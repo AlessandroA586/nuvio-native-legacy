@@ -568,17 +568,13 @@ static int sCatDe(const char *nome) {
   return sNCats++;
 }
 
-// Primeiro elemento de texto de um array JSON ("genre":["X"] -> "X").
+// Primeiro elemento de texto de um array JSON ("genre":["X"] -> "X"). Pelo
+// js_cadeia, e nao copia crua: addon em Python (json.dumps) escapa todo
+// caractere fora do ASCII, e "Not\u00edcias" virava a categoria
+// "Notu00edcias" (medido em 01/10/2026 com addon de teste).
 static int lerStrEl(const char *p, char *dst, int tam) {
-  int n = 0;
-  if (!p || *p != '"') return 0;
-  p++;
-  while (*p && *p != '"' && n < tam - 1) {
-    if (*p == '\\' && p[1]) p++;
-    dst[n++] = *p++;
-  }
-  dst[n] = 0;
-  return n > 0;
+  if (tam > 0) dst[0] = 0;
+  return js_cadeia(p, dst, (size_t)tam);
 }
 
 static int sCanalPorId(const char *id) {

@@ -14,10 +14,14 @@
 const char *js_fim(const char *p);
 
 // Valor textual de "chave" dentro de [ini,fim). 1 se achou. Escapes \uXXXX
-// viram espaco de proposito: os textos vem cheios de emoji e sao so para
-// exibicao — decodificar UTF-16 aqui seria trabalho sem retorno.
+// viram UTF-8 (par de substitutos incluido); \n \t \r viram espaco.
 int js_texto(const char *ini, const char *fim, const char *chave,
              char *dst, size_t tam);
+
+// O mesmo decodificador, para uma string JSON que ja se tem na mao: `p`
+// aponta para a aspa de abertura. E o leitor de um ELEMENTO de array
+// ("genre":["Not\u00edcias"]), que nao tem chave para js_texto achar.
+int js_cadeia(const char *p, char *dst, size_t tam);
 
 // Numero de "chave". Exige que o caractere apos a chave seja digito/sinal, o
 // que evita casar com um OBJETO de mesmo nome — o caso real e

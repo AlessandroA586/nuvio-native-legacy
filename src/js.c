@@ -93,10 +93,13 @@ static int escapeU(const char *p, char *dst, size_t *k, size_t tam) {
 int js_texto(const char *ini, const char *fim, const char *chave,
              char *dst, size_t tam) {
   const char *p = achaChave(ini, fim, chave);
-  size_t k = 0;
   if (!p) return 0;
-  p = pula(p);
-  if (*p != '"') return 0;
+  return js_cadeia(pula(p), dst, tam);
+}
+
+int js_cadeia(const char *p, char *dst, size_t tam) {
+  size_t k = 0;
+  if (!p || *p != '"' || tam == 0) return 0;
   p++;
   while (*p && *p != '"' && k + 1 < tam) {
     if (*p == '\\' && p[1]) {

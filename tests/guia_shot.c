@@ -221,6 +221,13 @@ int main(int argc, char **argv) {
   SDL_Window *w;
   SDL_GLContext gl;
 
+  // genero de addon em Python (json.dumps escapa o nao-ASCII): a categoria
+  // saia "Notu00edcias" (medido em 01/10/2026). Ver tests/jscadeia.c.
+  { const char *m = "{\"genre\":[\"Not\\u00edcias\"]}";
+    char gen[64];
+    assert(lerStrEl(js_array(m, NULL, "genre"), gen, sizeof gen));
+    assert(!strcmp(gen, "Not\xc3\xad" "cias")); }
+
   assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
   IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
