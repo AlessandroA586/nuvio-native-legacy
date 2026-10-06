@@ -19,7 +19,11 @@ typedef enum {
   // SO NO LAYOUT DINAMICA (ajustes_home_layout): formas que a Apple TV usa e a
   // home Moderna nao tem. Nascem em dinAtribuirTipos, nunca do catalogo.
   FILEIRA_TOP10_NUM,   // ranking: numeral grande ao lado de cada cartaz
-  FILEIRA_LARGA        // cartao deitado 16:9 maior que o da Moderna
+  FILEIRA_LARGA,       // cartao deitado 16:9 maior que o da Moderna
+  // Escolhiveis em qualquer layout (06/10):
+  FILEIRA_LINHA_TEMPO, // cartazes por ano sobre a linha animada dos anos
+  FILEIRA_FICHA,       // cartaz com a ficha do titulo ao lado
+  FILEIRA_PALCO        // o foco grande no centro, vizinhos diminuindo
 } TipoFileira;
 
 // O item sob o foco, com o retangulo que ele ocupa na tela NESTE quadro. A

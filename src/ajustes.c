@@ -6865,6 +6865,9 @@ static const struct { float w, h; } AJ_FIL_FORMA[FIL_TIPO_N] = {
   // Os dois 4:3 maiores: o fator de fil_tipo_fator (fileiras.c) sobre o 4:3.
   { NV_DESTAQUE_QUADRADO_W * 1.25f, NV_DESTAQUE_QUADRADO_H * 1.25f }, // 4:3 MEDIO
   { NV_DESTAQUE_QUADRADO_W * 1.5f,  NV_DESTAQUE_QUADRADO_H * 1.5f },  // 4:3 GRANDE
+  { 212.0f, 322.0f + NV_TEMPO_FAIXA_H }, // LINHA DO TEMPO — cartaz + a faixa dos anos
+  { NV_FICHA_W, 322.0f },                // CARTAZ COM FICHA
+  { 212.0f * NV_PALCO_ESC, 322.0f * NV_PALCO_ESC }, // PALCO — o cartaz do centro
 };
 
 // Uma frase por forma. Diz o que a forma E e para que serve, nao como se chama.
@@ -6883,6 +6886,9 @@ static const char *aj_fil_forma_ajuda(int t) {
     case FIL_TIPO_DESTAQUE_QUADRADO_G:
       return i18n("A maior arte em 4:3: dois cards e um pedaço do próximo por tela.");
     case FIL_TIPO_LARGA:    return i18n("Arte deitada 16:9 com o nome do título dentro do card.");
+    case FIL_TIPO_LINHA_TEMPO: return i18n("Cartazes em ordem de lançamento sobre uma linha com os anos, que se desenha conforme você anda.");
+    case FIL_TIPO_FICHA:    return i18n("Cartaz com a ficha ao lado: ano, gênero, nota e o começo da sinopse.");
+    case FIL_TIPO_PALCO:    return i18n("O título em foco fica grande no centro e os vizinhos diminuem dos dois lados.");
     default:                return i18n("O app escolhe pela fileira: retomada e coleções já têm forma própria.");
   }
 }

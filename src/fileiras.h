@@ -95,6 +95,11 @@ typedef enum {
   // motivo dos outros — o 6 gravado continua sendo o 4:3 de sempre.
   FIL_TIPO_DESTAQUE_QUADRADO_M, // 4:3 x1,25 — dois cards e meio por tela
   FIL_TIPO_DESTAQUE_QUADRADO_G, // 4:3 x1,5  — dois cards e um pedaco
+  // As tres fileiras de 06/10 (dono: "3 fileiras novas bonitonas"). No fim
+  // pelo mesmo motivo: o numero gravado dos tipos acima nao muda.
+  FIL_TIPO_LINHA_TEMPO,  // FILEIRA_LINHA_TEMPO — cartazes por ano sobre a linha animada
+  FIL_TIPO_FICHA,        // FILEIRA_FICHA — cartaz com a ficha (ano, nota, sinopse) ao lado
+  FIL_TIPO_PALCO,        // FILEIRA_PALCO — o foco grande no centro, vizinhos menores
   FIL_TIPO_N
 } FilTipo;
 

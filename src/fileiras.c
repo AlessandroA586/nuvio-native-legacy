@@ -94,7 +94,8 @@ static pthread_mutex_t trava = PTHREAD_MUTEX_INITIALIZER;
 static const char *TIPO_ROT[FIL_TIPO_N] = {
   "Automático", "Cartaz em pé", "Destaque largo", "Coleção", "Serviço", "Ranking empilhado",
   "Destaque 4:3", "Ranking numerado", "Faixa com título",
-  "Destaque 4:3 médio", "Destaque 4:3 grande"
+  "Destaque 4:3 médio", "Destaque 4:3 grande",
+  "Linha do tempo", "Cartaz com ficha", "Palco"
 };
 static const char *TAM_ROT[FIL_TAM_N] = { "Compacto", "Padrão", "Grande" };
 // 0,85 e 1,2 e nao 0,5 e 2,0: o card do web mede 212x322 e o passo da fileira
@@ -222,6 +223,9 @@ static const FilEstiloLinha LINHAS_CAT[] = {
                        { "Destaque 4:3", "Destaque 4:3 médio", "Destaque 4:3 grande" } },
   { "Ranking numerado",  1, { FIL_TIPO_RANKING }, { "Ranking numerado" } },
   { "Ranking empilhado", 1, { FIL_TIPO_TOP10 }, { "Ranking empilhado" } },
+  { "Linha do tempo",    1, { FIL_TIPO_LINHA_TEMPO }, { "Linha do tempo" } },
+  { "Cartaz com ficha",  1, { FIL_TIPO_FICHA }, { "Cartaz com ficha" } },
+  { "Palco",             1, { FIL_TIPO_PALCO }, { "Palco" } },
 };
 #define N_LINHAS_CAT (int)(sizeof LINHAS_CAT / sizeof *LINHAS_CAT)
 static const int ESTILOS_COL[] = { FIL_TIPO_AUTO, FIL_TIPO_COLECAO,
@@ -1250,6 +1254,9 @@ const char *fil_estilo_ajuda(const char *chave, int t) {
     case FIL_TIPO_DESTAQUE_QUADRADO_G:
       return "A maior arte em 4:3: dois cards e um pedaço do próximo por tela.";
     case FIL_TIPO_LARGA:    return "Arte deitada 16:9 com o nome do título dentro do card.";
+    case FIL_TIPO_LINHA_TEMPO: return "Cartazes em ordem de lançamento sobre uma linha com os anos, que se desenha conforme você anda.";
+    case FIL_TIPO_FICHA:    return "Cartaz com a ficha ao lado: ano, gênero, nota e o começo da sinopse.";
+    case FIL_TIPO_PALCO:    return "O título em foco fica grande no centro e os vizinhos diminuem dos dois lados.";
     default:                return "O app escolhe a forma pelo nome do catálogo e pelo layout da Home.";
   }
 }
