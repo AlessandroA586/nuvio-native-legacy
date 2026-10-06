@@ -639,6 +639,8 @@ void vertudo_atualizar(float dt, Uint32 agora) {
   // Mira a linha focada a 30% da altura util, como o resto do app faz.
   alvo = n ? VT_TOPO + celY[foco] - NV_TELA_H * 0.30f : 0.0f;
   // Decadas: o primeiro cartaz de uma secao leva o cabecalho junto.
+  // Saga: a trilha de capitulos fica acima da linha e entra junto.
+  if (lay == VT_LAY_SAGA) alvo -= VT_SAGA_TRILHA;
   if (lay == VT_LAY_DECADAS && n)
     for (int k = 0; k < decN; k++) if (decY[k] + VT_DEC_H == celY[foco]) { alvo -= VT_DEC_H; break; }
   if(tabFocus)alvo=0;
@@ -1114,7 +1116,7 @@ static void cabecalhoDecada(int k, float x0, float y, float a) {
   ajustes_acento(&ar, &ag, &ab);
   t = txt_linha(TXT_TITULO2, ano, 244, 245, 248, 255);
   q = txt_linha(TXT_HERO_META, qtd, 176, 182, 194, 255);
-  gfx_cor((GfxRect){ x0, y + 14.0f, 6.0f, t.h - 10.0f }, 0.5f, ar, ag, ab, a);
+  gfx_cor((GfxRect){ x0, y + 16.0f, 6.0f, t.h - 14.0f }, 3.0f / (t.h - 14.0f), ar, ag, ab, a);
   txt_desenhar_alpha(t, x0 + 22.0f, y + 8.0f, a);
   txt_desenhar_alpha(q, x0 + 22.0f + t.w + 20.0f, y + 8.0f + (t.h - q.h) * 0.6f, a * 0.9f);
   gfx_cor((GfxRect){ x0 + 22.0f + t.w + q.w + 44.0f, y + 8.0f + t.h * 0.55f,
@@ -1124,8 +1126,11 @@ static void cabecalhoDecada(int k, float x0, float y, float a) {
 // O BOTAO "Exibição": mora na faixa das abas, sobre a coluna do painel. Um
 // pequeno simbolo de grade e o nome da exibicao atual; com o foco, o
 // preenchimento no acento das abas e a dica de que OK troca.
-static void botaoExibicao(float a) {
-  float x = VT_PAN_X, y = 253.0f, H = 52.0f, maxW = grupo("Directors") ? 172.0f : VT_PAN_W;
+// SEM ABAS (uma fonte so) ele vai para o inicio da faixa, onde as abas
+// estariam: a coluna do painel e do retrato do diretor fica livre.
+static void botaoExibicao(float a, float x0) {
+  float x = nAbas() ? VT_PAN_X : x0, y = 253.0f, H = 52.0f;
+  float maxW = nAbas() && grupo("Directors") ? 172.0f : VT_PAN_W;
   float f = pillAnim, sr, sg, sb;
   int cor = f > 0.5f ? ajustes_tinta_foco() : 214;
   TxtLinha t = txt_linha_corta(TXT_HERO_META, LAY_NOME[lay], cor, cor, cor, 255, maxW - 70.0f);
@@ -1217,7 +1222,7 @@ void vertudo_desenhar(Uint32 agora) {
 
   // CABECALHO por cima do recorte, entao ele nunca compete com a arte.
   themeHeader(a,x0);
-  if (collection) botaoExibicao(a);
+  if (collection) botaoExibicao(a, x0);
 
   if (n > 0) painel(a);
 }
