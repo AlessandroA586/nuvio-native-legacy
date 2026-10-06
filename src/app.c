@@ -260,6 +260,10 @@ static int    folhaParaTocar;
 #define CANAL_STALKER_TENTATIVAS 3
 static int    stalkerTentativas;
 static int    canalFonteIdx = -1;         // indice na lista de streams, -1 = fora
+// CANAL DE ADDON PELO PROXY DE TS (#283). 1 = a tentativa em curso de
+// canalFonteIdx foi entregue ao player por proxyts; se ela morrer, a MESMA
+// fonte e tentada direto antes de passar para a proxima.
+static int    canalViaProxy;
 static Uint32 canalFonteDesde;            // quando a fonte atual foi pedida
 // So o automatico usa o fallback. Uma escolha manual e uma decisao explicita
 // do dono e nao pode ser trocada por outra fonte por tras da tela.
@@ -744,6 +748,46 @@ static void renovarListaDoPlayer(void) {
 // FONTEVOLTA_PRAZO_MS sem abrir — o video para, a tela continua em "abrindo
 // fonte" e a escolha normal assume (aguardandoFonte = 1), com a lista que a
 // busca de fundo ja trouxe ou esta trazendo.
+// A URL QUE O PLAYER RECEBE PARA UMA FONTE DE CANAL (#283).
+//
+// Relato #283 (QNED70B e NanoCell, 2.0.1): os canais dos addons nao tocam na
+// LG e tocam no Mi Stick. Nos registros 41889/41909/41918/42119/42328 (mesma
+// conta, webOS 11.2 e 6.5) o padrao e o do #158 no Xtream: a playlist do addon
+// e viva para a sonda, o uMS recebe o load, ganha VDEC, enche 4-8 s de buffer
+// e o decoder nunca anuncia (`buffer=4.0s decoder=0 ... 21061ms`, Fenix TV), ou
+// o servidor recusa os pedidos do motor HLS do uMS (`server error:40404`, `203
+// AV Type Not Founded`) numa playlist que a sonda, com os cabecalhos do addon,
+// leu viva. O Xtream ja passa pelo proxy de TS desde o #158 e toca; os canais
+// de addon iam sempre direto.
+//
+// Agora a fonte HTTP de canal de addon que nao e arquivo (.mp4/.mkv) vai pelo
+// proxy, com os cabecalhos do addon em todo pedido (playlist e segmentos). O
+// proxy redireciona o que ja e TS continuo ou nao e playlist, entao o caminho
+// que ja tocava nao muda. Desligado em Ajustes > Live TV, como no Xtream.
+static const char *urlCanal(const Stream *s, char *buf, size_t n) {
+  const char *id = player_id_canal();
+  canalViaProxy = 0;
+  if (!s) return "";
+  if (!strncmp(s->url, PROXYTS_PREFIXO, strlen(PROXYTS_PREFIXO))) {
+    // Xtream: a lista ja vem marcada, e sem cabecalho de addon.
+    proxyts_definir_cabecalhos(s->cabecalhos);
+    return s->url;
+  }
+  if (id[0] && !xtream_e_id(id) && !stalker_e_id(id) && ajustes_livetv_proxy() &&
+      proxyts_disponivel() && proxyts_candidata(s->url, s->mp4) &&
+      strlen(s->url) + strlen(PROXYTS_PREFIXO) < n) {
+    proxyts_definir_cabecalhos(s->cabecalhos);
+    snprintf(buf, n, "%s%s", PROXYTS_PREFIXO, s->url);
+    canalViaProxy = 1;
+    printf("[canal] fonte de addon pelo proxy-ts%s\n",
+           s->cabecalhos[0] ? ", com os cabecalhos do addon" : "");
+    fflush(stdout);
+    return buf;
+  }
+  proxyts_definir_cabecalhos("");
+  return s->url;
+}
+
 static int tocarFonteGuardada(void) {
   Stream s;
   char alvo[64];
@@ -1062,6 +1106,7 @@ static void processarFonteJob(void) {
         stream_definir_atual(0);
         canalFonteIdx = 0;
         canalFonteDesde = SDL_GetTicks();
+        canalViaProxy = 0;
         if (s) player_definir_fonte(s->url);
         marco("canal: link renovado");
       } else if (aplicar && mesmoId) {
@@ -1465,6 +1510,7 @@ static void tocarCanal(const CatItem *it) {
   novaGeracaoFonte();        // invalida qualquer resolver do canal anterior
   limparFontePendente();
   canalFonteIdx = -1;             // canal novo: watchdog arma de novo no fim da busca
+  canalViaProxy = 0;
   stalkerTentativas = 0;          // canal novo: o teto de renovacao recomeca
   stalkerRenovando = 0;            // resposta de renovacao antiga sera descartada
   // Canal de portal nao esta em addon nenhum: perguntar seria esperar o prazo
@@ -3458,7 +3504,10 @@ void app_atualizar(float dt, Uint32 agora) {
     if ((player_aberto() || player_mini_ativo()) && !player_quer_sair()) {
       stream_definir_atual(fonteEscolhida);
       if (s) {
-        player_definir_fonte(s->url);
+        if (player_id_canal()[0]) {
+          static char viaProxy[4200];
+          player_definir_fonte(urlCanal(s, viaProxy, sizeof viaProxy));
+        } else player_definir_fonte(s->url);
         // Tocou por outra fonte, mas um servico de debrid ficou de fora por
         // conta sem plano: diz uma vez por sessao, sem bloquear nada.
         { int novo = debrid_sem_plano_novo();
@@ -3561,7 +3610,7 @@ void app_atualizar(float dt, Uint32 agora) {
     Uint32 semDecMs = espera ? espera : CANAL_SEM_DECODER_MS;
     Uint32 prazo = (espera && canalFontePrazo == CANAL_FONTE_PRAZO_MS) ? espera : canalFontePrazo;
     Uint32 teto = espera > CANAL_ABRE_TETO_MS ? espera : CANAL_ABRE_TETO_MS;
-    int semDecoder = xt && player_carregando() && desde > semDecMs &&
+    int semDecoder = (xt || canalViaProxy) && player_carregando() && desde > semDecMs &&
         video_buffer_fim() > 0.5 && !video_decoder_anunciou();
     int morta = player_fonte_falhou() || video_falhou() ||
         (player_carregando() && desde > prazo && video_buffer_fim() <= 0.5) ||
@@ -3584,6 +3633,26 @@ void app_atualizar(float dt, Uint32 agora) {
       fflush(stdout);
       int prox = stream_canal_proxima(canalFonteIdx);
       const Stream *s;
+      // PELO PROXY NAO ABRIU: a MESMA fonte direto, antes da proxima (#283).
+      // Cobre o HLS que o proxy nao converte (cifrado, fMP4, audio a parte) e
+      // a TV em que o motor HLS do uMS toca melhor que o TS continuo. Se o
+      // proxy so redirecionou, a tentativa direta ja foi esta.
+      if (canalViaProxy) {
+        const Stream *mesma = stream_item(canalFonteIdx);
+        int redir = proxyts_redirecionou();
+        canalViaProxy = 0;
+        if (mesma && !redir) {
+          printf("[canal] fonte %d pelo proxy nao abriu (%s); tentando direto\n", canalFonteIdx,
+                 video_falhou() ? video_erro_texto()
+                                : semDecoder ? "dado sem decoder" : "sem dado no prazo");
+          fflush(stdout);
+          marco("canal: proxy falhou, fonte direto");
+          proxyts_definir_cabecalhos("");
+          canalFonteDesde = SDL_GetTicks();
+          player_definir_fonte(mesma->url);
+          return;
+        }
+      }
       // PORTAL STALKER: nao existe "proxima fonte" — cada canal tem uma so, e
       // o que morre nao e o canal, e o LINK, que vale minutos. Avancar o indice
       // aqui cairia direto no ramo de desistir, entao o conserto e pedir um
@@ -3637,7 +3706,8 @@ void app_atualizar(float dt, Uint32 agora) {
         // com todas mudas o curto matava a 4K que abre em 11,8 s (25/09).
         canalFontePrazo = stream_canal_prazo_longo(prox)
                             ? CANAL_FONTE_PRAZO_MS : CANAL_FONTE_PRAZO_MUDA_MS;
-        player_definir_fonte(s->url);
+        { static char viaProxy[4200];
+          player_definir_fonte(urlCanal(s, viaProxy, sizeof viaProxy)); }
       } else {
         canalFonteIdx = -1;
         // Sem mais fonte na lista: na tela cheia vira o erro de sempre; no
@@ -3709,7 +3779,7 @@ void app_atualizar(float dt, Uint32 agora) {
       }
       // Escolha manual num canal tambem entra no watchdog: fonte viva escolhida
       // a dedo pode morrer igual.
-      if (player_id_canal()[0]) { canalFonteIdx = fonte; canalFonteDesde = SDL_GetTicks(); }
+      if (player_id_canal()[0]) { canalFonteIdx = fonte; canalFonteDesde = SDL_GetTicks(); canalViaProxy = 0; }
     }
   }
   if (aguardandoFonte != 2 && player_pediu_fontes()) {

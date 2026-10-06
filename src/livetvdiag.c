@@ -461,6 +461,7 @@ static void iniciarPlayer(int f) {
   L.estado = E_PLAYER;
   video_definir_reconexao(0);
   video_definir_cabecalhos(it->cabs);
+  proxyts_definir_cabecalhos(it->cabs);
   { char px[96], marcada[4200];
     snprintf(marcada, sizeof marcada, "%s%s", PROXYTS_PREFIXO, x->url);
     L.pfVivo = video_tocar(L.pfModo == M_D ? x->segUrl

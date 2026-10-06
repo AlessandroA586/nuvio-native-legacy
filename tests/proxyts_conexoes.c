@@ -30,6 +30,13 @@ char *rede_baixar_trecho_st(const char *url, int segundos, long ini, long fim,
   snprintf(final, nf, "%s", url);
   return corpo;
 }
+// So o caminho com cabecalhos do addon (#283) chama; este teste nao usa.
+int rede_url_final_cab(const char *url, int segundos, const char *const *cab,
+                       char *dst, unsigned tam, int *st) {
+  (void)url; (void)segundos; (void)cab; (void)st;
+  if (dst && tam) dst[0] = 0;
+  return 0;
+}
 char *rede_baixar_bin_medido_controle(const char *url, int segundos,
     const char *const *cab, const RedeControle *ctl, long *n, RedeMedida *md) {
   unsigned char *b;
