@@ -1,0 +1,166 @@
+// AS EXIBICOES DA PAGINA DE COLECAO (vertudo.c), sem janela e sem rede.
+//
+// Pedido do dono (06/10): cada colecao escolhe como se mostra — Grade, Linha do
+// tempo, Ranking, Saga, Decadas, Mural. O que este teste cobra:
+//   1. o Automatico pelo conteudo (Diretores, ranking, franquia, o resto);
+//   2. toda exibicao cabe na largura util da grade e nenhuma celula encosta
+//      noutra (a tabela de celulas e o unico lugar que posiciona);
+//   3. as linhas sao contiguas e crescentes (a navegacao depende disso);
+//   4. a ordem cronologica de Saga/Decadas/Linha (sem ano vai para o fim) e os
+//      cabecalhos de decada antes dos titulos deles;
+//   5. o D-pad: cima/baixo pelo centro mais proximo no Mural, a esquerda no
+//      primeiro da linha pede a barra, cima na primeira linha vai ao botao;
+//   6. OK no botao troca a exibicao e a escolha fica gravada POR PERFIL.
+//
+// Inclui src/vertudo.c (o estado e estatico) e troca a lista que a descoberta
+// leu por uma semeada aqui.
+#define desc_vertudo_n shot_vt_n
+#define desc_vertudo_item shot_vt_item
+#include "../src/vertudo.c"
+#undef desc_vertudo_n
+#undef desc_vertudo_item
+#include <assert.h>
+
+static CatItem semente[24];
+static int nSemente;
+int shot_vt_n(void) { return nSemente; }
+int shot_vt_item(int i, CatItem *dst) {
+  if (i < 0 || i >= nSemente) return 0;
+  if (dst) *dst = semente[i];
+  return 1;
+}
+
+static const int ANOS[] = { 2005, 1977, 1999, 2015, 1980, 0, 2002, 1983,
+                            2017, 2019, 2008, 1997, 2016, 1977 };
+#define NANOS (int)(sizeof ANOS / sizeof *ANOS)
+
+static void semear(void) {
+  int i;
+  nSemente = NANOS;
+  for (i = 0; i < nSemente; i++) {
+    CatItem *c = &semente[i];
+    memset(c, 0, sizeof *c);
+    snprintf(c->imdb, sizeof c->imdb, "tt70%05d", i);
+    snprintf(c->tipo, sizeof c->tipo, "movie");
+    snprintf(c->titulo, sizeof c->titulo, "Capítulo %d", i);
+    if (ANOS[i]) snprintf(c->meta, sizeof c->meta, "%d · 2 h", ANOS[i]);
+  }
+}
+
+static void tecla(SDL_Keycode k) {
+  SDL_Event e;
+  memset(&e, 0, sizeof e);
+  e.type = SDL_KEYDOWN; e.key.keysym.sym = k;
+  vertudo_evento(&e);
+}
+
+static int sobrepoe(int a, int b) {
+  return celX[a] < celX[b] + celW[b] - 0.5f && celX[b] < celX[a] + celW[a] - 0.5f &&
+         celY[a] < celY[b] + celH[b] - 0.5f && celY[b] < celY[a] + celH[a] - 0.5f;
+}
+
+static ColFolder pasta;
+static ColSource fontes[2];
+
+int main(void) {
+  int L, i, j;
+  char dir[600];
+  snprintf(dir, sizeof dir, "%s/nv-colexib.XXXXXX", getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp");
+  assert(mkdtemp(dir));
+  setenv("NUVIO_DADOS", dir, 1);
+  dados_iniciar("deploy/app/art");
+  semear();
+  pasta.sources = fontes;
+  pasta.nSources = 1;
+  snprintf(pasta.id, sizeof pasta.id, "starwars");
+  snprintf(pasta.groupId, sizeof pasta.groupId, "franquias");
+  snprintf(fontes[0].title, sizeof fontes[0].title, "Star Wars");
+  collection = &pasta;
+  aberta = 1;
+
+  // 1. AUTOMATICO
+  snprintf(pasta.title, sizeof pasta.title, "Star Wars");
+  snprintf(pasta.group, sizeof pasta.group, "Film Collections");
+  ranked = 0; assert(layAuto() == VT_LAY_SAGA);
+  snprintf(pasta.group, sizeof pasta.group, "Directors");
+  assert(layAuto() == VT_LAY_LINHA);
+  snprintf(pasta.group, sizeof pasta.group, "Awards");
+  ranked = 1; assert(layAuto() == VT_LAY_RANKING);
+  ranked = 0; assert(layAuto() == VT_LAY_GRADE);
+  snprintf(pasta.title, sizeof pasta.title, "Trilogia do Anel");
+  assert(layAuto() == VT_LAY_SAGA);
+  snprintf(pasta.title, sizeof pasta.title, "Star Wars");
+  collection = NULL; assert(layAuto() == VT_LAY_GRADE);
+  collection = &pasta;
+
+  // 2-4. GEOMETRIA de cada exibicao
+  for (L = VT_LAY_GRADE; L < VT_LAY_N; L++) {
+    lay = L; celLay = -1; orderN = -1; foco = 0;
+    montar(nSemente);
+    assert(celN == nSemente);
+    for (i = 0; i < nSemente; i++) {
+      assert(celX[i] >= 0.0f && celY[i] >= 0.0f);
+      assert(celX[i] + celW[i] <= VT_CW + 30.0f);   // ranking passa 16 px no maximo
+      if (i) assert(celLin[i] >= celLin[i - 1] && celLin[i] <= celLin[i - 1] + 1);
+      for (j = 0; j < i; j++) if (sobrepoe(i, j)) {
+        fprintf(stderr, "exibicao %d: celulas %d e %d se sobrepoem\n", L, i, j);
+        return 1;
+      }
+    }
+    if (ordenaPorAno()) {
+      int ant = 0;
+      CatItem it;
+      for (i = 0; i < nSemente; i++) {
+        int y; assert(viewItem(i, &it)); y = yearOf(&it);
+        assert(y >= ant); ant = y;
+      }
+      assert(viewItem(nSemente - 1, &it) && !it.meta[0]);   // sem ano: no fim
+    }
+    printf("exibicao %-15s ok: %d celulas, %d linhas, altura %.0f\n",
+           LAY_NOME[L], celN, celLin[celN - 1] + 1, celFim);
+  }
+  // Decadas: 1970, 1980, 1990, 2000, 2010 e "sem data" = 6 secoes, na ordem,
+  // cada cabecalho acima do primeiro titulo dela.
+  lay = VT_LAY_DECADAS; celLay = -1; orderN = -1; montar(nSemente);
+  assert(decN == 6);
+  assert(decAno[0] == 1970 && decAno[4] == 2010 && decAno[5] == 0);
+  assert(decQtd[0] == 2 && decQtd[1] == 2 && decQtd[5] == 1);
+  for (i = 1; i < decN; i++) assert(decY[i] > decY[i - 1]);
+  assert(celY[0] == decY[0] + VT_DEC_H);
+
+  // 5. D-PAD no Mural: o grande (0) desce para o pequeno de baixo mais perto.
+  lay = VT_LAY_MURAL; celLay = -1; orderN = -1; montar(nSemente);
+  tabFocus = 0; foco = 0;
+  tecla(SDLK_DOWN); assert(foco == 3);           // primeiro pequeno de baixo
+  tecla(SDLK_UP);   assert(foco == 1);           // o pequeno de cima, mesmo x
+  tecla(SDLK_LEFT); assert(foco == 0);
+  pedMenu = 0;
+  tecla(SDLK_LEFT); assert(pedMenu == 1 && foco == 0);   // primeiro da linha
+  foco = 2; tecla(SDLK_DOWN); assert(foco == 4);
+  tecla(SDLK_DOWN); assert(celLin[foco] == 2);   // bloco seguinte, espelhado
+  // Cima na primeira linha: a faixa do botao "Exibição".
+  foco = 1; tecla(SDLK_UP); assert(tabFocus == 1 && tabCursor == nAbas());
+
+  // 6. OK NO BOTAO troca e grava; outro perfil nao herda.
+  salvos_perfil(1);
+  layEscolha = VT_LAY_AUTO; lay = VT_LAY_GRADE;
+  tecla(SDLK_RETURN);
+  assert(lay == VT_LAY_LINHA && layEscolha == VT_LAY_LINHA);
+  tecla(SDLK_RETURN); tecla(SDLK_RETURN);
+  assert(lay == VT_LAY_SAGA);
+  assert(escolhaGravada(&pasta) == VT_LAY_SAGA);
+  { ColFolder outra = pasta; snprintf(outra.id, sizeof outra.id, "outra");
+    assert(escolhaGravada(&outra) == VT_LAY_AUTO); }
+  salvos_perfil(2);
+  assert(escolhaGravada(&pasta) == VT_LAY_AUTO);
+  gravarEscolha(&pasta, VT_LAY_MURAL);
+  assert(escolhaGravada(&pasta) == VT_LAY_MURAL);
+  salvos_perfil(1);
+  assert(escolhaGravada(&pasta) == VT_LAY_SAGA);
+  // Volta ao comeco do ciclo depois da ultima (Mural -> Grade).
+  lay = VT_LAY_MURAL; tabFocus = 1; tabCursor = nAbas();
+  tecla(SDLK_RETURN); assert(lay == VT_LAY_GRADE);
+
+  printf("colecao_exibicao: ok\n");
+  return 0;
+}
