@@ -134,14 +134,29 @@ static void capturaPainel(const char *nome, SDL_Window *win, int addonsPane) {
   printf("capture: %s\n",nome);
 }
 
-static void poeCanal(int i, const char *nome, const char *logo) {
-  snprintf(canais[i].id, sizeof canais[i].id, "c%d", i);
-  snprintf(canais[i].nome, sizeof canais[i].nome, "%s", nome);
-  snprintf(canais[i].logo, sizeof canais[i].logo, "%s", logo);
-  canais[i].desc[0] = 0;
-  canais[i].cat = 0;
-  canais[i].epg = -2;      // sem grade real: o cartao mostra "AO VIVO"
-  canais[i].fav = i == 1;
+// SEMEIA A LISTA PELO CAMINHO DE VERDADE (M1): staging -> adotarStaging, como o
+// fio de carga. Cada canal: fonte, grupo, nome, logo, descricao e numero.
+typedef struct { const char *fonte, *grupo, *nome, *logo, *desc; int numero; } ShotCanal;
+static void semearCanais(const ShotCanal *v, int n) {
+  int i;
+  stagingZerar();
+  sTeto = 30000;
+  for (i = 0; i < n; i++) {
+    int fl = sFonte(LTV_ADDON, v[i].fonte, v[i].fonte, "");
+    char id[32];
+    GCru c;
+    snprintf(id, sizeof id, "c%d", i);
+    memset(&c, 0, sizeof c);
+    c.id = id; c.nome = v[i].nome; c.logo = v[i].logo; c.desc = v[i].desc ? v[i].desc : "";
+    c.grupo = v[i].grupo; c.numero = v[i].numero;
+    c.epgId = c.tvgNome = c.url = c.ua = c.ref = "";
+    sGrupoInfo(fl, v[i].grupo, 1);
+    sCanalAdd(fl, &c);
+    sLtvF[fl].total++;
+  }
+  favLido = 1;
+  adotarStaging();
+  estado = G_PRONTO;
 }
 
 // GRADE DE MENTIRA para a tela do guia (25/09/2026): o heroi e a grade so se
@@ -195,46 +210,31 @@ static void semearEpg(void) {
   free(xml);
 }
 
-// Monta a lista do guia: duas categorias, canais com e sem grade.
+// Monta a lista do guia: duas fontes, tres grupos, canais com e sem grade.
+// "Esportes" existe nas duas fontes e aparece DUAS vezes (decisao 2).
 static void semearGuia(void) {
-  // logo: 0 recortado (silhueta de um tom), 1 com fundo proprio, 2 AZULEJO
-  // (quadrado claro arredondado com margem transparente e marca escura — o
-  // formato que virava bloco creme na C9), 3 arquivo que NAO EXISTE (o logo
-  // que falha: tem de aparecer o azulejo escuro com as iniciais).
+  // logo: 0 recortado, 1 com fundo proprio, 2 AZULEJO, 3 arquivo que NAO EXISTE.
   static const char *LOGO[] = {
     "tests/fixtures/logos/recortado.png", "tests/fixtures/logos/comfundo.png",
     "tests/fixtures/logos/azulejo.png", "tests/fixtures/logos/nao-existe.png",
   };
-  static const struct { const char *nome; int cat; int logo; } C[] = {
-    { "Globo RJ", 0, 2 }, { "SporTV", 1, 2 }, { "GE TV", 1, 3 },
-    { "GNT", 0, 1 }, { "Cartoon Network", 0, 3 }, { "Canal Recortado HD", 0, 0 },
-    { "Discovery", 0, 2 }, { "Canal 24h Classicos", 0, 3 },
+  ShotCanal C[] = {
+    { "FrostView", "Abertos", "Globo RJ", NULL, "Categoria: Abertos Qualidades: 4K, FHD, HD, SD 8 fonte(s)", 4 },
+    { "FrostView", "Abertos", "GNT", NULL, "Categoria: Abertos 1 fonte(s)", 41 },
+    { "FrostView", "Abertos", "Cartoon Network", NULL, NULL, 33 },
+    { "FrostView", "Abertos", "Canal Recortado HD", NULL, NULL, 50 },
+    { "FrostView", "Abertos", "Discovery", NULL, NULL, 52 },
+    { "FrostView", "Abertos", "Canal 24h Classicos", NULL, NULL, 99 },
+    { "FrostView", "Esportes", "SporTV", NULL, NULL, 101 },
+    { "FrostView", "Esportes", "GE TV", NULL, "Canal de esportes com jogos ao vivo, resenha e bastidores.", 102 },
+    { "Xtream", "Esportes", "ESPN", NULL, NULL, 101 },
+    { "Xtream", "Esportes", "Premiere Clubes", NULL, NULL, 103 },
   };
-  int i, n = (int)(sizeof C / sizeof C[0]), w = 0, c;
-  // Ordem publicada = agrupada por categoria, como empacotar() deixa.
-  for (c = 0; c < 2; c++)
-    for (i = 0; i < n; i++) {
-      if (C[i].cat != c) continue;
-      poeCanal(w, C[i].nome, LOGO[C[i].logo]);
-      canais[w].cat = c; canais[w].epg = -1; canais[w].fav = 0;
-      w++;
-    }
-  // O molde do addon (medido na C9): vira selos + "8 fontes", sem a
-  // "Categoria:" repetida. GE TV leva texto livre, que tem de ir como veio.
-  snprintf(canais[0].desc, sizeof canais[0].desc, "%s",
-           "Categoria: Abertos Qualidades: 4K, FHD, HD, SD 8 fonte(s)");
-  snprintf(canais[3].desc, sizeof canais[3].desc, "%s",
-           "Categoria: Abertos 1 fonte(s)");
-  snprintf(canais[7].desc, sizeof canais[7].desc, "%s",
-           "Canal de esportes com jogos ao vivo, resenha e bastidores.");
+  static const int L[] = { 2, 1, 3, 0, 2, 3, 2, 3, 0, 1 };
+  int i, n = (int)(sizeof C / sizeof C[0]);
+  for (i = 0; i < n; i++) C[i].logo = LOGO[L[i]];
+  semearCanais(C, n);
   canais[1].fav = 1;
-  nCanais = w;
-  snprintf(cats[0], sizeof cats[0], "%s", "Abertos");
-  snprintf(cats[1], sizeof cats[1], "%s", "Esportes");
-  nCats = 2;
-  catIni[0] = 0; catN[0] = 6;
-  catIni[1] = 6; catN[1] = 2;
-  nFavOrd = 0;
 }
 
 int main(int argc, char **argv) {
@@ -300,13 +300,15 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  poeCanal(0, "Canal Recortado HD", "tests/fixtures/logos/recortado.png");
-  poeCanal(1, "Canal Recortado HD", "tests/fixtures/logos/recortado.png");
-  poeCanal(2, "Canal Com Fundo HD", "tests/fixtures/logos/comfundo.png");
-  poeCanal(3, "Canal Com Fundo HD", "tests/fixtures/logos/comfundo.png");
-  nCanais = 4;
-  snprintf(cats[0], sizeof cats[0], "%s", "Aberta");
-  nCats = 1; catIni[0] = 0; catN[0] = 4;
+  { static const ShotCanal C4[] = {
+      { "Addon", "Aberta", "Canal Recortado HD", "tests/fixtures/logos/recortado.png", NULL, 1 },
+      { "Addon", "Aberta", "Canal Recortado HD", "tests/fixtures/logos/recortado.png", NULL, 2 },
+      { "Addon", "Aberta", "Canal Com Fundo HD", "tests/fixtures/logos/comfundo.png", NULL, 3 },
+      { "Addon", "Aberta", "Canal Com Fundo HD", "tests/fixtures/logos/comfundo.png", NULL, 4 } };
+    int k;
+    semearCanais(C4, 4);
+    for (k = 0; k < 4; k++) canais[k].epg = -2;   // sem grade real: "AO VIVO"
+    canais[1].fav = 1; }
 
   // O MOLDE DA DESCRICAO nas duas formas medidas na C9, e texto livre.
   { GDesc d;
@@ -446,13 +448,14 @@ int main(int argc, char **argv) {
       "Canais Reality Shows", "Canais Recordtv", "Canais Religiosos",
       "Canais Series 24h Maratonas Sem Fim", "Canais Sportv", "Canais Telecine",
       "Canais Variedades", "Disney+", "HBO", "Premiere" };
-    int k, nc = (int)(sizeof NC / sizeof NC[0]);
-    for (k = 0; k < nc; k++) {
-      snprintf(cats[k], sizeof cats[k], "%s", NC[k]);
-      catIni[k] = k * 2 > 6 ? 6 : k * 2; catN[k] = k % 3 == 0 ? 117 : 4 + k;
-    }
-    // So o painel le catN; a grade nao e desenhada com foco nela.
-    nCats = nc; }
+    static ShotCanal V[1200];
+    int k, j, n = 0, nc = (int)(sizeof NC / sizeof NC[0]);
+    for (k = 0; k < nc; k++)
+      for (j = 0; j < (k % 3 == 0 ? 117 : 4 + k) && n < 1200; j++) {
+        V[n].fonte = "FrostView"; V[n].grupo = NC[k]; V[n].nome = "Canal";
+        V[n].logo = "tests/fixtures/logos/recortado.png"; V[n].desc = NULL; V[n].numero = n + 1; n++;
+      }
+    semearCanais(V, n); }
   modoLista = 1; focoLin = 0; focoCol = 0; focoAnelOk = 0;
   catAberto = 2; catFoco = 14; catAnim = 1.0f;
   { float areaH = G_CAT_BASE - G_CAT_TOPO;
@@ -471,7 +474,7 @@ int main(int argc, char **argv) {
   capturaTela(nome, w, 1);
   catAberto = 0; catAnim = 0.0f; focoLin = 0;
 
-  nCanais = 0; nCats = 0; nFontes = 0; fontesOk = 1; estado = G_FALHOU;
+  stagingZerar(); adotarStaging(); nFontes = 0; fontesOk = 1; estado = G_FALHOU;
   falhas = 0;
   snprintf(nome, sizeof nome, "%s-tela-vazia.bmp", saida);
   capturaTela(nome, w, 0);

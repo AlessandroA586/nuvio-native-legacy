@@ -6,6 +6,7 @@
 #include <string.h>
 #include <strings.h>
 #include <ctype.h>
+#include <pthread.h>
 
 // --- arena ----------------------------------------------------------------------
 struct LtvBloco { LtvBloco *prox; size_t cap; char d[]; };
@@ -457,4 +458,117 @@ void ltv_m3u_fim(LtvM3u *p) {
     linhaM3u(p, p->linha);
   }
   p->nl = 0;
+}
+
+// --- fontes por URL --------------------------------------------------------------------
+static LtvUrl urls[LTV_URLS_MAX];
+static int nUrls, urlsPerfil = -1;
+static pthread_mutex_t travaUrls = PTHREAD_MUTEX_INITIALIZER;
+
+int ltv_urls_de_texto(const char *t, LtvUrl *out, int max) {
+  int n = 0;
+  while (t && *t && n < max) {
+    const char *fim = t + strcspn(t, "\n");
+    const char *a = memchr(t, '\t', (size_t)(fim - t));
+    const char *b = a ? memchr(a + 1, '\t', (size_t)(fim - a - 1)) : NULL;
+    if (a && b) {
+      LtvUrl u;
+      size_t k;
+      memset(&u, 0, sizeof u);
+      u.tipo = !strncmp(t, "xmltv", 5) ? LTV_URL_XMLTV : LTV_URL_M3U;
+      k = (size_t)(b - a - 1); if (k >= sizeof u.nome) k = sizeof u.nome - 1;
+      memcpy(u.nome, a + 1, k); u.nome[k] = 0;
+      k = (size_t)(fim - b - 1); if (k && b[k] == '\r') k--;
+      if (k && k < sizeof u.url) { memcpy(u.url, b + 1, k); u.url[k] = 0; out[n++] = u; }
+    }
+    t = *fim ? fim + 1 : fim;
+  }
+  return n;
+}
+size_t ltv_urls_texto(const LtvUrl *v, int n, char *dst, size_t tam) {
+  size_t u = 0;
+  int i;
+  if (tam) dst[0] = 0;
+  for (i = 0; i < n; i++) {
+    int w = snprintf(dst + u, tam - u, "%s\t%s\t%s\n", v[i].tipo == LTV_URL_XMLTV ? "xmltv" : "m3u",
+                     v[i].nome, v[i].url);
+    if (w < 0 || (size_t)w >= tam - u) break;
+    u += (size_t)w;
+  }
+  return u;
+}
+static void urlsNome(char *d, size_t n, int perfil) {
+  if (perfil <= 0) snprintf(d, n, "ltv-urls.txt"); else snprintf(d, n, "ltv-urls-p%d.txt", perfil);
+}
+void ltv_urls_carregar(int perfil) {
+  char nome[40], *t;
+  urlsNome(nome, sizeof nome, perfil);
+  t = dados_ler(nome);
+  pthread_mutex_lock(&travaUrls);
+  urlsPerfil = perfil;
+  nUrls = t ? ltv_urls_de_texto(t, urls, LTV_URLS_MAX) : 0;
+  pthread_mutex_unlock(&travaUrls);
+  free(t);
+}
+static void urlsGravar(void) {
+  char nome[40], buf[LTV_URLS_MAX * 1200];
+  urlsNome(nome, sizeof nome, urlsPerfil);
+  ltv_urls_texto(urls, nUrls, buf, sizeof buf);
+  dados_gravar(nome, buf);
+}
+int ltv_urls_copiar(LtvUrl *out, int max) {
+  int n;
+  pthread_mutex_lock(&travaUrls);
+  n = nUrls < max ? nUrls : max;
+  if (n > 0) memcpy(out, urls, sizeof *out * (size_t)n);
+  pthread_mutex_unlock(&travaUrls);
+  return n;
+}
+int ltv_urls_adicionar(int tipo, const char *nome, const char *url) {
+  int i;
+  size_t k;
+  if (!url) return -1;
+  while (*url == ' ') url++;
+  k = strlen(url);
+  while (k && (url[k - 1] == ' ' || url[k - 1] == '\n' || url[k - 1] == '\r')) k--;
+  if (!k || k >= sizeof urls[0].url || strchr(url, '\t')) return -1;
+  if (strncasecmp(url, "http://", 7) && strncasecmp(url, "https://", 8)) return -1;
+  pthread_mutex_lock(&travaUrls);
+  for (i = 0; i < nUrls; i++)
+    if (urls[i].tipo == tipo && !strncmp(urls[i].url, url, k) && !urls[i].url[k]) break;
+  if (i == nUrls) {
+    if (nUrls >= LTV_URLS_MAX) { pthread_mutex_unlock(&travaUrls); return -1; }
+    nUrls++;
+  }
+  urls[i].tipo = tipo;
+  memcpy(urls[i].url, url, k); urls[i].url[k] = 0;
+  { char host[64];
+    ltv_url_host(urls[i].url, host, sizeof host);
+    snprintf(urls[i].nome, sizeof urls[i].nome, "%s", nome && nome[0] && !strchr(nome, '\t') ? nome : host); }
+  urlsGravar();
+  pthread_mutex_unlock(&travaUrls);
+  return i;
+}
+void ltv_urls_remover(int i) {
+  pthread_mutex_lock(&travaUrls);
+  if (i >= 0 && i < nUrls) {
+    memmove(&urls[i], &urls[i + 1], sizeof urls[0] * (size_t)(nUrls - i - 1));
+    nUrls--;
+    urlsGravar();
+  }
+  pthread_mutex_unlock(&travaUrls);
+}
+void ltv_url_host(const char *url, char *dst, size_t n) {
+  const char *p = url, *a, *f;
+  size_t k;
+  if (!n) return;
+  dst[0] = 0;
+  if (!url) return;
+  if ((a = strstr(p, "://"))) p = a + 3;
+  f = p + strcspn(p, "/?#");
+  a = memchr(p, '@', (size_t)(f - p));     // usuario:senha@host
+  if (a) p = a + 1;
+  k = (size_t)(f - p);
+  if (k >= n) k = n - 1;
+  memcpy(dst, p, k); dst[k] = 0;
 }

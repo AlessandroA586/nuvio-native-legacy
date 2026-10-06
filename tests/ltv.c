@@ -183,6 +183,28 @@ int main(void) {
     OK(ltv_m3u_atributo("#EXTINF:-1 TVG-ID=\"X\"", "tvg-id", v, sizeof v) && !strcmp(v, "X"), "atributo sem caixa");
     OK(!ltv_m3u_atributo("#EXTINF:-1 xtvg-id=\"X\"", "tvg-id", v, sizeof v), "nome de atributo inteiro"); }
 
+
+  // --- fontes por URL (M9)
+  { LtvUrl v[LTV_URLS_MAX];
+    char h[64];
+    int n;
+    disco[0] = 0;
+    ltv_urls_carregar(1);
+    OK(ltv_urls_adicionar(LTV_URL_M3U, "", "http://u:SENHA@lista.exemplo:8080/get.php?username=u&password=SENHA") == 0,
+       "M3U por URL entra");
+    OK(ltv_urls_adicionar(LTV_URL_XMLTV, "Minha grade", " https://epg.exemplo/a.xml.gz \n") == 1, "XMLTV por URL entra (aparada)");
+    OK(ltv_urls_adicionar(LTV_URL_M3U, "", "ftp://nao") < 0 && ltv_urls_adicionar(LTV_URL_M3U, "", "") < 0,
+       "so http(s)");
+    n = ltv_urls_copiar(v, LTV_URLS_MAX);
+    OK(n == 2 && !strcmp(v[0].nome, "lista.exemplo:8080") && !strstr(v[0].nome, "SENHA"),
+       "nome padrao = host, sem credencial");
+    OK(!strcmp(v[1].url, "https://epg.exemplo/a.xml.gz") && v[1].tipo == LTV_URL_XMLTV, "tipo e URL aparada");
+    ltv_urls_carregar(1);
+    OK(ltv_urls_copiar(v, LTV_URLS_MAX) == 2, "ida e volta no disco");
+    ltv_urls_remover(0);
+    OK(ltv_urls_copiar(v, LTV_URLS_MAX) == 1 && v[0].tipo == LTV_URL_XMLTV, "remover");
+    ltv_url_host("https://user:pw@h.exemplo/x?y", h, sizeof h);
+    OK(!strcmp(h, "h.exemplo"), "host sem usuario/senha/caminho"); }
   printf("%s (%d falha(s))\n", falhas ? "FALHOU" : "tudo ok", falhas);
   return falhas ? 1 : 0;
 }

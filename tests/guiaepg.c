@@ -103,7 +103,7 @@ static long gz(const char *in, char **out) {
 // Roda o fio da carga ate publicar (epg_passo e quem publica).
 static int carregar(void) {
   int k;
-  for (k = 0; k < 2000; k++) {
+  for (k = 0; k < 30000; k++) {      // ate 60 s: o arquivo de 100 MB sob ASan
     struct timespec ts = { 0, 2000000 };
     epg_passo();
     if (epg_estado() == EPG_PRONTO || epg_estado() == EPG_FALHOU) return epg_estado();

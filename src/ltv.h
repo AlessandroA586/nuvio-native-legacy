@@ -141,4 +141,20 @@ void ltv_m3u_fim(LtvM3u *p);
 // Valor de atributo `nome="..."` numa linha #EXTINF (sem caixa no nome).
 int  ltv_m3u_atributo(const char *linha, const char *nome, char *dst, size_t n);
 
+// --- fontes por URL (M9): M3U e XMLTV dos Ajustes -------------------------------
+// Por perfil, em ltv-urls-p<N>.txt ("m3u|xmltv TAB nome TAB url"). A URL pode
+// levar usuario e senha: fica so no disco do aparelho, nunca em log nem na conta
+// (a tela de Ajustes mostra so o host). Copia sob trava: o fio do guia le.
+enum { LTV_URL_M3U = 0, LTV_URL_XMLTV = 1 };
+#define LTV_URLS_MAX 8
+typedef struct { int tipo; char nome[64]; char url[1024]; } LtvUrl;
+void ltv_urls_carregar(int perfil);
+int  ltv_urls_copiar(LtvUrl *out, int max);
+int  ltv_urls_adicionar(int tipo, const char *nome, const char *url);   // indice ou -1
+void ltv_urls_remover(int i);
+int  ltv_urls_de_texto(const char *t, LtvUrl *out, int max);
+size_t ltv_urls_texto(const LtvUrl *v, int n, char *dst, size_t tam);
+// "host" da URL para a tela (sem usuario, senha, caminho nem consulta).
+void ltv_url_host(const char *url, char *dst, size_t n);
+
 #endif

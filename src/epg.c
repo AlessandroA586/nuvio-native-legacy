@@ -1275,11 +1275,19 @@ static int cortaNumero(const char *k, long corte) {
   return k[corte] >= '0' && k[corte] <= '9';
 }
 
-// Os niveis 4 em diante (apelido, prefixo, substring, afiliada). Com a trava.
+// Os niveis 4 em diante (apelido, prefixo, substring, afiliada), TODOS pelo
+// indice ordenado de chaves: nada varre a grade inteira. Com 20 mil canais de
+// grade e 30 mil na lista, a varredura das versoes antigas (6 chaves x 20 mil
+// por canal) levava minutos numa TV; aqui cada regra e O(tamanho do nome x
+// log n). Com a trava.
+static int idxCanalCom(const char *k) {        // canal com a chave exata, ou -1
+  int lo, n = k[0] ? idxFaixa(k, &lo) : 0;
+  return n ? P.idx[lo].canal : -1;
+}
 static int regras(const char *k1, const char *k2, const char *prim) {
-  int i, j, melhor = -1;
-  long melhorTam = 0, t;
-  const char *chave = NULL;
+  int j, L;
+  long t = (long)strlen(k1);
+  char sub[96];
   #define DEVOLVE(idx, kv) return comGrade((idx), (kv))
   // apelido
   for (j = 0; j < (int)(sizeof ALIAS / sizeof ALIAS[0]); j++)
@@ -1287,43 +1295,51 @@ static int regras(const char *k1, const char *k2, const char *prim) {
       int c = idxMelhor(ALIAS[j][1], -1);
       if (c >= 0) DEVOLVE(c, ALIAS[j][1]);
     }
-  // a grade e prefixo do canal ("recordtvpaulista" -> "recordtv")
-  t = (long)strlen(k1);
-  for (i = 0; i < P.nCanais; i++)
-    for (j = 0; j < P.canais[i].nChaves; j++) {
-      const char *kv = KS(&P, P.canais[i].chaves[j]);
-      long tc = (long)strlen(kv);
-      if (tc >= 4 && tc < t && tc > melhorTam && !strncmp(k1, kv, (size_t)tc) && !cortaNumero(k1, tc))
-        { melhor = i; melhorTam = tc; chave = kv; }
-    }
-  if (melhor >= 0) DEVOLVE(melhor, chave);
+  // a grade e PREFIXO do canal ("recordtvpaulista" -> "recordtv"): a mais comprida
+  for (L = (int)t - 1; L >= 4; L--) {
+    int c;
+    if (cortaNumero(k1, L)) continue;
+    memcpy(sub, k1, (size_t)L); sub[L] = 0;
+    if ((c = idxCanalCom(sub)) >= 0) DEVOLVE(c, sub);
+  }
   // o canal e prefixo de UMA SO chave da grade (ambigua nao casa)
-  { int nCand = 0;
-    if (t >= 4)
-      for (i = 0; i < P.nCanais; i++)
-        for (j = 0; j < P.canais[i].nChaves; j++) {
-          const char *kv = KS(&P, P.canais[i].chaves[j]);
-          if ((long)strlen(kv) > t && !strncmp(kv, k1, (size_t)t) && melhor != i &&
-              !cortaNumero(kv, t)) { melhor = i; nCand++; chave = kv; }
+  if (t >= 4) {
+    int lo, a = 0, b = P.nIdx, cand = -1, nCand = 0;
+    const char *kc = NULL;
+    while (a < b) { int m = (a + b) / 2; if (strcmp(P.k + P.idx[m].chave, k1) < 0) a = m + 1; else b = m; }
+    for (lo = a; lo < P.nIdx; lo++) {
+      const char *kv = P.k + P.idx[lo].chave;
+      if (strncmp(kv, k1, (size_t)t)) break;
+      if ((long)strlen(kv) <= t || cortaNumero(kv, t)) continue;
+      if (P.idx[lo].canal != cand) { cand = P.idx[lo].canal; nCand++; kc = kv; }
+    }
+    if (nCand == 1) DEVOLVE(cand, kc);
+  }
+  // uma chave comprida da grade INTEIRA dentro do nome ("TV Cidade - RecordTV"):
+  // vence a mais comprida; empate de tamanho com chaves DIFERENTES e ambiguo.
+  { const char *nomes[2] = { k1, k2 };
+    for (L = (int)t - 1; L >= 6; L--) {
+      int achou = -1, ambig = 0, q, i;
+      char chaveAchada[96] = "";
+      for (q = 0; q < 2; q++) {
+        const char *k = nomes[q];
+        int tk = (int)strlen(k);
+        for (i = 0; i + L <= tk; i++) {
+          int c;
+          if (cortaNumero(k + i, L)) continue;
+          memcpy(sub, k + i, (size_t)L); sub[L] = 0;
+          if ((c = idxCanalCom(sub)) < 0) continue;
+          if (achou < 0) { achou = c; snprintf(chaveAchada, sizeof chaveAchada, "%s", sub); }
+          else if (strcmp(chaveAchada, sub)) ambig = 1;
         }
-    if (nCand == 1) DEVOLVE(melhor, chave); }
-  // chave comprida da grade INTEIRA dentro do nome ("TV Cidade - RecordTV")
-  { long melhorTc = 0; int ambig = 0; const char *melhorChave = NULL;
-    melhor = -1;
-    for (i = 0; i < P.nCanais; i++)
-      for (j = 0; j < P.canais[i].nChaves; j++) {
-        const char *kv = KS(&P, P.canais[i].chaves[j]);
-        long tc = (long)strlen(kv);
-        if (tc < 6 || t <= tc) continue;
-        { const char *em = strstr(k1, kv);
-          if (!em && k2[0]) em = strstr(k2, kv);
-          if (!em) continue;
-          if (cortaNumero(em, tc)) continue; }
-        if (tc > melhorTc) { melhorTc = tc; melhor = i; melhorChave = kv; ambig = 0; }
-        else if (tc == melhorTc && i != melhor && !(melhorChave && !strcmp(melhorChave, kv)))
-          ambig = 1;
       }
-    if (melhor >= 0 && !ambig) DEVOLVE(melhor, melhorChave); }
+      if (achou >= 0) {
+        if (ambig) break;
+        { int c = idxMelhor(chaveAchada, -1);
+          snprintf(sub, sizeof sub, "%s", chaveAchada);
+          DEVOLVE(c >= 0 ? c : achou, sub); }
+      }
+    } }
   // afiliada regional: o primeiro token util e a chave inteira de uma rede
   if (prim[0] && (long)strlen(prim) >= 3) {
     int c = idxMelhor(prim, -1);
