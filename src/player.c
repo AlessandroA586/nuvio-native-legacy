@@ -485,7 +485,7 @@ static int pedGuia, pedZap, pedGuiaCheio;   // pedidos de canal: overlay do guia
 // -2), 0 = nenhum. `pedRecarregar` refaz a busca de fonte do mesmo canal.
 static AoVivoZap zapEst;
 static float bannerAV;         // 0..1, a entrada do banner do zapping
-static int botaoAV, infoAV, pedRecarregar;
+static int botaoAV, infoAV, pedRecarregar, pedUltimo;
 static int avErroFoco;   // o botao em foco no modal do erro do canal
 // ATRAS DO AO VIVO (29/09/2026). Canal com janela de tempo (DVR do provedor)
 // pausa; quem pausa fica atras da transmissao, e o OSD diz quanto e oferece
@@ -530,6 +530,8 @@ int  player_pediu_guia(void) { int v = pedGuia; pedGuia = 0; return v; }
 int  player_pediu_guia_cheio(void) { int v = pedGuiaCheio; pedGuiaCheio = 0; return v; }
 int  player_pediu_zap(void)  { int v = pedZap;  pedZap  = 0; return v; }
 int  player_pediu_recarregar(void) { int v = pedRecarregar; pedRecarregar = 0; return v; }
+int  player_pediu_ultimo(void) { int v = pedUltimo; pedUltimo = 0; return v; }
+const char *player_titulo_canal(void) { return itemCanal.titulo; }
 void player_episodio_atual(int *t, int *e) { *t = epT; *e = epE; }
 // O dono avancou na mao (Comecar agora): lembra quanto faltava (credaprende.h).
 void player_aprender_creditos(void) {
@@ -1238,7 +1240,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   abrindoExp = 0; abrindoT = 0.0f; abrindoDesde = 0;
   erroTitulo[0] = erroDica[0] = 0;
   pedGuia = pedZap = pedGuiaCheio = 0;
-  memset(&zapEst, 0, sizeof zapEst); bannerAV = 0.0f; botaoAV = 0; infoAV = 0; pedRecarregar = 0;
+  memset(&zapEst, 0, sizeof zapEst); bannerAV = 0.0f; botaoAV = 0; infoAV = 0; pedRecarregar = 0; pedUltimo = 0;
   avLat0 = -1.0; avAtraso = 0.0; avPausaDesde = 0;
   retomadaAplicada=0; semRetomada=0;
   abertoEm = SDL_GetTicks(); medirAbertura = 1; tocouMedido = 0;
@@ -1261,7 +1263,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   prebuscaUrl[0] = 0;
   // Reconexao so no filme/episodio: canal ao vivo tem o watchdog de app.c.
   video_definir_reconexao(!ehCanal());
-  video_definir_modo_live(ehCanal() ? ajustes_livetv_modo() : 0);
+  video_definir_modo_live(ehCanal() ? guia_modo_do_canal(player_id_canal(), ajustes_livetv_modo()) : 0);
   // F07: seek cache for this open (live channels never; the backend also
   // refuses HLS/DASH). Arms only the next video_tocar: trailers stay uncached.
   cacheboost_backend_cache(ehCanal() ? 0 : ajustes_cache_seek_mb());
@@ -1343,7 +1345,7 @@ static int prebuscaCabe(const char *url) {
 static void tocarFonte(const char *url) {
   marco("abrir: url ao pipeline");
   video_definir_reconexao(!ehCanal());
-  video_definir_modo_live(ehCanal() ? ajustes_livetv_modo() : 0);
+  video_definir_modo_live(ehCanal() ? guia_modo_do_canal(player_id_canal(), ajustes_livetv_modo()) : 0);
   cacheboost_backend_cache(ehCanal() ? 0 : ajustes_cache_seek_mb());   // F07, ver player_abrir
   { char px[96];
 #ifdef NV_ANDROID
@@ -2270,6 +2272,7 @@ static int avBotoes(int *ids) {
   ids[n++] = AV_B_INFO;
   ids[n++] = AV_B_RECARREGAR;
   ids[n++] = AV_B_FONTE;
+  ids[n++] = AV_B_ULTIMO;
   ids[n++] = AV_B_ASPECTO;   // no fim, como no mockup do Glass UI
   return n;
 }
@@ -2295,6 +2298,7 @@ static void avAtivar(int b) {
     case AV_B_LEGENDA: pedFaixas = 2; break;
     case AV_B_INFO: infoAV = !infoAV; break;
     case AV_B_RECARREGAR: pedRecarregar = 1; break;
+    case AV_B_ULTIMO: pedUltimo = 1; break;
     case AV_B_FONTE: pedFontes = 1; break;
   }
 }
@@ -2541,6 +2545,10 @@ void player_evento(const SDL_Event *e) {
   // um cursor que aqui nao existe. Numa TV o gesto tem que ser um toque, e o
   // aviso que sobe na troca ja diz em que modo se entrou, entao a tecla nem
   // precisa da interface aberta. O 0 e a tecla livre no controle da LG.
+  // NA LIVE TV o "0" e o ULTIMO CANAL (decisao 5 do dono, plano do guia M7): e
+  // o atalho mais usado de TV paga. A proporcao do canal fica no botao do OSD.
+  // No filme continua a proporcao.
+  if ((k == SDLK_0 || k == SDLK_KP_0) && ehCanal()) { pedUltimo = 1; return; }
   if (k == SDLK_0 || k == SDLK_KP_0) { player_aspecto_ciclar(); return; }
 
   // CANAL AO VIVO: OSD proprio (aovivo.h) e teclas proprias. BAIXO e o botao

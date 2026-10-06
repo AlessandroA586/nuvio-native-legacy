@@ -86,6 +86,8 @@ object NvPlayer {
     private var cabAtual = ""
     private var abriuEm = 0L
     private var retentou = false
+    private var atrasJanelaDesde = 0L
+    private var atrasJanelaN = 0
     private var pronto = false
     private var duracaoEnviada = -1
     private var videoW = 0
@@ -704,6 +706,19 @@ object NvPlayer {
         override fun onPlayerError(error: PlaybackException) {
             if (!atual(minha)) return
             Log.w(TAG, "erro ${error.errorCodeName} (${error.errorCode}): ${error.message}")
+            // AO VIVO ATRAS DA JANELA (1002, visto nos logs 2.0.x): o player ficou
+            // para tras do que o servidor ainda guarda (rede lenta, pausa longa).
+            // Nao e erro do canal: volta para a borda ao vivo e prepara de novo,
+            // ate 3 vezes por minuto para nao virar laco num fluxo quebrado.
+            if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
+                val agora = SystemClock.elapsedRealtime()
+                if (agora - atrasJanelaDesde > 60_000L) { atrasJanelaDesde = agora; atrasJanelaN = 0 }
+                if (atrasJanelaN < 3) {
+                    atrasJanelaN++
+                    player?.let { it.seekToDefaultPosition(); it.prepare() }
+                    return
+                }
+            }
             // Decoder que falha nos primeiros 5 s: o recurso pode estar sendo
             // solto por outro app (ResourceConflict do Tizen); reabre uma vez.
             val cedo = SystemClock.elapsedRealtime() - abriuEm < RETRY_DECODER_MS

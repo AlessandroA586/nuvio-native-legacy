@@ -372,6 +372,18 @@ int main(int argc, char **argv) {
   snprintf(nome, sizeof nome, "%s-lista-sem-epg.bmp", saida);
   capturaTela(nome, w, 1);
 
+  // BARRA DE FONTES (M3): foco no chip do Xtream, com a linha da fonte.
+  focoLin = 0; focoCol = 0; rolL = 0.0f; focoAnelOk = 0;
+  ltvF[1].saude = LTV_SAUDE_DEGRADADA; ltvF[1].cortada = 1; ltvF[1].total = 16462;
+  focoFontes = 1; fontesCol = 3;
+  snprintf(nome, sizeof nome, "%s-fontes.bmp", saida);
+  capturaTela(nome, w, 1);
+  // ESCOLHER GRADE DESTE CANAL (M5): opcoes do canal -> lista de grades.
+  focoFontes = 0;
+  fopCanalAbrir(&canais[0]); fopFoco = 1; fopCanalOk(); fopFoco = 2;
+  snprintf(nome, sizeof nome, "%s-grade-manual.bmp", saida);
+  capturaTela(nome, w, 1);
+  fopAberto = 0;
   focoLin = 0; focoCol = 1; rolL = 0.0f; focoAnelOk = 0;
   focoTopo = 1; topoCol = G_TOPO_PREVIEW; animTopo[G_TOPO_PREVIEW] = 1.0f;
   snprintf(nome, sizeof nome, "%s-lista-topo.bmp", saida);

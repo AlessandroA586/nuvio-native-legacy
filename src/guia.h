@@ -99,7 +99,13 @@ int  guia_variantes(const char *id, GuiaVariante *out, int max);
 // Canais da fileira em foco para o diagnostico da Live TV; `bases` (opcional)
 // recebe o addon de cada um, `grupo` o nome da fileira.
 int  guia_canais_para_teste(GuiaVariante *out, char bases[][600], int max, char *grupo, size_t ng);
-int  guia_pediu_livetv_diag(void);   // VERDE no guia completo
+int  guia_pediu_livetv_diag(void);
+// A fonte (chave ltv.h) do canal; 0 = fora da lista.
+int  guia_fonte_do_canal(const char *id, char *chave, size_t n);
+// O diagnostico grava formato/modo/proxy na fonte do canal testado (M8), e o
+// player le o modo da fonte ao abrir o canal (padrao = o dos Ajustes).
+void guia_fonte_gravar_diag(const char *id, int formato, int modo, int proxy);
+int  guia_modo_do_canal(const char *id, int padrao);   // VERDE no guia completo
 int  guia_item_do_canal(const char *id, const char *nome, const char *base, CatItem *it);
 
 // --- A CARA DO CANAL FORA DO GUIA (29/09/2026) -------------------------------

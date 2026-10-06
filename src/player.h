@@ -126,6 +126,9 @@ int  player_pediu_guia(void);
 // O botao "Guia" do OSD do canal: o guia COMPLETO com o canal no preview.
 int  player_pediu_guia_cheio(void);
 int  player_pediu_zap(void);        // deslocamento em canais (+3, -1...), 0 = nenhum
+// "0" ou o botao "Ultimo canal" na Live TV (decisao 5): voltar ao canal anterior.
+int  player_pediu_ultimo(void);
+const char *player_titulo_canal(void);   // nome do canal no ar ("" sem canal)
 int  player_pediu_recarregar(void);  // "Recarregar" do OSD: refaz a fonte do mesmo canal
 // Identidade do canal congelada na abertura: o indice do catalogo pode ser
 // remapeado por uma republicacao da descoberta em plena reproducao, e zap/foco

@@ -1494,9 +1494,19 @@ static void tentarProximaFonteVOD(void) {
 // aguardandoFonte=1 manda a escolha para stream_primeira_boa, como o
 // Reproduzir do detalhe — sem folha de fontes no meio, que para um canal ao
 // vivo so atrapalharia o zapear.
+// ULTIMO CANAL (recall, M7): o canal que estava no ar antes do atual. Guardado
+// em toda troca de canal; o "0" e o botao do OSD voltam a ele (e trocam de lugar).
+static char ultCanalId[80], ultCanalNome[140], ultCanalBase[600];
+static char atualCanalBase[600];
 static void tocarCanal(const CatItem *it) {
   int ni;
   if (!it || !it->imdb[0]) return;
+  if (player_aberto() && player_id_canal()[0] && strcmp(player_id_canal(), it->imdb)) {
+    snprintf(ultCanalId, sizeof ultCanalId, "%s", player_id_canal());
+    snprintf(ultCanalNome, sizeof ultCanalNome, "%s", player_titulo_canal());
+    snprintf(ultCanalBase, sizeof ultCanalBase, "%s", atualCanalBase);
+  }
+  snprintf(atualCanalBase, sizeof atualCanalBase, "%s", guia_canal_origem());
   ni = cat_indice_por_imdb(it->imdb);
   if (ni < 0) ni = cat_acrescentar(it);
   if (ni < 0) return;
@@ -3833,6 +3843,14 @@ void app_atualizar(float dt, Uint32 agora) {
       else guia_carregar();
     } }
 
+  // ULTIMO CANAL: "0" ou o botao do OSD na Live TV.
+  if (player_pediu_ultimo() && player_aberto() && aguardandoFonte != 2) {
+    CatItem it;
+    if (ultCanalId[0] && guia_item_do_canal(ultCanalId, ultCanalNome, ultCanalBase, &it)) {
+      printf("[livetv] ultimo canal\n"); fflush(stdout);
+      tocarCanal(&it);
+    }
+  }
   // RECARREGAR (botao do OSD do canal): mesma acao do zap com deslocamento 0 —
   // o proprio canal, fonte buscada de novo.
   if (player_pediu_recarregar() && player_aberto() && aguardandoFonte != 2) {

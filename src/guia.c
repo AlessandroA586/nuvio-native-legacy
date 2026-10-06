@@ -1912,25 +1912,68 @@ int guia_variantes(const char *id, GuiaVariante *out, int max) {
   return n;
 }
 
-// OS CANAIS DO TESTE do diagnostico da Live TV: a fileira em foco (que pode
-// ser a de Favoritos), a partir do canal focado; sem foco valido, a primeira.
+// OS CANAIS DO TESTE do diagnostico da Live TV (M8). Nos logs 2.0.x, 20 de 40
+// recomendacoes nao mediram nada: a fileira em foco estava vazia ou era curta.
+// Agora: a fileira em foco a partir do canal focado e, se ela tiver menos que
+// `max`, o resto vem da MESMA FONTE do canal focado, um de cada grupo (grupos
+// diferentes costumam ser servidores diferentes). Sem foco valido, a primeira
+// fonte com canal.
 int guia_canais_para_teste(GuiaVariante *out, char bases[][600], int max, char *grupo, size_t ng) {
-  int l = focoLin, c0 = focoCol, n = 0, k, total;
+  int l = focoLin, c0 = focoCol, n = 0, k, total, f = -1, g;
+  GCanal *foco;
   if (l < 0 || l >= nLinhas()) l = 0;
   total = linhaN(l);
   if (c0 < 0 || c0 >= total) c0 = 0;
+  foco = linhaItem(l, c0);
+  if (foco) f = foco->fonte;
+  else if (nCanais) f = canais[0].fonte;
   if (grupo && ng) snprintf(grupo, ng, "%s", nLinhas() ? linhaNome(l) : "");
-  for (k = 0; k < total && n < max; k++) {
-    GCanal *g = linhaItem(l, (c0 + k) % total);
-    if (!g) continue;
-    snprintf(out[n].id, sizeof out[n].id, "%s", g->id);
-    snprintf(out[n].nome, sizeof out[n].nome, "%s", g->nome);
-    out[n].altura = nv_res_do_texto(g->nome);
-    if (bases) snprintf(bases[n], 600, "%s", g->base);
-    n++;
+  #define POE(g_) do { GCanal *g2 = (g_); int j_, ja_ = 0;                          \
+      for (j_ = 0; j_ < n; j_++) if (!strcmp(out[j_].id, g2->id)) ja_ = 1;          \
+      if (!ja_) { snprintf(out[n].id, sizeof out[n].id, "%s", g2->id);              \
+        snprintf(out[n].nome, sizeof out[n].nome, "%s", g2->nome);                  \
+        out[n].altura = nv_res_do_texto(g2->nome);                                  \
+        if (bases) snprintf(bases[n], 600, "%s", g2->base); n++; } } while (0)
+  for (k = 0; k < total && n < max && n < 3; k++) {
+    GCanal *g1 = linhaItem(l, (c0 + k) % total);
+    if (g1) POE(g1);
   }
+  for (g = 0; g < nCats && n < max && f >= 0; g++)
+    if (cats[g].fonte == f && catN[g] > 0) POE(&canais[catIni[g]]);
+  for (k = 3; k < total && n < max; k++) {
+    GCanal *g1 = linhaItem(l, (c0 + k) % total);
+    if (g1) POE(g1);
+  }
+  #undef POE
+  if (grupo && ng && f >= 0 && f < nLtvF && n > total)
+    snprintf(grupo, ng, "%s", ltvF[f].nome);
   return n;
 }
+
+// O diagnostico grava o que mediu NA FONTE (M8), e nao so nos Ajustes globais:
+// cada provedor pede um formato/modo diferente (#158).
+int guia_fonte_do_canal(const char *id, char *chave, size_t n) {
+  GCanal *c = canalPorId(id);
+  if (!c || c->fonte < 0 || c->fonte >= nLtvF) return 0;
+  snprintf(chave, n, "%s", ltvF[c->fonte].chave);
+  return 1;
+}
+void guia_fonte_gravar_diag(const char *id, int formato, int modo, int proxy) {
+  char ch[LTV_CHAVE];
+  LtvPref *p;
+  if (!guia_fonte_do_canal(id, ch, sizeof ch) || !(p = ltv_pref(ch, 1))) return;
+  p->formato = formato; p->modo = modo; p->proxy = proxy;
+  ltv_pref_gravar();
+  printf("[ltv] fonte=%s diagnostico gravado: formato=%d modo=%d proxy=%d\n", ch, formato, modo, proxy);
+  fflush(stdout);
+}
+int guia_modo_do_canal(const char *id, int padrao) {
+  char ch[LTV_CHAVE];
+  LtvPref *p;
+  if (!guia_fonte_do_canal(id, ch, sizeof ch) || !(p = ltv_pref(ch, 0)) || p->modo < 0) return padrao;
+  return p->modo;
+}
+
 static int pedLivetvDiag;
 int guia_pediu_livetv_diag(void) { int v = pedLivetvDiag; pedLivetvDiag = 0; return v; }
 
@@ -2465,6 +2508,96 @@ static void sair(void) {
   catAberto = 0; dirSeg = 0; okDesde = 0; focoTopo = 0;
 }
 
+// --- BARRA DE FONTES (M3) -----------------------------------------------------------
+// "★ Favoritos · Todas · <addon> · Xtream · <M3U>" no alto da ficha do heroi.
+// Cada chip de fonte tem um PONTO DE SAUDE (verde ok, ambar lista do cache ou
+// grade fraca, vermelho fora) e a contagem. Foco num chip mostra a linha da
+// fonte (canais, grupos, grade em %, atualizada ha quanto, e o aviso de corte).
+// OK filtra (a escolha vale so na sessao, decisao 1); segurar OK abre as opcoes
+// da fonte: ordem dos grupos (provedor / A-Z) e o horario da grade (M6).
+#define G_FONTES_H 56.0f
+static int focoFontes, fontesCol;
+static Uint32 fontesOkDesde; static int fontesOkLongo;
+static int fopAberto, fopFoco;            // opcoes da fonte
+// OPCOES DO CANAL (segurar OK numa linha, M5/M7): Favorito e "Escolher grade
+// deste canal". fopModo 0 = fonte, 1 = canal, 2 = lista de grades.
+enum { FOP_FONTE = 0, FOP_CANAL, FOP_GRADE };
+static int fopModo;
+#define G_SUG 8
+static int sugN, sug[G_SUG];
+static GCanal *fopCanal;
+static void mapaDefinir(GCanal *c, const char *gf, const char *gid);
+static float fontesRol;
+static int barraVisivel(void) { return nLtvF > 0 && !overlay; }
+static int fontesN(void) { return 2 + nLtvF; }
+static int filtroDoChip(int i) { return i == 0 ? G_FILTRO_FAV : i == 1 ? G_FILTRO_TODAS : i - 2; }
+static int chipDoFiltro(void) { return filtro == G_FILTRO_FAV ? 0 : filtro == G_FILTRO_TODAS ? 1 : filtro + 2; }
+static void fontesEntrar(void) { focoFontes = 1; focoTopo = 0; fontesCol = chipDoFiltro(); fopAberto = 0; }
+static void fontesEscolher(int i) {
+  filtroDefinir(filtroDoChip(i));
+  focoLin = 0; focoCol = 0; focoValido();
+  printf("[ltv] filtro: %s\n", i == 0 ? "favoritos" : i == 1 ? "todas" : ltvF[i - 2].chave);
+  fflush(stdout);
+}
+enum { FOP_AZ, FOP_FUSO, FOP_RECARREGAR, FOP_N };
+static void fopCanalAbrir(GCanal *c) { fopAberto = 1; fopModo = FOP_CANAL; fopFoco = 0; fopCanal = c; }
+static int fopItens(void) { return fopModo == FOP_CANAL ? 2 : fopModo == FOP_GRADE ? 2 + sugN : FOP_N; }
+static void fopCanalOk(void) {
+  GCanal *c = fopCanal;
+  if (!c) { fopAberto = 0; return; }
+  if (fopModo == FOP_CANAL) {
+    if (fopFoco == 0) { favAlternar(c); fopAberto = 0; return; }
+    // As sugestoes: as grades com programa mais parecidas com o nome (fuzzy so
+    // SUGERE, nunca casa sozinho), e a atual primeiro quando ha.
+    sugN = epg_sugerir(c->tvgNome[0] ? c->tvgNome : c->nome, sug, G_SUG);
+    fopModo = FOP_GRADE; fopFoco = 0;
+    return;
+  }
+  if (fopFoco == 0) mapaDefinir(c, NULL, NULL);
+  else if (fopFoco == 1) mapaDefinir(c, "", "-");
+  else mapaDefinir(c, epg_canal_fonte(sug[fopFoco - 2]), epg_canal_id(sug[fopFoco - 2]));
+  epgCoberturaZerar();
+  fopAberto = 0;
+}
+static void fopMudar(int dir) {
+  int f = fontesCol - 2;
+  LtvPref *p;
+  if (fopModo != FOP_FONTE) { if (dir == 0) fopCanalOk(); return; }
+  if (f < 0 || f >= nLtvF || !(p = ltv_pref(ltvF[f].chave, 1))) return;
+  if (fopFoco == FOP_AZ) { p->az = !p->az; ltv_pref_gravar(); empacotar(); focoValido(); }
+  else if (fopFoco == FOP_FUSO) {
+    p->fusoMin += dir * 30;
+    if (p->fusoMin < -720) p->fusoMin = -720;
+    if (p->fusoMin > 840) p->fusoMin = 840;
+    ltvF[f].fusoS = p->fusoMin * 60;
+    ltv_pref_gravar();
+    printf("[ltv] fonte=%s fuso=%+dmin\n", ltvF[f].chave, p->fusoMin); fflush(stdout);
+  } else if (fopFoco == FOP_RECARREGAR && dir == 0) {
+    fopAberto = 0;
+    if (fioVivo) recarregarPend = 1;
+    else { estado = G_PARADO; ultTentativa = 0; iniciarCarga(); }
+  }
+}
+// Teclas da barra. 1 = consumiu.
+static int fontesEvento(SDL_Keycode k, Uint32 agora) {
+  if (fopAberto) {
+    if (k == SDLK_UP)   { if (fopFoco > 0) fopFoco--; return 1; }
+    if (k == SDLK_DOWN) { if (fopFoco + 1 < fopItens()) fopFoco++; return 1; }
+    if (k == SDLK_LEFT || k == SDLK_RIGHT) { fopMudar(k == SDLK_RIGHT ? 1 : -1); return 1; }
+    if (k == SDLK_RETURN || k == SDLK_KP_ENTER) { fopMudar(0); return 1; }
+    return 1;
+  }
+  if (k == SDLK_LEFT)  { if (fontesCol > 0) fontesCol--; return 1; }
+  if (k == SDLK_RIGHT) { if (fontesCol + 1 < fontesN()) fontesCol++; return 1; }
+  if (k == SDLK_UP)    { focoFontes = 0; focoTopo = 1; topoCol = modoLista ? G_TOPO_LISTA : G_TOPO_CARTOES; return 1; }
+  if (k == SDLK_DOWN)  { focoFontes = 0; focoValido(); return 1; }
+  if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
+    if (!fontesOkDesde) { fontesOkDesde = agora ? agora : 1; fontesOkLongo = 0; }
+    return 1;
+  }
+  return 0;
+}
+
 void guia_evento(const SDL_Event *e) {
   if (!guia_visivel()) return;
   if (buscaEvento(e)) return;
@@ -2479,6 +2612,12 @@ void guia_evento(const SDL_Event *e) {
     if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
       if (okDesde && !okLongo) acaoOk();
       okDesde = 0; okLongo = 0;
+      if (fontesOkDesde && !fontesOkLongo && focoFontes && !fopAberto) {
+        int ch = fontesCol;
+        fontesEscolher(ch);
+        focoFontes = 0;
+      }
+      fontesOkDesde = 0; fontesOkLongo = 0;
     }
     return;
   }
@@ -2490,6 +2629,8 @@ void guia_evento(const SDL_Event *e) {
 
   if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE ||
       k == SDLK_DELETE || e->key.keysym.scancode == NV_SCANCODE_BACK) {
+    if (fopAberto) { fopAberto = 0; return; }
+    if (focoFontes && !painel && !catAberto) { focoFontes = 0; return; }
     sair(); return;
   }
   // NA FAIXA, AZUL ABRE O GUIA COMPLETO (o canal no ar encolhe para o
@@ -2570,13 +2711,17 @@ void guia_evento(const SDL_Event *e) {
     return;
   }
 
+  if (fopAberto) { dirSeg = 0; fontesEvento(k, agora); return; }
+  if (focoFontes && barraVisivel()) { dirSeg = 0; if (fontesEvento(k, agora)) return; }
+  else focoFontes = 0;
+
   // Foco no cabecalho: ESQUERDA/DIREITA entre os tres controles, BAIXO volta
-  // as linhas, OK age. CIMA nao faz nada — nao ha nada acima.
+  // a barra de fontes (ou as linhas), OK age. CIMA nao faz nada.
   if (focoTopo) {
     dirSeg = 0;
     if (k == SDLK_LEFT)  { if (topoCol > 0) topoCol--; return; }
     if (k == SDLK_RIGHT) { if (topoCol + 1 < G_TOPO_N) topoCol++; return; }
-    if (k == SDLK_DOWN)  { focoTopo = 0; return; }
+    if (k == SDLK_DOWN)  { focoTopo = 0; if (barraVisivel()) fontesEntrar(); return; }
     if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
       if (topoCol == G_TOPO_BUSCAR) buscaAbrir();
       else if (topoCol == G_TOPO_CATEGORIAS) catAbrir(2, 0);
@@ -2600,7 +2745,8 @@ void guia_evento(const SDL_Event *e) {
     // CIMA na primeira linha sobe ao cabecalho — so num toque FRESCO: quem
     // esta segurando CIMA quer o modo salta-categoria, nao o controle.
     if (dir < 0 && fresco && focoLin == 0 && (!modoLista || focoCol == 0)) {
-      focoTopo = 1; topoCol = modoLista ? G_TOPO_LISTA : G_TOPO_CARTOES;
+      if (barraVisivel()) fontesEntrar();
+      else { focoTopo = 1; topoCol = modoLista ? G_TOPO_LISTA : G_TOPO_CARTOES; }
       dirSeg = 0;
       return;
     }
@@ -2630,11 +2776,11 @@ void guia_evento(const SDL_Event *e) {
   // toda". BAIXO no cabecalho volta para a linha em que estava.
   if (modoLista) {
     if (k == SDLK_LEFT)  { if (janelaDesl > 0) janelaDesl -= G_L_PASSO_MIN;
-                           else { focoTopo = 1; topoCol = G_TOPO_LISTA; dicaUsou(); } return; }
+                           else { if (barraVisivel()) fontesEntrar(); else { focoTopo = 1; topoCol = G_TOPO_LISTA; } dicaUsou(); } return; }
     if (k == SDLK_RIGHT) { if (janelaDesl < G_L_DESL_MAX) janelaDesl += G_L_PASSO_MIN; return; }
   } else {
     if (k == SDLK_LEFT)  { if (focoCol > 0) focoCol--;
-                           else { focoTopo = 1; topoCol = G_TOPO_CARTOES; dicaUsou(); } return; }
+                           else { if (barraVisivel()) fontesEntrar(); else { focoTopo = 1; topoCol = G_TOPO_CARTOES; } dicaUsou(); } return; }
     if (k == SDLK_RIGHT) { if (focoCol + 1 < linhaN(focoLin)) focoCol++; return; }
   }
   if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
@@ -3100,9 +3246,17 @@ void guia_atualizar(float dt, Uint32 agora) {
   }
 
   // OK segurado = favorito.
+  // OK segurado num chip de fonte: as opcoes da fonte (Todas/Favoritos nao tem).
+  if (fontesOkDesde && !fontesOkLongo && agora - fontesOkDesde >= NV_HOLD_MS) {
+    fontesOkLongo = 1;
+    if (focoFontes && fontesCol >= 2) { fopAberto = 1; fopModo = FOP_FONTE; fopFoco = 0; }
+  }
   if (okDesde && !okLongo && agora - okDesde >= NV_HOLD_MS) {
     GCanal *c = linhaItem(focoLin, focoCol);
-    if (c) favAlternar(c);
+    // Na faixa sobre o video o OK segurado continua sendo o favorito; no guia
+    // completo abre as opcoes do canal (Favorito, Escolher grade).
+    if (c && overlay) favAlternar(c);
+    else if (c) fopCanalAbrir(c);
     okLongo = 1;
   }
 
@@ -3485,7 +3639,7 @@ static void desenharHero(float a, time_t agoraT, time_t tFoco) {
   GfxRect pv = { G_PREVIEW_X, G_PREVIEW_Y, G_PREVIEW_W, G_PREVIEW_H };
   float raio = G_PREVIEW_RAIO / G_PREVIEW_H;
   float ha = a * heroA;
-  float x = G_INFO_X, w = G_INFO_W, y = G_HERO_Y;
+  float x = G_INFO_X, w = G_INFO_W, y = G_HERO_Y + (barraVisivel() ? G_FONTES_H : 0.0f);
   float proxY = G_HERO_Y + G_PREVIEW_H - 34.0f;
   float ar, ag, ab;
   int epg, tem = 0, noAr = 0;
@@ -3888,6 +4042,143 @@ static void desenharDuasPortas(float x, float y, float a) {
           i18n("As duas enchem a mesma grade"), 150, 153, 162, 255, d.w - 36.0f);
       txt_desenhar_alpha(t, d.x + (d.w - t.w) * 0.5f, y + dh * 0.5f + 56.0f,
                          a * 0.95f); } }
+}
+
+
+// O "atualizado ha" curto da fonte.
+static void haQuanto(long long quando, char *d, size_t n) {
+  long s = (long)((long long)time(NULL) - quando);
+  if (quando <= 0 || s < 0) { d[0] = 0; return; }
+  if (s < 120) snprintf(d, n, "%s", i18n("agora"));
+  else if (s < 7200) snprintf(d, n, i18n("há %d min"), (int)(s / 60));
+  else if (s < 2 * 86400) snprintf(d, n, i18n("há %d h"), (int)(s / 3600));
+  else snprintf(d, n, i18n("há %d dias"), (int)(s / 86400));
+}
+
+static void desenharFontes(float a) {
+  float x0 = G_INFO_X, xm = G_INFO_X + G_INFO_W, y = G_HERO_Y, h = 40.0f, x, alvo, xf = 0, wf = 0;
+  float xs[2 + G_MAX_LTV], ws[2 + G_MAX_LTV];
+  char rot[2 + G_MAX_LTV][96];
+  int i, n = fontesN(), sel = chipDoFiltro(), tf = ajustes_tinta_foco();
+  if (!barraVisivel()) return;
+  for (i = 0; i < n; i++) {
+    if (i == 0) snprintf(rot[i], sizeof rot[i], "\xe2\x98\x85 %s", i18n("Favoritos"));
+    else if (i == 1) snprintf(rot[i], sizeof rot[i], "%s", i18n("Todas"));
+    else snprintf(rot[i], sizeof rot[i], "%s  %d", ltvF[i - 2].nome, ltvF[i - 2].nCanais);
+    ws[i] = (float)txt_linha(TXT_PG_ROTULO, rot[i], 255, 255, 255, 255).w + 2.0f * G_CHIP_PAD + (i >= 2 ? 18.0f : 0.0f);
+  }
+  for (i = 0, x = 0.0f; i < n; i++) { xs[i] = x; x += ws[i] + 10.0f; }
+  // A barra rola para o chip em foco (ou o escolhido) ficar a vista.
+  { int k = focoFontes ? fontesCol : sel;
+    alvo = fontesRol;
+    if (xs[k] - fontesRol < 0.0f) alvo = xs[k];
+    if (xs[k] + ws[k] - fontesRol > xm - x0) alvo = xs[k] + ws[k] - (xm - x0);
+    fontesRol = alvo; }
+  gfx_recorte(x0 - 4.0f, y - 6.0f, xm - x0 + 8.0f, h + 12.0f);
+  for (i = 0; i < n; i++) {
+    GfxRect r = { x0 + xs[i] - fontesRol, y, ws[i], h };
+    int foc = focoFontes && fontesCol == i, ct;
+    float tx;
+    if (r.x + r.w < x0 - 4.0f || r.x > xm + 4.0f) continue;
+    if (foc) { plrui_pilula_foco(r, a); xf = r.x; wf = r.w; }
+    else if (i == sel) { if (ajustes_vidro()) gfx_cor(r, 0.5f, 1, 1, 1, 0.14f * a); else gfx_cor(r, 0.5f, 0.204f, 0.212f, 0.243f, a); }
+    else plrui_botao_repouso(r, a);
+    ct = foc ? tf : i == sel ? 245 : 168;
+    tx = r.x + G_CHIP_PAD;
+    if (i >= 2) {
+      // Ponto de saude: verde, ambar, vermelho.
+      int sd = ltvF[i - 2].saude;
+      GfxRect d = { tx, r.y + (h - 10.0f) * 0.5f, 10.0f, 10.0f };
+      if (sd == LTV_SAUDE_FORA) gfx_cor(d, 0.5f, 0.92f, 0.33f, 0.31f, a);
+      else if (sd == LTV_SAUDE_DEGRADADA) gfx_cor(d, 0.5f, 0.98f, 0.73f, 0.26f, a);
+      else gfx_cor(d, 0.5f, 0.30f, 0.84f, 0.46f, a);
+      tx += 18.0f;
+    }
+    { TxtLinha t = txt_linha(TXT_PG_ROTULO, rot[i], ct, ct < 255 ? ct + 1 : 255, ct + 5 > 255 ? 255 : ct + 5, 255);
+      txt_desenhar_alpha(t, tx, r.y + (h - (float)t.h) * 0.5f, a); }
+  }
+  gfx_sem_recorte();
+  // A LINHA DA FONTE em foco: o que ela tem, de quando e o aviso de corte.
+  if (focoFontes && fontesCol >= 2 && !fopAberto) {
+    const GFonteLtv *F = &ltvF[fontesCol - 2];
+    char linha[320], quando[64], grade[64] = "";
+    haQuanto(F->atualizada, quando, sizeof quando);
+    if (F->epgResolvidos && F->nCanais)
+      snprintf(grade, sizeof grade, i18n("grade em %d%%"), F->epgCom * 100 / F->nCanais);
+    if (F->saude == LTV_SAUDE_FORA)
+      snprintf(linha, sizeof linha, "%s", i18n("Fora do ar agora · sem lista guardada · segure OK para recarregar"));
+    else {
+      size_t u;
+      if (F->cortada) snprintf(linha, sizeof linha, i18n("Mostrando %d de %d canais (o que cabe nesta TV)"),
+                               F->nCanais, F->total);
+      else snprintf(linha, sizeof linha, i18n("%d canais · %d grupos"), F->nCanais, F->nGrupos);
+      u = strlen(linha);
+      if (grade[0]) u += (size_t)snprintf(linha + u, sizeof linha - u, " \xc2\xb7 %s", grade);
+      snprintf(linha + u, sizeof linha - u, " \xc2\xb7 %s", F->deCache ? i18n("lista guardada") : quando);
+    }
+    { TxtLinha t = txt_linha_corta(TXT_CAPTION, linha, 196, 198, 206, 255, G_INFO_W);
+      GfxRect p = { x0, y + h + 8.0f, (float)t.w + 28.0f, 36.0f };
+      gfx_cor(p, 0.5f, 0.08f, 0.085f, 0.10f, 0.94f * a);
+      txt_desenhar_alpha(t, p.x + 14.0f, p.y + (p.h - (float)t.h) * 0.5f, a); }
+  }
+  if (fopAberto && fopModo != FOP_FONTE && fopCanal) {
+    static char it[2 + G_SUG][160];
+    int nIt = fopItens(), k, tf2 = ajustes_tinta_foco();
+    GfxRect c = { x0, G_HERO_Y + G_FONTES_H + 20.0f, 760.0f, 60.0f + (float)nIt * 58.0f };
+    const char *tit = fopModo == FOP_CANAL ? fopCanal->nome : i18n("Escolher grade deste canal");
+    if (fopModo == FOP_CANAL) {
+      snprintf(it[0], sizeof it[0], "%s%s", fopCanal->fav ? "\xe2\x98\x85 " : "", i18n("Favorito"));
+      snprintf(it[1], sizeof it[1], "%s", i18n("Escolher grade deste canal"));
+    } else {
+      int e = epgDo(fopCanal);
+      snprintf(it[0], sizeof it[0], "%s%s%s", i18n("Automática"), e >= 0 ? " \xc2\xb7 " : "",
+               e >= 0 ? epg_canal_nome(e) : "");
+      snprintf(it[1], sizeof it[1], "%s", i18n("Sem grade de programação"));
+      for (k = 0; k < sugN; k++)
+        snprintf(it[2 + k], sizeof it[0], "%s%s%s", epg_canal_nome(sug[k]),
+                 epg_canal_fonte(sug[k])[0] ? "  \xc2\xb7  " : "", epg_canal_fonte(sug[k]));
+    }
+    materialPainelGuia(c, 22.0f, a);
+    gfx_cor(c, 22.0f / c.h, 0.071f, 0.075f, 0.086f, 0.92f * a);   // o heroi nao vaza pelo vidro
+    { TxtLinha t = txt_linha_corta(TXT_PG_ROTULO, tit, 150, 153, 162, 255, c.w - 40.0f);
+      txt_desenhar_alpha(t, c.x + 24.0f, c.y + 18.0f, a); }
+    for (k = 0; k < nIt; k++) {
+      GfxRect r = { c.x + 12.0f, c.y + 52.0f + (float)k * 58.0f, c.w - 24.0f, 50.0f };
+      int foc = k == fopFoco, cc = foc ? tf2 : 225;
+      TxtLinha t;
+      if (foc) plrui_linha_foco(r, 18.0f, a);
+      t = txt_linha_corta(TXT_BODY, it[k], cc, cc, cc, 255, r.w - 28.0f);
+      txt_desenhar_alpha(t, r.x + 14.0f, r.y + (r.h - (float)t.h) * 0.5f, a);
+    }
+  }
+  // AS OPCOES DA FONTE (segurar OK): um cartao sob o chip.
+  if (fopAberto && fopModo == FOP_FONTE && fontesCol >= 2) {
+    const GFonteLtv *F = &ltvF[fontesCol - 2];
+    LtvPref *p = ltv_pref(F->chave, 0);
+    char it[FOP_N][120];
+    GfxRect c = { xf > 0 ? xf : x0, y + h + 10.0f, 560.0f, 52.0f + FOP_N * 58.0f };
+    int k;
+    snprintf(it[FOP_AZ], sizeof it[0], "%s: %s", i18n("Ordem dos grupos"),
+             p && p->az ? "A\xe2\x80\x93Z" : i18n("do provedor"));
+    { size_t u = (size_t)snprintf(it[FOP_FUSO], sizeof it[0], i18n("Horário da grade: %+.1f h"),
+                                  (p ? p->fusoMin : 0) / 60.0);
+      snprintf(it[FOP_FUSO] + u, sizeof it[0] - u, "  \xe2\x97\x82\xe2\x96\xb8"); }
+    snprintf(it[FOP_RECARREGAR], sizeof it[0], "%s", i18n("Recarregar"));
+    if (c.x + c.w > xm) c.x = xm - c.w;
+    (void)wf;
+    materialPainelGuia(c, 22.0f, a);
+    gfx_cor(c, 22.0f / c.h, 0.071f, 0.075f, 0.086f, 0.92f * a);   // o heroi nao vaza pelo vidro
+    { TxtLinha t = txt_linha_corta(TXT_PG_ROTULO, F->nome, 150, 153, 162, 255, c.w - 40.0f);
+      txt_desenhar_alpha(t, c.x + 24.0f, c.y + 16.0f, a); }
+    for (k = 0; k < FOP_N; k++) {
+      GfxRect r = { c.x + 12.0f, c.y + 48.0f + (float)k * 58.0f, c.w - 24.0f, 50.0f };
+      int foc = k == fopFoco, cc = foc ? tf : 225;
+      TxtLinha t;
+      if (foc) plrui_linha_foco(r, 18.0f, a);
+      t = txt_linha_corta(TXT_BODY, it[k], cc, cc, cc, 255, r.w - 28.0f);
+      txt_desenhar_alpha(t, r.x + 14.0f, r.y + (r.h - (float)t.h) * 0.5f, a);
+    }
+  }
 }
 
 // --- cabecalho: [Cartoes | Lista]  [Addons]  [Preview]  relogio -------------
@@ -4988,10 +5279,10 @@ void guia_desenhar(Uint32 agora) {
   { const char *dica = modoLista
       ? (overlay
          ? GUIA_FECHA_L
-         : i18n("OK assiste  ·  segure OK = favorito  ·  \xe2\x86\x90\xe2\x86\x92 adianta a grade  ·  segure \xe2\x86\x91\xe2\x86\x93 pula seção  ·  Voltar sai"))
+         : i18n("OK assiste  ·  segure OK = opções  ·  \xe2\x86\x90\xe2\x86\x92 adianta a grade  ·  \xe2\x86\x91 fontes  ·  Voltar sai"))
       : (overlay
          ? GUIA_FECHA_G
-         : i18n("OK assiste  ·  segure OK = favorito  ·  segure \xe2\x86\x91\xe2\x86\x93 pula seção  ·  Voltar sai"));
+         : i18n("OK assiste  ·  segure OK = opções  ·  \xe2\x86\x91 fontes  ·  segure \xe2\x86\x91\xe2\x86\x93 pula seção  ·  Voltar sai"));
     TxtLinha t = txt_linha_corta(TXT_CAPTION, dica, 128, 130, 138, 255,
                                  G_AREA_W);
     txt_desenhar_alpha(t, G_AREA_X, NV_TELA_H - 48.0f, a);
@@ -5007,6 +5298,14 @@ void guia_desenhar(Uint32 agora) {
 #endif
     }
 
+  if ((estado == G_PRONTO || estado == G_BAIXANDO) && nLtvF > 0) {
+    desenharFontes(a);
+    if (filtro == G_FILTRO_FAV && !nFavOrd) {
+      TxtLinha t = txt_linha_corta(TXT_BODY, i18n("Nenhum favorito ainda. Segure OK num canal para marcar."),
+                                   200, 202, 210, 255, G_INFO_W);
+      txt_desenhar_alpha(t, G_INFO_X, G_HERO_Y + G_FONTES_H + 80.0f, a);
+    }
+  }
   desenharDica();
   desenharPainelCategorias(a);
   buscaDesenhar(agora);
