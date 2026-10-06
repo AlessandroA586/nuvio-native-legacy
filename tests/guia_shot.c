@@ -121,7 +121,7 @@ static void capturaPainel(const char *nome, SDL_Window *win, int addonsPane) {
     SDL_PumpEvents();txt_novo_quadro();tex_novo_quadro();tex_bombear(6);gfx_novo_quadro();
     glClearColor(.03f,.03f,.035f,1);glClear(GL_COLOR_BUFFER_BIT);
     if (vidroFundoAtivo()) vidroFundoDesenhar(); else shot_arte_desenhar(0);
-    if(addonsPane) desenharPainelAddons(1); else desenharPainelCategorias(1);
+    if(addonsPane==2) { desenharGrupos(1); } else if(addonsPane) desenharPainelAddons(1); else desenharPainelCategorias(1);
     if(q==69) {
       unsigned char *pix=malloc(1920*1080*4);
       SDL_Surface *s=SDL_CreateRGBSurfaceWithFormat(0,1920,1080,32,SDL_PIXELFORMAT_RGBA32);assert(pix&&s);
@@ -378,6 +378,21 @@ int main(int argc, char **argv) {
   focoFontes = 1; fontesCol = 3;
   snprintf(nome, sizeof nome, "%s-fontes.bmp", saida);
   capturaTela(nome, w, 1);
+  // ESCOLHER GRUPOS (M2): teto de 3000 e uma fonte com grupos grandes.
+  { static const struct { const char *n; int c; } G[] = {
+      {"Esportes",412},{"Filmes",980},{"Series",1450},{"Abertos",190},{"Noticias",120},
+      {"Infantil",260},{"Documentarios",310},{"Musica",150},{"Adulto",500},{"Radio",90},
+      {"Internacional",1700},{"Religiosos",75},{"PPV",64} };
+    GFonteLtv *F = &ltvF[1];
+    int k;
+    free(F->gi); F->gi = calloc(13, sizeof *F->gi); F->ngi = 13;
+    for (k = 0; k < 13; k++) { F->gi[k].nome = G[k].n; F->gi[k].n = G[k].c; F->gi[k].entra = k < 3; }
+    tetoCarga = 3000;
+    gpAbrir(1);
+    gpMarca[0] = 1; gpMarca[3] = 1; gpMarca[4] = 1; gpMarca[5] = 1; gpFoco = 5;
+    snprintf(nome, sizeof nome, "%s-grupos.png", saida);
+    capturaPainel(nome, w, 2);
+    gpAberto = 0; tetoCarga = 30000; }
   // ESCOLHER GRADE DESTE CANAL (M5): opcoes do canal -> lista de grades.
   focoFontes = 0;
   fopCanalAbrir(&canais[0]); fopFoco = 1; fopCanalOk(); fopFoco = 2;

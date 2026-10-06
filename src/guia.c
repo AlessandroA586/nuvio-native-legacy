@@ -2539,7 +2539,8 @@ static void fontesEscolher(int i) {
   printf("[ltv] filtro: %s\n", i == 0 ? "favoritos" : i == 1 ? "todas" : ltvF[i - 2].chave);
   fflush(stdout);
 }
-enum { FOP_AZ, FOP_FUSO, FOP_RECARREGAR, FOP_N };
+enum { FOP_AZ, FOP_GRUPOS, FOP_FUSO, FOP_RECARREGAR, FOP_N };
+static void gpAbrir(int f);
 static void fopCanalAbrir(GCanal *c) { fopAberto = 1; fopModo = FOP_CANAL; fopFoco = 0; fopCanal = c; }
 static int fopItens(void) { return fopModo == FOP_CANAL ? 2 : fopModo == FOP_GRADE ? 2 + sugN : FOP_N; }
 static void fopCanalOk(void) {
@@ -2565,6 +2566,7 @@ static void fopMudar(int dir) {
   if (fopModo != FOP_FONTE) { if (dir == 0) fopCanalOk(); return; }
   if (f < 0 || f >= nLtvF || !(p = ltv_pref(ltvF[f].chave, 1))) return;
   if (fopFoco == FOP_AZ) { p->az = !p->az; ltv_pref_gravar(); empacotar(); focoValido(); }
+  else if (fopFoco == FOP_GRUPOS) { if (dir == 0) gpAbrir(f); }
   else if (fopFoco == FOP_FUSO) {
     p->fusoMin += dir * 30;
     if (p->fusoMin < -720) p->fusoMin = -720;
@@ -2576,6 +2578,96 @@ static void fopMudar(int dir) {
     fopAberto = 0;
     if (fioVivo) recarregarPend = 1;
     else { estado = G_PARADO; ultTentativa = 0; iniciarCarga(); }
+  }
+}
+// --- ESCOLHER GRUPOS (M2) ---------------------------------------------------------
+// Uma fonte que passa do teto da TV mostra so parte dos canais; aqui a pessoa
+// marca os grupos que quer, vendo "N de M canais" ao vivo (M = o teto da
+// plataforma menos o que as OUTRAS fontes ja ocupam). Sem nada marcado vale o
+// automatico: grupos inteiros na ordem do provedor. Marcar so e permitido
+// enquanto couber, para a conta da tela ser a do resultado.
+// Aplicar grava em ltv_pref (grupos) e recarrega; Voltar descarta.
+static int gpAberto, gpFonte, gpFoco, gpN, gpAviso;
+static unsigned char *gpMarca;
+static float gpRol;
+static Uint32 gpAbriuEm, gpAvisoEm;
+static int gpCota(void) {
+  int j, usado = 0;
+  for (j = 0; j < nLtvF; j++) if (j != gpFonte) usado += ltvF[j].nCanais;
+  return tetoCarga - usado > 0 ? tetoCarga - usado : 0;
+}
+// Canais que entram com a marcacao atual (automatico = a regra do provedor).
+static int gpConta(int *auto_) {
+  const GFonteLtv *F = &ltvF[gpFonte];
+  int i, soma = 0, marcados = 0;
+  for (i = 0; i < gpN; i++) if (gpMarca[i]) { soma += F->gi[i].n; marcados++; }
+  if (auto_) *auto_ = !marcados;
+  if (marcados) return soma;
+  { int *c = malloc(sizeof(int) * (size_t)(gpN ? gpN : 1));
+    const char **nm = malloc(sizeof(char *) * (size_t)(gpN ? gpN : 1));
+    unsigned char *en = malloc((size_t)(gpN ? gpN : 1));
+    if (c && nm && en) {
+      for (i = 0; i < gpN; i++) { c[i] = F->gi[i].n; nm[i] = F->gi[i].nome; }
+      soma = ltv_grupos_admitir(c, nm, gpN, NULL, 0, gpCota(), en);
+    }
+    free(c); free(nm); free(en); }
+  return soma;
+}
+static void gpAbrir(int f) {
+  const GFonteLtv *F = &ltvF[f];
+  LtvPref *p = ltv_pref(F->chave, 0);
+  const char *sel[256];
+  int i, ns = p ? ltv_pref_grupos(p, sel, 256) : 0;
+  if (F->ngi <= 0) return;
+  free(gpMarca);
+  gpMarca = calloc((size_t)F->ngi, 1);
+  if (!gpMarca) return;
+  gpFonte = f; gpN = F->ngi; gpFoco = 2; gpRol = 0.0f; gpAviso = 0;
+  // Ja havia escolha: ela. Senao o que esta na tela agora (quando a fonte foi
+  // cortada) ou nada (cabe tudo: automatico).
+  for (i = 0; i < gpN; i++)
+    gpMarca[i] = ns > 0 ? (unsigned char)nomeNaLista(F->gi[i].nome, sel, ns)
+                        : (unsigned char)(F->cortada && F->gi[i].entra);
+  fopAberto = 0; gpAberto = 1; gpAbriuEm = SDL_GetTicks();
+}
+static void gpAplicar(void) {
+  const GFonteLtv *F = &ltvF[gpFonte];
+  LtvPref *p = ltv_pref(F->chave, 1);
+  const char **v = malloc(sizeof(char *) * (size_t)(gpN ? gpN : 1));
+  int i, n = 0;
+  if (p && v) {
+    for (i = 0; i < gpN; i++) if (gpMarca[i]) v[n++] = F->gi[i].nome;
+    ltv_pref_definir_grupos(p, v, n);
+    ltv_pref_gravar();
+    printf("[ltv] fonte=%s grupos escolhidos=%d\n", F->chave, n); fflush(stdout);
+    if (fioVivo) recarregarPend = 1;
+    else { estado = G_PARADO; ultTentativa = 0; iniciarCarga(); }
+  }
+  free(v);
+  gpAberto = 0; focoFontes = 0;
+}
+// Teclas do seletor; sempre consome.
+static void gpEvento(SDL_Keycode k, int repete, Uint32 agora) {
+  int n = 2 + gpN;
+  if (k == SDLK_UP)   { if (gpFoco > 0) gpFoco--; return; }
+  if (k == SDLK_DOWN) { if (gpFoco + 1 < n) gpFoco++; return; }
+  if (k == SDLK_PAGEUP) { gpFoco = gpFoco > 8 ? gpFoco - 8 : 0; return; }
+  if (k == SDLK_PAGEDOWN) { gpFoco = gpFoco + 8 < n ? gpFoco + 8 : n - 1; return; }
+  if ((k == SDLK_RETURN || k == SDLK_KP_ENTER) && !repete && agora - gpAbriuEm > 350u) {
+    if (gpFoco == 0) {
+      int au; (void)gpConta(&au);
+      gpAplicar();
+    } else if (gpFoco == 1) memset(gpMarca, 0, (size_t)gpN);
+    else {
+      int i = gpFoco - 2;
+      if (gpMarca[i]) gpMarca[i] = 0;
+      else {
+        int au, antes = gpConta(&au);
+        int livre = au ? 0 : antes;   // o automatico some ao marcar: conta de zero
+        if (livre + ltvF[gpFonte].gi[i].n <= gpCota()) gpMarca[i] = 1;
+        else { gpAviso = 1; gpAvisoEm = agora; }
+      }
+    }
   }
 }
 // Teclas da barra. 1 = consumiu.
@@ -2627,6 +2719,12 @@ void guia_evento(const SDL_Event *e) {
   // A dica sai na primeira tecla; a tecla segue valendo.
   dicaDesde = 0;
 
+  if (gpAberto) {
+    if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE ||
+        k == SDLK_DELETE || e->key.keysym.scancode == NV_SCANCODE_BACK) { gpAberto = 0; return; }
+    gpEvento(k, e->key.repeat, agora);
+    return;
+  }
   if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE ||
       k == SDLK_DELETE || e->key.keysym.scancode == NV_SCANCODE_BACK) {
     if (fopAberto) { fopAberto = 0; return; }
@@ -4163,6 +4261,7 @@ static void desenharFontes(float a) {
     { size_t u = (size_t)snprintf(it[FOP_FUSO], sizeof it[0], i18n("Horário da grade: %+.1f h"),
                                   (p ? p->fusoMin : 0) / 60.0);
       snprintf(it[FOP_FUSO] + u, sizeof it[0] - u, "  \xe2\x97\x82\xe2\x96\xb8"); }
+    snprintf(it[FOP_GRUPOS], sizeof it[0], "%s", i18n("Escolher grupos"));
     snprintf(it[FOP_RECARREGAR], sizeof it[0], "%s", i18n("Recarregar"));
     if (c.x + c.w > xm) c.x = xm - c.w;
     (void)wf;
@@ -4179,6 +4278,86 @@ static void desenharFontes(float a) {
       txt_desenhar_alpha(t, r.x + 14.0f, r.y + (r.h - (float)t.h) * 0.5f, a);
     }
   }
+}
+
+// O SELETOR DE GRUPOS (M2): folha central de vidro, uma linha por grupo da
+// fonte com caixa de marcar e a contagem; o contador "N de M canais" no alto
+// fica vermelho se a escolha nao couber (a marcacao que estouraria e recusada).
+static void desenharGrupos(float a) {
+  const GFonteLtv *F;
+  float W = 980.0f, H = 840.0f, rowH = 52.0f, listaY, listaH, ar, ag, ab;
+  GfxRect c;
+  int i, n, vis, au, tf = ajustes_tinta_foco(), cota, conta;
+  char tmp[200];
+  if (!gpAberto || gpFonte >= nLtvF) return;
+  F = &ltvF[gpFonte];
+  n = 2 + gpN;
+  c = (GfxRect){ (NV_TELA_W - W) * 0.5f, (NV_TELA_H - H) * 0.5f, W, H };
+  ajustes_acento(&ar, &ag, &ab);
+  gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0, 0, 0, 0, 0.62f * a);
+  materialPainelGuia(c, 26.0f, a);
+  gfx_cor(c, 26.0f / c.h, 0.071f, 0.075f, 0.086f, 0.94f * a);
+  conta = gpConta(&au); cota = gpCota();
+  // Cabecalho: titulo, fonte e o contador.
+  { TxtLinha t = txt_linha(TXT_CALLOUT, i18n("Escolher grupos"), 240, 241, 246, 255);
+    txt_desenhar_alpha(t, c.x + 36.0f, c.y + 26.0f, a); }
+  { TxtLinha t = txt_linha_corta(TXT_CAPTION, F->nome, 150, 153, 162, 255, W * 0.4f);
+    txt_desenhar_alpha(t, c.x + 36.0f, c.y + 70.0f, a); }
+  { int estoura = conta > cota;
+    snprintf(tmp, sizeof tmp, i18n("%d de %d canais"), conta, cota);
+    { TxtLinha t = txt_linha(TXT_BODY, tmp, estoura ? 240 : 236, estoura ? 110 : 237, estoura ? 100 : 242, 255);
+      GfxRect pl = { c.x + c.w - 36.0f - (float)t.w - 32.0f, c.y + 30.0f, (float)t.w + 32.0f, 44.0f };
+      gfx_cor(pl, 0.5f, 1, 1, 1, 0.08f * a);
+      txt_desenhar_alpha(t, pl.x + 16.0f, pl.y + (pl.h - (float)t.h) * 0.5f, a); }
+    if (au) { TxtLinha t = txt_linha(TXT_CAPTION, i18n("Automático: a ordem do provedor, até onde cabe"), 150, 153, 162, 255);
+      txt_desenhar_alpha(t, c.x + c.w - 36.0f - (float)t.w, c.y + 82.0f, a); } }
+  // Linhas: 0 Aplicar, 1 Automatico, depois os grupos.
+  listaY = c.y + 124.0f; listaH = c.h - 124.0f - 64.0f;
+  vis = (int)(listaH / rowH);
+  { float alvo = gpRol;
+    if ((float)gpFoco < alvo) alvo = (float)gpFoco;
+    if ((float)(gpFoco + 1) > alvo + (float)vis) alvo = (float)(gpFoco + 1 - vis);
+    if (alvo < 0.0f) alvo = 0.0f;
+    gpRol += (alvo - gpRol) * 0.35f;
+    if (alvo - gpRol < 0.01f && gpRol - alvo < 0.01f) gpRol = alvo; }
+  gfx_recorte(c.x, listaY - 4.0f, c.w, listaH + 8.0f);
+  for (i = 0; i < n; i++) {
+    GfxRect r = { c.x + 16.0f, listaY + ((float)i - gpRol) * rowH, c.w - 32.0f, rowH - 4.0f };
+    int foc = i == gpFoco, cc = foc ? tf : 225;
+    TxtLinha t;
+    float tx = r.x + 18.0f;
+    if (r.y + r.h < listaY - 4.0f || r.y > listaY + listaH + 4.0f) continue;
+    if (foc) plrui_linha_foco(r, 18.0f, a);
+    if (i == 0) {
+      t = txt_linha_corta(TXT_BODY, i18n("Aplicar e recarregar"), cc, cc, cc, 255, r.w - 40.0f);
+      txt_desenhar_alpha(t, tx, r.y + (r.h - (float)t.h) * 0.5f, a);
+    } else if (i == 1) {
+      t = txt_linha_corta(TXT_BODY, i18n("Automático (ordem do provedor)"), cc, cc, cc, 255, r.w - 40.0f);
+      txt_desenhar_alpha(t, tx, r.y + (r.h - (float)t.h) * 0.5f, a);
+    } else {
+      int g = i - 2, m = gpMarca[g];
+      GfxRect b = { tx, r.y + (r.h - 26.0f) * 0.5f, 26.0f, 26.0f };
+      if (m) gfx_cor(b, 0.28f, foc ? 0.10f : ar, foc ? 0.10f : ag, foc ? 0.10f : ab, a);
+      else {
+        gfx_cor(b, 0.28f, foc ? 0.0f : 1.0f, foc ? 0.0f : 1.0f, foc ? 0.0f : 1.0f, (foc ? 0.45f : 0.30f) * a);
+        gfx_cor((GfxRect){ b.x + 2.0f, b.y + 2.0f, b.w - 4.0f, b.h - 4.0f }, 0.26f, 0.071f, 0.075f, 0.086f, 0.96f * a);
+      }
+      if (m) gfx_cor((GfxRect){ b.x + 7.0f, b.y + 7.0f, 12.0f, 12.0f }, 0.2f, foc ? 1.0f : 0.07f, foc ? 1.0f : 0.07f, foc ? 1.0f : 0.08f, a);
+      snprintf(tmp, sizeof tmp, "%d", F->gi[g].n);
+      { TxtLinha q = txt_linha(TXT_CAPTION, tmp, foc ? cc : 150, foc ? cc : 153, foc ? cc : 162, 255);
+        txt_desenhar_alpha(q, r.x + r.w - 18.0f - (float)q.w, r.y + (r.h - (float)q.h) * 0.5f, a);
+        t = txt_linha_corta(TXT_BODY, F->gi[g].nome, cc, cc, cc, 255, r.w - 130.0f - (float)q.w);
+        txt_desenhar_alpha(t, tx + 44.0f, r.y + (r.h - (float)t.h) * 0.5f, a); }
+    }
+  }
+  gfx_sem_recorte();
+  // Rodape: dica, ou o aviso de que nao cabe.
+  { int aviso = gpAviso && SDL_GetTicks() - gpAvisoEm < 2500u;
+    TxtLinha t = txt_linha_corta(TXT_CAPTION,
+        aviso ? i18n("Esse grupo não cabe nesta TV. Desmarque outro antes.")
+              : i18n("OK marca  ·  Voltar descarta"),
+        aviso ? 240 : 128, aviso ? 130 : 130, aviso ? 110 : 138, 255, c.w - 72.0f);
+    txt_desenhar_alpha(t, c.x + 36.0f, c.y + c.h - 46.0f, a); }
 }
 
 // --- cabecalho: [Cartoes | Lista]  [Addons]  [Preview]  relogio -------------
@@ -5310,6 +5489,7 @@ void guia_desenhar(Uint32 agora) {
   desenharPainelCategorias(a);
   buscaDesenhar(agora);
   if (painel) desenharPainelAddons(a);
+  desenharGrupos(a);
   // O CANAL NO AR ENCOLHENDO para o preview: o furo segue o degrau da janela
   // do player por cima de tudo, e o video "pousa" no preview.
   { float x, y, w, h;
