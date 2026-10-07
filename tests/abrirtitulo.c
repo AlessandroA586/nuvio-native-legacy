@@ -207,6 +207,7 @@ static const char *META_SEM_ELENCO =
 static const char *addonResp, *addonTipo = "/series/";
 static const char *tmdbFind, *tmdbTemp1, *tmdbFilme, *cineSerie;
 int ajustes_cw_concluido(void) { return 90; }
+int   ajustes_cw_minimo(void)             { return 1; }
 unsigned recomenda_geracao(void) { return 1; }
 static int atrasoTempMs;
 static char pedidos[64][600];

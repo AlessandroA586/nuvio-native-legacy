@@ -31,6 +31,7 @@ int perfis_ativo(void) { return perfil; }
 int perfis_n(void) { return nLista; }
 const ContaPerfil *perfis_item(int i) { return i >= 0 && i < nLista ? &lista[i] : NULL; }
 int ajustes_cw_concluido(void) { return 90; }
+int   ajustes_cw_minimo(void)             { return 1; }
 static long long relogio(void) { return agora; }
 
 // O catalogo conhece o que o teste disser.

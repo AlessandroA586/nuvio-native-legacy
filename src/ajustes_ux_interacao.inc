@@ -36,7 +36,7 @@ static int uxRequisito(int op) {
     case AJ_EXPANDIR_ATRASO: case AJ_FOCO_TRAILER: return AJ_EXPANDIR;
     case AJ_CW_OK: case AJ_CW_FONTE: case AJ_CW_ESTILO: case AJ_CW_THUMB:
     case AJ_CW_FURTHEST: case AJ_CW_NAO_EXIBIDOS: case AJ_CW_ORDEM: case AJ_CW_RETIDO_TAMBEM:
-    case AJ_CW_CONCLUIDO: return AJ_CW_LIGADO;
+    case AJ_CW_CONCLUIDO: case AJ_CW_MINIMO: return AJ_CW_LIGADO;
     case AJ_CW_BLUR_PROX: return !lig(AJ_CW_LIGADO) ? AJ_CW_LIGADO : AJ_CW_THUMB;
     case AJ_PROF_BORDA: case AJ_PROF_BRILHO: case AJ_PROF_COBERTURA:
     case AJ_PROF_POSTERS: case AJ_PROF_CW: case AJ_PROF_EPS:

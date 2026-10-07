@@ -85,7 +85,7 @@ int perfilcont_de(const ContaPerfil *p, PerfilCont *saida) {
   ProgRegistro r;
   int i;
   if (!p || !saida || p->temPin) return 0;
-  if (!prog_continuar_de_perfil(p->indice, ajustes_cw_concluido(), &r)) return 0;
+  if (!prog_continuar_de_perfil_min(p->indice, ajustes_cw_minimo(), ajustes_cw_concluido(), &r)) return 0;
   memset(saida, 0, sizeof *saida);
   if (doCatalogo(&r)) {
     snprintf(saida->titulo, sizeof saida->titulo, "%s", rascunho.titulo);
@@ -118,7 +118,7 @@ void perfilcont_registrar(void) {
     ProgRegistro r;
     Snap s;
     int k;
-    if (!p || p->temPin || !prog_continuar_de_perfil(p->indice, ajustes_cw_concluido(), &r) ||
+    if (!p || p->temPin || !prog_continuar_de_perfil_min(p->indice, ajustes_cw_minimo(), ajustes_cw_concluido(), &r) ||
         !doCatalogo(&r) || strlen(rascunho.poster) >= sizeof s.poster) continue;
     memset(&s, 0, sizeof s);
     s.perfil = p->indice; s.t = r.temporada; s.e = r.episodio;

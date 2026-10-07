@@ -142,6 +142,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_PLR_CLASSIF: return "aj_shield";
     case AJ_REACAO_CREDITOS: return "aj_circle-play";
     case AJ_CW_CONCLUIDO: return "aj_circle-play";
+    case AJ_CW_MINIMO: return "aj_circle-play";
     case AJ_SAIDA_PLAYER: return "aj_circle-play";
     case AJ_SEEKR_LIGADO: return "aj_film";
     case AJ_SEEKR_CHAVE: return "aj_film";

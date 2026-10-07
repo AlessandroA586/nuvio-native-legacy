@@ -2395,7 +2395,7 @@ static int continuarLocal(CatItem *saida, int max) {
     int j, repetido = 0;
     if (r->durSeg < 60.0) continue;
     p = r->posSeg / r->durSeg;
-    if (p < 0.01 || p * 100.0 >= ajustes_cw_concluido()) continue;
+    if (p * 100.0 < (double)ajustes_cw_minimo() || p * 100.0 >= ajustes_cw_concluido()) continue;
     // Uma serie com varios episodios gravados entra UMA vez, no mais recente.
     for (j = 0; j < n; j++) {
       size_t L = idbase_len(saida[j].imdb);   // "kitsu:41370" inteiro, nao "kitsu"
@@ -2502,7 +2502,7 @@ static int continuarLocal(CatItem *saida, int max) {
 // home_registrar_retorno. Abaixo de 1% nao se comecou, do Percentual assistido
 // (90% de fabrica) em diante acabou — e "continuar" nao e nem uma coisa nem a
 // outra.
-static int emAndamento(int pct) { return pct >= 1 && pct < ajustes_cw_concluido(); }
+static int emAndamento(int pct) { return pct >= ajustes_cw_minimo() && pct < ajustes_cw_concluido(); }
 
 // QUANDO este item foi visto por ultimo, em ms. 0 = nao se sabe.
 //
@@ -3054,7 +3054,7 @@ int desc_continuar_otimista(int indice) {
   int n, k, mudou, travou;
   if (!ci || !ci->imdb[0]) return 0;
   novo = *ci;
-  if (novo.progresso < 1 || novo.progresso >= ajustes_cw_concluido()) return 0;
+  if (novo.progresso < ajustes_cw_minimo() || novo.progresso >= ajustes_cw_concluido()) return 0;
   if (ajustes_cw_fonte() == AJ_CWF_SIMKL && !simkl_ativo()) return 0;
   if (!strcmp(novo.tipo, "series") && novo.temporada > 0 && novo.episodio > 0) {
     char base[64];
