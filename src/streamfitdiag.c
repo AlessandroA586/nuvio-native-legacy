@@ -27,28 +27,36 @@ static void intervalo(const RedeIntervalo *v, void *arg) {
   if (taxa > 10000000) { m->invalida = 1; return; }
   m->kbps[m->n++] = (int)taxa; /* an actual zero-byte stall is evidence */
 }
+/* 0 = not a media body, 1 = loose (MIME absent or generic binary, body does not
+ * look like text), 2 = strict (a video/ MIME). The speed test measures at 1 or
+ * 2; only 2 feeds the stream-fit observation, which must be provably video.
+ * Debrid CDNs often serve files as application/octet-stream (#203): the strict
+ * gate alone left the Settings speed test with "sem medida" on every source. */
 static int midia(const RedeResposta *r) {
   char prefixo[513];
   unsigned i = 0, n = r->n_prefixo;
+  int forte;
   if (r->status != 200 && r->status != 206) return 0;
-  /* A playlist/text/unknown octet stream cannot prove transferred video.
-   * Missing MIME stays unknown, including older CORS/browser measurements. */
-  if (strncasecmp(r->mime, "video/", 6) || strstr(r->mime, "mpegurl")) return 0;
+  if (r->mime[0] && (!strncasecmp(r->mime, "text/", 5) || strstr(r->mime, "mpegurl") ||
+      strstr(r->mime, "json") || strstr(r->mime, "xml") || strstr(r->mime, "html") ||
+      strstr(r->mime, "dash"))) return 0;
   if (!n) return 0;
   for (; i < n; i++) prefixo[i] = (char)tolower(r->prefixo[i]);
   prefixo[n] = 0;
   i = 0;
   while (i < n && isspace((unsigned char)prefixo[i])) i++;
   if (prefixo[i] == '<' || prefixo[i] == '{' || prefixo[i] == '[' ||
-      strstr(prefixo, "<!doctype") || strstr(prefixo, "<html")) return 0;
-  return !vazao_url_aviso(r->final);
+      !strncmp(prefixo + i, "#extm3u", 7) || strstr(prefixo, "<!doctype") || strstr(prefixo, "<html")) return 0;
+  if (vazao_url_aviso(r->final)) return 0;
+  forte = !strncasecmp(r->mime, "video/", 6);
+  return forte ? 2 : 1;
 }
 int streamfitdiag_medir(const char *url, const char *const *cab, int segundos,
     long inicio, uint64_t maxBytes, const StreamfitDiagControle *ctl,
     int *kbps, int nMax, RedeVazao *res, char *final, unsigned tamFinal) {
   Medida m = {0}; RedePedido p = {0}; RedeResposta r;
   const char *vet[66]; char faixa[64];
-  int i, nc = 0, ok, n = 0, usada = 0;
+  int i, nc = 0, ok, n = 0, usada = 0, tipo;
   if (res) memset(res, 0, sizeof *res);
   if (final && tamFinal) final[0] = 0;
   if (!ctl || !ctl->rede || segundos < 1 || segundos > 60 || !maxBytes || !kbps || nMax < 1)
@@ -72,14 +80,16 @@ int streamfitdiag_medir(const char *url, const char *const *cab, int segundos,
     res->ms = r.corpo_ms; res->esperaMs = r.primeiro_byte_ms;
     res->cancelado = r.erro == REDE_CANCELADO || r.erro == REDE_GERACAO;
   }
-  if (ok && !r.fim_teto && !m.invalida && midia(&r) && !parar(&m)) {
+  tipo = ok && !r.fim_teto && !m.invalida && !parar(&m) ? midia(&r) : 0;
+  if (tipo) {
     n = m.n < nMax ? m.n : nMax;
     for (i = 0; i < n; i++) kbps[i] = m.kbps[i];
-    usada = streamfit_diagnostico(ctl->rede, r.final, m.kbps, m.n, streamfit_agora_ms());
+    if (tipo == 2) usada = streamfit_diagnostico(ctl->rede, r.final, m.kbps, m.n, streamfit_agora_ms());
   }
   /* No URL, title, host path, network identifier or credentials in the log. */
-  printf("[stream_fit] diagnostic accepted=%d intervals=%d http=%d error=%d\n",
-         usada, m.n, r.status, (int)r.erro);
+  /* MIME type only (e.g. video/x-matroska); never the URL. */
+  printf("[stream_fit] diagnostic accepted=%d intervals=%d http=%d error=%d midia=%d mime=%.40s\n",
+         usada, m.n, r.status, (int)r.erro, tipo, r.mime);
   rede_resposta_limpar(&r);
   return n;
 }

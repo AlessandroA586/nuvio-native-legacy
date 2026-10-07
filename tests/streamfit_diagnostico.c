@@ -53,7 +53,9 @@ int main(int argc, char **argv) {
   // cannot become a bandwidth observation. No source URL is guessed valid.
   assert(!medir("/html", 6, 1 << 20, 0, &r) && !foto().n);
   assert(!medir("/fake-video", 6, 1 << 20, 0, &r) && !foto().n);
-  assert(!medir("/unknown", 1, 1 << 20, 0, &r) && !foto().n);
+  // #203: a generic octet-stream body is MEASURED (debrid CDNs serve files so),
+  // but it never becomes a stream-fit observation: that needs a video/ MIME.
+  assert(medir("/unknown", 6, 1 << 20, 0, &r) > 0 && !foto().n);
   // Production diagnostic branch: do not pre-resolve with the legacy HEAD;
   // real final response supplies MIME and authority. Caller header is stripped.
   snprintf(url, sizeof url, "%s/redirect?synthetic=hidden", base);
