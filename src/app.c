@@ -1438,10 +1438,23 @@ static void processarTorrentJob(void) {
           player_erro_fonte_motivo(i18n("O P2P desta TV não iniciou"),
               i18n("Abra Fontes para escolher outra opção."));
           break;
-        case P2P_ERR_SEM_ESPACO:
-          player_erro_fonte_motivo(i18n("Falta espaço livre na TV para o P2P"),
-              i18n("O P2P precisa de 256 MB livres. Abra Fontes para escolher outra opção."));
+        case P2P_ERR_SEM_ESPACO: {
+          // #334: recusado antes de tocar porque nem a janela minima cabe:
+          // os numeros (o arquivo e maior que o teto). Sem tamanho = faltou
+          // o minimo de 256 MB ao subir.
+          uint64_t tam = 0, teto = 0, livre = 0;
+          char corpo[300];
+          p2pmotor_arquivo_atual(&tam, &teto, &livre);
+          if (tam > 0 && teto > 0 && tam > teto) {
+            snprintf(corpo, sizeof corpo,
+                     i18n("O vídeo tem %.1f GB e o P2P só pode guardar %.1f GB nesta TV (%.1f GB livres). Escolha uma fonte menor ou mude o limite em Ajustes > P2P."),
+                     (double)tam / 1073741824.0, (double)teto / 1073741824.0, (double)livre / 1073741824.0);
+            player_erro_fonte_motivo(i18n("Falta espaço livre na TV para o P2P"), corpo);
+          } else
+            player_erro_fonte_motivo(i18n("Falta espaço livre na TV para o P2P"),
+                i18n("O P2P precisa de 256 MB livres. Abra Fontes para escolher outra opção."));
           break;
+        }
         case P2P_ERR_DISCO:
           player_erro_fonte_motivo(i18n("Não foi possível medir o espaço livre da TV"),
               i18n("Sem essa medida o P2P não baixa nada. Abra Fontes para escolher outra opção."));

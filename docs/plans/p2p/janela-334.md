@@ -62,3 +62,40 @@ o P2P precisa de 300 MB"), como ja faz o "Falta espaço livre" de 256 MB.
 - teste do motor (mac, tests/p2pmotor_real.sh) com teto de 200 MB num torrent
   de 2 GB tocando do inicio ao fim, e um seek para tras de 50%;
 - TV Samsung 6+ com pouco livre (a do #334 e o caso).
+
+## Feito (07/10, branch agente/203-334-janela)
+
+O que mudou em relacao ao plano acima:
+
+- **Sem remove/re-add.** libtorrent 2.0.12 nao tem "desmarcar peca" publico,
+  mas tem `piece_picker::we_dont_have`. Um patch do libtorrent (o 9o do motor,
+  `libtorrent-2.0.12-nuvio-drop-piece.patch`) expoe
+  `torrent_handle::nuvio_drop_piece(p)`: tira a peca do picker, refaz o
+  file_progress, rejeita pedidos dela e manda dont_have aos pares. Voltar para
+  tras = a peca simplesmente falta, e o agendador a pede de novo.
+- **Disco:** `WindowDiskIo` embrulha o `posix_disk_io` e anota as pecas
+  escritas; leitura de peca apagada falha com `operation_aborted` (par:
+  reject + dont_have, sem pausar o torrent; read_piece: erro para a ponte).
+  Nunca zeros. Escrita nova tira a marca.
+- **Politica (ponte):** bytes comprometidos (no disco + agendados) acima de
+  85% da janela apagam as pecas mais longe de qualquer posicao ate 75%.
+  Protegidas: 8 MB do inicio, 16 MB do fim, pecas de borda, pecas com leitor,
+  o agendamento atual, 16-64 MB atras e o read-ahead a frente (que e
+  dimensionado para caber). Arquivo menor que a janela: nada muda.
+- **Buraco:** `fallocate64(PUNCH_HOLE|KEEP_SIZE)` (Linux/Android, 64 bits no
+  armv7), `F_PUNCHHOLE` no Mac. Sistema sem suporte: a janela para e
+  `stats.window_unsupported = 1` (o log da vigia diz); o teto duro segue.
+- **API 4:** `config.streaming_window_bytes` (minimo 160 MB no motor),
+  `stats.window_*`. Resume com a janela ligada perde o have-bitfield.
+- **App:** janela = teto duro - 32 MB, sempre; arquivo maior que o teto com
+  janela < 300 MB e recusado antes de tocar, com os numeros.
+- **Fonte do motor:** `tools/p2p-motor/janela-334.patch` sobre o 02938d7,
+  aplicado pelo `nv_p2p_fonte` (pasta.sh) em todos os build-*.sh. Mudou o
+  motor: regerar o patch (`git diff 02938d7 HEAD` no clone).
+
+Prova (Mac, `tests/streaming_window_test.cpp` do motor): arquivo de 320 MB,
+web seed no proprio processo, janela de 160 MB, toca ate o fim e volta para
+25%..50%: pico no disco 136-140 MB, 200 pecas apagadas, ~120 baixadas de
+novo, 403 MB comparados byte a byte. Falta: TV (Samsung 6+ do #334), e o
+texto de ajuda do "Limite de espaço do P2P" ainda diz que um arquivo maior
+que o limite para no meio (28 idiomas).
