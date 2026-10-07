@@ -113,6 +113,8 @@ int main(int argc, char **argv) {
   snprintf(t.addon, sizeof t.addon, "AIOStreams");
   snprintf(t.resolucao, sizeof t.resolucao, "3840 × 2160");
   snprintf(t.taxa, sizeof t.taxa, "38 Mbps");
+  snprintf(t.audio, sizeof t.audio, "E-AC-3 5.1 Atmos · Inglês");
+  snprintf(t.legenda, sizeof t.legenda, "Português · Completa");
 
   // 1. ANDROID: tudo medido.
   e = base();

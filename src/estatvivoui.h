@@ -30,7 +30,7 @@ int  estatvivo_kbps(int *estimada);
 #ifdef ESTATVIVO_TESTE
 // Capturas: o estado e as linhas do cartao, sem player nem video.
 typedef struct {
-  char titulo[160], sub[160], addon[64], resolucao[32], codecHdr[64], taxa[24];
+  char titulo[160], sub[160], addon[64], resolucao[32], codecHdr[64], taxa[24], audio[96], legenda[64];
   int plataforma;   // PtvPlataforma
 } EvTelaTeste;
 void estatvivo_teste(const EvEstado *e, const EvTelaTeste *t);

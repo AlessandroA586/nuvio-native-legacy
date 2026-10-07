@@ -2,7 +2,9 @@
 // pixels de layout 1920x1080.
 #include "estatvivoui.h"
 #include "ajustes.h"
+#include "audioinfo.h"
 #include "badges.h"
+#include "linguas.h"
 #include "catalogo.h"
 #include "gfx.h"
 #include "idioma.h"
@@ -28,7 +30,7 @@
 #define EVU_TX 243, 242, 239, 255
 
 typedef struct {
-  char titulo[160], sub[160], addon[64], resolucao[32], codecHdr[64], taxa[24];
+  char titulo[160], sub[160], addon[64], resolucao[32], codecHdr[64], taxa[24], audio[96], legenda[64];
   int plataforma;
 } EvTela;
 
@@ -117,6 +119,18 @@ static void montarTela(int taxaKbps) {
              doAddon && samsung ? " (add-on)" : "");
     if (h > 0 && u < sizeof tela.sub && strcmp(hd, "SDR"))
       snprintf(tela.sub + u, sizeof tela.sub - u, " %s", hd); }
+  // #293: o audio e a legenda EM USO, do que o pipeline listou. Codec/canais so
+  // quando a plataforma os da (audioinfo vazio = fica so o idioma); sem faixa, vazio.
+  { const VideoFaixa *fa = video_audio(video_audio_atual());
+    const VideoFaixa *fl = video_legenda(video_legenda_atual());
+    if (fa) {
+      char cc[40] = "";
+      audioinfo_texto(fa->codec, fa->canais, strstr(fa->rotulo, "Atmos") != NULL, cc, sizeof cc);
+      { const char *lg = fa->idioma[0] ? i18n(ling_nome(fa->idioma)) : "";
+        snprintf(tela.audio, sizeof tela.audio, "%s%s%s", cc, cc[0] && lg[0] ? " · " : "", lg); }
+    }
+    if (fl) snprintf(tela.legenda, sizeof tela.legenda, "%s", fl->rotulo);
+  }
   if (taxaKbps > 0) {
     char m[16];
     ev_fmt_mbps(m, sizeof m, taxaKbps, sepDec());
@@ -260,7 +274,7 @@ static void barra(float x, float y, float w, float frac, float a) {
 }
 
 static void kv(const char *k, const char *v, float x, float y, float w, int fio, float a) {
-  TxtLinha tv = txt_linha_corta(TXT_G23B, v[0] ? v : "—", 236, 236, 236, 255, w * 0.62f);
+  TxtLinha tv = txt_linha_corta(TXT_G23B, v[0] ? v : "—", 236, 236, 236, 255, w * 0.76f);
   TxtLinha tk = txt_linha_corta(TXT_AJ_TEXTO, k, 154, 154, 156, 255, w - (float)tv.w - 16);
   if (fio) gfx_cor((GfxRect){ x, y, w, 1 }, 0, 0.227f, 0.227f, 0.235f, a);
   txt_desenhar_alpha(tk, x, y + (40 - (float)tk.h) * 0.5f, a);
@@ -335,9 +349,11 @@ static void tileFonte(GfxRect r, float a) {
   float x = r.x + 24, y = r.y + 78, w = r.w - 48;
   ladrilho(r, "aj_film", i18n("Fonte"), tela.addon[0] ? EVO_ADDON : EVO_SEM, a);
   kv(i18n("Add-on"), tela.addon, x, y, w, 0, a);
-  kv(i18n("Resolução"), tela.resolucao, x, y + 40, w, 1, a);
-  kv(i18n("Codec · HDR"), tela.codecHdr, x, y + 80, w, 1, a);
-  kv(i18n("Taxa do arquivo"), tela.taxa, x, y + 120, w, 1, a);
+  kv(i18n("Resolução"), tela.resolucao, x, y + 34, w, 1, a);
+  kv(i18n("Codec · HDR"), tela.codecHdr, x, y + 68, w, 1, a);
+  kv(i18n("Taxa do arquivo"), tela.taxa, x, y + 102, w, 1, a);
+  kv(i18n("Áudio"), tela.audio, x, y + 136, w, 1, a);
+  kv(i18n("Legenda"), tela.legenda, x, y + 170, w, 1, a);
 }
 
 static void tileServidor(GfxRect r, float a) {
@@ -452,10 +468,10 @@ static void desenharCartao(float a) {
   { float x0 = x, x1 = x + EVU_TILE_W + 24, y0 = c.y + 140;
     tileVelocidade((GfxRect){ x0, y0, EVU_TILE_W, 244 }, a);
     tileBuffer((GfxRect){ x1, y0, EVU_TILE_W, 244 }, a);
-    tileFonte((GfxRect){ x0, y0 + 244 + EVU_GAP, EVU_TILE_W, 244 }, a);
-    tileServidor((GfxRect){ x1, y0 + 244 + EVU_GAP, EVU_TILE_W, 244 }, a);
-    tileErros((GfxRect){ x0, y0 + 2 * (244 + EVU_GAP), EVU_TILE_W, 214 }, a);
-    tileQuadros((GfxRect){ x1, y0 + 2 * (244 + EVU_GAP), EVU_TILE_W, 214 }, a); }
+    tileFonte((GfxRect){ x0, y0 + 244 + EVU_GAP, EVU_TILE_W, 284 }, a);
+    tileServidor((GfxRect){ x1, y0 + 244 + EVU_GAP, EVU_TILE_W, 284 }, a);
+    tileErros((GfxRect){ x0, y0 + 284 + 244 + 2 * EVU_GAP, EVU_TILE_W, 214 }, a);
+    tileQuadros((GfxRect){ x1, y0 + 284 + 244 + 2 * EVU_GAP, EVU_TILE_W, 214 }, a); }
   // Dicas embaixo do cartao.
   { static const char *const K[2] = { "OK", "Voltar" };
     static const char *const L[2] = { "Fixar no canto", "Fechar" };
@@ -520,6 +536,8 @@ void estatvivo_teste(const EvEstado *e, const EvTelaTeste *t) {
   snprintf(tela.resolucao, sizeof tela.resolucao, "%s", t->resolucao);
   snprintf(tela.codecHdr, sizeof tela.codecHdr, "%s", t->codecHdr);
   snprintf(tela.taxa, sizeof tela.taxa, "%s", t->taxa);
+  snprintf(tela.audio, sizeof tela.audio, "%s", t->audio);
+  snprintf(tela.legenda, sizeof tela.legenda, "%s", t->legenda);
   tela.plataforma = t->plataforma;
   abriuEm = 0;
 }
