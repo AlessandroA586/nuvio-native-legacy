@@ -3547,7 +3547,7 @@
   T("Quanto a borda do cartaz em foco acende.", "聚焦海報的邊緣亮起的程度。"),
   T("Quanto a vinheta escura cobre a arte na tela do título. Cem por cento é o padrão; zero mostra a arte limpa — o texto pode ficar difícil de ler sobre cenas claras.", "作品頁上，深色暗角覆蓋圖片的程度。預設是 100；0 則顯示無遮罩的圖片——在明亮的畫面上文字可能難以辨認。"),
   T("Quanto de pixel a arte carrega. Alta pede a versão grande de cada imagem e gasta mais memória; Baixa pede a menor, carrega antes e cabe em TV com pouca RAM.", "圖片攜帶的像素量。「高」會要求每張圖的大尺寸版本，佔用更多記憶體；「低」要求小尺寸版本，載入更快，適合記憶體較小的電視。"),
-  T("Quanto do armazenamento desta TV o P2P pode ocupar enquanto toca. Automático usa até metade do espaço livre (no máximo 1,5 GB). Um valor fixo sempre deixa 512 MB livres. O vídeo inteiro fica guardado até fechar o player: um arquivo maior que o limite para no meio.", "播放時 P2P 可佔用這台電視多少儲存空間。自動最多使用一半的剩餘空間（最多 1.5 GB）。固定值一律保留 512 MB 空閒。關閉播放器前會保存整部影片：大於上限的檔案會在中途停止。"),
+  T("Quanto do armazenamento da TV o P2P pode usar enquanto toca; Automático usa até metade do espaço livre. Se o vídeo for maior, ele continua tocando e a TV guarda só o trecho perto de onde você está (em pendrive FAT ou exFAT, ele para no limite).", "播放時 P2P 可使用電視多少儲存空間；自動最多使用一半的剩餘空間。影片超過上限也會繼續播放，電視只保留目前位置前後的一段（FAT 或 exFAT 格式的隨身碟會在上限處停止）。"),
   T("Quanto o reflexo passa por cima da arte do cartaz em foco.", "光澤掠過聚焦海報圖片的程度。"),
   T("Quanto o trailer é ampliado para encher a tela. Zoom cinema tira a tarja preta de um trailer de cinema; Original mostra o quadro inteiro, com tarja.", "預告片放大以填滿螢幕的程度。「影院縮放」會去掉寬銀幕預告片的黑邊；「原始」會顯示完整畫面，包括黑邊。"),
   T("Quanto tempo o canal tem para mostrar a imagem antes de o app passar para a próxima fonte ou mostrar o erro. Automática espera 15 s no Xtream e 25 s nos addons.", "頻道顯示畫面的時限，逾時後應用程式會換下一個片源或顯示錯誤。自動：Xtream 等 15 秒，附加元件等 25 秒。"),

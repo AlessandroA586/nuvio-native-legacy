@@ -1364,9 +1364,9 @@ static void vigiarMotorP2p(void) {
       player_erro_fonte_motivo(i18n("Não foi possível medir o espaço livre da TV"),
           i18n("Sem essa medida o P2P não baixa nada. Abra Fontes para escolher outra opção."));
     else {
-      // #334: dizer os numeros. O motor guarda o arquivo inteiro: um 4K de
-      // 15 GB nao cabe em 0,7 GB, e "escolha uma fonte menor" sem o tamanho
-      // nao explicava por que.
+      // #334: dizer os numeros. Com janela o motor so para aqui quando
+      // o sistema de arquivos nao abre buraco (FAT/exFAT) e vale o teto duro;
+      // "escolha uma fonte menor" sem o tamanho nao explicava por que.
       uint64_t tam = 0, teto = 0, livre = 0;
       char corpo[300];
       p2pmotor_arquivo_atual(&tam, &teto, &livre);
