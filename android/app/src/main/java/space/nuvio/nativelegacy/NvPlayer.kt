@@ -259,6 +259,9 @@ object NvPlayer {
     @JvmStatic fun volume(pct: Int) { principal.post { player?.volume = pct.coerceIn(0, 100) / 100f } }
     // F07: cache limit for the NEXT opens (MB, 0 = off) and the session volume
     // 0..200 (above 100 only while the audio is PCM).
+    // #338: buffer size preset (0 Auto, 1 Low, 2 Medium, 3 High), sticky, read at open.
+    @Volatile private var bufferPreset = 0
+    @JvmStatic fun buffer(preset: Int) { bufferPreset = preset.coerceIn(0, 3) }
     @JvmStatic fun cache(mb: Int) { cacheMbPedido = mb.coerceIn(0, 1024) }
     @JvmStatic fun ganho(pct: Int) {
         principal.post { ganhoPct = GanhoMath.pct(pct); aplicarGanho() }
@@ -376,8 +379,20 @@ object NvPlayer {
             // do heap, entre 32 e 96 MB, ainda segura dezenas de segundos de 4K.
             val tetoBuffer = (Runtime.getRuntime().maxMemory() / 4)
                 .coerceIn(32L shl 20, 96L shl 20).toInt()
+            // #338: presets mudam so quanto buffer, nunca a qualidade. Auto = o de
+            // sempre (50 s / teto em bytes). Em bytes o limite segue o heap: Alto
+            // sobe o teto ate 1/3 do heap (max 96 MB), nunca ao do DefaultLoadControl.
+            val heap = Runtime.getRuntime().maxMemory()
+            val (minMs, maxMs, bytes) = when (bufferPreset) {
+                1 -> Triple(15_000, 25_000, tetoBuffer / 2)
+                2 -> Triple(50_000, 80_000, tetoBuffer)
+                3 -> Triple(90_000, 150_000, (heap / 3).coerceIn(32L shl 20, 96L shl 20).toInt())
+                else -> Triple(50_000, 50_000, tetoBuffer)
+            }
+            Log.i(TAG, "[player] buffer preset=$bufferPreset min=${minMs / 1000}s max=${maxMs / 1000}s teto=${bytes shr 20}MB")
             val carga = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                .setTargetBufferBytes(tetoBuffer)
+                .setBufferDurationsMs(minMs, maxMs, 2_500, 5_000)
+                .setTargetBufferBytes(bytes)
                 .setPrioritizeTimeOverSizeThresholds(false)
                 .build()
             val p = ExoPlayer.Builder(act, renderizadores)

@@ -302,7 +302,11 @@ static void cacheSeek(void) {
   assert(!strcmp(textoValor(AJ_CACHE_SEEK), "Não disponível nesta TV"));
   assert(strstr(ajudaOpcao(AJ_CACHE_SEEK), "Não disponível nesta TV"));
   for (i = 0; i < 4; i++) { valor[AJ_CACHE_SEEK] = i; assert(ajustes_cache_seek_mb() == 0); }
+  /* #338: o buffer so existe no Android; aqui (host) fica sempre em Automatico. */
+  for (i = 0; i < 4; i++) { valor[AJ_BUFFER] = i; assert(ajustes_buffer_preset() == 0); }
+  assert(AJ_BUFFER == AJ_FONTE_PREPARAR + 1 && !strcmp(CHAVE[AJ_BUFFER], "bufferPlayerLocal") && OPCOES[AJ_BUFFER].n == 4 && valorPadrao[AJ_BUFFER] == 0 && somenteDesteAparelho(AJ_BUFFER));
   valor[AJ_CACHE_SEEK] = antes;
+  valor[AJ_BUFFER] = valorPadrao[AJ_BUFFER];
   n = ajustes_buscar("cache de seek", resultados, AJ_N);
   i = indiceResultado(AJ_CACHE_SEEK, n);
   assert(i >= 0 && resultados[i].bloqueado);
