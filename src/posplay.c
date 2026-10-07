@@ -82,6 +82,7 @@ static float  anim;
 static Uint32 fecharEm;              // 0 = sem contagem
 static int    pedT, pedE, pedTitulo = -1;
 static int    proxT, proxE;          // proximo episodio, quando ha
+static double restaReal;             // segundos de relogio que faltam, enquanto o cartao esta no ar
 static char   proxNome[120];
 
 int posplay_visivel(void) { return visivel; }
@@ -119,6 +120,13 @@ int posplay_pediu_episodio(int *t, int *e) {
   if (t) *t = pedT;
   if (e) *e = pedE;
   pedT = pedE = 0;
+  return 1;
+}
+int posplay_proximo(int *t, int *e, double *restaSeg) {
+  if (!visivel || !serie || !proxT) return 0;
+  if (t) *t = proxT;
+  if (e) *e = proxE;
+  if (restaSeg) *restaSeg = restaReal < 0.0 ? 0.0 : restaReal;
   return 1;
 }
 int posplay_pediu_titulo(void) { int v = pedTitulo; pedTitulo = -1; return v; }
@@ -331,6 +339,9 @@ void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
       if (!fecharEm) fecharEm = 1;   // 0 quer dizer "sem contagem"
     }
   }
+
+  if (visivel && serie)
+    restaReal = vel_tempo_real(durSeg - posSeg, player_velocidade_efetiva());
 
   // A contagem so vale para o proximo episodio.
   if (visivel && fecharEm && agora >= fecharEm) {

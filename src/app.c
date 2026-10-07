@@ -1550,6 +1550,52 @@ static void aquecerQuandoChegarem(void) {
   }
 #endif
 }
+// PRE-CARGA DAS FONTES DO PROXIMO EPISODIO (#326). Assim que o cartao "A seguir"
+// sobe (os creditos comecaram, ou os ultimos minutos), pergunta aos addons pelas
+// fontes do episodio seguinte num fio de fundo e guarda a resposta no cache VOD
+// (addons_prefetch_vod). Quando a contagem acaba ou a pessoa aperta Proximo, a busca
+// acha a lista pronta (ou adota a que ainda esta chegando) e a escolha automatica
+// parte dela, sem esperar a rede dos addons. So CONSULTA: a lista do episodio que
+// toca, o debrid e a conferencia ficam como estao, e nenhuma fonte e aberta nem
+// baixada antes da hora. Uma vez ao subir o cartao e, se os creditos forem longos e a
+// resposta ja tiver idade, uma vez mais nos ultimos PRECARGA_RENOVA_S segundos —
+// a lista do cache vale 30 s e e isso que mantem o link fresco ate o fim.
+#define PRECARGA_RENOVA_S 20.0
+#define PRECARGA_IDADE_MIN_MS 10000u
+static char precargaAlvo[80];
+static int precargaFeitas;      // 0 nada; 1 primeira; 2 renovada (ou desistiu)
+static Uint32 precargaQuando;
+static void precargaProximo(void) {
+  int t = 0, e = 0, r;
+  double resta = 0.0;
+  char id[80];
+  const CatItem *ci;
+  if (!player_aberto() || player_id_canal()[0] || player_quer_sair()) {
+    // A pessoa saiu: o fio larga o que falta e nada fica guardado para um episodio
+    // que ninguem vai abrir.
+    if (precargaAlvo[0]) { addons_prefetch_cancelar(); precargaAlvo[0] = 0; precargaFeitas = 0; }
+    return;
+  }
+  if (!posplay_proximo(&t, &e, &resta)) return;
+  ci = cat_item(player_indice());
+  if (!ci || strcmp(ci->tipo, "series") || !cat_id_stream(player_indice(), t, e, id, sizeof id)) return;
+  if (strcmp(id, precargaAlvo)) {
+    if (precargaAlvo[0]) addons_prefetch_cancelar();
+    snprintf(precargaAlvo, sizeof precargaAlvo, "%s", id);
+    precargaFeitas = 0;
+  }
+  if (precargaFeitas == 0) {
+    r = addons_prefetch_vod(id, "series", 0);
+    if (r == ADD_PF_INICIOU) { precargaFeitas = 1; precargaQuando = SDL_GetTicks(); marco("proximo: pre-carregando fontes"); }
+    else if (r == ADD_PF_PRONTO) { precargaFeitas = 1; precargaQuando = SDL_GetTicks() - PRECARGA_IDADE_MIN_MS; }
+    else if (r == ADD_PF_NAO) precargaFeitas = 2;
+  } else if (precargaFeitas == 1 && resta <= PRECARGA_RENOVA_S &&
+             (Uint32)(SDL_GetTicks() - precargaQuando) >= PRECARGA_IDADE_MIN_MS &&
+             !addons_prefetch_vivo()) {
+    r = addons_prefetch_vod(id, "series", 1);
+    if (r == ADD_PF_INICIOU || r == ADD_PF_NAO) { precargaFeitas = 2; precargaQuando = SDL_GetTicks(); }
+  }
+}
 // TOCAR ENQUANTO CONFERE. O fio que confere publica a primeira candidata da
 // fila (streams.c); aqui ela entra no player na hora, SEM esperar o veredito.
 // Mesmo estado de uma fonte automatica aberta (fonteVODAutomatica, a contagem
@@ -4429,6 +4475,7 @@ void app_atualizar(float dt, Uint32 agora) {
   // PÓS-REPRODUÇÃO. O proximo episodio reabre a busca de fonte com o id novo;
   // o titulo relacionado sai do player e abre o detalhe, que e onde o dono
   // escolhe se quer mesmo assistir.
+  precargaProximo();
   { int t = 0, e = 0;
     if (aguardandoFonte != 2 && posplay_pediu_episodio(&t, &e) && player_aberto()) {
       // O MESMO CAMINHO do botao de proximo episodio do player, logo acima, e

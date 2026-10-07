@@ -94,6 +94,19 @@ void addons_buscar(const char *imdb, const char *tipo);
 // quando a lista atual esta vazia ou foi filtrada por falta de debrid.
 void addons_buscar_renovar(const char *imdb, const char *tipo);
 
+// PRE-CARGA DO PROXIMO EPISODIO (#326). Pergunta aos addons, num fio de fundo, pelas fontes
+// de `id` (id composto "tt:T:E") e guarda a resposta no cache VOD; o addons_buscar que vier
+// a seguir (fim do episodio ou Proximo) a acha pronta. So consulta: nao toca na lista de
+// streams do que esta tocando, nao resolve link, nao mexe no debrid. Um fio por vez.
+// Devolve ADD_PF_INICIOU, ADD_PF_PRONTO (ja ha lista valida; `renovar` = 1 ignora isso),
+// ADD_PF_OCUPADO (tente no proximo quadro) ou ADD_PF_NAO (nunca vai servir: sem addon,
+// id de servidor pessoal, tipo que nao e filme/serie — nao insista).
+enum { ADD_PF_NAO = -1, ADD_PF_OCUPADO = 0, ADD_PF_INICIOU = 1, ADD_PF_PRONTO = 2 };
+int  addons_prefetch_vod(const char *id, const char *tipo, int renovar);
+// O usuario saiu: manda o fio parar de perguntar e descarta o que juntou.
+void addons_prefetch_cancelar(void);
+int  addons_prefetch_vivo(void);
+
 // --- busca em andamento, addon a addon (#221) --------------------------------
 // A busca real de filme/serie publica cada addon que responde, sem esperar os
 // outros: a folha enche aos poucos e a escolha automatica pode sair antes do

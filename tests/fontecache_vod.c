@@ -14,6 +14,12 @@ void ondever_pedir(const char *id, int series, long tmdb) {
   (void)id; (void)series; (void)tmdb;
 }
 
+// addonstats (latencia por addon) tem teste proprio; aqui so nao pode faltar o simbolo.
+#include "addonstats.h"
+void addonstats_registrar(const char *nome, unsigned ms, int respondeu) { (void)nome; (void)ms; (void)respondeu; }
+void addonstats_salvar(void) { }
+int addonstats_segunda_s(const char *nome, int padraoS) { (void)nome; return padraoS; }
+
 static _Atomic Uint32 relogio = 100000;
 static _Atomic int pedidos;
 static const char *conta = "conta-a";
@@ -187,6 +193,41 @@ int main(void) {
   buscarTituloModo("tt41", "movie", 1);
   assert(pedidos == antes + 1 && nLista == 2 && idadeLista == 0);
   puts("recarregar explicito com lista ativa vazia: ignora cache e faz HTTP");
+  // PRE-CARGA DO PROXIMO EPISODIO (#326): consulta de fundo que guarda no cache VOD,
+  // sem tocar na lista da tela; a busca real que vem depois nao vai a rede.
+  { int antesP, r, lim, nAntes = nLista;
+    char alvoAntes[64];
+    snprintf(alvoAntes, sizeof alvoAntes, "%s", listaAlvo);
+    fontecache_vod_limpar();
+    antesP = pedidos;
+    assert(addons_prefetch_vod("tt7:1:2", "series", 0) == ADD_PF_INICIOU);
+    for (lim = 0; lim < 4000 && addons_prefetch_vivo(); lim++) usleep(1000);
+    assert(lim < 4000);
+    assert(pedidos == antesP + 1);
+    assert(nLista == nAntes && !strcmp(listaAlvo, alvoAntes));       // a folha do que toca nao mudou
+    assert(addons_prefetch_vod("tt7:1:2", "series", 0) == ADD_PF_PRONTO);   // ja ha lista valida
+    assert(pedidos == antesP + 1);
+    buscarTitulo("tt7:1:2", "series");
+    assert(pedidos == antesP + 1 && nLista == 2 && idadeLista < FONTECACHE_VOD_VALIDADE_MS);
+    assert(addons_prefetch_vod("tt7:1:3", "tv", 0) == ADD_PF_NAO);          // so filme/serie
+    // Perfil trocado enquanto a pre-carga estava na rede: a resposta nao e guardada.
+    fontecache_vod_limpar();
+    trocaNaRede = 1;
+    assert(addons_prefetch_vod("tt8:1:1", "series", 0) == ADD_PF_INICIOU);
+    for (lim = 0; lim < 4000 && addons_prefetch_vivo(); lim++) usleep(1000);
+    assert(lim < 4000);
+    perfil = 1;
+    assert(bytesCache() == 0);
+    // Renovar refaz a consulta mesmo com lista valida.
+    assert(addons_prefetch_vod("tt7:1:2", "series", 0) == ADD_PF_INICIOU);
+    for (lim = 0; lim < 4000 && addons_prefetch_vivo(); lim++) usleep(1000);
+    antesP = pedidos;
+    assert(addons_prefetch_vod("tt7:1:2", "series", 1) == ADD_PF_INICIOU);
+    for (lim = 0; lim < 4000 && addons_prefetch_vivo(); lim++) usleep(1000);
+    assert(pedidos == antesP + 1);
+    puts("pre-carga do proximo episodio: 1 HTTP, lista da tela intacta, busca real sem rede, escopo respeitado");
+    fontecache_vod_limpar();
+  }
   // Uma resposta de parte dos addons continua visivel, mas nao vira cache.
   addons_adicionar("Falha fixture", "https://erro.invalid/manifest.json");
   buscarTitulo("tt42", "movie");

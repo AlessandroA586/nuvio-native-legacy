@@ -59,6 +59,10 @@ int  posplay_indice(void);
 // proximo episodio (temporada/episodio) ou titulo relacionado (indice).
 int  posplay_pediu_episodio(int *temporada, int *episodio);
 int  posplay_pediu_titulo(void);
+// O cartao "A seguir" esta no ar com um proximo episodio: 1 e o par T/E dele e quantos
+// segundos de relogio faltam para o episodio acabar. Leitura, sem consumir nada. Usado
+// pela pre-carga das fontes (app.c, #326).
+int  posplay_proximo(int *temporada, int *episodio, double *restaSeg);
 #ifdef NV_SHOT_HOOKS
 void posplay_shot(int idxCatalogo, int ehSerie, int t, int e, Uint32 fecha);
 #endif

@@ -108,6 +108,16 @@ static int pendRenovar;
 // nao por `fio`: addons_buscar o encontrou a caminho e resolveu esperar em vez
 // de repetir. addons_estado e quem colhe. Ver addons_buscar.
 static int adotado;
+// PRE-CARGA DO PROXIMO EPISODIO (#326, addons_prefetch_vod): a busca real pediu o alvo
+// que o prefetch de VOD ainda tem na rede; addons_estado colhe quando chegar, com
+// prazo (PF_ADOCAO_MS), e cai na busca normal se nao vier.
+static int adotadoVod;
+static Uint32 adotadoVodDesde;
+#define PF_ADOCAO_MS 6000u
+static void pfCancelar(void);
+static int pfVivoAgora(void);
+static int pfDoAlvo(const char *id, const char *tipo);
+static void pfJuntar(void);
 static void dispararBusca(void);
 static void progDrenar(void);
 
@@ -525,6 +535,31 @@ AddEstado addons_estado(void) {
     }
     e = atomic_load(&estado);
   }
+  // O alvo esta a caminho pela PRE-CARGA do proximo episodio (fio de VOD): colhe o que
+  // ela guardou no cache VOD assim que o fio terminar. Passou do prazo, ou terminou
+  // sem guardar (cancelada, addon mudo, conta trocada): a busca normal sai daqui.
+  if (adotadoVod && !fioVivo) {
+    if (pfVivoAgora() && (Uint32)(SDL_GetTicks() - adotadoVodDesde) < PF_ADOCAO_MS)
+      return ADD_BUSCANDO;
+    pfCancelar();
+    pfJuntar();
+    adotadoVod = 0;
+    { FontecacheEscopo escopo;
+      Stream *l; int n; Uint32 idade;
+      capturarEscopo(&escopo);
+      if (fontecache_vod_pegar(alvoId, alvoTipo, alvoBase, &escopo, &l, &n, &idade) == FC_ACERTO) {
+        stream_definir_lista_idade(l, n, idade);
+        free(l);
+        alvoBase[0] = 0;
+        estado = ADD_PRONTO;
+        printf("[proximo] a busca adotou a pre-carga: %d fontes (%u ms)\n", n, (unsigned)idade);
+        fflush(stdout);
+        return ADD_PRONTO;
+      }
+    }
+    dispararBusca();
+    return ADD_BUSCANDO;
+  }
   // O alvo esta a caminho pelo prefetch: colhe quando chegar. Se o prefetch
   // cedeu ou nao trouxe nada, a busca real sai daqui — o pedido nunca fica
   // pendurado em "buscando" por causa de um atalho que nao deu certo.
@@ -712,7 +747,7 @@ int addons_pendente_grupo_min(int (*f)(const char *nome, int plugin, void *u), v
 }
 
 int addons_ocupado(void) {
-  return fioVivo || adotado || atomic_load(&estado) == ADD_BUSCANDO;
+  return fioVivo || adotado || adotadoVod || atomic_load(&estado) == ADD_BUSCANDO;
 }
 
 // --- leitura tolerante de JSON ----------------------------------------------
@@ -1797,6 +1832,7 @@ typedef struct {
   int instalados, comFonte, ligadosComFonte;   // da lista
   int consultados, responderam, semResposta, comFontes;   // da consulta
   char mudo[64], vazio[64];   // um nome de exemplo de cada, para o singular
+  int quieto;   // 1 = consulta de fundo (pre-carga): nao anota addon fora do ar
 } Resumo;
 static Resumo resumo;
 
@@ -2292,7 +2328,7 @@ static int consultar(const char *id, const char *tipo, const char *base, int fio
         // nunca "respondeu sem fonte", que e `respondeu` com n = 0. Uma vez por
         // queda: so na PRIMEIRA consulta muda (mudoSeg 0 -> 1); responder de
         // novo zera e rearma. Cancelada no meio nao conta.
-        if (rs && addon[c.baldes[q].idx].mudoSeg == 1 && !(c.cancelado && c.cancelado(c.ctx)))
+        if (rs && !rs->quieto && addon[c.baldes[q].idx].mudoSeg == 1 && !(c.cancelado && c.cancelado(c.ctx)))
           foraAnotar(addon[c.baldes[q].idx].nome);
       }
       if (rs) {
@@ -2332,6 +2368,104 @@ int addons_consultar(const char *id, const char *tipo, const char *base, int fio
                      int (*cancelado)(void *), void *ctx, Stream **saida) {
   return consultar(id, tipo, base, fios, cancelado, ctx, saida, NULL, 0);
 }
+
+// --- PRE-CARGA DO PROXIMO EPISODIO (#326) ---------------------------------------
+// Quando o cartao "A seguir" sobe (ou os creditos comecam), o app pergunta aos addons
+// pelas fontes do episodio seguinte NESTE fio, enquanto o atual ainda toca, e guarda
+// a resposta no cache VOD (fontecache_vod_guardar). Quando o episodio termina ou a
+// pessoa aperta Proximo, addons_buscar acha a lista pronta e a busca nao vai a rede.
+//
+// So CONSULTA: a mesma pergunta aos addons que a busca real faz, sem tocar no alvo,
+// no estado, na lista de streams (a folha do episodio que toca fica como esta) nem no
+// debrid — resolver link e conferir fonte continuam sendo da escolha automatica, que
+// segue a fila de sempre. Nada e baixado. A lista so entra no cache se TODOS os addons
+// responderam (a mesma regra de resultadoCacheavel) e se conta/perfil/addons seguem os
+// mesmos. Validade: a do cache VOD (FONTECACHE_VOD_VALIDADE_MS).
+static pthread_t pfFio;
+static int pfCriado;
+static atomic_int pfVivo, pfParar;
+static char pfId[80], pfTipo[16];
+static FontecacheEscopo pfEscopo;
+static Uint32 pfInicio;
+
+static int pfCancelado(void *u) { (void)u; return atomic_load(&pfParar); }
+
+static void *pfRodar(void *u) {
+  Stream *l = NULL;
+  Resumo rs;
+  int n;
+  (void)u;
+  memset(&rs, 0, sizeof rs);
+  rs.quieto = 1;
+  n = consultar(pfId, pfTipo, "", 4, pfCancelado, NULL, &l, &rs, 0);
+  if (n > 0 && rs.semResposta == 0 && !atomic_load(&pfParar) && escopoAindaAtual(&pfEscopo)) {
+    fontecache_vod_guardar(pfId, pfTipo, "", &pfEscopo, l, n, SDL_GetTicks());
+    printf("[proximo] fontes pre-carregadas em %u ms (%d fontes, %s)\n",
+           (unsigned)(SDL_GetTicks() - pfInicio), n, pfId);
+  } else if (!atomic_load(&pfParar)) {
+    printf("[proximo] pre-carga de %s sem lista completa (%d fontes, %d addons sem resposta); a busca normal decide\n",
+           pfId, n < 0 ? 0 : n, rs.semResposta);
+  }
+  fflush(stdout);
+  free(l);
+  atomic_store(&pfVivo, 0);
+  return NULL;
+}
+
+static int pfVivoAgora(void) { return pfCriado && atomic_load(&pfVivo); }
+static int pfDoAlvo(const char *id, const char *tipo) {
+  return pfCriado && !strcmp(pfId, id) && !strcmp(pfTipo, tipo);
+}
+static void pfCancelar(void) {
+  if (pfCriado && atomic_load(&pfVivo)) atomic_store(&pfParar, 1);
+}
+// Colhe o fio terminado (ou, depois de cancelar, espera o que falta: so no
+// encerramento e na adocao vencida, onde o fio ja foi mandado parar).
+static void pfJuntar(void) {
+  if (!pfCriado) return;
+  if (atomic_load(&pfVivo)) return;   // ainda na rede: junta depois
+  pthread_join(pfFio, NULL);
+  pfCriado = 0;
+}
+
+int addons_prefetch_vod(const char *id, const char *tipo, int renovar) {
+  FontecacheEscopo escopo;
+  if (!id || !*id || !tipo || (strcmp(tipo, "series") && strcmp(tipo, "movie"))) return ADD_PF_NAO;
+  if (strlen(id) >= sizeof pfId || jfid_e(id)) return ADD_PF_NAO;
+  if (nAddon <= 0 && !addons_origem_extra_ativa()) return ADD_PF_NAO;
+  pfJuntar();
+  if (pfCriado) {
+    // Um fio so. O que esta na rede e este mesmo alvo: nada a fazer; senao manda parar
+    // e tenta de novo quando ele sair.
+    if (pfDoAlvo(id, tipo)) return ADD_PF_OCUPADO;
+    pfCancelar();
+    return ADD_PF_OCUPADO;
+  }
+  // A busca real tem a vez: com ela na rede o fio de fundo espera.
+  if (fioVivo || atomic_load(&estado) == ADD_BUSCANDO) return ADD_PF_OCUPADO;
+  capturarEscopo(&escopo);
+  if (!renovar) {
+    Stream *l; int n; Uint32 idade;
+    if (fontecache_vod_pegar(id, tipo, "", &escopo, &l, &n, &idade) == FC_ACERTO) {
+      free(l);
+      return ADD_PF_PRONTO;
+    }
+  }
+  snprintf(pfId, sizeof pfId, "%s", id);
+  snprintf(pfTipo, sizeof pfTipo, "%s", tipo);
+  pfEscopo = escopo;
+  pfInicio = SDL_GetTicks();
+  atomic_store(&pfParar, 0);
+  atomic_store(&pfVivo, 1);
+  if (pthread_create(&pfFio, NULL, pfRodar, NULL) != 0) {
+    atomic_store(&pfVivo, 0);
+    return ADD_PF_NAO;
+  }
+  pfCriado = 1;
+  return ADD_PF_INICIOU;
+}
+void addons_prefetch_cancelar(void) { pfCancelar(); }
+int addons_prefetch_vivo(void) { pfJuntar(); return pfVivoAgora(); }
 
 // Contagens da LISTA (nao da consulta), para "nao ha a quem perguntar".
 static void resumoDaLista(Resumo *rs) {
@@ -2442,7 +2576,7 @@ static void buscarPedido(const char *imdb, const char *tipo, int forcar) {
       return;
     }
     resumo.valido = 0;
-    adotado = 0;
+    adotado = 0; adotadoVod = 0;
     snprintf(alvoId, sizeof alvoId, "%s", imdb);
     snprintf(alvoTipo, sizeof alvoTipo, "%s", tipo && *tipo ? tipo : "movie");
     alvoBase[0] = 0;
@@ -2467,7 +2601,7 @@ static void buscarPedido(const char *imdb, const char *tipo, int forcar) {
   }
   // Um pedido novo desfaz a espera pelo prefetch do anterior; o prefetch em si
   // segue ou cede conforme o que vem abaixo.
-  adotado = 0;
+  adotado = 0; adotadoVod = 0;
   serie = tipo && !strcmp(tipo, "series");
   // Serie SEM episodio devolve lista vazia, com HTTP 200 e sem erro nenhum
   // (medido: 14 bytes de resposta). O identificador tem de ser
@@ -2503,6 +2637,17 @@ static void buscarPedido(const char *imdb, const char *tipo, int forcar) {
       printf("[addons] %d fontes VOD reaproveitadas (%u ms)\n", n, (unsigned)idade);
       return;
     }
+    // A pre-carga do proximo episodio ainda esta na rede com ESTE alvo: espera por ela
+    // (addons_estado colhe, com prazo) em vez de repetir as mesmas requisicoes.
+    if (!renovar && pfVivoAgora() && pfDoAlvo(alvoId, alvoTipo)) {
+      adotadoVod = 1; adotadoVodDesde = SDL_GetTicks();
+      estado = ADD_BUSCANDO;
+      printf("[proximo] pre-carga em curso para %s, esperando por ela\n", alvoId);
+      fflush(stdout);
+      return;
+    }
+    // Pedido real para outro lugar (ou renovado): a pre-carga larga o que falta.
+    pfCancelar();
   }
   // O CACHE ANTES DA REDE. Canal que o guia engatilhou (ou que acabou de sair
   // do ar) responde daqui, sem fio nenhum; canal cujo prefetch esta na rede
@@ -2534,7 +2679,9 @@ void addons_buscar_renovar(const char *imdb, const char *tipo) { buscarPedido(im
 void addons_encerrar(void) {
   int juntarLeg;
   fontecache_encerrar();
-  adotado = 0;
+  pfCancelar();
+  pfJuntar();
+  adotado = 0; adotadoVod = 0;
   if (fioVivo) pthread_join(fio, NULL);
   fioVivo = 0;
   progLigado = 0; progPublicou = 0;
