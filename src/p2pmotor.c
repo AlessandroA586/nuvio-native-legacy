@@ -163,7 +163,7 @@ static int pastas(char *raiz, unsigned nr, char *mae, unsigned nm) {
 // livres na TV, e nunca menos que o Automatico (escolher "mais" nao pode dar
 // menos). Na TV do #334 (1,37 GB livres) o Automatico da 685 MB e qualquer
 // fixo da 857 MB: o limite nao salva um 4K de 15 GB; so a janela (ver
-// docs/p2p-janela.md) salva.
+// docs/plans/p2p/janela-334.md) salva.
 uint64_t p2pmotor_teto_duro(uint64_t livre, unsigned escolhaMb) {
   uint64_t auto_ = (uint64_t)P2PM_DURO_MAX_MB << 20, fixo, reserva;
   if (livre / 2 < auto_) auto_ = livre / 2;

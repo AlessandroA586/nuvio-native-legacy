@@ -186,6 +186,7 @@ static const char *uxSinonimos(int op) {
     case AJ_FONTE_REGEX: case AJ_FONTE_REGEX_PADRAO: case AJ_FONTE_REGEX_MODELO:
       return "regex expressao regular padrao filtro nome idioma espanhol latino castellano multi dual remux auto-play autoplay regex match pattern";
     case AJ_TAM_MAX: case AJ_TAM_MIN: return "tamanho maximo minimo gb gigabyte arquivo franquia dados internet limite cota plano economizar fonte automatica size quota data cap";
+    case AJ_P2P_LIMITE: return "limite espaco p2p torrent armazenamento disco cheio memoria buffer cache tamanho maximo gb space limit storage full";
     case AJ_CACHE_SEEK: return "cache seek buffer disco armazenamento voltar avancar travando carregando";
     case AJ_TMDB_IDIOMA: return "idioma metadados titulo sinopse traducao tmdb";
     case AJ_HERO_TRAILER: return "trailer trailers destaque topo hero autoplay automatico";
@@ -227,7 +228,7 @@ static const char *uxCaminhoAntigo(int op) {
     case AJ_DEBRID_RD: case AJ_DEBRID_TB: case AJ_DEBRID_PM: case AJ_DEBRID_AD: case AJ_DEBRID_AD_TESTAR:
     case AJ_MDB_CHAVE: case AJ_FANART_CHAVE:
       return "Chaves";
-    case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR:
+    case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: case AJ_P2P_LIMITE:
     case AJ_JF_LIGADO: case AJ_JF_SERVIDOR: case AJ_JF_ENTRAR: case AJ_JF_SAIR:
     case AJ_EM_SERVIDOR: case AJ_EM_ENTRAR: case AJ_EM_SAIR:
     case AJ_PX_ENTRAR: case AJ_PX_SERVIDOR: case AJ_PX_SAIR:

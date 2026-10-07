@@ -113,7 +113,7 @@ static const Item TELA[] = {
       OPC(AJ_DEBRID_AD_TESTAR),
 #ifndef __EMSCRIPTEN__
     // .wgt: sem socket TCP/UDP no navegador, sem motor; P2P escondido (a8e7685d).
-    ROT("P2P"), OPC(AJ_P2P_LIGADO), OPC(AJ_P2P_URL), OPC(AJ_P2P_TESTAR),
+    ROT("P2P"), OPC(AJ_P2P_LIGADO), OPC(AJ_P2P_URL), OPC(AJ_P2P_TESTAR), OPC(AJ_P2P_LIMITE),
 #endif
     ROT("Servidores pessoais"),
       OPC(AJ_JF_LIGADO), OPC(AJ_JF_SERVIDOR), OPC(AJ_JF_ENTRAR), OPC(AJ_JF_SAIR),
@@ -214,7 +214,7 @@ static int uxAvancada(int op) {
     case AJ_SELOS_PACOTE: case AJ_SELOS_PACOTE_ADD: case AJ_SELOS_PACOTE_REM:
     case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO:
     case AJ_LIVETV_FORMATO: case AJ_LIVETV_MODO: case AJ_LIVETV_PROXY:
-    case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR:
+    case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: case AJ_P2P_LIMITE:
     case AJ_TEX_MB:
     case AJ_SEEKR_AJUSTE:
     case AJ_MANTER_VIDEO:

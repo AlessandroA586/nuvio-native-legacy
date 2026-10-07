@@ -1343,6 +1343,8 @@ static void pedirTorrentEscolhido(int indice) {
 // destroy rodam em fios proprios.
 static void vigiarMotorP2p(void) {
   int m;
+  // #334: o limite de Ajustes vale na proxima subida do motor (um atomico).
+  p2pmotor_definir_limite_mb(ajustes_p2p_limite_mb());
   // Sem p2pmotor_disponivel() aqui: no .tpk ele abre a libnuvio_engine.so
   // (dlopen), e isso so deve acontecer quando alguem pede P2P. ativo() e
   // motivo_parada() so leem estado.
@@ -1361,9 +1363,22 @@ static void vigiarMotorP2p(void) {
     else if (m == P2P_ERR_DISCO)
       player_erro_fonte_motivo(i18n("Não foi possível medir o espaço livre da TV"),
           i18n("Sem essa medida o P2P não baixa nada. Abra Fontes para escolher outra opção."));
-    else
-      player_erro_fonte_motivo(i18n("O P2P encheu o espaço livre da TV"),
-          i18n("O vídeo parou para não lotar a TV. Escolha uma fonte menor."));
+    else {
+      // #334: dizer os numeros. O motor guarda o arquivo inteiro: um 4K de
+      // 15 GB nao cabe em 0,7 GB, e "escolha uma fonte menor" sem o tamanho
+      // nao explicava por que.
+      uint64_t tam = 0, teto = 0, livre = 0;
+      char corpo[300];
+      p2pmotor_arquivo_atual(&tam, &teto, &livre);
+      if (tam > 0 && teto > 0) {
+        snprintf(corpo, sizeof corpo,
+                 i18n("O vídeo tem %.1f GB e o P2P só pode guardar %.1f GB nesta TV (%.1f GB livres). Escolha uma fonte menor ou mude o limite em Ajustes > P2P."),
+                 (double)tam / 1073741824.0, (double)teto / 1073741824.0, (double)livre / 1073741824.0);
+        player_erro_fonte_motivo(i18n("O P2P encheu o espaço livre da TV"), corpo);
+      } else
+        player_erro_fonte_motivo(i18n("O P2P encheu o espaço livre da TV"),
+            i18n("O vídeo parou para não lotar a TV. Escolha uma fonte menor."));
+    }
   }
 }
 static void processarTorrentJob(void) {

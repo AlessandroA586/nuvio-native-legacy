@@ -475,6 +475,10 @@ typedef enum {
   AJ_FONTE_AQUECER,
   AJ_FONTE_CONFERIR_VARIAS,
   AJ_FONTE_PREPARAR,
+  // #334: "Limite de espaço do P2P" do motor embutido (p2pmotor_teto_duro):
+  // Automatico (o de sempre) ou 2/4/8/16 GB, sempre deixando 512 MB livres.
+  // LOCAL (o disco e desta TV). No fim: valor[]/CHAVE[] posicionais.
+  AJ_P2P_LIMITE,
   AJ_N
 } OpcaoId;
 
@@ -539,6 +543,9 @@ static const char *V_TAMANHO_UI[] = { "100%", "120%", "130%", "150%" };
 static const char *V_TAMANHO_AJUSTES[] = { "80%", "90%", "100%" };
 // F07: the order is cacheboost_cache_mb's (0, 256, 512, 1024 MB).
 static const char *V_CACHE_SEEK[] = { "Desligado", "256 MB", "512 MB", "1 GB" };
+// #334: indice gravado em p2pLimiteLocal; ajustes_p2p_limite_mb devolve os MB.
+static const char *V_P2P_LIMITE[] = { "Automático", "2 GB", "4 GB", "8 GB", "16 GB" };
+static const unsigned P2P_LIMITE_MB[] = { 0, 2048, 4096, 8192, 16384 };
 // Only the Android player has an app-controlled disk cache (cacheboost.h);
 // LG/Samsung show the row with "Não disponível nesta TV". Compile-time, so the
 // many tests that compile ajustes.c alone need no extra source.
@@ -1289,6 +1296,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Aquecer conexões ao abrir o título", V_LIGA, 2),   // local: fonteAquecerLocal
   ESC("Conferir várias fontes ao mesmo tempo", V_LIGA, 2),   // local: fonteConferirVariasLocal
   ESC("Preparar a fonte ao abrir o título", V_LIGA, 2),   // local: fontePrepararLocal
+  ESC("Limite de espaço do P2P",         V_P2P_LIMITE, 5),   // local: p2pLimiteLocal (#334)
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1508,6 +1516,7 @@ static const char *CHAVE[] = {
   "fonteAquecerLocal",
   "fonteConferirVariasLocal",
   "fontePrepararLocal",
+  "p2pLimiteLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -1978,6 +1987,10 @@ void ajustes_definir_vidro(int ligado) { int a = valor[AJ_VIDRO]; valor[AJ_VIDRO
 int ajustes_p2p_ligado(void) { return 0; }
 #else
 int ajustes_p2p_ligado(void) { return lig(AJ_P2P_LIGADO) && !SEGURO; }
+unsigned ajustes_p2p_limite_mb(void) {
+  int v = valor[AJ_P2P_LIMITE];
+  return v >= 0 && v < (int)(sizeof P2P_LIMITE_MB / sizeof *P2P_LIMITE_MB) ? P2P_LIMITE_MB[v] : 0;
+}
 #endif
 // Servidores pessoais: ligado E com HTTP estrito neste backend (o WGT nao tem:
 // jellyfin_disponivel() e 0 la). Fica FORA do #ifdef acima: dentro do #else ela
@@ -3829,6 +3842,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_PERFIL_PESQ:    /* estado em recomenda.c, por conta: nunca no blob */
     case AJ_PERFIL_EDITAR:
     case AJ_P2P_LIGADO:     /* o servidor P2P e um aparelho da rede desta casa */
+    case AJ_P2P_LIMITE:     /* #334: o disco e desta TV */
     case AJ_JF_LIGADO:
     case AJ_AVANCADAS:      /* so a vista desta TV */
     case AJ_POSTER_PROV:    /* servico e rede desta casa: nao segue a conta */
@@ -4155,7 +4169,7 @@ static int foraDestaPlataforma(int op) {
   if (op == AJ_LEG_SYNC_AUDIO) return 1;
 #endif
 #ifdef __EMSCRIPTEN__
-  if (op == AJ_P2P_LIGADO || op == AJ_P2P_URL || op == AJ_P2P_TESTAR) return 1;
+  if (op == AJ_P2P_LIGADO || op == AJ_P2P_URL || op == AJ_P2P_TESTAR || op == AJ_P2P_LIMITE) return 1;
 #endif
   return 0;
 }
@@ -4720,6 +4734,8 @@ static int inativa(int op) {
     // fonte ao reproduzir", mas app.c (autoParcialPronto) ainda usa o prazo
     // quando ha fonte lembrada para o titulo, mesmo escolhendo a mao.
     case AJ_CACHE_SEEK:  return !cacheSeekExiste();
+    // #334: so o motor embutido usa o limite; com servidor na rede quem guarda e ele.
+    case AJ_P2P_LIMITE:  return !p2pmotor_disponivel() || p2pEndereco[0];
     case AJ_DTS_AC3:     return !dtsConversaoExiste();
     // Som: na Samsung (.wgt) o trailer e sempre mudo (trailerfonte_com_som).
     case AJ_HERO_TRAILER_SOM:
@@ -5104,6 +5120,7 @@ static const char *ajudaOpcao(int op) {
     case AJ_DEBRID_PM: return "Chave de API do Premiumize. Só precisa se a sua conta Nuvio não a traz. Fica só nesta TV e aparece mascarada.";
     case AJ_PERFIL_PESQ: return "Desligado por padrão. Ligado, outras pessoas do Nuvio podem te achar pelo apelido e ver o que você escolher mostrar: bio, gêneros favoritos, foto e o que assistiu recentemente. Nunca aparecem e-mail, conta, addons nem aparelho. Desligar apaga o perfil do servidor na hora.";
     case AJ_PERFIL_EDITAR: return "Apelido, bio, gêneros e o que mostrar no perfil; a atividade compartilhada só com amigos (desligada por padrão); pedidos de amizade recebidos e a lista de bloqueados.";
+    case AJ_P2P_LIMITE: return "Quanto do armazenamento desta TV o P2P pode ocupar enquanto toca. Automático usa até metade do espaço livre (no máximo 1,5 GB). Um valor fixo sempre deixa 512 MB livres. O vídeo inteiro fica guardado até fechar o player: um arquivo maior que o limite para no meio.";
     case AJ_P2P_TESTAR: return "Pergunta ao servidor se ele responde e qual a versão. Funciona mesmo com o P2P desligado, para conferir o endereço antes de ligar.";
     case AJ_POSTER_PROV: return "Troca os cartazes retrato por um pronto de um serviço externo, com notas, selos 4K/HDR e faixa Top 10 no próprio cartaz. SpatialPosters (instância pública ou a sua), RPDB (com chave) ou um modelo de URL seu. Só cartazes de card: o destaque e os fundos não mudam. Se o serviço não responde, volta ao cartaz normal.";
     case AJ_POSTER_INST: return "Endereço da instância do SpatialPosters. Vazio usa a pública (spatial-posters.vercel.app), que é gratuita e compartilhada; para muitos cartazes, rode a sua com Docker.";
