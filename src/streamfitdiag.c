@@ -2,6 +2,7 @@
 #include "streamfit.h"
 #include "redemarca.h"
 #include "vazao.h"
+#include "rede.h"
 #include <ctype.h>
 #include <limits.h>
 #include <stdio.h>
@@ -21,6 +22,7 @@ static int parar(void *arg) {
 static void intervalo(const RedeIntervalo *v, void *arg) {
   Medida *m = arg;
   uint64_t taxa;
+  rede_vazao_vivo_somar((long long)v->bytes);   /* live graph of the speed test (rede.h) */
   if (!v->completa || v->ms < 1000) return; /* final partial interval */
   if (m->n >= STREAMFIT_AMOSTRAS_MAX || v->bytes > UINT64_MAX / 8) { m->invalida = 1; return; }
   taxa = v->bytes * 8 / v->ms; /* bits/ms == kbps; actual interval duration */

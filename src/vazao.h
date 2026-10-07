@@ -190,4 +190,28 @@ void vazao_ordenar(const VazCicloRes *r, int n, int *ordem);
 // Mediana das medianas das fontes VS_OK do add-on; *usadas = quantas. 0 sem nenhuma.
 int vazao_mediana_addon(const VazCicloRes *r, int n, int addon, int *usadas);
 
+// ---------------------------------------------------------------------------
+// TELA NOVA DO TESTE (mockup stats-velocidade, telas 4 e 5, aprovado 07/10).
+//
+// O GRAFICO AO VIVO, um ponto por segundo, le rede_vazao_vivo_total (rede.h).
+
+// LATENCIA E JITTER de `n` tempos de resposta (ms, < 0 = falhou): a mediana
+// dos validos e o jitter = media das diferencas absolutas entre respostas
+// consecutivas validas. Devolve quantos valeram (0 = sem medida).
+int vazao_latencia(const int *ms, int n, int *mediana, int *jitter);
+
+// O QUE A VELOCIDADE TOCA. Cinco perfis com a taxa TIPICA de cada um (a do
+// mockup aprovado: 1080p 8, 1080p HDR 14, 4K HDR 28, 4K remux 45, 4K Dolby
+// Vision remux 80 Mbps) e tres faixas pela MESMA regra do otimo e do maximo:
+// cabe no otimo (p20 x 0,75) -> toca bem; so no maximo (mediana x 0,9) ->
+// pode travar; acima -> nao toca. Nome e tecnico e universal (sem i18n).
+#define VAZ_QUALIDADES 5
+typedef struct { const char *nome, *icone; int tipicoKbps; } VazQualidade;
+typedef enum { VBANDA_TOCA = 0, VBANDA_PODE_TRAVAR, VBANDA_NAO_TOCA } VazBanda;
+const VazQualidade *vazao_qualidade(int i);
+VazBanda vazao_banda(const VazaoResumo *r, int kbps);
+// O veredito: `*bom` = a mais alta que toca bem (-1 nenhuma) e `*proxima` = a
+// logo acima dela (-1 se todas tocam bem). A frase e da tela.
+void vazao_veredito(const VazaoResumo *r, int *bom, int *proxima);
+
 #endif

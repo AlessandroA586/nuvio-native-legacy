@@ -53,6 +53,7 @@
 #include "fonteauto.h"
 #include "streams.h"
 #include "vazao.h"
+#include "estatvivo.h"
 #include "tex_cache.h"
 #include "text.h"
 #include "js.h"
@@ -61,6 +62,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #ifndef NV_VERSAO
 #define NV_VERSAO "dev"
@@ -258,6 +260,11 @@ static int focoLinha;
 // O Range comeca 5 MB DENTRO do arquivo: o comeco de um MKV/MP4 e cabecalho,
 // e o CDN costuma servi-lo de cache quente — mediria o cache, nao a fonte.
 #define VAZ_INICIO_BYTE (5L * 1024L * 1024L)
+// Pontos do grafico ao vivo: 3 fontes x 8 s e folga para o 1o byte de cada.
+#define VAZ_VIVO_MAX    48
+// Latencia: 10 pedidos de 1 byte ao servidor da 1a fonte (a mediana e o
+// jitter, vazao_latencia). So o 1o byte conta; o corpo e cortado no teto.
+#define VAZ_LAT_N       10
 // Teto de bytes por fonte, so contra conta errada: os bytes sao descartados
 // e nada disto fica em memoria. 8 s a 1 Gbps sao 1 GB.
 #define VAZ_TETO_BYTES  (1536LL * 1024LL * 1024LL)
@@ -333,6 +340,24 @@ typedef struct {
   VazaoResumo resumo;
   VazResultado resultado;
   Uint32 inicioMs, fonteIniMs;
+  // TELA NOVA (mockup stats-velocidade, telas 4 e 5). O grafico ao vivo e
+  // escrito so pelo fio de desenho (diagnostico_atualizar), 1 ponto por
+  // segundo de corpo, pelo contador de rede_vazao_vivo_total.
+  int vivo[VAZ_VIVO_MAX], nVivo;
+  long long vivoBytes;
+  Uint32 vivoT;
+  // Latencia e jitter: fio escreve, publica latPronta.
+  int latMs, jitMs, latN;
+  _Atomic int latPronta;
+  char latHost[96];
+  // O host publico e o add-on da fonte que esta sendo medida agora, e os
+  // das ja medidas (so o rapido): "Fontes medidas" da tela.
+  char hostAgora[96];
+  int addonAgora;
+  char hostFonte[VAZAO_FONTES_MAX][96];
+  int addonFonte[VAZAO_FONTES_MAX];
+  int fimHora, fimMin;    // "Concluido · 21:49"
+  int envioPedido;        // "Enviar relatorio" desta medida: o chip mostra o envio
 } Vazao;
 
 static Vazao vz;
@@ -1181,6 +1206,9 @@ static void montarRelatorio(void) {
                  vz.ciclo == VCM_ADDON ? "addon" : "completo", VAZ_CICLO_JANELA_S,
                  vz.agenda.tentadas, vz.agenda.medidas, vz.agenda.falhas, vz.debridTotal,
                  vz.sel.duplicadas, vz.sel.foraDoLimite, vz.agenda.restantes);
+    if (vz.latN > 0)
+      ACRESCENTA("vazao_latencia_ms=%d\nvazao_jitter_ms=%d\nvazao_latencia_respostas=%d\n",
+                 vz.latMs, vz.jitMs, vz.latN);
     ACRESCENTA("vazao_falhas=aviso:%d|recusado:%d|sem_resposta:%d|navegador:%d|curto:%d\n",
                vz.falhas[VR_AVISO], vz.falhas[VR_RECUSADO], vz.falhas[VR_SEM_RESPOSTA],
                vz.falhas[VR_NAVEGADOR], vz.falhas[VR_CURTO]);
@@ -1636,7 +1664,9 @@ static int medirUmaFonte(const VazCand *c, char hosts[][96], int nHosts) {
   MnRes res;
   int k;
   vz.tentadas++;
-  res = medirNucleo(c, VAZ_JANELA_S, hosts, nHosts, &tmp, &r, chave, NULL, 0, &cat, &motivo);
+  vz.addonAgora = c->addon;
+  res = medirNucleo(c, VAZ_JANELA_S, hosts, nHosts, &tmp, &r, chave, vz.hostAgora, sizeof vz.hostAgora,
+                    &cat, &motivo);
   if (res == MN_REPETIDO) return VS_HOST_REPETIDO;
   if (res == MN_CANCELADO) { atomic_store(&vz.cancelado, 1); return VS_FALHOU; }
   if (res != MN_OK) {
@@ -1647,6 +1677,9 @@ static int medirUmaFonte(const VazCand *c, char hosts[][96], int nHosts) {
     return res == MN_AVISO ? VS_AVISO : VS_FALHOU;
   }
   *f = tmp;
+  { int i = atomic_load(&vz.nFonte);
+    snprintf(vz.hostFonte[i], sizeof vz.hostFonte[i], "%s", vz.hostAgora);
+    vz.addonFonte[i] = c->addon; }
   for (k = 0; k < f->n && vz.nAmostra < VAZAO_AMOSTRAS_MAX; k++) vz.amostra[vz.nAmostra++] = f->kbps[k];
   snprintf(hosts[nHosts], 96, "%s", chave);
   printf("[vazao] fonte %d/%d: %.1f Mbps mediana, p20 %.1f, %lu s, %lld MB\n",
@@ -1687,6 +1720,64 @@ static unsigned long vazAgora(void *u) { (void)u; return SDL_GetTicks(); }
 static void vazPasso(void *u, int feitos, int total) {
   (void)u; (void)feitos; (void)total;
   atomic_fetch_add(&vz.feitos, 1);
+}
+
+// LATENCIA E JITTER (tela nova, passo 1): VAZ_LAT_N pedidos de 1 byte ao
+// servidor da primeira fonte medivel, na ordem da fonte automatica, pelo
+// MESMO medidor do download (o teto de 1 byte corta o corpo: nada de arquivo
+// inteiro se o CDN ignorar o Range). Conta o tempo ate o 1o byte. Tenta ate 3
+// fontes; uma que falha em 8 dos 10 pedidos nao vira numero.
+static int latenciaUm(const char *alvo, const char *const *cab) {
+  RedeVazao r;
+  int kb[4];
+  char fim[8];
+  memset(&r, 0, sizeof r);
+  if (vz.rede) {
+    StreamfitDiagControle ctl = { .rede = vz.rede, .cancelado = fitVazCancelado, .prazo_ms = 4000 };
+    streamfitdiag_medir(alvo, cab, 1, 0, 1, &ctl, kb, 4, &r, fim, sizeof fim);
+  } else {
+    rede_vazao_espera(4000);
+    rede_medir_vazao(alvo, cab, 1, 0, 1, (volatile int *)&vz.cancelado, kb, 4, &r, NULL, 0);
+    rede_vazao_espera(0);
+  }
+  if (r.cancelado || r.status < 200 || r.status >= 300 || !r.bytes) return -1;
+  return (int)r.esperaMs;
+}
+
+static void vazaoLatencia(void) {
+  VazItem it[VAZ_MAX_CAND];
+  int ind[VAZ_MAX_CAND], nIt, q, tentou = 0;
+  nIt = itensDoCiclo(it, ind);
+  for (q = 0; q < nIt && tentou < 3 && !atomic_load(&vz.cancelado); q++) {
+    const VazCand *c = &vz.cand[ind[q]];
+    char fim[4096], copia[512];
+    const char *vet[8];
+    const char *const *cab;
+    const char *alvo;
+    int ms[VAZ_LAT_N], k, n;
+    if (!c->medivel || !c->url) continue;
+    tentou++;
+    cab = vetorCabecalhos(c->cab, copia, sizeof copia, vet, 8);
+    alvo = c->url;
+    if (!cab && !vz.rede) {
+      if (!rede_url_final(c->url, DIAG_TIMEOUT_S, fim, sizeof fim)) continue;
+      alvo = fim;
+    }
+    if (vazao_url_aviso(alvo)) continue;
+    for (k = 0; k < VAZ_LAT_N && !atomic_load(&vz.cancelado); k++) ms[k] = latenciaUm(alvo, cab);
+    n = vazao_latencia(ms, k, &vz.latMs, &vz.jitMs);
+    if (n >= 3) {
+      vz.latN = n;
+      vazao_host_publico(alvo, vz.latHost, sizeof vz.latHost);
+      printf("[vazao] latencia %d ms, jitter %d ms (%d de %d respostas)\n", vz.latMs, vz.jitMs, n, k);
+      fflush(stdout);
+      atomic_store(&vz.latPronta, 1);
+      return;
+    }
+  }
+  printf("[vazao] latencia: sem medida\n");
+  fflush(stdout);
+  atomic_store(&vz.latPronta, 1);
 }
 
 static void vazaoFontes(void) {
@@ -1793,9 +1884,15 @@ static int vazaoWorker(void *arg) {
   atomic_store(&vz.fase, 1);
   vazaoAddons();
   if (!atomic_load(&vz.cancelado)) {
+    if (vz.ciclo == VCM_RAPIDO) {
+      atomic_store(&vz.fase, 3);
+      vazaoLatencia();
+    }
     atomic_store(&vz.fase, 2);
-    if (vz.ciclo == VCM_RAPIDO) vazaoFontes();
-    else vazaoCiclo();
+    if (!atomic_load(&vz.cancelado)) {
+      if (vz.ciclo == VCM_RAPIDO) vazaoFontes();
+      else vazaoCiclo();
+    }
   }
   for (k = 0; k < atomic_load(&vz.nCic); k++) if (vz.cic[k].sit == VS_OK) medidas++;
   if (atomic_load(&vz.cancelado)) vz.resultado = VR_CANCELADO;
@@ -1869,8 +1966,10 @@ void diagnostico_cancelar_vazao(void) {
 // add-on" so aparecem com MAIS DE 3 fontes de link direto (com 3 ou menos o
 // rapido ja mediu todas as que ha, so que pulando host repetido); o "por
 // add-on" ainda pede pelo menos 2 add-ons com fonte, senao seria o mesmo teste.
-enum { VB_RAPIDO, VB_CICLO, VB_ADDON, VB_N };
-static const char *const VB_ROTULO[VB_N] = { "Testar de novo", "Ciclo completo", "Por add-on" };
+enum { VB_RAPIDO, VB_CICLO, VB_ADDON, VB_ENVIAR, VB_N };
+static const char *const VB_ROTULO[VB_N] = { "Testar de novo", "Testar todas as fontes", "Por add-on",
+                                             "Enviar relatório" };
+static const char *const VB_ICONE[VB_N] = { "aj_rotate-cw", "aj_layers", "aj_list-ordered", "aj_send" };
 
 static int addonsComFonte(void) {
   int i, n = 0;
@@ -1881,6 +1980,13 @@ static int addonsComFonte(void) {
 static int vazBotoes(int *lista) {
   int n = 0;
   lista[n++] = VB_RAPIDO;
+  // O RESULTADO DO RAPIDO (tela 5 do mockup): testar de novo, testar todas as
+  // fontes e enviar o relatorio. O "Por add-on" segue no resultado do ciclo.
+  if (vz.ciclo == VCM_RAPIDO && vz.resultado == VR_OK) {
+    lista[n++] = VB_CICLO;
+    lista[n++] = VB_ENVIAR;
+    return n;
+  }
   if (vz.mediveisTotal > VAZAO_FONTES_MAX) {
     lista[n++] = VB_CICLO;
     if (addonsComFonte() > 1) lista[n++] = VB_ADDON;
@@ -1888,7 +1994,9 @@ static int vazBotoes(int *lista) {
   return n;
 }
 
+static void enviarRelatorioVazao(void);
 static void acionarVazBotao(int b) {
+  if (b == VB_ENVIAR) { enviarRelatorioVazao(); return; }
   iniciarVazaoModo(b == VB_CICLO ? VCM_COMPLETO : b == VB_ADDON ? VCM_ADDON : VCM_RAPIDO);
 }
 
@@ -1899,12 +2007,33 @@ static void acionarVazBotao(int b) {
 // relatorio que ja saiu nao a tinha.
 static void concluirVazao(void) {
   if (vz.fio) { SDL_WaitThread(vz.fio, NULL); vz.fio = NULL; }
+  { time_t t = time(NULL);
+    struct tm *lt = localtime(&t);
+    if (lt) { vz.fimHora = lt->tm_hour; vz.fimMin = lt->tm_min; } }
   if (atomic_load(&vz.estado) != 2 || atomic_load(&d.estado) != 2 || !d.relatorio[0] ||
       atomic_load(&d.enviando))
     return;
   montarRelatorio();
   dados_gravar("diagnostico-otimizacao.txt", d.relatorio);
   if (d.enviado) d.vazaoPendente = 1;
+}
+
+// "Enviar relatorio" do resultado do teste (tela 5): o mesmo relatorio
+// compacto do diagnostico (montarRelatorio, sem url nem host do rapido), pelo
+// mesmo envio. Aberto so para o teste, o resto do relatorio vai zerado.
+static void enviarRelatorioVazao(void) {
+  if (atomic_load(&d.enviando) || atomic_load(&d.estado) == 1 || atomic_load(&vz.estado) != 2) return;
+  if (d.fioEnvio) { SDL_WaitThread(d.fioEnvio, NULL); d.fioEnvio = NULL; }
+  if (!d.id[0]) dados_uuid(d.id, sizeof d.id);
+  montarRelatorio();
+  dados_gravar("diagnostico-otimizacao.txt", d.relatorio);
+  d.enviado = d.envioFalhou = 0;
+  vz.envioPedido = 1;
+  atomic_store(&d.enviando, 1);
+  d.fioEnvio = SDL_CreateThread(envioWorker, "nuvio-diag-envio", NULL);
+  if (!d.fioEnvio) { atomic_store(&d.enviando, 0); d.envioFalhou = 1; }
+  printf("[vazao] relatorio: enviando\n");
+  fflush(stdout);
 }
 
 static void juntarFios(int esperarTodos) {
@@ -2096,7 +2225,7 @@ void diagnostico_evento(const SDL_Event *e) {
   // resultado e volta ao que estava (objetivo ou resultado do diagnostico).
   if (vz.aberto) {
     int ve = atomic_load(&vz.estado);
-    if (teclaVoltar(e)) {
+    if (teclaVoltar(e) || (ve == 1 && (k == SDLK_RETURN || k == SDLK_KP_ENTER))) {
       if (ve == 1) atomic_store(&vz.cancelado, 1);
       else {
         vz.aberto = 0;
@@ -2141,9 +2270,27 @@ void diagnostico_evento(const SDL_Event *e) {
   if (k == SDLK_RETURN || k == SDLK_KP_ENTER) iniciarTeste();
 }
 
+// UM PONTO POR SEGUNDO no grafico ao vivo: so dentro da janela de corpo de
+// uma fonte (fonteIniMs), para o tempo de resolver o link e esperar o 1o byte
+// nao virar um zero que nao e a conexao.
+static void vazaoVivo(Uint32 agora) {
+  long long tot;
+  if (atomic_load(&vz.estado) != 1 || atomic_load(&vz.fase) != 2 || !vz.fonteIniMs) {
+    vz.vivoT = 0;
+    return;
+  }
+  tot = rede_vazao_vivo_total();
+  if (!vz.vivoT) { vz.vivoT = agora; vz.vivoBytes = tot; return; }
+  if (agora - vz.vivoT < 1000u) return;
+  if (agora - vz.fonteIniMs <= (Uint32)(VAZ_JANELA_S * 1000 + 1500) && vz.nVivo < VAZ_VIVO_MAX && tot >= vz.vivoBytes)
+    vz.vivo[vz.nVivo++] = (int)((tot - vz.vivoBytes) * 8 / (long long)(agora - vz.vivoT));
+  vz.vivoT = agora;
+  vz.vivoBytes = tot;
+}
+
 void diagnostico_atualizar(float dt, Uint32 agora) {
-  (void)agora;
   juntarFios(0);
+  vazaoVivo(agora);
   if (vz.fio && atomic_load(&vz.estado) != 1) concluirVazao();
   if (d.passe) {
     int ms = (int)(dt * 1000.0f + 0.5f);
@@ -2921,7 +3068,8 @@ void diagnostico_desenhar(Uint32 agora) {
   { int est = atomic_load(&d.estado);
     ajustes_ui_fundo();
     if (vz.aberto) {
-      if (vz.ciclo == VCM_RAPIDO && atomic_load(&vz.estado) != 1 && vz.resultado == VR_OK) dgVazaoResultado(agora);
+      if (vz.ciclo == VCM_RAPIDO && atomic_load(&vz.estado) == 1) dgVazaoAoVivo(agora);
+      else if (vz.ciclo == VCM_RAPIDO && vz.resultado == VR_OK) dgVazaoResultado(agora);
       else dgVazaoGenerico(agora);
       return;
     }

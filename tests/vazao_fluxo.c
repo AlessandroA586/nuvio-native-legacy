@@ -68,11 +68,12 @@ int main(int argc, char **argv) {
   assert(vz.resumo.otimoKbps < vz.resumo.maximoKbps);
   puts("ok  addons medidos, candidatas filtradas, 2 hosts, ~8 Mbps");
 
-  // Mais de 3 fontes de link direto: o ciclo completo aparece; com um add-on
-  // so com fonte, o "por add-on" nao.
+  // O resultado do rapido (tela 5 do mockup): testar de novo, testar todas as
+  // fontes e enviar o relatorio. Latencia medida no servidor local.
   { int lista[VB_N];
-    assert(vazBotoes(lista) == 2 && lista[0] == VB_RAPIDO && lista[1] == VB_CICLO); }
-  puts("ok  botao Ciclo completo com mais de 3 fontes; Por add-on so com 2 add-ons");
+    assert(vazBotoes(lista) == 3 && lista[0] == VB_RAPIDO && lista[1] == VB_CICLO && lista[2] == VB_ENVIAR); }
+  assert(vz.latN >= 3 && vz.latMs >= 0 && atomic_load(&vz.latPronta));
+  puts("ok  botoes do resultado (de novo, todas as fontes, relatorio) e latencia medida");
 
   // 2. Relatorio: so numeros.
   atomic_store(&d.estado, 2);
@@ -80,6 +81,7 @@ int main(int argc, char **argv) {
   assert(strstr(d.relatorio, "vazao=v1\nvazao_resultado=ok\n"));
   assert(strstr(d.relatorio, "vazao_fonte=2|"));
   assert(strstr(d.relatorio, "vazao_addon=2|ms="));
+  assert(strstr(d.relatorio, "vazao_latencia_ms="));
   assert(!strstr(d.relatorio, "127.0.0.1") && !strstr(d.relatorio, "localhost") &&
          !strstr(d.relatorio, "/lento") && !strstr(d.relatorio, "Local"));
   puts("ok  relatorio com a vazao e sem url, host ou nome");

@@ -490,182 +490,343 @@ static void dgResultado(void) {
       ajustes_ui_dicas(k, l, 3, NV_TELA_W - 40 - dw, by + 15, 1); } }
 }
 
-// --- TESTE DE VELOCIDADE ----------------------------------------------------------
-static void dgVazaoResultado(Uint32 agora) {
-  GfxRect e = { dgX0(), 112, 900, NV_TELA_H - 152 }, dr;
-  float x = e.x + 44, w = e.w - 88, y, ar, ag, ab;
-  char a[200], b[32], c[32];
-  int nf = atomic_load(&vz.nFonte), i;
+// --- TESTE DE VELOCIDADE (mockup stats-velocidade, telas 4 e 5, 07/10) ----------
+// Uma ilha so, larga: a esquerda o numero grande e o grafico (um ponto por
+// segundo ao vivo; no resultado, todas as amostras), a direita os passos,
+// latencia e jitter e as fontes medidas (rodando) ou a tabela do que a
+// velocidade toca, o veredito e os botoes (resultado). Chips neutros, foco
+// pela peca de Ajustes (ajustes_ui_botao), icones Lucide.
+#define VZ_TOPO 112.0f
+static float vzX0(void) { return dgX0(); }
+static float vzW(void) { return NV_TELA_W - 48.0f - vzX0(); }
+static void vzCartao(GfxRect r) { gfx_cor(r, 22.0f / r.h, 1, 1, 1, 0.045f); }
+
+// Chip neutro (o .chip do mockup): fundo branco a 8%, fio de 8%, 20/600.
+static float vzChip(const char *icone, const char *s, float x, float y, int desenha) {
+  TxtLinha t = txt_linha(TXT_AJ_SEG, s, 216, 216, 216, 255);
+  float w = 18 + (icone ? 30 : 0) + t.w + 18;
+  if (!desenha) return w;
+  gfx_cor((GfxRect){ x, y, w, 40 }, 0.5f, 1, 1, 1, 0.08f);
+  gfx_anel((GfxRect){ x, y, w, 40 }, 0.5f, 1.0f, 1, 1, 1, 0.08f);
+  if (icone) gfx_icone((GfxRect){ x + 18, y + 10, 20, 20 }, icone, 0.85f, 0.85f, 0.85f, 1);
+  txt_desenhar(t, x + 18 + (icone ? 30 : 0), y + (40 - t.h) * 0.5f);
+  return w;
+}
+
+// Cabecalho comum: kicker, titulo e o chip da direita.
+static void vzCabecalho(GfxRect p, const char *icone, const char *chip) {
+  float x = p.x + 48;
+  ajustes_ui_kicker("Ajustes · Diagnóstico", x, p.y + 40, 1);
+  { TxtLinha t = dgT(TXT_V2_TIT, "Teste de velocidade"); txt_desenhar(t, x, p.y + 62); }
+  if (chip && chip[0]) {
+    float w = vzChip(icone, chip, 0, 0, 0);
+    vzChip(icone, chip, p.x + p.w - 48 - w, p.y + 54, 1);
+  }
+}
+
+// Linha com area: `v` em kbps, `total` pontos no eixo (o grafico enche da
+// esquerda para a direita), escala `mx` kbps. `doZero`: o 1o segmento sobe do
+// chao (ao vivo, o teste comeca do nada). A area vai em fatias de ~6 px
+// interpoladas, para a borda de cima seguir a linha sem degrau.
+static void vzLinha(const int *v, int n, int total, float mx, GfxRect r, float esp, int doZero) {
+  float px, py;
+  int i, den;
+  if (n < 1 || mx <= 0) return;
+  den = doZero ? (total - 1 > n ? total - 1 : n) : (total - 1 > n - 1 ? total - 1 : n - 1);
+  if (den < 1) den = 1;
+  px = r.x;
+  py = doZero ? r.y + r.h : r.y + r.h - r.h * fminf((float)v[0] / mx, 1.0f);
+  for (i = doZero ? 0 : 1; i < n; i++) {
+    float x = r.x + r.w * (float)(doZero ? i + 1 : i) / (float)den;
+    float y = r.y + r.h - r.h * fminf((float)v[i] / mx, 1.0f);
+    float sx;
+    for (sx = px; sx < x - 0.5f; sx += 6.0f) {
+      float sw = fminf(6.0f, x - sx), t = (sx + sw * 0.5f - px) / (x - px);
+      float sy = py + (y - py) * t;
+      gfx_cor((GfxRect){ sx, sy, sw, r.y + r.h - sy }, 0, 1, 1, 1, 0.10f);
+    }
+    dgLinha(px, py, x, y, esp, 0.953f, 0.949f, 0.937f, 1);
+    px = x; py = y;
+  }
+}
+
+// "Rotulo ...... valor" de 40 px com fio, no corpo do mockup (22).
+static float vzKv(const char *k, const char *v, float x, float y, float w) {
+  TxtLinha tv = dgTC(TXT_G22M, v, w * 0.7f), tk = txt_linha_corta(TXT_AJ_TEXTO, k, 154, 154, 156, 255, w - tv.w - 16);
+  gfx_cor((GfxRect){ x, y, w, 1 }, 0, 1, 1, 1, 0.08f);
+  txt_desenhar(tk, x, y + (40 - tk.h) * 0.5f);
+  txt_desenhar(tv, x + w - tv.w, y + (40 - tv.h) * 0.5f);
+  return 40;
+}
+
+// Numero grande com a unidade na linha de base. Devolve a altura usada.
+static float vzNumero(const char *n, const char *u, float x, float y) {
+  TxtLinha t = dgT(TXT_AJ_NUM110, n), un = txt_linha(TXT_V2_ROT, u, 180, 180, 182, 255);
+  txt_desenhar(t, x, y);
+  txt_desenhar(un, x + t.w + 14, y + t.h * 0.78f - un.h);
+  return t.h;
+}
+
+// --- RODANDO (tela 4) ------------------------------------------------------------
+static void dgVazaoAoVivo(Uint32 agora) {
+  GfxRect p = { vzX0(), VZ_TOPO, vzW(), NV_TELA_H - VZ_TOPO - 50 };
+  float x = p.x + 48, lw = (p.w - 96 - 40) * 0.6f, rx = x + lw + 40, rw = p.x + p.w - 48 - rx;
+  int fase = atomic_load(&vz.fase), nf = atomic_load(&vz.nFonte), i;
+  int baixando = fase == 2 && vz.fonteIniMs;
+  char a[200], b[32];
   (void)agora;
-  ajustes_acento(&ar, &ag, &ab);
-  ajustes_ui_ilha(e, 36, 0);
-  y = e.y + 44;
-  snprintf(a, sizeof a, "%s · %s", i18n("Teste de velocidade"), i18n("Desempenho desta TV"));
-  y += dgTitulo(a, "Tamanho de arquivo que toca sem parar nesta TV", TXT_ILHA_TITULO, x, y, w);
-  y += 30;
-  vazao_fmt_mbps(b, sizeof b, vz.resumo.medianaKbps, sepDecimal());
-  vazao_fmt_mbps(c, sizeof c, vz.resumo.p20Kbps, sepDecimal());
-  { TxtLinha n = dgT(TXT_AJ_NUM110, b), u = dgT(TXT_AJ_TIT28, "Mbps"), p;
-    snprintf(a, sizeof a, i18n("pior trecho %s Mbps"), c);
-    p = dgT(TXT_AJ_TEXTO, a);
-    txt_desenhar(n, x, y);
-    txt_desenhar_alpha(u, x + n.w + 14, y + n.h * 0.8f - u.h, 0.6f);
-    txt_desenhar_alpha(p, x + n.w + 14 + u.w + 18, y + n.h * 0.8f - p.h, 0.5f);
-    y += n.h * 0.9f + 30; }
-  { float cw = (w - 16) * 0.5f;
-    int k;
-    for (k = 0; k < 2; k++) {
-      int kb = k ? vz.resumo.maximoKbps : vz.resumo.otimoKbps;
-      GfxRect cr = { x + k * (cw + 16), y, cw, 200 };
-      char gb[16], ep[16], mb[16];
-      ajustes_ui_neutro(cr, 16, 0.04f);
-      if (k) ajustes_ui_kicker("Máximo", cr.x + 24, cr.y + 24, 1);
-      else ajCapsCor("Ótimo", cr.x + 24, cr.y + 24, ar, ag, ab);
-      vazao_fmt_gb(gb, sizeof gb, vazao_gb(kb, VAZAO_FILME_S), sepDecimal());
-      vazao_fmt_gb(ep, sizeof ep, vazao_gb(kb, VAZAO_EPISODIO_S), sepDecimal());
-      snprintf(a, sizeof a, "%s GB", gb);
-      { TxtLinha n = dgT(TXT_ILHA_TITULO, a); txt_desenhar(n, cr.x + 24, cr.y + 24 + 26); }
-      snprintf(a, sizeof a, i18n("por filme de 2 h · %s GB por episódio"), ep);
-      { TxtLinha l = dgTC(TXT_AJ_ESTADO, a, cw - 48); txt_desenhar_alpha(l, cr.x + 24, cr.y + 24 + 26 + 50, 0.6f); }
-      vazao_fmt_mbps(mb, sizeof mb, kb, sepDecimal());
-      snprintf(a, sizeof a, i18n(k ? "Até %s Mbps toca, mas pode pausar quando a rede cai."
-                                   : "Arquivos de até %s Mbps tocam sem parar, mesmo nos piores trechos."), mb);
-      txt_bloco(TXT_ILHA_GENERO, a, 243, 242, 239, cr.x + 24, cr.y + 24 + 26 + 50 + 34, cw - 48, 23, 0.45f, 2);
+  ajustes_ui_ilha(p, 36, 0);
+  { const char *h = vz.hostAgora[0] ? vz.hostAgora : vz.latHost;
+    if (h[0]) snprintf(a, sizeof a, i18n("Testando com o seu add-on · %s"), h);
+    else snprintf(a, sizeof a, "%s", i18n("Testando com o seu add-on"));
+    vzCabecalho(p, "aj_server", a); }
+
+  // ESQUERDA: download agora, pico e mediana, o grafico e a barra da fonte.
+  { GfxRect c = { x, p.y + 150, lw, 600 };
+    float cx = c.x + 34, cw = c.w - 68, y;
+    int mx = 0, ult = vz.nVivo ? vz.vivo[vz.nVivo - 1] : -1;
+    vzCartao(c);
+    ajCapsDg("Download agora", cx, c.y + 30);
+    if (vz.nVivo) {
+      int ord[VAZ_VIVO_MAX], k, med;
+      float xr = cx + cw;
+      for (k = 0; k < vz.nVivo; k++) { ord[k] = vz.vivo[k]; if (vz.vivo[k] > mx) mx = vz.vivo[k]; }
+      for (k = 1; k < vz.nVivo; k++) { int t = ord[k], j = k; while (j > 0 && ord[j - 1] > t) { ord[j] = ord[j - 1]; j--; } ord[j] = t; }
+      med = (vz.nVivo & 1) ? ord[vz.nVivo / 2] : (ord[vz.nVivo / 2 - 1] + ord[vz.nVivo / 2]) / 2;
+      ev_fmt_mbps(b, sizeof b, med, sepDecimal());
+      snprintf(a, sizeof a, i18n("Mediana %s"), b);
+      xr -= vzChip(NULL, a, 0, 0, 0); vzChip(NULL, a, xr, c.y + 34, 1);
+      ev_fmt_mbps(b, sizeof b, mx, sepDecimal());
+      snprintf(a, sizeof a, i18n("Pico %s"), b);
+      xr -= 12 + vzChip(NULL, a, 0, 0, 0); vzChip(NULL, a, xr, c.y + 34, 1);
     }
-    y += 200 + 34; }
-  ajustes_ui_kicker("Filme de 2 h · tamanho do arquivo", x, y, 1);
-  y += 18 + 16;
-  { double go = vazao_gb(vz.resumo.otimoKbps, VAZAO_FILME_S), gm = vazao_gb(vz.resumo.maximoKbps, VAZAO_FILME_S);
-    double esc = 40.0;
-    char so[16], sm[16], se[16];
-    TxtLinha l;
-    while (gm > esc * 0.9) esc *= 2;
-    gfx_cor((GfxRect){ x, y, w, 14 }, 0.5f, 1, 1, 1, 0.07f);
-    gfx_recorte(x, y, w, 14);
-    gfx_cor((GfxRect){ x, y, (float)(w * gm / esc) + 7, 14 }, 0.5f, DG_AMBAR, 0.75f);
-    gfx_cor((GfxRect){ x, y, (float)(w * go / esc), 14 }, 0.5f, DG_VERDE, 0.75f);
-    gfx_sem_recorte();
-    vazao_fmt_gb(so, sizeof so, go, sepDecimal()); vazao_fmt_gb(sm, sizeof sm, gm, sepDecimal());
-    snprintf(se, sizeof se, "%.0f GB", esc);
-    y += 14 + 10;
-    l = dgT(TXT_ILHA_HORA, "0"); txt_desenhar_alpha(l, x, y, 0.45f);
-    l = dgT(TXT_ILHA_HORA, se); txt_desenhar_alpha(l, x + w - l.w, y, 0.45f);
-    l = txt_linha(TXT_AJ_CHIP, so, 76, 195, 138, 255); txt_desenhar(l, x + (float)(w * go / esc) - l.w * 0.5f, y);
-    l = txt_linha(TXT_AJ_CHIP, sm, 232, 184, 74, 255); txt_desenhar(l, x + (float)(w * gm / esc) - l.w * 0.5f, y);
-    y += 44; }
-  { static const char *const L[3] = { "toca sem parar", "pode pausar", "acima do máximo" };
-    float lx = x;
+    ev_fmt_mbps(b, sizeof b, ult, sepDecimal());
+    vzNumero(b, "Mbps", cx - 4, c.y + 56);
+    y = c.y + 218;
+    { float H = 298, esc = mx > 0 ? (float)mx * 1.25f : 10000.0f;
+      int k;
+      for (k = 0; k < 4; k++) gfx_cor((GfxRect){ cx, y + H * k / 4.0f, cw, 1 }, 0, 1, 1, 1, 0.07f);
+      vzLinha(vz.vivo, vz.nVivo, VAZAO_FONTES_MAX * VAZ_JANELA_S, esc, (GfxRect){ cx, y, cw, H }, 2.5f, 1);
+      y += H + 12; }
+    { float dentro = baixando ? (float)(SDL_GetTicks() - vz.fonteIniMs) / 1000.0f : 0.0f;
+      int s = (int)dentro;
+      if (s > VAZ_JANELA_S) s = VAZ_JANELA_S;
+      gfx_cor((GfxRect){ cx, y, cw, 10 }, 0.5f, 1, 1, 1, 0.08f);
+      if (dentro > 0) gfx_cor((GfxRect){ cx, y, cw * fminf(dentro / VAZ_JANELA_S, 1.0f), 10 }, 0.5f, 0.902f, 0.902f, 0.894f, 1);
+      snprintf(a, sizeof a, i18n("%d de %d s · cada segundo é um ponto do gráfico; os dados baixados são descartados"),
+               s, VAZ_JANELA_S);
+      { TxtLinha l = dgTC(TXT_AJ_TEXTO, a, cw); txt_desenhar_alpha(l, cx, y + 24, 0.62f); } } }
+
+  // DIREITA: os tres passos.
+  { float y = p.y + 150;
     for (i = 0; i < 3; i++) {
-      TxtLinha l = dgT(TXT_ILHA_HORA, L[i]);
-      if (i == 0) gfx_cor((GfxRect){ lx, y + (l.h - 10) * 0.5f, 10, 10 }, 0.3f, DG_VERDE, 1);
-      else if (i == 1) gfx_cor((GfxRect){ lx, y + (l.h - 10) * 0.5f, 10, 10 }, 0.3f, DG_AMBAR, 1);
-      else gfx_cor((GfxRect){ lx, y + (l.h - 10) * 0.5f, 10, 10 }, 0.3f, 1, 1, 1, 0.12f);
-      txt_desenhar_alpha(l, lx + 18, y, 0.5f);
-      lx += 18 + l.w + 22;
+      int feito = i == 0 ? fase == 2 : 0, atual = i == 0 ? fase != 2 : i == 1 ? fase == 2 : 0;
+      float cy = y + 17 + i * 48;
+      GfxRect o = { rx, cy - 17, 34, 34 };
+      TxtLinha t;
+      if (i == 1) {
+        int k = nf + 1 > VAZAO_FONTES_MAX ? VAZAO_FONTES_MAX : nf + 1;
+        snprintf(a, sizeof a, i18n("Download · fonte %d de %d"), k, VAZAO_FONTES_MAX);
+      } else snprintf(a, sizeof a, "%s", i18n(i == 0 ? "Latência e jitter" : "Estabilidade e veredito"));
+      if (feito) {
+        gfx_cor(o, 0.5f, 0.902f, 0.902f, 0.894f, 1);
+        gfx_icone((GfxRect){ o.x + 8, o.y + 8, 18, 18 }, "aj_check", 0.08f, 0.08f, 0.08f, 1);
+      } else if (atual) {
+        gfx_anel(o, 0.5f, 3.0f, 0.953f, 0.949f, 0.937f, 1);
+        gfx_icone((GfxRect){ o.x + 8, o.y + 8, 18, 18 }, i == 1 ? "aj_arrow-down" : "aj_activity", 0.953f, 0.949f, 0.937f, 1);
+      } else {
+        char n[4];
+        TxtLinha l;
+        snprintf(n, sizeof n, "%d", i + 1);
+        l = dgT(TXT_AJ_KBD, n);
+        gfx_anel(o, 0.5f, 2.0f, 0.29f, 0.29f, 0.306f, 1);
+        txt_desenhar_alpha(l, o.x + (34 - l.w) * 0.5f, o.y + (34 - l.h) * 0.5f, 0.55f);
+      }
+      t = atual ? dgT(TXT_AJ_SECAO, a) : dgT(TXT_AJ_TEXTO, a);
+      txt_desenhar_alpha(t, rx + 46, cy - t.h * 0.5f, atual ? 1.0f : feito ? 0.82f : 0.55f);
+    } }
+
+  // Latencia e jitter.
+  { float tw = (rw - 24) * 0.5f, y = p.y + 318;
+    for (i = 0; i < 2; i++) {
+      GfxRect c = { rx + i * (tw + 24), y, tw, 214 };
+      int v = i ? vz.jitMs : vz.latMs, tem = atomic_load(&vz.latPronta) && vz.latN > 0;
+      vzCartao(c);
+      gfx_cor((GfxRect){ c.x + 24, c.y + 24, 44, 44 }, 12.0f / 44.0f, 1, 1, 1, 0.07f);
+      dgIcone(i ? "aj_activity" : "aj_zap", c.x + 24 + 10, c.y + 24 + 10, 24, 1);
+      { TxtLinha l = txt_linha(TXT_G22M, i ? "Jitter" : "Latência", 180, 180, 182, 255);
+        txt_desenhar(l, c.x + 24 + 58, c.y + 24 + (44 - l.h) * 0.5f); }
+      if (tem) snprintf(b, sizeof b, "%d", v); else snprintf(b, sizeof b, "—");
+      { TxtLinha n = dgT(TXT_V2_NUM, b), u = txt_linha(TXT_V2_LN, "ms", 180, 180, 182, 255);
+        txt_desenhar(n, c.x + 24, c.y + 84);
+        if (tem) txt_desenhar(u, c.x + 24 + n.w + 8, c.y + 84 + n.h * 0.8f - u.h); }
+      dgBloco(TXT_AJ_TEXTO, !tem ? (atomic_load(&vz.latPronta) ? "sem resposta do servidor" : "medindo…")
+                        : i ? "variação entre as respostas" : "até o servidor, mediana de 10",
+              c.x + 24, c.y + 150, tw - 48, 28, 0.62f, 2);
+    } }
+
+  // Fontes medidas.
+  { GfxRect c = { rx, p.y + 556, rw, 226 };
+    float y = c.y + 92;
+    vzCartao(c);
+    gfx_cor((GfxRect){ c.x + 24, c.y + 24, 44, 44 }, 12.0f / 44.0f, 1, 1, 1, 0.07f);
+    dgIcone("aj_server", c.x + 24 + 10, c.y + 24 + 10, 24, 1);
+    { TxtLinha l = txt_linha(TXT_G22M, "Fontes medidas", 180, 180, 182, 255);
+      txt_desenhar(l, c.x + 24 + 58, c.y + 24 + (44 - l.h) * 0.5f); }
+    for (i = 0; i < VAZAO_FONTES_MAX; i++) {
+      const char *host = i < nf ? vz.hostFonte[i] : i == nf && baixando ? vz.hostAgora : "";
+      int ad = i < nf ? vz.addonFonte[i] : vz.addonAgora;
+      TxtLinha v, h, n;
+      if (i < nf) {
+        ev_fmt_mbps(b, sizeof b, vz.fonte[i].r.medianaKbps, sepDecimal());
+        snprintf(a, sizeof a, "%s Mbps", b);
+        v = dgT(TXT_G23B, a);
+      } else v = txt_linha(TXT_G23B, i == nf && baixando ? "medindo…" : "na fila", 180, 180, 182, 255);
+      if (i > 0) gfx_cor((GfxRect){ c.x + 24, y - 1, c.w - 48, 1 }, 0, 1, 1, 1, 0.07f);
+      if (host[0] || i <= nf) {
+        snprintf(a, sizeof a, "%s", host[0] ? host : "…");
+        h = dgTC(TXT_AJ_TEXTO, a, (c.w - 48 - v.w - 24) * 0.62f);
+        txt_desenhar_alpha(h, c.x + 24, y + (40 - h.h) * 0.5f, 0.75f);
+        if (ad >= 0 && ad < addons_n() && (i < nf || (i == nf && baixando))) {
+          snprintf(a, sizeof a, "· %s", addons_nome(ad));
+          n = txt_linha_corta(TXT_AJ_TEXTO, a, 154, 154, 156, 255, c.w - 48 - v.w - 24 - h.w - 8);
+          txt_desenhar(n, c.x + 24 + h.w + 8, y + (40 - n.h) * 0.5f);
+        }
+      } else {
+        snprintf(a, sizeof a, i18n("Fonte %d"), i + 1);
+        h = dgT(TXT_AJ_TEXTO, a);
+        txt_desenhar_alpha(h, c.x + 24, y + (40 - h.h) * 0.5f, 0.55f);
+      }
+      txt_desenhar(v, c.x + c.w - 24 - v.w, y + (40 - v.h) * 0.5f);
+      y += 40;
+    } }
+
+  ajustes_ui_botao(i18n("Cancelar"), "aj_x", x, p.y + p.h - 48 - 60, 0);
+}
+
+// Frase com o comeco em negrito ("4K HDR: ok.") e o resto na mesma linha,
+// quebrando embaixo na largura do cartao.
+static void vzFrase(const char *forte, const char *resto, float x, float y, float w) {
+  TxtLinha f = dgT(TXT_G28B, forte), l;
+  char l1[240] = "", t[240];
+  const char *p = resto, *corte = resto;
+  float w1 = w - f.w - 10;
+  while (*p) {
+    const char *e = strchr(p, ' ');
+    int len = e ? (int)(e - p) : (int)strlen(p);
+    snprintf(t, sizeof t, "%s%s%.*s", l1, l1[0] ? " " : "", len, p);
+    if (txt_largura(TXT_V2_28, t) > w1) break;
+    snprintf(l1, sizeof l1, "%s", t);
+    p += len;
+    while (*p == ' ') p++;
+    corte = p;
+  }
+  txt_desenhar(f, x, y);
+  l = dgT(TXT_V2_28, l1);
+  if (l1[0]) txt_desenhar(l, x + f.w + 10, y + (f.h - l.h) * 0.5f);
+  if (*corte) txt_bloco(TXT_V2_28, corte, 243, 242, 239, x, y + 36, w, 34, 1, 2);
+}
+
+// --- RESULTADO (tela 5) ------------------------------------------------------------
+static void dgVazaoResultado(Uint32 agora) {
+  GfxRect p = { vzX0(), VZ_TOPO, vzW(), NV_TELA_H - VZ_TOPO - 50 };
+  float x = p.x + 48, lw = (p.w - 96 - 40) * 0.42f, rx = x + lw + 40, rw = p.x + p.w - 48 - rx;
+  char a[240], b[32], c2[32];
+  int i, bom, prox, nf = atomic_load(&vz.nFonte);
+  (void)agora;
+  ajustes_ui_ilha(p, 36, 0);
+  if (vz.envioPedido && atomic_load(&d.enviando)) snprintf(a, sizeof a, "%s", i18n("Enviando relatório…"));
+  else if (vz.envioPedido && d.enviado) snprintf(a, sizeof a, "%s", i18n("Relatório enviado"));
+  else if (vz.envioPedido && d.envioFalhou) snprintf(a, sizeof a, "%s", i18n("O envio falhou"));
+  else snprintf(a, sizeof a, i18n("Concluído · %02d:%02d"), vz.fimHora, vz.fimMin);
+  vzCabecalho(p, vz.envioPedido ? "aj_send" : "aj_clock", a);
+
+  // ESQUERDA: sua conexao.
+  { GfxRect c = { x, p.y + 150, lw, 620 };
+    float cx = c.x + 36, cw = c.w - 72, y;
+    vzCartao(c);
+    ajCapsDg("Sua conexão", cx, c.y + 38);
+    ev_fmt_mbps(b, sizeof b, vz.resumo.medianaKbps, sepDecimal());
+    y = c.y + 64 + vzNumero(b, "Mbps", cx - 4, c.y + 64) - 4;
+    ev_fmt_mbps(c2, sizeof c2, vz.resumo.p20Kbps, sepDecimal());
+    if (nf == 1) snprintf(a, sizeof a, i18n("1 fonte · pior trecho %s Mbps"), c2);
+    else snprintf(a, sizeof a, i18n("mediana de %d fontes · pior trecho %s Mbps"), nf, c2);
+    { TxtLinha l = dgTC(TXT_V2_24, a, cw); txt_desenhar_alpha(l, cx, y, 0.72f); y += l.h + 30; }
+    { int mx = 1, k;
+      for (k = 0; k < vz.nAmostra; k++) if (vz.amostra[k] > mx) mx = vz.amostra[k];
+      vzLinha(vz.amostra, vz.nAmostra, vz.nAmostra, (float)mx * 1.4f, (GfxRect){ cx, y, cw, 102 }, 2.0f, 0);
+      y += 102 + 26; }
+    snprintf(b, sizeof b, "%d ms", vz.latMs);
+    snprintf(c2, sizeof c2, "%d ms", vz.jitMs);
+    y += vzKv(i18n("Latência"), vz.latN ? b : "—", cx, y, cw);
+    y += vzKv(i18n("Jitter"), vz.latN ? c2 : "—", cx, y, cw);
+    { char go[16], gm[16];
+      vazao_fmt_gb(go, sizeof go, vazao_gb(vz.resumo.otimoKbps, VAZAO_FILME_S), sepDecimal());
+      vazao_fmt_gb(gm, sizeof gm, vazao_gb(vz.resumo.maximoKbps, VAZAO_FILME_S), sepDecimal());
+      snprintf(a, sizeof a, i18n("até %s GB / %s GB por filme de 2 h"), go, gm);
+      vzKv(i18n("Arquivo ideal / máximo"), a, cx, y, cw); } }
+
+  // DIREITA: o que essa velocidade toca.
+  { float y = p.y + 150;
+    ajCapsDg("O que essa velocidade toca", rx, y);
+    y += 34;
+    for (i = 0; i < VAZ_QUALIDADES; i++) {
+      const VazQualidade *q = vazao_qualidade(i);
+      VazBanda bd = vazao_banda(&vz.resumo, q->tipicoKbps);
+      GfxRect r = { rx, y, rw, 78 };
+      static const char *const ROT[3] = { "Toca bem", "Pode travar", "Não toca" };
+      static const char *const IC[3] = { "aj_check", "aj_triangle-alert", "aj_x" };
+      float al = bd == VBANDA_NAO_TOCA ? 0.55f : 1.0f;
+      vzCartao(r);
+      gfx_cor((GfxRect){ r.x + 20, r.y + 17, 44, 44 }, 12.0f / 44.0f, 1, 1, 1, 0.07f);
+      dgIcone(q->icone, r.x + 20 + 11, r.y + 17 + 11, 22, al);
+      { TxtLinha n = dgT(TXT_G28B, q->nome);
+        char tp[32];
+        TxtLinha s;
+        snprintf(tp, sizeof tp, i18n("%d Mbps típico"), q->tipicoKbps / 1000);
+        s = txt_linha(TXT_AJ_18, tp, 154, 154, 156, 255);
+        txt_desenhar_alpha(n, r.x + 84, r.y + 10, al);
+        txt_desenhar_alpha(s, r.x + 84, r.y + 12 + n.h, al); }
+      { TxtLinha t = bd == VBANDA_TOCA ? txt_linha(TXT_G21B, ROT[bd], 20, 20, 20, 255)
+                   : bd == VBANDA_PODE_TRAVAR ? dgT(TXT_G21B, ROT[bd])
+                   : txt_linha(TXT_G21B, ROT[bd], 154, 154, 156, 255);
+        float pw = 18 + 20 + 10 + t.w + 18, px = r.x + r.w - 20 - pw, py = r.y + 19;
+        GfxRect pr = { px, py, pw, 40 };
+        if (bd == VBANDA_TOCA) gfx_cor(pr, 0.5f, 0.949f, 0.949f, 0.933f, 1);
+        else if (bd == VBANDA_PODE_TRAVAR) { gfx_cor(pr, 0.5f, 1, 1, 1, 0.10f); gfx_anel(pr, 0.5f, 2.0f, 0.435f, 0.435f, 0.447f, 1); }
+        else gfx_anel(pr, 0.5f, 2.0f, 0.227f, 0.227f, 0.235f, 1);
+        if (bd == VBANDA_TOCA) gfx_icone((GfxRect){ px + 18, py + 10, 20, 20 }, IC[bd], 0.08f, 0.08f, 0.08f, 1);
+        else gfx_icone((GfxRect){ px + 18, py + 10, 20, 20 }, IC[bd], 0.85f, 0.85f, 0.85f, bd == VBANDA_NAO_TOCA ? 0.7f : 1);
+        txt_desenhar(t, px + 18 + 30, py + (40 - t.h) * 0.5f); }
+      y += 78 + 10;
     }
-    y += 18 + 22; }
-  dgBloco(TXT_ILHA_APOIO, "Filme de 2 h e episódio de 45 min; o tamanho do arquivo aparece no nome da fonte.", x, y, w, 22, 0.42f, 2);
+    // O VEREDITO, em palavras: o melhor que toca bem e o que vem logo acima.
+    { GfxRect v = { rx, y + 10, rw, 104 };
+      char go[16], forte[96], resto[240];
+      TxtLinha f = { 0 };
+      vzCartao(v);
+      vazao_veredito(&vz.resumo, &bom, &prox);
+      vazao_fmt_gb(go, sizeof go, vazao_gb(vz.resumo.otimoKbps, VAZAO_FILME_S), sepDecimal());
+      if (bom >= 0) snprintf(forte, sizeof forte, i18n("%s: ok."), vazao_qualidade(bom)->nome);
+      else snprintf(forte, sizeof forte, "%s", i18n("Abaixo de 1080p."));
+      if (prox < 0) snprintf(resto, sizeof resto, "%s", i18n("Até o remux mais pesado toca sem parar."));
+      else if (vazao_banda(&vz.resumo, vazao_qualidade(prox)->tipicoKbps) == VBANDA_PODE_TRAVAR)
+        snprintf(resto, sizeof resto, i18n("%s pode travar nas cenas mais pesadas; prefira arquivos de até %s GB."),
+                 vazao_qualidade(prox)->nome, go);
+      else snprintf(resto, sizeof resto, i18n("%s não toca sem parar; prefira arquivos de até %s GB."),
+                    vazao_qualidade(prox)->nome, go);
+      (void)f;
+      vzFrase(forte, resto, v.x + 22, v.y + 18, v.w - 44); }
+  }
+  // Botoes.
   { int lista[VB_N], n = vazBotoes(lista);
-    float bx = x, by = e.y + e.h - 40 - 60;
+    float bx = rx, by = p.y + p.h - 48 - 60 - 40;
     if (vz.botao >= n) vz.botao = n - 1;
     for (i = 0; i < n; i++)
-      bx += ajustes_ui_botao(i18n(VB_ROTULO[lista[i]]), i == 0 ? "aj_rotate-cw" : NULL, bx, by, i == vz.botao) + 12;
-    snprintf(a, sizeof a, i18n("%d de %d tentadas · %d segundos"), nf, vz.tentadas, vz.nAmostra);
-    { TxtLinha t = dgTC(TXT_ILHA_APOIO, a, x + w - bx - 10); txt_desenhar_alpha(t, x + w - t.w, by + (60 - t.h) * 0.5f, 0.45f); } }
-  // VAZAO POR FONTE
-  dr = (GfxRect){ e.x + e.w + 24, 40, 0, NV_TELA_H - 80 };
-  dr.w = NV_TELA_W - 40 - dr.x;
-  ajustes_ui_ilha(dr, 36, 0);
-  x = dr.x + 40; w = dr.w - 80; y = dr.y + 40;
-  ajustes_ui_kicker("Vazão por fonte", x, y, 1);
-  y += 26;
-  y += dgBloco(TXT_AJ_SUB, "Baixa por 8 s até 3 fontes de servidores diferentes, começando no meio do arquivo; os dados são descartados.",
-               x, y, w, 27.5f, 0.62f, 2) + 26;
-  { float H = 300, mx = 10, p20 = vz.resumo.p20Kbps / 1000.0f;
-    int f, s, nseg = 0, linhas[4] = { 10, 20, 30, 40 };
-    static const float COR[3][4] = { { -1, 0, 0, 1 }, { 0.953f, 0.949f, 0.937f, 0.75f }, { 0.953f, 0.949f, 0.937f, 0.4f } };
-    for (f = 0; f < nf && f < 3; f++) for (s = 0; s < vz.fonte[f].n; s++) {
-      if (vz.fonte[f].kbps[s] / 1000.0f > mx) mx = vz.fonte[f].kbps[s] / 1000.0f;
-      if (vz.fonte[f].n > nseg) nseg = vz.fonte[f].n; }
-    mx = ceilf(mx * 1.15f / 10.0f) * 10.0f;
-    if (nseg < 2) nseg = 2;
-    for (i = 0; i < 4; i++) if (linhas[i] < mx) {
-      float ly = y + H - H * linhas[i] / mx;
-      char t[8]; TxtLinha l;
-      snprintf(t, sizeof t, "%d", linhas[i]);
-      gfx_cor((GfxRect){ x, ly, w, 1 }, 0, 1, 1, 1, 0.07f);
-      l = dgT(TXT_AJ_MINI14, t); txt_desenhar_alpha(l, x, ly - 6 - l.h, 0.35f);
-    }
-    if (p20 > 0) {
-      float ly = y + H - H * p20 / mx, dx;
-      TxtLinha l;
-      snprintf(a, sizeof a, i18n("pior trecho %s Mbps"), c);
-      l = txt_linha(TXT_AJ_MINI12, a, 245, 200, 76, 255);
-      for (dx = 0; dx < w; dx += 11) gfx_cor((GfxRect){ x + dx, ly, 5, 1 }, 0, 0.961f, 0.784f, 0.298f, 0.7f);
-      txt_desenhar(l, x + w - l.w, ly - 8 - l.h);
-    }
-    for (f = nf < 3 ? nf - 1 : 2; f >= 0; f--) {
-      const VazFonte *vf = &vz.fonte[f];
-      float px = x, py = y + H, cr = COR[f][0], cg = COR[f][1], cb = COR[f][2], ca = COR[f][3];
-      if (cr < 0) { cr = ar; cg = ag; cb = ab; }
-      for (s = 0; s < vf->n; s++) {
-        float nx = x + w * (s + 1) / (float)nseg, ny = y + H - H * (vf->kbps[s] / 1000.0f) / mx;
-        dgLinha(px, py, nx, ny, f == 0 ? 1.75f : 1.25f, cr, cg, cb, ca);
-        px = nx; py = ny;
-      }
-    }
-    for (i = 0; i <= 4; i++) {
-      char t[8]; TxtLinha l; float tx = x + w * i / 4.0f;
-      snprintf(t, sizeof t, "%d s", nseg * i / 4);
-      l = dgT(TXT_AJ_MINI14, t);
-      txt_desenhar_alpha(l, i == 0 ? tx : i == 4 ? tx - l.w : tx - l.w * 0.5f, y + H + 6, 0.38f);
-    }
-    y += H + 26 + 14;
-    { float lx = x;
-      for (f = 0; f < nf && f < 3; f++) {
-        char mb[16]; TxtLinha l;
-        float cr = COR[f][0], cg = COR[f][1], cb = COR[f][2], ca = COR[f][3];
-        if (cr < 0) { cr = ar; cg = ag; cb = ab; ca = 1; }
-        vazao_fmt_mbps(mb, sizeof mb, vz.fonte[f].r.medianaKbps, sepDecimal());
-        snprintf(a, sizeof a, i18n("Fonte %d · %s Mbps"), f + 1, mb);
-        l = dgT(TXT_ILHA_HORA, a);
-        gfx_cor((GfxRect){ lx, y + (l.h - 10) * 0.5f, 10, 10 }, 0.3f, cr, cg, cb, ca);
-        txt_desenhar_alpha(l, lx + 17, y, 0.5f);
-        lx += 17 + l.w + 18;
-      } }
-    y += 18 + 34; }
-  { TxtLinha t = dgT(TXT_AJ_SECAO, "Add-ons e fontes");
-    txt_desenhar(t, x, y);
-    ajCapsDg("Resposta de cada add-on", x + t.w + 12, y + t.h - 16);
-    y += t.h + 10;
-    gfx_cor((GfxRect){ x, y, w, 1 }, 0, 1, 1, 1, 0.08f);
-    y += 6; }
-  { int maiorMs = 1, linha = 0;
-    for (i = 0; i < vz.nAddon; i++) if (vz.addon[i].medido && vz.addon[i].ms > maiorMs) maiorMs = vz.addon[i].ms;
-    for (i = 0; i < vz.nAddon && linha < 5 && y + 52 < dr.y + dr.h - 30; i++) {
-      const VazAddon *va = &vz.addon[i];
-      char val[96];
-      float fr = (float)va->ms / maiorMs;
-      TxtLinha n, t;
-      if (!va->medido) continue;
-      linha++;
-      n = dgTC(TXT_ILHA_ITEM, addons_nome(i), 170);
-      txt_desenhar(n, x, y + 14 + (24 - n.h) * 0.5f);
-      { float bx = x + 188, bw = w - 188 - 218;
-        gfx_cor((GfxRect){ bx, y + 22, bw, 8 }, 0.5f, 1, 1, 1, 0.07f);
-        if (va->ok) {
-          if (fr < 0.4f) gfx_cor((GfxRect){ bx, y + 22, bw * fr, 8 }, 0.5f, DG_VERDE, 0.85f);
-          else if (fr < 0.8f) gfx_cor((GfxRect){ bx, y + 22, bw * fr, 8 }, 0.5f, DG_AMBAR, 0.85f);
-          else gfx_cor((GfxRect){ bx, y + 22, bw * fr, 8 }, 0.5f, DG_VERM, 0.85f);
-        } }
-      if (va->ok) snprintf(val, sizeof val, i18n("%d ms · %d fontes"), va->ms, va->fontes);
-      else if (va->http) snprintf(val, sizeof val, i18n("HTTP %d"), va->http);
-      else snprintf(val, sizeof val, "%s", i18n("falhou"));
-      t = dgTC(TXT_ILHA_GENERO, val, 200);
-      txt_desenhar_alpha(t, x + w - t.w, y + 14 + (24 - t.h) * 0.5f, 0.6f);
-      y += 52;
-      gfx_cor((GfxRect){ x, y - 1, w, 1 }, 0, 1, 1, 1, 0.06f);
-    } }
+      bx += ajustes_ui_botao(i18n(VB_ROTULO[lista[i]]), VB_ICONE[lista[i]], bx, by, i == vz.botao) + 14;
+    { const char *k[1] = { "Voltar" }, *l[1] = { "Sair" };
+      float dw = ajustes_ui_dicas(k, l, 1, 0, 0, 0);
+      ajustes_ui_dicas(k, l, 1, p.x + p.w - 48 - dw, p.y + p.h - 44, 1); } }
 }
 
 // O resto do teste de velocidade (rodando, sem medida, ciclo completo): os

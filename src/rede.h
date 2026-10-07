@@ -345,6 +345,12 @@ int rede_medir_vazao(const char *url, const char *const *cabecalhos, int segundo
 // fonte parada nao pode segurar a fila inteira. So o libcurl honra (o XHR
 // sincrono do Tizen nao tem prazo).
 void rede_vazao_espera(unsigned long ms);
+// O GRAFICO AO VIVO do teste de velocidade (mockup stats-velocidade, tela 4):
+// cada medidor (rede_medir_vazao no libcurl e no XHR do Tizen, streamfitdiag no
+// Android) soma aqui os bytes de corpo que recebe; a tela le o total 1x/s e a
+// diferenca e o ponto do segundo. Um contador atomico; os bytes seguem descartados.
+void rede_vazao_vivo_somar(long long bytes);
+long long rede_vazao_vivo_total(void);
 
 // Registra quem OUVE os 401. Sem isto um token de sessao vencido era so uma
 // linha no log — o Trakt continuava "conectado" na tela enquanto toda

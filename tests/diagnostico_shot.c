@@ -217,6 +217,18 @@ int main(int argc, char **argv) {
   atomic_store(&vz.feitos, 6);
   atomic_store(&vz.nFonte, 1);
   vz.fonteIniMs = SDL_GetTicks();
+  // TELA NOVA (mockup stats-velocidade, tela 4): grafico ao vivo, latencia,
+  // a 1a fonte medida e a 2a baixando ha 5 s.
+  { static const int V[] = { 4000, 15000, 29000, 44000, 50000, 54000, 52000, 61200, 57000, 55000,
+                             58000, 52000, 50500, 54000, 56000, 51000, 54500, 57500, 54300 };
+    memcpy(vz.vivo, V, sizeof V); vz.nVivo = (int)(sizeof V / sizeof *V); }
+  vz.latMs = 38; vz.jitMs = 6; vz.latN = 10; atomic_store(&vz.latPronta, 1);
+  snprintf(vz.latHost, sizeof vz.latHost, "cdn-17.exemplo.net");
+  snprintf(vz.hostFonte[0], sizeof vz.hostFonte[0], "cdn-17.exemplo.net");
+  vz.addonFonte[0] = 1;
+  snprintf(vz.hostAgora, sizeof vz.hostAgora, "dl-02.outro.net");
+  vz.addonAgora = 2;
+  vz.fonteIniMs = SDL_GetTicks() - 5200u;
   snprintf(nome, sizeof nome, "%s-8-velocidade-rodando.bmp", saida);
   captura(nome, w, 0);
 
@@ -225,8 +237,25 @@ int main(int argc, char **argv) {
   vazao_resumir(vz.amostra, vz.nAmostra, &vz.resumo);
   vz.resultado = VR_OK;
   atomic_store(&vz.estado, 2);
+  vz.fimHora = 21; vz.fimMin = 49;
+  d.enviado = d.envioFalhou = 0;
   snprintf(nome, sizeof nome, "%s-9-velocidade-resultado.bmp", saida);
   captura(nome, w, 0);
+
+  // Os numeros do mockup (tela 5): mediana 53, pior trecho 41,2.
+  { static const int M[24] = { 53000, 54300, 52000, 41200, 55000, 53500, 51000, 56000,
+                               53000, 52500, 41500, 54000, 61200, 53000, 50000, 52800,
+                               53300, 47000, 55200, 53100, 49000, 54700, 52900, 53000 };
+    memcpy(vz.amostra, M, sizeof M); vz.nAmostra = 24;
+    vazao_resumir(vz.amostra, vz.nAmostra, &vz.resumo);
+    atomic_store(&vz.nFonte, 3); }
+  snprintf(nome, sizeof nome, "%s-9b-velocidade-resultado-mockup.bmp", saida);
+  captura(nome, w, 0);
+  vz.botao = 1;
+  d.enviado = 1; d.envioFalhou = 0; vz.envioPedido = 1;
+  snprintf(nome, sizeof nome, "%s-9c-velocidade-enviado.bmp", saida);
+  captura(nome, w, 0);
+  vz.botao = 0; d.enviado = 0;
 
   // Samsung com CDN sem CORS: diz que nao mediu, sem numero inventado.
   atomic_store(&vz.nFonte, 0);

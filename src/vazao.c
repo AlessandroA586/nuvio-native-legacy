@@ -267,3 +267,50 @@ int vazao_mediana_addon(const VazCicloRes *r, int n, int addon, int *usadas) {
   }
   return (m & 1) ? v[m / 2] : (int)(((long)v[m / 2 - 1] + v[m / 2] + 1) / 2);
 }
+
+// --- TELA NOVA (vazao.h) -------------------------------------------------------
+
+int vazao_latencia(const int *ms, int n, int *mediana, int *jitter) {
+  int v[64], m = 0, i, ant = -1;
+  long soma = 0, dif = 0, nd = 0;
+  if (mediana) *mediana = 0;
+  if (jitter) *jitter = 0;
+  if (!ms) return 0;
+  for (i = 0; i < n && m < 64; i++) {
+    if (ms[i] < 0) continue;
+    if (ant >= 0) { dif += abs(ms[i] - ant); nd++; }
+    ant = ms[i];
+    v[m++] = ms[i];
+    soma += ms[i];
+  }
+  if (!m) return 0;
+  qsort(v, (size_t)m, sizeof v[0], menor);
+  if (mediana) *mediana = (m & 1) ? v[m / 2] : (v[m / 2 - 1] + v[m / 2] + 1) / 2;
+  if (jitter) *jitter = nd ? (int)((dif + nd / 2) / nd) : 0;
+  (void)soma;
+  return m;
+}
+
+static const VazQualidade QUALIDADES[VAZ_QUALIDADES] = {
+  { "1080p", "aj_film", 8000 },
+  { "1080p HDR", "aj_sun-dim", 14000 },
+  { "4K HDR", "aj_monitor-play", 28000 },
+  { "4K remux", "aj_monitor-play", 45000 },
+  { "4K Dolby Vision remux", "aj_clapperboard", 80000 },
+};
+const VazQualidade *vazao_qualidade(int i) {
+  return i >= 0 && i < VAZ_QUALIDADES ? &QUALIDADES[i] : NULL;
+}
+VazBanda vazao_banda(const VazaoResumo *r, int kbps) {
+  if (!r || r->n <= 0) return VBANDA_NAO_TOCA;
+  if (kbps <= r->otimoKbps) return VBANDA_TOCA;
+  if (kbps <= r->maximoKbps) return VBANDA_PODE_TRAVAR;
+  return VBANDA_NAO_TOCA;
+}
+void vazao_veredito(const VazaoResumo *r, int *bom, int *proxima) {
+  int i, b = -1;
+  for (i = 0; i < VAZ_QUALIDADES; i++)
+    if (vazao_banda(r, QUALIDADES[i].tipicoKbps) == VBANDA_TOCA) b = i;
+  if (bom) *bom = b;
+  if (proxima) *proxima = b + 1 < VAZ_QUALIDADES ? b + 1 : -1;
+}

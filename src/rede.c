@@ -1,4 +1,5 @@
 #include "rede.h"
+#include "vazao.h"
 #include "negcache.h"
 #include "negcache.inc"
 #include <pthread.h>
@@ -11,6 +12,12 @@
 #include <time.h>
 #include <limits.h>
 #include <ctype.h>
+#include <stdatomic.h>
+
+// O contador do grafico ao vivo do teste de velocidade (rede.h).
+static _Atomic long long vazVivoTotal;
+void rede_vazao_vivo_somar(long long bytes) { if (bytes > 0) atomic_fetch_add(&vazVivoTotal, bytes); }
+long long rede_vazao_vivo_total(void) { return atomic_load(&vazVivoTotal); }
 
 /* Jobs nao dependem de TLS nem dos controles antigos por fio. O grupo e
  * retido pelos jobs, e a requisicao retem seu job ate terminar. */
@@ -641,6 +648,8 @@ int rede_medir_vazao(const char *url, const char *const *cab, int segundos,
   janela = (unsigned long)segundos * 1000UL;
   snprintf(atual, sizeof atual, "%s", url);
   cabs = juntarCabs(cab, NULL);
+  // Teto pequeno (a latencia do teste pede 1 byte): o 1o pedaco nao passa dele.
+  if (maxBytes > 0 && pedaco > maxBytes) pedaco = maxBytes;
   t0 = redeAgoraMs();
   while (gasto < janela && (maxBytes <= 0 || total < maxBytes)) {
     unsigned long a = redeAgoraMs(), dt;
@@ -662,6 +671,7 @@ int rede_medir_vazao(const char *url, const char *const *cab, int segundos,
     if (fin[0]) snprintf(atual, sizeof atual, "%s", fin);
     total += n;
     pos += n;
+    rede_vazao_vivo_somar((long long)n);
     gasto = redeAgoraMs() - t0;
     reps = (int)(dt / 1000UL);
     if (reps < 1) reps = 1;
@@ -1949,6 +1959,7 @@ static size_t contadorCorpo(void *dados, size_t tam, size_t qtd, void *u) {
   if (el >= c->janelaMs) { c->porJanela = 1; return 0; }
   if (el / 1000UL < VAZ_SEG_BALDES) c->balde[el / 1000UL] += (long long)b;
   c->bytes += (long long)b;
+  rede_vazao_vivo_somar((long long)b);   // o grafico ao vivo da tela
   c->ultimo = agora;
   if (c->maxBytes > 0 && c->bytes >= c->maxBytes) { c->porTeto = 1; return 0; }
   return b;
