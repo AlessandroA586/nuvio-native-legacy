@@ -41,6 +41,7 @@
 #define P2PM_DURO_MAX_MB 1536
 #endif
 #define P2PM_LIVRE_MIN_MB 256   // menos livre que isto ao subir: recusa
+#define P2PM_RESERVA_MB   512   // limite FIXO (Ajustes): deixa ao menos isto livre na TV (#334)
 #define P2PM_LIVRE_PISO_MB 128  // vigia: o livre caiu abaixo disto (outro app): para
 #define P2PM_RAM_MB       16    // cache em memoria do motor
 #define P2PM_RAM_DURO_MB  32    // vigia: memory_cache_used acima disto: para
@@ -59,6 +60,21 @@ const char *p2pmotor_motivo_indisponivel(void);
 int p2pmotor_resumo(char *detalhe, unsigned n);
 // Teto duro (MB) medido no ultimo resumo/subida; 0 sem medida.
 unsigned p2pmotor_teto_mb(void);
+
+// LIMITE DE ESPACO (#334, "Limite de espaço do P2P" em Ajustes). escolhaMb 0 =
+// Automatico (o de sempre: min(P2PM_DURO_MAX_MB, metade do livre)); > 0 = a
+// pessoa pediu ate tanto, limitado ao livre menos P2PM_RESERVA_MB e nunca
+// abaixo do Automatico. Vale na proxima subida do motor. Qualquer fio.
+void p2pmotor_definir_limite_mb(unsigned mb);
+// A conta acima, pura (testes).
+uint64_t p2pmotor_teto_duro(uint64_t livre, unsigned escolhaMb);
+// Tamanho do arquivo do ultimo pedido, o teto duro e o livre de quando o motor
+// subiu (0 = desconhecido). Para a tela explicar a parada por espaco.
+void p2pmotor_arquivo_atual(uint64_t *tam, uint64_t *teto, uint64_t *livre);
+// Inicio do app: apaga a pasta do motor que sobrou de uma sessao que caiu (TV
+// desligada com o filme tocando), em fio solto, sem abrir o motor. Sem pasta
+// nao cria fio. Um pedido que chegue durante a limpeza espera por ela.
+void p2pmotor_limpar_sobra(void);
 
 // BLOQUEIA (fio proprio). Sobe o motor se preciso, registra o magnet (com os
 // trackers do addon), espera os metadados (P2P_PRAZO_METADADOS), escolhe o

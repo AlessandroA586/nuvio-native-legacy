@@ -17,3 +17,7 @@ elif [ "${SANITIZE:-0}" = thread ]; then flags+=(-fsanitize=thread -fno-omit-fra
 cc "${flags[@]}" src/p2pmotor.c src/p2pmotor_motor.c src/p2p.c src/js.c \
   tests/p2pmotor.c -o "$OUT" -lpthread
 "$OUT"
+# #334: a conta do teto com os valores COMPILADOS de verdade (sem o -D acima).
+cc -O1 -g -Wall -Wextra -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -Wno-deprecated-declarations -Wno-macro-redefined src/p2pmotor.c src/p2pmotor_motor.c \
+  src/p2p.c src/js.c tests/p2pmotor_teto.c -o "$OUT-teto" -lpthread
+"$OUT-teto"

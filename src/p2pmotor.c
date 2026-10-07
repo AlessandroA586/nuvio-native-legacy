@@ -39,6 +39,8 @@ static char tidAtual[65], sidAtual[65], hashAtual[41], prefixoUrl[96];
 static int metaPronta;
 static char pastaRaiz[600], pastaMae[600];
 static uint64_t livreSubida;   // livre medido quando o motor subiu (#297)
+static uint64_t tamArquivo;    // tamanho do arquivo do pedido atual (#334); 0 = nao sei
+static int limpando;           // p2pmotor_limpar_sobra apagando a pasta (#334)
 static P2pmEstado estado;
 
 static _Atomic unsigned geracao;
@@ -46,6 +48,7 @@ static _Atomic int motivoParada;
 static _Atomic unsigned descartados;
 static _Atomic int segurado;
 static _Atomic unsigned tetoUltimoMb;
+static _Atomic unsigned limiteMb;    // escolha de Ajustes (#334); 0 = Automatico
 
 // Injecao (testes). Escrita so sem motor de pe.
 static const P2pmOps *opsInjetado;
@@ -155,6 +158,24 @@ static int pastas(char *raiz, unsigned nr, char *mae, unsigned nm) {
   return 1;
 }
 
+// #334: teto DURO da pasta. Automatico = o de sempre (metade do livre, no
+// maximo P2PM_DURO_MAX_MB). Fixo = ate o pedido, deixando P2PM_RESERVA_MB
+// livres na TV, e nunca menos que o Automatico (escolher "mais" nao pode dar
+// menos). Na TV do #334 (1,37 GB livres) o Automatico da 685 MB e qualquer
+// fixo da 857 MB: o limite nao salva um 4K de 15 GB; so a janela (ver
+// docs/p2p-janela.md) salva.
+uint64_t p2pmotor_teto_duro(uint64_t livre, unsigned escolhaMb) {
+  uint64_t auto_ = (uint64_t)P2PM_DURO_MAX_MB << 20, fixo, reserva;
+  if (livre / 2 < auto_) auto_ = livre / 2;
+  if (!escolhaMb) return auto_;
+  reserva = (uint64_t)P2PM_RESERVA_MB << 20;
+  fixo = (uint64_t)escolhaMb << 20;
+  if (livre <= reserva) fixo = 0;
+  else if (livre - reserva < fixo) fixo = livre - reserva;
+  return fixo > auto_ ? fixo : auto_;
+}
+void p2pmotor_definir_limite_mb(unsigned mb) { atomic_store(&limiteMb, mb); }
+
 // Orcamento ao subir. statvfs falhou: recusa (sem medir, nao ha teto honesto).
 static int orcamento(const char *mae, uint64_t *mole, uint64_t *duro, uint64_t *livre) {
   uint64_t l = 0;
@@ -162,8 +183,7 @@ static int orcamento(const char *mae, uint64_t *mole, uint64_t *duro, uint64_t *
   *livre = l;
   *mole = (uint64_t)P2PM_DISCO_MB << 20;
   if (l / 4 < *mole) *mole = l / 4;
-  *duro = (uint64_t)P2PM_DURO_MAX_MB << 20;
-  if (l / 2 < *duro) *duro = l / 2;
+  *duro = p2pmotor_teto_duro(l, atomic_load(&limiteMb));
   if (l < ((uint64_t)P2PM_LIVRE_MIN_MB << 20)) return P2P_ERR_SEM_ESPACO;
   return P2P_OK;
 }
@@ -274,6 +294,51 @@ int p2pmotor_resumo(char *detalhe, unsigned n) {
 }
 unsigned p2pmotor_teto_mb(void) { return atomic_load(&tetoUltimoMb); }
 
+void p2pmotor_arquivo_atual(uint64_t *tam, uint64_t *teto, uint64_t *livre) {
+  pthread_mutex_lock(&trava);
+  if (tam) *tam = tamArquivo;
+  if (teto) *teto = (uint64_t)atomic_load(&tetoUltimoMb) << 20;
+  if (livre) *livre = livreSubida;
+  pthread_mutex_unlock(&trava);
+}
+
+// #334: a pasta so era apagada ao PARAR o motor e no proximo SUBIR. TV
+// desligada com o filme tocando = ate o teto duro preso no disco ate a pessoa
+// abrir outro torrent. Agora o inicio do app tambem apaga.
+static void *limparFio(void *x) {
+  char *raiz = x;
+  uint64_t b = percorrer(raiz, 0, 0);
+  percorrer(raiz, 1, 0);
+  printf("[p2p-motor] inicio: sobra de %.0f MB apagada em %s\n", (double)b / 1048576.0, raiz);
+  fflush(stdout);
+  free(raiz);
+  pthread_mutex_lock(&trava);
+  limpando = 0;
+  pthread_cond_broadcast(&sinal);
+  pthread_mutex_unlock(&trava);
+  return NULL;
+}
+void p2pmotor_limpar_sobra(void) {
+  char raiz[600], mae[600], *dup;
+  struct stat st;
+  pthread_t t;
+  pthread_attr_t a;
+  if (!pastas(raiz, sizeof raiz, mae, sizeof mae)) return;
+  if (lstat(raiz, &st) != 0) return;            // nada sobrou: nem fio
+  pthread_mutex_lock(&trava);
+  // Motor de pe, subindo, parando ou outra limpeza: quem esta ai cuida da pasta.
+  if (motor || resolvendo || parando || limpando || !(dup = strdup(raiz))) {
+    pthread_mutex_unlock(&trava);
+    return;
+  }
+  limpando = 1;
+  pthread_attr_init(&a);
+  pthread_attr_setdetachstate(&a, PTHREAD_CREATE_DETACHED);
+  if (pthread_create(&t, &a, limparFio, dup) != 0) { limpando = 0; free(dup); }
+  pthread_attr_destroy(&a);
+  pthread_mutex_unlock(&trava);
+}
+
 void p2pmotor_cancelar(void) {
   atomic_fetch_add(&geracao, 1u);
   pthread_mutex_lock(&trava);
@@ -367,7 +432,7 @@ static void *pararFio(void *x) {
   tidAtual[0] = sidAtual[0] = hashAtual[0] = 0;
   metaPronta = 0;
   memset(&estado, 0, sizeof estado);
-  parando = 0;
+  parando = 0;   // tamArquivo/livreSubida ficam: a tela le depois da parada (#334)
   pthread_cond_broadcast(&sinal);
   pthread_mutex_unlock(&trava);
   printf("[p2p-motor] desligado e cache apagado em %.1f s\n", agora() - t0);
@@ -577,9 +642,9 @@ static int subir(const P2pmOps *o, unsigned g) {
   estado.ram_duro = (uint64_t)P2PM_RAM_DURO_MB << 20;
   atomic_store(&tetoUltimoMb, (unsigned)(duro >> 20));
   pthread_mutex_unlock(&trava);
-  printf("[p2p-motor] subiu %s: disco %.0f MB (duro %.0f MB), RAM %d MB (duro %d MB)\n",
+  printf("[p2p-motor] subiu %s: disco %.0f MB (duro %.0f MB, limite %u MB, livre %.0f MB), RAM %d MB (duro %d MB)\n",
          p2pmotor_versao(), (double)mole / 1048576.0, (double)duro / 1048576.0,
-         P2PM_RAM_MB, P2PM_RAM_DURO_MB);
+         atomic_load(&limiteMb), (double)livre / 1048576.0, P2PM_RAM_MB, P2PM_RAM_DURO_MB);
   return P2P_OK;
 }
 
@@ -663,7 +728,9 @@ static int resolverCom(Pedido *p, const char *h, int fileIdx, const char *fontes
   uint64_t rid = 0;
   size_t qtd = 0, i;
   int mesmo, r, idx, espaco = 0;
+  uint64_t tamEscolhido = 0;
   pthread_mutex_lock(&trava);
+  tamArquivo = 0;
   mesmo = hashAtual[0] && !strcmp(hashAtual, h) && metaPronta && tidAtual[0];
   snprintf(tid, sizeof tid, "%s", mesmo ? tidAtual : "");
   snprintf(sidVelho, sizeof sidVelho, "%s", sidAtual);
@@ -721,8 +788,22 @@ static int resolverCom(Pedido *p, const char *h, int fileIdx, const char *fontes
       tams[i] = (double)t;
     }
     idx = p2p_escolher_lista((const char *const *)nomes, tams, (int)qtd, fileIdx, temporada, episodio);
+    if (idx >= 0 && (size_t)idx < qtd) tamEscolhido = (uint64_t)tams[idx];
     for (i = 0; i < qtd; i++) free(nomes[i]);
     free(nomes); free(tams);
+  }
+  if (idx >= 0) {
+    // #334: o arquivo inteiro vai para a pasta (o motor nao despeja pecas ja
+    // tocadas). Maior que o teto = vai parar no meio; o log diz onde.
+    uint64_t teto;
+    pthread_mutex_lock(&trava);
+    tamArquivo = tamEscolhido;
+    teto = estado.disco_duro;
+    pthread_mutex_unlock(&trava);
+    if (teto && tamEscolhido > teto)
+      printf("[p2p-motor] %.8s: arquivo %d tem %.0f MB, teto %.0f MB: para perto de %.0f%%\n", h, idx,
+             (double)tamEscolhido / 1048576.0, (double)teto / 1048576.0,
+             100.0 * (double)teto / (double)tamEscolhido);
   }
   if (idx < 0) {
     printf("[p2p-motor] %.8s: sem arquivo de video\n", h);
@@ -797,10 +878,10 @@ int p2pmotor_resolver(const char *hash, int fileIdx, const char *fontes,
   // Uma parada em curso (destroy de segundos) ou a vigia lendo eventos: espera
   // no sinal (a trava fica solta), acordando com cancelamento.
   fimEspera = agora() + 15;
-  while ((parando || vigiaEventos) && atomic_load(&geracao) == g && agora() < fimEspera)
+  while ((parando || vigiaEventos || limpando) && atomic_load(&geracao) == g && agora() < fimEspera)
     esperarSinal(200);
   if (atomic_load(&geracao) != g) e = P2P_ERR_CANCELADO;
-  else if (parando || vigiaEventos) e = P2P_ERR_OCUPADO;
+  else if (parando || vigiaEventos || limpando) e = P2P_ERR_OCUPADO;
   else e = P2P_OK;
   if (e == P2P_OK && !motor) {
     pthread_mutex_unlock(&trava);

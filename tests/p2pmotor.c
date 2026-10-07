@@ -491,6 +491,30 @@ int main(void) {
   printf("p2pmotor: corrida (40 voltas) ok; motores criados %d, destruidos %d\n",
          atomic_load(&criados), atomic_load(&destruidos));
   assert(atomic_load(&criados) == atomic_load(&destruidos));
+  // #334: tamanho do arquivo escolhido fica para a tela; sobra apagada no inicio.
+  padrao();
+  r = p2pmotor_resolver(H1, -1, NULL, 0, 0, url, sizeof url);
+  assert(r == P2P_OK);
+  { uint64_t tam = 0, teto = 0, livre = 0;
+    p2pmotor_arquivo_atual(&tam, &teto, &livre);
+    assert(tam == 2000000000ull && teto == (uint64_t)P2PM_DURO_MAX_MB << 20 && livre == 8ull << 30); }
+  // limpar com o motor de pe: nao mexe na pasta (quem esta ai cuida dela)
+  p2pmotor_limpar_sobra();
+  assert(existe(RAIZ));
+  pararTudo();
+  { uint64_t tam = 0; p2pmotor_arquivo_atual(&tam, NULL, NULL); assert(tam == 2000000000ull); }
+  mkdir(RAIZ, 0700);
+  { char s2[700]; snprintf(s2, sizeof s2, "%s/dados", RAIZ); mkdir(s2, 0700);
+    snprintf(s2, sizeof s2, "%s/dados/video.mkv", RAIZ); FILE *a2 = fopen(s2, "w"); fputs("x", a2); fclose(a2); }
+  p2pmotor_limpar_sobra();
+  { double fim = agora() + 2; while (existe(RAIZ) && agora() < fim) ms(5); }
+  assert(!existe(RAIZ));
+  p2pmotor_limpar_sobra();     // sem pasta: nada, sem fio
+  r = p2pmotor_resolver(H1, -1, NULL, 0, 0, url, sizeof url);
+  assert(r == P2P_OK);
+  pararTudo();
+  puts("p2pmotor: #334 tamanho do arquivo e sobra apagada no inicio ok");
+
   { char mae[600]; snprintf(mae, sizeof mae, "/tmp/nv-p2pmotor-%d", (int)getpid()); rmdir(mae); }
   puts("p2pmotor: ok (motor FALSO: nao prova o nuvio-engine)");
   return 0;
