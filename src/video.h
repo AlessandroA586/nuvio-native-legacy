@@ -195,6 +195,37 @@ int    video_recorte_fonte_trailer(void);   // so o trailer: o ajuste em execuca
 static inline int video_recorte_fonte_trailer(void) { return video_recorte_fonte(); }
 #endif
 
+// --- ESTATISTICAS AO VIVO (estatvivo.h) ---------------------------------------
+// O que a PLATAFORMA mede da reproducao atual, sem estimativa nenhuma: cada
+// alvo preenche so o que o pipeline dele de fato informa e deixa o resto em -1
+// (ou host vazio). A estimativa, quando ha, e de estatvivo.c, nunca daqui.
+//   webOS    bufferSeg (bufferRange do uMS menos a posicao); nada de bytes,
+//            conexoes nem quadros: o uMS nao conta.
+//   Android  bytes (lidos do socket em ParaleloDataSource.kt), bufferSeg
+//            (bufferedPosition do ExoPlayer), conexoes abertas e o host final,
+//            tempo do 1o byte e quadros perdidos (AnalyticsListener).
+//   Samsung  bufferPct (onbufferingprogress do AVPlay / evento 7 do host .tpk):
+//            so porcentagem, nunca segundos; nada de bytes nem quadros.
+typedef struct {
+  long long bytes;          // corpo lido desde a abertura; -1 = nao conta
+  double bufferSeg;         // segundos de video baixados a frente; < 0 = nao sabe
+  double bufferAlvoSeg;     // o que o player tenta manter; 0 = nao diz
+  int bufferPct;            // 0..100; -1 = nao informa
+  int conexoes;             // abertas agora para o video; -1 = nao sabe
+  int primeiroByteMs;       // do pedido ao 1o byte do ultimo trecho; -1
+  long long quadrosPerdidos, quadros;   // -1 = o decodificador nao conta
+  char host[96];            // host publico (sem caminho) do link FINAL; "" = nao sabe
+} VideoStats;
+static inline void video_stats_vazio(VideoStats *s) {
+  s->bytes = -1; s->bufferSeg = -1.0; s->bufferAlvoSeg = 0.0; s->bufferPct = -1;
+  s->conexoes = -1; s->primeiroByteMs = -1; s->quadrosPerdidos = s->quadros = -1;
+  s->host[0] = 0;
+}
+void video_estatisticas(VideoStats *s);
+#if defined(__APPLE__) || defined(NV_LINUX_DESKTOP)
+void video_simular_estatisticas(const VideoStats *s);   // capturas; NULL zera
+#endif
+
 // --- faixas -----------------------------------------------------------------
 // Tudo isto sai do evento sourceInfo da assinatura do uMS: o addon nao informa
 // nada disso, e so o pipeline sabe o que ha DENTRO do arquivo.

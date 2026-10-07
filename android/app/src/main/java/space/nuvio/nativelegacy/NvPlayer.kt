@@ -110,6 +110,8 @@ object NvPlayer {
     private var ultDv = -1
     private var ultAtmos = -1
     private var avisouSemAudio = false
+    private var quadrosPerdidos = 0L
+    private var statsTiques = 0
 
     // --- natives (src/video_android.c, Java_space_nuvio_nativelegacy_NvPlayer_*) ---
     @JvmStatic external fun nativeIniciar()
@@ -126,6 +128,12 @@ object NvPlayer {
     @JvmStatic external fun nativeFitPassiva(rede: Long, geracao: Int, origem: String, kbps: IntArray, fimMs: Long)
     @JvmStatic external fun nativeAudioPcm(pcm: ShortArray, n: Int, ptsUs: Long)
     @JvmStatic external fun nativeAudioEstado(fmt: Int)
+    // Estatisticas ao vivo (src/estatvivo.h), 1x/s pelo tique: bytes do socket
+    // (-1 = esta abertura nao passou pelo ParaleloDataSource, ex. HLS), buffer
+    // a frente e o alvo do DefaultLoadControl em ms, conexoes abertas, 1o byte,
+    // quadros perdidos (onDroppedVideoFrames) e entregues; host final.
+    @JvmStatic external fun nativeStats(bytes: Long, bufferMs: Int, alvoMs: Int, conexoes: Int,
+                                        primeiroByteMs: Int, perdidos: Long, quadros: Long, host: String)
 
     // F06 sincronia por audio (AudioSyncTap.kt / AudioSyncSink.kt). Fio de
     // reproducao; o C so copia para um anel limitado (src/audsync.c).
@@ -304,6 +312,8 @@ object NvPlayer {
             // A geracao e a sessao nativa desta abertura (0 numa casca antiga:
             // o C nunca aceita a telemetria passiva dela).
             medidorToken = medidor.sessao(geracao)
+            ParaleloDataSource.Estat.zerar()
+            quadrosPerdidos = 0L; statsTiques = 0
             val rede = ParaleloDataSource.Factory(ua, props, http, medidor, medidorToken)
 
             // F07: SEEK CACHE over the chain above, progressive HTTP VOD only.
@@ -531,12 +541,33 @@ object NvPlayer {
             if (!atual(minha)) return
             val p = player ?: return
             try { nativePos(p.currentPosition.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()) } catch (e: UnsatisfiedLinkError) { }
+            if (++statsTiques >= 4) { statsTiques = 0; relatarStats(p) }
             if (cacheMidia != null && cacheEstado == CacheSessao.ATIVO && ++cacheTiques >= CACHE_RELATO_TIQUES) {
                 cacheTiques = 0
                 relatarCache(minha)
             }
             principal.postDelayed(this, TIQUE_MS)
         }
+    }
+
+    // Uma vez por segundo, do fio principal: leituras baratas, nada alocado
+    // alem da string do host (que o JNI copia).
+    private fun relatarStats(p: ExoPlayer) {
+        val e = ParaleloDataSource.Estat
+        val buf = (p.bufferedPosition - p.currentPosition).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+        var quadros = -1L
+        var perdidos = -1L
+        p.videoDecoderCounters?.let { c ->
+            c.ensureUpdated()
+            quadros = (c.renderedOutputBufferCount + c.droppedBufferCount).toLong()
+            perdidos = quadrosPerdidos
+        }
+        try {
+            nativeStats(if (e.usado) e.bytes.get() else -1L, buf,
+                androidx.media3.exoplayer.DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
+                if (e.usado) e.conexoes.get().coerceAtLeast(0) else -1,
+                e.primeiroByteMs, perdidos, quadros, e.host)
+        } catch (t: UnsatisfiedLinkError) { }
     }
 
     // --- janela ---------------------------------------------------------------
@@ -831,6 +862,10 @@ object NvPlayer {
     }
 
     private fun analitico(minha: Int) = object : AnalyticsListener {
+
+        override fun onDroppedVideoFrames(eventTime: AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) {
+            if (atual(minha)) quadrosPerdidos += droppedFrames
+        }
 
         override fun onVideoDecoderInitialized(
             eventTime: AnalyticsListener.EventTime, decoderName: String,

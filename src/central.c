@@ -8,9 +8,12 @@
 #include "catalogo.h"
 #include "dados.h"
 #include "escala.h"
+#include "estatvivo.h"
+#include "estatvivoui.h"
 #include "gfx.h"
 #include "horafmt.h"
 #include "idioma.h"
+#include "idiomacod.h"
 #include "layout.h"
 #include "perfiltv.h"
 #include "perfis.h"
@@ -83,9 +86,29 @@ static void gravar(void) {
   dados_gravar(nome, buf);
 }
 
+// ESTATISTICAS (mockup stats-velocidade, tela 1): com video no player, o
+// primeiro botao e sempre o das estatisticas ao vivo (estatvivoui.h). Nao e
+// uma opcao de Ajustes nem mora na lista da pessoa: e uma acao, e so existe
+// enquanto ha o que medir. op = CC_OP_ESTAT, item = -1.
+#define CC_OP_ESTAT (-2)
+#ifdef CENTRAL_TESTE
+static int testeEstat;
+#endif
+static int temEstat(void) {
+#ifdef CENTRAL_TESTE
+  if (testeEstat) return !previa;
+#endif
+  return !previa && player_aberto() && player_com_video();
+}
+
 // Os botoes que existem neste build (a chave pode nao estar na tela daqui).
 static int botoes(int *op, int *item) {
   int i, n = 0;
+  if (temEstat()) {
+    if (op) op[n] = CC_OP_ESTAT;
+    if (item) item[n] = -1;
+    n++;
+  }
   for (i = 0; i < lista.n; i++) {
     const CentralItem *c = central_catalogo(lista.item[i]);
     int o = c ? ajustes_rapido_op(c->chave) : -1;
@@ -135,7 +158,7 @@ static int ehCh(const SDL_Event *e) {
 }
 
 static void ativarBotao(int i) {
-  int op[CENTRAL_MAX], n = botoes(op, NULL);
+  int op[CENTRAL_MAX + 1], n = botoes(op, NULL);
   if (i == n) {
     int it[64], m = ofertas(it), j;
     editando = 1; focoEd = 0; rolaEd = 0;
@@ -143,6 +166,11 @@ static void ativarBotao(int i) {
     return;
   }
   if (i < 0 || i >= n) return;
+  if (op[i] == CC_OP_ESTAT) {
+    central_fechar();
+    estatvivo_abrir();
+    return;
+  }
   if (ajustes_rapido_passo(op[i], 1))
     printf("[central] %s -> %s\n", ajustes_rapido_rotulo(op[i]), ajustes_rapido_valor(op[i]));
   else avisar("Não foi possível salvar. O valor anterior foi mantido.");
@@ -307,6 +335,15 @@ static int tocando(char *tit, size_t nt, char *meta, size_t nm) {
     u += (size_t)snprintf(meta + u, nm - u, "%s%s", u ? " · " : "",
                           d == 3 ? "DTS:X" : d == 2 ? "DTS-HD" : "DTS");
   }
+  // "42,8 Mbps agora" (mockup, tela 1): o numero das estatisticas ao vivo,
+  // com o "≈" quando e estimado.
+  { int est, k = estatvivo_kbps(&est);
+    if (k >= 0 && u < nm) {
+      char m[24], f[48];
+      ev_fmt_mbps(m, sizeof m, k, idioma_ponto_decimal(ajustes_idioma()) ? '.' : ',');
+      snprintf(f, sizeof f, i18n("%s Mbps agora"), m);
+      u += (size_t)snprintf(meta + u, nm - u, "%s%s%s", u ? " · " : "", est ? "≈ " : "", f);
+    } }
   return tit[0] || meta[0];
 }
 
@@ -434,13 +471,14 @@ static void botao(GfxRect r, const char *icone, const char *rot, const char *val
 }
 
 static void desenhaBotoes(float x, float y, float w, float a) {
-  int op[CENTRAL_MAX], item[CENTRAL_MAX], n = botoes(op, item), i;
+  int op[CENTRAL_MAX + 1], item[CENTRAL_MAX + 1], n = botoes(op, item), i;
   float bw = (w - CC_GAP * (CC_COLS - 1)) / CC_COLS;
   if (foco > n) foco = n;
   for (i = 0; i <= n; i++) {
     GfxRect r = { x + (float)(i % CC_COLS) * (bw + CC_GAP), y + (float)(i / CC_COLS) * (CC_BOTAO_H + CC_GAP),
                   bw, CC_BOTAO_H };
-    if (i < n) {
+    if (i < n && op[i] == CC_OP_ESTAT) botao(r, "aj_gauge", "Estatísticas", "", -1, i == foco, a);
+    else if (i < n) {
       const CentralItem *c = central_catalogo(item[i]);
       int lig = ajustes_rapido_ligado(op[i]);
       if (previa && i == previaInverte && lig >= 0) lig = !lig;
@@ -586,6 +624,7 @@ void central_teste_tocando(const char *tit, const char *meta) {
   snprintf(testeTit, sizeof testeTit, "%s", tit ? tit : "");
   snprintf(testeMeta, sizeof testeMeta, "%s", meta ? meta : "");
 }
+void central_teste_estatisticas(int sim) { testeEstat = sim; }
 void central_teste_lista(const char *texto) { carregar(); centrallista_ler(&lista, texto); }
 void central_teste_foco(int f, int editar) {
   central_abrir();

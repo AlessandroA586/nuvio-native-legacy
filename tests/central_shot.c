@@ -135,6 +135,16 @@ int main(int argc, char **argv) {
   central_teste_foco(3, 0);
   snprintf(nome, sizeof nome, "%s-08-tocando.bmp", saida);
   captura(nome, 80);
+  // ESTATISTICAS (mockup stats-velocidade, tela 1): com video, o primeiro
+  // botao e o das estatisticas ao vivo, em foco.
+  central_teste_estatisticas(1);
+  central_teste_tocando("Duna: Parte Dois", "2160p · HDR10 · 42,8 Mbps agora");
+  central_teste_lista("dolbyVision\nqualidade\ntrailerAuto\nesmaecerLocal\nbrilhoPlayerLocal\n");
+  central_teste_foco(0, 0);
+  snprintf(nome, sizeof nome, "%s-08b-estatisticas.bmp", saida);
+  captura(nome, 80);
+  central_teste_estatisticas(0);
+  central_teste_lista(NULL);
   central_teste_tocando(NULL, NULL);
 
   ajustes_definir_vidro(1);

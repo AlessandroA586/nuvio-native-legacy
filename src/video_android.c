@@ -395,6 +395,39 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativePos(JNIEnv *
   posMs = ms;
 }
 
+// ESTATISTICAS AO VIVO (video.h, VideoStats): o Kotlin manda 1x/s, do fio
+// principal, o que ele CONTA — bytes do socket (ParaleloDataSource), buffer
+// (bufferedPosition), conexoes abertas, 1o byte, host final e quadros
+// (AnalyticsListener). A trava e curta: o app copia no quadro dele.
+static pthread_mutex_t travaStats = PTHREAD_MUTEX_INITIALIZER;
+static VideoStats statsAndroid;
+static int statsValido;
+JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeStats(JNIEnv *env, jclass cls,
+    jlong bytes, jint bufferMs, jint alvoMs, jint conexoes, jint primeiroByteMs,
+    jlong perdidos, jlong quadros, jstring host) {
+  char h[96];
+  (void)cls;
+  deJString(env, host, h, sizeof h);
+  pthread_mutex_lock(&travaStats);
+  video_stats_vazio(&statsAndroid);
+  statsAndroid.bytes = bytes >= 0 ? (long long)bytes : -1;
+  statsAndroid.bufferSeg = bufferMs >= 0 ? bufferMs / 1000.0 : -1.0;
+  statsAndroid.bufferAlvoSeg = alvoMs > 0 ? alvoMs / 1000.0 : 0.0;
+  statsAndroid.conexoes = conexoes;
+  statsAndroid.primeiroByteMs = primeiroByteMs;
+  statsAndroid.quadrosPerdidos = perdidos;
+  statsAndroid.quadros = quadros;
+  snprintf(statsAndroid.host, sizeof statsAndroid.host, "%s", h);
+  statsValido = 1;
+  pthread_mutex_unlock(&travaStats);
+}
+void video_estatisticas(VideoStats *s) {
+  pthread_mutex_lock(&travaStats);
+  if (statsValido && ativo) *s = statsAndroid;
+  else video_stats_vazio(s);
+  pthread_mutex_unlock(&travaStats);
+}
+
 JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeRetomada(JNIEnv *env, jclass cls, jint geracao, jint aceita) {
   (void)env; (void)cls;
   pthread_mutex_lock(&travaRetomada);
@@ -503,6 +536,7 @@ static int abrirSessao(int inicioMs) {
   tocandoDesde = 0; semDecoderAudio = 0; erroTxt[0] = 0;
   pausaPedida = pausaVista = 0;
   hdrAtual = "none"; dvAtual = atmosAtual = 0;
+  pthread_mutex_lock(&travaStats); statsValido = 0; pthread_mutex_unlock(&travaStats);
   nAudio = nLeg = 0; audioAtual = 0; legAtual = -1; legAte = 0;
   nNovasA = nNovasL = 0;
   if (!travaLeg) travaLeg = SDL_CreateMutex();
