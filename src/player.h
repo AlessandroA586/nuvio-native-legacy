@@ -128,6 +128,8 @@ int  player_pediu_guia_cheio(void);
 int  player_pediu_zap(void);        // deslocamento em canais (+3, -1...), 0 = nenhum
 // "0" ou o botao "Ultimo canal" na Live TV (decisao 5): voltar ao canal anterior.
 int  player_pediu_ultimo(void);
+// Numero digitado na Live TV (M7) ja confirmado (1,5 s ou OK); 0 = nada.
+int  player_pediu_numero(void);
 const char *player_titulo_canal(void);   // nome do canal no ar ("" sem canal)
 int  player_pediu_recarregar(void);  // "Recarregar" do OSD: refaz a fonte do mesmo canal
 // Identidade do canal congelada na abertura: o indice do catalogo pode ser

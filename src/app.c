@@ -3851,6 +3851,15 @@ void app_atualizar(float dt, Uint32 agora) {
       tocarCanal(&it);
     }
   }
+  // NUMERO DIGITADO (M7): o canal que a regra da decisao 7 acha.
+  { int n = player_pediu_numero();
+    if (n > 0 && player_aberto() && aguardandoFonte != 2) {
+      CatItem it;
+      if (guia_numero_canal(n, &it, NULL, 0, 1)) {
+        printf("[livetv] numero %d\n", n); fflush(stdout);
+        tocarCanal(&it);
+      } else guia_carregar();
+    } }
   // RECARREGAR (botao do OSD do canal): mesma acao do zap com deslocamento 0 —
   // o proprio canal, fonte buscada de novo.
   if (player_pediu_recarregar() && player_aberto() && aguardandoFonte != 2) {

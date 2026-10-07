@@ -45,6 +45,9 @@ void guia_carregar(void);
 int  guia_zap(const char *idAtual, int dir, CatItem *saida);
 // Igual, mas so ESPIA o alvo (banner do zapping): nao mexe na origem do pedido.
 int  guia_zap_ver(const char *idAtual, int dir, CatItem *saida);
+// Digitar numero na Live TV (M7): o canal que o numero leva; `aplicar` 0 so espia.
+// `fonte` recebe o nome da fonte quando o numero existe em mais de uma.
+int  guia_numero_canal(int numero, CatItem *saida, char *fonte, size_t nf, int aplicar);
 
 // Para o OSD do canal ao vivo (aovivo.h): posicao na ordem do guia, categoria,
 // favorito e o programa no ar de QUALQUER canal da lista (banner do zapping).

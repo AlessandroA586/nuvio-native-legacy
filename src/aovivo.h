@@ -95,6 +95,9 @@ typedef struct {
   int numero, salto;                 // salto: quantos canais desde o atual (+/-)
 } AoVivoBanner;
 void aovivo_banner_desenhar(const AoVivoBanner *b, float a);
+// Selo do numero digitado ("1 0 2" e o canal que ele leva), no canto de cima.
+// `nome` NULL = nenhum canal com esse numero. `fonte` "" = numero sem ambiguidade.
+void aovivo_numero_desenhar(const char *digitos, const char *nome, const char *fonte, float a);
 
 // Cartao de erro no estilo do modo ao vivo (causas do provedor / da conta).
 // Os botoes do modal do erro do canal (Recarregar, Fonte, Guia): `foco` em

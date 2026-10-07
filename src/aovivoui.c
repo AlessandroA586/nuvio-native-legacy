@@ -387,6 +387,38 @@ static void aovivo_banner_desenharCorpo_(const AoVivoBanner *b, float a) {
       } } }
 }
 
+
+// O SELO DO NUMERO DIGITADO (M7): como na TV, os digitos grandes no canto de
+// cima e, abaixo, o canal que o numero leva — ou a frase de que nao ha. Some
+// quando o player confirma (1,5 s sem tecla ou OK).
+static void aovivo_numero_corpo_(const char *dig, const char *nome, const char *fonte, float a);
+void aovivo_numero_desenhar(const char *digitos, const char *nome, const char *fonte, float a) {
+  ESCALA_INI();
+  aovivo_numero_corpo_(digitos, nome, fonte, a);
+  ESCALA_FIM();
+}
+static void aovivo_numero_corpo_(const char *dig, const char *nome, const char *fonte, float a) {
+  TxtLinha td, tn;
+  char sub[200];
+  float pad = 30.0f, w, h, x, y = 64.0f;
+  if (a <= 0.004f || !dig || !dig[0]) return;
+  td = txt_linha(TXT_TITULO2, dig, 243, 242, 239, 255);
+  if (nome) {
+    if (fonte && fonte[0]) snprintf(sub, sizeof sub, "%s  \xc2\xb7  %s", nome, fonte);
+    else snprintf(sub, sizeof sub, "%s", nome);
+    tn = txt_linha_corta(TXT_G20M, sub, 243, 242, 239, 200, 520.0f);
+  } else {
+    tn = txt_linha_corta(TXT_G20M, i18n("Nenhum canal com esse número"), 243, 160, 150, 230, 520.0f);
+  }
+  w = (float)(td.w > tn.w ? td.w : tn.w) + 2.0f * pad;
+  if (w < 220.0f) w = 220.0f;
+  h = (float)td.h + (float)tn.h + 2.0f * pad - 4.0f;
+  x = NV_TELA_W - NV_MARGEM_X - w;
+  plrui_material((GfxRect){ x, y, w, h }, 28.0f, 0, a);
+  txt_desenhar_alpha(td, x + w - pad - (float)td.w, y + pad - 8.0f, a);
+  txt_desenhar_alpha(tn, x + w - pad - (float)tn.w, y + pad - 8.0f + (float)td.h + 4.0f, a);
+}
+
 // O CANAL NAO ABRIU: a ilha modal (a mesma do erro de filme), com o canal no
 // kicker, a frase, o motivo do Xtream e as acoes que o texto cita — Recarregar,
 // Fonte, Guia — e a dica de CH+/CH-. player.c leva o foco (aovivo_erro_foco).

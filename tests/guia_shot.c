@@ -21,6 +21,7 @@
 // Inclui src/guia.c: desenharCard e a lista de canais sao estaticos, e semear
 // por dentro e o unico jeito de fotografar o cartao sem addon no ar.
 #include "badges.h"
+#include "aovivo.h"
 #include "../src/guia.c"
 #include "guialembrete.h"
 #include "gfx.h"
@@ -121,7 +122,8 @@ static void capturaPainel(const char *nome, SDL_Window *win, int addonsPane) {
     SDL_PumpEvents();txt_novo_quadro();tex_novo_quadro();tex_bombear(6);gfx_novo_quadro();
     glClearColor(.03f,.03f,.035f,1);glClear(GL_COLOR_BUFFER_BIT);
     if (vidroFundoAtivo()) vidroFundoDesenhar(); else shot_arte_desenhar(0);
-    if(addonsPane==2) { desenharGrupos(1); } else if(addonsPane) desenharPainelAddons(1); else desenharPainelCategorias(1);
+    if(addonsPane==3) { char fo[64]; CatItem it; const char *nm=NULL; fo[0]=0; if (guia_numero_canal(101,&it,fo,sizeof fo,0)) nm=it.titulo; aovivo_numero_desenhar("1 0 1",nm,fo,1); }
+    else if(addonsPane==2) { desenharGrupos(1); } else if(addonsPane) desenharPainelAddons(1); else desenharPainelCategorias(1);
     if(q==69) {
       unsigned char *pix=malloc(1920*1080*4);
       SDL_Surface *s=SDL_CreateRGBSurfaceWithFormat(0,1920,1080,32,SDL_PIXELFORMAT_RGBA32);assert(pix&&s);
@@ -392,7 +394,10 @@ int main(int argc, char **argv) {
     gpMarca[0] = 1; gpMarca[3] = 1; gpMarca[4] = 1; gpMarca[5] = 1; gpFoco = 5;
     snprintf(nome, sizeof nome, "%s-grupos.png", saida);
     capturaPainel(nome, w, 2);
-    gpAberto = 0; tetoCarga = 30000; }
+    gpAberto = 0; tetoCarga = 30000;
+    // DIGITAR O NUMERO (M7): 101 existe em duas fontes (FrostView e Xtream).
+    snprintf(nome, sizeof nome, "%s-numero.png", saida);
+    capturaPainel(nome, w, 3); }
   // ESCOLHER GRADE DESTE CANAL (M5): opcoes do canal -> lista de grades.
   focoFontes = 0;
   fopCanalAbrir(&canais[0]); fopFoco = 1; fopCanalOk(); fopFoco = 2;

@@ -2250,6 +2250,45 @@ int guia_zap_ver(const char *idAtual, int dir, CatItem *saida) {
   return zapAlvo(idAtual, dir, saida, 0);
 }
 
+
+// DIGITAR O NUMERO (M7, decisao 7): o canal que o numero digitado leva, pela
+// regra do ltv.h (fonte filtrada: so ela; "Todas": favoritos primeiro, depois
+// as fontes na ordem da barra). `aplicar` 0 so espia (o selo do player chama a
+// cada quadro: o resultado fica em cache ate o numero, o filtro ou a lista
+// mudarem). `fonte` recebe o nome da fonte quando o mesmo numero existe em mais
+// de uma ("Fonte · 101" na tela). 0 = nao ha canal com esse numero.
+int guia_numero_canal(int numero, CatItem *saida, char *fonte, size_t nf, int aplicar) {
+  static int cNum = -1, cFiltro = -9, cN = -1, cIdx = -1, cAmb;
+  static const GCanal *cLista;
+  static LtvNum *buf; static int capBuf;
+  int idx, amb = 0;
+  if (fonte && nf) fonte[0] = 0;
+  if (estado != G_PRONTO || nCanais < 1 || numero <= 0) return 0;
+  if (numero == cNum && filtro == cFiltro && nCanais == cN && canais == cLista) { idx = cIdx; amb = cAmb; }
+  else {
+    int i, f = filtro >= 0 ? filtro : -1;
+    if (nCanais > capBuf) {
+      LtvNum *no = realloc(buf, sizeof *no * (size_t)nCanais);
+      if (!no) return 0;
+      buf = no; capBuf = nCanais;
+    }
+    for (i = 0; i < nCanais; i++) {
+      buf[i].fonte = canais[i].fonte; buf[i].numero = canais[i].numero;
+      buf[i].fav = canais[i].fav; buf[i].ordemFonte = canais[i].fonte;
+    }
+    idx = ltv_numero_achar(buf, nCanais, numero, f, &amb);
+    cNum = numero; cFiltro = filtro; cN = nCanais; cLista = canais; cIdx = idx; cAmb = amb;
+  }
+  if (idx < 0) return 0;
+  if (fonte && nf && amb && canais[idx].fonte >= 0 && canais[idx].fonte < nLtvF)
+    snprintf(fonte, nf, "%s", ltvF[canais[idx].fonte].nome);
+  if (saida) {
+    canalParaItem(&canais[idx], saida);
+    if (aplicar) snprintf(pedidoBase, sizeof pedidoBase, "%s", canais[idx].base);
+  }
+  return 1;
+}
+
 // Onde o canal esta na ordem do guia e de que categoria e: o numero que o OSD
 // do player mostra. 0 com a lista ainda nao carregada ou canal fora dela.
 int guia_info_canal(const char *id, int *numero, int *total, char *cat, size_t n) {
