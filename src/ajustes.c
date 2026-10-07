@@ -4729,7 +4729,7 @@ static const char *ajudaOpcao(int op) {
     if (op == AJ_SELOS_PACOTE_REM)
       return "Só dá para remover um pacote que foi adicionado nesta TV.";
     if (op == AJ_URL_REM)
-      return "Escolha primeiro uma lista ou guia em Listas e guias por URL.";
+      return "Escolha antes uma lista ou guia.";
     if (op == AJ_SAIDA_PLAYER)
       return "Ative Relógio na tela: sem ele o player não tem para onde minimizar.";
     if (op == AJ_MANTER_VIDEO)
@@ -4806,10 +4806,10 @@ static const char *ajudaOpcao(int op) {
     case AJ_SELOS_CORES: return "Na lista de fontes, cada selo (4K, HDR, Dolby, codec, serviço) ganha a cor do seu tipo, como no pacote de selos do Nuvio. Desligado, os selos ficam brancos.";
     case AJ_SELOS_PACOTE: return "Qual pacote de selos desenha a lista de fontes. Do Nuvio é o pacote que vem no app; os outros são os pacotes da sua conta (importados no Nuvio web) e os que você adiciona aqui. Vale para este perfil. Se nenhum selo do pacote combinar com a fonte, ela usa os selos do app.";
     case AJ_SELOS_PACOTE_ADD: return "Adiciona um pacote de selos pelo link do JSON dele (no máximo 3 no total, contando os da conta). O pacote entra já escolhido.";
-    case AJ_URL_LISTA: return "As listas M3U e os guias XMLTV deste perfil. Cada lista M3U entra no Guia de TV como uma fonte própria; cada guia XMLTV serve a programação de todas as fontes. Aqui aparece só o endereço do servidor: a URL inteira pode ter usuário e senha e fica guardada só nesta TV.";
-    case AJ_URL_M3U_ADD: return "Adiciona uma lista de canais M3U pela URL (http ou https). Pode digitar com o teclado da TV ou pelo celular. Os canais entram no Guia de TV como uma fonte nova.";
-    case AJ_URL_XMLTV_ADD: return "Adiciona um guia de programação XMLTV pela URL (http ou https, pode ser .gz). Ele serve a grade de todas as fontes do Guia.";
-    case AJ_URL_REM: return "Tira do Guia a lista ou o guia escolhido em Listas e guias por URL.";
+    case AJ_URL_LISTA: return "Listas M3U e guias XMLTV deste perfil. Cada lista M3U vira uma fonte do Guia; cada guia XMLTV serve a programação de todas. Aqui aparece só o servidor; a URL inteira fica só nesta TV.";
+    case AJ_URL_M3U_ADD: return "Adiciona uma lista de canais M3U pela URL. Digite no teclado da TV ou pelo celular.";
+    case AJ_URL_XMLTV_ADD: return "Adiciona um guia de programação XMLTV pela URL (pode ser .gz).";
+    case AJ_URL_REM: return "Tira do Guia a lista ou o guia escolhido.";
     case AJ_SELOS_PACOTE_REM: return "Tira desta TV o pacote escolhido. Pacote que veio da conta só se remove na conta, no Nuvio web.";
     case AJ_COL_ARTE_CONTA: return "As pastas de coleção que o app já traz com arte própria passam a usar a capa, o fundo e o logo que estão na sua conta (editor de coleções do site). O que a conta não tiver continua com a arte do app.";
     case AJ_HERO_TRANSICAO: return "Deslizar: quando o destaque troca de título, a arte e o texto saem para o lado e o próximo entra colado, como num carrossel. Esmaecer: a arte apaga e a nova aparece no lugar. Com Animações reduzidas a troca é sempre sem movimento.";
@@ -5866,7 +5866,7 @@ static void eventoTela(const SDL_Event *e) {
     if (focoOp == AJ_URL_M3U_ADD || focoOp == AJ_URL_XMLTV_ADD) {
       stCampo = focoOp;
       teclado_abrir_com(focoOp == AJ_URL_M3U_ADD ? "Endereço da lista M3U" : "Endereço do guia XMLTV",
-                        "O link completo (http:// ou https://). Vazio cancela.",
+                        "O link completo, com http:// ou https://.",
                         400, URL_ALFA, NULL);
       return;
     }
