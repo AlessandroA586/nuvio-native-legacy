@@ -48,6 +48,7 @@ typedef struct {
 void aovivo_selecionar(time_t t, const EpgProg *l, int n, int *iAg, int *iPx);
 // Monta a partir da grade: `epgIdx` >= 0 usa a XMLTV (epg.c); senao, `xtId`
 // (canal Xtream) usa a grade curta do painel (xtepg.c). 1 se achou algo.
+int  aovivo_epg_de_faixa(const EpgProg *l, int n, time_t t, AoVivoEpg *o);
 int  aovivo_epg_montar(int epgIdx, const char *xtId, time_t t, AoVivoEpg *o);
 
 // --- OSD ----------------------------------------------------------------------

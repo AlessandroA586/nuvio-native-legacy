@@ -443,6 +443,8 @@ const char *player_id_canal(void) { return canalSessao ? itemCanal.imdb : ""; }
 // que o chama por quadro, pode nem estar aberto com o canal em tela cheia.
 static int pAgora(int epgIdx, time_t t, EpgProg *p) {
   const char *id = player_id_canal();
+  // O guia primeiro: cascata de casamento + fuso da fonte (M6).
+  if (guia_programa_agora(id, t, p)) return 1;
   if (epgIdx >= 0) return epg_agora(epgIdx, t, p);
   if (!xtream_e_id(id)) return 0;
   xtepg_querer(id);
@@ -451,6 +453,7 @@ static int pAgora(int epgIdx, time_t t, EpgProg *p) {
 }
 static int pProximo(int epgIdx, time_t t, int k, EpgProg *p) {
   const char *id = player_id_canal();
+  if (guia_programa_proximo(id, t, k, p)) return 1;
   if (epgIdx >= 0) return epg_proximo(epgIdx, t, k, p);
   return xtream_e_id(id) && xtepg_proximo(id, t, k, p);
 }
@@ -2330,7 +2333,10 @@ static void avMontarOsd(AoVivoOsd *o) {
     if (epgIdx < 0) epgIdx = -2;
   }
   if (id[0] && xtream_e_id(id)) { xtepg_querer(id); xtepg_passo(); }
-  aovivo_epg_montar(epgIdx, id, time(NULL), &o->epg);
+  { EpgProg fx[40]; time_t agT = time(NULL);
+    int nf = guia_programa_faixa(id, agT - 4 * 3600, agT + 12 * 3600, fx, 40);
+    if (nf < 1 || !aovivo_epg_de_faixa(fx, nf, agT, &o->epg))
+      aovivo_epg_montar(epgIdx, id, agT, &o->epg); }
 #ifdef NV_SHOT_HOOKS
   if (shotEpgOk) { o->epg = shotEpg; o->numero = shotNumero; }
 #endif

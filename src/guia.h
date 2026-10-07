@@ -58,6 +58,8 @@ int  guia_numero_canal(int numero, CatItem *saida, char *fonte, size_t nf, int a
 int  guia_info_canal(const char *id, int *numero, int *total, char *cat, size_t n);
 int  guia_e_favorito(const char *id);
 void guia_alternar_favorito(const char *id);
+int  guia_programa_faixa(const char *id, time_t de, time_t ate, EpgProg *out, int cap);
+int  guia_programa_proximo(const char *id, time_t t, int k, EpgProg *p);
 int  guia_programa_agora(const char *id, time_t t, EpgProg *p);
 
 void guia_evento(const SDL_Event *e);

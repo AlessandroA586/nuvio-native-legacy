@@ -2141,6 +2141,8 @@ static time_t janelaIni(time_t agoraT);
 static time_t instanteFoco(time_t agoraT);
 static int epgDo(GCanal *c);
 static int gAgora(GCanal *c, time_t t, EpgProg *p);   // ver a definicao (#158)
+static int gProximo(GCanal *c, time_t t, int k, EpgProg *p);
+static int gFaixa(GCanal *c, time_t de, time_t ate, EpgProg *out, int cap);
 static void pedirCanal(GCanal *c);
 static void buscaAbrir(void);
 static int buscaEvento(const SDL_Event *e);
@@ -2336,6 +2338,16 @@ void guia_alternar_favorito(const char *id) {
 int guia_programa_agora(const char *id, time_t t, EpgProg *p) {
   GCanal *c = canalPorId(id);
   return c && p && gAgora(c, t, p);
+}
+
+// A faixa de programas do canal pela MESMA cascata e o MESMO fuso do guia (M6).
+int guia_programa_faixa(const char *id, time_t de, time_t ate, EpgProg *out, int cap) {
+  GCanal *c = canalPorId(id);
+  return c && out ? gFaixa(c, de, ate, out, cap) : 0;
+}
+int guia_programa_proximo(const char *id, time_t t, int k, EpgProg *p) {
+  GCanal *c = canalPorId(id);
+  return c && p && gProximo(c, t, k, p);
 }
 
 static void moverVertical(int dir) {
