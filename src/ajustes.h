@@ -109,6 +109,11 @@ int ajustes_pausa_overlay(void);
 int ajustes_classif_player(void);   // 1 = mostra a classificacao/guia parental no player (padrao)
 // "O que achou?" nos creditos (reacao.h). Ligado de fabrica.
 int ajustes_reacao_creditos(void);
+// #329: pula abertura/resumo sozinho quando ha marcador (desligado de fabrica).
+int ajustes_pular_abertura(void);
+int ajustes_pular_resumo(void);
+// #331: a contagem do proximo episodio nos creditos (ligado de fabrica, como sempre foi).
+int ajustes_proximo_auto(void);
 // Medidor de desempenho na ilha do relogio (desempenho.h): Desempenho desta TV,
 // local. 0 = desligado, 1 = Minimo, 2 = Menor, 3 = Grande (DS_* de desempenho.h).
 int ajustes_medidor_desempenho(void);
