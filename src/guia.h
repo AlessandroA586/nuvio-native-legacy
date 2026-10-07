@@ -47,6 +47,10 @@ int  guia_zap(const char *idAtual, int dir, CatItem *saida);
 int  guia_zap_ver(const char *idAtual, int dir, CatItem *saida);
 // Digitar numero na Live TV (M7): o canal que o numero leva; `aplicar` 0 so espia.
 // `fonte` recebe o nome da fonte quando o numero existe em mais de uma.
+// Canal de lista M3U por URL (M9): o app toca a URL guardada com o User-Agent e o
+// Referer do canal. guia_m3u_canal 1 = achou; nada disso vai para o log.
+int  guia_e_m3u(const char *id);
+int  guia_m3u_canal(const char *id, char *url, size_t nu, char *ua, size_t nua, char *ref, size_t nr);
 int  guia_numero_canal(int numero, CatItem *saida, char *fonte, size_t nf, int aplicar);
 
 // Para o OSD do canal ao vivo (aovivo.h): posicao na ordem do guia, categoria,
@@ -60,6 +64,8 @@ void guia_evento(const SDL_Event *e);
 // 1 enquanto a recarga pedida pelo painel de addons de canais ainda corre com
 // o painel ja fechado (a ilha mostra "Atualizando a lista de canais…").
 int  guia_atualizando_lista(void);
+// Ajustes mudou as listas M3U / guias XMLTV por URL: recarrega a lista.
+void guia_fontes_mudaram(void);
 void guia_atualizar(float dt, Uint32 agora);
 void guia_desenhar(Uint32 agora);
 

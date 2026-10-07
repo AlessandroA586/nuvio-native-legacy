@@ -2251,6 +2251,21 @@ int guia_zap_ver(const char *idAtual, int dir, CatItem *saida) {
 }
 
 
+// CANAL DE LISTA M3U (M9): o id e "m3u:<chave da fonte>:<hash>" e a URL, o
+// User-Agent e o Referer ficam no canal (arena), nunca no log. 1 = achou.
+int guia_e_m3u(const char *id) { return id && !strncmp(id, "m3u:", 4); }
+int guia_m3u_canal(const char *id, char *url, size_t nu, char *ua, size_t nua, char *ref, size_t nr) {
+  const GCanal *c = guia_e_m3u(id) ? canalPorId(id) : NULL;
+  if (url && nu) url[0] = 0;
+  if (ua && nua) ua[0] = 0;
+  if (ref && nr) ref[0] = 0;
+  if (!c || !c->url || !c->url[0]) return 0;
+  if (url && nu) snprintf(url, nu, "%s", c->url);
+  if (ua && nua) snprintf(ua, nua, "%s", c->ua ? c->ua : "");
+  if (ref && nr) snprintf(ref, nr, "%s", c->ref ? c->ref : "");
+  return 1;
+}
+
 // DIGITAR O NUMERO (M7, decisao 7): o canal que o numero digitado leva, pela
 // regra do ltv.h (fonte filtrada: so ela; "Todas": favoritos primeiro, depois
 // as fontes na ordem da barra). `aplicar` 0 so espia (o selo do player chama a
@@ -3266,6 +3281,16 @@ static float paItemY(int i) {
   return 36.0f + (float)n * G_PA_ROW + 28.0f + 36.0f + 60.0f + (float)(i - n) * G_PA_ROW_REC;
 }
 #define G_PA_LISTA_Y 200.0f
+
+// Ajustes mexeu nas listas M3U / guias XMLTV por URL (M9): o que ja esta na
+// tela recarrega para a fonte nova entrar (ou a removida sair). Sem lista
+// carregada nao ha o que refazer: a proxima carga ja le as URLs.
+void guia_fontes_mudaram(void) {
+  ltv_urls_carregar(perfis_ativo());
+  if (nCanais <= 0 && estado == G_PARADO) return;
+  if (fioVivo) recarregarPend = 1;
+  else { estado = G_PARADO; ultTentativa = 0; iniciarCarga(); }
+}
 
 int guia_atualizando_lista(void) {
   return recargaDoPainel && !painel && (fioVivo || recarregarPend);

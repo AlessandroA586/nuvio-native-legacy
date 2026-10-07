@@ -237,6 +237,15 @@ static void semearGuia(void) {
   for (i = 0; i < n; i++) C[i].logo = LOGO[L[i]];
   semearCanais(C, n);
   canais[1].fav = 1;
+  // CANAL M3U (M9): o app toca a URL guardada com o UA e o Referer do canal.
+  { const char *idAntes = canais[2].id, *urlAntes = canais[2].url, *uaAntes = canais[2].ua, *refAntes = canais[2].ref;
+    char u[200], ua[64], rf[64];
+    assert(!guia_m3u_canal(canais[2].id, u, sizeof u, ua, sizeof ua, rf, sizeof rf));
+    canais[2].id = "m3u:m1234abcd:0000beef"; canais[2].url = "http://exemplo.invalid/c.m3u8";
+    canais[2].ua = "VLC/3.0"; canais[2].ref = "";
+    assert(guia_e_m3u(canais[2].id) && guia_m3u_canal(canais[2].id, u, sizeof u, ua, sizeof ua, rf, sizeof rf));
+    assert(!strcmp(u, "http://exemplo.invalid/c.m3u8") && !strcmp(ua, "VLC/3.0") && !rf[0]);
+    canais[2].id = idAntes; canais[2].url = urlAntes; canais[2].ua = uaAntes; canais[2].ref = refAntes; }
 }
 
 int main(int argc, char **argv) {
