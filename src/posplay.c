@@ -87,8 +87,10 @@ static int    pedT, pedE, pedTitulo = -1;
 static int    proxT, proxE;          // proximo episodio, quando ha
 static double restaReal;             // segundos de relogio que faltam, enquanto o cartao esta no ar
 static char   proxNome[120];
+static int    marcadorReal;          // o player diz: creditos de marcador real, nao estimativa (#331)
 static Uint32 abriuEm;               // quando o cartao do proximo episodio subiu (#331)
 
+void posplay_marcador_real(int real) { marcadorReal = real; }
 int posplay_visivel(void) { return visivel; }
 // Cartao do proximo episodio: SOBRE o video em tela cheia (o video nao recua).
 // Os relacionados do filme, bem mais altos, continuam recuando o video.
@@ -236,11 +238,13 @@ int posplay_regra_filme(double posSeg, double durSeg, double creditosSeg) {
 // novo `fecharEm` (0 = sem contagem). Regra (#331, no molde da Netflix):
 //   - autoplay desligado: nunca conta, o cartao espera a pessoa;
 //   - ja contando: mantem o instante (cancelar e esconder o cartao, que zera);
-//   - cartao no ar ha PP_ATRASO_MS: arma 5 s a partir de agora, com os creditos
-//     ainda rolando;
+//   - cartao no ar ha PP_ATRASO_MS E o inicio dos creditos vem de um MARCADOR de verdade
+//     (capitulo do MKV ou TheIntroDB deste episodio): arma 5 s a partir de agora, com os creditos
+//     ainda rolando. Com a estimativa dos 2 min finais NAO: ali ainda ha historia/cena
+//     pos-creditos, e so conta o fim (regra de sempre);
 //   - restam 5 s ou menos de relogio: arma o que resta, como sempre foi.
 // `restaReal` e o que falta do episodio em segundos de relogio.
-Uint32 posplay_contagem(Uint32 agora, Uint32 abriuEm, Uint32 fecharEm, double restaReal, int autoplay) {
+Uint32 posplay_contagem(Uint32 agora, Uint32 abriuEm, Uint32 fecharEm, double restaReal, int autoplay, int marcadorReal) {
   Uint32 alvo = 0;
   int armou = 0;
   if (!autoplay) return 0;
@@ -248,7 +252,7 @@ Uint32 posplay_contagem(Uint32 agora, Uint32 abriuEm, Uint32 fecharEm, double re
   if (restaReal <= (double)PP_CONTAGEM_S) {
     if (restaReal < 0.0) restaReal = 0.0;
     alvo = agora + (Uint32)(restaReal * 1000.0); armou = 1;
-  } else if (abriuEm && (Uint32)(agora - abriuEm) >= PP_ATRASO_MS) {
+  } else if (marcadorReal && abriuEm && (Uint32)(agora - abriuEm) >= PP_ATRASO_MS) {
     alvo = agora + (Uint32)PP_CONTAGEM_S * 1000u; armou = 1;
   }
   if (armou && !alvo) alvo = 1;   // 0 quer dizer "sem contagem"
@@ -361,7 +365,7 @@ void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
   if (visivel && serie && !fecharEm) {
     // #202: a 1,5x os segundos do arquivo passam mais depressa que os do relogio.
     double resta = vel_tempo_real(durSeg - posSeg, player_velocidade_efetiva());
-    fecharEm = posplay_contagem(agora, abriuEm, fecharEm, resta, ajustes_proximo_auto());
+    fecharEm = posplay_contagem(agora, abriuEm, fecharEm, resta, ajustes_proximo_auto(), marcadorReal);
   }
 
   if (visivel && serie)

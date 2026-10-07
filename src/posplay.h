@@ -63,7 +63,10 @@ int  posplay_pediu_titulo(void);
 // segundos de relogio faltam para o episodio acabar. Leitura, sem consumir nada. Usado
 // pela pre-carga das fontes (app.c, #326).
 // A conta da contagem, sem estado (#331). Devolve o novo instante de disparo, 0 = sem contagem.
-Uint32 posplay_contagem(Uint32 agora, Uint32 abriuEm, Uint32 fecharEm, double restaReal, int autoplay);
+Uint32 posplay_contagem(Uint32 agora, Uint32 abriuEm, Uint32 fecharEm, double restaReal, int autoplay, int marcadorReal);
+// O player diz, a cada quadro, se o inicio dos creditos vem de marcador real (capitulo do MKV ou
+// TheIntroDB deste episodio, aceito pela janela) e nao da estimativa. So assim a contagem adianta.
+void posplay_marcador_real(int real);
 int  posplay_proximo(int *temporada, int *episodio, double *restaSeg);
 #ifdef NV_SHOT_HOOKS
 void posplay_shot(int idxCatalogo, int ehSerie, int t, int e, Uint32 fecha);

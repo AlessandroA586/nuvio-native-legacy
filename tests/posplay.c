@@ -345,14 +345,16 @@ int main(void) {
   assert(posplay_desfocar_thumb(0, 5, 4) == 0);            // reassistindo: nitido
   puts("ok  o still do proximo episodio obedece a desfocar nao assistidos");
 
-  // #331: a contagem do proximo episodio comeca NOS CREDITOS, 4 s depois de o cartao subir.
-  assert(posplay_contagem(1000, 1000, 0, 120.0, 1) == 0);           // cartao acabou de subir
-  assert(posplay_contagem(4999, 1000, 0, 120.0, 1) == 0);           // ainda no atraso
-  assert(posplay_contagem(5000, 1000, 0, 120.0, 1) == 10000);       // 5 s a partir de agora
-  assert(posplay_contagem(5500, 1000, 10000, 100.0, 1) == 10000);   // armado: nao se move
-  assert(posplay_contagem(5000, 1000, 0, 120.0, 0) == 0);           // autoplay desligado: nunca
-  assert(posplay_contagem(2000, 1000, 0, 3.0, 1) == 5000);          // 3 s de episodio: conta o que resta
-  assert(posplay_contagem(2000, 1000, 0, -1.0, 1) == 2000);         // passou do fim: dispara ja
+  // #331: a contagem do proximo episodio so adianta com marcador REAL de creditos.
+  assert(posplay_contagem(1000, 1000, 0, 120.0, 1, 1) == 0);           // cartao acabou de subir
+  assert(posplay_contagem(4999, 1000, 0, 120.0, 1, 1) == 0);           // ainda no atraso
+  assert(posplay_contagem(5000, 1000, 0, 120.0, 1, 1) == 10000);       // marcador real: 5 s a partir de agora
+  assert(posplay_contagem(5000, 1000, 0, 120.0, 1, 0) == 0);           // estimativa: nao adianta
+  assert(posplay_contagem(60000, 1000, 0, 100.0, 1, 0) == 0);          // estimativa, cartao ha muito: ainda nao
+  assert(posplay_contagem(5500, 1000, 10000, 100.0, 1, 1) == 10000);   // armado: nao se move
+  assert(posplay_contagem(5000, 1000, 0, 120.0, 0, 1) == 0);           // autoplay desligado: nunca
+  assert(posplay_contagem(2000, 1000, 0, 3.0, 1, 0) == 5000);          // estimativa, 3 s de episodio: so o fim
+  assert(posplay_contagem(2000, 1000, 0, -1.0, 1, 1) == 2000);         // passou do fim: dispara ja
   puts("ok  contagem do proximo episodio: atraso, 5 s, autoplay desligado");
 
   puts("posplay: tudo ok");

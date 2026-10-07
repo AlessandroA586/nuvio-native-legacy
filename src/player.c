@@ -3076,9 +3076,13 @@ void player_atualizar(float dt, Uint32 agora) {
     // Canal ao vivo nao tem "fim": sem a guarda, o relogio reserva cruzaria os
     // 90% em ~1h42 de exibicao e abriria o painel de relacionados no meio da
     // programacao.
-    if (!ehCanal())
+    if (!ehCanal()) {
+      { double cr0 = credEfetivo();
+        posplay_marcador_real(cr0 > 1.0 && duracaoSeg - cr0 <= credJanela() &&
+                              (credFonteAtual == CRED_FONTE_CAPITULO || credFonteAtual == CRED_FONTE_INTRODB)); }
       posplay_atualizar(dt, agora, posSeg, duracaoSeg, eSerie, idxAtual(),
                         eSerie && ofertaProximo());
+    }
     // "O QUE ACHOU?" (reacao.h): no mesmo instante do pos-reproducao do filme,
     // e na serie so no fim da temporada ou no ultimo episodio disponivel.
     //
