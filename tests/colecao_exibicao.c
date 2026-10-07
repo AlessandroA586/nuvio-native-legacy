@@ -92,9 +92,19 @@ int main(void) {
   snprintf(pasta.title, sizeof pasta.title, "Star Wars");
   collection = NULL; assert(layAuto() == VT_LAY_GRADE);
   collection = &pasta;
+  // Com abas a Vitrine vence tudo menos o Diretor; o "Ver tudo" de uma fileira
+  // da home (semVitrineAuto) nao a escolhe sozinho.
+  snprintf(pasta.group, sizeof pasta.group, "Film Collections");
+  pasta.nSources = 2;
+  assert(layAuto() == VT_LAY_VITRINE);
+  semVitrineAuto = 1; assert(layAuto() == VT_LAY_SAGA); semVitrineAuto = 0;
+  snprintf(pasta.group, sizeof pasta.group, "Directors");
+  assert(layAuto() == VT_LAY_LINHA);
+  snprintf(pasta.group, sizeof pasta.group, "Film Collections");
+  pasta.nSources = 1;
 
   // 2-4. GEOMETRIA de cada exibicao
-  for (L = VT_LAY_GRADE; L < VT_LAY_N; L++) {
+  for (L = VT_LAY_GRADE; L < VT_LAY_VITRINE; L++) {
     lay = L; celLay = -1; orderN = -1; foco = 0;
     montar(nSemente);
     assert(celN == nSemente);
@@ -157,9 +167,52 @@ int main(void) {
   assert(escolhaGravada(&pasta) == VT_LAY_MURAL);
   salvos_perfil(1);
   assert(escolhaGravada(&pasta) == VT_LAY_SAGA);
-  // Volta ao comeco do ciclo depois da ultima (Mural -> Grade).
+  // Depois do Mural vem a Vitrine, e depois dela volta ao comeco (Grade).
   lay = VT_LAY_MURAL; tabFocus = 1; tabCursor = nAbas();
+  tecla(SDLK_RETURN); assert(lay == VT_LAY_VITRINE && tabFocus == 1);
+  assert(nAbas() == 0 && tabCursor == 0);
   tecla(SDLK_RETURN); assert(lay == VT_LAY_GRADE);
+
+  // 7. VITRINE: fileiras semeadas direto (a fila de abas precisa de rede).
+  pasta.nSources = 2;
+  lay = VT_LAY_VITRINE; layEscolha = VT_LAY_VITRINE; tabFocus = 0;
+  vitIniciar();
+  assert(vitBuf && vitMulti && vitN == 2);
+  vitLin[0].n = 5; vitLin[0].estado = VIT_PRONTA;
+  vitLin[1].n = 0; vitLin[1].estado = VIT_VAZIA;
+  for (i = 0; i < 5; i++) vitBuf[i] = semente[i];
+  vitCarga = vitN;
+  // A fileira vazia e pulada; cima na primeira vai ao botao; esquerda na
+  // primeira coluna pede a barra; direita anda e para na ultima.
+  vitFR = 0; vitFC = 0; vitMexeu = 1;
+  tecla(SDLK_RIGHT); tecla(SDLK_RIGHT); assert(vitFC == 2);
+  for (i = 0; i < 6; i++) tecla(SDLK_RIGHT);
+  assert(vitFC == 4);
+  tecla(SDLK_DOWN); assert(vitFR == 0 && vitFC == 4);
+  pedMenu = 0; vitFC = 0; tecla(SDLK_LEFT); assert(pedMenu == 1);
+  tecla(SDLK_UP); assert(tabFocus == 1 && tabCursor == nAbas());
+  tecla(SDLK_DOWN); assert(tabFocus == 0);
+  // Segunda fileira com itens: baixo desce lembrando a coluna de cada uma.
+  vitLin[1].n = 3; vitLin[1].estado = VIT_PRONTA;
+  for (i = 0; i < 3; i++) vitBuf[VIT_ITENS + i] = semente[7 + i];
+  vitFR = 0; vitFC = 4;
+  tecla(SDLK_DOWN); assert(vitFR == 1 && vitFC == 0);   // cada fileira lembra a sua coluna
+  tecla(SDLK_RIGHT);
+  tecla(SDLK_UP); assert(vitFR == 0 && vitFC == 4);
+  // O destaque segue o foco depois do repouso.
+  vitAtualizar(0.016f, 1000); vitAtualizar(0.016f, 1300);
+  assert(vitHeroAtual == 0 * VIT_ITENS + 4);
+  tecla(SDLK_RETURN);   // sem catalogo global neste teste: so nao pode cair
+  // Sem abas (uma fonte so) as fileiras saem do catalogo: tipos misturados
+  // viram Filmes e Series; so filmes, decadas da mais nova a mais velha.
+  pasta.nSources = 1; vitIniciar();
+  assert(!vitMulti);
+  vitAgrupar(nSemente);
+  assert(vitN == 6 && vitLin[0].n >= 1 && strstr(vitLin[0].nome, "2010"));
+  assert(!strcmp(vitLin[vitN - 1].nome, i18n("Sem data")));
+  snprintf(semente[1].tipo, sizeof semente[1].tipo, "series");
+  vitAgrupar(nSemente);
+  assert(vitN == 2 && !strcmp(vitLin[0].nome, i18n("Filmes")) && !strcmp(vitLin[1].nome, i18n("Séries")));
 
   printf("colecao_exibicao: ok\n");
   return 0;

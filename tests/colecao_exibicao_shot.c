@@ -144,7 +144,7 @@ int main(int argc, char **argv) {
   aberta = 1; anim = 1.0f; source = 0; tabFocus = 0;
 
   captura(NULL, 60);   // artes chegando ao cache
-  for (L = VT_LAY_GRADE; L < VT_LAY_N; L++) {
+  for (L = VT_LAY_GRADE; L < VT_LAY_VITRINE; L++) {
     lay = L; layEscolha = L; celLay = -1; orderN = -1; foco = 1; scrollY = velY = 0;
     armarOnda();
     snprintf(nome, sizeof nome, "%s-%d-%s.bmp", saida, L,
@@ -172,6 +172,34 @@ int main(int argc, char **argv) {
   lay = VT_LAY_LINHA; celLay = -1; orderN = -1; foco = 2;
   snprintf(nome, sizeof nome, "%s-2-linha-diretor.bmp", saida);
   captura(nome, 80);
+
+  // VITRINE: tres abas viram tres fileiras (semeadas direto; a fila de abas
+  // precisa de rede). Topo, e rolada ate a terceira fileira.
+  pasta.nSources = 3; tabFocus = 0;
+  snprintf(pasta.group, sizeof pasta.group, "Film Collections");
+  snprintf(pasta.title, sizeof pasta.title, "Star Wars");
+  snprintf(titulo, sizeof titulo, "%s", pasta.title);
+  snprintf(fontes[2].title, sizeof fontes[2].title, "Animações");
+  snprintf(fontes[2].type, sizeof fontes[2].type, "movie");
+  lay = VT_LAY_VITRINE; layEscolha = VT_LAY_VITRINE; celLay = -1;
+  vitIniciar();
+  { static const char *NOMES[3] = { "Filmes", "Séries", "Animações" };
+    for (i = 0; i < 3; i++) {
+      int k;
+      snprintf(vitLin[i].nome, sizeof vitLin[i].nome, "%s", NOMES[i]);
+      vitLin[i].estado = VIT_PRONTA; vitLin[i].n = 12;
+      for (k = 0; k < 12; k++) vitBuf[i * VIT_ITENS + k] = semente[(i * 5 + k) % NF];
+    }
+    vitCarga = vitN; vitMexeu = 1; vitFR = 0; vitFC = 2; }
+  captura(NULL, 90);
+  snprintf(nome, sizeof nome, "%s-7-vitrine-topo.bmp", saida);
+  captura(nome, 90);
+  tecla(SDLK_DOWN); tecla(SDLK_DOWN); tecla(SDLK_RIGHT);
+  snprintf(nome, sizeof nome, "%s-7-vitrine-fileira3.bmp", saida);
+  captura(nome, 140);
+  tecla(SDLK_UP); tecla(SDLK_UP); tecla(SDLK_UP);
+  snprintf(nome, sizeof nome, "%s-7-vitrine-botao.bmp", saida);
+  captura(nome, 90);
 
   tex_encerrar();
   txt_encerrar();

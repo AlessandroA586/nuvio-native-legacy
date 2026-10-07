@@ -23,6 +23,7 @@
 #include "anos.h"
 #include "salvos.h"
 #include "dados.h"
+#include "home.h"
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -71,8 +72,8 @@ static char catalogId[96];
 // tinham. Agora toda colecao escolhe a sua, no botao "Exibição" ao lado das
 // abas, e a escolha fica gravada por perfil e por pasta.
 //
-// AUTOMATICO pelo conteudo (layAuto): Diretores = linha do tempo, ranking =
-// Ranking, franquia/saga = Saga, o resto = Grade. Quem nunca escolheu ve
+// AUTOMATICO pelo conteudo (layAuto): Diretores = linha do tempo, colecao com
+// abas = Vitrine, ranking = Ranking, franquia/saga = Saga, o resto = Grade. Quem nunca escolheu ve
 // exatamente o que via antes, menos as franquias, que ganham a Saga.
 //
 // TODAS AS EXIBICOES SAO A MESMA TELA: uma tabela de celulas (posicao e caixa
@@ -85,12 +86,13 @@ static char catalogId[96];
 // cache ja tem das fileiras da home.
 typedef enum {
   VT_LAY_AUTO = 0, VT_LAY_GRADE, VT_LAY_LINHA, VT_LAY_RANKING,
-  VT_LAY_SAGA, VT_LAY_DECADAS, VT_LAY_MURAL, VT_LAY_N
+  VT_LAY_SAGA, VT_LAY_DECADAS, VT_LAY_MURAL, VT_LAY_VITRINE, VT_LAY_N
 } VtLayout;
 static const char *LAY_NOME[VT_LAY_N] = {
-  "Automático", "Grade", "Linha do tempo", "Ranking", "Saga", "Décadas", "Mural"
+  "Automático", "Grade", "Linha do tempo", "Ranking", "Saga", "Décadas", "Mural", "Vitrine"
 };
 static int layEscolha;            // gravada (VT_LAY_AUTO = nunca escolheu)
+static int semVitrineAuto;        // aberta por vertudo_abrir (ver layAuto)
 static int lay = VT_LAY_GRADE;    // a que esta na tela
 static float pillAnim;            // foco no botao "Exibição"
 static float celX[VT_MAX], celY[VT_MAX], celW[VT_MAX], celH[VT_MAX];
@@ -267,6 +269,10 @@ static int contem(const char *s, const char *termo) {
 static int layAuto(void) {
   if (!collection) return VT_LAY_GRADE;
   if (grupo("Directors")) return VT_LAY_LINHA;
+  // ABAS VIRAM FILEIRAS: a Vitrine substitui a barra de abas. Nao vale para o
+  // "Ver tudo" de uma fileira da home (semVitrineAuto): quem clicou la quer o
+  // catalogo daquela fileira em grade, nao a colecao inteira.
+  if (collection->nSources > 1 && !semVitrineAuto) return VT_LAY_VITRINE;
   if (ranked) return VT_LAY_RANKING;
   if (grupo("Film Collections") || grupo("TV Collections") ||
       contem(collection->title, "saga") || contem(collection->title, "franquia") ||
@@ -289,13 +295,24 @@ static const char *baseDaFonte(const ColSource *s) {
   return s->addonId[0] ? addons_base_por_id(s->addonId) : "";
 }
 
+static void vitIniciar(void);
+static void carregarFonte(void);
 static void openSource(void) {
   const ColSource *s=&collection->sources[source];
-  const char *base=baseDaFonte(s);
   snprintf(catalogId,sizeof catalogId,"%s",s->catId);
   ranked=strstr(s->catId,"top100")||strstr(s->catId,"top250")||strstr(s->catId,"top10");
   foco=0;scrollY=velY=0;orderN=-1;celLay=-1;armarOnda();
   resolverLayout();
+  // VITRINE: nao ha "a fonte aberta"; cada aba vira uma fileira e vitIniciar
+  // as carrega uma a uma.
+  if (lay == VT_LAY_VITRINE) { vitIniciar(); return; }
+  carregarFonte();
+}
+// Pede ao carregador da descoberta o catalogo de `source` (sem mexer na tela).
+static void carregarFonte(void) {
+  const ColSource *s=&collection->sources[source];
+  const char *base=baseDaFonte(s);
+  snprintf(catalogId,sizeof catalogId,"%s",s->catId);
   // FONTE NAO-ADDON (issue #44): "tmdb"/"trakt" vinda do site. Nao tem base
   // de catalogo — o conteudo e pedido direto ao servico pelo
   // desc_vertudo_fonte. "Sem fonte" aqui quer dizer servico nao configurado
@@ -337,7 +354,7 @@ void vertudo_colecao(const ColFolder *folder) {
   if(!folder||!folder->nSources)return;
   memset(tabAnim, 0, sizeof tabAnim);
   collection=folder;source=tabCursor=0;tabFocus=folder->nSources>1;aberta=1;pedAbrir=-1;
-  pillAnim=0;layEscolha=escolhaGravada(folder);
+  pillAnim=0;layEscolha=escolhaGravada(folder);semVitrineAuto=0;
   // COMECAR NA PRIMEIRA FONTE QUE TEM ENDERECO, e nao teimosamente na fonte 0.
   // Numa pasta com varias abas e comum que so parte dos addons esteja instalada
   // aqui; abrir na aba morta faz a pasta inteira parecer vazia.
@@ -345,6 +362,7 @@ void vertudo_colecao(const ColFolder *folder) {
     if (folder->sources[i].prov[0] || baseDaFonte(&folder->sources[i])[0])
       { source = tabCursor = i; break; }
   snprintf(titulo,sizeof titulo,"%s",folder->title);openSource();
+  if(lay==VT_LAY_VITRINE)tabFocus=0;   // sem barra de abas: o foco nasce nas fileiras
 }
 
 void vertudo_abrir(const char *base, const char *tipo, const char *catId,
@@ -354,7 +372,8 @@ void vertudo_abrir(const char *base, const char *tipo, const char *catId,
   snprintf(titulo, sizeof titulo, "%s", tit ? tit : "");
   collection=col_por_catalogo(base,tipo,catId);
   source=tabCursor=tabFocus=0;orderN=-1;celLay=-1;pillAnim=0;
-  layEscolha=escolhaGravada(collection);
+  layEscolha=escolhaGravada(collection);semVitrineAuto=1;
+  if(layEscolha==VT_LAY_VITRINE)layEscolha=VT_LAY_AUTO;   // "Ver tudo" e uma fileira so
   if(collection) {
     for(int i=0;i<collection->nSources;i++)if(!strcmp(collection->sources[i].catId,catId)&&!strcmp(collection->sources[i].type,tipo)){source=tabCursor=i;break;}
     snprintf(titulo,sizeof titulo,"%s",collection->title);
@@ -386,21 +405,10 @@ static int nItens(void) { return desc_vertudo_n(); }
 // de titulo possa abri-lo por indice, que e como todo o app trabalha.
 static CtxHold hold;
 
+static void abrirItem(const CatItem *src);
 static void abrirFocado(void) {
   CatItem it;
-  if (!viewItem(foco, &it)) return;
-  // Item de fonte TMDB (issue #44): o id e "tmdb:<n>", nao imdb. Quem
-  // resolve e o caminho sob-demanda ja usado pela filmografia de elenco:
-  // external_ids -> imdb -> meta do Cinemeta -> cat_acrescentar, e o
-  // desc_titulo_pronto do loop principal abre o detalhe.
-  if (!strncmp(it.imdb, "tmdb:", 5)) {
-    desc_pedir_titulo_tmdb(atol(it.imdb + 5),
-                           !strcmp(it.tipo, "series") ? "tv" : "movie");
-  } else {
-    int idx = it.imdb[0] ? cat_indice_por_imdb(it.imdb) : -1;
-    if (idx < 0) idx = cat_acrescentar(&it);
-    if (idx >= 0) { pedAbrir = idx; } // conserva a lista e a posição ao voltar
-  }
+  if (viewItem(foco, &it)) abrirItem(&it);
 }
 
 // Retangulo e arte do cartao em foco, na tela virtual: o menu nasce ao lado e
@@ -438,6 +446,7 @@ static int menuNoFocado(void) {
 static int celulaAceitaMenu(void) {
   CatItem it;
   if (collection && tabFocus) return 0;
+  if (lay == VT_LAY_VITRINE) return 0;   // a Vitrine trata o OK sozinha (vitEvento)
   if (nItens() < 1 || desc_vertudo_erro()) return 0;
   return viewItem(foco, &it);
 }
@@ -559,7 +568,302 @@ static int vizinhoNaLinha(int n, int lin) {
   return achou;
 }
 // O botao "Exibição" mora na faixa das abas: cursor = nAbas.
-static int nAbas(void) { return collection && collection->nSources > 1 ? collection->nSources : 0; }
+static int nAbas(void) {
+  return collection && collection->nSources > 1 && lay != VT_LAY_VITRINE ? collection->nSources : 0;
+}
+
+// --- VITRINE ------------------------------------------------------------------
+//
+// Pedido de um usuario (Reddit): "can the collection view be like a home screen
+// with a hero poster? Tabs are not the best view". A Vitrine e a Home em
+// miniatura: o destaque do titulo em foco no alto (a mesma arte, logo, meta e
+// sinopse do destaque da Home) e, abaixo, UMA FILEIRA POR ABA da colecao, com
+// os cartazes das fileiras da Home. Sem abas, as fileiras saem do proprio
+// catalogo: por tipo (filmes e series misturados) ou por decada.
+//
+// DADOS. O carregador da descoberta guarda UM catalogo por vez, entao as abas
+// sao lidas em fila: abre a aba 0, espera a primeira pagina, guarda os
+// primeiros VIT_ITENS titulos na fileira dela e passa a proxima. Nada de rede
+// nova: e o mesmo caminho da grade, repetido. O que sobra e uma copia de ate
+// VIT_LIN_MAX x VIT_ITENS CatItems (alocada so quando a Vitrine abre pela
+// primeira vez), de modo que mudar de fileira nao refaz pedido nenhum.
+//
+// CUSTO NA TV: o mesmo da Home com o foco nas fileiras. UMA arte de tela cheia
+// (a do destaque, na camada GFX_HERO_CHEIO) e os cartazes; nenhuma passada de
+// blur. Durante os 250 ms da troca de destaque a arte anterior fica por baixo
+// (duas camadas, so ali, como a Home faz).
+#define VIT_LIN_MAX 12
+#define VIT_ITENS   20
+enum { VIT_PEND = 0, VIT_CARREGANDO, VIT_PRONTA, VIT_VAZIA };
+typedef struct { char nome[96]; int n, estado, semFonte; } VitLin;
+static VitLin vitLin[VIT_LIN_MAX];
+static CatItem *vitBuf;
+static int vitN, vitMulti, vitCarga, vitFR, vitFC, vitMexeu, vitUnicoN = -1;
+static int vitColLemb[VIT_LIN_MAX];
+static Uint32 vitT0, vitNomeEm, vitReleEm;
+static float vitScroll, vitScrollV, vitSx[VIT_LIN_MAX], vitSv[VIT_LIN_MAX];
+// O destaque: o que esta na tela, o que saiu, e o que o foco pede.
+static int vitHeroAtual = -1, vitHeroAnt = -1, vitHeroDes = -1;
+static Uint32 vitHeroDesde;
+static float vitHeroEntra = 1.0f;
+
+static CatItem *vitItem(int r, int c) {
+  if (!vitBuf || r < 0 || r >= vitN || c < 0 || c >= vitLin[r].n) return NULL;
+  return &vitBuf[r * VIT_ITENS + c];
+}
+static CatItem *vitChave(int k) { return k < 0 ? NULL : vitItem(k / VIT_ITENS, k % VIT_ITENS); }
+static int vitTemItens(void) {
+  for (int r = 0; r < vitN; r++) if (vitLin[r].n > 0) return 1;
+  return 0;
+}
+// A fileira com itens mais proxima de `r` na direcao `d` (+1 / -1); -1 se nao ha.
+static int vitLinhaVizinha(int r, int d) {
+  for (r += d; r >= 0 && r < vitN; r += d) if (vitLin[r].n > 0) return r;
+  return -1;
+}
+static void vitFocoInicial(void) {
+  if (vitLin[vitFR < vitN ? vitFR : 0].n > 0 && vitFR < vitN) return;
+  for (int r = 0; r < vitN; r++) if (vitLin[r].n > 0) { vitFR = r; vitFC = 0; return; }
+}
+
+// O texto de cada aba: o mesmo da barra de abas (ver a nota em themeHeader).
+static void rotulosAbas(char (*rot)[180]) {
+  static char nomeAba[COL_SOURCE_MAX][128];
+  int n = collection->nSources;
+  if (n > COL_SOURCE_MAX) n = COL_SOURCE_MAX;
+  for (int i = 0; i < n; i++) {
+    const ColSource *s = &collection->sources[i];
+    col_nome_fonte(s, desc_nome_catalogo(baseDaFonte(s), s->type, s->catId), nomeAba[i], sizeof nomeAba[i]);
+    if (!strcasecmp(nomeAba[i], collection->title)) nomeAba[i][0] = 0;
+  }
+  for (int i = 0; i < n; i++) {
+    const ColSource *s = &collection->sources[i];
+    const char *tipo = i18n(!strcmp(s->type, "series") ? "Séries" : "Filmes");
+    int repete = 0;
+    for (int j = 0; j < n && nomeAba[i][0]; j++) if (j != i && !strcmp(nomeAba[i], nomeAba[j])) repete = 1;
+    if (!nomeAba[i][0]) snprintf(rot[i], 180, "%s", tipo);
+    else if (repete) snprintf(rot[i], 180, "%s · %s", nomeAba[i], tipo);
+    else snprintf(rot[i], 180, "%s", nomeAba[i]);
+  }
+}
+static void vitNomes(void) {
+  static char rot[COL_SOURCE_MAX][180];
+  if (!vitMulti || !collection) return;
+  rotulosAbas(rot);
+  for (int r = 0; r < vitN; r++) snprintf(vitLin[r].nome, sizeof vitLin[r].nome, "%s", rot[r]);
+}
+
+static void vitIniciar(void) {
+  if (!vitBuf) vitBuf = calloc((size_t)VIT_LIN_MAX * VIT_ITENS, sizeof(CatItem));
+  memset(vitLin, 0, sizeof vitLin);
+  memset(vitColLemb, 0, sizeof vitColLemb);
+  memset(vitSx, 0, sizeof vitSx); memset(vitSv, 0, sizeof vitSv);
+  vitN = 0; vitCarga = 0; vitFR = vitFC = 0; vitMexeu = 0; vitUnicoN = -1;
+  vitScroll = vitScrollV = 0.0f;
+  vitHeroAtual = vitHeroAnt = vitHeroDes = -1; vitHeroEntra = 1.0f;
+  vitNomeEm = 0; vitT0 = 0;
+  if (!vitBuf || !collection) { lay = VT_LAY_GRADE; celLay = -1; carregarFonte(); return; }
+  vitMulti = collection->nSources > 1;
+  if (vitMulti) {
+    vitN = collection->nSources < VIT_LIN_MAX ? collection->nSources : VIT_LIN_MAX;
+    vitNomes();
+  } else carregarFonte();
+}
+
+// Guarda a primeira pagina do catalogo aberto na fileira `r`.
+static void vitGuardar(int r) {
+  int n = nItens(), k = 0;
+  if (n > VIT_ITENS) n = VIT_ITENS;
+  for (int i = 0; i < n; i++)
+    if (desc_vertudo_item(i, &vitBuf[r * VIT_ITENS + k])) k++;
+  vitLin[r].n = k;
+  vitLin[r].estado = k ? VIT_PRONTA : VIT_VAZIA;
+  vitLin[r].semFonte = semFonte;
+}
+
+// SEM ABAS: as fileiras saem dos titulos lidos. Tipos misturados = uma fileira
+// por tipo; senao uma por decada (a mais nova primeiro, "sem data" por ultimo).
+static void vitAgrupar(int n) {
+  static short chave[VT_MAX];
+  static CatItem tmp;
+  int chaves[VIT_LIN_MAX + 1], nc = 0, filmes = 0, series = 0;
+  if (n > VT_MAX) n = VT_MAX;
+  for (int i = 0; i < n; i++)
+    if (desc_vertudo_item(i, &tmp)) { if (!strcmp(tmp.tipo, "series")) series = 1; else filmes = 1; }
+  for (int i = 0; i < n; i++) {
+    int k;
+    chave[i] = -1;
+    if (!desc_vertudo_item(i, &tmp)) continue;
+    if (filmes && series) k = !strcmp(tmp.tipo, "series") ? 1 : 0;
+    else { int a = nv_ano_meta(tmp.meta); k = a ? a / 10 * 10 : 0; }
+    chave[i] = (short)k;
+    { int j; for (j = 0; j < nc && chaves[j] != k; j++) {}
+      if (j == nc && nc < VIT_LIN_MAX) chaves[nc++] = k; }
+  }
+  // Ordem das fileiras: tipos filmes, series; decadas da mais nova a mais velha.
+  for (int i = 1; i < nc; i++) {
+    int v = chaves[i], j = i;
+    int mistos = filmes && series;
+    for (; j > 0; j--) {
+      int a = chaves[j - 1], antes = mistos ? a > v : (v == 0 ? 0 : (a == 0 ? 1 : a < v));
+      if (!antes) break;
+      chaves[j] = chaves[j - 1];
+    }
+    chaves[j] = v;
+  }
+  memset(vitLin, 0, sizeof vitLin);
+  vitN = nc;
+  for (int r = 0; r < nc; r++) {
+    VitLin *l = &vitLin[r];
+    if (filmes && series) snprintf(l->nome, sizeof l->nome, "%s", i18n(chaves[r] ? "Séries" : "Filmes"));
+    else if (chaves[r]) snprintf(l->nome, sizeof l->nome, i18n("Anos %d"), chaves[r]);
+    else snprintf(l->nome, sizeof l->nome, "%s", i18n("Sem data"));
+    for (int i = 0; i < n && l->n < VIT_ITENS; i++)
+      if (chave[i] == chaves[r] && desc_vertudo_item(i, &vitBuf[r * VIT_ITENS + l->n])) l->n++;
+    l->estado = VIT_PRONTA;
+  }
+  if (vitFR >= vitN) vitFR = vitN ? vitN - 1 : 0;
+  if (vitN && vitFC >= vitLin[vitFR].n) vitFC = vitLin[vitFR].n ? vitLin[vitFR].n - 1 : 0;
+}
+
+// Um passo da carga, por quadro: a fila de abas, as ultimas paginas do catalogo
+// unico e a releitura das fontes cujo addon ainda nao tinha endereco.
+static void vitCarregar(Uint32 agora) {
+  if (!vitBuf) return;
+  if (!vitMulti) {
+    int n = nItens();
+    if (n != vitUnicoN) { vitUnicoN = n; if (n > 0) vitAgrupar(n); }
+    // O catalogo traz 100 por pagina: pede mais ate haver o que agrupar.
+    if (n > 0 && n < 300 && !desc_vertudo_carregando() && !desc_vertudo_fim() &&
+        !desc_vertudo_erro()) desc_vertudo_mais();
+    if (semFonte && baseDaFonte(&collection->sources[source])[0]) vitIniciar();
+    return;
+  }
+  if (vitCarga < vitN) {
+    VitLin *l = &vitLin[vitCarga];
+    if (l->estado == VIT_PEND) {
+      source = vitCarga; carregarFonte();
+      l->estado = VIT_CARREGANDO; vitT0 = agora ? agora : 1u;
+    } else if (l->estado == VIT_CARREGANDO && !desc_vertudo_carregando() &&
+               (nItens() > 0 || desc_vertudo_fim() || desc_vertudo_erro() || semFonte ||
+                (Sint32)(agora - vitT0) > 2500)) {
+      vitGuardar(vitCarga);
+      vitCarga++;
+    }
+  }
+  // Fonte sem endereco que ganhou um (a sonda do manifesto respondeu): reabre.
+  if ((Sint32)(agora - vitReleEm) > 1500) {
+    vitReleEm = agora;
+    vitNomes();
+    for (int r = 0; r < vitN && vitCarga >= vitN; r++)
+      if (vitLin[r].estado == VIT_VAZIA && vitLin[r].semFonte &&
+          baseDaFonte(&collection->sources[r])[0]) { vitLin[r].estado = VIT_PEND; vitCarga = r; break; }
+  }
+}
+
+// ABRIR UM TITULO (a grade e a Vitrine). O item NAO esta no catalogo global —
+// veio de uma pagina que so esta tela leu. Entra por cat_acrescentar para que a
+// tela de titulo possa abri-lo por indice, que e como todo o app trabalha.
+static void abrirItem(const CatItem *src) {
+  CatItem it = *src;
+  // Item de fonte TMDB (issue #44): o id e "tmdb:<n>", nao imdb. Quem resolve e
+  // o caminho sob-demanda ja usado pela filmografia de elenco: external_ids ->
+  // imdb -> meta do Cinemeta -> cat_acrescentar, e o desc_titulo_pronto do loop
+  // principal abre o detalhe.
+  if (!strncmp(it.imdb, "tmdb:", 5)) {
+    desc_pedir_titulo_tmdb(atol(it.imdb + 5), !strcmp(it.tipo, "series") ? "tv" : "movie");
+  } else {
+    int idx = it.imdb[0] ? cat_indice_por_imdb(it.imdb) : -1;
+    if (idx < 0) idx = cat_acrescentar(&it);
+    if (idx >= 0) pedAbrir = idx;
+  }
+}
+
+static int primeiraFonte(void) {
+  for (int i = 0; i < collection->nSources; i++)
+    if (collection->sources[i].prov[0] || baseDaFonte(&collection->sources[i])[0]) return i;
+  return 0;
+}
+// A PROXIMA EXIBICAO, e ela fica gravada para esta pasta (o botao "Exibição").
+static void alternarExibicao(void) {
+  int antes = lay, prox = lay % (VT_LAY_N - 1) + 1;
+  layEscolha = prox; gravarEscolha(collection, prox);
+  resolverLayout(); foco = 0; scrollY = velY = 0; armarOnda();
+  if (lay != antes && (lay == VT_LAY_VITRINE || antes == VT_LAY_VITRINE)) {
+    // A Vitrine nao tem aba aberta e as outras exibicoes precisam de uma: a
+    // fonte volta para a primeira que tem endereco, e o cursor para o botao.
+    source = primeiraFonte(); openSource();
+  }
+  tabCursor = nAbas();
+}
+
+static void vitEvento(int k) {
+  int enter = k == SDLK_RETURN || k == SDLK_KP_ENTER;
+  VitLin *l;
+  vitMexeu = 1;
+  if (tabFocus) {   // o botao "Exibição", acima do destaque
+    if (k == SDLK_LEFT) pedMenu = 1;
+    else if (k == SDLK_DOWN && vitTemItens()) tabFocus = 0;
+    else if (enter) alternarExibicao();
+    return;
+  }
+  if (vitFR >= vitN) return;
+  l = &vitLin[vitFR];
+  if (k == SDLK_LEFT) { if (vitFC > 0) vitFC--; else pedMenu = 1; }
+  else if (k == SDLK_RIGHT) { if (vitFC + 1 < l->n) vitFC++; }
+  else if (k == SDLK_DOWN) {
+    int r = vitLinhaVizinha(vitFR, 1);
+    if (r >= 0) { vitColLemb[vitFR] = vitFC; vitFR = r; vitFC = vitColLemb[r]; }
+  } else if (k == SDLK_UP) {
+    int r = vitLinhaVizinha(vitFR, -1);
+    if (r >= 0) { vitColLemb[vitFR] = vitFC; vitFR = r; vitFC = vitColLemb[r]; }
+    else tabFocus = 1, tabCursor = nAbas();
+  } else if (enter) {
+    const CatItem *it = vitItem(vitFR, vitFC);
+    if (it) abrirItem(it);
+  }
+  if (vitFR < vitN && vitFC >= vitLin[vitFR].n) vitFC = vitLin[vitFR].n ? vitLin[vitFR].n - 1 : 0;
+}
+
+// Medidas das fileiras: as da Home (home_vitrine_medida). O topo da primeira e
+// o da Home Moderna; a fileira em foco sobe para ele e a seguinte espia embaixo.
+#define VIT_TITULO_H 46.0f
+static float vitPasso(void) {
+  float w, h, p, rot;
+  home_vitrine_medida(&w, &h, &p, &rot);
+  return VIT_TITULO_H + h + rot + 40.0f;
+}
+
+static void vitAtualizar(float dt, Uint32 agora) {
+  float w, h, passo, rot, alvo;
+  vitCarregar(agora);
+  if (!vitMexeu) vitFocoInicial();
+  // Destaque: o item sob o foco; so troca depois de 140 ms parado e com a arte
+  // nova decodificada (ou 700 ms de espera), e a arte nova entra em 250 ms.
+  { int des = !vitItem(vitFR, vitFC) ? -1 : vitFR * VIT_ITENS + vitFC;
+    CatItem *it = vitChave(des);
+    if (des != vitHeroDes) { vitHeroDes = des; vitHeroDesde = agora; }
+    if (it && des != vitHeroAtual) {
+      Uint32 parado = agora - vitHeroDesde;
+      if (vitHeroAtual < 0 || (parado >= 140 && (home_vitrine_arte_pronta(it) || parado >= 700))) {
+        vitHeroAnt = vitHeroAtual; vitHeroAtual = des;
+        vitHeroEntra = vitHeroAnt < 0 ? 1.0f : 0.0f;
+      }
+    } else if (!it) { vitHeroAtual = vitHeroAnt = -1; vitHeroEntra = 1.0f; }
+    if (vitHeroEntra < 1.0f) {
+      vitHeroEntra += dt / 0.25f;
+      if (vitHeroEntra >= 1.0f) { vitHeroEntra = 1.0f; vitHeroAnt = -1; }
+    } }
+  home_vitrine_medida(&w, &h, &passo, &rot);
+  alvo = (float)vitFR * vitPasso();
+  vitScroll = anim_mola2(&vitScrollV, vitScroll, alvo, dt, NV_MOLA2_SCROLL);
+  for (int r = 0; r < vitN; r++) {
+    // A fileira em foco anda ate o cartaz caber com um vizinho a vista.
+    if (r == vitFR)
+      vitSx[r] = anim_mola2(&vitSv[r], vitSx[r], vitFC > 1 ? (vitFC - 1) * passo : 0.0f,
+                            dt, NV_MOLA2_SCROLL);
+  }
+}
 
 void vertudo_evento(const SDL_Event *e) {
   int n = nItens(), k;
@@ -574,17 +878,16 @@ void vertudo_evento(const SDL_Event *e) {
   if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE ||
       e->key.keysym.scancode == NV_SCANCODE_BACK) { aberta = 0; return; }
   if (n > VT_MAX) n = VT_MAX;
+  if (lay == VT_LAY_VITRINE) { vitEvento(k); return; }
   if(collection&&tabFocus) {
     int na = nAbas();
     if(k==SDLK_LEFT){ if(tabCursor>0)tabCursor--; else pedMenu=1; }
     if(k==SDLK_RIGHT&&tabCursor<na)tabCursor++;
     if(k==SDLK_RETURN||k==SDLK_KP_ENTER) {
       if(tabCursor>=na) {
-        // A PROXIMA EXIBICAO, e ela fica gravada para esta pasta. O cursor
-        // continua no botao: da para passar por todas de uma vez so com OK.
-        int prox = lay % (VT_LAY_N - 1) + 1;
-        layEscolha = prox; gravarEscolha(collection, prox);
-        resolverLayout(); foco = 0; scrollY = velY = 0; armarOnda();
+        // O cursor continua no botao: da para passar por todas as exibicoes
+        // de uma vez so com OK.
+        alternarExibicao();
       } else {source=tabCursor;openSource();tabFocus=0;}
     }
     if(k==SDLK_DOWN&&n>0)tabFocus=0;
@@ -622,7 +925,7 @@ void vertudo_atualizar(float dt, Uint32 agora) {
   // dezenas, nao milhares) e SO acontece no estado de erro — assim a colecao se
   // preenche sozinha quando o manifesto responde, em vez de exigir sair e
   // entrar de novo.
-  if (semFonte && collection) {
+  if (semFonte && collection && lay != VT_LAY_VITRINE) {
     const ColSource *s = &collection->sources[source];
     if (baseDaFonte(s)[0]) openSource();
   }
@@ -633,6 +936,7 @@ void vertudo_atualizar(float dt, Uint32 agora) {
   }
   { float alvoP = collection && tabFocus && tabCursor >= nAbas() ? 1.0f : 0.0f;
     pillAnim = anim_mola(pillAnim, alvoP, dt, alvoP > pillAnim ? NV_MOLA_FOCO : NV_MOLA_DESFOCO); }
+  if (lay == VT_LAY_VITRINE) { vitAtualizar(dt, agora); return; }
   if (celLay != lay || celN != n) montar(n);
   else if (lay == VT_LAY_SAGA && n <= 200 && (Sint32)(agora - vistosEm) > 1500)
     { contarVistos(n); vistosEm = agora; }
@@ -1134,8 +1438,12 @@ static void botaoExibicao(float a, float x0) {
   float f = pillAnim, sr, sg, sb;
   int cor = f > 0.5f ? ajustes_tinta_foco() : 214;
   TxtLinha t = txt_linha_corta(TXT_HERO_META, LAY_NOME[lay], cor, cor, cor, 255, maxW - 70.0f);
+  // VITRINE: no canto de cima, a direita do nome da colecao.
+  if (lay == VT_LAY_VITRINE) { x = NV_TELA_W - 104.0f - (t.w + 70.0f); y = 40.0f; }
   GfxRect pill = { x, y, t.w + 70.0f, H };
   corFocoFonte(&sr, &sg, &sb);
+  // Sobre a arte do destaque a pilula precisa de fundo proprio para ler.
+  if (lay == VT_LAY_VITRINE) gfx_cor(pill, NV_RAIO_PILL, 0, 0, 0, 0.42f * a * (1.0f - f));
   gfx_cor(pill, NV_RAIO_PILL, 1, 1, 1, 0.07f * a * (1.0f - f));
   if (f > 0.001f) focoAbaFonte(pill, f, a);
   { float gx = x + 22.0f, gy = y + (H - 18.0f) * 0.5f, c = cor / 255.0f;
@@ -1148,12 +1456,90 @@ static void botaoExibicao(float a, float x0) {
   }
 }
 
+static void vitDesenhar(float a, float x0) {
+  float w, h, passo, rot, pas = vitPasso();
+  CatItem *hero = vitChave(vitHeroAtual), *ant = vitChave(vitHeroAnt);
+  int arte = 0;
+  home_vitrine_medida(&w, &h, &passo, &rot);
+  // A tela inteira ja e pintada pela arte do destaque (e o clear do quadro): so
+  // a abertura/saida, com a Home por baixo, precisa do fundo escuro.
+  if (a < 0.99f) { GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
+    gfx_cor(tela, 0.0f, NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, a); }
+  if (hero) {
+    if (ant && vitHeroEntra < 1.0f) arte |= home_vitrine_arte(ant, a);
+    arte |= home_vitrine_arte(hero, a * (ant ? vitHeroEntra : 1.0f));
+  }
+  if (!arte) fundoColecao(a);
+  if (hero) home_vitrine_texto(hero, a);
+
+  // As fileiras, recortadas abaixo do texto do destaque.
+  gfx_recorte(0.0f, NV_SHELF_TOP - 8.0f, NV_TELA_W, NV_TELA_H - NV_SHELF_TOP + 8.0f);
+  for (int r = 0; r < vitN; r++) {
+    float y = NV_SHELF_TOP + r * pas - vitScroll, cy = y + VIT_TITULO_H;
+    float ac = a * (r == vitFR ? 1.0f : 0.78f);
+    VitLin *l = &vitLin[r];
+    TxtLinha tt;
+    if (y > NV_TELA_H) break;
+    if (y + pas < NV_SHELF_TOP - 8.0f) continue;
+    tt = txt_linha_corta(TXT_ROW_TITULO, l->nome[0] ? l->nome : "—", 245, 246, 249, 255, 900);
+    txt_desenhar_alpha(tt, x0, y, ac);
+    if (l->n > 0) {
+      for (int c = 0; c < l->n; c++) {
+        float cx = x0 + c * passo - vitSx[r];
+        GfxRect base = { cx, cy, w, h }, card = base;
+        int sel = r == vitFR && c == vitFC && !tabFocus;
+        if (cx + w < 0.0f) continue;
+        if (cx > NV_TELA_W) break;
+        if (sel) {
+          if (ajustes_borda_foco())
+            foco_anel(base, ajustes_raio_poster_px() / (w < h ? w : h), 1.0f, a);
+          else card = foco_zoom(base, 1.0f);
+        }
+        home_vitrine_cartao(&vitBuf[r * VIT_ITENS + c], base, card, ac);
+      }
+    } else if (l->estado == VIT_VAZIA) {
+      const char *msg = l->semFonte ? i18n("O addon desta coleção não está instalado nesta TV.")
+                                    : i18n("Nenhum título nesta lista.");
+      TxtLinha m = txt_linha_corta(TXT_DET_META2, msg, 196, 202, 213, 255, 1200);
+      txt_desenhar_alpha(m, x0, cy + 12.0f, ac * 0.9f);
+    } else {
+      // Esqueleto enquanto a fileira espera a vez ou a rede.
+      for (int c = 0; c < 8; c++) {
+        GfxRect e = { x0 + c * passo, cy, w, h };
+        if (e.x > NV_TELA_W) break;
+        gfx_cor(e, ajustes_raio_poster_px() / h, NV_COR_ESQUELETO_R, NV_COR_ESQUELETO_G,
+                NV_COR_ESQUELETO_B, ac * 0.7f);
+      }
+    }
+  }
+  if (!vitN) {   // nada para repartir em fileiras ainda: diz por que
+    const char *pv = collection && source < collection->nSources ? collection->sources[source].prov : "";
+    const char *msg = semFonte
+      ? (!strcmp(pv, "tmdb") ? i18n("O TMDB não está configurado nesta TV.")
+         : !strcmp(pv, "trakt") ? i18n("O Trakt não está configurado nesta TV.")
+         : i18n("O addon desta coleção não está instalado nesta TV."))
+      : desc_vertudo_erro() ? "Não foi possível carregar. OK para tentar novamente."
+      : desc_vertudo_carregando() ? "Carregando títulos…" : "Nenhum título nesta lista.";
+    txt_desenhar_alpha(txt_linha_corta(TXT_DET_META2, msg, 196, 202, 213, 255, 1200),
+                       x0, NV_SHELF_TOP + 20.0f, a);
+  }
+  gfx_sem_recorte();
+
+  // A faixa de cima: a colecao a que isto pertence e o botao "Exibição".
+  { TxtLinha eb = txt_linha(TXT_HERO_META, rotuloGrupo(), 214, 219, 227, 255);
+    TxtLinha tt = txt_linha_corta(TXT_TITULO2, titulo, 246, 247, 250, 255, 900);
+    txt_desenhar_alpha(eb, x0, 36.0f, a * 0.85f);
+    txt_desenhar_alpha(tt, x0, 62.0f, a); }
+  botaoExibicao(a, x0);
+}
+
 void vertudo_desenhar(Uint32 agora) {
   float a = anim, x0 = ajustes_conteudo_x();
   int n = nItens(), i, lin0 = -1;
   float corteTopo = VT_TOPO - 12.0f;
   if (a < 0.01f) return;
   if (n > VT_MAX) n = VT_MAX;
+  if (lay == VT_LAY_VITRINE) { vitDesenhar(a, x0); return; }
   if (celLay != lay || celN != n) montar(n);
   x0Atual = x0;
   if (ondaArmada && n > 0) { ondaEm = agora ? agora : 1u; ondaArmada = 0; }

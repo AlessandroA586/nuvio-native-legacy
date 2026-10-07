@@ -5105,6 +5105,59 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
   return 1;
 }
 
+// --- VITRINE DAS COLECOES (vertudo.c) -------------------------------------------
+// A exibicao "Vitrine" de uma colecao e a Home em miniatura: destaque no alto e
+// fileiras abaixo. Os itens dela NAO estao no catalogo global (vieram da pagina
+// que so a colecao leu), entao as pecas da Home que dependiam de um indice do
+// catalogo ganham aqui uma porta que recebe o CatItem direto. Nada novo e
+// desenhado: e a mesma arte do destaque (arte_hero_do_item), o mesmo bloco de
+// texto (desenhaCopiaHero) e o mesmo cartaz de fileira (desenhaArteCard,
+// veusDoCard, desenhaRotuloCard).
+void home_vitrine_medida(float *w, float *h, float *passo, float *rotH) {
+  *w = larguraDe(FILEIRA_NORMAL); *h = alturaDe(FILEIRA_NORMAL);
+  *passo = *w + gapDe(FILEIRA_NORMAL);
+  *rotH = temRotulo(FILEIRA_NORMAL) ? NV_POSTER_COPY_H : 0.0f;
+}
+// 1 quando a arte do destaque do item ja esta decodificada (e pede o decode).
+int home_vitrine_arte_pronta(const CatItem *ci) {
+  const char *a = ci ? arte_hero_do_item(ci) : NULL;
+  return !a || !a[0] || tex_obter_hero(a) != 0 || tex_falhou(a);
+}
+// A arte do destaque em tela cheia (a mesma camada da Home Moderna com o fundo
+// cheio). 1 se desenhou.
+int home_vitrine_arte(const CatItem *ci, float alfa) {
+  const char *a = ci ? arte_hero_do_item(ci) : NULL;
+  GfxRect r = { 0, 0, NV_TELA_W, NV_HERO_CHEIO_H };
+  if (!a || !a[0] || alfa <= 0.004f) return 0;
+  return desenhaArteHero(r, GFX_HERO_CHEIO, ci, a, alfa, 0.0f);
+}
+// Logo, meta, selos e sinopse do titulo, ancorados acima das fileiras.
+void home_vitrine_texto(const CatItem *ci, float alfa) {
+  float base = NV_SHELF_TOP - NV_HERO_COPY_GAP - 24.0f;
+  if (!ci || alfa <= 0.004f) return;
+  (void)desenhaCopiaHero(ci, 0, ajustes_conteudo_x(), base, HOME_LAYOUT_MODERNA, 1,
+                         150.0f, NV_HERO_SIN_W, 3, alfa, alfa, 0.0f,
+                         NV_HERO_BOTAO_H, NV_HOME_HERO_BOTAO_GAP, 0.0f);
+}
+// Um cartaz de fileira normal. `base` e a caixa em repouso (o rotulo fica nela)
+// e `card` a caixa com o foco ja aplicado.
+void home_vitrine_cartao(const CatItem *ci, GfxRect base, GfxRect card, float alfa) {
+  int deitado = ajustes_posteres_deitados();
+  const char *cam = arte_por_formato(ci, deitado);
+  float raio = raioDe(card.w, card.h), og = gfx_opacidade_grupo;
+  GLuint t = cam ? tex_obter_larg(cam, card.w) : 0;
+  gfx_opacidade_grupo = alfa;
+  gfx_veu_card_limpar();
+  if (t) veusDoCard(ci, FILEIRA_NORMAL, deitado, 0.0f, 0);
+  desenhaArteCard(card, FILEIRA_NORMAL, cam, t, ci, 0.0f, raio, 1.0f, 0.0f);
+  if (t) gfx_veu_na_arte = 1; else gfx_veu_card_limpar();
+  desenhaProfundidade(card, raio, ajustes_profundidade_posters());
+  desenhaRotuloCard(ci, FILEIRA_NORMAL, deitado, temRotulo(FILEIRA_NORMAL),
+                    base.x, base.y, base.w, base.h, raio);
+  gfx_veu_card_limpar();
+  gfx_opacidade_grupo = og;
+}
+
 // O CARTAO FOCADO, PINTADO DE UM LUGAR SO. A home o pinta na fileira e o menu do
 // cartaz (ctxmenu.c) o pinta DE NOVO por cima do veu: a mesma funcao, com os
 // mesmos parametros, para o cartao nao mudar de arte, recorte, rotulo ou logo
