@@ -7340,6 +7340,7 @@ int ajustes_shot_valor(const char *chave, int v) {
 int ajustes_rapido_op(const char *chave) {
   int i, op = -1, n;
   if (!chave || !chave[0]) return -1;
+  if (!strcmp(chave, "corDestaque")) return AJ_RAPIDO_COR;
   for (i = 0; i < AJ_N; i++)
     if (CHAVE[i] && CHAVE[i][0] != '-' && !strcmp(CHAVE[i], chave)) { op = i; break; }
   if (op < 0 || OPCOES[op].tipo != OP_ESCOLHA) return -1;
@@ -7349,10 +7350,49 @@ int ajustes_rapido_op(const char *chave) {
   for (i = 0; i < AJ_N_TELA; i++) if (TELA[i].tipo == IT_OPC && TELA[i].op == op) return op;
   return -1;
 }
-const char *ajustes_rapido_rotulo(int op) { return op >= 0 && op < AJ_N ? rotuloOpcao(op) : ""; }
-const char *ajustes_rapido_valor(int op) { return op >= 0 && op < AJ_N ? textoValor(op) : ""; }
+static int corTema(int i);
+const char *ajustes_rapido_cor_atual_nome(void);
+const char *ajustes_rapido_rotulo(int op) {
+  if (op == AJ_RAPIDO_COR) return rotuloOpcao(AJ_TEMA);
+  return op >= 0 && op < AJ_N ? rotuloOpcao(op) : "";
+}
+const char *ajustes_rapido_valor(int op) {
+  if (op == AJ_RAPIDO_COR) return ajustes_rapido_cor_atual_nome();
+  return op >= 0 && op < AJ_N ? textoValor(op) : "";
+}
 int ajustes_rapido_ligado(int op) { return op >= 0 && op < AJ_N && ehInterruptor(op) ? lig(op) : -1; }
 int ajustes_rapido_passo(int op, int dir) {
+  if (op == AJ_RAPIDO_COR) {   // sem seletor: o proximo dos dezoito
+    int a = ajustes_rapido_cor_atual();
+    return ajustes_rapido_cor_definir(((a < 0 ? 0 : a) + (dir < 0 ? 17 : 1)) % 18);
+  }
   if (op < 0 || op >= AJ_N) return 0;
   return definirValorDireto(op, passoAdiante(op, dir < 0 ? -1 : 1));
+}
+
+// A COR DE DESTAQUE NA CENTRAL. O seletor da central mostra so os dezoito
+// acentos fixos (a regua de Ajustes: nove claros, nove profundos); os
+// dinamicos (Da arte, Textura...) pedem a tela de Ajustes. A troca passa por
+// definirValorDireto, o mesmo caminho do OK da tela.
+int ajustes_rapido_cor_n(void) { return 18; }
+static int corTema(int i) { return i < 0 || i >= 18 ? 0 : i < 9 ? REGUA_CLAROS[i] : REGUA_PROFUNDOS[i - 9]; }
+const char *ajustes_rapido_cor_nome(int i) { return V_TEMA[corTema(i)]; }
+float ajustes_rapido_cor(int i, float *r, float *g, float *b) {
+  int t = corTema(i);
+  corDeHex(TEMA_ACENTO[t].fill, r, g, b);
+  return TEMA_ACENTO[t].fam == 'c' ? AJ_TINTA_ESCURA : 1.0f;
+}
+int ajustes_rapido_cor_atual(void) {
+  int i, v = valor[AJ_TEMA];
+  if (SEGURO && temaDinamico()) v = 0;
+  for (i = 0; i < 18; i++) if (corTema(i) == v) return i;
+  return -1;   // um dinamico: nenhum dos dezoito
+}
+const char *ajustes_rapido_cor_atual_nome(void) {
+  int i = ajustes_rapido_cor_atual();
+  return i >= 0 ? V_TEMA[corTema(i)] : V_TEMA[valor[AJ_TEMA] >= 0 && valor[AJ_TEMA] < AJ_N_TEMAS_OPC ? valor[AJ_TEMA] : 0];
+}
+int ajustes_rapido_cor_definir(int i) {
+  if (i < 0 || i >= 18) return 0;
+  return definirValorDireto(AJ_TEMA, corTema(i));
 }
