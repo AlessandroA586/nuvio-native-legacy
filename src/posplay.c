@@ -33,6 +33,9 @@
 #define PP_FILME_MIN_S    150.0
 #define PP_FILME_MAX_S    330.0
 #define PP_CONTAGEM_S     5
+// #331: a contagem nao espera mais os 5 s finais. O cartao sobe com os creditos
+// e, PP_ATRASO_MS depois, a contagem de 5 s comeca com os creditos ainda rolando.
+#define PP_ATRASO_MS      4000u
 // Guardas do #115 ("More like this aparece cedo demais — no comeco do
 // filme"). Ver posplay_regra_filme.
 #define PP_FILME_METADE   0.5     // nunca antes da metade da duracao
@@ -84,6 +87,7 @@ static int    pedT, pedE, pedTitulo = -1;
 static int    proxT, proxE;          // proximo episodio, quando ha
 static double restaReal;             // segundos de relogio que faltam, enquanto o cartao esta no ar
 static char   proxNome[120];
+static Uint32 abriuEm;               // quando o cartao do proximo episodio subiu (#331)
 
 int posplay_visivel(void) { return visivel; }
 // Cartao do proximo episodio: SOBRE o video em tela cheia (o video nao recua).
@@ -228,6 +232,29 @@ int posplay_regra_filme(double posSeg, double durSeg, double creditosSeg) {
   return resta > 0.0 && resta <= janela;
 }
 
+// A CONTAGEM DO PROXIMO EPISODIO, sem estado (o teste chama direto). Devolve o
+// novo `fecharEm` (0 = sem contagem). Regra (#331, no molde da Netflix):
+//   - autoplay desligado: nunca conta, o cartao espera a pessoa;
+//   - ja contando: mantem o instante (cancelar e esconder o cartao, que zera);
+//   - cartao no ar ha PP_ATRASO_MS: arma 5 s a partir de agora, com os creditos
+//     ainda rolando;
+//   - restam 5 s ou menos de relogio: arma o que resta, como sempre foi.
+// `restaReal` e o que falta do episodio em segundos de relogio.
+Uint32 posplay_contagem(Uint32 agora, Uint32 abriuEm, Uint32 fecharEm, double restaReal, int autoplay) {
+  Uint32 alvo = 0;
+  int armou = 0;
+  if (!autoplay) return 0;
+  if (fecharEm) return fecharEm;
+  if (restaReal <= (double)PP_CONTAGEM_S) {
+    if (restaReal < 0.0) restaReal = 0.0;
+    alvo = agora + (Uint32)(restaReal * 1000.0); armou = 1;
+  } else if (abriuEm && (Uint32)(agora - abriuEm) >= PP_ATRASO_MS) {
+    alvo = agora + (Uint32)PP_CONTAGEM_S * 1000u; armou = 1;
+  }
+  if (armou && !alvo) alvo = 1;   // 0 quer dizer "sem contagem"
+  return alvo;
+}
+
 void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
                        int ehSerie, int idxCatalogo, int janelaSerie) {
   int deveAparecer = 0;
@@ -304,7 +331,8 @@ void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
       player_episodio_atual(&t, &e);
       if (!(t > 0 && e > 0) && ci) { t = ci->temporada; e = ci->episodio; }
       if (t > 0 && e > 0 && acharProximo(idx, t, e)) {
-        fecharEm = 0;            // a contagem entra so nos segundos finais
+        fecharEm = 0;            // a contagem entra PP_ATRASO_MS depois (posplay_contagem)
+        abriuEm = agora ? agora : 1;
         visivel = 1;
       }
       // Sem proximo episodio (fim da serie): nao aparece nada. Mostrar um
@@ -333,11 +361,7 @@ void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
   if (visivel && serie && !fecharEm) {
     // #202: a 1,5x os segundos do arquivo passam mais depressa que os do relogio.
     double resta = vel_tempo_real(durSeg - posSeg, player_velocidade_efetiva());
-    if (resta <= (double)PP_CONTAGEM_S) {
-      if (resta < 0.0) resta = 0.0;
-      fecharEm = agora + (Uint32)(resta * 1000.0);
-      if (!fecharEm) fecharEm = 1;   // 0 quer dizer "sem contagem"
-    }
+    fecharEm = posplay_contagem(agora, abriuEm, fecharEm, resta, ajustes_proximo_auto());
   }
 
   if (visivel && serie)
