@@ -150,5 +150,14 @@ int main(void) {
 #endif
 
   puts("intro: tudo ok");
+    // #329: pular sozinho so abertura/resumo, so ligado, so com fim conhecido.
+  assert(intro_auto_pular(INTRO_ABERTURA, 90.0, 1, 0));
+  assert(!intro_auto_pular(INTRO_ABERTURA, 90.0, 0, 1));
+  assert(intro_auto_pular(INTRO_RESUMO, 30.0, 0, 1));
+  assert(!intro_auto_pular(INTRO_RESUMO, 30.0, 1, 0));
+  assert(!intro_auto_pular(INTRO_CREDITOS, 3000.0, 1, 1));   // creditos: proximo episodio
+  assert(!intro_auto_pular(INTRO_ABERTURA, 0.0, 1, 1));      // fim 0 = ate o fim da midia
+  puts("ok  pulo automatico: so abertura/resumo, ligado e com fim");
+
   return 0;
 }

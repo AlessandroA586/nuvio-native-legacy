@@ -235,3 +235,8 @@ void intro_shot_definir(const IntroTrecho *v,int n){
   pthread_mutex_unlock(&trava);
 }
 #endif
+
+int intro_auto_pular(int tipo,double fim,int pularAbertura,int pularResumo){
+  if(!(fim>0.0))return 0;
+  return (tipo==INTRO_ABERTURA&&pularAbertura)||(tipo==INTRO_RESUMO&&pularResumo);
+}
