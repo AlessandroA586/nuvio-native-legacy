@@ -4944,32 +4944,6 @@ typedef struct {
 static CartaoFoco cartaoFoco; static float cartaoFocoRaio; static int temCartaoFoco;
 // O caminho da arte mora num buffer que o proximo cartao sobrescreve: copia propria.
 static char cartaoFocoArte[1024];
-// SELO DE ASSISTIDO: pilula escura translucida (material da ilha) com um check
-// no acento e a palavra "Assistido". Altura e recuo acompanham a largura do
-// cartao (26..32); abaixo de 150 de largura so o check, num disco da mesma
-// altura. Sombra rasa separa o selo de um poster claro.
-static float desenhaSeloVisto(float px, float py, float w) {
-  float h = w * 0.13f, m = w * 0.06f, ic, pw;
-  float ar, ag, ab;
-  int compacto = w < 150.0f;
-  TxtLinha t = { 0 };
-  if (h < 26.0f) h = 26.0f;
-  if (h > 32.0f) h = 32.0f;
-  if (m < 8.0f) m = 8.0f;
-  if (m > 14.0f) m = 14.0f;
-  ic = h * 0.58f;
-  if (!compacto) t = txt_linha(TXT_CAPTION, i18n("Assistido"), 240, 240, 245, 255);
-  pw = compacto ? h : h * 0.36f + ic + 6.0f + (float)t.w + h * 0.46f;
-  { float mx = px + w - pw - m, my = py + m;
-    ajustes_acento(&ar, &ag, &ab);
-    gfx_cor((GfxRect){ mx, my + 3.0f, pw, h }, 0.5f, 0, 0, 0, 0.28f);
-    gfx_cor((GfxRect){ mx, my, pw, h }, 0.5f, 0.05f, 0.055f, 0.067f, 0.80f);
-    { float ix = compacto ? mx + (h - ic) * 0.5f : mx + h * 0.36f;
-      gfx_icone((GfxRect){ ix, my + (h - ic) * 0.5f, ic, ic }, "check", ar, ag, ab, 1.0f);
-      if (!compacto) txt_desenhar(t, ix + ic + 6.0f, my + (h - t.h) * 0.5f); }
-    return mx; }
-}
-
 // CHIP DE AMIGOS no canto de cima A ESQUERDA do cartaz (amigostitulo.h): ate 2
 // rostos + "+N". Fica longe do titulo (embaixo) e do selo "Assistido" (a
 // direita): `limiteX` e a borda esquerda desse selo, e o chip encolhe para nao
@@ -5048,7 +5022,7 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
           float limiteSelo = px + w;
           if (cItem && tipo != FILEIRA_CONTINUE && tipo != FILEIRA_RETORNO &&
               ajustes_selo_visto() && cat_visto(cItem)) {
-            limiteSelo = desenhaSeloVisto(px, py, w);
+            limiteSelo = badges_selo_visto(px, py, w, 1.0f);
           }
           if (cItem && tipo != FILEIRA_CONTINUE && tipo != FILEIRA_RETORNO)
             desenhaChipAmigos(cItem, px, py, w, limiteSelo, aArte);
