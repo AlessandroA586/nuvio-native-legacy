@@ -394,6 +394,35 @@ int main(int argc, char **argv) {
     return 0;
   }
 
+  // MODO "visto" (#352): selo de assistido na grade e na lista, e as duas
+  // ordenacoes novas. Marca tt90000, 02, 03 e 07 como vistos.
+  if (argc > 2 && !strcmp(argv[2], "visto")) {
+    static const int V[] = { 1, 2, 3, 8, 10 };
+    unsigned k;
+    for (k = 0; k < sizeof V / sizeof V[0]; k++) {
+      char id[16]; snprintf(id, sizeof id, "tt900%02d", V[k]);
+      cat_historico_definir_id(id, "movie", 1);
+    }
+    quadros(10);
+    tecla(SDLK_DOWN); tecla(SDLK_DOWN); tecla(SDLK_RIGHT);
+    snprintf(nome, sizeof nome, "%s-visto-grade-foco.bmp", saida); captura(nome);
+    tecla(SDLK_DOWN);
+    snprintf(nome, sizeof nome, "%s-visto-grade-foco-visto.bmp", saida); captura(nome);
+    AO_TOPO(); SELETOR(1); tecla(SDLK_RETURN); tecla(SDLK_RETURN); tecla(SDLK_RETURN);   // ordem 3 = assistidos primeiro
+    snprintf(nome, sizeof nome, "%s-visto-ordem-assistidos-seletor.bmp", saida); captura(nome);
+    tecla(SDLK_DOWN); tecla(SDLK_DOWN); tecla(SDLK_UP);
+    snprintf(nome, sizeof nome, "%s-visto-ordem-assistidos.bmp", saida); captura(nome);
+    AO_TOPO(); SELETOR(1); tecla(SDLK_RETURN);                                 // ordem 4 = nao assistidos
+    tecla(SDLK_DOWN); tecla(SDLK_DOWN); tecla(SDLK_UP);
+    snprintf(nome, sizeof nome, "%s-visto-ordem-nao-assistidos.bmp", saida); captura(nome);
+    AO_TOPO(); SELETOR(2); tecla(SDLK_RETURN);                                 // exibicao: lista
+    AO_TOPO(); SELETOR(1); tecla(SDLK_RETURN); tecla(SDLK_RETURN);             // ordem 0
+    tecla(SDLK_DOWN); tecla(SDLK_DOWN);
+    snprintf(nome, sizeof nome, "%s-visto-lista.bmp", saida); captura(nome);
+    printf("pronto\n");
+    return 0;
+  }
+
   // 1. Salvos em cartazes, com o foco NA GRADE: e onde se ve a pilula escolhida
   // continuando marcada com o foco longe dela, e o contorno do cartaz.
   tecla(SDLK_DOWN); tecla(SDLK_DOWN); tecla(SDLK_RIGHT);
