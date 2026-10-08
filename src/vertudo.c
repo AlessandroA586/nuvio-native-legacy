@@ -270,16 +270,9 @@ static int contem(const char *s, const char *termo) {
 static int layAuto(void) {
   if (!collection) return VT_LAY_GRADE;
   if (grupo("Directors")) return VT_LAY_LINHA;
-  // COM ABAS, O PADRAO E O DE SEMPRE: Grade e barra de abas. A Vitrine (uma
-  // fileira por aba) so entra quando o dono a escolhe no botao "Exibição". O
-  // "Ver tudo" de uma fileira da home (semVitrineAuto) segue a regra das pastas
-  // sem abas.
-  if (collection->nSources > 1 && !semVitrineAuto) return VT_LAY_GRADE;
-  if (ranked) return VT_LAY_RANKING;
-  if (grupo("Film Collections") || grupo("TV Collections") ||
-      contem(collection->title, "saga") || contem(collection->title, "franquia") ||
-      contem(collection->title, "franchise") || contem(collection->title, "trilog"))
-    return VT_LAY_SAGA;
+  // O PADRAO E O DA 2.0.3: Grade para toda pasta (com ou sem abas); so o
+  // Diretor vai para a Linha do tempo, como ja ia. Ranking, Saga, Decadas, Mural
+  // e Vitrine so entram quando o dono escolhe no botao "Exibição".
   return VT_LAY_GRADE;
 }
 static void resolverLayout(void) {
