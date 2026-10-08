@@ -1191,8 +1191,9 @@ int main(void) {
       // forma escolhida numa orfa tambem protege
       { int q; for (q = 0; q < fil_n(); q++)
           if (!strcmp(fil_chave(q), "binge_seed_7")) fil_ciclar_tipo(q); }
-      fil_marcar_declaradas(decl, nd);
+      fil_marcar_declaradas(decl, nd, 1);
       for (j = 0; j < nNovos; j++) fil_registrar(decl[nDecl + j], decl[nDecl + j], "BingeCat", "series", 1);
+      fil_gravar_registro();
       for (j = 0; j < fil_n(); j++) {
         const char *c = fil_chave(j);
         if (!strncmp(c, "binge_novo_", 11)) nNovosOk++;
