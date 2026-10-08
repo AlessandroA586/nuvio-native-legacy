@@ -46,6 +46,13 @@ typedef struct {
   int  emColecao;      // visible collection owns this source; runtime projection
   int  semAddon;       // runtime only: no ENABLED add-on declares this catalog any more (#319)
   int  visPessoal;     // explicit TV add/remove, persisted as an optional line
+  // CATALOGO NOVO QUE A PESSOA AINDA NAO TOCOU (#358). Marcado em registrar() ao
+  // criar a linha e gravado como linha opcional "nova <chave>" (arquivo antigo
+  // nao a tem). Vale ate a pessoa agir (alternar/adicionar/remover) ou a folha
+  // normalizar. Se ao normalizar ele cai alem do limite, vai para a FILA e nao
+  // para "Fora": a pessoa nunca pediu para tirar, so nao coube. Linha que ja
+  // estava no arquivo sem a marca segue a regra antiga (alem do limite = Fora).
+  int  nova;
 } Linha;
 
 static Linha linhas[FIL_MAX];
@@ -296,6 +303,9 @@ static void gravar(void) {
   for (i = 0; i < nLinhas && k < cap; i++)
     if (linhas[i].visPessoal)
       k += (size_t)snprintf(txt + k, cap - k, "visibilidade %s\n", linhas[i].chave);
+  for (i = 0; i < nLinhas && k < cap; i++)
+    if (linhas[i].nova)
+      k += (size_t)snprintf(txt + k, cap - k, "nova %s\n", linhas[i].chave);
   if (k < cap) dados_gravar(arquivoDoPerfil(), txt);
   free(txt);
   revisao++;
@@ -350,6 +360,9 @@ static void carregar(void) {
       heroLocal = 0;
     } else if (!strncmp(buf, "conta_auto ", 11)) {
       snprintf(donoAuto, sizeof donoAuto, "%s", buf + 11);
+    } else if (!strncmp(buf, "nova ", 5)) {
+      for (int i = 0; i < nLinhas; i++)
+        if (!strcmp(linhas[i].chave, buf + 5)) linhas[i].nova = 1;
     } else if (!strncmp(buf, "visibilidade ", 13)) {
       for (int i = 0; i < nLinhas; i++)
         if (!strcmp(linhas[i].chave, buf + 13)) linhas[i].visPessoal = 1;
@@ -597,6 +610,7 @@ int fil_adicionar(int i, int *estado) {
   if (i < 0 || i >= nLinhas) { pthread_mutex_unlock(&trava); if (estado) *estado = FIL_FORA; return i; }
   linhas[i].oculta = 0;
   linhas[i].visPessoal = 1;
+  linhas[i].nova = 0;
   for (j = nLinhas - 1; j >= 0; j--) if (!linhas[j].oculta && j != i) { ultimo = j; break; }
   // Ja esta depois do ultimo ligado: nao ha para onde ir.
   if (ultimo >= 0 && i < ultimo) {
@@ -628,13 +642,24 @@ void fil_normalizar(void) {
   pthread_mutex_lock(&trava);
   garantir();
   for (i = 0; i < nLinhas; i++) {
-    if (linhas[i].oculta || linhas[i].ocultaConta || linhas[i].emColecao || linhas[i].semAddon) continue;
+    int nova = linhas[i].nova;
+    if (linhas[i].oculta || linhas[i].ocultaConta || linhas[i].emColecao || linhas[i].semAddon) {
+      if (nova && (linhas[i].oculta || linhas[i].ocultaConta)) { linhas[i].nova = 0; mudou = 1; }
+      continue;
+    }
     if (fil_origem_de(linhas[i].chave) != FIL_ORIGEM_CATALOGO) {
       if (linhas[i].fila) { linhas[i].fila = 0; mudou = 1; }
+      if (nova) { linhas[i].nova = 0; mudou = 1; }
       continue;
     }
     if (p < limite) { if (linhas[i].fila) { linhas[i].fila = 0; mudou = 1; } }
-    else if (!linhas[i].fila && !linhas[i].naHome) { linhas[i].oculta = OC_PESSOA; mudou = 1; continue; }
+    else if (!linhas[i].fila && !linhas[i].naHome) {
+      // #358: catalogo novo e intocado que nao coube espera na FILA; so o que
+      // ja estava no arquivo (ou a pessoa tirou) vai para Fora.
+      if (nova) { linhas[i].fila = 1; linhas[i].nova = 0; mudou = 1; p++; continue; }
+      linhas[i].oculta = OC_PESSOA; mudou = 1; continue;
+    }
+    if (nova) { linhas[i].nova = 0; mudou = 1; }
     p++;
   }
   if (mudou) gravar();
@@ -646,7 +671,7 @@ void fil_normalizar(void) {
 void fil_remover(int i) {
   pthread_mutex_lock(&trava);
   garantir();
-  if (i >= 0 && i < nLinhas && linhas[i].oculta != OC_PESSOA) { linhas[i].oculta = OC_PESSOA; linhas[i].visPessoal = 1; linhas[i].fila = 0; gravar(); }
+  if (i >= 0 && i < nLinhas && linhas[i].oculta != OC_PESSOA) { linhas[i].oculta = OC_PESSOA; linhas[i].visPessoal = 1; linhas[i].fila = 0; linhas[i].nova = 0; gravar(); }
   pthread_mutex_unlock(&trava);
 }
 
@@ -936,6 +961,7 @@ static void registrar(const char *chave, const char *titulo,
     snprintf(linhas[i].chave, FIL_CHAVE, "%s", chave);
     linhas[i].tam = FIL_TAM_PADRAO;
     linhas[i].itens = -1;
+    if (podeDespejar) linhas[i].nova = 1;   // #358: ainda nao tocado pela pessoa
     // Fora da cota entra FORA DA HOME (issue #197). Ligado, ele caia na
     // primeira vaga livre do limite e fil_escolhida o dava como escolhido na
     // TV: a volta seguinte o pedia e ele aparecia na home sem ninguem pedir.
@@ -1191,7 +1217,7 @@ int fil_aceita_tipo(int i)  { return (i >= 0 && i < nLinhas) && !formaFixa(linha
 
 void fil_alternar(int i) {
   pthread_mutex_lock(&trava);
-  if (i >= 0 && i < nLinhas) { linhas[i].oculta = linhas[i].oculta ? 0 : OC_PESSOA; linhas[i].visPessoal = 1; gravar(); }
+  if (i >= 0 && i < nLinhas) { linhas[i].oculta = linhas[i].oculta ? 0 : OC_PESSOA; linhas[i].visPessoal = 1; linhas[i].nova = 0; gravar(); }
   pthread_mutex_unlock(&trava);
 }
 
