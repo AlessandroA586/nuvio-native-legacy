@@ -3054,19 +3054,16 @@ void player_atualizar(float dt, Uint32 agora) {
   // trecho (voltar de proposito para dentro dele nao pula de novo), so tocando de verdade.
   if (!ehCanal() && comVideo && tocando && video_pronto() && !scrubbing && duracaoReal) {
     double fimT = 0.0; int tipoT = 0;
-    static int pulouTipo, pulouEpT, pulouEpE; static double pulouFim; static char pulouId[64];
     if (intro_ativo(posSeg, &fimT, &tipoT) &&
-        intro_auto_pular(tipoT, fimT, ajustes_pular_abertura(), ajustes_pular_resumo())) {
-      const CatItem *cx = item();
-      const char *id = cx ? cx->imdb : "";
-      if (!(pulouTipo == tipoT && pulouFim == fimT && pulouEpT == epT && pulouEpE == epE && !strcmp(pulouId, id))) {
-        pulouTipo = tipoT; pulouFim = fimT; pulouEpT = epT; pulouEpE = epE;
-        snprintf(pulouId, sizeof pulouId, "%s", id);
-        posSeg = (float)puloDestino(fimT);
-        video_buscar(posSeg);
-        player_toast(tipoT == INTRO_RESUMO ? i18n("Resumo pulado") : i18n("Abertura pulada"), 2200);
-        printf("[intro] pulo automatico: tipo=%d ate %.0fs\n", tipoT, fimT); fflush(stdout);
-      }
+        intro_auto_pular(tipoT, fimT, duracaoSeg, ajustes_pular_abertura(), ajustes_pular_resumo(),
+                         ajustes_pular_creditos()) &&
+        !intro_auto_ja(tipoT, fimT)) {
+      intro_auto_marcar(tipoT, fimT);
+      posSeg = (float)puloDestino(fimT);
+      video_buscar(posSeg);
+      player_toast(tipoT == INTRO_RESUMO ? i18n("Resumo pulado") :
+                   tipoT == INTRO_CREDITOS ? i18n("Créditos pulados") : i18n("Abertura pulada"), 2200);
+      printf("[intro] pulo automatico: tipo=%d ate %.0fs\n", tipoT, fimT); fflush(stdout);
     }
   }
 

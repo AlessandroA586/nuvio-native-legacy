@@ -49,10 +49,13 @@ int  intro_janela_ok(int tipo,double ini,double fim,double dur,int filme,const c
 #define INTRO_BOTAO_SEG 10.0
 int  intro_botao(double posSeg,double agora,int osd,int focado,double *fim,int *tipo);
 int  intro_botao_visivel(double *fim,int *tipo);
-// #329: o trecho (tipo, fim) deve ser pulado sozinho? So abertura e resumo, so com o ajuste
-// ligado e so quando o marcador tem fim (fim 0 = "ate o fim da midia", que nunca se pula
-// sem a pessoa pedir). Creditos nao entram: quem os trata e o proximo episodio.
-int  intro_auto_pular(int tipo,double fim,int pularAbertura,int pularResumo);
+// #329/#331: o trecho (tipo, fim) deve ser pulado sozinho? Abertura/resumo: ajuste ligado e
+// fim conhecido. Creditos: ajuste proprio, fim EXPLICITO do marcador e a pelo menos 5 s do fim
+// da midia `dur` (creditos ate o fim ficam com o proximo episodio, nunca um seek para alem do fim).
+int  intro_auto_pular(int tipo,double fim,double dur,int pularAbertura,int pularResumo,int pularCreditos);
+// Pulou sozinho este trecho nesta reproducao? (uma vez so; voltar nao repete). Zera a cada pedido.
+int  intro_auto_ja(int tipo,double fim);
+void intro_auto_marcar(int tipo,double fim);
 int  intro_extrair(const char *json,IntroTrecho *saida,int max);
 // Copia ate `max` trechos conhecidos; devolve quantos.
 int  intro_trechos(IntroTrecho *saida,int max);

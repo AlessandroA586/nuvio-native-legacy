@@ -236,7 +236,27 @@ void intro_shot_definir(const IntroTrecho *v,int n){
 }
 #endif
 
-int intro_auto_pular(int tipo,double fim,int pularAbertura,int pularResumo){
+// #329/#331: quais trechos ja foram pulados sozinhos NESTA reproducao (a geracao muda a cada
+// pedido de marcadores, ou seja a cada abertura). Voltar de proposito para dentro do trecho,
+// ou para antes dele, nao pula de novo — vale para os tres tipos, e um nao apaga o outro.
+static unsigned autoGer;static double autoFim[4];
+static void autoSincronizar(void){if(autoGer!=geracao){memset(autoFim,0,sizeof autoFim);autoGer=geracao;}}
+int intro_auto_ja(int tipo,double fim){
+  int r;if(tipo<1||tipo>3)return 1;
+  pthread_mutex_lock(&trava);autoSincronizar();r=autoFim[tipo]==fim;pthread_mutex_unlock(&trava);return r;
+}
+void intro_auto_marcar(int tipo,double fim){
+  if(tipo<1||tipo>3)return;
+  pthread_mutex_lock(&trava);autoSincronizar();autoFim[tipo]=fim;pthread_mutex_unlock(&trava);
+}
+
+// Abertura/resumo: com o ajuste ligado e fim conhecido. Creditos: so com o ajuste proprio E
+// com INICIO e FIM explicitos do marcador (TheIntroDB; fim 0 = "ate o fim da midia" nunca
+// vale). Estimativa, os 50 s finais, o aprendido e o episodio vizinho nem passam por aqui: so
+// trecho de intro_ativo chega. Creditos que vao ate o fim da midia (fim a menos de 5 s da
+// duracao, ou duracao desconhecida) tambem nao: quem os trata e o proximo episodio.
+int intro_auto_pular(int tipo,double fim,double dur,int pularAbertura,int pularResumo,int pularCreditos){
   if(!(fim>0.0))return 0;
+  if(tipo==INTRO_CREDITOS)return pularCreditos&&dur>0.0&&fim<=dur-5.0;
   return (tipo==INTRO_ABERTURA&&pularAbertura)||(tipo==INTRO_RESUMO&&pularResumo);
 }

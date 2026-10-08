@@ -251,3 +251,4 @@
   1, /* minimum progress to enter Continue watching (#326): 1% */
   1, 1, /* auto-skip intro and recap (#329): Desligado */
   0, /* auto-play next episode during credits (#331): Ligado, as before */
+  1, /* auto-skip credits, only with a real start+end marker: Desligado */

@@ -114,6 +114,8 @@ int ajustes_pular_abertura(void);
 int ajustes_pular_resumo(void);
 // #331: a contagem do proximo episodio nos creditos (ligado de fabrica, como sempre foi).
 int ajustes_proximo_auto(void);
+// Pula os creditos sozinho, so com inicio e fim reais do marcador (desligado de fabrica).
+int ajustes_pular_creditos(void);
 // Medidor de desempenho na ilha do relogio (desempenho.h): Desempenho desta TV,
 // local. 0 = desligado, 1 = Minimo, 2 = Menor, 3 = Grande (DS_* de desempenho.h).
 int ajustes_medidor_desempenho(void);
