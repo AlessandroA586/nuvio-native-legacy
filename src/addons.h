@@ -49,6 +49,13 @@ int  addons_perfil_da_lista(void);
 // Lista atual, para o sync poder empurrar de volta o que este aparelho tem.
 int  addons_exportar(AddonRemoto *saida, int max);
 
+// Quantos addons ENTRARAM e quantos SAIRAM entre duas listas, comparados pela
+// URL (e nao pelo nome: dois addons podem se chamar igual), e quantos dos que
+// ficaram MUDARAM (ligado/desligado ou ordem). E o que o botao "Sincronizar
+// addons" (#360) diz depois da volta. Qualquer ponteiro de saida pode ser NULL.
+void addons_diferenca(const AddonRemoto *antes, int na, const AddonRemoto *depois, int nd,
+                      int *entraram, int *sairam, int *mudaram);
+
 // Esquece a lista da conta. Chamado ao SAIR: sem isto, a proxima pessoa a usar
 // esta TV navega com os addons da anterior — e como as chaves de debrid vao
 // embutidas nas URLs, ela tambem consome a assinatura da anterior — ate o

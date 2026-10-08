@@ -913,8 +913,28 @@ void ajustes_desenhar_addons(int foco) {
   ajDesenharAddons(foco);
   AJ_ESCALA_FIM();
 }
+// A linha "Sincronizar addons" (#360), no fim da lista: o disco com o icone,
+// como o "Todos os add-ons" da folha de permitidos. O texto de apoio diz o
+// estado: ocupado, sem conta ou o que o botao faz.
+static const char *ajSyncAddonsApoio(void) {
+  if (!sessao_logada()) return "Entre na conta Nuvio para sincronizar os addons.";
+  if (sync_manual_addons_rodando()) return "Sincronizando…";
+  return "Busca agora os addons da sua conta, sem esperar a volta automática.";
+}
+static void ajLinhaSyncAddons(GfxRect r, int f, float a) {
+  int ocupado = sync_manual_addons_rodando();
+  float tw = r.w - 22 - 64 - 40;
+  TxtLinha t = ajTxtC(TXT_AJ_ROTULO, "Sincronizar addons", tw);
+  TxtLinha c = ajTxtC(TXT_ILHA_GENERO, ajSyncAddonsApoio(), tw);
+  float ty = r.y + 40 - (t.h + 4 + c.h) * 0.5f;
+  if (f) ajFocoLinha(r, 22, 1, a);
+  ajNeutro((GfxRect){ r.x + 22, r.y + 16, 48, 48 }, 14, 0.09f, 0.141f, 0.149f, 0.173f, 1);
+  ajIcone("aj_rotate-cw", r.x + 22 + 14, r.y + 16 + 14, 20, (ocupado ? 0.4f : 0.85f) * a);
+  txt_desenhar_alpha(t, r.x + 22 + 48 + 16, ty, (ocupado ? 0.5f : f ? 1.0f : 0.86f) * a);
+  txt_desenhar_alpha(c, r.x + 22 + 48 + 16, ty + t.h + 4, 0.42f * a);
+}
 static void ajDesenharAddons(int foco) {
-  int n = addons_n(), i, lig = 0, salvoIdx = uxIndice, salvoFoco = focoIndice;
+  int n = addons_n(), i, lig = 0, salvoIdx = uxIndice, salvoFoco = focoIndice, fSync;
   GfxRect fr, ir;
   float topo, base = NV_VTELA_H - 40.0f / ajustes_tamanho_ajustes(), y, alvo;
   char sub[96];
@@ -928,18 +948,22 @@ static void ajDesenharAddons(int foco) {
   ajIlha(fr, 36, 1, 0);
   snprintf(sub, sizeof sub, i18n("%d de %d ligados nesta TV"), lig, n);
   topo = ajCabecalhoFolha(fr, "Fontes e addons", "Addons", n ? sub : "Nenhum addon nesta conta.", 0, 1);
-  if (foco >= n) foco = n - 1;
+  if (foco > n) foco = n;
+  if (foco < 0) foco = 0;
+  fSync = foco == n;   // a ultima linha e o botao, nao um addon
   alvo = foco * 84.0f - (base - topo - 80.0f) * 0.5f;
-  if (alvo > n * 84.0f - (base - topo)) alvo = n * 80.0f - (base - topo);
+  if (alvo > (n + 1) * 84.0f - (base - topo)) alvo = (n + 1) * 84.0f - (base - topo);
   if (alvo < 0) alvo = 0;
   gfx_recorte(fr.x, topo, fr.w, base - topo);
   y = topo - alvo;
-  for (i = 0; i < n; i++, y += 84) {
+  for (i = 0; i <= n; i++, y += 84) {
     GfxRect r = { fr.x + 18, y, fr.w - 36, 80 };
     float a = ajMascara(y + 40, topo, base);
-    int ligado = addons_ativo(i), f = i == foco;
+    int ligado, f = i == foco;
     TxtLinha t, c;
     if (y + 80 < topo || y > base) continue;
+    if (i == n) { ajLinhaSyncAddons(r, f, a); continue; }
+    ligado = addons_ativo(i);
     if (f) ajFocoLinha(r, 22, 1, a);
     ajRosto(addons_nome(i), r.x + 22, y + 16, 48, 14, 0.09f, 0.85f * a, TXT_ILHA_INICIAL);
     { float cw = ajChipLiga(r.x + r.w - 22, y + 40, ligado, a);
@@ -951,7 +975,14 @@ static void ajDesenharAddons(int foco) {
   gfx_sem_recorte();
   if (!ajTemInspetor()) return;
   ajIlha(ir, 36, 1, 0);
-  if (n > 0) {
+  if (fSync) {
+    float tx = ir.x + 38, tw = ir.w - 76, yy = ir.y + 40;
+    ajIcone("aj_rotate-cw", tx, yy - 1, 20, 0.45f);
+    ajCaps(TXT_MINI, "Conta", 2.1f, tx + 30, yy, 0.45f);
+    yy += 28;
+    yy += ajBloco(TXT_AJ_INSP, "Sincronizar addons", tx, yy, tw, 38.4f, 1, 2) + 12;
+    ajBloco(TXT_AJ_SUB, ajSyncAddonsApoio(), tx, yy, tw, 28.5f, 0.62f, 5);
+  } else if (n > 0) {
     float x = ir.x + 32, w = ir.w - 64, py = ir.y + 32, ix = x + 26;
     static const int REC[3] = { ADD_CATALOGO, ADD_STREAM, ADD_LEGENDA };
     static const char *const NOME[3] = { "Catálogo", "Fontes", "Legendas" };
@@ -994,7 +1025,7 @@ static void ajDesenharAddons(int foco) {
       yy += ajBloco(TXT_AJ_INSP, addons_nome(foco), tx, yy, tw, 38.4f, 1, 2) + 12;
       ajBloco(TXT_AJ_SUB, "A lista de addons da sua conta, para ligar e desligar cada um nesta TV.", tx, yy, tw, 28.5f, 0.62f, 5); }
   }
-  { AjDica d[2] = { { "OK", "Ligar ou desligar" }, { "Voltar", "Ajustes" } };
+  { AjDica d[2] = { { "OK", fSync ? "Sincronizar addons" : "Ligar ou desligar" }, { "Voltar", "Ajustes" } };
     ajDicas(d, 2, ir.x + 32, ir.y + ir.h - 32, ir.w - 64, 1); }
 }
 

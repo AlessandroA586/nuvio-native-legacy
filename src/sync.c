@@ -369,6 +369,10 @@ static int  foraCiclo, copiaCiclo;
 // copia. Separado de foraCiclo porque um 429 so na ordem de catalogos nao
 // deixa a home sem addon nenhum, e o aviso da ilha e sobre os addons.
 static int  addonsCiclo, addonsFora;
+// O que puxarAddons devolveu NESTE ciclo (1 = a conta respondeu). Um 4xx nao
+// derruba o ciclo, entao `estado` nao diz se a lista chegou; o botao do #360
+// precisa saber para nao dizer "em dia" sobre uma leitura que falhou.
+static int  addonsLidosCiclo;
 static long copiaQuandoCiclo;
 static int  foraHttp, usandoCopia;
 static long copiaQuando;
@@ -1232,6 +1236,7 @@ static void *rodar(void *u) {
   copiaCiclo = 0;
   addonsCiclo = 0;
   copiaQuandoCiclo = 0;
+  addonsLidosCiclo = 0;
   perfis_puxar();
   if (!contaDoCicloAtual()) {
     estado = SYNC_PRONTO;
@@ -1271,7 +1276,7 @@ static void *rodar(void *u) {
   // Lido DEPOIS da porteira: quando a pessoa responde enquanto perfis_puxar
   // ainda esta no ar, este ciclo ja segue com o perfil escolhido.
   perfilDoCiclo = perfis_ativo();
-  if (puxarAddons() < 0) {
+  if ((addonsLidosCiclo = puxarAddons()) < 0) {
     char d[32];
     if (temAddonsRem && !addonsPendentes()) addonsCedo = 1;
     soLeituraDaCopia(foraCiclo > 0 ? foraCiclo : 0);
@@ -1388,6 +1393,13 @@ static void restaurarOrdemLocal(void) {
   if (mudou || tinha) desc_remontar_fileiras();
 }
 
+// SINCRONIZAR ADD-ONS A MAO (#360). `manualRodando` liga so quando o fio que
+// leva o pedido foi criado: um clique com um ciclo ja no ar espera ele acabar e
+// pede outro, porque o que estava no ar pode ter lido a conta ANTES do clique.
+static int manualPedido, manualRodando, manualResultado, manualAdd, manualRem, manualMud;
+static AddonRemoto manualAntes[SY_ADD_MAX];
+static int manualAntesN;
+
 void sync_iniciar(void) {
   plugins_perfil_mudou();   // conta/perfil novos: estado e geracao dos plugins
   colfileiras_contexto();
@@ -1422,7 +1434,10 @@ void sync_iniciar(void) {
   copiaGeracaoDoCiclo = contacache_geracao();
   estado = SYNC_RODANDO;
   fioPronto = 0;
-  if (pthread_create(&fio, NULL, rodar, NULL) == 0) { pthread_detach(fio); fioVivo = 1; }
+  if (pthread_create(&fio, NULL, rodar, NULL) == 0) {
+    pthread_detach(fio); fioVivo = 1;
+    if (manualPedido) manualRodando = 1;
+  }
   else { estado = SYNC_FALHOU; snprintf(resumo, sizeof resumo, "sem fio para sincronizar"); }
 }
 
@@ -1723,6 +1738,22 @@ void sync_passo(unsigned agoraMs) {
   // respondida) ou puxou para um perfil que nao e mais o ativo. Quando a
   // pessoa responde durante perfis_puxar, o proprio ciclo segue inteiro com o
   // perfil escolhido — repetir ali seria o ciclo de rede duas vezes por nada.
+  // O PEDIDO DO BOTAO "Sincronizar add-ons" (#360). Acabou o ciclo que o levava:
+  // compara as listas e deixa o resultado para a tela. O ciclo que ja estava no ar
+  // quando o botao foi apertado nao conta (manualRodando=0): pede outro.
+  if (manualPedido && !cicloInterrompido) {
+    if (!manualRodando) { sync_iniciar(); if (!manualRodando) { manualPedido = 0; manualResultado = 3; } }
+    else {
+      static AddonRemoto depois[SY_ADD_MAX];
+      int nd = addons_exportar(depois, SY_ADD_MAX);
+      addons_diferenca(manualAntes, manualAntesN, depois, nd, &manualAdd, &manualRem, &manualMud);
+      manualPedido = manualRodando = 0;
+      manualResultado = (estado == SYNC_FALHOU || foraHttp || addonsLidosCiclo != 1) ? 3
+                      : addonsPendentes() ? 4 : 2;
+      printf("[sync] add-ons a mao: +%d -%d ~%d (resultado %d)\n",
+             manualAdd, manualRem, manualMud, manualResultado);
+    }
+  }
   if (pedidoComFioVivo) {
     pedidoComFioVivo = 0;
     if ((cicloInterrompido && !perfis_precisa_escolher()) ||
@@ -1736,6 +1767,28 @@ int  sync_usando_copia(void)  { return foraHttp && usandoCopia; }
 long sync_copia_quando(void)  { return copiaQuando; }
 int  sync_addons_fora(void)   { return foraHttp ? addonsFora : 0; }
 SyncEstado  sync_estado(void)      { return estado; }
+int sync_manual_addons(void) {
+  if (!sessao_logada()) return 0;
+  if (manualPedido) return 1;   // ja ha um pedido no ar: o botao nao empilha outro
+  if (nuvem_freio_ativo()) { manualResultado = 3; return 1; }
+  manualAntesN = addons_exportar(manualAntes, SY_ADD_MAX);
+  manualPedido = 1; manualRodando = 0; manualResultado = 0;
+  sync_iniciar();
+  return 1;
+}
+int sync_manual_addons_rodando(void) { return manualPedido; }
+int sync_manual_addons_estado(int *add, int *rem, int *mud) {
+  int r;
+  if (manualPedido) return 1;
+  r = manualResultado;
+  if (r >= 2) {
+    if (add) *add = manualAdd;
+    if (rem) *rem = manualRem;
+    if (mud) *mud = manualMud;
+    manualResultado = 0;
+  }
+  return r;
+}
 // As frases fixas (resumo guarda o portugues) passam pela tabela aqui; as com
 // numero ja foram montadas com o formato traduzido.
 const char *sync_resumo(void)      { return i18n(resumo); }
@@ -2059,6 +2112,8 @@ void sync_esquecer_usuario(void) {
   estado = SYNC_PARADO;
   ultimoOk = 0;
   sujoProgresso = 0; sujoAjustes = 0;
+  // Um pedido do botao de addons (#360) no ar e da conta que saiu.
+  manualPedido = manualRodando = manualResultado = 0;
   addonsEsquecer();
   free(ajustesBlob);
   ajustesBlob = NULL;

@@ -50,6 +50,19 @@ typedef enum {
 // Idempotente enquanto um ciclo estiver em andamento.
 void sync_iniciar(void);
 
+// SINCRONIZAR ADD-ONS A MAO (#360). Pede uma volta da conta ja (nao espera os 5
+// minutos) e guarda o resultado para a tela de Add-ons dizer o que mudou. A volta
+// e a mesma de sempre, so que marcada: quando acaba, compara a lista de add-ons de
+// antes com a de depois. Sem conta logada nao faz nada (devolve 0).
+int  sync_manual_addons(void);
+// 0 = nada pedido; 1 = rodando; 2 = acabou bem (add/rem/mud preenchidos: quantos
+// entraram, sairam e mudaram de estado ou ordem); 3 = falhou ou o servidor esta
+// fora; 4 = ha mudanca desta TV ainda sem subir, e ela vale mais que a conta. Os
+// estados 2 a 4 sao lidos UMA vez (ilhasinais.c, que avisa) e voltam a 0.
+int  sync_manual_addons_estado(int *add, int *rem, int *mud);
+// So consulta, nao consome: a tela de Add-ons desenha o botao ocupado.
+int  sync_manual_addons_rodando(void);
+
 SyncEstado  sync_estado(void);
 const char *sync_resumo(void);   // uma linha para a tela de ajustes
 
