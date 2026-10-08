@@ -78,33 +78,28 @@ int main(void) {
   collection = &pasta;
   aberta = 1;
 
-  // 1. AUTOMATICO
+  // 1. AUTOMATICO = exatamente o que a 2.0.3 mostra: Grade para tudo, so o
+  // Diretor na Linha do tempo (a 2.0.3 ja fazia). Ranking, Saga, Decadas, Mural
+  // e Vitrine existem, mas SO pelo botao "Exibição" (opt-in).
+  { static const char *GRUPOS[] = { "Film Collections", "TV Collections", "Awards",
+                                    "Studios", "Genres", "" };
+    static const char *TITULOS[] = { "Star Wars", "Trilogia do Anel", "Saga Marvel",
+                                     "Franquia X", "Top 100", "Franchise" };
+    int g, t, ab, r, sv;
+    for (g = 0; g < 6; g++) for (t = 0; t < 6; t++)
+      for (ab = 1; ab <= 3; ab++) for (r = 0; r < 2; r++) for (sv = 0; sv < 2; sv++) {
+        snprintf(pasta.group, sizeof pasta.group, "%s", GRUPOS[g]);
+        snprintf(pasta.title, sizeof pasta.title, "%s", TITULOS[t]);
+        pasta.nSources = ab; ranked = r; semVitrineAuto = sv;
+        assert(layAuto() == VT_LAY_GRADE);
+        snprintf(pasta.group, sizeof pasta.group, "Directors");
+        assert(layAuto() == VT_LAY_LINHA);
+      } }
+  ranked = 0; semVitrineAuto = 0; pasta.nSources = 1;
   snprintf(pasta.title, sizeof pasta.title, "Star Wars");
   snprintf(pasta.group, sizeof pasta.group, "Film Collections");
-  ranked = 0; assert(layAuto() == VT_LAY_SAGA);
-  snprintf(pasta.group, sizeof pasta.group, "Directors");
-  assert(layAuto() == VT_LAY_LINHA);
-  snprintf(pasta.group, sizeof pasta.group, "Awards");
-  ranked = 1; assert(layAuto() == VT_LAY_RANKING);
-  ranked = 0; assert(layAuto() == VT_LAY_GRADE);
-  snprintf(pasta.title, sizeof pasta.title, "Trilogia do Anel");
-  assert(layAuto() == VT_LAY_SAGA);
-  snprintf(pasta.title, sizeof pasta.title, "Star Wars");
   collection = NULL; assert(layAuto() == VT_LAY_GRADE);
   collection = &pasta;
-  // PADRAO INALTERADO: com abas o Automatico continua na Grade com a barra de
-  // abas (so o Diretor vai para a Linha do tempo). A Vitrine so entra quando o
-  // dono escolhe no botao "Exibição" (opt-in). O "Ver tudo" de uma fileira da
-  // home (semVitrineAuto) segue a regra das pastas sem abas.
-  snprintf(pasta.group, sizeof pasta.group, "Film Collections");
-  pasta.nSources = 2;
-  assert(layAuto() == VT_LAY_GRADE);   // Automatico -> Grade/abas, NUNCA Vitrine
-  assert(layAuto() != VT_LAY_VITRINE);
-  semVitrineAuto = 1; assert(layAuto() == VT_LAY_SAGA); semVitrineAuto = 0;
-  snprintf(pasta.group, sizeof pasta.group, "Directors");
-  assert(layAuto() == VT_LAY_LINHA);
-  snprintf(pasta.group, sizeof pasta.group, "Film Collections");
-  pasta.nSources = 1;
 
   // 2-4. GEOMETRIA de cada exibicao
   for (L = VT_LAY_GRADE; L < VT_LAY_VITRINE; L++) {
