@@ -21,6 +21,11 @@
 void central_abrir(void);
 void central_fechar(void);
 int  central_aberta(void);
+// A TROCA RAPIDA DE PERFIL (2.0.4): o profile_index que a pessoa escolheu no
+// seletor da central (com o PIN ja aceito, quando o perfil tem), lido e zerado
+// por app.c uma vez por quadro; 0 = nenhum pedido. Quem troca de verdade e o
+// app.c, pelo mesmo corpo da tela de escolha de perfil.
+int  central_pediu_perfil(void);
 // Aberta: come o teclado todo.
 void central_evento(const SDL_Event *e);
 // Por quadro, antes do desenho: pede a ilha esticada (fora do player).
@@ -57,6 +62,9 @@ void central_teste_tocando(const char *tit, const char *meta);
 void central_teste_lista(const char *texto);
 void central_teste_cor(int foco);           // o seletor da cor de destaque aberto
 void central_teste_estatisticas(int sim);   // o botao das estatisticas, sem player
+void central_teste_trocavel(int sim);       // a troca rapida de perfil existe (>1 perfil na lista)
+void central_teste_info(int sim);           // o foco na linha do perfil
+void central_teste_trocar(int foco, int pin, int digitos);  // o seletor aberto; pin >= 0 = PIN do slot
 #endif
 
 #endif

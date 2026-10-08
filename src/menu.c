@@ -15,6 +15,7 @@
 #include "menu.h"
 #include "iconeapp.h"
 #include "perfis.h"
+#include "avatarperfil.h"
 #include "tex_cache.h"
 #include "gfx.h"
 #include "text.h"
@@ -621,13 +622,11 @@ static void desenhaRodape(const MenuGeo *g, float e, float alpha, float foco, fl
   const ContaPerfil *p = perfis_item_ativo();
   float ec = limita01(e);
   float cy = g->rodY + g->rodH * 0.5f;
-  float cr, cg, cb;
   float tam = anim_mistura(NV_MENU_AVATAR_RAIL, NV_MENU_AVATAR, ec);
   // Aberto, o avatar comeca no mesmo recuo de 20 do icone (.it padding).
   float cx = g->x + anim_mistura(NV_MENU_ICONE_RAIL, NV_MENU_PAD + MK(20.0f) + NV_MENU_AVATAR * 0.5f, ec);
   float tx = g->x + NV_MENU_PAD + MK(20.0f) + NV_MENU_AVATAR + MK(18.0f);
   float txMax = NV_MENU_W_ABERTO - (NV_MENU_PAD + MK(20.0f) + NV_MENU_AVATAR + MK(18.0f)) - NV_MENU_PAD - MK(20.0f);
-  char ini[4];
   GfxRect av;
 
   if (alpha <= 0.01f) return;
@@ -637,24 +636,8 @@ static void desenhaRodape(const MenuGeo *g, float e, float alpha, float foco, fl
   av.y = cy - tam * 0.5f;
   av.w = av.h = tam;
 
-  // FOTO quando a conta tem uma; senao o circulo com a inicial, que e o mesmo
-  // que o app web mostra quando `avatar_url` e nulo. A inicial e 19 Bold
-  // (TXT_V2_KBD18) a 90 % = 17 na tela: o mockup usa 16/700 no avatar de 40
-  // e 17/700 no de 44.
-  // A foto e pedida pela largura com que desenha (tex_obter_larg): o teto
-  // unico de 640 decodificava ate 1,6 MB de avatar para um circulo de 44.
-  // Ver tests/artemenor.c.
-  { GLuint tex = (p && p->avatarUrl[0]) ? tex_obter_larg(p->avatarUrl, av.w) : 0;
-    if (tex) {
-      gfx_tex_aspect_atual = 1.0f;
-      gfx_rect(av, tex, GFX_CARD, 0, 0, 0, 0.5f, 0, 0, 0, alpha);
-    } else {
-      corAvatar(p ? p->corHex : NULL, &cr, &cg, &cb);
-      gfx_cor(av, 0.5f, cr, cg, cb, alpha);
-      inicialDe(p ? p->nome : NULL, ini, sizeof ini);
-      { TxtLinha l = txt_linha(TXT_V2_KBD18, ini, 255, 255, 255, 255);
-        txt_desenhar_alpha(l, av.x + (av.w - l.w) * 0.5f,
-                           av.y + (av.h - l.h) * 0.5f, alpha); } } }
+  // FOTO ou disco com a inicial: avatarperfil.c (o mesmo da Central de controle).
+  avatarperfil_desenhar(av, p, alpha);
 
   if (aTexto > 0.01f) {
     // Nome no corpo dos rotulos (TXT_BODY 25/500 a 90 % = 22,5 na tela, o

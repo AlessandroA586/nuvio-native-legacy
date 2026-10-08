@@ -3545,6 +3545,19 @@ void app_atualizar(float dt, Uint32 agora) {
     if (detail_aberto()) detail_fechar_seco();
     if (vertudo_aberta()) vertudo_fechar_seco();
   }
+  // TROCA RAPIDA DE PERFIL pela Central de controle: o mesmo corpo da tela de
+  // escolha (aplicarTrocaDePerfil), sem a tela. Nao existe com video tocando.
+  { int novo = central_pediu_perfil();
+    if (novo > 0 && novo != perfis_ativo() && !player_aberto()) {
+      int antes = perfis_ativo();
+      perfis_definir_ativo(novo);
+      aplicarTrocaDePerfil(antes);
+      trocarContasDoPerfil();
+      sync_iniciar();
+      home_ir_topo();
+      perfilAntes = novo;
+      autoVoltarAte = autoPinAte = 0;
+    } }
   if (menu_pediu_trocar()) {
     player_descartar_retido();
     fontevolta_esquecer("troca de usuario");

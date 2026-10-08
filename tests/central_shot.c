@@ -11,6 +11,8 @@
 #include "tex_cache.h"
 #include "anim.h"
 #include "ilha.h"
+#include "dados.h"
+#include "perfis.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <assert.h>
@@ -79,6 +81,19 @@ int main(int argc, char **argv) {
   fprintf(f, "idioma 0\nselected_theme 2\ndolbyVision 0\n");
   fclose(f);
   ajustes_dir(dir);
+  // Cinco perfis (um com PIN) lidos do cache em disco, como no arranque da TV.
+  snprintf(arq, sizeof arq, "%s/perfis.txt", dir);
+  f = fopen(arq, "w"); assert(f);
+  fputs("1\t0\t1\t0\t#1E88E5\tHenrique\t\t\n2\t0\t0\t0\t#E5397A\tLia\t\t\n"
+        "3\t1\t0\t0\t#43A047\tPedro\t\t\n4\t0\t0\t0\t#FB8C00\tBia\t\t\n"
+        "5\t0\t0\t0\t#8E24AA\tCaio\t\t\n", f);
+  fclose(f);
+  snprintf(arq, sizeof arq, "%s/perfil.txt", dir);
+  f = fopen(arq, "w"); assert(f);
+  fputs("1\n", f);
+  fclose(f);
+  dados_iniciar("deploy/app/art");
+  perfis_carregar_ativo();
 
   assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
   IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG);
@@ -181,6 +196,34 @@ int main(int argc, char **argv) {
   snprintf(nome, sizeof nome, "%s-17-oceano-botoes.bmp", saida);
   captura(nome, 40);
   ajustes_rapido_cor_definir(0);
+
+  // TROCA RAPIDA DE PERFIL (2.0.4): o perfil da linha de cima com o avatar, em
+  // foco, o seletor (foco no 2o, no 5o: rola) e o PIN do Pedro.
+  central_teste_trocavel(1);
+  central_teste_lista(NULL);
+  central_teste_foco(0, 0);
+  snprintf(nome, sizeof nome, "%s-18-perfil-avatar.bmp", saida);
+  captura(nome, 60);
+  central_teste_info(1);
+  snprintf(nome, sizeof nome, "%s-19-perfil-foco.bmp", saida);
+  captura(nome, 20);
+  central_teste_trocar(1, -1, 0);
+  snprintf(nome, sizeof nome, "%s-20-trocador-a.bmp", saida);
+  captura(nome, 4);
+  snprintf(nome, sizeof nome, "%s-21-trocador.bmp", saida);
+  captura(nome, 60);
+  central_teste_trocar(4, -1, 0);
+  snprintf(nome, sizeof nome, "%s-22-trocador-rolado.bmp", saida);
+  captura(nome, 60);
+  central_teste_trocar(2, 2, 2);
+  snprintf(nome, sizeof nome, "%s-23-pin.bmp", saida);
+  captura(nome, 60);
+  ajustes_definir_vidro(1);
+  central_teste_trocar(1, -1, 0);
+  snprintf(nome, sizeof nome, "%s-24-trocador-vidro.bmp", saida);
+  captura(nome, 60);
+  ajustes_definir_vidro(0);
+  central_teste_trocavel(0);
 
   central_fechar();                          // volta para a pilula
   snprintf(nome, sizeof nome, "%s-11-fechando.bmp", saida);

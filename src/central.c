@@ -5,6 +5,7 @@
 #include "chsegura.h"
 #include "ajustes.h"
 #include "anim.h"
+#include "avatarperfil.h"
 #include "catalogo.h"
 #include "dados.h"
 #include "escala.h"
@@ -25,6 +26,8 @@
 #include "tex_cache.h"
 #include "text.h"
 #include "video.h"
+#include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,6 +53,7 @@
 #define CC_LINHA_GAP 4.0f
 #define CC_LINHAS_MAX 9         // a lista rola dentro disso
 #define CC_DICAS_H  30.0f
+#define CC_AV_INFO  26.0f       // o avatar da linha de informacao
 #define CC_COR_D    40.0f       // o disco de uma cor no seletor
 #define CC_COR_COLS  9
 #define CC_COR_LIN_GAP 14.0f
@@ -63,6 +67,50 @@ static int focoEd;              // item do catalogo em foco na edicao
 static float rolaEd;            // rolagem da lista de edicao (px)
 static CentralLista lista;
 static int perfilLido = -1;
+
+// --- A TROCA RAPIDA DE PERFIL (2.0.4) -----------------------------------------
+// O perfil da linha de cima e um botao: OK abre, dentro do painel, uma fileira
+// de avatares com o nome; esquerda/direita andam, OK troca. Perfil com PIN pede
+// o PIN ali mesmo (4 digitos, verificado no servidor por perfis_verificar_pin,
+// como na tela de escolha). Quem troca de verdade e app.c, pelo MESMO corpo da
+// tela de escolha (central_pediu_perfil). Com video no player a troca nao
+// existe: ela esvaziaria a reproducao, entao a linha fica so informativa.
+#define CC_PERF_CEL_W   113.0f     // uma celula = a largura util / 4
+#define CC_PERF_VIS       4        // celulas visiveis; mais perfis rolam
+#define CC_PERF_AV       64.0f
+#define CC_PERF_CEL_H   118.0f
+#define CC_PIN_LEN        4
+#define CC_PIN_COLS       5
+#define CC_PIN_TECLA_W   76.0f
+#define CC_PIN_TECLA_H   46.0f
+#define CC_PIN_GAP        8.0f
+#define CC_PIN_CAB_H     44.0f     // avatar + nome de quem esta sendo destravado
+#define CC_PIN_PONTOS_H  30.0f
+#define CC_PIN_H  (CC_PIN_CAB_H + 10.0f + CC_PIN_PONTOS_H + 14.0f + 2.0f * CC_PIN_TECLA_H + CC_PIN_GAP)
+static int focoInfo;            // o foco esta no perfil da linha de cima
+static int trocando;            // o seletor de perfil aberto
+static int focoPerf;            // slot (0..n-1 da lista) em foco
+static float rolaPerf, rolaVel; // primeiro slot visivel (suavizado) e a velocidade da mola
+static float placaPerf;         // onde a placa de foco esta, em slots (anda ate o foco)
+static int pinSlot = -1;        // slot cujo PIN esta sendo pedido; -1 nenhum
+static char pinBuf[CC_PIN_LEN + 1];
+static int pinTecla;            // 0..9 na grade 5x2 (1..5 em cima, 6..9,0 embaixo)
+static int pinErrado, pinRede, pinVerif;
+static float pinTremor;         // s que faltam do balanco do PIN errado
+static _Atomic int pinResultado;     // 0 pendente, 1 ok, -1 errado, -2 sem rede
+static _Atomic unsigned pinGeracao;
+static int pedidoPerfil;        // profile_index pedido, lido e zerado por app.c
+typedef struct { unsigned geracao; int indice; char valor[CC_PIN_LEN + 1]; } PinTarefa;
+#ifdef CENTRAL_TESTE
+static int testePodeTrocar;
+#endif
+static int previa;   // definida mais abaixo, com previaInverte
+static int podeTrocar(void) {
+#ifdef CENTRAL_TESTE
+  if (testePodeTrocar) return perfis_n() > 1;
+#endif
+  return !previa && !player_aberto() && perfis_n() > 1;
+}
 // A previa do cartao de novidades (central_previa_*): sem video tocando,
 // sem aviso, e o botao `previaInverte` mostrado com o interruptor trocado.
 static int previa, previaInverte = -1;
@@ -138,12 +186,30 @@ void central_abrir(void) {
   aberta = 1;
   editando = 0;
   escolhendoCor = 0;
+  focoInfo = 0;
+  trocando = 0;
+  pinSlot = -1;
   foco = 0;
   aviso[0] = 0;
   printf("[central] aberta (%d atalhos)\n", botoes(NULL, NULL));
   fflush(stdout);
 }
-void central_fechar(void) { aberta = 0; editando = 0; escolhendoCor = 0; }
+// O PIN digitado sai da memoria com a central, e uma verificacao em voo perde o
+// direito de responder (a geracao muda).
+static void pinLimpar(void) {
+  atomic_fetch_add(&pinGeracao, 1);
+  atomic_store(&pinResultado, 0);
+  memset(pinBuf, 0, sizeof pinBuf);
+  pinSlot = -1; pinVerif = pinErrado = pinRede = 0; pinTremor = 0.0f;
+}
+void central_fechar(void) {
+  aberta = 0; editando = 0; escolhendoCor = 0;
+  focoInfo = 0; trocando = 0;
+  pinLimpar();
+}
+// Lido e zerado por app.c, uma vez por quadro: o profile_index que a pessoa
+// escolheu na troca rapida, ou 0.
+int central_pediu_perfil(void) { int v = pedidoPerfil; pedidoPerfil = 0; return v; }
 int  central_aberta(void) { return aberta; }
 
 static void avisar(const char *s) {
@@ -211,6 +277,97 @@ static void corAplicar(int i) {
   fflush(stdout);
 }
 
+// --- O SELETOR DE PERFIL ------------------------------------------------------
+static float perfAlvoRola(void) {
+  int n = perfis_n();
+  float a = (float)focoPerf - 1.0f;
+  if (n <= CC_PERF_VIS) return 0.0f;
+  if (a < 0.0f) a = 0.0f;
+  if (a > (float)(n - CC_PERF_VIS)) a = (float)(n - CC_PERF_VIS);
+  return a;
+}
+static void abrirTrocador(void) {
+  if (!podeTrocar()) return;
+  trocando = 1; focoInfo = 0;
+  pinLimpar();
+  focoPerf = perfis_indice_sugerido();
+  rolaPerf = perfAlvoRola(); rolaVel = 0.0f;
+  placaPerf = (float)focoPerf;
+}
+static void *fioPinVerificar(void *u) {
+  PinTarefa *t = u;
+  int v = perfis_verificar_pin(t->indice, t->valor);
+  memset(t->valor, 0, sizeof t->valor);   // o PIN nao fica no heap nem vai a log
+  if (t->geracao == atomic_load(&pinGeracao))
+    atomic_store(&pinResultado, v > 0 ? 1 : (v < 0 ? -2 : -1));
+  free(t);
+  return NULL;
+}
+static void pinVerificar(void) {
+  PinTarefa *t;
+  const ContaPerfil *p = perfis_item(pinSlot);
+  pthread_t th;
+  if (!p || !pinBuf[0]) return;
+  t = calloc(1, sizeof *t);
+  if (!t) { pinRede = 1; return; }
+  t->geracao = atomic_load(&pinGeracao);
+  t->indice = p->indice;
+  snprintf(t->valor, sizeof t->valor, "%s", pinBuf);
+  pinVerif = 1; pinErrado = pinRede = 0;
+  atomic_store(&pinResultado, 0);
+  if (pthread_create(&th, NULL, fioPinVerificar, t) == 0) pthread_detach(th);
+  else { memset(t->valor, 0, sizeof t->valor); free(t); pinVerif = 0; pinRede = 1; memset(pinBuf, 0, sizeof pinBuf); }
+}
+static void pinDigito(int d) {
+  size_t z = strlen(pinBuf);
+  if (pinVerif || z >= CC_PIN_LEN) return;
+  pinBuf[z] = (char)('0' + d); pinBuf[z + 1] = 0;
+  pinErrado = pinRede = 0;
+  if (z + 1 == CC_PIN_LEN) pinVerificar();
+}
+// Escolher o slot: o mesmo perfil so fecha o seletor; PIN pede o PIN; o resto
+// vira o pedido que app.c executa.
+static void escolherPerfil(int slot) {
+  const ContaPerfil *p = perfis_item(slot);
+  if (!p) return;
+  if (p->indice == perfis_ativo()) { trocando = 0; return; }
+  if (perfis_acao(slot) == PERFIL_ACAO_PIN) {
+    pinLimpar();
+    pinSlot = slot; pinTecla = 0;
+    return;
+  }
+  pedidoPerfil = p->indice;
+  printf("[central] troca rapida para o perfil %d\n", p->indice);
+  fflush(stdout);
+  central_fechar();
+}
+static void trocadorEvento(SDL_Keycode k) {
+  int n = perfis_n();
+  if (pinSlot >= 0) {
+    if (ehVoltar(k)) {
+      if (pinVerif) { pinLimpar(); }                       // desiste da verificacao
+      else if (pinBuf[0]) { pinBuf[strlen(pinBuf) - 1] = 0; pinErrado = pinRede = 0; }
+      else pinLimpar();                                    // volta para a fileira
+      return;
+    }
+    if (pinVerif) return;
+    if (k >= SDLK_0 && k <= SDLK_9) { pinDigito((int)(k - SDLK_0)); return; }
+    if (k >= SDLK_KP_1 && k <= SDLK_KP_9) { pinDigito((int)(k - SDLK_KP_1) + 1); return; }
+    if (k == SDLK_KP_0) { pinDigito(0); return; }
+    if (k == SDLK_BACKSPACE) { if (pinBuf[0]) pinBuf[strlen(pinBuf) - 1] = 0; return; }
+    if (k == SDLK_LEFT && pinTecla % CC_PIN_COLS > 0) pinTecla--;
+    else if (k == SDLK_RIGHT && pinTecla % CC_PIN_COLS < CC_PIN_COLS - 1) pinTecla++;
+    else if (k == SDLK_UP && pinTecla >= CC_PIN_COLS) pinTecla -= CC_PIN_COLS;
+    else if (k == SDLK_DOWN && pinTecla < CC_PIN_COLS) pinTecla += CC_PIN_COLS;
+    else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) pinDigito(pinTecla == 9 ? 0 : pinTecla + 1);
+    return;
+  }
+  if (ehVoltar(k)) { trocando = 0; return; }
+  if (k == SDLK_LEFT && focoPerf > 0) focoPerf--;
+  else if (k == SDLK_RIGHT && focoPerf + 1 < n) focoPerf++;
+  else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) escolherPerfil(focoPerf);
+}
+
 void central_evento(const SDL_Event *e) {
   SDL_Keycode k;
   if (!aberta || e->type != SDL_KEYDOWN) return;
@@ -226,6 +383,7 @@ void central_evento(const SDL_Event *e) {
     else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) corAplicar(focoCor);
     return;
   }
+  if (trocando) { trocadorEvento(k); return; }
   if (editando) {
     int it[64], m = ofertas(it);
     if (ehVoltar(k)) { editando = 0; return; }
@@ -238,9 +396,15 @@ void central_evento(const SDL_Event *e) {
     int n = botoes(NULL, NULL) + 1;   // + "Editar atalhos"
     if (foco >= n) foco = n - 1;
     if (ehVoltar(k)) { central_fechar(); return; }
+    if (focoInfo) {   // o perfil da linha de cima: OK abre o seletor, BAIXO volta aos botoes
+      if (!podeTrocar() || k == SDLK_DOWN) focoInfo = 0;
+      else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) abrirTrocador();
+      return;
+    }
     if (k == SDLK_LEFT && foco % CC_COLS > 0) foco--;
     else if (k == SDLK_RIGHT && foco % CC_COLS < CC_COLS - 1 && foco + 1 < n) foco++;
     else if (k == SDLK_UP && foco >= CC_COLS) foco -= CC_COLS;
+    else if (k == SDLK_UP && podeTrocar()) focoInfo = 1;
     else if (k == SDLK_DOWN && foco + CC_COLS < n) foco += CC_COLS;
     else if (k == SDLK_DOWN && foco / CC_COLS < (n - 1) / CC_COLS) foco = n - 1;
     else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) ativarBotao(foco);
@@ -248,9 +412,18 @@ void central_evento(const SDL_Event *e) {
 }
 
 // Ponteiro (Magic Remote, toque): mesmo foco e mesmo OK das setas.
-static void ptFoco(int i, int ed) { if (ed == 2) focoCor = i; else if (ed) focoEd = i; else foco = i; }
+static void ptFoco(int i, int ed) {
+  if (ed == 3) { focoInfo = 1; return; }
+  if (ed == 4) { focoPerf = i; return; }
+  if (ed == 5) { pinTecla = i; return; }
+  focoInfo = 0;
+  if (ed == 2) focoCor = i; else if (ed) focoEd = i; else foco = i;
+}
 static void ptOk(int i, int ed) {
   ptFoco(i, ed);
+  if (ed == 3) { abrirTrocador(); return; }
+  if (ed == 4) { if (pinSlot < 0) escolherPerfil(i); return; }
+  if (ed == 5) { if (!pinVerif) pinDigito(i == 9 ? 0 : i + 1); return; }
   if (ed == 2) corAplicar(i);
   else if (ed) alternarOferta(i);
   else ativarBotao(i);
@@ -266,9 +439,37 @@ static float altura(int comFaixa);
 // sozinha chamando o corpo com o alfa caindo. Mudou a altura (botao posto ou
 // tirado, edicao): a ilha anda ate a nova na mola dela.
 void central_atualizar(float dt, Uint32 agora) {
-  (void)dt; (void)agora;
+  int reduz = ajustes_animacoes_reduzidas();
+  (void)agora;
   if (!aberta) return;
   carregar();
+  // O player abriu por baixo (ou a lista de perfis encolheu): a troca some.
+  if ((trocando || focoInfo) && !podeTrocar()) { trocando = 0; focoInfo = 0; pinLimpar(); }
+  if (trocando) {
+    int n = perfis_n();
+    if (focoPerf >= n) focoPerf = n - 1;
+    rolaPerf = anim_mola2_reduzida(&rolaVel, rolaPerf, perfAlvoRola(), dt, NV_MOLA2_SCROLL, reduz);
+    placaPerf = reduz ? (float)focoPerf : anim_mola(placaPerf, (float)focoPerf, dt, 26.0f);
+    if (pinTremor > 0.0f) { pinTremor -= dt; if (pinTremor < 0.0f) pinTremor = 0.0f; }
+    if (pinSlot >= 0 && pinVerif) {
+      int r = atomic_load(&pinResultado);
+      if (r) {
+        const ContaPerfil *p = perfis_item(pinSlot);
+        atomic_store(&pinResultado, 0);
+        pinVerif = 0;
+        memset(pinBuf, 0, sizeof pinBuf);
+        if (r == 1 && p) {
+          pedidoPerfil = p->indice;
+          printf("[central] troca rapida para o perfil %d (PIN aceito)\n", p->indice);
+          fflush(stdout);
+          central_fechar();
+          return;
+        }
+        if (r == -1) { pinErrado = 1; pinTremor = reduz ? 0.0f : 0.40f; }
+        else pinRede = 1;
+      }
+    }
+  }
   if (!player_aberto()) ilha_corpo(CC_W, altura(1), corpo, NULL);
 }
 // No player o pedido vai logo antes de plrilha_desenhar: o ultimo pedido com
@@ -397,6 +598,8 @@ static float altura(int comFaixa) {
   float h = comFaixa ? CC_INFO_H : CC_INFO_H - 12.0f;
   if (escolhendoCor) {
     h += 6.0f + 2.0f * CC_COR_D + CC_COR_LIN_GAP + 14.0f + CC_COR_NOME_H + 14.0f + CC_DICAS_H;
+  } else if (trocando) {
+    h += 6.0f + (pinSlot >= 0 ? CC_PIN_H : CC_PERF_CEL_H) + 14.0f + CC_DICAS_H;
   } else if (editando) {
     int n = linhasEdicao();
     h += 6.0f + (float)n * (CC_LINHA_H + CC_LINHA_GAP) - CC_LINHA_GAP + 14.0f + CC_DICAS_H;
@@ -429,17 +632,29 @@ static void linhaInfo(float x, float yc, float wMax, float a) {
   int off = rede_saude_offline();
   float x0 = x;
   if (p && p->nome[0]) {
-    float pr = 0.12f, pg = 0.53f, pb = 0.90f;
-    unsigned v;
-    TxtLinha n;
-    if (p->corHex[0] == '#' && sscanf(p->corHex + 1, "%6x", &v) == 1) {
-      pr = (float)((v >> 16) & 255) / 255.0f; pg = (float)((v >> 8) & 255) / 255.0f; pb = (float)(v & 255) / 255.0f;
+    // O PERFIL: avatar pequeno (o mesmo desenho do menu), o nome e, quando a
+    // troca existe, um chevron. E um botao: o foco e a placa clara com o anel
+    // dos outros botoes.
+    TxtLinha n = txt_linha_corta(TXT_ILHA_SUB, p->nome, 243, 242, 239, 255, wMax * 0.45f);
+    int pode = podeTrocar();
+    float wChip = CC_AV_INFO + 8.0f + (float)n.w + (pode ? 8.0f + 14.0f : 0.0f);
+    GfxRect chip = { x - 8.0f, yc - 18.0f, wChip + 16.0f, 36.0f };
+    if (pode) {
+      if (focoInfo) {
+        superficie(chip, chip.h * 0.5f, 1.0f, a);
+        gfx_anel(chip, 0.5f, 2.5f, 1, 1, 1, 0.95f * a);   // por dentro: a faixa de cima nao tem folga
+      }
+      if (aberta && a > 0.5f && ponteiro_ativo()) ponteiro_alvo(chip.x, chip.y, chip.w, chip.h, ptFoco, ptOk, 0, 3);
     }
-    gfx_cor((GfxRect){ x, yc - 6.0f, 12.0f, 12.0f }, 0.5f, pr, pg, pb, a);
-    x += 20.0f;
-    n = txt_linha_corta(TXT_ILHA_SUB, p->nome, 243, 242, 239, 255, wMax * 0.45f);
-    txt_desenhar_alpha(n, x, yc - (float)n.h * 0.5f, 0.9f * a);
+    avatarperfil_desenhar((GfxRect){ x, yc - CC_AV_INFO * 0.5f, CC_AV_INFO, CC_AV_INFO }, p, a);
+    x += CC_AV_INFO + 8.0f;
+    txt_desenhar_alpha(n, x, yc - (float)n.h * 0.5f, (focoInfo ? 1.0f : 0.9f) * a);
     x += (float)n.w;
+    if (pode) {
+      gfx_icone((GfxRect){ x + 8.0f, yc - 7.0f, 14.0f, 14.0f }, "aj_chevrons-down",
+                0.953f, 0.949f, 0.937f, (focoInfo ? 0.95f : 0.5f) * a);
+      x += 8.0f + 14.0f + 6.0f;
+    }
     x += sep(x, yc, a);
   }
   gfx_icone((GfxRect){ x, yc - 9.0f, 18.0f, 18.0f }, off ? "aj_wifi-off" : "aj_wifi",
@@ -515,18 +730,18 @@ static void desenhaBotoes(float x, float y, float w, float a) {
   for (i = 0; i <= n; i++) {
     GfxRect r = { x + (float)(i % CC_COLS) * (bw + CC_GAP), y + (float)(i / CC_COLS) * (CC_BOTAO_H + CC_GAP),
                   bw, CC_BOTAO_H };
-    if (i < n && op[i] == CC_OP_ESTAT) botao(r, "aj_gauge", "Estatísticas", "", -1, i == foco, a);
+    if (i < n && op[i] == CC_OP_ESTAT) botao(r, "aj_gauge", "Estatísticas", "", -1, i == foco && !focoInfo, a);
     else if (i < n) {
       const CentralItem *c = central_catalogo(item[i]);
       int lig = ajustes_rapido_ligado(op[i]);
       if (previa && i == previaInverte && lig >= 0) lig = !lig;
-      botao(r, c->icone, c->curto, ajustes_rapido_valor(op[i]), lig, i == foco, a);
+      botao(r, c->icone, c->curto, ajustes_rapido_valor(op[i]), lig, i == foco && !focoInfo, a);
       if (op[i] == AJ_RAPIDO_COR) {   // a cor de agora, num ponto no canto
         float cr, cg, cb;
         ajustes_acento_marca(&cr, &cg, &cb);
         gfx_cor((GfxRect){ r.x + r.w - 14.0f - 14.0f, r.y + 16.0f, 14.0f, 14.0f }, 0.5f, cr, cg, cb, a);
       }
-    } else botao(r, "aj_sliders-horizontal", "Editar", "", 0, i == foco, a);
+    } else botao(r, "aj_sliders-horizontal", "Editar", "", 0, i == foco && !focoInfo, a);
     if (aberta && a > 0.5f && ponteiro_ativo()) ponteiro_alvo(r.x, r.y, r.w, r.h, ptFoco, ptOk, i, 0);
   }
 }
@@ -602,6 +817,88 @@ static void dicas(const char *const *k, const char *const *l, int n, float x, fl
   }
 }
 
+// A FILEIRA DE PERFIS: avatares de 64 com o nome, 4 por vez; a placa de foco
+// e a rolagem andam em molas (central_atualizar). Perfil com PIN leva o escudo
+// no canto do avatar; o perfil de agora, o visto na cor de destaque.
+static void desenhaPerfis(float x, float y, float w, float a) {
+  int n = perfis_n(), i;
+  float cel = CC_PERF_CEL_W, ar, ag, ab, tinta = (float)ajustes_tinta_foco() / 255.0f;
+  float x0 = x + (n < CC_PERF_VIS ? (w - (float)n * cel) * 0.5f : (w - (float)CC_PERF_VIS * cel) * 0.5f);
+  float rola = n < CC_PERF_VIS ? 0.0f : rolaPerf;
+  GfxRect placa = { x0 + (placaPerf - rola) * cel + 4.0f, y, cel - 8.0f, CC_PERF_CEL_H };
+  ajustes_acento(&ar, &ag, &ab);
+  gfx_recorte(x - 8.0f, y - 6.0f, w + 16.0f, CC_PERF_CEL_H + 12.0f);
+  superficie(placa, 24.0f, 1.0f, a);
+  gfx_anel_fora(placa, 24.0f / placa.h, 3.0f, 2.5f, 1, 1, 1, 0.95f * a);
+  for (i = 0; i < n; i++) {
+    const ContaPerfil *p = perfis_item(i);
+    float cx = x0 + ((float)i - rola) * cel;
+    int sel = i == focoPerf, atual = p && p->indice == perfis_ativo();
+    GfxRect av = { cx + (cel - CC_PERF_AV) * 0.5f, y + 12.0f, CC_PERF_AV, CC_PERF_AV };
+    float ia = (sel ? 1.0f : 0.72f) * a;
+    TxtLinha nome;
+    if (cx + cel < x - 8.0f || cx > x + w + 8.0f || !p) continue;
+    avatarperfil_desenhar(av, p, ia);
+    if (atual) {
+      GfxRect b = { av.x + av.w - 22.0f, av.y + av.h - 22.0f, 22.0f, 22.0f };
+      gfx_cor((GfxRect){ b.x - 2.0f, b.y - 2.0f, b.w + 4.0f, b.h + 4.0f }, 0.5f, 0.135f, 0.14f, 0.163f, a);
+      gfx_cor(b, 0.5f, ar, ag, ab, a);
+      gfx_icone((GfxRect){ b.x + 4.0f, b.y + 4.0f, 14.0f, 14.0f }, "aj_check", tinta, tinta, tinta, a);
+    }
+    if (p->temPin)
+      gfx_icone((GfxRect){ av.x + av.w - 12.0f, av.y - 4.0f, 18.0f, 18.0f }, "aj_shield-check",
+                0.953f, 0.949f, 0.937f, 0.9f * a);
+    nome = txt_linha_corta(TXT_ILHA_SUB, p->nome[0] ? p->nome : i18n("perfil"), 243, 242, 239, 255, cel - 20.0f);
+    txt_desenhar_alpha(nome, cx + ((float)cel - (float)nome.w) * 0.5f, y + 12.0f + CC_PERF_AV + 12.0f, ia);
+    if (aberta && a > 0.5f && ponteiro_ativo() && cx >= x - 4.0f && cx + cel <= x + w + 4.0f)
+      ponteiro_alvo(cx + 4.0f, y, cel - 8.0f, CC_PERF_CEL_H, ptFoco, ptOk, i, 4);
+  }
+  gfx_sem_recorte();
+}
+
+// O PIN: quem esta sendo destravado (avatar e nome ficam no titulo), quatro
+// pontos (nunca os digitos), e o teclado de 5x2. Errado: os pontos balancam.
+static void desenhaPin(float x, float y, float w, float a) {
+  const ContaPerfil *p = perfis_item(pinSlot);
+  size_t z = strlen(pinBuf), i;
+  float pw = (float)CC_PIN_LEN * 18.0f + (float)(CC_PIN_LEN - 1) * 16.0f, px, py, ky;
+  float tw = (float)CC_PIN_COLS * CC_PIN_TECLA_W + (float)(CC_PIN_COLS - 1) * CC_PIN_GAP;
+  float kx = x + (w - tw) * 0.5f;
+  if (!p) return;
+  avatarperfil_desenhar((GfxRect){ x, y + (CC_PIN_CAB_H - 36.0f) * 0.5f, 36.0f, 36.0f }, p, a);
+  { char t[96];
+    TxtLinha l;
+    snprintf(t, sizeof t, i18n("PIN de %s"), p->nome[0] ? p->nome : i18n("perfil"));
+    l = txt_linha_corta(TXT_ILHA_SUB, t, 243, 242, 239, 255, w - 52.0f);
+    txt_desenhar_alpha(l, x + 48.0f, y + (CC_PIN_CAB_H - (float)l.h) * 0.5f, a); }
+  px = x + (w - pw) * 0.5f;
+  if (pinTremor > 0.0f) px += sinf(pinTremor * 50.0f) * 14.0f * (pinTremor / 0.40f);
+  py = y + CC_PIN_CAB_H + 10.0f + (CC_PIN_PONTOS_H - 18.0f) * 0.5f;
+  for (i = 0; i < CC_PIN_LEN; i++) {
+    GfxRect d = { px + (float)i * 34.0f, py, 18.0f, 18.0f };
+    if (i < z) gfx_cor(d, 0.5f, 0.953f, 0.949f, 0.937f, a);
+    else gfx_anel(d, 0.5f, 2.0f, 0.953f, 0.949f, 0.937f, (pinErrado ? 0.9f : 0.45f) * a);
+  }
+  if (pinErrado || pinRede) {
+    TxtLinha l = txt_linha_corta(TXT_ILHA_HORA, pinRede ? i18n("Sem conexão. Tente novamente.") : i18n("PIN incorreto"),
+                                 240, 184, 107, 255, w * 0.4f);
+    txt_desenhar_alpha(l, x + w - (float)l.w, y + CC_PIN_CAB_H + 10.0f + (CC_PIN_PONTOS_H - (float)l.h) * 0.5f, a);
+  }
+  ky = y + CC_PIN_CAB_H + 10.0f + CC_PIN_PONTOS_H + 14.0f;
+  for (i = 0; i < 10; i++) {
+    GfxRect r = { kx + (float)(i % CC_PIN_COLS) * (CC_PIN_TECLA_W + CC_PIN_GAP),
+                  ky + (float)(i / CC_PIN_COLS) * (CC_PIN_TECLA_H + CC_PIN_GAP), CC_PIN_TECLA_W, CC_PIN_TECLA_H };
+    char d[2] = { (char)('0' + (i == 9 ? 0 : (int)i + 1)), 0 };
+    int f = (int)i == pinTecla && !pinVerif;
+    TxtLinha l = txt_linha(TXT_ILHA_ITEM, d, 243, 242, 239, 255);
+    superficie(r, r.h * 0.5f, f ? 1.0f : 0.0f, (pinVerif ? 0.55f : 1.0f) * a);
+    if (f) gfx_anel_fora(r, 0.5f, 3.0f, 2.5f, 1, 1, 1, 0.95f * a);
+    txt_desenhar_alpha(l, r.x + (r.w - (float)l.w) * 0.5f, r.y + (r.h - (float)l.h) * 0.5f, (pinVerif ? 0.55f : 1.0f) * a);
+    if (aberta && a > 0.5f && ponteiro_ativo() && !pinVerif)
+      ponteiro_alvo(r.x, r.y, r.w, r.h, ptFoco, ptOk, (int)i, 5);
+  }
+}
+
 // O CONTEUDO. Na ilha (u == NULL) `r` e o painel inteiro e a faixa de cima
 // (CC_INFO_H) e da hora, que a ilha mantem no lugar, a direita: a linha de
 // informacao (ou o titulo da edicao) fica a esquerda dela. No player (u !=
@@ -630,6 +927,18 @@ static void corpo(GfxRect r, float a, void *u) {
     { static const char *const tk[] = { "OK", "Voltar" };
       static const char *const rot[] = { "Escolher", "Pronto" };
       dicas(tk, rot, 2, cx, base, a); }
+    return;
+  }
+
+  if (trocando) {
+    float base = r.y + r.h - CC_PAD - CC_DICAS_H;
+    ajustes_ui_kicker(i18n("Trocar de perfil"), cx, yc - 8.0f, a);
+    if (pinSlot >= 0) desenhaPin(cx, y, cw, a);
+    else desenhaPerfis(cx, y, cw, a);
+    { static const char *const tk[] = { "OK", "Voltar" };
+      static const char *const rotL[] = { "Escolher", "Pronto" };
+      static const char *const rotP[] = { "Escolher", "Voltar" };
+      dicas(tk, pinSlot >= 0 ? rotP : rotL, 2, cx, base, a); }
     return;
   }
 
@@ -703,6 +1012,22 @@ float central_rotulo_w(void) {
 }
 
 #ifdef CENTRAL_TESTE
+// A troca rapida: `sim` liga a troca mesmo sem player parado; o foco na linha
+// de cima; o seletor aberto no slot `f`, e dele o PIN com `digitos` pontos.
+void central_teste_trocavel(int sim) { testePodeTrocar = sim; }
+void central_teste_info(int sim) { focoInfo = sim && podeTrocar(); }
+void central_teste_trocar(int f, int pin, int digitos) {
+  testePodeTrocar = 1;
+  central_abrir();
+  editando = escolhendoCor = 0;
+  abrirTrocador();
+  focoPerf = f; placaPerf = (float)f; rolaPerf = perfAlvoRola();
+  if (pin >= 0) {
+    pinSlot = pin; pinTecla = 4;
+    memset(pinBuf, 0, sizeof pinBuf);
+    while (digitos-- > 0 && strlen(pinBuf) < CC_PIN_LEN) pinBuf[strlen(pinBuf)] = '7';
+  }
+}
 void central_teste_tocando(const char *tit, const char *meta) {
   snprintf(testeTit, sizeof testeTit, "%s", tit ? tit : "");
   snprintf(testeMeta, sizeof testeMeta, "%s", meta ? meta : "");
