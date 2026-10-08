@@ -8,6 +8,7 @@
 #include "gfx.h"
 #include "text.h"
 #include "tex_cache.h"
+#include "perfiltv.h"
 #include "layout.h"
 #include "anim.h"
 #include "revela.h"
@@ -269,10 +270,11 @@ static int contem(const char *s, const char *termo) {
 static int layAuto(void) {
   if (!collection) return VT_LAY_GRADE;
   if (grupo("Directors")) return VT_LAY_LINHA;
-  // ABAS VIRAM FILEIRAS: a Vitrine substitui a barra de abas. Nao vale para o
-  // "Ver tudo" de uma fileira da home (semVitrineAuto): quem clicou la quer o
-  // catalogo daquela fileira em grade, nao a colecao inteira.
-  if (collection->nSources > 1 && !semVitrineAuto) return VT_LAY_VITRINE;
+  // COM ABAS, O PADRAO E O DE SEMPRE: Grade e barra de abas. A Vitrine (uma
+  // fileira por aba) so entra quando o dono a escolhe no botao "Exibição". O
+  // "Ver tudo" de uma fileira da home (semVitrineAuto) segue a regra das pastas
+  // sem abas.
+  if (collection->nSources > 1 && !semVitrineAuto) return VT_LAY_GRADE;
   if (ranked) return VT_LAY_RANKING;
   if (grupo("Film Collections") || grupo("TV Collections") ||
       contem(collection->title, "saga") || contem(collection->title, "franquia") ||
@@ -593,7 +595,10 @@ static int nAbas(void) {
 // blur. Durante os 250 ms da troca de destaque a arte anterior fica por baixo
 // (duas camadas, so ali, como a Home faz).
 #define VIT_LIN_MAX 12
-#define VIT_ITENS   20
+#define VIT_ITENS   20   // teto por fileira (o espaco que o buffer reserva)
+#define VIT_ITENS_FRACA 12   // TV com pouca RAM ou GPU fraca: buffer ~40% menor
+// Itens por fileira EM VIGOR, fixado quando o buffer nasce (vitIniciar).
+static int vitCap = VIT_ITENS;
 enum { VIT_PEND = 0, VIT_CARREGANDO, VIT_PRONTA, VIT_VAZIA };
 typedef struct { char nome[96]; int n, estado, semFonte; } VitLin;
 static VitLin vitLin[VIT_LIN_MAX];
@@ -609,9 +614,9 @@ static float vitHeroEntra = 1.0f;
 
 static CatItem *vitItem(int r, int c) {
   if (!vitBuf || r < 0 || r >= vitN || c < 0 || c >= vitLin[r].n) return NULL;
-  return &vitBuf[r * VIT_ITENS + c];
+  return &vitBuf[r * vitCap + c];
 }
-static CatItem *vitChave(int k) { return k < 0 ? NULL : vitItem(k / VIT_ITENS, k % VIT_ITENS); }
+static CatItem *vitChave(int k) { return k < 0 ? NULL : vitItem(k / vitCap, k % vitCap); }
 static int vitTemItens(void) {
   for (int r = 0; r < vitN; r++) if (vitLin[r].n > 0) return 1;
   return 0;
@@ -654,7 +659,13 @@ static void vitNomes(void) {
 }
 
 static void vitIniciar(void) {
-  if (!vitBuf) vitBuf = calloc((size_t)VIT_LIN_MAX * VIT_ITENS, sizeof(CatItem));
+  if (!vitBuf) {
+    // RAM <= 1,5 GB (MemTotal/deviceMemory) ou GPU fraca: 12 itens por fileira.
+    long memMb = 0; int mb = 0, fixo = 0, slots = 0;
+    tex_orcamento_info(&mb, &memMb, &fixo, &slots);
+    vitCap = (memMb > 0 && memMb <= 1536) || ptv_gpu_fraca_atual() ? VIT_ITENS_FRACA : VIT_ITENS;
+    vitBuf = calloc((size_t)VIT_LIN_MAX * vitCap, sizeof(CatItem));
+  }
   memset(vitLin, 0, sizeof vitLin);
   memset(vitColLemb, 0, sizeof vitColLemb);
   memset(vitSx, 0, sizeof vitSx); memset(vitSv, 0, sizeof vitSv);
@@ -673,9 +684,9 @@ static void vitIniciar(void) {
 // Guarda a primeira pagina do catalogo aberto na fileira `r`.
 static void vitGuardar(int r) {
   int n = nItens(), k = 0;
-  if (n > VIT_ITENS) n = VIT_ITENS;
+  if (n > vitCap) n = vitCap;
   for (int i = 0; i < n; i++)
-    if (desc_vertudo_item(i, &vitBuf[r * VIT_ITENS + k])) k++;
+    if (desc_vertudo_item(i, &vitBuf[r * vitCap + k])) k++;
   vitLin[r].n = k;
   vitLin[r].estado = k ? VIT_PRONTA : VIT_VAZIA;
   vitLin[r].semFonte = semFonte;
@@ -718,8 +729,8 @@ static void vitAgrupar(int n) {
     if (filmes && series) snprintf(l->nome, sizeof l->nome, "%s", i18n(chaves[r] ? "Séries" : "Filmes"));
     else if (chaves[r]) snprintf(l->nome, sizeof l->nome, i18n("Anos %d"), chaves[r]);
     else snprintf(l->nome, sizeof l->nome, "%s", i18n("Sem data"));
-    for (int i = 0; i < n && l->n < VIT_ITENS; i++)
-      if (chave[i] == chaves[r] && desc_vertudo_item(i, &vitBuf[r * VIT_ITENS + l->n])) l->n++;
+    for (int i = 0; i < n && l->n < vitCap; i++)
+      if (chave[i] == chaves[r] && desc_vertudo_item(i, &vitBuf[r * vitCap + l->n])) l->n++;
     l->estado = VIT_PRONTA;
   }
   if (vitFR >= vitN) vitFR = vitN ? vitN - 1 : 0;
@@ -840,7 +851,7 @@ static void vitAtualizar(float dt, Uint32 agora) {
   if (!vitMexeu) vitFocoInicial();
   // Destaque: o item sob o foco; so troca depois de 140 ms parado e com a arte
   // nova decodificada (ou 700 ms de espera), e a arte nova entra em 250 ms.
-  { int des = !vitItem(vitFR, vitFC) ? -1 : vitFR * VIT_ITENS + vitFC;
+  { int des = !vitItem(vitFR, vitFC) ? -1 : vitFR * vitCap + vitFC;
     CatItem *it = vitChave(des);
     if (des != vitHeroDes) { vitHeroDes = des; vitHeroDesde = agora; }
     if (it && des != vitHeroAtual) {
@@ -1495,7 +1506,7 @@ static void vitDesenhar(float a, float x0) {
             foco_anel(base, ajustes_raio_poster_px() / (w < h ? w : h), 1.0f, a);
           else card = foco_zoom(base, 1.0f);
         }
-        home_vitrine_cartao(&vitBuf[r * VIT_ITENS + c], base, card, ac);
+        home_vitrine_cartao(&vitBuf[r * vitCap + c], base, card, ac);
       }
     } else if (l->estado == VIT_VAZIA) {
       const char *msg = l->semFonte ? i18n("O addon desta coleção não está instalado nesta TV.")
