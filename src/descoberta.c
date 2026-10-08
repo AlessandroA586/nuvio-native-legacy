@@ -2191,6 +2191,23 @@ static int lerManifesto(int iAddon, const char *base, Decl *saida, int max,
 // monta caminha na ordem, esperando o balde k ficar pronto. O resultado e a
 // mesma ordem de antes, com o tempo do MAIOR pedido em vez da SOMA.
 #define CAT_FIOS 3
+// QUANTAS FILEIRAS UMA RODADA PEDE, no maximo. Os pedidos em voo ja sao so
+// CAT_FIOS (3) — cem fileiras nunca viram cem GET de uma vez —, mas cada
+// TarefaCat carrega o balde inteiro (MAX_POR_FILEIRA CatItem, ~375 KB), e a
+// rodada aloca todas de uma vez. Nas TVs o teto de 40 deixa isso em ~15 MB; no
+// Android, com fileiras ilimitadas (2.0.4), 200 fileiras seriam 75 MB so de
+// baldes. Fatiando em 24 a rodada custa no maximo ~9 MB e a home continua sendo
+// publicada fileira a fileira; a ordem nao muda porque o cursor e o mesmo.
+#ifdef NV_ANDROID
+#define CAT_RODADA_MAX 24
+#else
+#define CAT_RODADA_MAX CAT_FIL_MAX   // nas TVs o teto ja cabe numa rodada: nada muda
+#endif
+static int catRodadaTamanho(int alvo) {
+  return alvo > CAT_RODADA_MAX ? CAT_RODADA_MAX : alvo;
+}
+int desc_catalogos_por_rodada(int alvo) { return catRodadaTamanho(alvo); }
+int desc_catalogos_em_voo(void) { return CAT_FIOS; }
 
 typedef struct {
   const Decl *d;        // so para quem monta; o fio le as copias abaixo
@@ -4096,7 +4113,7 @@ static void *montar(void *u) {
       // seguinte pede exatamente o que faltou. O caso comum — todos respondendo
       // — continua sendo UMA rodada, com o mesmo custo de antes.
       while (nFil < teto && cursor < nOrdem) {
-        int alvo = teto - nFil;
+        int alvo = catRodadaTamanho(teto - nFil);
         RodadaCat *rod;
         TarefaCat *tarefas;
         int nTarefas = 0;

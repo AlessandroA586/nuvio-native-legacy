@@ -720,8 +720,20 @@ static float ajSeg(const char *const *rot, const char *const *num, int n, int se
   }
   return w;
 }
+// ANDROID, LIMITE DE FILEIRAS: o trilho vai de 3 a 40 em 90% da largura e o
+// ultimo trecho e o "Ilimitado" (200). Linear, 40 ficaria em 19% do trilho.
+static float ajFracaoLimite(float v) {
+#ifdef NV_ANDROID
+  const float lo = FIL_LIMITE_MIN, tv = FIL_LIMITE_MAX_TV, hi = FIL_LIMITE_MAX;
+  if (v <= tv) return 0.9f * (v - lo) / (tv - lo);
+  return 0.9f + 0.1f * (v - tv) / (hi - tv);
+#else
+  return (v - FIL_LIMITE_MIN) / (float)(FIL_LIMITE_MAX - FIL_LIMITE_MIN);
+#endif
+}
 static float ajFracao(int op, int v) {
   const Opcao *o = &OPCOES[op];
+  if (op == AJ_FIL_LIMITE) return ajFracaoLimite((float)v);
   return o->max > o->min ? (float)(v - o->min) / (float)(o->max - o->min) : 0.0f;
 }
 // O padrao que a tela MOSTRA. O limite de fileiras mora em fileiras.c e nao
@@ -797,6 +809,7 @@ static float ajMov(int op, float alvo) {
 static float ajMovFracao(int op, int alvo) {
   const Opcao *o = &OPCOES[op];
   float v = ajMov(op, alvo);
+  if (op == AJ_FIL_LIMITE) return ajFracaoLimite(v);
   return o->max > o->min ? (v-o->min)/(o->max-o->min) : 0.0f;
 }
 static void ajMovAtualizar(float dt) {

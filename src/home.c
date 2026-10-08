@@ -89,7 +89,13 @@ int player_aberto(void);
 // acrescimos nao crescem junto: 64 sobra para 40 + colecoes + social + retomada.
 // Custo: as tabelas por fileira aqui somam ~200 KB estaticos (Fileira pesa
 // 1,3 KB); nada disto mora na pilha.
+// ANDROID: CAT_FIL_MAX e 224 la (fileiras ilimitadas, 2.0.4); a folga de 24
+// e a mesma ideia. ~250 x 1,3 KB x 3 vetores de Fileira = ~1 MB de BSS.
+#ifdef NV_ANDROID
+#define MAX_FIL    (CAT_FIL_MAX + 24)
+#else
 #define MAX_FIL    64
+#endif
 _Static_assert(MAX_FIL >= CAT_FIL_MAX + 16, "a home precisa de folga sobre o teto do catalogo");
 // 13 e nao 12: sao 12 CARTAZES mais a coluna do card "Ver tudo", que ocupa a
 // posicao seguinte a ultima arte. Com 12 aqui, animFoco[r][12] escrevia fora do

@@ -4992,7 +4992,13 @@ static const char *ajudaOpcao(int op) {
     case AJ_SELOS_PACOTE_REM: return "Tira desta TV o pacote escolhido. Pacote que veio da conta só se remove na conta, no Nuvio web.";
     case AJ_COL_ARTE_CONTA: return "As pastas de coleção que o app já traz com arte própria passam a usar a capa, o fundo e o logo que estão na sua conta (editor de coleções do site). O que a conta não tiver continua com a arte do app.";
     case AJ_HERO_TRANSICAO: return "Deslizar: quando o destaque troca de título, a arte e o texto saem para o lado e o próximo entra colado, como num carrossel. Esmaecer: a arte apaga e a nova aparece no lugar. Com Animações reduzidas a troca é sempre sem movimento.";
+#ifdef NV_ANDROID
+    // FILEIRAS ILIMITADAS (dono, 2.0.4). Sem a folha de memoria: no Android ela
+    // virou esta dica. O diario do modo seguro continua vigiando igual.
+    case AJ_FIL_LIMITE: return "Quantas fileiras a Home monta: de 3 a 40, ou Ilimitado. Cada fileira é um pedido pela rede, então com muitas a Home leva mais tempo para ficar completa.";
+#else
     case AJ_FIL_LIMITE: return "Quantas fileiras a Home monta, de 3 a 40. Menos fileiras também significam menos catálogos pedidos pela rede, e não fileiras invisíveis. Mais fileiras usam mais memória e rede: em TV com 1 GB de memória a Home pode ficar lenta ou fechar. Se o app fechar depois de você aumentar, ele volta sozinho ao valor anterior.";
+#endif
     case AJ_ITENS_FILEIRA: return "Quantos títulos cada fileira da Home mostra antes do Ver tudo. Mais itens usam mais memória: em TV com 1 GB de memória a Home pode ficar mais lenta ou fechar. Se o app fechar depois de você aumentar, ele volta sozinho ao valor anterior. Aumentar vale na próxima vez que o app abrir.";
     case AJ_FIL_ORDEM: return "Abre a lista de fileiras para reordenar, ligar, desligar e escolher o card de cada uma. É lá que dá para ver de onde cada fileira vem.";
     case AJ_RAIL: return "A barra de navegação da esquerda fica sempre aberta, ou recolhida até você ir até ela.";
@@ -5743,7 +5749,8 @@ static int riscoAplicar(const char *chave, int novo, int ant) {
 // Texto de um valor para os avisos: o mesmo rotulo que a linha mostra.
 static void riscoRotulo(int op, int v, char *dst, size_t tam) {
   const Opcao *o = &OPCOES[op];
-  if (op == AJ_FIL_LIMITE) snprintf(dst, tam, "%d", v);
+  if (op == AJ_FIL_LIMITE && fil_limite_ilimitado(v)) snprintf(dst, tam, "%s", i18n("Ilimitado"));
+  else if (op == AJ_FIL_LIMITE) snprintf(dst, tam, "%d", v);
   else if (o->tipo == OP_ESCOLHA && v >= 0 && v < o->n) snprintf(dst, tam, "%s", i18n(o->valores[v]));
   else snprintf(dst, tam, "%d", v);
 }
@@ -5816,6 +5823,7 @@ static void mudarValor(int op, int dir);
 // O valor a que `dir` levaria `op`, sem aplicar. Espelha mudarValor.
 static int passoAdiante(int op, int dir) {
   const Opcao *o = &OPCOES[op];
+  if (op == AJ_FIL_LIMITE) return fil_limite_passo(valor[op], dir);   // Android: 40 -> Ilimitado
   if (o->tipo == OP_NUMERO) return limita(op, valor[op] + dir * o->passo);
   { int n = nValores(op); return (valor[op] + (dir > 0 ? 1 : n - 1)) % n; }
 }
@@ -5825,7 +5833,7 @@ static int riscoPedirConfirmacao(int op, int dir) {
   if (op == AJ_FIL_LIMITE) {
     bit = SEG_AVISO_FILEIRAS;
     de = riscoAtual(op); para = passoAdiante(op, dir);
-    if (!(para > FIL_LIMITE_SEGURO && para > de)) return 0;
+    if (!fil_limite_pede_aviso(de, para)) return 0;   // Android: nunca (vira dica)
   } else if (op == AJ_ITENS_FILEIRA) {
     bit = SEG_AVISO_ITENS;
     de = valor[op]; para = passoAdiante(op, dir);
@@ -6502,6 +6510,7 @@ static const char *textoValor(int op) {
     snprintf(buf, sizeof buf, i18n("%d,%d s"), v / 10, v % 10);
     return buf;
   }
+  if (op == AJ_FIL_LIMITE && fil_limite_ilimitado(valor[op])) return i18n("Ilimitado");
   if (o->tipo == OP_NUMERO) {
     snprintf(buf, sizeof buf, "%d%s", valor[op], o->sufixo ? o->sufixo : "");
     return buf;

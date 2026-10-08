@@ -302,4 +302,11 @@ void desc_pedir_titulo_semente(const char *imdb, long tmdb, const char *tipo,
 int  desc_titulo_pronto(void);
 int  desc_titulo_buscando(void);
 
+// RITMO DOS PEDIDOS DE CATALOGO (fileiras ilimitadas no Android, 2.0.4).
+// Quantas fileiras uma rodada de montar() pede quando faltam `alvo`, e quantos
+// GET de catalogo ficam em voo ao mesmo tempo (os fios da rodada). Expostos
+// para tests/fileiras_android.sh provar que 100 fileiras nao viram 100 pedidos.
+int desc_catalogos_por_rodada(int alvo);
+int desc_catalogos_em_voo(void);
+
 #endif
