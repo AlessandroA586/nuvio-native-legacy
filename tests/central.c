@@ -3,6 +3,9 @@
 #include "chsegura.h"
 #include "centrallista.h"
 #include "ajustes.h"
+#include "central.h"
+#include "dados.h"
+#include "perfis.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -144,11 +147,31 @@ static void ajustesRapido(const char *dir) {
             v0, ajustes_rapido_valor(op)); }
 }
 
+// A troca rapida de perfil so existe com mais de um perfil (e, no codigo, sem
+// player nem pagina do titulo abertos: central.c podeTrocar).
+static void trocaRapida(const char *dir) {
+  char arq[700];
+  FILE *f;
+  dados_iniciar("deploy/app/art");
+  snprintf(arq, sizeof arq, "%s/perfis.txt", dir);
+  f = fopen(arq, "w");
+  if (!f) { printf("FALHA: perfis.txt\n"); falhas++; return; }
+  fputs("1\t0\t1\t0\t#1E88E5\tA\t\t\n", f);
+  fclose(f);
+  perfis_carregar_ativo();
+  if (central_troca_disponivel()) { printf("FALHA: troca com um perfil so\n"); falhas++; }
+  f = fopen(arq, "w");
+  fputs("1\t0\t1\t0\t#1E88E5\tA\t\t\n2\t0\t0\t0\t#E5397A\tB\t\t\n", f);
+  fclose(f);
+  perfis_carregar_ativo();
+  if (!central_troca_disponivel()) { printf("FALHA: sem troca com dois perfis\n"); falhas++; }
+}
+
 int main(void) {
   const char *dir = getenv("NUVIO_DADOS");
   teclaSegurada();
   lista();
-  if (dir && *dir) ajustesRapido(dir);
+  if (dir && *dir) { ajustesRapido(dir); trocaRapida(dir); }
   else { printf("FALHA: NUVIO_DADOS\n"); falhas++; }
   if (falhas) { printf("%d falha(s)\n", falhas); return 1; }
   puts("PASS: central de controle");

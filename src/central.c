@@ -2,6 +2,7 @@
 #define NV_ESCALA_TELA
 #include "central.h"
 #include "centrallista.h"
+#include "detail.h"
 #include "chsegura.h"
 #include "ajustes.h"
 #include "anim.h"
@@ -107,10 +108,13 @@ static int testePodeTrocar;
 static int previa;   // definida mais abaixo, com previaInverte
 static int podeTrocar(void) {
 #ifdef CENTRAL_TESTE
-  if (testePodeTrocar) return perfis_n() > 1;
+  if (testePodeTrocar) return !detail_aberto() && perfis_n() > 1;
 #endif
-  return !previa && !player_aberto() && perfis_n() > 1;
+  // Nem com o player, nem com a pagina do titulo aberta: a troca esvaziaria o
+  // que esta na tela. A linha do perfil fica so informativa.
+  return !previa && !player_aberto() && !detail_aberto() && perfis_n() > 1;
 }
+int central_troca_disponivel(void) { return podeTrocar(); }
 // A previa do cartao de novidades (central_previa_*): sem video tocando,
 // sem aviso, e o botao `previaInverte` mostrado com o interruptor trocado.
 static int previa, previaInverte = -1;

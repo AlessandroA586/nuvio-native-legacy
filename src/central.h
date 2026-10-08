@@ -26,6 +26,9 @@ int  central_aberta(void);
 // por app.c uma vez por quadro; 0 = nenhum pedido. Quem troca de verdade e o
 // app.c, pelo mesmo corpo da tela de escolha de perfil.
 int  central_pediu_perfil(void);
+// 1 quando a troca rapida existe agora: mais de um perfil, e nem player nem
+// pagina do titulo abertos.
+int  central_troca_disponivel(void);
 // Aberta: come o teclado todo.
 void central_evento(const SDL_Event *e);
 // Por quadro, antes do desenho: pede a ilha esticada (fora do player).
