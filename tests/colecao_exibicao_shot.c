@@ -144,6 +144,13 @@ int main(int argc, char **argv) {
   aberta = 1; anim = 1.0f; source = 0; tabFocus = 0;
 
   captura(NULL, 60);   // artes chegando ao cache
+  // PADRAO (#362): pasta com abas, exibicao Automatico -> Grade com a barra de
+  // abas, NUNCA a Vitrine.
+  layEscolha = VT_LAY_AUTO; lay = VT_LAY_MURAL; celLay = -1; orderN = -1; foco = 1;
+  resolverLayout();
+  assert(lay == VT_LAY_GRADE);
+  snprintf(nome, sizeof nome, "%s-1-grade-padrao-abas.bmp", saida);
+  captura(nome, 110);
   for (L = VT_LAY_GRADE; L < VT_LAY_VITRINE; L++) {
     lay = L; layEscolha = L; celLay = -1; orderN = -1; foco = 1; scrollY = velY = 0;
     armarOnda();
