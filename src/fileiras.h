@@ -21,6 +21,7 @@
 // por uma perda de dados silenciosa nos outros aparelhos.
 #ifndef NV_FILEIRAS_H
 #define NV_FILEIRAS_H
+#include <stddef.h>
 
 // 64 como o PREF_MAX de descoberta.c e o CATORD_MAX de catordem.c. O Xperience
 // sozinho declara 605 catalogos: a tela de Ajustes lista os 64 PRIMEIROS na
@@ -296,6 +297,9 @@ int         fil_linha_tam(int i);
 // devolve -1 quando a fileira ainda nao foi montada nesta sessao.
 int         fil_linha_origem(int i);
 const char *fil_linha_addon(int i);
+// Nome do addon que declara a fileira de CATALOGO `chave` (pilula na home).
+// Devolve 0 e dst vazio para fileiras do app, colecoes e addon desconhecido.
+int         fil_addon_da_chave(const char *chave, char *dst, size_t tam);
 const char *fil_linha_conteudo(int i);
 int         fil_linha_itens(int i);
 // `fil_linha_na_home`: a ultima home montada tinha esta fileira.

@@ -302,6 +302,12 @@ int main(int argc, char **argv) {
     assert(col_definir_json(js) == 4);
   }
   cat_definir_tudo(itens, total, fils, NF);
+  // O nome do addon de cada catalogo, para a pilula do titulo ("Nome do addon no
+  // catalogo", NV_AJ="catalogAddonNameEnabled 0"). Dois nomes, um deles longo.
+  { int k;
+    for (k = 0; k < NF; k++)
+      if (FILS[k].catalogo)
+        fil_registrar(FILS[k].chave, FILS[k].titulo, k % 2 ? "Cinemeta" : "Xperience Premium", FILS[k].tipo, -1); }
   // NV_AMIGOS=1: amigos falsos nos tres primeiros titulos de "Popular" (feed externo).
   if (getenv("NV_AMIGOS")) {
     SvEvento e[6]; int k = 0, i;

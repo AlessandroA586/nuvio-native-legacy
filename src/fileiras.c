@@ -787,6 +787,25 @@ static int achar(const char *chave) {
   return -1;
 }
 
+// O NOME DO ADDON que declara a fileira `chave`, para a pilula ao lado do
+// titulo na home (ajustes_nome_addon). So catalogo de addon: as fileiras do
+// app e as colecoes nao vem "de" um addon. 0 = sem pilula.
+int fil_addon_da_chave(const char *chave, char *dst, size_t tam) {
+  int i, r = 0;
+  if (!dst || !tam) return 0;
+  dst[0] = 0;
+  if (!chave || !chave[0]) return 0;
+  pthread_mutex_lock(&trava);
+  garantir();
+  i = achar(chave);
+  if (i >= 0 && linhas[i].addon[0] && fil_origem_de(linhas[i].chave) == FIL_ORIGEM_CATALOGO) {
+    snprintf(dst, tam, "%s", linhas[i].addon);
+    r = 1;
+  }
+  pthread_mutex_unlock(&trava);
+  return r;
+}
+
 static void registrar(const char *chave, const char *titulo,
                       const char *addon, const char *conteudo, int itens,
                       int podeDespejar) {

@@ -22,6 +22,7 @@
 #include "homeestado.h"
 #include "cachearte.h"
 #include "fileiras.h"
+#include "idiomacod.h"
 #include "continuar.h"
 #include "vertudo.h"
 #include "ctxmenu.h"
@@ -5307,6 +5308,30 @@ void home_desenhar(Uint32 agora) {
       if(!strncmp(fileiras[r].catId,"ai_",3)) {
         TxtLinha ai=txt_linha(TXT_HERO_META,"AI-powered",183,192,219,255);
         txt_desenhar(ai,ajustes_conteudo_x()+tl.w+22,y+(tl.h-ai.h)*.5f);
+      }
+      // PILULA DO ADDON ("Nome do addon no catalogo"): o nome em caixa alta, fio
+      // fino neutro, ao lado do titulo e centrada nele. O titulo nao leva o
+      // nome no texto: a pilula e o mesmo desenho em todos os layouts, porque
+      // esta e a unica linha que desenha titulo de fileira.
+      if (ajustes_nome_addon() && tipo != FILEIRA_SOCIAL && fileiras[r].chave[0]) {
+        char nomeAddon[48], caixa[96];
+        if (fil_addon_da_chave(fileiras[r].chave, nomeAddon, sizeof nomeAddon)) {
+          float px = ajustes_conteudo_x() + (float)tl.w + 18.0f;
+          float limite = NV_TELA_W - NV_HOME_SAFE_RIGHT - 190.0f;   // o contador "n / m" mora a direita
+          if (!strncmp(fileiras[r].catId, "ai_", 3)) px += 150.0f;
+          if (limite - px > 60.0f) {
+            TxtLinha pl;
+            float pw, ph;
+            idioma_maiusc_em(ajustes_idioma(), caixa, sizeof caixa, nomeAddon);
+            pl = txt_linha_corta(TXT_MINI, caixa, 245, 246, 249, 255,
+                                 fminf(limite - px - 24.0f, 300.0f));
+            pw = (float)pl.w + 20.0f;
+            ph = (float)pl.h + 8.0f;
+            { float py = y + ((float)tl.h - ph) * 0.5f;
+              gfx_anel((GfxRect){ px, py, pw, ph }, 0.5f, 1.5f, 1, 1, 1, 0.42f);
+              txt_desenhar_alpha(pl, px + 10.0f, py + 4.0f, 0.72f); }
+          }
+        }
       }
       if (foco.fileira == r && !focoHero && tipo != FILEIRA_SOCIAL) {
         char pos[32];
