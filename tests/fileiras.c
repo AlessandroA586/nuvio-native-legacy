@@ -575,11 +575,70 @@ int main(void) {
     fil_normalizar();
     for (j = 0; j < fil_n(); j++) {
       const char *k = fil_chave(j);
-      if (!strcmp(k, "d")) assert(fil_linha_oculta(j));           // sobrou: fora
+      // #358: d e catalogo NOVO (registrado nesta sessao, intocado): nao coube,
+      // espera na fila em vez de ir para Fora.
+      if (!strcmp(k, "d")) assert(!fil_linha_oculta(j) && fil_estado(j) == FIL_NA_FILA);
       if (!strcmp(k, "e")) assert(!fil_linha_oculta(j));          // na home: fica
       if (!strcmp(k, "f")) assert(!fil_linha_oculta(j) && fil_estado(j) == FIL_NA_FILA);
     } }
-  puts("ok  normalizar: so a fila pedida fica alem do limite");
+  puts("ok  normalizar: catalogo novo que nao coube vai para a fila (#358)");
+
+  // #358: add-on novo com N catalogos. Com espaco livre todos entram na Home;
+  // com a Home cheia o excedente vira FILA (nunca OC_PESSOA / Fora).
+  fil_esquecer();
+  fil_definir_limite(5);
+  { int j, na_home = 0, na_fila = 0, fora = 0;
+    char ch[32];
+    for (j = 0; j < 3; j++) { snprintf(ch, sizeof ch, "n%d", j); fil_registrar(ch, ch, "Novo", "movie", 1); }
+    fil_normalizar();
+    for (j = 0; j < fil_n(); j++) assert(fil_estado(j) == FIL_NA_HOME);   // cabem: Home
+    for (j = 3; j < 9; j++) { snprintf(ch, sizeof ch, "n%d", j); fil_registrar(ch, ch, "Novo", "movie", 1); }
+    fil_normalizar();
+    for (j = 0; j < fil_n(); j++) {
+      if (fil_linha_oculta(j)) fora++;
+      else if (fil_estado(j) == FIL_NA_FILA) na_fila++;
+      else na_home++;
+    }
+    assert(na_home == 5 && na_fila == 4 && fora == 0);
+    // O que o dono tirou de proposito continua Fora.
+    { int pj = -1; for (j = 0; j < fil_n(); j++) if (!strcmp(fil_chave(j), "n1")) pj = j;
+      fil_remover(pj); }
+    fil_normalizar();
+    for (j = 0; j < fil_n(); j++) if (!strcmp(fil_chave(j), "n1")) assert(fil_linha_oculta(j));
+  }
+  puts("ok  #358: addon novo cabe na Home; excedente na fila; Fora explicito fica");
+
+  // #358: linha que JA ESTAVA no arquivo (sem a marca "nova") alem do limite
+  // segue a regra antiga: vai para Fora. A nova do mesmo arquivo vai para a
+  // fila, e a marca sobrevive ao recarregar antes da folha normalizar.
+  fil_esquecer();
+  { int j, achouVelha = 0, achouNova = 0;
+    usaArquivo = 1;
+    { FILE *f = fopen("/tmp/fileirasui-p1.txt", "w");
+      fprintf(f, "limite 3\nordem 0\n");
+      fprintf(f, "linha v1\t0\t0\t1\t0\tV1\n");
+      fprintf(f, "linha v2\t0\t0\t1\t0\tV2\n");
+      fprintf(f, "linha v3\t0\t0\t1\t0\tV3\n");
+      fprintf(f, "linha v4\t0\t0\t1\t0\tV4\n");
+      fprintf(f, "linha nv\t0\t0\t1\t0\tNV\n");
+      fprintf(f, "nova nv\n");
+      fclose(f); }
+    fil_definir_perfil(1);
+    fil_teste_recarregar();      // persistencia: a marca volta do disco
+    fil_normalizar();
+    for (j = 0; j < fil_n(); j++) {
+      if (!strcmp(fil_chave(j), "v4")) { achouVelha = 1; assert(fil_linha_oculta(j)); }
+      if (!strcmp(fil_chave(j), "nv")) { achouNova = 1; assert(!fil_linha_oculta(j) && fil_estado(j) == FIL_NA_FILA); }
+    }
+    assert(achouVelha && achouNova);
+    // a fila persiste e a marca "nova" ja foi consumida
+    fil_teste_recarregar();
+    for (j = 0; j < fil_n(); j++)
+      if (!strcmp(fil_chave(j), "nv")) assert(!fil_linha_oculta(j) && fil_estado(j) == FIL_NA_FILA);
+    remove("/tmp/fileirasui-p1.txt");
+    fil_definir_perfil(0);
+    usaArquivo = 0; }
+  puts("ok  #358: linha antiga alem do limite segue Fora; marca e fila persistem");
 
   // PODA: catalogo de addon que sumiu da conta sai; o resto fica. A lista vem
   // da conta do PERFIL desta escolha (perfilDaLista == 1 == perfil ativo).
@@ -760,14 +819,15 @@ int main(void) {
     assert(fil_escolhida("cand_3") == -1);              // ligada so por ter entrado
     assert(fil_escolhida("ultra_150") == -1);           // listada, nao escolhida
     assert(fil_escolhida("nao_existe") == -1);
-    // A folha abre (normaliza: o que sobrou alem do limite vira "fora"), a
-    // pessoa tira uma da home e poe a de fora da cota: agora ela e escolhida.
+    // A folha abre (normaliza; #358: os candidatos NOVOS que nao couberam vao
+    // para a fila, nao para "fora"), a pessoa tira uma da home — cand_3 sobe — e
+    // poe a de fora da cota: agora ela e escolhida (fica na fila, home cheia).
     fil_normalizar();
     assert(fil_escolhida("ultra_150") == -1);
     fil_remover(0);
     assert(fil_escolhida("cand_0") == -1);              // oculta nao e escolha
     i = fil_adicionar(5, &estado);
-    assert(i >= 0 && estado == FIL_NA_HOME);
+    assert(i >= 0 && estado == FIL_NA_FILA);
     assert(fil_escolhida("ultra_150") >= 0);
     // Tabela cheia: o registro de fora da cota fica de fora, calado, e nao
     // despeja nem uma linha dispensavel.
