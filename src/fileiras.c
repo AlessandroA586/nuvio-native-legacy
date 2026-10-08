@@ -52,6 +52,7 @@ typedef struct {
   // desligar a fileira depois, o sync (mao unica, so puxa) esconde aqui
   // tambem. Linha opcional "addvence" no arquivo, como "visibilidade".
   int  addVenceConta;
+  int  semDecl;        // runtime only (#204): no manifest read this session declares this exact catalog
   // CATALOGO NOVO QUE A PESSOA AINDA NAO TOCOU (#358). Marcado em registrar() ao
   // criar a linha e gravado como linha opcional "nova <chave>" (arquivo antigo
   // nao a tem). Vale ate a pessoa agir (alternar/adicionar/remover) ou a folha
@@ -739,6 +740,79 @@ int fil_adicionada_na_tv(const char *chave) {
   return r;
 }
 
+// ESCOLHA EXPLICITA DA PESSOA (#204), a unica que protege do despejo uma linha
+// de catalogo que NINGUEM DECLARA MAIS. E mais estreita que temEscolha de
+// proposito: `oculta == OC_PESSOA` sozinha NAO conta, porque fil_normalizar
+// tambem a grava sozinha (catalogo antigo alem do limite vira "Fora" sem a
+// pessoa pedir) — e foram essas linhas, 659 delas, que lotaram a tabela. O que
+// a pessoa fez de verdade deixa marca propria: ligar/desligar/"Fora" na TV
+// (visPessoal), fila pedida (fila), forma ou tamanho (tipo/tam) e a fonte do
+// destaque. Renomear e ordem local nao moram na linha (tabela a parte / flag
+// global). Custo aceito: arquivo anterior a visPessoal nao distingue um "Fora"
+// da pessoa de um automatico; vale como automatico.
+static int escolhaExplicita(const Linha *l) {
+  return l->visPessoal || l->fila || l->tipo != FIL_TIPO_AUTO ||
+         l->tam != FIL_TAM_PADRAO || (heroFonte[0] && !strcmp(heroFonte, l->chave));
+}
+
+// Despejavel por "ninguem declara mais": catalogo de addon, sem escolha
+// explicita, fora da home, nao registrado nesta sessao, nao da conta/colecao.
+static int orfaDespejavel(const Linha *l) {
+  return fil_origem_de(l->chave) == FIL_ORIGEM_CATALOGO &&
+         (l->semDecl || l->semAddon) && !l->vista && !l->naHome &&
+         !l->ocultaConta && !l->emColecao && l->oculta != OC_COLECAO &&
+         !escolhaExplicita(l);
+}
+
+static unsigned orfasLiberadas;   // despejos ainda nao logados
+
+static void logarOrfas(void) {   // com a trava
+  int i, mantidas = 0;
+  if (!orfasLiberadas) return;
+  for (i = 0; i < nLinhas; i++)
+    if (fil_origem_de(linhas[i].chave) == FIL_ORIGEM_CATALOGO &&
+        (linhas[i].semDecl || linhas[i].semAddon) && escolhaExplicita(&linhas[i])) mantidas++;
+  printf("[fileiras] liberadas %u vagas de catalogos que nenhum addon declara "
+         "(mantidas %d escolhas da pessoa)\n", orfasLiberadas, mantidas);
+  fflush(stdout);
+  orfasLiberadas = 0;
+}
+
+// Diz quais catalogos os manifestos declaram AGORA, ANTES do registro do ciclo.
+// `chaves` = chaves de todos os candidatos lidos. Marca semDecl nas demais
+// linhas de catalogo e, se o despejavel passar de 25% da tabela, poda tudo ja,
+// sem esperar encher (barato: uma varredura). Quem chama garante lista completa
+// (mesmas travas da poda). Devolve quantas linhas sairam.
+int fil_marcar_declaradas(const char *const *chaves, int n, int perfilDaLista) {
+  int i, k, lixo = 0, fora = 0, w = 0;
+  if (n <= 0 || !chaves) return 0;
+  pthread_mutex_lock(&trava);
+  garantir();
+  if (perfilDaLista <= 0 || perfilDaLista != perfil) { pthread_mutex_unlock(&trava); return 0; }
+  for (i = 0; i < nLinhas; i++) {
+    int achou = 0;
+    if (fil_origem_de(linhas[i].chave) != FIL_ORIGEM_CATALOGO) { linhas[i].semDecl = 0; continue; }
+    for (k = 0; k < n && !achou; k++)
+      if (chaves[k] && !strcmp(chaves[k], linhas[i].chave)) achou = 1;
+    linhas[i].semDecl = !achou;
+  }
+  for (i = 0; i < nLinhas; i++) if (orfaDespejavel(&linhas[i])) lixo++;
+  if (lixo > FIL_MAX / 4) {
+    for (i = 0; i < nLinhas; i++) {
+      if (orfaDespejavel(&linhas[i])) { fora++; continue; }
+      if (w != i) linhas[w] = linhas[i];
+      w++;
+    }
+    nLinhas = w;
+    orfasLiberadas += (unsigned)fora;
+    gravar();
+  }
+  logarOrfas();
+  revisao++;
+  pthread_mutex_unlock(&trava);
+  return fora;
+}
+
 int fil_podar_catalogos(const char *const *ids, const char *const *bases, int n,
                         int perfilDaLista) {
   int i, w = 0, fora = 0;
@@ -998,6 +1072,10 @@ static void registrar(const FilPassada *passada, const char *chave,
       // ela volta sozinha na proxima volta se ainda couber.
       for (k = nLinhas - 1; k >= 0 && v < 0; k--)
         if (linhas[k].oculta == OC_SUGESTAO && !linhas[k].naHome) v = k;
+      // #204: catalogo que nenhum addon declara mais e sobre o qual a pessoa
+      // nunca escolheu nada: sai o MAIS ANTIGO (o primeiro da tabela).
+      for (k = 0; k < nLinhas && v < 0; k++)
+        if (orfaDespejavel(&linhas[k])) { v = k; orfasLiberadas++; break; }
       for (passo = 0; passo < 3 && v < 0; passo++)
         for (k = nLinhas - 1; k >= 0 && v < 0; k--)
           if (!linhas[k].naHome && (passo == 2 || !linhas[k].vista) &&
@@ -1052,6 +1130,7 @@ static void registrar(const FilPassada *passada, const char *chave,
   }
   linhas[i].vista = 1;
   linhas[i].semAddon = 0;   // an add-on declared it again
+  linhas[i].semDecl = 0;
   // O PRIMEIRO A REGISTRAR MANDA NO NOME, e nao o ultimo. Sao dois
   // registradores: a descoberta com o nome do catalogo (ja com customTitles) e
   // a home com o nome que ela desenha, que para meia dezena de chaves conhecidas
@@ -1167,6 +1246,7 @@ int fil_conta_dono(const char *usuario) {
 void fil_gravar_registro(void) {
   pthread_mutex_lock(&trava);
   if (registroSujo) { registroSujo = 0; gravar(); }
+  logarOrfas();
   pthread_mutex_unlock(&trava);
 }
 

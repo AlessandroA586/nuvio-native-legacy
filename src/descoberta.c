@@ -4325,6 +4325,18 @@ static void *montar(void *u) {
         // As que ficaram (com escolha da pessoa) deixam de ocupar vaga.
         { int m = fil_marcar_sem_addon(ids, bases, ativos, na, perfilLista);
           if (m) printf("[fileiras] %d fileira(s) de addon removido/desligado fora da conta de vagas\n", m); }
+        // #204: quais catalogos os manifestos declaram AGORA, ANTES do registro
+        // abaixo. Com o vetor de candidatos cheio (DECL_MAX) a lista pode estar
+        // truncada, e dai "nao declarado" nao quer dizer nada: nao marca.
+        if (nDecl > 0 && nDecl < DECL_MAX) {
+          const char **dk = malloc(sizeof *dk * (size_t)nDecl);
+          if (dk) {
+            int q2;
+            for (q2 = 0; q2 < nDecl; q2++) dk[q2] = decls[q2].chave;
+            fil_marcar_declaradas(dk, nDecl, perfilLista);
+            free(dk);
+          }
+        }
       } }
 
     // ALVOS DE BUSCA. Independem da ordem/filtro das FILEIRAS da home: um

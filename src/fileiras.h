@@ -251,6 +251,12 @@ int  fil_podar_catalogos(const char *const *ids, const char *const *bases, int n
 // #319: marca (so em memoria) as linhas de catalogo cujo addon saiu da conta ou
 // foi desligado, para elas nao ocuparem vaga do limite nem aparecerem na home.
 // `ativos[k]` = addon k ligado. Devolve quantas linhas mudaram de estado.
+// #204: `chaves[0..n)` = catalogos que os manifestos lidos declaram AGORA (chamar
+// ANTES do registro do ciclo). Linha de catalogo fora da lista, sem escolha
+// explicita da pessoa, vira despejavel quando a tabela enche; se forem mais de
+// 25% de FIL_MAX, saem ja. Devolve quantas saíram.
+int  fil_marcar_declaradas(const char *const *chaves, int n, int perfilDaLista);
+
 int  fil_marcar_sem_addon(const char *const *ids, const char *const *bases,
                           const int *ativos, int n, int perfilDaLista);
 
