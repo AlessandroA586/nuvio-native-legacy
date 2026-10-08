@@ -33,8 +33,15 @@ int  ajustes_menu_explorar(void);
 int  ajustes_menu_guia(void);
 int  ajustes_menu_agenda(void);
 int  ajustes_menu_perfil(void);
-// "Trailer do cartaz em foco" (#124, focusedPosterBackdropTrailerEnabled),
-// ja considerando a dependencia: 1 so com expandir ou cartaz deitado ligados.
+// "Trailer do cartaz em foco" (#124; tres modos desde 08/10/2026). Na conta
+// continua o booleano do web (focusedPosterBackdropTrailerEnabled): true =
+// qualquer modo ligado. O modo seguro devolve DESLIGADO.
+//   DESLIGADO  nada toca com o foco num cartaz;
+//   CHEIA      o trailer toca no lugar da arte do destaque e a home entra no
+//              modo cinema, como o trailer do destaque (so o logo fica);
+//   CARD       o trailer toca DENTRO do cartaz em foco (home.c: cartaz deitado
+//              e 4:3 na hora; cartaz em pe so aberto por "Expandir poster").
+enum { AJ_TRAILER_CARTAZ_DESLIGADO = 0, AJ_TRAILER_CARTAZ_CHEIA = 1, AJ_TRAILER_CARTAZ_CARD = 2 };
 int  ajustes_trailer_cartaz(void);
 // "Itens por fileira" da Home (#163): 12, 18 ou 24. Padrao 12.
 int  ajustes_itens_fileira(void);

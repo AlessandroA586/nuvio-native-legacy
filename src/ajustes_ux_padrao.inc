@@ -146,7 +146,7 @@
   0,                /* diagnostico */
   0,                /* teste de velocidade: acao */
   0, 0, 0, 0,       /* explorar, guia, agenda, perfil na barra lateral: ligados */
-  1,                /* trailer do cartaz em foco: desligado (DEFAULT do web) */
+  0,                /* trailer do cartaz em foco: Desligado (AJ_TRAILER_CARTAZ_*; DEFAULT do web) */
   0,                /* itens por fileira: 12, como sempre foi (ver V_ITENS_FIL) */
   TXT_FAMILIA_INTER,/* fonte da interface: independente da legenda */
   0,                /* efeitos visuais do .tpk: automatico (adaptativo, ate o nivel 1) */

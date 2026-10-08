@@ -33,7 +33,7 @@ static int uxRequisito(int op) {
       return !lig(AJ_HERO_TRAILER) ? AJ_HERO_TRAILER : -1;
     case AJ_DET_TRAILER_SOM:
       return !lig(AJ_DET_TRAILER_AUTO) ? AJ_DET_TRAILER_AUTO : -1;
-    case AJ_EXPANDIR_ATRASO: case AJ_FOCO_TRAILER: return AJ_EXPANDIR;
+    case AJ_EXPANDIR_ATRASO: return AJ_EXPANDIR;
     case AJ_CW_OK: case AJ_CW_FONTE: case AJ_CW_ESTILO: case AJ_CW_THUMB:
     case AJ_CW_FURTHEST: case AJ_CW_NAO_EXIBIDOS: case AJ_CW_ORDEM: case AJ_CW_RETIDO_TAMBEM:
     case AJ_CW_CONCLUIDO: return AJ_CW_LIGADO;
