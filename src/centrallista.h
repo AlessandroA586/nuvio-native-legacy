@@ -14,7 +14,9 @@
 #define NV_CENTRALLISTA_H
 #include <stddef.h>
 
-#define CENTRAL_MAX 8
+// 16 desde a 2.0.4 (dono: "quero mais opcoes"). Lista e arquivo antigos
+// (<= 8 chaves) leem igual: o limite so corta o que passa dele.
+#define CENTRAL_MAX 16
 
 // `curto`: o nome no botao (o rotulo inteiro de Ajustes nao cabe num botao de
 // ~120 px; o inteiro continua na lista de edicao). Chave em portugues, i18n.

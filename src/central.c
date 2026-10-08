@@ -53,6 +53,7 @@
 #define CC_LINHA_H  50.0f       // linha da lista de edicao
 #define CC_LINHA_GAP 4.0f
 #define CC_LINHAS_MAX 9         // a lista rola dentro disso
+#define CC_BOT_VIS    4         // fileiras de botoes visiveis; mais rolam (o foco segue)
 #define CC_DICAS_H  30.0f
 #define CC_AV_INFO  26.0f       // o avatar da linha de informacao
 #define CC_COR_D    40.0f       // o disco de uma cor no seletor
@@ -65,6 +66,9 @@ static int aberta, editando;
 static int escolhendoCor, focoCor;   // o seletor da cor de destaque (so os 18 fixos)
 static int foco;                // botao em foco; == nBotoes e "Editar atalhos"
 static int focoEd;              // item do catalogo em foco na edicao
+static void topoBotAjusta(void);
+static int   topoBot;           // primeira fileira de botoes visivel (alvo)
+static float rolaBot, rolaBotVel; // a mesma, suavizada, e a velocidade da mola
 static float rolaEd;            // rolagem da lista de edicao (px)
 static CentralLista lista;
 static int perfilLido = -1;
@@ -194,6 +198,7 @@ void central_abrir(void) {
   trocando = 0;
   pinSlot = -1;
   foco = 0;
+  topoBot = 0; rolaBot = 0.0f; rolaBotVel = 0.0f;
   aviso[0] = 0;
   printf("[central] aberta (%d atalhos)\n", botoes(NULL, NULL));
   fflush(stdout);
@@ -449,6 +454,10 @@ void central_atualizar(float dt, Uint32 agora) {
   carregar();
   // O player abriu por baixo (ou a lista de perfis encolheu): a troca some.
   if ((trocando || focoInfo) && !podeTrocar()) { trocando = 0; focoInfo = 0; pinLimpar(); }
+  if (!trocando && !editando && !escolhendoCor) {
+    topoBotAjusta();
+    rolaBot = anim_mola2_reduzida(&rolaBotVel, rolaBot, (float)topoBot, dt, NV_MOLA2_SCROLL, reduz);
+  }
   if (trocando) {
     int n = perfis_n();
     if (focoPerf >= n) focoPerf = n - 1;
@@ -589,6 +598,16 @@ static int tocando(char *tit, size_t nt, char *meta, size_t nm) {
 }
 
 static int linhasBotoes(void) { return (botoes(NULL, NULL) + 1 + CC_COLS - 1) / CC_COLS; }
+static int linhasBotoesVis(void) { int n = linhasBotoes(); return n < CC_BOT_VIS ? n : CC_BOT_VIS; }
+// Quem manda na rolagem e o foco: anda o minimo para ele ficar a vista.
+static void topoBotAjusta(void) {
+  int n = linhasBotoes(), f = foco / CC_COLS, maxT = n > CC_BOT_VIS ? n - CC_BOT_VIS : 0;
+  if (focoInfo) f = topoBot;   // o foco subiu para a linha de cima: a grade nao se mexe
+  if (f < topoBot) topoBot = f;
+  if (f > topoBot + CC_BOT_VIS - 1) topoBot = f - CC_BOT_VIS + 1;
+  if (topoBot > maxT) topoBot = maxT;
+  if (topoBot < 0) topoBot = 0;
+}
 static int linhasEdicao(void) {
   int it[64], m = ofertas(it);
   return m < CC_LINHAS_MAX ? m : CC_LINHAS_MAX;
@@ -608,7 +627,7 @@ static float altura(int comFaixa) {
     int n = linhasEdicao();
     h += 6.0f + (float)n * (CC_LINHA_H + CC_LINHA_GAP) - CC_LINHA_GAP + 14.0f + CC_DICAS_H;
   } else {
-    int n = linhasBotoes();
+    int n = linhasBotoesVis();
     h += 6.0f;
     if (tocando(t, sizeof t, m, sizeof m)) h += CC_TOC_H + 10.0f;
     h += (float)n * (CC_BOTAO_H + CC_GAP) - CC_GAP;
@@ -729,11 +748,15 @@ static void botao(GfxRect r, const char *icone, const char *rot, const char *val
 
 static void desenhaBotoes(float x, float y, float w, float a) {
   int op[CENTRAL_MAX + 1], item[CENTRAL_MAX + 1], n = botoes(op, item), i;
-  float bw = (w - CC_GAP * (CC_COLS - 1)) / CC_COLS;
+  int lin = linhasBotoes(), vis = linhasBotoesVis();
+  float bw = (w - CC_GAP * (CC_COLS - 1)) / CC_COLS, passo = CC_BOTAO_H + CC_GAP;
+  float rola = lin > vis ? rolaBot : 0.0f, hv = (float)vis * passo - CC_GAP;
   if (foco > n) foco = n;
+  if (lin > vis) gfx_recorte(x - 8.0f, y - 4.0f, w + 16.0f, hv + 8.0f);
   for (i = 0; i <= n; i++) {
-    GfxRect r = { x + (float)(i % CC_COLS) * (bw + CC_GAP), y + (float)(i / CC_COLS) * (CC_BOTAO_H + CC_GAP),
+    GfxRect r = { x + (float)(i % CC_COLS) * (bw + CC_GAP), y + ((float)(i / CC_COLS) - rola) * passo,
                   bw, CC_BOTAO_H };
+    if (lin > vis && (r.y + r.h < y - 4.0f || r.y > y + hv + 4.0f)) continue;   // fora da janela
     if (i < n && op[i] == CC_OP_ESTAT) botao(r, "aj_gauge", "Estatísticas", "", -1, i == foco && !focoInfo, a);
     else if (i < n) {
       const CentralItem *c = central_catalogo(item[i]);
@@ -746,7 +769,15 @@ static void desenhaBotoes(float x, float y, float w, float a) {
         gfx_cor((GfxRect){ r.x + r.w - 14.0f - 14.0f, r.y + 16.0f, 14.0f, 14.0f }, 0.5f, cr, cg, cb, a);
       }
     } else botao(r, "aj_sliders-horizontal", "Editar", "", 0, i == foco && !focoInfo, a);
-    if (aberta && a > 0.5f && ponteiro_ativo()) ponteiro_alvo(r.x, r.y, r.w, r.h, ptFoco, ptOk, i, 0);
+    if (aberta && a > 0.5f && ponteiro_ativo() && r.y >= y - 8.0f && r.y + r.h <= y + hv + 8.0f)
+      ponteiro_alvo(r.x, r.y, r.w, r.h, ptFoco, ptOk, i, 0);
+  }
+  if (lin > vis) {
+    // a barrinha da rolagem, na margem direita do painel
+    float th = hv * (float)vis / (float)lin, ty = y + (hv - th) * (rola / (float)(lin - vis));
+    gfx_sem_recorte();
+    gfx_cor((GfxRect){ x + w + 7.0f, y, 3.0f, hv }, 0.5f, 1, 1, 1, 0.08f * a);
+    gfx_cor((GfxRect){ x + w + 7.0f, ty, 3.0f, th }, 0.5f, 1, 1, 1, 0.45f * a);
   }
 }
 
@@ -1041,7 +1072,9 @@ void central_teste_lista(const char *texto) { carregar(); centrallista_ler(&list
 void central_teste_foco(int f, int editar) {
   central_abrir();
   editando = escolhendoCor = 0;
+  trocando = 0; focoInfo = 0; pinSlot = -1;
   foco = f < 0 ? botoes(NULL, NULL) : f;
+  topoBot = 0; topoBotAjusta(); rolaBot = (float)topoBot; rolaBotVel = 0.0f;
   if (editar) ativarBotao(botoes(NULL, NULL));
 }
 // Captura do seletor de cores, com o foco no disco `foco`.

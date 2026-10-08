@@ -4,6 +4,7 @@
 // anda em passos fixos de 16 ms para os quadros do meio serem sempre os
 // mesmos. NUVIO_DADOS e temporario (ver o .sh). Saida: <prefixo>-N-*.bmp.
 #include "central.h"
+#include "centrallista.h"
 #include "ajustes.h"
 #include "ajustes_ux.h"
 #include "gfx.h"
@@ -224,6 +225,39 @@ int main(int argc, char **argv) {
   captura(nome, 60);
   ajustes_definir_vidro(0);
   central_teste_trocavel(0);
+
+  // MAIS ATALHOS (2.0.4): 8, 12 e 16 (o teto). Acima de 3 fileiras a grade
+  // rola; o foco no ultimo botao leva a janela ate o fim.
+  { static const int qtd[] = { 8, 12, 16 };
+    int q, k;
+    for (q = 0; q < 3; q++) {
+      char txt[2048];
+      size_t u = 0;
+      int c = 0;
+      txt[0] = 0;
+      for (k = 0; k < central_catalogo_n() && c < qtd[q]; k++)
+        if (ajustes_rapido_op(central_catalogo(k)->chave) >= 0) {
+          u += (size_t)snprintf(txt + u, sizeof txt - u, "%s\n", central_catalogo(k)->chave);
+          c++;
+        }
+      central_teste_lista(txt);
+      central_teste_foco(0, 0);
+      snprintf(nome, sizeof nome, "%s-30-%02d-itens-topo.bmp", saida, qtd[q]);
+      captura(nome, 60);
+      central_teste_foco(-1, 0);
+      snprintf(nome, sizeof nome, "%s-31-%02d-itens-fim.bmp", saida, qtd[q]);
+      captura(nome, 60);
+      if (qtd[q] == 16) {
+        central_teste_foco(7, 0);
+        quadros(6, 0.0f);   // no meio da rolagem do foco 7 -> fim, so para ver o movimento
+        snprintf(nome, sizeof nome, "%s-32-16-itens-meio.bmp", saida);
+        salvar(nome);
+        central_teste_foco(-1, 1);
+        snprintf(nome, sizeof nome, "%s-33-16-itens-edicao.bmp", saida);
+        captura(nome, 80);
+      }
+    } }
+  central_teste_lista(NULL);
 
   central_fechar();                          // volta para a pilula
   snprintf(nome, sizeof nome, "%s-11-fechando.bmp", saida);

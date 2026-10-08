@@ -66,7 +66,7 @@ static void teclaSegurada(void) {
 
 static void lista(void) {
   CentralLista l, m;
-  char buf[512];
+  char buf[512], buf2[1024];
   int i, n;
   centrallista_padrao(&l);
   CONFERE(l.n == 7, "padrao: 7 atalhos (%d)", l.n);
@@ -91,6 +91,26 @@ static void lista(void) {
   n = central_catalogo_n();
   for (i = 0; i < n && m.n < CENTRAL_MAX; i++) centrallista_alternar(&m, i);
   CONFERE(m.n == CENTRAL_MAX && centrallista_alternar(&m, CENTRAL_MAX) == -1, "cheia recusa");
+  // 2.0.4: o teto e 16; arquivos de ate 8 chaves leem igual (mesma ordem), 12 e 16 inteiros, 17+ cortam.
+  CONFERE(CENTRAL_MAX == 16 && n >= 17, "teto 16 e catalogo com folga (%d)", n);
+  {
+    static const int qtd[] = { 1, 7, 8, 12, 16, 20 };
+    char txt[2048];
+    int q, k;
+    for (q = 0; q < 6; q++) {
+      size_t u = 0;
+      int esperado = qtd[q] < CENTRAL_MAX ? qtd[q] : CENTRAL_MAX;
+      txt[0] = 0;
+      for (k = 0; k < qtd[q] && k < n; k++)
+        u += (size_t)snprintf(txt + u, sizeof txt - u, "%s\n", central_catalogo(k)->chave);
+      centrallista_ler(&m, txt);
+      CONFERE(m.n == esperado, "ler %d chaves -> %d (%d)", qtd[q], esperado, m.n);
+      for (k = 0; k < m.n; k++) CONFERE(m.item[k] == k, "ler %d: ordem %d mantida", qtd[q], k);
+      centrallista_escrever(&m, buf2, sizeof buf2);
+      centrallista_ler(&l, buf2);
+      CONFERE(l.n == m.n && !memcmp(l.item, m.item, sizeof(int) * (size_t)m.n), "ida e volta com %d", m.n);
+    }
+  }
 }
 
 static void ajustesRapido(const char *dir) {
