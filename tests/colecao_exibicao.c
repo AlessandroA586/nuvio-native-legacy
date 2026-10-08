@@ -92,11 +92,14 @@ int main(void) {
   snprintf(pasta.title, sizeof pasta.title, "Star Wars");
   collection = NULL; assert(layAuto() == VT_LAY_GRADE);
   collection = &pasta;
-  // Com abas a Vitrine vence tudo menos o Diretor; o "Ver tudo" de uma fileira
-  // da home (semVitrineAuto) nao a escolhe sozinho.
+  // PADRAO INALTERADO: com abas o Automatico continua na Grade com a barra de
+  // abas (so o Diretor vai para a Linha do tempo). A Vitrine so entra quando o
+  // dono escolhe no botao "Exibição" (opt-in). O "Ver tudo" de uma fileira da
+  // home (semVitrineAuto) segue a regra das pastas sem abas.
   snprintf(pasta.group, sizeof pasta.group, "Film Collections");
   pasta.nSources = 2;
-  assert(layAuto() == VT_LAY_VITRINE);
+  assert(layAuto() == VT_LAY_GRADE);   // Automatico -> Grade/abas, NUNCA Vitrine
+  assert(layAuto() != VT_LAY_VITRINE);
   semVitrineAuto = 1; assert(layAuto() == VT_LAY_SAGA); semVitrineAuto = 0;
   snprintf(pasta.group, sizeof pasta.group, "Directors");
   assert(layAuto() == VT_LAY_LINHA);
