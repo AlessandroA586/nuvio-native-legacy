@@ -68,5 +68,7 @@ for caso in identidade ack-perfil disco ram8 teto; do
   export NV_T_DIR="$dir/addons-$caso"; mkdir "$NV_T_DIR"
   sessao "addons-$caso"
 done
+export NV_T_DIR="$dir/addons-sort"; mkdir "$NV_T_DIR"
+sessao addons-sort
 echo "$SAIDA" | grep -q 'FALHOU' && exit 1
 echo "syncordem.sh: ok"

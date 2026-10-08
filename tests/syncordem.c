@@ -111,6 +111,8 @@ int ajustes_hist_conta(void) { return 1; }
 void ajustes_perfil_guardar(int perfil) { (void)perfil; }
 int  ajustes_perfil_restaurar(int perfil) { (void)perfil; return 0; }
 void ajustes_perfil_esquecer(void) { }
+void psparede_esquecer(void) { }
+void fil_hero_da_conta(const char *c) { (void)c; }
 void arteesc_esquecer(void) { }
 void sorg_esquecer(void) { }
 static void carregarAtivo(void) {
@@ -167,6 +169,8 @@ static const char *ORDEM_B =
 
 static volatile int rpcCatHome;
 static int rpcCredencial;
+static char ordemVista[256];
+static int modoSort;
 static int modoAddons, pushSt = 500, pushes, aplicacoesAddons, segurandoPush, noPush;
 static char addonLocal[120] = "https://local-a.example/manifest.json";
 static char addonNome[64] = "Addon de teste";
@@ -210,6 +214,12 @@ char *sessao_rpc(const char *funcao, const char *corpo, int *st) {
 }
 char *sessao_tabela(const char *t, const char *q, int *st) {
   (void)q; *st = 200;
+  // #204: tres linhas FORA da ordem do array; sort_order manda (b=1, c=2, a=3).
+  // "sem" nao tem o campo e fica na posicao do array (3o).
+  if (modoSort && !strcmp(t, "addons"))
+    return strdup("[{\"url\":\"https://a.example/manifest.json\",\"name\":\"a\",\"sort_order\":3},"
+                  "{\"url\":\"https://b.example/manifest.json\",\"name\":\"b\",\"sort_order\":1},"
+                  "{\"url\":\"https://c.example/manifest.json\",\"name\":\"c\",\"sort_order\":2}]");
   if (modoAddons && !strcmp(t, "addons")) return strdup("[{\"url\":\"https://server-old.example/manifest.json\",\"enabled\":true}]");
   return strdup("[]");
 }
@@ -259,6 +269,11 @@ void cat_historico_contexto(const char *u, int p) {
 
 int  addons_definir_lista(const AddonRemoto *l, int n) {
   int mudou = 0;
+  if (modoSort) {
+    int i; ordemVista[0] = 0;
+    for (i = 0; i < n; i++) strncat(ordemVista, l[i].nome, sizeof ordemVista - strlen(ordemVista) - 1);
+    return 1;
+  }
   if (modoAddons && n > 0) {
     mudou = strcmp(addonLocal, l[0].url) || addonAtivo != l[0].ativo || strcmp(addonNome, l[0].nome);
     aplicacoesAddons++; snprintf(addonLocal, sizeof addonLocal, "%s", l[0].url);
@@ -487,6 +502,12 @@ int main(int argc, char **argv) {
   int remAntes, rpcAntes;
 
   setvbuf(stdout, NULL, _IOLBF, 0);
+  if (argc > 1 && !strcmp(argv[1], "addons-sort")) {
+    printf("-- sessao: addons.sort_order fora da ordem do array\n");
+    modoAddons = 1; modoSort = 1; escolher(1); sync_iniciar(); ateTerminar();
+    confere("addons ordenados por sort_order, nao pela posicao", !strcmp(ordemVista, "bca"));
+    return falhas != 0;
+  }
   if (argc > 1 && !strncmp(argv[1], "addons-", 7)) return testePersistencia(argv[1]);
   if (argc > 1 && !strcmp(argv[1], "addons")) {
     modoAddons = 1; escolher(1); sync_sujar_addons(); sync_iniciar(); ateTerminar();

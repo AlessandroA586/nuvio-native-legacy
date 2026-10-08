@@ -481,9 +481,12 @@ static int ok2xx(const char *r, int st) { return r && st >= 200 && st < 300; }
 static int lerAddons(const char *r) {
   // static: so o fio do sync le a conta, e 8 KB nao pertencem a pilha dele.
   static char url[SY_URL_LEITURA];
+  // Posicao de cada addon na conta: a coluna `sort_order` da linha, como o
+  // web grava (#204). Sem ela (ou sem o campo) vale a posicao no array.
+  static double ordemAdd[SY_ADD_MAX];
   const char *p;
-  int k = 0, fora = 0;
-  for (p = js_raiz_array(r); p && k < SY_ADD_MAX; p = js_prox(js_fim(p))) {
+  int k = 0, fora = 0, linha = 0;
+  for (p = js_raiz_array(r); p && k < SY_ADD_MAX; p = js_prox(js_fim(p)), linha++) {
     const char *f = js_fim(p);
     char b[16];
     memset(&addonsRem[k], 0, sizeof addonsRem[k]);
@@ -498,7 +501,22 @@ static int lerAddons(const char *r) {
     // causa de um campo que o servidor nao mandou e pior que um a mais.
     addonsRem[k].ativo = js_bruto(p, f, "enabled", b, sizeof b)
                          ? (strcmp(b, "false") != 0) : 1;
+    ordemAdd[k] = js_num(p, f, "sort_order", (double)linha);
     k++;
+  }
+  { // O servidor pede order=sort_order.asc, mas a copia local e as respostas
+    // reordenadas por proxy nao garantem: o campo manda, nao a posicao.
+    // Insercao estavel (empate mantem a ordem de chegada).
+    int i;
+    for (i = 1; i < k; i++) {
+      int j = i;
+      while (j > 0 && ordemAdd[j - 1] > ordemAdd[j]) {
+        AddonRemoto t = addonsRem[j - 1]; double d = ordemAdd[j - 1];
+        addonsRem[j - 1] = addonsRem[j]; ordemAdd[j - 1] = ordemAdd[j];
+        addonsRem[j] = t; ordemAdd[j] = d;
+        j--;
+      }
+    }
   }
   addonsDeFora = fora;
   return k;
