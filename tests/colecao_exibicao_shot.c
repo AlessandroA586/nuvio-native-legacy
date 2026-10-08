@@ -188,7 +188,7 @@ int main(int argc, char **argv) {
       int k;
       snprintf(vitLin[i].nome, sizeof vitLin[i].nome, "%s", NOMES[i]);
       vitLin[i].estado = VIT_PRONTA; vitLin[i].n = 12;
-      for (k = 0; k < 12; k++) vitBuf[i * VIT_ITENS + k] = semente[(i * 5 + k) % NF];
+      for (k = 0; k < 12; k++) vitBuf[i * vitCap + k] = semente[(i * 5 + k) % NF];
     }
     vitCarga = vitN; vitMexeu = 1; vitFR = 0; vitFC = 2; }
   captura(NULL, 90);

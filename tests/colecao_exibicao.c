@@ -197,14 +197,14 @@ int main(void) {
   tecla(SDLK_DOWN); assert(tabFocus == 0);
   // Segunda fileira com itens: baixo desce lembrando a coluna de cada uma.
   vitLin[1].n = 3; vitLin[1].estado = VIT_PRONTA;
-  for (i = 0; i < 3; i++) vitBuf[VIT_ITENS + i] = semente[7 + i];
+  for (i = 0; i < 3; i++) vitBuf[vitCap + i] = semente[7 + i];
   vitFR = 0; vitFC = 4;
   tecla(SDLK_DOWN); assert(vitFR == 1 && vitFC == 0);   // cada fileira lembra a sua coluna
   tecla(SDLK_RIGHT);
   tecla(SDLK_UP); assert(vitFR == 0 && vitFC == 4);
   // O destaque segue o foco depois do repouso.
   vitAtualizar(0.016f, 1000); vitAtualizar(0.016f, 1300);
-  assert(vitHeroAtual == 0 * VIT_ITENS + 4);
+  assert(vitHeroAtual == 0 * vitCap + 4);
   tecla(SDLK_RETURN);   // sem catalogo global neste teste: so nao pode cair
   // Sem abas (uma fonte so) as fileiras saem do catalogo: tipos misturados
   // viram Filmes e Series; so filmes, decadas da mais nova a mais velha.
