@@ -1210,6 +1210,68 @@ int main(void) {
     remove("/tmp/fileirasui.txt");
     usaArquivo = 0; }
   puts("ok  #360: add contra o desligado sobrevive ao restart (addvence no arquivo)");
+  // #204: TABELA CHEIA DE CATALOGOS QUE NINGUEM DECLARA. Log MD8G2R: 768 linhas
+  // velhas (auto-"Fora", oculta=1 sem visibilidade) e 60 catalogos novos do
+  // BingeCat recusados. Cenario A: lixo > 25% (poda ja). Cenario B: lixo
+  // pequeno, a tabela enche e o registro despeja o mais antigo.
+  { int cen;
+    for (cen = 0; cen < 2; cen++) {
+      int j, nLixo = cen == 0 ? 700 : 100, nDecl = FIL_MAX - nLixo, nNovos = 60;
+      const char *decl[FIL_MAX + 64];
+      static char buf[FIL_MAX + 64][48];
+      int nd = 0, achouEsc = 0, achouTipo = 0, achouDecl = 0, nNovosOk = 0;
+      FILE *arq;
+      fil_esquecer();
+      usaArquivo = 1;
+      fil_definir_perfil(0); fil_definir_perfil(1);
+      arq = fopen("/tmp/fileirasui-p1.txt", "w");
+      assert(arq);
+      for (j = 0; j < nLixo; j++)   // oculta=1: "Fora" automatico, sem escolha
+        fprintf(arq, "linha binge_seed_%d\t1\t0\t1\tSeed %d\n", j, j);
+      for (j = 0; j < nDecl; j++)
+        fprintf(arq, "linha vivo_%d\t0\t0\t1\tVivo %d\n", j, j);
+      fprintf(arq, "visibilidade binge_seed_3\n");        // pessoa mexeu: fica
+      fprintf(arq, "visibilidade vivo_0\n");
+      fclose(arq);
+      fil_teste_recarregar();
+      assert(fil_n() == FIL_MAX);
+      for (j = 0; j < nDecl; j++) { snprintf(buf[nd], 48, "vivo_%d", j); decl[nd] = buf[nd]; nd++; }
+      for (j = 0; j < nNovos; j++) { snprintf(buf[nd], 48, "binge_novo_%d", j); decl[nd] = buf[nd]; nd++; }
+      // forma escolhida numa orfa tambem protege
+      { int q; for (q = 0; q < fil_n(); q++)
+          if (!strcmp(fil_chave(q), "binge_seed_7")) fil_ciclar_tipo(q); }
+      fil_marcar_declaradas(decl, nd);
+      for (j = 0; j < nNovos; j++) fil_registrar(decl[nDecl + j], decl[nDecl + j], "BingeCat", "series", 1);
+      for (j = 0; j < fil_n(); j++) {
+        const char *c = fil_chave(j);
+        if (!strncmp(c, "binge_novo_", 11)) nNovosOk++;
+        if (!strcmp(c, "binge_seed_3")) achouEsc = 1;
+        if (!strcmp(c, "binge_seed_7")) achouTipo = 1;
+        if (!strcmp(c, "vivo_0")) achouDecl++;
+      }
+      assert(nNovosOk == nNovos);          // as 60 novas entraram
+      assert(achouEsc && achouTipo);       // escolha da pessoa sobreviveu
+      assert(achouDecl == 1);              // declaradas intocadas
+      { int vivos = 0; for (j = 0; j < fil_n(); j++) if (!strncmp(fil_chave(j), "vivo_", 5)) vivos++;
+        assert(vivos == nDecl); }
+      assert(fil_n() <= FIL_MAX);
+      if (cen == 0) assert(fil_n() < 400);   // o arquivo encolheu
+      // persistencia: relê e nada volta
+      fil_teste_recarregar();
+      fil_definir_perfil(0); fil_definir_perfil(1);
+      { int vivos = 0, novos = 0, esc = 0;
+        for (j = 0; j < fil_n(); j++) {
+          const char *c = fil_chave(j);
+          if (!strncmp(c, "vivo_", 5)) vivos++;
+          if (!strncmp(c, "binge_novo_", 11)) novos++;
+          if (!strcmp(c, "binge_seed_3") || !strcmp(c, "binge_seed_7")) esc++;
+        }
+        assert(vivos == nDecl && novos == nNovos && esc == 2); }
+      remove("/tmp/fileirasui-p1.txt");
+      fil_definir_perfil(0);
+      usaArquivo = 0;
+    } }
+  puts("ok  #204: catalogo que nenhum addon declara sai antes de recusar o novo; escolha explicita fica");
 
   puts("fileiras: tudo ok");
   return 0;
