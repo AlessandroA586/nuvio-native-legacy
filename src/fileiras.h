@@ -398,7 +398,8 @@ float fil_escala_tipo(const char *chave, int t);
 //
 // REGRA (#204): a ordem da CONTA e soberana ate a pessoa reordenar nesta TV
 // (fil_mover, fil_mover_grupo, fil_ordenar_por_addon, ou ligar uma fileira para
-// o fim da lista: tudo isso marca ordemLocal). Dai em diante a local vence, e
+// o fim da lista: tudo isso marca ordemLocal; ligar via fil_adicionar e
+// DECISAO DO DONO, mantida de proposito). Dai em diante a local vence, e
 // so volta a conta num reset (fil_esquecer / logout). Catalogo que a escolha
 // local nao conhece cai no fim, na ordem da conta.
 int  fil_tem_ordem(void);

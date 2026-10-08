@@ -806,6 +806,24 @@ int main(void) {
     assert(!fil_tem_ordem()); }
   puts("ok  ordem da conta manda ate haver reordenacao local");
 
+  // DECISAO DO DONO (#204): ligar uma fileira na TV (fil_adicionar manda para o
+  // fim) conta como escolha de posicao e marca ordemLocal; dai em diante a
+  // ordem da TV vence a da conta.
+  fil_esquecer();
+  usaArquivo = 0;
+  fil_registrar("p1", "Um", "", "", 5);
+  fil_registrar("p2", "Dois", "", "", 5);
+  fil_registrar("p3", "Tres", "", "", 5);
+  fil_remover(0);                      // p1 desligada
+  assert(!fil_tem_ordem());
+  { int est = -1; fil_adicionar(0, &est); }   // liga: vai para o fim
+  assert(fil_tem_ordem());
+  { const char *ch[3] = { "p1", "p2", "p3" };
+    int ord[8], q = fil_unir(ch, 3, ord, 8);
+    assert(q == 3 && ord[0] == 1 && ord[2] == 0); }   // p1 no fim: a TV manda
+  fil_esquecer();
+  puts("ok  fil_adicionar marca ordem local (decisao do dono)");
+
   // #204: a fonte da CONTA vale ate a pessoa escolher na TV; depois, a TV manda.
   fil_esquecer();
   usaArquivo = 1;
