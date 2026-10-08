@@ -132,6 +132,24 @@ PerfilAcao perfis_acao(int i);
 // certo, e manda essa pessoa tentar de novo para sempre.
 int  perfis_verificar_pin(int indice, const char *pin);
 
+// ENTRAR AUTOMATICAMENTE COM UM PERFIL (4a funcao da tela de escolha: nao
+// aparecer). Um unico perfil por TV pode ter a marca: ligar em outro desliga a
+// anterior, porque e UM indice, nao uma bandeira por perfil. Fica nesta TV
+// (perfil-auto.txt): a conta nao tem coluna para isso (sync_pull_profiles
+// devolve nome, avatar, cor, is_primary, uses_primary_addons e a trava, e so).
+//
+// 0 = nenhum. Nunca devolve um perfil que saiu da conta nem um com PIN: a
+// trava existe para o aparelho nao abrir o perfil sozinho.
+int  perfis_auto(void);
+// 1 quando o perfil `indice` PODE receber a marca: esta na lista e nao tem PIN.
+int  perfis_auto_pode(int indice);
+// Liga (indice > 0) ou desliga (0) a marca. Recusa PIN e perfil desconhecido
+// (devolve 0 e nada muda). Ligar num perfil tira a marca do anterior.
+int  perfis_auto_definir(int indice);
+// O perfil em que o arranque deve entrar sem perguntar, ou 0 quando a pergunta
+// vale (nenhuma marca, perfil travado/ausente, ou a pessoa ja escolheu).
+int  perfis_auto_candidato(void);
+
 // Esquece os perfis, o dono e a escolha gravada. Chamado ao SAIR: manter a
 // escolha faria a conta seguinte comecar sincronizando o `p_profile_id` da
 // conta anterior — ou seja, ESCREVENDO progresso no perfil errado.

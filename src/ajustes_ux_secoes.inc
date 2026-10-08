@@ -215,7 +215,7 @@ static int ajCenaSecao(int op) {
     case AJ_LIVETV_DIAG: case AJ_LIVETV_RES: case AJ_LIVETV_ESPERA: case AJ_LIVETV_FORMATO: case AJ_LIVETV_MODO:
     case AJ_LIVETV_PROXY:
       return AJC_TV_PROBLEMAS;
-    case AJ_PERFIL_ATIVO: case AJ_SYNC:
+    case AJ_PERFIL_ATIVO: case AJ_SYNC: case AJ_PERFIL_AUTO:
     case AJ_PERFIL_PESQ: case AJ_PERFIL_EDITAR: case AJ_SAIR:
       return AJC_CON_PERFIS;
     case AJ_ADDONS: case AJ_PLUGINS: case AJ_ADDONS_PRINCIPAL: return AJC_FON_ADDONS;
@@ -1019,6 +1019,7 @@ static void ajcConPerfis(int A) {
   ajcTxt(textoValor(AJ_PERFIL_ATIVO), 11, 0, 134, 84, 150, 0.6f);
   ajcFoco(AJ_PERFIL_ATIVO, 48, 44, 72, 72, 36);
   ajcFoco(AJ_PERFIL_EDITAR, 48, 44, 72, 72, 36);
+  ajcFoco(AJ_PERFIL_AUTO, 48, 44, 72, 72, 36);
   ajcLinha(AJ_SYNC, "aj_cloud", 38, 140, 250, 40, 1);
   ajcLinha(AJ_PERFIL_PESQ, "aj_globe", 38, 186, 250, 40, 1);
   ajcLinha(AJ_PERFIL_EDITAR, "aj_user-round", 38, 232, 250, 40, 1);

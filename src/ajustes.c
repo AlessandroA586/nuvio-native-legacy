@@ -475,6 +475,11 @@ typedef enum {
   AJ_FONTE_AQUECER,
   AJ_FONTE_CONFERIR_VARIAS,
   AJ_FONTE_PREPARAR,
+  // 2.0.4: "Entrar automaticamente com este perfil". NAO e guardada em
+  // ajustes.txt: o estado e perfis_auto() (perfil-auto.txt, um perfil so por TV),
+  // espelhado em valor[] a cada quadro. V_LIGA: 0 = Ligado (este perfil entra
+  // sozinho). No fim: valor[]/CHAVE[] posicionais.
+  AJ_PERFIL_AUTO,
   AJ_N
 } OpcaoId;
 
@@ -1289,6 +1294,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Aquecer conexões ao abrir o título", V_LIGA, 2),   // local: fonteAquecerLocal
   ESC("Conferir várias fontes ao mesmo tempo", V_LIGA, 2),   // local: fonteConferirVariasLocal
   ESC("Preparar a fonte ao abrir o título", V_LIGA, 2),   // local: fontePrepararLocal
+  ESC("Entrar automaticamente com este perfil", V_LIGA, 2), // espelho de perfis_auto()
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1508,6 +1514,7 @@ static const char *CHAVE[] = {
   "fonteAquecerLocal",
   "fonteConferirVariasLocal",
   "fontePrepararLocal",
+  "-perfilAutoLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -3827,6 +3834,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_LIVETV_DIAG: case AJ_LIVETV_MODO: case AJ_LIVETV_PROXY: /* rede e provedor desta casa: o web nao tem */
     case AJ_HOME_LAYOUT:    /* a Dinamica nao tem par na conta (selected_layout) */
     case AJ_PERFIL_PESQ:    /* estado em recomenda.c, por conta: nunca no blob */
+    case AJ_PERFIL_AUTO:    /* estado em perfis.c, por TV: nunca no blob */
     case AJ_PERFIL_EDITAR:
     case AJ_P2P_LIGADO:     /* o servidor P2P e um aparelho da rede desta casa */
     case AJ_JF_LIGADO:
@@ -4695,6 +4703,8 @@ static int inativa(int op) {
     // O fundo em tela cheia e da Moderna: no Padrao o destaque e um banner e na
     // Dinamica ele e sempre de ponta a ponta e rola junto com as fileiras.
     case AJ_HERO_CHEIO:   return ajustes_home_layout() != HOME_LAYOUT_MODERNA;
+    // Perfil com PIN nao entra sozinho. Quem ja e o automatico pode sempre desligar.
+    case AJ_PERFIL_AUTO:  return !perfis_auto_pode(perfis_ativo()) && perfis_auto() != perfis_ativo();
     // #162: o Descobrir do app web (navegar catalogos por tipo e genero) ainda
     // nao existe nesta TV — o "Explorar" daqui e outra tela. A escolha vem e
     // vai para a conta, mas aqui nao muda nada, e a linha tem de dizer isso.
@@ -4792,6 +4802,7 @@ static int visivel(int i) {
   if (TELA[i].tipo == IT_OPC) {
     int op = TELA[i].op;
     if ((op == AJ_PERFIL_PESQ || op == AJ_PERFIL_EDITAR) && !recomenda_ativo()) return 0;
+    if (op == AJ_PERFIL_AUTO && !perfis_n()) return 0;   // sem conta, sem perfil: a linha nao existe
     if (uxAvancada(op) && !lig(AJ_AVANCADAS)) return 0;
   }
   return 1;
@@ -4860,6 +4871,7 @@ static const char *ajudaOpcao(int op) {
     if (op == AJ_RAIL) return "Desative a barra lateral moderna para escolher entre recolhida e fixa.";
     if (op == AJ_RAIL_BLUR) return "Ative a barra lateral moderna para usar o desfoque.";
     if (op == AJ_HERO_CATALOGOS) return "Ative Mostrar destaque para exibir os catálogos no topo da Home.";
+    if (op == AJ_PERFIL_AUTO) return "Um perfil com PIN não pode entrar sozinho: a trava existe para a TV não abrir o perfil sem o PIN.";
     if (op == AJ_HERO_CHEIO) return "Só vale no layout Moderna. No Padrão o destaque é um banner, e na Dinâmica ele ocupa a largura toda e sobe junto com a rolagem.";
     if (op == AJ_DTS_AC3) return "Não disponível nesta TV. Só a LG converte o DTS dentro do app.";
     if (op == AJ_CACHE_SEEK) return "Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.";
@@ -5155,6 +5167,7 @@ static const char *ajudaOpcao(int op) {
     case AJ_CACHE_SEEK: return "Guarda no disco o trecho já baixado do vídeo, para voltar sem baixar de novo. Apagado ao fechar o player.";
     case AJ_ANIM: return "Use Reduzidas para movimentos mais discretos ao navegar pela interface.";
     case AJ_RESOLUCAO: return "Automática começa em 1080p e testa o 4K sozinha: só usa 4K se a tela for 4K e a TV aguentar com folga; se travar depois, volta para 1080p. Nunca baixa para 720p. Escolher 4K força 4K (se a TV não aguentar, o app volta para 1080p e avisa). 720p desenha em 1280x720 e amplia: mais leve, com texto mais suave. Reinicie o app depois de mudar. O vídeo não muda.";
+    case AJ_PERFIL_AUTO: return "Ligado, o Nuvio abre direto neste perfil, sem passar pela escolha de perfil. Só um perfil por TV: ligar aqui desliga o outro. Para escolher outro perfil, segure Voltar ao abrir o app. Perfis com PIN não podem.";
     case AJ_PERFIL_ATIVO: return "Perfil em uso nesta TV. Trocar de perfil é feito na tela de perfis, ao abrir o app.";
     case AJ_SYNC: return "Estado da última troca de dados com a sua conta: addons, progresso, coleções e preferências.";
     case AJ_ADDONS: return "Abre a lista de addons da sua conta, para ligar e desligar cada um nesta TV.";
@@ -6019,6 +6032,12 @@ static int definirValorDireto(int op, int novo) {
     pessoas_definir_pesquisavel(novo == 0);
     return 1;
   }
+  if (op == AJ_PERFIL_AUTO) {
+    // Um indice so: ligar neste perfil troca o anterior, desligar zera.
+    if (!perfis_auto_definir(novo == 0 ? perfis_ativo() : 0)) return 0;
+    valor[op] = novo;
+    return 1;
+  }
   antes = valor[op];
   if (novo == antes) return 1;
   valor[op] = novo;
@@ -6315,6 +6334,7 @@ void ajustes_atualizar(float dt, Uint32 agora) {
   if (uxAviso[0] && SDL_TICKS_PASSED(agora, uxAvisoAte)) uxAviso[0] = 0;
   montarTela();
   valor[AJ_PERFIL_PESQ] = recomenda_pesquisavel() ? 0 : 1;   // V_LIGA: 0 = Ligado
+  valor[AJ_PERFIL_AUTO] = perfis_auto() == perfis_ativo() ? 0 : 1;   // espelho: so um perfil por TV
   valor[AJ_FONTE_REGEX_MODELO] = fonteregra_modelo_atual();   // espelho do padrao (#202)
   p2pTesteRecolher();
   pstTesteRecolher();
@@ -6947,7 +6967,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_DESCANSO_ESTILO: case AJ_DESCANSO_FONTE:
       return AJPV_INTERFACE;
     case AJ_PERFIL_ATIVO: case AJ_SYNC: case AJ_SAIR:
-    case AJ_PERFIL_PESQ: case AJ_PERFIL_EDITAR: case AJ_ADDONS_PRINCIPAL: case AJ_ENQUETES:
+    case AJ_PERFIL_PESQ: case AJ_PERFIL_EDITAR: case AJ_ADDONS_PRINCIPAL: case AJ_ENQUETES: case AJ_PERFIL_AUTO:
       return AJPV_CONTA;
     case AJ_SALVOS_DEST: case AJ_TRAKT: case AJ_SIMKL: case AJ_DISCORD: case AJ_HIST_CONTA: case AJ_SOCIAL:
       return AJPV_RASTREIO;

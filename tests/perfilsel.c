@@ -242,6 +242,29 @@ static void etapaUm(void) {
     assert(!strstr(c, pinBom));
     free(c); }
 
+  // I) ENTRAR AUTOMATICAMENTE: um perfil so por TV, nunca um com PIN, nunca um
+  //    que saiu da conta.
+  assert(perfis_auto() == 0);
+  assert(perfis_auto_pode(1) == 1 && perfis_auto_pode(2) == 1);
+  assert(perfis_auto_pode(3) == 0);                 // PIN
+  assert(perfis_auto_pode(9) == 0);                 // nao esta na lista
+  assert(perfis_auto_definir(3) == 0 && perfis_auto() == 0);
+  assert(perfis_auto_definir(2) == 1 && perfis_auto() == 2);
+  assert(perfis_auto_definir(1) == 1 && perfis_auto() == 1);   // ligar outro tira o anterior
+  assert(perfis_auto_definir(3) == 0 && perfis_auto() == 1);   // recusa nao mexe no que ha
+  assert(perfis_auto_definir(0) == 1 && perfis_auto() == 0);
+  assert(dados_ler("perfil-auto.txt") == NULL);
+  assert(perfis_auto_definir(1) == 1);
+  // Esta sessao o perfil 2 ja foi escolhido: o candidato so vale na pergunta.
+  assert(perfis_auto_candidato() == 0);
+  // O perfil marcado ganha PIN na conta: a marca deixa de valer sem apagar o
+  // arquivo (se o PIN sair, volta).
+  respLocks = "[{\"profile_id\":1,\"pin_enabled\":true}]";
+  assert(perfis_puxar() == 3 && perfis_item(0)->temPin == 1);
+  assert(perfis_auto() == 0);
+  respLocks = LOCKS_JSON;
+  assert(perfis_puxar() == 3 && perfis_auto() == 1);
+
   puts("etapa 1 (a conta chega pela rede): OK");
 }
 
@@ -276,6 +299,11 @@ static void etapaDois(void) {
   // 3. E ela abre com o cursor em quem estava, nao no primeiro da fila.
   assert(perfis_indice_sugerido() == 1);
 
+  // 3b. A MARCA DE "ENTRAR AUTOMATICAMENTE" SOBREVIVE AO ARRANQUE: o perfil 1 esta
+  //     marcado e o gravado e o 2, entao o app entra no 1 sem perguntar.
+  assert(perfis_auto() == 1);
+  assert(perfis_auto_candidato() == 1);
+
   // 4. O Voltar dispensa: ha resposta de ontem e ela nao esta atras de um PIN.
   assert(perfis_pode_dispensar() == 1);
   perfis_manter_ativo();
@@ -286,6 +314,7 @@ static void etapaDois(void) {
   //    proxima conta abrir mostrando os nomes da familia anterior.
   perfis_esquecer();
   assert(perfis_n() == 0 && perfis_ativo() == 1);
+  assert(perfis_auto() == 0 && dados_ler("perfil-auto.txt") == NULL);   // a marca e da conta que saiu
   assert(dados_ler("perfis.txt") == NULL);
   assert(dados_ler("perfil.txt") == NULL);
 

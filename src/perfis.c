@@ -24,6 +24,7 @@ int ajustes_addons_do_principal(void);
 
 #define ARQ_ATIVO "perfil.txt"
 #define ARQ_LISTA "perfis.txt"
+#define ARQ_AUTO  "perfil-auto.txt"
 
 static ContaPerfil lista[CONTA_PERFIL_MAX];
 static int n;
@@ -42,6 +43,7 @@ static int ativo = 1;
 // `gravado` guarda que existe uma resposta de ontem — que e o que permite ao
 // Voltar dispensar a tela sem escolher nada, e o que faz o cursor nascer no
 // perfil certo.
+static int autoPerfil;     // profile_index marcado para entrar sozinho; 0 = nenhum
 static int escolhido;      // 1 depois que o usuario decidiu NESTA sessao
 static int gravado;        // 1 quando perfil.txt existia no arranque
 
@@ -360,6 +362,10 @@ void perfis_carregar_ativo(void) {
   fontepref_definir_perfil(ativo);
   arteesc_definir_perfil(ativo);
   lerCache();
+  { char *a = dados_ler(ARQ_AUTO);
+    autoPerfil = a ? atoi(a) : 0;
+    if (autoPerfil < 0) autoPerfil = 0;
+    free(a); }
 }
 
 // plugins.h puxa streams.h (SDL); perfis.c compila sem SDL nos testes.
@@ -409,6 +415,37 @@ int perfis_pode_dispensar(void) {
   return p && !p->temPin;
 }
 
+int perfis_auto(void) {
+  int i;
+  if (autoPerfil <= 0) return 0;
+  for (i = 0; i < n; i++)
+    if (lista[i].indice == autoPerfil) return lista[i].temPin ? 0 : autoPerfil;
+  return 0;
+}
+
+int perfis_auto_pode(int indice) {
+  int i;
+  for (i = 0; i < n; i++)
+    if (lista[i].indice == indice) return !lista[i].temPin;
+  return 0;
+}
+
+int perfis_auto_definir(int indice) {
+  char linha[32];
+  if (indice < 0) return 0;
+  if (indice > 0 && !perfis_auto_pode(indice)) return 0;
+  autoPerfil = indice;
+  if (indice == 0) { dados_apagar(ARQ_AUTO); return 1; }
+  snprintf(linha, sizeof linha, "%d\n", indice);
+  dados_gravar(ARQ_AUTO, linha);
+  printf("[perfis] entrar sozinho com o perfil %d\n", indice);
+  return 1;
+}
+
+int perfis_auto_candidato(void) {
+  return escolhido ? 0 : perfis_auto();
+}
+
 int perfis_indice_sugerido(void) {
   int i;
   for (i = 0; i < n; i++) if (lista[i].indice == ativo) return i;
@@ -449,6 +486,8 @@ void perfis_esquecer(void) {
   ativo = 1;
   escolhido = 0;
   gravado = 0;
+  autoPerfil = 0;
+  dados_apagar(ARQ_AUTO);
   dados_apagar(ARQ_ATIVO);
   // O cache da LISTA sai junto. Ele guarda os nomes das pessoas da conta
   // anterior e as URLs dos avatares delas — deixa-lo no aparelho faria a tela

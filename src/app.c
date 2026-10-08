@@ -534,6 +534,15 @@ static int sidebar_permitida(void) {
 // requisicoes) num perfil que nao mudou seria pagar o preco da troca em toda
 // abertura do app.
 static int perfilAntes = 1;
+static void aplicarTrocaDePerfil(int antes);
+static void trocarContasDoPerfil(void);
+// "Entrar automaticamente com este perfil": quando o arranque pulou a escolha,
+// por quanto tempo o Voltar ainda a abre (a tecla segurada na abertura nem
+// sempre chega ao app como tecla pressionada) e por quanto tempo o app confere
+// se a conta passou a travar esse perfil com PIN (a lista do cache e de ontem).
+static Uint32 autoVoltarAte, autoPinAte;
+#define AUTO_VOLTAR_MS 4000u
+#define AUTO_PIN_MS   20000u
 // Quando a troca de perfil comecou a preparar a home nova. Ver o teto abaixo.
 static Uint32 trocaPerfilDesde;
 // Teto da espera pela home do perfil novo. A rede lenta nunca prende a pessoa
@@ -1909,6 +1918,20 @@ static void salvoParaConta(const CatItem *ci, int salvo) {
     contapend_chutar();
 }
 
+// Alguma das teclas de Voltar esta apertada AGORA? Bombeia os eventos antes de
+// perguntar: o app acabou de abrir e a fila ainda nao foi lida.
+static int voltarSegurado(void) {
+  const Uint8 *k;
+  int n = 0;
+  SDL_PumpEvents();
+  k = SDL_GetKeyboardState(&n);
+  if (!k) return 0;
+  return (n > SDL_SCANCODE_AC_BACK && k[SDL_SCANCODE_AC_BACK]) ||
+         (n > SDL_SCANCODE_ESCAPE && k[SDL_SCANCODE_ESCAPE]) ||
+         (n > SDL_SCANCODE_BACKSPACE && k[SDL_SCANCODE_BACKSPACE]) ||
+         (n > NV_SCANCODE_BACK && k[NV_SCANCODE_BACK]);
+}
+
 int app_iniciar(const char *dirArte) {
 #ifdef NV_LINUX_DESKTOP
   const char *preview = getenv("NUVIO_UI_PREVIEW");
@@ -1975,6 +1998,26 @@ int app_iniciar(const char *dirArte) {
 #endif
   if (sessao_logada()) {
     tela = TELA_HOME;
+    // ENTRAR AUTOMATICAMENTE (Ajustes > Conta e perfis): o perfil marcado entra
+    // sem a escolha. E a mesma conclusao do "Voltar continua como <perfil>" —
+    // perfis_definir_ativo marca a pergunta como respondida e o ramo `else`
+    // abaixo chama perfilsel_continuar_ativo() — mais o que uma troca desfaz
+    // (aplicarTrocaDePerfil), porque o perfil que ficou gravado ontem pode ser
+    // outro. Voltar SEGURADO na abertura pula isto e cai na escolha.
+    { int alvo = perfis_auto_candidato();
+      if (alvo && voltarSegurado()) {
+        printf("[perfis] Voltar segurado na abertura: a escolha de perfil abre\n");
+        fflush(stdout);
+      } else if (alvo) {
+        int antes = perfis_ativo();
+        perfis_definir_ativo(alvo);
+        if (alvo != antes) { aplicarTrocaDePerfil(antes); trocarContasDoPerfil(); }
+        else ilhasinais_perfil_trocado();
+        autoVoltarAte = SDL_GetTicks() + AUTO_VOLTAR_MS;
+        autoPinAte = SDL_GetTicks() + AUTO_PIN_MS;
+        printf("[perfis] entrou sozinho no perfil %d (antes %d)\n", alvo, antes);
+        fflush(stdout);
+      } }
     // Com sessao gravada o ciclo comeca no arranque: e ele que traz os addons
     // e o Trakt da pessoa, sem os quais a home mostra so o que veio no pacote.
     sync_iniciar();
@@ -2279,6 +2322,22 @@ void app_evento(const SDL_Event *e) {
   // depois, porque e ela que define para QUEM o resto do app vai sincronizar.
   if (tela == TELA_LOGIN)          { login_evento(e);     return; }
   if (tela == TELA_ESCOLHA_PERFIL) { perfilsel_evento(e); return; }
+  // VOLTAR NOS PRIMEIROS SEGUNDOS depois de o arranque ter entrado sozinho num
+  // perfil ("Entrar automaticamente"): a saida de emergencia, abre a escolha.
+  if (autoVoltarAte && e->type == SDL_KEYDOWN) {
+    SDL_Keycode ak = e->key.keysym.sym;
+    if (SDL_TICKS_PASSED(SDL_GetTicks(), autoVoltarAte)) autoVoltarAte = 0;
+    else if ((ak == SDLK_AC_BACK || ak == SDLK_ESCAPE || ak == SDLK_BACKSPACE ||
+              e->key.keysym.scancode == NV_SCANCODE_BACK) &&
+             tela == TELA_HOME && !player_aberto() && !detail_aberto()) {
+      autoVoltarAte = 0;
+      player_descartar_retido();
+      tela = TELA_ESCOLHA_PERFIL;
+      perfilAntes = perfis_ativo();
+      perfilsel_iniciar();
+      return;
+    }
+  }
 
   // O SPOTLIGHT ABERTO e dono de todo o teclado: e uma caixa modal por cima da
   // tela, e o que ele escolhe so e feito depois de ele fechar.
@@ -2691,6 +2750,63 @@ static const char *homeTrailerBloqueio(void) {
   return NULL;
 }
 
+// O QUE UMA TROCA DE PERFIL DESFAZ, num lugar so: a tela de escolha, o arranque
+// com "Entrar automaticamente" e a troca rapida da Central chamam este mesmo
+// corpo. `antes` e o perfil de que se sai (perfis_definir_ativo ja rodou).
+// NAO inicia o sync: cada chamador tem o seu momento de chamar sync_iniciar.
+static void aplicarTrocaDePerfil(int antes) {
+  invalidarPerfil();
+  // Os ajustes DESTE perfil nesta TV (ou os do principal, na primeira
+  // visita), e o blob da conta dele por cima. Ver sync_trocar_perfil.
+  sync_trocar_perfil(antes);
+  ilhasinais_perfil_trocado();   // "Agora no perfil Lia" na ilha (02/10)
+  enquete_perfil_trocado();      // a enquete do perfil anterior sai (N3)
+  // AS COLECOES DO PERFIL ANTERIOR SAEM JA. col_definir_json so roda
+  // quando a conta manda linhas, entao um perfil sem colecoes ficava
+  // com as do anterior para sempre.
+  col_esquecer_perfil();
+  // OS SALVOS SAO DO PERFIL: a lista do anterior sai da tela (so os
+  // titulos que o novo nao tem) e entra a deste.
+  trocarSalvosDePerfil();
+  // E A FILEIRA DE CONTINUAR, que invalidarPerfil() nao alcanca.
+  //
+  // invalidarPerfil() so zera a tela de Perfil/Stats. Quem refaz o
+  // "Continuar assistindo" e desc_refazer_continuar(), chamada em apenas
+  // dois lugares: o fim de uma reproducao (player.c) e sync.c, sob
+  // `if (syncprog_aplicar(NULL) > 0)`. E ai esta o defeito: progresso.txt
+  // guarda TODOS os perfis num arquivo so, e prog_aplicar_remoto devolve
+  // 0 quando o registro que veio nao e mais novo que o que ja esta em
+  // disco. Voltar para um perfil JA SINCRONIZADO nao traz novidade
+  // nenhuma -> 0 -> a fileira nunca era refeita e continuava mostrando a
+  // do perfil anterior. Relatado por um testador na exp.4: abriu no
+  // perfil 2, trocou para o 1, e o "Continuar assistindo" seguiu sendo o
+  // do 2.
+  //
+  // Aqui NAO se pergunta se o sync trouxe algo: o perfil mudou, e isso
+  // por si so ja torna a fileira na tela a fileira errada. A leitura em
+  // si sempre esteve certa (prog_ler filtra por perfis_ativo()); o que
+  // faltava era o pedido de refazer.
+  desc_refazer_continuar();
+}
+
+static void trocarContasDoPerfil(void) {
+  // O TRAKT E O SIMKL TAMBEM SAO DO PERFIL. O vinculo local era um so por
+  // aparelho e o perfil 2 seguia com o Trakt do 1 — watchlist, historico,
+  // "continuar" e as fileiras do Trakt (relato do dono na C9). Aqui a
+  // credencial do perfil anterior sai da memoria e entra a deste, ou
+  // nenhuma; a da conta, se o perfil tiver, chega pelo sync_iniciar abaixo.
+  // Quando algum dos dois estava ou ficou ligado, as fileiras na tela sao do
+  // perfil errado e a home inteira e remontada — desc_refazer_continuar so
+  // refaz o "Continuar", e a watchlist e as listas do Trakt ficariam.
+  //
+  // Roda mesmo quando o perfil nao mudou: as duas comparam com o perfil DELAS, nao
+  // com perfilAntes, e devolvem 0 sem mexer em nada quando ja estao certas.
+  { int tk = traktauth_trocar_perfil(perfis_ativo());
+    int sk = simklauth_trocar_perfil(perfis_ativo());
+    if (sk) simkl_esquecer();
+    if (tk || sk) desc_repetir(); }
+}
+
 void app_atualizar(float dt, Uint32 agora) {
   if (player_aberto() || player_mini_ativo()) diagnostico_cancelar_vazao();
   // Login e escolha de perfil retornam cedo; a atividade da conta anterior
@@ -2866,55 +2982,8 @@ void app_atualizar(float dt, Uint32 agora) {
       // O que continua condicionado a troca e so o CARO: invalidarPerfil()
       // joga fora o que ja foi carregado, e reaplicar ajustes so faz sentido
       // quando o destino mudou.
-      if (trocou) {
-        invalidarPerfil();
-        // Os ajustes DESTE perfil nesta TV (ou os do principal, na primeira
-        // visita), e o blob da conta dele por cima. Ver sync_trocar_perfil.
-        sync_trocar_perfil(perfilAntes);
-        ilhasinais_perfil_trocado();   // "Agora no perfil Lia" na ilha (02/10)
-        enquete_perfil_trocado();      // a enquete do perfil anterior sai (N3)
-        // AS COLECOES DO PERFIL ANTERIOR SAEM JA. col_definir_json so roda
-        // quando a conta manda linhas, entao um perfil sem colecoes ficava
-        // com as do anterior para sempre.
-        col_esquecer_perfil();
-        // OS SALVOS SAO DO PERFIL: a lista do anterior sai da tela (so os
-        // titulos que o novo nao tem) e entra a deste.
-        trocarSalvosDePerfil();
-        // E A FILEIRA DE CONTINUAR, que invalidarPerfil() nao alcanca.
-        //
-        // invalidarPerfil() so zera a tela de Perfil/Stats. Quem refaz o
-        // "Continuar assistindo" e desc_refazer_continuar(), chamada em apenas
-        // dois lugares: o fim de uma reproducao (player.c) e sync.c, sob
-        // `if (syncprog_aplicar(NULL) > 0)`. E ai esta o defeito: progresso.txt
-        // guarda TODOS os perfis num arquivo so, e prog_aplicar_remoto devolve
-        // 0 quando o registro que veio nao e mais novo que o que ja esta em
-        // disco. Voltar para um perfil JA SINCRONIZADO nao traz novidade
-        // nenhuma -> 0 -> a fileira nunca era refeita e continuava mostrando a
-        // do perfil anterior. Relatado por um testador na exp.4: abriu no
-        // perfil 2, trocou para o 1, e o "Continuar assistindo" seguiu sendo o
-        // do 2.
-        //
-        // Aqui NAO se pergunta se o sync trouxe algo: o perfil mudou, e isso
-        // por si so ja torna a fileira na tela a fileira errada. A leitura em
-        // si sempre esteve certa (prog_ler filtra por perfis_ativo()); o que
-        // faltava era o pedido de refazer.
-        desc_refazer_continuar();
-      }
-      // O TRAKT E O SIMKL TAMBEM SAO DO PERFIL. O vinculo local era um so por
-      // aparelho e o perfil 2 seguia com o Trakt do 1 — watchlist, historico,
-      // "continuar" e as fileiras do Trakt (relato do dono na C9). Aqui a
-      // credencial do perfil anterior sai da memoria e entra a deste, ou
-      // nenhuma; a da conta, se o perfil tiver, chega pelo sync_iniciar abaixo.
-      // Quando algum dos dois estava ou ficou ligado, as fileiras na tela sao do
-      // perfil errado e a home inteira e remontada — desc_refazer_continuar so
-      // refaz o "Continuar", e a watchlist e as listas do Trakt ficariam.
-      //
-      // FORA do `if` acima de proposito: as duas comparam com o perfil DELAS, nao
-      // com perfilAntes, e devolvem 0 sem mexer em nada quando ja estao certas.
-      { int tk = traktauth_trocar_perfil(perfis_ativo());
-        int sk = simklauth_trocar_perfil(perfis_ativo());
-        if (sk) simkl_esquecer();
-        if (tk || sk) desc_repetir(); }
+      if (trocou) aplicarTrocaDePerfil(perfilAntes);
+      trocarContasDoPerfil();
       sync_iniciar();
       if (trocou) {
         // Fica nesta tela, com o indicador no cartao, ate a home estar pronta
@@ -2965,6 +3034,21 @@ void app_atualizar(float dt, Uint32 agora) {
   // (ou a primeira depois de um "sair"), quando quem descobre que existem dois
   // perfis e o sync, segundos depois. Sem ela o app assumiria o perfil 1 para
   // sempre nessa primeira sessao.
+  // O PERFIL QUE ENTROU SOZINHO PASSOU A TER PIN: a lista do arranque e a de
+  // ontem, e a da conta so chega com o primeiro sync. A trava vale mais que o
+  // atalho: a escolha abre e o PIN e pedido como sempre.
+  if (autoPinAte && SDL_TICKS_PASSED(SDL_GetTicks(), autoPinAte)) autoPinAte = 0;
+  if (autoPinAte && tela == TELA_HOME && !player_aberto() && !detail_aberto() &&
+      perfis_item_ativo() && perfis_item_ativo()->temPin) {
+    autoPinAte = autoVoltarAte = 0;
+    printf("[perfis] o perfil automatico agora tem PIN: a escolha abre\n");
+    fflush(stdout);
+    player_descartar_retido();
+    tela = TELA_ESCOLHA_PERFIL;
+    perfilAntes = perfis_ativo();
+    perfilsel_iniciar();
+    return;
+  }
   if (tela == TELA_HOME && !player_aberto() && !detail_aberto() &&
       perfis_precisa_escolher()) {
     player_descartar_retido();
