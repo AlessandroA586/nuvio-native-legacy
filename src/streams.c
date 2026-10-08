@@ -2907,7 +2907,56 @@ void stream_atualizar_lista(const Stream *l, int qtd) {
   }
 }
 int stream_folha_n(void) { return nFiltrados(); }
+// DETALHES DA FONTE (#355): o titulo e a descricao do addon sao cortados na
+// linha (uma fileira de selos, duas linhas de texto). O texto inteiro existe
+// em Stream.rotulo / descricao / arquivo; esta modal o mostra por completo,
+// por cima da folha. Copia no abrir (a lista pode recarregar por baixo) e
+// NUNCA toca em Stream.url: la mora a chave do debrid.
+static int   detAberto;
+static float detAnim, detRol, detRolAlvo, detAlt;   // detAlt: altura do corpo, medida no desenho
+static char  detProv[96], detTit[512], detArq[512], detDesc[4096];
+#define DET_PASSO 84.0f
+static void detalheAbrir(const Stream *s) {
+  char tmp[sizeof s->descricao];
+  detProv[0]=detTit[0]=detArq[0]=detDesc[0]=0;
+  // Sem NV_LIMPA_UMA_LINHA: o \n da descricao fica, txt_bloco quebra nele.
+  nv_limpar_texto(s->provedor,detProv,sizeof detProv,NV_LIMPA_UMA_LINHA);
+  nv_limpar_texto(s->rotulo,detTit,sizeof detTit,0);
+  nv_limpar_texto(s->arquivo,detArq,sizeof detArq,NV_LIMPA_UMA_LINHA);
+  snprintf(tmp,sizeof tmp,"%s",s->descricao);
+  for(char *p=tmp,*q=tmp;;p++){ if(*p!='\r') *q++=*p; if(!*p) break; }
+  nv_limpar_texto(tmp,detDesc,sizeof detDesc,0);
+  detAberto=1; detRol=detRolAlvo=0; detAlt=0;
+}
+int  stream_detalhe_aberto(void) { return detAberto; }
+const char *stream_detalhe_texto(void) { return detDesc; }
+int  stream_detalhe_tecla_abre(const SDL_Event *e) {
+  SDL_Keycode k=e->key.keysym.sym;
+  return k==SDLK_i || k==SDLK_F5 || (int)e->key.keysym.scancode==NV_SCANCODE_YELLOW
+#ifdef NV_ANDROID
+      || k==SDLK_F9   // o Info do controle Android chega como F9 (NuvioActivity)
+#endif
+      ;
+}
+// Devolve 1 se a modal consumiu o evento (sempre, enquanto aberta).
+static int detalheEvento(const SDL_Event *e) {
+  SDL_Keycode k;
+  if(!detAberto) return 0;
+  if(e->type!=SDL_KEYDOWN) return 1;
+  k=e->key.keysym.sym;
+  if(e->key.repeat && stream_detalhe_tecla_abre(e)) return 1;   // o dedo que abriu nao fecha
+  if(k==SDLK_ESCAPE||k==SDLK_AC_BACK||k==SDLK_BACKSPACE||k==SDLK_DELETE||
+     k==SDLK_RETURN||k==SDLK_KP_ENTER||stream_detalhe_tecla_abre(e)) { detAberto=0; return 1; }
+  if(k==SDLK_UP) detRolAlvo-=DET_PASSO;
+  else if(k==SDLK_DOWN) detRolAlvo+=DET_PASSO;
+  else if(k==SDLK_PAGEUP) detRolAlvo-=DET_PASSO*3;
+  else if(k==SDLK_PAGEDOWN) detRolAlvo+=DET_PASSO*3;
+  if(detRolAlvo<0) detRolAlvo=0;
+  return 1;
+}
+static void ponteiroDetalhe(int a, int b) { (void)a; (void)b; detAberto = 0; }
 void stream_folha_evento(const SDL_Event *e) {
+  if(aberta && detalheEvento(e)) return;
 #ifdef NV_TOUCH_UI
   if (toquerol_navegacao(e)) { toquerol_limpar(&toqueFontes); toquerol_limpar(&toqueFontesAbas); }
 #endif
@@ -2917,6 +2966,11 @@ void stream_folha_evento(const SDL_Event *e) {
   if(k==SDLK_r) {recarregar=1;return;}
   montar(automaticaDaFolha());
   int nf=nOrdem;
+  if(grupo==1 && stream_detalhe_tecla_abre(e)) {
+    int i=filtrado(foco);
+    if(i>=0) detalheAbrir(&lista[i]);
+    return;
+  }
   // ORDEM DO FOCO, de cima: fileira de botoes (grupo -1) -> abas de addon
   // (grupo 0) -> lista (grupo 1). CIMA na primeira linha vai as abas; CIMA
   // nas abas vai ao ultimo botao (Fechar, o mais perto do canto); BAIXO desce
@@ -2978,6 +3032,10 @@ void stream_folha_atualizar(float dt, Uint32 agora) {
   folhaGeometria();
   (void)agora;
   anim=anim_mola(anim,aberta?1:0,dt,NV_MOLA_TELA);
+  if(!aberta) detAberto=0;
+  detAnim=anim_mola(detAnim,detAberto?1:0,dt,NV_MOLA_TELA);
+  { float max=detAlt>0?detAlt:0; if(detRolAlvo>max) detRolAlvo=max;
+    float d=detRolAlvo-detRol; detRol = fabsf(d)<.5f ? detRolAlvo : detRol+d*(dt*16>1?1:dt*16); }
   // FOLHA FECHADA E JA FORA DA TELA: nada a montar. Esta funcao roda todo
   // quadro em qualquer tela (app.c), e montar + stream_automatico percorrem
   // a lista inteira de fontes duas vezes: MEDIDO no Mac (06/10/2026), 1 ms
@@ -3298,6 +3356,58 @@ static void medirCabecalho(void) {
 
 static void stream_folha_desenharCorpo_(Uint32 agora);
 static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha);
+// MODAL DE DETALHES: cartao de vidro no meio da folha, veu sobre a lista.
+// O corpo rola (CIMA/BAIXO) com esmaecido nas bordas; altura medida no proprio
+// desenho (detAlt = o que passa da janela) e o alvo da rolagem preso nela.
+#define DET_JAN_H   440.0f
+#define DET_LD       30.0f
+static void desenhaDetalhe(float x, float w, int ptr) {
+  float a=detAnim;
+  if(a<.01f) return;
+  float ar,ag,ab; ajustes_acento(&ar,&ag,&ab);
+  float cw=w-96.0f, ch=DET_JAN_H+150.0f;
+  float cx=x+(w-cw)*.5f, cy=(NV_TELA_H-ch)*.5f+(1.0f-a)*16.0f;
+  float pad=40.0f, ix=cx+pad, iw=cw-2*pad;
+  // Veu so sobre a folha (a modal e dela): escurece a lista sem esconde-la.
+  gfx_cor((GfxRect){x,0,w,NV_TELA_H},0,0,0,0,.55f*a);
+  ajustes_ui_ilha((GfxRect){cx,cy,cw,ch},FOLHA_RAIO_IL*.8f,1);
+  if(ptr) {
+    ponteiro_alvo(0,0,NV_TELA_W,NV_TELA_H,NULL,ponteiroDetalhe,0,0);
+    ponteiro_alvo(cx,cy,cw,ch,NULL,NULL,0,0);
+  }
+  float y=cy+34.0f;
+  plrui_kicker("Detalhes da fonte",ix,y,243,242,239,a*.45f);
+  gfx_icone((GfxRect){ix+iw-24,y-3,24,24},"aj_info",.7f,.7f,.7f,a*.8f);
+  y+=34.0f;
+  if(detProv[0]) txt_desenhar_alpha(txt_linha_corta(TXT_PAINEL_ITEM,detProv,(int)(ar*255),(int)(ag*255),(int)(ab*255),255,iw),ix,y,a);
+  y+=48.0f;
+  // CORPO ROLAVEL
+  float jy=y, jh=DET_JAN_H-60.0f;
+  gfx_recorte(ix-4,jy,iw+8,jh);
+  float by=jy-detRol;
+  if(detTit[0]) {
+    by+=txt_bloco(TXT_PAINEL_ITEM,detTit,250,250,248,ix,by,iw,34.0f,a,0)+22.0f;
+  }
+  if(detArq[0]) {
+    plrui_kicker("Arquivo",ix,by,243,242,239,a*.45f); by+=30.0f;
+    by+=txt_bloco(TXT_PG_FIM,detArq,150,150,148,ix,by,iw,DET_LD,a,0)+22.0f;
+  }
+  if(detDesc[0]) {
+    plrui_kicker("Descrição",ix,by,243,242,239,a*.45f); by+=30.0f;
+    by+=txt_bloco(TXT_PG_FIM,detDesc,200,200,198,ix,by,iw,DET_LD,a,0);
+  }
+  { float total=by-(jy-detRol); detAlt=total>jh?total-jh:0; }
+  // Esmaecido nas bordas, so quando ha para onde rolar.
+  { float fr=jh<120?.5f:36.0f/jh;
+    if(detRol>1.0f) { float e=detRol>30?1:detRol/30;
+      gfx_rect((GfxRect){ix-4,jy,iw+8,40},0,GFX_BRILHO_TOPO,0,1.0f,0,0,.09f,.095f,.108f,.92f*e*a); }
+    if(detRol<detAlt-1.0f) { float e=detAlt-detRol>30?1:(detAlt-detRol)/30; (void)fr;
+      gfx_rect((GfxRect){ix-4,jy+jh-40,iw+8,40},0,GFX_BRILHO_TOPO,0,1.0f,.02f,0,.09f,.095f,.108f,.92f*e*a); } }
+  gfx_sem_recorte();
+  // Rodape: o que as teclas fazem.
+  { const char *dica=detAlt>0?"↑ ↓ rola · OK ou Voltar fecha":"OK ou Voltar fecha";
+    txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM,dica,120,120,118,255,iw),ix,cy+ch-pad-8,a); }
+}
 // Camada ampliada (escala.h): o corpo desenha na tela virtual.
 void stream_folha_desenhar(Uint32 agora) {
   ESCALA_INI();
@@ -3559,7 +3669,9 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       if(gb[0]){
         txt_desenhar_alpha(lu,tr-lu.w,cy+(lg.h-lu.h)-3,anim);
         txt_desenhar_alpha(lg,tr-lu.w-6-lg.w,cy,anim); }
-      txt_desenhar_alpha(lp,tr-lp.w,gb[0]?cy+40:cy+6,anim); }
+      txt_desenhar_alpha(lp,tr-lp.w,gb[0]?cy+40:cy+6,anim);
+      // Dica da tecla Info/Amarela: so na linha em foco, no canto do addon.
+      if(sel) gfx_icone((GfxRect){tr-lp.w-30,(gb[0]?cy+40:cy+6)+3,20,20},"aj_info",.62f,.62f,.62f,anim*.85f); }
     txtW=tr-tx-colW-28;
     cy=y+20;
     // A MARCA: o que esta tocando (com o equalizador), a escolha anterior e a
@@ -3803,6 +3915,10 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
   // Na ilha, de volta ao recorte dela (plrilha corta a forma inteira).
   if (ilha) gfx_recorte(ilhaR.x,ilhaR.y,ilhaR.w,ilhaR.h);
   else gfx_sem_recorte();
+  if (detAnim > .01f) {
+    desenhaDetalhe(x,w,ptr);
+    if (ilha) gfx_recorte(ilhaR.x,ilhaR.y,ilhaR.w,ilhaR.h);
+  }
 }
 
 // A MEDIDA DE REDE DA FONTE QUE ESTA ABRINDO (o player expande o cartao de

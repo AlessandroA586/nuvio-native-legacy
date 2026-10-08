@@ -2479,6 +2479,13 @@ void app_evento(const SDL_Event *e) {
   // login, a tecla vermelha nao chegaria ali e o painel seria inutil onde ele
   // mais importa. Enquanto aberto ele engole todo o teclado, incluindo o KEYUP
   // do toque que o abriu ou fechou (ver a nota da armadilha em registro.c).
+#ifdef NV_ANDROID
+  // O Info do controle Android chega como F9 (o painel de registro). Com a
+  // folha de fontes aberta ele e dos DETALHES DA FONTE (#355); o registro
+  // continua na tecla vermelha / Ajustes, e aberto ele ainda fecha o painel.
+  if (e->type == SDL_KEYDOWN && e->key.keysym.sym == SDLK_F9 && stream_folha_aberta() &&
+      !registro_aberto()) { stream_folha_evento(e); return; }
+#endif
   if (registro_evento(e)) return;
   // O painel de envio do registro (Ajustes > Enviar registro, ou o "Enviar
   // agora" do painel): modal, come o teclado enquanto aberto.
