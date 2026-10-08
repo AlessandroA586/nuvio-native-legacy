@@ -395,6 +395,12 @@ float fil_escala_tipo(const char *chave, int t);
 
 // 1 quando existe ordem LOCAL gravada. Sem ela, fil_unir e a identidade e a
 // ordem da conta (catordem.c) continua valendo sozinha.
+//
+// REGRA (#204): a ordem da CONTA e soberana ate a pessoa reordenar nesta TV
+// (fil_mover, fil_mover_grupo, fil_ordenar_por_addon, ou ligar uma fileira para
+// o fim da lista: tudo isso marca ordemLocal). Dai em diante a local vence, e
+// so volta a conta num reset (fil_esquecer / logout). Catalogo que a escolha
+// local nao conhece cai no fim, na ordem da conta.
 int  fil_tem_ordem(void);
 
 // Sobe a cada mudanca desta escolha. Quem cacheia a lista de fileiras remonta

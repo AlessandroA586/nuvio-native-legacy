@@ -787,6 +787,25 @@ int main(void) {
   assert(!strcmp(fil_hero_fonte(), ""));
   puts("ok  fonte do destaque grava, le e tolera arquivo antigo");
 
+  // #204: ordem da CONTA manda ate a pessoa reordenar nesta TV; depois, a local.
+  fil_esquecer();
+  usaArquivo = 0;
+  fil_registrar("o1", "Um", "", "", 5);
+  fil_registrar("o2", "Dois", "", "", 5);
+  fil_registrar("o3", "Tres", "", "", 5);
+  { const char *ch[3] = { "o3", "o1", "o2" };   // ordem que a conta entregou
+    int ord[8], q;
+    assert(!fil_tem_ordem());
+    q = fil_unir(ch, 3, ord, 8);                 // sem ordem local: identidade
+    assert(q == 3 && ord[0] == 0 && ord[1] == 1 && ord[2] == 2);
+    fil_mover(0, 1);                             // a pessoa reordena na TV
+    assert(fil_tem_ordem());
+    q = fil_unir(ch, 3, ord, 8);                 // agora a local manda
+    assert(q == 3 && !(ord[0] == 0 && ord[1] == 1 && ord[2] == 2));
+    fil_esquecer();                              // logout/reset devolve a conta
+    assert(!fil_tem_ordem()); }
+  puts("ok  ordem da conta manda ate haver reordenacao local");
+
   // #204: a fonte da CONTA vale ate a pessoa escolher na TV; depois, a TV manda.
   fil_esquecer();
   usaArquivo = 1;
