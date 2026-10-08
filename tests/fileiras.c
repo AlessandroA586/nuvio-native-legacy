@@ -787,6 +787,25 @@ int main(void) {
   assert(!strcmp(fil_hero_fonte(), ""));
   puts("ok  fonte do destaque grava, le e tolera arquivo antigo");
 
+  // #204: a fonte da CONTA vale ate a pessoa escolher na TV; depois, a TV manda.
+  fil_esquecer();
+  usaArquivo = 1;
+  remove("/tmp/fileirasui.txt");
+  fil_teste_recarregar();
+  fil_hero_da_conta("a_movie_x");
+  assert(!strcmp(fil_hero_fonte(), "a_movie_x"));      // conta aplicada
+  fil_teste_recarregar();
+  assert(!strcmp(fil_hero_fonte(), "a_movie_x"));      // e sobrevive ao arquivo
+  fil_hero_da_conta("b_series_y");
+  assert(!strcmp(fil_hero_fonte(), "b_series_y"));     // conta muda, TV segue
+  fil_definir_hero_fonte("");                          // pessoa escolhe Automatico
+  fil_hero_da_conta("c_movie_z");
+  assert(!strcmp(fil_hero_fonte(), ""));               // local venceu, mesmo vazio
+  fil_teste_recarregar();
+  fil_hero_da_conta("c_movie_z");
+  assert(!strcmp(fil_hero_fonte(), ""));               // ...e a marca sobrevive
+  puts("ok  fonte do destaque da conta: local vence depois de escolher");
+
   // SEMENTE SO PARA O PERFIL 1. O fileirasui.txt antigo e a escolha de quem
   // usava o app antes dos perfis — que sincronizava sempre o perfil 1. Relato
   // do dono na C9: o perfil 2 abria com a ordem, o limite e o destaque do 1.

@@ -153,6 +153,9 @@ const char *fil_origem_ajuda(int origem);
 // voltar, e apagar em silencio faria a preferencia sumir sem ninguem pedir.
 const char *fil_hero_fonte(void);
 void        fil_definir_hero_fonte(const char *chave);
+// Fonte vinda da CONTA (hero_catalog_keys). So vale enquanto a pessoa nao
+// escolheu a fonte nesta TV; depois de fil_definir_hero_fonte, e ignorada.
+void        fil_hero_da_conta(const char *chave);
 
 // --- limite ------------------------------------------------------------------
 int  fil_limite(void);

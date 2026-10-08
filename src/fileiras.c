@@ -81,6 +81,9 @@ static int   registroSujo;   // ver fil_gravar_registro
 // conta e este arquivo. Em ajustes.txt seria um texto solto que ninguem
 // revisita.
 static char  heroFonte[FIL_CHAVE];
+// 1 = a pessoa escolheu a fonte do destaque NESTA TV (inclusive "automatico").
+// Enquanto for 0, a conta (layout_settings.hero_catalog_keys) manda. #204
+static int   heroLocal;
 static char donoAuto[128];
 static unsigned revisao;
 // A leitura acontece no fio da DESCOBERTA (montar) e a escrita no fio de
@@ -280,6 +283,8 @@ static void gravar(void) {
   // valendo numa anterior (ela so nao ve o destaque) e vice-versa.
   if (heroFonte[0] && k < cap)
     k += (size_t)snprintf(txt + k, cap - k, "hero %s\n", heroFonte);
+  if (k < cap)
+    k += (size_t)snprintf(txt + k, cap - k, heroLocal ? "hero_local 1\n" : "hero_conta 1\n");
   if (donoAuto[0] && k < cap)
     k += (size_t)snprintf(txt + k, cap - k, "conta_auto %s\n", donoAuto);
   for (i = 0; i < nLinhas && k < cap; i++)
@@ -310,6 +315,7 @@ static void carregar(void) {
   // pegou isso usa um arquivo de versao anterior, que e o mesmo caso: linha
   // ausente tem de significar "automatico", nunca "o que estava na memoria".
   heroFonte[0] = 0;
+  heroLocal = 0;
   if (!dados_caminho(caminho, sizeof caminho, arquivoDoPerfil())) return;
   f = fopen(caminho, "r");
   // Perfil sem arquivo proprio ainda: SO O PERFIL 1 comeca do arquivo antigo
@@ -337,6 +343,11 @@ static void carregar(void) {
       migrado197 = 1;
     } else if (!strncmp(buf, "hero ", 5)) {
       snprintf(heroFonte, sizeof heroFonte, "%s", buf + 5);
+      heroLocal = 1;   // arquivo antigo, sem marca: foi escolha da pessoa
+    } else if (!strcmp(buf, "hero_local 1")) {
+      heroLocal = 1;
+    } else if (!strcmp(buf, "hero_conta 1")) {
+      heroLocal = 0;
     } else if (!strncmp(buf, "conta_auto ", 11)) {
       snprintf(donoAuto, sizeof donoAuto, "%s", buf + 11);
     } else if (!strncmp(buf, "visibilidade ", 13)) {
@@ -428,7 +439,18 @@ const char *fil_hero_fonte(void) {
 void fil_definir_hero_fonte(const char *chave) {
   pthread_mutex_lock(&trava);
   garantir();
-  if (strcmp(heroFonte, chave ? chave : "")) {
+  if (strcmp(heroFonte, chave ? chave : "") || !heroLocal) {
+    snprintf(heroFonte, sizeof heroFonte, "%s", chave ? chave : "");
+    heroLocal = 1;   // escolha da pessoa: a conta deixa de mandar
+    gravar();
+  }
+  pthread_mutex_unlock(&trava);
+}
+
+void fil_hero_da_conta(const char *chave) {
+  pthread_mutex_lock(&trava);
+  garantir();
+  if (!heroLocal && strcmp(heroFonte, chave ? chave : "")) {
     snprintf(heroFonte, sizeof heroFonte, "%s", chave ? chave : "");
     gravar();
   }
@@ -1637,6 +1659,8 @@ int fil_unir(const char *const *chaves, int n, int *saida, int max) {
 void fil_esquecer(void) {
   pthread_mutex_lock(&trava);
   nLinhas = 0;
+  heroLocal = 0;
+  heroFonte[0] = 0;
   ordemLocal = 0;
   donoAuto[0] = 0;
   limite = FIL_LIMITE_PADRAO;

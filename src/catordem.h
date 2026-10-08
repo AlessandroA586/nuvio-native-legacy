@@ -64,6 +64,19 @@ int catordem_ocultar_nao_lancados(void);
 int catordem_tem_ocultar_sublinhado(void);
 int catordem_ocultar_sublinhado(void);
 
+// Titulo renomeado pela conta (`custom_title` do item no blob de catalogos da
+// home; no web e `customTitles`). NULL quando a conta nao renomeou. Quem aplica
+// (descoberta.c) deixa o renomeio LOCAL (fileiras.txt `titulo`) vencer.
+const char *catordem_titulo(const char *chave);
+
+// Fonte do destaque da conta: `hero_catalog_keys` do blob de AJUSTES (feature
+// layout_settings), valor {"type":"string","value":"[\"k\"]"} ou string_set.
+// Le o blob inteiro; devolve 1 se a chave existe. `catordem_hero()` e a
+// PRIMEIRA chave ("" = todos/automatico), pois o destaque nativo tem 1 fonte.
+int         catordem_hero_do_blob(const char *blobAjustes);
+int         catordem_tem_hero(void);
+const char *catordem_hero(void);
+
 // Esquece a configuracao lida. Chamar no logout junto com o resto: a ordem da
 // home e da conta de quem saiu.
 void catordem_esquecer(void);

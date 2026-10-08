@@ -20,6 +20,19 @@ unsigned catordem_revisao(void) { return revisao; }
 // Itens da resposta que nao couberam (ordem ou ocultos), so para o log.
 static int nAlem;
 
+// Titulos renomeados na conta (`custom_title` de cada item de items[]). Poucos
+// por conta; teto proprio em vez de 2048 entradas de 290 bytes.
+#define CATORD_TIT_MAX 256
+#define CATORD_TIT_LEN 96
+typedef struct { char chave[CATORD_CHAVE]; char titulo[CATORD_TIT_LEN]; } TitConta;
+static TitConta titulos[CATORD_TIT_MAX];
+static int nTitulos;
+// Fonte do destaque da conta: layout_settings.hero_catalog_keys, que mora no
+// blob de AJUSTES (nao no de catalogos da home). So a primeira chave serve: o
+// destaque nativo tem uma fonte so.
+static char heroConta[CATORD_CHAVE];
+static int  temHero;
+
 // Impressao digital do que foi lido. Substitui as copias inteiras de antes
 // (antesOrdem/antesOcultos: 442 KB com 768 itens, 1,2 MB com 2048).
 static unsigned long long assinaturaLida(void) {
@@ -35,7 +48,14 @@ static unsigned long long assinaturaLida(void) {
     for (b = (const unsigned char *)ocultos[i]; *b; b++) h = (h ^ *b) * 1099511628211ULL;
     h = (h ^ 2u) * 1099511628211ULL;
   }
-  return (h ^ (unsigned)nOcultos) * 1099511628211ULL;
+  h = (h ^ (unsigned)nOcultos) * 1099511628211ULL;
+  for (i = 0; i < nTitulos; i++) {
+    for (b = (const unsigned char *)titulos[i].chave; *b; b++) h = (h ^ *b) * 1099511628211ULL;
+    h = (h ^ 3u) * 1099511628211ULL;
+    for (b = (const unsigned char *)titulos[i].titulo; *b; b++) h = (h ^ *b) * 1099511628211ULL;
+    h = (h ^ 4u) * 1099511628211ULL;
+  }
+  return (h ^ (unsigned)nTitulos) * 1099511628211ULL;
 }
 
 // ---------------------------------------------------------------- leitura
@@ -108,7 +128,8 @@ static int lerItens(const char *ini, const char *fim) {
   typedef struct { char chave[CATORD_CHAVE]; int ordem, ligado; } Ent;
   // Applied on the main thread, like the module state. Keep TV stacks small.
   static Ent v[CATORD_MAX];
-  int nv = 0, i, j;
+  static TitConta tit[CATORD_TIT_MAX];
+  int nv = 0, nt = 0, i, j;
   const char *p = js_array(ini, fim, "items");
   if (!p) {
     char raw[32];
@@ -117,7 +138,9 @@ static int lerItens(const char *ini, const char *fim) {
     while (*q && (unsigned char)*q <= ' ') q++;
     if (*q++ != '[') return 0;
     while (*q && (unsigned char)*q <= ' ') q++;
-    return *q == ']';
+    if (*q != ']') return 0;
+    nTitulos = 0;     // items:[] explicito: a conta nao renomeia nada
+    return 1;
   }
   for (; p; p = js_prox(fimElemento(p))) {
     const char *f = fimElemento(p);
@@ -129,9 +152,26 @@ static int lerItens(const char *ini, const char *fim) {
     // `enabled !== false`: ausente significa LIGADO. Tratar ausencia como
     // desligado esconderia toda fileira que o web nunca precisou marcar.
     v[nv].ligado = !(js_bruto(p, f, "enabled", b, sizeof b) && strstr(b, "false"));
+    // customTitles do web e `custom_title` (ou `customTitle`) DENTRO do item;
+    // vazio/ausente = sem renomeio.
+    if (nt < CATORD_TIT_MAX) {
+      char t[CATORD_TIT_LEN];
+      t[0] = 0;
+      if (!js_texto(p, f, "custom_title", t, sizeof t))
+        js_texto(p, f, "customTitle", t, sizeof t);
+      { char *a = t; size_t n; while (*a == ' ') a++;
+        n = strlen(a); while (n && a[n - 1] == ' ') a[--n] = 0;
+        if (*a) {
+          snprintf(tit[nt].chave, CATORD_CHAVE, "%s", v[nv].chave);
+          snprintf(tit[nt].titulo, CATORD_TIT_LEN, "%s", a);
+          nt++;
+        } }
+    }
     nv++;
   }
   if (!nv) return 0;
+  memcpy(titulos, tit, sizeof(TitConta) * (size_t)nt);
+  nTitulos = nt;
   for (i = 1; i < nv; i++) {           // Stable insertion sort over bounded account configuration
     int k = i;
     while (k > 0 && v[k - 1].ordem > v[k].ordem) {
@@ -321,6 +361,41 @@ int catordem_oculta(const char *chave, const char *chaveDesativar) {
   return 0;
 }
 
+const char *catordem_titulo(const char *chave) {
+  int i;
+  if (!chave || !chave[0]) return NULL;
+  for (i = 0; i < nTitulos; i++) if (!strcmp(titulos[i].chave, chave)) return titulos[i].titulo;
+  return NULL;
+}
+
+int catordem_hero_do_blob(const char *json) {
+  char emb[4096], val[4096];
+  const char *fim, *p;
+  char antes[CATORD_CHAVE];
+  int tinha = temHero;
+  snprintf(antes, sizeof antes, "%s", heroConta);
+  if (!json) return 0;
+  fim = json + strlen(json);
+  if (!js_bruto(json, fim, "hero_catalog_keys", emb, sizeof emb)) return 0;
+  heroConta[0] = 0;
+  p = NULL;
+  // string_set: {"type":"string_set","value":["a","b"]}
+  { const char *e = emb + strlen(emb), *a = js_array(emb, e, "value");
+    if (a && *a == '"') p = a; }
+  // string: {"type":"string","value":"[\"a\",\"b\"]"} — o JSON vem como texto.
+  if (!p && js_texto(emb, emb + strlen(emb), "value", val, sizeof val)) {
+    const char *q = strchr(val, '"');
+    if (q) { js_cadeia(q, heroConta, sizeof heroConta); }
+  } else if (p) {
+    js_cadeia(p, heroConta, sizeof heroConta);
+  }
+  temHero = 1;      // presente, mesmo vazio ("todos")
+  if (!tinha || strcmp(antes, heroConta)) revisao++;
+  return 1;
+}
+int         catordem_tem_hero(void) { return temHero; }
+const char *catordem_hero(void)     { return heroConta; }
+
 int catordem_tem_ocultar_nao_lancados(void) { return temNLanc; }
 int catordem_ocultar_nao_lancados(void)     { return valNLanc; }
 int catordem_tem_ocultar_sublinhado(void)   { return temSublinhado; }
@@ -329,6 +404,9 @@ int catordem_ocultar_sublinhado(void)       { return valSublinhado; }
 void catordem_esquecer(void) {
   revisao++;
   nOrdem = nOcultos = 0;
+  nTitulos = 0;
+  heroConta[0] = 0;
+  temHero = 0;
   temOrdem = 0;
   temNLanc = valNLanc = temSublinhado = valSublinhado = 0;
   memset(ordem, 0, sizeof ordem);

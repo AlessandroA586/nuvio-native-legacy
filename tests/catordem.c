@@ -168,6 +168,46 @@ int main(void) {
     confere("repeated empty does not rebuild", catordem_ler("{\"items\":[]}"), 0);
   }
 
+  printf("\ncustomTitles e heroCatalogKeys da conta (#204):\n");
+  catordem_esquecer();
+  // items FORA de ordem; custom_title (snake) e customTitle (camel) como o web
+  // le; titulo vazio = sem renomeio; UTF-8 por escape.
+  confere("blob com custom_title lido",
+          catordem_ler("[{\"settings_json\":{\"items\":["
+            "{\"addon_id\":\"b\",\"type\":\"Series\",\"catalog_id\":\"y\",\"order\":2,\"custom_title\":\"Minhas S\\u00e9ries\"},"
+            "{\"addon_id\":\"a\",\"type\":\"movie\",\"catalog_id\":\"x\",\"order\":1,\"customTitle\":\"  Filmes top \"},"
+            "{\"addon_id\":\"c\",\"type\":\"movie\",\"catalog_id\":\"z\",\"order\":3,\"custom_title\":\"\"},"
+            "{\"is_collection\":true,\"collection_id\":\"k1\",\"order\":4,\"custom_title\":\"Pastas\"}"
+            "]}}]"), 1);
+  confereTexto("titulo snake_case", catordem_titulo("b_series_y") ? catordem_titulo("b_series_y") : "(null)", "Minhas S\xc3\xa9ries");
+  confereTexto("titulo camelCase aparado", catordem_titulo("a_movie_x") ? catordem_titulo("a_movie_x") : "(null)", "Filmes top");
+  confere("titulo vazio nao renomeia", catordem_titulo("c_movie_z") == NULL, 1);
+  confereTexto("titulo de colecao", catordem_titulo("collection_k1") ? catordem_titulo("collection_k1") : "(null)", "Pastas");
+  confere("mesma resposta nao reconstroi", catordem_ler("[{\"settings_json\":{\"items\":["
+            "{\"addon_id\":\"b\",\"type\":\"series\",\"catalog_id\":\"y\",\"order\":2,\"custom_title\":\"Minhas S\\u00e9ries\"},"
+            "{\"addon_id\":\"a\",\"type\":\"movie\",\"catalog_id\":\"x\",\"order\":1,\"customTitle\":\"Filmes top\"},"
+            "{\"addon_id\":\"c\",\"type\":\"movie\",\"catalog_id\":\"z\",\"order\":3},"
+            "{\"is_collection\":true,\"collection_id\":\"k1\",\"order\":4,\"custom_title\":\"Pastas\"}"
+            "]}}]"), 0);
+  confere("renomeio removido na conta muda", catordem_ler("{\"items\":["
+            "{\"addon_id\":\"a\",\"type\":\"movie\",\"catalog_id\":\"x\",\"order\":1}]}"), 1);
+  confere("...e o titulo some", catordem_titulo("a_movie_x") == NULL, 1);
+  confere("legado sem items nao tem titulo", catordem_titulo("b_series_y") == NULL, 1);
+
+  // hero_catalog_keys: blob de AJUSTES, valor embrulhado.
+  confere("hero ausente", catordem_hero_do_blob("{\"features\":{\"layout_settings\":{}}}"), 0);
+  confere("hero string JSON lido", catordem_hero_do_blob(
+    "{\"features\":{\"layout_settings\":{\"hero_section_enabled\":{\"type\":\"boolean\",\"value\":true},"
+    "\"hero_catalog_keys\":{\"type\":\"string\",\"value\":\"[\\\"a_movie_x\\\",\\\"b_series_y\\\"]\"}}}}"), 1);
+  confereTexto("primeira chave do hero", catordem_hero(), "a_movie_x");
+  catordem_hero_do_blob(
+    "{\"features\":{\"layout_settings\":{\"hero_catalog_keys\":{\"type\":\"string_set\",\"value\":[\"c_movie_z\"]}}}}");
+  confereTexto("hero string_set", catordem_hero(), "c_movie_z");
+  catordem_hero_do_blob(
+    "{\"features\":{\"layout_settings\":{\"hero_catalog_keys\":{\"type\":\"string\",\"value\":\"[]\"}}}}");
+  confereTexto("hero vazio = todos", catordem_hero(), "");
+  confere("...mas a chave existia", catordem_tem_hero(), 1);
+
   printf("\nlogout esquece a ordem da conta anterior:\n");
   catordem_esquecer();
   confere("sem ordem depois de esquecer", catordem_tem_ordem(), 0);

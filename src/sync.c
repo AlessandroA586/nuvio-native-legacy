@@ -33,6 +33,7 @@ void servidores_esquecer_todos(void);   // servidores.c: wipe every profile's to
 #include "ajustes.h"
 #include "idioma.h"
 #include "catordem.h"
+#include "fileiras.h"
 #include "catordemcache.h"
 #include "contacache.h"
 #include "descoberta.h"
@@ -1682,6 +1683,9 @@ void sync_passo(unsigned agoraMs) {
   spMarcar(SP_REMONTAR); }
   if (temAjustesBlob && ajustesBlob) {
     ajustes_aplicar_blob(ajustesBlob);
+    // Fonte do destaque da conta (layout_settings.hero_catalog_keys). So vale
+    // enquanto a pessoa nao escolheu a fonte nesta TV (fil_hero_da_conta).
+    if (catordem_hero_do_blob(ajustesBlob)) fil_hero_da_conta(catordem_hero());
     // O BLOB NAO E LIBERADO AQUI (mudou em #85): ele e a base da costura que
     // sobe no proximo ciclo. Quem o libera e o pull seguinte, que o substitui,
     // e o logout.

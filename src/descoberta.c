@@ -3231,6 +3231,10 @@ static int ordenarCandidatos(Decl *decls, int nDecl, int *ordem, int nFixas,
     for (k = 0; k < nOrdem; k++) {
       Decl *d = &decls[ordem[k]];
       int t;
+      // Titulo da CONTA (custom_title do blob de catalogos) primeiro; o
+      // renomeio LOCAL (fileiras.txt) vem depois e vence.
+      { const char *ct = catordem_titulo(d->chave);
+        if (ct) snprintf(d->titulo, sizeof d->titulo, "%s", ct); }
       for (t = 0; t < nPrefTit; t++)
         if (!strcmp(prefTit[t].chave, d->chave)) {
           snprintf(d->titulo, sizeof d->titulo, "%s", prefTit[t].titulo);
