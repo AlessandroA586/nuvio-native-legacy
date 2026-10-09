@@ -495,6 +495,7 @@ static int pedirFonteJob(int tipo, unsigned geracao, const char *id, int renovan
 #include "gfx.h"
 #include "catalogo.h"
 #include "layout.h"
+#include "segurar.h"
 #include "servidores.h"
 #include <stdio.h>
 
@@ -2773,6 +2774,9 @@ void app_atualizar(float dt, Uint32 agora) {
   // Animacoes reduzidas valem para TODA mola e rampa do app (anim.h), nao so
   // para as telas que lembravam de perguntar. Uma leitura por quadro.
   anim_politica_reduzida = ajustes_animacoes_reduzidas();
+  // Pausa entre quadros medida uma vez, antes de qualquer tela perguntar se o
+  // OK segurado venceu (segurar.h, #387).
+  segurar_quadro(agora);
   central_atualizar(dt, agora);
   // OK na vitrine da tela de descanso (descanso.h): abre o titulo, so com a
   // Home na frente. Em outra tela o OK so acordou.

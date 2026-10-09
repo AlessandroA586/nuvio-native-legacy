@@ -2,25 +2,35 @@
 #include "layout.h"
 #include <stdio.h>
 
-// Ultimo quadro que perguntou. Uma tela por vez segura o OK, entao um relogio
-// so basta; um valor velho (tela que parou de perguntar) so pode atrasar o
-// disparo em um quadro, nunca adianta-lo.
-static Uint32 ultimaPergunta;
+// Inicio do quadro atual e do anterior (segurar_quadro).
+static Uint32 quadroAnt, quadroAtual;
+// Pressao (pelo `desde`) que ja ganhou a linha de log de disparo / de espera.
+static Uint32 logadoDisparo, logadoEspera;
+
+void segurar_quadro(Uint32 agora) {
+  quadroAnt = quadroAtual;
+  quadroAtual = agora;
+}
 
 int segurar_venceu(Uint32 agora, Uint32 desde, const char *tela) {
-  Uint32 intervalo = agora - ultimaPergunta;
-  ultimaPergunta = agora;
+  Uint32 pausa = quadroAnt ? quadroAtual - quadroAnt : 0;
   if (!desde || agora - desde < NV_HOLD_MS) return 0;
-  if (intervalo > NV_SEGURAR_PAUSA_MS) {
+  if (pausa > NV_SEGURAR_PAUSA_MS) {
     // Os eventos que chegaram durante a pausa (o KEYUP de um toque curto) sao
-    // lidos antes do proximo quadro; ele decide.
-    printf("[segurar] %s: limiar vencido apos pausa de %u ms; espera um quadro\n",
-           tela ? tela : "?", (unsigned)intervalo);
-    fflush(stdout);
+    // lidos no inicio do proximo quadro; ele decide.
+    if (logadoEspera != desde) {
+      logadoEspera = desde;
+      printf("[segurar] %s: limiar vencido apos pausa de %u ms; espera um quadro\n",
+             tela ? tela : "?", (unsigned)pausa);
+      fflush(stdout);
+    }
     return 0;
   }
-  printf("[segurar] %s: disparou com %u ms segurando\n", tela ? tela : "?",
-         (unsigned)(agora - desde));
-  fflush(stdout);
+  if (logadoDisparo != desde) {
+    logadoDisparo = desde;
+    printf("[segurar] %s: disparou com %u ms segurando\n", tela ? tela : "?",
+           (unsigned)(agora - desde));
+    fflush(stdout);
+  }
   return 1;
 }

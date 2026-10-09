@@ -14,15 +14,23 @@ int main(void) {
   Uint32 t;
   int disparou = 0;
   // Segurando de verdade: quadros de 16 ms ate passar o limiar.
-  for (t = 1000; t <= 1000 + NV_HOLD_MS + 32 && !disparou; t += 16)
+  for (t = 1000; t <= 1000 + NV_HOLD_MS + 32 && !disparou; t += 16) {
+    segurar_quadro(t);
     disparou = segurar_venceu(t, 1000, "teste");
+  }
   caso(disparou, 1, "segurou com quadros normais dispara");
   caso(t - 16 - 1000 >= NV_HOLD_MS && t - 16 - 1000 < NV_HOLD_MS + 32, 1, "dispara logo depois do limiar");
   // Toque curto e um quadro de 900 ms logo depois do KEYDOWN: o KEYUP ja esta
   // na fila e ainda nao foi lido. O quadro que sai da pausa nao pode disparar.
+  segurar_quadro(5000);
   caso(segurar_venceu(5000, 5000, "teste"), 0, "quadro do KEYDOWN nao dispara");
+  segurar_quadro(5900);
   caso(segurar_venceu(5900, 5000, "teste"), 0, "quadro depois de pausa de 900 ms nao dispara");
+  // Duas telas perguntam no MESMO quadro (menu de contexto antes da Biblioteca):
+  // a primeira pergunta nao pode gastar a pausa da segunda.
+  caso(segurar_venceu(5900, 5000, "teste"), 0, "segunda tela no mesmo quadro tambem espera");
   // Ainda segurando no quadro seguinte (normal): agora dispara.
+  segurar_quadro(5916);
   caso(segurar_venceu(5916, 5000, "teste"), 1, "quadro normal depois da pausa dispara");
   // Nao armado nunca dispara.
   caso(segurar_venceu(9000, 0, "teste"), 0, "sem armar nao dispara");

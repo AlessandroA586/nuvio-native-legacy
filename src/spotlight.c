@@ -47,6 +47,7 @@
 #include "tex_cache.h"
 #include "anim.h"
 #include "layout.h"
+#include "segurar.h"
 #include "ajustes.h"
 #include "ajustes_ux.h"
 #include "idioma.h"
@@ -1373,7 +1374,7 @@ void spot_atualizar(float dt, Uint32 agora) {
     animLin[i] = anim_mola(animLin[i], alvo, dt, NV_MOLA_FOCO);
     entraLin[i] = anim_mola(entraLin[i], 1.0f, dt, 14.0f);
   }
-  if (painel == P_LISTA && okPress && !okLongo && agora - okDesde >= NV_HOLD_MS) {
+  if (painel == P_LISTA && okPress && !okLongo && segurar_venceu(agora, okDesde ? okDesde : 1, "spotlight recentes")) {
     okLongo = 1;
     removerRecente(focoL);
   }
