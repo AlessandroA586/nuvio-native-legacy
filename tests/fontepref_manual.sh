@@ -19,8 +19,9 @@ for gatilho in 'episodios_escolheu(&t,&e)' 'player_pediu_proximo(&t,&e)' 'detail
   confere "$janela" 1 "caminho manual '$gatilho' arma aguardandoFonte = 1"
 done
 # O bloco central aplica a lembrada (binge incluso) ANTES de pedir a fonte.
-n=$(grep -n 'lembrada = base\[0\] ? fontepref_escolher(base) : -1;' src/app.c | sed -n 2p | cut -d: -f1)
-confere "$(sed -n "${n},$((n + 2))p" src/app.c | grep -c 'stream_preferir(lembrada)')" 1 "bloco central: fontepref_escolher -> stream_preferir"
+n=$(grep -n 'lembrada = base\[0\] ? (ajustes_fonte_manual() ? fontepref_escolher_manual(base)' src/app.c | head -1 | cut -d: -f1)
+confere "$(sed -n "${n},$((n + 3))p" src/app.c | grep -c 'fontepref_escolher(base)) : -1')" 1 "bloco central usa fontepref_escolher (com a automatica) fora do modo manual"
+confere "$(sed -n "${n},$((n + 3))p" src/app.c | grep -c 'stream_preferir(lembrada)')" 1 "bloco central: fontepref_escolher -> stream_preferir"
 # A lembrada so e gravada na escolha MANUAL da folha (decisao documentada).
 confere "$(grep -c 'fontepref_guardar(base, s)' src/app.c)" 1 "fontepref_guardar so no escolheu da folha"
 [ "$falha" = 0 ] || exit 1

@@ -2033,6 +2033,26 @@ static void atualizarMotivoInicio(void) {
     if (txt[0]) { printf("[fonte] ilha: %s (%u ms)\n", txt, (unsigned)sn.desdeMs); fflush(stdout); }
   }
 }
+// A FONTE DO AUTOMATICO TOCOU: guarda o bingeGroup dela (fontepref.h). So
+// depois de o video estar pronto e andando — uma fonte que foi escolhida e
+// falhou na conferencia, ou que o player nao abriu, nunca chega aqui. Serie
+// apenas (filme nao tem episodio seguinte). Uma vez por fonte/lista.
+static void lembrarAutomatica(void) {
+  static int ultAtual = -1;
+  static unsigned ultGer;
+  int t = 0, e = 0, at;
+  if (!fonteVODAutomatica || player_id_canal()[0] || !player_aberto() || player_quer_sair() ||
+      aguardandoFonte != 0 || !video_pronto() || video_pos() < 3.0 ||
+      video_falhou() || player_fonte_falhou()) return;
+  at = stream_atual();
+  if (at < 0 || (at == ultAtual && stream_lista_geracao() == ultGer)) return;
+  player_episodio_atual(&t, &e);
+  if (t <= 0 || e <= 0) return;
+  ultAtual = at; ultGer = stream_lista_geracao();
+  { char base[24];
+    idBaseDoTitulo(base, sizeof base);
+    if (base[0]) fontepref_auto_guardar(base, stream_item(at)); }
+}
 static void tentarProximaFonteVOD(void) {
   Uint32 desde;
   int atual, motivo = 0;
@@ -3531,7 +3551,7 @@ void app_atualizar(float dt, Uint32 agora) {
     char base[24];
     prefFolhaN = stream_n();
     idBaseDoTitulo(base, sizeof base);
-    if (base[0] && fontepref_tem(base)) stream_preferir(fontepref_escolher(base));
+    if (base[0] && fontepref_tem(base)) stream_preferir(fontepref_escolher_manual(base));
   } else if (!stream_folha_aberta()) prefFolhaN = -1;
   trocaDeTituloSeSolicitada();
   marcarAssistidoSeSolicitado();
@@ -4087,7 +4107,7 @@ void app_atualizar(float dt, Uint32 agora) {
       // marca no primeiro quadro. E so uma varredura da lista em memoria.
       char base[24];
       idBaseDoTitulo(base, sizeof base);
-      stream_preferir(base[0] ? fontepref_escolher(base) : -1);
+      stream_preferir(base[0] ? fontepref_escolher_manual(base) : -1);
       nomeParaFolha(); stream_folha_abrir();
     }
   }
@@ -4160,7 +4180,11 @@ void app_atualizar(float dt, Uint32 agora) {
       char base[24];
       int lembrada;
       idBaseDoTitulo(base, sizeof base);
-      lembrada = base[0] ? fontepref_escolher(base) : -1;
+      // Com "escolher a fonte ao reproduzir" ligado so vale a escolha da PESSOA:
+      // a memoria do automatico (bingeGroup) nao pode tocar sozinha aqui nem
+      // aparecer como "Sua escolha anterior" na folha que vai abrir.
+      lembrada = base[0] ? (ajustes_fonte_manual() ? fontepref_escolher_manual(base)
+                                                   : fontepref_escolher(base)) : -1;
       stream_preferir(lembrada);
       // QUEM ESCOLHE E A PESSOA, quando ela pediu isso em Ajustes.
       //
@@ -4560,6 +4584,7 @@ void app_atualizar(float dt, Uint32 agora) {
     }
   }
   tentarProximaFonteVOD();
+  lembrarAutomatica();
   atualizarMotivoInicio();
   // O OK na explicacao da ilha: sai do player e cai em Ajustes > Fontes e addons
   // > Escolha da fonte, na linha da espera. A pessoa pediu: e o unico caso em
@@ -4652,7 +4677,7 @@ void app_atualizar(float dt, Uint32 agora) {
     char base[24];
     stream_folha_contexto(player_linha_episodio());
     idBaseDoTitulo(base, sizeof base);
-    stream_preferir(base[0] ? fontepref_escolher(base) : -1);
+    stream_preferir(base[0] ? fontepref_escolher_manual(base) : -1);
     nomeParaFolha(); stream_folha_abrir();
   }
 
