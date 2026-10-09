@@ -38,6 +38,7 @@
 #include "anim.h"
 #include "revela.h"
 #include "layout.h"
+#include "segurar.h"
 #include "ajustes.h"
 #include "catalogo.h"
 #include "descoberta.h"
@@ -1189,7 +1190,7 @@ void busca_atualizar(float dt, Uint32 agora) {
   animMic = anim_mola(animMic, painel == 0 && campoFoco == 2 ? 1.0f : 0.0f, dt, NV_MOLA_FOCO);
   if (painel != 1) ctxhold_cancelar(&holdRes);
   else if (ctxhold_passo(&holdRes, agora, 1) && menuNoResultado()) ctxhold_cancelar(&holdRes);
-  if (painel == 2 && okPress && !okLongo && agora - okDesde >= NV_HOLD_MS) {
+  if (painel == 2 && okPress && !okLongo && segurar_venceu(agora, okDesde ? okDesde : 1, "busca recentes")) {
     okLongo = 1;
     recentesRemover();
   }

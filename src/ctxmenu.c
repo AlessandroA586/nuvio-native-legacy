@@ -13,6 +13,7 @@
 #include "text.h"
 #include "tex_cache.h"
 #include "layout.h"
+#include "segurar.h"
 #include "anim.h"
 #include "movimento.h"
 #include "ajustes.h"
@@ -1124,7 +1125,7 @@ void ctx_atualizar(float dt, Uint32 agora) {
     SDL_AddEventWatch(observarHold, NULL);
     holdObservador = 1;
   }
-  if (holdAtivo && agora - holdDesde >= NV_HOLD_MS) holdPronto = 1;
+  if (holdAtivo && segurar_venceu(agora, holdDesde ? holdDesde : 1, "menu")) holdPronto = 1;
   if (ajustes_animacoes_reduzidas())
     anim = aberto ? 1.0f : 0.0f;
   else if (inlineOn && doPainel) {
