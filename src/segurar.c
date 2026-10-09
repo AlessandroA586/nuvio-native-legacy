@@ -2,34 +2,22 @@
 #include "layout.h"
 #include <stdio.h>
 
-// Inicio do quadro atual e do anterior (segurar_quadro).
-static Uint32 quadroAnt, quadroAtual;
-// Pressao (pelo `desde`) que ja ganhou a linha de log de disparo / de espera.
-static Uint32 logadoDisparo, logadoEspera;
+// Instante da ultima leitura de eventos (0 = segurar_quadro nunca chamado).
+static Uint32 leitura;
+// Pressao (pelo `desde`) que ja ganhou a linha de log.
+static Uint32 logado;
 
-void segurar_quadro(Uint32 agora) {
-  quadroAnt = quadroAtual;
-  quadroAtual = agora;
-}
+void segurar_quadro(Uint32 agora) { leitura = agora; }
 
 int segurar_venceu(Uint32 agora, Uint32 desde, const char *tela) {
-  Uint32 pausa = quadroAnt ? quadroAtual - quadroAnt : 0;
-  if (!desde || agora - desde < NV_HOLD_MS) return 0;
-  if (pausa > NV_SEGURAR_PAUSA_MS) {
-    // Os eventos que chegaram durante a pausa (o KEYUP de um toque curto) sao
-    // lidos no inicio do proximo quadro; ele decide.
-    if (logadoEspera != desde) {
-      logadoEspera = desde;
-      printf("[segurar] %s: limiar vencido apos pausa de %u ms; espera um quadro\n",
-             tela ? tela : "?", (unsigned)pausa);
-      fflush(stdout);
-    }
-    return 0;
-  }
-  if (logadoDisparo != desde) {
-    logadoDisparo = desde;
-    printf("[segurar] %s: disparou com %u ms segurando\n", tela ? tela : "?",
-           (unsigned)(agora - desde));
+  Uint32 ref = leitura ? leitura : agora;
+  if (!desde) return 0;
+  // KEYDOWN lido depois da ultima leitura registrada: ainda nao ha medida.
+  if ((Sint32)(ref - desde) < (Sint32)NV_HOLD_MS) return 0;
+  if (logado != desde) {
+    logado = desde;
+    printf("[segurar] %s: disparou com %u ms segurando (relogio da tela %u ms)\n",
+           tela ? tela : "?", (unsigned)(ref - desde), (unsigned)(agora - desde));
     fflush(stdout);
   }
   return 1;

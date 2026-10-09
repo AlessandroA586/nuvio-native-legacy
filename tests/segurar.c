@@ -1,5 +1,5 @@
 // #387: um quadro lento entre o KEYDOWN e o KEYUP do OK nao pode virar
-// pressao longa. segurar_venceu so dispara depois de um quadro normal.
+// pressao longa. O segurar e medido no instante da ultima leitura de eventos.
 #include "segurar.h"
 #include "layout.h"
 #include <stdio.h>
@@ -11,30 +11,34 @@ static void caso(int obtido, int quer, const char *nome) {
 }
 
 int main(void) {
-  Uint32 t;
-  int disparou = 0;
+  Uint32 t, disparo = 0;
   // Segurando de verdade: quadros de 16 ms ate passar o limiar.
-  for (t = 1000; t <= 1000 + NV_HOLD_MS + 32 && !disparou; t += 16) {
+  for (t = 1000; t <= 1000 + NV_HOLD_MS + 32 && !disparo; t += 16) {
     segurar_quadro(t);
-    disparou = segurar_venceu(t, 1000, "teste");
+    if (segurar_venceu(t, 1000, "teste")) disparo = t;
   }
-  caso(disparou, 1, "segurou com quadros normais dispara");
-  caso(t - 16 - 1000 >= NV_HOLD_MS && t - 16 - 1000 < NV_HOLD_MS + 32, 1, "dispara logo depois do limiar");
-  // Toque curto e um quadro de 900 ms logo depois do KEYDOWN: o KEYUP ja esta
-  // na fila e ainda nao foi lido. O quadro que sai da pausa nao pode disparar.
-  segurar_quadro(5000);
-  caso(segurar_venceu(5000, 5000, "teste"), 0, "quadro do KEYDOWN nao dispara");
-  segurar_quadro(5900);
-  caso(segurar_venceu(5900, 5000, "teste"), 0, "quadro depois de pausa de 900 ms nao dispara");
-  // Duas telas perguntam no MESMO quadro (menu de contexto antes da Biblioteca):
-  // a primeira pergunta nao pode gastar a pausa da segunda.
-  caso(segurar_venceu(5900, 5000, "teste"), 0, "segunda tela no mesmo quadro tambem espera");
-  // Ainda segurando no quadro seguinte (normal): agora dispara.
-  segurar_quadro(5916);
-  caso(segurar_venceu(5916, 5000, "teste"), 1, "quadro normal depois da pausa dispara");
+  caso(disparo >= 1000 + NV_HOLD_MS && disparo < 1000 + NV_HOLD_MS + 16, 1, "segurou com quadros normais dispara no limiar");
+  // Pausa DENTRO do quadro (revisao do Codex): leitura em 2016, KEYDOWN lido em
+  // 2017, a subida de textura leva 900 ms e a tela pergunta com o relogio em
+  // 2916. O KEYUP de um toque curto esta na fila e ainda nao foi lido.
+  segurar_quadro(2016);
+  caso(segurar_venceu(2916, 2017, "teste"), 0, "pausa dentro do quadro nao dispara");
+  // Pausa ENTRE quadros: a proxima leitura e em 2930; se o OK ainda esta
+  // afundado depois dela, e segurar de verdade.
+  segurar_quadro(2930);
+  caso(segurar_venceu(2930, 2017, "teste"), 1, "segurando depois da proxima leitura dispara");
+  // Duas telas no mesmo quadro veem a mesma medida.
+  caso(segurar_venceu(3500, 2017, "teste"), 1, "segunda tela no mesmo quadro concorda");
+  // Quadros sempre lentos (200 ms): o segurar de verdade ainda dispara.
+  disparo = 0;
+  for (t = 5000; t <= 6200 && !disparo; t += 200) {
+    segurar_quadro(t);
+    if (segurar_venceu(t, 5000, "teste")) disparo = t;
+  }
+  caso(disparo && disparo <= 5000 + NV_HOLD_MS + 200, 1, "quadros de 200 ms nao impedem o segurar");
   // Nao armado nunca dispara.
   caso(segurar_venceu(9000, 0, "teste"), 0, "sem armar nao dispara");
   if (falhas) { printf("FAIL #387: %d caso(s)\n", falhas); return 1; }
-  puts("PASS #387: pausa longa nao vira pressao longa.");
+  puts("PASS #387: o segurar e medido na ultima leitura de eventos.");
   return 0;
 }
