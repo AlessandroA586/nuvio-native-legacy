@@ -40,10 +40,10 @@ static int lista(Stream *v, int ep) {
   char u[100];
   snprintf(u, sizeof u, "https://exemplo.invalido/a/%d.mp4", ep);
   fonteB(&v[0], "Torrentio", "Torrentio\n1080p", u, 1080, 1, "");
-  snprintf(u, sizeof u, "https://exemplo.invalido/x/%d.mkv", ep);
-  fonteB(&v[1], "Outro Addon", "Outro 1080p", u, 1080, 0, "addon|grupoX");
-  snprintf(u, sizeof u, "https://exemplo.invalido/y/%d.mkv", ep);
-  fonteB(&v[2], "Terceiro", "Terceiro 1080p", u, 1080, 0, "addon|grupoY");
+  snprintf(u, sizeof u, "https://exemplo.invalido/x/%d.mp4", ep);
+  fonteB(&v[1], "Outro Addon", "Outro 1080p", u, 1080, 1, "addon|grupoX");
+  snprintf(u, sizeof u, "https://exemplo.invalido/y/%d.mp4", ep);
+  fonteB(&v[2], "Terceiro", "Terceiro 1080p", u, 1080, 1, "addon|grupoY");
   return 3;
 }
 
@@ -145,6 +145,22 @@ int main(void) {
   stream_definir_lista(v, 4);
   CONFERE(stream_automatico() == 3, "a pontuacao escolhe a 4K (%d)", stream_automatico());
   CONFERE(fontepref_escolher("tt3000005:1:2") == -1, "o grupo X (1080p) NAO rebaixa a faixa da 4K");
+
+  // ---- a regra do MP4 da LG (2.0.3) fica ACIMA: grupo em MKV nao ganha do MP4
+  // da mesma faixa. Fora da LG a regra nao existe e o grupo vale.
+  fontepref_definir_perfil(7);
+  n = lista(v, 1);
+  stream_definir_lista(v, n);
+  CONFERE(fontepref_auto_guardar("tt3000007:1:1", &v[1]) == 1, "perfil 7: automatica X");
+  n = lista(v, 2);
+  v[1].mp4 = 0; snprintf(v[1].url, sizeof v[1].url, "https://exemplo.invalido/x/2.mkv");
+  stream_definir_lista(v, n);
+  k = fontepref_escolher("tt3000007:1:2");
+#if !defined(NV_ANDROID) && !defined(NV_TPK) && !defined(__EMSCRIPTEN__) && !defined(NV_LINUX_DESKTOP)
+  CONFERE(k == -1, "LG: o grupo X em MKV nao passa na frente do MP4 da faixa (%d)", k);
+#else
+  CONFERE(k == 1, "fora da LG o grupo X em MKV vale (%d)", k);
+#endif
 
   // ---- arquivo da manual: o formato nao mudou (parser antigo le igual)
   fontepref_definir_perfil(6);

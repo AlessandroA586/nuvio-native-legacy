@@ -1956,6 +1956,20 @@ int stream_proxima_sem_perda(int atual) {
   return lista[melhor].altura >= lista[atual].altura &&
          lista[melhor].dolbyVision >= lista[atual].dolbyVision;
 }
+int stream_grupo_sem_perda(int i) {
+  int a, gi, ga;
+  if (i < 0 || i >= n || automaticaExcluida(i) || ehInformativa(&lista[i])) return 0;
+  gi = grupoDe(i);
+  if (gi < 0) return 0;
+  a = automaticoCom(1);
+  if (a < 0 || a == i) return 1;
+  ga = grupoDe(a);
+  if (gi > ga) return 0;
+  if (lista[i].altura < lista[a].altura || lista[i].dolbyVision < lista[a].dolbyVision) return 0;
+  if (lgMp4Primeiro() && lista[i].altura == lista[a].altura &&
+      stream_e_mp4(&lista[a]) && !stream_e_mp4(&lista[i])) return 0;
+  return 1;
+}
 int stream_automatico(void) { return automaticoCom(1); }
 int stream_automatico_canal(void) { return automaticoCom(0); }
 

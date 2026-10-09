@@ -180,6 +180,12 @@ int  stream_automatico(void);
 // existe e NAO e pior que ela: mesma resolucao ou maior, Dolby Vision igual ou
 // melhor. 0 = nao ha proxima, ou a proxima baixaria a qualidade (#202).
 int  stream_proxima_sem_perda(int atual);
+// A fonte `i` pode ser seguida por um grupo lembrado SEM rebaixar o que o
+// automatico escolheria hoje: nao excluida pelas regras do dono, grupo de
+// regras igual ou melhor, resolucao e Dolby Vision iguais ou maiores e, na LG,
+// nunca um nao-MP4 no lugar do MP4 da mesma faixa. Usada so pela memoria do
+// AUTOMATICO (fontepref); a manual nao passa por aqui, e escolha da pessoa.
+int  stream_grupo_sem_perda(int i);
 // O mesmo sem as regras de auto-play (#202): canal ao vivo.
 int  stream_automatico_canal(void);
 // Exclui uma candidata que ja foi entregue ao player e travou no pipeline.
