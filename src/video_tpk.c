@@ -41,12 +41,18 @@ typedef void (*FnSemArg)(void);
 typedef void (*FnInt)(int);
 typedef void (*FnRet)(int x, int y, int w, int h);
 typedef int  (*FnPos)(void);
+// Source crop in RATIOS of the frame (0..1), destination in screen units.
+// Returns 1 when the TV took it, 0 when this build has no such call (Tizen 4)
+// or the call refused the values.
+typedef int  (*FnCropSource)(double rx, double ry, double rw, double rh,
+                               int dx, int dy, int dw, int dh);
 
 static FnAbrir  hAbrir;
 static FnSemArg hParar;
 static FnInt    hPausar, hBuscar, hVolume;
 static FnRet    hJanela;
 static FnPos    hPos;
+static FnCropSource hCropSource;
 typedef void (*FnEscolher)(int tipo, int idx);
 static FnEscolher hEscolher;
 
@@ -156,6 +162,22 @@ void nv_tpk_video_registrar(FnAbrir abrir, FnSemArg parar, FnInt pausar, FnInt b
 __attribute__((visibility("default")))
 void nv_tpk_video_registrar_faixas(FnEscolher escolher) { hEscolher = escolher; }
 
+// The source crop, registered apart from nv_tpk_video_registrar on purpose: that
+// signature is resolved BY NAME by the Tizen 4/5 ELF loader and is called by all
+// four hosts, so widening it would touch every host and the loader. A second
+// entry point costs nothing and leaves what works alone.
+__attribute__((visibility("default")))
+void nv_tpk_video_crop_register(FnCropSource r) { hCropSource = r; }
+
+// Whether THIS TV has the source-crop call. The host probes with reflection once
+// at startup and reports the answer here, because it decides which aspect modes
+// the player may offer at all: with no crop, five of the eight draw the same full
+// screen on a 16:9 frame, and the other three are a button that does nothing -
+// which is exactly the report this fixes.
+static int cropOk;
+__attribute__((visibility("default")))
+void nv_tpk_video_crop_available(int tem) { cropOk = tem ? 1 : 0; }
+
 void video_escolher_audio(int i);
 
 // Mesma regra do video.c / video_tizen.c: sem preferencia ou sem faixa que
@@ -260,6 +282,10 @@ void nv_tpk_video_legenda(const char *texto, int durMs) {
 enum { EV_PRONTO = 1, EV_TOCANDO = 2, EV_PAUSADO = 3, EV_FIM = 4, EV_ERRO = 5,
        EV_TAMANHO = 6, EV_BUFFER = 7, EV_VELOCIDADE = 8 };
 
+// HAS THE PLAYER EVER REALLY PLAYED IN THIS SESSION? Sticky: EV_TOCANDO is the
+// host saying Start() took, and nothing clears it until a new video opens.
+// The crop needs exactly this and not more - see escolhasPendentes.
+
 __attribute__((visibility("default")))
 void nv_tpk_video_evento(int tipo, int a, int b) {
   if (!ativo) return; // evento tardio depois de sair
@@ -350,6 +376,61 @@ int  video_iniciar_auto(void) { return hAbrir != NULL; }
 int  video_registro_negado(void) { return 0; }
 
 static int emTrailer = 0;   // ver video_tpk_trailer_marcar
+
+// A CROP CHOSEN BEFORE THERE IS A PICTURE IS LOST, SO IT IS SENT AGAIN.
+//
+// Seen on 2026-10-10: the first press with the video PAUSED did nothing, it started
+// working once the film played, and after that it worked even in pause. That matches
+// the measurement already recorded for the trailer on this same set (src/trailer.c):
+// asked before playing, the crop is ACCEPTED and IGNORED, and only a LATER request
+// lands.
+//
+// So a crop owed is sent once more when the first frame arrives, which is when the
+// plane stops swallowing writes. The mode saved in Ajustes is applied at OPEN,
+// inside that window, and that is the case this exists for; a press made while the
+// film already runs is sent by the press itself and needs nothing here.
+//
+// ONE extra send, and not a repeating loop: each send is several calls into the
+// player, and the plane is shared with the window positioning player.c drives.
+// Hammering it races the two for no gain.
+static int cropOwed;                       // the plane still has to be told this
+static int owedIdentity;                   // ...and the answer is the WHOLE FRAME
+static int owedSrcX, owedSrcY, owedSrcW, owedSrcH;
+static int owedDstX, owedDstY, owedDstW, owedDstH;
+
+// A NEW SESSION FORGETS THE OWED CROP. Without this it belonged to the FIRST video
+// of the app's life, so every later title carried a stale one, and leaving and
+// resuming appeared to be the only fix.
+static void cropRearm(void) { cropOwed = 0; owedIdentity = 0; }
+
+// True while a crop this side sent may still be on the plane. Set when the host
+// takes a crop, cleared by a whole-frame write that took. Sticky across sessions on
+// purpose: a reconnect reuses the player, and the crop outlives the session that
+// asked for it. It is what makes video_janela clear only when there is something to
+// clear.
+static int cropAtivo;
+
+static int cropSource(int qw, int qh, int sx, int sy, int sw, int sh,
+                      int dx, int dy, int dw, int dh);
+static void cropClear(int dx, int dy, int dw, int dh);
+
+// Sends it again, now that the film is really running.
+static void cropSendOwed(void) {
+  if (!cropOwed) return;
+  cropOwed = 0;
+  if (owedIdentity) {
+    owedIdentity = 0;
+    printf("[video] tpk source crop: re-sending the whole frame now that the film is running\n");
+    fflush(stdout);
+    cropClear(owedDstX, owedDstY, owedDstW, owedDstH);
+    return;
+  }
+  printf("[video] tpk source crop: sending again now that the film is running\n");
+  fflush(stdout);
+  cropSource(largura, altura, owedSrcX, owedSrcY, owedSrcW, owedSrcH,
+             owedDstX, owedDstY, owedDstW, owedDstH);
+}
+
 // Abre urlAtual no host. Serve a fonte nova e ao recarregar da reconexao.
 static int abrirSessao(void) {
   // video_iniciar() NAO e chamada no .tpk (so video.c, o ramo da LG, a chama;
@@ -367,7 +448,12 @@ static int abrirSessao(void) {
   nAudio = nLeg = 0; audioAtual = 0; legAtual = -1;
   audioNaoSup = faixasLidas = audioLogado = 0;
   comecou = 0; comecouEm = 0; audioComecou = 0; audioPend = legPend = -1;
-  if (!travaLeg) travaLeg = SDL_CreateMutex();
+  // A NEW SESSION RE-ARMS THE CROP. Without this the repeat belonged to the
+  // FIRST video of the app's life: the window was never cleared, so every later
+  // title skipped it and a crop lost early stayed lost for that whole film.
+  // Resuming is what appeared to fix it, because a resume is a re-apply with
+  // the plane already running.
+  cropRearm();  if (!travaLeg) travaLeg = SDL_CreateMutex();
   legendaLimpar(1);
   legendaMarcarEnvio(-1);
   if (travaLeg) { SDL_LockMutex(travaLeg); legCueSessao = 0; legAbriuEm = SDL_GetTicks(); SDL_UnlockMutex(travaLeg); }
@@ -528,6 +614,7 @@ static void sondaMkv(double pos) {
 // worked took 4519 ms, so a timeout would fire mid-buffer and restore the bug.
 #define LEG_QUADRO_S   0.25
 static int temQuadro(void) { return pronto && video_pos() >= LEG_QUADRO_S; }
+
 static void escolhasPendentes(void) {
   Uint32 agora = SDL_GetTicks();
   // Audio keeps its own state: it leaves on the first tick and never had this
@@ -539,7 +626,10 @@ static void escolhasPendentes(void) {
     fflush(stdout);
     if (hEscolher) hEscolher(0, faixaAudio[i].numero);
   }
-  // The subtitle window counts from this, the first frame.
+  // The subtitle window counts from this, the first frame. The CROP does not: an
+  // owed write is sent while the film is RUNNING (see below), which is a different
+  // and much weaker condition. Keeping the two apart is the point - a paused film
+  // reaches none of this and the crop must still go out.
   if (!comecou && temQuadro()) {
     comecou = 1; comecouEm = agora;
     // The position is the frame evidence and this logs it: on a RESUMED episode
@@ -548,6 +638,14 @@ static void escolhasPendentes(void) {
     printf("[video] tpk: first frame at %.2fs\n", video_pos());
     fflush(stdout);
   }
+  // The owed write goes out when the film is RUNNING.
+  //
+  // It used to go out on `cropCanLand()` (has it EVER played), which is sticky for the
+  // whole session: a write dropped while paused was re-sent immediately, still paused,
+  // dropped again, and never tried once the person pressed play. That is why going back
+  // to Original while paused stayed zoomed even after playback started. Waiting for
+  // `tocando` is what makes the resume the thing that lands it.
+  if (cropOwed && tocando) cropSendOwed();
   if (!comecou) return;
   if (legPend >= 0 && agora - comecouEm >= LEG_ACOMODAR_MS) {
     int i = legPend; legPend = -1;
@@ -643,7 +741,14 @@ void video_buscar(double s) {
   if (hBuscar) hBuscar((int)(s * 1000.0));
   terminou = 0;
 }
-void video_janela(int x, int y, int w, int h) { if (hJanela) hJanela(x, y, w, h); }
+void video_janela(int x, int y, int w, int h) {
+  if (hJanela) hJanela(x, y, w, h);
+  // A PLAIN WINDOW WRITE SHOWS THE WHOLE SOURCE, so a crop still on the plane comes
+  // off with it - with THIS destination, not a full screen. Only when one is in
+  // force or owed: an untouched plane gets no write (and a crop write on a paused
+  // video force-resumes it, so silence matters here).
+  if (cropAtivo || cropOwed) cropClear(x, y, w, h);
+}
 
 // RECORTE DE FONTE EMULADO PELO RETANGULO DE DESTINO (ROI).
 //
@@ -686,16 +791,13 @@ void video_janela(int x, int y, int w, int h) { if (hJanela) hJanela(x, y, w, h)
 #ifndef NV_TPK_ZOOM_ROI
 #define NV_TPK_ZOOM_ROI 0
 #endif
-// #203: no 4/5 (NV_TPK40) o botao de aspecto do PLAYER ficava sem efeito: sem
-// recorte o ciclo so oferece "Original". O host 4/5 aplica o destino movendo a
-// janela do video (Video.cs JanelaTizen45), que nao e o ROI que apagava o plano
-// no Tizen 9, entao o player libera os modos de recorte la. O trailer segue
-// sem zoom (video_recorte_fonte_trailer) a nao ser que o ajuste esteja ligado.
-#ifdef NV_TPK40
-#define NV_TPK_PLAYER_RECORTE 1
-#else
-#define NV_TPK_PLAYER_RECORTE 0
-#endif
+// #203 NO LONGER GATES THIS ON A BUILD FLAG. It used to compile the crop/zoom
+// modes on for the 4/5 package on the theory that moving the video window was
+// enough. It is not: a zoom needs the frame drawn larger than the screen, with its
+// origin off the panel, and this platform refuses a negative origin (see the note
+// on cropSource). Whether the modes may be offered is now the TV's own answer - the
+// host probes for the source crop and reports through nv_tpk_video_crop_available
+// (see video_recorte_fonte).
 // Flag de EXECUCAO (#241, #290): Ajustes > Trailers > "Zoom no trailer e no
 // player (experimental)" deixa cada dono testar na propria TV. Comeca no padrao de compilacao acima.
 static int zoomRoi = 0;
@@ -718,14 +820,138 @@ static unsigned roiForaLogado;
 static int roiNaTela(int x, int y, int w, int h) {
   return w > 0 && h > 0 && x >= 0 && y >= 0 && x + w <= TPK_TELA_W && y + h <= TPK_TELA_H;
 }
+
+// A CROP OF THE SOURCE, IN RATIOS OF THE FRAME.
+//
+// This is the Samsung pair of the webOS sourceInput/displayOutput, and it is the
+// only way to zoom here without moving the destination off the screen. Ratios and
+// not pixels because that is what the call takes, and because a ratio can never be
+// negative: a zoom always needs an origin left of and above the screen, and this
+// platform refuses a negative origin. MEASURED: `mmf_attribute_validate_int >
+// [mmf_attribute:display_win_roi_x] out of range` (TizenFX #514), and Samsung's
+// own answer there is "libmm_player don't accept negative position when rendering
+// by Overlay" - which is the type of display this host uses.
+//
+// The destination is the WHOLE screen, so nothing ever leaves it. On success the
+// plane is already correct and the caller must not also move it.
+//
+static int cropSource(int qw, int qh, int sx, int sy, int sw, int sh,
+                        int dx, int dy, int dw, int dh) {
+  if (!hCropSource || qw < 2 || qh < 2 || sw < 2 || sh < 2) return 0;
+  // Ratios of the decoded frame. The slice is already clamped to the frame and
+  // even-aligned by player.c, so it never exceeds 0..1.
+  { double rx = (double)sx / (double)qw, ry = (double)sy / (double)qh;
+    double rw = (double)sw / (double)qw, rh = (double)sh / (double)qh;
+    int r;
+    if (rx < 0.0) { rw += rx; rx = 0.0; }
+    if (ry < 0.0) { rh += ry; ry = 0.0; }
+    if (rw > 1.0) rw = 1.0;
+    if (rh > 1.0) rh = 1.0;
+    if (rw <= 0.0 || rh <= 0.0) return 0;
+    r = hCropSource(rx, ry, rw, rh, dx, dy, dw, dh);
+    // SAY WHAT THIS NUMBER IS. The host has to marshal the call to its own thread,
+    // so what comes back is the PROBE verdict - "this TV has the call" - not the
+    // result of these values. Printing it as "applied" would be a claim the caller
+    // cannot support.
+    printf("[video] tpk source crop %.3f,%.3f %.3fx%.3f -> sent (host says; the verdict is its own, not this call's)\n",
+           rx, ry, rw, rh);
+    fflush(stdout);
+    // UNDO THE FORCED RESUME. SetVideoRoi resumes playback by force - the vendor
+    // says so in the note for the call - so a crop asked for on a video the person
+    // PAUSED starts the film, and the app then sees it as "the user pressed play".
+    // There is nothing to negotiate: the app knows it was paused, so it says so
+    // again right after, and the pause wins. The two calls are queued in order.
+    if (r && pausaPedida) {
+      printf("[video] tpk source crop: re-asserting the pause it just resumed\n");
+      fflush(stdout);
+      if (hPausar) hPausar(1);
+    }
+    if (r) { temRoi = 0; cropAtivo = 1; return 1; }
+  }
+  return 0;
+}
+
+// Back to the untouched frame. Sent when the mode stops cropping - and from
+// video_janela whenever a plain window write supersedes one, which is what keeps a
+// zoom off the PiP corner and out of every later mode.
+//
+// THE DESTINATION GOES WITH IT. The release writes the fit back (Video.cs reads the
+// crop's own destination for it), and it must be the fit the CALLER just asked for:
+// a hardcoded full screen clobbered the credits shrink and the corner window, which
+// the window write before this call had just set.
+static void cropClear(int dx, int dy, int dw, int dh) {
+  // A ZOOM ASKED FOR BEFORE THE FILM PLAYED MUST NOT OUTLIVE ITS OWN DEMAND. This
+  // path does not go through cropSource, so it has to drop the held zoom itself or
+  // the next retry would put the old crop back - and it drops it BEFORE the send:
+  // a clear that fails must still kill the held zoom, it may only retry the write.
+  cropOwed = 0; owedIdentity = 0;
+  if (!hCropSource) { cropAtivo = 0; return; }
+  if (hCropSource(0.0, 0.0, 1.0, 1.0, dx, dy, dw, dh)) {
+    // THE WHOLE FRAME IS ALSO OWED WHILE THE FILM IS PAUSED.
+    //
+    // MEASURED: going back to Original while paused left the picture zoomed, and it
+    // stayed zoomed after playback resumed. The zoom path had a retry for exactly
+    // this (a write the plane drops while paused) and this path had none: it was a
+    // one-shot. Cycling through every mode appeared to fix it only because the last
+    // round left the plane somewhere the stale crop no longer matched.
+    //
+    // The retry is armed by the same rule as the crop: it is armed when the film is
+    // not running now, and sent by cropSendOwed() once it is.
+    if (!tocando) { cropOwed = 1; owedIdentity = 1;
+      owedDstX = dx; owedDstY = dy; owedDstW = dw; owedDstH = dh; }
+    cropAtivo = 0;
+    printf("[video] tpk source crop cleared%s\n", cropOwed ? " (owed; the film is paused)" : "");
+    fflush(stdout);
+  } else {
+    // The write did not leave this side: the crop may still be on the plane, so the
+    // next plain write has to try again.
+    cropAtivo = 1;
+  }
+}
+
+
 void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh) {
   double qw = largura, qh = altura, ex, ey;
   int X, Y, W, H;
 
   // Sem as dimensoes do quadro, ou sem recorte de verdade, o destino cru serve.
   if (qw < 2.0 || qh < 2.0 || sw <= 0 || sh <= 0) { temRoi = 0; video_janela(dx, dy, dw, dh); return; }
-  // Recorte que cobre o quadro inteiro E o caso sem zoom: mesma coisa.
-  if (sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh) { temRoi = 0; video_janela(dx, dy, dw, dh); return; }
+  // Recorte que cobre o quadro inteiro E o caso sem zoom: mesma coisa. The crop
+  // comes off with it: video_janela sends the whole frame whenever one is in force.
+  if (sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh) {
+    temRoi = 0; video_janela(dx, dy, dw, dh);
+    return;
+  }
+
+  printf("[video] tpk recorte %d,%d %dx%d de %.0fx%.0f\n", sx, sy, sw, sh, qw, qh);
+  fflush(stdout);
+
+  // THE CROP FIRST: it is the only path that needs no rectangle outside the
+  // screen, and it is what actually zooms. The destination trick below needs the
+  // whole frame drawn into a LARGER rectangle whose origin sits left of and above
+  // the screen, and this platform refuses a negative origin - see the note on
+  // cropSource. It is kept only as the last resort.
+  //
+  // 4/5 ONLY, for now. The host is shared by all four packages and this path is
+  // verified on one TV; enabling the crop on the 6+/9 builds would change the
+  // aspect modes there with nothing to test it against. They keep today's
+  // behaviour until someone can look at one.
+#ifdef NV_TPK40
+  { int r = cropSource((int)qw, (int)qh, sx, sy, sw, sh, dx, dy, dw, dh);
+    if (r) {
+      // Remember the slice. A write made while the film is paused may be dropped by
+      // the plane, so it is marked owed and cropSendOwed() sends it once the film is
+      // running (see escolhasPendentes).
+      owedSrcX = sx; owedSrcY = sy; owedSrcW = sw; owedSrcH = sh;
+      owedDstX = dx; owedDstY = dy; owedDstW = dw; owedDstH = dh;
+      // ARMED WHENEVER THE FILM IS NOT RUNNING, not merely before the first play. The
+      // old rule was "has it EVER played", which is sticky for the whole session, so a
+      // crop asked for while paused was never treated as owed.
+      cropOwed = tocando ? 0 : 1;
+      owedIdentity = 0;
+      return;
+    } }
+#endif
 
   ex = (double)dw / (double)sw;
   ey = (double)dh / (double)sh;
@@ -734,16 +960,11 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
   X  = (int)(dx - sx * ex + 0.5);
   Y  = (int)(dy - sy * ey + 0.5);
 
-  printf("[video] tpk recorte %d,%d %dx%d de %.0fx%.0f -> roi %d,%d %dx%d\n",
-         sx, sy, sw, sh, qw, qh, X, Y, W, H);
-  fflush(stdout);
-
   // #290: o ajuste opt-in vale para o trailer E para o player (proporcao).
-  if (!NV_TPK_ZOOM_ROI && !NV_TPK_PLAYER_RECORTE && !zoomRoi && !roiNaTela(X, Y, W, H)) {
+  if (!NV_TPK_ZOOM_ROI && !zoomRoi && !roiNaTela(X, Y, W, H)) {
     if (roiForaLogado != sessao) {
       roiForaLogado = sessao;
-      printf("[video] tpk: roi fora da tela nao vai ao plano, fica o destino %d,%d %dx%d (sem zoom)\n",
-             dx, dy, dw, dh);
+      printf("[video] tpk no zoom: the crop refused and the ROI would leave the screen\n");
       fflush(stdout);
     }
     temRoi = 0;
@@ -751,14 +972,22 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
     return;
   }
 
+  printf("[video] tpk emulated crop -> roi %d,%d %dx%d\n", X, Y, W, H);
+  fflush(stdout);
   ultRoiX = X; ultRoiY = Y; ultRoiW = W; ultRoiH = H; temRoi = 1;
   video_janela(X, Y, W, H);
 }
-// #290 ("aspect ratio still doesn't work"): sem recorte o ciclo do player so
-// oferecia modos que cabem na tela, e num 16:9 todos dao o mesmo retangulo. O
-// mesmo ajuste experimental do trailer (desligado por padrao) libera os modos
-// de recorte/zoom no player.
-int  video_recorte_fonte(void) { return NV_TPK_ZOOM_ROI || NV_TPK_PLAYER_RECORTE || zoomRoi; }
+// The zoom needs the source crop. Without it, five of the eight modes draw the
+// same full screen on a 16:9 frame and the other three would do nothing - a
+// button that lies. The host probes and reports; see nv_tpk_video_crop_available.
+// 4/5 only: the 6+/9 builds keep today's modes (see video_janela_fonte).
+int  video_recorte_fonte(void) {
+#ifdef NV_TPK40
+  return cropOk || NV_TPK_ZOOM_ROI || zoomRoi;
+#else
+  return NV_TPK_ZOOM_ROI || zoomRoi;
+#endif
+}
 int  video_recorte_fonte_trailer(void) { return NV_TPK_ZOOM_ROI || zoomRoi; }
 // O host prende o plano em mais de um ponto depois do prepare; um ROI pedido
 // cedo pode ser engolido. trailer.c/player.c repetem o pedido nos primeiros

@@ -283,6 +283,9 @@ static Uint32 ultimoInput = 0;
 static int skipFoco = 0;
 static int trechoPulavel(double *fim);
 
+// Last time the person's pause had to be re-asserted (see player_atualizar).
+static Uint32 reafirmadoEm;
+
 // UMA COR DE ACENTO SO NO PLAYER (Glass UI): ajustes_acento(), a mesma das
 // ilhas. Havia duas contas (botao_cor_foco aqui, a mistura de 74% no
 // pos-reproducao e nas faixas) e o mesmo tema saia em dois tons na mesma tela.
@@ -1148,23 +1151,47 @@ static void aspArmar(void) { aspPendente = comVideo ? 1 : 0; aspLiberarEm = aspP
 static void aspArmar(void) {}
 #endif
 
+// ONE PRESS, ONE REPORT. A success return from the Tizen host is the setter's
+// return code, not proof the picture moved: Tizen accepts the call and the plane
+// ignores it (the same call that rejects display_win_roi_x as "out of range",
+// measured). Without this the log cannot separate "the key never arrived", "the
+// chosen mode draws the SAME rectangle" and "it went out and the plane dropped
+// it" - three different repairs. Cleared by player_aspecto_ciclar, because the
+// automatic calls (videoInfo, credits shrink, end of animation) reach here many
+// times for the same reason.
+static int aspPedidoPorTecla;
+
 static void aplicarAspecto(void) {
   PlrRect r, d;
   float qw, qh;
   int sx, sy, sw, sh;
-  if (!comVideo) return;
-  if (janAtiva) return;
+  if (!comVideo) {
+    if (aspPedidoPorTecla) { aspPedidoPorTecla = 0;
+      printf("[aspect] nothing to apply: no video\n"); fflush(stdout); }
+    return;
+  }
+  if (janAtiva) {
+    if (aspPedidoPorTecla) { aspPedidoPorTecla = 0;
+      printf("[aspect] nothing to apply: window animation running\n"); fflush(stdout); }
+    return;
+  }
 
   // No PiP todo recalculo cai na miniatura — o videoInfo da fonte nova num
   // zap, por exemplo, chega DEPOIS do video_janela do canto e sem esta
   // guarda reexpandiria o plano para a tela cheia com a moldura la embaixo.
-  if (mini) { PlrRect o = miniDestino();
+  if (mini) { if (aspPedidoPorTecla) { aspPedidoPorTecla = 0;
+                printf("[aspect] nothing to apply: video is in the corner (PiP)\n"); fflush(stdout); }
+              PlrRect o = miniDestino();
               video_janela((int)(o.x + 0.5f), (int)(o.y + 0.5f),
                            (int)(o.w + 0.5f), (int)(o.h + 0.5f));
               return; }
 
   // Layout neutro ate o modo salvo ser liberado (ver aspArmar).
-  if (aspPendente) return;
+  if (aspPendente) {
+    if (aspPedidoPorTecla) { aspPedidoPorTecla = 0;
+      printf("[aspect] nothing to apply: neutral layout until the first frame\n"); fflush(stdout); }
+    return;
+  }
 
   // VALOR HERDADO. `aspecto` e gravado por aparelho, mas um arquivo copiado —
   // ou um modo que existia numa versao anterior — pode trazer um modo que esta
@@ -1175,7 +1202,12 @@ static void aplicarAspecto(void) {
 
   r = aspectoRect(aspecto);
   d = aspectoVisivel(aspecto);
-  if (d.w < 1.0f || d.h < 1.0f || r.w < 1.0f || r.h < 1.0f) return;
+  if (d.w < 1.0f || d.h < 1.0f || r.w < 1.0f || r.h < 1.0f) {
+    if (aspPedidoPorTecla) { aspPedidoPorTecla = 0;
+      printf("[aspect] nothing to apply: degenerate rectangle (virtual %.0fx%.0f visible %.0fx%.0f)\n",
+             r.w, r.h, d.w, d.h); fflush(stdout); }
+    return;
+  }
 
   qw = (float)video_largura();
   qh = (float)video_altura();
@@ -1184,6 +1216,10 @@ static void aplicarAspecto(void) {
   // funciona. Assim que o videoInfo chegar, aplicarAspecto roda de novo.
   if (qw < 2.0f || qh < 2.0f) {
     PlrRect o = destinoComRecuo(d);
+    if (aspPedidoPorTecla) { aspPedidoPorTecla = 0;
+      printf("[aspect] mode=%d without frame dimensions; destination only %d,%d %dx%d\n",
+             aspecto, (int)(o.x + 0.5f), (int)(o.y + 0.5f),
+             (int)(o.w + 0.5f), (int)(o.h + 0.5f)); fflush(stdout); }
     video_janela((int)(o.x + 0.5f), (int)(o.y + 0.5f),
                  (int)(o.w + 0.5f), (int)(o.h + 0.5f));
     return;
@@ -1207,6 +1243,13 @@ static void aplicarAspecto(void) {
   // menor. Calcular a fonte a partir do retangulo ja recuado espremeria a
   // imagem, porque o recuo mudaria a regra de tres sem mudar o quadro.
   { PlrRect o = destinoComRecuo(d);
+    if (aspPedidoPorTecla) {
+      aspPedidoPorTecla = 0;
+      printf("[aspect] mode=%d frame %.0fx%.0f: source %d,%d %dx%d -> destination %d,%d %dx%d\n",
+             aspecto, qw, qh, sx, sy, sw, sh,
+             (int)(o.x + 0.5f), (int)(o.y + 0.5f), (int)(o.w + 0.5f), (int)(o.h + 0.5f));
+      fflush(stdout);
+    }
     video_janela_fonte(sx, sy, sw, sh,
                        (int)(o.x + 0.5f), (int)(o.y + 0.5f),
                        (int)(o.w + 0.5f), (int)(o.h + 0.5f)); }
@@ -1241,9 +1284,49 @@ static int modoPrecisaRecorte(int modo) {
 // como "escala funcionou mas nao parece estar recortando, parece que ta
 // esticando". Oferecer dois modos que fazem o que dizem e melhor que oito em
 // que seis mentem.
-static int modoDisponivel(int modo) {
+static int modoPermitido(int modo) {
   if (video_recorte_fonte()) return 1;
   return !modoPrecisaRecorte(modo);
+}
+
+// TWO MODES THAT DRAW THE SAME THING.
+//
+// Compared by the VIRTUAL rectangle, rounded the way it goes to the plane: two
+// modes with the same rectangle show the same picture, however different their
+// names are. And they are equal more often than it looks - on a 16:9 frame,
+// Original, Recortar, Esticar, Fit altura and Fit largura ALL come out as
+// 0,0 1920x1080, because fitting, covering and filling are the same drawing when
+// the frame is already the size of the screen.
+//
+// That is the report "some do nothing yet they are displayed": the press moved
+// the name in the warning and nothing else could move. It is not a Tizen
+// problem - the same happens on a 2.39:1 frame on the LG, where Fit largura
+// equals Original and Fit altura equals Recortar.
+static int mesmoRetangulo(PlrRect a, PlrRect b) {
+  return (int)(a.x + 0.5f) == (int)(b.x + 0.5f) &&
+         (int)(a.y + 0.5f) == (int)(b.y + 0.5f) &&
+         (int)(a.w + 0.5f) == (int)(b.w + 0.5f) &&
+         (int)(a.h + 0.5f) == (int)(b.h + 0.5f);
+}
+
+// IS THIS MODE WORTH A PRESS? Two questions: can this TV do it, and does it
+// draw anything new?
+//
+// The second one was the missing half. A mode that repeats the rectangle of an
+// earlier mode adds nothing, and offering it spends the key on nothing. The first
+// mode of each drawing represents the group, so the set comes from the FRAME's
+// ratio - the same 16:9 offers 4 modes and a 2.39:1 offers 6.
+//
+// The dots on screen (pd.pontos) count through this same function, so the dots
+// are exactly the modes the key walks: the two can never disagree.
+static int modoDisponivel(int modo) {
+  int i;
+  PlrRect r;
+  if (!modoPermitido(modo)) return 0;
+  r = aspectoRect(modo);
+  for (i = 0; i < modo; i++)
+    if (modoPermitido(i) && mesmoRetangulo(aspectoRect(i), r)) return 0;
+  return 1;
 }
 
 void player_toast_ex(const char *texto, unsigned ms, const char *icone, int ambar) {
@@ -1257,13 +1340,47 @@ void player_toast(const char *texto, unsigned ms) { player_toast_ex(texto, ms, N
 
 void player_aspecto_ciclar(void) {
   int m = aspecto, i;
-  // No maximo uma volta: se nada mais estiver disponivel, fica onde esta em vez
-  // de girar para sempre.
+  PlrRect antes, depois;
+  // THE VIRTUAL RECTANGLE, not the visible one. The visible one is clipped to
+  // the screen, so EVERY zoom mode measures 0,0 1920x1080 there - comparing the
+  // visible ones would say "same" exactly on the modes that do change. The
+  // virtual one is what computes the source slice, and it shows whether the
+  // press will move the picture at all.
+  antes = aspectoRect(aspecto);
+  // The NEXT mode that changes the picture, not simply the next one. One full lap
+  // at most: if no mode draws anything else it stays put instead of spinning.
+  //
+  // The same-rectangle test belongs INSIDE the scan. Breaking on the first
+  // available mode wedged the key: from Fit largura (7) on a 16:9 frame the first
+  // available found is Original, the two draw the same, and the press was refused
+  // there - the zooms a few modes later were never reached. Skipping candidates
+  // that draw what is already on screen walks past the current drawing.
   for (i = 0; i < PLR_ASP_N; i++) {
     m = (m + 1) % PLR_ASP_N;
-    if (modoDisponivel(m)) break;
+    if (modoDisponivel(m) && !mesmoRetangulo(antes, aspectoRect(m))) break;
   }
+  depois = aspectoRect(m);
+  // Nothing to change: there is only one possible drawing at this frame ratio. It
+  // does not re-apply (that would resend the same crop to the plane) and the toast
+  // says why the key did nothing - staying silent would be worse than before.
+  if (m == aspecto || mesmoRetangulo(antes, depois)) {
+    printf("[aspect] key: mode %d (%s); no other mode changes the picture on this frame\n",
+           aspecto, player_aspecto_rotulo(aspecto));
+    fflush(stdout);
+    toastTexto[0] = 0;
+    toastAte = SDL_GetTicks() + PLR_TOAST_MS;
+    return;
+  }
+  printf("[aspect] key: mode %d (%s) -> %d (%s); rectangle %d,%d %dx%d -> %d,%d %dx%d\n",
+         aspecto, player_aspecto_rotulo(aspecto), m, player_aspecto_rotulo(m),
+         (int)(antes.x + 0.5f), (int)(antes.y + 0.5f),
+         (int)(antes.w + 0.5f), (int)(antes.h + 0.5f),
+         (int)(depois.x + 0.5f), (int)(depois.y + 0.5f),
+         (int)(depois.w + 0.5f), (int)(depois.h + 0.5f));
+  fflush(stdout);
+  aspPedidoPorTecla = 1;
   player_aspecto_definir(m);
+  aspPedidoPorTecla = 0;
   toastTexto[0] = 0;
   toastAte = SDL_GetTicks() + PLR_TOAST_MS;
 }
@@ -2739,6 +2856,22 @@ void player_evento(const SDL_Event *e) {
     alternarTocando(); botao = PLR_PLAY; barraFoco = 0; skipFoco = 0;
     acordar(); return;
   }
+  // THE ASPECT KEY IS ROUTED BEFORE THE PAUSE PANEL, and that is deliberate.
+  //
+  // The panel's rule (:22218 in the web) is "any other key closes it and is
+  // consumed" - correct for a sheet, but it swallowed the aspect key whenever the
+  // panel was up, which is every pause longer than 5 s: pause, press, nothing
+  // happens (the press went to closing the panel), press again, now it works. The
+  // key has to reach its own handler on the FIRST press.
+  //
+  // The panel is still dismissed, so the press is not free of side effects; it
+  // just does the thing that was asked as well.
+  if (k == SDLK_0 || k == SDLK_KP_0) {
+    if (pausao_visivel()) pausao_fechar();
+    player_aspecto_ciclar();
+    acordar();
+    return;
+  }
   if (pausao_visivel()) {
     int r = pausao_evento(e);
     if (r == PAUSAO_RETOMAR) { alternarTocando(); acordar(); return; }
@@ -2748,12 +2881,8 @@ void player_evento(const SDL_Event *e) {
   // CONTROLES ESCONDIDOS: qualquer direcao so acorda a interface. O OK direto
   // pausa/retoma sem navegar nada — e o gesto do aparelho: um toque no centro
   // e o video obedece, sem passos no meio.
-  // A TECLA DE PROPORCAO vale sempre, com controles em pe ou escondidos. No web
-  // o modo so se troca por um botao dentro de "More Actions" — dois passos com
-  // um cursor que aqui nao existe. Numa TV o gesto tem que ser um toque, e o
-  // aviso que sobe na troca ja diz em que modo se entrou, entao a tecla nem
-  // precisa da interface aberta. O 0 e a tecla livre no controle da LG.
-  if (k == SDLK_0 || k == SDLK_KP_0) { player_aspecto_ciclar(); return; }
+  // The aspect key works always, with the controls up or hidden (see above, where
+  // it is handled before the pause panel).
 
   // CANAL AO VIVO: OSD proprio (aovivo.h) e teclas proprias. BAIXO e o botao
   // AZUL abrem o overlay do guia em qualquer estado — e la que mora "o que esta
@@ -3160,7 +3289,24 @@ void player_atualizar(float dt, Uint32 agora) {
       if(retomarPct>0) { marco("abrir: seek para o ponto salvo"); video_buscar(d*retomarPct/100.0); }
 #endif
     }
+    // THE APP OWNS ITS PAUSE, and `tocando` must never disagree with it. One write
+    // made on a paused plane resumes playback by force - SetVideoRoi, per its own
+    // API note - and the app would read that as "the user pressed play", after which
+    // the controls start hiding themselves again.
+    //
+    // The SCREEN follows the app's intent on this very pass; only the call that
+    // pushes the pipeline back is rate-limited, so a pipeline that keeps resuming
+    // is not hammered with a pause every frame.
     tocando = video_tocando();
+    if (tocando && pausaPessoa && comVideo) {
+      tocando = 0;
+      if (!reafirmadoEm || (Sint32)(agora - reafirmadoEm) >= 0) {
+        reafirmadoEm = agora + 1000u;
+        printf("[player] the pipeline resumed on its own with the person paused: re-asserting the pause\n");
+        fflush(stdout);
+        video_pausar(1);
+      }
+    }
     if (tocando && retomadaAplicada && medirAbertura && !tocouMedido && !ehCanal()) {
       tocouMedido = 1;
       printf("[player] tocando em %u ms desde a abertura (retomada %d%%)\n",
@@ -4544,7 +4690,14 @@ void player_desenhar(Uint32 agora) {
       pd.corIcone = toastCor;
     } else {
       int m, n = 0, k = 0;
-      for (m = 0; m < PLR_ASP_N; m++) if (modoDisponivel(m)) { if (m == aspecto) k = n; n++; }
+      // The dot of the DRAWING the mode is on. A saved mode that is not its
+      // group's representative (Fit largura draws what Original draws on 16:9)
+      // has no dot of its own: it stands on the representative's dot, and matching
+      // only the mode number left the pill naming one mode and pointing at another.
+      for (m = 0; m < PLR_ASP_N; m++) if (modoDisponivel(m)) {
+        if (m == aspecto || mesmoRetangulo(aspectoRect(m), aspectoRect(aspecto))) k = n;
+        n++;
+      }
       pd.texto = i18n(player_aspecto_rotulo(aspecto));
       pd.icone = "pl_ratio";
       pd.pontos = n > 1 ? n : 0; pd.ponto = k;
