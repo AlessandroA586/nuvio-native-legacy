@@ -855,11 +855,15 @@ static void  (*curl_reset)(void *);
 static time_t (*curl_getdate_fn)(const char *, const time_t *);
 
 // Chamado depois da repeticao existente do GET, diretamente nos demais caminhos.
-static int tmdbFallback(void *c, int r) {
-  char *url = NULL, *alias;
+static int tmdbFallback(void *c, int r, const char *pedido) {
+  char *url = NULL, *alias, *origem;
   long http = 0;
   if (!(r == 35 || r == 7 || r == 28 || r == 56 || r == 52) ||
       redeCancelouLocal || !curl_getinfo) return r;
+  // Um redirect de outro host ao TMDB nao autoriza reenviar seus cabecalhos.
+  origem = tmdbUrl(pedido);
+  if (!origem) return r;
+  free(origem);
   if (curl_getinfo(c, INFO_RESPONSE_CODE, &http) || http ||
       curl_getinfo(c, INFO_URL_FINAL, &url) || !(alias = tmdbUrl(url))) return r;
   if (!curl_setopt_f(c, OPT_URL, alias)) {
@@ -869,7 +873,7 @@ static int tmdbFallback(void *c, int r) {
   free(alias);
   return r;
 }
-static int performTmdb(void *c) { return tmdbFallback(c, curl_perform(c)); }
+static int performTmdb(void *c, const char *url) { return tmdbFallback(c, curl_perform(c), url); }
 
 static int retrySegundos(const char *s, size_t n) {
   char b[128], *fim;
@@ -1876,10 +1880,9 @@ static char *rede_baixar_interno3(const char *url, int segundos, long *tam,
       if (etag && tamEtag) etag[0] = 0;
       continue;
     }
-    r = tmdbFallback(c, r);
+    r = tmdbFallback(c, r == 42 && vigia.parou ? 28 : r, url);
     break;
   }
-  if (r == 42 && vigia.parou) r = 28;      // para quem chama, e prazo
   redeCurlLocal = r;
   anotarErro(r);
   if (redeFinalDst && redeFinalTam && curl_getinfo) {
@@ -2012,7 +2015,7 @@ int rede_url_final_tipo(const char *url, int segundos, const char *const *cab,
     lista = nova;
   }
   if (lista) curl_setopt(c, OPT_HTTPHEADER, lista);
-  r = performTmdb(c);
+  r = performTmdb(c, url);
   curl_getinfo(c, INFO_RESPONSE_CODE, &http);
   curl_getinfo(c, INFO_URL_FINAL, &fim);
   if (status) *status = (int)http;
@@ -2080,7 +2083,7 @@ int rede_aquecer_lote(const char *const *origens, int n, unsigned *ms) {
     curl_setopt(c, OPT_FOLLOWLOCATION, (long)0);
     opcoesComuns(c, 4000UL);
     t0 = redeAgoraMs();
-    r = performTmdb(c);
+    r = performTmdb(c, u);
     if (ms) { unsigned long dt = redeAgoraMs() - t0; ms[i] = r ? 0 : (unsigned)(dt ? dt : 1); }
     soltarHandleR(c, r, u);
     if (!r) {
@@ -2124,7 +2127,7 @@ char *rede_apagar(const char *url, int segundos, const char *const *cab,
     for (k = 0; cab && cab[k]; k++) lista = slist_append(lista, cab[k]);
     if (lista) curl_setopt(c, OPT_HTTPHEADER, lista);
   }
-  r = performTmdb(c);
+  r = performTmdb(c, url);
   { long h = 0;
     if (!r && curl_getinfo) curl_getinfo(c, INFO_RESPONSE_CODE, &h);
     if (status) *status = (int)h;
@@ -2176,7 +2179,7 @@ static char *postarNativo(const char *url, int segundos, const char *const *cab,
     for (k = 0; cab && cab[k]; k++) lista = slist_append(lista, cab[k]);
     if (lista) curl_setopt(c, OPT_HTTPHEADER, lista);
   }
-  r = performTmdb(c);
+  r = performTmdb(c, url);
   anotarErro(r);
   if (r != 0) { char seg[120];
     printf("[rede] POST falhou em %s: %s\n", rede_url_publica(url, seg, sizeof seg), redeErroTxt);
@@ -2388,7 +2391,7 @@ int rede_medir_vazao(const char *url, const char *const *cab, int segundos,
     for (k = 0; cab[k]; k++) lista = slist_append(lista, cab[k]);
     if (lista) curl_setopt(c, OPT_HTTPHEADER, lista);
   }
-  r = performTmdb(c);
+  r = performTmdb(c, url);
   { long http = 0;
     if (curl_getinfo) curl_getinfo(c, INFO_RESPONSE_CODE, &http);
     if (http > 0) ct.status = (int)http; }
@@ -2480,7 +2483,7 @@ RedeTls *rede_tls_abrir(const char *url, int segundos) {
   curl_setopt(c, OPT_SSL_VERIFYPEER, (long)1);
   curl_setopt(c, OPT_SSL_VERIFYHOST, (long)2);
   if (discordCa[0]) curl_setopt(c, OPT_CAINFO, discordCa);
-  r = performTmdb(c);
+  r = performTmdb(c, url);
   if (r == 0 && curl_getinfo) curl_getinfo(c, INFO_LASTSOCKET, &fd);
   if (r != 0 || fd < 0) {
     printf("[rede] tls: falhou (curl %d)\n", r);
@@ -2711,7 +2714,7 @@ char *rede_baixar_trecho64_final(const char *url, const char *headers,
     curl_setopt(c, OPT_NOPROGRESS, (long)0);
     list = downgraded ? NULL : dtsRangeHeaders(headers, public_only);
     if (list) curl_setopt(c, OPT_HTTPHEADER, list);
-    result = performTmdb(c);
+    result = performTmdb(c, url);
     if (curl_getinfo) {
       curl_getinfo(c, INFO_RESPONSE_CODE, &http);
       /* CURLINFO_REDIRECT_URL resolves relative Location without following it. */
