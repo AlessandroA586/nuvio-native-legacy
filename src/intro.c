@@ -1,4 +1,5 @@
 #include "intro.h"
+#include "creditosjson.h"
 #include "rede.h"
 #include "js.h"
 #include "credfonte.h"
@@ -15,6 +16,7 @@
 
 static pthread_mutex_t trava=PTHREAD_MUTEX_INITIALIZER;
 static IntroTrecho trechos[8];static int nTrechos;static int trechosAni; /* 1 = os trechos vieram do AniSkip */static unsigned geracao;
+static IntroTrecho creditosLimitados[8];static int nCreditosLimitados;
 static int botaoIdx=-1;static double botaoDesde;
 static int botaoVis;static double botaoFim;static int botaoTipo;
 // Trechos que o PROPRIO ARQUIVO declara (capitulos do MKV, 203-capitulos): valem
@@ -411,20 +413,31 @@ static int pedirAniskip(const Pedido *p,IntroTrecho *v,int max,int *falha){
 }
 
 static void *baixar(void *u){
-  Pedido*p=u;char*j=NULL;IntroTrecho v[8];
+  Pedido*p=u;char*j=NULL;IntroTrecho v[8],limitados[8];
   int caps=0,total=0,falhaAni=0,n=pedirAniskip(p,v,8,&falhaAni),r=R_VAZIO,temCred=0,vale,deAni=n>0;
+  int nl=0;
   int temIdOutro=p->tmdb>0||!strncmp(p->id,"tt",2);
-  if(n<=0&&temIdOutro){r=pedirEp(p,p->t,p->e,p->dur,&j);n=j?intro_extrair(j,v,8):0;}
+  if(n<=0&&temIdOutro){
+    r=pedirEp(p,p->t,p->e,p->dur,&j);
+    n=j?intro_extrair(j,v,8):0;
+    nl=j?creditosjson_extrair(j,limitados,8):0;
+  }
   else if(n<=0&&falhaAni)r=R_FALHA;
   else if(n>0)r=R_OK;
   if(n<0)n=0;
+  if(deAni)
+    for(int i=0;i<n&&nl<8;i++)
+      if(v[i].tipo==INTRO_CREDITOS&&v[i].fim>v[i].inicio)limitados[nl++]=v[i];
   free(j);
   for(int i=0;i<n;i++)if(v[i].tipo==INTRO_CREDITOS)temCred=1;
   pthread_mutex_lock(&trava);
   vale=p->g==geracao;
   if(vale){
     if(r==R_FALHA){falhou=1;falhouEm=(long)time(NULL);}
-    else{falhou=0;memcpy(trechos,v,(size_t)n*sizeof *v);nTrechos=n;trechosAni=deAni;}
+    else{
+      falhou=0;memcpy(trechos,v,(size_t)n*sizeof *v);nTrechos=n;trechosAni=deAni;
+      memcpy(creditosLimitados,limitados,(size_t)nl*sizeof *limitados);nCreditosLimitados=nl;
+    }
     fundirCapitulos();caps=nCapTr;total=nTrechos;
   }
   pthread_mutex_unlock(&trava);
@@ -443,7 +456,7 @@ static void disparar(const Pedido *base,double dur,int novo){
   p=malloc(sizeof*p);if(!p)return;
   *p=*base;p->dur=dur;
   pthread_mutex_lock(&trava);
-  if(novo){nTrechos=0;trechosAni=0;nCapTr=0;refeitos=0;tentativas=0;}
+  if(novo){nTrechos=0;nCreditosLimitados=0;trechosAni=0;nCapTr=0;refeitos=0;tentativas=0;}
   falhou=0;
   p->anime=animeDe(p->id,p->tmdb);
   p->g=++geracao;ultimo=*p;temUltimo=1;enviadoDur=dur;
@@ -497,7 +510,7 @@ void intro_definir_capitulos(const IntroTrecho *v,int n){
       ultimo.id,ultimo.t,ultimo.e,nTrechos);fflush(stdout);}
   pthread_mutex_unlock(&trava);
 }
-void intro_desligar(void){pthread_mutex_lock(&trava);geracao++;nTrechos=0;trechosAni=0;nCapTr=0;botaoVis=0;botaoIdx=-1;temUltimo=0;falhou=0;pthread_mutex_unlock(&trava);}
+void intro_desligar(void){pthread_mutex_lock(&trava);geracao++;nTrechos=nCreditosLimitados=0;trechosAni=0;nCapTr=0;botaoVis=0;botaoIdx=-1;temUltimo=0;falhou=0;pthread_mutex_unlock(&trava);}
 
 // DURACAO DA MIDIA E O TIPO (filme/serie), para recusar janelas absurdas.
 static double durMidia;static int ehFilme;
@@ -694,9 +707,18 @@ int intro_trechos(IntroTrecho *saida,int max){
   if(n>0)memcpy(saida,trechos,(size_t)n*sizeof *saida);
   pthread_mutex_unlock(&trava);return n;
 }
+// So limites numericos explicitos da resposta DESTE titulo. Marcadores abertos,
+// vizinhos e estimativas continuam disponiveis apenas pelo caminho manual.
+int intro_creditos_limitados(IntroTrecho *saida,int max){
+  int n;if(!saida||max<1)return 0;pthread_mutex_lock(&trava);
+  n=nCreditosLimitados<max?nCreditosLimitados:max;
+  if(n>0)memcpy(saida,creditosLimitados,(size_t)n*sizeof *saida);
+  pthread_mutex_unlock(&trava);return n;
+}
 #ifdef NV_SHOT_HOOKS
 void intro_shot_definir(const IntroTrecho *v,int n){
   pthread_mutex_lock(&trava);geracao++;
+  nCreditosLimitados=0;
   nTrechos=n<8?n:8;if(nTrechos>0)memcpy(trechos,v,(size_t)nTrechos*sizeof *v);
   pthread_mutex_unlock(&trava);
 }
