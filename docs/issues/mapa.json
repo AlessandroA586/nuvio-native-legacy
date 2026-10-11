@@ -7729,16 +7729,21 @@
     "e2f1eede (agente/204-sync-addons)"
    ],
    "ultima_resposta": {
-    "nos": false,
+    "nos": true,
     "data": "2026-10-08",
     "ultimo_comentario_por": "Namer03",
-    "ultima_nossa": "2026-10-08"
+    "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "postar correção",
+   "proximo_passo": "agente/205-syncmao (Codex) implementando mao unica",
    "notas": "Mescla do sync em 2.0.3 (46507ea5, 6b305295); botão \"Sincronizar addons\" só 2.0.5 (e2f1eede). Namer03 perguntou \"on 2.0.3?\"; rascunho de correção. Alvo 2.0.5 porque a issue pede o botão \"Sincronizar addons\" (e2f1eede, fora da 2.0.3); a mescla do sync já está em 2.0.3. COMMITS vs v2.0.3 (09/10): dentro da tag: 46507ea5, 6b305295; fora: e2f1eede.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/360",
    "criada_em": "2026-10-08",
-   "alvo": "2.0.5"
+   "alvo": "2.0.5",
+   "decisao": {
+    "decisao": "b: sync de addons mao unica (TV so puxa da conta, nunca envia); botao Sincronizar addons fica",
+    "data": "2026-10-11",
+    "quem": "dono"
+   }
   },
   {
    "numero": 361,
