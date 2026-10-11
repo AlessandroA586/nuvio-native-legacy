@@ -620,11 +620,14 @@ static void aj2TopoTexto(int t, char *b, size_t n, char *det, size_t nd) {
   else if (t == AJ2_T_AV) {
     snprintf(b, n, "%s", i18n("Avançadas"));
     snprintf(det, nd, " · %s", i18n(lig(AJ_AVANCADAS) ? "Visíveis" : "Escondidas"));
+  } else if (t == AJ2_T_DIF) {
+    snprintf(b, n, "%s", i18n("Diferentes do padrão"));
+    if (uxNDifs) snprintf(det, nd, " · %d", uxNDifs);
   } else snprintf(b, n, i18n("Perfil: %s"), textoLeitura(AJ_PERFIL_ATIVO));
 }
 static const char *aj2TopoIcone(int t) {
   return t == AJ2_T_BUSCA ? "aj_search" : t == AJ2_T_AV ? (lig(AJ_AVANCADAS) ? "aj_eye" : "aj_eye-off")
-       : t == AJ2_T_PERFIL ? "aj_user-round" : t == AJ2_T_TOUR ? "aj_sparkles" : "aj_life-buoy";
+       : t == AJ2_T_PERFIL ? "aj_user-round" : t == AJ2_T_DIF ? "aj_rotate-ccw-clock" : t == AJ2_T_TOUR ? "aj_sparkles" : "aj_life-buoy";
 }
 static float aj2LayoutSegW(TxtEstilo e, float ico);
 static float aj2TopoLargura(int t) {
@@ -637,21 +640,23 @@ static GfxRect aj2TopoR(int t) {
   GfxRect g = aj2GradeR();
   float cw = aj2GradeColW(), x = g.x + AJ2_G_PAD, y = aj2GradeChipY(), fim = g.x + g.w - AJ2_G_PAD;
   float wb = cw + (cw + AJ2_G_VAO) / 3.0f, wa = aj2TopoLargura(AJ2_T_AV), wp = aj2TopoLargura(AJ2_T_PERFIL);
-  float wl = aj2TopoLargura(AJ2_T_LAYOUT);
-  // Em alemao/russo as quatro podem nao caber numa fileira: a busca cede
+  float wl = aj2TopoLargura(AJ2_T_LAYOUT), wd = aj2TopoLargura(AJ2_T_DIF);
+  // Em alemao/russo as cinco podem nao caber numa fileira: a busca cede
   // primeiro. O "Painel | Lista" (#339) mora no fim da fileira, encostado a
   // direita.
-  if (wb + 20 + wa + 20 + wp + 20 + wl > fim - x) { wb = fim - x - 60 - wa - wp - wl; if (wb < 300) wb = 300; }
-  if (wb + 60 + wa + wp + wl > fim - x) { float k = (fim - x - 60 - wb) / (wa + wp + wl); wa *= k; wp *= k; wl *= k; }
+  if (wb + 20 + wa + 20 + wp + 20 + wd + 20 + wl > fim - x) { wb = fim - x - 80 - wa - wp - wd - wl; if (wb < 300) wb = 300; }
+  if (wb + 80 + wa + wp + wd + wl > fim - x) { float k = (fim - x - 80 - wb) / (wa + wp + wd + wl); wa *= k; wp *= k; wd *= k; wl *= k; }
   if (t == AJ2_T_BUSCA) return (GfxRect){ x, y, wb, AJ2_G_CHIP };
   if (t == AJ2_T_AV) return (GfxRect){ x + wb + 20, y, wa, AJ2_G_CHIP };
   if (t == AJ2_T_PERFIL) return (GfxRect){ x + wb + 20 + wa + 20, y, wp, AJ2_G_CHIP };
+  if (t == AJ2_T_DIF) return (GfxRect){ x + wb + 20 + wa + 20 + wp + 20, y, wd, AJ2_G_CHIP };
   if (t == AJ2_T_LAYOUT) return (GfxRect){ fim - wl, y, wl, AJ2_G_CHIP };
   if (t == AJ2_T_TOUR) return (GfxRect){ x, aj2GradeDescY(), 2 * cw + AJ2_G_VAO, AJ2_G_DESC };
   return (GfxRect){ x + 2 * (cw + AJ2_G_VAO), aj2GradeDescY(), cw, AJ2_G_DESC };
 }
 static void aj2GradeAtualizar(float dt) {
   int j, red = ajustes_animacoes_reduzidas();
+  if (focoIndice) uxListarDiferencas();   // a contagem da pilula; aberta, a lista fica estavel
   for (j = 0; j <= AJ2_NMENU; j++) {
     float alvo = focoIndice && uxTopo < 0 && j == uxIndice ? 1.0f : 0.0f;
     aj2GF[j] = red ? alvo : aj2Rampa(aj2GF[j], alvo, dt, 140.0f);
@@ -939,6 +944,7 @@ static void aj2DesenharIdxLista(void) {
       if (uxTopo == AJ2_T_BUSCA) desc = "Pelo nome ou pelo que quer mudar";
       else if (uxTopo == AJ2_T_AV) desc = ajudaOpcao(AJ_AVANCADAS);
       else if (uxTopo == AJ2_T_PERFIL) desc = "Perfil em uso nesta TV e o que vale para cada perfil.";
+      else if (uxTopo == AJ2_T_DIF) desc = "Valores fora da configuração de fábrica";
       else if (uxTopo == AJ2_T_LAYOUT) desc = "Painel tem a prévia ao lado; Lista põe tudo um embaixo do outro.";
       else if (uxTopo == AJ2_T_TOUR) desc = "Funções que pouca gente conhece, com OK para ligar cada uma dali mesmo.";
       else if (uxTopo == AJ2_T_RESOLVER) desc = "O que fazer quando algo não funciona, com o ajuste que resolve.";
@@ -1008,6 +1014,7 @@ static void aj2DesenharGrade(float a) {
       if (uxTopo == AJ2_T_BUSCA) desc = "Pelo nome ou pelo que quer mudar";
       else if (uxTopo == AJ2_T_AV) desc = ajudaOpcao(AJ_AVANCADAS);
       else if (uxTopo == AJ2_T_PERFIL) desc = "Perfil em uso nesta TV e o que vale para cada perfil.";
+      else if (uxTopo == AJ2_T_DIF) desc = "Valores fora da configuração de fábrica";
       else if (uxTopo == AJ2_T_LAYOUT) desc = "Painel tem a prévia ao lado; Lista põe tudo um embaixo do outro.";
       else if (uxTopo == AJ2_T_TOUR) desc = "Funções que pouca gente conhece, com OK para ligar cada uma dali mesmo.";
       else if (uxTopo == AJ2_T_RESOLVER) desc = "O que fazer quando algo não funciona, com o ajuste que resolve.";
@@ -1047,7 +1054,7 @@ static GfxRect aj2PaginaR(void) {
   return (GfxRect){ x, AJ2_TOPO, NV_VTELA_W - AJ2_MARGEM - x, AJ_CAB_PAGINA - 22.0f };
 }
 static void aj2DesenharPagina(float t) {
-  GfxRect h = aj2PaginaR(), c = uxIndice >= 2 ? aj2IdxCartao(uxIndice - 2) : aj2TopoR(AJ2_T_AV);
+  GfxRect h = aj2PaginaR(), c = uxIndice >= 2 ? aj2IdxCartao(uxIndice - 2) : aj2TopoR(AJ2_T_DIF);
   float k = aj2Suave(t < 0 ? 0 : t > 1 ? 1 : t), ar, ag, ab, tinta = ajTinta() / 255.0f;
   float conteudo = k * k, grupo = gfx_opacidade_grupo, x, tile = 76.0f, direita;
   GfxRect r;

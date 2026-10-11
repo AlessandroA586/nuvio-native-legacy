@@ -1,7 +1,7 @@
 static int aj2GrupoDe(int s);   // ajustes_ux_v2.inc: o grupo (coluna da grade) da categoria
 static void guiaIrCapitulo(const char *icone);   // ajustes_ux_guia.inc
 // #339: AJ2_T_LAYOUT e o segmentado "Painel | Lista" no fim da fileira das pilulas.
-enum { AJ2_T_BUSCA = 0, AJ2_T_AV, AJ2_T_PERFIL, AJ2_T_LAYOUT, AJ2_T_TOUR, AJ2_T_RESOLVER, AJ2_T_N };
+enum { AJ2_T_BUSCA = 0, AJ2_T_AV, AJ2_T_PERFIL, AJ2_T_DIF, AJ2_T_LAYOUT, AJ2_T_TOUR, AJ2_T_RESOLVER, AJ2_T_N };
 static int ajEmLinha(int op);
 static int ajReguaMover(int v, int dx, int dy);
 // Interação do seletor: só OK aplica; foco e rascunho nunca persistem.
@@ -252,6 +252,8 @@ static int uxEvento(SDL_Keycode k) {
           return 1;
         }
         if (t == AJ2_T_PERFIL) { focarOpcao(AJ_PERFIL_ATIVO); return 1; }
+        // Diferentes do padrao: abre a lista (degrau 1); Voltar devolve a pilula (uxTopo fica nela).
+        if (t == AJ2_T_DIF) { uxListarDiferencas(); uxDifFoco = 0; uxIndice = 1; focoIndice = 0; return 1; }
         if (t == AJ2_T_LAYOUT) return uxAlternarLayout();   // o foco fica na pilula
         // Os cartoes de descoberta abrem o Guia de uso (o tour completo, com
         // "Ligar agora" por funcao, e da 2.1): o do problema ja no capitulo
@@ -267,7 +269,7 @@ static int uxEvento(SDL_Keycode k) {
         if (t < AJ2_T_LAYOUT || t == AJ2_T_TOUR) uxTopo = t + 1;
       } else if (k == SDLK_DOWN) {
         if (t <= AJ2_T_AV) uxTopo = AJ2_T_TOUR;
-        else if (t == AJ2_T_PERFIL || t == AJ2_T_LAYOUT) uxTopo = AJ2_T_RESOLVER;
+        else if (t == AJ2_T_PERFIL || t == AJ2_T_DIF || t == AJ2_T_LAYOUT) uxTopo = AJ2_T_RESOLVER;
         else {
           int g = t == AJ2_T_TOUR || ajustes_layout_lista() ? 0 : 2, dest = ini[g] < nSecoes ? ini[g] : 0;
           uxVeioBusca = 0; focarSecao(dest); uxIndice = dest + 2;
