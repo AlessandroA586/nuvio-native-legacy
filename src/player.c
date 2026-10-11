@@ -543,6 +543,7 @@ static double credAvisadoEm, credAvisadoDur;
 //   durCurtaAvisado/durPassouAvisado   uma linha de log cada, por reproducao.
 static int duracaoReal, durCurtaAvisado, durPassouAvisado;
 static int concluiuAgora(double cred);
+static double duracaoCatalogo(void);
 static int introIdx=-1, introT=-1, introE=-1;
 // Com que id o TheIntroDB foi perguntado (0 = imdb). Muda quando o TMDB do
 // episodio chega depois da abertura (2.0.3): pede de novo por tmdb_id.
@@ -1733,7 +1734,31 @@ static void fecharSessao(int manter) {
            "progresso NAO gravado (clipe de erro do provedor?)\n", duracaoSeg);
     fflush(stdout);
   }
-  if (!jaRetido && comVideo && video_pronto() && duracaoSeg >= 120.0f && !ehCanal()) {
+  // TRAILER NAO E PROGRESSO, nem visto (#205). O detalhe toca o trailer do
+  // IMDb pela MESMA pipeline de video do player (trailer.c: video_tocar), e o
+  // prepare do trailer demora: o evento PRONTO dele (129 s, "tpk evento 1
+  // (129036)") chega DEPOIS de o dono pedir Reproduzir, sem selo de sessao —
+  // cai na sessao nova e vira a duracao do TITULO. O filme real toca, mas com
+  // duracaoSeg = 129 a regra da conclusao (pos >= dur-60 e pos >= dur/2) da o
+  // filme por VISTO a 69 s de reproducao real: pos := duracaoSeg grava 100%
+  // no catalogo, o trakt.c manda /scrobble/stop 100%, visto_titulo marca o
+  // filme no Simkl e na conta — "quase todos os filmes da fileira Trending"
+  // marcados sem ninguem ter visto nada. O limiar e o mesmo do episodio
+  // (player_duracao_suspeita): pipeline que diz MENOS DE UM TERCO da minutagem
+  // do titulo nao descreve este titulo — nem o fim dele, nem onde a pessoa
+  // parou. Nao se grava nada, em destino nenhum. (O aviso "Esta fonte parece
+  // ser outra obra" ja disparava para este caso — a partir daqui ele tambem
+  // segura a gravacao.)
+  double catDur = duracaoCatalogo();
+  int duracaoErrada = !jaRetido && comVideo && video_pronto() && duracaoSeg >= 120.0f &&
+                      !ehCanal() && player_duracao_suspeita((double)duracaoSeg, catDur);
+  if (duracaoErrada) {
+    printf("[player] duracao %.0fs contra %.0fs no catalogo: trailer ou fonte "
+           "que nao e este titulo — progresso e visto NAO gravados\n",
+           (double)duracaoSeg, catDur);
+    fflush(stdout);
+  }
+  if (!duracaoErrada && !jaRetido && comVideo && video_pronto() && duracaoSeg >= 120.0f && !ehCanal()) {
     // CANAL nao grava progresso: uma transmissao ao vivo nao tem "onde parou" —
     // guardar posSeg contra a duracao reserva colocaria "Globo 68%" em
     // Continuar assistindo, que e justamente o que nao pode acontecer.
@@ -2247,10 +2272,20 @@ int player_regra_concluiu(double posSeg, double durSeg, double cred) {
   return player_regra_proximo(posSeg, durSeg, cred);
 }
 
-// Minutagem do episodio corrente no catalogo, em segundos (0 = nao ha). Lida na
+// Minutagem do TITULO corrente no catalogo, em segundos (0 = nao ha). Lida na
 // hora: a lista de episodios pode chegar depois da abertura (#151).
+//
+// FILME NAO TEM LISTA: a minutagem vem do meta do proprio titulo ("2023 ·
+// 1 h 46 min"), o mesmo texto que duracaoFonteEsperada le. Ate a 2.0.4 este
+// zero fazia a duracao suspeita — a guarda que impede uma duracao falsa de
+// dar o titulo por assistido — valer SO para episodio com minutagem na lista;
+// filme NENHUM tinha guarda. Foi por ai que o PRONTO atrasado do trailer do
+// IMDb virou a duracao do filme no #205.
 static double duracaoCatalogo(void) {
-  if (epT <= 0) return 0.0;
+  if (epT <= 0) {
+    const CatItem *c = cat_item(idxAtual());
+    return c && !strcmp(c->tipo, "movie") ? (double)duracaoDeMeta(c->meta) : 0.0;
+  }
   for (int ix = idxAtual(), i = 0; i < cat_n_episodios(ix); i++) {
     const CatEp *ep = cat_episodio(ix, i);
     if (ep && ep->temporada == epT && ep->episodio == epE) return duracaoTexto(ep->duracao);
