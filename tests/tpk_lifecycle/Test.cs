@@ -26,7 +26,7 @@ class Test {
         try { Entry("fAbrir", p, IntPtr.Zero); } finally { Marshal.FreeHGlobal(p); }
     }
     static int Main() {
-        NvVid.Registrar = (a,b,c,d,e,f,g) => {}; NvVid.RegistrarFaixas = a => {};
+        NvVid.Registrar = (a,b,c,d,e,f,g) => {}; NvVid.RegistrarFaixas = a => {}; NvVid.RegistrarAspecto = a => {};
         NvVid.Evento = (a,b,c) => {}; NvVid.LogNativo = Console.WriteLine;
         NvVid.Faixa = (a,b,c) => {}; NvVid.FaixasFim = (a,b) => {};
         Setup(); Open(); Pump(); var old = Player.All[0];
@@ -99,6 +99,7 @@ namespace Tizen.Multimedia {
     public class Settings { public PlayerDisplayMode Mode {get;set;} public void SetRoi(Rectangle r) {} }
     public class Event : EventArgs { public int Error,Percent,Duration; public string Reason,Text; }
     public class Player {
+        public IntPtr Handle => new IntPtr(1);
         public static List<Player> All = new List<Player>(); public static bool Defer; public static int Overlap;
         public TaskCompletionSource<bool> Prepared = new TaskCompletionSource<bool>();
         public Player() { if(All.Exists(p=>!p.Disposed)) Overlap++; All.Add(this); }
