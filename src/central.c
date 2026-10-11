@@ -8,9 +8,12 @@
 #include "catalogo.h"
 #include "dados.h"
 #include "escala.h"
+#include "estatvivo.h"
+#include "estatvivoui.h"
 #include "gfx.h"
 #include "horafmt.h"
 #include "idioma.h"
+#include "idiomacod.h"
 #include "layout.h"
 #include "perfiltv.h"
 #include "perfis.h"
@@ -48,9 +51,14 @@
 #define CC_LINHA_GAP 4.0f
 #define CC_LINHAS_MAX 9         // a lista rola dentro disso
 #define CC_DICAS_H  30.0f
+#define CC_COR_D    40.0f       // o disco de uma cor no seletor
+#define CC_COR_COLS  9
+#define CC_COR_LIN_GAP 14.0f
+#define CC_COR_NOME_H 26.0f
 #define CC_TETO     (NV_TELA_H - NV_ILHA_Y - 36.0f)
 
 static int aberta, editando;
+static int escolhendoCor, focoCor;   // o seletor da cor de destaque (so os 18 fixos)
 static int foco;                // botao em foco; == nBotoes e "Editar atalhos"
 static int focoEd;              // item do catalogo em foco na edicao
 static float rolaEd;            // rolagem da lista de edicao (px)
@@ -84,9 +92,29 @@ static void gravar(void) {
   dados_gravar(nome, buf);
 }
 
+// ESTATISTICAS (mockup stats-velocidade, tela 1): com video no player, o
+// primeiro botao e sempre o das estatisticas ao vivo (estatvivoui.h). Nao e
+// uma opcao de Ajustes nem mora na lista da pessoa: e uma acao, e so existe
+// enquanto ha o que medir. op = CC_OP_ESTAT, item = -1.
+#define CC_OP_ESTAT (-2)
+#ifdef CENTRAL_TESTE
+static int testeEstat;
+#endif
+static int temEstat(void) {
+#ifdef CENTRAL_TESTE
+  if (testeEstat) return !previa;
+#endif
+  return !previa && player_aberto() && player_com_video();
+}
+
 // Os botoes que existem neste build (a chave pode nao estar na tela daqui).
 static int botoes(int *op, int *item) {
   int i, n = 0;
+  if (temEstat()) {
+    if (op) op[n] = CC_OP_ESTAT;
+    if (item) item[n] = -1;
+    n++;
+  }
   for (i = 0; i < lista.n; i++) {
     const CentralItem *c = central_catalogo(lista.item[i]);
     int o = c ? ajustes_rapido_op(c->chave) : -1;
@@ -110,12 +138,13 @@ void central_abrir(void) {
   if (aberta) return;
   aberta = 1;
   editando = 0;
+  escolhendoCor = 0;
   foco = 0;
   aviso[0] = 0;
   printf("[central] aberta (%d atalhos)\n", botoes(NULL, NULL));
   fflush(stdout);
 }
-void central_fechar(void) { aberta = 0; editando = 0; }
+void central_fechar(void) { aberta = 0; editando = 0; escolhendoCor = 0; }
 int  central_aberta(void) { return aberta; }
 
 static void avisar(const char *s) {
@@ -133,7 +162,7 @@ static int ehCh(const SDL_Event *e) {
 }
 
 static void ativarBotao(int i) {
-  int op[CENTRAL_MAX], n = botoes(op, NULL);
+  int op[CENTRAL_MAX + 1], n = botoes(op, NULL);
   if (i == n) {
     int it[64], m = ofertas(it), j;
     editando = 1; focoEd = 0; rolaEd = 0;
@@ -141,6 +170,17 @@ static void ativarBotao(int i) {
     return;
   }
   if (i < 0 || i >= n) return;
+  if (op[i] == AJ_RAPIDO_COR) {
+    int a = ajustes_rapido_cor_atual();
+    escolhendoCor = 1;
+    focoCor = a >= 0 ? a : 0;
+    return;
+  }
+  if (op[i] == CC_OP_ESTAT) {
+    central_fechar();
+    estatvivo_abrir();
+    return;
+  }
   if (ajustes_rapido_passo(op[i], 1))
     printf("[central] %s -> %s\n", ajustes_rapido_rotulo(op[i]), ajustes_rapido_valor(op[i]));
   else avisar("Não foi possível salvar. O valor anterior foi mantido.");
@@ -160,11 +200,30 @@ static void alternarOferta(int j) {
   gravar();
 }
 
+// Aplica a cor e grava como Ajustes; o painel inteiro ja se pinta com ela no
+// proximo quadro (os botoes ligados e a marca leem ajustes_acento).
+static void corAplicar(int i) {
+  if (ajustes_rapido_cor_definir(i)) {
+    printf("[central] %s -> %s\n", ajustes_rapido_rotulo(AJ_RAPIDO_COR), ajustes_rapido_cor_nome(i));
+  } else avisar("Não foi possível salvar. O valor anterior foi mantido.");
+  fflush(stdout);
+}
+
 void central_evento(const SDL_Event *e) {
   SDL_Keycode k;
   if (!aberta || e->type != SDL_KEYDOWN) return;
   k = e->key.keysym.sym;
   if (ehCh(e)) { central_fechar(); return; }
+  if (escolhendoCor) {
+    int n = ajustes_rapido_cor_n();
+    if (nv_tecla_voltar(e)) { escolhendoCor = 0; return; }
+    if (k == SDLK_LEFT && focoCor % CC_COR_COLS > 0) focoCor--;
+    else if (k == SDLK_RIGHT && focoCor % CC_COR_COLS < CC_COR_COLS - 1 && focoCor + 1 < n) focoCor++;
+    else if (k == SDLK_UP && focoCor >= CC_COR_COLS) focoCor -= CC_COR_COLS;
+    else if (k == SDLK_DOWN && focoCor + CC_COR_COLS < n) focoCor += CC_COR_COLS;
+    else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) corAplicar(focoCor);
+    return;
+  }
   if (editando) {
     int it[64], m = ofertas(it);
     if (nv_tecla_voltar(e)) { editando = 0; return; }
@@ -187,8 +246,13 @@ void central_evento(const SDL_Event *e) {
 }
 
 // Ponteiro (Magic Remote, toque): mesmo foco e mesmo OK das setas.
-static void ptFoco(int i, int ed) { if (ed) focoEd = i; else foco = i; }
-static void ptOk(int i, int ed) { ptFoco(i, ed); if (ed) alternarOferta(i); else ativarBotao(i); }
+static void ptFoco(int i, int ed) { if (ed == 2) focoCor = i; else if (ed) focoEd = i; else foco = i; }
+static void ptOk(int i, int ed) {
+  ptFoco(i, ed);
+  if (ed == 2) corAplicar(i);
+  else if (ed) alternarOferta(i);
+  else ativarBotao(i);
+}
 static void ptFora(int a, int b) { (void)a; (void)b; central_fechar(); }
 
 static void corpo(GfxRect r, float a, void *u);
@@ -305,6 +369,15 @@ static int tocando(char *tit, size_t nt, char *meta, size_t nm) {
     u += (size_t)snprintf(meta + u, nm - u, "%s%s", u ? " · " : "",
                           d == 3 ? "DTS:X" : d == 2 ? "DTS-HD" : "DTS");
   }
+  // "42,8 Mbps agora" (mockup, tela 1): o numero das estatisticas ao vivo,
+  // com o "≈" quando e estimado.
+  { int est, k = estatvivo_kbps(&est);
+    if (k >= 0 && u < nm) {
+      char m[24], f[48];
+      ev_fmt_mbps(m, sizeof m, k, idioma_ponto_decimal(ajustes_idioma()) ? '.' : ',');
+      snprintf(f, sizeof f, i18n("%s Mbps agora"), m);
+      u += (size_t)snprintf(meta + u, nm - u, "%s%s%s", u ? " · " : "", est ? "≈ " : "", f);
+    } }
   return tit[0] || meta[0];
 }
 
@@ -320,7 +393,9 @@ static int linhasEdicao(void) {
 static float altura(int comFaixa) {
   char t[96], m[96];
   float h = comFaixa ? CC_INFO_H : CC_INFO_H - 12.0f;
-  if (editando) {
+  if (escolhendoCor) {
+    h += 6.0f + 2.0f * CC_COR_D + CC_COR_LIN_GAP + 14.0f + CC_COR_NOME_H + 14.0f + CC_DICAS_H;
+  } else if (editando) {
     int n = linhasEdicao();
     h += 6.0f + (float)n * (CC_LINHA_H + CC_LINHA_GAP) - CC_LINHA_GAP + 14.0f + CC_DICAS_H;
   } else {
@@ -432,20 +507,52 @@ static void botao(GfxRect r, const char *icone, const char *rot, const char *val
 }
 
 static void desenhaBotoes(float x, float y, float w, float a) {
-  int op[CENTRAL_MAX], item[CENTRAL_MAX], n = botoes(op, item), i;
+  int op[CENTRAL_MAX + 1], item[CENTRAL_MAX + 1], n = botoes(op, item), i;
   float bw = (w - CC_GAP * (CC_COLS - 1)) / CC_COLS;
   if (foco > n) foco = n;
   for (i = 0; i <= n; i++) {
     GfxRect r = { x + (float)(i % CC_COLS) * (bw + CC_GAP), y + (float)(i / CC_COLS) * (CC_BOTAO_H + CC_GAP),
                   bw, CC_BOTAO_H };
-    if (i < n) {
+    if (i < n && op[i] == CC_OP_ESTAT) botao(r, "aj_gauge", "Estatísticas", "", -1, i == foco, a);
+    else if (i < n) {
       const CentralItem *c = central_catalogo(item[i]);
       int lig = ajustes_rapido_ligado(op[i]);
       if (previa && i == previaInverte && lig >= 0) lig = !lig;
       botao(r, c->icone, c->curto, ajustes_rapido_valor(op[i]), lig, i == foco, a);
+      if (op[i] == AJ_RAPIDO_COR) {   // a cor de agora, num ponto no canto
+        float cr, cg, cb;
+        ajustes_acento_marca(&cr, &cg, &cb);
+        gfx_cor((GfxRect){ r.x + r.w - 14.0f - 14.0f, r.y + 16.0f, 14.0f, 14.0f }, 0.5f, cr, cg, cb, a);
+      }
     } else botao(r, "aj_sliders-horizontal", "Editar", "", 0, i == foco, a);
     if (aberta && a > 0.5f && ponteiro_ativo()) ponteiro_alvo(r.x, r.y, r.w, r.h, ptFoco, ptOk, i, 0);
   }
+}
+
+// O SELETOR: 2 fileiras de 9 discos (claros em cima, profundos embaixo, a
+// ordem da regua de Ajustes). O atual leva o visto na tinta que contrasta; o
+// foco, o anel dos botoes. O nome da cor em foco fica embaixo.
+static void desenhaCores(float x, float y, float w, float a) {
+  int n = ajustes_rapido_cor_n(), atual = ajustes_rapido_cor_atual(), i;
+  float gap = (w - CC_COR_D * CC_COR_COLS) / (CC_COR_COLS - 1);
+  if (focoCor >= n) focoCor = n - 1;
+  for (i = 0; i < n; i++) {
+    float cr, cg, cb, tinta = ajustes_rapido_cor(i, &cr, &cg, &cb);
+    GfxRect r = { x + (float)(i % CC_COR_COLS) * (CC_COR_D + gap),
+                  y + (float)(i / CC_COR_COLS) * (CC_COR_D + CC_COR_LIN_GAP), CC_COR_D, CC_COR_D };
+    gfx_cor(r, 0.5f, cr, cg, cb, a);
+    if (i == atual)
+      gfx_icone((GfxRect){ r.x + 9.0f, r.y + 9.0f, 22.0f, 22.0f }, "aj_check", tinta, tinta, tinta, a);
+    if (i == focoCor) gfx_anel_fora(r, 0.5f, 3.0f, 2.5f, 1, 1, 1, 0.95f * a);
+    if (aberta && a > 0.5f && ponteiro_ativo()) ponteiro_alvo(r.x, r.y, r.w, r.h, ptFoco, ptOk, i, 2);
+  }
+  { float ny = y + 2.0f * CC_COR_D + CC_COR_LIN_GAP + 14.0f;
+    TxtLinha l = txt_linha_corta(TXT_ILHA_SUB, ajustes_rapido_cor_nome(focoCor), 243, 242, 239, 255, w - 90.0f);
+    txt_desenhar_alpha(l, x, ny + (CC_COR_NOME_H - (float)l.h) * 0.5f, a);
+    if (focoCor == atual) {
+      TxtLinha m = txt_linha(TXT_ILHA_HORA, "Atual", 243, 242, 239, 255);
+      txt_desenhar_alpha(m, x + (float)l.w + 12.0f, ny + (CC_COR_NOME_H - (float)m.h) * 0.5f, 0.55f * a);
+    } }
 }
 
 static void desenhaEdicao(float x, float y, float w, float h, float a) {
@@ -509,6 +616,20 @@ static void corpo(GfxRect r, float a, void *u) {
   }
   yc = u ? r.y + (CC_INFO_H - 12.0f) * 0.5f : r.y + CC_INFO_H * 0.5f;
   y = r.y + (u ? CC_INFO_H - 12.0f : CC_INFO_H) + 6.0f;
+
+  if (escolhendoCor) {
+    float base = r.y + r.h - CC_PAD - CC_DICAS_H;
+    ajustes_ui_kicker(i18n("Cor de destaque"), cx, yc - 8.0f, a);
+    desenhaCores(cx, y, cw, a);
+    if (aviso[0] && (Sint32)(avisoAte - agora) > 0) {
+      TxtLinha l = txt_linha_corta(TXT_ILHA_HORA, aviso, 240, 184, 107, 255, cw);
+      txt_desenhar_alpha(l, cx + cw - (float)l.w, base + (CC_DICAS_H - (float)l.h) * 0.5f, a);
+    }
+    { static const char *const tk[] = { "OK", "Voltar" };
+      static const char *const rot[] = { "Escolher", "Pronto" };
+      dicas(tk, rot, 2, cx, base, a); }
+    return;
+  }
 
   if (editando) {
     char t[24];
@@ -584,10 +705,14 @@ void central_teste_tocando(const char *tit, const char *meta) {
   snprintf(testeTit, sizeof testeTit, "%s", tit ? tit : "");
   snprintf(testeMeta, sizeof testeMeta, "%s", meta ? meta : "");
 }
+void central_teste_estatisticas(int sim) { testeEstat = sim; }
 void central_teste_lista(const char *texto) { carregar(); centrallista_ler(&lista, texto); }
 void central_teste_foco(int f, int editar) {
   central_abrir();
+  editando = escolhendoCor = 0;
   foco = f < 0 ? botoes(NULL, NULL) : f;
   if (editar) ativarBotao(botoes(NULL, NULL));
 }
+// Captura do seletor de cores, com o foco no disco `foco`.
+void central_teste_cor(int f) { central_abrir(); editando = 0; escolhendoCor = 1; focoCor = f; }
 #endif

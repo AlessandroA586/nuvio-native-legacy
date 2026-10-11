@@ -58,7 +58,7 @@ static jmethodID mAbrirPosicao;
 static jmethodID mAbrirRetomada;
 // F07 (optional, like abrirPosicao): cache(mb) and ganho(pct). A shell without
 // them simply has no seek cache and no boost.
-static jmethodID mCache, mGanho;
+static jmethodID mCache, mGanho, mBuffer;
 // #202 (opcional, como os de cima): velocidade(centesimos). Casca sem ele =
 // sem a linha da velocidade.
 static jmethodID mVelocidade;
@@ -80,6 +80,8 @@ static int resolverMetodos(JNIEnv *env) {
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mAbrirRetomada = NULL; }
   mCache = (*env)->GetStaticMethodID(env, gCls, "cache", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mCache = NULL; }
+  mBuffer = (*env)->GetStaticMethodID(env, gCls, "buffer", "(I)V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mBuffer = NULL; }
   mGanho = (*env)->GetStaticMethodID(env, gCls, "ganho", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mGanho = NULL; }
   mVelocidade = (*env)->GetStaticMethodID(env, gCls, "velocidade", "(I)V");
@@ -270,6 +272,7 @@ static unsigned sessao;
 // F07: the player arms the next video_tocar with its cache limit
 // (cacheboost_backend_cache); trailers never arm, so they stay uncached and
 // at 100%. `cacheSessao` survives the reconnection reopens of that video.
+static int bufferPreset, bufferEnviado;
 static int cacheArmado = -1, cacheSessao, cacheEnviado, playerSessao;
 static int ganhoEnviado = CB_VOL_NORMAL;
 static int retomadaInicialEstado = -1;
@@ -407,6 +410,39 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativePos(JNIEnv *
   posMs = ms;
 }
 
+// ESTATISTICAS AO VIVO (video.h, VideoStats): o Kotlin manda 1x/s, do fio
+// principal, o que ele CONTA — bytes do socket (ParaleloDataSource), buffer
+// (bufferedPosition), conexoes abertas, 1o byte, host final e quadros
+// (AnalyticsListener). A trava e curta: o app copia no quadro dele.
+static pthread_mutex_t travaStats = PTHREAD_MUTEX_INITIALIZER;
+static VideoStats statsAndroid;
+static int statsValido;
+JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeStats(JNIEnv *env, jclass cls,
+    jlong bytes, jint bufferMs, jint alvoMs, jint conexoes, jint primeiroByteMs,
+    jlong perdidos, jlong quadros, jstring host) {
+  char h[96];
+  (void)cls;
+  deJString(env, host, h, sizeof h);
+  pthread_mutex_lock(&travaStats);
+  video_stats_vazio(&statsAndroid);
+  statsAndroid.bytes = bytes >= 0 ? (long long)bytes : -1;
+  statsAndroid.bufferSeg = bufferMs >= 0 ? bufferMs / 1000.0 : -1.0;
+  statsAndroid.bufferAlvoSeg = alvoMs > 0 ? alvoMs / 1000.0 : 0.0;
+  statsAndroid.conexoes = conexoes;
+  statsAndroid.primeiroByteMs = primeiroByteMs;
+  statsAndroid.quadrosPerdidos = perdidos;
+  statsAndroid.quadros = quadros;
+  snprintf(statsAndroid.host, sizeof statsAndroid.host, "%s", h);
+  statsValido = 1;
+  pthread_mutex_unlock(&travaStats);
+}
+void video_estatisticas(VideoStats *s) {
+  pthread_mutex_lock(&travaStats);
+  if (statsValido && ativo) *s = statsAndroid;
+  else video_stats_vazio(s);
+  pthread_mutex_unlock(&travaStats);
+}
+
 JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeRetomada(JNIEnv *env, jclass cls, jint geracao, jint aceita) {
   (void)env; (void)cls;
   pthread_mutex_lock(&travaRetomada);
@@ -536,6 +572,7 @@ static int abrirSessao(int inicioMs, int fracao) {
   tocandoDesde = 0; semDecoderAudio = 0; erroTxt[0] = 0; reconErroVideo = 0;
   pausaPedida = pausaVista = 0;
   hdrAtual = "none"; dvAtual = atmosAtual = 0;
+  pthread_mutex_lock(&travaStats); statsValido = 0; pthread_mutex_unlock(&travaStats);
   nAudio = nLeg = 0; audioAtual = 0; legAtual = -1; legAte = 0;
   nNovasA = nNovasL = 0;
   temEnv = 0;   // a SurfaceView nova ainda nao recebeu janela nenhuma
@@ -546,6 +583,12 @@ static int abrirSessao(int inicioMs, int fracao) {
   // F07: the cache limit is sticky in Kotlin (read at each open), so it only
   // crosses JNI when it changes. Posted before the open on the same main
   // thread queue, it is in place when the open runs.
+  // #338: buffer preset, sticky in Kotlin like the cache limit.
+  if (mBuffer && bufferPreset != bufferEnviado) {
+    (*env)->CallStaticVoidMethod(env, gCls, mBuffer, (jint)bufferPreset);
+    fimChamada(env);
+    bufferEnviado = bufferPreset;
+  }
   if (mCache && cacheSessao != cacheEnviado) {
     (*env)->CallStaticVoidMethod(env, gCls, mCache, (jint)cacheSessao);
     fimChamada(env);
@@ -614,6 +657,7 @@ int video_tocar_retomada(const char *u, double segundos, double pct) {
 }
 int video_tocar_posicao(const char *u, double segundos) { return video_tocar_retomada(u, segundos, 0.0); }
 
+void cacheboost_backend_buffer(int p) { bufferPreset = p >= 0 && p <= 3 ? p : 0; }
 void cacheboost_backend_cache(int mb) { cacheArmado = mb > 0 ? mb : 0; }
 void cacheboost_backend_ganho(int pct) {
   if (pct < CB_VOL_MIN) pct = CB_VOL_MIN;

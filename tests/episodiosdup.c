@@ -32,6 +32,7 @@ Uint32 SDL_GetTicks(void) { return 0; }
 // traz — e mais os que este teste ja tinha)
 int         ajustes_idioma_ingles(void) { return 0; }
 int ajustes_idioma(void) { return 0; }
+int ajustes_cw_minimo(void) { return 1; }
 int   ajustes_cw_concluido(void)         { return 90; }  // factory "watched" threshold
 unsigned recomenda_geracao(void)         { return 0; }   // social generation: no social layer here
 int   ajustes_cw_ordem(void)               { return 0; }   // Padrao (issue #127)

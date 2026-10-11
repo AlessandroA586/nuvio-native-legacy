@@ -59,6 +59,8 @@ int  prog_ler(ProgRegistro *saida, int max);
 // `pctConcluido` (ajustes_cw_concluido), e fora do que a pessoa tirou da fileira
 // (prog_marcar_removido). Le so o disco/cache local. 1 se achou.
 int  prog_continuar_de_perfil(int perfil, int pctConcluido, ProgRegistro *saida);
+// Idem, com o piso do Continuar (ajustes_cw_minimo, #326); o de cima e este com piso 1.
+int  prog_continuar_de_perfil_min(int perfil, int pctMinimo, int pctConcluido, ProgRegistro *saida);
 
 // Copia para `saida` o registro do perfil ativo com essa chave. 1 se havia.
 // Copia, e nao ponteiro: dois fios leem aqui, e um ponteiro para o cache

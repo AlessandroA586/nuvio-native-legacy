@@ -1367,6 +1367,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   // F07: seek cache for this open (live channels never; the backend also
   // refuses HLS/DASH). Arms only the next video_tocar: trailers stay uncached.
   cacheboost_backend_cache(ehCanal() ? 0 : ajustes_cache_seek_mb());
+  cacheboost_backend_buffer(ajustes_buffer_preset());
   loadEm = SDL_GetTicks();
   { char px[96];
     if (url && *url) { memlog_evento("load"); memQuadroPendente = 1; }
@@ -1453,6 +1454,7 @@ static void tocarFonte(const char *url) {
   video_definir_modo_live(ehCanal() ? ajustes_livetv_modo() : 0);
   cacheboost_backend_cache(ehCanal() ? 0 : ajustes_cache_seek_mb());   // F07, ver player_abrir
   memlog_evento("load"); memQuadroPendente = 1;
+  cacheboost_backend_buffer(ajustes_buffer_preset());
   { char px[96];
 #ifdef NV_ANDROID
     // app.c define episodio e "do inicio" antes de entregar a fonte. O
@@ -3399,15 +3401,36 @@ void player_atualizar(float dt, Uint32 agora) {
     // com o detalhe fechado ninguem mais o soltaria.
     desc_episodios_pendente(); }
 
+  // PULAR SOZINHO (#329): abertura/resumo com marcador e o ajuste ligado. Uma vez por
+  // trecho (voltar de proposito para dentro dele nao pula de novo), so tocando de verdade.
+  if (!ehCanal() && comVideo && tocando && video_pronto() && !scrubbing && duracaoReal) {
+    double fimT = 0.0; int tipoT = 0;
+    if (intro_ativo(posSeg, &fimT, &tipoT) &&
+        intro_auto_pular(tipoT, fimT, duracaoSeg, ajustes_pular_abertura(), ajustes_pular_resumo(),
+                         ajustes_pular_creditos()) &&
+        !intro_auto_ja(tipoT, fimT)) {
+      intro_auto_marcar(tipoT, fimT);
+      posSeg = (float)puloDestino(fimT);
+      video_buscar(posSeg);
+      player_toast(tipoT == INTRO_RESUMO ? i18n("Resumo pulado") :
+                   tipoT == INTRO_CREDITOS ? i18n("Créditos pulados") : i18n("Abertura pulada"), 2200);
+      printf("[intro] pulo automatico: tipo=%d ate %.0fs\n", tipoT, fimT); fflush(stdout);
+    }
+  }
+
   // PÓS-REPRODUÇÃO: o proximo episodio ou os relacionados, no fim do titulo.
   { const CatItem *ci = item();
     int eSerie = ci && !strcmp(ci->tipo, "series");
     // Canal ao vivo nao tem "fim": sem a guarda, o relogio reserva cruzaria os
     // 90% em ~1h42 de exibicao e abriria o painel de relacionados no meio da
     // programacao.
-    if (!ehCanal())
+    if (!ehCanal()) {
+      { double cr0 = credEfetivo();
+        posplay_marcador_real(cr0 > 1.0 && duracaoSeg - cr0 <= credJanela() &&
+                              (credFonteAtual == CRED_FONTE_CAPITULO || credFonteAtual == CRED_FONTE_INTRODB)); }
       posplay_atualizar(dt, agora, posSeg, duracaoSeg, eSerie, idxAtual(),
                         eSerie && player_janela_proximo(0));
+    }
     // "O QUE ACHOU?" (reacao.h): no mesmo instante do pos-reproducao do filme,
     // e na serie so no fim da temporada ou no ultimo episodio disponivel.
     //

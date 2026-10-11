@@ -45,6 +45,7 @@ Uint32 SDL_GetTicks(void) { return 0; }
 int         ajustes_idioma_ingles(void) { return 0; }
 int ajustes_idioma(void) { return 0; }
 int   ajustes_cw_concluido(void)         { return 90; }  // factory "watched" threshold
+int   ajustes_cw_minimo(void)             { return 1; }
 unsigned recomenda_geracao(void)         { return 0; }   // social generation: no social layer here
 int   ajustes_cw_ordem(void)               { return 0; }   // Padrao (issue #127)
 int   ajustes_cw_mostrar_nao_exibidos(void) { return 1; }

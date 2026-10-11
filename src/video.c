@@ -28,6 +28,7 @@
 #include "dts/dts_overlay.h"
 #include "legenda.h"
 #include "dados.h"
+#include "vazao.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -298,6 +299,16 @@ double video_duracao(void) { return SIM.duracao; }
 // capitulos. Melhor um stub honesto que um numero inventado.
 double video_creditos(void) { return 0.0; }
 double video_buffer_fim(void) { return SIM.bufferFim; }
+static VideoStats simStats;
+static int simStatsDef;
+void video_simular_estatisticas(const VideoStats *s) {
+  if (s) { simStats = *s; simStatsDef = 1; } else simStatsDef = 0;
+}
+void video_estatisticas(VideoStats *s) {
+  if (simStatsDef) { *s = simStats; return; }
+  video_stats_vazio(s);
+  if (SIM.bufferFim > 0) s->bufferSeg = SIM.bufferFim - SIM.pos;
+}
 void video_definir_dv(int dv) { (void)dv; }
 int  video_tocando(void) { return SIM.tocando; }
 int  video_iniciando(void) { return SIM.iniciando; }
@@ -3269,6 +3280,13 @@ void video_janela_fonte(int sx, int sy, int sw, int sh,
 double video_pos(void)      { return posSeg; }
 double video_duracao(void)  { return durSeg; }
 double video_buffer_fim(void) { return bufferSeg; }
+// webOS: so o buffer em SEGUNDOS e real (bufferRange do uMS); bytes, conexoes
+// e quadros o uMS nao conta. O host e o do link pedido (o uMS nao diz o final).
+void video_estatisticas(VideoStats *s) {
+  video_stats_vazio(s);
+  if (bufferSeg > 0 && bufferSeg >= posSeg) s->bufferSeg = bufferSeg - posSeg;
+  vazao_host_publico(urlAtual, s->host, sizeof s->host);
+}
 int    video_tocando(void)  { return tocando; }
 int    video_pronto(void)   { return pronto; }
 // O "COMECA PAUSADO" DO DOLBY VISION EM MKV (#203, C9 do dono, 08/10). No

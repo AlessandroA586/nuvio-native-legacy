@@ -226,6 +226,10 @@ int prog_ler(ProgRegistro *saida, int max) {
 static int removidoVenceDe(int perfil, const char *imdb, long long instanteMs);
 
 int prog_continuar_de_perfil(int perfil, int pctConcluido, ProgRegistro *saida) {
+  return prog_continuar_de_perfil_min(perfil, 1, pctConcluido, saida);
+}
+
+int prog_continuar_de_perfil_min(int perfil, int pctMinimo, int pctConcluido, ProgRegistro *saida) {
   int i, melhor = -1;
   if (!saida) return 0;
   TRANCAR();
@@ -235,7 +239,7 @@ int prog_continuar_de_perfil(int perfil, int pctConcluido, ProgRegistro *saida) 
     double p;
     if (r->perfil != perfil || r->durSeg < 60.0) continue;
     p = r->posSeg / r->durSeg;
-    if (p < 0.01 || p * 100.0 >= pctConcluido) continue;
+    if (p * 100.0 < (double)pctMinimo || p * 100.0 >= pctConcluido) continue;
     if (removidoVenceDe(perfil, r->contentId, r->lastWatchedMs)) continue;
     if (melhor < 0 || maisNovoPrimeiro(r, &regs[melhor]) < 0) melhor = i;
   }
