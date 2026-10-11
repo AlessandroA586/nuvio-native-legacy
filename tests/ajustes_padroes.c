@@ -35,6 +35,13 @@ int main(void) {
   assert(!ajustes_legendas_todas());
   valor[AJ_LEG_MOSTRAR] = 1; assert(ajustes_legendas_todas()); valor[AJ_LEG_MOSTRAR] = 0;
   assert(ajCenaSecao(AJ_LEG_MOSTRAR) == AJC_IDI_FAIXAS);
+  // #205: a tela ao abrir o video nasce Cinema, local, em Reproducao > Durante.
+  { int ab = -1;
+    for (int i = 0; i < AJ_N; i++) if (!strcmp(CHAVE[i], "telaAberturaLocal")) ab = i;
+    assert(ab >= 0 && valor[ab] == 0 && somenteDesteAparelho(ab) && OPCOES[ab].n == 2);
+    assert(!ajustes_abertura_detalhada());
+    valor[ab] = 1; assert(ajustes_abertura_detalhada()); valor[ab] = 0;
+    assert(ajCenaSecao(ab) == AJC_REP_DURANTE); }
   // Home: layout e arte do destaque.
   assert(valor[AJ_HERO_FUNDO] == 0);          // Automatico
   assert(valor[AJ_HERO_ARTE_DIF] == 1);       // Desligado: mesma foto do card

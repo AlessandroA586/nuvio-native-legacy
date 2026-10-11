@@ -430,6 +430,8 @@ int   ajustes_esconder_logo_trailer(void);   // 1 = hide the corner title logo w
 // primary at the bottom, 0 = top band. tamanho: percent (60..160), 0 = automatic (90% of the
 // primary). cor/fundo/borda: the same indices as the primary style (VideoLegendaEstilo), -1 = same as primary.
 int   ajustes_legendas_todas(void); // #425: abrir todas as faixas
+// #205: 1 = tela de abertura Detalhada (o cartao com fonte e passos); 0 = Cinema.
+int   ajustes_abertura_detalhada(void);
 int   ajustes_leg2_junto(void);
 int   ajustes_leg2_tamanho(void);
 int   ajustes_leg2_cor(void);

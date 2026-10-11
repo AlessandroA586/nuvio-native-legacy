@@ -503,6 +503,9 @@ typedef enum {
   AJ_LEG_SYNC_AUTO, // local, ligada de fábrica; append-only
   AJ_LEG_MOSTRAR, // #425: local, append-only; 0 = so meus idiomas
   AJ_AVISO_LEGAL, // acao local, append-only
+  // #205: tela ao abrir o video. 0 = Cinema (a arte e o logo do titulo ate o
+  // primeiro quadro), 1 = Detalhada (o cartao com fonte e passos). LOCAL, append-only.
+  AJ_TELA_ABERTURA,
   AJ_N
 } OpcaoId;
 
@@ -516,6 +519,7 @@ static const char *V_ICONE_APP[ICONEAPP_N] = {
   "Play tricolor", "Arco", "TV viva", "Clube retrô", "Arcade N",
 };
 static const char *V_FONTE_ORDEM_ADDON[] = { "Por qualidade", "Do addon" };
+static const char *V_TELA_ABERTURA[] = { "Cinema", "Detalhada" };
 static const char *V_QUALIDADE[] = { "Automática", "4K", "1080p", "720p" };
 static const char *V_LIGA[]      = { "Ligado", "Desligado" };
 // Medidor de desempenho NA ILHA DO RELOGIO (desempenho.h, 03/10). O indice e o
@@ -1335,6 +1339,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Sincronia automática da legenda", V_LIGA, 2),
   ESC("Mostrar no player", V_LEG_MOSTRAR, 2),
   ACAO("Aviso legal"),
+  ESC("Tela de abertura do vídeo", V_TELA_ABERTURA, 2),   // local: telaAberturaLocal (#205)
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1562,6 +1567,7 @@ static const char *CHAVE[] = {
   "legendaSyncAutoLocal",
   "legendaMostrarLocal",
   "-avisoLegal",
+  "telaAberturaLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2095,6 +2101,7 @@ int ajustes_logo_app(void) { int v = valor[AJ_LOGO_APP]; return v < 0 || v > 1 ?
 int ajustes_abertura(void) { int v = valor[AJ_ABERTURA]; return v < 0 || v > 2 ? 0 : v; }
 // R4: estilo proprio da segunda legenda. -1 / 0 = segue a principal.
 int ajustes_legendas_todas(void) { return valor[AJ_LEG_MOSTRAR] == 1; }
+int ajustes_abertura_detalhada(void) { return valor[AJ_TELA_ABERTURA] == 1; }
 int ajustes_leg2_junto(void) { return valor[AJ_LEG2_POS] == 1; }
 int ajustes_leg2_tamanho(void) {
   static const int P[] = { 0, 60, 80, 100, 120, 140, 160, 170, 180, 190, 200,
@@ -4090,6 +4097,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_LOGO_TRAILER:   /* so a protecao de OLED desta TV */
     case AJ_LEG_MOSTRAR:
     case AJ_LEG_SYNC_AUTO: /* escolha local desta TV */
+    case AJ_TELA_ABERTURA: /* #205: o web nao tem; escolha desta TV */
     case AJ_LEG_SYNC_AUDIO: /* PCM e passthrough sao desta TV; o web nao tem */
     case AJ_LEG_FORCADA:    /* #287: o web nao tem esta escolha */
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA: /* estilo da legenda e desta TV */
@@ -5475,6 +5483,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_SOCIAL: return "Ligado (padrão): amigos, atividade deles e recomendações. Desligado: tudo isso some, com a fileira de amigos da Home, e o app para de falar com o serviço social. Salvos e Avisos continuam. Vale só para este perfil.";
     case AJ_DV_MKV: return "Arquivos MKV em Dolby Vision perfil 5 ou 8 tocam com o Dolby Vision ligado, em vez de HDR10. O áudio Dolby Digital e Dolby Digital Plus vai direto para a TV. Se a conexão não acompanhar, o vídeo continua em HDR10. Só em TVs LG com webOS 4 ou mais novo.";
     case AJ_CW_RETIDO_TAMBEM: return "Quando o título está na ilha ou em Retomar agora, mostra também na fileira Continuar assistindo.";
+    case AJ_TELA_ABERTURA: return "Cinema (padrão): a arte e o logo do título ficam na tela até o vídeo entrar. Detalhada: a fonte, o add-on e cada passo da abertura. Na Cinema, Para cima ou Para baixo mostra os detalhes. Vale só nesta TV.";
     case AJ_PLR_CLASSIF: return "Ligado (padrão): no começo do filme, a ilha mostra a classificação indicativa e os avisos do guia parental (violência, nudez, palavrões). Desligado: o player não mostra nada disso.";
     case AJ_RELOGIO_12H: return "Como a hora aparece no relógio, na tela de descanso, no fim do filme e no guia de TV: 18:30 ou 6:30 PM.";
     case AJ_RELOGIO_POS: return "Em que canto de cima fica a pílula do relógio e dos avisos. Automática fica à direita, em qualquer layout. Esquerda no layout Dinâmica fica ao lado da pílula do menu.";
@@ -5666,6 +5675,7 @@ static const char *beneficioProprio(int op) {
     case AJ_FONTE_PRIORIDADE: return "O critério da escolha automática: equilíbrio, qualidade ou começar rápido.";
     case AJ_FONTE_PRAZO: return "Quanto tempo o Nuvio espera os add-ons antes de escolher.";
     case AJ_PLR_CLASSIF: return "No começo do filme, a ilha mostra a classificação e os avisos.";
+    case AJ_TELA_ABERTURA: return "O que aparece enquanto o vídeo abre: a arte do título ou os detalhes da fonte.";
     case AJ_SAIDA_PLAYER: return "O filme pode ficar na ilha do relógio para você voltar depois.";
     case AJ_LEG_FORCADA: return "Placas e falas em outra língua aparecem; o resto, não.";
     case AJ_BUSCA_CINEMETA: return "A busca também consulta o Cinemeta se o catálogo do Nuvio falhar.";
@@ -7366,7 +7376,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK:
     case AJ_DV_MKV:
     case AJ_LEG_FORCADA:
-    case AJ_AUD_LINGUA: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_FONTE_MANUAL:
+    case AJ_AUD_LINGUA: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_FONTE_MANUAL:
     case AJ_FONTE_AUTO: case AJ_FONTE_REPOR: case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON: case AJ_SELOS_CORES: case AJ_FONTE_TOCAR_CONFERINDO: case AJ_FONTE_AQUECER: case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR:
     case AJ_FONTE_PRIORIDADE: case AJ_FONTE_HDR:
     case AJ_SELOS_PACOTE:
