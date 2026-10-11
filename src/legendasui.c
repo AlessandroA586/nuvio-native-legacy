@@ -256,6 +256,30 @@ static int recomendada(const char *pref, int secundaria) {
   return r >= 0 ? mapa[r] : -1;
 }
 
+// montarLinhas roda TODO QUADRO (legendasui_corpo) e pedia a mesma decisao
+// duas vezes — malloc de LEG_MAX legendas + ling/legauto — sempre com o
+// mesmo resultado. Cache por assinatura dos candidatos (e das entradas que
+// entram na decisao: preferencias, idiomas, tipos e a fonte atual).
+static uint64_t recHashStr(uint64_t h, const char *s) { while (*s) h = h * 33u + (unsigned char)*s++; return h; }
+static uint64_t recAssinatura(void) {
+  uint64_t h = 5381u;
+  int i;
+  h = recHashStr(h, prefLinha(0)); h = recHashStr(h, prefLinha(1));
+  h = recHashStr(h, video_url_atual());
+  h = h * 33u + (uint64_t)nCand;
+  for (i = 0; i < nCand; i++) {
+    h = h * 33u + (uint64_t)(cand[i].embutida ? 1 : 0) * 3u + (uint64_t)(cand[i].tipo + 1);
+    h = recHashStr(h, cand[i].idioma); h = recHashStr(h, cand[i].id);
+    if (!cand[i].embutida) {
+      h = recHashStr(h, cand[i].leg.url); h = recHashStr(h, cand[i].leg.arquivo);
+      h = recHashStr(h, cand[i].formato);
+    }
+  }
+  return h;
+}
+static int recP = -2, recQ = -2;   // cache de montarLinhas; -2 = nunca calculado
+static uint64_t recAssin;
+
 static int temPreferencia(void) {
   const char *p = prefLinha(0);
   return p[0] && strcmp(p, "forced") && strcmp(p, "*");
@@ -274,10 +298,21 @@ static void montarLinhas(void) {
   idPrimario(prim);
   nLinhasV = 0;
   if (!mais && !ver) {
-    int p = recomendada(prefLinha(0), 0), q = recomendada(prefLinha(1), 0);
+    uint64_t assin = recAssinatura();
+    int p, q, ativa = -1;
+    if (assin != recAssin) {
+      recP = recomendada(prefLinha(0), 0); recQ = recomendada(prefLinha(1), 0); recAssin = assin;
+    }
+    p = recP; q = recQ;
     linhaFixa(LR_NENHUMA, 0, "p|-");
     if (p >= 0) linhaCandidata(p, 0, "rec|p");
     if (q >= 0 && q != p) linhaCandidata(q, 0, "rec|s");
+    // A principal ATIVA que nao e nenhuma das recomendadas (escolha manual,
+    // idioma fora da preferencia) e nao tem linha em "par" (sem segunda
+    // legenda) ficava SEM linha — e o foco ao abrir caia em "Desligada".
+    // Linha propria, marcada pelo ativoNoSlot de sempre.
+    for (i = 0; i < nCand; i++) if (prim[0] && !strcmp(prim, cand[i].id)) ativa = i;
+    if (ativa >= 0 && ativa != p && ativa != q && !sec[0]) linhaCandidata(ativa, 0, "rec|a");
     if (sec[0]) {
       linhaFixa(LR_PAR, 0, "par");
       for (i = 0; i < nCand; i++) if (!strcmp(prim, cand[i].id)) linhas[nLinhasV - 1].cand = i;
@@ -1019,10 +1054,10 @@ static void estiloSecundario(const VideoLegendaEstilo *e, TxtEstilo *est, int *r
                              int *fundo, int *borda) {
   int pct = ajustes_leg2_tamanho(), c = ajustes_leg2_cor(), f = ajustes_leg2_fundo(), bd = ajustes_leg2_borda();
   if (pct <= 0) pct = e->tamanho * 9 / 10;
-  if (pct < 50) pct = 50;
-  if (pct > 300) pct = 300;
+  if (pct < TXT_LEG_PCT_MIN) pct = TXT_LEG_PCT_MIN;
+  if (pct > TXT_LEG_PCT_MAX) pct = TXT_LEG_PCT_MAX;
   pct = (pct / 10) * 10;
-  *est = (TxtEstilo)(TXT_LEG_50 + (pct - 50) / 10);
+  *est = (TxtEstilo)(TXT_LEG_50 + (pct - TXT_LEG_PCT_MIN) / 10);
   corEstilo(c >= 0 ? c : e->cor, r, g, b);
   *fundo = f >= 0 ? f : e->fundo;
   *borda = bd >= 0 ? bd : e->borda;

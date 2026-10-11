@@ -627,6 +627,14 @@ static char erroTitulo[160], erroDica[160];
 // "Fonte 2 de 3": a tentativa do automatico VOD (app.c, tentarProximaFonteVOD).
 static int tentativaN, tentativaM;
 static int durFonteAvisada, durFontePulou, pedProximaFonte;
+// Cache da duracao esperada da fonte corrente (achado 4 do review #205):
+// duracaoFonteEsperada varre os episodios do titulo, e durFonteAtualizar roda
+// por quadro. Recalcula so quando o conteudo dos episodios muda (a primeira
+// lista — e o metadado que preenche a duracao — chega DEPOIS da fonte abrir,
+// sem zerar nada: cat_versao_episodios sobe) ou o catalogo inteiro troca.
+static int durFonteEsperadaOk;
+static double durFonteEsperadaCache;
+static unsigned durFonteEsperadaVer, durFonteEsperadaRev;
 static Uint32 durFonteAcaoAte;
 // ABRINDO A FONTE, COMPACTO POR PADRAO (dono, 05/10): o cartao nasce enxuto —
 // o ponto, o estado e as marcas da fonte — e o BAIXO expande os detalhes.
@@ -937,7 +945,7 @@ static void prefsLer(void) {
       /* Migra o arquivo antigo 0..4 sem perder a preferencia do aparelho. */
       static const int antigo[5]={60,80,120,160,200};
       if(v>=0&&v<=4)legEstilo.tamanho=antigo[v];
-      else if(v>=50&&v<=300)legEstilo.tamanho=(v/10)*10;
+      else if(v>=TXT_LEG_PCT_MIN&&v<=TXT_LEG_PCT_MAX)legEstilo.tamanho=(v/10)*10;
     }
     else if (!strcmp(chave, "leg_cor")     && v >= 0 && v < VIDEO_LEG_NCORES) legEstilo.cor = v;
     else if (!strcmp(chave, "leg_fundo")   && v >= 0 && v <= 4)  legEstilo.fundo = v;
@@ -1560,7 +1568,15 @@ static void dvTelaAtualizar(float dt, Uint32 agora) {
 // PRETO enquanto o fluxo abria — que era o "clica em reproduzir e fica preto".
 void player_definir_fonte(const char *url) {
   if ((!aberto && !mini) || !url || !*url) return;
-  durFonteAvisada = pedProximaFonte = 0; durFonteAcaoAte = toastAte = 0;
+  durFonteAvisada = pedProximaFonte = 0;
+  // Fonte nova: a duracao esperada conhecida nao vale mais (mesmo titulo,
+  // episodio outro, catalogo pode ter andado).
+  durFonteEsperadaOk = 0;
+  // So apaga o toast que era o aviso de duracao (os dois prazos caminham
+  // juntos); qualquer OUTRO toast na tela (sem sinal, velocidade, DV) e do
+  // video anterior e continua valendo ate o prazo dele.
+  if (durFonteAcaoAte == toastAte) toastAte = 0;
+  durFonteAcaoAte = 0;
   duracaoReal = durCurtaAvisado = durPassouAvisado = 0;
   esperandoFonte = 0;
   erroFonte = 0;
@@ -2330,7 +2346,11 @@ static void durFonteAtualizar(double real, Uint32 agora) {
   char r[32], e[32], aviso[320];
   int rm, em;
   if (durFonteAvisada || ehCanal() || !isfinite(real) || real <= 1) return;
-  esperada = duracaoFonteEsperada();
+  { unsigned ver = cat_versao_episodios(), rev = cat_revisao();
+    if (!durFonteEsperadaOk || durFonteEsperadaVer != ver || durFonteEsperadaRev != rev) {
+      durFonteEsperadaOk = 1; durFonteEsperadaVer = ver; durFonteEsperadaRev = rev;
+      durFonteEsperadaCache = duracaoFonteEsperada(); } }
+  esperada = durFonteEsperadaCache;
   if (esperada <= 0 || fabs(real - esperada) <= 600 ||
       !(real > esperada * 2 || real < esperada * .5)) return;
   durFonteAvisada = 1;
@@ -3878,8 +3898,8 @@ static PlrRect areaVideoLegenda(void) {
  * cresce junto, como o sub-scale do mpv, sem mexer em cor, borda ou lugar. */
 static double escalaFonteAss(void) {
   int pct = legEstilo.tamanho;
-  if (pct < 50) pct = 50;
-  if (pct > 300) pct = 300;
+  if (pct < TXT_LEG_PCT_MIN) pct = TXT_LEG_PCT_MIN;
+  if (pct > TXT_LEG_PCT_MAX) pct = TXT_LEG_PCT_MAX;
   return pct / 120.0;
 }
 
@@ -3981,7 +4001,7 @@ static void desenharLegendaPrincipal(float *topoPilha){
       PlainAssStyle style = {0};
       int pct = legEstilo.tamanho, fam = legEstilo.familia;
       float base = baseLegendaPrincipal();
-      if (pct < 50) pct = 50; if (pct > 300) pct = 300;
+      if (pct < TXT_LEG_PCT_MIN) pct = TXT_LEG_PCT_MIN; if (pct > TXT_LEG_PCT_MAX) pct = TXT_LEG_PCT_MAX;
       style.size = (pct / 10) * 4;
       if (fam < 0 || fam >= (int)(sizeof families / sizeof families[0])) fam = 0;
       snprintf(style.font, sizeof style.font, "%s", families[fam]);
@@ -4029,7 +4049,7 @@ static void desenharLegendaPrincipal(float *topoPilha){
     n = 1;
   }
   if (n <= 0) return;
-  int pct=legEstilo.tamanho;if(pct<50)pct=50;if(pct>300)pct=300;pct=(pct/10)*10;
+  int pct=legEstilo.tamanho;if(pct<TXT_LEG_PCT_MIN)pct=TXT_LEG_PCT_MIN;if(pct>TXT_LEG_PCT_MAX)pct=TXT_LEG_PCT_MAX;pct=(pct/10)*10;
   TxtEstilo est=(TxtEstilo)(TXT_LEG_50+(pct-50)/10);corLegenda(legEstilo.cor,&r,&g,&b);
   float alpha=(legEstilo.opacidade==3?.25f:legEstilo.opacidade==2?.5f:legEstilo.opacidade==1?.75f:1.f)*entrada;
   // A pilha "normal" (sem \pos e sem \an, ou \an 2): empilha de baixo para
@@ -4405,7 +4425,7 @@ static void corpoDurFonte(GfxRect r, float a, void *u) {
   float w = plrui_botao(x, y, "Tentar próxima fonte (OK)", "pl_layers", 1, a);
   (void)u;
   if (a > .9f && durFonteAcaoAte && durFonteAcaoAte == toastAte)
-    ponteiro_alvo(x, y, w, 60, durFonteTentar, NULL, 0, 0);
+    ponteiro_alvo(x, y, w, 60, NULL, durFonteTentar, 0, 0);
 }
 
 static void desenharOsd(Uint32 agora, float a, float ac, const CatItem *c);

@@ -72,9 +72,16 @@ int main(int argc, char **argv) {
     legenda_desligar();
     // Prova #421: a pre-busca deve colher texto sem ativacao especifica do .tpk.
     assert(mkvass_prebuscar(esperado, escolher, 0));
+    // #9 da revisao: faixa de TEXTO solta o player no cabecalho (fase sai de 1
+    // ANTES da colheita); os cues chegam em segundo plano. Esperar fechar 2/2.
     for (int i = 0; mkvass_prebusca_fase() == 1 && i < 2000; i++) usleep(10000);
+    assert(mkvass_prebusca_fase() == 2);
     int col = 0, total = 0;
-    mkvass_estatisticas(NULL, NULL, &col, &total);
+    for (int i = 0; i < 2000; i++) {
+      mkvass_estatisticas(NULL, NULL, &col, &total);
+      if (total == 2 && col == 2) break;
+      usleep(10000);
+    }
     assert(col == 2 && total == 2);
     assert(!legenda_ligada_em(legenda_geracao()));
     mkvass_iniciar_ordinal(esperado, 0);

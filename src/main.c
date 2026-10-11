@@ -1766,11 +1766,13 @@ int main(int argc, char **argv) {
     esmaecer_estilo(player_aberto() ? ESM_ESTILO_ESCURECER : ajustes_descanso_estilo());
     // #422: trailer tocando na pagina do titulo tambem e alguem assistindo. So
     // no titulo: o destaque da Home troca de trailer sem parar e a tela nunca
-    // escureceria.
+    // escureceria. Trailer em TELA CHEIA pausado e parado (trailer_pausado so
+    // existe em tela cheia, que e onde da para pausar).
     esmaecer_quadro(agora, dt,
                     ((player_aberto() || player_mini_ativo()) && player_com_video() &&
                      !player_pausado() && !player_carregando()) ||
-                    (detail_aberto() && !player_aberto() && trailer_tocando()));
+                    (detail_aberto() && !player_aberto() && trailer_tocando() &&
+                     !trailer_pausado()));
     // TELA DE DESCANSO: vitrine/relogio por cima do preto (descanso.h).
     descanso_quadro(agora, dt, esmaecer_descanso(),
                     ajustes_descanso_estilo(), ajustes_descanso_fonte());

@@ -507,10 +507,28 @@ int main(int argc,char **argv) {
     pthread_mutex_lock(&fakeTrava);
     assert(mapPedidos==6&&dbPedidos==antesDb+1);mapFora=0;
     pthread_mutex_unlock(&fakeTrava);
-    // Sem indice e sem rede: outro titulo nao dispara nova descarga nesta semana.
+    // Sem indice e sem rede: outro titulo nao dispara nova descarga no prazo
+    // do retry CURTO (10 min apos a 1a falha; antes eram 7 dias).
     intro_pedir_ids("tt5607616",65942,1,39,0,0);usleep(200000);
     pthread_mutex_lock(&fakeTrava);assert(mapPedidos==6);pthread_mutex_unlock(&fakeTrava);
     char retry[256];snprintf(retry,sizeof retry,"%s/anime-fribb.retry",dadosTeste);
+    // A falha ficou contada no arquivo ("1"), nao mais vazia.
+    { FILE *rf=fopen(retry,"rb");char rb[8]={0};size_t rn;
+      assert(rf);rn=fread(rb,1,sizeof rb-1,rf);fclose(rf);rb[rn]=0;
+      assert(!strcmp(rb,"1")); }
+    pthread_mutex_lock(&fakeTrava);mapFora=1;pthread_mutex_unlock(&fakeTrava);
+    // 11 minutos depois o prazo curto passou: tenta de novo.
+    struct utimbuf ha11={time(NULL)-660,time(NULL)-660};
+    assert(!utime(retry,&ha11));
+    intro_pedir_ids("tt5607616",65942,1,39,0,0);usleep(300000);
+    pthread_mutex_lock(&fakeTrava);assert(mapPedidos==7);pthread_mutex_unlock(&fakeTrava);
+    // 2a falha seguida: o prazo sobe para 1 h — 11 minutos nao bastam.
+    { FILE *rf=fopen(retry,"rb");char rb[8]={0};size_t rn;
+      assert(rf);rn=fread(rb,1,sizeof rb-1,rf);fclose(rf);rb[rn]=0;
+      assert(!strcmp(rb,"2")); }
+    assert(!utime(retry,&ha11));
+    intro_pedir_ids("tt5607617",0,2,14,0,0);usleep(200000);
+    pthread_mutex_lock(&fakeTrava);assert(mapPedidos==7);mapFora=0;pthread_mutex_unlock(&fakeTrava);
     assert(!unlink(retry));
     puts("ok  #430: indice em fluxo criado uma vez/reutilizado entre titulos; semana; stale/503; corrompido/ausente refaz; sem indice -> TheIntroDB");
     intro_definir_buscador(NULL);

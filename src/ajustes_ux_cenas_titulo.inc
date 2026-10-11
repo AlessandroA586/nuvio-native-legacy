@@ -477,17 +477,17 @@ static void ajcT_leg2(int op) {
   static const float COR[7][3] = { { 1, 1, 1 }, { 1, 1, 1 }, { 1, 0.9f, 0.2f }, { 0.4f, 0.9f, 0.4f },
                                    { 0.4f, 0.7f, 1 }, { 1, 0.35f, 0.3f }, { 0.1f, 0.1f, 0.1f } };
   static const float FUN[6] = { 0.45f, 0.0f, 0.25f, 0.5f, 0.75f, 1.0f };
-  static const float TAM[7] = { 1.0f, 0.6f, 0.8f, 1.0f, 1.2f, 1.4f, 1.6f };
   static const char *PCT[6] = { "=", "0", "25", "50", "75", "100" };
-  static const char *TXT[7] = { "=", "60", "80", "100", "120", "140", "160" };
   static const char *L[3] = { "PT", "EN", "ES" };
   float p = ajc_onda(2.0f), junto = ajcValor(AJ_LEG2_POS), yb = 74 + (276 - 74) * junto, tam, lw;
   int c = valor[AJ_LEG2_COR] >= 0 && valor[AJ_LEG2_COR] < 7 ? valor[AJ_LEG2_COR] : 0, i;
   int vf = valor[AJ_LEG2_FUNDO] >= 0 && valor[AJ_LEG2_FUNDO] < 6 ? valor[AJ_LEG2_FUNDO] : 0;
   int vb = valor[AJ_LEG2_BORDA] >= 0 && valor[AJ_LEG2_BORDA] < 4 ? valor[AJ_LEG2_BORDA] : 0;
-  int vt = valor[AJ_LEG2_TAMANHO] >= 0 && valor[AJ_LEG2_TAMANHO] < 7 ? valor[AJ_LEG2_TAMANHO] : 0;
+  // Tamanho real da opcao (ajustes_leg2_tamanho): 0 = auto, 90% da principal;
+  // senao o percentual escolhido (60..300), nao mais a tabela antiga de 7.
+  int pct2 = ajustes_leg2_tamanho();
   float tm, fundo = FUN[vf], borda = 0;
-  tam = TAM[vt] * 0.9f;
+  tam = (pct2 > 0 ? pct2 / 100.0f : 0.9f) * 0.9f;
   tm = tam;
   lw = 220 * tam;
   ajcT_fundoVideo();
@@ -511,8 +511,9 @@ static void ajcT_leg2(int op) {
   ajc_legenda(320, yb, tm, fundo, COR[c][0], COR[c][1], COR[c][2], borda, 1);
   ajc_foco(320 - lw * 0.5f - 6, yb - 34 * tam - 4, lw + 12, 34 * tam + 12, 8, 0.4f + 0.6f * p);
   if (op == AJ_LEG2_TAMANHO) {   // a regua do tamanho
+    const char *rot = textoValor(AJ_LEG2_TAMANHO);   // o rotulo real: "Automático", "60%".."300%"
     ajc_acento_ret(66, yb - 34 * tam, 3, 34 * tam, 1.5f, 1);
-    ajcT_txtc(TXT[vt], 70, 1, 320 - ajcLargura(TXT[vt], 70, 1) * 0.5f, 126, 243, 242, 239, 0.9f);
+    ajcT_txtc(rot, 70, 1, 320 - ajcLargura(rot, 70, 1) * 0.5f, 126, 243, 242, 239, 0.9f);
     ajc_icone("aj_type", 90, 160, 44, 0.85f);
   }
   if (op == AJ_LEG2_COR) {

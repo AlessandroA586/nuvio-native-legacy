@@ -503,6 +503,10 @@ void stream_invalidar(const char *porque) {
 static int filtrado(int linha);
 static int nOrdem, focoFixo = -1;
 static float *linhaY, focoFixoY;
+// #205: indice que um fio de conferencia acabou de achar fora do cache; o fio
+// da UI consome e prende o foco se for a carta em foco. Atomico porque a
+// conferencia paralela roda fora do fio da UI.
+static _Atomic int foraCacheFoco = -1;
 static void atualizarProvedores(void);
 static int aberta, foco, grupo;
 static float rolagem, velRol;
@@ -1260,7 +1264,13 @@ static int verificarUma(int i, Conferencia *c) {
       pthread_mutex_unlock(&verTrava);
     } else {
       pthread_mutex_lock(&verTrava);
-      if (listaGeracao == c->geracao && i < n && fora) lista[i].foraCache = 1;
+      if (listaGeracao == c->geracao && i < n && fora) {
+        lista[i].foraCache = 1;
+        // #205: se for a carta em foco na folha, ela muda de lugar no proximo
+        // montar(). Avisar o fio da UI, que prende o foco pelo indice (o
+        // mesmo focoFixo de stream_lista_acrescentar).
+        atomic_store(&foraCacheFoco, i);
+      }
       pthread_mutex_unlock(&verTrava);
       printf("[fonte] %d torrent nao resolveu no debrid\n", i);
     }
@@ -2662,17 +2672,19 @@ static void montar(int automatica) {
     // Preserve the approved quality groups and descending-size base order.
     // Only measured-heavy sources move back within their own group.
     streamfit_particionar(grupoTmp, nt, fitClasses, fitN, grupoFitTmp);
+    // #205 (sobre o #402): "fora do cache" no fim DO PROPRIO grupo, em vez de
+    // despejadas depois de todos os grupos sem cabecalho nenhum em cima — a
+    // secao do grupo as abriga, na ordem do addon.
+    for (k = 0; k < n; k++) {
+      i = ORD(k);
+      if (i != m && lista[i].foraCache && passaFiltro(i) && grupoRes(&lista[i]) == g) grupoTmp[nt++] = i;
+    }
     if (!nt) continue;
     if (nOrdem) y += FOLHA_SEC_GAP;
     secY[g] = y;
     y += FOLHA_SEC_H;
     secN[g] = nt;
     for (k = 0; k < nt; k++) porLinha(grupoTmp[k], &y, automatica);
-  }
-  // #402: negativas conhecidas depois de TODOS os grupos; desconhecidas ficam.
-  for (k = 0; k < n; k++) {
-    i = ORD(k);
-    if (lista[i].foraCache && passaFiltro(i)) porLinha(i, &y, automatica);
   }
   alturaTotal = y;
 }
@@ -2905,6 +2917,16 @@ void stream_folha_atualizar(float dt, Uint32 agora) {
   // por conta propria; o foco pedido com a folha fechada era sobrescrito ao
   // abrir, entao sai daqui tambem.
   if (!aberta && anim < .005f) { focoFixo = -1; return; }
+  // #205: a carta em foco que um fio de conferencia acabou de achar fora do
+  // cache deixa o grupo por um lugar atras dos cached do seu grupo. Prender o
+  // foco pelo indice ANTES do montar, com o Y da linha como ela esta agora —
+  // depois do montar o focoFixo e reposto na linha nova (o mesmo padrao de
+  // stream_lista_acrescentar).
+  { int fl = atomic_exchange(&foraCacheFoco, -1);
+    if (fl >= 0 && aberta && grupo == 1 && filtrado(foco) == fl) {
+      focoFixo = fl;
+      focoFixoY = foco >= 0 && foco < nOrdem ? linhaY[foco] : 0;
+    } }
   atualizarProvedores();
   montar(automaticaDaFolha());
   nf=nOrdem;

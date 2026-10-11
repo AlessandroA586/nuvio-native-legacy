@@ -262,6 +262,22 @@ static int mapaBaixar(const char *arq){
   if(!ok)remove(tmp);else dados_marcar_sujo(1);
   dados_fs_liberar();return ok;
 }
+// QUANTAS DESCARGAS DO INDICE FALHARAM EM SEGUIDA (o arquivo retry guarda o
+// numero; vazio ou ilegivel = pelo menos uma) e onde grava a proxima contagem.
+// Arquivo ausente => 0 (nunca falhou).
+static int retryContar(const char *retry,struct stat *st){
+  FILE *f;char b[8];size_t r;int n;
+  if(stat(retry,st))return 0;
+  f=fopen(retry,"rb");if(!f)return 1;
+  r=fread(b,1,sizeof b-1,f);fclose(f);
+  b[r<sizeof b-1?r:sizeof b-2]=0;
+  n=atoi(b);
+  return n<1?1:n;
+}
+static void retryGravar(const char *retry,int tentativasAteAgora){
+  FILE *f=fopen(retry,"wb");
+  if(f){fprintf(f,"%d",tentativasAteAgora+1);fclose(f);}
+}
 static long malMapeado(const char *id,long tmdb,int t,int *ep){
   char arq[1024],retry[1024];long mal=0;int melhor=-1;struct stat st;time_t agora=time(NULL);
   const char *dir=dados_dir();if(!dir||!*dir)return 0;
@@ -269,9 +285,15 @@ static long malMapeado(const char *id,long tmdb,int t,int *ep){
   snprintf(retry,sizeof retry,"%s/anime-fribb.retry",dir);
   pthread_mutex_lock(&mapTrava);
   int valido=mapaLer(arq,imdbNumero(id),tmdb,t,*ep,&mal,&melhor);
-  // Falha inicial tambem fica uma semana sem rede, inclusive apos reiniciar.
-  if(!valido&&!stat(retry,&st)&&st.st_mtime<=agora&&agora-st.st_mtime<MAP_SEMANA){
-    pthread_mutex_unlock(&mapTrava);return 0;
+  // SEM indice util o retry e CURTO e cresce a cada falha (10 min, 1 h, 6 h):
+  // uma rede fora num dia nao vira uma semana sem intro. A semana inteira so
+  // existe para adiar a RENOVACAO de um indice que ja serve (utime abaixo).
+  if(!valido){
+    int tent=retryContar(retry,&st);
+    time_t prazo=tent>=3?6*60*60:tent==2?60*60:10*60;
+    if(tent>0&&st.st_mtime<=agora&&agora-st.st_mtime<prazo){
+      pthread_mutex_unlock(&mapTrava);return 0;
+    }
   }
   if(!valido||stat(arq,&st)||agora-st.st_mtime>=MAP_SEMANA||st.st_mtime>agora){
     if(mapaBaixar(arq)){
@@ -281,7 +303,10 @@ static long malMapeado(const char *id,long tmdb,int t,int *ep){
     else if(valido){ // Mantem o indice velho e adia outra tentativa por uma semana.
       dados_fs_travar();utime(arq,NULL);dados_marcar_sujo(1);dados_fs_liberar();
     }else{
-      dados_fs_travar();FILE *f=fopen(retry,"wb");if(f)fclose(f);
+      dados_fs_travar();
+      // Conta a falha no arquivo: 1 => 10 min, 2 => 1 h, 3+ => 6 h. O retry
+      // antigo era vazio (uma semana inteira sem tentar de novo).
+      retryGravar(retry,retryContar(retry,&st));
       dados_marcar_sujo(1);dados_fs_liberar();
     }
   }

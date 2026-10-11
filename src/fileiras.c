@@ -46,6 +46,12 @@ typedef struct {
   int  emColecao;      // visible collection owns this source; runtime projection
   int  semAddon;       // runtime only: no ENABLED add-on declares this catalog any more (#319)
   int  visPessoal;     // explicit TV add/remove, persisted as an optional line
+  // #360 EDGE-TRIGGER: 1 quando a fileira foi ADICIONADA nesta TV com a conta
+  // ja dizendo "desligada" — escolha local consciente contra o estado conhecido,
+  // vale para sempre. Add com a conta ligada nao congela nada: se a conta
+  // desligar a fileira depois, o sync (mao unica, so puxa) esconde aqui
+  // tambem. Linha opcional "addvence" no arquivo, como "visibilidade".
+  int  addVenceConta;
 } Linha;
 
 static Linha linhas[FIL_MAX];
@@ -291,6 +297,11 @@ static void gravar(void) {
   for (i = 0; i < nLinhas && k < cap; i++)
     if (linhas[i].visPessoal)
       k += (size_t)snprintf(txt + k, cap - k, "visibilidade %s\n", linhas[i].chave);
+  // Linha propria e opcional como "visibilidade": versao anterior nao a conhece
+  // (ignora) e versao futura sem ela volta ao padrao "a conta vence".
+  for (i = 0; i < nLinhas && k < cap; i++)
+    if (linhas[i].visPessoal && linhas[i].addVenceConta)
+      k += (size_t)snprintf(txt + k, cap - k, "addvence %s\n", linhas[i].chave);
   if (k < cap) dados_gravar(arquivoDoPerfil(), txt);
   free(txt);
   revisao++;
@@ -342,6 +353,9 @@ static void carregar(void) {
     } else if (!strncmp(buf, "visibilidade ", 13)) {
       for (int i = 0; i < nLinhas; i++)
         if (!strcmp(linhas[i].chave, buf + 13)) linhas[i].visPessoal = 1;
+    } else if (!strncmp(buf, "addvence ", 9)) {
+      for (int i = 0; i < nLinhas; i++)
+        if (!strcmp(linhas[i].chave, buf + 9)) linhas[i].addVenceConta = 1;
     } else if (!strncmp(buf, "linha ", 6) && nLinhas < FIL_MAX) {
       char *p = buf + 6, *campo[4];
       int c;
@@ -575,6 +589,9 @@ int fil_adicionar(int i, int *estado) {
   if (i < 0 || i >= nLinhas) { pthread_mutex_unlock(&trava); if (estado) *estado = FIL_FORA; return i; }
   linhas[i].oculta = 0;
   linhas[i].visPessoal = 1;
+  // Snapshot do momento do add (#360): so e escolha contra a conta se a conta
+  // ja dizia "desligada" quando a pessoa adicionou.
+  linhas[i].addVenceConta = linhas[i].ocultaConta;
   // #327: adicionar e uma escolha que VENCE a colecao. Sem isto o catalogo
   // engolido por uma pasta visivel continuava emColecao, o estado seguia
   // "fora" e a tela dizia "Adicionada" sem nada mudar.
@@ -631,7 +648,11 @@ void fil_normalizar(void) {
 void fil_remover(int i) {
   pthread_mutex_lock(&trava);
   garantir();
-  if (i >= 0 && i < nLinhas && linhas[i].oculta != OC_PESSOA) { linhas[i].oculta = OC_PESSOA; linhas[i].visPessoal = 1; linhas[i].fila = 0; gravar(); }
+  if (i >= 0 && i < nLinhas && linhas[i].oculta != OC_PESSOA) {
+    linhas[i].oculta = OC_PESSOA; linhas[i].visPessoal = 1; linhas[i].fila = 0;
+    linhas[i].addVenceConta = 0;   // o add que a protegia acabou de ser desfeito
+    gravar();
+  }
   pthread_mutex_unlock(&trava);
 }
 
@@ -1106,6 +1127,7 @@ int fil_conta_dono(const char *usuario) {
   if (mudou) for (int i = 0; i < nLinhas; i++) {
     if (linhas[i].oculta == OC_COLECAO) linhas[i].oculta = OC_SUGESTAO;
     linhas[i].ocultaConta = 0; linhas[i].emColecao = 0;
+    linhas[i].addVenceConta = 0;   // a escolha era contra a OUTRA conta
   }
   if (strcmp(donoAuto, usuario)) {
     snprintf(donoAuto, sizeof donoAuto, "%s", usuario);
@@ -1149,7 +1171,8 @@ void fil_colecoes_reconciliar(const char *const *chaves,
     pthread_mutex_lock(&trava);
     int i = achar(chaves[j]);
     if (i >= 0) {
-      int o = ocultas && ocultas[j] && !(linhas[i].visPessoal && !linhas[i].oculta);
+      int o = ocultas && ocultas[j] && !(linhas[i].visPessoal && !linhas[i].oculta &&
+                                          linhas[i].addVenceConta);
       if (linhas[i].ocultaConta != o) { linhas[i].ocultaConta = o; revisao++; }
       if (titulos && titulos[j] && strcmp(linhas[i].titulo, titulos[j])) {
         snprintf(linhas[i].titulo, sizeof linhas[i].titulo, "%s", titulos[j]);
@@ -1185,7 +1208,8 @@ void fil_conta_reconciliar(const char *const *chaves, const int *ocultas,
     int o = 0, c = 0;
     for (int j = 0; j < n; j++)
       if (chaves[j] && !strcmp(chaves[j], linhas[i].chave)) {
-        o = ocultas && ocultas[j] && !(linhas[i].visPessoal && !linhas[i].oculta);
+        o = ocultas && ocultas[j] && !(linhas[i].visPessoal && !linhas[i].oculta &&
+                                       linhas[i].addVenceConta);
         c = emColecao && emColecao[j]; break;
       }
     if (linhas[i].ocultaConta != o) { linhas[i].ocultaConta = o; revisao++; }
@@ -1257,7 +1281,15 @@ int fil_aceita_tipo(int i)  { return (i >= 0 && i < nLinhas) && !formaFixa(linha
 
 void fil_alternar(int i) {
   pthread_mutex_lock(&trava);
-  if (i >= 0 && i < nLinhas) { linhas[i].oculta = linhas[i].oculta ? 0 : OC_PESSOA; linhas[i].visPessoal = 1; gravar(); }
+  if (i >= 0 && i < nLinhas) {
+    linhas[i].oculta = linhas[i].oculta ? 0 : OC_PESSOA;
+    linhas[i].visPessoal = 1;
+    // Voltar a ficar ligado pela alternancia e um add como outro qualquer:
+    // mesmo snapshot contra a conta (#360).
+    if (linhas[i].oculta) linhas[i].addVenceConta = 0;
+    else linhas[i].addVenceConta = linhas[i].ocultaConta;
+    gravar();
+  }
   pthread_mutex_unlock(&trava);
 }
 
