@@ -274,8 +274,9 @@ static const char *ROT_MODO[BIB_N_MODOS] = { "Salvos", "Coleção", "Listas" };
 enum { TIPO_TODOS, TIPO_FILME, TIPO_SERIE, BIB_N_TIPOS };
 static const char *ROT_TIPO[BIB_N_TIPOS] = { "Todos", "Filmes", "Séries" };
 // Seletor "Ordenar".
-enum { ORD_ADICIONADOS, ORD_TITULO, ORD_ANO, BIB_N_ORD };
-static const char *ROT_ORD[BIB_N_ORD] = { "Ordem da lista", "Título: A a Z", "Ano: mais recentes" };
+enum { ORD_ADICIONADOS, ORD_TITULO, ORD_ANO, ORD_VISTO, ORD_NAO_VISTO, BIB_N_ORD };
+static const char *ROT_ORD[BIB_N_ORD] = { "Ordem da lista", "Título: A a Z", "Ano: mais recentes",
+                                          "Assistidos primeiro", "Não assistidos primeiro" };
 // Seletor "Exibição".
 enum { VIS_CARTAZ, VIS_LISTA, BIB_N_VIS };
 static const char *ROT_VIS[BIB_N_VIS] = { "Cartazes", "Lista" };
@@ -557,6 +558,19 @@ static const char *metaFiltro(int v) {
   if (v >= 0) { c = cat_item(v); return c ? c->meta : ""; }
   s = salvos_item(-v - 1); return s ? s->meta : "";
 }
+// 1 quando o titulo de uma posicao de `filtro` consta como visto (cat_visto,
+// o MESMO estado do selo). Salvo local fora do catalogo: so imdb e tipo importam
+// para o historico (#352).
+static int vistoFiltro(int v) {
+  if (v >= 0) return cat_visto(cat_item(v));
+  { const SalvoItem *s = salvos_item(-v - 1);
+    CatItem tmp;
+    if (!s) return 0;
+    memset(&tmp, 0, sizeof tmp);
+    snprintf(tmp.imdb, sizeof tmp.imdb, "%s", s->id);
+    snprintf(tmp.tipo, sizeof tmp.tipo, "%s", s->tipo);
+    return cat_visto(&tmp); }
+}
 static int ehSerieSalvo(const SalvoItem *s) {
   return s && !strcmp(s->tipo, "series");
 }
@@ -668,7 +682,14 @@ static void reconstruir(void) {
   }
 
   // Ordenacao por insercao — sao poucas dezenas de itens, uma vez por troca.
-  if (ordem != ORD_ADICIONADOS) {
+  if (ordem == ORD_VISTO || ordem == ORD_NAO_VISTO) {
+    // Duas faixas, ESTAVEL: a ordem de adicao segue dentro de cada uma.
+    static int tmpF[CAT_MAX + SALVOS_MAX];
+    int quer = ordem == ORD_VISTO, k = 0;
+    for (int i = 0; i < nFiltro; i++) if (!!vistoFiltro(filtro[i]) == quer) tmpF[k++] = filtro[i];
+    for (int i = 0; i < nFiltro; i++) if (!!vistoFiltro(filtro[i]) != quer) tmpF[k++] = filtro[i];
+    memcpy(filtro, tmpF, (size_t)nFiltro * sizeof filtro[0]);
+  } else if (ordem != ORD_ADICIONADOS) {
     for (int i = 1; i < nFiltro; i++) {
       int v = filtro[i], j = i - 1;
       while (j >= 0) {
@@ -1635,6 +1656,11 @@ static void desenhaCartaz(const CatItem *ci, GfxRect base, float f, float a,
     if (ajustes_vidro()) gfx_vidro_cartao(card, raio, f, a);
     else gfx_anel(card, raio, NV_BIB_POSTER_BORDA, ar, ag, ab, f * a);
   }
+  // Selo de assistido: o da Home (badges_selo_visto), no cartaz JA ESCALADO,
+  // entao acompanha o foco de 1.08. Salvo local fora do catalogo chega como
+  // CatItem temporario com imdb/tipo: o historico responde igual.
+  if (ci && ajustes_selo_visto() && cat_visto(ci))
+    badges_selo_visto(card.x, card.y, card.w, a * aArte);
   if (ci) {
     float ty = base.y + base.h + BIB_TIT_GAP + 14.0f * f;
     if (f > 0.5f) {
@@ -1867,6 +1893,8 @@ static void desenhaLinhaTitulo(const CatItem *ci, float y, float f, float a) {
   } else gfx_cor(mini, raioMini, NV_COR_ESQUELETO_R, NV_COR_ESQUELETO_G,
                  NV_COR_ESQUELETO_B, a);
   if (!ci) return;
+  if (ajustes_selo_visto() && cat_visto(ci))
+    badges_selo_visto(mini.x, mini.y, mini.w, a);
 
   // BARRA DE RETOMADA.
   //
