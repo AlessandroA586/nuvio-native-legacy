@@ -75,4 +75,3 @@ int aovivo_epg_montar(int epgIdx, const char *xtId, time_t t, AoVivoEpg *o) {
   return o->temAgora || o->temProx;
 }
 
-

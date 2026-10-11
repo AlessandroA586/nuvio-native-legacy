@@ -174,12 +174,7 @@ static double rssMB(void) {
   if (!f) return 0.0;
   if (fscanf(f, "%ld %ld", &paginas, &res) != 2) res = 0;
   fclose(f);
-#if defined(NV_ANDROID) && defined(NV_TOUCH_UI)
-  long tamanhoPagina = sysconf(_SC_PAGESIZE);
-  return tamanhoPagina > 0 ? (double)res * tamanhoPagina / 1048576.0 : 0.0;
-#else
   return (double)res * 4096.0 / 1048576.0;
-#endif
 #endif
 }
 
@@ -497,65 +492,7 @@ static void teclasInjetadas(void (*entregar)(const SDL_Event *)) {
 
 // Tamanho do buffer de onde a captura le. Definido no arranque, junto com o
 // viewport.
-static int capW = (int)NV_TELA_BASE_W, capH = (int)NV_TELA_BASE_H;
-// Mobile uses the device viewport. Its dimensions and GPU samples cannot
-// decide the remembered TV resolution or trigger a TV 4K fallback.
-static int resolucaoDaTv(void) {
-#ifdef NV_TOUCH_UI
-  return !layout_modo_mobile();
-#else
-  return 1;
-#endif
-}
-#ifdef NV_TOUCH_UI
-static Uint32 tvViewportMudouEm;
-static int tvViewportMudou, tvModoMudou;
-static void resolucaoTvViewportMudou(Uint32 agora, int mudouModo) {
-  tvViewportMudouEm = agora;
-  tvViewportMudou = 1;
-  if (mudouModo) tvModoMudou = 1;
-}
-#endif
-// Android restores its fixed TV holder asynchronously. After a live change,
-// allow one report interval to settle, then require a whole unchanged TV
-// interval. Every report still harvests/resets GPU stats, including skipped
-// reports, so a Mobile or resize window cannot decide the TV's saved verdict.
-static int resolucaoTvJanela(Uint32 agora, Uint32 inicio, int w, int h, int pedidoW, int pedidoH) {
-#ifdef NV_TOUCH_UI
-  if (!resolucaoDaTv()) return 0;
-  if (tvViewportMudou && agora - tvViewportMudouEm < agora - inicio + 3000u) return 0;
-  // An initial TV launch may discover that 4K was refused. After toggling,
-  // the smaller drawable can instead be Mobile's holder awaiting restoration.
-  if (tvModoMudou && pedidoW > (int)NV_TELA_BASE_W &&
-      (w != pedidoW || h != pedidoH)) return 0;
-  return 1;
-#else
-  (void)agora; (void)inicio; (void)w; (void)h; (void)pedidoW; (void)pedidoH;
-  return 1;
-#endif
-}
-#ifdef NV_TOUCH_UI
-static void interfaceViewport(SDL_Window *win, int *width, int *height, int *modo) {
-  int novoW = 0, novoH = 0;
-  int novoModo = layout_modo_mobile();
-  SDL_GL_GetDrawableSize(win, &novoW, &novoH);
-  if (novoW <= 0 || novoH <= 0 ||
-      (novoW == *width && novoH == *height && novoModo == *modo)) return;
-  resolucaoTvViewportMudou(SDL_GetTicks(), novoModo != *modo);
-  *width = novoW; *height = novoH; *modo = novoModo;
-  layout_tela_definir(novoW, novoH);
-  ponteiro_cancelar_toque();
-  gpun_redimensionar(novoW, novoH);
-  glViewport(0, 0, novoW, novoH);
-  gfx_tamanho_alvo(novoW, novoH);
-  video_escala_definir(novoW, novoH);
-  gfx_snap_encerrar();
-  gfx_snap_iniciar((int)NV_TELA_W, (int)NV_TELA_H);
-  capW = novoW; capH = novoH;
-  printf("[interface] modo=%s drawable=%dx%d canvas=%.0fx%.0f\n",
-         novoModo ? "mobile" : "tv", novoW, novoH, NV_TELA_W, NV_TELA_H);
-}
-#endif
+static int capW = (int)NV_TELA_W, capH = (int)NV_TELA_H;
 
 // PORTA DE TESTE DO MOTOR P2P: "p2p:<infoHash>" no pedido de video resolve o
 // torrent pelo motor embutido (num fio: metadados, pares, primeiros bytes) e
@@ -1057,7 +994,7 @@ int main(int argc, char **argv) {
   //
   // NV_PEDIR_4K continua existindo para a build de medicao, que precisa pedir
   // sem depender de ajuste gravado.
-  { int quer4k = resolucaoDaTv() && ajustes_4k();
+  { int quer4k = ajustes_4k();
     // 4K THAT DID NOT HOLD on this TV in an earlier session (resolucao.h):
     // start at 1080p. Picking 4K again in Settings deletes the file.
     if (quer4k) {
@@ -1071,7 +1008,7 @@ int main(int argc, char **argv) {
     pediu4k = quer4k;
     // AUTOMATIC (resolucao.h): ask for the 4K surface only on a 4K display, and
     // only while the verdict for this TV + this app version is "probe" or "4K".
-    if (resolucaoDaTv() && ajustes_res_auto() && !quer4k) {
+    if (ajustes_res_auto() && !quer4k) {
       char *mem = dados_ler(RES_ARQ_AUTO);
       int est = res_auto_ler(mem, NV_VERSAO);
       SDL_DisplayMode dm; int tela4k = SDL_GetDesktopDisplayMode(0, &dm) == 0 && dm.w >= 3840;
@@ -1086,10 +1023,8 @@ int main(int argc, char **argv) {
       }
     }
 #ifdef NV_PEDIR_4K
-    if (resolucaoDaTv()) {
-      quer4k = 1;
-      printf("[4k] build de medicao: pedindo 3840x2160\n");
-    }
+    quer4k = 1;
+    printf("[4k] build de medicao: pedindo 3840x2160\n");
 #endif
     pedeW = quer4k ? 3840 : (int)NV_TELA_W;
     pedeH = quer4k ? 2160 : (int)NV_TELA_H;
@@ -1279,11 +1214,6 @@ int main(int argc, char **argv) {
   int dw = 0, dh = 0, jw = 0, jh = 0;
   SDL_GL_GetDrawableSize(win, &dw, &dh);
   SDL_GetWindowSize(win, &jw, &jh);
-#ifdef NV_TOUCH_UI
-  // Video scale reads the virtual canvas; establish the saved mode's physical
-  // aspect ratio before positioning the first native video plane.
-  layout_tela_definir(dw, dh);
-#endif
   printf("GPU: %s | %s\n", glGetString(GL_RENDERER), glGetString(GL_VERSION));
   printf("janela=%dx%d drawable=%dx%d\n", jw, jh, dw, dh);
   // O plano de video e posicionado em pixels da superficie, o layout em 1920x1080
@@ -1319,11 +1249,6 @@ int main(int argc, char **argv) {
   // Em tela retina o drawable e maior que a janela; sem ajustar o viewport, o
   // desenho ocupa um quarto da tela.
   SDL_GL_GetDrawableSize(win, &dw, &dh);
-#ifdef NV_TOUCH_UI
-  layout_tela_definir(dw, dh);
-  printf("[interface] modo=%s drawable=%dx%d canvas=%.0fx%.0f\n",
-         layout_modo_mobile() ? "mobile" : "tv", dw, dh, NV_TELA_W, NV_TELA_H);
-#endif
   glViewport(0, 0, dw, dh);
   gfx_tamanho_alvo(dw, dh);
   capW = dw; capH = dh;
@@ -1605,9 +1530,6 @@ int main(int argc, char **argv) {
   Uint64 fimCeder = SDL_GetPerformanceCounter();
   double cMaxMs = 0, foraMaxMs = 0;
 #endif
-#ifdef NV_TOUCH_UI
-  int viewportModo = layout_modo_mobile();
-#endif
   while (!app_quer_sair()
 #ifdef NV_SINAL_TERMINAR
          && !sinalTerminou
@@ -1635,12 +1557,6 @@ int main(int argc, char **argv) {
     // Enquanto o detalhe existe ele fica com o teclado inteiro: a home
     // continua desenhada por baixo, mas nao deve reagir ao D-pad.
     while (SDL_PollEvent(&e)) {
-#if defined(NV_ANDROID) && defined(NV_TOUCH_UI)
-      if (android_toque_cancelado(&e)) {
-        ponteiro_cancelar_toque();
-        continue;
-      }
-#endif
       ponteiro_diag(&e);
       // PROTECAO DE OLED (esmaecer.h): toda acao da pessoa acorda a tela, e a
       // tecla que acorda so acorda — nao age.
@@ -1658,15 +1574,6 @@ int main(int argc, char **argv) {
       // Teclado do sistema (entrada_texto.h): ve o texto ANTES de qualquer tela.
       texto_sistema_observar(&e);
       if (e.type == SDL_WINDOWEVENT) {
-        if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
-          ponteiro_evento(&e, app_evento);
-#ifdef NV_TOUCH_UI
-        if (e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED ||
-            e.window.event == SDL_WINDOWEVENT_RESIZED) {
-          ponteiro_evento(&e, app_evento);
-          interfaceViewport(win, &dw, &dh, &viewportModo);
-        }
-#endif
         // Ultimo sinal de vida na marca de sessao (avisos_sinal): e o que diz,
         // na abertura seguinte, se a sessao que "nao se despediu" tinha ido
         // para segundo plano antes de morrer.
@@ -1754,11 +1661,6 @@ int main(int argc, char **argv) {
     }
     central_tecla_quadro(SDL_GetTicks(), entregarCh);
     teclasInjetadas(app_evento);
-#ifdef NV_TOUCH_UI
-    // A saved mode change must refresh every target even when SDL keeps the
-    // same drawable size and sends no window event.
-    interfaceViewport(win, &dw, &dh, &viewportModo);
-#endif
     texto_sistema_quadro();
     fEv = NV_DT(tEv);
 
@@ -2107,10 +2009,9 @@ int main(int argc, char **argv) {
       // the extension exists; the line is what tells a 17 ms frame from a 30 ms
       // one when both show as "33" to the CPU.
       { double gMed = 0, gPior, gUlt, gP90 = gputempo_p90(); int gN = gputempo_colher(&gMed, &gPior, &gUlt);
-        int janelaTv = resolucaoTvJanela(agora, ultRelato, dw, dh, pedeW, pedeH);
         if (gN > 0) printf("[gpu-tempo] med=%.1fms pior=%.1fms ult=%.1fms n=%d\n", gMed, gPior, gUlt, gN);
         // AUTOMATIC 4K (resolucao.h): probe, then watch. Same validity rule as below.
-        if (autoPediu && janelaTv) {
+        if (autoPediu) {
           static ResAuto ra; static int iniciou, avisouSem;
           if (!iniciou) { iniciou = 1; ra.estado = autoEst == RES_AUTO_4K ? RES_AUTO_4K : RES_AUTO_SONDAR; }
           if (dw <= (int)NV_TELA_W) {
@@ -2140,7 +2041,7 @@ int main(int argc, char **argv) {
         }
         // 4K WATCH (resolucao.h): the person picked 4K and the TV granted it.
         // Only the interface counts: no player, no opening, 10 s of warm-up.
-        if (pediu4k && janelaTv && dw > (int)NV_TELA_W && !gpun_alvo_1080_ativo()) {
+        if (pediu4k && dw > (int)NV_TELA_W && !gpun_alvo_1080_ativo()) {
           static ResVigia vigia4k;
           double fpsJan = quadros * 1000.0 / (double)(agora - ultRelato);
           int valida = SDL_GetTicks() > 10000u && !abertura_ativa() &&

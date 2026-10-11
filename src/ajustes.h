@@ -14,8 +14,6 @@
 #include "gfx.h"
 
 int  ajustes_iniciar(void);
-// Per device: 0 = TV (default), 1 = Mobile. Applied before the initial viewport.
-int  ajustes_interface_mobile(void);
 
 // Pasta onde os ajustes sao lidos e gravados. Chamar uma vez, no inicio.
 void ajustes_dir(const char *dir);

@@ -76,35 +76,14 @@
 #include "logoapp.h"
 #include "abertura.h"
 #include "apoio.h"
-#include "telefoneui.h"
-#if defined(NV_ANDROID) && defined(NV_TOUCH_UI)
-#include "android.h"
-#endif
 
 // Settings has its own canvas and scale, independent of the global UI zoom.
 // Layout, text measurement, drawing and pointer targets share this factor.
 #undef NV_VTELA_W
 #undef NV_VTELA_H
-#define NV_VTELA_W (NV_LAYOUT_REAL_W / ajustes_tamanho_ajustes())
-#define NV_VTELA_H (NV_LAYOUT_REAL_H / ajustes_tamanho_ajustes())
-static int ajRetrato(void) {
-#ifdef NV_TOUCH_UI
-  return layout_modo_mobile() && NV_LAYOUT_REAL_H > NV_LAYOUT_REAL_W;
-#else
-  return 0;
-#endif
-}
+#define NV_VTELA_W (1920.0f / ajustes_tamanho_ajustes())
+#define NV_VTELA_H (1080.0f / ajustes_tamanho_ajustes())
 #define AJ_ESCALA_INI() float ajEscalaAnt_ = gfx_escala(); gfx_escala_sair(ajustes_tamanho_ajustes())
-static int ajTelaCheia(void) {
-#ifdef NV_TOUCH_UI
-  return layout_modo_mobile();
-#else
-  return 0;
-#endif
-}
-static float ajPaginaTopo(void) { return ajTelaCheia() ? 0.0f : 112.0f / ajustes_tamanho_ajustes(); }
-static float ajPaginaMargem(void) { return ajTelaCheia() ? 0.0f : (ajRetrato() ? 48.0f : 40.0f) / ajustes_tamanho_ajustes(); }
-static GfxRect ajTelaR(void) { return (GfxRect){0, 0, NV_VTELA_W, NV_VTELA_H}; }
 #define AJ_ESCALA_FIM() gfx_escala_sair(ajEscalaAnt_)
 
 // Versao do app: vem do build (-DNV_VERSAO, que tools/env.sh le do
@@ -174,12 +153,11 @@ static int focoEscuro(void) { return tintaFoco() < 128; }   // superficie do foc
 // A3 (04/10): o cabecalho compacto da lista (titulo da categoria + chip
 // Avancados, 96) e o rodape proprio (dicas e o aviso "Ajuste salvo", 72) que o
 // aviso nao cubra mais a ultima linha.
-static float ajTopoLista(void);
-#define AJ_TOPO        ajTopoLista()
+#define AJ_TOPO        (112.0f / ajustes_tamanho_ajustes() + AJ_CAB_PAGINA + AJ_A3_CAB)
 // 2.0.2: o cabecalho da pagina da categoria (o cartao da grade crescido), acima
 // da arte e da lista; o titulo saiu de dentro da ilha da lista.
-#define AJ_CAB_PAGINA  (ajRetrato() && !telefoneui_ativo() ? 224.0f : 136.0f)
-#define AJ_BASE        (NV_VTELA_H - ajPaginaMargem() - AJ_A3_RODAPE)
+#define AJ_CAB_PAGINA  136.0f
+#define AJ_BASE        (NV_VTELA_H - 40.0f / ajustes_tamanho_ajustes() - AJ_A3_RODAPE)
 #define AJ_A3_CAB       28.0f
 #define AJ_A3_RODAPE    72.0f
 // Raio da linha em fracao do menor lado (o SDF do shader e normalizado):
@@ -529,7 +507,6 @@ typedef enum {
   // #205: tela ao abrir o video. 0 = Cinema (a arte e o logo do titulo ate o
   // primeiro quadro), 1 = Detalhada (o cartao com fonte e passos). LOCAL, append-only.
   AJ_TELA_ABERTURA,
-  AJ_INTERFACE_MODO, // local, append-only; 0 = TV, 1 = Mobile
   // Credits with explicit boundaries; local to this profile on this TV.
   AJ_AUTO_CREDITOS,
   AJ_N
@@ -600,7 +577,6 @@ static const char *V_FONTE_ORDEM_USO[] = { "Não", "Para desempatar", "Ordem est
 // Indice gravado em tamanhoUiLocal; o fator sai de ajustes_tamanho_ui.
 static const char *V_TAMANHO_UI[] = { "100%", "120%", "130%", "150%" };
 static const char *V_TAMANHO_AJUSTES[] = { "80%", "90%", "100%" };
-static const char *V_INTERFACE_MODO[] = { "TV", "Mobile" };
 // F07: the order is cacheboost_cache_mb's (0, 256, 512, 1024 MB).
 static const char *V_CACHE_SEEK[] = { "Desligado", "256 MB", "512 MB", "1 GB" };
 // #334: indice gravado em p2pLimiteLocal; ajustes_p2p_limite_mb devolve os MB.
@@ -1369,7 +1345,6 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Aviso legal"),
   ESC("Brilho da interface em HDR", V_HDR_UI, 2),   // local: hdrUiLocal (#205)
   ESC("Tela de abertura do vídeo", V_TELA_ABERTURA, 2),   // local: telaAberturaLocal (#205)
-  ESC("Modo da interface", V_INTERFACE_MODO, 2),
   ESC("Pular créditos automaticamente", V_LIGA, 2),   // por perfil: autoCreditosLocal
 };
 
@@ -1600,7 +1575,6 @@ static const char *CHAVE[] = {
   "-avisoLegal",
   "hdrUiLocal",
   "telaAberturaLocal",
-  "interfaceModoLocal",
   "autoCreditosLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
@@ -1870,58 +1844,6 @@ static float scrollY = 0.0f;
 // cauda exponencial, a MESMA curva que a home mede. A de 1a ordem que estava
 // aqui partia na velocidade maxima e o primeiro quadro ja saltava 12%.
 static float velY = 0.0f;
-#ifdef NV_TOUCH_UI
-enum { AJT_MENU, AJT_INDICE, AJT_LISTA, AJT_EDITOR, AJT_DIFS, AJT_SUB, AJT_FONTES, AJT_FILEIRAS, AJT_N };
-typedef struct { GfxRect r; float *offset, maximo, escala; int id; } AjToqueRegiao;
-static AjToqueRegiao ajToqueRegioes[AJT_N];
-static int ajToqueN, ajToqueAtivo = -1, ajToqueLivre[AJT_N], ajToqueChave[AJT_N];
-static float ajToqueOffset[AJT_N];
-static int ajPontInline;
-static int ajSubToqueChave;
-static void ajToqueLimpar(void) {
-  memset(ajToqueLivre, 0, sizeof ajToqueLivre); ajToqueAtivo = -1;
-}
-static void ajToqueCamada(void) { ajToqueN = 0; }
-static int ajToqueRolar(const PonteiroRolagem *e) {
-  if (!layout_modo_mobile()) return 0;
-  if (e->fase == PONT_ROL_INICIO) {
-    if (!e->eixoY) return 0;
-    for (int i = ajToqueN - 1; i >= 0; i--) {
-      AjToqueRegiao *r = &ajToqueRegioes[i];
-      if (e->x >= r->r.x && e->x < r->r.x + r->r.w && e->y >= r->r.y && e->y < r->r.y + r->r.h) {
-        ajToqueAtivo = r->id; ajToqueLivre[r->id] = 1; return 1;
-      }
-    }
-    return 0;
-  }
-  if (e->fase == PONT_ROL_MOVER || e->fase == PONT_ROL_INERCIA) {
-    for (int i = ajToqueN - 1; i >= 0; i--) if (ajToqueRegioes[i].id == ajToqueAtivo) {
-      AjToqueRegiao *r = &ajToqueRegioes[i];
-      float antes = *r->offset;
-      *r->offset = anim_clamp(antes - e->delta / r->escala, 0.0f, r->maximo);
-      return fabsf(*r->offset - antes) > 0.001f;
-    }
-    return 0;
-  }
-  if (e->fase == PONT_ROL_FIM || e->fase == PONT_ROL_CANCELAR) ajToqueAtivo = -1;
-  return 1;
-}
-// Guarda a escala durante o desenho: no fio de eventos a escala ja voltou a 1.
-static float ajToqueRegistrar(int id, GfxRect r, float *offset, float maximo, float alvo, int chave) {
-  float s = gfx_escala();
-  if (ajToqueChave[id] != chave) {
-    ajToqueLivre[id] = 0; ajToqueChave[id] = chave;
-    if (ajToqueAtivo == id) ajToqueAtivo = -1;
-  }
-  if (!ajToqueLivre[id]) *offset = alvo;
-  maximo = fmaxf(0.0f, maximo); *offset = anim_clamp(*offset, 0.0f, maximo);
-  if (ajToqueN < AJT_N && s > 0.0f && r.w > 0.0f && r.h > 0.0f) {
-    ajToqueRegioes[ajToqueN++] = (AjToqueRegiao){ {r.x * s, r.y * s, r.w * s, r.h * s}, offset, maximo, s, id };
-    ponteiro_rolagem(ajToqueRolar);
-  }
-  return *offset;
-}
-#endif
 static float paginaA = 1.0f;   // entrada da pagina da categoria (0..1)
 static int sair = 0;
 
@@ -1957,14 +1879,13 @@ int  ajustes_teste_editor(int *pendente, int *rodape, int *restaurar, int *confi
 static char uxAviso[160];
 static Uint32 uxAvisoAte;
 static const char *textoValor(int op);
-static int ajOpcaoDisponivel(int op);
 static int uxTemPadrao(int op);
 static int uxDiferente(int op);
 static void uxCancelar(void);
 
 int ajustes_pediu_busca(void) { int p = uxPediuBusca; uxPediuBusca = 0; return p; }
 void ajustes_abrir_opcao(int op) {
-  if (op < 0 || op >= AJ_N || !ajOpcaoDisponivel(op)) return;
+  if (op < 0 || op >= AJ_N) return;
   uxAbrirOp = op; uxVeioBusca = 1;
 }
 
@@ -1989,21 +1910,6 @@ static int cinemetaInstalado(void) {
 }
 
 int ajustes_animacoes_reduzidas(void) { return valor[AJ_ANIM] == 1; }
-int ajustes_interface_mobile(void) {
-#ifdef NV_TOUCH_UI
-  return valor[AJ_INTERFACE_MODO] == 1;
-#else
-  return 0;
-#endif
-}
-static void interfaceAplicar(void) {
-#ifdef NV_TOUCH_UI
-  layout_modo_definir(ajustes_interface_mobile());
-#ifdef NV_ANDROID
-  android_interface_modo(layout_modo_mobile());
-#endif
-#endif
-}
 // Lido UMA vez, na criacao da janela, antes de qualquer desenho: trocar isto
 // com o app aberto nao redimensiona a superficie. Ver main.c.
 // PERFIL SEGURO (seguro.h): quando ligado, os acessores dos ajustes que pesam
@@ -2183,18 +2089,9 @@ float ajustes_tamanho_ajustes(void) {
 #ifdef AJUSTES_TESTE
   if (ajEscalaTestePct) return ajEscalaTestePct / 100.0f;
 #endif
-  float s = v >= 0 && v < 3 ? F[v] : 0.8f;
-  return ajRetrato() ? s * 1.25f : s;
+  return v >= 0 && v < 3 ? F[v] : 0.8f;
 }
-// The phone always uses List. Keep the stored TV preference unchanged.
-static int ajLayoutSelecionavel(void) { return !telefoneui_ativo(); }
-static int ajOpcaoDisponivel(int op) {
-#ifndef NV_TOUCH_UI
-  if (op == AJ_INTERFACE_MODO) return 0;
-#endif
-  return op != AJ_LAYOUT_AJUSTES || ajLayoutSelecionavel();
-}
-int ajustes_layout_lista(void) { return !ajLayoutSelecionavel() || valor[AJ_LAYOUT_AJUSTES] == 1; }
+int ajustes_layout_lista(void) { return valor[AJ_LAYOUT_AJUSTES] == 1; }
 int ajustes_esconder_logo_trailer(void) { return lig(AJ_LOGO_TRAILER); }
 int ajustes_legenda_sync_auto(void) { return lig(AJ_LEG_SYNC_AUTO); }
 int ajustes_trailer_zoom_tpk(void) { return lig(AJ_TRAILER_ZOOM_TPK); }   // 1 = Ligado
@@ -2342,12 +2239,7 @@ void ajustes_textura_quadro(void) {
 // moderna DESLIGA o recolhimento, e nao o contrario. Copiado de
 // normalizeLayoutPreferences para nao inventar precedencia.
 int ajustes_rail_moderna(void)        { return lig(AJ_RAIL_MODERNA); }
-int ajustes_rail_recolhida(void) {
-  // No telefone em retrato, o menu sobrepoe a pagina. A preferencia salva
-  // continua valendo quando a tela volta para paisagem.
-  if (ajRetrato()) return 1;
-  return ajustes_rail_moderna() ? 0 : lig(AJ_RAIL);
-}
+int ajustes_rail_recolhida(void)      { return ajustes_rail_moderna() ? 0 : lig(AJ_RAIL); }
 int ajustes_rail_moderna_blur(void)   { return lig(AJ_RAIL_BLUR); }
 int ajustes_hero_ligado(void)         { return lig(AJ_HERO); }
 int ajustes_hero_cheio(void)          { return lig(AJ_HERO_CHEIO); }
@@ -3227,7 +3119,6 @@ void ajustes_dir(const char *dir) {
   if (!f) {
     // Nunca gravou nada: o idioma nasce automatico (o padrao de valor[]).
     valor[AJ_IDIOMA] = 0;
-    interfaceAplicar();
     ajSombraSync();
     return;
   }
@@ -3407,7 +3298,6 @@ void ajustes_dir(const char *dir) {
   aplicarIdioma(AJ_AUD_LINGUA);
   txt_definir_fonte_interface((TxtFamilia)valor[AJ_FONTE_UI]);
   gfx_escala_ui_definir(ajustes_tamanho_ui());
-  interfaceAplicar();
   // O teto de imagens escolhido vale desde o arranque, nao so quando a tela
   // de Ajustes e aberta. tex_iniciar ja rodou (main.c); isto so o corrige.
   if (valor[AJ_TEX_MB] > 0) tex_definir_orcamento_mb(ajustes_tex_mb());
@@ -4216,7 +4106,6 @@ static int somenteDesteAparelho(int op) {
     case AJ_TAMANHO_UI:     /* o tamanho e desta tela, e o web nao tem */
     case AJ_TAMANHO_AJUSTES:
     case AJ_LAYOUT_AJUSTES: /* #339: o arranjo dos Ajustes e desta TV */
-    case AJ_INTERFACE_MODO: /* TV/Mobile follows this device, never the account */
     case AJ_LOGO_TRAILER:   /* so a protecao de OLED desta TV */
     case AJ_LEG_MOSTRAR:
     case AJ_HDR_UI:         /* o painel e desta TV */
@@ -4537,9 +4426,6 @@ static void focarOpcao(int op);
 // D1: "Posicao do relogio" 238 pessoas, "Sincronia por audio" 157, "Zoom do
 // trailer" 86, P2P no .wgt 6), escondendo o aviso que importa.
 static int foraDestaPlataforma(int op) {
-#ifndef NV_TOUCH_UI
-  if (op == AJ_INTERFACE_MODO) return 1;
-#endif
   if (op == AJ_RELOGIO_POS) return 1;   // saiu da tela em 7d69643a: a ilha e sempre no canto direito
   // 2.0.3: o Descobrir do web nao existe na TV; "Avancadas" e a pilula do alto
   // do indice; os oito AJ_MDB_* seguem as "Notas no titulo" (notaLigarPar).
@@ -4637,9 +4523,6 @@ int ajustes_iniciar(void) {
   // linhas), e quem veio da 1.3.9 com o autoplay nascido ligado recebe o
   // reset unico em ajustes_dir() (marca trailer-1310.txt).
   scrollY = 0.0f; velY = 0.0f; sair = 0; sairArmado = 0;
-#ifdef NV_TOUCH_UI
-  ajToqueLimpar(); ajToqueCamada(); memset(ajToqueOffset, 0, sizeof ajToqueOffset);
-#endif
   // Reabre na categoria em que estava, com o foco no indice (ver focoIndice).
   if (secAtual < 0 || secAtual >= nSecoes) secAtual = 0;
   focoIndice = 1; uxChipAv = 0;
@@ -5276,7 +5159,6 @@ static int visivel(int i) {
   }
   if (TELA[i].tipo == IT_OPC) {
     int op = TELA[i].op;
-    if (!ajOpcaoDisponivel(op)) return 0;
     if ((op == AJ_PERFIL_PESQ || op == AJ_PERFIL_EDITAR) && !recomenda_ativo()) return 0;
     if (op == AJ_BUSCA_CINEMETA && valor[op] == 0 && !cinemetaInstalado()) return 0;
     if (uxAvancada(op) && !lig(AJ_AVANCADAS) && !maisAberto[secDoItem[i]]) return 0;
@@ -5318,7 +5200,6 @@ static void abrirGrupo(int g) {
 // grupo que a contem (se houver) e poe o foco na LISTA, na linha dela.
 static void focarOpcao(int op) {
   int i;
-  if (!ajOpcaoDisponivel(op)) return;
   for (i = 0; i < AJ_N_TELA; i++) {
     if (TELA[i].tipo != IT_OPC || TELA[i].op != op) continue;
     // Busca/atalho para uma avancada: abre o "Mais opcoes" da categoria dela
@@ -5567,7 +5448,6 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_GPU_EFEITOS: return "Automático mede a TV nos primeiros segundos e, se ela não der conta, tira os efeitos mais pesados. Completos mantém tudo; Leves tira desfoque e brilho para deixar a navegação mais lisa.";
     case AJ_FONTE_UI: return "Altera a tipografia dos menus. A fonte das legendas é escolhida separadamente no player.";
     case AJ_TAMANHO_UI: return "Aumenta os controles do player, os painéis e os avisos. Os Ajustes têm um tamanho próprio.";
-    case AJ_INTERFACE_MODO: return "TV para controle remoto. Mobile para toque, em retrato ou paisagem. A troca é imediata e fica salva só neste aparelho.";
     case AJ_TAMANHO_AJUSTES: return i18n("Muda só o tamanho dos Ajustes nesta TV. O padrão é 80%.");
     case AJ_LAYOUT_AJUSTES: return "Painel mostra uma prévia ao lado das opções. Lista põe as categorias e as opções uma embaixo da outra, com a explicação logo abaixo da linha em foco.";
     case AJ_TEMA: return "Cor do botão em foco e das marcas de estado. Os claros levam texto escuro, os profundos texto branco — sempre a 4,5:1 ou mais.";
@@ -6639,7 +6519,7 @@ static void notaLigarPar(int op) {
 static int ajOrigemDireto = AJLOG_AJUSTES;   // quem chamou: a tela, ou a Central via ajustes_rapido_passo
 static int definirValorDireto(int op, int novo) {
   int antes;
-  if (op < 0 || op >= AJ_N || !ajOpcaoDisponivel(op) ||
+  if (op < 0 || op >= AJ_N ||
       (OPCOES[op].tipo != OP_ESCOLHA && OPCOES[op].tipo != OP_NUMERO)) return 0;
   novo = limita(op, novo);
   if (op == AJ_PERFIL_PESQ) {
@@ -6660,16 +6540,6 @@ static int definirValorDireto(int op, int novo) {
   if (op == AJ_IDIOMA) { idiomaEscolhido(); desc_repetir(); }
   if (op == AJ_FONTE_UI) txt_definir_fonte_interface((TxtFamilia)novo);
   if (op == AJ_TAMANHO_UI) gfx_escala_ui_definir(ajustes_tamanho_ui());
-  if (op == AJ_INTERFACE_MODO) {
-    interfaceAplicar();
-    scrollY = velY = 0.0f;
-    uxTopo = -1; uxCabLayout = 0;
-#ifdef NV_TOUCH_UI
-    ajToqueLimpar(); ajToqueCamada();
-    memset(ajToqueOffset, 0, sizeof ajToqueOffset);
-    ponteiro_cancelar_toque();
-#endif
-  }
   if (op == AJ_ICONE_APP) iconeapp_aplicar_plataforma();
   if (op == AJ_CW_FONTE || op == AJ_SALVOS_DEST || op == AJ_SOCIAL) desc_repetir();
   // A fonte decide so esta fileira: refaz-la, alem do ciclo completo (#244).
@@ -6723,9 +6593,6 @@ static const char *uxCaminho(int op);
 static const char *uxBloco(int op);
 static void eventoTela(const SDL_Event *e);
 void ajustes_evento(const SDL_Event *e) {
-#ifdef NV_TOUCH_UI
-  if (e->type == SDL_KEYDOWN) ajToqueLimpar();
-#endif
   AJ_ESCALA_INI();
   if (guiaAberto) { guiaEvento(e); AJ_ESCALA_FIM(); return; }
   if (apoioAberto) { apoioEvento(e); AJ_ESCALA_FIM(); return; }
@@ -7069,9 +6936,6 @@ void ajustes_atualizar(float dt, Uint32 agora) {
     if (secAgora != secVista) {
       if (secVista >= 0) paginaA = 0.0f;
       secVista = secAgora; scrollY = 0.0f; velY = 0.0f; alvo = 0.0f;
-#ifdef NV_TOUCH_UI
-      ajToqueLivre[AJT_LISTA] = 0;
-#endif
     } }
   paginaA = ajustes_animacoes_reduzidas() ? 1.0f : anim_rampa(paginaA, 1.0f, dt, 220.0f);
   // GLASS UI: a linha em foco fica no MEIO da janela (a lista some nos 80 px
@@ -7085,12 +6949,8 @@ void ajustes_atualizar(float dt, Uint32 agora) {
     if (topo - alvo < 0.0f) alvo = topo; }
   if (alvo < 0.0f) alvo = 0.0f;
   // (O "cabecalho inteiro ou nenhum" saiu: o cabecalho agora e fixo na folha.)
-#ifdef NV_TOUCH_UI
-  if (ajToqueLivre[AJT_LISTA]) velY = 0.0f;
-  else
-#endif
-    scrollY = anim_mola2_reduzida(&velY, scrollY, alvo, dt, NV_MOLA2_SCROLL,
-                                  ajustes_animacoes_reduzidas());
+  scrollY = anim_mola2_reduzida(&velY, scrollY, alvo, dt, NV_MOLA2_SCROLL,
+                                ajustes_animacoes_reduzidas());
   aj2Atualizar(dt);
   AJ_ESCALA_FIM();
 }
@@ -7605,7 +7465,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_IDIOMA: case AJ_ANIM: case AJ_TEMA:
     case AJ_COR_LOGO: case AJ_FONTE_UI: case AJ_VIDRO: case AJ_VIDRO_CONTORNO:
     case AJ_RELOGIO: case AJ_RELOGIO_POS: case AJ_SAIDA_PLAYER: case AJ_RELOGIO_12H:
-    case AJ_TAMANHO_UI: case AJ_TAMANHO_AJUSTES: case AJ_LAYOUT_AJUSTES: case AJ_INTERFACE_MODO: case AJ_FUNDO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO:
+    case AJ_TAMANHO_UI: case AJ_TAMANHO_AJUSTES: case AJ_LAYOUT_AJUSTES: case AJ_FUNDO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO:
     case AJ_AVANCADAS: case AJ_LOGO_APP: case AJ_ABERTURA:
     case AJ_ESMAECER: case AJ_BRILHO_PLAYER: case AJ_HDR_UI: case AJ_MANTER_VIDEO:
     case AJ_DESCANSO_ESTILO: case AJ_DESCANSO_FONTE:
@@ -7667,9 +7527,6 @@ static int ajQuadroPlugins;  // captura: a de plugins (foco + 1)
 static void ajDesenharTudo(Uint32 agora);
 // Own Settings scale: the virtual canvas and the active drawing factor agree.
 void ajustes_desenhar(Uint32 agora) {
-#ifdef NV_TOUCH_UI
-  ajToqueCamada();
-#endif
   AJ_ESCALA_INI();
   ajDesenharTudo(agora);
   AJ_ESCALA_FIM();
@@ -7693,11 +7550,7 @@ static void ajDesenharTudo(Uint32 agora) {
   // atropelam. Ela ja ocupa a tela toda em 100%.
   // Ponteiro (#99): a folha de fileiras tem o teclado; sem alvo proprio, o
   // clique e o OK (ponteiro.h, CAMADAS) — a rail de tras nao pode engoli-lo.
-  if (filAberta) { ponteiro_camada();
-#ifdef NV_TOUCH_UI
-    ajToqueCamada();
-#endif
-    ESCALA_REAL_INI(); desenhaFileiras(); ESCALA_REAL_FIM(); }
+  if (filAberta) { ponteiro_camada(); ESCALA_REAL_INI(); desenhaFileiras(); ESCALA_REAL_FIM(); }
   if (riscoFolha) desenhaRiscoFolha();
   if (frAberta == 3) desenhaFolhaOrdem();
   else if (frAberta) desenhaFolhaPermitidos();
@@ -7928,7 +7781,7 @@ int ajustes_teste_quadro(const char *id) {
         if (c && c[0] == '-') c++;
         if (c && !strcmp(c, par)) op = k;
       }
-      if (op < 0 || !ajOpcaoDisponivel(op)) return 0;
+      if (op < 0) return 0;
       if (ig) valor[op] = atoi(ig + 1);
       if (primeira < 0) primeira = op;
     }
@@ -8051,7 +7904,7 @@ int ajustes_rapido_op(const char *chave) {
   if (!chave || !chave[0]) return -1;
   for (i = 0; i < AJ_N; i++)
     if (CHAVE[i] && CHAVE[i][0] != '-' && !strcmp(CHAVE[i], chave)) { op = i; break; }
-  if (op < 0 || !ajOpcaoDisponivel(op) || OPCOES[op].tipo != OP_ESCOLHA) return -1;
+  if (op < 0 || OPCOES[op].tipo != OP_ESCOLHA) return -1;
   if (op == AJ_FIL_LIMITE || op == AJ_ITENS_FILEIRA) return -1;
   n = nValores(op);
   if (n < 2 || n > 6) return -1;
