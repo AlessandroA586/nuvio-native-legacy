@@ -4,15 +4,16 @@
 // funcoes registradas em nv_tpk_video_registrar e ouve pelo
 // nv_tpk_video_evento (src/video_tpk.c).
 //
-// Toda chamada ao player passa pelo fio principal (Principal), porque o C
-// chama do fio dele. A posicao e lida pelo relogio do host (Tique) e o C so le
-// o numero guardado, sem esperar ninguem.
+// Chamadas nativas ficam no fio da sessao; janela/Display nascem no principal.
+// Tique pede uma amostra sem esperar; o C so le o ultimo numero confirmado.
 using System;
 using System.IO;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Concurrent;
 using Tizen.Multimedia;
 
 namespace NuvioTpk
@@ -100,10 +101,41 @@ namespace NuvioTpk
         // Referencias vivas: o C guarda os ponteiros, o GC nao pode recolher.
         FnAbrir fAbrir; FnSemArg fParar; FnInt fPausar, fBuscar, fVolume; FnRet fJanela; FnPos fPos; FnEscolher fEscolher;
 
-        readonly VideoWindowMetrics windowMetrics = new VideoWindowMetrics();
+        VideoWindowMetrics windowMetrics = new VideoWindowMetrics();
         Player player;
         int sessao, playerSessao;
         volatile int posMs;
+
+        // Um contexto por sessao mantem comandos e continuacoes async no mesmo
+        // fio. Fechar descarta a fila antiga; nunca espera uma API presa.
+        sealed class FioVideo : SynchronizationContext
+        {
+            readonly BlockingCollection<Action> fila = new BlockingCollection<Action>();
+            readonly object trava = new object();
+            bool fechado;
+            internal int consulta;
+            internal FioVideo(Action<string> log)
+            {
+                new Thread(() => {
+                    SetSynchronizationContext(this);
+                    foreach (var a in fila.GetConsumingEnumerable())
+                        try { a(); } catch (Exception e) { log("fio video: " + e); }
+                    fila.Dispose();
+                }) { IsBackground = true, Name = "Nuvio video" }.Start();
+            }
+            public override void Post(SendOrPostCallback d, object state)
+            {
+                lock (trava) { if (!fechado) fila.Add(() => d(state)); }
+            }
+            internal void Fechar()
+            {
+                lock (trava) { fechado = true; while (fila.TryTake(out _)) { } fila.CompleteAdding(); }
+            }
+        }
+        FioVideo fio;
+        readonly object trocaTrava = new object();
+        Task<bool> liberacao = Task.FromResult(true);
+        internal int PrazoPararMs = 5000;
 
         public Video(Func<Display> fazDisplay, Action<Action> principal, string dados, int telaW, int telaH)
         {
@@ -227,8 +259,11 @@ namespace NuvioTpk
             try { return f() ?? ""; } catch { return ""; }
         }
 
-        // App foi para segundo plano: o player pausa (e o C fica sabendo).
-        public void PausarPeloSistema() { SoltaPrimer(); Pausar(true); }
+        // App foi para segundo plano (tecla Home): PARAR, nao pausar. Com o
+        // player preso o Pause nunca chega e o som seguia na Home (#412). O
+        // descarte em background solta Muted e o plano sem o fio da sessao; a
+        // volta e a reconexao de sempre no relogio parado (watchdog do C).
+        public void PausarPeloSistema() { Parar(); }
 
         // VOLUME DO TRAILER (#281: S90C, Tizen 9, trailer sem som com o ajuste
         // de som ligado). So o trailer pede volume (trailer.c); o filme nunca
@@ -264,14 +299,28 @@ namespace NuvioTpk
                 " lido=" + lido + " estado=" + estado + " (" + quando + ")");
         }
 
-        // Relogio do host, no fio principal.
+        // Relogio do host: nenhuma API no principal, uma consulta em voo por
+        // sessao. Mantem a amostra real (estimar esconderia o watchdog do C).
         public void Tique()
         {
-            // Uma consulta por tique no principal; fPos so le o cache.
-            long inicio = Stopwatch.GetTimestamp();
-            try { if (player != null && playerSessao == Volatile.Read(ref sessao) && player.State == PlayerState.Playing) posMs = player.GetPlayPosition(); } catch { }
-            long ms = (Stopwatch.GetTimestamp() - inicio) * 1000 / Stopwatch.Frequency;
-            if (ms >= 50) Log("[video] tpk consulta posicao levou " + ms + " ms (fio principal)");
+            var f = Volatile.Read(ref fio);
+            if (f == null || Interlocked.Exchange(ref f.consulta, 1) != 0) return;
+            int minha = Volatile.Read(ref sessao);
+            f.Post(_ => {
+                var p = Volatile.Read(ref player);
+                long inicio = Stopwatch.GetTimestamp();
+                try {
+                    if (p != null && playerSessao == minha && minha == Volatile.Read(ref sessao) && p.State == PlayerState.Playing) {
+                        int ms = p.GetPlayPosition();
+                        lock (trocaTrava) { if (minha == sessao && player == p) posMs = ms; }
+                    }
+                } catch { }
+                finally {
+                    long ms = (Stopwatch.GetTimestamp() - inicio) * 1000 / Stopwatch.Frequency;
+                    if (ms >= 50) Log("[video] tpk consulta posicao levou " + ms + " ms (fio video)");
+                    Volatile.Write(ref f.consulta, 0);
+                }
+            }, null);
         }
 
         public void Log(string s)
@@ -289,61 +338,52 @@ namespace NuvioTpk
         void ComSessao(Action a)
         {
             int minha = Volatile.Read(ref sessao);
-            Principal(() => { if (minha == Volatile.Read(ref sessao) && playerSessao == minha && !paradaFalhou) a(); });
+            var f = Volatile.Read(ref fio);
+            f?.Post(_ => { if (minha == Volatile.Read(ref sessao) && playerSessao == minha) a(); }, null);
         }
 
-        [DllImport("libc.so.6", EntryPoint = "_exit")] static extern void SairImediatamente(int codigo);
-        internal int PrazoPararMs = 5000;
-        internal Action FalhaFatal = () => { try { SairImediatamente(1); } catch { Environment.Exit(1); } };
-        int fatal;
-        bool paradaFalhou;
-        readonly object trocaTrava = new object();
-        System.Threading.Timer prazoParada;
-        Stopwatch tempoParada;
-
-        // O prazo nasce no fio solicitante, ANTES do Post: o principal pode
-        // estar preso em GetPlayPosition/Stop. Pedidos repetidos nao adiam o
-        // limite. A trava so protege o prazo, nunca uma chamada Tizen.
+        // Descarte independente da fila: ate GetPlayPosition/Prepare presos
+        // deixam passar Muted e Display=null. Nao cria outro dono do decoder
+        // sem confirmar Dispose; falha/timeout vira erro recuperavel na UI.
         void Trocar(Action<int> abrir)
         {
             int minha;
+            FioVideo novo;
+            Task<bool> soltar;
             lock (trocaTrava)
             {
-                if (fatal != 0) return;
                 minha = Interlocked.Increment(ref sessao);
-                if (prazoParada == null)
-                {
-                    var tempo = tempoParada = Stopwatch.StartNew();
-                    prazoParada = new System.Threading.Timer(_ =>
-                    {
-                        lock (trocaTrava)
-                        {
-                            if (prazoParada == null || tempoParada != tempo || fatal != 0) return;
-                            prazoParada.Dispose(); prazoParada = null;
-                            // Fila atrasada/flags nao provam recurso retido. As
-                            // referencias so somem quando Dispose retorna.
-                            if (Volatile.Read(ref player) == null && Volatile.Read(ref primer) == null) return;
-                            Volatile.Write(ref fatal, 1);
-                        }
-                        Log("[video] tpk parar NAO confirmou em " + tempo.ElapsedMilliseconds + " ms; encerrando processo");
-                        FalhaFatal();
-                    }, null, PrazoPararMs, Timeout.Infinite);
+                fio?.Fechar();
+                var velho = player; player = null;
+                var prime = primer; primer = null; primerGen++;
+                if (velho != null || prime != null) {
+                    var anterior = liberacao;
+                    liberacao = Task.Run(async () => {
+                        bool ok = await anterior.ConfigureAwait(false);
+                        if (prime != null) ok = Liberar(prime) && ok;
+                        if (velho != null) ok = Liberar(velho) && ok;
+                        return ok;
+                    });
                 }
+                soltar = liberacao;
+                ReportWindowMetrics(); windowMetrics = new VideoWindowMetrics();
+                novo = fio = new FioVideo(Log);
             }
-            Principal(() =>
-            {
-                if (minha != Volatile.Read(ref sessao) || Volatile.Read(ref fatal) != 0) return;
-                if (paradaFalhou || !PararAtual()) { paradaFalhou = true; return; }
-                long ms;
-                lock (trocaTrava)
-                {
-                    if (minha != sessao || fatal != 0) return;
-                    ms = tempoParada.ElapsedMilliseconds;
-                    prazoParada?.Dispose(); prazoParada = null;
+            Principal(() => {
+                if (janelaMovida && GeometriaJanela != null) {
+                    try { RestaurarJanela(); } catch (Exception e) { Log("reset-window: " + e.Message); }
                 }
-                Log("[video] tpk parar confirmado em " + ms + " ms");
-                if (abrir != null && minha == Volatile.Read(ref sessao)) abrir(minha);
             });
+            novo.Post(async _ => {
+                if (await Task.WhenAny(soltar, Task.Delay(PrazoPararMs)) != soltar || !await soltar) {
+                    Log("[video] tpk parar nao confirmou; player indisponivel, processo preservado");
+                    if (minha == Volatile.Read(ref sessao)) NvVid.Evento(EV_ERRO, -3, 0);
+                    return;
+                }
+                if (minha != Volatile.Read(ref sessao)) return;
+                Log("[video] tpk parar confirmado (fio video)");
+                if (abrir != null) abrir(minha);
+            }, null);
         }
 
         async void Abrir(string url, string cabecalhos, int minha)
@@ -356,7 +396,11 @@ namespace NuvioTpk
             try
             {
                 var p = new Player();
-                Volatile.Write(ref player, p); playerSessao = minha;
+                // Publicar e trocar de sessao usam a mesma trava: um Trocar no
+                // meio do "new Player()" ou captura p (e solta) ou o acha aqui.
+                bool viva;
+                lock (trocaTrava) { viva = minha == Volatile.Read(ref sessao); if (viva) { player = p; playerSessao = minha; } }
+                if (!viva) { Liberar(p); return; }
                 p.PlaybackCompleted += (s, e) => { if (minha == Volatile.Read(ref sessao)) NvVid.Evento(EV_FIM, 0, 0); };
                 p.ErrorOccurred += (s, e) => { if (minha == Volatile.Read(ref sessao)) { Log("erro " + e.Error); NvVid.Evento(EV_ERRO, (int)e.Error, 0); } };
                 p.BufferingProgressChanged += (s, e) => { if (minha == Volatile.Read(ref sessao)) NvVid.Evento(EV_BUFFER, e.Percent, 0); };
@@ -419,8 +463,8 @@ namespace NuvioTpk
         // clipe de 2 s preto e mudo (res/silencio.mp4, H.264 Main + AAC-LC) por
         // ~1 s e solta tudo (Stop/Unprepare/Dispose), como ao fim de um filme.
         // Nada fica preso: o filme de verdade e a saida seguem como hoje. So o
-        // host 6+ (Program.cs) chama isto; no 4/5 `primer` e sempre null e os
-        // SoltaPrimer() de Parar/PausarPeloSistema nao fazem nada.
+        // host 6+ (Program.cs) chama isto; no 4/5 `primer` e sempre null e o
+        // Trocar so encontra `player` para soltar.
         Player primer;
         int primerGen;
 
@@ -487,7 +531,9 @@ namespace NuvioTpk
 
         // Dispose confirma a liberacao, independentemente do estado anterior.
         // Preparing nao admite Unprepare; cada passo ainda tenta o Dispose.
-        bool Liberar(ref Player p)
+        // Muted e Display=null vem primeiro: silenciam e soltam o plano mesmo
+        // quando Stop/Unprepare travam (#412, saida para a Home).
+        bool Liberar(Player p)
         {
             try { p.Muted = true; } catch (Exception e) { Log("parar muted: " + e.Message); }
             try { p.Display = null; } catch (Exception e) { Log("parar display: " + e.Message); }
@@ -495,22 +541,11 @@ namespace NuvioTpk
             catch (Exception e) { Log("parar stop: " + e.Message); }
             try { if (p.State == PlayerState.Ready || p.State == PlayerState.Playing || p.State == PlayerState.Paused) p.Unprepare(); }
             catch (Exception e) { Log("parar unprepare: " + e.Message); }
-            try { p.Dispose(); Volatile.Write(ref p, null); return true; }
+            try { p.Dispose(); return true; }
             catch (Exception e) { Log("parar dispose: " + e.Message); return false; }
         }
 
-        bool PararAtual()
-        {
-            ReportWindowMetrics();
-            if (janelaMovida && GeometriaJanela != null)
-            {
-                try { RestaurarJanela(); }
-                catch (Exception e) { Log("[aspecto] reset-window: " + e.Message); }
-            }
-            if (!SoltaPrimer()) return false;
-            if (player == null) return true;
-            return Liberar(ref player); // cache preserva a retomada durante a espera da reconexao
-        }
+        bool Liberar(ref Player p) { if (!Liberar(p)) return false; Volatile.Write(ref p, null); return true; }
 
         void Pausar(bool pausa)
         {

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
 using NuvioTpk;
 using Tizen.Multimedia;
 class AspectoTest {
@@ -12,8 +13,36 @@ class AspectoTest {
     static Video video;
     static void Check(bool ok, string msg) { if (!ok) throw new Exception(msg); Console.WriteLine("ok: " + msg); }
     static void Entry(string name, params object[] args) => ((Delegate)typeof(Video).GetField(name, BindingFlags.NonPublic|BindingFlags.Instance).GetValue(video)).DynamicInvoke(args);
-    static void Pump() { while(queue.Count > 0) queue.Dequeue()(); }
-    static void Open() { var u=Marshal.StringToHGlobalAnsi("https://test/movie"); try { Entry("fAbrir",u,IntPtr.Zero); } finally { Marshal.FreeHGlobal(u); } Pump(); }
+    // Os comandos de sessao rodam no fio do Video, em ordem. Esperar a fila
+    // drenar: postar uma consulta de posicao (Tique) e esperar terminar garante
+    // que tudo postado antes foi processado (FIFO).
+    static void Pump() {
+        while(queue.Count > 0) queue.Dequeue()();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (sw.ElapsedMilliseconds < 3000) {
+            video.Tique();
+            var f = typeof(Video).GetField("fio", BindingFlags.NonPublic|BindingFlags.Instance).GetValue(video);
+            if (f == null) break;
+            var c = f.GetType().GetField("consulta", BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic);
+            if ((int)c.GetValue(f) == 0) {
+                // Tique posted and completed, or no pending query. Drain UI callbacks.
+                while(queue.Count > 0) queue.Dequeue()();
+                return;
+            }
+            Thread.Sleep(1);
+            while(queue.Count > 0) queue.Dequeue()();
+        }
+    }
+    static void WaitPlayer() {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (sw.ElapsedMilliseconds < 3000) {
+            Pump();
+            if (Player.All.Count > 0 && Player.All[Player.All.Count-1].Starts > 0) return;
+            Thread.Sleep(5);
+        }
+        throw new Exception("player nao iniciou");
+    }
+    static void Open() { var u=Marshal.StringToHGlobalAnsi("https://test/movie"); try { Entry("fAbrir",u,IntPtr.Zero); } finally { Marshal.FreeHGlobal(u); } WaitPlayer(); }
     static void Roi(int x,int y,int w,int h) { Entry("fJanela",x,y,w,h); Pump(); Check(probe(0)==(int)PlayerDisplayMode.Roi && probe(1)==x && probe(2)==y && probe(3)==w && probe(4)==h,"B ROI " + x+","+y+" "+w+"x"+h); }
     static int Main(string[] args) {
         NativeLibrary.SetDllImportResolver(typeof(Video).Assembly,(name,a,p)=>name=="libcapi-media-player.so.0" ? NativeLibrary.Load(args[0]) : IntPtr.Zero);
