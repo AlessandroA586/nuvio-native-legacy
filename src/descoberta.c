@@ -6341,10 +6341,43 @@ int desc_meta_n_episodios(const char *corpo) { return metaContarEpisodios(corpo,
 // do #328 repete uma ou duas vezes). Lista pequena nunca e.
 // Ser lista de arquivos NAO descarta o corpo por si so: ele perde o empate e a
 // preferencia pela ficha do addon, e so e recusado quando nao conhece MAIS
-// episodios distintos que a lista com que disputa (episodiosDoAddon,
-// episodiosDoCatalogo).
+// episodios distintos que a lista com que disputa, preservando suas temporadas
+// e ao menos 90% dos pares (temporada, episodio).
 static int metaListaDeArquivos(int distintos, int brutos) {
   return brutos >= 60 && brutos > distintos * 3;
+}
+
+// Lista de arquivos so pode ampliar a numeracao do catalogo, nunca refaze-la
+// (One Piece anime vs live-action). Compara o corpo inteiro, antes do corte.
+static int metaArquivosCompativeis(const char *arquivos, const char *catalogo) {
+  const char *corpos[2] = { arquivos, catalogo };
+  EpSet pares[2] = {{0}}, temps[2] = {{0}};
+  int i, ok = 1;
+  unsigned j, contidos = 0;
+  for (i = 0; i < 2; i++) {
+    const char *v = js_array(corpos[i], NULL, "videos");
+    while (v) {
+      const char *f = js_fim(v);
+      int t = videoTemporada(v, f), e = (int)js_num(v, f, "episode", 0);
+      if (t > 0) {
+        unsigned antes = temps[i].n;
+        if (epSetNovo(&temps[i], t, 0) && temps[i].n == antes) ok = 0;
+        if (e > 0) {
+          antes = pares[i].n;
+          if (epSetNovo(&pares[i], t, e) && pares[i].n == antes) ok = 0;
+        }
+      }
+      v = js_prox(f);
+    }
+  }
+  if (temps[1].n > 1 && temps[0].n < temps[1].n) ok = 0;
+  for (j = 0; j < pares[1].cap && pares[1].v; j++) {
+    unsigned long long k = pares[1].v[j];
+    if (k && pares[0].v && pares[0].v[epSetCasa(&pares[0], k)]) contidos++;
+  }
+  if ((unsigned long long)contidos * 10 < (unsigned long long)pares[1].n * 9) ok = 0;
+  for (i = 0; i < 2; i++) { free(pares[i].v); free(temps[i].v); }
+  return ok;                             // sem memoria, conserva o catalogo
 }
 
 // Em par com CAT_EP_MAX (catalogo.c): um titulo que caiba no store nao pode
@@ -6550,6 +6583,13 @@ static int episodiosDoAddon(int alvoItem, const char *serie, const char *titulo,
       printf("[desc] %s: %s respondeu %d videos para %d episodios (lista de arquivos) "
              "contra %d do Cinemeta; nao serve de lista de episodios\n",
              titulo, addons_nome(i), brutos, n2, nCine);
+      fflush(stdout);
+      free(c2);
+      continue;
+    }
+    if (arq && !metaArquivosCompativeis(c2, corpoCine)) {
+      printf("[desc] %s: %s respondeu lista de arquivos com menos temporadas ou "
+             "cobertura inferior a 90%%; mantendo a lista do Cinemeta\n", titulo, addons_nome(i));
       fflush(stdout);
       free(c2);
       continue;
@@ -7017,17 +7057,19 @@ static int episodiosDoCatalogo(int alvoItem, const char *titulo, const char *ser
   if (fonte < 0) return 0;
   // LISTA DE ARQUIVOS NA BASE (addon de fontes que tambem publica catalogo): a
   // base manda no texto da ficha, mas a lista dela so fica quando conhece MAIS
-  // episodios distintos que as outras fontes. Senao vale a maior lista de
+  // episodios distintos e preserva temporadas/cobertura. Senao vale a maior lista de
   // verdade. So entre listas do mesmo espaco de ids (item do IMDb): "kitsu:1"
   // e uma temporada, e a serie inteira do Cinemeta nao a substitui.
   if (arq[fonte] && mesmoId) {
     int melhor = -1;
     for (i = 0; i < mf->n; i++)
-      if (i != fonte && !arq[i] && nEp[i] >= nEp[fonte] && (melhor < 0 || nEp[i] > nEp[melhor]))
+      if (i != fonte && !arq[i] && nEp[i] > 0 &&
+          (nEp[i] >= nEp[fonte] || !metaArquivosCompativeis(mf->corpo[fonte], mf->corpo[i])) &&
+          (melhor < 0 || nEp[i] > nEp[melhor]))
         melhor = i;
     if (melhor >= 0) {
       printf("[desc] %s: %s respondeu uma lista de arquivos com %d episodios; "
-             "usando os %d de %s\n", titulo, mf->nome[fonte], nEp[fonte], nEp[melhor],
+             "sem ampliar temporadas/cobertura do catalogo; usando os %d de %s\n", titulo, mf->nome[fonte], nEp[fonte], nEp[melhor],
              mf->nome[melhor]);
       fflush(stdout);
       fonte = melhor;

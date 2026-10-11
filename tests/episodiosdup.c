@@ -239,6 +239,7 @@ char *rede_baixar(const char *u, int t) {
   for (r = 0; r < nRotas; r++)
     if (strstr(u, rotas[r].trecho)) return rotas[r].resp ? strdup(rotas[r].resp) : NULL;
   if (strstr(u, "cinemeta")) {
+    if (strstr(u, "/meta/series/tt0388629.json") && cineSerie) return strdup(cineSerie);
     if (strstr(u, "/meta/movie/tt13293588.json"))  return strdup(META_FILME_ERRADO);
     if (strstr(u, "/meta/series/tt13293588.json")) return strdup(cineSerie ? cineSerie : META_SERIE);
     if (strstr(u, "/meta/movie/tt0111161.json"))   return strdup(META_FILME_OK);
@@ -323,6 +324,63 @@ int main(void) {
                        "{\"id\":\"y\",\"season\":1,\"name\":\"Y\"},"
                        "{\"id\":\"z\",\"season\":1,\"name\":\"Z\"}]}", e, 16);
   assert(n == 3);
+  // Samsung 2.0.4: One Piece renumerado por um addon de fontes.
+  {
+    size_t cap = 2u << 20, k;
+    char *cine = malloc(cap), *arq = malloc(cap);
+    int i, caso, via;
+    assert(cine && arq);
+    for (caso = 0; caso < 5; caso++) {
+      // 18 temporadas/1180 vs 1/1200; depois 89%, 90%, 100% de
+      // cobertura em uma temporada; por fim 98% com perda de temporadas.
+      // Quatro variantes por arquivo.
+      int nc = caso && caso < 4 ? 100 : 1180, na = caso && caso < 4 ? 120 : 1200;
+      k = (size_t)snprintf(cine, cap, "{\"meta\":{\"id\":\"tt0388629\",\"type\":\"series\",\"name\":\"One Piece\",\"videos\":[");
+      for (i = 0; i < nc; i++) {
+        int t = caso ? 1 : i % 18 + 1, ep = caso ? i + 1 : i / 18 + 1;
+        if (caso == 4 && i >= nc - 17) { t = i - (nc - 17) + 2; ep = 1; }
+        k += (size_t)snprintf(cine + k, cap - k,
+          "%s{\"id\":\"tt0388629:%d:%d\",\"season\":%d,\"episode\":%d,\"name\":\"C%d\"}",
+          i ? "," : "", t, ep, t, ep, i);
+      }
+      snprintf(cine + k, cap - k, "]}}");
+      k = (size_t)snprintf(arq, cap, "{\"meta\":{\"id\":\"tt0388629\",\"type\":\"series\",\"name\":\"One Piece\",\"videos\":[");
+      for (i = 0; i < na * 4; i++) {
+        int ep = i % na + 1;
+        if (caso == 1 && ep > 89) ep += 100;
+        if (caso == 2 && ep > 90) ep += 100;
+        k += (size_t)snprintf(arq + k, cap - k,
+          "%s{\"id\":\"file%d\",\"season\":1,\"episode\":%d,\"name\":\"One.Piece.%d.mkv\"}",
+          i ? "," : "", i, ep, ep);
+      }
+      snprintf(arq + k, cap - k, "]}}");
+      assert(k < cap - 8);
+      for (via = 0; via < 2; via++) {
+        nFake = 0; nRotas = 0; addonMeta = 1; addonTipo = "/series/";
+        fakeMetaExterno = 0; fakeSoCinemeta = 0; fakeIdioma = "en-US";
+        cineSerie = cine; addonResp = arq;
+        if (via) {
+          addonMeta = 0; addonResp = NULL; nFake = 1;
+          fake[0] = (FakeAddon){ "Fontes", "https://fx.test/SEGREDO", "org.fx", "tt", 0 };
+          rota("fx.test/SEGREDO/meta/series/tt0388629.json", arq);
+        }
+        limparCacheMeta();
+        if (via) catalogoDe("tt0388629", "series", "One Piece", "org.fx");
+        else catalogoCom("tt0388629", "series", "One Piece");
+        abrir();
+        printf("One Piece caso=%d catalogo-primeiro=%d: %d episodios, %d temporadas\n",
+               caso, via, cat_n_episodios(0), cat_item(0)->nTemporadas);
+        assert(cat_n_episodios(0) == (caso < 2 || caso == 4 ? nc : na));
+        assert(cat_item(0)->nTemporadas == (caso && caso < 4 ? 1 : 18));
+        if (caso < 2 || caso == 4) {
+          assert(!strcmp(cat_episodio(0, 0)->vid, "tt0388629:1:1"));
+          assert(!strstr(cat_episodio(0, nc - 1)->nome, ".mkv"));
+        }
+      }
+    }
+    free(cine); free(arq);
+    puts("ok  temporadas e cobertura de 90% preservam a numeracao do catalogo");
+  }
   // --- LISTA DE ARQUIVOS DE ADDON DE FONTE NO LUGAR DOS EPISODIOS (2.0.3.1) ---
   // Relato de TV LG na 2.0.2 (Breaking Bad): um addon de FONTES respondia o
   // /meta com um video por ARQUIVO de torrent — 18529 entradas, quase todas
