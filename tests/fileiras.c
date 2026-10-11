@@ -1112,6 +1112,45 @@ int main(void) {
     assert(fil_estado_chave("cine_movie_top") == FIL_FORA); }
   puts("ok  adicionar vence o desligado da conta, e o sync nao desfaz");
 
+  // #360: o add com a conta LIGADA nao congela a fileira nesta TV. A conta e o
+  // dono do estado (sync de mao unica): se ela desligar depois, esconde aqui
+  // tambem. So o add FEITO contra o desligado ja conhecido vale para sempre.
+  { int est = -1, i = -1, k, contaOn[1] = { 0 }, contaOff[1] = { 1 }, nada[1] = { 0 };
+    const char *chs[1] = { "cine_movie_top" };
+    fil_esquecer();
+    fil_definir_limite(7);
+    fil_registrar("cine_movie_top", "Featured", "Cinemeta", "movie", 5);
+    fil_conta_reconciliar(chs, contaOn, nada, 1);        // a conta diz LIGADA
+    assert(fil_estado_chave("cine_movie_top") == FIL_NA_HOME);
+    for (k = 0; k < fil_n(); k++) if (!strcmp(fil_chave(k), "cine_movie_top")) i = k;
+    i = fil_adicionar(i, &est);                          // snapshot: conta ligada
+    assert(est == FIL_NA_HOME);
+    fil_conta_reconciliar(chs, contaOff, nada, 1);       // a conta desligou DEPOIS
+    assert(fil_estado_chave("cine_movie_top") == FIL_FORA); }
+  puts("ok  #360: add com conta ligada nao trava o sync; a conta desligando depois vence");
+
+  // E o "para sempre" do add contra o desligado sobrevive ao restart: o
+  // snapshot viaja no arquivo (linha "addvence").
+  { int est = -1, i = -1, k, contaOff[1] = { 1 }, nada[1] = { 0 };
+    const char *chs[1] = { "cine_movie_top" };
+    fil_esquecer();
+    fil_definir_limite(7);
+    fil_registrar("cine_movie_top", "Featured", "Cinemeta", "movie", 5);
+    fil_conta_reconciliar(chs, contaOff, nada, 1);
+    for (k = 0; k < fil_n(); k++) if (!strcmp(fil_chave(k), "cine_movie_top")) i = k;
+    usaArquivo = 1;
+    i = fil_adicionar(i, &est);                          // contra o desligado
+    assert(est == FIL_NA_HOME);
+    // reinicio: troca de perfil e volta rele o arquivo do disco
+    fil_definir_perfil(1);
+    fil_definir_perfil(0);
+    fil_registrar("cine_movie_top", "Featured", "Cinemeta", "movie", 5);
+    fil_conta_reconciliar(chs, contaOff, nada, 1);
+    assert(fil_estado_chave("cine_movie_top") == FIL_NA_HOME);
+    remove("/tmp/fileirasui.txt");
+    usaArquivo = 0; }
+  puts("ok  #360: add contra o desligado sobrevive ao restart (addvence no arquivo)");
+
   puts("fileiras: tudo ok");
   return 0;
 }
