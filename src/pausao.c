@@ -47,6 +47,12 @@ static int    idxItem = -1;
 static char   idItem[64];      // o titulo de idxItem (#190; ver pausao.h)
 static char   epLinha[220];
 
+// See pausao.h. Clearing `desdeQuando` makes pausao_atualizar re-arm from NOW
+// on the next frame, which is exactly what the web's schedulePauseOverlay() does.
+void pausao_activity(void) {
+  desdeQuando = 0;
+}
+
 void pausao_fechar(void) {
   visivel = 0;
   anim = 0.0f;
