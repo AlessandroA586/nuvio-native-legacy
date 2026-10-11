@@ -1,8 +1,16 @@
 #!/bin/bash
-# Modulo real sem SDL, OpenGL ou rede; dublados apenas os consumidores.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 dir=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-posplay-recuo.XXXXXX")
 trap 'rm -rf "$dir"' EXIT
-cc -std=c11 -O1 -g -Wno-unused-function tests/posplay_recuo.c -lm -o "$dir/test"
-"$dir/test"
+mkdir "$dir/dados"
+sources=()
+for source in src/*.c src/dts/*.c; do
+  case "$source" in src/main.c) continue;; esac
+  sources+=("$source")
+done
+cc -DNV_SHOT_HOOKS "${sources[@]}" tests/posplay_recuo.c -Isrc -o "$dir/test" \
+  -O1 -g -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
+  -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL \
+  -Wno-deprecated-declarations -Wno-macro-redefined
+NUVIO_DADOS="$dir/dados" "$dir/test"

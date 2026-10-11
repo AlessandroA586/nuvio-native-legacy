@@ -60,6 +60,10 @@ int dados_apagar(const char *name) {
   return !remove(path) || errno == ENOENT;
 }
 void dados_marcar_sujo(int light) { (void)light; }
+Uint32 SDL_GetTicks(void) { return 0; }
+void ajlog_mudou(const char *key, int old, int value, AjlogOrigem origin, unsigned now) {
+  (void)key; (void)old; (void)value; (void)origin; (void)now;
+}
 
 void fonteregra_perfil_guardar(int profile) { (void)profile; }
 int fonteregra_perfil_restaurar(int profile) { (void)profile; return 0; }
@@ -80,6 +84,9 @@ void ling_conta_legenda2(const char *code) { (void)code; }
 void ling_conta_audio(const char *code) { (void)code; }
 const char *ling_legenda(void) { return ""; }
 const char *ling_audio(void) { return ""; }
+const char *ling_conta_audio_valor(void) { return ""; }
+const char *ling_conta_legenda_valor(void) { return ""; }
+const char *ling_conta_legenda2_valor(void) { return ""; }
 
 int main(int argc, char **argv) {
   assert(argc == 2 && strlen(argv[1]) < sizeof dirAjustes);
