@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // Ver atividade.h. A disciplina e a de recomenda.c: o estado atras de um mutex,
 // a rede num fio, e quem chama do laco de desenho nunca espera rede nenhuma.
 #include "atividade.h"
@@ -21,7 +22,7 @@
 
 static SDL_mutex *mtx;
 static int  permitido;            // 0 = nada sai (padrao)
-static char fila[ATIV_FILA_MAX][1600];
+static char fila[ATIV_FILA_MAX][NV_ARTE_URL_MAX * 2 + 1600];
 static int  nFila;
 static int  fioVivo;
 static int  perfilLido = -1;      // de que perfil a fila em memoria veio
@@ -82,7 +83,7 @@ static size_t esc(char *dst, size_t tam, const char *s) {
 static int pct100(int p) { return p < 0 ? 0 : p > 100 ? 100 : p; }
 
 size_t atividade_json(const AtivEvento *e, char *dst, size_t tam) {
-  char ev[32], im[64], md[24], ti[480], po[1100];
+  char ev[32], im[64], md[24], ti[480], po[NV_ARTE_URL_MAX * 2];
   int n;
   if (!e || !dst || tam < 2) return 0;
   // Um campo que nao coube vira vazio, e nao uma string cortada no meio de um

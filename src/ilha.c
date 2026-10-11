@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // A ilha do relogio — ver ilha.h.
 //
 // CUSTO, porque a C9 e o teto: por quadro sao no maximo uma sombra do tamanho
@@ -42,7 +43,7 @@ typedef struct {
   int tipo, tecla, prior, grupo, vivo, cartao;
   int conta;                    // quantos avisos este representa ("N avisos novos")
   unsigned ms, ordem;           // ordem: chegada, para o FIFO dentro da prioridade
-  char rosto[256], rostoNome[64], capa[512], meta[64];
+  char rosto[256], rostoNome[64], capa[NV_ARTE_URL_MAX], meta[64];
   int temModal, abrir;
   IlhaModal modal;
   char titulo[120], kicker[48], dica[64];   // o aviso v2 (ilha.h, IlhaAvisoEx)
@@ -131,7 +132,7 @@ static float vooT;              // 0 -> 1, sem repique
 static Uint32 vooDesde;
 static GfxRect vooAlvo;
 static int vooAlvoOk;
-static char vooArte[1024], vooCapa[1024];
+static char vooArte[NV_ARTE_URL_MAX], vooCapa[NV_ARTE_URL_MAX];
 // DISSOLVER (Android, sessao retida): o video parado continua no plano de
 // baixo, entao o primeiro quadro do voo e ELE (a tela inteira transparente) e
 // a arte + home entram por cima em VOO_DISSOLVE_MS, ja encolhendo. Sem isso o
@@ -146,7 +147,7 @@ static int svooQuer, svoo;           // quer = pedido a espera do aviso na tela
 static float svooT, svooIconeA = 1.0f;
 static Uint32 svooDesde;
 static GfxRect svooDe;
-static char svooPoster[1024];
+static char svooPoster[NV_ARTE_URL_MAX];
 static Uint32 pousouEm;          // o pulso da pilula conta daqui
 static Uint32 altBase;           // a alternancia dos cartoes conta daqui
 

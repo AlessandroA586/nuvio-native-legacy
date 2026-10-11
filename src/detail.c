@@ -198,7 +198,7 @@ static int  pessoaAberta;
 // desenho do cartao em foco (antes do zoom do foco).
 static CtxHold holdLista;
 static GfxRect relFocoRect, colFocoRect, pesFocoRect;
-static char    relFocoArte[1024], colFocoArte[1024], pesFocoArte[1024];
+static char    relFocoArte[NV_TEX_URL_MAX], colFocoArte[NV_TEX_URL_MAX], pesFocoArte[NV_TEX_URL_MAX];
 static int  pessoaFoco;
 // Primeira LINHA visivel da filmografia. A grade tem 6 por linha e cabem duas
 // linhas na tela; sem isto o resto dos creditos era cortado sem aviso.
@@ -1146,7 +1146,7 @@ static const char *sinopseDe(int i) {
 // proxima abertura, e a home, ja veem o logo localizado. Sem logo nenhum ao
 // abrir, o que chegar entra (vazio nao e "arte boa").
 // arteFixa no teto da textura (#361): quando o titulo nao tem fundo ela e o
-// PROPRIO poster, que vai a 1024 — com 512 o cartaz de ~600 caracteres virava
+// PROPRIO poster, que vai a 2048 — com 512 o cartaz de ~600 caracteres virava
 // um 404 so na pagina do titulo. Logo segue o CatItem.logo (512).
 static char arteFixa[NV_TEX_URL_MAX], logoFixo[512], logoCatalogoFixo[512];
 static int  arteFixaPoster;

@@ -91,7 +91,7 @@ int ctxlista_abrir(int idx, GfxRect r, const char *arte) {
 // chegue depois disso e outro pedido, e abrir um menu que ninguem espera seria
 // pior que nao abrir.
 #define CTXL_PRAZO_MS 20000u
-static struct { int vivo; Uint32 desde; GfxRect r; char arte[1024]; } pend;
+static struct { int vivo; Uint32 desde; GfxRect r; char arte[NV_ARTE_URL_MAX]; } pend;
 
 int ctxlista_pedir(const char *imdb, long tmdb, const char *tipo,
                    const char *titulo, const char *ano, const char *poster,

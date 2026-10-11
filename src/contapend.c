@@ -1,3 +1,4 @@
+#include "arteurl.h"
 #include "contapend.h"
 #include "contacache.h"
 #include "sessao.h"
@@ -35,7 +36,7 @@ typedef struct {
   long long ms;        // quando a pessoa fez o gesto
   long long confMs;
   char nome[160];
-  char poster[1024];   // o de CatItem.poster (#361); o arquivo e texto com TAB
+  char poster[NV_ARTE_URL_MAX];   // o de CatItem.poster (#433); o arquivo e texto com TAB
 } Ent;
 
 static pthread_mutex_t trava = PTHREAD_MUTEX_INITIALIZER;

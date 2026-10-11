@@ -859,7 +859,7 @@ static float ajPreviaCompacta(int op, float x, float y, float w) {
 // Tres cartazes de uma fileira da Home: os do catalogo dela quando ja foi
 // lida, a amostra antes disso. Guardados por revisao do catalogo.
 static const char *ajPosterFileira(int fil, int k) {
-  static char cache[24][3][256];
+  static char cache[24][3][NV_TEX_URL_MAX];
   static unsigned rev = 0xffffffffu;
   static int pronto[24];
   if (cat_revisao() != rev) { rev = cat_revisao(); memset(pronto, 0, sizeof pronto); }

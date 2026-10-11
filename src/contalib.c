@@ -143,7 +143,7 @@ static int vagaPara(const ContaLibItem *novo, int k, int cap,
 // 404 calado. Sem ela, montarItem cai no metahub pelo id; o registro diz qual.
 static void urlInteira(const char *p, const char *f, const char *chave,
                        char *dst, size_t tam, const char *id) {
-  char v[2048];
+  char v[NV_ARTE_URL_MAX + 1];
   size_t n;
   dst[0] = 0;
   if (!js_texto(p, f, chave, v, sizeof v)) return;

@@ -161,7 +161,7 @@ static float   dicaCx = -1.0f;   // centro da barra de "Segure OK"; <0 = tela
 // Salvos), a ilha fica no meio.
 static int     temCartaz;
 static GfxRect cartazRect;
-static char    cartazArte[1024];
+static char    cartazArte[NV_TEX_URL_MAX];
 // A EXTENSAO DE INFORMACOES (ctxinfo.h): a mola dela (entra depois do menu), a
 // altura suavizada (o resumo chega aos poucos) e a caixa do ultimo quadro.
 static float   infoT, infoH;

@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // Cache de texturas com decode FORA da thread de desenho.
 //
 // Por que thread: decode medido no aparelho custa ~30ms por imagem. A 60fps o
@@ -18,7 +19,7 @@
 // estava no byte ~517 e caia fora, e o servico, sem idioma, desenhava o cartaz
 // em ingles (MEDIDO: a mesma URL sem o parametro devolve o cartaz ingles). O
 // CatItem.poster usa o mesmo teto (catalogo.h).
-#define NV_TEX_URL_MAX 1024
+#define NV_TEX_URL_MAX NV_ARTE_URL_MAX
 
 int  tex_iniciar(int max_itens);
 

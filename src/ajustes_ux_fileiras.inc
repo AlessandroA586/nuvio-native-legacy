@@ -25,17 +25,23 @@ static int ajTipoCanal(const char *t) {
   return !strcasecmp(t, "channel") || !strcasecmp(t, "channels") || !strcasecmp(t, "tv");
 }
 enum { ART_REAL = 0, ART_LOGO, ART_AMOSTRA };
-static char ajFilCache[FIL_MAX][8][2][200];
+// So as fileiras lidas guardam arte; 768 x 8 x 2 x 2048 fixos custariam 24 MiB.
+static char (*ajFilCache[FIL_MAX])[2][NV_TEX_URL_MAX];
 static unsigned char ajFilPronto[FIL_MAX], ajFilModo[FIL_MAX];
 static void ajFilLer(int fil) {
   static unsigned rev = 0xffffffffu;
-  if (cat_revisao() != rev) { rev = cat_revisao(); memset(ajFilPronto, 0, sizeof ajFilPronto); }
+  if (cat_revisao() != rev) {
+    for (int i = 0; i < FIL_MAX; i++) { free(ajFilCache[i]); ajFilCache[i] = NULL; }
+    rev = cat_revisao(); memset(ajFilPronto, 0, sizeof ajFilPronto);
+  }
   if (fil >= 0 && fil < FIL_MAX && !ajFilPronto[fil]) {
     static CatItem it[40];
     CatFileira meta;
     int n, j, i, dif = 0, comArte = 0;
     memset(&meta, 0, sizeof meta);
     n = cat_n() > 0 ? cat_copiar_fileira(fil_chave(fil), it, 40, &meta) : 0;
+    if (n > 0) ajFilCache[fil] = calloc(8, sizeof *ajFilCache[fil]);
+    if (!ajFilCache[fil]) { ajFilModo[fil] = ART_AMOSTRA; ajFilPronto[fil] = 1; return; }
     for (j = 0; j < 8; j++) { ajFilCache[fil][j][0][0] = ajFilCache[fil][j][1][0] = 0; }
     // Os 8 quadros pegam itens de arte DIFERENTE (varias afiliadas de uma rede
     // repetem o mesmo logo nos primeiros itens); so se faltar, repete.

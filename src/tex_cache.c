@@ -3456,7 +3456,7 @@ static const char *artePacoteOuRemota(const char *caminho, char *buf, size_t tam
 
 static GLuint tex_obter_limite(const char *caminho, int limite, int urgente,
                                int passageiro) {
-  if (!caminho || !*caminho) return 0;
+  if (!caminho || !*caminho || strlen(caminho) >= NV_TEX_URL_MAX) return 0;
 #ifdef NV_TPK
   char arteRemota[NV_TEX_URL_MAX];
   caminho = artePacoteOuRemota(caminho, arteRemota, sizeof arteRemota);

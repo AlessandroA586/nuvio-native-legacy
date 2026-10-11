@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // RECOMENDAR UM TITULO A UM AMIGO — o lado cliente.
 //
 // POR QUE EXISTE E POR QUE CONTRA UM SERVIDOR PROPRIO: o Supabase do Nuvio nao
@@ -62,7 +63,7 @@ typedef struct {
   char imdb[24];
   char tipo[8];        // "movie" | "series"
   char titulo[160];
-  char poster[512];
+  char poster[NV_ARTE_URL_MAX];
   char ano[16];
   int  modelo;         // indice do template; -1 = texto livre
   char texto[72];      // so quando modelo == -1
@@ -564,7 +565,7 @@ typedef struct {
   char imdb[24];      // "tt..." (obrigatorio)
   char midia[8];      // "movie" | "series"
   char titulo[160];
-  char poster[512];   // so sai no feed se for de host conhecido (servidor)
+  char poster[NV_ARTE_URL_MAX];   // so sai no feed se for de host conhecido (servidor)
   int  temporada, episodio;
   int  pct;           // 0-100
   int  seg;           // segundos assistidos NESTE trecho (desde o evento anterior)
@@ -592,7 +593,7 @@ typedef struct {
   char imdb[24];
   char midia[8];        // "movie" | "series"
   char titulo[160];
-  char poster[512];
+  char poster[NV_ARTE_URL_MAX];
   int  temporada, episodio, pct;
   long long quando;     // epoch s; 0 = desconhecido (vai para o fim)
   int  reacao;          // so REC_ACAO_REACAO
@@ -646,7 +647,7 @@ typedef struct {
   int  nGostou; RecEvento gostou[REC_AMIGO_GOSTOU];
   // recs que EU mandei para ela, mais nova primeiro (so grau 1)
   int  nRecs;
-  struct { long long id, criado; char imdb[24], tipo[8], titulo[160], poster[512];
+  struct { long long id, criado; char imdb[24], tipo[8], titulo[160], poster[NV_ARTE_URL_MAX];
            int estado, temReacao, reacao, terminou;
            // resposta DIRETA de quem recebeu (POST /v1/rec/resposta): a mensagem
            // curta ("" = nenhuma) e o epoch em que respondeu (0 = nao respondeu).

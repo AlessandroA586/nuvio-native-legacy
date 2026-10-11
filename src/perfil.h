@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // Tela de perfil e estatisticas do Trakt.
 //
 // O modulo e deliberadamente "burro" sobre rede: ele recebe um snapshot de
@@ -27,7 +28,7 @@ typedef struct {
   char id[64];               // imdb/trakt/slug, devolvido sem interpretacao
   char titulo[128];
   char detalhe[96];          // ex.: "T2E3 · Solo" ou "Filme"
-  char poster[768];
+  char poster[NV_ARTE_URL_MAX];
   char backdrop[768];
   int  plays;
   int  minutos;

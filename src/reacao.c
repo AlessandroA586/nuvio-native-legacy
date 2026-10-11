@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // Ver reacao.h.
 #include "reacao.h"
 #include "atividade.h"
@@ -189,7 +190,7 @@ static void marcarPendente(const char *imdb, const char *midia, const char *titu
 static struct {
   int    aberto;
   int    modoDetalhe;            // aberto pela pagina: sem contagem
-  char   imdb[24], midia[8], titulo[160], poster[512], nome[64];
+  char   imdb[24], midia[8], titulo[160], poster[NV_ARTE_URL_MAX], nome[64];
   long long rec;
   int    envia;                  // "vai ver sua resposta" so com envio de verdade
   int    foco;
