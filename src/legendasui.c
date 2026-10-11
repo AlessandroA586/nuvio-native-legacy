@@ -21,6 +21,7 @@
 #include <strings.h>
 #include <ctype.h>
 #include "bidi.h"
+#include "layout.h"
 
 // --- identity -------------------------------------------------------------------
 // FNV-1a 64 over the fields that identify a candidate within one media session.
@@ -177,20 +178,26 @@ void legendasui_definir_sync(const LegendasSyncProvider *p) {
 }
 
 // --- rows --------------------------------------------------------------------------
-typedef enum { LR_CAND, LR_NENHUMA, LR_MAIS, LR_SYNC, LR_ALVO, LR_ATRASO } LuiTipo;
+typedef enum { LR_CAND, LR_NENHUMA, LR_MAIS, LR_SYNC, LR_ALVO, LR_ATRASO, LR_PAR } LuiTipo;
 typedef struct {
   LuiTipo tipo;
-  int slot, cand, nVar;
+  int slot, cand;
   char chave[96];
 } LuiLinha;
-#define LUI_MAX_LINHAS (LEGUI_MAX_CAND * 2 + 8)
+#define LUI_MAX_LINHAS (LEGUI_MAX_CAND + 8)
 static LuiLinha linhas[LUI_MAX_LINHAS];
 static int nLinhasV;
 
 static int mais, alvo, aberto;
-// #202: a language row with several versions opens the list of THAT group's
-// versions (ver = 1). verGrupo is the simple-view row key it came from; Back
-// returns focus to it.
+static int menu, menuFoco, okPendente, okLongo;
+static Uint32 okDesde;
+static char menuVolta[96], verIdioma[16];
+static LuiLinha okLinha;
+static LegUiCand okCand;
+static LegUiCand menuCand; // snapshot: late addon responses cannot change the action
+static int menuTipo, menuRecomendada;
+static void abrirMenu(void);
+// Language drilldown returns to the row that opened it.
 static int ver;
 static char verGrupo[96];
 static char focoChave[96];
@@ -207,66 +214,10 @@ static const char *prefLinha(int slot) {
 // Translated language name. Also part of the row key: the UI language cannot
 // change while the player panel is open, so the key stays stable.
 static const char *nomeIdioma(const char *cod) { return cod && cod[0] ? i18n(ling_nome(cod)) : "?"; }
-static void chaveOrigem(const LegUiCand *c, char *dst, size_t n) {
-  // One group per KIND (#287): "Embutida · Forçada" and the full track of the
-  // same language are two rows, not "2 versões" (the kind is what the person
-  // picks by). Plain stays "E" and signs "E*", as before.
-  if (c->embutida) {
-    if (c->tipo == LING_LEG_COMUM) snprintf(dst, n, "E");
-    else if (c->tipo == LING_LEG_LETREIROS) snprintf(dst, n, "E*");
-    else snprintf(dst, n, "E:%c", c->tipo == LING_LEG_FORCADA ? 'F' : c->tipo == LING_LEG_SDH ? 'S' : 'C');
-  }
-  else snprintf(dst, n, "A:%s", c->origem);
-}
-
-// Groups of language + origin for one slot of the simple view. The active
-// candidate of that slot always gets its group, filtered or not, so the check
-// is never hidden by the filter.
-// The SECOND slot of the simple view never offers what would not draw: an
-// embedded track or an ASS file of the second language is left out (More
-// options still lists it, dimmed, with the reason), and the slot's "Nenhuma"
-// row says why (secOculta: 1 = an embedded track, 2 = only ASS files).
-static int secOculta;
-static void gruposDoSlot(int slot, const char *ativo) {
-  const char *pref = prefLinha(slot);
-  int i, k;
-  if (slot) secOculta = 0;
-  int passo, ii;
-  // A LINGUA PREFERIDA PRIMEIRO (foto do dono, 04/10: Ingles na frente de
-  // Portugues com o idioma em portugues): 3 = o melhor (pt-BR para quem pediu
-  // portugues), 2 = a mesma familia, 1 = sem preferencia, 0 = o resto (so a
-  // que esta ativa). A ordem de chegada dos addons manda dentro de cada grau.
-  for (passo = 3; passo >= 0; passo--)
-  for (ii = 0; ii < nCand && nLinhasV < LUI_MAX_LINHAS - 4; ii++) {
-    const LegUiCand *c;
-    char org[80], chave[96];
-    i = ii; c = &cand[i];
-    if (ling_afinidade(c->idioma, pref) != passo) continue;
-    int casa = slot ? (pref[0] && ling_casa(c->idioma, pref)) : (!pref[0] || ling_casa(c->idioma, pref));
-    if (!casa && strcmp(c->id, ativo)) continue;
-    if (slot && !legendasui_cand_secundaria_ok(c)) {
-      if (c->embutida) secOculta = 1; else if (!secOculta) secOculta = 2;
-      continue;
-    }
-    chaveOrigem(c, org, sizeof org);
-    snprintf(chave, sizeof chave, "%c|%s|%s", slot ? 's' : 'p', nomeIdioma(c->idioma), org);
-    for (k = 0; k < nLinhasV; k++) if (!strcmp(linhas[k].chave, chave)) break;
-    if (k < nLinhasV) {
-      linhas[k].nVar++;
-      if (!strcmp(c->id, ativo)) linhas[k].cand = i;   // the row stands for the active variant
-      continue;
-    }
-    linhas[nLinhasV].tipo = LR_CAND; linhas[nLinhasV].slot = slot;
-    linhas[nLinhasV].cand = i; linhas[nLinhasV].nVar = 1;
-    snprintf(linhas[nLinhasV].chave, sizeof linhas[nLinhasV].chave, "%s", chave);
-    nLinhasV++;
-  }
-}
-
 static void linhaFixa(LuiTipo t, int slot, const char *chave) {
   if (nLinhasV >= LUI_MAX_LINHAS) return;
   linhas[nLinhasV].tipo = t; linhas[nLinhasV].slot = slot;
-  linhas[nLinhasV].cand = -1; linhas[nLinhasV].nVar = 0;
+  linhas[nLinhasV].cand = -1;
   snprintf(linhas[nLinhasV].chave, sizeof linhas[nLinhasV].chave, "%s", chave);
   nLinhasV++;
 }
@@ -276,29 +227,40 @@ static const char *estadoSync(int slot) {
   return s && s[0] ? s : NULL;
 }
 
-// Does this candidate belong to the simple-view group `grupo` (same key as
-// gruposDoSlot builds)? The second slot never lists what it cannot draw.
-static int candNoGrupo(const char *grupo, const LegUiCand *c) {
-  char org[80], chave[96];
-  int slot = grupo[0] == 's';
-  if (slot && !legendasui_cand_secundaria_ok(c)) return 0;
-  chaveOrigem(c, org, sizeof org);
-  snprintf(chave, sizeof chave, "%c|%s|%s", slot ? 's' : 'p', nomeIdioma(c->idioma), org);
-  return !strcmp(chave, grupo);
+// Reuse the automatic language/type and release rules, without changing the
+// playback startup decision. The secondary action only considers drawable files.
+static int recomendada(const char *pref, int secundaria) {
+  const char *emb[LEGUI_MAX_CAND];
+  int tipos[LEGUI_MAX_CAND], mapa[LEGUI_MAX_CAND], ne = 0, i, r;
+  Legenda *add;
+  int na = 0;
+  if (!pref || !*pref || !strcasecmp(pref, "none") || !strcmp(pref, "forced")) return -1;
+  if (!secundaria) {
+    for (i = 0; i < nCand; i++) if (cand[i].embutida) {
+      emb[ne] = cand[i].idioma; tipos[ne] = cand[i].tipo; mapa[ne++] = i;
+    }
+    r = ling_legenda_auto_tipo(pref, "", 0, emb, tipos, ne, 1, NULL, 0, 1);
+    if (r >= 0) return mapa[r];
+  }
+  add = malloc(sizeof *add * LEG_MAX);
+  if (!add) return -1;
+  for (i = 0; i < nCand && na < LEG_MAX; i++)
+    if (!cand[i].embutida && (!secundaria || legendasui_cand_secundaria_ok(&cand[i]))) {
+      add[na] = cand[i].leg; mapa[na++] = i;
+    }
+  r = legauto_escolher(add, na, pref, video_url_atual(), NULL, 0, 0);
+  free(add);
+  return r >= 0 ? mapa[r] : -1;
 }
 
-// The version the app would pick on its own: the file whose name shares the
-// most words with what is playing; ties (and embedded tracks) keep the first.
-static int versaoRecomendada(const char *grupo) {
-  const char *midia = video_url_atual();
-  int i, melhor = -1, ms = -1;
-  for (i = 0; i < nCand; i++) {
-    int s;
-    if (!candNoGrupo(grupo, &cand[i])) continue;
-    s = cand[i].embutida ? 0 : legauto_afinidade_release(cand[i].arquivo, midia ? midia : "");
-    if (s > ms) { ms = s; melhor = i; }
-  }
-  return melhor;
+static int temPreferencia(void) {
+  const char *p = prefLinha(0);
+  return p[0] && strcmp(p, "forced") && strcmp(p, "*");
+}
+
+static void linhaCandidata(int i, int slot, const char *chave) {
+  linhaFixa(LR_CAND, slot, chave);
+  linhas[nLinhasV - 1].cand = i;
 }
 
 static void montarLinhas(void) {
@@ -308,32 +270,29 @@ static void montarLinhas(void) {
   capturar();
   idPrimario(prim);
   nLinhasV = 0;
-  if (ver) {
-    int rec = versaoRecomendada(verGrupo);
-    for (i = 0; i < nCand && nLinhasV < LUI_MAX_LINHAS; i++) {
-      char k[96];
-      if (!candNoGrupo(verGrupo, &cand[i])) continue;
-      snprintf(k, sizeof k, "v|%s", cand[i].id);
-      linhaFixa(LR_CAND, verGrupo[0] == 's', k);
-      linhas[nLinhasV - 1].cand = i; linhas[nLinhasV - 1].nVar = i == rec ? -1 : 1;   // -1: recommended
-    }
-  } else if (!mais) {
-    gruposDoSlot(0, prim);
+  if (!mais && !ver) {
+    int p = recomendada(prefLinha(0), 0), q = recomendada(prefLinha(1), 0);
     linhaFixa(LR_NENHUMA, 0, "p|-");
-    gruposDoSlot(1, sec);
-    linhaFixa(LR_NENHUMA, 1, "s|-");
+    if (p >= 0) linhaCandidata(p, 0, "rec|p");
+    if (q >= 0 && q != p) linhaCandidata(q, 0, "rec|s");
+    if (sec[0]) {
+      linhaFixa(LR_PAR, 0, "par");
+      for (i = 0; i < nCand; i++) if (!strcmp(prim, cand[i].id)) linhas[nLinhasV - 1].cand = i;
+    }
     for (slot = 0; slot < 2; slot++)
       if (estadoSync(slot)) linhaFixa(LR_SYNC, slot, slot ? "sync|s" : "sync|p");
     linhaFixa(LR_MAIS, 0, "mais");
   } else {
+    // Same full list and per-slot delay controls as before; the language
+    // submenu merely filters this list, without introducing another screen.
     linhaFixa(LR_ALVO, alvo, "m|alvo");
     linhaFixa(LR_ATRASO, alvo, "m|atraso");
     linhaFixa(LR_NENHUMA, alvo, "m|-");
     for (i = 0; i < nCand && nLinhasV < LUI_MAX_LINHAS; i++) {
       char k[96];
+      if (ver && !ling_casa(cand[i].idioma, verIdioma)) continue;
       snprintf(k, sizeof k, "m|%s", cand[i].id);
-      linhaFixa(LR_CAND, alvo, k);
-      linhas[nLinhasV - 1].cand = i; linhas[nLinhasV - 1].nVar = 1;
+      linhaCandidata(i, alvo, k);
     }
   }
   // FOCUS BY IDENTITY: find the row with the remembered key; if it vanished
@@ -361,13 +320,13 @@ static void avisar(const char *s) {
 void legendasui_abrir(void) {
   char prim[24];
   int i;
-  aberto = 1; mais = 0; ver = 0; alvo = 0; rolagem = 0; aviso[0] = 0;
+  aberto = 1; mais = ajustes_legendas_todas() || !temPreferencia(); ver = 0; menu = okPendente = okLongo = 0; alvo = 0; rolagem = 0; aviso[0] = 0;
   focoChave[0] = 0; foco = 0;
   montarLinhas();
   // Open on the row of the active primary, else on the first row.
   idPrimario(prim);
   for (i = 0; i < nLinhasV; i++)
-    if (linhas[i].tipo == LR_CAND && linhas[i].slot == 0 && linhas[i].cand >= 0 &&
+    if ((linhas[i].tipo == LR_CAND || linhas[i].tipo == LR_PAR) && linhas[i].slot == 0 && linhas[i].cand >= 0 &&
         !strcmp(cand[linhas[i].cand].id, prim)) break;
   if (i == nLinhasV && !prim[0])
     for (i = 0; i < nLinhasV; i++) if (linhas[i].tipo == LR_NENHUMA && linhas[i].slot == 0) break;
@@ -379,6 +338,7 @@ int legendasui_versoes(void) { return aberto && ver; }
 
 void legendasui_reiniciar(void) {
   legenda2_reiniciar();
+  aberto = menu = okPendente = okLongo = 0;
   mais = 0; ver = 0; alvo = 0; focoChave[0] = 0; foco = 0; rolagem = 0; aviso[0] = 0;
 }
 
@@ -442,8 +402,8 @@ static int ativoNoSlot(int slot, const LegUiCand *c) {
 
 // ATRASO EM REGUA (pedido de usuario, 05/10): era um botao de 0,25 s por
 // toque. Agora cada toque anda 0,1 s e SEGURAR a seta anda 0,5 s por
-// repeticao; a regua mostra onde o valor esta entre -10 e +10 s.
-#define LU_ATRASO_MAX 10000
+// repeticao; limite compartilhado com a barra de estilo.
+#define LU_ATRASO_MAX LEGUI_ATRASO_MAX
 static void mudarAtraso(int passo) {
   if (alvo == 0) {
     VideoLegendaEstilo *e = player_leg_estilo();
@@ -470,16 +430,89 @@ static int nAcoes(int slot, const char **rot, int max) {
   return n < 0 ? 0 : n > max ? max : n;
 }
 
+static int temMenu(const LuiLinha *l) {
+  return l && (l->tipo == LR_CAND || l->tipo == LR_NENHUMA || l->tipo == LR_PAR);
+}
+
+static void abrirMenu(void) {
+  const LuiLinha *l = nLinhasV ? &linhas[foco] : NULL;
+  if (!temMenu(l)) return;
+  menu = 1; menuFoco = 0; menuTipo = l->tipo;
+  menuRecomendada = !mais && !ver;
+  memset(&menuCand, 0, sizeof menuCand);
+  if (okPendente) {
+    menuTipo = okLinha.tipo; menuCand = okCand;
+  } else if (l->cand >= 0) menuCand = cand[l->cand];
+  snprintf(menuVolta, sizeof menuVolta, "%s", l->chave);
+}
+
+void legendasui_atualizar(void) {
+  if (aberto && !menu && okPendente && !okLongo && SDL_GetTicks() - okDesde >= NV_HOLD_MS) {
+    okLongo = 1;
+    abrirMenu();
+  }
+}
+
+static void menuEscolher(void) {
+  int acao = menuFoco;
+  menu = 0;
+  if (acao == 2) {
+    if (!menuCand.id[0]) return;
+    snprintf(verGrupo, sizeof verGrupo, "%s", menuVolta);
+    snprintf(verIdioma, sizeof verIdioma, "%s", menuCand.idioma);
+    ver = 1; alvo = 0; rolagem = foco = 0; focoChave[0] = 0;
+    montarLinhas(); focar(nLinhasV > 3 ? 3 : 0);
+  } else if (menuTipo == LR_NENHUMA) {
+    escolher(acao, NULL);
+  } else if (menuCand.id[0]) {
+    // On a recommendation the secondary action picks the best drawable file
+    // of that language. In the full list it uses the exact selected file.
+    int i = acao == 1 && menuRecomendada ? recomendada(menuCand.idioma, 1) : -1;
+    escolher(acao, i >= 0 ? &cand[i] : &menuCand);
+  }
+}
+
 int legendasui_evento(const SDL_Event *e) {
   SDL_Keycode k;
   LuiLinha *l;
-  if (!aberto || e->type != SDL_KEYDOWN) return LEGUI_NADA;
+  int ok;
+  if (!aberto || (e->type != SDL_KEYDOWN && e->type != SDL_KEYUP)) return LEGUI_NADA;
   montarLinhas();
   k = e->key.keysym.sym;
+  ok = k == SDLK_RETURN || k == SDLK_KP_ENTER;
   l = nLinhasV ? &linhas[foco] : NULL;
+  if (ok && e->type == SDL_KEYUP) {
+    int pendente = okPendente;
+    legendasui_atualizar();
+    okPendente = 0;
+    if (okLongo) { okLongo = 0; return LEGUI_TRATADO; }
+    if (!pendente) return LEGUI_TRATADO;
+    if (!menu) {
+      // Apply the identity captured on keydown, even if addons arrived meanwhile.
+      if (okLinha.tipo == LR_CAND) escolher(okLinha.slot, &okCand);
+      else if (okLinha.tipo == LR_NENHUMA) escolher(okLinha.slot, NULL);
+      return LEGUI_TRATADO;
+    }
+  } else if (e->type == SDL_KEYUP) return LEGUI_NADA;
+  else if (ok && (temMenu(l) || menu)) {
+    if (!okPendente) {
+      okPendente = 1; okDesde = SDL_GetTicks(); okLongo = 0;
+      if (l) { okLinha = *l; memset(&okCand, 0, sizeof okCand);
+        if (l->cand >= 0) okCand = cand[l->cand]; }
+    }
+    if (!menu) legendasui_atualizar();
+    return LEGUI_TRATADO;
+  } else { okPendente = okLongo = 0; }
+  if (menu) {
+    if (k == SDLK_LEFT || k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE) menu = 0;
+    else if (k == SDLK_UP && menuFoco > 0) menuFoco--;
+    else if (k == SDLK_DOWN && menuFoco < (menuCand.id[0] ? 2 : 1)) menuFoco++;
+    else if (ok) menuEscolher();
+    return LEGUI_TRATADO;
+  }
   if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE) {
     if (ver) { ver = 0; rolagem = 0; snprintf(focoChave, sizeof focoChave, "%s", verGrupo); montarLinhas(); return LEGUI_TRATADO; }
-    if (mais) { mais = 0; snprintf(focoChave, sizeof focoChave, "mais"); rolagem = 0; montarLinhas(); return LEGUI_TRATADO; }
+    if (mais && temPreferencia() && !ajustes_legendas_todas()) { mais = 0; snprintf(focoChave, sizeof focoChave, "mais"); rolagem = 0; montarLinhas(); return LEGUI_TRATADO; }
     aberto = 0;
     return LEGUI_FECHAR;
   }
@@ -494,31 +527,21 @@ int legendasui_evento(const SDL_Event *e) {
       int n = nAcoes(l->slot, rot, 4);
       if (n > 0 && syncAcao + d >= 0 && syncAcao + d < n) { syncAcao += d; return LEGUI_TRATADO; }
     }
-    if (d > 0) return LEGUI_ESTILO;
+    if (d > 0 && temMenu(l)) { abrirMenu(); return LEGUI_TRATADO; }
+    if (d > 0 || (d < 0 && foco == 0)) return LEGUI_ESTILO;
     return LEGUI_TRATADO;
   }
-  if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
+  if (ok) {
     if (!l) return LEGUI_TRATADO;
     switch (l->tipo) {
       case LR_MAIS:
         mais = 1; alvo = 0; rolagem = 0; focoChave[0] = 0; foco = 0;
-        montarLinhas(); focar(2 < nLinhasV ? 3 < nLinhasV ? 3 : 2 : 0);
+        montarLinhas(); focar(nLinhasV > 3 ? 3 : 0);
         break;
       case LR_NENHUMA: escolher(l->slot, NULL); break;
-      case LR_CAND:
-        if (!mais && !ver && l->nVar > 1) {
-          snprintf(verGrupo, sizeof verGrupo, "%s", l->chave);
-          ver = 1; rolagem = 0; focoChave[0] = 0; foco = 0;
-          montarLinhas();
-          { int i, a = -1;   // open on the version in use, else the recommended one
-            for (i = 0; i < nLinhasV; i++) {
-              if (linhas[i].cand >= 0 && ativoNoSlot(linhas[i].slot, &cand[linhas[i].cand])) { a = i; break; }
-              if (a < 0 && linhas[i].nVar < 0) a = i;
-            }
-            focar(a >= 0 ? a : 0); }
-          break;
-        }
-        escolher(l->slot, l->cand >= 0 ? &cand[l->cand] : NULL); break;
+      case LR_PAR: // already playing: keep the current pair without reloading
+        break;
+      case LR_CAND: escolher(l->slot, l->cand >= 0 ? &cand[l->cand] : NULL); break;
       case LR_ALVO: alvo = !alvo; break;
       case LR_ATRASO: break;
       case LR_SYNC: {
@@ -548,11 +571,12 @@ int legendasui_evento(const SDL_Event *e) {
 // `pont` = a ilha esta assentada neste quadro (alvos so entao).
 static int pont;
 static int ponteiroAqui(int i) {
-  return aberto && !faixas_estilo_topo() && i >= 0 && i < nLinhasV;
+  return aberto && !menu && !faixas_estilo_topo() && i >= 0 && i < nLinhasV;
 }
 static void ponteiroLinha(int i, int b) {
   (void)b;
   if (!ponteiroAqui(i) || i == foco) return;
+  okPendente = okLongo = 0;
   focar(i);
 }
 static void ponteiroAlvoSeg(int i, int seg) {
@@ -636,24 +660,30 @@ static const char *estadoSecundaria(void) {
   }
 }
 
+static const char *nomeSecundario(void) {
+  for (int i = 0; i < nCand; i++)
+    if (!strcmp(cand[i].id, legenda2_identidade())) return nomeIdioma(cand[i].idioma);
+  return i18n("Secundária");
+}
+
 static void textoLinha(const LuiLinha *l, char *nome, size_t tn, char *sub, size_t ts,
                        const char **idioma, const char **icone, int *ativo, int *apagada) {
   const LegUiCand *c = l->cand >= 0 ? &cand[l->cand] : NULL;
   nome[0] = sub[0] = 0; *idioma = NULL; *icone = NULL; *ativo = 0; *apagada = 0;
   switch (l->tipo) {
+    case LR_PAR:
+      snprintf(nome, tn, "%s + %s", c ? nomeIdioma(c->idioma) : i18n("Desligada"), nomeSecundario());
+      snprintf(sub, ts, "%s", i18n("Combinação atual"));
+      *icone = "pl_captions"; *ativo = 1;
+      break;
     case LR_NENHUMA:
-      // A segunda lista tem a SUA "nenhuma": com o mesmo nome da primeira as
-      // duas pareciam repetidas (foto do dono, 04/10).
-      snprintf(nome, tn, "%s", i18n(!mais && l->slot == 1 ? "Sem segunda legenda" : "Nenhuma"));
-      if (!mais && l->slot == 1 && secOculta)
-        snprintf(sub, ts, "%s", secOculta == 1 ? i18n("Embutida como secundária: indisponível")
-                                               : i18n("ASS como secundária: indisponível"));
-      else snprintf(sub, ts, "%s", i18n("Sem legenda"));
+      snprintf(nome, tn, "%s", i18n(l->slot ? "Sem segunda legenda" : "Desligada"));
+      snprintf(sub, ts, "%s", i18n("Sem legenda"));
       *icone = "pl_eye-off";
       *ativo = l->slot ? !legenda2_identidade()[0] : !legendasui_slot_identidade(0)[0];
       break;
     case LR_MAIS:
-      snprintf(nome, tn, "%s", i18n("Mais opções"));
+      snprintf(nome, tn, "%s", i18n("Todas as legendas"));
       snprintf(sub, ts, "%s", i18n("Todas as legendas, com detalhes"));
       *icone = "pl_layers";
       break;
@@ -684,13 +714,9 @@ static void textoLinha(const LuiLinha *l, char *nome, size_t tn, char *sub, size
         snprintf(nome, tn, "%s", nomeIdioma(c->idioma));
         juntar(sub, ts, c->embutida ? i18n("Embutida") : c->origem);
         juntar(sub, ts, legendasui_tipo_rotulo(c));
-        if (l->nVar > 1) { char b[32]; snprintf(b, sizeof b, i18n("%d versões"), l->nVar); juntar(sub, ts, b); }
       } else {
         const char *marca = c->embutida ? faixas_legenda_marca(c->indice) : NULL;
         snprintf(nome, tn, "%s", c->embutida ? c->rotulo : nomeIdioma(c->idioma));
-        // The version the app would pick by itself: marked on the title line,
-        // which has the full width (the details line is busy with the file name).
-        if (l->nVar < 0) juntar(nome, tn, i18n("Recomendada"));
         juntar(sub, ts, c->embutida ? i18n("Embutida") : c->origem);
         juntar(sub, ts, c->formato);
         { const char *t = legendasui_tipo_rotulo(c);
@@ -712,6 +738,7 @@ static void textoLinha(const LuiLinha *l, char *nome, size_t tn, char *sub, size
   }
 }
 
+static void ponteiroMenuAbrir(int i, int b);
 static void desenharLinha(const LuiLinha *l, int idx, int sel, float x, float y, float w, float a) {
   char nome[96], sub[256];
   const char *idioma, *icone;
@@ -745,10 +772,11 @@ static void desenharLinha(const LuiLinha *l, int idx, int sel, float x, float y,
     // needs the width next to the < action > discs.)
     // In "Mais opções" the slot is the "Usar como" row at the top: no pill per
     // row, so the details (release name) get the width.
-    dir -= pilulaSlot(l->slot, dir, y + LU_LN_H * 0.5f, sel, aL) + 12.0f;
+    if (ativo) dir -= pilulaSlot(l->slot, dir, y + LU_LN_H * 0.5f, sel, aL) + 12.0f;
     // Several versions: OK opens them, and the chevron says so.
-    if (l->tipo == LR_CAND && l->nVar > 1) {
+    if (l->tipo == LR_CAND) {
       gfx_icone((GfxRect){ dir - 24.0f, y + (LU_LN_H - 24.0f) * 0.5f, 24.0f, 24.0f }, "pl_chevron-right", 1, 1, 1, (sel ? 0.9f : 0.5f) * aL);
+      if (pont) ponteiro_alvo(dir - 40.0f, y, 40.0f, LU_LN_H, ponteiroLinha, ponteiroMenuAbrir, idx, 0);
       dir -= 24.0f + 10.0f;
     }
   }
@@ -780,7 +808,7 @@ static void desenharLinha(const LuiLinha *l, int idx, int sel, float x, float y,
     }
   }
   if (l->tipo == LR_ATRASO) {
-    // Regua: trilho de -10 a +10 s, marca no zero, preenchido do zero ate o
+    // Regua: trilho de -60 a +60 s, marca no zero, preenchido do zero ate o
     // valor na cor de destaque; o botao so aparece com a linha em foco.
     int v = l->slot ? legenda2_offset_manual() : player_leg_estilo()->atrasoMs;
     float tw = 260.0f, tx = dir - tw - 6.0f, cy = y + LU_LN_H * 0.5f;
@@ -813,13 +841,35 @@ static const char *tituloSessao(void) {
   return c && c->titulo[0] ? c->titulo : "";
 }
 
+static void ponteiroMenu(int i, int b) { (void)b; if (menu) menuFoco = i; }
+static void ponteiroMenuEscolher(int i, int b) { (void)b; if (menu) { menuFoco = i; menuEscolher(); } }
+static void ponteiroMenuAbrir(int i, int b) { (void)b; if (ponteiroAqui(i)) { focar(i); abrirMenu(); } }
+
+static void desenharMenu(GfxRect c, float a) {
+  const char *rot[] = { "Usar como principal", "Usar como segunda legenda (junto)", "Ver todas deste idioma" };
+  float w = 580.0f, h = 3 * 70.0f + 24.0f;
+  float x = c.x - w - 16.0f, y = c.y + LU_PAD_Y + LU_TIT_H + 14.0f + (foco - rolagem) * (LU_LN_H + LU_LN_VAO);
+  if (x < 16.0f) x = c.x + c.w - w - 12.0f;
+  if (y + h > NV_VTELA_H - 24.0f) y = NV_VTELA_H - 24.0f - h;
+  gfx_cor((GfxRect){ x, y, w, h }, 20.0f / h, .075f, .08f, .09f, a);
+  if (a > .99f) ponteiro_camada();
+  for (int i = 0; i < 3; i++) {
+    GfxRect r = { x + 10, y + 12 + i * 70, w - 20, 66 };
+    int disponivel = i != 2 || menuCand.id[0];
+    if (i == menuFoco) plrui_linha_foco(r, 16, a);
+    TxtLinha t = txt_linha_corta(TXT_G16B, i18n(rot[i]), 243, 242, 239, disponivel ? 255 : 80, w - 48);
+    txt_desenhar_alpha(t, r.x + 14, r.y + (r.h - t.h) * .5f, a);
+    if (disponivel && a > .99f) ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroMenu, ponteiroMenuEscolher, i, 0);
+  }
+}
+
 void legendasui_corpo(GfxRect c, float a) {
   float x0 = c.x + LU_PAD_X, w = c.w - LU_PAD_X * 2.0f, y = c.y + LU_PAD_Y;
   int vis = luVis(), fim, i;
   montarLinhas();
-  pont = a > 0.99f && ponteiro_ativo();
+  pont = !menu && a > 0.99f && ponteiro_ativo();
   plrui_kicker(tituloSessao(), x0 + 10.0f, y, 115, 115, 113, a);
-  { TxtLinha t = txt_linha(TXT_ILHA_PERGUNTA, mais ? "Mais opções" : ver && nLinhasV && linhas[0].cand >= 0 ? nomeIdioma(cand[linhas[0].cand].idioma) : "Legendas", 243, 242, 239, 255);
+  { TxtLinha t = txt_linha(TXT_ILHA_PERGUNTA, ver ? nomeIdioma(verIdioma) : mais ? "Todas as legendas" : "Recomendadas", 243, 242, 239, 255);
     float ty = y + 22.0f;
     const char *rot[2] = { "Faixas", "Estilo" };
     int cont[2] = { nCand, -1 };
@@ -844,7 +894,7 @@ void legendasui_corpo(GfxRect c, float a) {
     } else {
       char q[32];
       const char *k[3] = { "OK", "\xe2\x86\x92", "Voltar" };
-      const char *rt[3] = { "Usar", "Estilo", mais || ver ? "Voltar" : "Fechar" };
+      const char *rt[3] = { "Usar", "Opções", mais || ver ? "Voltar" : "Fechar" };
       int naSync = nLinhasV && linhas[foco].tipo == LR_SYNC, nf = 0, pf = 0;
       // The AutoSync row is not a choice: it is left out of "N de M", which
       // disappears on it, and the hints say what OK does there.
@@ -864,6 +914,11 @@ void legendasui_corpo(GfxRect c, float a) {
         else plrui_dicas(ks + 2, rs + 2, 1, x0 + w - 10.0f, yc, 1, a);
       }
     } }
+  if (menu) {
+    // The island clips its body; the side menu extends outside that rectangle.
+    gfx_sem_recorte(); desenharMenu(c, a);
+    gfx_recorte(c.x, c.y, c.w, c.h);
+  }
 }
 
 // --- the second subtitle on screen ---------------------------------------------------

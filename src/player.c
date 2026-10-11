@@ -937,7 +937,7 @@ static void prefsLer(void) {
     else if (!strcmp(chave, "leg_fundo")   && v >= 0 && v <= 4)  legEstilo.fundo = v;
     else if (!strcmp(chave, "leg_pos")     && v >= 0 && v <= 7)  legEstilo.posicao = v;
     else if (!strcmp(chave, "leg_borda")   && v >= 0 && v <= 2)  legEstilo.borda = v;
-    else if (!strcmp(chave, "leg_atraso")  && v > -10000 && v < 10000) legEstilo.atrasoMs = v;
+    else if (!strcmp(chave, "leg_atraso")  && v >= -LEG_ATRASO_MANUAL_MAX && v <= LEG_ATRASO_MANUAL_MAX) legEstilo.atrasoMs = v;
     else if (!strcmp(chave, "leg_opacidade") && v >= 0 && v <= 3) legEstilo.opacidade = v;
     else if (!strcmp(chave, "leg_familia") && v >= 0 && v < TXT_FAMILIA_N) legEstilo.familia = v;
     else if (!strcmp(chave, "leg_negrito") && (v == 0 || v == 1)) legEstilo.negrito = v;

@@ -646,7 +646,7 @@ int main(void) {
   { int vz = 0, k; for (k = 0; k < AJ_N_TELA; k++) if (TELA[k].tipo == IT_OPC && TELA[k].op == AJ_P2P_LIMITE) vz++; assert(vz == 1); }
   assert(indiceResultado(AJ_P2P_LIMITE, ajustes_buscar("limite p2p", resultados, AJ_N)) >= 0);
   // #400: acrescentado no fim, sem deslocar os indices antigos.
-  assert(AJ_LEG_SYNC_AUTO == AJ_FONTE_ORDEM_ADDON + 1 && AJ_N == AJ_LEG_SYNC_AUTO + 1);
+  assert(AJ_LEG_SYNC_AUTO == AJ_FONTE_ORDEM_ADDON + 1 && AJ_LEG_MOSTRAR == AJ_LEG_SYNC_AUTO + 1 && AJ_N == AJ_LEG_MOSTRAR + 1);
   assert(!strcmp(CHAVE[AJ_FONTE_ORDEM_ADDON], "fonteOrdemLocal"));
   assert(OPCOES[AJ_FONTE_ORDEM_ADDON].n == 2 && valorPadrao[AJ_FONTE_ORDEM_ADDON] == 0);
   assert(somenteDesteAparelho(AJ_FONTE_ORDEM_ADDON) && !dePerfil(AJ_FONTE_ORDEM_ADDON));

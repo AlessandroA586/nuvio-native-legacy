@@ -582,11 +582,10 @@ static void ciclarEstilo(int linha) {
     case 4: e->fundo   = (e->fundo + 1) % 5; break;
     case 5: e->posicao = (e->posicao + 1) % 8; break;
     case 6: e->borda   = (e->borda + 1) % 3; break;
-    // -5 s a +5 s de 250 em 250 ms, voltando ao inicio. Passo menor exigiria
-    // dezenas de toques para sair do lugar num controle remoto.
+    // Mesmo limite da regua; OK avanca 0,25 s sem dar a volta.
     case 7:
       e->atrasoMs += 250;
-      if (e->atrasoMs > 5000) e->atrasoMs = -5000;
+      if (e->atrasoMs > LEGUI_ATRASO_MAX) e->atrasoMs = LEGUI_ATRASO_MAX;
       break;
     case 8: e->negrito = !e->negrito; break;
     default:
@@ -949,16 +948,15 @@ static void passoVelocidade(int d) {
 }
 static void passoAtrasoEstilo(int d) {
   VideoLegendaEstilo *e = player_leg_estilo();
-  e->atrasoMs += d > 0 ? 250 : -250;
-  if (e->atrasoMs > 5000) e->atrasoMs = 5000;
-  if (e->atrasoMs < -5000) e->atrasoMs = -5000;
+  e->atrasoMs += d * 250;
+  if (e->atrasoMs > LEGUI_ATRASO_MAX) e->atrasoMs = LEGUI_ATRASO_MAX;
+  if (e->atrasoMs < -LEGUI_ATRASO_MAX) e->atrasoMs = -LEGUI_ATRASO_MAX;
   player_leg_estilo_mudou();
 }
 
 void faixas_evento(const SDL_Event *e) {
   SDL_Keycode k;
-  if (!aberta || e->type != SDL_KEYDOWN) return;
-  k = e->key.keysym.sym;
+  if (!aberta) return;
   // F04: the subtitle LIST is the selector of legendasui.c (simple view and
   // "Mais opções"); the Estilo bar below stays here.
   if (modo && coluna == 1) {
@@ -967,6 +965,8 @@ void faixas_evento(const SDL_Event *e) {
     else if (r == LEGUI_ESTILO) coluna = FX_COL_ESTILO;
     return;
   }
+  if (e->type != SDL_KEYDOWN) return;
+  k = e->key.keysym.sym;
   if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE) { aberta = 0; return; }
   // F07: the volume row of the audio sheet. The change is live (no OK needed);
   // OK just closes, like Back.
@@ -1001,8 +1001,7 @@ void faixas_evento(const SDL_Event *e) {
   if (coluna == FX_COL_ESTILO) {
     int *f = &foco[FX_COL_ESTILO];
     // O ATRASO E UM PASSO < > (mockup do Glass UI): esquerda adianta e direita
-    // atrasa 0,25 s, sem dar a volta; para sair dele, cima/baixo. O OK segue
-    // girando, como nas outras opcoes.
+    // atrasa 0,25 s, sem dar a volta; cima/baixo sai.
     if (*f == 7 && (k == SDLK_LEFT || k == SDLK_RIGHT) && !estiloPreservadoAss(7)) {
       passoAtrasoEstilo(k == SDLK_RIGHT ? 1 : -1);
       return;
@@ -1055,6 +1054,7 @@ static void avisarQueda(int e) {
 }
 
 void faixas_atualizar(float dt, Uint32 agora) {
+  if (aberta && modo && coluna == 1) legendasui_atualizar();
   // #202: the platform refused the speed (LG/.tpk answer after the request):
   // the row is gone and playback is back at 1x; say it once.
   if (velPedidaUi != VEL_NORMAL && !video_velocidade_suportada()) {

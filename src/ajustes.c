@@ -501,11 +501,13 @@ typedef enum {
   // #400: LOCAL, deste aparelho. No fim: valor[]/CHAVE[] posicionais.
   AJ_FONTE_ORDEM_ADDON,
   AJ_LEG_SYNC_AUTO, // local, ligada de fábrica; append-only
+  AJ_LEG_MOSTRAR, // #425: local, append-only; 0 = so meus idiomas
   AJ_N
 } OpcaoId;
 
 // "Pacote de selos": so o TAMANHO importa aqui (3 pacotes + "Do Nuvio"); o texto
 // de cada valor vem de selospacote_nome (textoValor / uxValorTexto).
+static const char *V_LEG_MOSTRAR[] = { "Só meus idiomas", "Todas" };
 static const char *V_SELOS_PACOTE[] = { "Do Nuvio", "Pacote 1", "Pacote 2", "Pacote 3" };
 
 static const char *V_ICONE_APP[ICONEAPP_N] = {
@@ -1328,6 +1330,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Limite de espaço do P2P",         V_P2P_LIMITE, 5),   // local: p2pLimiteLocal (#334)
   ESC("Ordem das fontes", V_FONTE_ORDEM_ADDON, 2), // local (#400)
   ESC("Sincronia automática da legenda", V_LIGA, 2),
+  ESC("Mostrar no player", V_LEG_MOSTRAR, 2),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1553,6 +1556,7 @@ static const char *CHAVE[] = {
   "p2pLimiteLocal",
   "fonteOrdemLocal",
   "legendaSyncAutoLocal",
+  "legendaMostrarLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2085,6 +2089,7 @@ int ajustes_icone_app(void) { return valor[AJ_ICONE_APP]; }
 int ajustes_logo_app(void) { int v = valor[AJ_LOGO_APP]; return v < 0 || v > 1 ? 0 : v; }
 int ajustes_abertura(void) { int v = valor[AJ_ABERTURA]; return v < 0 || v > 2 ? 0 : v; }
 // R4: estilo proprio da segunda legenda. -1 / 0 = segue a principal.
+int ajustes_legendas_todas(void) { return valor[AJ_LEG_MOSTRAR] == 1; }
 int ajustes_leg2_junto(void) { return valor[AJ_LEG2_POS] == 1; }
 int ajustes_leg2_tamanho(void) {
   static const int P[] = { 0, 60, 80, 100, 120, 140, 160 };
@@ -4077,6 +4082,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_TAMANHO_AJUSTES:
     case AJ_LAYOUT_AJUSTES: /* #339: o arranjo dos Ajustes e desta TV */
     case AJ_LOGO_TRAILER:   /* so a protecao de OLED desta TV */
+    case AJ_LEG_MOSTRAR:
     case AJ_LEG_SYNC_AUTO: /* escolha local desta TV */
     case AJ_LEG_SYNC_AUDIO: /* PCM e passthrough sao desta TV; o web nao tem */
     case AJ_LEG_FORCADA:    /* #287: o web nao tem esta escolha */
@@ -5225,6 +5231,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_LEG_SYNC_AUTO: return "Ajusta a legenda automaticamente. Desligue para manter a escolhida. Vale só nesta TV.";
     case AJ_LEG_SYNC_AUDIO: return "Compara as falas do áudio com a legenda externa para acertar o atraso. Só onde o player entrega o áudio decodificado e sem passthrough; vale só nesta TV.";
     case AJ_LEG_FORCADA: return "Quando o áudio já está no idioma da legenda, liga só a legenda forçada desse idioma (falas em outra língua e placas), ou nenhuma se o arquivo não tiver. Desligado, liga a legenda completa como antes.";
+    case AJ_LEG_MOSTRAR: return valor[op] ? "Todas as legendas, com detalhes" : "Recomendadas";
     case AJ_LEG_LINGUA2: return "Segunda legenda, mostrada no alto da tela junto com a principal. Só arquivos SRT/VTT dos addons. \"Da conta\" segue o que está no seu perfil.";
     case AJ_LEG2_POS: return "No topo, a segunda legenda fica no alto da tela. Junto da principal, ela fica logo acima da principal, no pé da tela.";
     case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:

@@ -85,6 +85,7 @@ static void quadros(int n) {
 static void tecla(SDL_Keycode k) {
   SDL_Event ev; memset(&ev, 0, sizeof ev);
   ev.type = SDL_KEYDOWN; ev.key.keysym.sym = k; faixas_evento(&ev);
+  ev.type = SDL_KEYUP; faixas_evento(&ev);
   quadros(3);
 }
 
@@ -230,18 +231,19 @@ int main(int argc, char **argv) {
   faixas_abrir_em(1);
   quadros(60);
   salvar("legendas-seletor-simples");
-  tecla(SDLK_RETURN);                                     // #202: the active pt row has 2 versions -> their list
-  quadros(30);
-  assert(legendasui_versoes());
+  salvar("painel-depois-curta");
+  tecla(SDLK_RIGHT); quadros(30);
+  salvar("painel-depois-menu");
+  tecla(SDLK_DOWN); tecla(SDLK_DOWN); tecla(SDLK_RETURN);
+  quadros(30); assert(legendasui_versoes());
   salvar("legendas-seletor-versoes");
-  tecla(SDLK_ESCAPE);                                     // Back to the main list, focus on that language
-  quadros(20);
-  assert(!legendasui_versoes());
+  tecla(SDLK_ESCAPE); quadros(20); assert(!legendasui_versoes());
   { int i; for (i = 0; i < 12; i++) tecla(SDLK_DOWN); }   // last row: Mais opcoes
   tecla(SDLK_RETURN);
   quadros(40);
   assert(legendasui_mais());
   salvar("legendas-mais-opcoes");
+  salvar("painel-depois-todas");
   tecla(SDLK_RIGHT);                                      // aim at the second slot? no: candidate row -> Estilo
   tecla(SDLK_LEFT);
   tecla(SDLK_UP); tecla(SDLK_UP); tecla(SDLK_UP);         // to the "Usar como" row
@@ -251,7 +253,18 @@ int main(int argc, char **argv) {
   { int i; for (i = 0; i < 8; i++) tecla(SDLK_DOWN); }   // the addon files, with details
   quadros(30);
   salvar("legendas-mais-opcoes-addons");
+  // Read the real persisted preference, including both manual-delay endpoints.
+  player_dir(getenv("NUVIO_DADOS"));
+  { char nome[700]; const int offsets[] = { 60000, -60000, 15000, 60001 };
+    for (int j = 0; j < 4; j++) {
+      snprintf(nome, sizeof nome, "%s/player.txt", getenv("NUVIO_DADOS"));
+      FILE *f = fopen(nome, "w"); assert(f); fprintf(f, "leg_atraso %d\n", offsets[j]); fclose(f);
+      player_leg_estilo()->atrasoMs = 0;
+      player_abrir(0, NULL);
+      assert(player_leg_estilo()->atrasoMs == (j == 3 ? 0 : offsets[j]));
+    }
+  }
   legenda2_encerrar();
-  puts("legendas_shot: ok");
+  puts("legendas_shot: captures and ±60 s preference reload OK");
   return 0;
 }

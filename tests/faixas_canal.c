@@ -19,7 +19,19 @@ int addons_n_legendas(void) { return 3; }
 const Legenda *addons_legenda(int i) { return i >= 0 && i < 3 ? &filme[i] : NULL; }
 const char *player_id_canal(void) { return canal; }
 const char *i18n(const char *s) { return s; }
+static VideoLegendaEstilo estilo;
+VideoLegendaEstilo *player_leg_estilo(void) { return &estilo; }
+void player_leg_estilo_mudou(void) {}
+void player_leg_estilo_tocou(int m) { (void)m; }
+int assrender_ativo(void) { return 0; }
+int assrender_texto_simples(void) { return 0; }
 int main(void) {
+  // Style arrow and OK paths share the ±60 s bound, with the existing 250 ms step.
+  passoAtrasoEstilo(60); assert(estilo.atrasoMs == 15000);
+  passoAtrasoEstilo(300); assert(estilo.atrasoMs == LEGUI_ATRASO_MAX);
+  ciclarEstilo(7); assert(estilo.atrasoMs == LEGUI_ATRASO_MAX);
+  passoAtrasoEstilo(-600); assert(estilo.atrasoMs == -LEGUI_ATRASO_MAX);
+  ciclarEstilo(7); assert(estilo.atrasoMs == -LEGUI_ATRASO_MAX + 250);
   snprintf(filme[0].rotulo, sizeof filme[0].rotulo, "Portugues (OpenSubtitles)");
   // A movie: embedded + addon subtitles, as before.
   assert(nLegendas() == 3);
