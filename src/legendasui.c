@@ -326,11 +326,17 @@ static void montarLinhas(void) {
     linhaFixa(LR_ALVO, alvo, "m|alvo");
     linhaFixa(LR_ATRASO, alvo, "m|atraso");
     linhaFixa(LR_NENHUMA, alvo, "m|-");
+    // Sem idioma preferido (ou com "mostrar todas") o painel abre direto aqui
+    // e a linha do AutoSync, que so existia em Recomendadas, sumia.
+    if (!ver && estadoSync(alvo)) linhaFixa(LR_SYNC, alvo, alvo ? "m|sync|s" : "m|sync|p");
     // Dono, 11/10: a lista junta as do MESMO idioma (as embutidas e as dos
     // addons chegavam intercaladas). Os idiomas da preferencia primeiro, os
     // outros na ordem em que aparecem; dentro do grupo, a ordem de sempre.
     { int ordem[LEGUI_MAX_CAND], usado[LEGUI_MAX_CAND] = { 0 }, n = 0, j, g;
       const char *pref[2] = { prefLinha(0), prefLinha(1) };
+      // Sem preferencia, o idioma da legenda ATIVA abre a lista.
+      if (!pref[0][0]) for (i = 0; i < nCand; i++)
+        if (prim[0] && !strcmp(prim, cand[i].id) && cand[i].idioma[0]) { pref[0] = cand[i].idioma; break; }
       for (g = 0; g < 3; g++)
         for (i = 0; i < nCand; i++) {
           if (usado[i] || (g < 2 && !ling_casa(cand[i].idioma, pref[g]))) continue;

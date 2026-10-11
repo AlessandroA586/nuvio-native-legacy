@@ -237,6 +237,12 @@ int main(void) {
   focarChave("m|atraso"); tecla(SDLK_LEFT); assert(secOffset == -100 && estilo.atrasoMs == 0);
   focarChave("m|alvo"); tecla(SDLK_LEFT);
   focarChave("m|atraso"); tecla(SDLK_RIGHT); assert(estilo.atrasoMs == 100 && secOffset == -100);
+  // The full list also carries the AutoSync row: without a language
+  // preference the panel opens straight into it.
+  { LegendasSyncProvider p = { syncEstado, syncAcoes, syncRodar, NULL };
+    legendasui_definir_sync(&p); montarLinhas();
+    focarChave("m|sync|p"); assert(linhas[foco].tipo == LR_SYNC && linhas[foco].slot == 0);
+    legendasui_definir_sync(NULL); montarLinhas(); focarChave("m|atraso"); }
   tecla(SDLK_ESCAPE); assert(!mais && !strcmp(linhas[foco].chave, "mais"));
 
   // AutoSync actions are unchanged, per slot.
