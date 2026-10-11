@@ -4270,6 +4270,24 @@ void app_atualizar(float dt, Uint32 agora) {
   vigiarFonteGuardada();
   fitDuracaoMidia();
   fitPassivaPermitir();
+  // Mesmo resolver/ranking da troca VOD. A trava de UMA vez mora no player;
+  // sem candidata, conserva o video e o aviso (o OK abre a folha existente).
+  if (player_aberto() && !player_quer_sair() &&
+      !player_id_canal()[0] && aguardandoFonte == 0) {
+    int pedido = player_pediu_proxima_fonte();
+    if (pedido) {
+      int atual = stream_atual();
+      if (atual >= 0) stream_automatico_excluir(atual);
+      if (stream_automatico() >= 0) {
+        printf("[fonte] duracao: descartou %d; tentando proxima (%s)\n",
+               atual, pedido == 2 ? "automatico" : "OK");
+        player_voltar_a_esperar();
+        (void)pedirProximaFonteVOD();
+      } else if (pedido == 1) {
+        nomeParaFolha(); stream_folha_abrir();
+      }
+    }
+  }
   tentarProximaFonteVOD();
   atualizarMotivoInicio();
   // O OK na explicacao da ilha: sai do player e cai em Ajustes > Fontes e addons
