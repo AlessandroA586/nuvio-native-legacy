@@ -74,6 +74,9 @@ int player_aberto(void);
 #include <time.h>
 #include "trailer.h"
 #include "trailercinema.h"
+#if defined(NV_TPK) && !defined(__EMSCRIPTEN__)
+#include "video.h"   /* cartaoVideoRect: tamanho do quadro para o LetterBox no cartao */
+#endif
 #include "trailerimdb.h"
 #include "trailerapple.h"
 #include "trailerfonte.h"
@@ -460,9 +463,29 @@ static float  heroTrailerFade = 0.0f;
 // MODO CINEMA no destaque (dono, 29/09/2026: "quando o trailer comecar no hero,
 // deixar ele igual a quando ta no details do titulo: so a arte do titulo
 // embaixo e passando o trailer, e voltar ao normal quando acabar"). A conta e
-// a do detalhe (trailercinema.h). So vale para o trailer do DESTAQUE: no do
-// cartaz em foco as fileiras sao o assunto, esconde-las apagaria o cartaz.
+// a do detalhe (trailercinema.h). Vale para o trailer do DESTAQUE e para o do
+// cartaz em foco no modo Tela cheia (08/10/2026); no modo No card as fileiras
+// sao o assunto, esconde-las apagaria o cartaz.
 static TrailerCinema heroCinema;
+// TRAILER DENTRO DO CARTAZ EM FOCO (modo "No card" do "Trailer do cartaz em
+// foco", dono 08/10/2026). E o MESMO trailer do destaque — mesma maquina de
+// fontes, mesmo "uma vez por titulo", mesma espera — so o destino muda: o
+// plano de video vai para o retangulo do cartaz e o furo arredondado e aberto
+// la, no pintarCartao. `heroTrailerNoCartao` e o destino do trailer ABERTO
+// (fixado no trailer_abrir; destino diferente fecha e recomeca).
+//
+// O desenho escreve, a cada quadro, o cartaz em foco que pode receber o
+// trailer; o passo (que roda ANTES do desenho) le o do quadro anterior.
+//   cartaoTrailerPode   o cartaz serve EM PRINCIPIO: deitado/4:3, ou em pe que
+//                       ainda vai abrir por "Expandir poster" (pede a fonte ja);
+//   cartaoTrailerServe  serve AGORA: deitado e, se expande, ja todo aberto.
+// Cartaz em pe sem "Expandir poster" nunca serve: o trailer nao cabe nele.
+static int     heroTrailerNoCartao;
+static int     cartaoTrailerItem = -1, cartaoTrailerPode, cartaoTrailerServe;
+static GfxRect cartaoTrailerRect;
+// Proporcao minima (largura/altura) do cartaz que recebe o trailer: o 4:3
+// (1,33) entra, o 2:3 em pe (0,67) nao.
+#define NV_CARTAO_TRAILER_ASP 1.2f
 // UM TRAILER POR TITULO NA SESSAO (dono, 30/09: "toca uma vez e pronto"). O
 // hero abria o trailer de novo toda vez que o foco voltava ao mesmo titulo, para
 // sempre. Agora, depois que o trailer de um titulo TOCOU (o `playing` chegou),
@@ -513,6 +536,28 @@ static int heroTrailerTocando(void);
 // A espera e ajuste; a janela da Apple (NV_TRAILER_HERO_JANELA_MS) conta a
 // partir dela, senao uma espera longa venceria a janela antes de abrir.
 static Uint32 heroTrailerEspera(void) { return ajustes_trailer_hero_espera_ms(); }
+// ONDE O VIDEO FICA DENTRO DO CARTAZ. LG, Android e .wgt: o cartaz inteiro, e o
+// "cover" e de quem toca (trailer_recorte no plano; object-fit no <video>). No
+// .tpk o recorte de fonte esta desligado (#188, #195: ROI fora da tela mostra a
+// tela da Samsung) e o plano em modo Roi ESTICA o quadro no retangulo: aqui o
+// quadro inteiro e encaixado (LetterBox) no cartaz, pelo centro, e o resto do
+// cartaz fica preto. Nunca maior que o cartaz, nunca fora da tela.
+static GfxRect cartaoVideoRect(GfxRect c) {
+#if defined(NV_TPK) && !defined(__EMSCRIPTEN__)
+  // Sempre, tambem com o zoom experimental (#241) ligado: no cartao o .tpk nao
+  // recorta (trailer_no_cartao), entao o ROI e este retangulo e nada mais.
+  { float asp = (video_largura() > 0 && video_altura() > 0)
+              ? (float)video_largura() / (float)video_altura() : 16.0f / 9.0f;
+    GfxRect v = c;
+    if (c.w / c.h > asp) { v.w = c.h * asp; v.x = c.x + (c.w - v.w) * 0.5f; }
+    else                 { v.h = c.w / asp; v.y = c.y + (c.h - v.h) * 0.5f; }
+    v.x = (float)(int)(v.x + 0.5f); v.y = (float)(int)(v.y + 0.5f);
+    v.w = (float)((int)(v.w + 0.5f) & ~1); v.h = (float)((int)(v.h + 0.5f) & ~1);
+    return v;
+  }
+#endif
+  return c;
+}
 static Uint32 heroTrailerMaxEspera(void) { return heroTrailerEspera() + NV_TRAILER_HERO_JANELA_MS; }
 
 static Uint32 heroTrailerPrazoPreparacao(Uint32 agora) {
@@ -4012,7 +4057,8 @@ static void desenhaHero(Uint32 agora, float saida) {
   // hero e a arte se apaga por cima dele (heroTrailerFade); as rampas do hero
   // voltam por cima do video (#290, ver o fim do bloco). So no hero de titulo (colecao e social nao chegam aqui com
   // trailer: ver home_trailer_passo).
-  float aTrailer = (heroTrailerFade > 0.005f && heroTrailerItem == heroAtual) ? heroTrailerFade : 0.0f;
+  float aTrailer = (heroTrailerFade > 0.005f && heroTrailerItem == heroAtual &&
+                    !heroTrailerNoCartao) ? heroTrailerFade : 0.0f;
   if (aTrailer > 0.0f) {
     GfxRect furo = r;
     if (furo.y + furo.h > NV_TELA_H) furo.h = NV_TELA_H - furo.y;
@@ -4502,12 +4548,45 @@ static void heroTrailerFonteFalhou(void) {
   heroTrailerPreparandoAte=0;heroTrailerFade=0.0f;
 }
 
+#ifdef NV_SHOT_HOOKS
+// CAPTURAS SEM TRAILER DE VERDADE (no Mac trailer_suportado() e 0): o passo
+// finge um trailer que ja TOCA, com os mesmos portoes de destino do passo real
+// (foco, modo, cartaz capaz e aberto), e a captura compoe um "video" sob o
+// furo. So o que o desenho le: item, destino, fade e o modo cinema.
+static int shotTrailer;
+void home_shot_trailer(int sim) { shotTrailer = sim; }
+static void shotTrailerPasso(int topo, float dt, Uint32 agora, int heroSetting, int posterSetting) {
+  int dest = -1;   // -1 nenhum, 0 destaque, 1 cartaz
+  float alvo;
+  if (topo && heroAtual >= 0 && heroPendente == heroAtual && heroDesejado < 0) {
+    if (focoHero) { if (heroSetting) dest = 0; }
+    else if (agora - heroPendenteEm >= (Uint32)(ajustes_expandir_poster_atraso() * 1000.0f)) {
+      if (posterSetting == AJ_TRAILER_CARTAZ_CHEIA) dest = 0;
+      else if (posterSetting == AJ_TRAILER_CARTAZ_CARD && cartaoTrailerItem == heroAtual &&
+               cartaoTrailerServe) dest = 1;
+    }
+  }
+  if (dest < 0 || heroTrailerItem != heroAtual || heroTrailerNoCartao != (dest == 1)) heroTrailerFade = 0.0f;
+  heroTrailerItem = dest >= 0 ? heroAtual : -1;
+  heroTrailerNoCartao = dest == 1;
+  alvo = dest >= 0 ? 1.0f : 0.0f;
+  heroTrailerFade = anim_mola(heroTrailerFade, alvo, dt, NV_MOLA_SCROLL);
+  { int toca = topo && dest == 0 && layoutHome() != HOME_LAYOUT_PADRAO;
+    trailercinema_passo(&heroCinema, toca, dt, ajustes_animacoes_reduzidas()); }
+}
+#endif
+
 void home_trailer_passo(int topo, float dt, Uint32 agora) {
   const CatItem *ci = NULL;
   int pronto;
   Uint32 decorrido;
   int heroSetting = ajustes_trailer_hero(), posterSetting = ajustes_trailer_cartaz();
   int enabled = heroSetting || posterSetting, motivo = HERO_GATE_READY;
+  // Destino deste foco: o cartaz (modo No card) ou o retangulo do destaque.
+  const int destCartao = !focoHero && posterSetting == AJ_TRAILER_CARTAZ_CARD;
+#ifdef NV_SHOT_HOOKS
+  if (shotTrailer) { shotTrailerPasso(topo, dt, agora, heroSetting, posterSetting); return; }
+#endif
   if (!trailer_suportado()) { heroTrailerGateLog(HERO_GATE_UNSUPPORTED, enabled); return; }
   // DUAS PORTAS PARA O MESMO TRAILER. Com o foco no destaque, "Trailer no
   // destaque". Com o foco num CARTAZ das fileiras (#124: "parado num titulo do
@@ -4523,6 +4602,9 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
                    layoutHome() != HOME_LAYOUT_DINAMICA &&
                    heroPendente == heroAtual &&
                    agora - heroPendenteEm >= (Uint32)(ajustes_expandir_poster_atraso() * 1000.0f);
+    // No card: so o cartaz que o desenho marcou como capaz, e do MESMO titulo
+    // do destaque (o hero segue o foco; e dele a maquina de fontes).
+    if (destCartao) noCartaz = noCartaz && cartaoTrailerPode && cartaoTrailerItem == heroAtual;
     pronto = topo && (noHero || noCartaz);
     if (!topo) motivo = HERO_GATE_OVERLAY;
     else if (!ajustes_hero_ligado()) motivo = HERO_GATE_DISABLED;
@@ -4563,8 +4645,12 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
     heroTrailerImdb[0] = 0;
     heroTrailerPreparandoAte = 0; heroTrailerFonte = 0; heroTrailerAppleFalhou = 0;
     heroTrailerFalhas = 0;heroTrailerQual = 0;
-    heroTrailerFade = 0.0f;
-  } else if (heroTrailerItem != heroAtual || strcmp(heroTrailerImdb, ci->imdb) != 0) {
+    heroTrailerFade = 0.0f; heroTrailerNoCartao = 0;
+  } else if (heroTrailerItem != heroAtual || strcmp(heroTrailerImdb, ci->imdb) != 0 ||
+             (trailer_aberto() && !trailer_cheia() && trailer_dono() == TRAILER_DONO_HOME &&
+              heroTrailerNoCartao != destCartao)) {
+    // O DESTINO MUDOU com o mesmo titulo (cartaz -> destaque): o trailer no
+    // retangulo do cartaz nao pode seguir para o hero sem fechar.
     // A rotacao do carrossel roda ANTES deste passo (home_atualizar): quando
     // o prazo de preparo vence, heroTrailerSegurando solta e o hero troca de
     // titulo no mesmo quadro — o fechamento acontece AQUI, nao no ramo do
@@ -4581,7 +4667,7 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
     snprintf(heroTrailerImdb, sizeof heroTrailerImdb, "%s", ci->imdb);
     heroTrailerPreparandoAte = 0; heroTrailerFonte = 0; heroTrailerAppleFalhou = 0;
     heroTrailerFalhas = 0;heroTrailerQual = 0;
-    heroTrailerFade = 0.0f;
+    heroTrailerFade = 0.0f; heroTrailerNoCartao = 0;
     // Ja tocou nesta sessao: nem consulta/reconsulta fonte para um autoplay
     // que nao vai acontecer. Tambem libera a rotacao se o conjunto ficou sem memoria.
     heroTrailerTentado = heroTrailerMemoriaFalhou || heroTrailerJaTocou(ci->imdb);
@@ -4638,6 +4724,7 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
   if (pronto && ci && ci->imdb[0] && heroTrailerItem == heroAtual &&
       !trailer_aberto() && !heroTrailerTentado && !heroTrailerMemoriaFalhou &&
       !heroTrailerJaTocou(ci->imdb) &&
+      (!destCartao || cartaoTrailerServe) &&   // No card: em pe, so todo aberto
       agora - heroTrailerDesde >= heroTrailerEspera()) {
     // A ORDEM e a do ajuste "Fonte do trailer" (trailerfonte.h). Automatico:
     // Apple (HLS matted) antes do IMDb (MP4 com tarja, LG) ou do YouTube (id
@@ -4695,7 +4782,10 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
       heroTrailerPreparandoAte = heroTrailerPrazoPreparacao(agora);
       // SOM: so no destaque (o do cartaz em foco segue mudo) e so com o
       // ajuste. Na Samsung (.wgt) trailer_abrir forca mudo de qualquer jeito.
-      trailer_abrir(u, heroArteRect, focoHero && ajustes_trailer_hero_som(), 0);
+      heroTrailerNoCartao = destCartao;
+      trailer_no_cartao(destCartao);
+      trailer_abrir(u, destCartao ? cartaoVideoRect(cartaoTrailerRect) : heroArteRect,
+                    focoHero && ajustes_trailer_hero_som(), 0);
       trailer_marcar_dono(TRAILER_DONO_HOME, ci->imdb);
       // trailer_abrir e void por compatibilidade com o player nativo; no
       // browser ainda pode recusar a criacao (canvas ausente). Tratar isso
@@ -4715,6 +4805,16 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
     }
   }
 trailer_hero_fim:
+  // O CARTAZ ANDA (rolagem da fileira assentando, mola do anel): o plano segue
+  // o retangulo do quadro anterior. So na mudanca de verdade — cada
+  // trailer_rect refaz janela e recorte no plano.
+  if (heroTrailerNoCartao && trailer_aberto() && !trailer_cheia() &&
+      trailer_dono() == TRAILER_DONO_HOME && cartaoTrailerItem == heroTrailerItem) {
+    GfxRect alvoR = cartaoVideoRect(cartaoTrailerRect), atual = trailer_retangulo();
+    if (fabsf(alvoR.x - atual.x) > 1.0f || fabsf(alvoR.y - atual.y) > 1.0f ||
+        fabsf(alvoR.w - atual.w) > 1.0f || fabsf(alvoR.h - atual.h) > 1.0f)
+      trailer_rect(alvoR);
+  }
   { float alvo = (heroTrailerItem >= 0 && heroTrailerItem == heroAtual &&
                   trailer_aberto() && !trailer_cheia() && trailer_tocando() &&
                   trailer_mostra_video()) ? 1.0f : 0.0f;   // .tpk: ate o recorte assentar (#178)
@@ -4727,7 +4827,11 @@ trailer_hero_fim:
     // O modo cinema tira as fileiras da tela para o trailer ficar inteiro. No
     // Padrao o trailer toca num BANNER e as fileiras sao o assunto da tela:
     // sem cinema, o texto e a arte seguem como estao.
-    { int toca = topo && focoHero && ajustes_trailer_hero() && alvo > 0.5f &&
+    // Tela cheia do cartaz em foco (08/10/2026): o mesmo modo cinema do
+    // trailer do destaque — so o nome/logo fica, e "Nao mostrar logo" vale
+    // para os dois. No card, nao: la as fileiras sao o palco.
+    { int toca = topo && alvo > 0.5f && !heroTrailerNoCartao &&
+                 (focoHero ? ajustes_trailer_hero() : posterSetting == AJ_TRAILER_CARTAZ_CHEIA) &&
                  layoutHome() != HOME_LAYOUT_PADRAO;
       trailercinema_passo(&heroCinema, toca, dt, ajustes_animacoes_reduzidas());
       if (!topo) trailercinema_zerar(&heroCinema); } }
@@ -4808,6 +4912,9 @@ static void desenhaPilha(int idxCat, int stackN, float px, float py, float h, fl
 
 // A arte do cartao (ou o esqueleto / "arte indisponivel" sem ela). `varre` e a
 // luz do foco; 0 fora do cartao em foco.
+// 1 enquanto o pintarCartao desenha a arte POR CIMA do trailer (No card): o
+// esqueleto opaco de baixo taparia o furo.
+static int arteSobreTrailer;
 static void desenhaArteCard(GfxRect card, TipoFileira tipo, const char *caminho, GLuint t,
                             const CatItem *cItem, float f, float raio, float aArte,
                             float varre) {
@@ -4838,7 +4945,7 @@ static void desenhaArteCard(GfxRect card, TipoFileira tipo, const char *caminho,
     gfx_tex_aspect_atual = tex_aspecto(caminho);
     // O esqueleto fica por baixo so enquanto a arte esvanece: um
     // desenho do tamanho do card por ~220 ms, e depois nenhum.
-    if (aArte < 0.999f)
+    if (aArte < 0.999f && !arteSobreTrailer)
       gfx_cor(card, raio, NV_COR_ESQUELETO_R, NV_COR_ESQUELETO_G,
               NV_COR_ESQUELETO_B, 1.0f);
     gfx_varre_atual = varre;
@@ -5191,6 +5298,7 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
 typedef struct {
   int r, c; TipoFileira tipo; const CatItem *cItem; const char *caminho; GLuint t;
   float aArte; int deitado, rotuloFora; float abre, esc, f, px, py, w, h, varre;
+  float trailer;   // 0..1: o trailer do modo No card entra por baixo da arte
 } CartaoFoco;
 static CartaoFoco cartaoFoco; static float cartaoFocoRaio; static int temCartaoFoco;
 // O caminho da arte mora num buffer que o proximo cartao sobrescreve: copia propria.
@@ -5233,6 +5341,20 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
                       ar, ag, ab, f); }
           }
           GfxRect card = { px, py, w, h };
+          // TRAILER NO CARTAZ (modo No card): o furo arredondado DEPOIS do anel
+          // (que fica inteiro, por fora) e ANTES da arte, que sai com 1 - fade
+          // por cima — o video entra por baixo dela, como no destaque. No .tpk o
+          // quadro vai encaixado (cartaoVideoRect): o cartaz vira preto e o furo
+          // e so a area do video, para o plano nunca mostrar o que esta atras.
+          float aArteCard = aArte;
+          if (k->trailer > 0.004f) {
+            GfxRect v = cartaoVideoRect(card);
+            if (v.x > card.x + 0.5f || v.y > card.y + 0.5f || v.w < card.w - 1.0f || v.h < card.h - 1.0f) {
+              gfx_cor(card, raio, 0.0f, 0.0f, 0.0f, 1.0f);
+              gfx_furo(v);
+            } else gfx_furo_raio(card, raio);
+            aArteCard = aArte * (1.0f - k->trailer);
+          }
           // CARD SEM ARTE: superficie solida, nao o vazio. Sem isto o card
           // ficava da cor do fundo — MEDIDO: #242429 sobre #252629, diferenca
           // de (1,2,0), contraste 1,0:1. Era literalmente invisivel, e foi a
@@ -5240,9 +5362,19 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
           // do tom exato do fundo. A referencia desenha #2C2C2C na caixa exata.
           gfx_veu_card_limpar();
           if (t) veusDoCard(cItem, tipo, deitado, abre, 1);
-          desenhaArteCard(card, tipo, caminho, t, cItem, f, raio, aArte,
-                          varreFoco);
+          // Sem arte e com trailer, o "card sem arte" (superficie solida) nao
+          // pode tapar o video: o mesmo desenho, com o alfa que sobra.
+          arteSobreTrailer = k->trailer > 0.004f;
+          if (!arteSobreTrailer || (t && aArteCard > 0.004f))
+            desenhaArteCard(card, tipo, caminho, t, cItem, f, raio, aArteCard,
+                            varreFoco);
+          arteSobreTrailer = 0;
           if (t) gfx_veu_na_arte = 1; else gfx_veu_card_limpar();
+          // SOBRE O TRAILER so ficam o anel e o logo do card aberto (o mesmo
+          // principio do modo cinema): selos, rotulo, faixa e o resto apagam
+          // junto com a arte. gfx_opacidade_grupo e o multiplicador de tudo.
+          const float ogCartao = gfx_opacidade_grupo;
+          gfx_opacidade_grupo = ogCartao * (1.0f - k->trailer);
           // SELO DE ASSISTIDO: disco branco com um "v" escuro, no canto
           // superior direito do poster. A referencia o tem e nos nao tinhamos
           // indicador nenhum na home — sem ele nao da para varrer uma fileira e
@@ -5320,6 +5452,7 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
           // de realce. Sem historico ainda, sem chip — nada de inventar.
           // Progresso em andamento vira um fio na base do card.
           if (abre > 0.01f && cItem) desenhaFaixaAberta(cItem, r, px, py, w, h, esc, abre);
+          gfx_opacidade_grupo = ogCartao;
           if (abre > 0.01f && cItem && cItem->logo[0]) {
             // Largura pedida pela tela, nao o teto generico de 640: o logo
             // nunca passa de ~65% do card, e decodificar o arquivo inteiro
@@ -5361,7 +5494,9 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
                 gfx_rect(rl, tl, m, 0, 0, 0, 0.0f, 1, 1, 1, abre); }
             }
           }
+  gfx_opacidade_grupo = ogCartao * (1.0f - k->trailer);
   if (editorial(tipo)) desenhaEditorialCard(cItem, tipo, px, py, w, h, raio);
+  gfx_opacidade_grupo = ogCartao;
   gfx_veu_card_limpar();
 }
 
@@ -5379,6 +5514,8 @@ int home_cartao_foco_por_cima(int indice) {
 }
 
 void home_desenhar(Uint32 agora) {
+  // O cartaz capaz do trailer No card e reescrito por quem o pintar neste quadro.
+  cartaoTrailerItem = -1; cartaoTrailerPode = cartaoTrailerServe = 0;
   amigostitulo_atualizar();   // barato: so remonta quando o feed social mudou
   // O REBORDO DO CARTAZ EM FOCO e ajuste da pessoa, e ele mora no shader do
   // GFX_CARD (nao e um retangulo desenhado por cima): por isso vai por uma
@@ -5811,8 +5948,30 @@ void home_desenhar(Uint32 agora) {
           // e UM numero para o app inteiro (NV_DETW_ANEL ja valia 4 e so era
           // usado no detalhe).
           const float raio = raioDe(w, h);
+          // MODO NO CARD: o cartaz em foco diz ao passo se recebe o trailer
+          // (ver cartaoTrailerPode/Serve) e, com ele tocando, abre o furo.
+          float trailerCard = 0.0f;
+          if (!focoHero && focus_indice(&foco, r, c) && cItem &&
+              tipo != FILEIRA_CONTINUE && tipo != FILEIRA_RETORNO &&
+              tipo != FILEIRA_SOCIAL && tipo != FILEIRA_CATALOGOS) {
+            int expande = ajustes_expandir_poster() && podeExpandir(r) &&
+                          r == expFileira && c == expColuna;
+            int deitadoJa = h > 1.0f && w / h >= NV_CARTAO_TRAILER_ASP;
+            // INTEIRO NA TELA: o plano nunca recebe retangulo fora dela (no
+            // .tpk, #188/#195, mostraria o que esta atras do app). Cartaz que
+            // sai da tela tocando deixa de servir e o passo fecha o trailer.
+            int naTela = px >= 0.0f && py >= 0.0f && px + w <= NV_TELA_W && py + h <= NV_TELA_H;
+            cartaoTrailerItem = idxCat;
+            cartaoTrailerRect = (GfxRect){ px, py, w, h };
+            cartaoTrailerPode = naTela && (deitadoJa || expande);
+            cartaoTrailerServe = naTela && deitadoJa && (!expande || abre >= 0.999f);
+            if (heroTrailerNoCartao && heroTrailerItem == idxCat && heroTrailerFade > 0.004f &&
+                trailer_dono() != TRAILER_DONO_DETALHE)
+              trailerCard = heroTrailerFade;
+          }
           CartaoFoco ck = { r, c, tipo, cItem, caminho, t, aArte, deitado, rotuloFora, abre, esc, f,
-                            px, py, w, h, (!focoHero && focus_indice(&foco, r, c)) ? varreFoco : 0.0f };
+                            px, py, w, h, (!focoHero && focus_indice(&foco, r, c)) ? varreFoco : 0.0f,
+                            trailerCard };
           pintarCartao(&ck, raio);
           // MARCADOR "PRIMEIRA FILEIRA PINTADA" (#7 do handoff de desempenho,
           // 05/10). "primeira fileira da rede pronta" e "catalogo da rede

@@ -538,6 +538,11 @@ static const char *V_FONTE_ORDEM_ADDON[] = { "Por qualidade", "Do addon" };
 static const char *V_TELA_ABERTURA[] = { "Cinema", "Detalhada" };
 static const char *V_QUALIDADE[] = { "Automática", "4K", "1080p", "720p" };
 static const char *V_LIGA[]      = { "Ligado", "Desligado" };
+// TRAILER DO CARTAZ EM FOCO EM TRES MODOS (dono, 07/10/2026). O indice e o
+// AJ_TRAILER_CARTAZ_* de ajustes.h e o gravado em "trailerCartazModo"; a chave
+// antiga (V_LIGA, a mesma do web) migra no carregar (focoTrailerMigrar) e a
+// conta continua vendo um booleano (chaveConta, textoDoValor).
+static const char *V_FOCO_TRAILER[] = { "Desligado", "Tela cheia", "No card" };
 // Medidor de desempenho NA ILHA DO RELOGIO (desempenho.h, 03/10). O indice e o
 // gravado em "medidorFormaLocal"; a chave antiga (V_LIGA) migra no carregar.
 static const char *V_MEDIDOR[]   = { "Desligado", "Mínimo", "Menor", "Grande" };
@@ -1196,7 +1201,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Guia TV na barra lateral",        V_LIGA, 2),   // local: menuGuiaLocal
   ESC("Agenda na barra lateral",         V_LIGA, 2),   // local: menuAgendaLocal
   ESC("Perfil e Stats na barra lateral", V_LIGA, 2),   // local: menuPerfilLocal
-  ESC("Trailer do cartaz em foco",       V_LIGA, 2),   // focusedPosterBackdropTrailerEnabled
+  ESC("Trailer do cartaz em foco",       V_FOCO_TRAILER, 3),   // trailerCartazModo (conta: focusedPosterBackdropTrailerEnabled)
   ESC("Itens por fileira",               V_ITENS_FIL, 3), // local: itensFileiraLocal
   ESC("Fonte da interface", V_FONTE_UI, 6),
   ESC("Efeitos visuais", V_GPU_EF, 3),   // local: gpuEfeitosLocal (.tpk)
@@ -1473,8 +1478,11 @@ static const char *CHAVE[] = {
   "-velocidade",
   // Locais e SEM o "-": sobrevivem ao fechamento, e o web nao tem a escolha.
   "menuExplorarLocal", "menuGuiaLocal", "menuAgendaLocal", "menuPerfilLocal",
-  // A MESMA chave do web (layoutPreferences), entao segue a conta.
-  "focusedPosterBackdropTrailerEnabled",
+  // Tres modos (V_FOCO_TRAILER). Na CONTA continua o booleano do web
+  // (layoutPreferences), focusedPosterBackdropTrailerEnabled: ver chaveConta.
+  // O nome no arquivo mudou porque o indice mudou de sentido (V_LIGA: 0 =
+  // Ligado; aqui 0 = Desligado) e a chave velha migra (focoTrailerMigrar).
+  "trailerCartazModo",
   "itensFileiraLocal",
   "fonteInterface",
   "gpuEfeitosLocal",
@@ -2396,9 +2404,23 @@ int  ajustes_itens_fileira(void) {
   return N[i];
 }
 int  ajustes_trailer_cartaz(void) {
-  // A MESMA dependencia de inativa(AJ_FOCO_TRAILER), escrita aqui porque
-  // inativa() vem bem mais abaixo no arquivo.
-  return lig(AJ_FOCO_TRAILER) && !SEGURO && !trailerHeroVetado && (lig(AJ_EXPANDIR) || valor[AJ_LANDSCAPE] == 0);
+  // Sem dependencia aqui: cada modo decide na home se o cartaz em foco serve
+  // (home.c, cartaoTrailerServe). O "so com expandir ou cartaz deitado" do web
+  // virou a regra do modo No card para cartaz EM PE.
+  int v = valor[AJ_FOCO_TRAILER];
+  if (SEGURO || trailerHeroVetado || v < AJ_TRAILER_CARTAZ_DESLIGADO || v > AJ_TRAILER_CARTAZ_CARD) return AJ_TRAILER_CARTAZ_DESLIGADO;
+  return v;
+}
+// A CHAVE VELHA "focusedPosterBackdropTrailerEnabled" (V_LIGA: 0 = Ligado) vira
+// o modo de hoje. Ligado tocava o trailer no retangulo da arte do destaque —
+// o lugar do Tela cheia (que agora tambem esconde as fileiras, como o trailer
+// do destaque). Ligado com a dependencia de entao desligada (cartaz em pe sem
+// Expandir) nao tocava nada: continua sem tocar. Chamar com o arquivo inteiro
+// lido (expandir e cartaz deitado podem vir depois da chave velha).
+static int focoTrailerMigrar(int antigo) {
+  if (antigo != 0) return AJ_TRAILER_CARTAZ_DESLIGADO;
+  return (lig(AJ_EXPANDIR) || valor[AJ_LANDSCAPE] == 0) ? AJ_TRAILER_CARTAZ_CHEIA
+                                                       : AJ_TRAILER_CARTAZ_DESLIGADO;
 }
 void ajustes_definir_envio_auto(int ligado) { valor[AJ_ENVIO_AUTO] = ligado ? 0 : 1; AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar()); }
 // ARTE DO DESTAQUE ESCOLHIDA PELO DIAGNOSTICO, e so depois de a pessoa ver a
@@ -3168,6 +3190,7 @@ void ajustes_dir(const char *dir) {
   }
   { int viuIdioma = 0, viuAuto = 0, idiomaGravado = IDIOMA_EN, autoGravado = 0;
     int medidorAntigo = -1, viuMedidor = 0, resAntiga = -1, viuRes = 0, prazoAntigo = -1, viuEspera = 0;
+    int focoAntigo = -1, viuFoco = 0;
   while (fgets(linha, sizeof linha, f)) {
     char chave[64]; int v, i;
     if (sscanf(linha, "%63s %d", chave, &v) != 2) continue;
@@ -3188,6 +3211,8 @@ void ajustes_dir(const char *dir) {
     // "Espera pelos add-ons" ganhou Instantaneo/15 s/30 s (#202): o indice de
     // antes (3 s, 5 s, 8 s, Todos) vira o da lista nova.
     if (!strcmp(chave, "fontePrazoLocal")) { prazoAntigo = v; continue; }
+    // Trailer do cartaz em foco: era V_LIGA (ver focoTrailerMigrar).
+    if (!strcmp(chave, "focusedPosterBackdropTrailerEnabled")) { focoAntigo = v; continue; }
     if (!strcmp(chave, "idiomaFonteLocal")) {
       if (v >= IDA_TMDB && v <= IDA_PADRAO) idiomaFonteGravada = v;
       continue;
@@ -3201,6 +3226,7 @@ void ajustes_dir(const char *dir) {
       if (i == AJ_MEDIDOR) viuMedidor = 1;
       if (i == AJ_RESOLUCAO) viuRes = 1;
       if (i == AJ_FONTE_PRAZO) viuEspera = 1;
+      if (i == AJ_FOCO_TRAILER) viuFoco = 1;
       break;
     }
   }
@@ -3212,6 +3238,11 @@ void ajustes_dir(const char *dir) {
   if (!viuEspera && prazoAntigo >= 0) {
     static const int DE_PARA[4] = { 1, 2, 3, 6 };   // 3 s, 5 s, 8 s, Todos
     valor[AJ_FONTE_PRAZO] = prazoAntigo < 4 ? DE_PARA[prazoAntigo] : valorPadrao[AJ_FONTE_PRAZO];
+  }
+  if (!viuFoco && focoAntigo >= 0) {
+    valor[AJ_FOCO_TRAILER] = focoTrailerMigrar(focoAntigo);
+    printf("[ajustes] trailer do cartaz em foco: focusedPosterBackdropTrailerEnabled %d -> trailerCartazModo %d\n",
+           focoAntigo, valor[AJ_FOCO_TRAILER]);
   }
   // Escolha manual: "idioma" gravado e SEM a marca de automatico (arquivo de
   // antes da marca, ou de quem escolheu). Sem "idioma" nenhum, nunca houve
@@ -3926,6 +3957,13 @@ void ajustes_idiomas_da_conta(const char *json) {
   ling_conta_legenda(""); ling_conta_legenda2(""); ling_conta_audio("");
 }
 
+// O NOME NA CONTA. Quase sempre o mesmo do arquivo; o trailer do cartaz em foco
+// mudou de nome aqui (o indice ganhou tres modos) e na conta continua o booleano
+// do web, que o celular e o navegador leem.
+static const char *chaveConta(int i) {
+  return i == AJ_FOCO_TRAILER ? "focusedPosterBackdropTrailerEnabled" : CHAVE[i];
+}
+
 int ajustes_aplicar_blob(const char *json) {
   const char *fim;
   int i, mudou = 0, reconhecidas = 0;
@@ -3959,9 +3997,9 @@ int ajustes_aplicar_blob(const char *json) {
     //
     // A busca por nome ignora o aninhamento de proposito: js_bruto varre o
     // texto inteiro, e os nomes destas chaves sao unicos no documento.
-    camelParaSnake(CHAVE[i], snake, sizeof snake);
+    camelParaSnake(chaveConta(i), snake, sizeof snake);
     if (!js_bruto(json, fim, snake, embrulho, sizeof embrulho) &&
-        !js_bruto(json, fim, CHAVE[i], embrulho, sizeof embrulho)) continue;
+        !js_bruto(json, fim, chaveConta(i), embrulho, sizeof embrulho)) continue;
     if (embrulho[0] == '{') {
       // Desembrulha {"type":...,"value":X}. O `type` vem antes do `value` no
       // codificador do web, entao a primeira chave "value" e a certa.
@@ -3977,6 +4015,12 @@ int ajustes_aplicar_blob(const char *json) {
       // coincidencia: se um vetor novo comecar pelo estado desligado, ele
       // precisa de literais proprios em literaisDe().
       novo = !strcmp(bruto, "true") ? 0 : 1;
+      // Trailer do cartaz em foco: true na conta = "algum modo". O modo que
+      // esta TV ja tinha fica (No card nao vira Tela cheia a cada costura);
+      // desligado aqui e ligado la vira Tela cheia, o lugar de antes.
+      if (i == AJ_FOCO_TRAILER)
+        novo = novo ? AJ_TRAILER_CARTAZ_DESLIGADO
+                    : (valor[i] != AJ_TRAILER_CARTAZ_DESLIGADO ? valor[i] : AJ_TRAILER_CARTAZ_CHEIA);
     } else if (bruto[0] == '"') {
       const char *const *lit = literaisDe(i);
       char texto[128];
@@ -4233,19 +4277,28 @@ int ajustes_perfil_restaurar(int perfil) {
   nomePerfil(nome, sizeof nome, perfil);
   t = dados_ler(nome);
   if (!t) return 0;
+  { int focoAntigo = -1, viuFoco = 0;
   for (l = t; l && *l; ) {
     char chave[64], *fim = strchr(l, '\n');
     int v, i;
     if (fim) *fim = 0;
-    if (sscanf(l, "%63s %d", chave, &v) == 2)
+    // Perfil guardado antes dos tres modos (ver focoTrailerMigrar).
+    if (sscanf(l, "%63s %d", chave, &v) == 2 && !strcmp(chave, "focusedPosterBackdropTrailerEnabled"))
+      focoAntigo = v;
+    else if (sscanf(l, "%63s %d", chave, &v) == 2)
       for (i = 0; i < AJ_N; i++) {
         if (!dePerfil(i) || strcmp(CHAVE[i], chave)) continue;
         v = limita(i, v);
+        if (i == AJ_FOCO_TRAILER) viuFoco = 1;
         if (v != valor[i]) { valor[i] = v; mudou++; }
         break;
       }
     l = fim ? fim + 1 : NULL;
   }
+  if (!viuFoco && focoAntigo >= 0) {
+    int v = focoTrailerMigrar(focoAntigo);
+    if (v != valor[AJ_FOCO_TRAILER]) { valor[AJ_FOCO_TRAILER] = v; mudou++; }
+  } }
   free(t);
   if (mudou) {
     gravar();
@@ -4312,6 +4365,11 @@ static int acharValor(const char *ini, const char *fim, const char *chave,
 static int textoDoValor(int op, const char *vi, const char *vf,
                         char *dst, size_t tam) {
   size_t n = (size_t)(vf - vi);
+  // Tres modos aqui, um booleano na conta (chaveConta): 0 = Desligado.
+  if (op == AJ_FOCO_TRAILER && ((n >= 4 && !strncmp(vi, "true", 4)) || (n >= 5 && !strncmp(vi, "false", 5)))) {
+    snprintf(dst, tam, "%s", valor[op] != AJ_TRAILER_CARTAZ_DESLIGADO ? "true" : "false");
+    return 1;
+  }
   if (n >= 4 && !strncmp(vi, "true", 4))  { snprintf(dst, tam, "%s", valor[op] == 0 ? "true" : "false"); return 1; }
   if (n >= 5 && !strncmp(vi, "false", 5)) { snprintf(dst, tam, "%s", valor[op] == 0 ? "true" : "false"); return 1; }
   if (*vi == '"') {
@@ -4376,9 +4434,9 @@ int ajustes_mesclar_blob(const char *base, char **saida) {
     // conta fica exatamente como esta (a costura nao toca a chave), que e o
     // "padrao" certo: o ultimo tema fixo que a conta conhece.
     if (i == AJ_TEMA && temaLocal()) continue;
-    camelParaSnake(CHAVE[i], snake, sizeof snake);
+    camelParaSnake(chaveConta(i), snake, sizeof snake);
     if (!acharValor(base, fim, snake, &vi, &vf) &&
-        !acharValor(base, fim, CHAVE[i], &vi, &vf)) continue;
+        !acharValor(base, fim, chaveConta(i), &vi, &vf)) continue;
     // Valor embrulhado em {"type":...,"value":X}: o que se reescreve e o X.
     if (*vi == '{' && acharValor(vi, vf, "value", &ei, &ef)) { vi = ei; vf = ef; }
     if (!textoDoValor(i, vi, vf, troca[n].texto, sizeof troca[n].texto)) {
@@ -5087,9 +5145,8 @@ static int inativa(int op) {
     case AJ_DET_TRAILER_SOM:
       return !lig(AJ_DET_TRAILER_AUTO) || !trailerfonte_com_som(trailerfonte_tizen());
     case AJ_HERO_TRAILER_ESPERA: return !lig(AJ_HERO_TRAILER);
-    // Como no web (getFocusedPosterFlowConfig): o trailer do cartaz so existe
-    // com o cartaz expandindo ou com cartazes deitados.
-    case AJ_FOCO_TRAILER: return !ajustes_expandir_poster() && valor[AJ_LANDSCAPE] != 0;
+    // AJ_FOCO_TRAILER nao depende mais de nada (tres modos, 08/10/2026): a
+    // regra do cartaz em pe sem Expandir mora no modo No card (home.c).
     // AJ_ATUALIZAR NAO APAGA MAIS (01/10/2026): sem versao nova conhecida
     // ela vira "Procurar atualização" e consulta o GitHub na hora.
     case AJ_PROF_BORDA: case AJ_PROF_BRILHO: case AJ_PROF_COBERTURA:
@@ -5265,7 +5322,6 @@ static const char *ajudaOpcaoBase(int op) {
       return "Ative o trailer automático da página do título para ajustar o som.";
     if (op == AJ_HERO_TRAILER_SOM || op == AJ_HERO_TRAILER_ESPERA)
       return "Ative Trailer no destaque para ajustar o trailer do topo da Home.";
-    if (op == AJ_FOCO_TRAILER) return "Ative Expandir pôster ao focar, ou Pôsteres horizontais, para usar o trailer do cartaz em foco.";
     if (op > AJ_TMDB_LIGADO && op <= AJ_TMDB_CW)
       return "Ative TMDB para ajustar o que ele enriquece.";
     if (op > AJ_MDB_LIGADO && op <= AJ_MDB_MAL)
@@ -5460,7 +5516,7 @@ static const char *ajudaOpcaoBase(int op) {
     // --- Posteres e cards
     case AJ_EXPANDIR: return "O cartaz em foco cresce e abre a arte deitada atrás dele depois de um instante parado.";
     case AJ_EXPANDIR_ATRASO: return "Quanto tempo o foco precisa ficar parado antes de o cartaz expandir.";
-    case AJ_FOCO_TRAILER: return "Com o foco parado num cartaz, o trailer toca sem som no lugar da arte do destaque, depois do mesmo tempo de espera da expansão.";
+    case AJ_FOCO_TRAILER: return "Com o foco parado num cartaz, o trailer toca sem som depois da espera da expansão. Tela cheia: a Home some e fica só o nome. No card: dentro do cartaz; pôster em pé só com Expandir pôster ao focar.";
     case AJ_NAV_RAPIDA: return "Andar de lado numa fileira não espera a animação terminar. Serve para controle que repete rápido.";
     case AJ_BORDA_FOCO: return "O anel colorido que marca o cartaz em foco na Home. Desligado, o foco fica só pelo tamanho do cartaz.";
     case AJ_PROF: return "Dá relevo aos cartazes: borda iluminada e um reflexo que acompanha o foco.";
@@ -6182,6 +6238,7 @@ typedef struct {
 static int nvFileiras(int v) { return v > FIL_LIMITE_VIGIADO ? v : 0; }
 static int nvItens(int v)    { return v > 0 ? v : 0; }
 static int nvLigado(int v)   { return v == 0; }        // V_LIGA: 0 = Ligado
+static int nvModo(int v)     { return v != 0; }        // V_FOCO_TRAILER: 0 = Desligado
 static int nv4k(int v)       { return v == RES_4K; }
 static int nvImersiva(int v) { return v == AJ_TEMA_IMERSIVA; }
 static int nvQualAlta(int v) { return v == 2; }
@@ -6193,7 +6250,7 @@ static const Risco RISCOS[] = {
   { AJ_VIDRO,          "vidro",           nvLigado },
   { AJ_TEMA,           "temaImersivo",    nvImersiva },
   { AJ_HERO_TRAILER,   "trailerDestaque", nvLigado },
-  { AJ_FOCO_TRAILER,   "trailerCartaz",   nvLigado },
+  { AJ_FOCO_TRAILER,   "trailerCartaz",   nvModo },
   { AJ_P2P_LIGADO,     "p2p",             nvLigado },
   { AJ_QUALIDADE_IMG,  "qualidadeImagem", nvQualAlta },
   { AJ_TEX_MB,         "memoriaImagens",  nvTexAlto },

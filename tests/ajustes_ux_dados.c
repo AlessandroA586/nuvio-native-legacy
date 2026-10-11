@@ -117,9 +117,9 @@ static void padroesEValores(void) {
   }
   assert(!uxTemPadrao(-1) && !uxTemPadrao(AJ_N));
   assert(!uxDiferente(-1) && !uxDiferente(AJ_N));
-  valor[AJ_FOCO_TRAILER] = 1 - valorPadrao[AJ_FOCO_TRAILER];
+  valor[AJ_FOCO_TRAILER] = AJ_TRAILER_CARTAZ_CARD;
   assert(uxDiferente(AJ_FOCO_TRAILER));
-  assert(uxValorPadrao(AJ_FOCO_TRAILER) == 1);
+  assert(uxValorPadrao(AJ_FOCO_TRAILER) == AJ_TRAILER_CARTAZ_DESLIGADO);
   valor[AJ_FOCO_TRAILER] = valorPadrao[AJ_FOCO_TRAILER];
   /* Um valor que o modo seguro suspende continua sendo a preferencia salva. */
   valor[AJ_RESOLUCAO] = RES_4K;
@@ -139,7 +139,9 @@ static void padroesEValores(void) {
 
   memcpy(copia, valor, sizeof copia);
   uxValorTexto(AJ_FOCO_TRAILER, 0, texto, sizeof texto);
-  assert(!strcmp(texto, i18n("Ligado")));
+  assert(!strcmp(texto, i18n("Desligado")));
+  uxValorTexto(AJ_FOCO_TRAILER, AJ_TRAILER_CARTAZ_CARD, texto, sizeof texto);
+  assert(!strcmp(texto, i18n("No card")));
   uxValorTexto(AJ_AUD_LINGUA, LING_OPC_ORIGINAL, texto, sizeof texto);
   assert(!strcmp(texto, i18n("Original do título")));
   uxValorTexto(AJ_HERO_TRAILER_ESPERA, 22, texto, sizeof texto);
@@ -149,7 +151,7 @@ static void padroesEValores(void) {
   uxValorTexto(AJ_FIL_LIMITE, 12, texto, sizeof texto);
   assert(!strcmp(texto, "12"));
   uxValorTexto(AJ_FOCO_TRAILER, INT_MAX, texto, sizeof texto);
-  assert(!strcmp(texto, i18n("Ligado")));
+  assert(!strcmp(texto, i18n("Desligado")));   /* fora da lista: o indice 0 */
   uxValorTexto(AJ_N, 0, texto, sizeof texto);
   assert(!texto[0]);
   uxValorTexto(AJ_IDIOMA, 0, NULL, 0);

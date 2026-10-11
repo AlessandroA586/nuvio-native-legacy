@@ -326,7 +326,9 @@ static void ajcCenaCartazes(int op) {
 }
 // Trailers: o destaque (ou o cartaz) onde o play vira video.
 static void ajcCenaTrailer(int op) {
-  int ligado = op >= 0 ? ajcLig(op) > 0.5f : 1;
+  // O trailer do cartaz tem tres modos (0 = Desligado), nao o V_LIGA.
+  int ligado = op == AJ_FOCO_TRAILER ? valor[op] != AJ_TRAILER_CARTAZ_DESLIGADO
+             : op >= 0 ? ajcLig(op) > 0.5f : 1;
   float f = ajc_fase(5.0f), vid;
   // o laco: 0-30% parado com o play, depois o video entra e fica
   vid = op == AJ_TRAILER_QUAL || op == AJ_TRAILER_ASPECTO || op == AJ_LOGO_TRAILER || op == AJ_TRAILER_FONTE ? 1.0f
@@ -335,12 +337,22 @@ static void ajcCenaTrailer(int op) {
   if (!ligado && op != AJ_HERO_TRAILER_ESPERA) vid = 0;
   if (op == AJ_FOCO_TRAILER) {   // no cartaz em foco da fileira
     int i;
-    for (i = 0; i < 5; i++) ajc_cartaz(30 + i * 118, 120, 100, 150, i, 1);
-    ajc_cartaz(148, 120, 100, 150, 1, 1);
-    if (vid > 0.01f) ajc_video(148, 120, 100, 150, 9, vid);
-    ajc_play(198, 195, 34, 1 - vid);
-    ajc_foco(148, 120, 100, 150, 9, 1);
-    ajcChaveCanto(ajcLig(op));
+    // Tela cheia: o video toma a previa e os cartazes apagam (modo cinema).
+    if (valor[op] == AJ_TRAILER_CARTAZ_CHEIA) {
+      for (i = 0; i < 5; i++) ajc_cartaz(30 + i * 118, 120, 100, 150, i, 1 - vid);
+      if (vid > 0.01f) ajc_video(0, 0, 640, 360, 0, vid);
+      ajc_play(198, 195, 34, 1 - vid);
+      ajcChaveCanto(1.0f);
+      return;
+    }
+    // No card (e Desligado): o video no cartaz em foco, deitado.
+    ajc_cartaz(30, 120, 100, 150, 0, 1);
+    for (i = 2; i < 4; i++) ajc_cartaz(334 + (i - 2) * 118, 120, 100, 150, i, 1);
+    ajc_cartaz(148, 120, 168, 150, 1, 1);
+    if (vid > 0.01f) ajc_video(148, 120, 168, 150, 9, vid);
+    ajc_play(232, 195, 34, 1 - vid);
+    ajc_foco(148, 120, 168, 150, 9, 1);
+    ajcChaveCanto(ligado ? 1.0f : 0.0f);
     return;
   }
   ajc_cartaz(0, 0, 640, 360, 1, 1);
