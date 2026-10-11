@@ -624,6 +624,8 @@ const CatEp *player_proximo_episodio(void) {
 static char erroTitulo[160], erroDica[160];
 // "Fonte 2 de 3": a tentativa do automatico VOD (app.c, tentarProximaFonteVOD).
 static int tentativaN, tentativaM;
+static int durFonteAvisada, durFontePulou, pedProximaFonte;
+static Uint32 durFonteAcaoAte;
 // ABRINDO A FONTE, COMPACTO POR PADRAO (dono, 05/10): o cartao nasce enxuto —
 // o ponto, o estado e as marcas da fonte — e o BAIXO expande os detalhes.
 // abrindoExp e o pedido (BAIXO liga, CIMA desliga); abrindoT (0..1) e a mola
@@ -861,7 +863,7 @@ static int    aspecto = PLR_ASP_ORIGINAL;
 static Uint32 toastAte = 0;      // ate quando o aviso de modo fica de pe
 // Texto do aviso quando NAO e o modo de proporcao (vazio = rotulo do modo).
 // Hoje so o audio nao suportado usa: um aviso por fonte, ver player_atualizar.
-static char   toastTexto[160];
+static char   toastTexto[320];
 // O icone do aviso (art/icones) e a cor dele: 0 branco, 1 ambar (aviso).
 static char   toastIcone[32];
 static int    toastCor;
@@ -1250,6 +1252,7 @@ static int modoDisponivel(int modo) {
 
 void player_toast_ex(const char *texto, unsigned ms, const char *icone, int ambar) {
   if (!texto || !*texto) return;
+  durFonteAcaoAte = 0;
   snprintf(toastTexto, sizeof toastTexto, "%s", texto);
   snprintf(toastIcone, sizeof toastIcone, "%s", icone && *icone ? icone : "aj_info");
   toastCor = ambar ? 1 : 0;
@@ -1258,6 +1261,7 @@ void player_toast_ex(const char *texto, unsigned ms, const char *icone, int amba
 void player_toast(const char *texto, unsigned ms) { player_toast_ex(texto, ms, NULL, 0); }
 
 void player_aspecto_ciclar(void) {
+  durFonteAcaoAte = 0;
   int m = aspecto, i;
   // No maximo uma volta: se nada mais estiver disponivel, fica onde esta em vez
   // de girar para sempre.
@@ -1324,6 +1328,8 @@ void player_abrir(int indiceCatalogo, const char *url) {
     if (canalSessao) { guia_carregar(); epg_iniciar(); } }
   tocando = 1; pausaPessoa = 0; retomandoSalto = 0; visivel = 1; anim = 0.0f; entrada = 0.0f; soBarra = 0; cheio = 1.0f; fileira = 1.0f;
   pedFontes = erroFonte = pedFaixas = pedProxT = pedProxE = 0; inicioImagem = 0;
+  durFonteAvisada = durFontePulou = pedProximaFonte = 0;
+  durFonteAcaoAte = 0;
   abrindoExp = 0; abrindoT = 0.0f; abrindoDesde = 0;
   erroTitulo[0] = erroDica[0] = 0;
   pedGuia = pedZap = pedGuiaCheio = 0;
@@ -1547,6 +1553,8 @@ static void dvTelaAtualizar(float dt, Uint32 agora) {
 // PRETO enquanto o fluxo abria — que era o "clica em reproduzir e fica preto".
 void player_definir_fonte(const char *url) {
   if ((!aberto && !mini) || !url || !*url) return;
+  durFonteAvisada = pedProximaFonte = 0; durFonteAcaoAte = toastAte = 0;
+  duracaoReal = durCurtaAvisado = durPassouAvisado = 0;
   esperandoFonte = 0;
   erroFonte = 0;
   dvTelaFonte(url);
@@ -2246,6 +2254,61 @@ static double duracaoCatalogo(void) {
   return 0.0;
 }
 
+// TMDB ja enriquece CatEp.duracao. Sem o episodio, so dois vizinhos da mesma
+// temporada que concordem (20%) dao escala confiavel; nunca a reserva do player.
+static double duracaoFonteEsperada(void) {
+  const CatItem *c = cat_item(idxAtual());
+  double antes = 0, depois = 0;
+  if (!c || ehCanal()) return 0;
+  if (!strcmp(c->tipo, "movie")) return duracaoDeMeta(c->meta);
+  if (epT <= 0 || epE <= 0) return 0;
+  for (int ix = idxAtual(), i = 0; i < cat_n_episodios(ix); i++) {
+    const CatEp *ep = cat_episodio(ix, i);
+    double d;
+    if (!ep || ep->temporada != epT) continue;
+    d = duracaoDeMeta(ep->duracao);
+    if (ep->episodio == epE && d > 0) return d;
+    if (ep->episodio == epE - 1) antes = d;
+    if (ep->episodio == epE + 1) depois = d;
+  }
+  return antes > 0 && depois > 0 && fmax(antes, depois) <= fmin(antes, depois) * 1.2
+           ? (antes + depois) / 2 : 0;
+}
+
+int player_pediu_proxima_fonte(void) {
+  int p = pedProximaFonte; pedProximaFonte = 0; return p;
+}
+static void durFonteTentar(int a, int b) {
+  (void)a; (void)b;
+  if (!aberto || saindo || !durFonteAcaoAte || durFonteAcaoAte != toastAte ||
+      SDL_GetTicks() >= durFonteAcaoAte) return;
+  pedProximaFonte = 1; durFonteAcaoAte = toastAte = 0;
+}
+static void durFonteAtualizar(double real, Uint32 agora) {
+  double esperada;
+  char r[32], e[32], aviso[320];
+  int rm, em;
+  if (durFonteAvisada || ehCanal() || !isfinite(real) || real <= 1) return;
+  esperada = duracaoFonteEsperada();
+  if (esperada <= 0 || fabs(real - esperada) <= 600 ||
+      !(real > esperada * 2 || real < esperada * .5)) return;
+  durFonteAvisada = 1;
+  rm = (int)(real / 60); em = (int)(esperada / 60);
+  if (rm < 60) snprintf(r, sizeof r, i18n("%d min"), rm);
+  else snprintf(r, sizeof r, i18n("%dh %dmin"), rm / 60, rm % 60);
+  if (em < 60) snprintf(e, sizeof e, i18n("%d min"), em);
+  else snprintf(e, sizeof e, i18n("%dh %dmin"), em / 60, em % 60);
+  snprintf(aviso, sizeof aviso, i18n("Esta fonte parece ser outra obra (%s vs %s)"), r, e);
+  player_toast_ex(aviso, 12000, "aj_triangle-alert", 1);
+  durFonteAcaoAte = toastAte = agora + 12000;
+  printf("[fonte] duracao incompatível: real=%.0fs esperada=%.0fs automatico=%d\n",
+         real, esperada, tentativaN > 0);
+  if (tentativaN > 0 && !durFontePulou && agora - loadEm <= 10000u) {
+    durFontePulou = 1; pedProximaFonte = 2;
+    printf("[fonte] duracao: pulando para a proxima uma vez no inicio\n");
+  }
+}
+
 // player_regra_concluiu com o estado do player: e o que as saidas chamam.
 // Duracao suspeita e sem marcador, quem mede o fim e a minutagem do catalogo.
 static int concluiuAgora(double cred) {
@@ -2686,6 +2749,9 @@ void player_evento(const SDL_Event *e) {
     if (r) { if (r == 2) acordar(); return; } }
   if (!aberto || saindo || e->type != SDL_KEYDOWN) return;
   SDL_Keycode k = e->key.keysym.sym;
+
+  if (durFonteAcaoAte && durFonteAcaoAte == toastAte && SDL_GetTicks() < durFonteAcaoAte &&
+      (k == SDLK_RETURN || k == SDLK_KP_ENTER)) { durFonteTentar(0, 0); return; }
 
   // EVERY KEY IS ACTIVITY, including the ones a panel consumes below. The pause
   // panel re-arms its 5 s clock from here, so a person pressing keys - or holding
@@ -3131,7 +3197,10 @@ void player_atualizar(float dt, Uint32 agora) {
       legsync_audio_habilitar(ajustes_legenda_sync_audio());
       legsync_passo(video_url_atual(), posSeg, bf > 0.5 ? bf - (double)posSeg : -1.0,
                     scrubbing || video_bufferando_ms() > 0, agora); }
-    if (d > 1.0) { duracaoSeg = (float)d; duracaoReal = 1; }
+    if (d > 1.0) {
+      duracaoSeg = (float)d; duracaoReal = 1;
+      durFonteAtualizar(d, agora);
+    }
     // MINIATURAS DO SEEKR: so com a duracao REAL (o servico escolhe a versao
     // da folha por ela) e uma vez por titulo — seekr_pedir ignora o repetido.
     if (d > 60.0 && video_pronto() && !ehCanal() && ajustes_seekr_ligado()) {
@@ -4267,6 +4336,14 @@ static void corpoErro(GfxRect r, float a, void *u) {
   plrui_botao(x, y, "Voltar", NULL, erroBotao == 1 ? 1.0f : 0.0f, a);
 }
 
+static void corpoDurFonte(GfxRect r, float a, void *u) {
+  float x = r.x + 28, y = r.y + 12;
+  float w = plrui_botao(x, y, "Tentar próxima fonte (OK)", "pl_layers", 1, a);
+  (void)u;
+  if (a > .9f && durFonteAcaoAte && durFonteAcaoAte == toastAte)
+    ponteiro_alvo(x, y, w, 60, durFonteTentar, NULL, 0, 0);
+}
+
 static void desenharOsd(Uint32 agora, float a, float ac, const CatItem *c);
 // O QUE FICA FORA DO FURO. Video em tela cheia com barras (Original, 2.39:1,
 // 4:3...): PRETO de verdade, (0,0,0,1). O Glass UI (5a058b6c) trocou o chapado
@@ -4565,6 +4642,9 @@ void player_desenhar(Uint32 agora) {
       pd.texto = toastTexto;
       pd.icone = toastIcone[0] ? toastIcone : "aj_info";
       pd.corIcone = toastCor;
+      if (durFonteAcaoAte == toastAte) {
+        pd.w = 1000; pd.h = 88; pd.corpo = corpoDurFonte;
+      }
     } else {
       int m, n = 0, k = 0;
       for (m = 0; m < PLR_ASP_N; m++) if (modoDisponivel(m)) { if (m == aspecto) k = n; n++; }
