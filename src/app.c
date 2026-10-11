@@ -135,6 +135,7 @@
 #include "fontepref.h"
 #include "video.h"
 #include "addons.h"
+#include "legauto.h"
 #include "idioma.h"
 #include "descoberta.h"
 #include "ilha_voo.h"
@@ -2750,8 +2751,11 @@ static void legendasDaFonte(void) {
   char chave[sizeof ultimo], alvo[64];
   const Stream *s;
   const CatItem *c;
-  if (!player_aberto() || player_id_canal()[0] || !player_com_video()) return;
+  // A legenda automatica compara o release com este nome, entao ele vale desde
+  // que o player abre (antes do primeiro quadro), nao so com video.
   s = stream_item(stream_atual());
+  legauto_fonte(player_aberto() && !player_id_canal()[0] && s ? s->arquivo : NULL);
+  if (!player_aberto() || player_id_canal()[0] || !player_com_video()) return;
   c = cat_item(player_indice());
   if (!s || !c || !c->imdb[0]) return;
   alvoPlayer(alvo, sizeof alvo);

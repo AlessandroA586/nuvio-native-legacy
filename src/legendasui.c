@@ -251,7 +251,7 @@ static int recomendada(const char *pref, int secundaria) {
     if (!cand[i].embutida && (!secundaria || legendasui_cand_secundaria_ok(&cand[i]))) {
       add[na] = cand[i].leg; mapa[na++] = i;
     }
-  r = legauto_escolher(add, na, pref, video_url_atual(), NULL, 0, 0);
+  r = legauto_escolher(add, na, pref, legauto_midia(video_url_atual()), NULL, 0, 0);
   free(add);
   return r >= 0 ? mapa[r] : -1;
 }
