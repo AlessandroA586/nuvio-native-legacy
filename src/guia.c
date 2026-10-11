@@ -41,6 +41,7 @@
 // nunca tocam no staging — mesma disciplina do epg.c.
 #include "horafmt.h"
 #include "guia.h"
+#include "registro.h"
 #include "guiaaddons.h"
 #include "plrui.h"
 #include "badges.h"   /* marcas de resolucao no heroi */
@@ -1888,6 +1889,7 @@ static void instalar(int k) {
     paErroCheio = (addons_n() >= 16);
     return;
   }
+  registro_aviso_legal();
   sync_sujar_addons();
   paMexeu = 1;
   paLigou = 1;   // instalar e ligar: precisa baixar o manifesto e o catalogo

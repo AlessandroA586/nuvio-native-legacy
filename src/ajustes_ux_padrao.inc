@@ -255,3 +255,4 @@
   0, /* Source display order (#400): Por qualidade, local */
   0, /* Sincronia automática da legenda: Ligado, local */
   0, /* Mostrar no player (#425): Só meus idiomas; sem preferencia, todas */
+  0, /* Aviso legal: acao */

@@ -502,6 +502,7 @@ typedef enum {
   AJ_FONTE_ORDEM_ADDON,
   AJ_LEG_SYNC_AUTO, // local, ligada de fábrica; append-only
   AJ_LEG_MOSTRAR, // #425: local, append-only; 0 = so meus idiomas
+  AJ_AVISO_LEGAL, // acao local, append-only
   AJ_N
 } OpcaoId;
 
@@ -1331,6 +1332,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Ordem das fontes", V_FONTE_ORDEM_ADDON, 2), // local (#400)
   ESC("Sincronia automática da legenda", V_LIGA, 2),
   ESC("Mostrar no player", V_LEG_MOSTRAR, 2),
+  ACAO("Aviso legal"),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1557,6 +1559,7 @@ static const char *CHAVE[] = {
   "fonteOrdemLocal",
   "legendaSyncAutoLocal",
   "legendaMostrarLocal",
+  "-avisoLegal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -5495,6 +5498,7 @@ static const char *ajudaOpcaoBase(int op) {
         : "Procura agora uma versão nova do Nuvio. Se houver, abre o cartão com o que mudou e o botão de instalar. O app também confere sozinho a cada 6 horas.";
     case AJ_VER_REGISTRO: return "Abre o registro do app por cima desta tela, ao vivo: o mesmo painel do botão vermelho do controle, para quem não tem esse botão.";
     case AJ_MEDIDOR: return "Mostra quadros por segundo, o pior quadro e a memória dentro da ilha do relógio, atualizados a cada 3 s. Mínimo fica na linha da hora, Menor ganha uma segunda linha e Grande abre o painel completo. Quando a ilha mostra um aviso, o medidor se recolhe e volta depois.";
+    case AJ_AVISO_LEGAL: return "Aviso legal";
     case AJ_GUIA: return "O que o Nuvio faz, em 12 capítulos. Cada recurso diz onde fica e tem um atalho para ele.";
     case AJ_NOVIDADES20: return "O tour do que mudou na 2.0, capítulo por capítulo, com o que vale neste aparelho. Abre do começo.";
     case AJ_APOIAR: return "Se o Nuvio te ajuda e você quiser apoiar quem faz o app, aponte a câmera do celular para um dos códigos. É opcional: nada muda no app.";
@@ -6616,6 +6620,7 @@ static void eventoTela(const SDL_Event *e) {
     // O painel de envio (registro.h) dispara o envio e mostra o codigo ou o
     // motivo da falha; antes so o texto da linha mudava.
     if (focoOp == AJ_ENVIAR_LOG) { registro_envio_abrir(); return; }
+    if (focoOp == AJ_AVISO_LEGAL) { registro_legal_abrir(); return; }
     if (focoOp == AJ_VER_REGISTRO) { registro_abrir(); return; }
     if (focoOp == AJ_GUIA) { guiaAbrir(0); return; }
     if (focoOp == AJ_NOVIDADES20) { pediuNovidades20 = 1; return; }
@@ -6787,7 +6792,7 @@ void ajustes_atualizar(float dt, Uint32 agora) {
   { int r = pessoas_aberto() ? TECLADO_NADA : teclado_resultado();
     if (r == TECLADO_PRONTO && stCampo) {
       if (stCampo == AJ_STALKER_MAC) stalker_definir_mac(teclado_texto());
-      else if (stCampo == AJ_XTREAM_SERVIDOR) xtream_definir_servidor(teclado_texto());
+      else if (stCampo == AJ_XTREAM_SERVIDOR) { xtream_definir_servidor(teclado_texto()); if (teclado_texto()[0]) registro_aviso_legal(); }
       else if (stCampo == AJ_XTREAM_USUARIO)  xtream_definir_usuario(teclado_texto());
       else if (stCampo == AJ_XTREAM_SENHA)    xtream_definir_senha(teclado_texto());
       else if (stCampo == AJ_FANART_CHAVE)    fanartDefinir(teclado_texto());
@@ -6821,7 +6826,7 @@ void ajustes_atualizar(float dt, Uint32 agora) {
       }
       else if (stCampo >= AJ_POSTER_INST && stCampo <= AJ_POSTER_MODELO) pstDefinir(stCampo, teclado_texto());
       else if (debIdx(stCampo) >= 0)          debDefinir(stCampo, teclado_texto());
-      else if (stCampo != AJ_JF_ENTRAR && stCampo != AJ_EM_ENTRAR) stalker_definir_portal(teclado_texto());
+      else if (stCampo != AJ_JF_ENTRAR && stCampo != AJ_EM_ENTRAR) { stalker_definir_portal(teclado_texto()); if (teclado_texto()[0]) registro_aviso_legal(); }
       if (r == TECLADO_PRONTO) stCampo = 0;
     } else if (r == TECLADO_CANCELOU) {
       if (stCampo == AJ_JF_ENTRAR || stCampo == AJ_EM_ENTRAR) { teclado_esquecer(); memset(jfUsuario, 0, sizeof jfUsuario); }

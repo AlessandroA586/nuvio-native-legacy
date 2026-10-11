@@ -5,6 +5,7 @@
 //       OK liga/desliga o scraper; remover pede o OK duas vezes.
 // Sem motor neste alvo (plugins_disponivel() == 0) so ha a linha que diz isso.
 #include "pluginsui.h"
+#include "registro.h"
 #include "plugins.h"
 #include "ajustes.h"
 #include "teclado.h"
@@ -99,7 +100,7 @@ void pluginsui_atualizar(float dt, Uint32 agora) {
                                             r == -1 ? "já está na conta" :
                                             r == -2 ? "Lista cheia (24 repositórios)" :
                                             "o endereço precisa começar com http"));
-    if (r == 1) foco = 1 + plugins_n_repos();
+    if (r == 1) { foco = 1 + plugins_n_repos(); registro_aviso_legal(); }
   }
   // A lista pode encolher por fora (sync da conta, outro perfil): foco valido.
   n = linhas();
