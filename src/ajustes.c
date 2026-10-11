@@ -506,6 +506,9 @@ typedef enum {
   // progresso.c, home.c). Padrao 1 = o comportamento de sempre. No fim: valor[]/CHAVE[]
   // sao posicionais.
   AJ_CW_MINIMO,
+  // #338: tamanho do buffer do player (Android: LoadControl do ExoPlayer). So
+  // existe onde o player deixa o app escolher; LOCAL. No fim: posicionais.
+  AJ_BUFFER,
   AJ_N
 } OpcaoId;
 
@@ -573,6 +576,8 @@ static const char *V_FONTE_ORDEM_USO[] = { "Não", "Para desempatar", "Ordem est
 static const char *V_TAMANHO_UI[] = { "100%", "120%", "130%", "150%" };
 static const char *V_TAMANHO_AJUSTES[] = { "80%", "90%", "100%" };
 // F07: the order is cacheboost_cache_mb's (0, 256, 512, 1024 MB).
+// #338: indice = preset do NvPlayer.kt (0 = o de sempre).
+static const char *V_BUFFER[] = { "Automático", "Pequeno", "Médio", "Grande" };
 static const char *V_CACHE_SEEK[] = { "Desligado", "256 MB", "512 MB", "1 GB" };
 // #334: indice gravado em p2pLimiteLocal; ajustes_p2p_limite_mb devolve os MB.
 static const char *V_P2P_LIMITE[] = { "Automático", "2 GB", "4 GB", "8 GB", "16 GB" };
@@ -1336,6 +1341,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Sincronia automática da legenda", V_LIGA, 2),
   ESC("Mostrar no player", V_LEG_MOSTRAR, 2),
   NUM("Mínimo para entrar no Continuar", 1, 20, 1, "%"),   // local: cwMinimoLocal
+  ESC("Tamanho do buffer", V_BUFFER, 4),                 // local: bufferPlayerLocal (Android)
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1563,6 +1569,7 @@ static const char *CHAVE[] = {
   "legendaSyncAutoLocal",
   "legendaMostrarLocal",
   "cwMinimoLocal",
+  "bufferPlayerLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2086,6 +2093,14 @@ int ajustes_legenda_sync_audio(void) { return lig(AJ_LEG_SYNC_AUDIO); }
 int ajustes_legenda_sync_audio(void) { return 0; }   // escondida fora do Android
 #endif
 int ajustes_legenda_forcada_auto(void) { return lig(AJ_LEG_FORCADA); }   // #287, padrao Ligado
+int ajustes_buffer_preset(void) {
+#ifdef NV_ANDROID
+  int v = valor[AJ_BUFFER];
+  return v >= 0 && v < 4 ? v : 0;
+#else
+  return 0;   // so o ExoPlayer deixa o app escolher o buffer
+#endif
+}
 int ajustes_cache_seek_mb(void) {
   static const int MB[] = { 0, 256, 512, 1024 };
   int v = valor[AJ_CACHE_SEEK];
@@ -4102,6 +4117,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_LEG_FORCADA:    /* #287: o web nao tem esta escolha */
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA: /* estilo da legenda e desta TV */
     case AJ_CACHE_SEEK:     /* F07: o disco e o player sao desta TV */
+    case AJ_BUFFER:         /* #338: o buffer e do player desta TV */
     case AJ_TRAILER_ZOOM_TPK: /* #241: o firmware de cada Samsung reage de um jeito */
     case AJ_FUNDO:          /* o desfoque custa GPU desta TV; o web nao tem */
     case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: /* teste do vidro: visual desta TV */
@@ -5490,6 +5506,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_AVANCADAS: return "Mostra, em todas as categorias, as opções técnicas marcadas como Avançado. Vale só para esta TV.";
     case AJ_LOGO_TRAILER: return "Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.";
     case AJ_TRAILER_ZOOM_TPK: return "Amplia a imagem do trailer e libera os modos de recorte e zoom da proporção no player; em algumas TVs Samsung pode deixar a tela preta ou mostrar a tela inicial da TV.";
+    case AJ_BUFFER: return "Quanto vídeo o player baixa à frente. Pequeno poupa memória e rede; Grande aguenta melhor internet instável e arquivos pesados, até o limite de memória da TV. Não muda a qualidade da imagem. Vale a partir do próximo vídeo.";
     case AJ_CACHE_SEEK: return "Guarda no disco o trecho já baixado do vídeo, para voltar sem baixar de novo. Apagado ao fechar o player.";
     case AJ_ANIM: return "Use Reduzidas para movimentos mais discretos ao navegar pela interface.";
     case AJ_RESOLUCAO: return "Automática começa em 1080p e testa o 4K sozinha: só usa 4K se a tela for 4K e a TV aguentar com folga; se travar depois, volta para 1080p. Nunca baixa para 720p. Escolher 4K força 4K (se a TV não aguentar, o app volta para 1080p e avisa). 720p desenha em 1280x720 e amplia: mais leve, com texto mais suave. Reinicie o app depois de mudar. O vídeo não muda.";
@@ -7370,7 +7387,7 @@ typedef enum {
 static AjPreview familiaPreviaOpcao(int op) {
   switch (op) {
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
-    case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK:
+    case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK: case AJ_BUFFER:
     case AJ_DV_MKV:
     case AJ_LEG_FORCADA:
     case AJ_AUD_LINGUA: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_FONTE_MANUAL:
@@ -7854,6 +7871,7 @@ int ajustes_shot_valor(const char *chave, int v) {
 int ajustes_rapido_op(const char *chave) {
   int i, op = -1, n;
   if (!chave || !chave[0]) return -1;
+  if (!strcmp(chave, "corDestaque")) return AJ_RAPIDO_COR;
   for (i = 0; i < AJ_N; i++)
     if (CHAVE[i] && CHAVE[i][0] != '-' && !strcmp(CHAVE[i], chave)) { op = i; break; }
   if (op < 0 || OPCOES[op].tipo != OP_ESCOLHA) return -1;
@@ -7863,10 +7881,52 @@ int ajustes_rapido_op(const char *chave) {
   for (i = 0; i < AJ_N_TELA; i++) if (TELA[i].tipo == IT_OPC && TELA[i].op == op) return op;
   return -1;
 }
-const char *ajustes_rapido_rotulo(int op) { return op >= 0 && op < AJ_N ? rotuloOpcao(op) : ""; }
-const char *ajustes_rapido_valor(int op) { return op >= 0 && op < AJ_N ? textoValor(op) : ""; }
+static int corTema(int i);
+const char *ajustes_rapido_cor_atual_nome(void);
+const char *ajustes_rapido_rotulo(int op) {
+  if (op == AJ_RAPIDO_COR) return rotuloOpcao(AJ_TEMA);
+  return op >= 0 && op < AJ_N ? rotuloOpcao(op) : "";
+}
+const char *ajustes_rapido_valor(int op) {
+  if (op == AJ_RAPIDO_COR) return ajustes_rapido_cor_atual_nome();
+  return op >= 0 && op < AJ_N ? textoValor(op) : "";
+}
 int ajustes_rapido_ligado(int op) { return op >= 0 && op < AJ_N && ehInterruptor(op) ? lig(op) : -1; }
 int ajustes_rapido_passo(int op, int dir) {
+  if (op == AJ_RAPIDO_COR) {   // sem seletor: o proximo dos dezoito
+    int a = ajustes_rapido_cor_atual();
+    return ajustes_rapido_cor_definir(((a < 0 ? 0 : a) + (dir < 0 ? 17 : 1)) % 18);
+  }
   if (op < 0 || op >= AJ_N) return 0;
   { int r; ajOrigemDireto = AJLOG_CENTRAL; r = definirValorDireto(op, passoAdiante(op, dir < 0 ? -1 : 1)); ajOrigemDireto = AJLOG_AJUSTES; return r; }
+}
+
+// A COR DE DESTAQUE NA CENTRAL. O seletor da central mostra so os dezoito
+// acentos fixos (a regua de Ajustes: nove claros, nove profundos); os
+// dinamicos (Da arte, Textura...) pedem a tela de Ajustes. A troca passa por
+// definirValorDireto, o mesmo caminho do OK da tela.
+int ajustes_rapido_cor_n(void) { return 18; }
+static int corTema(int i) { return i < 0 || i >= 18 ? 0 : i < 9 ? REGUA_CLAROS[i] : REGUA_PROFUNDOS[i - 9]; }
+const char *ajustes_rapido_cor_nome(int i) { return V_TEMA[corTema(i)]; }
+float ajustes_rapido_cor(int i, float *r, float *g, float *b) {
+  int t = corTema(i);
+  corDeHex(TEMA_ACENTO[t].fill, r, g, b);
+  return TEMA_ACENTO[t].fam == 'c' ? AJ_TINTA_ESCURA : 1.0f;
+}
+int ajustes_rapido_cor_atual(void) {
+  int i, v = valor[AJ_TEMA];
+  if (SEGURO && temaDinamico()) v = 0;
+  for (i = 0; i < 18; i++) if (corTema(i) == v) return i;
+  return -1;   // um dinamico: nenhum dos dezoito
+}
+const char *ajustes_rapido_cor_atual_nome(void) {
+  int i = ajustes_rapido_cor_atual();
+  return i >= 0 ? V_TEMA[corTema(i)] : V_TEMA[valor[AJ_TEMA] >= 0 && valor[AJ_TEMA] < AJ_N_TEMAS_OPC ? valor[AJ_TEMA] : 0];
+}
+int ajustes_rapido_cor_definir(int i) {
+  if (i < 0 || i >= 18) return 0;
+  int r; ajOrigemDireto = AJLOG_CENTRAL;
+  r = definirValorDireto(AJ_TEMA, corTema(i));
+  ajOrigemDireto = AJLOG_AJUSTES;
+  return r;
 }

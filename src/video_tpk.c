@@ -29,6 +29,7 @@
 #include "rede.h"
 #include "faixasmkv.h"
 #include "velocidade.h"
+#include "vazao.h"
 #include <SDL2/SDL.h>
 #include <pthread.h>
 #include <stdatomic.h>
@@ -89,6 +90,7 @@ static volatile int durMs, bufferando;
 // e a recusa a esconde pelo resto da execucao.
 static volatile int velPedida = 100, velEnviada = 100, velRecusada;
 static volatile Uint32 bufferDesde;
+static volatile int bufPct;   // o ultimo evento 7 do host (0..100)
 static unsigned sessao;
 // The host reports numeric errors from another thread. Preserve that evidence
 // for the source failure screen without guessing a codec or network cause.
@@ -285,6 +287,7 @@ void nv_tpk_video_evento(int tipo, int a, int b) {
                      printf("[video] tpk: player error 0x%08x (%d)\n", (unsigned)a, b); break;
     case EV_TAMANHO: largura = a; altura = b; break;
     case EV_BUFFER:
+      bufPct = a < 0 ? 0 : a > 100 ? 100 : a;
       if (a < 100 && !bufferando) { bufferando = 1; bufferDesde = SDL_GetTicks(); }
       else if (a >= 100) bufferando = 0;
       break;
@@ -370,7 +373,7 @@ static int abrirSessao(void) {
   vigiaAtiva = pausaPedida = 0;
   atomic_store(&vigiaReiniciar, 1);
   ativo = 1; pronto = falhou = terminou = tocando = 0;
-  largura = altura = durMs = 0; bufferando = 1; bufferDesde = SDL_GetTicks();
+  largura = altura = durMs = 0; bufferando = 1; bufferDesde = SDL_GetTicks(); bufPct = 0;
   nAudio = nLeg = 0; audioAtual = 0; legAtual = -1;
   audioNaoSup = faixasLidas = audioLogado = 0;
   comecou = 0; comecouEm = 0; audioComecou = 0; audioPend = legPend = -1;
@@ -797,6 +800,13 @@ double video_duracao(void) { return durMs / 1000.0; }
 // Capitulos do MKV lidos por um fio lateral (capmkv.c, 203-capitulos).
 double video_creditos(void) { return capmkv_creditos(video_duracao()); }
 double video_buffer_fim(void) { return 0; }
+// SAMSUNG (.tpk): o host so repassa a PORCENTAGEM do buffering (evento 7);
+// nada de bytes, segundos, conexoes ou quadros. O host e o do link pedido.
+void video_estatisticas(VideoStats *s) {
+  video_stats_vazio(s);
+  if (urlAtual[0]) s->bufferPct = bufPct;
+  vazao_host_publico(urlAtual, s->host, sizeof s->host);
+}
 unsigned video_bufferando_ms(void) {
   // Esperando para reconectar: o watchdog (app.c) nao troca de fonte.
   if (nv_recon_ativa(&recon)) return 0;

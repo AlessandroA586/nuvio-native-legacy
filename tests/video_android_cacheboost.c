@@ -43,6 +43,7 @@ static jmethodID JNICALL metodo(JNIEnv *e, jclass c, const char *nome, const cha
   if (!strcmp(nome, "parar")) return (jmethodID)(uintptr_t)12;
   if (!strcmp(nome, "cache")) return semCache ? NULL : (jmethodID)(uintptr_t)13;
   if (!strcmp(nome, "ganho")) return semCache ? NULL : (jmethodID)(uintptr_t)14;
+  if (!strcmp(nome, "buffer")) return semCache ? NULL : (jmethodID)(uintptr_t)16;
   if (!strcmp(nome, "velocidade")) return semCache ? NULL : (jmethodID)(uintptr_t)15;
   return (jmethodID)(uintptr_t)1;
 }
@@ -61,6 +62,7 @@ static void JNICALL chamar(JNIEnv *e, jclass c, jmethodID m, ...) {
     case 13: snprintf(b, sizeof b, "C%d", va_arg(ap, jint)); anota(b); break;
     case 14: snprintf(b, sizeof b, "G%d", va_arg(ap, jint)); anota(b); break;
     case 15: snprintf(b, sizeof b, "V%d", va_arg(ap, jint)); anota(b); break;
+    case 16: snprintf(b, sizeof b, "B%d", va_arg(ap, jint)); anota(b); break;
     default: break;
   }
   va_end(ap);
@@ -181,7 +183,27 @@ int main(void) {
   video_velocidade(200); video_bombear();
   assert(!strcmp(registro, "V100"));
 
-  // An older Kotlin shell without cache()/ganho(): nothing crosses, open works.
+  // #338: buffer crosses before open, once per change, with invalid presets reset.
+  registro[0] = 0;
+  cacheboost_backend_buffer(3);
+  assert(video_tocar("https://example.invalid/buffer.mkv"));
+  assert(strstr(registro, "B3") && strstr(registro, "B3") < strchr(registro, 'A'));
+  registro[0] = 0;
+  assert(abrirSessao(0, 0));
+  assert(!strchr(registro, 'B'));
+  registro[0] = 0;
+  cacheboost_backend_buffer(99);
+  assert(abrirSessao(0, 0));
+  assert(strstr(registro, "B0"));
+  { VideoStats st;
+    Java_space_nuvio_nativelegacy_NvPlayer_nativeStats(&env, NULL, 1000, 25000, 150000, 2, 12, 3, 100, NULL);
+    video_estatisticas(&st);
+    assert(st.bytes == 1000 && st.bufferSeg == 25 && st.bufferAlvoSeg == 150 && st.quadrosPerdidos == 3);
+    assert(abrirSessao(0, 0));
+    video_estatisticas(&st);
+    assert(st.bytes == -1 && st.bufferSeg < 0);
+  }
+  // An older Kotlin shell without cache()/ganho()/buffer(): open still works.
   semCache = 1;
   assert(resolverMetodos(&env));
   registro[0] = 0;

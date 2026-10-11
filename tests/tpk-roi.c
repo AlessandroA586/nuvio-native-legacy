@@ -47,6 +47,13 @@ int main(void) {
   nv_tpk_video_registrar(hAbrir, hParar, hInt, hInt, hInt, hJanela, hPos);
   video_tocar("http://x/trailer.m3u8");
   assert(!video_erro_texto()[0]);
+  { VideoStats st;
+    nv_tpk_video_evento(7, 62, 0);
+    video_estatisticas(&st);
+    assert(st.bufferPct == 62 && st.bytes == -1 && st.bufferSeg < 0);
+    assert(!strcmp(st.host, "x"));
+    nv_tpk_video_evento(7, 100, 0);
+  }
   nv_tpk_video_evento(5, (int)0xfe6c0031u, 0);
   video_bombear();
   assert(video_falhou());
