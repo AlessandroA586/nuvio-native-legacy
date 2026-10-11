@@ -78,6 +78,23 @@ int main(void) {
   assert(buscas == 0); // nao reaplica progresso salvo na suspensao
   puts("ok retorno: 1 load total, 0 stop, 0 seek, pausa confirmada");
 
+  // THE PERSON'S PAUSE, LEAVE, RETURN. The return must come back PLAYING: the
+  // person's pause flag has to clear on the resume, or the pause guard in
+  // player_atualizar reads the deliberate resume as a pipeline that started itself
+  // and pauses the film the person just came back to.
+  abrir("movie");
+  { SDL_Event ev; memset(&ev, 0, sizeof ev);
+    ev.type = SDL_KEYDOWN; ev.key.keysym.sym = SDLK_PAUSE;
+    player_evento(&ev); }
+  assert(player_pausa_pessoa());
+  guardar();
+  assert(player_retomar_retido("fixture-titulo", 0, 0));
+  assert(!player_pausa_pessoa());
+  { int pa = pausas; player_atualizar(.016f, SDL_GetTicks());
+    assert(pausas == pa); }             // the guard did not re-pause it
+  assert(tocando);
+  puts("ok returning from the person's own pause does not come back paused");
+
   guardar();
   int p = paradas;
   player_validar_retido(SDL_GetTicks() + 119000u);

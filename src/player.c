@@ -661,7 +661,7 @@ static void erroSemVideo(void) {
 }
 // Desfaz o de cima quando a fonte que parecia morta volta a entregar. Ver a
 // nota no watchdog de canal em app.c.
-void player_limpar_erro_fonte(void) { if (erroFonte) { erroFonte = 0; tocando = 1; } }
+void player_limpar_erro_fonte(void) { if (erroFonte) { erroFonte = 0; tocando = 1; pausaPessoa = 0; } }
 // Leitura do estado para o watchdog de canal do app.c: uma fonte ao vivo que
 // falhou (ou nao abre no prazo) deve trocar para a proxima da lista sozinha.
 int  player_fonte_falhou(void) { return erroFonte; }
@@ -2055,7 +2055,7 @@ int player_retomar_retido(const char *imdb, int t, int e) {
   desc_episodios_garantir(idxAtual());
   entrada = 1.0f; visivel = 0; anim = 0.0f; soBarra = 0;
   scrubbing = barraFoco = 0; encolhe = 1.0f; encolheT = encolheAlvo = 0.0f;
-  ultimoInput = agora; retomadaAplicada = 1; tocando = 1;
+  ultimoInput = agora; retomadaAplicada = 1; tocando = 1; pausaPessoa = 0;
   medirAbertura = 0;   // a medida desta volta e a "retomada pronta" abaixo
   relogio_zerar(&relLeg);
   avisarCascaAberto(1); aplicarAspecto();
@@ -2773,7 +2773,7 @@ static void terminarSalto(void) {
   seekr_ocioso();   // solta a folha decodificada (~22 MB), fica o JPEG
   if (comVideo) {
     video_buscar(posSeg);
-    if (scrubTocava) { video_pausar(0); tocando = 1; }
+    if (scrubTocava) { video_pausar(0); tocando = 1; pausaPessoa = 0; }
   }
 }
 
@@ -3297,6 +3297,12 @@ void player_atualizar(float dt, Uint32 agora) {
     // The SCREEN follows the app's intent on this very pass; only the call that
     // pushes the pipeline back is rate-limited, so a pipeline that keeps resuming
     // is not hammered with a pause every frame.
+    //
+    // `pausaPessoa` IS THE WHOLE ANSWER TO "did the person pause?". Every deliberate
+    // resume clears it (alternarTocando, avVoltarAoVivo, terminarSalto,
+    // player_retomar_retido) - a resume that left it set looked like a pipeline
+    // resuming on its own, and this guard paused the film the person had just asked
+    // for. Anything that starts playback without asking the person must not exist.
     tocando = video_tocando();
     if (tocando && pausaPessoa && comVideo) {
       tocando = 0;
