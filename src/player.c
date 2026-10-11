@@ -4398,12 +4398,12 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
     if (ts && as > 0.01f) gfx_rect(tela, ts, GFX_CARD, 0, 0, 0, 0.0f, 0, 0, 0, as); }
   gfx_tex_aspect_atual = 0.0f;
 
-  // O LOGO RESPIRA: 3,2 s por ciclo, 2% de escala e 12% de brilho.
-  resp = reduz ? 0.0f : 0.5f - 0.5f * cosf(t * 6.2831853f / 3.2f);
+  // O logo fica PARADO (dono, 11/10: sem aumentar e diminuir); so o trilho anda.
+  resp = 1.0f;
   entra = reduz ? 1.0f : (t < 0.4f ? t / 0.4f : 1.0f);
   lg = marca ? tex_obter_larg_qualquer(marca, 640) : 0;
   if (lg) {
-    float ar = tex_aspecto(marca), lw = 640.0f, lh = ar > 0.0f ? lw / ar : 200.0f, k = 1.0f + 0.02f * resp;
+    float ar = tex_aspecto(marca), lw = 640.0f, lh = ar > 0.0f ? lw / ar : 200.0f, k = 1.0f;
     if (lh > 220.0f) { lh = 220.0f; lw = lh * ar; }
     gfx_rect((GfxRect){ NV_TELA_W * 0.5f - lw * k * 0.5f, cy - lh * k * 0.5f, lw * k, lh * k }, lg,
              tex_marca_escura(marca) ? GFX_MARCA : GFX_TEXTO, 0, 0, 0, 0, .96f, .96f, .97f,
@@ -4688,7 +4688,9 @@ void player_desenhar(Uint32 agora) {
   // vai-e-volta curto de um seek nao acende.
   // SEM PLACA (dono, 05/10): era um disco de material opaco por tras do anel.
   // Agora so os pontos, cada um com a sombra suave propria (plrui_anel_solto).
-  else if (comVideo && !erroFonte && !saindo && video_bufferando_ms() >= 600) {
+  // Com o veu da Cinema ainda na tela o trilho dela ja e o sinal (dono, 11/10:
+  // o anel por cima do logo ficava feio).
+  else if (comVideo && !erroFonte && !saindo && video_bufferando_ms() >= 600 && cine.veu <= 0.01f) {
     ESCALA_INI();
     plrui_anel_solto(NV_VTELA_W * 0.5f, NV_VTELA_H * 0.5f, 56.0f, agora, entrada);
     ESCALA_FIM();
