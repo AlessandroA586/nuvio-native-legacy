@@ -322,6 +322,12 @@ StreamfitClasse stream_fit_folha_estado(int indice, StreamfitResultado *saida);
 // 0 = sem medida: l1/l2 vazias.
 int stream_fit_abrindo(const Stream *s, char *l1, size_t n1, char *l2, size_t n2);
 int  stream_folha_aberta(void);
+// DETALHES DA FONTE (#355): modal sobre a folha com o texto inteiro do addon.
+// Abre com Info / AMARELA / I na linha em foco; enquanto aberta ela come o
+// teclado (Voltar/OK fecham so ela).
+int  stream_detalhe_aberto(void);
+const char *stream_detalhe_texto(void);          // a descricao ja limpa (para testes)
+int  stream_detalhe_tecla_abre(const SDL_Event *e);
 // QUANTAS LINHAS A FOLHA MOSTRA AGORA — issue #132 ("so 1 fonte listada"). A
 // folha lista a lista INTEIRA de stream_definir_lista; so os filtros que a
 // pessoa liga NA PROPRIA FOLHA (provedor, "MP4") tiram linha. A verificacao do
