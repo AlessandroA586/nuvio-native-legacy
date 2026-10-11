@@ -579,6 +579,9 @@ int fil_adicionar(int i, int *estado) {
   // engolido por uma pasta visivel continuava emColecao, o estado seguia
   // "fora" e a tela dizia "Adicionada" sem nada mudar.
   linhas[i].emColecao = 0;
+  // Adicionar tambem vence o "desligado" vindo da ordem da conta: sem isto a
+  // tela dizia "Added to Home" e a linha ficava em "Not on Home".
+  linhas[i].ocultaConta = 0;
   for (j = nLinhas - 1; j >= 0; j--) if (!linhas[j].oculta && j != i) { ultimo = j; break; }
   // Ja esta depois do ultimo ligado: nao ha para onde ir.
   if (ultimo >= 0 && i < ultimo) {
@@ -1146,7 +1149,7 @@ void fil_colecoes_reconciliar(const char *const *chaves,
     pthread_mutex_lock(&trava);
     int i = achar(chaves[j]);
     if (i >= 0) {
-      int o = ocultas && ocultas[j];
+      int o = ocultas && ocultas[j] && !(linhas[i].visPessoal && !linhas[i].oculta);
       if (linhas[i].ocultaConta != o) { linhas[i].ocultaConta = o; revisao++; }
       if (titulos && titulos[j] && strcmp(linhas[i].titulo, titulos[j])) {
         snprintf(linhas[i].titulo, sizeof linhas[i].titulo, "%s", titulos[j]);
@@ -1182,7 +1185,8 @@ void fil_conta_reconciliar(const char *const *chaves, const int *ocultas,
     int o = 0, c = 0;
     for (int j = 0; j < n; j++)
       if (chaves[j] && !strcmp(chaves[j], linhas[i].chave)) {
-        o = ocultas && ocultas[j]; c = emColecao && emColecao[j]; break;
+        o = ocultas && ocultas[j] && !(linhas[i].visPessoal && !linhas[i].oculta);
+        c = emColecao && emColecao[j]; break;
       }
     if (linhas[i].ocultaConta != o) { linhas[i].ocultaConta = o; revisao++; }
     if (linhas[i].emColecao != c) { linhas[i].emColecao = c; revisao++; }
