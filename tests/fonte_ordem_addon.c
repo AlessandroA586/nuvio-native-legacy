@@ -3,6 +3,18 @@
 #include "../src/streams.c"
 
 static int modo;
+static int negativa, consultas;
+int debrid_resolver_cache(const char *h, int f, char *u, unsigned t, int *fora) {
+  (void)h; (void)f; (void)u; (void)t; consultas++; *fora = negativa; return 0;
+}
+int rede_url_final_tipo(const char *u, int s, const char *const *c, char *d,
+                        unsigned t, int *st, char *m, unsigned mt, long *b) {
+  (void)u; (void)s; (void)c; (void)d; (void)t; (void)st; (void)m; (void)mt; (void)b;
+  assert(!"esta fixture so consulta torrent"); return 0;
+}
+char *rede_baixar_st(const char *u, int s, const char *const *c, int *st) {
+  (void)u; (void)s; (void)c; (void)st; assert(!"sem rede nesta fixture"); return NULL;
+}
 int ajustes_selos_coloridos(void) { return 0; }
 void selospacote_colorido(int ligado) { (void)ligado; }
 int selospacote_embutidos_ok(void) { return 0; }
@@ -11,7 +23,7 @@ const char *i18n(const char *s) { return s; }
 int vazao_url_aviso(const char *url) { (void)url; return 0; }
 int ajustes_fonte_ordem_addon(void) { return modo; }
 int ajustes_fonte_texto_addon(void) { return 0; }
-int debrid_ativo(void) { return 0; }
+int debrid_ativo(void) { return 1; }
 int p2p_ativo(void) { return 0; }
 int selospacote_ativo(void) { return -1; }
 unsigned selospacote_versao(void) { return 1; }
@@ -33,6 +45,8 @@ static void conferir(const int *esperada, int qtd) {
   if (modo) for (int g = 0; g < FOLHA_GRUPOS; g++) assert(secN[g] == 0);
 }
 int main(void) {
+  assert(stream_texto_fora_de_cache("Not cached"));
+  assert(!stream_texto_fora_de_cache("cached WEB-DL Download"));
   const char *json = "{\"streams\":["
     "{\"url\":\"https://video.invalid/720.mp4\",\"name\":\"720p\",\"videoSize\":104857600},"
     "{\"url\":\"https://video.invalid/4k-small.mp4\",\"name\":\"2160p\",\"videoSize\":209715200},"
@@ -58,5 +72,41 @@ int main(void) {
   soMp4 = 0; filtro = 0; melhorFolha = -1; fitClasses[4] = SF_DESCONHECIDA;
   modo = 0; conferir(qualidade, 6);
   stream_definir_lista(NULL, 0); modo = 1; conferir(NULL, 0);
+  // #402: cache negativo conhecido vai ao fim, desconhecido conserva a ordem.
+  const char *mista = "{\"streams\":["
+    "{\"infoHash\":\"a\",\"name\":\"⏳ 2160p\"},"
+    "{\"url\":\"https://video.invalid/720.mp4\",\"name\":\"720p\"},"
+    "{\"infoHash\":\"b\",\"name\":\"1080p\"},"
+    "{\"infoHash\":\"c\",\"name\":\"⚡ 1080p cached\"}]}";
+  assert(stream_extrair(mista, "NMR | ALL", &a) == 4);
+  assert(a[0].foraCache && !a[2].foraCache && !a[3].foraCache);
+  stream_definir_lista(a, 4); free(a);
+  atualizarProvedores(); melhorFolha = -1;
+  const int mistaQ[] = {2,3,1,0}, mistaA[] = {1,2,3,0};
+  modo = 0; conferir(mistaQ, 4);
+  melhorFolha = 0; conferir(mistaQ, 4); // nem a promocao pode ressuscita-la
+  modo = 1; conferir(mistaA, 4);
+  assert(!stream_automatico_disponivel(0));
+  assert(stream_automatico_disponivel(2) && stream_automatico_disponivel(3));
+  assert(temMarca(0, -1)); // selo tambem no modo de texto do addon
+  // Campo estruturado sem marca textual: false e diferente de ausente/true.
+  assert(stream_extrair("{\"streams\":["
+    "{\"name\":\"2160p\",\"clientResolve\":{\"infoHash\":\"x\",\"isCached\":false}},"
+    "{\"name\":\"720p\",\"clientResolve\":{\"infoHash\":\"y\",\"isCached\":true}},"
+    "{\"name\":\"1080p\",\"infoHash\":\"z\",\"behaviorHints\":{\"bingeGroup\":\"aio|1080p\"}}]}",
+    "AIOStreams", &a) == 3);
+  assert(a[0].foraCache && !a[1].foraCache && !a[2].foraCache);
+  stream_definir_lista(a, 3); free(a); melhorFolha = -1;
+  atualizarProvedores();
+  const int hintQ[] = {2,1,0}, hintA[] = {1,2,0};
+  modo = 0; conferir(hintQ, 3); modo = 1; conferir(hintA, 3);
+  Conferencia c = {0}; c.geracao = listaGeracao;
+  negativa = 0; assert(!verificarUma(2, &c)); // erro/sem resposta nao e negativa
+  assert(!lista[2].foraCache && consultas == 1);
+  negativa = 1; assert(!verificarUma(2, &c));
+  assert(lista[2].foraCache && consultas == 2 && !stream_automatico_disponivel(2));
+  assert(!verificarUma(2, &c) && consultas == 2); // nao consulta de novo
+  const int consultada[] = {1,0,2};
+  modo = 0; conferir(consultada, 3); modo = 1; conferir(consultada, 3);
   puts("fonte_ordem_addon: PASS (qualidade, addon, chegada inversa, filtros, melhor fonte, StreamFit, troca, vazio)");
 }

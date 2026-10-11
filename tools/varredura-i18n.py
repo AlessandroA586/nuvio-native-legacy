@@ -498,6 +498,7 @@ IGNORAR = {
     "inicio alem da duracao",
     "inicio antes de 50% do filme",  # intro.c:399, secao 2: so o log [marcador]
     "codec nao e de texto (ASS/SRT/WebVTT): a TV desenha",
+    "legenda nativa desligada", # faixas.c: argumento ternario do printf, so log
     "confirmada pelo relogio do pipeline", "enviado ao ExoPlayer",
     "dado sem decoder", "sem dado no prazo",
     "escolha manual: a folha abre com o que chegou", "fonte boa o bastante",

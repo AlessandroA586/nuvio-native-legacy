@@ -221,7 +221,7 @@ int stream_texto_fora_de_cache(const char *t) {
   if (!t) return 0;
   return strstr(t, "\xe2\x8f\xb3") != NULL          // U+23F3 ⏳
       || strstr(t, "\xe2\xac\x87") != NULL          // U+2B07 ⬇
-      || contem(t, " download]") || contem(t, "uncached");
+      || contem(t, " download]") || contem(t, "uncached") || contem(t, "not cached");
 }
 
 // "sources": ["tracker:udp://...", "dht:<hash>"] de um stream de torrent, uma
@@ -371,6 +371,14 @@ int stream_extrair(const char *json, const char *provedor, Stream **saida) {
       }
       s.mp4 = token(texto, "mp4") || contem(s.url, ".mp4");
       s.foraCache = stream_texto_fora_de_cache(texto);
+      // AIOStreams: clientResolve.isCached e explicito; ausente nao e false.
+      if (s.infoHash[0] && !s.url[0]) {
+        const char *cr = valorRaiz(p, fim, "clientResolve");
+        const char *v = cr ? valorRaiz(cr, fim, "isCached") : NULL;
+        if (v && fim - v >= 5 && !memcmp(v, "false", 5) &&
+            (v + 5 == fim || v[5] == ',' || v[5] == '}' || isspace((unsigned char)v[5])))
+          s.foraCache = 1;
+      }
       if (s.infoHash[0]) s.temSemeadores = lerSemeadores(texto, &s.semeadores);
       s.tamanhoBytes = bytesExatos(p, fim);
       double bytes = js_num(p, fim, "videoSize", 0);

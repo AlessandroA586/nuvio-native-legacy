@@ -81,8 +81,8 @@ typedef struct {
   // "⏳" do AIOStreams, "[TB download]"/"[RD download]" do Torrentio, "⬇" ou
   // "uncached" no nome/descricao. Abrir o link manda o servico BAIXAR, e o que
   // toca antes de terminar e um clipe de aviso de ~8 s (registros 1136, 2191,
-  // 2501). Serve a duas coisas: o automatico poe estas no fim da fila (pontos()
-  // em streams.c), e a escolha manual avisa na tela que o servico esta
+  // 2501). Tambem recebe a negativa da consulta de debrid ja feita. A folha
+  // poe estas no fim e o automatico as exclui; a escolha manual avisa que esta
   // baixando. Nao exclui nada: escolhida a dedo, toca como na 1.3.5.
   int  foraCache;
   // A SONDA VIU A URL RESPONDER PAGINA (HTML/JSON/texto) e nao video (2.0.2,
