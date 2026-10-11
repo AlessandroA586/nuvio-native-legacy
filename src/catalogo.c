@@ -1897,6 +1897,30 @@ int cat_completar_sinopse(int i, const char *imdb, const char *sinopse,
   return ok;
 }
 
+// Campos basicos da pre-busca: so lacunas, com identidade sob a mesma trava.
+int cat_completar_basico(int i, const CatItem *c) {
+  if (!c || !c->imdb[0]) return 0;
+  int ok = 0;
+  catTravar();
+  if (itens && i >= 0 && i < n && !strcmp(itens[i].imdb, c->imdb) &&
+      !strcmp(itens[i].tipo, c->tipo)) {
+    if (!itens[i].logo[0] && c->logo[0]) {
+      snprintf(itens[i].logo, sizeof itens[i].logo, "%s", c->logo); ok = 1;
+    }
+    if (!itens[i].meta[0] && c->meta[0]) {
+      snprintf(itens[i].meta, sizeof itens[i].meta, "%s", c->meta); ok = 1;
+    }
+    if (!itens[i].nota && c->nota > 0) { itens[i].nota = c->nota; ok = 1; }
+    if (!itens[i].nElenco && c->nElenco > 0 && c->nElenco <= CAT_ELENCO_MAX) {
+      itens[i].nElenco = c->nElenco;
+      memcpy(itens[i].elenco, c->elenco, sizeof itens[i].elenco); ok = 1;
+    }
+    if (ok) mudou();
+  }
+  pthread_mutex_unlock(&pubTrava);
+  return ok;
+}
+
 // Escrita PARCIAL do texto localizado (fioLocalizar): titulo, sinopse, logo e
 // fundo (backdrop e backdropCatalogo), cada um so se veio e e diferente — campo
 // vazio nao apaga, como aplicarLocItem. Revalida a identidade sob a trava;
