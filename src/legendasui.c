@@ -786,6 +786,12 @@ static void desenharLinha(const LuiLinha *l, int idx, int sel, float x, float y,
     gfx_icone((GfxRect){ dir - 24.0f, y + (LU_LN_H - 24.0f) * 0.5f, 24.0f, 24.0f }, "pl_chevron-right", 1, 1, 1, (sel ? 0.9f : 0.5f) * aL);
     if (pont && l->tipo != LR_MAIS) ponteiro_alvo(dir - 40.0f, y, 40.0f, LU_LN_H, ponteiroLinha, ponteiroMenuAbrir, idx, 0);
     dir -= 24.0f + 10.0f;
+    // Dono, 11/10: a linha em foco diz que segurar abre mais ("hold to more"),
+    // na mesma pilula de tecla do rodape.
+    if (sel && !menu && l->tipo != LR_MAIS) {
+      const char *k[1] = { "Segure OK" }, *r[1] = { "Mais opções" };
+      dir -= plrui_dicas(k, r, 1, dir, y + LU_LN_H * 0.5f, 1, 0.8f * aL) + 12.0f;
+    }
   }
   if (l->tipo == LR_SYNC && sel) {
     // The chosen action between < > discs; a disc dims with nothing beyond it.
@@ -916,8 +922,9 @@ void legendasui_corpo(GfxRect c, float a) {
       txt_desenhar_alpha(l, x0 + 10.0f, yc - (float)l.h * 0.5f, a);
     } else {
       char q[32];
-      const char *k[4] = { "OK", "Segure OK", "\xe2\x86\x92", "Voltar" };
-      const char *rt[4] = { "Usar", "Opções", "Estilo", mais || ver ? "Voltar" : "Fechar" };
+      // "Segure OK" saiu daqui: a linha em foco ja diz (Mais opcoes).
+      const char *k[3] = { "OK", "\xe2\x86\x92", "Voltar" };
+      const char *rt[3] = { "Usar", "Estilo", mais || ver ? "Voltar" : "Fechar" };
       const char *km[2] = { "OK", "Voltar" }, *rm[2] = { "Usar", "Fechar" };
       int naSync = nLinhasV && linhas[foco].tipo == LR_SYNC, nf = 0, pf = 0;
       // The AutoSync row is not a choice: it is left out of "N de M", which
@@ -928,7 +935,7 @@ void legendasui_corpo(GfxRect c, float a) {
         { TxtLinha l = txt_linha(TXT_ILHA_APOIO, q, 243, 242, 239, 115);
           txt_desenhar_alpha(l, x0 + 10.0f, yc - (float)l.h * 0.5f, a); }
         if (menu) plrui_dicas(km, rm, 2, x0 + w - 10.0f, yc, 1, a);
-        else plrui_dicas(k, rt, 4, x0 + w - 10.0f, yc, 1, a);
+        else plrui_dicas(k, rt, 3, x0 + w - 10.0f, yc, 1, a);
       } else {
         const char *rot[4], *ks[3] = { "OK", "\xe2\x86\x90 \xe2\x86\x92", "Voltar" };
         int n = nAcoes(linhas[foco].slot, rot, 4);
