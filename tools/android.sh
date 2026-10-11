@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build do Nuvio para Android TV (SDL2 + GLES2, nucleo C em libmain.so).
+# Build do Nuvio para Android TV/Mobile (SDL2 + GLES2, nucleo C em libmain.so).
 #
 #   tools/android.sh            -> APK debug em build/android/Nuvio-<v>-android-debug.apk
 #   NUVIO_P2P_MOTOR=<raiz> tools/android.sh -> motor P2P (padrao: pasta achada por tools/p2p-motor/pasta.sh; =none desliga)
@@ -77,7 +77,10 @@ for abi in arm64-v8a armeabi-v7a; do
 done
 
 echo "[4/5] gradle"
-GR=(android/gradlew -p android --console=plain -Pnuvio.sdlSrc="$CACHE/src" -Pnuvio.estagio="$EST")
+export ANDROID_NDK_HOME="${ANDROID_NDK_HOME:-$ANDROID_HOME/ndk/27.2.12479018}"
+FFMPEG_AAR="$EST/media3-ffmpeg-16kb.aar"
+bash tools/android/ffmpeg-android.sh "$FFMPEG_AAR" arm64-v8a armeabi-v7a
+GR=(android/gradlew -p android --console=plain -Pnuvio.sdlSrc="$CACHE/src" -Pnuvio.estagio="$EST" -Pnuvio.ffmpegAar="$FFMPEG_AAR")
 # Motor P2P embutido: pasta achada por tools/p2p-motor/pasta.sh (NUVIO_P2P_MOTOR,
 # ou a pasta padrao); configurada e incompleta = erro, nunca pacote sem motor calado.
 . tools/p2p-motor/pasta.sh
@@ -116,11 +119,11 @@ SEGREDO='(^|/)(trakt|addons|tmdb|mdblist|sessao|simkl[^/]*|fanart|diag-token)\.t
 for a in "${APKS[@]}"; do
   L=$(unzip -Z1 "$a")
   for need in lib/arm64-v8a/libmain.so lib/armeabi-v7a/libmain.so lib/arm64-v8a/libSDL2.so lib/armeabi-v7a/libSDL2.so; do
-    printf '%s\n' "$L" | grep -qx "$need" || { echo "android.sh: $a nao tem $need" >&2; exit 1; }
+    printf '%s\n' "$L" | grep -x "$need" >/dev/null || { echo "android.sh: $a nao tem $need" >&2; exit 1; }
   done
-  printf '%s\n' "$L" | grep -q '^assets/art/' || { echo "android.sh: $a sem assets/art" >&2; exit 1; }
-  printf '%s\n' "$L" | grep -q '^assets/fonts/' || { echo "android.sh: $a sem assets/fonts" >&2; exit 1; }
-  printf '%s\n' "$L" | grep -q '^assets/licencas/p2p-avisos.txt$' || { echo "android.sh: $a sem assets/licencas" >&2; exit 1; }
+  printf '%s\n' "$L" | grep '^assets/art/' >/dev/null || { echo "android.sh: $a sem assets/art" >&2; exit 1; }
+  printf '%s\n' "$L" | grep '^assets/fonts/' >/dev/null || { echo "android.sh: $a sem assets/fonts" >&2; exit 1; }
+  printf '%s\n' "$L" | grep '^assets/licencas/p2p-avisos.txt$' >/dev/null || { echo "android.sh: $a sem assets/licencas" >&2; exit 1; }
   if [ -n "$NV_P2P_DIR" ]; then   # motor pedido: o simbolo da API C tem de estar nas DUAS libmain.so
     for abi in arm64-v8a armeabi-v7a; do
       m=$(unzip -p "$a" "lib/$abi/libmain.so" | strings | grep -c 'Nuvio Engine/' || true)
@@ -130,6 +133,8 @@ for a in "${APKS[@]}"; do
   fi
   n=$(printf '%s\n' "$L" | grep -c -E "$SEGREDO" || true)
   [ "$n" = "0" ] || { echo "android.sh: $a leva $n arquivo(s) de pessoa:" >&2; printf '%s\n' "$L" | grep -E "$SEGREDO" >&2; exit 1; }
+  python3 tools/android-apk-pages.py "$a"
   echo "ok: $a ($(du -h "$a" | cut -f1))"
   printf '%s\n' "$L" | grep -E '^lib/.*\.so$' | sed 's/^/  /'
 done
+

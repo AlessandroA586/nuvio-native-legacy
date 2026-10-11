@@ -168,8 +168,13 @@ static void mudouEstado(const char *s) {
 }
 
 int st_ler(int d, char *dst, size_t n) {
+  return st_ler_valor(d, dst, n, NULL);
+}
+
+int st_ler_valor(int d, char *dst, size_t n, int *valorRecebido) {
   char ev[600];
   int r = ST_NADA, k;
+  if (valorRecebido) *valorRecebido = 0;
   if (n) dst[0] = 0;
   for (k = 0; k < 32 && proximo(ev, sizeof ev); k++) {
     char t = ev[0];
@@ -177,8 +182,10 @@ int st_ler(int d, char *dst, size_t n) {
     if (d != dono) continue;              // de outro campo: descarta
     switch (t) {
       case 'T': case 'P':
+        if (valorRecebido) *valorRecebido = 1;
         snprintf(dst, n, "%s", v); r = ST_TEXTO; break;
       case 'D': case 'V':
+        if (valorRecebido) *valorRecebido = 1;
         snprintf(dst, n, "%s", v);
         printf("[texto] %s: %d bytes\n", t == 'D' ? "teclado concluiu" : "voz final", (int)strlen(v));
         fflush(stdout);

@@ -406,6 +406,9 @@ void trailer_abrir(const char *fonte, GfxRect r, int som, int modoCheia) {
 
 void trailer_rect(GfxRect r) {
   if (!aberto) return;
+#ifdef NV_TOUCH_UI
+  if (rect.x == r.x && rect.y == r.y && rect.w == r.w && rect.h == r.h) return;
+#endif
   rect = r;
 #ifdef __EMSCRIPTEN__
   trailer_js_abrir(fonteAtual, r.x, r.y, r.w, r.h, comSom, ajustes_trailer_zoom(), NV_REC_URL);

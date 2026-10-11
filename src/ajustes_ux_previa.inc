@@ -934,7 +934,7 @@ static float ajPreviaEditor(int op, float x, float y, float w) {
 void ajustes_previa_busca(int op, float x, float y, float w, float h, float a) {
   char v[160];
   TxtLinha l;
-  if (op < 0 || op >= AJ_N) return;
+  if (op < 0 || op >= AJ_N || !ajOpcaoDisponivel(op)) return;
   // 2.0.2: a previa gerada da opcao (sem foto), no meio do quadro pedido.
   { float g = gfx_opacidade_grupo, cw = h * 16.0f / 9.0f;
     if (cw > w) cw = w;

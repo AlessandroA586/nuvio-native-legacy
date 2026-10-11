@@ -109,6 +109,9 @@ static const Item TELA[] = {
     ROT("Barra lateral"), OPC(AJ_RAIL_BLUR),
 
   SEC("Aparência", "Cor, transparência, fonte, animações e relógio", "aj_palette"),
+#ifdef NV_TOUCH_UI
+    OPC(AJ_INTERFACE_MODO),
+#endif
     ROT("Cores e vidro"),
       OPC(AJ_TEMA), OPC(AJ_FUNDO), OPC(AJ_COR_LOGO), OPC(AJ_VIDRO), OPC(AJ_VIDRO_CONTORNO),
     ROT("Logo e abertura"),

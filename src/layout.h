@@ -8,8 +8,24 @@
 #ifndef NV_LAYOUT_H
 #define NV_LAYOUT_H
 
-#define NV_TELA_W        1920.0f
-#define NV_TELA_H        1080.0f
+#define NV_TELA_BASE_W   1920.0f
+#define NV_TELA_BASE_H   1080.0f
+#ifdef NV_TOUCH_UI
+extern float nv_layout_w;
+extern float nv_layout_h;
+#define NV_TELA_W        nv_layout_w
+#define NV_TELA_H        nv_layout_h
+#else
+#define NV_TELA_W        NV_TELA_BASE_W
+#define NV_TELA_H        NV_TELA_BASE_H
+#endif
+
+// TV starts with the original 1920x1080 canvas. Mobile preserves the physical
+// aspect ratio, with a virtual short edge of 1080. Changing mode reuses the
+// last valid drawable size, including when Android does not emit a resize.
+void layout_tela_definir(int width, int height);
+void layout_modo_definir(int mobile);
+int layout_modo_mobile(void);
 
 // O shell legacy usa uma rail de 72dp (144px no canvas 1080p) e inicia o
 // conteúdo 104px depois dela, como no CSS .home-main + --home-content-start.
@@ -1000,3 +1016,4 @@ extern float nv_cor_fundo_viva[3];   // corviva.c
 #define NV_DET_ESTOURO   0.035f
 
 #endif
+

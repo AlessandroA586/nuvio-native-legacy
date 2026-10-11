@@ -215,7 +215,14 @@ static Uint32 animIni;
 
 void tgraf_reiniciar(void) { animImdb[0] = 0; animIni = 0; }
 
-float tgraf_altura(void) { return TG_CAB + TG_CARD_H; }
+#include "telefoneui.h"
+static int tgEmpilhado(void) { return telefoneui_ativo() && NV_TELA_W < 1500; }
+float tgraf_altura_dados(const TgDados *d) {
+  if (!tgEmpilhado()) return TG_CAB + TG_CARD_H;
+  return TG_CAB + TG_CARD_H + TG_GAP + 52 + (d ? d->n : 0) * 46.0f +
+         (d && d->nAmg > 0 ? TG_GAP + TG_CARD_H : 0);
+}
+float tgraf_altura(void) { return tgraf_altura_dados(&dados); }
 
 static float suaveSaida(float x) {
   if (x <= 0.0f) return 0.0f;
@@ -317,7 +324,8 @@ static void colunaNumeros(const TgDados *d, float x, float y, float w, int foco,
 #define TG_LIN_TEMP_H 46.0f
 static void desenhaGrafico(const TgDados *d, GfxRect card, int foco, int selNumero,
                            float a, Uint32 agora) {
-  float ax = card.x + TG_PAD + TG_STAT_W + TG_PAD, aw = card.x + card.w - TG_PAD - ax;
+  float ax = card.x + TG_PAD + (tgEmpilhado() ? 0 : TG_STAT_W + TG_PAD);
+  float aw = card.x + card.w - TG_PAD - ax;
   float ay = card.y + 26.0f, ah = card.h - 52.0f;
   float ar, ag, ab, colW, linH;
   int i, nCol, porCol;
@@ -328,7 +336,8 @@ static void desenhaGrafico(const TgDados *d, GfxRect card, int foco, int selNume
           1.0f, 1.0f, 1.0f, a * 0.08f);
   porCol = (int)(ah / TG_LIN_TEMP_H);
   if (porCol < 1) porCol = 1;
-  nCol = (d->n + porCol - 1) / porCol;
+  nCol = tgEmpilhado() ? 1 : (d->n + porCol - 1) / porCol;
+  if (tgEmpilhado()) porCol = d->n > 0 ? d->n : 1;
   if (nCol > 4) { nCol = 4; porCol = (d->n + 3) / 4; }
   linH = ah / (float)porCol;
   if (linH > TG_LIN_TEMP_H + 8.0f) linH = TG_LIN_TEMP_H + 8.0f;
@@ -416,7 +425,7 @@ static void desenhaAmigos(const TgDados *d, GfxRect card, float a, Uint32 agora)
 
 void tgraf_desenhar(const TgDados *d, float x, float y, float w, int foco,
                     int selNumero, float a, Uint32 agora) {
-  float alt = tgraf_altura();
+  float alt = tgraf_altura_dados(d);
   GfxRect cg, ca;
   int temAmg;
   if (!tgraf_existe(d) || a <= 0.001f) return;
@@ -429,6 +438,21 @@ void tgraf_desenhar(const TgDados *d, float x, float y, float w, int foco,
   { TxtLinha lt = txt_linha(TXT_HEADLINE, i18n("Seu progresso"), 245, 248, 255, 255);
     txt_desenhar_alpha(lt, x, y, a); }
   temAmg = d->nAmg > 0;
+  if (tgEmpilhado()) {
+    cg = (GfxRect){x, y + TG_CAB, w, TG_CARD_H};
+    notasui_painel(cg, TG_RAIO, a);
+    colunaNumeros(d, cg.x + TG_PAD, cg.y + 30, w - TG_PAD * 2, foco, a);
+    cg.y += cg.h + TG_GAP;
+    cg.h = 52 + d->n * 46.0f;
+    notasui_painel(cg, TG_RAIO, a);
+    desenhaGrafico(d, cg, foco, selNumero, a, agora);
+    if (temAmg) {
+      ca = (GfxRect){x, cg.y + cg.h + TG_GAP, w, TG_CARD_H};
+      notasui_painel(ca, TG_RAIO, a);
+      desenhaAmigos(d, ca, a, agora);
+    }
+    return;
+  }
   cg = (GfxRect){ x, y + TG_CAB, temAmg ? w - TG_AMG_W - TG_GAP : w, TG_CARD_H };
   notasui_painel(cg, TG_RAIO, a);
   colunaNumeros(d, cg.x + TG_PAD, cg.y + 30.0f, TG_STAT_W - 8.0f, foco, a);

@@ -16,6 +16,7 @@
 #include "perfis.h"
 #include "player.h"
 #include "ponteiro.h"
+#include "rolagemtoque.h"
 #include "ilha.h"
 #include "plrilha.h"
 #include "redesaude.h"
@@ -54,6 +55,13 @@ static int aberta, editando;
 static int foco;                // botao em foco; == nBotoes e "Editar atalhos"
 static int focoEd;              // item do catalogo em foco na edicao
 static float rolaEd;            // rolagem da lista de edicao (px)
+#ifdef NV_TOUCH_UI
+static ToqueRolagem toqueCentral;
+static int toqueCentralRolar(const PonteiroRolagem *e) {
+  if (!aberta || !editando) return 0;
+  return toquerol_evento(&toqueCentral, e);
+}
+#endif
 static CentralLista lista;
 static int perfilLido = -1;
 // A previa do cartao de novidades (central_previa_*): sem video tocando,
@@ -137,6 +145,9 @@ static void ativarBotao(int i) {
   if (i == n) {
     int it[64], m = ofertas(it), j;
     editando = 1; focoEd = 0; rolaEd = 0;
+#ifdef NV_TOUCH_UI
+    toquerol_limpar(&toqueCentral);
+#endif
     for (j = 0; j < m; j++) if (centrallista_tem(&lista, it[j])) { focoEd = j; break; }
     return;
   }
@@ -161,6 +172,9 @@ static void alternarOferta(int j) {
 }
 
 void central_evento(const SDL_Event *e) {
+#ifdef NV_TOUCH_UI
+  if (toquerol_navegacao(e)) toquerol_limpar(&toqueCentral);
+#endif
   SDL_Keycode k;
   if (!aberta || e->type != SDL_KEYDOWN) return;
   k = e->key.keysym.sym;
@@ -455,6 +469,11 @@ static void desenhaEdicao(float x, float y, float w, float h, float a) {
   float maxR = (float)m * passo - CC_LINHA_GAP - h;
   if (alvo > maxR) alvo = maxR;
   if (alvo < 0) alvo = 0;
+#ifdef NV_TOUCH_UI
+  toquerol_vincular(&toqueCentral, (GfxRect){x, y, w, h}, gfx_escala(), 0, maxR, 1, &rolaEd);
+  if (aberta && a > 0.5f) ponteiro_rolagem(toqueCentralRolar);
+  if (!toqueCentral.livre)
+#endif
   rolaEd = alvo;
   gfx_recorte(x - 8.0f, y, w + 16.0f, h);
   for (j = 0; j < m; j++) {
@@ -474,7 +493,13 @@ static void desenhaEdicao(float x, float y, float w, float h, float a) {
       ajustes_acento_marca(&ar, &ag, &ab);
       gfx_icone(ic, "aj_circle-check", ar, ag, ab, a);
     } else gfx_icone(ic, "aj_plus", 0.953f, 0.949f, 0.937f, 0.45f * a);
-    if (aberta && a > 0.5f && ponteiro_ativo()) ponteiro_alvo(r.x, r.y, r.w, r.h, ptFoco, ptOk, j, 1);
+    if (aberta && a > 0.5f && ponteiro_ativo()) {
+#ifdef NV_TOUCH_UI
+      ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, y, y + h, ptFoco, ptOk, j, 1);
+#else
+      ponteiro_alvo(r.x, r.y, r.w, r.h, ptFoco, ptOk, j, 1);
+#endif
+    }
   }
   gfx_sem_recorte();
 }

@@ -24,6 +24,8 @@
 #define NV_ESCALA_TELA   // o arquivo inteiro mede pela tela virtual (escala.h)
 #include "escala.h"
 #include "ponteiro.h"
+#include "rolagemtoque.h"
+#include "telefoneui.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -57,6 +59,13 @@
 #define PP_LD_SIN     28.0f
 
 static int    visivel, serie, idx = -1, foco;
+#ifdef NV_TOUCH_UI
+static ToqueRolagem toquePP;
+static float scrollPP;
+static int toquePPRolar(const PonteiroRolagem *e) {
+  return visivel && !serie && telefoneui_ativo() ? toquerol_evento(&toquePP, e) : 0;
+}
+#endif
 // O titulo de `idx` (#190). O catalogo e refeito com o player aberto e a mesma
 // posicao passa a ser de outro titulo: sem o id, o cartao A seguir mostrava o
 // episodio de outra serie. Ver fixarTitulo.
@@ -125,6 +134,9 @@ void posplay_fechar(void) {
   durVista = 0.0; durEstavel = 0.0;   // titulo novo: a duracao comeca de novo
   pedT = pedE = 0; pedTitulo = -1;
   dispensado = 0;   // titulo novo: a dispensa do anterior nao vale mais
+#ifdef NV_TOUCH_UI
+  scrollPP = 0; memset(&toquePP, 0, sizeof toquePP);
+#endif
 }
 
 int posplay_pediu_episodio(int *t, int *e) {
@@ -404,6 +416,9 @@ void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
 int posplay_evento(const SDL_Event *e) {
   int k;
   if (!visivel || e->type != SDL_KEYDOWN) return 0;
+#ifdef NV_TOUCH_UI
+  if (toquerol_navegacao(e)) toquerol_limpar(&toquePP);
+#endif
   k = e->key.keysym.sym;
   if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE ||
       e->key.keysym.scancode == NV_SCANCODE_BACK) {
@@ -495,6 +510,9 @@ static void ponteiroCartaz(int i, int b) {
   if (n > PP_MAX) n = PP_MAX;
   if (!visivel || serie || i < 0 || i >= n || foco == i) return;
   foco = i;
+#ifdef NV_TOUCH_UI
+  toquerol_limpar(&toquePP);
+#endif
 }
 int posplay_teste_foco(void) { return foco; }
 
@@ -585,25 +603,44 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
   // FILME: os relacionados que o Trakt ja deu ao abrir o titulo.
   { int n = extras_n_relacionados(), i;
     float sobe = (1.0f - a) * 20.0f;
-    GfxRect ilha = { x, NV_TELA_H - 444.0f + sobe, NV_TELA_W - 192.0f, 444.0f - 40.0f };   // 636 em 1080
+    float extra = telefoneui_ativo() ? 40.0f : 0;
+    GfxRect ilha = { x, NV_TELA_H - 444.0f - extra + sobe, NV_TELA_W - 192.0f, 444.0f + extra - 40.0f };
     float y = ilha.y + 26.0f, cx;
     if (n > PP_MAX) n = PP_MAX;
     plrui_material(ilha, 36.0f, 0, a);
     { float kx = ilha.x + 34.0f, yc = y + 15.0f;
-      kx += plrui_kicker("Mais como este", kx, yc - 9.0f, 243, 242, 239, a * 0.45f) + 16.0f;
+      float kickerW = plrui_kicker("Mais como este", kx, yc - 9.0f, 243, 242, 239, a * 0.45f);
+      if (telefoneui_ativo()) yc += 34;
+      else kx += kickerW + 16;
       if (foco < n) {
-        TxtLinha t = txt_linha_corta(TXT_ILHA_SECAO, extras_relacionado_titulo(foco), 243, 242, 239, 255, 700.0f);
+        float nomeW = 700;
+        TxtLinha ano = txt_linha(TXT_G18R, extras_relacionado_ano(foco), 243, 242, 239, 128);
+        if (telefoneui_ativo()) nomeW = ilha.w - 68 - (ano.w ? ano.w + 16 : 0);
+        TxtLinha t = txt_linha_corta(TXT_ILHA_SECAO, extras_relacionado_titulo(foco), 243, 242, 239, 255, nomeW);
         txt_desenhar_alpha(t, kx, yc - (float)t.h * 0.5f, a);
         kx += (float)t.w + 16.0f;
         if (extras_relacionado_ano(foco)[0]) {
-          TxtLinha l = txt_linha(TXT_G18R, extras_relacionado_ano(foco), 243, 242, 239, 128);
-          txt_desenhar_alpha(l, kx, yc - (float)l.h * 0.5f + 2.0f, a);
+          txt_desenhar_alpha(ano, kx, yc - (float)ano.h * 0.5f + 2.0f, a);
         }
       }
       { const char *k[3] = { "OK", "\xe2\x86\x93", "Voltar" }, *r[3] = { "Abrir", "Voltar ao player", "Dispensar" };
-        plrui_dicas(k, r, 3, ilha.x + ilha.w - 34.0f, yc, 1, a); } }
-    y += 30.0f + 22.0f;
+        if (!telefoneui_ativo()) plrui_dicas(k, r, 3, ilha.x + ilha.w - 34.0f, yc, 1, a); } }
+    y += 30.0f + 22.0f + extra;
     cx = ilha.x + 34.0f;
+#ifdef NV_TOUCH_UI
+    if (telefoneui_ativo()) {
+      float vista = ilha.w - 54.0f, max = fmaxf(0, n * 212.0f - 22.0f - vista);
+      toquerol_vincular(&toquePP, (GfxRect){cx, y - 20, vista, 313}, gfx_escala(), 0, max, 0, &scrollPP);
+      if (!toquePP.livre) {
+        float esq = foco * 212.0f, dir = esq + 190;
+        if (esq < scrollPP) scrollPP = esq;
+        if (dir > scrollPP + vista) scrollPP = dir - vista;
+        scrollPP = toquerol_clamp(scrollPP, 0, max);
+      }
+      if (visivel && a > .99f) ponteiro_rolagem(toquePPRolar);
+      cx -= scrollPP;
+    }
+#endif
     gfx_recorte(ilha.x, ilha.y - 40.0f, ilha.w, ilha.h + 40.0f);
     for (i = 0; i < n; i++) {
       const char *po = extras_relacionado_poster(i);
@@ -611,12 +648,17 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
       int sel = (i == foco);
       float k = sel ? 1.08f : 1.0f, w = 182.0f * k, h = 273.0f * k;
       GfxRect r = { cx + (182.0f - w) * 0.5f, y + 273.0f - h, w, h };
-      if (cx + 182.0f > ilha.x + ilha.w - 20.0f) break;
+      if (!telefoneui_ativo() && cx + 182.0f > ilha.x + ilha.w - 20.0f) break;
       // A faixa do cartaz inteira, vao incluido: as faixas se encostam e o
       // deslocamento do focado (+8) nao faz o foco oscilar na borda.
-      if (visivel && a > 0.99f && a < 1.01f)
-        ponteiro_alvo(cx, y - 20.0f, 182.0f + 30.0f + (sel ? 8.0f : 0.0f), 273.0f + 40.0f,
-                      ponteiroCartaz, NULL, i, 0);
+      if (visivel && a > 0.99f && a < 1.01f) {
+        float ax = cx, aw = 182.0f + 30.0f + (sel ? 8.0f : 0.0f);
+        if (telefoneui_ativo()) {
+          float right = fminf(ax + aw, ilha.x + ilha.w - 20);
+          ax = fmaxf(ax, ilha.x + 34); aw = right - ax;
+        }
+        if (aw > 0) ponteiro_alvo(ax, y - 20.0f, aw, 313.0f, ponteiroCartaz, NULL, i, 0);
+      }
       if (sel) gfx_rect((GfxRect){ r.x - 20.0f, r.y + 4.0f, r.w + 40.0f, r.h + 40.0f }, 0, GFX_SOMBRA,
                         1.0f, 0, 0, 0.5f, 0, 0, 0, 0.55f * a);
       if (t) {
@@ -624,7 +666,7 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
         gfx_rect(r, t, GFX_CARD, 0, 0, 0, 14.0f / r.h, 0, 0, 0, a * (sel ? 1.0f : 0.82f));
         gfx_tex_aspect_atual = 0.0f;
       } else gfx_cor(r, 14.0f / r.h, .133f, .133f, .133f, a);
-      cx += 182.0f + 30.0f + (sel ? 8.0f : 0.0f);
+      cx += 182.0f + 30.0f + (telefoneui_ativo() ? 0 : sel ? 8.0f : 0.0f);
     }
     gfx_sem_recorte(); }
 }
@@ -633,7 +675,7 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
 // reacao, reacao.h). As contas sao as de posplay_desenhar, sem a mola.
 float posplay_topo(float baseY) {
   if (anim < 0.01f) return baseY;
-  return serie ? NV_TELA_H - 420.0f - 16.0f : NV_TELA_H - 444.0f - 16.0f;
+  return serie ? NV_TELA_H - 420.0f - 16.0f : NV_TELA_H - 444.0f - (telefoneui_ativo() ? 40 : 0) - 16.0f;
 }
 
 #ifdef NV_SHOT_HOOKS
