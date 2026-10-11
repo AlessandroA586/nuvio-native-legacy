@@ -219,6 +219,7 @@ namespace NuvioTpk
                 }
                 try { Apps.Registrar(a => EcoreMainloop.PostAndWakeUp(a)); } catch (Exception e) { Etapa("note apps-init " + e.GetType().Name); }
                 Etapa("ok nv_tpk_iniciar");
+                NvCarga.LimparAntigos(dados);
             }
             catch (Exception e)
             {

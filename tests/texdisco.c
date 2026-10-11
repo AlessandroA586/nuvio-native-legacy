@@ -2,9 +2,16 @@
 #include <errno.h>
 #include <assert.h>
 #include <sys/statvfs.h>
+#include <string.h>
 #include "artehero.h"
 #include "../src/sdlcompat.h"
 static int falhaEscrita, falhaFechar, downloads;
+static int livreTesteMB;
+static int statvfsTeste(const char *p, struct statvfs *fs) {
+  if (!livreTesteMB) return statvfs(p, fs);
+  memset(fs, 0, sizeof *fs); fs->f_frsize=1048576; fs->f_bavail=livreTesteMB;
+  return 0;
+}
 static SDL_mutex *writeRaceMtx;
 static SDL_cond *writeRaceCond;
 static int writeRaceHold, writeRaceBlocked, writeRaceRelease;
@@ -29,10 +36,12 @@ static int fecharTeste(FILE *f) {
 #define fwrite escritaTeste
 #define fclose fecharTeste
 #define rede_baixar_bin redeTeste
+#define statvfs(p, fs) statvfsTeste(p, fs)
 #include "../src/tex_cache.c"
 #undef fwrite
 #undef fclose
 #undef rede_baixar_bin
+#undef statvfs
 char *redeTeste(const char *url, int timeout, long *n) {
   unsigned char *b = calloc(1, 1024);
   (void)url; (void)timeout;
@@ -76,6 +85,10 @@ int main(void) {
   assert(nv_cache_podar(dir,&total,0,512*1024,reserva,0,protegido,NULL)>=4);
   puts("ok: espaco livre dispara poda mesmo abaixo do teto");
   snprintf(dirCache,sizeof dirCache,"%s",dir); cacheDiscoBytes=total;
+  livreTesteMB=299; assert(tetoDisco()==32L*1024*1024);
+  livreTesteMB=300; assert(tetoDisco()>32L*1024*1024);
+  livreTesteMB=0;
+  puts("ok: abaixo de 300 MB livres, arte tem teto de 32 MB");
   snprintf(tmp, sizeof tmp, "%s-pacote/icone.png", dir);
   assert(!noCache(tmp));
   snprintf(tmp, sizeof tmp, "%s/00000000.jpg", dir);
