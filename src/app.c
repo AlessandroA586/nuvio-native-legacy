@@ -4864,6 +4864,9 @@ static void desenharTelas(Uint32 agora) {
   // BRILHO DA INTERFACE DO PLAYER (esmaecer.h): tudo daqui ate a ilha do player
   // multiplica a cor pelo fator (a legenda se isenta em player.c).
   if (player_aberto()) gfx_osd_mult = player_osd_brilho();
+  // UI EM HDR (esmaecer.h): branco a 80% e veus mais densos com o video em
+  // HDR/DV, legenda e tela do DV inclusive. Volta a 1 depois da tela do DV.
+  if (player_aberto()) gfx_hdr_ui = player_ui_hdr();
   CAMADA_SE(player_aberto());
   player_desenhar(agora);
   // O overlay do guia vai POR CIMA do player — o video continua atras do fundo
@@ -4885,6 +4888,7 @@ static void desenharTelas(Uint32 agora) {
   // inclusive: ela cobre a troca do HDR10 pelo caminho do DV e esvai sobre o
   // filme. Sem o brilho do OSD (e tela, nao controle).
   if (player_aberto()) dvtela_desenhar(agora);
+  gfx_hdr_ui = 1.0f;
 }
 
 // ONDE O RELOGIO DA ILHA CABE (ilha.h). Em toda tela de menu (Home, Explorar,

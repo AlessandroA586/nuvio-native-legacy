@@ -546,6 +546,9 @@ void gfx_cor(GfxRect r, float raio, float cr, float cg, float cb, float ca);
 // Multiplicador de COR (nao de alfa) aplicado a GFX_COR/TEXTO/ANEL/MARCA: o brilho
 // da interface do player (esmaecer.h). 1 = sem efeito; quem muda restaura.
 extern float gfx_osd_mult;
+// UI em HDR (esmaecer.h): HDR_UI_BRILHO enquanto o video do player esta em
+// HDR/DV, 1 fora. Vale para texto, cor e logos; quem muda restaura.
+extern float gfx_hdr_ui;
 // A mancha GFX_SOMBRA em `s` sem o miolo `furo`, que um painel OPACO pintado em
 // seguida cobre inteiro (mesmo pixel, menos preenchimento). Ver gfx.c.
 void gfx_sombra_vazada(GfxRect s, float foco, float parx, float raio, float cr, float cg, float cb, float ca,

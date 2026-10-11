@@ -12,6 +12,7 @@
 #include "corviva.h"
 #include "gpunivel.h"
 #include "ajustes.h"
+#include "esmaecer.h"
 
 // A MISTURA, com o estado lembrado. gfx_rect desliga a mistura num desenho
 // opaco e a devolve ao que estava — nao a "ligada" — porque quem gera o
@@ -89,6 +90,7 @@ int gfx_veu_na_arte = 0;
 float gfx_desliza_atual = 0.0f;
 float gfx_opacidade_grupo = 1.0f;
 float gfx_osd_mult = 1.0f;
+float gfx_hdr_ui = 1.0f;
 // Tamanho real do alvo da tela (em retina, maior que 1920x1080). Guardado aqui
 // porque toda volta de FBO precisa restaurar o viewport com ele.
 static int telaW = (int)NV_TELA_W, telaH = (int)NV_TELA_H;
@@ -580,8 +582,9 @@ static const char *FS_CORPO[GFX_NMODOS] = {
 
   // GFX_TEXTO — a forma da letra vem do ALPHA da textura, nunca do RGB
   "void main(){\n"
+  // uFoco = 1 - gfx_hdr_ui (UI em HDR, esmaecer.h); 0 fora do HDR.
   "  vec4 g = texture2D(uTex, vUv);\n"
-  "  gl_FragColor = vec4(g.rgb, g.a * uCor.a);\n"
+  "  gl_FragColor = vec4(g.rgb * (1.0 - uFoco), g.a * uCor.a);\n"
   "}\n",
 
   // GFX_FUNDO — arte desfocada por mipmap (uFoco carrega o bias), com o
@@ -1812,6 +1815,11 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
       (modo == GFX_COR || modo == GFX_TEXTO || modo == GFX_ANEL || modo == GFX_MARCA)) {
     cr *= gfx_osd_mult; cg *= gfx_osd_mult; cb *= gfx_osd_mult;
   }
+  // UI EM HDR (esmaecer.h): o texto pelo uFoco do proprio shader (o RGB dele
+  // vem da textura); retangulos de cor e logos pela cor. Arte nao muda.
+  if (modo == GFX_TEXTO) foco = 1.0f - gfx_hdr_ui;
+  else if (gfx_hdr_ui < 0.999f && (!tex || modo == GFX_MARCA))
+    esmaecer_cor_hdr(gfx_hdr_ui, &cr, &cg, &cb, &ca);
   GFX_TR_RECT(r.x, r.y, r.w, r.h);
   if (escAtiva != 1.0f) { r.x *= escAtiva; r.y *= escAtiva; r.w *= escAtiva; r.h *= escAtiva; }
   // A COR DO DESTAQUE E A ASSINATURA. Com o degrade ligado, todo retangulo ou

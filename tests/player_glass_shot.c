@@ -89,11 +89,13 @@ static void quadros(int n) {
     glBindFramebuffer(GL_FRAMEBUFFER, fbo); glViewport(0, 0, LW, LH);
     glClearColor(0, 0, 0, 1); glClear(GL_COLOR_BUFFER_BIT);
     if (fundo) fundo();
+    gfx_hdr_ui = player_ui_hdr();   // como app.c: UI em HDR (esmaecer.h)
     player_desenhar(relogio);
     episodios_desenhar();
     stream_folha_desenhar(relogio);
     faixas_desenhar(relogio);
     plrilha_desenhar(relogio);
+    gfx_hdr_ui = 1.0f;
     if (extra) extra();
     SDL_Delay(1);
   }
@@ -374,6 +376,18 @@ int main(int argc, char **argv) {
     player_shot_estado(relogio, 4360.0f, 9420.0f, 1, 0, 0, 0);
     quadros(60);
     salvar("osd");
+  }
+  // UI EM HDR (#205): o mesmo OSD com o video SDR e com Dolby Vision.
+  if (quer(argc, argv, "osd-sdr") || quer(argc, argv, "osd-hdr")) {
+    int k;
+    for (k = 0; k < 2; k++) {
+      if (!quer(argc, argv, k ? "osd-hdr" : "osd-sdr")) continue;
+      abrir(&filme); simular(3840, 1606, "", k, 1);
+      quadros(10);
+      player_shot_estado(relogio, 4360.0f, 9420.0f, 1, 0, 0, 0);
+      quadros(60);
+      salvar(k ? "osd-hdr" : "osd-sdr");
+    }
   }
   if (quer(argc, argv, "osd-serie")) {
     IntroTrecho tr[2] = { { 67.2, 235.2, INTRO_ABERTURA }, { 3124.8, 0.0, INTRO_CREDITOS } };

@@ -35,6 +35,10 @@ int main(void) {
   assert(!ajustes_legendas_todas());
   valor[AJ_LEG_MOSTRAR] = 1; assert(ajustes_legendas_todas()); valor[AJ_LEG_MOSTRAR] = 0;
   assert(ajCenaSecao(AJ_LEG_MOSTRAR) == AJC_IDI_FAIXAS);
+  // #205: Brilho da interface em HDR: Automatico de fabrica, local, chave propria.
+  assert(valor[AJ_HDR_UI] == 0 && ajustes_hdr_ui() && somenteDesteAparelho(AJ_HDR_UI));
+  assert(!strcmp(CHAVE[AJ_HDR_UI], "hdrUiLocal"));
+  valor[AJ_HDR_UI] = 1; assert(!ajustes_hdr_ui()); valor[AJ_HDR_UI] = 0;
   // Home: layout e arte do destaque.
   assert(valor[AJ_HERO_FUNDO] == 0);          // Automatico
   assert(valor[AJ_HERO_ARTE_DIF] == 1);       // Desligado: mesma foto do card

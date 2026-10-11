@@ -161,6 +161,7 @@ static const char *uxSinonimos(int op) {
     case AJ_DESCANSO_ESTILO: return "descanso screensaver protetor vitrine relogio hora filmes escurecer estilo";
     case AJ_DESCANSO_FONTE: return "descanso vitrine titulos lista continuar catalogo filmes series";
     case AJ_PROPORCAO_PADRAO: return "proporcao padrao aspecto aspect ratio zoom original recortar esticar preencher cinema tarja barras pretas formato tela tamanho imagem player";
+    case AJ_HDR_UI: return "brilho interface hdr dolby vision dv branco esbranquicado leitoso vidro cor player legenda";
     case AJ_BRILHO_PLAYER: return "brilho interface player controles barra escurecer forte claro oled hdr osd luz";
     case AJ_NOVIDADES20: return "novidades novo versao 2.0 tour guia o que mudou mudancas whats new";
     case AJ_DTS_AC3: return "dts convertido ac3 aac dolby digital 5.1 surround estereo audio som barra de som receiver arc earc conversao lg converted stereo";
