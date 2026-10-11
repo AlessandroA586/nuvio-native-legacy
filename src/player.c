@@ -4341,7 +4341,7 @@ static void corpoDurFonte(GfxRect r, float a, void *u) {
   float w = plrui_botao(x, y, "Tentar próxima fonte (OK)", "pl_layers", 1, a);
   (void)u;
   if (a > .9f && durFonteAcaoAte && durFonteAcaoAte == toastAte)
-    ponteiro_alvo(x, y, w, 60, durFonteTentar, NULL, 0, 0);
+    ponteiro_alvo(x, y, w, 60, NULL, durFonteTentar, 0, 0);
 }
 
 static void desenharOsd(Uint32 agora, float a, float ac, const CatItem *c);
