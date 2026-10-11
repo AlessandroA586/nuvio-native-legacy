@@ -4116,8 +4116,9 @@ void app_atualizar(float dt, Uint32 agora) {
         (player_carregando() && desde > prazo && video_buffer_fim() <= 0.5) ||
         (player_carregando() && desde > teto) ||
         video_bufferando_ms() > CANAL_TRAVA_MS || semDecoder;
-    // CANAL QUE PAROU DEPOIS DE TOCAR (#302): fim de fluxo (o provedor fechou a
-    // conexao), posicao parada ou buffering por 8 s. Reabre a MESMA fonte, ate
+    // CANAL QUE PAROU DEPOIS DE TOCAR (#302): fim de fluxo, posicao parada ou
+    // buffering por 8 s. EOF de live TPK com progresso reabre imediatamente
+    // sem gastar tentativa; as demais quedas reabrem a MESMA fonte, ate
     // NV_LS_MAX vezes (livestall.h); esgotou, cai no caminho de sempre (proxima
     // fonte). Pausa da pessoa nunca entra. So roda se o watchdog acima nao ja
     // declarou a fonte morta (erro de verdade tem o seu proprio caminho).
@@ -4145,6 +4146,11 @@ void app_atualizar(float dt, Uint32 agora) {
         const Stream *mesma = stream_item(canalFonteIdx);
         if (mesma) {
           static char viaProxy[4200];
+#ifdef NV_TPK
+          if (video_terminou() && !liveStall.pendente)
+            printf("[canal] tpk EOF de live: reabrindo a fonte %d imediatamente (sem tentativa)\n", canalFonteIdx);
+          else
+#endif
           printf("[canal] reabrindo a fonte %d (tentativa %d/%d)\n", canalFonteIdx,
                  liveStall.tentativa, NV_LS_MAX);
           fflush(stdout);

@@ -1,11 +1,11 @@
-// VIGIA DE TRAVA DO CANAL AO VIVO (#302), igual nas quatro plataformas.
+// VIGIA DE TRAVA DO CANAL AO VIVO (#302), comum as quatro plataformas.
 //
 // O caso medido (log 45605, .tpk 6.5, provedor Xtream de TS continuo): o canal
-// toca ~25-30 s, o provedor fecha a conexao, o Tizen.Multimedia.Player avisa
+// toca ~25-30 s, possivelmente a conexao fecha, o Tizen.Multimedia.Player avisa
 // PlaybackCompleted (evento 4) e fica parado. Nada disso e erro nem
 // buffering, entao o watchdog de canal do app.c (falhou / bufferando > 12 s /
 // prazo de abertura) nunca disparava: a imagem congelava para sempre e so
-// trocar de canal destravava. Os outros players de IPTV reabrem sozinhos.
+// trocar de canal destravava. No relato, outros players mantem a reproducao.
 //
 // Regra: canal que JA andou e depois (a) terminou, (b) a posicao nao anda por
 // NV_LS_PARADO_MS, ou (c) esta bufferando por NV_LS_PARADO_MS, e reaberto
@@ -14,6 +14,8 @@
 // contador volta a zero (o provedor que corta a cada 30 s reconecta para
 // sempre, como os outros apps). Esgotou: o chamador cai no caminho de sempre
 // (proxima fonte, cartao de erro).
+// No TPK, EOF depois de entregar video e continuidade: reabre sem espera
+// nem tentativa. Trava e EOF sem progresso continuam na regra limitada.
 //
 // So funcoes puras e sem SDL: o teste compila no Mac (tests/livestall.sh).
 #ifndef NV_LIVESTALL_H
@@ -63,6 +65,12 @@ static inline int nv_ls_passo(NvLiveStall *s, unsigned agora, double pos, int pr
     if ((int)(agora - s->quando) < 0) return NV_LS_ESPERA;
     return NV_LS_REABRIR;
   }
+#ifdef NV_TPK
+  // #302: EOF de canal que entregou video e continuidade de live, nao fim
+  // de arquivo. Reabre neste quadro, sem backoff/toast/orcamento de falhas.
+  // Sem progresso nesta abertura, mantem o limite para nao girar em falso.
+  if (pronto && terminou && (s->andou || pos > 0.05)) return NV_LS_REABRIR;
+#endif
   if (pronto && pos > s->pos + 0.05) {
     if (!s->movDesde) s->movDesde = agora;
     s->pos = pos; s->movEm = agora; s->andou = 1;
