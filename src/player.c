@@ -2687,6 +2687,12 @@ void player_evento(const SDL_Event *e) {
   if (!aberto || saindo || e->type != SDL_KEYDOWN) return;
   SDL_Keycode k = e->key.keysym.sym;
 
+  // EVERY KEY IS ACTIVITY, including the ones a panel consumes below. The pause
+  // panel re-arms its 5 s clock from here, so a person pressing keys - or holding
+  // Left/Right - never has it reappear under their hands and take the controls
+  // away. Called before any handler returns.
+  pausao_activity();
+
   if (k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE ||
       k == SDLK_DELETE) {
 #ifdef NV_ANDROID
@@ -3345,6 +3351,13 @@ void player_atualizar(float dt, Uint32 agora) {
 
   // Pausado, os controles ficam. Sumir com eles deixaria o usuario diante de um
   // quadro parado sem nenhuma pista de que foi ele quem pausou.
+  // A HAND ON THE REMOTE COUNTS AS ACTIVITY, not only a key. Pointer motion never
+  // reaches here as an event (main.c consumes it in the pointer, and inside a
+  // single target the hover only fires when the target CHANGES), so the 4 s hide
+  // clock kept running under a moving pointer: it only ever read `ultimoInput`,
+  // which only a key updates.
+  { Uint32 mov = ponteiro_last_motion();
+    if (mov && (Sint32)(mov - ultimoInput) > 0) ultimoInput = mov; }
   if (visivel && tocando && !player_carregando() && !episodios_aberto() &&
       !stream_folha_aberta() && !faixas_aberta() && agora - ultimoInput > PLR_ESCONDE_MS) visivel = 0;
   if (epT > 0 && !strstr(linhaEp, " · ")) player_definir_episodio(epT, epE);

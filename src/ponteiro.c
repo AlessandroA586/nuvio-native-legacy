@@ -51,6 +51,8 @@ static int pronto  = 1;          // a do quadro anterior, que o hit-test le
 static float px = NV_TELA_W * 0.5f, py = NV_TELA_H * 0.5f;
 static int visivel = 0;
 static Uint32 ultimoMov = 0;
+// The last TOUCH is activity too: see ponteiro_last_motion.
+static Uint32 toqueUltimo = 0;
 static int janelaW = 0, janelaH = 0;
 static Uint32 (*relogio)(void) = NULL;
 
@@ -124,6 +126,12 @@ int ponteiro_teste_lista(const PonteiroAlvo **v) { if (v) *v = lista[pronto]; re
 float ponteiro_x(void) { return px; }
 float ponteiro_y(void) { return py; }
 int ponteiro_ativo(void) { return visivel || toqueDisponivel; }
+
+// See ponteiro.h. A touch counts as activity too: a finger on the screen is also a
+// hand on the remote, and without this the bar vanished under a resting finger.
+Uint32 ponteiro_last_motion(void) {
+  return toqueUltimo > ultimoMov ? toqueUltimo : ultimoMov;
+}
 
 // DIAGNOSTICO DE ENTRADA (#99, segunda volta). Na C9 chegaram os avisos
 // 484/485 e a rodinha, e NENHUM movimento nem clique. Para saber o que o SDL
@@ -413,6 +421,7 @@ static int eventoToque(const SDL_Event *e, void (*entregar)(const SDL_Event *)) 
   int dedo = dedoIndice(t);
   Uint32 agora = agoraMs();
   toqueDisponivel = 1;
+  toqueUltimo = agora ? agora : 1;
   entregarToque = entregar;
   if (e->type == SDL_FINGERDOWN) {
     if (dedo >= 0) return 1;
