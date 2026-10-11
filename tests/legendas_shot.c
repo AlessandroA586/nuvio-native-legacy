@@ -232,12 +232,19 @@ int main(int argc, char **argv) {
   quadros(60);
   salvar("legendas-seletor-simples");
   salvar("painel-depois-curta");
-  tecla(SDLK_RIGHT); quadros(30);
+  salvar("painel-v2-lista");
+  // Hold OK on the row: the dropdown opens below it (#425 v2). Right goes to Estilo.
+  { SDL_Event ev; memset(&ev, 0, sizeof ev);
+    ev.type = SDL_KEYDOWN; ev.key.keysym.sym = SDLK_RETURN; faixas_evento(&ev);
+    SDL_Delay(780); quadros(30);
+    ev.type = SDL_KEYUP; faixas_evento(&ev); quadros(30); }
   salvar("painel-depois-menu");
+  salvar("painel-v2-menu");
   tecla(SDLK_DOWN); tecla(SDLK_DOWN); tecla(SDLK_RETURN);
   quadros(30); assert(legendasui_versoes());
   salvar("legendas-seletor-versoes");
   tecla(SDLK_ESCAPE); quadros(20); assert(!legendasui_versoes());
+  tecla(SDLK_RIGHT); quadros(40); salvar("painel-v2-estilo"); tecla(SDLK_LEFT); quadros(20);
   { int i; for (i = 0; i < 12; i++) tecla(SDLK_DOWN); }   // last row: Mais opcoes
   tecla(SDLK_RETURN);
   quadros(40);

@@ -16,6 +16,8 @@
 #include "legauto.h"
 #include "video.h"
 #include "ponteiro.h"
+#include "ctxmenu.h"
+#include "anim.h"
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -196,6 +198,7 @@ static LuiLinha okLinha;
 static LegUiCand okCand;
 static LegUiCand menuCand; // snapshot: late addon responses cannot change the action
 static int menuTipo, menuRecomendada;
+static float menuT, menuFocoA[3];   // molas do dropdown (abertura e foco por linha)
 static void abrirMenu(void);
 // Language drilldown returns to the row that opened it.
 static int ver;
@@ -438,6 +441,7 @@ static void abrirMenu(void) {
   const LuiLinha *l = nLinhasV ? &linhas[foco] : NULL;
   if (!temMenu(l)) return;
   menu = 1; menuFoco = 0; menuTipo = l->tipo;
+  menuT = 0.0f; menuFocoA[0] = menuFocoA[1] = menuFocoA[2] = 0.0f;
   menuRecomendada = !mais && !ver;
   memset(&menuCand, 0, sizeof menuCand);
   if (okPendente) {
@@ -446,7 +450,10 @@ static void abrirMenu(void) {
   snprintf(menuVolta, sizeof menuVolta, "%s", l->chave);
 }
 
-void legendasui_atualizar(void) {
+void legendasui_atualizar(float dt) {
+  // Molas do dropdown, por quadro (faixas_atualizar): abertura e foco por linha.
+  menuT = anim_mola(menuT, menu ? 1.0f : 0.0f, dt, NV_MOLA_TELA);
+  for (int i = 0; i < 3; i++) menuFocoA[i] = anim_mola(menuFocoA[i], menu && i == menuFoco ? 1.0f : 0.0f, dt, NV_MOLA_FOCO);
   if (aberto && !menu && okPendente && !okLongo && SDL_GetTicks() - okDesde >= NV_HOLD_MS) {
     okLongo = 1;
     abrirMenu();
@@ -483,7 +490,7 @@ int legendasui_evento(const SDL_Event *e) {
   l = nLinhasV ? &linhas[foco] : NULL;
   if (ok && e->type == SDL_KEYUP) {
     int pendente = okPendente;
-    legendasui_atualizar();
+    legendasui_atualizar(0.0f);
     okPendente = 0;
     if (okLongo) { okLongo = 0; return LEGUI_TRATADO; }
     if (!pendente) return LEGUI_TRATADO;
@@ -500,7 +507,7 @@ int legendasui_evento(const SDL_Event *e) {
       if (l) { okLinha = *l; memset(&okCand, 0, sizeof okCand);
         if (l->cand >= 0) okCand = cand[l->cand]; }
     }
-    if (!menu) legendasui_atualizar();
+    if (!menu) legendasui_atualizar(0.0f);
     return LEGUI_TRATADO;
   } else { okPendente = okLongo = 0; }
   if (menu) {
@@ -527,7 +534,6 @@ int legendasui_evento(const SDL_Event *e) {
       int n = nAcoes(l->slot, rot, 4);
       if (n > 0 && syncAcao + d >= 0 && syncAcao + d < n) { syncAcao += d; return LEGUI_TRATADO; }
     }
-    if (d > 0 && temMenu(l)) { abrirMenu(); return LEGUI_TRATADO; }
     if (d > 0 || (d < 0 && foco == 0)) return LEGUI_ESTILO;
     return LEGUI_TRATADO;
   }
@@ -773,12 +779,13 @@ static void desenharLinha(const LuiLinha *l, int idx, int sel, float x, float y,
     // In "Mais opções" the slot is the "Usar como" row at the top: no pill per
     // row, so the details (release name) get the width.
     if (ativo) dir -= pilulaSlot(l->slot, dir, y + LU_LN_H * 0.5f, sel, aL) + 12.0f;
-    // Several versions: OK opens them, and the chevron says so.
-    if (l->tipo == LR_CAND) {
-      gfx_icone((GfxRect){ dir - 24.0f, y + (LU_LN_H - 24.0f) * 0.5f, 24.0f, 24.0f }, "pl_chevron-right", 1, 1, 1, (sel ? 0.9f : 0.5f) * aL);
-      if (pont) ponteiro_alvo(dir - 40.0f, y, 40.0f, LU_LN_H, ponteiroLinha, ponteiroMenuAbrir, idx, 0);
-      dir -= 24.0f + 10.0f;
-    }
+  }
+  // O chevron diz "tem mais atras deste OK" (o das Ajustes): a linha com acoes
+  // (segure OK) e "Todas as legendas". Mesmo icone do resto do app.
+  if (!mais && !ver && (temMenu(l) || l->tipo == LR_MAIS)) {
+    gfx_icone((GfxRect){ dir - 24.0f, y + (LU_LN_H - 24.0f) * 0.5f, 24.0f, 24.0f }, "pl_chevron-right", 1, 1, 1, (sel ? 0.9f : 0.5f) * aL);
+    if (pont && l->tipo != LR_MAIS) ponteiro_alvo(dir - 40.0f, y, 40.0f, LU_LN_H, ponteiroLinha, ponteiroMenuAbrir, idx, 0);
+    dir -= 24.0f + 10.0f;
   }
   if (l->tipo == LR_SYNC && sel) {
     // The chosen action between < > discs; a disc dims with nothing beyond it.
@@ -845,21 +852,37 @@ static void ponteiroMenu(int i, int b) { (void)b; if (menu) menuFoco = i; }
 static void ponteiroMenuEscolher(int i, int b) { (void)b; if (menu) { menuFoco = i; menuEscolher(); } }
 static void ponteiroMenuAbrir(int i, int b) { (void)b; if (ponteiroAqui(i)) { focar(i); abrirMenu(); } }
 
+// O DROPDOWN do segure OK: a ilha e as linhas do menu do cartaz (ctxmenu.c),
+// ancorado ABAIXO da linha focada. Sem lugar embaixo, abre acima dela.
+#define LU_MENU_PAD 14.0f
+static const CtxLinha menuLin[3] = {
+  { "Usar como principal", "pl_captions" },
+  { "Usar como segunda legenda (junto)", "pl_layers" },
+  { "Ver todas deste idioma", "aj_list-video" },
+};
+static GfxRect menuGeo(GfxRect c) {
+  CtxLinha l[3];
+  float ry = c.y + LU_PAD_Y + LU_TIT_H + 14.0f + (foco - rolagem) * (LU_LN_H + LU_LN_VAO);
+  float w = 0.0f, h = LU_MENU_PAD * 2.0f + 3 * ctx_menu_passo() - 4.0f, y;
+  for (int i = 0; i < 3; i++) { l[i].rot = i18n(menuLin[i].rot); l[i].icone = menuLin[i].icone; }
+  w = ctx_menu_largura(l, 3);
+  y = ry + LU_LN_H + 6.0f;
+  if (y + h > NV_VTELA_H - 24.0f) y = ry - 6.0f - h;
+  return (GfxRect){ c.x + c.w - LU_PAD_X - 8.0f - w, y, w, h };
+}
+
 static void desenharMenu(GfxRect c, float a) {
-  const char *rot[] = { "Usar como principal", "Usar como segunda legenda (junto)", "Ver todas deste idioma" };
-  float w = 580.0f, h = 3 * 70.0f + 24.0f;
-  float x = c.x - w - 16.0f, y = c.y + LU_PAD_Y + LU_TIT_H + 14.0f + (foco - rolagem) * (LU_LN_H + LU_LN_VAO);
-  if (x < 16.0f) x = c.x + c.w - w - 12.0f;
-  if (y + h > NV_VTELA_H - 24.0f) y = NV_VTELA_H - 24.0f - h;
-  gfx_cor((GfxRect){ x, y, w, h }, 20.0f / h, .075f, .08f, .09f, a);
-  if (a > .99f) ponteiro_camada();
+  GfxRect m = menuGeo(c);
+  m.y += (1.0f - menuT) * -10.0f;
+  a *= menuT;
+  gfx_cor(m, 32.0f / m.h, .071f, .075f, .086f, a);   // as linhas de baixo nao aparecem por tras
+  ctx_menu_ilha(m, 32.0f, a);
+  if (menuT > 0.9f) ponteiro_camada();
   for (int i = 0; i < 3; i++) {
-    GfxRect r = { x + 10, y + 12 + i * 70, w - 20, 66 };
+    GfxRect r = { m.x + LU_MENU_PAD, m.y + LU_MENU_PAD + i * ctx_menu_passo(), m.w - LU_MENU_PAD * 2.0f, 60.0f };
     int disponivel = i != 2 || menuCand.id[0];
-    if (i == menuFoco) plrui_linha_foco(r, 16, a);
-    TxtLinha t = txt_linha_corta(TXT_G16B, i18n(rot[i]), 243, 242, 239, disponivel ? 255 : 80, w - 48);
-    txt_desenhar_alpha(t, r.x + 14, r.y + (r.h - t.h) * .5f, a);
-    if (disponivel && a > .99f) ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroMenu, ponteiroMenuEscolher, i, 0);
+    ctx_menu_linha(r, i18n(menuLin[i].rot), menuLin[i].icone, menuFocoA[i], disponivel ? a : a * 0.35f, -1.0f);
+    if (disponivel && menuT > 0.9f) ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroMenu, ponteiroMenuEscolher, i, 0);
   }
 }
 
@@ -893,8 +916,9 @@ void legendasui_corpo(GfxRect c, float a) {
       txt_desenhar_alpha(l, x0 + 10.0f, yc - (float)l.h * 0.5f, a);
     } else {
       char q[32];
-      const char *k[3] = { "OK", "\xe2\x86\x92", "Voltar" };
-      const char *rt[3] = { "Usar", "Opções", mais || ver ? "Voltar" : "Fechar" };
+      const char *k[4] = { "OK", "Segure OK", "\xe2\x86\x92", "Voltar" };
+      const char *rt[4] = { "Usar", "Opções", "Estilo", mais || ver ? "Voltar" : "Fechar" };
+      const char *km[2] = { "OK", "Voltar" }, *rm[2] = { "Usar", "Fechar" };
       int naSync = nLinhasV && linhas[foco].tipo == LR_SYNC, nf = 0, pf = 0;
       // The AutoSync row is not a choice: it is left out of "N de M", which
       // disappears on it, and the hints say what OK does there.
@@ -903,7 +927,8 @@ void legendasui_corpo(GfxRect c, float a) {
         snprintf(q, sizeof q, i18n("%d de %d"), nf ? pf : 0, nf);
         { TxtLinha l = txt_linha(TXT_ILHA_APOIO, q, 243, 242, 239, 115);
           txt_desenhar_alpha(l, x0 + 10.0f, yc - (float)l.h * 0.5f, a); }
-        plrui_dicas(k, rt, 3, x0 + w - 10.0f, yc, 1, a);
+        if (menu) plrui_dicas(km, rm, 2, x0 + w - 10.0f, yc, 1, a);
+        else plrui_dicas(k, rt, 4, x0 + w - 10.0f, yc, 1, a);
       } else {
         const char *rot[4], *ks[3] = { "OK", "\xe2\x86\x90 \xe2\x86\x92", "Voltar" };
         int n = nAcoes(linhas[foco].slot, rot, 4);
