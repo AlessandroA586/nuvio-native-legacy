@@ -220,11 +220,13 @@ int main(void) {
   { focoIndice = 1; uxTopo = AJ2_T_BUSCA;
     key(SDLK_RIGHT); assert(uxTopo == AJ2_T_AV);
     key(SDLK_RIGHT); assert(uxTopo == AJ2_T_PERFIL);
+    key(SDLK_RIGHT); assert(uxTopo == AJ2_T_DIF);                               // Diferentes do padrao is reachable from Perfil
     key(SDLK_RIGHT); assert(uxTopo == AJ2_T_LAYOUT);                            // #339 Painel | Lista
     key(SDLK_RIGHT); assert(uxTopo == AJ2_T_LAYOUT);                            // last of the row
     key(SDLK_DOWN); assert(uxTopo == AJ2_T_RESOLVER);
     key(SDLK_LEFT); assert(uxTopo == AJ2_T_TOUR);
-    uxTopo = AJ2_T_LAYOUT; key(SDLK_LEFT); assert(uxTopo == AJ2_T_PERFIL);
+    uxTopo = AJ2_T_LAYOUT; key(SDLK_LEFT); assert(uxTopo == AJ2_T_DIF);
+    key(SDLK_LEFT); assert(uxTopo == AJ2_T_PERFIL);
     key(SDLK_LEFT); assert(uxTopo == AJ2_T_AV);
     key(SDLK_LEFT); assert(uxTopo == AJ2_T_BUSCA);
     key(SDLK_DOWN); assert(uxTopo == AJ2_T_TOUR);
@@ -246,6 +248,16 @@ int main(void) {
     uxTopo = AJ2_T_RESOLVER; key(SDLK_RETURN); assert(guiaAberto && gv.col == GC_LISTA && gv.ent >= 0);
     guiaSair(); assert(!guiaAberto && focoIndice && uxTopo == AJ2_T_RESOLVER);
     uxTopo = AJ2_T_PERFIL; key(SDLK_RETURN); assert(!focoIndice && focoOp == AJ_PERFIL_ATIVO);
+    // Diferentes do padrao: Down goes to the discovery card, OK opens the list
+    // (uxIndice 1), Back returns to the pill.
+    focoIndice = 1; uxTopo = AJ2_T_DIF; key(SDLK_DOWN); assert(uxTopo == AJ2_T_RESOLVER);
+    key(SDLK_UP); assert(uxTopo == AJ2_T_PERFIL);
+    uxTopo = AJ2_T_DIF; valor[AJ_LARGURA_DP] = valorPadrao[AJ_LARGURA_DP] + 1;
+    key(SDLK_RETURN); assert(!focoIndice && uxIndice == 1 && uxNDifs >= 1 && uxDifFoco == 0);
+    key(SDLK_ESCAPE); assert(focoIndice && uxTopo == AJ2_T_DIF);
+    { char b[160], d[96]; aj2TopoTexto(AJ2_T_DIF, b, sizeof b, d, sizeof d);
+      char n[16]; snprintf(n, sizeof n, " · %d", uxNDifs); assert(b[0] && !strcmp(d, n)); }
+    valor[AJ_LARGURA_DP] = valorPadrao[AJ_LARGURA_DP];
     sair = 0; focoIndice = 1; uxTopo = AJ2_T_TOUR; key(SDLK_LEFT); assert(sair); sair = 0;
     uxIndice = 1; focoIndice = 1; uxTopo = -1; }
   // #339 "Lista": one column. Down walks every category across the groups, Up on
@@ -268,7 +280,7 @@ int main(void) {
   // #339: the "Painel | Lista" toggle on both screens, same key as Aparencia.
   // Index: the pill at the end of the top row; OK flips and focus stays on it.
   { valor[AJ_LAYOUT_AJUSTES] = 0;
-    focoIndice = 1; uxTopo = AJ2_T_PERFIL;
+    focoIndice = 1; uxTopo = AJ2_T_DIF;
     key(SDLK_RIGHT); assert(uxTopo == AJ2_T_LAYOUT);
     key(SDLK_RETURN); assert(ajustes_layout_lista() && focoIndice && uxTopo == AJ2_T_LAYOUT);
     key(SDLK_RETURN); assert(!ajustes_layout_lista() && focoIndice && uxTopo == AJ2_T_LAYOUT);
