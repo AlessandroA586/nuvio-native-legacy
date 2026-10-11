@@ -21,6 +21,7 @@ sessao() {
   if ! NV_T_DIR="$dir/$d" "$bin" "$@" > "$dir/saida" 2>&1; then falhou=1; fi
   grep -E '^(--|  )|\[sync\] (push|edicao|addons:)' "$dir/saida" || true
 }
+sessao manual manual
 sessao s1 periodico
 sessao s2 mescla
 sessao s2b remocao

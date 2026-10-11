@@ -8,6 +8,8 @@
 #include "anim.h"
 #include "sync.h"
 #include "ajustes.h"
+#include "ilha.h"
+#include "sessao.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -52,13 +54,28 @@ int addonsui_quer_sair(void) {
   return sair;
 }
 
+// SINCRONIZAR ADDONS (#360): a ultima linha da lista (foco == n). Pede a volta
+// da conta ja, pelo mesmo ciclo de sempre (sync.c, fora do fio do quadro); o
+// resultado vira aviso da ilha (ilhasinais.c). Sem conta nao ha o que puxar: a
+// linha explica em vez de sumir.
+static void sincronizar(void) {
+  if (!sessao_logada()) {
+    ilha_avisar("sync-addons", ILHA_INFO, "aj_rotate-cw",
+                i18n("Entre na conta Nuvio para sincronizar os addons."), 4000u, 0);
+    return;
+  }
+  if (sync_manual_addons_rodando()) return;   // ja no ar: o botao nao empilha
+  sync_manual_addons();
+}
+
 void addonsui_evento(const SDL_Event *e) {
   int n = addons_n();
   if (e->type != SDL_KEYDOWN) return;
   switch (e->key.keysym.sym) {
     case SDLK_UP:     if (foco > 0) foco--; break;
-    case SDLK_DOWN:   if (foco < n - 1) foco++; break;
-    case SDLK_RETURN:
+    case SDLK_DOWN:   if (foco < n) foco++; break;
+    case SDLK_RETURN: case SDLK_KP_ENTER:
+      if (foco >= n) { sincronizar(); break; }
       if (n > 0) {
         addons_alternar(foco);
         mexeu = 1;
@@ -78,7 +95,7 @@ void addonsui_evento(const SDL_Event *e) {
 // setas). O desenho mora em ajustes_ux_ilha.inc (ajSubLista).
 void addonsui_ponteiro(int i, int b) {
   (void)b;
-  if (sair || i < 0 || i >= addons_n() || i == foco) return;
+  if (sair || i < 0 || i > addons_n() || i == foco) return;
   foco = i;
 }
 int addonsui_foco(void) { return foco; }

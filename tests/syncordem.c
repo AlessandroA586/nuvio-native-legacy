@@ -290,6 +290,11 @@ int  addons_exportar(AddonRemoto *s, int m) {
   snprintf(s[0].nome, sizeof s[0].nome, "%s", addonNome);
   s[0].ativo = addonAtivo; return 1;
 }
+void addons_diferenca(const AddonRemoto *a, int na, const AddonRemoto *d, int nd,
+                      int *e, int *s, int *m) {
+  (void)a; (void)na; (void)d; (void)nd;
+  if (e) *e = 0; if (s) *s = 0; if (m) *m = 0;
+}
 void agenda_esquecer(void) {}
 void lembrete_esquecer_todos(void) {}
 int  ajustes_aplicar_blob(const char *j) { (void)j; blobsAplicados++; return 0; }

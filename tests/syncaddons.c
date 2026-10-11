@@ -334,7 +334,24 @@ int main(int argc, char **argv) {
   contaLer();
   printf("-- cenario %s%s%s (conta no inicio: %s)\n", cen, argc > 2 ? " " : "", argc > 2 ? argv[2] : "", conta);
 
-  if (!strcmp(cen, "periodico")) {
+  if (!strcmp(cen, "manual")) {
+    snprintf(conta, sizeof conta, "AB");
+    sync_iniciar(); // Click while the first cycle is already running.
+    confere("manual request accepted", sync_manual_addons() == 1);
+    confere("duplicate click does not enqueue", sync_manual_addons() == 1);
+    confere("manual request reports busy", sync_manual_addons_rodando());
+    ateTerminar();
+    ateTerminar();
+    confere("manual request completes", !sync_manual_addons_rodando());
+    confere("manual result reports success", sync_manual_addons_estado(NULL, NULL, NULL) == 2);
+    confere("manual result is consumed once", sync_manual_addons_estado(NULL, NULL, NULL) == 0);
+    tvLetras(l, sizeof l);
+    confere("manual request applied account addons", !strcmp(l, "AB"));
+    sync_manual_addons();
+    sync_esquecer_usuario();
+    confere("logout clears pending manual request", !sync_manual_addons_rodando());
+    confere("logout clears manual result", sync_manual_addons_estado(NULL, NULL, NULL) == 0);
+  } else if (!strcmp(cen, "periodico")) {
     unsigned fim;
     snprintf(conta, sizeof conta, "AB");
     sync_iniciar(); ateTerminar();

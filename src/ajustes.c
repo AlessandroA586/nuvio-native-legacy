@@ -7842,7 +7842,8 @@ int ajustes_teste_quadro(const char *id) {
     valor[AJ_QUALIDADE] = 1; valor[AJ_HERO_TRAILER] = 0;
     uxListarDiferencas(); uxIndice = 1; focoIndice = 0; uxDifFoco = 0;
   }
-  else if (!strcmp(id, "addons")) {
+  // "addons-sync": a mesma tela com o foco no botao "Sincronizar addons" (#360).
+  else if (!strcmp(id, "addons") || !strcmp(id, "addons-sync")) {
     static const char *const NOME[8] = { "Cinemeta", "AIOStreams", "Xperience", "TMDB", "Akashi", "MDBList", "OpenSubtitles v3", "Torrentio" };
     static const char *const REC[8] = { "\"catalog\",\"meta\"", "\"catalog\",\"stream\"", "\"catalog\"", "\"catalog\",\"meta\"",
                                         "\"catalog\"", "\"catalog\"", "\"subtitles\"", "\"stream\"" };
@@ -7857,7 +7858,7 @@ int ajustes_teste_quadro(const char *id) {
         addons_manifesto_lido(k, man);
         if ((k == 4 || k == 7) && addons_ativo(k)) addons_alternar(k);
       }
-    ajQuadroAddons = 2;
+    ajQuadroAddons = strcmp(id, "addons-sync") ? 2 : addons_n() + 1;
   }
   else if (!strcmp(id, "plugins")) { ajArteFundoN = 3; ajQuadroPlugins = 1; }
   else return 0;

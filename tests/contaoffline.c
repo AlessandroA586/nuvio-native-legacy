@@ -208,6 +208,11 @@ void desc_tmdb_definir(const char *c) { (void)c; }
 void addons_marcar_da_conta(int perfil) { (void)perfil; }
 void addons_esquecer(void) {}
 int  addons_exportar(AddonRemoto *s, int m) { (void)s; (void)m; return 0; }
+void addons_diferenca(const AddonRemoto *a, int na, const AddonRemoto *d, int nd,
+                      int *e, int *s, int *m) {
+  (void)a; (void)na; (void)d; (void)nd;
+  if (e) *e = 0; if (s) *s = 0; if (m) *m = 0;
+}
 void agenda_esquecer(void) {}
 void lembrete_esquecer_todos(void) {}
 int  ajustes_aplicar_blob(const char *j) { (void)j; return 0; }

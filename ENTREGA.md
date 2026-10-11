@@ -8,4 +8,6 @@ Worktree `agente/205-decisoes`, início `6a68b96e`; sem push. Um merge por branc
 
 - **#331 — agente/203-331:** contagem nos créditos com marcador real; pela decisão #256, automático **desligado** de fábrica, contagem local **1–60 s (padrão 5 s)**. Mantidos pré-carga, janela e legendas da integração; ajustes append-only. 10 testes (intro, posplay, Ajustes, próximo, reação, pré-carga e preferências): **rc 0** (`331-results.txt` + `331-final-results.txt`). `idiomas.py`/`varredura-i18n.py`: **rc 0**, traduções existentes preservadas. Corrigida vírgula na tradução nova antes da repetição de posplay.
 
+- **#360 — agente/204-sync-addons:** botão e resultado pela ilha no ciclo de sync existente; layout atual e ponteiro preservados. Mantidas correções de perfil/Home da integração, descartadas alterações ancestrais alheias ao botão. 12 testes de addons/sync/conta/Ajustes: **rc 0** (`360-results.txt` + `360-final-results.txt`); novos casos de clique repetido, logout, lista vazia e 64 addons. Corrigidos stubs e link de `contaoffline_limites` (base também rc 1). `idiomas.py`/`varredura-i18n.py`: **rc 0**.
+
 Logs locais: `/tmp/nv-205-decisoes-logs/`. Suíte geral: 578 scripts, vários compilam o app inteiro (~45–60 s cada); serão usados os testes das áreas tocadas. `bw` sem autenticação; credenciais não consultadas.
