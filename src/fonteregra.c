@@ -1,6 +1,7 @@
 #include "fonteregra.h"
 #include "dados.h"
 #include "js.h"
+#include "regexjs.h"
 #include <ctype.h>
 #include <pthread.h>
 #include <regex.h>
@@ -22,6 +23,9 @@ static unsigned versao = 1;
 // A regex compilada do padrao em uso. `reEstado` e o de fonteregra_regex_estado.
 static regex_t re, reExcl;
 static int reOk, reExclOk, reEstado;
+// Padrao com lookahead positivo ou lookbehind: o POSIX nao representa, entao ele
+// roda no motor proprio (regexjs.c) e re/reExcl ficam sem uso. NULL = caminho POSIX.
+static RegexJs *reJs;
 
 #define ARQ "fonteregra.txt"
 
@@ -136,11 +140,37 @@ static int temLetraOuDigito(const char *s) {
   return 0;
 }
 
+// 1 se o padrao usa lookahead positivo "(?=" ou lookbehind "(?<=" / "(?<!", que a
+// traducao para POSIX nao consegue expressar (o "(?!" simples segue pelo POSIX,
+// como sempre foi). Ignora o que esta escapado ou dentro de [...].
+static int precisaMotorJs(const char *s) {
+  int colchete = 0;
+  for (; *s; s++) {
+    if (*s == '\\' && s[1]) { s++; continue; }
+    if (colchete) { if (*s == ']') colchete = 0; continue; }
+    if (*s == '[') { colchete = 1; continue; }
+    if (s[0] == '(' && s[1] == '?' &&
+        (s[2] == '=' || (s[2] == '<' && (s[3] == '=' || s[3] == '!')))) return 1;
+  }
+  return 0;
+}
+
 // Compila padrao + exclusao. 1 = ok; 0 = nao configurado; -1 = invalido.
-static int compilar(const char *java, regex_t *r, int *rok, regex_t *rx, int *rxok) {
+// Com lookahead positivo/lookbehind, *js recebe o programa do motor proprio e
+// r/rx nao sao tocados.
+static int compilar(const char *java, regex_t *r, int *rok, regex_t *rx, int *rxok, RegexJs **js) {
   char posix[FR_REGEX_MAX * 4 + 64], excl[FR_REGEX_MAX + 1];
   *rok = *rxok = 0;
+  *js = NULL;
   if (!java || !java[0] || !temLetraOuDigito(java)) return 0;
+  if (precisaMotorJs(java)) {
+    // Sem caixa e com o ponto casando quebra de linha, como o POSIX de sempre
+    // (o texto da fonte junta addon, nome, titulo e descricao em varias linhas).
+    char p[FR_REGEX_MAX + 8];
+    snprintf(p, sizeof p, "(?is)%s", java);
+    *js = regexjs_compilar_web(p, NULL, 0);
+    return *js ? 1 : -1;
+  }
   if (!fonteregra_posix(java, posix, sizeof posix, excl, sizeof excl)) return -1;
   // So o lookahead ("(?!.*CAM)"): casa tudo, e a exclusao faz o trabalho.
   if (!posix[0]) snprintf(posix, sizeof posix, "^");
@@ -158,7 +188,8 @@ static int compilar(const char *java, regex_t *r, int *rok, regex_t *rx, int *rx
   return 1;
 }
 
-static int casa(const regex_t *r, int rok, const regex_t *rx, int rxok, const char *texto) {
+static int casa(const RegexJs *js, const regex_t *r, int rok, const regex_t *rx, int rxok, const char *texto) {
+  if (js) return regexjs_testar(js, texto ? texto : "", texto ? strlen(texto) : 0) ? 1 : 0;
   if (!rok) return 0;
   if (regexec(r, texto ? texto : "", 0, NULL, 0) != 0) return 0;
   if (rxok && regexec(rx, texto ? texto : "", 0, NULL, 0) == 0) return 0;
@@ -167,11 +198,13 @@ static int casa(const regex_t *r, int rok, const regex_t *rx, int rxok, const ch
 
 int fonteregra_regex_testar(const char *java, const char *texto) {
   regex_t r, rx;
-  int rok, rxok, e = compilar(java, &r, &rok, &rx, &rxok), m;
+  RegexJs *js;
+  int rok, rxok, e = compilar(java, &r, &rok, &rx, &rxok, &js), m;
   if (e <= 0) return -1;
-  m = casa(&r, rok, &rx, rxok, texto);
+  m = casa(js, &r, rok, &rx, rxok, texto);
   if (rok) regfree(&r);
   if (rxok) regfree(&rx);
+  if (js) regexjs_liberar(js);
   return m;
 }
 
@@ -194,7 +227,8 @@ const char *fonteregra_modelo(int i) { return i > 0 && i < fonteregra_modelos() 
 static void recompilarSemTrava(void) {
   if (reOk) regfree(&re);
   if (reExclOk) regfree(&reExcl);
-  reEstado = compilar(padrao, &re, &reOk, &reExcl, &reExclOk);
+  if (reJs) { regexjs_liberar(reJs); reJs = NULL; }
+  reEstado = compilar(padrao, &re, &reOk, &reExcl, &reExclOk, &reJs);
 }
 
 static void limparNome(char *dst, size_t tam, const char *src) {
@@ -443,7 +477,7 @@ int fonteregra_grupo(const FonteRegraCfg *c, const char *nome, int plugin, const
   pthread_mutex_lock(&trava);
   perm = permitidoSemTrava(c, nome, plugin);
   if (c->regexModo != FR_REGEX_DESLIGADA && reEstado == 1) {
-    int m = casa(&re, reOk, &reExcl, reExclOk, texto);
+    int m = casa(reJs, &re, reOk, &reExcl, reExclOk, texto);
     if (!m && c->regexModo == FR_REGEX_EXIGIR) { pthread_mutex_unlock(&trava); return -1; }
     sub = !m;
   }
