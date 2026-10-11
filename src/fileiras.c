@@ -408,6 +408,34 @@ int fil_limite_gravado(void) {
   return v;
 }
 
+int fil_limite_passo(int v, int dir) {
+  int n;
+#ifdef NV_ANDROID
+  if (dir > 0 && v >= FIL_LIMITE_MAX_TV) return FIL_LIMITE_MAX;
+  if (dir < 0 && v > FIL_LIMITE_MAX_TV) return FIL_LIMITE_MAX_TV;
+#endif
+  n = v + (dir > 0 ? 1 : dir < 0 ? -1 : 0);
+  return limita(n, FIL_LIMITE_MIN, FIL_LIMITE_MAX);
+}
+
+int fil_limite_pede_aviso(int de, int para) {
+#ifdef NV_ANDROID
+  (void)de; (void)para;
+  return 0;
+#else
+  return para > FIL_LIMITE_SEGURO && para > de;
+#endif
+}
+
+int fil_limite_ilimitado(int v) {
+#ifdef NV_ANDROID
+  return v >= FIL_LIMITE_ILIMITADO;
+#else
+  (void)v;
+  return 0;
+#endif
+}
+
 void fil_definir_teto_sessao(int teto) {
   pthread_mutex_lock(&trava);
   tetoSessao = teto > 0 ? limita(teto, FIL_LIMITE_MIN, FIL_LIMITE_MAX) : 0;

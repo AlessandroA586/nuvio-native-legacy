@@ -769,14 +769,17 @@ static void aj2EditorNumero(GfxRect m) {
   const Opcao *o = &OPCOES[uxOp];
   float y, lx, lw, ar, ag, ab, pw = 520.0f;
   char v[64], salvo[64], uni[64];
-  int risco = uxOp == AJ_FIL_LIMITE ? FIL_LIMITE_SEGURO : -1;
+  // Android: sem faixa vigiada no trilho (a folha de memoria virou dica).
+  int risco = uxOp == AJ_FIL_LIMITE && fil_limite_pede_aviso(FIL_LIMITE_MIN, FIL_LIMITE_MAX) ? FIL_LIMITE_SEGURO : -1;
+  int ilimitado = uxOp == AJ_FIL_LIMITE && fil_limite_ilimitado(uxPendente);
   ajustes_acento(&ar, &ag, &ab);
   y = aj2CabecalhoEditor(m);
   if (m.w - 104 - pw - 56 < 560) pw = 0;
   lx = m.x + 52; lw = pw > 0 ? m.w - 104 - pw - 56 : m.w - 104;
   snprintf(v, sizeof v, "%d", uxPendente);
   uxValorTexto(uxOp, uxOriginal, salvo, sizeof salvo);
-  if (uxOp == AJ_FIL_LIMITE) snprintf(uni, sizeof uni, "%s", i18n("fileiras"));
+  if (ilimitado) uni[0] = 0;
+  else if (uxOp == AJ_FIL_LIMITE) snprintf(uni, sizeof uni, "%s", i18n("fileiras"));
   else snprintf(uni, sizeof uni, "%s", o->sufixo ? o->sufixo + (o->sufixo[0] == ' ') : "");
   { GfxRect r = { lx, y, lw, 34 + 150 + 40 + 10 + 14 + 40 + 34 };
     float fr = ajMovFracao(uxOp, uxPendente), fp = ajPadraoVisual(uxOp) >= 0 ? ajFracao(uxOp, ajPadraoVisual(uxOp)) : -1;
@@ -784,7 +787,8 @@ static void aj2EditorNumero(GfxRect m) {
     TxtLinha big, u = ajTxt(TXT_V2_36B, uni), ls;
     char sv[96];
     if (uxOp == AJ_HERO_TRAILER_ESPERA) snprintf(v, sizeof v, "%d,%d", uxPendente / 10, uxPendente % 10);
-    big = ajTxt(TXT_V2_NUM150, v);
+    // "Ilimitado" nao cabe no corpo de 150 dos numeros: vai no titulo de 36.
+    big = ilimitado ? ajTxt(TXT_V2_36B, i18n("Ilimitado")) : ajTxt(TXT_V2_NUM150, v);
     if (ajVid()) gfx_cor(r, 30.0f / r.h, 1, 1, 1, uxRodape ? 0.0f : 0.12f);
     else ajFocoLinha(r, 30, uxRodape ? 0 : 1, 1);
     txt_desenhar(big, tx - 4, cy - big.h * 0.5f);
@@ -816,7 +820,9 @@ static void aj2EditorNumero(GfxRect m) {
     { char t[64]; TxtLinha l;
       float lc = ty + 10 + 14 + 13.5f;
       snprintf(t, sizeof t, "%d", o->min); l = ajTxt(TXT_V2_24, t); txt_desenhar_alpha(l, tx, lc - l.h * 0.5f, 0.5f);
-      snprintf(t, sizeof t, "%d", o->max); l = ajTxt(TXT_V2_24, t); txt_desenhar_alpha(l, tx + tw - l.w, lc - l.h * 0.5f, 0.5f);
+      if (uxOp == AJ_FIL_LIMITE && fil_limite_ilimitado(o->max)) snprintf(t, sizeof t, "%s", i18n("Ilimitado"));
+      else snprintf(t, sizeof t, "%d", o->max);
+      l = ajTxt(TXT_V2_24, t); txt_desenhar_alpha(l, tx + tw - l.w, lc - l.h * 0.5f, 0.5f);
       if (fp >= 0) {
         char pv[64];
         uxValorTexto(uxOp, ajPadraoVisual(uxOp), pv, sizeof pv);
@@ -831,8 +837,14 @@ static void aj2EditorNumero(GfxRect m) {
     y += r.h; }
   if (uxOp == AJ_FIL_LIMITE) {
     char t[400];
+#ifdef NV_ANDROID
+    // Dica, nao alerta: no Android o limite e "ilimitado" (dono, 2.0.4).
+    snprintf(t, sizeof t, "%s", i18n("Ilimitado mostra todos os catálogos ligados. Com muitas fileiras a Home leva mais tempo para ficar completa."));
+    y += 22; y += aj2Ef("aj_info", t, lx, y, lw, 1);
+#else
     snprintf(t, sizeof t, i18n("Mais fileiras usam mais memória e rede: em TV com 1 GB a Home pode ficar lenta ou fechar. Acima de %d a TV pede confirmação."), FIL_LIMITE_SEGURO);
     y += 22; y += aj2Ef("aj_triangle-alert", t, lx, y, lw, 1);
+#endif
   }
   { const char *ef = uxOp == AJ_FIL_LIMITE ? NULL : efeitoOpcao(uxOp);
     if (ef && ef[0] && y + 12 + 80 <= m.y + m.h - 40 - 64 - 20) {
