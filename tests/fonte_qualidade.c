@@ -71,6 +71,15 @@ int main(void) {
   cfg(0, 0, 0);   // padroes: Equilibrio, Preferir, DV ligado; qualidade Automatica
   streamfit_limpar();
 
+  // #402: sem cache conhecido nunca entra no automatico, nem sozinha.
+  { Stream m[2];
+    fonte(&m[0], "NMR | ALL", "uncached 2160p", 2160, 0, 1, 0, "tb.invalid");
+    fonte(&m[1], "NMR", "720p", 720, 0, 0, 0, "td.invalid");
+    assert(!strcmp(vence(m, 2), "720p"));
+    stream_definir_lista(m, 1);
+    assert(stream_automatico() == -1);
+  }
+
   // 1) A LISTA DO DONO, sem medida nenhuma (hosts=0 na C9).
   n = 0;
   plugin(&l[n++], "MegaEmbed - 1080", 1080);

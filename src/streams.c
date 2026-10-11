@@ -346,9 +346,9 @@ static int ehInformativa(const Stream *s) {
 // na folha manual (#284: 75% Android / 60% Samsung / 41% LG falham quando o
 // automatico os escolhe, contra 6/14/9% das fontes com resolucao).
 static int foraDoAuto(int i) {
-  return automaticaExcluida(i) || (i >= 0 && i < n && (ehInformativa(&lista[i]) || excedeDecoder(&lista[i])));
+  return automaticaExcluida(i) || (i >= 0 && i < n && (lista[i].foraCache || ehInformativa(&lista[i]) || excedeDecoder(&lista[i])));
 }
-int stream_automatico_disponivel(int indice) { return indice >= 0 && indice < n && !automaticaExcluida(indice) && !excedeDecoder(&lista[indice]); }
+int stream_automatico_disponivel(int indice) { return indice >= 0 && indice < n && !lista[indice].foraCache && !automaticaExcluida(indice) && !excedeDecoder(&lista[indice]); }
 int stream_automatico_excluir(int indice) {
   int resultado = 0;
   pthread_mutex_lock(&autoExclTrava);
@@ -877,14 +877,8 @@ static long multasDe(const Stream *s) {
   // qualidade (< 50000), menor que cache/origem/teto.
   if (s->altura <= 0) m += 60000;
   if (!cabeNoTeto(s)) m += 1000000;
-  // FORA DE CACHE NO DEBRID vai para depois das cacheadas, e tambem nao sai
-  // da fila: o automatico prefere o que TOCA AGORA. Registro 1163 (1.3.12,
-  // AIOStreams+TorBox): a verificacao aceitou "⏳ FHD", o link do AIOStreams
-  // manda o TorBox baixar e devolve um clipe de aviso de 8 s — que a
-  // verificacao nao tem como distinguir de filme. Com a marca do proprio
-  // addon, a cacheada da mesma lista vem antes. Menor que o teto (1000000):
-  // uma cacheada acima do teto ainda perde para uma fora de cache dentro dele,
-  // como ja perdia para qualquer fonte dentro dele.
+  // Fora de cache conhecido tambem sai do automatico (foraDoAuto, #402).
+  // O peso continua util para quem inspeciona a pontuacao de uma fonte.
   if (s->foraCache) m += 500000;
   // P2P do servidor de streaming: o fim da fila. O automatico nem chega a
   // toca-lo (nao ha debrid que o resolva), mas a ORDEM da folha tambem conta:
@@ -1246,7 +1240,7 @@ static int verificarUma(int i, Conferencia *c) {
     pthread_mutex_unlock(&verTrava);
     return 0;
   }
-  if (excedeDecoder(&lista[i])) { pthread_mutex_unlock(&verTrava); return 0; }
+  if (lista[i].foraCache || excedeDecoder(&lista[i])) { pthread_mutex_unlock(&verTrava); return 0; }
   snprintf(url, sizeof url, "%s", lista[i].url);
   snprintf(cab, sizeof cab, "%s", lista[i].cabecalhos);
   snprintf(infoHash, sizeof infoHash, "%s", lista[i].infoHash);
@@ -1256,14 +1250,20 @@ static int verificarUma(int i, Conferencia *c) {
 
   if (!url[0] && infoHash[0]) {
     // Link recem-saido do unrestrict: nao precisa da segunda viagem abaixo.
-    if (debrid_resolver(infoHash, fileIdx, url, sizeof url)) {
+    int fora = 0;
+    if (debrid_resolver_cache(infoHash, fileIdx, url, sizeof url, &fora)) {
       pthread_mutex_lock(&verTrava);
       if (listaGeracao == c->geracao && i < n) {
         snprintf(lista[i].url, sizeof lista[i].url, "%s", url);
         ok = 1;
       } else c->abortou = 1;
       pthread_mutex_unlock(&verTrava);
-    } else printf("[fonte] %d torrent nao resolveu no debrid\n", i);
+    } else {
+      pthread_mutex_lock(&verTrava);
+      if (listaGeracao == c->geracao && i < n && fora) lista[i].foraCache = 1;
+      pthread_mutex_unlock(&verTrava);
+      printf("[fonte] %d torrent nao resolveu no debrid\n", i);
+    }
   } else if (!url[0]) {
     ok = 0;
   } else if (!resolverUrl(url, cab, 10, fim, sizeof fim, mime, sizeof mime, &corpo)) {
@@ -1443,7 +1443,7 @@ int stream_resolver_escolhida(int i, unsigned geracao, char *url, unsigned nu,
 static void faixaPontos(const Stream *s, char *dst, size_t tam) {
   static const char *const hdrNome[] = { "SDR", "HDR", "HDR10", "HDR10+", "DV" };
   snprintf(dst, tam, "%dp %s%s%s%s%s", s->altura, hdrNome[nivelHdr(s)], s->mp4 ? " mp4" : "",
-           s->foraCache ? " uncached" : " cached", ehPlugin(s) ? " plugin" : " addon",
+           s->foraCache ? " uncached" : " cache-unconfirmed", ehPlugin(s) ? " plugin" : " addon",
            !cabeNaAltura(s) ? " over-cap" : foraDaFaixaTamanho(s) == 1 ? " over-size"
            : foraDaFaixaTamanho(s) == 2 ? " under-size" : "");
 }
@@ -1992,7 +1992,7 @@ static int automaticoCom(int regras) {
   // enchendo por addon o indice e a ordem de CHEGADA, nao a dos addons.
   for (int k = 0; k < n; k++) {
     int i = ORD(k), g = regras ? grupoDe(i) : 0;
-    if (automaticaExcluida(i) || ehInformativa(&lista[i]) ||
+    if (lista[i].foraCache || automaticaExcluida(i) || ehInformativa(&lista[i]) ||
         (regras && excedeDecoder(&lista[i])) || g < 0) continue;
     long p = pontos(&lista[i]);
     if (lg) { idx[m] = i; pts[m] = p; grp[m] = (signed char)g; m++; }
@@ -2133,7 +2133,7 @@ static int nFiltrados(void) {
 // na frente quando existe; senao, a de maior pontuacao. Pedido do dono, 16/09.
 // Uma vez por quadro, nunca por linha: stream_automatico percorre a lista.
 static int automaticaDaFolha(void) {
-  return preferida >= 0 && !automaticaExcluida(preferida) &&
+  return preferida >= 0 && !lista[preferida].foraCache && !automaticaExcluida(preferida) &&
          (canalFolha || !excedeDecoder(&lista[preferida])) ? preferida : automaticoCom(!canalFolha);
 }
 
@@ -2545,7 +2545,7 @@ static int temMarca(int i, int automatica) {
   (void)automatica;
   // StreamFit (F03): a measured-heavy source carries its reason on the mark line.
   return i >= 0 && (i == atual || i == preferida || (i == melhorFolha && nFiltrados() > 1) ||
-                    fitPesada(i));
+                    fitPesada(i) || lista[i].foraCache);
 }
 // Altura de uma linha: base, marca, e o nome do arquivo que abre por mola na
 // linha em foco. Usa nOrdem como o indice que a linha vai receber.
@@ -2610,7 +2610,7 @@ static void montar(int automatica) {
     alturaTotal = y;
     return;
   }
-  // #400: ordem visual do addon, sem promover, agrupar ou particionar fontes.
+  // #400/#402: ordem do addon, com negativas de cache conhecidas no fim.
   // A folha chama montar() a cada desenho: mudar o ajuste vale no proximo quadro.
   if (ajustes_fonte_ordem_addon()) {
     // A classificacao do StreamFit (avisos "Acima da conexao") e o
@@ -2619,9 +2619,9 @@ static void montar(int automatica) {
     fitAtualizar();
     memset(secN, 0, sizeof secN);
     nOrdem = 0;
-    for (k = 0; k < n; k++) {
+    for (int fora = 0; fora < 2; fora++) for (k = 0; k < n; k++) {
       i = ORD(k);
-      if (!passaFiltro(i)) continue;
+      if (!passaFiltro(i) || !!lista[i].foraCache != fora) continue;
       (void)grupoRes(&lista[i]);
       porLinha(i, &y, automatica);
     }
@@ -2638,7 +2638,7 @@ static void montar(int automatica) {
   }
   fitAtualizar();
   nOrdem = 0;
-  if (melhorFolha >= 0 && melhorFolha < n && passaFiltro(melhorFolha) && nFiltrados() > 1 &&
+  if (melhorFolha >= 0 && melhorFolha < n && !lista[melhorFolha].foraCache && passaFiltro(melhorFolha) && nFiltrados() > 1 &&
       (melhorFolha >= fitN || fitClasses[melhorFolha] != SF_PESADA)) {
     m = melhorFolha;
     porLinha(m, &y, automatica);
@@ -2651,7 +2651,7 @@ static void montar(int automatica) {
     // addon (#221) e o empate de tamanho fica com a ordem do addon.
     for (k = 0; k < n; k++) {
       i = ORD(k);
-      if (i != m && passaFiltro(i) && grupoRes(&lista[i]) == g) grupoTmp[nt++] = i;
+      if (i != m && !lista[i].foraCache && passaFiltro(i) && grupoRes(&lista[i]) == g) grupoTmp[nt++] = i;
     }
     // Insercao estavel: em tamanho igual vale a ordem do addon.
     for (k = 1; k < nt; k++) {
@@ -2668,6 +2668,11 @@ static void montar(int automatica) {
     y += FOLHA_SEC_H;
     secN[g] = nt;
     for (k = 0; k < nt; k++) porLinha(grupoTmp[k], &y, automatica);
+  }
+  // #402: negativas conhecidas depois de TODOS os grupos; desconhecidas ficam.
+  for (k = 0; k < n; k++) {
+    i = ORD(k);
+    if (lista[i].foraCache && passaFiltro(i)) porLinha(i, &y, automatica);
   }
   alturaTotal = y;
 }
@@ -3470,6 +3475,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       // StreamFit (F03): "above the connection" is a condition of this source on
       // this network, not a defect: champagne-grey like the HDR label, after any
       // other mark. It is why the row sits at the end of its group.
+      if(s->foraCache) mx += caixaAlta("Fora do cache",185,179,171,mx,cy,anim)+18;
       if(fitPesada(i)){
         gfx_cor((GfxRect){mx,cy+5,7,7},.5f,.80f,.70f,.52f,anim);
         caixaAlta("Acima da conexão",204,178,132,mx+16,cy,anim);
@@ -3596,15 +3602,10 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
         if(id){ int c=sel?230:190;
           TxtLinha li=txt_linha(TXT_HERO_META,id,c,c,c,255);
           if(lw+18+li.w<=txtW0){ txt_desenhar_alpha(li,tx0+(lw>0?lw+18:0),cy+(FOLHA_SELO_H-li.h)*.5f,anim); lw+=(lw>0?18:0)+li.w; } } }
-      // FORA DO CACHE: o debrid ainda vai baixar; tocar agora da o clipe de
-      // aviso (ver o toast em app.c). Discreto, no fim da fileira — e uma
-      // condicao da fonte, nao um defeito dela.
       if(s->naoVideo){ int c=sel?185:140;
         TxtLinha ln=txt_linha(TXT_HERO_META,"Não é vídeo",c,c-6,c-14,255);
         if(lw+18+ln.w<=txtW0) { txt_desenhar_alpha(ln,tx0+(lw>0?lw+18:0),cy+(FOLHA_SELO_H-ln.h)*.5f,anim); lw+=(lw>0?18:0)+ln.w; } }
-      if(s->foraCache){ int c=sel?185:140;
-        TxtLinha lf=txt_linha(TXT_HERO_META,"Fora do cache",c,c-6,c-14,255);
-        if(lw+18+lf.w<=txtW0) { txt_desenhar_alpha(lf,tx0+(lw>0?lw+18:0),cy+(FOLHA_SELO_H-lf.h)*.5f,anim); lw+=(lw>0?18:0)+lf.w; } } }
+      }
     cy+=FOLHA_SELO_H+12;
     // O ARQUIVO, so na linha em foco: e o que distingue duas fontes iguais
     // (grupo de release, versao), e em toda linha era ruido.

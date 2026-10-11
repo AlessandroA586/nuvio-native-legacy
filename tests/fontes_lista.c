@@ -98,7 +98,7 @@ static void conferirFolhaCheia(const Stream *l, int n, const char *cenario) {
   tecla(SDLK_RETURN);
   { int esc = -1;
     assert(stream_folha_escolheu(&esc));
-    assert(esc == N_TOTAL - 1); }
+    assert(esc == 4); } // #402: ultima e a segunda fonte conhecida fora de cache
   printf("fontes_lista: %s: %d de %d na folha\n", cenario, stream_folha_n(), N_TOTAL);
 }
 
