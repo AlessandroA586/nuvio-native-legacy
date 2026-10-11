@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-09",
- "base": "21077ab5",
- "nota": "Status: aberta, respondida, consertada-nao-lancada, lancada, por-desenho, fora-do-escopo, precisa-log, duplicada (+ fechada-sem-resposta, usado só em issues fechadas sem nenhum comentário).",
+ "atualizado_em": "2026-10-11",
+ "base": "db6ae4ee",
+ "nota": "Fonte GitHub atualizada em 11/10; estados sincronizados com gh issue list. Releases e consertos identificados pelos refs locais.",
  "itens": [
   {
    "numero": 1,
@@ -5802,7 +5802,7 @@
   {
    "numero": 269,
    "titulo": "Embedded subtitles are not being detected or not being display well",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung (tpk/wgt?)",
    "tipo": "bug",
    "status": "lancada",
@@ -5824,8 +5824,7 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "MKV >2 GB rejeitado pelo leitor de legendas; conserto 80569112 só na 2.0.3 (2.0.1/2.0.2 tiveram partes). Resposta também prometeu \"setting para o usuário escolher este comportamento\": item vago, sem commit identificado. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/269",
-   "criada_em": "2026-10-06",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-06"
   },
   {
    "numero": 270,
@@ -6119,7 +6118,7 @@
   {
    "numero": 284,
    "titulo": "Source result (\"Best for this tv\") missing resolution",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "lancada",
@@ -6137,8 +6136,7 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "a63ec982: linha \"Melhor para esta TV\" mostra resolução. Sem comentário nosso na issue. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/284",
-   "criada_em": "2026-10-06",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-06"
   },
   {
    "numero": 286,
@@ -6167,7 +6165,7 @@
   {
    "numero": 287,
    "titulo": "Auto select forced embedded sub",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "lancada",
@@ -6184,8 +6182,7 @@
    "proximo_passo": "nada (autor confirmou; pode fechar)",
    "notas": "Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/287",
-   "criada_em": "2026-10-06",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-06"
   },
   {
    "numero": 288,
@@ -6307,7 +6304,7 @@
   {
    "numero": 294,
    "titulo": "🐛 Home collection order resets after switching profiles",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "bug",
    "status": "lancada",
@@ -6327,8 +6324,7 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "Parte na 2.0.2 (b4186acd); 66e6ae9e/26d845c6/abd0770a na 2.0.3. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag. PERSISTE NA 2.0.3 (09/10): a #392 relata a mesma reordenação ao trocar de perfil em v2.0.3 (.tpk Tizen 6.0); investigação em agente/2031-ordemperfil. Conserto do #392 (2.0.4): bb583b60, 9023ebdb em agente/2031-ordemperfil, não integrado.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/294",
-   "criada_em": "2026-10-06",
-   "alvo": "2.0.4"
+   "criada_em": "2026-10-06"
   },
   {
    "numero": 295,
@@ -6450,8 +6446,8 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "lancada",
-   "release": "2.0.3",
+   "status": "precisa-log",
+   "release": "2.0.5",
    "conserto": [
     "6c4d3863 (v2.0.3)",
     "8fea5018 (v2.0.3)",
@@ -6463,8 +6459,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-08"
    },
-   "proximo_passo": "postar correção",
-   "notas": "Rascunho de correção: o conserto do live TV NÃO está na 2.0.2 (resposta anterior dizia que sim). 0021b573 (2.0.2) é parcial. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
+   "proximo_passo": "triar",
+   "notas": "Rascunho de correção: o conserto do live TV NÃO está na 2.0.2 (resposta anterior dizia que sim). 0021b573 (2.0.2) é parcial. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag. Log BKPH09 ainda não foi lido; sem conserto confirmado para este relato.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/302",
    "criada_em": "2026-10-07",
    "alvo": "2.0.5"
@@ -6516,7 +6512,7 @@
   {
    "numero": 305,
    "titulo": "Hide player ui when pressing up",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "lancada",
@@ -6533,8 +6529,7 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/305",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 306,
@@ -6675,7 +6670,7 @@
   {
    "numero": 312,
    "titulo": "few minor bugs, none affect use",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "LG",
    "tipo": "bug",
    "status": "lancada",
@@ -6693,8 +6688,7 @@
    "proximo_passo": "nada (correcao publicada 09/10: Dolby Vision em MKV vem DESLIGADO por padrao); pode fechar com a 2.0.3",
    "notas": "Nossa resposta disse que \"Dolby Vision in MKV\" vem LIGADO por padrão: ERRADO, é DESLIGADO (docs 203-dvmkv-decisao.md; ajustes_ux_padrao.inc). Resumo traduzido e \"All sources\" saem na 2.0.3, não na 2.0.2. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag. 09/10: correcao publicada na issue (DV em MKV desligado por padrao), com OK do dono.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/312",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 313,
@@ -6821,7 +6815,7 @@
   {
    "numero": 319,
    "titulo": "Home row still not updating properly",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "bug",
    "status": "lancada",
@@ -6841,13 +6835,12 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/319",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 320,
    "titulo": "Arabic language in Subtitle shows no glyph font",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "lancada",
@@ -6865,13 +6858,12 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "Nenhum commit cita #320; 22ecac46/8ab3b78f (\"tpk: arabic plain subtitles find Noto Naskh when the installed res/ predates 2.0.2\") batem com a promessa \"o próximo update busca a fonte sozinho\". LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/320",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 321,
    "titulo": "The \"not started\" label does not shift downwards.",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "lancada",
@@ -6888,13 +6880,12 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "b347004c \"rotulo de secao desce com o cartao aberto\" (cita #203 = versão); NOTAS 2.0.3 o lista. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/321",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 322,
    "titulo": "Can't delete from Continue watching on the home screen",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "lancada",
@@ -6911,13 +6902,12 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "b8d110de: up next removível + opção para desligar (cita \"#203\" = versão). LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/322",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 323,
    "titulo": "App crashes on playback",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "bug",
    "status": "lancada",
@@ -6935,8 +6925,7 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "Tudo integrado em 2.0.3. O SIGSEGV em verificarOuParar (Conferencia na pilha) está consertado por 696afa74, que veio no merge 1b6c9a89: a Conferencia vai para o heap com contagem e é solta pelo último fio. f349c2f7/4d22e4f7 são uma versão anterior do mesmo conserto (sem liberar) e não precisam entrar; SANITIZE=1 tests/fonteparalela.sh passa em c3c1032e. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/323",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 324,
@@ -7081,7 +7070,7 @@
   {
    "numero": 330,
    "titulo": "[Bug]extremely laggy after repeated playback",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "bug",
    "status": "lancada",
@@ -7098,8 +7087,7 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/330",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 331,
@@ -7130,7 +7118,7 @@
   {
    "numero": 332,
    "titulo": "Nuvio didn't finish opening",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "bug",
    "status": "lancada",
@@ -7150,13 +7138,12 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "SUSPEITA: relato Sony BRAVIA preso em \"rede _preparar\"; commits citados são os do #266. A resposta final do dono fala de outro assunto (contorno do vidro dos pôsteres, citado como \"corrigido para a próxima versão\"). teste-shield-266.2 não resolveu segundo EzequielS04. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/332",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 333,
    "titulo": "Arabic language",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "all",
    "tipo": "feature",
    "status": "duplicada",
@@ -7171,8 +7158,7 @@
    "proximo_passo": "responder (apontar #250/#260; sem resposta nossa)",
    "notas": "Duplicata de #250 (Arabic). Comentário no commit c824675c (v1.0.1) é falso positivo.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/333",
-   "criada_em": "2026-10-07",
-   "alvo": "2.1"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 334,
@@ -7203,7 +7189,7 @@
   {
    "numero": 335,
    "titulo": "Extend Arabic subtitle size scale (200%-250%), ASS support, and fix bold rendering",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung (tpk/wgt?)",
    "tipo": "feature",
    "status": "lancada",
@@ -7225,8 +7211,7 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/335",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 336,
@@ -7296,7 +7281,7 @@
   {
    "numero": 339,
    "titulo": "Pantalla de ajustes",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "lancada",
@@ -7316,13 +7301,12 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/339",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 340,
    "titulo": "Quicker Seek/skipping",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "lancada",
@@ -7339,8 +7323,7 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/340",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 341,
@@ -7348,8 +7331,8 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "lancada",
-   "release": "2.0.3",
+   "status": "consertada-nao-lancada",
+   "release": "2.0.5",
    "conserto": [
     "beb5007a (v2.0.3)"
    ],
@@ -7363,7 +7346,7 @@
    "notas": "SUSPEITA: nenhum commit cita #341; beb5007a \"tpk 4/5: botão de aspecto/zoom do player passa a ter efeito\" está na 2.0.3 e NOTAS cita \"aspect/zoom button on Tizen 4/5\". LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/341",
    "criada_em": "2026-10-08",
-   "alvo": "ja-lancada"
+   "alvo": "2.0.5"
   },
   {
    "numero": 342,
@@ -7410,10 +7393,10 @@
   {
    "numero": 344,
    "titulo": "Live TV search crash",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "bug",
-   "status": "consertada-nao-lancada",
+   "status": "lancada",
    "release": "2.0.4",
    "conserto": [
     "9d78c75a (integracao/2.0.3.1)",
@@ -7429,8 +7412,7 @@
    "proximo_passo": "responder com a causa quando o hotfix 2.0.4 sair",
    "notas": "CAUSA PROVADA (09/10) por tombstone simbolizado (log AX1R49): leitura fora do limite em buscaFazer (src/guia.c ~3965, EpgProg ps[24] enquanto epg_faixa/xtepg_faixa devolvem o total). Existe desde a v1.7.0, continua na 2.0.3 e vale para todas as plataformas com o guia. Conserto em agente/2031-guiabusca, alvo 2.0.4. Primeira rodada integrada em integracao/2.0.3.1 (merge c9af64b1; teste 9d78c75a falhava com ASan, conserto 8dd273f3); ainda sem tag v*.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/344",
-   "criada_em": "2026-10-08",
-   "alvo": "2.0.4"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 345,
@@ -7655,7 +7637,7 @@
    "plataforma": "?",
    "tipo": "bug",
    "status": "precisa-log",
-   "release": "2.0.3",
+   "release": "2.0.5",
    "conserto": [
     "d47a78c8 (2.0.3)",
     "9af09e0c (2.0.3)"
@@ -7666,11 +7648,11 @@
     "ultimo_comentario_por": "aimquestion",
     "ultima_nossa": "2026-10-08"
    },
-   "proximo_passo": "ler o log T5JF2G (09/10) e confirmar a leitura abaixo; se for isso, pedir novo log na 2.0.3",
-   "notas": "d47a78c8 (Cinemeta antes da ficha Nuvio, 2.0.3) cobre uma suspeita, sem confirmação. Config \"quanto à frente\" planejada 2.0.5 (sem commit). LOG T5JF2G (autor, 09/10): leitura informada pelo coordenador, SUSPEITA e sem conserto: a fileira Continuar Assistindo é montada antes de a lista de vistos da conta chegar e não é refeita depois (o passo \"a seguir da conta\" nunca aparece no log). Precisa de log da 2.0.3 para confirmar. Alvo 2.0.3 mantido (a tag já saiu: reavaliar para 2.0.4/2.0.5 se o log da 2.0.3 confirmar). COMMITS vs v2.0.3 (09/10): d47a78c8, 9af09e0c estão na tag; status mantido porque o conserto é suspeita/parcial e sem confirmação do autor. REDDIT hboinay 09/10 (item 5, \"próximas temporadas apareceram uma vez e sumiram\"): mesmo sintoma; pedir o log da 2.0.3.",
+   "proximo_passo": "triar",
+   "notas": "d47a78c8 (Cinemeta antes da ficha Nuvio, 2.0.3) cobre uma suspeita, sem confirmação. Config \"quanto à frente\" planejada 2.0.5 (sem commit). LOG T5JF2G (autor, 09/10): leitura informada pelo coordenador, SUSPEITA e sem conserto: a fileira Continuar Assistindo é montada antes de a lista de vistos da conta chegar e não é refeita depois (o passo \"a seguir da conta\" nunca aparece no log). Precisa de log da 2.0.3 para confirmar. Alvo 2.0.3 mantido (a tag já saiu: reavaliar para 2.0.4/2.0.5 se o log da 2.0.3 confirmar). COMMITS vs v2.0.3 (09/10): d47a78c8, 9af09e0c estão na tag; status mantido porque o conserto é suspeita/parcial e sem confirmação do autor. REDDIT hboinay 09/10 (item 5, \"próximas temporadas apareceram uma vez e sumiram\"): mesmo sintoma; pedir o log da 2.0.3. Ajuste Mostrar não exibidos; sem conserto confirmado para este relato.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/356",
    "criada_em": "2026-10-08",
-   "alvo": "2.0.3"
+   "alvo": "2.0.5"
   },
   {
    "numero": 357,
@@ -7768,7 +7750,7 @@
   {
    "numero": 361,
    "titulo": "Poster URL Max Character Length Too Short",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "all",
    "tipo": "feature",
    "status": "lancada",
@@ -7787,8 +7769,7 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "NOTAS 2.0.3: posters com URL longa (>~500 caracteres) chegam inteiros ao fundo, detalhe, Salvos e conta (merge 9ac3531d, agente/203-361). Pedido original pedia limite maior; URL de fundo/logo longa demais é descartada com linha de log. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/361",
-   "criada_em": "2026-10-08",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 362,
@@ -7817,7 +7798,7 @@
   {
    "numero": 363,
    "titulo": "Unable to Send Recommendation to a Friend",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "bug",
    "status": "lancada",
@@ -7836,8 +7817,7 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/363",
-   "criada_em": "2026-10-08",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 364,
@@ -7929,7 +7909,7 @@
   {
    "numero": 368,
    "titulo": "Tab enhancement",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "lancada",
@@ -7947,8 +7927,7 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "Rascunho de correção: ocultar add-ons no guia sai na 2.0.3, não na 2.0.2; busca espera 300 ms. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/368",
-   "criada_em": "2026-10-08",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 369,
@@ -7977,7 +7956,7 @@
   {
    "numero": 370,
    "titulo": "Subtitles sync issues",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .wgt",
    "tipo": "bug",
    "status": "lancada",
@@ -7997,8 +7976,7 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/370",
-   "criada_em": "2026-10-08",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 371,
@@ -8028,10 +8006,10 @@
   {
    "numero": 372,
    "titulo": "[Bug] Incorrect Season/Episode Metadata Mapping for TV Anime & SIMKL Login Issue",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "consertada-nao-lancada",
+   "status": "lancada",
    "release": "2.0.4",
    "conserto": [
     "038a7dc7 (integracao/2.0.3.1)",
@@ -8049,8 +8027,7 @@
    "proximo_passo": "parte 1 (abas de temporada) sai na 2.0.4: responder ao autor com a causa quando sair; parte 2 (numeracao Cinemeta/TVDB + camada de traducao) na 2.0.5; a parte SIMKL do titulo segue sem tratamento",
    "notas": "CAUSA PROVADA (09/10): regressão 9677065b (v2.0.1, catálogo do Nuvio primeiro para a lista de episódios; o TMDB junta anime longo em 1-2 temporadas: Bleach no Nuvio {1:366,2:50} contra S1-16 no Cinemeta) somada a um defeito antigo: as abas de temporada saem do corpo do Nuvio mesmo quando a lista de episódios é a do add-on (descoberta.c ~7069-7087, detail.c ~742-765). O log BZB857 (2.0.3, webOS) prova. A teoria do autor sobre o Trakt está errada.  Relacionado: #328 (episódios duplicados), mesma raiz (numeração). A parte SIMKL do título não foi tratada. DECISÃO DO DONO (09/10), duas partes. PARTE 1, conserto na 2.0.4: as abas de temporada saem da lista de episódios publicada (não da ficha do Nuvio) e a cauda de enriquecimento do detalhe não repõe abas velhas; integrada em integracao/2.0.3.1 (merge 21077ab5; 038a7dc7, c2112b61, a120b67c, 167310e6, 8eb5ce90), ainda sem tag v*. PARTE 2, 2.0.5, opção (b): lista de episódios na numeração Cinemeta/TVDB mais uma camada de tradução por número absoluto do episódio para o progresso/scrobble do Trakt, a conta Nuvio, o Simkl, os ids de \"a seguir\"/Continuar assistindo e as marcas de visto (vistonao/vistoep). Como a issue tem um alvo só, o alvo é 2.0.5 (parte aberta). Origem: dono 09/10.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/372",
-   "criada_em": "2026-10-08",
-   "alvo": "2.0.5"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 373,
@@ -8097,7 +8074,7 @@
   {
    "numero": 378,
    "titulo": "“From Account” subtitle setting defaults to “NONE” on playback",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "consertada-nao-lancada",
@@ -8114,8 +8091,7 @@
    "proximo_passo": "responder ao autor quando a 2.0.4 sair",
    "notas": "",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/378",
-   "criada_em": "2026-10-08",
-   "alvo": "2.0.4"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 379,
@@ -8185,7 +8161,7 @@
   {
    "numero": 384,
    "titulo": "Embedded ASS subtitles stopped rendering after anime intro",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "LG",
    "tipo": "bug",
    "status": "lancada",
@@ -8203,8 +8179,7 @@
    "proximo_passo": "fechar com a resposta curta do bloco \"fechar com a 2.0.3\" (o dono decide; saiu na v2.0.3)",
    "notas": "LG C5, webOS 26, Nuvio 2.0.2; Re:Zero S1 (Seadex): legenda embutida do ep. 3 funcionou, a do ep. 4 parou de aparecer depois da abertura. O autor (Vidhin05) JÁ mandou dois códigos de log no corpo (DDRROH e 98ZQED), ainda não lidos por nós; por isso o status é aberta e não precisa-log. Um comentário do próprio autor fala de \"quedas de conexão e falhas de rede, talvez queda do debrid\": relato solto, sem log próprio, tratar como segundo sintoma e checar nos mesmos logs. Namer03 (não é do projeto) respondeu \"mesma coisa do #308, sai na 2.0.3\": SUSPEITA, o #308 é legenda que bloqueia a fonte, o sintoma aqui (legenda some no meio) pode ser outro; não confirmado. Candidatos já na 2.0.3: #269 (legenda embutida) e #335 (ASS). ALVO 2.0.5 = triagem: pode virar 2.0.3 se os logs mostrarem que é o #308. CAUSA ACHADA (09/10, nos logs do próprio autor): NÃO é o #308 e NÃO está corrigido na 2.0.3 até agora. O coletor de ASS embutido indexa no máximo 8000 blocos (MKVASS_MAX_PONTOS, src/mkvass.c:61) NA ORDEM DO ARQUIVO; numa release com muito typeset (letreiros, karaokê) os 8000 acabam logo depois da abertura, e o resto do episódio fica sem legenda (log: \"cobertura=7360-217270ms\" com exatamente 8000 eventos). O branch agente/203-384 trabalha nisso; o alvo continua 2.0.5 a menos que esse branch entre na 2.0.3. Próximo passo: integrar agente/203-384 (ou deixar para a 2.0.5) e avisar o autor. O comentário de \"queda do debrid\" segue sem log próprio. CORRIGIDO (09/10): o conserto de agente/203-384 entrou na 2.0.3 (merge 2b4c3cea; b03b86db teste e 9ee093ac conserto, ambos contidos na tag v2.0.3): o índice cobre a faixa inteira e a faixa grande é colhida só na janela do playhead, sem carga extra no CDN. O texto acima sobre \"não está corrigido\" e \"alvo 2.0.5\" é histórico. A \"queda do debrid\" do autor segue sem log próprio.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/384",
-   "criada_em": "2026-10-09",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 385,
@@ -8317,7 +8292,7 @@
   {
    "numero": 390,
    "titulo": "Custom poster source not setting",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "consertada-nao-lancada",
@@ -8334,8 +8309,7 @@
    "proximo_passo": "responder ao autor quando a 2.0.4 sair",
    "notas": "QN74F, Tizen 9.0, .tpk, Nuvio 2.0.2 (escrito \"2.02\"). Ao colocar a URL de cartaz própria (pelo celular e à mão) e apertar \"Concluído\", volta para as opções sem gravar a URL. Mesmo autor do #388 e do #389. Não investigado. Relação com a URL de cartaz longa do #361 (2.0.3) não conferida: SUSPEITA.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/390",
-   "criada_em": "2026-10-09",
-   "alvo": "2.0.4"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 392,
@@ -8344,7 +8318,7 @@
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "consertada-nao-lancada",
-   "release": "2.0.4",
+   "release": "2.0.5",
    "conserto": [
     "bb583b60 (agente/2031-ordemperfil)",
     "9023ebdb (agente/2031-ordemperfil)",
@@ -8360,7 +8334,7 @@
    "notas": "Samsung .tpk Tizen 6.0, v2.0.3 (rawldon, log VV8JG2): ao trocar de perfil e voltar, a ordem das fileiras da Home muda (coleções, catálogos e Continuar assistindo). CAUSA PROVADA pelo log VV8JG2: o build da Home registra os catálogos dos add-ons do perfil anterior no arquivo de ordem do perfil novo, e isso expulsa fileiras. Conserto em agente/2031-ordemperfil (teste bb583b60, conserto 9023ebdb: a lista de add-ons do perfil que saiu não é registrada no arquivo do perfil novo), ainda não integrado. Mesma queixa do #294, que persiste na 2.0.3.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/392",
    "criada_em": "2026-10-09",
-   "alvo": "2.0.4"
+   "alvo": "2.0.5"
   },
   {
    "numero": 393,
@@ -8426,7 +8400,7 @@
    "alvo": "2.1"
   },
   {
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "release": "-",
    "conserto": [
     "a46e1a4c (merge)"
@@ -8438,7 +8412,6 @@
     "ultima_nossa": null
    },
    "criada_em": "2026-10-09",
-   "alvo": "2.0.5",
    "numero": 400,
    "titulo": "feature-request: allow using default addon sources sort order",
    "plataforma": "all",
@@ -8475,8 +8448,8 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "consertada-nao-lancada",
-   "release": "-",
+   "status": "precisa-log",
+   "release": "2.0.5",
    "conserto": [
     "ca8f29b4 (merge em integracao/2.0.3.1; teste tests/fhd402.sh)"
    ],
@@ -8486,11 +8459,11 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "responder ao autor quando a 2.0.4 sair",
-   "notas": "Namer03, S95C, .tpk 2.0.3. A imagem mostra, na aba NMR, o cabecalho do grupo \"Other SDR\" com fileiras cujo nome (formatter do addon) diz \"FHD | REMUX | SDR\" e \"FHD | SDR\"; so a ultima diz \"N/A | SDR\" (essa realmente nao declara resolucao). CAUSA (lida no codigo, sem teste ainda): o grupo vem de grupoRes (src/streams.c:2105) que usa s->altura ou os selos r-4k/r-1080/r-720; a altura sai de stream_parse.c:281-283, que so procura os numeros 2160/1440/1080/720/480 e 4k/uhd, e badges_detectar (badges.c:40-42) so tem 1080p/1080i/1080. A palavra FHD sozinha (comum em formatter de AIOStreams) nao casa, entao altura=0 e o grupo e Outras (GRUPO_NOME, streams.c:2072). O app ja conhece FHD para canal ao vivo (nv_res_do_texto, livetv_regras.h:38) mas nao usa no filme/serie. NAO e ordenacao (nivelHdr, MP4 primeiro da LG e perfil 5 nao entram: e a Samsung .tpk e o problema e o grupo, nao a ordem dentro dele). Nao e configuracao (fonteregra.h trata auto-play, nao grupos). Cuidado no conserto: nv_res_do_texto aceita \"hd\" solto como 720, o que casaria DTS-HD; copiar so fhd/fullhd/full hd. Candidato a 2.0.4 (muda so o parser, 2 linhas + teste), decisao do dono. SUSPEITA: o JSON bruto do autor pode ter a resolucao em outro campo; sem o log/JSON da fonte nao foi provado.",
+   "proximo_passo": "triar",
+   "notas": "Namer03, S95C, .tpk 2.0.3. A imagem mostra, na aba NMR, o cabecalho do grupo \"Other SDR\" com fileiras cujo nome (formatter do addon) diz \"FHD | REMUX | SDR\" e \"FHD | SDR\"; so a ultima diz \"N/A | SDR\" (essa realmente nao declara resolucao). CAUSA (lida no codigo, sem teste ainda): o grupo vem de grupoRes (src/streams.c:2105) que usa s->altura ou os selos r-4k/r-1080/r-720; a altura sai de stream_parse.c:281-283, que so procura os numeros 2160/1440/1080/720/480 e 4k/uhd, e badges_detectar (badges.c:40-42) so tem 1080p/1080i/1080. A palavra FHD sozinha (comum em formatter de AIOStreams) nao casa, entao altura=0 e o grupo e Outras (GRUPO_NOME, streams.c:2072). O app ja conhece FHD para canal ao vivo (nv_res_do_texto, livetv_regras.h:38) mas nao usa no filme/serie. NAO e ordenacao (nivelHdr, MP4 primeiro da LG e perfil 5 nao entram: e a Samsung .tpk e o problema e o grupo, nao a ordem dentro dele). Nao e configuracao (fonteregra.h trata auto-play, nao grupos). Cuidado no conserto: nv_res_do_texto aceita \"hd\" solto como 720, o que casaria DTS-HD; copiar so fhd/fullhd/full hd. Candidato a 2.0.4 (muda so o parser, 2 linhas + teste), decisao do dono. SUSPEITA: o JSON bruto do autor pode ter a resolucao em outro campo; sem o log/JSON da fonte nao foi provado. Diagnóstico atualizado: torrents sem cache; sem conserto identificado.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/402",
    "criada_em": "2026-10-09",
-   "alvo": "2.0.4"
+   "alvo": "2.0.5"
   },
   {
    "numero": 403,
@@ -8600,7 +8573,7 @@
   {
    "numero": 409,
    "titulo": "The source didn't answer in time error even though the server is working",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "bug",
    "status": "consertada-nao-lancada",
@@ -8615,8 +8588,7 @@
    "proximo_passo": "juntado na integração (2051869e); validar na TCL; responder ao autor",
    "notas": "Log 4B891A (Changhong AI PONT, MStar, Android 11, tela 1080p): automático escolhe 4K (VidFast), 15 s sem nenhum evento do player, depois erro 4003 (decodificação). Foto do autor: vídeo tocando atrás da mensagem. Causa provável: troca de fonte abre player novo antes do velho soltar o decoder (NvPlayer.liberar só encolhe a SurfaceView e solta em outra thread; overlay MStar segue visível). Conserto em agente/204-decoder409 (capacidade 4K do decoder, sem repetir codec que falhou, Voltar fecha o erro) + rodada 2 (esperar o release, logs do player). | 10/10: outro usuário (Namer03) lembrou no fio que já existe Reprodução › seleção manual de fonte como contorno.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/409",
-   "criada_em": "2026-10-09",
-   "alvo": "2.0.4"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 410,
@@ -8644,7 +8616,7 @@
   {
    "numero": 411,
    "titulo": "Samsung \"Not Available\" toast on Play/Pause (Tizen 4/5)",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "consertada-nao-lancada",
@@ -8661,8 +8633,7 @@
    "proximo_passo": "gerar .tpk Tizen 4/5 da 2.0.4 para o relator testar (precisa OK do dono)",
    "notas": "Q7FN Tizen 4. Host 4/5 passa a reservar teclas de mídia (keygrab TOPMOST via ecore_wayland/ecore_wl2, varre janelas 0-63) — merge a066e6c8. Relator sugeriu ElmSharp WinKeyGrab/eext_win_keygrab_set e se ofereceu para testar numa Q7FN.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/411",
-   "criada_em": "2026-10-09",
-   "alvo": "2.0.4"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 412,
@@ -8670,8 +8641,8 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "consertada-nao-lancada",
-   "release": "2.0.4",
+   "status": "precisa-log",
+   "release": "2.0.5",
    "conserto": [],
    "ultima_resposta": {
     "nos": false,
@@ -8679,1280 +8650,510 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "juntado na integração (f7a24dc7); validar numa Samsung .tpk (host .NET mudou: precisa instalar o .tpk, auto-update da .so não basta); responder ao autor",
-   "notas": "Log QHQRVE (S95C, .tpk): relógio do player congelado, UI com upd=120 ms por quadro, parar retorna 0 ms mas o player nativo segue tocando. Conserto em agente/204-tpkpreso412 (71c7d615): ASS deixa de segurar o quadro, recupera relógio congelado, parada confirmada antes de abrir outro player. Revisão Codex achou P1 (Voltar durante PrepareAsync encerraria o processo numa TV sã): rodada 2 em andamento.",
+   "proximo_passo": "triar",
+   "notas": "Log QHQRVE (S95C, .tpk): relógio do player congelado, UI com upd=120 ms por quadro, parar retorna 0 ms mas o player nativo segue tocando. Conserto em agente/204-tpkpreso412 (71c7d615): ASS deixa de segurar o quadro, recupera relógio congelado, parada confirmada antes de abrir outro player. Revisão Codex achou P1 (Voltar durante PrepareAsync encerraria o processo numa TV sã): rodada 2 em andamento. Aguarda log; sem conserto confirmado para este relato.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/412",
    "criada_em": "2026-10-10",
-   "alvo": "2.0.4"
-  }
- ],
- "fora_do_github": [
-  {
-   "id": "shield-22",
-   "titulo": "Relatório Shield (22 itens, Reddit)",
-   "plataforma": "Android (Shield)",
-   "status": "desconhecido",
-   "release": "2.0.3 (parcial)",
-   "conserto": [
-    "d30344ab/96ccdab1 (#6 Shield: tetos do Android e paginação da watchlist do Trakt, 2.0.3; 7b9e641a, o revert do 96ccdab1, não está em nenhuma branch)",
-    "5413db8a (Shield #19: guia \"Mostrando N de M canais\", Android guarda 3000 canais/128 categorias, 2.0.3)",
-    "6b3aaae1 (Shield 318.3: card do Continuar com o still do episódio; filme assistido diz Reproduzir, 2.0.3)",
-    "eabe3afd/b03aa2f0/35421d1a/73c4ab4c (#266/#332: curl fora do fio principal, /dev/urandom, login por HttpURLConnection, 2.0.3)"
-   ],
-   "proximo_passo": "mapeado em 09/10: o relatório de 20 itens do hboinay (provável versão do de 22) está nas entradas reddit-hboinay-NN abaixo; postar o rascunho docs/issues/rascunhos/reddit-hboinay-2026-10-09.md",
-   "notas": "O texto dos 22 itens NÃO está no repositório nem nas issues. Só três grupos de commits citam \"Shield\". Mapeamento item a item: desconhecido. ATUALIZAÇÃO 09/10: chegou um relatório de 20 itens do mesmo autor e da mesma build (teste-318.3); cada item virou uma entrada reddit-hboinay-NN (ou uma nota em #353/#356). Falta confirmar se é o mesmo relatório dos 22."
+   "alvo": "2.0.5"
   },
   {
-   "id": "android-9",
-   "titulo": "Relatório Android TV (9 itens) = #369",
-   "plataforma": "Android",
-   "status": "consertada-nao-lancada (parcial)",
-   "release": "2.0.3",
-   "conserto": [
-    "712557ca (tailandês)",
-    "5f04c36b (ocultar não lançados)"
-   ],
-   "proximo_passo": "responder no #369 e listar os 7 itens sem commit",
-   "notas": "Só 2 dos 9 itens têm commit identificado. #369 não tem resposta nossa."
-  },
-  {
-   "id": "samsung-audio-oculto",
-   "titulo": "Samsung: faixa de áudio escondida pela TV (DTS/TrueHD)",
-   "plataforma": "Samsung .tpk (e .wgt na fase 1)",
-   "status": "consertada-nao-lancada (casar faixa) + planejado (aviso)",
-   "release": "2.0.3 (casar faixa); 2.0.5 (aviso, fase 1)",
-   "conserto": [
-    "4112f3f7 + efd1014b (agente/203-casarfaixa, em integracao/2.0.3): TV com menos faixas que o MKV casa por idioma, codec e canais",
-    "0ef8ddc9 (agente/204-samsung-dts): só o plano docs/plans/samsung-dts.md, sem código",
-    "f45ddc14 (2.0.2, #313): aviso só quando TODAS as faixas são recusadas"
-   ],
-   "proximo_passo": "implementar fase 1 do plano (aviso + faixa cinza na folha de áudio, 1,5-2 dias); fase 2 (ESPlayer) depende de teste de assinatura Partner em TV",
-   "notas": "Relato do Reddit: 2 faixas no box, 1 na TV. Relacionado a #313. ESPlayer exige privilégio Partner (no 4/5 isso já quebrou a instalação, 118014)."
-  },
-  {
-   "id": "samsung-80gb",
-   "titulo": "Samsung: pacote de 80 GB",
-   "plataforma": "Samsung",
-   "status": "desconhecido",
-   "release": "-",
-   "conserto": [],
-   "proximo_passo": "perguntar ao dono o que é",
-   "notas": "Nada encontrado em commits, docs, notas de release ou issues (buscas por \"80 GB\"/\"80GB\"). Não preencher sem a fonte."
-  },
-  {
-   "id": "reddit-hboinay-01",
-   "titulo": "Home: mais de 40 fileiras e ordem dos catálogos (hboinay item 1)",
-   "plataforma": "Android",
-   "status": "precisa-log",
-   "release": "alvo sugerido 2.0.5 (teto) / sem alvo (ordem)",
-   "conserto": [
-    "8e058817 (agente/204-fileiras-android, não integrado): Android com fileiras ilimitadas, teto 200"
-   ],
-   "proximo_passo": "teto: integrar agente/204-fileiras-android na 2.0.5 (já no roadmap); ordem: pedir log",
-   "notas": "TETO por desenho: CAT_FIL_MAX 40 (catalogo.h:394) e FIL_LIMITE_MAX 40 (fileiras.h:60); a branch 204-fileiras-android o sobe para 200 só no Android. ORDEM: não há como afirmar sem log; ligação provável com #358 (catálogos que a Home move para \"Fora da Home\", 29c640b7 em agente/204-conta-catalogos). Pedir o log para ver a ordem da conta contra a da Home. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
-  },
-  {
-   "id": "reddit-hboinay-03",
-   "titulo": "Continuar com fonte Nuvio mostra 5-6 itens e depois 1; a conta tem 30 (hboinay item 3)",
-   "plataforma": "Android",
-   "status": "precisa-log",
-   "release": "2.0.3 (parcial, 507d3a6b); teto alvo sugerido 2.0.5",
-   "conserto": [
-    "507d3a6b (v2.0.3): fonte Conta semeia o \"a seguir\" mesmo com Trakt/Simkl, descarta vistos velhos"
-   ],
-   "proximo_passo": "pedir log da 2.0.3 (Ajustes > Sobre > Enviar log)",
-   "notas": "O teto de cada fonte é CONT_MAX 12 (descoberta.c:2605), então 30 na conta nunca aparecem inteiros, e o \"a seguir\" ainda passa por filtros (episódio visto em outra fonte, série parada há mais de 60 dias com Trakt/Simkl vinculado, descoberta.c). 5-6 e depois 1 pode ser o filtro ou a lista de vistos da conta ainda não puxada (mesma suspeita do #356). Sem log é suspeita. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
-  },
-  {
-   "id": "reddit-hboinay-04",
-   "titulo": "Com Trakt e Simkl vinculados, Continuar mostra vistos antigos mesmo com fonte Nuvio (hboinay item 4)",
-   "plataforma": "Android",
-   "status": "precisa-log",
-   "release": "2.0.3 (parcial, 507d3a6b + 005b3095 + c0f4054c)",
-   "conserto": [
-    "507d3a6b (v2.0.3)",
-    "005b3095 (v2.0.3): desmarcar ganha",
-    "c0f4054c (v2.0.3): a seguir recua para o primeiro episódio desmarcado"
-   ],
-   "proximo_passo": "pedir log da 2.0.3 com a fonte em Conta Nuvio",
-   "notas": "Na leitura do código a fonte Conta não consulta Trakt nem Simkl (descoberta.c: querTrakt só em Trakt/Todas, querSimkl idem), então os \"vistos antigos\" teriam de vir de continuarLocal ou do \"a seguir\" da conta; a 2.0.3 descarta o visto em outra fonte e o parado há mais de 60 dias. Não reproduzido. Sem log é suspeita. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
-  },
-  {
-   "id": "reddit-hboinay-06",
-   "titulo": "Biblioteca: Trakt 213 e Simkl 483 de 1600+ (hboinay item 6)",
-   "plataforma": "Android",
-   "status": "aberta",
-   "release": "alvo sugerido 2.0.5",
-   "conserto": [
-    "d30344ab (v2.0.3): watchlist do Trakt paginada",
-    "96ccdab1 (v2.0.3): tetos do Android voltam a 400/300",
-    "7b9e641a (órfão, nenhuma branch): reverte o 96ccdab1 e devolve os tetos 2000/1000 no Android"
-   ],
-   "proximo_passo": "decidir o 7b9e641a: reaproveitá-lo na 2.0.5 (Android com teto 2000 Trakt e 1000 Simkl) ou manter o teto de hoje",
-   "notas": "Na 2.0.3 o Trakt pagina (?page=&limit=500, trakt.c:1873-1960) mas para em TRAKT_LISTA_MAX 400 (trakt.h:133) em todas as plataformas, e o Simkl em SIMKL_PTW_MAX 300 (simkl.h): quem tem 1600+ passa a ver 400/300 em vez de 213/483. O teto maior só existe no commit órfão 7b9e641a. O Simkl não pagina (all-items numa resposta), então o teto é só memória. Nota da 2.0.3 diz \"até 400 itens\" e vale para todas as TVs. Relacionado: #393. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
-  },
-  {
-   "id": "reddit-hboinay-07",
-   "titulo": "Selo de assistido não aparece em séries nos cartazes (só em filmes) (hboinay item 7)",
-   "plataforma": "Android",
-   "status": "aberta",
-   "release": "alvo sugerido 2.0.5",
-   "conserto": [],
-   "proximo_passo": "ler o /sync/watched/shows do Trakt uma vez (como o mapa de filmes vistos em trakt.c:1317) para marcar as séries inteiras",
-   "notas": "cat_visto (catalogo.c:432) devolve 0 para série sem histórico; o histórico da série só é escrito quando a PÁGINA do título é aberta (extras.c:586-597, contadores de /shows/<id>/progress/watched) ou ao marcar à mão. Cartaz de série em fileira não tem selo antes disso. Vale para todas as plataformas. #352 (agente/204-biblioteca-visto, 402e2438) só leva o selo para a Biblioteca. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
-  },
-  {
-   "id": "reddit-hboinay-08",
-   "titulo": "Trailers do destaque e da ficha começam pequenos e depois enchem a tela (hboinay item 8)",
-   "plataforma": "Android",
-   "status": "precisa-log",
-   "release": "alvo sugerido 2.0.5",
-   "conserto": [],
-   "proximo_passo": "reproduzir na Shield com o log de trailer; ver a ordem posição/recorte no NvPlayer.kt",
-   "notas": "No Android o Kotlin posiciona o recorte (video_android.c:9, video_recorte_fonte=1) e trailer_mostra_video (trailer.c:467) só espera o recorte no .tpk; no Android o plano aparece assim que toca. O pedido é esconder até o recorte assentar, como o .tpk faz (trailer.h:54-60). Hipótese, não medida. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
-  },
-  {
-   "id": "reddit-hboinay-11",
-   "titulo": "Cartazes escuros demais; pede desligar o brilho animado (hboinay item 11)",
-   "plataforma": "Android",
-   "status": "aberta",
-   "release": "alvo sugerido 2.0.5",
-   "conserto": [],
-   "proximo_passo": "dois ajustes pequenos: luz do foco (varredura) liga/desliga e força do véu do cartaz",
-   "notas": "A varredura de luz no foco (revela_varre, revela.h:83, home.c:5426) só some com \"Animações reduzidas\" global (anim_politica_reduzida), que também tira todo o resto do movimento; não há ajuste próprio. O escurecimento vem do véu sobre a arte (veusDoCard, home.c:4844) e do efeito de profundidade (AJ_PROF_*), este com liga/desliga em Ajustes. Contorno de hoje: Animações reduzidas e Efeito de profundidade desligados. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
-  },
-  {
-   "id": "reddit-hboinay-12",
-   "titulo": "Selos: URL do manifesto diz \"isso não é um JSON de selos\"; não usa os selos da conta (hboinay item 12)",
-   "plataforma": "Android",
-   "status": "precisa-log",
-   "release": "alvo sugerido 2.0.5",
-   "conserto": [],
-   "proximo_passo": "pedir a URL do manifesto e o log; testar o JSON no selospacote_adicionar",
-   "notas": "A mensagem sai de SELOS_ERR_JSON (ajustes.c:3047; selospacote.c:639-648): corpo que não é objeto/string JSON ou resposta maior que 4 MB. Os selos da conta só vêm de features.stream_badge_settings.stream_badge_rules no blob de ajustes do perfil (selospacote.c:588-612): se a conta não tem esse campo, nada é usado. Sem a URL e o log não dá para saber qual dos dois é. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
-  },
-  {
-   "id": "reddit-hboinay-13",
-   "titulo": "Só um servidor Jellyfin e um Emby por perfil (hboinay item 13)",
-   "plataforma": "Android",
-   "status": "por-desenho",
-   "release": "alvo sugerido 2.1",
-   "conserto": [],
-   "proximo_passo": "avaliar vários servidores por tipo (hoje instância 0 = Jellyfin, 1 = Emby, mais Plex)",
-   "notas": "Por desenho: um servidor por tipo e por perfil (jellyfin.h:5-10, JfInst; token em jellyfin-p<N>.txt). Vários exigem lista de instâncias, ids com namespace por servidor (jfid.h) e Home com mais fileiras (SRV_FIL_MAX, servidores.h). Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
-  },
-  {
-   "id": "reddit-hboinay-14",
-   "titulo": "Jellyfin/Emby fora das listas de fontes: add-ons permitidos, ordem, lista (hboinay item 14)",
-   "plataforma": "Android",
-   "status": "aberta",
-   "release": "alvo sugerido 2.1",
-   "conserto": [],
-   "proximo_passo": "decidir como o servidor pessoal entra em fonteregra (permitidos/ordem)",
-   "notas": "Para título de servidor pessoal a lista de fontes é só a do servidor (addons.c:493-510, servidores_fontes_colher + stream_definir_lista) e as regras de add-on permitido e ordem (fonteregra.h) só conhecem add-ons/plugins. O servidor vem sempre primeiro por desenho (9025bfa9). Confirmar com o autor o que ele esperava ver. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
-  },
-  {
-   "id": "reddit-hboinay-16",
-   "titulo": "Estilo da legenda só para a segunda legenda nos Ajustes; sincronia automática só por áudio (hboinay item 16)",
-   "plataforma": "Android",
-   "status": "aberta",
-   "release": "alvo sugerido 2.0.5 (estilo)",
-   "conserto": [],
-   "proximo_passo": "estilo da principal em Ajustes; perguntar quais legendas ele testou na sincronia",
-   "notas": "Ajustes tem Tamanho/Cor/Fundo/Borda só da segunda legenda (ajustes.c:1268-1272; a dica diz que a da principal \"é definida no player\"). Sincronia: além do áudio (AJ \"Sincronia por áudio\") existe o AutoSync por texto (legsync.c/autosync.c, em v2.0.3), mas só em legenda EXTERNA, tendo como referência a faixa de texto do MKV (legsync.h:11-16); legenda embutida ou nativa fica indisponível. Pode não ser bug, e sim limite. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
-  },
-  {
-   "id": "reddit-hboinay-17",
-   "titulo": "Só uma conta Xtream por perfil (hboinay item 17)",
-   "plataforma": "Android",
-   "status": "por-desenho",
-   "release": "alvo sugerido 2.1",
-   "conserto": [],
-   "proximo_passo": "avaliar várias contas (lista por perfil, canais com id por conta)",
-   "notas": "Por desenho: um servidor, usuário e senha por perfil (xtream.h, arquivo xtream-p<N>.txt; id \"xtream:<stream_id>\" sem conta). Várias contas pedem mudar o id do canal e o cadastro nos Ajustes. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
-  },
-  {
-   "id": "reddit-hboinay-18",
-   "titulo": "IPTV sem VOD/séries do Xtream (hboinay item 18)",
-   "plataforma": "Android",
-   "status": "por-desenho",
-   "release": "futuro",
-   "conserto": [],
-   "proximo_passo": "registrar como pedido; não planejado",
-   "notas": "O módulo só lê get_live_categories e get_live_streams (xtream.c, xtream.h); não existe get_vod_* nem get_series. Seria um módulo novo (catálogo + ficha + resolução de URL /movie/ e /series/). Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
-  },
-  {
-   "id": "reddit-hboinay-19",
-   "titulo": "TV ao vivo só com canais do Reino Unido e EUA, de dezenas de países (hboinay item 19)",
-   "plataforma": "Android",
-   "status": "precisa-log",
-   "release": "2.0.3 (provável, 5413db8a)",
-   "conserto": [
-    "5413db8a (v2.0.3): guia diz \"Mostrando N de M canais\"; Android guarda 3000 canais e 128 categorias",
-    "45ae240c (teste)"
-   ],
-   "proximo_passo": "pedir para atualizar para a 2.0.3 e, se persistir, o log",
-   "notas": "Antes da 2.0.3 o guia cortava em 900 canais e 48 categorias sem avisar e sumia categorias inteiras (45ae240c); com a lista ordenada isso deixaria só os primeiros países. Hipótese forte, sem confirmação do autor. Se persistir na 2.0.3, a fonte passa a ser o catálogo do add-on (Ajustes > Guia, canais por add-on, #283). Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
-  },
-  {
-   "id": "reddit-hboinay-20",
-   "titulo": "TV ao vivo com fps variando entre 24 e 50 (33, 34, 48) (hboinay item 20)",
-   "plataforma": "Android",
-   "status": "precisa-log",
-   "release": "alvo sugerido 2.0.5",
-   "conserto": [],
-   "proximo_passo": "pedir log com o medidor de desempenho ligado durante um canal ao vivo",
-   "notas": "Sem leitura de código que explique. O medidor (AJ_MEDIDOR) mede quadros da interface, não do vídeo; o vídeo ao vivo roda no Media3 (video_android.c). Pode ser decodificação, rede ou troca de taxa da tela. Só dá para dizer com o log. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
-  },
-  {
-   "id": "reddit-hboinay-21",
-   "titulo": "Canais piscando em verde na TV ao vivo (hboinay item 21)",
-   "plataforma": "Android",
-   "status": "precisa-log",
-   "release": "alvo sugerido 2.0.5",
-   "conserto": [],
-   "proximo_passo": "pedir log com o canal que pisca e a saída de vídeo da Shield",
-   "notas": "Tela verde em vídeo costuma ser decodificador/superfície (buffer YUV sem quadro). No Android a superfície é recriada em partida HDR e mudança de aspecto (notas da 2.0.3). Não localizado no código; sem log é suspeita. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
-  },
-  {
-   "id": "reddit-ragingmuncher-01",
-   "titulo": "Painel lateral (side bar) pisca depois da atualização (Ragingmuncher)",
-   "plataforma": "desconhecida",
-   "status": "precisa-log",
-   "release": "sem alvo (aguardando informação do autor); relatado na 2.0.3",
-   "conserto": [],
-   "proximo_passo": "responder no Reddit pedindo: modelo da TV e pacote (.tpk/.wgt/versão do webOS); se o ponteiro estava na tela ou só setas; em qual tela/item e se já acontecia na 2.0.2; enviar o log logo depois, com a hora aproximada (Ajustes > Sobre > Enviar log); vídeo pelo celular se for só visual",
-   "notas": "Relato: o painel lateral (side bar) pisca depois da atualização para a 2.0.3. TV e plataforma desconhecidas. ANÁLISE de 09/10: em ~310 logs da 2.0.3 (webos, tizen, tizen-tpk, a partir de 09/10/2026 15:00 UTC) não há laço de troca de tela (no máximo 18 linhas \"[transicao] tela\" por log, espaçadas por segundos). O painel lateral não escreve linha de log, então isso só descarta um laço, NÃO um pisca visual. src/menu.c não mudou entre a v2.0.2 e a v2.0.3; src/ponteiro.c ganhou 11 linhas (só aparo de alvo do ponteiro). SUSPEITA, não provada: Magic Remote com o ponteiro sobre o painel com o fundo de vidro. Sem log ou vídeo é suspeita. Origem: Reddit u/Ragingmuncher, versão 2.0.3, 09/10/2026."
-  },
-  {
-   "id": "reddit-km7-203",
-   "titulo": "Reddit (DueResult1983): 2.0.3 trava ao tocar série no Android TV; caixa inteira trava, teve de desinstalar",
-   "plataforma": "Android (Mecool KM7 SE, Amlogic, Android 12)",
+   "numero": 413,
+   "titulo": "[Samsung Tizen 4 / v2.0.3] Finished movie plays again when starting a different movie (first attempt only)",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "bug",
    "status": "aberta",
    "release": "-",
    "conserto": [],
-   "proximo_passo": "reproduzir com vídeo 4K HEVC numa caixa Amlogic de 2 GB; medir no logcat as linhas \"[player] superficie\" da 0b8f9290 (recriação da superfície fora do fio principal) e decidir se a 2.0.4 volta ao caminho antigo nesse tipo de aparelho",
-   "notas": "Pessoa nuvio:266479b1 (registros D1 66153..65330). Queda nativa em 5 de 13 sessões 2.0.3 contra 4 de 49 na 2.0.2 (no geral do Android a 2.0.3 MELHOROU: 25/400 contra 70/391). Pilhas: 65736 = GC da ART (HeapTaskDaemon, ConcurrentCopying, ponteiro nulo); 66017 relata a queda da sessão 66008 = fio ExoPlayer:Playback em AudioTrack.getTimestamp -> GetPrimitiveArrayCritical (SIGSEGV 0xfffffffe); 66021/66025/66054 sem tombstone. As duas pilhas são dentro da ART, padrão de heap Java corrompido ou memória esgotada. Memória: avisos onTrimMemory 5/10/15/20/40 em várias sessões, teto de textura já em 128 MB. Sessão 66008: série tt26545992 T1E1 4K 3840x1920 retomando em 22%; a superfície é recriada 2 vezes logo no início (3x \"primeiro quadro\") e o log para de repente sem linha de FPS. SUSPEITA principal: 0b8f9290 (2.0.3) manda MSG_SET_VIDEO_OUTPUT null ao renderer antes de recriar a superfície; em Amlogic isso pode manter/reabrir o decoder 4K e somar memória. Outras mudanças do player Android entre v2.0.2 e v2.0.3: 2a351b76 (aspecto espera superfície estável), c3726d2d (capítulos MKV por fio lateral), ce7bcd0f (retomada). Seekr já existia na 2.0.2, descartado como novidade."
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Reprodução única, sem causa confirmada.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/413",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
   },
   {
-   "id": "reddit-webos3-32lj600b",
-   "titulo": "Reddit (nossascamerasip): LG 32LJ600B (webOS 3), 2.0.3: trailer com imagem e sem som; filme com som e sem imagem",
-   "plataforma": "LG webOS 3",
+   "numero": 414,
+   "titulo": "https://nuvio.tvflix.co.uk",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Coleção tvflix.co.uk instala mas não abre; sem log.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/414",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
+  },
+  {
+   "numero": 415,
+   "titulo": "constant crashing, no matter if I play or not",
+   "estado_github": "aberta",
+   "plataforma": "LG webOS",
+   "tipo": "bug",
    "status": "precisa-log",
-   "release": "-",
-   "conserto": [],
-   "proximo_passo": "pedir o código do log (Ajustes > Sobre > Enviar registro) logo depois de abrir um filme; com o log, ver a linha [tv] e o caminho do vídeo (DTS, hdr, player) no webOS 3",
-   "notas": "A mesma pessoa usa a C1 sem problema. Em 09/10 não há sessão da 32LJ600B no D1 (busca por LJ600 e por host=webos-3 desde o id 64500); há outras webOS 3.9.3 na 2.0.3 com \"arranque queda\" (65SJ800V 65304/65363/65374, OLED55B7P 65317). A 2.0.4 já leva a queda do webOS 3 no 2º vídeo (09ce19a0) e a leitura estrita da versão (webosver), mas nada prova que seja este defeito."
-  },
-  {
-   "id": "pedido-perfil-simkl",
-   "titulo": "Pedido: \"Meu perfil\" e status funcionando sem Trakt (usa Simkl e dá erro); sugere Telegram/Discord",
-   "plataforma": "all",
-   "status": "aberta",
-   "release": "-",
-   "conserto": [],
-   "proximo_passo": "2.0.5: perfil com Simkl (stats do Simkl, ou montado do histórico local + Simkl) e mensagem certa quando só o Simkl está ligado; Telegram/Discord é decisão do dono",
-   "notas": "LIDO 09/10: a tela Meu perfil chama só trakt_perfil (src/app.c carregarPerfil, ~350) e, sem Trakt, mostra \"Trakt desconectado. Vincule a conta para ver seu perfil.\" (app.c ~3273) mesmo com o Simkl conectado. perfil.c só mostra Simkl na linha de contas (~770). \"Status\" do relato não está claro (status de amigos/assistindo agora também vem do Trakt)."
-  },
-  {
-   "id": "fork-ysosrs123",
-   "titulo": "Estudo do fork ysosrs123/NuvioTV-Fork (pré-carregamento e outras melhorias)",
-   "plataforma": "all",
-   "status": "aberta",
-   "release": "-",
-   "conserto": [],
-   "proximo_passo": "pré-carregar fontes do próximo episódio em agente/204-proxprefetch (rodada 2); pós-créditos, lista de fontes mortas e ytId na 2.0.5",
-   "notas": "Relatório do MiniMax M3 em /Volumes/ExternalSSD/tmp/nuvio-fork-ysosrs/relatorio.md, CONFERIDO pela coordenação: 3 afirmações erradas do M3 (já temos Preparar fonte ao abrir, foco fixo quando a lista cresce, medição passiva/StreamFit). Verdadeiros: preload do próximo (#3795), segurar cartão até pós-créditos, failover com fontes mortas persistentes, autoplay com ytId, 4 conexões fixas no ParaleloDataSource."
-  },
-  {
-   "id": "dono-biblioteca-129",
-   "titulo": "Biblioteca mostra 129 salvos e 8 títulos",
-   "plataforma": "Android TV",
-   "status": "consertada-nao-lancada",
-   "release": "2.0.4",
-   "conserto": [],
-   "proximo_passo": "nada; validado na TCL",
-   "notas": "'Ocultar não lançados' escondia todo título sem metadados (121 de 129). Conserto 251d5e0f."
-  },
-  {
-   "id": "dono-spotlight-ordem",
-   "titulo": "Spotlight: título do usuário não vinha primeiro; item cortado",
-   "plataforma": "Android TV",
-   "status": "consertada-nao-lancada",
-   "release": "2.0.4",
-   "conserto": [],
-   "proximo_passo": "dono dizer qual foto estava errada (arte não reproduzida)",
-   "notas": "Busca 'silo': série 2023 em 4º. Conserto em agente/204-spotlight (1de8ce4e..63a41b4b). Arte trocada não comprovada."
-  },
-  {
-   "id": "dono-dv-escuro",
-   "titulo": "Dolby Vision às vezes abre escuro na TCL; clareia ao mudar o aspecto",
-   "plataforma": "Android TV",
-   "status": "aberta",
-   "release": "-",
-   "conserto": [],
-   "proximo_passo": "dono avisar na hora em que abrir escuro para puxar o [dvtrace]",
-   "notas": "Sem causa provada. Logs da superfície HDR em 817d3c3a. Suspeita: recriação da abertura marcada como feita antes de terminar; mudar aspecto força outra recriação."
-  },
-  {
-   "id": "dono-progresso-desmarcar",
-   "titulo": "'Seu progresso' errado depois de desmarcar episódios",
-   "plataforma": "Android TV",
-   "status": "aberta",
-   "release": "-",
-   "conserto": [],
-   "proximo_passo": "decidir se entra 'desmarcar daqui em diante' no menu do episódio",
-   "notas": "No log, 'até aqui desmarcar' em T3E2 tirou T1, T2 e T3E1-2 e deixou T3E3+ marcados; nada voltou sozinho. Dois buracos de sync achados e não provados (ENTREGA-progdesmarca.md). Achado lateral consertado: cache do gráfico (6c6d1668)."
-  }
- ],
- "base_roadmap": "21077ab5",
- "roadmap": [
-  {
-   "release": "2.0.3",
-   "situacao": "lançada 09/10 (v2.0.3, 8ed4517c)",
-   "descricao": "Publicada na tag v2.0.3 (commit 8ed4517c, 09/10/2026). Lista completa em docs/releases/2.0.3/NOTAS.md. Em 09/10 os consertos com todos os commits contidos na tag passaram a status lancada; o que ficou como estava tem commits fora da tag ou conserto só suspeito (ver notas de cada issue). Inclui #361 (URL de cartaz longa).",
-   "itens": []
-  },
-  {
-   "release": "2.0.4",
-   "situacao": "hotfix (antes chamado 2.0.3.1; sai como 2.0.4 porque webOS e Tizen exigem x.y.z) em revisao no PR #408 (so revisao); tudo abaixo integrado em integracao/2.0.3.1 menos o Dolby Vision perfil 5, sem tag",
-   "descricao": "Hotfix sobre a 2.0.3 (já publicada na tag v2.0.3) com as causas achadas em 09/10.",
-   "itens": [
-    {
-     "nome": "Temporadas: abas da lista publicada (#372 parte 1)",
-     "porque": "INTEGRADO em integracao/2.0.3.1 (merge 21077ab5; 038a7dc7, c2112b61, a120b67c, 167310e6, 8eb5ce90), sem tag v*. CAUSA PROVADA: regressão 9677065b (v2.0.1, catálogo do Nuvio primeiro para a lista de episódios; o TMDB junta anime longo, Bleach {1:366,2:50} contra S1-16 no Cinemeta) e defeito antigo das abas de temporada vindas do corpo do Nuvio mesmo quando a lista do add-on vence (descoberta.c ~7069-7087, detail.c ~742-765). Log BZB857 (2.0.3, webOS). A parte 2 (numeração) foi para a 2.0.5. #328 saiu daqui: vai para a 2.0.5.",
-     "issues": [
-      372
-     ],
-     "origem": "logs dos autores, 09/10; decisão do dono 09/10",
-     "branches": [
-      "agente/2031-temporadas (integrada)"
-     ]
-    },
-    {
-     "nome": "Queda ao pesquisar na TV ao vivo (#344), primeira rodada",
-     "porque": "INTEGRADO em integracao/2.0.3.1 (merge c9af64b1; teste 9d78c75a, conserto 8dd273f3), sem tag v*. CAUSA PROVADA por tombstone simbolizado (log AX1R49): leitura fora do limite em buscaFazer (src/guia.c ~3965, ps[24] com epg_faixa/xtepg_faixa devolvendo o total), desde a v1.7.0, todas as plataformas com o guia.",
-     "issues": [
-      344
-     ],
-     "origem": "log do autor, 09/10",
-     "branches": [
-      "agente/2031-guiabusca (integrada)"
-     ]
-    },
-    {
-     "nome": "Ordem da Home ao trocar de perfil (#392, #294)",
-     "porque": "INTEGRADO em integracao/2.0.3.1 (merge bdd49eb6). CAUSA PROVADA pelo log VV8JG2 (.tpk Tizen 6.0, v2.0.3): o build da Home registra os catálogos de add-ons do perfil anterior no arquivo de ordem do perfil novo e expulsa fileiras. Teste bb583b60, conserto 9023ebdb.",
-     "issues": [
-      392,
-      294
-     ],
-     "origem": "log do autor, 09/10",
-     "branches": [
-      "agente/2031-ordemperfil"
-     ]
-    },
-    {
-     "nome": "Queda do webOS 3 na sonda do adaptador DTS",
-     "porque": "INTEGRADO em integracao/2.0.3.1 (merge 09ce19a0): a sonda do adaptador DTS responde uma vez por processo (00b4a937) e a libplayerAPIs fica na memória (RTLD_NODELETE, 65491e7b); a explicação do mecanismo é SUSPEITA, não certeza (1d7264c1). Sem issue no mapa.",
-     "issues": [],
-     "origem": "investigação 09/10",
-     "branches": [
-      "agente/2031-webos3"
-     ]
-    },
-    {
-     "nome": "Fontes com FHD sem numero caem em Outras (#402)",
-     "porque": "INTEGRADO em integracao/2.0.3.1 (merge ca8f29b4; teste tests/fhd402.sh, revisado por Codex e OpenCode). CAUSA lida no codigo: stream_parse.c:281-283 e badges.c:40-42 nao reconhecem FHD/FULLHD sem numero, entao altura=0 e o grupo vira Outras (streams.c:2105). Conserto de 2 linhas mais teste; candidato a entrar na 2.0.4 se o dono quiser. Nao e a ordenacao nem uma configuracao.",
-     "issues": [
-      402
-     ],
-     "origem": "agente 09/10"
-    },
-    {
-     "nome": "Legendas \"Da conta\" e modelo de URL do poster (#378, #390)",
-     "porque": "INTEGRADO em integracao/2.0.3.1 (merges 28aa5c4b e beab28ec), cada um com teste que falhava antes do conserto.",
-     "issues": "",
-     "origem": ""
-    },
-    {
-     "nome": "Dolby Vision perfil 5 na LG: decisão pendente (HDR10 ou MP4 primeiro)",
-     "porque": "Pendente: duas branches de alternativas; a decisão espera o teste do dono na C9. Entra no hotfix só se for escolhida.",
-     "issues": [],
-     "origem": "dono, 09/10; decisão pendente",
-     "branches": [
-      "agente/2031-dvp5-hdr10",
-      "agente/2031-dvp5-mp4"
-     ]
-    }
-   ]
-  },
-  {
    "release": "2.0.5",
-   "situacao": "planejada; já tem branches agente/203-3xx e agente/204-*, nada integrado",
-   "descricao": "Pequenos recursos de player e Biblioteca que já têm código fora da 2.0.3, mais triagem dos bugs sem conserto (pedir log).",
-   "itens": [
-    {
-     "nome": "Próximo episódio automático após 5 s",
-     "porque": "Estende a contagem estilo Netflix do #331 (agente/203-331) e o pedido #256; é uma opção no mesmo card, então vai junto. Sem branch próprio para os 5 s: SUSPEITA de que baste um valor padrão.",
-     "issues": [
-      256,
-      331,
-      326,
-      329
-     ]
-    },
-    {
-     "nome": "Estatísticas do player e tamanho do buffer",
-     "porque": "Código pronto em agente/203-338; a resposta já prometeu \"next build\".",
-     "issues": [
-      338
-     ]
-    },
-    {
-     "nome": "Biblioteca: indicadores de visto, esconder assistidos, vitrine de coleção, detalhes da fonte",
-     "porque": "Pequenos, cada um em seu branch agente/204-*; não dependem do redesign.",
-     "issues": [
-      352,
-      366,
-      362,
-      355
-     ]
-    },
-    {
-     "nome": "Catálogos da conta, sync de add-ons, fonte recusada, P2P por formato",
-     "porque": "Branches agente/204-conta-catalogos, 204-sync-addons, 204-fonte-recusada prontos ou quase.",
-     "issues": [
-      358,
-      365,
-      360,
-      364,
-      349
-     ]
-    },
-    {
-     "nome": "Samsung: DTS/TrueHD escondido (fase 1)",
-     "porque": "Plano e spike em agente/204-samsung-dts (docs/plans); fase 1 já planejada para a 2.0.5.",
-     "issues": [
-      313
-     ]
-    },
-    {
-     "nome": "Android: fileiras ilimitadas na Home, armazenamento rotativo do P2P",
-     "porque": "agente/204-fileiras-android e agente/203-334-janela (janela de streaming do P2P) existem e ficaram fora da 2.0.3 por risco.",
-     "issues": [
-      334
-     ]
-    },
-    {
-     "nome": "Triagem de bugs sem conserto e dois pedidos pequenos (#306, #337)",
-     "porque": "Todos aguardam log do autor; entram na 2.0.5 se o log aparecer a tempo, senão escorregam.",
-     "issues": [
-      288,
-      315,
-      316,
-      344,
-      345,
-      346,
-      353,
-      357,
-      367,
-      372,
-      373,
-      378,
-      379,
-      306,
-      337,
-      385,
-      308
-     ]
-    },
-    {
-     "nome": "Binge group: lembrar também a fonte que o automático tocou (#310)",
-     "porque": "Pedido (a) do #310. A revisão de código mostrou que a escolha manual de outro episódio já aplica o binge group; a lacuna era só a fonte escolhida à mão ser lembrada. O dono aprovou em 09/10 (\"sim vamos adicionar na 2.0.4\"; a 2.0.4 planejada foi renumerada para 2.0.5 em 09/10) lembrar também o binge group da fonte que o automático tocou. Código em agente/204-binge (29d2c248, 02753401, 6345e9ff), não integrado. Origem: dono 09/10.",
-     "issues": [
-      310
-     ],
-     "branches": [
-      "agente/204-binge"
-     ]
-    },
-    {
-     "nome": "Trailer vazando para a sessão do episódio no .tpk (#385)",
-     "porque": "SUSPEITA, sem conserto. No log do #385 (.tpk, 2.0.2), \"tpk evento 1 (129036)\" vem sempre depois de \"[trailer] ... no fundo com som\" e aparece até sem episódio aberto; no log 1 o evento de duração do trailer chegou depois de \"abrir: url ao pipeline\" e o posplay o leu como duração do episódio (\"duracao suspeita 129s\"). Conferir se os eventos do player do trailer (duração, fim, erro) são descartados ao abrir o episódio. Separado da recusa de conexão do TorBox, que foi bloqueio do nó/IP (conserto da pausa na 2.0.3). Origem: logs do #385, 09/10.",
-     "issues": [
-      385
-     ]
-    },
-    {
-     "nome": "Numeração de temporadas Cinemeta + camada de tradução (#372 parte 2)",
-     "porque": "Opção (b) escolhida pelo dono: lista de episódios na numeração Cinemeta/TVDB mais uma camada de tradução por número absoluto do episódio para o progresso/scrobble do Trakt, a conta Nuvio, o Simkl, os ids de \"a seguir\"/Continuar assistindo e as marcas de visto (vistonao/vistoep). A parte 1 (abas de temporada) sai na 2.0.4. #328 acompanha: mesma raiz suspeita.",
-     "issues": [
-      372,
-      328
-     ],
-     "origem": "dono 09/10",
-     "branches": []
-    },
-    {
-     "nome": "CI com ASan/TSan nos testes de host (+ ASan do app inteiro por candidata a release, helpers de buffer limitado)",
-     "porque": "Alternativa sem Rust do estudo: SANITIZE=1 e SANITIZE=thread nos 152 + 29 testes que já aceitam, falhando o PR; roteiro fixo com ASan no app inteiro por release candidate; helpers de buffer limitado (nv_cpy, nv_slice). Cobre os bugs de memória do ranking a custo de horas, sem tocar em alvo de TV. Referência: docs/plans/rust-piloto.md (\"alternativas sem Rust\", seção 5).",
-     "issues": [],
-     "origem": "dono 09/10",
-     "branches": [
-      "docs/plans/rust-piloto.md"
-     ]
-    },
-    {
-     "nome": "Biblioteca: aba Salvos seguir o destino Simkl (sugestao)",
-     "porque": "#393; só se o autor confirmar que o que falta é isso (Listas › Simkl e \"Onde o + salva\" já existem). Sugestão do agente, não aprovado pelo dono.",
-     "issues": [
-      393
-     ],
-     "origem": "agente 09/10"
-    },
-    {
-     "nome": "Binario do LG sem simbolos de depuracao: ipk menor (#401)",
-     "porque": "MEDIDO no ipk 2.0.4: 58,3 MB, binario 55,3 MB com debug_info/.symtab (30,8 MB de secoes de depuracao, 10,5 MB comprimidas), arte 39 MB ja comprimida. Strip no link do tools/arm.sh deve baixar o ipk para ~48 MB (estimativa, nao medida) e guardar o binario com simbolos como anexo da release para simbolizar queda. Nao prova que seja a causa dos 15 min do #401 (SUSPEITA: download da TV ou instalacao de 1190 arquivos); pedir ao autor o tempo por fase. Fontes opcionais (Roboto, Montserrat, Inter, ate ~4 MB descomprimidos) poderiam baixar sob demanda como a Naskh (assrender.c ~870), sem promessa.",
-     "issues": [
-      401
-     ],
-     "origem": "agente 09/10"
-    },
-    {
-     "nome": "Botao Proximo episodio na fileira de controles do player (#403)",
-     "porque": "Hoje so o cartao na janela de creditos/fim (dispensa gruda) e a lista pelo botao Episodios. Sugestao: acao de proximo episodio na fileira (ou atalho) para serie, reaproveitando player_proximo_episodio e o pedido de app.c:4424. Vai junto com o proximo episodio automatico. Sugestao do agente, nao aprovado pelo dono.",
-     "issues": [
-      403
-     ],
-     "origem": "agente 09/10"
-    },
-    {
-     "nome": "Dados do app fora da pasta do app (LG) e limpeza de sobras",
-     "porque": "Medido na C9 (09/10): .nuvio dentro da pasta do app com 359 MB / 3980 arquivos (cache de imagens 111 MB, cache.suspeito-1853 195 MB nunca apagado, trailers 28 MB, fontes de legenda ASS repetidas por faixa ~7,5 MB cada). SUSPEITA de ser o que deixa a atualização pelo Homebrew lenta (#401): instalação nova é rápida, atualização por cima leva 15 min. Fazer: (1) cache de imagens, trailers e fontes da legenda fora da pasta do app; (2) apagar cache.suspeito-* antigos; (3) não guardar cópia das fontes por faixa. Aprovado pelo dono 09/10.",
-     "issues": [
-      401
-     ]
-    },
-    {
-     "nome": "Novos de 09/10: ordem do add-on, busca rapida, notas em bloco, menu do topo (#400, #405, #406, #407)",
-     "porque": "Triagem 09/10 sem conserto: #400 pedido (opcao de manter a ordem do add-on), #405 bug com log ABB125, #406 pedido, #407 bug sem log, todos do Samsung menos o #400.",
-     "issues": "",
-     "origem": ""
-    }
-   ]
-  },
-  {
-   "release": "2.1",
-   "situacao": "aprovada pelo dono em 06/10/2026 (e 07/10 para Ajustes); sem data",
-   "descricao": "Os seis recursos aprovados pelo dono, mais perfis com o pacote de UX dos Ajustes. Os itens marcados \"suspeita\" foram colocados aqui pelo agente anterior e NÃO estão aprovados.",
-   "itens": [
-    {
-     "nome": "Watch Together (Assistir Juntos)",
-     "porque": "Aprovado pelo dono para a 2.1. Sala compartilhada entre aparelhos; o branch já carrega a marca de perfil infantil enviada para a sala.",
-     "issues": [],
-     "origem": "dono 06/10",
-     "branches": [
-      "feat/watch-together"
-     ]
-    },
-    {
-     "nome": "Diário + sono (Diário + sono)",
-     "porque": "Aprovado pelo dono para a 2.1.",
-     "issues": [],
-     "origem": "dono 06/10",
-     "branches": [
-      "feat/sp-diario"
-     ]
-    },
-    {
-     "nome": "Trava (Lock)",
-     "porque": "Aprovado pelo dono para a 2.1.",
-     "issues": [],
-     "origem": "dono 06/10",
-     "branches": [
-      "feat/sp-trava"
-     ]
-    },
-    {
-     "nome": "Caça / Conquistas (Hunt/Achievements)",
-     "porque": "Aprovado pelo dono para a 2.1.",
-     "issues": [],
-     "origem": "dono 06/10",
-     "branches": [
-      "feat/sp-conquistas"
-     ]
-    },
-    {
-     "nome": "Redesign da Biblioteca (Biblioteca)",
-     "porque": "Branch agente/202-biblioteca (procedência por título, aba Listas); o plano de dados está em docs/plans/biblioteca-ilimitada.md (branch agente/biblioteca-ilimitada-plano) e diz \"não na 2.0.3\". Mexe em memória e navegação; não cabe num ponto de versão.",
-     "issues": [],
-     "origem": "dono 06/10",
-     "branches": [
-      "agente/202-biblioteca",
-      "agente/biblioteca-ilimitada-plano (docs/plans/biblioteca-ilimitada.md)"
-     ]
-    },
-    {
-     "nome": "Coleções + fileiras",
-     "porque": "Aprovado pelo dono para a 2.1. Os pequenos ajustes de vitrine (#362) continuam na 2.0.5 em agente/204-colecao-vitrine e não dependem disto.",
-     "issues": [],
-     "origem": "dono 06/10",
-     "branches": [
-      "feat/colecoes-fileiras",
-      "agente/201-colecoes"
-     ]
-    },
-    {
-     "nome": "Perfis + tour, \"Começar\", \"Resolver um problema\" e busca com i18n nos Ajustes",
-     "porque": "Decisão de UX dos Ajustes de 07/10: esses quatro itens saem na 2.1 junto com perfis. Branch de cada um: não identificado (suspeita: parte do trabalho está em feat/ajustes-ux e agente/204-perfil, não confirmado).",
-     "issues": [],
-     "origem": "dono 07/10",
-     "branches": []
-    },
-    {
-     "nome": "Limites maiores de Trakt/Biblioteca (sem teto)",
-     "porque": "Parte do plano biblioteca-ilimitada, que o dono aprovou só como redesign; tirar os tetos do Trakt como item próprio não foi citado por ele. A 2.0.3 só pagina a watchlist do Trakt até 400 itens e mantém os tetos de hoje (96ccdab1). Tirar o teto exige o índice leve + janela de CatItem do plano biblioteca-ilimitada, que é parte do redesign.",
-     "issues": [],
-     "origem": "suspeita (sugestão do agente, não aprovado)",
-     "branches": []
-    },
-    {
-     "nome": "Remoção de barras pretas embutidas no quadro (blackbar/crop)",
-     "porque": "Recurso novo, sem issue nem branch (relacionados: #341 aspecto/zoom e #241 barras do trailer, esse já tratado). Precisa detectar a barra no quadro em cada pipeline (LG, .tpk, Android). SUSPEITA de 2.1; pode virar 2.0.5 se for só um recorte manual por título.",
-     "issues": [
-      341
-     ],
-     "origem": "suspeita (sugestão do agente, não aprovado)",
-     "branches": []
-    },
-    {
-     "nome": "Dolby Vision em MKV na Samsung",
-     "porque": "A 2.0.3 só traz DV em MKV na LG (opcional, desligado) e a Samsung nunca escolhe DV. Na Samsung falta prova de que o decodificador aceita; precisa de spike por modelo antes de prometer. SUSPEITA de 2.1.",
-     "issues": [],
-     "origem": "suspeita (sugestão do agente, não aprovado)",
-     "branches": []
-    },
-    {
-     "nome": "Menus em árabe e auto sync de legenda por linha",
-     "porque": "SUSPEITA do agente, fora do roadmap do dono: o árabe nos menus foi prometido na resposta do #325 e o auto sync tem pesquisa em legenda-sync-lg-samsung-pesquisa.md, mas nenhum dos dois consta da decisão de 06/10. Pode sair da 2.1 para futuro se o dono preferir.",
-     "issues": [
-      250,
-      333,
-      374
-     ],
-     "origem": "suspeita (sugestão do agente, não aprovado)",
-     "branches": []
-    },
-    {
-     "nome": "Plano de refatoração geral",
-     "porque": "docs/plans/refatoracao-geral.md (branch agente/refatoracao-plano, 0dc06334): 23 mudanças pequenas, cada uma com porteiro de teste. Fazer depois da 2.0.3 sair e fora da 2.0.5, para não misturar refatoração com os recursos acima. Itens 01-04 (apagar morto, deduplicar Biblioteca) vão melhor junto do redesign da Biblioteca. Ordem com o Rust (dono 09/10): o porte Rust de fonteparalela+streams vem depois do piloto e deve ser coordenado com os itens do plano que tocam streams.c.",
-     "issues": [],
-     "origem": "suspeita (sugestão do agente, não aprovado)",
-     "branches": [
-      "agente/refatoracao-plano"
-     ]
-    },
-    {
-     "nome": "Auto-play: reusar último link com validade e regex separada por tipo (filmes / séries / anime)",
-     "porque": "Pedidos (b) e (c) do #310. (b) não há cache de link hoje (fontepref guarda só a identidade, 180 dias; fontecache é prefetch de 30 s): guardar URL de debrid pede arquivo, validade nos Ajustes e queda para a busca. (c) hoje há uma regex e um modo só (fonteregra.c:15, ajustes.c:1301, uma chave na conta): por tipo pede três regex, três modos, blob novo e uma definição de anime. Médio e grande, por isso 2.1 e não 2.0.5. Sem aprovação do dono ainda.",
-     "issues": [
-      310
-     ],
-     "origem": "suspeita (sugestão do agente, não aprovado)",
-     "branches": []
-    },
-    {
-     "nome": "Piloto Rust 'mkvcore' (no_std, atrás de -DNV_RUST_MKVCORE, com fallback C) — piloto de toolchain",
-     "porque": "Experimento de toolchain nos 5 alvos com flag por alvo e fallback C (reversível trocando uma variável de build); flag desligada por padrão no primeiro candidato. Estimativa de 3 a 4 semanas, SUSPEITA. Referência: docs/plans/rust-piloto.md (seção 4).",
-     "issues": [],
-     "origem": "dono 09/10",
-     "branches": [
-      "docs/plans/rust-piloto.md"
-     ]
-    },
-    {
-     "nome": "Portar fonteparalela+streams e o publicador do catálogo (se o piloto passar)",
-     "porque": "Só depois do piloto mkvcore passar os guards nos 5 alvos; é onde está o ganho real de Rust segundo o estudo, mas o custo é de meses (SUSPEITA). Coordenar com o plano de refatoração geral, que também mexe em streams.c. Referência: docs/plans/rust-piloto.md (seção 6).",
-     "issues": [],
-     "origem": "dono 09/10",
-     "branches": [
-      "docs/plans/rust-piloto.md"
-     ]
-    },
-    {
-     "nome": "Atraso do áudio no player (sugestao)",
-     "porque": "Pedido no #397; não existe hoje (só o atraso de legenda). Sugestão do agente, não aprovado pelo dono: começar onde o backend deixa (Android/Media3); LG e Samsung podem não ter API.",
-     "issues": [
-      397
-     ],
-     "origem": "agente 09/10"
-    }
-   ]
-  },
-  {
-   "release": "2.2",
-   "situacao": "aprovada pelo dono em 06/10/2026; sem data",
-   "descricao": "Servidores locais, guia de TV e música.",
-   "itens": [
-    {
-     "nome": "Servidores locais (Jellyfin / Plex / Emby)",
-     "porque": "Aprovado pelo dono para a 2.2; ele tem um servidor real para testar.",
-     "issues": [],
-     "origem": "dono 06/10",
-     "branches": [
-      "f11-jellyfin",
-      "feat/emby-plex"
-     ]
-    },
-    {
-     "nome": "Guia de TV (guia pro)",
-     "porque": "Aprovado pelo dono para a 2.2. Existem várias linhas de trabalho: guia-tv, guia-pro, guia-pro-2, lembrete e a UI w18; qual é a mais recente fica a conferir.",
-     "issues": [],
-     "origem": "dono 06/10",
-     "branches": [
-      "feat/guia-tv",
-      "feat/guia-pro",
-      "feat/guia-pro-2",
-      "feat/guia-lembrete",
-      "ui/w18-guia-tv"
-     ]
-    },
-    {
-     "nome": "Música (álbum da trilha sonora)",
-     "porque": "Aprovado pelo dono para a 2.2: álbum da trilha, só link do Spotify, prévia para testar na TV e no celular, crowdsourcing no Android permitido, Apple Insight via uts-api timed-metadata. Branch: nenhum encontrado.",
-     "issues": [],
-     "origem": "dono 06/10",
-     "branches": []
-    }
-   ]
-  },
-  {
-   "release": "futuro",
-   "situacao": "sem data nem dono",
-   "descricao": "Pedidos que fazem sentido mas não têm plano.",
-   "itens": [
-    {
-     "nome": "Porte VIDAA, layout RTL, anime-skip.com, busca por microfone, pontos do carrossel estilo Apple TV, serviços na barra lateral",
-     "porque": "Cada um é grande ou depende de terceiros; nenhum tem branch.",
-     "issues": [
-      135,
-      260,
-      343,
-      347,
-      348,
-      304,
-      342
-     ]
-    },
-    {
-     "nome": "Passo de quadro no player (sugestao)",
-     "porque": "Pedido no #397 (\"frame skipping\", ambíguo); não existe, só saltos de 10 a 120 s. Sugestão do agente, não aprovado pelo dono; depende de a TV aceitar avanço por quadro.",
-     "issues": [
-      397
-     ],
-     "origem": "agente 09/10"
-    }
-   ]
-  },
-  {
-   "release": "nao vamos fazer",
-   "situacao": "fora do escopo do produto",
-   "descricao": "PC, iOS, e itens que não são trabalho de código.",
-   "itens": [
-    {
-     "nome": "App para PC (#354), .ipa para iOS (#307), relatório automático de logs (#324), aviso de desempenho em 4K (#292)",
-     "porque": "Plataformas que o projeto não atende ou issues que não pedem mudança.",
-     "issues": [
-      354,
-      307,
-      324,
-      292
-     ]
-    }
-   ]
-  }
- ],
- "decisoes": [
-  {
-   "id": "dec-256-proximo-episodio",
-   "pergunta": "Próximo episódio automático após 5 s: entra na 2.0.5 junto da contagem do #331, ligado por padrão ou desligado?",
-   "recomendacao": "2.0.5, desligado por padrão, valor configurável. O #256 ainda pede que o card volte depois de dispensado; isso fica fora.",
-   "issues": [
-    256,
-    331
+   "conserto": [
+    "5c266499 (integracao/2.0.5; memlog)"
    ],
-   "estado": "pendente"
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Diagnóstico via memlog; sem conserto confirmado.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/415",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
   },
   {
-   "id": "dec-360-botao-sincronizar",
-   "pergunta": "#360 (botão Sincronizar addons) fica em 2.0.5 mesmo com a mescla do sync já na 2.0.3?",
-   "recomendacao": "Sim, 2.0.5; corrigir a resposta que perguntou \"on 2.0.3?\" dizendo que a mescla vem agora e o botão depois.",
-   "issues": [
-    360
+   "numero": 416,
+   "titulo": "[Samsung Tizen 6 / v2.0.4] Filmography page empty - every api.themoviedb.org fetch fails with network error",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "bug",
+   "status": "consertada-nao-lancada",
+   "release": "2.0.5",
+   "conserto": [
+    "8b5ed6c0 (integracao/2.0.5)"
    ],
-   "estado": "pendente"
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Correção integrada para fallback de api.tmdb.org.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/416",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
   },
   {
-   "id": "dec-334-p2p-limite",
-   "pergunta": "#334 sai como 2.0.3 só com o limite de P2P e a limpeza, e a janela de streaming (armazenamento rotativo, agente/203-334-janela) fica para a 2.0.5?",
-   "recomendacao": "Sim: limite e limpeza já estão em 2.0.3; a janela muda o motor de P2P e a 2.0.3 está congelada. Avisar na issue que o rotativo vem na 2.0.5.",
-   "issues": [
-    334
+   "numero": 417,
+   "titulo": "[Samsung Tizen 6 / v2.0.4] Every card in the Trailers row plays the same video",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "bug",
+   "status": "consertada-nao-lancada",
+   "release": "2.0.5",
+   "conserto": [
+    "f219bc9d (integracao/2.0.5)"
    ],
-   "estado": "pendente"
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Correção integrada: cartões de trailer usam o vídeo correspondente.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/417",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
   },
   {
-   "id": "dec-326-promessas-next-build",
-   "pergunta": "#326 e #338 foram prometidos para \"próxima atualização/next build\" e o código só está em branches de 2.0.5. Responder já avisando 2.0.5?",
-   "recomendacao": "Sim, corrigir a promessa agora.",
-   "issues": [
-    326,
-    338
+   "numero": 418,
+   "titulo": "App fails to connect: \"The Nuvio account server didn't respond\" and QR code does not generate",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Falha de conexão/autenticação; sem causa confirmada.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/418",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
+  },
+  {
+   "numero": 419,
+   "titulo": "[Samsung Tizen 6 / v2.0.4] Clicking a Recommendations card does nothing",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "bug",
+   "status": "consertada-nao-lancada",
+   "release": "2.0.5",
+   "conserto": [
+    "8b5ed6c0 (integracao/2.0.5)"
    ],
-   "estado": "pendente"
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Correção integrada junto do fallback TMDB.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/419",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
   },
   {
-   "id": "dec-bugs-sem-log",
-   "pergunta": "Bugs sem log (#288, #315, #316, #344-346, #353, #357, #367, #372, #373, #378, #379) ficam todos em 2.0.5?",
-   "recomendacao": "Sim como alvo de triagem, mas sem prometer: pedir log primeiro; os que não chegarem com log em 30 dias viram \"precisa-log\" e saem do alvo.",
-   "issues": [
-    288,
-    315,
-    316,
-    344,
-    345,
-    346,
-    353,
-    357,
-    367,
-    372,
-    373,
-    378,
-    379
+   "numero": 420,
+   "titulo": "Feature request: Android TV title deep links (ACTION_VIEW) for companion apps",
+   "estado_github": "aberta",
+   "plataforma": "Android",
+   "tipo": "feature",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Pedido de deep links ACTION_VIEW.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/420",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
+  },
+  {
+   "numero": 421,
+   "titulo": "Bold and style in Arabic subtitles still not working",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "bug",
+   "status": "consertada-nao-lancada",
+   "release": "2.0.5",
+   "conserto": [
+    "c8e8d983 (integracao/2.0.5)"
    ],
-   "estado": "pendente"
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Legenda de texto embutida desenhada pelo app na LG/Samsung.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/421",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
   },
   {
-   "id": "dec-354-nao-vamos-fazer",
-   "pergunta": "\"nao vamos fazer\": #354 (PC), #307 (.ipa iOS), #324 (relatório de logs), #292 (aviso 4K Android). Confirma?",
-   "recomendacao": "Confirmar #354 e #307 (fora de escopo, já classificados fora-do-escopo). #324 e #292 não são pedidos de recurso: fechar como informativos em vez de \"não vamos fazer\".",
-   "issues": [
-    354,
-    307,
-    324,
-    292
+   "numero": 422,
+   "titulo": "In-app screensaver comes on during an autoplaying trailer if I don’t touch the remote",
+   "estado_github": "aberta",
+   "plataforma": "Android",
+   "tipo": "bug",
+   "status": "consertada-nao-lancada",
+   "release": "2.0.5",
+   "conserto": [
+    "a408e51a (integracao/2.0.5)"
    ],
-   "estado": "pendente"
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Screensaver aguarda trailer da página do título.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/422",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
   },
   {
-   "id": "dec-304-pedidos-interface",
-   "pergunta": "Pedidos de interface (#304 serviços na barra lateral, #347 microfone, #348 pontos do carrossel/botão Reproduzir, #342 botão Pular cena) ficam em \"futuro\" ou \"nao vamos fazer\"?",
-   "recomendacao": "Futuro para #304, #348 e #347. #342 (conteúdo explícito) depende de base de dados de terceiros que não existe: recomendo nao vamos fazer.",
-   "issues": [
-    304,
-    348,
-    347,
-    342
+   "numero": 423,
+   "titulo": "Not update LG",
+   "estado_github": "aberta",
+   "plataforma": "LG webOS",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Relato de atualização com versão antiga; sem log.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/423",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
+  },
+  {
+   "numero": 424,
+   "titulo": "Live tv not loading categories",
+   "estado_github": "aberta",
+   "plataforma": "Android",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Pedido sobre categorias e carregamento de TV ao vivo.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/424",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
+  },
+  {
+   "numero": 425,
+   "titulo": "Unnable to remove subtitle languages",
+   "estado_github": "aberta",
+   "plataforma": "all",
+   "tipo": "feature",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Pedido sobre idiomas de legenda e limite de sincronização manual.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/425",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
+  },
+  {
+   "numero": 426,
+   "titulo": "Aspect ratio bug",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "bug",
+   "status": "consertada-nao-lancada",
+   "release": "2.0.5",
+   "conserto": [
+    "3ba2987a (integracao/2.0.5)"
    ],
-   "estado": "pendente"
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Correção DisplayRoi integrada para proporção de tela.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/426",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
   },
   {
-   "id": "dec-135-vidaa-rtl",
-   "pergunta": "#135 (porte VIDAA) e #260 (RTL) em \"futuro\" ou \"nao vamos fazer\"?",
-   "recomendacao": "Futuro; há trabalho feito em feat/vidaa e uma resposta pública dizendo \"depois\" para o RTL.",
-   "issues": [
-    135,
-    260
+   "numero": 427,
+   "titulo": "Memory for images capped at 160 MB",
+   "estado_github": "aberta",
+   "plataforma": "LG webOS",
+   "tipo": "bug",
+   "status": "precisa-log",
+   "release": "2.0.5",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Aguarda código/log para diagnóstico.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/427",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
+  },
+  {
+   "numero": 428,
+   "titulo": "Constant freezes",
+   "estado_github": "aberta",
+   "plataforma": "LG webOS",
+   "tipo": "bug",
+   "status": "precisa-log",
+   "release": "2.0.5",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Aguarda código/log para diagnóstico.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/428",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
+  },
+  {
+   "numero": 429,
+   "titulo": "Subtitles auto select",
+   "estado_github": "aberta",
+   "plataforma": "Android",
+   "tipo": "bug",
+   "status": "consertada-nao-lancada",
+   "release": "2.0.5",
+   "conserto": [
+    "2d42c8e0 (integracao/2.0.5)"
    ],
-   "estado": "pendente"
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Correção integrada para códigos hbs/hrv/srp/bos.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/429",
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.5"
   },
   {
-   "id": "dec-144-aguardando-fechamento",
-   "pergunta": "Issues abertas só aguardando fechamento (#144, #252, #287, #290, #293, #296, #298, #300, #303): fechar?",
-   "recomendacao": "Fechar com comentário, depois que o dono aprovar o texto. Alvo registrado como ja-lancada (valor extra além dos cinco pedidos).",
-   "issues": [
-    144,
-    252,
-    287,
-    290,
-    293,
-    296,
-    298,
-    300,
-    303
-   ],
-   "estado": "pendente"
+   "numero": 430,
+   "titulo": "Multiple intro skip sources and priority order",
+   "estado_github": "aberta",
+   "plataforma": "all",
+   "tipo": "feature",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Pedido de múltiplas fontes e prioridade para pular abertura.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/430",
+   "criada_em": "2026-10-10",
+   "alvo": "2.1"
   },
   {
-   "id": "dec-341-blackbar-crop",
-   "pergunta": "Blackbar/crop (remover barras pretas embutidas) é 2.1, 2.2 ou 2.0.5? Não consta do roadmap aprovado.",
-   "recomendacao": "Sugestão do agente, não aprovada: manter fora das versões aprovadas; se o dono quiser, 2.2 ou futuro, pois é recurso novo, sem branch e toca os três pipelines de vídeo.",
-   "issues": [
-    341
-   ],
-   "estado": "pendente"
+   "numero": 433,
+   "titulo": "All posters are displayed horizontally, not coming from my addon",
+   "estado_github": "aberta",
+   "plataforma": "LG webOS",
+   "tipo": "bug",
+   "status": "precisa-log",
+   "release": "2.0.5",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Diagnóstico: URL de cartaz de 1170 bytes descartada pelo limite de 1023; sem conserto.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/433",
+   "criada_em": "2026-10-11",
+   "alvo": "2.0.5"
   },
   {
-   "id": "dec-dv-mkv-samsung",
-   "pergunta": "Dolby Vision em MKV na Samsung: manter na 2.1, passar para 2.2 ou futuro? Não consta do roadmap aprovado.",
-   "recomendacao": "Sugestão do agente, não aprovada: futuro, só como spike de pesquisa; não prometer ao público até haver prova num modelo.",
-   "issues": [],
-   "estado": "pendente"
+   "numero": 434,
+   "titulo": "Ability to remove genre tags in title page",
+   "estado_github": "aberta",
+   "plataforma": "all",
+   "tipo": "feature",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Pedido para remover gêneros da página do título.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/434",
+   "criada_em": "2026-10-11",
+   "alvo": "2.1"
   },
   {
-   "id": "dec-352-limites-trakt",
-   "pergunta": "Limites maiores do Trakt/Biblioteca: entram dentro do redesign aprovado da 2.1 ou ficam fora?",
-   "recomendacao": "Sugestão do agente, não aprovada: dentro do redesign (o plano biblioteca-ilimitada é parte dele). O redesign em si já está aprovado; a 2.0.5 fica só com indicadores de visto (#352) e esconder assistidos (#366).",
-   "issues": [
-    352,
-    366
-   ],
-   "estado": "pendente"
+   "numero": 436,
+   "titulo": "Feature request: Option to view submitted logs",
+   "estado_github": "aberta",
+   "plataforma": "all",
+   "tipo": "feature",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Pedido para consultar logs enviados.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/436",
+   "criada_em": "2026-10-11",
+   "alvo": "2.1"
   },
   {
-   "id": "dec-refatoracao-geral",
-   "pergunta": "Plano de refatoração geral (docs/plans/refatoracao-geral.md): quando? Não consta do roadmap aprovado.",
-   "recomendacao": "Sugestão do agente, não aprovada: depois da 2.0.3, na 2.1 como trabalho próprio; na 2.0.5 no máximo os itens 01-04 (apagar morto). Não misturar com recursos.",
-   "issues": [],
-   "estado": "pendente"
+   "numero": 437,
+   "titulo": "Cloudstream Repository Support",
+   "estado_github": "aberta",
+   "plataforma": "all",
+   "tipo": "feature",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Pedido de suporte a repositórios Cloudstream.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/437",
+   "criada_em": "2026-10-11",
+   "alvo": "futuro"
   },
   {
-   "id": "dec-250-arabe-autosync",
-   "pergunta": "Menus em árabe (#250, #333) e auto sync de legenda (#374) seguem na 2.1? Não constam do roadmap aprovado; o árabe foi prometido na resposta do #325.",
-   "recomendacao": "Sugestão do agente, não aprovada: manter na 2.1 só se sobrar espaço; senão futuro. Corrigir a promessa pública do #325 se for para futuro.",
-   "issues": [
-    250,
-    333,
-    374
-   ],
-   "estado": "pendente"
-  },
-  {
-   "id": "dec-fechar-203-sem-confirmacao",
-   "pergunta": "Fechar com a 2.0.3 (bloco acima): fechar já as issues sem confirmação do autor ou esperar o retorno?",
-   "recomendacao": "Fechar já #317 e #318 (autores confirmaram). As demais, esperar alguns dias pelo retorno; a resposta curta já pede para reabrir se persistir, então fechar também é aceitável.",
-   "issues": [
-    269,
-    284,
-    294,
-    305,
-    311,
-    317,
-    318,
-    319,
-    320,
-    321,
-    322,
-    323,
-    330,
-    332,
-    335,
-    339,
-    340,
-    361,
-    363,
-    368,
-    370,
-    384
-   ],
-   "estado": "pendente"
-  },
-  {
-   "id": "dec-400-ordem-fontes-addon",
-   "pergunta": "Ordem das fontes do add-on (#400, AIOStreams): entra na 2.0.4 ou fica para a 2.0.5?",
-   "recomendacao": "Opção \"Ordem das fontes: Por qualidade / Do addon\" na exibição, sem mexer no automático (o oficial já mantém a ordem do add-on).",
-   "issues": [
-    400
-   ],
-   "estado": "decidida",
-   "decisao": "Entra na 2.0.4. Implementação delegada ao Codex em agente/204-ordem400.",
-   "data": "2026-10-09",
-   "quem": "dono (Henrique)"
-  },
-  {
-   "id": "dec-408-atualizar-pr",
-   "pergunta": "Atualizar o PR #408 (review only) com KM7, consertos do Copilot/ultrareview, OpenSubtitles e mapa?",
-   "recomendacao": "Sim: push de integracao/2.0.3.1.",
-   "issues": [
-    408
-   ],
-   "estado": "decidida",
-   "decisao": "Sim. Push feito (063f381b).",
-   "data": "2026-10-09",
-   "quem": "dono (Henrique)"
-  },
-  {
-   "id": "dec-204-card-novidades",
-   "pergunta": "Card de novidades da 2.0.4 (hotfix): fazer ou não?",
-   "recomendacao": "Sugestão do agente era não fazer por ser hotfix.",
-   "issues": [],
-   "estado": "decidida",
-   "decisao": "Fazer. Delegado ao Codex em agente/204-novidades (até 3 cenas, só o que NOTAS.md prova).",
-   "data": "2026-10-09",
-   "quem": "dono (Henrique)"
-  },
-  {
-   "id": "dec-painel-sempre-atualizado",
-   "pergunta": "Painel de issues: sempre atualizado?",
-   "recomendacao": "Republicar a cada mudança do mapa na integração.",
-   "issues": [],
-   "estado": "decidida",
-   "decisao": "Sim, faz parte do fluxo: hook post-commit/post-merge republica o painel (tools/painel-issues).",
-   "data": "2026-10-09",
-   "quem": "dono (Henrique)"
-  },
-  {
-   "id": "dec-km7-se-hdr",
-   "pergunta": "Erros de KM7 SE (Reddit): consertar na 2.0.4?",
-   "recomendacao": "Amlogic deixa de recriar a superfície de vídeo no HDR.",
-   "issues": [],
-   "estado": "decidida",
-   "decisao": "Sim, 2.0.4 (98929593, ccd37565).",
-   "data": "2026-10-09",
-   "quem": "dono (Henrique)"
-  },
-  {
-   "id": "dec-dvp5-lg-hdr10-ou-mp4",
-   "pergunta": "Dolby Vision perfil 5 na LG: variante HDR10 ou MP4 primeiro (agente/2031-dvp5-hdr10 x agente/2031-dvp5-mp4)?",
-   "recomendacao": "Testar as duas na C9 e escolher; fora da 2.0.4 se não houver teste.",
-   "issues": [],
-   "estado": "decidida",
-   "decisao": "MP4 (agente/2031-dvp5-mp4) juntado na 2.0.4; C9 rodou o build, sem título DV perfil 5 em MP4 para exercitar.",
-   "data": "2026-10-09",
-   "quem": "dono (Henrique)"
-  },
-  {
-   "id": "dec-canal-comunidade",
-   "pergunta": "Canal de comunidade (Telegram ou Discord) pedido por usuário?",
-   "recomendacao": "Sugestão do agente: Discord (o app já tem integração de presença com Discord); decisão do dono.",
-   "issues": [],
-   "estado": "decidida",
-   "decisao": "Discord. Servidor \"Nuvio Legacy\" criado em 09/10 com modo Comunidade e estrutura no estilo do oficial (Info & Updates, Discussion por plataforma, Feedback em fóruns, Testing, Off-Topic). Convite permanente: https://discord.gg/9NWr6SHyzJ (vai no cartão de novidades com QR, notas e README).",
-   "data": "2026-10-09",
-   "quem": "dono (Henrique)"
-  },
-  {
-   "id": "dec-perfil-sem-trakt",
-   "pergunta": "Perfil sem Trakt (usuários com Simkl veem \"Trakt desconectado\"): entra em qual versão?",
-   "recomendacao": "2.0.5: perfil com dados do Simkl e mensagem certa quando só o Simkl está ligado.",
-   "issues": [],
-   "estado": "pendente"
-  },
-  {
-   "id": "dec-410-vidro-profundidade-tpk",
-   "pergunta": "#410 (vidro, Profundidade e Reflexo no .tpk) entra em qual versão?",
-   "recomendacao": "Agente tinha posto 2.0.5.",
-   "issues": [
-    410
-   ],
-   "estado": "decidida",
-   "decisao": "2.0.4: é regressão da 2.0.3.",
-   "data": "2026-10-09",
-   "quem": "dono (Henrique)"
-  },
-  {
-   "id": "dec-addons-principal-off",
-   "pergunta": "\"Usar os addons do perfil principal\" ligado ou desligado por padrão?",
-   "recomendacao": "—",
-   "issues": [],
-   "estado": "decidida",
-   "decisao": "Desligado por padrão (a6ae4f64); quem já escolheu mantém.",
-   "data": "2026-10-09",
-   "quem": "dono (Henrique)"
-  },
-  {
-   "id": "dec-central-pi",
-   "pergunta": "Central de comando: base dos executores?",
-   "recomendacao": "Usar o pi (pi-mono) em modo RPC para MiniMax/Ollama; Codex e Claude Code ficam nos seus harnesses.",
-   "issues": [],
-   "estado": "decidida",
-   "decisao": "Sim: pi como harness dos executores; Sol estudando o RPC/sessões/fork.",
-   "data": "2026-10-09",
-   "quem": "dono (Henrique)"
-  }
- ],
- "decisoes_ids_retirados": [],
- "fechar_203": [
-  {
-   "numero": 269,
-   "resposta": "Thanks for reporting this! Embedded subtitles on big MKV files (over 2 GB) are fixed in 2.0.3. Please update, and reopen this if they still don't show up.",
-   "confirmado": false,
-   "confirmacao": "o autor agradeceu o conserto parcial da 2.0.2; nao testou a 2.0.3"
-  },
-  {
-   "numero": 284,
-   "resposta": "Thanks! The \"Best for this TV\" source line now shows the resolution in 2.0.3. Please reopen if you still don't see it.",
-   "confirmado": false,
-   "confirmacao": "sem comentarios do autor"
-  },
-  {
-   "numero": 305,
-   "resposta": "Done in 2.0.3: pressing Up on the seek bar now hides the player controls (any key brings them back). Reopen if it doesn't work for you.",
-   "confirmado": false,
-   "confirmacao": "sem confirmacao do autor"
-  },
-  {
-   "numero": 312,
-   "resposta": "The Dolby Vision correction is posted above: Dolby Vision in MKV is off by default in 2.0.3 (Settings > Playback > More options). Thanks, and reopen if anything is still off.",
-   "confirmado": false,
-   "confirmacao": "correcao do texto publicada 09/10; autor nao respondeu"
-  },
-  {
-   "numero": 319,
-   "resposta": "Thanks for the log! 2.0.3 fixes the home rows not refreshing (rows of switched-off add-ons are now cleaned up properly). Please reopen if it still happens.",
-   "confirmado": false,
-   "confirmacao": "sem confirmacao do autor"
-  },
-  {
-   "numero": 320,
-   "resposta": "This is fixed in 2.0.3: the Arabic subtitle font is now found even when the update only replaced the app's code. Please reopen if you still see empty boxes.",
-   "confirmado": false,
-   "confirmacao": "sem confirmacao do autor"
-  },
-  {
-   "numero": 321,
-   "resposta": "Fixed in 2.0.3: the section label now moves down with the expanded card. Reopen if you still see it.",
-   "confirmado": false,
-   "confirmacao": "sem confirmacao do autor"
-  },
-  {
-   "numero": 322,
-   "resposta": "2.0.3 adds \"Remove from Continue Watching\" for the \"Up next\" items too (plus an option to turn them off). Please reopen if it doesn't work for you.",
-   "confirmado": false,
-   "confirmacao": "sem confirmacao do autor"
-  },
-  {
-   "numero": 323,
-   "resposta": "The crash in the \"check several sources at once\" step is fixed in 2.0.3, so you can turn that option back on. Please reopen if it crashes again.",
-   "confirmado": false,
-   "confirmacao": "o autor confirmou que sem o passo de varias fontes nao cai; nao testou a 2.0.3"
-  },
-  {
-   "numero": 330,
-   "resposta": "Thanks for the report! 2.0.3 includes a fix for the lag after repeated playback. Please update and reopen if it's still slow.",
-   "confirmado": false,
-   "confirmacao": "sem comentarios do autor"
-  },
-  {
-   "numero": 332,
-   "resposta": "Thanks for the report! 2.0.3 includes the startup fixes for these Android TV devices (and the poster glass outline fix). Please update and reopen if it still doesn't finish opening.",
-   "confirmado": false,
-   "confirmacao": "sem confirmacao do autor; suspeita de mesma raiz do #266, sem log do aparelho"
-  },
-  {
-   "numero": 335,
-   "resposta": "2.0.3 raises the subtitle size up to 250%, uses a real bold Arabic font, and draws ASS subtitles at the screen's real resolution. Please reopen if anything is still off.",
-   "confirmado": false,
-   "confirmacao": "sem confirmacao do autor"
-  },
-  {
-   "numero": 339,
-   "resposta": "2.0.3 adds a \"Settings layout\" option (Settings > Appearance) with the List style, categories and options one below the other as before. Thanks for the feedback, and reopen if it's not what you wanted.",
-   "confirmado": false,
-   "confirmacao": "sem confirmacao do autor"
-  },
-  {
-   "numero": 340,
-   "resposta": "2.0.3 makes seeking and skipping quicker. Please try it and reopen if it still feels slow.",
-   "confirmado": false,
-   "confirmacao": "sem comentarios do autor"
-  },
-  {
-   "numero": 361,
-   "resposta": "Long poster URLs now come through whole in 2.0.3 (background, details, Saved and account). Please reopen if you still see broken posters.",
-   "confirmado": false,
-   "confirmacao": "sem comentarios do autor"
-  },
-  {
-   "numero": 363,
-   "resposta": "Fixed in 2.0.3: recommending an episode from Continue Watching now sends the show correctly. Please reopen if it still fails.",
-   "confirmado": false,
-   "confirmacao": "o autor mandou o log; nao confirmou o conserto"
-  },
-  {
-   "numero": 368,
-   "resposta": "2.0.3 makes search wait for you to stop typing (300 ms) and adds the option to hide add-ons in the TV guide. Please reopen if search is still slow on your TV.",
-   "confirmado": false,
-   "confirmacao": "sem confirmacao do autor"
-  },
-  {
-   "numero": 370,
-   "resposta": "2.0.3 fixes Arabic plain-text subtitles showing boxes on the Samsung .wgt. If the timing is still off now that the text is readable, please reopen and tell us which title.",
-   "confirmado": false,
-   "confirmacao": "sem confirmacao do autor; o sincronismo pode continuar fora"
-  },
-  {
-   "numero": 384,
-   "resposta": "Fixed in 2.0.3: the embedded ASS subtitle index now covers the whole file, so the subtitles no longer vanish after the intro. Please update and reopen if they still do.",
-   "confirmado": false,
-   "confirmacao": "o autor mandou logs; nao confirmou na 2.0.3 (a queda de conexao que ele citou segue sem log proprio)"
-  }
- ],
- "nao_fechar_ainda": [
-  {
-   "numero": 294,
-   "motivo": "A #392 (rawldon, 09/10, v2.0.3, Samsung Tizen 6.0 .tpk) diz que trocar de perfil e voltar ainda reordena a Home (coleções, catálogos e Continuar). Conserto da 2.0.3 não basta; agente/2031-ordemperfil investigando (logs VV8JG2/Z4HDY2)."
-  },
-  {
-   "numero": 266,
-   "motivo": "Varios relatos no mesmo fio: o QR do Shield foi confirmado (charles474), mas ele trouxe queixa nova de legenda diferente do Nuvio oficial e ha log de outro aparelho (Airtel Xtreme) sem leitura."
-  },
-  {
-   "numero": 286,
-   "motivo": "O autor disse \"a bit better\"; ainda ha trabalho de desempenho no Mali-400 em andamento (poster/GPU, ordenacao do sync)."
-  },
-  {
-   "numero": 302,
-   "motivo": "O autor segue dizendo que a TV ao vivo congela o filme (log 2TAVFN); a leitura nossa diz que e a rede, sem confirmacao dele."
-  },
-  {
-   "numero": 350,
-   "motivo": "Mesmo autor do #302: filme travando durante a TV ao vivo ainda sem resposta; fechar so depois de resolver esse ponto."
-  },
-  {
-   "numero": 328,
-   "motivo": "Vai para a 2.0.5 com a parte 2 do #372 (numeração Cinemeta + camada de tradução): suspeita de mesma raiz, não confirmada; o commit de duplicados da 2.0.3 não cobre a causa provada. Autor não testou."
-  },
-  {
-   "numero": 341,
-   "motivo": "SUSPEITA: nenhum commit cita o #341 e nao foi testado em Tizen 5; o pedido de crop de barras pretas segue como decisao aberta."
-  },
-  {
-   "numero": 369,
-   "motivo": "Relatorio de 9 itens; so 2 tem commit (tailandes e ocultar nao lancados), os outros 7 ficam abertos (alvo 2.0.5)."
-  },
-  {
-   "numero": 383,
-   "motivo": "SUSPEITA de que a 2.0.3 cobre o pedido (memoria por perfil/titulo); pedir ao autor que confirme que bate com o Nuvio antes de fechar."
-  },
-  {
-   "numero": 385,
-   "motivo": "Suspeitas abertas: verificacao paralela de fontes e vazamento de eventos do trailer no .tpk; o conserto da 2.0.3 e so a pausa da leitura lateral. Alvo 2.0.5."
-  },
-  {
-   "numero": 334,
-   "motivo": "Limite de P2P e limpeza na 2.0.3, mas a janela de streaming (armazenamento rotativo) so na 2.0.5; avisar na issue."
-  },
-  {
-   "numero": 360,
-   "motivo": "Mescla do sync na 2.0.3, mas o botao \"Sincronizar addons\" (e2f1eede) e 2.0.5."
-  },
-  {
-   "numero": 246,
-   "motivo": "precisa-log: nao confirmado que o conserto da 2.0.3 cobre o relato HEVC/anime; falta log do autor."
-  },
-  {
-   "numero": 280,
-   "motivo": "precisa-log: correcao generica de fileiras na 2.0.3, sem log do autor para confirmar."
-  },
-  {
-   "numero": 356,
-   "motivo": "precisa-log: leitura do log T5JF2G indica causa nao coberta pela 2.0.3; precisa de log novo."
-  },
-  {
-   "numero": 392,
-   "motivo": "Conserto em agente/2031-ordemperfil, ainda não integrado nem lançado (2.0.4)."
+   "numero": 438,
+   "titulo": "MdbList",
+   "estado_github": "aberta",
+   "plataforma": "LG webOS",
+   "tipo": "feature",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar",
+   "notas": "Pedido de integração MDBList.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/438",
+   "criada_em": "2026-10-11",
+   "alvo": "futuro"
   }
  ],
  "validacoes": [
@@ -10491,6 +9692,1296 @@
    "ref": "integracao/2.0.3.1 710541ab..25e9c3aa",
    "resultado": "inconclusivo",
    "evidencia": "/Volumes/ExternalSSD/tmp/suite-204-7105.log; falhas até agora: cachearte-wasm (módulo node ausente), central_rotulos e colecoes_teto (não linkam src/dts; video.c já chamava dts_overlay_draw na v2.0.3, não é regressão)"
+  },
+  {
+   "data": "2026-10-11",
+   "quem": "Feanor",
+   "o_que": "Build de diagnóstico v2.0.5-aspect.1, método B em Tizen 5",
+   "issues": [
+    341,
+    426
+   ],
+   "ref": "v2.0.5-aspect.1",
+   "resultado": "passou",
+   "evidencia": "relato de teste: método B OK"
+  },
+  {
+   "data": "2026-10-11",
+   "quem": "mackojanko",
+   "o_que": "Build de diagnóstico v2.0.5-aspect.1, métodos B e D na Q80A Tizen 6",
+   "issues": [
+    341,
+    426
+   ],
+   "ref": "v2.0.5-aspect.1",
+   "resultado": "passou",
+   "evidencia": "relato de teste: métodos B e D OK"
   }
- ]
+ ],
+ "decisoes": [
+  {
+   "id": "dec-256-proximo-episodio",
+   "pergunta": "Próximo episódio automático após 5 s: entra na 2.0.5 junto da contagem do #331, ligado por padrão ou desligado?",
+   "recomendacao": "2.0.5, desligado por padrão, valor configurável. O #256 ainda pede que o card volte depois de dispensado; isso fica fora.",
+   "issues": [
+    256,
+    331
+   ],
+   "estado": "pendente"
+  },
+  {
+   "id": "dec-360-botao-sincronizar",
+   "pergunta": "#360 (botão Sincronizar addons) fica em 2.0.5 mesmo com a mescla do sync já na 2.0.3?",
+   "recomendacao": "Sim, 2.0.5; corrigir a resposta que perguntou \"on 2.0.3?\" dizendo que a mescla vem agora e o botão depois.",
+   "issues": [
+    360
+   ],
+   "estado": "pendente"
+  },
+  {
+   "id": "dec-334-p2p-limite",
+   "pergunta": "#334 sai como 2.0.3 só com o limite de P2P e a limpeza, e a janela de streaming (armazenamento rotativo, agente/203-334-janela) fica para a 2.0.5?",
+   "recomendacao": "Sim: limite e limpeza já estão em 2.0.3; a janela muda o motor de P2P e a 2.0.3 está congelada. Avisar na issue que o rotativo vem na 2.0.5.",
+   "issues": [
+    334
+   ],
+   "estado": "pendente"
+  },
+  {
+   "id": "dec-326-promessas-next-build",
+   "pergunta": "#326 e #338 foram prometidos para \"próxima atualização/next build\" e o código só está em branches de 2.0.5. Responder já avisando 2.0.5?",
+   "recomendacao": "Sim, corrigir a promessa agora.",
+   "issues": [
+    326,
+    338
+   ],
+   "estado": "pendente"
+  },
+  {
+   "id": "dec-bugs-sem-log",
+   "pergunta": "Bugs sem log (#288, #315, #316, #344-346, #353, #357, #367, #372, #373, #378, #379) ficam todos em 2.0.5?",
+   "recomendacao": "Sim como alvo de triagem, mas sem prometer: pedir log primeiro; os que não chegarem com log em 30 dias viram \"precisa-log\" e saem do alvo.",
+   "issues": [
+    288,
+    315,
+    316,
+    344,
+    345,
+    346,
+    353,
+    357,
+    367,
+    372,
+    373,
+    378,
+    379
+   ],
+   "estado": "pendente"
+  },
+  {
+   "id": "dec-354-nao-vamos-fazer",
+   "pergunta": "\"nao vamos fazer\": #354 (PC), #307 (.ipa iOS), #324 (relatório de logs), #292 (aviso 4K Android). Confirma?",
+   "recomendacao": "Confirmar #354 e #307 (fora de escopo, já classificados fora-do-escopo). #324 e #292 não são pedidos de recurso: fechar como informativos em vez de \"não vamos fazer\".",
+   "issues": [
+    354,
+    307,
+    324,
+    292
+   ],
+   "estado": "pendente"
+  },
+  {
+   "id": "dec-304-pedidos-interface",
+   "pergunta": "Pedidos de interface (#304 serviços na barra lateral, #347 microfone, #348 pontos do carrossel/botão Reproduzir, #342 botão Pular cena) ficam em \"futuro\" ou \"nao vamos fazer\"?",
+   "recomendacao": "Futuro para #304, #348 e #347. #342 (conteúdo explícito) depende de base de dados de terceiros que não existe: recomendo nao vamos fazer.",
+   "issues": [
+    304,
+    348,
+    347,
+    342
+   ],
+   "estado": "pendente"
+  },
+  {
+   "id": "dec-135-vidaa-rtl",
+   "pergunta": "#135 (porte VIDAA) e #260 (RTL) em \"futuro\" ou \"nao vamos fazer\"?",
+   "recomendacao": "Futuro; há trabalho feito em feat/vidaa e uma resposta pública dizendo \"depois\" para o RTL.",
+   "issues": [
+    135,
+    260
+   ],
+   "estado": "pendente"
+  },
+  {
+   "id": "dec-144-aguardando-fechamento",
+   "pergunta": "Issues abertas só aguardando fechamento (#144, #252, #287, #290, #293, #296, #298, #300, #303): fechar?",
+   "recomendacao": "Fechar com comentário, depois que o dono aprovar o texto. Alvo registrado como ja-lancada (valor extra além dos cinco pedidos).",
+   "issues": [
+    144,
+    252,
+    287,
+    290,
+    293,
+    296,
+    298,
+    300,
+    303
+   ],
+   "estado": "pendente"
+  },
+  {
+   "id": "dec-341-blackbar-crop",
+   "pergunta": "Blackbar/crop (remover barras pretas embutidas) é 2.1, 2.2 ou 2.0.5? Não consta do roadmap aprovado.",
+   "recomendacao": "Sugestão do agente, não aprovada: manter fora das versões aprovadas; se o dono quiser, 2.2 ou futuro, pois é recurso novo, sem branch e toca os três pipelines de vídeo.",
+   "issues": [
+    341
+   ],
+   "estado": "pendente"
+  },
+  {
+   "id": "dec-dv-mkv-samsung",
+   "pergunta": "Dolby Vision em MKV na Samsung: manter na 2.1, passar para 2.2 ou futuro? Não consta do roadmap aprovado.",
+   "recomendacao": "Sugestão do agente, não aprovada: futuro, só como spike de pesquisa; não prometer ao público até haver prova num modelo.",
+   "issues": [],
+   "estado": "pendente"
+  },
+  {
+   "id": "dec-352-limites-trakt",
+   "pergunta": "Limites maiores do Trakt/Biblioteca: entram dentro do redesign aprovado da 2.1 ou ficam fora?",
+   "recomendacao": "Sugestão do agente, não aprovada: dentro do redesign (o plano biblioteca-ilimitada é parte dele). O redesign em si já está aprovado; a 2.0.5 fica só com indicadores de visto (#352) e esconder assistidos (#366).",
+   "issues": [
+    352,
+    366
+   ],
+   "estado": "pendente"
+  },
+  {
+   "id": "dec-refatoracao-geral",
+   "pergunta": "Plano de refatoração geral (docs/plans/refatoracao-geral.md): quando? Não consta do roadmap aprovado.",
+   "recomendacao": "Sugestão do agente, não aprovada: depois da 2.0.3, na 2.1 como trabalho próprio; na 2.0.5 no máximo os itens 01-04 (apagar morto). Não misturar com recursos.",
+   "issues": [],
+   "estado": "pendente"
+  },
+  {
+   "id": "dec-250-arabe-autosync",
+   "pergunta": "Menus em árabe (#250, #333) e auto sync de legenda (#374) seguem na 2.1? Não constam do roadmap aprovado; o árabe foi prometido na resposta do #325.",
+   "recomendacao": "Sugestão do agente, não aprovada: manter na 2.1 só se sobrar espaço; senão futuro. Corrigir a promessa pública do #325 se for para futuro.",
+   "issues": [
+    250,
+    333,
+    374
+   ],
+   "estado": "pendente"
+  },
+  {
+   "id": "dec-fechar-203-sem-confirmacao",
+   "pergunta": "Fechar com a 2.0.3 (bloco acima): fechar já as issues sem confirmação do autor ou esperar o retorno?",
+   "recomendacao": "Fechar já #317 e #318 (autores confirmaram). As demais, esperar alguns dias pelo retorno; a resposta curta já pede para reabrir se persistir, então fechar também é aceitável.",
+   "issues": [
+    269,
+    284,
+    294,
+    305,
+    311,
+    317,
+    318,
+    319,
+    320,
+    321,
+    322,
+    323,
+    330,
+    332,
+    335,
+    339,
+    340,
+    361,
+    363,
+    368,
+    370,
+    384
+   ],
+   "estado": "pendente"
+  },
+  {
+   "id": "dec-400-ordem-fontes-addon",
+   "pergunta": "Ordem das fontes do add-on (#400, AIOStreams): entra na 2.0.4 ou fica para a 2.0.5?",
+   "recomendacao": "Opção \"Ordem das fontes: Por qualidade / Do addon\" na exibição, sem mexer no automático (o oficial já mantém a ordem do add-on).",
+   "issues": [
+    400
+   ],
+   "estado": "decidida",
+   "decisao": "Entra na 2.0.4. Implementação delegada ao Codex em agente/204-ordem400.",
+   "data": "2026-10-09",
+   "quem": "dono (Henrique)"
+  },
+  {
+   "id": "dec-408-atualizar-pr",
+   "pergunta": "Atualizar o PR #408 (review only) com KM7, consertos do Copilot/ultrareview, OpenSubtitles e mapa?",
+   "recomendacao": "Sim: push de integracao/2.0.3.1.",
+   "issues": [
+    408
+   ],
+   "estado": "decidida",
+   "decisao": "Sim. Push feito (063f381b).",
+   "data": "2026-10-09",
+   "quem": "dono (Henrique)"
+  },
+  {
+   "id": "dec-204-card-novidades",
+   "pergunta": "Card de novidades da 2.0.4 (hotfix): fazer ou não?",
+   "recomendacao": "Sugestão do agente era não fazer por ser hotfix.",
+   "issues": [],
+   "estado": "decidida",
+   "decisao": "Fazer. Delegado ao Codex em agente/204-novidades (até 3 cenas, só o que NOTAS.md prova).",
+   "data": "2026-10-09",
+   "quem": "dono (Henrique)"
+  },
+  {
+   "id": "dec-painel-sempre-atualizado",
+   "pergunta": "Painel de issues: sempre atualizado?",
+   "recomendacao": "Republicar a cada mudança do mapa na integração.",
+   "issues": [],
+   "estado": "decidida",
+   "decisao": "Sim, faz parte do fluxo: hook post-commit/post-merge republica o painel (tools/painel-issues).",
+   "data": "2026-10-09",
+   "quem": "dono (Henrique)"
+  },
+  {
+   "id": "dec-km7-se-hdr",
+   "pergunta": "Erros de KM7 SE (Reddit): consertar na 2.0.4?",
+   "recomendacao": "Amlogic deixa de recriar a superfície de vídeo no HDR.",
+   "issues": [],
+   "estado": "decidida",
+   "decisao": "Sim, 2.0.4 (98929593, ccd37565).",
+   "data": "2026-10-09",
+   "quem": "dono (Henrique)"
+  },
+  {
+   "id": "dec-dvp5-lg-hdr10-ou-mp4",
+   "pergunta": "Dolby Vision perfil 5 na LG: variante HDR10 ou MP4 primeiro (agente/2031-dvp5-hdr10 x agente/2031-dvp5-mp4)?",
+   "recomendacao": "Testar as duas na C9 e escolher; fora da 2.0.4 se não houver teste.",
+   "issues": [],
+   "estado": "decidida",
+   "decisao": "MP4 (agente/2031-dvp5-mp4) juntado na 2.0.4; C9 rodou o build, sem título DV perfil 5 em MP4 para exercitar.",
+   "data": "2026-10-09",
+   "quem": "dono (Henrique)"
+  },
+  {
+   "id": "dec-canal-comunidade",
+   "pergunta": "Canal de comunidade (Telegram ou Discord) pedido por usuário?",
+   "recomendacao": "Sugestão do agente: Discord (o app já tem integração de presença com Discord); decisão do dono.",
+   "issues": [],
+   "estado": "decidida",
+   "decisao": "Discord. Servidor \"Nuvio Legacy\" criado em 09/10 com modo Comunidade e estrutura no estilo do oficial (Info & Updates, Discussion por plataforma, Feedback em fóruns, Testing, Off-Topic). Convite permanente: https://discord.gg/9NWr6SHyzJ (vai no cartão de novidades com QR, notas e README).",
+   "data": "2026-10-09",
+   "quem": "dono (Henrique)"
+  },
+  {
+   "id": "dec-perfil-sem-trakt",
+   "pergunta": "Perfil sem Trakt (usuários com Simkl veem \"Trakt desconectado\"): entra em qual versão?",
+   "recomendacao": "2.0.5: perfil com dados do Simkl e mensagem certa quando só o Simkl está ligado.",
+   "issues": [],
+   "estado": "pendente"
+  },
+  {
+   "id": "dec-410-vidro-profundidade-tpk",
+   "pergunta": "#410 (vidro, Profundidade e Reflexo no .tpk) entra em qual versão?",
+   "recomendacao": "Agente tinha posto 2.0.5.",
+   "issues": [
+    410
+   ],
+   "estado": "decidida",
+   "decisao": "2.0.4: é regressão da 2.0.3.",
+   "data": "2026-10-09",
+   "quem": "dono (Henrique)"
+  },
+  {
+   "id": "dec-addons-principal-off",
+   "pergunta": "\"Usar os addons do perfil principal\" ligado ou desligado por padrão?",
+   "recomendacao": "—",
+   "issues": [],
+   "estado": "decidida",
+   "decisao": "Desligado por padrão (a6ae4f64); quem já escolheu mantém.",
+   "data": "2026-10-09",
+   "quem": "dono (Henrique)"
+  },
+  {
+   "id": "dec-central-pi",
+   "pergunta": "Central de comando: base dos executores?",
+   "recomendacao": "Usar o pi (pi-mono) em modo RPC para MiniMax/Ollama; Codex e Claude Code ficam nos seus harnesses.",
+   "issues": [],
+   "estado": "decidida",
+   "decisao": "Sim: pi como harness dos executores; Sol estudando o RPC/sessões/fork.",
+   "data": "2026-10-09",
+   "quem": "dono (Henrique)"
+  }
+ ],
+ "fora_do_github": [
+  {
+   "id": "shield-22",
+   "titulo": "Relatório Shield (22 itens, Reddit)",
+   "plataforma": "Android (Shield)",
+   "status": "desconhecido",
+   "release": "2.0.3 (parcial)",
+   "conserto": [
+    "d30344ab/96ccdab1 (#6 Shield: tetos do Android e paginação da watchlist do Trakt, 2.0.3; 7b9e641a, o revert do 96ccdab1, não está em nenhuma branch)",
+    "5413db8a (Shield #19: guia \"Mostrando N de M canais\", Android guarda 3000 canais/128 categorias, 2.0.3)",
+    "6b3aaae1 (Shield 318.3: card do Continuar com o still do episódio; filme assistido diz Reproduzir, 2.0.3)",
+    "eabe3afd/b03aa2f0/35421d1a/73c4ab4c (#266/#332: curl fora do fio principal, /dev/urandom, login por HttpURLConnection, 2.0.3)"
+   ],
+   "proximo_passo": "mapeado em 09/10: o relatório de 20 itens do hboinay (provável versão do de 22) está nas entradas reddit-hboinay-NN abaixo; postar o rascunho docs/issues/rascunhos/reddit-hboinay-2026-10-09.md",
+   "notas": "O texto dos 22 itens NÃO está no repositório nem nas issues. Só três grupos de commits citam \"Shield\". Mapeamento item a item: desconhecido. ATUALIZAÇÃO 09/10: chegou um relatório de 20 itens do mesmo autor e da mesma build (teste-318.3); cada item virou uma entrada reddit-hboinay-NN (ou uma nota em #353/#356). Falta confirmar se é o mesmo relatório dos 22."
+  },
+  {
+   "id": "android-9",
+   "titulo": "Relatório Android TV (9 itens) = #369",
+   "plataforma": "Android",
+   "status": "consertada-nao-lancada (parcial)",
+   "release": "2.0.3",
+   "conserto": [
+    "712557ca (tailandês)",
+    "5f04c36b (ocultar não lançados)"
+   ],
+   "proximo_passo": "responder no #369 e listar os 7 itens sem commit",
+   "notas": "Só 2 dos 9 itens têm commit identificado. #369 não tem resposta nossa."
+  },
+  {
+   "id": "samsung-audio-oculto",
+   "titulo": "Samsung: faixa de áudio escondida pela TV (DTS/TrueHD)",
+   "plataforma": "Samsung .tpk (e .wgt na fase 1)",
+   "status": "consertada-nao-lancada (casar faixa) + planejado (aviso)",
+   "release": "2.0.3 (casar faixa); 2.0.5 (aviso, fase 1)",
+   "conserto": [
+    "4112f3f7 + efd1014b (agente/203-casarfaixa, em integracao/2.0.3): TV com menos faixas que o MKV casa por idioma, codec e canais",
+    "0ef8ddc9 (agente/204-samsung-dts): só o plano docs/plans/samsung-dts.md, sem código",
+    "f45ddc14 (2.0.2, #313): aviso só quando TODAS as faixas são recusadas"
+   ],
+   "proximo_passo": "implementar fase 1 do plano (aviso + faixa cinza na folha de áudio, 1,5-2 dias); fase 2 (ESPlayer) depende de teste de assinatura Partner em TV",
+   "notas": "Relato do Reddit: 2 faixas no box, 1 na TV. Relacionado a #313. ESPlayer exige privilégio Partner (no 4/5 isso já quebrou a instalação, 118014)."
+  },
+  {
+   "id": "samsung-80gb",
+   "titulo": "Samsung: pacote de 80 GB",
+   "plataforma": "Samsung",
+   "status": "desconhecido",
+   "release": "-",
+   "conserto": [],
+   "proximo_passo": "perguntar ao dono o que é",
+   "notas": "Nada encontrado em commits, docs, notas de release ou issues (buscas por \"80 GB\"/\"80GB\"). Não preencher sem a fonte."
+  },
+  {
+   "id": "reddit-hboinay-01",
+   "titulo": "Home: mais de 40 fileiras e ordem dos catálogos (hboinay item 1)",
+   "plataforma": "Android",
+   "status": "precisa-log",
+   "release": "alvo sugerido 2.0.5 (teto) / sem alvo (ordem)",
+   "conserto": [
+    "8e058817 (agente/204-fileiras-android, não integrado): Android com fileiras ilimitadas, teto 200"
+   ],
+   "proximo_passo": "teto: integrar agente/204-fileiras-android na 2.0.5 (já no roadmap); ordem: pedir log",
+   "notas": "TETO por desenho: CAT_FIL_MAX 40 (catalogo.h:394) e FIL_LIMITE_MAX 40 (fileiras.h:60); a branch 204-fileiras-android o sobe para 200 só no Android. ORDEM: não há como afirmar sem log; ligação provável com #358 (catálogos que a Home move para \"Fora da Home\", 29c640b7 em agente/204-conta-catalogos). Pedir o log para ver a ordem da conta contra a da Home. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
+  },
+  {
+   "id": "reddit-hboinay-03",
+   "titulo": "Continuar com fonte Nuvio mostra 5-6 itens e depois 1; a conta tem 30 (hboinay item 3)",
+   "plataforma": "Android",
+   "status": "precisa-log",
+   "release": "2.0.3 (parcial, 507d3a6b); teto alvo sugerido 2.0.5",
+   "conserto": [
+    "507d3a6b (v2.0.3): fonte Conta semeia o \"a seguir\" mesmo com Trakt/Simkl, descarta vistos velhos"
+   ],
+   "proximo_passo": "pedir log da 2.0.3 (Ajustes > Sobre > Enviar log)",
+   "notas": "O teto de cada fonte é CONT_MAX 12 (descoberta.c:2605), então 30 na conta nunca aparecem inteiros, e o \"a seguir\" ainda passa por filtros (episódio visto em outra fonte, série parada há mais de 60 dias com Trakt/Simkl vinculado, descoberta.c). 5-6 e depois 1 pode ser o filtro ou a lista de vistos da conta ainda não puxada (mesma suspeita do #356). Sem log é suspeita. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
+  },
+  {
+   "id": "reddit-hboinay-04",
+   "titulo": "Com Trakt e Simkl vinculados, Continuar mostra vistos antigos mesmo com fonte Nuvio (hboinay item 4)",
+   "plataforma": "Android",
+   "status": "precisa-log",
+   "release": "2.0.3 (parcial, 507d3a6b + 005b3095 + c0f4054c)",
+   "conserto": [
+    "507d3a6b (v2.0.3)",
+    "005b3095 (v2.0.3): desmarcar ganha",
+    "c0f4054c (v2.0.3): a seguir recua para o primeiro episódio desmarcado"
+   ],
+   "proximo_passo": "pedir log da 2.0.3 com a fonte em Conta Nuvio",
+   "notas": "Na leitura do código a fonte Conta não consulta Trakt nem Simkl (descoberta.c: querTrakt só em Trakt/Todas, querSimkl idem), então os \"vistos antigos\" teriam de vir de continuarLocal ou do \"a seguir\" da conta; a 2.0.3 descarta o visto em outra fonte e o parado há mais de 60 dias. Não reproduzido. Sem log é suspeita. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
+  },
+  {
+   "id": "reddit-hboinay-06",
+   "titulo": "Biblioteca: Trakt 213 e Simkl 483 de 1600+ (hboinay item 6)",
+   "plataforma": "Android",
+   "status": "aberta",
+   "release": "alvo sugerido 2.0.5",
+   "conserto": [
+    "d30344ab (v2.0.3): watchlist do Trakt paginada",
+    "96ccdab1 (v2.0.3): tetos do Android voltam a 400/300",
+    "7b9e641a (órfão, nenhuma branch): reverte o 96ccdab1 e devolve os tetos 2000/1000 no Android"
+   ],
+   "proximo_passo": "decidir o 7b9e641a: reaproveitá-lo na 2.0.5 (Android com teto 2000 Trakt e 1000 Simkl) ou manter o teto de hoje",
+   "notas": "Na 2.0.3 o Trakt pagina (?page=&limit=500, trakt.c:1873-1960) mas para em TRAKT_LISTA_MAX 400 (trakt.h:133) em todas as plataformas, e o Simkl em SIMKL_PTW_MAX 300 (simkl.h): quem tem 1600+ passa a ver 400/300 em vez de 213/483. O teto maior só existe no commit órfão 7b9e641a. O Simkl não pagina (all-items numa resposta), então o teto é só memória. Nota da 2.0.3 diz \"até 400 itens\" e vale para todas as TVs. Relacionado: #393. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
+  },
+  {
+   "id": "reddit-hboinay-07",
+   "titulo": "Selo de assistido não aparece em séries nos cartazes (só em filmes) (hboinay item 7)",
+   "plataforma": "Android",
+   "status": "aberta",
+   "release": "alvo sugerido 2.0.5",
+   "conserto": [],
+   "proximo_passo": "ler o /sync/watched/shows do Trakt uma vez (como o mapa de filmes vistos em trakt.c:1317) para marcar as séries inteiras",
+   "notas": "cat_visto (catalogo.c:432) devolve 0 para série sem histórico; o histórico da série só é escrito quando a PÁGINA do título é aberta (extras.c:586-597, contadores de /shows/<id>/progress/watched) ou ao marcar à mão. Cartaz de série em fileira não tem selo antes disso. Vale para todas as plataformas. #352 (agente/204-biblioteca-visto, 402e2438) só leva o selo para a Biblioteca. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
+  },
+  {
+   "id": "reddit-hboinay-08",
+   "titulo": "Trailers do destaque e da ficha começam pequenos e depois enchem a tela (hboinay item 8)",
+   "plataforma": "Android",
+   "status": "precisa-log",
+   "release": "alvo sugerido 2.0.5",
+   "conserto": [],
+   "proximo_passo": "reproduzir na Shield com o log de trailer; ver a ordem posição/recorte no NvPlayer.kt",
+   "notas": "No Android o Kotlin posiciona o recorte (video_android.c:9, video_recorte_fonte=1) e trailer_mostra_video (trailer.c:467) só espera o recorte no .tpk; no Android o plano aparece assim que toca. O pedido é esconder até o recorte assentar, como o .tpk faz (trailer.h:54-60). Hipótese, não medida. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
+  },
+  {
+   "id": "reddit-hboinay-11",
+   "titulo": "Cartazes escuros demais; pede desligar o brilho animado (hboinay item 11)",
+   "plataforma": "Android",
+   "status": "aberta",
+   "release": "alvo sugerido 2.0.5",
+   "conserto": [],
+   "proximo_passo": "dois ajustes pequenos: luz do foco (varredura) liga/desliga e força do véu do cartaz",
+   "notas": "A varredura de luz no foco (revela_varre, revela.h:83, home.c:5426) só some com \"Animações reduzidas\" global (anim_politica_reduzida), que também tira todo o resto do movimento; não há ajuste próprio. O escurecimento vem do véu sobre a arte (veusDoCard, home.c:4844) e do efeito de profundidade (AJ_PROF_*), este com liga/desliga em Ajustes. Contorno de hoje: Animações reduzidas e Efeito de profundidade desligados. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
+  },
+  {
+   "id": "reddit-hboinay-12",
+   "titulo": "Selos: URL do manifesto diz \"isso não é um JSON de selos\"; não usa os selos da conta (hboinay item 12)",
+   "plataforma": "Android",
+   "status": "precisa-log",
+   "release": "alvo sugerido 2.0.5",
+   "conserto": [],
+   "proximo_passo": "pedir a URL do manifesto e o log; testar o JSON no selospacote_adicionar",
+   "notas": "A mensagem sai de SELOS_ERR_JSON (ajustes.c:3047; selospacote.c:639-648): corpo que não é objeto/string JSON ou resposta maior que 4 MB. Os selos da conta só vêm de features.stream_badge_settings.stream_badge_rules no blob de ajustes do perfil (selospacote.c:588-612): se a conta não tem esse campo, nada é usado. Sem a URL e o log não dá para saber qual dos dois é. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
+  },
+  {
+   "id": "reddit-hboinay-13",
+   "titulo": "Só um servidor Jellyfin e um Emby por perfil (hboinay item 13)",
+   "plataforma": "Android",
+   "status": "por-desenho",
+   "release": "alvo sugerido 2.1",
+   "conserto": [],
+   "proximo_passo": "avaliar vários servidores por tipo (hoje instância 0 = Jellyfin, 1 = Emby, mais Plex)",
+   "notas": "Por desenho: um servidor por tipo e por perfil (jellyfin.h:5-10, JfInst; token em jellyfin-p<N>.txt). Vários exigem lista de instâncias, ids com namespace por servidor (jfid.h) e Home com mais fileiras (SRV_FIL_MAX, servidores.h). Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
+  },
+  {
+   "id": "reddit-hboinay-14",
+   "titulo": "Jellyfin/Emby fora das listas de fontes: add-ons permitidos, ordem, lista (hboinay item 14)",
+   "plataforma": "Android",
+   "status": "aberta",
+   "release": "alvo sugerido 2.1",
+   "conserto": [],
+   "proximo_passo": "decidir como o servidor pessoal entra em fonteregra (permitidos/ordem)",
+   "notas": "Para título de servidor pessoal a lista de fontes é só a do servidor (addons.c:493-510, servidores_fontes_colher + stream_definir_lista) e as regras de add-on permitido e ordem (fonteregra.h) só conhecem add-ons/plugins. O servidor vem sempre primeiro por desenho (9025bfa9). Confirmar com o autor o que ele esperava ver. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
+  },
+  {
+   "id": "reddit-hboinay-16",
+   "titulo": "Estilo da legenda só para a segunda legenda nos Ajustes; sincronia automática só por áudio (hboinay item 16)",
+   "plataforma": "Android",
+   "status": "aberta",
+   "release": "alvo sugerido 2.0.5 (estilo)",
+   "conserto": [],
+   "proximo_passo": "estilo da principal em Ajustes; perguntar quais legendas ele testou na sincronia",
+   "notas": "Ajustes tem Tamanho/Cor/Fundo/Borda só da segunda legenda (ajustes.c:1268-1272; a dica diz que a da principal \"é definida no player\"). Sincronia: além do áudio (AJ \"Sincronia por áudio\") existe o AutoSync por texto (legsync.c/autosync.c, em v2.0.3), mas só em legenda EXTERNA, tendo como referência a faixa de texto do MKV (legsync.h:11-16); legenda embutida ou nativa fica indisponível. Pode não ser bug, e sim limite. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
+  },
+  {
+   "id": "reddit-hboinay-17",
+   "titulo": "Só uma conta Xtream por perfil (hboinay item 17)",
+   "plataforma": "Android",
+   "status": "por-desenho",
+   "release": "alvo sugerido 2.1",
+   "conserto": [],
+   "proximo_passo": "avaliar várias contas (lista por perfil, canais com id por conta)",
+   "notas": "Por desenho: um servidor, usuário e senha por perfil (xtream.h, arquivo xtream-p<N>.txt; id \"xtream:<stream_id>\" sem conta). Várias contas pedem mudar o id do canal e o cadastro nos Ajustes. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
+  },
+  {
+   "id": "reddit-hboinay-18",
+   "titulo": "IPTV sem VOD/séries do Xtream (hboinay item 18)",
+   "plataforma": "Android",
+   "status": "por-desenho",
+   "release": "futuro",
+   "conserto": [],
+   "proximo_passo": "registrar como pedido; não planejado",
+   "notas": "O módulo só lê get_live_categories e get_live_streams (xtream.c, xtream.h); não existe get_vod_* nem get_series. Seria um módulo novo (catálogo + ficha + resolução de URL /movie/ e /series/). Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
+  },
+  {
+   "id": "reddit-hboinay-19",
+   "titulo": "TV ao vivo só com canais do Reino Unido e EUA, de dezenas de países (hboinay item 19)",
+   "plataforma": "Android",
+   "status": "precisa-log",
+   "release": "2.0.3 (provável, 5413db8a)",
+   "conserto": [
+    "5413db8a (v2.0.3): guia diz \"Mostrando N de M canais\"; Android guarda 3000 canais e 128 categorias",
+    "45ae240c (teste)"
+   ],
+   "proximo_passo": "pedir para atualizar para a 2.0.3 e, se persistir, o log",
+   "notas": "Antes da 2.0.3 o guia cortava em 900 canais e 48 categorias sem avisar e sumia categorias inteiras (45ae240c); com a lista ordenada isso deixaria só os primeiros países. Hipótese forte, sem confirmação do autor. Se persistir na 2.0.3, a fonte passa a ser o catálogo do add-on (Ajustes > Guia, canais por add-on, #283). Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
+  },
+  {
+   "id": "reddit-hboinay-20",
+   "titulo": "TV ao vivo com fps variando entre 24 e 50 (33, 34, 48) (hboinay item 20)",
+   "plataforma": "Android",
+   "status": "precisa-log",
+   "release": "alvo sugerido 2.0.5",
+   "conserto": [],
+   "proximo_passo": "pedir log com o medidor de desempenho ligado durante um canal ao vivo",
+   "notas": "Sem leitura de código que explique. O medidor (AJ_MEDIDOR) mede quadros da interface, não do vídeo; o vídeo ao vivo roda no Media3 (video_android.c). Pode ser decodificação, rede ou troca de taxa da tela. Só dá para dizer com o log. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
+  },
+  {
+   "id": "reddit-hboinay-21",
+   "titulo": "Canais piscando em verde na TV ao vivo (hboinay item 21)",
+   "plataforma": "Android",
+   "status": "precisa-log",
+   "release": "alvo sugerido 2.0.5",
+   "conserto": [],
+   "proximo_passo": "pedir log com o canal que pisca e a saída de vídeo da Shield",
+   "notas": "Tela verde em vídeo costuma ser decodificador/superfície (buffer YUV sem quadro). No Android a superfície é recriada em partida HDR e mudança de aspecto (notas da 2.0.3). Não localizado no código; sem log é suspeita. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026."
+  },
+  {
+   "id": "reddit-ragingmuncher-01",
+   "titulo": "Painel lateral (side bar) pisca depois da atualização (Ragingmuncher)",
+   "plataforma": "desconhecida",
+   "status": "precisa-log",
+   "release": "sem alvo (aguardando informação do autor); relatado na 2.0.3",
+   "conserto": [],
+   "proximo_passo": "responder no Reddit pedindo: modelo da TV e pacote (.tpk/.wgt/versão do webOS); se o ponteiro estava na tela ou só setas; em qual tela/item e se já acontecia na 2.0.2; enviar o log logo depois, com a hora aproximada (Ajustes > Sobre > Enviar log); vídeo pelo celular se for só visual",
+   "notas": "Relato: o painel lateral (side bar) pisca depois da atualização para a 2.0.3. TV e plataforma desconhecidas. ANÁLISE de 09/10: em ~310 logs da 2.0.3 (webos, tizen, tizen-tpk, a partir de 09/10/2026 15:00 UTC) não há laço de troca de tela (no máximo 18 linhas \"[transicao] tela\" por log, espaçadas por segundos). O painel lateral não escreve linha de log, então isso só descarta um laço, NÃO um pisca visual. src/menu.c não mudou entre a v2.0.2 e a v2.0.3; src/ponteiro.c ganhou 11 linhas (só aparo de alvo do ponteiro). SUSPEITA, não provada: Magic Remote com o ponteiro sobre o painel com o fundo de vidro. Sem log ou vídeo é suspeita. Origem: Reddit u/Ragingmuncher, versão 2.0.3, 09/10/2026."
+  },
+  {
+   "id": "reddit-km7-203",
+   "titulo": "Reddit (DueResult1983): 2.0.3 trava ao tocar série no Android TV; caixa inteira trava, teve de desinstalar",
+   "plataforma": "Android (Mecool KM7 SE, Amlogic, Android 12)",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "proximo_passo": "reproduzir com vídeo 4K HEVC numa caixa Amlogic de 2 GB; medir no logcat as linhas \"[player] superficie\" da 0b8f9290 (recriação da superfície fora do fio principal) e decidir se a 2.0.4 volta ao caminho antigo nesse tipo de aparelho",
+   "notas": "Pessoa nuvio:266479b1 (registros D1 66153..65330). Queda nativa em 5 de 13 sessões 2.0.3 contra 4 de 49 na 2.0.2 (no geral do Android a 2.0.3 MELHOROU: 25/400 contra 70/391). Pilhas: 65736 = GC da ART (HeapTaskDaemon, ConcurrentCopying, ponteiro nulo); 66017 relata a queda da sessão 66008 = fio ExoPlayer:Playback em AudioTrack.getTimestamp -> GetPrimitiveArrayCritical (SIGSEGV 0xfffffffe); 66021/66025/66054 sem tombstone. As duas pilhas são dentro da ART, padrão de heap Java corrompido ou memória esgotada. Memória: avisos onTrimMemory 5/10/15/20/40 em várias sessões, teto de textura já em 128 MB. Sessão 66008: série tt26545992 T1E1 4K 3840x1920 retomando em 22%; a superfície é recriada 2 vezes logo no início (3x \"primeiro quadro\") e o log para de repente sem linha de FPS. SUSPEITA principal: 0b8f9290 (2.0.3) manda MSG_SET_VIDEO_OUTPUT null ao renderer antes de recriar a superfície; em Amlogic isso pode manter/reabrir o decoder 4K e somar memória. Outras mudanças do player Android entre v2.0.2 e v2.0.3: 2a351b76 (aspecto espera superfície estável), c3726d2d (capítulos MKV por fio lateral), ce7bcd0f (retomada). Seekr já existia na 2.0.2, descartado como novidade."
+  },
+  {
+   "id": "reddit-webos3-32lj600b",
+   "titulo": "Reddit (nossascamerasip): LG 32LJ600B (webOS 3), 2.0.3: trailer com imagem e sem som; filme com som e sem imagem",
+   "plataforma": "LG webOS 3",
+   "status": "precisa-log",
+   "release": "-",
+   "conserto": [],
+   "proximo_passo": "pedir o código do log (Ajustes > Sobre > Enviar registro) logo depois de abrir um filme; com o log, ver a linha [tv] e o caminho do vídeo (DTS, hdr, player) no webOS 3",
+   "notas": "A mesma pessoa usa a C1 sem problema. Em 09/10 não há sessão da 32LJ600B no D1 (busca por LJ600 e por host=webos-3 desde o id 64500); há outras webOS 3.9.3 na 2.0.3 com \"arranque queda\" (65SJ800V 65304/65363/65374, OLED55B7P 65317). A 2.0.4 já leva a queda do webOS 3 no 2º vídeo (09ce19a0) e a leitura estrita da versão (webosver), mas nada prova que seja este defeito."
+  },
+  {
+   "id": "pedido-perfil-simkl",
+   "titulo": "Pedido: \"Meu perfil\" e status funcionando sem Trakt (usa Simkl e dá erro); sugere Telegram/Discord",
+   "plataforma": "all",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "proximo_passo": "2.0.5: perfil com Simkl (stats do Simkl, ou montado do histórico local + Simkl) e mensagem certa quando só o Simkl está ligado; Telegram/Discord é decisão do dono",
+   "notas": "LIDO 09/10: a tela Meu perfil chama só trakt_perfil (src/app.c carregarPerfil, ~350) e, sem Trakt, mostra \"Trakt desconectado. Vincule a conta para ver seu perfil.\" (app.c ~3273) mesmo com o Simkl conectado. perfil.c só mostra Simkl na linha de contas (~770). \"Status\" do relato não está claro (status de amigos/assistindo agora também vem do Trakt)."
+  },
+  {
+   "id": "fork-ysosrs123",
+   "titulo": "Estudo do fork ysosrs123/NuvioTV-Fork (pré-carregamento e outras melhorias)",
+   "plataforma": "all",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "proximo_passo": "pré-carregar fontes do próximo episódio em agente/204-proxprefetch (rodada 2); pós-créditos, lista de fontes mortas e ytId na 2.0.5",
+   "notas": "Relatório do MiniMax M3 em /Volumes/ExternalSSD/tmp/nuvio-fork-ysosrs/relatorio.md, CONFERIDO pela coordenação: 3 afirmações erradas do M3 (já temos Preparar fonte ao abrir, foco fixo quando a lista cresce, medição passiva/StreamFit). Verdadeiros: preload do próximo (#3795), segurar cartão até pós-créditos, failover com fontes mortas persistentes, autoplay com ytId, 4 conexões fixas no ParaleloDataSource."
+  },
+  {
+   "id": "dono-biblioteca-129",
+   "titulo": "Biblioteca mostra 129 salvos e 8 títulos",
+   "plataforma": "Android TV",
+   "status": "consertada-nao-lancada",
+   "release": "2.0.4",
+   "conserto": [],
+   "proximo_passo": "nada; validado na TCL",
+   "notas": "'Ocultar não lançados' escondia todo título sem metadados (121 de 129). Conserto 251d5e0f."
+  },
+  {
+   "id": "dono-spotlight-ordem",
+   "titulo": "Spotlight: título do usuário não vinha primeiro; item cortado",
+   "plataforma": "Android TV",
+   "status": "consertada-nao-lancada",
+   "release": "2.0.4",
+   "conserto": [],
+   "proximo_passo": "dono dizer qual foto estava errada (arte não reproduzida)",
+   "notas": "Busca 'silo': série 2023 em 4º. Conserto em agente/204-spotlight (1de8ce4e..63a41b4b). Arte trocada não comprovada."
+  },
+  {
+   "id": "dono-dv-escuro",
+   "titulo": "Dolby Vision às vezes abre escuro na TCL; clareia ao mudar o aspecto",
+   "plataforma": "Android TV",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "proximo_passo": "dono avisar na hora em que abrir escuro para puxar o [dvtrace]",
+   "notas": "Sem causa provada. Logs da superfície HDR em 817d3c3a. Suspeita: recriação da abertura marcada como feita antes de terminar; mudar aspecto força outra recriação."
+  },
+  {
+   "id": "dono-progresso-desmarcar",
+   "titulo": "'Seu progresso' errado depois de desmarcar episódios",
+   "plataforma": "Android TV",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "proximo_passo": "decidir se entra 'desmarcar daqui em diante' no menu do episódio",
+   "notas": "No log, 'até aqui desmarcar' em T3E2 tirou T1, T2 e T3E1-2 e deixou T3E3+ marcados; nada voltou sozinho. Dois buracos de sync achados e não provados (ENTREGA-progdesmarca.md). Achado lateral consertado: cache do gráfico (6c6d1668)."
+  },
+  {
+   "id": "discord-2026-10-10-simkl-visto",
+   "titulo": "Título marcado como visto no Simkl sem assistir",
+   "plataforma": "all",
+   "status": "desconhecido",
+   "release": "-",
+   "conserto": [],
+   "proximo_passo": "triar",
+   "notas": "Dono também observou; causa não identificada."
+  },
+  {
+   "id": "discord-2026-10-10-addons-sync-duplicados",
+   "titulo": "Add-ons duplicados durante sincronização",
+   "plataforma": "all",
+   "status": "desconhecido",
+   "release": "-",
+   "conserto": [],
+   "proximo_passo": "triar",
+   "notas": "Relato no Discord sem log."
+  },
+  {
+   "id": "discord-2026-10-10-cotonet",
+   "titulo": "Cotonet não aparece",
+   "plataforma": "all",
+   "status": "desconhecido",
+   "release": "-",
+   "conserto": [],
+   "proximo_passo": "triar",
+   "notas": "Relato no Discord sem log."
+  },
+  {
+   "id": "discord-2026-10-10-legenda-texto-lg",
+   "titulo": "Legenda embutida de texto na LG",
+   "plataforma": "LG webOS",
+   "status": "consertada-nao-lancada",
+   "release": "2.0.5",
+   "conserto": [
+    "c8e8d983 (integracao/2.0.5)"
+   ],
+   "proximo_passo": "triar",
+   "notas": "Relato de Jaco; desenho pelo app integrado na 2.0.5."
+  },
+  {
+   "id": "discord-2026-10-10-add-to-home",
+   "titulo": "Add to Home respeita lista de desativados",
+   "plataforma": "all",
+   "status": "consertada-nao-lancada",
+   "release": "2.0.5",
+   "conserto": [
+    "85411758 (integracao/2.0.5)"
+   ],
+   "proximo_passo": "triar",
+   "notas": "Relato do Discord; correção integrada para Add to Home prevalecer sobre a lista desativada."
+  }
+ ],
+ "fechar_203": [],
+ "nao_fechar_ainda": [
+  {
+   "numero": 294,
+   "motivo": "A #392 (rawldon, 09/10, v2.0.3, Samsung Tizen 6.0 .tpk) diz que trocar de perfil e voltar ainda reordena a Home (coleções, catálogos e Continuar). Conserto da 2.0.3 não basta; agente/2031-ordemperfil investigando (logs VV8JG2/Z4HDY2)."
+  },
+  {
+   "numero": 266,
+   "motivo": "Varios relatos no mesmo fio: o QR do Shield foi confirmado (charles474), mas ele trouxe queixa nova de legenda diferente do Nuvio oficial e ha log de outro aparelho (Airtel Xtreme) sem leitura."
+  },
+  {
+   "numero": 286,
+   "motivo": "O autor disse \"a bit better\"; ainda ha trabalho de desempenho no Mali-400 em andamento (poster/GPU, ordenacao do sync)."
+  },
+  {
+   "numero": 302,
+   "motivo": "O autor segue dizendo que a TV ao vivo congela o filme (log 2TAVFN); a leitura nossa diz que e a rede, sem confirmacao dele."
+  },
+  {
+   "numero": 350,
+   "motivo": "Mesmo autor do #302: filme travando durante a TV ao vivo ainda sem resposta; fechar so depois de resolver esse ponto."
+  },
+  {
+   "numero": 328,
+   "motivo": "Vai para a 2.0.5 com a parte 2 do #372 (numeração Cinemeta + camada de tradução): suspeita de mesma raiz, não confirmada; o commit de duplicados da 2.0.3 não cobre a causa provada. Autor não testou."
+  },
+  {
+   "numero": 341,
+   "motivo": "SUSPEITA: nenhum commit cita o #341 e nao foi testado em Tizen 5; o pedido de crop de barras pretas segue como decisao aberta."
+  },
+  {
+   "numero": 369,
+   "motivo": "Relatorio de 9 itens; so 2 tem commit (tailandes e ocultar nao lancados), os outros 7 ficam abertos (alvo 2.0.5)."
+  },
+  {
+   "numero": 383,
+   "motivo": "SUSPEITA de que a 2.0.3 cobre o pedido (memoria por perfil/titulo); pedir ao autor que confirme que bate com o Nuvio antes de fechar."
+  },
+  {
+   "numero": 385,
+   "motivo": "Suspeitas abertas: verificacao paralela de fontes e vazamento de eventos do trailer no .tpk; o conserto da 2.0.3 e so a pausa da leitura lateral. Alvo 2.0.5."
+  },
+  {
+   "numero": 334,
+   "motivo": "Limite de P2P e limpeza na 2.0.3, mas a janela de streaming (armazenamento rotativo) so na 2.0.5; avisar na issue."
+  },
+  {
+   "numero": 360,
+   "motivo": "Mescla do sync na 2.0.3, mas o botao \"Sincronizar addons\" (e2f1eede) e 2.0.5."
+  },
+  {
+   "numero": 246,
+   "motivo": "precisa-log: nao confirmado que o conserto da 2.0.3 cobre o relato HEVC/anime; falta log do autor."
+  },
+  {
+   "numero": 280,
+   "motivo": "precisa-log: correcao generica de fileiras na 2.0.3, sem log do autor para confirmar."
+  },
+  {
+   "numero": 356,
+   "motivo": "precisa-log: leitura do log T5JF2G indica causa nao coberta pela 2.0.3; precisa de log novo."
+  },
+  {
+   "numero": 392,
+   "motivo": "Conserto em agente/2031-ordemperfil, ainda não integrado nem lançado (2.0.4)."
+  }
+ ],
+ "base_roadmap": "21077ab5",
+ "roadmap": [
+  {
+   "release": "2.0.3",
+   "situacao": "lançada 09/10 (v2.0.3, 8ed4517c)",
+   "descricao": "Publicada na tag v2.0.3 (commit 8ed4517c, 09/10/2026). Lista completa em docs/releases/2.0.3/NOTAS.md. Em 09/10 os consertos com todos os commits contidos na tag passaram a status lancada; o que ficou como estava tem commits fora da tag ou conserto só suspeito (ver notas de cada issue). Inclui #361 (URL de cartaz longa).",
+   "itens": []
+  },
+  {
+   "release": "2.0.4",
+   "situacao": "lancada 10/10 (v2.0.4, db6ae4ee)",
+   "descricao": "Publicada na tag v2.0.4 (commit db6ae4ee, 10/10/2026). Correções confirmadas na tag estão marcadas como lançadas.",
+   "itens": [
+    {
+     "nome": "Temporadas: abas da lista publicada (#372 parte 1)",
+     "porque": "INTEGRADO em integracao/2.0.3.1 (merge 21077ab5; 038a7dc7, c2112b61, a120b67c, 167310e6, 8eb5ce90), sem tag v*. CAUSA PROVADA: regressão 9677065b (v2.0.1, catálogo do Nuvio primeiro para a lista de episódios; o TMDB junta anime longo, Bleach {1:366,2:50} contra S1-16 no Cinemeta) e defeito antigo das abas de temporada vindas do corpo do Nuvio mesmo quando a lista do add-on vence (descoberta.c ~7069-7087, detail.c ~742-765). Log BZB857 (2.0.3, webOS). A parte 2 (numeração) foi para a 2.0.5. #328 saiu daqui: vai para a 2.0.5.",
+     "issues": [
+      372
+     ],
+     "origem": "logs dos autores, 09/10; decisão do dono 09/10",
+     "branches": [
+      "agente/2031-temporadas (integrada)"
+     ]
+    },
+    {
+     "nome": "Queda ao pesquisar na TV ao vivo (#344), primeira rodada",
+     "porque": "INTEGRADO em integracao/2.0.3.1 (merge c9af64b1; teste 9d78c75a, conserto 8dd273f3), sem tag v*. CAUSA PROVADA por tombstone simbolizado (log AX1R49): leitura fora do limite em buscaFazer (src/guia.c ~3965, ps[24] com epg_faixa/xtepg_faixa devolvendo o total), desde a v1.7.0, todas as plataformas com o guia.",
+     "issues": [
+      344
+     ],
+     "origem": "log do autor, 09/10",
+     "branches": [
+      "agente/2031-guiabusca (integrada)"
+     ]
+    },
+    {
+     "nome": "Ordem da Home ao trocar de perfil (#392, #294)",
+     "porque": "INTEGRADO em integracao/2.0.3.1 (merge bdd49eb6). CAUSA PROVADA pelo log VV8JG2 (.tpk Tizen 6.0, v2.0.3): o build da Home registra os catálogos de add-ons do perfil anterior no arquivo de ordem do perfil novo e expulsa fileiras. Teste bb583b60, conserto 9023ebdb.",
+     "issues": [
+      392,
+      294
+     ],
+     "origem": "log do autor, 09/10",
+     "branches": [
+      "agente/2031-ordemperfil"
+     ]
+    },
+    {
+     "nome": "Queda do webOS 3 na sonda do adaptador DTS",
+     "porque": "INTEGRADO em integracao/2.0.3.1 (merge 09ce19a0): a sonda do adaptador DTS responde uma vez por processo (00b4a937) e a libplayerAPIs fica na memória (RTLD_NODELETE, 65491e7b); a explicação do mecanismo é SUSPEITA, não certeza (1d7264c1). Sem issue no mapa.",
+     "issues": [],
+     "origem": "investigação 09/10",
+     "branches": [
+      "agente/2031-webos3"
+     ]
+    },
+    {
+     "nome": "Fontes com FHD sem numero caem em Outras (#402)",
+     "porque": "INTEGRADO em integracao/2.0.3.1 (merge ca8f29b4; teste tests/fhd402.sh, revisado por Codex e OpenCode). CAUSA lida no codigo: stream_parse.c:281-283 e badges.c:40-42 nao reconhecem FHD/FULLHD sem numero, entao altura=0 e o grupo vira Outras (streams.c:2105). Conserto de 2 linhas mais teste; candidato a entrar na 2.0.4 se o dono quiser. Nao e a ordenacao nem uma configuracao.",
+     "issues": [
+      402
+     ],
+     "origem": "agente 09/10"
+    },
+    {
+     "nome": "Legendas \"Da conta\" e modelo de URL do poster (#378, #390)",
+     "porque": "INTEGRADO em integracao/2.0.3.1 (merges 28aa5c4b e beab28ec), cada um com teste que falhava antes do conserto.",
+     "issues": "",
+     "origem": ""
+    },
+    {
+     "nome": "Dolby Vision perfil 5 na LG: decisão pendente (HDR10 ou MP4 primeiro)",
+     "porque": "Pendente: duas branches de alternativas; a decisão espera o teste do dono na C9. Entra no hotfix só se for escolhida.",
+     "issues": [],
+     "origem": "dono, 09/10; decisão pendente",
+     "branches": [
+      "agente/2031-dvp5-hdr10",
+      "agente/2031-dvp5-mp4"
+     ]
+    }
+   ]
+  },
+  {
+   "release": "2.0.5",
+   "situacao": "em integracao/2.0.5",
+   "descricao": "Correções e pedidos em triagem para a próxima versão; os hashes registrados são os merges encontrados em origin/master..HEAD.",
+   "itens": [
+    {
+     "nome": "Próximo episódio automático após 5 s",
+     "porque": "Estende a contagem estilo Netflix do #331 (agente/203-331) e o pedido #256; é uma opção no mesmo card, então vai junto. Sem branch próprio para os 5 s: SUSPEITA de que baste um valor padrão.",
+     "issues": [
+      256,
+      331,
+      326,
+      329
+     ]
+    },
+    {
+     "nome": "Estatísticas do player e tamanho do buffer",
+     "porque": "Código pronto em agente/203-338; a resposta já prometeu \"next build\".",
+     "issues": [
+      338
+     ]
+    },
+    {
+     "nome": "Biblioteca: indicadores de visto, esconder assistidos, vitrine de coleção, detalhes da fonte",
+     "porque": "Pequenos, cada um em seu branch agente/204-*; não dependem do redesign.",
+     "issues": [
+      352,
+      366,
+      362,
+      355
+     ]
+    },
+    {
+     "nome": "Catálogos da conta, sync de add-ons, fonte recusada, P2P por formato",
+     "porque": "Branches agente/204-conta-catalogos, 204-sync-addons, 204-fonte-recusada prontos ou quase.",
+     "issues": [
+      358,
+      365,
+      360,
+      364,
+      349
+     ]
+    },
+    {
+     "nome": "Samsung: DTS/TrueHD escondido (fase 1)",
+     "porque": "Plano e spike em agente/204-samsung-dts (docs/plans); fase 1 já planejada para a 2.0.5.",
+     "issues": [
+      313
+     ]
+    },
+    {
+     "nome": "Android: fileiras ilimitadas na Home, armazenamento rotativo do P2P",
+     "porque": "agente/204-fileiras-android e agente/203-334-janela (janela de streaming do P2P) existem e ficaram fora da 2.0.3 por risco.",
+     "issues": [
+      334
+     ]
+    },
+    {
+     "nome": "Triagem de bugs sem conserto e dois pedidos pequenos (#306, #337)",
+     "porque": "Todos aguardam log do autor; entram na 2.0.5 se o log aparecer a tempo, senão escorregam.",
+     "issues": [
+      288,
+      315,
+      316,
+      344,
+      345,
+      346,
+      353,
+      357,
+      367,
+      372,
+      373,
+      378,
+      379,
+      306,
+      337,
+      385,
+      308
+     ]
+    },
+    {
+     "nome": "Binge group: lembrar também a fonte que o automático tocou (#310)",
+     "porque": "Pedido (a) do #310. A revisão de código mostrou que a escolha manual de outro episódio já aplica o binge group; a lacuna era só a fonte escolhida à mão ser lembrada. O dono aprovou em 09/10 (\"sim vamos adicionar na 2.0.4\"; a 2.0.4 planejada foi renumerada para 2.0.5 em 09/10) lembrar também o binge group da fonte que o automático tocou. Código em agente/204-binge (29d2c248, 02753401, 6345e9ff), não integrado. Origem: dono 09/10.",
+     "issues": [
+      310
+     ],
+     "branches": [
+      "agente/204-binge"
+     ]
+    },
+    {
+     "nome": "Trailer vazando para a sessão do episódio no .tpk (#385)",
+     "porque": "SUSPEITA, sem conserto. No log do #385 (.tpk, 2.0.2), \"tpk evento 1 (129036)\" vem sempre depois de \"[trailer] ... no fundo com som\" e aparece até sem episódio aberto; no log 1 o evento de duração do trailer chegou depois de \"abrir: url ao pipeline\" e o posplay o leu como duração do episódio (\"duracao suspeita 129s\"). Conferir se os eventos do player do trailer (duração, fim, erro) são descartados ao abrir o episódio. Separado da recusa de conexão do TorBox, que foi bloqueio do nó/IP (conserto da pausa na 2.0.3). Origem: logs do #385, 09/10.",
+     "issues": [
+      385
+     ]
+    },
+    {
+     "nome": "Numeração de temporadas Cinemeta + camada de tradução (#372 parte 2)",
+     "porque": "Opção (b) escolhida pelo dono: lista de episódios na numeração Cinemeta/TVDB mais uma camada de tradução por número absoluto do episódio para o progresso/scrobble do Trakt, a conta Nuvio, o Simkl, os ids de \"a seguir\"/Continuar assistindo e as marcas de visto (vistonao/vistoep). A parte 1 (abas de temporada) sai na 2.0.4. #328 acompanha: mesma raiz suspeita.",
+     "issues": [
+      372,
+      328
+     ],
+     "origem": "dono 09/10",
+     "branches": []
+    },
+    {
+     "nome": "CI com ASan/TSan nos testes de host (+ ASan do app inteiro por candidata a release, helpers de buffer limitado)",
+     "porque": "Alternativa sem Rust do estudo: SANITIZE=1 e SANITIZE=thread nos 152 + 29 testes que já aceitam, falhando o PR; roteiro fixo com ASan no app inteiro por release candidate; helpers de buffer limitado (nv_cpy, nv_slice). Cobre os bugs de memória do ranking a custo de horas, sem tocar em alvo de TV. Referência: docs/plans/rust-piloto.md (\"alternativas sem Rust\", seção 5).",
+     "issues": [],
+     "origem": "dono 09/10",
+     "branches": [
+      "docs/plans/rust-piloto.md"
+     ]
+    },
+    {
+     "nome": "Biblioteca: aba Salvos seguir o destino Simkl (sugestao)",
+     "porque": "#393; só se o autor confirmar que o que falta é isso (Listas › Simkl e \"Onde o + salva\" já existem). Sugestão do agente, não aprovado pelo dono.",
+     "issues": [
+      393
+     ],
+     "origem": "agente 09/10"
+    },
+    {
+     "nome": "Binario do LG sem simbolos de depuracao: ipk menor (#401)",
+     "porque": "MEDIDO no ipk 2.0.4: 58,3 MB, binario 55,3 MB com debug_info/.symtab (30,8 MB de secoes de depuracao, 10,5 MB comprimidas), arte 39 MB ja comprimida. Strip no link do tools/arm.sh deve baixar o ipk para ~48 MB (estimativa, nao medida) e guardar o binario com simbolos como anexo da release para simbolizar queda. Nao prova que seja a causa dos 15 min do #401 (SUSPEITA: download da TV ou instalacao de 1190 arquivos); pedir ao autor o tempo por fase. Fontes opcionais (Roboto, Montserrat, Inter, ate ~4 MB descomprimidos) poderiam baixar sob demanda como a Naskh (assrender.c ~870), sem promessa.",
+     "issues": [
+      401
+     ],
+     "origem": "agente 09/10"
+    },
+    {
+     "nome": "Botao Proximo episodio na fileira de controles do player (#403)",
+     "porque": "Hoje so o cartao na janela de creditos/fim (dispensa gruda) e a lista pelo botao Episodios. Sugestao: acao de proximo episodio na fileira (ou atalho) para serie, reaproveitando player_proximo_episodio e o pedido de app.c:4424. Vai junto com o proximo episodio automatico. Sugestao do agente, nao aprovado pelo dono.",
+     "issues": [
+      403
+     ],
+     "origem": "agente 09/10"
+    },
+    {
+     "nome": "Dados do app fora da pasta do app (LG) e limpeza de sobras",
+     "porque": "Medido na C9 (09/10): .nuvio dentro da pasta do app com 359 MB / 3980 arquivos (cache de imagens 111 MB, cache.suspeito-1853 195 MB nunca apagado, trailers 28 MB, fontes de legenda ASS repetidas por faixa ~7,5 MB cada). SUSPEITA de ser o que deixa a atualização pelo Homebrew lenta (#401): instalação nova é rápida, atualização por cima leva 15 min. Fazer: (1) cache de imagens, trailers e fontes da legenda fora da pasta do app; (2) apagar cache.suspeito-* antigos; (3) não guardar cópia das fontes por faixa. Aprovado pelo dono 09/10.",
+     "issues": [
+      401
+     ]
+    },
+    {
+     "nome": "Novos de 09/10: ordem do add-on, busca rapida, notas em bloco, menu do topo (#400, #405, #406, #407)",
+     "porque": "Triagem 09/10 sem conserto: #400 pedido (opcao de manter a ordem do add-on), #405 bug com log ABB125, #406 pedido, #407 bug sem log, todos do Samsung menos o #400.",
+     "issues": "",
+     "origem": ""
+    },
+    {
+     "nome": "Perfil/Home (#392)",
+     "porque": "Correção integrada; hash 811ba74a.",
+     "issues": [
+      392
+     ],
+     "origem": "origin/master..HEAD"
+    },
+    {
+     "nome": "Fallback TMDB (#416, #419)",
+     "porque": "Correção integrada; hash 8b5ed6c0.",
+     "issues": [
+      416,
+      419
+     ],
+     "origem": "origin/master..HEAD"
+    },
+    {
+     "nome": "Cartão de trailer (#417)",
+     "porque": "Correção integrada; hash f219bc9d.",
+     "issues": [
+      417
+     ],
+     "origem": "origin/master..HEAD"
+    },
+    {
+     "nome": "Screensaver durante trailer (#422)",
+     "porque": "Correção integrada; hash a408e51a.",
+     "issues": [
+      422
+     ],
+     "origem": "origin/master..HEAD"
+    },
+    {
+     "nome": "Legendas embutidas de texto (#421)",
+     "porque": "Correção integrada; hash c8e8d983.",
+     "issues": [
+      421
+     ],
+     "origem": "origin/master..HEAD"
+    },
+    {
+     "nome": "DisplayRoi e aspecto (#426, #341)",
+     "porque": "Correção integrada; hash 3ba2987a.",
+     "issues": [
+      426,
+      341
+     ],
+     "origem": "origin/master..HEAD"
+    },
+    {
+     "nome": "Seleção de legendas hbs (#429)",
+     "porque": "Correção integrada; hash 2d42c8e0.",
+     "issues": [
+      429
+     ],
+     "origem": "origin/master..HEAD"
+    }
+   ]
+  },
+  {
+   "release": "2.1",
+   "situacao": "aprovada pelo dono em 06/10/2026 (e 07/10 para Ajustes); sem data",
+   "descricao": "Os seis recursos aprovados pelo dono, mais perfis com o pacote de UX dos Ajustes. Os itens marcados \"suspeita\" foram colocados aqui pelo agente anterior e NÃO estão aprovados.",
+   "itens": [
+    {
+     "nome": "Watch Together (Assistir Juntos)",
+     "porque": "Aprovado pelo dono para a 2.1. Sala compartilhada entre aparelhos; o branch já carrega a marca de perfil infantil enviada para a sala.",
+     "issues": [],
+     "origem": "dono 06/10",
+     "branches": [
+      "feat/watch-together"
+     ]
+    },
+    {
+     "nome": "Diário + sono (Diário + sono)",
+     "porque": "Aprovado pelo dono para a 2.1.",
+     "issues": [],
+     "origem": "dono 06/10",
+     "branches": [
+      "feat/sp-diario"
+     ]
+    },
+    {
+     "nome": "Trava (Lock)",
+     "porque": "Aprovado pelo dono para a 2.1.",
+     "issues": [],
+     "origem": "dono 06/10",
+     "branches": [
+      "feat/sp-trava"
+     ]
+    },
+    {
+     "nome": "Caça / Conquistas (Hunt/Achievements)",
+     "porque": "Aprovado pelo dono para a 2.1.",
+     "issues": [],
+     "origem": "dono 06/10",
+     "branches": [
+      "feat/sp-conquistas"
+     ]
+    },
+    {
+     "nome": "Redesign da Biblioteca (Biblioteca)",
+     "porque": "Branch agente/202-biblioteca (procedência por título, aba Listas); o plano de dados está em docs/plans/biblioteca-ilimitada.md (branch agente/biblioteca-ilimitada-plano) e diz \"não na 2.0.3\". Mexe em memória e navegação; não cabe num ponto de versão.",
+     "issues": [],
+     "origem": "dono 06/10",
+     "branches": [
+      "agente/202-biblioteca",
+      "agente/biblioteca-ilimitada-plano (docs/plans/biblioteca-ilimitada.md)"
+     ]
+    },
+    {
+     "nome": "Coleções + fileiras",
+     "porque": "Aprovado pelo dono para a 2.1. Os pequenos ajustes de vitrine (#362) continuam na 2.0.5 em agente/204-colecao-vitrine e não dependem disto.",
+     "issues": [],
+     "origem": "dono 06/10",
+     "branches": [
+      "feat/colecoes-fileiras",
+      "agente/201-colecoes"
+     ]
+    },
+    {
+     "nome": "Perfis + tour, \"Começar\", \"Resolver um problema\" e busca com i18n nos Ajustes",
+     "porque": "Decisão de UX dos Ajustes de 07/10: esses quatro itens saem na 2.1 junto com perfis. Branch de cada um: não identificado (suspeita: parte do trabalho está em feat/ajustes-ux e agente/204-perfil, não confirmado).",
+     "issues": [],
+     "origem": "dono 07/10",
+     "branches": []
+    },
+    {
+     "nome": "Limites maiores de Trakt/Biblioteca (sem teto)",
+     "porque": "Parte do plano biblioteca-ilimitada, que o dono aprovou só como redesign; tirar os tetos do Trakt como item próprio não foi citado por ele. A 2.0.3 só pagina a watchlist do Trakt até 400 itens e mantém os tetos de hoje (96ccdab1). Tirar o teto exige o índice leve + janela de CatItem do plano biblioteca-ilimitada, que é parte do redesign.",
+     "issues": [],
+     "origem": "suspeita (sugestão do agente, não aprovado)",
+     "branches": []
+    },
+    {
+     "nome": "Remoção de barras pretas embutidas no quadro (blackbar/crop)",
+     "porque": "Recurso novo, sem issue nem branch (relacionados: #341 aspecto/zoom e #241 barras do trailer, esse já tratado). Precisa detectar a barra no quadro em cada pipeline (LG, .tpk, Android). SUSPEITA de 2.1; pode virar 2.0.5 se for só um recorte manual por título.",
+     "issues": [
+      341
+     ],
+     "origem": "suspeita (sugestão do agente, não aprovado)",
+     "branches": []
+    },
+    {
+     "nome": "Dolby Vision em MKV na Samsung",
+     "porque": "A 2.0.3 só traz DV em MKV na LG (opcional, desligado) e a Samsung nunca escolhe DV. Na Samsung falta prova de que o decodificador aceita; precisa de spike por modelo antes de prometer. SUSPEITA de 2.1.",
+     "issues": [],
+     "origem": "suspeita (sugestão do agente, não aprovado)",
+     "branches": []
+    },
+    {
+     "nome": "Menus em árabe e auto sync de legenda por linha",
+     "porque": "SUSPEITA do agente, fora do roadmap do dono: o árabe nos menus foi prometido na resposta do #325 e o auto sync tem pesquisa em legenda-sync-lg-samsung-pesquisa.md, mas nenhum dos dois consta da decisão de 06/10. Pode sair da 2.1 para futuro se o dono preferir.",
+     "issues": [
+      250,
+      333,
+      374
+     ],
+     "origem": "suspeita (sugestão do agente, não aprovado)",
+     "branches": []
+    },
+    {
+     "nome": "Plano de refatoração geral",
+     "porque": "docs/plans/refatoracao-geral.md (branch agente/refatoracao-plano, 0dc06334): 23 mudanças pequenas, cada uma com porteiro de teste. Fazer depois da 2.0.3 sair e fora da 2.0.5, para não misturar refatoração com os recursos acima. Itens 01-04 (apagar morto, deduplicar Biblioteca) vão melhor junto do redesign da Biblioteca. Ordem com o Rust (dono 09/10): o porte Rust de fonteparalela+streams vem depois do piloto e deve ser coordenado com os itens do plano que tocam streams.c.",
+     "issues": [],
+     "origem": "suspeita (sugestão do agente, não aprovado)",
+     "branches": [
+      "agente/refatoracao-plano"
+     ]
+    },
+    {
+     "nome": "Auto-play: reusar último link com validade e regex separada por tipo (filmes / séries / anime)",
+     "porque": "Pedidos (b) e (c) do #310. (b) não há cache de link hoje (fontepref guarda só a identidade, 180 dias; fontecache é prefetch de 30 s): guardar URL de debrid pede arquivo, validade nos Ajustes e queda para a busca. (c) hoje há uma regex e um modo só (fonteregra.c:15, ajustes.c:1301, uma chave na conta): por tipo pede três regex, três modos, blob novo e uma definição de anime. Médio e grande, por isso 2.1 e não 2.0.5. Sem aprovação do dono ainda.",
+     "issues": [
+      310
+     ],
+     "origem": "suspeita (sugestão do agente, não aprovado)",
+     "branches": []
+    },
+    {
+     "nome": "Piloto Rust 'mkvcore' (no_std, atrás de -DNV_RUST_MKVCORE, com fallback C) — piloto de toolchain",
+     "porque": "Experimento de toolchain nos 5 alvos com flag por alvo e fallback C (reversível trocando uma variável de build); flag desligada por padrão no primeiro candidato. Estimativa de 3 a 4 semanas, SUSPEITA. Referência: docs/plans/rust-piloto.md (seção 4).",
+     "issues": [],
+     "origem": "dono 09/10",
+     "branches": [
+      "docs/plans/rust-piloto.md"
+     ]
+    },
+    {
+     "nome": "Portar fonteparalela+streams e o publicador do catálogo (se o piloto passar)",
+     "porque": "Só depois do piloto mkvcore passar os guards nos 5 alvos; é onde está o ganho real de Rust segundo o estudo, mas o custo é de meses (SUSPEITA). Coordenar com o plano de refatoração geral, que também mexe em streams.c. Referência: docs/plans/rust-piloto.md (seção 6).",
+     "issues": [],
+     "origem": "dono 09/10",
+     "branches": [
+      "docs/plans/rust-piloto.md"
+     ]
+    },
+    {
+     "nome": "Atraso do áudio no player (sugestao)",
+     "porque": "Pedido no #397; não existe hoje (só o atraso de legenda). Sugestão do agente, não aprovado pelo dono: começar onde o backend deixa (Android/Media3); LG e Samsung podem não ter API.",
+     "issues": [
+      397
+     ],
+     "origem": "agente 09/10"
+    }
+   ]
+  },
+  {
+   "release": "2.2",
+   "situacao": "aprovada pelo dono em 06/10/2026; sem data",
+   "descricao": "Servidores locais, guia de TV e música.",
+   "itens": [
+    {
+     "nome": "Servidores locais (Jellyfin / Plex / Emby)",
+     "porque": "Aprovado pelo dono para a 2.2; ele tem um servidor real para testar.",
+     "issues": [],
+     "origem": "dono 06/10",
+     "branches": [
+      "f11-jellyfin",
+      "feat/emby-plex"
+     ]
+    },
+    {
+     "nome": "Guia de TV (guia pro)",
+     "porque": "Aprovado pelo dono para a 2.2. Existem várias linhas de trabalho: guia-tv, guia-pro, guia-pro-2, lembrete e a UI w18; qual é a mais recente fica a conferir.",
+     "issues": [],
+     "origem": "dono 06/10",
+     "branches": [
+      "feat/guia-tv",
+      "feat/guia-pro",
+      "feat/guia-pro-2",
+      "feat/guia-lembrete",
+      "ui/w18-guia-tv"
+     ]
+    },
+    {
+     "nome": "Música (álbum da trilha sonora)",
+     "porque": "Aprovado pelo dono para a 2.2: álbum da trilha, só link do Spotify, prévia para testar na TV e no celular, crowdsourcing no Android permitido, Apple Insight via uts-api timed-metadata. Branch: nenhum encontrado.",
+     "issues": [],
+     "origem": "dono 06/10",
+     "branches": []
+    }
+   ]
+  },
+  {
+   "release": "futuro",
+   "situacao": "sem data nem dono",
+   "descricao": "Pedidos que fazem sentido mas não têm plano.",
+   "itens": [
+    {
+     "nome": "Porte VIDAA, layout RTL, anime-skip.com, busca por microfone, pontos do carrossel estilo Apple TV, serviços na barra lateral",
+     "porque": "Cada um é grande ou depende de terceiros; nenhum tem branch.",
+     "issues": [
+      135,
+      260,
+      343,
+      347,
+      348,
+      304,
+      342
+     ]
+    },
+    {
+     "nome": "Passo de quadro no player (sugestao)",
+     "porque": "Pedido no #397 (\"frame skipping\", ambíguo); não existe, só saltos de 10 a 120 s. Sugestão do agente, não aprovado pelo dono; depende de a TV aceitar avanço por quadro.",
+     "issues": [
+      397
+     ],
+     "origem": "agente 09/10"
+    }
+   ]
+  },
+  {
+   "release": "nao vamos fazer",
+   "situacao": "fora do escopo do produto",
+   "descricao": "PC, iOS, e itens que não são trabalho de código.",
+   "itens": [
+    {
+     "nome": "App para PC (#354), .ipa para iOS (#307), relatório automático de logs (#324), aviso de desempenho em 4K (#292)",
+     "porque": "Plataformas que o projeto não atende ou issues que não pedem mudança.",
+     "issues": [
+      354,
+      307,
+      324,
+      292
+     ]
+    }
+   ]
+  }
+ ],
+ "decisoes_ids_retirados": []
 }
