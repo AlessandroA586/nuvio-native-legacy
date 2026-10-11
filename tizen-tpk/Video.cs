@@ -32,6 +32,10 @@ namespace NuvioTpk
         [DllImport("libnuvio.so")] static extern void nv_tpk_video_registrar(IntPtr abrir, IntPtr parar, IntPtr pausar,
                                                                               IntPtr buscar, IntPtr volume, IntPtr janela, IntPtr pos);
         [DllImport("libnuvio.so")] static extern void nv_tpk_video_evento(int tipo, int a, int b);
+        [DllImport("libnuvio.so")] static extern void nv_tpk_video_registrar_aspecto(IntPtr janela);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void RegistrarAspectoDel(IntPtr janela);
+        public static RegistrarAspectoDel RegistrarAspecto = nv_tpk_video_registrar_aspecto;
+
         [DllImport("libnuvio.so")] static extern void nv_tpk_video_registrar_faixas(IntPtr escolher);
         [DllImport("libnuvio.so")] static extern void nv_tpk_video_faixa(int tipo, int idx, string lingua);
         [DllImport("libnuvio.so")] static extern void nv_tpk_video_faixas_fim(int selAudio, int selLeg);
@@ -61,6 +65,8 @@ namespace NuvioTpk
         public static void Ligar(Func<string, IntPtr> resolve)
         {
             IntPtr p;
+            p = resolve("nv_tpk_video_registrar_aspecto");
+            RegistrarAspecto = p != IntPtr.Zero ? Marshal.GetDelegateForFunctionPointer<RegistrarAspectoDel>(p) : new RegistrarAspectoDel(_ => { });
             if ((p = resolve("nv_tpk_video_registrar")) != IntPtr.Zero) Registrar = Marshal.GetDelegateForFunctionPointer<RegistrarDel>(p);
             if ((p = resolve("nv_tpk_video_evento")) != IntPtr.Zero) Evento = Marshal.GetDelegateForFunctionPointer<EventoDel>(p);
             if ((p = resolve("nv_tpk_video_registrar_faixas")) != IntPtr.Zero) RegistrarFaixas = Marshal.GetDelegateForFunctionPointer<RegistrarFaixasDel>(p);
@@ -77,6 +83,11 @@ namespace NuvioTpk
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void FnSemArg();
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void FnInt(int v);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void FnRet(int x, int y, int w, int h);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void FnAspecto(int x, int y, int w, int h, int lx, int ly, int lw, int lh);
+        [DllImport("libcapi-media-player.so.0")] static extern int player_set_display_mode(IntPtr p, PlayerDisplayMode mode);
+        [DllImport("libcapi-media-player.so.0")] static extern int player_set_display_roi_area(IntPtr p, int x, int y, int w, int h);
+        FnAspecto fAspecto;
+        bool aspectoRecusado;
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate int FnPos();
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void FnEscolher(int tipo, int idx);
 
@@ -107,6 +118,10 @@ namespace NuvioTpk
             fBuscar = ms => ComSessao(() => Buscar(ms));
             fVolume = v => ComSessao(() => PedirVolume(v));
             fJanela = (x, y, w, h) => ComSessao(() => Janela(x, y, w, h));
+            fAspecto = (x,y,w,h,lx,ly,lw,lh) => ComSessao(() => Janela(x,y,w,h,lx,ly,lw,lh));
+            // Older staged libnuvio versions only have the original window callback.
+            try { NvVid.RegistrarAspecto(Marshal.GetFunctionPointerForDelegate(fAspecto)); }
+            catch (EntryPointNotFoundException) { }
             fPos = () => posMs;
             NvVid.Registrar(Marshal.GetFunctionPointerForDelegate(fAbrir), Marshal.GetFunctionPointerForDelegate(fParar),
                                    Marshal.GetFunctionPointerForDelegate(fPausar), Marshal.GetFunctionPointerForDelegate(fBuscar),
@@ -337,6 +352,7 @@ namespace NuvioTpk
             // Player novo nasce no volume cheio; so um pedido DESTA sessao
             // (trailer.c, logo depois do video_tocar) o muda.
             volAlvo = 1f; volPedido = false;
+            aspectoRecusado = false;
             try
             {
                 var p = new Player();
@@ -486,6 +502,11 @@ namespace NuvioTpk
         bool PararAtual()
         {
             ReportWindowMetrics();
+            if (janelaMovida && GeometriaJanela != null)
+            {
+                try { RestaurarJanela(); }
+                catch (Exception e) { Log("[aspecto] reset-window: " + e.Message); }
+            }
             if (!SoltaPrimer()) return false;
             if (player == null) return true;
             return Liberar(ref player); // cache preserva a retomada durante a espera da reconexao
@@ -522,35 +543,69 @@ namespace NuvioTpk
         public Func<int, int, int, int, string> GeometriaJanela;
         bool janelaMovida;
 
-        void Janela(int x, int y, int w, int h)
+        void RestaurarJanela()
         {
-            if (player == null) return;
-            bool applied = false, fullscreen = x == 0 && y == 0 && w == telaW && h == telaH;
-            windowMetrics.Begin(player, x, y, w, h, fullscreen);
-            long started = Stopwatch.GetTimestamp(), ended = 0;
+            string erro = GeometriaJanela(0,0,telaW,telaH);
+            if (erro != null) throw new InvalidOperationException(erro);
+            janelaMovida = false;
+        }
+
+        void Janela(int x, int y, int w, int h) { Janela(x,y,w,h,x,y,w,h); }
+
+        void Janela(int x, int y, int w, int h, int lx, int ly, int lw, int lh)
+        {
+            if (player == null || w <= 0 || h <= 0) return;
+            bool applied = false;
+            windowMetrics.Begin(player, x, y, w, h, x == 0 && y == 0 && w == telaW && h == telaH);
+            long started = Stopwatch.GetTimestamp();
+            string motivo = null;
             try
             {
-                // QUADRO CHEIO SEM ZOOM: LetterBox, o mesmo caminho da reproducao
-                // normal nos 4 hosts. A reproducao cheia pede exatamente a tela
-                // (0,0,telaW,telaH), entao esta guarda continua sendo um no-op
-                // para ela — 6+ e o host 4/5 nao mudam.
-                //
-                // ZOOM (#178): o recorte de fonte emulado (src/video_tpk.c
-                // video_janela_fonte) manda um ROI que RECUA a origem para
-                // negativo ou ESTOURA a tela, para que a fatia desejada do quadro
-                // preencha o destino. Antes, `w >= telaW && h >= telaH` engolia um
-                // ROI ampliado ancorado em 0,0 de volta para LetterBox, matando o
-                // zoom. Agora so o quadro EXATO da tela vira LetterBox; qualquer
-                // ROI de zoom (origem negativa OU maior que a tela) passa cru ao
-                // SetRoi.
-                if (GeometriaJanela != null) { applied = JanelaTizen45(x, y, w, h, fullscreen); return; }
-                if (fullscreen) { player.DisplaySettings.Mode = PlayerDisplayMode.LetterBox; applied = true; return; }
-                player.DisplaySettings.Mode = PlayerDisplayMode.Roi;
-                player.DisplaySettings.SetRoi(new Rectangle(x, y, w, h));
-                applied = true;
+                if (!aspectoRecusado)
+                {
+                    try
+                    {
+                        if (janelaMovida && GeometriaJanela != null) RestaurarJanela();
+                        int rc = player_set_display_mode(player.Handle, PlayerDisplayMode.Roi);
+                        if (rc == 0) rc = player_set_display_roi_area(player.Handle, x, y, w, h);
+                        if (rc == 0) { applied = true; return; }
+                        motivo = "DisplayRoi rc=0x" + rc.ToString("x8");
+                    }
+                    catch (Exception e) { motivo = "DisplayRoi " + e.GetType().Name + ": " + e.Message; }
+                    aspectoRecusado = true; // Only this player generation; a new open retries B.
+                    // A driver may mutate Mode/ROI before returning an error.
+                    // Leave Roi before applying the old path; never cache partial success.
+                    player.DisplaySettings.Mode = PlayerDisplayMode.LetterBox;
+                }
+                bool fullscreen = lx == 0 && ly == 0 && lw == telaW && lh == telaH;
+                if (GeometriaJanela != null) applied = JanelaTizen45(lx, ly, lw, lh, fullscreen);
+                else
+                {
+                    player.DisplaySettings.Mode = fullscreen ? PlayerDisplayMode.LetterBox : PlayerDisplayMode.Roi;
+                    if (!fullscreen) player.DisplaySettings.SetRoi(new Rectangle(lx, ly, lw, lh));
+                    applied = true;
+                }
             }
-            catch (Exception e) { ended = Stopwatch.GetTimestamp(); Log("[video-window] apply failed: " + e.Message); }
-            finally { windowMetrics.Complete(applied, (ended != 0 ? ended : Stopwatch.GetTimestamp()) - started); }
+            catch (Exception e)
+            {
+                motivo = (motivo ?? "legacy") + "; restore: " + e.GetType().Name + ": " + e.Message;
+            }
+            finally
+            {
+                if (!applied)
+                {
+                    // Failed legacy work must not leave a moved ElmSharp window or active partial ROI.
+                    try { player.DisplaySettings.Mode = PlayerDisplayMode.LetterBox; }
+                    catch (Exception e) { motivo += "; reset-mode: " + e.Message; }
+                    if (GeometriaJanela != null && janelaMovida)
+                    {
+                        try { RestaurarJanela(); }
+                        catch (Exception e) { motivo += "; reset-window: " + e.Message; }
+                    }
+                }
+                if (motivo != null) Log("[aspecto] sessao=" + playerSessao + " " + motivo.Replace('\n',' ').Replace('\r',' ') + " fallback=" + (applied ? "ok" : "failed"));
+                windowMetrics.Complete(applied, Stopwatch.GetTimestamp() - started);
+            }
         }
 
         // Tizen 4/5 (#203, botao de aspecto/zoom sem efeito). CAUSA PROVAVEL
@@ -566,11 +621,12 @@ namespace NuvioTpk
             if (fullscreen)
             {
                 string e0 = janelaMovida ? GeometriaJanela(0, 0, telaW, telaH) : null;
-                janelaMovida = false;
+                janelaMovida = e0 != null;
                 player.DisplaySettings.Mode = PlayerDisplayMode.LetterBox;
                 Log("[aspect] tpk40 modo=letterbox " + rotulo + (e0 == null ? " ok" : " falhou: " + e0));
                 return e0 == null;
             }
+            janelaMovida = true; // The void geometry setter may partially mutate then fail.
             string erro = GeometriaJanela(x, y, w, h);
             if (erro == null)
             {
