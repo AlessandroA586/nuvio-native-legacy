@@ -15,6 +15,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 class ParaleloDataSourceTest {
+    @Test fun limitePadraoReservaUmaConexaoParaLeituraLateral() {
+        assertEquals(3, ParaleloDataSource.CONEXOES)
+    }
+
     private open class ConexaoFalsa(url: URL) : HttpURLConnection(url) {
         val desconectou = AtomicBoolean()
         override fun connect() = Unit
@@ -73,6 +77,8 @@ class ParaleloDataSourceTest {
         assertTrue(saiu.await(2, TimeUnit.SECONDS))
         assertTrue(conexao.desconectou.get())
         assertTrue(terminouComErro.get())
+        // O finally libera `saiu` imediatamente antes de Thread.run retornar.
+        t.join(200)
         assertFalse(t.isAlive)
     }
 }

@@ -149,7 +149,14 @@ static int conexaoRecusada(int e) { return e == 6 || e == 7 || e == 35; }
 // janela de 90 s levou 49 s. Tres conexoes a mais (o pipeline ja usa uma ou
 // duas) triplicam o ritmo sem disputar banda: cada pedido e de ~1 KB.
 #ifndef MKVASS_PARALELOS
+#ifdef NV_ANDROID
+// O ParaleloDataSource usa tres conexoes. TorBox recomenda quatro ou menos
+// por link: uma leitura lateral conserva o orcamento total sem abandonar a
+// legenda embutida. Antes eram 4 + 3 e o CDN podia recusar o no inteiro.
+#define MKVASS_PARALELOS   1
+#else
 #define MKVASS_PARALELOS   3
+#endif
 #endif
 #define MKVASS_PREBUSCA    8
 // VARREDURA (#92, webOS 25): quando o indice NAO tem CuePoint da faixa de

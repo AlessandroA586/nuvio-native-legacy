@@ -48,7 +48,11 @@ class ParaleloDataSource(
 
     companion object {
         private const val TAG = "nuvio-paralelo"
-        const val CONEXOES = 4
+        // TorBox recomenda no maximo quatro conexoes por link. O leitor
+        // lateral de MKV (legenda/capitulos) usa uma; deixar tres para o video
+        // evita o antigo pico 4 + 3 que podia acionar o freio do CDN e bloquear
+        // novas conexoes ao no no meio da reproducao.
+        const val CONEXOES = 3
         const val PEDACO = 4 shl 20           // 4 MB por pedido
         private const val ADIANTE = 3         // pedacos em voo por conexao
         private const val TENTATIVAS = 3
