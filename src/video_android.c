@@ -244,6 +244,9 @@ static Uint32 legAte;
 
 static char urlAtual[4096];
 static char cabecalhos[2048];
+// ULTIMA JANELA ENTREGUE ao Kotlin (dedupe de reenvio; ver janelaSeMudou, la
+// embaixo, onde a regra vive junto das funcoes que enviam).
+static int envX, envY, envW, envH, envEnc, temEnv;
 // prontoLoad = o player preparou (evento 1); primeiroQuadro = evento 8.
 // video_pronto() so e 1 com imagem (ver o cabecalho).
 static volatile int superficieEstavel;
@@ -535,6 +538,7 @@ static int abrirSessao(int inicioMs, int fracao) {
   hdrAtual = "none"; dvAtual = atmosAtual = 0;
   nAudio = nLeg = 0; audioAtual = 0; legAtual = -1; legAte = 0;
   nNovasA = nNovasL = 0;
+  temEnv = 0;   // a SurfaceView nova ainda nao recebeu janela nenhuma
   if (!travaLeg) travaLeg = SDL_CreateMutex();
   unsigned geracao = novaRetomada(-1);
   env = ambiente();
@@ -695,13 +699,26 @@ void video_buscar(double s) {
 // que e o que o plano de video da LG e o LetterBox da Samsung fazem com uma
 // janela lisa — o nucleo conta com isso (trailer "Original", janela antes do
 // videoInfo). 0: o retangulo e exato, ja calculado com a proporcao (recorte).
+// ULTIMA JANELA ENTREGUE (dedupe). O nucleo manda o retangulo de novo quando
+// dois modos de aspecto coincidem no mesmo filme — Ajustar largura e Original
+// num 2.39:1, por exemplo — e a cada releitura do videoInfo; o log da TCL
+// (11/10) mostrou "1920x1037" pedido duas vezes seguidas. O Kotlin nao faria
+// nada com o repetido (layout identico) e o dvtrace enchia de "changed" sem
+// mudanca. O reaplicar do trailer chama janelaKt DIRETO, fora do dedupe: ele
+// existe justamente para reenviar. abrirSessao zera — a SurfaceView de cada
+// abertura comeca sem janela nenhuma e precisa receber ate o retangulo igual.
 static void janelaKt(int x, int y, int w, int h, int encaixa) {
   JNIEnv *env = ambiente();
-  if (!env) return;
+  if (!env) return;   // sem JNI nao ha entrega: o dedupe so lembra do que chegou
+  envX = x; envY = y; envW = w; envH = h; envEnc = encaixa; temEnv = 1;
   (*env)->CallStaticVoidMethod(env, gCls, mJanela, (jint)x, (jint)y, (jint)w, (jint)h, (jint)encaixa);
   fimChamada(env);
 }
-void video_janela(int x, int y, int w, int h) { janelaKt(x, y, w, h, 1); }
+static void janelaSeMudou(int x, int y, int w, int h, int encaixa) {
+  if (temEnv && x == envX && y == envY && w == envW && h == envH && encaixa == envEnc) return;
+  janelaKt(x, y, w, h, encaixa);
+}
+void video_janela(int x, int y, int w, int h) { janelaSeMudou(x, y, w, h, 1); }
 
 // RECORTE DE FONTE PELO RETANGULO DE DESTINO AMPLIADO. Mesma conta do ROI do
 // .tpk (video_tpk.c, #178): desenhar o recorte (sx,sy,sw,sh) dentro de
@@ -720,7 +737,7 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
   // Quadro INTEIRO num destino que o chamador ja calculou (Original encaixado,
   // Esticar, Encaixar altura): o destino e EXATO, nao se encaixa de novo —
   // senao Esticar virava Original.
-  if (sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh) { temUlt = 0; janelaKt(dx, dy, dw, dh, 0); return; }
+  if (sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh) { temUlt = 0; janelaSeMudou(dx, dy, dw, dh, 0); return; }
 
   ex = (double)dw / (double)sw;
   ey = (double)dh / (double)sh;
@@ -733,7 +750,7 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
          sx, sy, sw, sh, qw, qh, X, Y, W, H);
   fflush(stdout);
   ultX = X; ultY = Y; ultW = W; ultH = H; temUlt = 1;
-  janelaKt(X, Y, W, H, 0);
+  janelaSeMudou(X, Y, W, H, 0);
 }
 int  video_recorte_fonte(void) { return 1; }
 void video_recorte_reaplicar(void) { if (temUlt) janelaKt(ultX, ultY, ultW, ultH, 0); }
