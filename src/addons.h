@@ -221,7 +221,8 @@ int  addons_ativo(int i);
 int  addons_base_desligada(const char *base);   // 1 = addon da lista desligado na conta
 int  addons_alternar(int i);          // devolve o estado NOVO
 // Acrescenta um addon sem refazer a lista (ver a nota em addons.c). 1 = entrou,
-// 0 = lista cheia, ja instalado ou URL que nao cabe (addonurl.h). Quem chama deve chamar sync_sujar_addons().
+// 0 = lista cheia, ja instalado ou URL que nao cabe (addonurl.h). #360 mao
+// unica: o acrescimo vale so nesta TV; o proximo pull traz a conta por cima.
 int  addons_adicionar(const char *nome, const char *urlManifest);
 // O addon fornece este recurso? Ate a sonda responder e uma suposicao
 // otimista; addons_sondado() diz qual dos dois casos e.

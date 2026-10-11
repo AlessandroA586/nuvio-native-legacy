@@ -51,7 +51,7 @@
 #include "epg.h"
 #include "rede.h"
 #include "addons.h"
-#include "sync.h"        /* sync_sujar_addons: ligar/desligar sobe para a conta */
+#include "sync.h"        /* sync_iniciar: o ciclo que traz a conta para esta TV */
 #include "descoberta.h"  /* desc_repetir: addon novo so entra com ciclo novo */
 #include "stalker.h"
 #include "xtream.h"
@@ -1888,7 +1888,7 @@ static void instalar(int k) {
     paErroCheio = (addons_n() >= 16);
     return;
   }
-  sync_sujar_addons();
+  // #360 mao unica: a instalacao vale so nesta TV ate o proximo pull da conta.
   paMexeu = 1;
   paLigou = 1;   // instalar e ligar: precisa baixar o manifesto e o catalogo
   // O recem-instalado entra na secao de cima (ainda "nao conferido") e o
@@ -1902,7 +1902,7 @@ static void painelOk(void) {
   if (paFoco < paN) {
     int i = paIdx[paFoco];
     int ligado = addons_alternar(i);
-    sync_sujar_addons();   // desligar aqui e desligar no celular tambem
+    // #360 mao unica: desligar aqui vale nesta TV ate o proximo pull da conta.
     paMexeu = 1;
     if (ligado) paLigou = 1;   // ligou (ou acabou de instalar): fechar pede ciclo
     painelAplicar(i);

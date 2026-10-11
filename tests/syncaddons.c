@@ -1,26 +1,27 @@
-// #360 "ADD-ONS GET OUT OF SYNC": os tres suspeitos, contra o sync.c REAL.
+// #360 MAO UNICA (11/10/2026): a TV so PUXA os addons da conta, nunca envia.
 //
 // Mesmo arnes de tests/contaoffline.c (fio, sync_iniciar/sync_passo/
 // sync_periodico de verdade; disco numa pasta de verdade; servidor dublado).
-// O servidor dublado guarda a lista de addons da conta em servidor.txt e trata
-// sync_push_addons como SUBSTITUICAO da lista do perfil — e o que o web faz no
-// caminho de reserva do mesmo RPC (librarySyncService.js: DELETE das linhas do
-// perfil + upsert da lista inteira), e o RPC recebe a lista inteira, com
-// sort_order, nao um delta.
+// O servidor dublado guarda a lista de addons da conta em servidor.txt e conta
+// as chamadas a sync_push_addons — que nunca podem acontecer.
 //
 // Cenarios (um processo por sessao; "reiniciar" = processo novo, mesmo disco):
-//   periodico   suspeito 1: o ciclo de 5 min nao roda com o player aberto
-//               (app.c), mas a primeira chamada depois de fechar o player ja
-//               parte o ciclo atrasado — nao espera mais 5 minutos.
-//   mescla      suspeito 2: conta A,B; a TV acrescenta D (pendente); o celular
-//               acrescenta C; o ciclo seguinte NAO pode apagar C da conta.
-//   remocao     suspeito 2, o espelho: o celular tira B enquanto a TV tem D
-//               pendente; o push da TV nao pode ressuscitar B.
-//   recusa1 ST  suspeito 3, 1a abertura: edicao pendente, push responde ST em
-//               dois ciclos.
-//   recusa2 ST  suspeito 3, depois de reiniciar: mais um ciclo com push ST.
-//               4xx: a edicao cai (3 recusas), a TV volta a seguir a conta.
-//               5xx / sem resposta: a edicao fica e continua tentando.
+//   periodico   o ciclo de 5 min nao roda com o player aberto (app.c), mas a
+//               primeira chamada depois de fechar o player ja parte o ciclo
+//               atrasado — nao espera mais 5 minutos.
+//   maounica    edicao local (instalar, desligar, reordenar) nao gera
+//               pendencia nem push, e o proximo pull sobrescreve com a conta.
+//               O botao "Sincronizar addons" puxa a lista nova na hora.
+//   duplicata   a conta com o mesmo addon duas vezes (heranca do push antigo)
+//               e aplicada uma vez so; o pull repetido nao reinstala.
+//   gravar      a lista aplicada vira snapshot em disco (contacache,
+//               superficie "addons-aplicados").
+//   reabrir     reinicio com o snapshot ja em disco: o pull identico nao
+//               reaplica (e o que cura o "refreshes the addon at every
+//               startup" do relato).
+//   migrar      pendencias conta-addons-pend-*.txt da versao anterior (de
+//               qualquer conta/perfil, inclusive .tmp) sao apagadas na
+//               primeira execucao, sem nunca serem enviadas.
 #include "sync.h"
 #include "addons.h"
 #include "catordem.h"
@@ -364,80 +365,50 @@ int main(int argc, char **argv) {
     confere("1o quadro depois de 2 h de player: o ciclo atrasado parte JA", sync_periodico(agora) == 1);
     ateTerminar();
     confere("e o relogio volta a contar a partir dele", sync_ultimo_ok() >= agora - 64);
-  } else if (!strcmp(cen, "mescla") || !strcmp(cen, "remocao")) {
-    int mescla = !strcmp(cen, "mescla");
+  } else if (!strcmp(cen, "maounica")) {
     snprintf(conta, sizeof conta, "AB"); contaGravar();
     sync_iniciar(); ateTerminar();
-    tvLetras(l, sizeof l);
-    confere("a TV aplicou a conta (A,B)", !strcmp(l, "AB"));
-    tvAcrescentar('D');                 // a pessoa instala D na TV
-    sync_sujar_addons();
-    confere("a edicao da TV ficou pendente em disco", existe(PEND));
-    if (mescla) snprintf(conta, sizeof conta, "ABC");   // o celular instala C
-    else        snprintf(conta, sizeof conta, "A");     // o celular tira B
-    contaGravar();
+    int aplicou = aplicacoes;
     proximoCiclo();
-    printf("  conta depois do push da TV: %s\n", conta);
-    if (mescla) {
-      confere("#360: C (instalado no celular) continua na conta", strchr(conta, 'C') != NULL);
-      confere("D (instalado na TV) subiu para a conta", strchr(conta, 'D') != NULL);
-      confere("A e B continuam", strchr(conta, 'A') && strchr(conta, 'B'));
-    } else {
-      confere("#360: B (tirado no celular) NAO volta para a conta", strchr(conta, 'B') == NULL);
-      confere("D (instalado na TV) subiu, A continua", strchr(conta, 'D') && strchr(conta, 'A'));
-    }
-    confere("a edicao foi confirmada (pendencia saiu do disco)", !existe(PEND));
-    tvLetras(l, sizeof l);
-    printf("  lista da TV depois do ciclo: %s\n", l);
-    confere("a TV mostra a lista da conta ja neste ciclo", !strcmp(l, conta));
-  } else if (!strcmp(cen, "cheio")) {
-    // Base = 63 em comum; a TV acrescenta 1000, o celular 2000 (a conta vai a 64
-    // = SY_ADD_MAX). A uniao tem 65: o push (substituicao) nao pode perder 2000.
-    int i, perdido = 0;
-    cheio = 1;
-    for (i = 0; i < 63; i++) contaN[i] = i;
-    nContaN = 63;
+    confere("pull identico nao reaplica", aplicacoes == aplicou);
+    tvAcrescentar('D'); sync_sujar_addons();
+    confere("edicao local nao cria pendencia", !existe(PEND));
+    proximoCiclo(); tvLetras(l, sizeof l);
+    confere("conta inalterada e nenhum push", pushes == 0 && !strcmp(conta, "AB"));
+    confere("pull sobrescreve edicao local mesmo com conta igual", !strcmp(l, "AB"));
+    tv[0].ativo = 0; sync_sujar_addons();
+    proximoCiclo(); tvLetras(l, sizeof l);
+    confere("ligar e desligar tambem fica local ate o pull", !strcmp(l, "AB"));
+    AddonRemoto tmp = tv[0]; tv[0] = tv[1]; tv[1] = tmp;
+    sync_sujar_addons(); proximoCiclo(); tvLetras(l, sizeof l);
+    confere("pull restaura ordem da conta", !strcmp(l, "AB"));
+    snprintf(conta, sizeof conta, "A");
+    sync_manual_addons(); ateTerminar(); tvLetras(l, sizeof l);
+    confere("botao puxa nova lista na hora", !strcmp(l, "A") && !pushes);
+  } else if (!strcmp(cen, "duplicata")) {
+    snprintf(conta, sizeof conta, "ABB");
     sync_iniciar(); ateTerminar();
-    confere("a TV aplicou os 63 da conta", nTv == 63);
-    memset(&tv[nTv], 0, sizeof tv[nTv]);
-    snprintf(tv[nTv].url, sizeof tv[nTv].url, "https://n1000.exemplo/manifest.json");
-    snprintf(tv[nTv].nome, sizeof tv[nTv].nome, "n1000");
-    tv[nTv++].ativo = 1;
-    sync_sujar_addons();
-    contaN[nContaN++] = 2000;               // o celular instala o 64o
+    confere("dedupe da conta mantem primeiro URL e estado", nTv == 2 && tv[0].ativo);
+    int aplicou = aplicacoes;
     proximoCiclo();
-    for (i = 0; i < nContaN; i++) if (contaN[i] == 2000) break;
-    perdido = i == nContaN;
-    printf("  pushes=%d, conta com %d addons\n", pushes, nContaN);
-    confere("o addon do celular (2000) continua na conta", !perdido);
-    confere("conta nao encolheu nem trocou (64)", nContaN == 64);
-    confere("nao houve push de substituicao truncado", pushes == 0);
-    confere("a edicao da TV continua pendente (nada foi descartado)", existe(PEND));
-  } else if (!strcmp(cen, "recusa1")) {
-    snprintf(conta, sizeof conta, "AB"); contaGravar();
+    confere("duplicata repetida nao reinstala", aplicacoes == aplicou && !pushes);
+  } else if (!strcmp(cen, "gravar") || !strcmp(cen, "reabrir")) {
+    snprintf(conta, sizeof conta, "AB");
+    // Simula a lista local restaurada no boot. O pull nao deve reinstala-la.
+    if (!strcmp(cen, "reabrir")) { tvAcrescentar('A'); tvAcrescentar('B'); }
     sync_iniciar(); ateTerminar();
-    tvAcrescentar('D');
-    sync_sujar_addons();
+    confere("snapshot nao reaplica no proximo arranque", aplicacoes == (!strcmp(cen, "gravar") ? 1 : 0));
     proximoCiclo();
-    proximoCiclo();
-    confere("2 pushes tentados", pushes == 2);
-    confere("depois de 2 recusas a edicao ainda esta em disco", existe(PEND));
-  } else if (!strcmp(cen, "recusa2")) {
-    int perm = pushModo >= 400 && pushModo < 500 && pushModo != 429;
-    // Reiniciou. Enquanto isso o celular instalou C.
-    snprintf(conta, sizeof conta, "ABC"); contaGravar();
-    sync_iniciar(); ateTerminar();
-    tvLetras(l, sizeof l);
-    printf("  push %d: pendencia em disco=%d, TV=%s, conta=%s\n", pushModo, existe(PEND), l, conta);
-    if (perm) {
-      confere("#360: 3a recusa 4xx (contando o reinicio): a edicao cai do disco", !existe(PEND));
-      confere("e a TV volta a seguir a conta (A,B,C)", !strcmp(l, "ABC"));
-      confere("a conta nao foi tocada pela edicao recusada", !strcmp(conta, "ABC"));
-    } else {
-      confere("5xx/sem resposta: a edicao continua pendente (retenta)", existe(PEND));
-      confere("e a TV mantem a edicao local (D)", strchr(l, 'D') != NULL);
-      confere("a conta nao mudou", !strcmp(conta, "ABC"));
-    }
+    confere("pull repetido nao reinstala", aplicacoes == (!strcmp(cen, "gravar") ? 1 : 0));
+  } else if (!strcmp(cen, "migrar")) {
+    dados_gravar(PEND, "{\"owner\":\"conta-a\",\"profile\":1,\"edit\":\"old\",\"addons\":[{\"url\":\"https://d.exemplo/manifest.json\",\"enabled\":true}]}");
+    dados_gravar(PEND ".tmp", "interrompido");
+    dados_gravar("conta-addons-pend-636f6e74612d62-p2.txt", "outra conta");
+    dados_gravar("conta-outro.txt", "preservar");
+    snprintf(conta, sizeof conta, "AB");
+    sync_iniciar(); ateTerminar(); tvLetras(l, sizeof l);
+    confere("pendencias antigas e temporarios removidos sem enviar", !existe(PEND) && !existe(PEND ".tmp") && !existe("conta-addons-pend-636f6e74612d62-p2.txt") && pushes == 0);
+    confere("migracao segue conta e preserva outros arquivos", !strcmp(l, "AB") && existe("conta-outro.txt"));
   } else {
     printf("cenario desconhecido\n");
     return 2;

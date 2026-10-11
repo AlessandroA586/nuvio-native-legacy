@@ -1224,7 +1224,7 @@ static void ajDesenharAddons(int foco) {
       snprintf(host, sizeof host, "%.*s", (int)strcspn(p, "/"), p);
     }
     snprintf(forn, sizeof forn, "%s", ajAddonFornece(foco));
-    y = ajSubInspetor(AJ_ADDONS, k, addons_nome(foco), i18n("A lista de addons da sua conta, para ligar e desligar cada um nesta TV."));
+    y = ajSubInspetor(AJ_ADDONS, k, addons_nome(foco), i18n("Os addons vêm da sua conta Nuvio. Ligar e desligar aqui vale só nesta TV, até a próxima sincronização."));
     if (y + 3 * 57.0f <= ir.y + ir.h) {
       y += aj2Meta(i18n("Fornece"), forn, ir.x, y, ir.w, 1);
       y += aj2Meta(i18n("Nesta TV"), i18n(addons_ativo(foco) ? "Ligado" : "Desligado"), ir.x, y, ir.w, 1);

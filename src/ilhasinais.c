@@ -305,11 +305,6 @@ static void addonsAMao(void) {
     ilha_avisar("sync-addons", ILHA_ERRO, "aj_rotate-cw", i18n("Não foi possível sincronizar os addons."), 5000u, 0);
     return;
   }
-  if (r == 4) {
-    ilha_avisar("sync-addons", ILHA_INFO, "aj_rotate-cw",
-                i18n("Há mudanças desta TV ainda sem enviar; os addons da conta não foram aplicados."), 6000u, 0);
-    return;
-  }
   if (add || rem) snprintf(txt, sizeof txt, i18n("Addons sincronizados: %d adicionados, %d removidos"), add, rem);
   else snprintf(txt, sizeof txt, "%s", i18n(mud ? "Addons atualizados com a conta" : "Addons já estão em dia"));
   ilha_avisar("sync-addons", ILHA_OK, "aj_rotate-cw", txt, 4000u, 0);
