@@ -241,6 +241,7 @@ for p in $PACOTES; do
     rm -f "$MAN.bak"
     FLAG_TEXTO="-p:NvTextoCanario=1"
   fi
+  [ ! -d "$H/bin/Release" ] || find "$H/bin/Release" -type f -name '*.tpk' -delete
   dotnet build "$H/$p.csproj" -c Release -nologo -v q -p:TizenManifestFile="$MAN" $FLAG_TEXTO
   TPK=$(find "$H/bin/Release" -name '*.tpk' | head -1)
   [ -n "$TPK" ] || { echo "$p: dotnet nao gerou .tpk" >&2; exit 1; }
