@@ -741,7 +741,17 @@ object NvPlayer {
         // recortado e nao sai; entra no esticar e fica esticado"). Recriar a
         // Surface (GONE -> VISIBLE) faz o compositor montar camada nova com a
         // geometria nova; o ExoPlayer troca a saida do decoder sem recarregar.
-        recriarSuperficie(RECRIA_ESPERA_MS)
+        //
+        // SO EM SDR. No HDR/DV cada recriacao aqui obrigava o Media3 a soltar a
+        // saida do decoder e o C2MtkVdecTv a religar o DispLink: o aspecto salvo
+        // aplicado apos o primeiro quadro, e cada troca manual de modo, mudava o
+        // tamanho e recriava (~12 vezes em 30 s; TCL 2160p DV, 11/10), com o fio
+        // principal parado no glClear ("renderer soltou em 7057 ms", pior quadro
+        // 6612.7 ms). No HDR a recriacao fica so nas TRANSICOES DE MODO
+        // (hdrNaSuperficie: a primeira 200 ms apos o primeiro quadro e a segunda
+        // 1,5 s depois), que existem para a TV ligar o HDR; mudanca de tamanho
+        // nao recria.
+        if (ultHdr.isEmpty() || ultHdr == "none") recriarSuperficie(RECRIA_ESPERA_MS)
     }
 
     // Recriar a Surface custa um quadro preto e, em rajada (aspecto apertado

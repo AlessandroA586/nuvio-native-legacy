@@ -48,6 +48,7 @@ object PlayerFixture {
     var camada: Layer? = Layer(1920, 1080)
     var superficie: Surface? = Surface()
     var jx = 0; var jy = 0; var jw = 1920; var jh = 1080
+    var ultHdr = "none"
     fun recriarSuperficie(delay: Long) { check(delay == 350L); Counts.recreations++ }
     fun apply() = aplicarJanela()
 METHOD
@@ -83,7 +84,29 @@ fun main() {
     check(lp.leftMargin == 10 && lp.width == 200)
     p.superficie = null; p.apply()
     check(Counts.assignments == 7 && Counts.recreations == 7)
-    println("android_window_layout: repeated requests, resize, replacement, external mutation and retry ok")
+    // HDR/DV (TCL 2160p DV, 11/10): mudanca de TAMANHO nao pode recriar a
+    // superficie. Cada recriacao no HDR obriga o Media3 a soltar a saida do
+    // decoder e religa o DispLink; o aspecto salvo aplicado apos o primeiro
+    // quadro e cada troca manual recriavam ~12 vezes em 30 s, com o fio
+    // principal parado no glClear (pior quadro 6612.7 ms). No HDR a recriacao
+    // fica so nas transicoes de modo (hdrNaSuperficie), fora daqui.
+    p.superficie = Surface(); p.ultHdr = "DolbyVision"
+    val recriacoesHdr = Counts.recreations
+    p.jx = -189; p.jy = -80; p.jw = 2300; p.jh = 1242; p.apply()
+    lp = p.superficie!!.layoutParams as FrameLayout.LayoutParams
+    check(lp.width == 2300 && lp.height == 1242 && lp.leftMargin == -189 && lp.topMargin == -80)
+    check(Counts.assignments == 8 && Counts.recreations == recriacoesHdr)
+    p.jx = 0; p.jy = 21; p.jw = 1920; p.jh = 1037; p.apply()
+    check(Counts.assignments == 9 && Counts.recreations == recriacoesHdr)
+    p.ultHdr = "HDR10"; p.jw = 2083; p.jh = 1125; p.apply()
+    check(Counts.assignments == 10 && Counts.recreations == recriacoesHdr)
+    p.ultHdr = "none"   // SDR continua recriando: a TCL prende a geometria do plano
+    p.jw = 2300; p.apply()
+    check(Counts.assignments == 11 && Counts.recreations == recriacoesHdr + 1)
+    p.ultHdr = ""        // HDR ainda desconhecido: recria como SDR, como sempre
+    p.jw = 1920; p.apply()
+    check(Counts.assignments == 12 && Counts.recreations == recriacoesHdr + 2)
+    println("android_window_layout: repeated requests, resize, replacement, external mutation, retry and HDR/DV without recreation ok")
 }
 '''.replace('METHOD', method)
 cache = Path.home() / '.gradle/caches/modules-2/files-2.1'
