@@ -5277,7 +5277,13 @@ static void desenharOsdCorpo(Uint32 agora, float a, float ac, const CatItem *c) 
       if (lAudio.w > 0) tot += (nSelos ? 22.0f : 0.0f) + (float)lAudio.w;
       // ENTRADA ESCALONADA: o rasterizador faz poucas linhas por quadro e os
       // selos ja chegariam um a um; a curva assume a cadencia (90 ms, 10 px).
-      float t0 = (float)(agora - ultimoInput) / 1000.0f;
+      // Conta de quando o OSD APARECEU, nao da ultima tecla: navegar nos
+      // botoes ou no seek fazia os selos sumirem e voltarem a cada toque
+      // (dono, 11/10). Quadro sem selos ha mais de 300 ms = OSD fechou.
+      static Uint32 selosDesde, selosVisto;
+      if (!selosVisto || agora - selosVisto > 300 || ac < 0.01f) selosDesde = agora;
+      selosVisto = agora;
+      float t0 = (float)(agora - selosDesde) / 1000.0f;
       for (i = 0; i < nSelos; i++) { w[i] = marca_formato_largura(selos[i], mh); tot += w[i] + (i ? 22.0f : 0.0f); }
       x = esq ? PLR_MARGEM : NV_VTELA_W - PLR_MARGEM - tot;
       for (i = 0; i < nSelos; i++) {
