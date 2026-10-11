@@ -118,6 +118,7 @@ int   player_pausa_pessoa(void);   // so a pausa pedida pela pessoa (#302)
 // Fator de cor do OSD do player (Ajustes > Brilho da interface no player + degrau
 // automatico com a barra parada). 1 = sem efeito. Ver esmaecer.h.
 float player_osd_brilho(void);
+float player_ui_hdr(void);   // HDR_UI_BRILHO com o video em HDR/DV, senao 1 (esmaecer.h)
 float player_duracao_seg(void);
 int   player_eh_canal(void);
 // StreamFit (F03): 1 + real backend duration of the player's own source.

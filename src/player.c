@@ -5182,6 +5182,12 @@ void player_shot_buscando(int sim) { shotBusca = sim; scrubbing = sim; posVisSol
 // BRILHO DA INTERFACE DO PLAYER (esmaecer.h): o fator de cor que app.c aplica
 // (gfx_osd_mult) a tudo o que o player desenha por cima do video. O degrau
 // automatico so vale com o filme tocando e a barra parada.
+// UI EM HDR (esmaecer.h): o fator de app.c (gfx_hdr_ui) enquanto o video esta
+// em HDR/DV. Android e webOS dizem o hdrType real; o .tpk responde "none" e o
+// .wgt "desconhecido", e la fica desligado.
+float player_ui_hdr(void) {
+  return ajustes_hdr_ui() ? esmaecer_brilho_hdr(video_hdr(), video_tem_dolby_vision()) : 1.0f;
+}
 float player_osd_brilho(void) {
   Uint32 agora = SDL_GetTicks();
   return esmaecer_brilho_osd(ajustes_brilho_player(),

@@ -503,11 +503,13 @@ typedef enum {
   AJ_LEG_SYNC_AUTO, // local, ligada de fábrica; append-only
   AJ_LEG_MOSTRAR, // #425: local, append-only; 0 = so meus idiomas
   AJ_AVISO_LEGAL, // acao local, append-only
+  AJ_HDR_UI, // #205: Brilho da interface em HDR (0 Automatico, 1 Desligado); local, append-only
   AJ_N
 } OpcaoId;
 
 // "Pacote de selos": so o TAMANHO importa aqui (3 pacotes + "Do Nuvio"); o texto
 // de cada valor vem de selospacote_nome (textoValor / uxValorTexto).
+static const char *V_HDR_UI[] = { "Automático", "Desligado" };
 static const char *V_LEG_MOSTRAR[] = { "Só meus idiomas", "Todas" };
 static const char *V_SELOS_PACOTE[] = { "Do Nuvio", "Pacote 1", "Pacote 2", "Pacote 3" };
 
@@ -1335,6 +1337,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Sincronia automática da legenda", V_LIGA, 2),
   ESC("Mostrar no player", V_LEG_MOSTRAR, 2),
   ACAO("Aviso legal"),
+  ESC("Brilho da interface em HDR", V_HDR_UI, 2),   // local: hdrUiLocal (#205)
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1562,6 +1565,7 @@ static const char *CHAVE[] = {
   "legendaSyncAutoLocal",
   "legendaMostrarLocal",
   "-avisoLegal",
+  "hdrUiLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -1924,6 +1928,7 @@ int ajustes_descanso_estilo(void)  { int v = valor[AJ_DESCANSO_ESTILO]; return v
 int ajustes_descanso_fonte(void)   { int v = valor[AJ_DESCANSO_FONTE]; return v < 0 || v > 1 ? 0 : v; }
 // #202: -1 = ultimo modo usado; 0..7 = PlrAspecto a aplicar ao abrir o video.
 int ajustes_proporcao_padrao(void) { int v = valor[AJ_PROPORCAO_PADRAO]; return v < 1 || v > 8 ? -1 : v - 1; }
+int ajustes_hdr_ui(void)            { return valor[AJ_HDR_UI] != 1; }   // 1 = Desligado
 int ajustes_brilho_player(void)    { int v = valor[AJ_BRILHO_PLAYER]; return v < 0 || v > 3 ? 1 : v; }
 void ajustes_espelhar_enquetes(int ligado) { int n = ligado ? 0 : 1; if (valor[AJ_ENQUETES] != n) { valor[AJ_ENQUETES] = n; AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar()); } }
 int ajustes_fonte_hdr(void)        { int v = valor[AJ_FONTE_HDR]; return v < 0 || v > 2 ? 0 : v; }
@@ -4089,6 +4094,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_LAYOUT_AJUSTES: /* #339: o arranjo dos Ajustes e desta TV */
     case AJ_LOGO_TRAILER:   /* so a protecao de OLED desta TV */
     case AJ_LEG_MOSTRAR:
+    case AJ_HDR_UI:         /* o painel e desta TV */
     case AJ_LEG_SYNC_AUTO: /* escolha local desta TV */
     case AJ_LEG_SYNC_AUDIO: /* PCM e passthrough sao desta TV; o web nao tem */
     case AJ_LEG_FORCADA:    /* #287: o web nao tem esta escolha */
@@ -5449,6 +5455,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_DESCANSO_ESTILO: return "Vitrine mostra títulos do catálogo em tela cheia, um de cada vez; OK abre o que está na tela. Relógio mostra a hora grande e a próxima estreia da Agenda. Só escurecer apaga a tela quase toda, com um relógio pequeno. Nos três nada fica parado no mesmo lugar.";
     case AJ_DESCANSO_FONTE: return "De onde a vitrine tira os títulos: o catálogo inteiro, ou só o que está na sua lista e em Continuar assistindo.";
     case AJ_PROPORCAO_PADRAO: return "Como a imagem do filme ocupa a tela quando o vídeo começa. Último usado mantém o que você escolheu por último no player. Os outros modos valem em todo vídeo, e você ainda pode trocar durante a reprodução com a tecla 0 ou o botão Proporção. Em TVs que não recortam a imagem, os modos de zoom caem para Original.";
+    case AJ_HDR_UI: return "Com HDR ou Dolby Vision, a interface fica esbranquiçada. Automático reduz o branco em um quinto e adensa os vidros, só com HDR ativo. Onde o player não informa o HDR, não muda nada.";
     case AJ_BRILHO_PLAYER: return "Escurece os controles, o título e a barra do player (as legendas não mudam). Com o filme tocando e a barra parada, ela ainda baixa um degrau até você apertar uma tecla.";
     case AJ_BUSCA_CINEMETA: return "Só a busca. Ligado (padrão): consulta o catálogo do Nuvio e, se ele falhar, o Cinemeta; um add-on Cinemeta instalado também responde. Desligado: o Cinemeta fica de fora da busca. Não mexe nas fileiras da Home (use Fileiras da Home) nem na ficha do título.";
     case AJ_BUSCA_NUVIO: return "Onde ficam os resultados do catálogo do Nuvio (os grupos Filmes e Séries da busca). Primeiro (padrão): antes dos seus add-ons. Por último: depois deles, para os seus resultados virem na frente. Desligado: a busca não consulta o catálogo do Nuvio. O Continuar assistindo não muda.";
@@ -7412,7 +7419,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_RELOGIO: case AJ_RELOGIO_POS: case AJ_SAIDA_PLAYER: case AJ_RELOGIO_12H:
     case AJ_TAMANHO_UI: case AJ_TAMANHO_AJUSTES: case AJ_LAYOUT_AJUSTES: case AJ_FUNDO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO:
     case AJ_AVANCADAS: case AJ_LOGO_APP: case AJ_ABERTURA:
-    case AJ_ESMAECER: case AJ_BRILHO_PLAYER: case AJ_MANTER_VIDEO:
+    case AJ_ESMAECER: case AJ_BRILHO_PLAYER: case AJ_HDR_UI: case AJ_MANTER_VIDEO:
     case AJ_DESCANSO_ESTILO: case AJ_DESCANSO_FONTE:
       return AJPV_INTERFACE;
     case AJ_PERFIL_ATIVO: case AJ_SYNC: case AJ_SAIR:

@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <time.h>
 #ifndef ESMAECER_SEM_GFX
 #include "gfx.h"
@@ -119,6 +120,12 @@ float esmaecer_brilho_osd(int escolha, unsigned parado_ms, int tocando) {
     f *= 1.0f - (1.0f - BRILHO_AUTO_PASSO) * t;
   }
   return f < 0.40f ? 0.40f : f;
+}
+
+float esmaecer_brilho_hdr(const char *hdr, int dv) {
+  if (dv) return HDR_UI_BRILHO;
+  if (!hdr || !*hdr || !strcasecmp(hdr, "none") || !strcasecmp(hdr, "desconhecido")) return 1.0f;
+  return HDR_UI_BRILHO;
 }
 
 #ifndef ESMAECER_SEM_GFX
