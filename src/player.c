@@ -4471,7 +4471,11 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
   if (tb) tb = gfx_desfocado(tb, arte);
   gfx_tex_aspect_atual = arte ? tex_aspecto(arte) : 0.0f;
   // Recua para 45%: a arte vira luz de fundo, o logo fica sozinho na frente.
-  if (tb) gfx_rect(tela, tb, GFX_CARD, 0, 0, 0, 0.0f, 0, 0, 0, v * (1.0f - 0.55f * f));
+  // Pelo GFX_SNAP com o nv_dither ligado (uPar.x = 1) e o escurecimento na
+  // mesma passada (uFoco), como o fundo da tela DV: o GFX_CARD nao tem ruido,
+  // e a arte desfocada e escura saia em faixas de 8 bits no OLED (dono, 11/10:
+  // "falta o dither no background"). A copia desfocada ja e 16:9 como a tela.
+  if (tb) gfx_rect(tela, tb, GFX_SNAP, 0.55f * f, 1.0f, 0.0f, 0.0f, 0, 0, 0, v);
   { float as = v * (tb ? 1.0f - f : 1.0f - 0.55f * f);
     if (ts && as > 0.01f) gfx_rect(tela, ts, GFX_CARD, 0, 0, 0, 0.0f, 0, 0, 0, as); }
   gfx_tex_aspect_atual = 0.0f;
