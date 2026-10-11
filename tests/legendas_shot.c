@@ -244,7 +244,30 @@ int main(int argc, char **argv) {
   quadros(30); assert(legendasui_versoes());
   salvar("legendas-seletor-versoes");
   tecla(SDLK_ESCAPE); quadros(20); assert(!legendasui_versoes());
-  tecla(SDLK_RIGHT); quadros(40); salvar("painel-v2-estilo"); tecla(SDLK_LEFT); quadros(20);
+  tecla(SDLK_RIGHT); quadros(40); salvar("painel-v2-estilo");
+  // Estilo tab controls (owner, 11/10): each opens in place, same panel height.
+  { VideoLegendaEstilo guardado = *player_leg_estilo();
+    float h0 = legendasui_altura();
+    quadros(60); salvar("estilo-grade");
+    tecla(SDLK_RETURN); quadros(60); assert(faixas_estilo_controle() == 0);          // Tamanho
+    tecla(SDLK_RIGHT); tecla(SDLK_RIGHT); tecla(SDLK_RIGHT); quadros(40);
+    assert(player_leg_estilo()->tamanho == guardado.tamanho + 30);
+    salvar("estilo-slider-tamanho");
+    tecla(SDLK_ESCAPE); quadros(30); assert(faixas_estilo_controle() < 0 && faixas_estilo_topo());
+    tecla(SDLK_DOWN); tecla(SDLK_RETURN); quadros(60); assert(faixas_estilo_controle() == 5);   // Posicao
+    tecla(SDLK_RIGHT); tecla(SDLK_RIGHT); quadros(40);
+    salvar("estilo-posicao");
+    tecla(SDLK_RETURN); tecla(SDLK_UP); tecla(SDLK_RIGHT); tecla(SDLK_RIGHT);               // item 2, Cor
+    tecla(SDLK_RETURN); quadros(60); assert(faixas_estilo_controle() == 2);
+    tecla(SDLK_RIGHT); tecla(SDLK_RIGHT); quadros(40);
+    salvar("estilo-cores");
+    tecla(SDLK_RETURN); tecla(SDLK_LEFT);                                                   // item 1, Fonte
+    tecla(SDLK_RETURN); quadros(60); assert(faixas_estilo_controle() == 1);
+    tecla(SDLK_RIGHT); tecla(SDLK_DOWN); quadros(40);
+    salvar("estilo-fontes");
+    tecla(SDLK_RETURN); quadros(20);
+    *player_leg_estilo() = guardado; player_leg_estilo_mudou();
+    tecla(SDLK_LEFT); tecla(SDLK_LEFT); quadros(20); (void)h0; }
   { int i; for (i = 0; i < 12; i++) tecla(SDLK_DOWN); }   // last row: Mais opcoes
   tecla(SDLK_RETURN);
   quadros(40);
