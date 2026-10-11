@@ -9727,7 +9727,10 @@
     256,
     331
    ],
-   "estado": "pendente"
+   "estado": "decidida",
+   "decisao": "Sim: 2.0.5, desligado por padrao, valor configuravel (junto da contagem do #331).",
+   "decidida_em": "2026-10-11",
+   "quem": "dono (painel)"
   },
   {
    "id": "dec-360-botao-sincronizar",
@@ -9736,7 +9739,10 @@
    "issues": [
     360
    ],
-   "estado": "pendente"
+   "estado": "decidida",
+   "decisao": "Sim: mescla ja na 2.0.3; botao Sincronizar addons (agente/204-sync-addons) na 2.0.5; avisado na issue (11/10).",
+   "decidida_em": "2026-10-11",
+   "quem": "dono (painel)"
   },
   {
    "id": "dec-334-p2p-limite",
@@ -9745,7 +9751,10 @@
    "issues": [
     334
    ],
-   "estado": "pendente"
+   "estado": "decidida",
+   "decisao": "Sim: limite e limpeza ja na 2.0.3; janela de streaming (agente/203-334-janela) na 2.0.5; avisado na issue (11/10).",
+   "decidida_em": "2026-10-11",
+   "quem": "dono (painel)"
   },
   {
    "id": "dec-326-promessas-next-build",
@@ -9755,7 +9764,10 @@
     326,
     338
    ],
-   "estado": "pendente"
+   "estado": "decidida",
+   "decisao": "Sim: #326 e #338 corrigidos na issue para 2.0.5 (11/10).",
+   "decidida_em": "2026-10-11",
+   "quem": "dono (painel)"
   },
   {
    "id": "dec-bugs-sem-log",
