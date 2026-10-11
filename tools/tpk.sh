@@ -30,6 +30,10 @@
 # stb, SDL2_ttf com freetype embutido) em ~/.cache/nuvio-tpk/prefix, feitas por
 # tools/tpk/deps.sh na imagem tools/tpk/Dockerfile.
 set -euo pipefail
+# Emulator-only build; keep every command in the default ARM path unchanged.
+if [ "${NUVIO_TPK_ARCH:-}" = x86_64 ]; then
+  exec bash "$(dirname "$0")/tpk/x64.sh"
+fi
 cd "$(dirname "$0")/.."
 RAIZ="$PWD"
 CACHE="${NUVIO_TPK_CACHE:-$HOME/.cache/nuvio-tpk}"
