@@ -40,6 +40,8 @@ void faixas_aba_estilo(int estilo);
 // fechada); `col` 0 = audio, 1 = lista de legendas, 2 = barra de estilo;
 // `vol`/`vel` = foco nas linhas de volume/velocidade da folha de audio.
 int  faixas_teste_foco(int *col, int *vol, int *vel);
+// Testes: o item da aba Estilo cujo controle (slider, paleta, fontes) esta aberto; -1 = a grade.
+int  faixas_estilo_controle(void);
 
 // F04: what the subtitle selector (legendasui.c) needs from the primary.
 // Combined index of the active primary (embedded first, then addons; -1 none).
