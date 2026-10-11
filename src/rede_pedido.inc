@@ -332,10 +332,11 @@ int rede_pedir(const RedePedido *p, RedeResposta *r) {
 #undef PEDIDO_OPT
     strcpy(r->final, url);
     rede_url_publica(url, r->host, sizeof r->host);
-    r->curl_erro = performTmdb(curl);
+    r->curl_erro = performTmdb(curl, url);
     { char *final = NULL;
       if (!curl_getinfo(curl, INFO_URL_FINAL, &final) && final)
         snprintf(r->final, sizeof r->final, "%s", final);
+      rede_url_publica(r->final, r->host, sizeof r->host);
     }
     curl_getinfo(curl, INFO_RESPONSE_CODE, &status); r->status = (int)status;
     if (!curl_getinfo(curl, INFO_SIZE_DOWNLOAD, &fio) && fio >= 0 && fio < 9007199254740992.0)

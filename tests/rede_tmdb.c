@@ -1,6 +1,9 @@
 /* Sem internet: doubles de curl exercitam os caminhos reais de rede.c. */
 #include <assert.h>
 #include <stdarg.h>
+#ifdef NV_TPK40
+void nv_tpk40_etapa(const char *s) { (void)s; }
+#endif
 #include "../src/rede.c"
 #define OLD "https://api.themoviedb.org/3/movie/1?api_key=x"
 #define NEW "https://api.tmdb.org/3/movie/1?api_key=x"
@@ -37,10 +40,39 @@ static void *outro(void *p) {
   int st; char *r = rede_postar_st(OLD, 5, NULL, "{}", &st);
   assert(r && st == 200); free(r); (void)p; return NULL;
 }
+#ifdef NV_ANDROID
+static int androidChamadas, androidAlt, androidHttp, androidFalhaAlt;
+char *android_http(const char *v, const char *u, const char *c, const char *b, int p,
+                   int *st, long *n, char *erroTxt, size_t ne) {
+  (void)v; (void)c; (void)b; (void)p;
+  androidChamadas++;
+  if (!strcmp(u, NEW)) {
+    androidAlt++; *st = androidFalhaAlt ? 0 : 200;
+    if (!androidFalhaAlt) { *n = 2; return strdup("{}"); }
+  } else { assert(!strcmp(u, OLD)); *st = androidHttp; }
+  snprintf(erroTxt, ne, "reset"); return NULL;
+}
+void android_etapa(const char *s) { (void)s; }
+void android_quadro(void) {}
+#endif
 int main(void) {
   int st, i; long n; char *r; pthread_t fio;
   pronto = 1; curl_init = init; curl_cleanup = cleanup; curl_setopt_f = option;
   curl_perform = perform; curl_getinfo = info; slist_append = append; slist_free = free;
+#ifdef NV_ANDROID
+  androidHttp = 401;
+  r = viaAndroid("GET", OLD, 5, NULL, NULL, &st, NULL, "teste");
+  assert(!r && androidChamadas == 1 && androidAlt == 0);
+  androidHttp = 0; androidFalhaAlt = 1; androidChamadas = 0;
+  r = viaAndroid("GET", OLD, 5, NULL, NULL, &st, NULL, "teste");
+  assert(!r && androidChamadas == 2 && androidAlt == 1);
+  androidFalhaAlt = 0; androidChamadas = androidAlt = 0;
+  r = viaAndroid("GET", OLD, 5, NULL, NULL, &st, NULL, "teste");
+  assert(r && st == 200 && androidChamadas == 2 && androidAlt == 1); free(r);
+  curlRuim = 1; pthread_create(&fio, NULL, outro, NULL); pthread_join(fio, NULL);
+  assert(androidChamadas == 3 && androidAlt == 2);
+  puts("rede_tmdb Android: ok"); return 0;
+#endif
   /* Outros hosts e respostas HTTP nunca ativam a troca. */
   r = rede_baixar_st("https://other.org/3/movie/1?api_key=x", 5, NULL, &st); free(r);
   r = rede_baixar_st("https://api.themoviedb.org.evil/3/movie/1?api_key=x", 5, NULL, &st); free(r);
