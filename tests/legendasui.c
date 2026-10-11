@@ -290,6 +290,13 @@ int main(void) {
   ativaEmb = 2; snprintf(sec, sizeof sec, "%s", cand[nEmb + 3].id);
   ling_local_legenda("pt"); montarLinhas();
   assert(linhaDe("par") >= 0 && linhaDe("rec|a") < 0);
+  // With both on, the hold-OK menu on the pair turns the second one off
+  // (there used to be no way back out from the menu).
+  focarChave("par"); abrirMenu();
+  assert(menu && menuTiraSecundaria() && !strcmp(menuRot(1), "Sem segunda legenda"));
+  secDesligar = 0; menuFoco = 1; menuEscolher();
+  assert(!menu && secDesligar == 1 && !sec[0]);
+  montarLinhas(); abrirMenu(); assert(!menuTiraSecundaria()); menu = 0;
   sec[0] = 0; ativaEmb = -1;
 
   puts("legendasui: identities, formats, kinds, full list, late arrivals, second-slot refusals, offsets, AutoSync, settings, active-outside-recommendations OK");
