@@ -2,7 +2,7 @@
 // when the person opens Subtitles in the player.
 //
 // #425: Off + best primary/backup language + current pair. OK applies the
-// primary; hold OK / RIGHT opens the side menu. All tracks remain accessible.
+// primary; hold OK opens a dropdown below the row (RIGHT goes to Estilo). All tracks remain accessible.
 // No primary preference, or "Todas" in Settings: open the full list.
 //
 // FOCUS is an opaque row identity, never an index: embedded tracks discovered
@@ -25,7 +25,7 @@
 
 // Manual delay bounds shared by every platform and both UI entry points.
 #define LEGUI_ATRASO_MAX LEG_ATRASO_MANUAL_MAX
-void legendasui_atualizar(void);
+void legendasui_atualizar(float dt);
 
 // --- panel, driven by faixas.c -----------------------------------------------
 void  legendasui_abrir(void);

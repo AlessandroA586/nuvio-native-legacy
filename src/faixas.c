@@ -1054,7 +1054,7 @@ static void avisarQueda(int e) {
 }
 
 void faixas_atualizar(float dt, Uint32 agora) {
-  if (aberta && modo && coluna == 1) legendasui_atualizar();
+  if (aberta && modo && coluna == 1) legendasui_atualizar(dt);
   // #202: the platform refused the speed (LG/.tpk answer after the request):
   // the row is gone and playback is back at 1x; say it once.
   if (velPedidaUi != VEL_NORMAL && !video_velocidade_suportada()) {

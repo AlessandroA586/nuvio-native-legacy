@@ -95,6 +95,17 @@ static int tecla(SDL_Keycode k) {
   e.type = SDL_KEYUP; legendasui_evento(&e);
   return r;
 }
+// ctxmenu.c is not linked here: fixed island measures.
+float ctx_menu_largura(const CtxLinha *l, int n) { (void)l; (void)n; return 420.0f; }
+float ctx_menu_passo(void) { return 64.0f; }
+float gfx_escala_ui(void) { return 1.0f; }
+// Hold OK as the TV delivers it: separate KEYDOWNs (repeat=0), then the release.
+static void segurar(void) {
+  SDL_Event e = {0}; e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_RETURN;
+  legendasui_evento(&e);
+  agoraMs += 701; legendasui_evento(&e);
+  e.type = SDL_KEYUP; legendasui_evento(&e);
+}
 static void focarChave(const char *k) {
   montarLinhas();
   assert(linhaDe(k) >= 0);
@@ -137,17 +148,32 @@ int main(int argc, char **argv) {
     focar(2); tecla(SDLK_RETURN);
     assert(escolhidasExt == 1 && !strcmp(escolhidaExtUrl, add[2].url));
   } else if (!strcmp(caso, "direita")) {
-    focar(1); assert(tecla(SDLK_RIGHT) == LEGUI_TRATADO);
+    // Right goes to the Style tab, never to the actions menu.
+    focar(1); assert(tecla(SDLK_RIGHT) == LEGUI_ESTILO && !menu);
+    focar(0); assert(tecla(SDLK_RIGHT) == LEGUI_ESTILO && !menu);
+    // Hold OK opens the dropdown instead.
+    focar(1); segurar(); assert(menu);
     tecla(SDLK_DOWN); tecla(SDLK_RETURN);
     assert(secEscolhas == 1 && escolhidaEmb == -99 && escolhidasExt == 0);
   } else if (!strcmp(caso, "segurar")) {
     SDL_Event e = {0}; e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_RETURN;
     focar(1); legendasui_evento(&e);
-    assert(escolhidaEmb == -99 && escolhidasExt == 0);
+    assert(escolhidaEmb == -99 && escolhidasExt == 0 && !menu);
     agoraMs += 701; legendasui_evento(&e); // TV repeat=0
     e.type = SDL_KEYUP; legendasui_evento(&e);
+    assert(menu);
+    {   // dropdown anchored BELOW the focused row, inside the panel's column
+      GfxRect c = { 1000, 100, 800, 700 }, m = menuGeo(c);
+      float linhaFim = c.y + LU_PAD_Y + LU_TIT_H + 14.0f + (foco - rolagem) * (LU_LN_H + LU_LN_VAO) + LU_LN_H;
+      assert(m.y >= linhaFim && m.x >= c.x && m.x + m.w <= c.x + c.w);
+    }
     tecla(SDLK_DOWN); tecla(SDLK_RETURN);
     assert(secEscolhas == 1 && escolhidaEmb == -99);
+  } else if (!strcmp(caso, "voltar")) {
+    // Back closes the dropdown first, then the panel.
+    focar(1); segurar(); assert(menu);
+    assert(tecla(SDLK_ESCAPE) == LEGUI_TRATADO && !menu && aberto);
+    assert(tecla(SDLK_ESCAPE) == LEGUI_FECHAR && !aberto);
   } else if (!strcmp(caso, "atraso")) {
     alvo = 0; mudarAtraso(15000); assert(estilo.atrasoMs == 15000);
     mudarAtraso(90000); assert(estilo.atrasoMs == 60000);
@@ -176,7 +202,7 @@ int main(int argc, char **argv) {
     ativaEmb = -1; extId[0] = 0; montarLinhas();
     assert(linhaDe("par") >= 0); // second slot remains visible with primary off
     // Language menu includes all providers and returns to its recommendation.
-    focarChave("rec|p"); tecla(SDLK_RIGHT); tecla(SDLK_DOWN); tecla(SDLK_DOWN); tecla(SDLK_RETURN);
+    focarChave("rec|p"); segurar(); tecla(SDLK_DOWN); tecla(SDLK_DOWN); tecla(SDLK_RETURN);
     assert(ver && !mais && nLinhasV == 6);
     tecla(SDLK_ESCAPE); assert(!ver && !strcmp(linhas[foco].chave, "rec|p"));
     // Pending short OK retains the chosen file across late addon replacements.
