@@ -15,6 +15,7 @@
 #include "mkv.h"
 #include "capmkv.h"
 #include "mkvass.h"
+#include "faixasmkv.h"
 #include "js.h"
 #include "lsregistro.h"
 #include "rede.h"
@@ -2004,6 +2005,8 @@ static void *lerMkv(void *arg) {
     if (nt > NV_FAIXA_MAX) nt = NV_FAIXA_MAX;
     for (i = 0; i < nt; i++) tv[i] = faixaLeg[i].numero;
     modo = mkv_casar_legendas(fx, n, tv, nt, idx);
+    if (modo == MKV_CASA_NADA && faixasmkv_legendas_por_idioma(faixaLeg, nt, fx, n, idx))
+      printf("[mkv] legendas: pares unicos por idioma (lista da TV diferente)\n");
     // DIAGNOSTICO que faltou no #92: sem as duas listas lado a lado no log, o
     // deslocamento parecia "a TV desenha mal" e ninguem via que era o app.
     { int nArq = 0;

@@ -121,7 +121,7 @@ long mkvass_pausas_cdn(void);
 //
 // `escolher` recebe os idiomas das legendas do arquivo NA ORDEM DAS TrackEntry
 // (a mesma do ordinal) e devolve o ordinal a colher, ou -1. Se a escolhida nao
-// for ASS/SSA, ou nada casar, o fio termina depois do cabecalho (um Range).
+// for ASS/SSA ou texto simples aceito, ou nada casar, o fio termina depois do cabecalho (um Range).
 // `fracInicio` (0..1) e onde o player vai retomar, em fracao da duracao: a
 // janela pre-buscada comeca ali (a duracao vem do Info do proprio arquivo).
 //
@@ -159,9 +159,9 @@ void mkvass_parar(void);
 int  mkvass_estado(void);
 // #269: aceitar tambem faixa de TEXTO SIMPLES (S_TEXT/UTF8 e S_TEXT/WEBVTT),
 // entregue ao overlay como SubRip (o estilo do app vale, como na externa).
-// Padrao 0: LG e Tizen web seguem so com ASS/SSA (a TV desenha SRT bem). O
-// .tpk liga, porque o player dele nao entrega o texto da legenda embutida. A
-// pre-busca antes do video continua so ASS.
+// Padrao 1 (#421), inclusive na pre-busca: LG e .tpk usam os Ajustes do app.
+// Android conserva padrao 0: Media3 ja entrega o texto ao overlay.
+// Desligavel para testes/consumidores que precisem somente de ASS.
 void mkvass_aceitar_texto(int sim);
 // 1 quando o estado e um dos no-go.
 int  mkvass_nogo(void);
