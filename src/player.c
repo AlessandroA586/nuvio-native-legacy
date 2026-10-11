@@ -28,6 +28,7 @@
 #include "player.h"
 #include "memlog.h"
 #include "dvtela.h"
+#include "abrecine.h"
 #include "ilhacart.h"
 #include "idbase.h"
 #include "dados.h"
@@ -636,6 +637,8 @@ static Uint32 abrindoDesde, abrindoAgora, abrindoUlt;
 static int abrindoViva;   // o quadro anterior estava abrindo
 static float abrindoFundo;   // o preto da abertura, que sai junto com o cartao
 static Uint32 abrindoFundoUlt;
+// A TELA CINEMA da abertura (#205, abrecine.h): no lugar do cartao, por padrao.
+static AbreCine cine;
 // O botao em foco no modal do erro: 0 = Abrir Fontes, 1 = Voltar.
 static int erroBotao;
 void player_definir_tentativa(int n, int max) { tentativaN = n; tentativaM = max; }
@@ -1331,6 +1334,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   durFonteAvisada = durFontePulou = pedProximaFonte = 0;
   durFonteAcaoAte = 0;
   abrindoExp = 0; abrindoT = 0.0f; abrindoDesde = 0;
+  memset(&cine, 0, sizeof cine);
   erroTitulo[0] = erroDica[0] = 0;
   pedGuia = pedZap = pedGuiaCheio = 0;
   memset(&zapEst, 0, sizeof zapEst); bannerAV = 0.0f; botaoAV = 0; infoAV = 0; pedRecarregar = 0;
@@ -2794,9 +2798,11 @@ void player_evento(const SDL_Event *e) {
   // e o OK/Fontes nao mudam. Com a folha de Fontes aberta a tecla e dela
   // (app.c nem chega aqui). Canal sintonizando fica de fora.
   if (player_carregando() && !ehCanal() && !stream_folha_aberta()) {
+    // Na CINEMA, Para cima/Para baixo primeiro mostra a detalhada (#205).
+    if (abrecine_tecla(&cine, k)) return;
     if (k == SDLK_DOWN) { abrindoExp = 1; return; }
     if (k == SDLK_UP && abrindoExp) { abrindoExp = 0; return; }
-    if ((k == SDLK_RETURN || k == SDLK_KP_ENTER) && motivoInicio[0]) { pedAjFonte = 1; return; }
+    if ((k == SDLK_RETURN || k == SDLK_KP_ENTER) && motivoInicio[0] && !abrecine_cinema(&cine)) { pedAjFonte = 1; return; }
   }
 
   // PAINEL DE PAUSA: com ele de pe, a tecla e DELE. Vem antes de tudo o que
@@ -4368,6 +4374,68 @@ void player_fundo_fora_do_furo(GfxRect furo, int recuado, const CatItem *c) {
              1.0f, 0, 0, 0.5f, 0, 0, 0, 0.5f); }
 }
 
+// A TELA CINEMA DA ABERTURA (#205, abrecine.h). Tudo multiplicado pelo veu,
+// que so cai com o quadro real (o crossfade e o veu saindo por cima dele).
+// CUSTO: a arte desfocada e a copia 96x54 de sempre (gfx_desfocado), uma
+// passada; a nitida so enquanto recua (~1 s); o preto so com o furo aberto
+// (sem furo o preto opaco de baixo ja esta la). Logo, trilho e linha sao
+// retangulos pequenos.
+static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
+  GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
+  float v = cine.veu, f = cine.foco, t = (float)(agora - cine.desde) / 1000.0f;
+  float resp, entra, cy = NV_TELA_H * 0.46f, base;
+  int reduz = ajustes_animacoes_reduzidas();
+  const char *arte = c && c->backdrop[0] ? artehero_url(c) : NULL;
+  const char *marca = c ? artehero_logo_sessao(c) : NULL;
+  GLuint ts = arte ? tex_obter_hero(arte) : 0, tb = arte ? tex_obter_larg(arte, 480) : 0, lg;
+  if (v <= 0.0f) return;
+  if (furou || !player_carregando()) gfx_cor(tela, 0.0f, 0, 0, 0, v);
+  if (tb) tb = gfx_desfocado(tb, arte);
+  gfx_tex_aspect_atual = arte ? tex_aspecto(arte) : 0.0f;
+  // Recua para 45%: a arte vira luz de fundo, o logo fica sozinho na frente.
+  if (tb) gfx_rect(tela, tb, GFX_CARD, 0, 0, 0, 0.0f, 0, 0, 0, v * (1.0f - 0.55f * f));
+  { float as = v * (tb ? 1.0f - f : 1.0f - 0.55f * f);
+    if (ts && as > 0.01f) gfx_rect(tela, ts, GFX_CARD, 0, 0, 0, 0.0f, 0, 0, 0, as); }
+  gfx_tex_aspect_atual = 0.0f;
+
+  // O LOGO RESPIRA: 3,2 s por ciclo, 2% de escala e 12% de brilho.
+  resp = reduz ? 0.0f : 0.5f - 0.5f * cosf(t * 6.2831853f / 3.2f);
+  entra = reduz ? 1.0f : (t < 0.4f ? t / 0.4f : 1.0f);
+  lg = marca ? tex_obter_larg_qualquer(marca, 640) : 0;
+  if (lg) {
+    float ar = tex_aspecto(marca), lw = 640.0f, lh = ar > 0.0f ? lw / ar : 200.0f, k = 1.0f + 0.02f * resp;
+    if (lh > 220.0f) { lh = 220.0f; lw = lh * ar; }
+    gfx_rect((GfxRect){ NV_TELA_W * 0.5f - lw * k * 0.5f, cy - lh * k * 0.5f, lw * k, lh * k }, lg,
+             tex_marca_escura(marca) ? GFX_MARCA : GFX_TEXTO, 0, 0, 0, 0, .96f, .96f, .97f,
+             v * entra * (0.88f + 0.12f * resp));
+    base = cy + lh * 0.5f;
+  } else {
+    TxtLinha l = txt_linha_corta(TXT_TITULO2, c ? c->titulo : "", 255, 255, 255, 255, 1400.0f);
+    txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, cy - l.h * 0.5f, v * entra * (0.88f + 0.12f * resp));
+    base = cy + l.h * 0.5f;
+  }
+
+  // O TRILHO: 200 x 3, um brilho de 64 px na cor de acento correndo da
+  // esquerda para a direita. Sem porcentagem: a abertura nao tem progresso real.
+  { float tw = 200.0f, sw = 64.0f, x0 = NV_TELA_W * 0.5f - tw * 0.5f, y = base + 56.0f, r, g, b;
+    gfx_cor((GfxRect){ x0, y, tw, 3.0f }, 0.5f, 1, 1, 1, 0.16f * v * entra);
+    if (!reduz) {
+      float p = fmodf(t / 1.6f, 1.0f), e = p * p * (3.0f - 2.0f * p);
+      float a0 = x0 - sw + (tw + sw) * e, a1 = a0 + sw;
+      if (a0 < x0) a0 = x0;
+      if (a1 > x0 + tw) a1 = x0 + tw;
+      corFocoPlayer(&r, &g, &b);
+      if (a1 > a0) gfx_cor((GfxRect){ a0, y, a1 - a0, 3.0f }, 0.5f, r, g, b, 0.9f * v * entra);
+    }
+    // DEMOROU: uma linha so, curta e calma, que entra devagar.
+    if (abrecine_demorando(&cine, agora)) {
+      float d = (float)(agora - cine.desde - ABRECINE_DEMORA_MS) / 600.0f;
+      TxtLinha l = txt_linha(TXT_G19M, i18n("Só mais um instante…"), 243, 242, 239, 255);
+      txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, y + 32.0f,
+                         0.62f * v * (reduz || d > 1.0f ? 1.0f : d));
+    } }
+}
+
 void player_desenhar(Uint32 agora) {
   if (!aberto) return;
   const CatItem *c = item();
@@ -4419,6 +4487,20 @@ void player_desenhar(Uint32 agora) {
       } else furar = 0;
     } }
 #endif
+  // O QUADRO REAL da tela cinema (#205): furo aberto E video andando. No LG o
+  // `pronto` sobe no loadCompleted e o quadro pode vir segundos depois; no
+  // .tpk o furo acima ja espera a posicao. abrecine.h tem o teto.
+  { static Uint32 cineUlt;
+    int imagem = furar && (video_tocando() || video_pos() >= 0.25);
+    float dtc = cineUlt && agora - cineUlt < 100u ? (float)(agora - cineUlt) / 1000.0f : 1.0f / 60.0f;
+#ifdef NV_SHOT_HOOKS
+    if (shotSemFuro) imagem = player_com_video() && !esperandoFonte && (video_tocando() || video_pos() >= 0.25);
+#endif
+    if (!player_com_video()) imagem = 1;
+    cineUlt = agora;
+    abrecine_passo(&cine, player_carregando() && !ehCanal(), imagem, ajustes_abertura_detalhada(),
+                   agora, dtc, ajustes_animacoes_reduzidas());
+    if (erroFonte || saindo || ehCanal()) cine.veu = 0.0f; }
 #ifdef NV_ANDROID
   // Video vivo por baixo: o vidro fosco (assado de 320x180) nao desenha ali.
   if (furar) gfx_vidro_fosco_bloquear();
@@ -4524,13 +4606,16 @@ void player_desenhar(Uint32 agora) {
   { float dtf = abrindoFundoUlt ? (float)(agora - abrindoFundoUlt) / 1000.0f : 1.0f / 60.0f;
     abrindoFundoUlt = agora;
     if (dtf > 0.1f) dtf = 0.1f;
-    if (player_carregando() && !ehCanal()) abrindoFundo = 1.0f;
+    // A CINEMA tem o proprio crossfade (o veu dela), que espera o quadro real.
+    if (abrecine_cinema(&cine)) abrindoFundo = 0.0f;
+    else if (player_carregando() && !ehCanal()) abrindoFundo = 1.0f;
     else if (abrindoFundo > 0.0f) {
       abrindoFundo = ajustes_animacoes_reduzidas() ? 0.0f : anim_mola(abrindoFundo, 0.0f, dtf, 12.0f);
       if (abrindoFundo < 0.01f) abrindoFundo = 0.0f;
       else if (player_com_video() && !erroFonte && !saindo && !ehCanal())
         gfx_cor(tela, 0.0f, 0.0f, 0.0f, 0.0f, abrindoFundo);
-    } }
+    }
+    if (abrecine_cinema(&cine) && !dvtela_visivel()) desenharCinema(agora, c, furar); }
   // Uma abertura NOVA (a anterior acabou, ou o player reabriu): volta ao compacto
   // e zera o relogio. Ao acabar, o estado fica como esta para o cartao sair com o
   // mesmo conteudo (a saida e a da ilha, plrilha.c).
@@ -4581,7 +4666,9 @@ void player_desenhar(Uint32 agora) {
   } else if (player_carregando() && !stream_folha_aberta() && stream_folha_anim() < 0.05f &&
              // A TELA DO DOLBY VISION substitui o cartao: sem ela, o caminho do
              // DV mostrava "Abrindo fonte" DUAS vezes (a TV e depois o demux).
-             !dvtela_visivel()) {
+             !dvtela_visivel() &&
+             // A CINEMA (#205) esta no lugar do cartao.
+             !abrecine_cinema(&cine)) {
     // COM A FOLHA DE FONTES NA TELA o cartao fica de fora: ela e a escolha que
     // o player espera, e o cartao no meio tapava a esquerda das primeiras
     // linhas (foto do dono, 04/10). Escolhida a fonte, a folha sai e o cartao

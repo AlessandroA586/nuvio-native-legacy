@@ -596,6 +596,37 @@ int main(int argc, char **argv) {
       player_definir_tentativa(0, 0);
     }
   }
+  if (quer(argc, argv, "cinema")) {
+    // A ABERTURA CINEMA (#205): o titulo recuado com o logo, a linha de demora
+    // depois de 8 s, o crossfade com o primeiro quadro, e a Detalhada pelo ajuste.
+    Stream st;
+    VideoSimulacao v;
+    memset(&st, 0, sizeof st);
+    snprintf(st.rotulo, sizeof st.rotulo, "Project Hail Mary 2160p");
+    snprintf(st.provedor, sizeof st.provedor, "AIOStreams");
+    snprintf(st.url, sizeof st.url, "http://exemplo/phm.mkv");
+    stream_definir_lista(&st, 1);
+    abrir(&filme); simular(0, 0, "", 0, 0);
+    stream_definir_atual(0);
+    player_shot_carregando(1);
+    quadros(90);  salvar("cinema-inicio");
+    quadros(460); salvar("cinema-demorando");
+    // O primeiro quadro: a fonte abriu e o video anda. O veu sai por cima dele.
+    player_shot_carregando(0); player_shot_video(1);
+    memset(&v, 0, sizeof v);
+    v.largura = 3840; v.altura = 1606; v.pronto = 1; v.tocando = 1; v.pos = 0.5; v.duracao = 9420.0;
+    video_simular(&v);
+    quadros(7);   salvar("cinema-crossfade");
+    quadros(60);
+    player_shot_video(0); simular(0, 0, "", 0, 0);
+    ajustes_shot_valor("telaAberturaLocal", 1);
+    abrir(&filme); simular(0, 0, "", 0, 0);
+    stream_definir_atual(0);
+    player_shot_carregando(1);
+    quadros(90);  salvar("detalhada");
+    player_shot_carregando(0);
+    ajustes_shot_valor("telaAberturaLocal", 0);
+  }
   if (quer(argc, argv, "carregando")) {
     Stream st;
     memset(&st, 0, sizeof st);

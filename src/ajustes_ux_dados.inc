@@ -170,6 +170,7 @@ static const char *uxSinonimos(int op) {
     case AJ_CW_RETIDO_TAMBEM: return "continuar assistindo tambem ilha retomar agora fileira duplicar repetir aparecer dois lugares titulo continue watching also island resume";
     case AJ_HIST_CONTA: return "historico historico vistos progresso conta nuvio enviar scrobble simkl trakt perfil sincronizar sync history watched";
     case AJ_SOCIAL: return "social amigos amigo atividade recomendar recomendacoes friends activity recommend presenca desligar remover";
+    case AJ_TELA_ABERTURA: return "tela abertura abrindo carregando loading cinema detalhada fonte play transicao opening source screen";
     case AJ_PLR_CLASSIF: return "classificacao indicativa idade faixa etaria 16 12 18 livre guia parental avisos violencia nudez player content rating age parental guide";
     case AJ_APOIAR: return "apoiar apoio doar doacao patreon kofi ko-fi cafe contribuir ajudar projeto qr support donate";
     case AJ_BUSCA_NUVIO: return "busca pesquisa nuvio catalogo resultados primeiro ultimo desligar ocultar mover baixo aiometadata addon search results first last disable";

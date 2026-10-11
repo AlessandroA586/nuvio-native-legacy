@@ -257,3 +257,4 @@
   0, /* Mostrar no player (#425): Só meus idiomas; sem preferencia, todas */
   0, /* Aviso legal: acao */
   0, /* Brilho da interface em HDR (#205): Automatico, local */
+  0, /* Tela de abertura do video (#205): Cinema, local */
