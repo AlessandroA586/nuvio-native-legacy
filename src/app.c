@@ -824,6 +824,8 @@ static const char *urlCanal(const Stream *s, char *buf, size_t n) {
   const char *id = player_id_canal();
   canalViaProxy = 0;
   if (!s) return "";
+  // Toda troca de fonte do guia passa aqui, inclusive a do watchdog.
+  video_definir_cabecalhos(s->cabecalhos);
   if (!strncmp(s->url, PROXYTS_PREFIXO, strlen(PROXYTS_PREFIXO))) {
     // Xtream: a lista ja vem marcada, e sem cabecalho de addon.
     proxyts_definir_cabecalhos(s->cabecalhos);

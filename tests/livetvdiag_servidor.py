@@ -58,7 +58,9 @@ class H(http.server.BaseHTTPRequestHandler):
         # playlist E nos segmentos. /addon/r redireciona para a playlist, que
         # aponta os segmentos por caminho RELATIVO ao endereco final.
         if p.startswith('/addon/'):
-            if self.headers.get('Referer', '') != 'https://addon.example/':
+            if (self.headers.get('Referer', '') != 'https://addon.example/' or
+                self.headers.get('Origin', '') != 'https://addon.example' or
+                self.headers.get('User-Agent', '') != 'Teste/1'):
                 self.send_response(403); self.end_headers(); self.wfile.write(b'<html>403</html>'); return
             if p == '/addon/r':
                 self.send_response(302); self.send_header('Location', '/addon/v/canal.m3u8'); self.end_headers(); return
