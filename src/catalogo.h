@@ -505,6 +505,11 @@ unsigned      cat_revisao(void);
 // volta do vetor comum de episodios, que NAO mexe em cat_revisao). Quem mostra
 // a lista de uma serie repede quando ela muda e a lista dele esta vazia.
 unsigned      cat_geracao_episodios(void);
+// Versao de CONTEUDO dos episodios: sobe a CADA escrita (redefinicao da
+// lista, item tirado do meio, zerarFaixas, wrap). Para CACHE derivado dos
+// episodios (duracao esperada da fonte) recalcular em O(1) — sem repedir
+// nada pela rede, ao contrario de cat_geracao_episodios.
+unsigned      cat_versao_episodios(void);
 // Relogio monotonico em ms, para os marcadores [perf] da publicacao.
 double        cat_relogio_ms(void);
 // Sobe a cada mudanca em QUALQUER item (marca de lista, progresso, item novo,

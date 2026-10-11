@@ -627,11 +627,12 @@ static int tentativaN, tentativaM;
 static int durFonteAvisada, durFontePulou, pedProximaFonte;
 // Cache da duracao esperada da fonte corrente (achado 4 do review #205):
 // duracaoFonteEsperada varre os episodios do titulo, e durFonteAtualizar roda
-// por quadro. Recalcula so quando o catalogo entrega episodios novos (TMDB
-// chegando atrasado sobe cat_geracao_episodios) ou o catalogo inteiro troca.
+// por quadro. Recalcula so quando o conteudo dos episodios muda (a primeira
+// lista — e o metadado que preenche a duracao — chega DEPOIS da fonte abrir,
+// sem zerar nada: cat_versao_episodios sobe) ou o catalogo inteiro troca.
 static int durFonteEsperadaOk;
 static double durFonteEsperadaCache;
-static unsigned durFonteEsperadaGer, durFonteEsperadaRev;
+static unsigned durFonteEsperadaVer, durFonteEsperadaRev;
 static Uint32 durFonteAcaoAte;
 // ABRINDO A FONTE, COMPACTO POR PADRAO (dono, 05/10): o cartao nasce enxuto —
 // o ponto, o estado e as marcas da fonte — e o BAIXO expande os detalhes.
@@ -2304,9 +2305,9 @@ static void durFonteAtualizar(double real, Uint32 agora) {
   char r[32], e[32], aviso[320];
   int rm, em;
   if (durFonteAvisada || ehCanal() || !isfinite(real) || real <= 1) return;
-  { unsigned ger = cat_geracao_episodios(), rev = cat_revisao();
-    if (!durFonteEsperadaOk || durFonteEsperadaGer != ger || durFonteEsperadaRev != rev) {
-      durFonteEsperadaOk = 1; durFonteEsperadaGer = ger; durFonteEsperadaRev = rev;
+  { unsigned ver = cat_versao_episodios(), rev = cat_revisao();
+    if (!durFonteEsperadaOk || durFonteEsperadaVer != ver || durFonteEsperadaRev != rev) {
+      durFonteEsperadaOk = 1; durFonteEsperadaVer = ver; durFonteEsperadaRev = rev;
       durFonteEsperadaCache = duracaoFonteEsperada(); } }
   esperada = durFonteEsperadaCache;
   if (esperada <= 0 || fabs(real - esperada) <= 600 ||
