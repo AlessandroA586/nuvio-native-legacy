@@ -1,3 +1,4 @@
+#include "intro.h"
 #include "arteurl.h"
 #include "imdbnota.h"
 #include "extras.h"
@@ -878,6 +879,7 @@ static void *buscar(void *arg) {
           return NULL;
         }
         const char *fimC = corpo + strlen(corpo);
+        intro_registrar_tmdb(id,idT,corpo);
         // Uma linha, no corpo que ja esta na mao. Ver a nota em
         // fichaIdiomaOrig.
         js_texto(corpo, fimC, "original_language",

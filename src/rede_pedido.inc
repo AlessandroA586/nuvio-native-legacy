@@ -120,6 +120,12 @@ static size_t pedidoCorpo(void *b, size_t size, size_t count, void *u) {
     c->primeiro = c->janela = pedidoAgoraMs();
     c->r->primeiro_byte_ms = pedidoMs(c->primeiro - c->inicio);
   }
+  if (c->p->receber_corpo) {
+    c->r->n_corpo += n;
+    if (c->status >= 200 && c->status < 300 &&
+        !c->p->receber_corpo(b, n, c->p->corpo_usuario)) return 0;
+    return n;
+  }
   ok = pedidoGuardar(&c->r->corpo, &c->r->n_corpo, &c->corpoCap, c->tetoCorpo, b, n);
   if (ok != 1) { c->r->erro = ok ? REDE_MEMORIA : REDE_LIMITE_CORPO; return 0; }
   return n;
@@ -347,7 +353,7 @@ int rede_pedir(const RedePedido *p, RedeResposta *r) {
       pedidoIntervalo(&c, agora, 1);
       if (pedidoParar(&c)) break;
       /* Empty 204/HEAD still owns a terminated buffer like an ordinary reply. */
-      if (!r->corpo && !p->janela_corpo_ms) {
+      if (!r->corpo && !p->janela_corpo_ms && !p->receber_corpo) {
         r->corpo = calloc(1, 1);
         if (!r->corpo) { r->erro = REDE_MEMORIA; break; }
       }

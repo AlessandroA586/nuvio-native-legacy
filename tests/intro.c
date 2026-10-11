@@ -17,12 +17,37 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <sys/stat.h>
+#include <utime.h>
+#include <time.h>
+#include <sys/resource.h>
 
 // DUBLE DE REDE. intro.c pede pela rede_pedir; o teste troca o buscador
 // (intro_definir_buscador) por um que serve as respostas GRAVADAS de
 // tests/fixtures. Os dois simbolos abaixo so existem para linkar.
 #include "../src/rede.h"
-int rede_pedir(const RedePedido *p, RedeResposta *r) { (void)p; memset(r, 0, sizeof *r); return 0; }
+static char dadosTeste[]="/tmp/nuvio-intro-XXXXXX";
+const char *dados_dir(void){return dadosTeste;}
+void dados_fs_travar(void){}
+void dados_fs_liberar(void){}
+void dados_marcar_sujo(int leve){(void)leve;}
+static int fakeBuscar(const char *,char **,int *);
+static const char *fribbFonte;
+int rede_pedir(const RedePedido *p, RedeResposta *r) {
+  char *j=NULL;memset(r,0,sizeof *r);
+  if(!p->receber_corpo)return 0;
+  if(fribbFonte){
+    FILE *f=fopen(fribbFonte,"rb");assert(f);char bloco[16384];size_t n;int ok=1;
+    while((n=fread(bloco,1,sizeof bloco,f))&&ok)ok=p->receber_corpo(bloco,n,p->corpo_usuario);
+    assert(!ferror(f));fclose(f);r->status=200;return ok;
+  }
+  fakeBuscar(p->url,&j,&r->status);
+  int ok=1;
+  // Cortes de 7 bytes atravessam aspas, campos, escapes e objetos.
+  for(size_t i=0;j&&j[i]&&ok;){size_t n=strlen(j+i);if(n>7)n=7;
+    ok=p->receber_corpo(j+i,n,p->corpo_usuario);i+=n;}
+  free(j);return ok;
+}
 void rede_resposta_limpar(RedeResposta *r) { (void)r; }
 
 // Le uma resposta gravada de tests/fixtures/theintrodb (chamadas reais a
@@ -47,12 +72,32 @@ static double credFinal(const IntroTrecho *v, int n) {
 static pthread_mutex_t fakeTrava = PTHREAD_MUTEX_INITIALIZER;
 static char ultimaUrl[400];
 static int fakeStatus500;
+static int mapPedidos, aniPedidos, dbPedidos, mapFora;
 static int fakeBuscar(const char *url, char **corpo, int *status) {
   const char *arq = NULL;
   pthread_mutex_lock(&fakeTrava);
   snprintf(ultimaUrl, sizeof ultimaUrl, "%s", url);
   pthread_mutex_unlock(&fakeTrava);
   *corpo = NULL;
+  pthread_mutex_lock(&fakeTrava);
+  if (strstr(url, "Fribb/anime-lists")) mapPedidos++;
+  if (strstr(url, "api.aniskip.com")) aniPedidos++;
+  if (strstr(url, "api.theintrodb.org")) dbPedidos++;
+  pthread_mutex_unlock(&fakeTrava);
+  if (strstr(url, "Fribb/anime-lists")) {
+    *status = mapFora ? 503 : 200;
+    if (!mapFora) *corpo = strdup(
+      "[{\"imdb_id\":[\"\"],\"mal_id\":539,\"themoviedb_id\":{\"tv\":43004},\"season\":{\"tvdb\":1,\"tmdb\":1}},"
+      "{\"ignored\":\"brace } and escaped \\\" quote\",\"imdb_id\":[\"tt5607616\"],\"mal_id\":31240,\"themoviedb_id\":{\"tv\":65942},\"season\":{\"tvdb\":1,\"tmdb\":1}},"
+      "{\"imdb_id\":[\"tt5607616\"],\"mal_id\":39587,\"themoviedb_id\":{\"tv\":65942},\"season\":{\"tvdb\":2,\"tmdb\":1},\"episode_offset\":{\"tmdb\":26}},"
+      "{\"imdb_id\":[\"tt5607616\",\"tt5607617\"],\"mal_id\":42203,\"themoviedb_id\":{\"tv\":65942},\"season\":{\"tvdb\":2,\"tmdb\":1},\"episode_offset\":{\"tvdb\":13,\"tmdb\":38}}]");
+    return *status;
+  }
+  if (strstr(url, "skip-times/39587/1?") || strstr(url, "skip-times/42203/1?")) {
+    *corpo = strdup("{\"results\":[{\"skipType\":\"op\",\"interval\":{\"startTime\":10,\"endTime\":100},\"episodeLength\":1440},{\"skipType\":\"ed\",\"interval\":{\"startTime\":1350,\"endTime\":1440},\"episodeLength\":1440}]}");
+    *status = 200; return 200;
+  }
+  if (strstr(url, "imdb_id=tt4300000")) arq = "theintrodb/bb_s01e01.json";
   if (fakeStatus500) { *status = 500; return 500; }
   if (strstr(url, "tmdb_id=37854&season=4&episode=92")) arq = "theintrodb/onepiece_tmdb_s04e92.json";
   else if (strstr(url, "imdb_id=tt0388629&season=4&episode=1&") || strstr(url, "imdb_id=tt0388629&season=4&episode=1\0"))
@@ -89,9 +134,27 @@ static int mesmoSeg(double a, double esperado) {
   return d < 0.001 && d > -0.001;
 }
 
-int main(void) {
+int main(int argc,char **argv) {
   IntroTrecho v[8];
   int n;
+  assert(mkdtemp(dadosTeste));
+  if(argc==2){ // Medicao reproduzivel com captura real, sem buffer da lista.
+    fribbFonte=argv[1];intro_definir_buscador(fakeBuscar);
+    intro_registrar_tmdb("tt5607616",65942,"{\"genres\":[{\"id\":16}],\"original_language\":\"ja\"}");
+    intro_pedir_ids("tt5607616",65942,1,39,0,0);assert(esperar(2)==2);
+    char caminho[256];struct stat st;
+    snprintf(caminho,sizeof caminho,"%s/anime-fribb.idx",dadosTeste);
+    assert(!stat(caminho,&st));printf("Fribb index: %lld bytes\n",(long long)st.st_size);
+    struct rusage uso;assert(!getrusage(RUSAGE_SELF,&uso));
+    printf("Peak RSS: %ld %s (parser + fixture streamed from disk)\n",uso.ru_maxrss,
+#ifdef __APPLE__
+           "bytes"
+#else
+           "KiB"
+#endif
+    );
+    intro_desligar();assert(!unlink(caminho));assert(!rmdir(dadosTeste));return 0;
+  }
 
   // FILME: /v3/media?imdb_id=tt0111161 (Shawshank). So creditos, sem fim.
   n = intro_extrair("{\"tmdb_id\":278,\"type\":\"movie\","
@@ -371,6 +434,85 @@ int main(void) {
     nt = esperar(2); nt = intro_trechos(t, 8);
     assert(nt == 2 && mesmoSeg(credFinal(t, nt), 1387.996));
     puts("ok  anime kitsu:12 -> MAL 21 -> AniSkip: abertura e ED");
+    // #430: evidencia vem do TMDB ja baixado, antes ou depois do player.
+    const char *anime = "{\"original_language\":\"ja\",\"genres\":[{\"id\":16}]}";
+    intro_registrar_tmdb("tt5607616", 65942, anime);
+    intro_pedir_ids("tt5607616", 0, 2, 1, 0, 0);
+    assert(esperar(2) == 2);
+    pthread_mutex_lock(&fakeTrava);
+    assert(strstr(ultimaUrl, "skip-times/39587/1?"));
+    assert(mapPedidos == 1);
+    pthread_mutex_unlock(&fakeTrava);
+    nt = intro_trechos(t, 8);
+    assert(achar(t, nt, INTRO_ABERTURA)->inicio == 10.0);
+    assert(achar(t, nt, INTRO_CREDITOS)->inicio == 1350.0);
+    intro_pedir_ids("tt5607616", 65942, 1, 39, 0, 0);
+    assert(esperar(2) == 2);
+    pthread_mutex_lock(&fakeTrava);
+    assert(strstr(ultimaUrl, "skip-times/42203/1?"));
+    assert(mapPedidos == 1); // outro episodio/parte usa o mesmo cache do titulo
+    pthread_mutex_unlock(&fakeTrava);
+    char indice[256];struct stat st;
+    snprintf(indice,sizeof indice,"%s/anime-fribb.idx",dadosTeste);
+    assert(!stat(indice,&st)&&st.st_size>0);
+    ino_t inode=st.st_ino;time_t mtime=st.st_mtime;
+    // Outro titulo usa o arquivo, sem o antigo cache RAM por titulo.
+    intro_registrar_tmdb("tt5607617", 0, anime);
+    intro_pedir_ids("tt5607617", 0, 2, 14, 0, 0);
+    assert(esperar(2)==2);
+    assert(!stat(indice,&st)&&st.st_ino==inode&&st.st_mtime==mtime);
+    pthread_mutex_lock(&fakeTrava);assert(mapPedidos==1);pthread_mutex_unlock(&fakeTrava);
+    intro_pedir_ids("tt5607616",65942,1,39,0,0);assert(esperar(2)==2);
+    IntroTrecho cap = {30, 120, INTRO_ABERTURA};
+    intro_definir_capitulos(&cap, 1);
+    nt = intro_trechos(t, 8);
+    assert(achar(t, nt, INTRO_ABERTURA)->inicio == 30);
+    assert(achar(t, nt, INTRO_CREDITOS)->inicio == 1350);
+    intro_registrar_tmdb("tt5607616", 65942, "{\"original_language\":\"ja\",\"genres\":[{\"id\":18}]}");
+    intro_pedir_ids("tt5607616", 0, 2, 1, 0, 0);
+    usleep(200000);
+    assert(intro_trechos(t, 8) == 0);
+    intro_registrar_tmdb("tt5607616", 65942, "{\"origin_country\":[\"JP\"],\"genres\":[{\"id\":16}]}");
+    assert(esperar(2) == 2); // evidencia tardia refaz pelo AniSkip
+    pthread_mutex_lock(&fakeTrava);
+    int antesMap = mapPedidos, antesAni = aniPedidos;
+    pthread_mutex_unlock(&fakeTrava);
+    intro_registrar_tmdb("tt0903747", 1396, "{\"original_language\":\"en\",\"genres\":[{\"id\":16}]}");
+    intro_pedir_ids("tt0903747", 0, 1, 1, 0, 0);
+    assert(esperar(2) == 2);
+    pthread_mutex_lock(&fakeTrava);
+    assert(mapPedidos == antesMap && aniPedidos == antesAni);
+    pthread_mutex_unlock(&fakeTrava);
+    // Renovacao semanal falha: ainda resolve pelo indice velho; nao repete.
+    struct utimbuf velho={time(NULL)-8*24*60*60,time(NULL)-8*24*60*60};
+    assert(!utime(indice,&velho));
+    pthread_mutex_lock(&fakeTrava);mapFora=1;pthread_mutex_unlock(&fakeTrava);
+    intro_pedir_ids("tt5607617",0,2,14,0,0);assert(esperar(2)==2);
+    pthread_mutex_lock(&fakeTrava);assert(mapPedidos==2);pthread_mutex_unlock(&fakeTrava);
+    intro_pedir_ids("tt5607616",65942,1,39,0,0);assert(esperar(2)==2);
+    pthread_mutex_lock(&fakeTrava);assert(mapPedidos==2);mapFora=0;pthread_mutex_unlock(&fakeTrava);
+    assert(!utime(indice,&velho));
+    intro_pedir_ids("tt5607617",0,2,14,0,0);assert(esperar(2)==2);
+    pthread_mutex_lock(&fakeTrava);assert(mapPedidos==3);pthread_mutex_unlock(&fakeTrava);
+    // Corrupcao e remocao refazem, mesmo antes da semana.
+    FILE *idx=fopen(indice,"r+b");assert(idx);assert(!fseek(idx,16,SEEK_SET));fputc(255,idx);fclose(idx);
+    intro_pedir_ids("tt5607616",65942,1,39,0,0);assert(esperar(2)==2);
+    pthread_mutex_lock(&fakeTrava);assert(mapPedidos==4);pthread_mutex_unlock(&fakeTrava);
+    assert(!unlink(indice));
+    intro_pedir_ids("tt5607617",0,2,14,0,0);assert(esperar(2)==2);
+    pthread_mutex_lock(&fakeTrava);assert(mapPedidos==5);mapFora=1;int antesDb=dbPedidos;pthread_mutex_unlock(&fakeTrava);
+    assert(!unlink(indice));
+    intro_registrar_tmdb("tt4300000",430,anime);
+    intro_pedir_ids("tt4300000",0,1,1,0,0);assert(esperar(2)==2);
+    pthread_mutex_lock(&fakeTrava);
+    assert(mapPedidos==6&&dbPedidos==antesDb+1);mapFora=0;
+    pthread_mutex_unlock(&fakeTrava);
+    // Sem indice e sem rede: outro titulo nao dispara nova descarga nesta semana.
+    intro_pedir_ids("tt5607616",65942,1,39,0,0);usleep(200000);
+    pthread_mutex_lock(&fakeTrava);assert(mapPedidos==6);pthread_mutex_unlock(&fakeTrava);
+    char retry[256];snprintf(retry,sizeof retry,"%s/anime-fribb.retry",dadosTeste);
+    assert(!unlink(retry));
+    puts("ok  #430: indice em fluxo criado uma vez/reutilizado entre titulos; semana; stale/503; corrompido/ausente refaz; sem indice -> TheIntroDB");
     intro_definir_buscador(NULL);
     intro_desligar();
   }
@@ -443,6 +585,7 @@ int main(void) {
   assert(intro_kitsu_mal(fixture("../kitsu12_mappings.json")) == 21);
   assert(intro_extrair_aniskip("{\"found\":false,\"results\":[],\"statusCode\":404}", 0, v, 8) == 0);
   puts("ok  AniSkip: op/ed/recap, ED ate o fim, 10% de duracao, mapeamento kitsu -> MAL");
+  assert(!rmdir(dadosTeste));
   puts("intro: tudo ok");
   return 0;
 }
