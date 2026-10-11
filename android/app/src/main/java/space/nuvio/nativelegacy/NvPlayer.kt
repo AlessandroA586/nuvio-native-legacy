@@ -75,6 +75,7 @@ object NvPlayer {
     private val principal = Handler(Looper.getMainLooper())
     private var activity: Activity? = null
     private var camada: FrameLayout? = null
+    private var interfaceMobile = false
     private var superficie: SurfaceView? = null
     // #202: a TCL segurou o AudioFlinger por 27-38 s ao soltar o audio do filme
     // anterior; release() no fio principal congelava o app. Cada abertura tem a
@@ -205,6 +206,12 @@ object NvPlayer {
 
     // --- ciclo de vida (NuvioActivity) ---------------------------------------
 
+    // UI-thread mode changes use the same coordinate policy as the native canvas.
+    fun interfaceModo(mobile: Boolean) {
+        interfaceMobile = mobile
+        reaplicarJanela()
+    }
+
     // onCreate, DEPOIS do super.onCreate (a libmain.so ja carregada pelo SDL).
     @JvmStatic
     fun iniciar(activity: Activity, camada: FrameLayout) {
@@ -215,7 +222,7 @@ object NvPlayer {
         novaSuperficie(activity)
         // A camada so tem tamanho depois do layout: reaplica a janela quando mudar.
         camada.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or2, ob ->
-            if (r - l != or2 - ol || b - t != ob - ot) aplicarJanela()
+            if (r - l != or2 - ol || b - t != ob - ot) reaplicarJanela()
         }
         try { nativeIniciar() } catch (e: UnsatisfiedLinkError) {
             Log.w(TAG, "nativeIniciar sem a lib ainda; o C acha a classe pelo ClassLoader da Activity: $e")
@@ -689,17 +696,35 @@ object NvPlayer {
         aplicarJanela()
     }
 
+    private fun larguraLogica(): Float {
+        val c = camada
+        return if (interfaceMobile && c != null && c.width > 0 && c.height > 0)
+            TELA_H.toFloat() * c.width / minOf(c.width, c.height) else TELA_W.toFloat()
+    }
+
+    private fun alturaLogica(): Float {
+        val c = camada
+        return if (interfaceMobile && c != null && c.width > 0 && c.height > 0)
+            TELA_H.toFloat() * c.height / minOf(c.width, c.height) else TELA_H.toFloat()
+    }
+
+    private fun reaplicarJanela() {
+        if (!temJanela) aplicarEncaixe() else aplicarJanela()
+    }
+
     // Sem janela pedida ainda: o quadro inteiro encaixado (letterbox) na tela.
     private fun aplicarEncaixe() {
         if (temJanela) return
+        val largura = larguraLogica()
+        val altura = alturaLogica()
         if (videoW > 0 && videoH > 0) {
-            val esc = minOf(TELA_W.toFloat() / videoW, TELA_H.toFloat() / videoH)
+            val esc = minOf(largura / videoW, altura / videoH)
             jw = (videoW * esc + 0.5f).toInt()
             jh = (videoH * esc + 0.5f).toInt()
-            jx = (TELA_W - jw) / 2
-            jy = (TELA_H - jh) / 2
+            jx = ((largura - jw) / 2).toInt()
+            jy = ((altura - jh) / 2).toInt()
         } else {
-            jx = 0; jy = 0; jw = TELA_W; jh = TELA_H
+            jx = 0; jy = 0; jw = Math.round(largura); jh = Math.round(altura)
         }
         aplicarJanela()
     }
@@ -713,8 +738,8 @@ object NvPlayer {
             val m = c.resources.displayMetrics
             cw = m.widthPixels; ch = m.heightPixels
         }
-        val ex = cw.toFloat() / TELA_W
-        val ey = ch.toFloat() / TELA_H
+        val ex = cw.toFloat() / larguraLogica()
+        val ey = ch.toFloat() / alturaLogica()
         // As BORDAS arredondam e o tamanho sai da diferenca: tela cheia cai
         // exatamente em 0,0,cw,ch, sem fresta.
         val x0 = Math.round(jx * ex)

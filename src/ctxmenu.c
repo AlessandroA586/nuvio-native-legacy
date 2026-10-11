@@ -37,6 +37,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ponteiro.h"
+#include "rolagemtoque.h"
+#include "telefoneui.h"
 #define NV_ESCALA_TELA   // o arquivo inteiro mede pela tela virtual (escala.h)
 #include "escala.h"
 
@@ -283,6 +285,10 @@ static float estAnim[FIL_TIPO_N];
 // `prevRef*` e a forma que decide a reducao de cada uma (home_previa_fileira).
 static int   prevAtual = -1, prevAnt = -1, prevRefAtual = -1, prevRefAnt = -1;
 static float prevT = 1.0f;
+#ifdef NV_TOUCH_UI
+static ToqueRolagem toqueEst;
+static float estRolY;
+#endif
 
 // --- RECOMENDAR: O FLUXO NAO MORA MAIS AQUI ---------------------------------
 //
@@ -403,12 +409,17 @@ static void montar(void) {
     nEstilos = fil_estilo_linhas(filChave, estLin, FIL_TIPO_N);
     // O foco nasce na forma que vale agora, no TAMANHO que vale agora; as
     // outras linhas de tamanho nascem no menor (o de sempre).
-    if (estFoco < 0 || estFoco >= nEstilos)
+    if (estFoco < 0 || estFoco >= nEstilos) {
+#ifdef NV_TOUCH_UI
+      estRolY = 0.0f;
+      toquerol_limpar(&toqueEst);
+#endif
       for (estFoco = 0, k = 0; k < nEstilos; k++) {
         estTam[k] = 0;
         for (j = 0; j < estLin[k].n; j++)
           if (estLin[k].tipos[j] == atual) { estFoco = k; estTam[k] = j; }
       }
+    }
     return;
   }
   if (!ci) return;
@@ -628,7 +639,7 @@ static void abrirComum(int indice) {
   // A longa ja consumiu o gesto na home. Limpar a sentinela aqui evita que o
   // KEYUP seguinte seja reaproveitado como uma selecao dentro da modal.
   holdPronto = 0;
-  esperandoSoltura = 1;   // o OK que abriu ainda esta afundado; ver a nota acima
+  esperandoSoltura = !ponteiro_ok_longo();   // dedo ja entregou o par completo
   idx = indice; foco = 0; aberto = 1;
   dispensarOp = dispensarPend; dispensarPend = 0;
   detalhesOk = detalhesPend; detalhesPend = 0;
@@ -1093,6 +1104,9 @@ void ctx_evento(const SDL_Event *e) {
   // Pagina de estilos: cima/baixo trocam a forma, esquerda/direita o tamanho
   // (so nas linhas que tem tamanhos); nada disso grava. OK grava.
   if (pagina == 1) {
+#ifdef NV_TOUCH_UI
+    if (toquerol_navegacao(e)) toquerol_limpar(&toqueEst);
+#endif
     if (k == SDLK_UP)   { if (estFoco > 0) estFoco--; return; }
     if (k == SDLK_DOWN) { if (estFoco + 1 < nEstilos) estFoco++; return; }
     if (estFoco >= 0 && estFoco < nEstilos && estLin[estFoco].n > 1) {
@@ -1419,7 +1433,157 @@ static void desenhaTamanhos(GfxRect r, int i, int atual, float a) {
   }
 }
 
+#ifdef NV_TOUCH_UI
+#define EST_TOQUE_LINHA 72.0f
+#define EST_TOQUE_SEG   56.0f
+#define EST_TOQUE_GAP    8.0f
+typedef struct { GfxRect modal, lista, previa, cancelar; } EstTelefoneGeo;
+
+static float estListaAltura(void) {
+  return fmaxf(0.0f, (float)nEstilos * (EST_TOQUE_LINHA + EST_GAP) - EST_GAP);
+}
+
+static EstTelefoneGeo estTelefoneGeo(float a) {
+  EstTelefoneGeo g;
+  int retrato = NV_LAYOUT_REAL_H > NV_LAYOUT_REAL_W;
+  const float pad = 28.0f, cab = 100.0f, rod = 64.0f;
+  float w = fminf(EST_W, NV_TELA_W - 64.0f);
+  float h = fminf(retrato ? pad * 2 + cab + rod + estListaAltura() + 24.0f + 440.0f
+                         : 934.0f, NV_TELA_H - 64.0f);
+  g.modal = (GfxRect){ (NV_TELA_W - w) * .5f,
+                       (NV_TELA_H - h) * .5f + (1.0f - a) * 40.0f, w, h };
+  g.lista = (GfxRect){ g.modal.x + pad, g.modal.y + pad + cab,
+                       w - pad * 2, h - pad * 2 - cab - rod };
+  if (retrato) {
+    float ph = fminf(440.0f, g.lista.h * .46f);
+    g.lista.h -= ph + 24.0f;
+    g.previa = (GfxRect){ g.lista.x, g.lista.y + g.lista.h + 24.0f, g.lista.w, ph };
+  } else {
+    g.lista.w = fminf(EST_LISTA_W, g.lista.w * .42f);
+    g.previa = (GfxRect){ g.lista.x + g.lista.w + 32.0f, g.lista.y,
+                         w - pad * 2 - g.lista.w - 32.0f, g.lista.h };
+  }
+  g.cancelar = (GfxRect){ g.modal.x + w - pad - 160.0f,
+                         g.modal.y + h - pad - EST_TOQUE_SEG, 160.0f, EST_TOQUE_SEG };
+  return g;
+}
+
+static int toqueEstRolar(const PonteiroRolagem *e) {
+  if (!aberto || pagina != 1 || !telefoneui_ativo()) return 0;
+  return toquerol_evento(&toqueEst, e);
+}
+
+static void estToqueAlvo(GfxRect r, GfxRect janela, int i, int b) {
+  if (!aberto) return;
+  ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, janela.y, janela.y + janela.h,
+                      ponteiroEstFoco, ponteiroEstOk, i, b);
+}
+
+static void estLinhaTelefone(GfxRect r, GfxRect janela, int i, int atual, float a) {
+  int n = estLin[i].n, marcado = 0;
+  float seg = n > 1 ? n * EST_TOQUE_SEG + (n - 1) * EST_TOQUE_GAP + 20.0f : 0;
+  float k = fmaxf(0.0f, fminf(1.0f, estAnim[i]));
+  for (int j = 0; j < n; j++) if (estLin[i].tipos[j] == atual) marcado = 1;
+  if (a > .5f) estToqueAlvo(r, janela, i, 0);
+  if (k > .01f) {
+    if (ajustes_vidro()) gfx_cor(r, .5f, 1, 1, 1, .14f * k * a);
+    else gfx_cor(r, .5f, .19f, .195f, .215f, k * a);
+  }
+  if (marcado) gfx_icone((GfxRect){r.x + 20, r.y + (r.h - CTX_ICONE) * .5f,
+                                  CTX_ICONE, CTX_ICONE}, "check", .95f, .95f, .94f, a);
+  TxtLinha t = txt_linha_corta(TXT_PG_ROTULO, estLin[i].rotulo, 243, 242, 239, 255,
+                              r.w - 62.0f - 20.0f - seg);
+  txt_desenhar_alpha(t, r.x + 62, r.y + (r.h - t.h) * .5f, (.72f + .28f * k) * a);
+  if (n < 2) return;
+  float sx = r.x + r.w - 10.0f - n * EST_TOQUE_SEG - (n - 1) * EST_TOQUE_GAP;
+  for (int j = 0; j < n; j++) {
+    GfxRect c = {sx + j * (EST_TOQUE_SEG + EST_TOQUE_GAP),
+                  r.y + (r.h - EST_TOQUE_SEG) * .5f, EST_TOQUE_SEG, EST_TOQUE_SEG};
+    const char *pal = i18n(fil_estilo_tam_palavra(j));
+    char letra[8]; int p = 0, esc = j == estTam[i];
+    if (pal[0]) { letra[p++] = pal[0];
+      while (p < 6 && ((unsigned char)pal[p] & 0xC0) == 0x80) { letra[p] = pal[p]; p++; } }
+    letra[p] = 0;
+    if (a > .5f) estToqueAlvo(c, janela, i, j + 1);
+    if (esc) gfx_cor(c, .5f, .93f, .93f, .93f, .95f * a);
+    else if (estLin[i].tipos[j] == atual) gfx_anel(c, .5f, 1.5f, .93f, .93f, .93f, .6f * a);
+    t = txt_linha(TXT_DET_BOTAO, letra, esc ? 20 : 237, esc ? 22 : 237, esc ? 26 : 237, 255);
+    txt_desenhar_alpha(t, c.x + (c.w - t.w) * .5f, c.y + (c.h - t.h) * .5f, a);
+  }
+}
+
+static void desenhaEstilosTelefone(float a) {
+  EstTelefoneGeo g = estTelefoneGeo(a);
+  int atual = fil_tipo(filChave);
+  float maximo = fmaxf(0, estListaAltura() - g.lista.h);
+  estRolY = toquerol_clamp(estRolY, 0, maximo);
+  if (!toqueEst.livre && estFoco >= 0 && estFoco < nEstilos) {
+    float y = estFoco * (EST_TOQUE_LINHA + EST_GAP);
+    if (y < estRolY) estRolY = y;
+    if (y + EST_TOQUE_LINHA > estRolY + g.lista.h) estRolY = y + EST_TOQUE_LINHA - g.lista.h;
+    estRolY = toquerol_clamp(estRolY, 0, maximo);
+  }
+  toquerol_vincular(&toqueEst, g.lista, gfx_escala(), 0, maximo, 1, &estRolY);
+  ponteiro_rolagem(toqueEstRolar);
+  gfx_cor((GfxRect){0, 0, NV_TELA_W, NV_TELA_H}, 0, 0, 0, 0, .55f * a);
+  if (aberto && a > .5f && ponteiro_ativo()) {
+    ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ponteiroCtxFora, 0, 0);
+    ponteiro_alvo(g.modal.x, g.modal.y, g.modal.w, g.modal.h, NULL, NULL, 0, 0);
+  }
+  ilhaCtx(g.modal, 36, a);
+  kickerCtx("Estilo da fileira", g.modal.x + 28, g.modal.y + 28, a);
+  TxtLinha titulo = txt_linha_corta(TXT_ROW_TITULO, filTitulo, 243, 242, 239, 255, g.modal.w - 56);
+  txt_desenhar_alpha(titulo, g.modal.x + 28, g.modal.y + 54, a);
+  gfx_recorte(g.lista.x, g.lista.y, g.lista.w, g.lista.h);
+  for (int i = 0; i < nEstilos; i++) {
+    GfxRect r = {g.lista.x, g.lista.y + i * (EST_TOQUE_LINHA + EST_GAP) - estRolY,
+                 g.lista.w, EST_TOQUE_LINHA};
+    if (r.y + r.h <= g.lista.y || r.y >= g.lista.y + g.lista.h) continue;
+    estLinhaTelefone(r, g.lista, i, atual, a);
+  }
+  gfx_sem_recorte();
+  if (estFoco >= 0 && estFoco < nEstilos) {
+    int jt = estTam[estFoco] >= 0 && estTam[estFoco] < estLin[estFoco].n ? estTam[estFoco] : 0;
+    int salvo = estTipo(estFoco) == atual;
+    float bw = salvo ? badge_largura("Atual") + 18.0f : 0;
+    TxtLinha nome = txt_linha_corta(TXT_TITULO3, estLin[estFoco].nomes[jt], 245, 248, 255, 255, g.previa.w - bw);
+    txt_desenhar_alpha(nome, g.previa.x, g.previa.y, a);
+    if (salvo) badge_desenhar(g.previa.x + g.previa.w - bw + 18,
+                              g.previa.y + (nome.h - BADGE_H) * .5f, "Atual", BADGE_REALCE, a);
+    txt_bloco_corta(TXT_CAPTION2, i18n(fil_estilo_ajuda(filChave, estTipo(estFoco))),
+                    170, 174, 184, g.previa.x, g.previa.y + nome.h + 8, g.previa.w, 30, a * .92f, 2);
+  }
+  GfxRect palco = {g.previa.x, g.previa.y + EST_PALCO_Y, g.previa.w, g.previa.h - EST_PALCO_Y};
+  gfx_cor(palco, 26.0f / palco.h, NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, .96f * a);
+  titulo = txt_linha_corta(TXT_ROW_TITULO, filTitulo, 245, 246, 249, 255, palco.w - 48);
+  txt_desenhar_alpha(titulo, palco.x + 24, palco.y + 20, a);
+  GfxRect area = {palco.x + 24, palco.y + 40 + titulo.h, palco.w - 48,
+                  palco.h - 60 - titulo.h};
+  if (prevAnt >= 0 && prevT < .995f) {
+    GfxRect s = area; s.x -= 24 * prevT;
+    home_previa_fileira(filChave, prevAnt, prevRefAnt, s, a * (1 - prevT));
+  }
+  if (prevAtual >= 0) {
+    GfxRect e = area; e.x += 24 * (1 - prevT);
+    e.w = fminf(e.w, palco.x + palco.w - 24 - e.x);
+    home_previa_fileira(filChave, prevAtual, prevRefAtual, e, a * prevT);
+  }
+  titulo = txt_linha_corta(TXT_ILHA_APOIO, "Toque para aplicar", 243, 242, 239, 255,
+                           g.modal.w - 56 - g.cancelar.w - 24);
+  txt_desenhar_alpha(titulo, g.modal.x + 28, g.cancelar.y + (g.cancelar.h - titulo.h) * .5f, a * .6f);
+  gfx_cor(g.cancelar, .5f, 1, 1, 1, .08f * a);
+  titulo = txt_linha_corta(TXT_PG_ROTULO, "Fechar", 243, 242, 239, 255, g.cancelar.w - 28);
+  txt_desenhar_alpha(titulo, g.cancelar.x + (g.cancelar.w - titulo.w) * .5f,
+                     g.cancelar.y + (g.cancelar.h - titulo.h) * .5f, a);
+  if (aberto && a > .5f) ponteiro_alvo(g.cancelar.x, g.cancelar.y, g.cancelar.w, g.cancelar.h,
+                                      NULL, ponteiroCtxFora, 0, 0);
+}
+#endif
+
 static void desenhaEstilos(float a) {
+#ifdef NV_TOUCH_UI
+  if (telefoneui_ativo()) { desenhaEstilosTelefone(a); return; }
+#endif
   float lista = (float)nEstilos * (EST_LINHA + EST_GAP) - EST_GAP;
   float corpo = lista > EST_PALCO_H + EST_PALCO_Y ? lista : EST_PALCO_H + EST_PALCO_Y;
   float alt = CTX_PAD * 2.0f + 116.0f + corpo + CTX_RODAPE;
@@ -1738,6 +1902,12 @@ static void desenhaLista(float a) {
 // ---- A LINHA EXPANDIDA DO PAINEL DE SALVOS (ver ctxmenu.h) ----
 #define IL_PAD    18.0f
 #define IL_PILULA 50.0f
+#ifdef NV_TOUCH_UI
+static GfxRect inlineRecorte;
+static int inlineRecorteValido;
+void ctx_inline_recorte(GfxRect r) { inlineRecorte = r; inlineRecorteValido = r.w > 0 && r.h > 0; }
+int ctx_inline_painel_ativo(void) { return aberto && modoInline() && pagina == 0; }
+#endif
 void ctx_inline_pedir(int on) { inlinePend = on; }
 static int modoInline(void) { return inlineOn && doPainel && !doSocial && !doLista && !soFileira; }
 float ctx_inline_t(void) { return modoInline() ? (anim < 0.0f ? 0.0f : anim > 1.0f ? 1.0f : anim) : 0.0f; }
@@ -1753,6 +1923,30 @@ static const char *pilulaRot(int i, const CatItem *ci) {
     default:           return ops[i].rot;
   }
 }
+#ifdef NV_TOUCH_UI
+static void inlineAcoes(const CatItem *ci, float w, float faixaH, float hi, GfxRect *r) {
+  const float gap = 10, cw = w - 2 * (IL_PAD + 6);
+  float nat[CTX_MAX], total = 0, k = 1, x = IL_PAD + 6;
+  for (int i = 0; i < nOps; i++) {
+    nat[i] = 20 + 10 + (float)txt_linha(TXT_CAPTION2, pilulaRot(i, ci), 255, 255, 255, 255).w + 22;
+    total += nat[i];
+  }
+  total += gap * (nOps > 1 ? nOps - 1 : 0);
+  if (total > cw) k = (cw - gap * (nOps > 1 ? nOps - 1 : 0)) / (total - gap * (nOps > 1 ? nOps - 1 : 0));
+  for (int i = 0; i < nOps; i++) {
+    r[i] = (GfxRect){x, IL_PAD + faixaH + 14 + hi + 14, nat[i] * k, IL_PILULA};
+    x += r[i].w + gap;
+  }
+}
+int ctx_inline_foco_rect(float w, float faixaH, GfxRect *r) {
+  const CatItem *ci = itemAtual();
+  if (!r || !ci || !ctx_inline_painel_ativo() || foco < 0 || foco >= nOps) return 0;
+  CtxInfoEstado e = estInline(ci); GfxRect acoes[CTX_MAX];
+  float hi = ctxinfo_compacto(ci, &e, 0, 0, w - 2 * (IL_PAD + 6), 0, 0);
+  inlineAcoes(ci, w, faixaH, hi, acoes); *r = acoes[foco];
+  return foco + 1;
+}
+#endif
 float ctx_inline_altura(float w, float faixaH) {
   const CatItem *ci = itemAtual();
   CtxInfoEstado e;
@@ -1762,6 +1956,11 @@ float ctx_inline_altura(float w, float faixaH) {
          14.0f + IL_PILULA + IL_PAD;
 }
 void ctx_inline_desenhar(float x, float y, float w, float faixaH, float a) {
+#ifdef NV_TOUCH_UI
+  GfxRect recorteAtual = inlineRecorte;
+  int temRecorte = inlineRecorteValido;
+  inlineRecorteValido = 0;
+#endif
   const CatItem *ci = itemAtual();
   CtxInfoEstado e;
   float cx = x + IL_PAD + 6.0f, cw = w - 2.0f * (IL_PAD + 6.0f), py, hi, gap = 10.0f;
@@ -1774,6 +1973,10 @@ void ctx_inline_desenhar(float x, float y, float w, float faixaH, float a) {
   hi = ctxinfo_compacto(ci, &e, cx, y + IL_PAD + faixaH + 14.0f, cw, a, 1);
   py = y + IL_PAD + faixaH + 14.0f + hi + 14.0f;
   ajustes_acento(&ar, &ag, &ab);
+#ifdef NV_TOUCH_UI
+  GfxRect phoneAcoes[CTX_MAX];
+  if (telefoneui_ativo()) inlineAcoes(ci, w, faixaH, hi, phoneAcoes);
+#endif
   { float nat[CTX_MAX], tot = 0.0f, k = 1.0f, px = cx;
     for (i = 0; i < nOps; i++) {
       nat[i] = 20.0f + 10.0f + (float)txt_linha(TXT_CAPTION2, pilulaRot(i, ci), 255, 255, 255, 255).w + 22.0f;
@@ -1783,6 +1986,9 @@ void ctx_inline_desenhar(float x, float y, float w, float faixaH, float a) {
     if (tot > cw) k = (cw - gap * (float)(nOps > 1 ? nOps - 1 : 0)) / (tot - gap * (float)(nOps > 1 ? nOps - 1 : 0));
     for (i = 0; i < nOps; i++) {
       GfxRect r = { px, py, nat[i] * k, IL_PILULA };
+#ifdef NV_TOUCH_UI
+      if (telefoneui_ativo()) { r = phoneAcoes[i]; r.x += x; r.y += y; }
+#endif
       float f = focoAnim[i];
       const char *icone = "aj_info";
       TxtLinha t;
@@ -1796,7 +2002,19 @@ void ctx_inline_desenhar(float x, float y, float w, float faixaH, float a) {
       }
       gfx_cor(r, 0.5f, 1, 1, 1, (.07f + .05f * f) * a);
       if (f > 0.01f) gfx_cor(r, 0.5f, ar, ag, ab, .30f * f * a);
-      if (aberto && a > 0.5f) ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroCtxOpcao, NULL, i, 0);
+      if (aberto && a > 0.5f) {
+#ifdef NV_TOUCH_UI
+        if (telefoneui_ativo()) {
+          if (temRecorte && ctx_inline_painel_ativo()) {
+            float ax = fmaxf(r.x, recorteAtual.x), ay = fmaxf(r.y, recorteAtual.y);
+            float ar = fminf(r.x + r.w, recorteAtual.x + recorteAtual.w);
+            float ab = fminf(r.y + r.h, recorteAtual.y + recorteAtual.h);
+            if (ar > ax && ab > ay) ponteiro_alvo(ax, ay, ar - ax, ab - ay, ponteiroCtxOpcao, NULL, i, 0);
+          }
+        } else
+#endif
+        ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroCtxOpcao, NULL, i, 0);
+      }
       t = txt_linha_corta(TXT_CAPTION2, pilulaRot(i, ci), 243, 242, 239, 255, r.w - 22.0f - 30.0f);
       tw = 30.0f + (float)t.w;
       gfx_icone((GfxRect){ r.x + (r.w - tw) * 0.5f, r.y + (r.h - 20.0f) * 0.5f, 20.0f, 20.0f },

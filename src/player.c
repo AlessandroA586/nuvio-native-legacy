@@ -42,6 +42,7 @@
 #include "tex_cache.h"
 #include "anim.h"
 #include "layout.h"
+#include "telefoneui.h"
 #include "catalogo.h"
 #include "artehero.h"
 #include "logotitulo.h"
@@ -57,6 +58,9 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 static void avisarCascaAberto(int v) { EM_ASM({ window.nvPlayerAberto = $0; }, v); }
+#elif defined(NV_ANDROID) && defined(NV_TOUCH_UI)
+#include "android.h"
+static void avisarCascaAberto(int v) { android_player_tela_cheia(v); }
 #else
 static void avisarCascaAberto(int v) { (void)v; }
 #endif
@@ -620,6 +624,13 @@ const CatEp *player_proximo_episodio(void) {
 // este canal agora"). Vazio = as frases genericas. Ja traduzido por quem
 // chama; txt_linha tenta traduzir de novo, nao acha chave e deixa como esta.
 static char erroTitulo[160], erroDica[160];
+#ifdef NV_TOUCH_UI
+static int (*modalToqueGuarda)(void);
+static int avToqueQuadro, avToqueErro, avToqueElegivel;
+static char avToqueCanal[sizeof itemCanal.imdb];
+void player_toque_modal_guarda(int (*pode)(void)) { modalToqueGuarda = pode; }
+static int modalToquePode(void) { return !modalToqueGuarda || modalToqueGuarda(); }
+#endif
 // "Fonte 2 de 3": a tentativa do automatico VOD (app.c, tentarProximaFonteVOD).
 static int tentativaN, tentativaM;
 // ABRINDO A FONTE, COMPACTO POR PADRAO (dono, 05/10): o cartao nasce enxuto —
@@ -634,6 +645,15 @@ static float abrindoFundo;   // o preto da abertura, que sai junto com o cartao
 static Uint32 abrindoFundoUlt;
 // O botao em foco no modal do erro: 0 = Abrir Fontes, 1 = Voltar.
 static int erroBotao;
+static void erroEscolher(int i) {
+#ifdef NV_ANDROID
+  (void)i;
+  player_voltar_a_esperar(); pedFontes = 1; // Abrir Fontes e Voltar dispensam o erro (#409)
+#else
+  if (i == 0) pedFontes = 1;
+  else { saindo = 1; pediuSair = 1; }
+#endif
+}
 void player_definir_tentativa(int n, int max) { tentativaN = n; tentativaM = max; }
 void player_erro_fonte(void) {
   esperandoFonte = 0; erroFonte = 1; visivel = 0; tocando = 0; soBarra = 0;
@@ -1212,6 +1232,17 @@ static void aplicarAspecto(void) {
                        (int)(o.w + 0.5f), (int)(o.h + 0.5f)); }
 }
 
+#ifdef NV_TOUCH_UI
+static void playerTelaAtualizar(void) {
+  static float largura, altura;
+  if (!comVideo || retido) return;
+  if (largura != NV_LAYOUT_REAL_W || altura != NV_LAYOUT_REAL_H) {
+    largura = NV_LAYOUT_REAL_W; altura = NV_LAYOUT_REAL_H;
+    aplicarAspecto();
+  }
+}
+#endif
+
 void player_aspecto_definir(int modo) {
   if (modo < 0 || modo >= PLR_ASP_N) modo = PLR_ASP_ORIGINAL;
   aspecto = modo;
@@ -1269,6 +1300,9 @@ void player_aspecto_ciclar(void) {
 }
 
 void player_abrir(int indiceCatalogo, const char *url) {
+#ifdef NV_TOUCH_UI
+  avToqueCanal[0] = 0;
+#endif
   player_descartar_retido();
   // O trailer usa o mesmo plano de video (LG) — solta antes de o player
   // carregar a fonte, senao o load novo pisa no mediaId do trailer.
@@ -1991,6 +2025,9 @@ void player_minimizar(void) {
   PlrRect r;
   if (!player_minimizavel()) { player_encerrar(); return; }
   mini = 1; pediuSair = 0; visivel = 0;
+#if defined(NV_ANDROID) && defined(NV_TOUCH_UI)
+  android_player_tela_cheia(0);
+#endif
   pausao_fechar(); episodios_fechar(); posplay_fechar();
   r = miniDestino();
   video_janela((int)(r.x + 0.5f), (int)(r.y + 0.5f),
@@ -2099,6 +2136,21 @@ void player_fechar_mini(void) {
 // tampar (mesma propriedade que o veu dos controles usa). O destino e
 // reenviado so quando muda: cada chamada ao plano e uma mensagem ao ACB, e a
 // proporcao real do quadro pode chegar segundos depois da miniatura abrir.
+#ifdef NV_TOUCH_UI
+static int (*miniToqueGuarda)(void);
+void player_mini_toque_guarda(int (*pode)(void)) { miniToqueGuarda = pode; }
+static int miniToquePode(void) {
+  return mini && !miniGuia && telefoneui_ativo() && miniToqueGuarda && miniToqueGuarda();
+}
+static void miniToqueRestaurar(int a, int b) {
+  (void)a; (void)b;
+  if (miniToquePode()) player_restaurar();
+}
+static void miniToqueFechar(int a, int b) {
+  (void)a; (void)b;
+  if (miniToquePode()) player_fechar_mini();
+}
+#endif
 void player_mini_desenhar(Uint32 agora) {
   static float lx = -1.0f, ly, lw, lh;
   PlrRect r; GfxRect f;
@@ -2114,10 +2166,16 @@ void player_mini_desenhar(Uint32 agora) {
   }
   // No guia quem desenha e o guia (furo no preview, selo, bordas).
   if (miniGuia) return;
+#ifdef NV_TOUCH_UI
+  // A foreground sheet owns its pixels as well as its touch targets. Keep
+  // the native window current across rotation, without painting over it.
+  if (telefoneui_ativo() && !miniToquePode()) return;
+#endif
   f = (GfxRect){ r.x, r.y, r.w, r.h };
   (void)fr; (void)fg; (void)fb;
   // A ILHA em volta (sem o anel de acento de 4 px), o furo com raio 22.
-  { GfxRect il = { f.x - 10.0f, f.y - 10.0f, 500.0f, PLR_PIP_ILHA_H };
+  { GfxRect il = { telefoneui_ativo() ? PLR_PIP_X - 10 : f.x - 10.0f,
+                   telefoneui_ativo() ? PLR_PIP_Y - 10 : f.y - 10.0f, 500.0f, PLR_PIP_ILHA_H };
     char rot[160];
     EpgProg ag;
     float x = il.x + 20.0f, yc = f.y + f.h + 14.0f + 14.0f;
@@ -2140,6 +2198,19 @@ void player_mini_desenhar(Uint32 agora) {
     plrui_limpar_sep(rot);
     { TxtLinha nm = txt_linha_corta(TXT_G18M, rot, 243, 242, 239, 255, il.x + il.w - 20.0f - x);
       txt_desenhar_alpha(nm, x, yc - (float)nm.h * 0.5f, 1.0f); }
+#ifdef NV_TOUCH_UI
+    if (telefoneui_ativo()) {
+      if (miniToquePode()) {
+        GfxRect fechar = { il.x + il.w - 72, il.y + 16, 56, 56 };
+        ponteiro_alvo(il.x, il.y, il.w, il.h, NULL, miniToqueRestaurar, 0, 0);
+        plrui_botao_repouso(fechar, 1);
+        gfx_icone((GfxRect){fechar.x + 16, fechar.y + 16, 24, 24}, "aj_x", 1, 1, 1, 1);
+        ponteiro_alvo(fechar.x, fechar.y, fechar.w, fechar.h, NULL, miniToqueFechar, 0, 0);
+        TxtLinha l = txt_linha_corta(TXT_G18M, i18n("Tela cheia"), 243, 242, 239, 255, il.w - 40);
+        txt_desenhar_alpha(l, il.x + 20, il.y + il.h - 24 - l.h, .65f);
+      }
+    } else
+#endif
     { const char *k[2] = {
 #ifdef NV_ANDROID
         "CH+",
@@ -2702,12 +2773,7 @@ void player_evento(const SDL_Event *e) {
     if (k == SDLK_LEFT) erroBotao = 0;
     else if (k == SDLK_RIGHT) erroBotao = 1;
     else if (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE) {
-#ifdef NV_ANDROID
-      player_voltar_a_esperar(); pedFontes = 1; // Abrir Fontes e Voltar dispensam o erro
-#else
-      if (erroBotao == 0) pedFontes = 1;
-      else { saindo = 1; pediuSair = 1; }
-#endif
+      erroEscolher(erroBotao);
     }
     return;
   }
@@ -2936,6 +3002,9 @@ static void introTmdbTardio(Uint32 agora) {
 }
 
 void player_atualizar(float dt, Uint32 agora) {
+#ifdef NV_TOUCH_UI
+  playerTelaAtualizar();
+#endif
   if (retido) { player_validar_retido(agora); return; }
   // DV EM MKV NASCE NO PONTO SALVO: enquanto a retomada nao foi pedida ao
   // player da TV, a troca para o caminho do DV espera (video.c, iniciarDts le o
@@ -3915,7 +3984,7 @@ static void desenharLegendaPrincipal(float *topoPilha){
 // barraFoco, skipFoco) e todos acordam os controles: mexer a mao sobre o
 // video e o "toque" que faz a barra subir. Clicar no video (fora dos
 // controles) e o OK dos controles escondidos: Play/Pause.
-static float barraPtrX, barraPtrW = NV_TELA_W;
+static float barraPtrX, barraPtrW = NV_TELA_BASE_W;
 static int ponteiroNoPlayer(void) {
   // "O que achou?" com os controles escondidos e dono das teclas
   // (reacao_evento): o alvo de tela inteira do player cobriria as pilulas dele.
@@ -4221,14 +4290,62 @@ static void corpoCarregando(GfxRect r, float a, void *u) {
 
 // O MODAL DO ERRO: o motivo (36/700), a dica e os dois botoes. ESQUERDA e
 // DIREITA andam, OK aciona (player_evento).
+static float erroLargura(void) {
+  return telefoneui_largura(880, NV_VTELA_W, 96);
+}
+
+#ifdef NV_TOUCH_UI
+static int avToquePode(int erro) {
+  return telefoneui_ativo() && aberto && !mini && !saindo && ehCanal() &&
+         erroFonte == erro && modalToquePode() && !stream_folha_aberta() &&
+         !faixas_aberta() && !episodios_aberto() && !zapEst.pend &&
+         (erro || anim * entrada > .99f);
+}
+static void avToqueAcao(int acao, int erro, int quadro) {
+  int ids[AV_B_N], n, i;
+  if (quadro != avToqueQuadro || erro != avToqueErro ||
+      strcmp(avToqueCanal, player_id_canal()) || !avToquePode(erro)) return;
+  if (erro) {
+    if (acao != AV_B_RECARREGAR && acao != AV_B_FONTE && acao != AV_B_GUIA) return;
+  } else {
+    n = avBotoes(ids);
+    for (i = 0; i < n && ids[i] != acao; i++) {}
+    if (i == n) return;
+    botaoAV = i;
+  }
+  avAtivar(acao);
+  acordar();
+}
+static void avToquePreparar(int erro) {
+  int elegivel = avToquePode(erro), mudou = avToqueErro != erro || strcmp(avToqueCanal, player_id_canal());
+  if (mudou) aovivo_toque_reiniciar();
+  if (!avToqueQuadro || mudou || avToqueElegivel != elegivel)
+    avToqueQuadro = avToqueQuadro == 0x7fffffff ? 1 : avToqueQuadro + 1;
+  avToqueErro = erro;
+  avToqueElegivel = elegivel;
+  snprintf(avToqueCanal, sizeof avToqueCanal, "%s", player_id_canal());
+  aovivo_toque_definir(elegivel ? avToqueAcao : NULL, avToqueQuadro);
+}
+#endif
+#ifdef NV_TOUCH_UI
+static int erroToquePode(void) {
+  return telefoneui_ativo() && aberto && !mini && !saindo && erroFonte && !ehCanal() &&
+         modalToquePode() && !stream_folha_aberta() && !faixas_aberta() && !episodios_aberto();
+}
+static void erroToqueAcao(int i, int b) {
+  (void)b;
+  if (!erroToquePode() || i < 0 || i > 1) return;
+  erroBotao = i; erroEscolher(i);
+}
+#endif
 static float alturaErro(void) {
   TxtLinha t = txt_linha(TXT_ILHA_PERGUNTA, "Ag", 0, 0, 0, 255);
   float h = 18.0f + 4.0f;
   const char *tit = erroTitulo[0] ? erroTitulo : "Não foi possível abrir a fonte";
   const char *dica = erroDica[0] ? erroDica : "Abra Fontes para escolher outra opção ou recarregar.";
-  h += txt_bloco_corta(TXT_ILHA_PERGUNTA, tit, 0, 0, 0, 0, 0, 880.0f - 72.0f, (float)t.h + 7.0f, 0.0f, 3);
-  h += 14.0f + txt_bloco_corta(TXT_ILHA_TEXTO, dica, 0, 0, 0, 0, 0, 880.0f - 72.0f, 30.0f, 0.0f, 3);
-  return h + 28.0f + 60.0f + 34.0f;
+  h += txt_bloco_corta(TXT_ILHA_PERGUNTA, tit, 0, 0, 0, 0, 0, erroLargura() - 72.0f, (float)t.h + 7.0f, 0.0f, 3);
+  h += 14.0f + txt_bloco_corta(TXT_ILHA_TEXTO, dica, 0, 0, 0, 0, 0, erroLargura() - 72.0f, 30.0f, 0.0f, 3);
+  return h + 28.0f + (telefoneui_ativo() ? 76 : 60) + 34.0f;
 }
 static void corpoErro(GfxRect r, float a, void *u) {
   float x = r.x + 36.0f, w = r.w - 72.0f, y = r.y + 18.0f + 4.0f;
@@ -4240,6 +4357,25 @@ static void corpoErro(GfxRect r, float a, void *u) {
   y += 14.0f;
   y += txt_bloco_corta(TXT_ILHA_TEXTO, dica, 158, 157, 155, x, y, w, 30.0f, a, 3);
   y += 28.0f;
+#ifdef NV_TOUCH_UI
+  if (telefoneui_ativo()) {
+    int pont = a > .99f && erroToquePode();
+    if (pont) {
+      ponteiro_camada();
+      ponteiro_alvo(0, 0, NV_VTELA_W, NV_VTELA_H, NULL, NULL, 0, 0);
+    }
+    for (int i = 0; i < 2; i++) {
+      GfxRect b = {x + i * (w + 12) * .5f, y, (w - 12) * .5f, 76};
+      int foco = erroBotao == i, tinta = foco ? plrui_tinta() : 225;
+      const char *rot = i18n(i ? "Voltar" : "Abrir Fontes");
+      if (foco) plrui_pilula_foco(b, a); else plrui_botao_repouso(b, a);
+      float th = txt_bloco_corta(TXT_G21B, rot, tinta, tinta, tinta, 0, 0, b.w - 32, 28, 0, 2);
+      txt_bloco_corta(TXT_G21B, rot, tinta, tinta, tinta, b.x + 16, b.y + (b.h - th) * .5f, b.w - 32, 28, a, 2);
+      if (pont) ponteiro_alvo(b.x, b.y, b.w, b.h, NULL, erroToqueAcao, i, 0);
+    }
+    return;
+  }
+#endif
   x += plrui_botao(x, y, "Abrir Fontes", "pl_layers", erroBotao == 0 ? 1.0f : 0.0f, a) + 12.0f;
   plrui_botao(x, y, "Voltar", NULL, erroBotao == 1 ? 1.0f : 0.0f, a);
 }
@@ -4509,6 +4645,9 @@ void player_desenhar(Uint32 agora) {
   if (erroFonte && ehCanal()) {
     // Cartao no estilo do ao vivo: a marca do canal e a causa (provedor, conta)
     // que o app ja calculou em erroTitulo/erroDica.
+#ifdef NV_TOUCH_UI
+    avToquePreparar(1);
+#endif
     aovivo_erro_desenhar(itemCanal.titulo, itemCanal.poster, erroTitulo, erroDica, entrada);
   } else if (erroFonte) {
     // A FONTE NAO ABRIU: a ilha do canto vira o MODAL (o mesmo das
@@ -4521,7 +4660,7 @@ void player_desenhar(Uint32 agora) {
     memset(&pd, 0, sizeof pd);
     pd.icone = "aj_triangle-alert"; pd.corIcone = 1;
     pd.texto = i18n("Fonte");
-    pd.w = 880.0f; pd.h = alturaErro();
+    pd.w = erroLargura(); pd.h = alturaErro();
     pd.corpo = corpoErro; pd.modal = 1;
     plrilha_pedir(&pd);
   }
@@ -4728,6 +4867,9 @@ void player_desenhar(Uint32 agora) {
       desenharLegendaExterna();
       if (!zapEst.pend) {
         avMontarOsd(&o);
+#ifdef NV_TOUCH_UI
+        avToquePreparar(0);
+#endif
         aovivo_osd_desenhar(&o, a);
         // A HORA E A ILHA DO PLAYER, como no filme: Fontes, Audio, Legendas
         // e Informacoes crescem dela (o OSD do canal tinha pilula propria).

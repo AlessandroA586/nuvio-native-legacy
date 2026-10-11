@@ -17,6 +17,7 @@
 #include "teclado.h"
 #include "ponteiro.h"
 #include "app.h"
+#include "telefoneui.h"
 #include "descanso.h"
 #include "iconeapp.h"
 #include "logoapp.h"
@@ -530,6 +531,66 @@ static int saiuPorEsquerda;   // a ultima tecla foi ESQUERDA (ver app_evento)
 static int sidebar_permitida(void) {
   return tela != TELA_GUIA && !player_mini_ativo();
 }
+#ifdef NV_TOUCH_UI
+static int sidebarToquePode(void) {
+  return sidebar_permitida() && !menu_aberto() && !player_aberto() &&
+         !central_aberta() && !ilha_modal_aberto() && !celb_aberto() &&
+         !ctx_aberto() && !spainel_aberto() && app_central_pode();
+}
+static void sidebarToqueAbrirTela(Tela origem) {
+  if (!sidebarToquePode() || tela != origem || detail_aberto() || vertudo_aberta()) return;
+  saiuPorEsquerda = 0;
+  menu_abrir();
+}
+#define SIDEBAR_TOQUE_TELA(nome, origem) static void nome(void) { sidebarToqueAbrirTela(origem); }
+SIDEBAR_TOQUE_TELA(sidebarToqueHome, TELA_HOME)
+SIDEBAR_TOQUE_TELA(sidebarToqueExplorar, TELA_EXPLORAR)
+SIDEBAR_TOQUE_TELA(sidebarToqueBusca, TELA_BUSCA)
+SIDEBAR_TOQUE_TELA(sidebarToqueBiblioteca, TELA_BIBLIOTECA)
+SIDEBAR_TOQUE_TELA(sidebarToquePerfil, TELA_PERFIL)
+SIDEBAR_TOQUE_TELA(sidebarToqueAjustes, TELA_AJUSTES)
+SIDEBAR_TOQUE_TELA(sidebarToqueDiagnostico, TELA_DIAGNOSTICO)
+SIDEBAR_TOQUE_TELA(sidebarToqueSocial, TELA_SOCIAL)
+SIDEBAR_TOQUE_TELA(sidebarToqueAddons, TELA_ADDONS)
+SIDEBAR_TOQUE_TELA(sidebarToqueAgenda, TELA_AGENDA)
+SIDEBAR_TOQUE_TELA(sidebarToqueLiveTVDiag, TELA_LIVETV_DIAG)
+SIDEBAR_TOQUE_TELA(sidebarToquePlugins, TELA_PLUGINS)
+#undef SIDEBAR_TOQUE_TELA
+static void sidebarToqueDetalhe(void) {
+  if (!sidebarToquePode() || !detail_aberto()) return;
+  saiuPorEsquerda = 0;
+  menu_abrir_sobre(1);
+}
+static void sidebarToqueLista(void) {
+  if (!sidebarToquePode() || !vertudo_aberta() || detail_aberto()) return;
+  saiuPorEsquerda = 0;
+  menu_abrir_sobre(0);
+}
+static void sidebarToqueRegistrar(int contexto) {
+  PonteiroBordaFn fn = NULL;
+  if (!sidebarToquePode()) return;
+  if (contexto == 1 && detail_aberto()) fn = sidebarToqueDetalhe;
+  else if (contexto == 2 && vertudo_aberta() && !detail_aberto()) fn = sidebarToqueLista;
+  else if (contexto == 0 && !detail_aberto() && !vertudo_aberta()) {
+    switch (tela) {
+      case TELA_HOME: fn = sidebarToqueHome; break;
+      case TELA_EXPLORAR: fn = sidebarToqueExplorar; break;
+      case TELA_BUSCA: fn = sidebarToqueBusca; break;
+      case TELA_BIBLIOTECA: fn = sidebarToqueBiblioteca; break;
+      case TELA_PERFIL: fn = sidebarToquePerfil; break;
+      case TELA_AJUSTES: fn = sidebarToqueAjustes; break;
+      case TELA_DIAGNOSTICO: fn = sidebarToqueDiagnostico; break;
+      case TELA_SOCIAL: fn = sidebarToqueSocial; break;
+      case TELA_ADDONS: fn = sidebarToqueAddons; break;
+      case TELA_AGENDA: fn = sidebarToqueAgenda; break;
+      case TELA_LIVETV_DIAG: fn = sidebarToqueLiveTVDiag; break;
+      case TELA_PLUGINS: fn = sidebarToquePlugins; break;
+      default: break;
+    }
+  }
+  if (fn) ponteiro_borda_esquerda(120.0f, fn);
+}
+#endif
 // perfis_ativo() no instante em que a tela de escolha abriu. So serve para uma
 // pergunta: a pessoa TROCOU de perfil, ou confirmou o mesmo? Agora que a tela
 // aparece a cada arranque, confirmar o mesmo perfil e o caso comum — e recarga
@@ -4526,6 +4587,18 @@ void app_atualizar(float dt, Uint32 agora) {
   }
 
   cwRetidoSincronizar();
+#ifdef NV_TOUCH_UI
+  { static float guiaW, guiaH;
+    if (guiaW != NV_TELA_W || guiaH != NV_TELA_H) {
+      guiaW = NV_TELA_W; guiaH = NV_TELA_H;
+      if (player_mini_no_guia_ativo()) {
+        float x, y, w, h;
+        guia_preview_rect(&x, &y, &w, &h);
+        player_mini_no_guia(x, y, w, h);
+      }
+    }
+  }
+#endif
   player_atualizar(dt, agora);
   // A barra por cima da pagina: o trailer do fundo fica mudo enquanto ela
   // esta aberta (detail_sob_menu). O pedido de barra da pagina e lido em
@@ -4691,7 +4764,22 @@ void app_atualizar(float dt, Uint32 agora) {
 // descarta, antes de se desenhar, os alvos de quem ficou por baixo — o
 // ponteiro so pode focar o que as setas focariam. A pergunta e a mesma que o
 // roteador de app_evento faz ("esta aberta?"), so que na ordem do desenho.
+#ifdef NV_TOUCH_UI
+#define CAMADA_SE(aberta) do { if (aberta) { \
+  ponteiro_camada(); \
+  ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, NULL, 0, 0); \
+} } while (0)
+#else
 #define CAMADA_SE(aberta) do { if (aberta) ponteiro_camada(); } while (0)
+#endif
+static void desenharCtxDoPainel(Uint32 agora) {
+  CAMADA_SE(ctx_aberto()
+#ifdef NV_TOUCH_UI
+            && !(telefoneui_ativo() && ctx_inline_painel_ativo())
+#endif
+  );
+  ctx_desenhar(agora);
+}
 
 // TUDO QUE FICA ATRAS DO PAINEL DE SALVOS: a tela, "Ver tudo", o cartaz com
 // menu, o detalhe e o menu lateral. Funcao propria para spainel_fundo poder
@@ -4701,6 +4789,9 @@ static void desenharAtrasDoPainel(void *ctx) {
   // "Ver tudo" cobre a tela de tras por completo (fundo opaco), entao a home
   // nao precisa ser desenhada por baixo — a mesma conta do detail_cobre_tela.
   if (!detail_cobre_tela() && !vertudo_aberta()) {
+#ifdef NV_TOUCH_UI
+    sidebarToqueRegistrar(0);
+#endif
     switch (tela) {
       case TELA_EXPLORAR:   explorar_desenhar(agora);   break;
       case TELA_GUIA:       guia_desenhar(agora);       break;
@@ -4718,6 +4809,9 @@ static void desenharAtrasDoPainel(void *ctx) {
     }
   }
   CAMADA_SE(vertudo_aberta());
+#ifdef NV_TOUCH_UI
+  if (!detail_cobre_tela()) sidebarToqueRegistrar(2);
+#endif
   if (!detail_cobre_tela()) vertudo_desenhar(agora);
   // Com o painel de Salvos na tela o menu do cartaz e desenhado DEPOIS dele
   // (desenharTelas): e o painel que o abre, e por baixo ele ficaria sob o veu.
@@ -4726,6 +4820,9 @@ static void desenharAtrasDoPainel(void *ctx) {
     ctx_desenhar(agora);
   }
   CAMADA_SE(detail_aberto());
+#ifdef NV_TOUCH_UI
+  sidebarToqueRegistrar(1);
+#endif
   detail_desenhar(agora);
   // Aberto de dentro da pagina do titulo, o menu vai POR CIMA dela.
   if (!spainel_visivel() && detail_aberto() && ctx_aberto()) {
@@ -4792,6 +4889,9 @@ static void desenharTelas(Uint32 agora) {
 
   // Estado vazio de verdade, em vez de uma tela preta que parece travamento.
   if (!homePronta && tela == TELA_HOME && !player_aberto() && !detail_aberto()) {
+#ifdef NV_TOUCH_UI
+    sidebarToqueRegistrar(0);
+#endif
     GfxRect fundo = { 0, 0, NV_TELA_W, NV_TELA_H };
     TxtLinha t, sb;
     gfx_cor(fundo, 0.0f, NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1.0f);
@@ -4833,8 +4933,7 @@ static void desenharTelas(Uint32 agora) {
     CAMADA_SE(spainel_aberto());
     if (spainel_visivel()) {
       spainel_desenhar(agora);
-      CAMADA_SE(ctx_aberto());
-      ctx_desenhar(agora);
+      desenharCtxDoPainel(agora);
     }
   }
   // BRILHO DA INTERFACE DO PLAYER (esmaecer.h): tudo daqui ate a ilha do player
@@ -4855,7 +4954,12 @@ static void desenharTelas(Uint32 agora) {
   // camadas dele: a pilula da hora, os avisos e o que nasce dela (Audio,
   // Legendas, estilo, carregando, erro) — e a folha de Fontes, que cresce
   // dela (streams.c) e por isso nao a esconde mais.
-  if (player_aberto()) { central_desenhar(agora); plrilha_desenhar(agora); }
+  if (player_aberto()) {
+#ifdef NV_TOUCH_UI
+    CAMADA_SE(central_aberta());
+#endif
+    central_desenhar(agora); plrilha_desenhar(agora);
+  }
   gfx_osd_mult = 1.0f;
   // A TELA DO DOLBY VISION EM MKV (dvtela.h) por cima de TUDO do player, ilha
   // inclusive: ela cobre a troca do HDR10 pelo caminho do DV e esvai sobre o
@@ -4872,6 +4976,16 @@ static void desenharTelas(Uint32 agora) {
 // faixas): a pilula ficaria boiando sobre o veu de outra coisa. Os AVISOS da
 // ilha nao passam por aqui — eles aparecem em qualquer tela fora do player.
 static int spotVeuPronto;   // o veu do Spotlight ja esta na copia congelada
+static int relogioCamadaAberta(void) {
+  return sintro_aberto() || novidades_aberto() || novidades11_aberto() || novidades12_aberto() ||
+      novidades13_aberto() || novidades131_aberto() || novidades132_aberto() ||
+      novidades133_aberto() || novidades134_aberto() || novidades139_aberto() ||
+      novidades1312_aberto() || novidades142_aberto() || novidades148_aberto() ||
+      novidades170_aberto() || novidades180_aberto() || novidades20_aberto() || novidades201_aberto() || novidades202_aberto() || novcartao_aberto() || telemetria_aberto() || recintro_aberto() ||
+      atualizacao_aberta() || agendaviso_aberto() || avisos_cartao_aberto() ||
+      glem_cartao_aberto() || recenviar_aberto() || pessoas_aberto() ||
+      recomenda_aberta() || pipintro_aberto() || diagnostico_intro_aberto();
+}
 static int relogioCabe(void) {
   // AJUSTES NO GLASS UI (mockup de 03/10): o relogio fica no canto, em cima da
   // ilha de categorias — a tela nao tem mais titulo ali. Com folha, vinculo ou
@@ -4889,17 +5003,28 @@ static int relogioCabe(void) {
   // a ilha do menu nasce logo abaixo da do relogio, na mesma margem
   // (ilha_posicionar), e as duas formam a coluna da esquerda.
   if (ctx_aberto() || stream_folha_aberta() || faixas_aberta() || episodios_aberto()) return 0;
-  if (sintro_aberto() || novidades_aberto() || novidades11_aberto() || novidades12_aberto() ||
-      novidades13_aberto() || novidades131_aberto() || novidades132_aberto() ||
-      novidades133_aberto() || novidades134_aberto() || novidades139_aberto() ||
-      novidades1312_aberto() || novidades142_aberto() || novidades148_aberto() ||
-      novidades170_aberto() || novidades180_aberto() || novidades20_aberto() || novidades201_aberto() || novidades202_aberto() || novcartao_aberto() || telemetria_aberto() || recintro_aberto() ||
-      atualizacao_aberta() || agendaviso_aberto() || avisos_cartao_aberto() ||
-      glem_cartao_aberto() || recenviar_aberto() || pessoas_aberto() ||
-      recomenda_aberta() || pipintro_aberto() || diagnostico_intro_aberto())
-    return 0;
+  if (relogioCamadaAberta()) return 0;
   return 1;
 }
+
+#ifdef NV_TOUCH_UI
+static int playerToquePermitido(void) {
+  if (!app_central_pode() || menu_aberto() || spainel_aberto() ||
+      central_aberta() || ilha_modal_aberto() || celb_aberto() || ctx_aberto() ||
+      recenviar_aberto() || pessoas_aberto() || stream_folha_aberta() ||
+      faixas_aberta() || episodios_aberto() || guia_overlay_aberta() || avisos_aberto() ||
+      relogioCamadaAberta()) return 0;
+  if (tela == TELA_DIAGNOSTICO && diagnostico_apresentacao_aberta()) return 0;
+  if (tela == TELA_AJUSTES && !ajustes_relogio_cabe()) return 0;
+  if (tela == TELA_AGENDA && agendaui_menu_aberto()) return 0;
+  return 1;
+}
+static int miniToquePermitido(void) {
+  if (player_aberto() || !playerToquePermitido()) return 0;
+  // In the Guide its own preview and modal controls own the video rectangle.
+  return tela != TELA_GUIA;
+}
+#endif
 
 void app_desenhar(Uint32 agora) {
   // O GUIA DA 2.0 e tela inteira e opaco: nada do app por baixo (uma camada
@@ -4970,6 +5095,14 @@ void app_desenhar(Uint32 agora) {
   // ainda chegava aparecer. Nada de congelar com video no ar (o PiP pinta o
   // furo) nem com o painel de Salvos, que usa o mesmo FBO.
   { static int pronto, refeitas, regCongelado;
+#ifdef NV_TOUCH_UI
+    static float fundoW, fundoH;
+    static unsigned fundoGeracao;
+    if (fundoW != NV_TELA_W || fundoH != NV_TELA_H || fundoGeracao != gfx_snap_geracao()) {
+      pronto = refeitas = regCongelado = 0;
+      fundoW = NV_TELA_W; fundoH = NV_TELA_H;
+    }
+#endif
     static unsigned revPronta;
     static Uint32 desde;
     static const Uint32 REFAZ[] = { 400, 1500, 4000 };
@@ -5012,10 +5145,18 @@ void app_desenhar(Uint32 agora) {
       }
       if (regCongelado) gfx_snap_desenhar();
     } else desenharTelas(agora);
-    if (!registro_aberto()) regCongelado = 0; }
+    if (!registro_aberto()) regCongelado = 0;
+#ifdef NV_TOUCH_UI
+    fundoGeracao = gfx_snap_geracao();
+#endif
+  }
   // O explicador fica ACIMA de qualquer tela (menos do painel de log, que e
   // ferramenta de diagnostico): ele e a primeira coisa que a pessoa ve depois
   // desta atualizacao, e nada pode aparecer por cima dele.
+#ifdef NV_TOUCH_UI
+  player_mini_toque_guarda(miniToquePermitido);
+  player_toque_modal_guarda(playerToquePermitido);
+#endif
   player_mini_desenhar(agora);
   CAMADA_SE(sintro_aberto());
   if (!registro_aberto()) sintro_desenhar(agora);
@@ -5124,6 +5265,9 @@ void app_desenhar(Uint32 agora) {
     // O CARTAO DA ATUALIZACAO e a pilula crescida (atualizacao.c): enquanto
     // ele esta na tela, ela fica por baixo, medindo, sem se desenhar.
     ilha_coberta(spainel_da_ilha() || atualizacao_cobre_ilha());
+#ifdef NV_TOUCH_UI
+    CAMADA_SE(central_aberta() || ilha_modal_aberto());
+#endif
     ilha_desenhar(agora);
   }
   // O cartao do lembrete fica acima do player e da tela: e um aviso com hora.
@@ -5139,8 +5283,18 @@ void app_desenhar(Uint32 agora) {
   if (!registro_aberto()) recomenda_desenhar(agora);
   CAMADA_SE(pipintro_aberto());
   if (!registro_aberto()) pipintro_desenhar(agora);
-  if (!registro_aberto()) spot_desenhar(agora, spotVeuPronto);
-  if (!registro_aberto()) celb_desenhar();
+  if (!registro_aberto()) {
+#ifdef NV_TOUCH_UI
+    CAMADA_SE(spot_aberto());
+#endif
+    spot_desenhar(agora, spotVeuPronto);
+  }
+  if (!registro_aberto()) {
+#ifdef NV_TOUCH_UI
+    CAMADA_SE(celb_aberto());
+#endif
+    celb_desenhar();
+  }
   CAMADA_SE(diagnostico_intro_aberto());
   if (!registro_aberto()) diagnostico_intro_desenhar(agora);
   // O MEDIDOR DE DESEMPENHO (Ajustes > Desempenho desta TV) nao e mais camada
@@ -5151,6 +5305,9 @@ void app_desenhar(Uint32 agora) {
   if (registro_aberto() && sessao_logada()) {
     ilha_relogio_visivel(ajustes_relogio_ligado());
     ilha_posicionar(1);
+#ifdef NV_TOUCH_UI
+    CAMADA_SE(central_aberta() || ilha_modal_aberto());
+#endif
     ilha_desenhar(agora);
   }
 }

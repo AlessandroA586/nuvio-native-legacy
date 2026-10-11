@@ -183,6 +183,12 @@ void player_manter_mini(void);
 void player_restaurar(void);
 void player_fechar_mini(void);
 void player_mini_desenhar(Uint32 agora);
+#ifdef NV_TOUCH_UI
+// The app supplies its current modal eligibility; saved touch callbacks check
+// it again before restoring or closing the PiP. Drawing keeps page targets.
+void player_mini_toque_guarda(int (*pode)(void));
+void player_toque_modal_guarda(int (*pode)(void));
+#endif
 // MINI NO GUIA: o "mini" cujo destino e o preview do guia (sem moldura: o
 // guia fura e desenha em volta). `player_mini_no_guia` define a caixa e liga
 // o modo — antes de player_manter_mini()+abrir, a sessao nova ja nasce no

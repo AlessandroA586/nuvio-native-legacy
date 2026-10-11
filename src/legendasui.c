@@ -16,6 +16,7 @@
 #include "legauto.h"
 #include "video.h"
 #include "ponteiro.h"
+#include "rolagemtoque.h"
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -195,6 +196,20 @@ static int ver;
 static char verGrupo[96];
 static char focoChave[96];
 static int foco, rolagem, syncAcao;
+#ifdef NV_TOUCH_UI
+static ToqueRolagem toqueLegendas;
+static float toqueLegendasOffset;
+static int toqueLegendasRolar(const PonteiroRolagem *e) {
+  if (!aberto || faixas_estilo_topo()) return 0;
+  return toquerol_evento(&toqueLegendas, e);
+}
+#endif
+static void rolagemZerar(void) {
+  rolagem = 0;
+#ifdef NV_TOUCH_UI
+  toqueLegendasOffset = 0; toquerol_limpar(&toqueLegendas);
+#endif
+}
 static char aviso[128];
 static Uint32 avisoAte;
 
@@ -361,7 +376,7 @@ static void avisar(const char *s) {
 void legendasui_abrir(void) {
   char prim[24];
   int i;
-  aberto = 1; mais = 0; ver = 0; alvo = 0; rolagem = 0; aviso[0] = 0;
+  aberto = 1; mais = 0; ver = 0; alvo = 0; rolagemZerar(); aviso[0] = 0;
   focoChave[0] = 0; foco = 0;
   montarLinhas();
   // Open on the row of the active primary, else on the first row.
@@ -379,7 +394,7 @@ int legendasui_versoes(void) { return aberto && ver; }
 
 void legendasui_reiniciar(void) {
   legenda2_reiniciar();
-  mais = 0; ver = 0; alvo = 0; focoChave[0] = 0; foco = 0; rolagem = 0; aviso[0] = 0;
+  mais = 0; ver = 0; alvo = 0; focoChave[0] = 0; foco = 0; rolagemZerar(); aviso[0] = 0;
 }
 
 // --- choosing ----------------------------------------------------------------------
@@ -471,6 +486,12 @@ static int nAcoes(int slot, const char **rot, int max) {
 }
 
 int legendasui_evento(const SDL_Event *e) {
+#ifdef NV_TOUCH_UI
+  if (toquerol_navegacao(e)) {
+    rolagem = (int)(toqueLegendasOffset / 92.0f);
+    toquerol_limpar(&toqueLegendas);
+  }
+#endif
   SDL_Keycode k;
   LuiLinha *l;
   if (!aberto || e->type != SDL_KEYDOWN) return LEGUI_NADA;
@@ -478,8 +499,8 @@ int legendasui_evento(const SDL_Event *e) {
   k = e->key.keysym.sym;
   l = nLinhasV ? &linhas[foco] : NULL;
   if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE) {
-    if (ver) { ver = 0; rolagem = 0; snprintf(focoChave, sizeof focoChave, "%s", verGrupo); montarLinhas(); return LEGUI_TRATADO; }
-    if (mais) { mais = 0; snprintf(focoChave, sizeof focoChave, "mais"); rolagem = 0; montarLinhas(); return LEGUI_TRATADO; }
+    if (ver) { ver = 0; rolagemZerar(); snprintf(focoChave, sizeof focoChave, "%s", verGrupo); montarLinhas(); return LEGUI_TRATADO; }
+    if (mais) { mais = 0; snprintf(focoChave, sizeof focoChave, "mais"); rolagemZerar(); montarLinhas(); return LEGUI_TRATADO; }
     aberto = 0;
     return LEGUI_FECHAR;
   }
@@ -501,14 +522,14 @@ int legendasui_evento(const SDL_Event *e) {
     if (!l) return LEGUI_TRATADO;
     switch (l->tipo) {
       case LR_MAIS:
-        mais = 1; alvo = 0; rolagem = 0; focoChave[0] = 0; foco = 0;
+        mais = 1; alvo = 0; rolagemZerar(); focoChave[0] = 0; foco = 0;
         montarLinhas(); focar(2 < nLinhasV ? 3 < nLinhasV ? 3 : 2 : 0);
         break;
       case LR_NENHUMA: escolher(l->slot, NULL); break;
       case LR_CAND:
         if (!mais && !ver && l->nVar > 1) {
           snprintf(verGrupo, sizeof verGrupo, "%s", l->chave);
-          ver = 1; rolagem = 0; focoChave[0] = 0; foco = 0;
+          ver = 1; rolagemZerar(); focoChave[0] = 0; foco = 0;
           montarLinhas();
           { int i, a = -1;   // open on the version in use, else the recommended one
             for (i = 0; i < nLinhasV; i++) {
@@ -831,11 +852,40 @@ void legendasui_corpo(GfxRect c, float a) {
       ponteiro_alvo(x0 + w - 10.0f - sw + w0, ty + (float)t.h - 54.0f, sw - w0, 54.0f, NULL, ponteiroAbaEstilo, 0, 0);
     } }
   y += LU_TIT_H + 14.0f;
+#ifdef NV_TOUCH_UI
+  if (!toqueLegendas.livre) {
+#endif
   ajustarRolagem(vis);
+#ifdef NV_TOUCH_UI
+    toqueLegendasOffset = rolagem * (LU_LN_H + LU_LN_VAO);
+  }
+  { float passo = LU_LN_H + LU_LN_VAO;
+    int n = nLinhasV < vis ? nLinhasV : vis;
+    float area = n * passo - (n > 0 ? LU_LN_VAO : 0);
+    GfxRect ilha;
+    int ptr = pont;
+    toquerol_vincular(&toqueLegendas, (GfxRect){x0, y, w, area}, gfx_escala(),
+                     0, nLinhasV * passo - LU_LN_VAO - area, 1, &toqueLegendasOffset);
+    if (aberto && a > 0.99f) ponteiro_rolagem(toqueLegendasRolar);
+    gfx_recorte(x0, y, w, area);
+    for (i = 0; i < nLinhasV; i++) {
+      float ry = y + i * passo - toqueLegendasOffset;
+      if (ry + LU_LN_H < y || ry > y + area) continue;
+      pont = ptr && ry >= y && ry + LU_LN_H <= y + area;
+      desenharLinha(&linhas[i], i, i == foco, x0, ry, w, a);
+      if (ptr && !pont) ponteiro_alvo_faixa(x0, ry, w, LU_LN_H, y, y + area, ponteiroLinha, NULL, i, 0);
+    }
+    pont = ptr;
+    if (plrilha_rect(&ilha)) gfx_recorte(ilha.x, ilha.y, ilha.w, ilha.h);
+    else gfx_recorte(c.x, c.y, c.w, c.h);
+    y += area + 14.0f;
+  }
+#else
   fim = rolagem + vis; if (fim > nLinhasV) fim = nLinhasV;
   for (i = rolagem; i < fim; i++)
     desenharLinha(&linhas[i], i, i == foco, x0, y + (i - rolagem) * (LU_LN_H + LU_LN_VAO), w, a);
   y += (fim - rolagem) * LU_LN_H + (fim - rolagem > 0 ? (fim - rolagem - 1) * LU_LN_VAO : 0.0f) + 14.0f;
+#endif
   gfx_cor((GfxRect){ x0, y, w, 1.0f }, 0.0f, 1, 1, 1, 0.07f * a);
   { float yc = y + 16.0f + 15.0f;
     if (aviso[0] && (Sint32)(avisoAte - SDL_GetTicks()) > 0) {
@@ -877,6 +927,7 @@ void legendasui_corpo(GfxRect c, float a) {
 // are up and squeezes to the side of a grown island (the subtitle panel).
 #define LEG2_LINHAS 4
 static float bandaFim;
+static float larguraSecundaria(void) { return NV_TELA_W - 120.0f; }
 
 static void corEstilo(int i, int *r, int *g, int *b) {
   static const unsigned char c[VIDEO_LEG_NCORES][3] = {
@@ -946,13 +997,13 @@ void legendasui_desenhar_secundaria(const LegendasGeo *g) {
   Leg2Linha ln[LEG2_LINHAS];
   const VideoLegendaEstilo *e = player_leg_estilo();
   int n, i, nl = 0, r, gg, b, fundo, borda;
-  float topo, x0 = 60.0f, x1 = 1860.0f, alpha, y, altura = 0.0f;
+  float topo, x0 = 60.0f, x1 = 60.0f + larguraSecundaria(), alpha, y, altura = 0.0f;
   TxtEstilo est;
   GfxRect il;
   bandaFim = 0.0f;
   // Minimised player / window animation: the second line has nowhere honest
   // to go, and the primary still identifies the scene.
-  if (!g || g->videoW < 1920.0f * 0.6f) return;
+  if (!g || g->videoW < NV_TELA_W * 0.6f) return;
   n = legenda2_cues(g->pos, cues, LEGENDA_SIMULTANEAS);
   if (n <= 0) return;
   estiloSecundario(e, &est, &r, &gg, &b, &fundo, &borda);
@@ -964,9 +1015,9 @@ void legendasui_desenhar_secundaria(const LegendasGeo *g) {
     il.x *= s; il.y *= s; il.w *= s; il.h *= s;
     if (il.y < topo + 260.0f && il.y + il.h > topo) {
       if (il.y + il.h + 16.0f < topo + 120.0f) topo = il.y + il.h + 16.0f;   // small pill: go under it
-      else if (il.x + il.w * 0.5f > 960.0f) x1 = il.x - 32.0f;
+      else if (il.x + il.w * 0.5f > NV_TELA_W * 0.5f) x1 = il.x - 32.0f;
       else x0 = il.x + il.w + 32.0f;
-      if (x1 - x0 < 560.0f) { x0 = 60.0f; x1 = 1860.0f; topo = il.y + il.h + 16.0f; }
+      if (x1 - x0 < 560.0f) { x0 = 60.0f; x1 = 60.0f + larguraSecundaria(); topo = il.y + il.h + 16.0f; }
     }
   }
   for (i = 0; i < n && nl < LEG2_LINHAS; i++)
@@ -1006,12 +1057,12 @@ float legendasui_altura_secundaria(const LegendasGeo *g) {
   int n, i, nl = 0, r, gg, b, fundo, borda;
   float altura = 0.0f;
   TxtEstilo est;
-  if (!g || g->videoW < 1920.0f * 0.6f) return 0.0f;
+  if (!g || g->videoW < NV_TELA_W * 0.6f) return 0.0f;
   n = legenda2_cues(g->pos, cues, LEGENDA_SIMULTANEAS);
   if (n <= 0) return 0.0f;
   estiloSecundario(e, &est, &r, &gg, &b, &fundo, &borda);
   for (i = 0; i < n && nl < LEG2_LINHAS; i++)
-    nl += quebrar(&cues[i], est, r, gg, b, borda, 1800.0f, ln + nl, LEG2_LINHAS - nl);
+    nl += quebrar(&cues[i], est, r, gg, b, borda, larguraSecundaria(), ln + nl, LEG2_LINHAS - nl);
   for (i = 0; i < nl; i++) altura += (float)ln[i].cor.h + (i ? 5.0f : 0.0f);
   return altura;
 }

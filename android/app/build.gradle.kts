@@ -9,6 +9,10 @@ val raiz = rootProject.projectDir.parentFile                         // raiz do 
 val cache = file(System.getProperty("user.home") + "/.cache/nuvio-android")
 val sdlSrc = (findProperty("nuvio.sdlSrc") as String?) ?: "$cache/src"
 val estagio = (findProperty("nuvio.estagio") as String?) ?: "${raiz}/build/android"
+val ffmpegAar = (findProperty("nuvio.ffmpegAar") as String?)?.let { file(it) }
+require(ffmpegAar == null || ffmpegAar.isFile) {
+    "nuvio.ffmpegAar must point to an existing AAR"
+}
 
 // Versao: fonte unica e deploy/app/appinfo.json (mesma do env.sh).
 val versao = Regex("\"version\"\\s*:\\s*\"([^\"]+)\"")
@@ -36,6 +40,7 @@ android {
                     "-DNUVIO_ENV_CMAKE=$estagio/nuvio-env.cmake",
                     "-DNUVIO_P2P_MOTOR=${(findProperty("nuvio.p2pMotor") as String?) ?: ""}",
                 )
+                arguments += "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
             }
         }
     }
@@ -113,6 +118,13 @@ dependencies {
     // ele a fonte toca muda (evento 9). Compilado e publicado pela Jellyfin no
     // Maven Central, na mesma versao do Media3. So entra quando a plataforma
     // nao serve (EXTENSION_RENDERER_MODE_ON no NvPlayer).
-    implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.8.0+1")
+    if (ffmpegAar != null) {
+        // Published 1.8.0+1 classes/32-bit JNI; selected 64-bit JNI rebuilt for 16KB pages.
+        implementation(files(ffmpegAar))
+        implementation("androidx.media3:media3-decoder:1.8.0")
+    } else {
+        implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.8.0+1")
+    }
     implementation("androidx.core:core-ktx:1.13.1")
 }
+

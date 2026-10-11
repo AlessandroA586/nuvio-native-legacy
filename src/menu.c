@@ -45,8 +45,8 @@ static float menuEscala(void) {
 #define MK(v) ((v) / NV_MENU_ESCALA_BASE)
 #undef NV_TELA_W
 #undef NV_TELA_H
-#define NV_TELA_W (1920.0f / NV_MENU_ESCALA)
-#define NV_TELA_H (1080.0f / NV_MENU_ESCALA)
+#define NV_TELA_W (NV_LAYOUT_REAL_W / NV_MENU_ESCALA)
+#define NV_TELA_H (NV_LAYOUT_REAL_H / NV_MENU_ESCALA)
 
 // O MENU DOS LAYOUTS CLASSICOS (dono, 03/10, sobre o mockup "Glass UI — ilha",
 // design/glass-ilha/glass-ilha.html, telas 1 e 2):
@@ -189,6 +189,9 @@ static void icone(int d, float cx, float cy, float s, float r, float g, float b,
 static void corAvatar(const char *hex, float *r, float *g, float *b);
 static int  tvAtivo(void);
 static int  tvOrdem(int *lista);
+#ifdef NV_TOUCH_UI
+static void tvToqueLimpar(void);
+#endif
 static void tvAtualizar(float dt);
 static void tvDesenhar(void);
 static void iconeTraco(int d, float cx, float cy, float s, float r, float g, float b, float a);
@@ -274,6 +277,9 @@ static void focoLinha(GfxRect r, float f, float alpha) {
 static void ponteiroLinha(int i, int b) {
   (void)b;
   if (i < 0 || i >= NV_MENU_FOCOS_TV) return;
+#ifdef NV_TOUCH_UI
+  tvToqueLimpar();
+#endif
   if (!aberto) menu_abrir();
   linha = i;
 }
@@ -403,6 +409,9 @@ static void desenhaBarra(float e, float a, int focos, float entrada) {
 }
 
 int menu_iniciar(void) {
+#ifdef NV_TOUCH_UI
+  tvToqueLimpar();
+#endif
   aberto = 0; destino = MENU_INICIO; linha = MENU_INICIO; mudou = 0;
   desliza = 0.0f; expande = 0.0f; expandeV = 0.0f;
   for (int i = 0; i < MENU_N; i++) animFoco[i] = 0.0f;
@@ -411,6 +420,9 @@ int menu_iniciar(void) {
 
 void menu_abrir(void) {
   if (aberto) return;
+#ifdef NV_TOUCH_UI
+  tvToqueLimpar();
+#endif
   // O destaque comeca sempre no destino em vigor, nunca onde ficou da ultima
   // vez: a barra e um mapa de onde voce esta, e abrir com o destaque em outro
   // item faria o usuario ler que ja mudou de tela.
@@ -480,10 +492,15 @@ void menu_evento(const SDL_Event *e) {
       (e->key.keysym.sym == SDLK_RETURN || e->key.keysym.sym == SDLK_KP_ENTER)) {
     int longo = buscaLongo;
     buscaOk = buscaLongo = 0;
-    if (!longo && linha == MENU_BUSCAR) escolher();
+    if (ponteiro_ok_longo() && linha == MENU_BUSCAR) {
+      pediuSpot = 1; aberto = 0; linha = destino;
+    } else if (!longo && linha == MENU_BUSCAR) escolher();
     return;
   }
   if (e->type != SDL_KEYDOWN) return;
+#ifdef NV_TOUCH_UI
+  tvToqueLimpar();
+#endif
   SDL_Keycode k = e->key.keysym.sym;
   // OK em Buscar so arma; a repeticao do firmware (OK segurado manda KEYDOWNs
   // separados) nao rearma.
@@ -702,6 +719,9 @@ void menu_desenhar(Uint32 agora) {
   gfx_escala_sair(ant);
 }
 static void menu_desenharCorpo_(Uint32 agora) {
+#ifdef NV_TOUCH_UI
+  if (layout_modo_mobile() && !aberto && !ponteiro_borda_registrada()) return;
+#endif
   (void)agora;
   if (tvAtivo()) { tvDesenhar(); return; }
   // Rail fixa sempre presente, como no shell legacy: a pilula estreita, so
@@ -806,6 +826,24 @@ static int assentado(void) {
   return desliza < 0.002f && expande <= 0.004f && fabsf(expandeV) < 0.05f;
 }
 static float tvRolar = 0.0f, tvRolarV = 0.0f;
+#ifdef NV_TOUCH_UI
+static int tvToqueLivre;
+static void tvToqueLimpar(void) { tvToqueLivre = 0; }
+static GfxRect tvToqueRegiao;
+static float tvToqueEscala = 1.0f, tvToqueMaximo;
+static int tvToqueRolar(const PonteiroRolagem *e) {
+  if (e->fase == PONT_ROL_INICIO) {
+    if (!e->eixoY || !aberto || e->x < tvToqueRegiao.x || e->x >= tvToqueRegiao.x + tvToqueRegiao.w || e->y < tvToqueRegiao.y || e->y >= tvToqueRegiao.y + tvToqueRegiao.h) return 0;
+    tvToqueLivre = 1; tvRolarV = 0.0f; buscaOk = buscaLongo = 0; return 1;
+  }
+  if (e->fase == PONT_ROL_MOVER || e->fase == PONT_ROL_INERCIA) {
+    float antes = tvRolar;
+    tvRolar = anim_clamp(tvRolar - e->delta / tvToqueEscala, 0.0f, tvToqueMaximo);
+    return fabsf(tvRolar - antes) > 0.001f;
+  }
+  return 1;
+}
+#endif
 static float tvPilAlfa = 1.0f, tvPilAlvo = 1.0f;
 
 static int tvAtivo(void) { return ajustes_home_layout() == HOME_LAYOUT_DINAMICA; }
@@ -922,7 +960,13 @@ static void tvAtualizar(float dt) {
     if (alvoR > total - vis) alvoR = total - vis;
     if (alvoR < 0.0f) alvoR = 0.0f;
     if (!aberto && tvAbre <= 0.002f) { tvRolar = 0.0f; tvRolarV = 0.0f; }
-    else tvRolar = anim_mola2(&tvRolarV, tvRolar, alvoR, dt, TV_MOLA_ROLAR); }
+    else {
+#ifdef NV_TOUCH_UI
+      if (tvToqueLivre) tvRolar = anim_clamp(tvRolar, 0.0f, total - vis);
+      else
+#endif
+      tvRolar = anim_mola2(&tvRolarV, tvRolar, alvoR, dt, TV_MOLA_ROLAR);
+    } }
   for (i = 0; i < NV_MENU_FOCOS_TV; i++) {
     float a = (aberto && i == linha) ? 1.0f : 0.0f;
     animFoco[i] = anim_mola(animFoco[i], a, dt,
@@ -1031,7 +1075,15 @@ static void tvSombra(float a) {
     gfx_cor((GfxRect){ x, 0, 20, NV_TELA_H }, 0.0f, 0, 0, 0, 0.22f * a * (1.0f - i / 16.0f));
 }
 
-static void tvPonteiroPilula(int a, int b) { (void)a; (void)b; menu_abrir(); }
+static void tvPonteiroPilula(int a, int b) {
+  (void)a; (void)b;
+#ifdef NV_TOUCH_UI
+  if (layout_modo_mobile()) ponteiro_borda_ativar();
+  else menu_abrir();
+#else
+  menu_abrir();
+#endif
+}
 
 static void tvDesenhar(void) {
   float s = tvAbre < 0.0f ? 0.0f : (tvAbre > 1.0f ? 1.0f : tvAbre);
@@ -1052,7 +1104,13 @@ static void tvDesenhar(void) {
         ponteiro_alvo(NV_MENU_PILULA_X, P.y, P.x + P.w - NV_MENU_PILULA_X, P.h,
                       NULL, tvPonteiroPilula, 0, 0);
       else
+#ifdef NV_TOUCH_UI
+        ponteiro_alvo(0, 0, 28.0f, NV_TELA_H,
+                      layout_modo_mobile() ? NULL : tvPonteiroPilula,
+                      layout_modo_mobile() ? tvPonteiroPilula : NULL, 0, 0);
+#else
         ponteiro_alvo(0, 0, 28.0f, NV_TELA_H, tvPonteiroPilula, NULL, 0, 0);
+#endif
     }
     if (pa <= 0.01f) return;
   }
@@ -1070,6 +1128,14 @@ static void tvDesenhar(void) {
   if (aberto) {
     ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ponteiroFora, 0, 0);
     ponteiro_alvo(Q.x, Q.y, Q.w, Q.h, NULL, NULL, 0, 0);
+#ifdef NV_TOUCH_UI
+    { float ys[NV_MENU_FOCOS_TV];
+      tvToqueEscala = gfx_escala();
+      tvToqueRegiao = (GfxRect){Q.x * tvToqueEscala, Q.y * tvToqueEscala, Q.w * tvToqueEscala, Q.h * tvToqueEscala};
+      tvToqueMaximo = fmaxf(0.0f, tvLayout(ys, NULL) - Q.h);
+      ponteiro_rolagem(tvToqueRolar);
+    }
+#endif
   }
 
   // Keep the polished Apple TV shape and focus; its material follows the
@@ -1182,3 +1248,4 @@ static void tvDesenhar(void) {
     gfx_sem_recorte();
   }
 }
+

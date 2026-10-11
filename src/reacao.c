@@ -20,6 +20,7 @@
 #define NV_ESCALA_TELA   // o arquivo inteiro mede pela tela virtual (escala.h)
 #include "escala.h"
 #include "ponteiro.h"
+#include "telefonecartao.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -208,12 +209,19 @@ static char  oferecido[24];      // titulo ja perguntado nesta sessao do player
 // 8 s e a tecla que a reinicia usam o mesmo relogio que a confere.
 static Uint32 ultimoAgora;
 static double durVista, durEstavel;
+#ifdef NV_TOUCH_UI
+static TelefoneCartao reacaoTelefone;
+static int reacaoTelefoneGeracao;
+#endif
 
 int reacao_aberta(void) { return c.aberto; }
 
 static void abrir(const char *imdb, const char *midia, const char *titulo,
                   const char *poster, int detalhe, Uint32 agora) {
   memset(&c, 0, sizeof c);
+#ifdef NV_TOUCH_UI
+  telefonecartao_limpar(&reacaoTelefone); reacaoTelefoneGeracao++;
+#endif
   c.aberto = 1;
   c.modoDetalhe = detalhe;
   atividade_id_puro(c.imdb, sizeof c.imdb, imdb);
@@ -409,6 +417,63 @@ static void ponteiroResposta(int i, int b) {
 }
 int reacao_teste_foco(void) { return c.foco; }
 
+#ifdef NV_TOUCH_UI
+static int reacaoTelefoneRolar(const PonteiroRolagem *e) {
+  if (!c.aberto || c.escrevendo || !telefoneui_ativo()) return 0;
+  return toquerol_evento(&reacaoTelefone.rolagem, e);
+}
+static void reacaoTelefoneEscolher(int i, int chave) {
+  SDL_Event e;
+  if (!telefoneui_ativo() || !c.aberto || c.escrevendo || chave != reacaoTelefoneGeracao * 2 + c.passo || i < 0 || i > 2) return;
+  c.foco = i; c.desde = ultimoAgora;
+  memset(&e, 0, sizeof e); e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_RETURN;
+  reacao_evento(&e, 0);
+}
+static float reacaoTelefoneConteudo(const char *perg, const char *orig, const char *ver,
+                                   float x, float y, float w, float a, Uint32 agora) {
+  float inicio = y;
+  if (orig[0]) y += telefonecartao_texto(TXT_G18M, orig, x, y, w, 28, .68f * a) + 16;
+  y += telefonecartao_texto(TXT_ILHA_PERGUNTA, perg, x, y, w, 48, a) + 24;
+  if (ver[0]) y += telefonecartao_texto(TXT_ILHA_GENERO, ver, x, y, w, 28, .55f * a) + 16;
+  if (!c.modoDetalhe && c.aberto && !c.escrevendo) {
+    float resta = fmaxf(0, 1 - (float)(agora - c.desde) / REACAO_TIMEOUT_MS);
+    if (a > 0) plrui_trilho((GfxRect){x, y, w, 4}, resta, .953f, .949f, .937f, .55f * a);
+    y += 20;
+  }
+  return y - inicio;
+}
+static void reacaoTelefoneDesenhar(const char *perg, const char *orig, const char *ver,
+                                  const char *const *rot, Uint32 agora, float baseY, float a) {
+  float total, h, y, w = NV_TELA_W - 48;
+  int reg = c.aberto && !c.escrevendo && a > .99f && a < 1.01f;
+  total = reacaoTelefoneConteudo(perg, orig, ver, 0, 0, w - 56, 0, agora);
+  h = fminf(NV_TELA_H - 48, total + 48 + 3 * 76 + 2 * 12 + 24);
+  y = c.modoPainel || c.modoDetalhe ? (NV_TELA_H - h) * .5f : baseY - h;
+  y = fmaxf(24, fminf(y, NV_TELA_H - 24 - h));
+  reacaoTelefone.painel = (GfxRect){24, y, w, h};
+  reacaoTelefone.corpo = (GfxRect){52, y + 24, w - 56, h - 48 - 3 * 76 - 2 * 12 - 24};
+  reacaoTelefone.botoes = 3; reacaoTelefone.interativo = reg;
+  if (reacaoTelefone.chave != c.passo || a < .99f) {
+    telefonecartao_limpar(&reacaoTelefone); reacaoTelefone.chave = c.passo;
+  }
+  reacaoTelefone.offset = fminf(reacaoTelefone.offset, fmaxf(0, total - reacaoTelefone.corpo.h));
+  if (c.aberto && (c.modoDetalhe || c.modoPainel)) ponteiro_camada();
+  if (reg) {
+    ponteiro_alvo(24, y, w, h, NULL, NULL, 0, 0);
+    toquerol_vincular(&reacaoTelefone.rolagem, reacaoTelefone.corpo, gfx_escala(), 0,
+                     total - reacaoTelefone.corpo.h, 1, &reacaoTelefone.offset);
+    ponteiro_rolagem(reacaoTelefoneRolar);
+  }
+  plrui_material(reacaoTelefone.painel, 36, 0, a);
+  gfx_recorte(reacaoTelefone.corpo.x, reacaoTelefone.corpo.y, reacaoTelefone.corpo.w, reacaoTelefone.corpo.h);
+  reacaoTelefoneConteudo(perg, orig, ver, reacaoTelefone.corpo.x,
+                        reacaoTelefone.corpo.y - reacaoTelefone.offset, reacaoTelefone.corpo.w, a, agora);
+  gfx_sem_recorte();
+  for (int i = 0; i < 3; i++) telefonecartao_botao(&reacaoTelefone, i, rot[i], c.foco == i,
+                                                 ponteiroResposta, reacaoTelefoneEscolher, reacaoTelefoneGeracao * 2 + c.passo, a);
+}
+#endif
+
 static void reacao_desenharCorpo_(Uint32 agora, float baseY);
 // Camada ampliada (escala.h): o corpo desenha na tela virtual.
 void reacao_desenhar(Uint32 agora, float baseY) {
@@ -433,6 +498,9 @@ static void reacao_desenharCorpo_(Uint32 agora, float baseY) {
   ver[0] = 0;
   if (orig[0] && (c.envia || respondeAmigo()))
     snprintf(ver, sizeof ver, i18n("%s vai ver sua resposta"), c.nome);
+#ifdef NV_TOUCH_UI
+  if (telefoneui_ativo()) { reacaoTelefoneDesenhar(perg, orig, ver, rot, agora, baseY, a); return; }
+#endif
   for (i = 0; i < 3; i++) pw += plrui_botao_largura(rot[i], ico[i]) + (i ? 12.0f : 0.0f);
   if (pw + 72.0f > w) w = pw + 72.0f;
   lead = (float)txt_linha(TXT_ILHA_PERGUNTA, "Ág", 245, 246, 248, 255).h + 6.0f;

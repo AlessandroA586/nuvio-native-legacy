@@ -326,6 +326,7 @@ int ajustes_buscar(const char *consulta, AjusteBuscaResultado *resultados, int c
     if (item->tipo != IT_OPC) continue;
     op = item->op;
     if (op < 0 || op >= AJ_N || visto[op]) continue;
+    if (!ajOpcaoDisponivel(op)) continue;
     visto[op] = 1;
     if (op == AJ_ICONE_APP && !apoiador_ativo()) continue;
     if ((op == AJ_PERFIL_PESQ || op == AJ_PERFIL_EDITAR) && !recomenda_ativo()) continue;

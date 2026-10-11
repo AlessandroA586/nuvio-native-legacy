@@ -85,6 +85,7 @@
 #include "nlanc.h"
 #include "ctxmenu.h"
 #include "escala.h"
+#include "telefoneui.h"
 #include "ponteiro.h"
 
 // Tinta do texto sobre o foco: em vidro o foco e so contorno sobre superficie
@@ -325,6 +326,10 @@ static RevelaArte revArte[BIB_MAX_LINHAS][BIB_COLUNAS_MAX];
 static Uint32 ondaEm;
 static int ondaArmada;
 static float scrollY = 0.0f;
+static Uint32 okDesde;
+#ifdef NV_TOUCH_UI
+static int toqueLivre;
+#endif
 // Velocidade da mola de 2a ordem da rolagem (anim_mola2): partida macia e
 // cauda exponencial, a MESMA curva que a home mede. A de 1a ordem que estava
 // aqui partia na velocidade maxima e o primeiro quadro ja saltava 12%.
@@ -410,9 +415,15 @@ static float bibX(void) {
   ajustes_area_conteudo(NV_BIB_X, NV_TELA_W - NV_BIB_DIR, &x, NULL);
   return x;
 }
+static float bibDireita(void) {
+#ifdef NV_TOUCH_UI
+  if (NV_TELA_W < NV_TELA_H) return NV_TELA_W - NV_BIB_X;
+#endif
+  return NV_BIB_DIR;
+}
 static float bibW(void) {
   float w;
-  ajustes_area_conteudo(NV_BIB_X, NV_TELA_W - NV_BIB_DIR, NULL, &w);
+  ajustes_area_conteudo(NV_BIB_X, NV_TELA_W - bibDireita(), NULL, &w);
   return w;
 }
 // O TOPO (modos, chips, botoes, titulo, resumo e selo) NASCE A 120% E ACOMPANHA
@@ -422,10 +433,22 @@ static float bibW(void) {
 // canto esquerdo e a mesma largura reais de bibX/bibW — e a grade comeca
 // DEPOIS do topo ampliado (gradeYBase). So biblioteca_desenhar liga a escala.
 #define BIB_TOPO_ESCALA_MIN 1.2f
+static int bibRetrato(void) {
+#ifdef NV_TOUCH_UI
+  return NV_TELA_W < NV_TELA_H;
+#else
+  return 0;
+#endif
+}
 static float bibHS(void) { return escala_min(BIB_TOPO_ESCALA_MIN); }
 static float hdrX(void) { return bibX() / bibHS(); }
 static float hdrW(void) { return bibW() / bibHS(); }
-static float hdrDir(void) { return NV_BIB_DIR / bibHS(); }
+static float hdrDir(void) { return bibDireita() / bibHS(); }
+static float bibControleMax(void) { return (hdrW() - BIB_FAIXA_GAP * 2.0f) / 3.0f; }
+static float pickerY(void) {
+  return BIB_FAIXA_Y + (BIB_SEG_H - BIB_CHIP_H) * 0.5f
+       + (bibRetrato() ? BIB_SEG_H + BIB_FAIXA_GAP : 0.0f);
+}
 // Cartazes: o cartaz fica nos 268 medidos e sai uma coluna (6 -> 5 com a rail
 // fixa: 5 x 268 + 4 x 24 = 1436 nos 1584). Encolher o cartaz para manter seis
 // mudaria o raio, a borda e a arte pedida — e o dono ja aprovou esse tamanho.
@@ -439,13 +462,23 @@ static int colunasCartaz(void) {
   int n = (int)((bibW() + BIB_CARD_GAP) / (BIB_CARD_W + BIB_CARD_GAP));
   return n < 1 ? 1 : n > BIB_COLUNAS_MAX ? BIB_COLUNAS_MAX : n;
 }
+static int colunasLista(void) {
+#ifdef NV_TOUCH_UI
+  if (NV_TELA_W < NV_TELA_H) {
+    int n = (int)((bibW() + BIB_LC_PASSO - BIB_LC_W) / BIB_LC_PASSO);
+    return n < 1 ? 1 : n > BIB_LC_COLS ? BIB_LC_COLS : n;
+  }
+#endif
+  return BIB_LC_COLS;
+}
 static float larguraCartaoLista(void) {
-  float w = (bibW() - (BIB_LC_COLS - 1) * (BIB_LC_PASSO - BIB_LC_W)) / BIB_LC_COLS;
+  int n = colunasLista();
+  float w = (bibW() - (n - 1) * (BIB_LC_PASSO - BIB_LC_W)) / n;
   return w < BIB_LC_W ? w : BIB_LC_W;
 }
 static int colunas(void) {
   if (exibicao == VIS_LISTA) return 1;
-  return estado() == EST_LISTAS ? BIB_LC_COLS : colunasCartaz();
+  return estado() == EST_LISTAS ? colunasLista() : colunasCartaz();
 }
 static float passoColuna(void) {
   return estado() == EST_LISTAS ? larguraCartaoLista() + (BIB_LC_PASSO - BIB_LC_W)
@@ -467,9 +500,43 @@ static float passoLinha(void) {
   return BIB_LINHA_PASSO;
 }
 static float gradeY(void) {
-  return (estado() == EST_ITENS ? BIB_GRADE_Y_ABERTA : BIB_GRADE_Y_TITULOS) * bibHS();
+  float y = estado() == EST_ITENS ? BIB_GRADE_Y_ABERTA : BIB_GRADE_Y_TITULOS;
+  if (bibRetrato() && estado() != EST_ITENS) y += BIB_SEG_H + BIB_FAIXA_GAP;
+  return y * bibHS();
 }
 static int nLinhas(void) { return (nCelulas + colunas() - 1) / colunas(); }
+
+#ifdef NV_TOUCH_UI
+static float toqueBibliotecaMax(void) {
+  int linhas = nLinhas();
+  if (linhas > BIB_MAX_LINHAS) linhas = BIB_MAX_LINHAS;
+  return linhas > 0 ? fmaxf(0.0f, gradeY() + (linhas - 1) * passoLinha() + alturaLinha() - BIB_GRADE_BASE) : 0.0f;
+}
+static int toqueBibliotecaRolar(const PonteiroRolagem *e) {
+  if (e->fase == PONT_ROL_INICIO) {
+    if (!e->eixoY || e->x < bibX() || e->x >= bibX() + bibW() || e->y < gradeY() || e->y >= BIB_GRADE_BASE || nCelulas < 1 || teclado_aberto()) return 0;
+    toqueLivre = 1; velY = 0.0f; okDesde = 0;
+    return 1;
+  }
+  if (e->fase == PONT_ROL_MOVER || e->fase == PONT_ROL_INERCIA) {
+    float antes = scrollY;
+    scrollY = anim_clamp(scrollY - e->delta, 0.0f, toqueBibliotecaMax());
+    if (estado() == EST_ITENS && scrollY >= toqueBibliotecaMax() - 2.0f * passoLinha()) lst_itens_mais();
+    return fabsf(scrollY - antes) > 0.001f;
+  }
+  return 1;
+}
+static void toqueBibliotecaRetomarFoco(void) {
+  if (toqueLivre && nCelulas > 0) {
+    int r = (int)((scrollY + (BIB_GRADE_BASE - gradeY()) * 0.35f) / passoLinha());
+    int i = r * colunas() + foco.coluna;
+    if (i >= nCelulas) i = nCelulas - 1;
+    if (i < 0) i = 0;
+    foco.fileira = gradeIni() + i / colunas(); foco.coluna = i % colunas();
+  }
+  toqueLivre = 0;
+}
+#endif
 
 static int ehSerie(const CatItem *ci) {
   return ci && (!strcmp(ci->tipo, "series") || ci->nTemporadas > 0
@@ -522,6 +589,9 @@ static void remapear(int preservar) {
     return;
   }
   scrollY = 0.0f; velY = 0.0f;
+#ifdef NV_TOUCH_UI
+  toqueLivre = 0;
+#endif
   memset(animFoco, 0, sizeof animFoco); memset(revArte, 0, sizeof revArte);
   ondaArmada = 1; ondaEm = 0;
 }
@@ -942,7 +1012,6 @@ static void menuNaCelula(int i) {
 // O OK da grade e medido: KEYDOWN arma, KEYUP decide (toque x pressao longa), e
 // biblioteca_atualizar dispara o menu no limiar com o dedo ainda no botao — a
 // mesma mecanica da home (home.c), com o mesmo NV_HOLD_MS. Setas cancelam.
-static Uint32 okDesde;
 
 static void eventoAberta(SDL_Keycode k) {
   if (foco.fileira == 0) {
@@ -972,6 +1041,9 @@ void biblioteca_evento(const SDL_Event *e) {
   // as teclas. Deixar a grade responder por baixo foi o defeito que a busca de
   // codigo de amigo ja teve.
   if (teclado_aberto()) { teclado_evento(e); return; }
+#ifdef NV_TOUCH_UI
+  if (e->type == SDL_KEYDOWN) toqueBibliotecaRetomarFoco();
+#endif
   { SDL_Keycode kk = e->key.keysym.sym;
     int ehOk = kk == SDLK_RETURN || kk == SDLK_KP_ENTER || kk == SDLK_SPACE;
     // SOLTAR O OK: se ele foi armado numa celula e o menu nao abriu, foi toque.
@@ -980,7 +1052,10 @@ void biblioteca_evento(const SDL_Event *e) {
     if (e->type == SDL_KEYUP && ehOk) {
       Uint32 desde = okDesde;
       okDesde = 0;
-      if (desde) okNaCelula(celulaEmFoco());
+      if (desde) {
+        if (ponteiro_ok_longo()) menuNaCelula(celulaEmFoco());
+        else okNaCelula(celulaEmFoco());
+      }
       return;
     }
     if (e->type == SDL_KEYDOWN && ehOk && !e->key.repeat) {
@@ -1141,7 +1216,11 @@ void biblioteca_atualizar(float dt, Uint32 agora) {
     alvo = 0.0f;
   }
   if (alvo < 0.0f) alvo = 0.0f;
-  scrollY = anim_mola2(&velY, scrollY, alvo, dt, NV_MOLA2_SCROLL);
+#ifdef NV_TOUCH_UI
+  if (toqueLivre) scrollY = anim_clamp(scrollY, 0.0f, toqueBibliotecaMax());
+  else
+#endif
+    scrollY = anim_mola2(&velY, scrollY, alvo, dt, NV_MOLA2_SCROLL);
 }
 
 // ---------------------------------------------------------------- desenho
@@ -1348,7 +1427,8 @@ static float larguraModo(int a) {
   float w = (float)txt_linha(TXT_ROW_TITULO, ROT_MODO[a], 140, 140, 140, 255).w * BIB_ESC_MODO;
   textoModo(a, num, sizeof num);
   if (num[0]) w += 9.0f + (float)txt_linha(TXT_CAPTION2, num, 93, 93, 93, 255).w * BIB_ESC_N;
-  return w + BIB_SEG_ITEM_PADX * 2.0f;
+  w += BIB_SEG_ITEM_PADX * 2.0f;
+  return bibRetrato() ? fminf(w, (hdrW() - BIB_SEG_PAD * 2.0f - BIB_SEG_ITEM_GAP * (BIB_N_MODOS - 1)) / BIB_N_MODOS) : w;
 }
 static float larguraSeletor(void) {
   float w = BIB_SEG_PAD * 2.0f + BIB_SEG_ITEM_GAP * (BIB_N_MODOS - 1);
@@ -1359,16 +1439,25 @@ static float larguraSeletor(void) {
 // biblioteca_evento; o OK do clique chega depois, pelo caminho de sempre (aba
 // escolhe, seletor cicla, celula abre ou, segurado, abre o menu do cartaz).
 static void ponteiroModo(int a, int b) {
+#ifdef NV_TOUCH_UI
+  toqueLivre = 0;
+#endif
   (void)b;
   if (estado() == EST_ITENS || a < 0 || a >= BIB_N_MODOS) return;
   foco.fileira = BIB_FIL_MODO; foco.coluna = a;
 }
 static void ponteiroPicker(int p, int b) {
+#ifdef NV_TOUCH_UI
+  toqueLivre = 0;
+#endif
   (void)b;
   if (estado() == EST_ITENS || p < 0 || p > 2) return;
   pickSel = p; foco.fileira = BIB_FIL_PICK; foco.coluna = p;
 }
 static void ponteiroAcao(int a, int b) {
+#ifdef NV_TOUCH_UI
+  toqueLivre = 0;
+#endif
   (void)b;
   if (estado() != EST_ITENS || a < 0 || a > 2) return;
   acaoSel = a; foco.fileira = 0; foco.coluna = a;
@@ -1377,6 +1466,9 @@ static void ponteiroCelula(int i, int b) {
   int nc = colunas();
   (void)b;
   if (i < 0 || i >= nCelulas || nc < 1) return;
+#ifdef NV_TOUCH_UI
+  toqueLivre = 0;
+#endif
   foco.fileira = gradeIni() + i / nc; foco.coluna = i % nc;
 }
 
@@ -1405,13 +1497,19 @@ static void desenhaModos(void) {
     }
     t  = v > 0.5f ? ajustes_tinta_foco() : sel ? 255 : 140;
     tn = v > 0.5f ? ajustes_tinta_foco2() : sel ? 118 : 93;
-    l = txt_linha(TXT_ROW_TITULO, ROT_MODO[a], t, t, t, 255);
+    textoModo(a, num, sizeof num);
+    ln = (TxtLinha){0};
+    if (bibRetrato()) {
+      float util = r.w - BIB_SEG_ITEM_PADX * 2.0f;
+      if (num[0]) ln = txt_linha_corta(TXT_CAPTION2, num, tn, tn, tn, 255, util * .4f / BIB_ESC_N);
+      l = txt_linha_corta(TXT_ROW_TITULO, ROT_MODO[a], t, t, t, 255,
+                          (util - (num[0] ? 9.0f + (float)ln.w * BIB_ESC_N : 0.0f)) / BIB_ESC_MODO);
+    } else l = txt_linha(TXT_ROW_TITULO, ROT_MODO[a], t, t, t, 255);
     txtEsc(l, r.x + BIB_SEG_ITEM_PADX, r.y + (r.h - (float)l.h * BIB_ESC_MODO) * 0.5f,
            BIB_ESC_MODO, 1.0f);
-    textoModo(a, num, sizeof num);
     if (num[0]) {
       // Na linha de BASE do nome (align-items: baseline), nao no meio dele.
-      ln = txt_linha(TXT_CAPTION2, num, tn, tn, tn, 255);
+      if (!bibRetrato()) ln = txt_linha(TXT_CAPTION2, num, tn, tn, tn, 255);
       txtEsc(ln, r.x + BIB_SEG_ITEM_PADX + (float)l.w * BIB_ESC_MODO + 9.0f,
              r.y + (r.h + (float)l.h * BIB_ESC_MODO) * 0.5f - (float)ln.h * BIB_ESC_N - 1.0f,
              BIB_ESC_N, 1.0f);
@@ -1419,8 +1517,9 @@ static void desenhaModos(void) {
     x += w + BIB_SEG_ITEM_GAP;
   }
   // O fio vertical entre o seletor e os filtros (1 x 34, branco a 12%).
-  gfx_cor((GfxRect){ c.x + c.w + BIB_FAIXA_GAP, c.y + (c.h - 34.0f) * 0.5f, 1.0f, 34.0f },
-          0.0f, 1, 1, 1, .12f);
+  if (!bibRetrato())
+    gfx_cor((GfxRect){ c.x + c.w + BIB_FAIXA_GAP, c.y + (c.h - 34.0f) * 0.5f, 1.0f, 34.0f },
+            0.0f, 1, 1, 1, .12f);
 }
 
 static void pickerTexto(int p, const char **rot, const char **val) {
@@ -1439,13 +1538,14 @@ static void pickerTexto(int p, const char **rot, const char **val) {
 static float pickerLargura(int p) {
   const char *rot, *val;
   pickerTexto(p, &rot, &val);
-  return (float)txt_linha(TXT_CAPTION2, rot, 117, 117, 117, 255).w * BIB_ESC_ROT + 6.0f
+  float w = (float)txt_linha(TXT_CAPTION2, rot, 117, 117, 117, 255).w * BIB_ESC_ROT + 6.0f
        + (float)txt_linha(TXT_HERO_SEC, val, 245, 245, 245, 255).w * BIB_ESC_VAL
        + BIB_CHIP_PADX * 2.0f;
+  return bibRetrato() ? fminf(w, bibControleMax()) : w;
 }
 
 static float pickerX(int p) {
-  float x = hdrX() + larguraSeletor() + BIB_FAIXA_GAP * 2.0f + 1.0f;
+  float x = hdrX() + (bibRetrato() ? 0.0f : larguraSeletor() + BIB_FAIXA_GAP * 2.0f + 1.0f);
   int i;
   for (i = 0; i < p; i++) x += pickerLargura(i) + BIB_FAIXA_GAP;
   return x;
@@ -1454,7 +1554,7 @@ static float pickerX(int p) {
 static void desenhaPicker(int p, float f) {
   const char *rot, *val;
   float w = pickerLargura(p);
-  GfxRect r = { pickerX(p), BIB_FAIXA_Y + (BIB_SEG_H - BIB_CHIP_H) * 0.5f, w, BIB_CHIP_H };
+  GfxRect r = { pickerX(p), pickerY(), w, BIB_CHIP_H };
   float v = anim_clamp(f, 0.0f, 1.0f);
   ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroPicker, NULL, p, 0);
   // Repouso: o vidro dos filtros (branco a 6%) ou, no solido, o #15161a do
@@ -1472,8 +1572,15 @@ static void desenhaPicker(int p, float f) {
     TxtLinha tr, tv;
     float x = r.x + BIB_CHIP_PADX;
     pickerTexto(p, &rot, &val);
-    tr = txt_linha(TXT_CAPTION2, rot, rotulo, rotulo, rotulo, 255);
-    tv = txt_linha(TXT_HERO_SEC, val, valor, valor, valor, 255);
+    if (bibRetrato()) {
+      float util = r.w - BIB_CHIP_PADX * 2.0f;
+      tr = txt_linha_corta(TXT_CAPTION2, rot, rotulo, rotulo, rotulo, 255, util * .45f / BIB_ESC_ROT);
+      tv = txt_linha_corta(TXT_HERO_SEC, val, valor, valor, valor, 255,
+                           (util - (float)tr.w * BIB_ESC_ROT - 6.0f) / BIB_ESC_VAL);
+    } else {
+      tr = txt_linha(TXT_CAPTION2, rot, rotulo, rotulo, rotulo, 255);
+      tv = txt_linha(TXT_HERO_SEC, val, valor, valor, valor, 255);
+    }
     txtEsc(tr, x, r.y + (r.h - (float)tr.h * BIB_ESC_ROT) * 0.5f, BIB_ESC_ROT, 1.0f);
     x += (float)tr.w * BIB_ESC_ROT + 6.0f;
     txtEsc(tv, x, r.y + (r.h - (float)tv.h * BIB_ESC_VAL) * 0.5f, BIB_ESC_VAL, 1.0f); }
@@ -1484,8 +1591,9 @@ static void desenhaPicker(int p, float f) {
 // do texto) — eram tres pilulas de 520/520/300 x 72, o dobro de qualquer botao
 // do mockup.
 static float larguraAcao(const char *rot) {
-  return (float)txt_linha(TXT_HERO_SEC, rot, 245, 245, 245, 255).w * BIB_ESC_VAL
-       + BIB_CHIP_PADX * 2.0f + 8.0f;
+  float w = (float)txt_linha(TXT_HERO_SEC, rot, 245, 245, 245, 255).w * BIB_ESC_VAL
+          + BIB_CHIP_PADX * 2.0f + 8.0f;
+  return bibRetrato() ? fminf(w, bibControleMax()) : w;
 }
 static void desenhaAcoes(void) {
   float x = hdrX();
@@ -1506,7 +1614,9 @@ static void desenhaAcoes(void) {
     r.w = larguraAcao(rot);
     ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroAcao, NULL, a, 0);
     cor = pilula(r, 0.5f, animPick[a], ligada);
-    { TxtLinha l = txt_linha(TXT_HERO_SEC, rot, cor, cor, cor, 255);
+    { TxtLinha l = bibRetrato()
+        ? txt_linha_corta(TXT_HERO_SEC, rot, cor, cor, cor, 255, (r.w - BIB_CHIP_PADX * 2.0f) / BIB_ESC_VAL)
+        : txt_linha(TXT_HERO_SEC, rot, cor, cor, cor, 255);
       txtEsc(l, r.x + (r.w - (float)l.w * BIB_ESC_VAL) * 0.5f,
              r.y + (r.h - (float)l.h * BIB_ESC_VAL) * 0.5f, BIB_ESC_VAL, 1.0f); }
     x += r.w + BIB_FAIXA_GAP;
@@ -1977,6 +2087,24 @@ static void desenhaCartaoLista(const LstLista *l, GfxRect r, float f, float a) {
   if (!l) return;
   tintaSecundaria(cor, &sr, &sg, &sb);
   subtituloLista(l, sub, sizeof sub);
+  if (telefoneui_ativo()) {
+    int fixada = lst_fixada(l);
+    TxtLinha fx = fixada ? txt_linha_corta(TXT_CAPTION2, i18n("FIXADA"), cor, cor, cor, 255, larg * .45f)
+                        : (TxtLinha){0};
+    TxtLinha medida = txt_linha(TXT_CAPTION2, sub, sr, sg, sb, 255);
+    float rodapeH = fmaxf(medida.h, fx.h), rodapeY = r.y + r.h - BIB_LC_PAD - rodapeH;
+    float marca = seloFonte(l, r.x + BIB_LC_PAD, rodapeY, rodapeH, cor, a);
+    float apoioX = r.x + BIB_LC_PAD + (marca > 0 ? marca + 12 : 0);
+    float apoioW = r.x + r.w - BIB_LC_PAD - apoioX - (fixada ? fx.w + 12 : 0);
+    TxtLinha apoio = txt_linha_corta(TXT_CAPTION2, sub, sr, sg, sb, 255, apoioW);
+    int linhas = (int)floorf((rodapeY - y - 6) / BIB_LC_ENTRE);
+    if (linhas < 1) linhas = 1;
+    if (linhas > 2) linhas = 2;
+    txt_bloco(TXT_CALLOUT, l->titulo, cor, cor, cor, r.x + BIB_LC_PAD, y, larg, BIB_LC_ENTRE, a, linhas);
+    txt_desenhar_alpha(apoio, apoioX, rodapeY, a * .95f);
+    if (fixada) txt_desenhar_alpha(fx, r.x + r.w - BIB_LC_PAD - fx.w, rodapeY, a * .95f);
+    return;
+  }
   { float wMarca = seloFonte(l, r.x + BIB_LC_PAD, y, 22.0f, cor, a);
     if (wMarca > 0.0f) y += 28.0f; }
   // TITULO EM ATE DUAS LINHAS. Com quatro cartoes de 414 o nome ja saia cortado
@@ -2012,6 +2140,15 @@ static void desenhaLinhaLista(const LstLista *l, float y, float f, float a) {
     if (w > 0.0f) tx += w + 26.0f; }
   { TxtLinha s2 = txt_linha_corta(TXT_CAPTION2, sub, sr, sg, sb, 255, 340.0f);
     float xDir = r.x + bibW() - 24.0f;
+    if (telefoneui_ativo() && lst_fixada(l)) {
+      TxtLinha fx = txt_linha_corta(TXT_CAPTION2, i18n("FIXADA"), cor, cor, cor, 255, (xDir - tx) * .25f);
+      float fxX = xDir - s2.w - 24 - fx.w;
+      TxtLinha t = txt_linha_corta(TXT_CALLOUT, l->titulo, cor, cor, cor, 255, fxX - 24 - tx);
+      txt_desenhar_alpha(t, tx, y + (BIB_LL_H - t.h) * .5f, a);
+      txt_desenhar_alpha(fx, fxX, y + (BIB_LL_H - fx.h) * .5f, a * .95f);
+      txt_desenhar_alpha(s2, xDir - s2.w, y + (BIB_LL_H - s2.h) * .5f, a * .95f);
+      return;
+    }
     TxtLinha t = txt_linha_corta(TXT_CALLOUT, l->titulo, cor, cor, cor, 255,
                                  xDir - (float)s2.w - 60.0f - tx);
     txt_desenhar_alpha(t, tx, y + (BIB_LL_H - (float)t.h) * 0.5f, a);
@@ -2176,6 +2313,9 @@ static void barraHold(GfxRect r, float a) {
 void biblioteca_desenhar(Uint32 agora) {
   int linhas, r, c, nc = colunas();
   float passoC, passoL, gy, gcy;
+#ifdef NV_TOUCH_UI
+  if (!teclado_aberto()) ponteiro_rolagem(toqueBibliotecaRolar);
+#endif
   // Mesmo ajuste, mesma disciplina da home: o rebordo claro do GFX_CARD e
   // ligado aqui e DEVOLVIDO no fim, porque a variavel e global e as outras
   // telas desenham card tambem.

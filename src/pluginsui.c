@@ -61,6 +61,21 @@ static void ok(void) {
   plugins_alternar_scraper(repo, foco - 1);
 }
 
+static void abrirRepo(void) {
+  if (plugins_disponivel() && nivel == 0 && foco >= 2 && foco < linhas()) {
+    repo = foco - 2; focoSalvo = foco; nivel = 1; foco = 0; armado = 0; aviso[0] = 0;
+  }
+}
+
+#ifdef NV_TOUCH_UI
+void pluginsui_detalhes(int i, int b) {
+  (void)b;
+  if (sair || teclado_aberto() || nivel != 0 || i < 2 || i >= linhas()) return;
+  foco = i;
+  abrirRepo();
+}
+#endif
+
 void pluginsui_evento(const SDL_Event *e) {
   int n;
   if (teclado_aberto()) { teclado_evento(e); return; }
@@ -71,9 +86,7 @@ void pluginsui_evento(const SDL_Event *e) {
     case SDLK_DOWN: if (foco < n - 1) { foco++; armado = 0; } break;
     case SDLK_RETURN: case SDLK_KP_ENTER: ok(); break;
     case SDLK_RIGHT:
-      if (plugins_disponivel() && nivel == 0 && foco >= 2) {
-        repo = foco - 2; focoSalvo = foco; nivel = 1; foco = 0; armado = 0; aviso[0] = 0;
-      }
+      abrirRepo();
       break;
     case SDLK_AC_BACK: case SDLK_ESCAPE: case SDLK_BACKSPACE: case SDLK_LEFT: voltar(); break;
     default: break;

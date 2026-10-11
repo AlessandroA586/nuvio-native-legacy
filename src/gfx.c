@@ -91,16 +91,16 @@ float gfx_opacidade_grupo = 1.0f;
 float gfx_osd_mult = 1.0f;
 // Tamanho real do alvo da tela (em retina, maior que 1920x1080). Guardado aqui
 // porque toda volta de FBO precisa restaurar o viewport com ele.
-static int telaW = (int)NV_TELA_W, telaH = (int)NV_TELA_H;
+static int telaW = (int)NV_TELA_BASE_W, telaH = (int)NV_TELA_BASE_H;
 // MINIATURA (gfx_mini_*): o espaco de layout que o VS mapeia no viewport e a
 // escala do alvo. Fora dela, a tela cheia de sempre.
-static float uTelaW = NV_TELA_W, uTelaH = NV_TELA_H;
+static float uTelaW = NV_TELA_BASE_W, uTelaH = NV_TELA_BASE_H;
 static int   miniAtiva, miniPxW, miniPxH;
 static float miniX0, miniY0, miniEsc;
 // O alvo da TELA (o ultimo gfx_tamanho_alvo): a unidade de gfx_fill_gpu. Os
 // alvos pequenos (luz assada, snapshot) mudam telaW por dentro e contam pelo
 // tamanho deles.
-static int telaRealW = (int)NV_TELA_W, telaRealH = (int)NV_TELA_H;
+static int telaRealW = (int)NV_TELA_BASE_W, telaRealH = (int)NV_TELA_BASE_H;
 // A tesoura ligada por gfx_recorte, em pixels do alvo (origem embaixo).
 static int recorteAtivo;
 static GLint recorteBox[4];
@@ -126,8 +126,13 @@ static double fillGpuArea(GfxRect r, const float sub[4]) {
   return (double)(x1 - x0) * (double)(y1 - y0) / ((double)telaRealW * (double)telaRealH);
 }
 /* Pixels do alvo da tela por unidade de layout (1920 de largura): 1 em 1080p, 2 em 4K. */
-float gfx_px_por_unidade(void) { return (float)telaRealW / 1920.0f; }
-void gfx_tamanho_alvo(int w, int h) { telaW = w; telaH = h; telaRealW = w; telaRealH = h; }
+float gfx_px_por_unidade(void) { return (float)telaRealW / NV_TELA_W; }
+void gfx_tamanho_alvo(int w, int h) {
+  telaW = w; telaH = h; telaRealW = w; telaRealH = h;
+#ifdef NV_TOUCH_UI
+  uTelaW = NV_TELA_W; uTelaH = NV_TELA_H;
+#endif
+}
 // Tamanho da interface (gfx.h). escAtiva multiplica o retangulo de layout
 // antes de tudo: o SDF, os raios e as espessuras sao fracoes do proprio rect,
 // e uAlt sai da altura JA ampliada — a rampa de borda segue com 1 px do alvo.
@@ -3153,12 +3158,12 @@ void gfx_snap_comecar(void) {
 // o sintoma do dono e a home sumida atras do Social.
 int gfx_snap_vazio(int *maxCanal) {
   static unsigned char lin[1100 * 4];
-  int k, i, mx = 0;
+  int k, i, mx = 0, n = snapW < 1100 ? snapW : 1100;
   if (!snapFbo || !snapAtivo) return 0;
   for (k = 0; k < 3; k++) {
     int y = snapH * (k == 0 ? 3 : k == 1 ? 5 : 7) / 10;
-    glReadPixels(0, y, 1100 < snapW ? 1100 : snapW, 1, GL_RGBA, GL_UNSIGNED_BYTE, lin);
-    for (i = 0; i < 1100 * 4; i += 4) {
+    glReadPixels(0, y, n, 1, GL_RGBA, GL_UNSIGNED_BYTE, lin);
+    for (i = 0; i < n * 4; i += 4) {
       if (lin[i] > mx) mx = lin[i];
       if (lin[i + 1] > mx) mx = lin[i + 1];
       if (lin[i + 2] > mx) mx = lin[i + 2];
@@ -3188,6 +3193,9 @@ void gfx_snap_desenhar(void) {
 }
 
 void gfx_snap_encerrar(void) {
+#ifdef NV_TOUCH_UI
+  snapGeracao++;
+#endif
   if (snapFbo) glDeleteFramebuffers(1, &snapFbo);
   if (snapTex) glDeleteTextures(1, &snapTex);
   snapFbo = snapTex = 0;

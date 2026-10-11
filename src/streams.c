@@ -39,6 +39,7 @@
 #include "video.h"
 #include "botoes.h"
 #include "ponteiro.h"
+#include "rolagemtoque.h"
 #include "player.h"
 #include "plrilha.h"
 #define NV_ESCALA_TELA   // o arquivo inteiro mede pela tela virtual (escala.h)
@@ -54,7 +55,8 @@
 // A ILHA DO MOCKUP APROVADO (Glass UI, design/glass-ilha "Fontes", e o
 // player-mockup de 03/10): 820 de largura, a 40 das bordas, raio 36 — a
 // mesma folha dos Episodios no player.
-#define FOLHA_W        820.0f
+#include "telefoneui.h"
+#define FOLHA_W        telefoneui_largura(820.0f, NV_TELA_W, FOLHA_MARGEM)
 #define FOLHA_MARGEM    40.0f
 #define FOLHA_RAIO_IL   36.0f
 #define FOLHA_PAD_E     48.0f  // da borda da folha ao cartao da linha
@@ -395,6 +397,17 @@ static float anim = 0.0f, rolagem = 0.0f;
 // cauda exponencial, a MESMA curva que a home mede. A de 1a ordem que estava
 // aqui partia na velocidade maxima e o primeiro quadro ja saltava 12%.
 static float velRol = 0.0f;
+#ifdef NV_TOUCH_UI
+static ToqueRolagem toqueFontes, toqueFontesAbas;
+static float toqueFontesAbasOffset;
+static int toqueFontesRolar(const PonteiroRolagem *e) {
+  int r;
+  if (!aberta) return 0;
+  r = toquerol_evento(e->eixoY ? &toqueFontes : &toqueFontesAbas, e);
+  if (r && e->eixoY) velRol = 0.0f;
+  return r;
+}
+#endif
 // Linha do realce, em unidades de ITEM (2.4 = entre o terceiro e o quarto). O
 // realce escorrega entre as linhas em vez de saltar: com o salto seco a folha
 // parecia trocar de conteudo a cada tecla, e num D-pad e a continuidade do
@@ -2735,6 +2748,9 @@ static void desenharAudioBars(float x, float y, float alt, float alfa, Uint32 ag
 }
 
 void stream_folha_abrir(void) {
+#ifdef NV_TOUCH_UI
+  toquerol_limpar(&toqueFontes); toquerol_limpar(&toqueFontesAbas); toqueFontesAbasOffset = 0;
+#endif
   int excl, aut, alvo;
   fitAbrir();
   aberta=1; escolha=-1; grupo=1; filtro=0; soMp4=0; soCache=0; soDub=0; recarregar=0;
@@ -2825,6 +2841,9 @@ void stream_atualizar_lista(const Stream *l, int qtd) {
 }
 int stream_folha_n(void) { return nFiltrados(); }
 void stream_folha_evento(const SDL_Event *e) {
+#ifdef NV_TOUCH_UI
+  if (toquerol_navegacao(e)) { toquerol_limpar(&toqueFontes); toquerol_limpar(&toqueFontesAbas); }
+#endif
   if(!aberta || e->type!=SDL_KEYDOWN) return;
   SDL_Keycode k=e->key.keysym.sym;
   if(k==SDLK_ESCAPE || k==SDLK_AC_BACK || k==SDLK_BACKSPACE || k==SDLK_DELETE) {aberta=0;return;}
@@ -2916,9 +2935,19 @@ void stream_folha_atualizar(float dt, Uint32 agora) {
   montar(automaticaDaFolha());
   if (focoFixo >= 0) {
     int r = grupo == 1 ? linhaDe(focoFixo) : -1;
-    if (r >= 0) { rolagem += linhaY[r] - focoFixoY; foco = r; focoVisto = r; }
+    if (r >= 0) {
+#ifdef NV_TOUCH_UI
+      if (!toqueFontes.livre)
+#endif
+      rolagem += linhaY[r] - focoFixoY;
+      foco = r; focoVisto = r;
+    }
     focoFixo = -1;
   }
+#ifdef NV_TOUCH_UI
+  if (toqueFontes.livre) { rolagem = toquerol_clamp(rolagem, 0, fmaxf(0, alturaTotal - areaLista() + 40)); velRol = 0; }
+  else
+#endif
   rolagem=anim_mola2(&velRol,rolagem,alvoRolagem(),dt,NV_MOLA2_SCROLL);
 }
 int stream_folha_escolheu(int *out) {
@@ -2932,6 +2961,9 @@ int stream_folha_escolheu(int *out) {
 static void ponteiroFolhaBotao(int i, int b) { (void)b; grupo = -1; foco = i; }
 static void ponteiroFolhaLinha(int row, int b) { (void)b; grupo = 1; foco = row; }
 static void ponteiroFolhaFiltro(int i, int b) {
+#ifdef NV_TOUCH_UI
+  toquerol_limpar(&toqueFontes);
+#endif
   (void)b;
   if (i < -1 || i >= nProvedores) return;
   filtro = i; foco = 0; rolagem = 0; grupo = 1;
@@ -3247,6 +3279,11 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
   ai=(int)(ar*255.0f+.5f);
   if (ilha) plrilha_rect(&ilhaR);
   int ptr = aberta && anim > .5f && ponteiro_ativo();
+#ifdef NV_TOUCH_UI
+  toquerol_vincular(&toqueFontes, (GfxRect){x, FOLHA_TOPO, w, areaLista()},
+                   gfx_escala(), 0, alturaTotal - areaLista() + 40, 1, &rolagem);
+  if (ptr) ponteiro_rolagem(toqueFontesRolar);
+#endif
   if (ptr && ilha) {
     ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ponteiroFolhaFora, 0, 0);
     ponteiro_alvo(ilhaR.x, ilhaR.y, ilhaR.w, ilhaR.h, NULL, NULL, 0, 0);
@@ -3327,14 +3364,34 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     soma=2*pin; int fim=ini;
     while(fim<nProvedores && soma+iw[fim+1]+6.0f<=maxW){ soma+=iw[fim+1]+6.0f; fim++; }
     if(fim==ini) fim=ini+1;
+#ifdef NV_TOUCH_UI
+    { float total = 2 * pin, antes = 0;
+      for (int i = -1; i < nProvedores; i++) { total += iw[i + 1] + 6; if (i < ini) antes += iw[i + 1] + 6; }
+      if (!toqueFontesAbas.livre) toqueFontesAbasOffset = antes;
+      toquerol_vincular(&toqueFontesAbas, (GfxRect){lx - 2, segY, maxW, FOLHA_ABAS_H}, gfx_escala(),
+                       0, total - 6 - maxW, 0, &toqueFontesAbasOffset);
+      ini = -1; fim = nProvedores; soma = fminf(total, maxW + 6);
+      gfx_recorte(lx - 2, segY, maxW, FOLHA_ABAS_H);
+    }
+#endif
     sx=lx-2.0f;
     if (ajustes_vidro()) gfx_cor((GfxRect){sx,segY,soma-6.0f,FOLHA_ABAS_H},.5f,1,1,1,.05f*anim);
     else gfx_cor((GfxRect){sx,segY,soma-6.0f,FOLHA_ABAS_H},.5f,.113f,.118f,.137f,anim);
     sx+=pin;
+#ifdef NV_TOUCH_UI
+    sx -= toqueFontesAbasOffset;
+#endif
     for(int i=ini;i<fim;i++){
       int qidx=i+1;
       GfxRect r={sx,segY+pin,iw[qidx],FOLHA_ABA_H}; int sel=i==filtro;
-      if (ptr) ponteiro_alvo(r.x, r.y, r.w, r.h, NULL, ponteiroFolhaFiltro, i, 0);
+      if (ptr) {
+#ifdef NV_TOUCH_UI
+        float l = fmaxf(r.x, lx - 2), d = fminf(r.x + r.w, lx - 2 + maxW);
+        if (d > l) ponteiro_alvo(l, r.y, d - l, r.h, NULL, ponteiroFolhaFiltro, i, 0);
+#else
+        ponteiro_alvo(r.x, r.y, r.w, r.h, NULL, ponteiroFolhaFiltro, i, 0);
+#endif
+      }
       if(sel&&grupo==0) focoFonte(r,.5f,anim);
       else if(sel) { if (ajustes_vidro()) gfx_cor(r,.5f,1,1,1,.12f*anim); else gfx_cor(r,.5f,.204f,.212f,.243f,anim); }
       txt_desenhar_alpha(nome[qidx],r.x+22,r.y+(FOLHA_ABA_H-nome[qidx].h)*.5f,anim);

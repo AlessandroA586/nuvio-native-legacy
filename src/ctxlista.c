@@ -7,6 +7,7 @@
 #include "descoberta.h"
 #include "layout.h"
 #include "anim.h"
+#include "ponteiro.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -38,6 +39,7 @@ int ctxhold_evento(CtxHold *h, const SDL_Event *e, int celulaAceita) {
   // fechou a barra lateral ou o menu solta sobre esta tela.
   if (!h->armado) return CTXH_NADA;
   ctxhold_cancelar(h);
+  if (ponteiro_ok_longo()) return CTXH_LONGO;
   return CTXH_TOQUE;
 }
 
@@ -91,14 +93,14 @@ int ctxlista_abrir(int idx, GfxRect r, const char *arte) {
 // chegue depois disso e outro pedido, e abrir um menu que ninguem espera seria
 // pior que nao abrir.
 #define CTXL_PRAZO_MS 20000u
-static struct { int vivo; Uint32 desde; GfxRect r; char arte[1024]; } pend;
+static struct { int vivo, solto; Uint32 desde; GfxRect r; char arte[1024]; } pend;
 
 int ctxlista_pedir(const char *imdb, long tmdb, const char *tipo,
                    const char *titulo, const char *ano, const char *poster,
                    GfxRect r, const char *arte) {
   if (desc_titulo_buscando()) return 0;
   if ((!imdb || !imdb[0]) && tmdb <= 0) return 0;
-  pend.vivo = 1; pend.desde = SDL_GetTicks(); pend.r = r;
+  pend.vivo = 1; pend.solto = ponteiro_ok_longo(); pend.desde = SDL_GetTicks(); pend.r = r;
   snprintf(pend.arte, sizeof pend.arte, "%s", arte ? arte : "");
   desc_pedir_titulo_semente(imdb ? imdb : "", tmdb, tipo, titulo, ano, poster);
   return 1;
@@ -108,7 +110,13 @@ int ctxlista_tomar(int idx) {
   if (!pend.vivo) return 0;
   pend.vivo = 0;
   // Velho ou com outro menu na frente: engole, nao abre a pagina que ninguem pediu.
-  if (SDL_GetTicks() - pend.desde <= CTXL_PRAZO_MS && !ctx_aberto())
+  if (SDL_GetTicks() - pend.desde <= CTXL_PRAZO_MS && !ctx_aberto()) {
     ctxlista_abrir(idx, pend.r, pend.arte);
+    if (pend.solto && ctx_aberto()) {
+      SDL_Event up; SDL_zero(up); up.type = SDL_KEYUP;
+      up.key.keysym.sym = SDLK_RETURN; up.key.state = SDL_RELEASED;
+      ctx_evento(&up);
+    }
+  }
   return 1;
 }

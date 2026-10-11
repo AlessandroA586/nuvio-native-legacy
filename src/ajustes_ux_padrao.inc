@@ -254,3 +254,4 @@
   0, /* P2P space limit (#334): Automatico */
   0, /* Source display order (#400): Por qualidade, local */
   0, /* Sincronia automática da legenda: Ligado, local */
+  0, /* interface mode: TV, including on phones until Mobile is selected */

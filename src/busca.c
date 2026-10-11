@@ -66,14 +66,35 @@
 // CIMA da primeira fileira do teclado — e OK nele chama o teclado da TV; o
 // microfone (Falar) e o celular entram dentro do campo, no fim.
 #define BU_MARG        96.0f
-#define BU_COL_W      520.0f
+#define BU_COL_W      buColW()
 #define BU_COL_GAP     56.0f
-#define BU_CAMPO_H     76.0f
+#define BU_CAMPO_H     buCampoH()
 #define BU_ILHA_GAP    22.0f
 #define BU_KB_PAD      20.0f
 #define BU_CAMPO_PADX  28.0f
-static float buX(void)   { return ajustes_rail_largura_fixa() + BU_MARG; }
-static float buDir(void) { return NV_TELA_W - BU_MARG; }
+static int buRetrato(void) {
+#ifdef NV_TOUCH_UI
+  return NV_TELA_H > NV_TELA_W;
+#else
+  return 0;
+#endif
+}
+static int buTelefone(void) {
+#ifdef NV_TOUCH_UI
+  return layout_modo_mobile();
+#else
+  return 0;
+#endif
+}
+static int buRetratoTelefone(void) { return buRetrato() && buTelefone(); }
+static int buTecladoNativo(void) { return buTelefone() && st_ime_disponivel(); }
+static int buUmaColuna(void) { return buRetrato() || buTecladoNativo(); }
+static float buCampoH(void) { return buTecladoNativo() ? 104.0f : 76.0f; }
+static float buMargem(void) { return buTelefone() ? 48.0f : BU_MARG; }
+static float buX(void)   { return ajustes_rail_largura_fixa() + buMargem(); }
+static float buDir(void) { return NV_TELA_W - (buRetratoTelefone() ? buX() : buMargem()); }
+static float buColW(void) { return buUmaColuna() ? buDir() - buX() : 520.0f; }
+static float buResY(void);
 // A coluna da esquerda desce quando a pilula da Dinamica ocupa o canto.
 static float buTopoEsq(void) {
   float px, py, pw, ph;
@@ -96,8 +117,8 @@ static float buTopoEsq(void) {
 #define BU_MAX_CONSULTA 48
 
 // --- Coluna da direita --------------------------------------------------------
-#define BU_RES_X       (buX() + BU_COL_W + BU_COL_GAP)
-#define BU_RES_Y       64.0f
+#define BU_RES_X       (buUmaColuna() ? buX() : buX() + BU_COL_W + BU_COL_GAP)
+#define BU_RES_Y       buResY()
 #define BU_DIR         buDir()
 #define BU_RES_AREA_H  (NV_TELA_H - 48.0f - BU_RES_Y)
 // 32 fixas, e nao FOCUS_MAX_FILEIRAS: aquele teto subiu para a grade da
@@ -110,7 +131,7 @@ static float buTopoEsq(void) {
 #define BU_MELHOR_H    226.0f
 #define BU_CARTAZ_W    180.0f
 #define BU_CARTAZ_H    270.0f
-#define BU_NOME_ALT     30.0f
+#define BU_NOME_ALT     (buTecladoNativo() ? 50.0f : 30.0f)
 #define BU_SECAO_GAP    34.0f
 
 // --- Buscas recentes (campo vazio; regras em buscasrec.h) ---------------------
@@ -181,6 +202,14 @@ static int    filNova[BU_MAX_FILEIRAS];
 static Uint32 filEntraEm[BU_MAX_FILEIRAS];
 static float scrollY = 0.0f, scrollAlvo = 0.0f;
 static float scrollX[BU_MAX_FILEIRAS];
+#ifdef NV_TOUCH_UI
+static int toqueLivreY, toqueLivreX[BU_MAX_FILEIRAS], toqueFileira = -1;
+static void toqueBuscaLimpar(void) {
+  toqueLivreY = 0; toqueFileira = -1;
+  memset(toqueLivreX, 0, sizeof toqueLivreX);
+}
+static void toqueBuscaRetomarFoco(void);
+#endif
 // Velocidade da mola de 2a ordem da rolagem (anim_mola2): partida macia e
 // cauda exponencial, a MESMA curva que a home mede. A de 1a ordem que estava
 // aqui partia na velocidade maxima e o primeiro quadro ja saltava 12%.
@@ -243,6 +272,12 @@ static int  kbN;                           // teclas de letra do layout ativo
 static int  kbFil = 6;                     // fileiras de letra do layout ativo
 static int  kbTemLayout;                   // a tecla de layout aparece?
 static int  KB_COLUNAS[BU_KB_MAX_FIL + 1] = { 6, 6, 6, 6, 6, 6, 3 };
+static float buResY(void) {
+  if (buTecladoNativo()) return buTopoEsq() + BU_CAMPO_H + 44.0f;
+  if (!buRetrato()) return 64.0f;
+  return BU_KB_Y + 2.0f * BU_KB_PAD + (kbFil + 1) * BU_TECLA_W
+       + kbFil * BU_TECLA_GAP + 92.0f;
+}
 
 // O idioma dos metadados usa cirilico? (ru, uk, be, bg, sr, mk)
 static int idiomaCirilico(void) {
@@ -594,6 +629,13 @@ montado:
   { char chaveAntes[BU_MAX_FILEIRAS][96];
     Uint32 entraAntes[BU_MAX_FILEIRAS];
     int novaAntes[BU_MAX_FILEIRAS];
+#ifdef NV_TOUCH_UI
+    int livresAntes[BU_MAX_FILEIRAS], toqueAntes = toqueFileira;
+    float scrollAntes[BU_MAX_FILEIRAS];
+    memcpy(livresAntes, toqueLivreX, sizeof livresAntes);
+    memcpy(scrollAntes, scrollX, sizeof scrollAntes);
+    memset(toqueLivreX, 0, sizeof toqueLivreX); toqueFileira = -1;
+#endif
     memcpy(chaveAntes, filChave, sizeof chaveAntes);
     memcpy(entraAntes, filEntraEm, sizeof entraAntes);
     memcpy(novaAntes, filNova, sizeof novaAntes);
@@ -605,7 +647,14 @@ montado:
       filNova[r] = 1;
       for (int k = 0; k < BU_MAX_FILEIRAS; k++)
         if (chaveAntes[k][0] && !strcmp(chaveAntes[k], filChave[r])) {
-          filNova[r] = novaAntes[k]; filEntraEm[r] = entraAntes[k]; break;
+          filNova[r] = novaAntes[k]; filEntraEm[r] = entraAntes[k];
+#ifdef NV_TOUCH_UI
+          if (mesmaConsulta && livresAntes[k]) {
+            toqueLivreX[r] = 1; scrollX[r] = scrollAntes[k]; velX[r] = 0.0f;
+          }
+          if (mesmaConsulta && k == toqueAntes) toqueFileira = r;
+#endif
+          break;
         }
     } }
 
@@ -625,6 +674,9 @@ montado:
   if (nFil == 0 && painel == 1) painel = 0;
   memset(animRes, 0, sizeof animRes); memset(revRes, 0, sizeof revRes);
   if (!mesmaConsulta) {
+#ifdef NV_TOUCH_UI
+    toqueBuscaLimpar();
+#endif
     memset(scrollX, 0, sizeof scrollX); memset(velX, 0, sizeof velX);
     scrollY = scrollAlvo = 0.0f; velY = 0.0f;
   }
@@ -695,6 +747,8 @@ static void recentesVertical(int dy) {
     if (c < 0) c = 0;
     if (c >= fil[0].n) c = fil[0].n - 1;
     painel = 1; focoRes.fileira = 0; focoRes.coluna = c;
+  } else if (dy < 0 && buTecladoNativo()) {
+    painel = 0; campoFoco = 1;
   }
 }
 
@@ -756,19 +810,39 @@ static void campoOk(void) {
   else if (campoFoco == 2) st_voz_iniciar(ST_BUSCA);
   else st_ime_abrir(ST_BUSCA, consulta, BU_MAX_CONSULTA - 1);
 }
-static void focarCampoPonteiro(int a, int b) { (void)b; painel = 0; campoFoco = a; }
+static void focarCampoPonteiro(int a, int b) {
+  (void)b;
+#ifdef NV_TOUCH_UI
+  toqueBuscaLimpar();
+#endif
+  painel = 0; campoFoco = a;
+}
 
 // PONTEIRO (#99) NO TECLADO E NOS RESULTADOS: a tecla ou o titulo sob o cursor
 // ganha o foco pelas mesmas variaveis das setas; o OK do clique digita a tecla
 // ou abre o titulo, pelo caminho de sempre.
 static void ponteiroTecla(int f, int c) {
   if (f < 0 || f > kbFil || c < 0 || c >= KB_COLUNAS[f]) return;
+#ifdef NV_TOUCH_UI
+  toqueBuscaLimpar();
+#endif
   painel = 0; campoFoco = 0; focoKb.fileira = f; focoKb.coluna = c; focoKb.colunaLembrada[f] = c;
 }
 static void ponteiroResultado(int r, int c) {
   if (r < 0 || r >= nFil || c < 0 || c >= fil[r].n) return;
+#ifdef NV_TOUCH_UI
+  toqueBuscaLimpar();
+#endif
   painel = 1; focoRes.fileira = r; focoRes.coluna = c; focoRes.colunaLembrada[r] = c;
 }
+#ifdef NV_TOUCH_UI
+static void ponteiroRecente(int i, int b) {
+  (void)b;
+  if (i < 0 || i >= nRecLayout) return;
+  toqueBuscaLimpar();
+  painel = 2; focoRec = i;
+}
+#endif
 
 static void aplicarTecla(void) {
   if (focoKb.fileira < kbFil) {
@@ -815,6 +889,9 @@ static GfxRect retanguloTecla(int fileira, int coluna) {
 
 // --- Ciclo de vida -----------------------------------------------------------
 int busca_iniciar(void) {
+#ifdef NV_TOUCH_UI
+  toqueBuscaLimpar();
+#endif
   layoutCir = 0;
   kbMontar();
   focus_iniciar(&focoKb, kbFil + 1, KB_COLUNAS);
@@ -831,7 +908,7 @@ int busca_iniciar(void) {
   memset(animRec, 0, sizeof animRec);
   focoRec = 0; nRecLayout = 0;
   okPress = okLongo = 0; okDesde = 0;
-  campoFoco = 0; animFocoCampo = animMic = 0.0f;
+  campoFoco = buTecladoNativo() ? 1 : 0; animFocoCampo = animMic = 0.0f;
   refiltrar();
   return 1;
 }
@@ -901,6 +978,9 @@ static int menuNoResultado(void) {
 
 void busca_evento(const SDL_Event *e) {
   if (e->type == SDL_QUIT) { sair = 1; return; }
+#ifdef NV_TOUCH_UI
+  if (e->type == SDL_KEYDOWN) toqueBuscaRetomarFoco();
+#endif
   if (st_evento(e)) return;   // teclado da TV: o valor inteiro vem por sistexto
   // TEXTO DE TECLADO FISICO OU IME (#176): o que nao e ASCII (cirilico, ș, ț,
   // ă...) chega como SDL_TEXTINPUT. O ASCII fica com o SDL_KEYDOWN abaixo — o
@@ -917,6 +997,7 @@ void busca_evento(const SDL_Event *e) {
   // OK NUM RESULTADO DECIDE NA SOLTURA, como a pilula: toque abre o titulo,
   // segurar abre o menu do cartaz.
   switch (ctxhold_evento(&holdRes, e, resultadoAceitaMenu())) {
+    case CTXH_LONGO: if (!menuNoResultado()) abrirResultado(); return;
     case CTXH_CONSUMIDO: return;
     case CTXH_TOQUE: abrirResultado(); return;
     default: break;
@@ -929,7 +1010,7 @@ void busca_evento(const SDL_Event *e) {
     if (e->type == SDL_KEYDOWN) {
       if (!okPress) { okPress = 1; okLongo = 0; okDesde = SDL_GetTicks(); }
     } else if (e->type == SDL_KEYUP && okPress) {
-      Uint32 dur = SDL_GetTicks() - okDesde;
+      Uint32 dur = ponteiro_ok_longo() ? NV_HOLD_MS : SDL_GetTicks() - okDesde;
       okPress = 0; okDesde = 0;
       if (okLongo) okLongo = 0;
       else if (dur >= NV_HOLD_MS) recentesRemover();
@@ -941,6 +1022,7 @@ void busca_evento(const SDL_Event *e) {
     okPress = 0; okLongo = 0; okDesde = 0;
   }
   if (e->type != SDL_KEYDOWN) return;
+  if (buTecladoNativo() && painel == 0 && !campoFoco) campoFoco = 1;
 
   if (k == SDLK_BACKSPACE && painel == 0) {
     if (nConsulta > 0) { campoApagar(); refiltrar(); }
@@ -987,7 +1069,13 @@ void busca_evento(const SDL_Event *e) {
 
   if (painel == 0 && campoFoco) {
     switch (k) {
-      case SDLK_DOWN: campoFoco = 0; return;
+      case SDLK_DOWN:
+        if (buTecladoNativo()) {
+          if (nFil > 0 && !sugestao) { registrarConsulta(); painel = 1; }
+          else if (recentesVisiveis()) recentesEntrar();
+          else if (nFil > 0) painel = 1;
+        } else campoFoco = 0;
+        return;
       // DIREITA anda campo -> Falar -> Celular, o que existir aqui.
       case SDLK_RIGHT:
         if (campoFoco == 1 && st_voz_disponivel()) campoFoco = 2;
@@ -1067,8 +1155,9 @@ void busca_evento(const SDL_Event *e) {
         focus_mover(&focoRes, 1, 0);
       }
       break;
-    case SDLK_UP:
-      if (!focus_mover(&focoRes, 0, -1) && sugestao && focoRes.fileira == 0 && recentesVisiveis()) {
+    case SDLK_UP: {
+      int moveu = focus_mover(&focoRes, 0, -1);
+      if (!moveu && sugestao && focoRes.fileira == 0 && recentesVisiveis()) {
         // Do primeiro Populares de volta as pilulas: a mais proxima em x.
         float cx = BU_RES_X + focoRes.coluna * buPasso() - scrollX[0] + buCartazW() * 0.5f;
         float melhor = 1e9f;
@@ -1081,8 +1170,9 @@ void busca_evento(const SDL_Event *e) {
           if (d < melhor) { melhor = d; focoRec = i; }
         }
         recentesAjustarFoco();
-      }
+      } else if (!moveu && buTecladoNativo()) { painel = 0; campoFoco = 1; }
       break;
+    }
     case SDLK_DOWN: focus_mover(&focoRes, 0,  1); break;
     case SDLK_RETURN: case SDLK_KP_ENTER: abrirResultado(); break;
     default: break;
@@ -1092,25 +1182,121 @@ void busca_evento(const SDL_Event *e) {
 // --- Geometria das entradas da direita ---------------------------------------
 // Passo e largura do cartaz: 5 colunas iguais com vao 22 na largura da coluna
 // (o grid de 5 do mockup); mais estreita (rail fixa), o cartaz encolhe 2:3.
-static float buPasso(void) { return ((BU_DIR - BU_RES_X) - 4.0f * 22.0f) / 5.0f + 22.0f; }
-static float buCartazW(void) { float w = buPasso() - 22.0f; return w < BU_CARTAZ_W ? w : BU_CARTAZ_W; }
+static float buPasso(void) {
+  float larg = BU_DIR - BU_RES_X;
+#ifdef NV_TOUCH_UI
+  if (buTecladoNativo()) {
+    int cols = buRetrato() ? 3 : (int)((larg + 22.0f) / 270.0f);
+    if (cols < 1) cols = 1;
+    if (cols > 8) cols = 8;
+    return (fmaxf(1.0f, larg) - (cols - 1) * 22.0f) / cols + 22.0f;
+  }
+  int cols = (int)((larg + 22.0f) / 182.0f);
+  if (cols < 1) cols = 1;
+  if (cols > 5) cols = 5;
+  return (fmaxf(1.0f, larg) - (cols - 1) * 22.0f) / cols + 22.0f;
+#else
+  return (larg - 4.0f * 22.0f) / 5.0f + 22.0f;
+#endif
+}
+static float buCartazW(void) {
+  float w = buPasso() - 22.0f;
+  return buTecladoNativo() || w < BU_CARTAZ_W ? w : BU_CARTAZ_W;
+}
 // PESSOAS: avatar 64 + 14 + nome (18), vao 26 entre pessoas (o .av do mockup).
-#define BU_PESS_AV     64.0f
+#define BU_PESS_AV     (buTecladoNativo() ? 96.0f : 64.0f)
 #define BU_PESS_GAP    26.0f
 #define BU_PESS_NOMEMAX 230.0f
 // x (relativo a coluna) e largura de cada pessoa, preenchidos pelo desenho (a
 // largura do nome vem do texto rasterizado) e lidos pela rolagem.
 static float pessX[BU_MAX_PESS], pessW[BU_MAX_PESS];
+static float filKickH(int r) {
+#ifdef NV_TOUCH_UI
+  int origem = !fil[r].melhor && fil[r].origem && fil[r].origem[0];
+  if (origem && (buRetrato() || BU_DIR - BU_RES_X < 760.0f))
+    return buTecladoNativo() ? 78.0f : 58.0f;
+  if (buTecladoNativo()) return 46.0f;
+#else
+  (void)r;
+#endif
+  return BU_KICK_H;
+}
 static float filAlt(int r) {
-  if (fil[r].pessoas) return BU_KICK_H + BU_PESS_AV;
-  if (fil[r].melhor) return BU_KICK_H + BU_MELHOR_H;
-  return BU_KICK_H + buCartazW() * 1.5f + BU_NOME_ALT;
+  // O alvo e a pilula de foco chegam 8px abaixo do avatar no telefone.
+  if (fil[r].pessoas) return filKickH(r) + BU_PESS_AV + (buTelefone() ? 8.0f : 0.0f);
+  if (fil[r].melhor) return filKickH(r) + BU_MELHOR_H;
+  return filKickH(r) + buCartazW() * 1.5f + BU_NOME_ALT;
 }
 static float filTopo(int r) {
   float y = sugestao ? sugDesloc : 0.0f;
   for (int i = 0; i < r; i++) y += filAlt(i) + BU_SECAO_GAP;
   return y;
 }
+
+#ifdef NV_TOUCH_UI
+static float toqueBuscaMaxY(void) {
+  float fim = nFil > 0 ? filTopo(nFil - 1) + filAlt(nFil - 1)
+                      : recentesVisiveis() ? sugDesloc - BU_SECAO_GAP : 0.0f;
+  return fmaxf(0.0f, fim - BU_RES_AREA_H);
+}
+static float toqueBuscaMaxX(int r) {
+  int n = fil[r].n;
+  float fim;
+  if (n < 1 || fil[r].melhor) return 0.0f;
+  fim = fil[r].pessoas ? pessX[n - 1] + pessW[n - 1]
+                      : (n - 1) * buPasso() + buCartazW();
+  return fmaxf(0.0f, fim - (BU_DIR - BU_RES_X));
+}
+static int toqueBuscaRolar(const PonteiroRolagem *e) {
+  if (e->fase == PONT_ROL_INICIO) {
+    if (e->x < BU_RES_X || e->x >= BU_DIR || e->y < BU_RES_Y - 20.0f ||
+        e->y >= BU_RES_Y + BU_RES_AREA_H || (nFil < 1 && !recentesVisiveis())) return 0;
+    toqueFileira = -1;
+    if (!e->eixoY) {
+      for (int r = 0; r < nFil; r++) {
+        float y = BU_RES_Y + filTopo(r) - scrollY;
+        if (e->y >= y && e->y < y + filAlt(r)) { toqueFileira = r; break; }
+      }
+      if (toqueFileira < 0) return 0;
+      toqueLivreX[toqueFileira] = 1; velX[toqueFileira] = 0.0f;
+    }
+    toqueLivreY = 1; velY = 0.0f; scrollAlvo = scrollY;
+    ctxhold_cancelar(&holdRes);
+    return 1;
+  }
+  if (e->fase == PONT_ROL_MOVER || e->fase == PONT_ROL_INERCIA) {
+    float *s, antes, maximo;
+    if (e->eixoY) { s = &scrollY; maximo = toqueBuscaMaxY(); }
+    else {
+      if (toqueFileira < 0 || toqueFileira >= nFil) return 0;
+      s = &scrollX[toqueFileira]; maximo = toqueBuscaMaxX(toqueFileira);
+    }
+    antes = *s; *s = anim_clamp(*s - e->delta, 0.0f, maximo);
+    if (e->eixoY) scrollAlvo = scrollY;
+    return fabsf(*s - antes) > 0.001f;
+  }
+  if (e->fase == PONT_ROL_FIM || e->fase == PONT_ROL_CANCELAR) toqueFileira = -1;
+  return 1;
+}
+static void toqueBuscaRetomarFoco(void) {
+  if (toqueLivreY && nFil > 0) {
+    float ponto = scrollY + BU_RES_AREA_H * 0.35f;
+    int r = 0;
+    while (r + 1 < nFil && filTopo(r) + filAlt(r) < ponto) r++;
+    painel = 1; focoRes.fileira = r; focoRes.coluna = focoRes.colunaLembrada[r];
+  }
+  for (int r = 0; r < nFil; r++) if (toqueLivreX[r] && fil[r].n > 0) {
+    float ponto = scrollX[r] + (BU_DIR - BU_RES_X) * 0.35f;
+    int c = (int)(ponto / buPasso());
+    if (fil[r].pessoas) { c = 0; while (c + 1 < fil[r].n && pessX[c] + pessW[c] < ponto) c++; }
+    if (c >= fil[r].n) c = fil[r].n - 1;
+    if (c < 0) c = 0;
+    focoRes.colunaLembrada[r] = c;
+    if (focoRes.fileira == r) focoRes.coluna = c;
+  }
+  toqueBuscaLimpar();
+}
+#endif
 
 void busca_atualizar(float dt, Uint32 agora) {
   // TECLADO/VOZ DO SISTEMA (sistexto.h): o texto vem inteiro e substitui o campo.
@@ -1207,8 +1393,14 @@ void busca_atualizar(float dt, Uint32 agora) {
     int r = focoRes.fileira;
     float topo = filTopo(r);
     float base = topo + filAlt(r);
-    if (topo - scrollAlvo < 0.0f)             scrollAlvo = topo;
-    if (base - scrollAlvo > BU_RES_AREA_H)    scrollAlvo = base - BU_RES_AREA_H;
+#ifdef NV_TOUCH_UI
+    if (!toqueLivreY) {
+#endif
+      if (topo - scrollAlvo < 0.0f)             scrollAlvo = topo;
+      if (base - scrollAlvo > BU_RES_AREA_H)    scrollAlvo = base - BU_RES_AREA_H;
+#ifdef NV_TOUCH_UI
+    }
+#endif
 
     // Rolagem horizontal da fileira em foco, mesma regra da home.
     float util = BU_DIR - BU_RES_X;
@@ -1222,12 +1414,28 @@ void busca_atualizar(float dt, Uint32 agora) {
     if (dir - alvoX > util) alvoX = dir - util;
     if (esq - alvoX < 0.0f) alvoX = esq;
     if (alvoX < 0.0f) alvoX = 0.0f;
-    scrollX[r] = anim_mola2(&velX[r], scrollX[r], alvoX, dt, NV_MOLA2_SCROLL);
+#ifdef NV_TOUCH_UI
+    if (!toqueLivreX[r])
+#endif
+      scrollX[r] = anim_mola2(&velX[r], scrollX[r], alvoX, dt, NV_MOLA2_SCROLL);
   } else {
+#ifdef NV_TOUCH_UI
+    if (!toqueLivreY)
+#endif
     scrollAlvo = 0.0f;
   }
   if (scrollAlvo < 0.0f) scrollAlvo = 0.0f;
-  scrollY = anim_mola2(&velY, scrollY, scrollAlvo, dt, NV_MOLA2_SCROLL);
+#ifdef NV_TOUCH_UI
+  for (int r = 0; r < nFil; r++)
+    scrollX[r] = anim_clamp(scrollX[r], 0.0f, toqueBuscaMaxX(r));
+  scrollAlvo = anim_clamp(scrollAlvo, 0.0f, toqueBuscaMaxY());
+  if (toqueLivreY) scrollY = scrollAlvo = anim_clamp(scrollY, 0.0f, toqueBuscaMaxY());
+  else
+#endif
+    scrollY = anim_mola2(&velY, scrollY, scrollAlvo, dt, NV_MOLA2_SCROLL);
+#ifdef NV_TOUCH_UI
+  scrollY = anim_clamp(scrollY, 0.0f, toqueBuscaMaxY());
+#endif
 }
 
 // --- Desenho -----------------------------------------------------------------
@@ -1235,6 +1443,49 @@ void busca_atualizar(float dt, Uint32 agora) {
 // Sem contorno em lugar nenhum: foco = superficie mais clara (campo, tile) ou
 // pilula no acento (tecla, chip). O corpo do texto e o #F3F2EF do mockup.
 #define BU_TX 243, 242, 239, 255
+
+static void buAlvoResultado(GfxRect r, PonteiroFn focar, int a, int b) {
+#ifdef NV_TOUCH_UI
+  float x = fmaxf(r.x, BU_RES_X), y = fmaxf(r.y, BU_RES_Y - 20.0f);
+  float dir = fminf(r.x + r.w, BU_DIR);
+  float base = fminf(r.y + r.h, BU_RES_Y + BU_RES_AREA_H);
+  if (dir > x && base > y) ponteiro_alvo(x, y, dir - x, base - y, focar, NULL, a, b);
+#else
+  ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, BU_RES_Y - 20.0f,
+                      BU_RES_Y + BU_RES_AREA_H + 20.0f, focar, NULL, a, b);
+#endif
+}
+
+static void buCabecalho(int r, float y, float larg) {
+  const char *titulo = fil[r].melhor ? i18n("Melhor resultado") : fil[r].titulo;
+#ifdef NV_TOUCH_UI
+  int origem = !fil[r].melhor && fil[r].origem && fil[r].origem[0];
+  int empilhado = origem && (buRetrato() || larg < 760.0f);
+  float reserva = origem && !empilhado ? fminf(360.0f, larg * 0.32f) + 16.0f : 0.0f;
+  TxtLinha t = txt_linha_corta(buTecladoNativo() ? TXT_ILHA_SECAO : TXT_MINI,
+                              titulo, BU_TX, fmaxf(1.0f, larg - reserva));
+  txt_desenhar_alpha(t, BU_RES_X, y, 0.45f);
+  if (origem) {
+    char org[96];
+    float x = empilhado ? BU_RES_X : BU_RES_X + fminf((float)t.w, larg - reserva) + 16.0f;
+    float w = BU_DIR - x;
+    snprintf(org, sizeof org, i18n("de %s"), fil[r].origem);
+    if (w > 24.0f) {
+      TxtLinha ts = txt_linha_corta(buTecladoNativo() ? TXT_ILHA_CORPO : TXT_ILHA_APOIO,
+                                   org, BU_TX, w);
+      txt_desenhar_alpha(ts, x, y + (empilhado ? (buTecladoNativo() ? 32.0f : 24.0f) : 0.0f), 0.36f);
+    }
+  }
+#else
+  float kw = ajustes_ui_kicker(titulo, BU_RES_X, y, 1.0f);
+  if (!fil[r].melhor && fil[r].origem) {
+    char org[96];
+    snprintf(org, sizeof org, i18n("de %s"), fil[r].origem);
+    TxtLinha ts = txt_linha_corta(TXT_ILHA_APOIO, org, BU_TX, larg - kw - 16.0f);
+    txt_desenhar_alpha(ts, BU_RES_X + kw + 16.0f, y, 0.36f);
+  }
+#endif
+}
 
 static void buPilulaAcento(GfxRect r, float raioPx, float a) {
   float ar, ag, ab;
@@ -1270,6 +1521,7 @@ static void buArte(GfxRect r, const char *url, float raioPx, float a) {
 // sistema (Android) o campo e alvo de foco e o microfone/celular entram no fim.
 static void desenhaCampo(Uint32 agora) {
   GfxRect c = { buX(), buTopoEsq(), BU_COL_W, BU_CAMPO_H };
+  TxtEstilo estilo = buTecladoNativo() ? TXT_HEADLINE : TXT_CALLOUT;
   float ar, ag, ab;
   ajustes_acento(&ar, &ag, &ab);
   ajustes_ui_ilha(c, 38.0f, 0);
@@ -1285,7 +1537,8 @@ static void desenhaCampo(Uint32 agora) {
       gfx_opacidade_grupo = g;
     }
     if (temIme && ponteiro_ativo())
-      ponteiro_alvo(c.x, c.y, fim + 4.0f - c.x, c.h, focarCampoPonteiro, NULL, 1, 0);
+      ponteiro_alvo(c.x, c.y, (buUmaColuna() ? fminf(fim + 4.0f, c.x + c.w) : fim + 4.0f) - c.x,
+                    c.h, focarCampoPonteiro, NULL, 1, 0);
     if (temCel)
       celb_botao(CELB_BUSCA, (GfxRect){ cx, my, d, d }, painel == 0 && campoFoco == 3,
                  focarCampoPonteiro, 3, 0, 1.0f);
@@ -1309,25 +1562,28 @@ static void desenhaCampo(Uint32 agora) {
                 "menu_search", ci, ci, ci + 0.01f, 1.0f); }
     { float tx = c.x + BU_CAMPO_PADX + 28.0f + 16.0f;
       float maxW = fim - tx - 14.0f;
+      if (buUmaColuna()) gfx_recorte(tx - 8.0f, c.y + 4.0f, fim - tx, c.h - 8.0f);
       if (nConsulta) {
-        TxtLinha l = txt_linha_corta(TXT_CALLOUT, consulta, BU_TX, maxW);
+        TxtLinha l = txt_linha_corta(estilo, consulta, BU_TX, maxW);
         txt_desenhar(l, tx, c.y + (c.h - l.h) * 0.5f);
-        tx += l.w + 2.0f;
+        tx += (buUmaColuna() ? fminf((float)l.w, maxW) : (float)l.w) + 2.0f;
       } else {
         const char *av = st_dono() == ST_BUSCA ? st_aviso() : "";
         const char *ph = vozBusca() ? i18n("Ouvindo…") : av[0] ? i18n(av) : "Buscar filmes e séries";
-        TxtLinha l = txt_linha_corta(TXT_CALLOUT, ph, 255, av[0] && !vozBusca() ? 200 : 243,
+        TxtLinha l = txt_linha_corta(estilo, ph, 255, av[0] && !vozBusca() ? 200 : 243,
                                      av[0] && !vozBusca() ? 140 : 239, 255, maxW);
         txt_desenhar_alpha(l, tx, c.y + (c.h - l.h) * 0.5f, av[0] ? 0.9f : 0.42f);
       }
       if (painel == 0 && (nConsulta > 0 || campoFoco == 1) && (agora / 500) % 2 == 0)
         gfx_cor((GfxRect){ nConsulta ? tx + 2.0f : tx - 6.0f, c.y + (c.h - 30.0f) * 0.5f, 2.0f, 30.0f }, 0.5f, ar, ag, ab, 1.0f);
+      if (buUmaColuna()) gfx_sem_recorte();
     }
   }
 }
 
 // Ilha do teclado: teclas de 62 (raio 18), a focada na pilula do acento.
 static void desenhaTeclado(void) {
+  if (buTecladoNativo()) return;
   char rotulo[8];
   int linhas = kbFil + 1;
   GfxRect ilha = { BU_KB_X, BU_KB_Y, BU_COL_W,
@@ -1373,15 +1629,26 @@ static void desenhaVazio(void) {
   const char *t1 = nConsulta >= 2 ? "Nenhum título recebido" : "O que vamos assistir?";
   const char *t2 = nConsulta >= 2 ? "Os resultados dos addons aparecem aqui."
                              : "Digite ao menos 2 letras de um filme ou série.";
+#ifdef NV_TOUCH_UI
+  float larg = fmaxf(1.0f, BU_DIR - BU_RES_X);
+  TxtLinha l1 = txt_linha_corta(TXT_ILHA_TITULO, t1, BU_TX, larg);
+  TxtLinha l2 = txt_linha_corta(TXT_ILHA_CORPO, t2, BU_TX, larg);
+#else
   TxtLinha l1 = txt_linha(TXT_ILHA_TITULO, t1, BU_TX);
   TxtLinha l2 = txt_linha(TXT_ILHA_CORPO, t2, BU_TX);
+#endif
   float cx = BU_RES_X + (BU_DIR - BU_RES_X) * 0.5f;
   float y = BU_RES_Y + 220.0f;
   txt_desenhar(l1, cx - l1.w * 0.5f, y);
   txt_desenhar_alpha(l2, cx - l2.w * 0.5f, y + l1.h + 14.0f, 0.55f);
   if (nConsulta >= 2) {
+#ifdef NV_TOUCH_UI
+    TxtLinha ajuda = txt_linha_corta(TXT_ILHA_GENERO,
+        "Se não aparecerem, confira a conexão ou tente outro nome.", BU_TX, larg);
+#else
     TxtLinha ajuda = txt_linha(TXT_ILHA_GENERO,
         "Se não aparecerem, confira a conexão ou tente outro nome.", BU_TX);
+#endif
     txt_desenhar_alpha(ajuda, cx - ajuda.w * 0.5f, y + l1.h + l2.h + 36.0f, 0.42f);
   }
 }
@@ -1392,7 +1659,12 @@ static void desenhaRecentes(Uint32 agora, float dy) {
   int n = buscasrec_n(), i, lin = 0;
   float x = BU_RES_X, y = BU_REC_Y + dy, maxW = BU_DIR - BU_RES_X;
   const char *limpar = i18n("Limpar");
+#ifdef NV_TOUCH_UI
+  { TxtLinha t = txt_linha_corta(TXT_MINI, i18n("Buscas recentes"), BU_TX, maxW);
+    txt_desenhar_alpha(t, BU_RES_X, BU_RES_Y + dy, 0.45f); }
+#else
   ajustes_ui_kicker(i18n("Buscas recentes"), BU_RES_X, BU_RES_Y + dy, 1.0f);
+#endif
   nRecLayout = 0;
   for (i = 0; i <= n && i < BU_REC_ITENS; i++) {
     float f = animRec[i];
@@ -1400,12 +1672,20 @@ static void desenhaRecentes(Uint32 agora, float dy) {
     float w;
     TxtLinha l = i < n
       ? txt_linha_corta(TXT_AJ_SEG, buscasrec_termo(i), tinta, tinta, tinta, 255, maxW - 2.0f * BU_REC_PADX)
+#ifdef NV_TOUCH_UI
+      : txt_linha_corta(TXT_AJ_SEG, limpar, tinta, tinta, tinta, 255, maxW - 2.0f * BU_REC_PADX);
+    w = fminf((float)l.w + 2.0f * BU_REC_PADX, maxW);
+#else
       : txt_linha(TXT_AJ_SEG, limpar, tinta, tinta, tinta, 255);
     w = (float)l.w + 2.0f * BU_REC_PADX;
+#endif
     if (x > BU_RES_X && x + w > BU_DIR) { x = BU_RES_X; y += BU_REC_LINHA; lin++; }
     recRect[i] = (GfxRect){ x, y, w, BU_REC_H };
     recLin[i] = lin;
     nRecLayout = i + 1;
+#ifdef NV_TOUCH_UI
+    buAlvoResultado(recRect[i], ponteiroRecente, i, 0);
+#endif
     buNeutro(recRect[i], 28.0f, 0.08f, 1.0f - f);
     buPilulaAcento(recRect[i], 28.0f, f);
     txt_desenhar_alpha(l, x + BU_REC_PADX, y + (BU_REC_H - l.h) * 0.5f, i < n || f > 0.5f ? 1.0f : 0.85f);
@@ -1417,7 +1697,12 @@ static void desenhaRecentes(Uint32 agora, float dy) {
     }
     x += w + BU_REC_GAP;
   }
-  { TxtLinha d = txt_linha(TXT_ILHA_APOIO, i18n("OK   Buscar de novo      Segure OK   Remover"), BU_TX);
+  {
+#ifdef NV_TOUCH_UI
+    TxtLinha d = txt_linha_corta(TXT_ILHA_APOIO, i18n("OK   Buscar de novo      Segure OK   Remover"), BU_TX, maxW);
+#else
+    TxtLinha d = txt_linha(TXT_ILHA_APOIO, i18n("OK   Buscar de novo      Segure OK   Remover"), BU_TX);
+#endif
     txt_desenhar_alpha(d, BU_RES_X, y + BU_REC_H + 22.0f, 0.42f);
     // Onde as sugestoes comecam (relativo ao topo da coluna, sem a rolagem).
     sugDesloc = (y - dy) + BU_REC_H + 22.0f + d.h + BU_SECAO_GAP - BU_RES_Y; }
@@ -1427,12 +1712,36 @@ static void desenhaResultados(Uint32 agora) {
   float varreFoco = revela_varre(&revVarre, painel == 1
                                  ? focoRes.fileira * 64 + focoRes.coluna : -1, agora);
   temItemFoco = 0;
-  if (nFil == 0 && recentesVisiveis()) { sugDesloc = 0.0f; desenhaRecentes(agora, 0.0f); return; }
+#ifdef NV_TOUCH_UI
+  // Desenho, gesto e alvos compartilham a mesma janela de resultados.
+  gfx_recorte(BU_RES_X, BU_RES_Y - 20.0f, BU_DIR - BU_RES_X, BU_RES_AREA_H + 20.0f);
+  scrollY = anim_clamp(scrollY, 0.0f, toqueBuscaMaxY());
+  scrollAlvo = anim_clamp(scrollAlvo, 0.0f, toqueBuscaMaxY());
+  for (int r = 0; r < nFil; r++) scrollX[r] = anim_clamp(scrollX[r], 0.0f, toqueBuscaMaxX(r));
+#endif
+  if (nFil == 0 && recentesVisiveis()) {
+    sugDesloc = 0.0f;
+#ifdef NV_TOUCH_UI
+    desenhaRecentes(agora, -scrollY);
+    gfx_sem_recorte();
+#else
+    desenhaRecentes(agora, 0.0f);
+#endif
+    return;
+  }
   nRecLayout = 0;
-  if (nFil == 0) { desenhaVazio(); return; }
+  if (nFil == 0) {
+    desenhaVazio();
+#ifdef NV_TOUCH_UI
+    gfx_sem_recorte();
+#endif
+    return;
+  }
 
+#ifndef NV_TOUCH_UI
   gfx_recorte(BU_RES_X - 30.0f, BU_RES_Y - 20.0f,
               (BU_DIR - BU_RES_X) + 60.0f, BU_RES_AREA_H + 40.0f);
+#endif
   // CAMPO VAZIO: as pilulas das buscas recentes em cima e os Populares logo
   // abaixo, na mesma coluna e na mesma rolagem.
   if (sugestao && recentesVisiveis()) desenhaRecentes(agora, -scrollY);
@@ -1456,16 +1765,9 @@ static void desenhaResultados(Uint32 agora) {
     gfx_opacidade_grupo = grupo * revela_entra(filEntraEm[r], 0.0f, agora);
 
     // Rotulo da entrada: "Melhor resultado" ou o nome do catalogo (+ origem).
-    { float kw = ajustes_ui_kicker(fil[r].melhor ? i18n("Melhor resultado") : fil[r].titulo,
-                                   BU_RES_X, ry + 4.0f, 1.0f);
-      if (!fil[r].melhor && fil[r].origem) {
-        char org[96];
-        snprintf(org, sizeof org, i18n("de %s"), fil[r].origem);
-        TxtLinha ts = txt_linha_corta(TXT_ILHA_APOIO, org, BU_TX, larg - kw - 16.0f);
-        txt_desenhar_alpha(ts, BU_RES_X + kw + 16.0f, ry + 4.0f, 0.36f);
-      } }
+    buCabecalho(r, ry + 4.0f, larg);
     gfx_opacidade_grupo = grupo;
-    float cy = ry + BU_KICK_H;
+    float cy = ry + filKickH(r);
 
     if (fil[r].pessoas) {
       // PESSOAS (mockup): avatar redondo de 64, nome 18 a 14 ao lado, vao 26.
@@ -1475,15 +1777,16 @@ static void desenhaResultados(Uint32 agora) {
         int q = fil[r].itens[c];
         float f = animRes[r][c];
         float entra = filEntraEm[r] ? revela_entra(filEntraEm[r], revela_onda_atraso(c, 0), agora) : 1.0f;
-        TxtLinha nm = txt_linha_corta(TXT_ILHA_META, pess[q].nome, BU_TX, BU_PESS_NOMEMAX);
+        TxtLinha nm = txt_linha_corta(buTecladoNativo() ? TXT_ILHA_NOME : TXT_ILHA_META,
+                                     pess[q].nome, BU_TX, BU_PESS_NOMEMAX);
         float w = BU_PESS_AV + 14.0f + (float)nm.w;
         float px = BU_RES_X + x - scrollX[r];
         GfxRect av = { px, cy + (1.0f - entra) * NV_ENTRA_DY, BU_PESS_AV, BU_PESS_AV };
         pessX[c] = x; pessW[c] = w;
         x += w + BU_PESS_GAP;
         if (px > BU_DIR + 30.0f || px + w < BU_RES_X - 30.0f) continue;
-        ponteiro_alvo_faixa(av.x - 12.0f, cy - 8.0f, w + 30.0f, BU_PESS_AV + 16.0f,
-                            BU_RES_Y - 20.0f, BU_RES_Y + BU_RES_AREA_H + 20.0f, ponteiroResultado, NULL, r, c);
+        buAlvoResultado((GfxRect){av.x - 12.0f, cy - 8.0f, w + 30.0f, BU_PESS_AV + 16.0f},
+                        ponteiroResultado, r, c);
         gfx_opacidade_grupo = grupo * entra;
         if (f > 0.01f) {
           GfxRect pil = { av.x - 12.0f, av.y - 8.0f, w + 30.0f, BU_PESS_AV + 16.0f };
@@ -1512,8 +1815,7 @@ static void desenhaResultados(Uint32 agora) {
       float entra = filEntraEm[r] ? revela_entra(filEntraEm[r], 0.0f, agora) : 1.0f;
       if (!ci) continue;
       GfxRect t = { BU_RES_X, cy + (1.0f - entra) * NV_ENTRA_DY, larg, BU_MELHOR_H };
-      ponteiro_alvo_faixa(BU_RES_X, cy, larg, BU_MELHOR_H, BU_RES_Y - 20.0f,
-                          BU_RES_Y + BU_RES_AREA_H + 20.0f, ponteiroResultado, NULL, r, 0);
+      buAlvoResultado((GfxRect){BU_RES_X, cy, larg, BU_MELHOR_H}, ponteiroResultado, r, 0);
       gfx_opacidade_grupo = grupo * entra;
       ajustes_ui_ilha(t, 26.0f, 0);
       if (f > 0.01f) {
@@ -1525,6 +1827,9 @@ static void desenhaResultados(Uint32 agora) {
         GfxRect art = { t.x + 20.0f, t.y + 20.0f, 330.0f, t.h - 40.0f };
         float tx, ty, bloco;
         if (!ci->backdrop[0]) art.w = art.h * 2.0f / 3.0f;
+#ifdef NV_TOUCH_UI
+        art.w = fminf(art.w, fmaxf(1.0f, (t.w - 68.0f) * 0.45f));
+#endif
         buArte(art, ci->backdrop[0] ? url : posterprov_card_addon(ci->origem, ci->imdb, ci->tmdb, ci->tipo, url),
                14.0f, 1.0f);
         tx = art.x + art.w + 28.0f;
@@ -1565,10 +1870,14 @@ static void desenhaResultados(Uint32 agora) {
           float px = BU_RES_X + c * passo - scrollX[r];
           if (px > BU_DIR + 30.0f || px + cw < BU_RES_X - passo) continue;
           if (passe == 0 || f > 0.01f) {
+#ifdef NV_TOUCH_UI
+            buAlvoResultado((GfxRect){px, cy - 6.0f, cw, ch + 40.0f}, ponteiroResultado, r, c);
+#else
             float ax = px < BU_RES_X - 30.0f ? BU_RES_X - 30.0f : px;
             float aw = (px + cw > BU_DIR + 30.0f ? BU_DIR + 30.0f : px + cw) - ax;
             if (aw > 0.0f) ponteiro_alvo_faixa(ax, cy - 6.0f, aw, ch + 40.0f, BU_RES_Y - 20.0f,
                                                BU_RES_Y + BU_RES_AREA_H + 20.0f, ponteiroResultado, NULL, r, c);
+#endif
           }
           float entra = filEntraEm[r]
                       ? revela_entra(filEntraEm[r], revela_onda_atraso(c - c0, 0), agora) : 1.0f;
@@ -1597,7 +1906,8 @@ static void desenhaResultados(Uint32 agora) {
               gfx_esqueleto(p, raio, NV_COR_ESQUELETO_R, NV_COR_ESQUELETO_G, NV_COR_ESQUELETO_B, 1.0f);
             else
               gfx_cor(p, raio, NV_COR_ESQUELETO_R, NV_COR_ESQUELETO_G, NV_COR_ESQUELETO_B, 1.0f); }
-          { TxtLinha tn = txt_linha_corta(TXT_ILHA_GENERO, ci->titulo, BU_TX, cw);
+          { TxtLinha tn = txt_linha_corta(buTecladoNativo() ? TXT_ILHA_NOME : TXT_ILHA_GENERO,
+                                         ci->titulo, BU_TX, cw);
             txt_desenhar_alpha(tn, p.x, p.y + p.h + 10.0f, anim_mistura(0.62f, 1.0f, f)); }
           if (painel == 1 && focus_indice(&focoRes, r, c)) {
             itemFoco.indice = fil[r].itens[c];
@@ -1617,6 +1927,9 @@ static void desenhaResultados(Uint32 agora) {
 }
 
 void busca_desenhar(Uint32 agora) {
+#ifdef NV_TOUCH_UI
+  ponteiro_rolagem(toqueBuscaRolar);
+#endif
   ajustes_ui_fundo();
   // O .fundo da pagina no mockup (preto 70% em cima, 92% a 60%): os resultados
   // e o teclado leem sobre a arte sem competir com ela.
