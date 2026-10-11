@@ -625,6 +625,13 @@ static char erroTitulo[160], erroDica[160];
 // "Fonte 2 de 3": a tentativa do automatico VOD (app.c, tentarProximaFonteVOD).
 static int tentativaN, tentativaM;
 static int durFonteAvisada, durFontePulou, pedProximaFonte;
+// Cache da duracao esperada da fonte corrente (achado 4 do review #205):
+// duracaoFonteEsperada varre os episodios do titulo, e durFonteAtualizar roda
+// por quadro. Recalcula so quando o catalogo entrega episodios novos (TMDB
+// chegando atrasado sobe cat_geracao_episodios) ou o catalogo inteiro troca.
+static int durFonteEsperadaOk;
+static double durFonteEsperadaCache;
+static unsigned durFonteEsperadaGer, durFonteEsperadaRev;
 static Uint32 durFonteAcaoAte;
 // ABRINDO A FONTE, COMPACTO POR PADRAO (dono, 05/10): o cartao nasce enxuto —
 // o ponto, o estado e as marcas da fonte — e o BAIXO expande os detalhes.
@@ -1554,6 +1561,9 @@ static void dvTelaAtualizar(float dt, Uint32 agora) {
 void player_definir_fonte(const char *url) {
   if ((!aberto && !mini) || !url || !*url) return;
   durFonteAvisada = pedProximaFonte = 0;
+  // Fonte nova: a duracao esperada conhecida nao vale mais (mesmo titulo,
+  // episodio outro, catalogo pode ter andado).
+  durFonteEsperadaOk = 0;
   // So apaga o toast que era o aviso de duracao (os dois prazos caminham
   // juntos); qualquer OUTRO toast na tela (sem sinal, velocidade, DV) e do
   // video anterior e continua valendo ate o prazo dele.
@@ -2294,7 +2304,11 @@ static void durFonteAtualizar(double real, Uint32 agora) {
   char r[32], e[32], aviso[320];
   int rm, em;
   if (durFonteAvisada || ehCanal() || !isfinite(real) || real <= 1) return;
-  esperada = duracaoFonteEsperada();
+  { unsigned ger = cat_geracao_episodios(), rev = cat_revisao();
+    if (!durFonteEsperadaOk || durFonteEsperadaGer != ger || durFonteEsperadaRev != rev) {
+      durFonteEsperadaOk = 1; durFonteEsperadaGer = ger; durFonteEsperadaRev = rev;
+      durFonteEsperadaCache = duracaoFonteEsperada(); } }
+  esperada = durFonteEsperadaCache;
   if (esperada <= 0 || fabs(real - esperada) <= 600 ||
       !(real > esperada * 2 || real < esperada * .5)) return;
   durFonteAvisada = 1;
