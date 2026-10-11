@@ -1,5 +1,6 @@
 // Idade real da lista reaproveitada: nao reinicia validade de URL assinada.
 #include "streams.h"
+#include "selospacote.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -16,6 +17,12 @@ unsigned selospacote_versao(void) { return 1; }
 int selospacote_casar(const char *const *p, int n, unsigned short *o, int m) {
   (void)p; (void)n; (void)o; (void)m; return 0;
 }
+// selosAgendar (puxado por stream_definir_lista) consulta estes; sem os
+// stubs o link quebra — quebrava desde o #402, sem relacao com #205.
+void selospacote_colorido(int ligado) { (void)ligado; }
+int selospacote_embutidos_ok(void) { return 0; }
+const SeloFiltro *selospacote_filtro(unsigned short id) { (void)id; return NULL; }
+int ajustes_selos_coloridos(void) { return 0; }
 int main(void) {
   Stream s = {0};
   strcpy(s.url, "https://video.invalid/assinado.mp4");
