@@ -247,7 +247,7 @@ class NuvioActivity : SDLActivity() {
                 )
                 return 2
             }
-            val uri = FileProvider.getUriForFile(this, "space.nuvio.nativelegacy.atualizacao", arq)
+            val uri = FileProvider.getUriForFile(this, "$packageName.atualizacao", arq)
             instalando = true
             startActivity(
                 Intent(Intent.ACTION_VIEW)

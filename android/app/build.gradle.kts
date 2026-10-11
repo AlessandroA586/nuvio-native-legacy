@@ -59,6 +59,11 @@ android {
         }
     }
     buildTypes {
+        debug {
+            // Nunca substituir a instalacao de producao durante diagnosticos.
+            applicationIdSuffix = ".strictdebug"
+            versionNameSuffix = "-strictdebug"
+        }
         release {
             isMinifyEnabled = false
             if (ks != null) signingConfig = signingConfigs.getByName("release")
