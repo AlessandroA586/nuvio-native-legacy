@@ -1185,8 +1185,13 @@ static float ajSubInspetor(int op, const char *kick, const char *titulo, const c
   if (texto && texto[0]) y += ajBloco(TXT_V3_INSP, texto, x, y, w, 37.0f, 0.70f, 4) + 14.0f;
   return y;
 }
+static const char *ajSyncAddonsApoio(void) {
+  if (!sessao_logada()) return "Entre na conta Nuvio para sincronizar os addons.";
+  if (sync_manual_addons_rodando()) return "Sincronizando…";
+  return "Busca agora os addons da sua conta, sem esperar a volta automática.";
+}
 static void ajDesenharAddons(int foco) {
-  static AjSubLinha L[64];
+  static AjSubLinha L[65];
   int n = addons_n(), i, lig = 0;
   char sub[96], val[64], k[160];
   montarTela();
@@ -1196,17 +1201,19 @@ static void ajDesenharAddons(int foco) {
   snprintf(val, sizeof val, i18n("%d de %d"), lig, n);
   snprintf(sub, sizeof sub, "%s", n ? i18n("Ligados nesta TV") : i18n("Nenhum addon nesta conta."));
   ajSubCabecalho("aj_puzzle", "Fontes e addons", "Addons", n ? val : "", sub);
-  if (foco >= n) foco = n - 1;
+  if (foco > n) foco = n;
   if (foco < 0) foco = 0;
   { static char apoio[64][96];
     for (i = 0; i < n; i++) {
       snprintf(apoio[i], sizeof apoio[i], "%s", ajAddonFornece(i));   // ajAddonFornece devolve um buffer so
       L[i] = (AjSubLinha){ addons_nome(i), apoio[i], NULL, addons_ativo(i), 0, 0 };
     } }
-  { AjDica d[3] = { { "OK", "Mudar" }, { "↑ ↓", "Navegar" }, { "Voltar", "Fontes e addons" } };
-    ajSubLista(L, n, foco, d, 3, NULL, addonsui_ponteiro); }
+  L[n] = (AjSubLinha){ "Sincronizar addons", ajSyncAddonsApoio(), "aj_rotate-cw", -1, 0, 1 };
+  { AjDica d[3] = { { "OK", foco == n ? "Sincronizar addons" : "Mudar" }, { "↑ ↓", "Navegar" }, { "Voltar", "Fontes e addons" } };
+    ajSubLista(L, n + 1, foco, d, 3, NULL, addonsui_ponteiro); }
   snprintf(k, sizeof k, "%s · %s", i18n("Fontes e addons"), i18n("Addons"));
-  if (n > 0) {
+  if (foco == n) ajSubInspetor(AJ_ADDONS, k, "Sincronizar addons", i18n(ajSyncAddonsApoio()));
+  else if (n > 0) {
     const char *base0 = addons_base(foco);
     char host[160] = "", forn[200];
     GfxRect ir = aj2InspR();
@@ -1217,7 +1224,7 @@ static void ajDesenharAddons(int foco) {
       snprintf(host, sizeof host, "%.*s", (int)strcspn(p, "/"), p);
     }
     snprintf(forn, sizeof forn, "%s", ajAddonFornece(foco));
-    y = ajSubInspetor(AJ_ADDONS, k, addons_nome(foco), i18n("A lista de addons da sua conta, para ligar e desligar cada um nesta TV."));
+    y = ajSubInspetor(AJ_ADDONS, k, addons_nome(foco), i18n("Os addons vêm da sua conta Nuvio. Ligar e desligar aqui vale só nesta TV, até a próxima sincronização."));
     if (y + 3 * 57.0f <= ir.y + ir.h) {
       y += aj2Meta(i18n("Fornece"), forn, ir.x, y, ir.w, 1);
       y += aj2Meta(i18n("Nesta TV"), i18n(addons_ativo(foco) ? "Ligado" : "Desligado"), ir.x, y, ir.w, 1);

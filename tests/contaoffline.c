@@ -208,6 +208,11 @@ void desc_tmdb_definir(const char *c) { (void)c; }
 void addons_marcar_da_conta(int perfil) { (void)perfil; }
 void addons_esquecer(void) {}
 int  addons_exportar(AddonRemoto *s, int m) { (void)s; (void)m; return 0; }
+void addons_diferenca(const AddonRemoto *a, int na, const AddonRemoto *d, int nd,
+                      int *e, int *s, int *m) {
+  (void)a; (void)na; (void)d; (void)nd;
+  if (e) *e = 0; if (s) *s = 0; if (m) *m = 0;
+}
 void agenda_esquecer(void) {}
 void lembrete_esquecer_todos(void) {}
 int  ajustes_aplicar_blob(const char *j) { (void)j; return 0; }
@@ -326,10 +331,10 @@ int main(int argc, char **argv) {
   if (ADDONS == contaLonga) {
     confere("#201: a URL de 1500 caracteres chegou inteira ao app", longaIntacta);
     confere("#201: a URL acima do limite nao chegou, nem cortada", nAplicados == 2 && !grandeChegou);
-    // A lista desta TV ficou menor que a da conta: uma edicao daqui NAO sobe
-    // (o push substituiria a lista da conta e apagaria o addon que nao coube).
+    // A lista desta TV ficou menor que a da conta. Marcar como suja e um no-op
+    // desde a mao unica (#360): pendencia de addons nao existe mais.
     sync_sujar_addons();
-    confere("#201: edicao com a lista incompleta nao vira pendencia em disco",
+    confere("#201: lista incompleta nao gera pendencia em disco",
             !existe("conta-addons-pend-636f6e74612d61-p1.txt"));
   }
   if (!strcmp(extra, "volta")) {

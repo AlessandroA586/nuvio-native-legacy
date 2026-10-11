@@ -21,13 +21,12 @@ sessao() {
   if ! NV_T_DIR="$dir/$d" "$bin" "$@" > "$dir/saida" 2>&1; then falhou=1; fi
   grep -E '^(--|  )|\[sync\] (push|edicao|addons:)' "$dir/saida" || true
 }
+sessao manual manual
 sessao s1 periodico
-sessao s2 mescla
-sessao s2b remocao
-sessao s2c cheio
-for st in 400 503 0; do
-  sessao "s3-$st" recusa1 "$st"
-  sessao "s3-$st" recusa2 "$st"
-done
+sessao local maounica
+sessao dedupe duplicata
+sessao boot gravar
+sessao boot reabrir
+sessao migracao migrar
 if [ "$falhou" = 1 ]; then echo "syncaddons.sh: FALHOU"; exit 1; fi
 echo "syncaddons.sh: ok"

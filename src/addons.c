@@ -452,6 +452,29 @@ int addons_exportar(AddonRemoto *saida, int max) {
   return k;
 }
 
+static int listaPos(const AddonRemoto *l, int n, const char *url) {
+  int i;
+  for (i = 0; i < n; i++) if (!strcmp(l[i].url, url)) return i;
+  return -1;
+}
+void addons_diferenca(const AddonRemoto *antes, int na, const AddonRemoto *depois, int nd,
+                      int *entraram, int *sairam, int *mudaram) {
+  int i, e = 0, s = 0, m = 0, k = 0;
+  for (i = 0; i < nd; i++) if (listaPos(antes, na, depois[i].url) < 0) e++;
+  for (i = 0; i < na; i++) if (listaPos(depois, nd, antes[i].url) < 0) s++;
+  // Os que ficaram: ligado/desligado diferente, ou fora da ordem relativa de
+  // antes (k e a posicao do anterior que ficou; andar para tras e reordenar).
+  for (i = 0; i < nd; i++) {
+    int j = listaPos(antes, na, depois[i].url);
+    if (j < 0) continue;
+    if ((antes[j].ativo ? 1 : 0) != (depois[i].ativo ? 1 : 0) || j < k) m++;
+    if (j > k) k = j;
+  }
+  if (entraram) *entraram = e;
+  if (sairam) *sairam = s;
+  if (mudaram) *mudaram = m;
+}
+
 void addons_esquecer(void) {
   memset(addon, 0, sizeof addon);
   nAddon = 0;

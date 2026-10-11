@@ -2,21 +2,21 @@
 
 ## Para que serve
 
-Sincroniza o app nativo com a conta Nuvio: puxa addons, credenciais de serviços (Trakt, TMDB, mdblist, debrid), progresso de reprodução, perfis, biblioteca, coleções, catálogos da home e ajustes do perfil; empurra de volta addons, progresso local, ajustes locais e o jornal de vistos/salvos. Roda em todas as plataformas (webOS, Android, Tizen .tpk/.wgt); não há `#ifdef` de plataforma neste arquivo.
+Sincroniza o app nativo com a conta Nuvio: puxa addons, credenciais de serviços (Trakt, TMDB, mdblist, debrid), progresso de reprodução, perfis, biblioteca, coleções, catálogos da home e ajustes do perfil; empurra de volta progresso local, ajustes locais e o jornal de vistos/salvos. Addons são MÃO ÚNICA desde 11/10/2026 (#360): a TV só puxa a lista da conta — `sync_push_addons` e a pendência de edição local de addons deixaram de existir (o push substituía a lista inteira do perfil e era a origem das duplicatas do relato). Roda em todas as plataformas (webOS, Android, Tizen .tpk/.wgt); não há `#ifdef` de plataforma neste arquivo.
 
 ## Funções públicas
 
 | Assinatura | O que faz | Fio | Pré-condições | Travas | Efeitos colaterais |
 |---|---|---|---|---|---|
-| `void sync_iniciar(void)` | Dispara um ciclo completo de sync num fio próprio. | Principal | `sessao_logada()` deve ser verdadeiro; senão retorna em `sync.c:1623`. | `addonsTrava` (copia lista local pendente) | Cria `pthread_t fio`, detacha; escreve `estado`, `fioVivo`, `perfilDoCiclo`, `usuarioDoCiclo`; `sync.c:1654`. |
+| `void sync_iniciar(void)` | Dispara um ciclo completo de sync num fio próprio. | Principal | `sessao_logada()` para o ciclo; a migração de pendências antigas roda mesmo sem login. | nenhuma | Cria `pthread_t fio`, detacha; escreve `estado`, `fioVivo`, `perfilDoCiclo`, `usuarioDoCiclo`. |
 | `SyncEstado sync_estado(void)` | Devolve estado do ciclo (`SYNC_PARADO/RODANDO/PRONTO/FALHOU`). | Qualquer | — | nenhuma (leitura simples de `estado`) | — |
 | `const char *sync_resumo(void)` | Monta linha traduzida para a tela de ajustes. | Principal/quadro | — | `resumoTrava` | Lê `resumoDados`; não altera estado. |
 | `void sync_sujar_progresso(void)` | Marca progresso local como sujo para empurrar no próximo ciclo. | Principal | — | nenhuma | `sujoProgresso = 1`; `sync.c:2030`. |
-| `void sync_sujar_addons(void)` | Captura lista atual de addons e grava pendência em disco. | Principal | `sessao_logada()`; `addonsNome()` válido. | `addonsTrava` | Grava `conta-addons-pend-*.txt`; `sync.c:2031-2068`. |
+| `void sync_sujar_addons(void)` | No-op desde a mão única dos addons (#360): a edição local não sobe mais; vale nesta TV até o próximo pull. | Principal | — | nenhuma | Nenhum; o símbolo resta para os chamadores antigos e testes. |
 | `unsigned sync_ultimo_ok(void)` | MS do último ciclo bem-sucedido. | Principal | — | nenhuma | — |
-| `void sync_passo(unsigned agoraMs)` | Recolhe resultado do fio e aplica no app (addons, credenciais, coleções, biblioteca, vistos, progresso, ajustes). | Principal | Chamado a cada quadro por `app.c:2870`. | `addonsTrava` em `addonsBaseDefinir` | Altera catálogo, coleções, ordem da home, ajustes, progresso; dispara remontagem. |
+| `void sync_passo(unsigned agoraMs)` | Recolhe resultado do fio e aplica no app (addons, credenciais, coleções, biblioteca, vistos, progresso, ajustes). | Principal | Chamado a cada quadro por `app.c:2870`. | nenhuma | Altera catálogo, coleções, ordem da home, ajustes, progresso; dispara remontagem. |
 | `int sync_periodico(unsigned agoraMs)` | Dispara ciclo automático se passou `SYNC_INTERVALO_MS` (5 min). | Principal | — | nenhuma | Pode chamar `sync_iniciar()`; `sync.c:1663-1675`. |
-| `void sync_esquecer_usuario(void)` | Apaga todo dado local da conta que saiu. | Principal | Chamado junto de `sessao_sair()`; `sync.h:90-102`. | `addonsTrava` em `addonsEsquecer` | Apaga arquivos, libera blobs, zera estado; `sync.c:2260-2382`. |
+| `void sync_esquecer_usuario(void)` | Apaga todo dado local da conta que saiu. | Principal | Chamado junto de `sessao_sair()`; `sync.h:90-102`. | nenhuma | Apaga arquivos, libera blobs, zera estado. |
 | `void sync_reaplicar_ajustes(void)` | Faz o próximo ciclo aplicar blob de ajustes da conta. | Principal | Login/troca de perfil. | nenhuma | `aplicarAjustes = 1`; apaga `ajustes-locais.txt`; `sync.c:2165-2186`. |
 | `void sync_trocar_perfil(int antes)` | Guarda ajustes do perfil que sai e restaura do que entra. | Principal | `perfis_ativo()` já é o novo. | nenhuma | Grava `ajustes-locais-p<N>.txt`; chama `sync_reaplicar_ajustes`; `sync.c:2203-2243`. |
 | `int sync_perfil_pronto(void)` | 1 quando o último ciclo aplicado é do perfil ativo e nenhum ciclo está no ar. | Principal | — | nenhuma | — |
@@ -38,7 +38,7 @@ Sincroniza o app nativo com a conta Nuvio: puxa addons, credenciais de serviços
 | `ultimoOk` | `static unsigned` | `sync_passo` quando ciclo termina bem | `sync_periodico`, `app.c` |
 | `sujoProgresso`, `sujoAjustes` | `static int` | Principal (`player.c`, `ajustes.c`) | Fio de sync (`rodar`) |
 | `addonsRem[]`, `nAddonsRem`, `temAddonsRem` | `static AddonRemoto[]` | Fio de sync preenche; `sync_passo` consome | `sync_passo` |
-| `addonsFila` (pendências) | `static AddonsPendencia*` | `sync_sujar_addons`, `addonsRestaurar`, `addonsEncerrar` | `sync_iniciar`, `addonsPendentes` |
+| snapshot da lista aplicada | `conta-addons-aplicados-p<N>.json` (contacache, superfície `CC_ADDONS_APLICADOS`) | `addonsAplicar` grava ao aplicar | `addonsRestaurar` lê no arranque: pull idêntico não reaplica nem refaz sonda de manifestos |
 | `ajustesBlob` | `static char*` | Fio de sync (`puxarAjustesPerfil`); `empurrarAjustes` substitui | `sync_passo` aplica; `empurrarAjustes` costura |
 | `catHomeBlob`, `colBlob`, `bibBlob`, `vistosBlob` | `static char*` | Fio de sync preenche | `sync_passo` consome e libera |
 | `foraHttp`, `usandoCopia`, `copiaQuando`, `addonsFora` | `static int`/`long` | `sync_passo` publica do ciclo | `sync_servidor_fora`, `sync_usando_copia`, etc. |
@@ -56,7 +56,6 @@ flowchart TD
     C --> E[puxarCredenciais]
     C --> F[syncprog_puxar]
     C --> G[puxarSoLeitura]
-    C --> H[empurrarAddons]
     C --> I[empurrarAjustes]
     C --> J[sincronizarPlugins]
     C --> K[syncprog_empurrar]
@@ -65,7 +64,6 @@ flowchart TD
     E --> N[sessao_rpc sync_pull_provider_credentials]
     F --> O[sessao_rpc sync_pull_watch_progress]
     G --> P[sessao_rpc sync_pull_collections / sync_pull_library / sync_pull_watched_items / sync_pull_profile_settings_blob / sync_pull_home_catalog_settings]
-    H --> Q[sessao_rpc sync_push_addons]
     I --> R[ajustes_mesclar_blob]
     I --> S[sessao_rpc sync_push_profile_settings_blob]
     J --> T[plugins_retrato / plugins_definir_da_conta]
@@ -79,8 +77,6 @@ flowchart TD
     AA --> AB[prog_aplicar_remoto]
     A --> AC[ajustes.c sync_resumo]
     AD[player.c] --> AE[sync_sujar_progresso]
-    AF[ajustes.c] --> AG[sync_sujar_addons]
-    AH[addonsui.c] --> AF
     AI[credfio.c] --> AJ[sync_empurrar_credencial]
 ```
 
@@ -102,7 +98,7 @@ sequenceDiagram
     F->>R: puxarCredenciais
     F->>R: syncprog_puxar
     F->>R: puxarSoLeitura (coleções, biblioteca, vistos, ajustes, catHome)
-    F->>R: empurrarAddons / empurrarAjustes / sincronizarPlugins / syncprog_empurrar / contapend_enviar
+    F->>R: empurrarAjustes / sincronizarPlugins / syncprog_empurrar / contapend_enviar
     F->>S: fioPronto = 1 (release)
     P->>S: sync_passo() a cada quadro
     S-->>P: vê fioPronto (acquire)
@@ -113,13 +109,12 @@ sequenceDiagram
 ## IMPACTOS
 
 - **Se mexer na ordem das RPCs em `rodar`**: o push deve vir DEPOIS do pull do mesmo ciclo (`sync.c:1538-1542`). Empurrar antes de puxar faz o aparelho sobrescrever na conta o que ele mesmo mandou.
-- **Se mexer em `addonsMesclar`/`empurrarAddons`**: o push de addons é mescla de três vias com a leitura da conta deste ciclo (`sync.c:732-776`). Nunca subir lista vazia: apaga addons da pessoa em todos os aparelhos (`sync.c:785-788`). A união não pode truncar em `SY_ADD_MAX` (`sync.c:769`).
+- **Se mexer no pull de addons (`lerAddons`/`addonsAplicar`)**: a lista é mão única — a conta manda, a TV nunca envia (#360). O pull deduplica por URL base normalizada (`nv_addon_base`); a lista aplicada vira snapshot em `CC_ADDONS_APLICADOS` e o arranque compara antes de reaplicar (pull idêntico não refaz sonda de manifestos). Pendências `conta-addons-pend-*.txt` de versões antigas são apagadas na primeira execução, sem envio.
 - **Se mexer em `empurrarAjustes`**: só sobe se houver blob da conta (`ajustesBlob != NULL`) e só costura chaves que já existem (`sync.c:1286-1296`). Sem base, não manda nada.
-- **Se mexer em `sync_sujar_addons`**: quando `addonsDeFora > 0` a edição local não sobe para não apagar da conta addons que não cabem nesta TV (`sync.c:2037-2044`).
 - **Se mexer em `sync_esquecer_usuario`**: qualquer coisa que sobreviva ao logout vaza dados da conta anterior. A ordem não importa muito, mas o conjunto sim (`sync.c:2262`).
 - **Se mexer em `sync_passo` perfil/conta**: ciclo de perfil trocado no meio é descartado e dispara novo `sync_iniciar()` (`sync.c:1762-1784`).
 - **Contratos com Kotlin/.NET/JS**: não há neste módulo.
-- **Testes**: `tests/sync_resumo_corrida.sh`, `tests/syncordem.sh`, `tests/vistoep_corrida.sh`. Não há teste automático cobrindo `sync_esquecer_usuario`, `sync_empurrar_credencial` nem o caminho de servidor fora/cópia.
+- **Testes**: `tests/syncaddons.sh` (mão única dos addons), `tests/syncordem.sh`, `tests/sync_resumo_corrida.sh`, `tests/contaoffline.sh` (servidor fora/cópia).
 
 ## Regressões já acontecidas
 
@@ -131,6 +126,6 @@ sequenceDiagram
 - **#215** — Servidor da conta fora do ar deixava app sem dados: fallback para `contacache` em `soLeituraDaCopia`/`guardarOuCopia`.
 - **#233** — "Nuvio account isn't synced by app": biblioteca/coleções/vistos eram contados e jogados fora; agora guardam blobs e aplicam no fio principal (commit `141d4785`, `e7e2cb3b`).
 - **#312** — Resumo do sync não traduzia na hora: `SyncResumo` guarda números, texto é traduzido em `sync_resumo` (commit `1c60454d`).
-- **#360** — "Sync addons" com mescla três vias e botão adiado para 2.0.5 (commits `46507ea5`, `be6c07b7`, `e2f1eede` em `agente/204-sync-addons`).
+- **#360** — "Sync addons" virou MÃO ÚNICA (11/10/2026): push e pendência local de addons removidos (eram a origem das duplicatas e remoções cruzadas); dedupe por URL base no pull; snapshot da lista aplicada (`CC_ADDONS_APLICADOS`) evita reaplicar no arranque; botão "Sincronizar addons" (e2f1eede) continua só de pull. Antes: mescla três vias (46507ea5, be6c07b7 em `agente/204-sync-addons`).
 - **#378** — Blob de ajustes marcado com perfil errado: `ajustesBlobPerfil`, `ajustesBlobGeracao`, idiomas da conta sem sobreposição (commits `59733d54`, `04844fb9`, `f75ec81a`).
 - **#392** — Lista de addons de outro perfil: `addons_perfil_da_lista()` e refaz registro quando perfil muda (commits `96e5de44`, `1d4b5e97`).

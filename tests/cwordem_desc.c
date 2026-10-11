@@ -131,6 +131,7 @@ static int modoTeste = CWO_PADRAO, naoExibidosTeste = 1;
 int ajustes_cw_ordem(void)                { return modoTeste; }
 static int concluidoTeste = 90;         // Percentual assistido; 90 de fabrica
 int   ajustes_cw_concluido(void)           { return concluidoTeste; }
+int   ajustes_cw_minimo(void)             { return 1; }
 int ajustes_cw_mostrar_nao_exibidos(void) { return naoExibidosTeste; }
 int   ajustes_cw_proximo(void) { return 1; }
 

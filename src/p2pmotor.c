@@ -176,6 +176,18 @@ uint64_t p2pmotor_teto_duro(uint64_t livre, unsigned escolhaMb) {
 }
 void p2pmotor_definir_limite_mb(unsigned mb) { atomic_store(&limiteMb, mb); }
 
+// #334: a janela fica um pouco abaixo do teto duro (a vigia para em > duro e a
+// pasta tem tambem o resume e as pecas de borda com outros arquivos). O motor
+// so usa a janela para arquivo MAIOR que ela; menor fica inteiro, como antes.
+uint64_t p2pmotor_janela(uint64_t duro) {
+  uint64_t folga = (uint64_t)P2PM_JANELA_FOLGA_MB << 20;
+  return duro > folga ? duro - folga : 0;
+}
+int p2pmotor_cabe(uint64_t tam, uint64_t duro) {
+  if (tam <= duro) return 1;
+  return p2pmotor_janela(duro) >= ((uint64_t)P2PM_JANELA_MIN_MB << 20);
+}
+
 // Orcamento ao subir. statvfs falhou: recusa (sem medir, nao ha teto honesto).
 static int orcamento(const char *mae, uint64_t *mole, uint64_t *duro, uint64_t *livre) {
   uint64_t l = 0;
@@ -542,15 +554,18 @@ static void *vigiaFio(void *x) {
     // parada aponta para fora do motor.
     if (++volta * vigiaMs >= 60000u) {
       volta = 0;
-      printf("[p2p-motor] disco: pasta %.0f MB, motor %.0f MB, baixado %.0f MB, livre %.0f MB (ao subir %.0f MB)\n",
+      printf("[p2p-motor] disco: pasta %.0f MB, motor %.0f MB, baixado %.0f MB, livre %.0f MB (ao subir %.0f MB), janela apagou %.0f MB, rebaixou %llu pecas\n",
              (double)usado / 1048576.0, (double)st.disco_motor / 1048576.0,
              (double)st.baixado / 1048576.0, (double)livre / 1048576.0,
-             (double)subida / 1048576.0);
+             (double)subida / 1048576.0, (double)st.janela_apagado / 1048576.0,
+             (unsigned long long)st.janela_rebaixadas);
       fflush(stdout);
     }
     if (motivo == P2P_ERR_SEM_ESPACO) {
-      printf("[p2p-motor] sem espaco: baixado %.0f MB, livre ao subir %.0f MB\n",
-             (double)st.baixado / 1048576.0, (double)subida / 1048576.0);
+      printf("[p2p-motor] sem espaco: baixado %.0f MB, livre ao subir %.0f MB, janela apagou %.0f MB%s\n",
+             (double)st.baixado / 1048576.0, (double)subida / 1048576.0,
+             (double)st.janela_apagado / 1048576.0,
+             st.janela_sem_suporte ? " (sistema de arquivos sem buraco: janela parada)" : "");
     }
 
     pthread_mutex_lock(&trava);
@@ -608,6 +623,7 @@ static int subir(const P2pmOps *o, unsigned g) {
   c.ram = (uint64_t)P2PM_RAM_MB << 20;
   c.disco = mole;
   c.upload_bps = 256u * 1024u;
+  c.janela = p2pmotor_janela(duro);
   if (atomic_load(&geracao) != g) { percorrer(raiz, 1, 0); return P2P_ERR_CANCELADO; }
   if (o->criar(&c, &m) != 0 || !m) {
     printf("[p2p-motor] nao subiu\n");
@@ -642,8 +658,9 @@ static int subir(const P2pmOps *o, unsigned g) {
   estado.ram_duro = (uint64_t)P2PM_RAM_DURO_MB << 20;
   atomic_store(&tetoUltimoMb, (unsigned)(duro >> 20));
   pthread_mutex_unlock(&trava);
-  printf("[p2p-motor] subiu %s: disco %.0f MB (duro %.0f MB, limite %u MB, livre %.0f MB), RAM %d MB (duro %d MB)\n",
+  printf("[p2p-motor] subiu %s: disco %.0f MB (duro %.0f MB, janela %.0f MB, limite %u MB, livre %.0f MB), RAM %d MB (duro %d MB)\n",
          p2pmotor_versao(), (double)mole / 1048576.0, (double)duro / 1048576.0,
+         (double)c.janela / 1048576.0,
          atomic_load(&limiteMb), (double)livre / 1048576.0, P2PM_RAM_MB, P2PM_RAM_DURO_MB);
   return P2P_OK;
 }
@@ -793,17 +810,26 @@ static int resolverCom(Pedido *p, const char *h, int fileIdx, const char *fontes
     free(nomes); free(tams);
   }
   if (idx >= 0) {
-    // #334: o arquivo inteiro vai para a pasta (o motor nao despeja pecas ja
-    // tocadas). Maior que o teto = vai parar no meio; o log diz onde.
+    // #334: arquivo maior que o teto toca pela janela (o motor apaga o que ja
+    // tocou). Nem a janela minima cabe: recusa AGORA, com os numeros para a
+    // tela, em vez de tocar e parar no meio.
     uint64_t teto;
     pthread_mutex_lock(&trava);
     tamArquivo = tamEscolhido;
     teto = estado.disco_duro;
     pthread_mutex_unlock(&trava);
-    if (teto && tamEscolhido > teto)
-      printf("[p2p-motor] %.8s: arquivo %d tem %.0f MB, teto %.0f MB: para perto de %.0f%%\n", h, idx,
+    if (teto && tamEscolhido > teto) {
+      if (!p2pmotor_cabe(tamEscolhido, teto)) {
+        printf("[p2p-motor] %.8s: arquivo %d tem %.0f MB, teto %.0f MB, janela %.0f MB < %d MB: recusado\n",
+               h, idx, (double)tamEscolhido / 1048576.0, (double)teto / 1048576.0,
+               (double)p2pmotor_janela(teto) / 1048576.0, P2PM_JANELA_MIN_MB);
+        soltarTorrent(p);
+        return P2P_ERR_SEM_ESPACO;
+      }
+      printf("[p2p-motor] %.8s: arquivo %d tem %.0f MB, teto %.0f MB: janela de %.0f MB\n", h, idx,
              (double)tamEscolhido / 1048576.0, (double)teto / 1048576.0,
-             100.0 * (double)teto / (double)tamEscolhido);
+             (double)p2pmotor_janela(teto) / 1048576.0);
+    }
   }
   if (idx < 0) {
     printf("[p2p-motor] %.8s: sem arquivo de video\n", h);
