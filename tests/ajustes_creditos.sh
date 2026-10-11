@@ -1,5 +1,5 @@
 #!/bin/bash
-# Default-off credits preference: real ajustes.c, JSON parser and profile files.
+# Single default-off device preference: real ajustes.c, JSON parser and profile isolation.
 #   bash tests/ajustes_creditos.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."

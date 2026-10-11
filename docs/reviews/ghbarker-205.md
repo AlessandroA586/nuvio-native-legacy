@@ -2,6 +2,8 @@
 
 Branch: `agente/205-prghbarker`. Base anterior aos dois merges: `33d939d1`.
 
+Este documento registra a revisão anterior ao merge `9b02841b` da integração 2.0.5. A decisão final de unificação, os conflitos e a verificação depois desse merge estão em [ghbarker-205-merge.md](ghbarker-205-merge.md). As referências a `AJ_AUTO_CREDITOS`, preferência por perfil e ausência de `a3cd9757` abaixo descrevem somente aquela árvore anterior.
+
 **Resultado: #431 não entra; #381 entra com ressalvas.** Nenhum push, comentário no GitHub, stash ou instalação em TV foi feito. As cabeças foram conferidas com fetch: `pr-431=7437d872`, `pr-381=8d6ed977`; ambas de ghbarker. Os merges originais `e1b09420` e `57b3e231` permanecem no histórico.
 
 ## Escopo da revisão
