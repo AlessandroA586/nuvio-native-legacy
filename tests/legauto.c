@@ -15,6 +15,9 @@ int main(void) {
   // A CAUSA (foto da TV, 04/10): o AIOStreams manda "PORTUGUESE"; copiado em 8
   // bytes virava "PORTUGU", que nao casa com "pt" nem "por".
   assert(!ling_casa("PORTUGU", "pt"));
+  // #429: codigo conjunto servo-croata
+  assert(ling_casa("hbs", "hr") && ling_casa("hbs", "sr") && ling_casa("sh", "bs"));
+  assert(ling_casa("hr", "hbs") && ling_casa("bos", "bs") && !ling_casa("hbs", "sl") && !ling_casa("hr", "sr"));
   ling_normalizar("PORTUGUESE", c, sizeof c); assert(ling_casa(c, "pt"));
   ling_normalizar("Portuguese (Brazil)", c, sizeof c); assert(ling_casa(c, "pt") && !strcmp(ling_selo(c), "PT-BR"));
   ling_normalizar("por", c, sizeof c); assert(!strcmp(c, "por"));

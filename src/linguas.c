@@ -117,6 +117,9 @@ static const char *familia(const char *c, char *buf) {
     // legendas): ja->"jp", cs->"cz", nl->"du", el->"gr", id->"in", ms->"ma".
     // Nenhum deles e codigo ISO de outro idioma.
     { "jp","ja" },{ "cz","cs" },{ "du","nl" },{ "gr","el" },{ "in","id" },{ "ma","ms" },
+    // #429: servo-croata. "hbs"/"sh" e o codigo conjunto que muitos MKV usam
+    // para croata, servio e bosnio; ling_casa trata "sh" como os tres.
+    { "bos","bs" },{ "hbs","sh" },
   };
   size_t i;
   for (i = 0; i < sizeof F / sizeof *F; i++)
@@ -137,7 +140,15 @@ int ling_casa(const char *codigo, const char *pref) {
   if (!codigo || !*codigo) return 0;
   if (!strcasecmp(codigo, pref)) return 1;
   { char a[8], b[8];
-    return !strcasecmp(familia(codigo, a), familia(pref, b)); }
+    const char *fa = familia(codigo, a), *fb = familia(pref, b);
+    if (!strcasecmp(fa, fb)) return 1;
+    // #429: faixa "hbs"/"sh" serve a quem pediu croata, servio ou bosnio (e o
+    // contrario): e a mesma lingua escrita, etiquetada pelo codigo conjunto.
+    if (!strcmp(fa, "sh") || !strcmp(fb, "sh")) {
+      const char *o = !strcmp(fa, "sh") ? fb : fa;
+      return !strcmp(o, "hr") || !strcmp(o, "sr") || !strcmp(o, "bs");
+    }
+    return 0; }
 }
 
 // NORMALIZA a etiqueta de idioma que o addon manda. Um addon (AIOStreams)
