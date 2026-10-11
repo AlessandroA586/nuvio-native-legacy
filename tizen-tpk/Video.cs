@@ -219,7 +219,12 @@ namespace NuvioTpk
         int CropSourcePost(double rx, double ry, double rw, double rh,
                            int dx, int dy, int dw, int dh) {
             if (!cropSupported) return 0;
-            Principal(() => CropSource(rx, ry, rw, rh, dx, dy, dw, dh));
+            // THE SESSION GOES WITH IT, as it does for every other call this host
+            // marshals (see ComSessao). This one wrote to the shared `player` field
+            // with a bare Principal(), so a crop posted by the old video and run
+            // after a teardown landed on the NEXT title: the new film opened already
+            // zoomed, in a mode nobody asked it for.
+            ComSessao(() => CropSource(rx, ry, rw, rh, dx, dy, dw, dh));
             return 1;
         }
 
