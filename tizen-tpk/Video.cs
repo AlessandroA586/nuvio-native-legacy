@@ -299,7 +299,11 @@ namespace NuvioTpk
                 // the app already tracks it, and it re-asserts there.
                 return CropApply(m, ca, rx, ry, rw, rh, dx, dy, dw, dh);
             }
-            catch (Exception e) { RevokeCrop(Unwrap(e)); return 0; }
+            // THE MUTE COMES BACK ON THE WAY OUT, refusals included. CropApply mutes
+            // BEFORE the crop (the film is resumed to present it), and the success path
+            // hands the mute over to the repaint. A call that threw left it on: the set
+            // went silent for good, with a revoked crop and no line saying why.
+            catch (Exception e) { if (!repaintActive) RepaintMute(false); RevokeCrop(Unwrap(e)); return 0; }
         }
 
         int CropApply(System.Reflection.MethodInfo m, System.Reflection.ConstructorInfo ca,
