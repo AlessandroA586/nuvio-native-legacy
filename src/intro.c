@@ -711,8 +711,11 @@ int intro_trechos(IntroTrecho *saida,int max){
 // vizinhos e estimativas continuam disponiveis apenas pelo caminho manual.
 int intro_creditos_limitados(IntroTrecho *saida,int max){
   int n;if(!saida||max<1)return 0;pthread_mutex_lock(&trava);
-  n=nCreditosLimitados<max?nCreditosLimitados:max;
-  if(n>0)memcpy(saida,creditosLimitados,(size_t)n*sizeof *saida);
+  n=0;
+  for(int i=0;i<nCreditosLimitados&&n<max;i++){
+    IntroTrecho v=creditosLimitados[i];
+    if(intro_janela_ok(v.tipo,v.inicio,v.fim,durMidia,ehFilme,NULL))saida[n++]=v;
+  }
   pthread_mutex_unlock(&trava);return n;
 }
 #ifdef NV_SHOT_HOOKS

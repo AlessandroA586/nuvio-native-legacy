@@ -1,5 +1,6 @@
 #include "intro.h"
 #include "creditosjson.h"
+#include "rede.h"
 #include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -32,6 +33,15 @@ char *rede_baixar(const char *url, int segundos) {
   }
   return strdup(resposta);
 }
+const char *dados_dir(void) { return ""; }
+void dados_fs_travar(void) {}
+void dados_fs_liberar(void) {}
+void dados_marcar_sujo(int leve) { (void)leve; }
+int rede_pedir(const RedePedido *p, RedeResposta *r) { (void)p; (void)r; return 0; }
+void rede_resposta_limpar(RedeResposta *r) { (void)r; }
+static int fixtureBuscar(const char *url, char **corpo, int *status) {
+  *corpo = rede_baixar(url, 12); *status = 200; return 1;
+}
 static void esperar(int *flag) {
   struct timespec limite; assert(!clock_gettime(CLOCK_REALTIME, &limite)); limite.tv_sec += 5;
   pthread_mutex_lock(&netTrava);
@@ -48,6 +58,9 @@ static void verificar(const char *j, int esperado) {
   for (int i = 0; i < n; i++)
     assert(v[i].tipo == INTRO_CREDITOS && v[i].inicio >= 0.0 && v[i].fim > v[i].inicio);
 }
+#undef R_OK
+#include "../src/intro.c"
+
 int main(void) {
   IntroTrecho v[8];
   verificar("{\"type\":\"movie\",\"tmdb_id\":1,\"credits\":[{\"start_ms\":900000,\"end_ms\":1000000}]}", 1);
@@ -95,6 +108,18 @@ int main(void) {
   // O marcador aberto continua aparecendo no caminho manual.
   assert(intro_extrair("{\"credits\":[{\"start_ms\":900000,\"end_ms\":null}]}", v, 8) == 1 && v[0].fim == 0.0);
 
+  // A leitura explicita deve obedecer a mesma janela do botao manual.
+  creditosLimitados[0] = (IntroTrecho){900, 1000, INTRO_CREDITOS}; nCreditosLimitados = 1;
+  durMidia = 0; ehFilme = 0;
+  assert(!intro_creditos_limitados(v, 8));
+  durMidia = 1500;
+  assert(!intro_creditos_limitados(v, 8)); // outro corte: meio do episodio
+  durMidia = 1000;
+  assert(intro_creditos_limitados(v, 8) == 1);
+  durMidia = 3000; ehFilme = 1;
+  assert(!intro_creditos_limitados(v, 8)); // abertura do filme nao e final
+  durMidia = 1000; ehFilme = 0;
+  intro_definir_buscador(fixtureBuscar);
   assert(!pthread_key_create(&fimFio, terminou));
   intro_pedir("tt000001", 0, 0); esperar(&entrou[0]);
   intro_pedir("tt000002", 0, 0);
