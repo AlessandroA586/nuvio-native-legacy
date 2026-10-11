@@ -181,9 +181,15 @@ typedef enum {
   TXT_V3_PILL,     // "Ligado"/"Desligado" escritos (21 / 600)
   TXT_V3_SELO,     // ESTA TV, ESTE PERFIL, AVANCADO, SO LG (14 / 700, caixa alta)
   TXT_V3_INSP,     // texto do inspetor (22 / 400)
-  TXT_V3_INSP_B,   // "O que muda:" (22 / 700)
-  TXT_NFONTES
-} TxtEstilo;
+   TXT_V3_INSP_B,   // "O que muda:" (22 / 700)
+   TXT_NFONTES
+ } TxtEstilo;
+
+// Faixa do tamanho de legenda em % (a mesma que TXT_LEG_50..TXT_LEG_300
+// codifica de 10 em 10). Unica fonte dos limites: quem grava, quem cicla,
+// quem desenha e a segunda legenda clampeiam por aqui.
+#define TXT_LEG_PCT_MIN 50
+#define TXT_LEG_PCT_MAX 300
 
 // w/h em unidades de layout. pw/ph = tamanho da textura em pixels, preenchido
 // so para linhas da camada ampliada (gfx_escala); 0 no caminho normal.
