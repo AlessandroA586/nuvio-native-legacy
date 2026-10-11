@@ -6,4 +6,6 @@ Worktree `agente/205-decisoes`, início `6a68b96e`; sem push. Um merge por branc
 
 - **#338 — agente/203-338:** estatísticas ao vivo pela Central, áudio/legenda em uso e buffer Android; mantido o diagnóstico mais recente da integração. Alvo do buffer acompanha o preset. 21 verificações (Central/Ajustes/estatísticas/cache/JNI/TPK/diagnóstico e Kotlin Android): **rc 0**. Corrigido link dos testes TPK que passavam na base. `idiomas.py` e `varredura-i18n.py`: **rc 0**. `player.sh` **rc 134** (linha 161) e `video_acb_lg.sh` **rc 1** (símbolos webOS): mesmos resultados na base `6a68b96e`, sem regressão.
 
+- **#331 — agente/203-331:** contagem nos créditos com marcador real; pela decisão #256, automático **desligado** de fábrica, contagem local **1–60 s (padrão 5 s)**. Mantidos pré-carga, janela e legendas da integração; ajustes append-only. 10 testes (intro, posplay, Ajustes, próximo, reação, pré-carga e preferências): **rc 0** (`331-results.txt` + `331-final-results.txt`). `idiomas.py`/`varredura-i18n.py`: **rc 0**, traduções existentes preservadas. Corrigida vírgula na tradução nova antes da repetição de posplay.
+
 Logs locais: `/tmp/nv-205-decisoes-logs/`. Suíte geral: 578 scripts, vários compilam o app inteiro (~45–60 s cada); serão usados os testes das áreas tocadas. `bw` sem autenticação; credenciais não consultadas.

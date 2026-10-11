@@ -257,3 +257,7 @@
   0, /* Mostrar no player (#425): Só meus idiomas; sem preferencia, todas */
   1, /* minimum progress to enter Continue watching (#326): 1% */
   0, /* player buffer size (#338, Android only): Automatico */
+  1, 1, /* auto-skip intro and recap (#329): Desligado */
+  1, /* owner decision #256: next episode auto-play is off by default */
+  1, /* auto-skip credits, only with a real start+end marker: Desligado */
+  5, /* owner decision #256: configurable countdown in seconds */

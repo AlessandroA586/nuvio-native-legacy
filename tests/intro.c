@@ -444,5 +444,49 @@ int main(void) {
   assert(intro_extrair_aniskip("{\"found\":false,\"results\":[],\"statusCode\":404}", 0, v, 8) == 0);
   puts("ok  AniSkip: op/ed/recap, ED ate o fim, 10% de duracao, mapeamento kitsu -> MAL");
   puts("intro: tudo ok");
+  // #329/#331: pular sozinho. Assinatura: (tipo, fim, dur, abertura, resumo, creditos).
+  assert(intro_auto_pular(INTRO_ABERTURA, 90.0, 3000.0, 1, 0, 0));
+  assert(!intro_auto_pular(INTRO_ABERTURA, 90.0, 3000.0, 0, 1, 1));
+  assert(intro_auto_pular(INTRO_RESUMO, 30.0, 3000.0, 0, 1, 0));
+  assert(!intro_auto_pular(INTRO_RESUMO, 30.0, 3000.0, 1, 0, 1));
+  assert(!intro_auto_pular(INTRO_ABERTURA, 0.0, 3000.0, 1, 1, 1));      // fim 0 = ate o fim da midia
+  puts("ok  pulo automatico: abertura/resumo, ligado e com fim");
+  // creditos: ajuste proprio + fim explicito dentro da midia
+  assert(intro_auto_pular(INTRO_CREDITOS, 2900.0, 3000.0, 0, 0, 1));    // inicio e fim reais -> pula
+  assert(!intro_auto_pular(INTRO_CREDITOS, 2900.0, 3000.0, 1, 1, 0));   // ajuste desligado
+  assert(!intro_auto_pular(INTRO_CREDITOS, 0.0, 3000.0, 0, 0, 1));      // fim null (ate o fim): nunca
+  assert(!intro_auto_pular(INTRO_CREDITOS, 2998.0, 3000.0, 0, 0, 1));   // acaba junto com a midia: proximo episodio
+  assert(!intro_auto_pular(INTRO_CREDITOS, 3500.0, 3000.0, 0, 0, 1));   // alem do fim: nunca um seek para fora
+  assert(!intro_auto_pular(INTRO_CREDITOS, 2900.0, 0.0, 0, 0, 1));      // duracao desconhecida
+  puts("ok  creditos: so com fim explicito e a 5 s do fim; sem ajuste/sem fim/estimativa nao");
+  // Marcadores so com inicio (TheIntroDB end_ms:null) e a estimativa nao viram trecho pulavel
+  {
+    IntroTrecho t[1]={{2900.0,0.0,INTRO_CREDITOS}};
+    double fim=-1;int tp=0;
+    intro_shot_definir(t,1);intro_definir_duracao(3000.0,0);
+    assert(intro_ativo(2950.0,&fim,&tp)&&tp==INTRO_CREDITOS&&fim==0.0);
+    assert(!intro_auto_pular(tp,fim,3000.0,1,1,1));
+    puts("ok  creditos sem end_ms nao pulam");
+  }
+  // Uma vez por trecho, e voltar (para dentro ou para antes) nao pula de novo
+  {
+    IntroTrecho t[3]={{10.0,70.0,INTRO_RESUMO},{70.0,160.0,INTRO_ABERTURA},{2900.0,2960.0,INTRO_CREDITOS}};
+    intro_shot_definir(t,3);
+    assert(!intro_auto_ja(INTRO_CREDITOS,2960.0));
+    intro_auto_marcar(INTRO_CREDITOS,2960.0);
+    intro_auto_marcar(INTRO_ABERTURA,160.0);
+    intro_auto_marcar(INTRO_RESUMO,70.0);
+    // um tipo nao apaga o outro: depois de pular a abertura, o resumo e os creditos continuam marcados
+    assert(intro_auto_ja(INTRO_CREDITOS,2960.0));
+    assert(intro_auto_ja(INTRO_RESUMO,70.0));
+    assert(intro_auto_ja(INTRO_ABERTURA,160.0));
+    assert(!intro_auto_ja(INTRO_CREDITOS,2970.0));    // outro marcador (fim diferente) e outro trecho
+    // nova reproducao (novo pedido de marcadores) zera
+    intro_shot_definir(t,3);
+    assert(!intro_auto_ja(INTRO_CREDITOS,2960.0));
+    assert(!intro_auto_ja(INTRO_RESUMO,70.0));
+    puts("ok  rebobinar nao pula de novo; nova reproducao zera");
+  }
+
   return 0;
 }
