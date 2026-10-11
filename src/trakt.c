@@ -338,7 +338,8 @@ static void doBlocoTrakt(CatItem *d, const char *bloco, const char *fim,
   imagemTrakt(bloco, fim, "fanart", d->backdrop, sizeof d->backdrop);
   snprintf(d->backdropTrakt, sizeof d->backdropTrakt, "%s", d->backdrop);
   imagemTrakt(bloco, fim, "logo",   d->logo,     sizeof d->logo);
-  if (!d->backdrop[0]) snprintf(d->backdrop, sizeof d->backdrop, "%s", d->poster);
+  if (!d->backdrop[0] && strlen(d->poster) < sizeof d->backdrop)
+    snprintf(d->backdrop, sizeof d->backdrop, "%s", d->poster);
   if (!d->sinopse[0]) js_texto(bloco, fim, "overview", d->sinopse, sizeof d->sinopse);
   minutos = (int)js_num(bloco, fim, "runtime", 0.0);
   ano     = (int)js_num(bloco, fim, "year", 0.0);
@@ -693,7 +694,8 @@ static int enfeitar(CatItem *d, const char *tipo) {
   }
   if (!d->titulo[0]) js_texto(corpo, NULL, "name", d->titulo, sizeof d->titulo);
   if (!d->sinopse[0]) js_texto(corpo, NULL, "description", d->sinopse, sizeof d->sinopse);
-  if (!d->backdrop[0]) snprintf(d->backdrop, sizeof d->backdrop, "%s", d->poster);
+  if (!d->backdrop[0] && strlen(d->poster) < sizeof d->backdrop)
+    snprintf(d->backdrop, sizeof d->backdrop, "%s", d->poster);
   if (!d->meta[0] || d->restanteMin <= 0) {
     char r[24] = "", ano[24] = "";
     js_texto(corpo, NULL, "runtime", r, sizeof r);

@@ -2,8 +2,8 @@
 //
 // O relato (markcodes): cartaz de provedor como o pictorium passa de ~300
 // caracteres e nao carrega. CatItem.poster ja tinha 1024 desde o #200; o corte
-// estava nas COPIAS da URL pelo caminho. Este teste leva uma URL de ~600
-// caracteres, com query string (o formato de provedor de cartaz com nota), por
+// estava nas COPIAS da URL pelo caminho. Este teste leva URLs de 600, 1173 e 2000
+// bytes, com query string (o formato de provedor de cartaz com nota), por
 // cada parada:
 //
 //   1. JSON do catalogo/meta do addon -> deMeta -> CatItem (poster, e o fundo
@@ -25,7 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PUL_URL 600
+#define PUL_URL 2000
 
 // Formato de provedor de cartaz com nota: caminho com id, query com a
 // configuracao e um token longo no fim. O reporter nao colou a URL; o
@@ -85,10 +85,10 @@ char *sessao_rpc(const char *fn, const char *corpo, int *st) {
   return strdup("[]");
 }
 
-int main(void) {
+static int testar(size_t alvo) {
   char url[PUL_URL + 1];
-  montaUrl(url, sizeof url, "poster", PUL_URL);
-  assert(strlen(url) == PUL_URL);
+  montaUrl(url, sizeof url, "poster", alvo);
+  assert(strlen(url) == alvo);
   contapend_relogio(relogio);
   contapend_sem_fio(1);
   assert(contapend_lista("tt0111161", "movie", "Um Sonho de Liberdade", url, 1) == 1);
@@ -112,6 +112,8 @@ char *redeTeste(const char *u, int timeout, long *n);
 #include "../src/tex_cache.c"
 #undef rede_baixar_bin
 #include "salvos.h"
+#include "agenda.h"
+#include "atividade.h"
 #include "contalib.h"
 #include "dados.h"
 #include <unistd.h>
@@ -130,16 +132,16 @@ static int deJson(const char *json, CatItem *ci) {
   return deMeta(json, json + strlen(json), "movie", ci);
 }
 
-int main(void) {
+static int testar(size_t alvo) {
   char url[PUL_URL + 1], fundo[PUL_URL + 1], logo[PUL_URL + 1], enorme[1601];
-  char json[6000], dir[400], sub[700];
+  char json[9000], dir[400], sub[700];
   CatItem *ci = calloc(1, sizeof *ci);
   assert(ci);
-  montaUrl(url, sizeof url, "poster", PUL_URL);
-  montaUrl(fundo, sizeof fundo, "background", PUL_URL);
-  montaUrl(logo, sizeof logo, "logo", PUL_URL);
+  montaUrl(url, sizeof url, "poster", alvo);
+  montaUrl(fundo, sizeof fundo, "background", alvo);
+  montaUrl(logo, sizeof logo, "logo", alvo);
   montaUrl(enorme, sizeof enorme, "poster", 1600);
-  assert(strlen(url) == PUL_URL && strlen(enorme) == 1600);
+  assert(strlen(url) == alvo && strlen(enorme) == 1600);
   { const char *t = getenv("TMPDIR");
     snprintf(dir, sizeof dir, "%s/nuvio-poster-longa-XXXXXX", t && *t ? t : "/tmp");
     assert(mkdtemp(dir)); }
@@ -149,7 +151,7 @@ int main(void) {
            "{\"id\":\"tt0111161\",\"type\":\"movie\",\"name\":\"Um Sonho de Liberdade\","
            "\"poster\":\"%s\"}", url);
   assert(deJson(json, ci));
-  CONFERE("catalogo: CatItem.poster recebe a URL de 600 caracteres inteira",
+  CONFERE("catalogo: CatItem.poster recebe a URL de 600/1173/2000 caracteres inteira",
           !strcmp(ci->poster, url));
   CONFERE("catalogo: o fundo que nasce do poster e a URL inteira ou nenhum (nunca cortada)",
           inteiraOuVazia(ci->backdrop, url) && inteiraOuVazia(ci->backdropCatalogo, url));
@@ -161,19 +163,21 @@ int main(void) {
   assert(deJson(json, ci));
   CONFERE("meta: poster inteiro com fundo e logo compridos ao lado",
           !strcmp(ci->poster, url));
-  CONFERE("meta: fundo de 600 caracteres inteiro ou vazio, nunca um prefixo",
+  CONFERE("meta: fundo de 600/1173/2000 caracteres inteiro ou vazio, nunca um prefixo",
           inteiraOuVazia(ci->backdrop, fundo) || !strcmp(ci->backdrop, url));
-  CONFERE("meta: logo de 600 caracteres inteiro ou vazio, nunca um prefixo",
+  CONFERE("meta: logo de 600/1173/2000 caracteres inteiro ou vazio, nunca um prefixo",
           inteiraOuVazia(ci->logo, logo));
-  // Poster maior que o proprio CatItem.poster (1024): sem corte calado.
+  // O antigo caso de 1600 bytes tambem continua inteiro ou ausente.
   snprintf(json, sizeof json,
            "{\"id\":\"tt0111161\",\"type\":\"movie\",\"name\":\"Um Sonho de Liberdade\","
            "\"poster\":\"%s\"}", enorme);
   deJson(json, ci);
-  CONFERE("catalogo: poster de 1600 caracteres nao vira prefixo de 1023",
+  CONFERE("catalogo: poster de 1600/1173/2000 caracteres nao vira prefixo de 1023",
           inteiraOuVazia(ci->poster, enorme) && inteiraOuVazia(ci->backdrop, enorme));
 
   // 3. Textura: o pedido guarda a URL, a rede recebe a URL e o disco usa hash.
+  snprintf(json, sizeof json, "{\"id\":\"tt0111161\",\"name\":\"Matchbox\",\"poster\":\"%s\"}", url);
+  assert(deJson(json, ci));
   CONFERE("tex: o item de textura comporta a URL inteira",
           strlen(url) < sizeof itens[0].caminho);
   tex_cache_dir(dir);
@@ -184,11 +188,21 @@ int main(void) {
     // FNV em unsigned long: 8 hex no 32 bits (TV), 16 no Mac, mais a extensao.
     CONFERE("tex: nome no disco e o hash, curto (nao a URL)", strlen(nome) <= 24);
     snprintf(u2, sizeof u2, "%s", url);
-    u2[PUL_URL - 1] = u2[PUL_URL - 1] == 'A' ? 'B' : 'A';   // so o ultimo byte muda
+    u2[alvo - 1] = u2[alvo - 1] == 'A' ? 'B' : 'A';   // so o ultimo byte muda
     nomeDeCache(u2, outro, sizeof outro);
     CONFERE("tex: o hash cobre a URL inteira (ultimo byte muda o nome)", strcmp(dst, outro));
-    assert(garantirLocal(url, dst, sizeof dst, NULL, NULL));
-    CONFERE("tex: a rede recebe a URL inteira", redeVezes == 1 && !strcmp(redePediu, url));
+    CONFERE("deMeta -> pedido de textura: URL inteira", !strcmp(ci->poster, url));
+    // Use a entrada publica, mas sem fios/GL: consuma manualmente a fila.
+    mtx = SDL_CreateMutex(); cond = SDL_CreateCond();
+    assert(mtx && cond);
+    memset(itens, 0, sizeof itens); filaIni = filaFim = 0;
+    tex_obter_larg(ci->poster, 212);
+    CONFERE("tex_obter_larg: fila guarda o cartaz inteiro", filaFim != filaIni &&
+            !strcmp(itens[fila[filaIni]].caminho, url));
+    if (filaFim != filaIni)
+      garantirLocal(itens[fila[filaIni]].caminho, dst, sizeof dst, NULL, NULL);
+    SDL_DestroyCond(cond); SDL_DestroyMutex(mtx); cond = NULL; mtx = NULL;
+    CONFERE("tex: a rede recebe a URL inteira", redeVezes == (int)(alvo == 600 ? 1 : alvo == 1173 ? 2 : 3) && !strcmp(redePediu, url));
     CONFERE("tex: o arquivo baixado fica sob o nome do hash", access(dst, F_OK) == 0);
     unlink(dst); }
 
@@ -220,11 +234,35 @@ int main(void) {
   CONFERE("conta: a linha da biblioteca e lida", contalib_ler_biblioteca(json) == 1);
   CONFERE("conta: ContaLibItem.poster recebe a URL inteira",
           contalib_n() == 1 && !strcmp(contalib_item(0)->poster, url));
-  CONFERE("conta: fundo de 600 caracteres inteiro ou vazio, nunca um prefixo",
+  CONFERE("conta: fundo de 600/1173/2000 caracteres inteiro ou vazio, nunca um prefixo",
           contalib_n() == 1 && inteiraOuVazia(contalib_item(0)->backdrop, fundo));
 
+  agenda_registrar(ci->imdb, ci->titulo, ci->poster, "Returning Series", 1, 1,
+                   "Piloto", "2030-10-11", "2026-10-10");
+  CONFERE("agenda: registro conserva poster inteiro", agenda_registro(ci->imdb) &&
+          !strcmp(agenda_registro(ci->imdb)->poster, url));
+  { AtivEvento ev = {0}; char evento[9000], lido[PUL_URL + 1];
+    snprintf(ev.poster, sizeof ev.poster, "%s", ci->poster);
+    CONFERE("atividade: serializacao conserva poster inteiro",
+            atividade_json(&ev, evento, sizeof evento) &&
+            js_texto(evento, NULL, "poster", lido, sizeof lido) && !strcmp(lido, url)); }
+  { CatFileira f = {0}; CatItem copia;
+    snprintf(f.chave, sizeof f.chave, "addon_movie_top"); f.n = 1;
+    cat_definir_tudo(ci, 1, &f, 1);
+    CONFERE("Home/colecao/busca/CW: CatItem publicado conserva poster",
+            cat_copiar_por_id(ci->imdb, ci->tipo, &copia) && !strcmp(copia.poster, url));
+    cat_quadro(); }
   free(ci);
   printf(falhas ? "FALHOU (%d)\n" : "PASSOU\n", falhas);
   return falhas ? 1 : 0;
 }
 #endif
+
+int main(void) {
+  const size_t tamanhos[] = {600, 1173, 2000};
+  for (size_t i = 0; i < sizeof tamanhos / sizeof tamanhos[0]; i++) {
+    printf("\nURL de %zu bytes\n", tamanhos[i]);
+    testar(tamanhos[i]);
+  }
+  return falhas ? 1 : 0;
+}

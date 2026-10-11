@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // Spotlight: a caixa de busca por cima da tela. O porque e quem abre estao em
 // spotlight.h; aqui so as decisoes de forma e de custo.
 //
@@ -149,7 +150,7 @@ typedef struct {
   char tituloTipo[8];
   char t1[160];
   char t2[200];
-  char arte[1024];
+  char arte[NV_ARTE_URL_MAX];
   char genero[160];
   int paisagem;
   char icone[32];

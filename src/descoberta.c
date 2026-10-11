@@ -1,3 +1,4 @@
+#include "arteurl.h"
 #include "descoberta.h"
 #include "idioma.h"
 #include "ajustes.h"
@@ -338,7 +339,7 @@ static int ehSvg(const char *s) {
 //   1 = copiada, 0 = ausente, -1 = nao cabe (vazia, com linha no registro).
 // `soRaiz`: so a chave da raiz do objeto (js_texto_raiz_em); 0 tenta a raiz e
 // depois a primeira de qualquer nivel, a ordem de deMeta (#200).
-#define DESC_URL_LIDA 2048
+#define DESC_URL_LIDA (NV_ARTE_URL_MAX + 1)
 static int urlArteInteira(const char *ini, const char *fim, const char *chave,
                           int soRaiz, char *dst, size_t tam, const char *dono) {
   char v[DESC_URL_LIDA];
@@ -1136,7 +1137,7 @@ static int deMeta(const char *ini, const char *fim, const char *tipo, CatItem *d
   // nota, so nos titulos que vinham do cache dele. A raiz manda; o aninhado so
   // entra quando a raiz nao tem o campo (era o comportamento de antes).
   //
-  // Poster comprido demais ate para os 1024 (#361): o titulo fica, sem cartaz
+  // Poster comprido demais ate para NV_ARTE_URL_MAX (#361): o titulo fica, sem cartaz
   // e com a linha no registro — sumir da fileira seria o defeito calado.
   if (!urlArteInteira(ini, fim, "poster", 0, d->poster, sizeof d->poster, d->titulo))
     return 0;
@@ -1177,7 +1178,7 @@ static int deMeta(const char *ini, const char *fim, const char *tipo, CatItem *d
                (int)(o - d->backdrop), d->backdrop, o + 14);
       snprintf(d->backdrop, sizeof d->backdrop, "%s", novo);
     } }
-  // So se o poster CABE no fundo (512 contra 1024, #361): o cartaz de ~600
+  // So se o poster CABE no fundo (512 contra 2048, #361): o cartaz de ~600
   // caracteres entrava aqui cortado, e o card deitado, o destaque e a busca
   // pedem `backdrop` antes do poster — o 404 era deles. Sem fundo, todos ja
   // caem no metahub pelo id e depois no proprio poster inteiro.

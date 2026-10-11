@@ -1,3 +1,4 @@
+#include "arteurl.h"
 #include "imdbnota.h"
 #include "extras.h"
 #include "streams.h"
@@ -138,7 +139,7 @@ static int  epFioVivo;
 static char epShow[24];
 static int  epPedTemp, epPedNum;
 static int  nComent;
-static struct { char titulo[120], ano[8], imdb[16], poster[200]; } rel[EX_REL_MAX];
+static struct { char titulo[120], ano[8], imdb[16], poster[NV_ARTE_URL_MAX]; } rel[EX_REL_MAX];
 // Vistos: um bit por episodio, ate 40 episodios em 20 temporadas. Vetor fixo
 // porque a consulta acontece no DESENHO de cada card, a cada quadro — uma
 // busca em lista ali custaria mais que a resposta.

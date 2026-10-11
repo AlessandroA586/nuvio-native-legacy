@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // Catalogo de titulos vindo de um arquivo, no lugar das listas fixas no codigo.
 //
 // Existe porque testar layout com nomes inventados esconde problemas reais: os
@@ -36,10 +37,9 @@ typedef struct {
   char backdropCatalogo[512]; // background vindo do addon/Cinemeta
   char backdropTmdb[512];     // backdrop vindo do TMDB
   char backdropTrakt[512];    // fanart vindo do Trakt
-  // 1024 e nao 512 (#200): a URL de cartaz que o AIOMetadata monta para o
-  // PostersPlus passa de 700 bytes e o corte calado levava o idioma embora.
-  // Mesmo teto do cache de textura (NV_TEX_URL_MAX, tex_cache.h).
-  char poster[1024];
+  // #433: PostersPlus envia 1173 bytes; ate 2047 bytes mais NUL.
+  // Mesmo teto nas copias e no cache de textura (arteurl.h).
+  char poster[NV_ARTE_URL_MAX];
   char logo[512];      // vazio quando o titulo nao tem logo
   // Language evidence belongs to this exact logo, never to another selection.
   char logoIdioma[8];

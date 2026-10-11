@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // Painel "Salvos" — a camada da direita que a tecla AZUL abre. Ver salvospainel.h
 // para o que ele substituiu e por que.
 //
@@ -188,11 +189,11 @@
 // "[contalib] biblioteca da conta aplicada"). No Mac, sem conta, o catalogo
 // nunca era republicado e nada acontecia — o defeito so existia com dados reais.
 //
-// Copiar custa ~1300 bytes por linha (o poster tem 1024, #361), no heap e do
+// Copiar custa ~1300 bytes por linha (o poster tem 2048, #433), no heap e do
 // tamanho da lista real. E o preco de nao depender do tempo de vida de um
 // bloco que outro modulo troca sem avisar.
 typedef struct {
-  char  titulo[160], poster[1024], meta[96];   // poster: o de CatItem (#361)
+  char  titulo[160], poster[NV_ARTE_URL_MAX], meta[96];   // poster: o de CatItem (#361)
   char  id[24];
   int   serie;
   int   nota;

@@ -5188,7 +5188,7 @@ typedef struct {
 } CartaoFoco;
 static CartaoFoco cartaoFoco; static float cartaoFocoRaio; static int temCartaoFoco;
 // O caminho da arte mora num buffer que o proximo cartao sobrescreve: copia propria.
-static char cartaoFocoArte[1024];
+static char cartaoFocoArte[NV_TEX_URL_MAX];
 // SELO DE ASSISTIDO: pilula escura translucida (material da ilha) com um check
 // no acento e a palavra "Assistido". Altura e recuo acompanham a largura do
 // cartao (26..32); abaixo de 150 de largura so o check, num disco da mesma
