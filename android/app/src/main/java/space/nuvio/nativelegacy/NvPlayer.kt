@@ -61,6 +61,10 @@ object NvPlayer {
     private const val EV_PAUSADO = 3
     private const val EV_FIM = 4
     private const val EV_ERRO = 5
+    // A URL final do TorBox aponta para um no especifico. ParaleloDataSource ja
+    // tentou conecta-lo tres vezes; reabrir o mesmo host em 3/10/25 s so
+    // prolonga a interrupcao. O C usa este codigo para pedir a proxima fonte.
+    private const val ERRO_CDN_TORBOX_INDISPONIVEL = -20001
     private const val EV_TAMANHO = 6
     private const val EV_BUFFER = 7
     private const val EV_PRIMEIRO_QUADRO = 8
@@ -1018,7 +1022,11 @@ object NvPlayer {
                 principal.postDelayed({ if (atual(minha)) abrirMain(u, c, true, inicio, geracao, pedido, fracao) }, 400)
                 return
             }
-            ev(EV_ERRO, error.errorCode, tipo)
+            val codigo = if (FalhaFonte.conexaoCdnTorBox(urlAtual, error)) {
+                Log.w(TAG, "[player] no TorBox indisponivel; troca de fonte imediata")
+                ERRO_CDN_TORBOX_INDISPONIVEL
+            } else error.errorCode
+            ev(EV_ERRO, codigo, tipo)
         }
     }
 
