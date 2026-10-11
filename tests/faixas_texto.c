@@ -12,6 +12,8 @@ void mkvass_iniciar_ordinal(const char *url, int ord) { assert(*url); ordinal = 
 // voltou a desenhar" — o app nunca tinha deixado de desenhar. O toast so
 // existe quando houve falha de verdade antes (a TV estava no fallback).
 static int toasts, colhidos;
+static VideoLegendaEstilo estilo;
+VideoLegendaEstilo *player_leg_estilo(void) { return &estilo; }
 void player_toast(const char *texto, unsigned ms) { (void)texto; (void)ms; toasts++; }
 unsigned legenda_geracao(void) { return 0; }
 int legenda_ligada_em(unsigned geracao) { (void)geracao; return 1; }
