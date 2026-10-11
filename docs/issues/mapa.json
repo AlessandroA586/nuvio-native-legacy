@@ -3228,7 +3228,7 @@
   {
    "numero": 144,
    "titulo": "Align UI with nuvioTV (android)",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "feature",
    "status": "respondida",
@@ -3246,11 +3246,10 @@
     "ultimo_comentario_por": "I0-oX",
     "ultima_nossa": "2026-10-06"
    },
-   "proximo_passo": "nada (autor disse que não vê mais os problemas; pode fechar)",
+   "proximo_passo": "nada (fechada 11/10 por decisao do dono)",
    "notas": "Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/144",
-   "criada_em": "2026-09-25",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-09-25"
   },
   {
    "numero": 145,
@@ -5496,7 +5495,7 @@
   {
    "numero": 252,
    "titulo": "Add default audio language setting for anime",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "por-desenho",
@@ -5508,11 +5507,10 @@
     "ultimo_comentario_por": "redjawn07",
     "ultima_nossa": "2026-10-06"
    },
-   "proximo_passo": "nada (autor confirmou que funciona; pode fechar)",
+   "proximo_passo": "nada (fechada 11/10 por decisao do dono)",
    "notas": "Opção já existe: Ajustes > Idiomas e legendas > Idioma do áudio. Alvo ja-lancada: a opção já existe.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/252",
-   "criada_em": "2026-10-05",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-05"
   },
   {
    "numero": 253,
@@ -6230,7 +6228,7 @@
   {
    "numero": 290,
    "titulo": "Few minor issues on 2.1",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "bug",
    "status": "lancada",
@@ -6250,11 +6248,10 @@
     "ultimo_comentario_por": "base08",
     "ultima_nossa": null
    },
-   "proximo_passo": "nada (pedir confirmação se quiser)",
+   "proximo_passo": "nada (fechada 11/10 por decisao do dono)",
    "notas": "7 commits #290 na 2.0.2 (gradiente do hero sobre trailer em janela, aspecto, etc.). Sem confirmação do autor; base08 confirmou o ponto 1 antes do release. Título original \"Few minor issues on 2.1\". Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/290",
-   "criada_em": "2026-10-06",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-06"
   },
   {
    "numero": 292,
@@ -6351,7 +6348,7 @@
   {
    "numero": 296,
    "titulo": "Si podrías agregar estas visitas seria grandioso",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .wgt",
    "tipo": "feature",
    "status": "lancada",
@@ -6365,11 +6362,10 @@
     "ultimo_comentario_por": "LameZorras",
     "ultima_nossa": "2026-10-07"
    },
-   "proximo_passo": "nada (pode fechar)",
+   "proximo_passo": "nada (fechada 11/10 por decisao do dono)",
    "notas": "Coberto pela \"Elección de la fuente\" (#310) na 2.0.2; nenhum commit cita #296. Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/296",
-   "criada_em": "2026-10-06",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-06"
   },
   {
    "numero": 297,
@@ -6397,7 +6393,7 @@
   {
    "numero": 298,
    "titulo": "The Arabic subtitles",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung (Tizen 6)",
    "tipo": "feature",
    "status": "lancada",
@@ -6411,16 +6407,15 @@
     "ultimo_comentario_por": "Soufianelz",
     "ultima_nossa": "2026-10-07"
    },
-   "proximo_passo": "responder (autor informou Tizen 6; dizer em qual versão testar)",
+   "proximo_passo": "nada (fechada 11/10 por decisao do dono)",
    "notas": "#273 (legendas árabes, 546c7418/57e24174) está na 2.0.2; #335 refina na 2.0.3. Nossa resposta de 07/10 disse \"próxima release\"; já estava na 2.0.2. Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/298",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 300,
    "titulo": "Default Aspect Ratio Option",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "lancada",
@@ -6434,11 +6429,10 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-07"
    },
-   "proximo_passo": "nada (pode fechar)",
+   "proximo_passo": "nada (fechada 11/10 por decisao do dono)",
    "notas": "Resposta cita 2.0.2; nenhum commit cita #300. Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/300",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 302,
@@ -6468,7 +6462,7 @@
   {
    "numero": 303,
    "titulo": "how to remove continue watching from opening screen",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "lancada",
@@ -6482,11 +6476,10 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-07"
    },
-   "proximo_passo": "nada (pode fechar)",
+   "proximo_passo": "nada (fechada 11/10 por decisao do dono)",
    "notas": "Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/303",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 304,
@@ -9839,7 +9832,10 @@
     300,
     303
    ],
-   "estado": "pendente"
+   "estado": "decidida",
+   "decisao": "Sim: fechadas 144 252 290 296 298 300 303 com comentario (11/10); 293 fica aberta ate a 2.0.5 (codec vem com Stats for nerds).",
+   "data": "2026-10-11",
+   "quem": "dono (painel)"
   },
   {
    "id": "dec-341-blackbar-crop",
@@ -9865,7 +9861,10 @@
     352,
     366
    ],
-   "estado": "pendente"
+   "estado": "decidida",
+   "decisao": "Sim: limites maiores do Trakt/Biblioteca ficam dentro do redesign da 2.1.",
+   "data": "2026-10-11",
+   "quem": "dono (painel)"
   },
   {
    "id": "dec-refatoracao-geral",
@@ -9883,7 +9882,10 @@
     333,
     374
    ],
-   "estado": "pendente"
+   "estado": "decidida",
+   "decisao": "Sim: menus em arabe (#250/#333) e auto sync de legenda (#374) na 2.1.",
+   "data": "2026-10-11",
+   "quem": "dono (painel)"
   },
   {
    "id": "dec-fechar-203-sem-confirmacao",
@@ -9913,7 +9915,10 @@
     370,
     384
    ],
-   "estado": "pendente"
+   "estado": "decidida",
+   "decisao": "Sim: fechar sem esperar confirmacao (todas ja fechadas em 10/10).",
+   "data": "2026-10-11",
+   "quem": "dono (painel)"
   },
   {
    "id": "dec-400-ordem-fontes-addon",
@@ -9994,7 +9999,10 @@
    "pergunta": "Perfil sem Trakt (usuários com Simkl veem \"Trakt desconectado\"): entra em qual versão?",
    "recomendacao": "2.0.5: perfil com dados do Simkl e mensagem certa quando só o Simkl está ligado.",
    "issues": [],
-   "estado": "pendente"
+   "estado": "decidida",
+   "decisao": "Sim: 2.0.5 — perfil com dados do Simkl e mensagem certa quando so o Simkl esta ligado.",
+   "data": "2026-10-11",
+   "quem": "dono (painel)"
   },
   {
    "id": "dec-410-vidro-profundidade-tpk",
