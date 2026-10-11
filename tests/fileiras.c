@@ -575,11 +575,70 @@ int main(void) {
     fil_normalizar();
     for (j = 0; j < fil_n(); j++) {
       const char *k = fil_chave(j);
-      if (!strcmp(k, "d")) assert(fil_linha_oculta(j));           // sobrou: fora
+      // #358: d e catalogo NOVO (registrado nesta sessao, intocado): nao coube,
+      // espera na fila em vez de ir para Fora.
+      if (!strcmp(k, "d")) assert(!fil_linha_oculta(j) && fil_estado(j) == FIL_NA_FILA);
       if (!strcmp(k, "e")) assert(!fil_linha_oculta(j));          // na home: fica
       if (!strcmp(k, "f")) assert(!fil_linha_oculta(j) && fil_estado(j) == FIL_NA_FILA);
     } }
-  puts("ok  normalizar: so a fila pedida fica alem do limite");
+  puts("ok  normalizar: catalogo novo que nao coube vai para a fila (#358)");
+
+  // #358: add-on novo com N catalogos. Com espaco livre todos entram na Home;
+  // com a Home cheia o excedente vira FILA (nunca OC_PESSOA / Fora).
+  fil_esquecer();
+  fil_definir_limite(5);
+  { int j, na_home = 0, na_fila = 0, fora = 0;
+    char ch[32];
+    for (j = 0; j < 3; j++) { snprintf(ch, sizeof ch, "n%d", j); fil_registrar(ch, ch, "Novo", "movie", 1); }
+    fil_normalizar();
+    for (j = 0; j < fil_n(); j++) assert(fil_estado(j) == FIL_NA_HOME);   // cabem: Home
+    for (j = 3; j < 9; j++) { snprintf(ch, sizeof ch, "n%d", j); fil_registrar(ch, ch, "Novo", "movie", 1); }
+    fil_normalizar();
+    for (j = 0; j < fil_n(); j++) {
+      if (fil_linha_oculta(j)) fora++;
+      else if (fil_estado(j) == FIL_NA_FILA) na_fila++;
+      else na_home++;
+    }
+    assert(na_home == 5 && na_fila == 4 && fora == 0);
+    // O que o dono tirou de proposito continua Fora.
+    { int pj = -1; for (j = 0; j < fil_n(); j++) if (!strcmp(fil_chave(j), "n1")) pj = j;
+      fil_remover(pj); }
+    fil_normalizar();
+    for (j = 0; j < fil_n(); j++) if (!strcmp(fil_chave(j), "n1")) assert(fil_linha_oculta(j));
+  }
+  puts("ok  #358: addon novo cabe na Home; excedente na fila; Fora explicito fica");
+
+  // #358: linha que JA ESTAVA no arquivo (sem a marca "nova") alem do limite
+  // segue a regra antiga: vai para Fora. A nova do mesmo arquivo vai para a
+  // fila, e a marca sobrevive ao recarregar antes da folha normalizar.
+  fil_esquecer();
+  { int j, achouVelha = 0, achouNova = 0;
+    usaArquivo = 1;
+    { FILE *f = fopen("/tmp/fileirasui-p1.txt", "w");
+      fprintf(f, "limite 3\nordem 0\n");
+      fprintf(f, "linha v1\t0\t0\t1\t0\tV1\n");
+      fprintf(f, "linha v2\t0\t0\t1\t0\tV2\n");
+      fprintf(f, "linha v3\t0\t0\t1\t0\tV3\n");
+      fprintf(f, "linha v4\t0\t0\t1\t0\tV4\n");
+      fprintf(f, "linha nv\t0\t0\t1\t0\tNV\n");
+      fprintf(f, "nova nv\n");
+      fclose(f); }
+    fil_definir_perfil(1);
+    fil_teste_recarregar();      // persistencia: a marca volta do disco
+    fil_normalizar();
+    for (j = 0; j < fil_n(); j++) {
+      if (!strcmp(fil_chave(j), "v4")) { achouVelha = 1; assert(fil_linha_oculta(j)); }
+      if (!strcmp(fil_chave(j), "nv")) { achouNova = 1; assert(!fil_linha_oculta(j) && fil_estado(j) == FIL_NA_FILA); }
+    }
+    assert(achouVelha && achouNova);
+    // a fila persiste e a marca "nova" ja foi consumida
+    fil_teste_recarregar();
+    for (j = 0; j < fil_n(); j++)
+      if (!strcmp(fil_chave(j), "nv")) assert(!fil_linha_oculta(j) && fil_estado(j) == FIL_NA_FILA);
+    remove("/tmp/fileirasui-p1.txt");
+    fil_definir_perfil(0);
+    usaArquivo = 0; }
+  puts("ok  #358: linha antiga alem do limite segue Fora; marca e fila persistem");
 
   // PODA: catalogo de addon que sumiu da conta sai; o resto fica. A lista vem
   // da conta do PERFIL desta escolha (perfilDaLista == 1 == perfil ativo).
@@ -760,14 +819,15 @@ int main(void) {
     assert(fil_escolhida("cand_3") == -1);              // ligada so por ter entrado
     assert(fil_escolhida("ultra_150") == -1);           // listada, nao escolhida
     assert(fil_escolhida("nao_existe") == -1);
-    // A folha abre (normaliza: o que sobrou alem do limite vira "fora"), a
-    // pessoa tira uma da home e poe a de fora da cota: agora ela e escolhida.
+    // A folha abre (normaliza; #358: os candidatos NOVOS que nao couberam vao
+    // para a fila, nao para "fora"), a pessoa tira uma da home — cand_3 sobe — e
+    // poe a de fora da cota: agora ela e escolhida (fica na fila, home cheia).
     fil_normalizar();
     assert(fil_escolhida("ultra_150") == -1);
     fil_remover(0);
     assert(fil_escolhida("cand_0") == -1);              // oculta nao e escolha
     i = fil_adicionar(5, &estado);
-    assert(i >= 0 && estado == FIL_NA_HOME);
+    assert(i >= 0 && estado == FIL_NA_FILA);
     assert(fil_escolhida("ultra_150") >= 0);
     // Tabela cheia: o registro de fora da cota fica de fora, calado, e nao
     // despeja nem uma linha dispensavel.
@@ -1111,6 +1171,69 @@ int main(void) {
     fil_conta_reconciliar(chs, contaOff, nada, 1);
     assert(fil_estado_chave("cine_movie_top") == FIL_FORA); }
   puts("ok  adicionar vence o desligado da conta, e o sync nao desfaz");
+  // #204: TABELA CHEIA DE CATALOGOS QUE NINGUEM DECLARA. Log MD8G2R: 768 linhas
+  // velhas (auto-"Fora", oculta=1 sem visibilidade) e 60 catalogos novos do
+  // BingeCat recusados. Cenario A: lixo > 25% (poda ja). Cenario B: lixo
+  // pequeno, a tabela enche e o registro despeja o mais antigo.
+  { int cen;
+    for (cen = 0; cen < 2; cen++) {
+      int j, nLixo = cen == 0 ? 700 : 100, nDecl = FIL_MAX - nLixo, nNovos = 60;
+      const char *decl[FIL_MAX + 64];
+      static char buf[FIL_MAX + 64][48];
+      int nd = 0, achouEsc = 0, achouTipo = 0, achouDecl = 0, nNovosOk = 0;
+      FILE *arq;
+      fil_esquecer();
+      usaArquivo = 1;
+      fil_definir_perfil(0); fil_definir_perfil(1);
+      arq = fopen("/tmp/fileirasui-p1.txt", "w");
+      assert(arq);
+      for (j = 0; j < nLixo; j++)   // oculta=1: "Fora" automatico, sem escolha
+        fprintf(arq, "linha binge_seed_%d\t1\t0\t1\tSeed %d\n", j, j);
+      for (j = 0; j < nDecl; j++)
+        fprintf(arq, "linha vivo_%d\t0\t0\t1\tVivo %d\n", j, j);
+      fprintf(arq, "visibilidade binge_seed_3\n");        // pessoa mexeu: fica
+      fprintf(arq, "visibilidade vivo_0\n");
+      fclose(arq);
+      fil_teste_recarregar();
+      assert(fil_n() == FIL_MAX);
+      for (j = 0; j < nDecl; j++) { snprintf(buf[nd], 48, "vivo_%d", j); decl[nd] = buf[nd]; nd++; }
+      for (j = 0; j < nNovos; j++) { snprintf(buf[nd], 48, "binge_novo_%d", j); decl[nd] = buf[nd]; nd++; }
+      // forma escolhida numa orfa tambem protege
+      { int q; for (q = 0; q < fil_n(); q++)
+          if (!strcmp(fil_chave(q), "binge_seed_7")) fil_ciclar_tipo(q); }
+      fil_marcar_declaradas(decl, nd, 1);
+      for (j = 0; j < nNovos; j++) fil_registrar(decl[nDecl + j], decl[nDecl + j], "BingeCat", "series", 1);
+      fil_gravar_registro();
+      for (j = 0; j < fil_n(); j++) {
+        const char *c = fil_chave(j);
+        if (!strncmp(c, "binge_novo_", 11)) nNovosOk++;
+        if (!strcmp(c, "binge_seed_3")) achouEsc = 1;
+        if (!strcmp(c, "binge_seed_7")) achouTipo = 1;
+        if (!strcmp(c, "vivo_0")) achouDecl++;
+      }
+      assert(nNovosOk == nNovos);          // as 60 novas entraram
+      assert(achouEsc && achouTipo);       // escolha da pessoa sobreviveu
+      assert(achouDecl == 1);              // declaradas intocadas
+      { int vivos = 0; for (j = 0; j < fil_n(); j++) if (!strncmp(fil_chave(j), "vivo_", 5)) vivos++;
+        assert(vivos == nDecl); }
+      assert(fil_n() <= FIL_MAX);
+      if (cen == 0) assert(fil_n() < 400);   // o arquivo encolheu
+      // persistencia: relê e nada volta
+      fil_teste_recarregar();
+      fil_definir_perfil(0); fil_definir_perfil(1);
+      { int vivos = 0, novos = 0, esc = 0;
+        for (j = 0; j < fil_n(); j++) {
+          const char *c = fil_chave(j);
+          if (!strncmp(c, "vivo_", 5)) vivos++;
+          if (!strncmp(c, "binge_novo_", 11)) novos++;
+          if (!strcmp(c, "binge_seed_3") || !strcmp(c, "binge_seed_7")) esc++;
+        }
+        assert(vivos == nDecl && novos == nNovos && esc == 2); }
+      remove("/tmp/fileirasui-p1.txt");
+      fil_definir_perfil(0);
+      usaArquivo = 0;
+    } }
+  puts("ok  #204: catalogo que nenhum addon declara sai antes de recusar o novo; escolha explicita fica");
 
   puts("fileiras: tudo ok");
   return 0;

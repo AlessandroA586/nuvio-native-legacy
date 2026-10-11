@@ -66,6 +66,7 @@ void  fil_registrar_se_couber_de(const FilPassada *p, const char *c, const char 
 int   fil_podar_catalogos(const char *const *ids, const char *const *bases, int n,
                           int perfilDaLista) {
   (void)ids; (void)bases; (void)n; (void)perfilDaLista; return 0; }
+int fil_marcar_declaradas(const char *const *chaves, int n, int perfilDaLista) { (void)chaves; (void)n; (void)perfilDaLista; return 0; }
 int fil_marcar_sem_addon(const char *const *ids, const char *const *bases, const int *ativos, int n, int perfilDaLista) {
   (void)ids; (void)bases; (void)ativos; (void)n; (void)perfilDaLista; return 0;
 }
