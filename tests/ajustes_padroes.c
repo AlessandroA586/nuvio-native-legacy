@@ -11,6 +11,13 @@
 #include <assert.h>
 
 int main(void) {
+  // #439: keep persisted indices 0..6, then every 10% up to 300%.
+  assert(OPCOES[AJ_LEG2_TAMANHO].n == 21);
+  for (int i = 0; i < 21; i++) {
+    valor[AJ_LEG2_TAMANHO] = i;
+    assert(ajustes_leg2_tamanho() == (i == 0 ? 0 : i <= 6 ? 40 + i * 20 : 100 + i * 10));
+  }
+  valor[AJ_LEG2_TAMANHO] = 0;
   // TCL: opção ligada de fábrica, local, antes da sincronia por áudio.
   int syncAuto = -1, naTela = -1, audioTela = -1;
   for (int i = 0; i < AJ_N; i++) if (!strcmp(CHAVE[i], "legendaSyncAutoLocal")) syncAuto = i;

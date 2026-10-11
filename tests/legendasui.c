@@ -19,6 +19,11 @@ static VideoLegendaEstilo estilo = { 120, 0, 0, 3, 1, 0, 0, 0, 0 };
 static int caps = REDE_CAP_CORPO;
 static int todas;
 int ajustes_legendas_todas(void) { return todas; }
+static int segundaPct;
+int ajustes_leg2_tamanho(void) { return segundaPct; }
+int ajustes_leg2_cor(void) { return -1; }
+int ajustes_leg2_fundo(void) { return -1; }
+int ajustes_leg2_borda(void) { return -1; }
 
 int video_n_legenda(void) { return nEmb; }
 const VideoFaixa *video_legenda(int i) { return i >= 0 && i < nEmb ? &emb[i] : NULL; }
@@ -112,6 +117,16 @@ static int syncAcoes(int slot, const char **r, int max, void *u) {
 static void syncRodar(int slot, int acao, void *u) { (void)u; syncExec[slot] = acao; }
 
 int main(void) {
+  // #439: the secondary overlay must keep all added sizes.
+  TxtEstilo est; int r, g, b, fundo, borda;
+  for (segundaPct = 260; segundaPct <= 300; segundaPct += 10) {
+    estiloSecundario(&estilo, &est, &r, &g, &b, &fundo, &borda);
+    assert(est == TXT_LEG_50 + (segundaPct - 50) / 10);
+  }
+  segundaPct = 0; estilo.tamanho = 300;
+  estiloSecundario(&estilo, &est, &r, &g, &b, &fundo, &borda);
+  assert(est == TXT_LEG_50 + (270 - 50) / 10);
+  estilo.tamanho = 120;
   char sub[256];
   int i, n0;
 

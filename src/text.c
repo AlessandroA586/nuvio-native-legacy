@@ -127,7 +127,7 @@ static unsigned char *lerTudo(const char *caminho, size_t *tam) {
 }
 // Pesos de fontes legadas que não têm três faces reais usam síntese. Fontes
 // novas e Inter carregam as faces reais, uma família por vez e sob demanda.
-#define TXT_LEG_N (TXT_LEG_250 - TXT_LEG_50 + 1)
+#define TXT_LEG_N (TXT_LEG_300 - TXT_LEG_50 + 1)
 static TTF_Font *fontesLegendaLGCam[TXT_NCAM][TXT_LEG_N];
 #define fontesLegendaLG (fontesLegendaLGCam[camada])
 static int avisoFallback[TXT_FAMILIA_N];
@@ -305,6 +305,8 @@ static const struct { int corpo, peso; } ESTILOS[TXT_NFONTES] = {
   { 80, PESO_REGULAR },
   { 84, PESO_REGULAR }, { 88, PESO_REGULAR }, { 92, PESO_REGULAR },
   { 96, PESO_REGULAR }, { 100, PESO_REGULAR },   // 210..250% (#335)
+  { 104, PESO_REGULAR }, { 108, PESO_REGULAR }, { 112, PESO_REGULAR },
+  { 116, PESO_REGULAR }, { 120, PESO_REGULAR },  // 260..300% (#439)
   { NV_TOP10_NUM_CORPO, PESO_BOLD },   // numeral do Top 10 da Dinamica
   // Escala das ilhas (text.h). 600 e 800 claros sobre o vidro escuro vao para
   // Bold pela regra optica escrita acima; 400 fica Regular.
@@ -914,7 +916,7 @@ const char *txt_fonte_da_linha(TxtFamilia familia, TxtEstilo estilo, const char 
 
 static TTF_Font *fonteLegendaDe(TxtEstilo estilo, const char *s,
                                 TxtFamilia familia) {
-  if (familia == TXT_FAMILIA_LG && estilo >= TXT_LEG_50 && estilo <= TXT_LEG_250) {
+  if (familia == TXT_FAMILIA_LG && estilo >= TXT_LEG_50 && estilo <= TXT_LEG_300) {
     int i = estilo - TXT_LEG_50;
     if (!fontesLegendaLG[i] && !tentouLegendaLG[i]) {
       tentouLegendaLG[i] = 1;
@@ -961,13 +963,26 @@ static void fecharNegrito(int c, int f) {
   }
 }
 
+// #440: corpos iguais nao garantem alturas iguais entre faces. No arabe,
+// compare o mim isolado que bidi.c desenha; nas familias, a ascensao.
+static int corpoNegrito(TTF_Font *regular, TTF_Font *bold, int corpo, Uint16 glifo) {
+  int r = TTF_FontAscent(regular), b = TTF_FontAscent(bold);
+  int rmin, rmax, bmin, bmax;
+  if (glifo && TTF_GlyphIsProvided(regular, glifo) && TTF_GlyphIsProvided(bold, glifo) &&
+      TTF_GlyphMetrics(regular, glifo, NULL, NULL, &rmin, &rmax, NULL) == 0 &&
+      TTF_GlyphMetrics(bold, glifo, NULL, NULL, &bmin, &bmax, NULL) == 0) {
+    r = rmax - rmin; b = bmax - bmin;
+  }
+  return r > 0 && b > 0 ? (corpo * r + b / 2) / b : corpo;
+}
+
 // A face Bold que substitui o TTF_STYLE_BOLD de `fonte`, ou NULL (fica o
 // sintetico). So quando `fonte` e a face principal da familia naquele estilo.
 static TTF_Font *fonteNegritoReal(TxtFamilia familia, TxtEstilo estilo, TTF_Font *fonte) {
   int i = estilo - TXT_LEG_50;
   if (familia < TXT_FAMILIA_INTER || familia >= TXT_FAMILIA_N ||
       familia == TXT_FAMILIA_LG || familia == TXT_FAMILIA_DROID) return NULL;
-  if (estilo < TXT_LEG_50 || estilo > TXT_LEG_250 || ESTILOS[estilo].peso == PESO_BOLD) return NULL;
+  if (estilo < TXT_LEG_50 || estilo > TXT_LEG_300 || ESTILOS[estilo].peso == PESO_BOLD) return NULL;
   if (!fonte || fonte != fontes[familia][estilo]) return NULL;
   if (!bytesPeso[familia][PESO_BOLD] ||
       bytesPeso[familia][PESO_BOLD] == bytesPeso[familia][PESO_REGULAR]) return NULL;
@@ -975,13 +990,21 @@ static TTF_Font *fonteNegritoReal(TxtFamilia familia, TxtEstilo estilo, TTF_Font
     SDL_RWops *rw = SDL_RWFromConstMem(bytesPeso[familia][PESO_BOLD], (int)tamPeso[familia][PESO_BOLD]);
     tentouNegCam[camada][familia][i] = 1;
     if (rw) {
-      fontesNegCam[camada][familia][i] = TTF_OpenFontRW(rw, 0, (int)(ESTILOS[estilo].corpo * ESC_T + 0.5f));
+      int corpo = (int)(ESTILOS[estilo].corpo * ESC_T + 0.5f);
+      TTF_Font *bold = TTF_OpenFontRW(rw, 0, corpo);
+      int ajustado = bold ? corpoNegrito(fonte, bold, corpo, 0) : corpo;
+      if (bold && ajustado != corpo && ajustado >= 4) {
+        TTF_CloseFont(bold);
+        SDL_RWseek(rw, 0, RW_SEEK_SET);
+        bold = TTF_OpenFontRW(rw, 0, ajustado);
+      }
+      fontesNegCam[camada][familia][i] = bold;
       if (fontesNegCam[camada][familia][i]) {
         rwNegCam[camada][familia][i] = rw;
         // Uma vez por familia/tamanho: a prova na TV de que o negrito saiu da
         // face Bold e nao do borrao do SDL_ttf.
         printf("[leg] negrito: face Bold real de %s, %d px (nao TTF_STYLE_BOLD)\n",
-               TXT_FAMILIAS_PT[familia], (int)(ESTILOS[estilo].corpo * ESC_T + 0.5f));
+               TXT_FAMILIAS_PT[familia], ajustado);
         fflush(stdout);
       } else SDL_FreeRW(rw);
     }
@@ -1367,7 +1390,7 @@ static void altDe(TxtFamilia familia, TxtEstilo estilo, TTF_Font *f,
   if (familia < TXT_FAMILIA_INTER || familia >= TXT_FAMILIA_N) familia = TXT_FAMILIA_INTER;
   if (!f || estilo < 0 || estilo >= TXT_NFONTES) return;
   if (f == fontes[familia][estilo] || f == fontes[TXT_FAMILIA_INTER][estilo]) return;
-  if (estilo >= TXT_LEG_50 && estilo <= TXT_LEG_250 && f == fontesLegendaLG[estilo - TXT_LEG_50]) return;
+  if (estilo >= TXT_LEG_50 && estilo <= TXT_LEG_300 && f == fontesLegendaLG[estilo - TXT_LEG_50]) return;
   *a = fontes[familia][estilo];
   *b = fontes[TXT_FAMILIA_INTER][estilo];
   if (*b == *a) *b = NULL;
@@ -1406,21 +1429,29 @@ static int txtTemLatim(const char *s) {
   return 0;
 }
 
-// Face Bold REAL do Noto Naskh (#335), aberta sob demanda no corpo da linha em
-// curso (arabeCorpo, posto por quem desenha). Sem o arquivo, vale a regra
-// acima: arabe sem negrito sintetico. Uma por camada e corpo.
-#define ARABE_BOLD_N 24
-static struct { int corpo; TTF_Font *f; } arabeBoldCache[TXT_NCAM][ARABE_BOLD_N];
-static TTF_Font *arabeBoldFace(void) {
+// Face Bold REAL do Noto Naskh, aberta sob demanda e ajustada a altura da
+// regular da linha (#440). Sem o arquivo: arabe sem negrito sintetico.
+// Cache por camada, corpo da linha e face regular.
+#define ARABE_BOLD_N 32
+static struct { int corpo; TTF_Font *regular, *f; } arabeBoldCache[TXT_NCAM][ARABE_BOLD_N];
+static TTF_Font *arabeBoldFace(TTF_Font *regular) {
   int i;
-  if (!arabeBoldCaminho[0] || arabeCorpo < 4) return NULL;
+  if (!regular || !arabeBoldCaminho[0] || arabeCorpo < 4) return NULL;
   for (i = 0; i < ARABE_BOLD_N; i++) {
-    if (arabeBoldCache[camada][i].corpo == arabeCorpo) return arabeBoldCache[camada][i].f;
+    if (arabeBoldCache[camada][i].corpo == arabeCorpo &&
+        arabeBoldCache[camada][i].regular == regular) return arabeBoldCache[camada][i].f;
     if (!arabeBoldCache[camada][i].corpo) {
       arabeBoldCache[camada][i].corpo = arabeCorpo;   // tentou: f NULL = arquivo ausente
+      arabeBoldCache[camada][i].regular = regular;
       arabeBoldCache[camada][i].f = TTF_OpenFont(arabeBoldCaminho, arabeCorpo);
+      int corpo = arabeBoldCache[camada][i].f ?
+          corpoNegrito(regular, arabeBoldCache[camada][i].f, arabeCorpo, 0xFEE1) : arabeCorpo;
+      if (arabeBoldCache[camada][i].f && corpo != arabeCorpo && corpo >= 4) {
+        TTF_CloseFont(arabeBoldCache[camada][i].f);
+        arabeBoldCache[camada][i].f = TTF_OpenFont(arabeBoldCaminho, corpo);
+      }
       if (arabeBoldCache[camada][i].f)
-        printf("[leg] negrito arabe: face Bold real, %d px\n", arabeCorpo);
+        printf("[leg] negrito arabe: face Bold real, %d px\n", corpo);
       return arabeBoldCache[camada][i].f;
     }
   }
@@ -1432,6 +1463,7 @@ static void arabeBoldFechar(void) {
     for (i = 0; i < ARABE_BOLD_N; i++) {
       if (arabeBoldCache[c][i].f) TTF_CloseFont(arabeBoldCache[c][i].f);
       arabeBoldCache[c][i].f = NULL; arabeBoldCache[c][i].corpo = 0;
+      arabeBoldCache[c][i].regular = NULL;
     }
 }
 
@@ -1458,7 +1490,7 @@ static int medirCorridas(TTF_Font *f, TTF_Font *a, TTF_Font *b, const char *s,
     memcpy(pedaco, s + c[i].ini, (size_t)len); pedaco[len] = 0;
     { TTF_Font *g = c[i].f; int ex = extra;
       if (bidi_tem_arabe(pedaco) && (extra & TTF_STYLE_BOLD)) {
-        TTF_Font *bf = arabeBoldFace();
+        TTF_Font *bf = arabeBoldFace(g);
         if (bf) g = bf;
         ex = extra & ~TTF_STYLE_BOLD;
       }
@@ -1485,7 +1517,7 @@ static SDL_Surface *renderCorridas(TTF_Font *f, TTF_Font *a, TTF_Font *b,
     if (len <= 0 || len >= (int)sizeof pedaco) continue;
     memcpy(pedaco, s + c[i].ini, (size_t)len); pedaco[len] = 0;
     if (bidi_tem_arabe(pedaco) && (extra & TTF_STYLE_BOLD)) {
-      TTF_Font *bf = arabeBoldFace();
+      TTF_Font *bf = arabeBoldFace(g);
       if (bf) g = bf;
       ex = extra & ~TTF_STYLE_BOLD;
     }
@@ -1665,7 +1697,7 @@ static TxtLinha linhaFamilia(TxtEstilo estilo, const char *s, int r, int g,
   int estiloAnt, novo = 0;
   arabeCorpo = (int)(ESTILOS[estilo].corpo * ESC_T + 0.5f);
   if (enfase && bidi_tem_arabe(v) && !txtTemLatim(v) && (enfase & TXT_ENF_NEGRITO)) {   // #335
-    TTF_Font *bf = arabeBoldFace();
+    TTF_Font *bf = arabeBoldFace(fonte);
     if (bf) fonte = bf;               // a face Bold de verdade
     enfase &= ~TXT_ENF_NEGRITO;       // nunca o sintetico sobre arabe
   }
@@ -1780,7 +1812,7 @@ static int larguraLinhaMedir(TxtEstilo estilo, const char *s, TxtFamilia familia
   int estiloAnt, novo = 0;
   arabeCorpo = (int)(ESTILOS[estilo].corpo * ESC_T + 0.5f);
   if (enfase && bidi_tem_arabe(v) && !txtTemLatim(v) && (enfase & TXT_ENF_NEGRITO)) {   // #335
-    TTF_Font *bf = arabeBoldFace();
+    TTF_Font *bf = arabeBoldFace(fonte);
     if (bf) fonte = bf;               // a face Bold de verdade
     enfase &= ~TXT_ENF_NEGRITO;       // nunca o sintetico sobre arabe
   }

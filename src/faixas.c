@@ -573,7 +573,7 @@ static void ciclarEstilo(int linha) {
   VideoLegendaEstilo *e = player_leg_estilo();
   if (estiloPreservadoAss(linha)) return;
   switch (linha) {
-    case 0: e->tamanho += 10; if (e->tamanho > 250) e->tamanho = 50; break;
+    case 0: e->tamanho += 10; if (e->tamanho > 300) e->tamanho = 50; break;
     case 1: e->familia = (e->familia + 1) % TXT_FAMILIA_N; break;
     // COR: marca que a pessoa mexeu — dai em diante ela vence a cor que o
     // arquivo ASS pede (ver player_leg_estilo_tocou em player.h).
