@@ -4956,6 +4956,7 @@ void player_desenhar(Uint32 agora) {
   // em 2/3 do tempo. A ilha tambem mostra a velocidade quando nao e 1x.
   plrilha_relogio(0.0f, ehCanal() ? -1.0 : vel_tempo_real((double)(duracaoSeg - posSeg), velMed.efetiva));
   plrilha_velocidade(ehCanal() ? VEL_NORMAL : velMed.efetiva);
+  { const CatItem *ct = item(); plrilha_titulo(ct ? ct->titulo : NULL); }
   float a = anim * entrada;
   // FOLHA ABERTA, OSD APAGADO. A folha de Fontes e a de Legendas sao vidro
   // translucido: o relogio, os selos 4K/HDR e o tempo do player apareciam
