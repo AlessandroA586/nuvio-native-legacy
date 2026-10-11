@@ -2524,7 +2524,7 @@ static void sincronizarFileiras(void) {
       int j, repetida = 0;
       if (!strcmp(f->chave, "last_session")) continue;
       if (fil_oculta(f->chave)) continue;
-      if (f->tipo == FILEIRA_CATALOGOS && catordem_oculta(f->chave, f->chave)) continue;
+      if (f->tipo == FILEIRA_CATALOGOS && (catordem_oculta(f->chave, f->chave) && !fil_adicionada_na_tv(f->chave))) continue;
       // UMA FILEIRA POR CHAVE (issue #127, "Proximos episodios" duplicada na
       // C9 do dono). A chave e a identidade da fileira em todo o resto — foco,
       // rolagem, registro, ordem —, e duas com a mesma chave desenhariam o

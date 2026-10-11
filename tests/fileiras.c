@@ -1091,6 +1091,26 @@ int main(void) {
     fil_remover(i);
     assert(!fil_adicionada_na_tv("x_movie_a")); }
   puts("ok  #327: adicionar um catalogo de pasta de colecao o traz para a Home");
+  // 2.0.4 (Discord + dono): catalogo DESLIGADO pela ordem da conta. OK no
+  // editor dizia "Added to Home" e a linha ficava em "Not on Home"; o sync
+  // seguinte tambem reaplicava o desligado.
+  { int est = -1, i = -1, k, contaOff[1] = { 1 }, nada[1] = { 0 };
+    const char *chs[1] = { "cine_movie_top" };
+    fil_esquecer();
+    fil_definir_limite(7);
+    fil_registrar("cine_movie_top", "Featured", "Cinemeta", "movie", 5);
+    fil_conta_reconciliar(chs, contaOff, nada, 1);
+    assert(fil_estado_chave("cine_movie_top") == FIL_FORA);
+    for (k = 0; k < fil_n(); k++) if (!strcmp(fil_chave(k), "cine_movie_top")) i = k;
+    i = fil_adicionar(i, &est);
+    assert(est == FIL_NA_HOME);
+    assert(fil_estado_chave("cine_movie_top") == FIL_NA_HOME);
+    fil_conta_reconciliar(chs, contaOff, nada, 1);   // o sync seguinte
+    assert(fil_estado_chave("cine_movie_top") == FIL_NA_HOME);
+    fil_remover(i);
+    fil_conta_reconciliar(chs, contaOff, nada, 1);
+    assert(fil_estado_chave("cine_movie_top") == FIL_FORA); }
+  puts("ok  adicionar vence o desligado da conta, e o sync nao desfaz");
 
   puts("fileiras: tudo ok");
   return 0;
