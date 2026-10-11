@@ -598,7 +598,9 @@ static const char *V_VIDRO_FOSCO[] = { "Desligado", "Ligado" };
 // R4: segunda legenda. 0 = No topo (como sempre); 1 = empilhada logo acima da
 // principal, no pe da tela.
 static const char *V_LEG2_POS[] = { "No topo", "Junto da principal" };
-static const char *V_LEG2_TAMANHO[] = { "Automático", "60%", "80%", "100%", "120%", "140%", "160%" };
+static const char *V_LEG2_TAMANHO[] = { "Automático", "60%", "80%", "100%", "120%", "140%", "160%",
+  "170%", "180%", "190%", "200%", "210%", "220%", "230%", "240%",
+  "250%", "260%", "270%", "280%", "290%", "300%" };
 static const char *V_LEG2_COR[] = { "Igual à principal", "Branco", "Amarelo", "Verde", "Azul", "Vermelho", "Preto" };
 static const char *V_LEG2_FUNDO[] = { "Igual à principal", "Nenhum", "Escuro 25%", "Escuro 50%", "Escuro 75%", "Escuro 100%" };
 static const char *V_LEG2_BORDA[] = { "Igual à principal", "Nenhuma", "Contorno", "Sombra" };
@@ -1273,7 +1275,7 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Sair do Jellyfin"),
   ESC("Mostrar opções avançadas",       V_LIGA, 2),   // local: avancadasLocal
   ESC("Posição da segunda legenda",      V_LEG2_POS, 2),      // local: legenda2PosLocal
-  ESC("Tamanho da segunda legenda",      V_LEG2_TAMANHO, 7),  // local: legenda2TamanhoLocal
+  ESC("Tamanho da segunda legenda",      V_LEG2_TAMANHO, 21),  // local: legenda2TamanhoLocal
   ESC("Cor da segunda legenda",          V_LEG2_COR, 7),      // local: legenda2CorLocal
   ESC("Fundo da segunda legenda",        V_LEG2_FUNDO, 6),    // local: legenda2FundoLocal
   ESC("Borda da segunda legenda",        V_LEG2_BORDA, 4),    // local: legenda2BordaLocal
@@ -2092,9 +2094,10 @@ int ajustes_abertura(void) { int v = valor[AJ_ABERTURA]; return v < 0 || v > 2 ?
 int ajustes_legendas_todas(void) { return valor[AJ_LEG_MOSTRAR] == 1; }
 int ajustes_leg2_junto(void) { return valor[AJ_LEG2_POS] == 1; }
 int ajustes_leg2_tamanho(void) {
-  static const int P[] = { 0, 60, 80, 100, 120, 140, 160 };
+  static const int P[] = { 0, 60, 80, 100, 120, 140, 160, 170, 180, 190, 200,
+                           210, 220, 230, 240, 250, 260, 270, 280, 290, 300 };
   int v = valor[AJ_LEG2_TAMANHO];
-  return v >= 0 && v < 7 ? P[v] : 0;
+  return v >= 0 && v < (int)(sizeof P / sizeof *P) ? P[v] : 0;
 }
 int ajustes_leg2_cor(void) { int v = valor[AJ_LEG2_COR]; return v >= 1 && v <= 6 ? v - 1 : -1; }
 int ajustes_leg2_fundo(void) { int v = valor[AJ_LEG2_FUNDO]; return v >= 1 && v <= 5 ? v - 1 : -1; }

@@ -40,13 +40,14 @@ typedef enum {
   TXT_PAINEL_TITULO, TXT_PAINEL_ITEM,
   TXT_CW_TITULO, TXT_CW_META, TXT_CW_BADGE,
   TXT_RANK,
-  // Legenda externa: 50%..250% (#335), em passos de 10. O firmware da C9 oferece
+  // Legenda externa: 50%..300% (#439), em passos de 10. O firmware da C9 oferece
   // apenas cinco degraus; estas fontes pertencem ao overlay do proprio app.
   TXT_LEG_50, TXT_LEG_60, TXT_LEG_70, TXT_LEG_80,
   TXT_LEG_90, TXT_LEG_100, TXT_LEG_110, TXT_LEG_120,
   TXT_LEG_130, TXT_LEG_140, TXT_LEG_150, TXT_LEG_160,
   TXT_LEG_170, TXT_LEG_180, TXT_LEG_190, TXT_LEG_200,
   TXT_LEG_210, TXT_LEG_220, TXT_LEG_230, TXT_LEG_240, TXT_LEG_250,
+  TXT_LEG_260, TXT_LEG_270, TXT_LEG_280, TXT_LEG_290, TXT_LEG_300,
   // Numeral do Top 10 da home Dinamica (NV_TOP10_NUM_CORPO). No FIM, depois das
   // legendas: TXT_LEG_* e contado por aritmetica a partir de TXT_LEG_50.
   TXT_RANK_GRANDE,

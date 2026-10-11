@@ -988,7 +988,7 @@ static void estiloSecundario(const VideoLegendaEstilo *e, TxtEstilo *est, int *r
   int pct = ajustes_leg2_tamanho(), c = ajustes_leg2_cor(), f = ajustes_leg2_fundo(), bd = ajustes_leg2_borda();
   if (pct <= 0) pct = e->tamanho * 9 / 10;
   if (pct < 50) pct = 50;
-  if (pct > 250) pct = 250;
+  if (pct > 300) pct = 300;
   pct = (pct / 10) * 10;
   *est = (TxtEstilo)(TXT_LEG_50 + (pct - 50) / 10);
   corEstilo(c >= 0 ? c : e->cor, r, g, b);

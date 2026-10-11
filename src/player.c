@@ -933,7 +933,7 @@ static void prefsLer(void) {
       /* Migra o arquivo antigo 0..4 sem perder a preferencia do aparelho. */
       static const int antigo[5]={60,80,120,160,200};
       if(v>=0&&v<=4)legEstilo.tamanho=antigo[v];
-      else if(v>=50&&v<=250)legEstilo.tamanho=(v/10)*10;
+      else if(v>=50&&v<=300)legEstilo.tamanho=(v/10)*10;
     }
     else if (!strcmp(chave, "leg_cor")     && v >= 0 && v < VIDEO_LEG_NCORES) legEstilo.cor = v;
     else if (!strcmp(chave, "leg_fundo")   && v >= 0 && v <= 4)  legEstilo.fundo = v;
@@ -3815,7 +3815,7 @@ static PlrRect areaVideoLegenda(void) {
 static double escalaFonteAss(void) {
   int pct = legEstilo.tamanho;
   if (pct < 50) pct = 50;
-  if (pct > 250) pct = 250;
+  if (pct > 300) pct = 300;
   return pct / 120.0;
 }
 
@@ -3917,7 +3917,7 @@ static void desenharLegendaPrincipal(float *topoPilha){
       PlainAssStyle style = {0};
       int pct = legEstilo.tamanho, fam = legEstilo.familia;
       float base = baseLegendaPrincipal();
-      if (pct < 50) pct = 50; if (pct > 250) pct = 250;
+      if (pct < 50) pct = 50; if (pct > 300) pct = 300;
       style.size = (pct / 10) * 4;
       if (fam < 0 || fam >= (int)(sizeof families / sizeof families[0])) fam = 0;
       snprintf(style.font, sizeof style.font, "%s", families[fam]);
@@ -3965,7 +3965,7 @@ static void desenharLegendaPrincipal(float *topoPilha){
     n = 1;
   }
   if (n <= 0) return;
-  int pct=legEstilo.tamanho;if(pct<50)pct=50;if(pct>250)pct=250;pct=(pct/10)*10;
+  int pct=legEstilo.tamanho;if(pct<50)pct=50;if(pct>300)pct=300;pct=(pct/10)*10;
   TxtEstilo est=(TxtEstilo)(TXT_LEG_50+(pct-50)/10);corLegenda(legEstilo.cor,&r,&g,&b);
   float alpha=(legEstilo.opacidade==3?.25f:legEstilo.opacidade==2?.5f:legEstilo.opacidade==1?.75f:1.f)*entrada;
   // A pilha "normal" (sem \pos e sem \an, ou \an 2): empilha de baixo para

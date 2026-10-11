@@ -26,6 +26,12 @@ void player_leg_estilo_tocou(int m) { (void)m; }
 int assrender_ativo(void) { return 0; }
 int assrender_texto_simples(void) { return 0; }
 int main(void) {
+  // #439: every added 10% step is selectable before wrapping to 50%.
+  estilo.tamanho = 250;
+  for (int pct = 260; pct <= 300; pct += 10) {
+    ciclarEstilo(0); assert(estilo.tamanho == pct);
+  }
+  ciclarEstilo(0); assert(estilo.tamanho == 50);
   // Style arrow and OK paths share the ±60 s bound, with the existing 250 ms step.
   passoAtrasoEstilo(60); assert(estilo.atrasoMs == 15000);
   passoAtrasoEstilo(300); assert(estilo.atrasoMs == LEGUI_ATRASO_MAX);
