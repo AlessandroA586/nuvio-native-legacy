@@ -3787,6 +3787,7 @@
   T("Quanto a borda do cartaz em foco acende.", "フォーカス中のポスターの縁が、どれだけ明るく光るかを設定します。"),
   T("Quanto a vinheta escura cobre a arte na tela do título. Cem por cento é o padrão; zero mostra a arte limpa — o texto pode ficar difícil de ler sobre cenas claras.", "作品ページで、暗いビネットがアートワークをどれだけ覆うかを設定します。初期値は 100 です。0 にするとアートがそのまま見えますが、明るいシーンの上では文字が読みにくくなることがあります。"),
   T("Quanto de pixel a arte carrega. Alta pede a versão grande de cada imagem e gasta mais memória; Baixa pede a menor, carrega antes e cabe em TV com pouca RAM.", "アートワークが持つピクセル量を設定します。高は各画像の大きいバージョンを要求してメモリを多く使います。低は小さいバージョンを要求し、読み込みが早く、RAM の少ないテレビでも収まります。"),
+  T("Quanto do armazenamento da TV o P2P pode usar enquanto toca; Automático usa até metade do espaço livre. Se o vídeo for maior, ele continua tocando e a TV guarda só o trecho perto de onde você está (em pendrive FAT ou exFAT, ele para no limite).", "再生中に P2P がテレビのストレージをどれだけ使えるか。自動は空き容量の半分まで使います。動画が上限より大きくても再生は続き、テレビは今見ている位置の前後だけを保持します（FAT または exFAT の USB メモリでは上限で止まります）。"),
   T("Quanto do armazenamento desta TV o P2P pode ocupar enquanto toca. Automático usa até metade do espaço livre (no máximo 1,5 GB). Um valor fixo sempre deixa 512 MB livres. O vídeo inteiro fica guardado até fechar o player: um arquivo maior que o limite para no meio.", "再生中に P2P がこのテレビのストレージをどれだけ使えるか。自動は空き容量の半分まで（最大 1.5 GB）。固定値は常に 512 MB の空きを残します。プレーヤーを閉じるまで動画全体が保存されるため、上限より大きいファイルは途中で止まります。"),
   T("Quanto espera pelos add-ons", "アドオンを待つ時間"),
   T("Quanto o reflexo passa por cima da arte do cartaz em foco.", "つやが、フォーカス中のポスターのアートワークの上をどれだけ流れるかを設定します。"),

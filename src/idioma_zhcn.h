@@ -3787,6 +3787,7 @@
   T("Quanto a borda do cartaz em foco acende.", "聚焦海报的边缘亮起的程度。"),
   T("Quanto a vinheta escura cobre a arte na tela do título. Cem por cento é o padrão; zero mostra a arte limpa — o texto pode ficar difícil de ler sobre cenas claras.", "作品页上，深色暗角覆盖图片的程度。默认是 100；0 则显示无遮罩的图片——在明亮的画面上文字可能难以辨认。"),
   T("Quanto de pixel a arte carrega. Alta pede a versão grande de cada imagem e gasta mais memória; Baixa pede a menor, carrega antes e cabe em TV com pouca RAM.", "图片携带的像素量。“高”会请求每张图的大尺寸版本，占用更多内存；“低”请求小尺寸版本，加载更快，适合内存较小的电视。"),
+  T("Quanto do armazenamento da TV o P2P pode usar enquanto toca; Automático usa até metade do espaço livre. Se o vídeo for maior, ele continua tocando e a TV guarda só o trecho perto de onde você está (em pendrive FAT ou exFAT, ele para no limite).", "播放时 P2P 可使用电视多少存储空间；自动最多使用一半的剩余空间。视频超过上限也会继续播放，电视只保留当前位置前后的一段（FAT 或 exFAT 格式的 U 盘会在上限处停止）。"),
   T("Quanto do armazenamento desta TV o P2P pode ocupar enquanto toca. Automático usa até metade do espaço livre (no máximo 1,5 GB). Um valor fixo sempre deixa 512 MB livres. O vídeo inteiro fica guardado até fechar o player: um arquivo maior que o limite para no meio.", "播放时 P2P 可占用这台电视多少存储空间。自动最多使用一半的剩余空间（最多 1.5 GB）。固定值始终保留 512 MB 空闲。关闭播放器前会保存整个视频：大于上限的文件会在中途停止。"),
   T("Quanto espera pelos add-ons", "等待插件的时间"),
   T("Quanto o reflexo passa por cima da arte do cartaz em foco.", "光泽掠过聚焦海报图片的程度。"),
