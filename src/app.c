@@ -4281,6 +4281,11 @@ void app_atualizar(float dt, Uint32 agora) {
   if (player_aberto() && !player_quer_sair() &&
       !player_id_canal()[0] && aguardandoFonte == 0) {
     int pedido = player_pediu_proxima_fonte();
+    // O pulo AUTOMATICO obedece "Outra fonte se falhar" (Ajustes): esgotadas
+    // as tentativas da reproducao, o que sobra e o aviso na tela — o OK do
+    // usuario (pedido 1) continua abrindo a folha de fontes.
+    if (pedido == 2 && fonteVODTentativas >= VOD_FONTE_MAX_TENTATIVAS)
+      pedido = 0;
     if (pedido) {
       int atual = stream_atual();
       if (atual >= 0) stream_automatico_excluir(atual);
