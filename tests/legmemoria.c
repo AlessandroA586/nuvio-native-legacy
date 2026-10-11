@@ -43,6 +43,7 @@ void video_escolher_audio(int i) { (void)i; }
 int mkvass_estado(void) { return 0; }
 int mkvass_varredura(void) { return 0; }
 void mkvass_parar(void) {}
+void mkvass_aceitar_texto(int sim) { (void)sim; }
 void mkvass_iniciar_ordinal(const char *u, int o) { (void)u; (void)o; }
 void legenda_desligar(void) {}
 const char *i18n(const char *s) { return s; }

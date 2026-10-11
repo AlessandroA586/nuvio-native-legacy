@@ -1482,8 +1482,8 @@ static int lerTracks(Fio *f, const unsigned char *p, long n) {
       if (tipo != 17 || ordinalLeg++ != -f->faixa - 1) continue;
       f->faixa = numero;
     } else if (numero != f->faixa) continue;
-    // Texto simples: so com o pedido explicito (.tpk) e nunca na pre-busca —
-    // ela segura o video, e na LG a TV desenha SRT bem.
+    // Texto simples: so com o pedido explicito (LG/.tpk), nunca na pre-busca,
+    // para nao segurar o inicio do video por esta colheita.
     if (!ehAss && ehTexto && aceitaTexto && !f->prebusca) {
       f->texto = 1;
       f->corpoTam = 0;

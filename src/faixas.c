@@ -89,9 +89,8 @@ static char legExternaId[24];
 // sem tentar outra vez.
 //
 // Na LG o player nativo e silenciado enquanto o app coleta e compoe a faixa;
-// em no-go, a selecao volta ao uMS. NA SAMSUNG ESTE RAMO NAO RODA: o
-// video_tizen.c nao preenche `codec`, entao ehAss e sempre falso la e a faixa
-// vai ao AVPlay, cujo texto o player desenha pelo onsubtitlechange (#122).
+// em no-go, a selecao volta ao uMS. O Tizen web entrega o texto pelo
+// onsubtitlechange (#122); o .tpk tambem usa esta colheita por Range.
 static int legOverlay = -1, legOverlayNoGo = -1;
 
 // Faixa embutida escolhida ANTES de a sonda do cabecalho voltar (#92, webOS
@@ -131,14 +130,12 @@ static int ehAss(const VideoFaixa *f) {
   return f && (!strncmp(f->codec, "S_TEXT/ASS", 10) || !strncmp(f->codec, "S_TEXT/SSA", 10));
 }
 
-// #269: QUEM DESENHA a faixa embutida (regra em faixasmkv_overlay). ASS vai ao
-// overlay em todo alvo (#92). No .tpk da Samsung tambem o TEXTO SIMPLES
-// (S_TEXT/UTF8, WebVTT): o Tizen.Multimedia.Player lista e seleciona a faixa,
-// mas nenhum log de TV jamais mostrou o texto chegando pelo SubtitleUpdated
-// (S90C, Tizen 9: "so a do OpenSubtitles funciona"). O overlay le a faixa do
-// MKV por Range, como a LG faz com ASS; o player so fica de reserva (no-go do
-// mkvass, fonte MP4, faixa sem par no cabecalho).
-#ifdef NV_TPK
+// ASS vai ao overlay em todo alvo (#92). Na LG e no .tpk tambem o texto
+// simples (SRT/WebVTT): o uMS reduz o tamanho a cinco presets, diferentes da
+// previa, e o .tpk nao entrega cues pelo SubtitleUpdated (#269). Colher pelo
+// MKV usa o mesmo renderer e tamanho da previa. O player nativo e a reserva
+// para no-go do mkvass, fonte MP4 ou faixa sem par no cabecalho.
+#if defined(NV_TPK) || (!defined(NV_ANDROID) && !defined(__EMSCRIPTEN__))
 #define FX_TEXTO_OVERLAY 1
 #else
 #define FX_TEXTO_OVERLAY 0
@@ -156,6 +153,7 @@ static int vaiOverlay(const VideoFaixa *f) {
 static void overlayAssumir(int i, int ord) {
   const VideoFaixa *f = video_legenda(i);
   video_escolher_legenda(-1);
+  mkvass_aceitar_texto(FX_TEXTO_OVERLAY);
   mkvass_iniciar_ordinal(video_url_atual(), ord);
   legOverlay = i;
   legOverlayFalhas = legOverlayRecusas = 0; legOverlayRetomar = 0;
@@ -177,7 +175,7 @@ static const char *motivoTV(int i) {
   if (sond == 0) return "sonda do cabecalho ainda nao voltou";
   if (!f->codec[0]) return "sonda voltou sem par para esta faixa (ver [mkv] legendas da TV x arquivo)";
   if (!vaiOverlay(f)) return FX_TEXTO_OVERLAY ? "codec nao e de texto (ASS/SRT/WebVTT): a TV desenha"
-                                               : "codec nao e ASS/SSA: a TV desenha bem";
+                                               : "codec nao e ASS/SSA: a TV desenha";
   if (video_legenda_ordinal_mkv(i) < 0) return "sem ordinal no arquivo";
   return "?";
 }

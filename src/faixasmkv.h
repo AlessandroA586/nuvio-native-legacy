@@ -39,7 +39,7 @@ const char *faixasmkv_codec(const char *codecId);
 // #269: a faixa de legenda deste CodecID e desenhada pelo overlay do app,
 // lida do MKV pelo mkvass, em vez do player da TV? ASS/SSA sempre (#92).
 // Texto simples (S_TEXT/UTF8 = SRT, S_TEXT/WEBVTT) so quando `textoSimples`
-// — o .tpk, cujo player nao entrega o texto da legenda embutida (#269).
+// — LG (tamanho igual a previa) e .tpk (sem cues do player, #269).
 // Imagem (PGS/VobSub) e desconhecido: nunca.
 int faixasmkv_overlay(const char *codecId, int textoSimples);
 
