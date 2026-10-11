@@ -433,8 +433,7 @@ typedef struct {
   Ponto   *pontos;
   int      nPontos, nColhidos;
   char    *corpo;          // cabecalho ASS + linhas Dialogue: colhidas (ou SRT, ver `texto`)
-  // #269: faixa de TEXTO SIMPLES (S_TEXT/UTF8, S_TEXT/WEBVTT), aceita so com
-  // mkvass_aceitar_texto. O corpo e SubRip: o overlay desenha com o estilo do
+  // #421: faixa de TEXTO SIMPLES (S_TEXT/UTF8, S_TEXT/WEBVTT). O corpo e SubRip: o overlay desenha com o estilo do
   // app, igual a legenda externa (que funciona na mesma TV).
   int      texto;
   size_t   corpoTam, corpoCap;
@@ -515,7 +514,11 @@ typedef struct {
 } Fio;
 
 // #269: ver mkvass_aceitar_texto. Lido pelo fio no cabecalho.
-static volatile int aceitaTexto;
+#ifdef NV_ANDROID
+static volatile int aceitaTexto; // Media3 ja entrega texto ao overlay.
+#else
+static volatile int aceitaTexto = 1;
+#endif
 void mkvass_aceitar_texto(int sim) { aceitaTexto = sim ? 1 : 0; }
 
 static int minhaVez(const Fio *f) {
@@ -1482,9 +1485,8 @@ static int lerTracks(Fio *f, const unsigned char *p, long n) {
       if (tipo != 17 || ordinalLeg++ != -f->faixa - 1) continue;
       f->faixa = numero;
     } else if (numero != f->faixa) continue;
-    // Texto simples: so com o pedido explicito (.tpk) e nunca na pre-busca —
-    // ela segura o video, e na LG a TV desenha SRT bem.
-    if (!ehAss && ehTexto && aceitaTexto && !f->prebusca) {
+    // #421: o mesmo SubRip das externas, inclusive na pre-busca.
+    if (!ehAss && ehTexto && aceitaTexto) {
       f->texto = 1;
       f->corpoTam = 0;
       if (!corpoAnexar(f, "", 0)) return -1;
@@ -3245,7 +3247,7 @@ static void *trabalhar(void *arg) {
   // escolheu nada. Volta a ocioso; a escolha de verdade comeca do zero.
   if (r && f->prebusca) {
     printf("[mkvass] pre-busca sem colheita: %s (HTTP %d, curl %d, %ld ms)\n",
-           r == MKVASS_NOGO_NAO_MKV ? "nao e MKV" : r == MKVASS_NOGO_FAIXA ? "nenhuma faixa ASS a colher"
+           r == MKVASS_NOGO_NAO_MKV ? "nao e MKV" : r == MKVASS_NOGO_FAIXA ? "nenhuma faixa de texto a colher"
            : r == MKVASS_NOGO_RESTO ? "o servidor recusou o resto" : "rede ou indice",
            f->ultSt, f->ultErro, agoraMs() - f->t0);
     fflush(stdout);

@@ -406,11 +406,12 @@ int main(int argc, char **argv) {
   ok(ped <= 2, "no-go de faixa custou <= 2 Ranges (so o cabecalho)");
 
   mkvass_parar(); esperarFio();
+  mkvass_aceitar_texto(0);
   mkvass_iniciar(urlSrt, 3);              // S_TEXT/UTF8
   rodarAte(1.0, 20000, 0.0);
   ok(mkvass_estado() == MKVASS_NOGO_FAIXA, "faixa SRT: NOGO_FAIXA");
   // A faixa de verdade (ordinal 0 = a S_TEXT/UTF8) sem o pedido do .tpk:
-  // continua no-go de codec, a LG nao muda.
+  // continua no-go de codec com a opcao desligada.
   mkvass_parar(); esperarFio();
   mkvass_iniciar_ordinal(urlSrt, 0);
   rodarAte(1.0, 20000, 0.0);

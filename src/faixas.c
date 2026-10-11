@@ -131,37 +131,34 @@ static int ehAss(const VideoFaixa *f) {
   return f && (!strncmp(f->codec, "S_TEXT/ASS", 10) || !strncmp(f->codec, "S_TEXT/SSA", 10));
 }
 
-// #269: QUEM DESENHA a faixa embutida (regra em faixasmkv_overlay). ASS vai ao
-// overlay em todo alvo (#92). No .tpk da Samsung tambem o TEXTO SIMPLES
-// (S_TEXT/UTF8, WebVTT): o Tizen.Multimedia.Player lista e seleciona a faixa,
-// mas nenhum log de TV jamais mostrou o texto chegando pelo SubtitleUpdated
-// (S90C, Tizen 9: "so a do OpenSubtitles funciona"). O overlay le a faixa do
-// MKV por Range, como a LG faz com ASS; o player so fica de reserva (no-go do
-// mkvass, fonte MP4, faixa sem par no cabecalho).
-#ifdef NV_TPK
-#define FX_TEXTO_OVERLAY 1
-#else
+// #421: texto embutido usa o mesmo overlay das externas. Android ja recebe
+// os cues do Media3; la so ASS continua pelo colhedor.
+#ifdef NV_ANDROID
 #define FX_TEXTO_OVERLAY 0
+#else
+#define FX_TEXTO_OVERLAY 1
 #endif
 static int vaiOverlay(const VideoFaixa *f) {
   return f && faixasmkv_overlay(f->codec, FX_TEXTO_OVERLAY);
 }
 
 // O overlay do app assume a faixa embutida `i` (ordinal `ord` no arquivo): a
-// legenda nativa da TV e DESLIGADA (video_escolher_legenda(-1) manda
+// legenda nativa da TV e DESLIGADA quando o texto chegar (-1 manda
 // setSubtitleEnable false ao uMS / desliga no AVPlay) e o mkvass comeca a
 // colher. A linha de log e a prova de que o app assumiu — se a TV continuar
 // desenhando por cima, o firmware ignorou o setSubtitleEnable, e isso e
 // outro bug (a resposta do uMS sai logo abaixo como "[video] {...}").
 static void overlayAssumir(int i, int ord) {
   const VideoFaixa *f = video_legenda(i);
-  video_escolher_legenda(-1);
+  int texto = f && !ehAss(f);
+  // Texto: a TV segura a legenda enquanto a rede ainda nao entregou cues.
+  video_escolher_legenda(texto ? i : -1);
   mkvass_iniciar_ordinal(video_url_atual(), ord);
   legOverlay = i;
   legOverlayFalhas = legOverlayRecusas = 0; legOverlayRetomar = 0;
-  legOverlayTV = legOverlayColhidos = 0;
-  printf("[legenda] faixa %d (%s, %s) -> app: ordinal %d; legenda nativa desligada\n",
-         i, f ? f->rotulo : "?", f ? f->codec : "?", ord);
+  legOverlayTV = texto; legOverlayColhidos = 0;
+  printf("[legenda] faixa %d (%s, %s) -> app: ordinal %d; %s\n",
+         i, f ? f->rotulo : "?", f ? f->codec : "?", ord, texto ? "TV enquanto aguarda texto" : "legenda nativa desligada");
   fflush(stdout);
 }
 
