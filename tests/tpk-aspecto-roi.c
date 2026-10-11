@@ -4,9 +4,9 @@
 #undef main
 
 void nv_tpk_video_registrar_aspecto(void (*)(int,int,int,int,int,int,int,int));
-static int lx,ly,lw,lh;
+static int lx,ly,lw,lh,na;
 static void hAspecto(int x,int y,int w,int h,int a,int b,int c,int d) {
-  hJanela(x,y,w,h); lx=a;ly=b;lw=c;lh=d;
+  na++; hJanela(x,y,w,h); lx=a;ly=b;lw=c;lh=d;
 }
 static void check(int x,int y,int w,int h,int a,int b,int c,int d) {
   confere("B bridge",x,y,w,h);
@@ -30,24 +30,31 @@ int main(void) {
   }
   // Zoom: production source crop is integer/even; preserve its exact scale.
   nv_tpk_video_evento(6,1912,800);
+  na=0;
   video_janela_fonte(244,0,1422,800,0,0,1920,1080);
 #ifdef NV_TPK40
+  assert(na==1);
   check(-328,0,2582,1080,-328,0,2582,1080);
 #else
-  check(-328,0,2582,1080,0,0,1920,1080);
+  assert(na==0);
+  confere("B bridge refuses off-screen ROI",0,0,1920,1080);
 #endif
   video_recorte_reaplicar();
 #ifdef NV_TPK40
+  assert(na==2);
   check(-328,0,2582,1080,-328,0,2582,1080);
 #else
-  check(-328,0,2582,1080,0,0,1920,1080);
+  assert(na==0);
 #endif
   nv_tpk_video_evento(6,1440,1080);
+  na=0;
   video_janela_fonte(0,134,1440,810,0,0,1920,1080);
 #ifdef NV_TPK40
+  assert(na==1);
   check(0,-178,1920,1440,0,-178,1920,1440);
 #else
-  check(0,-178,1920,1440,0,0,1920,1080);
+  assert(na==0);
+  confere("B bridge refuses vertical off-screen ROI",0,0,1920,1080);
 #endif
   // A cached crop can never be replayed into another player generation.
   nj=0; video_tocar("http://test/next"); video_recorte_reaplicar(); assert(nj==0);
