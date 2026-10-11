@@ -491,6 +491,7 @@ int   ajustes_cw_retido_tambem(void);   // 1 = o titulo da ilha/Retomar tambem f
 // Percentual (70-98, padrao 90) a partir do qual o episodio conta como
 // assistido: sai do Continuar assistindo e o card passa ao proximo. Local.
 int   ajustes_cw_concluido(void);
+int   ajustes_cw_minimo(void);    // 1..20 %: piso do Continuar assistindo (#326); 1 = como sempre
 
 // --- LAYOUT: pagina de detalhe (efeito vive em detail.c) ---------------------
 int   ajustes_desfocar_nao_assistidos(void); // blurUnwatchedEpisodes

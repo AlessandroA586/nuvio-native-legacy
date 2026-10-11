@@ -5948,7 +5948,7 @@ int home_retorno_vale(int indice, double posSeg, double durSeg) {
   double p;
   if (indice < 0 || durSeg <= 1.0) return 0;
   p = posSeg / durSeg;
-  return p >= 0.01 && p * 100.0 < ajustes_cw_concluido();
+  return p * 100.0 >= (double)ajustes_cw_minimo() && p * 100.0 < ajustes_cw_concluido();
 }
 void home_registrar_retorno(int indice, double posSeg, double durSeg) {
   int novo = home_retorno_vale(indice, posSeg, durSeg) ? indice : -1;

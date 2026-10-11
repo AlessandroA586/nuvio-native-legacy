@@ -502,6 +502,10 @@ typedef enum {
   AJ_FONTE_ORDEM_ADDON,
   AJ_LEG_SYNC_AUTO, // local, ligada de fábrica; append-only
   AJ_LEG_MOSTRAR, // #425: local, append-only; 0 = so meus idiomas
+  // 2.0.2 (#326): "Minimo para entrar no Continuar". Antes era o 1% fixo (descoberta.c,
+  // progresso.c, home.c). Padrao 1 = o comportamento de sempre. No fim: valor[]/CHAVE[]
+  // sao posicionais.
+  AJ_CW_MINIMO,
   AJ_N
 } OpcaoId;
 
@@ -1331,6 +1335,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Ordem das fontes", V_FONTE_ORDEM_ADDON, 2), // local (#400)
   ESC("Sincronia automática da legenda", V_LIGA, 2),
   ESC("Mostrar no player", V_LEG_MOSTRAR, 2),
+  NUM("Mínimo para entrar no Continuar", 1, 20, 1, "%"),   // local: cwMinimoLocal
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1557,6 +1562,7 @@ static const char *CHAVE[] = {
   "fonteOrdemLocal",
   "legendaSyncAutoLocal",
   "legendaMostrarLocal",
+  "cwMinimoLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2376,6 +2382,13 @@ float ajustes_espaco_fator(int pct) {
 }
 float ajustes_espaco_fileiras(void) { return ajustes_espaco_fator(valor[AJ_ESPACO_FILEIRAS]); }
 float ajustes_espaco_titulos(void)  { return ajustes_espaco_fator(valor[AJ_ESPACO_TITULOS]); }
+// O piso do Continuar assistindo, em %. Fora da faixa do NUM (arquivo torto) volta para
+// dentro dela; nunca passa do Percentual assistido, que fecharia a faixa.
+int ajustes_cw_minimo(void) {
+  int v = valor[AJ_CW_MINIMO], c = ajustes_cw_concluido();
+  v = v < 1 ? 1 : v > 20 ? 20 : v;
+  return v >= c ? c - 1 : v;
+}
 int ajustes_cw_concluido(void) {
   int v = valor[AJ_CW_CONCLUIDO];
   return v < 70 ? 70 : v > 98 ? 98 : v;   // a faixa do NUM, se o arquivo vier torto
@@ -4039,6 +4052,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_VIDRO:          /* visual desta TV: a GPU de cada uma aguenta diferente */
     case AJ_VIDRO_CONTORNO:
     case AJ_CW_CONCLUIDO:   /* o web nao tem esta escolha */
+    case AJ_CW_MINIMO:      /* idem */
     case AJ_ADDONS_PRINCIPAL: /* escolha desta TV; a conta tem uses_primary_addons */
     case AJ_HERO_TRANSICAO: /* o web nao tem esta escolha */
     case AJ_ADDON_POSTER: case AJ_ADDON_FUNDO: case AJ_ADDON_LOGO:
@@ -4990,7 +5004,7 @@ static int inativa(int op) {
     case AJ_DESCANSO_FONTE:  return valor[AJ_ESMAECER] == 0 || ajustes_descanso_estilo() != 0;
     case AJ_CW_OK: case AJ_CW_FONTE: case AJ_CW_PROXIMO:
     case AJ_CW_ESTILO: case AJ_CW_THUMB: case AJ_CW_FURTHEST:
-    case AJ_CW_NAO_EXIBIDOS: case AJ_CW_ORDEM: case AJ_CW_CONCLUIDO: case AJ_CW_RETIDO_TAMBEM:
+    case AJ_CW_NAO_EXIBIDOS: case AJ_CW_ORDEM: case AJ_CW_CONCLUIDO: case AJ_CW_MINIMO: case AJ_CW_RETIDO_TAMBEM:
       return !ajustes_cw_ligado();
     case AJ_CW_BLUR_PROX: return !ajustes_cw_ligado() || !ajustes_cw_thumb_episodio();
     case AJ_EXPANDIR_ATRASO: return !ajustes_expandir_poster();
@@ -5179,7 +5193,7 @@ static const char *ajudaOpcaoBase(int op) {
     if (op == AJ_DTS_AC3) return "Não disponível nesta TV. Só a LG converte o DTS dentro do app.";
     if (op == AJ_CACHE_SEEK) return "Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.";
     if (op == AJ_DESCOBRIR) return "A tela Descobrir do app web ainda não existe nesta TV. A escolha fica guardada na conta.";
-    if ((op >= AJ_CW_OK && op <= AJ_CW_ORDEM) || op == AJ_CW_PROXIMO || op == AJ_CW_CONCLUIDO || op == AJ_CW_RETIDO_TAMBEM)
+    if ((op >= AJ_CW_OK && op <= AJ_CW_ORDEM) || op == AJ_CW_PROXIMO || op == AJ_CW_CONCLUIDO || op == AJ_CW_MINIMO || op == AJ_CW_RETIDO_TAMBEM)
       return op == AJ_CW_BLUR_PROX && ajustes_cw_ligado()
         ? "Ative Miniatura do episódio para desfocar a imagem do próximo episódio."
         : "Ative Continuar assistindo para ajustar os cards de retomada.";
@@ -5328,6 +5342,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_CW_NAO_EXIBIDOS: return "A retomada mostra o próximo episódio antes de ir ao ar.";
     case AJ_CW_ORDEM: return "Como a retomada se ordena: pelo mais recente, no estilo dos streamings, ou com os episódios futuros num bloco separado.";
     case AJ_CW_CONCLUIDO: return "A partir de quanto do episódio ele conta como assistido e a retomada passa ao próximo.";
+    case AJ_CW_MINIMO: return "Quanto você precisa assistir para o título aparecer em Continuar assistindo. Abaixo disso ele não entra na fileira.";
 
     // --- Pagina de detalhe
     case AJ_DET_TRAILER:
@@ -6483,7 +6498,7 @@ static int definirValorDireto(int op, int novo) {
   if (op == AJ_CW_FONTE || op == AJ_SALVOS_DEST || op == AJ_SOCIAL) desc_repetir();
   // A fonte decide so esta fileira: refaz-la, alem do ciclo completo (#244).
   if (op == AJ_CW_FONTE || op == AJ_CW_PROXIMO) desc_refazer_continuar();
-  if (op == AJ_CW_ORDEM || op == AJ_CW_NAO_EXIBIDOS || op == AJ_CW_CONCLUIDO || op == AJ_CW_RETIDO_TAMBEM)
+  if (op == AJ_CW_ORDEM || op == AJ_CW_NAO_EXIBIDOS || op == AJ_CW_CONCLUIDO || op == AJ_CW_MINIMO || op == AJ_CW_RETIDO_TAMBEM)
     desc_refazer_continuar();
   if (op == AJ_TEX_MB) tex_definir_orcamento_mb(ajustes_tex_mb());
   // Picking 4K again = try again: forget that this TV did not hold it.

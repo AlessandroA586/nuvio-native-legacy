@@ -181,6 +181,7 @@ static const char *uxSinonimos(int op) {
       return "ordem ordenar subir descer prioridade add-on addon plugin primeiro desempate estrita auto-play autoplay automatico order priority tie strict";
     case AJ_CW_PROXIMO: return "proximo episodio continuar assistindo a seguir next up fileira retomada esconder series so em andamento continue watching";
     case AJ_LAYOUT_AJUSTES: return "layout arranjo lista painel grade linhas uma embaixo da outra antigo anterior visual ajustes configuracoes list rows settings classic";
+    case AJ_CW_MINIMO: return "minimo continuar assistindo porcentagem percentual entrar fileira retomada progresso quanto assistir comecou piso minimum percent continue watching threshold row";
     case AJ_FONTE_PREPARAR: return "preparar fonte ao abrir titulo antecipar resolver antecipado play instantaneo inicio rapido debrid painel arquivo prepare source ahead instant start";
     case AJ_FONTE_CONFERIR_VARIAS: return "conferir varias fontes ao mesmo tempo paralelo paralela simultaneo verificar verificacao automatico rapido inicio debrid painel arquivos parallel check several sources speed";
     case AJ_FONTE_AQUECER: return "aquecer conexoes conexao rede dns tls antecipar preparar abrir titulo inicio rapido lento demora warm preconnect connection network speed";

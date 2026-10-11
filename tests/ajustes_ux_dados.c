@@ -645,8 +645,16 @@ int main(void) {
     valor[AJ_P2P_LIMITE] = 9; assert(ajustes_p2p_limite_mb() == 0); valor[AJ_P2P_LIMITE] = antes; }
   { int vz = 0, k; for (k = 0; k < AJ_N_TELA; k++) if (TELA[k].tipo == IT_OPC && TELA[k].op == AJ_P2P_LIMITE) vz++; assert(vz == 1); }
   assert(indiceResultado(AJ_P2P_LIMITE, ajustes_buscar("limite p2p", resultados, AJ_N)) >= 0);
+  // #326: append-only, local, 1% por padrao; respeita a faixa do Continuar.
+  assert(!strcmp(CHAVE[AJ_CW_MINIMO], "cwMinimoLocal") && valorPadrao[AJ_CW_MINIMO] == 1);
+  assert(somenteDesteAparelho(AJ_CW_MINIMO) && !dePerfil(AJ_CW_MINIMO));
+  { int antes = valor[AJ_CW_MINIMO];
+    valor[AJ_CW_MINIMO] = 10; assert(ajustes_cw_minimo() == 10);
+    valor[AJ_CW_MINIMO] = 0; assert(ajustes_cw_minimo() == 1);
+    valor[AJ_CW_MINIMO] = 99; assert(ajustes_cw_minimo() == 20);
+    valor[AJ_CW_MINIMO] = antes; }
   // #400: acrescentado no fim, sem deslocar os indices antigos.
-  assert(AJ_LEG_SYNC_AUTO == AJ_FONTE_ORDEM_ADDON + 1 && AJ_LEG_MOSTRAR == AJ_LEG_SYNC_AUTO + 1 && AJ_N == AJ_LEG_MOSTRAR + 1);
+  assert(AJ_LEG_SYNC_AUTO == AJ_FONTE_ORDEM_ADDON + 1 && AJ_LEG_MOSTRAR == AJ_LEG_SYNC_AUTO + 1 && AJ_CW_MINIMO == AJ_LEG_MOSTRAR + 1 && AJ_N == AJ_CW_MINIMO + 1);
   assert(!strcmp(CHAVE[AJ_FONTE_ORDEM_ADDON], "fonteOrdemLocal"));
   assert(OPCOES[AJ_FONTE_ORDEM_ADDON].n == 2 && valorPadrao[AJ_FONTE_ORDEM_ADDON] == 0);
   assert(somenteDesteAparelho(AJ_FONTE_ORDEM_ADDON) && !dePerfil(AJ_FONTE_ORDEM_ADDON));
