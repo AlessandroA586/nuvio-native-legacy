@@ -15,10 +15,15 @@ static int cap4k[4];
 void stream_definir_decoder4k(int h, int a, int v, int av) {
   cap4k[0] = h; cap4k[1] = a; cap4k[2] = v; cap4k[3] = av;
 }
+#ifdef NV_NDK_JNI
+static struct JNINativeInterface jni;
+#else
 static struct JNINativeInterface_ jni;
-static const struct JNINativeInterface_ *env = &jni;
+#endif
+static JNIEnv env = &jni;
 static int chamadasNormais, chamadasPosicao, recebidoMs, recebidoGeracao, excecao, lancar;
 static int ausente, ausenteFracao, chamadasFracao, recebidoFracao;
+static int chamadasPausa, ultimoPausar, chamadasBusca, ultimoBuscar;
 static unsigned relogio = 100;
 void *SDL_AndroidGetJNIEnv(void) { return &env; }
 void *SDL_AndroidGetActivity(void) { return NULL; }
@@ -40,6 +45,8 @@ static jmethodID JNICALL metodo(JNIEnv *e, jclass c, const char *nome, const cha
     if (ausenteFracao) { excecao = 1; return NULL; }
     return (jmethodID)(uintptr_t)5;
   }
+  if (!strcmp(nome, "pausar")) return (jmethodID)(uintptr_t)6;
+  if (!strcmp(nome, "buscar")) return (jmethodID)(uintptr_t)7;
   return (jmethodID)(uintptr_t)1;
 }
 static jstring JNICALL texto(JNIEnv *e, const jchar *u, jsize n) {
@@ -51,6 +58,14 @@ static void JNICALL limparExcecao(JNIEnv *e) { (void)e; excecao = 0; }
 static void JNICALL chamar(JNIEnv *e, jclass c, jmethodID m, ...) {
   (void)e; (void)c;
   if (m == mParar) return;
+  if (m == mPausar) {
+    va_list ap; va_start(ap, m); ultimoPausar = va_arg(ap, jint); va_end(ap);
+    chamadasPausa++; return;
+  }
+  if (m == mBuscar) {
+    va_list ap; va_start(ap, m); ultimoBuscar = va_arg(ap, jint); va_end(ap);
+    chamadasBusca++; return;
+  }
   va_list ap; va_start(ap, m);
   (void)va_arg(ap, jstring); (void)va_arg(ap, jstring);
   if (m == mAbrirRetomada) {
@@ -169,5 +184,29 @@ int main(void) {
   assert(video_tocar("https://example.invalid/novo.mkv"));
   assert(video_erro_decoder_codigo() == 0 && !video_falhou());
   puts("ok #409 JNI: audio/desconhecido nao bloqueiam video; reset ao parar/abrir");
+
+  // Queda provocada por seek enquanto pausado: a reabertura deve continuar
+  // pausada e aplicar o alvo mesmo sem receber EV_TOCANDO.
+  video_parar(); video_definir_reconexao(1);
+  assert(video_tocar("https://example.invalid/pausado.mkv"));
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_PRONTO, 7200000, 0);
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_PRIMEIRO_QUADRO, 0, 0);
+  Java_space_nuvio_nativelegacy_NvPlayer_nativePos(NULL, NULL, 2451000);
+  video_bombear();
+  video_pausar(1);
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_PAUSADO, 0, 0);
+  int pausas = chamadasPausa, buscas = chamadasBusca;
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_ERRO, 2000, -1);
+  video_bombear();
+  relogio += 3000; video_bombear();
+  assert(chamadasPausa == pausas + 1 && ultimoPausar == 1);
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_PRONTO, 7200000, 0);
+  video_bombear();
+  assert(chamadasBusca == buscas + 1 && ultimoBuscar == 2451000);
+  assert(video_pausa_confirmada() == 0); // espera o ack do player novo
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_PAUSADO, 0, 0);
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_PRIMEIRO_QUADRO, 0, 0);
+  assert(video_pausa_confirmada());
+  puts("ok reconexao de seek pausado conserva pausa e posicao");
   puts("video Android retomada: PASS (JNI, geracoes, fallback e limites)");
 }

@@ -33,6 +33,7 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import java.util.concurrent.atomic.AtomicInteger
 
 // Player do Nuvio no Android TV: Media3 ExoPlayer numa SurfaceView ATRAS da
@@ -459,14 +460,21 @@ object NvPlayer {
                 .build()
             val p = ExoPlayer.Builder(act, renderizadores)
                 .setLoadControl(carga)
+                // release/detach continuam no Looper da aplicacao, como exige
+                // Media3, mas o HAL nao pode prender a interface sem limite.
+                .setReleaseTimeoutMs(2000)
+                .setDetachSurfaceTimeoutMs(2000)
                 .setMediaSourceFactory(DefaultMediaSourceFactory(act)
+                    // ParaleloDataSource faz as tres tentativas de transporte;
+                    // nao empilhar outra rodada invisivel do Loader antes da
+                    // maquina de reconexao 3/10/25 s do nucleo.
+                    .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(0))
                     // DefaultDataSource e nao so http: o trailer da Apple chega como
                     // file:// (master reduzido a uma variante em dados/trailer, trailerapple.c).
                     .setDataSourceFactory(DefaultDataSource.Factory(act, origem)))
                 .build()
             player = p
             aplicarGanho()
-            semTravaDeFio(p)
             // Release anterior ainda preso no HAL de audio: sessao de audio nova,
             // para o AudioTrack deste filme nao esperar o patch do velho.
             if (liberacoesEmCurso.get() > 0) {
@@ -567,22 +575,6 @@ object NvPlayer {
         superficie?.visibility = View.GONE
     }
 
-    // O release roda em outro fio (liberarEmFundo) e o Media3 1.8 lanca se um
-    // fio que nao e o da aplicacao toca o player; o seletor e so do pacote, entao
-    // reflexao. Sem ele (outra versao), o release volta ao fio principal.
-    private fun semTravaDeFio(p: ExoPlayer) {
-        try {
-            val m = p.javaClass.getDeclaredMethod("setThrowsWhenUsingWrongThread", Boolean::class.javaPrimitiveType)
-            m.isAccessible = true
-            m.invoke(p, false)
-            fioLivre = true
-        } catch (e: Throwable) {
-            fioLivre = false
-            Log.w(TAG, "[player] sem destravar o fio do release (volta ao fio principal): $e")
-        }
-    }
-    @Volatile private var fioLivre = false
-
     private fun novaSuperficie(act: Activity) {
         if (superficie != null) return
         val c = camada ?: return
@@ -622,9 +614,9 @@ object NvPlayer {
         }
     }
 
-    // stop+release do player velho fora do fio principal. A SurfaceView so sai
-    // da tela depois: tirar antes dispararia o callback de superficie do
-    // Media3, que espera o fio de reproducao (justo o que esta preso).
+    // Media3 exige stop/release no applicationLooper (SDLActivity). Os timeouts
+    // configurados no Builder limitam a espera do HAL; executar em nv-release
+    // apenas escondia a violacao e produzia o warning de wrong thread.
     private fun liberarEmFundo(p: ExoPlayer, sv: SurfaceView?) {
         liberacoesEmCurso.incrementAndGet()
         val corpo = Runnable {
@@ -635,12 +627,9 @@ object NvPlayer {
             if (ms > 5000) Log.w(TAG, "[player] release anterior levou $ms ms (>5 s: HAL de audio preso?)")
             else Log.i(TAG, "[player] release anterior levou $ms ms")
             liberacoesEmCurso.decrementAndGet()
-            principal.post {
-                if (sv != null && sv !== superficie) (sv.parent as? FrameLayout)?.removeView(sv)
-            }
+            if (sv != null && sv !== superficie) (sv.parent as? FrameLayout)?.removeView(sv)
         }
-        if (fioLivre) { val t = Thread(corpo, "nv-release"); t.isDaemon = true; t.start() }
-        else corpo.run()
+        if (Looper.myLooper() == p.applicationLooper) corpo.run() else principal.post(corpo)
     }
 
     // Tique de 250 ms: a posicao que o C le sem esperar ninguem.
