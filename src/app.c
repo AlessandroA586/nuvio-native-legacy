@@ -28,6 +28,8 @@
 #include "sessao.h"
 #include "perfis.h"
 #include "fontevolta.h"
+#include "fonteescolha.h"
+#include "fontesonda.h"
 #include "fonteantecipa.h"
 #include "aquecer.h"
 #include "addonstats.h"
@@ -1674,6 +1676,51 @@ static int pedirProximaFonteVOD(void) {
   }
   return 1;
 }
+// SONDA DEPOIS DA RECUSA DO PLAYER (#364, fontesonda.h). O player nativo
+// recusou a URL no preparo (erro de conexao): repete o pedido pelo nosso
+// cliente, FORA do fio de quadro, e escreve uma linha so, sem caminho nem query.
+// Uma vez por URL.
+typedef struct { char url[4096]; char cab[512]; } SondaRecusa;
+static void *sondarRecusaFio(void *u) {
+  SondaRecusa *p = u;
+  const char *vetor[8];
+  char *l, *ctx = NULL, fim[4096], mime[96], linha[400];
+  int nc = 0, http = 0, ok;
+  long corpo = -1;
+  Uint32 t0 = SDL_GetTicks();
+  fim[0] = 0; mime[0] = 0;
+  for (l = strtok_r(p->cab, "\n", &ctx); l && nc < 7; l = strtok_r(NULL, "\n", &ctx)) vetor[nc++] = l;
+  vetor[nc] = NULL;
+  ok = rede_url_final_tipo(p->url, 6, nc ? vetor : NULL, fim, sizeof fim, &http,
+                           mime, sizeof mime, &corpo);
+  // O pedido nao conta os saltos: 1 = "houve ao menos um" quando o destino mudou.
+  fontesonda_linha(linha, sizeof linha, ok && fim[0] ? fim : p->url, http,
+                   ok && fim[0] && strcmp(fim, p->url) ? 1 : 0, mime,
+                   (unsigned)(SDL_GetTicks() - t0));
+  printf("%s\n", linha);
+  fflush(stdout);
+  free(p);
+  return NULL;
+}
+static void sondarAposRecusa(void) {
+#ifndef __EMSCRIPTEN__
+  static char ultima[4096];
+  const char *url = video_url_atual();
+  const Stream *s;
+  SondaRecusa *p;
+  pthread_t t;
+  if (!url || !*url || !fontesonda_erro_conexao(video_erro_texto())) return;
+  if (!strcmp(url, ultima)) return;
+  snprintf(ultima, sizeof ultima, "%s", url);
+  s = stream_atual() >= 0 ? stream_item(stream_atual()) : NULL;
+  p = calloc(1, sizeof *p);
+  if (!p) return;
+  snprintf(p->url, sizeof p->url, "%s", url);
+  if (s) snprintf(p->cab, sizeof p->cab, "%s", s->cabecalhos);
+  if (pthread_create(&t, NULL, sondarRecusaFio, p) == 0) pthread_detach(t);
+  else free(p);
+#endif
+}
 // ESCOLHA MANUAL QUE NAO ABRE: prazo ate o primeiro quadro (fontevolta.h).
 // Vence -> o erro de fonte do player, com "A fonte nao respondeu" e as saidas
 // de sempre. O automatico ja tem o proprio prazo (tentarProximaFonteVOD).
@@ -1696,6 +1743,7 @@ static void vigiarAberturaManual(void) {
   if (video_falhou()) {
     printf("[fonte] escolha manual: erro do player em %u ms (%s)\n", (unsigned)desde, video_erro_texto());
     fflush(stdout);
+    sondarAposRecusa();
     fonteManualDesde = 0;
     player_erro_fonte_motivo(i18n("Não foi possível abrir a fonte"), NULL);
     return;
@@ -1826,7 +1874,7 @@ static void tentarProximaFonteVOD(void) {
   // (video_reconexao.h). So vira troca de fonte quando ela desistir (falhou).
   if (video_reconectando()) return;
   desde = SDL_GetTicks() - fonteVODDesde;
-  if (video_falhou() || player_fonte_falhou()) motivo = 1;
+  if (video_falhou() || player_fonte_falhou()) { motivo = 1; sondarAposRecusa(); }
   // Reloading a source that already played (Dolby Vision path handing back
   // to the TV player, track switch) is not a source that never opened: on
   // the C9 the 30 s deadline, counted from the first open, swapped a playing
@@ -4344,6 +4392,9 @@ void app_atualizar(float dt, Uint32 agora) {
     // preferencia: quem nunca abriu esta folha continua com a regra da
     // pontuacao para sempre, que e a condicao de nao quebrar o app de quem
     // nunca escolheu nada.
+    // Capturado ANTES de stream_preferir(fonte) abaixo: e a marca que a folha
+    // mostrava (fonteescolha.h).
+    int escolhaPreferida = stream_preferida();
     if (s) {
       char base[24];
       idBaseDoTitulo(base, sizeof base);
@@ -4376,7 +4427,17 @@ void app_atualizar(float dt, Uint32 agora) {
         // Fonte direta: o torrent do motor (se havia) para de baixar.
         p2pmotor_parar_fundo();
         player_definir_fonte(s->url);
-        if (!player_id_canal()[0]) fonteManualDesde = SDL_GetTicks();
+        // PREFERENCIA NAO E ESCOLHA MANUAL (#364): a linha lembrada, aberta com OK,
+        // cai para a proxima fonte como o automatico. Escolha de verdade: prazo
+        // e mensagem, sem troca por tras da tela.
+        if (fonteescolha_cai_para_proxima(fonte, escolhaPreferida, 1, player_id_canal()[0])) {
+          fonteVODAutomatica = 1;
+          fonteVODTentativas = 1;
+          fonteVODDesde = SDL_GetTicks();
+          player_definir_tentativa(1, VOD_FONTE_MAX_TENTATIVAS);
+          printf("[fonte] preferencia (nao escolha manual): cai para a proxima se falhar\n");
+          fflush(stdout);
+        } else if (!player_id_canal()[0]) fonteManualDesde = SDL_GetTicks();
         // FONTE QUE O ADDON MARCA COMO FORA DE CACHE ("⏳", "[TB download]"):
         // tocar o link e o que manda o servico baixar, e o que o addon devolve
         // enquanto baixa e um clipe de aviso de ~8 s (registros 1136, 2191,
