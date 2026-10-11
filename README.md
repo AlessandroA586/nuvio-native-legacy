@@ -320,6 +320,24 @@ Most design notes are in Portuguese, because I wrote them for myself:
 Release notes live in `docs/releases/`. [INSTALL.md](INSTALL.md) and this file are
 in English.
 
+## Disclaimer
+
+Nuvio Legacy is a **media player**. It does not host, store, index, upload or
+distribute any movies, series, channels or other content, and it ships with no
+content sources. Everything it plays comes from add-ons, playlists, servers and
+accounts that **you** choose to install or connect. Those are run by third
+parties that have nothing to do with this project.
+
+- You are responsible for what you add and watch, and for making sure you have
+  the right to access it where you live.
+- This project does not control, endorse or verify any add-on, playlist or
+  service, and does not provide links to unlicensed content.
+- There is nothing hosted here to take down. Copyright notices about a stream
+  should go to whoever hosts it (the add-on, playlist or server), not to this
+  repository.
+- Nuvio Legacy is not affiliated with Stremio, the official Nuvio app, any
+  streaming service, debrid service or TV maker.
+
 ## License
 
 [GNU General Public License v3.0](LICENSE).
