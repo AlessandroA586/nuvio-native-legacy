@@ -47,8 +47,11 @@ for spec in "a 25 60 590 690" "b 612 90 650 650" "c 1262 100 615 640"; do
     -composite -trim +repage -strip "$REC/7$1.png"
 done
 
-# Preserve the current package branding; Original is never regenerated from an old logo.
-magick deploy/app/icon.png -resize 256x256 -strip "$ART/original.png"
+# Original = the "LEGACY" icon (design/marca/nuvio-legacy-icone.png, same art as
+# the Discord server). The gallery draws its own rounded tile, so the dark
+# square background is cut away from the corners.
+magick design/marca/nuvio-legacy-icone.png -alpha set -fuzz 6% -fill none \
+  -draw "alpha 0,0 floodfill" -filter Lanczos -resize 256x256 -strip "$ART/original.png"
 
 # Alternative IDs match src/iconeapp.c; Original was generated above.
 LISTA="fenix:$SRC/1.webp nverde:$SRC/2.webp
