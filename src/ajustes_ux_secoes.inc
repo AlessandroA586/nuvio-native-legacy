@@ -203,8 +203,8 @@ static int ajCenaSecao(int op) {
       return AJC_REP_FONTE;
     // 2.0.3: HDR e Dolby Vision mora em Imagem e som.
     case AJ_FONTE_HDR:
-    case AJ_QUALIDADE: case AJ_DV: case AJ_DV_MKV: case AJ_ATMOS: case AJ_DTS_AC3: case AJ_CACHE_SEEK: return AJC_REP_IMAGEM;
-    case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_REACAO_CREDITOS: case AJ_SAIDA_PLAYER: case AJ_MANTER_VIDEO: case AJ_PROPORCAO_PADRAO: return AJC_REP_DURANTE;
+    case AJ_QUALIDADE: case AJ_DV: case AJ_DV_MKV: case AJ_ATMOS: case AJ_DTS_AC3: case AJ_CACHE_SEEK: case AJ_BUFFER: return AJC_REP_IMAGEM;
+    case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_AUTO: case AJ_PROXIMO_CONTAGEM: case AJ_REACAO_CREDITOS: case AJ_SAIDA_PLAYER: case AJ_MANTER_VIDEO: case AJ_PROPORCAO_PADRAO: return AJC_REP_DURANTE;
     case AJ_SEEKR_LIGADO: case AJ_SEEKR_CHAVE: case AJ_SEEKR_TESTAR: case AJ_SEEKR_FITA: case AJ_SEEKR_AJUSTE:
       return AJC_REP_SEEKR;
     case AJ_IDIOMA: case AJ_TMDB_IDIOMA: return AJC_IDI_INTERFACE;
@@ -944,9 +944,11 @@ static void ajcIdiLegenda2(int A) {
   static const float COR[6][3] = { { 1, 1, 1 }, { 1, 0.86f, 0.2f }, { 0.4f, 0.9f, 0.4f }, { 0.4f, 0.65f, 1 },
                                    { 1, 0.35f, 0.3f }, { 0.08f, 0.08f, 0.08f } };
   static const float FU[5] = { 0, 0.25f, 0.5f, 0.75f, 1.0f };
-  static const float TAM[7] = { 1.0f, 0.6f, 0.8f, 1.0f, 1.2f, 1.4f, 1.6f };
   int c = ajustes_leg2_cor(), f = ajustes_leg2_fundo(), b = ajustes_leg2_borda(), junto = ajustes_leg2_junto();
-  float k = TAM[valor[AJ_LEG2_TAMANHO] >= 0 && valor[AJ_LEG2_TAMANHO] < 7 ? valor[AJ_LEG2_TAMANHO] : 0];
+  // O MESMO numero que o player usa (legendasui estiloSecundario): 0 = auto,
+  // 90% da principal; senao o proprio percentual da opcao (ate 300%).
+  int pct2 = ajustes_leg2_tamanho();
+  float k = pct2 > 0 ? pct2 / 100.0f : 0.9f;
   float bw = 220 * k, bh = 9 * k, by = junto ? 262 - bh - 18 : 26, bx = 320 - bw * 0.5f;
   const float *cc = c >= 0 && c < 6 ? COR[c] : COR[0];
   CIMG(ajArte(AJA_FUNDO, A), 0, 0, 640, 360, 22, 1);

@@ -87,6 +87,7 @@
 #include "marco.h"
 #include "mkv.h"
 #include "capmkv.h"
+#include "vazao.h"
 #include <SDL2/SDL.h>
 #include <emscripten.h>
 #include <emscripten/threading.h>
@@ -112,7 +113,7 @@
 //   * o buffer vem de malloc/pilha do C e a escrita e feita DEPOIS, entao a
 //     view (HEAPF64/HEAPU8) tem de ser indexada na hora do uso — nunca guardada
 //     entre chamadas. Aqui isso e automatico porque cada operacao reindexa.
-//   * "estado" devolve SO DOUBLES, nove deles, e nao uma struct mista. Um
+//   * "estado" devolve SO DOUBLES, dez deles, e nao uma struct mista. Um
 //     campo int no meio obrigaria a acertar deslocamento e alinhamento em duas
 //     linguagens; um vetor de um tipo so nao tem como sair de fase.
 EM_JS(double, nv_av, (const char *cmd, const char *txt,
@@ -443,10 +444,10 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
   }
 
   if (op === "estado") {
-    // NOVE DOUBLES, nesta ordem, e a mesma no C (ver EST_*). Um tipo so: sem
+    // DEZ DOUBLES, nesta ordem, e a mesma no C (ver EST_*). Um tipo so: sem
     // deslocamento a acertar, sem alinhamento a supor.
     // dstTam vem em BYTES, como em "faixas": um so contrato para o buffer.
-    if (!dst || dstTam < 72) return 0;
+    if (!dst || dstTam < 80) return 0;
     var p6 = pl();
     var dur = 0;
     if (p6 && S.aberto && S.pronto) {
@@ -497,7 +498,8 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
     HEAPF64[o + 5] = S.larg;
     HEAPF64[o + 6] = S.alt;
     HEAPF64[o + 7] = S.erro ? 1 : 0;
-    HEAPF64[o + 8] = S.fim ? 1 : 0;
+    HEAPF64[o + 8] = S.bufPct;
+    HEAPF64[o + 9] = S.fim ? 1 : 0;
     return 1;
   }
 
@@ -722,7 +724,7 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
 // Indices do vetor devolvido por "estado". Precisam casar com a ordem escrita
 // no JS acima, e sao a UNICA coisa combinada entre os dois lados.
 enum { EST_POS, EST_DUR, EST_TOCANDO, EST_PRONTO, EST_ABERTO,
-       EST_LARG, EST_ALT, EST_ERRO, EST_FIM, EST_N };
+       EST_LARG, EST_ALT, EST_ERRO, EST_BUFPCT, EST_FIM, EST_N };
 
 // O pedido que atravessa para o fio principal. Fica na PILHA do chamador: com
 // -pthread a memoria e compartilhada e avChamar() e sincrona, entao o quadro
@@ -801,6 +803,7 @@ static Uint32 aberturaEm;   // avplay open (log do inicio, #202)
 static int    ativo;         // ha sessao aberta — e o que abre o furo
 static int    tocando, pronto, terminou;
 static double posSeg, durSeg;
+static int    bufPct;
 static int    vidW, vidH;
 static int    houveErro;
 static char   erroTexto[96];   // ver logarErro e video_erro_texto
@@ -1198,6 +1201,7 @@ void video_bombear(void) {
   memset(est, 0, sizeof est);
   if (avChamar("estado", NULL, 0, 0, 0, 0, (char *)est, (int)sizeof est) < 1) return;
   posSeg   = est[EST_POS];
+  bufPct   = (int)est[EST_BUFPCT];
   durSeg   = est[EST_DUR];
   tocando  = est[EST_TOCANDO] != 0;
   pronto   = est[EST_PRONTO]  != 0;
@@ -1461,6 +1465,14 @@ double video_duracao(void)    { return durSeg; }
 // O AVPlay so informa PORCENTAGEM de buffering (onbufferingprogress), nunca um
 // instante. 0 e o que video.h define como "desconhecido"; quem chama ja trata.
 double video_buffer_fim(void) { return 0; }
+// SAMSUNG (.wgt): o AVPlay so da a PORCENTAGEM do buffering
+// (onbufferingprogress, 100 no onbufferingcomplete); nada de bytes, segundos,
+// conexoes ou quadros. O host e o do link pedido.
+void video_estatisticas(VideoStats *s) {
+  video_stats_vazio(s);
+  if (urlAtual[0]) s->bufferPct = bufPct < 0 ? 0 : bufPct > 100 ? 100 : bufPct;
+  vazao_host_publico(urlAtual, s->host, sizeof s->host);
+}
 // O AVPlay nao expoe o par bufferingStart/End; sem sinal, nunca afirma travo.
 unsigned video_bufferando_ms(void) { return 0; }
 void video_definir_reconexao(int sim) { reconProxima = sim ? 1 : 0; }

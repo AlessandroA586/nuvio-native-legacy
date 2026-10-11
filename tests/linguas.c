@@ -200,6 +200,21 @@ int main(void) {
     ok("auto287: sem forcada, letreiros com audio no idioma",
        ling_legenda_auto_tipo("pt", "por", 1, emb, tl, 1, 1, NULL, 0, 1) == 0); }
 
+  // #205: quem pediu "hr" prefere a faixa "hr" a uma "hbs" que tambem serve —
+  // o casamento exato de familia vence o conjunto, mesmo vindo depois.
+  { const char *emb[] = { "hbs", "hr" }, *add[] = { "sh", "sr" };
+    ok("auto205: hr pedido vence hbs na frente",
+       ling_legenda_auto("hr", emb, 2, 1, add, 2, 1) == 1);
+    ok("auto205: sr do addon vence sh na frente",
+       ling_legenda_auto("sr", NULL, 0, 1, add, 2, 1) == 1);
+    ok("auto205: hbs pedido vence hr na frente",
+       ling_legenda_auto("hbs", emb, 2, 1, NULL, 0, 1) == 0);
+    ok("auto205: sem hr, hbs serve",
+       ling_legenda_auto("hr", emb, 1, 1, NULL, 0, 1) == 0);
+    const int tp[] = { LING_LEG_COMUM, LING_LEG_COMUM };
+    ok("auto205: tipo tambem ranqueia hr antes de hbs",
+       ling_legenda_auto_tipo("hr", "", 0, emb, tp, 2, 1, NULL, 0, 1) == 1); }
+
   if (falhas) { printf("%d falha(s)\n", falhas); return 1; }
   printf("linguas ok\n");
   return 0;

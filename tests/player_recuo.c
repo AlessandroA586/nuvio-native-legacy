@@ -1,5 +1,5 @@
-// O recuo continuo por quadro deve cancelar Next e proteger o trecho inteiro,
-// nao somente os 10 s da primeira tecla. Modulo real, sem janela nem rede.
+// O recuo continuo por quadro cancela Next e espera progresso no destino.
+// A memoria do unico pulo automatico continua pertencendo a intro.c.
 #include "../src/player.c"
 #include <assert.h>
 
@@ -12,19 +12,18 @@ int main(void) {
   scrubSalto = (SaltoEst){.inicio = agora - 2000, .ultimaTecla = agora, .rep = 1};
   scrubUltimo = agora;
   creditosauto_zerar(&creditosAuto);
+  intro_auto_marcar(INTRO_CREDITOS, 1460);
   player_atualizar(.05f, agora);
   assert(posSeg < 1450);
-  assert(creditosAuto.voltou && creditosAuto.voltouDe == 1450);
-  assert(creditosAuto.voltouAte == posSeg);
-  IntroTrecho v = {posSeg, 1460, INTRO_CREDITOS}; double fim;
-  creditosAuto.buscaPendente = 0;
-  assert(!creditosauto_decidir(&creditosAuto, &v, 1, posSeg + 1, 1500, 0, 1, 1, &fim));
-  // Continuar avancando nao amplia o intervalo de recuo.
-  double ate = creditosAuto.voltouAte;
+  assert(creditosAuto.buscaPendente && creditosAuto.buscaRecuo);
+  assert(creditosAuto.inicioBusca == 1450 && creditosAuto.fimBusca == posSeg);
+  assert(intro_auto_ja(INTRO_CREDITOS, 1460));
+  // Continuar avancando nao altera o destino do recuo.
+  double ate = creditosAuto.fimBusca;
   scrubDir = 1; scrubSalto.ultimaTecla = agora + 16; scrubUltimo = agora + 16;
   player_atualizar(.05f, agora + 16);
-  assert(creditosAuto.voltouAte == ate);
+  assert(creditosAuto.fimBusca == ate);
   SDL_Quit();
-  puts("player_recuo: recuo continuo protegido; avanco nao amplia a recusa");
+  puts("player_recuo: recuo continuo confirmado; memoria unica de intro_auto preservada");
   return 0;
 }

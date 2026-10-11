@@ -114,10 +114,14 @@ int ajustes_pausa_overlay(void);
 int ajustes_classif_player(void);   // 1 = mostra a classificacao/guia parental no player (padrao)
 // "O que achou?" nos creditos (reacao.h). Ligado de fabrica.
 int ajustes_reacao_creditos(void);
-// Credits with explicit start/end markers, default off; this profile on this TV.
-int ajustes_auto_creditos(void);
-// After principal-profile inheritance, restore only this profile's credit choice.
-void ajustes_auto_creditos_restaurar(int perfil);
+// #329: pula abertura/resumo sozinho quando ha marcador (desligado de fabrica).
+int ajustes_pular_abertura(void);
+int ajustes_pular_resumo(void);
+// #331: a contagem do proximo episodio nos creditos (desligado de fabrica; contagem configuravel, padrao 5 s).
+int ajustes_proximo_auto(void);
+int ajustes_proximo_contagem(void);
+// Pula os creditos sozinho, so com inicio e fim reais do marcador (desligado de fabrica).
+int ajustes_pular_creditos(void);
 // Medidor de desempenho na ilha do relogio (desempenho.h): Desempenho desta TV,
 // local. 0 = desligado, 1 = Minimo, 2 = Menor, 3 = Grande (DS_* de desempenho.h).
 int ajustes_medidor_desempenho(void);
@@ -447,6 +451,7 @@ int   ajustes_legenda_sync_auto(void);       // local, ligada por padrão
 int   ajustes_legenda_sync_audio(void);      // 1 = offer "Por audio" in subtitle AutoSync (F06; local, default off)
 int   ajustes_trailer_zoom_tpk(void);        // #241: 1 = experimental trailer zoom on the native .tpk (local, default off)
 unsigned ajustes_p2p_limite_mb(void);           // #334: P2P space limit in MB (0 = Automatic)
+int   ajustes_buffer_preset(void);           // #338: 0 Automatico, 1 Baixo, 2 Medio, 3 Alto (0 fora do Android)
 int   ajustes_cache_seek_mb(void);           // F07: seek cache limit in MB for the next video (0 = off / not on this TV)
 #ifdef AJUSTES_TESTE
 void  ajustes_teste_escala(int percentual); // fixture only; does not persist
@@ -498,6 +503,7 @@ int   ajustes_cw_retido_tambem(void);   // 1 = o titulo da ilha/Retomar tambem f
 // Percentual (70-98, padrao 90) a partir do qual o episodio conta como
 // assistido: sai do Continuar assistindo e o card passa ao proximo. Local.
 int   ajustes_cw_concluido(void);
+int   ajustes_cw_minimo(void);    // 1..20 %: piso do Continuar assistindo (#326); 1 = como sempre
 
 // --- LAYOUT: pagina de detalhe (efeito vive em detail.c) ---------------------
 int   ajustes_desfocar_nao_assistidos(void); // blurUnwatchedEpisodes
@@ -641,11 +647,24 @@ void ajustes_tmdb_idioma_relatar(const char *blob);
 // portugues (text.c traduz ao desenhar). _ligado: 1/0 num interruptor, -1 nos
 // outros. _passo: proximo (dir 1) ou anterior (-1) valor, gravado e com os
 // mesmos efeitos do OK na tela de Ajustes; 0 se nao gravou.
+// "corDestaque" nao e uma opcao de 2 a 6 valores: o op e o AJ_RAPIDO_COR e a
+// central abre o seletor de cores (ajustes_rapido_cor_*, logo abaixo).
+#define AJ_RAPIDO_COR 9000
 int         ajustes_rapido_op(const char *chave);
 const char *ajustes_rapido_rotulo(int op);
 const char *ajustes_rapido_valor(int op);
 int         ajustes_rapido_ligado(int op);
 int         ajustes_rapido_passo(int op, int dir);
+// A COR DE DESTAQUE (seletor da central): os 18 acentos fixos na ordem da
+// regua de Ajustes (0-8 claros, 9-17 profundos). `cor` devolve a tinta que
+// contrasta com o preenchimento (como ajustes_acento_tinta); `atual` = -1 com
+// um acento dinamico; `definir` grava como a tela de Ajustes (0 = falhou).
+int         ajustes_rapido_cor_n(void);
+const char *ajustes_rapido_cor_nome(int i);
+float       ajustes_rapido_cor(int i, float *r, float *g, float *b);
+int         ajustes_rapido_cor_atual(void);
+const char *ajustes_rapido_cor_atual_nome(void);
+int         ajustes_rapido_cor_definir(int i);
 
 #ifdef NV_SHOT_HOOKS
 int ajustes_shot_valor(const char *chave, int v);   // capturas: opcao pela chave

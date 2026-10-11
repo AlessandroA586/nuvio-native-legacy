@@ -49,6 +49,13 @@ int  addons_perfil_da_lista(void);
 // Lista atual, para o sync poder empurrar de volta o que este aparelho tem.
 int  addons_exportar(AddonRemoto *saida, int max);
 
+// Quantos addons ENTRARAM e quantos SAIRAM entre duas listas, comparados pela
+// URL (e nao pelo nome: dois addons podem se chamar igual), e quantos dos que
+// ficaram MUDARAM (ligado/desligado ou ordem). E o que o botao "Sincronizar
+// addons" (#360) diz depois da volta. Qualquer ponteiro de saida pode ser NULL.
+void addons_diferenca(const AddonRemoto *antes, int na, const AddonRemoto *depois, int nd,
+                      int *entraram, int *sairam, int *mudaram);
+
 // Esquece a lista da conta. Chamado ao SAIR: sem isto, a proxima pessoa a usar
 // esta TV navega com os addons da anterior — e como as chaves de debrid vao
 // embutidas nas URLs, ela tambem consome a assinatura da anterior — ate o
@@ -214,7 +221,8 @@ int  addons_ativo(int i);
 int  addons_base_desligada(const char *base);   // 1 = addon da lista desligado na conta
 int  addons_alternar(int i);          // devolve o estado NOVO
 // Acrescenta um addon sem refazer a lista (ver a nota em addons.c). 1 = entrou,
-// 0 = lista cheia, ja instalado ou URL que nao cabe (addonurl.h). Quem chama deve chamar sync_sujar_addons().
+// 0 = lista cheia, ja instalado ou URL que nao cabe (addonurl.h). #360 mao
+// unica: o acrescimo vale so nesta TV; o proximo pull traz a conta por cima.
 int  addons_adicionar(const char *nome, const char *urlManifest);
 // O addon fornece este recurso? Ate a sonda responder e uma suposicao
 // otimista; addons_sondado() diz qual dos dois casos e.

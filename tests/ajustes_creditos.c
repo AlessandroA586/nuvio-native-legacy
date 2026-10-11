@@ -91,59 +91,46 @@ const char *ling_conta_legenda2_valor(void) { return ""; }
 int main(int argc, char **argv) {
   assert(argc == 2 && strlen(argv[1]) < sizeof dirAjustes);
   snprintf(dirAjustes, sizeof dirAjustes, "%s", argv[1]);
-  assert(!ajustes_auto_creditos() && valorPadrao[AJ_AUTO_CREDITOS] == 1);
-  assert(somenteDesteAparelho(AJ_AUTO_CREDITOS) && dePerfil(AJ_AUTO_CREDITOS));
-  assert(!strcmp(uxEscopo(AJ_AUTO_CREDITOS), "Este perfil nesta TV"));
+  assert(!ajustes_pular_creditos() && valorPadrao[AJ_PULAR_CREDITOS] == 1);
+  assert(somenteDesteAparelho(AJ_PULAR_CREDITOS) && !dePerfil(AJ_PULAR_CREDITOS));
+  assert(!strcmp(uxEscopo(AJ_PULAR_CREDITOS), "Só nesta TV"));
+  for (int i = 0; i < AJ_N; i++) assert(strcmp(CHAVE[i], "autoCreditosLocal"));
 
-  valor[AJ_AUTO_CREDITOS] = 0;
+  valor[AJ_PULAR_CREDITOS] = 0;
   valor[AJ_HERO] = 1;
   ajustes_perfil_guardar(1);
   char *snapshot = dados_ler("ajustes-p1.txt");
-  assert(snapshot && strstr(snapshot, "autoCreditosLocal 0\n"));
+  assert(snapshot && !strstr(snapshot, "pularCreditosLocal") && !strstr(snapshot, "autoCreditosLocal"));
   free(snapshot);
-  valor[AJ_AUTO_CREDITOS] = 1;
   valor[AJ_HERO] = 0;
   ajustes_perfil_guardar(2);
-  // Clear memory before loading a saved file: no in-memory profile model.
-  memcpy(valor, valorPadrao, sizeof valor);
-  assert(ajustes_perfil_restaurar(1) && ajustes_auto_creditos());
+  assert(ajustes_perfil_restaurar(1) && ajustes_pular_creditos());
   assert(valor[AJ_HERO] == 1);
-  assert(ajustes_perfil_restaurar(2) && !ajustes_auto_creditos());
+  assert(ajustes_perfil_restaurar(2) && ajustes_pular_creditos());
   assert(valor[AJ_HERO] == 0);
-
-  assert(dados_gravar("ajustes-p4.txt", "heroSectionEnabled 1\n"));
-  valor[AJ_AUTO_CREDITOS] = 0;
-  assert(ajustes_perfil_restaurar(4) && !ajustes_auto_creditos());
-  // Same primary-profile fallback used by sync_trocar_perfil on first visit.
-  assert(ajustes_perfil_restaurar(1) && ajustes_auto_creditos());
-  int hero = valor[AJ_HERO];
-  assert(!ajustes_perfil_restaurar(5));
-  ajustes_auto_creditos_restaurar(5);
-  assert(!ajustes_auto_creditos() && valor[AJ_HERO] == hero);
-  assert(dados_gravar("ajustes-p6.txt", "autoCreditosLocal 99\n"));
-  valor[AJ_AUTO_CREDITOS] = 0;
-  ajustes_auto_creditos_restaurar(6);
-  assert(!ajustes_auto_creditos());
+  assert(dados_gravar("ajustes-p4.txt", "heroSectionEnabled 1\npularCreditosLocal 1\nautoCreditosLocal 1\n"));
+  assert(ajustes_perfil_restaurar(4) && ajustes_pular_creditos());
+  assert(!ajustes_perfil_restaurar(5) && ajustes_pular_creditos());
+  assert(gravar());
+  snapshot = dados_ler("ajustes.txt");
+  assert(snapshot && strstr(snapshot, "pularCreditosLocal 0") && !strstr(snapshot, "autoCreditosLocal"));
+  free(snapshot);
 
   valor[AJ_IDIOMA] = IDIOMA_EN + 1;
   valor[AJ_PAUSA_OVERLAY] = 0;
-  valor[AJ_AUTO_CREDITOS] = 1;
-  assert(ajustes_aplicar_blob("{\"autoCreditosLocal\":true,\"auto_creditos_local\":true}") == 0);
-  assert(!ajustes_auto_creditos());
-  valor[AJ_AUTO_CREDITOS] = 0;
-  assert(ajustes_aplicar_blob("{\"autoCreditosLocal\":false,\"auto_creditos_local\":false}") == 0);
-  assert(ajustes_auto_creditos());
+  valor[AJ_PULAR_CREDITOS] = 1;
+  assert(ajustes_aplicar_blob("{\"pularCreditosLocal\":true,\"autoCreditosLocal\":true}") == 0);
+  assert(!ajustes_pular_creditos());
+  valor[AJ_PULAR_CREDITOS] = 0;
+  assert(ajustes_aplicar_blob("{\"pularCreditosLocal\":false,\"autoCreditosLocal\":false}") == 0);
+  assert(ajustes_pular_creditos());
   char *merged = NULL;
   assert(ajustes_mesclar_blob("{\"pauseOverlayEnabled\":false}", &merged) > 0);
-  assert(merged && !strstr(merged, "autoCreditos") && !strstr(merged, "auto_creditos"));
+  assert(merged && !strstr(merged, "pularCreditos") && !strstr(merged, "autoCreditos"));
   free(merged);
 
   ajustes_perfil_esquecer();
-  assert(!ajustes_auto_creditos() && !dados_ler("ajustes-p1.txt"));
-  snapshot = dados_ler("ajustes.txt");
-  assert(snapshot && (strstr(snapshot, "autoCreditosLocal 1\n") ||
-                      strstr(snapshot, "autoCreditosLocal 1\r\n")));
-  free(snapshot);
-  puts("ajustes_creditos: defaults, profile files, old/new profiles, account isolation and logout passed");
+  assert(ajustes_pular_creditos() && !dados_ler("ajustes-p1.txt"));
+  puts("ajustes_creditos: one device-local preference, default off, persistence and account/profile isolation passed");
   return 0;
 }

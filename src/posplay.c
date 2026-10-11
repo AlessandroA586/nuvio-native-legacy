@@ -30,10 +30,12 @@
 #include <string.h>
 #include <time.h>
 
-// 5 s de contagem final: constante do web 1.0.6 (postPlayRecommendationController).
+// Contagem configuravel, 5 s de fabrica, desligada por padrao (#256).
 // O web abre o painel de filme aos 90%; aqui, desde a 2.0.3, sem marcador e um
 // tempo FIXO antes do fim (intro_fim_estimado_filme, intro.h).
-#define PP_CONTAGEM_S     5
+// #331: a contagem nao espera mais os 5 s finais. O cartao sobe com os creditos
+// e, PP_ATRASO_MS depois, a contagem comeca com os creditos ainda rolando.
+#define PP_ATRASO_MS      4000u
 // Guardas do #115 ("More like this aparece cedo demais — no comeco do
 // filme"). Ver posplay_regra_filme.
 #define PP_FILME_METADE   0.5     // nunca antes da metade da duracao
@@ -93,7 +95,10 @@ static void cancelarPreparo(int apagar) {
   if (apagar && preAlvo[0])
     fontecache_vod_apagar(preAlvo, "series", "", &preEscopo);
 }
+static int    marcadorReal;          // o player diz: creditos de marcador real, nao estimativa (#331)
+static Uint32 abriuEm;               // quando o cartao do proximo episodio subiu (#331)
 
+void posplay_marcador_real(int real) { marcadorReal = real; }
 int posplay_visivel(void) { return visivel; }
 // Cartao do proximo episodio: SOBRE o video em tela cheia (o video nao recua).
 // Os relacionados do filme, bem mais altos, continuam recuando o video.
@@ -227,7 +232,7 @@ static void prepararProximo(int ehSerie, double resta) {
   }
   // Uma renovacao, 10 s antes da contagem final: o preparo feito antes dos
   // creditos pode ter expirado. Nao consulta periodicamente durante o episodio.
-  if (preTentou == 2 || (preTentou && resta > PP_CONTAGEM_S + 10.0) ||
+  if (preTentou == 2 || (preTentou && resta > ajustes_proximo_contagem() + 10.0) ||
       dispensado || durEstavel < PP_DUR_ESTAVEL_S ||
       !player_janela_proximo(10.0)) return;
   player_episodio_atual(&t, &e);
@@ -299,6 +304,33 @@ int posplay_regra_filme(double posSeg, double durSeg, double creditosSeg) {
   return resta > 0.0 && resta <= janela;
 }
 
+// A CONTAGEM DO PROXIMO EPISODIO, sem estado (o teste chama direto). Devolve o
+// novo `fecharEm` (0 = sem contagem). Regra (#331, no molde da Netflix):
+//   - autoplay desligado: nunca conta, o cartao espera a pessoa;
+//   - ja contando: mantem o instante (cancelar e esconder o cartao, que zera);
+//   - cartao no ar ha PP_ATRASO_MS E o inicio dos creditos vem de um MARCADOR de verdade
+//     (capitulo do MKV ou TheIntroDB deste episodio): arma contagemSeg a partir de agora, com os creditos
+//     ainda rolando. Com a estimativa dos 2 min finais NAO: ali ainda ha historia/cena
+//     pos-creditos, e so conta o fim (regra de sempre);
+//   - resta menos que contagemSeg de relogio: arma o que resta.
+// `restaReal` e o que falta do episodio em segundos de relogio.
+Uint32 posplay_contagem(Uint32 agora, Uint32 abriuEm, Uint32 fecharEm, double restaReal, int autoplay, int marcadorReal, int contagemSeg) {
+  Uint32 alvo = 0;
+  int armou = 0;
+  if (!autoplay) return 0;
+  if (fecharEm) return fecharEm;
+  if (contagemSeg < 1) contagemSeg = 1;
+  if (contagemSeg > 60) contagemSeg = 60;
+  if (restaReal <= (double)contagemSeg) {
+    if (restaReal < 0.0) restaReal = 0.0;
+    alvo = agora + (Uint32)(restaReal * 1000.0); armou = 1;
+  } else if (marcadorReal && abriuEm && (Uint32)(agora - abriuEm) >= PP_ATRASO_MS) {
+    alvo = agora + (Uint32)contagemSeg * 1000u; armou = 1;
+  }
+  if (armou && !alvo) alvo = 1;   // 0 quer dizer "sem contagem"
+  return alvo;
+}
+
 void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
                        int ehSerie, int idxCatalogo, int janelaSerie) {
   int deveAparecer = 0;
@@ -345,8 +377,7 @@ void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
     // a usa-la aqui foi o que permitiu apagar aquela caixa — havia DUAS
     // interfaces de proximo episodio na mesma tela, uma feia e uma nova.
     //
-    // A CONTAGEM continua sendo a do web: so nos 5 s finais. Aparecer cedo e
-    // util; comecar a contar cedo tiraria do dono o fim do episodio.
+    // A contagem antecipada exige marcador real e autoplay ligado.
     deveAparecer = janelaSerie && durEstavel >= PP_DUR_ESTAVEL_S;
   } else {
     // FILME: a regra inteira mora em posplay_regra_filme, logo acima, que o
@@ -389,7 +420,8 @@ void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
       player_episodio_atual(&t, &e);
       if (!(t > 0 && e > 0) && ci) { t = ci->temporada; e = ci->episodio; }
       if (t > 0 && e > 0 && acharProximo(idx, t, e)) {
-        fecharEm = 0;            // a contagem entra so nos segundos finais
+        fecharEm = 0;            // a contagem entra PP_ATRASO_MS depois (posplay_contagem)
+        abriuEm = agora ? agora : 1;
         visivel = 1;
       }
       // Sem proximo episodio (fim da serie): nao aparece nada. Mostrar um
@@ -400,29 +432,13 @@ void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
     }
   }
 
-  // CONTAGEM FINAL, os 5 s que posplay.h documenta
-  // (POST_PLAY_RECOMMENDATION_FINAL_COUNTDOWN_SECONDS do web). O cabecalho
-  // "A seguir em %d s", a constante PP_CONTAGEM_S e o bloco logo abaixo que
-  // consome `fecharEm` estavam aqui desde o primeiro commit deste arquivo;
-  // faltava a unica linha que ARMA o relogio. O painel ficava em "A seguir"
-  // para sempre e nada tocava sozinho — no video do issue #14 e o que se ve.
-  //
-  // DEPOIS do bloco que abre o painel, e nao antes: no quadro em que o painel
-  // sobe, `visivel` so vira 1 ali em cima. Armar antes deixaria o primeiro
-  // quadro de fora, e se ele ja for o dos segundos finais o relogio nunca
-  // arma — foi assim que este teste falhou da primeira vez.
-  //
-  // Conta o que RESTA de verdade, e nao 5 s a partir de agora: os creditos
-  // comecam muito antes do fim em algumas series, e um relogio fixo
-  // dispararia no meio deles.
-  if (visivel && serie && !fecharEm && !recuou && !aguardaBusca) {
+  // Arma depois de abrir o cartao: marcador real permite antecipar a contagem;
+  // sem ele, conta apenas os segundos restantes. Desligado, espera OK.
+  // Recuo e busca pendente suspendem a mesma contagem configuravel.
+  if (visivel && serie && !recuou && !aguardaBusca) {
     // #202: a 1,5x os segundos do arquivo passam mais depressa que os do relogio.
     double resta = vel_tempo_real(durSeg - posSeg, player_velocidade_efetiva());
-    if (resta <= (double)PP_CONTAGEM_S) {
-      if (resta < 0.0) resta = 0.0;
-      fecharEm = agora + (Uint32)(resta * 1000.0);
-      if (!fecharEm) fecharEm = 1;   // 0 quer dizer "sem contagem"
-    }
+    fecharEm = posplay_contagem(agora, abriuEm, fecharEm, resta, ajustes_proximo_auto(), marcadorReal, ajustes_proximo_contagem());
   }
 
   // A contagem so vale para o proximo episodio.
@@ -593,7 +609,7 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
     { float tx = tr.x + tr.w + 30.0f, tw = ilha.x + ilha.w - 28.0f - tx, ty = ilha.y + 28.0f;
       if (resta > 0) snprintf(cab, sizeof cab, i18n("A seguir em %d s"), resta);
       else snprintf(cab, sizeof cab, "%s", i18n("A seguir"));
-      anelContagem(tx + 13.0f, ty + 13.0f, resta > 0 ? (float)resta / (float)PP_CONTAGEM_S : 1.0f, a);
+      anelContagem(tx + 13.0f, ty + 13.0f, resta > 0 ? (float)resta / (float)ajustes_proximo_contagem() : 1.0f, a);
       plrui_kicker(cab, tx + 26.0f + 12.0f, ty + 4.0f, 243, 242, 239, a * 0.62f);
       ty += 26.0f + 12.0f;
       { TxtLinha t = txt_linha_corta(TXT_ILHA_TITULO, (px && px->nome[0]) ? px->nome : num, 243, 242, 239, 255, tw);

@@ -5,6 +5,7 @@
 #include "credfonte.h"
 #include "dados.h"
 #include <stdint.h>
+#include <math.h>
 #include <ctype.h>
 #include <sys/stat.h>
 #include <utime.h>
@@ -26,6 +27,11 @@ static int botaoVis;static double botaoFim;static int botaoTipo;
 static IntroTrecho capTr[4];static int nCapTr;
 static void fundirCapitulos(void);   // chamar COM a trava
 static unsigned verGer;
+// Memoria unica do automatico, inclusive recuo antes de uma resposta tardia.
+static unsigned autoGer;static double autoFim[4],autoDe,autoAte;static int autoRecuou;
+static void autoSincronizar(void){
+  if(autoGer!=geracao){memset(autoFim,0,sizeof autoFim);autoRecuou=0;autoGer=geracao;}
+}
 
 
 // AS QUATRO CHAVES QUE A API DEVOLVE, e o tipo de cada uma (as mesmas do
@@ -264,6 +270,22 @@ static int mapaBaixar(const char *arq){
   if(!ok)remove(tmp);else dados_marcar_sujo(1);
   dados_fs_liberar();return ok;
 }
+// QUANTAS DESCARGAS DO INDICE FALHARAM EM SEGUIDA (o arquivo retry guarda o
+// numero; vazio ou ilegivel = pelo menos uma) e onde grava a proxima contagem.
+// Arquivo ausente => 0 (nunca falhou).
+static int retryContar(const char *retry,struct stat *st){
+  FILE *f;char b[8];size_t r;int n;
+  if(stat(retry,st))return 0;
+  f=fopen(retry,"rb");if(!f)return 1;
+  r=fread(b,1,sizeof b-1,f);fclose(f);
+  b[r<sizeof b-1?r:sizeof b-2]=0;
+  n=atoi(b);
+  return n<1?1:n;
+}
+static void retryGravar(const char *retry,int tentativasAteAgora){
+  FILE *f=fopen(retry,"wb");
+  if(f){fprintf(f,"%d",tentativasAteAgora+1);fclose(f);}
+}
 static long malMapeado(const char *id,long tmdb,int t,int *ep){
   char arq[1024],retry[1024];long mal=0;int melhor=-1;struct stat st;time_t agora=time(NULL);
   const char *dir=dados_dir();if(!dir||!*dir)return 0;
@@ -271,9 +293,15 @@ static long malMapeado(const char *id,long tmdb,int t,int *ep){
   snprintf(retry,sizeof retry,"%s/anime-fribb.retry",dir);
   pthread_mutex_lock(&mapTrava);
   int valido=mapaLer(arq,imdbNumero(id),tmdb,t,*ep,&mal,&melhor);
-  // Falha inicial tambem fica uma semana sem rede, inclusive apos reiniciar.
-  if(!valido&&!stat(retry,&st)&&st.st_mtime<=agora&&agora-st.st_mtime<MAP_SEMANA){
-    pthread_mutex_unlock(&mapTrava);return 0;
+  // SEM indice util o retry e CURTO e cresce a cada falha (10 min, 1 h, 6 h):
+  // uma rede fora num dia nao vira uma semana sem intro. A semana inteira so
+  // existe para adiar a RENOVACAO de um indice que ja serve (utime abaixo).
+  if(!valido){
+    int tent=retryContar(retry,&st);
+    time_t prazo=tent>=3?6*60*60:tent==2?60*60:10*60;
+    if(tent>0&&st.st_mtime<=agora&&agora-st.st_mtime<prazo){
+      pthread_mutex_unlock(&mapTrava);return 0;
+    }
   }
   if(!valido||stat(arq,&st)||agora-st.st_mtime>=MAP_SEMANA||st.st_mtime>agora){
     if(mapaBaixar(arq)){
@@ -283,7 +311,10 @@ static long malMapeado(const char *id,long tmdb,int t,int *ep){
     else if(valido){ // Mantem o indice velho e adia outra tentativa por uma semana.
       dados_fs_travar();utime(arq,NULL);dados_marcar_sujo(1);dados_fs_liberar();
     }else{
-      dados_fs_travar();FILE *f=fopen(retry,"wb");if(f)fclose(f);
+      dados_fs_travar();
+      // Conta a falha no arquivo: 1 => 10 min, 2 => 1 h, 3+ => 6 h. O retry
+      // antigo era vazio (uma semana inteira sem tentar de novo).
+      retryGravar(retry,retryContar(retry,&st));
       dados_marcar_sujo(1);dados_fs_liberar();
     }
   }
@@ -401,7 +432,15 @@ static int pedirAniskip(const Pedido *p,IntroTrecho *v,int max,int *falha){
     mal=malDe(p->id);
   }else{
     if(!p->anime)return 0;
+#ifdef __EMSCRIPTEN__
+    // Fribb streams through rede_pedir on this worker. That reaches an
+    // EM_ASYNC_JS outside the deliberately narrow ASYNCIFY_ONLY list.
+    printf("[intro] Fribb mapping disabled on Tizen WGT: worker fetch is outside ASYNCIFY_ONLY\n");
+    fflush(stdout);
+    return 0;
+#else
     mal=malMapeado(p->id,p->tmdb,p->t,&ep);
+#endif
   }
   if(mal<=0)return 0;
   intro_montar_url_aniskip(url,sizeof url,mal,ep,p->dur);
@@ -635,17 +674,42 @@ static double fimEmendado(int i){
   return f;
 }
 
-int intro_ativo(double pos,double*fim,int*tipo){
-  int ok=0;pthread_mutex_lock(&trava);
+// Chamar com a trava: manual e automatico compartilham a escolha/janela.
+static int ativoInterno(double pos,double*fim,int*tipo,int automatico){
+  int ok=0;
   for(int i=0;i<nTrechos;i++){
     // fim ZERO = ate o fim da midia: basta ter passado do inicio.
     int dentro=trechos[i].fim>0.0
                ? (pos>=trechos[i].inicio&&pos<trechos[i].fim)
                : (pos>=trechos[i].inicio);
     if(trechos[i].tipo==INTRO_PREVIA)continue;   // sem botao proprio (CHAVES)
-    if(dentro&&valido(i)){if(fim)*fim=fimEmendado(i);if(tipo)*tipo=trechos[i].tipo;ok=1;break;}
+    if(dentro&&valido(i)){
+      double f=fimEmendado(i);
+      if(automatico&&trechos[i].tipo==INTRO_CREDITOS){
+        int explicito=0;
+        autoSincronizar();
+        if(autoRecuou&&autoDe>=trechos[i].inicio&&autoAte<trechos[i].fim)continue;
+        // Capitulos do proprio arquivo continuam tendo prioridade (#329).
+        // Rede: inicio e fim numericos deste titulo, nunca vizinho/estimativa.
+        for(int k=0;k<nCapTr;k++)
+          if(capTr[k].tipo==INTRO_CREDITOS&&capTr[k].inicio==trechos[i].inicio&&
+             capTr[k].fim==trechos[i].fim&&capTr[k].fim>capTr[k].inicio)explicito=1;
+        for(int k=0;k<nCreditosLimitados;k++)
+          if(creditosLimitados[k].inicio==trechos[i].inicio&&
+             creditosLimitados[k].fim==trechos[i].fim)explicito=1;
+        if(!explicito)continue;
+        f=trechos[i].fim; // nao pula a previa/cena depois dos creditos
+      }
+      if(fim)*fim=f;if(tipo)*tipo=trechos[i].tipo;ok=1;break;
+    }
   }
-  pthread_mutex_unlock(&trava);return ok;
+  return ok;
+}
+int intro_ativo(double pos,double*fim,int*tipo){
+  int ok;pthread_mutex_lock(&trava);ok=ativoInterno(pos,fim,tipo,0);pthread_mutex_unlock(&trava);return ok;
+}
+int intro_auto_ativo(double pos,double*fim,int*tipo){
+  int ok;pthread_mutex_lock(&trava);ok=ativoInterno(pos,fim,tipo,1);pthread_mutex_unlock(&trava);return ok;
 }
 
 // O BOTAO DE PULAR, com tempo: aparece sozinho UMA vez por trecho, some em
@@ -751,4 +815,34 @@ void intro_registrar_tmdb(const char *id,long tmdb,const char *json){
       (!strcmp(ultimo.id,id)||(tmdb>0&&ultimo.tmdb==tmdb))){b=ultimo;refaz=1;}
   pthread_mutex_unlock(&trava);
   if(refaz)disparar(&b,b.dur,0);
+}
+
+// #329/#331: quais trechos ja foram pulados sozinhos NESTA reproducao (a geracao muda a cada
+// pedido de marcadores, ou seja a cada abertura). Voltar de proposito para dentro do trecho,
+// ou para antes dele, nao pula de novo — vale para os tres tipos, e um nao apaga o outro.
+void intro_auto_recuar(double de,double para){
+  if(!isfinite(de)||!isfinite(para)||para>=de)return;
+  pthread_mutex_lock(&trava);autoSincronizar();
+  if(!autoRecuou||de>autoDe)autoDe=de;
+  if(!autoRecuou||para<autoAte)autoAte=para;
+  autoRecuou=1;pthread_mutex_unlock(&trava);
+}
+int intro_auto_ja(int tipo,double fim){
+  int r;if(tipo<1||tipo>3)return 1;
+  pthread_mutex_lock(&trava);autoSincronizar();r=autoFim[tipo]==fim;pthread_mutex_unlock(&trava);return r;
+}
+void intro_auto_marcar(int tipo,double fim){
+  if(tipo<1||tipo>3)return;
+  pthread_mutex_lock(&trava);autoSincronizar();autoFim[tipo]=fim;pthread_mutex_unlock(&trava);
+}
+
+// Abertura/resumo: com o ajuste ligado e fim conhecido. Creditos: so com o ajuste proprio E
+// com INICIO e FIM explicitos do marcador (TheIntroDB; fim 0 = "ate o fim da midia" nunca
+// vale). Estimativa, os 50 s finais, o aprendido e o episodio vizinho nem passam por aqui: so
+// trecho de intro_ativo chega. Creditos que vao ate o fim da midia (fim a menos de 5 s da
+// duracao, ou duracao desconhecida) tambem nao: quem os trata e o proximo episodio.
+int intro_auto_pular(int tipo,double fim,double dur,int pularAbertura,int pularResumo,int pularCreditos){
+  if(!(fim>0.0))return 0;
+  if(tipo==INTRO_CREDITOS)return pularCreditos&&dur>0.0&&fim<=dur-5.0;
+  return (tipo==INTRO_ABERTURA&&pularAbertura)||(tipo==INTRO_RESUMO&&pularResumo);
 }

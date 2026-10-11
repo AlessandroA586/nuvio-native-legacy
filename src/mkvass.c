@@ -1459,6 +1459,12 @@ static int escolherNoCabecalho(Fio *f, const unsigned char *p, long n) {
   return 0;
 }
 
+// Soltar o player de uma pre-busca de TEXTO: a TV ja desenha a faixa nativa
+// desde o primeiro quadro (faixas.c overlayAssumir, "TV enquanto aguarda
+// texto"), os cues do app chegam em segundo plano e o handoff acontece no
+// PROGRESSO de faixas.c. Nao ha por que segurar o video ate MKVASS_PREBUSCA_MS.
+static void prebuscaTextoSoltar(Fio *f);
+
 // Devolve: 1 achou a faixa e e ASS (ou texto simples aceito); 0 nao achou;
 // -1 achou e nao serve.
 static int lerTracks(Fio *f, const unsigned char *p, long n) {
@@ -1490,6 +1496,7 @@ static int lerTracks(Fio *f, const unsigned char *p, long n) {
       f->texto = 1;
       f->corpoTam = 0;
       if (!corpoAnexar(f, "", 0)) return -1;
+      if (f->prebusca) prebuscaTextoSoltar(f);
       printf("[mkvass] faixa %d e texto simples (SubRip pelo overlay do app)\n", f->faixa);
       fflush(stdout);
       return 1;
@@ -2622,6 +2629,15 @@ static void prebuscaFase(Fio *f, int fase) {
   if (f->g == S.geracao) S.nColhidos = f->nColhidos;   // o player loga o que chegou
   if (f->g == S.geracao && S.prebuscaFase) S.prebuscaFase = fase;
   pthread_mutex_unlock(&S.trava);
+}
+
+// Definida antes de lerTracks: quando a faixa escolhida na pre-busca e TEXTO
+// simples, o player e solto na hora (fase 2) — a TV desenha a nativa enquanto
+// os cues chegam em segundo plano. A colheita segue normalmente.
+static void prebuscaTextoSoltar(Fio *f) {
+  prebuscaFase(f, 2);
+  printf("[mkvass] pre-busca de texto: video solto, colheita segue em segundo plano\n");
+  fflush(stdout);
 }
 
 // faixas.c pediu esta mesma faixa (mkvass_iniciar_ordinal com a url e o

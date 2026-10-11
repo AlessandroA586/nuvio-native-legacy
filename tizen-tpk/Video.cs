@@ -585,9 +585,17 @@ namespace NuvioTpk
             janelaMovida = false;
         }
 
-        void Janela(int x, int y, int w, int h) { Janela(x,y,w,h,x,y,w,h); }
+        void Janela(int x, int y, int w, int h)
+        {
+            Janela(x,y,w,h,x,y,w,h,x == 0 && y == 0 && w == telaW && h == telaH);
+        }
 
         void Janela(int x, int y, int w, int h, int lx, int ly, int lw, int lh)
+        {
+            Janela(x,y,w,h,lx,ly,lw,lh,false);
+        }
+
+        void Janela(int x, int y, int w, int h, int lx, int ly, int lw, int lh, bool telaCheiaSimples)
         {
             if (player == null || w <= 0 || h <= 0) return;
             bool applied = false;
@@ -596,6 +604,15 @@ namespace NuvioTpk
             string motivo = null;
             try
             {
+                // Before the aspect bridge, the simple fullscreen callback
+                // meant preserve source aspect. Roi stretches 2.39:1 and 4:3.
+                if (telaCheiaSimples)
+                {
+                    if (janelaMovida && GeometriaJanela != null) RestaurarJanela();
+                    player.DisplaySettings.Mode = PlayerDisplayMode.LetterBox;
+                    applied = true;
+                    return;
+                }
                 if (!aspectoRecusado)
                 {
                     try

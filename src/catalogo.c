@@ -247,7 +247,17 @@ static void revisaoSobe(void) { __atomic_add_fetch(&catRevisao, 1u, __ATOMIC_REL
 // Desde 1a5d1670 a troca de catalogo nao zera mais nEps, entao a volta deixou
 // de ser rara: acontece a cada CAT_EP_MAX episodios publicados na sessao.
 static unsigned epGeracao;
-static void epGeracaoSobe(void) { __atomic_add_fetch(&epGeracao, 1u, __ATOMIC_RELEASE); }
+// VERSAO DE CONTEUDO dos episodios (review #205, achado 4): sobe a CADA
+// escrita — inclusive redefinir a mesma lista com a duracao preenchida (o
+// metadado chega depois da fonte abrir) e tirar um item do meio. Para quem
+// mantem CACHE derivado dos episodios (duracao esperada da fonte, player.c)
+// recalcular em O(1). Nao confundir com epGeracao acima: aquela so sobe
+// quando listas sao PERDIDAS (zerarFaixas, wrap do vetor comum) e faz quem
+// mostra episodios REPEDIR pela rede.
+static unsigned epVersao;
+static void epVersaoSobe(void) { __atomic_add_fetch(&epVersao, 1u, __ATOMIC_RELEASE); }
+unsigned cat_versao_episodios(void) { return __atomic_load_n(&epVersao, __ATOMIC_ACQUIRE); }
+static void epGeracaoSobe(void) { epVersaoSobe(); __atomic_add_fetch(&epGeracao, 1u, __ATOMIC_RELEASE); }
 unsigned cat_geracao_episodios(void) { return __atomic_load_n(&epGeracao, __ATOMIC_ACQUIRE); }
 // SOBE A CADA MUDANCA EM ITEM, e nao so na troca do bloco: marca de lista
 // (naLista), progresso, item acrescentado ou substituido. Existe para quem
@@ -1519,6 +1529,7 @@ static void tirarDaJanela(int r, int indice) {
     memmove(&epQtd[indice], &epQtd[indice + 1], sizeof(int) * (size_t)quantos);
   }
   if (epQtd && orfao < nFaixas) epQtd[orfao] = 0;
+  epVersaoSobe();   // os indices andaram: caches derivados recalculam
   pthread_mutex_unlock(&epTrava);
   // Fileira que esvaziou sai da lista, senao a home desenha um titulo com
   // nada embaixo. Mesmo protocolo: zera a contagem antes de mexer no vetor.
@@ -2351,6 +2362,7 @@ void cat_definir_episodios(int indiceItem, const CatEp *lista, int qtd) {
   epIni[indiceItem] = nEps;
   epQtd[indiceItem] = qtd;
   nEps += qtd;
+  epVersaoSobe();   // conteudo novo (mesma contagem conta): caches derivados
   pthread_mutex_unlock(&epTrava);
 }
 

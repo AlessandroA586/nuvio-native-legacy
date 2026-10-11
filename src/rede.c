@@ -899,10 +899,16 @@ static void  (*curl_reset)(void *);
 static time_t (*curl_getdate_fn)(const char *, const time_t *);
 
 // Chamado depois da repeticao existente do GET, diretamente nos demais caminhos.
+// So falha de TRANSPORTE que falhou RAPIDO: conexao recusada (7), aperto de mao
+// TLS que nao fechou (35), resposta vazia (52) e recepcao que caiu (56). O curl
+// 28 (timeout) NAO entra: ele so acontece quando o prazo do pedido ja foi
+// gasto inteiro, e a tentativa no alias dobraria a espera maxima de quem
+// chamou — o mesmo principio de valeRepetir logo abaixo ("o que ja custou o
+// prazo inteiro nao repete").
 static int tmdbFallback(void *c, int r) {
   char *url = NULL, *alias;
   long http = 0;
-  if (!(r == 35 || r == 7 || r == 28 || r == 56 || r == 52) ||
+  if (!(r == 35 || r == 7 || r == 56 || r == 52) ||
       redeCancelouLocal || !curl_getinfo) return r;
   if (curl_getinfo(c, INFO_RESPONSE_CODE, &http) || http ||
       curl_getinfo(c, INFO_URL_FINAL, &url) || !(alias = tmdbUrl(url))) return r;

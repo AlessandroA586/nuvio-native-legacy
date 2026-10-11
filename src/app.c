@@ -14,6 +14,7 @@
 #include "arranque.h"
 #include "celbotao.h"
 #include "central.h"
+#include "estatvivoui.h"
 #include "teclado.h"
 #include "ponteiro.h"
 #include "app.h"
@@ -1385,9 +1386,9 @@ static void vigiarMotorP2p(void) {
       player_erro_fonte_motivo(i18n("Não foi possível medir o espaço livre da TV"),
           i18n("Sem essa medida o P2P não baixa nada. Abra Fontes para escolher outra opção."));
     else {
-      // #334: dizer os numeros. O motor guarda o arquivo inteiro: um 4K de
-      // 15 GB nao cabe em 0,7 GB, e "escolha uma fonte menor" sem o tamanho
-      // nao explicava por que.
+      // #334: dizer os numeros. Com janela o motor so para aqui quando
+      // o sistema de arquivos nao abre buraco (FAT/exFAT) e vale o teto duro;
+      // "escolha uma fonte menor" sem o tamanho nao explicava por que.
       uint64_t tam = 0, teto = 0, livre = 0;
       char corpo[300];
       p2pmotor_arquivo_atual(&tam, &teto, &livre);
@@ -1459,10 +1460,23 @@ static void processarTorrentJob(void) {
           player_erro_fonte_motivo(i18n("O P2P desta TV não iniciou"),
               i18n("Abra Fontes para escolher outra opção."));
           break;
-        case P2P_ERR_SEM_ESPACO:
-          player_erro_fonte_motivo(i18n("Falta espaço livre na TV para o P2P"),
-              i18n("O P2P precisa de 256 MB livres. Abra Fontes para escolher outra opção."));
+        case P2P_ERR_SEM_ESPACO: {
+          // #334: recusado antes de tocar porque nem a janela minima cabe:
+          // os numeros (o arquivo e maior que o teto). Sem tamanho = faltou
+          // o minimo de 256 MB ao subir.
+          uint64_t tam = 0, teto = 0, livre = 0;
+          char corpo[300];
+          p2pmotor_arquivo_atual(&tam, &teto, &livre);
+          if (tam > 0 && teto > 0 && tam > teto) {
+            snprintf(corpo, sizeof corpo,
+                     i18n("O vídeo tem %.1f GB e o P2P só pode guardar %.1f GB nesta TV (%.1f GB livres). Escolha uma fonte menor ou mude o limite em Ajustes > P2P."),
+                     (double)tam / 1073741824.0, (double)teto / 1073741824.0, (double)livre / 1073741824.0);
+            player_erro_fonte_motivo(i18n("Falta espaço livre na TV para o P2P"), corpo);
+          } else
+            player_erro_fonte_motivo(i18n("Falta espaço livre na TV para o P2P"),
+                i18n("O P2P precisa de 256 MB livres. Abra Fontes para escolher outra opção."));
           break;
+        }
         case P2P_ERR_DISCO:
           player_erro_fonte_motivo(i18n("Não foi possível medir o espaço livre da TV"),
               i18n("Sem essa medida o P2P não baixa nada. Abra Fontes para escolher outra opção."));
@@ -2300,6 +2314,9 @@ void app_evento(const SDL_Event *e) {
   // A CENTRAL DE CONTROLE (central.h, CH+ segurado) e uma camada: aberta, come
   // o teclado todo, por cima do player, das folhas e das ilhas.
   if (central_aberta()) { central_evento(e); return; }
+  // AS ESTATISTICAS AO VIVO (estatvivoui.h), abertas pela central: modal ate
+  // Voltar (fecha) ou OK (fixa no canto, e ai nao come mais tecla nenhuma).
+  if (estatvivo_evento(e)) return;
   // O MODAL DA ILHA (ilha.h) e uma camada: aberto, come o teclado todo.
   if (ilha_evento(e)) return;
   // A CENTRAL DE AVISOS vem logo depois do painel de log: com o toast na tela
@@ -2786,6 +2803,7 @@ void app_atualizar(float dt, Uint32 agora) {
   // para as telas que lembravam de perguntar. Uma leitura por quadro.
   anim_politica_reduzida = ajustes_animacoes_reduzidas();
   central_atualizar(dt, agora);
+  estatvivo_atualizar(agora);
   // OK na vitrine da tela de descanso (descanso.h): abre o titulo, so com a
   // Home na frente. Em outra tela o OK so acordou.
   { int k = descanso_pedido_abrir();
@@ -4283,6 +4301,11 @@ void app_atualizar(float dt, Uint32 agora) {
   if (player_aberto() && !player_quer_sair() &&
       !player_id_canal()[0] && aguardandoFonte == 0) {
     int pedido = player_pediu_proxima_fonte();
+    // O pulo AUTOMATICO obedece "Outra fonte se falhar" (Ajustes): esgotadas
+    // as tentativas da reproducao, o que sobra e o aviso na tela — o OK do
+    // usuario (pedido 1) continua abrindo a folha de fontes.
+    if (pedido == 2 && fonteVODTentativas >= VOD_FONTE_MAX_TENTATIVAS)
+      pedido = 0;
     if (pedido) {
       int atual = stream_atual();
       if (atual >= 0) stream_automatico_excluir(atual);
@@ -4884,7 +4907,7 @@ static void desenharTelas(Uint32 agora) {
   // camadas dele: a pilula da hora, os avisos e o que nasce dela (Audio,
   // Legendas, estilo, carregando, erro) — e a folha de Fontes, que cresce
   // dela (streams.c) e por isso nao a esconde mais.
-  if (player_aberto()) { central_desenhar(agora); plrilha_desenhar(agora); }
+  if (player_aberto()) { estatvivo_desenhar(agora); central_desenhar(agora); plrilha_desenhar(agora); }
   gfx_osd_mult = 1.0f;
   // A TELA DO DOLBY VISION EM MKV (dvtela.h) por cima de TUDO do player, ilha
   // inclusive: ela cobre a troca do HDR10 pelo caminho do DV e esvai sobre o

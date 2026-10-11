@@ -28,6 +28,13 @@ def digest(path):
         return hashlib.file_digest(f, 'sha256').hexdigest() if hasattr(hashlib, 'file_digest') else hashlib.sha256(f.read()).hexdigest()
 
 
+def verify_sums(manifest):
+    for line in manifest.read_text().splitlines():
+        expected, name = line.split(None, 1)
+        if digest(manifest.parent / name) != expected:
+            raise RuntimeError(f'checksum divergiu: {name}')
+
+
 def tree_state():
     status = command('git', 'status', '--porcelain', '--untracked-files=all')
     h = hashlib.sha256(subprocess.check_output(['git', 'diff', 'HEAD', '--binary']))
@@ -205,7 +212,7 @@ def main():
         subprocess.run(['bash', 'tools/hb-repo.sh', str(out / expected_files(args.version)[0]), str(out)], check=True)
         files = expected_files(args.version) + ['repo.json', 'webosbrew.manifest.json']
         (out / 'SHA256SUMS').write_text(''.join(f'{digest(out / name)}  {name}\n' for name in sorted(files)))
-        subprocess.run(['shasum', '-a', '256', '-c', 'SHA256SUMS'], cwd=out, check=True)
+        verify_sums(out / 'SHA256SUMS')
         if tree_state()[1] != fingerprint:
             (out / 'SHA256SUMS').unlink()
             raise RuntimeError('arvore mudou durante a conferencia')

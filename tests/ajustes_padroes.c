@@ -141,10 +141,13 @@ int main(void) {
   assert(!strcmp(CHAVE[AJ_FANART_CHAVE + 1], "-diagnostico"));
   assert(valor[AJ_FANART_CHAVE] == 0 && valor[AJ_DIAGNOSTICO] == 0);
   assert(valor[AJ_MDB_MAL] == 0);
-  assert(valor[AJ_AUTO_CREDITOS] == 1 && !ajustes_auto_creditos());
-  assert(!strcmp(CHAVE[AJ_AUTO_CREDITOS], "autoCreditosLocal"));
-  assert(somenteDesteAparelho(AJ_AUTO_CREDITOS) && dePerfil(AJ_AUTO_CREDITOS));
-  assert(!strcmp(i18n(OPCOES[AJ_AUTO_CREDITOS].rotulo), "Automatically skip credits"));
+  assert(valor[AJ_PULAR_CREDITOS] == 1 && !ajustes_pular_creditos());
+  assert(!strcmp(CHAVE[AJ_PULAR_CREDITOS], "pularCreditosLocal"));
+  assert(somenteDesteAparelho(AJ_PULAR_CREDITOS) && !dePerfil(AJ_PULAR_CREDITOS));
+  assert(!strcmp(i18n(OPCOES[AJ_PULAR_CREDITOS].rotulo), "Skip the credits automatically"));
+  assert(!ajustes_proximo_auto() && ajustes_proximo_contagem() == 5);
+  assert(AJ_N == AJ_PROXIMO_CONTAGEM + 1);
+  for (int i = 0; i < AJ_N; i++) assert(strcmp(CHAVE[i], "autoCreditosLocal"));
   puts("ajustes_padroes: ok");
   return 0;
 }

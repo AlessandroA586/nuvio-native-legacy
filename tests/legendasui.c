@@ -255,6 +255,37 @@ int main(void) {
   assert(tecla(SDLK_ESCAPE) == LEGUI_FECHAR);
   snprintf(sec, sizeof sec, "a1"); secOffset = 900;
   legendasui_reiniciar(); assert(!sec[0] && secOffset == 0);
-  puts("legendasui: identities, formats, kinds, full list, late arrivals, second-slot refusals, offsets, AutoSync, settings OK");
+
+  // --- recommended view: ACTIVE primary outside the recommendations -------
+  // pt preferido, en como segunda, mas a ativa e a faixa es: linha propria
+  // (marcada) e foco nela ao abrir — antes caia em "Desligada".
+  ling_local_legenda("pt"); ling_local_legenda2("en");
+  nEmb = 3;
+  faixa(0, 3, "pt", "Português", "S_TEXT/UTF8", 0);
+  faixa(1, 4, "en", "English", "S_TEXT/UTF8", 0);
+  faixa(2, 5, "es", "Español", "S_TEXT/UTF8", 0);
+  nAdd = 6;
+  ativaEmb = 2; extId[0] = 0; sec[0] = 0;
+  legendasui_abrir();
+  assert(!mais && linhaDe("rec|a") >= 0);
+  assert(!strcmp(linhas[foco].chave, "rec|a"));
+  assert(cand[linhas[linhaDe("rec|a")].cand].indice == 2);
+  { char nome[96]; const char *id, *ic; int at, ap;
+    textoLinha(&linhas[linhaDe("rec|a")], nome, sizeof nome, sub, sizeof sub, &id, &ic, &at, &ap);
+    assert(at && strstr(sub, "Embutida")); }
+  // A ativa vira a recomendada (preferencia muda para es): rec|a some e o
+  // cache da decisao acompanha o mundo sem reabrir nada.
+  ling_local_legenda("es");
+  montarLinhas();
+  assert(linhaDe("rec|a") < 0);
+  assert(!strcmp(cand[linhas[linhaDe("rec|p")].cand].idioma, "es"));
+  // Com segunda legenda ligada, a combinacao em vigor tem a linha "par": sem
+  // duplicar a ativa em rec|a.
+  ativaEmb = 2; snprintf(sec, sizeof sec, "%s", cand[nEmb + 3].id);
+  ling_local_legenda("pt"); montarLinhas();
+  assert(linhaDe("par") >= 0 && linhaDe("rec|a") < 0);
+  sec[0] = 0; ativaEmb = -1;
+
+  puts("legendasui: identities, formats, kinds, full list, late arrivals, second-slot refusals, offsets, AutoSync, settings, active-outside-recommendations OK");
   return 0;
 }

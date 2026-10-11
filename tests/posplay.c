@@ -118,6 +118,15 @@ int main(void) {
   assert(!posplay_visivel() && !posplay_pediu_episodio(&t, &e));
   puts("ok  Baixo devolve o player sem pedir episodio");
 
+  // Owner #256: factory default waits for OK, even at the end.
+  assert(!ajustes_proximo_auto() && ajustes_proximo_contagem() == 5);
+  posplay_fechar();
+  aquecer(3600.0, 1);
+  posplay_atualizar(0.016f, 1000, 3597.0, 3600.0, 1, 0, 1);
+  posplay_atualizar(0.016f, 10000, 3600.0, 3600.0, 1, 0, 1);
+  assert(posplay_visivel() && !posplay_pediu_episodio(&t, &e));
+  ajustes_shot_valor("proximoAutoLocal", 0); // Enable for countdown cases below.
+
   // 4b. 2.0.3, SAMSUNG: A LEGENDA SEGUE O CARTAO. Ela subia por ofertaProximo()
   //     (a JANELA, verdadeira ate o fim do episodio) e ficava no meio da tela
   //     depois de o cartao sumir. Agora sobe so com o cartao NA TELA e volta no
@@ -460,6 +469,21 @@ int main(void) {
   }
   intro_shot_definir(NULL, 0);
   puts("ok  prefetch antecipa a janela real em 10 s, com e sem creditos");
+  // #331: a contagem do proximo episodio so adianta com marcador REAL de creditos.
+  assert(posplay_contagem(1000, 1000, 0, 120.0, 1, 1, 5) == 0);           // cartao acabou de subir
+  assert(posplay_contagem(4999, 1000, 0, 120.0, 1, 1, 5) == 0);           // ainda no atraso
+  assert(posplay_contagem(5000, 1000, 0, 120.0, 1, 1, 5) == 10000);       // marcador real: 5 s a partir de agora
+  assert(posplay_contagem(5000, 1000, 0, 120.0, 1, 0, 5) == 0);           // estimativa: nao adianta
+  assert(posplay_contagem(60000, 1000, 0, 100.0, 1, 0, 5) == 0);          // estimativa, cartao ha muito: ainda nao
+  assert(posplay_contagem(5500, 1000, 10000, 100.0, 1, 1, 5) == 10000);   // armado: nao se move
+  assert(posplay_contagem(5000, 1000, 0, 120.0, 0, 1, 5) == 0);           // autoplay desligado: nunca
+  assert(posplay_contagem(2000, 1000, 0, 3.0, 1, 0, 5) == 5000);          // estimativa, 3 s de episodio: so o fim
+  assert(posplay_contagem(2000, 1000, 0, -1.0, 1, 1, 5) == 2000);         // passou do fim: dispara ja
+  assert(posplay_contagem(5000, 1000, 0, 120, 1, 1, 12) == 17000);
+  assert(posplay_contagem(5000, 1000, 0, 120, 1, 1, 1) == 6000);
+  assert(posplay_contagem(5000, 1000, 17000, 100, 0, 1, 12) == 0);
+  assert(posplay_contagem(5000, 1000, 0, 3, 1, 1, 12) == 8000);
+  puts("ok  contagem do proximo episodio: atraso, 5 s, autoplay desligado");
 
   puts("posplay: tudo ok");
   return 0;

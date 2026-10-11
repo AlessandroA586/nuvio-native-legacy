@@ -119,6 +119,9 @@ object NvPlayer {
     private var ultDv = -1
     private var ultAtmos = -1
     private var avisouSemAudio = false
+    private var quadrosPerdidos = 0L
+    private var statsTiques = 0
+    private var bufferAlvoMs = androidx.media3.exoplayer.DefaultLoadControl.DEFAULT_MAX_BUFFER_MS
 
     // --- natives (src/video_android.c, Java_space_nuvio_nativelegacy_NvPlayer_*) ---
     @JvmStatic external fun nativeIniciar()
@@ -137,6 +140,12 @@ object NvPlayer {
     @JvmStatic external fun nativeFitPassiva(rede: Long, geracao: Int, origem: String, kbps: IntArray, fimMs: Long)
     @JvmStatic external fun nativeAudioPcm(pcm: ShortArray, n: Int, ptsUs: Long)
     @JvmStatic external fun nativeAudioEstado(fmt: Int)
+    // Estatisticas ao vivo (src/estatvivo.h), 1x/s pelo tique: bytes do socket
+    // (-1 = esta abertura nao passou pelo ParaleloDataSource, ex. HLS), buffer
+    // a frente e o alvo do DefaultLoadControl em ms, conexoes abertas, 1o byte,
+    // quadros perdidos (onDroppedVideoFrames) e entregues; host final.
+    @JvmStatic external fun nativeStats(bytes: Long, bufferMs: Int, alvoMs: Int, conexoes: Int,
+                                        primeiroByteMs: Int, perdidos: Long, quadros: Long, host: String)
 
     // F06 sincronia por audio (AudioSyncTap.kt / AudioSyncSink.kt). Fio de
     // reproducao; o C so copia para um anel limitado (src/audsync.c).
@@ -318,6 +327,9 @@ object NvPlayer {
     @JvmStatic fun volume(pct: Int) { principal.post { player?.volume = pct.coerceIn(0, 100) / 100f } }
     // F07: cache limit for the NEXT opens (MB, 0 = off) and the session volume
     // 0..200 (above 100 only while the audio is PCM).
+    // #338: buffer size preset (0 Auto, 1 Low, 2 Medium, 3 High), sticky, read at open.
+    @Volatile private var bufferPreset = 0
+    @JvmStatic fun buffer(preset: Int) { bufferPreset = preset.coerceIn(0, 3) }
     @JvmStatic fun cache(mb: Int) { cacheMbPedido = mb.coerceIn(0, 1024) }
     @JvmStatic fun ganho(pct: Int) {
         principal.post { ganhoPct = GanhoMath.pct(pct); aplicarGanho() }
@@ -393,6 +405,8 @@ object NvPlayer {
             // A geracao e a sessao nativa desta abertura (0 numa casca antiga:
             // o C nunca aceita a telemetria passiva dela).
             medidorToken = medidor.sessao(geracao)
+            ParaleloDataSource.Estat.zerar()
+            quadrosPerdidos = 0L; statsTiques = 0
             val rede = ParaleloDataSource.Factory(ua, props, http, medidor, medidorToken)
 
             // F07: SEEK CACHE over the chain above, progressive HTTP VOD only.
@@ -453,8 +467,21 @@ object NvPlayer {
             // do heap, entre 32 e 96 MB, ainda segura dezenas de segundos de 4K.
             val tetoBuffer = (Runtime.getRuntime().maxMemory() / 4)
                 .coerceIn(32L shl 20, 96L shl 20).toInt()
+            // #338: presets mudam so quanto buffer, nunca a qualidade. Auto = o de
+            // sempre (50 s / teto em bytes). Em bytes o limite segue o heap: Alto
+            // sobe o teto ate 1/3 do heap (max 96 MB), nunca ao do DefaultLoadControl.
+            val heap = Runtime.getRuntime().maxMemory()
+            val (minMs, maxMs, bytes) = when (bufferPreset) {
+                1 -> Triple(15_000, 25_000, tetoBuffer / 2)
+                2 -> Triple(50_000, 80_000, tetoBuffer)
+                3 -> Triple(90_000, 150_000, (heap / 3).coerceIn(32L shl 20, 96L shl 20).toInt())
+                else -> Triple(50_000, 50_000, tetoBuffer)
+            }
+            bufferAlvoMs = maxMs
+            Log.i(TAG, "[player] buffer preset=$bufferPreset min=${minMs / 1000}s max=${maxMs / 1000}s teto=${bytes shr 20}MB")
             val carga = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                .setTargetBufferBytes(tetoBuffer)
+                .setBufferDurationsMs(minMs, maxMs, 2_500, 5_000)
+                .setTargetBufferBytes(bytes)
                 .setPrioritizeTimeOverSizeThresholds(false)
                 .build()
             val p = ExoPlayer.Builder(act, renderizadores)
@@ -649,12 +676,33 @@ object NvPlayer {
             if (!atual(minha)) return
             val p = player ?: return
             try { nativePos(p.currentPosition.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()) } catch (e: UnsatisfiedLinkError) { }
+            if (++statsTiques >= 4) { statsTiques = 0; relatarStats(p) }
             if (cacheMidia != null && cacheEstado == CacheSessao.ATIVO && ++cacheTiques >= CACHE_RELATO_TIQUES) {
                 cacheTiques = 0
                 relatarCache(minha)
             }
             principal.postDelayed(this, TIQUE_MS)
         }
+    }
+
+    // Uma vez por segundo, do fio principal: leituras baratas, nada alocado
+    // alem da string do host (que o JNI copia).
+    private fun relatarStats(p: ExoPlayer) {
+        val e = ParaleloDataSource.Estat
+        val buf = (p.bufferedPosition - p.currentPosition).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+        var quadros = -1L
+        var perdidos = -1L
+        p.videoDecoderCounters?.let { c ->
+            c.ensureUpdated()
+            quadros = (c.renderedOutputBufferCount + c.droppedBufferCount).toLong()
+            perdidos = quadrosPerdidos
+        }
+        try {
+            nativeStats(if (e.usado) e.bytes.get() else -1L, buf,
+                bufferAlvoMs,
+                if (e.usado) e.conexoes.get().coerceAtLeast(0) else -1,
+                e.primeiroByteMs, perdidos, quadros, e.host)
+        } catch (t: UnsatisfiedLinkError) { }
     }
 
     // --- janela ---------------------------------------------------------------
@@ -1044,6 +1092,10 @@ object NvPlayer {
     }
 
     private fun analitico(minha: Int) = object : AnalyticsListener {
+
+        override fun onDroppedVideoFrames(eventTime: AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) {
+            if (atual(minha)) quadrosPerdidos += droppedFrames
+        }
 
         override fun onVideoDecoderInitialized(
             eventTime: AnalyticsListener.EventTime, decoderName: String,

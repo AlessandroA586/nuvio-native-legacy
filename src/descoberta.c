@@ -2507,7 +2507,7 @@ static int continuarLocal(CatItem *saida, int max) {
     int j, repetido = 0;
     if (r->durSeg < 60.0) continue;
     p = r->posSeg / r->durSeg;
-    if (p < 0.01 || p * 100.0 >= ajustes_cw_concluido()) continue;
+    if (p * 100.0 < (double)ajustes_cw_minimo() || p * 100.0 >= ajustes_cw_concluido()) continue;
     // Uma serie com varios episodios gravados entra UMA vez, no mais recente.
     for (j = 0; j < n; j++) {
       size_t L = idbase_len(saida[j].imdb);   // "kitsu:41370" inteiro, nao "kitsu"
@@ -2614,7 +2614,7 @@ static int continuarLocal(CatItem *saida, int max) {
 // home_registrar_retorno. Abaixo de 1% nao se comecou, do Percentual assistido
 // (90% de fabrica) em diante acabou — e "continuar" nao e nem uma coisa nem a
 // outra.
-static int emAndamento(int pct) { return pct >= 1 && pct < ajustes_cw_concluido(); }
+static int emAndamento(int pct) { return pct >= ajustes_cw_minimo() && pct < ajustes_cw_concluido(); }
 
 // QUANDO este item foi visto por ultimo, em ms. 0 = nao se sabe.
 //
@@ -3284,7 +3284,7 @@ int desc_continuar_otimista(int indice) {
   int n, k, mudou, travou;
   if (!ci || !ci->imdb[0]) return 0;
   novo = *ci;
-  if (novo.progresso < 1 || novo.progresso >= ajustes_cw_concluido()) return 0;
+  if (novo.progresso < ajustes_cw_minimo() || novo.progresso >= ajustes_cw_concluido()) return 0;
   if (ajustes_cw_fonte() == AJ_CWF_SIMKL && !simkl_ativo()) return 0;
   if (!strcmp(novo.tipo, "series") && novo.temporada > 0 && novo.episodio > 0) {
     char base[64];
@@ -7662,7 +7662,8 @@ static void *fioVerTudo(void *u) {
   // do TMDB ou do Trakt, nao de um catalogo de addon. vtPagina aqui e o
   // NUMERO da pagina (comeca em 1), nao o skip de itens.
   if (prov) {
-    CatItem lote[48]; int nl=0, semMais=0, ok=0;
+    CatItem *lote=malloc(sizeof *lote*48); int nl=0, semMais=0, ok=0;
+    if(!lote){pthread_mutex_lock(&vtTrava);vtErro=1;vtFioVivo=0;pthread_mutex_unlock(&vtTrava);return NULL;}
     corpo=NULL;
     if (prov==1) {
       const char *vetor=tmdbMontarUrl(&fonte,skip,url,sizeof url);
@@ -7728,7 +7729,7 @@ static void *fioVerTudo(void *u) {
     // Cinemeta de uma vez, como a fileira "Continuar assistindo" ja faz.
     if (prov==2&&nl) trakt_enfeitar_lote(lote,nl);
     pthread_mutex_lock(&vtTrava);
-    if(generation!=vtGeracao){pthread_mutex_unlock(&vtTrava);continue;}
+    if(generation!=vtGeracao){pthread_mutex_unlock(&vtTrava);free(lote);continue;}
     { int added=ocultos;   // pagina so de futuros nao encerra a paginacao
       for(int i=0;i<nl&&vtN<VT_MAX;i++){
         int dup=0;
@@ -7741,6 +7742,7 @@ static void *fioVerTudo(void *u) {
       if(ok){if(semMais||!added||vtN>=VT_MAX)vtFim=1;else vtPagina=skip+1;}
       vtFioVivo=0; }
     pthread_mutex_unlock(&vtTrava);
+    free(lote);
     return NULL;
   }
 

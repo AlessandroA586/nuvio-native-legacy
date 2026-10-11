@@ -119,6 +119,31 @@ int main(void) {
   durMidia = 3000; ehFilme = 1;
   assert(!intro_creditos_limitados(v, 8)); // abertura do filme nao e final
   durMidia = 1000; ehFilme = 0;
+  // O fluxo unico exige limites explicitos e nunca pula uma previa/cena junto.
+  trechos[0] = (IntroTrecho){900, 950, INTRO_CREDITOS};
+  trechos[1] = (IntroTrecho){950, 980, INTRO_PREVIA}; nTrechos = 2;
+  creditosLimitados[0] = trechos[0];
+  double fim; int tipo;
+  assert(intro_ativo(910, &fim, &tipo) && fim == 980);
+  assert(intro_auto_ativo(910, &fim, &tipo) && fim == 950 && tipo == INTRO_CREDITOS);
+  assert(intro_auto_pular(tipo, fim, 1000, 0, 0, 1));
+  intro_auto_marcar(tipo, fim);
+  assert(intro_auto_ja(tipo, fim)); // recuo nao repete o pulo
+  intro_auto_recuar(960, 890);
+  assert(!intro_auto_ativo(910, &fim, &tipo)); // protege resposta tardia tambem
+  geracao++; // outra reproducao permite o marcador novamente
+  assert(intro_auto_ativo(910, &fim, &tipo));
+  nCreditosLimitados = 0;
+  assert(intro_ativo(910, &fim, &tipo) && !intro_auto_ativo(910, &fim, &tipo));
+  capTr[0] = trechos[0]; nCapTr = 1;
+  assert(intro_auto_ativo(910, &fim, &tipo) && fim == 950); // capitulo real tem prioridade
+  capTr[0].fim = 0;
+  assert(!intro_auto_ativo(910, &fim, &tipo)); // capitulo aberto nao e limite explicito
+  nCapTr = 0;
+  creditosLimitados[0] = (IntroTrecho){900, 1000, INTRO_CREDITOS}; nCreditosLimitados = 1;
+  trechos[0] = creditosLimitados[0]; nTrechos = 1;
+  assert(intro_auto_ativo(910, &fim, &tipo));
+  assert(!intro_auto_pular(tipo, fim, 1000, 0, 0, 1)); // ate o fim: fica para Next
   intro_definir_buscador(fixtureBuscar);
   assert(!pthread_key_create(&fimFio, terminou));
   intro_pedir("tt000001", 0, 0); esperar(&entrou[0]);

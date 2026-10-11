@@ -704,10 +704,12 @@ static void ajcCenaServico(int op, const char *icone) {
 static void ajcCenaLegenda(int op) {
   static const float COR[7][3] = { { 1, 1, 1 }, { 1, 1, 1 }, { 1, 0.9f, 0.2f }, { 0.4f, 0.9f, 0.4f },
                                    { 0.4f, 0.7f, 1 }, { 1, 0.35f, 0.3f }, { 0.1f, 0.1f, 0.1f } };
-  static const float TAM[7] = { 1.0f, 0.6f, 0.8f, 1.0f, 1.2f, 1.4f, 1.6f };
   static const float FUN[6] = { 0.5f, 0.0f, 0.25f, 0.5f, 0.75f, 1.0f };
   int c = valor[AJ_LEG2_COR] >= 0 && valor[AJ_LEG2_COR] < 7 ? valor[AJ_LEG2_COR] : 0;
-  float tam = TAM[valor[AJ_LEG2_TAMANHO] >= 0 && valor[AJ_LEG2_TAMANHO] < 7 ? valor[AJ_LEG2_TAMANHO] : 0];
+  // Tamanho real da opcao (ajustes_leg2_tamanho), nao mais a tabela antiga
+  // de 7: 0 = auto, 90% da principal; senao o percentual escolhido (60..300).
+  int pct2 = ajustes_leg2_tamanho();
+  float tam = pct2 > 0 ? pct2 / 100.0f : 0.9f;
   float fun = FUN[valor[AJ_LEG2_FUNDO] >= 0 && valor[AJ_LEG2_FUNDO] < 6 ? valor[AJ_LEG2_FUNDO] : 0];
   float borda = op == AJ_LEG2_BORDA ? ajcLig(op) : 0.0f, junto = ajcValor(AJ_LEG2_POS);
   int segunda = op == AJ_LEG_LINGUA2 || op == AJ_LEG2_POS || op == AJ_LEG2_TAMANHO || op == AJ_LEG2_COR

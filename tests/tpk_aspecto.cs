@@ -43,7 +43,13 @@ class AspectoTest {
         throw new Exception("player nao iniciou");
     }
     static void Open() { var u=Marshal.StringToHGlobalAnsi("https://test/movie"); try { Entry("fAbrir",u,IntPtr.Zero); } finally { Marshal.FreeHGlobal(u); } WaitPlayer(); }
-    static void Roi(int x,int y,int w,int h) { Entry("fJanela",x,y,w,h); Pump(); Check(probe(0)==(int)PlayerDisplayMode.Roi && probe(1)==x && probe(2)==y && probe(3)==w && probe(4)==h,"B ROI " + x+","+y+" "+w+"x"+h); }
+    static void Roi(int x,int y,int w,int h) { Entry("fAspecto",x,y,w,h,x,y,w,h); Pump(); Check(probe(0)==(int)PlayerDisplayMode.Roi && probe(1)==x && probe(2)==y && probe(3)==w && probe(4)==h,"B ROI " + x+","+y+" "+w+"x"+h); }
+    static void Simple(int x,int y,int w,int h) {
+        int calls=probe(6); Entry("fJanela",x,y,w,h); Pump();
+        bool full=x==0 && y==0 && w==1920 && h==1080;
+        Check(probe(0)==(int)(full?PlayerDisplayMode.LetterBox:PlayerDisplayMode.Roi),"simple callback " + (full?"fullscreen letterbox":"partial ROI"));
+        Check(probe(6)==calls+(full?0:1),"simple callback ROI count");
+    }
     static int Main(string[] args) {
         NativeLibrary.SetDllImportResolver(typeof(Video).Assembly,(name,a,p)=>name=="libcapi-media-player.so.0" ? NativeLibrary.Load(args[0]) : IntPtr.Zero);
         NvVid.Registrar=(a,b,c,d,e,f,g)=>{}; NvVid.RegistrarFaixas=a=>{}; NvVid.RegistrarAspecto=a=>{}; NvVid.Evento=(a,b,c)=>{};
@@ -53,6 +59,7 @@ class AspectoTest {
         Open();
         foreach(bool elm in new[]{false,true}) {
             video.GeometriaJanela=elm ? (Func<int,int,int,int,string>)((x,y,w,h)=>null) : null;
+            Simple(0,0,1920,1080); Simple(0,138,1920,804);
             // Original / Fill / Zoom (contain, stretch, centered cover).
             Roi(0,0,1920,1080); Roi(0,0,1920,1080); Roi(0,0,1920,1080); // 16:9
             Roi(0,138,1920,804); Roi(0,0,1920,1080); Roi(-331,0,2581,1080); // 2.39:1 (1912x800)

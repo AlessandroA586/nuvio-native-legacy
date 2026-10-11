@@ -44,6 +44,20 @@ int main(void) {
   posplay_aguardar_busca(0);
   posplay_atualizar(.016f, 6100, 3600, 3600, 1, 0, 1);
   assert(pedir()); // fim real libera
-  puts("posplay_recuo: contagem, pedido automatico, amostra antiga e OK manual ok");
+  // O cancelamento tambem vale para a contagem antecipada e configuravel
+  // da integracao, enquanto os creditos ainda estao rolando.
+  ajustes_shot_valor("proximoContagemLocal", 12);
+  posplay_fechar(); aquecer(3600, 1);
+  posplay_marcador_real(1);
+  posplay_atualizar(.016f, 1000, 3500, 3600, 1, 0, 1);
+  posplay_atualizar(.016f, 5000, 3504, 3600, 1, 0, 1);
+  posplay_atualizar(.016f, 16000, 3515, 3600, 1, 0, 1);
+  assert(posplay_visivel() && !pedir()); // 12 s, nao os 5 s fixos do PR
+  posplay_recuar();
+  posplay_atualizar(.016f, 18000, 3514, 3600, 1, 0, 1);
+  assert(posplay_visivel() && !pedir());
+  assert(tecla(SDLK_RETURN) == 1 && pedir());
+  posplay_marcador_real(0);
+  puts("posplay_recuo: contagem configuravel/antecipada, pedido automatico, amostra antiga e OK manual ok");
   return 0;
 }

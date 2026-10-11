@@ -629,6 +629,14 @@ static char erroTitulo[160], erroDica[160];
 // "Fonte 2 de 3": a tentativa do automatico VOD (app.c, tentarProximaFonteVOD).
 static int tentativaN, tentativaM;
 static int durFonteAvisada, durFontePulou, pedProximaFonte;
+// Cache da duracao esperada da fonte corrente (achado 4 do review #205):
+// duracaoFonteEsperada varre os episodios do titulo, e durFonteAtualizar roda
+// por quadro. Recalcula so quando o conteudo dos episodios muda (a primeira
+// lista — e o metadado que preenche a duracao — chega DEPOIS da fonte abrir,
+// sem zerar nada: cat_versao_episodios sobe) ou o catalogo inteiro troca.
+static int durFonteEsperadaOk;
+static double durFonteEsperadaCache;
+static unsigned durFonteEsperadaVer, durFonteEsperadaRev;
 static Uint32 durFonteAcaoAte;
 // ABRINDO A FONTE, COMPACTO POR PADRAO (dono, 05/10): o cartao nasce enxuto —
 // o ponto, o estado e as marcas da fonte — e o BAIXO expande os detalhes.
@@ -939,7 +947,7 @@ static void prefsLer(void) {
       /* Migra o arquivo antigo 0..4 sem perder a preferencia do aparelho. */
       static const int antigo[5]={60,80,120,160,200};
       if(v>=0&&v<=4)legEstilo.tamanho=antigo[v];
-      else if(v>=50&&v<=300)legEstilo.tamanho=(v/10)*10;
+      else if(v>=TXT_LEG_PCT_MIN&&v<=TXT_LEG_PCT_MAX)legEstilo.tamanho=(v/10)*10;
     }
     else if (!strcmp(chave, "leg_cor")     && v >= 0 && v < VIDEO_LEG_NCORES) legEstilo.cor = v;
     else if (!strcmp(chave, "leg_fundo")   && v >= 0 && v <= 4)  legEstilo.fundo = v;
@@ -1371,6 +1379,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   // F07: seek cache for this open (live channels never; the backend also
   // refuses HLS/DASH). Arms only the next video_tocar: trailers stay uncached.
   cacheboost_backend_cache(ehCanal() ? 0 : ajustes_cache_seek_mb());
+  cacheboost_backend_buffer(ajustes_buffer_preset());
   loadEm = SDL_GetTicks();
   { char px[96];
     if (url && *url) { memlog_evento("load"); memQuadroPendente = 1; }
@@ -1457,6 +1466,7 @@ static void tocarFonte(const char *url) {
   video_definir_modo_live(ehCanal() ? ajustes_livetv_modo() : 0);
   cacheboost_backend_cache(ehCanal() ? 0 : ajustes_cache_seek_mb());   // F07, ver player_abrir
   memlog_evento("load"); memQuadroPendente = 1;
+  cacheboost_backend_buffer(ajustes_buffer_preset());
   { char px[96];
 #ifdef NV_ANDROID
     // app.c define episodio e "do inicio" antes de entregar a fonte. O
@@ -1561,7 +1571,15 @@ static void dvTelaAtualizar(float dt, Uint32 agora) {
 // PRETO enquanto o fluxo abria — que era o "clica em reproduzir e fica preto".
 void player_definir_fonte(const char *url) {
   if ((!aberto && !mini) || !url || !*url) return;
-  durFonteAvisada = pedProximaFonte = 0; durFonteAcaoAte = toastAte = 0;
+  durFonteAvisada = pedProximaFonte = 0;
+  // Fonte nova: a duracao esperada conhecida nao vale mais (mesmo titulo,
+  // episodio outro, catalogo pode ter andado).
+  durFonteEsperadaOk = 0;
+  // So apaga o toast que era o aviso de duracao (os dois prazos caminham
+  // juntos); qualquer OUTRO toast na tela (sem sinal, velocidade, DV) e do
+  // video anterior e continua valendo ate o prazo dele.
+  if (durFonteAcaoAte == toastAte) toastAte = 0;
+  durFonteAcaoAte = 0;
   duracaoReal = durCurtaAvisado = durPassouAvisado = 0;
   esperandoFonte = 0;
   erroFonte = 0;
@@ -2331,7 +2349,11 @@ static void durFonteAtualizar(double real, Uint32 agora) {
   char r[32], e[32], aviso[320];
   int rm, em;
   if (durFonteAvisada || ehCanal() || !isfinite(real) || real <= 1) return;
-  esperada = duracaoFonteEsperada();
+  { unsigned ver = cat_versao_episodios(), rev = cat_revisao();
+    if (!durFonteEsperadaOk || durFonteEsperadaVer != ver || durFonteEsperadaRev != rev) {
+      durFonteEsperadaOk = 1; durFonteEsperadaVer = ver; durFonteEsperadaRev = rev;
+      durFonteEsperadaCache = duracaoFonteEsperada(); } }
+  esperada = durFonteEsperadaCache;
   if (esperada <= 0 || fabs(real - esperada) <= 600 ||
       !(real > esperada * 2 || real < esperada * .5)) return;
   durFonteAvisada = 1;
@@ -2733,6 +2755,7 @@ static void avTecla(SDL_Keycode k) {
 //    pipeline recebe UMA posicao, no fim, em vez de uma por toque.
 static void recuarAutomatico(double de, double para) {
   if (!isfinite(de) || !isfinite(para) || para >= de) return;
+  intro_auto_recuar(de, para);
   creditosauto_recuar(&creditosAuto, de, para);
   posplay_recuar();
 }
@@ -3447,38 +3470,47 @@ void player_atualizar(float dt, Uint32 agora) {
     // com o detalhe fechado ninguem mais o soltaria.
     desc_episodios_pendente(); }
 
+  if (comVideo) creditosauto_fonte(&creditosAuto, video_url_atual());
+  // PULAR SOZINHO (#329/#331): abertura/resumo/creditos com marcador e ajuste ligado. Uma vez por
+  // trecho (voltar de proposito para dentro dele nao pula de novo), so tocando de verdade.
+  if (!ehCanal() && comVideo && tocando && video_ativo() && video_pronto() &&
+      retomadaAplicada && !scrubbing && !retomandoSalto && duracaoReal &&
+      !saindo && !erroFonte && !esperandoFonte && !pedFontes && !pedFaixas &&
+      !stream_folha_aberta() && !faixas_aberta() && !episodios_aberto() &&
+      !episodios_menu_aberto_qualquer() && !pausao_visivel() &&
+      !video_bufferando_ms() && !creditosAuto.buscaPendente) {
+    double fimT = 0.0; int tipoT = 0;
+    if (intro_auto_ativo(posSeg, &fimT, &tipoT) &&
+        intro_auto_pular(tipoT, fimT, duracaoSeg, ajustes_pular_abertura(), ajustes_pular_resumo(),
+                         ajustes_pular_creditos() && !creditosAuto.fonteMudou) &&
+        !intro_auto_ja(tipoT, fimT)) {
+      intro_auto_marcar(tipoT, fimT);
+      posSeg = tipoT == INTRO_CREDITOS ? (float)fimT : (float)puloDestino(fimT);
+      creditosauto_buscar(&creditosAuto, posSeg);
+      video_buscar(posSeg);
+      player_toast(tipoT == INTRO_RESUMO ? i18n("Resumo pulado") :
+                   tipoT == INTRO_CREDITOS ? i18n("Créditos pulados") : i18n("Abertura pulada"), 2200);
+      printf("[intro] pulo automatico: tipo=%d ate %.0fs\n", tipoT, fimT); fflush(stdout);
+    }
+  }
+
   // PÓS-REPRODUÇÃO: o proximo episodio ou os relacionados, no fim do titulo.
   { const CatItem *ci = item();
     int eSerie = ci && !strcmp(ci->tipo, "series");
-    if (comVideo) creditosauto_fonte(&creditosAuto, video_url_atual());
     int aguardaBusca = creditosauto_aguardar(&creditosAuto, video_pos(),
       comVideo && video_pronto() && tocando && !scrubbing && !video_bufferando_ms(),
       comVideo && video_terminou());
     posplay_aguardar_busca(aguardaBusca);
-    // Usa o relogio e os sinais existentes do pipeline, em todas as plataformas.
-    // Creditos sem fim explicito continuam disponiveis apenas pelo botao manual.
-    int livre = comVideo && video_ativo() && video_pronto() && tocando &&
-      retomadaAplicada && duracaoReal && !ehCanal() && !scrubbing && !retomandoSalto &&
-      !saindo && !erroFonte && !esperandoFonte && !pedFontes && !pedFaixas &&
-      !stream_folha_aberta() && !faixas_aberta() && !episodios_aberto() &&
-      !episodios_menu_aberto_qualquer() && !pausao_visivel() && !video_bufferando_ms();
-    if (livre && !aguardaBusca && ajustes_auto_creditos() && creditosAuto.fonte[0]) {
-      IntroTrecho v[8]; double fim, pos = video_pos();
-      int n = intro_creditos_limitados(v, 8);
-      if (creditosauto_decidir(&creditosAuto, v, n, pos, video_duracao(),
-                               !eSerie, 1, 1, &fim)) {
-        video_buscar(fim); // limite exato: a cena depois dos creditos fica intacta
-        posplay_aguardar_busca(1);
-        printf("[intro] creditos automaticos: %.3fs -> %.3fs\n", pos, fim);
-        fflush(stdout);
-      }
-    }
     // Canal ao vivo nao tem "fim": sem a guarda, o relogio reserva cruzaria os
     // 90% em ~1h42 de exibicao e abriria o painel de relacionados no meio da
     // programacao.
-    if (!ehCanal())
+    if (!ehCanal()) {
+      { double cr0 = credEfetivo();
+        posplay_marcador_real(cr0 > 1.0 && duracaoSeg - cr0 <= credJanela() &&
+                              (credFonteAtual == CRED_FONTE_CAPITULO || credFonteAtual == CRED_FONTE_INTRODB)); }
       posplay_atualizar(dt, agora, posSeg, duracaoSeg, eSerie, idxAtual(),
                         eSerie && player_janela_proximo(0));
+    }
     // "O QUE ACHOU?" (reacao.h): no mesmo instante do pos-reproducao do filme,
     // e na serie so no fim da temporada ou no ultimo episodio disponivel.
     //
@@ -3891,8 +3923,8 @@ static PlrRect areaVideoLegenda(void) {
  * cresce junto, como o sub-scale do mpv, sem mexer em cor, borda ou lugar. */
 static double escalaFonteAss(void) {
   int pct = legEstilo.tamanho;
-  if (pct < 50) pct = 50;
-  if (pct > 300) pct = 300;
+  if (pct < TXT_LEG_PCT_MIN) pct = TXT_LEG_PCT_MIN;
+  if (pct > TXT_LEG_PCT_MAX) pct = TXT_LEG_PCT_MAX;
   return pct / 120.0;
 }
 
@@ -3994,7 +4026,7 @@ static void desenharLegendaPrincipal(float *topoPilha){
       PlainAssStyle style = {0};
       int pct = legEstilo.tamanho, fam = legEstilo.familia;
       float base = baseLegendaPrincipal();
-      if (pct < 50) pct = 50; if (pct > 300) pct = 300;
+      if (pct < TXT_LEG_PCT_MIN) pct = TXT_LEG_PCT_MIN; if (pct > TXT_LEG_PCT_MAX) pct = TXT_LEG_PCT_MAX;
       style.size = (pct / 10) * 4;
       if (fam < 0 || fam >= (int)(sizeof families / sizeof families[0])) fam = 0;
       snprintf(style.font, sizeof style.font, "%s", families[fam]);
@@ -4042,7 +4074,7 @@ static void desenharLegendaPrincipal(float *topoPilha){
     n = 1;
   }
   if (n <= 0) return;
-  int pct=legEstilo.tamanho;if(pct<50)pct=50;if(pct>300)pct=300;pct=(pct/10)*10;
+  int pct=legEstilo.tamanho;if(pct<TXT_LEG_PCT_MIN)pct=TXT_LEG_PCT_MIN;if(pct>TXT_LEG_PCT_MAX)pct=TXT_LEG_PCT_MAX;pct=(pct/10)*10;
   TxtEstilo est=(TxtEstilo)(TXT_LEG_50+(pct-50)/10);corLegenda(legEstilo.cor,&r,&g,&b);
   float alpha=(legEstilo.opacidade==3?.25f:legEstilo.opacidade==2?.5f:legEstilo.opacidade==1?.75f:1.f)*entrada;
   // A pilha "normal" (sem \pos e sem \an, ou \an 2): empilha de baixo para
@@ -4422,7 +4454,7 @@ static void corpoDurFonte(GfxRect r, float a, void *u) {
   float w = plrui_botao(x, y, "Tentar próxima fonte (OK)", "pl_layers", 1, a);
   (void)u;
   if (a > .9f && durFonteAcaoAte && durFonteAcaoAte == toastAte)
-    ponteiro_alvo(x, y, w, 60, durFonteTentar, NULL, 0, 0);
+    ponteiro_alvo(x, y, w, 60, NULL, durFonteTentar, 0, 0);
 }
 
 static void desenharOsd(Uint32 agora, float a, float ac, const CatItem *c);

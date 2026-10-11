@@ -507,8 +507,20 @@ typedef enum {
   // #205: tela ao abrir o video. 0 = Cinema (a arte e o logo do titulo ate o
   // primeiro quadro), 1 = Detalhada (o cartao com fonte e passos). LOCAL, append-only.
   AJ_TELA_ABERTURA,
-  // Credits with explicit boundaries; local to this profile on this TV.
-  AJ_AUTO_CREDITOS,
+  // 2.0.2 (#326): "Minimo para entrar no Continuar". Antes era o 1% fixo (descoberta.c,
+  // progresso.c, home.c). Padrao 1 = o comportamento de sempre. No fim: valor[]/CHAVE[]
+  // sao posicionais.
+  AJ_CW_MINIMO,
+  // #338: tamanho do buffer do player (Android: LoadControl do ExoPlayer). So
+  // existe onde o player deixa o app escolher; LOCAL. No fim: posicionais.
+  AJ_BUFFER,
+  // #329/#331: pular abertura/resumo e tocar o proximo sozinho (desligados por padrao).
+  AJ_PULAR_ABERTURA,
+  AJ_PULAR_RESUMO,
+  AJ_PROXIMO_AUTO,
+  // #329-ideia (PR #351): pular os creditos sozinho, so com inicio e fim reais do marcador. Desligado.
+  AJ_PULAR_CREDITOS,
+  AJ_PROXIMO_CONTAGEM, // #256: segundos locais; append-only
   AJ_N
 } OpcaoId;
 
@@ -578,6 +590,8 @@ static const char *V_FONTE_ORDEM_USO[] = { "Não", "Para desempatar", "Ordem est
 static const char *V_TAMANHO_UI[] = { "100%", "120%", "130%", "150%" };
 static const char *V_TAMANHO_AJUSTES[] = { "80%", "90%", "100%" };
 // F07: the order is cacheboost_cache_mb's (0, 256, 512, 1024 MB).
+// #338: indice = preset do NvPlayer.kt (0 = o de sempre).
+static const char *V_BUFFER[] = { "Automático", "Pequeno", "Médio", "Grande" };
 static const char *V_CACHE_SEEK[] = { "Desligado", "256 MB", "512 MB", "1 GB" };
 // #334: indice gravado em p2pLimiteLocal; ajustes_p2p_limite_mb devolve os MB.
 static const char *V_P2P_LIMITE[] = { "Automático", "2 GB", "4 GB", "8 GB", "16 GB" };
@@ -1345,7 +1359,13 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Aviso legal"),
   ESC("Brilho da interface em HDR", V_HDR_UI, 2),   // local: hdrUiLocal (#205)
   ESC("Tela de abertura do vídeo", V_TELA_ABERTURA, 2),   // local: telaAberturaLocal (#205)
-  ESC("Pular créditos automaticamente", V_LIGA, 2),   // por perfil: autoCreditosLocal
+  NUM("Mínimo para entrar no Continuar", 1, 20, 1, "%"),   // local: cwMinimoLocal
+  ESC("Tamanho do buffer", V_BUFFER, 4),                 // local: bufferPlayerLocal (Android)
+  ESC("Pular a abertura automaticamente", V_LIGA, 2),   // local: pularAberturaLocal
+  ESC("Pular o resumo automaticamente", V_LIGA, 2),   // local: pularResumoLocal
+  ESC("Tocar o próximo episódio automaticamente", V_LIGA, 2),   // local: proximoAutoLocal
+  ESC("Pular os créditos automaticamente", V_LIGA, 2),   // local: pularCreditosLocal
+  NUM("Contagem do próximo episódio", 1, 60, 1, "s"),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1575,7 +1595,13 @@ static const char *CHAVE[] = {
   "-avisoLegal",
   "hdrUiLocal",
   "telaAberturaLocal",
-  "autoCreditosLocal",
+  "cwMinimoLocal",
+  "bufferPlayerLocal",
+  "pularAberturaLocal",
+  "pularResumoLocal",
+  "proximoAutoLocal",
+  "pularCreditosLocal",
+  "proximoContagemLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -1927,6 +1953,11 @@ int ajustes_dolby_vision(void)        { return lig(AJ_DV); }
 int ajustes_dolby_atmos(void)         { return lig(AJ_ATMOS); }
 int ajustes_pausa_overlay(void)       { return lig(AJ_PAUSA_OVERLAY); }
 int ajustes_reacao_creditos(void)     { return lig(AJ_REACAO_CREDITOS); }
+int ajustes_pular_abertura(void)      { return lig(AJ_PULAR_ABERTURA); }
+int ajustes_pular_resumo(void)        { return lig(AJ_PULAR_RESUMO); }
+int ajustes_proximo_auto(void)        { return lig(AJ_PROXIMO_AUTO); }
+int ajustes_proximo_contagem(void)    { int n = valor[AJ_PROXIMO_CONTAGEM]; return n < 1 ? 1 : n > 60 ? 60 : n; }
+int ajustes_pular_creditos(void)      { return lig(AJ_PULAR_CREDITOS); }
 int ajustes_medidor_desempenho(void)  { return valor[AJ_MEDIDOR]; }
 int ajustes_fonte_manual(void)        { return lig(AJ_FONTE_MANUAL); }
 int ajustes_fonte_primeira(void)      { return valor[AJ_FONTE_AUTO] == 1; }
@@ -1968,7 +1999,6 @@ int ajustes_fonte_preparar(void) { return lig(AJ_FONTE_PREPARAR); }
 int ajustes_cw_proximo(void) { return lig(AJ_CW_PROXIMO); }
 int ajustes_busca_nuvio(void) { int v = valor[AJ_BUSCA_NUVIO]; return v < 0 || v > 2 ? 0 : v; }
 int ajustes_busca_origem(void) { return lig(AJ_BUSCA_ORIGEM); }
-int ajustes_auto_creditos(void) { return lig(AJ_AUTO_CREDITOS); }
 int ajustes_fonte_escopo(void)      { int v = valor[AJ_FONTE_ESCOPO]; return v < 0 || v > 2 ? 0 : v; }
 int ajustes_fonte_regex_modo(void)  { int v = valor[AJ_FONTE_REGEX]; return v < 0 || v > 2 ? 0 : v; }
 int ajustes_fonte_usar_outros(void) { return lig(AJ_FONTE_OUTROS); }
@@ -2101,6 +2131,14 @@ int ajustes_legenda_sync_audio(void) { return lig(AJ_LEG_SYNC_AUDIO); }
 int ajustes_legenda_sync_audio(void) { return 0; }   // escondida fora do Android
 #endif
 int ajustes_legenda_forcada_auto(void) { return lig(AJ_LEG_FORCADA); }   // #287, padrao Ligado
+int ajustes_buffer_preset(void) {
+#ifdef NV_ANDROID
+  int v = valor[AJ_BUFFER];
+  return v >= 0 && v < 4 ? v : 0;
+#else
+  return 0;   // so o ExoPlayer deixa o app escolher o buffer
+#endif
+}
 int ajustes_cache_seek_mb(void) {
   static const int MB[] = { 0, 256, 512, 1024 };
   int v = valor[AJ_CACHE_SEEK];
@@ -2399,6 +2437,13 @@ float ajustes_espaco_fator(int pct) {
 }
 float ajustes_espaco_fileiras(void) { return ajustes_espaco_fator(valor[AJ_ESPACO_FILEIRAS]); }
 float ajustes_espaco_titulos(void)  { return ajustes_espaco_fator(valor[AJ_ESPACO_TITULOS]); }
+// O piso do Continuar assistindo, em %. Fora da faixa do NUM (arquivo torto) volta para
+// dentro dela; nunca passa do Percentual assistido, que fecharia a faixa.
+int ajustes_cw_minimo(void) {
+  int v = valor[AJ_CW_MINIMO], c = ajustes_cw_concluido();
+  v = v < 1 ? 1 : v > 20 ? 20 : v;
+  return v >= c ? c - 1 : v;
+}
 int ajustes_cw_concluido(void) {
   int v = valor[AJ_CW_CONCLUIDO];
   return v < 70 ? 70 : v > 98 ? 98 : v;   // a faixa do NUM, se o arquivo vier torto
@@ -3099,7 +3144,6 @@ void ajustes_dir(const char *dir) {
   FILE *f;
   char caminho[600], linha[96];
   if (!dir || !*dir) return;
-  valor[AJ_AUTO_CREDITOS] = valorPadrao[AJ_AUTO_CREDITOS];
   snprintf(dirAjustes, sizeof dirAjustes, "%s", dir);
   fonteregra_carregar();
   fanartCarregar();
@@ -4046,7 +4090,6 @@ static int somenteDesteAparelho(int op) {
     case AJ_FONTE_AQUECER:
     case AJ_FONTE_CONFERIR_VARIAS:
     case AJ_FONTE_PREPARAR:
-    case AJ_AUTO_CREDITOS: /* por perfil nesta TV; nunca no blob da conta */
     case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON:
     case AJ_SALVOS_DEST:
     case AJ_EPG_PAIS:       /* pais da grade: por aparelho, o web nao tem */
@@ -4064,6 +4107,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_VIDRO:          /* visual desta TV: a GPU de cada uma aguenta diferente */
     case AJ_VIDRO_CONTORNO:
     case AJ_CW_CONCLUIDO:   /* o web nao tem esta escolha */
+    case AJ_CW_MINIMO:      /* idem */
     case AJ_ADDONS_PRINCIPAL: /* escolha desta TV; a conta tem uses_primary_addons */
     case AJ_HERO_TRANSICAO: /* o web nao tem esta escolha */
     case AJ_ADDON_POSTER: case AJ_ADDON_FUNDO: case AJ_ADDON_LOGO:
@@ -4115,11 +4159,13 @@ static int somenteDesteAparelho(int op) {
     case AJ_LEG_FORCADA:    /* #287: o web nao tem esta escolha */
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA: /* estilo da legenda e desta TV */
     case AJ_CACHE_SEEK:     /* F07: o disco e o player sao desta TV */
+    case AJ_BUFFER:         /* #338: o buffer e do player desta TV */
     case AJ_TRAILER_ZOOM_TPK: /* #241: o firmware de cada Samsung reage de um jeito */
     case AJ_FUNDO:          /* o desfoque custa GPU desta TV; o web nao tem */
     case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: /* teste do vidro: visual desta TV */
     case AJ_SELO_VISTO:     /* o web nao tem a escolha */
     case AJ_REACAO_CREDITOS: /* o web nao tem a pergunta */
+    case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PROXIMO_AUTO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_CONTAGEM: /* idem: local desta TV */
     case AJ_SEEKR_LIGADO: case AJ_SEEKR_FITA: case AJ_SEEKR_AJUSTE: /* o web nao tem o Seekr */
     case AJ_MENU_EXPLORAR: case AJ_MENU_GUIA: case AJ_MENU_AGENDA: case AJ_MENU_PERFIL:
     // Linha do titulo: o web nao tem, e nenhuma conta pode desliga-las aqui.
@@ -4145,9 +4191,7 @@ static int somenteDesteAparelho(int op) {
 // onde o historico vai e se o social existe. Entram na copia por perfil
 // (ajustes-p<N>.txt) e continuam FORA do blob (somenteDesteAparelho).
 static int perfilLocal(int i) {
-  return i == AJ_CW_FONTE || i == AJ_CW_PROXIMO || i == AJ_SALVOS_DEST ||
-         i == AJ_HIST_CONTA || i == AJ_SOCIAL ||
-         i == AJ_AUTO_CREDITOS;
+  return i == AJ_CW_FONTE || i == AJ_CW_PROXIMO || i == AJ_SALVOS_DEST || i == AJ_HIST_CONTA || i == AJ_SOCIAL;
 }
 
 static int dePerfil(int i) {
@@ -4160,26 +4204,6 @@ static int dePerfil(int i) {
 
 static void nomePerfil(char *dst, size_t tam, int perfil) {
   snprintf(dst, tam, "ajustes-p%d.txt", perfil);
-}
-
-// A first visit may inherit the principal's other settings, but automatic
-// credits always use this profile's own choice (off when no choice exists).
-void ajustes_auto_creditos_restaurar(int perfil) {
-  char nome[32], *t, *l;
-  int antes = valor[AJ_AUTO_CREDITOS];
-  valor[AJ_AUTO_CREDITOS] = valorPadrao[AJ_AUTO_CREDITOS];
-  nomePerfil(nome, sizeof nome, perfil);
-  t = perfil > 0 ? dados_ler(nome) : NULL;
-  for (l = t; l && *l; ) {
-    char chave[64], *fim = strchr(l, '\n');
-    int v;
-    if (fim) *fim = 0;
-    if (sscanf(l, "%63s %d", chave, &v) == 2 && !strcmp(chave, CHAVE[AJ_AUTO_CREDITOS]))
-      valor[AJ_AUTO_CREDITOS] = limita(AJ_AUTO_CREDITOS, v);
-    l = fim ? fim + 1 : NULL;
-  }
-  free(t);
-  if (antes != valor[AJ_AUTO_CREDITOS]) gravar();
 }
 
 void ajustes_perfil_guardar(int perfil) {
@@ -4209,11 +4233,6 @@ int ajustes_perfil_restaurar(int perfil) {
   nomePerfil(nome, sizeof nome, perfil);
   t = dados_ler(nome);
   if (!t) return 0;
-  // Older profile snapshots have no credits preference: they start off.
-  if (valor[AJ_AUTO_CREDITOS] != valorPadrao[AJ_AUTO_CREDITOS]) {
-    valor[AJ_AUTO_CREDITOS] = valorPadrao[AJ_AUTO_CREDITOS];
-    mudou++;
-  }
   for (l = t; l && *l; ) {
     char chave[64], *fim = strchr(l, '\n');
     int v, i;
@@ -4247,8 +4266,6 @@ void ajustes_perfil_esquecer(void) {
   // cobre com folga. Apagar arquivo que nao existe nao custa nada.
   for (i = 1; i <= 32; i++) { nomePerfil(nome, sizeof nome, i); dados_apagar(nome); }
   fonteregra_perfil_esquecer();
-  valor[AJ_AUTO_CREDITOS] = valorPadrao[AJ_AUTO_CREDITOS];
-  gravar();
 }
 
 // Onde esta o valor de `chave` dentro de [ini,fim): *vi aponta o primeiro
@@ -5046,7 +5063,7 @@ static int inativa(int op) {
     case AJ_DESCANSO_FONTE:  return valor[AJ_ESMAECER] == 0 || ajustes_descanso_estilo() != 0;
     case AJ_CW_OK: case AJ_CW_FONTE: case AJ_CW_PROXIMO:
     case AJ_CW_ESTILO: case AJ_CW_THUMB: case AJ_CW_FURTHEST:
-    case AJ_CW_NAO_EXIBIDOS: case AJ_CW_ORDEM: case AJ_CW_CONCLUIDO: case AJ_CW_RETIDO_TAMBEM:
+    case AJ_CW_NAO_EXIBIDOS: case AJ_CW_ORDEM: case AJ_CW_CONCLUIDO: case AJ_CW_MINIMO: case AJ_CW_RETIDO_TAMBEM:
       return !ajustes_cw_ligado();
     case AJ_CW_BLUR_PROX: return !ajustes_cw_ligado() || !ajustes_cw_thumb_episodio();
     case AJ_EXPANDIR_ATRASO: return !ajustes_expandir_poster();
@@ -5235,7 +5252,7 @@ static const char *ajudaOpcaoBase(int op) {
     if (op == AJ_DTS_AC3) return "Não disponível nesta TV. Só a LG converte o DTS dentro do app.";
     if (op == AJ_CACHE_SEEK) return "Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.";
     if (op == AJ_DESCOBRIR) return "A tela Descobrir do app web ainda não existe nesta TV. A escolha fica guardada na conta.";
-    if ((op >= AJ_CW_OK && op <= AJ_CW_ORDEM) || op == AJ_CW_PROXIMO || op == AJ_CW_CONCLUIDO || op == AJ_CW_RETIDO_TAMBEM)
+    if ((op >= AJ_CW_OK && op <= AJ_CW_ORDEM) || op == AJ_CW_PROXIMO || op == AJ_CW_CONCLUIDO || op == AJ_CW_MINIMO || op == AJ_CW_RETIDO_TAMBEM)
       return op == AJ_CW_BLUR_PROX && ajustes_cw_ligado()
         ? "Ative Miniatura do episódio para desfocar a imagem do próximo episódio."
         : "Ative Continuar assistindo para ajustar os cards de retomada.";
@@ -5295,8 +5312,15 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_LEG_LINGUA: return "Idioma ligado sozinho quando o vídeo começa. Legendas dos addons aparecem em inglês e no idioma escolhido aqui. \"Da conta\" segue o que está no seu perfil.";
     case AJ_AUD_LINGUA: return "Faixa de áudio escolhida quando o arquivo tem mais de uma. Se o idioma não existir no arquivo, o player usa a primeira.";
     case AJ_PAUSA_OVERLAY: return "Ao pausar, sobe uma ficha com a sinopse e os dados do que você está vendo.";
+    case AJ_PULAR_ABERTURA: return "Pula a abertura sozinho quando o episódio tem o trecho marcado, e avisa na tela. Sem marcador, nada é pulado. O botão Pular abertura continua valendo.";
+    case AJ_PULAR_RESUMO: return "Pula o resumo do episódio anterior sozinho quando o episódio tem o trecho marcado, e avisa na tela. Sem marcador, nada é pulado.";
+    case AJ_PULAR_CREDITOS: return "Pula os créditos sozinho, e avisa na tela, só quando o marcador diz onde eles começam e onde acabam. Sem marcador completo, e nos créditos que vão até o fim do episódio, nada é pulado: quem cuida é o próximo episódio.";
+    case AJ_PROXIMO_AUTO: case AJ_PROXIMO_CONTAGEM: {
+      static char b[512];
+      snprintf(b, sizeof b, i18n("Nos créditos, uma contagem de %d s toca o próximo episódio enquanto eles ainda rolam. Voltar cancela e deixa os créditos terminarem. Desligado, o cartão espera você apertar OK."), ajustes_proximo_contagem());
+      return b;
+    }
     case AJ_REACAO_CREDITOS: return "Nos créditos de um filme, ou no fim de uma temporada, um cartão pequeno pergunta o que você achou. Some sozinho em 8 s. Com o Trakt ligado, a resposta vira nota lá.";
-    case AJ_AUTO_CREDITOS: return "Pula créditos com início e fim conhecidos, preservando as cenas depois deles. Sem um fim válido, use o botão manual. Retroceder no vídeo mantém esse trecho disponível para assistir manualmente. Preferência deste perfil nesta TV.";
     case AJ_STALKER_PORTAL: return "Os canais do portal entram no Guia de TV, junto com os dos addons. Endereço sem http:// e sem barra no fim: meu-portal.exemplo.tv:8080";
     case AJ_STALKER_MAC: return "O MAC que o provedor cadastrou para você. É credencial: vale como senha, e só aparece nesta tela mascarado.";
     case AJ_STALKER_LIMPAR: return "Apaga o portal e o MAC deste perfil, e os canais dele somem do Guia. Sair da conta também apaga.";
@@ -5385,6 +5409,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_CW_NAO_EXIBIDOS: return "A retomada mostra o próximo episódio antes de ir ao ar.";
     case AJ_CW_ORDEM: return "Como a retomada se ordena: pelo mais recente, no estilo dos streamings, ou com os episódios futuros num bloco separado.";
     case AJ_CW_CONCLUIDO: return "A partir de quanto do episódio ele conta como assistido e a retomada passa ao próximo.";
+    case AJ_CW_MINIMO: return "Quanto você precisa assistir para o título aparecer em Continuar assistindo. Abaixo disso ele não entra na fileira.";
 
     // --- Pagina de detalhe
     case AJ_DET_TRAILER:
@@ -5481,7 +5506,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_DEBRID_PM: return "Chave de API do Premiumize. Só precisa se a sua conta Nuvio não a traz. Fica só nesta TV e aparece mascarada.";
     case AJ_PERFIL_PESQ: return "Desligado por padrão. Ligado, outras pessoas do Nuvio podem te achar pelo apelido e ver o que você escolher mostrar: bio, gêneros favoritos, foto e o que assistiu recentemente. Nunca aparecem e-mail, conta, addons nem aparelho. Desligar apaga o perfil do servidor na hora.";
     case AJ_PERFIL_EDITAR: return "Apelido, bio, gêneros e o que mostrar no perfil; a atividade compartilhada só com amigos (desligada por padrão); pedidos de amizade recebidos e a lista de bloqueados.";
-    case AJ_P2P_LIMITE: return "Quanto do armazenamento desta TV o P2P pode ocupar enquanto toca. Automático usa até metade do espaço livre (no máximo 1,5 GB). Um valor fixo sempre deixa 512 MB livres. O vídeo inteiro fica guardado até fechar o player: um arquivo maior que o limite para no meio.";
+    case AJ_P2P_LIMITE: return "Quanto do armazenamento da TV o P2P pode usar enquanto toca; Automático usa até metade do espaço livre. Se o vídeo for maior, ele continua tocando e a TV guarda só o trecho perto de onde você está (em pendrive FAT ou exFAT, ele para no limite).";
     case AJ_P2P_TESTAR: return "Pergunta ao servidor se ele responde e qual a versão. Funciona mesmo com o P2P desligado, para conferir o endereço antes de ligar.";
     case AJ_POSTER_PROV: return "Troca os cartazes retrato por um pronto de um serviço externo, com notas, selos 4K/HDR e faixa Top 10 no próprio cartaz. SpatialPosters (instância pública ou a sua), RPDB (com chave) ou um modelo de URL seu. Só cartazes de card: o destaque e os fundos não mudam. Se o serviço não responde, volta ao cartaz normal.";
     case AJ_POSTER_INST: return "Endereço da instância do SpatialPosters. Vazio usa a pública (spatial-posters.vercel.app), que é gratuita e compartilhada; para muitos cartazes, rode a sua com Docker.";
@@ -5534,6 +5559,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_AVANCADAS: return "Mostra, em todas as categorias, as opções técnicas marcadas como Avançado. Vale só para esta TV.";
     case AJ_LOGO_TRAILER: return "Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.";
     case AJ_TRAILER_ZOOM_TPK: return "Amplia a imagem do trailer e libera os modos de recorte e zoom da proporção no player; em algumas TVs Samsung pode deixar a tela preta ou mostrar a tela inicial da TV.";
+    case AJ_BUFFER: return "Quanto vídeo o player baixa à frente. Pequeno poupa memória e rede; Grande aguenta melhor internet instável e arquivos pesados, até o limite de memória da TV. Não muda a qualidade da imagem. Vale a partir do próximo vídeo.";
     case AJ_CACHE_SEEK: return "Guarda no disco o trecho já baixado do vídeo, para voltar sem baixar de novo. Apagado ao fechar o player.";
     case AJ_ANIM: return "Use Reduzidas para movimentos mais discretos ao navegar pela interface.";
     case AJ_RESOLUCAO: return "Automática começa em 1080p e testa o 4K sozinha: só usa 4K se a tela for 4K e a TV aguentar com folga; se travar depois, volta para 1080p. Nunca baixa para 720p. Escolher 4K força 4K (se a TV não aguentar, o app volta para 1080p e avisa). 720p desenha em 1280x720 e amplia: mais leve, com texto mais suave. Reinicie o app depois de mudar. O vídeo não muda.";
@@ -6544,7 +6570,7 @@ static int definirValorDireto(int op, int novo) {
   if (op == AJ_CW_FONTE || op == AJ_SALVOS_DEST || op == AJ_SOCIAL) desc_repetir();
   // A fonte decide so esta fileira: refaz-la, alem do ciclo completo (#244).
   if (op == AJ_CW_FONTE || op == AJ_CW_PROXIMO) desc_refazer_continuar();
-  if (op == AJ_CW_ORDEM || op == AJ_CW_NAO_EXIBIDOS || op == AJ_CW_CONCLUIDO || op == AJ_CW_RETIDO_TAMBEM)
+  if (op == AJ_CW_ORDEM || op == AJ_CW_NAO_EXIBIDOS || op == AJ_CW_CONCLUIDO || op == AJ_CW_MINIMO || op == AJ_CW_RETIDO_TAMBEM)
     desc_refazer_continuar();
   if (op == AJ_TEX_MB) tex_definir_orcamento_mb(ajustes_tex_mb());
   // Picking 4K again = try again: forget that this TV did not hold it.
@@ -7417,15 +7443,14 @@ typedef enum {
 static AjPreview familiaPreviaOpcao(int op) {
   switch (op) {
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
-    case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK:
+    case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK: case AJ_BUFFER:
     case AJ_DV_MKV:
     case AJ_LEG_FORCADA:
     case AJ_AUD_LINGUA: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_FONTE_MANUAL:
     case AJ_FONTE_AUTO: case AJ_FONTE_REPOR: case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON: case AJ_SELOS_CORES: case AJ_FONTE_TOCAR_CONFERINDO: case AJ_FONTE_AQUECER: case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR:
     case AJ_FONTE_PRIORIDADE: case AJ_FONTE_HDR:
     case AJ_SELOS_PACOTE:
-    case AJ_REACAO_CREDITOS:
-    case AJ_AUTO_CREDITOS:
+    case AJ_REACAO_CREDITOS: case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PROXIMO_AUTO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_CONTAGEM:
     case AJ_FONTE_PRAZO: case AJ_TAM_MAX: case AJ_TAM_MIN: case AJ_PROPORCAO_PADRAO: case AJ_DTS_AC3:
     case AJ_FONTE_ESCOPO: case AJ_FONTE_ADDONS_PERM: case AJ_FONTE_PLUGINS_PERM: case AJ_FONTE_OUTROS:
     case AJ_FONTE_REGEX: case AJ_FONTE_REGEX_PADRAO: case AJ_FONTE_REGEX_MODELO:
@@ -7842,7 +7867,8 @@ int ajustes_teste_quadro(const char *id) {
     valor[AJ_QUALIDADE] = 1; valor[AJ_HERO_TRAILER] = 0;
     uxListarDiferencas(); uxIndice = 1; focoIndice = 0; uxDifFoco = 0;
   }
-  else if (!strcmp(id, "addons")) {
+  // "addons-sync": a mesma tela com o foco no botao "Sincronizar addons" (#360).
+  else if (!strcmp(id, "addons") || !strcmp(id, "addons-sync")) {
     static const char *const NOME[8] = { "Cinemeta", "AIOStreams", "Xperience", "TMDB", "Akashi", "MDBList", "OpenSubtitles v3", "Torrentio" };
     static const char *const REC[8] = { "\"catalog\",\"meta\"", "\"catalog\",\"stream\"", "\"catalog\"", "\"catalog\",\"meta\"",
                                         "\"catalog\"", "\"catalog\"", "\"subtitles\"", "\"stream\"" };
@@ -7857,7 +7883,7 @@ int ajustes_teste_quadro(const char *id) {
         addons_manifesto_lido(k, man);
         if ((k == 4 || k == 7) && addons_ativo(k)) addons_alternar(k);
       }
-    ajQuadroAddons = 2;
+    ajQuadroAddons = strcmp(id, "addons-sync") ? 2 : addons_n() + 1;
   }
   else if (!strcmp(id, "plugins")) { ajArteFundoN = 3; ajQuadroPlugins = 1; }
   else return 0;
@@ -7902,6 +7928,7 @@ int ajustes_shot_valor(const char *chave, int v) {
 int ajustes_rapido_op(const char *chave) {
   int i, op = -1, n;
   if (!chave || !chave[0]) return -1;
+  if (!strcmp(chave, "corDestaque")) return AJ_RAPIDO_COR;
   for (i = 0; i < AJ_N; i++)
     if (CHAVE[i] && CHAVE[i][0] != '-' && !strcmp(CHAVE[i], chave)) { op = i; break; }
   if (op < 0 || OPCOES[op].tipo != OP_ESCOLHA) return -1;
@@ -7911,10 +7938,52 @@ int ajustes_rapido_op(const char *chave) {
   for (i = 0; i < AJ_N_TELA; i++) if (TELA[i].tipo == IT_OPC && TELA[i].op == op) return op;
   return -1;
 }
-const char *ajustes_rapido_rotulo(int op) { return op >= 0 && op < AJ_N ? rotuloOpcao(op) : ""; }
-const char *ajustes_rapido_valor(int op) { return op >= 0 && op < AJ_N ? textoValor(op) : ""; }
+static int corTema(int i);
+const char *ajustes_rapido_cor_atual_nome(void);
+const char *ajustes_rapido_rotulo(int op) {
+  if (op == AJ_RAPIDO_COR) return rotuloOpcao(AJ_TEMA);
+  return op >= 0 && op < AJ_N ? rotuloOpcao(op) : "";
+}
+const char *ajustes_rapido_valor(int op) {
+  if (op == AJ_RAPIDO_COR) return ajustes_rapido_cor_atual_nome();
+  return op >= 0 && op < AJ_N ? textoValor(op) : "";
+}
 int ajustes_rapido_ligado(int op) { return op >= 0 && op < AJ_N && ehInterruptor(op) ? lig(op) : -1; }
 int ajustes_rapido_passo(int op, int dir) {
+  if (op == AJ_RAPIDO_COR) {   // sem seletor: o proximo dos dezoito
+    int a = ajustes_rapido_cor_atual();
+    return ajustes_rapido_cor_definir(((a < 0 ? 0 : a) + (dir < 0 ? 17 : 1)) % 18);
+  }
   if (op < 0 || op >= AJ_N) return 0;
   { int r; ajOrigemDireto = AJLOG_CENTRAL; r = definirValorDireto(op, passoAdiante(op, dir < 0 ? -1 : 1)); ajOrigemDireto = AJLOG_AJUSTES; return r; }
+}
+
+// A COR DE DESTAQUE NA CENTRAL. O seletor da central mostra so os dezoito
+// acentos fixos (a regua de Ajustes: nove claros, nove profundos); os
+// dinamicos (Da arte, Textura...) pedem a tela de Ajustes. A troca passa por
+// definirValorDireto, o mesmo caminho do OK da tela.
+int ajustes_rapido_cor_n(void) { return 18; }
+static int corTema(int i) { return i < 0 || i >= 18 ? 0 : i < 9 ? REGUA_CLAROS[i] : REGUA_PROFUNDOS[i - 9]; }
+const char *ajustes_rapido_cor_nome(int i) { return V_TEMA[corTema(i)]; }
+float ajustes_rapido_cor(int i, float *r, float *g, float *b) {
+  int t = corTema(i);
+  corDeHex(TEMA_ACENTO[t].fill, r, g, b);
+  return TEMA_ACENTO[t].fam == 'c' ? AJ_TINTA_ESCURA : 1.0f;
+}
+int ajustes_rapido_cor_atual(void) {
+  int i, v = valor[AJ_TEMA];
+  if (SEGURO && temaDinamico()) v = 0;
+  for (i = 0; i < 18; i++) if (corTema(i) == v) return i;
+  return -1;   // um dinamico: nenhum dos dezoito
+}
+const char *ajustes_rapido_cor_atual_nome(void) {
+  int i = ajustes_rapido_cor_atual();
+  return i >= 0 ? V_TEMA[corTema(i)] : V_TEMA[valor[AJ_TEMA] >= 0 && valor[AJ_TEMA] < AJ_N_TEMAS_OPC ? valor[AJ_TEMA] : 0];
+}
+int ajustes_rapido_cor_definir(int i) {
+  if (i < 0 || i >= 18) return 0;
+  int r; ajOrigemDireto = AJLOG_CENTRAL;
+  r = definirValorDireto(AJ_TEMA, corTema(i));
+  ajOrigemDireto = AJLOG_AJUSTES;
+  return r;
 }

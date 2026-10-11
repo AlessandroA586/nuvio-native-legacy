@@ -1186,12 +1186,22 @@ void faixas_atualizar(float dt, Uint32 agora) {
     mkvass_estatisticas(NULL, NULL, &col, NULL);
     if ((e == MKVASS_COMPLETO || (e == MKVASS_COLHENDO && col > legOverlayColhidos)) &&
         legenda_ligada_em(legenda_geracao())) {
-      printf("[legenda] faixa %d: o mkvass voltou a entregar (%d blocos, depois de %d falha(s))%s\n",
-             legOverlay, col, legOverlayFalhas, legOverlayTV ? ": a faixa VOLTA ao app (nativa desligada)" : "");
+      // "VOLTA ao app" e toast so quando o app tinha DEIXADO de desenhar
+      // (falha(s) antes). Faixa de TEXTO no primeiro cue e o handoff normal —
+      // "a TV segura ate os cues chegarem" — e nao tem "voltou" nenhum.
+      int voltou = legOverlayFalhas > 0;
+      if (voltou)
+        printf("[legenda] faixa %d: o mkvass voltou a entregar (%d blocos, depois de %d falha(s))%s\n",
+               legOverlay, col, legOverlayFalhas,
+               legOverlayTV ? ": a faixa VOLTA ao app (nativa desligada)" : "");
+      else
+        printf("[legenda] faixa %d: %d blocos de texto chegaram: o app assume (nativa desligada)\n",
+               legOverlay, col);
       fflush(stdout);
       if (legOverlayTV) {
         video_escolher_legenda(-1);
-        player_toast(i18n("Legenda ASS: o app voltou a desenhar"), 4000);
+        if (voltou)
+          player_toast(i18n("Legenda ASS: o app voltou a desenhar"), 4000);
       }
       legOverlayTV = 0; legOverlayFalhas = 0; legOverlayColhidos = col;
     }

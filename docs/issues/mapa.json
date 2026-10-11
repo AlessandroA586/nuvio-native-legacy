@@ -9786,7 +9786,10 @@
     378,
     379
    ],
-   "estado": "pendente"
+   "estado": "decidida",
+   "decisao": "Sim: ficam na 2.0.5 (seguir a recomendacao).",
+   "data": "2026-10-11",
+   "quem": "dono (painel)"
   },
   {
    "id": "dec-354-nao-vamos-fazer",
@@ -9798,7 +9801,11 @@
     324,
     292
    ],
-   "estado": "pendente"
+   "estado": "decidida",
+   "decisao": "Ainda nao vamos fazer, mas pode ser que sim no futuro (nao fechar como recusado definitivo).",
+   "data": "2026-10-11",
+   "quem": "dono (painel)",
+   "nota_dono": "ainda nao vamos fazer, mas pode ser que sim "
   },
   {
    "id": "dec-304-pedidos-interface",
@@ -9810,7 +9817,11 @@
     347,
     342
    ],
-   "estado": "pendente"
+   "estado": "decidida",
+   "decisao": "Futuro (sem release marcada).",
+   "data": "2026-10-11",
+   "quem": "dono (painel)",
+   "nota_dono": "futuro"
   },
   {
    "id": "dec-135-vidaa-rtl",
@@ -9820,7 +9831,11 @@
     135,
     260
    ],
-   "estado": "pendente"
+   "estado": "decidida",
+   "decisao": "Futuro (sem release marcada).",
+   "data": "2026-10-11",
+   "quem": "dono (painel)",
+   "nota_dono": "futuro"
   },
   {
    "id": "dec-144-aguardando-fechamento",
@@ -9849,14 +9864,22 @@
    "issues": [
     341
    ],
-   "estado": "pendente"
+   "estado": "decidida",
+   "decisao": "Vai para a 2.1.",
+   "data": "2026-10-11",
+   "quem": "dono (painel)",
+   "nota_dono": "2.1"
   },
   {
    "id": "dec-dv-mkv-samsung",
    "pergunta": "Dolby Vision em MKV na Samsung: manter na 2.1, passar para 2.2 ou futuro? Não consta do roadmap aprovado.",
    "recomendacao": "Sugestão do agente, não aprovada: futuro, só como spike de pesquisa; não prometer ao público até haver prova num modelo.",
    "issues": [],
-   "estado": "pendente"
+   "estado": "decidida",
+   "decisao": "Vai para a 2.1.",
+   "data": "2026-10-11",
+   "quem": "dono (painel)",
+   "nota_dono": "2.1"
   },
   {
    "id": "dec-352-limites-trakt",
@@ -9876,7 +9899,11 @@
    "pergunta": "Plano de refatoração geral (docs/plans/refatoracao-geral.md): quando? Não consta do roadmap aprovado.",
    "recomendacao": "Sugestão do agente, não aprovada: depois da 2.0.3, na 2.1 como trabalho próprio; na 2.0.5 no máximo os itens 01-04 (apagar morto). Não misturar com recursos.",
    "issues": [],
-   "estado": "pendente"
+   "estado": "decidida",
+   "decisao": "Sim, mas so o que melhorar de verdade; usar Rust onde ele resolver problema nosso.",
+   "data": "2026-10-11",
+   "quem": "dono (painel)",
+   "nota_dono": "apenas o que for melhorar e tb usar rust no que for resolver nossos problemas tb"
   },
   {
    "id": "dec-250-arabe-autosync",

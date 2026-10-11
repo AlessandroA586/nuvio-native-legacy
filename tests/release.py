@@ -19,6 +19,15 @@ spec.loader.exec_module(r)
 (ROOT/'build').mkdir(exist_ok=True)
 with tempfile.TemporaryDirectory(dir=ROOT/'build', prefix='release-test-') as tmp:
     tmp = Path(tmp)
+    checks = tmp/'checks'; checks.mkdir()
+    (checks/'artifact.bin').write_bytes(b'nuvio')
+    (checks/'SHA256SUMS').write_text(f'{r.digest(checks/"artifact.bin")}  artifact.bin\n')
+    r.verify_sums(checks/'SHA256SUMS')
+    (checks/'artifact.bin').write_bytes(b'changed')
+    try: r.verify_sums(checks/'SHA256SUMS')
+    except RuntimeError: pass
+    else: raise AssertionError('checksum mismatch was accepted')
+
     props = tmp/'local.properties'
     props.write_text('NUVIO_SUPABASE_URL=https://example.invalid\nNUVIO_SUPABASE_ANON_KEY=sentinel-do-not-print\nTV_LOGIN_WEB_BASE_URL=https://example.invalid\n')
     env = dict(os.environ, NUVIO_PROPERTIES=str(props), NUVIO_REQUIRE_ALL='1')

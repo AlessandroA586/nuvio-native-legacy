@@ -5,8 +5,8 @@
 // fonte e nao escolhidas aqui:
 //   - FILME: quando o progresso passa de 90% da duracao
 //     (DEFAULT_POST_PLAY_MOVIE_THRESHOLD_PERCENT).
-//   - SERIE: nos ultimos segundos, com contagem regressiva de 5
-//     (POST_PLAY_RECOMMENDATION_FINAL_COUNTDOWN_SECONDS).
+//   - SERIE: nos creditos; autoplay opcional com contagem configuravel
+//     (desligado de fabrica, 5 s como valor inicial).
 //   - Em qualquer caso, no fim do fluxo.
 //
 // O QUE MOSTRA e diferente do web, e de proposito:
@@ -67,6 +67,11 @@ int  posplay_indice(void);
 // proximo episodio (temporada/episodio) ou titulo relacionado (indice).
 int  posplay_pediu_episodio(int *temporada, int *episodio);
 int  posplay_pediu_titulo(void);
+// A conta da contagem, sem estado (#331). Devolve o novo instante de disparo, 0 = sem contagem.
+Uint32 posplay_contagem(Uint32 agora, Uint32 abriuEm, Uint32 fecharEm, double restaReal, int autoplay, int marcadorReal, int contagemSeg);
+// O player diz, a cada quadro, se o inicio dos creditos vem de marcador real (capitulo do MKV ou
+// TheIntroDB deste episodio, aceito pela janela) e nao da estimativa. So assim a contagem adianta.
+void posplay_marcador_real(int real);
 #ifdef NV_SHOT_HOOKS
 void posplay_shot(int idxCatalogo, int ehSerie, int t, int e, Uint32 fecha);
 #endif
