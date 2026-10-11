@@ -40,12 +40,15 @@ void intro_pedir_vizinhos(const char *imdb,int temporada,int episodio,double dur
 // tmdb 0: imdb_id com a numeracao do Cinemeta. A duracao vai depois, sozinha,
 // quando o player a informar (intro_definir_duracao).
 void intro_pedir_ids(const char *imdb,long tmdb,int temporada,int episodio,double durAnt,double durProx);
+// Evidencia local: corpo TMDB ja baixado; Animation + ja/JP, sem GET novo.
+// Se chegar depois do pedido, refaz uma vez ao reconhecer anime.
+void intro_registrar_tmdb(const char *id,long tmdb,const char *json);
 // URL do pedido (exposta para o teste). durSeg 0 = sem duration_ms.
 void intro_montar_url(char *url,size_t n,const char *imdb,long tmdb,int t,int e,double durSeg);
 // Troca quem faz o GET (teste). Devolve o status HTTP (0 = sem resposta) e o
 // corpo em *corpo (malloc) quando 2xx. NULL volta ao padrao (rede_pedir).
 void intro_definir_buscador(int (*f)(const char *url,char **corpo,int *status));
-// ANISKIP (anime com id kitsu:/mal:, intro.c). Le a resposta de
+// ANISKIP (kitsu:/mal: ou IMDb/TMDB de anime mapeado pela Fribb, intro.c). Le a resposta de
 // /v2/skip-times: op -> abertura, ed -> creditos, recap -> resumo; por tipo, o
 // lancamento de duracao mais proxima de `dur`, recusado se diferir mais que
 // INTRO_ANISKIP_TOLERA (outro corte). dur 0 = nao compara.

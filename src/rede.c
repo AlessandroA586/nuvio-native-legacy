@@ -295,10 +295,54 @@ static _Thread_local unsigned redeFinalTam;
 
 void rede_preparar(void) { }   // nao ha biblioteca para carregar
 unsigned rede_pedido_capacidades(void) { return 0; }
+// WGT: somente GET publico sem redirects, em fluxo; nunca usa responseText.
+EM_JS_DEPS(nv_fluxo_deps, "$wasmTable");
+EM_ASYNC_JS(int, nv_http_fluxo, (const char *url, unsigned prazo, unsigned teto,
+                                int callback, void *usuario, int *status, unsigned *total), {
+  if (typeof ReadableStream === 'undefined' || typeof AbortController === 'undefined') return 2;
+  var controle = new AbortController(), expirou = false, bloco = _malloc(16384);
+  if (!bloco) return 3;
+  var timer = setTimeout(function() { expirou = true; controle.abort(); }, prazo);
+  try {
+    var resposta = await fetch(UTF8ToString(url), {
+      redirect: 'error', credentials: 'omit', signal: controle.signal
+    });
+    HEAP32[status >> 2] = resposta.status;
+    if (!resposta.body || !resposta.body.getReader) return 2;
+    var leitor = resposta.body.getReader(), n = 0;
+    while (true) {
+      var parte = await leitor.read();
+      if (parte.done) break;
+      if (parte.value.length > teto - n) return 8;
+      n += parte.value.length; HEAPU32[total >> 2] = n;
+      if (resposta.status >= 200 && resposta.status < 300) {
+        for (var i = 0; i < parte.value.length; i += 16384) {
+          var pedaco = parte.value.subarray(i, i + 16384);
+          HEAPU8.set(pedaco, bloco);
+          if (!wasmTable.get(callback)(bloco, pedaco.length, usuario)) return 4;
+        }
+      }
+    }
+    return 0;
+  } catch (e) { return expirou ? 5 : 4; }
+  finally { clearTimeout(timer); controle.abort(); _free(bloco); }
+});
 int rede_pedir(const RedePedido *p, RedeResposta *r) {
-  (void)p;
   if (!r) return 0;
   memset(r, 0, sizeof *r);
+  // Os demais pedidos continuam indisponiveis: o XHR nao cumpre o contrato.
+  if (p && p->receber_corpo && p->url && !strncmp(p->url,"https://",8) &&
+      (!p->metodo || !strcmp(p->metodo,"GET")) && !p->seguir && !p->cabecalhos &&
+      !p->corpo && !p->n_corpo && !p->job && !p->parar && !p->intervalo &&
+      !p->janela_corpo_ms && !p->ca_arquivo && !p->tls_pessoal &&
+      !p->max_cabecalhos && p->prazo_ms<=300000 && p->max_bytes<=REDE_CORPO_MAXIMO) {
+    unsigned total=0;
+    r->erro=nv_http_fluxo(p->url,p->prazo_ms?p->prazo_ms:15000,
+        p->max_bytes?p->max_bytes:REDE_CORPO_PADRAO,
+        (int)p->receber_corpo,p->corpo_usuario,&r->status,&total);
+    r->n_corpo=total;
+    return r->erro==REDE_OK;
+  }
   r->erro = REDE_INDISPONIVEL;
   return 0; /* nenhum XHR: nao prometer teto, timeout ou cancel inexistentes */
 }
