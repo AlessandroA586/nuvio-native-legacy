@@ -18,6 +18,7 @@ work,root=map(Path,sys.argv[1:])
 s=(root/'tests/tpk_lifecycle/Test.cs').read_text()
 if 'IntPtr Handle' not in s: s=s.replace('public class Player {','public class Player { public IntPtr Handle => new IntPtr(1);')
 s=s.replace('public class Settings { public PlayerDisplayMode Mode {get;set;}', 'public class Settings { PlayerDisplayMode mode; public PlayerDisplayMode Mode {get=>mode;set {mode=value; Native.mode((int)value);}}')
+s=s.replace('public void SetRoi(Rectangle r) {}', 'public bool FailRoi; public void SetRoi(Rectangle r) { if(FailRoi) throw new Exception("legacy ROI rejected"); }')
 s+='\nstatic class Native { [System.Runtime.InteropServices.DllImport("libcapi-media-player.so.0", EntryPoint="player_set_display_mode")] internal static extern int set(System.IntPtr p,int m); internal static void mode(int m) { set(System.IntPtr.Zero,m); } }\n'
 (work/'Stubs.cs').write_text(s)
 paths=['tests/tpk_aspecto.cs','tizen-tpk/Video.cs','tizen-tpk/VideoWindowMetrics.cs']
