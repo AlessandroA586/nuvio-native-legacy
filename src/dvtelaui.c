@@ -101,7 +101,7 @@ static void fundo(float a) {
     if (t) tb = gfx_desfocado(t, arteUrl);
   }
   // Opaco desde o primeiro quadro: atras pode estar o HDR10 do player da TV.
-  if (tb) gfx_rect(tela, tb, GFX_SNAP, 0.727f, 1.0f, 0.0f, 0.0f, 0.0104f, 0.0111f, 0.0138f, a);
+  if (tb) gfx_rect(tela, tb, GFX_SNAP, 0.727f, 2.0f, 0.0f, 0.0f, 0.0104f, 0.0111f, 0.0138f, a);
   else gfx_cor(tela, 0.0f, 0.016f, 0.017f, 0.021f, a);
   // Escurece a base: o cartao fica numa poca de luz.
   gfx_veu_css(tela, 0, 0.0f, 1.0f, 0.35f * a);

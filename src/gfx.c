@@ -238,6 +238,12 @@ static const char *VS =
 // registradores livres significa menos fragmentos em voo ao mesmo tempo — a
 // Mali-G71 desta TV entregava ~40fps com apenas duas camadas de tela cheia.
 // Com um programa enxuto por modo cada desenho usa so o que precisa.
+// Tamanho da copia desfocada (gfx_desfocado); o GFX_SNAP precisa dele no shader.
+#define NV_DESF_W 96
+#define NV_DESF_H 54
+#define NV_STR_(x) #x
+#define NV_STR(x) NV_STR_(x)
+
 static const char *FS_CABECA =
   NV_GLSL_PREFIXO
   "#ifdef GL_FRAGMENT_PRECISION_HIGH\n"
@@ -622,9 +628,26 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   // de 28% da "Arte borrada", gfx_luz_canal_desenhar); mix com 0 devolve a
   // textura exata. uPar.x > 0.5: a cor sai pelo nv_dither (o Frost). Os outros
   // chamadores passam 0 nos dois.
+  // uPar.x > 1.5: a fonte e a copia desfocada de NV_DESF_W x NV_DESF_H
+  // esticada na tela inteira (o fundo do Cinema). O bilinear puro, ~20x
+  // ampliado, deixa as emendas dos texels a vista em losangos que o dither nao
+  // apaga; o B-spline cubico por 4 leituras bilineares (GPU Gems 2, cap. 20)
+  // tem derivada continua e a rampa sai lisa.
+  "vec3 nv_bspline(vec2 uv){\n"
+  "  vec2 ts = vec2(" NV_STR(NV_DESF_W) ".0, " NV_STR(NV_DESF_H) ".0);\n"
+  "  vec2 p = uv * ts - 0.5, f = fract(p), c = p - f + 0.5;\n"
+  "  vec2 f2 = f * f, f3 = f2 * f, e = 1.0 - f;\n"
+  "  vec2 w0 = e * e * e / 6.0, w1 = (4.0 - 6.0 * f2 + 3.0 * f3) / 6.0;\n"
+  "  vec2 w3 = f3 / 6.0, w2 = 1.0 - w0 - w1 - w3;\n"
+  "  vec2 g0 = w0 + w1, g1 = w2 + w3;\n"
+  "  vec2 a = (c - 1.0 + w1 / g0) / ts, b = (c + 1.0 + w3 / g1) / ts;\n"
+  "  return g0.y * (g0.x * texture2D(uTex, a).rgb + g1.x * texture2D(uTex, vec2(b.x, a.y)).rgb)\n"
+  "       + g1.y * (g0.x * texture2D(uTex, vec2(a.x, b.y)).rgb + g1.x * texture2D(uTex, b).rgb);\n"
+  "}\n"
   "void main(){\n"
   "  vec2 uv = (uPar.y > 0.5) ? vec2(vUv.x, 1.0 - vUv.y) : vUv;\n"
-  "  vec3 c = mix(texture2D(uTex, uv).rgb, uCor.rgb, uFoco);\n"
+  "  vec3 t = uPar.x > 1.5 ? nv_bspline(uv) : texture2D(uTex, uv).rgb;\n"
+  "  vec3 c = mix(t, uCor.rgb, uFoco);\n"
   "  gl_FragColor = uPar.x > 0.5 ? nv_dither(c, uCor.a) : vec4(c, uCor.a);\n"
   "}\n",
 
@@ -3408,8 +3431,6 @@ void gfx_borrao_encerrar(void) {
 // quadro, o card desenha essa textura minuscula esticada com filtro linear:
 // o mesmo custo de um card nitido. A geracao sao dois quads de 96x54, limitada
 // a NV_DESF_POR_QUADRO por quadro.
-#define NV_DESF_W 96
-#define NV_DESF_H 54
 #define NV_DESF_N 16            // cards visiveis + folga para a rolagem
 #define NV_DESF_POR_QUADRO 2
 // Passo do gaussiano em texels do alvo. Com 9 amostras o borrao alcanca
