@@ -2693,6 +2693,10 @@ static void marcarAssistidoSeSolicitado(void) {
   // olho aberto e o toque "marcava" de novo em vez de desmarcar.
   { int visto = cat_visto(c);
     const double dur = 3600.0;
+    if (!visto) {
+      printf("[visto] marcado por detalhe-manual pos=3600 dur=3600 assistido=0s id=%s\n", c->imdb);
+      fflush(stdout);
+    }
     cat_salvar_progresso(i, visto ? 0.0 : dur, dur);
     if (c->imdb[0]) {
       trakt_assistido(c->imdb, !visto);

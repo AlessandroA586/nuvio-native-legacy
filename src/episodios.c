@@ -341,6 +341,7 @@ static int aplicarVisto(int modo, int visto) {
          nomeModo(modo), visto ? "marcar" : "desmarcar", ci->imdb, vmT, vmE, mudou, ja);
   fflush(stdout);
   if (!mudou) return 0;
+  if (visto) { printf("[visto] marcado por episodios-manual pos=0 dur=0 assistido=0s id=%s n=%d\n", ci->imdb, mudou); fflush(stdout); }
   for (int i = 0; i < mudou; i += SMK_LOTE_MAX) {
     int qtd = mudou - i;
     if (qtd > SMK_LOTE_MAX) qtd = SMK_LOTE_MAX;
