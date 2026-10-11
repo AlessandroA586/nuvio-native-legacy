@@ -399,7 +399,15 @@ static int pedirAniskip(const Pedido *p,IntroTrecho *v,int max,int *falha){
     mal=malDe(p->id);
   }else{
     if(!p->anime)return 0;
+#ifdef __EMSCRIPTEN__
+    // Fribb streams through rede_pedir on this worker. That reaches an
+    // EM_ASYNC_JS outside the deliberately narrow ASYNCIFY_ONLY list.
+    printf("[intro] Fribb mapping disabled on Tizen WGT: worker fetch is outside ASYNCIFY_ONLY\n");
+    fflush(stdout);
+    return 0;
+#else
     mal=malMapeado(p->id,p->tmdb,p->t,&ep);
+#endif
   }
   if(mal<=0)return 0;
   intro_montar_url_aniskip(url,sizeof url,mal,ep,p->dur);
