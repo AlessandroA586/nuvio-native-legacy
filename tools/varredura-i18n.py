@@ -339,6 +339,8 @@ IGNORAR = {
     # dado de comparacao de home.c (sinalRanking, layout Dinamica), nunca texto
     # desenhado. "top", "popular" e "trending" ja nao acusam por serem ASCII.
     "em alta", "mais vist", "tendência",
+    "linha do tempo",              # comparacao do nome do catalogo em home.c
+    "colecao-exibicao-p%d.txt",     # arquivo local de layouts em vertudo.c
     "-perfil",                      # sufixo de nome de arquivo (ajustes.c)
     "recomendacoes-perfil.txt",     # nome de arquivo do perfil publico (recomenda.c)
     "amigos-vistos.txt",            # nome de arquivo das novidades vistas (socialvis.c)

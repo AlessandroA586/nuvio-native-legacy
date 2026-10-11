@@ -316,6 +316,13 @@
 // cartaz cobre a ponta direita dele (a Apple faz assim), entao o passo da
 // fileira cresce por ela.
 #define NV_TOP10_NUM_FAIXA 138.0f
+// FILEIRAS DE 06/10 (home.c). Linha do tempo: a faixa dos anos sob os
+// cartazes. Ficha: cartaz 212 + a ficha de texto. Palco: o cartaz do centro
+// sobre a medida do cartaz comum; os vizinhos caem para NV_PALCO_VIZ dele.
+#define NV_TEMPO_FAIXA_H   96.0f
+#define NV_FICHA_W        600.0f
+#define NV_PALCO_ESC       1.3f
+#define NV_PALCO_VIZ       0.66f
 // O numeral: corpo do TXT_RANK_GRANDE (os algarismos da Inter medem ~0,73 do
 // corpo, ~190 px contra o cartaz de 322 — perto de 60%, a proporcao da Apple),
 // quanto da largura dele fica POR BAIXO do cartaz, e a folga minima ate o
