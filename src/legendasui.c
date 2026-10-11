@@ -326,12 +326,25 @@ static void montarLinhas(void) {
     linhaFixa(LR_ALVO, alvo, "m|alvo");
     linhaFixa(LR_ATRASO, alvo, "m|atraso");
     linhaFixa(LR_NENHUMA, alvo, "m|-");
-    for (i = 0; i < nCand && nLinhasV < LUI_MAX_LINHAS; i++) {
-      char k[96];
-      if (ver && !ling_casa(cand[i].idioma, verIdioma)) continue;
-      snprintf(k, sizeof k, "m|%s", cand[i].id);
-      linhaCandidata(i, alvo, k);
-    }
+    // Dono, 11/10: a lista junta as do MESMO idioma (as embutidas e as dos
+    // addons chegavam intercaladas). Os idiomas da preferencia primeiro, os
+    // outros na ordem em que aparecem; dentro do grupo, a ordem de sempre.
+    { int ordem[LEGUI_MAX_CAND], usado[LEGUI_MAX_CAND] = { 0 }, n = 0, j, g;
+      const char *pref[2] = { prefLinha(0), prefLinha(1) };
+      for (g = 0; g < 3; g++)
+        for (i = 0; i < nCand; i++) {
+          if (usado[i] || (g < 2 && !ling_casa(cand[i].idioma, pref[g]))) continue;
+          for (j = i; j < nCand; j++)
+            if (!usado[j] && (cand[i].idioma[0] ? cand[j].idioma[0] && ling_casa(cand[j].idioma, cand[i].idioma)
+                                                : !cand[j].idioma[0])) { usado[j] = 1; ordem[n++] = j; }
+        }
+      for (j = 0; j < n && nLinhasV < LUI_MAX_LINHAS; j++) {
+        char k[96];
+        i = ordem[j];
+        if (ver && !ling_casa(cand[i].idioma, verIdioma)) continue;
+        snprintf(k, sizeof k, "m|%s", cand[i].id);
+        linhaCandidata(i, alvo, k);
+      } }
   }
   // FOCUS BY IDENTITY: find the row with the remembered key; if it vanished
   // (a list was replaced), stay at the same position and adopt that row.
@@ -827,6 +840,10 @@ static void desenharLinha(const LuiLinha *l, int idx, int sel, float x, float y,
       const char *k[1] = { "Segure OK" }, *r[1] = { "Mais opções" };
       dir -= plrui_dicas(k, r, 1, dir, y + LU_LN_H * 0.5f, 1, 0.8f * aL) + 12.0f;
     }
+  } else if ((mais || ver) && sel && !menu && l->tipo == LR_CAND) {
+    // Na lista inteira o segurar tambem abre o menu da linha: a mesma dica.
+    const char *k[1] = { "Segure OK" }, *r[1] = { "Mais opções" };
+    dir -= plrui_dicas(k, r, 1, dir, y + LU_LN_H * 0.5f, 1, 0.8f * aL) + 12.0f;
   }
   if (l->tipo == LR_SYNC && sel) {
     // The chosen action between < > discs; a disc dims with nothing beyond it.
