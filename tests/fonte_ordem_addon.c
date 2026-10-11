@@ -32,6 +32,8 @@ int selospacote_casar(const char *const *p, int q, unsigned short *o, int m) {
 }
 int ondever_n(const char *id) { (void)id; return 0; }
 Uint32 SDL_GetTicks(void) { return 1000; }
+char *dados_ler(const char *nome) { (void)nome; return NULL; }
+int dados_gravar(const char *nome, const char *s) { (void)nome; (void)s; return 1; }
 
 static void conferir(const int *esperada, int qtd) {
   montar(-1);

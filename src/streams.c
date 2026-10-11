@@ -36,6 +36,7 @@
 #include "p2p.h"
 #include "p2pmotor.h"
 #include "fonteauto.h"
+#include "fontesmortas.h"
 #include "video.h"
 #include "botoes.h"
 #include "ponteiro.h"
@@ -346,9 +347,16 @@ static int ehInformativa(const Stream *s) {
 // na folha manual (#284: 75% Android / 60% Samsung / 41% LG falham quando o
 // automatico os escolhe, contra 6/14/9% das fontes com resolucao).
 static int foraDoAuto(int i) {
-  return automaticaExcluida(i) || (i >= 0 && i < n && (lista[i].foraCache || ehInformativa(&lista[i]) || excedeDecoder(&lista[i])));
+  return automaticaExcluida(i) || (i >= 0 && i < n && (lista[i].foraCache || ehInformativa(&lista[i]) || excedeDecoder(&lista[i]) || fontesmortas_idade(&lista[i]) >= 0));
 }
-int stream_automatico_disponivel(int indice) { return indice >= 0 && indice < n && !lista[indice].foraCache && !automaticaExcluida(indice) && !excedeDecoder(&lista[indice]); }
+int stream_automatico_disponivel(int indice) { return indice >= 0 && indice < n && !foraDoAuto(indice); }
+long stream_vod_falhou_ha(int indice) { return indice >= 0 && indice < n ? fontesmortas_idade(&lista[indice]) : -1; }
+void stream_vod_falhou(int indice) {
+  if (indice >= 0 && indice < n) { fontesmortas_marcar(&lista[indice]); stream_automatico_excluir(indice); }
+}
+void stream_vod_tocou(int indice) {
+  if (indice >= 0 && indice < n) fontesmortas_limpar(&lista[indice]);
+}
 int stream_automatico_excluir(int indice) {
   int resultado = 0;
   pthread_mutex_lock(&autoExclTrava);
@@ -1244,7 +1252,9 @@ static int verificarUma(int i, Conferencia *c) {
     pthread_mutex_unlock(&verTrava);
     return 0;
   }
-  if (lista[i].foraCache || excedeDecoder(&lista[i])) { pthread_mutex_unlock(&verTrava); return 0; }
+  if (lista[i].foraCache || excedeDecoder(&lista[i]) || fontesmortas_idade(&lista[i]) >= 0) {
+    pthread_mutex_unlock(&verTrava); return 0;
+  }
   snprintf(url, sizeof url, "%s", lista[i].url);
   snprintf(cab, sizeof cab, "%s", lista[i].cabecalhos);
   snprintf(infoHash, sizeof infoHash, "%s", lista[i].infoHash);
@@ -2002,8 +2012,7 @@ static int automaticoCom(int regras) {
   // enchendo por addon o indice e a ordem de CHEGADA, nao a dos addons.
   for (int k = 0; k < n; k++) {
     int i = ORD(k), g = regras ? grupoDe(i) : 0;
-    if (lista[i].foraCache || automaticaExcluida(i) || ehInformativa(&lista[i]) ||
-        (regras && excedeDecoder(&lista[i])) || g < 0) continue;
+    if ((regras ? foraDoAuto(i) : lista[i].foraCache || automaticaExcluida(i) || ehInformativa(&lista[i])) || g < 0) continue;
     long p = pontos(&lista[i]);
     if (lg) { idx[m] = i; pts[m] = p; grp[m] = (signed char)g; m++; }
     // O GRUPO das regras (#202) vem antes da pontuacao: permitida primeiro.
@@ -2050,6 +2059,29 @@ int stream_proxima_sem_perda(int atual) {
   if (melhor < 0) return 0;
   return lista[melhor].altura >= lista[atual].altura &&
          lista[melhor].dolbyVision >= lista[atual].dolbyVision;
+}
+int stream_proxima_vod(int atualIdx) {
+  // atualIdx < 0 (nunca abriu nenhuma): comeca do topo da ordem.
+  int achou = atualIdx < 0;
+  for (int k = 0; k < n; k++) {
+    int i = ORD(k);
+    if (achou && !foraDoAuto(i) && grupoDe(i) >= 0) return i;
+    if (i == atualIdx) achou = 1;
+  }
+  return -1;
+}
+int stream_verificar_proxima_vod(int atualIdx, int tentativas) {
+  Conferencia c = { 0, 0, 0, -1 };
+  int i = atualIdx;
+  c.geracao = stream_lista_geracao();
+  // Sem reordenar pela pontuacao nem resolver a mesma URL falhada outra vez.
+  // Limita tambem a conferencia: todas mortas nao podem custar dezenas de GETs.
+  while (tentativas-- > 0 && (i = stream_proxima_vod(i)) >= 0) {
+    if (verificarOuParar(i, &c)) return c.abortou ? -1 : i;
+    if (c.abortou) break;
+    stream_automatico_excluir(i); // sonda ruim nesta rodada nao prova erro de abertura
+  }
+  return -1;
 }
 int stream_automatico(void) { return automaticoCom(1); }
 int stream_automatico_canal(void) { return automaticoCom(0); }
@@ -2555,7 +2587,7 @@ static int temMarca(int i, int automatica) {
   (void)automatica;
   // StreamFit (F03): a measured-heavy source carries its reason on the mark line.
   return i >= 0 && (i == atual || i == preferida || (i == melhorFolha && nFiltrados() > 1) ||
-                    fitPesada(i) || lista[i].foraCache);
+                    fitPesada(i) || lista[i].foraCache || (!canalFolha && stream_vod_falhou_ha(i) >= 0));
 }
 // Altura de uma linha: base, marca, e o nome do arquivo que abre por mola na
 // linha em foco. Usa nOrdem como o indice que a linha vai receber.
@@ -3497,6 +3529,11 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       // StreamFit (F03): "above the connection" is a condition of this source on
       // this network, not a defect: champagne-grey like the HDR label, after any
       // other mark. It is why the row sits at the end of its group.
+      if(!canalFolha && stream_vod_falhou_ha(i) >= 0) {
+        char dica[80];
+        snprintf(dica, sizeof dica, i18n("falhou há %d min"), (int)(stream_vod_falhou_ha(i) / 60));
+        mx += caixaAlta(dica,135,130,125,mx,cy,anim)+18;
+      }
       if(s->foraCache) mx += caixaAlta("Fora do cache",185,179,171,mx,cy,anim)+18;
       if(fitPesada(i)){
         gfx_cor((GfxRect){mx,cy+5,7,7},.5f,.80f,.70f,.52f,anim);
@@ -3511,7 +3548,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     // pontuacao (stream_automatico: MP4/DV que a LG toca primeiro). E a unica
     // forma cheia da lista inteira, e por isso o olho vai nela.
     { char nome[96];
-      int c=s->naoVideo?(sel?150:105):(sel?255:205);   // apagada: e aviso, nao video
+      int c=(s->naoVideo || (!canalFolha && stream_vod_falhou_ha(i) >= 0))?(sel?150:105):(sel?255:205);   // apagada: aviso ou fonte falhada
       char ep[64]="";
       tira=0;
       if(ajustes_fonte_texto_addon()) tituloAddon(s,nome,sizeof nome);

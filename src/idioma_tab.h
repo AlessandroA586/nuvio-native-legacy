@@ -5067,6 +5067,7 @@
   { "falha ao consultar o Simkl (HTTP %d)", "Simkl query failed (HTTP %d)" },
   { "falha ao trocar o codigo (HTTP %d)", "code exchange failed (HTTP %d)" },
   { "falhou", "failed" },
+  { "falhou há %d min", "failed %d min ago" },
   { "faltam %d min", "%d min left" },
   { "faltam %dh%02d", "%dh%02d left" },
   { "família", "family" },

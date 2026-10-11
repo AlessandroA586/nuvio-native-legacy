@@ -133,6 +133,7 @@
 #include <unistd.h>
 #include "ondever.h"
 #include "fontepref.h"
+#include "fontesmortas.h"
 #include "video.h"
 #include "addons.h"
 #include "idioma.h"
@@ -254,7 +255,7 @@ static _Atomic int fonteEscolhida = -2;   // release/acquire entre verificacao e
 // nenhum fio de rede le player_id_canal(), que pode mudar durante um zap.
 static _Atomic unsigned stalkerGeracao;
 enum { FJOB_IDLE, FJOB_RUNNING, FJOB_DONE };
-enum { FJOB_NONE, FJOB_ADDON, FJOB_CANAL, FJOB_STALKER, FJOB_PREPARO };
+enum { FJOB_NONE, FJOB_ADDON, FJOB_CANAL, FJOB_STALKER, FJOB_PREPARO, FJOB_PROXIMA_VOD };
 typedef struct {
   _Atomic int estado;
   int tipo;
@@ -262,10 +263,13 @@ typedef struct {
   int resultado;
   Uint32 prazo;
   unsigned geracao;
+  int depoisDe, tentativas;
+  unsigned listaGeracao;
   char id[80];
   char url[4096];
 } FonteJob;
 static FonteJob fonteJob;
+static int fonteDepoisDe, fonteRestantes; // pedido pendente; nunca mexer no job ativo
 static unsigned fontePedidoGeracao;
 static int fontePendenteTipo;
 static int fontePendenteRenovando;
@@ -302,6 +306,7 @@ static Uint32 canalFonteDesde;            // quando a fonte atual foi pedida
 // do dono e nao pode ser trocada por outra fonte por tras da tela.
 static int    fonteVODAutomatica;
 static int    fonteVODTentativas;
+static int    fonteVODPrimeiroQuadro;
 // Retomar pela fonte guardada em curso (tocarFonteGuardada); 0 = caminho normal.
 static int    voltaAtiva;
 static Uint32 voltaDesde;
@@ -408,6 +413,12 @@ static void *escolherFonte(void *u) {
 // guia fica travando"). O prazo do watchdog e decidido aqui tambem, com a
 // classe da escolhida, e lido pelo laco quando fonteEscolhida deixa de ser -2.
 static Uint32 canalFontePrazo;
+static void *escolherProximaVOD(void *u) {
+  FonteJob *job = u;
+  job->resultado = stream_verificar_proxima_vod(job->depoisDe, job->tentativas);
+  atomic_store_explicit(&job->estado, FJOB_DONE, memory_order_release);
+  return NULL;
+}
 static void *escolherFonteCanal(void *u) {
   FonteJob *job = u;
   int e;
@@ -448,6 +459,7 @@ static void limparFonteVOD(void) {
   fonteVODAutomatica = 0;
   voltaAtiva = 0;
   fonteVODTentativas = 0;
+  fonteVODPrimeiroQuadro = 0;
   fonteVODDesde = 0;
   fonteManualDesde = 0;
   player_definir_tentativa(0, 0);
@@ -466,11 +478,15 @@ static int iniciarFonteJob(int tipo, unsigned geracao, const char *id, int renov
   job->tipo = tipo;
   job->renovando = renovando;
   job->geracao = geracao;
+  job->depoisDe = fonteDepoisDe;
+  job->tentativas = fonteRestantes;
+  job->listaGeracao = stream_lista_geracao();
   if (id) snprintf(job->id, sizeof job->id, "%s", id);
   atomic_store_explicit(&job->estado, FJOB_RUNNING, memory_order_release);
   if (pthread_create(&fioFonte, NULL,
                      tipo == FJOB_STALKER ? escolherFonteStalker :
-                     tipo == FJOB_CANAL ? escolherFonteCanal : escolherFonte,
+                     tipo == FJOB_CANAL ? escolherFonteCanal :
+                     tipo == FJOB_PROXIMA_VOD ? escolherProximaVOD : escolherFonte,
                      job) != 0) {
     atomic_store_explicit(&job->estado, FJOB_IDLE, memory_order_release);
     return -1;
@@ -854,6 +870,7 @@ static int tocarFonteGuardada(void) {
   alvoPlayer(alvo, sizeof alvo);
   if (!alvo[0] || !fontevolta_pegar(alvo, sessao_usuario(), perfis_ativo(), SDL_GetTicks(), &s))
     return 0;
+  if (fontesmortas_idade(&s) >= 0) { fontevolta_esquecer("fonte falhou antes"); return 0; }
   marco("abrir: fonte guardada, sem busca");
   stream_definir_atual(-1);
   video_definir_dv(s.dolbyVision);
@@ -892,6 +909,12 @@ static void vigiarFonteGuardada(void) {
   fflush(stdout);
   marco("abrir: fonte guardada falhou, busca normal");
   voltaAtiva = 0;
+  // O link guardado falhou antes de abrir: mesmo VOD da lista nova.
+  { Stream s; char alvo[64];
+    alvoPlayer(alvo, sizeof alvo);
+    if (fontevolta_pegar(alvo, sessao_usuario(), perfis_ativo(), SDL_GetTicks(), &s))
+      fontesmortas_marcar(&s);
+  }
   fontevolta_esquecer(motivo);
   player_voltar_a_esperar();
   limparFonteVOD();
@@ -1211,7 +1234,8 @@ static void processarFonteJob(void) {
       fonteEscolhida = -1;
     }
   } else if (aplicar) {
-    fonteEscolhida = resultado;
+    fonteEscolhida = tipo == FJOB_PROXIMA_VOD && job->listaGeracao != stream_lista_geracao()
+                      ? -1 : resultado;
     if (tipo == FJOB_CANAL) canalFontePrazo = prazo;
   }
   // O job antigo foi recolhido. Só agora o slot pode receber o pedido que
@@ -1421,6 +1445,7 @@ static void processarTorrentJob(void) {
     if (j->resultado == 1 && j->url[0]) {
       player_definir_fonte(j->url);
     } else if (j->resultado == DEBRID_BAIXANDO) {
+      if (!player_id_canal()[0]) stream_vod_falhou(j->indice);
       char titulo[160];
       const char *serv = j->servico[0] ? j->servico : "debrid";
       if (j->pct >= 0)
@@ -1491,6 +1516,7 @@ static void processarTorrentJob(void) {
       player_erro_fonte_motivo(i18n(debrid_sem_plano_frase(debrid_sem_plano())),
           i18n("Abra Fontes para escolher uma fonte direta."));
     } else if (j->resultado == 0) {
+      if (!player_id_canal()[0]) stream_vod_falhou(j->indice);
       player_erro_fonte_motivo(i18n("O serviço de debrid não abriu este torrent"),
           i18n("Abra Fontes para escolher outra opção."));
     } else {
@@ -1614,6 +1640,7 @@ static void abrirAntecipada(int i) {
   fflush(stdout);
   marco("fonte: tocando enquanto confere");
   stream_definir_atual(i);
+  fonteVODPrimeiroQuadro = 0;
   video_definir_dv(s->dolbyVision);
   video_definir_cabecalhos(s->cabecalhos);
   video_definir_mp4(stream_e_mp4(s));
@@ -1651,7 +1678,8 @@ static void vigiarAntecipada(void) {
       stream_automatico_erro_decoder(antAberta, video_erro_decoder_codigo(), 0);
 #endif
       fa_player_falhou(antAberta);
-      stream_automatico_excluir(antAberta);
+      if (!fonteVODPrimeiroQuadro) stream_vod_falhou(antAberta);
+      else stream_automatico_excluir(antAberta);
       stream_automatico_excluir_irmas(antAberta);
       desfazerAntecipada("o player errou primeiro");
       break;
@@ -1660,13 +1688,16 @@ static void vigiarAntecipada(void) {
 }
 // Pede a verificacao da proxima candidata automatica, com a sessao do player
 // aberta. 0 quando nem deu para pedir (ja mostrou o erro).
-static int pedirProximaFonteVOD(void) {
+static int pedirProximaFonteVOD(int depoisDe) {
   unsigned geracao = novaGeracaoFonte();
   aguardandoFonte = 2;
   fontePedidoGeracao = geracao;
   fonteEscolhida = -2;
   limparFontePendente();
-  if (pedirFonteJob(FJOB_ADDON, geracao, NULL, 0) < 0) {
+  fonteDepoisDe = depoisDe;
+  fonteRestantes = VOD_FONTE_MAX_TENTATIVAS - fonteVODTentativas;
+  if (fonteRestantes < 1) fonteRestantes = 1;
+  if (pedirFonteJob(FJOB_PROXIMA_VOD, geracao, NULL, 0) < 0) {
     aguardandoFonte = 0;
     limparFonteVOD();
     player_erro_fonte();
@@ -1682,13 +1713,14 @@ static void vigiarAberturaManual(void) {
   Uint32 desde;
   if (!fonteManualDesde) return;
   if (!player_aberto() || player_quer_sair() || player_id_canal()[0] ||
-      fonteVODAutomatica || aguardandoFonte != 0 || player_fonte_falhou() || video_pronto()) {
+      fonteVODAutomatica || aguardandoFonte != 0 || player_fonte_falhou() ||
+      (video_pronto() && video_pos() > 0.25)) {
     fonteManualDesde = 0; return;
   }
   desde = SDL_GetTicks() - fonteManualDesde;
   memset(&g, 0, sizeof g);
   g.falhou = video_falhou() || player_fonte_falhou();
-  g.pronto = video_pronto();
+  g.pronto = video_pronto() && video_pos() > 0.25;
   g.carregando = player_carregando();
   g.desdeMs = desde;
   // Erro do player no preparo (Media3 2004 etc., video_android.c): sem isto a
@@ -1697,13 +1729,16 @@ static void vigiarAberturaManual(void) {
     printf("[fonte] escolha manual: erro do player em %u ms (%s)\n", (unsigned)desde, video_erro_texto());
     fflush(stdout);
     fonteManualDesde = 0;
+    stream_vod_falhou(stream_atual());
     player_erro_fonte_motivo(i18n("Não foi possível abrir a fonte"), NULL);
     return;
   }
-  if (!fontevolta_abertura_vencida(&g, FONTE_MANUAL_PRAZO_MS)) return;
+  if (!fontevolta_abertura_vencida(&g, FONTE_MANUAL_PRAZO_MS) &&
+      !(desde > FONTE_MANUAL_PRAZO_MS && !g.pronto)) return;
   printf("[fonte] escolha manual nao abriu em %u ms: erro de fonte\n", (unsigned)desde);
   fflush(stdout);
   fonteManualDesde = 0;
+  stream_vod_falhou(stream_atual());
   player_erro_fonte_motivo(i18n("A fonte não respondeu a tempo."), NULL);
 }
 // PRAZO DE ABERTURA (#202, inicio.h): 15 s sem nenhum sinal de vida, 30 s com
@@ -1822,6 +1857,12 @@ static void tentarProximaFonteVOD(void) {
   int atual, motivo = 0;
   if (!fonteVODAutomatica || player_id_canal()[0] || !player_aberto() ||
       player_quer_sair() || aguardandoFonte != 0 || !fonteVODDesde) return;
+  // Pronto pode anteceder o primeiro quadro. Posicao > 0 tambem e usada
+  // pelo pipeline LG/TPK como prova de imagem, sem depender do loadCompleted.
+  if (video_pronto() && video_pos() > 0.25 && !fonteVODPrimeiroQuadro) {
+    fonteVODPrimeiroQuadro = 1;
+    stream_vod_tocou(stream_atual());
+  }
   // Rede caiu com o video andando: a mesma fonte esta sendo recarregada
   // (video_reconexao.h). So vira troca de fonte quando ela desistir (falhou).
   if (video_reconectando()) return;
@@ -1836,7 +1877,10 @@ static void tentarProximaFonteVOD(void) {
   if (!motivo) return;
 
   atual = stream_atual();
-  if (atual >= 0) stream_automatico_excluir(atual);
+  if (atual >= 0) {
+    if (!fonteVODPrimeiroQuadro) stream_vod_falhou(atual);
+    else stream_automatico_excluir(atual);
+  }
   // Erro do PLAYER (nao prazo nem buffer): as irmas desta fonte saem junto,
   // senao as vagas que sobram vao todas para links que falham igual.
   if (atual >= 0 && motivo == 1) {
@@ -1847,7 +1891,7 @@ static void tentarProximaFonteVOD(void) {
     if (k) printf("[fonte] automatico VOD pulou %d link(s) irmao(s) de %d\n", k, atual);
   }
   if (fonteVODTentativas >= VOD_FONTE_MAX_TENTATIVAS ||
-      stream_automatico() < 0) {
+      stream_proxima_vod(atual) < 0) {
     printf("[fonte] automatico VOD sem proxima candidata (motivo=%d, %d de %d)\n",
            motivo, fonteVODTentativas, VOD_FONTE_MAX_TENTATIVAS);
     fonteVODAutomatica = 0;
@@ -1855,7 +1899,9 @@ static void tentarProximaFonteVOD(void) {
     else player_erro_fonte();
     return;
   }
-  if (!pedirProximaFonteVOD()) return;
+  player_voltar_a_esperar();
+  if (!pedirProximaFonteVOD(atual)) return;
+  player_toast(i18n("Fonte falhou, tentando a próxima"), 3000);
   player_definir_tentativa(fonteVODTentativas + 1, VOD_FONTE_MAX_TENTATIVAS);
   printf("[fonte] automatico VOD descartou %d; verificando proxima (%d/%d)\n",
          atual, fonteVODTentativas + 1, VOD_FONTE_MAX_TENTATIVAS);
@@ -2036,6 +2082,7 @@ int app_iniciar(const char *dirArte) {
   ondever_iniciar();
   arranque_etapa("app_iniciar/fontepref_iniciar");
   fontepref_iniciar();
+  fontesmortas_iniciar();
   arranque_etapa("app_iniciar/addonstats_ler");
   addonstats_ler();   // #202: latencia de cada add-on NESTA TV (addonstats.h)
   // A ARTE ESCOLHIDA A MAO (#142) tambem, antes do primeiro destaque: sem ela
@@ -4024,6 +4071,7 @@ void app_atualizar(float dt, Uint32 agora) {
           // Aberta antes do veredito: a contagem e o relogio dos 15 s sem sinal
           // ja correm desde a abertura (abrirAntecipada), e nao recomecam.
           if (!jaTocando) {
+            fonteVODPrimeiroQuadro = 0;
             fonteVODTentativas++;
             fonteVODDesde = SDL_GetTicks();
             // "Fonte 2 de 3" na ilha do player: a troca deixa de ser muda.
@@ -4041,11 +4089,11 @@ void app_atualizar(float dt, Uint32 agora) {
       // fila dela, e aqui e erro como sempre foi.
       else if (!player_id_canal()[0] && ajustes_fonte_primeira() &&
                ++fonteVODTentativas < VOD_FONTE_MAX_TENTATIVAS &&
-               stream_automatico() >= 0) {
+               stream_proxima_vod(stream_atual()) >= 0) {
         printf("[fonte] primeira da lista nao serviu; conferindo a seguinte (%d/%d)\n",
                fonteVODTentativas + 1, VOD_FONTE_MAX_TENTATIVAS);
         player_definir_tentativa(fonteVODTentativas + 1, VOD_FONTE_MAX_TENTATIVAS);
-        (void)pedirProximaFonteVOD();
+        (void)pedirProximaFonteVOD(stream_atual());
       }
       // AS REGRAS DE AUTO-PLAY NAO DEIXARAM NENHUMA (#202: so add-ons
       // permitidos sem "usar os outros", ou regex exigida que nada casa): a
@@ -4294,6 +4342,13 @@ void app_atualizar(float dt, Uint32 agora) {
   }
 
   vigiarFonteGuardada();
+  if (player_aberto() && !player_id_canal()[0] && video_pronto() && video_pos() > 0.25) {
+    if (fonteManualDesde) { stream_vod_tocou(stream_atual()); fonteManualDesde = 0; }
+    if (fonteVODAutomatica && !fonteVODPrimeiroQuadro) {
+      fonteVODPrimeiroQuadro = 1;
+      stream_vod_tocou(stream_atual());
+    }
+  }
   fitDuracaoMidia();
   fitPassivaPermitir();
   // Mesmo resolver/ranking da troca VOD. A trava de UMA vez mora no player;
@@ -4309,11 +4364,11 @@ void app_atualizar(float dt, Uint32 agora) {
     if (pedido) {
       int atual = stream_atual();
       if (atual >= 0) stream_automatico_excluir(atual);
-      if (stream_automatico() >= 0) {
+      if (stream_proxima_vod(atual) >= 0) {
         printf("[fonte] duracao: descartou %d; tentando proxima (%s)\n",
                atual, pedido == 2 ? "automatico" : "OK");
         player_voltar_a_esperar();
-        (void)pedirProximaFonteVOD();
+        (void)pedirProximaFonteVOD(atual);
       } else if (pedido == 1) {
         nomeParaFolha(); stream_folha_abrir();
       }

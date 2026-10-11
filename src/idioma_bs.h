@@ -5068,6 +5068,7 @@
   T("falha ao consultar o Simkl (HTTP %d)", "Simkl upit nije uspio (HTTP %d)"),
   T("falha ao trocar o codigo (HTTP %d)", "razmjena koda nije uspjela (HTTP %d)"),
   T("falhou", "neuspjelo"),
+  T("falhou há %d min", "neuspjelo prije %d min"),
   T("faltam %d min", "preostalo %d min"),
   T("faltam %dh%02d", "preostalo %dh%02d"),
   T("família", "porodica"),

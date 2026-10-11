@@ -5068,6 +5068,7 @@
   T("falha ao consultar o Simkl (HTTP %d)", "A Simkl-lekérdezés sikertelen (HTTP %d)"),
   T("falha ao trocar o codigo (HTTP %d)", "a kódcsere sikertelen (HTTP %d)"),
   T("falhou", "sikertelen"),
+  T("falhou há %d min", "%d perce sikertelen"),
   T("faltam %d min", "még %d perc"),
   T("faltam %dh%02d", "még %dó%02d"),
   T("família", "család"),

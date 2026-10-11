@@ -5068,6 +5068,7 @@
   T("falha ao consultar o Simkl (HTTP %d)", "Simkl-verzoek mislukt (HTTP %d)"),
   T("falha ao trocar o codigo (HTTP %d)", "code-uitwisseling mislukt (HTTP %d)"),
   T("falhou", "mislukt"),
+  T("falhou há %d min", "%d min geleden mislukt"),
   T("faltam %d min", "nog %d min"),
   T("faltam %dh%02d", "nog %dh%02d"),
   T("família", "familie"),

@@ -5068,6 +5068,7 @@
   T("falha ao consultar o Simkl (HTTP %d)", "forespørgslen til Simkl mislykkedes (HTTP %d)"),
   T("falha ao trocar o codigo (HTTP %d)", "kodeudvekslingen mislykkedes (HTTP %d)"),
   T("falhou", "mislykkedes"),
+  T("falhou há %d min", "fejlede for %d min siden"),
   T("faltam %d min", "%d min. tilbage"),
   T("faltam %dh%02d", "%dt%02d tilbage"),
   T("família", "familie"),

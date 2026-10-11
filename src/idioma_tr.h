@@ -5068,6 +5068,7 @@
   T("falha ao consultar o Simkl (HTTP %d)", "Simkl sorgusu başarısız (HTTP %d)"),
   T("falha ao trocar o codigo (HTTP %d)", "kod değişimi başarısız (HTTP %d)"),
   T("falhou", "başarısız"),
+  T("falhou há %d min", "%d dk önce başarısız"),
   T("faltam %d min", "%d dk kaldı"),
   T("faltam %dh%02d", "%dsa%02d kaldı"),
   T("família", "aile"),

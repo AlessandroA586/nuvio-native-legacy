@@ -5068,6 +5068,7 @@
   T("falha ao consultar o Simkl (HTTP %d)", "Simkl への問い合わせに失敗しました（HTTP %d）"),
   T("falha ao trocar o codigo (HTTP %d)", "コードの交換に失敗しました（HTTP %d）"),
   T("falhou", "失敗しました"),
+  T("falhou há %d min", "%d分前に失敗"),
   T("faltam %d min", "残り%d分"),
   T("faltam %dh%02d", "残り%d時間%02d分"),
   T("família", "ファミリー"),
