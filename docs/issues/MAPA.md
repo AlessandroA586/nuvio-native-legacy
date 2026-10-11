@@ -116,7 +116,7 @@ Plano de refatoração: `docs/plans/refatoracao-geral.md` (branch `agente/refato
 | 2.2 | 0 |  |
 | futuro | 10 | #135, #260, #304, #342, #343, #347, #348, #389, #437, #438 |
 | nao vamos fazer | 4 | #292, #307, #324, #354 |
-| ja-lancada | 9 | #144, #252, #290, #293, #296, #298, #300, #303, #383 |
+| ja-lancada | 2 | #293, #383 |
 
 ## Fechar com a 2.0.3
 
@@ -154,21 +154,21 @@ Issues ABERTAS no GitHub cujo conserto saiu na v2.0.3 (commits contidos na tag).
 2. `dec-354-nao-vamos-fazer` [pendente] "nao vamos fazer": #354 (PC), #307 (.ipa iOS), #324 (relatório de logs), #292 (aviso 4K Android). Confirma? Recomendação: Confirmar #354 e #307 (fora de escopo, já classificados fora-do-escopo). #324 e #292 não são pedidos de recurso: fechar como informativos em vez de "não vamos fazer".
 3. `dec-304-pedidos-interface` [pendente] Pedidos de interface (#304 serviços na barra lateral, #347 microfone, #348 pontos do carrossel/botão Reproduzir, #342 botão Pular cena) ficam em "futuro" ou "nao vamos fazer"? Recomendação: Futuro para #304, #348 e #347. #342 (conteúdo explícito) depende de base de dados de terceiros que não existe: recomendo nao vamos fazer.
 4. `dec-135-vidaa-rtl` [pendente] #135 (porte VIDAA) e #260 (RTL) em "futuro" ou "nao vamos fazer"? Recomendação: Futuro; há trabalho feito em feat/vidaa e uma resposta pública dizendo "depois" para o RTL.
-5. `dec-144-aguardando-fechamento` [pendente] Issues abertas só aguardando fechamento (#144, #252, #287, #290, #293, #296, #298, #300, #303): fechar? Recomendação: Fechar com comentário, depois que o dono aprovar o texto. Alvo registrado como ja-lancada (valor extra além dos cinco pedidos).
-6. `dec-341-blackbar-crop` [pendente] Blackbar/crop (remover barras pretas embutidas) é 2.1, 2.2 ou 2.0.5? Não consta do roadmap aprovado. Recomendação: Sugestão do agente, não aprovada: manter fora das versões aprovadas; se o dono quiser, 2.2 ou futuro, pois é recurso novo, sem branch e toca os três pipelines de vídeo.
-7. `dec-dv-mkv-samsung` [pendente] Dolby Vision em MKV na Samsung: manter na 2.1, passar para 2.2 ou futuro? Não consta do roadmap aprovado. Recomendação: Sugestão do agente, não aprovada: futuro, só como spike de pesquisa; não prometer ao público até haver prova num modelo.
-8. `dec-352-limites-trakt` [pendente] Limites maiores do Trakt/Biblioteca: entram dentro do redesign aprovado da 2.1 ou ficam fora? Recomendação: Sugestão do agente, não aprovada: dentro do redesign (o plano biblioteca-ilimitada é parte dele). O redesign em si já está aprovado; a 2.0.5 fica só com indicadores de visto (#352) e esconder assistidos (#366).
-9. `dec-refatoracao-geral` [pendente] Plano de refatoração geral (docs/plans/refatoracao-geral.md): quando? Não consta do roadmap aprovado. Recomendação: Sugestão do agente, não aprovada: depois da 2.0.3, na 2.1 como trabalho próprio; na 2.0.5 no máximo os itens 01-04 (apagar morto). Não misturar com recursos.
-10. `dec-250-arabe-autosync` [pendente] Menus em árabe (#250, #333) e auto sync de legenda (#374) seguem na 2.1? Não constam do roadmap aprovado; o árabe foi prometido na resposta do #325. Recomendação: Sugestão do agente, não aprovada: manter na 2.1 só se sobrar espaço; senão futuro. Corrigir a promessa pública do #325 se for para futuro.
-11. `dec-fechar-203-sem-confirmacao` [pendente] Fechar com a 2.0.3 (bloco acima): fechar já as issues sem confirmação do autor ou esperar o retorno? Recomendação: Fechar já #317 e #318 (autores confirmaram). As demais, esperar alguns dias pelo retorno; a resposta curta já pede para reabrir se persistir, então fechar também é aceitável.
-12. `dec-perfil-sem-trakt` [pendente] Perfil sem Trakt (usuários com Simkl veem "Trakt desconectado"): entra em qual versão? Recomendação: 2.0.5: perfil com dados do Simkl e mensagem certa quando só o Simkl está ligado.
+5. `dec-341-blackbar-crop` [pendente] Blackbar/crop (remover barras pretas embutidas) é 2.1, 2.2 ou 2.0.5? Não consta do roadmap aprovado. Recomendação: Sugestão do agente, não aprovada: manter fora das versões aprovadas; se o dono quiser, 2.2 ou futuro, pois é recurso novo, sem branch e toca os três pipelines de vídeo.
+6. `dec-dv-mkv-samsung` [pendente] Dolby Vision em MKV na Samsung: manter na 2.1, passar para 2.2 ou futuro? Não consta do roadmap aprovado. Recomendação: Sugestão do agente, não aprovada: futuro, só como spike de pesquisa; não prometer ao público até haver prova num modelo.
+7. `dec-refatoracao-geral` [pendente] Plano de refatoração geral (docs/plans/refatoracao-geral.md): quando? Não consta do roadmap aprovado. Recomendação: Sugestão do agente, não aprovada: depois da 2.0.3, na 2.1 como trabalho próprio; na 2.0.5 no máximo os itens 01-04 (apagar morto). Não misturar com recursos.
 
 ### Decididas
 
-- 2026-10-11 (dono (painel)), `dec-256-proximo-episodio` [respondida, a aplicar]: Próximo episódio automático após 5 s: entra na 2.0.5 junto da contagem do #331, ligado por padrão ou desligado? **Sim: 2.0.5, desligado por padrao, valor configuravel (junto da contagem do #331).** **Resposta do dono: SIM** (2026-10-11).
-- 2026-10-11 (dono (painel)), `dec-360-botao-sincronizar` [respondida, a aplicar]: #360 (botão Sincronizar addons) fica em 2.0.5 mesmo com a mescla do sync já na 2.0.3? **Sim: mescla ja na 2.0.3; botao Sincronizar addons (agente/204-sync-addons) na 2.0.5; avisado na issue (11/10).** **Resposta do dono: SIM** (2026-10-11).
-- 2026-10-11 (dono (painel)), `dec-334-p2p-limite` [respondida, a aplicar]: #334 sai como 2.0.3 só com o limite de P2P e a limpeza, e a janela de streaming (armazenamento rotativo, agente/203-334-janela) fica para a 2.0.5? **Sim: limite e limpeza ja na 2.0.3; janela de streaming (agente/203-334-janela) na 2.0.5; avisado na issue (11/10).** **Resposta do dono: SIM** (2026-10-11).
-- 2026-10-11 (dono (painel)), `dec-326-promessas-next-build` [respondida, a aplicar]: #326 e #338 foram prometidos para "próxima atualização/next build" e o código só está em branches de 2.0.5. Responder já avisando 2.0.5? **Sim: #326 e #338 corrigidos na issue para 2.0.5 (11/10).** **Resposta do dono: SIM** (2026-10-11).
+- 2026-10-11 (dono (painel)), `dec-256-proximo-episodio` [decidida]: Próximo episódio automático após 5 s: entra na 2.0.5 junto da contagem do #331, ligado por padrão ou desligado? **Sim: 2.0.5, desligado por padrao, valor configuravel (junto da contagem do #331).**
+- 2026-10-11 (dono (painel)), `dec-360-botao-sincronizar` [decidida]: #360 (botão Sincronizar addons) fica em 2.0.5 mesmo com a mescla do sync já na 2.0.3? **Sim: mescla ja na 2.0.3; botao Sincronizar addons (agente/204-sync-addons) na 2.0.5; avisado na issue (11/10).**
+- 2026-10-11 (dono (painel)), `dec-334-p2p-limite` [decidida]: #334 sai como 2.0.3 só com o limite de P2P e a limpeza, e a janela de streaming (armazenamento rotativo, agente/203-334-janela) fica para a 2.0.5? **Sim: limite e limpeza ja na 2.0.3; janela de streaming (agente/203-334-janela) na 2.0.5; avisado na issue (11/10).**
+- 2026-10-11 (dono (painel)), `dec-326-promessas-next-build` [decidida]: #326 e #338 foram prometidos para "próxima atualização/next build" e o código só está em branches de 2.0.5. Responder já avisando 2.0.5? **Sim: #326 e #338 corrigidos na issue para 2.0.5 (11/10).**
+- 2026-10-11 (dono (painel)), `dec-144-aguardando-fechamento` [decidida]: Issues abertas só aguardando fechamento (#144, #252, #287, #290, #293, #296, #298, #300, #303): fechar? **Sim: fechadas 144 252 290 296 298 300 303 com comentario (11/10); 293 fica aberta ate a 2.0.5 (codec vem com Stats for nerds).**
+- 2026-10-11 (dono (painel)), `dec-352-limites-trakt` [decidida]: Limites maiores do Trakt/Biblioteca: entram dentro do redesign aprovado da 2.1 ou ficam fora? **Sim: limites maiores do Trakt/Biblioteca ficam dentro do redesign da 2.1.**
+- 2026-10-11 (dono (painel)), `dec-250-arabe-autosync` [decidida]: Menus em árabe (#250, #333) e auto sync de legenda (#374) seguem na 2.1? Não constam do roadmap aprovado; o árabe foi prometido na resposta do #325. **Sim: menus em arabe (#250/#333) e auto sync de legenda (#374) na 2.1.**
+- 2026-10-11 (dono (painel)), `dec-fechar-203-sem-confirmacao` [decidida]: Fechar com a 2.0.3 (bloco acima): fechar já as issues sem confirmação do autor ou esperar o retorno? **Sim: fechar sem esperar confirmacao (todas ja fechadas em 10/10).**
+- 2026-10-11 (dono (painel)), `dec-perfil-sem-trakt` [decidida]: Perfil sem Trakt (usuários com Simkl veem "Trakt desconectado"): entra em qual versão? **Sim: 2.0.5 — perfil com dados do Simkl e mensagem certa quando so o Simkl esta ligado.**
 - 2026-10-09 (dono (Henrique)), `dec-400-ordem-fontes-addon` [decidida]: Ordem das fontes do add-on (#400, AIOStreams): entra na 2.0.4 ou fica para a 2.0.5? **Entra na 2.0.4. Implementação delegada ao Codex em agente/204-ordem400.**
 - 2026-10-09 (dono (Henrique)), `dec-408-atualizar-pr` [decidida]: Atualizar o PR #408 (review only) com KM7, consertos do Copilot/ultrareview, OpenSubtitles e mapa? **Sim. Push feito (063f381b).**
 - 2026-10-09 (dono (Henrique)), `dec-204-card-novidades` [decidida]: Card de novidades da 2.0.4 (hotfix): fazer ou não? **Fazer. Delegado ao Codex em agente/204-novidades (até 3 cenas, só o que NOTAS.md prova).**
@@ -209,8 +209,8 @@ Por release (grupo de planejamento):
 
 Lançadas por versão: 1.0.7: 2, 1.0.10: 1, 1.0.13: 1, 1.0.15: 1, 1.0.16: 1, 1.0.21: 1, 1.0.23: 1, 1.0.29: 1, 1.0.30: 3, 1.0.31: 1, 1.0.32: 1, 1.0.34: 1, 1.0.35: 1, 1.0.36: 1, 1.0.38: 2, 1.0.41: 1, 1.0.43: 5, 1.0.44: 4, 1.0.45: 1, 1.0.51: 4, 1.0.53: 1, 1.0.54: 1, 1.0.55: 1, 1.0.56: 1, 1.1.0: 2, 1.1.2: 2, 1.2.1: 4, 1.3.0: 1, 1.3.2: 4, 1.3.4: 6, 1.3.4-comparacao1: 1, 1.3.5: 1, 1.3.7: 1, 1.3.10: 1, 1.3.11: 2, 1.3.12: 4, 1.4: 6, 1.4.1: 1, 1.4.2: 9, 1.4.3: 9, 1.4.4: 2, 1.4.5: 2, 1.4.6: 8, 1.4.7: 2, 1.5.0: 1, 1.5.1: 5, 1.5.2: 8, 1.5.3: 3, 1.5.4: 4, 1.6.0: 11, 1.6.1: 1, 1.6.2: 3, 1.6.3: 2, 1.6.4: 5, 1.6.5: 4, 1.7.0: 11, 1.7.1: 4, 1.7.2: 3, 1.7.4: 4, 2.0.0: 28, 2.0.1: 12, 2.0.2: 18, 2.0.3: 33, 2.0.4: 2.
 
-Abertas no GitHub: 103. Fechadas: 299.
-Abertas sem nenhum comentário nosso: 70.
+Abertas no GitHub: 96. Fechadas: 306.
+Abertas sem nenhum comentário nosso: 69.
 
 ## 2.0.3 lançada com pendência (precisa-log, respondida ou conserto parcial)
 
@@ -326,13 +326,11 @@ Notas:
 
 ## Aberta sem plano
 
-55 issues.
+53 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
 | [#135](https://github.com/iqui27/nuvio-native-legacy/issues/135) | Looking for testers: experimental Hisense VIDAA port (Hisens | VIDAA | feature | respondida | - | futuro | faacf493, 08d21c20, a81639d2 | autor 10-06 | responder (feedback do gabo748 em 06/10 sem retorno) |
-| [#144](https://github.com/iqui27/nuvio-native-legacy/issues/144) | Align UI with nuvioTV (android) | Android | feature | respondida | - | ja-lancada | e1a31298, b7d10412, 581b2f82 | autor 10-08 | nada (autor disse que não vê mais os problemas; pode fechar) |
-| [#252](https://github.com/iqui27/nuvio-native-legacy/issues/252) | Add default audio language setting for anime | ? | feature | por-desenho | - | ja-lancada | - | autor 10-08 | nada (autor confirmou que funciona; pode fechar) |
 | [#288](https://github.com/iqui27/nuvio-native-legacy/issues/288) | Profile selection background is grainy dark video | LG? (TCL C6K no formulário) | bug | aberta | - | 2.0.5 | - | sem comentários | responder / pedir log (sem resposta) |
 | [#292](https://github.com/iqui27/nuvio-native-legacy/issues/292) | GoogleTV performance UPDATE | Android | question | por-desenho | - | nao vamos fazer | - | sem comentários | nada |
 | [#304](https://github.com/iqui27/nuvio-native-legacy/issues/304) | Apple tv dynamic homeacreen | ? | feature | aberta | - | futuro | - | sem comentários | responder (sem resposta) |
@@ -389,8 +387,6 @@ Notas:
 Notas:
 
 - **#135**: Porte experimental VIDAA; issue de chamada de testadores. Commits faacf493 (2.0.2) e feat/vidaa.
-- **#144**: Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.
-- **#252**: Opção já existe: Ajustes > Idiomas e legendas > Idioma do áudio. Alvo ja-lancada: a opção já existe.
 - **#288**: Formulário diz LG webOS mas o modelo é TCL C6K: plataforma incerta.
 - **#292**: Aviso nosso (virou issue a partir da discussão #291): resolução da interface em 4K deixa o Android lento. Alvo nao vamos fazer: é aviso/pergunta, não há mudança de código planejada (ver decisões).
 - **#307**: SUSPEITA de fora-do-escopo: pedido de .ipa, app é C/SDL para TVs. O dono decide.
@@ -436,19 +432,14 @@ Notas:
 
 266 issues.
 
-### Lançadas e ainda abertas no GitHub (13)
+### Lançadas e ainda abertas no GitHub (8)
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
 | [#266](https://github.com/iqui27/nuvio-native-legacy/issues/266) | Bug: Doesn't open on ATv | Android | bug | lancada | 2.0.3 | 2.0.5 | eabe3afd, b03aa2f0, 35421d1a | autor 10-08 | responder (confirmou QR com teste-318.x; nova queixa: legenda diferente do Nuvio oficial) |
 | [#283](https://github.com/iqui27/nuvio-native-legacy/issues/283) | Minha tv lg nao consegue abrir nenhum canal dos meus addons | LG | bug | lancada | 2.0.2 | 2.0.3 | 1424e409, 6de601a5, b68bad96 | autor 10-07 | ler log MWASFG e responder |
 | [#286](https://github.com/iqui27/nuvio-native-legacy/issues/286) | Performance on older Samsung UA40N5300 | Samsung .tpk | bug | lancada | 2.0.3 | 2.0.5 | 325ed7a0, e03080dd | nós 10-08 | postar correção |
-| [#290](https://github.com/iqui27/nuvio-native-legacy/issues/290) | Few minor issues on 2.1 | ? | bug | lancada | 2.0.2 | ja-lancada | 75cee76f, 4843e5b0, b5deeb25 | autor 10-06 | nada (pedir confirmação se quiser) |
 | [#293](https://github.com/iqui27/nuvio-native-legacy/issues/293) | Audio codec details on player | ? | feature | lancada | 2.0.2 | ja-lancada | 8c856535, db1f5891 | nós 10-07 | nada |
-| [#296](https://github.com/iqui27/nuvio-native-legacy/issues/296) | Si podrías agregar estas visitas seria grandioso | Samsung .wgt | feature | lancada | 2.0.2 | ja-lancada | sem commit | autor 10-07 | nada (pode fechar) |
-| [#298](https://github.com/iqui27/nuvio-native-legacy/issues/298) | The Arabic subtitles | Samsung (Tizen 6) | feature | lancada | 2.0.2 | ja-lancada | sem commit | autor 10-07 | responder (autor informou Tizen 6; dizer em qual versão testar) |
-| [#300](https://github.com/iqui27/nuvio-native-legacy/issues/300) | Default Aspect Ratio Option | ? | feature | lancada | 2.0.2 | ja-lancada | sem commit | nós 10-07 | nada (pode fechar) |
-| [#303](https://github.com/iqui27/nuvio-native-legacy/issues/303) | how to remove continue watching from opening screen | ? | feature | lancada | 2.0.2 | ja-lancada | 1300a834 | nós 10-07 | nada (pode fechar) |
 | [#328](https://github.com/iqui27/nuvio-native-legacy/issues/328) | 🐛 Bug Report: Episodes Are Being Duplicated | ? | bug | lancada | 2.0.3 | 2.0.5 | 9c5d0027, 7edab4b0 | sem comentários | responder ao autor; reavaliar com a parte 2 do #372 (2.0.5); o conserto de duplicados da 2 |
 | [#350](https://github.com/iqui27/nuvio-native-legacy/issues/350) | Major bug | Samsung .tpk | bug | lancada | 2.0.3 | 2.0.5 | 4b8ba24b | autor 10-08 | postar correção |
 | [#369](https://github.com/iqui27/nuvio-native-legacy/issues/369) | [Bug] Multiple issues/Missing Features on Android TV version | Android | bug | lancada | 2.0.3 | 2.0.5 | 712557ca, 5f04c36b | sem comentários | responder (sem resposta); relatório de 9 itens, só 2 com commit |
@@ -459,18 +450,13 @@ Notas:
 - **#266**: Vários relatos juntos (Shield/TCL/BRAVIA). Reporter charles474 confirmou QR com build de teste em 08/10. Parte do conserto já na 2.0.2 (a1d5e039). LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.
 - **#283**: Canais de add-on passam pelo proxy com headers na 2.0.2 (b68bad96); 1424e409/6de601a5 na 2.0.3. Autor mandou log MWASFG depois da resposta: não confirmado que resolveu. Alvo 2.0.3: NOTAS 2.0.3 cita #283 (guia de TV por add-on); aguarda confirmação do autor.
 - **#286**: Rascunho de correção em 203-respostas-correcao.md: nome certo é "Resolução da interface > 720p (leve)". Mali-400 (Utgard). LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.
-- **#290**: 7 commits #290 na 2.0.2 (gradiente do hero sobre trailer em janela, aspecto, etc.). Sem confirmação do autor; base08 confirmou o ponto 1 antes do release. Título original "Few minor issues on 2.1". Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.
 - **#293**: Codec/canais do áudio no player na 2.0.2 (db1f5891). Estatísticas completas em 8c856535 (agente/203-338 = 2.0.5). Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.
-- **#296**: Coberto pela "Elección de la fuente" (#310) na 2.0.2; nenhum commit cita #296. Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.
-- **#298**: #273 (legendas árabes, 546c7418/57e24174) está na 2.0.2; #335 refina na 2.0.3. Nossa resposta de 07/10 disse "próxima release"; já estava na 2.0.2. Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.
-- **#300**: Resposta cita 2.0.2; nenhum commit cita #300. Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.
-- **#303**: Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.
 - **#328**: 09/10: SUSPEITA de mesma raiz do #372 (numeração de temporadas/episódios do catálogo do Nuvio primeiro, regressão 9677065b), não confirmada. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag. DECISÃO (dono 09/10): mantém a nota de mesma raiz e vai para a 2.0.5 junto da parte 2 do #372 (numeração Cinemeta + camada de tradução). O conserto de episódios duplicados da 2.0.3 (9c5d0027, 7edab4b0) já saiu, mas o autor não o testou e a parte 1 do #372 (2.0.4) só mexe nas abas de temporada, então não há base para dizer que a 2.0.3 já fecha o caso. Origem: dono 09/10.
 - **#350**: Rascunho de correção: nome do ajuste é "OK no card"; "Ver detalhes" no menu de segurar sai na 2.0.3. Autor relatou depois filme travando durante TV ao vivo: responder. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.
 - **#369**: Parcial: tailandês (712557ca) e ocultar não lançados (5f04c36b). Os outros itens do relatório de 9: sem commit identificado. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.
 - **#383**: Pedido: a legenda lembrar a faixa entre episódios (referência: NuvioMedia/NuvioTVSmart#1025). SUSPEITA de que a 2.0.3 já cobre: legmemoria (a89987c1, na tag v2.0.3) guarda por perfil a faixa exata por título (imdb sem temporada/episódio, então vale para os episódios da série) e a última escolha a mão em outro título; só a escolha manual grava. Não conferido contra a regra exata do Nuvio nem testado em TV; se o autor disser que falta algo (por exemplo lembrar por idioma de áudio), reabrir como 2.0.5. O comentário de base08 (não é do projeto) só concorda.
 
-### Lançadas e fechadas (253)
+### Lançadas e fechadas (258)
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -700,9 +686,14 @@ Notas:
 | [#284](https://github.com/iqui27/nuvio-native-legacy/issues/284) | Source result ("Best for this tv") missing resolution | ? | feature | lancada | 2.0.3 | - | df492356, a63ec982 | sem comentários | fechar com a resposta curta do bloco "fechar com a 2.0.3" (o dono decide; saiu na v2.0.3) |
 | [#287](https://github.com/iqui27/nuvio-native-legacy/issues/287) | Auto select forced embedded sub | ? | feature | lancada | 2.0.2 | - | 0702a143 | autor 10-07 | nada (autor confirmou; pode fechar) |
 | [#289](https://github.com/iqui27/nuvio-native-legacy/issues/289) | Eliminate “OK” button on profile pin entry | all | feature | lancada | 2.0.2 | - | 3eb5aef5 | nós 10-07 | nada (fechada) |
+| [#290](https://github.com/iqui27/nuvio-native-legacy/issues/290) | Few minor issues on 2.1 | ? | bug | lancada | 2.0.2 | - | 75cee76f, 4843e5b0, b5deeb25 | autor 10-06 | nada (fechada 11/10 por decisao do dono) |
 | [#294](https://github.com/iqui27/nuvio-native-legacy/issues/294) | 🐛 Home collection order resets after switching profiles | ? | bug | lancada | 2.0.3 | - | 66e6ae9e, 26d845c6, abd0770a | nós 10-07 | fechar com a resposta curta do bloco "fechar com a 2.0.3" (o dono decide; saiu na v2.0.3) |
 | [#295](https://github.com/iqui27/nuvio-native-legacy/issues/295) | Profile picker background — “Profile art” option not working | Samsung .tpk | bug | lancada | 2.0.2 | - | 881f7cae | nós 10-07 | nada (fechada) |
+| [#296](https://github.com/iqui27/nuvio-native-legacy/issues/296) | Si podrías agregar estas visitas seria grandioso | Samsung .wgt | feature | lancada | 2.0.2 | - | sem commit | autor 10-07 | nada (fechada 11/10 por decisao do dono) |
 | [#297](https://github.com/iqui27/nuvio-native-legacy/issues/297) |  Issue: P2P stream stops due to full TV storage. | Samsung .tpk | bug | lancada | 2.0.2 | - | 325f4e2b, 1b6a5439 | nós 10-07 | nada (fechada) |
+| [#298](https://github.com/iqui27/nuvio-native-legacy/issues/298) | The Arabic subtitles | Samsung (Tizen 6) | feature | lancada | 2.0.2 | - | sem commit | autor 10-07 | nada (fechada 11/10 por decisao do dono) |
+| [#300](https://github.com/iqui27/nuvio-native-legacy/issues/300) | Default Aspect Ratio Option | ? | feature | lancada | 2.0.2 | - | sem commit | nós 10-07 | nada (fechada 11/10 por decisao do dono) |
+| [#303](https://github.com/iqui27/nuvio-native-legacy/issues/303) | how to remove continue watching from opening screen | ? | feature | lancada | 2.0.2 | - | 1300a834 | nós 10-07 | nada (fechada 11/10 por decisao do dono) |
 | [#305](https://github.com/iqui27/nuvio-native-legacy/issues/305) | Hide player ui when pressing up | ? | feature | lancada | 2.0.3 | - | 98bee79f | nós 10-07 | fechar com a resposta curta do bloco "fechar com a 2.0.3" (o dono decide; saiu na v2.0.3) |
 | [#308](https://github.com/iqui27/nuvio-native-legacy/issues/308) | [bug] subtitles block source | ? | bug | lancada | 2.0.3 | - | e52fae3f, 6269f306, b65c3324 | autor 10-09 | nada (fechada 09/10; renderizacao ASS segue na #394) |
 | [#311](https://github.com/iqui27/nuvio-native-legacy/issues/311) | [suggestion] option to disable "from nuvio search" | ? | feature | lancada | 2.0.3 | - | 607b25bf, a86e55c2, 0d5ca11b | nós 10-08 | nada: o autor confirmou em 10/10 ("Fully functional verified, closing") e fechou |
@@ -833,7 +824,12 @@ Notas:
 - **#282**: Sem commit #282; versão 2.0.1 citada na nossa resposta.
 - **#284**: a63ec982: linha "Melhor para esta TV" mostra resolução. Sem comentário nosso na issue. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.
 - **#287**: Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.
+- **#290**: 7 commits #290 na 2.0.2 (gradiente do hero sobre trailer em janela, aspecto, etc.). Sem confirmação do autor; base08 confirmou o ponto 1 antes do release. Título original "Few minor issues on 2.1". Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.
 - **#294**: Parte na 2.0.2 (b4186acd); 66e6ae9e/26d845c6/abd0770a na 2.0.3. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag. PERSISTE NA 2.0.3 (09/10): a #392 relata a mesma reordenação ao trocar de perfil em v2.0.3 (.tpk Tizen 6.0); investigação em agente/2031-ordemperfil. Conserto do #392 (2.0.4): bb583b60, 9023ebdb em agente/2031-ordemperfil, não integrado.
+- **#296**: Coberto pela "Elección de la fuente" (#310) na 2.0.2; nenhum commit cita #296. Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.
+- **#298**: #273 (legendas árabes, 546c7418/57e24174) está na 2.0.2; #335 refina na 2.0.3. Nossa resposta de 07/10 disse "próxima release"; já estava na 2.0.2. Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.
+- **#300**: Resposta cita 2.0.2; nenhum commit cita #300. Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.
+- **#303**: Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.
 - **#305**: LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.
 - **#308**: O defeito do relato original (fonte com ASS que não abre e cai no CDN) está corrigido na 2.0.3: o autor confirma em 09/10 "got them working now". DECISÃO: a issue segue aberta no mapa, com status lancada e alvo 2.0.5, porque o autor trouxe sintomas NOVOS no mesmo fio: todas as legendas ASS com sombra/anel e cor diferente da original (exemplo do Stremio com anel branco), legendas grandes/avançadas lentas (baixo fps) e um clipe fora de sincronia (vídeos e captura anexados, não vistos por nós). SUSPEITA, sem leitura de código nem log: desenho do libass (sombra/contorno/cor) e custo de desenho das legendas grandes na TV. Se o dono preferir, fechar a #308 como resolvida e abrir issue nova para o desenho. FECHADA 09/10 com OK do dono: o problema original saiu na 2.0.3; os sintomas novos de renderizacao ASS (sombra/anel, cor, lentidao, dessincronia) foram para a #394.
 - **#311**: Resposta corrigiu: opções de busca não estão na 2.0.2, saem na 2.0.3. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag.
@@ -861,7 +857,7 @@ Notas:
 
 ## Fechado sem conserto (por-desenho, fora-do-escopo, duplicada, respondida, sem resposta)
 
-43 issues.
+45 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -881,6 +877,7 @@ Notas:
 | [#98](https://github.com/iqui27/nuvio-native-legacy/issues/98) | Dunno how github does its uploads but the there's no release | ? | ? | fechada-sem-resposta | - | - | - | sem comentários | nada (fechada) |
 | [#107](https://github.com/iqui27/nuvio-native-legacy/issues/107) | Not searching files from addon | ? | bug | precisa-log | - | - | - | autor 09-23 | nada (fechada) |
 | [#140](https://github.com/iqui27/nuvio-native-legacy/issues/140) | trailer no sound | ? | ? | fechada-sem-resposta | - | - | - | sem comentários | nada (fechada) |
+| [#144](https://github.com/iqui27/nuvio-native-legacy/issues/144) | Align UI with nuvioTV (android) | Android | feature | respondida | - | - | e1a31298, b7d10412, 581b2f82 | autor 10-08 | nada (fechada 11/10 por decisao do dono) |
 | [#148](https://github.com/iqui27/nuvio-native-legacy/issues/148) | Sudden crash by moving through the app | ? | bug | precisa-log | - | - | - | autor 09-27 | nada (fechada) |
 | [#154](https://github.com/iqui27/nuvio-native-legacy/issues/154) | Relatório de Logs | ? | meta | por-desenho | - | - | - | nós 09-27 | nada (relatório automático de logs) |
 | [#155](https://github.com/iqui27/nuvio-native-legacy/issues/155) | Thanks for building this! | LG | meta | respondida | - | - | - | autor 10-06 | nada (fechada) |
@@ -894,6 +891,7 @@ Notas:
 | [#240](https://github.com/iqui27/nuvio-native-legacy/issues/240) | tardan demasiado en cargar una serie o pelicula | LG | bug | precisa-log | - | - | - | autor 10-06 | nada (fechada) |
 | [#242](https://github.com/iqui27/nuvio-native-legacy/issues/242) | API QUESTION | ? | question | respondida | - | - | - | nós 10-06 | nada (fechada) |
 | [#248](https://github.com/iqui27/nuvio-native-legacy/issues/248) | Catalog sequencing mismatched | Samsung .tpk | bug | por-desenho | - | - | - | autor 10-04 | nada (fechada) |
+| [#252](https://github.com/iqui27/nuvio-native-legacy/issues/252) | Add default audio language setting for anime | ? | feature | por-desenho | - | - | - | autor 10-08 | nada (fechada 11/10 por decisao do dono) |
 | [#254](https://github.com/iqui27/nuvio-native-legacy/issues/254) | Home row does not update properly after installing/removing  | Samsung .tpk | bug | respondida | 2.0.0 | - | - | nós 10-06 | nada (fechada) |
 | [#256](https://github.com/iqui27/nuvio-native-legacy/issues/256) | Add Autoplay for Next Episode & Allow Customizable "Up Next" | ? | feature | respondida | - | - | - | autor 10-08 | nada (fechada pelo autor em 09/10); a opção de ajustar o tempo do card segue só como recur |
 | [#257](https://github.com/iqui27/nuvio-native-legacy/issues/257) | FYI: included in Tizen Community Packages | Samsung (tpk/wgt?) | meta | respondida | - | - | - | nós 10-06 | nada (fechada) |
@@ -918,9 +916,11 @@ Notas:
 - **#63**: Tizen 5.0 sem WebAssembly threads; depois o .tpk 4/5 (1.6.0) resolveu por outro caminho.
 - **#81**: v1.3.7 apenas registra o tempo de seek na Samsung (diagnóstico).
 - **#90**: "Not in 1.4.2 yet — still on the list".
+- **#144**: Alvo ja-lancada: já saiu numa versão publicada; só falta fechar.
 - **#189**: "Vou tentar ajustes em breve", sem commit #189.
 - **#217**: Contribuidor oferece PRs de build em Linux; resposta aceita.
 - **#248**: Resposta diz que é comportamento da plataforma Tizen.
+- **#252**: Opção já existe: Ajustes > Idiomas e legendas > Idioma do áudio. Alvo ja-lancada: a opção já existe.
 - **#254**: Resposta: busca atualiza ao mudar add-ons na 2.0; a parte da Home não confirmada.
 - **#256**: Parte do pedido tem relação com #331 (contagem estilo Netflix, em agente/203-331 = 2.0.5). Ajuste de tempo do card "ainda não existe" (nossa resposta). Fechada pelo autor em 09/10 (COMPLETED) depois de confirmar que o card aparece nos créditos e o próximo episódio toca sozinho; o pedido de ajuste de tempo fica sem issue própria (roadmap 2.0.5, item do próximo episódio automático).
 - **#267**: Resposta: CH+/CH- já atribuídos.
