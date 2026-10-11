@@ -1,5 +1,8 @@
 #ifndef NV_LEGENDA_H
 #define NV_LEGENDA_H
+
+// Manual delay accepted by the player controls and stored preferences (#425).
+#define LEG_ATRASO_MANUAL_MAX 60000
 #include <stddef.h>
 #include <stdint.h>
 

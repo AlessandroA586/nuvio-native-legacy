@@ -23,6 +23,11 @@ int main(void) {
   }
   assert(naTela >= 0 && (audioTela < 0 || audioTela == naTela + 1));
   assert(!strcmp(OPCOES[syncAuto].rotulo, "Sincronia automática da legenda"));
+  assert(valor[AJ_LEG_MOSTRAR] == 0 && somenteDesteAparelho(AJ_LEG_MOSTRAR));
+  assert(!strcmp(CHAVE[AJ_LEG_MOSTRAR], "legendaMostrarLocal"));
+  assert(!ajustes_legendas_todas());
+  valor[AJ_LEG_MOSTRAR] = 1; assert(ajustes_legendas_todas()); valor[AJ_LEG_MOSTRAR] = 0;
+  assert(ajCenaSecao(AJ_LEG_MOSTRAR) == AJC_IDI_FAIXAS);
   // Home: layout e arte do destaque.
   assert(valor[AJ_HERO_FUNDO] == 0);          // Automatico
   assert(valor[AJ_HERO_ARTE_DIF] == 1);       // Desligado: mesma foto do card

@@ -429,6 +429,7 @@ int   ajustes_esconder_logo_trailer(void);   // 1 = hide the corner title logo w
 // R4: second subtitle placement and own style (local). junto: 1 = stacked right above the
 // primary at the bottom, 0 = top band. tamanho: percent (60..160), 0 = automatic (90% of the
 // primary). cor/fundo/borda: the same indices as the primary style (VideoLegendaEstilo), -1 = same as primary.
+int   ajustes_legendas_todas(void); // #425: abrir todas as faixas
 int   ajustes_leg2_junto(void);
 int   ajustes_leg2_tamanho(void);
 int   ajustes_leg2_cor(void);

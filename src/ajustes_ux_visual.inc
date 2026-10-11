@@ -150,7 +150,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_SEEKR_AJUSTE: return "aj_film";
     case AJ_IDIOMA: return "aj_languages";
     case AJ_AUD_LINGUA: return "aj_audio-lines";
-    case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_LEG_FORCADA: return "aj_captions";
+    case AJ_LEG_MOSTRAR: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_LEG_FORCADA: return "aj_captions";
     case AJ_CACHE_SEEK: return "aj_database";
     case AJ_TAM_MAX: case AJ_TAM_MIN: return "aj_database";
     case AJ_TMDB_IDIOMA: return "aj_file-text";
