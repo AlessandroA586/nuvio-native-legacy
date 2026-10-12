@@ -73,3 +73,11 @@ CREATE TABLE IF NOT EXISTS sessao (
 
 -- Ver migracao-011-diario.sql (diario por perfil, cofre e pendentes do
 -- Letterboxd). `preparar-local.sh` aplica todo migracao-*.sql apos este esquema.
+
+-- Ver migracao-015-ident-hora.sql (contador de verificacao de identidade).
+CREATE TABLE IF NOT EXISTS ident_hora (
+  hora   INTEGER PRIMARY KEY,
+  verif  INTEGER NOT NULL DEFAULT 0,
+  recusa INTEGER NOT NULL DEFAULT 0,
+  local  INTEGER NOT NULL DEFAULT 0
+);

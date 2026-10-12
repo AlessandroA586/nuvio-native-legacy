@@ -35,6 +35,7 @@
 #include "anim.h"
 #include "movimento.h"
 #include "layout.h"
+#include "segurar.h"
 #include "ajustes.h"
 #include "ponteiro.h"
 #include "rolagemtoque.h"
@@ -2543,7 +2544,7 @@ void spainel_atualizar(float dt, Uint32 agora) {
   if (foco == SP_FOCO_BARRA && !temBarra()) foco = SP_FOCO_ABAS;
   if (barraFoco >= nChips()) barraFoco = nChips() - 1;
   // O LIMIAR DO OK LONGO, com o dedo ainda no botao (ver okDesde).
-  if (aberto && okDesde && SDL_GetTicks() - okDesde >= NV_HOLD_MS) {
+  if (aberto && segurar_venceu(SDL_GetTicks(), okDesde, "salvos")) {
     okDesde = 0;
     abrirMenu();
   }

@@ -137,6 +137,7 @@ object NvPlayer {
     @JvmStatic external fun nativeDecoder4k(hevc: Int, avc: Int, vp9: Int, av1: Int)
     @JvmStatic external fun nativeTela(hdr: Int, dv: Int)
     @JvmStatic external fun nativeHdr(hdr: String, dv: Int, atmos: Int)
+    @JvmStatic external fun nativeErroTexto(texto: String)
     @JvmStatic external fun nativeRetomada(geracao: Int, aceita: Int)
     @JvmStatic external fun nativeFitPassiva(rede: Long, geracao: Int, origem: String, kbps: IntArray, fimMs: Long)
     @JvmStatic external fun nativeAudioPcm(pcm: ShortArray, n: Int, ptsUs: Long)
@@ -1095,6 +1096,13 @@ object NvPlayer {
                 else -> "desconhecido"
             }
             Log.w(TAG, "[player] onPlayerError renderer=$renderer nome=${exo?.rendererName} loadMs=${SystemClock.elapsedRealtime() - abriuEm} erro ${error.errorCodeName} (${error.errorCode}): ${error.message}")
+            // The app log (what "Enviar registro" uploads) only got the bare
+            // code: 2000 (IO_UNSPECIFIED) says nothing without its cause. URLs
+            // lose their query, where addons put tokens.
+            val causa = generateSequence(error.cause) { it.cause }.take(3)
+                .joinToString(" <- ") { "${it.javaClass.simpleName}: ${it.message ?: ""}" }
+                .replace(Regex("""\?[^\s"]*"""), "?…").take(400)
+            try { nativeErroTexto("${error.errorCodeName} (${error.errorCode}) renderer=$renderer causa=$causa") } catch (_: Throwable) {}
             // Decoder que falha nos primeiros 5 s: o recurso pode estar sendo
             // solto por outro app (ResourceConflict do Tizen); reabre uma vez.
             val cedo = SystemClock.elapsedRealtime() - abriuEm < RETRY_DECODER_MS

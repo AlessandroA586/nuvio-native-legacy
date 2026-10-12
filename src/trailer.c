@@ -16,6 +16,7 @@
 #endif
 
 static int    aberto, cheia, comSom;
+static unsigned geracao;   // invalida a prova do player mesmo depois do trailer fechar
 static int    falhouUltima;
 static GfxRect rect;
 static char   fonteAtual[1024];
@@ -393,6 +394,7 @@ void trailer_abrir(const char *fonte, GfxRect r, int som, int modoCheia) {
   if (!nova) recortePendente = 1;
 #endif
   if (nova) {
+    geracao++;
     snprintf(fonteAtual, sizeof fonteAtual, "%s", fonte);
     abertoEm = SDL_GetTicks();
     printf("[trailer] %.60s %s%s\n", fonte, modoCheia ? "tela cheia" : "no fundo", som ? " com som" : " mudo");
@@ -454,6 +456,7 @@ int trailer_continuar(GfxRect r, int som) {
 }
 
 int trailer_aberto(void)  { return aberto; }
+unsigned trailer_geracao(void) { return geracao; }
 int trailer_com_som(void) { return aberto && comSom; }
 int trailer_cheia(void)   { return aberto && cheia; }
 int trailer_tocando(void) {

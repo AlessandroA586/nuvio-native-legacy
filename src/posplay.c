@@ -92,6 +92,7 @@ static int    dispensado;
 static float  anim;
 static Uint32 fecharEm;              // 0 = sem contagem
 static int    pedT, pedE, pedTitulo = -1;
+static int    pedAutomatico, recuou, aguardaBusca;
 static int    proxT, proxE;          // proximo episodio, quando ha
 static char   proxNome[120];
 static char   preEpisodio[64], preAlvo[64];
@@ -138,10 +139,37 @@ void posplay_fechar(void) {
   visivel = 0; fecharEm = 0; foco = 0;
   durVista = 0.0; durEstavel = 0.0;   // titulo novo: a duracao comeca de novo
   pedT = pedE = 0; pedTitulo = -1;
+  pedAutomatico = recuou = aguardaBusca = 0;
   dispensado = 0;   // titulo novo: a dispensa do anterior nao vale mais
 #ifdef NV_TOUCH_UI
   scrollPP = 0; memset(&toquePP, 0, sizeof toquePP);
 #endif
+}
+
+static void cancelarAutomatico(void) {
+  fecharEm = 0;
+  if (pedAutomatico) {
+    pedT = pedE = 0;
+    pedAutomatico = 0;
+    if (serie && proxT > 0 && proxE > 0) {
+      visivel = 1;
+      dispensado = 0;
+    }
+  }
+}
+
+// Recuar e pedir para ficar neste episodio. O cartao continua servindo ao OK,
+// mas a contagem nao volta enquanto a pessoa ainda esta na mesma janela.
+void posplay_recuar(void) {
+  cancelarAutomatico();
+  recuou = 1;
+}
+
+// A posicao da barra pode mostrar o destino antes de o seek chegar ao motor.
+// Enquanto o player espera progresso real, Next continua sendo uma escolha.
+void posplay_aguardar_busca(int aguardar) {
+  aguardaBusca = aguardar != 0;
+  if (aguardaBusca) cancelarAutomatico();
 }
 
 int posplay_pediu_episodio(int *t, int *e) {
@@ -149,6 +177,7 @@ int posplay_pediu_episodio(int *t, int *e) {
   if (t) *t = pedT;
   if (e) *e = pedE;
   pedT = pedE = 0;
+  pedAutomatico = 0;
   return 1;
 }
 int posplay_pediu_titulo(void) { int v = pedTitulo; pedTitulo = -1; return v; }
@@ -351,6 +380,8 @@ void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
   prepararProximo(ehSerie, vel_tempo_real(durSeg - posSeg, player_velocidade_efetiva()));
   if (durSeg <= 1.0) return;
 
+  if (ehSerie && !janelaSerie && !aguardaBusca) recuou = 0;
+
   if (ehSerie) {
     // A JANELA quem decide e o player: ele e o unico que sabe se os creditos
     // comecaram (intro_ativo/INTRO_CREDITOS) alem dos dois minutos finais. Era
@@ -415,7 +446,8 @@ void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
 
   // Arma depois de abrir o cartao: marcador real permite antecipar a contagem;
   // sem ele, conta apenas os segundos restantes. Desligado, espera OK.
-  if (visivel && serie) {
+  // Recuo e busca pendente suspendem a mesma contagem configuravel.
+  if (visivel && serie && !recuou && !aguardaBusca) {
     // #202: a 1,5x os segundos do arquivo passam mais depressa que os do relogio.
     double resta = vel_tempo_real(durSeg - posSeg, player_velocidade_efetiva());
     fecharEm = posplay_contagem(agora, abriuEm, fecharEm, resta, ajustes_proximo_auto(), marcadorReal, ajustes_proximo_contagem());
@@ -424,6 +456,7 @@ void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
   // A contagem so vale para o proximo episodio.
   if (visivel && fecharEm && agora >= fecharEm) {
     pedT = proxT; pedE = proxE;
+    pedAutomatico = 1;
     esconder();
   }
 }
@@ -454,7 +487,7 @@ int posplay_evento(const SDL_Event *e) {
   }
   if (serie) {
     if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
-      player_aprender_creditos(); pedT = proxT; pedE = proxE; esconder(); return 1;
+      player_aprender_creditos(); pedT = proxT; pedE = proxE; pedAutomatico = 0; esconder(); return 1;
     }
     return 0;
   }

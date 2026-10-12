@@ -669,7 +669,7 @@ static void ajcT_memImg(int op) {
   } else {
     float x = 118 + cap * 45 - 3;
     if (v == 0) snprintf(b, sizeof b, "RAM");
-    else snprintf(b, sizeof b, "%d MB", MB[v]);
+    else snprintf(b, sizeof b, "%d MB", MB[v] > tex_teto_ram_mb() ? tex_teto_ram_mb() : MB[v]);
     ajc_acento_ret(x, 90, 4, 80, 2, 1);
     ajcT_txtc(b, 36, 1, 110, 190, 243, 242, 239, 1);
     ajc_ret(118, 108, 40, 44, 6, 0, 0, 0, 0.5f * ajc_onda(2.0f));   // o teto empurra o mais antigo para fora

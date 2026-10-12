@@ -25,7 +25,9 @@
 //   4. nada (o comportamento de antes).
 // A regra do #287 (audio ja no idioma da legenda = so a forcada) continua
 // valendo para o que sai daqui: quem decide a faixa pelo idioma e
-// ling_legenda_auto_tipo, igual.
+// ling_legenda_auto_tipo, igual. MENOS no passo 1 quando a escolha foi uma
+// legenda INTEIRA (#383): quem ligou a legenda em ingles numa serie em ingles
+// quer a inteira no episodio seguinte, nao "so a forcada".
 //
 // SO A ESCOLHA MANUAL E GRAVADA. O que a automatica liga e o que o AutoSync
 // troca nao viram escolha — senao a primeira decisao do app se perpetuaria
@@ -41,7 +43,7 @@ typedef struct {
   char idioma[16];    // codigo normalizado ("pt", "pob", "en"), "none", ou "" (faixa sem etiqueta)
   char tipo;          // 'e' embutida, 'a' addon, 0 = nenhuma
   int  numero;        // embutida: VideoFaixa.numero
-  char id[24];        // addon: legendasui_id_addon
+  char id[24];        // addon: legendasui_id_addon; embutida: "c" inteira, "f" forcada/letreiros, "" antiga/desconhecida
   char nome[48];      // so para o log (rotulo da faixa / provedor)
   long long quandoS;
 } LegMem;

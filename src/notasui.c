@@ -386,13 +386,18 @@ static TxtLinha texto(TxtEstilo e, const char *s, int c) {
 static const char *nomeCurto(int f) { return f == EX_METAUSER ? "Metacritic" : nf_nome(f); }
 
 // CARTAO DE NOTA, a esquerda.
-static void desenhaCartao(const Medidas *m, float x, float y, float h, float a) {
+static void desenhaCartao(const Medidas *m, float x, float y, float h, float f, float a) {
   NfResumo r;
   GfxRect box = { x, y, SCORE_W, h };
   float px = x + 40.0f, py = y + 34.0f, larg = SCORE_W - 80.0f;
   char buf[160];
   nf_resumo(m->fontes, m->norm, m->nFontes, &r);
+  // O foco da secao mora AQUI, no numero grande: os blocos de fonte nao sao
+  // paradas do D-pad (o detalhe de cada um ja esta na grade ao lado).
+  if (!ajustes_vidro()) foco_anel(box, CARD_RAIO / h, f, a);
   painel(box, CARD_RAIO, a);
+  if (f > 0.01f) gfx_cor(box, CARD_RAIO / h, 1, 1, 1, 0.07f * f * a);
+  if (ajustes_vidro()) foco_anel(box, CARD_RAIO / h, f, a);
   if (r.n == 0) {
     // So a nota agregada do MDBList (ou nenhuma que conte): nada a comparar.
     txt_bloco_corta(TXT_DET_META2, i18n("Só a nota agregada chegou; não há o que comparar."),
@@ -535,12 +540,12 @@ float notasui_fontes_desenhar(const NotasSecao *s, float x, float y, float a,
   if (y >= NV_TELA_H || y + m.h <= 0.0f) return m.h;
   aa = portao(&gateFontes, a, &aberto);
   nf_resumo(m.fontes, m.norm, m.nFontes, &r);
-  desenhaCartao(&m, x, y, m.scoreH, aa);
+  desenhaCartao(&m, x, y, m.scoreH, foco ? foco[0] : 0.0f, aa);
   for (i = 0; i < m.nFontes; i++) {
     float tx = gx + (float)(i % 2) * (TILE_W + TILE_GAP);
     float ty = y + (notasEmpilhadas() ? m.scoreH + COL_GAP : 0) + (float)(i / 2) * (TILE_H + TILE_GAP);
     if (ty > NV_TELA_H || ty + TILE_H < 0.0f) continue;
-    desenhaBloco(s, m.fontes[i], m.norm[i], &r, tx, ty, foco ? foco[i] : 0.0f, aa);
+    desenhaBloco(s, m.fontes[i], m.norm[i], &r, tx, ty, 0.0f, aa);
   }
   if (!aberto) textogate_passo(&gateFontes, txt_pendentes - pend0, SDL_GetTicks());
   return m.h;

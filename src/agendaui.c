@@ -890,6 +890,8 @@ static void marcarVistos(const AgItem *it, const AgModal *m) {
       n++;
     }
   if (!n) return;
+  printf("[visto] marcado por agenda-manual pos=0 dur=0 assistido=0s id=%s n=%d\n", it->imdb, n);
+  fflush(stdout);
   vistoep_marcar_lote(it->imdb, pares, n, 1);
   visto_episodios(it->imdb, "series", pares, n, 1, visto_destinos());
 }

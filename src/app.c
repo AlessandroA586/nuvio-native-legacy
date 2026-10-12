@@ -136,6 +136,7 @@
 #include "fontepref.h"
 #include "video.h"
 #include "addons.h"
+#include "legauto.h"
 #include "idioma.h"
 #include "descoberta.h"
 #include "ilha_voo.h"
@@ -305,6 +306,7 @@ static int    fonteVODAutomatica;
 static int    fonteVODTentativas;
 // Retomar pela fonte guardada em curso (tocarFonteGuardada); 0 = caminho normal.
 static int    voltaAtiva;
+static Stream voltaFonte;  // fonte aberta fora da lista; vive alem da conferencia
 static Uint32 voltaDesde;
 static Uint32 fonteVODDesde;
 static Uint32 fonteManualDesde;   // OK na folha de Fontes: prazo ate o primeiro quadro
@@ -448,6 +450,7 @@ static void limparFonteVOD(void) {
   antAberta = -1;
   fonteVODAutomatica = 0;
   voltaAtiva = 0;
+  memset(&voltaFonte, 0, sizeof voltaFonte);
   fonteVODTentativas = 0;
   fonteVODDesde = 0;
   fonteManualDesde = 0;
@@ -497,6 +500,7 @@ static int pedirFonteJob(int tipo, unsigned geracao, const char *id, int renovan
 #include "gfx.h"
 #include "catalogo.h"
 #include "layout.h"
+#include "segurar.h"
 #include "servidores.h"
 #include <stdio.h>
 
@@ -917,6 +921,7 @@ static int tocarFonteGuardada(void) {
     return 0;
   marco("abrir: fonte guardada, sem busca");
   stream_definir_atual(-1);
+  voltaFonte = s;
   video_definir_dv(s.dolbyVision);
   video_definir_cabecalhos(s.cabecalhos);
   video_definir_mp4(stream_e_mp4(&s));
@@ -2754,6 +2759,10 @@ static void marcarAssistidoSeSolicitado(void) {
   // olho aberto e o toque "marcava" de novo em vez de desmarcar.
   { int visto = cat_visto(c);
     const double dur = 3600.0;
+    if (!visto) {
+      printf("[visto] marcado por detalhe-manual pos=3600 dur=3600 assistido=0s id=%s\n", c->imdb);
+      fflush(stdout);
+    }
     cat_salvar_progresso(i, visto ? 0.0 : dur, dur);
     if (c->imdb[0]) {
       trakt_assistido(c->imdb, !visto);
@@ -2811,8 +2820,12 @@ static void legendasDaFonte(void) {
   char chave[sizeof ultimo], alvo[64];
   const Stream *s;
   const CatItem *c;
-  if (!player_aberto() || player_id_canal()[0] || !player_com_video()) return;
+  // A legenda automatica compara o release com este nome, entao ele vale desde
+  // que o player abre (antes do primeiro quadro), nao so com video.
   s = stream_item(stream_atual());
+  if (!s && voltaFonte.url[0]) s = &voltaFonte;
+  legauto_fonte(player_aberto() && !player_id_canal()[0] && s ? s->arquivo : NULL);
+  if (!player_aberto() || player_id_canal()[0] || !player_com_video()) return;
   c = cat_item(player_indice());
   if (!s || !c || !c->imdb[0]) return;
   alvoPlayer(alvo, sizeof alvo);
@@ -2863,6 +2876,9 @@ void app_atualizar(float dt, Uint32 agora) {
   // Animacoes reduzidas valem para TODA mola e rampa do app (anim.h), nao so
   // para as telas que lembravam de perguntar. Uma leitura por quadro.
   anim_politica_reduzida = ajustes_animacoes_reduzidas();
+  // Pausa entre quadros medida uma vez, antes de qualquer tela perguntar se o
+  // OK segurado venceu (segurar.h, #387).
+  segurar_quadro(agora);
   central_atualizar(dt, agora);
   estatvivo_atualizar(agora);
   // OK na vitrine da tela de descanso (descanso.h): abre o titulo, so com a

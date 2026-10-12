@@ -237,6 +237,12 @@ int main(void) {
   focarChave("m|atraso"); tecla(SDLK_LEFT); assert(secOffset == -100 && estilo.atrasoMs == 0);
   focarChave("m|alvo"); tecla(SDLK_LEFT);
   focarChave("m|atraso"); tecla(SDLK_RIGHT); assert(estilo.atrasoMs == 100 && secOffset == -100);
+  // The full list also carries the AutoSync row: without a language
+  // preference the panel opens straight into it.
+  { LegendasSyncProvider p = { syncEstado, syncAcoes, syncRodar, NULL };
+    legendasui_definir_sync(&p); montarLinhas();
+    focarChave("m|sync|p"); assert(linhas[foco].tipo == LR_SYNC && linhas[foco].slot == 0);
+    legendasui_definir_sync(NULL); montarLinhas(); focarChave("m|atraso"); }
   tecla(SDLK_ESCAPE); assert(!mais && !strcmp(linhas[foco].chave, "mais"));
 
   // AutoSync actions are unchanged, per slot.
@@ -284,7 +290,27 @@ int main(void) {
   ativaEmb = 2; snprintf(sec, sizeof sec, "%s", cand[nEmb + 3].id);
   ling_local_legenda("pt"); montarLinhas();
   assert(linhaDe("par") >= 0 && linhaDe("rec|a") < 0);
+  // With both on, the hold-OK menu on the pair turns the second one off
+  // (there used to be no way back out from the menu).
+  focarChave("par"); abrirMenu();
+  assert(menu && menuTiraSecundaria() && !strcmp(menuRot(1), "Sem segunda legenda"));
+  secDesligar = 0; menuFoco = 1; menuEscolher();
+  assert(!menu && secDesligar == 1 && !sec[0]);
+  montarLinhas(); abrirMenu(); assert(!menuTiraSecundaria()); menu = 0;
   sec[0] = 0; ativaEmb = -1;
+
+  // Nome publicado depois do primeiro calculo, com URL opaca e candidatas iguais.
+  nEmb = 0; nAdd = 2; tocando = "https://h.invalid/opaque";
+  addon(0, "pt", "OpenSubtitles", "Show.HDTV.LOL.srt", "https://h.invalid/old.srt");
+  addon(1, "pt", "OpenSubtitles", "Show.WEB-DL.NTb.srt", "https://h.invalid/new.srt");
+  legauto_fonte(NULL); legendasui_abrir();
+  assert(recP == 0);
+  uint64_t assinatura = recAssinatura();
+  legauto_fonte("Show.WEB-DL.NTb.mkv");
+  montarLinhas();
+  assert(recP == 1 && recAssinatura() != assinatura);
+  legendasui_abrir(); assert(recP == 1);
+  legauto_fonte(NULL); montarLinhas(); assert(recP == 0);
 
   puts("legendasui: identities, formats, kinds, full list, late arrivals, second-slot refusals, offsets, AutoSync, settings, active-outside-recommendations OK");
   return 0;

@@ -84,7 +84,7 @@ typedef struct {
 } NovCena;
 
 typedef struct {
-  const char *versao;     // "2.0.4" (o titulo e "Novidades da %s")
+  const char *versao;     // "2.0.5" (o titulo e "Novidades da %s")
   const char *arquivo;    // a marca de "ja visto" (dados_*)
   const char *subtitulo;  // uma frase embaixo do titulo
   const NovItem *itens;
@@ -176,7 +176,7 @@ __attribute__((unused)) static void novArteDesfocada(int numero, GfxRect r, floa
 
 // ======================================================= O CONTEUDO DA VERSAO
 // Para a proxima versao: um src/novidades/<versao>.inc novo, trocado aqui.
-#include "novidades/204.inc"
+#include "novidades/205.inc"
 #define CT NOV_ATUAL
 
 static const char *artePorNumero(int n) {

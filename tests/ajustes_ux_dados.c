@@ -312,6 +312,22 @@ static void cacheSeek(void) {
   assert(i >= 0 && resultados[i].bloqueado);
 }
 
+static void creditosAutomaticos(void) {
+  int vezes = 0, idiomaAntes = valor[AJ_IDIOMA];
+  assert(!ajustes_pular_creditos() && uxValorPadrao(AJ_PULAR_CREDITOS) == 1);
+  assert(!strcmp(uxEscopo(AJ_PULAR_CREDITOS), "Só nesta TV"));
+  assert(somenteDesteAparelho(AJ_PULAR_CREDITOS) && !dePerfil(AJ_PULAR_CREDITOS));
+  assert(familiaPreviaOpcao(AJ_PULAR_CREDITOS) == AJPV_REPRO);
+  for (int i = 0; i < AJ_N_TELA; i++)
+    if (TELA[i].tipo == IT_OPC && TELA[i].op == AJ_PULAR_CREDITOS) vezes++;
+  assert(vezes == 1);
+  for (int i = 0; i < AJ_N; i++) assert(strcmp(CHAVE[i], "autoCreditosLocal"));
+  valor[AJ_IDIOMA] = IDIOMA_EN + 1;
+  int n = ajustes_buscar("Skip the credits automatically", resultados, AJ_N);
+  assert(indiceResultado(AJ_PULAR_CREDITOS, n) >= 0);
+  valor[AJ_IDIOMA] = idiomaAntes;
+}
+
 // Cada categoria e cada submenu (ROT) tem a SUA arte: nenhum indice de
 // AJ_ARTE_SEC se repete, todo bloco de ajustes_ux_tela.inc tem coluna, e a
 // opcao devolve a arte do bloco dela (o primeiro bloco fica com a da categoria).
@@ -725,6 +741,7 @@ int main(void) {
   artePorSubmenu();
   reorganizacao202();
   cacheSeek();
+  creditosAutomaticos();
   zoomTpk();
   prazoDosAddonsIntegrado();
   padroesEValores();

@@ -45,6 +45,9 @@ void trailer_recorte(int vw, int vh, float z, float dw, float dh,
                      int *sx, int *sy, int *sw, int *sh);
 void trailer_fechar(void);
 int  trailer_aberto(void);
+// Muda a cada fonte de trailer aberta: uma sessao principal anterior perdeu
+// o pipeline, mesmo se o trailer ja terminou ou usou a mesma URL.
+unsigned trailer_geracao(void);
 int  trailer_cheia(void);
 // 1 quando ha video de fato tocando: so ai a pagina abre o furo — antes
 // disso mostrar um buraco preto seria pior que a arte.

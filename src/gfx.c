@@ -243,6 +243,12 @@ static const char *VS =
 // registradores livres significa menos fragmentos em voo ao mesmo tempo — a
 // Mali-G71 desta TV entregava ~40fps com apenas duas camadas de tela cheia.
 // Com um programa enxuto por modo cada desenho usa so o que precisa.
+// Tamanho da copia desfocada (gfx_desfocado); o GFX_SNAP precisa dele no shader.
+#define NV_DESF_W 96
+#define NV_DESF_H 54
+#define NV_STR_(x) #x
+#define NV_STR(x) NV_STR_(x)
+
 static const char *FS_CABECA =
   NV_GLSL_PREFIXO
   "#ifdef GL_FRAGMENT_PRECISION_HIGH\n"
@@ -627,9 +633,26 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   // de 28% da "Arte borrada", gfx_luz_canal_desenhar); mix com 0 devolve a
   // textura exata. uPar.x > 0.5: a cor sai pelo nv_dither (o Frost). Os outros
   // chamadores passam 0 nos dois.
+  // uPar.x > 1.5: a fonte e a copia desfocada de NV_DESF_W x NV_DESF_H
+  // esticada na tela inteira (o fundo do Cinema). O bilinear puro, ~20x
+  // ampliado, deixa as emendas dos texels a vista em losangos que o dither nao
+  // apaga; o B-spline cubico por 4 leituras bilineares (GPU Gems 2, cap. 20)
+  // tem derivada continua e a rampa sai lisa.
+  "vec3 nv_bspline(vec2 uv){\n"
+  "  vec2 ts = vec2(" NV_STR(NV_DESF_W) ".0, " NV_STR(NV_DESF_H) ".0);\n"
+  "  vec2 p = uv * ts - 0.5, f = fract(p), c = p - f + 0.5;\n"
+  "  vec2 f2 = f * f, f3 = f2 * f, e = 1.0 - f;\n"
+  "  vec2 w0 = e * e * e / 6.0, w1 = (4.0 - 6.0 * f2 + 3.0 * f3) / 6.0;\n"
+  "  vec2 w3 = f3 / 6.0, w2 = 1.0 - w0 - w1 - w3;\n"
+  "  vec2 g0 = w0 + w1, g1 = w2 + w3;\n"
+  "  vec2 a = (c - 1.0 + w1 / g0) / ts, b = (c + 1.0 + w3 / g1) / ts;\n"
+  "  return g0.y * (g0.x * texture2D(uTex, a).rgb + g1.x * texture2D(uTex, vec2(b.x, a.y)).rgb)\n"
+  "       + g1.y * (g0.x * texture2D(uTex, vec2(a.x, b.y)).rgb + g1.x * texture2D(uTex, b).rgb);\n"
+  "}\n"
   "void main(){\n"
   "  vec2 uv = (uPar.y > 0.5) ? vec2(vUv.x, 1.0 - vUv.y) : vUv;\n"
-  "  vec3 c = mix(texture2D(uTex, uv).rgb, uCor.rgb, uFoco);\n"
+  "  vec3 t = uPar.x > 1.5 ? nv_bspline(uv) : texture2D(uTex, uv).rgb;\n"
+  "  vec3 c = mix(t, uCor.rgb, uFoco);\n"
   "  gl_FragColor = uPar.x > 0.5 ? nv_dither(c, uCor.a) : vec4(c, uCor.a);\n"
   "}\n",
 
@@ -3416,18 +3439,22 @@ void gfx_borrao_encerrar(void) {
 // quadro, o card desenha essa textura minuscula esticada com filtro linear:
 // o mesmo custo de um card nitido. A geracao sao dois quads de 96x54, limitada
 // a NV_DESF_POR_QUADRO por quadro.
-#define NV_DESF_W 96
-#define NV_DESF_H 54
 #define NV_DESF_N 16            // cards visiveis + folga para a rolagem
 #define NV_DESF_POR_QUADRO 2
 // Passo do gaussiano em texels do alvo. Com 9 amostras o borrao alcanca
 // +-4 passos: 1.6 * 4 / 96 = ~6.7% da largura para cada lado, ~43 px num card
 // de 640. Rosto e texto do still somem; a cor e a composicao continuam.
 #define NV_DESF_PASSO 1.6f
+// A arte chega com 480 px de largura (16:9 -> 270 de altura). A reducao vai em
+// duas passadas, 480x270 -> 96x270 -> 96x54, cada uma so encolhendo um eixo,
+// com taps a um texel da arte. Uma passada direta lia uma linha em cinco
+// (alias): o fundo virava amostra esparsa da imagem, com manchas e listras.
+#define NV_DESF_SRC_W 480
+#define NV_DESF_MID_H 270
 
 typedef struct { GLuint src, tex; unsigned long chave, uso; } Desf;
 static Desf desf[NV_DESF_N];
-static GLuint desfFbo = 0, desfTmp = 0;
+static GLuint desfFbo = 0, desfTmp = 0, desfTmp2 = 0, desfMid = 0;
 static int desfFalhou = 0;
 static unsigned long desfRelogio = 0;
 
@@ -3442,12 +3469,12 @@ static void desfEsquecerFonte(GLuint tex) {
     if (desf[i].src == tex) { desf[i].src = 0; desf[i].chave = 0; }
 }
 
-static GLuint desfNovaTex(void) {
+static GLuint desfNovaTex(int w, int h) {
   GLuint t = 0;
   glGenTextures(1, &t);
   glBindTexture(GL_TEXTURE_2D, t);
   // RGBA e nao RGB: e o unico formato que o WebGL 1 GARANTE renderizavel.
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, NV_DESF_W, NV_DESF_H, 0, GL_RGBA,
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
                GL_UNSIGNED_BYTE, NULL);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -3461,7 +3488,9 @@ static int desfPreparar(void) {
   GLenum st;
   if (desfFbo) return 1;
   if (desfFalhou) return 0;
-  desfTmp = desfNovaTex();
+  desfMid = desfNovaTex(NV_DESF_W, NV_DESF_MID_H);
+  desfTmp = desfNovaTex(NV_DESF_W, NV_DESF_H);
+  desfTmp2 = desfNovaTex(NV_DESF_W, NV_DESF_H);
   glGenFramebuffers(1, &desfFbo);
   glBindFramebuffer(GL_FRAMEBUFFER, desfFbo);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, desfTmp, 0);
@@ -3475,6 +3504,16 @@ static int desfPreparar(void) {
     return 0;
   }
   return 1;
+}
+
+// Uma passada de desfoque/reducao de src para dst (w x h). ux/uy: passo em uv.
+static void desfPasso(GLuint src, GLuint dst, int w, int h, float ux, float uy) {
+  GfxRect cheio = { 0, 0, NV_TELA_W, NV_TELA_H };
+  glBindFramebuffer(GL_FRAMEBUFFER, desfFbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dst, 0);
+  glViewport(0, 0, w, h);
+  gpun_descartar_cor(0);
+  gfx_rect(cheio, src, GFX_BLUR, 0, ux, uy, 0.0f, 0, 0, 0, 1.0f);
 }
 
 GLuint gfx_desfocado(GLuint src, const char *chave) {
@@ -3505,7 +3544,6 @@ GLuint gfx_desfocado(GLuint src, const char *chave) {
     GLboolean mistura = glIsEnabled(GL_BLEND);
     GLuint dst;
     float aspAnt = gfx_tex_aspect_atual;
-    GfxRect cheio = { 0, 0, NV_TELA_W, NV_TELA_H };
     // Estado lido do GL de proposito, e so aqui: o card pode estar sendo
     // desenhado dentro do snapshot da home ou sob gfx_recorte, e voltar
     // cegamente para o framebuffer 0 com o viewport da tela estragaria os dois.
@@ -3513,27 +3551,21 @@ GLuint gfx_desfocado(GLuint src, const char *chave) {
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &fboAnt);
     glGetIntegerv(GL_VIEWPORT, vp);
     if (!desfPreparar()) { glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)fboAnt); return 0; }
-    if (!desf[vago].tex) desf[vago].tex = desfNovaTex();
+    if (!desf[vago].tex) desf[vago].tex = desfNovaTex(NV_DESF_W, NV_DESF_H);
     dst = desf[vago].tex;
     ESC_REAL_INI();
     GFX_OUTRO_INI();
     glDisable(GL_SCISSOR_TEST);
     gfxBlend(0);
-    glViewport(0, 0, NV_DESF_W, NV_DESF_H);
     gfx_tex_aspect_atual = 0.0f;   // a arte INTEIRA, esticada; o card recorta depois
-    // Passada 1: horizontal, lendo a arte original e ja reduzindo. Escrever
-    // num FBO inverte o eixo y (ver GFX_SNAP); a passada 2 inverte de novo, e
-    // o resultado sai de pe para o GFX_CARD, como uma arte comum.
-    glBindFramebuffer(GL_FRAMEBUFFER, desfFbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, desfTmp, 0);
-    gpun_descartar_cor(0);   // a passada cobre o alvo inteiro, opaca
-    gfx_rect(cheio, src, GFX_BLUR, 0, NV_DESF_PASSO / (float)NV_DESF_W, 0.0f,
-             0.0f, 0, 0, 0, 1.0f);
-    // Passada 2: vertical, do intermediario para a textura guardada.
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dst, 0);
-    gpun_descartar_cor(0);
-    gfx_rect(cheio, desfTmp, GFX_BLUR, 0, 0.0f, NV_DESF_PASSO / (float)NV_DESF_H,
-             0.0f, 0, 0, 0, 1.0f);
+    // Escrever num FBO inverte o eixo y (ver GFX_SNAP): cada passada inverte, e
+    // as quatro deixam o resultado de pe para o GFX_CARD, como uma arte comum.
+    // 1-2: reducao, horizontal e depois vertical, taps a um texel da arte.
+    desfPasso(src, desfMid, NV_DESF_W, NV_DESF_MID_H, 1.0f / NV_DESF_SRC_W, 0.0f);
+    desfPasso(desfMid, desfTmp, NV_DESF_W, NV_DESF_H, 0.0f, 1.0f / NV_DESF_MID_H);
+    // 3-4: desfoque gaussiano, horizontal e depois vertical, no alvo 96x54.
+    desfPasso(desfTmp, desfTmp2, NV_DESF_W, NV_DESF_H, NV_DESF_PASSO / (float)NV_DESF_W, 0.0f);
+    desfPasso(desfTmp2, dst, NV_DESF_W, NV_DESF_H, 0.0f, NV_DESF_PASSO / (float)NV_DESF_H);
     gfx_tex_aspect_atual = aspAnt;
     glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)fboAnt);
     glViewport(vp[0], vp[1], vp[2], vp[3]);
@@ -3578,6 +3610,8 @@ static void desfEncerrar(void) {
   }
   if (desfFbo) { glDeleteFramebuffers(1, &desfFbo); desfFbo = 0; }
   if (desfTmp) { gfx_tex_esquecer(desfTmp); glDeleteTextures(1, &desfTmp); desfTmp = 0; }
+  if (desfTmp2) { gfx_tex_esquecer(desfTmp2); glDeleteTextures(1, &desfTmp2); desfTmp2 = 0; }
+  if (desfMid) { gfx_tex_esquecer(desfMid); glDeleteTextures(1, &desfMid); desfMid = 0; }
 }
 
 // --- MINIATURA ---------------------------------------------------------------------

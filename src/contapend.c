@@ -385,6 +385,10 @@ static int enviarVistos(const char *usu, int perfil, const Ent *env, int n, char
   }
   jsw_arr_fim(&w);
   jsw_obj_fim(&w);
+  if (op == '+') {
+    printf("[visto] marcado por conta-jornal-reenvio pos=0 dur=0 assistido=0s perfil=%d n=%d (gestos ja registrados)\n", perfil, n);
+    fflush(stdout);
+  }
   r = sessao_rpc(op == '+' ? "sync_push_watched_items" : "sync_delete_watched_items",
                  jsw_texto_final(&w), &st);
   jsw_livre(&w);
@@ -838,14 +842,22 @@ int contapend_aplicar_local(void) {
                     copia[i].ms, &fonte);
       depois = vistoep_estado(copia[i].id, copia[i].temp, copia[i].ep);
       if (antes != depois) {
+        if (depois == 1)
+          printf("[visto] marcado por conta-jornal-importacao pos=0 dur=0 assistido=0s id=%s T%dE%d\n",
+                 copia[i].id, copia[i].temp, copia[i].ep);
         printf("[vistoep] %s T%dE%d: jornal perfil=%d op=%c gesto_ms=%lld confirmado=%d "
                "conf_ms=%lld mapa=%d->%d\n", copia[i].id, copia[i].temp, copia[i].ep,
                copia[i].perfil, copia[i].op, copia[i].ms, copia[i].conf,
                copia[i].confMs, antes, depois);
         fflush(stdout);
       }
-    } else
+    } else {
+      if (copia[i].op == '+') {
+        printf("[visto] marcado por conta-jornal-importacao pos=0 dur=0 assistido=0s id=%s\n", copia[i].id);
+        fflush(stdout);
+      }
       cat_historico_definir_id(copia[i].id, copia[i].tipo, copia[i].op == '+');
+    }
     k++;
   }
   free(copia);

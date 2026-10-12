@@ -733,6 +733,7 @@ static void ajPontEdRodape(int a, int b) { (void)a; (void)b; if (ajPontEdVale() 
 static void ajPontEdValor(int i, int b) {
   (void)b;
   if (!ajPontEdVale() || i < 0 || i >= nValores(uxOp) || (!uxRodape && uxPendente == i)) return;
+  if (uxOp == AJ_TEX_MB && texAcima(i)) return;
   uxRodape = 0; uxPendente = i;
 }
 static void ajPontEdNumero(int a, int b) { (void)a; (void)b; if (ajPontEdVale()) uxRodape = 0; }
@@ -924,11 +925,14 @@ static void aj2EditorEscolha(GfxRect m) {
     GfxRect r = { lx, y, lw, 96 };
     int fv;
     uxValorTexto(uxOp, i, t, sizeof t);
+    // Acima do que a RAM desta TV suporta: o rotulo fica puro e apagado, com o motivo a direita.
+    if (uxOp == AJ_TEX_MB && texAcima(i)) snprintf(t, sizeof t, "%s", i18n(o->valores[i]));
     if (ajPontEditor) {
+      PonteiroFn ac = uxOp == AJ_TEX_MB && texAcima(i) ? NULL : ajPontEdValor;
 #ifdef NV_TOUCH_UI
-      ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, y0, aj2EditorBase(m), ajPontEdValor, NULL, i, 0);
+      ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, y0, aj2EditorBase(m), ac, NULL, i, 0);
 #else
-      ponteiro_alvo(r.x, r.y, r.w, r.h, ajPontEdValor, NULL, i, 0);
+      ponteiro_alvo(r.x, r.y, r.w, r.h, ac, NULL, i, 0);
 #endif
     }
     if (foco) ajFocoLinha(r, 28, 1, 1);
@@ -944,8 +948,18 @@ static void aj2EditorEscolha(GfxRect m) {
         logoapp_miniatura(i, (GfxRect){r.x + 24, r.y + 16, 64, 64}, 1, foco ? 1.0f : 0.7f);
         textoX = r.x + 110;
       }
+      int indisp = uxOp == AJ_TEX_MB && texAcima(i);
       TxtLinha l = ajTxtC(TXT_V2_ROT, t, lw - 210 - (textoX - r.x));
-      txt_desenhar_alpha(l, textoX, r.y + (96 - l.h) * 0.5f, foco ? 1.0f : 0.88f);
+      txt_desenhar_alpha(l, textoX, r.y + (96 - l.h) * 0.5f, indisp ? 0.4f : foco ? 1.0f : 0.88f);
+      if (indisp) {
+        char mot[96];
+        TxtLinha m;
+        float mx = r.x + r.w - 30;
+        snprintf(mot, sizeof mot, i18n("acima do máximo desta TV (%d MB)"), tex_teto_ram_mb());
+        m = ajTxtC(TXT_V2_28, mot, r.w - 60 - (textoX - r.x) - l.w - 24 - (i == uxOriginal ? 200 : 0));
+        if (i == uxOriginal) mx -= 170;
+        txt_desenhar_alpha(m, mx - m.w, r.y + (96 - m.h) * 0.5f, 0.5f);
+      }
     }
     if (i == uxOriginal) {
       TxtLinha s = ajTxt(TXT_V2_28, "Salvo");

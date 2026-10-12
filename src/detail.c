@@ -32,6 +32,8 @@
 #include "idiomacod.h"
 #include "badges.h"
 #include "marco.h"
+#include "titulotempo.h"
+static TituloTempo detalheTempo;
 #include "ajustes.h"
 #include "home.h"
 #include "extras.h"
@@ -78,6 +80,7 @@
 #include "ponteiro.h"
 #include "rolagemtoque.h"
 #include "plrui.h"
+#include "avisodisp.h"
 #include "svdesenho.h"
 #include "amigostitulo.h"
 #include "amigostitulo_ui.h"
@@ -517,6 +520,13 @@ static int comentEp = 0;
 // le o foco ENQUANTO ele esta na fileira; ao descer ate os cartoes o foco ja
 // saiu de la e a conta caia no "retomar"/"proximo", que e outro episodio.
 static int comEpT = 0, comEpE = 0;
+// Escolhendo o episodio dos comentarios (segurar OK na pilula "Episódio"): o
+// foco foi para as fileiras de temporada/episodio e o OK volta para a pilula
+// em vez de reproduzir.
+static int comPicando = 0;
+// Dica de primeira vez da pilula, por perfil (avisodisp.h).
+#define COM_DICA_CHAVE "dica:comentarios-episodio"
+static int comDicaPend;   // enfileirada, ainda nao vista na ilha
 static int abaInfo = 0;              // aba de informacao escolhida
 
 // AS DUAS SECOES QUE SO CARREGAM QUANDO ALGUEM ENTRA NELAS.
@@ -1391,6 +1401,7 @@ static void abrirInterno(const HomeItem *it) {
   trailerSemFonteLogado = 0;
   trailercinema_zerar(&trailerCinema);
   idx = it->indice;
+  titulo_tempo_inicio(&detalheTempo, "detalhe", cat_item(idx));
   // O TRAILER DO CARTAZ CONTINUA AQUI, COM SOM (pedido do rawldon, canario
   // tpk-janela; so o .tpk, NV_TRAILER_CONTINUA_DETALHE em trailerfonte.h).
   // Se o destaque da home esta tocando o trailer DESTE titulo, a pagina o
@@ -1437,7 +1448,11 @@ static void abrirInterno(const HomeItem *it) {
       idxCopia = *ci0; idxTemCopia = 1;
     } }
   { const CatItem *ci0 = cat_item(idx);
-    artehero_logo_sessao_iniciar(ci0); }
+    artehero_logo_sessao_iniciar(ci0);
+    const char *logo = logoDe(idx);
+    GLuint tex = logo ? tex_obter_logo_larg_qualquer(logo, NV_DETW_LOGO_MAXW) : 0;
+    titulo_tempo_logo(&detalheTempo, "detalhe", logo, tex, 0);
+  }
   // Nota do Trakt, comentarios e relacionados. Pedido na ABERTURA e nao no
   // desenho: as abas so aparecem depois que o dado chega, e pedir no desenho
   // faria a barra de abas surgir com o titulo ja na tela.
@@ -1473,6 +1488,7 @@ static void abrirInterno(const HomeItem *it) {
   temporada = 0;
   epAncora = 0;
   comEpT = comEpE = 0;
+  comPicando = 0;
   { const CatItem *ci0 = cat_item(idx);
     int t = 0, e = 0, achou = 0;
     if (ci0 && ci0->progresso > 0 && ci0->progresso < ajustes_cw_concluido() &&
@@ -1751,6 +1767,51 @@ static int episodioDosComentarios(int *temp, int *epis) {
     *temp = comEpT; *epis = comEpE; return 1;
   }
   return episodioAlvo(temp, epis, NULL);
+}
+
+// De volta a pilula "Episódio" com o episodio que o foco pisou (comEpT/comEpE
+// seguem o foco na fileira de episodios, ver detail_atualizar).
+static void comentariosVoltar(void) {
+  // Captura o episodio focado AQUI: o laco SDL processa todos os eventos antes
+  // de detail_atualizar, entao Direita + OK no mesmo lote deixava comEpT/comEpE
+  // um episodio atras. A coluna lembrada tambem e a que a reabertura usa.
+  if (foco.fileira == SEC_EPISODIOS) {
+    const CatEp *ep = cat_episodio(idx, epAbsoluto(foco.coluna));
+    if (ep) { comEpT = ep->temporada; comEpE = ep->episodio; }
+    epAncora = foco.coluna;
+    foco.colunaLembrada[SEC_EPISODIOS] = foco.coluna;
+  }
+  comPicando = 0;
+  comentEp = 1;
+  foco.fileira = SEC_COMENTARIOS;
+  foco.coluna = 1;
+}
+
+static void comentariosEscolher(void) {
+  int n = foco.nColunas[SEC_EPISODIOS], k, c;
+  const CatItem *ci = cat_item(idx);
+  if (n <= 0) return;
+  // Voltar das temporadas deixa a pagina em outra temporada que a confirmada:
+  // reabrir volta para a do episodio de comEpT/comEpE.
+  if (comEpT > 0 && ci && ci->nTemporadas > 0 && temporadaEm(temporada) != comEpT)
+    for (k = 0; k < ci->nTemporadas; k++)
+      if (ci->temporadas[k] == comEpT) {
+        temporada = k;
+        irParaTemporada(k, 0);
+        foco.colunaLembrada[SEC_TEMPORADAS] = k;
+        n = foco.nColunas[SEC_EPISODIOS] = epVisiveis();
+        for (c = 0; c < n; c++) {
+          const CatEp *e = cat_episodio(idx, epAbsoluto(c));
+          if (e && e->episodio == comEpE) { epAncora = c; foco.colunaLembrada[SEC_EPISODIOS] = c; break; }
+        }
+        break;
+      }
+  comPicando = 1;
+  foco.fileira = SEC_EPISODIOS;
+  foco.coluna = foco.colunaLembrada[SEC_EPISODIOS];
+  if (foco.coluna < 0 || foco.coluna >= n) foco.coluna = n - 1 < epAncora ? n - 1 : epAncora;
+  ilha_avisar("det-com-ep", ILHA_INFO, NULL,
+              i18n("Escolha a temporada e o episódio e aperte OK"), 6000u, 0);
 }
 
 int detail_ep_foco(int *temp, int *epis) {
@@ -2099,9 +2160,10 @@ static int secaoN(int r) {
     case SEC_FRASES:
       return (ci && ci->imdb[0]) ? 1 : 0;
     // Sem nenhuma nota a secao nao existe (nada de painel vazio).
-    // UM BLOCO POR FONTE na grade de duas colunas (detail_evento anda nela).
+    // UMA PARADA SO: o numero grande. Os blocos por fonte nao tomam foco
+    // (dono 11/10/2026: "so focar no numero grande e depois ja desce").
     case SEC_NOTAS:
-      return notasui_fontes_n(notasDados());
+      return notasui_fontes_n(notasDados()) > 0 ? 1 : 0;
     // A grade de episodios virou o cartao "Notas por episodio" do bloco acima.
     case SEC_NOTAS_EP:
       return 0;
@@ -2709,6 +2771,9 @@ void detail_evento(const SDL_Event *e) {
       // "Série | Episódio": a pilula escolhe a fonte dos cartoes (ver a nota
       // em detail_atualizar sobre por que nao e ao passar o foco).
       comentEp = foco.coluna;
+      // Segurar OK em "Episódio": escolher temporada e episodio nas proprias
+      // fileiras da pagina; o OK de la devolve o foco para ca.
+      if (comentEp && dur >= NV_HOLD_MS) comentariosEscolher();
     } else if (foco.fileira == SEC_TRAILERS) {
       // OK num trailer. Onde ha pagina (Samsung), o trailer toca AQUI, em
       // tela cheia e com som, atras do canvas (trailer.h) — era o #82: o
@@ -2761,7 +2826,8 @@ void detail_evento(const SDL_Event *e) {
       // a folha so abre de dentro do player. Quem estava na pagina de detalhe —
       // que e onde qualquer um iria procurar — segurava o card e via as fontes.
       const CatEp *ep = cat_episodio(idx, epAbsoluto(foco.coluna));
-      if (dur >= NV_HOLD_MS && ep)
+      if (comPicando) comentariosVoltar();
+      else if (dur >= NV_HOLD_MS && ep)
         episodios_menu_visto(idx, ep->temporada, ep->episodio, ep->nome);
       else
         // ISSUE #57, SEGUNDA VOLTA. O toque curto no card do episodio abria a
@@ -2799,7 +2865,8 @@ void detail_evento(const SDL_Event *e) {
 
   if (k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE ||
       k == SDLK_DELETE) {
-    if (acoesAgrupadas() && maisAcoes && nivel == 0) { maisAcoes = 0; botao = temInicio() ? 1 : 0; }
+    if (comPicando) comentariosVoltar();
+    else if (acoesAgrupadas() && maisAcoes && nivel == 0) { maisAcoes = 0; botao = temInicio() ? 1 : 0; }
     else if (nivel > 0) nivel = 0;
     else if (carro && carCheia) carCheia = 0;   // tela cheia no topo -> cartao
     else if (nVolta > 0) { pedAbrir = voltaPilha[--nVolta]; voltando = 1; }   // volta ao titulo de onde veio
@@ -2878,22 +2945,10 @@ void detail_evento(const SDL_Event *e) {
   // primeiro da T1 continua pedindo o menu lateral).
   if (ehSerie() && foco.fileira == SEC_EPISODIOS && (k == SDLK_LEFT || k == SDLK_RIGHT) &&
       detail_ep_borda(k == SDLK_RIGHT ? 1 : -1)) return;
-  // NOTAS: os blocos de fonte sao uma grade de DUAS colunas. Cima/baixo anda
-  // dentro dela antes de sair da secao; esquerda/direita nao atravessa a linha
-  // (esquerda na coluna da esquerda pede o menu, como nas outras fileiras).
+  // NOTAS: uma parada so (o numero grande); esquerda pede o menu, direita nao
+  // anda, cima/baixo saem pela regra comum.
   if (foco.fileira == SEC_NOTAS) {
-    int nc = foco.nColunas[SEC_NOTAS], c = foco.coluna;
-    // Linha de baixo incompleta: da coluna da direita desce para o ultimo bloco.
-    if (k == SDLK_DOWN && c / NOTASUI_COLUNAS < (nc - 1) / NOTASUI_COLUNAS) {
-      foco.coluna = c + NOTASUI_COLUNAS < nc ? c + NOTASUI_COLUNAS : nc - 1;
-      return;
-    }
-    if (k == SDLK_UP && c >= NOTASUI_COLUNAS) { foco.coluna -= NOTASUI_COLUNAS; return; }
-    if (k == SDLK_RIGHT) {
-      if (c % NOTASUI_COLUNAS < NOTASUI_COLUNAS - 1 && c + 1 < nc) foco.coluna++;
-      return;
-    }
-    if (k == SDLK_LEFT && c % NOTASUI_COLUNAS > 0) { foco.coluna--; return; }
+    if (k == SDLK_RIGHT) return;
     if (k == SDLK_LEFT) { pediuMenu = 1; return; }
   }
   if (k == SDLK_RIGHT) {
@@ -3389,6 +3444,24 @@ void detail_atualizar(float dt, Uint32 agora) {
     if (c >= 0) foco.colunaLembrada[SEC_PROGTEMP] = c;
   }
 
+  // Saiu das fileiras de temporada/episodio sem confirmar: desfaz o modo.
+  if (comPicando && foco.fileira != SEC_EPISODIOS && foco.fileira != SEC_TEMPORADAS)
+    comPicando = 0;
+  // Primeira vez que o foco chega na pilula "Episódio" (por perfil): a ilha diz
+  // que segurar OK escolhe temporada e episodio. O rotulo "Segure OK" ao lado
+  // da pilula e a versao permanente.
+  // A dispensa so e gravada depois de a ilha MOSTRAR (ilha_mostrou): com a fila
+  // cheia ela descarta o aviso, e o perfil nunca mais veria a dica.
+  if (comDicaPend && ilha_mostrou(COM_DICA_CHAVE)) { avisodisp_por(COM_DICA_CHAVE); comDicaPend = 0; }
+  if (nivel >= 1 && foco.fileira == SEC_COMENTARIOS && ehSerie() && foco.coluna == 1 &&
+      !avisodisp_tem(COM_DICA_CHAVE)) {
+    if (!comDicaPend) {
+      ilha_avisar(COM_DICA_CHAVE, ILHA_INFO, NULL,
+                  i18n("Segure OK em Episódio para escolher a temporada e o episódio"), 6000u, 0);
+      comDicaPend = 1;
+    }
+  } else comDicaPend = 0;
+
   // SELETOR DE COMENTARIOS: a fonte troca no OK, NAO ao passar o foco.
   //
   // Trocava ao passar (#78, Owlphibia: "the TV Show option not being able to
@@ -3555,6 +3628,7 @@ void detail_atualizar(float dt, Uint32 agora) {
   if (okDesceEm && !ctx_aberto()) {
     Uint32 dur = agora - okDesceEm;
     int alvoHold = (nivel >= 1 && (foco.fileira == SEC_EPISODIOS || foco.fileira == SEC_TEMPORADAS)) ||
+                   (nivel >= 1 && foco.fileira == SEC_COMENTARIOS && ehSerie() && foco.coluna == 1) ||
                    (nivel == 0 && !focoAmigos && acaoEm(botao) == ACAO_PRIMARIO);
     if (alvoHold && dur >= 150u) {
       float p = (float)(dur - 150u) / (float)(NV_HOLD_MS - 150);
@@ -4319,6 +4393,8 @@ static void heroWeb(float a, float desloc) {
   // pedido. Pedindo o teto, o logo sumia por um instante ao abrir o titulo;
   // pedindo a largura real, aparece na hora e troca pela nitida em seguida.
   GLuint texLogo = arqLogo ? tex_obter_logo_larg_qualquer(arqLogo, larguraLogoHero()) : 0;
+  titulo_tempo_logo(&detalheTempo, "detalhe", arqLogo, texLogo, 0);
+  if (a > 0.05f) titulo_tempo_info(&detalheTempo, "detalhe", ci, 0);
   float baseLogo = ((temRetom > 0.0f || agLinha[0]) ? yEstado : yAcoes)
                    - NV_DETW_LOGO_GAP;
   float espacoLogo = baseLogo - 110.0f - (!nomeAbaixo ? hNome : 0);
@@ -4374,8 +4450,10 @@ static void heroWeb(float a, float desloc) {
     // -1 = ainda carregando: trata como clara e nao tinge. Errar para o lado de
     // nao mexer na arte e o certo enquanto nao se sabe.
     { GfxModo m = tex_marca_escura(arqLogo) ? GFX_MARCA : GFX_TEXTO;
-      if (r.w > 0 && r.h > 0)
-        gfx_rect(r, texLogo, m, 0, 0, 0, 0.0f, 1, 1, 1, aLogo); }
+      if (r.w > 0 && r.h > 0) {
+        gfx_rect(r, texLogo, m, 0, 0, 0, 0.0f, 1, 1, 1, aLogo);
+        titulo_tempo_logo(&detalheTempo, "detalhe", arqLogo, texLogo, aLogo > 0.05f);
+      } }
   } else if (nome && !nomeAbaixo) {
     txt_bloco(TXT_DET_META2, nome, 255, 255, 255, NV_DETW2_X,
               baseLogo - fminf(NV_DETW_LOGO_H, espacoLogo) - hNome,
@@ -5506,6 +5584,7 @@ static void desenhaDetalhes(float x, float y, float f, float a) {
 }
 
 static void desenhaElenco(float x, float y, int c, float f, float a) {
+  if (a > 0.05f) titulo_tempo_info(&detalheTempo, "detalhe", cat_item(idx), 1);
   const CatItem *ci = cat_item(idx);
   const char *nome = NULL, *papel = NULL, *foto = NULL;
   if (ci && c < ci->nElenco) {
@@ -6416,6 +6495,10 @@ static float cabecalhoComentarios(float x, float y, float a) {
           txt_peso(l, r.x + (r.w - l.w) * 0.5f, r.y + (r.h - l.h) * 0.5f, a, 0.5f); } }
       px += w + COM_PILL_GAP;
     }
+    // O gesto escondido, a vista: a mesma pilula de tecla das legendas.
+    { const char *k[1] = { "Segure OK" }, *r[1] = { "Escolher episódio" };
+      int emFoco = nivel >= 1 && foco.fileira == fileira && foco.coluna == 1;
+      plrui_dicas(k, r, 1, px + 8.0f, yy + COM_PILL_H * 0.5f, 0, (emFoco ? 0.9f : 0.5f) * a); }
     yy += COM_PILL_H + 28.0f;
   }
   return yy;

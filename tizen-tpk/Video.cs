@@ -595,9 +595,38 @@ namespace NuvioTpk
             Janela(x,y,w,h,lx,ly,lw,lh,false);
         }
 
+        // #426 (Q7FN, Tizen 4.0): a ROI/window with negative origin or bigger
+        // than the panel leaves the 2018 plane anchored top-left with a black
+        // band below. Tizen 5+ took it in the field, so only Program40 on a 4.x
+        // platform clears this; zoom then degrades to contain, centered.
+        public bool PlanoAceitaRoiFora = true;
+
+        // Keeps a destination rectangle inside the panel. Bigger than the panel:
+        // contain-fit, centered (aspect kept). Otherwise: slide inside.
+        internal static void CabeNaTela(ref int x, ref int y, ref int w, ref int h, int telaW, int telaH)
+        {
+            if (w <= 0 || h <= 0 || telaW <= 0 || telaH <= 0) return;
+            if (w > telaW || h > telaH)
+            {
+                double s = Math.Min((double)telaW / w, (double)telaH / h);
+                w = Math.Max(1, Math.Min(telaW, (int)Math.Round(w * s)));
+                h = Math.Max(1, Math.Min(telaH, (int)Math.Round(h * s)));
+                x = (telaW - w) / 2;
+                y = (telaH - h) / 2;
+                return;
+            }
+            x = Math.Max(0, Math.Min(x, telaW - w));
+            y = Math.Max(0, Math.Min(y, telaH - h));
+        }
+
         void Janela(int x, int y, int w, int h, int lx, int ly, int lw, int lh, bool telaCheiaSimples)
         {
             if (player == null || w <= 0 || h <= 0) return;
+            if (!PlanoAceitaRoiFora)
+            {
+                CabeNaTela(ref x, ref y, ref w, ref h, telaW, telaH);
+                CabeNaTela(ref lx, ref ly, ref lw, ref lh, telaW, telaH);
+            }
             bool applied = false;
             windowMetrics.Begin(player, x, y, w, h, x == 0 && y == 0 && w == telaW && h == telaH);
             long started = Stopwatch.GetTimestamp();

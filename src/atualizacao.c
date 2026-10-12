@@ -360,13 +360,14 @@ static int textoJson(const char *corpo, const char *chave, char *dst, size_t tam
 // 1.3.3 volta ao nome de contrato, e este codigo passa a aceitar os dois para
 // o proximo nome bonito nao quebrar de novo. A regra que nao muda: a normal
 // NUNCA casa com um nome que tenha "highcache".
-#ifdef NV_TEX_MB_FIXO
-#  define AT_SUFIXO "-highcache.ipk"
-#  define AT_SUFIXO2 "-highcache.ipk"
-#else
-#  define AT_SUFIXO "_arm.ipk"
-#  define AT_SUFIXO2 "-webos.ipk"
-#endif
+//
+// APOSENTADA NA 2.0.5. A build de cache grande (NV_TEX_MB_FIXO) tambem pega o
+// .ipk NORMAL: a 2.0.5 e a ultima highcache, e quem a instalou sai dela no
+// proximo "Atualizar agora". O teto de 300 MB vem da Ajustes > Memória para
+// imagens (migracao unica em ajustes.c). A highcache continua sendo empacotada
+// na 2.0.5 so para essa migracao chegar a quem a usa.
+#define AT_SUFIXO "_arm.ipk"
+#define AT_SUFIXO2 "-webos.ipk"
 
 static int terminaEm(const char *s, size_t n, const char *sufixo) {
   size_t k = strlen(sufixo);

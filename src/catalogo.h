@@ -484,6 +484,8 @@ int  cat_copiar_item(int indice, CatItem *saida);
 // ainda nao tem sinopse. Nao toca em mais nada. 1 = escreveu.
 int  cat_completar_sinopse(int indice, const char *imdb, const char *sinopse,
                            const char *titulo);
+// Logo, ano, nota e elenco primarios, apenas onde faltam; revalida id+tipo.
+int  cat_completar_basico(int indice, const CatItem *item);
 // Texto localizado de `indice` (titulo, sinopse, logo, fundo), se ele ainda e
 // `imdb`. Campo vazio nao apaga; nada mais do item e tocado. 1 = mudou.
 int  cat_aplicar_localizado(int indice, const char *imdb, const char *titulo,

@@ -202,6 +202,7 @@ static LegUiCand menuCand; // snapshot: late addon responses cannot change the a
 static int menuTipo, menuRecomendada;
 static float menuT, menuFocoA[3];   // molas do dropdown (abertura e foco por linha)
 static void abrirMenu(void);
+static int menuTiraSecundaria(void);
 // Language drilldown returns to the row that opened it.
 static int ver;
 static char verGrupo[96];
@@ -267,7 +268,7 @@ static int recomendada(const char *pref, int secundaria) {
     if (!cand[i].embutida && (!secundaria || legendasui_cand_secundaria_ok(&cand[i]))) {
       add[na] = cand[i].leg; mapa[na++] = i;
     }
-  r = legauto_escolher(add, na, pref, video_url_atual(), NULL, 0, 0);
+  r = legauto_escolher(add, na, pref, legauto_midia(video_url_atual()), NULL, 0, 0);
   free(add);
   return r >= 0 ? mapa[r] : -1;
 }
@@ -281,7 +282,7 @@ static uint64_t recAssinatura(void) {
   uint64_t h = 5381u;
   int i;
   h = recHashStr(h, prefLinha(0)); h = recHashStr(h, prefLinha(1));
-  h = recHashStr(h, video_url_atual());
+  h = recHashStr(h, legauto_midia(video_url_atual()));
   h = h * 33u + (uint64_t)nCand;
   for (i = 0; i < nCand; i++) {
     h = h * 33u + (uint64_t)(cand[i].embutida ? 1 : 0) * 3u + (uint64_t)(cand[i].tipo + 1);
@@ -342,11 +343,17 @@ static void montarLinhas(void) {
     linhaFixa(LR_ALVO, alvo, "m|alvo");
     linhaFixa(LR_ATRASO, alvo, "m|atraso");
     linhaFixa(LR_NENHUMA, alvo, "m|-");
+    // Sem idioma preferido (ou com "mostrar todas") o painel abre direto aqui
+    // e a linha do AutoSync, que so existia em Recomendadas, sumia.
+    if (!ver && estadoSync(alvo)) linhaFixa(LR_SYNC, alvo, alvo ? "m|sync|s" : "m|sync|p");
     // Dono, 11/10: a lista junta as do MESMO idioma (as embutidas e as dos
     // addons chegavam intercaladas). Os idiomas da preferencia primeiro, os
     // outros na ordem em que aparecem; dentro do grupo, a ordem de sempre.
     { int ordem[LEGUI_MAX_CAND], usado[LEGUI_MAX_CAND] = { 0 }, n = 0, j, g;
       const char *pref[2] = { prefLinha(0), prefLinha(1) };
+      // Sem preferencia, o idioma da legenda ATIVA abre a lista.
+      if (!pref[0][0]) for (i = 0; i < nCand; i++)
+        if (prim[0] && !strcmp(prim, cand[i].id) && cand[i].idioma[0]) { pref[0] = cand[i].idioma; break; }
       for (g = 0; g < 3; g++)
         for (i = 0; i < nCand; i++) {
           if (usado[i] || (g < 2 && !ling_casa(cand[i].idioma, pref[g]))) continue;
@@ -526,6 +533,7 @@ void legendasui_atualizar(float dt) {
 
 static void menuEscolher(void) {
   int acao = menuFoco;
+  if (acao == 1 && menuTiraSecundaria()) { menu = 0; escolher(1, NULL); return; }
   menu = 0;
   if (acao == 2) {
     if (!menuCand.id[0]) return;
@@ -940,11 +948,26 @@ static const CtxLinha menuLin[3] = {
   { "Usar como segunda legenda (junto)", "pl_layers" },
   { "Ver todas deste idioma", "aj_list-video" },
 };
+// With a second subtitle on, the "second" action on its own row (or on the
+// "Combinacao atual" pair) turns it off: once both were together the menu had
+// no way back out except scrolling to the "Sem segunda legenda" row.
+static int menuTiraSecundaria(void) {
+  const char *sec = legenda2_identidade();
+  int i;
+  if (!sec[0] || menuTipo == LR_NENHUMA) return 0;
+  if (menuTipo == LR_PAR || !strcmp(menuCand.id, sec)) return 1;
+  i = menuRecomendada && menuCand.id[0] ? recomendada(menuCand.idioma, 1) : -1;
+  return i >= 0 && !strcmp(cand[i].id, sec);
+}
+static const char *menuRot(int i) {
+  return i18n(i == 1 && menuTiraSecundaria() ? "Sem segunda legenda" : menuLin[i].rot);
+}
+static const char *menuIcone(int i) { return i == 1 && menuTiraSecundaria() ? "pl_eye-off" : menuLin[i].icone; }
 static GfxRect menuGeo(GfxRect c) {
   CtxLinha l[3];
   float ry = c.y + LU_PAD_Y + LU_TIT_H + 14.0f + (foco - rolagem) * (LU_LN_H + LU_LN_VAO);
   float w = 0.0f, h = LU_MENU_PAD * 2.0f + 3 * ctx_menu_passo() - 4.0f, y;
-  for (int i = 0; i < 3; i++) { l[i].rot = i18n(menuLin[i].rot); l[i].icone = menuLin[i].icone; }
+  for (int i = 0; i < 3; i++) { l[i].rot = menuRot(i); l[i].icone = menuIcone(i); }
   w = ctx_menu_largura(l, 3);
   y = ry + LU_LN_H + 6.0f;
   if (y + h > NV_VTELA_H - 24.0f) y = ry - 6.0f - h;
@@ -961,7 +984,7 @@ static void desenharMenu(GfxRect c, float a) {
   for (int i = 0; i < 3; i++) {
     GfxRect r = { m.x + LU_MENU_PAD, m.y + LU_MENU_PAD + i * ctx_menu_passo(), m.w - LU_MENU_PAD * 2.0f, 60.0f };
     int disponivel = i != 2 || menuCand.id[0];
-    ctx_menu_linha(r, i18n(menuLin[i].rot), menuLin[i].icone, menuFocoA[i], disponivel ? a : a * 0.35f, -1.0f);
+    ctx_menu_linha(r, menuRot(i), menuIcone(i), menuFocoA[i], disponivel ? a : a * 0.35f, -1.0f);
     if (disponivel && menuT > 0.9f) ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroMenu, ponteiroMenuEscolher, i, 0);
   }
 }

@@ -6,6 +6,7 @@
 #include "idioma.h"
 #include "descoberta.h"
 #include "layout.h"
+#include "segurar.h"
 #include "anim.h"
 #include "ponteiro.h"
 #include <stdio.h>
@@ -53,7 +54,7 @@ int ctxhold_passo(CtxHold *h, Uint32 agora, int feedback) {
   if (!h || !h->armado || h->longo) return 0;
   if (ctx_aberto()) { ctxhold_cancelar(h); return 0; }
   p = ctxhold_progresso(h, agora);
-  if (p >= 1.0f) { h->longo = 1; return 1; }
+  if (p >= 1.0f && segurar_venceu(agora, h->desde ? h->desde : 1, "lista")) { h->longo = 1; return 1; }
   if (feedback && agora - h->desde >= CTXH_TOQUE_MS)
     ilha_atividade(i18n("Segure para opções"), p);
   return 0;

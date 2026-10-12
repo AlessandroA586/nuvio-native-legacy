@@ -69,6 +69,7 @@
 #include "tex_cache.h"
 #include "anim.h"
 #include "layout.h"
+#include "segurar.h"
 #include "idioma.h"
 #include "video.h"      /* preview do canal focado no canto do guia */
 #include "player.h"     /* o preview e uma sessao "mini no guia" do player */
@@ -2573,7 +2574,7 @@ void guia_atualizar(float dt, Uint32 agora) {
   }
 
   // OK segurado = favorito.
-  if (okDesde && !okLongo && agora - okDesde >= NV_HOLD_MS) {
+  if (!okLongo && segurar_venceu(agora, okDesde, "guia")) {
     GCanal *c = linhaItem(focoLin, focoCol);
     if (c) favAlternar(c);
     okLongo = 1;

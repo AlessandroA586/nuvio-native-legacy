@@ -13,6 +13,7 @@
 #include "text.h"
 #include "tex_cache.h"
 #include "layout.h"
+#include "segurar.h"
 #include "anim.h"
 #include "movimento.h"
 #include "ajustes.h"
@@ -740,6 +741,7 @@ static int opTinhaRetomada;
 static void desfazerAssistido(const void *p) {
   const AssistidoCtx *c = p;
   int volta = !c->intencao;
+  if (volta) { printf("[visto] marcado por desfazer-menu-manual pos=0 dur=0 assistido=0s id=%s\n", c->ci.imdb); fflush(stdout); }
   visto_titulo(c->ci.imdb, c->ci.tipo, c->ci.temporadas, c->ci.nTemporadas, volta, visto_destinos());
   if (trakt_ativo()) trakt_assistido_tipo(c->ci.imdb, c->ci.tipo, volta);
   cat_historico_definir_id(c->ci.imdb, c->ci.tipo, volta);
@@ -828,6 +830,7 @@ static void aplicarEstilo(void) {
 // passo de historico do "Ja assisti" da recomendacao: `soMarcar` nunca desmarca).
 static void iniciarAssistido(int atual, const CatItem *ci, int soMarcar) {
       intencao = soMarcar ? 1 : (historicoDe(ci) == 1 ? 0 : 1);
+      if (intencao) { printf("[visto] marcado por menu-manual pos=0 dur=0 assistido=0s id=%s\n", ci->imdb); fflush(stdout); }
       opItem = *ci; opTinhaRetomada = ci->progresso > 0 || ci->restanteMin > 0;
       snprintf(operacaoImdb, sizeof operacaoImdb, "%s", ci->imdb);
       operacao = CTX_OP_HISTORICO;
@@ -1138,7 +1141,7 @@ void ctx_atualizar(float dt, Uint32 agora) {
     SDL_AddEventWatch(observarHold, NULL);
     holdObservador = 1;
   }
-  if (holdAtivo && agora - holdDesde >= NV_HOLD_MS) holdPronto = 1;
+  if (holdAtivo && segurar_venceu(agora, holdDesde ? holdDesde : 1, "menu")) holdPronto = 1;
   if (ajustes_animacoes_reduzidas())
     anim = aberto ? 1.0f : 0.0f;
   else if (inlineOn && doPainel) {

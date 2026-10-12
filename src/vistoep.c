@@ -170,6 +170,9 @@ void vistoep_fonte_log(const char *imdb, const char *fonte, const VistoFonte *c)
     u += (size_t)snprintf(quais + u, sizeof quais - u, "%sT%dE%d", i ? " " : ": ",
                           c->par[i].temporada, c->par[i].episodio);
   if (c->bloqueados > k && u + 5 < sizeof quais) snprintf(quais + u, sizeof quais - u, " ...");
+  if (c->vistos)
+    printf("[visto] marcado por %s-importacao pos=0 dur=0 assistido=0s id=%s n=%d (sem reproducao local)\n",
+           fonte, imdb, c->vistos);
   printf("[vistoep] %s: %s +%d (bloqueados %d%s; remoto mais novo %d)\n", imdb, fonte,
          c->vistos, c->bloqueados, quais, c->venceu);
   fflush(stdout);

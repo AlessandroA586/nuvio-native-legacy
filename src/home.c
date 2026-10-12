@@ -26,6 +26,12 @@
 #include "vertudo.h"
 #include "ctxmenu.h"
 #include "marco.h"
+#include "titulotempo.h"
+static TituloTempo heroTempo;
+static void heroTempoInicio(int indice) {
+  const CatItem *c = cat_item(indice);
+  if (c && strcmp(heroTempo.id, c->imdb)) titulo_tempo_inicio(&heroTempo, "hero", c);
+}
 #include "gfx.h"
 #include "text.h"
 #include "tex_cache.h"
@@ -1204,6 +1210,7 @@ static void heroPasso(int d) {
   alvo = heroIdxEm(pos + d);
   if (n <= 0 || alvo < 0) return;
   heroPendente = alvo;
+  heroTempoInicio(alvo);
   // Sem repouso: aqui a pessoa DISSE qual titulo quer. O repouso de
   // NV_HERO_REPOUSO_MS existe para o foco que atravessa uma fileira, onde cada
   // passo e caminho e nao destino.
@@ -3103,6 +3110,27 @@ void home_oculta(int oculta) { homeOculta = oculta ? 1 : 0; }
 // Pede (uma vez por posicao) a arte do hero de heroAtual+-1, em prioridade
 // baixa. Barato no quadro: depois de pedidos os dois, so compara dois inteiros;
 // enquanto a URL nao resolve (catalogo chegando) tenta no maximo a cada 250 ms.
+static void heroPedirLogo(const CatItem *ci, int lay, int cheio);
+static int heroInfoItem = -1;
+static void heroPreBuscarInfo(int indice) {
+  if (indice < 0 || heroInfoItem == indice) return;
+  heroInfoItem = indice;
+  int lista[3] = { indice, -1, -1 }, n = 1;
+  if (!focoHero && foco.fileira >= 0 && foco.fileira < nFileiras) {
+    const Fileira *f = &fileiras[foco.fileira];
+    for (int d = -1; d <= 1; d += 2) {
+      int col = foco.coluna + d;
+      if (col >= 0 && col < f->n) lista[n++] = fileiraItemIndice(f, col);
+    }
+  }
+  desc_sinopse_hero(lista, n);
+  heroPedirLogo(cat_item_exato(indice), ajustes_home_layout(), focoHero);
+  // Vizinhos aquecem o arquivo/miniatura, sem reservar outra textura de hero.
+  for (int k = 1; k < n; k++) {
+    const char *u = artehero_logo_sessao(cat_item_exato(lista[k]));
+    if (u) (void)tex_obter_larg(u, 128);
+  }
+}
 static void heroAquecerVizinhos(Uint32 agora) {
   int n = heroNLista(), pos, d;
   if (heroAtual != heroVizBase) { heroVizBase = heroAtual; heroVizFeito = 0; heroVizTentaEm = 0; }
@@ -3119,6 +3147,8 @@ static void heroAquecerVizinhos(Uint32 agora) {
     if (viz < 0 || viz == heroAtual || (d > 0 && n == 2)) { heroVizFeito |= bit; continue; }
     arte = arte_por_identidade(viz, 2);
     if (!arte) continue;
+    { const char *logo = artehero_logo_sessao(cat_item_exato(viz));
+      if (logo) (void)tex_obter_larg(logo, 128); }
     heroVizFeito |= bit;
     (void)tex_obter_hero_quente(arte);
     printf("[hero] pre-busca vizinho %s hash=%08lx\n", d < 0 ? "anterior" : "proximo",
@@ -3268,7 +3298,9 @@ void home_atualizar(float dt, Uint32 agora) {
     // atravessar uma fileira pedia uma dezena delas em dois segundos — o cache
     // estourava e despejava os posteres visiveis. Ver a nota em layout.h.
     if (alvo >= 0 && alvo != heroPendente) {
+      heroInfoItem = -1;
       heroPendente = alvo;
+      heroTempoInicio(alvo);
       heroPendenteEm = agora;
       // AQUECE O ARQUIVO JA, no passo do foco e nao no da troca. O pedido de
       // 1920 so acontecia quando o candidato virava heroi desejado — depois do
@@ -3285,6 +3317,10 @@ void home_atualizar(float dt, Uint32 agora) {
       // aconteceu, senao ela dispararia depois sem ninguem ter pedido.
       if (heroPendente == heroAtual) heroDesejado = -1;
     }
+    if (alvo >= 0 && agora - heroPendenteEm >= 300u)
+      heroPreBuscarInfo(alvo);
+    else if (focoHero && agora - heroUltTecla >= 300u)
+      heroPreBuscarInfo(heroDesejado >= 0 ? heroDesejado : heroAtual);
     if (alvo >= 0 && heroPendente != heroAtual &&
         agora - heroPendenteEm >= NV_HERO_REPOUSO_MS) {
       // So ANUNCIA o desejo. Quem efetiva a troca e o desenho, quando a textura
@@ -3310,6 +3346,7 @@ void home_atualizar(float dt, Uint32 agora) {
       int proximo = total > 0 ? heroIdxEm(((pos < 0 ? 0 : pos) + 1) % total) : 0;
       if (proximo < 0) proximo = 0;
       heroPendente = proximo;
+      heroTempoInicio(proximo);
       heroPendenteEm = agora - NV_HERO_REPOUSO_MS;
       // O carrossel tambem ganha o arquivo quente: o proximo item ja e
       // conhecido aqui, muito antes de o prazo de espera comecar a contar.
@@ -3786,7 +3823,11 @@ static float heroLogoMaxW(int lay, int cheio) {
 // titulo que esta na tela.
 static void heroPedirLogo(const CatItem *ci, int lay, int cheio) {
   const char *url = ci ? artehero_logo_sessao(ci) : NULL;
-  if (url && url[0]) (void)tex_obter_logo_larg_qualquer(url, heroLogoMaxW(lay, cheio));
+  if (url && url[0]) {
+    GLuint tex = tex_obter_logo_larg_qualquer(url, heroLogoMaxW(lay, cheio));
+    if (ci && !strcmp(heroTempo.id, ci->imdb))
+      titulo_tempo_logo(&heroTempo, "hero", url, tex, 0);
+  }
 }
 
 static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
@@ -3887,6 +3928,13 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
   // Durante a promoção para o hero, entregar a textura menor já pronta evita
   // um quadro vazio; o cache continua reprocessando para o teto final.
   GLuint tlogo = urlLogo ? tex_obter_logo_larg_qualquer(urlLogo, maxWLogo) : 0;
+  if (principal && ci) {
+    if (!heroTempo.id[0]) heroTempoInicio(heroAtual);
+    if (!strcmp(heroTempo.id, ci->imdb)) {
+      titulo_tempo_logo(&heroTempo, "hero", urlLogo, tlogo, aTexto * heroEntra > 0.05f);
+      if (aCopy > 0.05f) titulo_tempo_info(&heroTempo, "hero", ci, 0);
+    }
+  }
   // COR VIVA: o logo do mesmo titulo do destaque ("Cor da logo").
   if (urlLogo && principal) corviva_definir_logo(urlLogo, CORVIVA_HOME);
   // Igual ao detalhe: nome escrito so quando nao ha logo ou o cache ja falhou.

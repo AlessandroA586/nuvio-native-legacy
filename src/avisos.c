@@ -14,6 +14,7 @@
 #include "text.h"
 #include "anim.h"
 #include "layout.h"
+#include "segurar.h"
 #include "idioma.h"
 #include "ajustes.h"
 #include "recomenda.h"
@@ -1080,7 +1081,7 @@ void avisos_atualizar(float dt, Uint32 agora) {
   }
 
   // O limiar do OK longo na central, com o dedo ainda no botao.
-  if (aberto && okDesde && SDL_GetTicks() - okDesde >= NV_HOLD_MS) soltarOk(1);
+  if (aberto && segurar_venceu(SDL_GetTicks(), okDesde, "avisos")) soltarOk(1);
   if (!aberto) okDesde = 0;
   if (vistosSujos && !aberto) vistosGravar();
   avisos_envio_auto_passo(agora);

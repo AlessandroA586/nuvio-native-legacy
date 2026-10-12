@@ -10,6 +10,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+unsigned int SDL_GetTicks(void) { return 0; }
+void marco(const char *m) { (void)m; }
+
 static _Atomic int apagados, cinemetaGets;
 
 static const char *registro(int id, const char *paused, int pct) {

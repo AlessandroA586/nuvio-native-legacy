@@ -72,6 +72,10 @@ for abi in arm64-v8a armeabi-v7a; do
   for so in libcurl.so libjpeg.so libwebp.so; do
     f="$CACHE/prefix/$abi/lib/$so"
     if [ -f "$f" ]; then mkdir -p "$EST/jnilibs/$abi"; cp "$f" "$EST/jnilibs/$abi/"
+    # Sem libcurl o app cai inteiro no HttpURLConnection e imagem chega com 0 B
+    # (11/10: limpeza de disco apagou ~/.cache/*; APK sem logo nem capa na TCL).
+    elif [ "$so" = libcurl.so ] && [ -z "${NUVIO_SEM_CURL:-}" ]; then
+      echo "ERRO: $abi/libcurl.so ausente em $CACHE/prefix (NUVIO_SEM_CURL=1 para seguir sem)" >&2; exit 1
     else echo "  aviso: $abi/$so ausente em $CACHE/prefix (o APK segue sem ela)"; fi
   done
 done

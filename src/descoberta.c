@@ -2947,7 +2947,13 @@ static int montarContinuar(CatItem *saida, int max) {
   // Simkl nesta TV disse que acompanha por ele; deixa-lo de fora do padrao
   // repetiria o defeito do #5 — uma fonte vinculada e ignorada em silencio.
   // Quem nao vinculou nao paga nada: sem token, nenhum pedido sai.
-  int fonte = ajustes_cw_fonte();
+  //
+  // "SO O TRAKT" NUM PERFIL SEM TRAKT: a escolha veio do perfil principal (a
+  // primeira visita parte dele; ajustes-p<N>.txt antigo nao tem cwFonteLocal).
+  // Na C9 do dono o perfil 2 ficava com a fileira vazia e o progresso da conta
+  // aceito no disco. Sem vinculo nao ha Trakt a escolher: vale "Todas".
+  int fonte = ajustes_cw_fonte() == AJ_CWF_TRAKT && !trakt_ativo() ? AJ_CWF_AMBAS
+                                                                    : ajustes_cw_fonte();
   int querConta = fonte == AJ_CWF_AMBAS || fonte == AJ_CWF_CONTA;
   int querTrakt = fonte == AJ_CWF_AMBAS || fonte == AJ_CWF_TRAKT;
   int querSimkl = (fonte == AJ_CWF_AMBAS || fonte == AJ_CWF_SIMKL) && simkl_ativo();
@@ -5280,37 +5286,117 @@ void desc_esquecer(void) {
 // 96 porque "xperience:<id longo>" passava dos 40 e dois ids com o mesmo comeco
 // dividiriam a chave.
 #define META_CACHE_N 12
-static struct { char id[96]; char *corpo; unsigned uso; } metaCache[META_CACHE_N];   // "series/tt..."
+static struct { char id[256]; char *corpo; unsigned uso; time_t quando; } metaCache[META_CACHE_N];
 static unsigned metaRelogio;
 static pthread_mutex_t metaTrava = PTHREAD_MUTEX_INITIALIZER;
-
+#define META_TTL_S (6 * 60 * 60)
+#ifdef __EMSCRIPTEN__
+#include "dados.h"
+#define META_FS_TRAVAR() dados_fs_travar()
+#define META_FS_LIBERAR() dados_fs_liberar()
+#else
+#define META_FS_TRAVAR() ((void)0)
+#define META_FS_LIBERAR() ((void)0)
+#endif
+const char *dados_dir(void);
+static void metaChaveContexto(const char *id, char *dst, size_t n) {
+  const char *usuario = sessao_usuario();
+  snprintf(dst, n, "%s/%d/%s/%s", usuario ? usuario : "", perfis_ativo(), desc_tmdb_idioma(), id);
+}
+static int metaDiscoNome(const char *chave, char *dst, size_t n) {
+  const char *dir = dados_dir();
+  if (!dir || !dir[0]) return 0;
+  snprintf(dst, n, "%s/meta-%02u.txt", dir, hashBaseAddon(chave) % 64);
+  return 1;
+}
+// ponytail: 64 slots (colisao vira miss), ate 256 KiB/corpo e validade 6 h.
+// Sem indice novo: ampliar slots apenas se a taxa de miss justificar.
+static char *metaDiscoLer(const char *chave) {
+  char nome[700], linha[300]; long quando;
+  char *corpo = NULL;
+  if (!metaDiscoNome(chave, nome, sizeof nome)) return NULL;
+  META_FS_TRAVAR();
+  FILE *f = fopen(nome, "rb");
+  if (!f) { META_FS_LIBERAR(); return NULL; }
+  if (fgets(linha, sizeof linha, f) && sscanf(linha, "%ld", &quando) == 1 &&
+      quando <= (long)time(NULL) && time(NULL) - quando < META_TTL_S &&
+      fgets(linha, sizeof linha, f)) {
+    linha[strcspn(linha, "\n")] = 0;
+    if (!strcmp(linha, chave)) {
+      long ini = ftell(f), fim;
+      if (!fseek(f, 0, SEEK_END) && (fim = ftell(f)) > ini && fim - ini <= 256 * 1024 &&
+          !fseek(f, ini, SEEK_SET)) {
+        corpo = malloc((size_t)(fim - ini) + 1);
+        if (corpo) {
+          if (fread(corpo, 1, (size_t)(fim - ini), f) == (size_t)(fim - ini)) corpo[fim - ini] = 0;
+          else { free(corpo); corpo = NULL; }
+        }
+      }
+    }
+  }
+  fclose(f);
+  META_FS_LIBERAR();
+  return corpo;
+}
+static void metaDiscoGravar(const char *chave, const char *corpo) {
+  char nome[700], tmp[720];
+  if (!corpo || strlen(corpo) > 256 * 1024 || !metaDiscoNome(chave, nome, sizeof nome)) return;
+  snprintf(tmp, sizeof tmp, "%s.tmp", nome);
+  META_FS_TRAVAR();
+  FILE *f = fopen(tmp, "wb");
+  if (!f) { META_FS_LIBERAR(); return; }
+  int ok = fprintf(f, "%ld\n%s\n%s", (long)time(NULL), chave, corpo) > 0;
+  if (fclose(f)) ok = 0;
+  if (ok) ok = rename(tmp, nome) == 0;
+  if (!ok) remove(tmp);
+  META_FS_LIBERAR();
+#ifdef __EMSCRIPTEN__
+  if (ok) dados_marcar_sujo(1);
+#endif
+}
 static char *metaCacheObter(const char *id) {
+  char chave[256], msg[220];
+  metaChaveContexto(id, chave, sizeof chave);
   char *r = NULL;
   pthread_mutex_lock(&metaTrava);
   for (int i = 0; i < META_CACHE_N; i++)
-    if (metaCache[i].corpo && !strcmp(metaCache[i].id, id)) {
+    if (metaCache[i].corpo && !strcmp(metaCache[i].id, chave) &&
+        metaCache[i].quando <= time(NULL) && time(NULL) - metaCache[i].quando < META_TTL_S) {
       metaCache[i].uso = ++metaRelogio;
-      r = strdup(metaCache[i].corpo); /* o fio trabalha em copia estavel */
+      r = strdup(metaCache[i].corpo);
       break;
     }
+  const char *fonte = r ? "memoria" : "disco";
+  if (!r) r = metaDiscoLer(chave);
   pthread_mutex_unlock(&metaTrava);
+  if (r) {
+    snprintf(msg, sizeof msg, "meta: origem chave=%s fonte=%s", id, fonte);
+    marco(msg);
+  }
   return r;
 }
 
 static void metaCacheGuardar(const char *id, const char *corpo) {
+  char chave[256];
+  metaChaveContexto(id, chave, sizeof chave);
   int vaga = 0;
   char *copia = strdup(corpo);
   if (!copia) return;
   pthread_mutex_lock(&metaTrava);
   for (int i = 0; i < META_CACHE_N; i++) {
-    if (metaCache[i].corpo && !strcmp(metaCache[i].id, id)) { vaga = i; break; }
+    if (metaCache[i].corpo && !strcmp(metaCache[i].id, chave)) { vaga = i; break; }
     if (!metaCache[i].corpo || metaCache[i].uso < metaCache[vaga].uso) vaga = i;
   }
   free(metaCache[vaga].corpo);
   metaCache[vaga].corpo = copia;
   metaCache[vaga].uso = ++metaRelogio;
-  snprintf(metaCache[vaga].id, sizeof metaCache[vaga].id, "%s", id);
+  metaCache[vaga].quando = time(NULL);
+  snprintf(metaCache[vaga].id, sizeof metaCache[vaga].id, "%s", chave);
+  metaDiscoGravar(chave, corpo);
   pthread_mutex_unlock(&metaTrava);
+  char msg[220];
+  snprintf(msg, sizeof msg, "meta: recebida chave=%s fonte=rede", id);
+  marco(msg);
 }
 
 // --- TEXTO LOCALIZADO (#176) ---------------------------------------------------
@@ -5378,7 +5464,7 @@ static char *metaDoAddonT(int i, const char *tipo, const char *id, int prazo) {
   if (metaNegAtiva(chave)) return NULL;
   if (!descPedidoCoube(base, nv_addon_url(url, sizeof url, base, "/meta/%s/%s.json", tipo, idUrl),
                        sizeof url)) return NULL;
-  c = rede_baixar(url, prazo);
+  c = metaprov_get_rede(url, prazo, NULL, NULL);
   if (c) metaCacheGuardar(chave, c);
   else metaNegGuardar(chave);
   return c;
@@ -5909,12 +5995,13 @@ static void localizarContinuarPublicado(void) {
 // (metaprov_meta: catalogo do Nuvio, Cinemeta so como reserva), em fio proprio,
 // UM pedido por vez e com pausa entre eles — nunca uma rajada de 10.
 //
-// So a sinopse (e o nome, se o item veio sem) e escrita: a arte do item nao
-// muda, senao o fundo do destaque trocaria debaixo de quem esta olhando.
+// Sinopse, logo, ano e nota so preenchem lacunas: fundo/arte existente ficam.
+// O corpo e compartilhado com o detalhe, em memoria e em disco.
 // O resultado vai para o CATALOGO (cat_atualizar_item), entao o detalhe, que
 // le o mesmo item, reaproveita sem pedir de novo. Titulo que nao conseguiu
 // sinopse (rede, ficha sem descricao) NAO sai do destaque: aparece sem ela, e
 // a falha vai para o log, com o id, para nao ser silencio.
+static void completarRaso(CatItem *dst, const char *corpo, const char *tipo);
 #define HSIN_LOTE 10
 #define HSIN_PAUSA_MS 150
 #define HSIN_NEG_N 32
@@ -5945,30 +6032,39 @@ static void hsNegGuardar(const char *imdb) {
   pthread_mutex_unlock(&hsTrava);
 }
 
-// Preenche a sinopse de UM item raso. -1 = nada a fazer (ja tem sinopse, canal,
-// id que nao e do IMDb); 1 = preencheu; 0 = tentou e nao veio texto.
+// Completa texto e logo de UM item raso. -1 = nada a fazer (ja tem ambos, canal,
+// id que nao e do IMDb); 1 = preencheu; 0 = tentou e faltou texto/logo.
 // `get` e o provedor de rede (NULL = o de sempre); o teste passa o dele.
 int desc_sinopse_completar_item(CatItem *c, MetaprovGet get, void *ctx) {
   char id[24], tit[160], sin[900];
   const char *tipo;
   char *corpo;
   int prov = -1;
-  if (!c || c->sinopse[0] || !locChaveDoItem(c, id, sizeof id, &tipo)) return -1;
-  corpo = get ? metaprov_meta_com(tipo, id, 10, get, ctx, &prov)
-              : metaprov_meta(tipo, id, 10, &prov);
+  if (!c || (c->sinopse[0] && c->logo[0]) || !locChaveDoItem(c, id, sizeof id, &tipo)) return -1;
+  int tinhaSinopse = c->sinopse[0] != 0;
+  char chave[96];
+  desc_meta_chave(chave, sizeof chave, tipo, id);
+  corpo = metaCacheObter(chave);
+  if (!corpo) {
+    corpo = get ? metaprov_meta_com(tipo, id, 10, get, ctx, &prov)
+                : metaprov_meta(tipo, id, 10, &prov);
+    if (corpo) metaCacheGuardar(chave, corpo);
+  }
   tit[0] = sin[0] = 0;
-  if (!corpo || !metaTextos(corpo, tit, sizeof tit, sin, sizeof sin) || !sin[0]) {
+  if (!corpo || !metaTextos(corpo, tit, sizeof tit, sin, sizeof sin)) {
     const char *porque = corpo ? "a ficha nao tem descricao" : "sem resposta da rede";
     free(corpo);
     printf("[hero] sinopse NAO preenchida %s (%s)\n", id, porque);
     fflush(stdout);
     return 0;
   }
+  if (!c->sinopse[0] && sin[0]) snprintf(c->sinopse, sizeof c->sinopse, "%s", sin);
+  completarRaso(c, corpo, tipo);
   free(corpo);
-  snprintf(c->sinopse, sizeof c->sinopse, "%s", sin);
+  if (!c->logo[0] && (tinhaSinopse || !c->sinopse[0])) return 0;
   if (!c->titulo[0] && tit[0]) snprintf(c->titulo, sizeof c->titulo, "%s", tit);
-  printf("[hero] sinopse preenchida %s (%d caracteres, %s)\n", id, (int)strlen(sin),
-         prov == METAPROV_CINEMETA ? "Cinemeta" : "catalogo do Nuvio");
+  printf("[hero] sinopse preenchida %s (%d caracteres, %s)\n", id, (int)strlen(c->sinopse),
+         prov == METAPROV_CINEMETA ? "Cinemeta" : "catalogo do Nuvio/cache");
   fflush(stdout);
   return 1;
 }
@@ -5990,17 +6086,22 @@ static void *fioSinopseHero(void *u) {
       char imdb[64];
       int r;
       if (!e) continue;
-      if (!cat_copiar_item(lista[k], e) || e->sinopse[0]) { free(e); continue; }
+      if (!cat_copiar_item(lista[k], e) || (e->sinopse[0] && e->logo[0])) { free(e); continue; }
       snprintf(imdb, sizeof imdb, "%s", e->imdb);
       if (hsNegativo(imdb)) { free(e); continue; }
       r = desc_sinopse_completar_item(e, NULL, NULL);
       if (r == 0) hsNegGuardar(imdb);
-      // O catalogo pode ter sido refeito enquanto a rede respondia: so a
-      // sinopse (e o nome, se faltava) entram, e so se o indice ainda e este
-      // titulo. Nada mais do item e reescrito.
-      if (r == 1) cat_completar_sinopse(lista[k], imdb, e->sinopse, e->titulo);
+      // Publica somente lacunas, revalidando identidade; preserva outros escritores.
+      if (r == 1) {
+        cat_completar_sinopse(lista[k], imdb, e->sinopse, e->titulo);
+        cat_completar_basico(lista[k], e);
+      }
       free(e);
       SDL_Delay(HSIN_PAUSA_MS);   // um pedido por vez, com folga entre eles
+      pthread_mutex_lock(&hsTrava);
+      int mudouFoco = hsDeNovo;
+      pthread_mutex_unlock(&hsTrava);
+      if (mudouFoco) break;       // foco novo nao espera todo o lote antigo
     }
     pthread_mutex_lock(&hsTrava);
     if (hsDeNovo) { pthread_mutex_unlock(&hsTrava); continue; }
@@ -6019,7 +6120,7 @@ void desc_sinopse_hero(const int *idx, int n) {
   if (n > HSIN_LOTE) n = HSIN_LOTE;
   for (i = 0; i < n; i++) {
     const CatItem *o = idx[i] >= 0 && idx[i] < cat_n() ? cat_item(idx[i]) : NULL;
-    if (o && !o->sinopse[0]) { falta = 1; break; }
+    if (o && (!o->sinopse[0] || !o->logo[0])) { falta = 1; break; }
   }
   if (!falta) return;
   pthread_mutex_lock(&hsTrava);
@@ -6630,18 +6731,37 @@ static void generosDe(const char *corpo, char *lista, size_t tam, const char *ti
 // tudo isso do mesmo /meta que buscarEps ja tem na mao — entao o que falta e
 // copiar de la, e o detalhe fica igual em qualquer entrada.
 //
-// Raso = sem sinopse. Um item completo nao e tocado. Poster e generos ficam
+// Sinopse pronta: completa lacunas de logo/ano/nota, sem trocar a arte atual.
+// Sem sinopse: segue a regra de enriquecimento raso. Poster e generos ficam
 // (o poster ja esta na tela; os generos buscarEps ja regrava).
 static void completarRaso(CatItem *dst, const char *corpo, const char *tipo) {
   const char *m = corpo ? strstr(corpo, "\"meta\"") : NULL;
   CatItem *cheio;
-  if (!m || !dst || dst->sinopse[0]) return;
+  if (!m || !dst) return;
+  {
+    // Logo/ano/nota nao dependem de sinopse nem de poster na ficha.
+    const char *raiz = strchr(m, '{');
+    if (!raiz) return;
+    if (!dst->logo[0]) {
+      urlArteInteira(raiz, NULL, "logo", 0, dst->logo, sizeof dst->logo, dst->titulo);
+      if (ehSvg(dst->logo) || !strcmp(dst->logo, dst->poster)) dst->logo[0] = 0;
+    }
+    if (!dst->meta[0]) js_texto_raiz_em(raiz, NULL, "releaseInfo", dst->meta, sizeof dst->meta);
+    if (!dst->nota) {
+      double nota = js_num(raiz, NULL, "imdbRating", 0);
+      if (nota > 0) {
+        int n10 = (int)(nota * 10 + .5);
+        dst->nota = n10 > 99 ? n10 / 10 : n10;
+      }
+    }
+  }
+  if (dst->sinopse[0]) return;
   cheio = malloc(sizeof *cheio);
   if (!cheio) return;
   if (deMeta(m, NULL, tipo, cheio)) {
     snprintf(dst->sinopse, sizeof dst->sinopse, "%s", cheio->sinopse);
-    if (cheio->meta[0]) snprintf(dst->meta, sizeof dst->meta, "%s", cheio->meta);
-    if (cheio->nota > 0) dst->nota = cheio->nota;
+    if (!dst->meta[0] && cheio->meta[0]) snprintf(dst->meta, sizeof dst->meta, "%s", cheio->meta);
+    if (!dst->nota && cheio->nota > 0) dst->nota = cheio->nota;
     if (cheio->tmdb > 0 && dst->tmdb <= 0) dst->tmdb = cheio->tmdb;
     // Fundo e logo do /meta MANDAM, inclusive o logo vazio: o do metahub que
     // o item raso montou pode nem existir, e a busca desenharia o nome.
@@ -6656,7 +6776,7 @@ static void completarRaso(CatItem *dst, const char *corpo, const char *tipo) {
       snprintf(dst->backdropTmdb, sizeof dst->backdropTmdb, "%s", cheio->backdropTmdb);
       snprintf(dst->backdropTrakt, sizeof dst->backdropTrakt, "%s", cheio->backdropTrakt);
     }
-    if (!logoAddon) snprintf(dst->logo, sizeof dst->logo, "%s", cheio->logo);
+    if (!logoAddon && cheio->logo[0]) snprintf(dst->logo, sizeof dst->logo, "%s", cheio->logo);
     if (!strcmp(dst->classificacao, "14")) dst->classificacao[0] = 0;
   }
   free(cheio);
@@ -6880,7 +7000,19 @@ static int catalogoPrimeiro(const CatItem *c) {
 // caminho do catalogo: ha ficha de um addon, ou (id que nao e do IMDb) ao menos
 // a do Cinemeta achada pelo mapeamento. 0 = nada util; quem chama segue o
 // caminho antigo (Cinemeta para "tt", nada para o resto).
-static int metaCatalogoResolver(const CatItem *orig, MetaFontes *mf) {
+static void fichaDe(CatItem *d, const char *corpo, int soVazios);
+static void metaPublicarPrimario(const CatItem *orig, const char *corpo, int indice) {
+  CatItem *cedo = malloc(sizeof *cedo);
+  if (!cedo) return;
+  *cedo = *orig;
+  completarRaso(cedo, corpo, orig->tipo);
+  fichaDe(cedo, corpo, 1);
+  cat_completar_sinopse(indice, orig->imdb, cedo->sinopse, cedo->titulo);
+  cat_completar_basico(indice, cedo);
+  marco("detalhe: ficha primaria publicada antes do complemento");
+  free(cedo);
+}
+static int metaCatalogoResolver(const CatItem *orig, MetaFontes *mf, int indice) {
   char id[64];
   int origem = addonDaOrigem(orig->origem), i, n = addons_n(), extras = 0;
   int ehImdb = !strncmp(orig->imdb, "tt", 2);
@@ -6888,13 +7020,17 @@ static int metaCatalogoResolver(const CatItem *orig, MetaFontes *mf) {
   idbase_copiar(orig->imdb, id, sizeof id);
   // a) quem publicou
   if (origem >= 0) tentarFichaDoAddon(mf, origem, orig->tipo, id);
+  if (mf->n) metaPublicarPrimario(orig, mf->corpo[0], indice);
   // b) outros addons de metadados, na ordem do usuario
   for (i = 0; i < n && extras < 2 && (!mf->n || !metaCompleta(mf->corpo[0])); i++) {
     int r;
     if (i == origem) continue;
     r = addons_aceita_id(i, orig->tipo, id);
     if (r == 1 || (r == -1 && ehImdb && addons_sondado(i) && addons_fornece(i, ADD_META))) {
-      if (tentarFichaDoAddon(mf, i, orig->tipo, id)) extras++;
+      if (tentarFichaDoAddon(mf, i, orig->tipo, id)) {
+        if (mf->n == 1) metaPublicarPrimario(orig, mf->corpo[0], indice);
+        extras++;
+      }
     }
   }
   // O IMDb do titulo: o proprio id, ou o que a ficha revelou.
@@ -7065,7 +7201,7 @@ static int preCede(const char *id) {
 
 static void *buscarEps(void *u) {
   int alvoItem = epItem;
-  const CatItem *orig = cat_item(alvoItem);
+  const CatItem *orig;
   CatItem base;
   const CatItem *it;
   char *corpo = NULL;
@@ -7075,14 +7211,12 @@ static void *buscarEps(void *u) {
   int viaCatalogo = 0, solto = 0;
   (void)u;
   memset(&mf, 0, sizeof mf);
-  if (!orig || !orig->imdb[0]) { fioEpVivo = 0; return NULL; }
+  if (!cat_copiar_item(alvoItem, &base) || !base.imdb[0]) { fioEpVivo = 0; return NULL; }
+  orig = &base;
   if (preCede(orig->imdb)) { fioEpVivo = 0; return NULL; }
   snprintf(epAlvoId, sizeof epAlvoId, "%s", orig->imdb);
   snprintf(meuId, sizeof meuId, "%s", orig->imdb);
-  // COPIA AGORA (#190): o ponteiro de cat_item so vale ate o fim do quadro, e
-  // este fio vai para a rede antes de ler o resto dele.
-  base = *orig;
-  orig = &base;
+  // Copia sob a trava antes de sair para a rede; nenhum ponteiro de quadro.
   // CANAL NAO PASSA AQUI. O Cinemeta so conhece filme/serie por id do IMDb
   // ("tt..."); id de canal e "cs:channel:<hash>". "ehFilme = tipo != series"
   // tratava canal como filme, pedia /meta/movie/<id> com um id que o
@@ -7117,7 +7251,7 @@ static void *buscarEps(void *u) {
   // CATALOGO PRIMEIRO (metaCatalogo, logo acima): a ficha do addon que PUBLICOU o
   // item, e o Cinemeta so como complemento. Devolve 0 quando nao ha nada
   // util — ai o caminho de sempre: Cinemeta para "tt", nada para o resto.
-  if (catalogoPrimeiro(orig)) viaCatalogo = metaCatalogoResolver(orig, &mf);
+  if (catalogoPrimeiro(orig)) viaCatalogo = metaCatalogoResolver(orig, &mf, alvoItem);
   if (!viaCatalogo && strncmp(orig->imdb, "tt", 2)) {
     metaFontesLiberar(&mf);
     fioEpVivo = 0;
@@ -7277,6 +7411,12 @@ static void *buscarEps(void *u) {
             } } }
     completarRaso(&edit, corpo, ehFilme ? "movie" : "series");
     if (viaCatalogo) completarFicha(&edit, &mf, ehFilme ? "movie" : "series");
+    // A logo e a ficha basica nao esperam a traducao/fotos opcionais.
+    if ((alvoItem = epAlvo(alvoItem)) >= 0) {
+      cat_completar_sinopse(alvoItem, edit.imdb, edit.sinopse, edit.titulo);
+      cat_completar_basico(alvoItem, &edit);
+      marco("detalhe: campos primarios publicados antes dos extras");
+    }
     // TITULO, SINOPSE E GENEROS DO ADDON DE METADADOS (#176). So campo que o
     // addon preencheu troca o do Cinemeta; o que ele nao tem fica como estava.
     if (aplicar) {

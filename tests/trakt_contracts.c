@@ -1,4 +1,6 @@
 #include "trakt.h"
+#include "traktscrobble.h"
+#include <math.h>
 #include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -59,6 +61,16 @@ static void espera(int esperado) {
 int main(void) {
   trakt_definir("token", "client");
 
+  // Nenhum desses pedidos pode ocupar a vaga pendente ou tocar a rede.
+  assert(trakt_scrobble(SCR_EV_SAIU, "tt1234567", 129, 129, 0) == SCR_NADA);
+  assert(trakt_scrobble(SCR_EV_SAIU, "tt1234567", 129, 129, 69) == SCR_NADA);
+  assert(trakt_scrobble(SCR_EV_SAIU, "tt1234567", 2580, 2580, 120) == SCR_NADA);
+  assert(trakt_scrobble(SCR_EV_SAIU, "tt1234567", 30, 30, 30) == SCR_NADA);
+  assert(trakt_scrobble(SCR_EV_SAIU, "tt1234567", NAN, 2580, 2580) == SCR_NADA);
+  assert(trakt_scrobble(SCR_EV_SAIU, "tt1234567", 2580, 2580, NAN) == SCR_NADA);
+  assert(trakt_scrobble(SCR_EV_TOCANDO, "tt1234567", 10, 2580, 0) == SCR_NADA);
+  assert(chamadas == 0);
+
   proximoStatus = 400;
   assert(trakt_watchlist_tipo("tt1234567:2:4", "series", 1));
   espera(1);
@@ -95,6 +107,20 @@ int main(void) {
   pthread_mutex_lock(&lock); liberar = 1; pthread_cond_broadcast(&cond); pthread_mutex_unlock(&lock);
   while (trakt_operacao_estado(2) == 1) sched_yield();
   assert(trakt_operacao_estado(2) == 3 && marcas == 1);
-  puts("trakt contracts: PASS (intenção, escopo, falha e retry confirmados)");
+  bloquear = 1; liberar = 0;
+  trakt_definir("token", "client");
+  assert(trakt_scrobble(SCR_EV_SAIU, "tt1234567", 2580, 2580, 2322) == SCR_STOP);
+  espera(6);
+  assert(strstr(ultimaUrl, "/scrobble/stop"));
+  assert(strstr(ultimoCorpo, "100.00"));
+  // Com um envio real em voo, stops sem prova tambem nao ocupam scrPend.
+  assert(trakt_scrobble(SCR_EV_SAIU, "tt9999999", 180, 180, 0) == SCR_NADA);
+  assert(trakt_scrobble(SCR_EV_SAIU, "tt9999999", 2580, 2580, 120) == SCR_NADA);
+  assert(trakt_scrobble(SCR_EV_SAIU, "tt1234567", 200, 2580, 200) == SCR_PAUSE);
+  pthread_mutex_lock(&lock); liberar = 1; pthread_cond_broadcast(&cond); pthread_mutex_unlock(&lock);
+  espera(7);
+  assert(strstr(ultimaUrl, "/scrobble/pause"));
+  assert(!strstr(ultimoCorpo, "tt9999999"));
+  puts("trakt contracts: PASS (intencao, escopo, falha, retry e stop com prova de reproducao)");
   return 0;
 }

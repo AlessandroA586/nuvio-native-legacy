@@ -20,6 +20,7 @@
 #include "text.h"
 #include "anim.h"
 #include "layout.h"
+#include "segurar.h"
 #include "ajustes.h"
 #include "botoes.h"
 #include "ponteiro.h"
@@ -542,7 +543,7 @@ void menu_evento(const SDL_Event *e) {
 }
 
 void menu_atualizar(float dt, Uint32 agora) {
-  if (buscaOk && !buscaLongo && aberto && agora - buscaDesde >= NV_HOLD_MS) {
+  if (buscaOk && !buscaLongo && aberto && segurar_venceu(agora, buscaDesde ? buscaDesde : 1, "menu busca")) {
     buscaLongo = 1;
     pediuSpot = 1;   // o Spotlight abre por cima de tudo: nao fecha a camada
     aberto = 0;
