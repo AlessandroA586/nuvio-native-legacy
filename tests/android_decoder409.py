@@ -25,7 +25,8 @@ abrir = bloco('    private fun abrirMain(')
 abrir = (abrir.split('        novaSuperficie(act)')[0]
          + abrir[abrir.index('            // F07: VOLUME BOOST.'):abrir.index('            // ON (')]
          + '        val p = ExoPlayer(emptyList())\n'
-         + abrir[abrir.index('            player = p'):abrir.index('            semTravaDeFio(p)')]
+         + abrir[abrir.index('            player = p'):abrir.index('            // Release anterior')]
+         + '        ' + abrir[abrir.index('            p.playWhenReady ='):abrir.index('            p.prepare()')].strip() + '\n'
          + '        criados.add(url)\n    }')
 erro = bloco('        override fun onPlayerError(')
 fixture = r'''
@@ -39,8 +40,8 @@ object Log {
     fun i(t: String, s: String) { linhas.add(s) }
     fun w(t: String, s: String) { linhas.add(s) }
 }
-open class PlaybackException(val errorCode: Int) {
-    val errorCodeName = "decoder"; val message = "fixture"
+open class PlaybackException(val errorCode: Int) : Exception() {
+    val errorCodeName = "decoder"; override val message = "fixture"
     companion object { const val ERROR_CODE_DECODER_INIT_FAILED = 4001; const val ERROR_CODE_DECODING_FAILED = 4003 }
 }
 class ExoPlaybackException(code: Int, val rendererIndex: Int, val type: Int = TYPE_RENDERER) : PlaybackException(code) {
@@ -48,6 +49,7 @@ class ExoPlaybackException(code: Int, val rendererIndex: Int, val type: Int = TY
     companion object { const val TYPE_RENDERER = 1 }
 }
 class ExoPlayer(val tipos: List<Int>) {
+    var playWhenReady = false
     var volume = 1f
     val rendererCount get() = tipos.size
     fun getRendererType(i: Int) = tipos[i]
@@ -76,10 +78,12 @@ object Fixture {
     var sessao = 1; var abriuEm = 0L; var retentou = true
     var urlAtual = "url"; var cabAtual = ""; var inicioAtualMs = 0; var geracaoNative = 0; var fracaoAtual = 0
     var player: ExoPlayer? = null; var evento = -99
+    var pausaPedida = false
     var ganhoPct = 100; var processador: GanhoAudioProcessor? = null
     fun atual(minha: Int) = minha == sessao && pedidoAtivo == pedidos.get()
     fun confirmarRetomada(g: Int, a: Boolean) {}
     fun ev(t: Int, a: Int, b: Int) { evento = b }
+    fun nativeErroTexto(texto: String) {}
     fun liberar() {
         releases++; sessao++
         player = null; processador = null
@@ -91,6 +95,7 @@ object Fixture {
     ABRIR
     GANHO
     APLICAR_GANHO
+    PAUSAR
     fun ouvinte(minha: Int) = object : Player.Listener {
         ERRO
     }
@@ -126,6 +131,17 @@ fun main(args: Array<String>) {
         check(Log.linhas.any { it.contains("renderer=audio") && it.contains("loadMs=") })
         check(Log.linhas.any { it.contains("renderer=video") })
         println("PASS renderer: audio/video/desconhecido, 4 codigos e callback obsoleto")
+        return
+    }
+    if (args[0] == "pausa") {
+        f.reset(); f.releaseMs = 600; f.abrir("pausada"); f.pausar(1)
+        f.principal.ate(725)
+        check(f.player != null && f.player?.playWhenReady == false) { "pausa perdida na abertura adiada" }
+        f.abrir("nova"); f.principal.ate(1400)
+        check(f.player?.playWhenReady == true) { "pausa vazou para fonte nova" }
+        f.reset(); f.releaseMs = 600; f.abrir("alternada"); f.pausar(1); f.pausar(0)
+        f.principal.ate(725); check(f.player?.playWhenReady == true)
+        println("PASS pausa: abertura adiada conserva pausa/retomar; nova fonte nasce tocando")
         return
     }
     if (args[0] == "ganho") {
@@ -167,7 +183,8 @@ fun main(args: Array<String>) {
 }
 '''.replace('ABRIR', abrir).replace('ERRO\n', erro + '\n').replace(
     'APLICAR_GANHO', bloco('    private fun aplicarGanho(')).replace(
-    '    GANHO\n', bloco('    @JvmStatic fun ganho(') + '\n')
+    '    GANHO\n', bloco('    @JvmStatic fun ganho(') + '\n').replace(
+    '    PAUSAR\n', bloco('    @JvmStatic fun pausar(') + '\n')
 cache = Path.home() / '.gradle/caches/modules-2/files-2.1'
 def jar(group, artifact, version):
     return str(next((cache / group / artifact / version).glob('*/*.jar')))
@@ -185,6 +202,6 @@ with tempfile.TemporaryDirectory(prefix='nuvio-decoder409-') as tmp:
                     '-jvm-target', '17', '-d', str(tmp / 'classes'), str(file),
                     str(root / 'android/app/src/main/java/space/nuvio/nativelegacy/GanhoMath.kt')], check=True)
     failed = 0
-    for case in ('renderer', 'release', 'ganho'):
+    for case in ('renderer', 'release', 'ganho', 'pausa'):
         failed += subprocess.run([java, '-cp', f'{tmp / "classes"}:{stdlib}', 'DecoderFixtureKt', case]).returncode != 0
     raise SystemExit(bool(failed))

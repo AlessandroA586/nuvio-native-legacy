@@ -64,6 +64,11 @@ android {
         }
     }
     buildTypes {
+        debug {
+            // Nunca substituir a instalacao de producao durante diagnosticos.
+            applicationIdSuffix = ".strictdebug"
+            versionNameSuffix = "-strictdebug"
+        }
         release {
             isMinifyEnabled = false
             if (ks != null) signingConfig = signingConfigs.getByName("release")
@@ -86,6 +91,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+    testOptions { unitTests.isReturnDefaultValues = true }
 }
 
 // Copia as classes Java do SDL no build (nada de copia grande no git).
@@ -126,5 +132,6 @@ dependencies {
         implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.8.0+1")
     }
     implementation("androidx.core:core-ktx:1.13.1")
+    testImplementation("junit:junit:4.13.2")
 }
 

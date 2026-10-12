@@ -879,7 +879,8 @@ class NuvioActivity : SDLActivity() {
     @Volatile private var iconePendente: String? = null
     @Volatile private var esperandoTela = false   // voz do sistema por cima
 
-    private fun compIcone(i: String) = ComponentName(this, "$packageName.Icone_$i")
+    // O pacote instalado muda no debug; a classe do alias continua no namespace.
+    private fun compIcone(i: String) = ComponentName(this, "space.nuvio.nativelegacy.Icone_$i")
     private fun iconeLigado(i: String): Boolean {
         val st = packageManager.getComponentEnabledSetting(compIcone(i))
         // DEFAULT = o que o manifest diz: so o original nasce ligado.
