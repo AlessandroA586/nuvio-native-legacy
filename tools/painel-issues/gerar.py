@@ -36,7 +36,9 @@ def publico(dados, repo):
     for i in dados["itens"]:
         status = i.get("status")
         status = {"consertada-nao-lancada": "precisa-teste"}.get(status, status)
-        if status not in ("lancada", "precisa-teste", "precisa-log", "em-andamento", "em-progresso", "good-first-issue"):
+        if status in ("respondida", "por-desenho", "fora-do-escopo", "duplicada", "fechada-sem-resposta"):
+            status = "encerrada"
+        elif status not in ("lancada", "precisa-teste", "precisa-log", "em-andamento", "em-progresso", "good-first-issue"):
             status = "aberta"
         texto = json.dumps([i.get("notas"), i.get("proximo_passo"), i.get("conserto")], ensure_ascii=False)
         tokens = set(re.findall(r"[A-Za-z0-9][A-Za-z0-9._/-]{2,80}", texto))
