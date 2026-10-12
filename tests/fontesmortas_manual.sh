@@ -1,0 +1,20 @@
+#!/bin/bash
+set -eu
+cd "$(dirname "$0")/.."
+dir=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-manual.XXXXXX")
+trap 'rm -rf "$dir"' EXIT
+export NUVIO_DADOS="$dir/dados"
+mkdir -p "$NUVIO_DADOS"
+flags=(-O1 -g -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2
+       -Wno-deprecated-declarations -Wno-macro-redefined)
+renomes=()
+for nome in tocar falhou pronto pos; do renomes+=("-Dvideo_$nome=nv_base_video_$nome"); done
+cc "${flags[@]}" "${renomes[@]}" -c src/video.c -o "$dir/video.o"
+sources=()
+for source in src/*.c src/dts/*.c; do
+  case "$source" in src/main.c|src/app.c|src/video.c) continue;; esac
+  sources+=("$source")
+done
+cc "${flags[@]}" "${sources[@]}" tests/fontesmortas_manual.c "$dir/video.o" \
+  -o "$dir/teste" -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL
+"$dir/teste"

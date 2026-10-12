@@ -1721,7 +1721,7 @@ static void vigiarAberturaManual(void) {
   Uint32 desde;
   if (!fonteManualDesde) return;
   if (!player_aberto() || player_quer_sair() || player_id_canal()[0] ||
-      fonteVODAutomatica || aguardandoFonte != 0 || player_fonte_falhou()) {
+      fonteVODAutomatica || aguardandoFonte != 0) {
     fonteManualDesde = 0; return;
   }
   if (video_pronto() && video_pos() > 0.25) {
@@ -1736,12 +1736,13 @@ static void vigiarAberturaManual(void) {
   g.desdeMs = desde;
   // Erro do player no preparo (Media3 2004 etc., video_android.c): sem isto a
   // tela ficava em "Abrindo fonte" ate o prazo, ou para sempre.
-  if (video_falhou()) {
+  if (g.falhou) {
     printf("[fonte] escolha manual: erro do player em %u ms (%s)\n", (unsigned)desde, video_erro_texto());
     fflush(stdout);
     fonteManualDesde = 0;
     stream_vod_falhou(stream_atual());
-    player_erro_fonte_motivo(i18n("Não foi possível abrir a fonte"), NULL);
+    if (!player_fonte_falhou())
+      player_erro_fonte_motivo(i18n("Não foi possível abrir a fonte"), NULL);
     return;
   }
   if (!fontevolta_abertura_vencida(&g, FONTE_MANUAL_PRAZO_MS) &&
