@@ -3652,7 +3652,7 @@ static void pstCarregar(void) {
 // O que a pessoa digitou/colou num campo. Vazio apaga.
 static void pstDefinir(int op, const char *texto) {
   char b[PP_MODELO_MAX + 8], inst[PP_INSTANCIA_MAX];
-  size_t i = 0, k;
+  size_t i = 0, k, nTexto = texto ? strlen(texto) : 0;
   pstAviso = PST_OK;
   while (texto && (texto[i] == ' ' || texto[i] == '\t')) i++;
   pstCopia(b, sizeof b, texto ? texto + i : "");
@@ -3692,8 +3692,18 @@ static void pstDefinir(int op, const char *texto) {
   }
   pstSalvar();
   pstAplicar();
+  printf("[poster] modelo salvo (n=%zu)\n", nTexto);
+  fflush(stdout);
   return;
 recusado:
+  { static const char *motivos[] = { "", "token invalido", "instancia invalida", "parametros invalidos",
+                                   "chave invalida", "sintaxe invalida", "endereco pronto longo demais" };
+    char url[96];
+    // Sem esquema pode ser a chave nua: rede_url_publica a devolveria inteira.
+    const char *publica = (!strncmp(b, "http://", 7) || !strncmp(b, "https://", 8)) ? b : "";
+    printf("[poster] modelo recusado: %s (n=%zu) %s\n", motivos[pstAviso], nTexto,
+           posterprov_redigir(publica, url, sizeof url));
+    fflush(stdout); }
   uxNotificar(pstTexto(AJ_POSTER_TESTAR));
 }
 
@@ -3844,6 +3854,9 @@ static void pstAtivar(int op) {
 void teclado_teste_sistema(const char *t);
 void teclado_teste_foco(int f, int c);
 const char *ajustes_teste_poster_aviso(void) { return uxAviso; }
+void ajustes_teste_poster_definir(int campo, const char *texto) {
+  pstDefinir(AJ_POSTER_INST + campo, texto);
+}
 int ajustes_teste_poster_modelo(const char *colado, char *lido, size_t n) {
   valor[AJ_POSTER_PROV] = PP_MODELO;
   pstAtivar(AJ_POSTER_MODELO);

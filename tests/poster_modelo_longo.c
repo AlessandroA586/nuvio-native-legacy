@@ -11,10 +11,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 int ajustes_teste_poster_modelo(const char *colado, char *lido, size_t n);
 void ajustes_teste_poster_recarregar(char *lido, size_t n);
 const char *ajustes_teste_poster_aviso(void);
+void ajustes_teste_poster_definir(int campo, const char *texto);
 
 static int falhas;
 #define OK(c, m) do { if (c) printf("ok   %s\n", m); else { printf("FALHA %s\n", m); falhas++; } } while (0)
@@ -140,6 +142,51 @@ int main(void) {
       snprintf(c.modelo, sizeof c.modelo, "%s", lido);
       OK(posterprov_montar_url(&c, "tt0111161", 0, "movie", u3, sizeof u3) && strlen(u3) == 338,
          "e ele monta (338 caracteres com tt0111161)"); } }
+
+  // Captura o stdout de pstDefinir: uma linha por recusa e nenhuma chave.
+  { const char *ruins[] = {
+      "https://usuario:SEGREDO@sem-ponto/{id}?api_key=SEGREDO",
+      "https://posters.exemplo.invalid/SEGREDO/sem-token",
+      "https://posters.exemplo.invalid/SEGREDO?fmt=webp",
+      "https://posters.exemplo.invalid/SEGREDO",
+      "https://usuario:SEGREDO@posters.exemplo.invalid/SEGREDO/{desconhecido}?api_key=SEGREDO",
+      "posters.exemplo.invalid/SEGREDO/{imdb}",
+      "SEGREDO" };
+    const char *motivos[] = { "instancia invalida", "token invalido", "parametros invalidos", "chave invalida",
+                             "sintaxe invalida", "sintaxe invalida", "sintaxe invalida" };
+    FILE *log = tmpfile();
+    int salvo, a;
+    char linha[1024], esperado[1024], redigida[96];
+    assert(log);
+    fflush(stdout); salvo = dup(STDOUT_FILENO); assert(salvo >= 0);
+    assert(dup2(fileno(log), STDOUT_FILENO) >= 0);
+    for (a = 0; a < 7; a++) ajustes_teste_poster_definir(a < 4 ? a : 4, ruins[a]);
+    snprintf(modelo, sizeof modelo, "https://posters.exemplo.invalid/SEGREDO/");
+    k = (int)strlen(modelo);
+    for (a = 0; a < 40; a++) k += snprintf(modelo + k, sizeof modelo - (size_t)k, "{imdb}");
+    ajustes_teste_poster_definir(4, modelo);
+    ajustes_teste_poster_definir(4, "https://posters.exemplo.invalid/{id}");
+    fflush(stdout); assert(dup2(salvo, STDOUT_FILENO) >= 0); close(salvo);
+    rewind(log);
+    for (a = 0; a < 7; a++) {
+      posterprov_redigir(a < 5 ? ruins[a] : "", redigida, sizeof redigida);
+      snprintf(esperado, sizeof esperado, "[poster] modelo recusado: %s (n=%zu) %s\n",
+               motivos[a], strlen(ruins[a]), redigida);
+      linha[0] = 0;
+      OK(fgets(linha, sizeof linha, log) && !strcmp(linha, esperado) && !strstr(linha, "SEGREDO"),
+         "recusa gera uma linha de log com motivo, tamanho e URL redigida");
+    }
+    posterprov_redigir(modelo, redigida, sizeof redigida);
+    snprintf(esperado, sizeof esperado, "[poster] modelo recusado: endereco pronto longo demais (n=%zu) %s\n",
+             strlen(modelo), redigida);
+    OK(fgets(linha, sizeof linha, log) && !strcmp(linha, esperado) && !strstr(linha, "SEGREDO"),
+       "log de recusa por tamanho tambem redige a chave");
+    snprintf(esperado, sizeof esperado, "[poster] modelo salvo (n=%zu)\n",
+             strlen("https://posters.exemplo.invalid/{id}"));
+    OK(fgets(linha, sizeof linha, log) && !strcmp(linha, esperado), "sucesso gera log de modelo salvo");
+    OK(!fgets(linha, sizeof linha, log), "nao ha linhas extras nem URL em claro no log");
+    fclose(log);
+  }
 
   if (falhas) { printf("%d falha(s)\n", falhas); return 1; }
   printf("tudo ok\n");
