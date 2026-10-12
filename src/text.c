@@ -427,6 +427,8 @@ static const struct { int corpo, peso; } ESTILOS[TXT_NFONTES] = {
   { 18, PESO_BOLD    },   // TXT_V3_SELO
   { 28, PESO_REGULAR },   // TXT_V3_INSP
   { 28, PESO_BOLD    },   // TXT_V3_INSP_B
+  { NV_FT_DET_SIN, PESO_BOLD   },   // TXT_DET_META_FORTE
+  { NV_FT_DET_SIN, PESO_MEDIUM },   // TXT_DET_META_GEN
 };
 
 // RESERVA PARA O QUE A INTER NAO TEM.

@@ -4773,7 +4773,7 @@ static void heroWeb(float a, float desloc) {
             desenhaPonto(x + NV_DETW2_BULLET_SEP, yc, 0.702f, a);   // 179
             x += NV_DETW2_BULLET_SEP * 2 + NV_DETW2_PONTO_D;
           }
-          TxtLinha lt = txt_linha(TXT_DET_SIN, termo, 179, 179, 179, 255);
+          TxtLinha lt = txt_linha(TXT_DET_META_GEN, termo, 179, 179, 179, 255);
           txt_desenhar_alpha(lt, x, yc - lt.h * 0.5f, a);
           x += lt.w; algo = 1;
         }
@@ -4787,7 +4787,7 @@ static void heroWeb(float a, float desloc) {
     if (ano[0]) {
       if (algo) { desenhaPonto(x + NV_DETW2_SEP, yc, 0.502f, a);    // 128
                   x += NV_DETW2_SEP * 2 + NV_DETW2_PONTO_D; }
-      TxtLinha la = txt_linha(TXT_DET_SIN, ano, 179, 179, 179, 255);
+      TxtLinha la = txt_linha(TXT_DET_META_FORTE, ano, 255, 255, 255, 255);
       txt_desenhar_alpha(la, x, yc - la.h * 0.5f, a);
       x += la.w; algo = 1;
     }
@@ -4796,7 +4796,7 @@ static void heroWeb(float a, float desloc) {
     if (!ehSerie() && dur[0]) {
       if (algo) { desenhaPonto(x + NV_DETW2_SEP, yc, 0.502f, a);
                   x += NV_DETW2_SEP * 2 + NV_DETW2_PONTO_D; }
-      TxtLinha ld = txt_linha(TXT_DET_SIN, dur, 179, 179, 179, 255);
+      TxtLinha ld = txt_linha(TXT_DET_META_FORTE, dur, 255, 255, 255, 255);
       txt_desenhar_alpha(ld, x, yc - ld.h * 0.5f, a);
       x += ld.w; algo = 1;
     }

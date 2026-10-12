@@ -182,6 +182,11 @@ typedef enum {
   TXT_V3_SELO,     // ESTA TV, ESTE PERFIL, AVANCADO, SO LG (14 / 700, caixa alta)
   TXT_V3_INSP,     // texto do inspetor (22 / 400)
   TXT_V3_INSP_B,   // "O que muda:" (22 / 700)
+  // Linha de meta do detalhe no peso do Nuvio Desktop (dono, 12/10/2026): ano e
+  // duracao em Bold branco, generos no peso do meio (SemiBold na JetBrains Sans,
+  // Medium nas outras). Mesmo corpo da sinopse (NV_FT_DET_SIN).
+  TXT_DET_META_FORTE,   // ano, duracao       26 / 700
+  TXT_DET_META_GEN,     // generos            26 / 600
   TXT_NFONTES
 } TxtEstilo;
 
