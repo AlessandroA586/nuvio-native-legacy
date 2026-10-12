@@ -12,6 +12,7 @@
 // modulo imprime. O progresso do proprio teste sai por stderr.
 #include "../src/simkl.h"
 #include "../src/ajustes.h"
+#include "../src/js.h"
 #include "../src/rede.h"
 #include <assert.h>
 #include <fcntl.h>
@@ -314,6 +315,32 @@ static void maisMenos(void) {
   OK("plantowatch da rede: naLista e a guarda do - conhece o que veio de la");
 }
 
+static void perfilStats(void) {
+  static const char *settings =
+    "{\"user\":{\"name\":\"Tolu no Simkl\",\"avatar\":\"https://simkl.in/avatars/tolu_100.jpg\"},"
+    "\"account\":{\"id\":42,\"type\":\"free\"}}";
+  static const char *itens =
+    "{\"movies\":[{\"last_watched_at\":\"2026-10-10T20:00:00Z\","
+      "\"movie\":{\"title\":\"Dune\",\"runtime\":120,\"ids\":{\"imdb\":\"tt1160419\"}}},"
+      "{\"last_watched_at\":\"2026-09-30T20:00:00Z\","
+      "\"movie\":{\"title\":\"Old\",\"runtime\":99,\"ids\":{\"imdb\":\"tt0000001\"}}}],"
+    "\"shows\":[{\"show\":{\"title\":\"Severance\",\"runtime\":45,"
+      "\"ids\":{\"imdb\":\"tt11280740\"}},\"seasons\":[{\"number\":2,\"episodes\":["
+      "{\"number\":1,\"watched_at\":\"2026-10-11T19:00:00Z\"},"
+      "{\"number\":2,\"runtime\":50,\"watched_at\":\"2026-10-11T20:00:00Z\"}]}]}],"
+    "\"anime\":[]}";
+  PerfilDados d;
+  time_t agora = (time_t)(js_ms_iso("2026-10-12T12:00:00Z") / 1000);
+  assert(simkl_perfil_ler(settings, itens, &d, agora));
+  assert(!strcmp(d.nome, "Tolu no Simkl"));
+  assert(strstr(d.avatar, "simkl.in/avatars"));
+  assert(d.plays == 3 && d.filmes == 1 && d.episodios == 2);
+  assert(d.minutos == 215 && d.diasAtivosMes == 2);
+  assert(d.nDestaques == 2 && !strcmp(d.destaques[0].id, "tt11280740"));
+  assert(d.destaques[0].plays == 2 && strstr(d.destaques[0].detalhe, "2"));
+  OK("perfil: identidade e estatisticas mensais saem do Simkl; outro mes fica fora");
+}
+
 int main(void) {
   char caminho[] = "/tmp/nuvio-simkl-cw-XXXXXX";
   int fd = mkstemp(caminho), salvo = dup(1);
@@ -328,6 +355,7 @@ int main(void) {
   leitores();
   retomada();
   maisMenos();
+  perfilStats();
   simkl_esquecer();
   assert(!simkl_na_plantowatch("tt2788316"));
 

@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <time.h>
 
 #define SMK_API "https://api.simkl.com"
 // Retomada: o mesmo teto da fileira (CONT_MAX de descoberta.c) com folga para
@@ -374,6 +375,153 @@ static char *pegar(const char *caminho, const char *consulta, int *st) {
     return NULL;
   }
   return r;
+}
+
+// ------------------------------------------------------------ perfil e stats
+
+static int perfilNoMes(const char *iso, const struct tm *mes, int *dia) {
+  long long ms;
+  time_t s;
+  struct tm local;
+  if (!iso || !(ms = js_ms_iso(iso))) return 0;
+  s = (time_t)(ms / 1000);
+  localtime_r(&s, &local);
+  if (local.tm_year != mes->tm_year || local.tm_mon != mes->tm_mon) return 0;
+  if (dia) *dia = local.tm_mday;
+  return 1;
+}
+
+static PerfilDestaque *perfilDestaque(PerfilDados *d, const char *imdb,
+                                      const char *titulo) {
+  int i;
+  if (!imdb || strncmp(imdb, "tt", 2)) return NULL;
+  for (i = 0; i < d->nDestaques; i++)
+    if (!strcmp(d->destaques[i].id, imdb)) return &d->destaques[i];
+  if (d->nDestaques >= PERFIL_MAX_DESTAQUES) return NULL;
+  { PerfilDestaque *r = &d->destaques[d->nDestaques++];
+    snprintf(r->id, sizeof r->id, "%s", imdb);
+    snprintf(r->titulo, sizeof r->titulo, "%s", titulo && *titulo ? titulo : imdb);
+    snprintf(r->poster, sizeof r->poster,
+             "https://images.metahub.space/poster/medium/%s/img", imdb);
+    snprintf(r->backdrop, sizeof r->backdrop,
+             "https://images.metahub.space/background/medium/%s/img", imdb);
+    return r; }
+}
+
+static void perfilSomar(PerfilDados *d, const struct tm *mes, const char *quando,
+                        const char *imdb, const char *titulo, int runtime,
+                        int filme, int temporada, int episodio) {
+  PerfilDestaque *r;
+  int dia = 0;
+  if (!perfilNoMes(quando, mes, &dia)) return;
+  d->plays++;
+  if (filme) d->filmes++; else d->episodios++;
+  if (runtime > 0) d->minutos += runtime;
+  if (dia >= 1 && dia <= PERFIL_MAX_DIAS) d->atividade[dia - 1]++;
+  r = perfilDestaque(d, imdb, titulo);
+  if (!r) return;
+  r->plays++;
+  if (runtime > 0) r->minutos += runtime;
+  if (filme) snprintf(r->detalhe, sizeof r->detalhe, "Filme");
+  else if (temporada > 0 && episodio > 0)
+    snprintf(r->detalhe, sizeof r->detalhe, i18n("T%dE%d"), temporada, episodio);
+}
+
+static void perfilLerTipo(const char *json, const char *lista, int filme,
+                          PerfilDados *d, const struct tm *mes) {
+  const char *p;
+  for (p = js_array(json, NULL, lista); p && *p == '{'; p = js_prox(js_fim(p))) {
+    const char *f = js_fim(p), *obra, *obraFim, *ids, *idsFim;
+    char titulo[128] = "", imdb[24] = "", quando[48] = "";
+    int runtime;
+    if (!objetoRaiz(p, f, filme ? "movie" : "show", &obra, &obraFim)) continue;
+    js_texto_raiz_em(obra, obraFim, "title", titulo, sizeof titulo);
+    runtime = (int)js_num(obra, obraFim, "runtime", 0);
+    if (objetoRaiz(obra, obraFim, "ids", &ids, &idsFim))
+      js_texto(ids, idsFim, "imdb", imdb, sizeof imdb);
+    if (filme) {
+      js_texto_raiz_em(p, f, "last_watched_at", quando, sizeof quando);
+      perfilSomar(d, mes, quando, imdb, titulo, runtime, 1, 0, 0);
+    } else {
+      const char *s;
+      for (s = js_array(p, f, "seasons"); s && *s == '{'; s = js_prox(js_fim(s))) {
+        const char *sf = js_fim(s), *e;
+        int temporada = (int)js_num(s, sf, "number", 0);
+        for (e = js_array(s, sf, "episodes"); e && *e == '{'; e = js_prox(js_fim(e))) {
+          const char *ef = js_fim(e);
+          int episodio = (int)js_num(e, ef, "number", 0);
+          int duracao = (int)js_num(e, ef, "runtime", runtime);
+          quando[0] = 0;
+          js_texto_raiz_em(e, ef, "watched_at", quando, sizeof quando);
+          perfilSomar(d, mes, quando, imdb, titulo, duracao, 0, temporada, episodio);
+        }
+      }
+    }
+  }
+}
+
+int simkl_perfil_ler(const char *settings, const char *itens,
+                     PerfilDados *d, time_t agora) {
+  const char *u, *uf;
+  struct tm mes, primeiro;
+  int dias;
+  static const char *meses[] = { "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                                 "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro" };
+  if (!d || (!settings && !itens)) return 0;
+  memset(d, 0, sizeof *d);
+  localtime_r(&agora, &mes);
+  snprintf(d->periodo, sizeof d->periodo, "%s %d", i18n(meses[mes.tm_mon]), mes.tm_year + 1900);
+  if (settings && objetoRaiz(settings, NULL, "user", &u, &uf)) {
+    js_texto_raiz_em(u, uf, "name", d->nome, sizeof d->nome);
+    js_texto_raiz_em(u, uf, "avatar", d->avatar, sizeof d->avatar);
+  }
+  if (itens) {
+    perfilLerTipo(itens, "movies", 1, d, &mes);
+    perfilLerTipo(itens, "shows", 0, d, &mes);
+    perfilLerTipo(itens, "anime", 0, d, &mes);
+  }
+  for (int i = 0; i < d->nDestaques; i++) for (int j = i + 1; j < d->nDestaques; j++)
+    if (d->destaques[j].plays > d->destaques[i].plays) {
+      PerfilDestaque x = d->destaques[i]; d->destaques[i] = d->destaques[j]; d->destaques[j] = x;
+    }
+  dias = 31;
+  if (mes.tm_mon == 1) dias = ((mes.tm_year + 1900) % 4 == 0) ? 29 : 28;
+  else if (mes.tm_mon == 3 || mes.tm_mon == 5 || mes.tm_mon == 8 || mes.tm_mon == 10) dias = 30;
+  d->nDias = dias;
+  primeiro = mes; primeiro.tm_mday = 1; primeiro.tm_hour = primeiro.tm_min = primeiro.tm_sec = 0;
+  primeiro.tm_isdst = -1; mktime(&primeiro); d->primeiroDiaSemana = primeiro.tm_wday;
+  for (int i = 0; i < d->nDias; i++) if (d->atividade[i]) d->diasAtivosMes++;
+  for (int i = mes.tm_mday - 1; i >= 0 && i < d->nDias; i--) {
+    if (!d->atividade[i]) break;
+    d->streakAtual++;
+  }
+  d->parcial = 1;
+  snprintf(d->aviso, sizeof d->aviso,
+           "Resumo mensal do histórico disponível no Simkl.");
+  return 1;
+}
+
+int simkl_perfil(PerfilDados *d) {
+  char inicio[48], consulta[256];
+  char *settings = NULL, *itens = NULL;
+  time_t agora = time(NULL), limite;
+  struct tm primeiro, utc;
+  int st = 0, ok;
+  if (!d || !simkl_ativo()) return 0;
+  settings = pegar("/users/settings", NULL, &st);
+  localtime_r(&agora, &primeiro);
+  primeiro.tm_mday = 1; primeiro.tm_hour = primeiro.tm_min = primeiro.tm_sec = 0; primeiro.tm_isdst = -1;
+  limite = mktime(&primeiro); gmtime_r(&limite, &utc);
+  strftime(inicio, sizeof inicio, "%Y-%m-%dT%H:%M:%SZ", &utc);
+  snprintf(consulta, sizeof consulta,
+           "date_from=%s&extended=full&include_all_episodes=original&episode_watched_at=yes", inicio);
+  itens = pegar("/sync/all-items/all/all", consulta, &st);
+  ok = simkl_perfil_ler(settings, itens, d, agora);
+  free(settings); free(itens);
+  if (ok) printf("[simkl] perfil: %d plays, %d min, %d destaques\n",
+                 d->plays, d->minutos, d->nDestaques);
+  fflush(stdout);
+  return ok;
 }
 
 // Assinatura barata de um corpo (FNV-1a). 0 = sem corpo.

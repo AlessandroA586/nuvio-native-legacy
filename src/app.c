@@ -349,7 +349,12 @@ typedef struct { unsigned geracao; int perfil; char conta[96]; } PerfilPedido;
 static void *carregarPerfil(void *u) {
   PerfilPedido *pedido=u;
   PerfilDados novo={0};
-  int sucesso=trakt_perfil(&novo);
+  int sucesso=0;
+  // A pagina pertence a pessoa, nao ao Trakt. Preferimos o Trakt quando os
+  // dois estao ligados para preservar o snapshot antigo; num perfil so com
+  // Simkl, identidade e historico mensal vem do proprio Simkl.
+  if (trakt_ativo()) sucesso=trakt_perfil(&novo);
+  if (!sucesso && simkl_ativo()) sucesso=simkl_perfil(&novo);
   pthread_mutex_lock(&perfilTrava);
   // A troca de conta/perfil invalida a resposta. O worker termina, mas nunca
   // publica uma identidade antiga nem deixa um snapshot obsoleto na fila.
@@ -3280,8 +3285,9 @@ void app_atualizar(float dt, Uint32 agora) {
     PerfilDados snapshot; int sucesso;
     pthread_mutex_lock(&perfilTrava); snapshot=perfilPendente; sucesso=perfilSucesso; pthread_mutex_unlock(&perfilTrava);
     if (sucesso) perfil_definir_dados(&snapshot);
-    else if (!trakt_ativo()) perfil_definir_estado(PERFIL_ESTADO_DESCONECTADO,
-                                                    "Trakt desconectado. Vincule a conta para ver seu perfil.");
+    else if (!trakt_ativo() && !simkl_ativo())
+      perfil_definir_estado(PERFIL_ESTADO_DESCONECTADO,
+                            "Nenhum histórico conectado. Vincule Trakt ou Simkl para ver seu perfil.");
     else perfil_definir_estado(PERFIL_ESTADO_INDISPONIVEL,
                                "Perfil indisponível. O último resumo continua seguro, se houver.");
     atomic_store_explicit(&perfilCarga, 0, memory_order_release);
