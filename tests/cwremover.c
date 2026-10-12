@@ -166,6 +166,7 @@ int trakt_continuar(CatItem *s, int m) {
   }
   return i;
 }
+int trakt_cw_concluiu(const char *id, long long ms) { (void)id; (void)ms; return 0; }
 int   trakt_continuar_falhou(void)        { return 0; }
 
 static long long agora = 1000000;

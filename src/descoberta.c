@@ -2710,6 +2710,25 @@ static int mesmaObra(const CatItem *a, const CatItem *b) {
   return ia[0] && !strcmp(ia, ib);
 }
 
+// Uma sugestao so supera progresso da mesma obra com conclusao posterior.
+static int candidatoVence(const CatItem *novo, const CatItem *velho) {
+  long long ms = instanteDaConta(novo), antes = instanteDaConta(velho);
+  int np = emAndamento(novo->progresso), vp = emAndamento(velho->progresso);
+  if (!np && vp) {
+    ProgRegistro r;
+    char id[24], chave[48];
+    int t = velho->temporada, e = velho->episodio;
+    prog_content_id(id, sizeof id, velho->imdb, &t, &e);
+    prog_chave(chave, sizeof chave, id, t, e);
+    if (!trakt_cw_concluiu(velho->imdb, antes) &&
+        !(prog_por_chave(chave, &r) && r.durSeg > 1.0 &&
+          r.tocou != 0 && 100.0 * r.posSeg / r.durSeg >= ajustes_cw_concluido() &&
+          r.lastWatchedMs > antes && r.lastWatchedMs <= ms)) return 0;
+  }
+  if (np && !vp) return !candidatoVence(velho, novo);
+  return ms > antes;
+}
+
 // Um candidato da fileira, com o que se sabe sobre QUANDO ele aconteceu.
 typedef struct { CatItem *item; long long ms; int ord; } Cand;
 
@@ -2787,7 +2806,8 @@ static int filtrarRemoto(CatItem *v, int n, int (*aSeguir)(const char *),
   for (i = 0, w = 0; i < n; i++) {
     // "A SEGUIR" (issue #66) entra com 0%: e o proximo episodio de uma serie
     // cujo ultimo terminou. Nao e "pausado", mas e "continuar".
-    if (!aSeguir(v[i].imdb) && !emAndamento(v[i].progresso)) { (*fora)++; continue; }
+    if ((!ajustes_cw_proximo() || !aSeguir(v[i].imdb)) &&
+        !emAndamento(v[i].progresso)) { (*fora)++; continue; }
     // O REGISTRO LOCAL MAIS NOVO VENCE A RESPOSTA REMOTA. Sem este cruzamento
     // a refazagem da fileira (issue #38) lia um /sync/playback que ainda nao
     // recebeu o scrobble que acabamos de mandar: o titulo terminado voltava a
@@ -2852,6 +2872,7 @@ static int filtrarRemoto(CatItem *v, int n, int (*aSeguir)(const char *),
         }
       }
     }
+    if (!ajustes_cw_proximo() && !emAndamento(v[i].progresso)) { (*fora)++; continue; }
     // "A seguir" que passa da desmarcacao da pessoa recua (ajustarASeguir).
     if (v[i].progresso == 0 && v[i].temporada > 0 && v[i].episodio > 0 &&
         aSeguir(v[i].imdb)) ajustarASeguir(&v[i]);
@@ -2894,6 +2915,7 @@ static int contaASeguir(CatItem *lista, int n, int max, int comOutraFonte) {
   CatItem *lote;
   int nSem, nLote = 0, i, j, confirmados, entraram = 0;
   int fVelho = 0, fVisto = 0, fPausado = 0;
+  if (!ajustes_cw_proximo()) { cwo_conta_definir(NULL, 0); return n; }
   nSem = contalib_sementes_a_seguir(sem, PROX_MAX_BUSCAS,
                                     ajustes_cw_do_episodio_mais_alto());
   if (nSem < 0) {
@@ -2940,7 +2962,7 @@ static int contaASeguir(CatItem *lista, int n, int max, int comOutraFonte) {
   // Publicado ANTES do enfeite: e por ele que trakt.c sabe que tem de conferir.
   cwo_conta_definir(ids, nLote);
   confirmados = nLote ? trakt_enfeitar_lote(lote, nLote) : 0;
-  // Junta pelo instante, mais recente primeiro; o lote ja vem assim. Com
+  // Sugestoes so disputam lugares entre si; pausados ficam. Com
   // "Mostrar nao exibidos" desligado o futuro nem disputa lugar: o filtro mais
   // abaixo o tiraria, e o pausado que ele empurrou para fora nao voltaria.
   for (i = 0; i < confirmados; i++) {
@@ -2952,9 +2974,11 @@ static int contaASeguir(CatItem *lista, int n, int max, int comOutraFonte) {
         cwo_futuro(&x, (long long)time(NULL) * 1000LL)) continue;
     if (n < max) alvo = n++;
     else {
-      int vel = 0;
-      for (j = 1; j < n; j++) if (lista[j].retomadoMs < lista[vel].retomadoMs) vel = j;
-      if (lista[vel].retomadoMs >= lote[i].retomadoMs) continue;
+      int vel = -1;
+      for (j = 0; j < n; j++)
+        if (lista[j].progresso == 0 &&
+            (vel < 0 || lista[j].retomadoMs < lista[vel].retomadoMs)) vel = j;
+      if (vel < 0 || lista[vel].retomadoMs >= lote[i].retomadoMs) continue;
       alvo = vel;
     }
     lista[alvo] = lote[i];
@@ -2972,12 +2996,6 @@ static int contaASeguir(CatItem *lista, int n, int max, int comOutraFonte) {
          confirmados, entraram);
   free(lote);
   return n;
-}
-
-static void *fioReexibirTrakt(void *u) {
-  trakt_progresso_ocultar((const char *)u, 0);
-  free(u);
-  return NULL;
 }
 
 static int montarContinuar(CatItem *saida, int max) {
@@ -3034,7 +3052,7 @@ static int montarContinuar(CatItem *saida, int max) {
   if (fonte == AJ_CWF_SIMKL && !simkl_ativo())
     printf("[desc] continuar assistindo: fonte Simkl sem vinculo; fileira vazia\n");
 
-  // TRAKT E SIMKL NA MESMA OBRA: fica o de instante mais novo. Os dois
+  // TRAKT E SIMKL NA MESMA OBRA: progresso vence sugestao sem prova. Os dois
   // costumam concordar (muita gente sincroniza um no outro), e dois cards da
   // mesma serie seriam o defeito que continuarLocal ja evita.
   // A mesma obra DENTRO do Trakt tambem entra uma vez (#244: o mesmo episodio
@@ -3047,7 +3065,7 @@ static int montarContinuar(CatItem *saida, int max) {
       if (mesmaObra(remotos[k], &doTrakt[i])) achou = k;
     if (achou < 0) { remotos[nR++] = &doTrakt[i]; continue; }
     repetidos++;
-    if (instanteDaConta(&doTrakt[i]) > instanteDaConta(remotos[achou])) remotos[achou] = &doTrakt[i];
+    if (candidatoVence(&doTrakt[i], remotos[achou])) remotos[achou] = &doTrakt[i];
   }
   for (i = 0; i < nS; i++) {
     int k, achou = -1;
@@ -3055,7 +3073,7 @@ static int montarContinuar(CatItem *saida, int max) {
       if (mesmaObra(remotos[k], &doSimkl[i])) achou = k;
     if (achou < 0) { remotos[nR++] = &doSimkl[i]; continue; }
     repetidos++;
-    if (instanteDaConta(&doSimkl[i]) > instanteDaConta(remotos[achou]))
+    if (candidatoVence(&doSimkl[i], remotos[achou]))
       remotos[achou] = &doSimkl[i];
   }
   nL = querConta ? continuarLocal(daConta, CONT_MAX) : 0;
@@ -3078,16 +3096,14 @@ static int montarContinuar(CatItem *saida, int max) {
   // mesma obra sai: manter os dois poria a mesma serie duas vezes na fileira,
   // que e o defeito que continuarLocal ja evitava dentro da propria lista.
   //
-  // EXCETO QUANDO O REMOTO E MAIS NOVO NA MESMA OBRA (issue #66): a conta tinha
-  // S1E1 a 3% de 8/9 e o Trakt dizia "viu S1E1 inteiro em 19/9, a seguir
-  // S1E2"; manter a conta punha na fileira um episodio ja visto, com o selo
-  // "a seguir" do outro. O instante decide, como no resto desta funcao.
+  // Uma sugestao so substitui o pausado da conta com conclusao confirmada
+  // posterior daquele episodio. Recencia sozinha nao prova conclusao.
   { static int pularLocal[CONT_MAX];
     memset(pularLocal, 0, sizeof pularLocal);
     for (i = 0; i < nR; i++)
       for (j = 0; j < nL; j++)
         if (mesmaObra(remotos[i], &daConta[j]) &&
-            instanteDaConta(remotos[i]) > instanteDaConta(&daConta[j]))
+            candidatoVence(remotos[i], &daConta[j]))
           pularLocal[j] = 1;
   for (i = 0; i < nL && nJ < (int)(sizeof juntos / sizeof *juntos); i++) {
     if (pularLocal[i]) continue;
@@ -3128,17 +3144,13 @@ static int montarContinuar(CatItem *saida, int max) {
   // OCULTO PELA PESSOA, EM DISCO (#203): o "Tirar de Continuar assistindo" num
   // item "A seguir". Vale para as tres fontes e sobrevive ao reinicio; a obra
   // VOLTA SOZINHA quando ha episodio novo (instante mais novo que o carimbo, ou
-  // registro local mais novo) — para a pessoa nunca ficar presa fora. Ao voltar,
-  // desfaz tambem o oculto do Trakt, senao o proximo episodio nao viria de la.
+  // registro local mais novo). Esta leitura so altera o espelho local; nao
+  // escreve no Trakt.
   { int w = 0, ocultos = 0;
     for (i = 0; i < nJ; i++) {
       if (prog_oculto_vence(juntos[i].item->imdb, juntos[i].ms)) { ocultos++; continue; }
       if (prog_oculto_soltar(juntos[i].item->imdb, juntos[i].ms)) {
-        char *id = strdup(juntos[i].item->imdb);
-        pthread_t t;
         printf("[desc] continuar assistindo: %s voltou (episodio novo)\n", juntos[i].item->imdb);
-        if (id && pthread_create(&t, NULL, fioReexibirTrakt, id) == 0) pthread_detach(t);
-        else free(id);
       }
       juntos[w++] = juntos[i];
     }
@@ -3152,7 +3164,10 @@ static int montarContinuar(CatItem *saida, int max) {
     while (k > 0) {
       long long a = juntos[k].ms, b = juntos[k - 1].ms;
       int troca;
-      if (a != b) troca = !b ? 0 : (!a ? 1 : a > b);
+      int pa = emAndamento(juntos[k].item->progresso);
+      int pb = emAndamento(juntos[k - 1].item->progresso);
+      if (pa != pb) troca = pa;
+      else if (a != b) troca = !b ? 0 : (!a ? 1 : a > b);
       else        troca = juntos[k].ord < juntos[k - 1].ord;
       if (!troca) break;
       { Cand t = juntos[k - 1]; juntos[k - 1] = juntos[k]; juntos[k] = t; }
@@ -3161,7 +3176,7 @@ static int montarContinuar(CatItem *saida, int max) {
   }
 
   // A ORDENACAO ESCOLHIDA EM AJUSTES (issue #127) — ver cwordem.h. Ate aqui a
-  // lista esta pelo instante, que e o modo "Padrao". "Estilo streaming" e
+  // lista esta por grupo e recencia. "Estilo streaming" e
   // "Separar futuros" levam os "a seguir" que ainda nao foram ao ar para o fim,
   // pela estreia; no segundo a home ainda os tira desta fileira e monta
   // "Proximos episodios" com eles. `showUnairedNextUp` desligado os tira de vez
@@ -3177,9 +3192,7 @@ static int montarContinuar(CatItem *saida, int max) {
     for (i = 0; i < nJ; i++) {
       const CatItem *c = juntos[i].item;
       CwoItem x;
-      x.aSeguir = c->progresso == 0 &&
-                  (trakt_e_a_seguir(c->imdb) || simkl_e_a_seguir(c->imdb) ||
-                   cwo_conta_a_seguir(c->imdb));
+      x.aSeguir = !emAndamento(c->progresso);
       // "PROXIMO EPISODIO NO CONTINUAR" desligado (#203): sai todo item que e o
       // PROXIMO — o "a seguir" e o episodio terminado que o card trocaria pelo
       // seguinte (continuar_desenhar). Fica so o que esta em andamento.
@@ -3216,7 +3229,13 @@ static int montarContinuar(CatItem *saida, int max) {
     // Antes era um slice de [exibidos..., futuros...]: com a fileira cheia —
     // 22 candidatos para 12 lugares na C9 do dono — os futuros eram sempre os
     // cortados, e "Separar futuros"/"Estilo streaming" nao mudavam nada.
-    cwo_corte(principal, nJ - principal, max, &mp, &mf);
+    // Reserva para futuros apenas DEPOIS dos pausados, nunca contra eles.
+    { int pausados = 0;
+      while (pausados < principal && emAndamento(ordenados[pausados].item->progresso)) pausados++;
+      if (pausados > max) pausados = max;
+      cwo_corte(principal - pausados, nJ - principal, max - pausados, &mp, &mf);
+      mp += pausados;
+    }
     for (i = 0; i < mp; i++) juntos[i] = ordenados[i];
     for (i = 0; i < mf; i++) {
       juntos[mp + i] = ordenados[principal + i];

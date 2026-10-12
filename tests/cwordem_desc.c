@@ -134,7 +134,9 @@ static int concluidoTeste = 90;         // Percentual assistido; 90 de fabrica
 int   ajustes_cw_concluido(void)           { return concluidoTeste; }
 int   ajustes_cw_minimo(void)             { return 1; }
 int ajustes_cw_mostrar_nao_exibidos(void) { return naoExibidosTeste; }
+#ifndef CW205_MONTAGEM
 int   ajustes_cw_proximo(void) { return 1; }
+#endif
 
 // --- O "TRAKT" FALSO ---------------------------------------------------------
 // Por instante (o mais recente primeiro depois da ordenacao da montagem):
@@ -200,6 +202,11 @@ int trakt_continuar(CatItem *s, int m) {
                                                          : agoraMs + f->estreiaDias * DIA);
   }
   return i;
+}
+static const char *concluidoIdTeste;
+static long long concluidoMsTeste;
+int trakt_cw_concluiu(const char *id, long long ms) {
+  return concluidoIdTeste && !strcmp(id, concluidoIdTeste) && concluidoMsTeste > ms;
 }
 int   trakt_continuar_falhou(void)        { return traktFalhouTeste; }
 
@@ -291,16 +298,16 @@ int main(void) {
   prog_definir_relogio(relogioProg);
   agoraMs = (long long)time(NULL) * 1000LL;
 
-  { static const char *const e[] = { "ttA:1:3", "tt1", "ttB:2:1", "ttC:1:8", "tt2" };
+  { static const char *const e[] = { "tt1", "tt2", "ttA:1:3", "ttB:2:1", "ttC:1:8" };
     modoTeste = CWO_PADRAO;
     conferir("padrao", e, 5);
     assert(!cwo_e_futuro("ttA:1:3") && !cwo_e_futuro("ttB:2:1"));
     puts("ok  padrao: pelo instante, nenhum futuro publicado"); }
 
-  { static const char *const e[] = { "tt1", "ttC:1:8", "tt2", "ttB:2:1", "ttA:1:3" };
+  { static const char *const e[] = { "tt1", "tt2", "ttC:1:8", "ttA:1:3", "ttB:2:1" };
     modoTeste = CWO_STREAMING;
     conferir("streaming", e, 5);
-    puts("ok  streaming: futuros no fim, a estreia mais proxima primeiro");
+    puts("ok  streaming: pausados primeiro, futuros no fim por recencia");
     modoTeste = CWO_SEPARAR;
     conferir("separar", e, 5);
     assert(cwo_e_futuro("ttA:1:3") && cwo_e_futuro("ttB:2:1"));
@@ -310,11 +317,11 @@ int main(void) {
   // Fileira curta: os futuros e que ficam de fora do corte.
   { CatItem lote[CONT_MAX];
     int nc = montarContinuar(lote, 4);
-    assert(nc == 4 && !strcmp(lote[3].imdb, "ttB:2:1"));
-    assert(cwo_e_futuro("ttB:2:1") && !cwo_e_futuro("ttA:1:3"));
+    assert(nc == 4 && !strcmp(lote[3].imdb, "ttA:1:3"));
+    assert(cwo_e_futuro("ttA:1:3") && !cwo_e_futuro("ttB:2:1"));
     puts("ok  fileira curta: o futuro fica com o lugar reservado, o outro sai"); }
 
-  { static const char *const e[] = { "tt1", "ttC:1:8", "tt2" };
+  { static const char *const e[] = { "tt1", "tt2", "ttC:1:8" };
     naoExibidosTeste = 0;
     conferir("nao exibidos desligado", e, 3);
     assert(!cwo_e_futuro("ttA:1:3") && !cwo_e_futuro("ttB:2:1"));
@@ -339,45 +346,43 @@ int main(void) {
     }
     naoExibidosTeste = 1;
 
-    // Padrao: pelo instante, Brothers (o mais recente) primeiro.
+    // Sugestao mais recente sem prova nao elimina S1E4 pausado.
     { CatItem lote[CONT_MAX];
       int nc;
       modoTeste = CWO_PADRAO;
       nc = montarContinuar(lote, CONT_MAX);
-      assert(nc == 12 && !strcmp(lote[0].imdb, "tt6773088:1:6"));
+      assert(nc == 12 && !strcmp(lote[0].imdb, "tt6773088:1:4"));
       for (k = 1; k < nc; k++) assert(strncmp(lote[k].imdb, "tt6773088", 9));
       assert(!cwo_e_futuro("tt6773088:1:6"));
-      puts("ok  brothers padrao: o S1E6 do Trakt na frente, o S1E4 da conta fora"); }
+      puts("ok  brothers padrao: S1E4 pausado fica, S1E6 sem prova fica fora"); }
 
-    // Separar futuros: Brothers FICA na lista (no fim) e e publicado como futuro.
+    // Separar futuros tambem preserva os 12 pausados.
     { CatItem lote[CONT_MAX];
       int nc;
       modoTeste = CWO_SEPARAR;
       nc = montarContinuar(lote, CONT_MAX);
       assert(nc == 12);
-      assert(!strcmp(lote[11].imdb, "tt6773088:1:6"));
-      assert(!strcmp(lote[0].imdb, "tt32260680:1:2"));
-      assert(cwo_e_futuro("tt6773088:1:6"));
+      assert(!strcmp(lote[0].imdb, "tt6773088:1:4") && lote[0].progresso == 40);
+      assert(!cwo_e_futuro("tt6773088:1:6"));
       assert(!cwo_e_futuro("tt32260680:1:2") && !cwo_e_futuro("tt31937954:1:3"));
-      puts("ok  brothers separar: S1E6 publicado como futuro, nao cortado");
+      puts("ok  brothers separar: S1E4 preservado, sem sugestao no lugar");
       modoTeste = CWO_STREAMING;
       nc = montarContinuar(lote, CONT_MAX);
-      assert(nc == 12 && !strcmp(lote[11].imdb, "tt6773088:1:6"));
-      puts("ok  brothers streaming: S1E6 no fim da fileira"); }
+      assert(nc == 12 && !strcmp(lote[0].imdb, "tt6773088:1:4"));
+      puts("ok  brothers streaming: S1E4 preservado"); }
 
-    // showUnairedNextUp desligado: Brothers sai, e a fileira continua cheia.
+    // showUnairedNextUp desligado: o pausado de Brothers continua.
     { CatItem lote[CONT_MAX];
       int nc;
       naoExibidosTeste = 0;
       modoTeste = CWO_SEPARAR;
       nc = montarContinuar(lote, CONT_MAX);
       assert(nc == 12);
-      for (k = 0; k < nc; k++) assert(strncmp(lote[k].imdb, "tt6773088", 9));
+      assert(!strcmp(lote[0].imdb, "tt6773088:1:4"));
       assert(!cwo_e_futuro("tt6773088:1:6"));
       puts("ok  brothers nao exibidos desligado: S1E6 escondido, fileira cheia"); }
 
-    // Sem data (o Cinemeta nao deu `released`): conta como exibido, fica na
-    // frente pelo instante e nao e publicado como futuro.
+    // Sugestao sem data tambem nao vence progresso sem prova.
     { CatItem lote[CONT_MAX];
       int nc;
       naoExibidosTeste = 1;
@@ -385,10 +390,25 @@ int main(void) {
       semDataPrimeiro = 1;
       nc = montarContinuar(lote, CONT_MAX);
       semDataPrimeiro = 0;
-      assert(nc == 12 && !strcmp(lote[0].imdb, "tt6773088:1:6"));
+      assert(nc == 12 && !strcmp(lote[0].imdb, "tt6773088:1:4"));
       assert(!cwo_e_futuro("tt6773088:1:6"));
-      puts("ok  brothers sem data: conta como exibido (e o log diz)"); }
+      puts("ok  brothers sem data: pausado preservado"); }
     naoExibidosTeste = 1; }
+
+  // Mesma obra: sugestao so vence com conclusao confirmada posterior.
+  { CatItem pausa = {0}, proxima = {0};
+    snprintf(pausa.imdb, sizeof pausa.imdb, "ttProof:1:3");
+    pausa.temporada = 1; pausa.episodio = 3; pausa.progresso = 62; pausa.retomadoMs = 100;
+    proxima = pausa; proxima.progresso = 0; proxima.retomadoMs = 300;
+    snprintf(proxima.imdb, sizeof proxima.imdb, "ttProof:1:4"); proxima.episodio = 4;
+    assert(!candidatoVence(&proxima, &pausa));
+    concluidoIdTeste = pausa.imdb; concluidoMsTeste = 90;
+    assert(!candidatoVence(&proxima, &pausa));
+    concluidoMsTeste = 200; assert(candidatoVence(&proxima, &pausa));
+    pausa.retomadoMs = 250; assert(!candidatoVence(&proxima, &pausa));
+    concluidoIdTeste = NULL;
+    puts("ok mesma obra: conclusao anterior/ausente nao vence; posterior vence");
+  }
 
   // #151: TRAKT SEM RESPOSTA NAO ESVAZIA A FILEIRA. Com a fonte so no Trakt a
   // lista nova sai vazia; o que estava publicado fica. Com o Trakt de volta e
@@ -438,9 +458,9 @@ int main(void) {
     modoTeste = CWO_PADRAO;
     nc = montarContinuar(lote, CONT_MAX);
     assert(nc == 2);
-    assert(!strcmp(lote[0].imdb, "ttP:1:5") && lote[0].temporada == 1 &&
-           lote[0].episodio == 5 && lote[0].progresso == 100);
-    assert(!strcmp(lote[1].imdb, "ttQ:2:1") && lote[1].progresso == 30);
+    assert(!strcmp(lote[1].imdb, "ttP:1:5") && lote[1].temporada == 1 &&
+           lote[1].episodio == 5 && lote[1].progresso == 100);
+    assert(!strcmp(lote[0].imdb, "ttQ:2:1") && lote[0].progresso == 30);
     puts("ok  trakt velho: S1E3 nao volta por cima do S1E5 visto aqui; o adiante fica");
     fonteTeste = 0; nTabela = 0; }
 
@@ -466,7 +486,7 @@ int main(void) {
 
   // #199: SO A CONTA, SEM TRAKT NEM SIMKL. As 12 pausadas da conta (Brothers
   // S1E4 e tt7000001..11) continuam no disco; os vistos da conta semeiam o "a
-  // seguir". Os dois mais novos entram no lugar dos pausados mais velhos.
+  // seguir". Com 12 pausados, nenhuma sugestao pode tomar o lugar deles.
   { CatItem lote[CONT_MAX];
     int nc, k;
     fonteTeste = 1;               // AJ_CWF_CONTA
@@ -477,8 +497,7 @@ int main(void) {
     consultadas = 0;
     nc = montarContinuar(lote, CONT_MAX);
     assert(nc == 12);
-    assert(!strcmp(lote[0].imdb, "ttT:4:10") && !strcmp(lote[1].imdb, "ttM:1:4"));
-    assert(lote[0].progresso == 0 && lote[0].temporada == 4 && lote[0].episodio == 10);
+    for (k = 0; k < nc; k++) assert(lote[k].progresso == 40);
     // A semente da serie ja pausada nem vai ao Cinemeta; a que acabou vai e sai.
     assert(consultadas == 3);
     for (k = 0; k < nc; k++)
@@ -487,18 +506,18 @@ int main(void) {
     assert(!cwo_e_futuro("ttT:4:10"));
     puts("ok  #199 conta: a seguir dos vistos entra, pausado e serie acabada ficam fora");
 
-    // Ordenacao "Separar futuros": Ted Lasso (estreia em 6 dias) vira futuro.
+    // Ordenacao "Separar futuros": nenhuma reserva expulsa pausados.
     modoTeste = CWO_SEPARAR;
     nc = montarContinuar(lote, CONT_MAX);
-    assert(nc == 12 && !strcmp(lote[11].imdb, "ttT:4:10"));
-    assert(cwo_e_futuro("ttT:4:10") && !cwo_e_futuro("ttM:1:4"));
-    puts("ok  #199 conta separar: o nao lancado vai para Proximos episodios");
+    assert(nc == 12 && !cwo_e_futuro("ttT:4:10"));
+    for (k = 0; k < nc; k++) assert(lote[k].progresso == 40);
+    puts("ok  #199 conta separar: 12 pausados preservados");
 
     // "Mostrar nao exibidos" desligado: o futuro sai, o que ja foi ao ar fica.
     naoExibidosTeste = 0;
     modoTeste = CWO_PADRAO;
     nc = montarContinuar(lote, CONT_MAX);
-    assert(nc == 12 && !strcmp(lote[0].imdb, "ttM:1:4"));
+    assert(nc == 12 && lote[0].progresso == 40);
     for (k = 0; k < nc; k++) assert(strncmp(lote[k].imdb, "ttT", 3));
     puts("ok  #199 conta nao exibidos desligado: so o nao lancado sai");
     naoExibidosTeste = 1;
@@ -547,6 +566,13 @@ int main(void) {
     contaAntigaId = NULL;
     traktAtivoTeste = 1;
     puts("ok  conta + Trakt: serie parada ha 61 dias nao ressuscita");
+    // Com lugares livres, sementes da conta entram apos os pausados.
+    prog_remover("tt7000010"); prog_remover("tt7000011");
+    nc = montarContinuar(lote, CONT_MAX);
+    assert(nc == 12 && !strcmp(lote[10].imdb, "ttT:4:10") &&
+           !strcmp(lote[11].imdb, "ttM:1:4"));
+    for (k = 0; k < 10; k++) assert(lote[k].progresso == 40);
+    puts("ok conta: sugestoes preenchem somente os dois lugares livres");
     contaBaseMs = 0;
     contaSementesTeste = 0;
     fonteTeste = 0; }

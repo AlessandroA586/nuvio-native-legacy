@@ -155,6 +155,7 @@ int trakt_continuar(CatItem *s, int m) {
   um(&s[4], "tt700", "movie", 0, 0, 40, 600000);
   return 5;
 }
+int trakt_cw_concluiu(const char *id, long long ms) { (void)id; (void)ms; return 0; }
 int   trakt_continuar_falhou(void)        { return 0; }
 
 static long long agora = 1000000;
