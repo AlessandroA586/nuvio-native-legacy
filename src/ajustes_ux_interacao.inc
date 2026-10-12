@@ -210,9 +210,12 @@ static int uxEvento(SDL_Keycode k) {
       if (OPCOES[uxOp].tipo == OP_NUMERO)
         uxPendente = limita(uxOp, uxPendente + d * OPCOES[uxOp].passo);
       else {
-        uxPendente += d;
+        int ant = uxPendente;
+        do uxPendente += d;
+        while (uxOp == AJ_TEX_MB && uxPendente >= 0 && uxPendente < nValores(uxOp) && texAcima(uxPendente));
         if (uxPendente < 0) uxPendente = 0;
         if (uxPendente >= nValores(uxOp)) uxPendente = nValores(uxOp) - 1;
+        if (uxOp == AJ_TEX_MB && texAcima(uxPendente)) uxPendente = ant;
       }
     }
     return 1;

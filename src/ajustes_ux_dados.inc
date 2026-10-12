@@ -100,6 +100,11 @@ static void uxValorTexto(int op, int v, char *buf, size_t tam) {
     texto = i18n(texto);
   } else if (op == AJ_SELOS_PACOTE) {
     texto = v > 0 && v <= selospacote_n() ? selospacote_nome(v - 1) : i18n("Do Nuvio");
+  } else if (op == AJ_TEX_MB && v > 0 && v < o->n && texAcima(v)) {
+    char t[160];
+    texValorTexto(v, t, sizeof t);
+    uxTextoCopiar(buf, tam, t);
+    return;
   } else if (o->valores && o->n > 0) {
     /* Nao resolve Automatico nem o modo seguro: mostra o que foi salvo. */
     if (v < 0 || v >= o->n) v = 0;

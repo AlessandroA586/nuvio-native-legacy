@@ -686,6 +686,14 @@ static const char *V_PS_FUNDO[]  = { "Filmes", "Listras", "Arte do perfil", "Luz
 // GB para em 300, que e o unico valor acima do automatico medido em aparelho.
 static const char *V_TEX_MB[]    = { "Automático", "96 MB", "160 MB", "240 MB", "300 MB", "400 MB", "512 MB" };
 static const int   TEX_MB_DE[]   = { 0, 96, 160, 240, 300, 400, 512 };
+// Automatico continua disponivel, mesmo quando nenhum valor manual cabe.
+static int texAcima(int i) { return i > 0 && i < 7 && TEX_MB_DE[i] > tex_teto_ram_mb(); }
+// "512 MB" ou, acima do teto, "512 MB → 160 MB nesta TV": o que vale de verdade.
+static const char *texValorTexto(int i, char *buf, size_t tam) {
+  if (!texAcima(i)) return i18n(V_TEX_MB[i]);
+  snprintf(buf, tam, i18n("%s → %d MB nesta TV"), i18n(V_TEX_MB[i]), tex_teto_ram_mb());
+  return buf;
+}
 // TRES PADROES DE IMAGEM. O nome diz o que a pessoa ganha, nao o que o cache
 // faz: "Alta" e mais pixel de arte e mais memoria; "Baixa" e arte que chega
 // antes e cabe em TV com pouca RAM.
@@ -6315,7 +6323,13 @@ static void mudarValor(int op, int dir);
 static int passoAdiante(int op, int dir) {
   const Opcao *o = &OPCOES[op];
   if (o->tipo == OP_NUMERO) return limita(op, valor[op] + dir * o->passo);
-  { int n = nValores(op); return (valor[op] + (dir > 0 ? 1 : n - 1)) % n; }
+  { int n = nValores(op), v = valor[op], k;
+    // Ao girar, pula o que esta TV nao suporta (o 512 numa TV de 160 so enganaria).
+    for (k = 0; k < n; k++) {
+      v = (v + (dir > 0 ? 1 : n - 1)) % n;
+      if (op != AJ_TEX_MB || !texAcima(v)) return v;
+    }
+    return 0; }
 }
 // 1 quando a mudanca precisa da folha (e a abriu).
 static int riscoPedirConfirmacao(int op, int dir) {
@@ -6554,6 +6568,7 @@ static int definirValorDireto(int op, int novo) {
   }
   antes = valor[op];
   if (novo == antes) return 1;
+  if (op == AJ_TEX_MB && texAcima(novo)) return 0;
   valor[op] = novo;
   if (novo == 0) notaLigarPar(op);
   { int ok; ajOrigem = ajOrigemDireto; ok = gravar(); ajOrigem = 0; if (!ok) { valor[op] = antes; return 0; } }
@@ -7038,6 +7053,11 @@ static const char *textoValor(int op) {
   if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA) {
     int v = valor[op];
     return (v >= 0 && v < nLingua && V_LINGUA[v]) ? V_LINGUA[v] : "Da conta";
+  }
+  if (op == AJ_TEX_MB && valor[op] > 0 && valor[op] < 7 && texAcima(valor[op])) {
+    static char tex[96];
+    texValorTexto(valor[op], tex, sizeof tex);
+    return tex;
   }
   if (op == AJ_CACHE_SEEK && !cacheSeekExiste()) return "Não disponível nesta TV";
   if (op == AJ_DTS_AC3 && !dtsConversaoExiste()) return "Não disponível nesta TV";
@@ -7666,7 +7686,14 @@ void ajustes_teste_ux_captura(int cenario) {
     uxListarDiferencas(); uxIndice = 1; focoIndice = 0; uxDifFoco = 0;
     if (cenario == 5) { uxAbrirEditor(AJ_TEMA); uxRodape = uxRestaurar = 1; }
   }
-  if (cenario == 6) focarOpcao(AJ_TEX_MB);
+  if (cenario == 6) {   // NUVIO_SHOT_TEX_MB=<indice 0-6 de V_TEX_MB>
+    if (getenv("NUVIO_SHOT_TEX_MB")) {
+      valor[AJ_TEX_MB] = atoi(getenv("NUVIO_SHOT_TEX_MB"));
+      tex_definir_orcamento_mb(ajustes_tex_mb());
+    }
+    focarOpcao(AJ_TEX_MB);
+    if (getenv("NUVIO_SHOT_TEX_EDITOR")) uxAbrirEditor(AJ_TEX_MB);
+  }
   if (cenario == 7) { focarOpcao(AJ_LARGURA_DP); uxAbrirEditor(AJ_LARGURA_DP); uxEvento(SDLK_DOWN); }
   if (cenario == 8) { focarSecao(0); uxIndice = 1; focoIndice = 1; uxChipAv = 1; }
   if (cenario == 9) { valor[AJ_IDIOMA] = IDIOMA_EN + 1; focarOpcao(AJ_HOME_LAYOUT); uxAbrirEditor(AJ_HOME_LAYOUT); }
