@@ -70,6 +70,11 @@ jobs:
           bash workload-install.sh
           dotnet workload list
 
+      # Same workaround used on the owner's computer: the arm/v5 platform name
+      # is not accepted by the emulation, plain linux/arm is.
+      - name: Use linux/arm instead of linux/arm/v5
+        run: sed -i 's#linux/arm/v5#linux/arm#g' tools/tpk.sh
+
       - name: Build the TPK
         run: |
           export PATH="$DOTNET_ROOT:$PATH"
