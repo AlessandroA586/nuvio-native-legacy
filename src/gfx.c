@@ -3015,6 +3015,14 @@ void gfx_vidro_cartao(GfxRect r, float raio, float foco, float a) {
   float f = foco < 0.0f ? 0.0f : (foco > 1.0f ? 1.0f : foco), cr, cg, cb;
   if (f <= 0.01f || a <= 0.001f) return;
   ajustes_acento(&cr, &cg, &cb);
+  // "Contorno do vidro" DESLIGADO: sem fio no cartao, so um halo fraco por fora
+  // (a arte cobre o interior, entao o realce fica de fora, na mesma ordem de
+  // desenho de quem chama). Antes o contorno nao era lido aqui: Home, Biblioteca
+  // e Amigos ignoravam a opcao.
+  if (!ajustes_vidro_contorno()) {
+    gfx_anel_fora(r, raio, 1.0f, 9.0f, cr, cg, cb, 0.22f * f * a);
+    return;
+  }
   gfx_anel_fora(r, raio, 2.0f, 3.0f, cr, cg, cb, 0.96f * f * a);
 }
 void gfx_vidro_pilula_cheia(GfxRect r, float raio, float foco, float a) {
