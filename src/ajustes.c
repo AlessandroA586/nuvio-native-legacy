@@ -3140,7 +3140,26 @@ static const char *spAddTexto(void) {
 static const char *SP_ALFA_URL =
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:/.-_?=&%#+~@!,;";
 
+#ifdef NV_TEX_MB_FIXO
+// A ultima highcache (2.0.5) leva a 300 MB quem nao tem texturasMB salvo.
+// A chave presente preserva qualquer escolha, inclusive Automatico (0).
+// A marca e por aparelho e impede repetir a migracao depois de uma troca.
+static void memoriaMigrar(int viuMemoria) {
+  char *m = dados_ler("memoriaimagens-205.txt");
+  if (m) { free(m); return; }
+  if (!viuMemoria) {
+    valor[AJ_TEX_MB] = 4;   // TEX_MB_DE[4] = 300
+    printf("[ajustes] memoria para imagens -> 300 MB (migracao unica da 2.0.5)\n");
+  }
+  dados_gravar("memoriaimagens-205.txt", "1\n");
+  gravar();
+}
+#endif
+
 void ajustes_dir(const char *dir) {
+#ifdef NV_TEX_MB_FIXO
+  int viuMemoria = 0;
+#endif
   FILE *f;
   char caminho[600], linha[96];
   if (!dir || !*dir) return;
@@ -3163,6 +3182,10 @@ void ajustes_dir(const char *dir) {
   if (!f) {
     // Nunca gravou nada: o idioma nasce automatico (o padrao de valor[]).
     valor[AJ_IDIOMA] = 0;
+#ifdef NV_TEX_MB_FIXO
+    memoriaMigrar(0);
+    if (valor[AJ_TEX_MB] > 0) tex_definir_orcamento_mb(ajustes_tex_mb());
+#endif
     ajSombraSync();
     return;
   }
@@ -3198,6 +3221,9 @@ void ajustes_dir(const char *dir) {
       // Valor fora da faixa (arquivo de outra versao, ou editado a mao) cai no
       // padrao em vez de indexar fora do vetor.
       valor[i] = limita(i, v);
+#ifdef NV_TEX_MB_FIXO
+      if (i == AJ_TEX_MB) viuMemoria = 1;
+#endif
       if (i == AJ_MEDIDOR) viuMedidor = 1;
       if (i == AJ_RESOLUCAO) viuRes = 1;
       if (i == AJ_FONTE_PRAZO) viuEspera = 1;
@@ -3331,23 +3357,8 @@ void ajustes_dir(const char *dir) {
       dados_gravar("aparencia-20.txt", "1\n");
       gravar();
     } }
-  // MIGRACAO UNICA (2.0.5, dono): a build de cache grande (NV_TEX_MB_FIXO=300)
-  // esta sendo aposentada, e a 2.0.5 e a ultima que a traz. Quem a instalou fica
-  // com o mesmo teto de 300 MB, agora pelo ajuste. "Nunca escolheu" e o 0 no
-  // arquivo, que e igual ao Automatico escolhido de proposito (o arquivo nao
-  // guarda a diferenca); a marca diz que a migracao ja rodou. Quem escolheu outro
-  // valor fica, e quem trocar depois da marca fica. A build normal nao migra.
 #ifdef NV_TEX_MB_FIXO
-  { char *m = dados_ler("memoriaimagens-205.txt");
-    if (m) free(m);
-    else {
-      if (valor[AJ_TEX_MB] == 0) {
-        valor[AJ_TEX_MB] = 4;   // TEX_MB_DE[4] = 300
-        printf("[ajustes] memoria para imagens -> 300 MB (migracao unica da 2.0.5)\n");
-      }
-      dados_gravar("memoriaimagens-205.txt", "1\n");
-      gravar();
-    } }
+  memoriaMigrar(viuMemoria);
 #endif
   // O limite mora em fileiras.c; esta linha e so o espelho dele. Ler daqui em
   // vez de gravar evita a divergencia: o arquivo de ajustes nao guarda o
