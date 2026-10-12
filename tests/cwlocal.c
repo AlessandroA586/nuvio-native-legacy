@@ -86,6 +86,11 @@ int main(void) {
   cat_definir(&reserva, 1); falhaMeta = 0;
   n = continuarLocal(lote, 12);
   assert(!strcmp(porId(lote, n, "tt101:1:3")->titulo, "IMDb recuperado"));
+  // "Trakt only" inherited from the main profile by a profile without Trakt:
+  // the account progress must still fill the row, not an empty one.
+  fonteTeste = AJ_CWF_TRAKT; traktAtivoTeste = 0; traktFalhouTeste = 1;
+  n = montarContinuar(lote, 12);
+  assert(n == 5 && porId(lote, n, "tt101:1:3")->progresso == 40);
   prog_esquecer_tudo();
   puts("cwlocal: IMDb/TMDB/Kitsu/provider cache, offline/uncached progress, base+type identity and original thresholds ok");
 }
