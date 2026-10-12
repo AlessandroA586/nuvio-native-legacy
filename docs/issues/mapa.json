@@ -9308,6 +9308,26 @@
    "notas": "C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/468",
    "alvo": "2.0.6"
+  },
+  {
+   "numero": 469,
+   "titulo": "all movies shows not correct aspect ratio , original, stretching, full nothing helps",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "bug",
+   "status": "precisa-log",
+   "release": "2.0.5",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "Pedir log (codigo) com troca de modo de aspecto; ver qual pacote .tpk e qual caminho (DisplayRoi/fallback) o log mostra.",
+   "notas": "Q800T (GQ65Q800TGT, 2020, Tizen 5.5), 2.0.5. Nenhum modo de aspecto muda a imagem. 2.0.5 ja tem c4f344e8 (DisplayRoi + fallback 2.0.4, #426/#341) e 81d2152b (tpk 6+). Suspeita: Tizen 5.5 cai no caminho sem DisplayRoi. Pedir codigo do log e foto.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/469",
+   "alvo": "2.0.6"
   }
  ],
  "validacoes": [
