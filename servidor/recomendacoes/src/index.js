@@ -133,6 +133,8 @@ const RECUSADO = false;
 // `exp` do JWT, ou 0 se ilegivel. Token valido fica no cache ate vencer (teto
 // SESSAO_MAX): reverificar a cada 10 min um token de 1 h era 6x as chamadas.
 const SESSAO_MAX = 3600;
+// JWT recusado nao volta a valer: lembra a recusa ate ele vencer (teto de 1 dia).
+const RECUSA_MAX = 86400;
 function jwtExp(token) {
   try {
     const b = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
@@ -147,12 +149,14 @@ function jwtExp(token) {
 // a cada IDENT_LOTE eventos. Sem a tabela, so o log. Recusa acima de 20% vira
 // aviso no log — e o que o Nuvio mediu antes de bloquear (86%).
 const IDENT_LOTE = 50;
-const ident = { verif: 0, recusa: 0, local: 0 };
+const ident = { verif: 0, recusa: 0, local: 0, desde: 0 };
 async function contar(env, t, k) {
   ident[k]++;
-  if (ident.verif + ident.recusa + ident.local < IDENT_LOTE) return;
+  // Grava tambem por tempo: o isolate costuma morrer antes de juntar o lote.
+  if (ident.verif + ident.recusa + ident.local < IDENT_LOTE && t - ident.desde < 60) return;
   const { verif, recusa, local } = ident;
   ident.verif = ident.recusa = ident.local = 0;
+  ident.desde = t;
   const msg = `[ident] verif=${verif} recusa=${recusa} vencido_local=${local}`;
   if (recusa > (verif + recusa) * 0.2) console.warn(msg + " RECUSA ALTA"); else console.log(msg);
   try {
@@ -209,7 +213,7 @@ async function quemE(req, env) {
     await env.DB.prepare(
       "INSERT INTO sessao (hash, id, nome, expira) VALUES (?, '', '', ?) " +
       "ON CONFLICT(hash) DO UPDATE SET id = '', nome = '', expira = excluded.expira"
-    ).bind(hash, t + SESSAO_TTL).run();
+    ).bind(hash, exp ? Math.min(exp, t + RECUSA_MAX) : t + SESSAO_TTL).run();
     return null;
   }
   if (!quem) return null;
