@@ -4227,6 +4227,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "Geen internet, een add-on die niet antwoordde, Trakt ontkoppeld, een vriendschapsverzoek en een profielwissel verschijnen op het pilletje zelf. Is er iets te doen, dan groeit het tot een kaart met knoppen."),
   T("Sem internet. Mostrando o que já estava salvo.", "Geen internet. Wat al opgeslagen was wordt getoond."),
   T("Sem legenda", "Zonder ondertitels"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "Dit bestand heeft geen tekstondertitels om als referentie te gebruiken"),
   T("Sem legendas neste canal", "Geen ondertiteling op dit kanaal"),
   T("Sem lembrete", "Geen herinnering"),
   T("Sem limite", "Geen limiet"),

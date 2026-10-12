@@ -97,18 +97,21 @@ int legenda_eh_ass(const char *corpo);
 /* Immutable subtitle documents, independent of the currently drawn overlay.
  * Build once on a worker, retain while analysing/drawing, release when done.
  * `identidade` must identify the subtitle track/file, never contain a signed
- * URL or credentials. A partial mkvass batch MUST NOT set COMPLETO. */
+ * URL or credentials. A partial mkvass batch MUST NOT set COMPLETO for the
+ * whole track. JANELA + COMPLETO proves only its explicit indexed interval. */
 typedef struct LegendaDocumento LegendaDocumento;
 enum {
   LEGENDA_DOC_COMPLETO = 1u << 0,
   LEGENDA_DOC_FORCED = 1u << 1,
-  LEGENDA_DOC_SINAIS = 1u << 2
+  LEGENDA_DOC_SINAIS = 1u << 2,
+  LEGENDA_DOC_JANELA = 1u << 3 /* COMPLETO somente entre janelaInicio/Fim */
 };
 typedef struct {
   char idioma[24], origem[96], identidade[128];
   uint64_t sessao;
   unsigned flags;
   double duracaoSeg; /* media duration when known; zero = unknown */
+  double janelaInicio, janelaFim; /* intervalo indexado integralmente colhido */
 } LegendaDocumentoInfo;
 LegendaDocumento *legenda_documento_criar(const char *corpo,
                                         const LegendaDocumentoInfo *info);

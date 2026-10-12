@@ -4227,6 +4227,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "Niente internet, addon che non ha risposto, Trakt scollegato, richiesta di amicizia e cambio profilo compaiono sulla pillola stessa. Quando c’è qualcosa da fare, si allarga in una scheda con pulsanti."),
   T("Sem internet. Mostrando o que já estava salvo.", "Niente internet. Mostro ciò che era già salvato."),
   T("Sem legenda", "Senza sottotitoli"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "Questo file non contiene sottotitoli di testo da usare come riferimento"),
   T("Sem legendas neste canal", "Nessun sottotitolo su questo canale"),
   T("Sem lembrete", "Nessun promemoria"),
   T("Sem limite", "Nessun limite"),

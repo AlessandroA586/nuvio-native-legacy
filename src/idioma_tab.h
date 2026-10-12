@@ -4226,6 +4226,7 @@
   { "Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "No internet, an add-on that didn't answer, Trakt disconnected, a friend request and a profile switch show up on the pill itself. When there's something to do, it grows into a card with buttons." },
   { "Sem internet. Mostrando o que já estava salvo.", "No internet. Showing what was already saved." },
   { "Sem legenda", "No subtitles" },
+  { "Sem legenda de texto neste arquivo para usar como referência", "No text subtitles in this file to use as a reference" },
   { "Sem legendas neste canal", "No subtitles on this channel" },
   { "Sem lembrete", "No reminder" },
   { "Sem limite", "No limit" },

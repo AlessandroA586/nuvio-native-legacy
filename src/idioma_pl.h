@@ -4227,6 +4227,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "Brak internetu, dodatek, który nie odpowiedział, rozłączony Trakt, zaproszenie do znajomych i zmiana profilu pojawiają się na samej pigułce. Gdy jest coś do zrobienia, rośnie do karty z przyciskami."),
   T("Sem internet. Mostrando o que já estava salvo.", "Brak internetu. Pokazuję to, co już zapisane."),
   T("Sem legenda", "Bez napisów"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "Ten plik nie ma napisów tekstowych do użycia jako odniesienia"),
   T("Sem legendas neste canal", "Brak napisów na tym kanale"),
   T("Sem lembrete", "Bez przypomnienia"),
   T("Sem limite", "Bez limitu"),

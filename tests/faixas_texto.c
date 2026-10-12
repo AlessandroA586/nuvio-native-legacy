@@ -66,6 +66,7 @@ int legmem_exata(const LegMem *m, const int *numeros, const char *const *idiomas
                  const char *const *idsAdd, int nAdd) {
   (void)m; (void)numeros; (void)idiomas; (void)nomes; (void)nEmb; (void)idsAdd; (void)nAdd; return -1;
 }
+unsigned legsync_manual_seq(void) { return 0; }
 uint64_t legsync_hash_url(const char *url) { (void)url; return 0; }
 void legsync_primaria_externa(const char *url, const char *idioma, const char *origem) { (void)url; (void)idioma; (void)origem; }
 void legsync_primaria_outra(int embutida) { (void)embutida; }

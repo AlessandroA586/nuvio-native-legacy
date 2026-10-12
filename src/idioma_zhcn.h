@@ -4227,6 +4227,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "没有网络、附加组件未响应、Trakt 断开、好友请求和切换个人资料都会直接显示在胶囊上。需要操作时，它会展开为带按钮的卡片。"),
   T("Sem internet. Mostrando o que já estava salvo.", "没有网络。正在显示已保存的内容。"),
   T("Sem legenda", "无字幕"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "此文件没有可用作参考的文本字幕"),
   T("Sem legendas neste canal", "此频道没有字幕"),
   T("Sem lembrete", "无提醒"),
   T("Sem limite", "不限"),

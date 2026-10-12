@@ -4226,6 +4226,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "Kein Internet, ein Add-on, das nicht antwortet, Trakt getrennt, eine Freundschaftsanfrage und ein Profilwechsel erscheinen auf der Pille selbst. Gibt es etwas zu tun, wächst sie zu einer Karte mit Tasten."),
   T("Sem internet. Mostrando o que já estava salvo.", "Kein Internet. Gespeichertes wird angezeigt."),
   T("Sem legenda", "Ohne Untertitel"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "Diese Datei enthält keine Textuntertitel als Referenz"),
   T("Sem legendas neste canal", "Keine Untertitel auf diesem Sender"),
   T("Sem lembrete", "Keine Erinnerung"),
   T("Sem limite", "Kein Limit"),

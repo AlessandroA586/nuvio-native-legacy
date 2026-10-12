@@ -4227,6 +4227,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "Nėra interneto, neatsakęs priedas, atjungtas Trakt, kvietimas draugauti ir profilio keitimas rodomi pačioje piliulėje. Kai yra ką daryti, ji išauga į kortelę su mygtukais."),
   T("Sem internet. Mostrando o que já estava salvo.", "Nėra interneto. Rodoma tai, kas jau išsaugota."),
   T("Sem legenda", "Be subtitrų"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "Šiame faile nėra tekstinių subtitrų, kuriuos būtų galima naudoti kaip atskaitą"),
   T("Sem legendas neste canal", "Šiame kanale subtitrų nėra"),
   T("Sem lembrete", "Be priminimo"),
   T("Sem limite", "Be apribojimo"),

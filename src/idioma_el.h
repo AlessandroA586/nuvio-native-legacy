@@ -4227,6 +4227,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "Χωρίς internet, πρόσθετο που δεν απάντησε, Trakt αποσυνδεδεμένο, αίτημα φιλίας και αλλαγή προφίλ εμφανίζονται πάνω στην κάψουλα. Όταν χρειάζεται ενέργεια, μεγαλώνει σε κάρτα με κουμπιά."),
   T("Sem internet. Mostrando o que já estava salvo.", "Χωρίς ίντερνετ. Εμφανίζεται ό,τι ήταν αποθηκευμένο."),
   T("Sem legenda", "Χωρίς υπότιτλους"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "Αυτό το αρχείο δεν έχει υπότιτλους κειμένου για χρήση ως αναφορά"),
   T("Sem legendas neste canal", "Δεν υπάρχουν υπότιτλοι σε αυτό το κανάλι"),
   T("Sem lembrete", "Χωρίς υπενθύμιση"),
   T("Sem limite", "Χωρίς όριο"),

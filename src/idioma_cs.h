@@ -4227,6 +4227,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "Bez internetu, doplněk, který neodpověděl, odpojený Trakt, žádost o přátelství a změna profilu se objeví přímo na pilulce. Když je co dělat, zvětší se v kartu s tlačítky."),
   T("Sem internet. Mostrando o que já estava salvo.", "Bez internetu. Zobrazuji, co už bylo uložené."),
   T("Sem legenda", "Bez titulků"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "Tento soubor nemá textové titulky, které lze použít jako referenci"),
   T("Sem legendas neste canal", "Na tomto kanálu nejsou titulky"),
   T("Sem lembrete", "Bez připomenutí"),
   T("Sem limite", "Bez limitu"),
