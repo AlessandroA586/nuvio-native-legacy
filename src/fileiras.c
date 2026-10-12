@@ -1391,13 +1391,13 @@ void fil_alternar(int i) {
   if (i >= 0 && i < nLinhas) {
     linhas[i].oculta = linhas[i].oculta ? 0 : OC_PESSOA;
     linhas[i].visPessoal = 1;
+    linhas[i].nova = 0;
     // Voltar a ficar ligado pela alternancia e um add como outro qualquer:
     // mesmo snapshot contra a conta (#360).
     if (linhas[i].oculta) linhas[i].addVenceConta = 0;
     else linhas[i].addVenceConta = linhas[i].ocultaConta;
     gravar();
   }
-  if (i >= 0 && i < nLinhas) { linhas[i].oculta = linhas[i].oculta ? 0 : OC_PESSOA; linhas[i].visPessoal = 1; linhas[i].nova = 0; gravar(); }
   pthread_mutex_unlock(&trava);
 }
 

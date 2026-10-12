@@ -1,3 +1,4 @@
+#define _GNU_SOURCE   // strcasestr no glibc (LG/tpk)
 #include "fontesonda.h"
 #include <stdio.h>
 #include <string.h>
