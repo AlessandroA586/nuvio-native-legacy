@@ -349,3 +349,13 @@ Thanks! This may overlap with #372, but we have not confirmed that they are the 
 Thanks! #254 describes stale Home catalogs, while your report says Home is fixed and only “Not on Home Screen” keeps old entries. Is that still the distinction on 2.0.5 after removing an add-on and refreshing? Please confirm before we combine these reports; we already have VK50RJ.
 
 **#419 → #416:** texto de confirmação na [seção #419](#issue-419); candidato, não fechar como duplicata sem confirmação.
+
+## #437 — CloudStream (fechar, fora do escopo; dono decidiu 12/10)
+
+Thanks for the suggestion. We looked into it and decided not to support CloudStream repositories in Nuvio Legacy:
+
+- CloudStream extensions are compiled Kotlin plugins for the Android JVM. Our TV app is native C, so they can't run here without rebuilding a whole plugin runtime.
+- Most of those repositories scrape third-party sites. Bundling that kind of source inside the app is a legal risk we can't take on for the project.
+- If you want extra sources, Nuvio-format JS plugins and regular Stremio addons already work in the app.
+
+Closing as out of scope. Thanks again for taking the time to write it up.

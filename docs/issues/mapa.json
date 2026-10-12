@@ -9007,7 +9007,7 @@
    "estado_github": "aberta",
    "plataforma": "all",
    "tipo": "feature",
-   "status": "aberta",
+   "status": "fora-do-escopo",
    "release": "-",
    "conserto": [],
    "ultima_resposta": {
@@ -9016,7 +9016,7 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "triar/reproduzir; falta conserto comprovado",
+   "proximo_passo": "Dono postar resposta de fechamento (rascunho em respostas-triagem-2.0.5.md).",
    "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/437",
    "criada_em": "2026-10-11",

@@ -180,12 +180,12 @@ Por status:
 | Status | Qtd |
 |---|---|
 | lancada | 306 |
-| aberta | 53 |
+| aberta | 52 |
 | respondida | 22 |
 | por-desenho | 15 |
 | precisa-log | 13 |
 | fechada-sem-resposta | 6 |
-| fora-do-escopo | 3 |
+| fora-do-escopo | 4 |
 | duplicada | 2 |
 
 Por release (grupo de planejamento):
@@ -366,7 +366,7 @@ Notas:
 | [#420](https://github.com/iqui27/nuvio-native-legacy/issues/420) | Feature request: Android TV title deep links (ACTION_VIEW) f | Android | feature | aberta | - | 2.1 | - | sem comentários | triar/reproduzir; falta conserto comprovado |
 | [#434](https://github.com/iqui27/nuvio-native-legacy/issues/434) | Ability to remove genre tags in title page | all | feature | aberta | - | 2.1 | - | nós 10-11 | triar/reproduzir; falta conserto comprovado |
 | [#436](https://github.com/iqui27/nuvio-native-legacy/issues/436) | Feature request: Option to view submitted logs | all | feature | aberta | - | 2.1 | - | nós 10-11 | triar/reproduzir; falta conserto comprovado |
-| [#437](https://github.com/iqui27/nuvio-native-legacy/issues/437) | Cloudstream Repository Support | all | feature | aberta | - | futuro | - | nós 10-11 | triar/reproduzir; falta conserto comprovado |
+| [#437](https://github.com/iqui27/nuvio-native-legacy/issues/437) | Cloudstream Repository Support | all | feature | fora-do-escopo | - | futuro | - | nós 10-11 | Dono postar resposta de fechamento (rascunho em respostas-triagem-2.0.5.md). |
 | [#438](https://github.com/iqui27/nuvio-native-legacy/issues/438) | MdbList | LG | feature | aberta | - | futuro | - | nós 10-11 | triar/reproduzir; falta conserto comprovado |
 | [#450](https://github.com/iqui27/nuvio-native-legacy/issues/450) | PS5 Port | all | feature | aberta | - | futuro | - | autor 10-11 | Avaliar SDK/toolchain, vídeo, entrada e distribuição PS5 antes de qualquer plano; manter p |
 | [#457](https://github.com/iqui27/nuvio-native-legacy/issues/457) | Add an option to show info for preresolved streams in detail | Android | feature | aberta | - | 2.1 | - | sem comentários | Definir quais campos confiáveis do Stream mostrar na ficha e estado sem fonte/sonda penden |

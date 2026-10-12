@@ -222,7 +222,8 @@ Limite do QR: 134 bytes (`src/qr.h`). Todas as URLs de verificação acima cabem
 - **Q6:** `nuviolegacy://` com as mesmas formas do oficial (`nuviolegacy://movie/<imdb>`, `nuviolegacy://detail/tv/<imdb>`).
 - **Q3:** só Cinemeta `addon_catalog`; não pedir permissão ao stremio-addons.net.
 - **Q8:** sim — guia "configure no celular, a TV segue" no Discord, em inglês, depois de validar com conta de teste.
-- Q5 (registro de apps), Q7 (#437): em aberto.
+- **Q5:** sem registro de apps por enquanto. MDBList por chave do usuário (conta Nuvio no celular); Premiumize/Debrid-Link seguem por chave colada. Se houver demanda, o dono registra em seu nome (como Trakt), segredo só no Vaultwarden.
+- **Q7:** fechar #437 como fora do escopo, com a justificativa do §7 (Kotlin/dex não roda no nosso C, risco legal de raspadores, plugins JS Nuvio já cobrem).
 
 ## 9. Prioridade proposta (sem sobrescrever o mapa)
 
