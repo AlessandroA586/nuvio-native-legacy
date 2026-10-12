@@ -22,8 +22,13 @@ for i in d['itens']:
     for c in i['commits']:
         keys(c, 'hash assunto')
         assert all(isinstance(v, str) for v in c.values())
+assert len({r['release'] for r in d['roadmap']}) == len(d['roadmap']), 'grupo de release duplicado (futuro)'
+for i in d['itens']:
+    assert i['plataforma'] in ('Android', 'LG', 'Samsung .tpk', 'Samsung .wgt', 'Samsung', 'VIDAA', 'PC', 'Mac', 'all', '—'), i['plataforma']
 for r in d['roadmap']:
     keys(r, 'release situacao')
     assert all(isinstance(v, str) for v in r.values())
 print('PASS publico: allowlist e textos internos')
 PY
+
+PUBLIC_RENDER="$out" node tools/painel-issues/tests/painel-js.mjs

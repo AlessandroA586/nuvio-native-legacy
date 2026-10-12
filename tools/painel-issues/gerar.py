@@ -23,6 +23,15 @@ def publico(dados, repo):
         m = re.match(r"^\d+\.\d+(?:\.\d+)?", str(value or ""))
         return m.group() if m else ""
 
+    def platform(value):
+        value = str(value or "").strip()
+        if value in ("Android", "LG", "Samsung .tpk", "Samsung .wgt", "Samsung", "VIDAA", "PC", "Mac", "all"):
+            return value
+        for name in ("Android", "LG", "Samsung", "VIDAA", "PC", "Mac"):
+            if re.match(re.escape(name) + r"(?:\?|\s|$)", value):
+                return name
+        return "—"
+
     itens = []
     for i in dados["itens"]:
         status = i.get("status")
@@ -42,14 +51,17 @@ def publico(dados, repo):
                 if sha:
                     commits.append({"hash": sha, "assunto": text(assunto, "Commit")})
         itens.append({"numero": int(i["numero"]), "titulo": text(i.get("titulo"), "Issue #" + str(i["numero"])),
-                      "plataforma": text(i.get("plataforma")),
+                      "plataforma": platform(i.get("plataforma")),
                       "estado_github": "aberta" if i.get("estado_github") == "aberta" else "fechada",
                       "status": status, "alvo": version(i.get("alvo")) or (i.get("alvo") if i.get("alvo") in ("futuro", "ja-lancada", "nao vamos fazer") else ""),
                       "release": version(i.get("release")), "branches": branches, "commits": commits})
+    roadmap = {}
+    for r in dados.get("roadmap", []):
+        release = version(r.get("release")) or ("futuro" if r.get("release") == "futuro" else "")
+        if release:
+            roadmap.setdefault(release, {"release": release, "situacao": "lancada" if re.search("lançada|lancada", r.get("situacao", "")) else "planejada"})
     return {"meta": {"repo": dados["meta"]["repo"], "publico": True}, "itens": itens,
-            "roadmap": [{"release": version(r.get("release")) or "futuro",
-                         "situacao": "lancada" if re.search("lançada|lancada", r.get("situacao", "")) else "planejada"}
-                        for r in dados.get("roadmap", [])]}
+            "roadmap": list(roadmap.values())}
 
 
 def main():
@@ -119,6 +131,17 @@ def main():
     for nome in sorted(os.listdir(AQUI)):
         if nome.endswith((".html", ".css", ".js")):
             shutil.copy2(os.path.join(AQUI, nome), os.path.join(a.out, nome))
+            if a.publico and nome == "index.html":
+                path = os.path.join(a.out, nome)
+                with open(path, encoding="utf-8") as f:
+                    html = f.read()
+                html = html.replace('lang="pt-BR"', 'lang="en"').replace(
+                    '<title>Nuvio Legacy - issues e roadmap</title>',
+                    '<title>Nuvio Legacy - issues and roadmap</title>').replace(
+                    'aria-label="Navegação"', 'aria-label="Navigation"').replace(
+                    '<a href="#ajudar">Como ajudar</a>', '<a href="#ajudar">How to help</a>')
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(html)
     print("ok: %d issues -> %s (commit %s)" % (len(dados["itens"]), a.out, h or "?"))
 
 
