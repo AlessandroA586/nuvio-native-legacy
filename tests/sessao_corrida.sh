@@ -17,7 +17,7 @@ esac
 bin="${TMPDIR:-/tmp}/nuvio-sessao-corrida"
 cc "${flags[@]}" "${SESSAO_C:-src/sessao.c}" src/js.c src/jsw.c tests/sessao_corrida.c -o "$bin"
 falhou=0
-for caso in rpc401 vencido r504 leitores copia copia504 recusado; do
+for caso in rpc401 vencido r504 leitores copia copia504 copia-sem-refresh recusado; do
   dir="$(mktemp -d)"
   if ! NV_T_DIR="$dir" "$bin" "$caso"; then falhou=1; echo "sessao_corrida.sh: FALHOU ($caso)"; fi
   rm -rf "$dir"

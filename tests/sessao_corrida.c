@@ -254,6 +254,14 @@ int main(int argc, char **argv) {
       confere("renovacao em 504: UM pedido ao servidor", renovacoes == 1);
       confere("sessao fica", sessao_logada());
     }
+  } else if (!strcmp(caso, "copia-sem-refresh")) {
+    char t[3000] = "sentinela";
+    int ok;
+    dados_gravar("sessao.txt", "t0001." PL_VENCIDO ".s0001\n\n0\n");
+    sessao_iniciar();
+    ok = sessao_token_copiar(t, sizeof t);
+    confere("vencido sem refresh: devolve 0 e dst vazio", !ok && !t[0]);
+    confere("sem refresh: nenhum pedido de renovacao", renovacoes == 0);
   } else if (!strcmp(caso, "recusado")) {
     // O Worker recusa com 401 o token que mandamos: UMA renovacao. Um 401 que
     // chega com o token ja trocado (outro fio renovou) nao renova de novo.

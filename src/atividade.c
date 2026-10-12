@@ -6,6 +6,7 @@
 #include "recomenda.h"
 #include "dados.h"
 #include "perfis.h"
+#include "plugins.h"
 #include "rede.h"
 #include "sessao.h"
 #include "trakt.h"
@@ -26,6 +27,7 @@ static char fila[ATIV_FILA_MAX][NV_ARTE_URL_MAX * 2 + 1600];
 static int  nFila;
 static int  fioVivo;
 static int  perfilLido = -1;      // de que perfil a fila em memoria veio
+static unsigned contaLida, filaGeracao;
 
 // O trecho de reproducao em curso. So o fio principal toca nisto.
 static struct {
@@ -140,6 +142,8 @@ static void ler(void) {
   char *b, *p;
   nFila = 0;
   perfilLido = perfis_ativo();
+  contaLida = plugins_geracao();
+  filaGeracao++;
   b = dados_ler(arquivo());
   if (!b) return;
   for (p = b; *p && nFila < ATIV_FILA_MAX;) {
@@ -177,14 +181,24 @@ static int fioEnviar(void *u) {
   snprintf(fioUrl, sizeof fioUrl, "%s/v1/atividade", NV_REC_URL);
   for (;;) {
     int st = 0, manter;
+    unsigned geracao;
     char *r;
     travar();
-    if (nFila < 1 || !atividade_envia()) { fioVivo = 0; destravar(); return 0; }
+    if (nFila < 1 || !atividade_envia() || perfilLido != perfis_ativo() ||
+        contaLida != plugins_geracao()) { fioVivo = 0; destravar(); return 0; }
+    geracao = filaGeracao;
     snprintf(corpo, sizeof corpo, "%s", fila[0]);
     destravar();
     // Fora da trava: a identidade pode renovar o token (rede), e o laco de
     // desenho toma esta mesma trava para enfileirar.
     if (!identidade(cab)) { travar(); fioVivo = 0; destravar(); return 0; }
+    // A renovacao pode esperar rede: consentimento, fila e conta/perfil podem
+    // ter mudado. Nem um corpo identico de uma fila nova valida o envio antigo.
+    travar();
+    if (!atividade_envia() || nFila < 1 || geracao != filaGeracao ||
+        perfilLido != perfis_ativo() || contaLida != plugins_geracao() ||
+        strcmp(fila[0], corpo)) { fioVivo = 0; destravar(); return 0; }
+    destravar();
     r = rede_postar_st(fioUrl, ATIV_TEMPO_REDE, cab, corpo, &st);
     free(r);
     // 401 com a conta Nuvio: o token venceu ou foi recusado. Renova UMA vez; o
@@ -202,7 +216,8 @@ static int fioEnviar(void *u) {
     if (manter) { fioVivo = 0; destravar(); return 0; }
     // O primeiro ainda e o que saiu: so este fio remove, e enfileirar acrescenta
     // no fim (ou descarta o mais VELHO quando cheia — ver enfileirar).
-    if (nFila > 0 && !strcmp(fila[0], corpo)) {
+    if (geracao == filaGeracao && perfilLido == perfis_ativo() &&
+        contaLida == plugins_geracao() && nFila > 0 && !strcmp(fila[0], corpo)) {
       memmove(fila, fila + 1, sizeof fila[0] * (size_t)(nFila - 1));
       nFila--;
       gravar();
@@ -228,12 +243,13 @@ static void enfileirar(const AtivEvento *e) {
   if (!atividade_envia()) return;
   if (!atividade_json(e, linha, sizeof linha)) return;
   travar();
-  if (perfilLido != perfis_ativo()) ler();
+  if (perfilLido != perfis_ativo() || contaLida != plugins_geracao()) ler();
   // Cheia: sai o mais VELHO. O evento novo descreve o agora; o velho, se nao
   // saiu ate aqui, provavelmente nao sai mais.
   if (nFila >= ATIV_FILA_MAX) {
     memmove(fila, fila + 1, sizeof fila[0] * (size_t)(ATIV_FILA_MAX - 1));
     nFila = ATIV_FILA_MAX - 1;
+    filaGeracao++;
   }
   snprintf(fila[nFila++], sizeof fila[0], "%s", linha);
   gravar();
@@ -255,7 +271,7 @@ void atividade_definir_permitido(int nivel) {
   travar();
   permitido = nivel > 0 ? nivel : 0;
   // DESLIGAR APAGA O QUE NAO SAIU — a mesma promessa de recomenda.c.
-  if (!permitido) { nFila = 0; gravar(); }
+  if (!permitido) { filaGeracao++; nFila = 0; gravar(); }
   else acordarFio();
   destravar();
 }

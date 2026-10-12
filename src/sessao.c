@@ -747,7 +747,7 @@ int sessao_token_copiar(char *dst, size_t n) {
   if (!dst || !n) return 0;
   dst[0] = 0;
   pthread_mutex_lock(&tokTrava);
-  precisa = acesso[0] != 0 && !anonima && renovar[0] != 0 && vencidoEm(60);
+  precisa = acesso[0] != 0 && !anonima && vencidoEm(60);
   pthread_mutex_unlock(&tokTrava);
   if (precisa && renovarToken(NULL, 60, &st) <= 0) return 0;
   pthread_mutex_lock(&tokTrava);
