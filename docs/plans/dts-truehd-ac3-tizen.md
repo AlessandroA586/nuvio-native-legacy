@@ -180,7 +180,7 @@ behaviour rules. At the end push, and append a hand-off note to the plan."
 | 8-channel sources lose height/objects | Documented in help text; downmix matrix tested in S2 |
 | `AJ_DTS_AC3` positional setting migration | No new enum entries; default only for this build |
 
-## Hand-off: S1–S4 built on `feat/dts-truehd-ac3-tizen` (2026-10-13)
+## Hand-off: S1–S5 built on `feat/dts-truehd-ac3-tizen` (2026-10-13)
 
 Built in one session from the DESIGN doc (Option B), without the TV. Not yet run on the S95C.
 
@@ -190,6 +190,7 @@ Built in one session from the DESIGN doc (Option B), without the TV. Not yet run
 | S2 | Remux core: video copied, DTS core / TrueHD 5.1 presentation → AC3; lookahead DTS, decode-order cuts, locked audio anchor, +10 s fixed offset; generator continues segment to segment | `src/dts/dts_remux.c/.h`, `dts_engine_open_demux()` |
 | S3 | Loopback server: HLS VOD on demand, progressive TS/MKV/MP4, chunked / Content-Length / close; per-request log; LAN log endpoint | `src/dts/dts_hls_tpk.c/.h` |
 | S4 | Wire-up: trigger (all MKV audio refused + TV lists none, or NotSupportedAudioCodec, or header known before open, or DTS/TrueHD picked in the audio menu), fallback to the original on failure before the first frame, progressive position offset auto-detected, menu lists file tracks with "→ Dolby Digital 5.1"; `AJ_DTS_AC3` enabled (default 5.1 on .tpk); hidden rows `AJ_DTS_TPK_MODO/CORPO/REDE` (Playback › More options › Sound and video of this TV); 16 strings × 28 tables | `src/video_tpk.c`, `src/ajustes.c` + `ajustes_ux_*.inc`, `src/video.c`, `src/player.c`, `src/idioma_*.h` |
+| S5 | Hardening: a generator the player gave up on is interrupted inside its network wait (not only between packets) and that run ends as "stopped", not as an error/500; reads recover after a stop (sticky AVIO error cleared before the seek); CPU accounting kept on early exits; request log shows `-` when nothing was sent | `src/dts/dts_engine.c/.h` (`dts_engine_interrupt`), `src/dts/dts_remux.c/.h` (`dts_remux_gen_interrupt`), `src/dts/dts_hls_tpk.c` |
 
 Decisions taken here (owner can revisit):
 * Track mapping to FFmpeg is by **audio ordinal** (FFmpeg's Matroska demuxer does not expose TrackNumber).

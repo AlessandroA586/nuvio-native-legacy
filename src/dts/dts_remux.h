@@ -81,6 +81,9 @@ int dts_remux_gen_run(DtsRemuxGen *, int seg, double start_s, const char *fmt,
                       DtsRemuxWrite w, void *opaque, volatile int *stop,
                       DtsRemuxStats *st, char *err, size_t errn);
 void dts_remux_gen_free(DtsRemuxGen *);
+/* Breaks the run of this generator out of a network wait (the player gave up
+ * on it). Any thread; the run ends with -2 and the next run seeks. */
+void dts_remux_gen_interrupt(DtsRemuxGen *);
 
 /* Source time (seconds) a progressive run started at: the keyframe it used. */
 double dts_remux_gen_start_s(const DtsRemuxGen *);

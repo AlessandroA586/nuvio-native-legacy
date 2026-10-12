@@ -401,7 +401,7 @@ static Gerador *pegarGerador(Sessao *s, int seg, int *continua, char *err, size_
       nv->g = g; nv->ocupado = 0;
       pthread_cond_broadcast(&s->c);
       if (!g) break;
-      printf("[dts-tpk] sessao %u: gerador %d aberto (fonte aberta de novo)\n", s->id, vaga);
+      printf("[dts-tpk] sessao %u: gerador %d pronto\n", s->id, vaga);
       fflush(stdout);
       esc = nv;
       break;
@@ -412,6 +412,7 @@ static Gerador *pegarGerador(Sessao *s, int seg, int *continua, char *err, size_
         if (s->ger[i].ocupado && s->ger[i].g && (!velho || s->ger[i].uso < velho->uso)) velho = &s->ger[i];
       if (velho && !velho->parar) {
         velho->parar = 1;
+        dts_remux_gen_interrupt(velho->g);   // preso na rede: solta ja, nao no proximo pacote
         printf("[dts-tpk] sessao %u: %d geradores ocupados, o mais antigo (seg %d) para\n", s->id, GERADORES, velho->seg);
         fflush(stdout);
       } }
@@ -595,14 +596,16 @@ static int servirFluxo(int sock, Sessao *s, const Pedido *pd, unsigned nr, int s
   if (!ok && rr != -2) s->nErros++;
   pthread_mutex_unlock(&s->m);
   uint64_t fim = agoraMs();
+  char stTxt[8];                           // "-": nada saiu (o player fechou antes)
+  if (status) snprintf(stTxt, sizeof stTxt, "%d", status); else snprintf(stTxt, sizeof stTxt, "-");
   if (seg >= 0)
-    printf("[dts-tpk] #%u <- %d seg%d (%.3f-%.3f s): %lld B, 1o byte %u ms, total %u ms, gerador %d %s, cpu %.0f ms "
-           "(audio %.0f), rede %.0f ms%s%s\n", nr, status, seg, st.first_pts_s, st.last_pts_s, (long long)enviados,
+    printf("[dts-tpk] #%u <- %s seg%d (%.3f-%.3f s): %lld B, 1o byte %u ms, total %u ms, gerador %d %s, cpu %.0f ms "
+           "(audio %.0f), rede %.0f ms%s%s\n", nr, stTxt, seg, st.first_pts_s, st.last_pts_s, (long long)enviados,
            (unsigned)((o.primeiroByte ? o.primeiroByte : fim) - t0), (unsigned)(fim - t0), (int)(ger - s->ger),
            st.fresh ? "buscou" : "continuou", st.cpu_s * 1000.0, st.audio_cpu_s * 1000.0, st.range_wait_s * 1000.0,
            ok ? "" : rr == -2 ? ", player fechou" : ", ERRO: ", ok || rr == -2 ? "" : err);
   else
-    printf("[dts-tpk] #%u <- %d %s desde %.3f s: %lld B em %u ms, %s%s\n", nr, status, fmt, dts_remux_gen_start_s(ger->g),
+    printf("[dts-tpk] #%u <- %s %s desde %.3f s: %lld B em %u ms, %s%s\n", nr, stTxt, fmt, dts_remux_gen_start_s(ger->g),
            (long long)enviados, (unsigned)(fim - t0), ok ? "fim do arquivo" : rr == -2 ? "player fechou" : "ERRO: ",
            ok || rr == -2 ? "" : err);
   fflush(stdout);

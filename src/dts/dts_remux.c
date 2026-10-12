@@ -60,6 +60,7 @@ int dts_remux_gen_run(DtsRemuxGen *g, int s, double t, const char *f, DtsRemuxWr
   return -1;
 }
 void dts_remux_gen_free(DtsRemuxGen *g) { (void)g; }
+void dts_remux_gen_interrupt(DtsRemuxGen *g) { (void)g; }
 double dts_remux_gen_start_s(const DtsRemuxGen *g) { (void)g; return 0; }
 #else
 
@@ -155,6 +156,7 @@ struct DtsRemux {
 struct DtsRemuxGen {
   DtsRemux *src;
   DtsEngine *eng;
+  atomic_int interrupted;           /* dts_remux_gen_interrupt during this run */
   AVFormatContext *ic;
   AVStream *V, *A;
   AVCodecContext *dec, *enc;
@@ -471,6 +473,7 @@ DtsRemuxGen *dts_remux_gen_new(DtsRemux *r, char *err, size_t errn) {
   g->eng = r->probe; r->probe = NULL;
   pthread_mutex_unlock(&r->lock);
   if (!g->eng) {
+    double t0 = now_s(CLOCK_MONOTONIC);
     g->eng = dts_engine_create();
     if (!g->eng) { fail(err, errn, "Out of memory", 0); free(g); return NULL; }
     registerEngine(r, g->eng);
@@ -483,6 +486,9 @@ DtsRemuxGen *dts_remux_gen_new(DtsRemux *r, char *err, size_t errn) {
     }
     for (unsigned i = 0; i < ic->nb_streams; i++)
       if ((int)i != r->vs && (int)i != r->as) ic->streams[i]->discard = AVDISCARD_ALL;
+    printf("[dts-tpk] generator: own reader opened in %.0f ms (the first one reuses the probe's)\n",
+           (now_s(CLOCK_MONOTONIC) - t0) * 1000.0);
+    fflush(stdout);
   }
   g->ic = dts_engine_avformat(g->eng);
   g->V = g->ic->streams[r->vs]; g->A = g->ic->streams[r->as];
@@ -520,6 +526,11 @@ void dts_remux_gen_free(DtsRemuxGen *g) {
 }
 
 int dts_remux_gen_next(const DtsRemuxGen *g) { return g ? g->nextSeg : -1; }
+void dts_remux_gen_interrupt(DtsRemuxGen *g) {
+  if (!g) return;
+  atomic_store(&g->interrupted, 1);
+  dts_engine_interrupt(g->eng, 1);
+}
 double dts_remux_gen_start_s(const DtsRemuxGen *g) { return g ? g->progStartS : 0.0; }
 
 static int sinkWrite(void *o, const uint8_t *b, int n) {
@@ -870,6 +881,9 @@ static int freshStart(DtsRemuxGen *g, int64_t kf, int64_t b48, char *err, size_t
     int64_t g0 = (b48 / g->frame) * g->frame - (int64_t)PREROLL * g->frame;
     g->grid = g0 < 0 ? 0 : g0;
   }
+  /* A stopped or interrupted run leaves the read error sticky in the AVIO
+   * context; the seek below starts clean. */
+  if (g->ic->pb) { g->ic->pb->error = 0; g->ic->pb->eof_reached = 0; }
   rr = avformat_seek_file(g->ic, g->src->vs, INT64_MIN, kf, kf, AVSEEK_FLAG_BACKWARD);
   if (rr < 0) {
     /* No index entry: seek by time on any stream. */
@@ -925,11 +939,18 @@ int dts_remux_gen_run(DtsRemuxGen *g, int seg, double startS, const char *fmt,
   dts_engine_metrics(g->eng, &m0);
   if (g->logWall <= 0) rollingLog(g, 0);   /* starts the 30 s window */
   g->w = w; g->wop = opaque; g->wfail = 0; g->bytes = 0;
+  /* A previous interrupt is over: this run reads again. Cleared BEFORE *stop
+   * is read, so an interrupt racing with the start is never lost (the caller
+   * sets *stop first, then interrupts). */
+  atomic_store(&g->interrupted, 0);
+  dts_engine_interrupt(g->eng, 0);
+  if (stop && *stop) { rr = -2; goto out; }
   if (seg >= 0) {
-    if (seg >= r->nseg) { fail(err, errn, "No such segment", 0); return -1; }
+    if (seg >= r->nseg) { fail(err, errn, "No such segment", 0); rr = -1; goto out; }
     fresh = g->nextSeg != seg || !g->oc;
+    st->fresh = fresh;
     g->prog = 0; target = seg;
-    if (fresh && freshStart(g, r->segTs[seg], r->segB48[seg], err, errn) < 0) return -1;
+    if (fresh && freshStart(g, r->segTs[seg], r->segB48[seg], err, errn) < 0) { rr = -1; goto out; }
     if (fresh) { if (openMux(g, "mpegts", err, errn) < 0) { rr = g->wfail ? -2 : -1; goto out; } }
     else av_opt_set(g->oc->priv_data, "mpegts_flags", "resend_headers", 0);  /* PAT/PMT open the segment */
   } else {
@@ -937,13 +958,13 @@ int dts_remux_gen_run(DtsRemuxGen *g, int seg, double startS, const char *fmt,
     int k = r->nkf > 0 ? floorIdx(r->kf, r->nkf, want) : -1;
     int64_t kf = k >= 0 ? r->kf[k] : (r->nkf > 0 ? r->kf[0] : want);
     fresh = 1; g->prog = 1; target = 0;
+    st->fresh = 1;
     g->progKf = kf; g->progStartS = kf * av_q2d(r->vtb);
     g->progB48 = startS <= 0.05 ? UNSET : llround(g->progStartS * 48000.0);
     if (g->progStartS < 0) g->progStartS = 0;
-    if (freshStart(g, kf, g->progB48, err, errn) < 0) return -1;
+    if (freshStart(g, kf, g->progB48, err, errn) < 0) { rr = -1; goto out; }
     if (openMux(g, fmt && *fmt ? fmt : "mpegts", err, errn) < 0) { rr = g->wfail ? -2 : -1; goto out; }
   }
-  st->fresh = fresh;
   for (;;) {
     if ((stop && *stop) || (r->extCancel && *r->extCancel)) { fail(err, errn, "Stopped", 0); rr = -2; break; }
     if ((rr = emitVideo(g, target, st, err, errn)) < 0) break;
@@ -979,6 +1000,11 @@ int dts_remux_gen_run(DtsRemuxGen *g, int seg, double startS, const char *fmt,
     if (g->wfail) { fail(err, errn, "Client closed", 0); rr = -2; }
   }
 out:
+  /* Whatever failed while the player had already given up on this run (its
+   * reads were cut by the interrupt, a seek among them) is a stop, not an
+   * error: no 500 for a client that is gone, no error in the summary. */
+  if (rr == -1 && ((stop && *stop) || atomic_load(&g->interrupted) || (r->extCancel && *r->extCancel))) rr = -2;
+  if (rr == -2) fail(err, errn, "Stopped", 0);
   if (rr >= 0 && !g->prog && seg + 1 < r->nseg && !g->demuxEof) {
     g->nextSeg = seg + 1;           /* continuation: muxer and queues stay */
   } else {

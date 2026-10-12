@@ -43,4 +43,7 @@ const char *dts_engine_error(DtsEngine *);
 int dts_engine_open_demux(DtsEngine *, const char *url, const char *headers);
 void *dts_engine_avformat(DtsEngine *);
 int64_t dts_engine_size(DtsEngine *);
+/* Remux: on = 1 makes the read in progress (and the next ones) fail until it
+ * is set back to 0; unlike cancel it is not permanent. Any thread. */
+void dts_engine_interrupt(DtsEngine *, int on);
 #endif

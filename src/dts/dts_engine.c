@@ -29,6 +29,7 @@ const char *dts_engine_error(DtsEngine *e) { (void)e; return "DTS conversion not
 int dts_engine_open_demux(DtsEngine *e,const char *u,const char *h) { (void)e;(void)u;(void)h; return -1; }
 void *dts_engine_avformat(DtsEngine *e) { (void)e; return NULL; }
 int64_t dts_engine_size(DtsEngine *e) { (void)e; return -1; }
+void dts_engine_interrupt(DtsEngine *e,int on) { (void)e; (void)on; }
 #else
 #include "../rede.h"
 #include <limits.h>
@@ -84,6 +85,10 @@ struct DtsEngine {
    * the final address reused, like the Dolby Vision path, because the whole
    * video also flows through this reader. Never set on webOS. */
   int remux;
+  /* Remux only: abort the CURRENT read without the permanent cancel (a stuck
+   * range while the player already gave up on that segment). Cleared by the
+   * caller before the next run; the demuxer state is then reset by a seek. */
+  volatile int interrupt;
   char final_url[8192];
   AVFormatContext *fmt;
   AVIOContext *io;
@@ -239,7 +244,7 @@ static void queue_ranges(DtsEngine *e) {
 }
 static int read_range(void *opaque,uint8_t *dst,int n) {
   DtsEngine *e=opaque;
-  if (cancelled(e)) return AVERROR_EXIT;
+  if (cancelled(e) || __atomic_load_n(&e->interrupt,__ATOMIC_RELAXED)) return AVERROR_EXIT;
   if (e->total>=0 && e->pos>=e->total) return AVERROR_EOF;
   if (!e->cache || e->pos<e->cache_start || e->pos-e->cache_start>=e->cache_size) {
     uint64_t wait_started=clock_ns(CLOCK_MONOTONIC);
@@ -258,8 +263,9 @@ static int read_range(void *opaque,uint8_t *dst,int n) {
         if(e->ranges[i].state && e->ranges[i].start==e->pos) job=&e->ranges[i];
     }
     if(!job) { pthread_mutex_unlock(&e->range_lock); return AVERROR_EXIT; }
-    while(job->state!=3 && !cancelled(e)) pthread_cond_wait(&e->range_wake,&e->range_lock);
-    if(cancelled(e)) { pthread_mutex_unlock(&e->range_lock); return AVERROR_EXIT; }
+    while(job->state!=3 && !cancelled(e) && !__atomic_load_n(&e->interrupt,__ATOMIC_RELAXED))
+      pthread_cond_wait(&e->range_wake,&e->range_lock);
+    if(cancelled(e) || __atomic_load_n(&e->interrupt,__ATOMIC_RELAXED)) { pthread_mutex_unlock(&e->range_lock); return AVERROR_EXIT; }
     long count=job->count; int status=job->status; int64_t total=job->total, end=job->end;
     uint64_t ready_at=clock_ns(CLOCK_MONOTONIC);
     if(ready_at>=wait_started) e->metrics.range_blocked_ns+=ready_at-wait_started;
@@ -548,6 +554,11 @@ int dts_engine_open_demux(DtsEngine *e,const char *url,const char *headers) {
   return 0;
 }
 void *dts_engine_avformat(DtsEngine *e) { return e?e->fmt:NULL; }
+void dts_engine_interrupt(DtsEngine *e,int on) {
+  if(!e) return;
+  __atomic_store_n(&e->interrupt,on?1:0,__ATOMIC_RELAXED);
+  if(on) { pthread_mutex_lock(&e->range_lock); pthread_cond_broadcast(&e->range_wake); pthread_mutex_unlock(&e->range_lock); }
+}
 /* Total size of the source, -1 while unknown (first range not answered). */
 int64_t dts_engine_size(DtsEngine *e) { return e?e->total:-1; }
 static int resample(DtsEngine *e,AVFrame *f) {
