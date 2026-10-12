@@ -1797,19 +1797,22 @@ static void fecharSessao(int manter) {
   }
   int prova = fontePrincipal() && duracaoReal && !esperandoFonte && !erroFonte && !video_falhou() &&
               isfinite(posSeg) && isfinite(duracaoSeg) && assistidoSeg >= PLR_SCR_TOCOU_S;
-  // Prova do VISTO: so segura o "seek ate o fim" (scrobble_assistiu). O ponto
-  // salvo de onde esta sessao retomou ja tinha sido assistido antes, e o que
-  // sobra depois do fim do cartao (creditos) tambem: retomar em 85%, ver ate
-  // os creditos e aceitar o proximo nao pode ficar sem visto (#100). Fora da
-  // conclusao nada e creditado — o seek ate o fim continua sem prova. A cauda
-  // NUNCA e prova: so entra quando os segundos REAIS ja provam o trecho da
-  // retomada ate a saida (a mesma regra, com a saida no lugar do fim). Sem
-  // isso 70 s reais contra a duracao falsa de 129 s viravam 129 s assistidos.
-  double de = duracaoSeg * retomarPct / 100.0;
+  // Prova do VISTO: so segura o "seek ate o fim" (scrobble_assistiu) e e UMA,
+  // gravada ao lado da posicao (progresso.c): os segundos REAIS tocados ate
+  // ela, somados entre sessoes, e o ponto de onde a soma comecou. Parar perto
+  // do fim e terminar depois — ate em outro dia ou perfil — soma as duas
+  // sessoes (#100). Recomecar do zero zera a soma; retomar um ponto sem prova
+  // local (outro aparelho, linha antiga) comeca a soma ali. A cauda dos
+  // creditos so preenche a posicao depois da prova, nunca a substitui.
+  char chave[48];
+  ProgRegistro reg;
+  double tocado = assistidoSeg, de = duracaoSeg * retomarPct / 100.0;
+  prog_chave(chave, sizeof chave, item() ? item()->imdb : "", epT, epE);
+  if (retomarPct > 0 && prog_por_chave(chave, &reg) && reg.tocadoSeg >= 0) {
+    tocado += reg.tocadoSeg; de = reg.deSeg;
+  }
   int fim = concluiuAgora(credEfetivo());
-  int cauda = fim && duracaoSeg > posSeg && scrobble_assistiu(assistidoSeg, de, posSeg);
-  double vistoSeg = assistidoSeg + (cauda ? duracaoSeg - posSeg : 0.0);
-  int assistiu = scrobble_assistiu(vistoSeg, de, duracaoSeg);
+  int assistiu = scrobble_assistiu(tocado, de, duracaoSeg);
   // Sem ela a posicao REAL continua gravada (barra, Continuar assistindo,
   // conta): so o arredondamento para 100% e o visto ficam de fora.
   if (!duracaoErrada && !jaRetido && prova && video_pronto() && duracaoSeg >= 120.0f &&
@@ -1845,12 +1848,9 @@ static void fecharSessao(int manter) {
       fflush(stdout);
     }
     // A posicao gravada e sempre a REAL (ponto de retomada). Sem prova, o selo
-    // nao pode vir dela: cat_visto le progresso >= 90 so quando nao ha
-    // historico, entao o "nao visto" vai para o historico local.
+    // nao vem dela: cat_visto le a prova gravada aqui (prog_sem_prova).
     cat_salvar_progresso_ep(ia, pos, duracaoSeg, epT, epE);
-    if (!assistiu && pos >= duracaoSeg * 0.9f && ci && ci->imdb[0] &&
-        cat_historico_estado_id(ci->imdb, ci->tipo) < 0)
-      cat_historico_definir_id(ci->imdb, ci->tipo, 0);
+    prog_definir_prova(chave, tocado, de);
     // E tambem para o Trakt, que e de onde o "continue assistindo" vem: gravar
     // so aqui deixaria este app discordando dos outros aparelhos do dono.
     // Personal-server items stay private: no Trakt, friends feed or social
@@ -1858,7 +1858,7 @@ static void fecharSessao(int manter) {
     if (ci && ci->imdb[0] && !jfid_e(ci->imdb)) {
       char id[64];
       idTrakt(ci, id, sizeof id);
-      trakt_marcar(id, pos, duracaoSeg, vistoSeg, de);
+      trakt_marcar(id, pos, duracaoSeg, tocado, de);
       // "ASSISTIU" para os amigos, so quando CONCLUIU e so se ela ligou a
       // atividade (ou os "vistos recentemente" do perfil). Largar aos 8% nao
       // assistiu nada — e nao chega a lugar nenhum.

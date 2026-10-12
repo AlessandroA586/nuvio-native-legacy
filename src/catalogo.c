@@ -438,7 +438,9 @@ int cat_visto(const CatItem *c) {
   // episodio, nao da serie; quem decide a serie inteira e o historico, que
   // extras.c escreve com os contadores de /shows/<id>/progress/watched.
   if (!strcmp(tipo_base(c->tipo), "series")) return 0;
-  return c->progresso >= 90;
+  // Posicao sem prova de reproducao (seek ate o fim, #205) nao e visto: o
+  // registro local guarda os segundos tocados ate ela.
+  return c->progresso >= 90 && !prog_sem_prova(c->imdb);
 }
 
 // Compatibilidade para chamadores antigos que so conhecem o IMDb. A serie e
@@ -1560,6 +1562,7 @@ int cat_tirar_item_da_fileira(int indice) {
 __attribute__((weak)) int prog_removido_vence(const char *imdb, long long instanteMs) {
   (void)imdb; (void)instanteMs; return 0;
 }
+__attribute__((weak)) int prog_sem_prova(const char *imdb) { (void)imdb; return 0; }
 
 static int fileiraContinuar(void) {
   int r;

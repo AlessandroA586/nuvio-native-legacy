@@ -40,6 +40,11 @@ typedef struct {
   double posSeg, durSeg;
   long long lastWatchedMs;    // 0 = desconhecido (linha migrada)
   int  pendente;              // 1 = escrito aqui, ainda nao empurrado
+  // PROVA DO VISTO (#205), so deste aparelho e nao sincronizada: segundos REAIS
+  // tocados ate esta posicao, somados entre sessoes, e o ponto de onde a soma
+  // comecou (scrobble_assistiu). tocadoSeg < 0 = desconhecido (linha antiga ou
+  // vinda do servidor): o selo segue o progresso como sempre.
+  double tocadoSeg, deSeg;
 } ProgRegistro;
 
 // Chave no formato do web (toProgressKey): "%s_s%de%d" quando temporada >= 0 e
@@ -74,6 +79,15 @@ int  prog_por_chave(const char *chave, ProgRegistro *saida);
 // Devolve 1 quando gravou.
 int  prog_gravar_local(const char *imdb, int temporada, int episodio,
                        double posSeg, double durSeg);
+
+// Grava a prova no registro do perfil ativo com essa chave (que o player acabou
+// de gravar). Sem registro, nada. A posicao gravada por prog_gravar_local
+// mantem a prova que ja havia.
+void prog_definir_prova(const char *chave, double tocadoSeg, double deSeg);
+
+// 1 quando o registro local do FILME diz que a posicao dele nao tem prova:
+// o "nao visto" que segura o selo de progresso >= 90% (cat_visto).
+int  prog_sem_prova(const char *imdb);
 
 // Aplicacao de uma linha REMOTA (pull). Regra: local pendente vence; senao o
 // mais novo vence; empate mantem o local. `r->perfil` e ignorado — vale o

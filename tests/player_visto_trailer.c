@@ -40,6 +40,7 @@
 #include "layout.h"
 #include "ajustes.h"
 #include "trailerfonte.h"
+#include "progresso.h"
 
 // Relogio monotono controlado: seek/retomada nao ganham tempo assistido.
 static double agoraMono;
@@ -79,7 +80,8 @@ double video_creditos(void) { return creditos; }
 // OS DESTINOS, virados contadores pelo renome do .sh. A marcacao de vistos
 // parte daqui (fecharSessao) para o Trakt (scrobble stop) e para o
 // Simkl/conta (visto_titulo) — nenhuma rede aqui, so a contagem.
-static int nTrakt, nVisto;
+static int nTrakt, nVisto, concluido = 90;
+int ajustes_cw_concluido(void) { return concluido; }
 static double tkPos, tkDur, tkAssistido, tkDe;   // o que o Trakt recebeu por ultimo
 void trakt_marcar(const char *imdb, double posSeg, double durSeg, double assistidoSeg, double deSeg) {
   (void)imdb; tkPos = posSeg; tkDur = durSeg; tkAssistido = assistidoSeg; tkDe = deSeg; nTrakt++;
@@ -335,6 +337,22 @@ int main(void) {
   tocar(133, 1); pos = 2824; quadro(); player_encerrar();
   assert(nVisto == 0 && !cat_visto(cat_item(0)));
   assert(cat_item(0)->progresso == 99 && tkPos == 2824);
+  { ProgRegistro r;   // a posicao REAL tambem na pendencia do sync
+    assert(prog_por_chave("tt90000020", &r) && r.pendente && r.posSeg == 2824); }
+
+  // O mesmo selo depois de reiniciar o app (ou trocar de perfil e voltar): o
+  // progresso volta do disco a 99%, sem historico. A prova esta no disco junto
+  // com a posicao — nada em memoria segura o selo.
+  prog_invalidar();
+  { CatItem c = {0}; strcpy(c.imdb, "tt90000020"); strcpy(c.tipo, "movie");
+    c.progresso = 99; cat_definir(&c, 1); }
+  assert(cat_historico_estado_id("tt90000020", "movie") < 0 && !cat_visto(cat_item(0)));
+
+  // E assistir o filme inteiro depois disso marca, selo inclusive: a conclusao
+  // real substitui a falta de prova (sem conta vinculada nenhum historico vem).
+  sessao("tt90000020", 99, 2843); assert(pos == 0);
+  tocar(2843, 1); player_encerrar();
+  assert(nVisto == 1 && cat_item(0)->progresso == 100 && cat_visto(cat_item(0)));
 
   // Sem minutagem, retomada em 1% da duracao falsa de 129,036 s, 70 s reais e
   // sai: a cauda (57 s) completava os 120 s minimos — 100%, visto e stop. A
@@ -343,6 +361,23 @@ int main(void) {
   tocar(70, 1); player_encerrar();
   assert(nVisto == 0 && cat_item(0)->progresso < 90);
   assert(tkPos < tkDur && !scrobble_assistiu(tkAssistido, tkDe, tkDur));
+
+  // PARAR PERTO DO FIM E TERMINAR DEPOIS (setima revisao): a prova e a soma
+  // gravada. 85% de 2700 s assistidos numa sessao; noutra, depois de reiniciar,
+  // a retomada toca 105 s ate os creditos e conclui.
+  sessao("tt90000022", 0, 2700); creditos = 2400; tocar(2295, 1); player_encerrar();
+  assert(nVisto == 0 && cat_item(0)->progresso == 85);
+  prog_invalidar();
+  sessao("tt90000022", 85, 2700); creditos = 2400; assert(pos == 2295);
+  tocar(105, 1); player_encerrar();
+  assert(nTrakt == 1 && nVisto == 1 && cat_item(0)->progresso == 100 && tkPos == tkDur);
+
+  // O mesmo com 95% de 6000 s e mais 90 s ate os creditos (marcador em 5790 s).
+  sessao("tt90000023", 0, 6000); creditos = 5790; tocar(5700, 1); player_encerrar();
+  assert(nVisto == 0 && cat_item(0)->progresso == 95);
+  concluido = 98; sessao("tt90000023", 95, 6000); creditos = 5790; assert(pos == 5700);
+  tocar(90, 1); player_encerrar(); concluido = 90;
+  assert(nTrakt == 1 && nVisto == 1 && cat_item(0)->progresso == 100 && tkPos == tkDur);
 
   puts("PASS: trailer, seek, pausa e buffer nao marcam; reproducao real grava progresso e visto");
   return 0;

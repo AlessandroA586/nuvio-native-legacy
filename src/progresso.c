@@ -3,6 +3,7 @@
 #include "jfid.h"
 #include "dados.h"
 #include "perfis.h"
+#include "traktscrobble.h"
 #include <pthread.h>
 #include <limits.h>
 #include <math.h>
@@ -98,19 +99,22 @@ static int lerLinhaAntiga(const char *linha, ProgRegistro *r) {
   r->lastWatchedMs = 0;
   r->pendente = 1;        // nunca foi empurrado com a chave certa
   r->perfil = perfis_ativo();
+  r->tocadoSeg = -1;
   return 1;
 }
 
-// Linha do formato NOVO (10 colunas, tab):
-// perfil chave contentId tipo temp ep posSeg durSeg lastMs pendente
+// Linha do formato NOVO (10 colunas, tab, mais as 2 da prova desde a #205):
+// perfil chave contentId tipo temp ep posSeg durSeg lastMs pendente [tocado de]
 static int lerLinhaNova(const char *linha, ProgRegistro *r) {
   int n;
   memset(r, 0, sizeof *r);
-  n = sscanf(linha, "%d\t%47s\t%23s\t%7s\t%d\t%d\t%lf\t%lf\t%lld\t%d",
+  r->tocadoSeg = -1;
+  n = sscanf(linha, "%d\t%47s\t%23s\t%7s\t%d\t%d\t%lf\t%lf\t%lld\t%d\t%lf\t%lf",
              &r->perfil, r->chave, r->contentId, r->tipo,
              &r->temporada, &r->episodio, &r->posSeg, &r->durSeg,
-             &r->lastWatchedMs, &r->pendente);
-  if (n != 10 || !r->chave[0] || !r->contentId[0] ||
+             &r->lastWatchedMs, &r->pendente, &r->tocadoSeg, &r->deSeg);
+  if (n != 10 && n != 12) r->tocadoSeg = -1;
+  if (n < 10 || !r->chave[0] || !r->contentId[0] ||
       !temposValidos(r->posSeg, r->durSeg)) return 0;
   if (r->posSeg < 0) r->posSeg = 0;
   return 1;
@@ -158,10 +162,10 @@ static int gravar(void) {
   for (i = 0; i < nRegs; i++) {
     const ProgRegistro *r = &regs[i];
     size_t livre = tam - (size_t)(p - buf);
-    escrito = snprintf(p, livre, "%d\t%s\t%s\t%s\t%d\t%d\t%.0f\t%.0f\t%lld\t%d\n",
+    escrito = snprintf(p, livre, "%d\t%s\t%s\t%s\t%d\t%d\t%.0f\t%.0f\t%lld\t%d\t%.0f\t%.0f\n",
                  r->perfil, r->chave, r->contentId, r->tipo,
                  r->temporada, r->episodio, r->posSeg, r->durSeg,
-                 r->lastWatchedMs, r->pendente ? 1 : 0);
+                 r->lastWatchedMs, r->pendente ? 1 : 0, r->tocadoSeg, r->deSeg);
     if (escrito < 0 || (size_t)escrito >= livre) { free(buf); return 0; }
     p += escrito;
   }
@@ -295,7 +299,8 @@ int prog_gravar_local(const char *imdb, int temporada, int episodio,
   TRANCAR();
   carregar();
   i = achar(r.perfil, r.chave);
-  if (i < 0) { i = abrirVaga(); if (i >= 0 && i == nRegs) nRegs++; }
+  if (i >= 0) { r.tocadoSeg = regs[i].tocadoSeg; r.deSeg = regs[i].deSeg; }
+  else { r.tocadoSeg = -1; i = abrirVaga(); if (i >= 0 && i == nRegs) nRegs++; }
   if (i < 0) { DESTRANCAR(); return 0; }
   regs[i] = r;
   ok = gravar();
@@ -313,6 +318,7 @@ int prog_aplicar_remoto(const ProgRegistro *rem) {
   r = *rem;
   r.perfil = perfis_ativo();
   r.pendente = 0;
+  r.tocadoSeg = -1;   // posicao de outro aparelho: a prova daqui nao a descreve
   if (r.posSeg < 0) r.posSeg = 0;
   if (!r.chave[0]) prog_chave(r.chave, sizeof r.chave, r.contentId, r.temporada, r.episodio);
   if (!r.tipo[0]) snprintf(r.tipo, sizeof r.tipo, "%s", r.episodio > 0 ? "series" : "movie");
@@ -330,6 +336,25 @@ int prog_aplicar_remoto(const ProgRegistro *rem) {
   gravar();
   DESTRANCAR();
   return 1;
+}
+
+void prog_definir_prova(const char *chave, double tocadoSeg, double deSeg) {
+  int i;
+  if (!chave || !*chave || !isfinite(tocadoSeg) || !isfinite(deSeg)) return;
+  TRANCAR();
+  carregar();
+  i = achar(perfis_ativo(), chave);
+  if (i >= 0) { regs[i].tocadoSeg = tocadoSeg; regs[i].deSeg = deSeg; gravar(); }
+  DESTRANCAR();
+}
+
+int prog_sem_prova(const char *imdb) {
+  char chave[48];
+  ProgRegistro r;
+  if (!imdb || !*imdb) return 0;
+  prog_chave(chave, sizeof chave, imdb, 0, 0);
+  return prog_por_chave(chave, &r) && r.tocadoSeg >= 0 &&
+         !scrobble_assistiu(r.tocadoSeg, r.deSeg, r.durSeg);
 }
 
 void prog_confirmar_empurrados(const ProgRegistro *enviados, int n) {
