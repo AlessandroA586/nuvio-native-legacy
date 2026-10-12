@@ -8698,7 +8698,7 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Dono 12/10: esquema nuviolegacy:// (nao nuvio://), mesmas formas do oficial.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/420",
    "criada_em": "2026-10-10",
    "alvo": "2.1"
@@ -9184,10 +9184,10 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Validar contrato suportado para progresso parcial Simkl antes de implementar; especificar pause/stop e não marcar visto quando só pausou, com teste de retomada entre clientes.",
+   "proximo_passo": "Implementar Simkl scrobble (dono aprovou 12/10 para 2.0.6, PLANO-ECOSSISTEMA Q4).",
    "notas": "LG 2.0.4, Simkl conectado diretamente: pede enviar progresso parcial ao pausar/sair para retomar em outros apps. src/simkl.c:simkl_ler_playback e simkl_continuar leem pausados; simkl_episodios_marcar/simkl_titulo_marcar enviam histórico de visto. src/player.c chama trakt_scrobble ao tocar/pausar; não há envio Simkl equivalente neste caminho. Leitura de playback e histórico existem, envio incremental Simkl não comprovado. Limite demonstrado do cliente, sem afirmar capacidade atual da API Simkl offline.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/459",
-   "alvo": "2.1"
+   "alvo": "2.0.6"
   },
   {
    "numero": 460,
