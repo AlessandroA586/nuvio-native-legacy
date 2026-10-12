@@ -1090,6 +1090,8 @@
   T("Catálogos", "Catalogi"),
   T("Catálogos do destaque", "Hero-catalogi"),
   T("Cazaquistão", "Kazachstan"),
+  T("Cena pós-créditos", ""),
+  T("Cena pós-créditos — continuar assistindo", "Scene na de aftiteling — blijven kijken"),
   T("Central de avisos", "Meldingscentrum"),
   T("Central de controle", "Bedieningspaneel"),
   T("Chamadas em excesso ao player da Samsung durante a reprodução", "Te veel aanroepen naar de Samsung-speler tijdens het afspelen"),

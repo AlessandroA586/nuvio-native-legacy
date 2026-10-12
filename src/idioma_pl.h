@@ -1090,6 +1090,8 @@
   T("Catálogos", "Katalogi"),
   T("Catálogos do destaque", "Katalogi banera"),
   T("Cazaquistão", "Kazachstan"),
+  T("Cena pós-créditos", ""),
+  T("Cena pós-créditos — continuar assistindo", "Scena po napisach — oglądaj dalej"),
   T("Central de avisos", "Centrum powiadomień"),
   T("Central de controle", "Centrum sterowania"),
   T("Chamadas em excesso ao player da Samsung durante a reprodução", "Nadmiarowe wywołania odtwarzacza Samsung podczas odtwarzania"),

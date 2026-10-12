@@ -1089,6 +1089,8 @@
   T("Catálogos", "Catálogos"),
   T("Catálogos do destaque", "Catálogos del destacado"),
   T("Cazaquistão", "Kazajistán"),
+  T("Cena pós-créditos", ""),
+  T("Cena pós-créditos — continuar assistindo", "Escena postcréditos — seguir viendo"),
   T("Central de avisos", "Centro de avisos"),
   T("Central de controle", "Centro de control"),
   T("Chamadas em excesso ao player da Samsung durante a reprodução", "Llamadas excesivas al reproductor de Samsung durante la reproducción"),

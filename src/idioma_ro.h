@@ -1089,6 +1089,8 @@
   T("Catálogos", "Cataloage"),
   T("Catálogos do destaque", "Cataloagele bannerului principal"),
   T("Cazaquistão", "Kazahstan"),
+  T("Cena pós-créditos", ""),
+  T("Cena pós-créditos — continuar assistindo", "Scenă după credite — continuă să privești"),
   T("Central de avisos", "Centrul de notificări"),
   T("Central de controle", "Centru de control"),
   T("Chamadas em excesso ao player da Samsung durante a reprodução", "Apeluri excesive către playerul Samsung în timpul redării"),

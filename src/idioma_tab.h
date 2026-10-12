@@ -1089,6 +1089,8 @@
   { "Catálogos", "Catalogs" },
   { "Catálogos do destaque", "Hero catalogs" },
   { "Cazaquistão", "Kazakhstan" },
+  { "Cena pós-créditos", "Post-credits scene" },
+  { "Cena pós-créditos — continuar assistindo", "Post-credits scene — keep watching" },
   { "Central de avisos", "Notice center" },
   { "Central de controle", "Control center" },
   { "Chamadas em excesso ao player da Samsung durante a reprodução", "Excess calls to the Samsung player during playback" },

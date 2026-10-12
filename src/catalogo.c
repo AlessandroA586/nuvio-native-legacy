@@ -782,7 +782,10 @@ int ajustes_idioma(void);
 // com perfil 1 continua certo (era o dono daquele Trakt) e e aceito, para o
 // perfil 1 nao pagar um arranque sem cache por nada; o de qualquer outro
 // perfil e recusado e apagado.
-#define CACHE_VERSAO 6
+// VERSAO 7: novo campo CatItem.posCreditos (cena pós-créditos, TMDB
+// 179430/179431). O sizeof recusaria o arquivo sozinho; a versao sobe mesmo
+// assim para o motivo da recusa ser o campo novo.
+#define CACHE_VERSAO 7
 // Mesmo cabecalho, itens CODIFICADOS (zeros em corrida). Um CatItem tem ~16 KB
 // e quase tudo e zero (buffers de URL dimensionados para o pior caso): 1600
 // titulos eram 25,6 MB gravados na MEMFS dentro da trava do sistema de arquivos
@@ -1856,6 +1859,7 @@ void cat_atualizar_item(int i, const CatItem *item) {
   if (itens && i >= 0 && i < n &&
       !strcmp(itens[i].imdb, copia.imdb) &&
       (!tipo_certo(itens[i].tipo) || !strcmp(tipo_base(itens[i].tipo), tipo_base(copia.tipo)))) {
+    if (itens[i].posCreditos) copia.posCreditos = 1;   // marca de outro fio sobrevive
     itens[i] = copia;   // an uncertain stored type may be resolved to movie/series
     mudou();
   }
@@ -1873,6 +1877,9 @@ void cat_atualizar_item_sem_abas(int i, const CatItem *item) {
       (!tipo_certo(itens[i].tipo) || !strcmp(tipo_base(itens[i].tipo), tipo_base(copia.tipo)))) {
     copia.nTemporadas = itens[i].nTemporadas;
     memcpy(copia.temporadas, itens[i].temporadas, sizeof copia.temporadas);
+    // A marca da cena chega por cat_marcar_pos_creditos noutro fio; uma copia
+    // tirada antes dela nao pode apaga-la.
+    if (itens[i].posCreditos) copia.posCreditos = 1;
     itens[i] = copia;
     mudou();
   }
@@ -2365,6 +2372,23 @@ void cat_trocar_continuar(const CatItem *lista, int qtd) {
 // Roda no fio buscarEps (um por pagina de serie) e no de montar(), com o
 // desenho lendo. Tudo sob epTrava (#203): antes, epIni/epQtd eram escritos no
 // ponteiro que garantirFaixas, noutro fio, podia ter acabado de liberar.
+// CENA POS-CREDITOS (TMDB 179430/179431): o fio do detalhe descobre o sinal
+// depois de o item ja estar publicado; escreve so este bit, sem repubicar o
+// CatItem inteiro (que trocaria faixas de episodios no meio de uma leitura).
+// Roda em fio fora do desenho, como cat_definir_episodios.
+void cat_marcar_pos_creditos(const char *imdb, int pos) {
+  int i;
+  if (!imdb || !imdb[0]) return;
+  pthread_mutex_lock(&pubTrava);
+  if (itens)
+    for (i = 0; i < n; i++)
+      if (!strcmp(itens[i].imdb, imdb) && itens[i].posCreditos != (pos ? 1 : 0)) {
+        itens[i].posCreditos = pos ? 1 : 0;   // toda fileira com a obra, nao so a primeira
+        mudou();
+      }
+  pthread_mutex_unlock(&pubTrava);
+}
+
 void cat_definir_episodios(int indiceItem, const CatEp *lista, int qtd) {
   int m = cat_n();
   if (!lista || qtd < 1 || m < 1) return;

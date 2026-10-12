@@ -1090,6 +1090,8 @@
   T("Catálogos", "Katalog"),
   T("Catálogos do destaque", "Katalog hero"),
   T("Cazaquistão", "Kazakhstan"),
+  T("Cena pós-créditos", ""),
+  T("Cena pós-créditos — continuar assistindo", "Adegan pascakredit — lanjut menonton"),
   T("Central de avisos", "Pusat pemberitahuan"),
   T("Central de controle", "Pusat kontrol"),
   T("Chamadas em excesso ao player da Samsung durante a reprodução", "Panggilan berlebih ke pemutar Samsung selama pemutaran"),

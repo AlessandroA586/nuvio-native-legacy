@@ -1090,6 +1090,8 @@
   T("Catálogos", "Katalógusok"),
   T("Catálogos do destaque", "Főkép-katalógusok"),
   T("Cazaquistão", "Kazahsztán"),
+  T("Cena pós-créditos", ""),
+  T("Cena pós-créditos — continuar assistindo", "Stáblista utáni jelenet — nézés folytatása"),
   T("Central de avisos", "Értesítési központ"),
   T("Central de controle", "Vezérlőközpont"),
   T("Chamadas em excesso ao player da Samsung durante a reprodução", "Felesleges hívások a Samsung lejátszóhoz lejátszás közben"),
