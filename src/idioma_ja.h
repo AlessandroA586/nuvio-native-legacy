@@ -1083,6 +1083,7 @@
   T("Catálogos", "カタログ"),
   T("Catálogos do destaque", "ヒーローのカタログ"),
   T("Cazaquistão", "カザフスタン"),
+  T("Cena pós-créditos", ""),
   T("Cena pós-créditos — continuar assistindo", "エンドロール後のシーン — 視聴を続ける"),
   T("Central de avisos", "お知らせセンター"),
   T("Central de controle", "コントロールセンター"),

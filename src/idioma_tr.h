@@ -1083,6 +1083,7 @@
   T("Catálogos", "Kataloglar"),
   T("Catálogos do destaque", "Banner katalogları"),
   T("Cazaquistão", "Kazakistan"),
+  T("Cena pós-créditos", ""),
   T("Cena pós-créditos — continuar assistindo", "Jenerik sonrası sahne — izlemeye devam et"),
   T("Central de avisos", "Bildirim merkezi"),
   T("Central de controle", "Denetim merkezi"),

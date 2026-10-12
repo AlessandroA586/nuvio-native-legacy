@@ -1083,6 +1083,7 @@
   T("Catálogos", "Catálogos"),
   T("Catálogos do destaque", "Catálogos do destaque"),
   T("Cazaquistão", "Cazaquistão"),
+  T("Cena pós-créditos", ""),
   T("Cena pós-créditos — continuar assistindo", "Cena pós-créditos — continuar a ver"),
   T("Central de avisos", "Centro de avisos"),
   T("Central de controle", "Centro de controlo"),

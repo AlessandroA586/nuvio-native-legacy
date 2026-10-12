@@ -1083,6 +1083,7 @@
   T("Catálogos", "片库"),
   T("Catálogos do destaque", "主视觉片库"),
   T("Cazaquistão", "哈萨克斯坦"),
+  T("Cena pós-créditos", ""),
   T("Cena pós-créditos — continuar assistindo", "彩蛋场景 — 继续观看"),
   T("Central de avisos", "通知中心"),
   T("Central de controle", "控制中心"),

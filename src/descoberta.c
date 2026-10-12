@@ -388,9 +388,17 @@ int desc_tmdb_pos_creditos(const char *json) {
   // sem a chave "keywords": num corpo /movie ele tambem existe em
   // recommendations/release_dates, e os "id" dali sao de OUTROS filmes.
   const char *anexo = json ? strstr(json, "\"keywords\"") : NULL;
-  const char *objeto = anexo ? strchr(anexo, '{') : NULL;
+  const char *objeto = NULL;
   const char *lista = NULL;
   if (!json) return 0;
+  if (anexo) {   // so o valor da propria chave: "keywords":null nao pula para outra secao
+    objeto = anexo + 10;
+    while (*objeto == ' ' || *objeto == '\t' || *objeto == '\n' || *objeto == '\r') objeto++;
+    if (*objeto != ':') return 0;
+    objeto++;
+    while (*objeto == ' ' || *objeto == '\t' || *objeto == '\n' || *objeto == '\r') objeto++;
+    if (*objeto != '{') return 0;
+  }
   if (anexo) {   // filme: keywords.keywords[]; serie com append: keywords.results[]
     if (objeto) lista = js_array(objeto, NULL, "keywords");
     if (!lista && objeto) lista = js_array(objeto, NULL, "results");

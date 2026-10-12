@@ -1083,6 +1083,7 @@
   T("Catálogos", "Cataloghi"),
   T("Catálogos do destaque", "Cataloghi dell'hero"),
   T("Cazaquistão", "Kazakistan"),
+  T("Cena pós-créditos", ""),
   T("Cena pós-créditos — continuar assistindo", "Scena dopo i titoli — continua a guardare"),
   T("Central de avisos", "Centro avvisi"),
   T("Central de controle", "Centro di controllo"),

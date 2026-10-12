@@ -1082,6 +1082,7 @@
   T("Catálogos", "Каталоги"),
   T("Catálogos do destaque", "Каталоги главного баннера"),
   T("Cazaquistão", "Казахстан"),
+  T("Cena pós-créditos", ""),
   T("Cena pós-créditos — continuar assistindo", "Сцена после титров — продолжить просмотр"),
   T("Central de avisos", "Центр уведомлений"),
   T("Central de controle", "Пункт управления"),

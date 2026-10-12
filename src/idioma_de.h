@@ -1082,6 +1082,7 @@
   T("Catálogos", "Kataloge"),
   T("Catálogos do destaque", "Kataloge des Highlights"),
   T("Cazaquistão", "Kasachstan"),
+  T("Cena pós-créditos", ""),
   T("Cena pós-créditos — continuar assistindo", "Nach-Credits-Szene — weiter ansehen"),
   T("Central de avisos", "Meldungszentrale"),
   T("Central de controle", "Kontrollzentrum"),

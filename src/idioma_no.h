@@ -1083,6 +1083,7 @@
   T("Catálogos", "Kataloger"),
   T("Catálogos do destaque", "Katalogene i hovedbanneret"),
   T("Cazaquistão", "Kasakhstan"),
+  T("Cena pós-créditos", ""),
   T("Cena pós-créditos — continuar assistindo", "Etter rulleteksten — fortsett å se"),
   T("Central de avisos", "Varselsenter"),
   T("Central de controle", "Kontrollsenter"),

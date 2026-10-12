@@ -1083,6 +1083,7 @@
   T("Catálogos", "Katalogy"),
   T("Catálogos do destaque", "Katalogy hlavního banera"),
   T("Cazaquistão", "Kazachstán"),
+  T("Cena pós-créditos", ""),
   T("Cena pós-créditos — continuar assistindo", "Scéna po titulcích — pokračovat ve sledování"),
   T("Central de avisos", "Centrum oznámení"),
   T("Central de controle", "Ovládací centrum"),

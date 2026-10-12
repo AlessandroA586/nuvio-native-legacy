@@ -1083,6 +1083,7 @@
   T("Catálogos", "Katalog"),
   T("Catálogos do destaque", "Katalog hero"),
   T("Cazaquistão", "Kazakhstan"),
+  T("Cena pós-créditos", ""),
   T("Cena pós-créditos — continuar assistindo", "Adegan pascakredit — lanjut menonton"),
   T("Central de avisos", "Pusat pemberitahuan"),
   T("Central de controle", "Pusat kontrol"),

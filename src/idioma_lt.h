@@ -1083,6 +1083,7 @@
   T("Catálogos", "Katalogai"),
   T("Catálogos do destaque", "Pagrindinio bloko katalogai"),
   T("Cazaquistão", "Kazachstanas"),
+  T("Cena pós-créditos", ""),
   T("Cena pós-créditos — continuar assistindo", "Scena po titrų — žiūrėti toliau"),
   T("Central de avisos", "Pranešimų centras"),
   T("Central de controle", "Valdymo centras"),

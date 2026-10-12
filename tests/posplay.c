@@ -495,6 +495,8 @@ int main(void) {
     assert(desc_tmdb_pos_creditos("{\"keywords\":{\"keywords\":[{\"id\":179430,\"name\":\"duringcreditsstinger\"}]}}"));
     assert(desc_tmdb_pos_creditos("{\"keywords\":{\"results\":[{\"id\":179431,\"name\":\"aftercreditsstinger\"}]}}"));
     assert(!desc_tmdb_pos_creditos("{\"keywords\":null,\"results\":[{\"id\":179431}]}"));
+    assert(!desc_tmdb_pos_creditos("{\"keywords\":null,\"recommendations\":{\"results\":[{\"id\":179431}]}}"));
+    assert(!desc_tmdb_pos_creditos("{\"keywords\" : null , \"x\":{\"keywords\":[{\"id\":179430}]}}"));
     assert(!desc_tmdb_pos_creditos("{\"keywords\":{\"keywords\":[{\"id\":1,\"name\":\"credits\"}]}}"));
     cat_definir(&u, 1);
     cat_definir_episodios(0, eps, 10);
@@ -512,6 +514,14 @@ int main(void) {
     posplay_atualizar(0.016f, 16000, 3598.8, 3600.0, 1, 0, 1);   // pipeline para antes de 3600
     assert(posplay_visivel() && !posplay_pediu_episodio(&t, &e)); // volta inteiro, conta o que resta
     posplay_atualizar(0.016f, 17300, 3600.0, 3600.0, 1, 0, 1);
+    assert(!posplay_visivel() && posplay_pediu_episodio(&t, &e) && e == 4);
+    posplay_fechar();   // durante a cena a pessoa ainda pode ir ao proximo na mao
+    aquecer(3600.0, 1);
+    posplay_marcador_real(1);
+    posplay_atualizar(0.016f, 1000, 3450.0, 3600.0, 1, 0, 1);
+    assert(posplay_visivel() && posplay_teste_foco() == 0);
+    assert(tecla(SDLK_RIGHT) == 1 && posplay_teste_foco() == 1);
+    assert(tecla(SDLK_RETURN) == 1);
     assert(!posplay_visivel() && posplay_pediu_episodio(&t, &e) && e == 4);
     posplay_fechar();
     u.posCreditos = 0;

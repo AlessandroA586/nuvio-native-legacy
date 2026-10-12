@@ -1083,6 +1083,7 @@
   T("Catálogos", "Katalozi"),
   T("Catálogos do destaque", "Katalozi glavnog prikaza"),
   T("Cazaquistão", "Kazahstan"),
+  T("Cena pós-créditos", ""),
   T("Cena pós-créditos — continuar assistindo", "Scena nakon titlova — nastavi gledati"),
   T("Central de avisos", "Centar obavijesti"),
   T("Central de controle", "Kontrolni centar"),
