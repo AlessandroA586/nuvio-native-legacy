@@ -3,6 +3,7 @@
 #ifndef __EMSCRIPTEN__
 #define NV_ESPACO_IMPLEMENTADO 1
 #include <dirent.h>
+#include <limits.h>
 #include <stdint.h>
 #include <sys/statvfs.h>
 #if (defined(NV_TPK) || defined(NV_WEBOS)) && defined(__arm__)
@@ -14,7 +15,7 @@ _Static_assert(sizeof(off_t)==8, "dados.c precisa de -D_FILE_OFFSET_BITS=64 (esp
 #define ESPACO_MB (1024ULL * 1024ULL)
 #define ESPACO_CACHE (20 * ESPACO_MB)
 static pthread_mutex_t espacoTrava = PTHREAD_MUTEX_INITIALIZER;
-static char espacoApp[1200];
+static char espacoApp[PATH_MAX];
 static int espacoIniciado;
 
 typedef struct { char caminho[1200]; uint64_t bytes; time_t quando; } EspArquivo;
@@ -114,14 +115,14 @@ static void espacoSomar(const char *p, const char *ignorar, int grupo,
   closedir(d);
 }
 static void espacoRelatar(FILE *f, const char *dados, const char *app, double livre) {
-  uint64_t t[8]={0}; char d[1200],a[1200]="";
+  uint64_t t[8]={0}; char d[PATH_MAX],a[PATH_MAX]="";
   if(dados && realpath(dados,d)) espacoSomar(d,NULL,-1,0,t); else d[0]=0;
   if(app && realpath(app,a) && strcmp(a,d) &&
       !(d[0] && !strncmp(a,d,strlen(d)) && a[strlen(d)]=='/')) espacoSomar(a,d[0]?d:NULL,-1,0,t);
 #ifdef NV_TPK
   // O pacote fica em apps_ro e data/ em apps_rw. Inclui os irmaos de data/
   // (cache do host/player etc.) como "outros", sem varrer a home no desktop.
-  char rw[1200]; snprintf(rw,sizeof rw,"%s",d);
+  char rw[PATH_MAX]; snprintf(rw,sizeof rw,"%s",d);
   char *barra=strrchr(rw,'/'); if(barra) *barra=0;
   const char *pkg=strstr(rw,"/apps_rw/");
   if(pkg && pkg[9] && !strchr(pkg+9,'/') && strcmp(rw,a))
@@ -130,7 +131,7 @@ static void espacoRelatar(FILE *f, const char *dados, const char *app, double li
   // LG grava logs em /tmp, fora das duas arvores. Conta cada um so uma vez.
   const char *logs[]={getenv("NUVIO_LOG"),getenv("NUVIO_LOG_ANTERIOR")};
   for(int i=0;i<2;i++) {
-    char p[1200];
+    char p[PATH_MAX];
     if(!logs[i] || !realpath(logs[i],p)) continue;
     if((d[0] && !strncmp(p,d,strlen(d)) && (p[strlen(d)]=='/' || !p[strlen(d)])) ||
        (a[0] && !strncmp(p,a,strlen(a)) && (p[strlen(a)]=='/' || !p[strlen(a)]))) continue;
