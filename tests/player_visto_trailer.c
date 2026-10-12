@@ -319,6 +319,13 @@ int main(void) {
   assert(nVisto == 0 && cat_item(0)->progresso < 90);
   assert(!scrobble_assistiu(tkAssistido, tkDe, tkDur));
 
+  // Retomada em 85% de 2700 s, 5 s tocados e busca direto aos creditos em
+  // 2400 s: os 300 s que sobram nao viram prova de 5 s assistidos.
+  sessao("tt90000019", 85, 2700); creditos = 2400;
+  tocar(5, 1); pos = 2400; quadro(); player_encerrar();
+  assert(nVisto == 0 && cat_item(0)->progresso < 100);
+  assert(tkPos < tkDur && !scrobble_assistiu(tkAssistido, tkDe, tkDur));
+
   puts("PASS: trailer, seek, pausa e buffer nao marcam; reproducao real grava progresso e visto");
   return 0;
 }
