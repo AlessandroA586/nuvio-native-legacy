@@ -6684,8 +6684,32 @@ void desc_mesclar_episodios(CatEp *base, int nb, const CatEp *outro, int no, int
 // "Continuar assistindo" roda com o player aberto), cat_definir_episodios e
 // cat_atualizar_item escreviam na posicao velha — a lista e a ficha de um
 // titulo iam parar em outro. epAlvo re-resolve pelo id antes de cada escrita;
-// -1 = o titulo saiu do catalogo e nada e escrito. Um fio por vez (fioEpVivo).
+// -1 = o titulo saiu do catalogo ou o pedido foi substituido.
 static char epAlvoId[64];
+typedef struct { int item; unsigned geracao; char id[64]; CatItem base; } EpPedido;
+static pthread_key_t epPedidoKey;
+static pthread_once_t epPedidoOnce = PTHREAD_ONCE_INIT;
+static pthread_mutex_t epPedidoTrava = PTHREAD_MUTEX_INITIALIZER;
+static unsigned epGeracao;
+static void epPedidoKeyCriar(void) { pthread_key_create(&epPedidoKey, NULL); }
+static EpPedido *epPedidoAtual(void) {
+  pthread_once(&epPedidoOnce, epPedidoKeyCriar);
+  return pthread_getspecific(epPedidoKey);
+}
+static int epPedidoSaiu(void) {
+  EpPedido *p = epPedidoAtual();
+  int saiu;
+  pthread_mutex_lock(&epPedidoTrava);
+  saiu = p && p->geracao != epGeracao;
+  pthread_mutex_unlock(&epPedidoTrava);
+  return saiu;
+}
+static void epConcluir(void) {
+  pthread_mutex_lock(&epPedidoTrava);
+  EpPedido *p = epPedidoAtual();
+  if (!p || p->geracao == epGeracao) fioEpVivo = 0;
+  pthread_mutex_unlock(&epPedidoTrava);
+}
 // Com o id do PROPRIO fio: a cauda do buscarEps (notas por temporada do TMDB,
 // dezenas de pedidos em serie longa) roda depois de fioEpVivo ser solto, e o
 // proximo titulo ja reescreveu epAlvoId (sem _Thread_local no Tizen 4/5).
@@ -6698,7 +6722,11 @@ static int epAlvoDe(int alvoItem, const char *id) {
   }
   return i;
 }
-static int epAlvo(int alvoItem) { return epAlvoDe(alvoItem, epAlvoId); }
+static int epAlvo(int alvoItem) {
+  EpPedido *p = epPedidoAtual();
+  if (epPedidoSaiu()) return -1;
+  return epAlvoDe(alvoItem, p ? p->id : epAlvoId);
+}
 
 // AS ABAS DE TEMPORADA SAO AS DA LISTA QUE FOI PUBLICADA (#372). Eram lidas do
 // corpo da ficha (o do Nuvio) mesmo quando a lista que entrou era a de um
@@ -6738,7 +6766,32 @@ static int publicarEpisodios(const char *corpo, int alvoItem, const char *titulo
       free(o);
     }
   }
-  if (n && (alvoItem = epAlvo(alvoItem)) >= 0) cat_definir_episodios(alvoItem, eps, n);
+  if (n && (alvoItem = epAlvo(alvoItem)) >= 0) {
+    int antigos = cat_n_episodios(alvoItem);
+    CatEp *estavel = antigos > 0 && epPedidoAtual() ? malloc(sizeof(CatEp) * VIDEOS_MAX) : NULL;
+    if (estavel) {
+      int k = 0;
+      // Mantem os pares e a ordem ja vistos; novos pares entram no fim.
+      for (int i = 0; i < antigos && k < VIDEOS_MAX; i++) {
+        const CatEp *e = cat_episodio(alvoItem, i);
+        if (!e) continue;
+        for (int j = 0; j < n; j++)
+          if (e->temporada == eps[j].temporada && e->episodio == eps[j].episodio) {
+            estavel[k++] = eps[j]; break;
+          }
+      }
+      for (int j = 0; j < n && k < VIDEOS_MAX; j++) {
+        int i;
+        for (i = 0; i < k; i++)
+          if (estavel[i].temporada == eps[j].temporada &&
+              estavel[i].episodio == eps[j].episodio) break;
+        if (i == k) estavel[k++] = eps[j];
+      }
+      cat_definir_episodios(alvoItem, estavel, k);
+      if (tp) temporadasDosEps(estavel, k, tp);
+      free(estavel);
+    } else cat_definir_episodios(alvoItem, eps, n);
+  }
   free(eps);
   marco("episodios na tela");
   printf("[desc] %s: %d episodios publicados antes dos extras\n", titulo, n);
@@ -7147,27 +7200,79 @@ static void metaPublicarPrimario(const CatItem *orig, const char *corpo, int ind
   marco("detalhe: ficha primaria publicada antes do complemento");
   free(cedo);
 }
+typedef struct {
+  const CatItem *orig;
+  int indice, fil;
+  EpPedido *pedido;
+  char *corpo;
+} EpCine;
+static pthread_mutex_t epPublicacaoTrava = PTHREAD_MUTEX_INITIALIZER;
+static void epPublicarCedo(const CatItem *orig, const char *corpo, int indice) {
+  TempsPub tp = {0};
+  int brutos = 0, distintos = metaContarEpisodios(corpo, &brutos);
+  if (!corpo || !distintos || metaListaDeArquivos(distintos, brutos)) return;
+  pthread_mutex_lock(&epPublicacaoTrava);
+  if ((indice = epAlvo(indice)) < 0 || cat_n_episodios(indice) > 0) {
+    pthread_mutex_unlock(&epPublicacaoTrava);
+    return;
+  }
+  publicarEpisodios(corpo, indice, orig->titulo, NULL, 0, &tp);
+  CatItem edit;
+  if (cat_copiar_item(indice, &edit)) {
+    edit.nTemporadas = tp.n;
+    memcpy(edit.temporadas, tp.t, sizeof(int) * (size_t)tp.n);
+    cat_atualizar_item(indice, &edit);
+  }
+  pthread_mutex_unlock(&epPublicacaoTrava);
+}
+static void *epCineBuscar(void *u) {
+  EpCine *c = u;
+  pthread_once(&epPedidoOnce, epPedidoKeyCriar);
+  pthread_setspecific(epPedidoKey, c->pedido);
+  char id[64];
+  idbase_copiar(c->orig->imdb, id, sizeof id);
+  c->corpo = cinemetaMeta(c->orig->tipo, id, &c->fil);
+  epPublicarCedo(c->orig, c->corpo, c->indice);
+  pthread_setspecific(epPedidoKey, NULL);
+  return NULL;
+}
 static int metaCatalogoResolver(const CatItem *orig, MetaFontes *mf, int indice) {
   char id[64];
   int origem = addonDaOrigem(orig->origem), i, n = addons_n(), extras = 0;
   int ehImdb = !strncmp(orig->imdb, "tt", 2);
+  EpCine cedo = { orig, indice, 1, epPedidoAtual(), NULL };
+  pthread_t cineFio;
+  int paralelo = ehImdb && strcmp(orig->tipo, "movie") &&
+                 pthread_create(&cineFio, NULL, epCineBuscar, &cedo) == 0;
   memset(mf, 0, sizeof *mf);
   idbase_copiar(orig->imdb, id, sizeof id);
   // a) quem publicou
   if (origem >= 0) tentarFichaDoAddon(mf, origem, orig->tipo, id);
-  if (mf->n) metaPublicarPrimario(orig, mf->corpo[0], indice);
+  if (mf->n && !epPedidoSaiu()) {
+    epPublicarCedo(orig, mf->corpo[0], indice);
+    indice = epAlvo(indice);
+    if (indice >= 0) metaPublicarPrimario(orig, mf->corpo[0], indice);
+  }
   // b) outros addons de metadados, na ordem do usuario
-  for (i = 0; i < n && extras < 2 && (!mf->n || !metaCompleta(mf->corpo[0])); i++) {
+  for (i = 0; i < n && !epPedidoSaiu() && extras < 2 && (!mf->n || !metaCompleta(mf->corpo[0])); i++) {
     int r;
     if (i == origem) continue;
     r = addons_aceita_id(i, orig->tipo, id);
     if (r == 1 || (r == -1 && ehImdb && addons_sondado(i) && addons_fornece(i, ADD_META))) {
       if (tentarFichaDoAddon(mf, i, orig->tipo, id)) {
-        if (mf->n == 1) metaPublicarPrimario(orig, mf->corpo[0], indice);
+        if (mf->n == 1 && !epPedidoSaiu()) {
+          int alvo = epAlvo(indice);
+          if (alvo >= 0) {
+            epPublicarCedo(orig, mf->corpo[0], alvo);
+            metaPublicarPrimario(orig, mf->corpo[0], alvo);
+          }
+        }
         extras++;
       }
     }
   }
+  if (paralelo) pthread_join(cineFio, NULL);
+  if (epPedidoSaiu()) { free(cedo.corpo); return 0; }
   // O IMDb do titulo: o proprio id, ou o que a ficha revelou.
   if (ehImdb) snprintf(mf->tt, sizeof mf->tt, "%s", id);
   else for (i = 0; i < mf->n && !mf->tt[0]; i++) metaImdbDaFicha(mf->corpo[i], mf->tt, sizeof mf->tt);
@@ -7180,7 +7285,8 @@ static int metaCatalogoResolver(const CatItem *orig, MetaFontes *mf, int indice)
     char tp[16] = "";
     char *cm;
     if (mf->n) metaTipoProprio(mf->corpo[0], tp, sizeof tp);
-    cm = cinemetaMeta(tp[0] ? tp : orig->tipo, mf->tt, &fil);
+    if (paralelo) { cm = cedo.corpo; fil = cedo.fil; }
+    else cm = cinemetaMeta(tp[0] ? tp : orig->tipo, mf->tt, &fil);
     if (cm) {
       printf("[desc] ficha do catalogo Nuvio/Cinemeta (%s)\n", mf->n ? "complemento" : "por mapeamento");
       fflush(stdout);
@@ -7269,8 +7375,8 @@ static void completarFicha(CatItem *d, const MetaFontes *mf, const char *tipo) {
   }
 }
 
-// Episodios do caminho do catalogo. A lista da BASE manda; sem nenhum episodio
-// nela, a da primeira fonte que tem. Mescla episodio a episodio (still, data,
+// Episodios do caminho do catalogo. A base manda no texto; a lista maior
+// do mesmo IMDb conserva os episodios que o addon ainda nao conhece. Mescla episodio a episodio (still, data,
 // duracao, so vazios) apenas quando as duas listas falam o mesmo id — IMDb.
 // Devolve 1 quando os episodios publicados sao de um addon (o TMDB, depois, so
 // preenche o que faltar neles). Lista de ARQUIVOS mantida devolve 0: o nome
@@ -7312,32 +7418,37 @@ static int episodiosDoCatalogo(int alvoItem, const char *titulo, const char *ser
   // complemento quando havia outro addon no meio.
   for (i = 0; mesmoId && i < mf->n && outro < 0; i++)
     if (i != fonte && nEp[i] > 0 && mf->cine[i]) outro = i;
+  // Uma lista real menor do addon conserva os pares do Cinemeta e aplica
+  // o texto localizado, como episodiosDoAddon.
+  int modo = arq[fonte] ? DESC_MESCLA_TEXTO : DESC_MESCLA_VAZIOS;
+  if (outro >= 0 && !arq[fonte] && nEp[outro] > nEp[fonte]) {
+    int addon = fonte; fonte = outro; outro = addon;
+    modo = DESC_MESCLA_TEXTO;
+  }
   // Lista de arquivos que ficou (sabe mais episodios): o nome dela e nome de
   // arquivo, entao o do Cinemeta entra por cima nos episodios que os dois tem.
   publicarEpisodios(mf->corpo[fonte], alvoItem, titulo,
                     outro >= 0 ? mf->corpo[outro] : NULL,
-                    arq[fonte] ? DESC_MESCLA_TEXTO : DESC_MESCLA_VAZIOS, tp);
+                    modo, tp);
   arte_reserva_episodios(serie, mf->corpo[fonte]);
   // Lista de arquivos nao e "texto do addon" (como em episodiosDoAddon): com 1
   // o TMDB so preencheria vazios e os nomes de arquivo que sobraram ficariam.
-  return !mf->cine[fonte] && !arq[fonte];
+  return (!mf->cine[fonte] && !arq[fonte]) ||
+         (outro >= 0 && !mf->cine[outro] && !arq[outro]);
 }
 
-// PRE-BUSCA QUE CEDE. O fio de episodios e um so (epItem, epAlvoId...): uma
-// pre-busca do carrossel em voo fazia o pedido do titulo que chegou ficar
-// guardado (pendItem) ate ela acabar. Quem pre-busca marca epPreQuer; quando um
-// pedido de verdade chega com o fio ocupado por ela, epCancelar sobe e ela
-// larga nos pontos de parada abaixo (no maximo uma viagem de rede depois).
-static volatile int epPreQuer, epRodaPre, epCancelar;
+// Cada novo titulo invalida o pedido anterior. A rede em voo pode terminar
+// e alimentar o cache, mas nao publica nem segura o titulo atual.
 static int preCede(const char *id) {
-  if (!(epRodaPre && epCancelar)) return 0;
-  printf("[desc] pre-busca de %s cedeu ao titulo em cena\n", id);
+  if (!epPedidoSaiu()) return 0;
+  printf("[desc] pedido de %s cedeu ao titulo em cena\n", id);
   fflush(stdout);
   return 1;
 }
 
 static void *buscarEps(void *u) {
-  int alvoItem = epItem;
+  EpPedido *pedido = epPedidoAtual();
+  int alvoItem = pedido ? pedido->item : epItem;
   const CatItem *orig;
   CatItem base;
   const CatItem *it;
@@ -7348,10 +7459,13 @@ static void *buscarEps(void *u) {
   int viaCatalogo = 0, solto = 0;
   (void)u;
   memset(&mf, 0, sizeof mf);
-  if (!cat_copiar_item(alvoItem, &base) || !base.imdb[0]) { fioEpVivo = 0; return NULL; }
+  if (pedido) base = pedido->base;
+  else if (!cat_copiar_item(alvoItem, &base)) { epConcluir(); return NULL; }
+  if (!base.imdb[0]) { epConcluir(); return NULL; }
   orig = &base;
-  if (preCede(orig->imdb)) { fioEpVivo = 0; return NULL; }
-  snprintf(epAlvoId, sizeof epAlvoId, "%s", orig->imdb);
+  if (preCede(orig->imdb)) { epConcluir(); return NULL; }
+  if (pedido) snprintf(pedido->id, sizeof pedido->id, "%s", orig->imdb);
+  else snprintf(epAlvoId, sizeof epAlvoId, "%s", orig->imdb);
   snprintf(meuId, sizeof meuId, "%s", orig->imdb);
   // Copia sob a trava antes de sair para a rede; nenhum ponteiro de quadro.
   // CANAL NAO PASSA AQUI. O Cinemeta so conhece filme/serie por id do IMDb
@@ -7361,7 +7475,7 @@ static void *buscarEps(void *u) {
   // `serie`) reduzia TODO canal a "cs" — a mesma chave de cache para todos,
   // entao o primeiro canal aberto "vazava" elenco/genero/nota para os
   // seguintes. Medido: nenhum canal tem tipo "movie" nem "series" (#37).
-  if (ehCanal(orig->tipo)) { fioEpVivo = 0; return NULL; }
+  if (ehCanal(orig->tipo)) { epConcluir(); return NULL; }
   // PERSONAL SERVER ITEM: the server is the only source of its page. No
   // Cinemeta, TMDB or addon /meta gets an opaque server id.
   if (jfid_e(orig->imdb)) {
@@ -7373,7 +7487,7 @@ static void *buscarEps(void *u) {
       if (ne > 0) cat_definir_episodios(alvoItem, eps, ne);
     }
     free(eps);
-    fioEpVivo = 0;
+    epConcluir();
     return NULL;
   }
   // FILME TAMBEM PASSA AQUI. O /meta/movie traz elenco, direcao, generos e
@@ -7389,9 +7503,10 @@ static void *buscarEps(void *u) {
   // item, e o Cinemeta so como complemento. Devolve 0 quando nao ha nada
   // util — ai o caminho de sempre: Cinemeta para "tt", nada para o resto.
   if (catalogoPrimeiro(orig)) viaCatalogo = metaCatalogoResolver(orig, &mf, alvoItem);
+  if (epPedidoSaiu()) { metaFontesLiberar(&mf); epConcluir(); return NULL; }
   if (!viaCatalogo && strncmp(orig->imdb, "tt", 2)) {
     metaFontesLiberar(&mf);
-    fioEpVivo = 0;
+    epConcluir();
     return NULL;
   }
   // TIPO INCERTO ("anime" de catalogo do AIOMetadata, ou qualquer outro que
@@ -7430,7 +7545,7 @@ static void *buscarEps(void *u) {
     ehFilme = strcmp(tipos[ti], "series") != 0;
     if (ultimo || desc_meta_tem_temporadas(corpo)) break;
   }
-  if (!corpo || preCede(meuId)) { metaFontesLiberar(&mf); free(corpo); fioEpVivo = 0; return NULL; }
+  if (!corpo || preCede(meuId)) { metaFontesLiberar(&mf); free(corpo); epConcluir(); return NULL; }
   if (nTipos > 1) {
     const char *resolvido = ehFilme ? "movie" : "series";
     printf("[desc] %s: tipo '%s' do catalogo resolvido como '%s' pelo /meta\n",
@@ -7604,7 +7719,7 @@ static void *buscarEps(void *u) {
     // pendItem ate a cauda inteira acabar — pagina aberta e vazia. A cauda
     // escreve pelo id guardado em meuId (epAlvoDe), nao pelo global.
     solto = 1;
-    fioEpVivo = 0;
+    epConcluir();
     { char idBase[24];
       const char *dp;
       snprintf(idBase, sizeof idBase, "%s", it->imdb);
@@ -7643,7 +7758,7 @@ static void *buscarEps(void *u) {
     // com outras abas, e republicar o `edit` inteiro devolvia as abas velhas
     // (T1 com 72 episodios em T1-T3: T2/T3 carregados e escondidos). As abas
     // ficam as que estao no item; o resto (elenco, arte, texto) e desta cauda.
-    if (alvoItem >= 0 && (alvoItem = epAlvoDe(alvoItem, meuId)) >= 0) cat_atualizar_item_sem_abas(alvoItem, &edit);
+    if (alvoItem >= 0 && (alvoItem = epAlvo(alvoItem)) >= 0) cat_atualizar_item_sem_abas(alvoItem, &edit);
     printf("[desc] %s: %d atores, dir='%s', %d temporadas\n",
            edit.titulo, edit.nElenco, edit.direcao, edit.nTemporadas);
     fflush(stdout);
@@ -7669,7 +7784,7 @@ static void *buscarEps(void *u) {
           free(c3);
         }
       }
-      if (chave2[0] && tmdbId > 0 && alvoItem >= 0 && (alvoItem = epAlvoDe(alvoItem, meuId)) >= 0) {
+      if (chave2[0] && tmdbId > 0 && alvoItem >= 0 && (alvoItem = epAlvo(alvoItem)) >= 0) {
         int neps = cat_n_episodios(alvoItem);
         if (neps > 0) {
           CatEp *tmp = malloc(sizeof(CatEp) * (size_t)neps);
@@ -7708,7 +7823,7 @@ static void *buscarEps(void *u) {
                   if (e0 && (e0->tmdbSerie != tmdbId || e0->tmdbE != tmp[i2].tmdbE)) marcados++;
                 }
               if (marcados > 0 && preenchidas == 0) preenchidas = -marcados; }
-            if (preenchidas != 0 && (alvoItem = epAlvoDe(alvoItem, meuId)) >= 0 &&
+            if (preenchidas != 0 && (alvoItem = epAlvo(alvoItem)) >= 0 &&
                 cat_n_episodios(alvoItem) == neps) {
               cat_definir_episodios(alvoItem, tmp, neps);
               printf("[desc] %s: nota/sinopse TMDB em %d episodios\n",
@@ -7724,7 +7839,16 @@ static void *buscarEps(void *u) {
 
   free(corpo);
   metaFontesLiberar(&mf);
-  if (!solto) fioEpVivo = 0;   // solto antes: um fio mais novo pode estar vivo
+  if (!solto) epConcluir();   // solto antes: um fio mais novo pode estar vivo
+  return NULL;
+}
+
+static void *buscarEpsPedido(void *u) {
+  pthread_once(&epPedidoOnce, epPedidoKeyCriar);
+  pthread_setspecific(epPedidoKey, u);
+  buscarEps(NULL);
+  pthread_setspecific(epPedidoKey, NULL);
+  free(u);
   return NULL;
 }
 
@@ -8143,19 +8267,25 @@ int desc_vertudo_item(int i, CatItem *dst) {
 }
 
 void desc_episodios(int indiceItem, int temporada) {
-  if (fioEpVivo) {
-    pendItem = indiceItem; pendTemp = temporada;
-    if (epRodaPre) epCancelar = 1;   // a pre-busca em voo cede (ver preCede)
-    return;
-  }
+  pthread_mutex_lock(&epPedidoTrava);
+  int mesmo = fioEpVivo && epItem == indiceItem;
+  pthread_mutex_unlock(&epPedidoTrava);
+  if (mesmo) return;
   // A lista agora e UNICA e cobre todas as temporadas, entao ter qualquer
   // episodio deste titulo ja basta — trocar de aba nao pede nada.
   (void)temporada;
   if (cat_n_episodios(indiceItem) > 0) return;
+  EpPedido *p = calloc(1, sizeof *p);
+  if (!p) return;
+  p->item = indiceItem;
+  if (!cat_copiar_item(indiceItem, &p->base)) { free(p); return; }
+  snprintf(p->id, sizeof p->id, "%s", p->base.imdb);
+  pthread_mutex_lock(&epPedidoTrava);
+  p->geracao = ++epGeracao;
   epItem = indiceItem; epTemp = temporada;
-  epRodaPre = epPreQuer; epPreQuer = 0; epCancelar = 0;
   fioEpVivo = 1;
-  if (pthread_create(&fioEp, NULL, buscarEps, NULL) != 0) fioEpVivo = 0;
+  pthread_mutex_unlock(&epPedidoTrava);
+  if (pthread_create(&fioEp, NULL, buscarEpsPedido, p) != 0) { free(p); fioEpVivo = 0; }
   else pthread_detach(fioEp);
 }
 
@@ -8180,14 +8310,15 @@ int desc_episodios_precarregar(int indiceItem) {
   if (!(!strcmp(ci->tipo, "series") || strcmp(ci->tipo, "movie") || ci->nElenco == 0)) return 0;
   if (cat_n_episodios(indiceItem) > 0) return 0;
   if (fioEpVivo || pendItem >= 0) return -1;
-  epPreQuer = 1;
   desc_episodios(indiceItem, 0);
-  epPreQuer = 0;
   return fioEpVivo ? 1 : 0;
 }
 
 int desc_episodios_carregando(int indiceItem) {
-  return (fioEpVivo && epItem == indiceItem) || pendItem == indiceItem;
+  pthread_mutex_lock(&epPedidoTrava);
+  int carregando = (fioEpVivo && epItem == indiceItem) || pendItem == indiceItem;
+  pthread_mutex_unlock(&epPedidoTrava);
+  return carregando;
 }
 
 // Chamada por quadro por quem desenha, para o pedido guardado sair assim que o
