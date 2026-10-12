@@ -65,6 +65,21 @@ class AspectoTest {
             Roi(0,138,1920,804); Roi(0,0,1920,1080); Roi(-331,0,2581,1080); // 2.39:1 (1912x800)
             Roi(240,0,1440,1080); Roi(0,0,1920,1080); Roi(0,-180,1920,1440); // 4:3
         }
+        // #426: Tizen 4.0 plane takes no off-screen ROI. Everything stays inside
+        // the panel, contain-fit and centered; on-screen requests are untouched.
+        Open(); video.GeometriaJanela=null; video.PlanoAceitaRoiFora=false;
+        Roi(0,0,1920,1079);
+        Entry("fAspecto",-331,0,2581,1080,-331,0,2581,1080); Pump();
+        Check(probe(0)==(int)PlayerDisplayMode.Roi && probe(1)==0 && probe(2)==138 && probe(3)==1920 && probe(4)==803,"Tizen 4: 2.39:1 zoom is contain-fit and centered");
+        Entry("fAspecto",0,-180,1920,1440,0,-180,1920,1440); Pump();
+        Check(probe(1)==240 && probe(2)==0 && probe(3)==1440 && probe(4)==1080,"Tizen 4: 4:3 zoom is contain-fit and centered");
+        Entry("fAspecto",-144,-77,2210,1246,-144,-77,2210,1246); Pump();
+        Check(probe(1)>=0 && probe(2)>=0 && probe(1)+probe(3)<=1920 && probe(2)+probe(4)<=1080,"Tizen 4: log #426 zoom ROI stays on the panel");
+        { int wx=9,wy=9,ww=0,wh=0;
+          video.GeometriaJanela=(x,y,w,h)=>{wx=x;wy=y;ww=w;wh=h;return null;};
+          Open(); fail(2,-95); Entry("fAspecto",-331,0,2581,1080,-331,0,2581,1080); Pump(); fail(2,0);
+          Check(wx==0 && wy==138 && ww==1920 && wh==803,"Tizen 4: legacy window fallback also stays on the panel"); }
+        video.GeometriaJanela=null; video.PlanoAceitaRoiFora=true; Open();
         var p=Player.All[Player.All.Count-1]; int starts=p.Starts;
         video.GeometriaJanela=null;
         fail(2,-95); Entry("fAspecto",-331,0,2581,1080,0,0,1920,1080); Pump();
