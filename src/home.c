@@ -4913,20 +4913,25 @@ static void desenhaAtalhos(int r, float y) {
   // o cache nos ~4 quadros de tela que cabem entre dois passos de 67 ms.
   static int seqIndice=-1;static GLuint seqTex;
   for (int c = 0; c < fileiras[r].n; c++) {
-    float x = homeFileiraX(r, c);
-    if (x + w < 0 || x > NV_TELA_W) continue;
-    float f = animFoco[r][c], raio = raioDe(w, h);
-    GfxRect card = {x, y, w, h};
-    alvoCard(x, y, w, h, r, c);
+    float x0 = homeFileiraX(r, c);
+    if (x0 + w < 0 || x0 > NV_TELA_W) continue;
+    // O MESMO CRESCIMENTO DO FOCO das outras fileiras (escalaDe), a partir do
+    // centro do cartao. Sem ele, com o anel desligado, a colecao em foco nao
+    // mudava em nada.
+    float f = animFoco[r][c], esc = 1.0f + escalaDe(FILEIRA_CATALOGOS) * f;
+    float cw = w * esc, ch = h * esc, x = x0 - (cw - w) * 0.5f, cy = y - (ch - h) * 0.5f;
+    float raio = raioDe(cw, ch);
+    GfxRect card = {x, cy, cw, ch};
+    alvoCard(x, cy, cw, ch, r, c);
     // O ANEL E OPCIONAL (Ajustes > Foco no cartaz). Sem ele o foco continua
     // dito pelo tamanho e pela animacao do cartaz — o que sai e so a borda.
     if (f > .01f && ajustes_borda_foco()) {
-      float menor = w < h ? w : h;
+      float menor = cw < ch ? cw : ch;
       float ar, ag, ab; ajustes_acento(&ar, &ag, &ab);
-      if (ajustes_vidro()) gfx_vidro_cartao((GfxRect){x, y, w, h}, raio, f, 1.0f);
+      if (ajustes_vidro()) gfx_vidro_cartao(card, raio, f, 1.0f);
       else
-      gfx_cor((GfxRect){x - NV_ANEL_FOCO, y - NV_ANEL_FOCO,
-        w + 2*NV_ANEL_FOCO, h + 2*NV_ANEL_FOCO},
+      gfx_cor((GfxRect){x - NV_ANEL_FOCO, cy - NV_ANEL_FOCO,
+        cw + 2*NV_ANEL_FOCO, ch + 2*NV_ANEL_FOCO},
         (raio * menor + NV_ANEL_FOCO) / (menor + 2*NV_ANEL_FOCO), ar, ag, ab, f);
     }
     gfx_cor(card, raio, NV_COR_ESQUELETO_R, NV_COR_ESQUELETO_G, NV_COR_ESQUELETO_B, 1);
