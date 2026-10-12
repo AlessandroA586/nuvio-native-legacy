@@ -822,6 +822,7 @@ unsigned video_bufferando_ms(void) {
 }
 void video_definir_dv(int dv) { (void)dv; }
 void video_definir_cabecalhos(const char *c) { snprintf(cabecalhos, sizeof cabecalhos, "%s", c ? c : ""); }
+const char *video_cabecalhos(void) { return cabecalhos; }
 void video_definir_mp4(int m) { (void)m; }
 int  video_tocando(void) { return tocando; }
 // 1 SO COM IMAGEM: e o que abre o furo (player_com_video). Fonte sem quadro

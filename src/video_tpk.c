@@ -814,6 +814,7 @@ unsigned video_bufferando_ms(void) {
 }
 void video_definir_dv(int dv) { (void)dv; }
 void video_definir_cabecalhos(const char *c) { snprintf(cabecalhos, sizeof cabecalhos, "%s", c ? c : ""); }
+const char *video_cabecalhos(void) { return cabecalhos; }
 void video_definir_mp4(int m) { fonteMp4 = m != 0; }
 int  video_tocando(void) { return tocando; }
 int  video_pronto(void) { return pronto; }

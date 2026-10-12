@@ -131,6 +131,8 @@ void video_definir_dv(int dv);
 //   gst-launch-1.0 souphttpsrc location=<url> ! fakesink            -> Forbidden
 //   ... extra-headers="headers,Referer=(string)\"<ref>\"" ! fakesink -> baixa
 void video_definir_cabecalhos(const char *cabs);
+// Os cabecalhos em uso (mesmas linhas). "" quando nenhum ou sem suporte.
+const char *video_cabecalhos(void);
 
 // A fonte e MP4? Chamar ANTES de video_tocar, junto com video_definir_dv.
 //

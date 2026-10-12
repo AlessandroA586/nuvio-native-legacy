@@ -352,6 +352,7 @@ int  video_reconectando(void) { return SIM.reconectando; }
 // No Mac quem toca e o pipeline do sistema por outro caminho; os cabecalhos do
 // addon so tem efeito no payload do load da webOS. Stub para o alvo linkar.
 void video_definir_cabecalhos(const char *cabs) { (void)cabs; }
+const char *video_cabecalhos(void) { return ""; }
 int  video_tem_atmos(void) { return SIM.atmos; }
 int  video_tem_dolby_vision(void) { return SIM.dv; }
 const char *video_hdr(void) { return SIM.hdr[0] ? SIM.hdr : "none"; }
@@ -2320,6 +2321,7 @@ void video_bombear(void) {
 void video_definir_cabecalhos(const char *cabs) {
   snprintf(cabsHttp, sizeof cabsHttp, "%s", cabs ? cabs : "");
 }
+const char *video_cabecalhos(void) { return cabsHttp; }
 
 // Monta o "httpHeader" do payload do load a partir das linhas "Nome: valor".
 //

@@ -75,6 +75,10 @@ void legref_destruir(LegRef *r);          // cancela e faz join
 uint64_t legref_pedir(LegRef *r, const char *url, uint64_t sessao, const char *idioma,
                       const int *excluidas, int nExcluidas, const LegRefOrcamento *orc);
 void legref_cancelar(LegRef *r);
+// Cabecalhos da fonte ("Nome: valor" por linha), lidos a cada legref_pedir na
+// thread de quem pede. Sem eles o CDN que exige Referer/Authorization responde
+// erro ao Range e a referencia fica "rede". NULL = nenhum.
+void legref_fonte_cabecalhos(const char *(*f)(void));
 // Pausa entre Ranges (seek, buffer curto). Nao cancela.
 void legref_pausar(LegRef *r, int pausar);
 LegRefStatus legref_status(LegRef *r);

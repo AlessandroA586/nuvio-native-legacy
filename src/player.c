@@ -103,6 +103,7 @@ static void avisarCascaAberto(int v) { (void)v; }
 #include "proxyts.h"
 #include "perfis.h"
 #include "sessao.h"
+#include "legref.h"    // cabecalhos da fonte na leitura da referencia
 #include "legsync.h"   // F05 AutoSync: lifecycle + offset (hunks marcados F05)
 #include "progresso.h"
 #include "fontevolta.h"
@@ -1451,6 +1452,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   zerarAssistido();
   mkvass_video_aberto(comVideo);
   legsync_auto_habilitar(ajustes_legenda_sync_auto());
+  legref_fonte_cabecalhos(video_cabecalhos);   // a sincronia le o video com os cabecalhos do addon
   legsync_iniciar(comVideo ? video_url_atual() : "");   // F05: geracao nova, sem rede nem espera
   legsync_ui_ligar();   // F05: a linha de AutoSync do seletor de legendas (legendasui.c)
   aspArmar();

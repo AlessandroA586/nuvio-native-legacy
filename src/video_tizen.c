@@ -1560,6 +1560,7 @@ int  video_velocidade_bloqueada(void) { return 0; }
 // CABECALHOS DO ADDON NO ALVO TIZEN: AINDA NAO IMPLEMENTADO, DE PROPOSITO.
 // Ver a nota longa no fim deste arquivo.
 void video_definir_cabecalhos(const char *cabs) { (void)cabs; }
+const char *video_cabecalhos(void) { return ""; }
 
 void video_definir_dv(int dv) { dvPedido = dv ? 1 : 0; (void)dvPedido; }
 void video_definir_mp4(int ehMp4) { fonteMp4 = ehMp4; }
