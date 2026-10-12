@@ -123,6 +123,31 @@ summary{cursor:pointer;min-height:44px;padding:10px 0;color:var(--ac);font-size:
 [hidden]{display:none!important}.hero{position:relative;overflow:hidden;border-radius:24px;padding:40px 28px;background:linear-gradient(110deg,#23182f,#131116);margin:20px 0}.hero>div:first-child{position:relative;z-index:1}.hero h2{max-width:690px}.hero .cta,.primary{background:var(--ac);color:#201329;border-color:var(--ac);font-weight:650}.poster-wall{display:flex;gap:12px;width:260px;transform:rotate(8deg);opacity:.65}.poster-wall img{width:125px;height:240px;object-fit:cover;border-radius:12px}.poster-wall img:nth-child(2){margin-top:55px}.release-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.release-column.candidates{border-color:var(--brand)}.mode-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 0}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.btn{min-height:44px}.btn img,.badge img{filter:brightness(0) invert(1);width:16px;height:16px;vertical-align:middle;margin-right:6px}.badge{display:inline-block;color:var(--ac);font-size:12px;margin-top:8px}.issue-catalog{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.issue-catalog .issue-card{border:1px solid var(--line);border-radius:16px;padding:18px;background:var(--card)}dialog{background:#19151e;color:var(--tx);border:1px solid #594264;border-radius:20px;width:min(540px,calc(100% - 24px));max-height:90vh;padding:24px}dialog::backdrop{background:#000b}dialog.drawer{margin:0 0 0 auto;height:100dvh;max-height:100dvh;border-radius:20px 0 0 20px}dialog h2{margin:8px 0 16px}dialog label{display:block;margin:18px 0 6px}dialog input,dialog select,dialog textarea{width:100%;background:var(--card2);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit}dialog textarea{min-height:100px}.notice{color:var(--ac);font-size:13px}.mode-bar small{color:var(--mut)}
 @media(max-width:1000px){.release-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.issue-catalog{grid-template-columns:repeat(2,minmax(0,1fr))}.poster-wall{width:160px}}
 @media(max-width:600px){.release-grid,.issue-catalog{grid-template-columns:1fr}.poster-wall{display:none}.hero{padding:28px 20px}.mode-bar{align-items:stretch}.mode-bar select{width:100%}}
+
+/* Shared controls and issue presentation; native dialogs retain Escape/focus behavior. */
+#tools input,#tools select,#tools>.btn,dialog input,dialog select{height:40px;min-height:40px;border-radius:8px;border:1px solid var(--line);background-color:var(--card);padding:0 12px;font:inherit;color:var(--tx)}
+#tools select,dialog select{appearance:none;padding-right:34px;background-image:linear-gradient(45deg,transparent 50%,var(--mut) 50%),linear-gradient(135deg,var(--mut) 50%,transparent 50%);background-position:calc(100% - 16px) 17px,calc(100% - 11px) 17px;background-size:5px 5px;background-repeat:no-repeat}
+#tools input:focus-visible,#tools select:focus-visible,dialog input:focus-visible,dialog select:focus-visible,dialog textarea:focus-visible{outline:2px solid var(--ac);outline-offset:2px;border-color:var(--ac)}
+#tools{gap:10px}#tools select{max-width:210px}#chips{gap:8px;margin:14px 0}.chip{min-height:32px}.chip:hover{border-color:var(--ac)}
+#scroll-tabela:has(table){max-height:78vh;overflow:auto;border-radius:12px}
+.issue-table{font-variant-numeric:tabular-nums}.issue-table th,.issue-table td{padding:12px 8px;vertical-align:middle}.issue-table th{background:var(--card);white-space:normal;padding:0 8px;height:44px}
+.issue-table th button{border:0;background:none;color:inherit;font:inherit;padding:8px 0;cursor:pointer;text-align:left;width:100%}
+.issue-table .row{height:64px}.issue-table .row:nth-of-type(even){background:var(--card)}.issue-table .row:hover td,.issue-table .row:focus-within td{background:var(--card2)}
+.issue-table .tit>span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;font-weight:600}.issue-table .row td:not(.tit){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.issue-table .tag{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;margin:0;font-size:11px;line-height:1.4;padding:3px 7px}
+.issue-table .row-actions{text-align:right}.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;min-height:32px;padding:0;border-color:transparent}.icon-btn img{margin:0;width:16px;height:16px}.row-actions .icon-btn{opacity:0}.row:hover .icon-btn,.row:focus-within .icon-btn{opacity:1}.response{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:var(--mut)}.response:before{content:"";width:6px;height:6px;border-radius:50%;background:var(--mut)}.response.yes{color:var(--ok)}.response.yes:before{background:var(--ok)}
+dialog{background:var(--card);border-color:var(--line);padding:24px;max-width:540px;box-shadow:0 24px 80px #0008}dialog::backdrop{background:#000a;backdrop-filter:blur(5px)}
+.dialog-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}.dialog-header h2{margin:0;font-size:22px}.dialog-header .icon-btn{flex:none;font-size:24px;color:var(--mut)}
+.dialog-footer{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}dialog label{font-size:13px;color:var(--mut);margin:20px 0 8px}dialog textarea{background:var(--card);resize:vertical;padding:12px}dialog .btn{padding:8px 14px}dialog .icon-btn{padding:0}dialog p{overflow-wrap:anywhere}
+@media(hover:none){.row-actions .icon-btn{opacity:1}}
+@media(min-width:721px) and (max-width:800px){.issue-table{display:table}.issue-table tbody{display:table-row-group}.issue-table thead{display:table-header-group}.issue-table tr,.issue-table tr:has(th){display:table-row}.issue-table td,.issue-table th{display:table-cell;width:auto}.issue-table th{position:sticky}.issue-table td[data-label]:before{content:none}}
+@media(max-width:720px){
+ header{flex-wrap:wrap}main{min-width:0}#tools input{flex-basis:100%;width:100%}#tools select{flex:1 1 130px;max-width:100%;width:0}#tools>.btn{flex:0 0 auto}
+ #scroll-tabela:has(table){max-height:none;overflow:visible;border:0}.issue-table,.issue-table tbody{display:block;width:100%}.issue-table colgroup,.issue-table thead{display:none}
+ .issue-table .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;height:auto;padding:16px;margin-bottom:12px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+ .issue-table td{display:block;width:auto;padding:0;border:0;min-width:0}.issue-table td[data-label]:before{display:block;content:attr(data-label);font-size:11px;color:var(--mut);margin-bottom:4px}.issue-table .tit{grid-column:1/-1;grid-row:2}.issue-table .tit>span{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.issue-table .num:before,.issue-table .tit:before,.issue-table .row-actions:before{display:none}
+ .issue-table .row-actions{grid-column:2;grid-row:1}.row-actions .icon-btn{opacity:1}.issue-table .det{display:block;padding:12px;margin-bottom:12px}.issue-table .det td{padding:0}.det dl{grid-template-columns:1fr}
+ dialog,dialog.drawer{width:calc(100% - 24px);max-height:calc(100dvh - 24px);padding:20px}dialog.drawer{margin:12px;height:auto;border-radius:16px}
+}
 </style>
 </head>
 <body>
@@ -234,8 +259,7 @@ function redraw() { renderAll(); renderRoadmap(); }
 function modal(title, drawer) {
   var trigger=document.activeElement;
   var d = el("dialog", {class:drawer ? "drawer" : "", "aria-label":title});
-  d.appendChild(action("Fechar", function(){d.close();}));
-  d.appendChild(el("h2",{text:title}));
+  d.appendChild(el("div",{class:"dialog-header"},[el("h2",{text:title}),el("button",{type:"button",class:"btn icon-btn","aria-label":"Fechar",text:"×",onclick:function(){d.close();}})]));
   d.addEventListener("close",function(){d.remove();var target=trigger && trigger.isConnected?trigger:document.getElementById("mode");if(target)target.focus();});
   document.getElementById("app").appendChild(d); d.showModal(); return d;
 }
@@ -251,7 +275,7 @@ function claim(i) {
     if(w.assignee || !aberta(i)){message.textContent="Issue indisponível. Atualize a lista.";return;}
     w.assignee=MOCK_LOGIN;w.status="em-andamento";redraw();d.close();
     document.getElementById("feedback").textContent="Simulação: #"+i.numero+" atribuída a @"+MOCK_LOGIN+"; comentário e notificação ao dono previstos. Nada enviado.";
-  });b.className="btn primary";d.appendChild(b);
+  });b.className="btn primary";d.appendChild(el("div",{class:"dialog-footer"},[action("Cancelar",function(){d.close();}),b]));
 }
 function editIssue(i) {
   if(!ownerMode())return;
@@ -270,7 +294,7 @@ function editIssue(i) {
   var picker=field("Candidata à release · não garante lançamento",el("select",{id:"candidate"},[el("option",{value:"",text:"Sem candidatura"})]));versions.filter(function(v,n,a){return a.indexOf(v)===n;}).forEach(function(v){picker.appendChild(el("option",{value:v,text:v}));});picker.value=w.candidate;
   var status=field("Status",el("select",{id:"issue-status"}));[ ["aberta","Planejado"],["em-andamento","Em andamento"],["precisa-log","Bloqueado"],["precisa-teste","Precisa testar"],["lancada","Lançado"] ].forEach(function(x){status.appendChild(el("option",{value:x[0],text:x[1]}));});if(["aberta","em-andamento","precisa-log","precisa-teste","lancada"].indexOf(w.status)<0)status.appendChild(el("option",{value:w.status,text:"Manter · "+w.status}));status.value=w.status;
   d.appendChild(el("p",{class:"sub",text:"Commits e contexto serão públicos. Notas, decisões e validações ficam internas. Lançado exige confirmação de publicação no fluxo real."}));
-  d.appendChild(action("Salvar simulação",function(){w.commits=selected;w.context=context.value;w.note=note.value;w.candidate=picker.value;w.status=status.value;redraw();d.close();document.getElementById("feedback").textContent="Rascunho simulado salvo para #"+i.numero+". Nada enviado ao GitHub.";}));
+  var save=action("Salvar simulação",function(){w.commits=selected;w.context=context.value;w.note=note.value;w.candidate=picker.value;w.status=status.value;redraw();d.close();document.getElementById("feedback").textContent="Rascunho simulado salvo para #"+i.numero+". Nada enviado ao GitHub.";});save.className="btn primary";d.appendChild(el("div",{class:"dialog-footer"},[action("Cancelar",function(){d.close();}),save]));
 }
 
 function alvoDe(i) { return i.alvo ? String(i.alvo) : SEM_ALVO; }
@@ -405,7 +429,7 @@ function referencias(i) {
 }
 function issueCard(i, contexto) {
   var w = work(i), st = estadoPublico({status:w.status}), d = el("article", { class: "issue-card" }, [
-    el("div", null, [issueLink(i.numero), el("span", { class: "tag", text: i.plataforma || "Plataforma não informada" }), el("span", { class: "tag " + st[1], text: st[0] })]),
+    el("div", null, [issueLink(i.numero), el("span", { class: "tag", text: platformLabel(i.plataforma) }), el("span", { class: "tag " + st[1], text: st[0] })]),
     tx(i.titulo, "h4")]);
   if (contexto) d.appendChild(el("p", { text: contexto }));
   if (ownerMode() && i.proximo_passo && i.proximo_passo !== "triar") d.appendChild(tx(i.proximo_passo, "p"));
@@ -700,6 +724,15 @@ function renderListas() {
   if (!(D.nao_fechar_ainda || []).length) nf.appendChild(el("div", { class: "vazio", text: "Nada na lista." }));
 }
 
+function platformLabel(value) {
+  var labels = {desconhecida:["Sem plataforma","Unknown"],todas:["Todas","All"],outras:["Outras","Other"],all:["Todas","All"],"?":["Sem plataforma","Unknown"]};
+  var label=labels[value || "desconhecida"];return label?label[publicMode()?1:0]:value;
+}
+function displayLabel(value) {
+  if(value===SEM_ALVO)return "—";var label=t(sv(value));if(!label || label==="-")return "—";
+  return label.replace(/(^|[ -])([^ -])/g,function(_,space,c){return space+c.toUpperCase();});
+}
+
 function renderTools() {
   var box = document.getElementById("tools"); box.textContent = "";
   var q = el("input", { type: "search", placeholder: ownerMode()?"Buscar número, título ou notas":"Buscar número ou título", value: F.q, "aria-label": "Buscar" });
@@ -713,18 +746,18 @@ function renderTools() {
     return s;
   }
   var ma = count(alvoDe), ms = count(function (i) { return sv(i.status); });
-  box.appendChild(sel("estado", "GitHub", [["aberta", "aberta"], ["fechada", "fechada"]]));
-  box.appendChild(sel("alvo", "Alvo", sortAlvos(Object.keys(ma)).map(function (k) { return [k, t(k) + " (" + ma[k] + ")"]; })));
-  if(ownerMode()) box.appendChild(sel("status", "Status", Object.keys(ms).sort().map(function (k) { return [k, k + " (" + ms[k] + ")"]; })));
+  box.appendChild(sel("estado", "GitHub", [["aberta", displayLabel("aberta")], ["fechada", displayLabel("fechada")]]));
+  box.appendChild(sel("alvo", "Alvo", sortAlvos(Object.keys(ma)).map(function (k) { return [k, displayLabel(k) + " (" + ma[k] + ")"]; })));
+  if(ownerMode()) box.appendChild(sel("status", "Status", Object.keys(ms).sort().map(function (k) { return [k, displayLabel(k) + " (" + ms[k] + ")"]; })));
   box.appendChild(el("button", { class: "btn", type: "button", text: "Limpar", onclick: function () { F.q = F.plat = F.status = F.alvo = F.estado = F.extra = ""; renderAll(); } }));
   var chips = document.getElementById("chips"); chips.textContent = "";
   var mp = count(platDe);
   Object.keys(mp).sort(function (a, b) { return mp[b] - mp[a]; }).forEach(function (k) {
-    chips.appendChild(el("button", { class: "chip" + (F.plat === k ? " on" : ""), type: "button", text: t(k) + " " + mp[k], onclick: function () { F.plat = F.plat === k ? "" : k; renderTools(); renderBars(); renderTable(); } }));
+    chips.appendChild(el("button", { class: "chip" + (F.plat === k ? " on" : ""), type: "button", "aria-pressed": String(F.plat === k), text: platformLabel(k) + " " + mp[k], onclick: function () { F.plat = F.plat === k ? "" : k; renderTools(); renderBars(); renderTable(); } }));
   });
 }
 
-var COLS = [["numero", "#"], ["titulo", "Titulo"], ["estado_github", "GitHub"], ["plataforma", "Plataforma"], ["tipo", "Tipo"], ["status", "Status"], ["alvo", "Alvo"], ["release", "Release"], ["resp", "Resposta nossa"]];
+var COLS = [["numero", "#"], ["titulo", "Título"], ["estado_github", "GitHub"], ["plataforma", "Plataforma"], ["tipo", "Tipo"], ["status", "Status"], ["alvo", "Alvo"], ["release", "Release"], ["resp", "Resposta nossa"]];
 function respTxt(i) { var r = i.ultima_resposta; if (!r) return "-"; return (r.nos ? "sim" : "nao") + (r.ultima_nossa ? " " + r.ultima_nossa : ""); }
 function sortVal(i, k) {
   if (k === "numero") return i.numero || 0;
@@ -759,34 +792,37 @@ function renderTable() {
   document.getElementById("cnt").textContent = rows.length + t(" de ") + ITENS.length + " issues";
   var box = document.getElementById("tbl"); box.textContent = "";
   if(!ownerMode()) {var cards=el("div",{class:"issue-catalog"});rows.forEach(function(i){cards.appendChild(issueCard(i,""));});box.appendChild(cards);return;}
-  var table=el("table");box.appendChild(table);box=table;
+  var table=el("table",{class:"issue-table"});box.appendChild(table);box=table;
+  table.appendChild(el("colgroup",null,["5%","","7%","9%","7%","12%","8%","7%","10%","4%"].map(function(width){return el("col",{style:width?"width:"+width:""});})));
   var tr = el("tr");
   COLS.forEach(function (c) {
-    var th = el("th", { class: F.sort === c[0] ? "s" : "", text: c[1] + (F.sort === c[0] ? (F.dir > 0 ? " ▲" : " ▼") : ""), onclick: function () {
+    var th = el("th", { scope:"col", "aria-sort":F.sort===c[0]?(F.dir>0?"ascending":"descending"):"none", class:F.sort===c[0]?"s":"" }, [el("button", {type:"button", text: c[1] + (F.sort === c[0] ? (F.dir > 0 ? " ▲" : " ▼") : ""), onclick: function () {
       if (F.sort === c[0]) F.dir = -F.dir; else { F.sort = c[0]; F.dir = c[0] === "numero" ? -1 : 1; }
       renderTable();
-    } });
+    } })]);
     tr.appendChild(th);
   });
+  tr.appendChild(el("th",{scope:"col","aria-label":"Ações"}));
   box.appendChild(el("thead", null, [tr]));
   var tb = el("tbody");
   rows.forEach(function (i) {
     var u = safeUrl(i.url);
     var numCell = el("td", { class: "num" }, [u ? el("a", { href: u, target: "_blank", rel: "noopener", text: "#" + i.numero, onclick: function (e) { e.stopPropagation(); } }) : el("span", { text: "#" + i.numero })]);
     var st = sv(work(i).status);
-    var stCls = /lancada|consertada/.test(st) ? "ok" : /precisa-log|aberta/.test(st) ? "warn" : "";
+    var stCls = st === "lancada" ? "ok" : /bloquead|precisa-log/.test(st) ? "bad" : /teste|consertada/.test(st) ? "warn" : /em-andamento|em-progresso/.test(st) ? "ac" : "";
     var row = el("tr", { class: "row" }, [
       numCell,
-      el("td", { class: "tit" }, [tx(i.titulo), el("button", {type:"button",class:"btn",text:"Gerenciar",onclick:function(e){e.stopPropagation();editIssue(i);}})]),
-      el("td", null, [el("span", { class: "tag " + (aberta(i) ? "warn" : ""), text: sv(i.estado_github) })]),
-      el("td", { text: sv(i.plataforma) }),
-      el("td", { text: sv(i.tipo) }),
-      el("td", null, [el("span", { class: "tag " + stCls, text: st })]),
-      el("td", { text: alvoDe(i) === SEM_ALVO ? "-" : alvoDe(i) }),
-      el("td", { text: sv(i.release) }),
-      el("td", { text: respTxt(i) })
+      el("td", { class: "tit", title:sv(i.titulo) }, [tx(i.titulo)]),
+      el("td", null, [el("span", { class: "tag " + (aberta(i) ? "warn" : ""), text: displayLabel(i.estado_github) })]),
+      el("td", { text: platformLabel(i.plataforma) }),
+      el("td", null, [el("span",{class:"tag",text:displayLabel(i.tipo)})]),
+      el("td", null, [el("span", { class: "tag " + stCls, title:st, text: st === "aberta" ? "Planejado" : displayLabel(st) })]),
+      el("td", null, [el("span",{class:"tag ac",text:displayLabel(alvoDe(i))})]),
+      el("td", { text: displayLabel(i.release) }),
+      el("td", null, [i.ultima_resposta ? el("span",{class:"response"+(i.ultima_resposta.nos?" yes":""),text:i.ultima_resposta.nos?"Sim":"Não",title:respTxt(i)}) : el("span",{text:"—"})]),
+      el("td",{class:"row-actions"},[el("button",{type:"button",class:"btn icon-btn","aria-label":"Gerenciar issue #"+i.numero,title:"Gerenciar",onclick:function(e){e.stopPropagation();editIssue(i);}},[icon("settings-2")])])
     ]);
-    row.children && Array.prototype.forEach.call(row.children, function (td, n) { td.setAttribute("data-label", COLS[n][1]); });
+    row.children && Array.prototype.forEach.call(row.children, function (td, n) { td.setAttribute("data-label", n<COLS.length?COLS[n][1]:"Ações"); });
     tb.appendChild(row);
     var det = null;
     row.addEventListener("click", function () {
@@ -808,7 +844,7 @@ function detalhe(i) {
   if (r) add("Ultima resposta", "ultimo comentario por " + sv(r.ultimo_comentario_por) + " em " + sv(r.data) + "; ultima nossa: " + sv(r.ultima_nossa || "nunca"));
   add("Criada em", sv(i.criada_em));
   if (!dl.childNodes.length) add("Detalhes", "(sem notas)");
-  return el("tr", { class: "det" }, [el("td", { colspan: String(COLS.length) }, [dl])]);
+  return el("tr", { class: "det" }, [el("td", { colspan: String(COLS.length+1) }, [dl])]);
 }
 
 function renderAll() { if(!publicMode()) {renderKpis(); renderBars();} renderTools(); renderTable(); }
