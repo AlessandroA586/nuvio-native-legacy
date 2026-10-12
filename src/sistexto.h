@@ -32,9 +32,11 @@
 //     dele nao levante o teclado do webOS (pesquisa em spotlight.h, "LG E O
 //     TECLADO DO SISTEMA"; a linha "[spotlight] lg sdl ... osk=N" do log vai
 //     dizer). O caminho certo seria embarcar o SDL-webOS do webosbrew.
-//   - Samsung .tpk: quem tem acesso a STT/IME e o host .NET (tizen-tpk/), nao
-//     o nucleo C; ligar aqui exige uma ponte nova no host, que fica para um
-//     canario separado.
+//   - Samsung .tpk: quem tem acesso ao IME e o host .NET (tizen-tpk/). Na
+//     release, st_voz_disponivel() e o botao de microfone das buscas
+//     (Voz.cs): st_voz_iniciar abre o teclado da Samsung, o estado fica
+//     ST_DIGITANDO e st_aviso() diz para apertar o microfone do controle (o
+//     teclado ainda nao ouve). Digitar continua no teclado do app.
 //   - Samsung .wgt: webapis.voiceinteraction so a partir de Tizen 6.0 (nota em
 //     spotlight.h). Para captura e teste no Mac, NUVIO_SISTEXTO_TESTE=1
 // finge que existe (abrir so loga) e st_teste_evento injeta o que o Android

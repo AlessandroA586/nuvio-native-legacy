@@ -21,6 +21,8 @@
 static int   dono, estado, pedeTeclado, quedaTeclado;
 static float nivel;
 static const char *aviso = "";
+// O aviso do botao de microfone da Samsung: vale so com o teclado dela aberto.
+static const char AVISO_MIC_CONTROLE[] = "Aperte o microfone do controle e fale.";
 
 #define ST_FILA 16
 static char  fila[ST_FILA][600];
@@ -114,6 +116,14 @@ int st_voz_iniciar(int d) {
   else ok = 1;
 #endif
   estado = ok ? ST_OUVINDO : ST_PARADO;
+#ifndef NV_ANDROID
+  // Samsung .tpk: o botao abriu o teclado da Samsung, que ainda NAO esta
+  // ouvindo. Nada de "Ouvindo…": o campo diz onde esta o microfone.
+  if (ok && pelaPlataforma() && texto_sistema_voz_pelo_teclado()) {
+    estado = ST_DIGITANDO;
+    aviso = AVISO_MIC_CONTROLE;
+  }
+#endif
   if (!ok) aviso = "O ditado não respondeu. Tente de novo ou digite.";
   printf("[texto] voz: %s (dono %d, idioma %s)\n", ok ? "pedida" : "falhou", d, desc_tmdb_idioma());
   fflush(stdout);
@@ -130,6 +140,7 @@ void st_fechar(int d) {
   estado = ST_PARADO;
   dono = ST_DONO_NENHUM;
   nivel = 0.0f;
+  if (aviso == AVISO_MIC_CONTROLE) aviso = "";
 }
 
 void st_teste_evento(const char *ev) {
@@ -179,12 +190,14 @@ int st_ler(int d, char *dst, size_t n) {
       case 'T': case 'P':
         snprintf(dst, n, "%s", v); r = ST_TEXTO; break;
       case 'D': case 'V':
+        if (aviso == AVISO_MIC_CONTROLE) aviso = "";
         snprintf(dst, n, "%s", v);
         printf("[texto] %s: %d bytes\n", t == 'D' ? "teclado concluiu" : "voz final", (int)strlen(v));
         fflush(stdout);
         estado = ST_PARADO; nivel = 0.0f;
         return ST_FIM;
       case 'X':
+        if (aviso == AVISO_MIC_CONTROLE) aviso = "";
         estado = ST_PARADO;
         return ST_CANCELOU;
       case 'R': nivel = (float)atoi(v) / 100.0f; break;
