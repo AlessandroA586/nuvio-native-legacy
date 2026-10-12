@@ -8,6 +8,7 @@ import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -50,6 +51,29 @@ class ParaleloDataSourceTest {
         assertEquals(3, aberturas.get())
         assertEquals(listOf(250L, 750L), esperas)
         assertTrue(conexoes.take(2).all { it.desconectou.get() })
+    }
+
+    @Test fun timeoutDeSocketTambemRecebeTresTentativas() {
+        val aberturas = AtomicInteger()
+        val esperas = ArrayList<Long>()
+        val fonte = ParaleloDataSource(null, emptyMap(),
+            novaConexao = { url ->
+                object : ConexaoFalsa(url) {
+                    override fun getResponseCode(): Int {
+                        aberturas.incrementAndGet()
+                        throw SocketTimeoutException("timeout")
+                    }
+                }
+            },
+            dormir = { esperas += it })
+
+        try {
+            fonte.conectarComRetry(URL("https://example.invalid/video.mkv"), 0, 1023)
+        } catch (_: SocketTimeoutException) { }
+        finally { fonte.close() }
+
+        assertEquals(3, aberturas.get())
+        assertEquals(listOf(250L, 750L), esperas)
     }
 
     @Test fun closeDesconectaAberturaEmVoo() {

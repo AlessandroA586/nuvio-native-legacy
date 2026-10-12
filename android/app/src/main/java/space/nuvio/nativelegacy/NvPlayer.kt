@@ -33,7 +33,6 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import java.util.concurrent.atomic.AtomicInteger
 
 // Player do Nuvio no Android TV: Media3 ExoPlayer numa SurfaceView ATRAS da
@@ -472,7 +471,7 @@ object NvPlayer {
                     // ParaleloDataSource faz as tres tentativas de transporte;
                     // nao empilhar outra rodada invisivel do Loader antes da
                     // maquina de reconexao 3/10/25 s do nucleo.
-                    .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(0))
+                    .setLoadErrorHandlingPolicy(PoliticaErroFonte())
                     // DefaultDataSource e nao so http: o trailer da Apple chega como
                     // file:// (master reduzido a uma variante em dados/trailer, trailerapple.c).
                     .setDataSourceFactory(DefaultDataSource.Factory(act, origem)))
@@ -563,9 +562,9 @@ object NvPlayer {
             try { if (ana != null) p.removeAnalyticsListener(ana) } catch (e: Exception) { }
             // Esconde sem destruir a superficie (destruir acorda o callback do Media3).
             try { sv?.layoutParams = FrameLayout.LayoutParams(1, 1) } catch (e: Exception) { }
-            liberarEmFundo(p, sv)
             // A superficie velha fica com o player velho; a proxima abertura cria outra.
             superficie = null
+            liberarEmFundo(p, sv)
         }
         // F07: the session cache goes with its player (released and deleted
         // off the main thread, after the canceled loaders unwind).
@@ -618,22 +617,30 @@ object NvPlayer {
         }
     }
 
-    // Media3 exige stop/release no applicationLooper (SDLActivity). Os timeouts
-    // configurados no Builder limitam a espera do HAL; executar em nv-release
-    // apenas escondia a violacao e produzia o warning de wrong thread.
+    // Duas fases no applicationLooper: stop primeiro, release depois de o fio
+    // interno consumir a parada. Mesmo quando chamado do main, liberar() volta
+    // antes do trabalho potencialmente lento; nao viola a afinidade do Media3.
     private fun liberarEmFundo(p: ExoPlayer, sv: SurfaceView?) {
         liberacoesEmCurso.incrementAndGet()
-        val corpo = Runnable {
+        val looper = Handler(p.applicationLooper)
+        val soltar = Runnable {
             val ini = SystemClock.elapsedRealtime()
-            try { p.stop() } catch (e: Exception) { Log.w(TAG, "stop: $e") }
             try { p.release() } catch (e: Exception) { Log.w(TAG, "release: $e") }
             val ms = SystemClock.elapsedRealtime() - ini
             if (ms > 5000) Log.w(TAG, "[player] release anterior levou $ms ms (>5 s: HAL de audio preso?)")
             else Log.i(TAG, "[player] release anterior levou $ms ms")
             liberacoesEmCurso.decrementAndGet()
-            if (sv != null && sv !== superficie) (sv.parent as? FrameLayout)?.removeView(sv)
+            principal.post {
+                if (sv != null && sv !== superficie) (sv.parent as? FrameLayout)?.removeView(sv)
+            }
         }
-        if (Looper.myLooper() == p.applicationLooper) corpo.run() else principal.post(corpo)
+        looper.post {
+            try { p.playWhenReady = false } catch (e: Exception) { Log.w(TAG, "pause release: $e") }
+            try { p.stop() } catch (e: Exception) { Log.w(TAG, "stop: $e") }
+            // stop() envia a parada ao fio interno; dar-lhe uma volta evita que
+            // release() espere o decoder ocupado no proprio callback de parar.
+            looper.postDelayed(soltar, 50)
+        }
     }
 
     // Tique de 250 ms: a posicao que o C le sem esperar ninguem.

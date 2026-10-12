@@ -10,6 +10,7 @@ import androidx.media3.datasource.HttpDataSource
 import java.io.IOException
 import java.io.InputStream
 import java.io.InterruptedIOException
+import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Collections
@@ -124,8 +125,23 @@ class ParaleloDataSource(
     private val ativas = Collections.newSetFromMap(
         java.util.concurrent.ConcurrentHashMap<HttpURLConnection, Boolean>())
 
-    private fun cancelado(causa: Throwable? = null): InterruptedIOException =
-        InterruptedIOException("cancelado").also { if (causa != null) it.initCause(causa) }
+    private class Cancelamento(causa: Throwable? = null) : InterruptedIOException("cancelado") {
+        init { if (causa != null) initCause(causa) }
+    }
+
+    private fun cancelado(causa: Throwable? = null): InterruptedIOException = Cancelamento(causa)
+
+    private fun foiCancelado(e: IOException): Boolean =
+        fechado || Thread.currentThread().isInterrupted || e is Cancelamento
+
+    private fun falhaFinal(e: IOException): IOException {
+        var causa: Throwable? = e
+        repeat(16) {
+            if (causa is ConnectException) return FalhaConexaoParalela(e)
+            causa = causa?.cause ?: return e
+        }
+        return e
+    }
 
     private fun conferirCancelamento() {
         if (fechado || Thread.currentThread().isInterrupted) throw cancelado()
@@ -192,14 +208,16 @@ class ParaleloDataSource(
             try { return conectar(u, ini, ultimo) }
             catch (e: IOException) {
                 erro = e
-                if (fechado || e is InterruptedIOException) throw e
+                // SocketTimeoutException tambem herda InterruptedIOException:
+                // so a nossa sentinela (ou close/interrupcao real) cancela.
+                if (foiCancelado(e)) throw e
                 if (tentativa + 1 < TENTATIVAS) {
                     Log.w(TAG, "conexao ${tentativa + 1}/$TENTATIVAS falhou em ${u.host}; tentando de novo")
                     esperarTentativa(tentativa)
                 }
             }
         }
-        throw erro ?: IOException("conexao falhou")
+        throw falhaFinal(erro ?: IOException("conexao falhou"))
     }
 
     override fun open(dataSpec: DataSpec): Long {
@@ -309,14 +327,14 @@ class ParaleloDataSource(
                 return d
             } catch (e: IOException) {
                 ultimoErro = e
-                if (fechado || e is InterruptedIOException) throw e
+                if (foiCancelado(e)) throw e
                 if (it + 1 < TENTATIVAS) esperarTentativa(it)
             } finally {
                 desconectar(c)
                 medidor?.fim(token)
             }
         }
-        throw ultimoErro ?: IOException("pedaco $ini-$ult falhou")
+        throw falhaFinal(ultimoErro ?: IOException("pedaco $ini-$ult falhou"))
     }
 
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
