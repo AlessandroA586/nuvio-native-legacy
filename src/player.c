@@ -1801,10 +1801,12 @@ static void fecharSessao(int manter) {
   // salvo de onde esta sessao retomou ja tinha sido assistido antes, e o que
   // sobra depois do fim do cartao (creditos) tambem: retomar em 85%, ver ate
   // os creditos e aceitar o proximo nao pode ficar sem visto (#100). Fora da
-  // conclusao nada e creditado — o seek ate o fim continua sem prova.
+  // conclusao nada e creditado — o seek ate o fim continua sem prova. Sessao
+  // sem retomada nao precisa do credito: com ele, 70 s reais contra a duracao
+  // falsa de 129 s do trailer viravam 129 s assistidos.
   double de = duracaoSeg * retomarPct / 100.0;
   int fim = concluiuAgora(credEfetivo());
-  double vistoSeg = assistidoSeg + (fim && duracaoSeg > posSeg ? duracaoSeg - posSeg : 0.0);
+  double vistoSeg = assistidoSeg + (fim && de > 0 && duracaoSeg > posSeg ? duracaoSeg - posSeg : 0.0);
   int assistiu = scrobble_assistiu(vistoSeg, de, duracaoSeg);
   // Sem ela a posicao REAL continua gravada (barra, Continuar assistindo,
   // conta): so o arredondamento para 100% e o visto ficam de fora.

@@ -313,6 +313,12 @@ int main(void) {
   tocar(10, 1); pos = 2660; quadro(); tocar(5, 1); player_encerrar();
   assert(nVisto == 0 && cat_item(0)->progresso < 100 && tkPos < tkDur);
 
+  // Sem minutagem, duracao falsa de 129 s, 70 s reais: o resto ate o fim
+  // (59 s) nao pode ser creditado como assistido — gravava 100% e visto.
+  creditos = 0; abrir(1, "tt90000018", NULL, NULL, 129.036, 70);
+  assert(nVisto == 0 && cat_item(0)->progresso < 90);
+  assert(!scrobble_assistiu(tkAssistido, tkDe, tkDur));
+
   puts("PASS: trailer, seek, pausa e buffer nao marcam; reproducao real grava progresso e visto");
   return 0;
 }
