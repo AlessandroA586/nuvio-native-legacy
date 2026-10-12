@@ -6,8 +6,9 @@
 //   - registrado: botao SIM, teclado do sistema para digitar NAO;
 //   - OK no botao abre o teclado da Samsung; o campo diz "Aperte o microfone
 //     do controle e fale." (nao "Ouvindo…": o teclado ainda nao ouve);
-//   - o texto entra inteiro; Concluido termina (ST_FIM); Voltar cancela; nos
-//     dois o aviso some.
+//   - o teclado cobre a tela: o texto do meio do caminho NAO chega ao campo
+//     (nada e buscado por baixo dele); so o final, inteiro, com Concluido
+//     (ST_FIM); Voltar cancela sem mexer no campo; nos dois o aviso some.
 //   bash tests/tpk_voz.sh
 #include "sistexto.h"
 #include "entrada_texto.h"
@@ -71,23 +72,38 @@ int main(void) {
   assert(texto_sistema_voz_pelo_teclado());
   assert(st_estado() == ST_DIGITANDO && st_dono() == ST_BUSCA);
   assert(!strcmp(st_aviso(), HINT));
-  // A fala chega pelo teclado: valor inteiro, depois Concluido.
+  // A fala chega pelo teclado, mas fica com ele enquanto ele cobre a tela.
   nv_tpk_texto_valor("o poderoso");
   r = ler(ST_BUSCA, t, sizeof t);
-  assert(r == ST_TEXTO && !strcmp(t, "o poderoso"));
+  assert(r == ST_NADA && !t[0]);
+  assert(!strcmp(st_aviso(), HINT));
   nv_tpk_texto_valor("o poderoso chefão");
+  r = ler(ST_BUSCA, t, sizeof t);
+  assert(r == ST_NADA);
+  // Concluido: so agora o texto inteiro entra (e a busca roda).
   nv_tpk_texto_fim(1);
   r = ler(ST_BUSCA, t, sizeof t);
-  if (r == ST_TEXTO) r = ler(ST_BUSCA, t, sizeof t);
   assert(r == ST_FIM && !strcmp(t, "o poderoso chefão"));
   assert(st_estado() == ST_PARADO && !texto_sistema_aberto());
   assert(!st_aviso()[0]);                 // o aviso some com o teclado
 
-  // Voltar no teclado da Samsung: cancelado, aviso some.
+  // Voltar no teclado da Samsung depois de falar: cancelado, nada chega ao
+  // campo, aviso some.
   assert(st_voz_iniciar(ST_SPOT) && iniciou == 2 && !strcmp(st_aviso(), HINT));
+  nv_tpk_texto_valor("matrix");
   nv_tpk_texto_fim(0);
   r = ler(ST_SPOT, t, sizeof t);
-  assert(r == ST_CANCELOU && st_estado() == ST_PARADO && !st_aviso()[0]);
+  assert(r == ST_CANCELOU && !t[0] && st_estado() == ST_PARADO && !st_aviso()[0]);
+
+  // O teclado do app depois do botao: o texto volta a chegar normalmente
+  // (a trava do "so o final" era so da sessao do microfone).
+  st_teste_ligar(1);
+  assert(st_ime_abrir(ST_BUSCA, "", 64));
+  st_teste_evento("Tabc");
+  r = ler(ST_BUSCA, t, sizeof t);
+  assert(r == ST_TEXTO && !strcmp(t, "abc"));
+  st_fechar(ST_BUSCA);
+  st_teste_ligar(0);
 
   // Voltar na tela enquanto o teclado esta aberto: o app fecha, o host esconde.
   assert(st_voz_iniciar(ST_BUSCA) && iniciou == 3);

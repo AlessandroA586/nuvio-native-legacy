@@ -45,6 +45,9 @@
 // "Keyboard/IME"). Done = keyCode 65376, Cancel = 65385. O JS guarda o valor e
 // um contador; texto_sistema_quadro le os dois por EM_ASM (sem chamar o WASM de
 // dentro de um evento JS, que com ASYNCIFY pode cair no meio de um sono).
+// Como no .tpk de release, o <input> serve SO ao botao de microfone das buscas
+// (dono, 12/10/2026: o teclado do app e o de digitar nas duas plataformas
+// Samsung); nvTexto.microfone diz o que a TV respondeu sobre microfone.
 //
 // Samsung .tpk: o host .NET registra abrir/fechar por nv_tpk_texto_registrar
 // (canario, Texto.cs) ou so o botao de microfone por nv_tpk_voz_registrar
@@ -87,15 +90,13 @@ void nv_tpk_texto_valor(const char *v) { texto_sistema_ponte_valor(v); }
 __attribute__((visibility("default")))
 void nv_tpk_texto_fim(int confirmou) { texto_sistema_ponte_fim(confirmou); }
 
-// BOTAO DE MICROFONE DAS BUSCAS (tizen-tpk/Voz.cs, build de release). O
-// teclado do app continua sendo o de digitar; o botao abre o teclado da
-// Samsung so para o microfone dele. O host registra quando monta o campo do
-// IME e diz o que a TV respondeu sobre microfone (1 tem, 0 nao tem, -1 sem
-// resposta); o ajuste "Botao de microfone na busca" (texto_sistema_mic_modo)
-// decide com isso. O texto volta pelas mesmas nv_tpk_texto_valor/_fim.
+// BOTAO DE MICROFONE DAS BUSCAS (tizen-tpk/Voz.cs, build de release). O host
+// registra quando monta o campo do IME e diz o que a TV respondeu sobre
+// microfone (1 tem, 0 nao tem, -1 sem resposta). O texto volta pelas mesmas
+// nv_tpk_texto_valor/_fim.
 typedef void (*FnVoz)(void);
 static FnVoz vIniciar, vParar;
-static int vMic = -1, vModo = TS_MIC_AUTO;
+static int vMic = -1;
 static int abertoPeloMic;   // o que esta aberto veio do botao de microfone
 __attribute__((visibility("default")))
 void nv_tpk_voz_registrar(FnVoz iniciar, FnVoz parar, int microfone) {
@@ -103,10 +104,33 @@ void nv_tpk_voz_registrar(FnVoz iniciar, FnVoz parar, int microfone) {
   printf("[texto] host registrou o botao de microfone (microfone=%d)\n", microfone);
   fflush(stdout);
 }
-// Automatico: so a TV que diz NAO ter microfone fica sem o botao.
+#endif
+
+#if defined(NV_TPK) || defined(__EMSCRIPTEN__)
+// BOTAO DE MICROFONE DAS BUSCAS (.tpk e .wgt). O teclado do app continua
+// sendo o de digitar; o botao abre o teclado da Samsung so para o microfone
+// dele. O ajuste "Botao de microfone na busca" (texto_sistema_mic_modo) decide
+// com o que a TV respondeu: Automatico so esconde na TV que diz NAO ter
+// microfone.
+#define SAMSUNG_MIC 1
+static int vModo = TS_MIC_AUTO;
 static int micPermitido(void) {
-  if (!vIniciar || vModo == TS_MIC_DESLIGADO) return 0;
-  return vModo == TS_MIC_LIGADO || vMic != 0;
+  int tem, mic;
+#ifdef NV_TPK
+  tem = vIniciar != NULL; mic = vMic;
+#else
+  // O shell responde uma vez (o <input> e o getCapability nao mudam).
+  static int wTem = -1, wMic = -1;
+  if (wTem < 0) {
+    wTem = EM_ASM_INT({ return (typeof window !== "undefined" && window.nvTexto) ? 1 : 0; });
+    if (wTem) wMic = EM_ASM_INT({ var m = window.nvTexto.microfone; return m === 0 || m === 1 ? m : -1; });
+    printf("[texto] wgt: botao de microfone %s (microfone=%d)\n", wTem ? "possivel" : "sem campo", wMic);
+    fflush(stdout);
+  }
+  tem = wTem; mic = wMic;
+#endif
+  if (!tem || vModo == TS_MIC_DESLIGADO) return 0;
+  return vModo == TS_MIC_LIGADO || mic != 0;
 }
 #endif
 
@@ -149,7 +173,7 @@ int texto_sistema_disponivel(void) {
 #if defined(NV_TPK)
   return (hAbrir ? (TS_TECLADO | (hFlags & TS_VOZ)) : 0) | (micPermitido() ? TS_VOZ : 0);
 #elif defined(__EMSCRIPTEN__)
-  return EM_ASM_INT({ return (typeof window !== "undefined" && window.nvTexto) ? 1 : 0; }) ? TS_TECLADO : 0;
+  return micPermitido() ? TS_VOZ : 0;   // so o botao de microfone
 #elif defined(NV_ANDROID) || defined(NV_TEXTO_SDL_TESTE)
   return TS_TECLADO;
 #elif defined(__linux__)
@@ -162,7 +186,7 @@ int texto_sistema_disponivel(void) {
 int texto_sistema_aberto(void) { return aberto; }
 
 void texto_sistema_mic_modo(int modo) {
-#if defined(NV_TPK)
+#ifdef SAMSUNG_MIC
   if (modo == vModo) return;
   vModo = modo;
   printf("[texto] botao de microfone: ajuste %d\n", modo);
@@ -175,6 +199,8 @@ void texto_sistema_mic_modo(int modo) {
 int texto_sistema_voz_pelo_teclado(void) {
 #if defined(NV_TPK)
   return !hAbrir && micPermitido();
+#elif defined(__EMSCRIPTEN__)
+  return micPermitido();
 #else
   return 0;
 #endif
@@ -191,6 +217,8 @@ void texto_sistema_abrir(const char *atual, int voz) {
   // Botao de microfone (Voz.cs): a voz e o teclado da Samsung, sem o teclado
   // do sistema registrado para digitar.
   peloMic = voz && (tem & TS_VOZ) && !hAbrir;
+#elif defined(__EMSCRIPTEN__)
+  peloMic = voz && (tem & TS_VOZ);      // o <input> so serve ao botao
 #endif
   if (!peloMic && !(tem & TS_TECLADO)) return;
   if (!(tem & TS_VOZ)) voz = 0;

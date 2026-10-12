@@ -2,6 +2,9 @@
 // tools/tizen-shell.html (copiados do arquivo de verdade), com
 // src/entrada_texto.c em WASM. No Chrome nao ha IME da Samsung: o teste faz o
 // papel dele (insertText, composicao, Done 65376, Return 10009, blur).
+// O <input> so serve ao BOTAO DE MICROFONE das buscas (TS_VOZ sem
+// TS_TECLADO): o teclado do app e o de digitar. Sem emsdk, tests/wgt_voz.sh
+// cobre o mesmo com um emscripten.h fingido.
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -13,7 +16,7 @@ const { chromium } = pw;
 const raiz = path.resolve(__dirname, '..');
 const shell = fs.readFileSync(path.join(raiz, 'tools/tizen-shell.html'), 'utf8');
 const campo = shell.match(/<input id="nvTextoCampo"[\s\S]*?>/)[0];
-const ini = shell.indexOf('  // TECLADO DO SISTEMA (src/entrada_texto.c)');
+const ini = shell.indexOf('  // TECLADO DA SAMSUNG PARA O BOTAO DE MICROFONE DAS BUSCAS');
 const fim = shell.indexOf('})();', ini) + 5;
 if (ini < 0 || fim < 5) throw new Error('bloco nvTexto nao achado no tizen-shell.html');
 const ponte = shell.slice(ini, fim);
@@ -53,9 +56,14 @@ window.Module = { onRuntimeInitialized() { window.pronto = true; } };</script><s
     const quadro = () => C('t_quadro', null);
 
     await C('t_iniciar', 'number');
-    ok(await C('t_disponivel', 'number') === 1, 'disponivel = TS_TECLADO (sem TS_VOZ) com window.nvTexto');
-
+    ok(await C('t_disponivel', 'number') === 2, 'disponivel = TS_VOZ (sem TS_TECLADO) com window.nvTexto');
+    await C('t_mic_modo', null, ['number'], [2]);
+    ok(await C('t_disponivel', 'number') === 0, 'ajuste Desligado: sem botao');
+    await C('t_mic_modo', null, ['number'], [0]);
     await C('t_abrir', null, ['string', 'number'], ['ab', 0]);
+    ok(await C('t_aberto', 'number') === 0, 'sem voz o <input> nao abre (digitar e no teclado do app)');
+
+    await C('t_abrir', null, ['string', 'number'], ['ab', 1]);
     ok(await page.evaluate(() => document.activeElement.id) === 'nvTextoCampo', 'abrir foca o input escondido');
     ok(await page.evaluate(() => document.getElementById('nvTextoCampo').value) === 'ab', 'o IME comeca do texto atual');
     await page.keyboard.insertText('c');
@@ -90,18 +98,24 @@ window.Module = { onRuntimeInitialized() { window.pronto = true; } };</script><s
     ok(await C('t_n_fim', 'number') === 2 && await C('t_fim_confirmou', 'number') === 0, 'Return (10009) fecha sem confirmar');
     ok((await page.evaluate(() => window.capturaDepois)).length === 0, 'Return com o IME aberto nao chega aos outros ouvintes (nao fecha o Spotlight)');
 
-    await C('t_abrir', null, ['string', 'number'], ['', 0]);
+    await C('t_abrir', null, ['string', 'number'], ['', 1]);
     await page.evaluate(() => document.getElementById('nvTextoCampo').blur());
     await quadro();
-    ok(await C('t_n_fim', 'number') === 3, 'IME que some (blur) avisa o fim');
+    ok(await C('t_n_fim', 'number') === 3 && await C('t_fim_confirmou', 'number') === 0, 'IME que some (blur) sem nada dito: fim sem confirmar');
 
-    await C('t_abrir', null, ['string', 'number'], ['', 0]);
+    await C('t_abrir', null, ['string', 'number'], ['', 1]);
+    await page.keyboard.insertText('duna');
+    await page.evaluate(() => document.getElementById('nvTextoCampo').blur());
+    await quadro();
+    ok(await C('t_n_fim', 'number') === 4 && await C('t_fim_confirmou', 'number') === 1, 'IME que some depois da fala: o que foi dito vale');
+
+    await C('t_abrir', null, ['string', 'number'], ['', 1]);
     await C('t_fechar', null);
     await quadro();
     ok(await page.evaluate(() => document.activeElement.id) !== 'nvTextoCampo', 'fechar pelo app tira o foco do campo');
-    ok(await C('t_n_fim', 'number') === 4 && await C('t_aberto', 'number') === 0, 'fechar pelo app avisa o fim uma vez');
+    ok(await C('t_n_fim', 'number') === 5 && await C('t_aberto', 'number') === 0, 'fechar pelo app avisa o fim uma vez');
     await quadro();
-    ok(await C('t_n_fim', 'number') === 4, 'sem fim duplicado depois do blur');
+    ok(await C('t_n_fim', 'number') === 5, 'sem fim duplicado depois do blur');
     ok(erros.length === 0, 'sem erro de pagina ' + erros.join(' | '));
   } finally {
     if (browser) await browser.close();

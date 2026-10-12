@@ -472,8 +472,14 @@
     printErr: function (t) { console.warn(t); if (window.__nvDiag) window.__nvDiag(t, 1); }
   };
 
-  // TECLADO DO SISTEMA (src/entrada_texto.c). O C chama nvTexto.abrir/fechar
-  // por EM_ASM e LE seq/valor/fim a cada quadro; o JS nunca chama o WASM.
+  // TECLADO DA SAMSUNG PARA O BOTAO DE MICROFONE DAS BUSCAS
+  // (src/entrada_texto.c). O teclado do app e o de digitar; este campo so
+  // existe para o microfone do teclado da Samsung: OK no botao abre o
+  // teclado, a pessoa aperta o microfone do controle e fala. O C chama
+  // nvTexto.abrir/fechar por EM_ASM e LE seq/valor/fim a cada quadro; o JS
+  // nunca chama o WASM. nvTexto.microfone: o que a TV diz de
+  // http://tizen.org/feature/microphone (1 tem, 0 nao tem, -1 sem resposta);
+  // o ajuste "Botao de microfone na busca" decide com isso.
   //
   // focus() por JS abre o IME porque o metadado
   // http://samsung.com/tv/metadata/use.keypad.without.useraction vale true por
@@ -484,7 +490,12 @@
   // Este ouvinte de captura vem ANTES dos outros de keydown de proposito: o
   // Return (10009) com o IME aberto fecha so o IME, e nao o Spotlight.
   (function () {
-    var t = { seq: 0, valor: "", fim: -1, aberto: false };
+    var t = { seq: 0, valor: "", fim: -1, aberto: false, microfone: -1 };
+    try {
+      if (window.tizen && tizen.systeminfo && tizen.systeminfo.getCapability)
+        t.microfone = tizen.systeminfo.getCapability("http://tizen.org/feature/microphone") ? 1 : 0;
+    } catch (e) { console.log("[texto] wgt: feature/microphone: " + e); }
+    console.log("[texto] wgt: feature/microphone = " + t.microfone);
     var campo = function () { return document.getElementById("nvTextoCampo"); };
     function devolverFoco() {
       var c = document.getElementById("canvas");
@@ -526,7 +537,9 @@
       el.addEventListener("input", ler);
       el.addEventListener("compositionend", ler);
       el.addEventListener("change", ler);
-      el.addEventListener("blur", function () { ler(); terminar(0); });
+      // O teclado da Samsung fechou sozinho (sem Concluido nem Voltar): o que
+      // ja foi dito vale, como no .tpk.
+      el.addEventListener("blur", function () { ler(); terminar(t.valor.trim() ? 1 : 0); });
       ["keydown", "keyup", "keypress"].forEach(function (tipo) {
         el.addEventListener(tipo, function (ev) {
           if (!t.aberto) return;

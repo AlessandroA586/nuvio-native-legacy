@@ -107,7 +107,7 @@ static const Item TELA[] = {
     ROT("Fileiras"), OPC(AJ_ROTULOS), OPC(AJ_NOME_ADDON), OPC(AJ_SUFIXO_TIPO),
     ROT("Continuar assistindo"), OPC(AJ_CW_FURTHEST),
     ROT("Barra lateral"), OPC(AJ_RAIL_BLUR),
-#ifdef NV_TPK
+#if (defined(NV_TPK) || defined(__EMSCRIPTEN__)) && !defined(NV_TPK40)
       OPC(AJ_MIC_BUSCA),
 #endif
 
