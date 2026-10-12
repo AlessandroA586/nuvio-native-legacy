@@ -58,6 +58,7 @@ typedef struct {
   int fase;           // INI_FASE_*
   int pendentes;      // add-ons que a decisao automatica ainda espera
   int pendenteMudo;   // o unico que falta ja ficou sem responder na busca anterior
+  int fontesChegaram; // outros add-ons ja trouxeram fontes nesta busca
   int semResposta;    // add-ons que desistiram nesta busca
   int tentativa;      // 1 = primeira fonte; 2+ = troca depois de falha
   int viaDebrid;      // a fonte aberta vem de debrid
