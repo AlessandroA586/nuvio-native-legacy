@@ -4,6 +4,10 @@ Fonte do cartão "Novidades da 2.0.5": `src/novidades/205.inc`. Comunidade: **ht
 
 ## Português
 
+**Coleções**
+- **Novas exibições.** Grade, Linha do tempo, Ranking, Saga, Décadas, Mural e Vitrine: toda coleção e pasta pode ser vista de sete jeitos. A Saga mostra o que você já viu. A Vitrine traz um destaque grande e uma fileira por aba.
+- **Botão Exibição.** Fica ao lado das abas da coleção. Aperte OK nele para passar para a próxima exibição. Sem escolher, nada muda. A escolha fica gravada em cada coleção, para cada perfil.
+
 **Player**
 - **Abertura Cinema.** A abertura estilo cinema agora é o padrão. O cartão detalhado continua nos Ajustes.
 - **Marcado como visto.** Só depois de reprodução real. Um trailer não marca mais o título como visto.
@@ -29,6 +33,10 @@ Fonte do cartão "Novidades da 2.0.5": `src/novidades/205.inc`. Comunidade: **ht
 - **LG webOS.** Repositório próprio no Homebrew Channel, para instalar e atualizar.
 
 ## English
+
+**Collections**
+- **New layouts.** Grid, Timeline, Ranking, Saga, Decades, Mural and Showcase: every collection and folder can be viewed seven ways. Saga shows what you have already watched. Showcase brings a big highlight and one row per tab.
+- **Display button.** It sits next to the collection's tabs. Press OK on it to switch to the next layout. Nothing changes unless you choose. Your pick is saved for each collection, per profile.
 
 **Player**
 - **Cinema opening.** The cinema-style opening screen is now the default. The detailed card stays in Settings.
