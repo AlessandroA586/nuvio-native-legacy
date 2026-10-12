@@ -63,6 +63,9 @@
 // decide o nivel inicial e marca a GPU fraca no perfil (perfiltv.h).
 // `w`,`h` = drawable da janela.
 void gpun_iniciar(int w, int h);
+// Preview resize: keep the selected GPU level and rebuild its internal target.
+// Called on the drawing thread before beginning the next frame; other builds ignore it.
+void gpun_redimensionar(int w, int h);
 
 // Uma linha no log: [perfil] tpk mem=... gpu=... -> tex=... (so no .tpk).
 void gpun_log_perfil(long memMB, int texMb, int fios, int heroi);

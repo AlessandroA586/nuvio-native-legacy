@@ -127,10 +127,11 @@ static void ajIlhaSombra(GfxRect r, float raioPx, float al, int opaca) {
 }
 // Ilha: sombra curta, miolo (vidro 80% / solido #15161A) e a luz larga do canto
 // de cima, sem contorno. `modal` = miolo a 86%, para a ilha por cima de outra.
-static void ajIlha(GfxRect r, float raioPx, float a, int modal) {
+static void ajIlhaMaterial(GfxRect r, float raioPx, float a, int modal, int pagina) {
+  if (pagina) raioPx = 0.0f;
   float raio = raioPx / r.h;
   if (a <= 0.003f) return;
-  ajIlhaSombra(r, raioPx, (ajVid() ? 0.36f : 0.45f) * a, !ajVid() && a >= 0.999f);
+  if (!pagina) ajIlhaSombra(r, raioPx, (ajVid() ? 0.36f : 0.45f) * a, !ajVid() && a >= 0.999f);
   if (ajVid()) {
     // Teste do vidro: opacidade (78% = 0.80/0.86 de sempre) e fosco.
     float miolo = (modal ? 0.86f : 0.80f) * gfx_vidro_opacidade();
@@ -141,10 +142,17 @@ static void ajIlha(GfxRect r, float raioPx, float a, int modal) {
     gfx_cor(r, raio, 0.082f, 0.086f, 0.102f, a);
   }
 }
+static void ajIlha(GfxRect r, float raioPx, float a, int modal) {
+  ajIlhaMaterial(r, raioPx, a, modal, 0);
+}
+static void ajPaginaIlha(GfxRect r, float raioPx, float a) {
+  ajIlhaMaterial(r, raioPx, a, 0, ajTelaCheia());
+}
 // Ilha com o miolo do vidro a `miolo` (o editor da v2: 88%).
 static void ajIlhaMiolo(GfxRect r, float raioPx, float miolo) {
+  if (ajTelaCheia()) raioPx = 0.0f;
   float raio = raioPx / r.h;
-  ajIlhaSombra(r, raioPx, ajVid() ? 0.36f : 0.45f, !ajVid());
+  if (!ajTelaCheia()) ajIlhaSombra(r, raioPx, ajVid() ? 0.36f : 0.45f, !ajVid());
   if (ajVid()) {
     float m = miolo * gfx_vidro_opacidade();
     gfx_vidro_fosco(r, raio, 1);
@@ -279,6 +287,10 @@ static const char *ajFundoArte(void) {
 static void ajFundo(void) {
   fundo_desenhar_modo(FUNDO_FROST, (GfxRect){ 0, 0, NV_VTELA_W, NV_VTELA_H }, 0.0f, ajFundoArte(), 1.0f);
 }
+static void ajFundoPagina(void) {
+  ajFundo();
+  if (ajTelaCheia()) ajPaginaIlha(ajTelaR(), 0, 1);
+}
 
 // --- GEOMETRIA ------------------------------------------------------------------
 #define AJI_TOPO        (112.0f / ajustes_tamanho_ajustes())   // indice: logo abaixo da ilha do relogio
@@ -320,8 +332,8 @@ static GfxRect ajInspR(void) { return (GfxRect){ ajInspX(), AJI_MARGEM, NV_VTELA
 // The Settings scale changes content size while frame anchors remain at
 // 48/172/300 px and screen margins at 40 px. The global UI zoom is independent.
 #define AJ2_S          ajustes_tamanho_ajustes()
-#define AJ2_TOPO       (112.0f / AJ2_S)
-#define AJ2_MARGEM     (40.0f / AJ2_S)
+#define AJ2_TOPO       ajPaginaTopo()
+#define AJ2_MARGEM     ajPaginaMargem()
 // 770 (era 660): os nomes inteiros em Montserrat, a fonte mais larga que a TV
 // oferece — "Languages and subtitles" em 44/600 mede 563 e a linha tira 198.
 #define AJ2_MENU_W     730.0f
@@ -332,12 +344,15 @@ static GfxRect ajInspR(void) { return (GfxRect){ ajInspX(), AJI_MARGEM, NV_VTELA
 #define AJ2_LISTA_DX   (124.0f / AJ2_S)   // 172 com a ilha do menu em 48
 #define AJ2_LISTA_W   1000.0f
 #define AJ2_EDITOR_DX  (252.0f / AJ2_S)   // 300
-static float aj2X0(void) { return (48.0f + ajustes_rail_largura_fixa()) / AJ2_S; }
+static float aj2X0(void) {
+  float rail = ajustes_rail_largura_fixa();
+  return ((ajTelaCheia() && rail <= 0.0f ? 0.0f : 48.0f) + rail) / AJ2_S;
+}
 // A3: linhas compactas (58 + 2 de vao, rotulo 24), o dobro de linhas na tela.
-#define AJ2_LN_H        60.0f   // 2.0.3: 48 px no mockup v3 a 80%
+#define AJ2_LN_H        (ajRetrato() ? 96.0f : 60.0f)
 #define AJ2_LN_GAP       2.0f
-#define AJ2_LN_SUB      76.0f   // linha com a segunda linha ("Depende de: ...")
-#define AJ2_LN_LINHA1   60.0f   // a primeira linha de uma linha que abre
+#define AJ2_LN_SUB      (ajRetrato() ? 120.0f : 76.0f)
+#define AJ2_LN_LINHA1   AJ2_LN_H
 #define AJ2_LN_BEN      31.0f   // cada linha da frase de beneficio (2.0.3)
 static float aj2N1;
 static GfxRect aj2MenuR(void) {
@@ -347,11 +362,12 @@ static GfxRect aj2MenuR(void) {
 }
 // #339: "Lista" tira a coluna da arte: a lista toma a largura e a explicacao
 // da opcao em foco abre embaixo da linha (o caminho de 120%, que ja era assim).
-static int aj2TemInsp(void) { return ajustes_tamanho_ajustes() < 1.19f && !ajustes_layout_lista(); }
+static int aj2TemInsp(void) { return (ajRetrato() || ajustes_tamanho_ajustes() < 1.19f) && !ajustes_layout_lista(); }
 // A LARGURA DA LISTA DA V2 (1000 em 80-100%). Nao desenha mais nada: e a regua
 // de ajSegmentada (quem e segmentado e quem abre editor), mantida para que a
 // A3 nao mude a navegacao de nenhuma opcao.
 static float aj2ListaWRef(void) {
+  if (ajRetrato()) return NV_VTELA_W - AJ2_MARGEM - aj2X0();
   float x = aj2X0() + AJ2_LISTA_DX;
   float w = aj2TemInsp() ? AJ2_LISTA_W : NV_VTELA_W - AJ2_MARGEM - x;
   if (aj2TemInsp() && x + w + 24.0f + 440.0f > NV_VTELA_W - AJ2_MARGEM) w = NV_VTELA_W - AJ2_MARGEM - 464.0f - x;
@@ -364,16 +380,30 @@ static float aj2ListaWRef(void) {
 #define AJ2_CORPO (AJ2_TOPO + AJ_CAB_PAGINA)   // 2.0.2: abaixo do cabecalho da pagina
 static float aj2ArteX(void) { return aj2X0(); }
 static float aj2ArteW(void) { return (NV_VTELA_W - AJ2_MARGEM - aj2ArteX()) * 0.44f; }
+static float aj2InspRetratoH(void) {
+  float w = fminf(560.0f, NV_VTELA_W - AJ2_MARGEM - aj2ArteX());
+  return w * 9.0f / 16.0f + 124.0f;
+}
 static GfxRect aj2ListaR(void) {
+  if (ajRetrato()) {
+    float x = aj2ArteX(), y = AJ2_CORPO + (aj2TemInsp() ? aj2InspRetratoH() + 24.0f : 0.0f);
+    return (GfxRect){x, y, NV_VTELA_W - AJ2_MARGEM - x, NV_VTELA_H - y - AJ2_MARGEM};
+  }
   float x = ajustes_layout_lista() ? aj2ArteX() : aj2ArteX() + aj2ArteW() + 36.0f;
   return (GfxRect){ x, AJ2_CORPO, NV_VTELA_W - AJ2_MARGEM - x, NV_VTELA_H - AJ2_CORPO - AJ2_MARGEM };
 }
+static float ajTopoLista(void) { return aj2ListaR().y + AJ_A3_CAB; }
 // O "inspetor" da A3 e a coluna da arte (sem ilha).
 static GfxRect aj2InspR(void) {
+  if (ajRetrato()) {
+    float pad = ajTelaCheia() ? 28.0f : 0.0f;
+    return (GfxRect){aj2ArteX() + pad, AJ2_CORPO, NV_VTELA_W - AJ2_MARGEM - aj2ArteX() - 2 * pad, aj2InspRetratoH()};
+  }
+  if (ajTelaCheia()) return (GfxRect){aj2ArteX() + 28.0f, AJ2_CORPO, aj2ArteW() - 28.0f, NV_VTELA_H - AJ2_CORPO};
   return (GfxRect){ aj2ArteX(), AJ2_CORPO, aj2ArteW(), NV_VTELA_H - AJ2_CORPO - AJ2_MARGEM };
 }
 static GfxRect aj2EditorR(void) {
-  float x = aj2X0() + AJ2_EDITOR_DX;
+  float x = aj2X0() + (ajTelaCheia() ? 0.0f : AJ2_EDITOR_DX);
   return (GfxRect){ x, AJ2_CORPO, NV_VTELA_W - AJ2_MARGEM - x, NV_VTELA_H - AJ2_CORPO - AJ2_MARGEM };
 }
 // Onde a lista comeca (o fim do cabecalho: 42 + kicker 21,8 + 4 + titulo 62,9
@@ -427,6 +457,33 @@ static int ajEmLinha(int op) {
 static int ajEditandoLinha(int op) {
   return uxEditor == 1 && !uxRestaurar && !uxAvisoRisco && uxOp == op && ajEmLinha(op);
 }
+#ifdef NV_TOUCH_UI
+static void ajToqueInlineValor(int v, int op) {
+  if (!ajPontInline || !ajEditandoLinha(op) || v < 0 || v >= nValores(op)) return;
+  uxPendente = v; uxRodape = 0;
+}
+static void ajToqueConfirmar(int a, int b) {
+  (void)a; (void)b;
+  if (uxEditor == 1 && !uxRestaurar && !uxAvisoRisco) { uxRodape = 0; uxAplicar(); }
+}
+static void ajToqueCancelar(int a, int b) { (void)a; (void)b; if (uxEditor) uxCancelar(); }
+static void ajToqueEscolhaAlvo(GfxRect r, int v, int op, float topo, float base) {
+  if (ajPontInline && ajEditandoLinha(op))
+    ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, topo, base, NULL, ajToqueInlineValor, v, op);
+}
+static void ajToqueBotoes(float direita, float yc, float a) {
+  const char *rot[2] = { "Confirmar", "Cancelar" };
+  for (int i = 0; i < 2; i++) {
+    TxtLinha t = i == 0 ? ajTxtT(TXT_V2_SEG, rot[i]) : ajTxt(TXT_V2_SEG, rot[i]);
+    GfxRect r = { direita - t.w - 40.0f, yc - 24.0f, t.w + 40.0f, 48.0f };
+    if (i == 0) ajPilulaAcento(r, 24.0f, a);
+    else ajNeutro(r, 24.0f, 0.10f, AJ_CHIP_SOL, a);
+    txt_desenhar_alpha(t, r.x + 20.0f, yc - t.h * 0.5f, a);
+    ponteiro_alvo(r.x, r.y, r.w, r.h, NULL, i == 0 ? ajToqueConfirmar : ajToqueCancelar, 0, 0);
+    direita = r.x - 12.0f;
+  }
+}
+#endif
 // AS LINHAS QUE ABREM (v2): a primeira linha fica com 70,4 (16 + 38,4 + 16),
 // 20 de vao (o gap do flex que quebra) e o que vem embaixo — a regua da cor
 // de destaque editando, os tres cartoes do Fundo em foco e, sem inspetor
@@ -540,7 +597,12 @@ static void aj2Regua(GfxRect ln, float y, float a) {
     }
     for (k = 0; k < n; k++) {
       int v = L[k];
-      if (f < 2) { aj2Bolinha(v, bx + 28.0f + k * 72.0f, cy, v == alvo, v == sel && v != alvo, a); continue; }
+      if (f < 2) {
+#ifdef NV_TOUCH_UI
+        ajToqueEscolhaAlvo((GfxRect){bx + k * 72.0f, cy - 32.0f, 64, 64}, v, AJ_TEMA, AJ_TOPO, AJ_BASE);
+#endif
+        aj2Bolinha(v, bx + 28.0f + k * 72.0f, cy, v == alvo, v == sel && v != alvo, a); continue;
+      }
       // Pilula da dinamica: disco com o DESENHO do que ela faz, tingido na cor
       // que ela tiraria da arte agora, e o nome. Antes eram a mesma miniatura
       // da arte em todas (nao dizia qual era qual) mais um ponto de cor, e a
@@ -553,6 +615,9 @@ static void aj2Regua(GfxRect ln, float y, float a) {
         TxtLinha t = ajTxtC(TXT_V2_SEG, nome, maxT);
         float w = 7 + 42 + 10 + t.w + 18, c1[3], c2[3];
         GfxRect p = { px, cy - 28.0f, w, 56 };
+#ifdef NV_TOUCH_UI
+        ajToqueEscolhaAlvo(p, v, AJ_TEMA, AJ_TOPO, AJ_BASE);
+#endif
         int foc = v == alvo;
         if (foc) {
           gfx_cor(p, 0.5f, 1, 1, 1, 0.16f * a);
@@ -1022,6 +1087,9 @@ static float aj2Seg(int op, int n, int sel, int ed, float xDir, float yc, float 
     int ac = i == sel && ed;
     TxtLinha t = ac ? ajTxtT(TXT_V2_SEG, ajRotSeg(op, i)) : ajTxt(TXT_V2_SEG, ajRotSeg(op, i));
     float iw = t.w + 44.0f, al = 0.55f;
+#ifdef NV_TOUCH_UI
+    ajToqueEscolhaAlvo((GfxRect){x, yc - ih * 0.5f, iw, ih}, i, op, AJ_TOPO, AJ_BASE);
+#endif
     if (i == sel) al = 1;
     txt_desenhar_alpha(t, x + 22, yc - t.h * 0.5f, al * a);
     x += iw + 4.0f;
@@ -1050,6 +1118,9 @@ static void aj2CartoesFundo(GfxRect ln, float y, float a) {
   for (i = 0; i < 3; i++) {
     float cx = ln.x + 30.0f + i * (cw + gap), mw = cw - 20.0f, mh = mw * 9.0f / 16.0f;
     TxtLinha t = ajTxtC(TXT_V2_SEG, N[i], cw - 50.0f);
+#ifdef NV_TOUCH_UI
+    ajToqueEscolhaAlvo((GfxRect){cx, y, cw, 10 + mh + 10 + 29 + 10}, i, AJ_FUNDO, AJ_TOPO, AJ_BASE);
+#endif
     if (i == sel) ajNeutro((GfxRect){ cx, y, cw, 10 + mh + 10 + 29 + 10 }, 20, 0.12f, 0.204f, 0.212f, 0.243f, a);
     aj2MiniFundo(i, cx + 10, y + 10, mw, (i == sel ? 1.0f : 0.7f) * a);
     if (i == sel) {
@@ -1086,7 +1157,7 @@ static void ajDesenharLinha(int item, float y, float f, float a) {
   // A3: o segmentado da opcao em foco fica sobre a arte (ajDesenharInspetor);
   // a linha mostra o valor, como as outras escolhas.
   // Sem a arte (#339 "Lista", 120%), o segmentado da escolha em foco fica na linha.
-  if ((tipo == AJL_TOG && ed) || (!aj2TemInsp() && ajSegmentada(op) && !desligada && (ed || emFoco))) {
+  if ((tipo == AJL_TOG && ed) || ((!aj2TemInsp() || ajRetrato()) && ajSegmentada(op) && !desligada && (ed || emFoco))) {
     int n = nValores(op);
     if (n > 3) n = 3;
     cauda = aj2Seg(op, n, ed ? uxPendente : valor[op], ed, xDir, yc, aTx);

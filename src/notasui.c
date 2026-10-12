@@ -275,13 +275,15 @@ float notasui_marca_cartao(int f, int cru, float xc, float yc, float h, float a)
 // TODAS as fontes viram bloco: com onze a grade tem seis linhas e continua
 // inteira na tela (nada cortado). O foco anda pelos blocos com as setas
 // (detail.c faz o cima/baixo dentro da grade).
-#define SEC_W       1728.0f      // NV_TELA_W - 2 * NV_DETP_X
-#define SCORE_W      520.0f
+#include "telefoneui.h"
+static int notasEmpilhadas(void) { return telefoneui_ativo() && NV_TELA_W < 1500; }
+#define SEC_W       (notasEmpilhadas() ? NV_TELA_W - 192.0f : 1728.0f)
+#define SCORE_W     (notasEmpilhadas() ? SEC_W : 520.0f)
 #define SCORE_MIN_H  448.0f
 #define COL_GAP       28.0f
 #define TILE_GAP      14.0f
 #define TILE_H       104.0f
-#define TILE_W     ((SEC_W - SCORE_W - COL_GAP - TILE_GAP) * 0.5f)
+#define TILE_W     ((SEC_W - (notasEmpilhadas() ? 0 : SCORE_W + COL_GAP) - TILE_GAP) * 0.5f)
 #define TILE_PAD      24.0f
 #define TILE_LOGO_W   64.0f
 #define TILE_VAL_W   128.0f
@@ -329,7 +331,7 @@ typedef struct {
   int nFontes;
   int fontes[EX_NFONTES];
   int norm[EX_NFONTES];
-  float h;                    // altura da secao (cartao x grade)
+  float h, scoreH;             // altura da secao e do resumo
 } Medidas;
 
 static void medir(const NotasSecao *s, Medidas *m) {
@@ -345,7 +347,8 @@ static void medir(const NotasSecao *s, Medidas *m) {
   if (m->nFontes) {
     int linhas = (m->nFontes + 1) / 2;
     float hg = (float)linhas * TILE_H + (float)(linhas - 1) * TILE_GAP;
-    m->h = hg > SCORE_MIN_H ? hg : SCORE_MIN_H;
+    m->scoreH = notasEmpilhadas() ? SCORE_MIN_H : fmaxf(hg, SCORE_MIN_H);
+    m->h = notasEmpilhadas() ? m->scoreH + COL_GAP + hg : m->scoreH;
   }
 }
 
@@ -526,16 +529,16 @@ float notasui_fontes_desenhar(const NotasSecao *s, float x, float y, float a,
   Medidas m;
   NfResumo r;
   int pend0 = txt_pendentes, aberto, i;
-  float aa, gx = x + SCORE_W + COL_GAP;
+  float aa, gx = notasEmpilhadas() ? x : x + SCORE_W + COL_GAP;
   medir(s, &m);
   if (!m.nFontes) return 0.0f;
   if (y >= NV_TELA_H || y + m.h <= 0.0f) return m.h;
   aa = portao(&gateFontes, a, &aberto);
   nf_resumo(m.fontes, m.norm, m.nFontes, &r);
-  desenhaCartao(&m, x, y, m.h, aa);
+  desenhaCartao(&m, x, y, m.scoreH, aa);
   for (i = 0; i < m.nFontes; i++) {
     float tx = gx + (float)(i % 2) * (TILE_W + TILE_GAP);
-    float ty = y + (float)(i / 2) * (TILE_H + TILE_GAP);
+    float ty = y + (notasEmpilhadas() ? m.scoreH + COL_GAP : 0) + (float)(i / 2) * (TILE_H + TILE_GAP);
     if (ty > NV_TELA_H || ty + TILE_H < 0.0f) continue;
     desenhaBloco(s, m.fontes[i], m.norm[i], &r, tx, ty, foco ? foco[i] : 0.0f, aa);
   }
