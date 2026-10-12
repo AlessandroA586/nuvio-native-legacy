@@ -6495,10 +6495,7 @@ static float cabecalhoComentarios(float x, float y, float a) {
           txt_peso(l, r.x + (r.w - l.w) * 0.5f, r.y + (r.h - l.h) * 0.5f, a, 0.5f); } }
       px += w + COM_PILL_GAP;
     }
-    // O gesto escondido, a vista: a mesma pilula de tecla das legendas.
-    { const char *k[1] = { "Segure OK" }, *r[1] = { "Escolher episódio" };
-      int emFoco = nivel >= 1 && foco.fileira == fileira && foco.coluna == 1;
-      plrui_dicas(k, r, 1, px + 8.0f, yy + COM_PILL_H * 0.5f, 0, (emFoco ? 0.9f : 0.5f) * a); }
+    // O gesto (segurar OK) so aparece na ilha, na primeira vez (COM_DICA_CHAVE).
     yy += COM_PILL_H + 28.0f;
   }
   return yy;
