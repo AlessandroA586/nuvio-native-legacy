@@ -196,7 +196,7 @@ static float agEscala(void) { return escForcada > 0.0f ? escForcada : escModal >
 static int agColunaUnica(void) {
 #ifdef NV_TOUCH_UI
   float w = NV_LAYOUT_REAL_W, h = NV_LAYOUT_REAL_H;
-  return escForcada <= 0.0f && w > 0.0f && h > 0.0f &&
+  return layout_modo_mobile() && escForcada <= 0.0f && w > 0.0f && h > 0.0f &&
          fmaxf(w, h) / fminf(w, h) >= 1.7f;
 #else
   return 0;
