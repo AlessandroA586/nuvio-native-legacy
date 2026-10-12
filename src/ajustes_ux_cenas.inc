@@ -16,7 +16,7 @@
 // --- apoio ---------------------------------------------------------------------------
 static float ajcLig(int op) {   // 0..1: o interruptor, animado pela mola da linha
   if (op < 0 || op >= AJ_N) return 1.0f;
-  { float v = ajMov(op, (float)valor[op]); v = 1.0f - v; return v < 0 ? 0 : v > 1 ? 1 : v; }
+  { float v = ajMov(op, (float)uxValorAtual(op)); v = 1.0f - v; return v < 0 ? 0 : v > 1 ? 1 : v; }
 }
 static float ajcValor(int op) { return op >= 0 && op < AJ_N ? ajMov(op, (float)valor[op]) : 0.0f; }
 static void ajcTexto(const char *t, float px, int forte, float x, float y, float a) {
