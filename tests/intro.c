@@ -70,7 +70,7 @@ static double credFinal(const IntroTrecho *v, int n) {
 
 // O BUSCADOR FALSO: cada URL vira uma fixture ou um status. Guarda a ultima URL.
 static pthread_mutex_t fakeTrava = PTHREAD_MUTEX_INITIALIZER;
-static char ultimaUrl[400];
+static char ultimaUrl[400], ultimaAni[400];
 static int fakeStatus500;
 static int mapPedidos, aniPedidos, dbPedidos, mapFora;
 static int fakeBuscar(const char *url, char **corpo, int *status) {
@@ -81,7 +81,7 @@ static int fakeBuscar(const char *url, char **corpo, int *status) {
   *corpo = NULL;
   pthread_mutex_lock(&fakeTrava);
   if (strstr(url, "Fribb/anime-lists")) mapPedidos++;
-  if (strstr(url, "api.aniskip.com")) aniPedidos++;
+  if (strstr(url, "api.aniskip.com")) { aniPedidos++; snprintf(ultimaAni, sizeof ultimaAni, "%s", url); }
   if (strstr(url, "api.theintrodb.org")) dbPedidos++;
   pthread_mutex_unlock(&fakeTrava);
   if (strstr(url, "Fribb/anime-lists")) {
@@ -440,7 +440,7 @@ int main(int argc,char **argv) {
     intro_pedir_ids("tt5607616", 0, 2, 1, 0, 0);
     assert(esperar(2) == 2);
     pthread_mutex_lock(&fakeTrava);
-    assert(strstr(ultimaUrl, "skip-times/39587/1?"));
+    assert(strstr(ultimaAni, "skip-times/39587/1?"));
     assert(mapPedidos == 1);
     pthread_mutex_unlock(&fakeTrava);
     nt = intro_trechos(t, 8);
@@ -449,7 +449,7 @@ int main(int argc,char **argv) {
     intro_pedir_ids("tt5607616", 65942, 1, 39, 0, 0);
     assert(esperar(2) == 2);
     pthread_mutex_lock(&fakeTrava);
-    assert(strstr(ultimaUrl, "skip-times/42203/1?"));
+    assert(strstr(ultimaAni, "skip-times/42203/1?"));
     assert(mapPedidos == 1); // outro episodio/parte usa o mesmo cache do titulo
     pthread_mutex_unlock(&fakeTrava);
     char indice[256];struct stat st;
@@ -603,6 +603,14 @@ int main(int argc,char **argv) {
   assert(intro_kitsu_mal(fixture("../kitsu12_mappings.json")) == 21);
   assert(intro_extrair_aniskip("{\"found\":false,\"results\":[],\"statusCode\":404}", 0, v, 8) == 0);
   puts("ok  AniSkip: op/ed/recap, ED ate o fim, 10% de duracao, mapeamento kitsu -> MAL");
+  // COBERTURA POR TIPO: AniSkip so com OP nao bloqueia o ED do TheIntroDB.
+  { IntroTrecho a[8] = {{10.0, 100.0, INTRO_ABERTURA, 1}}, w[8] = {{20.0, 90.0, INTRO_ABERTURA, 0}, {1300.0, 0.0, INTRO_CREDITOS, 0}};
+    int na = 1;
+    assert(!intro_tipos_completos(a, na));
+    na = intro_completar(a, na, w, 2, 8);
+    assert(na == 2 && a[0].ani == 1 && a[0].inicio == 10.0);   // OP do AniSkip fica
+    assert(a[1].tipo == INTRO_CREDITOS && a[1].ani == 0);      // ED vem do TheIntroDB
+    puts("ok  fontes completam por tipo, com origem por trecho"); }
   assert(!rmdir(dadosTeste));
   puts("intro: tudo ok");
   // #329/#331: pular sozinho. Assinatura: (tipo, fim, dur, abertura, resumo, creditos).
