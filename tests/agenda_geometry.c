@@ -8,7 +8,22 @@ int agenda_n(void) { return 0; }
 const AgItem *agenda_lista(int i) { (void)i; return NULL; }
 int agenda_dias(const char *data) { (void)data; return -1; }
 
+// Drag a scrollable Agenda list: only Mobile may capture it (TV drag = arrows).
+static void agendaArrasto(int mobile) {
+  PonteiroRolagem e = { PONT_ROL_INICIO, 1, 0.0f, 0.0f, 500.0f, 500.0f };
+  layout_modo_definir(mobile);
+  ctxAberto = 0; scrollY = 0.0f; toqueAgAtiva = NULL; toquerol_limpar(&toqueAgenda);
+  toquerol_vincular(&toqueAgenda, (GfxRect){0, 0, 1920, 1080}, 1.0f, 0.0f, 400.0f, 1, &scrollY);
+  int captura = toqueAgendaRolar(&e);
+  e.fase = PONT_ROL_MOVER; e.delta = -200.0f;
+  toqueAgendaRolar(&e);
+  if (mobile) assert(captura == 1 && scrollY == 200.0f && toqueAgenda.livre);
+  else assert(captura == 0 && scrollY == 0.0f && !toqueAgenda.livre && !toqueAgAtiva);
+}
+
 int main(void) {
+  agendaArrasto(0);
+  agendaArrasto(1);
   layout_tela_definir(1920, 1080);
   layout_modo_definir(0);
   AgMes m = agMesMedir();

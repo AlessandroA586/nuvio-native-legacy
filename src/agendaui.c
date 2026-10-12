@@ -495,6 +495,7 @@ static void toqueManchetesReiniciar(void) {
   if (toqueAgAtiva == &toqueManchetes) toqueAgAtiva = NULL;
 }
 static int toqueAgendaRolar(const PonteiroRolagem *e) {
+  if (!layout_modo_mobile()) return 0;
   if (e->fase == PONT_ROL_INICIO) {
     toqueAgAtiva = NULL;
     ToqueRolagem *v[2]; int n = 0;

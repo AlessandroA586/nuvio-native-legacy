@@ -947,11 +947,16 @@ void ponteiro_camada(void) {
 }
 
 void ponteiro_rolagem(PonteiroRolagemFn fn) {
-  if (ponteiro_ativo()) listaRolagem[escreve] = fn;
+  if (!ponteiro_ativo()) return;
+#ifdef NV_TOUCH_UI
+  // TV keeps drag-as-arrows: no scroll capture outside Mobile mode.
+  if (!layout_modo_mobile()) return;
+#endif
+  listaRolagem[escreve] = fn;
 }
 #ifdef NV_TOUCH_UI
 void ponteiro_borda_esquerda(float largura, PonteiroBordaFn ativar) {
-  if (ponteiro_ativo()) listaBorda[escreve] = (Borda){fmaxf(0.0f, largura) * gfx_escala(), ativar};
+  if (ponteiro_ativo() && layout_modo_mobile()) listaBorda[escreve] = (Borda){fmaxf(0.0f, largura) * gfx_escala(), ativar};
 }
 int ponteiro_borda_registrada(void) { return listaBorda[escreve].ativar != NULL; }
 void ponteiro_borda_ativar(void) {

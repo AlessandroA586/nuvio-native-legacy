@@ -1249,6 +1249,7 @@ static float toqueBuscaMaxX(int r) {
   return fmaxf(0.0f, fim - (BU_DIR - BU_RES_X));
 }
 static int toqueBuscaRolar(const PonteiroRolagem *e) {
+  if (!layout_modo_mobile()) return 0;
   if (e->fase == PONT_ROL_INICIO) {
     if (e->x < BU_RES_X || e->x >= BU_DIR || e->y < BU_RES_Y - 20.0f ||
         e->y >= BU_RES_Y + BU_RES_AREA_H || (nFil < 1 && !recentesVisiveis())) return 0;

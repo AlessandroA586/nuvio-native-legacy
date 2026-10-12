@@ -1131,6 +1131,13 @@ static int ajModalAberto(void) {
   return (uxEditor && (uxRestaurar || uxAvisoRisco || uxEditor == 2)) || riscoFolha || frAberta || ajVinculoAtivo() ||
          teclado_aberto() || registro_envio_aberto() || apoioAberto;
 }
+#ifdef NV_TOUCH_UI
+// Inline pointer editing (Confirm/Cancel footer, Mobile hit targets) is Mobile only.
+static int ajInlineAtivo(int modal, const Aj2Pose *p) {
+  return layout_modo_mobile() && !modal && uxOp >= 0 && ajEditandoLinha(uxOp) &&
+         p->lA > 0.997f && fabsf(p->lS - 1.0f) < 0.002f && fabsf(p->lDx) < 0.5f;
+}
+#endif
 static void ajDesenharTela(void) {
   int modal = ajModalAberto();
   Aj2Pose p = aj2PoseAgora();
@@ -1141,8 +1148,7 @@ static void ajDesenharTela(void) {
   ajFundoPagina();
   if (filAberta) return;   // a folha de fileiras ocupa a tela (desenhada depois)
 #ifdef NV_TOUCH_UI
-  ajPontInline = !modal && uxOp >= 0 && ajEditandoLinha(uxOp) &&
-                p.lA > 0.997f && fabsf(p.lS - 1.0f) < 0.002f && fabsf(p.lDx) < 0.5f;
+  ajPontInline = ajInlineAtivo(modal, &p);
   if (ajPontInline) { ponteiro_camada(); ajToqueCamada(); }
 #endif
   if (modal) gfx_opacidade_grupo = 0.16f;

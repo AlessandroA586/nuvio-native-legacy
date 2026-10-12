@@ -3,6 +3,7 @@
 
 #ifdef NV_TOUCH_UI
 #include "gfx.h"
+#include "layout.h"
 #include "ponteiro.h"
 #include <math.h>
 
@@ -32,7 +33,7 @@ static inline void toquerol_vincular(ToqueRolagem *r, GfxRect regiao,
 }
 static inline void toquerol_limpar(ToqueRolagem *r) { r->livre = 0; }
 static inline int toquerol_evento(ToqueRolagem *r, const PonteiroRolagem *e) {
-  if (!r->offset) return 0;
+  if (!r->offset || !layout_modo_mobile()) return 0;
   if (e->fase == PONT_ROL_INICIO) {
     float x = e->x / r->escala, y = e->y / r->escala;
     if (e->eixoY != r->eixoY || r->maximo <= r->minimo ||
