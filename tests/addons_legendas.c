@@ -1,6 +1,26 @@
 // Actual production subtitle worker; offline providers and measurements only.
+#include <time.h>
+int teste_clock_gettime(clockid_t c, struct timespec *t);
+#define clock_gettime teste_clock_gettime
 #include "../src/addons.c"
+#undef clock_gettime
 #include <assert.h>
+static unsigned long long agoraTeste;
+static int prazoCenario, tentativasCauda;
+static unsigned atrasoInicio;
+void prazo_auto_iniciar(void);
+void prazo_auto_avancar(unsigned ms);
+int prazo_auto_selecionou(void);
+int teste_clock_gettime(clockid_t c, struct timespec *t) {
+  (void)c; t->tv_sec = (time_t)(agoraTeste / 1000u); t->tv_nsec = (long)(agoraTeste % 1000u) * 1000000L; return 0;
+}
+static void avancar(unsigned ms) {
+  unsigned long long fim = agoraTeste + ms;
+  while (agoraTeste < fim) {
+    agoraTeste += fim - agoraTeste > 500 ? 500 : fim - agoraTeste;
+    if (prazoCenario) prazo_auto_avancar((unsigned)agoraTeste);
+  }
+}
 static const char *responses[3];
 static char ultimaUrl[3][2048];
 static int desligaIdx = -1;
@@ -20,6 +40,7 @@ char *rede_baixar_medido_controle(const char *url, int seconds,
   }
   assert(idx >= 0 && strstr(url, "/subtitles/") && strstr(url, ".json"));
   requests++;
+  if (prazoCenario) avancar(15000);
   snprintf(ultimaUrl[idx], sizeof ultimaUrl[idx], "%s", url);
   if (recusaExtras && strstr(url, "videoSize=")) {
     *medida = (RedeMedida){ .status = 400, .bytes = 5, .ms = 7 };
@@ -32,10 +53,18 @@ char *rede_baixar_medido_controle(const char *url, int seconds,
 char *rede_baixar_trecho_st(const char *url, int segundos, long long ini, long long fim,
                             long *tam, int *st, int *erro, char *final, unsigned tamFinal) {
   char *b;
-  (void)segundos; (void)final; (void)tamFinal;
+  (void)final; (void)tamFinal;
   assert(!strncmp(url, "https://cdn.fixture.invalid/", 28));
   trechos++;
   if (erro) *erro = 0;
+  if (prazoCenario && !ini) avancar(atrasoInicio);
+  if (prazoCenario && ini > 0) {
+    tentativasCauda++; avancar((unsigned)segundos * 1000u);
+    if (st) *st = 0;
+    if (erro) *erro = 28;
+    *tam = 0;
+    return NULL;
+  }
   if (semRange) { if (st) *st = 200; }
   else if (st) *st = 206;
   b = malloc((size_t)(fim - ini + 2));
@@ -169,6 +198,22 @@ int main(void) {
     memset(ultimaUrl, 0, sizeof ultimaUrl);
     desligaIdx = 1; antes = requests; run(2, "tt123", "movie"); desligaIdx = -1;
     assert(requests - antes == 1 && ultimaUrl[0][0] && !ultimaUrl[1][0]); }
+
+  // Hash + retry nao podem passar do prazo de 30 s da legenda automatica.
+  { unsigned long long tam = 1000000;
+    responses[0] = "{\"subtitles\":[{\"lang\":\"por\",\"url\":\"https://fixture.invalid/pt.srt\"}]}";
+    status[0] = 200; ling_local_legenda("pt"); ling_conta_legenda(""); ling_conta_legenda2("");
+    memset(&legExt, 0, sizeof legExt); hashMedido[0] = 0;
+    snprintf(legExt.id, sizeof legExt.id, "tt123"); legExt.tamanho = tam;
+    snprintf(legExt.video, sizeof legExt.video, "https://cdn.fixture.invalid/x/v.mkv");
+    for (atrasoInicio = 0; atrasoInicio <= 6000; atrasoInicio += 6000) {
+      agoraTeste = 0; tentativasCauda = 0; nLegs = 0;
+      prazoCenario = 1; fioLegVivo = 1; prazo_auto_iniciar();
+      avancar(1000); run(1, "tt123", "movie"); avancar(500); prazoCenario = 0;
+      assert(prazo_auto_selecionou());
+      assert(agoraTeste <= 28500 && tentativasCauda == (atrasoInicio ? 1 : 2));
+      assert(!strstr(ultimaUrl[0], "videoHash="));
+    } }
 
   puts("addon subtitles: provider fairness, real origin, ordered languages, empty/missing/HTTP and episode checks ok");
 }

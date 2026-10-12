@@ -1002,7 +1002,7 @@ static void legendaAutomatica(Uint32 agora) {
     if (v) {
       int nv = addons_legendas_copiar(v, LEG_MAX, NULL, NULL);
       uint64_t lem = ci ? legauto_lembrada(ci->imdb[0] ? ci->imdb : ci->titulo, pref) : 0;
-      int b = legauto_escolher(v, nv, pref, video_url_atual(), NULL, 0, lem);
+      int b = legauto_escolher(v, nv, pref, legauto_midia(video_url_atual()), NULL, 0, lem);
       if (b >= 0 && b < nAdd) r = nEmb + b;
       free(v);
     }

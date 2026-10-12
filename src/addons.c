@@ -1196,29 +1196,49 @@ static unsigned relogioMs(void) {
 // comeco do arquivo com 200, e somar isso como "o fim" daria um hash errado,
 // pior que nenhum (o addon casaria a legenda de OUTRO arquivo).
 static int medirHash(const char *url, unsigned long long tam, char out[17],
-                     const char **motivo) {
+                     char *motivo, size_t nMotivo) {
   long n1 = 0, n2 = 0;
-  int st1 = 0, st2 = 0, e = 0, ok = 0;
+  int st1 = 0, st2 = 0, e1 = 0, e2 = 0, ok = 0, tent = 0;
   char *a, *b = NULL;
-  a = rede_baixar_trecho_st(url, 6, 0, LEGEXTRAS_BLOCO - 1, &n1, &st1, &e, NULL, 0);
-  if (a && st1 == 206 && n1 == LEGEXTRAS_BLOCO)
-    b = rede_baixar_trecho_st(url, 6, (long)(tam - LEGEXTRAS_BLOCO), (long)(tam - 1),
-                              &n2, &st2, &e, NULL, 0);
+  unsigned inicio = relogioMs();
+  a = rede_baixar_trecho_st(url, 6, 0, LEGEXTRAS_BLOCO - 1, &n1, &st1, &e1, NULL, 0);
+  if (a && st1 == 206 && n1 == LEGEXTRAS_BLOCO) {
+    // Seek frio no debrid: ate 8 s e UMA nova tentativa, mas os dois Range
+    // juntos conservam o teto anterior de 12 s. O addon ainda precisa responder
+    // antes dos 30 s da selecao automatica; hash e opcional, legenda nao.
+    while (!b && tent < 2) {
+      unsigned gasto = relogioMs() - inicio;
+      int segundos;
+      if (gasto >= 12000u) break;
+      segundos = (int)((12000u - gasto) / 1000u);
+      if (!segundos) break;
+      if (segundos > 8) segundos = 8;
+      tent++;
+      b = rede_baixar_trecho_st(url, segundos, (long long)(tam - LEGEXTRAS_BLOCO), (long long)(tam - 1),
+                                &n2, &st2, &e2, NULL, 0);
+    }
+  }
   if (b && st2 == 206 && n2 == LEGEXTRAS_BLOCO)
     ok = legextras_hash((const unsigned char *)a, (size_t)n1, (const unsigned char *)b,
                         (size_t)n2, tam, out);
-  *motivo = ok ? "measured" : !a ? "network failure" : st1 != 206 || (b && st2 != 206) ? "no Range support" : "short range";
+  // So numeros: nunca o URL (leva o token do debrid).
+  snprintf(motivo, nMotivo, "%s st1=%d n1=%ld e1=%d st2=%d n2=%ld e2=%d tent=%d",
+           ok ? "measured" : !a ? "first range failed" : st1 != 206 ? "first range not 206"
+           : n1 != LEGEXTRAS_BLOCO ? "first range short" : !b ? "tail range failed"
+           : st2 != 206 ? "tail range not 206" : "tail range short",
+           st1, n1, e1, st2, n2, e2, tent);
   free(a); free(b);
   return ok;
 }
 
 // Prepara o segmento de extras de uma busca, com o hash quando da para
 // medir. Roda no fio da busca, antes dos addons: o hash custa dois pedidos
-// curtos (prazo de 6 s cada) e o resultado vale para todos eles.
+// curtos (ate 12 s no total, incluindo retry) e o resultado vale para todos eles.
 static void prepararExtras(LegBusca *B) {
   LegExtras e;
   char hash[20] = "", nome[256];
   const char *motivo = "no source";
+  char motivoMedido[160];
   pthread_mutex_lock(&legTrava);
   e = legExt;
   pthread_mutex_unlock(&legTrava);
@@ -1237,12 +1257,16 @@ static void prepararExtras(LegBusca *B) {
     if (cache) snprintf(hash, sizeof hash, "%s", hashMedido);
     pthread_mutex_unlock(&legTrava);
     if (cache) motivo = "measured (cached)";
-    else if (medirHash(e.video, e.tamanho, hash, &motivo)) {
+    else {
+      int ok = medirHash(e.video, e.tamanho, hash, motivoMedido, sizeof motivoMedido);
+      motivo = motivoMedido;
+      if (ok) {
       pthread_mutex_lock(&legTrava);
       snprintf(hashDeUrl, sizeof hashDeUrl, "%s", e.video);
       snprintf(hashMedido, sizeof hashMedido, "%s", hash);
       hashTam = e.tamanho;
       pthread_mutex_unlock(&legTrava);
+      }
     }
   }
   if (legextras_segmento(B->extras, sizeof B->extras, nome, e.tamanho, hash) < 0)
