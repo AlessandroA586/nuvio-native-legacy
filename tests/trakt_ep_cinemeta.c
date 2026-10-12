@@ -8,6 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+unsigned int SDL_GetTicks(void) { return 0; }
+void marco(const char *m) { (void)m; }
+
 static int nuvioGets, cineGets;
 static long long estreiaMs;
 static char estreiaId[48];

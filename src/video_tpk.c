@@ -29,6 +29,7 @@
 #include "rede.h"
 #include "faixasmkv.h"
 #include "velocidade.h"
+#include "vazao.h"
 #include <SDL2/SDL.h>
 #include <pthread.h>
 #include <stdatomic.h>
@@ -46,6 +47,10 @@ static FnAbrir  hAbrir;
 static FnSemArg hParar;
 static FnInt    hPausar, hBuscar, hVolume;
 static FnRet    hJanela;
+typedef void (*FnAspecto)(int, int, int, int, int, int, int, int);
+static FnAspecto hAspecto;
+static int ultRoiX, ultRoiY, ultRoiW, ultRoiH, temRoi;
+static int ultLegX, ultLegY, ultLegW, ultLegH;
 static FnPos    hPos;
 typedef void (*FnEscolher)(int tipo, int idx);
 static FnEscolher hEscolher;
@@ -85,6 +90,7 @@ static volatile int durMs, bufferando;
 // e a recusa a esconde pelo resto da execucao.
 static volatile int velPedida = 100, velEnviada = 100, velRecusada;
 static volatile Uint32 bufferDesde;
+static volatile int bufPct;   // o ultimo evento 7 do host (0..100)
 static unsigned sessao;
 // The host reports numeric errors from another thread. Preserve that evidence
 // for the source failure screen without guessing a codec or network cause.
@@ -155,6 +161,9 @@ void nv_tpk_video_registrar(FnAbrir abrir, FnSemArg parar, FnInt pausar, FnInt b
 
 __attribute__((visibility("default")))
 void nv_tpk_video_registrar_faixas(FnEscolher escolher) { hEscolher = escolher; }
+
+__attribute__((visibility("default")))
+void nv_tpk_video_registrar_aspecto(FnAspecto janela) { hAspecto = janela; }
 
 void video_escolher_audio(int i);
 
@@ -278,6 +287,7 @@ void nv_tpk_video_evento(int tipo, int a, int b) {
                      printf("[video] tpk: player error 0x%08x (%d)\n", (unsigned)a, b); break;
     case EV_TAMANHO: largura = a; altura = b; break;
     case EV_BUFFER:
+      bufPct = a < 0 ? 0 : a > 100 ? 100 : a;
       if (a < 100 && !bufferando) { bufferando = 1; bufferDesde = SDL_GetTicks(); }
       else if (a >= 100) bufferando = 0;
       break;
@@ -363,7 +373,7 @@ static int abrirSessao(void) {
   vigiaAtiva = pausaPedida = 0;
   atomic_store(&vigiaReiniciar, 1);
   ativo = 1; pronto = falhou = terminou = tocando = 0;
-  largura = altura = durMs = 0; bufferando = 1; bufferDesde = SDL_GetTicks();
+  largura = altura = durMs = 0; bufferando = 1; bufferDesde = SDL_GetTicks(); bufPct = 0;
   nAudio = nLeg = 0; audioAtual = 0; legAtual = -1;
   audioNaoSup = faixasLidas = audioLogado = 0;
   comecou = 0; comecouEm = 0; audioComecou = 0; audioPend = legPend = -1;
@@ -372,6 +382,7 @@ static int abrirSessao(void) {
   legendaMarcarEnvio(-1);
   if (travaLeg) { SDL_LockMutex(travaLeg); legCueSessao = 0; legAbriuEm = SDL_GetTicks(); SDL_UnlockMutex(travaLeg); }
   emTrailer = 0;
+  temRoi = 0;
   sessao++;
   velEnviada = 100;   // Player novo no host: nasce em 1x
   if (!hAbrir) { falhou = 1; printf("[video] tpk: host sem player\n"); return 0; }
@@ -627,6 +638,7 @@ void video_bombear(void) {
 }
 void video_parar(void) {
   emTrailer = 0;
+  temRoi = 0;
   capmkv_zerar();   // fio de capitulos em voo nao alimenta o proximo titulo
   audioPend = legPend = -1; comecou = 0; comecouEm = 0; audioComecou = 0;
   legendaLimpar(1);
@@ -713,14 +725,13 @@ void video_tpk_zoom_roi_definir(int ligado) {
 int video_tpk_zoom_roi(void) { return zoomRoi; }
 #define TPK_TELA_W 1920   // o host (Program.cs) usa 1920x1080 e o layout tambem
 #define TPK_TELA_H 1080
-static int ultRoiX, ultRoiY, ultRoiW, ultRoiH, temRoi;
 static unsigned roiForaLogado;
 static int roiNaTela(int x, int y, int w, int h) {
   return w > 0 && h > 0 && x >= 0 && y >= 0 && x + w <= TPK_TELA_W && y + h <= TPK_TELA_H;
 }
 void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh) {
   double qw = largura, qh = altura, ex, ey;
-  int X, Y, W, H;
+  int X, Y, W, H, lx, ly, lw, lh;
 
   // Sem as dimensoes do quadro, ou sem recorte de verdade, o destino cru serve.
   if (qw < 2.0 || qh < 2.0 || sw <= 0 || sh <= 0) { temRoi = 0; video_janela(dx, dy, dw, dh); return; }
@@ -738,7 +749,21 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
          sx, sy, sw, sh, qw, qh, X, Y, W, H);
   fflush(stdout);
 
-  // #290: o ajuste opt-in vale para o trailer E para o player (proporcao).
+  // Preserve the exact 2.0.4 fallback rectangle, including its opt-in gate.
+  lx = X; ly = Y; lw = W; lh = H;
+  if (!NV_TPK_ZOOM_ROI && !NV_TPK_PLAYER_RECORTE && !zoomRoi && !roiNaTela(X,Y,W,H)) {
+    lx = dx; ly = dy; lw = dw; lh = dh;
+  }
+  // New hosts accept B without a diagnostic/experimental flag for the player.
+  // Trailer zoom remains opt-in. Old staged hosts retain the previous gate.
+  if (hAspecto && (!emTrailer || NV_TPK_ZOOM_ROI || zoomRoi || roiNaTela(X,Y,W,H))) {
+    ultRoiX=X; ultRoiY=Y; ultRoiW=W; ultRoiH=H; temRoi=1;
+    ultLegX=lx; ultLegY=ly; ultLegW=lw; ultLegH=lh;
+    hAspecto(X,Y,W,H,lx,ly,lw,lh);
+    return;
+  }
+
+  // #290: old host / trailer path.
   if (!NV_TPK_ZOOM_ROI && !NV_TPK_PLAYER_RECORTE && !zoomRoi && !roiNaTela(X, Y, W, H)) {
     if (roiForaLogado != sessao) {
       roiForaLogado = sessao;
@@ -752,24 +777,36 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
   }
 
   ultRoiX = X; ultRoiY = Y; ultRoiW = W; ultRoiH = H; temRoi = 1;
+  ultLegX=lx; ultLegY=ly; ultLegW=lw; ultLegH=lh;
   video_janela(X, Y, W, H);
 }
 // #290 ("aspect ratio still doesn't work"): sem recorte o ciclo do player so
 // oferecia modos que cabem na tela, e num 16:9 todos dao o mesmo retangulo. O
 // mesmo ajuste experimental do trailer (desligado por padrao) libera os modos
 // de recorte/zoom no player.
-int  video_recorte_fonte(void) { return NV_TPK_ZOOM_ROI || NV_TPK_PLAYER_RECORTE || zoomRoi; }
+int  video_recorte_fonte(void) { return hAspecto != NULL || NV_TPK_ZOOM_ROI || NV_TPK_PLAYER_RECORTE || zoomRoi; }
 int  video_recorte_fonte_trailer(void) { return NV_TPK_ZOOM_ROI || zoomRoi; }
 // O host prende o plano em mais de um ponto depois do prepare; um ROI pedido
 // cedo pode ser engolido. trailer.c/player.c repetem o pedido nos primeiros
 // segundos por aqui — reenvia o ultimo ROI calculado, sem recalcular.
-void video_recorte_reaplicar(void) { if (temRoi) video_janela(ultRoiX, ultRoiY, ultRoiW, ultRoiH); }
+void video_recorte_reaplicar(void) {
+  if (!temRoi) return;
+  if (hAspecto) hAspecto(ultRoiX,ultRoiY,ultRoiW,ultRoiH,ultLegX,ultLegY,ultLegW,ultLegH);
+  else video_janela(ultRoiX,ultRoiY,ultRoiW,ultRoiH);
+}
 const char *video_url_atual(void) { return urlAtual; }
 double video_pos(void) { return (hPos && pronto) ? hPos() / 1000.0 : 0; }
 double video_duracao(void) { return durMs / 1000.0; }
 // Capitulos do MKV lidos por um fio lateral (capmkv.c, 203-capitulos).
 double video_creditos(void) { return capmkv_creditos(video_duracao()); }
 double video_buffer_fim(void) { return 0; }
+// SAMSUNG (.tpk): o host so repassa a PORCENTAGEM do buffering (evento 7);
+// nada de bytes, segundos, conexoes ou quadros. O host e o do link pedido.
+void video_estatisticas(VideoStats *s) {
+  video_stats_vazio(s);
+  if (urlAtual[0]) s->bufferPct = bufPct;
+  vazao_host_publico(urlAtual, s->host, sizeof s->host);
+}
 unsigned video_bufferando_ms(void) {
   // Esperando para reconectar: o watchdog (app.c) nao troca de fonte.
   if (nv_recon_ativa(&recon)) return 0;
@@ -777,6 +814,7 @@ unsigned video_bufferando_ms(void) {
 }
 void video_definir_dv(int dv) { (void)dv; }
 void video_definir_cabecalhos(const char *c) { snprintf(cabecalhos, sizeof cabecalhos, "%s", c ? c : ""); }
+const char *video_cabecalhos(void) { return cabecalhos; }
 void video_definir_mp4(int m) { fonteMp4 = m != 0; }
 int  video_tocando(void) { return tocando; }
 int  video_pronto(void) { return pronto; }

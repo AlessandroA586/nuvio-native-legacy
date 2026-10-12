@@ -99,6 +99,8 @@ int  trakt_continuar_falhou(void);
 // O id ("tt:S:E") e um item "a seguir" da ultima leitura — proximo episodio de
 // serie cujo ultimo visto terminou. Entra na fileira com progresso 0.
 int trakt_e_a_seguir(const char *id);
+// Historico lido confirmou o mesmo episodio depois do progresso informado.
+int trakt_cw_concluiu(const char *id, long long progressoMs);
 // Oculta/reexibe a serie no progresso do Trakt (POST /users/hidden/progress_watched).
 // Sincrono, para fio de trabalho. 0 sem Trakt ou sem IMDb.
 int trakt_progresso_ocultar(const char *imdb, int ocultar);
@@ -116,11 +118,15 @@ int  trakt_perfil(PerfilDados *saida);
 // Informa onde o dono parou. `imdb` pode trazer episodio ("tt123:4:9").
 // Ate agora o app so LIA o Trakt; sem isto, assistir aqui nao mexia no
 // "continue assistindo" dos outros aparelhos dele. Nao bloqueia: sai num fio.
-void trakt_marcar(const char *imdb, double posSeg, double durSeg);
+void trakt_marcar(const char *imdb, double posSeg, double durSeg, double assistidoSeg, int assistiu);
 // Scrobble durante a reproducao (#179): /scrobble/start ("Now Watching") ao
 // tocar, /scrobble/pause ao pausar. `evento` e SCR_EV_* de traktscrobble.h.
 // Nao bloqueia; repeticoes (start ja em pe, pause sem start) sao descartadas.
-int  trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg);
+// `assistidoSeg`: midia realmente tocada nesta fonte principal (seek nao
+// conta); `assistiu`: a decisao do player (player_regra_visto), sem ela nao
+// sai stop. Saida recusada tambem encerra o start em pe.
+int  trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg, double assistidoSeg,
+                    int assistiu);
 
 // Watchlist ("Minha Lista") e colecao ("Comprados") do dono. `qual` e
 // "watchlist" ou "collection". BLOQUEIA — chamar do fio de descoberta.

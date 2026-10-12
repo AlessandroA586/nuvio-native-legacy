@@ -35,11 +35,9 @@
 // agora sao o mesmo numero, e o corte, se um dia voltar a acontecer, e dito.
 // 32 e nao 16 (30/09): o app oficial passou a 32, e quem tem muitos addons
 // perdia justamente os de legenda, que costumam ser os ultimos da lista.
-// 64 e nao 32 (#203, 07/10): nos logs 2.0.x, 44 de 464 pessoas leram EXATAMENTE
-// 32 linhas da conta e nenhuma leu 33 ou mais — o monte no teto, nao uma
-// distribuicao. Quem tem mais de 32 perdia o resto sem aviso (o de legenda,
-// tipicamente o ultimo). O teto de lerAddons (sync.c) e o mesmo numero.
-#define ADD_MAX 64
+// 128: contas com 100 add-ons ultrapassavam o teto anterior e perdiam o resto.
+// O teto de lerAddons (sync.c) e o mesmo numero; o corte continua no log.
+#define ADD_MAX 128
 #define ADD_PREF_MAX 8
 #define ADD_PREF_TAM 24
 
@@ -452,6 +450,29 @@ int addons_exportar(AddonRemoto *saida, int max) {
   return k;
 }
 
+static int listaPos(const AddonRemoto *l, int n, const char *url) {
+  int i;
+  for (i = 0; i < n; i++) if (!strcmp(l[i].url, url)) return i;
+  return -1;
+}
+void addons_diferenca(const AddonRemoto *antes, int na, const AddonRemoto *depois, int nd,
+                      int *entraram, int *sairam, int *mudaram) {
+  int i, e = 0, s = 0, m = 0, k = 0;
+  for (i = 0; i < nd; i++) if (listaPos(antes, na, depois[i].url) < 0) e++;
+  for (i = 0; i < na; i++) if (listaPos(depois, nd, antes[i].url) < 0) s++;
+  // Os que ficaram: ligado/desligado diferente, ou fora da ordem relativa de
+  // antes (k e a posicao do anterior que ficou; andar para tras e reordenar).
+  for (i = 0; i < nd; i++) {
+    int j = listaPos(antes, na, depois[i].url);
+    if (j < 0) continue;
+    if ((antes[j].ativo ? 1 : 0) != (depois[i].ativo ? 1 : 0) || j < k) m++;
+    if (j > k) k = j;
+  }
+  if (entraram) *entraram = e;
+  if (sairam) *sairam = s;
+  if (mudaram) *mudaram = m;
+}
+
 void addons_esquecer(void) {
   memset(addon, 0, sizeof addon);
   nAddon = 0;
@@ -585,7 +606,7 @@ AddEstado addons_estado(void) {
 // No fio da UI. Resposta de busca que ja nao e a da tela (pedido novo na fila,
 // conta/perfil trocados) e jogada fora aqui, sem nunca chegar a lista.
 static void progDrenar(void) {
-  Chegada local[ADD_MAX * 2 + ADD_EXTRA_MAX];
+  static Chegada local[ADD_MAX * 2 + ADD_EXTRA_MAX]; // so o fio da UI drena
   int q, k;
   if (!progLigado) return;
   pthread_mutex_lock(&progTrava);
@@ -839,8 +860,7 @@ typedef struct {
   int exigeCab;
 } LegExtras;
 static LegExtras legExt;
-// A busca em curso e um REFAZER com extras: a lista anterior fica na tela ate
-// esta terminar inteira (publicarLegendas so publica no fim).
+// A busca com extras soma resultados a lista anterior ao terminar.
 static int legManter;
 // Hash ja medido, para a mesma fonte nao ir de novo ao CDN a cada busca.
 static char hashDeUrl[4096], hashMedido[20];
@@ -985,11 +1005,21 @@ static int arrayDeLegendas(const char *corpo) {
   return 0;
 }
 
+static int legendaRepetida(const Legenda *v, int n, const Legenda *l) {
+  int i;
+  for (i = 0; i < n; i++)
+    if (!strcmp(v[i].url, l->url) ||
+        (l->id[0] && v[i].addonIndice == l->addonIndice && !strcmp(v[i].id, l->id))) return 1;
+  return 0;
+}
+
 static int distribuirLegendas(const LegLote *lotes, int nLotes, int nGrupos,
                               Legenda *saida) {
   int gi, n = 0;
   for (gi = 0; gi < nGrupos; gi++) {
-    int prox[ADD_MAX] = {0}, noGrupo = 0, avancou = 1;
+    static int prox[ADD_MAX]; // publicacao serializada por B->m
+    int noGrupo = 0, avancou = 1;
+    memset(prox, 0, sizeof prox);
     int teto = LEG_MAX / nGrupos;
     // Um resultado por provider por volta, dentro de cada idioma. Mantem a
     // ordem principal -> secundario -> ingles e preenche lugares vagos com
@@ -1000,8 +1030,11 @@ static int distribuirLegendas(const LegLote *lotes, int nLotes, int nGrupos,
       for (i = 0; i < nLotes && noGrupo < teto; i++) {
         while (prox[i] < lotes[i].n && lotes[i].grupo[prox[i]] != gi) prox[i]++;
         if (prox[i] >= lotes[i].n) continue;
-        saida[n++] = lotes[i].itens[prox[i]++];
-        noGrupo++; avancou = 1;
+        const Legenda *l = &lotes[i].itens[prox[i]++];
+        avancou = 1;
+        if (legendaRepetida(saida, n, l)) continue;
+        saida[n++] = *l;
+        noGrupo++;
       }
     }
   }
@@ -1031,7 +1064,7 @@ static int distribuirLegendas(const LegLote *lotes, int nLotes, int nGrupos,
 typedef struct {
   LegLote *lotes;          // um por addon
   int nLotes, nGrupos;
-  int manter;              // refazer com extras: publica so no fim
+  int manter;              // extras: mescla so no fim, preservando indices
   char extras[1200];       // segmento legextras_segmento; "" = sem extras
   const char *grupos[3];
   char gruposTexto[3][16];
@@ -1054,8 +1087,15 @@ static void publicarLegendas(LegBusca *B, int final) {
   pthread_mutex_unlock(&B->m);
   pthread_mutex_lock(&legTrava);
   if (!legParar && B->geracao == legGeracao) {
-    memcpy(legs, achadas, sizeof legs);
-    nLegs = n;
+    if (B->manter) {
+      int i;
+      // Mantem ordem e indices atuais: a escolha ativa continua na mesma entrada.
+      for (i = 0; i < n && nLegs < LEG_MAX; i++)
+        if (!legendaRepetida(legs, nLegs, &achadas[i])) legs[nLegs++] = achadas[i];
+    } else {
+      memcpy(legs, achadas, sizeof legs);
+      nLegs = n;
+    }
   }
   pthread_mutex_unlock(&legTrava);
   free(achadas);
@@ -1095,16 +1135,24 @@ static void *buscarUmAddon(void *u) {
   for (q = p; q;) {
     const char *f = js_fim(q);
     if (!f || f <= q) break;
-    recebidas++;
+    { char id[256] = "";
+      js_texto(q, f, "id", id, sizeof id);
+      if (!strncmp(id, "error.", 6)) {
+        // id/lang podem repetir URL autenticada, configuracao ou quebras de linha.
+        printf("[legendas] addon avisou: erro na resposta de legendas\n");
+      } else recebidas++;
+    }
     q = js_prox(f);
   }
   for (gi = 0; gi < B->nGrupos; gi++) {
     int noGrupo = 0, teto = LEG_MAX / B->nGrupos;
     for (q = p; q && noGrupo < teto;) {
       const char *f = js_fim(q);
-      char l[64] = "", cod[16], nome[120] = "", link[2048];
+      char l[64] = "", cod[16], nome[120] = "", link[2048], id[256] = "";
       Legenda *d = &lote->itens[lote->n];
       if (!f || f <= q) break;
+      js_texto(q, f, "id", id, sizeof id);
+      if (!strncmp(id, "error.", 6)) { q = js_prox(f); continue; }
       if (*q == '{' && episodioCorreto(q, f, B->temporada, B->episodio) &&
           js_texto(q, f, "lang", l, sizeof l)) {
         // "PORTUGUESE" / "Portuguese (Brazil)" / "por" / "pt-BR" viram um
@@ -1117,6 +1165,9 @@ static void *buscarUmAddon(void *u) {
         if (ling_casa(cod, B->grupos[gi]) && js_texto(q, f, "url", link, sizeof link) &&
             !(strlen(link) >= sizeof d->url && ++cortadas)) {
           snprintf(d->url, sizeof d->url, "%s", link);
+          snprintf(d->id, sizeof d->id, "%s", id);
+          d->addonIndice = i;
+          if (legendaRepetida(lote->itens, lote->n, d)) { q = js_prox(f); continue; }
           js_texto(q, f, "subtitleFileName", nome, sizeof nome);
           if (!nome[0]) js_texto(q, f, "movieReleaseName", nome, sizeof nome);
           snprintf(d->idioma, sizeof d->idioma, "%s", cod);
@@ -1173,29 +1224,49 @@ static unsigned relogioMs(void) {
 // comeco do arquivo com 200, e somar isso como "o fim" daria um hash errado,
 // pior que nenhum (o addon casaria a legenda de OUTRO arquivo).
 static int medirHash(const char *url, unsigned long long tam, char out[17],
-                     const char **motivo) {
+                     char *motivo, size_t nMotivo) {
   long n1 = 0, n2 = 0;
-  int st1 = 0, st2 = 0, e = 0, ok = 0;
+  int st1 = 0, st2 = 0, e1 = 0, e2 = 0, ok = 0, tent = 0;
   char *a, *b = NULL;
-  a = rede_baixar_trecho_st(url, 6, 0, LEGEXTRAS_BLOCO - 1, &n1, &st1, &e, NULL, 0);
-  if (a && st1 == 206 && n1 == LEGEXTRAS_BLOCO)
-    b = rede_baixar_trecho_st(url, 6, (long)(tam - LEGEXTRAS_BLOCO), (long)(tam - 1),
-                              &n2, &st2, &e, NULL, 0);
+  unsigned inicio = relogioMs();
+  a = rede_baixar_trecho_st(url, 6, 0, LEGEXTRAS_BLOCO - 1, &n1, &st1, &e1, NULL, 0);
+  if (a && st1 == 206 && n1 == LEGEXTRAS_BLOCO) {
+    // Seek frio no debrid: ate 8 s e UMA nova tentativa, mas os dois Range
+    // juntos conservam o teto anterior de 12 s. O addon ainda precisa responder
+    // antes dos 30 s da selecao automatica; hash e opcional, legenda nao.
+    while (!b && tent < 2) {
+      unsigned gasto = relogioMs() - inicio;
+      int segundos;
+      if (gasto >= 12000u) break;
+      segundos = (int)((12000u - gasto) / 1000u);
+      if (!segundos) break;
+      if (segundos > 8) segundos = 8;
+      tent++;
+      b = rede_baixar_trecho_st(url, segundos, (long long)(tam - LEGEXTRAS_BLOCO), (long long)(tam - 1),
+                                &n2, &st2, &e2, NULL, 0);
+    }
+  }
   if (b && st2 == 206 && n2 == LEGEXTRAS_BLOCO)
     ok = legextras_hash((const unsigned char *)a, (size_t)n1, (const unsigned char *)b,
                         (size_t)n2, tam, out);
-  *motivo = ok ? "measured" : !a ? "network failure" : st1 != 206 || (b && st2 != 206) ? "no Range support" : "short range";
+  // So numeros: nunca o URL (leva o token do debrid).
+  snprintf(motivo, nMotivo, "%s st1=%d n1=%ld e1=%d st2=%d n2=%ld e2=%d tent=%d",
+           ok ? "measured" : !a ? "first range failed" : st1 != 206 ? "first range not 206"
+           : n1 != LEGEXTRAS_BLOCO ? "first range short" : !b ? "tail range failed"
+           : st2 != 206 ? "tail range not 206" : "tail range short",
+           st1, n1, e1, st2, n2, e2, tent);
   free(a); free(b);
   return ok;
 }
 
 // Prepara o segmento de extras de uma busca, com o hash quando da para
 // medir. Roda no fio da busca, antes dos addons: o hash custa dois pedidos
-// curtos (prazo de 6 s cada) e o resultado vale para todos eles.
+// curtos (ate 12 s no total, incluindo retry) e o resultado vale para todos eles.
 static void prepararExtras(LegBusca *B) {
   LegExtras e;
   char hash[20] = "", nome[256];
   const char *motivo = "no source";
+  char motivoMedido[160];
   pthread_mutex_lock(&legTrava);
   e = legExt;
   pthread_mutex_unlock(&legTrava);
@@ -1214,12 +1285,16 @@ static void prepararExtras(LegBusca *B) {
     if (cache) snprintf(hash, sizeof hash, "%s", hashMedido);
     pthread_mutex_unlock(&legTrava);
     if (cache) motivo = "measured (cached)";
-    else if (medirHash(e.video, e.tamanho, hash, &motivo)) {
+    else {
+      int ok = medirHash(e.video, e.tamanho, hash, motivoMedido, sizeof motivoMedido);
+      motivo = motivoMedido;
+      if (ok) {
       pthread_mutex_lock(&legTrava);
       snprintf(hashDeUrl, sizeof hashDeUrl, "%s", e.video);
       snprintf(hashMedido, sizeof hashMedido, "%s", hash);
       hashTam = e.tamanho;
       pthread_mutex_unlock(&legTrava);
+      }
     }
   }
   if (legextras_segmento(B->extras, sizeof B->extras, nome, e.tamanho, hash) < 0)
@@ -1234,13 +1309,14 @@ static void *buscarLegendas(void *u) {
   (void)u;
   for (;;) {
     LegBusca B;
-    LegFio fio[ADD_MAX];
-    pthread_t th[ADD_MAX];
-    int criado[ADD_MAX] = {0};
+    static LegFio fio[ADD_MAX]; // uma busca de legendas por vez
+    static pthread_t th[ADD_MAX];
+    static int criado[ADD_MAX];
     unsigned t0 = relogioMs();
     int i, nAtivos = 0;
 
     memset(&B, 0, sizeof B);
+    memset(criado, 0, sizeof criado);
     pthread_mutex_init(&B.m, NULL);
     pthread_mutex_lock(&legTrava);
     if (legParar) { fioLegVivo = 0; pthread_mutex_unlock(&legTrava); pthread_mutex_destroy(&B.m); return NULL; }
@@ -1269,7 +1345,7 @@ static void *buscarLegendas(void *u) {
     }
     for (i = 0; i < B.nLotes; i++) if (criado[i]) pthread_join(th[i], NULL);
 
-    // Refazer com extras: a lista nova entra de uma vez, agora que todos
+    // Refazer com extras: soma a lista nova de uma vez, agora que todos
     // responderam (publicarLegendas descarta se a geracao ja mudou).
     if (B.manter && B.lotes) publicarLegendas(&B, 1);
     free(B.lotes);
@@ -1785,16 +1861,15 @@ void addons_legendas_fonte(const char *imdb, const char *tipo, const char *arqui
     return;
   }
   legExt = novo;
-  // Mesmo titulo: a lista atual fica ate a nova terminar. Titulo outro (a
-  // fonte chegou antes da busca do episodio): busca normal.
-  manter = !strcmp(id, legId) && !strcmp(tp, legTipo) && nLegs > 0;
+  // Mesmo titulo: soma resultados, mesmo se a primeira busca ainda roda.
+  manter = !strcmp(id, legId) && !strcmp(tp, legTipo);
   snprintf(legId, sizeof legId, "%s", id);
   snprintf(legTipo, sizeof legTipo, "%s", tp);
   legGeracao++;
   legManter = manter;
   if (!manter) nLegs = 0;
   printf("[legendas] fonte conhecida: refazendo a busca com extras%s\n",
-         manter ? " (lista atual fica ate a nova chegar)" : "");
+         manter ? " (soma a lista atual)" : "");
   fflush(stdout);
   if (fioLegVivo) { pthread_mutex_unlock(&legTrava); return; }
   juntar = fioLegCriado;

@@ -140,8 +140,11 @@ static const char *ajVisualIcone(int op) {
     case AJ_ATMOS: return "aj_monitor-play";
     case AJ_PAUSA_OVERLAY: return "aj_circle-play";
     case AJ_PLR_CLASSIF: return "aj_shield";
+    case AJ_TELA_ABERTURA: return "aj_clapperboard";
     case AJ_REACAO_CREDITOS: return "aj_circle-play";
     case AJ_CW_CONCLUIDO: return "aj_circle-play";
+    case AJ_CW_MINIMO: return "aj_circle-play";
+    case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_AUTO: case AJ_PROXIMO_CONTAGEM: return "aj_circle-play";
     case AJ_SAIDA_PLAYER: return "aj_circle-play";
     case AJ_SEEKR_LIGADO: return "aj_film";
     case AJ_SEEKR_CHAVE: return "aj_film";
@@ -150,7 +153,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_SEEKR_AJUSTE: return "aj_film";
     case AJ_IDIOMA: return "aj_languages";
     case AJ_AUD_LINGUA: return "aj_audio-lines";
-    case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_LEG_FORCADA: return "aj_captions";
+    case AJ_LEG_MOSTRAR: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_LEG_FORCADA: return "aj_captions";
     case AJ_CACHE_SEEK: return "aj_database";
     case AJ_TAM_MAX: case AJ_TAM_MIN: return "aj_database";
     case AJ_TMDB_IDIOMA: return "aj_file-text";
@@ -162,6 +165,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_TAMANHO_UI: return "aj_maximize-2";
     case AJ_TAMANHO_AJUSTES: return "aj_sliders-horizontal";
     case AJ_LAYOUT_AJUSTES: return "aj_layout-list";
+    case AJ_INTERFACE_MODO: return "aj_smartphone";
     case AJ_AVANCADAS: return "aj_eye";
     case AJ_LOGO_TRAILER: return "aj_eye-off";
     case AJ_LEG_SYNC_AUTO: case AJ_LEG_SYNC_AUDIO: return "aj_audio-lines";
@@ -180,7 +184,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_DESCANSO_FONTE: return "aj_film";
     case AJ_PROPORCAO_PADRAO: return "aj_maximize-2";
     case AJ_DTS_AC3: return "aj_audio-lines";
-    case AJ_BRILHO_PLAYER: return "aj_sun-dim";
+    case AJ_BRILHO_PLAYER: case AJ_HDR_UI: return "aj_sun-dim";
     case AJ_MANTER_VIDEO: return "aj_memory-stick";
     case AJ_RELOGIO: case AJ_RELOGIO_12H: return "aj_clock";
     case AJ_VIDRO_CONTORNO: return "aj_layers";
@@ -247,6 +251,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_APOIAR: return "aj_heart";
     case AJ_VERSAO_I: return "aj_info";
     case AJ_ATUALIZAR: return "aj_download";
+    case AJ_AVISO_LEGAL: return "aj_file-text";
     case AJ_VER_REGISTRO: return "aj_scroll-text";
     case AJ_ENVIAR_LOG: return "aj_send";
     case AJ_ENVIO_AUTO: return "aj_scroll-text";

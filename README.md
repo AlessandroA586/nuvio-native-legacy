@@ -1,3 +1,5 @@
+**Android TV and Mobile in one APK:** In Settings > Appearance, choose **Interface mode: TV / Mobile**. TV remains the default and keeps remote navigation. Mobile enables phone layouts, direct touch scrolling, portrait browsing, and the native keyboard; full-screen playback uses landscape. The choice is saved only on this device, and switching keeps the same app, account, and data. See [Android interface modes](docs/android/INTERFACE-MODES.md) for details.
+
 <picture>
   <source media="(max-width: 640px)" srcset="docs/assets/nuvio-readme-banner-mobile.png">
   <img src="docs/assets/nuvio-readme-banner.png" alt="Nuvio Native Legacy. A native TV client for LG webOS, Samsung Tizen and Android TV (experimental). Independent, unofficial fork." width="1600">
@@ -319,6 +321,24 @@ Most design notes are in Portuguese, because I wrote them for myself:
 [MEDIDAS-WEB.md](MEDIDAS-WEB.md), [FERRAMENTAS.md](FERRAMENTAS.md).
 Release notes live in `docs/releases/`. [INSTALL.md](INSTALL.md) and this file are
 in English.
+
+## Disclaimer
+
+Nuvio Legacy is a **media player**. It does not host, store, index, upload or
+distribute any movies, series, channels or other content, and it ships with no
+content sources. Everything it plays comes from add-ons, playlists, servers and
+accounts that **you** choose to install or connect. Those are run by third
+parties that have nothing to do with this project.
+
+- You are responsible for what you add and watch, and for making sure you have
+  the right to access it where you live.
+- This project does not control, endorse or verify any add-on, playlist or
+  service, and does not provide links to unlicensed content.
+- There is nothing hosted here to take down. Copyright notices about a stream
+  should go to whoever hosts it (the add-on, playlist or server), not to this
+  repository.
+- Nuvio Legacy is not affiliated with Stremio, the official Nuvio app, any
+  streaming service, debrid service or TV maker.
 
 ## License
 

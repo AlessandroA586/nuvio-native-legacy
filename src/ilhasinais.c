@@ -295,6 +295,21 @@ void ilhasinais_debrid_baixando(const char *servico, const char *titulo) {
   ilha_avisar("debrid-baixa", ILHA_INFO, "aj_download", txt, 9000u, 0);
 }
 
+// O BOTAO "Sincronizar addons" (#360) da tela de Add-ons: o resultado chega
+// aqui, e nao na tela, porque a pessoa pode sair dela antes de a volta acabar.
+static void addonsAMao(void) {
+  char txt[200];
+  int add = 0, rem = 0, mud = 0, r = sync_manual_addons_estado(&add, &rem, &mud);
+  if (r < 2) return;
+  if (r == 3) {
+    ilha_avisar("sync-addons", ILHA_ERRO, "aj_rotate-cw", i18n("Não foi possível sincronizar os addons."), 5000u, 0);
+    return;
+  }
+  if (add || rem) snprintf(txt, sizeof txt, i18n("Addons sincronizados: %d adicionados, %d removidos"), add, rem);
+  else snprintf(txt, sizeof txt, "%s", i18n(mud ? "Addons atualizados com a conta" : "Addons já estão em dia"));
+  ilha_avisar("sync-addons", ILHA_OK, "aj_rotate-cw", txt, 4000u, 0);
+}
+
 static void sincronia(Uint32 agora) {
   static SyncEstado antes = SYNC_PARADO;
   static Uint32 rodandoDesde;
@@ -314,6 +329,7 @@ static void sincronia(Uint32 agora) {
     }
   } else if (st == SYNC_PRONTO) falhaDita = 0;
   antes = st;
+  addonsAMao();
 }
 
 void ilhasinais_perfil_trocado(void) {

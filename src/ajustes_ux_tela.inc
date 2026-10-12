@@ -19,8 +19,9 @@ static const Item TELA[] = {
       OPC(AJ_FONTE_MANUAL), OPC(AJ_FONTE_PRIORIDADE), OPC(AJ_FONTE_PRAZO),
       OPC(AJ_FONTE_REPOR), OPC(AJ_TAM_MAX),
     ROT("Durante e depois"),
-      OPC(AJ_PAUSA_OVERLAY), OPC(AJ_PLR_CLASSIF), OPC(AJ_REACAO_CREDITOS), OPC(AJ_CW_CONCLUIDO),
-      OPC(AJ_SAIDA_PLAYER), OPC(AJ_PROPORCAO_PADRAO), OPC(AJ_BRILHO_PLAYER),
+      OPC(AJ_PAUSA_OVERLAY), OPC(AJ_TELA_ABERTURA), OPC(AJ_PLR_CLASSIF), OPC(AJ_PULAR_ABERTURA), OPC(AJ_PULAR_RESUMO),
+      OPC(AJ_PULAR_CREDITOS), OPC(AJ_PROXIMO_AUTO), OPC(AJ_PROXIMO_CONTAGEM), OPC(AJ_REACAO_CREDITOS), OPC(AJ_CW_CONCLUIDO), OPC(AJ_CW_MINIMO),
+      OPC(AJ_SAIDA_PLAYER), OPC(AJ_PROPORCAO_PADRAO), OPC(AJ_BRILHO_PLAYER), OPC(AJ_HDR_UI),
     ROT("Miniatura ao avançar"),
       OPC(AJ_SEEKR_LIGADO), OPC(AJ_SEEKR_CHAVE), OPC(AJ_SEEKR_TESTAR), OPC(AJ_SEEKR_FITA),
     MAIS(),
@@ -39,6 +40,9 @@ static const Item TELA[] = {
       OPC(AJ_DV_MKV),
 #endif
       OPC(AJ_CACHE_SEEK), OPC(AJ_MANTER_VIDEO), OPC(AJ_SEEKR_AJUSTE),
+#ifdef NV_ANDROID
+      OPC(AJ_BUFFER),
+#endif
 #ifndef __EMSCRIPTEN__
     // .wgt: sem socket TCP/UDP no navegador, sem motor; P2P escondido (a8e7685d).
     ROT("P2P"), OPC(AJ_P2P_LIGADO), OPC(AJ_P2P_URL), OPC(AJ_P2P_TESTAR), OPC(AJ_P2P_LIMITE),
@@ -47,7 +51,7 @@ static const Item TELA[] = {
   SEC("Idiomas e legendas", "Idioma da interface, áudio, legenda e metadados", "aj_languages"),
     ROT("Idiomas"),
       OPC(AJ_IDIOMA), OPC(AJ_AUD_LINGUA), OPC(AJ_LEG_LINGUA), OPC(AJ_LEG_FORCADA),
-      OPC(AJ_LEG_SYNC_AUTO),
+      OPC(AJ_LEG_MOSTRAR), OPC(AJ_LEG_SYNC_AUTO),
 #ifdef NV_ANDROID
       // Sincronia pelo audio (F06): so o player do Android entrega o PCM. Na LG e
       // na Samsung a linha so diria "indisponivel nesta plataforma" (decisao do
@@ -109,6 +113,9 @@ static const Item TELA[] = {
     ROT("Barra lateral"), OPC(AJ_RAIL_BLUR),
 
   SEC("Aparência", "Cor, transparência, fonte, animações e relógio", "aj_palette"),
+#ifdef NV_TOUCH_UI
+    OPC(AJ_INTERFACE_MODO),
+#endif
     ROT("Cores e vidro"),
       OPC(AJ_TEMA), OPC(AJ_FUNDO), OPC(AJ_COR_LOGO), OPC(AJ_VIDRO), OPC(AJ_VIDRO_CONTORNO),
     ROT("Logo e abertura"),
@@ -163,8 +170,7 @@ static const Item TELA[] = {
     MAIS(),
     ROT("Cartaz em foco"), OPC(AJ_GRAD_CLASSICO),
     ROT("Forma"),
-      OPC(AJ_PROF_BORDA), OPC(AJ_PROF_BRILHO), OPC(AJ_PROF_COBERTURA), OPC(AJ_PROF_POSTERS),
-      OPC(AJ_PROF_CW), OPC(AJ_PROF_EPS), OPC(AJ_PROF_ELENCO), OPC(AJ_PROF_TRAILERS),
+      OPC(AJ_PROF_BRILHO),
     ROT("De onde vem a arte"),
       OPC(AJ_ADDON_POSTER), OPC(AJ_ADDON_FUNDO), OPC(AJ_ADDON_LOGO),
       OPC(AJ_COL_ARTE_CONTA), OPC(AJ_POSTER_INST), OPC(AJ_POSTER_TOKEN),
@@ -195,6 +201,7 @@ static const Item TELA[] = {
     OPC(AJ_GUIA),
     OPC(AJ_NOVIDADES20),
     OPC(AJ_APOIAR),
+    OPC(AJ_AVISO_LEGAL),
     ROTS("App", ""), OPC(AJ_VERSAO_I), OPC(AJ_ATUALIZAR),
     ROTS("Registro", "para quem faz o app"),
       OPC(AJ_VER_REGISTRO), OPC(AJ_ENVIAR_LOG), OPC(AJ_ENVIO_AUTO),

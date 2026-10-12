@@ -107,7 +107,7 @@ async function idTrakt(token, env) {
     // nosso e nao ha como saber se o token venceu, se o client id e de outro
     // aplicativo ou se o Trakt estava fora — tres consertos diferentes.
     console.log(`trakt /users/settings -> ${r.status}`);
-    return null;
+    return r.status === 401 || r.status === 403 ? RECUSADO : null;
   }
   const d = await r.json();
   const slug = d?.user?.ids?.slug || d?.user?.username;
@@ -122,6 +122,53 @@ async function idTrakt(token, env) {
   };
 }
 
+// TOKEN RECUSADO NAO VOLTA A SER PERGUNTADO (pedido do Nuvio, 11/10/2026: o
+// Supabase deles bloqueou este user-agent porque 86% das chamadas a
+// /auth/v1/user eram tokens vencidos repetidos — TVs com a sessao velha sondam
+// uma vez por minuto). Duas travas: o JWT do Supabase traz `exp`, entao token
+// vencido ou ilegivel e recusado aqui sem rede; e um 401/403 de quem emitiu
+// fica no cache como sessao de id vazio pelo mesmo SESSAO_TTL. Falha de rede ou
+// 5xx NAO entra no cache: ai a culpa nao e do token.
+const RECUSADO = false;
+// `exp` do JWT, ou 0 se ilegivel. Token valido fica no cache ate vencer (teto
+// SESSAO_MAX): reverificar a cada 10 min um token de 1 h era 6x as chamadas.
+const SESSAO_MAX = 3600;
+// JWT recusado nao volta a valer: lembra a recusa ate ele vencer (teto de 1 dia).
+const RECUSA_MAX = 86400;
+function jwtExp(token) {
+  try {
+    const b = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const exp = JSON.parse(atob(b + "===".slice((b.length + 3) % 4))).exp;
+    return typeof exp === "number" ? exp : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// CONTADOR DE IDENTIDADE: por isolate, despejado em `ident_hora` (migracao 015)
+// a cada IDENT_LOTE eventos. Sem a tabela, so o log. Recusa acima de 20% vira
+// aviso no log — e o que o Nuvio mediu antes de bloquear (86%).
+const IDENT_LOTE = 50;
+const ident = { verif: 0, recusa: 0, local: 0, assinatura: 0, desde: 0 };
+async function contar(env, t, k) {
+  ident[k]++;
+  // Grava tambem por tempo: o isolate costuma morrer antes de juntar o lote.
+  if (ident.verif + ident.recusa + ident.local + ident.assinatura < IDENT_LOTE && t - ident.desde < 60) return;
+  const { verif, recusa, local, assinatura } = ident;
+  ident.verif = ident.recusa = ident.local = ident.assinatura = 0;
+  ident.desde = t;
+  const msg = `[ident] verif=${verif} recusa=${recusa} vencido_local=${local} assinatura=${assinatura}`;
+  if (recusa > (verif + recusa) * 0.2) console.warn(msg + " RECUSA ALTA"); else console.log(msg);
+  try {
+    await env.DB.prepare(
+      "INSERT INTO ident_hora (hora, verif, recusa, local, assinatura) VALUES (?, ?, ?, ?, ?) " +
+      "ON CONFLICT(hora) DO UPDATE SET verif = verif + excluded.verif, " +
+      "recusa = recusa + excluded.recusa, local = local + excluded.local, " +
+      "assinatura = assinatura + excluded.assinatura"
+    ).bind(Math.floor(t / 3600) * 3600, verif, recusa, local, assinatura).run();
+  } catch {}
+}
+
 async function idNuvio(token, env) {
   const r = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
     headers: { apikey: env.SUPABASE_ANON_KEY, authorization: `Bearer ${token}`,
@@ -129,7 +176,7 @@ async function idNuvio(token, env) {
   });
   if (!r.ok) {
     console.log(`supabase /auth/v1/user -> ${r.status}`);
-    return null;
+    return r.status === 401 || r.status === 403 ? RECUSADO : null;
   }
   const d = await r.json();
   if (!d?.id) return null;
@@ -140,6 +187,102 @@ async function idNuvio(token, env) {
   // `user_metadata.avatar_url` seria inventar um campo que nao foi medido. Quem
   // resolve este caso e o cliente, com a inicial num disco colorido.
   return { id: `nuvio:${d.id}`, nome: limpar(nome, 64), avatar: "" };
+}
+
+const NUVIO_TTL = 6 * 3600;
+const jwksMemoria = new Map();
+function jwtBytes(s) {
+  return Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), c => c.charCodeAt(0));
+}
+function jwtJson(s) { return JSON.parse(new TextDecoder().decode(jwtBytes(s))); }
+
+// null: JWKS indisponivel, usar EXATAMENTE a verificacao antiga.
+// false: token recusado; objeto: assinatura e claims conferidos.
+async function assinaturaNuvio(token, env, t) {
+  let partes, header, claims;
+  try {
+    partes = token.split(".");
+    try { header = jwtJson(partes[0]); } catch { header = {}; }
+    claims = jwtJson(partes[1]);
+    if (header.alg && header.alg !== "ES256") return RECUSADO;
+    if (header.alg && (partes.length !== 3 || header.alg !== "ES256" || typeof header.kid !== "string" ||
+        !header.kid || typeof claims.sub !== "string" || !claims.sub ||
+        !Number.isFinite(claims.exp) || claims.exp <= t || !Number.isFinite(claims.iat))) return RECUSADO;
+  } catch { return RECUSADO; }
+  const url = env.NUVIO_JWKS_URL || `${env.SUPABASE_URL}/auth/v1/.well-known/jwks.json`;
+  let chaves;
+  try {
+    let cache = jwksMemoria.get(url);
+    if (!cache || cache.expira <= t) {
+      cache = await env.DB.prepare("SELECT chaves, expira, rebusca FROM nuvio_jwks WHERE url = ?").bind(url).first();
+      if (cache?.chaves) cache.chaves = JSON.parse(cache.chaves);
+    }
+    const vigente = cache?.expira > t;
+    const conhecida = vigente && cache.chaves.some(k => k.kid === header.kid);
+    if (!vigente || !conhecida) {
+      if (vigente) {
+        // A reserva atomica no D1 limita tambem isolates concorrentes.
+        const reserva = await env.DB.prepare("UPDATE nuvio_jwks SET rebusca = ? WHERE url = ? AND rebusca <= ?")
+          .bind(t, url, t - 60).run();
+        if (!reserva.meta.changes) return RECUSADO;
+      }
+      const r = await fetch(url, { headers: { "user-agent": UA } });
+      if (!r.ok) return null;
+      const d = await r.json();
+      if (!Array.isArray(d?.keys) || !d.keys.length) return null;
+      chaves = d.keys.filter(k => k?.kty === "EC" && k.crv === "P-256" &&
+        typeof k.kid === "string" && (!k.alg || k.alg === "ES256") && (!k.use || k.use === "sig") &&
+        (!k.key_ops || k.key_ops.includes("verify")) && !k.d);
+      if (!chaves.length) return null;
+      // Validar o formato antes de guardar: chave malformada e indisponibilidade.
+      for (const k of chaves) await crypto.subtle.importKey("jwk", k, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+      cache = { chaves, expira: t + NUVIO_TTL, rebusca: vigente ? t : (cache?.rebusca || 0) };
+      await env.DB.prepare("INSERT INTO nuvio_jwks (url, chaves, expira, rebusca) VALUES (?, ?, ?, ?) " +
+        "ON CONFLICT(url) DO UPDATE SET chaves = excluded.chaves, expira = excluded.expira, rebusca = excluded.rebusca")
+        .bind(url, JSON.stringify(chaves), cache.expira, cache.rebusca).run();
+    }
+    jwksMemoria.set(url, cache);
+    chaves = cache.chaves;
+  } catch { return null; }
+  if (header.alg !== "ES256") return RECUSADO;
+  const chave = chaves.find(k => k.kid === header.kid);
+  if (!chave) return RECUSADO;
+  try {
+    const key = await crypto.subtle.importKey("jwk", chave, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+    const ok = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, key,
+      jwtBytes(partes[2]), new TextEncoder().encode(partes[0] + "." + partes[1]));
+    return ok ? claims : RECUSADO;
+  } catch { return RECUSADO; }
+}
+
+async function contaNuvio(token, claims, env, t) {
+  let conta = await env.DB.prepare("SELECT ultima_verificacao, nome, revogado FROM nuvio_conta WHERE sub = ?")
+    .bind(claims.sub).first();
+  if (conta?.revogado && claims.iat <= conta.revogado) return RECUSADO;
+  if (!conta || t - conta.ultima_verificacao >= NUVIO_TTL ||
+      (conta.revogado && conta.ultima_verificacao <= conta.revogado)) {
+    // Reserva antes da rede: tokens distintos e isolates compartilham o teto.
+    const reserva = await env.DB.prepare(
+      "INSERT INTO nuvio_conta (sub, ultima_verificacao, nome, revogado) VALUES (?, ?, '', 0) " +
+      "ON CONFLICT(sub) DO UPDATE SET ultima_verificacao = excluded.ultima_verificacao " +
+      "WHERE nuvio_conta.ultima_verificacao <= ? OR (nuvio_conta.revogado > 0 AND nuvio_conta.ultima_verificacao <= nuvio_conta.revogado)"
+    ).bind(claims.sub, t, t - NUVIO_TTL).run();
+    if (reserva.meta.changes) {
+      let quem;
+      try { quem = await idNuvio(token, env); } catch { quem = null; }
+      if (quem === RECUSADO) {
+        await env.DB.prepare("UPDATE nuvio_conta SET revogado = ? WHERE sub = ?").bind(t, claims.sub).run();
+        return RECUSADO;
+      }
+      if (quem) {
+        await contar(env, t, "verif");
+        await env.DB.prepare("UPDATE nuvio_conta SET nome = ? WHERE sub = ?").bind(quem.nome, claims.sub).run();
+      }
+    }
+    conta = await env.DB.prepare("SELECT ultima_verificacao, nome, revogado FROM nuvio_conta WHERE sub = ?").bind(claims.sub).first();
+    if (conta?.revogado && claims.iat <= conta.revogado) return RECUSADO;
+  }
+  return { id: `nuvio:${claims.sub}`, nome: limpar(claims.user_metadata?.name || claims.user_metadata?.full_name || conta?.nome || "", 64), avatar: "" };
 }
 
 async function quemE(req, env) {
@@ -156,14 +299,42 @@ async function quemE(req, env) {
   // `avatar: ""` aqui quer dizer "nao perguntei agora", e `registrar` so
   // sobrescreve a foto guardada quando ela vem de uma verificacao DE VERDADE.
   // Sem essa regra, os 10 min de cache apagariam a foto de todo mundo.
-  if (cache) return comPerfil(req, via, { id: cache.id, nome: cache.nome, avatar: "" });
+  if (cache && (!cache.id || via === "trakt")) return cache.id ? comPerfil(req, via, { id: cache.id, nome: cache.nome, avatar: "" }) : null;
 
-  const quem = via === "trakt" ? await idTrakt(token, env) : await idNuvio(token, env);
+  if (cache && via === "nuvio") {
+    let alg;
+    try { alg = jwtJson(token.split(".")[0]).alg; } catch {}
+    if (!alg) return comPerfil(req, via, { id: cache.id, nome: cache.nome, avatar: "" });
+  }
+  const exp = via === "nuvio" ? jwtExp(token) : 0;
+  if (via === "nuvio" && exp <= t) { await contar(env, t, "local"); return null; }
+  let quem;
+  let local = false;
+  if (via === "nuvio") {
+    const claims = await assinaturaNuvio(token, env, t);
+    if (claims === null) {
+      if (cache) return comPerfil(req, via, { id: cache.id, nome: cache.nome, avatar: "" });
+      quem = await idNuvio(token, env);
+    } else {
+      local = true;
+      quem = claims && await contaNuvio(token, claims, env, t);
+    }
+  } else quem = await idTrakt(token, env);
+  if (quem) await contar(env, t, local ? "assinatura" : "verif");
+  if (quem === RECUSADO) {
+    await contar(env, t, "recusa");
+    await env.DB.prepare(
+      "INSERT INTO sessao (hash, id, nome, expira) VALUES (?, '', '', ?) " +
+      "ON CONFLICT(hash) DO UPDATE SET id = '', nome = '', expira = excluded.expira"
+    ).bind(hash, exp ? Math.min(exp, t + RECUSA_MAX) : t + SESSAO_TTL).run();
+    return null;
+  }
   if (!quem) return null;
+  if (local) return comPerfil(req, via, quem);
   await env.DB.prepare(
     "INSERT INTO sessao (hash, id, nome, expira) VALUES (?, ?, ?, ?) " +
     "ON CONFLICT(hash) DO UPDATE SET id = excluded.id, nome = excluded.nome, expira = excluded.expira"
-  ).bind(hash, quem.id, quem.nome, t + SESSAO_TTL).run();
+  ).bind(hash, quem.id, quem.nome, exp ? Math.min(exp, t + SESSAO_MAX) : t + SESSAO_TTL).run();
   return comPerfil(req, via, quem);
 }
 
@@ -966,5 +1137,6 @@ export default {
     // Separado de proposito: sem a migracao 010 aplicada, a tabela `sala` nao
     // existe e o lote inteiro (90 dias de retencao) falharia junto.
     try { await env.DB.batch(limpezaSala(env, t)); } catch {}
+    try { await env.DB.prepare("DELETE FROM ident_hora WHERE hora < ?").bind(t - 30 * 86400).run(); } catch {}
   },
 };

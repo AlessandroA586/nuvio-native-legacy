@@ -78,9 +78,9 @@
   1,                /* navegacao horizontal rapida: desligada (fabrica) */
   0,                /* borda no cartaz em foco: ligada (o foco de sempre) */
 
-  1,                /* efeito de profundidade: desligado (fabrica) */
-  28,               /* brilho da borda */
-  10,               /* reflexo */
+  0,                /* efeito de profundidade: ligado (2.0.5: e o reflexo do foco) */
+  28,               /* brilho da borda (sem uso desde a 2.0.5; so a conta) */
+  100,              /* reflexo: a intensidade do efeito */
   0,                /* cobertura da borda */
   0, 0, 0, 0, 0,    /* profundidade em posters, cw, episodios, elenco, trailers */
 
@@ -146,7 +146,7 @@
   0,                /* diagnostico */
   0,                /* teste de velocidade: acao */
   0, 0, 0, 0,       /* explorar, guia, agenda, perfil na barra lateral: ligados */
-  1,                /* trailer do cartaz em foco: desligado (DEFAULT do web) */
+  0,                /* trailer do cartaz em foco: Desligado (AJ_TRAILER_CARTAZ_*; DEFAULT do web) */
   0,                /* itens por fileira: 12, como sempre foi (ver V_ITENS_FIL) */
   TXT_FAMILIA_INTER,/* fonte da interface: independente da legenda */
   0,                /* efeitos visuais do .tpk: automatico (adaptativo, ate o nivel 1) */
@@ -254,3 +254,14 @@
   0, /* P2P space limit (#334): Automatico */
   0, /* Source display order (#400): Por qualidade, local */
   0, /* Sincronia automática da legenda: Ligado, local */
+  0, /* Mostrar no player (#425): Só meus idiomas; sem preferencia, todas */
+  0, /* Aviso legal: acao */
+  0, /* Brilho da interface em HDR (#205): Automatico, local */
+  0, /* Tela de abertura do video (#205): Cinema, local */
+  1, /* minimum progress to enter Continue watching (#326): 1% */
+  0, /* player buffer size (#338, Android only): Automatico */
+  1, 1, /* auto-skip intro and recap (#329): Desligado */
+  1, /* owner decision #256: next episode auto-play is off by default */
+  1, /* auto-skip credits, only with a real start+end marker: Desligado */
+  5, /* owner decision #256: configurable countdown in seconds */
+  0, /* interface mode: TV, including on phones until Mobile is selected */

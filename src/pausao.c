@@ -5,6 +5,7 @@
 #include "text.h"
 #include "anim.h"
 #include "layout.h"
+#include "telefoneui.h"
 #include "idioma.h"
 #include "relogiofim.h"
 #include "plrui.h"
@@ -46,6 +47,12 @@ static Uint32 desdeQuando;     // quando a condicao passou a valer; 0 = nao vale
 static int    idxItem = -1;
 static char   idItem[64];      // o titulo de idxItem (#190; ver pausao.h)
 static char   epLinha[220];
+
+// See pausao.h. Clearing `desdeQuando` makes pausao_atualizar re-arm from NOW
+// on the next frame, which is exactly what the web's schedulePauseOverlay() does.
+void pausao_activity(void) {
+  desdeQuando = 0;
+}
 
 void pausao_fechar(void) {
   visivel = 0;
@@ -278,7 +285,8 @@ static void pausao_desenharCorpo_(Uint32 agora, const PausaoCena *cena) {
     { TxtLinha l2 = txt_linha(TXT_ILHA_NOME, t2, 243, 242, 239, 128);
       TxtLinha l1 = txt_linha(TXT_ILHA_NOME, t1, 243, 242, 239, 235);
       float xr = NV_TELA_W - PAUSAO_X - l2.w;
-      txt_desenhar_alpha(l2, xr, 938.0f, a);
-      txt_desenhar_alpha(l1, xr - 8.0f - l1.w, 938.0f, a); }
+      float timeY = telefoneui_ativo() ? PAUSAO_BARRA_Y - 52.0f : 938.0f;
+      txt_desenhar_alpha(l2, xr, timeY, a);
+      txt_desenhar_alpha(l1, xr - 8.0f - l1.w, timeY, a); }
   }
 }

@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // ATIVIDADE DE REPRODUCAO PARA O SERVICO SOCIAL — o lado do app de
 // POST /v1/atividade (servidor/recomendacoes/, dono: outro modulo).
 //
@@ -45,7 +46,7 @@ typedef struct {
   char imdb[24];        // sempre "tt..." puro, sem ":T:E"
   char midia[8];        // "movie" | "series"
   char titulo[160];
-  char poster[512];
+  char poster[NV_ARTE_URL_MAX];
   int  temporada, episodio;   // 0 em filme
   int  pct;             // 0..100
   int  seg;             // segundos assistidos neste trecho

@@ -316,6 +316,10 @@ IGNORAR = {
     # Motivos do vigia da fonte guardada (fontevolta.c, fontevolta_decidir):
     # vao so para o log "[voltafonte] recuo para a busca: <motivo>".
     "erro do player", "clipe curto", "conferencia falhou",
+    # Vereditos de fontesonda_linha (#364): so printf no fio de sonda,
+    # nunca rotulos de interface nem mensagens do player.
+    "o player recusou um link que responde (apontar para player/TLS/formato)",
+    "o link tambem nao serve pelo nosso cliente", "sem resposta pelo nosso cliente",
     # Hosts de provedor de poster/meta que levam a config no caminho
     # (redeurl.c, rede_url_log): dado de comparacao, nunca tela. "com" casou
     # com a lista de palavras de portugues.
@@ -335,6 +339,8 @@ IGNORAR = {
     # dado de comparacao de home.c (sinalRanking, layout Dinamica), nunca texto
     # desenhado. "top", "popular" e "trending" ja nao acusam por serem ASCII.
     "em alta", "mais vist", "tendência",
+    "linha do tempo",              # comparacao do nome do catalogo em home.c
+    "colecao-exibicao-p%d.txt",     # arquivo local de layouts em vertudo.c
     "-perfil",                      # sufixo de nome de arquivo (ajustes.c)
     "recomendacoes-perfil.txt",     # nome de arquivo do perfil publico (recomenda.c)
     "amigos-vistos.txt",            # nome de arquivo das novidades vistas (socialvis.c)
@@ -399,6 +405,8 @@ IGNORAR = {
     "servidor da conta fora do ar (HTTP %d) · usando a cópia de %s",
     "servidor da conta fora do ar (HTTP %d) · sem cópia salva",
     "conta-%s-p%d.json", "conta-fora",
+    # Chaves da ilha e do avisodisp da pilula "Episódio" dos comentarios (detail.c).
+    "det-com-ep", "dica:comentarios-episodio",
     "conta-addons-pend-",  # prefixo de arquivo da fila offline, nunca texto de tela
     "hdr do pipeline: %s (fonte DV=%d)",
     # Tres marcos de video.c/video_tizen.c. O buffer e montado numa instrucao
@@ -498,6 +506,7 @@ IGNORAR = {
     "inicio alem da duracao",
     "inicio antes de 50% do filme",  # intro.c:399, secao 2: so o log [marcador]
     "codec nao e de texto (ASS/SRT/WebVTT): a TV desenha",
+    "legenda nativa desligada", # faixas.c: argumento ternario do printf, so log
     "confirmada pelo relogio do pipeline", "enviado ao ExoPlayer",
     "dado sem decoder", "sem dado no prazo",
     "escolha manual: a folha abre com o que chegou", "fonte boa o bastante",

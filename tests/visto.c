@@ -28,6 +28,8 @@
 #define OK(s) fprintf(stderr, "ok  %s\n", s)
 
 // ---------------------------------------------------------------- stubs
+unsigned int SDL_GetTicks(void) { return 0; }
+void marco(const char *m) { (void)m; }
 static const char *tokenSimkl = "";
 static int logada = 1;
 const char *simklauth_token(void) { return tokenSimkl; }

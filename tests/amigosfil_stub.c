@@ -9,6 +9,8 @@
 __attribute__((weak)) void colfileiras_sincronizar(void) {}
 __attribute__((weak)) void selospacote_conta_do_blob(const char *blob) { (void)blob; }
 __attribute__((weak)) int selospacote_n(void) { return 0; }
+// home.c reads the touch long-press flag; ponteiro.c is not linked into these tests.
+__attribute__((weak)) int ponteiro_ok_longo(void) { return 0; }
 int  amigosfil_n_colunas(void) { return 1; }
 int  amigosfil_convite(void) { return 1; }
 int  amigosfil_indice_cat(int coluna) { (void)coluna; return -1; }

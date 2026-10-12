@@ -143,7 +143,7 @@ static int vagaPara(const ContaLibItem *novo, int k, int cap,
 // 404 calado. Sem ela, montarItem cai no metahub pelo id; o registro diz qual.
 static void urlInteira(const char *p, const char *f, const char *chave,
                        char *dst, size_t tam, const char *id) {
-  char v[2048];
+  char v[NV_ARTE_URL_MAX + 1];
   size_t n;
   dst[0] = 0;
   if (!js_texto(p, f, chave, v, sizeof v)) return;
@@ -489,8 +489,8 @@ int contalib_aplicar_vistos(void) {
     cat_historico_definir_id(vistos[i].id, vistos[i].tipo, 1);
     k++;
   }
-  if (k) printf("[contalib] %d titulos marcados como vistos pela conta\n", k);
-  if (ke) printf("[contalib] %d episodios vistos vindos da conta\n", ke);
+  if (k) printf("[visto] marcado por conta-importacao pos=0 dur=0 assistido=0s n=%d titulos (sem reproducao local)\n", k);
+  if (ke) printf("[visto] marcado por conta-importacao pos=0 dur=0 assistido=0s n=%d episodios (sem reproducao local)\n", ke);
   // O LOG POR FONTE (vistoep.h). A conta fala de TODOS os titulos num pull so,
   // e este pull roda a cada ciclo: uma linha de total, e uma por titulo SO
   // onde algo foi barrado — e la que se le "a conta ainda acha que foi visto".

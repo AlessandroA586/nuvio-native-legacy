@@ -20,6 +20,7 @@
 #include <time.h>
 #include <limits.h>
 #include <stdint.h>
+#include <math.h>
 
 
 static char token[128], cliente[80];
@@ -338,7 +339,8 @@ static void doBlocoTrakt(CatItem *d, const char *bloco, const char *fim,
   imagemTrakt(bloco, fim, "fanart", d->backdrop, sizeof d->backdrop);
   snprintf(d->backdropTrakt, sizeof d->backdropTrakt, "%s", d->backdrop);
   imagemTrakt(bloco, fim, "logo",   d->logo,     sizeof d->logo);
-  if (!d->backdrop[0]) snprintf(d->backdrop, sizeof d->backdrop, "%s", d->poster);
+  if (!d->backdrop[0] && strlen(d->poster) < sizeof d->backdrop)
+    snprintf(d->backdrop, sizeof d->backdrop, "%s", d->poster);
   if (!d->sinopse[0]) js_texto(bloco, fim, "overview", d->sinopse, sizeof d->sinopse);
   minutos = (int)js_num(bloco, fim, "runtime", 0.0);
   ano     = (int)js_num(bloco, fim, "year", 0.0);
@@ -397,6 +399,16 @@ static int ehProximo(const char *id) {
   return 0;
 }
 int trakt_e_a_seguir(const char *id) { return id && ehProximo(id); }
+int trakt_cw_concluiu(const char *id, long long progressoMs) {
+  char base[24]; int t = 0, e = 0, i;
+  const char *sep = id ? strchr(id, ':') : NULL;
+  if (!sep || sscanf(sep + 1, "%d:%d", &t, &e) != 2) return 0;
+  snprintf(base, sizeof base, "%.*s", (int)(sep - id), id);
+  for (i = 0; i < nUlt; i++)
+    if (!strcmp(ult[i].imdb, base) && ult[i].temporada == t &&
+        ult[i].episodio == e && ult[i].quandoMs > progressoMs) return 1;
+  return 0;
+}
 // O episodio existe no meta do Cinemeta? Os ids em videos[] sao "tt:S:E".
 static int episodioExiste(const char *corpo, const char *serie, int t, int e) {
   char chave[48];
@@ -693,7 +705,8 @@ static int enfeitar(CatItem *d, const char *tipo) {
   }
   if (!d->titulo[0]) js_texto(corpo, NULL, "name", d->titulo, sizeof d->titulo);
   if (!d->sinopse[0]) js_texto(corpo, NULL, "description", d->sinopse, sizeof d->sinopse);
-  if (!d->backdrop[0]) snprintf(d->backdrop, sizeof d->backdrop, "%s", d->poster);
+  if (!d->backdrop[0] && strlen(d->poster) < sizeof d->backdrop)
+    snprintf(d->backdrop, sizeof d->backdrop, "%s", d->poster);
   if (!d->meta[0] || d->restanteMin <= 0) {
     char r[24] = "", ano[24] = "";
     js_texto(corpo, NULL, "runtime", r, sizeof r);
@@ -1283,6 +1296,10 @@ static int filmesAplicar(const FilmesVistos *v, HistoricoPedido pedido) {
   for (size_t i = 0; atual && i < v->n; i++)
     atual = cat_historico_definir_se_geracao(v->ids[i], "movie", 1, pedido.mapa);
   pthread_mutex_unlock(&travaCred);
+  if (atual && v->n) {
+    printf("[visto] marcado por trakt-importacao pos=0 dur=0 assistido=0s n=%zu filmes (sem reproducao local)\n", v->n);
+    fflush(stdout);
+  }
   return atual;
 }
 
@@ -1418,6 +1435,8 @@ int trakt_continuar(CatItem *saida, int max) {
     if (filmes) pthread_join(fioFilmes, NULL);
     continuarFalhou = 1; printf("[trakt] sem resposta\n"); return 0;
   }
+  // A prova de conclusao precisa estar pronta antes de consumir vagas de playback.
+  if (hist) pthread_join(fioHist, NULL); else carregarHistoricoReal(cab, pedido);
   // O corpo e um array na raiz; js_array procura por chave, entao anda-se a mao.
   p = strchr(corpo, '[');
   p = p ? p + 1 : NULL;
@@ -1433,6 +1452,9 @@ int trakt_continuar(CatItem *saida, int max) {
       char imdb[24] = "";
       memset(d, 0, sizeof *d);
       d->progresso = (int)js_num(p, f, "progress", 0.0);
+      if (d->progresso < ajustes_cw_minimo() || d->progresso >= ajustes_cw_concluido()) {
+        p = js_prox(f); continue;
+      }
       // QUANDO foi pausado. E o unico dado desta resposta que permite comparar
       // um item do Trakt com um do progresso da conta Nuvio: sem ele a fileira
       // "Continuar assistindo" tinha de chutar a ordem entre as duas fontes.
@@ -1466,6 +1488,8 @@ int trakt_continuar(CatItem *saida, int max) {
         snprintf(d->imdb, sizeof d->imdb, "%s", imdb);
         snprintf(d->tipo, sizeof d->tipo, "movie");
       }
+      // So o historico posterior do MESMO episodio confirma avancar um pausado.
+      if (trakt_cw_concluiu(d->imdb, d->retomadoMs)) { p = js_prox(f); continue; }
       // O ID DO REGISTRO DE PLAYBACK, guardado aqui e em lugar nenhum mais.
       //
       // O Trakt remove um item da barra de retomada por DELETE
@@ -1493,12 +1517,11 @@ int trakt_continuar(CatItem *saida, int max) {
       // Enfeitar fica para DEPOIS do laco, em paralelo. Aqui o item ja esta
       // montado: so falta a arte e a sinopse, que vem da rede.
       n++;
+      n = dedupObras(saida, n);
     }
     p = js_prox(f);
   }
   free(corpo);
-  n = dedupObras(saida, n);
-  if (hist) pthread_join(fioHist, NULL); else carregarHistoricoReal(cab, pedido);
   // Os filmes vistos seguem rodando durante os GETs de "a seguir" e do enfeite
   // abaixo; so sao esperados no fim, antes de a fileira sair.
   if (!filmes) carregarFilmesVistos(cab, pedido);
@@ -1511,7 +1534,7 @@ int trakt_continuar(CatItem *saida, int max) {
   { int u, nTar = 0, acabou = 0;
     static TarefaProx tar[TK_ULT_MAX];
     static int tarDe[TK_ULT_MAX];   // ult[u] -> indice em tar[], ou -1
-    for (u = 0; u < nUlt; u++) {
+    for (u = 0; ajustes_cw_proximo() && u < nUlt; u++) {
       int k, ja = 0;
       size_t L = strlen(ult[u].imdb);
       tarDe[u] = -1;
@@ -1524,7 +1547,7 @@ int trakt_continuar(CatItem *saida, int max) {
       tarDe[u] = nTar++;
     }
     consultarProximos(tar, nTar, cab);
-    for (u = 0; u < nUlt; u++) {
+    for (u = 0; ajustes_cw_proximo() && u < nUlt; u++) {
       int k, ja = 0, alvo, proxT = ult[u].temporada, proxE = ult[u].episodio + 1;
       size_t L = strlen(ult[u].imdb);
       if (ult[u].temporada <= 0 || ult[u].episodio <= 0) continue;
@@ -1544,16 +1567,14 @@ int trakt_continuar(CatItem *saida, int max) {
         }
         if (r->estado == 1) { proxT = r->t; proxE = r->e; }
       }
-      // LISTA CHEIA: o "a seguir" entra no lugar do item mais antigo se for
-      // mais novo que ele. Sem isto, com `max` pausados a fileira nunca
-      // mostrava um "a seguir", por mais recente que fosse (medido: 12 de 12
-      // pausados, 25 series no historico, zero "a seguir").
+      // Pausados validos nunca cedem lugar a sugestoes de outras obras.
       if (n < max) alvo = n++;
       else {
-        int vel = 0;
-        for (k = 1; k < n; k++) if (saida[k].retomadoMs < saida[vel].retomadoMs) vel = k;
-        if (saida[vel].retomadoMs >= ult[u].quandoMs) continue;
-        printf("[trakt] a seguir substitui %s (%lld)\n", saida[vel].imdb, saida[vel].retomadoMs);
+        int vel = -1;
+        for (k = 0; k < n; k++)
+          if (saida[k].progresso == 0 &&
+              (vel < 0 || saida[k].retomadoMs < saida[vel].retomadoMs)) vel = k;
+        if (vel < 0 || saida[vel].retomadoMs >= ult[u].quandoMs) continue;
         alvo = vel;
       }
       { CatItem *d = &saida[alvo];
@@ -1570,12 +1591,14 @@ int trakt_continuar(CatItem *saida, int max) {
     }
     if (nTar)
       printf("[trakt] a seguir conferido no Trakt: %d serie(s), %d sem proximo\n", nTar, acabou); }
-  // MAIS RECENTE PRIMEIRO, pausado ou "a seguir" — e a ordem em que a fileira
-  // corta quando ha mais itens que lugares. Insercao: n <= CONT_MAX.
+  // Pausados primeiro; recencia dentro de cada grupo. Insercao: n <= CONT_MAX.
   { int a, b;
     for (a = 1; a < n; a++) {
       CatItem t = saida[a];
-      for (b = a - 1; b >= 0 && saida[b].retomadoMs < t.retomadoMs; b--) saida[b + 1] = saida[b];
+      for (b = a - 1; b >= 0 &&
+           ((saida[b].progresso == 0 && t.progresso > 0) ||
+            ((saida[b].progresso == 0) == (t.progresso == 0) &&
+             saida[b].retomadoMs < t.retomadoMs)); b--) saida[b + 1] = saida[b];
       saida[b + 1] = t;
     } }
   // O MAPA DE EPISODIOS VISTOS NAO SAI DAQUI. Ele e buscado por SERIE, em
@@ -2040,16 +2063,34 @@ static void *fioScrobble(void *u) {
   }
 }
 
+// Recusa. Na SAIDA a sessao acabou mesmo sem chamada: com o start ainda "em
+// pe" a proxima abertura do mesmo titulo nao mandaria /scrobble/start.
+static int recusar(int evento) {
+  if (evento == SCR_EV_SAIU) {
+    pthread_mutex_lock(&travaScr); scrEstado.ativo = 0; pthread_mutex_unlock(&travaScr);
+  }
+  return SCR_NADA;
+}
+
 // Enfileira. Devolve a acao decidida (SCR_NADA quando nao ha o que mandar).
-int trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg) {
+int trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg, double assistidoSeg,
+                   int assistiu) {
   int acao;
   double pct;
   pthread_t t;
-  if (!ligado || !imdb || !*imdb || durSeg <= 1.0) return SCR_NADA;
+  if (!ligado || !imdb || !*imdb || !isfinite(posSeg) || !isfinite(durSeg) ||
+      !isfinite(assistidoSeg) || durSeg < 120.0 || assistidoSeg < 5.0) return recusar(evento);
   pct = 100.0 * posSeg / durSeg;
+  // Valida ANTES da vaga pendente: nem um stop sem reproducao entra na fila.
+  if (evento == SCR_EV_SAIU && pct >= 90.0 && !assistiu) return recusar(evento);
   pthread_mutex_lock(&travaScr);
   acao = scrobble_decidir(&scrEstado, evento, imdb, pct);
   if (acao != SCR_NADA) {
+    if (acao == SCR_STOP) {
+      printf("[visto] marcado por trakt-scrobble-player pos=%.3f dur=%.3f assistido=%.3fs id=%s\n",
+             posSeg, durSeg, assistidoSeg, imdb);
+      fflush(stdout);
+    }
     scrPend.acao = acao; scrPend.pct = pct; scrPend.tem = 1;
     snprintf(scrPend.id, sizeof scrPend.id, "%s", imdb);
     if (!scrFioVivo) {
@@ -2063,8 +2104,8 @@ int trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg) {
 }
 
 // Saida do player: stop (>= 90%) ou pause, como sempre foi.
-void trakt_marcar(const char *imdb, double posSeg, double durSeg) {
-  trakt_scrobble(SCR_EV_SAIU, imdb, posSeg, durSeg);
+void trakt_marcar(const char *imdb, double posSeg, double durSeg, double assistidoSeg, int assistiu) {
+  trakt_scrobble(SCR_EV_SAIU, imdb, posSeg, durSeg, assistidoSeg, assistiu);
 }
 
 // --- WATCHLIST: escrever e ler ------------------------------------------------

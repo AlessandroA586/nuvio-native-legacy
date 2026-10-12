@@ -34,6 +34,10 @@ _Static_assert(AJ_SALVOS_LOCAL == 0 && AJ_SALVOS_TRAKT == 1 && AJ_SALVOS_SIMKL =
 
 // ---------------------------------------------------------------- stubs
 
+static int proximoTeste = 1;
+int ajustes_cw_proximo(void) { return proximoTeste; }
+int ajustes_cw_minimo(void) { return 1; }
+int ajustes_cw_concluido(void) { return 90; }
 static const char *tokenAtual = "";
 const char *simklauth_token(void) { return tokenAtual; }
 const char *nuvem_simkl_cliente(void) { return "cid-teste"; }
@@ -234,9 +238,9 @@ static void retomada(void) {
   // novo: a serie ja esta pausada no S01E05.
   assert(n == 4);
   for (i = 0; i < n; i++) assert(strncmp(v[i].imdb, "tt0903747:1:6", 13));
-  // Mais recente primeiro: Severance (20/01) antes de Inception (15/01 11:15).
-  assert(!strcmp(v[0].imdb, "tt11280740:2:3"));
-  assert(!strcmp(v[1].imdb, "tt1375666"));
+  // Pausados primeiro; sugestoes ficam nos lugares restantes.
+  assert(!strcmp(v[0].imdb, "tt1375666"));
+  assert(!strcmp(v[3].imdb, "tt11280740:2:3"));
   assert(simkl_e_a_seguir("tt11280740:2:3"));
   assert(!simkl_e_a_seguir("tt1375666"));
   assert(batidas[0] == 1 && batidas[1] == 1 && batidas[2] == 1);
@@ -252,11 +256,17 @@ static void retomada(void) {
   assert(n == 4 && batidas[0] == 3 && batidas[1] == 2 && batidas[2] == 2);
   OK("retomada: /sync/activities igual nao baixa all-items de novo");
 
-  // Lista cheia: o "a seguir" mais novo toma o lugar do pausado mais velho.
+  // Lista cheia: a sugestao nao expulsa nenhum pausado.
   n = simkl_continuar(v, 3);
-  assert(n == 3 && !strcmp(v[0].imdb, "tt11280740:2:3"));
-  for (i = 0; i < n; i++) assert(strcmp(v[i].imdb, "tt2560140:2:3"));   // o de 14/01 saiu
-  OK("retomada: com a fileira cheia, o a seguir mais novo substitui o mais velho");
+  assert(n == 3 && !strcmp(v[0].imdb, "tt1375666"));
+  for (i = 0; i < n; i++) assert(strcmp(v[i].imdb, "tt11280740:2:3"));
+  assert(!strcmp(v[2].imdb, "tt2560140:2:3"));
+  OK("retomada: com a fileira cheia, todos os pausados ficam");
+  proximoTeste = 0;
+  n = simkl_continuar(v, 12);
+  assert(n == 3 && !simkl_e_a_seguir("tt11280740:2:3"));
+  proximoTeste = 1;
+  OK("retomada: OFF filtra sugestoes antes da disputa");
 
   // Tirar da retomada: DELETE /sync/playback/<id do registro>.
   n = simkl_continuar(v, 12);

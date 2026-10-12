@@ -67,6 +67,16 @@ static void stats(void) {
   CHECK(addonstats_mudo_seguidas("Mudo") == 2);
   addonstats_carregar("lixo sem tab\n\tsem nome\nX\tabc\nY\t10:1 20:x 30:0\n");
   CHECK(addonstats_mudo_seguidas("Y") >= 0);   // arquivo estragado nao quebra
+
+  // 128 add-ons + 160 scrapers cabem sem expulsar o primeiro nome.
+  addonstats_zerar();
+  for (i = 0; i < 288; i++) {
+    char nome[48];
+    snprintf(nome, sizeof nome, "Origem %d", i);
+    addonstats_registrar(nome, 30000, 0);
+  }
+  CHECK(addonstats_mudo_seguidas("Origem 0") == 1);
+  CHECK(addonstats_mudo_seguidas("Origem 287") == 1);
 }
 
 static void abertura(void) {
@@ -93,6 +103,15 @@ static void abertura(void) {
   // Quem ja tocou nunca vence.
   g.tocou = 1; g.proximaSemPerda = 1; g.desdeMs = 99999;
   CHECK(!inicio_abre_vencida(&g));
+  // Quadro ja desenhado (DV na TCL, sem "pronto" ainda) nunca vence (12/10).
+  g.tocou = 0; g.quadro = 1;
+  CHECK(!inicio_abre_vencida(&g));
+  // 4K/DV sem quadro: 60 s, nao 30 (Silo 2160p DV levou 24 s ao quadro).
+  g.quadro = 0; g.pesado = 1; g.dadoChegando = 1; g.desdeMs = 45000;
+  CHECK(inicio_abre_prazo_ms(&g) == INICIO_ABRE_PESADO_MS);
+  CHECK(!inicio_abre_vencida(&g));
+  g.desdeMs = INICIO_ABRE_PESADO_MS + 1;
+  CHECK(inicio_abre_vencida(&g));
 }
 
 static void motivo(void) {
@@ -105,10 +124,18 @@ static void motivo(void) {
   CHECK(inicio_motivo(&s) == INI_ESPERA_UM);
   s.pendenteMudo = 1;
   CHECK(inicio_motivo(&s) == INI_ESPERA_MUDO);
+  s.fontesChegaram = 1;
+  CHECK(inicio_motivo(&s) == INI_ESPERA_VARIOS);
+  s.fontesChegaram = 0;
+  CHECK(inicio_motivo(&s) == INI_ESPERA_MUDO);
   s.pendentes = 3;
   CHECK(inicio_motivo(&s) == INI_ESPERA_VARIOS);
   s.pendentes = 0; s.semResposta = 1;
   CHECK(inicio_motivo(&s) == INI_NAO_RESPONDEU);
+  s.fontesChegaram = 1;
+  CHECK(inicio_motivo(&s) == INI_NADA);
+  s.fontesChegaram = 0; s.semResposta = 2;
+  CHECK(inicio_motivo(&s) == INI_NADA);
   s.semResposta = 0;
   CHECK(inicio_motivo(&s) == INI_NADA);
   s.fase = INI_FASE_VERIFICA;

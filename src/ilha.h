@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // ILHA — o relogio no topo da tela, numa pilula, que se ABRE para os avisos.
 //
 // Pedido do dono (01/10/2026): "ilha dinamica estilo iOS". Em repouso a
@@ -78,7 +79,7 @@ typedef struct {
   char chips[3][32];        // generos, em pilulas
   char estado[80];          // na base da coluna ("há 12 min")
   char rodape[120];         // a direita dos botoes ("Recusar não avisa a pessoa.")
-  char arte[1024];          // 480x270; com `rosto`, ele vai no canto da arte
+  char arte[NV_ARTE_URL_MAX];          // 480x270; com `rosto`, ele vai no canto da arte
   char rosto[256];          // url do avatar (vazio = so a inicial de rostoNome)
   char rostoNome[64];
   char icone[32];           // sem arte nem rosto: ladrilho 150 com este icone
@@ -227,7 +228,7 @@ typedef struct {
   char imdb[64];
   int  serie, t, e;      // t/e = 0 em filme
   char titulo[160], epNome[120], sinopse[420];
-  char poster[1024], logo[512], arte[512];   // arte: still do episodio ou fundo
+  char poster[NV_ARTE_URL_MAX], logo[512], arte[512];   // arte: still do episodio ou fundo
   float progresso;       // 0..1 na ILHA_VIVO; < 0 sem barra
   int  restanteMin;      // ILHA_VIVO
   char quando[24];       // ILHA_ESTREIA: "hoje" (ja traduzido) ou ""

@@ -360,9 +360,9 @@ int main(void) {
                   "3\t1\t0\t0\t#43A047\tInfantil\t\tdeploy/app/art/07.jpg\n"
                   "4\t0\t0\t0\t#8E24AA\tVisitas\t\t\n", 1);
     perfis_carregar_ativo();
-    perfis_definir_ativo(3); assert(prog_gravar_local("tt-cont-b", 0, 0, 1000, 6000));
-    perfis_definir_ativo(2); assert(prog_gravar_local("tt-cont-b", 0, 0, 2300, 6000));
-    perfis_definir_ativo(1); assert(prog_gravar_local("tt-cont-a", 2, 4, 1560, 2640));
+    perfis_definir_ativo(3); assert(prog_gravar_local("tt-cont-b", 0, 0, 1000, 6000, -1));
+    perfis_definir_ativo(2); assert(prog_gravar_local("tt-cont-b", 0, 0, 2300, 6000, -1));
+    perfis_definir_ativo(1); assert(prog_gravar_local("tt-cont-a", 2, 4, 1560, 2640, -1));
     ajustesDeTeste(0);
     perfilsel_iniciar();
     captura("/tmp/nuvio-perfilsel-continuar-1.bmp");

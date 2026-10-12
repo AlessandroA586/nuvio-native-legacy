@@ -58,7 +58,7 @@ static jmethodID mAbrirPosicao;
 static jmethodID mAbrirRetomada;
 // F07 (optional, like abrirPosicao): cache(mb) and ganho(pct). A shell without
 // them simply has no seek cache and no boost.
-static jmethodID mCache, mGanho;
+static jmethodID mCache, mGanho, mBuffer;
 // #202 (opcional, como os de cima): velocidade(centesimos). Casca sem ele =
 // sem a linha da velocidade.
 static jmethodID mVelocidade;
@@ -80,6 +80,8 @@ static int resolverMetodos(JNIEnv *env) {
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mAbrirRetomada = NULL; }
   mCache = (*env)->GetStaticMethodID(env, gCls, "cache", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mCache = NULL; }
+  mBuffer = (*env)->GetStaticMethodID(env, gCls, "buffer", "(I)V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mBuffer = NULL; }
   mGanho = (*env)->GetStaticMethodID(env, gCls, "ganho", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mGanho = NULL; }
   mVelocidade = (*env)->GetStaticMethodID(env, gCls, "velocidade", "(I)V");
@@ -244,6 +246,9 @@ static Uint32 legAte;
 
 static char urlAtual[4096];
 static char cabecalhos[2048];
+// ULTIMA JANELA ENTREGUE ao Kotlin (dedupe de reenvio; ver janelaSeMudou, la
+// embaixo, onde a regra vive junto das funcoes que enviam).
+static int envX, envY, envW, envH, envEnc, temEnv;
 // prontoLoad = o player preparou (evento 1); primeiroQuadro = evento 8.
 // video_pronto() so e 1 com imagem (ver o cabecalho).
 static volatile int superficieEstavel;
@@ -267,6 +272,7 @@ static unsigned sessao;
 // F07: the player arms the next video_tocar with its cache limit
 // (cacheboost_backend_cache); trailers never arm, so they stay uncached and
 // at 100%. `cacheSessao` survives the reconnection reopens of that video.
+static int bufferPreset, bufferEnviado;
 static int cacheArmado = -1, cacheSessao, cacheEnviado, playerSessao;
 static int ganhoEnviado = CB_VOL_NORMAL;
 static int retomadaInicialEstado = -1;
@@ -404,6 +410,39 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativePos(JNIEnv *
   posMs = ms;
 }
 
+// ESTATISTICAS AO VIVO (video.h, VideoStats): o Kotlin manda 1x/s, do fio
+// principal, o que ele CONTA — bytes do socket (ParaleloDataSource), buffer
+// (bufferedPosition), conexoes abertas, 1o byte, host final e quadros
+// (AnalyticsListener). A trava e curta: o app copia no quadro dele.
+static pthread_mutex_t travaStats = PTHREAD_MUTEX_INITIALIZER;
+static VideoStats statsAndroid;
+static int statsValido;
+JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeStats(JNIEnv *env, jclass cls,
+    jlong bytes, jint bufferMs, jint alvoMs, jint conexoes, jint primeiroByteMs,
+    jlong perdidos, jlong quadros, jstring host) {
+  char h[96];
+  (void)cls;
+  deJString(env, host, h, sizeof h);
+  pthread_mutex_lock(&travaStats);
+  video_stats_vazio(&statsAndroid);
+  statsAndroid.bytes = bytes >= 0 ? (long long)bytes : -1;
+  statsAndroid.bufferSeg = bufferMs >= 0 ? bufferMs / 1000.0 : -1.0;
+  statsAndroid.bufferAlvoSeg = alvoMs > 0 ? alvoMs / 1000.0 : 0.0;
+  statsAndroid.conexoes = conexoes;
+  statsAndroid.primeiroByteMs = primeiroByteMs;
+  statsAndroid.quadrosPerdidos = perdidos;
+  statsAndroid.quadros = quadros;
+  snprintf(statsAndroid.host, sizeof statsAndroid.host, "%s", h);
+  statsValido = 1;
+  pthread_mutex_unlock(&travaStats);
+}
+void video_estatisticas(VideoStats *s) {
+  pthread_mutex_lock(&travaStats);
+  if (statsValido && ativo) *s = statsAndroid;
+  else video_stats_vazio(s);
+  pthread_mutex_unlock(&travaStats);
+}
+
 JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeRetomada(JNIEnv *env, jclass cls, jint geracao, jint aceita) {
   (void)env; (void)cls;
   pthread_mutex_lock(&travaRetomada);
@@ -455,6 +494,14 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeDecoder4k(JN
   (void)env; (void)cls;
   stream_definir_decoder4k(hevc, avc, vp9, av1);
   printf("[tv] decoder 4K: hevc=%d avc=%d vp9=%d av1=%d\n", (int)hevc, (int)avc, (int)vp9, (int)av1);
+  fflush(stdout);
+}
+
+JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeErroTexto(JNIEnv *env, jclass cls, jstring texto) {
+  char t[512];
+  (void)cls;
+  deJString(env, texto, t, sizeof t);
+  printf("[video] android erro: %s\n", t);
   fflush(stdout);
 }
 
@@ -533,8 +580,10 @@ static int abrirSessao(int inicioMs, int fracao) {
   tocandoDesde = 0; semDecoderAudio = 0; erroTxt[0] = 0; reconErroVideo = 0;
   pausaPedida = pausaVista = 0;
   hdrAtual = "none"; dvAtual = atmosAtual = 0;
+  pthread_mutex_lock(&travaStats); statsValido = 0; pthread_mutex_unlock(&travaStats);
   nAudio = nLeg = 0; audioAtual = 0; legAtual = -1; legAte = 0;
   nNovasA = nNovasL = 0;
+  temEnv = 0;   // a SurfaceView nova ainda nao recebeu janela nenhuma
   if (!travaLeg) travaLeg = SDL_CreateMutex();
   unsigned geracao = novaRetomada(-1);
   env = ambiente();
@@ -542,6 +591,12 @@ static int abrirSessao(int inicioMs, int fracao) {
   // F07: the cache limit is sticky in Kotlin (read at each open), so it only
   // crosses JNI when it changes. Posted before the open on the same main
   // thread queue, it is in place when the open runs.
+  // #338: buffer preset, sticky in Kotlin like the cache limit.
+  if (mBuffer && bufferPreset != bufferEnviado) {
+    (*env)->CallStaticVoidMethod(env, gCls, mBuffer, (jint)bufferPreset);
+    fimChamada(env);
+    bufferEnviado = bufferPreset;
+  }
   if (mCache && cacheSessao != cacheEnviado) {
     (*env)->CallStaticVoidMethod(env, gCls, mCache, (jint)cacheSessao);
     fimChamada(env);
@@ -610,6 +665,7 @@ int video_tocar_retomada(const char *u, double segundos, double pct) {
 }
 int video_tocar_posicao(const char *u, double segundos) { return video_tocar_retomada(u, segundos, 0.0); }
 
+void cacheboost_backend_buffer(int p) { bufferPreset = p >= 0 && p <= 3 ? p : 0; }
 void cacheboost_backend_cache(int mb) { cacheArmado = mb > 0 ? mb : 0; }
 void cacheboost_backend_ganho(int pct) {
   if (pct < CB_VOL_MIN) pct = CB_VOL_MIN;
@@ -695,13 +751,26 @@ void video_buscar(double s) {
 // que e o que o plano de video da LG e o LetterBox da Samsung fazem com uma
 // janela lisa — o nucleo conta com isso (trailer "Original", janela antes do
 // videoInfo). 0: o retangulo e exato, ja calculado com a proporcao (recorte).
+// ULTIMA JANELA ENTREGUE (dedupe). O nucleo manda o retangulo de novo quando
+// dois modos de aspecto coincidem no mesmo filme — Ajustar largura e Original
+// num 2.39:1, por exemplo — e a cada releitura do videoInfo; o log da TCL
+// (11/10) mostrou "1920x1037" pedido duas vezes seguidas. O Kotlin nao faria
+// nada com o repetido (layout identico) e o dvtrace enchia de "changed" sem
+// mudanca. O reaplicar do trailer chama janelaKt DIRETO, fora do dedupe: ele
+// existe justamente para reenviar. abrirSessao zera — a SurfaceView de cada
+// abertura comeca sem janela nenhuma e precisa receber ate o retangulo igual.
 static void janelaKt(int x, int y, int w, int h, int encaixa) {
   JNIEnv *env = ambiente();
-  if (!env) return;
+  if (!env) return;   // sem JNI nao ha entrega: o dedupe so lembra do que chegou
+  envX = x; envY = y; envW = w; envH = h; envEnc = encaixa; temEnv = 1;
   (*env)->CallStaticVoidMethod(env, gCls, mJanela, (jint)x, (jint)y, (jint)w, (jint)h, (jint)encaixa);
   fimChamada(env);
 }
-void video_janela(int x, int y, int w, int h) { janelaKt(x, y, w, h, 1); }
+static void janelaSeMudou(int x, int y, int w, int h, int encaixa) {
+  if (temEnv && x == envX && y == envY && w == envW && h == envH && encaixa == envEnc) return;
+  janelaKt(x, y, w, h, encaixa);
+}
+void video_janela(int x, int y, int w, int h) { janelaSeMudou(x, y, w, h, 1); }
 
 // RECORTE DE FONTE PELO RETANGULO DE DESTINO AMPLIADO. Mesma conta do ROI do
 // .tpk (video_tpk.c, #178): desenhar o recorte (sx,sy,sw,sh) dentro de
@@ -720,7 +789,7 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
   // Quadro INTEIRO num destino que o chamador ja calculou (Original encaixado,
   // Esticar, Encaixar altura): o destino e EXATO, nao se encaixa de novo —
   // senao Esticar virava Original.
-  if (sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh) { temUlt = 0; janelaKt(dx, dy, dw, dh, 0); return; }
+  if (sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh) { temUlt = 0; janelaSeMudou(dx, dy, dw, dh, 0); return; }
 
   ex = (double)dw / (double)sw;
   ey = (double)dh / (double)sh;
@@ -733,7 +802,7 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
          sx, sy, sw, sh, qw, qh, X, Y, W, H);
   fflush(stdout);
   ultX = X; ultY = Y; ultW = W; ultH = H; temUlt = 1;
-  janelaKt(X, Y, W, H, 0);
+  janelaSeMudou(X, Y, W, H, 0);
 }
 int  video_recorte_fonte(void) { return 1; }
 void video_recorte_reaplicar(void) { if (temUlt) janelaKt(ultX, ultY, ultW, ultH, 0); }
@@ -753,6 +822,7 @@ unsigned video_bufferando_ms(void) {
 }
 void video_definir_dv(int dv) { (void)dv; }
 void video_definir_cabecalhos(const char *c) { snprintf(cabecalhos, sizeof cabecalhos, "%s", c ? c : ""); }
+const char *video_cabecalhos(void) { return cabecalhos; }
 void video_definir_mp4(int m) { (void)m; }
 int  video_tocando(void) { return tocando; }
 // 1 SO COM IMAGEM: e o que abre o furo (player_com_video). Fonte sem quadro
@@ -766,6 +836,7 @@ int  video_pronto(void) {
 }
 int  video_ativo(void) { return ativo; }
 int  video_superficie_estavel(void) { return superficieEstavel; }
+int  video_quadro_visto(void) { return primeiroQuadro; }
 int  video_falhou(void) { return falhou; }
 int  video_audio_nao_suportado(void) { return semDecoderAudio; }
 int  video_seek_desistiu(void) { return 0; }

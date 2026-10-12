@@ -1,5 +1,5 @@
 #!/bin/bash
-# URL de cartaz comprida (#361): ~600 caracteres com query string do JSON do
+# URL de cartaz comprida (#361): 600/1173/2000 bytes com query string do JSON do
 # addon ao CatItem, ao pedido de textura (rede, chave, nome no disco), aos
 # Salvos gravados e relidos, a biblioteca da conta e ao jornal da conta. Ver
 # tests/poster_url_longa.c.

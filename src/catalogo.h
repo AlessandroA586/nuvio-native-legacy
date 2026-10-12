@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // Catalogo de titulos vindo de um arquivo, no lugar das listas fixas no codigo.
 //
 // Existe porque testar layout com nomes inventados esconde problemas reais: os
@@ -18,7 +19,17 @@
 // o item em si custa ~3,5 KB de texto.
 //
 // CAT_MAX sobrevive so como teto de seguranca contra resposta absurda.
+//
+// ANDROID: 8000. O dono liberou fileiras "ilimitadas" so no Android (2.0.4):
+// CAT_FIL_MAX la e 224, e 224 fileiras x 24 itens = 5376 titulos, mais o
+// "Continuar assistindo" e as listas. O vetor continua crescendo SOB DEMANDA
+// (garantirEspaco dobra a partir de 64), entao o numero maior nao custa nada a
+// quem tem 7 fileiras; so deixa de cortar quem tem 150.
+#ifdef NV_ANDROID
+#define CAT_MAX 8000
+#else
 #define CAT_MAX 2000
+#endif
 #define CAT_TEMP_MAX 64
 // Elenco guardado por titulo. O Cinemeta traz 3-5 nomes no `cast` do meta e era
 // isso que a tela mostrava (issue #94); quem completa a fileira e o TMDB, que
@@ -36,10 +47,9 @@ typedef struct {
   char backdropCatalogo[512]; // background vindo do addon/Cinemeta
   char backdropTmdb[512];     // backdrop vindo do TMDB
   char backdropTrakt[512];    // fanart vindo do Trakt
-  // 1024 e nao 512 (#200): a URL de cartaz que o AIOMetadata monta para o
-  // PostersPlus passa de 700 bytes e o corte calado levava o idioma embora.
-  // Mesmo teto do cache de textura (NV_TEX_URL_MAX, tex_cache.h).
-  char poster[1024];
+  // #433: PostersPlus envia 1173 bytes; ate 2047 bytes mais NUL.
+  // Mesmo teto nas copias e no cache de textura (arteurl.h).
+  char poster[NV_ARTE_URL_MAX];
   char logo[512];      // vazio quando o titulo nao tem logo
   // Language evidence belongs to this exact logo, never to another selection.
   char logoIdioma[8];
@@ -118,6 +128,7 @@ typedef struct {
   // fotosDoElenco em descoberta.c). Era descartado; e por ele que se chega a
   // COLECAO do filme, que o TMDB so expoe por id proprio.
   long tmdb;
+  int posCreditos; // TMDB 179430/179431: manter o video ate o fim real
   // QUANDO isto foi visto pela ultima vez, em ms desde a epoca. 0 = nao se sabe.
   //
   // Existe para ordenar a fileira "Continuar assistindo", que agora une DUAS
@@ -347,7 +358,9 @@ int cat_historico_definir_se_geracao(const char *imdb, const char *tipo,
                                      int visto, unsigned long long geracao);
 
 void cat_salvar_progresso(int indice, double posSeg, double durSeg);
-void cat_salvar_progresso_ep(int indice, double posSeg, double durSeg, int temporada, int episodio);
+// `tocou`: ver ProgRegistro (progresso.h).
+void cat_salvar_progresso_ep(int indice, double posSeg, double durSeg, int temporada, int episodio,
+                             int tocou);
 
 // So a MEMORIA do item (barra, minutos restantes, episodio em andamento), sem
 // tocar em arquivo. E o que o sync usa para o que veio da conta — a decisao de
@@ -391,7 +404,20 @@ void cat_definir(const CatItem *lista, int n);
 // ate a base passar a NV_ADDON_URL_MAX, #201): os vetores
 // de fileira (40 x 2,5 KB = 100 KB) sao static onde eram de pilha — ver
 // cat_ler_cache, cat_trocar_continuar e montar().
+//
+// ANDROID (2.0.4, pedido do dono: "deixar ilimitado para android as fileiras"):
+// 224 = FIL_LIMITE_MAX do Android (200, o "Ilimitado" de Ajustes) + 24 de folga
+// para as fixas (Continuar, social, servidor pessoal). Os vetores de fileira
+// continuam static (BSS, nunca pilha): 224 x 2,5 KB = 560 KB por vetor, e so as
+// paginas das fileiras de fato escritas viram memoria residente. O custo real e
+// o dos itens: 100 fileiras x 24 x 15,6 KB = ~37 MB de catalogo (ver fileiras.h).
+// webOS, Tizen, .wgt e .tpk seguem com 40 — o _Static_assert de descoberta.c
+// vale nos dois lados.
+#ifdef NV_ANDROID
+#define CAT_FIL_MAX 224
+#else
 #define CAT_FIL_MAX 40
+#endif
 
 typedef struct {
   char chave[192];   // homeCatalogKey: <addonId>_<tipo>_<catalogoId>
@@ -468,6 +494,8 @@ void cat_definir_tudo(const CatItem *lista, int qtd,
 
 // Substitui os episodios de UM titulo. Chamado quando o detalhe abre.
 void cat_definir_episodios(int indiceItem, const CatEp *lista, int n);
+// So o bit da cena pos-creditos (TMDB 179430/179431), pelo id do titulo.
+void cat_marcar_pos_creditos(const char *imdb, int pos);
 
 // Substitui UM item, preservando o resto. Usado quando o detalhe abre e traz
 // elenco, direcao e temporadas que o catalogo da fileira nao tinha.
@@ -484,6 +512,8 @@ int  cat_copiar_item(int indice, CatItem *saida);
 // ainda nao tem sinopse. Nao toca em mais nada. 1 = escreveu.
 int  cat_completar_sinopse(int indice, const char *imdb, const char *sinopse,
                            const char *titulo);
+// Logo, ano, nota e elenco primarios, apenas onde faltam; revalida id+tipo.
+int  cat_completar_basico(int indice, const CatItem *item);
 // Texto localizado de `indice` (titulo, sinopse, logo, fundo), se ele ainda e
 // `imdb`. Campo vazio nao apaga; nada mais do item e tocado. 1 = mudou.
 int  cat_aplicar_localizado(int indice, const char *imdb, const char *titulo,
@@ -505,6 +535,11 @@ unsigned      cat_revisao(void);
 // volta do vetor comum de episodios, que NAO mexe em cat_revisao). Quem mostra
 // a lista de uma serie repede quando ela muda e a lista dele esta vazia.
 unsigned      cat_geracao_episodios(void);
+// Versao de CONTEUDO dos episodios: sobe a CADA escrita (redefinicao da
+// lista, item tirado do meio, zerarFaixas, wrap). Para CACHE derivado dos
+// episodios (duracao esperada da fonte) recalcular em O(1) — sem repedir
+// nada pela rede, ao contrario de cat_geracao_episodios.
+unsigned      cat_versao_episodios(void);
 // Relogio monotonico em ms, para os marcadores [perf] da publicacao.
 double        cat_relogio_ms(void);
 // Sobe a cada mudanca em QUALQUER item (marca de lista, progresso, item novo,

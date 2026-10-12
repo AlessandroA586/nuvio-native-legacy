@@ -54,6 +54,7 @@ static void protocolo(void) {
   SDL_Event d = tecla(SDL_KEYDOWN, SDLK_RETURN, 0), u = tecla(SDL_KEYUP, SDLK_RETURN, 0);
   SDL_Event rep = tecla(SDL_KEYDOWN, SDLK_RETURN, 1), seta = tecla(SDL_KEYDOWN, SDLK_RIGHT, 0);
   printf("\nprotocolo do gesto:\n");
+  while (!SDL_GetTicks()) SDL_Delay(1);  // segurar reserva 0 para nao armado.
   memset(&h, 0, sizeof h);
   confere("KEYUP sem armar nao e clique", ctxhold_evento(&h, &u, 1) == CTXH_NADA);
   confere("KEYDOWN numa celula que aceita arma e consome", ctxhold_evento(&h, &d, 1) == CTXH_CONSUMIDO && h.armado);

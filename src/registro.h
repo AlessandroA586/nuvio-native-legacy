@@ -61,6 +61,10 @@ int  registro_aberto(void);
 // Abre o painel sem a tecla vermelha (Ajustes > Sobre e ajuda > "Ver o
 // registro na tela"): nem todo controle LG tem a fileira de cores.
 void registro_abrir(void);
+// Mesma ilha de leitura; aviso informativo apos adicionar fonte, uma vez por TV.
+void registro_legal_abrir(void);
+void registro_aviso_legal(void);
+int registro_legal_aberto(void);
 // 1 depois que o painel foi aberto por Ajustes uma vez (o "NOVO" da linha).
 int  registro_ja_aberto(void);
 

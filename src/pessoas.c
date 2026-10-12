@@ -35,6 +35,8 @@
 #define NV_ESCALA_TELA_ATIVA   // mede pela tela do fator ativo (escala.h)
 #include "escala.h"
 #include "ponteiro.h"
+#include "rolagemtoque.h"
+#include "telefoneui.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -93,6 +95,16 @@ typedef struct {
 
 static int   aberto, foco, coluna = 1;   // coluna 1 = a pilula de acao da linha
 static float anim, rolagem, rolagemAlvo;
+#ifdef NV_TOUCH_UI
+static ToqueRolagem toque;
+static void toqueRetomar(void);
+static int toqueRolar(const PonteiroRolagem *e) {
+  if (!aberto || teclado_aberto()) return 0;
+  int r = toquerol_evento(&toque, e);
+  if (r) rolagemAlvo = rolagem;
+  return r;
+}
+#endif
 static Linha linhas[PE_MAXL];
 static float linhaY[PE_MAXL];            // topo de cada linha dentro da lista
 static float conteudoH;
@@ -153,6 +165,9 @@ static void irPara(int pg) {
   pagina = pg;
   foco = 0; coluna = 1;
   rolagem = rolagemAlvo = 0.0f;
+#ifdef NV_TOUCH_UI
+  toquerol_limpar(&toque);
+#endif
   confirmando = -1;
   memset(focoAnim, 0, sizeof focoAnim);
   memset(colAnim, 0, sizeof colAnim);
@@ -482,6 +497,9 @@ static float pnTopo, pnBase;       // a janela da lista (recorte vertical)
 static void ponteiroLinha(int i, int col) {
   int temCol;
   if (!aberto || teclado_aberto() || !focavel(i)) return;
+#ifdef NV_TOUCH_UI
+  toquerol_limpar(&toque);
+#endif
   temCol = temColunaAcao(i);
   if (foco == i && (!temCol || coluna == col)) return;
   foco = i; confirmando = -1;
@@ -657,6 +675,9 @@ void pessoas_evento(const SDL_Event *e) {
   if (!aberto) return;
   if (teclado_aberto()) { teclado_evento(e); return; }
   if (e->type != SDL_KEYDOWN) return;
+#ifdef NV_TOUCH_UI
+  if (toquerol_navegacao(e)) toqueRetomar();
+#endif
   k = e->key.keysym.sym;
   if (e->key.repeat && teclaOk(k)) return;
   // ← NA PILULA VAI A PESSOA (OK abre o perfil); → volta a pilula. Em qualquer
@@ -807,6 +828,20 @@ static void medir(void) {
 }
 
 static float janelaH(float cab);
+static float alturaIlha(void);
+static float janelaFoco(void) {
+#ifdef NV_TOUCH_UI
+  if (telefoneui_ativo()) {
+    /* Choose the same scale from the same unscaled geometry as drawing,
+     * including on the first frame or after a rotation. */
+    ESCALA_SE_COUBER_INI(PE_W, alturaIlha());
+    float h = janelaH(0);
+    ESCALA_SE_COUBER_FIM();
+    return h;
+  }
+#endif
+  return janelaH(0);
+}
 
 void pessoas_atualizar(float dt, Uint32 agora) {
   int i, est;
@@ -869,7 +904,14 @@ void pessoas_atualizar(float dt, Uint32 agora) {
   // ROLAGEM: a linha focada inteira na janela, com meia linha de folga quando
   // da (quem desce ve que ha mais embaixo). A secao logo acima da linha focada
   // entra junto: um cabecalho sozinho no pe da janela nao diz nada.
-  { float jh = janelaH(0.0f), topoF, baseF;
+#ifdef NV_TOUCH_UI
+  if (toque.livre) {
+    float jh = telefoneui_ativo() ? janelaFoco() : toque.regiao.h;
+    rolagem = rolagemAlvo = toquerol_clamp(rolagem, 0.0f, fmaxf(0.0f, conteudoH - jh));
+    return;
+  }
+#endif
+  { float jh = janelaFoco(), topoF, baseF;
     if (foco >= 0 && foco < nL) {
       topoF = linhaY[foco];
       if (foco > 0 && linhas[foco - 1].tipo == T_SECAO) topoF = linhaY[foco - 1];
@@ -1306,6 +1348,17 @@ static float alturaIlha(void) {
   float cab = alturaCab(&c, temC);
   return PE_PAD * 2.0f + cab + janelaH(cab) + PE_RODAPE;
 }
+#ifdef NV_TOUCH_UI
+static void toqueRetomar(void) {
+  if (toque.livre && nL > 0) {
+    float ponto = rolagem + toque.regiao.h * 0.35f;
+    int i = 0;
+    while (i + 1 < nL && linhaY[i + 1] <= ponto) i++;
+    foco = i; acertarFoco();
+  }
+  toquerol_limpar(&toque);
+}
+#endif
 // Cartao de tela quase cheia: ampliado so se ainda couber (escala.h).
 void pessoas_desenhar(Uint32 agora) {
   ESCALA_SE_COUBER_INI(PE_W, alturaIlha());
@@ -1350,6 +1403,12 @@ static void pessoas_desenharCorpo_(Uint32 agora) {
   // So assentada (a mola da entrada passa de 1) e sem o teclado por cima.
   pnRegistrar = aberto && anim > 0.99f && anim < 1.01f && !teclado_aberto();
   pnTopo = ly - 8.0f; pnBase = ly + jh + 8.0f;
+#ifdef NV_TOUCH_UI
+  if (pnRegistrar) {
+    toquerol_vincular(&toque, (GfxRect){ x, ly, PE_W, jh }, gfx_escala(), 0.0f, fmaxf(0.0f, conteudoH - jh), 1, &rolagem);
+    ponteiro_rolagem(toqueRolar);
+  }
+#endif
   for (i = 0; i < nL; i++) {
     float ry = ly + linhaY[i] - rolagem, h = alturaLinha(&linhas[i]);
     if (ry + h < ly - 8.0f || ry > ly + jh + 8.0f) continue;

@@ -113,6 +113,8 @@ void desc_tmdb(const char *dirArte);
 // campo `api_key`. Enquanto a chave sair do arquivo, ela vai dentro do .ipk e
 // e a chave de quem montou o pacote — cota dele, para todo mundo que instalar.
 void desc_tmdb_definir(const char *chave);
+// Keywords anexadas ao detalhe do TMDB: 179430/179431 sinalizam cena extra.
+int desc_tmdb_pos_creditos(const char *json);
 // "pt-BR" ou "en-US", conforme o idioma da interface: sinopse, biografia e nome
 // de colecao vem do TMDB ja traduzidos, e em ingles vinham em portugues.
 const char *desc_tmdb_idioma(void);
@@ -317,5 +319,12 @@ int  desc_titulo_buscando(void);
 // Sem ele o "a seguir" do Continuar assistindo fica como o remoto o deu.
 void desc_lapides_primeira(int (*primeira)(const char *imdb, int temporada, int episodio,
                                            long long remotoMs, int *pt, int *pe));
+
+// RITMO DOS PEDIDOS DE CATALOGO (fileiras ilimitadas no Android, 2.0.4).
+// Quantas fileiras uma rodada de montar() pede quando faltam `alvo`, e quantos
+// GET de catalogo ficam em voo ao mesmo tempo (os fios da rodada). Expostos
+// para tests/fileiras_android.sh provar que 100 fileiras nao viram 100 pedidos.
+int desc_catalogos_por_rodada(int alvo);
+int desc_catalogos_em_voo(void);
 
 #endif

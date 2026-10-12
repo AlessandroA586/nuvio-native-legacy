@@ -2,6 +2,7 @@
 // rotas (todas conferidas na documentacao oficial), o que ficou de fora e o
 // modelo de fios.
 #include "simkl.h"
+#include "ajustes.h"
 #include "simklauth.h"
 #include "nuvem.h"
 #include "rede.h"
@@ -144,6 +145,7 @@ int simkl_ler_playback(const char *json, CatItem *dst, long long *ids, int max) 
     // `progress` e porcentagem em float (0-100, "45.5"). Os limites de 1% a
     // 90% sao aplicados em montarContinuar, igual para as tres fontes.
     if (valorRaiz(p, f, "progress", &vi, &vf)) d->progresso = (int)atof(vi);
+    if (d->progresso < ajustes_cw_minimo() || d->progresso >= ajustes_cw_concluido()) continue;
     if (js_texto_raiz_em(p, f, "paused_at", quando, sizeof quando))
       d->retomadoMs = js_ms_iso(quando);
     if (ids) {
@@ -495,21 +497,22 @@ int simkl_continuar(CatItem *saida, int max) {
   nProx = 0;
   pthread_mutex_unlock(&trava);
 
-  // "A SEGUIR" disputa lugar como no Trakt: serie ja pausada nao entra de novo;
-  // com a lista cheia, entra no lugar do item mais velho se for mais novo.
+  // Sugestoes so entram com o ajuste ON, nos lugares que os pausados deixaram.
   // No heap e so durante a montagem: 64 CatItem sao ~1 MB, e isto roda uma
   // vez por ciclo de descoberta.
   prox = (CatItem *)malloc(sizeof(CatItem) * SMK_PLAY_MAX);
-  nP = prox ? simkl_ler_assistindo(cAssist, prox, SMK_PLAY_MAX) : 0;
+  nP = prox && ajustes_cw_proximo() ? simkl_ler_assistindo(cAssist, prox, SMK_PLAY_MAX) : 0;
   for (k = 0; k < nP; k++) {
     int ja = 0, alvo;
     for (i = 0; i < n && !ja; i++) ja = mesmaSerie(saida[i].imdb, prox[k].imdb);
     if (ja) continue;
     if (n < max) alvo = n++;
     else {
-      int vel = 0;
-      for (i = 1; i < n; i++) if (saida[i].retomadoMs < saida[vel].retomadoMs) vel = i;
-      if (saida[vel].retomadoMs >= prox[k].retomadoMs) continue;
+      int vel = -1;
+      for (i = 0; i < n; i++)
+        if (saida[i].progresso == 0 &&
+            (vel < 0 || saida[i].retomadoMs < saida[vel].retomadoMs)) vel = i;
+      if (vel < 0 || saida[vel].retomadoMs >= prox[k].retomadoMs) continue;
       alvo = vel;
     }
     saida[alvo] = prox[k];
@@ -526,7 +529,10 @@ int simkl_continuar(CatItem *saida, int max) {
   { int a, b;
     for (a = 1; a < n; a++) {
       CatItem t = saida[a];
-      for (b = a - 1; b >= 0 && saida[b].retomadoMs < t.retomadoMs; b--) saida[b + 1] = saida[b];
+      for (b = a - 1; b >= 0 &&
+           ((saida[b].progresso == 0 && t.progresso > 0) ||
+            ((saida[b].progresso == 0) == (t.progresso == 0) &&
+             saida[b].retomadoMs < t.retomadoMs)); b--) saida[b + 1] = saida[b];
       saida[b + 1] = t;
     } }
   printf("[simkl] retomada: %d pausado(s) + %d a seguir candidato(s) -> %d\n",

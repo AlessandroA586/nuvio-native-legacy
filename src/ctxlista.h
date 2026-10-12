@@ -36,13 +36,14 @@ typedef struct {
   int longo;      // limiar ja cruzado (a tela tentou abrir)
 } CtxHold;
 
-enum { CTXH_NADA = 0, CTXH_CONSUMIDO = 1, CTXH_TOQUE = 2 };
+enum { CTXH_NADA = 0, CTXH_CONSUMIDO = 1, CTXH_TOQUE = 2, CTXH_LONGO = 3 };
 
 // Alimente com TODO evento de teclado da tela. `celulaAceita` = a celula em
 // foco pode abrir o menu agora. Nao-OK e KEYDOWN cancelam. Devolve
 //   CTXH_CONSUMIDO  o evento era do gesto (armar, repeticao, soltura apos o
 //                   menu): a tela nao faz mais nada com ele;
 //   CTXH_TOQUE      OK soltou antes do limiar: faca a acao normal do OK;
+//   CTXH_LONGO      dedo confirmou pressao longa: abra o menu da celula;
 //   CTXH_NADA       nao e do gesto (ou a celula nao aceita o menu: a tela
 //                   segue o caminho de antes, inclusive o OK no KEYDOWN).
 int  ctxhold_evento(CtxHold *h, const SDL_Event *e, int celulaAceita);

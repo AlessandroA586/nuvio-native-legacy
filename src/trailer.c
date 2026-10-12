@@ -16,11 +16,13 @@
 #endif
 
 static int    aberto, cheia, comSom;
+static unsigned geracao;   // invalida a prova do player mesmo depois do trailer fechar
 static int    falhouUltima;
 static GfxRect rect;
 static char   fonteAtual[1024];
 static Uint32 abertoEm;   // SDL_GetTicks da abertura da fonte atual, para o log
 static int    dono;       // TRAILER_DONO_* (trailer.h)
+static int    noCartao;   // trailer_no_cartao: sem recorte de fonte no .tpk
 static char   donoImdb[32];
 
 void trailer_recorte(int vw, int vh, float z, float dw, float dh,
@@ -336,7 +338,11 @@ static void nativoAplicar(void) {
     int sw, sh, sx, sy;
     trailer_recorte(video_largura(), video_altura(), ajustes_trailer_zoom(),
                     rect.w, rect.h, &sx, &sy, &sw, &sh);
+#ifdef NV_TPK
+    if (video_recorte_fonte_trailer() && !noCartao)
+#else
     if (video_recorte_fonte_trailer())
+#endif
       video_janela_fonte(sx, sy, sw, sh,
                          (int)rect.x, (int)rect.y, (int)rect.w, (int)rect.h);
     recortePendente = 0;
@@ -393,6 +399,7 @@ void trailer_abrir(const char *fonte, GfxRect r, int som, int modoCheia) {
   if (!nova) recortePendente = 1;
 #endif
   if (nova) {
+    geracao++;
     snprintf(fonteAtual, sizeof fonteAtual, "%s", fonte);
     abertoEm = SDL_GetTicks();
     printf("[trailer] %.60s %s%s\n", fonte, modoCheia ? "tela cheia" : "no fundo", som ? " com som" : " mudo");
@@ -406,6 +413,9 @@ void trailer_abrir(const char *fonte, GfxRect r, int som, int modoCheia) {
 
 void trailer_rect(GfxRect r) {
   if (!aberto) return;
+#ifdef NV_TOUCH_UI
+  if (rect.x == r.x && rect.y == r.y && rect.w == r.w && rect.h == r.h) return;
+#endif
   rect = r;
 #ifdef __EMSCRIPTEN__
   trailer_js_abrir(fonteAtual, r.x, r.y, r.w, r.h, comSom, ajustes_trailer_zoom(), NV_REC_URL);
@@ -416,7 +426,10 @@ void trailer_rect(GfxRect r) {
 #endif
 }
 
+void trailer_no_cartao(int sim) { noCartao = sim ? 1 : 0; }
+
 void trailer_fechar(void) {
+  noCartao = 0;
   if (!aberto) return;
 #ifdef __EMSCRIPTEN__
   trailer_js_fechar();
@@ -433,6 +446,9 @@ void trailer_fechar(void) {
 void trailer_marcar_dono(int d, const char *imdb) {
   if (!aberto) return;
   dono = d;
+  // A pagina do titulo ADOTOU o trailer do cartao: dali em diante o retangulo
+  // e o dela, com o recorte de sempre.
+  if (d == TRAILER_DONO_DETALHE) noCartao = 0;
   snprintf(donoImdb, sizeof donoImdb, "%s", imdb ? imdb : "");
 }
 int trailer_dono(void) { return aberto ? dono : TRAILER_DONO_NENHUM; }
@@ -451,6 +467,7 @@ int trailer_continuar(GfxRect r, int som) {
 }
 
 int trailer_aberto(void)  { return aberto; }
+unsigned trailer_geracao(void) { return geracao; }
 int trailer_com_som(void) { return aberto && comSom; }
 int trailer_cheia(void)   { return aberto && cheia; }
 int trailer_tocando(void) {
@@ -479,7 +496,7 @@ int trailer_mostra_video(void) {
   // a esperar, o LetterBox de sempre ja e a imagem certa.
   // "Original" so dispensa a espera quando o destino tambem nao pede corte
   // (o cover de trailer_recorte num destino que nao e da proporcao do video).
-  int semCorte = !video_recorte_fonte_trailer();
+  int semCorte = !video_recorte_fonte_trailer() || noCartao;
   if (!semCorte && ajustes_trailer_zoom() <= 1.001f && video_largura() > 0 && video_altura() > 0) {
     int sx, sy, sw, sh;
     trailer_recorte(video_largura(), video_altura(), 1.0f, rect.w, rect.h, &sx, &sy, &sw, &sh);

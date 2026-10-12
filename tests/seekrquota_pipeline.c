@@ -102,6 +102,10 @@ static void recorte(void) {
 int main(void) {
   assert(SDL_Init(SDL_INIT_TIMER) == 0);
   dados_iniciar("/tmp");
+  // Sem chave: nem a validacao nem a miniatura chegam a rede.
+  assert(seekr_validar("") == 0);
+  seekr_pedir("tt0133093", 0, 0, 7200000);
+  assert(validationN == 0 && spriteN == 0 && usadas() == 0);
   seekr_definir_chave(esperada);
   assert(seekr_validar(esperada) == 1 && validationN == 1 && usadas() == 0);
   // Equal requests in flight have one reservation and one dispatch.

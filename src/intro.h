@@ -40,12 +40,15 @@ void intro_pedir_vizinhos(const char *imdb,int temporada,int episodio,double dur
 // tmdb 0: imdb_id com a numeracao do Cinemeta. A duracao vai depois, sozinha,
 // quando o player a informar (intro_definir_duracao).
 void intro_pedir_ids(const char *imdb,long tmdb,int temporada,int episodio,double durAnt,double durProx);
+// Evidencia local: corpo TMDB ja baixado; Animation + ja/JP, sem GET novo.
+// Se chegar depois do pedido, refaz uma vez ao reconhecer anime.
+void intro_registrar_tmdb(const char *id,long tmdb,const char *json);
 // URL do pedido (exposta para o teste). durSeg 0 = sem duration_ms.
 void intro_montar_url(char *url,size_t n,const char *imdb,long tmdb,int t,int e,double durSeg);
 // Troca quem faz o GET (teste). Devolve o status HTTP (0 = sem resposta) e o
 // corpo em *corpo (malloc) quando 2xx. NULL volta ao padrao (rede_pedir).
 void intro_definir_buscador(int (*f)(const char *url,char **corpo,int *status));
-// ANISKIP (anime com id kitsu:/mal:, intro.c). Le a resposta de
+// ANISKIP (kitsu:/mal: ou IMDb/TMDB de anime mapeado pela Fribb, intro.c). Le a resposta de
 // /v2/skip-times: op -> abertura, ed -> creditos, recap -> resumo; por tipo, o
 // lancamento de duracao mais proxima de `dur`, recusado se diferir mais que
 // INTRO_ANISKIP_TOLERA (outro corte). dur 0 = nao compara.
@@ -131,9 +134,23 @@ int  intro_resposta_confere(const char *json,int temporada,int episodio);
 #define INTRO_BOTAO_SEG 10.0
 int  intro_botao(double posSeg,double agora,int osd,int focado,double *fim,int *tipo);
 int  intro_botao_visivel(double *fim,int *tipo);
+// #329/#331: o trecho (tipo, fim) deve ser pulado sozinho? Abertura/resumo: ajuste ligado e
+// fim conhecido. Creditos: ajuste proprio, fim EXPLICITO do marcador e a pelo menos 5 s do fim
+// da midia `dur` (creditos ate o fim ficam com o proximo episodio, nunca um seek para alem do fim).
+int  intro_auto_pular(int tipo,double fim,double dur,int pularAbertura,int pularResumo,int pularCreditos);
+// Mesmo trecho ativo; creditos exigem limites explicitos da resposta atual.
+int  intro_auto_ativo(double pos,double *fim,int *tipo);
+// Pulou sozinho este trecho nesta reproducao? (uma vez so; voltar nao repete). Zera a cada pedido.
+int  intro_auto_ja(int tipo,double fim);
+void intro_auto_marcar(int tipo,double fim);
+// Recuo manual protege tambem creditos cujo marcador ainda nao chegou.
+void intro_auto_recuar(double de,double para);
 int  intro_extrair(const char *json,IntroTrecho *saida,int max);
 // Copia ate `max` trechos conhecidos; devolve quantos.
 int  intro_trechos(IntroTrecho *saida,int max);
+// Copia apenas creditos com inicio/fim numericos explicitos e verificados na
+// resposta atual. Sem fim, vizinhos, capitulos e estimativas nao entram.
+int  intro_creditos_limitados(IntroTrecho *saida,int max);
 #ifdef NV_SHOT_HOOKS
 void intro_shot_definir(const IntroTrecho *v,int n);   // capturas: trechos fixos
 #endif

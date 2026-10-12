@@ -27,4 +27,6 @@ echo "$saida" | grep -qF '[addons] Formato antigo: resposta sem fonte: {"err":"I
   || { echo "FALHOU: amostra da resposta sem fonte fora do log"; exit 1; }
 echo "$saida" | grep -qF '[addons] Fonte e catalogo: resposta sem fonte: {"streams":[]}' \
   || { echo "FALHOU: amostra de {\"streams\":[]} fora do log"; exit 1; }
+echo "$saida" | grep -qF '[addons] 2 da conta ficaram de fora: o app guarda no maximo 128' \
+  || { echo "FALHOU: corte de 130 para 128 fora do log"; exit 1; }
 echo "addonslista.sh: ok"

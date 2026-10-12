@@ -29,6 +29,81 @@ int main(void) {
   dados_iniciar(dir); assert(!strcmp(dados_dir(), dir)); snprintf(dirAjustes, sizeof dirAjustes, "%s", dir);
   ajustes_iniciar(); assert(gravar());
 
+  // Seekr: sem chave avisa sem gravar; chave propria permite ligar e recarregar.
+  {
+    assert(!ajustes_seekr_habilitado());
+    antes = arquivo();
+    assert(uxAlternarDireto(AJ_SEEKR_LIGADO));
+    assert(strstr(uxAviso, "seekr.tv") && !ajustes_seekr_ligado());
+    igual(antes); free(antes);
+    seekrDefinir("seekr-chave-ficticia");
+    assert(uxAlternarDireto(AJ_SEEKR_LIGADO) && ajustes_seekr_ligado());
+    ajustes_iniciar();
+    assert(ajustes_seekr_ligado() && seekr_tem_chave());
+    seekrDefinir("");
+    assert(!ajustes_seekr_ligado() && !seekr_tem_chave());
+    assert(uxValorAtual(AJ_SEEKR_LIGADO) == 1);
+    assert(definirValorDireto(AJ_SEEKR_LIGADO, 1));
+  }
+
+  // #427: a saved request above the RAM cap stays visible, but cannot be selected again.
+  {
+    char t[160];
+    int lingua = valor[AJ_IDIOMA];
+    valor[AJ_IDIOMA] = IDIOMA_PT + 1;
+    int cap = tex_teto_ram_mb();
+    assert(cap == 160);   // no tex_iniciar: unknown RAM uses the conservative cap
+    valor[AJ_TEX_MB] = 6;
+    assert(gravar());
+    assert(!strcmp(textoValor(AJ_TEX_MB), "512 MB → 160 MB nesta TV"));
+    uxValorTexto(AJ_TEX_MB, 6, t, sizeof t);
+    assert(!strcmp(t, textoValor(AJ_TEX_MB)));
+    assert(ajustes_tex_mb() == 512 && valor[AJ_TEX_MB] == 6);
+    assert(passoAdiante(AJ_TEX_MB, -1) == 2);
+    assert(passoAdiante(AJ_TEX_MB, 1) == 0);
+    uxAbrirEditor(AJ_TEX_MB);
+    key(SDLK_UP); assert(uxPendente == 2);
+    key(SDLK_DOWN); assert(uxPendente == 2);
+    ajPontEdValor(6, 0); assert(uxPendente == 2);
+    // Clicking unavailable 400 MB must not confirm the focused 160 MB.
+    {
+      const PonteiroAlvo *alvos;
+      SDL_Event e = {0};
+      int alvo, total;
+      antes = arquivo();
+      ponteiro_iniciar(); ponteiro_teste_janela(1920, 1080);
+      ponteiro_teste_toque(1);
+      ponteiro_quadro(SDL_GetTicks());
+      ajPontEditor = 1;
+      gfx_opacidade_grupo = 0;  // register real editor targets without a GL context
+      GfxRect painel = aj2EditorR(); painel.w = 1100;  // compact layout, no GPU preview
+      aj2EditorEscolha(painel);
+      ponteiro_desenhar();
+      gfx_opacidade_grupo = 1;
+      total = ponteiro_teste_lista(&alvos);
+      for (alvo = 0; alvo < total && alvos[alvo].a != 5; alvo++) { }
+      assert(alvo < total);
+      e.type = SDL_MOUSEBUTTONDOWN; e.button.button = SDL_BUTTON_LEFT;
+      e.button.x = (int)(alvos[alvo].x + alvos[alvo].w / 2);
+      e.button.y = (int)(alvos[alvo].y + alvos[alvo].h / 2);
+      assert(ponteiro_evento(&e, ajustes_evento));
+      assert(uxEditor == 1 && uxPendente == 2 && valor[AJ_TEX_MB] == 6);
+      igual(antes); free(antes);
+      e.type = SDL_MOUSEBUTTONUP;
+      assert(ponteiro_evento(&e, ajustes_evento));
+      ponteiro_teste_toque(0); ajPontEditor = 0;
+    }
+    assert(!definirValorDireto(AJ_TEX_MB, 5));
+    key(SDLK_ESCAPE);
+    valor[AJ_TEX_MB] = 2;
+    assert(passoAdiante(AJ_TEX_MB, 1) == 0);
+    assert(!strcmp(textoValor(AJ_TEX_MB), "160 MB"));
+    valor[AJ_TEX_MB] = 0;
+    assert(passoAdiante(AJ_TEX_MB, -1) == 2);
+    assert(!strcmp(textoValor(AJ_TEX_MB), "Automático"));
+    valor[AJ_IDIOMA] = lingua;
+  }
+
   // Glass and outline are reachable without advanced settings, even when off.
   assert(!uxAvancada(AJ_VIDRO) && !uxAvancada(AJ_VIDRO_CONTORNO));
   original = valor[AJ_VIDRO]; valor[AJ_VIDRO] = 1;
@@ -220,11 +295,13 @@ int main(void) {
   { focoIndice = 1; uxTopo = AJ2_T_BUSCA;
     key(SDLK_RIGHT); assert(uxTopo == AJ2_T_AV);
     key(SDLK_RIGHT); assert(uxTopo == AJ2_T_PERFIL);
+    key(SDLK_RIGHT); assert(uxTopo == AJ2_T_DIF);                               // Diferentes do padrao is reachable from Perfil
     key(SDLK_RIGHT); assert(uxTopo == AJ2_T_LAYOUT);                            // #339 Painel | Lista
     key(SDLK_RIGHT); assert(uxTopo == AJ2_T_LAYOUT);                            // last of the row
     key(SDLK_DOWN); assert(uxTopo == AJ2_T_RESOLVER);
     key(SDLK_LEFT); assert(uxTopo == AJ2_T_TOUR);
-    uxTopo = AJ2_T_LAYOUT; key(SDLK_LEFT); assert(uxTopo == AJ2_T_PERFIL);
+    uxTopo = AJ2_T_LAYOUT; key(SDLK_LEFT); assert(uxTopo == AJ2_T_DIF);
+    key(SDLK_LEFT); assert(uxTopo == AJ2_T_PERFIL);
     key(SDLK_LEFT); assert(uxTopo == AJ2_T_AV);
     key(SDLK_LEFT); assert(uxTopo == AJ2_T_BUSCA);
     key(SDLK_DOWN); assert(uxTopo == AJ2_T_TOUR);
@@ -246,6 +323,16 @@ int main(void) {
     uxTopo = AJ2_T_RESOLVER; key(SDLK_RETURN); assert(guiaAberto && gv.col == GC_LISTA && gv.ent >= 0);
     guiaSair(); assert(!guiaAberto && focoIndice && uxTopo == AJ2_T_RESOLVER);
     uxTopo = AJ2_T_PERFIL; key(SDLK_RETURN); assert(!focoIndice && focoOp == AJ_PERFIL_ATIVO);
+    // Diferentes do padrao: Down goes to the discovery card, OK opens the list
+    // (uxIndice 1), Back returns to the pill.
+    focoIndice = 1; uxTopo = AJ2_T_DIF; key(SDLK_DOWN); assert(uxTopo == AJ2_T_RESOLVER);
+    key(SDLK_UP); assert(uxTopo == AJ2_T_PERFIL);
+    uxTopo = AJ2_T_DIF; valor[AJ_LARGURA_DP] = valorPadrao[AJ_LARGURA_DP] + 1;
+    key(SDLK_RETURN); assert(!focoIndice && uxIndice == 1 && uxNDifs >= 1 && uxDifFoco == 0);
+    key(SDLK_ESCAPE); assert(focoIndice && uxTopo == AJ2_T_DIF);
+    { char b[160], d[96]; aj2TopoTexto(AJ2_T_DIF, b, sizeof b, d, sizeof d);
+      char n[16]; snprintf(n, sizeof n, " · %d", uxNDifs); assert(b[0] && !strcmp(d, n)); }
+    valor[AJ_LARGURA_DP] = valorPadrao[AJ_LARGURA_DP];
     sair = 0; focoIndice = 1; uxTopo = AJ2_T_TOUR; key(SDLK_LEFT); assert(sair); sair = 0;
     uxIndice = 1; focoIndice = 1; uxTopo = -1; }
   // #339 "Lista": one column. Down walks every category across the groups, Up on
@@ -268,7 +355,7 @@ int main(void) {
   // #339: the "Painel | Lista" toggle on both screens, same key as Aparencia.
   // Index: the pill at the end of the top row; OK flips and focus stays on it.
   { valor[AJ_LAYOUT_AJUSTES] = 0;
-    focoIndice = 1; uxTopo = AJ2_T_PERFIL;
+    focoIndice = 1; uxTopo = AJ2_T_DIF;
     key(SDLK_RIGHT); assert(uxTopo == AJ2_T_LAYOUT);
     key(SDLK_RETURN); assert(ajustes_layout_lista() && focoIndice && uxTopo == AJ2_T_LAYOUT);
     key(SDLK_RETURN); assert(!ajustes_layout_lista() && focoIndice && uxTopo == AJ2_T_LAYOUT);

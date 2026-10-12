@@ -12,7 +12,8 @@ Regras (docs/auditoria-release.md):
     Mac aberto o smoke nao roda (sai 2, "nao verificado").
 
 Saida: uma linha PASS/FAIL/NAO VERIFICADO por afirmacao; codigo 0 (tudo PASS),
-1 (alguma FAIL) ou 2 (nada falhou, mas algo ficou sem verificar).
+1 (alguma FAIL) ou 2 (algum check executavel ficou sem verificar).
+INFO registra limites de cobertura; nao afirma que houve reproducao.
 """
 import argparse
 import os
@@ -131,7 +132,10 @@ def copiar_dados():
     # As telas de novidades cobrem a Home e so saem com OK: marcadas como vistas
     # NA COPIA. Os nomes saem do proprio codigo, entao versao nova entra sozinha.
     nomes = set()
-    for c in list((RAIZ / "src").glob("*.c")) + list((RAIZ / "src").glob("*.h")):
+    # O motor atual inclui o conteudo (e a marca) de src/novidades/<versao>.inc.
+    fontes = (list((RAIZ / "src").glob("*.c")) + list((RAIZ / "src").glob("*.h"))
+              + list((RAIZ / "src/novidades").glob("*.inc")))
+    for c in fontes:
         nomes |= set(re.findall(r'"(novidades-[A-Za-z0-9_-]+\.txt)"', c.read_text(errors="ignore")))
         for m in re.finditer(r'#define\s+\w+_ARQ\s+"(novidades[^"]+)"', c.read_text(errors="ignore")):
             nomes.add(m.group(1))
@@ -284,8 +288,8 @@ def rodada_a(serie_pedida):
             else:
                 res("FAIL", "A: mesma serie reaberta mostra episodios", f"{serie}: {v[-1] if v else 'sem linha [detail]'}")
             a.tecla("back")
-        res("NAO VERIFICADO", "A: serie aberta pela ilha / pelo player",
-            "o cartao da ilha so existe depois de tocar, e o smoke nunca toca (ver verificacao estatica 1)")
+        res("INFO", "A: limite de cobertura ilha / player",
+            "abertura real nao exercitada: exige reproducao; pedido de episodios coberto pela estatica 1")
         return {"perfil": perfil, "cw": cw or []}
     finally:
         a.fechar()

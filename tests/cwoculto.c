@@ -45,7 +45,7 @@ int main(void) {
   // Assistir de novo AQUI (registro local mais novo) tambem solta.
   prog_ocultar_continuar("tt300");
   agora += 10000;
-  assert(prog_gravar_local("tt300", 1, 2, 60.0, 3000.0));
+  assert(prog_gravar_local("tt300", 1, 2, 60.0, 3000.0, -1));
   assert(!prog_oculto_vence("tt300", 0));
   // Logout apaga tudo.
   prog_ocultar_continuar("tt400");

@@ -81,6 +81,7 @@ int  tgraf_coluna(const TgDados *d, int numero);
 void tgraf_frase_amigos(const TgDados *d, char *dst, size_t tam);
 
 float tgraf_altura(void);
+float tgraf_altura_dados(const TgDados *d);
 // Desenha o bloco em (x, y), largura `w`. `foco` = coluna focada (-1 = a
 // fileira nao tem o foco); `selNumero` = temporada escolhida na pagina.
 void tgraf_desenhar(const TgDados *d, float x, float y, float w, int foco,

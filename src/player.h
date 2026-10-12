@@ -27,6 +27,8 @@ void player_aprender_creditos(void);
 int player_indice(void);
 const char *player_linha_episodio(void);
 int player_pediu_fontes(void);
+// Troca pelo caminho VOD existente: 1 = OK no aviso, 2 = salto automatico.
+int player_pediu_proxima_fonte(void);
 // A explicacao da espera na ilha do player (inicio.h, #202): texto ja traduzido
 // por quadro, "" = nada. O OK no cartao de abertura com texto pede Ajustes >
 // Fontes e addons > Escolha da fonte; o app.c consome com este.
@@ -67,6 +69,12 @@ int player_duracao_suspeita(double durSeg, double catSeg);
 // Um numero so: o mesmo que abre o cartao. Mais os 60 s de folga de sempre,
 // para quem sai por cima do fim sem passar pelo cartao.
 int player_regra_concluiu(double posSeg, double durSeg, double cred);
+// VISTO (#205): `tocado` segundos de midia tocados desde `base` (o ponto
+// retomado, 0 quando ele nao foi alcancado tocando) cobrem o trecho ate `pos`?
+// `*chegou` e o `tocou` gravado com a posicao. Visto = `fim` (concluiu) com
+// cobertura e ao menos 2 min no total: o seek ate o fim nao marca, e 70 s
+// contra a duracao falsa de 129 s de um trailer tambem nao.
+int player_regra_visto(double base, double tocado, double pos, int fim, int *chegou);
 void player_erro_fonte(void);
 // O mesmo cartao, com a causa no lugar das frases genericas (issue #112):
 // `titulo` substitui "Nao foi possivel abrir a fonte" e `dica` a linha de
@@ -116,6 +124,7 @@ int   player_pausa_pessoa(void);   // so a pausa pedida pela pessoa (#302)
 // Fator de cor do OSD do player (Ajustes > Brilho da interface no player + degrau
 // automatico com a barra parada). 1 = sem efeito. Ver esmaecer.h.
 float player_osd_brilho(void);
+float player_ui_hdr(void);   // HDR_UI_BRILHO com o video em HDR/DV, senao 1 (esmaecer.h)
 float player_duracao_seg(void);
 int   player_eh_canal(void);
 // StreamFit (F03): 1 + real backend duration of the player's own source.
@@ -183,6 +192,12 @@ void player_manter_mini(void);
 void player_restaurar(void);
 void player_fechar_mini(void);
 void player_mini_desenhar(Uint32 agora);
+#ifdef NV_TOUCH_UI
+// The app supplies its current modal eligibility; saved touch callbacks check
+// it again before restoring or closing the PiP. Drawing keeps page targets.
+void player_mini_toque_guarda(int (*pode)(void));
+void player_toque_modal_guarda(int (*pode)(void));
+#endif
 // MINI NO GUIA: o "mini" cujo destino e o preview do guia (sem moldura: o
 // guia fura e desenha em volta). `player_mini_no_guia` define a caixa e liga
 // o modo — antes de player_manter_mini()+abrir, a sessao nova ja nasce no

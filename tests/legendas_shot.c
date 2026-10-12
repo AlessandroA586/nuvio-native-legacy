@@ -85,6 +85,7 @@ static void quadros(int n) {
 static void tecla(SDL_Keycode k) {
   SDL_Event ev; memset(&ev, 0, sizeof ev);
   ev.type = SDL_KEYDOWN; ev.key.keysym.sym = k; faixas_evento(&ev);
+  ev.type = SDL_KEYUP; faixas_evento(&ev);
   quadros(3);
 }
 
@@ -230,18 +231,49 @@ int main(int argc, char **argv) {
   faixas_abrir_em(1);
   quadros(60);
   salvar("legendas-seletor-simples");
-  tecla(SDLK_RETURN);                                     // #202: the active pt row has 2 versions -> their list
-  quadros(30);
-  assert(legendasui_versoes());
+  salvar("painel-depois-curta");
+  salvar("painel-v2-lista");
+  // Hold OK on the row: the dropdown opens below it (#425 v2). Right goes to Estilo.
+  { SDL_Event ev; memset(&ev, 0, sizeof ev);
+    ev.type = SDL_KEYDOWN; ev.key.keysym.sym = SDLK_RETURN; faixas_evento(&ev);
+    SDL_Delay(780); quadros(30);
+    ev.type = SDL_KEYUP; faixas_evento(&ev); quadros(30); }
+  salvar("painel-depois-menu");
+  salvar("painel-v2-menu");
+  tecla(SDLK_DOWN); tecla(SDLK_DOWN); tecla(SDLK_RETURN);
+  quadros(30); assert(legendasui_versoes());
   salvar("legendas-seletor-versoes");
-  tecla(SDLK_ESCAPE);                                     // Back to the main list, focus on that language
-  quadros(20);
-  assert(!legendasui_versoes());
+  tecla(SDLK_ESCAPE); quadros(20); assert(!legendasui_versoes());
+  tecla(SDLK_RIGHT); quadros(40); salvar("painel-v2-estilo");
+  // Estilo tab controls (owner, 11/10): each opens in place, same panel height.
+  { VideoLegendaEstilo guardado = *player_leg_estilo();
+    float h0 = legendasui_altura();
+    quadros(60); salvar("estilo-grade");
+    tecla(SDLK_RETURN); quadros(60); assert(faixas_estilo_controle() == 0);          // Tamanho
+    tecla(SDLK_RIGHT); tecla(SDLK_RIGHT); tecla(SDLK_RIGHT); quadros(40);
+    assert(player_leg_estilo()->tamanho == guardado.tamanho + 30);
+    salvar("estilo-slider-tamanho");
+    tecla(SDLK_ESCAPE); quadros(30); assert(faixas_estilo_controle() < 0 && faixas_estilo_topo());
+    tecla(SDLK_DOWN); tecla(SDLK_RETURN); quadros(60); assert(faixas_estilo_controle() == 5);   // Posicao
+    tecla(SDLK_RIGHT); tecla(SDLK_RIGHT); quadros(40);
+    salvar("estilo-posicao");
+    tecla(SDLK_RETURN); tecla(SDLK_UP); tecla(SDLK_RIGHT); tecla(SDLK_RIGHT);               // item 2, Cor
+    tecla(SDLK_RETURN); quadros(60); assert(faixas_estilo_controle() == 2);
+    tecla(SDLK_RIGHT); tecla(SDLK_RIGHT); quadros(40);
+    salvar("estilo-cores");
+    tecla(SDLK_RETURN); tecla(SDLK_LEFT);                                                   // item 1, Fonte
+    tecla(SDLK_RETURN); quadros(60); assert(faixas_estilo_controle() == 1);
+    tecla(SDLK_RIGHT); tecla(SDLK_DOWN); quadros(40);
+    salvar("estilo-fontes");
+    tecla(SDLK_RETURN); quadros(20);
+    *player_leg_estilo() = guardado; player_leg_estilo_mudou();
+    tecla(SDLK_LEFT); tecla(SDLK_LEFT); quadros(20); (void)h0; }
   { int i; for (i = 0; i < 12; i++) tecla(SDLK_DOWN); }   // last row: Mais opcoes
   tecla(SDLK_RETURN);
   quadros(40);
   assert(legendasui_mais());
   salvar("legendas-mais-opcoes");
+  salvar("painel-depois-todas");
   tecla(SDLK_RIGHT);                                      // aim at the second slot? no: candidate row -> Estilo
   tecla(SDLK_LEFT);
   tecla(SDLK_UP); tecla(SDLK_UP); tecla(SDLK_UP);         // to the "Usar como" row
@@ -251,7 +283,18 @@ int main(int argc, char **argv) {
   { int i; for (i = 0; i < 8; i++) tecla(SDLK_DOWN); }   // the addon files, with details
   quadros(30);
   salvar("legendas-mais-opcoes-addons");
+  // Read the real persisted preference, including both manual-delay endpoints.
+  player_dir(getenv("NUVIO_DADOS"));
+  { char nome[700]; const int offsets[] = { 60000, -60000, 15000, 60001 };
+    for (int j = 0; j < 4; j++) {
+      snprintf(nome, sizeof nome, "%s/player.txt", getenv("NUVIO_DADOS"));
+      FILE *f = fopen(nome, "w"); assert(f); fprintf(f, "leg_atraso %d\n", offsets[j]); fclose(f);
+      player_leg_estilo()->atrasoMs = 0;
+      player_abrir(0, NULL);
+      assert(player_leg_estilo()->atrasoMs == (j == 3 ? 0 : offsets[j]));
+    }
+  }
   legenda2_encerrar();
-  puts("legendas_shot: ok");
+  puts("legendas_shot: captures and ±60 s preference reload OK");
   return 0;
 }

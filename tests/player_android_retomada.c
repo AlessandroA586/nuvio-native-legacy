@@ -62,7 +62,7 @@ int main(void) {
   assert(SDL_Init(SDL_INIT_TIMER) == 0);
   dados_iniciar("");
   perfis_definir_ativo(1); ling_local_legenda("none");
-  assert(prog_gravar_local("fixture-filme", 0, 0, 612.345, 1800));
+  assert(prog_gravar_local("fixture-filme", 0, 0, 612.345, 1800, -1));
   abrir("fixture-filme", "movie", 34, 0, 0); fonteAbrir();
   assert(cargas == 1 && fabs(inicio - 612.345) < .0001 && inicioPct == 0 && buscas == 0);
   pronto = 1; quadro(); assert(buscas == 0); // ack ainda em voo
@@ -129,13 +129,13 @@ int main(void) {
   assert(inicio == 0 && inicioPct == 0); n = buscas; pronto = 1; quadro();
   assert(buscas == n); player_encerrar(); puts("ok ao vivo nao busca");
 
-  assert(prog_gravar_local("fixture-serie", 2, 4, 612.345, 1800));
+  assert(prog_gravar_local("fixture-serie", 2, 4, 612.345, 1800, -1));
   abrir("fixture-serie", "series", 34, 2, 4);
   player_definir_episodio(2, 5); fonteAbrir(); assert(inicio == 0 && inicioPct == 0);
   n = buscas; pronto = 1; quadro(); assert(buscas == n); player_encerrar();
   // Sair do E5 salva um registro novo dele. Recoloca o E4 como o episodio
   // atual antes de verificar sua retomada (mesmo contrato do catalogo real).
-  assert(prog_gravar_local("fixture-serie", 2, 4, 612.345, 1800));
+  assert(prog_gravar_local("fixture-serie", 2, 4, 612.345, 1800, -1));
   abrir("fixture-serie", "series", 34, 2, 4); fonteAbrir();
   assert(fabs(inicio - 612.345) < .0001); pronto = 1; ack = 1; quadro(); player_encerrar();
   puts("ok episodio salvo nao vaza para o seguinte");

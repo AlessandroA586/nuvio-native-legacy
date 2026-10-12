@@ -18,7 +18,9 @@
  * Redirects so HTTP(S), sem downgrade HTTPS. Cabecalhos do dono e corpo nao
  * atravessam origem; 307/308 autenticados entre origens sao recusados.
  * O XHR sincrono WGT nao oferece este contrato: retorna INDISPONIVEL sem
- * iniciar I/O. Os wrappers antigos continuam disponiveis com seus limites.
+ * iniciar I/O, exceto GET publico HTTPS com receber_corpo, sem redirects,
+ * cabecalhos, job ou intervalo (fetch em fluxo). Os wrappers antigos continuam
+ * disponiveis com seus limites.
  */
 typedef struct RedeGrupo RedeGrupo;
 typedef struct RedeJob RedeJob;
@@ -68,6 +70,13 @@ typedef struct {
   uint64_t max_descartado;    /* required with window; max 2 GiB */
   int (*parar)(void *);       /* additional caller cancellation, no UI work */
   void *parar_usuario;
+  /* Decoded body chunks, without allocating corpo; 0 aborts the request.
+   * Only final HTTP 2xx chunks reach this callback; max_bytes still applies. */
+  int (*receber_corpo)(const void *, size_t, void *);
+  void *corpo_usuario;
+  /* 1 = media Range read: follow an https->http redirect like the player does
+   * (debrid links). Cross-origin hops already drop every caller header. */
+  int rebaixar_midia;
 } RedePedido;
 typedef struct {
   int status, curl_erro;

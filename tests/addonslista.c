@@ -439,6 +439,23 @@ int main(void) {
     conferir("canal: desligado NAO consultado", pedidosDesligado, 0);
   }
 
+  // Teto da conta: URLs distintas, incluindo um desligado depois do teto antigo.
+  { static AddonRemoto conta[130];
+    int i;
+    for (i = 0; i < 130; i++) {
+      snprintf(conta[i].nome, sizeof conta[i].nome, "Conta %d", i);
+      snprintf(conta[i].url, sizeof conta[i].url, "https://conta%d.test/manifest.json", i);
+      conta[i].ativo = i != 99;
+    }
+    conferir("100 da conta aplicados", addons_definir_lista(conta, 100), 1);
+    conferir("100 da conta aceitos", addons_n(), 100);
+    conferirTexto("ultimo dos 100 presente", addons_nome(99), "Conta 99");
+    conferir("desligado entre os 100 continua desligado", addons_ativo(99), 0);
+    conferir("130 da conta aplicados", addons_definir_lista(conta, 130), 1);
+    conferir("130 da conta limitados a 128", addons_n(), 128);
+    conferirTexto("ultimo dos 128 presente", addons_nome(127), "Conta 127");
+  }
+
   remove(caminho);
   rmdir(dir);
   if (falhas) { printf("%d falha(s)\n", falhas); return 1; }

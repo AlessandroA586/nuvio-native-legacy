@@ -318,6 +318,7 @@ namespace NuvioTpk
             }
             try { Apps.Registrar(a => { if (principal != null) principal.Post(_ => a(), null); else a(); }); } catch (Exception e) { Etapa("note apps-init " + e.GetType().Name); }
             Etapa("ok nv_tpk_iniciar");
+            NvCarga.LimparAntigos(dados);
             // Prova no log (#184): >0 = os DllImport passaram pelo resolvedor e
             // cairam na encenada; o "[atualizacao] instalada X" do C deve dizer
             // a versao dela.

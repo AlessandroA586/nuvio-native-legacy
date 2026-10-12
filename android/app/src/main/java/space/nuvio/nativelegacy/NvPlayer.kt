@@ -75,6 +75,7 @@ object NvPlayer {
     private val principal = Handler(Looper.getMainLooper())
     private var activity: Activity? = null
     private var camada: FrameLayout? = null
+    private var interfaceMobile = false
     private var superficie: SurfaceView? = null
     // #202: a TCL segurou o AudioFlinger por 27-38 s ao soltar o audio do filme
     // anterior; release() no fio principal congelava o app. Cada abertura tem a
@@ -119,6 +120,9 @@ object NvPlayer {
     private var ultDv = -1
     private var ultAtmos = -1
     private var avisouSemAudio = false
+    private var quadrosPerdidos = 0L
+    private var statsTiques = 0
+    private var bufferAlvoMs = androidx.media3.exoplayer.DefaultLoadControl.DEFAULT_MAX_BUFFER_MS
 
     // --- natives (src/video_android.c, Java_space_nuvio_nativelegacy_NvPlayer_*) ---
     @JvmStatic external fun nativeIniciar()
@@ -133,10 +137,17 @@ object NvPlayer {
     @JvmStatic external fun nativeDecoder4k(hevc: Int, avc: Int, vp9: Int, av1: Int)
     @JvmStatic external fun nativeTela(hdr: Int, dv: Int)
     @JvmStatic external fun nativeHdr(hdr: String, dv: Int, atmos: Int)
+    @JvmStatic external fun nativeErroTexto(texto: String)
     @JvmStatic external fun nativeRetomada(geracao: Int, aceita: Int)
     @JvmStatic external fun nativeFitPassiva(rede: Long, geracao: Int, origem: String, kbps: IntArray, fimMs: Long)
     @JvmStatic external fun nativeAudioPcm(pcm: ShortArray, n: Int, ptsUs: Long)
     @JvmStatic external fun nativeAudioEstado(fmt: Int)
+    // Estatisticas ao vivo (src/estatvivo.h), 1x/s pelo tique: bytes do socket
+    // (-1 = esta abertura nao passou pelo ParaleloDataSource, ex. HLS), buffer
+    // a frente e o alvo do DefaultLoadControl em ms, conexoes abertas, 1o byte,
+    // quadros perdidos (onDroppedVideoFrames) e entregues; host final.
+    @JvmStatic external fun nativeStats(bytes: Long, bufferMs: Int, alvoMs: Int, conexoes: Int,
+                                        primeiroByteMs: Int, perdidos: Long, quadros: Long, host: String)
 
     // F06 sincronia por audio (AudioSyncTap.kt / AudioSyncSink.kt). Fio de
     // reproducao; o C so copia para um anel limitado (src/audsync.c).
@@ -205,6 +216,12 @@ object NvPlayer {
 
     // --- ciclo de vida (NuvioActivity) ---------------------------------------
 
+    // UI-thread mode changes use the same coordinate policy as the native canvas.
+    fun interfaceModo(mobile: Boolean) {
+        interfaceMobile = mobile
+        reaplicarJanela()
+    }
+
     // onCreate, DEPOIS do super.onCreate (a libmain.so ja carregada pelo SDL).
     @JvmStatic
     fun iniciar(activity: Activity, camada: FrameLayout) {
@@ -215,7 +232,7 @@ object NvPlayer {
         novaSuperficie(activity)
         // A camada so tem tamanho depois do layout: reaplica a janela quando mudar.
         camada.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or2, ob ->
-            if (r - l != or2 - ol || b - t != ob - ot) aplicarJanela()
+            if (r - l != or2 - ol || b - t != ob - ot) reaplicarJanela()
         }
         try { nativeIniciar() } catch (e: UnsatisfiedLinkError) {
             Log.w(TAG, "nativeIniciar sem a lib ainda; o C acha a classe pelo ClassLoader da Activity: $e")
@@ -318,6 +335,9 @@ object NvPlayer {
     @JvmStatic fun volume(pct: Int) { principal.post { player?.volume = pct.coerceIn(0, 100) / 100f } }
     // F07: cache limit for the NEXT opens (MB, 0 = off) and the session volume
     // 0..200 (above 100 only while the audio is PCM).
+    // #338: buffer size preset (0 Auto, 1 Low, 2 Medium, 3 High), sticky, read at open.
+    @Volatile private var bufferPreset = 0
+    @JvmStatic fun buffer(preset: Int) { bufferPreset = preset.coerceIn(0, 3) }
     @JvmStatic fun cache(mb: Int) { cacheMbPedido = mb.coerceIn(0, 1024) }
     @JvmStatic fun ganho(pct: Int) {
         principal.post { ganhoPct = GanhoMath.pct(pct); aplicarGanho() }
@@ -393,6 +413,8 @@ object NvPlayer {
             // A geracao e a sessao nativa desta abertura (0 numa casca antiga:
             // o C nunca aceita a telemetria passiva dela).
             medidorToken = medidor.sessao(geracao)
+            ParaleloDataSource.Estat.zerar()
+            quadrosPerdidos = 0L; statsTiques = 0
             val rede = ParaleloDataSource.Factory(ua, props, http, medidor, medidorToken)
 
             // F07: SEEK CACHE over the chain above, progressive HTTP VOD only.
@@ -453,8 +475,21 @@ object NvPlayer {
             // do heap, entre 32 e 96 MB, ainda segura dezenas de segundos de 4K.
             val tetoBuffer = (Runtime.getRuntime().maxMemory() / 4)
                 .coerceIn(32L shl 20, 96L shl 20).toInt()
+            // #338: presets mudam so quanto buffer, nunca a qualidade. Auto = o de
+            // sempre (50 s / teto em bytes). Em bytes o limite segue o heap: Alto
+            // sobe o teto ate 1/3 do heap (max 96 MB), nunca ao do DefaultLoadControl.
+            val heap = Runtime.getRuntime().maxMemory()
+            val (minMs, maxMs, bytes) = when (bufferPreset) {
+                1 -> Triple(15_000, 25_000, tetoBuffer / 2)
+                2 -> Triple(50_000, 80_000, tetoBuffer)
+                3 -> Triple(90_000, 150_000, (heap / 3).coerceIn(32L shl 20, 96L shl 20).toInt())
+                else -> Triple(50_000, 50_000, tetoBuffer)
+            }
+            bufferAlvoMs = maxMs
+            Log.i(TAG, "[player] buffer preset=$bufferPreset min=${minMs / 1000}s max=${maxMs / 1000}s teto=${bytes shr 20}MB")
             val carga = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                .setTargetBufferBytes(tetoBuffer)
+                .setBufferDurationsMs(minMs, maxMs, 2_500, 5_000)
+                .setTargetBufferBytes(bytes)
                 .setPrioritizeTimeOverSizeThresholds(false)
                 .build()
             val p = ExoPlayer.Builder(act, renderizadores)
@@ -649,12 +684,33 @@ object NvPlayer {
             if (!atual(minha)) return
             val p = player ?: return
             try { nativePos(p.currentPosition.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()) } catch (e: UnsatisfiedLinkError) { }
+            if (++statsTiques >= 4) { statsTiques = 0; relatarStats(p) }
             if (cacheMidia != null && cacheEstado == CacheSessao.ATIVO && ++cacheTiques >= CACHE_RELATO_TIQUES) {
                 cacheTiques = 0
                 relatarCache(minha)
             }
             principal.postDelayed(this, TIQUE_MS)
         }
+    }
+
+    // Uma vez por segundo, do fio principal: leituras baratas, nada alocado
+    // alem da string do host (que o JNI copia).
+    private fun relatarStats(p: ExoPlayer) {
+        val e = ParaleloDataSource.Estat
+        val buf = (p.bufferedPosition - p.currentPosition).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+        var quadros = -1L
+        var perdidos = -1L
+        p.videoDecoderCounters?.let { c ->
+            c.ensureUpdated()
+            quadros = (c.renderedOutputBufferCount + c.droppedBufferCount).toLong()
+            perdidos = quadrosPerdidos
+        }
+        try {
+            nativeStats(if (e.usado) e.bytes.get() else -1L, buf,
+                bufferAlvoMs,
+                if (e.usado) e.conexoes.get().coerceAtLeast(0) else -1,
+                e.primeiroByteMs, perdidos, quadros, e.host)
+        } catch (t: UnsatisfiedLinkError) { }
     }
 
     // --- janela ---------------------------------------------------------------
@@ -689,17 +745,35 @@ object NvPlayer {
         aplicarJanela()
     }
 
+    private fun larguraLogica(): Float {
+        val c = camada
+        return if (interfaceMobile && c != null && c.width > 0 && c.height > 0)
+            TELA_H.toFloat() * c.width / minOf(c.width, c.height) else TELA_W.toFloat()
+    }
+
+    private fun alturaLogica(): Float {
+        val c = camada
+        return if (interfaceMobile && c != null && c.width > 0 && c.height > 0)
+            TELA_H.toFloat() * c.height / minOf(c.width, c.height) else TELA_H.toFloat()
+    }
+
+    private fun reaplicarJanela() {
+        if (!temJanela) aplicarEncaixe() else aplicarJanela()
+    }
+
     // Sem janela pedida ainda: o quadro inteiro encaixado (letterbox) na tela.
     private fun aplicarEncaixe() {
         if (temJanela) return
+        val largura = larguraLogica()
+        val altura = alturaLogica()
         if (videoW > 0 && videoH > 0) {
-            val esc = minOf(TELA_W.toFloat() / videoW, TELA_H.toFloat() / videoH)
+            val esc = minOf(largura / videoW, altura / videoH)
             jw = (videoW * esc + 0.5f).toInt()
             jh = (videoH * esc + 0.5f).toInt()
-            jx = (TELA_W - jw) / 2
-            jy = (TELA_H - jh) / 2
+            jx = ((largura - jw) / 2).toInt()
+            jy = ((altura - jh) / 2).toInt()
         } else {
-            jx = 0; jy = 0; jw = TELA_W; jh = TELA_H
+            jx = 0; jy = 0; jw = Math.round(largura); jh = Math.round(altura)
         }
         aplicarJanela()
     }
@@ -713,8 +787,8 @@ object NvPlayer {
             val m = c.resources.displayMetrics
             cw = m.widthPixels; ch = m.heightPixels
         }
-        val ex = cw.toFloat() / TELA_W
-        val ey = ch.toFloat() / TELA_H
+        val ex = cw.toFloat() / larguraLogica()
+        val ey = ch.toFloat() / alturaLogica()
         // As BORDAS arredondam e o tamanho sai da diferenca: tela cheia cai
         // exatamente em 0,0,cw,ch, sem fresta.
         val x0 = Math.round(jx * ex)
@@ -741,13 +815,30 @@ object NvPlayer {
         // recortado e nao sai; entra no esticar e fica esticado"). Recriar a
         // Surface (GONE -> VISIBLE) faz o compositor montar camada nova com a
         // geometria nova; o ExoPlayer troca a saida do decoder sem recarregar.
-        recriarSuperficie(RECRIA_ESPERA_MS)
+        //
+        // SO EM SDR. No HDR/DV cada recriacao aqui obrigava o Media3 a soltar a
+        // saida do decoder e o C2MtkVdecTv a religar o DispLink: o aspecto salvo
+        // aplicado apos o primeiro quadro, e cada troca manual de modo, mudava o
+        // tamanho e recriava (~12 vezes em 30 s; TCL 2160p DV, 11/10), com o fio
+        // principal parado no glClear ("renderer soltou em 7057 ms", pior quadro
+        // 6612.7 ms). No HDR a recriacao fica so nas TRANSICOES DE MODO
+        // (hdrNaSuperficie: a primeira 200 ms apos o primeiro quadro e a segunda
+        // 1,5 s depois), que existem para a TV ligar o HDR.
+        //
+        // MAS SEM NENHUMA o plano fica preso no primeiro tamanho e so o Crop
+        // funcionava (dono, 12/10: "so funciona o crop"). Depois da superficie
+        // estavel a troca de tamanho recria UMA vez, RECRIA_ESPERA_HDR_MS apos
+        // a ultima troca; antes disso as recriacoes do HDR ja pegam o layout novo.
+        if (ultHdr.isEmpty() || ultHdr == "none") recriarSuperficie(RECRIA_ESPERA_MS)
+        else if (estavelEmitido) recriarSuperficie(RECRIA_ESPERA_HDR_MS)
     }
 
     // Recriar a Surface custa um quadro preto e, em rajada (aspecto apertado
     // varias vezes), travava: as trocas JUNTAM numa so, RECRIA_ESPERA_MS depois
     // da ultima. A mesma recriacao liga o HDR da TCL (ver onRenderedFirstFrame).
     private const val RECRIA_ESPERA_MS = 350L
+    // HDR/DV: recriar e caro (DispLink religa), so depois de o modo parar.
+    private const val RECRIA_ESPERA_HDR_MS = 600L
     private var hdrRecriado = false
     private var quadroVisto = false
     // SOLTAR A SAIDA SEM ESPERAR (2.0.3). Destruir a Surface com o decoder
@@ -1012,6 +1103,13 @@ object NvPlayer {
                 else -> "desconhecido"
             }
             Log.w(TAG, "[player] onPlayerError renderer=$renderer nome=${exo?.rendererName} loadMs=${SystemClock.elapsedRealtime() - abriuEm} erro ${error.errorCodeName} (${error.errorCode}): ${error.message}")
+            // The app log (what "Enviar registro" uploads) only got the bare
+            // code: 2000 (IO_UNSPECIFIED) says nothing without its cause. URLs
+            // lose their query, where addons put tokens.
+            val causa = generateSequence(error.cause) { it.cause }.take(3)
+                .joinToString(" <- ") { "${it.javaClass.simpleName}: ${it.message ?: ""}" }
+                .replace(Regex("""\?[^\s"]*"""), "?…").take(400)
+            try { nativeErroTexto("${error.errorCodeName} (${error.errorCode}) renderer=$renderer causa=$causa") } catch (_: Throwable) {}
             // Decoder que falha nos primeiros 5 s: o recurso pode estar sendo
             // solto por outro app (ResourceConflict do Tizen); reabre uma vez.
             val cedo = SystemClock.elapsedRealtime() - abriuEm < RETRY_DECODER_MS
@@ -1034,6 +1132,10 @@ object NvPlayer {
     }
 
     private fun analitico(minha: Int) = object : AnalyticsListener {
+
+        override fun onDroppedVideoFrames(eventTime: AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) {
+            if (atual(minha)) quadrosPerdidos += droppedFrames
+        }
 
         override fun onVideoDecoderInitialized(
             eventTime: AnalyticsListener.EventTime, decoderName: String,

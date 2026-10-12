@@ -56,6 +56,9 @@ void plrilha_relogio(float a, double falta);
 // #202: a velocidade da reproducao em centesimos (velocidade.h). Fora de
 // 100 a pilula mostra "1,5x" depois do "termina as". Vale ate a proxima chamada.
 void plrilha_velocidade(int cent);
+// O titulo aberto: com um painel de pe, vai a esquerda da linha do relogio
+// (dono, 11/10). NULL/"" = nada. Vale ate a proxima chamada.
+void plrilha_titulo(const char *t);
 // 1 = ancorada a direita (Posicao do relogio), para o OSD por as marcas de
 // formato no outro canto.
 int  plrilha_direita(void);

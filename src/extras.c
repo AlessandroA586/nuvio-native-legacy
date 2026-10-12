@@ -1,3 +1,5 @@
+#include "intro.h"
+#include "arteurl.h"
 #include "imdbnota.h"
 #include "extras.h"
 #include "streams.h"
@@ -138,7 +140,7 @@ static int  epFioVivo;
 static char epShow[24];
 static int  epPedTemp, epPedNum;
 static int  nComent;
-static struct { char titulo[120], ano[8], imdb[16], poster[200]; } rel[EX_REL_MAX];
+static struct { char titulo[120], ano[8], imdb[16], poster[NV_ARTE_URL_MAX]; } rel[EX_REL_MAX];
 // Vistos: um bit por episodio, ate 40 episodios em 20 temporadas. Vetor fixo
 // porque a consulta acontece no DESENHO de cada card, a cada quadro — uma
 // busca em lista ali custaria mais que a resposta.
@@ -319,6 +321,9 @@ static void urlFicha(char *dst, size_t cap, int serie, long idT,
     snprintf(extra, sizeof extra, "&include_video_language=%s", langs);
   }
   if (mais) snprintf(append + strlen(append), sizeof append - strlen(append), "%srecommendations", append[0] ? "," : "");
+  // keywords junto da ficha: o sinal de cena pos-creditos vem no MESMO corpo
+  // (TMDB 179430/179431), sem viagem nova.
+  if (!serie) snprintf(append + strlen(append), sizeof append - strlen(append), "%skeywords", append[0] ? "," : "");
   snprintf(dst, cap, "%s/%s/%ld?api_key=%s&language=%s%s%s%s",
            "https://api.themoviedb.org/3", serie ? "tv" : "movie", idT,
            chave, idioma, append[0] ? "&append_to_response=" : "", append, extra);
@@ -877,6 +882,12 @@ static void *buscar(void *arg) {
           return NULL;
         }
         const char *fimC = corpo + strlen(corpo);
+        intro_registrar_tmdb(id,idT,corpo);
+        // CENA POS-CREDITOS (TMDB 179430/179431), no mesmo corpo da ficha.
+        // Serie traz keywords em /tv/<id>/keywords (viagem propria em
+        // descoberta.c); aqui e so filme. Grava o bit direto no item: este fio
+        // nao tem o CatItem `edit` do detalhe.
+        if (!serie) cat_marcar_pos_creditos(id, desc_tmdb_pos_creditos(corpo));
         // Uma linha, no corpo que ja esta na mao. Ver a nota em
         // fichaIdiomaOrig.
         js_texto(corpo, fimC, "original_language",

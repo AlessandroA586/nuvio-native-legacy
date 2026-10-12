@@ -89,11 +89,13 @@ static void quadros(int n) {
     glBindFramebuffer(GL_FRAMEBUFFER, fbo); glViewport(0, 0, LW, LH);
     glClearColor(0, 0, 0, 1); glClear(GL_COLOR_BUFFER_BIT);
     if (fundo) fundo();
+    gfx_hdr_ui = player_ui_hdr();   // como app.c: UI em HDR (esmaecer.h)
     player_desenhar(relogio);
     episodios_desenhar();
     stream_folha_desenhar(relogio);
     faixas_desenhar(relogio);
     plrilha_desenhar(relogio);
+    gfx_hdr_ui = 1.0f;
     if (extra) extra();
     SDL_Delay(1);
   }
@@ -228,8 +230,8 @@ static CatItem serieComEps(void) {
     { CatItem lista[1]; lista[0] = f; cat_definir(lista, 1); }
     cat_definir_episodios(0, eps, 16);
     vistoep_definir(f.imdb, 1, 1, 1); vistoep_definir(f.imdb, 1, 2, 1);
-    prog_gravar_local(f.imdb, 1, 3, 1948.0, 3360.0);
-    prog_gravar_local(f.imdb, 1, 5, 1210.0, 3360.0);   // um nao assistido pela metade
+    prog_gravar_local(f.imdb, 1, 3, 1948.0, 3360.0, -1);
+    prog_gravar_local(f.imdb, 1, 5, 1210.0, 3360.0, -1);   // um nao assistido pela metade
     return f;
 }
 
@@ -374,6 +376,18 @@ int main(int argc, char **argv) {
     player_shot_estado(relogio, 4360.0f, 9420.0f, 1, 0, 0, 0);
     quadros(60);
     salvar("osd");
+  }
+  // UI EM HDR (#205): o mesmo OSD com o video SDR e com Dolby Vision.
+  if (quer(argc, argv, "osd-sdr") || quer(argc, argv, "osd-hdr")) {
+    int k;
+    for (k = 0; k < 2; k++) {
+      if (!quer(argc, argv, k ? "osd-hdr" : "osd-sdr")) continue;
+      abrir(&filme); simular(3840, 1606, "", k, 1);
+      quadros(10);
+      player_shot_estado(relogio, 4360.0f, 9420.0f, 1, 0, 0, 0);
+      quadros(60);
+      salvar(k ? "osd-hdr" : "osd-sdr");
+    }
   }
   if (quer(argc, argv, "osd-serie")) {
     IntroTrecho tr[2] = { { 67.2, 235.2, INTRO_ABERTURA }, { 3124.8, 0.0, INTRO_CREDITOS } };
@@ -581,6 +595,37 @@ int main(int argc, char **argv) {
       }
       player_definir_tentativa(0, 0);
     }
+  }
+  if (quer(argc, argv, "cinema")) {
+    // A ABERTURA CINEMA (#205): o titulo recuado com o logo, a linha de demora
+    // depois de 8 s, o crossfade com o primeiro quadro, e a Detalhada pelo ajuste.
+    Stream st;
+    VideoSimulacao v;
+    memset(&st, 0, sizeof st);
+    snprintf(st.rotulo, sizeof st.rotulo, "Project Hail Mary 2160p");
+    snprintf(st.provedor, sizeof st.provedor, "AIOStreams");
+    snprintf(st.url, sizeof st.url, "http://exemplo/phm.mkv");
+    stream_definir_lista(&st, 1);
+    abrir(&filme); simular(0, 0, "", 0, 0);
+    stream_definir_atual(0);
+    player_shot_carregando(1);
+    quadros(90);  salvar("cinema-inicio");
+    quadros(460); salvar("cinema-demorando");
+    // O primeiro quadro: a fonte abriu e o video anda. O veu sai por cima dele.
+    player_shot_carregando(0); player_shot_video(1);
+    memset(&v, 0, sizeof v);
+    v.largura = 3840; v.altura = 1606; v.pronto = 1; v.tocando = 1; v.pos = 0.5; v.duracao = 9420.0;
+    video_simular(&v);
+    quadros(7);   salvar("cinema-crossfade");
+    quadros(60);
+    player_shot_video(0); simular(0, 0, "", 0, 0);
+    ajustes_shot_valor("telaAberturaLocal", 1);
+    abrir(&filme); simular(0, 0, "", 0, 0);
+    stream_definir_atual(0);
+    player_shot_carregando(1);
+    quadros(90);  salvar("detalhada");
+    player_shot_carregando(0);
+    ajustes_shot_valor("telaAberturaLocal", 0);
   }
   if (quer(argc, argv, "carregando")) {
     Stream st;

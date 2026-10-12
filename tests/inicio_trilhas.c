@@ -19,6 +19,11 @@ int stream_atual(void) { return 0; }
 int stream_n(void) { return 2; }
 int stream_proxima_sem_perda(int i) { (void)i; return proximaBoa; }
 int ajustes_fonte_repor(void) { return 1; }
+const Stream *stream_item(int i) { (void)i; return NULL; }
+uint64_t badges_bit(const char *id) { (void)id; return 0; }
+#ifdef NV_ANDROID
+int video_quadro_visto(void) { return 0; }
+#endif
 
 int main(void) {
   CHECK(!aberturaVencida(14000));

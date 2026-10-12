@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // Recomendacoes entre amigos — ver a nota longa em recomenda.h para o porque
 // do servico proprio e por que "realtime" aqui e sondagem.
 //
@@ -180,7 +181,7 @@ static int  pedirTrakt, traktEstado, traktAchados;
 // escolho frase, confirmo" — nao ha como o dono disparar dois antes de ver o
 // resultado do primeiro, e uma fila de verdade seria estrutura sem uso.
 static struct {
-  char imdb[24], tipo[8], titulo[160], poster[512], ano[16];
+  char imdb[24], tipo[8], titulo[160], poster[NV_ARTE_URL_MAX], ano[16];
   char para[96], texto[72];
   int  modelo;
   int  nota;                  // centesimos, como o `nota` do CatItem
@@ -361,7 +362,7 @@ static void gravar(void) {
   // 1400 E NAO 1000 desde a v2: poster (512) + deAvatar (256) + titulo (160) +
   // de (96) + deNome (64) + o resto ja passam de 1100 bytes numa linha cheia, e
   // com o teto antigo a ultima linha sairia cortada no meio de uma URL.
-  size_t cap = (size_t)REC_MAX * 1400u + 64u;
+  size_t cap = (size_t)REC_MAX * (1400u + NV_ARTE_URL_MAX - 512u) + 64u;
   char *buf = (char *)malloc(cap);
   size_t k = 0;
   int i;
@@ -1953,8 +1954,8 @@ static int lerRecs(const char **cab) {
 }
 
 static void enviarFila(const char **cab) {
-  char corpo[2200];
-  char t[400], po[1100], ti[64], an[48], pa[260], tx[200];
+  char corpo[NV_ARTE_URL_MAX * 2 + 1600];
+  char t[400], po[NV_ARTE_URL_MAX * 2], ti[64], an[48], pa[260], tx[200];
   char *r;
   int st = 0, ok;
   SDL_LockMutex(mtx);
@@ -3453,7 +3454,7 @@ static void enviarAtivNova(const char **cab) {
   int n = 0;
   while (n < 8) {
     RecAtiv a;
-    char corpo[1600], t[400], po[1100], *r;
+    char corpo[NV_ARTE_URL_MAX * 2 + 800], t[400], po[NV_ARTE_URL_MAX * 2], *r;
     int st = 0;
     SDL_LockMutex(mtx);
     // A fila so vale com o nivel ligado E o servidor sabendo disso: com o

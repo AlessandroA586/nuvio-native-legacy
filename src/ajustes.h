@@ -14,6 +14,8 @@
 #include "gfx.h"
 
 int  ajustes_iniciar(void);
+// Per device: 0 = TV (default), 1 = Mobile. Applied before the initial viewport.
+int  ajustes_interface_mobile(void);
 
 // Pasta onde os ajustes sao lidos e gravados. Chamar uma vez, no inicio.
 void ajustes_dir(const char *dir);
@@ -33,8 +35,15 @@ int  ajustes_menu_explorar(void);
 int  ajustes_menu_guia(void);
 int  ajustes_menu_agenda(void);
 int  ajustes_menu_perfil(void);
-// "Trailer do cartaz em foco" (#124, focusedPosterBackdropTrailerEnabled),
-// ja considerando a dependencia: 1 so com expandir ou cartaz deitado ligados.
+// "Trailer do cartaz em foco" (#124; tres modos desde 08/10/2026). Na conta
+// continua o booleano do web (focusedPosterBackdropTrailerEnabled): true =
+// qualquer modo ligado. O modo seguro devolve DESLIGADO.
+//   DESLIGADO  nada toca com o foco num cartaz;
+//   CHEIA      o trailer toca no lugar da arte do destaque e a home entra no
+//              modo cinema, como o trailer do destaque (so o logo fica);
+//   CARD       o trailer toca DENTRO do cartaz em foco (home.c: cartaz deitado
+//              e 4:3 na hora; cartaz em pe so aberto por "Expandir poster").
+enum { AJ_TRAILER_CARTAZ_DESLIGADO = 0, AJ_TRAILER_CARTAZ_CHEIA = 1, AJ_TRAILER_CARTAZ_CARD = 2 };
 int  ajustes_trailer_cartaz(void);
 // "Itens por fileira" da Home (#163): 12, 18 ou 24. Padrao 12.
 int  ajustes_itens_fileira(void);
@@ -101,6 +110,7 @@ int ajustes_animacoes_reduzidas(void);
 // V_BRILHO_PLAYER (padrao 1 = 80%).
 int ajustes_esmaecer(void);
 int ajustes_brilho_player(void);
+int ajustes_hdr_ui(void);   // #205: 1 = Automatico (padrao), 0 = Desligado
 // #202: -1 = ultimo modo usado (padrao); 0..7 = PlrAspecto aplicado ao abrir o video.
 int ajustes_proporcao_padrao(void);
 int ajustes_descanso_estilo(void);   // ESM_ESTILO_* (esmaecer.h)
@@ -113,6 +123,14 @@ int ajustes_pausa_overlay(void);
 int ajustes_classif_player(void);   // 1 = mostra a classificacao/guia parental no player (padrao)
 // "O que achou?" nos creditos (reacao.h). Ligado de fabrica.
 int ajustes_reacao_creditos(void);
+// #329: pula abertura/resumo sozinho quando ha marcador (desligado de fabrica).
+int ajustes_pular_abertura(void);
+int ajustes_pular_resumo(void);
+// #331: a contagem do proximo episodio nos creditos (desligado de fabrica; contagem configuravel, padrao 5 s).
+int ajustes_proximo_auto(void);
+int ajustes_proximo_contagem(void);
+// Pula os creditos sozinho, so com inicio e fim reais do marcador (desligado de fabrica).
+int ajustes_pular_creditos(void);
 // Medidor de desempenho na ilha do relogio (desempenho.h): Desempenho desta TV,
 // local. 0 = desligado, 1 = Minimo, 2 = Menor, 3 = Grande (DS_* de desempenho.h).
 int ajustes_medidor_desempenho(void);
@@ -429,6 +447,9 @@ int   ajustes_esconder_logo_trailer(void);   // 1 = hide the corner title logo w
 // R4: second subtitle placement and own style (local). junto: 1 = stacked right above the
 // primary at the bottom, 0 = top band. tamanho: percent (60..160), 0 = automatic (90% of the
 // primary). cor/fundo/borda: the same indices as the primary style (VideoLegendaEstilo), -1 = same as primary.
+int   ajustes_legendas_todas(void); // #425: abrir todas as faixas
+// #205: 1 = tela de abertura Detalhada (o cartao com fonte e passos); 0 = Cinema.
+int   ajustes_abertura_detalhada(void);
 int   ajustes_leg2_junto(void);
 int   ajustes_leg2_tamanho(void);
 int   ajustes_leg2_cor(void);
@@ -439,6 +460,7 @@ int   ajustes_legenda_sync_auto(void);       // local, ligada por padrão
 int   ajustes_legenda_sync_audio(void);      // 1 = offer "Por audio" in subtitle AutoSync (F06; local, default off)
 int   ajustes_trailer_zoom_tpk(void);        // #241: 1 = experimental trailer zoom on the native .tpk (local, default off)
 unsigned ajustes_p2p_limite_mb(void);           // #334: P2P space limit in MB (0 = Automatic)
+int   ajustes_buffer_preset(void);           // #338: 0 Automatico, 1 Baixo, 2 Medio, 3 Alto (0 fora do Android)
 int   ajustes_cache_seek_mb(void);           // F07: seek cache limit in MB for the next video (0 = off / not on this TV)
 #ifdef AJUSTES_TESTE
 void  ajustes_teste_escala(int percentual); // fixture only; does not persist
@@ -490,6 +512,7 @@ int   ajustes_cw_retido_tambem(void);   // 1 = o titulo da ilha/Retomar tambem f
 // Percentual (70-98, padrao 90) a partir do qual o episodio conta como
 // assistido: sai do Continuar assistindo e o card passa ao proximo. Local.
 int   ajustes_cw_concluido(void);
+int   ajustes_cw_minimo(void);    // 1..20 %: piso do Continuar assistindo (#326); 1 = como sempre
 
 // --- LAYOUT: pagina de detalhe (efeito vive em detail.c) ---------------------
 int   ajustes_desfocar_nao_assistidos(void); // blurUnwatchedEpisodes
@@ -517,11 +540,6 @@ int   ajustes_profundidade(void);            // cardDepthEnabled
 float ajustes_profundidade_borda(void);      // 0..1 (cardDepthEdgeStrength/100)
 float ajustes_profundidade_brilho(void);     // 0..1 (cardDepthSheenStrength/100)
 float ajustes_profundidade_cobertura(void);  // 0..1 (cardDepthEdgeCoverage/100)
-int   ajustes_profundidade_posters(void);
-int   ajustes_profundidade_cw(void);
-int   ajustes_profundidade_episodios(void);
-int   ajustes_profundidade_elenco(void);
-int   ajustes_profundidade_trailers(void);
 
 // --- LAYOUT: tamanho do item -------------------------------------------------
 // ATENCAO, e a armadilha que ja custou uma medida errada: no layout MODERNO
@@ -633,11 +651,24 @@ void ajustes_tmdb_idioma_relatar(const char *blob);
 // portugues (text.c traduz ao desenhar). _ligado: 1/0 num interruptor, -1 nos
 // outros. _passo: proximo (dir 1) ou anterior (-1) valor, gravado e com os
 // mesmos efeitos do OK na tela de Ajustes; 0 se nao gravou.
+// "corDestaque" nao e uma opcao de 2 a 6 valores: o op e o AJ_RAPIDO_COR e a
+// central abre o seletor de cores (ajustes_rapido_cor_*, logo abaixo).
+#define AJ_RAPIDO_COR 9000
 int         ajustes_rapido_op(const char *chave);
 const char *ajustes_rapido_rotulo(int op);
 const char *ajustes_rapido_valor(int op);
 int         ajustes_rapido_ligado(int op);
 int         ajustes_rapido_passo(int op, int dir);
+// A COR DE DESTAQUE (seletor da central): os 18 acentos fixos na ordem da
+// regua de Ajustes (0-8 claros, 9-17 profundos). `cor` devolve a tinta que
+// contrasta com o preenchimento (como ajustes_acento_tinta); `atual` = -1 com
+// um acento dinamico; `definir` grava como a tela de Ajustes (0 = falhou).
+int         ajustes_rapido_cor_n(void);
+const char *ajustes_rapido_cor_nome(int i);
+float       ajustes_rapido_cor(int i, float *r, float *g, float *b);
+int         ajustes_rapido_cor_atual(void);
+const char *ajustes_rapido_cor_atual_nome(void);
+int         ajustes_rapido_cor_definir(int i);
 
 #ifdef NV_SHOT_HOOKS
 int ajustes_shot_valor(const char *chave, int v);   // capturas: opcao pela chave

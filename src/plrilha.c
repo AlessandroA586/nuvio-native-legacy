@@ -25,8 +25,10 @@
 // A mola da ilha (ilha.c, ILHA_MOLA_W/Z; o Spotlight usa a mesma, SP_MOLA).
 #define MOLA_W 10.0f
 #define MOLA_Z 0.72f
-#define X_ESQ   96.0f      // PLR_MARGEM: a coluna do OSD
-#define Y_TOPO  48.0f      // PLR_PAD_Y
+// Mesma margem e mesmo topo da ilha da Home (dono, 12/10: simetrica com os
+// selos do lado oposto em player.c, que seguem a mesma margem).
+#define X_ESQ   NV_ILHA_MARGEM_D
+#define Y_TOPO  NV_ILHA_Y
 #define CAB_H   64.0f      // cabecalho do corpo = a pilula aberta
 #define PIL_H   56.0f
 #define RAIO_CORPO 36.0f
@@ -116,6 +118,9 @@ void plrilha_relogio(float a, double f) {
 }
 
 void plrilha_velocidade(int cent) { velCent = cent > 0 ? cent : VEL_NORMAL; }
+
+static char titulo[256];
+void plrilha_titulo(const char *t) { snprintf(titulo, sizeof titulo, "%s", t ? t : ""); }
 
 void plrilha_esconder(void) { escondida = 1; }
 
@@ -358,15 +363,25 @@ static void plrilha_desenharCorpo_(Uint32 agora) {
     gfx_recorte(R.x, R.y, R.w, R.h);
     { float cabH = h < CAB_H ? h : CAB_H;
       float yc = R.y + cabH * 0.5f;
-      // A linha: centrada na pilula; com corpo, encostada a esquerda do
-      // cabecalho (o recuo de 28).
+      // A linha: centrada na pilula; com corpo, encostada a DIREITA do
+      // cabecalho (o recuo de 28) — dono, 11/10: o relogio do lado direito
+      // nos paineis que nascem da ilha. O texto `direita` troca de lado.
       float lx = R.x + (R.w - L.w) * 0.5f;
-      float ex = R.x + 28.0f;
+      float ex = R.x + R.w - 28.0f - L.w;
       float k = anim_clamp((R.w - (L.w + pad * 2.0f)) / 40.0f, 0.0f, 1.0f);
       lx = lx + (ex - lx) * k;
       desenharLinha(p, &L, lx, yc, A * textoA);
       if (p->direita && k > 0.0f)
-        txt_desenhar_alpha(L.dir, R.x + R.w - 28.0f - (float)L.dir.w, yc - (float)L.dir.h * 0.5f + 1.0f, A * k);
+        txt_desenhar_alpha(L.dir, R.x + 28.0f, yc - (float)L.dir.h * 0.5f + 1.0f, A * k);
+      // Sem `direita`, o lado esquerdo leva o titulo, cortado na largura
+      // final do painel (a da mola mudaria a textura a cada quadro).
+      else if (titulo[0] && k > 0.0f) {
+        float max = alvoW - L.w - 28.0f * 2.0f - 24.0f;
+        if (max > 40.0f) {
+          TxtLinha t = txt_linha_corta(TXT_G19M, titulo, 243, 242, 239, 200, max);
+          txt_desenhar_alpha(t, R.x + 28.0f, yc - (float)t.h * 0.5f + 1.0f, A * k);
+        }
+      }
       // Fio de 1 px sob o cabecalho, so com o corpo de pe.
       if (h > CAB_H + 4.0f && dsP == DS_DESLIGADO)
         gfx_cor((GfxRect){ R.x, R.y + CAB_H, R.w, 1.0f }, 0.0f, 1, 1, 1, 0.07f * A * cresce); }

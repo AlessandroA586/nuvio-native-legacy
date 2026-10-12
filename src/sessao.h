@@ -61,6 +61,12 @@ const char *sessao_usuario(void);         // `sub` do JWT; "" quando deslogado
 // 0 (e dst = "") quando nao ha. O antigo sessao_token() saiu de proposito:
 // nao ha como devolver ponteiro para um buffer que outro fio reescreve.
 int sessao_token_copiar(char *dst, size_t n);
+// Token vencido (ou a 60 s de vencer) NAO sai: a copia renova antes, uma vez,
+// pela mesma renovacao unica do 401. Renovacao falha (servidor fora, sem
+// refresh token, recusa) = 0 e dst = "": nada vai ao Worker.
+// Worker recusou com 401 o token `tok` que mandamos: renova UMA vez, se ainda
+// for o token da sessao. Quem ja trocou o token nao renova de novo.
+void sessao_token_recusado(const char *tok);
 
 // Comeca o fluxo de login num fio proprio (as chamadas bloqueiam). Idempotente
 // enquanto um fluxo estiver em andamento.
