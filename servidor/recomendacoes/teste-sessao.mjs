@@ -18,4 +18,16 @@ for (let i = 0; i < 5; i++) await pede("lixo");
 console.log("ilegivel x5 -> fetch", chamadas);
 for (let i = 0; i < 5; i++) { const r = await pede(jwt(now + 3600)); if (i == 0) console.log("status", r.status); }
 if (chamadas !== 1) { console.log("FALHOU: esperava 1 chamada, houve", chamadas); process.exit(1); }
+// Token aceito fica no cache ate o exp (teto 1 h), nao 10 min.
+globalThis.fetch = async () => { chamadas++; return new Response(JSON.stringify({ id: "u1" }), { status: 200 }); };
+chamadas = 0;
+const bom = jwt(now + 1800);
+await pede(bom);
+const exp = [...db.values()].find((r) => r.id === "nuvio:u1")?.expira;
+if (chamadas !== 1 || exp !== now + 1800 && exp !== now + 1801) { console.log("FALHOU: cache do token valido", chamadas, exp - now); process.exit(1); }
+// 50 eventos de identidade despejam uma linha em ident_hora (aqui: um INSERT visto).
+let despejos = 0; const prep = env.DB.prepare;
+env.DB.prepare = (sql) => { if (sql.includes("ident_hora")) despejos++; return prep(sql); };
+for (let i = 0; i < 50; i++) await pede(jwt(now - 1) + i);
+if (despejos !== 1) { console.log("FALHOU: contador despejou", despejos); process.exit(1); }
 console.log("ok");

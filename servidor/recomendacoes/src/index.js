@@ -130,14 +130,38 @@ async function idTrakt(token, env) {
 // fica no cache como sessao de id vazio pelo mesmo SESSAO_TTL. Falha de rede ou
 // 5xx NAO entra no cache: ai a culpa nao e do token.
 const RECUSADO = false;
-function jwtVencido(token, t) {
+// `exp` do JWT, ou 0 se ilegivel. Token valido fica no cache ate vencer (teto
+// SESSAO_MAX): reverificar a cada 10 min um token de 1 h era 6x as chamadas.
+const SESSAO_MAX = 3600;
+function jwtExp(token) {
   try {
     const b = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
     const exp = JSON.parse(atob(b + "===".slice((b.length + 3) % 4))).exp;
-    return typeof exp !== "number" || exp <= t;
+    return typeof exp === "number" ? exp : 0;
   } catch {
-    return true;
+    return 0;
   }
+}
+
+// CONTADOR DE IDENTIDADE: por isolate, despejado em `ident_hora` (migracao 015)
+// a cada IDENT_LOTE eventos. Sem a tabela, so o log. Recusa acima de 20% vira
+// aviso no log — e o que o Nuvio mediu antes de bloquear (86%).
+const IDENT_LOTE = 50;
+const ident = { verif: 0, recusa: 0, local: 0 };
+async function contar(env, t, k) {
+  ident[k]++;
+  if (ident.verif + ident.recusa + ident.local < IDENT_LOTE) return;
+  const { verif, recusa, local } = ident;
+  ident.verif = ident.recusa = ident.local = 0;
+  const msg = `[ident] verif=${verif} recusa=${recusa} vencido_local=${local}`;
+  if (recusa > (verif + recusa) * 0.2) console.warn(msg + " RECUSA ALTA"); else console.log(msg);
+  try {
+    await env.DB.prepare(
+      "INSERT INTO ident_hora (hora, verif, recusa, local) VALUES (?, ?, ?, ?) " +
+      "ON CONFLICT(hora) DO UPDATE SET verif = verif + excluded.verif, " +
+      "recusa = recusa + excluded.recusa, local = local + excluded.local"
+    ).bind(Math.floor(t / 3600) * 3600, verif, recusa, local).run();
+  } catch {}
 }
 
 async function idNuvio(token, env) {
@@ -176,9 +200,12 @@ async function quemE(req, env) {
   // Sem essa regra, os 10 min de cache apagariam a foto de todo mundo.
   if (cache) return cache.id ? comPerfil(req, via, { id: cache.id, nome: cache.nome, avatar: "" }) : null;
 
-  if (via === "nuvio" && jwtVencido(token, t)) return null;
+  const exp = via === "nuvio" ? jwtExp(token) : 0;
+  if (via === "nuvio" && exp <= t) { await contar(env, t, "local"); return null; }
   const quem = via === "trakt" ? await idTrakt(token, env) : await idNuvio(token, env);
+  if (quem) await contar(env, t, "verif");
   if (quem === RECUSADO) {
+    await contar(env, t, "recusa");
     await env.DB.prepare(
       "INSERT INTO sessao (hash, id, nome, expira) VALUES (?, '', '', ?) " +
       "ON CONFLICT(hash) DO UPDATE SET id = '', nome = '', expira = excluded.expira"
@@ -189,7 +216,7 @@ async function quemE(req, env) {
   await env.DB.prepare(
     "INSERT INTO sessao (hash, id, nome, expira) VALUES (?, ?, ?, ?) " +
     "ON CONFLICT(hash) DO UPDATE SET id = excluded.id, nome = excluded.nome, expira = excluded.expira"
-  ).bind(hash, quem.id, quem.nome, t + SESSAO_TTL).run();
+  ).bind(hash, quem.id, quem.nome, exp ? Math.min(exp, t + SESSAO_MAX) : t + SESSAO_TTL).run();
   return comPerfil(req, via, quem);
 }
 
@@ -992,5 +1019,6 @@ export default {
     // Separado de proposito: sem a migracao 010 aplicada, a tabela `sala` nao
     // existe e o lote inteiro (90 dias de retencao) falharia junto.
     try { await env.DB.batch(limpezaSala(env, t)); } catch {}
+    try { await env.DB.prepare("DELETE FROM ident_hora WHERE hora < ?").bind(t - 30 * 86400).run(); } catch {}
   },
 };
