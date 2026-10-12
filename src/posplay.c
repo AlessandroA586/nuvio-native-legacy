@@ -572,7 +572,7 @@ void posplay_desenhar(Uint32 agora, float baseY) {
   ESCALA_FIM();
 }
 static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
-  float a = anim, x = 96.0f;
+  float a = anim, x = NV_ILHA_MARGEM_D;   // a margem do player (PLR_MARGEM)
   (void)baseY;
   if (a < 0.01f) return;
   if (visivel) ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, NULL, 0, 0);   // anteparo
@@ -652,7 +652,7 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
   { int n = extras_n_relacionados(), i;
     float sobe = (1.0f - a) * 20.0f;
     float extra = telefoneui_ativo() ? 40.0f : 0;
-    GfxRect ilha = { x, NV_TELA_H - 444.0f - extra + sobe, NV_TELA_W - 192.0f, 444.0f + extra - 40.0f };
+    GfxRect ilha = { x, NV_TELA_H - 444.0f - extra + sobe, NV_TELA_W - 2.0f * x, 444.0f + extra - 40.0f };
     float y = ilha.y + 26.0f, cx;
     if (n > PP_MAX) n = PP_MAX;
     plrui_material(ilha, 36.0f, 0, a);

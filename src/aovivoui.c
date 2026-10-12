@@ -44,7 +44,7 @@
 #include <string.h>
 
 // --- desenho ---------------------------------------------------------------------
-#define AV_X        96.0f    // PLR_MARGEM: o recuo do conteudo do player de filme
+#define AV_X        NV_ILHA_MARGEM_D    // PLR_MARGEM: o recuo do conteudo do player de filme
 #define AV_LOGO_TOM 0.965f   // G_LOGO_CLARO do guia: marca recortada em branco
 
 // Duracao em relogio, sem palavra (nao precisa de traducao): 3:12, 1:04:09.

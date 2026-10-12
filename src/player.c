@@ -153,9 +153,9 @@ static void avisarCascaAberto(int v) { (void)v; }
 // (era 64 em parte disso e a barra ia de ponta a ponta). A barra tem cantos
 // redondos (plrui_barra, a mesma da pausa e do ao vivo), os botoes sao discos
 // de 68 no material da ilha e o focado vira a pilula no acento com o nome.
-#define PLR_PAD_X         96.0f
+#define PLR_PAD_X         PLR_MARGEM
 #define PLR_PAD_Y         48.0f
-#define PLR_MARGEM        96.0f
+#define PLR_MARGEM        NV_ILHA_MARGEM_D   // a margem da ilha do relogio (Home e player)
 #define PLR_BTN_D         68.0f
 #define PLR_BTN_GAP       12.0f
 #define PLR_GAP_ROW       38.0f   // topo da barra -> topo dos botoes
@@ -5305,7 +5305,7 @@ static void desenharOsdCorpo(Uint32 agora, float a, float ac, const CatItem *c) 
 
   // GEOMETRIA DO MOCKUP: a barra no y 902 (960 na busca so com a barra), os
   // botoes 38 abaixo dela, o tempo na linha dos botoes, o titulo 36 acima.
-  // Tudo entre as margens de 96: a barra deixou de ir de ponta a ponta.
+  // Tudo entre as margens da ilha (PLR_MARGEM): a barra nao vai de ponta a ponta.
   float ySo = ajustes_seekr_ligado() ? PLR_BARRA_Y_SEEKR : PLR_BARRA_Y_SO;
   float yBarra   = (PLR_BARRA_Y + (ySo - PLR_BARRA_Y) * (1.0f - cheio)) + desce;
   float yRowTopo = yBarra + PLR_GAP_ROW;
