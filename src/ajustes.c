@@ -3331,6 +3331,24 @@ void ajustes_dir(const char *dir) {
       dados_gravar("aparencia-20.txt", "1\n");
       gravar();
     } }
+  // MIGRACAO UNICA (2.0.5, dono): a build de cache grande (NV_TEX_MB_FIXO=300)
+  // esta sendo aposentada, e a 2.0.5 e a ultima que a traz. Quem a instalou fica
+  // com o mesmo teto de 300 MB, agora pelo ajuste. "Nunca escolheu" e o 0 no
+  // arquivo, que e igual ao Automatico escolhido de proposito (o arquivo nao
+  // guarda a diferenca); a marca diz que a migracao ja rodou. Quem escolheu outro
+  // valor fica, e quem trocar depois da marca fica. A build normal nao migra.
+#ifdef NV_TEX_MB_FIXO
+  { char *m = dados_ler("memoriaimagens-205.txt");
+    if (m) free(m);
+    else {
+      if (valor[AJ_TEX_MB] == 0) {
+        valor[AJ_TEX_MB] = 4;   // TEX_MB_DE[4] = 300
+        printf("[ajustes] memoria para imagens -> 300 MB (migracao unica da 2.0.5)\n");
+      }
+      dados_gravar("memoriaimagens-205.txt", "1\n");
+      gravar();
+    } }
+#endif
   // O limite mora em fileiras.c; esta linha e so o espelho dele. Ler daqui em
   // vez de gravar evita a divergencia: o arquivo de ajustes nao guarda o
   // numero, entao nao ha como os dois discordarem.
