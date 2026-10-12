@@ -1536,7 +1536,9 @@ int main(int argc, char **argv) {
   // Icone do app (apoiadores): a arte vem do pacote; o alias do launcher do
   // Android e a abertura do .wgt seguem o que ficou gravado (idempotente).
   iconeapp_iniciar(dirArte);
-  iconeapp_aplicar_plataforma();
+  { char *g = dados_ler("iconeapp-arte.txt");   // art changed since last apply -> apply again
+    if (iconeapp_arte_mudou(iconeapp_atual(), g)) iconeapp_aplicar_plataforma();
+    free(g); }
   ajustes_idioma_auto_iniciar(aoMudarIdiomaAuto);
   // A estrutura persistida só pode ser comparada após carregar a configuração.
   homeestado_iniciar();
