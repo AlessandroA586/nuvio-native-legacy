@@ -34,15 +34,46 @@ For full architecture details, compilation toolchains, and the original implemen
 
 ## 🛠️ Building & Development
 
-Because configuration secrets (such as Supabase backend variables) are excluded from the source repository, you will need a valid `local.properties` file mapped via `tools/env.sh` to package and build successful binaries.
+Configuration secrets (such as the Supabase backend variables) are excluded from the source repository. Builds read them from a `local.properties` file through `tools/env.sh`:
+
+```properties
+NUVIO_SUPABASE_URL=...
+NUVIO_SUPABASE_ANON_KEY=...
+TV_LOGIN_WEB_BASE_URL=...
+```
+
+### Build on GitHub (no local setup)
+
+The workflow `.github/workflows/build-tpk.yml` builds the full `NuvioTpk` package (Tizen 8+/9) on GitHub's servers.
+
+1. **Add the keys once:** repo **Settings → Secrets and variables → Actions → New repository secret**, name it `LOCAL_PROPERTIES` and paste the `local.properties` lines above. The value is hidden after saving and masked in logs. Without it the build still runs, but without API keys.
+2. **Start a build:** push to `feat/microfone-busca-por-voz` or `native-microphone`, or use **Actions → Build TPK → Run workflow** (this button appears once the workflow is on the default branch).
+3. **Download the result:** open the finished run, scroll to **Artifacts** and download `NuvioTpk`. Unzip it to get the `.tpk`. Artifacts are kept for 90 days.
+
+The first build is slow (roughly 1–2 hours) because the C code is compiled under ARM emulation; later runs reuse the cached libraries. If a build fails, the last 60 lines of the log are shown at the top of the run page.
+
+> **Note:** If the repository is public, any logged-in GitHub user can download the artifact, and the keys are compiled into the `.tpk`. Make the repository private if only you should get the package.
+
+### Build locally
 
 ```bash
 # To build the native Samsung .tpk targets (requires Docker + .NET 8 SDK)
 bash tools/tpk.sh
 
+# Only the Tizen 8+/9 package (needs the Samsung .NET workload)
+NV_TPK_PACOTES=NuvioTpk bash tools/tpk.sh
+
 # To build and check all native Samsung packages for a release
 bash tools/release-samsung.sh
 ```
+
+On machines where Docker rejects the `linux/arm/v5` platform name (this includes the GitHub workflow), use plain `linux/arm`:
+
+```bash
+sed -i 's#linux/arm/v5#linux/arm#g' tools/tpk.sh
+```
+
+Converting the app art needs `ffmpeg` (or `sips` on macOS) on the build machine.
 
 > **Note:** Packages ship unsigned on purpose. You will need to use a tool like **Apps2Samsung** to sign the generated `.tpk` file with your specific TV's DUID profile before deploying it to your hardware.
 
