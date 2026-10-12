@@ -1854,6 +1854,7 @@ void cat_atualizar_item(int i, const CatItem *item) {
   if (itens && i >= 0 && i < n &&
       !strcmp(itens[i].imdb, copia.imdb) &&
       (!tipo_certo(itens[i].tipo) || !strcmp(tipo_base(itens[i].tipo), tipo_base(copia.tipo)))) {
+    if (itens[i].posCreditos) copia.posCreditos = 1;   // marca de outro fio sobrevive
     itens[i] = copia;   // an uncertain stored type may be resolved to movie/series
     mudou();
   }
@@ -1871,6 +1872,9 @@ void cat_atualizar_item_sem_abas(int i, const CatItem *item) {
       (!tipo_certo(itens[i].tipo) || !strcmp(tipo_base(itens[i].tipo), tipo_base(copia.tipo)))) {
     copia.nTemporadas = itens[i].nTemporadas;
     memcpy(copia.temporadas, itens[i].temporadas, sizeof copia.temporadas);
+    // A marca da cena chega por cat_marcar_pos_creditos noutro fio; uma copia
+    // tirada antes dela nao pode apaga-la.
+    if (itens[i].posCreditos) copia.posCreditos = 1;
     itens[i] = copia;
     mudou();
   }
@@ -2350,9 +2354,8 @@ void cat_marcar_pos_creditos(const char *imdb, int pos) {
   if (itens)
     for (i = 0; i < n; i++)
       if (!strcmp(itens[i].imdb, imdb) && itens[i].posCreditos != (pos ? 1 : 0)) {
-        itens[i].posCreditos = pos ? 1 : 0;
+        itens[i].posCreditos = pos ? 1 : 0;   // toda fileira com a obra, nao so a primeira
         mudou();
-        break;
       }
   pthread_mutex_unlock(&pubTrava);
 }

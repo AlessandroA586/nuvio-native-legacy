@@ -524,6 +524,15 @@ int main(void) {
     assert(tecla(SDLK_RETURN) == 1);
     assert(!posplay_visivel() && posplay_pediu_episodio(&t, &e) && e == 4);
     posplay_fechar();
+    { CatItem dup[2] = { u, u }, velha = u;   // marca chega depois, em todas as fileiras
+      dup[0].posCreditos = dup[1].posCreditos = 0;
+      cat_definir(dup, 2);
+      cat_marcar_pos_creditos(u.imdb, 1);
+      assert(cat_item(0)->posCreditos && cat_item(1)->posCreditos);
+      velha.posCreditos = 0;
+      cat_atualizar_item(1, &velha);
+      cat_atualizar_item_sem_abas(0, &velha);
+      assert(cat_item(0)->posCreditos && cat_item(1)->posCreditos); }
     u.posCreditos = 0;
     cat_definir(&u, 1);
     cat_definir_episodios(0, eps, 10);
