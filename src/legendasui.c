@@ -265,7 +265,7 @@ static uint64_t recAssinatura(void) {
   uint64_t h = 5381u;
   int i;
   h = recHashStr(h, prefLinha(0)); h = recHashStr(h, prefLinha(1));
-  h = recHashStr(h, video_url_atual());
+  h = recHashStr(h, legauto_midia(video_url_atual()));
   h = h * 33u + (uint64_t)nCand;
   for (i = 0; i < nCand; i++) {
     h = h * 33u + (uint64_t)(cand[i].embutida ? 1 : 0) * 3u + (uint64_t)(cand[i].tipo + 1);

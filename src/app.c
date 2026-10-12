@@ -305,6 +305,7 @@ static int    fonteVODAutomatica;
 static int    fonteVODTentativas;
 // Retomar pela fonte guardada em curso (tocarFonteGuardada); 0 = caminho normal.
 static int    voltaAtiva;
+static Stream voltaFonte;  // fonte aberta fora da lista; vive alem da conferencia
 static Uint32 voltaDesde;
 static Uint32 fonteVODDesde;
 static Uint32 fonteManualDesde;   // OK na folha de Fontes: prazo ate o primeiro quadro
@@ -448,6 +449,7 @@ static void limparFonteVOD(void) {
   antAberta = -1;
   fonteVODAutomatica = 0;
   voltaAtiva = 0;
+  memset(&voltaFonte, 0, sizeof voltaFonte);
   fonteVODTentativas = 0;
   fonteVODDesde = 0;
   fonteManualDesde = 0;
@@ -857,6 +859,7 @@ static int tocarFonteGuardada(void) {
     return 0;
   marco("abrir: fonte guardada, sem busca");
   stream_definir_atual(-1);
+  voltaFonte = s;
   video_definir_dv(s.dolbyVision);
   video_definir_cabecalhos(s.cabecalhos);
   video_definir_mp4(stream_e_mp4(&s));
@@ -2754,6 +2757,7 @@ static void legendasDaFonte(void) {
   // A legenda automatica compara o release com este nome, entao ele vale desde
   // que o player abre (antes do primeiro quadro), nao so com video.
   s = stream_item(stream_atual());
+  if (!s && voltaFonte.url[0]) s = &voltaFonte;
   legauto_fonte(player_aberto() && !player_id_canal()[0] && s ? s->arquivo : NULL);
   if (!player_aberto() || player_id_canal()[0] || !player_com_video()) return;
   c = cat_item(player_indice());

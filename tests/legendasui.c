@@ -292,6 +292,19 @@ int main(void) {
   assert(linhaDe("par") >= 0 && linhaDe("rec|a") < 0);
   sec[0] = 0; ativaEmb = -1;
 
+  // Nome publicado depois do primeiro calculo, com URL opaca e candidatas iguais.
+  nEmb = 0; nAdd = 2; tocando = "https://h.invalid/opaque";
+  addon(0, "pt", "OpenSubtitles", "Show.HDTV.LOL.srt", "https://h.invalid/old.srt");
+  addon(1, "pt", "OpenSubtitles", "Show.WEB-DL.NTb.srt", "https://h.invalid/new.srt");
+  legauto_fonte(NULL); legendasui_abrir();
+  assert(recP == 0);
+  uint64_t assinatura = recAssinatura();
+  legauto_fonte("Show.WEB-DL.NTb.mkv");
+  montarLinhas();
+  assert(recP == 1 && recAssinatura() != assinatura);
+  legendasui_abrir(); assert(recP == 1);
+  legauto_fonte(NULL); montarLinhas(); assert(recP == 0);
+
   puts("legendasui: identities, formats, kinds, full list, late arrivals, second-slot refusals, offsets, AutoSync, settings, active-outside-recommendations OK");
   return 0;
 }

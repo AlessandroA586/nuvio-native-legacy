@@ -1200,15 +1200,21 @@ static int medirHash(const char *url, unsigned long long tam, char out[17],
   long n1 = 0, n2 = 0;
   int st1 = 0, st2 = 0, e1 = 0, e2 = 0, ok = 0, tent = 0;
   char *a, *b = NULL;
+  unsigned inicio = relogioMs();
   a = rede_baixar_trecho_st(url, 6, 0, LEGEXTRAS_BLOCO - 1, &n1, &st1, &e1, NULL, 0);
   if (a && st1 == 206 && n1 == LEGEXTRAS_BLOCO) {
-    // O fim do arquivo num link de debrid costuma custar um seek frio no
-    // servidor: prazo de 8 s e UMA nova tentativa se nao veio nada (a segunda
-    // ja acha o arquivo quente). O pedido segue redirecionamentos (o link do
-    // debrid responde 206 no CDN) e o 206 e conferido acima, nunca assumido.
+    // Seek frio no debrid: ate 8 s e UMA nova tentativa, mas os dois Range
+    // juntos conservam o teto anterior de 12 s. O addon ainda precisa responder
+    // antes dos 30 s da selecao automatica; hash e opcional, legenda nao.
     while (!b && tent < 2) {
+      unsigned gasto = relogioMs() - inicio;
+      int segundos;
+      if (gasto >= 12000u) break;
+      segundos = (int)((12000u - gasto) / 1000u);
+      if (!segundos) break;
+      if (segundos > 8) segundos = 8;
       tent++;
-      b = rede_baixar_trecho_st(url, 8, (long long)(tam - LEGEXTRAS_BLOCO), (long long)(tam - 1),
+      b = rede_baixar_trecho_st(url, segundos, (long long)(tam - LEGEXTRAS_BLOCO), (long long)(tam - 1),
                                 &n2, &st2, &e2, NULL, 0);
     }
   }
@@ -1227,8 +1233,7 @@ static int medirHash(const char *url, unsigned long long tam, char out[17],
 
 // Prepara o segmento de extras de uma busca, com o hash quando da para
 // medir. Roda no fio da busca, antes dos addons: o hash custa dois pedidos
-// curtos (6 s o inicio, 8 s o fim com uma nova tentativa) e o resultado vale
-// para todos eles.
+// curtos (ate 12 s no total, incluindo retry) e o resultado vale para todos eles.
 static void prepararExtras(LegBusca *B) {
   LegExtras e;
   char hash[20] = "", nome[256];
