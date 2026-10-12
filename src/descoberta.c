@@ -3268,6 +3268,12 @@ static int montarContinuar(CatItem *saida, int max) {
   // o ciclo seguinte com o Trakt de volta refaz a fileira normalmente.
   if (nJ == 0 && querTrakt && trakt_continuar_falhou()) {
     int k = cat_copiar_fileira("continue_watching", saida, max, NULL);
+    if (!ajustes_cw_proximo()) {
+      int w = 0;
+      for (i = 0; i < k; i++)
+        if (emAndamento(saida[i].progresso)) saida[w++] = saida[i];
+      k = w;
+    }
     // A metade que falta provar: por que a conta veio 0. Registros no
     // progresso deste perfil, antes dos filtros de 1-90%.
     if (querConta) {

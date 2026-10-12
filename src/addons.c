@@ -1135,11 +1135,11 @@ static void *buscarUmAddon(void *u) {
   for (q = p; q;) {
     const char *f = js_fim(q);
     if (!f || f <= q) break;
-    { char id[256] = "", texto[512] = "";
+    { char id[256] = "";
       js_texto(q, f, "id", id, sizeof id);
       if (!strncmp(id, "error.", 6)) {
-        js_texto(q, f, "lang", texto, sizeof texto);
-        printf("[legendas] addon avisou: %s\n", texto[0] ? texto : id);
+        // id/lang podem repetir URL autenticada, configuracao ou quebras de linha.
+        printf("[legendas] addon avisou: erro na resposta de legendas\n");
       } else recebidas++;
     }
     q = js_prox(f);

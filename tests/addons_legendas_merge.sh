@@ -8,6 +8,9 @@ cc tests/addons_legendas_merge.c tests/addons_legendas_prazo.c src/linguas.c src
   -std=gnu11 -pthread -ffunction-sections -fdata-sections -Wl,-dead_strip -Wall -Wextra \
   -Wno-unused-function -Wno-macro-redefined -Wno-missing-field-initializers -o "$work/test"
 "$work/test" > "$work/log"
-rg -F '[legendas] addon avisou: [❌] OpenSubtitles V3+ - 500 - Internal Server Error' "$work/log"
-rg -F '[legendas] addon avisou: upstream failed' "$work/log"
+test "$(rg -c '^\[legendas\] addon avisou:' "$work/log")" = 2
+if rg -q 'fixture\.invalid|PRIVATE_TOKEN|upstream failed|Internal Server Error' "$work/log"; then
+  echo 'subtitle error diagnostic leaked upstream text' >&2
+  exit 1
+fi
 rg '^PASS:' "$work/log"

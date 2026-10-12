@@ -133,6 +133,12 @@ int main(void) {
   responses[1] = "{\"subtitles\":[{\"lang\":\"ron\",\"url\":\"https://fixture.invalid/PRIVATE_TOKEN/ro.srt\"},{\"lang\":\"spa\"},{\"url\":\"https://fixture.invalid/no-lang.srt\"}]}";
   antes = requests; run(2, "tt123", "movie");
   assert(requests - antes == 2 && nLegs == 1 && !strcmp(legs[0].provedor, "Subs.ro"));
+  // Repro da revisao: error.* pode repetir URL/config e injetar linhas no log.
+  responses[0] = "{\"subtitles\":[{\"id\":\"error.upstream\",\"lang\":\"Falha ao acessar https://fixture.invalid/PRIVATE_TOKEN/subtitles/tt123.json?api_key=PRIVATE_TOKEN\\nINJECTED_DIAGNOSTIC\"}]}";
+  run(1, "tt123", "movie"); assert(nLegs == 0);
+  // Sem lang, o id de erro tambem e entrada nao confiavel.
+  responses[0] = "{\"subtitles\":[{\"id\":\"error.https://fixture.invalid/PRIVATE_TOKEN?config=PRIVATE_CONFIG\\nINJECTED_DIAGNOSTIC\"}]}";
+  run(1, "tt123", "movie"); assert(nLegs == 0);
   responses[0] = "{\"error\":\"PRIVATE_TOKEN\"}"; run(2, "tt123", "movie"); assert(nLegs == 1);
   responses[0] = NULL; status[0] = 404; run(2, "tt123", "movie"); assert(nLegs == 1);
 

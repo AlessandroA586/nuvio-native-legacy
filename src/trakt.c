@@ -1435,6 +1435,8 @@ int trakt_continuar(CatItem *saida, int max) {
     if (filmes) pthread_join(fioFilmes, NULL);
     continuarFalhou = 1; printf("[trakt] sem resposta\n"); return 0;
   }
+  // A prova de conclusao precisa estar pronta antes de consumir vagas de playback.
+  if (hist) pthread_join(fioHist, NULL); else carregarHistoricoReal(cab, pedido);
   // O corpo e um array na raiz; js_array procura por chave, entao anda-se a mao.
   p = strchr(corpo, '[');
   p = p ? p + 1 : NULL;
@@ -1486,6 +1488,8 @@ int trakt_continuar(CatItem *saida, int max) {
         snprintf(d->imdb, sizeof d->imdb, "%s", imdb);
         snprintf(d->tipo, sizeof d->tipo, "movie");
       }
+      // So o historico posterior do MESMO episodio confirma avancar um pausado.
+      if (trakt_cw_concluiu(d->imdb, d->retomadoMs)) { p = js_prox(f); continue; }
       // O ID DO REGISTRO DE PLAYBACK, guardado aqui e em lugar nenhum mais.
       //
       // O Trakt remove um item da barra de retomada por DELETE
@@ -1518,18 +1522,9 @@ int trakt_continuar(CatItem *saida, int max) {
     p = js_prox(f);
   }
   free(corpo);
-  if (hist) pthread_join(fioHist, NULL); else carregarHistoricoReal(cab, pedido);
   // Os filmes vistos seguem rodando durante os GETs de "a seguir" e do enfeite
   // abaixo; so sao esperados no fim, antes de a fileira sair.
   if (!filmes) carregarFilmesVistos(cab, pedido);
-  // So o historico posterior do MESMO episodio confirma avancar um pausado.
-  { int i, w = 0;
-    for (i = 0; i < n; i++) {
-      if (trakt_cw_concluiu(saida[i].imdb, saida[i].retomadoMs)) continue;
-      saida[w++] = saida[i];
-    }
-    n = w;
-  }
   printf("[trakt] historico: %d serie(s) com ultimo episodio visto\n", nUlt);
   // "A SEGUIR": serie cujo ultimo episodio visto terminou e que nao esta
   // pausada em nada. Entra com progresso 0 no episodio seguinte; enfeitar()
