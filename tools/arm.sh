@@ -255,7 +255,7 @@ cp nuvio-proto.arm deploy/app/nuvio-proto
 # estavam na lista.
 ARQ_DE_PESSOA="trakt.txt addons.txt tmdb.txt mdblist.txt ajustes.txt
                progresso.txt nuvem.txt sessao.txt perfil.txt cliente.txt
-               listas.txt guia-fav.txt debrid.txt fanart.txt p2p.txt"
+               listas.txt guia-fav.txt debrid.txt fanart.txt p2p.txt seekr.txt seekr.txt.tmp"
 
 # UM POR PERFIL, entao o nome nao e fixo: stalker-p1.txt, stalker-p2.txt...
 # Estes guardam o MAC do portal IPTV, que autentica a assinatura de quem
