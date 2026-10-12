@@ -31,30 +31,55 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
+#include "trailer.h"
+#include "video.h"
+#include "plrui.h"
+#include "text.h"
+#include "layout.h"
+#include "ajustes.h"
+#include "trailerfonte.h"
+
+// Relogio monotono controlado: seek/retomada nao ganham tempo assistido.
+static double agoraMono;
+int nv_test_clock_gettime(clockid_t id, struct timespec *ts) {
+  (void)id;
+  ts->tv_sec = (time_t)agoraMono;
+  ts->tv_nsec = (long)((agoraMono - ts->tv_sec) * 1e9);
+  return 0;
+}
 
 // Pipeline falso: pos e dur sob controle total do teste.
 static double dur, pos;
-static int ativo;
-int video_tocar(const char *url) { (void)url; ativo = 1; pos = 0; return 1; }
+static int ativo, pausado, buffer, terminou;
+static char urlAtual[4096];
+int video_tocar(const char *url) {
+  snprintf(urlAtual, sizeof urlAtual, "%s", url);
+  ativo = 1; pausado = buffer = terminou = 0; pos = 0; return 1;
+}
 void video_parar(void) { ativo = 0; }
-void video_pausar(int p) { (void)p; }
+void video_pausar(int p) { pausado = p; }
 void video_buscar(double p) { pos = p; }
 int video_pausa_confirmada(void) { return 0; }
-int video_tocando(void) { return ativo; }
+int video_tocando(void) { return ativo && !pausado; }
+unsigned video_bufferando_ms(void) { return (unsigned)buffer; }
 int video_pronto(void) { return ativo; }
 int video_ativo(void) { return ativo; }
 int video_falhou(void) { return 0; }
+int video_terminou(void) { return terminou; }
 int video_conflito_recurso(void) { return 0; }
 double video_pos(void) { return pos; }
 double video_duracao(void) { return dur; }
-const char *video_url_atual(void) { return "https://example.invalid/teste.mp4"; }
+const char *video_url_atual(void) { return urlAtual; }
+static const char *const fonte = "https://example.invalid/teste.mp4";
+int video_iniciar_auto(void) { return 1; }
 
 // OS DESTINOS, virados contadores pelo renome do .sh. A marcacao de vistos
 // parte daqui (fecharSessao) para o Trakt (scrobble stop) e para o
 // Simkl/conta (visto_titulo) — nenhuma rede aqui, so a contagem.
 static int nTrakt, nVisto;
-void trakt_marcar(const char *imdb, double posSeg, double durSeg) {
-  (void)imdb; (void)posSeg; (void)durSeg; nTrakt++;
+void trakt_marcar(const char *imdb, double posSeg, double durSeg, double assistidoSeg) {
+  (void)imdb; (void)posSeg; (void)durSeg; (void)assistidoSeg; nTrakt++;
 }
 int visto_titulo(const char *imdb, const char *tipo, const int *temporadas,
                  int nt, int visto, int destinos) {
@@ -62,7 +87,16 @@ int visto_titulo(const char *imdb, const char *tipo, const int *temporadas,
   nVisto++;
   return 1;
 }
+int visto_episodios(const char *imdb, const char *tipo, const VistoPar *pares,
+                    int n, int visto, int destinos) {
+  (void)imdb; (void)tipo; (void)pares; (void)n; (void)visto; (void)destinos;
+  nVisto++;
+  return 1;
+}
 
+// Mantem os headers do SDK macOS; seleciona so a implementacao nativa real.
+#undef __APPLE__
+#include "../src/trailer.c"
 static void quadro(void) { player_atualizar(.016f, SDL_GetTicks()); }
 
 // Abre, assiste `p` segundos de reproducao real com o pipeline informando `d`
@@ -84,16 +118,27 @@ static void abrir(int filme, const char *imdb, const char *meta,
   player_abrir(0, NULL);
   if (durEp) player_definir_episodio(1, 1);
   dur = d;
-  player_definir_fonte(video_url_atual());
+  player_definir_fonte(fonte);
   quadro();
   // Dois quadros: o primeiro pode buscar o ponto salvo (retomada); depois
   // disso a posicao e a que a pessoa assistiu de verdade.
+  // Reproducao continua real, amostrada uma vez por segundo.
+  for (int i = 0; i < (int)p; i++) { agoraMono += 1; pos += 1; quadro(); }
   pos = p; quadro(); quadro();
   player_encerrar();
 }
 
 int main(void) {
   assert(SDL_Init(SDL_INIT_TIMER) == 0); dados_iniciar(""); ling_local_legenda("none");
+
+  // Sem minutagem: fonte pronta na ultima posicao, sem reproducao real.
+  // Antes: fecharSessao arredonda 69/129 e chama TODOS os destinos.
+  CatItem semMeta = {0};
+  strcpy(semMeta.imdb, "tt90000001"); strcpy(semMeta.tipo, "movie");
+  cat_definir(&semMeta, 1); dur = 129.036;
+  player_abrir(0, fonte); quadro(); pos = 69; quadro();
+  player_encerrar();
+  assert(nTrakt == 0 && nVisto == 0 && cat_item(0)->progresso == 0);
 
   // (1) O RELATO DO #205, filme: meta diz 1 h 46 min, o pipeline (PRONTO do
   // trailer) diz 129 s, a pessoa assiste 69 s e sai. A regra antiga: 69 >=
@@ -136,6 +181,67 @@ int main(void) {
   assert(nTrakt == 1 && nVisto == 0);
   assert(cat_item(0)->progresso > 0 && cat_item(0)->progresso < 10);
 
-  puts("PASS: duracao de trailer nao marca visto nem grava progresso; titulo real continua marcando");
+  // Seek ate o fim nao e tempo assistido, mesmo com a minutagem certa.
+  semMeta.progresso = 0; strcpy(semMeta.imdb, "tt90000002");
+  cat_definir(&semMeta, 1); nTrakt = nVisto = 0; dur = 2580;
+  player_abrir(0, fonte); quadro(); agoraMono += 200; pos = 2525; quadro();
+  player_encerrar();
+  assert(nTrakt == 0 && nVisto == 0 && cat_item(0)->progresso == 0);
+
+  // Um trailer substitui a pipeline de uma sessao principal ainda aberta.
+  // Passa pelo trailer_abrir REAL; ao fechar a sessao nao pode copiar seu fim.
+  strcpy(semMeta.imdb, "tt90000003"); cat_definir(&semMeta, 1);
+  player_abrir(0, fonte); quadro();
+  for (int i = 0; i < 130; i++) { agoraMono += 1; pos += 1; quadro(); }
+  dur = 180;
+  trailer_abrir("https://example.invalid/trailer.mp4", (GfxRect){0,0,100,100}, 0, 0);
+  assert(trailer_aberto());
+  pos = 180; quadro(); player_encerrar();
+  assert(nTrakt == 0 && nVisto == 0 && cat_item(0)->progresso == 0);
+  trailer_fechar();
+
+  // Trailer nativo termina, fecha e deixa os valores antigos na pipeline.
+  // A sessao perdeu a fonte; mesmo restaurar a URL nao recupera sua prova.
+  strcpy(semMeta.imdb, "tt90000005"); cat_definir(&semMeta, 1); dur = 2580;
+  player_abrir(0, fonte); quadro();
+  for (int i = 0; i < 2400; i++) { agoraMono += 1; pos += 1; quadro(); }
+  trailer_abrir(fonte, (GfxRect){0,0,100,100}, 0, 0);
+  dur = pos = 180; terminou = 1;
+  trailer_atualizar(SDL_GetTicks()); assert(!trailer_aberto());
+  quadro(); player_encerrar();
+  assert(nTrakt == 0 && nVisto == 0 && cat_item(0)->progresso == 0);
+
+  // Pausa e buffer nao contam.
+  strcpy(semMeta.imdb, "tt90000004"); cat_definir(&semMeta, 1); dur = 2580;
+  player_abrir(0, fonte); quadro();
+  video_pausar(1);
+  for (int i = 0; i < 180; i++) { agoraMono += 1; quadro(); }
+  video_pausar(0); buffer = 1;
+  for (int i = 0; i < 180; i++) { agoraMono += 1; pos += 1; quadro(); }
+  buffer = 0; pos = 2525; quadro(); player_encerrar();
+  assert(nTrakt == 0 && nVisto == 0 && cat_item(0)->progresso == 0);
+
+  // Amostras em degraus de 200ms a 60fps: nao perder 95% do tempo real.
+  strcpy(semMeta.imdb, "tt90000006"); cat_definir(&semMeta, 1); dur = 180;
+  player_abrir(0, fonte); quadro(); quadro();
+  for (int i = 1; i <= 170 * 60; i++) {
+    agoraMono += 1.0 / 60.0; pos = (i / 12) * 0.2; quadro();
+  }
+  player_encerrar();
+  assert(nTrakt == 1 && nVisto == 1 && cat_item(0)->progresso == 100);
+
+  // Sem fonte (preparo/pre-busca): o video e de um trailer, nao do player.
+  nTrakt = nVisto = 0; strcpy(semMeta.imdb, "tt90000007"); cat_definir(&semMeta, 1);
+  player_abrir(0, NULL); dur = 180;
+  trailer_abrir(fonte, (GfxRect){0,0,100,100}, 0, 0);
+  for (int i = 0; i < 180; i++) { agoraMono += 1; pos += 1; quadro(); }
+  player_encerrar(); trailer_fechar();
+  assert(nTrakt == 0 && nVisto == 0 && cat_item(0)->progresso == 0);
+
+  // Regressao sem catalogo: 69s reais com duracao falsa de 129s nao concluem.
+  abrir(1, "tt90000008", NULL, NULL, 129.036, 69);
+  assert(nTrakt == 1 && nVisto == 0 && cat_item(0)->progresso < 90);
+
+  puts("PASS: trailer, seek, pausa e buffer nao marcam; reproducao real grava progresso e visto");
   return 0;
 }

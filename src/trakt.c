@@ -20,6 +20,7 @@
 #include <time.h>
 #include <limits.h>
 #include <stdint.h>
+#include <math.h>
 
 
 static char token[128], cliente[80];
@@ -1285,6 +1286,10 @@ static int filmesAplicar(const FilmesVistos *v, HistoricoPedido pedido) {
   for (size_t i = 0; atual && i < v->n; i++)
     atual = cat_historico_definir_se_geracao(v->ids[i], "movie", 1, pedido.mapa);
   pthread_mutex_unlock(&travaCred);
+  if (atual && v->n) {
+    printf("[visto] marcado por trakt-importacao pos=0 dur=0 assistido=0s n=%zu filmes (sem reproducao local)\n", v->n);
+    fflush(stdout);
+  }
   return atual;
 }
 
@@ -2043,15 +2048,24 @@ static void *fioScrobble(void *u) {
 }
 
 // Enfileira. Devolve a acao decidida (SCR_NADA quando nao ha o que mandar).
-int trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg) {
+int trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg, double assistidoSeg) {
   int acao;
   double pct;
   pthread_t t;
-  if (!ligado || !imdb || !*imdb || durSeg <= 1.0) return SCR_NADA;
+  if (!ligado || !imdb || !*imdb || !isfinite(posSeg) || !isfinite(durSeg) ||
+      !isfinite(assistidoSeg) || durSeg < 120.0 || assistidoSeg < 5.0) return SCR_NADA;
   pct = 100.0 * posSeg / durSeg;
+  // Valida ANTES da vaga pendente: nem um stop sem reproducao entra na fila.
+  if (evento == SCR_EV_SAIU && pct >= 90.0 &&
+      assistidoSeg < fmax(120.0, durSeg * 0.9)) return SCR_NADA;
   pthread_mutex_lock(&travaScr);
   acao = scrobble_decidir(&scrEstado, evento, imdb, pct);
   if (acao != SCR_NADA) {
+    if (acao == SCR_STOP) {
+      printf("[visto] marcado por trakt-scrobble-player pos=%.3f dur=%.3f assistido=%.3fs id=%s\n",
+             posSeg, durSeg, assistidoSeg, imdb);
+      fflush(stdout);
+    }
     scrPend.acao = acao; scrPend.pct = pct; scrPend.tem = 1;
     snprintf(scrPend.id, sizeof scrPend.id, "%s", imdb);
     if (!scrFioVivo) {
@@ -2065,8 +2079,8 @@ int trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg) {
 }
 
 // Saida do player: stop (>= 90%) ou pause, como sempre foi.
-void trakt_marcar(const char *imdb, double posSeg, double durSeg) {
-  trakt_scrobble(SCR_EV_SAIU, imdb, posSeg, durSeg);
+void trakt_marcar(const char *imdb, double posSeg, double durSeg, double assistidoSeg) {
+  trakt_scrobble(SCR_EV_SAIU, imdb, posSeg, durSeg, assistidoSeg);
 }
 
 // --- WATCHLIST: escrever e ler ------------------------------------------------
