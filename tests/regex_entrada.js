@@ -1,0 +1,114 @@
+// REGEX ENTRADA -> C: o que a pessoa digita/cola no campo "Padrao do filtro" passa
+// primeiro pelo filtro de alfabeto do campo (teclado.c definirDoSistema) e pelo
+// teto de tamanho, e SO ENTAO chega a fonteregra. Foi assim que o "(?=" virou
+// "(?" (falta o "=" no alfabeto) e uma regex valida foi recusada. Este gerador
+// aplica o MESMO filtro (alfabeto e teto lidos do codigo-fonte, passados por
+// NV_ALFA e NV_MAX) a uma lista grande de regex de verdade e imprime
+// "esperado<TAB>padrao-que-chegou-ao-C<TAB>texto", com o esperado vindo do
+// Nuvio OFICIAL (new RegExp(p,"i") + buildExcludeRegex) sobre a regex ORIGINAL.
+// Esperado -1 = o oficial recusa a regex (invalida). Qualquer caractere que o
+// filtro perca tambem sai em stderr e faz o gerador falhar.
+const ALFA = process.env.NV_ALFA || "";
+const MAX = parseInt(process.env.NV_MAX || "400", 10);
+
+function filtro(t) {                         // espelho de definirDoSistema
+  let w = "";
+  for (const ch of t) {
+    const c = ch.charCodeAt(0);
+    if (w.length >= MAX) break;
+    if (c >= 0x80 || !c) continue;
+    if (ALFA.includes(ch)) w += ch;
+    else if (/[A-Z]/.test(ch) && ALFA.includes(ch.toLowerCase())) w += ch.toLowerCase();
+    else if (/[a-z]/.test(ch) && ALFA.includes(ch.toUpperCase())) w += ch.toUpperCase();
+  }
+  return w;
+}
+function buildExcludeRegex(pattern) {
+  const matches = String(pattern || "").match(/\(\?![^)]*?\(([^)]+)\)/g) || [];
+  const words = matches.map((m) => { const i = /\(\?![^)]*?\(([^)]+)\)/.exec(m); return i ? i[1] : ""; })
+    .join("|").split("|").map((w) => w.trim()).filter(Boolean);
+  if (!words.length) return null;
+  try { return new RegExp(`\\b(${words.join("|")})\\b`, "i"); } catch (_) { return null; }
+}
+// Padrao com lookahead/lookbehind: roda no motor de JS (ponto NAO atravessa quebra
+// de linha, como o oficial). Os demais seguem o caminho POSIX de sempre, onde o
+// ponto e o ^ $ veem o texto inteiro: comportamento antigo e mantido de proposito
+// (fonteregra.c), entao esses padroes so sao comparados em texto de UMA linha.
+const temOlhar = (p) => /\(\?(=|<=|<!)/.test(p);
+function oficial(pattern, text) {
+  let inc;
+  // O oficial so liga o filtro quando ha letra/digito (isRegexSelectionConfigured):
+  // no C isso e -1 ("invalido ou nao configurado").
+  if (!/[a-z0-9]/i.test(pattern)) return -1;
+  // "(?i)" no inicio: o C aceita (Java/Python); o V8 so aceita "(?i:...)". Compara
+  // com o padrao sem o grupo de flags, que e o que o C executa.
+  pattern = pattern.replace(/^\(\?[ims]+\)/, "");
+  try { inc = new RegExp(pattern, "i"); } catch (_) { return -1; }
+  const exc = buildExcludeRegex(pattern);
+  return inc.test(text) && !(exc && exc.test(text)) ? 1 : 0;
+}
+
+const R = String.raw;
+const RES = R`(2160p|4K|UHD|1080p|FHD|BD|HD|720p|SDR)`;
+const SRC = R`(SeaDex|Remux|BD-Remux|Dual[\s-]?Audio|Multi[\s-]?Audio|Multi|Dub|Eng|Jap|10bit|HEVC|x265|H265|Hi10P|BluRay|WEB-DL|WEBRip|BDRip|BRRip|x264|AVC|H264|8bit|HDTV|DVDRip|HDRip|Subs)`;
+const DONO = R`(?=.*\b${RES}\b)(?=.*\b${SRC}\b)(?!.*(DTS|DTS-HD|DTS:X|.*DTS))(?!.*(?:\bDV\b|\bDolby\s?Vision\b)(?!.*\b(HDR10|HDR|Multi)\b))`;
+
+const padroes = [
+  DONO,                                                   // o do dono, como colado
+  DONO + R`(?!.*(TrueHD|MLP))`,
+  R`SeaDex|Remux|BluRay|Blu[\s\-]?Ray|BDRip|BRRip|\bBD\b|WEB[\s\-]?DL|WEBRip|\bWEB\b|HDTV|DVDRip|\bDVD\b`,
+  R`ESP|Latino|Castellano`,
+  R`\b(ESP|LAT)\b`,
+  R`^(?=.*1080p)(?!.*(DTS|CAM))`,
+  R`^(?=.*\b1080p\b)(?=.*\bWEB-DL\b)`,
+  R`(?=.*2160p)(?=.*HDR)`,
+  R`^(?=.*(Remux|BluRay))(?!.*(CAM|TS))`,
+  R`(?<=WEB-)DL`, R`(?<!x)265`, R`(?<=\b)HDR`, R`(?<!\d)4K`,
+  R`^(?!.*\b(CAM|TS|HDCAM)\b)(?=.*\b(1080p|2160p)\b)`,
+  R`(?=.*\bEng\b)(?!.*\b(Subs)\b)`,
+  R`2160p.*HDR`, R`2160p.*?HDR`, R`^.*(1080p|2160p).*$`,
+  R`(?:Remux|BluRay)\s+(?:HEVC|x265)`,
+  R`S\d{2}E\d{2}`, R`\d{3,4}p`, R`\d+(\.\d+)?\s?GB`, R`[^a-z]DTS[^a-z]`, R`[A-Z]{3}`,
+  R`DTS(-HD)?( MA)?`, R`DTS[-\s.]?(HD|X|MA)?`, R`TrueHD|MLP|DTS`, R`E-?AC-?3|DD\+`,
+  R`H\.?26[45]`, R`x26[45]`, R`5\.1|7\.1`, R`Atmos`, R`Dolby\s?Vision|\bDV\b`,
+  R`^(?!.*Dub).*Eng`, R`(Dual|Multi)[\s-]?Audio`,
+  R`Don't`, R`Tom & Jerry`, R`50% off`, R`#1 hit`, R`user@host`, R`a;b`, R`~approx`, R`say "hi"`,
+  R`a{2,3}`, R`a{2,}`, R`\(\d+\)`,
+  // invalidas no JS (o C tambem tem de recusar):
+  R`(`, R`[a-`, R`)`, R`?x`, R`(?<=a`, R`*a`, R`+a`, R`a|*`, R`[z-a]`, R`a{2,1}`, R`a\\`,
+  // sem letra/digito: o oficial nao liga o filtro, o C devolve -1:
+  R`.+`, R`^$`, R`\$|\^`, R`[\[\]]`,
+  // (?i) no inicio, aceito de proposito:
+  R`(?i)1080p`, R`(?i)^(?=.*remux)(?!.*dts)`,
+];
+
+// CONHECIDAS, nao comparadas (o C difere do V8 e nao vale mudar): quantificador
+// duplo (a** a+* a?* a{2}{3}) o glibc aceita e o JS recusa; "x{" e "x{,2}" sao
+// literais no JS e invalidos aqui; \\p{L}, \\1, \\k<n> e grupo nomeado o regexjs nao tem.
+const conhecidas = [R`a**`, R`a+*`, R`a?*`, R`a{2}{3}`, R`x{`, R`x{,2}`, R`\p{L}`, R`(a)\1`, R`(?<n>a)\k<n>`];
+
+const textos = [
+  "Film 1080p BluRay x265", "Film 1080p BD-Remux", "Anime BD-Remux 1080p DTS-HD",
+  "x 2160p Remux HEVC", "Film 1080p WEB-DL", "Film 1080p WEB-DL DTS",
+  "Movie 2021 2160p BluRay Remux HEVC TrueHD 7.1", "Movie 1080p BluRay x265 DTS-HD MA 5.1",
+  "Movie 2160p Remux DV HEVC Atmos", "Movie 2160p Remux DV HDR10 HEVC",
+  "Film 2160p WEB-DL Dolby Vision", "Anime 2160p Dual Audio HEVC",
+  "Film 1080p CAM", "Film TS 1080p", "Torrentio\n1080p WEB-DL", "Film 1080p\nDTS",
+  "Show S01E02 Eng 1080p Subs", "Show Eng 1080p", "film x265 web-dl", "movie 1080P bluray",
+  "Filme ESP Latino 1080p", "Castellano 720p", "Film H.264 5.1 E-AC-3", "Film DD+ 7.1 Atmos",
+  "Tom & Jerry 1080p", "Don't Look 1080p", "50% off #1 hit", "user@host a;b ~approx say \"hi\"",
+  "Film 4.5 GB", "(2021) [BD]", "aa aaa a", "",
+];
+
+let ruim = 0;
+const linhas = [];
+for (const p of padroes) {
+  const f = filtro(p);
+  if (f !== p) { ruim++; process.stderr.write(`FILTRO ALTERA:\n  digitado: ${p}\n  chegou  : ${f}\n`); }
+  for (const t of textos) {
+    if (!temOlhar(p) && t.includes("\n")) continue;
+    linhas.push([oficial(p, t), f, t.replace(/\n/g, "\\n")].join("\t"));
+  }
+}
+process.stdout.write(linhas.join("\n") + "\n");
+if (ruim) { process.stderr.write(`regex_entrada: ${ruim} padrao(oes) alterado(s) pelo filtro do campo\n`); process.exit(1); }
