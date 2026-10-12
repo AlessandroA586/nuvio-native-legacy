@@ -72,6 +72,15 @@ static void lookahead(void) {
   // Lookbehind.
   assert(fonteregra_regex_testar("(?<=WEB-)DL", "Film WEB-DL") == 1);
   assert(fonteregra_regex_testar("(?<=WEB-)DL", "Film BD-DL") == 0);
+  { char longo[1008];
+    FonteRegraCfg c = cfg(FR_ESCOPO_TODAS, FR_REGEX_EXIGIR, 1);
+    memset(longo, 'x', 1000);
+    strcpy(longo + 1000, " WEB-DL");
+    assert(fonteregra_regex_testar("(?<=WEB-)DL", longo) == 1);
+    assert(fonteregra_definir_regex("(?<=WEB-)DL") == 1);
+    assert(fonteregra_grupo(&c, "Torrentio", 0, longo) == 0);
+    assert(fonteregra_definir_regex("") == 0);
+  }
   // (?= escapado ou dentro de colchete nao e lookahead: segue o POSIX.
   assert(fonteregra_regex_testar("a\\(?=b", "a=b") != -1);
   // Invalido continua -1 pelo motor proprio.

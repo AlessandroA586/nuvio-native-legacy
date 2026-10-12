@@ -18,6 +18,9 @@ for (let i = 0; i < 5; i++) await pede("lixo");
 console.log("ilegivel x5 -> fetch", chamadas);
 for (let i = 0; i < 5; i++) { const r = await pede(jwt(now + 3600)); if (i == 0) console.log("status", r.status); }
 if (chamadas !== 1) { console.log("FALHOU: esperava 1 chamada, houve", chamadas); process.exit(1); }
+// Recusa de JWT fica lembrada ate o exp dele, nao 10 min.
+const neg = [...db.values()].find((r) => r.id === "" && r.expira > now + 900);
+if (!neg || neg.expira > now + 3601) { console.log("FALHOU: recusa nao lembrada ate o exp", neg && neg.expira - now); process.exit(1); }
 // Token aceito fica no cache ate o exp (teto 1 h), nao 10 min.
 globalThis.fetch = async () => { chamadas++; return new Response(JSON.stringify({ id: "u1" }), { status: 200 }); };
 chamadas = 0;

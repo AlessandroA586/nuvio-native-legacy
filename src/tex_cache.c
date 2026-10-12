@@ -2974,6 +2974,10 @@ static int threadDecode(void *arg) {
 // 0,25/0,5/1/2/4/8 GB e que nem todo Chromium expoe — sem ele, 0, e o
 // orcamento fica no padrao de layout.h (96 MB), que e o que sempre foi.
 static long memTotalMB(void) {
+#ifdef AJUSTES_TESTE
+  const char *ram = getenv("NUVIO_SHOT_RAM_MB");
+  if (ram && atol(ram) > 0) return atol(ram);
+#endif
 #ifdef __EMSCRIPTEN__
   double gb = EM_ASM_DOUBLE({
     try {
@@ -3106,6 +3110,7 @@ static int orcamentoMB(void) {
 static int tetoPermitidoMB(void) {
   return ptv_tex_teto_mb(ptv_plataforma(), orcMemTotal);
 }
+int tex_teto_ram_mb(void) { return tetoPermitidoMB(); }
 void tex_definir_orcamento_mb(int mb) {
   int teto = tetoPermitidoMB(), aplicado;
   if (!mtx) return;

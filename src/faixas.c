@@ -836,6 +836,9 @@ static void lembrarManual(int i) {
     const VideoFaixa *f = video_legenda(i);
     if (!f) return;
     e.tipo = 'e'; e.numero = f->numero;
+    // #383: inteira explicita; id vazio de builds antigos e tipo desconhecido.
+    e.id[0] = (f->tipoLeg == LING_LEG_FORCADA || f->tipoLeg == LING_LEG_LETREIROS || f->letreiro) ? 'f' :
+              (f->tipoLeg == LING_LEG_COMPLETA || f->tipoLeg == LING_LEG_SDH) ? 'c' : 0;
     idiomaLembravel(f->idioma, e.idioma, sizeof e.idioma);
     snprintf(e.nome, sizeof e.nome, "%s", f->rotulo);
   } else { lembrarAddon(addons_legenda(i - emb)); return; }
@@ -869,7 +872,7 @@ static void legendaAutomatica(Uint32 agora) {
   const LegMem *mt;
   char tit[64];
   int tipos[NV_FAIXA_MAX];
-  int nEmb, nAdd = 0, embFechado, addFechado = 1, i, r, soForcada, origem;
+  int nEmb, nAdd = 0, embFechado, addFechado = 1, i, r, soForcada, origem, forcadaAuto;
   Uint32 passou;
   if (!legAuto || aberta || !player_aberto() || !player_com_video()) return;
   // Canal ao vivo nao tem legenda de addon nem idioma no arquivo que valha.
@@ -902,7 +905,15 @@ static void legendaAutomatica(Uint32 agora) {
   }
   fa = video_audio(video_audio_atual());
   audio = fa ? fa->idioma : "";
-  soForcada = ajustes_legenda_forcada_auto() && audio[0] && pref[0] &&
+  // #383: A LEGENDA INTEIRA ESCOLHIDA A MAO NESTE TITULO vence o #287. A faixa
+  // exata quase nunca existe no episodio seguinte (addon: o id leva a URL, que
+  // e de UM episodio; embutida: outro numero em outra fonte) e o que sobra e o
+  // idioma — com o audio no mesmo idioma o #287 respondia "so a forcada" e a
+  // escolha sumia: serie em ingles com legenda em ingles abria sem legenda.
+  forcadaAuto = ajustes_legenda_forcada_auto() &&
+                !(origem == LEGMEM_DE_TITULO &&
+                  (mt->tipo == 'a' || (mt->tipo == 'e' && !strcmp(mt->id, "c"))));
+  soForcada = forcadaAuto && audio[0] && pref[0] &&
               strcasecmp(pref, "none") && ling_casa(audio, pref);
   embFechado = video_mkv_sondado() != 0 || passou >= FX_AUTO_EMB_MS;
   // So confia na lista dos addons quando ela e DESTE titulo: sem imdb o app
@@ -942,7 +953,7 @@ static void legendaAutomatica(Uint32 agora) {
       return;
     }
   }
-  r = ling_legenda_auto_tipo(pref, audio, ajustes_legenda_forcada_auto(),
+  r = ling_legenda_auto_tipo(pref, audio, forcadaAuto,
                              emb, tipos, nEmb, embFechado, add, nAdd, addFechado);
   if (r == LING_AUTO_ESPERA) {
     // Passou do primeiro instante e ainda procura: a ilha diz o que esta fazendo.
@@ -991,7 +1002,7 @@ static void legendaAutomatica(Uint32 agora) {
     if (v) {
       int nv = addons_legendas_copiar(v, LEG_MAX, NULL, NULL);
       uint64_t lem = ci ? legauto_lembrada(ci->imdb[0] ? ci->imdb : ci->titulo, pref) : 0;
-      int b = legauto_escolher(v, nv, pref, video_url_atual(), NULL, 0, lem);
+      int b = legauto_escolher(v, nv, pref, legauto_midia(video_url_atual()), NULL, 0, lem);
       if (b >= 0 && b < nAdd) r = nEmb + b;
       free(v);
     }

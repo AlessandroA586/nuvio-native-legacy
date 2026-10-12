@@ -1,0 +1,36 @@
+// Conteudo da 2.0.5: docs/releases/2.0.5/NOVIDADES.md.
+// Sem cenas nem artes. Tetos de linhas para as traducoes; o motor mede antes de paginar.
+static const NovItem ITENS_205[] = {
+  { .grupo = "Player", .icone = "aj_clapperboard", .nome = "Abertura Cinema",
+    .frase = "A abertura estilo cinema agora é o padrão. O cartão detalhado continua nos Ajustes.", .linhas = 2 },
+  { .icone = "aj_circle-check", .nome = "Marcado como visto",
+    .frase = "Só depois de reprodução real. Um trailer não marca mais o título como visto.", .linhas = 2 },
+  { .icone = "aj_circle-play", .nome = "Pular abertura",
+    .frase = "Novas opções para pular abertura, recapitulação e créditos sozinho.", .linhas = 2 },
+  { .grupo = "Legendas", .icone = "aj_captions", .nome = "Lista completa",
+    .frase = "Legendas agrupadas por idioma, com a linha de sincronização automática.", .linhas = 2 },
+  { .icone = "aj_captions", .nome = "Segunda legenda",
+    .frase = "Segurar OK abre mais opções e desliga a segunda legenda. Tamanho de até 300%.", .linhas = 2 },
+  { .grupo = "Início", .icone = "aj_house", .nome = "Logos e dados",
+    .frase = "Logos e informações do título aparecem sem esperar o detalhe completo.", .linhas = 2 },
+  { .icone = "aj_user-round", .nome = "Perfis",
+    .frase = "Continuar assistindo sob cada avatar e troca rápida de perfil.", .linhas = 2 },
+  { .icone = "aj_puzzle", .nome = "Add-ons",
+    .frase = "Botão para sincronizar os addons da conta. A TV só recebe, nunca envia.", .linhas = 2 },
+  { .grupo = "Plataformas", .icone = "aj_sparkles", .nome = "Ícone do app",
+    .frase = "Novo ícone do app, com a etiqueta LEGACY." },
+  { .icone = "aj_memory-stick", .nome = "Memória de imagens",
+    .frase = "Os Ajustes mostram o limite de memória de imagens da sua TV.", .linhas = 2 },
+  { .icone = "aj_sliders-horizontal", .nome = "Samsung .tpk",
+    .frase = "O player nativo não trava mais a interface, e o botão de proporção muda a imagem.", .linhas = 2,
+    .plataformas = NOV_TPK | NOV_OUTRAS },
+  { .icone = "aj_tv-minimal-play", .nome = "LG webOS",
+    .frase = "Repositório próprio no Homebrew Channel, para instalar e atualizar.", .linhas = 2,
+    .plataformas = NOV_LG | NOV_OUTRAS },
+};
+static const NovConteudo NOV_ATUAL = {
+  .versao = "2.0.5",
+  .arquivo = "novidades-205.txt",
+  .subtitulo = "Cinema, legendas e perfis.",
+  .itens = ITENS_205, .nItens = (int)(sizeof ITENS_205 / sizeof *ITENS_205),
+};
