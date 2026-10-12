@@ -258,9 +258,25 @@ static void pilLembrar(void) {
   if (ci && pilHash) legauto_lembrar(ci->imdb[0] ? ci->imdb : ci->titulo, pilIdioma, pilHash);
 }
 
+// Sync pedido a mao (seletor/menu): "Sincronizando…" na hora, mesmo ciclo do
+// automatico; recusado vira o aviso final direto, sem fingir que trabalhou.
+static unsigned pilManualSeq;
+static void pilManual(Uint32 agora) {
+  LegSyncVisao v = legsync_visao(0);
+  pilBusca = 0; pil.rastreia = 1; pil.espera = 0; pil.troca = 0; pil.final = 0; pilFalhaBaixar = 0;
+  pil.iniciou = agora; pil.estado = PIL_OFF;
+  if (v.manualFase == 3) {
+    pil.rastreia = 0;
+    pil.final = legsync_pilula_final(&v, pilProvedor, pilTexto, sizeof pilTexto);
+    pilIr(PIL_APLICADA, agora);
+  } else pilIr(PIL_SINCRONIZANDO, agora);
+}
+
 static void pilAtualizar(Uint32 agora) {
   int r;
   LegSyncVisao v;
+  unsigned seq = legsync_manual_seq();
+  if (seq != pilManualSeq) { pilManualSeq = seq; if (player_aberto()) pilManual(agora); }
   if (!player_aberto()) pil.espera = 0;
   if (pil.estado == PIL_OFF && !pil.espera) return;
   if (pil.estado != PIL_OFF && (!player_aberto() || (pilBusca && !legAuto))) { pilZerar(); return; }

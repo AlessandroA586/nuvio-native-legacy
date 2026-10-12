@@ -149,26 +149,28 @@ int legsync_pilula_final(const LegSyncVisao *v, const char *provedor, char *dst,
 
 int legsync_pil_passo(LegSyncPil *p, const LegSyncVisao *v, unsigned agora, const char *provedor, char *texto, unsigned tam) {
   int quer, r = 0;
-  if (v->autoDesligado) { p->espera = 0; return LEGSYNC_PIL_ZERAR; }
-  if (v->falhaDownload && v->autoFase != 1) { p->espera = 0; return LEGSYNC_PIL_BAIXAR; }
+  // Sync pedido a mao segue o mesmo ciclo, com o automatico ligado ou nao.
+  int af = v->manualFase ? v->manualFase : v->autoFase;
+  if (v->autoDesligado && !v->manualFase) { p->espera = 0; return LEGSYNC_PIL_ZERAR; }
+  if (v->falhaDownload && af != 1) { p->espera = 0; return LEGSYNC_PIL_BAIXAR; }
   // Fechada, esperando o fim do plano: so o fim reabre. 2/3 = terminou (aceito,
   // desistiu/recusou/sem referencia); 1 segue; 0 = cancelado (sem plano): nada.
   if (p->espera && p->estado == LEGSYNC_PIL_OFF) {
-    if (v->autoFase == 2 || v->autoFase == 3) {
+    if (af == 2 || af == 3) {
       p->espera = 0; p->rastreia = 0;
       p->final = legsync_pilula_final(v, provedor, texto, tam);
       p->estado = LEGSYNC_PIL_APLICADA; p->desde = agora | 1u;
-      r |= LEGSYNC_PIL_FINAL_TARDE | (v->autoFase == 2 ? LEGSYNC_PIL_LEMBRAR : 0);
-    } else if (v->autoFase != 1) p->espera = 0;
+      r |= LEGSYNC_PIL_FINAL_TARDE | (af == 2 ? LEGSYNC_PIL_LEMBRAR : 0);
+    } else if (af != 1) p->espera = 0;
     return r;
   }
   if (p->estado == LEGSYNC_PIL_OFF) return 0;
   if (p->rastreia) {
     if (v->fase == LEGSYNC_AGUARDANDO) quer = LEGSYNC_PIL_PROCURANDO;
-    else if (v->autoFase == 1) quer = LEGSYNC_PIL_SINCRONIZANDO;
+    else if (af == 1) quer = LEGSYNC_PIL_SINCRONIZANDO;
     else quer = LEGSYNC_PIL_APLICADA;
     // Cada troca baixa de novo. Só o callback pode declarar falha de download.
-    if (quer == LEGSYNC_PIL_APLICADA && v->autoFase == 2) r |= LEGSYNC_PIL_LEMBRAR;
+    if (quer == LEGSYNC_PIL_APLICADA && af == 2) r |= LEGSYNC_PIL_LEMBRAR;
     // Leitura longa: a ilha encolhe de volta no relogio e o plano segue; o
     // aviso final reabre quando a sessao terminar.
     if (p->estado == LEGSYNC_PIL_SINCRONIZANDO && quer == LEGSYNC_PIL_SINCRONIZANDO && agora - p->desde >= LEGSYNC_PIL_SINC_MS) {

@@ -97,7 +97,9 @@ static int extrairSrt(const char *corpo,LegendaCue **saida,int *parcial) {
     for(char *q=linha;*q;q++)if(*q==',')*q='.';
     for(char *q=seta;*q;q++)if(*q==',')*q='.';
     double ini=tempo(linha),fim=tempo(seta);
-    if(ini<0||fim<=ini){if(parcial)*parcial=1;continue;}
+    // Um bloco com tempo ruim (fim<=inicio, comum em legenda da comunidade) cai
+    // sozinho: nao torna o resto um prefixo. Parcial e so falta de memoria.
+    if(ini<0||fim<=ini)continue;
     char texto[768]={0}; size_t usado=0;
     while(*p) {
       char *nl=strchr(p,'\n'); if(nl)*nl++=0;
@@ -454,7 +456,7 @@ static int extrairAss(const char *corpo,LegendaCue **saida,int *parcial) {
       pt = campoAss(linha,cTexto);
       if (!pt) {if(parcial)*parcial=1;continue;}
       a=tempo(trim(ini)); b=tempo(trim(fim));
-      if (a<0 || b<=a) {if(parcial)*parcial=1;continue;}
+      if (a<0 || b<=a) continue;   // so o bloco ruim cai (ver extrairSrt)
 
       memset(&c,0,sizeof c);
       c.cor=-1; c.posX=c.posY=-1.0f;

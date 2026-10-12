@@ -72,6 +72,10 @@ typedef struct {
   int falhaDownload;          // callback terminou sem corpo; não é um timeout da UI
   int autoTrocou;             // 1 = a escolhida nao sincronizou e outra legenda entrou no lugar
   char autoNome[64];          // nome da legenda que entrou (autoTrocou)
+  // Sync pedido a mao (Rapida/Completa/Audio/Outra): mesmo ciclo da pilula do
+  // automatico, com ou sem o automatico ligado. 0 nenhum, 1 trabalhando,
+  // 2 aceita, 3 nao deu (inclusive recusado na hora).
+  int manualFase;
 } LegSyncVisao;
 
 void legsync_iniciar(const char *urlMidia);
@@ -114,6 +118,7 @@ void legsync_definir_trocador(LegSyncTrocador t);
 uint64_t legsync_hash_url(const char *url);   // identidade opaca usada em `tentadas`
 
 int  legsync_acao(int acao);            // 1 = aceita no estado atual
+unsigned legsync_manual_seq(void);      // muda a cada sync pedido a mao (barato: por quadro)
 LegSyncVisao legsync_visao(int slot);   // slot 1: LEGSYNC_DEPOIS
 
 // --- API DE APRESENTACAO (legsyncui.c) -------------------------------------

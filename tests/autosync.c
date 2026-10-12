@@ -167,10 +167,10 @@ static void parsers(void) {
   int total=0;const LegendaCue *dados=legenda_documento_dados(a,&total);
   assert(total==1&&!strcmp(dados[0].texto,"Olá"));legenda_documento_liberar(a);casos++;
   a=legenda_documento_criar("1\n00:00:01,000 --> 00:00:03,000\nGood\n\n2\n00:00:nan --> 00:00:04,000\nBad\n\n",&info);
-  assert(a&&!(legenda_documento_info(a)->flags&LEGENDA_DOC_COMPLETO));
+  {int nb=0;legenda_documento_dados(a,&nb);assert(nb==1&&(legenda_documento_info(a)->flags&LEGENDA_DOC_COMPLETO));}  /* bloco ruim cai sozinho */
   legenda_documento_liberar(a);casos++;
   a=legenda_documento_criar("Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Good\nDialogue: 0,0:00:nan,0:00:04.00,Default,,0,0,0,,Bad\n",&info);
-  assert(a&&!(legenda_documento_info(a)->flags&LEGENDA_DOC_COMPLETO));
+  {int nb=0;legenda_documento_dados(a,&nb);assert(nb==1&&(legenda_documento_info(a)->flags&LEGENDA_DOC_COMPLETO));}  /* bloco ruim cai sozinho */
   legenda_documento_liberar(a);casos++;
 }
 int main(void) {

@@ -17,7 +17,7 @@
 #endif
 #define LS_CALMO_MS      2000u
 #define LS_FOLGA_MIN     20.0                  // buffer de video abaixo disto pausa a leitura
-#define LS_AUTO_MAX      4                     // R4: a escolhida + ate 3 trocas
+#define LS_AUTO_MAX      2                     // a escolhida + 1 troca (troca demais = legenda piscando)
 #define LS_AUTO_REFS     2                     // R4: faixas de referencia incompletas que ainda vale pular
 
 static pthread_mutex_t M = PTHREAD_MUTEX_INITIALIZER;
@@ -59,6 +59,9 @@ static struct {
   // 2 sincronizou, 3 nao deu.
   int autoEtapa, autoFase, autoTrocou, autoRefTent, autoPend;
   int autoTroca, autoVolta;       // o proximo primaria_externa vem do trocador
+  int autoTrocasEp;               // trocas automaticas neste episodio (no maximo 1)
+  int autoOrigN, primN;           // falas da escolha original / da legenda atual
+  int manualFase, manualLog;      // LegSyncVisao.manualFase; ultima fase que foi ao log
   char autoNome[64];
   uint64_t autoTent[LS_AUTO_MAX + 2]; int nAutoTent;
   unsigned autoDesde;             // ultimo PROGRESSO do plano (teto LS_AUTO_TETO_MS sem progresso)
@@ -73,6 +76,7 @@ static struct {
 #define LS_AUTO_TETO_MS 45000u
 static LegSyncTrocador trocador;
 static int autoLigado = 1;
+static unsigned manualSeq;   // legsync_manual_seq: lido sem trava pela pilula
 void legsync_teste_auto(int ligado) { legsync_auto_habilitar(ligado); }
 
 static uint64_t fnv(const char *s) {
@@ -128,6 +132,7 @@ void legsync_auto_habilitar(int ligado) {
 
 static void novaSessao(const char *url, int manterPrimaria) {
   L.sessao++;
+  L.manualFase = L.manualLog = 0;
   soltarSegunda();
   autosync_iniciar(L.sync, L.sessao);
   legref_cancelar(L.ref);
@@ -139,7 +144,7 @@ static void novaSessao(const char *url, int manterPrimaria) {
   // R4: outra midia recomeca o plano; a mesma escolha de legenda tenta de novo.
   L.autoEtapa = 0; L.autoRefTent = 0; L.autoPend = 0; L.autoTroca = L.autoVolta = 0;
   L.autoFase = autoLigado && manterPrimaria && L.primTipo == 1 ? 1 : 0;
-  if (!manterPrimaria) { L.autoTrocou = 0; L.autoNome[0] = 0; L.nAutoTent = 0; }
+  if (!manterPrimaria) { L.autoTrocou = 0; L.autoNome[0] = 0; L.nAutoTent = 0; L.autoTrocasEp = 0; L.autoOrigN = 0; }
   snprintf(L.url, sizeof L.url, "%s", url ? url : "");
   L.urlHash = fnv(L.url);
   if (!manterPrimaria) {
@@ -207,6 +212,8 @@ static void aoBaixar(const char *corpo, unsigned g, int vigente, void *u) {
     L.falhaDownload = !corpo; // recusa do parser de análise não é falha da rede
     if (doc && (legenda_documento_info(doc)->flags & LEGENDA_DOC_COMPLETO)) {
       L.primDoc = legenda_documento_reter(doc); L.primGer = g; L.primFase = 1;
+      legenda_documento_dados(doc, &L.primN);
+      if (!L.autoTrocou) L.autoOrigN = L.primN;
       if (m->sessao == L.sessao) autosync_selecionar(L.sync, 0, doc);
     } else L.primFase = 2;
   }
@@ -238,10 +245,10 @@ void legsync_primaria_externa(const char *url, const char *idioma, const char *o
     L.nExcl = 0; zerarAnalise(); pararAudio();
     // R4: a pessoa (ou a automatica de idioma) escolheu: plano novo. Vinda do
     // trocador, o plano continua e so anota a legenda tentada.
-    L.autoEtapa = 0; L.autoRefTent = 0; L.autoPend = 0;
+    L.autoEtapa = 0; L.autoRefTent = 0; L.autoPend = 0; L.manualFase = L.manualLog = 0;
     if (L.autoTroca && L.autoVolta) { L.autoFase = 3; L.autoEtapa = 9; L.autoTrocou = 0; L.autoNome[0] = 0; }
     else if (L.autoTroca) {
-      L.autoFase = 1; L.autoTrocou = 1; L.autoNome[0] = 0;
+      L.autoFase = 1; L.autoTrocou = 1; L.autoNome[0] = 0; L.autoTrocasEp++;
       if (L.nAutoTent < LS_AUTO_MAX + 2) L.autoTent[L.nAutoTent++] = h;
     } else {
       L.autoFase = autoLigado ? 1 : 0; L.autoTrocou = 0; L.autoNome[0] = 0;
@@ -268,7 +275,7 @@ void legsync_primaria_outra(int embutida) {
   }
   zerarAnalise(); pararAudio();
   L.autoFase = 0; L.autoEtapa = 9; L.autoTrocou = 0; L.autoNome[0] = 0; L.nAutoTent = 0;
-  L.autoPend = 0; L.autoTroca = L.autoVolta = 0;
+  L.autoPend = 0; L.autoTroca = L.autoVolta = 0; L.manualFase = L.manualLog = 0;
   pthread_mutex_unlock(&M);
   legenda_documento_liberar(velho);
 }
@@ -426,11 +433,21 @@ static int audioPossivel(void) {
 // R4: a legenda atual nao sincroniza. Pede outra do mesmo idioma ao trocador
 // (executado fora do lock, no fim de legsync_passo); acabadas as trocas, volta
 // a escolha original. Com M.
+// Regra (12/10, legenda piscando na C9): a automatica nunca tira da tela a
+// legenda que a pessoa ve so porque nao conseguiu sincronizar. So troca depois
+// de TENTAR e a referencia RECUSAR, uma vez por episodio; a candidata com menos
+// da metade das falas da original devolve a original (autoPasso).
+static void autoEncerrar(const char *motivo) {
+  L.autoFase = 3; L.autoEtapa = 9;
+  printf("[legsync] automatico: encerra sem trocar (%s)\n", motivo); fflush(stdout);
+}
+
 static void autoFalhou(int semReferencia) {
-  if (semReferencia) { L.autoFase = 3; L.autoEtapa = 9; return; }   // sem referencia nao ha como julgar outra
-  if (L.nAutoTent < LS_AUTO_MAX && L.primIdioma[0]) L.autoPend = 1;
-  else if (L.nAutoTent > 1) L.autoPend = 2;
-  else { L.autoFase = 3; L.autoEtapa = 9; }
+  if (semReferencia) { autoEncerrar("sem referencia para julgar outra"); return; }
+  if (L.autoTrocasEp == 0 && L.nAutoTent < LS_AUTO_MAX && L.primIdioma[0]) {
+    L.autoPend = 1;
+    printf("[legsync] automatico: referencia recusou; troca uma vez\n"); fflush(stdout);
+  } else autoEncerrar(L.autoTrocasEp ? "ja trocou neste episodio" : "sem outra do idioma");
 }
 
 // R4: o motor do plano. Um passo por quadro, com M. Nunca bloqueia.
@@ -438,14 +455,19 @@ static void autoPasso(void) {
   AutoSyncResultado e;
   if (L.autoFase != 1 || L.autoPend) return;
   if (L.primTipo != 1) { L.autoFase = 0; return; }
-  if (L.primFase == 2) { autoFalhou(0); return; }          // baixou incompleta: tenta outra
+  if (L.primFase == 2) { autoEncerrar("legenda incompleta; fica a da tela"); return; }
   if (L.primFase == 0) return;                              // ainda baixando
+  if (L.autoTrocou && L.autoOrigN > 0 && L.primN * 2 < L.autoOrigN) {
+    printf("[legsync] automatico: candidata com %d de %d falas; volta a original\n", L.primN, L.autoOrigN);
+    fflush(stdout);
+    L.autoPend = 2; return;
+  }
   if (!dona()) { L.autoFase = 0; return; }                  // o overlay mudou de dono
   if (L.autoEtapa == 0) {
     L.desfeita = 0;
     if (L.ref) {
       L.autoEtapa = 1; L.ultimoModo = AUTOSYNC_QUICK;
-      if (L.refDoc) { if (!solicitar(AUTOSYNC_QUICK)) autoFalhou(0); }
+      if (L.refDoc) { if (!solicitar(AUTOSYNC_QUICK)) autoEncerrar("pedido nao aceito"); }
       else {
         L.querModo = AUTOSYNC_QUICK; iniciarColeta();
         if (!L.refPedido) { L.querModo = -1; if (audioPossivel()) { L.autoEtapa = 2; iniciarAudio(); } else autoFalhou(1); }
@@ -525,9 +547,24 @@ int legsync_acao(int acao) {
       L.querModo = -1; L.reenviar = 0; ok = 1;
       break;
   }
+  if (acao & (LEGSYNC_ACAO_RAPIDA | LEGSYNC_ACAO_COMPLETA | LEGSYNC_ACAO_AUDIO | LEGSYNC_ACAO_OUTRA)) {
+    // Pedido a mao: a pilula mostra "Sincronizando…" na hora e o resultado no
+    // fim; recusado tambem aparece (antes era silencio).
+    const char *nome = acao == LEGSYNC_ACAO_RAPIDA ? "rapida" : acao == LEGSYNC_ACAO_COMPLETA ? "completa" :
+                       acao == LEGSYNC_ACAO_AUDIO ? "audio" : "outra";
+    L.manualFase = ok ? 1 : 3; L.manualLog = L.manualFase;
+    if (L.autoFase == 1 && ok) { L.autoFase = 0; L.autoEtapa = 9; L.autoPend = 0; }   // a mao assume
+    printf("[legsync] manual: %s -> %s (%s)\n", nome, ok ? "aceita" : "recusada",
+           ok ? "trabalhando" : !dona() ? "legenda nao e externa" : !L.ref ? "sem referencia nesta plataforma" :
+           L.semOutra ? "sem outra faixa" : "estado atual nao permite");
+    fflush(stdout);
+    __atomic_add_fetch(&manualSeq, 1u, __ATOMIC_RELEASE);
+  }
   pthread_mutex_unlock(&M);
   return ok;
 }
+
+unsigned legsync_manual_seq(void) { return __atomic_load_n(&manualSeq, __ATOMIC_ACQUIRE); }
 
 // SEGUNDA LEGENDA (slot 1). Um passo por quadro, com M. A segunda e externa
 // por construcao (legenda2.c); corrige-se contra a mesma faixa embutida da
@@ -624,7 +661,10 @@ void legsync_passo(const char *url, double pos, double folga, int sensivel, unsi
                       (long long)L.refPedido * 15485863LL + L.solicitou * 31LL + L.nAutoTent * 524287LL;
     if (L.refPedido) { LegRefStatus st = legref_status(L.ref); marca += st.pedidos * 3LL + st.feitos * 131071LL; }
     if (L.audPedido) { AudSyncStatus st = audsync_status(); marca += (long long)st.progresso * 8191LL + st.fase; }
-    if (!L.autoDesde || marca != L.autoMarca) { L.autoDesde = agora | 1u; L.autoMarca = marca; }
+    // Leitura PAUSADA de proposito (seek/buffer curto, rede lenta: C9 12/10 com
+    // 2-12 s de buffer) nao e etapa parada: o teto so corre lendo de fato.
+    int pausada = L.refPedido && (sensivel || (folga >= 0.0 && folga < LS_FOLGA_MIN));
+    if (!L.autoDesde || marca != L.autoMarca || pausada) { L.autoDesde = agora | 1u; L.autoMarca = marca; }
     else if (agora - L.autoDesde > LS_AUTO_TETO_MS) {
       printf("[legsync] automatico: %u s sem progresso (etapa %d, fase %d, ref=%d, pedido=%d); a legenda fica como esta\n",
              LS_AUTO_TETO_MS / 1000u, L.autoEtapa, L.primFase, L.refDoc != NULL, (int)L.refPedido);
@@ -793,6 +833,15 @@ LegSyncVisao legsync_visao(int slot) {
   }
   v.fase = LEGSYNC_PRONTA;
 fim:
+  if (L.manualFase == 1) {
+    if (v.fase == LEGSYNC_ACEITA) L.manualFase = 2;
+    else if (v.fase == LEGSYNC_RECUSADA || v.fase == LEGSYNC_INDISPONIVEL || v.fase == LEGSYNC_DESFEITA) L.manualFase = 3;
+  }
+  if (L.manualFase != L.manualLog) {
+    L.manualLog = L.manualFase;
+    printf("[legsync] manual: %s\n", L.manualFase == 2 ? "sincronizada" : "nao deu"); fflush(stdout);
+  }
+  v.manualFase = L.manualFase;
   pthread_mutex_unlock(&M);
   return v;
 }

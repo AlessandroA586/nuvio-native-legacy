@@ -504,19 +504,49 @@ int main(int argc, char **argv) {
     v = legsync_visao(0); assert(v.fase == LEGSYNC_DESFEITA && legsync_offset_ms(0) == 0 && trocas == 0);
 
     // 12b. A escolhida (ruim) nao fecha: troca para outra do mesmo idioma que sincroniza.
-    legsync_iniciar(MKV); trocas = 0; cand[0] = "ext_ruim2.srt"; cand[1] = "ext_mais2500.srt"; nCand = 2;
+    legsync_iniciar(MKV); trocas = 0; cand[0] = "ext_mais2500.srt"; nCand = 1;
     legsync_primaria_externa("ext://0/ext_ruim.srt", "pt", "Ruim");
     v = esperarAuto(MKV, 2);
     assert(v.autoTrocou && !strcmp(v.autoNome, "Prov-ext_mais2500.srt") && abs(v.offsetAutoMs - 2500) <= 25);
-    assert(trocas == 2 && strstr(prov.estado(0, prov.u), "Prov-ext_mais2500.srt"));
+    assert(trocas == 1 && strstr(prov.estado(0, prov.u), "Prov-ext_mais2500.srt"));
 
-    // 12c. Nenhuma sincroniza: volta a escolha original, nada alterado, estado honesto.
-    legsync_iniciar(MKV); trocas = 0; voltou = 0; cand[0] = "ext_ruim2.srt"; nCand = 1;
+    // 12c. Regra da legenda piscando (C9, 12/10): UMA troca por episodio e a
+    //      que entrou fica, mesmo sem sincronizar (nada de voltar e piscar).
+    legsync_iniciar(MKV); trocas = 0; voltou = 0; cand[0] = "ext_ruim2.srt"; cand[1] = "ext_mais2500.srt"; nCand = 2;
     legsync_primaria_externa("ext://0/ext_ruim.srt", "pt", "Ruim");
     v = esperarAuto(MKV, 3);
-    assert(voltou == 1 && !v.autoTrocou && legsync_offset_ms(0) == 0);
+    for (int k = 0; k < 200; k++) passo(MKV, 0);
+    v = legsync_visao(0);
+    assert(trocas == 1 && voltou == 0 && v.autoFase == 3 && v.autoTrocou && legsync_offset_ms(0) == 0);
     assert(!strcmp(prov.estado(0, prov.u), "N\xc3\xa3o deu para sincronizar"));
     assert(prov.acoes(0, rot, 8, prov.u) == 0);
+
+    // 12c2. Candidata com menos da metade das falas da original: volta a original.
+    { char c[700]; FILE *f; snprintf(c, sizeof c, "%s/ext_curta.srt", DIR); f = fopen(c, "wb"); assert(f);
+      for (int i = 1; i <= 20; i++) fprintf(f, "%d\n00:00:%02d,000 --> 00:00:%02d,500\nCurta %d\n\n", i, i * 2, i * 2, i);
+      fclose(f); }
+    legsync_iniciar(MKV); trocas = 0; voltou = 0; cand[0] = "ext_curta.srt"; nCand = 1;
+    legsync_primaria_externa("ext://0/ext_ruim.srt", "pt", "Ruim");
+    v = esperarAuto(MKV, 3);
+    assert(trocas == 1 && voltou == 1 && !v.autoTrocou && legsync_offset_ms(0) == 0);
+
+    // 12c3. Legenda que nao abre (incompleta/ilegivel): fica a da tela, sem trocar.
+    { char c[700]; FILE *f; snprintf(c, sizeof c, "%s/ext_lixo.srt", DIR); f = fopen(c, "wb"); assert(f);
+      fputs("isto nao e legenda\n", f); fclose(f); }
+    legsync_iniciar(MKV); trocas = 0; voltou = 0; cand[0] = "ext_mais2500.srt"; nCand = 1;
+    legsync_primaria_externa("ext://0/ext_lixo.srt", "pt", "Lixo");
+    v = esperarAuto(MKV, 3);
+    assert(trocas == 0 && voltou == 0);
+
+    // 12c4. Buffer curto (rede lenta, C9 12/10: 2-12 s a frente) pausa a leitura
+    //       por mais que o teto: pausa nao e "sem progresso", o plano nao desiste.
+    legsync_iniciar(MKV); trocas = 0; nCand = 0;
+    legsync_primaria_externa("ext://0/ext_mais2500.srt", "pt", "Boa");
+    for (int k = 0; k < (int)(LS_AUTO_TETO_TESTE / 50u) + 400; k++) {
+      agora += 50; legsync_passo(MKV, 30.0, 5.0, 0, agora); usleep(100);
+      assert(legsync_visao(0).autoFase != 3);
+    }
+    v = esperarAuto(MKV, 2);
 
     // 12d. Arquivo sem referencia (sem faixa de texto): nao ha como julgar, nao troca nada.
     legsync_iniciar(MKV3); trocas = 0; cand[0] = "ext_mais2500.srt"; nCand = 1;
