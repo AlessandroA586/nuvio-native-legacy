@@ -107,7 +107,7 @@ async function idTrakt(token, env) {
     // nosso e nao ha como saber se o token venceu, se o client id e de outro
     // aplicativo ou se o Trakt estava fora — tres consertos diferentes.
     console.log(`trakt /users/settings -> ${r.status}`);
-    return null;
+    return r.status === 401 || r.status === 403 ? RECUSADO : null;
   }
   const d = await r.json();
   const slug = d?.user?.ids?.slug || d?.user?.username;
@@ -122,6 +122,24 @@ async function idTrakt(token, env) {
   };
 }
 
+// TOKEN RECUSADO NAO VOLTA A SER PERGUNTADO (pedido do Nuvio, 11/10/2026: o
+// Supabase deles bloqueou este user-agent porque 86% das chamadas a
+// /auth/v1/user eram tokens vencidos repetidos — TVs com a sessao velha sondam
+// uma vez por minuto). Duas travas: o JWT do Supabase traz `exp`, entao token
+// vencido ou ilegivel e recusado aqui sem rede; e um 401/403 de quem emitiu
+// fica no cache como sessao de id vazio pelo mesmo SESSAO_TTL. Falha de rede ou
+// 5xx NAO entra no cache: ai a culpa nao e do token.
+const RECUSADO = false;
+function jwtVencido(token, t) {
+  try {
+    const b = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const exp = JSON.parse(atob(b + "===".slice((b.length + 3) % 4))).exp;
+    return typeof exp !== "number" || exp <= t;
+  } catch {
+    return true;
+  }
+}
+
 async function idNuvio(token, env) {
   const r = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
     headers: { apikey: env.SUPABASE_ANON_KEY, authorization: `Bearer ${token}`,
@@ -129,7 +147,7 @@ async function idNuvio(token, env) {
   });
   if (!r.ok) {
     console.log(`supabase /auth/v1/user -> ${r.status}`);
-    return null;
+    return r.status === 401 || r.status === 403 ? RECUSADO : null;
   }
   const d = await r.json();
   if (!d?.id) return null;
@@ -156,9 +174,17 @@ async function quemE(req, env) {
   // `avatar: ""` aqui quer dizer "nao perguntei agora", e `registrar` so
   // sobrescreve a foto guardada quando ela vem de uma verificacao DE VERDADE.
   // Sem essa regra, os 10 min de cache apagariam a foto de todo mundo.
-  if (cache) return comPerfil(req, via, { id: cache.id, nome: cache.nome, avatar: "" });
+  if (cache) return cache.id ? comPerfil(req, via, { id: cache.id, nome: cache.nome, avatar: "" }) : null;
 
+  if (via === "nuvio" && jwtVencido(token, t)) return null;
   const quem = via === "trakt" ? await idTrakt(token, env) : await idNuvio(token, env);
+  if (quem === RECUSADO) {
+    await env.DB.prepare(
+      "INSERT INTO sessao (hash, id, nome, expira) VALUES (?, '', '', ?) " +
+      "ON CONFLICT(hash) DO UPDATE SET id = '', nome = '', expira = excluded.expira"
+    ).bind(hash, t + SESSAO_TTL).run();
+    return null;
+  }
   if (!quem) return null;
   await env.DB.prepare(
     "INSERT INTO sessao (hash, id, nome, expira) VALUES (?, ?, ?, ?) " +
