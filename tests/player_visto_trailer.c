@@ -293,12 +293,12 @@ int main(void) {
   assert(tkPos == 5900 && scrobble_assistiu(tkAssistido, tkDe, tkDur));
 
   // SEEK ATE O FIM (log do C9, Dexter S1E2): 99 s tocados, busca, mais 34 s e
-  // sai a 19 s do fim. Nao viu — mas esta ali: grava a posicao REAL (nem os
-  // 100% do arredondamento, nem nada), e o Trakt recebe a saida sem prova,
-  // que e o que ele recusa (tests/trakt_contracts.c).
+  // sai a 19 s do fim. Nao viu: o progresso local fica abaixo dos 90% (nem
+  // os 100% do arredondamento, nem o selo), e o Trakt recebe a posicao real
+  // sem prova, que e o que ele recusa (tests/trakt_contracts.c).
   sessao("tt90000015", 0, 2843);
   tocar(99, 1); pos = 2790; quadro(); tocar(34, 1); player_encerrar();
-  assert(nVisto == 0 && cat_item(0)->progresso > 90 && cat_item(0)->progresso < 100);
+  assert(nVisto == 0 && cat_item(0)->progresso > 80 && cat_item(0)->progresso < 90);
   assert(nTrakt == 1 && tkPos == 2824 && !scrobble_assistiu(tkAssistido, tkDe, tkDur));
 
   // RETOMADA PERTO DO FIM (terceira revisao): 85% de 2700 s, mais 105 s ate os
@@ -325,6 +325,12 @@ int main(void) {
   tocar(5, 1); pos = 2400; quadro(); player_encerrar();
   assert(nVisto == 0 && cat_item(0)->progresso < 100);
   assert(tkPos < tkDur && !scrobble_assistiu(tkAssistido, tkDe, tkDur));
+
+  // Filme sem historico: 133 s tocados, busca e sai em 2824/2843 s. Sem prova
+  // o progresso gravado nao pode acender o selo de visto (cat_visto >= 90%).
+  sessao("tt90000020", 0, 2843);
+  tocar(133, 1); pos = 2824; quadro(); player_encerrar();
+  assert(nVisto == 0 && !cat_visto(cat_item(0)));
 
   puts("PASS: trailer, seek, pausa e buffer nao marcam; reproducao real grava progresso e visto");
   return 0;

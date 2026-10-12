@@ -1845,7 +1845,9 @@ static void fecharSessao(int manter) {
              (double)pos, (double)duracaoSeg, assistidoSeg, ci ? ci->imdb : "", epT, epE);
       fflush(stdout);
     }
-    cat_salvar_progresso_ep(ia, pos, duracaoSeg,epT,epE);
+    // Sem prova o progresso fica abaixo dos 90% que cat_visto le como visto:
+    // o seek ate o fim nao acende o selo.
+    cat_salvar_progresso_ep(ia, assistiu ? pos : fminf(pos, duracaoSeg * 0.89f), duracaoSeg,epT,epE);
     // E tambem para o Trakt, que e de onde o "continue assistindo" vem: gravar
     // so aqui deixaria este app discordando dos outros aparelhos do dono.
     // Personal-server items stay private: no Trakt, friends feed or social
