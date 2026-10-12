@@ -26,7 +26,7 @@ static int   foco, sair;
 // addonsui_quer_sair.
 static int   mexeu;
 static float scrollY;
-static float animFoco[64];
+static float animFoco[128];
 
 void addonsui_abrir(void) {
   foco = 0; sair = 0; mexeu = 0; scrollY = 0.0f;
@@ -103,7 +103,7 @@ void addonsui_atualizar(float dt, Uint32 agora) {
   int i, n = addons_n();
   float alvo;
   (void)agora;
-  for (i = 0; i < n && i < 64; i++)
+  for (i = 0; i < n && i < 128; i++)
     animFoco[i] = anim_mola(animFoco[i], i == foco ? 1.0f : 0.0f, dt, NV_MOLA_FOCO);
   // Rolagem que mantem a linha focada dentro da area util, como em Ajustes.
   alvo = (float)foco * (LINHA_H + LINHA_GAP);

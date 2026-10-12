@@ -106,9 +106,9 @@ int  perfis_puxar(void) { return 1; }
 static char conta[32];
 static int pushModo = 200, pushes;
 static char ultimoPush[4096];
-// Cenario "cheio": a conta tem ate 80 addons numerados (https://nNN.exemplo/...),
+// Cenario "cheio": a conta tem ate 130 addons numerados (https://nNN.exemplo/...),
 // fora do mapa de letras. contaN[] guarda os numeros; pushN[] o que o ultimo push levou.
-static int cheio, contaN[80], nContaN, pushN[80], nPushN;
+static int cheio, contaN[130], nContaN, pushN[130], nPushN;
 
 static void url(char *dst, size_t t, char l) {
   snprintf(dst, t, "https://%c.exemplo/manifest.json", l | 0x20);
@@ -132,7 +132,7 @@ char *sessao_tabela(const char *t, const char *q, int *st) {
   *st = 200;
   if (strcmp(t, "addons")) return strdup("[]");
   if (cheio) {
-    static char g[80 * 90];
+    static char g[130 * 90];
     size_t kk = 0;
     kk += (size_t)snprintf(g, sizeof g, "[");
     for (i = 0; i < nContaN; i++)
@@ -160,7 +160,7 @@ char *sessao_rpc(const char *funcao, const char *corpo, int *st) {
     pushes++;
     if (cheio) {
       nPushN = 0;
-      for (p = strstr(corpo, "https://n"); p && nPushN < 80; p = strstr(p + 1, "https://n")) pushN[nPushN++] = atoi(p + 9);
+      for (p = strstr(corpo, "https://n"); p && nPushN < 130; p = strstr(p + 1, "https://n")) pushN[nPushN++] = atoi(p + 9);
       nContaN = nPushN;                        // push SUBSTITUI a lista
       memcpy(contaN, pushN, sizeof contaN);
       return strdup("null");
@@ -194,12 +194,12 @@ void nuvem_url_escapar(const char *v, char *d, unsigned t) { snprintf(d, t, "%s"
 // A lista de addons da TV (addons.c): o sync aplica com addons_definir_lista e
 // le com addons_exportar.
 
-static AddonRemoto tv[80];
+static AddonRemoto tv[130];
 static int nTv, aplicacoes;
 int addons_definir_lista(const AddonRemoto *l, int n) {
   int i;
-  for (i = 0; i < n && i < 80; i++) tv[i] = l[i];
-  nTv = n < 80 ? n : 80;
+  for (i = 0; i < n && i < 130; i++) tv[i] = l[i];
+  nTv = n < 130 ? n : 130;
   aplicacoes++;
   return 1;
 }
@@ -335,7 +335,15 @@ int main(int argc, char **argv) {
   contaLer();
   printf("-- cenario %s%s%s (conta no inicio: %s)\n", cen, argc > 2 ? " " : "", argc > 2 ? argv[2] : "", conta);
 
-  if (!strcmp(cen, "manual")) {
+  if (!strcmp(cen, "cheio")) {
+    int i, total = argc > 2 ? atoi(argv[2]) : 100;
+    cheio = 1; nContaN = total;
+    for (i = 0; i < total; i++) contaN[i] = i;
+    sync_iniciar(); ateTerminar();
+    confere("conta aceita ate 128 addons", nTv == (total > 128 ? 128 : total));
+    confere("ordem e ultimo addon preservados", nTv > 0 && strstr(tv[nTv - 1].url, total > 128 ? "n127.exemplo" : "n99.exemplo"));
+    confere("nenhum push", pushes == 0);
+  } else if (!strcmp(cen, "manual")) {
     snprintf(conta, sizeof conta, "AB");
     sync_iniciar(); // Click while the first cycle is already running.
     confere("manual request accepted", sync_manual_addons() == 1);

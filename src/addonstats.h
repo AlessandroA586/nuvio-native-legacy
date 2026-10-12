@@ -23,7 +23,7 @@
 #define NV_ADDONSTATS_H
 
 #define ADDONSTATS_JANELA 8          // amostras guardadas por nome
-#define ADDONSTATS_MAX 192           // nomes (addons + scrapers de plugin)
+#define ADDONSTATS_MAX 288           // nomes (128 addons + 160 scrapers de plugin)
 #define ADDONSTATS_MUDO_IGNORA 2     // seguidas sem resposta: sai da espera
 #define ADDONSTATS_MUDO_PULA 3       // seguidas: sem segunda tentativa
 #define ADDONSTATS_SEGUNDA_MUDO_S 10 // segunda tentativa de quem ja foi mudo

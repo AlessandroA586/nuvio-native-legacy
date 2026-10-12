@@ -1996,6 +1996,7 @@ static void atualizarMotivoInicio(void) {
   if (sn.fase == INI_FASE_BUSCA) {
     addons_inicio_info(&ai);
     sn.pendentes = ai.pendentes; sn.pendenteMudo = ai.pendenteMudo; sn.semResposta = ai.semResposta;
+    sn.fontesChegaram = stream_n() > 0;
   } else if (sn.fase == INI_FASE_ABRE) {
     st = stream_item(stream_atual());
     sn.viaDebrid = fonteViaDebrid(st);

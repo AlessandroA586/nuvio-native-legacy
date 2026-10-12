@@ -35,11 +35,9 @@
 // agora sao o mesmo numero, e o corte, se um dia voltar a acontecer, e dito.
 // 32 e nao 16 (30/09): o app oficial passou a 32, e quem tem muitos addons
 // perdia justamente os de legenda, que costumam ser os ultimos da lista.
-// 64 e nao 32 (#203, 07/10): nos logs 2.0.x, 44 de 464 pessoas leram EXATAMENTE
-// 32 linhas da conta e nenhuma leu 33 ou mais — o monte no teto, nao uma
-// distribuicao. Quem tem mais de 32 perdia o resto sem aviso (o de legenda,
-// tipicamente o ultimo). O teto de lerAddons (sync.c) e o mesmo numero.
-#define ADD_MAX 64
+// 128: contas com 100 add-ons ultrapassavam o teto anterior e perdiam o resto.
+// O teto de lerAddons (sync.c) e o mesmo numero; o corte continua no log.
+#define ADD_MAX 128
 #define ADD_PREF_MAX 8
 #define ADD_PREF_TAM 24
 
@@ -608,7 +606,7 @@ AddEstado addons_estado(void) {
 // No fio da UI. Resposta de busca que ja nao e a da tela (pedido novo na fila,
 // conta/perfil trocados) e jogada fora aqui, sem nunca chegar a lista.
 static void progDrenar(void) {
-  Chegada local[ADD_MAX * 2 + ADD_EXTRA_MAX];
+  static Chegada local[ADD_MAX * 2 + ADD_EXTRA_MAX]; // so o fio da UI drena
   int q, k;
   if (!progLigado) return;
   pthread_mutex_lock(&progTrava);
@@ -1012,7 +1010,9 @@ static int distribuirLegendas(const LegLote *lotes, int nLotes, int nGrupos,
                               Legenda *saida) {
   int gi, n = 0;
   for (gi = 0; gi < nGrupos; gi++) {
-    int prox[ADD_MAX] = {0}, noGrupo = 0, avancou = 1;
+    static int prox[ADD_MAX]; // publicacao serializada por B->m
+    int noGrupo = 0, avancou = 1;
+    memset(prox, 0, sizeof prox);
     int teto = LEG_MAX / nGrupos;
     // Um resultado por provider por volta, dentro de cada idioma. Mantem a
     // ordem principal -> secundario -> ingles e preenche lugares vagos com
@@ -1281,13 +1281,14 @@ static void *buscarLegendas(void *u) {
   (void)u;
   for (;;) {
     LegBusca B;
-    LegFio fio[ADD_MAX];
-    pthread_t th[ADD_MAX];
-    int criado[ADD_MAX] = {0};
+    static LegFio fio[ADD_MAX]; // uma busca de legendas por vez
+    static pthread_t th[ADD_MAX];
+    static int criado[ADD_MAX];
     unsigned t0 = relogioMs();
     int i, nAtivos = 0;
 
     memset(&B, 0, sizeof B);
+    memset(criado, 0, sizeof criado);
     pthread_mutex_init(&B.m, NULL);
     pthread_mutex_lock(&legTrava);
     if (legParar) { fioLegVivo = 0; pthread_mutex_unlock(&legTrava); pthread_mutex_destroy(&B.m); return NULL; }

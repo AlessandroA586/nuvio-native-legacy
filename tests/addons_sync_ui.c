@@ -21,7 +21,7 @@ int main(void) {
   // Empty list still offers sync; signed out explains, signed in requests once.
   addonsui_abrir(); tecla(SDLK_RETURN); assert(avisos == 1 && !pedidos);
   logada = 1; tecla(SDLK_RETURN); tecla(SDLK_RETURN); assert(pedidos == 1);
-  for (int n = 2; n <= 64; n += 62) {
+  for (int n = 2; n <= 128; n += 126) {
     total = n; ocupado = 0; addonsui_abrir();
     tecla(SDLK_RETURN); assert(trocas > 0 && pedidos == (n == 2 ? 1 : 2));
     addonsui_ponteiro(n, 0); assert(addonsui_foco() == n);
@@ -31,5 +31,5 @@ int main(void) {
     assert(addonsui_foco() == n);
     tecla(SDLK_UP); assert(addonsui_foco() == n - 1);
   }
-  puts("addons_sync_ui: ok (empty list, 64 addons, remote, pointer, busy)");
+  puts("addons_sync_ui: ok (empty list, 128 addons, remote, pointer, busy)");
 }

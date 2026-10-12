@@ -1378,11 +1378,11 @@ static const char *ajSyncAddonsApoio(void) {
   return "Busca agora os addons da sua conta, sem esperar a volta automática.";
 }
 static void ajDesenharAddons(int foco) {
-  static AjSubLinha L[65];
+  static AjSubLinha L[129];
   int n = addons_n(), i, lig = 0;
   char sub[96], val[64], k[160];
   montarTela();
-  if (n > 64) n = 64;
+  if (n > 128) n = 128;
   for (i = 0; i < n; i++) if (addons_ativo(i)) lig++;
   ajFundoPagina();
   snprintf(val, sizeof val, i18n("%d de %d"), lig, n);
@@ -1390,7 +1390,7 @@ static void ajDesenharAddons(int foco) {
   ajSubCabecalho("aj_puzzle", "Fontes e addons", "Addons", n ? val : "", sub);
   if (foco > n) foco = n;
   if (foco < 0) foco = 0;
-  { static char apoio[64][96];
+  { static char apoio[128][96];
     for (i = 0; i < n; i++) {
       snprintf(apoio[i], sizeof apoio[i], "%s", ajAddonFornece(i));   // ajAddonFornece devolve um buffer so
       L[i] = (AjSubLinha){ addons_nome(i), apoio[i], NULL, addons_ativo(i), 0, 0 };

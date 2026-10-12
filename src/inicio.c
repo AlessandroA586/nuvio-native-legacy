@@ -19,9 +19,10 @@ int inicio_motivo(const InicioSinais *s) {
   if (s->desdeMs < INICIO_EXPLICA_MS) return INI_NADA;
   switch (s->fase) {
     case INI_FASE_BUSCA:
+      if (s->pendentes > 0 && s->fontesChegaram) return INI_ESPERA_VARIOS;
       if (s->pendentes == 1) return s->pendenteMudo ? INI_ESPERA_MUDO : INI_ESPERA_UM;
       if (s->pendentes > 1) return INI_ESPERA_VARIOS;
-      return s->semResposta > 0 ? INI_NAO_RESPONDEU : INI_NADA;
+      return s->semResposta == 1 && !s->fontesChegaram ? INI_NAO_RESPONDEU : INI_NADA;
     case INI_FASE_VERIFICA: return INI_VERIFICANDO;
     case INI_FASE_ABRE:     return s->viaDebrid ? INI_ABRINDO_DEBRID : INI_NADA;
     default: return INI_NADA;
