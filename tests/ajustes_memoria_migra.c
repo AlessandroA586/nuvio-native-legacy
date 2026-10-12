@@ -1,6 +1,7 @@
 // 2.0.5: highcache migrates memory without an explicit choice once per device.
 #include "../src/ajustes.c"
 #include <assert.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 static int falhas;
@@ -59,6 +60,17 @@ int main(int argc, char **argv) {
   dispositivo(dir, sizeof dir);
   escreve(dir, "texturasMB 0\n"); recarrega(dir);
   CHECK(valor[AJ_TEX_MB] == migrado); marca(temMarca);
+  // A failed migration save must remain pending and retry on the next load.
+  dispositivo(dir, sizeof dir);
+  escreve(dir, "texturasMB 0\n");
+  { char tmp[1200];
+    snprintf(tmp, sizeof tmp, "%s/ajustes.tmp", dir);
+    assert(!mkdir(tmp, 0700));
+    recarrega(dir); CHECK(valor[AJ_TEX_MB] == migrado); marca(0);
+    assert(!rmdir(tmp));
+    recarrega(dir); CHECK(valor[AJ_TEX_MB] == migrado); marca(temMarca);
+    recarrega(dir); CHECK(valor[AJ_TEX_MB] == migrado);
+  }
   // Confirming Automatic even when already selected records explicit intent.
   dispositivo(dir, sizeof dir);
   memcpy(valor, valorPadrao, sizeof valor);

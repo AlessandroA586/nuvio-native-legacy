@@ -3153,8 +3153,7 @@ static void memoriaMigrar(void) {
     valor[AJ_TEX_MB] = 4;   // TEX_MB_DE[4] = 300
     printf("[ajustes] memoria para imagens -> 300 MB (migracao unica da 2.0.5)\n");
   }
-  dados_gravar("memoriaimagens-205.txt", "1\n");
-  gravar();
+  if (gravar()) dados_gravar("memoriaimagens-205.txt", "1\n");
 }
 #endif
 
