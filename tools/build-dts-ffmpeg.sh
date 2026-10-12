@@ -47,8 +47,9 @@ else
       --cross-prefix="${CC%-gcc}-" --cc="$CC" --sysroot="${NUVIO_SYSROOT:?SDK sysroot required}"
   fi
 fi
-if [ -n "$MUXERS" ]; then set -- "$@" --enable-muxer="$MUXERS"; fi
-"$SRC/configure" "$@" --prefix="$PREFIX" --disable-everything \
+# --enable-muxer must come AFTER --disable-everything (configure applies them in
+# order). Unquoted on purpose: empty for webOS, so its configure line is unchanged.
+"$SRC/configure" "$@" --prefix="$PREFIX" --disable-everything ${MUXERS:+--enable-muxer=$MUXERS} \
   --disable-autodetect --disable-shared --enable-static --enable-pic \
   --disable-programs --disable-doc --disable-debug --disable-network \
   --disable-avdevice --disable-avfilter --disable-swscale --disable-postproc \
