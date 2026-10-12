@@ -296,7 +296,7 @@ int main(void) {
   fioContinuar(NULL);
   assert(!naContinuar("tt3"));
   agora = 1002000;
-  assert(prog_gravar_local("tt3", 0, 0, 600.0, 6000.0));
+  assert(prog_gravar_local("tt3", 0, 0, 600.0, 6000.0, -1));
   fioContinuar(NULL);
   assert(naContinuar("tt3"));
   conferirLista();

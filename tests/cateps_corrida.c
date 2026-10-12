@@ -37,8 +37,8 @@ const char *dados_dir(void) { return ""; }
 const char *sessao_usuario(void) { return ""; }
 int         perfis_ativo(void) { return 1; }
 const char *desc_genero_pt(const char *g) { return g; }
-int prog_gravar_local(const char *imdb, int t, int e, double p, double d) {
-  (void)imdb; (void)t; (void)e; (void)p; (void)d; return 0;
+int prog_gravar_local(const char *imdb, int t, int e, double p, double d, int tocou) {
+  (void)imdb; (void)t; (void)e; (void)p; (void)d; (void)tocou; return 0;
 }
 // Um registro de progresso, para a aplicacao do disco ter o que fazer em cada
 // troca (e o caminho de aplicarUm que o TSAN tambem pegou).

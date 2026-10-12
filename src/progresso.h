@@ -40,6 +40,10 @@ typedef struct {
   double posSeg, durSeg;
   long long lastWatchedMs;    // 0 = desconhecido (linha migrada)
   int  pendente;              // 1 = escrito aqui, ainda nao empurrado
+  // COMO ESTA POSICAO FOI ALCANCADA (#205), so deste aparelho e nao
+  // sincronizado: 1 tocando, 0 por seek, -1 desconhecido (linha antiga ou vinda
+  // do servidor) — vale como 1, como antes da #205. Descreve ESTA posSeg.
+  int  tocou;
 } ProgRegistro;
 
 // Chave no formato do web (toProgressKey): "%s_s%de%d" quando temporada >= 0 e
@@ -71,9 +75,14 @@ int  prog_por_chave(const char *chave, ProgRegistro *saida);
 // composto; temporada/episodio explicitos ganham dos que vierem no id.
 // Marca pendente e lastWatched = agora. Recusa durSeg <= 1 (ruido do player),
 // tempos nao finitos ou que nao caibam em milissegundos inteiros para o sync.
+// `tocou` e o de ProgRegistro, sempre informado por quem grava a posicao.
 // Devolve 1 quando gravou.
 int  prog_gravar_local(const char *imdb, int temporada, int episodio,
-                       double posSeg, double durSeg);
+                       double posSeg, double durSeg, int tocou);
+
+// `tocou` do registro local do FILME (perfil ativo); -1 sem registro. 0 segura
+// o selo de progresso >= 90% (cat_visto).
+int  prog_tocou(const char *imdb);
 
 // Aplicacao de uma linha REMOTA (pull). Regra: local pendente vence; senao o
 // mais novo vence; empate mantem o local. `r->perfil` e ignorado — vale o

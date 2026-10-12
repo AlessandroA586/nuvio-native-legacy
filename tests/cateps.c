@@ -75,8 +75,8 @@ void homeestado_contexto(HomeContexto *c) { *c = (HomeContexto){0}; c->perfil = 
 int homeestado_mudancas(const HomeContexto *a, const HomeContexto *b) { (void)a; (void)b; return 0; }
 const char *homeestado_mudancas_texto(int m, char *b, unsigned t) { (void)m; if (b && t) b[0] = 0; return b; }
 int prog_ler(ProgRegistro *saida, int max) { (void)saida; (void)max; return 0; }
-int prog_gravar_local(const char *imdb, int t, int e, double p, double d) {
-  (void)imdb; (void)t; (void)e; (void)p; (void)d; return 0;
+int prog_gravar_local(const char *imdb, int t, int e, double p, double d, int tocou) {
+  (void)imdb; (void)t; (void)e; (void)p; (void)d; (void)tocou; return 0;
 }
 
 void  SDL_Delay(Uint32 ms)                 { usleep(ms * 1000); }

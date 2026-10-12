@@ -20,7 +20,7 @@ static long long relogio(void) { return agora; }
 
 static void gravar(const char *id, double pos, double dur) {
   agora += 1000;
-  assert(prog_gravar_local(id, 0, 0, pos, dur));
+  assert(prog_gravar_local(id, 0, 0, pos, dur, -1));
 }
 
 int main(void) {

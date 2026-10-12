@@ -347,7 +347,9 @@ int cat_historico_definir_se_geracao(const char *imdb, const char *tipo,
                                      int visto, unsigned long long geracao);
 
 void cat_salvar_progresso(int indice, double posSeg, double durSeg);
-void cat_salvar_progresso_ep(int indice, double posSeg, double durSeg, int temporada, int episodio);
+// `tocou`: ver ProgRegistro (progresso.h).
+void cat_salvar_progresso_ep(int indice, double posSeg, double durSeg, int temporada, int episodio,
+                             int tocou);
 
 // So a MEMORIA do item (barra, minutos restantes, episodio em andamento), sem
 // tocar em arquivo. E o que o sync usa para o que veio da conta — a decisao de
