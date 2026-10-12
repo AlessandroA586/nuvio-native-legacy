@@ -81,6 +81,7 @@
 #include "anim.h"
 #include "revela.h"
 #include "layout.h"
+#include "segurar.h"
 #include "ajustes.h"
 #include "nlanc.h"
 #include "ctxmenu.h"
@@ -1094,7 +1095,7 @@ void biblioteca_atualizar(float dt, Uint32 agora) {
   // SEGUROU O OK NA CELULA ATE O LIMIAR: abre o menu agora, com o dedo ainda no
   // botao, e desarma — o KEYUP seguinte nao e toque. O modal ignora o OK que
   // ainda esta afundado (ctxmenu.c, esperandoSoltura).
-  if (okDesde && !ctx_aberto() && SDL_GetTicks() - okDesde >= NV_HOLD_MS) {
+  if (!ctx_aberto() && segurar_venceu(SDL_GetTicks(), okDesde, "biblioteca")) {
     int i = celulaEmFoco();
     okDesde = 0;
     menuNaCelula(i);
