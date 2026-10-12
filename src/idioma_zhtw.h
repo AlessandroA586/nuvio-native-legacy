@@ -5097,6 +5097,7 @@
   T("falha ao consultar o Simkl (HTTP %d)", "查詢 Simkl 失敗 (HTTP %d)"),
   T("falha ao trocar o codigo (HTTP %d)", "兌換代碼失敗 (HTTP %d)"),
   T("falhou", "失敗"),
+  T("falhou há %d min", "%d 分鐘前失敗"),
   T("faltam %d min", "還剩 %d 分鐘"),
   T("faltam %dh%02d", "還剩 %d 小時 %02d 分"),
   T("família", "家庭"),

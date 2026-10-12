@@ -5096,6 +5096,7 @@
   T("falha ao consultar o Simkl (HTTP %d)", "error al consultar Simkl (HTTP %d)"),
   T("falha ao trocar o codigo (HTTP %d)", "error al intercambiar el código (HTTP %d)"),
   T("falhou", "falló"),
+  T("falhou há %d min", "falló hace %d min"),
   T("faltam %d min", "faltan %d min"),
   T("faltam %dh%02d", "faltan %dh%02d"),
   T("família", "familia"),

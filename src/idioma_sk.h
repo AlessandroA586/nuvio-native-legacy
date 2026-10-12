@@ -5097,6 +5097,7 @@
   T("falha ao consultar o Simkl (HTTP %d)", "Dopyt na Simkl zlyhal (HTTP %d)"),
   T("falha ao trocar o codigo (HTTP %d)", "výmena kódu zlyhala (HTTP %d)"),
   T("falhou", "zlyhalo"),
+  T("falhou há %d min", "zlyhal pred %d min"),
   T("faltam %d min", "zostáva %d min"),
   T("faltam %dh%02d", "zostáva %dh%02d"),
   T("família", "rodina"),

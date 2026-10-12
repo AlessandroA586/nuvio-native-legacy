@@ -5097,6 +5097,7 @@
   T("falha ao consultar o Simkl (HTTP %d)", "το ερώτημα στο Simkl απέτυχε (HTTP %d)"),
   T("falha ao trocar o codigo (HTTP %d)", "η ανταλλαγή κωδικού απέτυχε (HTTP %d)"),
   T("falhou", "απέτυχε"),
+  T("falhou há %d min", "απέτυχε πριν %d λεπτά"),
   T("faltam %d min", "απομένουν %d λεπτά"),
   T("faltam %dh%02d", "απομένουν %dω%02d"),
   T("família", "οικογένεια"),

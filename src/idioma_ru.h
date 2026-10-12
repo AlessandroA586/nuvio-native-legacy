@@ -5096,6 +5096,7 @@
   T("falha ao consultar o Simkl (HTTP %d)", "запрос к Simkl не удался (HTTP %d)"),
   T("falha ao trocar o codigo (HTTP %d)", "обмен кода не удался (HTTP %d)"),
   T("falhou", "не удалось"),
+  T("falhou há %d min", "сбой %d мин назад"),
   T("faltam %d min", "осталось %d мин"),
   T("faltam %dh%02d", "осталось %dч%02d"),
   T("família", "семья"),

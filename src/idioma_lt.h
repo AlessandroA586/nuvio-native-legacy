@@ -5097,6 +5097,7 @@
   T("falha ao consultar o Simkl (HTTP %d)", "Simkl užklausa nepavyko (HTTP %d)"),
   T("falha ao trocar o codigo (HTTP %d)", "kodo keitimas nepavyko (HTTP %d)"),
   T("falhou", "nepavyko"),
+  T("falhou há %d min", "nepavyko prieš %d min"),
   T("faltam %d min", "liko %d min."),
   T("faltam %dh%02d", "liko %dval.%02d"),
   T("família", "šeima"),

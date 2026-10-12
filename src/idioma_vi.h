@@ -5097,6 +5097,7 @@
   T("falha ao consultar o Simkl (HTTP %d)", "truy vấn Simkl thất bại (HTTP %d)"),
   T("falha ao trocar o codigo (HTTP %d)", "trao đổi mã thất bại (HTTP %d)"),
   T("falhou", "thất bại"),
+  T("falhou há %d min", "thất bại %d phút trước"),
   T("faltam %d min", "còn %d phút"),
   T("faltam %dh%02d", "còn %dh%02d"),
   T("família", "gia đình"),

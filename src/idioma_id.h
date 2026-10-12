@@ -5097,6 +5097,7 @@
   T("falha ao consultar o Simkl (HTTP %d)", "kueri Simkl gagal (HTTP %d)"),
   T("falha ao trocar o codigo (HTTP %d)", "pertukaran kode gagal (HTTP %d)"),
   T("falhou", "gagal"),
+  T("falhou há %d min", "gagal %d menit lalu"),
   T("faltam %d min", "sisa %d mnt"),
   T("faltam %dh%02d", "sisa %dj%02d"),
   T("família", "keluarga"),

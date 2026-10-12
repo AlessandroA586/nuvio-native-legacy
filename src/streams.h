@@ -180,12 +180,22 @@ int  stream_automatico(void);
 // existe e NAO e pior que ela: mesma resolucao ou maior, Dolby Vision igual ou
 // melhor. 0 = nao ha proxima, ou a proxima baixaria a qualidade (#202).
 int  stream_proxima_sem_perda(int atual);
+// Primeira VOD nao tentada na ordem do addon, inclusive antes da atual.
+// Pula a atual e as ja falhadas; leitura protegida contra troca de lista.
+int  stream_proxima_vod(int atual);
+// Confere a proxima da ordem do addon fora do fio de desenho; -1 se acabou.
+// Devolve tambem quantas candidatas consumiram o orcamento (se nao NULL).
+int  stream_verificar_proxima_vod(int atual, int tentativas, int *conferidas);
 // O mesmo sem as regras de auto-play (#202): canal ao vivo.
 int  stream_automatico_canal(void);
 // Exclui uma candidata que ja foi entregue ao player e travou no pipeline.
 // A exclusao vale so para a lista atual; uma resposta nova limpa a memoria.
 // 1 = a fonte `indice` existe e ainda nao foi descartada pelo automatico nesta lista.
 int  stream_automatico_disponivel(int indice);
+// O player nao conseguiu abrir a fonte; so VOD, nao canais nem simples sonda.
+void stream_vod_falhou(int indice);
+void stream_vod_tocou(int indice);
+long stream_vod_falhou_ha(int indice);
 int  stream_automatico_excluir(int indice);
 // Exclui tambem as IRMAS da candidata (mesmo addon e mesmo rotulo), mas so
 // quando sobra outra candidata: quando o player nao conectou numa, as outras

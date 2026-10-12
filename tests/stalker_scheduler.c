@@ -158,6 +158,9 @@ int stream_primeira_boa(int tentativas) {
   return 7;
 }
 
+int stream_verificar_proxima_vod(int atual, int tentativas, int *conferidas) {
+  (void)atual; (void)tentativas; if (conferidas) *conferidas = 0; return -1;
+}
 int stream_canal_primeira_viva(int tentativas) { (void)tentativas; return -1; }
 int stream_canal_classe_escolhida(void) { return 0; }
 int stream_canal_proxima(int a) { return a + 1; }
