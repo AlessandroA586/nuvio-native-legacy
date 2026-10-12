@@ -1444,9 +1444,6 @@ static void desenhaFaixaAberta(const CatItem *ci, int r, float px, float py,
   }
 }
 
-static void desenhaProfundidade(GfxRect card, float raio, int ligadaAqui) {
-  foco_profundidade(card, raio, ligadaAqui, 1.0f);   // focoprof.h: o mesmo do Detalhe
-}
 // ZERO. MEDIDO no app web (sessao logada, perfil do dono): o card em foco tem
 // `transform: none`, `scale: none` e o mesmo getBoundingClientRect do card ao
 // lado — 212x322 nos dois, mesma linha, mesmo topo. A escala de 9% e o
@@ -5062,8 +5059,6 @@ static void desenhaAtalhos(int r, float y) {
       // diferente; a resposta ao foco, nao.
       gfx_rect(card, tex, GFX_CARD, f, 0, 0, raio, 0, 0, 0, 1);
       gfx_tex_aspect_atual = 0;
-      // E a profundidade tambem vale aqui, pelo mesmo interruptor dos cartazes.
-      desenhaProfundidade(card, raio, ajustes_profundidade_posters());
     }
     // A propria capa e a identidade do catalogo. O nome/logo vinha sendo
     // desenhado novamente por cima dela e criava exatamente a duplicacao que
@@ -5820,7 +5815,6 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
           gfx_tex_aspect_atual = tex_aspecto(arte);
           gfx_rect(card, tex, GFX_CARD, 0, 0, 0, raio, 0, 0, 0, 1);
           gfx_tex_aspect_atual = 0;
-          desenhaProfundidade(card, raio, ajustes_profundidade_posters());
         }
         continue;
       }
@@ -5833,7 +5827,6 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
         if (t) veusDoCard(ci, tipo, deitado, 0.0f, 0);
         desenhaArteCard(card, tipo, cam, t, ci, 0.0f, raio, 1.0f, 0.0f);
         if (t) gfx_veu_na_arte = 1; else gfx_veu_card_limpar();
-        desenhaProfundidade(card, raio, ajustes_profundidade_posters());
         desenhaRotuloCard(ci, tipo, deitado, rotuloFora, px, y0, w, h, raio);
         if (editorial(tipo)) desenhaEditorialCard(ci, tipo, px, y0, w, h, raio);
         gfx_veu_card_limpar(); }
@@ -5963,12 +5956,6 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
           }
           if (cItem && tipo != FILEIRA_CONTINUE && tipo != FILEIRA_RETORNO)
             desenhaChipAmigos(cItem, px, py, w, limiteSelo, aArte);
-
-          // `cardDepthEnabled` mais o interruptor por secao: `cardDepthPosters`
-          // nas fileiras de catalogo, `cardDepthContinueWatching` na primeira.
-          desenhaProfundidade(card, raio,
-                              tipo == FILEIRA_CONTINUE ? ajustes_profundidade_cw()
-                                                       : ajustes_profundidade_posters());
 
           // --- posterLabelsEnabled ---------------------------------------
           // Card DEITADO: a legenda vai DENTRO da moldura, sobre um degrade que

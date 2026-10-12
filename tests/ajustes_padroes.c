@@ -78,9 +78,9 @@ int main(void) {
   assert(somenteDesteAparelho(AJ_TRAILER_FONTE));
   assert(valor[AJ_EXPANDIR] == 0);
   assert(valor[AJ_EXPANDIR_ATRASO] == 3);
-  assert(valor[AJ_PROF] == 1);                // profundidade desligada
+  assert(valor[AJ_PROF] == 0);                // profundidade ligada (2.0.5: reflexo do foco)
   assert(valor[AJ_PROF_BORDA] == 28);         // cardDepthEdgeStrength
-  assert(valor[AJ_PROF_BRILHO] == 10);        // cardDepthSheenStrength
+  assert(valor[AJ_PROF_BRILHO] == 100);       // cardDepthSheenStrength = intensidade
   assert(valor[AJ_LARGURA_DP] == 126);
   assert(valor[AJ_RAIO_DP] == 12);            // canto normal, nao pilula
   assert(valor[AJ_QUALIDADE_IMG] == 1);       // Padrao

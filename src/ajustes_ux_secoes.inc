@@ -598,27 +598,24 @@ static void ajcCarFoco(int A) {
     ajcTxt(textoValor(AJ_EXPANDIR_ATRASO), 12, 1, 194, 60, 0, exp ? 1.0f : 0.4f);
     ajcFoco(AJ_EXPANDIR_ATRASO, 156, 52, w2, 32, 16); }
 }
-// Forma: a profundidade em cada tipo de cartao (cartaz, continuar, episodio,
-// elenco, trailer), com brilho, reflexo e cobertura da borda.
+// Forma: a profundidade (o reflexo do foco) vale em todo tipo de cartao
+// (cartaz, continuar, episodio, elenco, trailer), com a intensidade do reflexo.
 static void ajcCarForma(int A) {
   static const int OP[5] = { AJ_PROF_POSTERS, AJ_PROF_CW, AJ_PROF_EPS, AJ_PROF_ELENCO, AJ_PROF_TRAILERS };
   int prof = ajustes_profundidade(), i;
-  float borda = valor[AJ_PROF_BORDA] / 100.0f, brilho = valor[AJ_PROF_BRILHO] / 100.0f, cob = valor[AJ_PROF_COBERTURA] / 100.0f;
+  float brilho = valor[AJ_PROF_BRILHO] / 100.0f;
   GfxRect g;
   char c[1200];
   ajCenaArte(ajArte(AJA_FUNDO, A), (GfxRect){ ajc.x, ajc.y, 640 * ajc.s, ajc.h }, 22, 0.7f);
   g = CR(48, 36, 180, 270);
   gfx_rect((GfxRect){ g.x - 18 * ajc.s, g.y + 8 * ajc.s, g.w + 36 * ajc.s, g.h + 40 * ajc.s }, 0, GFX_SOMBRA, 1, 0, 0, 0.5f, 0, 0, 0, prof ? 0.7f : 0.3f);
   ajImg(ajArte(AJA_POSTER, A), g, 16 * ajc.s, 1);
-  if (prof) { gfx_brilho_topo(g, 16 * ajc.s / g.h, 0.25f + 0.5f * cob, 1, 1, 1, 0.35f * brilho + 0.05f);
-              gfx_anel(g, 16 * ajc.s / g.h, 2 * ajc.s, 1, 1, 1, 0.45f * borda); }
+  if (prof) gfx_brilho_topo(g, 16 * ajc.s / g.h, 0.34f, 1, 1, 1, 0.35f * brilho + 0.05f);
   ajcFoco(AJ_PROF, 48, 36, 180, 270, 16);
-  ajcFoco(AJ_PROF_BORDA, 48, 36, 180, 270, 16);
   ajcFoco(AJ_PROF_BRILHO, 48, 36, 180, 120, 16);
-  ajcFoco(AJ_PROF_COBERTURA, 48, 36, 180, 270, 16);
   for (i = 0; i < 5; i++) {
     float bx = 268 + (i % 2) * 174, by = 36 + (i / 2) * 98, cw = i == 0 ? 56 : i == 3 ? 72 : 150, ch = i == 0 ? 84 : 72;
-    float al = prof && lig(OP[i]) ? 1.0f : 0.45f;
+    float al = prof ? 1.0f : 0.45f;
     GfxRect r;
     if (i == 3) { snprintf(c, sizeof c, "%s", ajcElenco(A, 0)); r = CR(bx + 39, by + 6, 72, 72); ajImg(c, r, 36 * ajc.s, 1); }
     else if (i == 2) { snprintf(c, sizeof c, "%s", ajcEp(A, 1)); r = CR(bx, by + 6, cw, ch); ajImg(c, r, 10 * ajc.s, 1); }

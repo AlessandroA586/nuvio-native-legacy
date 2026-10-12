@@ -2579,11 +2579,6 @@ int   ajustes_profundidade(void)      { return lig(AJ_PROF); }
 float ajustes_profundidade_borda(void)     { return valor[AJ_PROF_BORDA] / 100.0f; }
 float ajustes_profundidade_brilho(void)    { return valor[AJ_PROF_BRILHO] / 100.0f; }
 float ajustes_profundidade_cobertura(void) { return valor[AJ_PROF_COBERTURA] / 100.0f; }
-int   ajustes_profundidade_posters(void)   { return lig(AJ_PROF_POSTERS); }
-int   ajustes_profundidade_cw(void)        { return lig(AJ_PROF_CW); }
-int   ajustes_profundidade_episodios(void) { return lig(AJ_PROF_EPS); }
-int   ajustes_profundidade_elenco(void)    { return lig(AJ_PROF_ELENCO); }
-int   ajustes_profundidade_trailers(void)  { return lig(AJ_PROF_TRAILERS); }
 
 int   ajustes_largura_poster_dp(void) { return valor[AJ_LARGURA_DP]; }
 int   ajustes_raio_poster_dp(void)    { return valor[AJ_RAIO_DP]; }
@@ -3469,6 +3464,19 @@ void ajustes_dir(const char *dir) {
       valor[AJ_FUNDO] = FUNDO_FROST;
       valor[AJ_VIDRO] = 1;           // V_LIGA: 1 = Desligado
       dados_gravar("aparencia-20.txt", "1\n");
+      gravar();
+    } }
+  // MIGRACAO UNICA (2.0.5): a profundidade virou o reflexo do foco do GFX_CARD,
+  // com um controle so (intensidade = AJ_PROF_BRILHO). Os valores antigos eram
+  // de outro efeito (realce de topo, borda e cobertura por tipo de cartao), entao
+  // todo mundo cai no padrao novo: ligado, 100%. Decisao do dono (12/10/2026).
+  { char *m = dados_ler("profundidade-205.txt");
+    if (m) free(m);
+    else {
+      printf("[ajustes] profundidade -> reflexo do foco ligado, 100%% (migracao unica da 2.0.5)\n");
+      valor[AJ_PROF] = 0;            // V_LIGA: 0 = Ligado
+      valor[AJ_PROF_BRILHO] = 100;
+      dados_gravar("profundidade-205.txt", "1\n");
       gravar();
     } }
 #ifdef NV_TEX_MB_FIXO

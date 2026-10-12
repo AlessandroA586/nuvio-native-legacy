@@ -5243,7 +5243,6 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     gfx_esqueleto(th, raioTh, 0.133f, 0.133f, 0.133f, a);
   else gfx_cor(th, raioTh, 0.133f, 0.133f, 0.133f, a);
   veuEpisodio(th, a);
-  if (!epApple()) foco_profundidade(th, raioTh, ajustes_profundidade_episodios(), a);
   if (ajustes_vidro()) gfx_vidro_aro(th, raioTh, 1.5f, 1, 1, 1, 0.14f * a);   // vidro: aro fino na miniatura
 
   // A mesma fonte que o menu modifica: desconhecido (-1) nao recebe selo.
@@ -5535,7 +5534,6 @@ static void desenhaTrailer(float x, float y, int c, float f, float a) {
   } else {
     gfx_cor(v, raio, 0.13f, 0.13f, 0.13f, a);
   }
-  foco_profundidade(v, raio, ajustes_profundidade_trailers(), a);
 
   // Selo de play: disco escuro e o triangulo por cima, centrados na miniatura.
   { float d = NV_DETF_TR_PLAY_D;
@@ -5636,7 +5634,6 @@ static void desenhaElenco(float x, float y, int c, float f, float a) {
     txt_desenhar_alpha(li, av.x + (av.w - li.w) * 0.5f,
                        av.y + (av.h - li.h) * 0.5f, a * 0.9f);
   }
-  foco_profundidade(av, 0.5f, ajustes_profundidade_elenco(), a);
   float yn = y + NV_DETP_EL_AVATAR + NV_DETP_EL_NOME_DY;
   TxtLinha ln = txt_linha_corta(TXT_CALLOUT, nome, epApple()?238:179, epApple()?240:179, epApple()?244:179, 255, NV_DETP_EL_W);
   txt_desenhar_alpha(ln, x + (NV_DETP_EL_W-ln.w)*.5f, yn, a);
@@ -5927,8 +5924,7 @@ static void desenhaRelacionados(float x, float y, float a, int primeiro, int lim
         gfx_esqueleto(r, raio, 0.133f, 0.133f, 0.133f, a);
       } else {
         gfx_cor(r, raio, 0.133f, 0.133f, 0.133f, a);
-      }
-      foco_profundidade(r, raio, ajustes_profundidade_posters(), a); }
+      } }
     { int c = aceso ? 255 : 225;
       TxtLinha lt = txt_linha_corta(TXT_DET_META2, extras_relacionado_titulo(i),
                                     c, c, c, 255, REL_CARD_W);
@@ -5983,7 +5979,6 @@ static void desenhaEstudio(float x, float y, int i, float f, float a) {
   moldura(r, 14.0f, a);
   if (!ajustes_borda_foco() && f > 0.01f) plrui_linha_foco(r, 14.0f, f * a);
   if (ajustes_vidro()) foco_anel(r0, raio, f, a);
-  foco_profundidade(r, raio, ajustes_profundidade_posters(), a);
   // Logo pedido pela largura com que o cartao desenha (h=52, w<=204; cap 256
   // com a folga cobrindo o crescimento do foco) — o 640 unico decodificava um
   // wordmark inteiro para 52 px de altura. Ver tests/artemenor.c.
@@ -7108,7 +7103,6 @@ static void desenhaPessoa(float a) {
       } else {
         gfx_cor(r, raioCartaz(PES_CARD_W, PES_CARD_H), 0.13f, 0.13f, 0.13f, a);
       }
-      foco_profundidade(r, raioCartaz(PES_CARD_W, PES_CARD_H), ajustes_profundidade_posters(), a);
       { TxtLinha lc = txt_linha_corta(TXT_DET_META2, pessoa_credito_titulo(i),
                                       230, 234, 242, 255, PES_CARD_W);
         txt_desenhar_alpha(lc, x, y + PES_CARD_H + 12.0f, a);

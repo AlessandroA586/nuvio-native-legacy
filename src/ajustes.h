@@ -533,11 +533,6 @@ int   ajustes_profundidade(void);            // cardDepthEnabled
 float ajustes_profundidade_borda(void);      // 0..1 (cardDepthEdgeStrength/100)
 float ajustes_profundidade_brilho(void);     // 0..1 (cardDepthSheenStrength/100)
 float ajustes_profundidade_cobertura(void);  // 0..1 (cardDepthEdgeCoverage/100)
-int   ajustes_profundidade_posters(void);
-int   ajustes_profundidade_cw(void);
-int   ajustes_profundidade_episodios(void);
-int   ajustes_profundidade_elenco(void);
-int   ajustes_profundidade_trailers(void);
 
 // --- LAYOUT: tamanho do item -------------------------------------------------
 // ATENCAO, e a armadilha que ja custou uma medida errada: no layout MODERNO

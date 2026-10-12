@@ -78,9 +78,9 @@
   1,                /* navegacao horizontal rapida: desligada (fabrica) */
   0,                /* borda no cartaz em foco: ligada (o foco de sempre) */
 
-  1,                /* efeito de profundidade: desligado (fabrica) */
-  28,               /* brilho da borda */
-  10,               /* reflexo */
+  0,                /* efeito de profundidade: ligado (2.0.5: e o reflexo do foco) */
+  28,               /* brilho da borda (sem uso desde a 2.0.5; so a conta) */
+  100,              /* reflexo: a intensidade do efeito */
   0,                /* cobertura da borda */
   0, 0, 0, 0, 0,    /* profundidade em posters, cw, episodios, elenco, trailers */
 
