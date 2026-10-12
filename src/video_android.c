@@ -836,6 +836,7 @@ int  video_pronto(void) {
 }
 int  video_ativo(void) { return ativo; }
 int  video_superficie_estavel(void) { return superficieEstavel; }
+int  video_quadro_visto(void) { return primeiroQuadro; }
 int  video_falhou(void) { return falhou; }
 int  video_audio_nao_suportado(void) { return semDecoderAudio; }
 int  video_seek_desistiu(void) { return 0; }

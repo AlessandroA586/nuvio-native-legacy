@@ -5525,6 +5525,12 @@ static void desenharOsdCorpo(Uint32 agora, float a, float ac, const CatItem *c) 
       else if (w > 0)                   selos[nSelos++] = FMT_SD; }
     // "Dolby Vision" so quando o PIPELINE devolveu DolbyVision no videoInfo
     // (MEDIDO: um MKV anunciado como DV volta HDR10 nesta TV).
+#ifdef NV_ANDROID
+    // A deteccao final chega ~100 ms depois (HDR10 -> DolbyVision, TCL 12/10):
+    // o selo de imagem espera a superficie estavel para nao piscar HDR10.
+    if (!video_superficie_estavel()) {}
+    else
+#endif
     if (video_tem_dolby_vision())                  selos[nSelos++] = FMT_DV;
     else if (!strcasecmp(video_hdr(), "HDR10"))    selos[nSelos++] = FMT_HDR10;
 #if defined(__EMSCRIPTEN__) || defined(NV_TPK)

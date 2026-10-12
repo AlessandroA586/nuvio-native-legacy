@@ -123,6 +123,7 @@
 #include "player.h"
 #include "dvtela.h"
 #include "legsync.h"
+#include "badges.h"
 #include "streams.h"
 #include "streamfitdur.h"
 #include "streamfitpassiva.h"
@@ -991,6 +992,12 @@ static void vigiarFonteGuardada(void) {
     g.pronto = video_pronto();
     g.duracao = video_duracao();
     g.carregando = player_carregando();
+#ifdef NV_ANDROID
+    g.quadro = video_quadro_visto();
+#endif
+#ifdef NV_ANDROID
+  g.quadro = video_quadro_visto();
+#endif
     g.conferencia = fontevolta_conferencia();
     g.desdeMs = desde = SDL_GetTicks() - voltaDesde;
     d = fontevolta_decidir(&g, &motivo);
@@ -1007,7 +1014,7 @@ static void vigiarFonteGuardada(void) {
   voltaAtiva = 0;
   // Sonda isolada so recua; a marca exige erro, clipe curto ou prazo do player.
   if (g.falhou || (g.pronto && g.duracao > 1.0 && g.duracao < 120.0) ||
-      (g.carregando && desde > FONTEVOLTA_PRAZO_MS)) {
+      (g.carregando && !g.quadro && desde > FONTEVOLTA_PRAZO_MS)) {
     Stream s; char alvo[64];
     alvoPlayer(alvo, sizeof alvo);
     if (!fonteProvouTocar() &&
@@ -1838,6 +1845,9 @@ static void vigiarAberturaManual(void) {
   g.falhou = video_falhou() || player_fonte_falhou();
   g.pronto = video_pronto() && video_pos() > 0.25;
   g.carregando = player_carregando();
+#ifdef NV_ANDROID
+  g.quadro = video_quadro_visto();
+#endif
   g.desdeMs = desde;
   // Erro do player no preparo (Media3 2004 etc., video_android.c): sem isto a
   // tela ficava em "Abrindo fonte" ate o prazo, ou para sempre.
@@ -1879,6 +1889,11 @@ static int aberturaVencida(Uint32 desde) {
   g.desdeMs = desde;
   g.proximaSemPerda = semPerda;
   g.dadoChegando = video_pronto() || video_buffer_fim() > 0.5;
+  { const Stream *s = stream_item(at);
+    g.pesado = s && (s->badges & (badges_bit("r-4k") | badges_bit("v-dv"))); }
+#ifdef NV_ANDROID
+  g.quadro = video_quadro_visto();
+#endif
 #if defined(NV_ANDROID) || defined(NV_TPK)
   // Trilhas do player ja provam resposta antes do primeiro quadro (DV na TCL).
   g.dadoChegando |= video_n_audio() > 0 || video_n_legenda() > 0;

@@ -19,11 +19,17 @@
 // pessoa decide. Sem proxima, nao ha para onde ir: o longo.
 #define INICIO_ABRE_SEM_SINAL_MS 15000u
 #define INICIO_ABRE_COM_DADO_MS  30000u
+// 4K / Dolby Vision sem quadro ainda: TCL 12/10, Silo 2160p DV pelo debrid
+// levou 12 s ate as faixas e 24 s ate o primeiro quadro; o prazo de 30 s
+// descartou a fonte boa. Quadro ja desenhado nunca vence (dono, 12/10).
+#define INICIO_ABRE_PESADO_MS    60000u
 
 typedef struct {
   int tocou;             // a fonte ja tocou nesta sessao (nunca vence)
   int proximaSemPerda;   // existe candidata seguinte nao pior que a atual
   int dadoChegando;      // buffer subindo / pipeline pronto
+  int quadro;            // o player ja desenhou quadro desta fonte (nunca vence)
+  int pesado;            // fonte 4K ou Dolby Vision
   unsigned desdeMs;      // desde que a fonte foi entregue ao player
 } InicioAbertura;
 

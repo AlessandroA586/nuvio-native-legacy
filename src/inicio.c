@@ -1,12 +1,13 @@
 #include "inicio.h"
 
 unsigned inicio_abre_prazo_ms(const InicioAbertura *g) {
+  if (g && g->pesado) return INICIO_ABRE_PESADO_MS;
   if (!g || !g->proximaSemPerda || g->dadoChegando) return INICIO_ABRE_COM_DADO_MS;
   return INICIO_ABRE_SEM_SINAL_MS;
 }
 
 int inicio_abre_vencida(const InicioAbertura *g) {
-  if (!g || g->tocou) return 0;
+  if (!g || g->tocou || g->quadro) return 0;
   return g->desdeMs > inicio_abre_prazo_ms(g);
 }
 

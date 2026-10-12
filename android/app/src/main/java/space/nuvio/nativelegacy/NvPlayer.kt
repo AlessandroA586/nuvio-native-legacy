@@ -823,15 +823,22 @@ object NvPlayer {
         // principal parado no glClear ("renderer soltou em 7057 ms", pior quadro
         // 6612.7 ms). No HDR a recriacao fica so nas TRANSICOES DE MODO
         // (hdrNaSuperficie: a primeira 200 ms apos o primeiro quadro e a segunda
-        // 1,5 s depois), que existem para a TV ligar o HDR; mudanca de tamanho
-        // nao recria.
+        // 1,5 s depois), que existem para a TV ligar o HDR.
+        //
+        // MAS SEM NENHUMA o plano fica preso no primeiro tamanho e so o Crop
+        // funcionava (dono, 12/10: "so funciona o crop"). Depois da superficie
+        // estavel a troca de tamanho recria UMA vez, RECRIA_ESPERA_HDR_MS apos
+        // a ultima troca; antes disso as recriacoes do HDR ja pegam o layout novo.
         if (ultHdr.isEmpty() || ultHdr == "none") recriarSuperficie(RECRIA_ESPERA_MS)
+        else if (estavelEmitido) recriarSuperficie(RECRIA_ESPERA_HDR_MS)
     }
 
     // Recriar a Surface custa um quadro preto e, em rajada (aspecto apertado
     // varias vezes), travava: as trocas JUNTAM numa so, RECRIA_ESPERA_MS depois
     // da ultima. A mesma recriacao liga o HDR da TCL (ver onRenderedFirstFrame).
     private const val RECRIA_ESPERA_MS = 350L
+    // HDR/DV: recriar e caro (DispLink religa), so depois de o modo parar.
+    private const val RECRIA_ESPERA_HDR_MS = 600L
     private var hdrRecriado = false
     private var quadroVisto = false
     // SOLTAR A SAIDA SEM ESPERAR (2.0.3). Destruir a Surface com o decoder

@@ -93,6 +93,15 @@ static void abertura(void) {
   // Quem ja tocou nunca vence.
   g.tocou = 1; g.proximaSemPerda = 1; g.desdeMs = 99999;
   CHECK(!inicio_abre_vencida(&g));
+  // Quadro ja desenhado (DV na TCL, sem "pronto" ainda) nunca vence (12/10).
+  g.tocou = 0; g.quadro = 1;
+  CHECK(!inicio_abre_vencida(&g));
+  // 4K/DV sem quadro: 60 s, nao 30 (Silo 2160p DV levou 24 s ao quadro).
+  g.quadro = 0; g.pesado = 1; g.dadoChegando = 1; g.desdeMs = 45000;
+  CHECK(inicio_abre_prazo_ms(&g) == INICIO_ABRE_PESADO_MS);
+  CHECK(!inicio_abre_vencida(&g));
+  g.desdeMs = INICIO_ABRE_PESADO_MS + 1;
+  CHECK(inicio_abre_vencida(&g));
 }
 
 static void motivo(void) {
