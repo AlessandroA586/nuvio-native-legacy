@@ -16,7 +16,10 @@
 #define LS_RITMO         8                     // Ranges por segundo, como o mkvass
 #endif
 #define LS_CALMO_MS      2000u
-#define LS_FOLGA_MIN     20.0                  // buffer de video abaixo disto pausa a leitura
+// Buffer de video abaixo disto pausa a leitura. O uMS da LG segura ~10 s a
+// frente (bufferRange percent 100 = 10 s, C9 12/10): com 20 s a leitura nunca
+// andava la. 8 s = so le com o buffer perto de cheio.
+#define LS_FOLGA_MIN     8.0
 #define LS_AUTO_MAX      2                     // a escolhida + 1 troca (troca demais = legenda piscando)
 #define LS_AUTO_REFS     2                     // R4: faixas de referencia incompletas que ainda vale pular
 
