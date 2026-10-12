@@ -98,7 +98,7 @@ typedef struct {
 #define NOV_ARTES_MAX 6
 #define NOV_ITENS_MAX 24
 #define NOV_CENAS_MAX 6
-#define NOV_PAGINAS_MAX 4
+#define NOV_PAGINAS_MAX 6
 
 static int   aberto, decidido, pagina, foco = 1;
 static float entrada, pag, relogio;
