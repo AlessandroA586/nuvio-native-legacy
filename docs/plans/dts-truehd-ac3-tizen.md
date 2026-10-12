@@ -5,6 +5,12 @@ Goal: when the chosen audio track is DTS (any variant), DTS-HD MA or TrueHD/MLP,
 plays it as **Dolby Digital 5.1 (AC3, 640 kbps)**, converted live in the app, with the
 video untouched (HDR / Dolby Vision preserved). Native tracks (AC3/E-AC3/AAC) are never touched.
 
+> **2026-10-12: architecture and session plan superseded by
+> [`dts-truehd-ac3-tizen-DESIGN.md`](dts-truehd-ac3-tizen-DESIGN.md)** (loopback HLS with
+> on-demand segments instead of progressive restart-on-seek; S0 becomes a probe build
+> because retail TVs close `sdb shell`). The fixed behaviour rules below still apply.
+> PC test tooling: `tools/dts-tizen-lab/`.
+
 Work is split into **6 sessions**. Each session ends with a pushed branch, passing host tests
 and a short hand-off note appended to this file, so the next session can start cold.
 
