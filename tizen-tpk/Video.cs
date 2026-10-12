@@ -136,6 +136,7 @@ namespace NuvioTpk
         readonly object trocaTrava = new object();
         Task<bool> liberacao = Task.FromResult(true);
         internal int PrazoPararMs = 5000;
+        internal int PrazoBuscarMs = 15000;
 
         public Video(Func<Display> fazDisplay, Action<Action> principal, string dados, int telaW, int telaH)
         {
@@ -579,8 +580,19 @@ namespace NuvioTpk
             var p = player;
             int minha = Volatile.Read(ref sessao);
             buscando = true;
+            bool expirou = false;
             try {
-                await p.SetPlayPositionAsync(ms, false);
+                var busca = p.SetPlayPositionAsync(ms, false);
+                _ = busca.ContinueWith(t => { var _e = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
+                if (await Task.WhenAny(busca, Task.Delay(PrazoBuscarMs)) != busca) {
+                    expirou = true; // Nao aceitar comandos neste player ate a troca.
+                    if (minha == Volatile.Read(ref sessao)) {
+                        Log("buscar: prazo vencido");
+                        NvVid.Evento(EV_PRESO, buscaPend >= 0 ? buscaPend : ms, 0);
+                    }
+                    return;
+                }
+                await busca;
                 if (minha != Volatile.Read(ref sessao)) return;
                 // PlaybackInterrupted pode ter emitido evento 3 durante o seek.
                 if (p.State == PlayerState.Playing) NvVid.Evento(EV_TOCANDO, 0, 0);
@@ -592,7 +604,7 @@ namespace NuvioTpk
                 return;
             }
             catch (Exception e) { Log("buscar: " + e.Message); return; }
-            finally { if (minha == Volatile.Read(ref sessao)) buscando = false; }
+            finally { if (!expirou && minha == Volatile.Read(ref sessao)) buscando = false; }
             if (minha != Volatile.Read(ref sessao)) return;
             // SetPlayPositionAsync terminou: nao disputar Pause/outro seek com
             // a transicao que produz evento 3; o cache so muda por consulta real.

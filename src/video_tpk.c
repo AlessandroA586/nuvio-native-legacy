@@ -674,11 +674,14 @@ void video_parar(void) {
   if (ativo && hParar) hParar();
   ativo = pronto = tocando = 0;
 }
-void video_pausar(int p) { pausaPedida = p != 0; vigiaAtiva = 0; if (nv_recon_ativa(&recon)) reconPausa = pausaPedida; else if (hPausar) hPausar(p); }
+void video_pausar(int p) { pausaPedida = p != 0; vigiaAtiva = 0; if (nv_recon_ativa(&recon) && (recon.pendente || reconErroPend || !pronto || reconBuscarMs >= 0)) reconPausa = pausaPedida; else if (hPausar) hPausar(p); }
 int video_pausa_confirmada(void) { return 0; } // host nao fornece ack por sessao
 void video_volume(int pct) { if (hVolume) hVolume(pct); }
 void video_buscar(double s) {
-  if (nv_recon_ativa(&recon)) { recon.alvo = s; reconBuscarMs = (int)(s * 1000.0); return; }
+  if (nv_recon_ativa(&recon)) {
+    recon.alvo = s;
+    if (recon.pendente || reconErroPend || !pronto || reconBuscarMs >= 0) { reconBuscarMs = (int)(s * 1000.0); return; }
+  }
   progressoEm = SDL_GetTicks(); progressoPos = video_pos(); vigiaAtiva = 1;
   if (hBuscar) hBuscar((int)(s * 1000.0));
   terminou = 0;

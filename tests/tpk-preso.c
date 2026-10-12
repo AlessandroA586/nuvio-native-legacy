@@ -51,6 +51,13 @@ int main(void) {
   int stops=paradas;nv_tpk_video_evento(9,-1,0);passo(1);
   assert(paradas==stops+1 && recon.pendente && recon.alvo==1337.033);
   passo(3000);prontoHost();passo(1);assert(pausa==1 && busca==1337033);
+  nv_tpk_video_evento(3,0,0);assert(recon.tentativa && !tocando);
+  video_pausar(0);assert(pausa==0);nv_tpk_video_evento(2,0,0);
+  passo(1);assert(tocando && recon.tentativa && !falhou);
+  video_pausar(1);nv_tpk_video_evento(3,0,0);
+  video_buscar(1327.033);assert(busca==1327033 && recon.alvo==1327.033);
+  video_pausar(0);assert(pausa==0);nv_tpk_video_evento(2,0,0);
+  posicao=1327033;passo(1);assert(tocando && recon.tentativa && !falhou);
   video_parar();video_definir_reconexao(1);video_tocar("http://test/movie");prontoHost();
   posicao=1337033;passo(1);nv_tpk_video_evento(9,-1,0);passo(1);
   // Seek forward durante a recuperacao atualiza o alvo, nao volta ao stall.
@@ -61,9 +68,11 @@ int main(void) {
   posicao=1337033;passo(1);video_pausar(1);nv_tpk_video_evento(7,50,0);
   nv_tpk_video_evento(10,0,0);passo(1);stops=paradas;passo(15001);
   assert(paradas==stops+1 && recon.pendente);video_parar();
-  // Seek recusado usa o alvo do comando, nao o ultimo relogio.
+  // Prazo do seek vence com PlaybackInterrupted/Paused, sem consulta lenta.
   video_definir_reconexao(1);video_tocar("http://test/movie");prontoHost();
-  posicao=1337033;passo(1);nv_tpk_video_evento(9,1347033,0);nv_tpk_video_evento(9,-1,0);passo(1);
-  assert(recon.pendente && recon.alvo==1347.033);video_parar();
+  posicao=1337033;passo(1);video_pausar(1);nv_tpk_video_evento(3,0,0);
+  nv_tpk_video_evento(9,1347033,0);nv_tpk_video_evento(9,-1,0);passo(1);
+  assert(recon.pendente && recon.alvo==1347.033);
+  passo(3000);prontoHost();passo(1);assert(busca==1347033 && pausa==1);video_parar();
   puts("ok: pausa/buffer/seek, retomada na posicao, limite e cancelamento");
 }

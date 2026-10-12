@@ -110,6 +110,27 @@ class Test {
         Thread.Sleep(50); Check(old.State == PlayerState.Playing, "pause aguarda seek nativo em voo");
         old.SeekPending.SetResult(true); Wait(() => old.State == PlayerState.Paused);
         Entry("fParar"); Wait(() => old.Disposed);
+        // Seek nunca conclui e interrompe playback: o prazo independe de Tique.
+        Setup();
+        typeof(Video).GetField("PrazoBuscarMs", BindingFlags.Instance|BindingFlags.NonPublic)?.SetValue(video, 150);
+        OpenTocado(); old = Player.All[0];
+        old.SeekPending = new TaskCompletionSource<bool>(); antes = presos;
+        Entry("fBuscar", 1200000); Wait(() => old.SeekCalls == 1);
+        old.Interromper(); Entry("fPausar", 1); Entry("fBuscar", 1347033);
+        video.Tique(); Wait(() => presos > antes);
+        Check(alvoPreso == 1347033 && !old.SeekPending.Task.IsCompleted && old.PositionCalls == 0,
+              "seek sem conclusao vence prazo pausado sem consulta de posicao");
+        Entry("fPausar", 0); Entry("fBuscar", 1357033); Thread.Sleep(50);
+        Check(presos == antes + 1 && old.Starts == 1 && old.SeekCalls == 1,
+              "seek expirado nao aceita comandos nem repete recuperacao");
+        Entry("fParar"); Open(); Wait(() => Player.All.Count == 2 && Player.All[1].Starts == 1);
+        Check(old.Disposed && Player.Overlap == 0, "seek preso libera antes de reabrir");
+        Entry("fPausar", 1); Wait(() => Player.All[1].State == PlayerState.Paused);
+        Entry("fPausar", 0); Wait(() => Player.All[1].Starts == 2);
+        Check(Player.All[1].State == PlayerState.Playing, "nova sessao aceita pausa e resume");
+        old.SeekPending.SetResult(true); Thread.Sleep(50);
+        Check(Player.All[1].Starts == 2, "seek tardio nao altera nova sessao");
+        Entry("fParar"); Wait(() => Player.All[1].Disposed);
         return failures == 0 ? 0 : 1;
     }
 }
@@ -145,6 +166,7 @@ namespace Tizen.Multimedia {
         public int PositionDelayMs, PositionCalls;
         public ManualResetEventSlim PositionEntered = new ManualResetEventSlim();
         public int GetPlayPosition() { Interlocked.Increment(ref PositionCalls); PositionEntered.Set(); Thread.Sleep(PositionDelayMs); return 1234; }
+        public void Interromper() { State=PlayerState.Paused; PlaybackInterrupted?.Invoke(this, new Event()); }
         public Task SetPlayPositionAsync(int ms,bool precise) { SeekCalls++; if(FailSeek) throw new InvalidOperationException("seek InvalidOperation"); return SeekPending?.Task ?? Task.CompletedTask; }
     }
 }
