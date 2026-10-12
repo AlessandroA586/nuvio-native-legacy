@@ -77,8 +77,8 @@ if [ "$SMOKE" = 1 ]; then
   python3 tools/auditoria/smoke_mac.py "${SMOKE_ARGS[@]}" | tee "$LOGS/smoke.txt"
   r=${PIPESTATUS[0]}
   while IFS= read -r l; do RESUMO+=("$l"); done \
-    < <(grep -E "^  (PASS|FAIL|NAO VERIFICADO) " "$LOGS/smoke.txt" | cut -c3-150 |
-        sed -E 's/^(PASS|FAIL|NAO VERIFICADO) +/\1|/' | awk -F'|' '{printf "%-16ssmoke %s\n", $1, $2}')
+    < <(grep -E "^  (PASS|FAIL|NAO VERIFICADO|INFO) " "$LOGS/smoke.txt" | cut -c3-150 |
+        sed -E 's/^(PASS|FAIL|NAO VERIFICADO|INFO) +/\1|/' | awk -F'|' '{printf "%-16ssmoke %s\n", $1, $2}')
   [ "$r" -ne 0 ] && falhou=1
 else
   etapa "smoke do Mac (pulado com --sem-smoke)" 2

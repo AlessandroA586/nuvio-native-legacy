@@ -1319,10 +1319,10 @@ static int normalizarIndice(int indice) {
   return ((indice % i) + i) % i;
 }
 
-void cat_apontar_episodio(int indice, int temporada, int episodio) {
+// Sob pubTrava; aplicarUm ja a segura. Ordem: pubTrava -> epTrava.
+static void apontarEpisodio(int indice, int temporada, int episodio) {
   int e;
-  indice = normalizarIndice(indice);
-  if (indice < 0 || !(temporada > 0 && episodio > 0)) return;
+  if (!(temporada > 0 && episodio > 0)) return;
   if (itens[indice].temporada != temporada || itens[indice].episodio != episodio)
     itens[indice].nomeEpisodio[0] = 0;
   itens[indice].temporada = temporada;
@@ -1337,10 +1337,19 @@ void cat_apontar_episodio(int indice, int temporada, int episodio) {
   }
 }
 
+// Mutacao por evento, sem acrescentar trava as leituras do desenho.
+void cat_apontar_episodio(int indice, int temporada, int episodio) {
+  CAT_TESTE_ANTES_TRAVA();
+  catTravar();
+  indice = normalizarIndice(indice);
+  if (indice >= 0) apontarEpisodio(indice, temporada, episodio);
+  pthread_mutex_unlock(&pubTrava);
+}
+
 static void aplicarUm(int indice, double posSeg, double durSeg, int temporada, int episodio) {
   itens[indice].progresso = (int)(100.0 * posSeg / durSeg);
   itens[indice].restanteMin = (int)((durSeg - posSeg) / 60.0 + 0.5);
-  cat_apontar_episodio(indice, temporada, episodio);
+  apontarEpisodio(indice, temporada, episodio);
 }
 
 // AS COPIAS DA MESMA OBRA (issue #208). O mesmo filme costuma estar em
@@ -1360,8 +1369,11 @@ static int mesmaCopia(int a, int b) { return mesmaCopiaEm(itens, a, b); }
 
 void cat_aplicar_progresso(int indice, double posSeg, double durSeg, int temporada, int episodio) {
   int j;
+  if (durSeg <= 1.0) return;
+  CAT_TESTE_ANTES_TRAVA();
+  catTravar();
   indice = normalizarIndice(indice);
-  if (indice < 0 || durSeg <= 1.0) return;
+  if (indice < 0) { pthread_mutex_unlock(&pubTrava); return; }
   aplicarUm(indice, posSeg, durSeg, temporada, episodio);
   for (j = 0; j < n; j++)
     if (mesmaCopia(indice, j)) {
@@ -1369,6 +1381,7 @@ void cat_aplicar_progresso(int indice, double posSeg, double durSeg, int tempora
       itens[j].retomadoMs = itens[indice].retomadoMs;
     }
   mudou();
+  pthread_mutex_unlock(&pubTrava);
 }
 
 // O PROGRESSO DO DISCO E APLICADO NO BLOCO NOVO, ANTES DE ELE SER PUBLICADO
