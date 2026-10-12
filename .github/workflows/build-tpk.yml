@@ -52,8 +52,10 @@ jobs:
           fi
 
       # Static SDL2/libass/etc. take a long time to build; reuse them.
-      - name: Cache static dependencies
-        uses: actions/cache@v4
+      # restore + save are split so the cache is saved even when a later step
+      # fails (plain actions/cache skips the save on failure).
+      - name: Restore static dependencies cache
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.NUVIO_TPK_CACHE }}
           key: tpk-deps-${{ hashFiles('tools/tpk/Dockerfile', 'tools/tpk/deps.sh') }}
@@ -71,7 +73,26 @@ jobs:
       - name: Build the TPK
         run: |
           export PATH="$DOTNET_ROOT:$PATH"
-          bash tools/tpk.sh
+          set -o pipefail
+          bash tools/tpk.sh 2>&1 | tee build.log
+
+      - name: Save static dependencies cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.NUVIO_TPK_CACHE }}
+          key: tpk-deps-${{ hashFiles('tools/tpk/Dockerfile', 'tools/tpk/deps.sh') }}
+
+      # On failure, show the last lines of the build at the top of the run page.
+      - name: Show build error summary
+        if: failure()
+        run: |
+          {
+            echo '### Build failed - last 60 lines'
+            echo '```'
+            tail -n 60 build.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload TPK
         uses: actions/upload-artifact@v4
