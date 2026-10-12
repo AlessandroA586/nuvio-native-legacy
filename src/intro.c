@@ -1,9 +1,11 @@
 #include "intro.h"
+#include "creditosjson.h"
 #include "rede.h"
 #include "js.h"
 #include "credfonte.h"
 #include "dados.h"
 #include <stdint.h>
+#include <math.h>
 #include <ctype.h>
 #include <sys/stat.h>
 #include <utime.h>
@@ -15,6 +17,7 @@
 
 static pthread_mutex_t trava=PTHREAD_MUTEX_INITIALIZER;
 static IntroTrecho trechos[8];static int nTrechos;static int trechosAni; /* 1 = os trechos vieram do AniSkip */static unsigned geracao;
+static IntroTrecho creditosLimitados[8];static int nCreditosLimitados;
 static int botaoIdx=-1;static double botaoDesde;
 static int botaoVis;static double botaoFim;static int botaoTipo;
 // Trechos que o PROPRIO ARQUIVO declara (capitulos do MKV, 203-capitulos): valem
@@ -24,6 +27,11 @@ static int botaoVis;static double botaoFim;static int botaoTipo;
 static IntroTrecho capTr[4];static int nCapTr;
 static void fundirCapitulos(void);   // chamar COM a trava
 static unsigned verGer;
+// Memoria unica do automatico, inclusive recuo antes de uma resposta tardia.
+static unsigned autoGer;static double autoFim[4],autoDe,autoAte;static int autoRecuou;
+static void autoSincronizar(void){
+  if(autoGer!=geracao){memset(autoFim,0,sizeof autoFim);autoRecuou=0;autoGer=geracao;}
+}
 
 
 // AS QUATRO CHAVES QUE A API DEVOLVE, e o tipo de cada uma (as mesmas do
@@ -444,20 +452,31 @@ static int pedirAniskip(const Pedido *p,IntroTrecho *v,int max,int *falha){
 }
 
 static void *baixar(void *u){
-  Pedido*p=u;char*j=NULL;IntroTrecho v[8];
+  Pedido*p=u;char*j=NULL;IntroTrecho v[8],limitados[8];
   int caps=0,total=0,falhaAni=0,n=pedirAniskip(p,v,8,&falhaAni),r=R_VAZIO,temCred=0,vale,deAni=n>0;
+  int nl=0;
   int temIdOutro=p->tmdb>0||!strncmp(p->id,"tt",2);
-  if(n<=0&&temIdOutro){r=pedirEp(p,p->t,p->e,p->dur,&j);n=j?intro_extrair(j,v,8):0;}
+  if(n<=0&&temIdOutro){
+    r=pedirEp(p,p->t,p->e,p->dur,&j);
+    n=j?intro_extrair(j,v,8):0;
+    nl=j?creditosjson_extrair(j,limitados,8):0;
+  }
   else if(n<=0&&falhaAni)r=R_FALHA;
   else if(n>0)r=R_OK;
   if(n<0)n=0;
+  if(deAni)
+    for(int i=0;i<n&&nl<8;i++)
+      if(v[i].tipo==INTRO_CREDITOS&&v[i].fim>v[i].inicio)limitados[nl++]=v[i];
   free(j);
   for(int i=0;i<n;i++)if(v[i].tipo==INTRO_CREDITOS)temCred=1;
   pthread_mutex_lock(&trava);
   vale=p->g==geracao;
   if(vale){
     if(r==R_FALHA){falhou=1;falhouEm=(long)time(NULL);}
-    else{falhou=0;memcpy(trechos,v,(size_t)n*sizeof *v);nTrechos=n;trechosAni=deAni;}
+    else{
+      falhou=0;memcpy(trechos,v,(size_t)n*sizeof *v);nTrechos=n;trechosAni=deAni;
+      memcpy(creditosLimitados,limitados,(size_t)nl*sizeof *limitados);nCreditosLimitados=nl;
+    }
     fundirCapitulos();caps=nCapTr;total=nTrechos;
   }
   pthread_mutex_unlock(&trava);
@@ -476,7 +495,7 @@ static void disparar(const Pedido *base,double dur,int novo){
   p=malloc(sizeof*p);if(!p)return;
   *p=*base;p->dur=dur;
   pthread_mutex_lock(&trava);
-  if(novo){nTrechos=0;trechosAni=0;nCapTr=0;refeitos=0;tentativas=0;}
+  if(novo){nTrechos=0;nCreditosLimitados=0;trechosAni=0;nCapTr=0;refeitos=0;tentativas=0;}
   falhou=0;
   p->anime=animeDe(p->id,p->tmdb);
   p->g=++geracao;ultimo=*p;temUltimo=1;enviadoDur=dur;
@@ -530,7 +549,7 @@ void intro_definir_capitulos(const IntroTrecho *v,int n){
       ultimo.id,ultimo.t,ultimo.e,nTrechos);fflush(stdout);}
   pthread_mutex_unlock(&trava);
 }
-void intro_desligar(void){pthread_mutex_lock(&trava);geracao++;nTrechos=0;trechosAni=0;nCapTr=0;botaoVis=0;botaoIdx=-1;temUltimo=0;falhou=0;pthread_mutex_unlock(&trava);}
+void intro_desligar(void){pthread_mutex_lock(&trava);geracao++;nTrechos=nCreditosLimitados=0;trechosAni=0;nCapTr=0;botaoVis=0;botaoIdx=-1;temUltimo=0;falhou=0;pthread_mutex_unlock(&trava);}
 
 // DURACAO DA MIDIA E O TIPO (filme/serie), para recusar janelas absurdas.
 static double durMidia;static int ehFilme;
@@ -655,17 +674,42 @@ static double fimEmendado(int i){
   return f;
 }
 
-int intro_ativo(double pos,double*fim,int*tipo){
-  int ok=0;pthread_mutex_lock(&trava);
+// Chamar com a trava: manual e automatico compartilham a escolha/janela.
+static int ativoInterno(double pos,double*fim,int*tipo,int automatico){
+  int ok=0;
   for(int i=0;i<nTrechos;i++){
     // fim ZERO = ate o fim da midia: basta ter passado do inicio.
     int dentro=trechos[i].fim>0.0
                ? (pos>=trechos[i].inicio&&pos<trechos[i].fim)
                : (pos>=trechos[i].inicio);
     if(trechos[i].tipo==INTRO_PREVIA)continue;   // sem botao proprio (CHAVES)
-    if(dentro&&valido(i)){if(fim)*fim=fimEmendado(i);if(tipo)*tipo=trechos[i].tipo;ok=1;break;}
+    if(dentro&&valido(i)){
+      double f=fimEmendado(i);
+      if(automatico&&trechos[i].tipo==INTRO_CREDITOS){
+        int explicito=0;
+        autoSincronizar();
+        if(autoRecuou&&autoDe>=trechos[i].inicio&&autoAte<trechos[i].fim)continue;
+        // Capitulos do proprio arquivo continuam tendo prioridade (#329).
+        // Rede: inicio e fim numericos deste titulo, nunca vizinho/estimativa.
+        for(int k=0;k<nCapTr;k++)
+          if(capTr[k].tipo==INTRO_CREDITOS&&capTr[k].inicio==trechos[i].inicio&&
+             capTr[k].fim==trechos[i].fim&&capTr[k].fim>capTr[k].inicio)explicito=1;
+        for(int k=0;k<nCreditosLimitados;k++)
+          if(creditosLimitados[k].inicio==trechos[i].inicio&&
+             creditosLimitados[k].fim==trechos[i].fim)explicito=1;
+        if(!explicito)continue;
+        f=trechos[i].fim; // nao pula a previa/cena depois dos creditos
+      }
+      if(fim)*fim=f;if(tipo)*tipo=trechos[i].tipo;ok=1;break;
+    }
   }
-  pthread_mutex_unlock(&trava);return ok;
+  return ok;
+}
+int intro_ativo(double pos,double*fim,int*tipo){
+  int ok;pthread_mutex_lock(&trava);ok=ativoInterno(pos,fim,tipo,0);pthread_mutex_unlock(&trava);return ok;
+}
+int intro_auto_ativo(double pos,double*fim,int*tipo){
+  int ok;pthread_mutex_lock(&trava);ok=ativoInterno(pos,fim,tipo,1);pthread_mutex_unlock(&trava);return ok;
 }
 
 // O BOTAO DE PULAR, com tempo: aparece sozinho UMA vez por trecho, some em
@@ -727,9 +771,21 @@ int intro_trechos(IntroTrecho *saida,int max){
   if(n>0)memcpy(saida,trechos,(size_t)n*sizeof *saida);
   pthread_mutex_unlock(&trava);return n;
 }
+// So limites numericos explicitos da resposta DESTE titulo. Marcadores abertos,
+// vizinhos e estimativas continuam disponiveis apenas pelo caminho manual.
+int intro_creditos_limitados(IntroTrecho *saida,int max){
+  int n;if(!saida||max<1)return 0;pthread_mutex_lock(&trava);
+  n=0;
+  for(int i=0;i<nCreditosLimitados&&n<max;i++){
+    IntroTrecho v=creditosLimitados[i];
+    if(intro_janela_ok(v.tipo,v.inicio,v.fim,durMidia,ehFilme,NULL))saida[n++]=v;
+  }
+  pthread_mutex_unlock(&trava);return n;
+}
 #ifdef NV_SHOT_HOOKS
 void intro_shot_definir(const IntroTrecho *v,int n){
   pthread_mutex_lock(&trava);geracao++;
+  nCreditosLimitados=0;
   nTrechos=n<8?n:8;if(nTrechos>0)memcpy(trechos,v,(size_t)nTrechos*sizeof *v);
   pthread_mutex_unlock(&trava);
 }
@@ -764,8 +820,13 @@ void intro_registrar_tmdb(const char *id,long tmdb,const char *json){
 // #329/#331: quais trechos ja foram pulados sozinhos NESTA reproducao (a geracao muda a cada
 // pedido de marcadores, ou seja a cada abertura). Voltar de proposito para dentro do trecho,
 // ou para antes dele, nao pula de novo — vale para os tres tipos, e um nao apaga o outro.
-static unsigned autoGer;static double autoFim[4];
-static void autoSincronizar(void){if(autoGer!=geracao){memset(autoFim,0,sizeof autoFim);autoGer=geracao;}}
+void intro_auto_recuar(double de,double para){
+  if(!isfinite(de)||!isfinite(para)||para>=de)return;
+  pthread_mutex_lock(&trava);autoSincronizar();
+  if(!autoRecuou||de>autoDe)autoDe=de;
+  if(!autoRecuou||para<autoAte)autoAte=para;
+  autoRecuou=1;pthread_mutex_unlock(&trava);
+}
 int intro_auto_ja(int tipo,double fim){
   int r;if(tipo<1||tipo>3)return 1;
   pthread_mutex_lock(&trava);autoSincronizar();r=autoFim[tipo]==fim;pthread_mutex_unlock(&trava);return r;

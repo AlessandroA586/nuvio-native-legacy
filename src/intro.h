@@ -138,12 +138,19 @@ int  intro_botao_visivel(double *fim,int *tipo);
 // fim conhecido. Creditos: ajuste proprio, fim EXPLICITO do marcador e a pelo menos 5 s do fim
 // da midia `dur` (creditos ate o fim ficam com o proximo episodio, nunca um seek para alem do fim).
 int  intro_auto_pular(int tipo,double fim,double dur,int pularAbertura,int pularResumo,int pularCreditos);
+// Mesmo trecho ativo; creditos exigem limites explicitos da resposta atual.
+int  intro_auto_ativo(double pos,double *fim,int *tipo);
 // Pulou sozinho este trecho nesta reproducao? (uma vez so; voltar nao repete). Zera a cada pedido.
 int  intro_auto_ja(int tipo,double fim);
 void intro_auto_marcar(int tipo,double fim);
+// Recuo manual protege tambem creditos cujo marcador ainda nao chegou.
+void intro_auto_recuar(double de,double para);
 int  intro_extrair(const char *json,IntroTrecho *saida,int max);
 // Copia ate `max` trechos conhecidos; devolve quantos.
 int  intro_trechos(IntroTrecho *saida,int max);
+// Copia apenas creditos com inicio/fim numericos explicitos e verificados na
+// resposta atual. Sem fim, vizinhos, capitulos e estimativas nao entram.
+int  intro_creditos_limitados(IntroTrecho *saida,int max);
 #ifdef NV_SHOT_HOOKS
 void intro_shot_definir(const IntroTrecho *v,int n);   // capturas: trechos fixos
 #endif

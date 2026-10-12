@@ -76,6 +76,7 @@ static void avisarCascaAberto(int v) { (void)v; }
 #include "relogio.h"
 #include "intro.h"
 #include "proximo.h"
+#include "creditosauto.h"
 #include "credfonte.h"
 #include "credaprende.h"
 #include "seekr.h"
@@ -210,6 +211,7 @@ static int   idx = 0;
 static int   tocando = 1;
 static int   pausaPessoa;   // pausa pedida pela pessoa (player_pausa_pessoa, #302)
 static int retomandoSalto; // seek requested playback; buffering is not user pause
+static CreditosAuto creditosAuto;
 // Uma unica sessao VOD pausada, por no maximo dois minutos. Nao abre conexao
 // especulativa: e o pipeline que ja estava exibindo este titulo.
 //
@@ -1317,6 +1319,7 @@ void player_aspecto_ciclar(void) {
 }
 
 void player_abrir(int indiceCatalogo, const char *url) {
+  creditosauto_zerar(&creditosAuto);
   player_descartar_retido();
   // O trailer usa o mesmo plano de video (LG) — solta antes de o player
   // carregar a fonte, senao o load novo pisa no mediaId do trailer.
@@ -2802,6 +2805,19 @@ static void avTecla(SDL_Keycode k) {
 //    mexia no pipeline com o video correndo. Agora o video PAUSA ao comecar o
 //    avanco e volta a tocar sozinho ao terminar, se estava tocando — e o
 //    pipeline recebe UMA posicao, no fim, em vez de uma por toque.
+static void recuarAutomatico(double de, double para) {
+  if (!isfinite(de) || !isfinite(para) || para >= de) return;
+  intro_auto_recuar(de, para);
+  creditosauto_recuar(&creditosAuto, de, para);
+  posplay_recuar();
+}
+
+// Busca do dono: se substitui uma busca de creditosAuto ainda armada, desarma.
+static void buscarUsuario(double alvo) {
+  creditosauto_destino(&creditosAuto, alvo);
+  video_buscar(alvo);
+}
+
 static void saltar(int dir, int repeticao) {
   int novo = 0;
   if (!scrubbing) {
@@ -2823,8 +2839,10 @@ static void saltar(int dir, int repeticao) {
   // Repeticao so mantem o avanco vivo: quem anda e salto_quadro, por quadro.
   if (passo <= 0.0f || scrubSalto.rep) return;
   scrubPassos++;
+  double de = posSeg;
   posSeg += dir * passo;
   posSeg = anim_clamp(posSeg, 0.0f, duracaoSeg);
+  recuarAutomatico(de, posSeg);
 }
 
 // Fim do avanco: manda a posicao escolhida e devolve o estado de antes.
@@ -2835,7 +2853,7 @@ static void terminarSalto(void) {
   pausao_fechar();
   seekr_ocioso();   // solta a folha decodificada (~22 MB), fica o JPEG
   if (comVideo) {
-    video_buscar(posSeg);
+    buscarUsuario(posSeg);
     if (scrubTocava) { video_pausar(0); tocando = 1; }
   }
 }
@@ -2976,7 +2994,7 @@ void player_evento(const SDL_Event *e) {
       // ar. Manter esta linha faria o OK disparar a troca duas vezes.
       { double fim;if(trechoPulavel(&fim)){
           { int tp=0;if(intro_botao_visivel(NULL,&tp)&&tp==INTRO_CREDITOS)player_aprender_creditos(); }
-          posSeg=(float)puloDestino(fim);if(comVideo)video_buscar(posSeg);return; } }
+          posSeg=(float)puloDestino(fim);if(comVideo)buscarUsuario(posSeg);return; } }
       // O OK com os controles escondidos e o Play/Pause: os controles sobem
       // com o foco NO PLAY, nao onde ficou da ultima vez (Legendas, Audio,
       // Proporcao). Sem isto o OK seguinte abria aquela folha (#109).
@@ -3023,7 +3041,7 @@ void player_evento(const SDL_Event *e) {
     double fim;
     if (!trechoPulavel(&fim)) skipFoco = 0;          // o trecho acabou por baixo do foco
     else if (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE) {
-      posSeg = (float)puloDestino(fim); if (comVideo) video_buscar(posSeg);
+      posSeg = (float)puloDestino(fim); if (comVideo) buscarUsuario(posSeg);
       skipFoco = 0; acordar(); return;
     } else if (k == SDLK_DOWN) { skipFoco = 0; acordar(); return; }
     else if (k == SDLK_UP) { skipFoco = 0; esconderControles(); return; }   // #305
@@ -3430,8 +3448,10 @@ void player_atualizar(float dt, Uint32 agora) {
   // depois de soltar; no resto do tempo e a posicao de verdade, sem atraso.
   if (scrubbing) {
     posVisSolto = 1;
+    double de = posSeg;
     posSeg = anim_clamp(posSeg + salto_quadro(&scrubSalto, scrubDir, agora, dt, duracaoSeg),
                         0.0f, duracaoSeg);
+    recuarAutomatico(de, posSeg);
   }
   if (posVisSolto) {
     posVis = anim_mola2(&posVisV, posVis, posSeg, dt, PLR_BUSCA_MOLA);
@@ -3509,16 +3529,23 @@ void player_atualizar(float dt, Uint32 agora) {
     // com o detalhe fechado ninguem mais o soltaria.
     desc_episodios_pendente(); }
 
-  // PULAR SOZINHO (#329): abertura/resumo com marcador e o ajuste ligado. Uma vez por
+  if (comVideo) creditosauto_fonte(&creditosAuto, video_url_atual());
+  // PULAR SOZINHO (#329/#331): abertura/resumo/creditos com marcador e ajuste ligado. Uma vez por
   // trecho (voltar de proposito para dentro dele nao pula de novo), so tocando de verdade.
-  if (!ehCanal() && comVideo && tocando && video_pronto() && !scrubbing && duracaoReal) {
+  if (!ehCanal() && comVideo && tocando && video_ativo() && video_pronto() &&
+      retomadaAplicada && !scrubbing && !retomandoSalto && duracaoReal &&
+      !saindo && !erroFonte && !esperandoFonte && !pedFontes && !pedFaixas &&
+      !stream_folha_aberta() && !faixas_aberta() && !episodios_aberto() &&
+      !episodios_menu_aberto_qualquer() && !pausao_visivel() &&
+      !video_bufferando_ms() && !creditosAuto.buscaPendente) {
     double fimT = 0.0; int tipoT = 0;
-    if (intro_ativo(posSeg, &fimT, &tipoT) &&
+    if (intro_auto_ativo(posSeg, &fimT, &tipoT) &&
         intro_auto_pular(tipoT, fimT, duracaoSeg, ajustes_pular_abertura(), ajustes_pular_resumo(),
-                         ajustes_pular_creditos()) &&
+                         ajustes_pular_creditos() && !creditosAuto.fonteMudou) &&
         !intro_auto_ja(tipoT, fimT)) {
       intro_auto_marcar(tipoT, fimT);
-      posSeg = (float)puloDestino(fimT);
+      posSeg = tipoT == INTRO_CREDITOS ? (float)fimT : (float)puloDestino(fimT);
+      creditosauto_buscar(&creditosAuto, posSeg);
       video_buscar(posSeg);
       player_toast(tipoT == INTRO_RESUMO ? i18n("Resumo pulado") :
                    tipoT == INTRO_CREDITOS ? i18n("Créditos pulados") : i18n("Abertura pulada"), 2200);
@@ -3529,6 +3556,10 @@ void player_atualizar(float dt, Uint32 agora) {
   // PÓS-REPRODUÇÃO: o proximo episodio ou os relacionados, no fim do titulo.
   { const CatItem *ci = item();
     int eSerie = ci && !strcmp(ci->tipo, "series");
+    int aguardaBusca = creditosauto_aguardar(&creditosAuto, video_pos(),
+      comVideo && video_pronto() && tocando && !scrubbing && !video_bufferando_ms(),
+      comVideo && video_terminou(), SDL_GetTicks());
+    posplay_aguardar_busca(aguardaBusca);
     // Canal ao vivo nao tem "fim": sem a guarda, o relogio reserva cruzaria os
     // 90% em ~1h42 de exibicao e abriria o painel de relacionados no meio da
     // programacao.
@@ -4191,12 +4222,16 @@ static void ponteiroBuscar(int a, int b) {
       if (tocando && comVideo) { video_pausar(1); tocando = 0; }
     }
     barraFoco = 1; skipFoco = 0;
+    double de = posSeg;
     posSeg = f * duracaoSeg;
+    recuarAutomatico(de, posSeg);
     scrubUltimo = SDL_GetTicks();
     return;
   }
+  double de = comVideo ? video_pos() : posSeg;
   posSeg = f * duracaoSeg;
-  if (comVideo) video_buscar(posSeg);
+  recuarAutomatico(de, posSeg);
+  if (comVideo) buscarUsuario(posSeg);
 }
 static void ponteiroSkip(int a, int b) { (void)a; (void)b; skipFoco = 1; barraFoco = 1; acordar(); }
 
