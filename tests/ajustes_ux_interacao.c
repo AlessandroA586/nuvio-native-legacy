@@ -37,6 +37,7 @@ int main(void) {
     int cap = tex_teto_ram_mb();
     assert(cap == 160);   // no tex_iniciar: unknown RAM uses the conservative cap
     valor[AJ_TEX_MB] = 6;
+    assert(gravar());
     assert(!strcmp(textoValor(AJ_TEX_MB), "512 MB → 160 MB nesta TV"));
     uxValorTexto(AJ_TEX_MB, 6, t, sizeof t);
     assert(!strcmp(t, textoValor(AJ_TEX_MB)));
@@ -47,6 +48,34 @@ int main(void) {
     key(SDLK_UP); assert(uxPendente == 2);
     key(SDLK_DOWN); assert(uxPendente == 2);
     ajPontEdValor(6, 0); assert(uxPendente == 2);
+    // Clicking unavailable 400 MB must not confirm the focused 160 MB.
+    {
+      const PonteiroAlvo *alvos;
+      SDL_Event e = {0};
+      int alvo, total;
+      antes = arquivo();
+      ponteiro_iniciar(); ponteiro_teste_janela(1920, 1080);
+      ponteiro_teste_toque(1);
+      ponteiro_quadro(SDL_GetTicks());
+      ajPontEditor = 1;
+      gfx_opacidade_grupo = 0;  // register real editor targets without a GL context
+      GfxRect painel = aj2EditorR(); painel.w = 1100;  // compact layout, no GPU preview
+      aj2EditorEscolha(painel);
+      ponteiro_desenhar();
+      gfx_opacidade_grupo = 1;
+      total = ponteiro_teste_lista(&alvos);
+      for (alvo = 0; alvo < total && alvos[alvo].a != 5; alvo++) { }
+      assert(alvo < total);
+      e.type = SDL_MOUSEBUTTONDOWN; e.button.button = SDL_BUTTON_LEFT;
+      e.button.x = (int)(alvos[alvo].x + alvos[alvo].w / 2);
+      e.button.y = (int)(alvos[alvo].y + alvos[alvo].h / 2);
+      assert(ponteiro_evento(&e, ajustes_evento));
+      assert(uxEditor == 1 && uxPendente == 2 && valor[AJ_TEX_MB] == 6);
+      igual(antes); free(antes);
+      e.type = SDL_MOUSEBUTTONUP;
+      assert(ponteiro_evento(&e, ajustes_evento));
+      ponteiro_teste_toque(0); ajPontEditor = 0;
+    }
     assert(!definirValorDireto(AJ_TEX_MB, 5));
     key(SDLK_ESCAPE);
     valor[AJ_TEX_MB] = 2;

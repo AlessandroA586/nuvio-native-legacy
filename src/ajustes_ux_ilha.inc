@@ -863,7 +863,7 @@ static void aj2EditorEscolha(GfxRect m) {
     uxValorTexto(uxOp, i, t, sizeof t);
     // Acima do que a RAM desta TV suporta: o rotulo fica puro e apagado, com o motivo a direita.
     if (uxOp == AJ_TEX_MB && texAcima(i)) snprintf(t, sizeof t, "%s", i18n(o->valores[i]));
-    if (ajPontEditor) ponteiro_alvo(r.x, r.y, r.w, r.h, ajPontEdValor, NULL, i, 0);
+    if (ajPontEditor) ponteiro_alvo(r.x, r.y, r.w, r.h, uxOp == AJ_TEX_MB && texAcima(i) ? NULL : ajPontEdValor, NULL, i, 0);
     if (foco) ajFocoLinha(r, 28, 1, 1);
     fv = marcaDoValor(uxOp, o->valores ? o->valores[i] : NULL);
     if (fv >= 0) marca_formato((FormatoMarca)fv, r.x + 30, r.y + 26, 44, 1, 1, 1, foco ? 0.9f : 0.6f);
