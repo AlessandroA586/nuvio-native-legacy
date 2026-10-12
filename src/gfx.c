@@ -3437,10 +3437,16 @@ void gfx_borrao_encerrar(void) {
 // +-4 passos: 1.6 * 4 / 96 = ~6.7% da largura para cada lado, ~43 px num card
 // de 640. Rosto e texto do still somem; a cor e a composicao continuam.
 #define NV_DESF_PASSO 1.6f
+// A arte chega com 480 px de largura (16:9 -> 270 de altura). A reducao vai em
+// duas passadas, 480x270 -> 96x270 -> 96x54, cada uma so encolhendo um eixo,
+// com taps a um texel da arte. Uma passada direta lia uma linha em cinco
+// (alias): o fundo virava amostra esparsa da imagem, com manchas e listras.
+#define NV_DESF_SRC_W 480
+#define NV_DESF_MID_H 270
 
 typedef struct { GLuint src, tex; unsigned long chave, uso; } Desf;
 static Desf desf[NV_DESF_N];
-static GLuint desfFbo = 0, desfTmp = 0;
+static GLuint desfFbo = 0, desfTmp = 0, desfTmp2 = 0, desfMid = 0;
 static int desfFalhou = 0;
 static unsigned long desfRelogio = 0;
 
@@ -3455,12 +3461,12 @@ static void desfEsquecerFonte(GLuint tex) {
     if (desf[i].src == tex) { desf[i].src = 0; desf[i].chave = 0; }
 }
 
-static GLuint desfNovaTex(void) {
+static GLuint desfNovaTex(int w, int h) {
   GLuint t = 0;
   glGenTextures(1, &t);
   glBindTexture(GL_TEXTURE_2D, t);
   // RGBA e nao RGB: e o unico formato que o WebGL 1 GARANTE renderizavel.
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, NV_DESF_W, NV_DESF_H, 0, GL_RGBA,
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
                GL_UNSIGNED_BYTE, NULL);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -3474,7 +3480,9 @@ static int desfPreparar(void) {
   GLenum st;
   if (desfFbo) return 1;
   if (desfFalhou) return 0;
-  desfTmp = desfNovaTex();
+  desfMid = desfNovaTex(NV_DESF_W, NV_DESF_MID_H);
+  desfTmp = desfNovaTex(NV_DESF_W, NV_DESF_H);
+  desfTmp2 = desfNovaTex(NV_DESF_W, NV_DESF_H);
   glGenFramebuffers(1, &desfFbo);
   glBindFramebuffer(GL_FRAMEBUFFER, desfFbo);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, desfTmp, 0);
@@ -3488,6 +3496,16 @@ static int desfPreparar(void) {
     return 0;
   }
   return 1;
+}
+
+// Uma passada de desfoque/reducao de src para dst (w x h). ux/uy: passo em uv.
+static void desfPasso(GLuint src, GLuint dst, int w, int h, float ux, float uy) {
+  GfxRect cheio = { 0, 0, NV_TELA_W, NV_TELA_H };
+  glBindFramebuffer(GL_FRAMEBUFFER, desfFbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dst, 0);
+  glViewport(0, 0, w, h);
+  gpun_descartar_cor(0);
+  gfx_rect(cheio, src, GFX_BLUR, 0, ux, uy, 0.0f, 0, 0, 0, 1.0f);
 }
 
 GLuint gfx_desfocado(GLuint src, const char *chave) {
@@ -3518,7 +3536,6 @@ GLuint gfx_desfocado(GLuint src, const char *chave) {
     GLboolean mistura = glIsEnabled(GL_BLEND);
     GLuint dst;
     float aspAnt = gfx_tex_aspect_atual;
-    GfxRect cheio = { 0, 0, NV_TELA_W, NV_TELA_H };
     // Estado lido do GL de proposito, e so aqui: o card pode estar sendo
     // desenhado dentro do snapshot da home ou sob gfx_recorte, e voltar
     // cegamente para o framebuffer 0 com o viewport da tela estragaria os dois.
@@ -3526,27 +3543,21 @@ GLuint gfx_desfocado(GLuint src, const char *chave) {
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &fboAnt);
     glGetIntegerv(GL_VIEWPORT, vp);
     if (!desfPreparar()) { glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)fboAnt); return 0; }
-    if (!desf[vago].tex) desf[vago].tex = desfNovaTex();
+    if (!desf[vago].tex) desf[vago].tex = desfNovaTex(NV_DESF_W, NV_DESF_H);
     dst = desf[vago].tex;
     ESC_REAL_INI();
     GFX_OUTRO_INI();
     glDisable(GL_SCISSOR_TEST);
     gfxBlend(0);
-    glViewport(0, 0, NV_DESF_W, NV_DESF_H);
     gfx_tex_aspect_atual = 0.0f;   // a arte INTEIRA, esticada; o card recorta depois
-    // Passada 1: horizontal, lendo a arte original e ja reduzindo. Escrever
-    // num FBO inverte o eixo y (ver GFX_SNAP); a passada 2 inverte de novo, e
-    // o resultado sai de pe para o GFX_CARD, como uma arte comum.
-    glBindFramebuffer(GL_FRAMEBUFFER, desfFbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, desfTmp, 0);
-    gpun_descartar_cor(0);   // a passada cobre o alvo inteiro, opaca
-    gfx_rect(cheio, src, GFX_BLUR, 0, NV_DESF_PASSO / (float)NV_DESF_W, 0.0f,
-             0.0f, 0, 0, 0, 1.0f);
-    // Passada 2: vertical, do intermediario para a textura guardada.
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dst, 0);
-    gpun_descartar_cor(0);
-    gfx_rect(cheio, desfTmp, GFX_BLUR, 0, 0.0f, NV_DESF_PASSO / (float)NV_DESF_H,
-             0.0f, 0, 0, 0, 1.0f);
+    // Escrever num FBO inverte o eixo y (ver GFX_SNAP): cada passada inverte, e
+    // as quatro deixam o resultado de pe para o GFX_CARD, como uma arte comum.
+    // 1-2: reducao, horizontal e depois vertical, taps a um texel da arte.
+    desfPasso(src, desfMid, NV_DESF_W, NV_DESF_MID_H, 1.0f / NV_DESF_SRC_W, 0.0f);
+    desfPasso(desfMid, desfTmp, NV_DESF_W, NV_DESF_H, 0.0f, 1.0f / NV_DESF_MID_H);
+    // 3-4: desfoque gaussiano, horizontal e depois vertical, no alvo 96x54.
+    desfPasso(desfTmp, desfTmp2, NV_DESF_W, NV_DESF_H, NV_DESF_PASSO / (float)NV_DESF_W, 0.0f);
+    desfPasso(desfTmp2, dst, NV_DESF_W, NV_DESF_H, 0.0f, NV_DESF_PASSO / (float)NV_DESF_H);
     gfx_tex_aspect_atual = aspAnt;
     glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)fboAnt);
     glViewport(vp[0], vp[1], vp[2], vp[3]);
@@ -3591,6 +3602,8 @@ static void desfEncerrar(void) {
   }
   if (desfFbo) { glDeleteFramebuffers(1, &desfFbo); desfFbo = 0; }
   if (desfTmp) { gfx_tex_esquecer(desfTmp); glDeleteTextures(1, &desfTmp); desfTmp = 0; }
+  if (desfTmp2) { gfx_tex_esquecer(desfTmp2); glDeleteTextures(1, &desfTmp2); desfTmp2 = 0; }
+  if (desfMid) { gfx_tex_esquecer(desfMid); glDeleteTextures(1, &desfMid); desfMid = 0; }
 }
 
 // --- MINIATURA ---------------------------------------------------------------------
