@@ -301,6 +301,18 @@ int main(void) {
   assert(nVisto == 0 && cat_item(0)->progresso > 90 && cat_item(0)->progresso < 100);
   assert(nTrakt == 1 && tkPos == 2824 && !scrobble_assistiu(tkAssistido, tkDe, tkDur));
 
+  // RETOMADA PERTO DO FIM (terceira revisao): 85% de 2700 s, mais 105 s ate os
+  // creditos em 2400 s e aceita o proximo. A prova media metade ate o FIM DO
+  // ARQUIVO (202,5 s): gravava 88% e o Trakt ficava sem stop.
+  sessao("tt90000016", 85, 2700); creditos = 2400; assert(pos == 2295);
+  tocar(105, 1); player_encerrar();
+  assert(nTrakt == 1 && nVisto == 1 && cat_item(0)->progresso == 100);
+  assert(tkPos == tkDur);
+  // A mesma retomada buscando o fim: o credito dos creditos nao vira prova.
+  sessao("tt90000017", 85, 2700); creditos = 2400;
+  tocar(10, 1); pos = 2660; quadro(); tocar(5, 1); player_encerrar();
+  assert(nVisto == 0 && cat_item(0)->progresso < 100 && tkPos < tkDur);
+
   puts("PASS: trailer, seek, pausa e buffer nao marcam; reproducao real grava progresso e visto");
   return 0;
 }

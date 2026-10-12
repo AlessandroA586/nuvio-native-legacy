@@ -1798,9 +1798,14 @@ static void fecharSessao(int manter) {
   int prova = fontePrincipal() && duracaoReal && !esperandoFonte && !erroFonte && !video_falhou() &&
               isfinite(posSeg) && isfinite(duracaoSeg) && assistidoSeg >= PLR_SCR_TOCOU_S;
   // Prova do VISTO: so segura o "seek ate o fim" (scrobble_assistiu). O ponto
-  // salvo de onde esta sessao retomou ja tinha sido assistido antes.
+  // salvo de onde esta sessao retomou ja tinha sido assistido antes, e o que
+  // sobra depois do fim do cartao (creditos) tambem: retomar em 85%, ver ate
+  // os creditos e aceitar o proximo nao pode ficar sem visto (#100). Fora da
+  // conclusao nada e creditado — o seek ate o fim continua sem prova.
   double de = duracaoSeg * retomarPct / 100.0;
-  int assistiu = scrobble_assistiu(assistidoSeg, de, duracaoSeg);
+  int fim = concluiuAgora(credEfetivo());
+  double vistoSeg = assistidoSeg + (fim && duracaoSeg > posSeg ? duracaoSeg - posSeg : 0.0);
+  int assistiu = scrobble_assistiu(vistoSeg, de, duracaoSeg);
   // Sem ela a posicao REAL continua gravada (barra, Continuar assistindo,
   // conta): so o arredondamento para 100% e o visto ficam de fora.
   if (!duracaoErrada && !jaRetido && prova && video_pronto() && duracaoSeg >= 120.0f &&
@@ -1821,9 +1826,8 @@ static void fecharSessao(int manter) {
     // Agora ha um numero so, e e o do cartao (player_regra_concluiu). As duas
     // fontes de marcador sao lidas na mesma ordem de ofertaProximo: o capitulo
     // do Matroska descreve ESTA copia, o TheIntroDB descreve o lancamento.
-    double cred = credEfetivo();
     int concluiu;
-    concluiu = assistiu && concluiuAgora(cred);
+    concluiu = assistiu && fim;
     float pos = concluiu ? duracaoSeg : posSeg;
     // Pelo indice CORRENTE do titulo, nao pelo guardado: depois de uma
     // republicacao o guardado grava o progresso no titulo errado.
@@ -1844,7 +1848,7 @@ static void fecharSessao(int manter) {
     if (ci && ci->imdb[0] && !jfid_e(ci->imdb)) {
       char id[64];
       idTrakt(ci, id, sizeof id);
-      trakt_marcar(id, pos, duracaoSeg, assistidoSeg, de);
+      trakt_marcar(id, pos, duracaoSeg, vistoSeg, de);
       // "ASSISTIU" para os amigos, so quando CONCLUIU e so se ela ligou a
       // atividade (ou os "vistos recentemente" do perfil). Largar aos 8% nao
       // assistiu nada — e nao chega a lugar nenhum.
