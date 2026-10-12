@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+unsigned int SDL_GetTicks(void) { return 0; }
+void marco(const char *m) { (void)m; }
+
 static int ocultos, apagados, remocoesSync;
 static char ultimaUrlPost[160];
 
