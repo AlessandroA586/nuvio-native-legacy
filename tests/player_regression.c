@@ -53,7 +53,8 @@ static void teclaMenu(SDL_Keycode k) {
 // de reproducao real. As sessoes inteiras (pipeline falso, destinos contados)
 // estao em tests/player_visto_trailer.c; este binario liga o video.c de verdade.
 static int saidaVisto(double pos, double dur, double cred, double assistido, double de) {
-  return player_regra_concluiu(pos, dur, cred) && scrobble_assistiu(assistido, de, dur);
+  int chegou;
+  return player_regra_visto(de, assistido, pos, player_regra_concluiu(pos, dur, cred), &chegou);
 }
 static void testar(void) {
   // #205 NAO PODE REGREDIR O #100. Aqui em cima porque nao dependem de estado.
@@ -370,7 +371,7 @@ static void testar(void) {
   assert(cat_historico_estado_item(0)==1);
   cat_historico_definir_id("tt0000001:2:4","series",0);
   assert(cat_historico_estado_item(0)==0);
-  cat_salvar_progresso_ep(0,500,1000,2,4);
+  cat_salvar_progresso_ep(0,500,1000,2,4, -1);
   c.temporada=1;c.episodio=1;strcpy(c.nomeEpisodio,"Nome antigo");
   cat_definir(&c,1);
   assert(cat_item(0)->temporada==2 && cat_item(0)->episodio==4 && cat_item(0)->progresso==50);

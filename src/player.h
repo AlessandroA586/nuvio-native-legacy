@@ -69,6 +69,12 @@ int player_duracao_suspeita(double durSeg, double catSeg);
 // Um numero so: o mesmo que abre o cartao. Mais os 60 s de folga de sempre,
 // para quem sai por cima do fim sem passar pelo cartao.
 int player_regra_concluiu(double posSeg, double durSeg, double cred);
+// VISTO (#205): `tocado` segundos de midia tocados desde `base` (o ponto
+// retomado, 0 quando ele nao foi alcancado tocando) cobrem o trecho ate `pos`?
+// `*chegou` e o `tocou` gravado com a posicao. Visto = `fim` (concluiu) com
+// cobertura e ao menos 2 min no total: o seek ate o fim nao marca, e 70 s
+// contra a duracao falsa de 129 s de um trailer tambem nao.
+int player_regra_visto(double base, double tocado, double pos, int fim, int *chegou);
 void player_erro_fonte(void);
 // O mesmo cartao, com a causa no lugar das frases genericas (issue #112):
 // `titulo` substitui "Nao foi possivel abrir a fonte" e `dica` a linha de

@@ -111,7 +111,7 @@ int main(void) {
   assert(trakt_operacao_estado(2) == 3 && marcas == 1);
   bloquear = 1; liberar = 0;
   trakt_definir("token", "client");
-  assert(trakt_scrobble(SCR_EV_SAIU, "tt1234567", 2580, 2580, 2322, 0) == SCR_STOP);
+  assert(trakt_scrobble(SCR_EV_SAIU, "tt1234567", 2580, 2580, 2322, 1) == SCR_STOP);
   espera(6);
   assert(strstr(ultimaUrl, "/scrobble/stop"));
   assert(strstr(ultimoCorpo, "100.00"));
@@ -131,11 +131,10 @@ int main(void) {
   assert(trakt_scrobble(SCR_EV_TOCANDO, "tt7777777", 10, 2843, 10, 0) == SCR_START);
   espera(9);
   assert(strstr(ultimaUrl, "/scrobble/start"));
-  // #100: tudo assistido ate os creditos (88,9% do tempo) fecha o historico,
-  // e retomar em 60% e ir ate o fim tambem.
-  assert(trakt_scrobble(SCR_EV_SAIU, "tt7777777", 2700, 2700, 2400, 0) == SCR_STOP);
+  // Com a decisao do player (player_regra_visto), o stop sai.
+  assert(trakt_scrobble(SCR_EV_SAIU, "tt7777777", 2700, 2700, 2400, 1) == SCR_STOP);
   espera(10);
-  assert(trakt_scrobble(SCR_EV_SAIU, "tt8888888", 6000, 6000, 2300, 3600) == SCR_STOP);
+  assert(trakt_scrobble(SCR_EV_SAIU, "tt8888888", 6000, 6000, 2300, 1) == SCR_STOP);
   espera(11);
   assert(strstr(ultimaUrl, "/scrobble/stop") && strstr(ultimoCorpo, "tt8888888"));
   puts("trakt contracts: PASS (intencao, escopo, falha, retry, stop com prova de reproducao e recusa que encerra o start)");

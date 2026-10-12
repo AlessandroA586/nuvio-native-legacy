@@ -51,7 +51,7 @@ int cat_copiar_por_id(const char *id, const char *tipo, CatItem *s) {
 
 static void gravar(int p, const char *id, int t, int e, double pos, double dur, long long quando) {
   perfil = p; agora = quando;
-  assert(prog_gravar_local(id, t, e, pos, dur));
+  assert(prog_gravar_local(id, t, e, pos, dur, -1));
 }
 
 static void zerar(void) {

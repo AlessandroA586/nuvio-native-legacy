@@ -2058,7 +2058,7 @@ static int recusar(int evento) {
 
 // Enfileira. Devolve a acao decidida (SCR_NADA quando nao ha o que mandar).
 int trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg, double assistidoSeg,
-                   double deSeg) {
+                   int assistiu) {
   int acao;
   double pct;
   pthread_t t;
@@ -2066,8 +2066,7 @@ int trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg, d
       !isfinite(assistidoSeg) || durSeg < 120.0 || assistidoSeg < 5.0) return recusar(evento);
   pct = 100.0 * posSeg / durSeg;
   // Valida ANTES da vaga pendente: nem um stop sem reproducao entra na fila.
-  if (evento == SCR_EV_SAIU && pct >= 90.0 &&
-      !scrobble_assistiu(assistidoSeg, deSeg, durSeg)) return recusar(evento);
+  if (evento == SCR_EV_SAIU && pct >= 90.0 && !assistiu) return recusar(evento);
   pthread_mutex_lock(&travaScr);
   acao = scrobble_decidir(&scrEstado, evento, imdb, pct);
   if (acao != SCR_NADA) {
@@ -2089,8 +2088,8 @@ int trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg, d
 }
 
 // Saida do player: stop (>= 90%) ou pause, como sempre foi.
-void trakt_marcar(const char *imdb, double posSeg, double durSeg, double assistidoSeg, double deSeg) {
-  trakt_scrobble(SCR_EV_SAIU, imdb, posSeg, durSeg, assistidoSeg, deSeg);
+void trakt_marcar(const char *imdb, double posSeg, double durSeg, double assistidoSeg, int assistiu) {
+  trakt_scrobble(SCR_EV_SAIU, imdb, posSeg, durSeg, assistidoSeg, assistiu);
 }
 
 // --- WATCHLIST: escrever e ler ------------------------------------------------

@@ -230,8 +230,8 @@ static CatItem serieComEps(void) {
     { CatItem lista[1]; lista[0] = f; cat_definir(lista, 1); }
     cat_definir_episodios(0, eps, 16);
     vistoep_definir(f.imdb, 1, 1, 1); vistoep_definir(f.imdb, 1, 2, 1);
-    prog_gravar_local(f.imdb, 1, 3, 1948.0, 3360.0);
-    prog_gravar_local(f.imdb, 1, 5, 1210.0, 3360.0);   // um nao assistido pela metade
+    prog_gravar_local(f.imdb, 1, 3, 1948.0, 3360.0, -1);
+    prog_gravar_local(f.imdb, 1, 5, 1210.0, 3360.0, -1);   // um nao assistido pela metade
     return f;
 }
 

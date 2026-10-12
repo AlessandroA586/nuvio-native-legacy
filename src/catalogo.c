@@ -438,9 +438,8 @@ int cat_visto(const CatItem *c) {
   // episodio, nao da serie; quem decide a serie inteira e o historico, que
   // extras.c escreve com os contadores de /shows/<id>/progress/watched.
   if (!strcmp(tipo_base(c->tipo), "series")) return 0;
-  // Posicao sem prova de reproducao (seek ate o fim, #205) nao e visto: o
-  // registro local guarda os segundos tocados ate ela.
-  return c->progresso >= 90 && !prog_sem_prova(c->imdb);
+  // Posicao alcancada por seek (#205) nao e visto: o registro local diz.
+  return c->progresso >= 90 && prog_tocou(c->imdb) != 0;
 }
 
 // Compatibilidade para chamadores antigos que so conhecem o IMDb. A serie e
@@ -1562,7 +1561,7 @@ int cat_tirar_item_da_fileira(int indice) {
 __attribute__((weak)) int prog_removido_vence(const char *imdb, long long instanteMs) {
   (void)imdb; (void)instanteMs; return 0;
 }
-__attribute__((weak)) int prog_sem_prova(const char *imdb) { (void)imdb; return 0; }
+__attribute__((weak)) int prog_tocou(const char *imdb) { (void)imdb; return -1; }
 
 static int fileiraContinuar(void) {
   int r;
@@ -1642,10 +1641,11 @@ static void zerarUm(int indice) {
 }
 
 void cat_salvar_progresso(int indice, double posSeg, double durSeg) {
-  cat_salvar_progresso_ep(indice,posSeg,durSeg,0,0);
+  cat_salvar_progresso_ep(indice,posSeg,durSeg,0,0,-1);
 }
 
-void cat_salvar_progresso_ep(int indice, double posSeg, double durSeg, int temporada, int episodio) {
+void cat_salvar_progresso_ep(int indice, double posSeg, double durSeg, int temporada, int episodio,
+                             int tocou) {
   indice = normalizarIndice(indice);
   if (indice < 0 || !itens[indice].imdb[0]) return;
   // O arquivo e de progresso.c: chave igual a do web, pendente, com hora. O
@@ -1656,7 +1656,7 @@ void cat_salvar_progresso_ep(int indice, double posSeg, double durSeg, int tempo
   // server id would sync to every device of the account. The card still
   // shows the new position in this session.
   if (jfid_e(itens[indice].imdb)) { cat_aplicar_progresso(indice, posSeg, durSeg, temporada, episodio); return; }
-  if (!prog_gravar_local(itens[indice].imdb, temporada, episodio, posSeg, durSeg)) return;
+  if (!prog_gravar_local(itens[indice].imdb, temporada, episodio, posSeg, durSeg, tocou)) return;
   cat_aplicar_progresso(indice, posSeg, durSeg, temporada, episodio);
 }
 

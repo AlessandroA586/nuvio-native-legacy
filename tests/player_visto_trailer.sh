@@ -18,7 +18,7 @@ cc "${flags[@]}" "${renomes[@]}" -c src/video.c -o "$dir/video.o"
 # token, nenhuma rede.
 cc "${flags[@]}" -Dtrakt_marcar=nv_base_trakt_marcar -c src/trakt.c -o "$dir/trakt.o"
 # O limiar do "Continuar assistindo" vira variavel: retomar em 95% pede 98.
-cc "${flags[@]}" -Dajustes_cw_concluido=nv_base_ajustes_cw_concluido -c src/ajustes.c -o "$dir/ajustes.o"
+cc "${flags[@]}" -Dajustes_cw_concluido=nv_base_ajustes_cw_concluido -Dajustes_manter_video=nv_base_ajustes_manter_video -Dajustes_pular_abertura=nv_base_ajustes_pular_abertura -c src/ajustes.c -o "$dir/ajustes.o"
 cc "${flags[@]}" -Dvisto_titulo=nv_base_visto_titulo -Dvisto_episodios=nv_base_visto_episodios -c src/visto.c -o "$dir/visto.o"
 # Relogio controlado so no player: nao intercepta libc/SDL/sanitizadores.
 cc "${flags[@]}" -DNV_SHOT_HOOKS -Dclock_gettime=nv_test_clock_gettime -c src/player.c -o "$dir/player.o"
