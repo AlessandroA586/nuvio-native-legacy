@@ -99,8 +99,27 @@ within 1 ms after seeks (T4).
 | HLS (v7 in 2023, v10 in 2024) with MPEG-TS and fMP4 segments, DASH, HTTP progressive | VERIFIED for the web/AVPlay stack (Samsung "General Specifications"); for `Tizen.Multimedia.Player` in a .NET app: ASSUMED, S0 measures |
 | `Tizen.TV.Multimedia.ESPlayer` needs a Partner privilege | VERIFIED (draft plan, `docs/issues/MAPA.md` 118014) |
 | `Tizen.Multimedia.MediaStreamSource` is public since Tizen 3, no privilege; supported formats are reported at runtime (`SupportedAudioTypes`/`SupportedVideoTypes`); `Ac3`, `Hevc`, `HevcM10p` mime types exist; docs only promise AAC/H.264 | VERIFIED, TizenFX `MediaStreamSource.cs`, `MediaFormatAudioMimeType.cs:129`, `MediaFormatVideoMimeType.cs:178-190` |
-| The app can listen on a socket on the `.tpk`: "Type on your phone" (`celular.c:485-515`, `INADDR_ANY`, free port) works on Tizen 9 (#390 reports using it on a Tizen 9 .tpk) | VERIFIED for LAN inbound; Player → 127.0.0.1 ASSUMED |
+| The app can listen on a socket on the `.tpk`: "Type on your phone" (`celular.c:485-515`, `INADDR_ANY`, free port) works on Tizen 9 (#390 reports using it on a Tizen 9 .tpk) | VERIFIED for LAN inbound. Player → 127.0.0.1: see section 2.1 (upstream enabled the Live TV TS proxy on the .tpk; a developer reports it works) — VERIFIED by upstream code, not yet on the S95C by us |
 | Player headers: only `UserAgent` and `Cookie` reach the player | VERIFIED (`Video.cs:349-356`, samsung-tpk skill) — irrelevant for loopback (no auth needed) |
+
+### 2.1 Re-check after syncing with upstream (2026-10-13, upstream 2.0.5)
+
+The fork was synced with upstream (382 commits). Re-checked against the new tree:
+
+| Item | Result |
+|---|---|
+| `src/dts/*` (converter engine), `tools/build-dts-ffmpeg.sh`, `tizen-manifest.xml` | UNCHANGED. The design's engine and privilege assumptions still hold (manifest still only `internet`, `appmanager.launch`, `network.get`) |
+| `dtsConversaoExiste()` still gates `AJ_DTS_AC3` (`ajustes.c:632`, used at `:5307`, `:7314`) | UNCHANGED: setting is still greyed out on Samsung |
+| Detection/warning only: `video_tpk_codec_recusado` (`video_tpk.c:445`), `avaliarAudioTv` (`:452`), `NotSupportedAudioCodec` handler (`:847`) | UNCHANGED in behaviour; line numbers moved |
+| **`src/proxyts.c` is no longer stubbed on `NV_TPK`** (commit 08d78644, "TS proxy on the .tpk") | **NEW and important.** The Samsung .tpk now runs a real HTTP server on `127.0.0.1:<free port>` (`proxyts.c:707-716`) and hands `http://127.0.0.1:P/live.ts?s=N` to the Samsung player (`proxyts.c:745`), including simultaneous GETs sharing one ingest and a 16 MiB buffer. Upstream claims Live TV channels "now play from the guide on ... Samsung" through it. |
+| `Video.cs` was reworked (player calls off the UI thread, disposal with timeout, display ROI/crop `player_set_display_roi_area`, #412) | Wiring is still "open a URL"; the new loopback URL goes through the same `video_tocar` path. Re-read `Video.cs` before S4 since prepare/dispose now run through a queue |
+| New `vazao.h`, `video_estatisticas`, `video_cabecalhos()` in `video_tpk.c` | Informational; can show buffer % for the converted stream |
+
+Consequences for the plan:
+* **Loopback is no longer a top risk.** The same .tpk already plays from 127.0.0.1 through the same player path, and a developer independently reports a 127.0.0.1 proxy working in the Samsung player from this app. Still log the address used on the first S95C run.
+* **S3 should reuse `proxyts.c`** as the server scaffold (port selection, accept loop, session lifecycle, one session at a time, cancel on new URL, shared buffering) rather than starting from `celular.c`.
+* Not yet proven by proxyts: that the player accepts **HLS playlists with many short segment requests** from loopback (proxyts serves one continuous TS, `video/mp2t`, no Content-Length). That is why mode 2 (progressive TS) stays as a test fallback.
+* Test modes decided for the first build: 1 HLS on-demand (default), 2 progressive TS, 3 progressive MKV/MP4, 4 loopback vs LAN IP, 5 off (control). Remove the losers after the S95C comparison.
 
 ## 3. Options compared
 
@@ -321,7 +340,7 @@ closed), 2-hour episode (memory line steady), pull the network for 10 s mid-play
 | 1 | Is `sdb shell` closed on the S95C? (decides the test method) | `sdb capability` | 1 min |
 | 2 | Does the S95C player play **converted content at all** (HEVC 10-bit + AC3 in TS / MKV / MP4 from a LAN server), with sound, DD on the receiver, HDR badge? | lab `/static/*` via probe | S0 |
 | 3 | Does it play **HLS VOD with on-demand chunked segments** (HEVC+AC3 TS), report the real duration, seek by `SetPlayPositionAsync` without errors, and what is its request pattern? | lab `/hls/` via probe + server log | S0 |
-| 4 | Can the Player process reach **127.0.0.1** inside the app? | probe `loop:` variants | S0 |
+| 4 | Can the Player process reach **127.0.0.1** inside the app? Now likely yes (section 2.1); confirm with a log line | first test build logs the address the player used | S4 |
 | 5 | Does `MediaStreamSource` list `Ac3`/`Hevc`/`HevcM10p` on the S95C? (only informs a future option) | probe `[sonda]` line | S0 |
 | 6 | Embedded PGS subtitles in converted mode: needed in v1? | owner decision | — |
 | 7 | ARM CPU of TrueHD 5.1-presentation decode + AC3 encode on the S95C (host: 1.4 % of an x86 core) | `[dts-tpk] cpu=` in S4 | S4 |
