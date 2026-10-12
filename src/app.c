@@ -4832,7 +4832,7 @@ void app_atualizar(float dt, Uint32 agora) {
 #ifdef NV_TOUCH_UI
 #define CAMADA_SE(aberta) do { if (aberta) { \
   ponteiro_camada(); \
-  ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, NULL, 0, 0); \
+  if (layout_modo_mobile()) ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, NULL, 0, 0); \
 } } while (0)
 #else
 #define CAMADA_SE(aberta) do { if (aberta) ponteiro_camada(); } while (0)

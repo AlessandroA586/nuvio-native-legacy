@@ -178,13 +178,13 @@ static float ajFilToqueTopo(int i) {
   return h;
 }
 static void ajFilToqueFocar(int i, int campo) {
-  if (!filAberta || filPegou) return;
+  if (!layout_modo_mobile() || !filAberta || filPegou) return;
   filNaBarra = 0; filFoco = i; filCampo = campo;
 }
 static void ajFilToqueSoltar(int destino, int campo) {
   int passos = FIL_MAX + 1, idx = filIdx(filFoco);
   (void)campo;
-  if (!filAberta || !filPegou || filAba || destino < 0 || destino >= filListaN || filIdx(destino) < 0 || idx < 0) return;
+  if (!layout_modo_mobile() || !filAberta || !filPegou || filAba || destino < 0 || destino >= filListaN || filIdx(destino) < 0 || idx < 0) return;
   while (filFoco != destino && passos-- > 0) {
     int dir = destino > filFoco ? 1 : -1;
     int novo = filPegou == 2 ? fil_mover_grupo(idx, dir) : fil_mover(idx, dir);
@@ -202,7 +202,7 @@ static void ajFilToqueSoltar(int destino, int campo) {
 }
 static void ajFilToqueAba(int aba, int b) {
   (void)b;
-  if (!filAberta || filPegou || aba < 0 || aba > 1) return;
+  if (!layout_modo_mobile() || !filAberta || filPegou || aba < 0 || aba > 1) return;
   filAba = aba; filNaBarra = 1; filFoco = 0; filTopo = 0; filCampo = 0;
   ajToqueLivre[AJT_FILEIRAS] = 0;
   filMontarLista();
@@ -241,7 +241,7 @@ static void desenhaFileiras(void) {
     // Atualizar tudo: disco 56 com o icone.
     bx -= 56;
 #ifdef NV_TOUCH_UI
-    ponteiro_alvo(bx, by, 56, 56, ajFilToqueFocar, NULL, filAba ? n + 1 : n, 0);
+    if (layout_modo_mobile()) ponteiro_alvo(bx, by, 56, 56, ajFilToqueFocar, NULL, filAba ? n + 1 : n, 0);
 #endif
     if (fAtualizar && !filNaBarra) { ajPilulaAcento((GfxRect){ bx, by, 56, 56 }, 28, 1); ajIconeT("aj_rotate-cw", bx + 17, by + 17, 22, 1); }
     else { ajNeutro((GfxRect){ bx, by, 56, 56 }, 28, 0.08f, AJ_CHIP_SOL, 1); ajIcone("aj_rotate-cw", bx + 17, by + 17, 22, 0.85f); }
@@ -251,7 +251,7 @@ static void desenhaFileiras(void) {
       float w = 22 + 20 + 10 + t.w + 22;
       bx -= 10 + w;
 #ifdef NV_TOUCH_UI
-      ponteiro_alvo(bx, by, w, 56, ajFilToqueFocar, NULL, n, 0);
+      if (layout_modo_mobile()) ponteiro_alvo(bx, by, w, 56, ajFilToqueFocar, NULL, n, 0);
 #endif
       if (fAgrupar && !filNaBarra) { ajPilulaAcento((GfxRect){ bx, by, w, 56 }, 28, 1); ajIconeT("aj_rows-3", bx + 22, by + 18, 20, 1); }
       else { ajNeutro((GfxRect){ bx, by, w, 56 }, 28, 0.08f, AJ_CHIP_SOL, 1); ajIcone("aj_rows-3", bx + 22, by + 18, 20, 0.85f); }
@@ -261,7 +261,8 @@ static void desenhaFileiras(void) {
       bx -= 10 + w;
       ajSeg(rot, num, 2, filAba, filNaBarra, bx, by + 28, 56, 1);
 #ifdef NV_TOUCH_UI
-      { float tx = bx + 5.0f;
+      if (layout_modo_mobile()) {
+        float tx = bx + 5.0f;
         for (int t = 0; t < 2; t++) {
           float tw = txt_largura(TXT_AJ_SEG, i18n(rot[t])) + 40.0f + 9.0f + txt_largura(TXT_ILHA_GENERO, num[t]);
           ponteiro_alvo(tx, by + 5.0f, tw, 46, NULL, ajFilToqueAba, t, 0);
@@ -315,9 +316,11 @@ static void desenhaFileiras(void) {
   gfx_recorte(ilha.x, topo - 4, pr.x - ilha.x, base - topo + 4);
   y = topo;
 #ifdef NV_TOUCH_UI
-  y -= ajToqueRegistrar(AJT_FILEIRAS, (GfxRect){cx, topo, cw, base - topo}, &ajToqueOffset[AJT_FILEIRAS],
-                        ajFilToqueTopo(n) - (base - topo), ajFilToqueTopo(filTopo), filAba * 2 + filForaAgrupada);
-  i = 0;
+  if (layout_modo_mobile()) {
+    y -= ajToqueRegistrar(AJT_FILEIRAS, (GfxRect){cx, topo, cw, base - topo}, &ajToqueOffset[AJT_FILEIRAS],
+                          ajFilToqueTopo(n) - (base - topo), ajFilToqueTopo(filTopo), filAba * 2 + filForaAgrupada);
+    i = 0;
+  } else i = filTopo;
 #else
   i = filTopo;
 #endif
@@ -327,7 +330,7 @@ static void desenhaFileiras(void) {
     float rh = filAba == 0 ? AJF_ROW_H : AJF_FORA_H;
     GfxRect ln;
 #ifdef NV_TOUCH_UI
-    if (y + ajFilToqueAltura(i) < topo) { y += ajFilToqueAltura(i); continue; }
+    if (layout_modo_mobile() && y + ajFilToqueAltura(i) < topo) { y += ajFilToqueAltura(i); continue; }
 #endif
     // Cabecalhos de grupo: a fila, ou o addon na aba Fora.
     if (filAba == 0 && filSep >= 0 && i == filSep) {
@@ -360,7 +363,7 @@ static void desenhaFileiras(void) {
     }
     ln = (GfxRect){ cx, y, cw, rh };
 #ifdef NV_TOUCH_UI
-    {
+    if (layout_modo_mobile()) {
       PonteiroFn soltar = filPegou ? ajFilToqueSoltar : NULL;
       ponteiro_alvo_faixa(cx, y, cw, rh, topo, base, ajFilToqueFocar, soltar, i, 0);
       if (filAba == 0 && idx != AJ_FIL_DESTAQUE) {
@@ -583,7 +586,12 @@ static void ajFilPainel(GfxRect pr, int n, int lim) {
     int nd = 0;
     if (filPegou) {
 #ifdef NV_TOUCH_UI
-      d[nd++] = (AjDica){ "Toque", "Escolher destino" }; d[nd++] = (AjDica){ "Voltar", "Cancelar" };
+      if (layout_modo_mobile()) {
+        d[nd++] = (AjDica){ "Toque", "Escolher destino" }; d[nd++] = (AjDica){ "Voltar", "Cancelar" };
+      } else {
+        d[nd++] = (AjDica){ "↑ ↓", filPegou == 2 ? "Mover o bloco" : "Mover" }; d[nd++] = (AjDica){ "← →", filPegou == 2 ? "Só a fileira" : "Bloco do addon" };
+        d[nd++] = (AjDica){ "OK", "Soltar" }; d[nd++] = (AjDica){ "Voltar", "Cancelar" };
+      }
 #else
       d[nd++] = (AjDica){ "↑ ↓", filPegou == 2 ? "Mover o bloco" : "Mover" }; d[nd++] = (AjDica){ "← →", filPegou == 2 ? "Só a fileira" : "Bloco do addon" };
       d[nd++] = (AjDica){ "OK", "Soltar" }; d[nd++] = (AjDica){ "Voltar", "Cancelar" };
