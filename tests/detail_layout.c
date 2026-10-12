@@ -1,6 +1,9 @@
 // Regression: unknown logo language and fullscreen carousel edge navigation.
 #define desc_pedir_titulo_semente capturar_rota_tmdb
 #define extras_relacionado_imdb relacionado_tmdb_fixture
+#include "../src/notasui.h"
+#define notasui_fontes_n notas_n_fixture
+int notas_n_fixture(const NotasSecao *s);
 #include "../src/detail.c"
 #undef desc_pedir_titulo_semente
 #undef extras_relacionado_imdb
@@ -15,6 +18,8 @@ void capturar_rota_tmdb(const char *imdb, long id, const char *tipo, const char 
   rotaId = id;
   snprintf(rotaTipo, sizeof rotaTipo, "%s", tipo);
 }
+// Five sources with a rating: the section must still be ONE focus stop.
+int notas_n_fixture(const NotasSecao *s) { (void)s; return 5; }
 const char *relacionado_tmdb_fixture(int i) {
   return i == 0 ? "tmdb:42" : "";
 }
@@ -48,6 +53,8 @@ int main(void) {
   assert(!mostrarNomeLogo(&c, u, 1, "pt-BR"));
   snprintf(c.tipo, sizeof c.tipo, "movie");
   cat_definir_tudo(&c, 1, NULL, 0); idx = 0;
+  // Ratings: focus stops only on the big score, never per source chip.
+  assert(secaoN(SEC_NOTAS) == 1);
   carro = 1; carCheia = 1; carN = 3; carPos = carAplicado = 1;
   nivel = 0; saindo = 0;
   SDL_Event e = {0}; e.type = SDL_KEYDOWN;
