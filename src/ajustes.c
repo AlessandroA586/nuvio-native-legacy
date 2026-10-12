@@ -750,7 +750,8 @@ static const char *V_IDIOMA[]    = { "Automático", "Português", "English", "Ro
 static const char *V_ANIM[]      = { "Completas", "Reduzidas" };
 static const char *V_FONTE_UI[]  = { "Inter", "LG Display", "Droid Sans",
                                      "Montserrat", "Roboto",
-                                     "Atkinson Hyperlegible Next" };
+                                     "Atkinson Hyperlegible Next",
+                                     "JetBrains Sans" };
 // A ORDEM IMPORTA: o indice 0 e o padrao (ver a lista de padroes, que e
 // posicional), e o padrao tem de ser 1080p. Numa TV que NAO concede a
 // superficie 4K a escolha nao faz nada, e numa que concede ela quadruplica o
@@ -1235,7 +1236,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Perfil e Stats na barra lateral", V_LIGA, 2),   // local: menuPerfilLocal
   ESC("Trailer do cartaz em foco",       V_FOCO_TRAILER, 3),   // trailerCartazModo (conta: focusedPosterBackdropTrailerEnabled)
   ESC("Itens por fileira",               V_ITENS_FIL, 3), // local: itensFileiraLocal
-  ESC("Fonte da interface", V_FONTE_UI, 6),
+  ESC("Fonte da interface", V_FONTE_UI, 7),
   ESC("Efeitos visuais", V_GPU_EF, 3),   // local: gpuEfeitosLocal (.tpk)
   ESC("Interface de vidro",              V_LIGA, 2),   // local: vidroLocal
   // EXPERIMENTAL (p2p.h). Tocar torrent sem debrid, por um servidor de
@@ -8185,7 +8186,7 @@ int ajustes_teste_quadro(const char *id) {
 void ajustes_teste_arte(int n) { ajArteFundoN = n; }
 
 void ajustes_teste_fonte_interface(int familia) {
-  if (familia < TXT_FAMILIA_INTER || familia > TXT_FAMILIA_ATKINSON) return;
+  if (familia < TXT_FAMILIA_INTER || familia > TXT_FAMILIA_JETBRAINS) return;
   valor[AJ_FONTE_UI] = familia;
   txt_definir_fonte_interface((TxtFamilia)familia);
 }

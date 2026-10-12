@@ -4188,7 +4188,8 @@ static void desenharLegendaPrincipal(float *topoPilha){
     if (assrender_texto_simples()) {
       static const char *const families[] = {
         "Inter Display", "LG Display", "Droid Sans",
-        "Montserrat", "Roboto", "Atkinson Hyperlegible Next"
+        "Montserrat", "Roboto", "Atkinson Hyperlegible Next",
+        "JetBrains Sans"
       };
       PlainAssStyle style = {0};
       int pct = legEstilo.tamanho, fam = legEstilo.familia;

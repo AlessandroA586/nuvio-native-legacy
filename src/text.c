@@ -135,7 +135,7 @@ static unsigned char tentouLegendaLGCam[TXT_NCAM][TXT_LEG_N];
 #define tentouLegendaLG (tentouLegendaLGCam[camada])
 const char *const TXT_FAMILIAS_PT[TXT_FAMILIA_N] = {
   "Inter", "LG Display", "Droid Sans", "Montserrat", "Roboto",
-  "Atkinson Hyperlegible Next"
+  "Atkinson Hyperlegible Next", "JetBrains Sans"
 };
 
 static Entrada cache[MAX_LINHAS];
@@ -1225,6 +1225,10 @@ int txt_iniciar(const char *dirRecursos, float escala) {
   snprintf(caminhoPeso[TXT_FAMILIA_ATKINSON][0], 512, "%sfonts/AtkinsonHyperlegibleNext-Regular.ttf", base);
   snprintf(caminhoPeso[TXT_FAMILIA_ATKINSON][1], 512, "%sfonts/AtkinsonHyperlegibleNext-Medium.ttf", base);
   snprintf(caminhoPeso[TXT_FAMILIA_ATKINSON][2], 512, "%sfonts/AtkinsonHyperlegibleNext-Bold.ttf", base);
+  // JetBrains Sans (a do Nuvio Desktop) nao tem Medium: o peso do meio e o SemiBold.
+  snprintf(caminhoPeso[TXT_FAMILIA_JETBRAINS][0], 512, "%sfonts/JetBrainsSans-Regular.ttf", base);
+  snprintf(caminhoPeso[TXT_FAMILIA_JETBRAINS][1], 512, "%sfonts/JetBrainsSans-SemiBold.ttf", base);
+  snprintf(caminhoPeso[TXT_FAMILIA_JETBRAINS][2], 512, "%sfonts/JetBrainsSans-Bold.ttf", base);
   snprintf(caminhoMono[0], 512, "%sfonts/JetBrainsMonoNL-Regular.ttf", base);
   snprintf(caminhoMono[1], 512, "%sfonts/JetBrainsMonoNL-SemiBold.ttf", base);
   snprintf(caminhoMono[2], 512, "%sfonts/Montserrat-ExtraLight-Relogio.ttf", base);
