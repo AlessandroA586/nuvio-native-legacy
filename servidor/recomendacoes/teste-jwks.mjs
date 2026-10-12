@@ -85,7 +85,7 @@ test('JWKS 500/formato ruim/rede: caminho antigo e cache sessao', async t => {
   const c = await cenario(t); c.rede.jwksStatus = 500;
   const tk = await token(c.payload());
   assert.equal((await c.pede(tk)).status, 200); assert.equal((await c.pede(tk)).status, 200);
-  assert.equal(c.rede.user, 1); assert.equal(c.rede.jwks, 1);
+  assert.equal(c.rede.user, 1); assert.equal(c.rede.jwks, 2);
   c.rede.jwksStatus = 200; c.rede.formatoRuim = true;
   assert.equal((await c.pede(await token(c.payload({ jti: 'formato' })))).status, 200);
   const fetchAnterior = globalThis.fetch;
@@ -107,6 +107,17 @@ test('6h: verifica de novo, 401 bloqueia antigos e iat novo recupera sem ressusc
   assert.equal((await c.pede(await token(c.payload({ iat: 1800000000 - 2 })))).status, 401);
   c.avanca(21600);
   assert.equal((await c.pede(novo)).status, 200); assert.equal(c.rede.user, 4);
+});
+test('token vencido recusa sem rede; conta limita pedidos concorrentes', async t => {
+  const c = await cenario(t);
+  assert.equal((await c.pede(await token(c.payload({ exp: 1800000000 })))).status, 401);
+  assert.equal(c.rede.jwks, 0); assert.equal(c.rede.user, 0);
+  await c.pede(await token(c.payload()));
+  c.avanca(21600);
+  const tokens = await Promise.all(Array.from({ length: 10 }, (_, i) => token(c.payload({ jti: i }))));
+  const respostas = await Promise.all(tokens.map(tk => c.pede(tk)));
+  assert.ok(respostas.every(r => r.status === 200));
+  assert.equal(c.rede.user, 2);
 });
 test('JWKS e nome conhecidos persistem entre isolates; URL configuravel', async t => {
   const c = await cenario(t); c.env.NUVIO_JWKS_URL = 'https://sb.test/chaves';
