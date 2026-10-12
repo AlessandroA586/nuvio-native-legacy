@@ -5229,7 +5229,7 @@
   T("memória", "μνήμη"),
   T("mistério", "μυστήριο"),
   T("mitologia", "μυθολογία"),
-  T("modelo inválido: use http(s):// e {imdb}, {tmdb}, {type} ou {tipo_tmdb}", "μη έγκυρο πρότυπο: χρησιμοποιήστε http(s):// και {imdb}, {tmdb}, {type} ή {tipo_tmdb}"),
+  T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "μη έγκυρο πρότυπο: χρησιμοποιήστε http(s):// και {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ή {tipo_tmdb}"),
   T("modelo longo demais: o endereço pronto passa de 512 caracteres", "πολύ μεγάλο πρότυπο: η τελική διεύθυνση ξεπερνά τους 512 χαρακτήρες"),
   T("monstros", "τέρας"),
   T("mostrar", "εμφάνιση"),

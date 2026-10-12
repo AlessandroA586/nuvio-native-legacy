@@ -5229,7 +5229,7 @@
   T("memória", "记忆"),
   T("mistério", "悬疑"),
   T("mitologia", "神话"),
-  T("modelo inválido: use http(s):// e {imdb}, {tmdb}, {type} ou {tipo_tmdb}", "模板无效：请使用 http(s):// 以及 {imdb}、{tmdb}、{type} 或 {tipo_tmdb}"),
+  T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "模板无效：请使用 http(s):// 以及 {imdb}、{imdb_id}、{tmdb}、{tmdb_id}、{id}、{type} 或 {tipo_tmdb}"),
   T("modelo longo demais: o endereço pronto passa de 512 caracteres", "模板太长：生成的地址超过 512 个字符"),
   T("monstros", "怪物"),
   T("mostrar", "显示"),

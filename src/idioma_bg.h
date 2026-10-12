@@ -5229,7 +5229,7 @@
   T("memória", "памет"),
   T("mistério", "мистерия"),
   T("mitologia", "митология"),
-  T("modelo inválido: use http(s):// e {imdb}, {tmdb}, {type} ou {tipo_tmdb}", "невалиден шаблон: използвайте http(s):// и {imdb}, {tmdb}, {type} или {tipo_tmdb}"),
+  T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "невалиден шаблон: използвайте http(s):// и {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} или {tipo_tmdb}"),
   T("modelo longo demais: o endereço pronto passa de 512 caracteres", "шаблонът е твърде дълъг: готовият адрес надхвърля 512 знака"),
   T("monstros", "чудовище"),
   T("mostrar", "покажи"),

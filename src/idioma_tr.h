@@ -5229,7 +5229,7 @@
   T("memória", "bellek"),
   T("mistério", "gizem"),
   T("mitologia", "mitoloji"),
-  T("modelo inválido: use http(s):// e {imdb}, {tmdb}, {type} ou {tipo_tmdb}", "geçersiz şablon: http(s):// ile {imdb}, {tmdb}, {type} veya {tipo_tmdb} kullanın"),
+  T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "geçersiz şablon: http(s):// ile {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} veya {tipo_tmdb} kullanın"),
   T("modelo longo demais: o endereço pronto passa de 512 caracteres", "şablon çok uzun: oluşan adres 512 karakteri aşıyor"),
   T("monstros", "canavar"),
   T("mostrar", "göster"),

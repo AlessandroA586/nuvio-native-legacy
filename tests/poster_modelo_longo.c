@@ -43,6 +43,45 @@ int main(void) {
   aviso = ajustes_teste_poster_modelo("https://meu.servidor.invalid/{type}/{imdb}.jpg", lido, sizeof lido);
   printf("aviso curto=%d lido=%s\n", aviso, lido);
   OK(aviso == 0 && !strcmp(lido, "https://meu.servidor.invalid/{type}/{imdb}.jpg"), "modelo curto inalterado");
+  // #390: aliases passam pelo mesmo caminho de gravacao do modelo proprio.
+  { const char *aliases[] = { "{imdb_id}", "{tmdb_id}", "{id}" };
+    const char *ids[] = { "tt0111161", "278", "tt0111161" };
+    int a;
+    for (a = 0; a < 3; a++) {
+      char esperado[PP_URL_MAX];
+      snprintf(modelo, sizeof modelo, "https://posters.exemplo.invalid/{type}/%s.jpg", aliases[a]);
+      aviso = ajustes_teste_poster_modelo(modelo, lido, sizeof lido);
+      snprintf(esperado, sizeof esperado, "https://posters.exemplo.invalid/movie/%s.jpg", ids[a]);
+      OK(aviso == 0 && !strcmp(lido, modelo) &&
+         posterprov_montar_url(posterprov_cfg(), "tt0111161", 278, "movie", u, sizeof u) &&
+         !strcmp(u, esperado), aliases[a]);
+      if (a == 2) {
+        OK(posterprov_montar_url(posterprov_cfg(), "tmdb:t1399", 0, "series", u, sizeof u) &&
+           !strcmp(u, "https://posters.exemplo.invalid/series/1399.jpg"),
+           "{id} usa TMDB quando nao ha IMDb");
+        OK(posterprov_montar_url(posterprov_cfg(), "tt0111161", 0, "movie", u, sizeof u) &&
+           !strcmp(u, esperado), "{id} aceita somente IMDb");
+        OK(posterprov_montar_url(posterprov_cfg(), "", 278, "movie", u, sizeof u) &&
+           !strcmp(u, "https://posters.exemplo.invalid/movie/278.jpg"), "{id} aceita somente TMDB");
+        OK(!posterprov_montar_url(posterprov_cfg(), "", 0, "movie", u, sizeof u),
+           "{id} sem identificador continua recusado");
+      } else {
+        OK(!posterprov_montar_url(posterprov_cfg(), a == 0 ? "tmdb:278" : "tt0111161",
+                                 0, "movie", u, sizeof u), "alias nao inventa identificador ausente");
+      }
+      // 12 marcadores: a sintaxe cabe em 400, mas o montado toca o limite.
+      { int max = a == 1 ? 19 : 23, i;
+        k = snprintf(modelo, sizeof modelo, "https://posters.exemplo.invalid/");
+        for (i = 0; i < 12; i++) k += snprintf(modelo + k, sizeof modelo - (size_t)k, "%s", aliases[a]);
+        while (k + 12 * (max - (int)strlen(aliases[a])) < PP_URL_MAX - 1) modelo[k++] = 'a';
+        modelo[k] = 0;
+        OK(posterprov_modelo_cabe(modelo), "alias com pior caso de 511 bytes cabe");
+        modelo[k++] = 'a'; modelo[k] = 0;
+        OK(posterprov_modelo_valido(modelo) && !posterprov_modelo_cabe(modelo),
+           "alias com pior caso de 512 bytes e recusado por tamanho");
+      }
+    }
+  }
   // Sem marcador continua recusado.
   aviso = ajustes_teste_poster_modelo("https://meu.servidor.invalid/x.jpg", lido, sizeof lido);
   OK(aviso != 0, "modelo sem marcador continua recusado");

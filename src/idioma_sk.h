@@ -5229,7 +5229,7 @@
   T("memória", "pamäť"),
   T("mistério", "záhada"),
   T("mitologia", "mytológia"),
-  T("modelo inválido: use http(s):// e {imdb}, {tmdb}, {type} ou {tipo_tmdb}", "neplatná šablóna: použite http(s):// a {imdb}, {tmdb}, {type} alebo {tipo_tmdb}"),
+  T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "neplatná šablóna: použite http(s):// a {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} alebo {tipo_tmdb}"),
   T("modelo longo demais: o endereço pronto passa de 512 caracteres", "šablóna je príliš dlhá: výsledná adresa má viac ako 512 znakov"),
   T("monstros", "netvor"),
   T("mostrar", "zobraziť"),

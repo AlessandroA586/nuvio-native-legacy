@@ -5228,7 +5228,7 @@
   { "memória", "memory" },
   { "mistério", "mystery" },
   { "mitologia", "mythology" },
-  { "modelo inválido: use http(s):// e {imdb}, {tmdb}, {type} ou {tipo_tmdb}", "invalid template: use http(s):// and {imdb}, {tmdb}, {type} or {tipo_tmdb}" },
+  { "modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "invalid template: use http(s):// and {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} or {tipo_tmdb}" },
   { "modelo longo demais: o endereço pronto passa de 512 caracteres", "template too long: the finished address goes over 512 characters" },
   { "monstros", "monster" },
   { "mostrar", "show" },
