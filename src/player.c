@@ -1667,6 +1667,7 @@ static void dvTelaAtualizar(float dt, Uint32 agora) {
 // PRETO enquanto o fluxo abria — que era o "clica em reproduzir e fica preto".
 void player_definir_fonte(const char *url) {
   if ((!aberto && !mini) || !url || !*url) return;
+  if (comVideo || prebuscaUrl[0]) legenda_pre_descartar("troca de fonte");
   durFonteAvisada = pedProximaFonte = 0;
   // Fonte nova: a duracao esperada conhecida nao vale mais (mesmo titulo,
   // episodio outro, catalogo pode ter andado).
@@ -1696,6 +1697,7 @@ void player_definir_fonte(const char *url) {
 
 void player_voltar_a_esperar(void) {
   if (!aberto) return;
+  legenda_pre_descartar("fonte descartada");
   // A fonte foi descartada: a tela do DV sai e o cartao de sempre conta a
   // troca ("Fonte falhou, tentando a proxima"); a proxima, se for DV, a traz.
   if (dvtela_ativa()) { dvtela_sair(DVT_SAIDA_FONTE, dvRelogio()); video_dv_tela(0); }
