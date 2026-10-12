@@ -188,7 +188,7 @@ function sv(v) { return v == null || v === "" ? "" : String(v); }
 var D, ITENS, BY = {}, F = { q: "", plat: "", status: "", alvo: "", estado: "", extra: "", sort: "numero", dir: -1 };
 var RASCUNHOS = {};   // o que o dono esta digitando, por id: sobrevive ao recarregamento
 var ULTIMA = Date.now(), ASSINATURA = "";
-var ALVO_ORDEM = ["2.0.4", "2.0.5", "2.1", "2.2", "futuro", "nao vamos fazer", "ja-lancada"];
+var ALVO_ORDEM = ["2.0.4", "2.0.5", "2.0.6", "2.1", "2.2", "futuro", "nao vamos fazer", "ja-lancada"];
 var SEM_ALVO = "(sem alvo)";
 
 
@@ -308,7 +308,10 @@ function platDe(i) {
   return "outras";
 }
 function aberta(i) { return i.estado_github === "aberta"; }
-function proximaVersao() { return "2.0.5"; }
+function proximaVersao() {
+  return ((D.roadmap || []).filter(function(r) { return /^\d+\.\d+(\.\d+)?$/.test(r.release) && !/lançada|lancada/.test(r.situacao); })
+    .map(function(r) { return r.release; }).sort(function(a,b) { return a.localeCompare(b, undefined, {numeric:true}); })[0]) || "2.0.6";
+}
 function sortAlvos(keys) {
   return keys.sort(function (a, b) {
     var ia = ALVO_ORDEM.indexOf(a), ib = ALVO_ORDEM.indexOf(b);
@@ -487,10 +490,10 @@ var LISTA_ID = 0;
 function renderRoadmap() {
   LISTA_ID = 0;
   var box = document.getElementById("roadmap"); box.textContent = "";
-  var rm = D.roadmap || [];
+  var rm = D.roadmap || [], current = proximaVersao();
   [["Já disponível", "shipped"], ["Release atual", "current"], ["A seguir", "next"]].forEach(function (col) {
     var lane = el("div", { class: "release-column " + col[1] }, [el("div", { class: "eyebrow", text: col[0] })]);
-    rm.filter(function (r) { return col[1] === "current" ? r.release === "2.0.5" : col[1] === "shipped" ? /lançada|lancada/.test(r.situacao) : r.release !== "2.0.5" && !/lançada|lancada/.test(r.situacao) && r.release !== "nao vamos fazer"; }).forEach(function (r) {
+    rm.filter(function (r) { return col[1] === "current" ? r.release === current && !/lançada|lancada/.test(r.situacao) : col[1] === "shipped" ? /lançada|lancada/.test(r.situacao) : r.release !== current && !/lançada|lancada/.test(r.situacao) && r.release !== "nao vamos fazer"; }).forEach(function (r) {
       var card = el("section", { class: "rel" }, [el("h3", { text: r.release }), el("p", {class:"desc",text:ownerMode()?r.situacao:col[0]})]);
       var issues = ITENS.filter(function (i) { return col[1] === "shipped" ? i.status === "lancada" && i.release === r.release : i.alvo === r.release && i.status !== "lancada"; });
       card.appendChild(el("p", { class: "sub", text: issues.length + t(" issues no mapa") }));
@@ -510,7 +513,7 @@ function renderRoadmap() {
   var candidates=el("section",{class:"release-column candidates"},[el("div",{class:"eyebrow",text:"Candidatas"}),el("h3",{text:"Próximas versões"}),el("p",{class:"sub",text:"Em avaliação. A candidatura não confirma entrega."})]);
   listaCompacta(candidates,ITENS.filter(function(i){return !!work(i).candidate;}),"",3);box.appendChild(candidates);
   var now = document.getElementById("agora"); now.textContent = "";
-  var ativos = ITENS.filter(function (i) { return /^(em-andamento|em-progresso)$/.test(work(i).status) || (i.alvo === "2.0.5" && i.status === "consertada-nao-lancada"); });
+  var ativos = ITENS.filter(function (i) { return /^(em-andamento|em-progresso)$/.test(work(i).status) || (i.alvo === proximaVersao() && i.status === "consertada-nao-lancada"); });
   if (!ativos.length) now.appendChild(el("p", { class: "vazio", text: "Nenhuma issue marcada explicitamente em andamento. Correções integradas aguardando lançamento estão abaixo, em Como ajudar." }));
   ativos.forEach(function (i) {
     var c = issueCard(i, i.status === "consertada-nao-lancada" ? "Em integração · correção registrada, ainda não lançada." : ""), refs = referencias(i);

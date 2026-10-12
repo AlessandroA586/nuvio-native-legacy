@@ -161,7 +161,12 @@ const ate = async (pred, ms = 3000) => {
   espera("integrada ainda precisa testar", "Precisa testar", ctx.estadoPublico({status: "consertada-nao-lancada"})[0]);
   espera("log pendente bloqueia diagnóstico", "Bloqueado", ctx.estadoPublico({status: "precisa-log"})[0]);
   espera("lançada é concluída", "Concluído", ctx.estadoPublico({status: "lancada"})[0]);
-  espera("release atual explícita", "2.0.5", ctx.proximaVersao());
+  espera("próximo patch sem roadmap", "2.0.6", ctx.proximaVersao());
+  ctx.D.roadmap = [{release:"2.0.5",situacao:"lançada"}, {release:"2.0.10",situacao:"planejada"}, {release:"2.0.6",situacao:"planejada"}];
+  espera("release lançada não é próxima; ordem numérica", "2.0.6", ctx.proximaVersao());
+  ctx.D.roadmap = [{release:"2.0.5",situacao:"planejada"}];
+  espera("release em preparação vem do roadmap", "2.0.5", ctx.proximaVersao());
+  ctx.D.roadmap = [];
   ctx.D.meta = { branches: ["agente/teste", "agente/teste-extra"], commits: { abcdef12: "full" } };
   const refs = ctx.referencias({notas: "agente/teste-extra abcdef12"});
   espera("branch não casa por prefixo", "agente/teste-extra", refs.branches.join(","));
