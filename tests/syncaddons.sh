@@ -28,5 +28,10 @@ sessao dedupe duplicata
 sessao boot gravar
 sessao boot reabrir
 sessao migracao migrar
+sessao cem cheio 100
+sessao corte cheio 130
+if ! grep -qF '[sync] addons: 2 da conta ficaram de fora (maximo 128, ou URL grande demais)' "$dir/saida"; then
+  echo "FALHOU: corte de 130 para 128 fora do log"; falhou=1
+fi
 if [ "$falhou" = 1 ]; then echo "syncaddons.sh: FALHOU"; exit 1; fi
 echo "syncaddons.sh: ok"

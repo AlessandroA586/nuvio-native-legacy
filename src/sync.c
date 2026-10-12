@@ -53,7 +53,7 @@ void servidores_esquecer_todos(void);   // servidores.c: wipe every profile's to
 #include <errno.h>
 #include <sys/stat.h>
 
-#define SY_ADD_MAX   64   // o mesmo teto de ADD_MAX (addons.c)
+#define SY_ADD_MAX   128   // o mesmo teto de ADD_MAX (addons.c)
 // URL lida da conta ANTES de caber em AddonRemoto: maior que o limite de
 // proposito, para o log dizer o tamanho de verdade em vez de "nao coube".
 #define SY_URL_LEITURA (NV_ADDON_URL_MAX * 8)   // 16 KB: URL grande vira apelido (addonurl.h, #203)
