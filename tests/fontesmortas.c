@@ -47,7 +47,7 @@ int naovideo_nome(const char *a, const char *b, int h, long t) {
   (void)a; (void)b; (void)h; (void)t; return 0;
 }
 
-static int sondas, sondaTroca, sondaFalha;
+static int sondas, sondaTroca, sondaFalha, falhasAte;
 int debrid_resolver_cache(const char *h, int f, char *u, unsigned t, int *fora) {
   (void)h; (void)f; (void)u; (void)t; (void)fora; assert(!"sem torrent nesta sonda"); return 0;
 }
@@ -61,7 +61,7 @@ int rede_url_final_tipo(const char *u, int s, const char *const *c, char *d,
     strcpy(nova->provedor, "Novo"); strcpy(nova->url, "https://nova.invalid/video");
     stream_definir_lista(nova, 1); free(nova);
   }
-  return !sondaFalha;
+  return !sondaFalha && sondas > falhasAte;
 }
 char *rede_baixar_st(const char *u, int s, const char *const *c, int *st) {
   (void)u; (void)s; (void)c; (void)st; assert(!"sem HLS nesta sonda"); return NULL;
@@ -70,6 +70,7 @@ int naovideo_mime(const char *m, const char *u, long b) { (void)m; (void)u; (voi
 int fa_player_falhou_foi(unsigned r, int i) { (void)r; (void)i; return 0; }
 void fa_concluir(unsigned r, int i, int ok) { (void)r; (void)i; (void)ok; }
 
+#ifndef FONTESMORTAS_ORCAMENTO
 static pthread_mutex_t eventoTrava = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t evento = PTHREAD_COND_INITIALIZER;
 static int iniciou, terminou;
@@ -116,6 +117,19 @@ static void concorrencia(void) {
   atomic_store(&parar, 1); assert(!pthread_join(fio, NULL));
   stream_definir_lista(NULL, 0); free(l);
 }
+#endif
+#ifdef FONTESMORTAS_ORCAMENTO
+void prepararOrcamento(int falhas) {
+  Stream *l = calloc(4, sizeof *l); assert(l);
+  for (int i = 0; i < 4; i++) {
+    strcpy(l[i].provedor, "Addon");
+    snprintf(l[i].url, sizeof l[i].url, "https://exemplo.invalid/%d", i);
+  }
+  stream_definir_lista(l, 4); free(l);
+  sondas = 0; falhasAte = falhas;
+}
+int totalSondas(void) { return sondas; }
+#else
 int main(int argc, char **argv) {
   if (argc > 1 && !strcmp(argv[1], "concorrencia")) {
     concorrencia(); puts("fontesmortas: PASS (concorrencia)"); return 0;
@@ -131,10 +145,10 @@ int main(int argc, char **argv) {
     stream_vod_falhou(1); // Vencedora inicial (2160p) no fim da lista.
     assert(stream_automatico_disponivel(0));
     assert(stream_proxima_vod(1) == 0);
-    assert(stream_verificar_proxima_vod(1, 1) == 0 && sondas == 1);
+    assert(stream_verificar_proxima_vod(1, 1, NULL) == 0 && sondas == 1);
     // Troca durante a sonda: aborta e nao exclui o mesmo indice da lista nova.
     sondaTroca = sondaFalha = 1;
-    assert(stream_verificar_proxima_vod(1, 3) == -1 && sondas == 2);
+    assert(stream_verificar_proxima_vod(1, 3, NULL) == -1 && sondas == 2);
     assert(stream_automatico_disponivel(0));
     stream_vod_falhou(0);
     assert(stream_proxima_vod(0) == -1);
@@ -213,3 +227,4 @@ int main(int argc, char **argv) {
   puts("fontesmortas: PASS (identidade, TTL, disco, ordem, escolha manual)");
   return 0;
 }
+#endif

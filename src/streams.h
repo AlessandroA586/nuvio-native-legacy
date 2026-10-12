@@ -184,7 +184,8 @@ int  stream_proxima_sem_perda(int atual);
 // Pula a atual e as ja falhadas; leitura protegida contra troca de lista.
 int  stream_proxima_vod(int atual);
 // Confere a proxima da ordem do addon fora do fio de desenho; -1 se acabou.
-int  stream_verificar_proxima_vod(int atual, int tentativas);
+// Devolve tambem quantas candidatas consumiram o orcamento (se nao NULL).
+int  stream_verificar_proxima_vod(int atual, int tentativas, int *conferidas);
 // O mesmo sem as regras de auto-play (#202): canal ao vivo.
 int  stream_automatico_canal(void);
 // Exclui uma candidata que ja foi entregue ao player e travou no pipeline.

@@ -2077,8 +2077,9 @@ int stream_proxima_vod(int atualIdx) {
   pthread_mutex_unlock(&verTrava);
   return i;
 }
-int stream_verificar_proxima_vod(int atualIdx, int tentativas) {
+int stream_verificar_proxima_vod(int atualIdx, int tentativas, int *conferidas) {
   Conferencia c = { 0, 0, 0, -1 };
+  if (conferidas) *conferidas = 0;
   int i = atualIdx;
   c.geracao = stream_lista_geracao();
   // Sem reordenar pela pontuacao nem resolver a mesma URL falhada outra vez.
@@ -2089,6 +2090,7 @@ int stream_verificar_proxima_vod(int atualIdx, int tentativas) {
     i = c.abortou ? -1 : proximaVODSemTrava(atualIdx);
     pthread_mutex_unlock(&verTrava);
     if (i < 0) break;
+    if (conferidas) (*conferidas)++;
     if (verificarOuParar(i, &c)) return c.abortou ? -1 : i;
     pthread_mutex_lock(&verTrava);
     if (listaGeracao != c.geracao) c.abortou = 1;

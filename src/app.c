@@ -263,7 +263,7 @@ typedef struct {
   int resultado;
   Uint32 prazo;
   unsigned geracao;
-  int depoisDe, tentativas;
+  int depoisDe, tentativas, conferidas;
   unsigned listaGeracao;
   char id[80];
   char url[4096];
@@ -415,7 +415,7 @@ static void *escolherFonte(void *u) {
 static Uint32 canalFontePrazo;
 static void *escolherProximaVOD(void *u) {
   FonteJob *job = u;
-  job->resultado = stream_verificar_proxima_vod(job->depoisDe, job->tentativas);
+  job->resultado = stream_verificar_proxima_vod(job->depoisDe, job->tentativas, &job->conferidas);
   atomic_store_explicit(&job->estado, FJOB_DONE, memory_order_release);
   return NULL;
 }
@@ -480,6 +480,7 @@ static int iniciarFonteJob(int tipo, unsigned geracao, const char *id, int renov
   job->geracao = geracao;
   job->depoisDe = fonteDepoisDe;
   job->tentativas = fonteRestantes;
+  job->conferidas = 0;
   job->listaGeracao = stream_lista_geracao();
   if (id) snprintf(job->id, sizeof job->id, "%s", id);
   atomic_store_explicit(&job->estado, FJOB_RUNNING, memory_order_release);
@@ -1238,6 +1239,10 @@ static void processarFonteJob(void) {
   } else if (aplicar) {
     fonteEscolhida = tipo == FJOB_PROXIMA_VOD && job->listaGeracao != stream_lista_geracao()
                       ? -1 : resultado;
+    // O consumidor ja cobra a candidata final; somar as anteriores do job.
+    if (tipo == FJOB_PROXIMA_VOD && job->listaGeracao == stream_lista_geracao() &&
+        job->conferidas > 1)
+      fonteVODTentativas += job->conferidas - 1;
     if (tipo == FJOB_CANAL) canalFontePrazo = prazo;
   }
   // O job antigo foi recolhido. Só agora o slot pode receber o pedido que
