@@ -185,7 +185,7 @@ const ate = async (pred, ms = 3000) => {
   espera("público: dono bloqueado", false, ctx.ownerMode());
   const card = ctx.issueCard(MAPA.itens[0], "");
   const links = []; const scan = n => {if(n.tagName === "A") links.push(n); n.children.forEach(scan);}; scan(card);
-  espera("público: claim abre issue", "https://github.com/example/project/issues/12", links.find(n => n.textContent === "I want to help")?.getAttribute("href"));
+  espera("público: claim abre issue", "https://github.com/example/project/issues/12", links.find(n => n.textContent === "Work on this")?.getAttribute("href"));
   espera("público: orientação para comentar", true, card.textContent.includes("Comment on the GitHub issue"));
   espera("público: sem aviso API", false, app.textContent.includes("API"));
 

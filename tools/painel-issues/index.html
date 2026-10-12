@@ -177,7 +177,7 @@ var PUBLIC_TEXT = {
   "Em andamento": "In progress",
   "Planejado": "Planned",
   "Plataforma não informada": "Unknown platform",
-  "Quero pegar": "I want to help",
+  "Quero pegar": "Work on this",
   "Comente na issue do GitHub para oferecer ajuda.": "Comment on the GitHub issue to offer help.",
   "Ver mais ": "Show more ",
   "Nenhum item registrado.": "No items recorded.",
@@ -208,12 +208,11 @@ var PUBLIC_TEXT = {
   "Alvo": "Target",
   "Limpar": "Clear",
   " de ": " of ",
-  "Desenvolvimento aberto / Nuvio Legacy": "Open development / Nuvio Legacy",
-  "O próximo capítulo. Feito com você.": "The next chapter. Built with you.",
-  "Acompanhe as entregas, entenda o que vem a seguir e ajude a melhorar a experiência na sua TV.": "Follow releases, see what is coming next and help improve the experience on your TV.",
-  "Quero ajudar": "I want to help",
+  "Roadmap e status das releases": "Roadmap and release status",
+  "Issues, trabalho planejado e correções entregues por versão, para cada plataforma suportada.": "Issues, planned work and shipped fixes by version, for each supported platform.",
+  "Quero ajudar": "Contribute",
   "Roadmap por release": "Roadmap by release",
-  "Em trabalho agora": "In progress now",
+  "Em trabalho agora": "In progress",
   "Como ajudar": "How to help",
   "Entregas recentes": "Recent releases",
   "Todas as issues": "All issues",
@@ -869,7 +868,7 @@ function esqueleto() {
   }
   app.appendChild(el("p",{id:"feedback",role:"status",class:"notice"}));
   function sec(titulo, id, cls) { app.appendChild(el("h2", { text: titulo })); var b = el("div", { id: id, class: cls || "" }); app.appendChild(b); return b; }
-  app.appendChild(el("section", { class: "hero" }, [el("div", null, [el("div", { class: "eyebrow", text: "Desenvolvimento aberto / Nuvio Legacy" }), el("h2", { text: "O próximo capítulo. Feito com você." }), el("p", { text: "Acompanhe as entregas, entenda o que vem a seguir e ajude a melhorar a experiência na sua TV." }), el("a", { href: "#ajudar", class: "cta", text: "Quero ajudar" })]), el("div", { class: "poster-wall", "aria-hidden":"true" }, POSTERS.map(function(src){return el("img",{src:src,alt:""});}))]));
+  app.appendChild(el("section", { class: "hero" }, [el("div", null, [el("div", { class: "eyebrow", text: "Nuvio Legacy" }), el("h2", { text: "Roadmap e status das releases" }), el("p", { text: "Issues, trabalho planejado e correções entregues por versão, para cada plataforma suportada." }), el("a", { href: "#ajudar", class: "cta", text: "Quero ajudar" })]), el("div", { class: "poster-wall", "aria-hidden":"true" }, POSTERS.map(function(src){return el("img",{src:src,alt:""});}))]));
   app.appendChild(el("div", { class: "sub", id: "meta" }));
   app.appendChild(el("div", { class: "sub" }, [el("span", { id: "atualiz" }), el("span", { id: "falha", hidden: "" })]));
   sec("Roadmap por release", "roadmap", "release-grid");
