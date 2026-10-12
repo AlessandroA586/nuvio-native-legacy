@@ -2060,15 +2060,22 @@ int stream_proxima_sem_perda(int atual) {
   return lista[melhor].altura >= lista[atual].altura &&
          lista[melhor].dolbyVision >= lista[atual].dolbyVision;
 }
-int stream_proxima_vod(int atualIdx) {
-  // atualIdx < 0 (nunca abriu nenhuma): comeca do topo da ordem.
-  int achou = atualIdx < 0;
+// Chamar sob verTrava: tanto lista quanto exib podem ser substituidas pela UI.
+static int proximaVODSemTrava(int atualIdx) {
+  // A vencedora inicial pode estar no fim: percorrer TODAS as nao tentadas,
+  // na ordem do addon. Falhas anteriores ja estao excluidas nesta lista.
   for (int k = 0; k < n; k++) {
     int i = ORD(k);
-    if (achou && !foraDoAuto(i) && grupoDe(i) >= 0) return i;
-    if (i == atualIdx) achou = 1;
+    if (i != atualIdx && !foraDoAuto(i) && grupoDe(i) >= 0) return i;
   }
   return -1;
+}
+int stream_proxima_vod(int atualIdx) {
+  int i;
+  pthread_mutex_lock(&verTrava);
+  i = proximaVODSemTrava(atualIdx);
+  pthread_mutex_unlock(&verTrava);
+  return i;
 }
 int stream_verificar_proxima_vod(int atualIdx, int tentativas) {
   Conferencia c = { 0, 0, 0, -1 };
@@ -2076,10 +2083,19 @@ int stream_verificar_proxima_vod(int atualIdx, int tentativas) {
   c.geracao = stream_lista_geracao();
   // Sem reordenar pela pontuacao nem resolver a mesma URL falhada outra vez.
   // Limita tambem a conferencia: todas mortas nao podem custar dezenas de GETs.
-  while (tentativas-- > 0 && (i = stream_proxima_vod(i)) >= 0) {
+  while (tentativas-- > 0) {
+    pthread_mutex_lock(&verTrava);
+    if (listaGeracao != c.geracao) c.abortou = 1;
+    i = c.abortou ? -1 : proximaVODSemTrava(atualIdx);
+    pthread_mutex_unlock(&verTrava);
+    if (i < 0) break;
     if (verificarOuParar(i, &c)) return c.abortou ? -1 : i;
+    pthread_mutex_lock(&verTrava);
+    if (listaGeracao != c.geracao) c.abortou = 1;
+    // Sonda ruim nao prova erro de abertura, nem pode excluir na lista nova.
+    if (!c.abortou) stream_automatico_excluir(i);
+    pthread_mutex_unlock(&verTrava);
     if (c.abortou) break;
-    stream_automatico_excluir(i); // sonda ruim nesta rodada nao prova erro de abertura
   }
   return -1;
 }

@@ -180,7 +180,8 @@ int  stream_automatico(void);
 // existe e NAO e pior que ela: mesma resolucao ou maior, Dolby Vision igual ou
 // melhor. 0 = nao ha proxima, ou a proxima baixaria a qualidade (#202).
 int  stream_proxima_sem_perda(int atual);
-// Proxima VOD na ordem de exibicao (a do addon), pulando as ja falhadas.
+// Primeira VOD nao tentada na ordem do addon, inclusive antes da atual.
+// Pula a atual e as ja falhadas; leitura protegida contra troca de lista.
 int  stream_proxima_vod(int atual);
 // Confere a proxima da ordem do addon fora do fio de desenho; -1 se acabou.
 int  stream_verificar_proxima_vod(int atual, int tentativas);

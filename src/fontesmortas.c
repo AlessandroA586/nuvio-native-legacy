@@ -21,6 +21,16 @@ static uint64_t bytes(uint64_t h, const char *s) {
   for (; *s; s++) { h ^= (unsigned char)*s; h *= UINT64_C(1099511628211); }
   return h;
 }
+static int volatil(const char *p, size_t n) {
+  static const char *const nomes[] = {
+    "token", "access_token", "expires", "expiry", "exp", "sig", "signature",
+    "auth", "authorization", "policy", "key-pair-id"
+  };
+  for (size_t i = 0; i < sizeof nomes / sizeof *nomes; i++)
+    if (strlen(nomes[i]) == n && !strncasecmp(p, nomes[i], n)) return 1;
+  return (n >= 6 && !strncasecmp(p, "x-amz-", 6)) ||
+         (n >= 7 && !strncasecmp(p, "x-goog-", 7));
+}
 static uint64_t identidade(const Stream *s) {
   uint64_t h = UINT64_C(14695981039346656037);
   char v[4096], idx[32];
@@ -34,8 +44,8 @@ static uint64_t identidade(const Stream *s) {
     snprintf(idx, sizeof idx, ":%d", s->fileIdx);
     return bytes(bytes(bytes(h, "t:"), v), idx);
   }
-  // Host e esquema nao distinguem caixa. So ids explicitos da query sao
-  // estaveis; assinaturas, expiracao e tokens nao identificam outro arquivo.
+  // Host nao distingue caixa. Preservar seletores desconhecidos da query:
+  // video, file, episode etc. podem identificar arquivos distintos.
   const char *p = strstr(s->url, "://");
   if (!p) return 0;
   p += 3;
@@ -43,19 +53,21 @@ static uint64_t identidade(const Stream *s) {
     { v[k++] = (char)tolower((unsigned char)*p++); }
   while (*p && *p != '?' && *p != '#' && k + 1 < sizeof v) v[k++] = *p++;
   v[k] = 0;
-  h = bytes(bytes(h, "u:"), v);
+  // Versao nova ignora marcas HTTP antigas, que podiam misturar arquivos.
+  h = bytes(bytes(h, "u2:"), v);
   if (*p == '?') {
     p++;
     while (*p && *p != '#') {
-      const char *fim = strchr(p, '&'), *igual = strchr(p, '=');
-      size_t len = fim ? (size_t)(fim - p) : strlen(p);
-      if (igual && (size_t)(igual - p) < len &&
-          ((size_t)(igual - p) == 2 && !strncasecmp(p, "id", 2))) {
-        h = bytes(h, "?id=");
-        for (const char *q = igual + 1; q < p + len; q++) { h ^= (unsigned char)*q; h *= UINT64_C(1099511628211); }
+      size_t len = strcspn(p, "&#");
+      const char *igual = memchr(p, '=', len);
+      size_t nomeLen = igual ? (size_t)(igual - p) : len;
+      if (len && !volatil(p, nomeLen)) {
+        h = bytes(h, "?");
+        for (const char *q = p; q < p + len; q++) { h ^= (unsigned char)*q; h *= UINT64_C(1099511628211); }
       }
-      if (!fim) break;
-      p = fim + 1;
+      p += len;
+      if (*p != '&') break;
+      p++;
     }
   }
   return h;

@@ -3,6 +3,8 @@
 #include "streams.h"
 #include "selospacote.h"
 #include "fonteregra.h"
+#include "../src/streams.c"
+#include <errno.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,7 +47,112 @@ int naovideo_nome(const char *a, const char *b, int h, long t) {
   (void)a; (void)b; (void)h; (void)t; return 0;
 }
 
-int main(void) {
+static int sondas, sondaTroca, sondaFalha;
+int debrid_resolver_cache(const char *h, int f, char *u, unsigned t, int *fora) {
+  (void)h; (void)f; (void)u; (void)t; (void)fora; assert(!"sem torrent nesta sonda"); return 0;
+}
+int rede_url_final_tipo(const char *u, int s, const char *const *c, char *d,
+                        unsigned t, int *st, char *m, unsigned mt, long *b) {
+  (void)s; (void)c; (void)st; (void)m; (void)mt; (void)b;
+  sondas++;
+  snprintf(d, t, "%s", u);
+  if (sondaTroca) {
+    Stream *nova = calloc(1, sizeof *nova); assert(nova);
+    strcpy(nova->provedor, "Novo"); strcpy(nova->url, "https://nova.invalid/video");
+    stream_definir_lista(nova, 1); free(nova);
+  }
+  return !sondaFalha;
+}
+char *rede_baixar_st(const char *u, int s, const char *const *c, int *st) {
+  (void)u; (void)s; (void)c; (void)st; assert(!"sem HLS nesta sonda"); return NULL;
+}
+int naovideo_mime(const char *m, const char *u, long b) { (void)m; (void)u; (void)b; return 0; }
+int fa_player_falhou_foi(unsigned r, int i) { (void)r; (void)i; return 0; }
+void fa_concluir(unsigned r, int i, int ok) { (void)r; (void)i; (void)ok; }
+
+static pthread_mutex_t eventoTrava = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t evento = PTHREAD_COND_INITIALIZER;
+static int iniciou, terminou;
+static _Atomic int parar;
+static void *varrerTrocas(void *u) {
+  (void)u;
+  while (!atomic_load(&parar)) (void)stream_proxima_vod(-1);
+  return NULL;
+}
+static void *varrer(void *u) {
+  (void)u;
+  pthread_mutex_lock(&eventoTrava);
+  iniciou = 1; pthread_cond_signal(&evento);
+  pthread_mutex_unlock(&eventoTrava);
+  (void)stream_proxima_vod(-1);
+  pthread_mutex_lock(&eventoTrava);
+  terminou = 1; pthread_cond_signal(&evento);
+  pthread_mutex_unlock(&eventoTrava);
+  return NULL;
+}
+static void concorrencia(void) {
+  pthread_t fio;
+  struct timespec limite;
+  int r = 0, leuDuranteTroca;
+  // A UI esta substituindo a lista: a varredura deve esperar a mesma trava.
+  pthread_mutex_lock(&verTrava);
+  assert(!pthread_create(&fio, NULL, varrer, NULL));
+  pthread_mutex_lock(&eventoTrava);
+  while (!iniciou) pthread_cond_wait(&evento, &eventoTrava);
+  clock_gettime(CLOCK_REALTIME, &limite); limite.tv_sec++;
+  while (!terminou && !r) r = pthread_cond_timedwait(&evento, &eventoTrava, &limite);
+  assert(!r || r == ETIMEDOUT);
+  leuDuranteTroca = terminou;
+  pthread_mutex_unlock(&eventoTrava);
+  pthread_mutex_unlock(&verTrava);
+  assert(!pthread_join(fio, NULL));
+  assert(!leuDuranteTroca && "varredura acessou a lista durante substituicao");
+  Stream *l = calloc(3, sizeof *l); assert(l);
+  for (int i = 0; i < 3; i++) {
+    strcpy(l[i].provedor, "Addon"); strcpy(l[i].url, "https://exemplo.invalid/video");
+  }
+  assert(!pthread_create(&fio, NULL, varrerTrocas, NULL));
+  for (int i = 0; i < 2000; i++) stream_definir_lista(l, i % 4);
+  atomic_store(&parar, 1); assert(!pthread_join(fio, NULL));
+  stream_definir_lista(NULL, 0); free(l);
+}
+int main(int argc, char **argv) {
+  if (argc > 1 && !strcmp(argv[1], "concorrencia")) {
+    concorrencia(); puts("fontesmortas: PASS (concorrencia)"); return 0;
+  }
+  if (argc > 1 && !strcmp(argv[1], "ordem")) {
+    Stream *l = calloc(2, sizeof *l); assert(l);
+    for (int i = 0; i < 2; i++) {
+      strcpy(l[i].provedor, "Addon");
+      snprintf(l[i].url, sizeof l[i].url, "https://exemplo.invalid/%d", i);
+      l[i].altura = i ? 2160 : 720;
+    }
+    stream_definir_lista(l, 2); free(l);
+    stream_vod_falhou(1); // Vencedora inicial (2160p) no fim da lista.
+    assert(stream_automatico_disponivel(0));
+    assert(stream_proxima_vod(1) == 0);
+    assert(stream_verificar_proxima_vod(1, 1) == 0 && sondas == 1);
+    // Troca durante a sonda: aborta e nao exclui o mesmo indice da lista nova.
+    sondaTroca = sondaFalha = 1;
+    assert(stream_verificar_proxima_vod(1, 3) == -1 && sondas == 2);
+    assert(stream_automatico_disponivel(0));
+    stream_vod_falhou(0);
+    assert(stream_proxima_vod(0) == -1);
+    stream_definir_lista(NULL, 0); free(disco);
+    puts("fontesmortas: PASS (vencedora no fim)"); return 0;
+  }
+  if (argc > 1 && !strcmp(argv[1], "identidade")) {
+    Stream *l = calloc(2, sizeof *l); assert(l);
+    strcpy(l[0].provedor, "Addon");
+    strcpy(l[0].url, "https://proxy.example/play?video=filmeA&token=velho");
+    l[1] = l[0]; strcpy(l[1].url, "https://proxy.example/play?video=filmeB&token=novo");
+    fontesmortas_marcar(&l[0]); fontesmortas_iniciar();
+    assert(fontesmortas_idade(&l[1]) < 0 && "filme B nunca foi aberto");
+    strcpy(l[1].url, "https://proxy.example/play?token=novo&video=filmeA#fragmento");
+    assert(fontesmortas_idade(&l[1]) >= 0);
+    free(l); free(disco);
+    puts("fontesmortas: PASS (seletor de conteudo)"); return 0;
+  }
   Stream *s = calloc(4, sizeof *s);
   assert(s);
   strcpy(s[0].provedor, "Addon A");
@@ -96,9 +203,12 @@ int main(void) {
   fontesmortas_limpar(&s[2]);
   fontesmortas_marcar(&s[0]);
   assert(stream_proxima_vod(2) == 1);
+  assert(stream_proxima_vod(1) == 2); // candidata anterior ainda nao tentada
+  stream_automatico_excluir(2);
   assert(stream_proxima_vod(1) == -1);
   fontesmortas_limpar(&s[0]);
   assert(stream_proxima_vod(2) == 0);
+  stream_definir_lista(NULL, 0);
   free(s); free(disco);
   puts("fontesmortas: PASS (identidade, TTL, disco, ordem, escolha manual)");
   return 0;

@@ -1444,6 +1444,7 @@ static void processarTorrentJob(void) {
   if (valido) {
     if (j->resultado == 1 && j->url[0]) {
       player_definir_fonte(j->url);
+      if (!player_id_canal()[0]) fonteManualDesde = SDL_GetTicks();
     } else if (j->resultado == DEBRID_BAIXANDO) {
       if (!player_id_canal()[0]) stream_vod_falhou(j->indice);
       char titulo[160];
@@ -1713,8 +1714,11 @@ static void vigiarAberturaManual(void) {
   Uint32 desde;
   if (!fonteManualDesde) return;
   if (!player_aberto() || player_quer_sair() || player_id_canal()[0] ||
-      fonteVODAutomatica || aguardandoFonte != 0 || player_fonte_falhou() ||
-      (video_pronto() && video_pos() > 0.25)) {
+      fonteVODAutomatica || aguardandoFonte != 0 || player_fonte_falhou()) {
+    fonteManualDesde = 0; return;
+  }
+  if (video_pronto() && video_pos() > 0.25) {
+    stream_vod_tocou(stream_atual());
     fonteManualDesde = 0; return;
   }
   desde = SDL_GetTicks() - fonteManualDesde;
@@ -4343,7 +4347,6 @@ void app_atualizar(float dt, Uint32 agora) {
 
   vigiarFonteGuardada();
   if (player_aberto() && !player_id_canal()[0] && video_pronto() && video_pos() > 0.25) {
-    if (fonteManualDesde) { stream_vod_tocou(stream_atual()); fonteManualDesde = 0; }
     if (fonteVODAutomatica && !fonteVODPrimeiroQuadro) {
       fonteVODPrimeiroQuadro = 1;
       stream_vod_tocou(stream_atual());
