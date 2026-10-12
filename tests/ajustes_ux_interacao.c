@@ -29,6 +29,35 @@ int main(void) {
   dados_iniciar(dir); assert(!strcmp(dados_dir(), dir)); snprintf(dirAjustes, sizeof dirAjustes, "%s", dir);
   ajustes_iniciar(); assert(gravar());
 
+  // #427: a saved request above the RAM cap stays visible, but cannot be selected again.
+  {
+    char t[160];
+    int lingua = valor[AJ_IDIOMA];
+    valor[AJ_IDIOMA] = IDIOMA_PT + 1;
+    int cap = tex_teto_ram_mb();
+    assert(cap == 160);   // no tex_iniciar: unknown RAM uses the conservative cap
+    valor[AJ_TEX_MB] = 6;
+    assert(!strcmp(textoValor(AJ_TEX_MB), "512 MB → 160 MB nesta TV"));
+    uxValorTexto(AJ_TEX_MB, 6, t, sizeof t);
+    assert(!strcmp(t, textoValor(AJ_TEX_MB)));
+    assert(ajustes_tex_mb() == 512 && valor[AJ_TEX_MB] == 6);
+    assert(passoAdiante(AJ_TEX_MB, -1) == 2);
+    assert(passoAdiante(AJ_TEX_MB, 1) == 0);
+    uxAbrirEditor(AJ_TEX_MB);
+    key(SDLK_UP); assert(uxPendente == 2);
+    key(SDLK_DOWN); assert(uxPendente == 2);
+    ajPontEdValor(6, 0); assert(uxPendente == 2);
+    assert(!definirValorDireto(AJ_TEX_MB, 5));
+    key(SDLK_ESCAPE);
+    valor[AJ_TEX_MB] = 2;
+    assert(passoAdiante(AJ_TEX_MB, 1) == 0);
+    assert(!strcmp(textoValor(AJ_TEX_MB), "160 MB"));
+    valor[AJ_TEX_MB] = 0;
+    assert(passoAdiante(AJ_TEX_MB, -1) == 2);
+    assert(!strcmp(textoValor(AJ_TEX_MB), "Automático"));
+    valor[AJ_IDIOMA] = lingua;
+  }
+
   // Glass and outline are reachable without advanced settings, even when off.
   assert(!uxAvancada(AJ_VIDRO) && !uxAvancada(AJ_VIDRO_CONTORNO));
   original = valor[AJ_VIDRO]; valor[AJ_VIDRO] = 1;

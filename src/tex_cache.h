@@ -215,6 +215,9 @@ void tex_threads_info(int *usadas, int *disponiveis);
 // Teto escolhido em Ajustes, em MB, aplicado ao vivo e travado pelo que a RAM
 // da TV suporta; 0 volta ao automatico. `fixo` passa a 3 quando esta em vigor.
 void tex_definir_orcamento_mb(int mb);
+// O maior teto, em MB, que a RAM desta TV deixa Ajustes pedir (o mesmo que
+// tex_definir_orcamento_mb aplica): Ajustes usa para mostrar o valor efetivo.
+int tex_teto_ram_mb(void);
 // Aviso de pressao de memoria do sistema (Android onTrimMemory, de qualquer fio):
 // baixa o teto por 30 s e o proximo quadro despeja arte fria ate caber.
 // `tex_pressao_pct` e a tabela nivel -> % do teto que fica (100 = sem efeito).
