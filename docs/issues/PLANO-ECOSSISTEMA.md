@@ -220,7 +220,9 @@ Limite do QR: 134 bytes (`src/qr.h`). Todas as URLs de verificação acima cabem
 - **Q2:** sim — importação só leitura pela API do Stremio autorizada; `authKey` só em memória.
 - **Q4:** sim — Simkl scrobble (#459) entra na 2.0.6, antes do watch_state.
 - **Q6:** `nuviolegacy://` com as mesmas formas do oficial (`nuviolegacy://movie/<imdb>`, `nuviolegacy://detail/tv/<imdb>`).
-- Q3, Q5, Q7, Q8: em aberto.
+- **Q3:** só Cinemeta `addon_catalog`; não pedir permissão ao stremio-addons.net.
+- **Q8:** sim — guia "configure no celular, a TV segue" no Discord, em inglês, depois de validar com conta de teste.
+- Q5 (registro de apps), Q7 (#437): em aberto.
 
 ## 9. Prioridade proposta (sem sobrescrever o mapa)
 
