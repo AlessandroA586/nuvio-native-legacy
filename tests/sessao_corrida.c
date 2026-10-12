@@ -15,6 +15,11 @@
 //   r504     : renovacao em 504 com 16 fios -> UM pedido, sessao fica.
 //   leitores : 8 fios fazendo RPC (com 401 forcado em rodadas) e 4 lendo o
 //              token: nenhuma copia sai rasgada.
+//   copia    : token vencido no disco: sessao_token_copiar renova UMA vez e
+//              devolve o novo (o Worker nunca recebe o vencido).
+//   copia504 : mesma coisa com a renovacao em 504: copia devolve 0, dst vazio.
+//   recusado : Worker 401 com o token atual: UMA renovacao; 401 repetido com o
+//              token ja trocado nao renova de novo.
 // Com -DANTIGO compila contra o sessao.c velho (sem sessao_token_copiar),
 // para a evidencia de antes: SESSAO_C=<arquivo> CFLAGS_X=-DANTIGO.
 #include "sessao.h"
@@ -225,6 +230,44 @@ int main(int argc, char **argv) {
     confere("nenhuma copia do token rasgada", rasgados == 0);
     confere("nenhum refresh token reusado (400)", recusas400 == 0);
     confere("continua logado", sessao_logada());
+  } else if (!strcmp(caso, "copia") || !strcmp(caso, "copia504")) {
+    // Quem leva o token ao Worker pela sessao_token_copiar: um token VENCIDO
+    // nao sai. A copia renova uma vez e devolve o novo; se a renovacao falha,
+    // sai token nenhum (nada vai ao Worker).
+    char t[3000];
+    int ok;
+    t[0] = 0;
+    gravar(PL_VENCIDO);
+    if (!strcmp(caso, "copia504")) stRenovar = 504;
+    sessao_iniciar();
+    ok = sessao_token_copiar(t, sizeof t);
+    printf("  renovacoes=%d token=%.12s\n", renovacoes, t);
+    if (!strcmp(caso, "copia")) {
+      confere("token vencido: a copia renova UMA vez", renovacoes == 1);
+      confere("devolve o token novo, nao o vencido",
+              ok && !strstr(t, PL_VENCIDO) && !strncmp(t, "t0002.", 6));
+      confere("token novo: segunda copia nao renova de novo",
+              sessao_token_copiar(t, sizeof t) && renovacoes == 1);
+      confere("continua logado", sessao_logada());
+    } else {
+      confere("renovacao em 504: copia devolve 0 e dst vazio", !ok && t[0] == 0);
+      confere("renovacao em 504: UM pedido ao servidor", renovacoes == 1);
+      confere("sessao fica", sessao_logada());
+    }
+  } else if (!strcmp(caso, "recusado")) {
+    // O Worker recusa com 401 o token que mandamos: UMA renovacao. Um 401 que
+    // chega com o token ja trocado (outro fio renovou) nao renova de novo.
+    char t[3000];
+    t[0] = 0;
+    gravar(PL_BOM);
+    sessao_iniciar();
+    sessao_token_copiar(t, sizeof t);
+    sessao_token_recusado(t);
+    confere("401 do Worker: UMA renovacao", renovacoes == 1);
+    sessao_token_recusado(t);
+    confere("401 com o token ja trocado: nao renova de novo", renovacoes == 1);
+    confere("continua logado", sessao_logada());
+    confere("o token seguinte e o novo", sessao_token_copiar(t, sizeof t) && !strncmp(t, "t0002.", 6));
   } else {
     printf("caso desconhecido\n");
     return 2;

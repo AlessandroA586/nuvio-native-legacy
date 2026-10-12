@@ -179,11 +179,18 @@ static int fioEnviar(void *u) {
     int st = 0, manter;
     char *r;
     travar();
-    if (nFila < 1 || !atividade_envia() || !identidade(cab)) { fioVivo = 0; destravar(); return 0; }
+    if (nFila < 1 || !atividade_envia()) { fioVivo = 0; destravar(); return 0; }
     snprintf(corpo, sizeof corpo, "%s", fila[0]);
     destravar();
+    // Fora da trava: a identidade pode renovar o token (rede), e o laco de
+    // desenho toma esta mesma trava para enfileirar.
+    if (!identidade(cab)) { travar(); fioVivo = 0; destravar(); return 0; }
     r = rede_postar_st(fioUrl, ATIV_TEMPO_REDE, cab, corpo, &st);
     free(r);
+    // 401 com a conta Nuvio: o token venceu ou foi recusado. Renova UMA vez; o
+    // evento fica na fila e sai com o token novo, em vez de repetir o mesmo
+    // token a cada minuto.
+    if (st == 401 && !strcmp(fioVia, "X-Nuvio-Auth: nuvio")) sessao_token_recusado(fioAut + 22);
     // FALHA DE TRANSPORTE, 5xx, 429 e 401 (identidade ainda nao reconhecida)
     // ficam na fila para a proxima vez. Qualquer outro status — 2xx, e tambem
     // 400/404 de um servidor que ainda nao conhece o evento — sai da fila:
