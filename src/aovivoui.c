@@ -277,10 +277,10 @@ static void aovivo_osd_desenharCorpo_(const AoVivoOsd *o, float a) {
   // Fontes, Audio, Legendas e as Informacoes cresciam de OUTRO lugar (a ilha do
   // player, sem relogio no canal). Agora a hora e a ilha do player
   // (plrilha_relogio, chamado por player.c) e tudo nasce dela, como no filme.
-  { float yr = 48.0f + 56.0f + 14.0f;   // Y_TOPO + PIL_H de plrilha.c + vao
+  { float yr = NV_ILHA_Y + 56.0f + 14.0f;   // Y_TOPO + PIL_H de plrilha.c + vao
     GfxRect ir;
     if (plrilha_rect(&ir) && ir.y + ir.h + 14.0f > yr) yr = ir.y + ir.h + 14.0f;
-    if (o->pausado) { pausao_selo(NV_TELA_W - AV_X, yr, 1, a); yr += PAUSAO_SELO_H + 12.0f; }
+    if (o->pausado) { pausao_selo(NV_TELA_W - NV_ILHA_MARGEM_D, yr, 1, a); yr += PAUSAO_SELO_H + 12.0f; }
     if (o->pausado && (o->pausaS > 0 || o->janelaS >= 60)) {
       char l2[160] = "", p1[64] = "", p2[80] = "";
       TxtLinha t;
@@ -288,13 +288,13 @@ static void aovivo_osd_desenharCorpo_(const AoVivoOsd *o, float a) {
       if (o->janelaS >= 60) { char d[24]; relogioDur(d, sizeof d, o->janelaS); snprintf(p2, sizeof p2, i18n("Dá para voltar até %s"), d); }
       snprintf(l2, sizeof l2, "%s%s%s", p1, (p1[0] && p2[0]) ? "  \xc2\xb7  " : "", p2);
       t = txt_linha(TXT_ILHA_SUB, l2, 243, 242, 239, 200);
-      txt_desenhar_alpha(t, NV_TELA_W - AV_X - t.w, yr, a);
+      txt_desenhar_alpha(t, NV_TELA_W - NV_ILHA_MARGEM_D - t.w, yr, a);
       yr += t.h + 6.0f;
     }
     if (o->bufferando) {
       // "Carregando o fluxo" e estado de aviso: ambar.
       TxtLinha lb = txt_linha(TXT_ILHA_SUB, "Carregando o fluxo…", 240, 185, 74, 255);
-      txt_desenhar_alpha(lb, NV_TELA_W - AV_X - lb.w, yr, a);
+      txt_desenhar_alpha(lb, NV_TELA_W - NV_ILHA_MARGEM_D - lb.w, yr, a);
       yr += lb.h + 6.0f;
     } }
 

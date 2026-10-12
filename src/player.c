@@ -5507,7 +5507,7 @@ static void desenharOsdCorpo(Uint32 agora, float a, float ac, const CatItem *c) 
     const char *rotAudio = ehCanal() ? "" : textoAudioAtual();
     TxtLinha lAudio = { 0 };
     if (rotAudio[0]) lAudio = txt_linha(TXT_G18M, rotAudio, 243, 242, 239, 255);
-    { const float mh = 34.0f;
+    { const float mh = 34.0f, ySelos = NV_ILHA_Y + (56.0f - mh) * 0.5f;   // 56 = PIL_H da ilha do player
       float w[4], tot = 0.0f, x;
       int i, esq = plrilha_direita();
       if (lAudio.w > 0) tot += (nSelos ? 22.0f : 0.0f) + (float)lAudio.w;
@@ -5521,12 +5521,13 @@ static void desenharOsdCorpo(Uint32 agora, float a, float ac, const CatItem *c) 
       selosVisto = agora;
       float t0 = (float)(agora - selosDesde) / 1000.0f;
       for (i = 0; i < nSelos; i++) { w[i] = marca_formato_largura(selos[i], mh); tot += w[i] + (i ? 22.0f : 0.0f); }
-      x = esq ? PLR_MARGEM : NV_VTELA_W - PLR_MARGEM - tot;
+      // Espelho da ilha do relogio (plrilha.c): mesma margem, centro na altura dela.
+      x = esq ? NV_ILHA_MARGEM_D : NV_VTELA_W - NV_ILHA_MARGEM_D - tot;
       for (i = 0; i < nSelos; i++) {
         float ts = anim_clamp((t0 - i * 0.09f) / 0.26f, 0.0f, 1.0f);
         float e  = 1.0f - (1.0f - ts) * (1.0f - ts);
         if (e > 0.004f)
-          marca_formato(selos[i], x, 58.0f + desce + (1.0f - e) * 10.0f, mh,
+          marca_formato(selos[i], x, ySelos + desce + (1.0f - e) * 10.0f, mh,
                         0.953f, 0.949f, 0.937f, ac * 0.82f * e);
         x += w[i] + 22.0f;
       }
@@ -5534,7 +5535,7 @@ static void desenharOsdCorpo(Uint32 agora, float a, float ac, const CatItem *c) 
         float ts = anim_clamp((t0 - nSelos * 0.09f) / 0.26f, 0.0f, 1.0f);
         float e  = 1.0f - (1.0f - ts) * (1.0f - ts);
         if (e > 0.004f)
-          txt_desenhar_alpha(lAudio, x, 58.0f + desce + (mh - (float)lAudio.h) * 0.5f + (1.0f - e) * 10.0f,
+          txt_desenhar_alpha(lAudio, x, ySelos + desce + (mh - (float)lAudio.h) * 0.5f + (1.0f - e) * 10.0f,
                              ac * 0.82f * e);
       } }
   }

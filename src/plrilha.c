@@ -25,8 +25,10 @@
 // A mola da ilha (ilha.c, ILHA_MOLA_W/Z; o Spotlight usa a mesma, SP_MOLA).
 #define MOLA_W 10.0f
 #define MOLA_Z 0.72f
-#define X_ESQ   96.0f      // PLR_MARGEM: a coluna do OSD
-#define Y_TOPO  48.0f      // PLR_PAD_Y
+// Mesma margem e mesmo topo da ilha da Home (dono, 12/10: simetrica com os
+// selos do lado oposto em player.c, que seguem a mesma margem).
+#define X_ESQ   NV_ILHA_MARGEM_D
+#define Y_TOPO  NV_ILHA_Y
 #define CAB_H   64.0f      // cabecalho do corpo = a pilula aberta
 #define PIL_H   56.0f
 #define RAIO_CORPO 36.0f
