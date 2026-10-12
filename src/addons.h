@@ -162,6 +162,8 @@ typedef struct {
   char url[1024];
   char provedor[64]; // nome do addon que devolveu esta legenda
   char arquivo[96];  // subtitleFileName / movieReleaseName as sent; "" = not sent
+  char id[256];      // identidade enviada pelo addon; "" = nao enviada
+  int addonIndice;   // origem para dedup por id+addon
 } Legenda;
 
 void addons_buscar_legendas(const char *imdb, const char *tipo);
@@ -171,8 +173,8 @@ void addons_buscar_legendas(const char *imdb, const char *tipo);
 // `videoSize` e `videoHash`. `hash` e o behaviorHints.videoHash quando o addon
 // de fonte manda; vazio, ele e medido aqui por dois Range de 64 KiB em
 // `urlVideo` (so link remoto, sem cabecalho exigido e com `tamanho` exato).
-// A lista que ja esta na tela FICA ate a busca nova terminar inteira: trocar a
-// fonte nao pode esvaziar a folha de legendas por segundos. Mesmo id e mesmos
+// Soma a lista nova a atual sem mover indices, ate LEG_MAX; erro/vazio mantem
+// o que ja existe. Duplicatas por URL ou id+addon ficam fora. Mesmo id e mesmos
 // extras de antes: nao faz nada.
 void addons_legendas_fonte(const char *imdb, const char *tipo, const char *arquivo,
                            unsigned long long tamanho, const char *hash,

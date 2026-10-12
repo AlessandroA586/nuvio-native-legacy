@@ -29,6 +29,23 @@ int main(void) {
   dados_iniciar(dir); assert(!strcmp(dados_dir(), dir)); snprintf(dirAjustes, sizeof dirAjustes, "%s", dir);
   ajustes_iniciar(); assert(gravar());
 
+  // Seekr: sem chave avisa sem gravar; chave propria permite ligar e recarregar.
+  {
+    assert(!ajustes_seekr_habilitado());
+    antes = arquivo();
+    assert(uxAlternarDireto(AJ_SEEKR_LIGADO));
+    assert(strstr(uxAviso, "seekr.tv") && !ajustes_seekr_ligado());
+    igual(antes); free(antes);
+    seekrDefinir("seekr-chave-ficticia");
+    assert(uxAlternarDireto(AJ_SEEKR_LIGADO) && ajustes_seekr_ligado());
+    ajustes_iniciar();
+    assert(ajustes_seekr_ligado() && seekr_tem_chave());
+    seekrDefinir("");
+    assert(!ajustes_seekr_ligado() && !seekr_tem_chave());
+    assert(uxValorAtual(AJ_SEEKR_LIGADO) == 1);
+    assert(definirValorDireto(AJ_SEEKR_LIGADO, 1));
+  }
+
   // #427: a saved request above the RAM cap stays visible, but cannot be selected again.
   {
     char t[160];
