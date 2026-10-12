@@ -883,14 +883,14 @@ static int tocarFonteGuardada(void) {
   return 1;
 }
 static void vigiarFonteGuardada(void) {
+  FontevoltaSinais g;
   const char *motivo = NULL;
   Uint32 desde;
   if (!voltaAtiva) return;
   if (!player_aberto() || player_quer_sair() || player_id_canal()[0] || aguardandoFonte) {
     voltaAtiva = 0; return;
   }
-  { FontevoltaSinais g;
-    int d;
+  { int d;
     g.falhou = video_falhou() || player_fonte_falhou();
     g.pronto = video_pronto();
     g.duracao = video_duracao();
@@ -909,8 +909,10 @@ static void vigiarFonteGuardada(void) {
   fflush(stdout);
   marco("abrir: fonte guardada falhou, busca normal");
   voltaAtiva = 0;
-  // O link guardado falhou antes de abrir: mesmo VOD da lista nova.
-  { Stream s; char alvo[64];
+  // Sonda isolada so recua; a marca exige erro, clipe curto ou prazo do player.
+  if (g.falhou || (g.pronto && g.duracao > 1.0 && g.duracao < 120.0) ||
+      (g.carregando && desde > FONTEVOLTA_PRAZO_MS)) {
+    Stream s; char alvo[64];
     alvoPlayer(alvo, sizeof alvo);
     if (fontevolta_pegar(alvo, sessao_usuario(), perfis_ativo(), SDL_GetTicks(), &s))
       fontesmortas_marcar(&s);
