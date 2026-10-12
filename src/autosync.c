@@ -679,8 +679,13 @@ AutoSyncResultado autosync_alinhar(const LegendaDocumento *doc,const LegendaDocu
     }
     if(cfg.raioBuscaMs>10000)cfg.raioBuscaMs=10000;
   }
-  // Janela local: margem igual ao raio, sem afirmar cobertura do episodio.
-  r.motivo=preparar(doc,&a,&c,ini+(janela?10:0),fimJan-(janela?10:0));if(r.motivo!=AUTOSYNC_OK)goto fim;
+  // Falha global da externa continua distinta de falta de evidencia local.
+  r.motivo=preparar(doc,&a,&c,-1,-1);if(r.motivo!=AUTOSYNC_OK)goto fim;
+  if(janela) {
+    free(a.v);a=(Falas){0};
+    r.motivo=preparar(doc,&a,&c,ini+10,fimJan-10);
+    if(r.motivo!=AUTOSYNC_OK){r.referenciaInvalida=1;goto fim;}
+  }
   r.motivo=preparar(ref,&b,&c,ini,fimJan);
   if(r.motivo!=AUTOSYNC_OK){r.referenciaInvalida=1;goto fim;}
   if(di->duracaoSeg>0&&ri->duracaoSeg>0&&fabs(di->duracaoSeg-ri->duracaoSeg)>cfg.toleranciaMs/1000.0) {
@@ -695,7 +700,7 @@ AutoSyncResultado autosync_alinhar(const LegendaDocumento *doc,const LegendaDocu
     for(int k=0;k<ne;k++)if(fabs(escalas[k]-e)<.00035)novo=0;
     if(novo)escalas[ne++]=e;
   }
-  int parcial=(a.fim-a.ini)<AS_PARCIAL*(b.fim-b.ini);
+  int parcial=!janela&&(a.fim-a.ini)<AS_PARCIAL*(b.fim-b.ini);
   Pico pk=buscar(a.v,a.n,&rg,&rf,escalas,ne,0,cfg.raioBuscaMs/1000.0,parcial,&c);
   if(c.terminou){r.motivo=(AutoSyncMotivo)c.terminou;goto fim;}
   r.confianca=pk.score;r.alternativa=pk.alternativo;
@@ -787,7 +792,9 @@ AutoSyncResultado autosync_alinhar(const LegendaDocumento *doc,const LegendaDocu
   }
   // Uma janela nao prova mudanca de fps/corte no resto do arquivo.
   if(janela) {
-    if(np!=1||pc[0].t.p!=1){r.motivo=AUTOSYNC_REGION_DISAGREEMENT;goto fim;}
+    if(np!=1||pc[0].t.p!=1||fabs(pc[0].t.q)*1000>cfg.raioBuscaMs) {
+      r.motivo=AUTOSYNC_REGION_DISAGREEMENT;goto fim;
+    }
   } else {
     r.ancoras=ancorar(&a,&b,pc,np,g,ng,cfg.toleranciaMs,mapa);
     if(!mapa->nos){r.motivo=AUTOSYNC_MEMORY;goto fim;}

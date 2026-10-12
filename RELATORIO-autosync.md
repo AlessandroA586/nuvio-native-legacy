@@ -111,3 +111,50 @@ Todas as verificações abaixo passaram:
 A primeira execução de `mkvass_texto.sh` revelou um stub de teste já incompleto: `faixas_texto.c` não definia `legsync_manual_seq`, utilizado por faixas.c. Foi acrescentado apenas o stub constante; a suíte então passou. Há warnings preexistentes de inicializador/variáveis nos testes, sem falha de compilação.
 
 Os scripts `*_shot.sh` são capturas com janela GL e olho humano, explicitamente fora das suítes; não foram executados. Não houve prova visual em TV, novo log Samsung, reprodução do fluxo do servidor real nem teste de throughput no aparelho. O build local não equivale a build/execução Tizen. Esses limites impedem afirmar que a queda real foi resolvida ou que a legenda MTBB real será aceita.
+
+## Rodada 2
+
+### Integração e escopo
+
+Primeiro foi executado `git merge integracao/2.0.5`, sem conflitos, gerando `c1b1f067` com pais `7fa87017` e `5efd0be4`. As mudanças dos dois lados foram preservadas; nenhuma mudança da integração foi revertida. Esta rodada corrige os dois P1 de `/Volumes/ExternalSSD/tmp/rev/REV-autosync.md`, reutilizando as provas `prova-troca.c` e `prova-janela.c` nas suítes existentes em `tests/`.
+
+### P1: recorte insuficiente autorizava troca
+
+`autosync_alinhar` valida primeiro a externa inteira. Para referência com `LEGENDA_DOC_JANELA`, prepara depois o recorte com margem de 10 segundos. Se somente esse recorte não sustenta a comparação, marca `referenciaInvalida`, chegando ao portão existente `autoFalhou(semReferencia)` do legsync. Falhas globais da externa continuam distintas; a política anterior para uma externa globalmente insuficiente permanece coberta pela regressão TCL 2.
+
+FAIL → PASS em `bash tests/legsync.sh`:
+
+- Antes da correção, a externa correta `emb.srt` tinha 113 falas, a referência local em `[0, 120]` tinha 20, e a margem deixava somente 18 na externa. A engine recusava com `sparse_dialogue`, o legsync anunciava “referencia recusou; troca uma vez” e o assert `trocas == 0` falhava com `trocas=1`.
+- Depois, a mesma regressão encerra com `trocas=0`, fase automática 3, sem retorno à original nem troca sinalizada, offset automático zero e atraso manual de 320 ms preservado.
+- `tests/autosync.c` também verifica recorte com poucas falas, span curto e nenhuma interseção: os três recusam com `referenciaInvalida` e offset zero. Uma externa globalmente esparsa continua recusando sem marcar falha da referência.
+
+### P1: modo CD1/CD2 escapava do raio local
+
+A ampliação parcial CD1/CD2 é desativada para `LEGENDA_DOC_JANELA`. Antes do aceite, o offset refinado em segundos é comparado ao raio configurado, limitado a 10.000 ms; não depende apenas do arredondamento do offset aplicado. A verificação ocorre depois do alinhamento/refino e exige também um único trecho com escala 1.
+
+FAIL → PASS em `bash tests/autosync.sh`:
+
+- A prova da janela `[1000, 1120]`, 40 falas concentradas e duas nas bordas foi incorporada ao teste. Antes, o worker aceitava e aplicava `30000 ms`, fazendo falhar o assert de recusa/offset zero.
+- Depois, os modos rápido e completo recusam essa mesma entrada com `low_confidence`, `offsetMs=0` e `autosync_offset_ms=0`.
+- Um teste adicional exercita o portão final: +10.000 ms é aceito; +10.100 ms chega ao refino com cobertura/confiança altas, mas é recusado com `region_disagreement` e offset aplicado zero.
+
+### Validação desta rodada
+
+Todos os comandos abaixo terminaram com código 0:
+
+| Comando | Resultado |
+| --- | --- |
+| `bash tests/mkvass_referencia.sh` | ASS 87/15.907, +2.500 ms, zero Ranges auxiliares; proteções aprovadas |
+| `SANITIZE=1 bash tests/mkvass_referencia.sh` | Mesmos resultados, sem diagnóstico ASan/UBSan |
+| `bash tests/legsync.sh` | 21 casos, incluindo a nova regressão; TCL 1, 2 e 3 aprovados |
+| `AUTOSYNC_PGS=1 bash tests/legsync.sh` | Mensagem específica, nenhuma troca, atraso manual preservado |
+| `bash tests/legref.sh` | 26 casos e HTTP local: completo, redirect, recusa de Range e cabeçalhos |
+| `bash tests/autosync.sh` | 572 verificações de corpus/estado/parser |
+| `bash tests/audsync.sh` | 23 casos |
+| `bash tests/i18n.sh` | 5.556 entradas × 28 idiomas após o merge, busca real e varredura aprovadas |
+| `git diff --check` | Sem erro de whitespace |
+| `git merge-base --is-ancestor integracao/2.0.5 HEAD` | Integração incorporada ao histórico |
+
+Logs FAIL → PASS e das suítes: `/Volumes/ExternalSSD/tmp/rev/rodada2-*.log`. A primeira tentativa do novo teste legsync terminou sem plano automático; o harness foi corrigido para habilitar o modo automático de teste. O FAIL funcional registrado acima foi então reproduzido antes de alterar a engine. Permanecem warnings preexistentes nos harnesses; nenhuma falha de compilação.
+
+Sem push, TV ou publicação. As provas são locais e sintéticas; esta rodada não acrescenta evidência sobre a queda da conexão real ou a aceitação da ASS MTBB real.

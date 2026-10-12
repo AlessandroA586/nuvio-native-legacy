@@ -5,6 +5,7 @@
 #include "legsync.h"
 #include "legenda2.h"
 #include "autosync.h"
+#include "legref.h"
 #include "rede.h"
 #include <assert.h>
 #include <math.h>
@@ -270,6 +271,21 @@ static void regressaoTcl(int caso) {
     assert(avisos == 1 && !p.espera);
   }
   legsync_destruir(); printf("TCL regressão %d: ok\n", caso);
+}
+
+// Prova-troca: externa correta, mas a margem da janela deixa so 18 falas.
+static LegendaDocumento *janelaLocal(const char *url, uint64_t sessao, const int *excl, int nExcl) {
+  (void)url; (void)excl; (void)nExcl;
+  long n; char *texto = arquivo("emb.srt", &n); assert(texto);
+  LegendaDocumentoInfo info = { .sessao = sessao, .flags = LEGENDA_DOC_COMPLETO | LEGENDA_DOC_JANELA,
+    .janelaInicio = 0, .janelaFim = 120, .identidade = "mkv-track:5" };
+  LegendaDocumento *todo = legenda_documento_bytes(texto, n, &info); free(texto); assert(todo);
+  int total, k = 0; const LegendaCue *v = legenda_documento_dados(todo, &total);
+  LegendaCue rec[120]; assert(total <= 120);
+  for (int i = 0; i < total; i++) if (v[i].fim <= 120) rec[k++] = v[i];
+  assert(k == 20);
+  LegendaDocumento *d = legenda_documento_de_cues(rec, k, &info);
+  legenda_documento_liberar(todo); return d;
 }
 
 int main(int argc, char **argv) {
@@ -641,6 +657,17 @@ int main(int argc, char **argv) {
       legsync_encerrar(); }
     casos++; }
   legsync_teste_auto(0); legsync_definir_trocador(NULL);
+
+  // Janela insuficiente nao julga a externa correta nem autoriza troca.
+  legref_fonte_local(janelaLocal); legsync_teste_auto(1);
+  legsync_audio_habilitar(0); legsync_iniciar(MKV); trocas = 0; voltou = 0;
+  legsync_definir_trocador(trocadorTeste); cand[0] = "ext_menos1200.srt"; nCand = 1;
+  legsync_primaria_externa("ext://0/emb.srt", "pt", "Correta");
+  v = esperarAuto(MKV, 3);
+  printf("janela insuficiente: trocas=%d fase=%d manual=%d\n", trocas, v.autoFase, legsync_offset_ms(320));
+  assert(trocas == 0 && voltou == 0 && !v.autoTrocou && v.fase == LEGSYNC_RECUSADA);
+  assert(v.offsetAutoMs == 0 && legsync_offset_ms(320) == 320);
+  legsync_encerrar(); legref_fonte_local(NULL); legsync_definir_trocador(NULL); legsync_teste_auto(0); casos++;
 
   // 13. SEGUNDA LEGENDA (slot 1, 2.1): a mesma engine contra a mesma faixa
   //     embutida, sozinha, mesmo com a principal embutida. Offset puro vai
