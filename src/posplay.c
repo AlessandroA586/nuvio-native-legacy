@@ -40,6 +40,10 @@
 // filme"). Ver posplay_regra_filme.
 #define PP_FILME_METADE   0.5     // nunca antes da metade da duracao
 #define PP_DUR_ESTAVEL_S  8.0     // duracao parada ha tanto tempo, no minimo
+// "Fim real" do arquivo para a cena pos-creditos: o pipeline para a uma fracao
+// de segundo da duracao (video_pos nao chega exatamente nela), entao um >=
+// exato nunca voltaria a abrir o cartao.
+#define PP_FIM_TOL_S      1.5
 
 // Cartazes dos relacionados, no tamanho da grade de "Ver tudo".
 #define PP_CARD_W  212.0f
@@ -95,13 +99,19 @@ static void cancelarPreparo(int apagar) {
     fontecache_vod_apagar(preAlvo, "series", "", &preEscopo);
 }
 static int    marcadorReal;          // o player diz: creditos de marcador real, nao estimativa (#331)
+// CENA POS-CREDITOS (TMDB 179430/179431 em CatItem.posCreditos). `aguardaCena`:
+// ha cena e o arquivo ainda nao acabou — o cartao fica no ar mas NAO age (nem
+// contagem, nem troca de titulo). `cenaPendente`: a pessoa escolheu continuar;
+// o cartao volta inteiro no fim real. So a acao da UI espera: visto/progresso
+// seguem no limiar de creditos (player.c, concluiuAgora).
+static int    cenaPendente, cenaNoFim, aguardaCena;
 static Uint32 abriuEm;               // quando o cartao do proximo episodio subiu (#331)
 
 void posplay_marcador_real(int real) { marcadorReal = real; }
 int posplay_visivel(void) { return visivel; }
 // Cartao do proximo episodio: SOBRE o video em tela cheia (o video nao recua).
 // Os relacionados do filme, bem mais altos, continuam recuando o video.
-int posplay_sobre_video(void) { return visivel && serie; }
+int posplay_sobre_video(void) { return visivel && (serie || aguardaCena); }
 
 // SAIR DA TELA PRESERVANDO A ESCOLHA, e a diferenca com posplay_fechar e o
 // issue #14 inteiro.
@@ -127,6 +137,7 @@ void posplay_fechar(void) {
   cancelarPreparo(0);
   preTentou = 0; preEpisodio[0] = preAlvo[0] = 0;
   visivel = 0; fecharEm = 0; foco = 0;
+  cenaPendente = cenaNoFim = aguardaCena = 0;
   durVista = 0.0; durEstavel = 0.0;   // titulo novo: a duracao comeca de novo
   pedT = pedE = 0; pedTitulo = -1;
   dispensado = 0;   // titulo novo: a dispensa do anterior nao vale mais
@@ -353,12 +364,18 @@ void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
     // teste chama sem player nem rede. Aqui entra so a DURACAO ESTAVEL — ver
     // durEstavel.
     deveAparecer = durEstavel >= PP_DUR_ESTAVEL_S &&
-                   posplay_regra_filme(posSeg, durSeg, creditosSeg);
+                   (posplay_regra_filme(posSeg, durSeg, creditosSeg) ||
+                    (cat_item(idx) && cat_item(idx)->posCreditos && durSeg - posSeg <= PP_FIM_TOL_S));
   }
 
   // Saiu da zona (o dono voltou o filme): a dispensa perde a validade e o
   // painel pode subir de novo quando ele chegar ao fim outra vez.
   if (!deveAparecer) dispensado = 0;
+  { const CatItem *ci = cat_item(idx);
+    cenaNoFim = ci && ci->posCreditos && durSeg - posSeg <= PP_FIM_TOL_S;
+    aguardaCena = ci && ci->posCreditos && !cenaNoFim;
+    if (cenaNoFim && cenaPendente) { cenaPendente = 0; dispensado = 0; }
+  }
 
   if (deveAparecer && !visivel && !dispensado) {
     if (!ehSerie)
@@ -406,7 +423,8 @@ void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
   if (visivel && serie) {
     // #202: a 1,5x os segundos do arquivo passam mais depressa que os do relogio.
     double resta = vel_tempo_real(durSeg - posSeg, player_velocidade_efetiva());
-    fecharEm = posplay_contagem(agora, abriuEm, fecharEm, resta, ajustes_proximo_auto(), marcadorReal, ajustes_proximo_contagem());
+    if (aguardaCena) fecharEm = 0;
+    else fecharEm = posplay_contagem(agora, abriuEm, fecharEm, resta, ajustes_proximo_auto(), marcadorReal, ajustes_proximo_contagem());
   }
 
   // A contagem so vale para o proximo episodio.
@@ -436,6 +454,12 @@ int posplay_evento(const SDL_Event *e) {
   if (k == SDLK_DOWN) {
     esconder();
     return 2;
+  }
+  // Cena pos-creditos (serie ou filme): OK = continuar assistindo, sem trocar
+  // de titulo. O cartao inteiro volta no fim real do arquivo.
+  if (aguardaCena) {
+    if (k == SDLK_RETURN || k == SDLK_KP_ENTER) { cenaPendente = 1; esconder(); return 1; }
+    return 0;
   }
   if (serie) {
     if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
@@ -529,6 +553,25 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
     if (i < 0) return;
     idx = i; }
 
+  // FILME COM CENA POS-CREDITOS: uma ilha so com o botao, sobre o video cheio
+  // (os cartazes de relacionados recuariam a imagem e cobririam a cena).
+  if (!serie && aguardaCena) {
+    float sobe = (1.0f - a) * 20.0f;
+    GfxRect ilha = { x, NV_TELA_H - 252.0f + sobe, 1180.0f, 140.0f };
+    float by, bw;
+    const char *k[2] = { "\xe2\x86\x93", "Voltar" }, *r[2] = { "Voltar ao player", "Ficar nos créditos" };
+    if (ilha.x + ilha.w > NV_TELA_W - 40.0f) ilha.x = (NV_TELA_W - ilha.w) * 0.5f;
+    by = ilha.y + (ilha.h - 60.0f) * 0.5f;
+    gfx_rect((GfxRect){ 0.0f, NV_TELA_H - 400.0f, NV_TELA_W, 400.0f }, 0, GFX_VEU_BAIXO,
+             0, 0, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.62f * a);
+    plrui_material(ilha, 36.0f, 0, a);
+    bw = plrui_botao(ilha.x + 28.0f, by, "Cena pós-créditos — continuar assistindo", "pl_play-f", 1.0f, a);
+    if (visivel && a > 0.99f && a < 1.01f)
+      ponteiro_alvo(ilha.x + 28.0f, by, bw, 60.0f, ponteiroComecar, NULL, 0, 0);
+    plrui_dicas(k, r, 2, ilha.x + 28.0f + bw + 22.0f, by + 30.0f, 0, a);
+    return;
+  }
+
   if (serie) {
     const CatItem *ci = cat_item(idx);
     const CatEp *px = NULL;
@@ -589,7 +632,7 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
       if (px && px->sinopse[0])
         txt_bloco_corta(TXT_ILHA_SUB, px->sinopse, 243, 242, 239, tx, ty, tw, 28.5f, a * 0.68f, 2);
       { float by = ilha.y + ilha.h - 28.0f - 60.0f;
-        float bw = plrui_botao(tx, by, "Começar agora", "pl_play-f", 1.0f, a);
+        float bw = plrui_botao(tx, by, aguardaCena ? "Cena pós-créditos — continuar assistindo" : "Começar agora", "pl_play-f", 1.0f, a);
         if (visivel && a > 0.99f && a < 1.01f)   // so assentado (sem a subida)
           ponteiro_alvo(tx, by, bw, 60.0f, ponteiroComecar, NULL, 0, 0);
         const char *k[2] = { "\xe2\x86\x93", "Voltar" }, *r[2] = { "Voltar ao player", "Ficar nos créditos" };
@@ -648,7 +691,7 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
 // reacao, reacao.h). As contas sao as de posplay_desenhar, sem a mola.
 float posplay_topo(float baseY) {
   if (anim < 0.01f) return baseY;
-  return serie ? NV_TELA_H - 420.0f - 16.0f : NV_TELA_H - 444.0f - 16.0f;
+  return serie ? NV_TELA_H - 420.0f - 16.0f : aguardaCena ? NV_TELA_H - 252.0f - 16.0f : NV_TELA_H - 444.0f - 16.0f;
 }
 
 #ifdef NV_SHOT_HOOKS

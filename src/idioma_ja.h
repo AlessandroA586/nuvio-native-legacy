@@ -1083,6 +1083,7 @@
   T("Catálogos", "カタログ"),
   T("Catálogos do destaque", "ヒーローのカタログ"),
   T("Cazaquistão", "カザフスタン"),
+  T("Cena pós-créditos — continuar assistindo", "エンドロール後のシーン — 視聴を続ける"),
   T("Central de avisos", "お知らせセンター"),
   T("Central de controle", "コントロールセンター"),
   T("Chamadas em excesso ao player da Samsung durante a reprodução", "再生中に Samsung プレーヤーへ過剰な呼び出しが発生する問題"),

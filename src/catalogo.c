@@ -781,7 +781,10 @@ int ajustes_idioma(void);
 // com perfil 1 continua certo (era o dono daquele Trakt) e e aceito, para o
 // perfil 1 nao pagar um arranque sem cache por nada; o de qualquer outro
 // perfil e recusado e apagado.
-#define CACHE_VERSAO 6
+// VERSAO 7: novo campo CatItem.posCreditos (cena pós-créditos, TMDB
+// 179430/179431). O sizeof recusaria o arquivo sozinho; a versao sobe mesmo
+// assim para o motivo da recusa ser o campo novo.
+#define CACHE_VERSAO 7
 // Mesmo cabecalho, itens CODIFICADOS (zeros em corrida). Um CatItem tem ~16 KB
 // e quase tudo e zero (buffers de URL dimensionados para o pior caso): 1600
 // titulos eram 25,6 MB gravados na MEMFS dentro da trava do sistema de arquivos
@@ -2336,6 +2339,24 @@ void cat_trocar_continuar(const CatItem *lista, int qtd) {
 // Roda no fio buscarEps (um por pagina de serie) e no de montar(), com o
 // desenho lendo. Tudo sob epTrava (#203): antes, epIni/epQtd eram escritos no
 // ponteiro que garantirFaixas, noutro fio, podia ter acabado de liberar.
+// CENA POS-CREDITOS (TMDB 179430/179431): o fio do detalhe descobre o sinal
+// depois de o item ja estar publicado; escreve so este bit, sem repubicar o
+// CatItem inteiro (que trocaria faixas de episodios no meio de uma leitura).
+// Roda em fio fora do desenho, como cat_definir_episodios.
+void cat_marcar_pos_creditos(const char *imdb, int pos) {
+  int i;
+  if (!imdb || !imdb[0]) return;
+  pthread_mutex_lock(&pubTrava);
+  if (itens)
+    for (i = 0; i < n; i++)
+      if (!strcmp(itens[i].imdb, imdb) && itens[i].posCreditos != (pos ? 1 : 0)) {
+        itens[i].posCreditos = pos ? 1 : 0;
+        mudou();
+        break;
+      }
+  pthread_mutex_unlock(&pubTrava);
+}
+
 void cat_definir_episodios(int indiceItem, const CatEp *lista, int qtd) {
   int m = cat_n();
   if (!lista || qtd < 1 || m < 1) return;

@@ -300,6 +300,8 @@ void reacao_player_atualizar(float dt, Uint32 agora, const CatItem *ci, int ehSe
   if (dur - durVista > 2.0 || durVista - dur > 2.0) { durVista = dur; durEstavel = 0.0; }
   else durEstavel += dt;
   if (!ci || !ci->imdb[0] || c.aberto || !ajustes_reacao_creditos()) return;
+  // Cena pos-creditos: esta pergunta tambem cobriria a imagem antes do fim.
+  if (ci->posCreditos && pos < dur) return;
   atividade_id_puro(id, sizeof id, ci->imdb);
   if (strncmp(id, "tt", 2) || !strcmp(oferecido, id)) return;
   if (durEstavel < 8.0) return;

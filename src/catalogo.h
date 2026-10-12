@@ -118,6 +118,7 @@ typedef struct {
   // fotosDoElenco em descoberta.c). Era descartado; e por ele que se chega a
   // COLECAO do filme, que o TMDB so expoe por id proprio.
   long tmdb;
+  int posCreditos; // TMDB 179430/179431: manter o video ate o fim real
   // QUANDO isto foi visto pela ultima vez, em ms desde a epoca. 0 = nao se sabe.
   //
   // Existe para ordenar a fileira "Continuar assistindo", que agora une DUAS
@@ -468,6 +469,8 @@ void cat_definir_tudo(const CatItem *lista, int qtd,
 
 // Substitui os episodios de UM titulo. Chamado quando o detalhe abre.
 void cat_definir_episodios(int indiceItem, const CatEp *lista, int n);
+// So o bit da cena pos-creditos (TMDB 179430/179431), pelo id do titulo.
+void cat_marcar_pos_creditos(const char *imdb, int pos);
 
 // Substitui UM item, preservando o resto. Usado quando o detalhe abre e traz
 // elenco, direcao e temporadas que o catalogo da fileira nao tinha.

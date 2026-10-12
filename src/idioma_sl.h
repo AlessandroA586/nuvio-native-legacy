@@ -1083,6 +1083,7 @@
   T("Catálogos", "Katalogi"),
   T("Catálogos do destaque", "Katalogi glavnega pasu"),
   T("Cazaquistão", "Kazahstan"),
+  T("Cena pós-créditos — continuar assistindo", "Prizor po koncu filma — gledaj naprej"),
   T("Central de avisos", "Središče obvestil"),
   T("Central de controle", "Nadzorno središče"),
   T("Chamadas em excesso ao player da Samsung durante a reprodução", "Odvečni klici predvajalnika Samsung med predvajanjem"),

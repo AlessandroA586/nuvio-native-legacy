@@ -1083,6 +1083,7 @@
   T("Catálogos", "Kataloger"),
   T("Catálogos do destaque", "Huvudbannerns kataloger"),
   T("Cazaquistão", "Kazakstan"),
+  T("Cena pós-créditos — continuar assistindo", "Eftertextscen — fortsätt titta"),
   T("Central de avisos", "Aviseringscenter"),
   T("Central de controle", "Kontrollcenter"),
   T("Chamadas em excesso ao player da Samsung durante a reprodução", "För många anrop till Samsungs spelare under uppspelning"),

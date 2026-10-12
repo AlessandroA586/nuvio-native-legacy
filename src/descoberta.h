@@ -113,6 +113,8 @@ void desc_tmdb(const char *dirArte);
 // campo `api_key`. Enquanto a chave sair do arquivo, ela vai dentro do .ipk e
 // e a chave de quem montou o pacote — cota dele, para todo mundo que instalar.
 void desc_tmdb_definir(const char *chave);
+// Keywords anexadas ao detalhe do TMDB: 179430/179431 sinalizam cena extra.
+int desc_tmdb_pos_creditos(const char *json);
 // "pt-BR" ou "en-US", conforme o idioma da interface: sinopse, biografia e nome
 // de colecao vem do TMDB ja traduzidos, e em ingles vinham em portugues.
 const char *desc_tmdb_idioma(void);

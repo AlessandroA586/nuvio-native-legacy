@@ -1083,6 +1083,7 @@
   T("Catálogos", "Danh mục"),
   T("Catálogos do destaque", "Danh mục banner chính"),
   T("Cazaquistão", "Kazakhstan"),
+  T("Cena pós-créditos — continuar assistindo", "Cảnh hậu kỳ — tiếp tục xem"),
   T("Central de avisos", "Trung tâm thông báo"),
   T("Central de controle", "Trung tâm điều khiển"),
   T("Chamadas em excesso ao player da Samsung durante a reprodução", "Gọi quá nhiều tới trình phát của Samsung khi đang phát"),

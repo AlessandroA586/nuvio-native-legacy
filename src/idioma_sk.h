@@ -1083,6 +1083,7 @@
   T("Catálogos", "Katalógy"),
   T("Catálogos do destaque", "Katalógy hlavného bannera"),
   T("Cazaquistão", "Kazachstan"),
+  T("Cena pós-créditos — continuar assistindo", "Scéna po titulkoch — pokračovať v sledovaní"),
   T("Central de avisos", "Centrum oznámení"),
   T("Central de controle", "Ovládacie centrum"),
   T("Chamadas em excesso ao player da Samsung durante a reprodução", "Nadbytočné volania prehrávača Samsung počas prehrávania"),

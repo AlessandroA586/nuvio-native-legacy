@@ -1083,6 +1083,7 @@
   T("Catálogos", "Κατάλογοι"),
   T("Catálogos do destaque", "Κατάλογοι του banner"),
   T("Cazaquistão", "Καζακστάν"),
+  T("Cena pós-créditos — continuar assistindo", "Σκηνή μετά τους τίτλους — συνεχίστε την προβολή"),
   T("Central de avisos", "Κέντρο ειδοποιήσεων"),
   T("Central de controle", "Κέντρο ελέγχου"),
   T("Chamadas em excesso ao player da Samsung durante a reprodução", "Υπερβολικές κλήσεις προς το πρόγραμμα αναπαραγωγής της Samsung κατά την αναπαραγωγή"),

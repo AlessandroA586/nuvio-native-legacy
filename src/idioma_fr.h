@@ -1082,6 +1082,7 @@
   T("Catálogos", "Catalogues"),
   T("Catálogos do destaque", "Catalogues de la une"),
   T("Cazaquistão", "Kazakhstan"),
+  T("Cena pós-créditos — continuar assistindo", "Scène post-générique — continuer à regarder"),
   T("Central de avisos", "Centre de notifications"),
   T("Central de controle", "Centre de contrôle"),
   T("Chamadas em excesso ao player da Samsung durante a reprodução", "Appels excessifs au lecteur Samsung pendant la lecture"),
