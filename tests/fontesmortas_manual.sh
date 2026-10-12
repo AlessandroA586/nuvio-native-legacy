@@ -18,9 +18,13 @@ for source in src/*.c src/dts/*.c; do
 done
 cc "${flags[@]}" "${sources[@]}" tests/fontesmortas_manual.c "$dir/video.o" \
   -o "$dir/teste" -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL
+# sdl2-compat sob ASan nao acha libSDL3 e abre um NSAlert que trava o teste.
+[ -e /opt/homebrew/lib/libSDL3.dylib ] && ln -sf /opt/homebrew/lib/libSDL3.dylib "$dir/libSDL3.dylib"
 if [ "$#" -gt 0 ]; then "$dir/teste" "$@"; else
   "$dir/teste"
   "$dir/teste" aviso
   "$dir/teste" tardia
   "$dir/teste" desconhecida
+  "$dir/teste" auto
+  "$dir/teste" antecipada
 fi

@@ -24,7 +24,8 @@ void player_definir_fonte(const char *u) { assert(!strcmp(u, "https://video.inva
 void player_erro_fonte(void) { erros++; }
 void player_erro_fonte_motivo(const char *a, const char *b) { (void)a; (void)b; erros++; }
 int video_pronto(void) { return pronto; }
-double video_pos(void) { return pronto ? 1.0 : 0.0; }
+static double posicao;
+double video_pos(void) { return pronto ? posicao : 0.0; }
 int video_falhou(void) { return falhou; }
 double video_duracao(void) { return pronto ? 5400 : 0; }
 int player_duracao_midia(double *seg) {
@@ -50,6 +51,7 @@ const char *video_erro_texto(void) { return ""; }
 int stream_atual(void) { return 0; }
 unsigned stream_lista_geracao(void) { return 1; }
 void stream_vod_falhou(int i) { assert(i == 0); fontesmortas_marcar(&fonte); }
+int stream_automatico_excluir(int i) { assert(i == 0); return 1; }
 void stream_vod_tocou(int i) { assert(i == 0); fontesmortas_limpar(&fonte); }
 int stream_resolver_escolhida(int i, unsigned g, char *u, unsigned n,
                               char *s, unsigned ns, int *pct) {
@@ -112,9 +114,12 @@ int main(int argc, char **argv) {
   assert(fonteManualDesde == ticks && "torrent manual sem vigia do primeiro quadro");
   vigiarAberturaManual();
   assert(fontesmortas_idade(&fonte) >= 0);
-  pronto = 1;
+  pronto = 1; posicao = 1.0;
   vigiarAberturaManual();
-  assert(!fonteManualDesde && fontesmortas_idade(&fonte) < 0);
+  assert(!fonteManualDesde && fontesmortas_idade(&fonte) >= 0 && "1 s de quadro nao prova a fonte");
+  posicao = 3.5; // Dois segundos reais de progresso limpam a marca.
+  vigiarAberturaManual();
+  assert(fontesmortas_idade(&fonte) < 0);
   fontesmortas_iniciar(); assert(fontesmortas_idade(&fonte) < 0);
   free(disco);
   puts("fontesmortas: PASS (torrent baixando, tentativa manual, primeiro quadro, disco)");
