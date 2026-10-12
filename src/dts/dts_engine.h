@@ -36,4 +36,11 @@ int dts_engine_seek(DtsEngine *, double seconds);
 void dts_engine_cancel(DtsEngine *);
 void dts_engine_destroy(DtsEngine *);
 const char *dts_engine_error(DtsEngine *);
+/* Samsung remux (dts_remux.c): open only the container over the ranged reader
+ * (4 MiB ranges, final address reused). 0 on success. dts_engine_avformat()
+ * then returns the AVFormatContext (as void *: no FFmpeg type crosses this
+ * header), valid until the next open or destroy. Cancel stays permanent. */
+int dts_engine_open_demux(DtsEngine *, const char *url, const char *headers);
+void *dts_engine_avformat(DtsEngine *);
+int64_t dts_engine_size(DtsEngine *);
 #endif

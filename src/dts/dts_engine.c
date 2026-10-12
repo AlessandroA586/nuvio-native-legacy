@@ -26,6 +26,9 @@ int dts_engine_seek(DtsEngine *e,double s) { (void)e;(void)s; return -1; }
 void dts_engine_cancel(DtsEngine *e) { (void)e; }
 void dts_engine_destroy(DtsEngine *e) { free(e); }
 const char *dts_engine_error(DtsEngine *e) { (void)e; return "DTS conversion not built"; }
+int dts_engine_open_demux(DtsEngine *e,const char *u,const char *h) { (void)e;(void)u;(void)h; return -1; }
+void *dts_engine_avformat(DtsEngine *e) { (void)e; return NULL; }
+int64_t dts_engine_size(DtsEngine *e) { (void)e; return -1; }
 #else
 #include "../rede.h"
 #include <limits.h>
@@ -77,6 +80,10 @@ struct DtsEngine {
   int64_t range_next;
   long range_bytes;
   int dv, passthrough, range_slots, final_cross;
+  /* Samsung remux (dts_engine_open_demux): container only, large ranges and
+   * the final address reused, like the Dolby Vision path, because the whole
+   * video also flows through this reader. Never set on webOS. */
+  int remux;
   char final_url[8192];
   AVFormatContext *fmt;
   AVIOContext *io;
@@ -138,7 +145,7 @@ static void *range_worker(void *opaque) {
     job->state=2;
     pthread_mutex_unlock(&e->range_lock);
     uint64_t begun=clock_ns(CLOCK_MONOTONIC);
-    if(!e->dv)
+    if(!e->dv && !e->remux)
       job->data=rede_baixar_trecho64_cab(e->url,e->headers,job->start,job->end,
         &job->count,&job->total,&job->status,&job->cancel);
     else {
@@ -171,7 +178,7 @@ static void *range_worker(void *opaque) {
                (unsigned long long)((done-first)/1000000),job->status,job->count);
         fflush(stdout);
       } else if(!__atomic_load_n(&job->cancel,__ATOMIC_RELAXED) &&
-                (!first_ok || first-begun>=UINT64_C(3000000000))) {
+                ((!first_ok && !(e->remux && first_status==416)) || first-begun>=UINT64_C(3000000000))) {
         printf("[dts-range] %s: at=%lldMiB ms=%llu http=%d bytes=%ld direto=%d\n",first_ok?"lento":"falhou",
                (long long)(job->start>>20),(unsigned long long)((first-begun)/1000000),first_status,job->count,direct);
         fflush(stdout);
@@ -384,7 +391,7 @@ int dts_engine_open(DtsEngine *e,const char *url,const char *headers,int audio,i
 #endif
   e->pos=0; e->total=-1; e->cache_size=0; e->has_core=0;
   e->range_bytes=e->dv?RANGE_BYTES_DV:RANGE_BYTES; e->range_slots=e->dv?RANGE_SLOTS_DV:RANGE_SLOTS;
-  e->final_url[0]=0; e->final_cross=0; e->passthrough=0;
+  e->final_url[0]=0; e->final_cross=0; e->passthrough=0; e->remux=0;
   e->demux_eof=e->decoder_eof=e->resampler_eof=e->encoder_sent_eof=e->timeline=0;
   if (cancelled(e)) return fail(e,"Cancelled",0);
   if (audio < -1 || !isfinite(start) || start<0 || start>INT64_MAX/1000000000.0)
@@ -508,6 +515,41 @@ int dts_engine_open(DtsEngine *e,const char *url,const char *headers,int audio,i
   e->target_ns=(int64_t)(start*1000000000.0);
   return start>0?dts_engine_seek(e,start):0;
 }
+/* Samsung remux (src/dts/dts_remux.c): only the container over the ranged
+ * reader. No stream info probe (MKV and MP4 headers carry what the remux needs,
+ * and probing would download seconds of 4K video before the first byte goes
+ * out), no codec, no track choice: the caller reads dts_engine_avformat(). */
+int dts_engine_open_demux(DtsEngine *e,const char *url,const char *headers) {
+  if (!e || !url || !*url) return -1;
+  close_media(e); memset(&e->info,0,sizeof(e->info)); e->error[0]=0;
+  memset(&e->metrics,0,sizeof(e->metrics));
+  e->pos=0; e->total=-1; e->cache_size=0; e->has_core=0;
+  e->remux=1; e->range_bytes=RANGE_BYTES_DV; e->range_slots=RANGE_SLOTS_DV;
+  e->final_url[0]=0; e->final_cross=0; e->passthrough=0;
+  e->demux_eof=e->decoder_eof=e->resampler_eof=e->encoder_sent_eof=e->timeline=0;
+  if (cancelled(e)) return fail(e,"Cancelled",0);
+  e->url=strdup(url); e->headers=strdup(headers?headers:"");
+  e->fmt=avformat_alloc_context();
+  unsigned char *buffer=av_malloc(65536);
+  if (!e->url || !e->headers || !e->fmt || !buffer) { av_free(buffer); return fail(e,"Demux allocation",0); }
+  e->io=avio_alloc_context(buffer,65536,0,e,read_range,NULL,seek_range);
+  if (!e->io) { av_free(buffer); return fail(e,"IO allocation",0); }
+  e->fmt->pb=e->io; e->fmt->flags|=AVFMT_FLAG_CUSTOM_IO;
+  e->fmt->interrupt_callback=(AVIOInterruptCB){cancelled,e};
+  AVDictionary *opts=NULL;
+  av_dict_set(&opts,"format_whitelist","matroska,webm,mov",0);
+  av_dict_set(&opts,"probesize","1048576",0);
+  int r=avformat_open_input(&e->fmt,NULL,NULL,&opts); av_dict_free(&opts);
+  if(r<0) return fail(e,"Container open",r);
+  if(e->fmt->duration==AV_NOPTS_VALUE || e->fmt->duration<=0)
+    return fail(e,"Finite VOD duration required",0);
+  e->info.duration_ns=av_rescale_q(e->fmt->duration,AV_TIME_BASE_Q,NS);
+  e->info.start_ns=e->fmt->start_time==AV_NOPTS_VALUE?0:av_rescale_q(e->fmt->start_time,AV_TIME_BASE_Q,NS);
+  return 0;
+}
+void *dts_engine_avformat(DtsEngine *e) { return e?e->fmt:NULL; }
+/* Total size of the source, -1 while unknown (first range not answered). */
+int64_t dts_engine_size(DtsEngine *e) { return e?e->total:-1; }
 static int resample(DtsEngine *e,AVFrame *f) {
   int r;
   if(f && (!e->swr || e->input_rate!=f->sample_rate || e->input_format!=f->format || av_channel_layout_compare(&e->input_layout,&f->ch_layout))) {
