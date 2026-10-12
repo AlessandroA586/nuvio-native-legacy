@@ -5,6 +5,7 @@
 // Caminho de verdade: modal do campo -> texto do celular -> pstDefinir ->
 // posteres.txt -> leitura de volta -> URL montada. A chave e de mentira.
 #include "dados.h"
+#include "idioma.h"
 #include "posterprov.h"
 #include <assert.h>
 #include <stdio.h>
@@ -13,6 +14,7 @@
 
 int ajustes_teste_poster_modelo(const char *colado, char *lido, size_t n);
 void ajustes_teste_poster_recarregar(char *lido, size_t n);
+const char *ajustes_teste_poster_aviso(void);
 
 static int falhas;
 #define OK(c, m) do { if (c) printf("ok   %s\n", m); else { printf("FALHA %s\n", m); falhas++; } } while (0)
@@ -85,6 +87,9 @@ int main(void) {
   // Sem marcador continua recusado.
   aviso = ajustes_teste_poster_modelo("https://meu.servidor.invalid/x.jpg", lido, sizeof lido);
   OK(aviso != 0, "modelo sem marcador continua recusado");
+  OK(!strcmp(ajustes_teste_poster_aviso(),
+     i18n("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}")),
+     "Done/OK mostra recusa de sintaxe no aviso de Ajustes");
 
   // Codex P2: o modelo cabe em 400, mas o MONTADO tem de caber em PP_URL_MAX.
   // 40 x {imdb} viram 40 x tt0111161 = 520 caracteres: salvo, nunca montaria.
@@ -98,6 +103,9 @@ int main(void) {
     aviso = ajustes_teste_poster_modelo(m, lido, sizeof lido);
     printf("aviso 40x{imdb}=%d\n", aviso);
     OK(aviso != 0, "400 caracteres com 40 x {imdb} (montado > 512) e recusado ao salvar");
+    OK(!strcmp(ajustes_teste_poster_aviso(),
+       i18n("modelo longo demais: o endereço pronto passa de 512 caracteres")),
+       "Done/OK mostra recusa de tamanho no aviso de Ajustes");
     // Copilot no #408: recusado por TAMANHO, nao pela sintaxe. O aviso de
     // sintaxe ("use http(s):// e {imdb}...") mandaria corrigir o que esta certo.
     { int sintaxe = ajustes_teste_poster_modelo("https://meu.servidor.invalid/x.jpg", lido, sizeof lido);
