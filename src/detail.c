@@ -3800,22 +3800,25 @@ static void luzFoco(GfxRect r, float a) {
   botao_luz(r, 1.0f, a);
 }
 
-// PROGRESSO DENTRO DO BOTAO DE RETOMAR (dono, 12/10/2026): trilho fino no pe
-// da pilula, no lugar da linha "Retomada disponivel N%" que ficava acima. A
-// mesma escala de foco de desenhaBotao, para a barra crescer junto.
-static void barraRetomada(GfxRect r, int focado, int pct, float a) {
-  if (focado) {
-    float cx = r.x + r.w * 0.5f, cy = r.y + r.h * 0.5f;
-    r.w *= NV_DETW2_FOCO_SX; r.h *= NV_DETW2_FOCO_SY;
-    r.x = cx - r.w * 0.5f; r.y = cy - r.h * 0.5f;
+// PROGRESSO NO BOTAO DE RETOMAR, no estilo do app da Apple TV (dono,
+// 12/10/2026): triangulo, trilho curto com o quanto ja foi visto e o tempo que
+// falta. -1 = botao sem trilho. Vale so para o primario, ligado em volta dele.
+static int primarioPct = -1;
+#define NV_DETW2_TRILHO_W 56.0f
+#define NV_DETW2_TRILHO_H  5.0f
+
+// "142 min", "2h 22min", "1 h 53 min" -> minutos; 0 quando nao da para ler.
+static int minutosDe(const char *s) {
+  int total = 0, v;
+  if (!s) return 0;
+  while (*s) {
+    if (*s < '0' || *s > '9') { s++; continue; }
+    v = 0;
+    while (*s >= '0' && *s <= '9') v = v * 10 + (*s++ - '0');
+    while (*s == ' ') s++;
+    total += (*s == 'h' || *s == 'H') ? v * 60 : v;
   }
-  float pad = r.h * 0.5f, h = 4.0f;
-  GfxRect t = { r.x + pad, r.y + r.h - 13.0f, r.w - pad * 2.0f, h };
-  if (t.w <= 0) return;
-  gfx_cor(t, 0.5f, 1.0f, 1.0f, 1.0f, 0.28f * a);
-  t.w *= (float)pct / 100.0f;
-  if (t.w < h) t.w = h;
-  gfx_cor(t, 0.5f, 1.0f, 1.0f, 1.0f, 0.95f * a);
+  return total;
 }
 
 static void desenhaBotao(GfxRect r, const char *rot, int icone, int focado, float a) {
@@ -3940,11 +3943,21 @@ static void desenhaBotao(GfxRect r, const char *rot, int icone, int focado, floa
       txt_linha_corta(TXT_DET_BOTAO, rot, c, c, c, 255,
                       r.w - NV_DETW2_BTN_PADX * 2 - iw - NV_DETW2_BTN_GAPI * s) :
       txt_linha(TXT_DET_BOTAO, rot, c, c, c, 255);
-    float grupo = iw + NV_DETW2_BTN_GAPI * s + l.w;
+    float tw = primarioPct >= 0 ? NV_DETW2_TRILHO_W * s + NV_DETW2_BTN_GAPI * s : 0.0f;
+    float grupo = iw + NV_DETW2_BTN_GAPI * s + tw + l.w;
     float x = r.x + (r.w - grupo) * 0.5f;
     GfxRect tri = { x, r.y + (r.h - ih) * 0.5f, iw, ih };
     gfx_rect(tri, 0, GFX_PLAY, 0, 0, 0, 0.0f, tintaBotao, tintaBotao, tintaBotao, a);
-    txt_desenhar_alpha(l, x + iw + NV_DETW2_BTN_GAPI * s,
+    if (primarioPct >= 0) {
+      float th = NV_DETW2_TRILHO_H * s;
+      GfxRect t = { x + iw + NV_DETW2_BTN_GAPI * s, r.y + (r.h - th) * 0.5f,
+                    NV_DETW2_TRILHO_W * s, th };
+      gfx_cor(t, 0.5f, tintaBotao, tintaBotao, tintaBotao, 0.30f * a);
+      t.w *= (float)primarioPct / 100.0f;
+      if (t.w < th) t.w = th;
+      gfx_cor(t, 0.5f, tintaBotao, tintaBotao, tintaBotao, a);
+    }
+    txt_desenhar_alpha(l, x + iw + NV_DETW2_BTN_GAPI * s + tw,
                        r.y + (r.h - l.h) * 0.5f, a); }
 }
 
@@ -3992,6 +4005,7 @@ static void desenhaSecundario(GfxRect r, const char *rot, int focado, float a) {
 static float larguraPrimario(const char *rot) {
   TxtLinha l = txt_linha(TXT_DET_BOTAO, rot, 0, 0, 0, 255);
   float w = NV_DETW2_BTN_PADX * 2 + NV_DETW2_BTN_ICONE_W + NV_DETW2_BTN_GAPI + l.w;
+  if (primarioPct >= 0) w += NV_DETW2_TRILHO_W + NV_DETW2_BTN_GAPI;
   return detalheRetrato() ? fminf(w, (larguraTextoHero() - NV_DETW2_BTN_GAP) * .5f) : w;
 }
 static float larguraSecundario(const char *rot) {
@@ -4227,8 +4241,10 @@ static void heroWeb(float a, float desloc) {
   const CatItem *ci = cat_item(idx);
 
   char ano[32], dur[64];
+  int durMin = 0;   // minutos do filme, lidos do texto cru (antes da traducao)
   partirMeta(fichaDe(idx), ano, sizeof ano, dur, sizeof dur);
   { char cru[64]; snprintf(cru, sizeof cru, "%s", dur);
+    durMin = minutosDe(cru);
     desc_duracao_txt(cru, dur, sizeof dur); }   // "142 min" -> forma do idioma da UI
 
   const char *sin = sinopseDe(idx);
@@ -4464,6 +4480,27 @@ static void heroWeb(float a, float desloc) {
     else { snprintf(rot, sizeof rot, "%s",
                     det_rotulo_primario(ci ? ci->progresso : 0, ajustes_cw_concluido()));
            retomando = !ehSerie(); } }
+  // Retomando com progresso: trilho no botao e, no lugar de "Retomar", o tempo
+  // que falta, como o app da Apple TV ("1 h 51 min"). Serie mantem o TxEy na
+  // frente. Sem duracao conhecida o rotulo fica como estava.
+  primarioPct = -1;
+  if (retomando && ci && ci->progresso > 0 && ci->progresso < 100) {
+    int total = durMin;   // serie: a duracao do episodio que a ficha traz ("54 min")
+    primarioPct = ci->progresso;
+    if (total > 0) {
+      int falta = (total * (100 - ci->progresso) + 99) / 100;
+      char tf[32];
+      desc_duracao_min(falta > 0 ? falta : 1, tf, sizeof tf);
+      if (ehSerie()) {
+        int t = 0, e = 0, de = 0;
+        if (episodioAlvo(&t, &e, &de) && t > 0 && e > 0) {
+          char ep[16];
+          snprintf(ep, sizeof ep, i18n("T%dE%d"), t, e);
+          snprintf(rot, sizeof rot, "%s · %s", ep, tf);
+        }
+      } else snprintf(rot, sizeof rot, "%s", tf);
+    }
+  }
 
   { float cyBtn = yAcoes + NV_DETW2_BTN_H * 0.5f;
     if (acoesAgrupadas()) {
@@ -4479,8 +4516,7 @@ static void heroWeb(float a, float desloc) {
     float bx = NV_DETW2_X;
     GfxRect rp = heroAcaoRect(&bx, &cyBtn, larguraPrimario(rot), NV_DETW2_BTN_H);
     desenhaBotao(rp, rot, 0, nivel == 0 && botao == nb, a);
-    if (retomando && ci && ci->progresso > 0 && ci->progresso < 100)
-      barraRetomada(rp, nivel == 0 && botao == nb, ci->progresso, a);
+    primarioPct = -1;   // os outros botoes nao tem trilho
     if (a > 0.3f) ponteiro_alvo(rp.x, rp.y, rp.w, rp.h, ponteiroDetalhe, NULL, -1, nb);
     bx += rp.w + NV_DETW2_BTN_GAP; nb++;
     if (temInicio()) {
