@@ -155,6 +155,7 @@ int simkl_ativo(void) { return simklAtivoTeste; }
 int trakt_progresso_ocultar(const char *i, int o) { (void)i; (void)o; return 0; }
 int trakt_e_a_seguir(const char *id) { return !tkProg && regSet(id, tkId); }
 int simkl_e_a_seguir(const char *id) { return regSet(id, skId); }
+int trakt_cw_concluiu(const char *id, long long ms) { (void)id; (void)ms; return 0; }
 int trakt_continuar_falhou(void) { return 0; }
 static void item(CatItem *s, const char *id, int prog, long long ms) {
   memset(s, 0, sizeof *s);

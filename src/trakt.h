@@ -99,6 +99,8 @@ int  trakt_continuar_falhou(void);
 // O id ("tt:S:E") e um item "a seguir" da ultima leitura — proximo episodio de
 // serie cujo ultimo visto terminou. Entra na fileira com progresso 0.
 int trakt_e_a_seguir(const char *id);
+// Historico lido confirmou o mesmo episodio depois do progresso informado.
+int trakt_cw_concluiu(const char *id, long long progressoMs);
 // Oculta/reexibe a serie no progresso do Trakt (POST /users/hidden/progress_watched).
 // Sincrono, para fio de trabalho. 0 sem Trakt ou sem IMDb.
 int trakt_progresso_ocultar(const char *imdb, int ocultar);

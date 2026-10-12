@@ -33,7 +33,8 @@ exige() {
 echo
 echo "log:"
 P='^\[desc\] continuar assistindo: tt14688458 a seguir ajustado pela desmarcacao: '
-exige "${P}T3E1 -> T2E7\$" 4
+# OFF filtra antes de ajustar/deduplicar: nao produz log de sugestao descartada.
+exige "${P}T3E1 -> T2E7\$" 3
 exige "${P}T2E11 -> T2E7\$" 2
 exige "${P}T3E1 -> T2E9\$" 1
 [ "$falhou" -eq 0 ]

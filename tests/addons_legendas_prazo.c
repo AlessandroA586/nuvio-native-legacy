@@ -50,3 +50,9 @@ void prazo_auto_iniciar(void) {
 }
 void prazo_auto_avancar(unsigned ms) { legendaAutomatica(ms); }
 int prazo_auto_selecionou(void) { return legExterna >= 0 && selecionada[0] && !legAuto; }
+void teste_merge_escolher(const Legenda *l) { faixas_escolher_externa(l); }
+int teste_merge_selecionada(const Legenda *l, int indice) {
+  char id[24]; legendasui_id_addon(l, id);
+  return faixas_legenda_ativa() == indice && !strcmp(faixas_legenda_externa_id(), id) &&
+         !strcmp(selecionada, l->url) && !legAuto;
+}

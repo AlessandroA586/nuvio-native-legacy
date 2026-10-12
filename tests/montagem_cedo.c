@@ -336,6 +336,7 @@ int trakt_continuar(CatItem *s, int m) {
   return 1;
 }
 int   trakt_e_a_seguir(const char *id)     { (void)id; return 0; }
+int trakt_cw_concluiu(const char *id, long long ms) { (void)id; (void)ms; return 0; }
 int   trakt_progresso_ocultar(const char *i, int o) { (void)i; (void)o; return 0; }
 int   trakt_continuar_falhou(void)         { return 0; }
 const char *nuvem_trakt_cliente(void)      { return ""; }
