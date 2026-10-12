@@ -165,7 +165,7 @@ static void ajDesenharInspetor(void) {
         if (n > 3) n = 3;
         sw = aj2SegLargura(op, n);
         gfx_cor((GfxRect){ bx - sw - 6.0f, by - 37.5f, sw + 12.0f, 75.0f }, 0.5f, 0, 0, 0, 0.45f);
-        aj2Seg(op, n, ed ? uxPendente : valor[op], ed, bx, by, 1);
+        aj2Seg(op, n, ed ? uxPendente : uxValorAtual(op), ed, bx, by, 1);
       }
       if (ph > 0) y += ph;
     } }

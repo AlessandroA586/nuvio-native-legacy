@@ -1769,6 +1769,7 @@ static void pstDefinir(int op, const char *texto);
 static void pstAtivar(int op);
 static void pstTesteRecolher(void);
 static const char *pstTexto(int op);
+static void uxNotificar(const char *s);
 static int gravar(void);
 static void aplicarIdioma(int op);
 static int somenteDesteAparelho(int op);
@@ -2016,7 +2017,8 @@ void ajustes_abrir_opcao(int op) {
 static const char *heroFonteRotulo(void);
 static void heroFonteCiclar(int dir);
 
-static int lig(int op)  { return valor[op] == 0; }
+static char seekrChave[96];
+static int lig(int op)  { return valor[op] == 0 && (op != AJ_SEEKR_LIGADO || seekrChave[0]); }
 // #311: "Buscar no Cinemeta" so governa a BUSCA (o add-on Cinemeta e a reserva
 // do catalogo do Nuvio). Sem o add-on instalado e com o ajuste no padrao ele nao
 // tem o que mostrar, e a pessoa o lia como "esconder o Cinemeta da Home": some da
@@ -2876,16 +2878,11 @@ static const char *fanartMascarada(void) {
   return m;
 }
 
-// Two local key sources: the package default (NV_SEEKR_API_KEY) and a personal
-// override in seekr.txt, never in account preferences. The personal key is
-// masked and takes priority; removing it restores the package default.
-// The TV's budget of 50 lookups per day applies to the package default only;
-// a personal key follows its own Seekr plan (no local cap, no fixed number).
-#ifndef NV_SEEKR_API_KEY
-#define NV_SEEKR_API_KEY ""
-#endif
-static int seekrEmbutida(void) { return NV_SEEKR_API_KEY[0] != 0; }
-static char seekrChave[96];
+// Somente a chave propria em seekr.txt, local e mascarada. Remover a chave
+// desliga o uso efetivo; os limites sao os do plano da pessoa no Seekr.
+static const char *seekrPedirChave(void) {
+  return i18n("Use sua própria chave do Seekr, gratuita em seekr.tv.");
+}
 static int seekrSalvarFalhou;
 static const char *SEEKR_ALFA =
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-";
@@ -2901,7 +2898,7 @@ static void seekrCarregar(void) {
   seekrLimpar(seekrChave, sizeof seekrChave, t);
   free(t);
   seekr_chave_propria(seekrChave[0] != 0);
-  seekr_definir_chave(seekrChave[0] ? seekrChave : NV_SEEKR_API_KEY);
+  seekr_definir_chave(seekrChave);
 }
 static void seekrDefinir(const char *txt) {
   char nova[sizeof seekrChave];
@@ -2914,17 +2911,17 @@ static void seekrDefinir(const char *txt) {
   }
   snprintf(seekrChave, sizeof seekrChave, "%s", nova);
   seekr_chave_propria(seekrChave[0] != 0);
-  seekr_definir_chave(seekrChave[0] ? seekrChave : NV_SEEKR_API_KEY);
+  seekr_definir_chave(seekrChave);
 }
 static const char *seekrMascarada(void) {
   static char m[24];
   size_t n = strlen(seekrChave);
-  if (!n) return i18n(seekrEmbutida() ? "Chave padrão do aplicativo" : "Não configurado");
+  if (!n) return seekrPedirChave();
   snprintf(m, sizeof m, "····%s", n > 4 ? seekrChave + n - 4 : "");
   return m;
 }
-int ajustes_seekr_habilitado(void) { return lig(AJ_SEEKR_LIGADO); }
-int ajustes_seekr_ligado(void) { return ajustes_seekr_habilitado() && (seekrChave[0] || seekrEmbutida()); }
+int ajustes_seekr_habilitado(void) { return valor[AJ_SEEKR_LIGADO] == 0; }
+int ajustes_seekr_ligado(void) { return lig(AJ_SEEKR_LIGADO); }
 int ajustes_seekr_fita(void)   { return lig(AJ_SEEKR_FITA); }
 int ajustes_seekr_ajuste_s(void) { return valor[AJ_SEEKR_AJUSTE]; }
 
@@ -3150,8 +3147,8 @@ static void *skTesteFioF(void *u) {
   return NULL;
 }
 static void skTesteIniciar(void) {
-  if (skFioVivo || (!seekrChave[0] && !seekrEmbutida())) return;
-  snprintf(skTesteChave, sizeof skTesteChave, "%s", seekrChave[0] ? seekrChave : NV_SEEKR_API_KEY);
+  if (skFioVivo || !seekrChave[0]) return;
+  snprintf(skTesteChave, sizeof skTesteChave, "%s", seekrChave);
   atomic_store_explicit(&skTeste, 1, memory_order_release);
   if (pthread_create(&skFio, NULL, skTesteFioF, NULL) != 0) {
     skTesteRes = -1;
@@ -3169,9 +3166,9 @@ static void skTesteRecolher(void) {
 }
 static const char *skTesteTexto(void) {
   int e = atomic_load_explicit(&skTeste, memory_order_acquire);
-  if (!seekrChave[0] && !seekrEmbutida()) return i18n("informe a chave primeiro");
+  if (!seekrChave[0]) return seekrPedirChave();
   if (e == 0) return i18n("OK testa");
-  if (strcmp(skTesteChave, seekrChave[0] ? seekrChave : NV_SEEKR_API_KEY)) return i18n("OK testa");
+  if (strcmp(skTesteChave, seekrChave)) return i18n("OK testa");
   if (e == 1 || e == 3) return i18n("testando…");
   if (skTesteRes > 0) return i18n("chave válida");
   if (skTesteRes == 0) return i18n("chave recusada");
@@ -3180,31 +3177,20 @@ static const char *skTesteTexto(void) {
 
 static const char *seekrAjuda(int op) {
   static char texto[900];
-  char uso[140], libera[100] = "", hora[48];
+  char libera[100] = "", hora[48];
+  if (seekrSalvarFalhou)
+    return i18n("Não foi possível salvar a chave. A chave anterior foi mantida.");
+  if (!seekrChave[0]) return seekrPedirChave();
+  if (op == AJ_SEEKR_CHAVE)
+    return i18n("Sua chave pessoal do Seekr, gratuita na prévia em seekr.tv. Fica só nesta TV e aparece mascarada.");
   SeekrUso u; seekr_uso(&u);
   const char *situacao = i18n(seekr_estado_rotulo(seekr_estado()));
-  if (seekrSalvarFalhou)
-    situacao = i18n("Não foi possível salvar a chave. A chave anterior foi mantida.");
-  else if (!u.chavePropria && !u.persistente)
-    situacao = i18n(seekr_estado_rotulo(SEEKR_ARMAZENAMENTO_INDISPONIVEL));
-  else if (!u.chavePropria && u.relogioAtrasado)
-    situacao = i18n("Confira a data e a hora desta TV. O contador não foi reiniciado.");
-  if (u.chavePropria) uso[0] = 0;   // plano da chave pessoal: sem numero fixo aqui
-  else if (u.persistente)
-    snprintf(uso, sizeof uso, i18n("%d de %d consultas hoje (UTC)"), u.usadas, u.limite);
-  else snprintf(uso, sizeof uso, "%s", i18n("Uso do Seekr indisponível"));
-  long long quando = seekr_estado() == SEEKR_LIMITE_PROVEDOR ? u.retryUtc : u.reinicioUtc;
-  if ((!u.chavePropria || seekr_estado() == SEEKR_LIMITE_PROVEDOR) && u.persistente && !u.relogioAtrasado && seekr_horario_local(quando, hora, sizeof hora))
-    snprintf(libera, sizeof libera, i18n(seekr_estado() == SEEKR_LIMITE_PROVEDOR ?
-             "Tente após %s (hora local)" : "Renova em %s (hora local)"), hora);
+  if (seekr_estado() == SEEKR_LIMITE_PROVEDOR && seekr_horario_local(u.retryUtc, hora, sizeof hora))
+    snprintf(libera, sizeof libera, i18n("Tente após %s (hora local)"), hora);
   const char *sobre = op == AJ_SEEKR_TESTAR ?
-    (u.chavePropria ? "Testar a chave não gasta consultas. Os limites são os do plano da sua chave no Seekr." :
-    "Testar a chave não gasta consultas. Os limites do Seekr são separados do limite desta TV.") :
-    u.chavePropria ? "Com a sua chave, valem os limites do seu plano no Seekr; esta TV não impõe um limite próprio. Cache não gasta consultas." :
-    "Até 50 consultas por instalação e dia UTC, compartilhadas por todos os perfis e chaves. Cache não gasta consultas; uma tentativa enviada à rede gasta mesmo se falhar.";
-  // The Settings inspector has four lines. Keep live usage/reset/state ahead
-  // of explanatory copy so a long translation cannot hide the actionable data.
-  snprintf(texto, sizeof texto, "%s%s%s%s%s\n%s", uso, uso[0] ? "\n" : "", libera,
+    "Testar a chave não gasta consultas. Os limites são os do plano da sua chave no Seekr." :
+    "Com a sua chave, valem os limites do seu plano no Seekr; esta TV não impõe um limite próprio. Cache não gasta consultas.";
+  snprintf(texto, sizeof texto, "%s%s%s\n%s", libera,
            libera[0] ? "\n" : "", situacao, i18n(sobre));
   return texto;
 }
@@ -3584,7 +3570,7 @@ static int gravar(void) {
 // aparecem mascarados ("····abcd"), como a chave do fanart.tv.
 static char pstInst[PP_INSTANCIA_MAX], pstToken[PP_TOKEN_MAX + 1], pstExtra[PP_EXTRA_MAX + 1];
 static char pstChave[PP_CHAVE_MAX], pstModelo[PP_MODELO_MAX];
-// Ultima recusa de um campo digitado (0 = nenhuma); aparece na linha "Testar".
+// Ultima recusa de um campo digitado (0 = nenhuma); aviso imediato e linha "Testar".
 enum { PST_OK = 0, PST_TOKEN_RUIM, PST_INST_RUIM, PST_EXTRA_RUIM, PST_CHAVE_RUIM, PST_MODELO_RUIM,
        PST_MODELO_LONGO };
 static int pstAviso;
@@ -3651,7 +3637,7 @@ static void pstCarregar(void) {
 // O que a pessoa digitou/colou num campo. Vazio apaga.
 static void pstDefinir(int op, const char *texto) {
   char b[PP_MODELO_MAX + 8], inst[PP_INSTANCIA_MAX];
-  size_t i = 0, k;
+  size_t i = 0, k, nTexto = texto ? strlen(texto) : 0;
   pstAviso = PST_OK;
   while (texto && (texto[i] == ' ' || texto[i] == '\t')) i++;
   pstCopia(b, sizeof b, texto ? texto + i : "");
@@ -3660,15 +3646,15 @@ static void pstDefinir(int op, const char *texto) {
   switch (op) {
     case AJ_POSTER_INST:
       if (!b[0]) pstInst[0] = 0;
-      else if (!posterprov_normalizar_instancia(b, pstInst, sizeof pstInst)) { pstAviso = PST_INST_RUIM; return; }
+      else if (!posterprov_normalizar_instancia(b, pstInst, sizeof pstInst)) { pstAviso = PST_INST_RUIM; goto recusado; }
       break;
     case AJ_POSTER_TOKEN:
       // Aceita o manifest colado inteiro: o host vira a instancia.
-      if (!posterprov_extrair_token(b, pstToken, sizeof pstToken, inst, sizeof inst)) { pstAviso = PST_TOKEN_RUIM; return; }
+      if (!posterprov_extrair_token(b, pstToken, sizeof pstToken, inst, sizeof inst)) { pstAviso = PST_TOKEN_RUIM; goto recusado; }
       if (inst[0]) pstCopia(pstInst, sizeof pstInst, inst);
       break;
     case AJ_POSTER_EXTRA:
-      if (!posterprov_extra_normalizar(b, pstExtra, sizeof pstExtra)) { pstAviso = PST_EXTRA_RUIM; return; }
+      if (!posterprov_extra_normalizar(b, pstExtra, sizeof pstExtra)) { pstAviso = PST_EXTRA_RUIM; goto recusado; }
       break;
     case AJ_POSTER_CHAVE: {
       PosterProvCfg c;
@@ -3676,7 +3662,7 @@ static void pstDefinir(int op, const char *texto) {
       memset(&c, 0, sizeof c);
       c.prov = PP_RPDB;
       pstCopia(c.chave, sizeof c.chave, b);
-      if (b[0] && !posterprov_montar_url(&c, "tt0111161", 0, "movie", u, sizeof u)) { pstAviso = PST_CHAVE_RUIM; return; }
+      if (b[0] && !posterprov_montar_url(&c, "tt0111161", 0, "movie", u, sizeof u)) { pstAviso = PST_CHAVE_RUIM; goto recusado; }
       pstCopia(pstChave, sizeof pstChave, b);
       break; }
     case AJ_POSTER_MODELO:
@@ -3684,13 +3670,26 @@ static void pstDefinir(int op, const char *texto) {
       // nao o de sintaxe (que mandaria corrigir o que esta certo).
       if (b[0] && !posterprov_modelo_cabe(b)) {
         pstAviso = posterprov_modelo_valido(b) ? PST_MODELO_LONGO : PST_MODELO_RUIM;
-        return;
+        goto recusado;
       }
       pstCopia(pstModelo, sizeof pstModelo, b);
       break;
   }
   pstSalvar();
   pstAplicar();
+  printf("[poster] modelo salvo (n=%zu)\n", nTexto);
+  fflush(stdout);
+  return;
+recusado:
+  { static const char *motivos[] = { "", "token invalido", "instancia invalida", "parametros invalidos",
+                                   "chave invalida", "sintaxe invalida", "endereco pronto longo demais" };
+    char url[96];
+    // Sem esquema pode ser a chave nua: rede_url_publica a devolveria inteira.
+    const char *publica = (!strncmp(b, "http://", 7) || !strncmp(b, "https://", 8)) ? b : "";
+    printf("[poster] modelo recusado: %s (n=%zu) %s\n", motivos[pstAviso], nTexto,
+           posterprov_redigir(publica, url, sizeof url));
+    fflush(stdout); }
+  uxNotificar(pstTexto(AJ_POSTER_TESTAR));
 }
 
 // "TESTAR POSTERES": baixa o cartaz de um filme conhecido. Um cartaz frio e
@@ -3772,7 +3771,7 @@ static const char *pstTexto(int op) {
     case PST_INST_RUIM:   return i18n("endereço inválido");
     case PST_EXTRA_RUIM:  return i18n("parâmetros inválidos (fmt, format, config e c não valem)");
     case PST_CHAVE_RUIM:  return i18n("chave inválida");
-    case PST_MODELO_RUIM: return i18n("modelo inválido: use http(s):// e {imdb}, {tmdb}, {type} ou {tipo_tmdb}");
+    case PST_MODELO_RUIM: return i18n("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}");
     case PST_MODELO_LONGO: return i18n("modelo longo demais: o endereço pronto passa de 512 caracteres");
     default: break;
   }
@@ -3838,12 +3837,26 @@ static void pstAtivar(int op) {
 // campo, o texto que chega do celular, pstDefinir, posteres.txt e a leitura de
 // volta. Devolve o aviso (PST_OK = 0) e o modelo relido em `lido`.
 void teclado_teste_sistema(const char *t);
+void teclado_teste_foco(int f, int c);
+const char *ajustes_teste_poster_aviso(void) { return uxAviso; }
+void ajustes_teste_poster_definir(int campo, const char *texto) {
+  pstDefinir(AJ_POSTER_INST + campo, texto);
+}
 int ajustes_teste_poster_modelo(const char *colado, char *lido, size_t n) {
   valor[AJ_POSTER_PROV] = PP_MODELO;
   pstAtivar(AJ_POSTER_MODELO);
   if (!teclado_aberto()) return -1;
+  uxAviso[0] = 0;
   teclado_teste_sistema(colado);
-  pstDefinir(AJ_POSTER_MODELO, teclado_texto());
+  teclado_teste_foco(0, 0);
+  { SDL_Event e = {0}; int i;
+    e.type = SDL_KEYDOWN;
+    e.key.keysym.sym = SDLK_DOWN;
+    for (i = 0; i < 20; i++) teclado_evento(&e);
+    e.key.keysym.sym = SDLK_RIGHT; teclado_evento(&e); teclado_evento(&e);
+    e.key.keysym.sym = SDLK_RETURN; teclado_evento(&e); }
+  if (teclado_aberto()) return -1;
+  ajustes_atualizar(0.016f, SDL_GetTicks());
   teclado_esquecer();
   pstModelo[0] = 0;
   pstCarregar();
@@ -5071,15 +5084,7 @@ static const char *textoLeitura(int op) {
   }
   if (op == AJ_FANART_CHAVE) return fanartMascarada();
   if (op == AJ_SEEKR_CHAVE) return seekrMascarada();
-  if (op == AJ_SEEKR_TESTAR) {
-    static char seekrValor[160];
-    SeekrUso u; seekr_uso(&u);
-    if (u.chavePropria) snprintf(seekrValor, sizeof seekrValor, "%s", skTesteTexto());
-    else if (u.persistente)
-      snprintf(seekrValor, sizeof seekrValor, i18n("%s · %d/%d"), skTesteTexto(), u.usadas, u.limite);
-    else snprintf(seekrValor, sizeof seekrValor, "%s", i18n("Uso do Seekr indisponível"));
-    return seekrValor;
-  }
+  if (op == AJ_SEEKR_TESTAR) return skTesteTexto();
   if (op == AJ_SELOS_PACOTE_ADD) return spAddTexto();
   if (op == AJ_SELOS_PACOTE_REM) {
     int a = selospacote_ativo();
@@ -5833,9 +5838,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_TMDB_CW: return "Usa o TMDB para preencher os cartazes da fileira de retomada.";
     case AJ_MDB_LIGADO: return "O MDBList junta notas de várias fontes na página do título. Desligar esconde a fileira inteira.";
     case AJ_MDB_CHAVE: return "A chave vem da sua conta Nuvio ou do arquivo do pacote. Não dá para digitar nesta TV.";
-    case AJ_SEEKR_LIGADO:
-      return seekrAjuda(op);
-    case AJ_SEEKR_CHAVE: return seekrSalvarFalhou ? seekrAjuda(op) : "Sua chave pessoal do Seekr, gratuita na prévia em seekr.tv. Fica só nesta TV e aparece mascarada.";
+    case AJ_SEEKR_LIGADO: case AJ_SEEKR_CHAVE: return seekrAjuda(op);
     case AJ_SEEKR_FITA: return "Mostra o quadro anterior e o seguinte ao lado da miniatura, com o tempo de cada um. Deixa claro que há um quadro a cada 10 segundos.";
     case AJ_SEEKR_AJUSTE: return "Use quando a miniatura mostra sempre a cena de alguns segundos antes ou depois. Acontece quando a sua versão do título é diferente da usada pelo Seekr (outro corte, abertura mais longa). Vale para todos os títulos; volte a 0 ao trocar de filme.";
     case AJ_SEEKR_TESTAR: return seekrAjuda(op);
@@ -6599,7 +6602,6 @@ static int frCol;               // folha da ordem: 0 = subir, 1 = descer
 static int frN;
 static char frNome[FR_FOLHA_MAX][FR_NOME_MAX];
 static char frApoio[FR_FOLHA_MAX][64];
-static void uxNotificar(const char *s);
 static void frPor(const char *nome, const char *apoio) {
   int k;
   if (!nome || !nome[0] || frN >= FR_FOLHA_MAX) return;
@@ -6782,6 +6784,10 @@ static int definirValorDireto(int op, int novo) {
   if (op < 0 || op >= AJ_N || !ajOpcaoDisponivel(op) ||
       (OPCOES[op].tipo != OP_ESCOLHA && OPCOES[op].tipo != OP_NUMERO)) return 0;
   novo = limita(op, novo);
+  if (op == AJ_SEEKR_LIGADO && novo == 0 && !seekrChave[0]) {
+    uxNotificar(seekrPedirChave());
+    return 0;
+  }
   if (op == AJ_PERFIL_PESQ) {
     pessoas_definir_pesquisavel(novo == 0);
     return 1;
@@ -7282,6 +7288,7 @@ static const char *textoValor(int op) {
   static char buf[48];
   const Opcao *o = &OPCOES[op];
   if (o->tipo == OP_LEITURA || o->tipo == OP_ACAO) return textoLeitura(op);
+  if (op == AJ_SEEKR_LIGADO && !seekrChave[0]) return i18n("Desligado");
   if (op == AJ_HERO_TRAILER_ESPERA) {
     // Decimos de segundo: 22 le "2,2 s".
     int v = valor[op];
