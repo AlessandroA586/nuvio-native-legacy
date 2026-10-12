@@ -54,6 +54,10 @@ containers; aborta se a 8094 estiver ocupada por outra coisa. Padrao de worktree
 Somente LAN (`http://192.168.1.20:8094`) ou Tailscale. O build normal não deve ser exposto publicamente: as notas contêm detalhes internos.
 Para hospedagem estática pública, usar exclusivamente `--publico`.
 
+Roadmap público: https://nuvio-legacy-roadmap.henriquef29.workers.dev. `publicar-publico.sh`
+roda `tests/publico.sh` e só então gera com `--publico` e faz `wrangler deploy` (Worker de
+assets `nuvio-legacy-roadmap`). O hook `painel-publicar` chama ele depois do `publicar.sh`.
+
 ## Respostas do dono (Aceitar/Negar + informacao adicional)
 
 Cada decisao em `docs/issues/mapa.json` tem um `id` estavel (`dec-...`, validado
