@@ -54,11 +54,20 @@
 #ifndef NV_SIMKL_H
 #define NV_SIMKL_H
 #include "catalogo.h"
+#include "perfildados.h"
 #include "vistoep.h"
 #include <stddef.h>
+#include <time.h>
 
 // 1 quando ha token do Simkl nesta TV (vinculo feito em Ajustes).
 int simkl_ativo(void);
+
+// Snapshot mensal da tela Perfil e Stats. A leitura de JSON e separada da
+// rede para os testes cobrirem a forma oficial de /users/settings e
+// /sync/all-items. `agora` escolhe o mes mostrado.
+int simkl_perfil_ler(const char *settings, const char *itens,
+                     PerfilDados *saida, time_t agora);
+int simkl_perfil(PerfilDados *saida);  // bloqueia; chamar de worker
 
 // A frase honesta para quando a opcao escolhida e o Simkl e nao ha vinculo.
 // Chave de idioma_tab.h; quem desenha passa por i18n como qualquer texto.

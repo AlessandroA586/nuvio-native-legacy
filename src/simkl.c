@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <time.h>
 
 #define SMK_API "https://api.simkl.com"
 // Retomada: o mesmo teto da fileira (CONT_MAX de descoberta.c) com folga para
@@ -345,18 +346,18 @@ const char *simkl_rota_historico(int visto) {
 // `metodo`: 'G' GET, 'P' POST, 'D' DELETE. O token entra so no cabecalho, e
 // nada aqui imprime a URL — o client_id nao e segredo, mas o costume do app e
 // logar so o caminho (ver rede_url_publica).
-static char *pedir(char metodo, const char *caminho, const char *consulta,
-                   const char *corpo, int *st) {
+static char *pedirComToken(char metodo, const char *caminho, const char *consulta,
+                           const char *corpo, int *st, const char *tk) {
   char url[640], cid[200], nome[120], aut[400];
   const char *cab[3];
   char *r;
   *st = 0;
-  if (!simkl_ativo() || !nuvem_simkl_cliente()[0]) return NULL;
+  if (!tk[0] || !nuvem_simkl_cliente()[0]) return NULL;
   nuvem_url_escapar(nuvem_simkl_cliente(), cid, sizeof cid);
   nuvem_url_escapar(nuvem_simkl_app()[0] ? nuvem_simkl_app() : "nuvio", nome, sizeof nome);
   snprintf(url, sizeof url, "%s%s?client_id=%s&app-name=%s&app-version=1.0.1%s%s",
            SMK_API, caminho, cid, nome, consulta ? "&" : "", consulta ? consulta : "");
-  snprintf(aut, sizeof aut, "Authorization: Bearer %s", simklauth_token());
+  snprintf(aut, sizeof aut, "Authorization: Bearer %s", tk);
   cab[0] = aut;
   cab[1] = "Accept: application/json";
   cab[2] = NULL;
@@ -365,6 +366,11 @@ static char *pedir(char metodo, const char *caminho, const char *consulta,
   else                    r = rede_baixar_st(url, 25, cab, st);
   memset(aut, 0, sizeof aut);
   return r;
+}
+
+static char *pedir(char metodo, const char *caminho, const char *consulta,
+                   const char *corpo, int *st) {
+  return pedirComToken(metodo, caminho, consulta, corpo, st, simklauth_token());
 }
 
 static char *pegar(const char *caminho, const char *consulta, int *st) {
@@ -376,6 +382,175 @@ static char *pegar(const char *caminho, const char *consulta, int *st) {
     return NULL;
   }
   return r;
+}
+
+// ------------------------------------------------------------ perfil e stats
+
+static int perfilNoMes(const char *iso, const struct tm *mes, int *dia) {
+  long long ms;
+  time_t s;
+  struct tm local;
+  if (!iso || !(ms = js_ms_iso(iso))) return 0;
+  s = (time_t)(ms / 1000);
+  localtime_r(&s, &local);
+  if (local.tm_year != mes->tm_year || local.tm_mon != mes->tm_mon) return 0;
+  if (dia) *dia = local.tm_mday;
+  return 1;
+}
+
+// Cada obra e agregada antes de disputar as quatro vagas, como no Trakt.
+static void perfilDestaque(PerfilDados *d, const PerfilDestaque *r) {
+  int i = 0, n;
+  if (!r->plays || !imdbValido(r->id)) return;
+  while (i < d->nDestaques && d->destaques[i].plays >= r->plays) i++;
+  if (i >= PERFIL_MAX_DESTAQUES) return;
+  n = d->nDestaques;
+  if (n < PERFIL_MAX_DESTAQUES) d->nDestaques++;
+  else n--;
+  for (; n > i; n--) d->destaques[n] = d->destaques[n - 1];
+  d->destaques[i] = *r;
+}
+
+static void perfilSomar(PerfilDados *d, const struct tm *mes, const char *quando,
+                        PerfilDestaque *r, int runtime,
+                        int filme, int temporada, int episodio) {
+  int dia = 0;
+  if (!perfilNoMes(quando, mes, &dia)) return;
+  d->plays++;
+  if (filme) d->filmes++; else d->episodios++;
+  if (runtime > 0) d->minutos += runtime;
+  if (dia >= 1 && dia <= PERFIL_MAX_DIAS) d->atividade[dia - 1]++;
+  r->plays++;
+  if (runtime > 0) r->minutos += runtime;
+  if (filme) snprintf(r->detalhe, sizeof r->detalhe, "Filme");
+  else if (temporada > 0 && episodio > 0)
+    snprintf(r->detalhe, sizeof r->detalhe, i18n("T%dE%d"), temporada, episodio);
+}
+
+static void perfilLerTipo(const char *json, const char *lista, int filme,
+                          PerfilDados *d, const struct tm *mes) {
+  const char *p;
+  for (p = js_array(json, NULL, lista); p && *p == '{'; p = js_prox(js_fim(p))) {
+    const char *f = js_fim(p), *obra, *obraFim, *ids, *idsFim;
+    char titulo[128] = "", imdb[24] = "", quando[48] = "";
+    int runtime;
+    PerfilDestaque r = {0};
+    if (!objetoRaiz(p, f, filme ? "movie" : !strcmp(lista, "anime") ? "anime" : "show", &obra, &obraFim)) continue;
+    js_texto_raiz_em(obra, obraFim, "title", titulo, sizeof titulo);
+    runtime = (int)js_num(obra, obraFim, "runtime", 0);
+    if (objetoRaiz(obra, obraFim, "ids", &ids, &idsFim))
+      js_texto(ids, idsFim, "imdb", imdb, sizeof imdb);
+    if (imdbValido(imdb)) {
+      snprintf(r.id, sizeof r.id, "%s", imdb);
+      snprintf(r.titulo, sizeof r.titulo, "%s", titulo[0] ? titulo : imdb);
+      snprintf(r.poster, sizeof r.poster, "https://images.metahub.space/poster/medium/%s/img", imdb);
+      snprintf(r.backdrop, sizeof r.backdrop, "https://images.metahub.space/background/medium/%s/img", imdb);
+    }
+    if (filme) {
+      js_texto_raiz_em(p, f, "last_watched_at", quando, sizeof quando);
+      perfilSomar(d, mes, quando, &r, runtime, 1, 0, 0);
+    } else {
+      const char *s;
+      for (s = js_array(p, f, "seasons"); s && *s == '{'; s = js_prox(js_fim(s))) {
+        const char *sf = js_fim(s), *e;
+        int temporada = (int)js_num(s, sf, "number", 0);
+        for (e = js_array(s, sf, "episodes"); e && *e == '{'; e = js_prox(js_fim(e))) {
+          const char *ef = js_fim(e);
+          int episodio = (int)js_num(e, ef, "number", 0);
+          int duracao = (int)js_num(e, ef, "runtime", runtime);
+          quando[0] = 0;
+          js_texto_raiz_em(e, ef, "watched_at", quando, sizeof quando);
+          perfilSomar(d, mes, quando, &r, duracao, 0, temporada, episodio);
+        }
+      }
+    }
+    perfilDestaque(d, &r);
+  }
+}
+
+// {} e a resposta vazia. Erro HTTP/HTML/JSON cortado nao e ausencia de plays.
+static int perfilHistoricoValido(const char *json) {
+  const char *fim, *p, *v, *vf;
+  int listas = 0;
+  static const char *tipos[] = { "movies", "shows", "anime" };
+  if (!json) return 0;
+  while (*json && (unsigned char)*json <= ' ') json++;
+  if (*json != '{') return 0;
+  fim = js_fim(json);
+  if (fim <= json + 1 || fim[-1] != '}') return 0;
+  for (p = fim; *p && (unsigned char)*p <= ' '; p++) ;
+  if (*p || valorRaiz(json, fim, "error", &v, &vf)) return 0;
+  p = json + 1;
+  while (p < fim && (unsigned char)*p <= ' ') p++;
+  if (*p == '}') return 1;
+  for (int i = 0; i < 3; i++) if (valorRaiz(json, fim, tipos[i], &v, &vf)) {
+    if (*v != '[' || vf > fim || vf <= v + 1 || vf[-1] != ']') return 0;
+    listas++;
+  }
+  return listas != 0;
+}
+
+int simkl_perfil_ler(const char *settings, const char *itens,
+                     PerfilDados *d, time_t agora) {
+  const char *u, *uf;
+  struct tm mes, primeiro;
+  int dias;
+  static const char *meses[] = { "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                                 "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro" };
+  if (!d || !perfilHistoricoValido(itens)) return 0;
+  memset(d, 0, sizeof *d);
+  localtime_r(&agora, &mes);
+  snprintf(d->periodo, sizeof d->periodo, "%s %d", i18n(meses[mes.tm_mon]), mes.tm_year + 1900);
+  if (settings && objetoRaiz(settings, NULL, "user", &u, &uf)) {
+    js_texto_raiz_em(u, uf, "name", d->nome, sizeof d->nome);
+    js_texto_raiz_em(u, uf, "avatar", d->avatar, sizeof d->avatar);
+  }
+  if (itens) {
+    perfilLerTipo(itens, "movies", 1, d, &mes);
+    perfilLerTipo(itens, "shows", 0, d, &mes);
+    perfilLerTipo(itens, "anime", 0, d, &mes);
+  }
+  dias = 31;
+  if (mes.tm_mon == 1) dias = ((mes.tm_year + 1900) % 4 == 0) ? 29 : 28;
+  else if (mes.tm_mon == 3 || mes.tm_mon == 5 || mes.tm_mon == 8 || mes.tm_mon == 10) dias = 30;
+  d->nDias = dias;
+  primeiro = mes; primeiro.tm_mday = 1; primeiro.tm_hour = primeiro.tm_min = primeiro.tm_sec = 0;
+  primeiro.tm_isdst = -1; mktime(&primeiro); d->primeiroDiaSemana = primeiro.tm_wday;
+  for (int i = 0; i < d->nDias; i++) if (d->atividade[i]) d->diasAtivosMes++;
+  for (int i = mes.tm_mday - 1; i >= 0 && i < d->nDias; i--) {
+    if (!d->atividade[i]) break;
+    d->streakAtual++;
+  }
+  d->parcial = 1;
+  snprintf(d->aviso, sizeof d->aviso,
+           "Resumo mensal do histórico disponível no Simkl.");
+  return 1;
+}
+
+int simkl_perfil(PerfilDados *d) {
+  char inicio[48], consulta[256], tk[300];
+  unsigned long long credencial;
+  char *settings = NULL, *itens = NULL;
+  time_t agora = time(NULL), limite;
+  struct tm primeiro, utc;
+  int st = 0, ok;
+  if (!d) return 0;
+  credencial = simklauth_credencial_copiar(tk, sizeof tk);
+  if (!tk[0]) return 0;
+  settings = pedirComToken('G', "/users/settings", NULL, NULL, &st, tk);
+  if (st < 200 || st >= 300) { free(settings); settings = NULL; }
+  localtime_r(&agora, &primeiro);
+  primeiro.tm_mday = 1; primeiro.tm_hour = primeiro.tm_min = primeiro.tm_sec = 0; primeiro.tm_isdst = -1;
+  limite = mktime(&primeiro); gmtime_r(&limite, &utc);
+  strftime(inicio, sizeof inicio, "%Y-%m-%dT%H:%M:%SZ", &utc);
+  snprintf(consulta, sizeof consulta,
+           "date_from=%s&extended=full&include_all_episodes=original&episode_watched_at=yes", inicio);
+  itens = pedirComToken('G', "/sync/all-items/all/all", consulta, NULL, &st, tk);
+  memset(tk, 0, sizeof tk);
+  ok = st >= 200 && st < 300 && credencial == simklauth_credencial_copiar(NULL, 0) &&
+       simkl_perfil_ler(settings, itens, d, agora);
+  free(settings); free(itens);
+  return ok;
 }
 
 // Assinatura barata de um corpo (FNV-1a). 0 = sem corpo.
