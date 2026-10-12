@@ -74,6 +74,9 @@ typedef struct {
    * Only final HTTP 2xx chunks reach this callback; max_bytes still applies. */
   int (*receber_corpo)(const void *, size_t, void *);
   void *corpo_usuario;
+  /* 1 = media Range read: follow an https->http redirect like the player does
+   * (debrid links). Cross-origin hops already drop every caller header. */
+  int rebaixar_midia;
 } RedePedido;
 typedef struct {
   int status, curl_erro;

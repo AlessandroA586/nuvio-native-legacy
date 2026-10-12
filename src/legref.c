@@ -1001,7 +1001,7 @@ static unsigned char *lerHttp(void *u, const char *url, long long ini, long n, l
   }
   cab[k] = NULL;
   memset(&p, 0, sizeof p);
-  p.url = url; p.cabecalhos = cab; p.seguir = 1;
+  p.url = url; p.cabecalhos = cab; p.seguir = 1; p.rebaixar_midia = 1;
   p.prazo_ms = 20000u + (unsigned)(n / 64);
   p.max_bytes = (size_t)n;
   p.parar = parar; p.parar_usuario = pu;

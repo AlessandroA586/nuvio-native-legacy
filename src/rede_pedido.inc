@@ -364,7 +364,7 @@ int rede_pedir(const RedePedido *p, RedeResposta *r) {
     }
     {
       char novaOrigem[300]; int novoTls;
-      if (!pedidoOrigem(destino, novaOrigem, sizeof novaOrigem, &novoTls) || (tls && !novoTls)) {
+      if (!pedidoOrigem(destino, novaOrigem, sizeof novaOrigem, &novoTls) || (tls && !novoTls && !p->rebaixar_midia)) {
         r->erro = REDE_REDIRECT; break;
       }
       /* 303 converts to GET (except HEAD); 301/302 only convert POST. */
