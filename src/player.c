@@ -1801,14 +1801,13 @@ static void fecharSessao(int manter) {
   // salvo de onde esta sessao retomou ja tinha sido assistido antes, e o que
   // sobra depois do fim do cartao (creditos) tambem: retomar em 85%, ver ate
   // os creditos e aceitar o proximo nao pode ficar sem visto (#100). Fora da
-  // conclusao nada e creditado — o seek ate o fim continua sem prova. Sessao
-  // sem retomada nao precisa do credito: com ele, 70 s reais contra a duracao
-  // falsa de 129 s do trailer viravam 129 s assistidos. E so quem tocou ao
-  // menos metade do trecho entre a retomada e a saida: retomar em 85%, tocar
-  // 5 s e buscar os creditos nao e ter assistido.
+  // conclusao nada e creditado — o seek ate o fim continua sem prova. A cauda
+  // NUNCA e prova: so entra quando os segundos REAIS ja provam o trecho da
+  // retomada ate a saida (a mesma regra, com a saida no lugar do fim). Sem
+  // isso 70 s reais contra a duracao falsa de 129 s viravam 129 s assistidos.
   double de = duracaoSeg * retomarPct / 100.0;
   int fim = concluiuAgora(credEfetivo());
-  int cauda = fim && de > 0 && duracaoSeg > posSeg && assistidoSeg >= (posSeg - de) * 0.5;
+  int cauda = fim && duracaoSeg > posSeg && scrobble_assistiu(assistidoSeg, de, posSeg);
   double vistoSeg = assistidoSeg + (cauda ? duracaoSeg - posSeg : 0.0);
   int assistiu = scrobble_assistiu(vistoSeg, de, duracaoSeg);
   // Sem ela a posicao REAL continua gravada (barra, Continuar assistindo,
@@ -1845,9 +1844,13 @@ static void fecharSessao(int manter) {
              (double)pos, (double)duracaoSeg, assistidoSeg, ci ? ci->imdb : "", epT, epE);
       fflush(stdout);
     }
-    // Sem prova o progresso fica abaixo dos 90% que cat_visto le como visto:
-    // o seek ate o fim nao acende o selo.
-    cat_salvar_progresso_ep(ia, assistiu ? pos : fminf(pos, duracaoSeg * 0.89f), duracaoSeg,epT,epE);
+    // A posicao gravada e sempre a REAL (ponto de retomada). Sem prova, o selo
+    // nao pode vir dela: cat_visto le progresso >= 90 so quando nao ha
+    // historico, entao o "nao visto" vai para o historico local.
+    cat_salvar_progresso_ep(ia, pos, duracaoSeg, epT, epE);
+    if (!assistiu && pos >= duracaoSeg * 0.9f && ci && ci->imdb[0] &&
+        cat_historico_estado_id(ci->imdb, ci->tipo) < 0)
+      cat_historico_definir_id(ci->imdb, ci->tipo, 0);
     // E tambem para o Trakt, que e de onde o "continue assistindo" vem: gravar
     // so aqui deixaria este app discordando dos outros aparelhos do dono.
     // Personal-server items stay private: no Trakt, friends feed or social

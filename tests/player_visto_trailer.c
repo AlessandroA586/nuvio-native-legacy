@@ -293,19 +293,20 @@ int main(void) {
   assert(tkPos == 5900 && scrobble_assistiu(tkAssistido, tkDe, tkDur));
 
   // SEEK ATE O FIM (log do C9, Dexter S1E2): 99 s tocados, busca, mais 34 s e
-  // sai a 19 s do fim. Nao viu: o progresso local fica abaixo dos 90% (nem
-  // os 100% do arredondamento, nem o selo), e o Trakt recebe a posicao real
-  // sem prova, que e o que ele recusa (tests/trakt_contracts.c).
+  // sai a 19 s do fim. Nao viu — mas esta ali: grava a posicao REAL (nem os
+  // 100% do arredondamento, nem nada), e o Trakt recebe a saida sem prova,
+  // que e o que ele recusa (tests/trakt_contracts.c).
   sessao("tt90000015", 0, 2843);
   tocar(99, 1); pos = 2790; quadro(); tocar(34, 1); player_encerrar();
-  assert(nVisto == 0 && cat_item(0)->progresso > 80 && cat_item(0)->progresso < 90);
+  assert(nVisto == 0 && cat_item(0)->progresso > 90 && cat_item(0)->progresso < 100);
   assert(nTrakt == 1 && tkPos == 2824 && !scrobble_assistiu(tkAssistido, tkDe, tkDur));
 
-  // RETOMADA PERTO DO FIM (terceira revisao): 85% de 2700 s, mais 105 s ate os
-  // creditos em 2400 s e aceita o proximo. A prova media metade ate o FIM DO
-  // ARQUIVO (202,5 s): gravava 88% e o Trakt ficava sem stop.
-  sessao("tt90000016", 85, 2700); creditos = 2400; assert(pos == 2295);
-  tocar(105, 1); player_encerrar();
+  // RETOMADA PERTO DO FIM (terceira revisao): 85% de 2700 s, mais 285 s ate os
+  // creditos em 2580 s e aceita o proximo. A prova media metade ate o FIM DO
+  // ARQUIVO (202,5 s) sem contar a cauda: gravava 96% e o Trakt ficava sem
+  // stop. A cauda so entra depois dos 120 s reais (sexta revisao).
+  sessao("tt90000016", 85, 2700); creditos = 2580; assert(pos == 2295);
+  tocar(285, 1); player_encerrar();
   assert(nTrakt == 1 && nVisto == 1 && cat_item(0)->progresso == 100);
   assert(tkPos == tkDur);
   // A mesma retomada buscando o fim: o credito dos creditos nao vira prova.
@@ -327,10 +328,21 @@ int main(void) {
   assert(tkPos < tkDur && !scrobble_assistiu(tkAssistido, tkDe, tkDur));
 
   // Filme sem historico: 133 s tocados, busca e sai em 2824/2843 s. Sem prova
-  // o progresso gravado nao pode acender o selo de visto (cat_visto >= 90%).
+  // o progresso gravado nao pode acender o selo de visto (cat_visto >= 90%) —
+  // mas a posicao gravada e a REAL: truncar em 89% (2530 s) fazia a retomada
+  // voltar quase cinco minutos (sexta revisao).
   sessao("tt90000020", 0, 2843);
   tocar(133, 1); pos = 2824; quadro(); player_encerrar();
   assert(nVisto == 0 && !cat_visto(cat_item(0)));
+  assert(cat_item(0)->progresso == 99 && tkPos == 2824);
+
+  // Sem minutagem, retomada em 1% da duracao falsa de 129,036 s, 70 s reais e
+  // sai: a cauda (57 s) completava os 120 s minimos — 100%, visto e stop. A
+  // prova e so segundo real tocado.
+  sessao("tt90000021", 1, 129.036);
+  tocar(70, 1); player_encerrar();
+  assert(nVisto == 0 && cat_item(0)->progresso < 90);
+  assert(tkPos < tkDur && !scrobble_assistiu(tkAssistido, tkDe, tkDur));
 
   puts("PASS: trailer, seek, pausa e buffer nao marcam; reproducao real grava progresso e visto");
   return 0;
