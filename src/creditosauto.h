@@ -5,7 +5,7 @@
 #include <string.h>
 
 // Busca que nunca pousa (destino trocado, seekTo falho) nao pode travar o
-// pos-play: com o video tocando, desiste depois deste tempo.
+// pos-play: com o video tocando ou terminado, desiste depois deste tempo.
 #define CREDITOSAUTO_LIMITE_MS 8000
 
 typedef struct {
@@ -50,7 +50,7 @@ static inline void creditosauto_destino(CreditosAuto *s, double alvo) {
 static inline int creditosauto_aguardar(CreditosAuto *s, double pos, int tocando, int terminou,
                                          unsigned long long agoraMs) {
   if (!s->buscaPendente) return 0;
-  if (!tocando) s->desdeMs = 0;
+  if (!tocando && !terminou) s->desdeMs = 0;
   else if (!s->desdeMs) s->desdeMs = agoraMs + 1;   // 0 = relogio parado
   else if (agoraMs + 1 - s->desdeMs >= CREDITOSAUTO_LIMITE_MS) { s->buscaPendente = 0; return 0; }
   if ((!s->buscaRecuo && terminou) ||

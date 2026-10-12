@@ -42,6 +42,17 @@ int main(void) {
   assert(creditosauto_aguardar(&s, 1490, 1, 0, 100));
   assert(creditosauto_aguardar(&s, 1490, 1, 0, 100 + CREDITOSAUTO_LIMITE_MS - 1));
   assert(!creditosauto_aguardar(&s, 1490, 1, 0, 100 + CREDITOSAUTO_LIMITE_MS));
+  // Recuo menor que a folga de progresso: o relogio pode ficar congelado
+  // ate o novo fim nativo. Mesmo parado no fim, a busca precisa expirar.
+  creditosauto_recuar(&s, 1500, 1499.9);
+  assert(creditosauto_aguardar(&s, 1499.9, 1, 0, 100));
+  assert(creditosauto_aguardar(&s, 1500, 0, 1, 1600));
+  assert(creditosauto_aguardar(&s, 1500, 0, 1, 100 + CREDITOSAUTO_LIMITE_MS - 1));
+  assert(!creditosauto_aguardar(&s, 1500, 0, 1, 100 + CREDITOSAUTO_LIMITE_MS));
+  // Pausa de verdade, sem fim nativo, continua sem gastar o prazo.
+  creditosauto_recuar(&s, 1500, 1499.9);
+  assert(creditosauto_aguardar(&s, 1499.9, 0, 0, 100));
+  assert(creditosauto_aguardar(&s, 1499.9, 0, 0, 100 + CREDITOSAUTO_LIMITE_MS));
   creditosauto_zerar(&s);
   creditosauto_fonte(&s, "https://example.test/corte-a");
   creditosauto_fonte(&s, "https://example.test/corte-a");

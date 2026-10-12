@@ -58,6 +58,18 @@ int main(void) {
   assert(posplay_visivel() && !pedir());
   assert(tecla(SDLK_RETURN) == 1 && pedir());
   posplay_marcador_real(0);
-  puts("posplay_recuo: contagem configuravel/antecipada, pedido automatico, amostra antiga e OK manual ok");
+  // Pedido ja consumido nao pode ressuscitar o cartao ao cancelar uma busca.
+  abrirContagem();
+  posplay_atualizar(.016f, 4100, 3600, 3600, 1, 0, 1);
+  assert(pedir());
+  posplay_recuar(); posplay_aguardar_busca(1);
+  assert(!posplay_visivel() && !pedir());
+  // player_abrir fecha o pos-play e apaga o pedido do titulo anterior.
+  abrirContagem();
+  posplay_atualizar(.016f, 4100, 3600, 3600, 1, 0, 1);
+  player_abrir(0, NULL); player_definir_episodio(5, 4);
+  posplay_recuar(); posplay_aguardar_busca(1);
+  assert(!posplay_visivel() && !pedir());
+  puts("posplay_recuo: contagem configuravel/antecipada, pedido automatico, amostra antiga, OK manual e troca de titulo ok");
   return 0;
 }
