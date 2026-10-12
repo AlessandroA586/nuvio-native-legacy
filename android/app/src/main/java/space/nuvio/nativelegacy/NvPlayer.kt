@@ -459,10 +459,6 @@ object NvPlayer {
                 .build()
             val p = ExoPlayer.Builder(act, renderizadores)
                 .setLoadControl(carga)
-                // release/detach continuam no Looper da aplicacao, como exige
-                // Media3, mas o HAL nao pode prender a interface sem limite.
-                .setReleaseTimeoutMs(2000)
-                .setDetachSurfaceTimeoutMs(2000)
                 .setMediaSourceFactory(DefaultMediaSourceFactory(act)
                     // ParaleloDataSource faz as tres tentativas de transporte;
                     // nao empilhar outra rodada invisivel do Loader antes da
