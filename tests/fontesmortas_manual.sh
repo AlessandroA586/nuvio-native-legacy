@@ -7,6 +7,7 @@ export NUVIO_DADOS="$dir/dados"
 mkdir -p "$NUVIO_DADOS"
 flags=(-O1 -g -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2
        -Wno-deprecated-declarations -Wno-macro-redefined)
+if [ "${SANITIZE:-0}" = 1 ]; then flags+=(-fsanitize=address,undefined -fno-omit-frame-pointer); fi
 renomes=()
 for nome in tocar falhou pronto pos; do renomes+=("-Dvideo_$nome=nv_base_video_$nome"); done
 cc "${flags[@]}" "${renomes[@]}" -c src/video.c -o "$dir/video.o"
@@ -17,4 +18,8 @@ for source in src/*.c src/dts/*.c; do
 done
 cc "${flags[@]}" "${sources[@]}" tests/fontesmortas_manual.c "$dir/video.o" \
   -o "$dir/teste" -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL
-"$dir/teste"
+if [ "$#" -gt 0 ]; then "$dir/teste" "$@"; else
+  "$dir/teste"
+  "$dir/teste" aviso
+  "$dir/teste" tardia
+fi

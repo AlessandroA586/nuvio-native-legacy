@@ -1713,19 +1713,27 @@ static int pedirProximaFonteVOD(int depoisDe) {
   }
   return 1;
 }
+// O titulo tocando desmente a marca, mesmo depois de o vigia vencer.
+// A duracao real desta sessao rejeita clipes de aviso e o trailer do detalhe.
+static void registrarFonteVODTocando(void) {
+  if (fonteVODPrimeiroQuadro || player_quer_sair() || aguardandoFonte ||
+      video_falhou() || !player_duracao_midia(NULL) || video_pos() <= 0.25) return;
+  fonteVODPrimeiroQuadro = 1;
+  stream_vod_tocou(stream_atual());
+}
 // ESCOLHA MANUAL QUE NAO ABRE: prazo ate o primeiro quadro (fontevolta.h).
 // Vence -> o erro de fonte do player, com "A fonte nao respondeu" e as saidas
 // de sempre. O automatico ja tem o proprio prazo (tentarProximaFonteVOD).
 static void vigiarAberturaManual(void) {
   FontevoltaSinais g;
   Uint32 desde;
+  registrarFonteVODTocando();
   if (!fonteManualDesde) return;
   if (!player_aberto() || player_quer_sair() || player_id_canal()[0] ||
       fonteVODAutomatica || aguardandoFonte != 0) {
     fonteManualDesde = 0; return;
   }
-  if (video_pronto() && video_pos() > 0.25) {
-    stream_vod_tocou(stream_atual());
+  if (fonteVODPrimeiroQuadro) {
     fonteManualDesde = 0; return;
   }
   desde = SDL_GetTicks() - fonteManualDesde;
@@ -1869,12 +1877,6 @@ static void tentarProximaFonteVOD(void) {
   int atual, motivo = 0;
   if (!fonteVODAutomatica || player_id_canal()[0] || !player_aberto() ||
       player_quer_sair() || aguardandoFonte != 0 || !fonteVODDesde) return;
-  // Pronto pode anteceder o primeiro quadro. Posicao > 0 tambem e usada
-  // pelo pipeline LG/TPK como prova de imagem, sem depender do loadCompleted.
-  if (video_pronto() && video_pos() > 0.25 && !fonteVODPrimeiroQuadro) {
-    fonteVODPrimeiroQuadro = 1;
-    stream_vod_tocou(stream_atual());
-  }
   // Rede caiu com o video andando: a mesma fonte esta sendo recarregada
   // (video_reconexao.h). So vira troca de fonte quando ela desistir (falhou).
   if (video_reconectando()) return;
@@ -4354,12 +4356,7 @@ void app_atualizar(float dt, Uint32 agora) {
   }
 
   vigiarFonteGuardada();
-  if (player_aberto() && !player_id_canal()[0] && video_pronto() && video_pos() > 0.25) {
-    if (fonteVODAutomatica && !fonteVODPrimeiroQuadro) {
-      fonteVODPrimeiroQuadro = 1;
-      stream_vod_tocou(stream_atual());
-    }
-  }
+  registrarFonteVODTocando();
   fitDuracaoMidia();
   fitPassivaPermitir();
   // Mesmo resolver/ranking da troca VOD. A trava de UMA vez mora no player;

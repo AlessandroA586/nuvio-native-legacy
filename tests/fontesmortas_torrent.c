@@ -27,6 +27,11 @@ int video_pronto(void) { return pronto; }
 double video_pos(void) { return pronto ? 1.0 : 0.0; }
 int video_falhou(void) { return falhou; }
 double video_duracao(void) { return pronto ? 5400 : 0; }
+int player_duracao_midia(double *seg) {
+  if (!pronto) return 0;
+  if (seg) *seg = video_duracao();
+  return 1;
+}
 void player_voltar_a_esperar(void) { esperando++; }
 void player_definir_tentativa(int i, int n) { (void)i; (void)n; }
 void player_episodio_atual(int *t, int *e) { *t = *e = 0; }
