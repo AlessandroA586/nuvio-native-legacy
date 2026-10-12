@@ -836,8 +836,8 @@ static void lembrarManual(int i) {
     const VideoFaixa *f = video_legenda(i);
     if (!f) return;
     e.tipo = 'e'; e.numero = f->numero;
-    // #383: forcada/letreiros escolhida a mao continua sob o #287 no seguinte.
-    if (f->tipoLeg == LING_LEG_FORCADA || f->tipoLeg == LING_LEG_LETREIROS || f->letreiro) e.id[0] = 'f';
+    // #383: inteira explicita; id vazio de builds antigos e tipo desconhecido.
+    e.id[0] = (f->tipoLeg == LING_LEG_FORCADA || f->tipoLeg == LING_LEG_LETREIROS || f->letreiro) ? 'f' : 'c';
     idiomaLembravel(f->idioma, e.idioma, sizeof e.idioma);
     snprintf(e.nome, sizeof e.nome, "%s", f->rotulo);
   } else { lembrarAddon(addons_legenda(i - emb)); return; }
@@ -910,7 +910,8 @@ static void legendaAutomatica(Uint32 agora) {
   // idioma — com o audio no mesmo idioma o #287 respondia "so a forcada" e a
   // escolha sumia: serie em ingles com legenda em ingles abria sem legenda.
   forcadaAuto = ajustes_legenda_forcada_auto() &&
-                !(origem == LEGMEM_DE_TITULO && mt->tipo && !(mt->tipo == 'e' && mt->id[0]));
+                !(origem == LEGMEM_DE_TITULO &&
+                  (mt->tipo == 'a' || (mt->tipo == 'e' && !strcmp(mt->id, "c"))));
   soForcada = forcadaAuto && audio[0] && pref[0] &&
               strcasecmp(pref, "none") && ling_casa(audio, pref);
   embFechado = video_mkv_sondado() != 0 || passou >= FX_AUTO_EMB_MS;

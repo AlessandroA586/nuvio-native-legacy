@@ -30,8 +30,26 @@ static void addonsDoEpisodio(const char *ep) {
 int main(void) {
   int r;
   forcadaAuto = 1;   // #287, o padrao de Ajustes
-  legmem_definir_perfil(1);
   snprintf(aud[0].idioma, sizeof aud[0].idioma, "en");
+
+  // Registro de builds antigos: forcada/letreiros tambem tinham id vazio.
+  // A faixa 2 do episodio anterior sumiu; #287 deve escolher a forcada 8.
+  dados_gravar("legmemoria-p3.txt",
+               "# nuvio legendas v1\n*\ten\n"
+               "tt2861424\t1\ten\te\t2\t\tEnglish forced\n");
+  legmem_definir_perfil(3);
+  titulo("tt2861424:1:2");
+  nAdds = 0; nLeg = 2;
+  faixa(0, "en", 7, LING_LEG_COMUM); faixa(1, "en", 8, LING_LEG_FORCADA);
+  r = abrir(-1);
+  printf("registro antigo com id vazio, episodio seguinte: %d\n", r);
+  assert(r == 1);
+  faixa(1, "en", 8, LING_LEG_LETREIROS);
+  assert(abrir(-1) == 1);
+  nLeg = 1;
+  assert(abrir(-1) == -1);
+
+  legmem_definir_perfil(1);
 
   // 1. ADDON. Remux so com PGS: o player nao lista embutida nenhuma.
   titulo("tt0903747:1:1");
@@ -49,6 +67,8 @@ int main(void) {
   nAdds = 0; nLeg = 2;
   faixa(0, "es", 1, LING_LEG_COMUM); faixa(1, "en", 2, LING_LEG_COMUM);
   aberta = 1; faixas_escolher_embutida(1); aberta = 0;
+  legmem_definir_perfil(2);
+  legmem_definir_perfil(1);               // marcador da inteira sobrevive ao disco
   titulo("tt0944947:1:2");
   faixa(0, "en", 5, LING_LEG_COMUM); faixa(1, "es", 6, LING_LEG_COMUM);
   r = abrir(-1);

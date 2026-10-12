@@ -43,7 +43,7 @@ typedef struct {
   char idioma[16];    // codigo normalizado ("pt", "pob", "en"), "none", ou "" (faixa sem etiqueta)
   char tipo;          // 'e' embutida, 'a' addon, 0 = nenhuma
   int  numero;        // embutida: VideoFaixa.numero
-  char id[24];        // addon: legendasui_id_addon; embutida: "f" = forcada/letreiros (#383)
+  char id[24];        // addon: legendasui_id_addon; embutida: "c" inteira, "f" forcada/letreiros, "" antiga/desconhecida
   char nome[48];      // so para o log (rotulo da faixa / provedor)
   long long quandoS;
 } LegMem;
