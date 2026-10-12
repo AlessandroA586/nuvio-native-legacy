@@ -11,5 +11,5 @@ all: $(OBJECTS)
 $(OBJDIR)/%.o: %.c tools/native-objects.mk
 	@mkdir -p $(dir $@)
 	@echo "CC $<"
-	@$(CC) $(NATIVE_FLAGS) $(if $(filter src/p2pmotor_motor.c,$<),$(MOTOR_FLAGS)) $(if $(filter src/p2pmotor.c,$<),-D_FILE_OFFSET_BITS=64) -MD -MP -MF $(@:.o=.d) -c $< -o $@
+	@$(CC) $(NATIVE_FLAGS) $(if $(filter src/p2pmotor_motor.c,$<),$(MOTOR_FLAGS)) $(if $(filter src/p2pmotor.c src/dados.c,$<),-D_FILE_OFFSET_BITS=64) -MD -MP -MF $(@:.o=.d) -c $< -o $@
 -include $(OBJECTS:.o=.d)

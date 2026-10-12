@@ -19,7 +19,17 @@
 // o item em si custa ~3,5 KB de texto.
 //
 // CAT_MAX sobrevive so como teto de seguranca contra resposta absurda.
+//
+// ANDROID: 8000. O dono liberou fileiras "ilimitadas" so no Android (2.0.4):
+// CAT_FIL_MAX la e 224, e 224 fileiras x 24 itens = 5376 titulos, mais o
+// "Continuar assistindo" e as listas. O vetor continua crescendo SOB DEMANDA
+// (garantirEspaco dobra a partir de 64), entao o numero maior nao custa nada a
+// quem tem 7 fileiras; so deixa de cortar quem tem 150.
+#ifdef NV_ANDROID
+#define CAT_MAX 8000
+#else
 #define CAT_MAX 2000
+#endif
 #define CAT_TEMP_MAX 64
 // Elenco guardado por titulo. O Cinemeta traz 3-5 nomes no `cast` do meta e era
 // isso que a tela mostrava (issue #94); quem completa a fileira e o TMDB, que
@@ -394,7 +404,20 @@ void cat_definir(const CatItem *lista, int n);
 // ate a base passar a NV_ADDON_URL_MAX, #201): os vetores
 // de fileira (40 x 2,5 KB = 100 KB) sao static onde eram de pilha — ver
 // cat_ler_cache, cat_trocar_continuar e montar().
+//
+// ANDROID (2.0.4, pedido do dono: "deixar ilimitado para android as fileiras"):
+// 224 = FIL_LIMITE_MAX do Android (200, o "Ilimitado" de Ajustes) + 24 de folga
+// para as fixas (Continuar, social, servidor pessoal). Os vetores de fileira
+// continuam static (BSS, nunca pilha): 224 x 2,5 KB = 560 KB por vetor, e so as
+// paginas das fileiras de fato escritas viram memoria residente. O custo real e
+// o dos itens: 100 fileiras x 24 x 15,6 KB = ~37 MB de catalogo (ver fileiras.h).
+// webOS, Tizen, .wgt e .tpk seguem com 40 — o _Static_assert de descoberta.c
+// vale nos dois lados.
+#ifdef NV_ANDROID
+#define CAT_FIL_MAX 224
+#else
 #define CAT_FIL_MAX 40
+#endif
 
 typedef struct {
   char chave[192];   // homeCatalogKey: <addonId>_<tipo>_<catalogoId>

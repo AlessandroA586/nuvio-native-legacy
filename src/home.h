@@ -19,7 +19,11 @@ typedef enum {
   // SO NO LAYOUT DINAMICA (ajustes_home_layout): formas que a Apple TV usa e a
   // home Moderna nao tem. Nascem em dinAtribuirTipos, nunca do catalogo.
   FILEIRA_TOP10_NUM,   // ranking: numeral grande ao lado de cada cartaz
-  FILEIRA_LARGA        // cartao deitado 16:9 maior que o da Moderna
+  FILEIRA_LARGA,       // cartao deitado 16:9 maior que o da Moderna
+  // Escolhiveis em qualquer layout (06/10):
+  FILEIRA_LINHA_TEMPO, // cartazes por ano sobre a linha animada dos anos
+  FILEIRA_FICHA,       // cartaz com a ficha do titulo ao lado
+  FILEIRA_PALCO        // o foco grande no centro, vizinhos diminuindo
 } TipoFileira;
 
 // O item sob o foco, com o retangulo que ele ocupa na tela NESTE quadro. A
@@ -54,6 +58,11 @@ void home_ir_topo(void);
 // Trailer no destaque: `topo` = 1 quando a home e o que esta na frente (sem
 // detalhe, player, painel, menu ou cartao por cima). app.c chama por quadro.
 void home_trailer_passo(int topo, float dt, Uint32 agora);
+#ifdef NV_SHOT_HOOKS
+// Capturas: finge um trailer ja tocando onde o passo real o abriria (destaque,
+// Tela cheia ou No card), sem plano de video. tests/homelayouts_shot.c.
+void home_shot_trailer(int sim);
+#endif
 // Why `topo` is 0 ("profile-choice", "detail"...), or NULL. Only for the
 // "[home-trailer] autoplay gate=top-overlay (...)" line; call before the step.
 void home_trailer_topo_motivo(const char *motivo);
@@ -105,6 +114,13 @@ int  home_pediu_guia(char *id, int tam);
 // `filTipo` nessa mesma reducao. Igual a `filTipo` = a forma enche sozinha.
 int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect area,
                         float alfa);
+// VITRINE DAS COLECOES (vertudo.c): destaque e cartaz da Home para um CatItem
+// que nao esta no catalogo global. Ver home.c.
+void home_vitrine_medida(float *w, float *h, float *passo, float *rotH);
+int  home_vitrine_arte_pronta(const CatItem *ci);
+int  home_vitrine_arte(const CatItem *ci, float alfa);
+void home_vitrine_texto(const CatItem *ci, float alfa);
+void home_vitrine_cartao(const CatItem *ci, GfxRect base, GfxRect card, float alfa);
 #endif
 const char *home_rastro_foco(void);
 // CARROSSEL DA DINAMICA: titulos (indices do catalogo) da fileira em foco e a

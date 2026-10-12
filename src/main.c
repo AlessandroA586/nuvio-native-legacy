@@ -872,18 +872,23 @@ int main(int argc, char **argv) {
     // 23/09: nenhuma linha de stderr sobrevivia no arquivo (o diagnostico do
     // libass, "[legenda] libass: ...", nunca aparecia) e sobravam ~1600 linhas
     // vazias — os restos dos textos sobrescritos.
+    if (log) {
 #if defined(NV_TPK) || defined(NV_ANDROID)
-    if (log) { rename(log, getenv("NUVIO_LOG_ANTERIOR"));
+      const char *anterior = getenv("NUVIO_LOG_ANTERIOR");
+#elif defined(NV_DTS_DEBUG)
+      const char *anterior = "/tmp/" NV_APP_ID "-anterior.log";
 #else
-    if (log) { rename(log,
-#ifdef NV_DTS_DEBUG
-        "/tmp/" NV_APP_ID "-anterior.log"
-#else
-        "/tmp/nuvio-anterior.log"
+      const char *anterior = "/tmp/nuvio-anterior.log";
 #endif
-      );
+      if (anterior && *anterior) rename(log, anterior);
+      // A medicao tambem inclui logs fora de dados_dir(), como /tmp na LG.
+      setenv("NUVIO_LOG", log, 1);
+#if !defined(NV_TPK) && !defined(NV_ANDROID)
+      setenv("NUVIO_LOG_ANTERIOR", anterior, 1);
 #endif
-               if (freopen(log, "w", stdout)) { fflush(stderr); dup2(fileno(stdout), fileno(stderr)); } } }
+      if (freopen(log, "w", stdout)) { fflush(stderr); dup2(fileno(stdout), fileno(stderr)); }
+    }
+  }
   setvbuf(stdout, NULL, _IOLBF, 0);
   arranque_etapa("main");
   arranque_relatar();
@@ -1015,6 +1020,7 @@ int main(int argc, char **argv) {
   // ja esta resolvido desde o topo do main.
   NV_ETAPA("dados_iniciar");
   dados_iniciar(dirArte);
+  dados_espaco_iniciar(dirArte);
   negcache_disco(dados_ler, dados_gravar_leve);   // 404 de API de metadados lembrado entre arranques
   #ifdef NV_LEVE
   printf("[leve] build de diagnostico: pool de fios 12, sem canal de avisos, sem recomendacoes, sem sync periodico, sem GIF de foco\n");

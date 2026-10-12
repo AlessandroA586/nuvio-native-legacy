@@ -52,7 +52,7 @@ static int uxRequisito(int op) {
       return !lig(AJ_HERO_TRAILER) ? AJ_HERO_TRAILER : -1;
     case AJ_DET_TRAILER_SOM:
       return !lig(AJ_DET_TRAILER_AUTO) ? AJ_DET_TRAILER_AUTO : -1;
-    case AJ_EXPANDIR_ATRASO: case AJ_FOCO_TRAILER: return AJ_EXPANDIR;
+    case AJ_EXPANDIR_ATRASO: return AJ_EXPANDIR;
     case AJ_CW_OK: case AJ_CW_FONTE: case AJ_CW_PROXIMO: case AJ_CW_ESTILO: case AJ_CW_THUMB:
     case AJ_CW_FURTHEST: case AJ_CW_NAO_EXIBIDOS: case AJ_CW_ORDEM: case AJ_CW_RETIDO_TAMBEM:
     case AJ_CW_CONCLUIDO: case AJ_CW_MINIMO: return AJ_CW_LIGADO;
@@ -110,7 +110,7 @@ static void uxAbrirEditor(int op) {
   uxEditor = inativa(op) ? 2 : 1;
 }
 static int uxRiscoFinal(int op, int novo) {
-  if (op == AJ_FIL_LIMITE && novo > FIL_LIMITE_SEGURO && novo > uxValorAtual(op))
+  if (op == AJ_FIL_LIMITE && fil_limite_pede_aviso(uxValorAtual(op), novo))
     return SEG_AVISO_FILEIRAS;
   if (op == AJ_ITENS_FILEIRA && novo > 0 && novo > uxValorAtual(op)) return SEG_AVISO_ITENS;
   return 0;
@@ -209,8 +209,9 @@ static int uxEvento(SDL_Keycode k) {
         uxRodape = k == SDLK_DOWN && uxTemPadrao(uxOp); return 1;
       }
       if (k == SDLK_LEFT || k == SDLK_RIGHT) {
-        if (!uxRodape) uxPendente = limita(uxOp, uxPendente +
-          (k == SDLK_RIGHT ? 1 : -1) * OPCOES[uxOp].passo);
+        if (!uxRodape) uxPendente = uxOp == AJ_FIL_LIMITE
+          ? fil_limite_passo(uxPendente, k == SDLK_RIGHT ? 1 : -1)
+          : limita(uxOp, uxPendente + (k == SDLK_RIGHT ? 1 : -1) * OPCOES[uxOp].passo);
         return 1;
       }
     }
@@ -227,7 +228,9 @@ static int uxEvento(SDL_Keycode k) {
     }
     if (!uxRodape && uxEditor == 1 && (k == SDLK_UP || k == SDLK_DOWN)) {
       int d = k == SDLK_DOWN ? 1 : -1;
-      if (OPCOES[uxOp].tipo == OP_NUMERO)
+      if (uxOp == AJ_FIL_LIMITE)
+        uxPendente = fil_limite_passo(uxPendente, d);   // Android: 40 <-> Ilimitado
+      else if (OPCOES[uxOp].tipo == OP_NUMERO)
         uxPendente = limita(uxOp, uxPendente + d * OPCOES[uxOp].passo);
       else {
         int ant = uxPendente;

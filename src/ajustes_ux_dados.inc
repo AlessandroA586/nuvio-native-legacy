@@ -90,6 +90,8 @@ static void uxValorTexto(int op, int v, char *buf, size_t tam) {
   else if (op == AJ_HERO_TRAILER_ESPERA) {
     snprintf(buf, tam, i18n("%d,%d s"), v / 10, v % 10);
     return;
+  } else if (op == AJ_FIL_LIMITE && fil_limite_ilimitado(v)) {
+    texto = i18n("Ilimitado");
   } else if (o->tipo == OP_NUMERO) {
     snprintf(buf, tam, "%d%s", v, o->sufixo ? o->sufixo : "");
     return;
