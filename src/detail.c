@@ -475,6 +475,7 @@ static int comEpT = 0, comEpE = 0;
 static int comPicando = 0;
 // Dica de primeira vez da pilula, por perfil (avisodisp.h).
 #define COM_DICA_CHAVE "dica:comentarios-episodio"
+static int comDicaPend;   // enfileirada, ainda nao vista na ilha
 static int abaInfo = 0;              // aba de informacao escolhida
 
 // AS DUAS SECOES QUE SO CARREGAM QUANDO ALGUEM ENTRA NELAS.
@@ -1710,6 +1711,15 @@ static int episodioDosComentarios(int *temp, int *epis) {
 // De volta a pilula "Episódio" com o episodio que o foco pisou (comEpT/comEpE
 // seguem o foco na fileira de episodios, ver detail_atualizar).
 static void comentariosVoltar(void) {
+  // Captura o episodio focado AQUI: o laco SDL processa todos os eventos antes
+  // de detail_atualizar, entao Direita + OK no mesmo lote deixava comEpT/comEpE
+  // um episodio atras. A coluna lembrada tambem e a que a reabertura usa.
+  if (foco.fileira == SEC_EPISODIOS) {
+    const CatEp *ep = cat_episodio(idx, epAbsoluto(foco.coluna));
+    if (ep) { comEpT = ep->temporada; comEpE = ep->episodio; }
+    epAncora = foco.coluna;
+    foco.colunaLembrada[SEC_EPISODIOS] = foco.coluna;
+  }
   comPicando = 0;
   comentEp = 1;
   foco.fileira = SEC_COMENTARIOS;
@@ -3294,12 +3304,17 @@ void detail_atualizar(float dt, Uint32 agora) {
   // Primeira vez que o foco chega na pilula "Episódio" (por perfil): a ilha diz
   // que segurar OK escolhe temporada e episodio. O rotulo "Segure OK" ao lado
   // da pilula e a versao permanente.
+  // A dispensa so e gravada depois de a ilha MOSTRAR (ilha_mostrou): com a fila
+  // cheia ela descarta o aviso, e o perfil nunca mais veria a dica.
+  if (comDicaPend && ilha_mostrou(COM_DICA_CHAVE)) { avisodisp_por(COM_DICA_CHAVE); comDicaPend = 0; }
   if (nivel >= 1 && foco.fileira == SEC_COMENTARIOS && ehSerie() && foco.coluna == 1 &&
       !avisodisp_tem(COM_DICA_CHAVE)) {
-    ilha_avisar(COM_DICA_CHAVE, ILHA_INFO, NULL,
-                i18n("Segure OK em Episódio para escolher a temporada e o episódio"), 6000u, 0);
-    avisodisp_por(COM_DICA_CHAVE);
-  }
+    if (!comDicaPend) {
+      ilha_avisar(COM_DICA_CHAVE, ILHA_INFO, NULL,
+                  i18n("Segure OK em Episódio para escolher a temporada e o episódio"), 6000u, 0);
+      comDicaPend = 1;
+    }
+  } else comDicaPend = 0;
 
   // SELETOR DE COMENTARIOS: a fonte troca no OK, NAO ao passar o foco.
   //
