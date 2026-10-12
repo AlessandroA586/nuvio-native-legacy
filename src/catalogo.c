@@ -1396,9 +1396,10 @@ static void aplicarUmEm(CatItem *v, int i, double posSeg, double durSeg, int tem
   apontarEm(v, i, temporada, episodio);
 }
 
-// Depois do disco: a copia que ficou sem progresso herda o da copia que tem
-// (a do CW, montada do Trakt/conta sem registro local, ou a que o disco nao
-// tocou por ser mais nova). Entre varias, a de instante mais novo.
+// Depois do disco: a copia sem progresso OU com progresso mais velho herda
+// o da copia mais nova (inclusive CW remoto sem registro local). Pular toda
+// copia nao zerada deixava episodio e percentual antigos na copia com meta:
+// escolher fonte reabria nela e player_definir_episodio zerava a retomada.
 // As fontes sao poucas (o que tem barra), entao o laco interno e sobre elas e
 // nao sobre o catalogo inteiro — milhares de itens ao quadrado na TV, nao.
 //
@@ -1414,10 +1415,11 @@ static void espalharEm(CatItem *v, int m) {
   nf = k;
   for (j = 0; j < m && nf; j++) {
     int melhor = -1;
-    if (v[j].progresso > 0 || !v[j].imdb[0]) continue;
+    if (!v[j].imdb[0]) continue;
     for (k = 0; k < nf; k++) {
       i = fontes[k];
       if (!mesmaCopiaEm(v, i, j)) continue;
+      if (v[j].progresso > 0 && v[i].retomadoMs <= v[j].retomadoMs) continue;
       if (melhor < 0 || v[i].retomadoMs > v[melhor].retomadoMs) melhor = i;
     }
     if (melhor < 0) continue;
