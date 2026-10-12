@@ -289,7 +289,6 @@ static char erroTxt[64];
 // MEDIDO em aparelho: status HTTP (2004), 403/404 e formato quebrado ficam de
 // fora de proposito, recarregar a mesma URL so repete a recusa.
 static int erroDeRede(int cod) { return cod >= 2000 && cod <= 2002; }
-#define ANDROID_ERRO_CDN_TORBOX_INDISPONIVEL (-20001)
 
 void video_escolher_audio(int i);
 
@@ -649,16 +648,7 @@ void video_bombear(void) {
     int antes = recon.tentativa;
     int rede = erroDeRede(reconErroCod);
     reconErroPend = 0;
-    // O DataSource ja tentou o mesmo no TorBox tres vezes. Como a URL final
-    // fixa o hostname, as reaberturas de 3/10/25 s repetiriam exatamente o no
-    // morto. Falhar aqui devolve o controle ao automatico de fontes, que
-    // resolve outro link/host e conserva a posicao pelo fluxo normal do app.
-    if (reconErroCod == ANDROID_ERRO_CDN_TORBOX_INDISPONIVEL) {
-      printf("[video] no TorBox indisponivel: pulando reconexao da mesma URL\n");
-      fflush(stdout);
-      nv_recon_zerar(&recon);
-      falhou = 1;
-    } else if (reconPermitida && urlAtual[0] && (reconIniciou || recon.tentativa) &&
+    if (reconPermitida && urlAtual[0] && (reconIniciou || recon.tentativa) &&
         nv_recon_erro(&recon, rede, SDL_GetTicks(), pos)) {
       if (!antes) {
         reconAudio = audioAtual; reconLeg = legAtual;

@@ -3,6 +3,8 @@ package space.nuvio.nativelegacy
 import android.net.Uri
 import android.util.Log
 import androidx.media3.common.C
+import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
+import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.datasource.BaseDataSource
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
@@ -10,7 +12,6 @@ import androidx.media3.datasource.HttpDataSource
 import java.io.IOException
 import java.io.InputStream
 import java.io.InterruptedIOException
-import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Collections
@@ -33,6 +34,20 @@ import java.util.concurrent.TimeUnit
 // So entra para http(s) que nao seja manifesto/segmento de HLS/DASH (esses ja
 // sao pedacos pequenos) e so se o servidor honrar Range (206 com Content-Range).
 // Senao, devolve o fluxo da conexao unica, como o DefaultHttpDataSource.
+internal class FalhaDownloadParalelo(causa: IOException) : IOException(causa)
+
+/** Nao repete no Loader o ciclo de tentativas que este DataSource ja esgotou. */
+internal class PoliticaErroParalelo : DefaultLoadErrorHandlingPolicy() {
+    override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
+        var causa: Throwable? = loadErrorInfo.exception
+        repeat(16) {
+            if (causa is FalhaDownloadParalelo) return C.TIME_UNSET
+            causa = causa?.cause ?: return super.getRetryDelayMsFor(loadErrorInfo)
+        }
+        return super.getRetryDelayMsFor(loadErrorInfo)
+    }
+}
+
 class ParaleloDataSource(
     private val ua: String?,
     private val props: Map<String, String>,
@@ -49,11 +64,7 @@ class ParaleloDataSource(
 
     companion object {
         private const val TAG = "nuvio-paralelo"
-        // TorBox recomenda no maximo quatro conexoes por link. O leitor
-        // lateral de MKV (legenda/capitulos) usa uma; deixar tres para o video
-        // evita o antigo pico 4 + 3 que podia acionar o freio do CDN e bloquear
-        // novas conexoes ao no no meio da reproducao.
-        const val CONEXOES = 3
+        const val CONEXOES = 4
         const val PEDACO = 4 shl 20           // 4 MB por pedido
         private const val ADIANTE = 3         // pedacos em voo por conexao
         private const val TENTATIVAS = 3
@@ -134,15 +145,6 @@ class ParaleloDataSource(
     private fun foiCancelado(e: IOException): Boolean =
         fechado || Thread.currentThread().isInterrupted || e is Cancelamento
 
-    private fun falhaFinal(e: IOException): IOException {
-        var causa: Throwable? = e
-        repeat(16) {
-            if (causa is ConnectException) return FalhaConexaoParalela(e)
-            causa = causa?.cause ?: return e
-        }
-        return e
-    }
-
     private fun conferirCancelamento() {
         if (fechado || Thread.currentThread().isInterrupted) throw cancelado()
     }
@@ -217,7 +219,7 @@ class ParaleloDataSource(
                 }
             }
         }
-        throw falhaFinal(erro ?: IOException("conexao falhou"))
+        throw FalhaDownloadParalelo(erro ?: IOException("conexao falhou"))
     }
 
     override fun open(dataSpec: DataSpec): Long {
@@ -334,7 +336,7 @@ class ParaleloDataSource(
                 medidor?.fim(token)
             }
         }
-        throw falhaFinal(ultimoErro ?: IOException("pedaco $ini-$ult falhou"))
+        throw FalhaDownloadParalelo(ultimoErro ?: IOException("pedaco $ini-$ult falhou"))
     }
 
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
