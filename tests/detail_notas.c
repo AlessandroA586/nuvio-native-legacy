@@ -34,6 +34,30 @@ int main(void) {
   comentariosEscolher();
   assert(foco.fileira == SEC_EPISODIOS && foco.coluna == 6);
 
+  // 2b) Season browsed away then Back: reopening returns to the confirmed
+  // episode's season, comments keep T1E2.
+  {
+    CatItem s = {0};
+    CatEp se[7] = {{0}};
+    snprintf(s.imdb, sizeof s.imdb, "tt9999904");
+    snprintf(s.tipo, sizeof s.tipo, "series");
+    s.nTemporadas = 2; s.temporadas[0] = 1; s.temporadas[1] = 2;
+    cat_definir_tudo(&s, 1, NULL, 0); idx = 0;
+    for (i = 0; i < 7; i++) { se[i].temporada = i < 4 ? 1 : 2; se[i].episodio = i < 4 ? i + 1 : i - 3; }
+    cat_definir_episodios(0, se, 7);
+    temporada = 0; comEpT = 1; comEpE = 2;
+    foco.nColunas[SEC_EPISODIOS] = 4;
+    foco.fileira = SEC_COMENTARIOS; foco.colunaLembrada[SEC_EPISODIOS] = 1;
+    comentariosEscolher();
+    temporada = 1; irParaTemporada(1, 0); foco.nColunas[SEC_EPISODIOS] = 3;
+    foco.coluna = 0;                     // browsing T2, nothing confirmed
+    comPicando = 0; foco.fileira = SEC_COMENTARIOS;
+    comentariosEscolher();
+    assert(temporada == 0 && foco.coluna == 1);
+    comentariosVoltar();
+    assert(comEpT == 1 && comEpE == 2);
+  }
+
   // 3) Hint: queued but not shown must not be dismissed; shown must be.
   comPicando = 0; foco.fileira = SEC_COMENTARIOS; foco.coluna = 1; nivel = 1;
   avisodisp_esquecer();

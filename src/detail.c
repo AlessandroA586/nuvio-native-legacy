@@ -1727,8 +1727,24 @@ static void comentariosVoltar(void) {
 }
 
 static void comentariosEscolher(void) {
-  int n = foco.nColunas[SEC_EPISODIOS];
+  int n = foco.nColunas[SEC_EPISODIOS], k, c;
+  const CatItem *ci = cat_item(idx);
   if (n <= 0) return;
+  // Voltar das temporadas deixa a pagina em outra temporada que a confirmada:
+  // reabrir volta para a do episodio de comEpT/comEpE.
+  if (comEpT > 0 && ci && ci->nTemporadas > 0 && temporadaEm(temporada) != comEpT)
+    for (k = 0; k < ci->nTemporadas; k++)
+      if (ci->temporadas[k] == comEpT) {
+        temporada = k;
+        irParaTemporada(k, 0);
+        foco.colunaLembrada[SEC_TEMPORADAS] = k;
+        n = foco.nColunas[SEC_EPISODIOS] = epVisiveis();
+        for (c = 0; c < n; c++) {
+          const CatEp *e = cat_episodio(idx, epAbsoluto(c));
+          if (e && e->episodio == comEpE) { epAncora = c; foco.colunaLembrada[SEC_EPISODIOS] = c; break; }
+        }
+        break;
+      }
   comPicando = 1;
   foco.fileira = SEC_EPISODIOS;
   foco.coluna = foco.colunaLembrada[SEC_EPISODIOS];
