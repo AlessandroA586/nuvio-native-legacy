@@ -8,6 +8,7 @@
 #include <strings.h>
 #include <ctype.h>
 #include <math.h>
+#include <time.h>
 
 static pthread_mutex_t trava = PTHREAD_MUTEX_INITIALIZER;
 static LegendaCue *cues;
@@ -627,9 +628,33 @@ static char *documentoTexto(const LegendaCue *v, int n) {
 }
 
 typedef struct { char url[1400]; unsigned g; LegendaBaixada pronto; void *u; } Pedido;
+
+/* So o host do link, para o log de tempo: caminho e query levam a chave do
+ * addon/debrid e nunca saem daqui; "usuario:senha@" tambem cai fora. */
+static void hostDoLink(const char *url, char *dst, size_t n) {
+  const char *a = strstr(url, "://"), *f, *arroba;
+  size_t k;
+  a = a ? a + 3 : url;
+  f = a + strcspn(a, "/?#");
+  for (arroba = a; arroba < f; arroba++) if (*arroba == '@') a = arroba + 1;
+  k = (size_t)(f - a);
+  if (k >= n) k = n - 1;
+  memcpy(dst, a, k); dst[k] = 0;
+  if (!k) snprintf(dst, n, "-");
+}
+
+static double msAgora(void) {
+  struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t);
+  return t.tv_sec * 1000.0 + t.tv_nsec / 1e6;
+}
+
 static void *baixar(void *u) {
   Pedido *p=u; long nb=0; const char *cs="utf-8";
+  char host[128]; double t0=msAgora();
+  hostDoLink(p->url,host,sizeof host);
   char *bruto=rede_baixar_bin(p->url,20,&nb);
+  printf("[legenda] download: host=%s %ld bytes em %.0f ms%s\n",host,bruto?nb:0L,msAgora()-t0,bruto?"":" (falhou)");
+  fflush(stdout);
   char *corpo=bruto?legenda_utf8(bruto,nb,&cs):NULL; LegendaCue *v=NULL;
   free(bruto);
   if (corpo && strcmp(cs,"utf-8")) { printf("[legenda] texto em %s, convertido para UTF-8\n",cs); fflush(stdout); }
