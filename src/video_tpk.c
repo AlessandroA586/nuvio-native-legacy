@@ -754,9 +754,9 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
   if (!NV_TPK_ZOOM_ROI && !NV_TPK_PLAYER_RECORTE && !zoomRoi && !roiNaTela(X,Y,W,H)) {
     lx = dx; ly = dy; lw = dw; lh = dh;
   }
-  // DisplayRoi returning success does not prove that the video plane stayed
-  // visible on Samsung 9. Keep off-screen ROI behind the same opt-in as before.
-  if (hAspecto && (NV_TPK_ZOOM_ROI || NV_TPK_PLAYER_RECORTE || zoomRoi || roiNaTela(X,Y,W,H))) {
+  // New hosts accept B without a diagnostic/experimental flag for the player.
+  // Trailer zoom remains opt-in. Old staged hosts retain the previous gate.
+  if (hAspecto && (!emTrailer || NV_TPK_ZOOM_ROI || zoomRoi || roiNaTela(X,Y,W,H))) {
     ultRoiX=X; ultRoiY=Y; ultRoiW=W; ultRoiH=H; temRoi=1;
     ultLegX=lx; ultLegY=ly; ultLegW=lw; ultLegH=lh;
     hAspecto(X,Y,W,H,lx,ly,lw,lh);
