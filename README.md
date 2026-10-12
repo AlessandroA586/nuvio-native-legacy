@@ -5,3 +5,11 @@ Current issues tackled:
 Regex (untested)
 
 Qr code to export logs locally (untested)
+
+-----
+
+Features: 
+
+Search by microphone
+
+DTS/TRUEHD downmix 
