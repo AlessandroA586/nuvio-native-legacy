@@ -76,6 +76,13 @@ void  ctx_inline_pedir(int on);
 float ctx_inline_t(void);
 float ctx_inline_altura(float w, float faixaH);
 void  ctx_inline_desenhar(float x, float y, float w, float faixaH, float a);
+#ifdef NV_TOUCH_UI
+int ctx_inline_painel_ativo(void);
+// Relative focused action rectangle; returns its index + 1, or zero.
+int ctx_inline_foco_rect(float w, float faixaH, GfxRect *r);
+// Caller supplies the current drawing layer's visible list bounds.
+void ctx_inline_recorte(GfxRect r);
+#endif
 // 1 enquanto o menu aberto e o do painel: app.c o desenha POR CIMA do painel e
 // entrega a ele as teclas que chegariam ao painel.
 int  ctx_do_painel(void);

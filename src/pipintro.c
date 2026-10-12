@@ -25,6 +25,7 @@
 #define NV_ESCALA_TELA_ATIVA   // mede pela tela do fator ativo (escala.h)
 #include "escala.h"
 #include "ponteiro.h"
+#include "telefonecartao.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -49,6 +50,9 @@
 static int   aberto;
 static int   focoBtn;          // 0 = "continuar no canto", 1 = "fechar o video"
 static float entrada;
+#ifdef NV_TOUCH_UI
+static TelefoneCartao piTelefone;
+#endif
 
 int pipintro_decisao(void) {
   char *s = dados_ler(PI_ARQ);
@@ -63,6 +67,9 @@ int  pipintro_aberto(void) { return aberto; }
 void pipintro_abrir(void) {
   if (pipintro_decisao() >= 0) return;   // ja decidido: nao pergunta de novo
   aberto = 1; focoBtn = 0;
+#ifdef NV_TOUCH_UI
+  telefonecartao_limpar(&piTelefone);
+#endif
 }
 
 void pipintro_evento(const SDL_Event *e) {
@@ -160,9 +167,50 @@ static void desenhaBotao(GfxRect r, const char *txt, int foco, int prim, float a
 static void ponteiroFoco(int i, int b) { (void)b; if (aberto && (i == 0 || i == 1)) focoBtn = i; }
 int pipintro_teste_foco(void) { return focoBtn; }
 
+#ifdef NV_TOUCH_UI
+static int piTelefoneRolar(const PonteiroRolagem *e) { return aberto && toquerol_evento(&piTelefone.rolagem, e); }
+static void piTelefoneEscolher(int i, int b) {
+  (void)b;
+  if (!aberto || i < 0 || i > 1) return;
+  focoBtn = i;
+  SDL_Event e = {0}; e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_RETURN;
+  pipintro_evento(&e);
+}
+static float piTelefoneConteudo(float x, float y, float w, float a) {
+  float inicio = y, figura = fminf(560, w);
+  y += telefonecartao_texto(TXT_CAPTION2, "NOVO NO NUVIO", x, y, w, 28, .6f * a) + 12;
+  y += telefonecartao_titulo("Canal em miniatura", x, y, w, a);
+  if (a > 0) desenhaFigura(x + (w - figura) * .5f, y, figura, a);
+  y += 40 + figura * .62f + 24;
+  y += telefonecartao_item("aspecto", "O vídeo fica no canto",
+       "Sair do player encolhe o canal para a borda — a imagem e o som continuam.", x, y, w, a);
+  y += telefonecartao_item("avancar", "Tela cheia",
+       "Toque na miniatura para voltar à tela cheia — a imagem e o som continuam.", x, y, w, a);
+  y += telefonecartao_item("menu_guide", "Guia de TV",
+       "Abra o Guia de TV e escolha outro canal.", x, y, w, a);
+  y += telefonecartao_item("oculto", "Fechar o vídeo",
+       "Toque no X da miniatura para fechar. Na home, Voltar também encerra a miniatura.", x, y, w, a);
+  return y - inicio;
+}
+static void piDesenharTelefone(void) {
+  if (entrada < .002f) return;
+  float a = anim_suave(entrada);
+  telefonecartao_medir(&piTelefone, NV_TELA_W, NV_TELA_H, 2);
+  float total = piTelefoneConteudo(0, 0, piTelefone.corpo.w, 0);
+  telefonecartao_comecar(&piTelefone, total, 0, aberto && entrada > .99f, piTelefoneRolar, a);
+  piTelefoneConteudo(piTelefone.corpo.x, piTelefone.corpo.y - piTelefone.offset, piTelefone.corpo.w, a);
+  gfx_sem_recorte();
+  telefonecartao_botao(&piTelefone, 0, "Continuar no canto", focoBtn == 0, ponteiroFoco, piTelefoneEscolher, 0, a);
+  telefonecartao_botao(&piTelefone, 1, "Fechar o vídeo", focoBtn == 1, ponteiroFoco, piTelefoneEscolher, 0, a);
+}
+#endif
+
 static void pipintro_desenharCorpo_(Uint32 agora);
 // Cartao de tela quase cheia: ampliado so se ainda couber (escala.h).
 void pipintro_desenhar(Uint32 agora) {
+#ifdef NV_TOUCH_UI
+  if (telefoneui_ativo()) { ESCALA_INI(); piDesenharTelefone(); ESCALA_FIM(); return; }
+#endif
   ESCALA_SE_COUBER_INI(PI_W, PI_H);
   pipintro_desenharCorpo_(agora);
   ESCALA_SE_COUBER_FIM();

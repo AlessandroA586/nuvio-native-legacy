@@ -15,6 +15,55 @@
 
 #define AND_TAG "nuvio"
 
+static void interfaceBool(const char *nome, int ativa) {
+  JNIEnv *env = (JNIEnv *)SDL_AndroidGetJNIEnv();
+  jobject act;
+  jclass cls;
+  jmethodID metodo;
+  if (!env) return;
+  act = (jobject)SDL_AndroidGetActivity();
+  if (!act) return;
+  cls = (*env)->GetObjectClass(env, act);
+  if (cls) {
+    metodo = (*env)->GetMethodID(env, cls, nome, "(Z)V");
+    if (metodo) (*env)->CallVoidMethod(env, act, metodo, ativa ? JNI_TRUE : JNI_FALSE);
+    (*env)->DeleteLocalRef(env, cls);
+  }
+  if ((*env)->ExceptionCheck(env)) (*env)->ExceptionClear(env);
+  (*env)->DeleteLocalRef(env, act);
+}
+
+void android_interface_modo(int mobile) { interfaceBool("interfaceModo", mobile); }
+
+#ifdef NV_TOUCH_UI
+static SDL_atomic_t toqueCancelEvento;
+
+void android_player_tela_cheia(int ativa) { interfaceBool("orientarPlayer", ativa); }
+
+int android_toque_cancelado(const SDL_Event *e) {
+  int tipo = SDL_AtomicGet(&toqueCancelEvento);
+  return tipo > 0 && e->type == (Uint32)tipo;
+}
+
+JNIEXPORT void JNICALL
+Java_space_nuvio_nativelegacy_NuvioActivity_nativeToqueCancelou(JNIEnv *env, jobject act) {
+  SDL_Event e;
+  int tipo;
+  (void)env; (void)act;
+  if (!SDL_WasInit(SDL_INIT_EVENTS)) return;
+  // Chamado apenas pelo fio da interface Android; o fio SDL so le o tipo.
+  tipo = SDL_AtomicGet(&toqueCancelEvento);
+  if (!tipo) {
+    Uint32 novo = SDL_RegisterEvents(1);
+    tipo = novo == (Uint32)-1 ? -1 : (int)novo;
+    SDL_AtomicSet(&toqueCancelEvento, tipo);
+  }
+  if (tipo <= 0) return;
+  SDL_zero(e); e.type = (Uint32)tipo;
+  SDL_PushEvent(&e);
+}
+#endif
+
 // A linha de modelo que o host .tpk escreve (tizen-tpk/Program.cs, LogaTv):
 //   [tv] modelo=<modelo> host=<host> dotnet=<...> tela=<WxH>
 // Aqui o "host" e o Android e nao ha .NET. NUVIO_TV_INFO vem do NuvioActivity:
@@ -415,3 +464,4 @@ Java_space_nuvio_nativelegacy_NuvioActivity_nativeRecUrl(JNIEnv *env, jobject ac
 }
 
 #endif
+

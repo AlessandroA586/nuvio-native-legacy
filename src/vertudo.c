@@ -21,6 +21,9 @@
 #include "ctxlista.h"
 #include "ctxmenu.h"
 #include "ponteiro.h"
+#include "rolagemtoque.h"
+#include "telefoneui.h"
+#include "escala.h"
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -35,10 +38,13 @@
 // vtColunas (x0 de ajustes_conteudo_x ate o painel); recolhida e Padrao
 // continuam com 5, como antes.
 static int vtColunas(void);
+static float vtCardLargura(void);
+static float vtCardAltura(void);
 #define VT_COLS      vtColunas()
 #define VT_COLS_MAX  5
-#define VT_CARD_W  248.0f
-#define VT_CARD_H  (timeline ? 236.0f : VT_CARD_W * 1.5f)
+#define VT_CARD_BASE_W 248.0f
+#define VT_CARD_W   vtCardLargura()
+#define VT_CARD_H   vtCardAltura()
 #define VT_GAP_X    16.0f                 // .seeall-grid: gap 20px 16px
 #define VT_GAP_Y    (20.0f + 40.0f)       // gap + a linha de titulo sob o cartaz
 #define VT_TOPO    (collection ? 332.0f : 244.0f)
@@ -58,18 +64,65 @@ static int vtColunas(void);
 
 static int   aberta, foco, pedAbrir = -1;
 static float anim, scrollY, velY;
+#ifdef NV_TOUCH_UI
+static int toqueLivre;
+static ToqueRolagem toqueAbas;
+static int toqueNasAbas;
+#endif
 static char  titulo[96];
 static const ColFolder *collection;
 static int source, tabFocus, tabCursor, timeline, ranked;
+static float tabRol;
+static int vtTelefone(void) {
+  return telefoneui_ativo();
+}
+static float vtEscala(void) { return vtTelefone() ? gfx_escala_ui() : 1.0f; }
+/* Keep measurements valid outside drawing too (focus, gestures and menus).
+ * Ordinary TV/tablet pages keep their original unscaled viewport. */
+#undef NV_TELA_W
+#undef NV_TELA_H
+#define NV_TELA_W (NV_LAYOUT_REAL_W / vtEscala())
+#define NV_TELA_H (NV_LAYOUT_REAL_H / vtEscala())
+static int vtTimelineRetrato(void) { return timeline && vtTelefone() && NV_TELA_H > NV_TELA_W; }
+static float vtInicio(void) {
+  return vtTelefone() ? 48.0f + ajustes_rail_largura_fixa() / vtEscala() : ajustes_conteudo_x();
+}
+static float vtFim(void) { return vtTelefone() ? NV_TELA_W - 48.0f : VT_PAN_X - VT_PAN_VAO; }
+static float vtCabecalhoLargura(float x, float original) {
+  if (!vtTelefone()) return original;
+  float fim = NV_TELA_W - 48.0f;
+  if (vtTimelineRetrato()) fim -= 180.0f;
+  return fminf(original, fim - x);
+}
+static GfxRect vtTimelineCard(float cy) {
+  float x = vtInicio() + (vtTimelineRetrato() ? 96.0f : 158.0f);
+  float w = 1000.0f;
+  if (vtTelefone()) w = fminf(w, vtFim() - x);
+  return (GfxRect){x, cy, w, VT_CARD_H};
+}
+static GfxRect vtTimelineArte(GfxRect card) {
+  float w = vtTelefone() ? fminf(376.0f, card.w * 0.36f) : 376.0f;
+  return (GfxRect){card.x + 12.0f, card.y + 12.0f, w, w * 212.0f / 376.0f};
+}
 // Colunas que cabem entre o inicio do conteudo (a rail fixa entra por
 // ajustes_conteudo_x, a fonte unica do recuo) e o painel, com VT_PAN_VAO de
 // folga. Tira colunas, nao encolhe o cartaz (regra de ajustes_area_conteudo).
 static int vtColunas(void) {
-  float livre = VT_PAN_X - VT_PAN_VAO - ajustes_conteudo_x() + VT_GAP_X;
-  int n = (int)(livre / (VT_CARD_W + VT_GAP_X) + 0.001f);
   if (timeline) return 1;
+  if (vtTelefone()) {
+    if (NV_TELA_H > NV_TELA_W) return 3;
+    int n = (int)((vtFim() - vtInicio() + VT_GAP_X) / (VT_CARD_BASE_W + VT_GAP_X));
+    return n < 1 ? 1 : n;
+  }
+  float livre = VT_PAN_X - VT_PAN_VAO - ajustes_conteudo_x() + VT_GAP_X;
+  int n = (int)(livre / (VT_CARD_BASE_W + VT_GAP_X) + 0.001f);
   return n < 1 ? 1 : n > VT_COLS_MAX ? VT_COLS_MAX : n;
 }
+static float vtCardLargura(void) {
+  if (!vtTelefone() || timeline) return VT_CARD_BASE_W;
+  return fmaxf(1.0f, (vtFim() - vtInicio() - (VT_COLS - 1) * VT_GAP_X) / VT_COLS);
+}
+static float vtCardAltura(void) { return timeline ? 236.0f : VT_CARD_W * 1.5f; }
 static float tabAnim[COL_SOURCE_MAX];
 static int order[VT_MAX], orderN=-1;
 static char catalogId[96];
@@ -163,6 +216,10 @@ static void openSource(void) {
   snprintf(catalogId,sizeof catalogId,"%s",s->catId);
   ranked=strstr(s->catId,"top100")||strstr(s->catId,"top250")||strstr(s->catId,"top10");
   foco=0;scrollY=velY=0;orderN=-1;armarOnda();
+#ifdef NV_TOUCH_UI
+  toqueLivre = 0;
+  toquerol_limpar(&toqueAbas);
+#endif
   // FONTE NAO-ADDON (issue #44): "tmdb"/"trakt" vinda do site. Nao tem base
   // de catalogo — o conteudo e pedido direto ao servico pelo
   // desc_vertudo_fonte. "Sem fonte" aqui quer dizer servico nao configurado
@@ -203,6 +260,9 @@ void vertudo_colecao(const ColFolder *folder) {
   int i;
   if(!folder||!folder->nSources)return;
   memset(tabAnim, 0, sizeof tabAnim);
+#ifdef NV_TOUCH_UI
+  tabRol = 0.0f;
+#endif
   collection=folder;source=tabCursor=0;tabFocus=folder->nSources>1;aberta=1;pedAbrir=-1;
   timeline=!strcmp(folder->group,"Directors");
   // COMECAR NA PRIMEIRA FONTE QUE TEM ENDERECO, e nao teimosamente na fonte 0.
@@ -217,6 +277,11 @@ void vertudo_colecao(const ColFolder *folder) {
 void vertudo_abrir(const char *base, const char *tipo, const char *catId,
                    const char *tit) {
   aberta = 1; foco = 0; scrollY = 0.0f; velY = 0.0f; pedAbrir = -1;
+#ifdef NV_TOUCH_UI
+  toqueLivre = 0;
+  toquerol_limpar(&toqueAbas);
+  tabRol = 0.0f;
+#endif
   memset(tabAnim, 0, sizeof tabAnim);
   snprintf(titulo, sizeof titulo, "%s", tit ? tit : "");
   collection=col_por_catalogo(base,tipo,catId);timeline=collection&&!strcmp(collection->group,"Directors");
@@ -269,11 +334,11 @@ static void abrirFocado(void) {
 // Retangulo e arte do cartao em foco, na tela virtual: o menu nasce ao lado e
 // o cartaz volta por cima do veu, como na home. Mesma conta do desenho.
 static GfxRect celulaRect(int i, const CatItem *it, const char **arte) {
-  float x0 = ajustes_conteudo_x();
+  float x0 = vtInicio();
   float cy = VT_TOPO + (float)(i / VT_COLS) * (VT_CARD_H + VT_GAP_Y) - scrollY;
   if (timeline) {
     *arte = it->backdrop[0] ? it->backdrop : it->poster;
-    return (GfxRect){ x0 + 158.0f + 12.0f, cy + 12.0f, 376.0f, 212.0f };
+    return vtTimelineArte(vtTimelineCard(cy));
   }
   { const char *pp = posterprov_card_addon(it->origem, it->imdb, it->tmdb, it->tipo, it->poster);
     *arte = pp[0] ? pp : it->backdrop; }
@@ -305,10 +370,51 @@ static int celulaAceitaMenu(void) {
   return viewItem(foco, &it);
 }
 
+#ifdef NV_TOUCH_UI
+static float toqueVertudoMax(void) {
+  int linhas = (nItens() + VT_COLS - 1) / VT_COLS;
+  return fmaxf(0.0f, VT_TOPO + linhas * (VT_CARD_H + VT_GAP_Y) - NV_TELA_H + 120.0f);
+}
+static int toqueVertudoRolar(const PonteiroRolagem *e) {
+  float escala = vtEscala();
+  if (e->fase == PONT_ROL_INICIO) {
+    toqueNasAbas = 0;
+    if (toquerol_evento(&toqueAbas, e)) { toqueNasAbas = 1; ctxhold_cancelar(&hold); return 1; }
+    float x = e->x / escala, y = e->y / escala;
+    if (!e->eixoY || x < vtInicio() || x >= (vtTelefone() ? vtFim() : VT_PAN_X) || y < VT_TOPO - 12.0f || y >= NV_TELA_H || nItens() < 1) return 0;
+    toqueLivre = 1; velY = 0.0f; ctxhold_cancelar(&hold);
+    return 1;
+  }
+  if (toqueNasAbas) return toquerol_evento(&toqueAbas, e);
+  if (e->fase == PONT_ROL_MOVER || e->fase == PONT_ROL_INERCIA) {
+    float antes = scrollY;
+    scrollY = anim_clamp(scrollY - e->delta / escala, 0.0f, toqueVertudoMax());
+    if (scrollY + NV_TELA_H >= VT_TOPO + nItens() / VT_COLS * (VT_CARD_H + VT_GAP_Y) - 2.0f * (VT_CARD_H + VT_GAP_Y)) desc_vertudo_mais();
+    return fabsf(scrollY - antes) > 0.001f;
+  }
+  return 1;
+}
+static void toqueVertudoRetomarFoco(void) {
+  if (toqueLivre && nItens() > 0) {
+    int linha = (int)((scrollY + NV_TELA_H * 0.30f - VT_TOPO) / (VT_CARD_H + VT_GAP_Y));
+    if (linha < 0) linha = 0;
+    foco = linha * VT_COLS + foco % VT_COLS;
+    if (foco >= nItens()) foco = nItens() - 1;
+    tabFocus = 0;
+  }
+  toqueLivre = 0;
+}
+#endif
+
 void vertudo_evento(const SDL_Event *e) {
   int n = nItens(), k;
   if (!aberta) return;
+#ifdef NV_TOUCH_UI
+  if (toquerol_navegacao(e)) toquerol_limpar(&toqueAbas);
+  if (e->type == SDL_KEYDOWN) toqueVertudoRetomarFoco();
+#endif
   switch (ctxhold_evento(&hold, e, celulaAceitaMenu())) {
+    case CTXH_LONGO: if (!menuNoFocado()) abrirFocado(); return;
     case CTXH_CONSUMIDO: return;
     case CTXH_TOQUE: abrirFocado(); return;
     default: break;
@@ -376,7 +482,11 @@ void vertudo_atualizar(float dt, Uint32 agora) {
   if (maxY < 0.0f) maxY = 0.0f;
   if (alvo < 0.0f) alvo = 0.0f;
   if (alvo > maxY) alvo = maxY;
-  scrollY = anim_mola2(&velY, scrollY, alvo, dt, NV_MOLA2_SCROLL);
+#ifdef NV_TOUCH_UI
+  if (toqueLivre) scrollY = anim_clamp(scrollY, 0.0f, maxY);
+  else
+#endif
+    scrollY = anim_mola2(&velY, scrollY, alvo, dt, NV_MOLA2_SCROLL);
 }
 
 // PAINEL DA DIREITA: o que a grade sozinha nao diz — sinopse, generos, nota.
@@ -493,11 +603,12 @@ static void themeBackground(float a) {
     if(collection->editorial) {
       GLuint art=tex_obter_hero(collection->detailHero);
       /* The content starts at 332; the separate detail illustration ends at 320. */
-      GfxRect header={0,0,1920,320};
+      float telaW = vtTelefone() ? NV_TELA_W : 1920.0f;
+      GfxRect header={0,0,telaW,320};
       if(collection->editorial==2&&tex_aspecto(collection->detailHero)>0) {
         float aspect=tex_aspecto(collection->detailHero);
-        header.w=fminf(1920,header.h*aspect);header.h=header.w/aspect;
-        header.x=1920-header.w;
+        header.w=fminf(telaW,header.h*aspect);header.h=header.w/aspect;
+        header.x=telaW-header.w;
       }
       if(art)gfx_rect(header,art,collection->editorial==2?GFX_EDITORIAL:GFX_TEXTO,0,0,0,0,1,1,1,a);
       return;
@@ -514,6 +625,8 @@ static void themeBackground(float a) {
         // apenas o cabeçalho e termina antes dele, sem atravessar pôster ou
         // sinopse como uma segunda camada.
         GfxRect rp={1660,18,260,300};
+        if (vtTelefone()) rp.x = NV_TELA_W - 48.0f - rp.w;
+        if (vtTimelineRetrato()) rp = (GfxRect){NV_TELA_W - 204.0f,18,156,180};
         gfx_tex_aspect_atual=tex_aspecto(foto);
         gfx_rect(rp,tp,GFX_RETRATO,
                  0,0,0,0,0,0,0,a*.88f);
@@ -533,18 +646,27 @@ static void themeBackground(float a) {
 static void ponteiroAba(int i, int b) {
   (void)b;
   if (!collection || i < 0 || i >= collection->nSources) return;
+#ifdef NV_TOUCH_UI
+  toqueLivre = 0;
+  toquerol_limpar(&toqueAbas);
+#endif
   tabFocus = 1; tabCursor = i;
 }
 static void ponteiroCartaz(int i, int b) {
   (void)b;
   if (i < 0 || i >= nItens()) return;
+#ifdef NV_TOUCH_UI
+  toqueLivre = 0;
+#endif
   tabFocus = 0; foco = i;
   if (foco >= nItens() - VT_COLS * 2) desc_vertudo_mais();
 }
 
 static void themeHeader(float a,float x0) {
   float r,g,b;corColecao(&r,&g,&b);
-  TxtLinha eyebrow=txt_linha(TXT_HERO_META,rotuloGrupo(),197,202,211,255);
+  TxtLinha eyebrow=vtTelefone()
+    ?txt_linha_corta(TXT_HERO_META,rotuloGrupo(),197,202,211,255,vtCabecalhoLargura(x0,960))
+    :txt_linha(TXT_HERO_META,rotuloGrupo(),197,202,211,255);
   txt_desenhar_alpha(eyebrow,x0,40,a);
   int ehDiretor=collection&&!strcasecmp(collection->group,"Directors");
   // O wordmark de uma coleção de diretores pode conter cabeça ou lettering
@@ -557,9 +679,9 @@ static void themeHeader(float a,float x0) {
     // Wordmark oficial, grande o bastante para leitura a distancia. O PNG
     // transparente e importado em ate 800px, portanto 560px nao interpola para
     // cima nem perde a silhueta original da marca.
-    float w=560.0f,h=w/aspect;if(h>108){h=108;w=h*aspect;}
+    float w=vtCabecalhoLargura(x0,560),h=w/aspect;if(h>108){h=108;w=h*aspect;}
     gfx_rect((GfxRect){x0,83,w,h},logo,tex_marca_escura(collection->logo)?GFX_MARCA:GFX_TEXTO,0,0,0,0,.96f,.97f,.98f,a);
-  } else {TxtLinha title=txt_linha_corta(TXT_TITULO1,titulo,242,243,247,255,940);txt_desenhar_alpha(title,x0,80,a);}
+  } else {TxtLinha title=txt_linha_corta(TXT_TITULO1,titulo,242,243,247,255,vtCabecalhoLargura(x0,940));txt_desenhar_alpha(title,x0,80,a);}
   char caption[180];int n=nItens();
   if(semFonte) {
     const char *pv=collection&&source<collection->nSources?collection->sources[source].prov:"";
@@ -571,7 +693,7 @@ static void themeHeader(float a,float x0) {
   else if(desc_vertudo_erro())snprintf(caption,sizeof caption,"Não foi possível carregar. OK para tentar novamente.");
   else if(!n)snprintf(caption,sizeof caption,"%s",desc_vertudo_carregando()?"Carregando títulos…":"Nenhum título nesta lista.");
   else snprintf(caption,sizeof caption,i18n("%d títulos%s  ·  %s"),n,desc_vertudo_fim()?"":i18n(" carregados"),i18n(legendaGrupo()));
-  TxtLinha sub=txt_linha_corta(TXT_DET_META2,caption,196,202,213,255,960);txt_desenhar_alpha(sub,x0,192,a);
+  TxtLinha sub=txt_linha_corta(TXT_DET_META2,caption,196,202,213,255,vtTelefone()?fminf(960.0f,NV_TELA_W-x0-48.0f):960.0f);txt_desenhar_alpha(sub,x0,192,a);
   if(collection&&collection->nSources>1) {
     // ABAS NO PADRAO DO APP (19/09/2026, "deixar mais parecido com o restante").
     // Antes: pilula de 304x58 fixa com anel, sublinhado e escala no foco —
@@ -582,7 +704,9 @@ static void themeHeader(float a,float x0) {
     // foco conserva uma marca mais baixa da mesma familia; as outras ficam
     // quase transparentes. `tabAnim` cruza o repouso e o foco em vez de
     // escalar.
-    const float H=52.0f,PAD=22.0f,GAP=12.0f,W=NV_TELA_W-x0-90;
+    const float H=52.0f,PAD=22.0f,GAP=12.0f,W=vtTelefone()?vtFim()-x0:NV_TELA_W-x0-90;
+    float margem = vtTelefone() ? 0.0f : 6.0f;
+    float textoW = vtTelefone() ? fminf(420.0f, W-PAD*2) : 420.0f;
     float larg[COL_SOURCE_MAX],pos[COL_SOURCE_MAX],px=0;
     static char rot[COL_SOURCE_MAX][180];
     int nAbas=collection->nSources;
@@ -607,24 +731,32 @@ static void themeHeader(float a,float x0) {
       else snprintf(rot[i],sizeof rot[i],"%s",nomeAba[i]);
       // Medida com a cor de repouso; a cor certa e reaplicada no desenho (o
       // cache de linhas guarda as duas).
-      larg[i]=txt_linha_corta(TXT_HERO_META,rot[i],176,176,176,255,420).w+PAD*2;pos[i]=px;px+=larg[i]+GAP;
+      larg[i]=txt_linha_corta(TXT_HERO_META,rot[i],176,176,176,255,textoW).w+PAD*2;pos[i]=px;px+=larg[i]+GAP;
     }
     // ROLAGEM PELO CURSOR, nao por indice: as abas tem larguras diferentes,
     // entao "seis por vez" nao existe mais. A aba com o cursor (ou a aberta,
     // quando o cursor esta na grade) entra inteira; a rolagem so anda o que
     // precisa, e o resto da faixa fica onde estava.
-    static float rol; int alvo=tabFocus?tabCursor:source;
+    int alvo=tabFocus?tabCursor:source;
     float ini=pos[alvo],fim=pos[alvo]+larg[alvo];
-    if(fim-rol>W)rol=fim-W; if(ini-rol<0)rol=ini;
-    if(rol<0)rol=0;
-    gfx_recorte(x0-6,244,W+12,H+12);
+#ifdef NV_TOUCH_UI
+    if (!toqueAbas.livre)
+#endif
+    { if(fim-tabRol>W)tabRol=fim-W; if(ini-tabRol<0)tabRol=ini; }
+    if(tabRol<0)tabRol=0;
+#ifdef NV_TOUCH_UI
+    tabRol = anim_clamp(tabRol, 0.0f, fmaxf(0.0f, px-GAP-W));
+    toquerol_vincular(&toqueAbas, (GfxRect){x0-margem,244,W+2*margem,H+12}, gfx_escala(),
+                     0.0f, fmaxf(0.0f, px-GAP-W), 0, &tabRol);
+#endif
+    gfx_recorte(x0-margem,244,W+2*margem,H+12);
     for(int i=0;i<nAbas;i++) {
-      float x=x0+pos[i]-rol;
-      if(x+larg[i]<x0-6||x>x0+W+6)continue;
+      float x=x0+pos[i]-tabRol;
+      if(x+larg[i]<=x0-margem||x>=x0+W+margem)continue;
       int f=tabFocus&&tabCursor==i,selecionada=source==i;
       float fa=tabAnim[i];
       GfxRect pill={x,253,larg[i],H};
-      ponteiro_alvo(fmaxf(pill.x,x0-6),pill.y,fminf(pill.x+pill.w,x0+W+6)-fmaxf(pill.x,x0-6),pill.h,ponteiroAba,NULL,i,0);
+      ponteiro_alvo(fmaxf(pill.x,x0-margem),pill.y,fminf(pill.x+pill.w,x0+W+margem)-fmaxf(pill.x,x0-margem),pill.h,ponteiroAba,NULL,i,0);
       if (selecionada) {
         float sr, sg, sb; corFocoFonte(&sr, &sg, &sb);
         gfx_cor(pill, NV_RAIO_PILL, sr, sg, sb,
@@ -632,7 +764,7 @@ static void themeHeader(float a,float x0) {
       } else gfx_cor(pill,NV_RAIO_PILL,1,1,1,.04f*a*(1-fa));
       if(fa>.001f) focoAbaFonte(pill, fa, a);
       int cor=f?ajustes_tinta_foco():selecionada?ajustes_tinta_foco2():176;
-      TxtLinha t=txt_linha_corta(TXT_HERO_META,rot[i],cor,cor,cor,255,420);
+      TxtLinha t=txt_linha_corta(TXT_HERO_META,rot[i],cor,cor,cor,255,textoW);
       txt_desenhar_alpha(t,x+PAD,pill.y+(H-t.h)*.5f,a);
     }gfx_sem_recorte();
   }
@@ -642,27 +774,36 @@ static void timelineCard(int i,float cy,float a,float x0) {
   CatItem it;if(!viewItem(i,&it))return;
   int sel=i==foco&&!tabFocus;float r,g,b;corColecao(&r,&g,&b);
   // A linha organiza a cronologia; não é uma borda decorativa de card.
-  gfx_cor((GfxRect){x0+109,cy-30,2,VT_CARD_H+VT_GAP_Y},0,.48f,.47f,.46f,a*.6f);
-  gfx_cor((GfxRect){x0+102,cy+24,16,16},.5f,sel?.95f:r,sel?.95f:g,sel?.97f:b,a);
+  float rail = vtTimelineRetrato() ? 64.0f : 109.0f;
+  gfx_cor((GfxRect){x0+rail,cy-30,2,VT_CARD_H+VT_GAP_Y},0,.48f,.47f,.46f,a*.6f);
+  gfx_cor((GfxRect){x0+rail-7,cy+24,16,16},.5f,sel?.95f:r,sel?.95f:g,sel?.97f:b,a);
   char year[16];int y=yearOf(&it);if(y==9999)snprintf(year,sizeof year,"—");else snprintf(year,sizeof year,"%d",y);
-  TxtLinha yr=txt_linha(TXT_CW_TITULO,year,219,210,195,255);txt_desenhar_alpha(yr,x0,cy+14,a);
-  float x=x0+158;GfxRect card={x,cy,1000,VT_CARD_H};
-  if(sel)gfx_cor((GfxRect){x-4,cy-4,1008,VT_CARD_H+8},.045f,.94f,.95f,.97f,a);
+  TxtLinha yr=txt_linha(vtTimelineRetrato()?TXT_DET_META2:TXT_CW_TITULO,year,219,210,195,255);txt_desenhar_alpha(yr,x0,cy+14,a);
+  GfxRect card=vtTimelineCard(cy), artRect=vtTimelineArte(card);
+  float x=card.x,tx=vtTelefone()?artRect.x+artRect.w+24.0f:x+418.0f;
+  float tw=vtTelefone()?card.x+card.w-tx-24.0f:550.0f;
+  if(sel)gfx_cor((GfxRect){x-4,cy-4,card.w+8,VT_CARD_H+8},.045f,.94f,.95f,.97f,a);
   gfx_cor(card,.04f,.09f,.095f,.105f,a);
   const char *art=it.backdrop[0]?it.backdrop:it.poster;GLuint tex=art[0]?tex_obter_larg(art,390):0;
-  if(tex){gfx_tex_aspect_atual=tex_aspecto(art);gfx_rect((GfxRect){x+12,cy+12,376,212},tex,GFX_CARD,0,0,0,.04f,0,0,0,a);gfx_tex_aspect_atual=0;}
-  else { gfx_cor((GfxRect){x+12,cy+12,376,212},.04f,.16f,.16f,.18f,a);
+  if(tex){gfx_tex_aspect_atual=tex_aspecto(art);gfx_rect(artRect,tex,GFX_CARD,0,0,0,.04f,0,0,0,a);gfx_tex_aspect_atual=0;}
+  else { gfx_cor(artRect,.04f,.16f,.16f,.18f,a);
          txt_desenhar_alpha(txt_linha(TXT_MINI,"Sem arte",184,188,198,255),
-                            x+158,y+104,a*.9f); }
-  TxtLinha name=txt_linha_corta(TXT_CW_TITULO,it.titulo,242,243,247,255,550);txt_desenhar_alpha(name,x+418,cy+22,a);
-  TxtLinha genre=txt_linha_corta(TXT_HERO_META,it.genero,187,194,207,255,550);txt_desenhar_alpha(genre,x+418,cy+64,a);
-  txt_bloco(TXT_DET_META2,it.sinopse,209,214,225,x+418,cy+106,545,30,a,3);
+                            vtTelefone()?artRect.x+artRect.w*.5f-32.0f:x+158,vtTelefone()?artRect.y+artRect.h*.5f-10.0f:y+104,a*.9f); }
+  TxtLinha name=txt_linha_corta(TXT_CW_TITULO,it.titulo,242,243,247,255,tw);txt_desenhar_alpha(name,tx,cy+22,a);
+  TxtLinha genre=txt_linha_corta(TXT_HERO_META,it.genero,187,194,207,255,tw);txt_desenhar_alpha(genre,tx,cy+64,a);
+  txt_bloco(TXT_DET_META2,it.sinopse,209,214,225,tx,cy+106,vtTelefone()?tw:545.0f,30,a,3);
 }
 
 void vertudo_desenhar(Uint32 agora) {
-  float a = anim, x0 = ajustes_conteudo_x();
+  float a = anim, x0 = vtInicio();
   int n = nItens(), i, lin0;
   if (a < 0.01f) return;
+  float escalaAnterior = gfx_escala();
+  if (vtTelefone()) gfx_escala_sair(vtEscala());
+#ifdef NV_TOUCH_UI
+  toqueAbas.offset = NULL;
+  ponteiro_rolagem(toqueVertudoRolar);
+#endif
   if (ondaArmada && n > 0) { ondaEm = agora ? agora : 1u; ondaArmada = 0; }
   if (ondaEm && revela_onda_fim(ondaEm, agora)) ondaEm = 0;
   // A onda conta a fileira VISIVEL: a grade que abre rolada (a volta de uma
@@ -699,7 +840,7 @@ void vertudo_desenhar(Uint32 agora) {
     float ac = a * entra;
     if (ac < 0.005f) continue;
     cy += (1.0f - entra) * NV_ENTRA_DY;
-    if (timeline) ponteiro_alvo_faixa(x0+158,cy,1000,VT_CARD_H,VT_TOPO-12.0f,NV_TELA_H,ponteiroCartaz,NULL,i,0);
+    if (timeline) { GfxRect r=vtTimelineCard(cy); ponteiro_alvo_faixa(r.x,r.y,r.w,r.h,VT_TOPO-12.0f,NV_TELA_H,ponteiroCartaz,NULL,i,0); }
     else ponteiro_alvo_faixa(cx,cy,VT_CARD_W,VT_CARD_H+40.0f,VT_TOPO-12.0f,NV_TELA_H,ponteiroCartaz,NULL,i,0);
     if(timeline){timelineCard(i,cy,ac,x0);continue;}
     if (!viewItem(i, &it)) continue;
@@ -745,12 +886,16 @@ void vertudo_desenhar(Uint32 agora) {
       txt_desenhar_alpha(ink,x,y,ac);
     }
   }
-  if(!n&&desc_vertudo_carregando())for(int i=0;i<VT_COLS;i++)
-    gfx_cor((GfxRect){x0+i*264,VT_TOPO,248,372},.06f,.12f,.13f,.15f,a);
+  if(!n&&desc_vertudo_carregando())for(int i=0;i<VT_COLS;i++) {
+    float w=vtTelefone()&&!timeline?VT_CARD_W:248.0f;
+    float h=vtTelefone()&&!timeline?VT_CARD_H:372.0f;
+    gfx_cor((GfxRect){x0+i*(w+VT_GAP_X),VT_TOPO,w,h},.06f,.12f,.13f,.15f,a);
+  }
   gfx_sem_recorte();
 
   // CABECALHO por cima do recorte, entao ele nunca compete com a arte.
   themeHeader(a,x0);
 
-  if (n > 0) painel(a);
+  if (n > 0 && !vtTelefone()) painel(a);
+  if (vtTelefone()) gfx_escala_sair(escalaAnterior);
 }

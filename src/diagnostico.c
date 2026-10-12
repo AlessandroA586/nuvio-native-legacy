@@ -58,6 +58,10 @@
 #include "text.h"
 #include "js.h"
 #include "ponteiro.h"
+#include "rolagemtoque.h"
+#include "telefoneui.h"
+#include "telefonecartao.h"
+#include "plrui.h"
 #include <stdatomic.h>
 #include <math.h>
 #include <stdio.h>
@@ -347,6 +351,9 @@ static int sairTela;
 static int velocidadePedida, soVelocidade;
 static int introGlobal;
 static int introDecidido;
+#ifdef NV_TOUCH_UI
+static void dgPhoneReiniciar(void);
+#endif
 
 static const char *gargaloPrincipal(void);
 
@@ -1895,6 +1902,11 @@ static void acionarVazBotao(int b) {
 }
 
 #define VAZ_LINHAS_RANKING 8
+#ifdef NV_TOUCH_UI
+static ToqueRolagem toqueRanking;
+static float toqueRankingOffset;
+static int toqueRankingRolar(const PonteiroRolagem *e) { return toquerol_evento(&toqueRanking, e); }
+#endif
 
 // O teste acabou (fio de desenho). Com um relatorio de diagnostico ja
 // montado, ele e remontado com a vazao e o "Enviar de novo" aparece: o
@@ -1934,6 +1946,9 @@ void diagnostico_iniciar(void) {
     return;
   }
   juntarFios(1);
+#ifdef NV_TOUCH_UI
+  dgPhoneReiniciar();
+#endif
   free(d.cfgAntes);
   memset(&d, 0, sizeof d);
   if (vz.fio) { SDL_WaitThread(vz.fio, NULL); vz.fio = NULL; }
@@ -2075,6 +2090,12 @@ static void acionarBotao(int b) {
 
 
 void diagnostico_evento(const SDL_Event *e) {
+#ifdef NV_TOUCH_UI
+  if (toquerol_navegacao(e)) {
+    if (toqueRanking.livre) vz.rolagem = (int)(toqueRankingOffset / 62.0f);
+    toquerol_limpar(&toqueRanking);
+  }
+#endif
   SDL_Keycode k;
   int estado;
   if (!e || e->type != SDL_KEYDOWN) return;
@@ -2325,6 +2346,9 @@ void diagnostico_intro_primeira_vez(void) {
 }
 
 int diagnostico_intro_aberto(void) { return introGlobal; }
+#ifdef NV_TOUCH_UI
+int diagnostico_apresentacao_aberta(void) { return introGlobal || d.intro; }
+#endif
 
 void diagnostico_intro_dispensar(int marcarVista) {
   introDecidido = 1;
@@ -2698,9 +2722,22 @@ static void desenharCicloRanking(GfxRect r, float ar, float ag, float ab) {
   max = tot - VAZ_LINHAS_RANKING;
   if (max < 0) max = 0;
   if (vz.rolagem > max) vz.rolagem = max;
-  for (i = vz.rolagem; i < tot && i < vz.rolagem + VAZ_LINHAS_RANKING; i++) {
+  int primeira = vz.rolagem, quantidade = VAZ_LINHAS_RANKING;
+  float resto = 0.0f;
+#ifdef NV_TOUCH_UI
+  if (!toqueRanking.livre) toqueRankingOffset = vz.rolagem * 62.0f;
+  toquerol_vincular(&toqueRanking, (GfxRect){r.x + 28.0f, r.y + 96.0f, r.w - 56.0f, VAZ_LINHAS_RANKING * 62.0f},
+                   gfx_escala(), 0.0f, max * 62.0f, 1, &toqueRankingOffset);
+  ponteiro_rolagem(toqueRankingRolar);
+  primeira = (int)(toqueRankingOffset / 62.0f);
+  vz.rolagem = primeira;
+  resto = toqueRankingOffset - primeira * 62.0f;
+  quantidade++;
+  gfx_recorte(r.x + 28.0f, r.y + 96.0f, r.w - 56.0f, VAZ_LINHAS_RANKING * 62.0f);
+#endif
+  for (i = primeira; i < tot && i < primeira + quantidade; i++) {
     const VazCicloRes *x = &vz.cic[ordem[i]];
-    float y = r.y + 96.0f + (float)(i - vz.rolagem) * 62.0f;
+    float y = r.y + 96.0f + (float)(i - primeira) * 62.0f - resto;
     float esq1, esq2;
     int cor, cr, cg, cb;
     const char *vt = veredito(x, &cor);
@@ -2740,6 +2777,9 @@ static void desenharCicloRanking(GfxRect r, float ar, float ag, float ab) {
     t = txt_linha_corta(TXT_CAPTION, a, 150, 160, 174, 255, esq2);
     txt_desenhar(t, r.x + 28.0f, y + 32.0f);
   }
+#ifdef NV_TOUCH_UI
+  gfx_sem_recorte();
+#endif
   if (tot > VAZ_LINHAS_RANKING) {
     snprintf(a, sizeof a, i18n("linhas %d-%d de %d"), vz.rolagem + 1,
              vz.rolagem + VAZ_LINHAS_RANKING < tot ? vz.rolagem + VAZ_LINHAS_RANKING : tot, tot);
@@ -2958,6 +2998,17 @@ static void diagnosticoAntigo(Uint32 agora);
 #include "diagnostico_ilha.inc"
 
 void diagnostico_desenhar(Uint32 agora) {
+#ifdef NV_TOUCH_UI
+  toqueRanking.offset = NULL;
+  if (telefoneui_ativo()) {
+    float anterior = gfx_escala();
+    gfx_escala_sair(gfx_escala_ui());
+    dgTelefone(agora);
+    gfx_escala_sair(anterior);
+    if (d.intro) { ponteiro_camada(); dgApresentacao(0); }
+    return;
+  }
+#endif
   // GLASS UI: as ilhas de diagnostico_ilha.inc sobre a arte, como Ajustes.
   { int est = atomic_load(&d.estado);
     ajustes_ui_fundo();

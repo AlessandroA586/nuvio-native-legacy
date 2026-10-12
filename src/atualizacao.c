@@ -29,6 +29,7 @@
 #include "idioma.h"
 #include "ajustes.h"
 #include "ponteiro.h"
+#include "rolagemtoque.h"
 #include "idiomacod.h"
 #include "plrui.h"
 #include "qr.h"
@@ -277,6 +278,14 @@ static int foco;                  // 0 = "Atualizar agora", 1 = "Depois"
 // `rolar` e onde o desenho esta (anda ate o alvo); `notasH` e a altura do texto
 // inteiro medida no quadro anterior e `vistaH` a da janela visivel.
 static float rolar, rolarAlvo, notasH, vistaH;
+#ifdef NV_TOUCH_UI
+static ToqueRolagem toqueNotas;
+static int toqueNotasRolar(const PonteiroRolagem *e) {
+  int r = toquerol_evento(&toqueNotas, e);
+  if (toqueNotas.livre) rolarAlvo = rolar;
+  return r;
+}
+#endif
 static SDL_Thread *fioInst;
 
 const char *atualizacao_nova(void) { return tagNova; }
@@ -908,6 +917,9 @@ static float rolarMax(void) {
 
 // Cada abertura comeca do topo das notas e com o foco no botao de atualizar.
 static void reiniciarVista(void) {
+#ifdef NV_TOUCH_UI
+  toquerol_limpar(&toqueNotas);
+#endif
   foco = 0;
   rolar = rolarAlvo = 0.0f;
 }
@@ -1079,6 +1091,12 @@ void atualizacao_abrir(void) {
 }
 
 void atualizacao_evento(const SDL_Event *e) {
+#ifdef NV_TOUCH_UI
+  if (toquerol_navegacao(e)) {
+    if (toqueNotas.livre) rolarAlvo = rolar;
+    toquerol_limpar(&toqueNotas);
+  }
+#endif
   SDL_Keycode k;
   if (!aberto || e->type != SDL_KEYDOWN) return;
   k = e->key.keysym.sym;
@@ -1238,6 +1256,9 @@ void atualizacao_atualizar(float dt, Uint32 agora) {
   if (!aberto && cartaoT < 0.0f) { cartaoT = 0.0f; cartaoV = 0.0f; }
   // Rolagem suave, mas curta (~120 ms para chegar): quem segura a seta quer
   // ver o texto andar, nao esperar.
+#ifdef NV_TOUCH_UI
+  if (!toqueNotas.livre)
+#endif
   { float d = rolarAlvo - rolar, f = dt * 1000.0f / 120.0f;
     if (f > 1.0f) f = 1.0f;
     rolar = (d > -0.5f && d < 0.5f) ? rolarAlvo : rolar + d * f; }
@@ -1585,6 +1606,11 @@ void atualizacao_desenhar(Uint32 agora) {
     rodY = C.y + C.h - rodH;
     vista = rodY - notTopo;
     vistaH = vista;
+#ifdef NV_TOUCH_UI
+    toquerol_vincular(&toqueNotas, (GfxRect){R.x, notTopo, R.w, vista}, gfx_escala(),
+                     0.0f, rolarMax(), 1, &rolar);
+    ponteiro_rolagem(toqueNotasRolar);
+#endif
 
     // NOTAS, recortadas na janela entre o cabecalho e o rodape, roláveis.
     // \x01 marca secao (28/700); "• " e item (24, entrelinha 1,45, a bolinha a
@@ -1753,3 +1779,4 @@ void atualizacao_desenhar(Uint32 agora) {
   }
   gfx_sem_recorte();
 }
+

@@ -78,6 +78,10 @@ const char *st_aviso(void);
 // ST_PEDE_TECLADO: a voz nao existe aqui; o dono abre st_ime_abrir com o texto
 // dele (o aviso ja diz que o microfone do teclado do sistema dita).
 int   st_ler(int dono, char *dst, size_t n);
+// Mesmo retorno e ordem de st_ler. O sinal opcional distingue um valor vazio
+// recebido de uma ausencia de texto, inclusive quando Voltar chega no mesmo
+// lote. O dono decide se conserva esse valor; fechar nao conclui a entrada.
+int   st_ler_valor(int dono, char *dst, size_t n, int *valorRecebido);
 
 // Primeira coisa no laco de eventos de quem tem o campo: 1 = o evento era do
 // texto do sistema (o aviso de valor/fim de entrada_texto.h, ou TEXTINPUT,
