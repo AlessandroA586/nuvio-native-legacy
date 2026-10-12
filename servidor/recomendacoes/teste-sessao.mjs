@@ -8,7 +8,10 @@ const stmt = (sql) => ({ bind: (...a) => ({
   run: async () => { if (sql.startsWith("INSERT INTO sessao")) { if (a.length === 2) db.set(a[0], { id: "", nome: "", expira: a[1] }); else db.set(a[0], { id: a[1], nome: a[2], expira: a[3] }); } return {}; },
   all: async () => ({ results: [] }) }) });
 const env = { DB: { prepare: stmt, batch: async () => [] }, SUPABASE_URL: "https://sb", SUPABASE_ANON_KEY: "k" };
-globalThis.fetch = async (u) => { chamadas++; return new Response("{}", { status: 401 }); };
+globalThis.fetch = async (u) => {
+  if (String(u).endsWith('/.well-known/jwks.json')) return new Response('{}', { status: 500 });
+  chamadas++; return new Response("{}", { status: 401 });
+};
 const jwt = (exp) => "h." + Buffer.from(JSON.stringify({ exp })).toString("base64url") + ".s";
 const pede = (tok) => w.fetch(new Request("https://x/v1/amigos/atividade", { headers: { authorization: "Bearer " + tok, "x-nuvio-auth": "nuvio" } }), env, { waitUntil() {} });
 const now = Math.floor(Date.now() / 1000);
@@ -22,7 +25,10 @@ if (chamadas !== 1) { console.log("FALHOU: esperava 1 chamada, houve", chamadas)
 const neg = [...db.values()].find((r) => r.id === "" && r.expira > now + 900);
 if (!neg || neg.expira > now + 3601) { console.log("FALHOU: recusa nao lembrada ate o exp", neg && neg.expira - now); process.exit(1); }
 // Token aceito fica no cache ate o exp (teto 1 h), nao 10 min.
-globalThis.fetch = async () => { chamadas++; return new Response(JSON.stringify({ id: "u1" }), { status: 200 }); };
+globalThis.fetch = async (u) => {
+  if (String(u).endsWith('/.well-known/jwks.json')) return new Response('{}', { status: 500 });
+  chamadas++; return new Response(JSON.stringify({ id: "u1" }), { status: 200 });
+};
 chamadas = 0;
 const bom = jwt(now + 1800);
 await pede(bom);
