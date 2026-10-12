@@ -169,6 +169,26 @@ const ate = async (pred, ms = 3000) => {
   const unsafe = ctx.tx('<img src=x onerror=alert(1)>');
   espera("texto de terceiros continua texto", '<img src=x onerror=alert(1)>', unsafe.textContent);
 
+  // Public bootstrap and polling never touch the private API or expose mock roles.
+  MAPA = {meta:{repo:"https://github.com/example/project",publico:true},
+    itens:[{numero:12,titulo:"Public issue",estado_github:"aberta",status:"aberta",branches:[],commits:[]}],roadmap:[]};
+  CHAMADAS.length = 0;
+  await ctx.init(MAPA);
+  await ctx.recarrega();
+  espera("público: nenhuma chamada API", 0, CHAMADAS.filter(u => u.includes("respostas")).length);
+  const app = DOC.getElementById("app");
+  const descendants = [];
+  const visit = n => {descendants.push(n); n.children.forEach(visit);}; visit(app);
+  espera("público: sem seletor de papel", false, descendants.some(n => n.id === "mode"));
+  espera("público: sem áreas internas", false, descendants.some(n => n.className === "internal"));
+  ctx.MODE = "owner";
+  espera("público: dono bloqueado", false, ctx.ownerMode());
+  const card = ctx.issueCard(MAPA.itens[0], "");
+  const links = []; const scan = n => {if(n.tagName === "A") links.push(n); n.children.forEach(scan);}; scan(card);
+  espera("público: claim abre issue", "https://github.com/example/project/issues/12", links.find(n => n.textContent === "Quero pegar")?.getAttribute("href"));
+  espera("público: orientação para comentar", true, card.textContent.includes("Comente na issue"));
+  espera("público: sem aviso API", false, app.textContent.includes("API"));
+
   console.log(FALHAS ? FALHAS + " falha(s)" : "TUDO OK");
   process.exit(FALHAS ? 1 : 0);
 })();

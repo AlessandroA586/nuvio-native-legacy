@@ -13,10 +13,50 @@ def git(repo, *args):
         return ""
 
 
+def publico(dados, repo):
+    # Construct every object explicitly: no internal field survives by default.
+    def text(value, fallback=""):
+        value = str(value or "")
+        return fallback if re.search("dono|decis|valida|respond|relato", value, re.I) else value
+
+    def version(value):
+        m = re.match(r"^\d+\.\d+(?:\.\d+)?", str(value or ""))
+        return m.group() if m else ""
+
+    itens = []
+    for i in dados["itens"]:
+        status = i.get("status")
+        status = {"consertada-nao-lancada": "precisa-teste"}.get(status, status)
+        if status not in ("lancada", "precisa-teste", "precisa-log", "em-andamento", "em-progresso", "good-first-issue"):
+            status = "aberta"
+        texto = json.dumps([i.get("notas"), i.get("proximo_passo"), i.get("conserto")], ensure_ascii=False)
+        tokens = set(re.findall(r"[A-Za-z0-9][A-Za-z0-9._/-]{2,80}", texto))
+        branches, commits = [], []
+        if status in ("em-andamento", "em-progresso", "precisa-teste"):
+            branches = [b for b in dados["meta"]["branches"] if b in tokens]
+            hashes = {h for h in dados["meta"]["commits"] if h in tokens}
+            hashes.update(dados["meta"]["branch_heads"][b] for b in branches)
+            for h in sorted(hashes):
+                fmt = git(repo, "log", "-1", "--format=%H%x09%s", h)
+                sha, _, assunto = fmt.partition("\t")
+                if sha:
+                    commits.append({"hash": sha, "assunto": text(assunto, "Commit")})
+        itens.append({"numero": int(i["numero"]), "titulo": text(i.get("titulo"), "Issue #" + str(i["numero"])),
+                      "plataforma": text(i.get("plataforma")),
+                      "estado_github": "aberta" if i.get("estado_github") == "aberta" else "fechada",
+                      "status": status, "alvo": version(i.get("alvo")) or (i.get("alvo") if i.get("alvo") in ("futuro", "ja-lancada", "nao vamos fazer") else ""),
+                      "release": version(i.get("release")), "branches": branches, "commits": commits})
+    return {"meta": {"repo": dados["meta"]["repo"], "publico": True}, "itens": itens,
+            "roadmap": [{"release": version(r.get("release")) or "futuro",
+                         "situacao": "lancada" if re.search("lançada|lancada", r.get("situacao", "")) else "planejada"}
+                        for r in dados.get("roadmap", [])]}
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--repo", default=os.path.abspath(os.path.join(AQUI, "..", "..")))
     ap.add_argument("--out", default=os.path.join(AQUI, "site"))
+    ap.add_argument("--publico", action="store_true", help="exporta somente campos públicos")
     a = ap.parse_args()
 
     mapa = os.path.join(a.repo, "docs", "issues", "mapa.json")
@@ -64,6 +104,9 @@ def main():
         head = git(a.repo, "rev-parse", branch + "^{commit}")
         dados["meta"]["branch_heads"][branch] = head[:12]
         commits[head[:12]] = head
+
+    if a.publico:
+        dados = publico(dados, a.repo)
 
     os.makedirs(a.out, exist_ok=True)
     fonts = os.path.join(a.out, "fonts")
