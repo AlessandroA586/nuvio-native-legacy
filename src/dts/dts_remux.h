@@ -56,6 +56,12 @@ const DtsRemuxInfo *dts_remux_info(const DtsRemux *);
 double dts_remux_segment_start(const DtsRemux *, int seg);    /* seconds; segment 0 = 0 */
 double dts_remux_segment_duration(const DtsRemux *, int seg);
 int dts_remux_segment_at(const DtsRemux *, double seconds);
+/* Source time of the index keyframe at or before `seconds` (progressive runs
+ * start there); `seconds` itself when there is no index. */
+double dts_remux_keyframe_before(const DtsRemux *, double seconds);
+/* Rebuilds the HLS segment table for another target length (the size of the
+ * source is known only after the open). Call before the first generator. */
+void dts_remux_resegment(DtsRemux *, double seg_target_s);
 /* Aborts every network wait of this source and its generators (async-safe). */
 void dts_remux_cancel(DtsRemux *);
 /* Frees the source; every generator must be freed first. */

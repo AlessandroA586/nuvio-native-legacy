@@ -31,7 +31,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef NV_DTS_FFMPEG
+/* Real code only in the Samsung .tpk build with FFmpeg (and the host smoke
+ * test). webOS also defines NV_DTS_FFMPEG but never remuxes: stubs there keep
+ * its binary as it was. */
+#if !defined(NV_DTS_FFMPEG) || !(defined(NV_TPK) || defined(NV_DTS_REMUX_TEST))
 int dts_remux_available(void) { return 0; }
 DtsRemux *dts_remux_open(const char *u, const char *h, int t, int s, double g, volatile int *c, char *err, size_t n) {
   (void)u; (void)h; (void)t; (void)s; (void)g; (void)c;
@@ -42,6 +45,8 @@ const DtsRemuxInfo *dts_remux_info(const DtsRemux *r) { (void)r; return NULL; }
 double dts_remux_segment_start(const DtsRemux *r, int s) { (void)r; (void)s; return 0; }
 double dts_remux_segment_duration(const DtsRemux *r, int s) { (void)r; (void)s; return 0; }
 int dts_remux_segment_at(const DtsRemux *r, double t) { (void)r; (void)t; return -1; }
+double dts_remux_keyframe_before(const DtsRemux *r, double t) { (void)r; return t; }
+void dts_remux_resegment(DtsRemux *r, double t) { (void)r; (void)t; }
 void dts_remux_cancel(DtsRemux *r) { (void)r; }
 void dts_remux_close(DtsRemux *r) { (void)r; }
 DtsRemuxGen *dts_remux_gen_new(DtsRemux *r, char *err, size_t n) {
@@ -368,6 +373,22 @@ int dts_remux_segment_at(const DtsRemux *r, double t) {
   int k = 0;
   while (k + 1 < r->nseg && r->segS[k + 1] <= t) k++;
   return k;
+}
+
+double dts_remux_keyframe_before(const DtsRemux *r, double t) {
+  if (!r || r->nkf < 1) return t;
+  int64_t want = av_rescale_q((int64_t)llround(t * 1000.0), (AVRational){1, 1000}, r->vtb);
+  int k = floorIdx(r->kf, r->nkf, want);
+  double s = (k >= 0 ? r->kf[k] : r->kf[0]) * av_q2d(r->vtb);
+  return s < 0 ? 0 : s;
+}
+
+void dts_remux_resegment(DtsRemux *r, double target) {
+  if (!r || r->nkf < 1) return;
+  free(r->segTs); free(r->segB48); free(r->segS);
+  r->segTs = r->segB48 = NULL; r->segS = NULL;
+  buildSegments(r, target > 0.5 ? target : 6.0);
+  r->info.n_segments = r->nseg;
 }
 
 void dts_remux_cancel(DtsRemux *r) {
