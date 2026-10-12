@@ -51,6 +51,22 @@ int main(void) {
 
   legmem_definir_perfil(1);
 
+  // .tpk antes da sonda: a forcada escolhida ainda tem tipo/letreiro zerados.
+  titulo("tt0386676:1:1");
+  nAdds = 0; nLeg = 2;
+  faixa(0, "en", 1, LING_LEG_COMUM); faixa(1, "en", 2, LING_LEG_COMUM);
+  aberta = 1; faixas_escolher_embutida(1); aberta = 0;
+  // A classificacao chega depois da escolha, sem nova escolha manual.
+  leg[1].tipoLeg = LING_LEG_FORCADA; leg[1].letreiro = 1;
+  legmem_definir_perfil(2);
+  legmem_definir_perfil(1);
+  titulo("tt0386676:1:2");
+  faixa(0, "en", 7, LING_LEG_COMPLETA); faixa(1, "en", 8, LING_LEG_FORCADA);
+  r = abrir(-1);
+  printf("forcada escolhida antes da sonda, episodio seguinte: %d\n", r);
+  assert(r == 1);
+  assert(!legmem_do_titulo("tt0386676")->id[0]);
+
   // 1. ADDON. Remux so com PGS: o player nao lista embutida nenhuma.
   titulo("tt0903747:1:1");
   nLeg = 0; addonsDoEpisodio("s01e01");
@@ -65,7 +81,7 @@ int main(void) {
   // 2. EMBUTIDA em outro numero no episodio seguinte (outra fonte/release).
   titulo("tt0944947:1:1");
   nAdds = 0; nLeg = 2;
-  faixa(0, "es", 1, LING_LEG_COMUM); faixa(1, "en", 2, LING_LEG_COMUM);
+  faixa(0, "es", 1, LING_LEG_COMUM); faixa(1, "en", 2, LING_LEG_COMPLETA);
   aberta = 1; faixas_escolher_embutida(1); aberta = 0;
   legmem_definir_perfil(2);
   legmem_definir_perfil(1);               // marcador da inteira sobrevive ao disco

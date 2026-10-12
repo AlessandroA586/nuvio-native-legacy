@@ -837,7 +837,8 @@ static void lembrarManual(int i) {
     if (!f) return;
     e.tipo = 'e'; e.numero = f->numero;
     // #383: inteira explicita; id vazio de builds antigos e tipo desconhecido.
-    e.id[0] = (f->tipoLeg == LING_LEG_FORCADA || f->tipoLeg == LING_LEG_LETREIROS || f->letreiro) ? 'f' : 'c';
+    e.id[0] = (f->tipoLeg == LING_LEG_FORCADA || f->tipoLeg == LING_LEG_LETREIROS || f->letreiro) ? 'f' :
+              (f->tipoLeg == LING_LEG_COMPLETA || f->tipoLeg == LING_LEG_SDH) ? 'c' : 0;
     idiomaLembravel(f->idioma, e.idioma, sizeof e.idioma);
     snprintf(e.nome, sizeof e.nome, "%s", f->rotulo);
   } else { lembrarAddon(addons_legenda(i - emb)); return; }
