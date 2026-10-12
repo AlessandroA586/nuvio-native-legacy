@@ -1022,7 +1022,9 @@ static unsigned char *lerHttp(void *u, const char *url, long long ini, long n, l
 }
 
 int legref_disponivel(void) {
-#if defined(__EMSCRIPTEN__) || defined(NV_TPK) || defined(NV_TPK40)
+  // Samsung: desligado ate provar em TV. -DNV_LEGREF_TPK liga no .tpk 6+
+  // (canario; o 4/5 fica fora: rede sem TLS por fio, outro carregador).
+#if defined(__EMSCRIPTEN__) || defined(NV_TPK40) || (defined(NV_TPK) && !defined(NV_LEGREF_TPK))
   return 0;
 #else
   return (rede_pedido_capacidades() & REDE_CAP_JOB) != 0;
