@@ -2047,17 +2047,27 @@ static void *fioScrobble(void *u) {
   }
 }
 
+// Recusa. Na SAIDA a sessao acabou mesmo sem chamada: com o start ainda "em
+// pe" a proxima abertura do mesmo titulo nao mandaria /scrobble/start.
+static int recusar(int evento) {
+  if (evento == SCR_EV_SAIU) {
+    pthread_mutex_lock(&travaScr); scrEstado.ativo = 0; pthread_mutex_unlock(&travaScr);
+  }
+  return SCR_NADA;
+}
+
 // Enfileira. Devolve a acao decidida (SCR_NADA quando nao ha o que mandar).
-int trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg, double assistidoSeg) {
+int trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg, double assistidoSeg,
+                   double deSeg) {
   int acao;
   double pct;
   pthread_t t;
   if (!ligado || !imdb || !*imdb || !isfinite(posSeg) || !isfinite(durSeg) ||
-      !isfinite(assistidoSeg) || durSeg < 120.0 || assistidoSeg < 5.0) return SCR_NADA;
+      !isfinite(assistidoSeg) || durSeg < 120.0 || assistidoSeg < 5.0) return recusar(evento);
   pct = 100.0 * posSeg / durSeg;
   // Valida ANTES da vaga pendente: nem um stop sem reproducao entra na fila.
   if (evento == SCR_EV_SAIU && pct >= 90.0 &&
-      assistidoSeg < fmax(120.0, durSeg * 0.9)) return SCR_NADA;
+      !scrobble_assistiu(assistidoSeg, deSeg, durSeg)) return recusar(evento);
   pthread_mutex_lock(&travaScr);
   acao = scrobble_decidir(&scrEstado, evento, imdb, pct);
   if (acao != SCR_NADA) {
@@ -2079,8 +2089,8 @@ int trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg, d
 }
 
 // Saida do player: stop (>= 90%) ou pause, como sempre foi.
-void trakt_marcar(const char *imdb, double posSeg, double durSeg, double assistidoSeg) {
-  trakt_scrobble(SCR_EV_SAIU, imdb, posSeg, durSeg, assistidoSeg);
+void trakt_marcar(const char *imdb, double posSeg, double durSeg, double assistidoSeg, double deSeg) {
+  trakt_scrobble(SCR_EV_SAIU, imdb, posSeg, durSeg, assistidoSeg, deSeg);
 }
 
 // --- WATCHLIST: escrever e ler ------------------------------------------------

@@ -25,6 +25,7 @@
 #include "dados.h"
 #include "linguas.h"
 #include "trakt.h"
+#include "traktscrobble.h"
 #include "visto.h"
 #include "vistoep.h"
 #include <SDL2/SDL.h>
@@ -50,7 +51,7 @@ int nv_test_clock_gettime(clockid_t id, struct timespec *ts) {
 }
 
 // Pipeline falso: pos e dur sob controle total do teste.
-static double dur, pos;
+static double dur, pos, creditos;
 static int ativo, pausado, buffer, terminou;
 static char urlAtual[4096];
 int video_tocar(const char *url) {
@@ -73,13 +74,15 @@ double video_duracao(void) { return dur; }
 const char *video_url_atual(void) { return urlAtual; }
 static const char *const fonte = "https://example.invalid/teste.mp4";
 int video_iniciar_auto(void) { return 1; }
+double video_creditos(void) { return creditos; }
 
 // OS DESTINOS, virados contadores pelo renome do .sh. A marcacao de vistos
 // parte daqui (fecharSessao) para o Trakt (scrobble stop) e para o
 // Simkl/conta (visto_titulo) — nenhuma rede aqui, so a contagem.
 static int nTrakt, nVisto;
-void trakt_marcar(const char *imdb, double posSeg, double durSeg, double assistidoSeg) {
-  (void)imdb; (void)posSeg; (void)durSeg; (void)assistidoSeg; nTrakt++;
+static double tkPos, tkDur, tkAssistido, tkDe;   // o que o Trakt recebeu por ultimo
+void trakt_marcar(const char *imdb, double posSeg, double durSeg, double assistidoSeg, double deSeg) {
+  (void)imdb; tkPos = posSeg; tkDur = durSeg; tkAssistido = assistidoSeg; tkDe = deSeg; nTrakt++;
 }
 int visto_titulo(const char *imdb, const char *tipo, const int *temporadas,
                  int nt, int visto, int destinos) {
@@ -126,6 +129,19 @@ static void abrir(int filme, const char *imdb, const char *meta,
   for (int i = 0; i < (int)p; i++) { agoraMono += 1; pos += 1; quadro(); }
   pos = p; quadro(); quadro();
   player_encerrar();
+}
+
+// Filme sem minutagem (so a prova de reproducao decide), ja com a fonte aberta
+// e o ponto salvo (`progresso`, em %) retomado.
+static void sessao(const char *imdb, int progresso, double d) {
+  CatItem c = {0};
+  strcpy(c.imdb, imdb); strcpy(c.tipo, "movie"); c.progresso = progresso;
+  cat_definir(&c, 1); nTrakt = nVisto = 0; dur = d; creditos = 0;
+  player_abrir(0, fonte); quadro(); quadro();
+}
+// `seg` segundos de relogio tocando a `vel` vezes a velocidade normal.
+static void tocar(int seg, double vel) {
+  for (int i = 0; i < seg; i++) { agoraMono += 1; pos += vel; quadro(); }
 }
 
 int main(void) {
@@ -241,6 +257,49 @@ int main(void) {
   // Regressao sem catalogo: 69s reais com duracao falsa de 129s nao concluem.
   abrir(1, "tt90000008", NULL, NULL, 129.036, 69);
   assert(nTrakt == 1 && nVisto == 0 && cat_item(0)->progresso < 90);
+
+  // --- #205 NAO PODE REGREDIR O #100 (segunda revisao) -----------------------
+  //
+  // A prova exigia 90% da DURACAO em tempo de relogio. Quem via tudo e saia
+  // pelo caminho que o proprio app oferece ficava abaixo disso.
+
+  // Aceitar o proximo no marcador de creditos: 2400 s de 2700 = 88,9%.
+  sessao("tt90000010", 0, 2700); creditos = 2400;
+  tocar(2400, 1); player_encerrar();
+  assert(nTrakt == 1 && nVisto == 1 && cat_item(0)->progresso == 100);
+  assert(tkPos == tkDur && scrobble_assistiu(tkAssistido, tkDe, tkDur));
+
+  // Abertura de 90 s pulada, saida a 60 s do fim de um episodio de 22 min.
+  sessao("tt90000011", 0, 1320);
+  tocar(30, 1); pos += 90; quadro(); tocar(1140, 1); player_encerrar();
+  assert(nTrakt == 1 && nVisto == 1 && cat_item(0)->progresso == 100);
+
+  // 1,5x: o relogio anda 1684 s, a midia tocada sao 2526 s.
+  sessao("tt90000012", 0, 2580);
+  tocar(1684, 1.5); player_encerrar();
+  assert(nTrakt == 1 && nVisto == 1 && cat_item(0)->progresso == 100);
+
+  // Retomada em 60% e o resto assistido: o load novo nao pode custar o visto.
+  sessao("tt90000013", 60, 6000); assert(pos == 3600);
+  tocar(2350, 1); player_encerrar();
+  assert(nTrakt == 1 && nVisto == 1 && cat_item(0)->progresso == 100);
+
+  // O mesmo, saindo a 100 s do fim (o cenario da revisao): o fim ainda nao
+  // chegou, mas a POSICAO tem de ser gravada — ficava nos 60% de antes — e o
+  // stop do Trakt (>= 90%) tem prova para sair.
+  sessao("tt90000014", 60, 6000);
+  tocar(2300, 1); player_encerrar();
+  assert(nTrakt == 1 && nVisto == 0 && cat_item(0)->progresso == 98);
+  assert(tkPos == 5900 && scrobble_assistiu(tkAssistido, tkDe, tkDur));
+
+  // SEEK ATE O FIM (log do C9, Dexter S1E2): 99 s tocados, busca, mais 34 s e
+  // sai a 19 s do fim. Nao viu — mas esta ali: grava a posicao REAL (nem os
+  // 100% do arredondamento, nem nada), e o Trakt recebe a saida sem prova,
+  // que e o que ele recusa (tests/trakt_contracts.c).
+  sessao("tt90000015", 0, 2843);
+  tocar(99, 1); pos = 2790; quadro(); tocar(34, 1); player_encerrar();
+  assert(nVisto == 0 && cat_item(0)->progresso > 90 && cat_item(0)->progresso < 100);
+  assert(nTrakt == 1 && tkPos == 2824 && !scrobble_assistiu(tkAssistido, tkDe, tkDur));
 
   puts("PASS: trailer, seek, pausa e buffer nao marcam; reproducao real grava progresso e visto");
   return 0;

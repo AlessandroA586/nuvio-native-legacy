@@ -9,7 +9,7 @@ flags=(-O1 -g -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2
   -Wno-deprecated-declarations -Wno-macro-redefined)
 if [ "${SANITIZE:-0}" = 1 ]; then flags+=(-fsanitize=address,undefined -fno-omit-frame-pointer); fi
 renomes=()
-for nome in tocar parar pausar buscar pausa_confirmada tocando pronto ativo falhou conflito_recurso pos duracao url_atual bufferando_ms iniciar_auto terminou; do
+for nome in tocar parar pausar buscar pausa_confirmada tocando pronto ativo falhou conflito_recurso pos duracao url_atual bufferando_ms iniciar_auto terminou creditos; do
   renomes+=("-Dvideo_$nome=nv_base_video_$nome")
 done
 cc "${flags[@]}" "${renomes[@]}" -c src/video.c -o "$dir/video.o"

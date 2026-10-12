@@ -533,7 +533,10 @@ static void medirAssistido(void) {
     // currentTime da LG chega em degraus (~200 ms). Mantem a amostra ate
     // andar: somar so o ultimo quadro perderia quase todo o tempo real.
     if (dp == 0) return;
-    if (dp > 0 && dp <= dm * 4.0 + 0.5) assistidoSeg += fmin(dm, dp);
+    // Segundos de MIDIA: a 1,5x o titulo inteiro passa em 2/3 do relogio, e
+    // quem viu assim viu tudo. O teto e a maior velocidade que o app oferece.
+    if (dp > 0 && dp <= dm * 4.0 + 0.5)
+      assistidoSeg += fmin(dm * VEL_LISTA[VEL_N - 1] / 100.0, dp);
   }
   assistidoMono = m; assistidoPos = p; assistidoAmostra = ok;
 }
@@ -1794,13 +1797,14 @@ static void fecharSessao(int manter) {
   }
   int prova = fontePrincipal() && duracaoReal && !esperandoFonte && !erroFonte && !video_falhou() &&
               isfinite(posSeg) && isfinite(duracaoSeg) && assistidoSeg >= PLR_SCR_TOCOU_S;
-  // Conservador: nao herda prova de outro load/retomada nem conta seek,
-  // creditos ou intro pulados como tempo assistido.
-  int tempoConcluido = assistidoSeg >= fmax(120.0, duracaoSeg * 0.9);
-  // Posicao final sem tempo real suficiente nao vira nem barra de 100% nem
-  // pendencia de conta. Uma retomada no fim tambem precisa dessa prova.
+  // Prova do VISTO: so segura o "seek ate o fim" (scrobble_assistiu). O ponto
+  // salvo de onde esta sessao retomou ja tinha sido assistido antes.
+  double de = duracaoSeg * retomarPct / 100.0;
+  int assistiu = scrobble_assistiu(assistidoSeg, de, duracaoSeg);
+  // Sem ela a posicao REAL continua gravada (barra, Continuar assistindo,
+  // conta): so o arredondamento para 100% e o visto ficam de fora.
   if (!duracaoErrada && !jaRetido && prova && video_pronto() && duracaoSeg >= 120.0f &&
-      !ehCanal() && (posSeg < duracaoSeg * 0.9f || tempoConcluido)) {
+      !ehCanal()) {
     // CANAL nao grava progresso: uma transmissao ao vivo nao tem "onde parou" —
     // guardar posSeg contra a duracao reserva colocaria "Globo 68%" em
     // Continuar assistindo, que e justamente o que nao pode acontecer.
@@ -1819,7 +1823,7 @@ static void fecharSessao(int manter) {
     // do Matroska descreve ESTA copia, o TheIntroDB descreve o lancamento.
     double cred = credEfetivo();
     int concluiu;
-    concluiu = tempoConcluido && concluiuAgora(cred);
+    concluiu = assistiu && concluiuAgora(cred);
     float pos = concluiu ? duracaoSeg : posSeg;
     // Pelo indice CORRENTE do titulo, nao pelo guardado: depois de uma
     // republicacao o guardado grava o progresso no titulo errado.
@@ -1827,7 +1831,7 @@ static void fecharSessao(int manter) {
     const CatItem *ci = item();
     home_registrar_retorno(ia, pos, duracaoSeg);
     ilhacart_player_saiu(ia, pos, duracaoSeg, epT, epE);
-    if (concluiu || pos >= duracaoSeg * 0.9f) {
+    if (assistiu && pos >= duracaoSeg * 0.9f) {
       printf("[visto] marcado por player pos=%.3f dur=%.3f assistido=%.3fs id=%s T%dE%d\n",
              (double)pos, (double)duracaoSeg, assistidoSeg, ci ? ci->imdb : "", epT, epE);
       fflush(stdout);
@@ -1840,7 +1844,7 @@ static void fecharSessao(int manter) {
     if (ci && ci->imdb[0] && !jfid_e(ci->imdb)) {
       char id[64];
       idTrakt(ci, id, sizeof id);
-      trakt_marcar(id, pos, duracaoSeg, assistidoSeg);
+      trakt_marcar(id, pos, duracaoSeg, assistidoSeg, de);
       // "ASSISTIU" para os amigos, so quando CONCLUIU e so se ela ligou a
       // atividade (ou os "vistos recentemente" do perfil). Largar aos 8% nao
       // assistiu nada — e nao chega a lugar nenhum.
@@ -1887,7 +1891,7 @@ static void fecharSessao(int manter) {
     // comecou agora nao entrava ate a proxima volta.
     desc_refazer_continuar();
   }
-  if (!jaRetido && comVideo && !ehCanal() && (!prova || !tempoConcluido)) {
+  if (!jaRetido && comVideo && !ehCanal() && (!prova || !assistiu)) {
     printf("[visto] encerramento player pos=%.3f dur=%.3f assistido=%.3fs fonte=%d prova=%d id=%s T%dE%d\n",
            (double)posSeg, (double)duracaoSeg, assistidoSeg, fontePrincipal(), prova,
            temFixo ? itemFixo.imdb : "", epT, epE);
@@ -3440,7 +3444,7 @@ void player_atualizar(float dt, Uint32 agora) {
       if (epT > 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
       else snprintf(id, sizeof id, "%s", cs->imdb);
       tocouS += dt;
-      if (tocouS >= PLR_SCR_TOCOU_S) trakt_scrobble(SCR_EV_TOCANDO, id, posSeg, duracaoSeg, assistidoSeg);
+      if (tocouS >= PLR_SCR_TOCOU_S) trakt_scrobble(SCR_EV_TOCANDO, id, posSeg, duracaoSeg, assistidoSeg, 0);
     } else {
       // Pausou (ou o video parou de andar): so fala se ha um start em pe.
       if (tocouS > 0.0f && cs && cs->imdb[0] && fontePrincipal() && video_pronto() && !ehCanal() &&
@@ -3448,7 +3452,7 @@ void player_atualizar(float dt, Uint32 agora) {
         char id[64];
         if (epT > 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
         else snprintf(id, sizeof id, "%s", cs->imdb);
-        trakt_scrobble(SCR_EV_PAUSOU, id, posSeg, duracaoSeg, assistidoSeg);
+        trakt_scrobble(SCR_EV_PAUSOU, id, posSeg, duracaoSeg, assistidoSeg, 0);
       }
       tocouS = 0.0f;
     } }

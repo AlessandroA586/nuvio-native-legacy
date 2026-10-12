@@ -9,6 +9,7 @@
 #include "tex_cache.h"
 #include "extras.h"
 #include "trakt.h"
+#include "traktscrobble.h"
 #include "addons.h"
 #include "rede.h"
 #include "detail.h"
@@ -48,7 +49,20 @@ static void teclaMenu(SDL_Keycode k) {
   SDL_Event e={0};e.type=SDL_KEYDOWN;e.key.keysym.sym=k;menu_evento(&e);
   e.type=SDL_KEYUP;menu_evento(&e);
 }
+// A decisao de "visto" de fecharSessao: o fim pela regra do cartao E a prova
+// de reproducao real. As sessoes inteiras (pipeline falso, destinos contados)
+// estao em tests/player_visto_trailer.c; este binario liga o video.c de verdade.
+static int saidaVisto(double pos, double dur, double cred, double assistido, double de) {
+  return player_regra_concluiu(pos, dur, cred) && scrobble_assistiu(assistido, de, dur);
+}
 static void testar(void) {
+  // #205 NAO PODE REGREDIR O #100. Aqui em cima porque nao dependem de estado.
+  assert(saidaVisto(2400, 2700, 2400, 2400, 0));    // aceitou o proximo nos creditos (88,9%)
+  assert(saidaVisto(1260, 1320, 0, 1170, 0));       // pulou 90 s de abertura, saiu a 60 s do fim
+  assert(saidaVisto(2526, 2580, 0, 2526, 0));       // 1,5x: conta a midia tocada, nao o relogio
+  assert(saidaVisto(5950, 6000, 0, 2350, 3600));    // retomou em 60% e foi ate o fim
+  assert(!saidaVisto(2824, 2843, 0, 133, 0));       // tocou 2 min e buscou o fim: nao viu
+  assert(!saidaVisto(69, 129, 0, 69, 0));           // duracao falsa de trailer, sem catalogo
   perfil_iniciar();perfil_abrir();
   assert(perfil_aberto());
   { PerfilDados pd={0};

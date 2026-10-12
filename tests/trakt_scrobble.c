@@ -37,6 +37,15 @@ int main(void) {
   scrobble_corpo(c, sizeof c, "tt1375666", 120.0);
   assert(!strcmp(c, "{\"movie\":{\"ids\":{\"imdb\":\"tt1375666\"}},\"progress\":100.00}"));
   assert(!strcmp(scrobble_nome(SCR_START), "start"));
+
+  // #205 sem regredir o #100: a prova de reproducao do stop/visto automatico
+  // so segura o "seek ate o fim". (segundos de midia tocados, retomada, duracao)
+  assert(scrobble_assistiu(2400, 0, 2700));     // tudo ate os creditos, aos 88,9%
+  assert(scrobble_assistiu(1170, 0, 1320));     // abertura de 90 s pulada
+  assert(scrobble_assistiu(2300, 3600, 6000));  // retomou em 60% e foi ate o fim
+  assert(!scrobble_assistiu(133, 0, 2843));     // tocou 2 min e buscou o fim (log do C9)
+  assert(!scrobble_assistiu(69, 0, 129));       // duracao falsa de trailer
+  assert(!scrobble_assistiu(0, 0, 2580));
   puts("trakt scrobble: PASS");
   return 0;
 }

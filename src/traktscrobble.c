@@ -32,6 +32,11 @@ int scrobble_decidir(ScrobbleEstado *s, int evento, const char *id, double pct) 
   return SCR_NADA;
 }
 
+int scrobble_assistiu(double assistidoSeg, double deSeg, double durSeg) {
+  double metade = (durSeg - deSeg) * 0.5;
+  return assistidoSeg >= (metade > 120.0 ? metade : 120.0);
+}
+
 void scrobble_corpo(char *dst, size_t n, const char *id, double pct) {
   char base[64];
   int t = 0, e = 0;

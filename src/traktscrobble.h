@@ -19,6 +19,16 @@ typedef struct { char id[64]; int ativo; } ScrobbleEstado;
 //   SAIU   : sempre fala: stop a partir de 90%, senao pause (guarda o ponto).
 int scrobble_decidir(ScrobbleEstado *s, int evento, const char *id, double pct);
 
+// PROVA DE REPRODUCAO do stop/visto automatico (#205). So segura o "seek ate o
+// fim": metade do que faltava quando esta fonte comecou a tocar (`deSeg`, o
+// ponto da retomada) tem de ter sido tocada de verdade, e nunca menos de 2 min
+// (duracao falsa de trailer, 129 s). Abertura, recap e creditos pulados cabem
+// na outra metade — exigir 90% da duracao desfazia o #100. `assistidoSeg` e
+// MIDIA tocada, nao relogio: a 1,5x o titulo inteiro conta inteiro.
+// ponytail: fracao fixa; quem toca metade e busca o fim marca. Creditar cada
+// pulo por marcador so se isso aparecer em relato.
+int scrobble_assistiu(double assistidoSeg, double deSeg, double durSeg);
+
 // JSON do corpo. `id` e "tt123" (filme) ou "tt123:T:E" (episodio: id do SHOW
 // mais temporada/numero, que o Trakt resolve sozinho).
 void scrobble_corpo(char *dst, size_t n, const char *id, double pct);
