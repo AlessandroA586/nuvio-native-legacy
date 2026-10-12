@@ -1125,10 +1125,11 @@ void busca_evento(const SDL_Event *e) {
       // salto para uma letra aleatoria ao subir ou descer no teclado.
       // CIMA da primeira fileira: o campo, onde ha teclado do sistema.
       case SDLK_UP:
-        // Sem teclado do sistema (LG, Samsung) o campo nao e alvo: cima vai
-        // direto ao botao do celular.
+        // Sem teclado do sistema o campo nao e alvo: cima vai ao microfone
+        // da Samsung, ou ao celular onde nao ha voz.
         if (!focus_mover_grade(&focoKb, 0, -1)) {
           if (st_ime_disponivel()) campoFoco = 1;
+          else if (st_voz_disponivel()) campoFoco = 2;
           else if (celb_disponivel()) campoFoco = 3;
         }
         break;
