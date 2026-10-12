@@ -4229,6 +4229,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "Nema interneta, dodatak koji nije odgovorio, isključen Trakt, zahtev za prijateljstvo i promena profila pojavljuju se na samoj piluli. Kad ima nešto za uraditi, naraste u karticu s dugmadima."),
   T("Sem internet. Mostrando o que já estava salvo.", "Nema interneta. Prikazujem ono što je već sačuvano."),
   T("Sem legenda", "Bez titlova"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "Ova datoteka nema tekstualne titlove za korišćenje kao referencu"),
   T("Sem legendas neste canal", "Nema titlova na ovom kanalu"),
   T("Sem lembrete", "Bez podsetnika"),
   T("Sem limite", "Bez ograničenja"),

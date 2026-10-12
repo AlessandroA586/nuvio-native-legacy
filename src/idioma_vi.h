@@ -4229,6 +4229,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "Mất internet, tiện ích không phản hồi, Trakt bị ngắt, lời mời kết bạn và đổi hồ sơ hiện ngay trên viên thuốc. Khi cần thao tác, nó mở rộng thành thẻ có nút."),
   T("Sem internet. Mostrando o que já estava salvo.", "Không có Internet. Đang hiện những gì đã lưu."),
   T("Sem legenda", "Không phụ đề"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "Tệp này không có phụ đề văn bản để dùng làm tham chiếu"),
   T("Sem legendas neste canal", "Kênh này không có phụ đề"),
   T("Sem lembrete", "Không nhắc nhở"),
   T("Sem limite", "Không giới hạn"),

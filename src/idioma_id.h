@@ -4229,6 +4229,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "Tanpa internet, add-on yang tidak menjawab, Trakt terputus, permintaan pertemanan, dan pergantian profil muncul langsung di kapsul. Jika ada yang perlu dilakukan, kapsul membesar menjadi kartu dengan tombol."),
   T("Sem internet. Mostrando o que já estava salvo.", "Tidak ada internet. Menampilkan yang sudah tersimpan."),
   T("Sem legenda", "Tanpa subtitle"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "File ini tidak memiliki subtitel teks untuk digunakan sebagai acuan"),
   T("Sem legendas neste canal", "Tidak ada subtitle di saluran ini"),
   T("Sem lembrete", "Tanpa pengingat"),
   T("Sem limite", "Tanpa batas"),

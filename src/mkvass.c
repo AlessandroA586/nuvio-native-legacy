@@ -399,6 +399,9 @@ static struct {
   unsigned char *cab;
   long     cabN;
   char     cabUrl[4096];
+  LegendaDocumento *referencia;
+  char refUrl[4096];
+  int refFaixa;
 } S = { PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, "", 0, 0,
         MKVASS_OCIOSO, 0.0, 0, 0, 0, 0, 0, 0, 0, -1.0, 0, "", 0, 0, 0, 0 };
 
@@ -436,6 +439,7 @@ typedef struct {
   // #421: faixa de TEXTO SIMPLES (S_TEXT/UTF8, S_TEXT/WEBVTT). O corpo e SubRip: o overlay desenha com o estilo do
   // app, igual a legenda externa (que funciona na mesma TV).
   int      texto;
+  int      refInvalida; // forced, letreiro, comentario ou faixa codificada
   size_t   corpoTam, corpoCap;
   ClCache  cl[CL_CACHE];
   int      clProx;
@@ -474,6 +478,7 @@ typedef struct {
   int      segurar, colhidosIni;
   int      entregas;       // 0 = a proxima e a primeira (fontes + carga cheia)
   long     t0, ultEntrega; // ms monotonicos: pedido, ultima entrega
+  long     refUltima; int refColhidos; // snapshot so quando houve progresso
   int      eventosEntregues, primeiraFala;
   double   posRef;         // playhead quando o grupo foi pedido (medida)
   int      atrasados, perdidos, palpites, palpitesFalhos;
@@ -1473,7 +1478,7 @@ static int lerTracks(Fio *f, const unsigned char *p, long n) {
   if (f->faixa == 0 && escolherNoCabecalho(f, p, n) < 0) return -1;
   while (proximo(&it, &id, &d, &t)) {
     Iter j; unsigned long fid; const unsigned char *fd; long ft;
-    int numero = 0, tipo = 0, ehAss = 0, ehTexto = 0; const unsigned char *priv = NULL; long privN = 0;
+    int numero = 0, tipo = 0, ehAss = 0, ehTexto = 0, refInvalida = 0; const unsigned char *priv = NULL; long privN = 0;
     if (id != ID_TRACKENTRY) continue;
     j.p = d; j.n = t; j.o = 0;
     while (proximo(&j, &fid, &fd, &ft)) {
@@ -1486,11 +1491,22 @@ static int lerTracks(Fio *f, const unsigned char *p, long n) {
                   (ft == 13 && !memcmp(fd, "S_TEXT/WEBVTT", 13));
       }
       else if (fid == ID_CODECPRIV) { priv = fd; privN = ft; }
+      else if (fid == 0x55AA && lerUint(fd, ft)) refInvalida = 1;
+      else if (fid == 0x6D80) refInvalida = 1;
+      else if (fid == 0x536E) {
+        char nome[96]; size_t k = (size_t)ft < sizeof nome - 1 ? (size_t)ft : sizeof nome - 1;
+        memcpy(nome, fd, k); nome[k] = 0;
+        for (size_t x = 0; x < k; x++) if (nome[x] >= 'A' && nome[x] <= 'Z') nome[x] += 'a' - 'A';
+        if (strstr(nome, "forced") || strstr(nome, "sign") || strstr(nome, "song") ||
+            strstr(nome, "letreiro") || strstr(nome, "forzad") || strstr(nome, "forc") ||
+            strstr(nome, "comment") || strstr(nome, "coment")) refInvalida = 1;
+      }
     }
     if (f->faixa < 0) {
       if (tipo != 17 || ordinalLeg++ != -f->faixa - 1) continue;
       f->faixa = numero;
     } else if (numero != f->faixa) continue;
+    f->refInvalida = refInvalida;
     // #421: o mesmo SubRip das externas, inclusive na pre-busca.
     if (!ehAss && ehTexto && aceitaTexto) {
       f->texto = 1;
@@ -2923,10 +2939,59 @@ static int contarEventos(const Fio *f) {
   return n;
 }
 
+// ponytail: um snapshot por fonte, limitado ao corpo existente. Sem cache de rede novo.
+static void guardarReferencia(Fio *f) {
+  LegendaDocumento *doc = NULL;
+  // Faixas menores seguem pelo coletor completo de sempre. Este desvio so
+  // cobre o indice que ja excede o teto de 7999 eventos do legref/AutoSync.
+  if (f->nPontos >= 8000 && f->corpo && !f->texto && !f->varredura && !f->indiceCortado &&
+      !f->corpoCortou && !f->refInvalida) {
+    int a = 0, melhor = 0, de = 0, ate = 0;
+    // Maior sequencia sem buracos. Cortes conservadores nos tempos dos cues
+    // vizinhos: nunca inclui um ponto nao colhido (inclusive no mesmo tempo).
+    for (int b = 0; b <= f->nPontos; b++) {
+      if (b < f->nPontos && f->pontos[b].colhido == 1) continue;
+      if (b - a > melhor) { melhor = b - a; de = a; ate = b; }
+      a = b + 1;
+    }
+    if (melhor > 0) {
+      LegendaDocumentoInfo info = { .flags = LEGENDA_DOC_COMPLETO | LEGENDA_DOC_JANELA };
+      info.janelaInicio = de ? segundosDe(f, f->pontos[de - 1].tempo) + .01 : 0;
+      info.janelaFim = ate < f->nPontos ? segundosDe(f, f->pontos[ate].tempo) - .01
+                                     : segundosDe(f, f->pontos[ate - 1].tempo) + 15;
+      if (info.janelaFim > info.janelaInicio) {
+        snprintf(info.origem, sizeof info.origem, "Embedded");
+        snprintf(info.identidade, sizeof info.identidade, "mkv-track:%d", f->faixa);
+        LegendaDocumento *todo = legenda_documento_criar(f->corpo, &info);
+        int n = 0, k = 0; const LegendaCue *v = legenda_documento_dados(todo, &n);
+        if (todo && !(legenda_documento_info(todo)->flags & LEGENDA_DOC_COMPLETO)) n = 0;
+        LegendaCue *rec = n > 0 ? malloc((size_t)n * sizeof *rec) : NULL;
+        if (rec) {
+          for (int i = 0; i < n; i++)
+            if (v[i].inicio >= info.janelaInicio && v[i].fim <= info.janelaFim) rec[k++] = v[i];
+          if (k > 0 && k < 8000) doc = legenda_documento_de_cues(rec, k, &info);
+        }
+        free(rec); legenda_documento_liberar(todo);
+      }
+    }
+  }
+  pthread_mutex_lock(&S.trava);
+  if (f->g == S.geracao) {
+    legenda_documento_liberar(S.referencia); S.referencia = doc; doc = NULL;
+    snprintf(S.refUrl, sizeof S.refUrl, "%s", f->urlOrig); S.refFaixa = f->faixa;
+  }
+  pthread_mutex_unlock(&S.trava);
+  legenda_documento_liberar(doc);
+}
+
 static int contarDesistidos(const Fio *f);
 
 static void entregar(Fio *f) {
   int n;
+  // O snapshot independe da adocao/dono do overlay, inclusive na pre-busca.
+  if (f->sujo && f->refColhidos != f->nColhidos && agoraMs() - f->refUltima >= MKVASS_ENTREGA_MS) {
+    guardarReferencia(f); f->refUltima = agoraMs(); f->refColhidos = f->nColhidos;
+  }
   // Pre-busca nao adotada: colhe, mas o overlay ainda nao e deste fio.
   if (f->prebusca) { verAdocao(f); if (f->prebusca) return; }
   if (!f->sujo || !f->corpo) return;
@@ -3504,6 +3569,7 @@ sair:
   if (f->nColhidos > 0 && mkvass_estado() != MKVASS_COMPLETO) gravarSidecar(f, 0, 1);
 
 fim:
+  guardarReferencia(f);
   soltarPrebusca(f);
   free(f->jan.p); f->jan.p = NULL;
   // A pre-busca acabou de qualquer jeito: o player nao espera mais por ela.
@@ -3572,6 +3638,9 @@ static int iniciarFio(const char *url, int numeroFaixa, int herdar, int segurar,
     if (strcmp(S.url, url)) S.urlFinal[0] = 0;
     S.paralelos = MKVASS_PARALELOS; S.varreCh = MKVASS_VARRE_CH;
     S.ultHttp = S.ultCurl = 0;
+  }
+  if (strcmp(S.refUrl, url) || !herdar) {
+    legenda_documento_liberar(S.referencia); S.referencia = NULL; S.refUrl[0] = 0;
   }
   if (strcmp(S.cabUrl, url)) { free(S.cab); S.cab = NULL; S.cabN = 0; S.cabUrl[0] = 0; }
   f->paralelos = S.paralelos > 0 ? S.paralelos : MKVASS_PARALELOS;
@@ -3648,6 +3717,23 @@ int mkvass_cabecalho(const char *url, unsigned char **buf, long *n) {
   }
   pthread_mutex_unlock(&S.trava);
   return ok;
+}
+
+LegendaDocumento *mkvass_referencia(const char *url, uint64_t sessao,
+                                    const int *excluidas, int nExcluidas) {
+  LegendaDocumento *d = NULL, *base = NULL;
+  pthread_mutex_lock(&S.trava);
+  int ok = url && !strcmp(url, S.refUrl);
+  for (int i = 0; i < nExcluidas; i++) if (excluidas[i] == S.refFaixa) ok = 0;
+  if (ok) base = legenda_documento_reter(S.referencia);
+  pthread_mutex_unlock(&S.trava);
+  if (base) {
+    int n; const LegendaCue *v = legenda_documento_dados(base, &n);
+    LegendaDocumentoInfo info = *legenda_documento_info(base); info.sessao = sessao;
+    d = legenda_documento_de_cues(v, n, &info);
+    legenda_documento_liberar(base);
+  }
+  return d;
 }
 
 void mkvass_video_aberto(int aberto) {

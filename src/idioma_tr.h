@@ -4229,6 +4229,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "İnternet yok, yanıt vermeyen eklenti, kopan Trakt, arkadaşlık isteği ve profil değişimi hapın üzerinde görünür. Yapılacak bir şey olduğunda düğmeli bir karta büyür."),
   T("Sem internet. Mostrando o que já estava salvo.", "İnternet yok. Kayıtlı olanlar gösteriliyor."),
   T("Sem legenda", "Altyazı yok"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "Bu dosyada referans olarak kullanılabilecek metin altyazısı yok"),
   T("Sem legendas neste canal", "Bu kanalda altyazı yok"),
   T("Sem lembrete", "Hatırlatıcı yok"),
   T("Sem limite", "Sınırsız"),

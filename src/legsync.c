@@ -733,6 +733,7 @@ static LegSyncMotivo motivoRef(LegRefMotivo m) {
     case LEGREF_SEM_RANGE: return LEGSYNC_M_SEM_RANGE;
     case LEGREF_REDE: return LEGSYNC_M_REDE;
     case LEGREF_ORCAMENTO: return LEGSYNC_M_ORCAMENTO;
+    case LEGREF_SEM_FAIXA: return LEGSYNC_M_SEM_TEXTO;
     default: return LEGSYNC_M_SEM_REFERENCIA;
   }
 }

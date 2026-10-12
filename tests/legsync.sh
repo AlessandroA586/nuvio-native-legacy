@@ -10,6 +10,8 @@ python3 - "$FX" <<'PYFX'
 from pathlib import Path
 import sys
 p = Path(sys.argv[1])
+# So PGS: preserva EBML/Tracks reais, troca apenas o CodecID (nao decodifica imagem).
+(p / 'pgs.mkv').write_bytes((p / 'ff.mkv').read_bytes().replace(b'S_TEXT/UTF8', b'S_HDMV/PGS\0'))
 (p / 'sparse.srt').write_text('\n\n'.join((p / 'emb.srt').read_text().split('\n\n')[:3]) + '\n')
 PYFX
 mkvmerge -q -o "$FX/sparse.mkv" "$FX/video.mkv" --language 0:eng "$FX/sparse.srt"
@@ -22,6 +24,6 @@ cc "${flags[@]}" -DLS_RITMO=0 -Isrc -I/opt/homebrew/include -I/opt/homebrew/incl
   src/assrender.c tests/legsync.c -pthread -lm -o "$D/t"
 "$D/t" "$FX"
 
-if [ -z "${TCL_CASO:-}" ]; then
+if [ -z "${TCL_CASO:-}" ] && [ -z "${AUTOSYNC_PGS:-}" ]; then
   for caso in 1 2 3; do TCL_CASO=$caso "$D/t" "$FX"; done
 fi

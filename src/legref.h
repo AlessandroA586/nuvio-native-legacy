@@ -9,7 +9,8 @@
 //
 // NAO E O MKVASS. Nao chama mkvass_iniciar, legenda_carregar nem
 // assrender_carregar; nao troca a faixa da pessoa; nao entrega nada ao
-// overlay. Estado, fio, orcamento e conexoes sao deste modulo.
+// overlay. Estado, fio, orcamento e conexoes sao deste modulo. Uma fonte local
+// opcional pode fornecer uma janela indexada completa sem abrir conexao.
 //
 // SO COM INDICE. MKV: Cues pelo SeekHead. SRT com CueDuration em todo ponto
 // (ffmpeg e mkvmerge gravam) sai do PROPRIO indice, so tempos (2-4 Ranges);
@@ -79,6 +80,9 @@ void legref_cancelar(LegRef *r);
 // thread de quem pede. Sem eles o CDN que exige Referer/Authorization responde
 // erro ao Range e a referencia fica "rede". NULL = nenhum.
 void legref_fonte_cabecalhos(const char *(*f)(void));
+// Fonte local opcional (mkvass): consultada no worker ANTES de qualquer Range.
+// Devolve snapshot retido/de quem chama ou NULL; nunca toca o overlay.
+void legref_fonte_local(LegendaDocumento *(*f)(const char *, uint64_t, const int *, int));
 // Pausa entre Ranges (seek, buffer curto). Nao cancela.
 void legref_pausar(LegRef *r, int pausar);
 LegRefStatus legref_status(LegRef *r);

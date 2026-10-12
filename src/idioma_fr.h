@@ -4228,6 +4228,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "Pas d’internet, add-on qui n’a pas répondu, Trakt déconnecté, demande d’ami et changement de profil apparaissent sur la pilule. Quand il y a quelque chose à faire, elle grandit en carte avec des boutons."),
   T("Sem internet. Mostrando o que já estava salvo.", "Pas d’internet. Affichage de ce qui était déjà enregistré."),
   T("Sem legenda", "Sans sous-titres"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "Ce fichier ne contient pas de sous-titres texte à utiliser comme référence"),
   T("Sem legendas neste canal", "Pas de sous-titres sur cette chaîne"),
   T("Sem lembrete", "Aucun rappel"),
   T("Sem limite", "Sans limite"),

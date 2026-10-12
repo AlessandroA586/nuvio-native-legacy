@@ -4229,6 +4229,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "インターネットなし、応答のないアドオン、Trakt の切断、友達リクエスト、プロフィールの切り替えは、ピルに直接表示されます。操作が必要なときは、ボタン付きのカードに広がります。"),
   T("Sem internet. Mostrando o que já estava salvo.", "インターネットがありません。保存済みの内容を表示しています。"),
   T("Sem legenda", "字幕なし"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "このファイルには参照に使えるテキスト字幕がありません"),
   T("Sem legendas neste canal", "このチャンネルには字幕がありません"),
   T("Sem lembrete", "リマインダーなし"),
   T("Sem limite", "制限なし"),

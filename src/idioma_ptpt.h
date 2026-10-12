@@ -4229,6 +4229,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "Sem internet, addon que não respondeu, Trakt desligado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há algo a fazer, cresce num cartão com botões."),
   T("Sem internet. Mostrando o que já estava salvo.", "Sem internet. A mostrar o que já estava guardado."),
   T("Sem legenda", "Sem legendas"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "Sem legendas de texto neste ficheiro para usar como referência"),
   T("Sem legendas neste canal", "Sem legendas neste canal"),
   T("Sem lembrete", "Sem lembrete"),
   T("Sem limite", "Sem limite"),

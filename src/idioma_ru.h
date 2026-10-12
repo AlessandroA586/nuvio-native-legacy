@@ -4228,6 +4228,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "Нет интернета, аддон не ответил, Trakt отключён, заявка в друзья и смена профиля появляются прямо на плашке. Если нужно действие, она вырастает в карточку с кнопками."),
   T("Sem internet. Mostrando o que já estava salvo.", "Нет интернета. Показываю то, что уже сохранено."),
   T("Sem legenda", "Без субтитров"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "В этом файле нет текстовых субтитров для использования как эталона"),
   T("Sem legendas neste canal", "Нет субтитров на этом канале"),
   T("Sem lembrete", "Без напоминания"),
   T("Sem limite", "Без ограничений"),

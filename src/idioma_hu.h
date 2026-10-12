@@ -4229,6 +4229,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "Nincs internet, egy nem válaszoló bővítmény, leválasztott Trakt, ismerősnek jelölés és profilváltás magán a kapszulán jelenik meg. Ha teendő van, gombokkal ellátott kártyává nő."),
   T("Sem internet. Mostrando o que já estava salvo.", "Nincs internet. A már mentett tartalom látszik."),
   T("Sem legenda", "Felirat nélkül"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "Ebben a fájlban nincs referenciaként használható szöveges felirat"),
   T("Sem legendas neste canal", "Ezen a csatornán nincs felirat"),
   T("Sem lembrete", "Nincs emlékeztető"),
   T("Sem limite", "Nincs korlát"),

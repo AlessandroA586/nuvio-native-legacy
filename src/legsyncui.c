@@ -87,6 +87,8 @@ static void textoBase(const LegSyncVisao *v, char *dst, unsigned tam) {
     case LEGSYNC_M_PLATAFORMA: snprintf(dst, tam, "%s", i18n("Indispon\xc3\xadvel nesta plataforma")); break;
     case LEGSYNC_M_EXTERNA_INCOMPLETA:
       snprintf(dst, tam, "%s", i18n("Legenda externa incompleta; n\xc3\xa3o d\xc3\xa1 para sincronizar")); break;
+    case LEGSYNC_M_SEM_TEXTO:
+      snprintf(dst, tam, "%s", i18n("Sem legenda de texto neste arquivo para usar como refer\xc3\xaancia")); break;
     case LEGSYNC_M_SEM_REFERENCIA:
       snprintf(dst, tam, "%s", i18n("Indispon\xc3\xadvel: sem legenda de texto indexada no arquivo")); break;
     case LEGSYNC_M_SEM_RANGE:  snprintf(dst, tam, "%s", i18n("Indispon\xc3\xadvel: o servidor n\xc3\xa3o aceita leitura parcial")); break;
@@ -109,6 +111,9 @@ void legsync_texto_simples(const LegSyncVisao *v, char *dst, unsigned tam) {
   dst[0] = 0;
   if (v->fase == LEGSYNC_DESFEITA) {
     snprintf(dst, tam, "%s", i18n("Corre\xc3\xa7\xc3\xa3o desfeita; o atraso manual continua")); return;
+  }
+  if (v->fase == LEGSYNC_INDISPONIVEL && v->motivo == LEGSYNC_M_SEM_TEXTO) {
+    textoBase(v, dst, tam); return;
   }
   if (v->autoFase == 3) { snprintf(dst, tam, "%s", i18n("N\xc3\xa3o deu para sincronizar")); return; }
   if (v->fase == LEGSYNC_ACEITA || v->autoFase == 2) {

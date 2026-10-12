@@ -172,6 +172,7 @@ typedef struct {
   char url[4096], idioma[24], cabs[2048];
   int excl[16], nExcl;
   LegRefOrcamento orc;
+  LegendaDocumento *(*local)(const char *, uint64_t, const int *, int);
 } Pedido;
 
 struct LegRef {
@@ -965,7 +966,14 @@ static void *trabalhar(void *u) {
     snprintf(j.urlFinal, sizeof j.urlFinal, "%s", j.p.url);
     pthread_mutex_unlock(&r->m);
     memset(&st, 0, sizeof st);
-    doc = coletar(&j, &st);
+    doc = j.p.local ? j.p.local(j.p.url, j.p.sessao, j.p.excl, j.p.nExcl) : NULL;
+    if (doc) {
+      const LegendaDocumentoInfo *info = legenda_documento_info(doc);
+      int n = 0, faixa = 0; legenda_documento_dados(doc, &n);
+      sscanf(info->identidade, "mkv-track:%d", &faixa);
+      anunciar(&j, &st, faixa, info->idioma, "S_TEXT/ASS");
+      progresso(&j, n, n);
+    } else doc = coletar(&j, &st);
     pthread_mutex_lock(&r->m);
     if (r->st.pedido == j.id && r->ped.id == j.id && !r->sair) {
       r->st.bytes = j.bytes; r->st.pedidos = j.pedidos;
@@ -975,7 +983,9 @@ static void *trabalhar(void *u) {
         r->st.motivo = j.erro;
       }
       fprintf(stderr, "[legref] reference %s reason=%s track=%d events=%d/%d requests=%d bytes=%lld\n",
-              r->st.fase == LEGREF_PRONTO ? "complete" : "unavailable", legref_motivo(r->st.motivo),
+              r->st.fase == LEGREF_PRONTO ?
+                (legenda_documento_info(r->doc)->flags & LEGENDA_DOC_JANELA ? "window" : "complete") : "unavailable",
+              legref_motivo(r->st.motivo),
               r->st.faixa, r->st.feitos, r->st.total, j.pedidos, j.bytes);
     }
     pthread_mutex_unlock(&r->m);
@@ -1053,6 +1063,8 @@ void legref_destruir(LegRef *r) {
 }
 
 static const char *(*fonteCabs)(void);
+static LegendaDocumento *(*fonteLocal)(const char *, uint64_t, const int *, int);
+void legref_fonte_local(LegendaDocumento *(*f)(const char *, uint64_t, const int *, int)) { fonteLocal = f; }
 void legref_fonte_cabecalhos(const char *(*f)(void)) { fonteCabs = f; }
 
 uint64_t legref_pedir(LegRef *r, const char *url, uint64_t sessao, const char *idioma,
@@ -1064,7 +1076,7 @@ uint64_t legref_pedir(LegRef *r, const char *url, uint64_t sessao, const char *i
   velho = r->doc; r->doc = NULL;
   id = ++r->gerador;
   memset(&r->ped, 0, sizeof r->ped);
-  r->ped.id = id; r->ped.sessao = sessao; r->ped.orc = *orc;
+  r->ped.id = id; r->ped.sessao = sessao; r->ped.orc = *orc; r->ped.local = fonteLocal;
   snprintf(r->ped.url, sizeof r->ped.url, "%s", url);
   snprintf(r->ped.idioma, sizeof r->ped.idioma, "%s", idioma ? idioma : "");
   snprintf(r->ped.cabs, sizeof r->ped.cabs, "%s", fonteCabs && fonteCabs() ? fonteCabs() : "");

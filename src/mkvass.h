@@ -41,6 +41,11 @@
 // faixa ao AVPlay como fallback.
 #ifndef NV_MKVASS_H
 #define NV_MKVASS_H
+#include "legenda.h"
+// Snapshot local ASS com indice >= 8000 pontos: nunca abre rede nem toca o overlay.
+// So devolve um intervalo cujos pontos indexados foram TODOS colhidos.
+LegendaDocumento *mkvass_referencia(const char *url, uint64_t sessao,
+                                    const int *excluidas, int nExcluidas);
 
 // Estados. Os >= MKVASS_NOGO sao terminais: a folha mostra o motivo e volta a
 // deixar o pipeline desenhar.

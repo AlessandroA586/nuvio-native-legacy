@@ -4229,6 +4229,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "Intet internet, en tilføjelse der ikke svarede, Trakt afbrudt, en venneanmodning og profilskift vises på selve pillen. Når der er noget at gøre, vokser den til et kort med knapper."),
   T("Sem internet. Mostrando o que já estava salvo.", "Intet internet. Viser det, der allerede var gemt."),
   T("Sem legenda", "Uden undertekster"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "Denne fil har ingen tekstundertekster at bruge som reference"),
   T("Sem legendas neste canal", "Ingen undertekster på denne kanal"),
   T("Sem lembrete", "Ingen påmindelse"),
   T("Sem limite", "Ingen grænse"),

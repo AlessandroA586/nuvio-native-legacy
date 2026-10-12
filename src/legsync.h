@@ -52,7 +52,8 @@ typedef enum {
   LEGSYNC_M_REDE, LEGSYNC_M_ORCAMENTO, LEGSYNC_M_SEM_OUTRA, LEGSYNC_M_CONFIANCA,
   // F06 (Por audio): why the audio reference is not offered / was refused.
   LEGSYNC_M_AUD_PLATAFORMA, LEGSYNC_M_AUD_PASSTHROUGH, LEGSYNC_M_AUD_SEM_AUDIO,
-  LEGSYNC_M_AUD_SEM_FALA
+  LEGSYNC_M_AUD_SEM_FALA,
+  LEGSYNC_M_SEM_TEXTO
 } LegSyncMotivo;
 
 typedef struct {

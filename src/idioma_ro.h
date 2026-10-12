@@ -4228,6 +4228,7 @@
   T("Sem internet, addon que não respondeu, Trakt desconectado, pedido de amizade e troca de perfil aparecem na própria pílula. Quando há o que fazer, ela cresce num cartão com botões.", "Fără internet, addon care n-a răspuns, Trakt deconectat, cerere de prietenie și schimbare de profil apar chiar pe pastilă. Când e ceva de făcut, crește într-un card cu butoane."),
   T("Sem internet. Mostrando o que já estava salvo.", "Fără internet. Arăt ce era deja salvat."),
   T("Sem legenda", "Fără subtitrare"),
+  T("Sem legenda de texto neste arquivo para usar como referência", "Acest fișier nu are subtitrări text de folosit ca referință"),
   T("Sem legendas neste canal", "Fără subtitrări pe acest canal"),
   T("Sem lembrete", "Fără memento"),
   T("Sem limite", "Fără limită"),
