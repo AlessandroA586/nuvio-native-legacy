@@ -214,6 +214,14 @@ Limite do QR: 134 bytes (`src/qr.h`). Todas as URLs de verificação acima cabem
 7. **#437 CloudStream:** fechar como fora do escopo com a justificativa do §7?
 8. **Guia “configure no celular, a TV segue”** (AIOManager/Xperience/Configurator → conta Nuvio): publicar no Discord em inglês depois de validar com conta de teste?
 
+### Decisões do dono (12/10/2026)
+
+- **Q1:** sim — a TV pode adicionar um addon na conta, um por vez (nunca a lista inteira).
+- **Q2:** sim — importação só leitura pela API do Stremio autorizada; `authKey` só em memória.
+- **Q4:** sim — Simkl scrobble (#459) entra na 2.0.6, antes do watch_state.
+- **Q6:** `nuviolegacy://` com as mesmas formas do oficial (`nuviolegacy://movie/<imdb>`, `nuviolegacy://detail/tv/<imdb>`).
+- Q3, Q5, Q7, Q8: em aberto.
+
 ## 9. Prioridade proposta (sem sobrescrever o mapa)
 
 | Alvo | Item | Etapa | Porte/risco | Issues |
