@@ -860,8 +860,7 @@ typedef struct {
   int exigeCab;
 } LegExtras;
 static LegExtras legExt;
-// A busca em curso e um REFAZER com extras: a lista anterior fica na tela ate
-// esta terminar inteira (publicarLegendas so publica no fim).
+// A busca com extras soma resultados a lista anterior ao terminar.
 static int legManter;
 // Hash ja medido, para a mesma fonte nao ir de novo ao CDN a cada busca.
 static char hashDeUrl[4096], hashMedido[20];
@@ -1006,6 +1005,14 @@ static int arrayDeLegendas(const char *corpo) {
   return 0;
 }
 
+static int legendaRepetida(const Legenda *v, int n, const Legenda *l) {
+  int i;
+  for (i = 0; i < n; i++)
+    if (!strcmp(v[i].url, l->url) ||
+        (l->id[0] && v[i].addonIndice == l->addonIndice && !strcmp(v[i].id, l->id))) return 1;
+  return 0;
+}
+
 static int distribuirLegendas(const LegLote *lotes, int nLotes, int nGrupos,
                               Legenda *saida) {
   int gi, n = 0;
@@ -1023,8 +1030,11 @@ static int distribuirLegendas(const LegLote *lotes, int nLotes, int nGrupos,
       for (i = 0; i < nLotes && noGrupo < teto; i++) {
         while (prox[i] < lotes[i].n && lotes[i].grupo[prox[i]] != gi) prox[i]++;
         if (prox[i] >= lotes[i].n) continue;
-        saida[n++] = lotes[i].itens[prox[i]++];
-        noGrupo++; avancou = 1;
+        const Legenda *l = &lotes[i].itens[prox[i]++];
+        avancou = 1;
+        if (legendaRepetida(saida, n, l)) continue;
+        saida[n++] = *l;
+        noGrupo++;
       }
     }
   }
@@ -1054,7 +1064,7 @@ static int distribuirLegendas(const LegLote *lotes, int nLotes, int nGrupos,
 typedef struct {
   LegLote *lotes;          // um por addon
   int nLotes, nGrupos;
-  int manter;              // refazer com extras: publica so no fim
+  int manter;              // extras: mescla so no fim, preservando indices
   char extras[1200];       // segmento legextras_segmento; "" = sem extras
   const char *grupos[3];
   char gruposTexto[3][16];
@@ -1077,8 +1087,15 @@ static void publicarLegendas(LegBusca *B, int final) {
   pthread_mutex_unlock(&B->m);
   pthread_mutex_lock(&legTrava);
   if (!legParar && B->geracao == legGeracao) {
-    memcpy(legs, achadas, sizeof legs);
-    nLegs = n;
+    if (B->manter) {
+      int i;
+      // Mantem ordem e indices atuais: a escolha ativa continua na mesma entrada.
+      for (i = 0; i < n && nLegs < LEG_MAX; i++)
+        if (!legendaRepetida(legs, nLegs, &achadas[i])) legs[nLegs++] = achadas[i];
+    } else {
+      memcpy(legs, achadas, sizeof legs);
+      nLegs = n;
+    }
   }
   pthread_mutex_unlock(&legTrava);
   free(achadas);
@@ -1118,16 +1135,24 @@ static void *buscarUmAddon(void *u) {
   for (q = p; q;) {
     const char *f = js_fim(q);
     if (!f || f <= q) break;
-    recebidas++;
+    { char id[256] = "", texto[512] = "";
+      js_texto(q, f, "id", id, sizeof id);
+      if (!strncmp(id, "error.", 6)) {
+        js_texto(q, f, "lang", texto, sizeof texto);
+        printf("[legendas] addon avisou: %s\n", texto[0] ? texto : id);
+      } else recebidas++;
+    }
     q = js_prox(f);
   }
   for (gi = 0; gi < B->nGrupos; gi++) {
     int noGrupo = 0, teto = LEG_MAX / B->nGrupos;
     for (q = p; q && noGrupo < teto;) {
       const char *f = js_fim(q);
-      char l[64] = "", cod[16], nome[120] = "", link[2048];
+      char l[64] = "", cod[16], nome[120] = "", link[2048], id[256] = "";
       Legenda *d = &lote->itens[lote->n];
       if (!f || f <= q) break;
+      js_texto(q, f, "id", id, sizeof id);
+      if (!strncmp(id, "error.", 6)) { q = js_prox(f); continue; }
       if (*q == '{' && episodioCorreto(q, f, B->temporada, B->episodio) &&
           js_texto(q, f, "lang", l, sizeof l)) {
         // "PORTUGUESE" / "Portuguese (Brazil)" / "por" / "pt-BR" viram um
@@ -1140,6 +1165,9 @@ static void *buscarUmAddon(void *u) {
         if (ling_casa(cod, B->grupos[gi]) && js_texto(q, f, "url", link, sizeof link) &&
             !(strlen(link) >= sizeof d->url && ++cortadas)) {
           snprintf(d->url, sizeof d->url, "%s", link);
+          snprintf(d->id, sizeof d->id, "%s", id);
+          d->addonIndice = i;
+          if (legendaRepetida(lote->itens, lote->n, d)) { q = js_prox(f); continue; }
           js_texto(q, f, "subtitleFileName", nome, sizeof nome);
           if (!nome[0]) js_texto(q, f, "movieReleaseName", nome, sizeof nome);
           snprintf(d->idioma, sizeof d->idioma, "%s", cod);
@@ -1317,7 +1345,7 @@ static void *buscarLegendas(void *u) {
     }
     for (i = 0; i < B.nLotes; i++) if (criado[i]) pthread_join(th[i], NULL);
 
-    // Refazer com extras: a lista nova entra de uma vez, agora que todos
+    // Refazer com extras: soma a lista nova de uma vez, agora que todos
     // responderam (publicarLegendas descarta se a geracao ja mudou).
     if (B.manter && B.lotes) publicarLegendas(&B, 1);
     free(B.lotes);
@@ -1833,16 +1861,15 @@ void addons_legendas_fonte(const char *imdb, const char *tipo, const char *arqui
     return;
   }
   legExt = novo;
-  // Mesmo titulo: a lista atual fica ate a nova terminar. Titulo outro (a
-  // fonte chegou antes da busca do episodio): busca normal.
-  manter = !strcmp(id, legId) && !strcmp(tp, legTipo) && nLegs > 0;
+  // Mesmo titulo: soma resultados, mesmo se a primeira busca ainda roda.
+  manter = !strcmp(id, legId) && !strcmp(tp, legTipo);
   snprintf(legId, sizeof legId, "%s", id);
   snprintf(legTipo, sizeof legTipo, "%s", tp);
   legGeracao++;
   legManter = manter;
   if (!manter) nLegs = 0;
   printf("[legendas] fonte conhecida: refazendo a busca com extras%s\n",
-         manter ? " (lista atual fica ate a nova chegar)" : "");
+         manter ? " (soma a lista atual)" : "");
   fflush(stdout);
   if (fioLegVivo) { pthread_mutex_unlock(&legTrava); return; }
   juntar = fioLegCriado;
