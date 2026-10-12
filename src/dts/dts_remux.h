@@ -5,7 +5,7 @@
  * goes to a writer callback: MPEG-TS segments for HLS, or one progressive
  * MPEG-TS / Matroska / fragmented MP4 stream.
  *
- * No FFmpeg type crosses this header. Without NV_DTS_FFMPEG every call fails
+ * No FFmpeg type crosses this header. In builds without FFmpeg every call fails
  * cleanly (dts_remux_available() == 0). */
 #ifndef NV_DTS_REMUX_H
 #define NV_DTS_REMUX_H
@@ -20,7 +20,7 @@ typedef struct {
   int width, height;
   char video_codec[16], audio_codec[16];
   char hdr[8];                 /* PQ, HLG or SDR (from the container) */
-  int track_id, stream_index;  /* Matroska TrackNumber / MP4 track id, FFmpeg index */
+  int audio_ordinal, stream_index; /* k-th audio track of the file (0-based), FFmpeg index */
   int in_channels, in_rate;    /* from the container header */
   int out_channels, out_bitrate;
   char out_codec[8];           /* "ac3" or "aac" */
@@ -45,12 +45,14 @@ typedef int (*DtsRemuxWrite)(void *opaque, const unsigned char *data, int n);
 int dts_remux_available(void);
 
 /* Opens the source and reads its keyframe index (one seek: Matroska parses
- * Cues lazily). track_id: the container track id of the audio to convert, or
- * -1 for the first DTS/TrueHD/MLP track. stereo_aac: 1 = AAC 2.0 (Settings
+ * Cues lazily). audio_ordinal: which audio track to convert, counted among the
+ * file's audio tracks in container order from 0 (FFmpeg does not expose the
+ * Matroska TrackNumber; its streams follow the TrackEntry order), or -1 for the
+ * first DTS/TrueHD/MLP track. stereo_aac: 1 = AAC 2.0 (Settings
  * "Stereo (AAC)"), 0 = AC3. seg_target_s: HLS segments group keyframes to at
  * least this length. *cancel (may be NULL) aborts the network waits. NULL on
  * failure with the reason in err (no URL in it). */
-DtsRemux *dts_remux_open(const char *url, const char *headers, int track_id, int stereo_aac,
+DtsRemux *dts_remux_open(const char *url, const char *headers, int audio_ordinal, int stereo_aac,
                          double seg_target_s, volatile int *cancel, char *err, size_t errn);
 const DtsRemuxInfo *dts_remux_info(const DtsRemux *);
 double dts_remux_segment_start(const DtsRemux *, int seg);    /* seconds; segment 0 = 0 */

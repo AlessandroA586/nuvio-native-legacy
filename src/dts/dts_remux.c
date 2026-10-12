@@ -259,11 +259,11 @@ static void buildSegments(DtsRemux *r, double target) {
   }
 }
 
-DtsRemux *dts_remux_open(const char *url, const char *headers, int trackId, int stereoAac,
+DtsRemux *dts_remux_open(const char *url, const char *headers, int ordinal, int stereoAac,
                          double segTarget, volatile int *cancel, char *err, size_t errn) {
   DtsRemux *r;
   AVFormatContext *ic;
-  int rr;
+  int rr, nAudio = 0, ordAs = -1, ordPedido = -1, primeiro = -1, primeiroOrd = -1;
   pthread_once(&logOnce, logInit);
   atomic_store(&logBudget, 40);
   if (err && errn) err[0] = 0;
@@ -292,11 +292,25 @@ DtsRemux *dts_remux_open(const char *url, const char *headers, int trackId, int 
       fail(err, errn, "Encrypted media", 0); goto bad;
     }
     if (p->codec_type == AVMEDIA_TYPE_VIDEO && r->vs < 0 && !(s->disposition & AV_DISPOSITION_ATTACHED_PIC)) r->vs = (int)i;
-    if (p->codec_type == AVMEDIA_TYPE_AUDIO && r->as < 0 && isConvertible(p->codec_id) &&
-        (trackId < 0 || s->id == trackId)) r->as = (int)i;
+    if (p->codec_type == AVMEDIA_TYPE_AUDIO) {
+      if (isConvertible(p->codec_id) && primeiro < 0) { primeiro = (int)i; primeiroOrd = nAudio; }
+      if (nAudio == ordinal) { ordPedido = (int)i; if (isConvertible(p->codec_id)) ordAs = (int)i; }
+      nAudio++;
+    }
   }
   if (r->vs < 0) { fail(err, errn, "No video stream", 0); goto bad; }
-  if (r->as < 0) { fail(err, errn, trackId < 0 ? "No DTS/TrueHD track" : "Chosen track is not DTS/TrueHD", 0); goto bad; }
+  if (ordinal >= 0 && ordAs < 0) {
+    /* The k-th audio of the app's MKV reader is not DTS/TrueHD here (FFmpeg
+     * skipped a track it could not parse?): the first convertible one. */
+    printf("[dts-tpk] audio %d pedido nao e DTS/TrueHD no FFmpeg (%s, %d faixas de audio); usando a %d\n", ordinal,
+           ordPedido >= 0 ? avcodec_get_name(ic->streams[ordPedido]->codecpar->codec_id) : "ausente", nAudio, primeiroOrd);
+    fflush(stdout);
+  }
+  r->as = ordAs >= 0 ? ordAs : primeiro;
+  if (r->as < 0) { fail(err, errn, "No DTS/TrueHD track", 0); goto bad; }
+  { int k = 0;
+    for (unsigned i = 0; i < ic->nb_streams && (int)i < r->as; i++) if (ic->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) k++;
+    r->info.audio_ordinal = k; }
   {
     AVStream *V = ic->streams[r->vs], *A = ic->streams[r->as];
     if (V->codecpar->codec_id != AV_CODEC_ID_HEVC && V->codecpar->codec_id != AV_CODEC_ID_H264) {
@@ -321,7 +335,7 @@ DtsRemux *dts_remux_open(const char *url, const char *headers, int trackId, int 
     snprintf(in->hdr, sizeof in->hdr, "%s", V->codecpar->color_trc == AVCOL_TRC_SMPTE2084 ? "PQ" :
              V->codecpar->color_trc == AVCOL_TRC_ARIB_STD_B67 ? "HLG" :
              V->codecpar->color_trc == AVCOL_TRC_UNSPECIFIED ? "?" : "SDR");
-    in->track_id = A->id; in->stream_index = r->as;
+    in->stream_index = r->as;
     in->in_channels = A->codecpar->ch_layout.nb_channels; in->in_rate = A->codecpar->sample_rate;
     int ic2 = in->in_channels;
     in->out_channels = stereoAac ? 2 : ic2 == 1 ? 1 : ic2 == 2 ? 2 : 6;

@@ -29,12 +29,13 @@ int dts_tpk_disponivel(void);
 const char *dts_tpk_modo_nome(int modo);
 const char *dts_tpk_corpo_nome(int corpo);
 
-/* New session for `url` (raw "Name: value" header lines): converts the audio
- * track with container id track_id (-1 = first DTS/TrueHD/MLP). The source is
+/* New session for `url` (raw "Name: value" header lines): converts the k-th
+ * audio track of the file, counted from 0 in container order (-1 = the first
+ * DTS/TrueHD/MLP). The source is
  * probed in a thread; the URL written to `out` is what the player opens (its
  * requests wait for the probe). inicio: start of the first progressive URL.
  * 0 when the server cannot run. Replaces the previous session. */
-int dts_tpk_abrir(const char *url, const char *headers, int track_id, int stereo_aac,
+int dts_tpk_abrir(const char *url, const char *headers, int audio_ordinal, int stereo_aac,
                   int modo, int corpo, double inicio, char *out, size_t n);
 /* Progressive modes: the URL that restarts the stream at s (same session). */
 int dts_tpk_url_em(double s, char *out, size_t n);

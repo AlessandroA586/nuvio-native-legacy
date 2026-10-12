@@ -2844,7 +2844,12 @@ static void avMontarOsd(AoVivoOsd *o) {
       switch (video_dts_estado()) {
         case VIDEO_DTS_NATIVO:     d = "Áudio: DTS, decodificado pela TV"; break;
         case VIDEO_DTS_PREPARANDO: d = "Áudio: DTS, preparando a conversão"; break;
+#ifdef NV_TPK
+        case VIDEO_DTS_CONVERTIDO: d = ajustes_dts_ac3() ? "Áudio: DTS convertido para Dolby Digital nesta TV"
+                                                          : "Áudio: DTS convertido para AAC estéreo nesta TV"; break;
+#else
         case VIDEO_DTS_CONVERTIDO: d = "Áudio: DTS convertido para AAC estéreo nesta TV"; break;
+#endif
         case VIDEO_DTS_FALHOU:     d = "Áudio: DTS, a conversão falhou (sem som)"; break;
         case VIDEO_DTS_SEM_SOM:    d = "Áudio: DTS, esta TV não toca (sem som)"; break;
       }

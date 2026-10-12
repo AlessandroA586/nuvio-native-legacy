@@ -239,7 +239,11 @@
   0, /* default aspect ratio: Ultimo usado */
   1, /* also in Continue watching (2.0.2): Desligado (V_LIGA: 1 = Desligado) = one title, one place */
   0, /* continue on the profile picker (#303): Ligado (V_LIGA: 0 = Ligado) = as before */
+#ifdef NV_TPK
+  1, /* DTS converted to: 5.1 (Dolby Digital) on the Samsung .tpk (design rule 3) */
+#else
   0, /* DTS converted to: Estereo (AAC) = the proven path */
+#endif
   1, /* Dolby Vision in MKV (2.0.2, experimental): Desligado */
   0, /* send history to the Nuvio account (2.0.2, per profile): Ligado */
   0, /* social features (2.0.2, per profile): Ligado */
@@ -265,3 +269,6 @@
   1, /* auto-skip credits, only with a real start+end marker: Desligado */
   5, /* owner decision #256: configurable countdown in seconds */
   0, /* interface mode: TV, including on phones until Mobile is selected */
+  0, /* DTS test delivery (.tpk): HLS on 127.0.0.1 */
+  0, /* DTS test HTTP body (.tpk): chunked */
+  0, /* app log on the LAN (.tpk): action */

@@ -179,3 +179,22 @@ behaviour rules. At the end push, and append a hand-off note to the plan."
 | LGPL obligations with static FFmpeg | Decide in S1 (private fork vs shipping relink material) |
 | 8-channel sources lose height/objects | Documented in help text; downmix matrix tested in S2 |
 | `AJ_DTS_AC3` positional setting migration | No new enum entries; default only for this build |
+
+## Hand-off: S1–S4 built on `feat/dts-truehd-ac3-tizen` (2026-10-13)
+
+Built in one session from the DESIGN doc (Option B), without the TV. Not yet run on the S95C.
+
+| Stage | What | Where |
+|---|---|---|
+| S1 | FFmpeg 7.1.5 `tpk` target (adds truehd/mlp, mpegts/matroska/mp4 muxers, truehd_core); `tpk.sh` downloads + checks the tarball on the host, builds once in `nuvio-tpk-sdk` into `~/.cache/nuvio-tpk/prefix-dts`, links it only into the 6+ `libnuvio.so`; LGPL notice in `res/licencas/dts/`. `NV_TPK_SEM_DTS=1` builds without | `tools/build-dts-ffmpeg.sh`, `tools/tpk.sh` |
+| S2 | Remux core: video copied, DTS core / TrueHD 5.1 presentation → AC3; lookahead DTS, decode-order cuts, locked audio anchor, +10 s fixed offset; generator continues segment to segment | `src/dts/dts_remux.c/.h`, `dts_engine_open_demux()` |
+| S3 | Loopback server: HLS VOD on demand, progressive TS/MKV/MP4, chunked / Content-Length / close; per-request log; LAN log endpoint | `src/dts/dts_hls_tpk.c/.h` |
+| S4 | Wire-up: trigger (all MKV audio refused + TV lists none, or NotSupportedAudioCodec, or header known before open, or DTS/TrueHD picked in the audio menu), fallback to the original on failure before the first frame, progressive position offset auto-detected, menu lists file tracks with "→ Dolby Digital 5.1"; `AJ_DTS_AC3` enabled (default 5.1 on .tpk); hidden rows `AJ_DTS_TPK_MODO/CORPO/REDE` (Playback › More options › Sound and video of this TV); 16 strings × 28 tables | `src/video_tpk.c`, `src/ajustes.c` + `ajustes_ux_*.inc`, `src/video.c`, `src/player.c`, `src/idioma_*.h` |
+
+Decisions taken here (owner can revisit):
+* Track mapping to FFmpeg is by **audio ordinal** (FFmpeg's Matroska demuxer does not expose TrackNumber).
+* Mixed files (a playable AC3/E-AC3/AAC plus DTS/TrueHD) keep playing the playable track, even if the preferred language is only on the DTS track; the DTS/TrueHD tracks are offered in the audio menu.
+* Conversion only on Tizen 8+ (`dts_tpk_disponivel`), so the 60/65 hosts sharing the `.so` are unchanged.
+* `tests/ajustes_dts.py` was already stale on this tree (it expects the DTS setting to be gone); not touched.
+
+Verified here: ARMv7 softfp cross-compile of all `src/*.c` with FFmpeg (no undefined symbols, no TLS); remux and server run as ARM binaries under qemu and on x86 with synthetic HEVC 10-bit HDR10 + DTS 5.1 / TrueHD 5.1 files (bit-identical decoded video, HDR10 SEI kept, AC3 5.1 channel order and level, segment continuation, seek, three body framings, progressive formats). `python3 tools/idiomas.py` passes. Not verifiable here: the .NET host, the Samsung player, ARM CPU cost, real DTS-HD MA / Atmos files.

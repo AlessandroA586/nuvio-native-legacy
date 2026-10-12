@@ -77,6 +77,7 @@
 #include "abertura.h"
 #include "apoio.h"
 #include "telefoneui.h"
+#include "dts/dts_hls_tpk.h"
 #if defined(NV_ANDROID) && defined(NV_TOUCH_UI)
 #include "android.h"
 #endif
@@ -544,6 +545,10 @@ typedef enum {
   AJ_PULAR_CREDITOS,
   AJ_PROXIMO_CONTAGEM, // #256: segundos locais; append-only
   AJ_INTERFACE_MODO, // local, append-only; 0 = TV, 1 = Mobile
+  // DTS/TrueHD -> Dolby Digital no .tpk (dts/dts_hls_tpk.h): linhas de TESTE da
+  // entrega ao player da Samsung, e o registro do app na rede (sem sdb shell na
+  // TV de varejo). So no .tpk, avancadas. LOCAIS. No fim: posicionais.
+  AJ_DTS_TPK_MODO, AJ_DTS_TPK_CORPO, AJ_DTS_TPK_REDE,
   AJ_N
 } OpcaoId;
 
@@ -593,6 +598,10 @@ static const char *V_DESCANSO_FONTE[]  = { "Catálogo", "Minha lista e Continuar
 static const char *V_BRILHO_PLAYER[] = { "100%", "80%", "65%", "50%" };
 // #202: 0 = o ultimo modo usado (comportamento de sempre); 1..8 = PlrAspecto + 1.
 static const char *V_DTS_SAIDA[] = { "Estéreo (AAC)", "5.1 (Dolby Digital)" };
+// Indices = DTSTPK_* e DTSTPK_CORPO_* (dts/dts_hls_tpk.h): o gravado e o indice.
+static const char *V_DTS_TPK_MODO[] = { "HLS em 127.0.0.1", "TS contínuo", "MKV contínuo", "MP4 contínuo",
+                                        "HLS no IP da rede", "Desligado" };
+static const char *V_DTS_TPK_CORPO[] = { "Em pedaços (chunked)", "Com tamanho (Content-Length)", "Fechar ao terminar" };
 static const char *V_PROPORCAO[] = { "Último usado", "Original", "Recortar", "Esticar", "Zoom leve", "Zoom cinema", "Zoom ultra", "Ajustar altura", "Ajustar largura" };
 static const char *V_LOGO_APP[] = { "Novo", "Clássico" };
 static const char *V_BUSCA_NUVIO[] = { "Primeiro", "Por último", "Desligado" };
@@ -628,9 +637,12 @@ static const unsigned P2P_LIMITE_MB[] = { 0, 2048, 4096, 8192, 16384 };
 // Only the Android player has an app-controlled disk cache (cacheboost.h);
 // LG/Samsung show the row with "Não disponível nesta TV". Compile-time, so the
 // many tests that compile ajustes.c alone need no extra source.
-// DTS -> AC3/AAC conversion lives only in the webOS player (src/dts).
+// DTS -> AC3/AAC conversion: the webOS player (src/dts) and, on the Samsung
+// .tpk, the loopback converter (dts/dts_hls_tpk.c) when FFmpeg is in the .so.
 static int dtsConversaoExiste(void) {
-#if defined(__APPLE__) || defined(NV_LINUX_DESKTOP) || defined(NV_TPK) || defined(NV_ANDROID) || defined(__EMSCRIPTEN__)
+#if defined(NV_TPK)
+  return dts_tpk_disponivel();
+#elif defined(__APPLE__) || defined(NV_LINUX_DESKTOP) || defined(NV_ANDROID) || defined(__EMSCRIPTEN__)
   return 0;
 #else
   return 1;
@@ -1405,6 +1417,9 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Pular os créditos automaticamente", V_LIGA, 2),   // local: pularCreditosLocal
   NUM("Contagem do próximo episódio", 1, 60, 1, "s"),
   ESC("Modo da interface", V_INTERFACE_MODO, 2),
+  ESC("Teste de entrega do DTS (Samsung)", V_DTS_TPK_MODO, 6),          // local: dtsTpkModoLocal
+  ESC("Teste do envio HTTP do DTS", V_DTS_TPK_CORPO, 3),               // local: dtsTpkCorpoLocal
+  ACAO("Registro do app na rede"),                                     // dts_hls_tpk.c, sem valor
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1645,6 +1660,9 @@ static const char *CHAVE[] = {
   "pularCreditosLocal",
   "proximoContagemLocal",
   "interfaceModoLocal",
+  "dtsTpkModoLocal",
+  "dtsTpkCorpoLocal",
+  "registroRedeLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2568,6 +2586,14 @@ int ajustes_cw_ordem(void)            { return valor[AJ_CW_ORDEM]; }
 int ajustes_cw_retido_tambem(void)    { return lig(AJ_CW_RETIDO_TAMBEM); }
 int ajustes_ps_continuar(void)        { return lig(AJ_PS_CONTINUAR); }
 int ajustes_dts_ac3(void)             { return valor[AJ_DTS_AC3] == 1; }
+int ajustes_dts_tpk_modo(void) {
+  int v = valor[AJ_DTS_TPK_MODO];
+  return v >= 0 && v < DTSTPK_MODOS ? v : DTSTPK_HLS;
+}
+int ajustes_dts_tpk_corpo(void) {
+  int v = valor[AJ_DTS_TPK_CORPO];
+  return v >= 0 && v < DTSTPK_CORPOS ? v : DTSTPK_CORPO_CHUNKED;
+}
 int ajustes_dv_mkv(void)              { return lig(AJ_DV_MKV); }
 int ajustes_hist_conta(void)          { return lig(AJ_HIST_CONTA); }
 int ajustes_social(void)              { return lig(AJ_SOCIAL); }
@@ -4334,6 +4360,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_P2P_LIGADO:     /* o servidor P2P e um aparelho da rede desta casa */
     case AJ_P2P_LIMITE:     /* #334: o disco e desta TV */
     case AJ_JF_LIGADO:
+    case AJ_DTS_TPK_MODO: case AJ_DTS_TPK_CORPO: case AJ_DTS_TPK_REDE: /* teste do player desta TV */
     case AJ_AVANCADAS:      /* so a vista desta TV */
     case AJ_POSTER_PROV:    /* servico e rede desta casa: nao segue a conta */
     case AJ_DET_SO_CINEMETA: /* o web nao tem esta escolha */
@@ -4679,6 +4706,7 @@ static int foraDestaPlataforma(int op) {
   if (op >= AJ_MDB_TRAKT && op <= AJ_MDB_MAL) return 1;
 #ifndef NV_TPK
   if (op == AJ_TRAILER_ZOOM_TPK) return 1;
+  if (op == AJ_DTS_TPK_MODO || op == AJ_DTS_TPK_CORPO || op == AJ_DTS_TPK_REDE) return 1;
 #endif
 #if defined(NV_TPK) || defined(NV_ANDROID)
   if (op == AJ_DV_MKV) return 1;
@@ -5042,8 +5070,16 @@ static void pxAtivar(int op) {
 static const char *frResumo(int plugin);
 static const char *frOrdemResumo(void);
 static const char *frRegexTexto(void);
+// AJ_DTS_TPK_REDE: o OK sobe o servidor do registro (dts_tpk_registro_rede);
+// antes disso a linha so diz Desligado, sem abrir porta nenhuma.
+static int registroRedeLigado;
 static const char *textoLeitura(int op) {
   static char buf[64];
+  if (op == AJ_DTS_TPK_REDE) {
+    static char url[96];
+    if (registroRedeLigado && dts_tpk_registro_rede(url, sizeof url)) return url;
+    return i18n("Desligado");
+  }
   // MASCARADO, sempre. Esta tela e fotografada e colada em issue — foi assim
   // que chegou o relato do painel de Tracking. O portal sai sem esquema e o MAC
   // so com os dois ultimos octetos: o bastante para a pessoa reconhecer QUAL
@@ -5305,6 +5341,8 @@ static int inativa(int op) {
     // #334: so o motor embutido usa o limite; com servidor na rede quem guarda e ele.
     case AJ_P2P_LIMITE:  return !p2pmotor_disponivel() || p2pEndereco[0];
     case AJ_DTS_AC3:     return !dtsConversaoExiste();
+    case AJ_DTS_TPK_MODO: return !dtsConversaoExiste();
+    case AJ_DTS_TPK_CORPO: return !dtsConversaoExiste() || ajustes_dts_tpk_modo() == DTSTPK_DESLIGADO;
     // Som: na Samsung (.wgt) o trailer e sempre mudo (trailerfonte_com_som).
     case AJ_HERO_TRAILER_SOM:
       return !lig(AJ_HERO_TRAILER) || !trailerfonte_com_som(trailerfonte_tizen());
@@ -5777,7 +5815,14 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_ESPACO_FILEIRAS: return "O espaço vertical entre uma fileira da Home e a seguinte. Com menos cabem mais fileiras na tela, com mais a Home fica mais arejada.";
     case AJ_ESPACO_TITULOS: return "O espaço horizontal entre os cartazes de uma fileira da Home.";
     case AJ_TAM_MIN: return "Na escolha automática, fontes menores que este tamanho ficam para o fim da fila. Se for maior que o tamanho máximo, o mínimo é ignorado. Só vale para arquivos com tamanho conhecido; se só houver fontes fora da faixa, a melhor delas ainda toca.";
+#ifdef NV_TPK
+    case AJ_DTS_AC3: return "Esta TV não toca DTS nem TrueHD: o app converte o som na hora. 5.1 (Dolby Digital) mantém o surround para barra de som e receiver; 7.1, Atmos e DTS:X viram 5.1, sem os objetos. Estéreo (AAC) serve qualquer TV. Vale a partir do próximo vídeo.";
+    case AJ_DTS_TPK_MODO: return "Teste da conversão de DTS e TrueHD: como o vídeo convertido chega ao player da TV. Desligado deixa o app como antes. Vale a partir do próximo vídeo.";
+    case AJ_DTS_TPK_CORPO: return "Teste: como o servidor do app envia cada parte do vídeo convertido ao player da TV. Vale a partir do próximo vídeo.";
+    case AJ_DTS_TPK_REDE: return "Mostra o registro do app num computador da mesma rede: aperte OK e abra no navegador o endereço que aparece. Fica ligado até fechar o app.";
+#else
     case AJ_DTS_AC3: return "Como o áudio DTS é entregue à TV quando o app o converte (só na LG). Estéreo (AAC) é o modo provado e serve qualquer TV. 5.1 (Dolby Digital) mantém o som surround para barra de som e receiver por ARC/eARC; vale a partir do próximo vídeo.";
+#endif
     case AJ_PS_CONTINUAR: return "Ligado, cada perfil mostra na escolha de perfil o cartão com o que ele estava assistindo. Desligado, a tela mostra só os perfis.";
     case AJ_HIST_CONTA: return "Ligado (padrão): o que você assiste neste perfil sobe para a conta Nuvio, com o progresso e os vistos. Desligado: nada disso é enviado à conta; o Trakt e o Simkl vinculados a este perfil continuam recebendo. Vale só para este perfil.";
     case AJ_SOCIAL: return "Ligado (padrão): amigos, atividade deles e recomendações. Desligado: tudo isso some, com a fileira de amigos da Home, e o app para de falar com o serviço social. Salvos e Avisos continuam. Vale só para este perfil.";
@@ -6982,6 +7027,7 @@ static void eventoTela(const SDL_Event *e) {
       return;
     }
     if (focoOp == AJ_DIAGNOSTICO) { pediuDiagnostico = 1; return; }
+    if (focoOp == AJ_DTS_TPK_REDE) { char u[96]; registroRedeLigado = 1; dts_tpk_registro_rede(u, sizeof u); return; }
     if (focoOp == AJ_HERO_CATALOGOS) { if (!inativa(focoOp)) heroFonteCiclar(+1); return; }
     if (focoOp == AJ_VELOCIDADE) { pediuVelocidade = 1; return; }
     if (focoOp == AJ_LIVETV_DIAG) { pediuLivetvDiag = 1; return; }
@@ -7729,6 +7775,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_SELOS_PACOTE:
     case AJ_REACAO_CREDITOS: case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PROXIMO_AUTO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_CONTAGEM:
     case AJ_FONTE_PRAZO: case AJ_TAM_MAX: case AJ_TAM_MIN: case AJ_PROPORCAO_PADRAO: case AJ_DTS_AC3:
+    case AJ_DTS_TPK_MODO: case AJ_DTS_TPK_CORPO: case AJ_DTS_TPK_REDE:
     case AJ_FONTE_ESCOPO: case AJ_FONTE_ADDONS_PERM: case AJ_FONTE_PLUGINS_PERM: case AJ_FONTE_OUTROS:
     case AJ_FONTE_REGEX: case AJ_FONTE_REGEX_PADRAO: case AJ_FONTE_REGEX_MODELO:
     case AJ_FONTE_ORDEM: case AJ_FONTE_ORDEM_USO:

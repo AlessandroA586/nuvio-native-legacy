@@ -67,6 +67,17 @@ For TV reports include model, firmware, revision, selected track and output;
 check native DTS, conversion, seeks, track changes and A/V sync using the
 [DTS Debug app](../../../tools/dts-pipeline/DEBUG.md).
 
+## Samsung .tpk (Tizen 8–9)
+
+The Samsung build converts with its own path: the TV's `Tizen.Multimedia.Player`
+reads the converted stream from a local HTTP server inside the app
+(`src/dts/dts_hls_tpk.c`; converter `src/dts/dts_remux.c`). Video is copied byte
+for byte; DTS decodes the core, TrueHD its 5.1 presentation, output AC3 5.1 at
+640 kb/s (stereo sources 2.0). Delivery (HLS / progressive TS, MKV, MP4, loopback
+or LAN address) and HTTP body framing are test settings until the S95C decides.
+Design, findings and the TV checklist: `docs/plans/dts-truehd-ac3-tizen-DESIGN.md`
+and the hand-off notes in `docs/plans/dts-truehd-ac3-tizen.md`.
+
 ## Dependency provenance and distribution
 
 The static FFmpeg libraries (`avformat`, `avcodec`, `swresample`, `avutil`) use

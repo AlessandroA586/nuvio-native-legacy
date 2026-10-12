@@ -42,6 +42,7 @@ int dts_tpk_registro_rede(char *u, size_t n) { (void)u; if (n) u[0] = 0; return 
 
 #include "../registro.h"
 #include <arpa/inet.h>
+#include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <ifaddrs.h>
@@ -334,9 +335,9 @@ static void *fioSonda(void *u) {
   pthread_cond_broadcast(&s->c);
   pthread_mutex_unlock(&s->m);
   if (rx) {
-    printf("[dts-tpk] sessao %u fonte: %s %dx%d hdr(container)=%s, audio %s track %d %d ch %d Hz -> %s %d ch %d kb/s "
+    printf("[dts-tpk] sessao %u fonte: %s %dx%d hdr(container)=%s, audio %s (audio %d do arquivo) %d ch %d Hz -> %s %d ch %d kb/s "
            "(%s); %d quadro(s)-chave, %d segmento(s) de ate %.1f s, %.0f s, %.0f MB; sonda %u ms\n",
-           s->id, in->video_codec, in->width, in->height, in->hdr, in->audio_codec, in->track_id, in->in_channels,
+           s->id, in->video_codec, in->width, in->height, in->hdr, in->audio_codec, in->audio_ordinal, in->in_channels,
            in->in_rate, in->out_codec, in->out_channels, in->out_bitrate / 1000, in->decoder_path, in->n_keyframes,
            in->n_segments, in->max_segment_s, in->duration_s, in->size_bytes > 0 ? in->size_bytes / 1048576.0 : -1.0,
            (unsigned)(s->prontaMs - s->criadaMs));
@@ -742,7 +743,35 @@ static int subir(int lan) {
   return 1;
 }
 
-int dts_tpk_disponivel(void) { return dts_remux_available(); }
+// Versao maior da Tizen (system-info por dlopen, como gpunivel.c). -1 = nao leu.
+static int tizenMaior(void) {
+  static int v = -2;
+  if (v == -2) {
+    static const char *const libs[] = { "libcapi-system-info.so.0", "libcapi-system-info.so", NULL };
+    int (*get)(const char *, char **) = NULL;
+    void *h = NULL;
+    char *t = NULL;
+    v = -1;
+    for (int i = 0; libs[i] && !h; i++) h = dlopen(libs[i], RTLD_NOW);
+    if (h) *(void **)&get = dlsym(h, "system_info_get_platform_string");
+    if (get && get("http://tizen.org/feature/platform.version", &t) == 0 && t) { v = atoi(t); free(t); }
+  }
+  return v;
+}
+
+// O escopo do plano e o pacote NuvioTpk (Tizen 8 e 9, a S95C). A mesma .so roda
+// nos hosts 6/6.5/7, onde a conversao (e as linhas dela nos Ajustes) fica fora.
+int dts_tpk_disponivel(void) {
+  static int c = -1;   // os Ajustes perguntam a cada quadro: decide uma vez
+  if (c < 0) {
+    int t = tizenMaior();
+    c = (t < 0 || t >= 8) && dts_remux_available();
+    printf("[dts-tpk] conversao DTS/TrueHD %s (tizen %d, FFmpeg %s)\n", c ? "disponivel" : "indisponivel", t,
+           dts_remux_available() ? "ligado" : "ausente");
+    fflush(stdout);
+  }
+  return c;
+}
 
 static void encerrarAtual(void) {   // sob G
   Sessao *s = atual;
@@ -818,7 +847,7 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
   pthread_detach(t);
   urlDe(s, inicio, out, n);
   pthread_mutex_unlock(&G);
-  printf("[dts-tpk] sessao %u: modo %s, corpo %s, endereco %s, faixa %d, saida %s; player abre %s\n", s->id,
+  printf("[dts-tpk] sessao %u: modo %s, corpo %s, endereco %s, audio %d do arquivo, saida %s; player abre %s\n", s->id,
          MODO_NOME[modo], CORPO_NOME[corpo], lan ? ipLanAtual : "127.0.0.1", track, stereo ? "AAC 2.0" : "AC3",
          strstr(out, "/v.m3u8") ? "a playlist HLS" : "o fluxo progressivo");
   fflush(stdout);
