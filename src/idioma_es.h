@@ -5228,7 +5228,7 @@
   T("memória", "memoria"),
   T("mistério", "misterio"),
   T("mitologia", "mitología"),
-  T("modelo inválido: use http(s):// e {imdb}, {tmdb}, {type} ou {tipo_tmdb}", "plantilla no válida: usa http(s):// y {imdb}, {tmdb}, {type} o {tipo_tmdb}"),
+  T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "plantilla no válida: usa http(s):// y {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} o {tipo_tmdb}"),
   T("modelo longo demais: o endereço pronto passa de 512 caracteres", "plantilla demasiado larga: la dirección final supera 512 caracteres"),
   T("monstros", "monstruos"),
   T("mostrar", "mostrar"),

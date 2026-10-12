@@ -5229,7 +5229,7 @@
   T("memória", "spomin"),
   T("mistério", "skrivnost"),
   T("mitologia", "mitologija"),
-  T("modelo inválido: use http(s):// e {imdb}, {tmdb}, {type} ou {tipo_tmdb}", "neveljavna predloga: uporabite http(s):// in {imdb}, {tmdb}, {type} ali {tipo_tmdb}"),
+  T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "neveljavna predloga: uporabite http(s):// in {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ali {tipo_tmdb}"),
   T("modelo longo demais: o endereço pronto passa de 512 caracteres", "predloga je predolga: končni naslov presega 512 znakov"),
   T("monstros", "pošast"),
   T("mostrar", "prikaži"),

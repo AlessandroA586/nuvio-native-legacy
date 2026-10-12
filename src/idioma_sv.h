@@ -5229,7 +5229,7 @@
   T("memória", "minne"),
   T("mistério", "mysterium"),
   T("mitologia", "mytologi"),
-  T("modelo inválido: use http(s):// e {imdb}, {tmdb}, {type} ou {tipo_tmdb}", "ogiltig mall: använd http(s):// och {imdb}, {tmdb}, {type} eller {tipo_tmdb}"),
+  T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "ogiltig mall: använd http(s):// och {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} eller {tipo_tmdb}"),
   T("modelo longo demais: o endereço pronto passa de 512 caracteres", "mallen är för lång: den färdiga adressen blir över 512 tecken"),
   T("monstros", "monster"),
   T("mostrar", "visa"),

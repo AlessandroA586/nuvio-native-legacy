@@ -5229,7 +5229,7 @@
   T("memória", "ký ức"),
   T("mistério", "bí ẩn"),
   T("mitologia", "thần thoại"),
-  T("modelo inválido: use http(s):// e {imdb}, {tmdb}, {type} ou {tipo_tmdb}", "mẫu không hợp lệ: dùng http(s):// và {imdb}, {tmdb}, {type} hoặc {tipo_tmdb}"),
+  T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "mẫu không hợp lệ: dùng http(s):// và {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} hoặc {tipo_tmdb}"),
   T("modelo longo demais: o endereço pronto passa de 512 caracteres", "mẫu quá dài: địa chỉ hoàn chỉnh vượt quá 512 ký tự"),
   T("monstros", "quái vật"),
   T("mostrar", "hiển thị"),

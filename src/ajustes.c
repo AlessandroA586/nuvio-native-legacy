@@ -1769,6 +1769,7 @@ static void pstDefinir(int op, const char *texto);
 static void pstAtivar(int op);
 static void pstTesteRecolher(void);
 static const char *pstTexto(int op);
+static void uxNotificar(const char *s);
 static int gravar(void);
 static void aplicarIdioma(int op);
 static int somenteDesteAparelho(int op);
@@ -3584,7 +3585,7 @@ static int gravar(void) {
 // aparecem mascarados ("····abcd"), como a chave do fanart.tv.
 static char pstInst[PP_INSTANCIA_MAX], pstToken[PP_TOKEN_MAX + 1], pstExtra[PP_EXTRA_MAX + 1];
 static char pstChave[PP_CHAVE_MAX], pstModelo[PP_MODELO_MAX];
-// Ultima recusa de um campo digitado (0 = nenhuma); aparece na linha "Testar".
+// Ultima recusa de um campo digitado (0 = nenhuma); aviso imediato e linha "Testar".
 enum { PST_OK = 0, PST_TOKEN_RUIM, PST_INST_RUIM, PST_EXTRA_RUIM, PST_CHAVE_RUIM, PST_MODELO_RUIM,
        PST_MODELO_LONGO };
 static int pstAviso;
@@ -3651,7 +3652,7 @@ static void pstCarregar(void) {
 // O que a pessoa digitou/colou num campo. Vazio apaga.
 static void pstDefinir(int op, const char *texto) {
   char b[PP_MODELO_MAX + 8], inst[PP_INSTANCIA_MAX];
-  size_t i = 0, k;
+  size_t i = 0, k, nTexto = texto ? strlen(texto) : 0;
   pstAviso = PST_OK;
   while (texto && (texto[i] == ' ' || texto[i] == '\t')) i++;
   pstCopia(b, sizeof b, texto ? texto + i : "");
@@ -3660,15 +3661,15 @@ static void pstDefinir(int op, const char *texto) {
   switch (op) {
     case AJ_POSTER_INST:
       if (!b[0]) pstInst[0] = 0;
-      else if (!posterprov_normalizar_instancia(b, pstInst, sizeof pstInst)) { pstAviso = PST_INST_RUIM; return; }
+      else if (!posterprov_normalizar_instancia(b, pstInst, sizeof pstInst)) { pstAviso = PST_INST_RUIM; goto recusado; }
       break;
     case AJ_POSTER_TOKEN:
       // Aceita o manifest colado inteiro: o host vira a instancia.
-      if (!posterprov_extrair_token(b, pstToken, sizeof pstToken, inst, sizeof inst)) { pstAviso = PST_TOKEN_RUIM; return; }
+      if (!posterprov_extrair_token(b, pstToken, sizeof pstToken, inst, sizeof inst)) { pstAviso = PST_TOKEN_RUIM; goto recusado; }
       if (inst[0]) pstCopia(pstInst, sizeof pstInst, inst);
       break;
     case AJ_POSTER_EXTRA:
-      if (!posterprov_extra_normalizar(b, pstExtra, sizeof pstExtra)) { pstAviso = PST_EXTRA_RUIM; return; }
+      if (!posterprov_extra_normalizar(b, pstExtra, sizeof pstExtra)) { pstAviso = PST_EXTRA_RUIM; goto recusado; }
       break;
     case AJ_POSTER_CHAVE: {
       PosterProvCfg c;
@@ -3676,7 +3677,7 @@ static void pstDefinir(int op, const char *texto) {
       memset(&c, 0, sizeof c);
       c.prov = PP_RPDB;
       pstCopia(c.chave, sizeof c.chave, b);
-      if (b[0] && !posterprov_montar_url(&c, "tt0111161", 0, "movie", u, sizeof u)) { pstAviso = PST_CHAVE_RUIM; return; }
+      if (b[0] && !posterprov_montar_url(&c, "tt0111161", 0, "movie", u, sizeof u)) { pstAviso = PST_CHAVE_RUIM; goto recusado; }
       pstCopia(pstChave, sizeof pstChave, b);
       break; }
     case AJ_POSTER_MODELO:
@@ -3684,13 +3685,26 @@ static void pstDefinir(int op, const char *texto) {
       // nao o de sintaxe (que mandaria corrigir o que esta certo).
       if (b[0] && !posterprov_modelo_cabe(b)) {
         pstAviso = posterprov_modelo_valido(b) ? PST_MODELO_LONGO : PST_MODELO_RUIM;
-        return;
+        goto recusado;
       }
       pstCopia(pstModelo, sizeof pstModelo, b);
       break;
   }
   pstSalvar();
   pstAplicar();
+  printf("[poster] modelo salvo (n=%zu)\n", nTexto);
+  fflush(stdout);
+  return;
+recusado:
+  { static const char *motivos[] = { "", "token invalido", "instancia invalida", "parametros invalidos",
+                                   "chave invalida", "sintaxe invalida", "endereco pronto longo demais" };
+    char url[96];
+    // Sem esquema pode ser a chave nua: rede_url_publica a devolveria inteira.
+    const char *publica = (!strncmp(b, "http://", 7) || !strncmp(b, "https://", 8)) ? b : "";
+    printf("[poster] modelo recusado: %s (n=%zu) %s\n", motivos[pstAviso], nTexto,
+           posterprov_redigir(publica, url, sizeof url));
+    fflush(stdout); }
+  uxNotificar(pstTexto(AJ_POSTER_TESTAR));
 }
 
 // "TESTAR POSTERES": baixa o cartaz de um filme conhecido. Um cartaz frio e
@@ -3772,7 +3786,7 @@ static const char *pstTexto(int op) {
     case PST_INST_RUIM:   return i18n("endereço inválido");
     case PST_EXTRA_RUIM:  return i18n("parâmetros inválidos (fmt, format, config e c não valem)");
     case PST_CHAVE_RUIM:  return i18n("chave inválida");
-    case PST_MODELO_RUIM: return i18n("modelo inválido: use http(s):// e {imdb}, {tmdb}, {type} ou {tipo_tmdb}");
+    case PST_MODELO_RUIM: return i18n("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}");
     case PST_MODELO_LONGO: return i18n("modelo longo demais: o endereço pronto passa de 512 caracteres");
     default: break;
   }
@@ -3838,12 +3852,26 @@ static void pstAtivar(int op) {
 // campo, o texto que chega do celular, pstDefinir, posteres.txt e a leitura de
 // volta. Devolve o aviso (PST_OK = 0) e o modelo relido em `lido`.
 void teclado_teste_sistema(const char *t);
+void teclado_teste_foco(int f, int c);
+const char *ajustes_teste_poster_aviso(void) { return uxAviso; }
+void ajustes_teste_poster_definir(int campo, const char *texto) {
+  pstDefinir(AJ_POSTER_INST + campo, texto);
+}
 int ajustes_teste_poster_modelo(const char *colado, char *lido, size_t n) {
   valor[AJ_POSTER_PROV] = PP_MODELO;
   pstAtivar(AJ_POSTER_MODELO);
   if (!teclado_aberto()) return -1;
+  uxAviso[0] = 0;
   teclado_teste_sistema(colado);
-  pstDefinir(AJ_POSTER_MODELO, teclado_texto());
+  teclado_teste_foco(0, 0);
+  { SDL_Event e = {0}; int i;
+    e.type = SDL_KEYDOWN;
+    e.key.keysym.sym = SDLK_DOWN;
+    for (i = 0; i < 20; i++) teclado_evento(&e);
+    e.key.keysym.sym = SDLK_RIGHT; teclado_evento(&e); teclado_evento(&e);
+    e.key.keysym.sym = SDLK_RETURN; teclado_evento(&e); }
+  if (teclado_aberto()) return -1;
+  ajustes_atualizar(0.016f, SDL_GetTicks());
   teclado_esquecer();
   pstModelo[0] = 0;
   pstCarregar();
@@ -6599,7 +6627,6 @@ static int frCol;               // folha da ordem: 0 = subir, 1 = descer
 static int frN;
 static char frNome[FR_FOLHA_MAX][FR_NOME_MAX];
 static char frApoio[FR_FOLHA_MAX][64];
-static void uxNotificar(const char *s);
 static void frPor(const char *nome, const char *apoio) {
   int k;
   if (!nome || !nome[0] || frN >= FR_FOLHA_MAX) return;

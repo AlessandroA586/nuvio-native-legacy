@@ -5228,7 +5228,7 @@
   T("memória", "Speicher"),
   T("mistério", "Mysterium"),
   T("mitologia", "Mythologie"),
-  T("modelo inválido: use http(s):// e {imdb}, {tmdb}, {type} ou {tipo_tmdb}", "ungültige Vorlage: http(s):// und {imdb}, {tmdb}, {type} oder {tipo_tmdb} verwenden"),
+  T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "ungültige Vorlage: http(s):// und {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} oder {tipo_tmdb} verwenden"),
   T("modelo longo demais: o endereço pronto passa de 512 caracteres", "Vorlage zu lang: die fertige Adresse hat mehr als 512 Zeichen"),
   T("monstros", "Monster"),
   T("mostrar", "anzeigen"),

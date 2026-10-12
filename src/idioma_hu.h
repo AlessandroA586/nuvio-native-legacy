@@ -5229,7 +5229,7 @@
   T("memória", "emlékezet"),
   T("mistério", "rejtély"),
   T("mitologia", "mitológia"),
-  T("modelo inválido: use http(s):// e {imdb}, {tmdb}, {type} ou {tipo_tmdb}", "érvénytelen sablon: használja a http(s):// előtagot és az {imdb}, {tmdb}, {type} vagy {tipo_tmdb} jelölőt"),
+  T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "érvénytelen sablon: használja a http(s):// előtagot és az {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} vagy {tipo_tmdb} jelölőt"),
   T("modelo longo demais: o endereço pronto passa de 512 caracteres", "túl hosszú sablon: a kész cím több mint 512 karakter"),
   T("monstros", "szörny"),
   T("mostrar", "megjelenítés"),

@@ -5229,7 +5229,7 @@
   T("memória", "geheugen"),
   T("mistério", "mysterie"),
   T("mitologia", "mythologie"),
-  T("modelo inválido: use http(s):// e {imdb}, {tmdb}, {type} ou {tipo_tmdb}", "ongeldig sjabloon: gebruik http(s):// en {imdb}, {tmdb}, {type} of {tipo_tmdb}"),
+  T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "ongeldig sjabloon: gebruik http(s):// en {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} of {tipo_tmdb}"),
   T("modelo longo demais: o endereço pronto passa de 512 caracteres", "sjabloon te lang: het uiteindelijke adres is langer dan 512 tekens"),
   T("monstros", "monster"),
   T("mostrar", "tonen"),
