@@ -625,10 +625,13 @@ static void paginaApoioDesenho(float y0, float a, float dx) {
   y += txt_bloco(TXT_V2_26, i18n("O Nuvio Legacy é gratuito. Se ele te ajuda e você quiser apoiar quem faz o app, aponte a câmera do celular para um dos códigos."),
                  200, 205, 215, x, y, textoW(), 36.0f, 0.9f * a, 4);
   y += 44.0f;
-  { float lado = 300.0f, gap = 44.0f;
+  // Doacoes + Discord dividem a coluna de texto: com Patreon e Ko-fi sao 3
+  // codigos, e 300 px cada nao cabem na coluna do cartao com cenas (~776 px).
+  { float gap = 44.0f, lado = fminf(300.0f, (textoW() - (float)n * gap - 48.0f) / (float)(n + 1));
     float comunidadeX = x + textoW() - lado;
+    float doacoesFim = x + (float)n * lado + (float)(n - 1) * gap;
     ajustes_ui_kicker(i18n("Comunidade"), comunidadeX, y - GRUPO_H, a);
-    gfx_cor((GfxRect){ comunidadeX - 68.0f, y - GRUPO_H, 1, lado + 174.0f },
+    gfx_cor((GfxRect){ (doacoesFim + comunidadeX) * 0.5f, y - GRUPO_H, 1, lado + 174.0f },
             0, 1, 1, 1, 0.08f * a);
     for (i = 0; i <= n; i++) {
       int q = i < n ? apoio_qual(i) : APOIO_DISCORD;
