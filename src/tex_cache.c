@@ -1225,6 +1225,8 @@ static long tetoDisco(void) {
   struct statvfs fs;
   long teto = NV_CACHE_DISCO_MAX;
   if (dirCache[0] && statvfs(dirCache, &fs) == 0) {
+    if ((double)fs.f_bavail * fs.f_frsize < 300.0 * 1048576.0)
+      return NV_CACHE_DISCO_PISO;
     double possivel = (double)fs.f_bavail * (double)fs.f_frsize +
                       (double)cachearte_nativo_indice_bytes();
     double prop = possivel * NV_CACHE_DISCO_FRACAO / 100.0;

@@ -101,7 +101,22 @@ class AspectoTest {
             Check(!elm || (wy==140 && wh==800),"old ElmSharp geometry retained");
             fail(1,0);
         }
+        // Legacy window writes can also fail after moving the surface.
+        Open(); p=Player.All[Player.All.Count-1];
+        int gx=0,gy=0,gw=1920,gh=1080;
+        video.GeometriaJanela=(x,y,w,h)=>{ gx=x;gy=y;gw=w;gh=h; return x==0 && y==0 && w==1920 && h==1080 ? null : "geometry partially applied"; };
+        fail(2,-95); Entry("fJanela",240,0,1440,1080); Pump(); fail(2,0);
+        Check(gx==0 && gy==0 && gw==1920 && gh==1080,"partial ElmSharp mutation rolled back before legacy Roi");
+        Check(p.DisplaySettings.Mode==PlayerDisplayMode.Roi,"legacy Roi after geometry rollback");
+        video.GeometriaJanela=null; p.DisplaySettings.FailRoi=true;
+        Entry("fJanela",240,0,1440,1080); Pump();
+        Check(p.DisplaySettings.Mode==PlayerDisplayMode.LetterBox && probe(0)==(int)PlayerDisplayMode.LetterBox,"failed legacy ROI leaves neutral mode");
+        Check(log.Exists(l=>l.Contains("[aspecto]") && l.Contains("fallback=failed")),"failed restoration is not reported as success");
+        p.DisplaySettings.FailRoi=false;
+        video.GeometriaJanela=(x,y,w,h)=>{gx=x;gy=y;gw=w;gh=h;return null;};
+        Entry("fJanela",240,0,1440,1080); Pump();
         Entry("fParar"); Pump();
+        Check(gx==0 && gy==0 && gw==1920 && gh==1080,"session teardown restores legacy window");
         Console.WriteLine("tpk_aspecto: PASS (native fake, no TV proof)"); return 0;
     }
 }

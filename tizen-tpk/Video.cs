@@ -723,6 +723,7 @@ namespace NuvioTpk
             Log("[aspect] tpk40 modo=janela " + rotulo + " falhou: " + erro);
             try
             {
+                if (janelaMovida) RestaurarJanela();
                 player.DisplaySettings.Mode = PlayerDisplayMode.Roi;
                 player.DisplaySettings.SetRoi(new Rectangle(x, y, w, h));
                 Log("[aspect] tpk40 modo=roi " + rotulo + " ok");
