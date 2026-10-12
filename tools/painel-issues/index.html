@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nuvio Legacy - issues e roadmap</title>
 <style>
-:root{--bg:#0e1013;--card:#161a1f;--card2:#1d2228;--line:#2a313a;--tx:#e6e9ed;--mut:#8a94a1;--ac:#7c9cff;--ac2:#3b4f94;--ok:#58c08a;--warn:#e0b24c;--bad:#e5736f}
+:root{--bg:#0d0d0d;--card:#171717;--card2:#2c2c2c;--line:#303030;--tx:#f5f5f5;--mut:#b3b3b3;--ac:#e0ebff;--ac2:#38465c;--ok:#58c08a;--warn:#e0b24c;--bad:#e5736f}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow-x:hidden}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 a{color:var(--ac);text-decoration:none}a:hover{text-decoration:underline}
 header{padding:20px 16px 12px;border-bottom:1px solid var(--line)}
 h1{margin:0 0 4px;font-size:20px;font-weight:650;display:flex;align-items:center;gap:10px}
@@ -88,14 +88,55 @@ tr.det td{background:var(--card);padding:12px 16px}
 @media(max-width:600px){.det dl{grid-template-columns:1fr}}
 .cnt{color:var(--mut);font-size:12.5px;margin:6px 0}
 .vazio{color:var(--mut);padding:8px 0}
+
+/* Nuvio: layout.h background/focus/skeleton; gfx.c glass highlight (.88,.92,1).
+   Interface family: src/text.c TXT_FAMILIA_INTER. Assets stay local. */
+@font-face{font-family:Inter;src:url(fonts/InterDisplay-Regular.ttf) format("truetype");font-weight:400;font-display:swap}
+@font-face{font-family:Inter;src:url(fonts/InterDisplay-Bold.ttf) format("truetype");font-weight:600 800;font-display:swap}
+html{scroll-padding-top:20px}body{overflow-wrap:anywhere}
+header{max-width:1280px;margin:auto;padding:24px 16px;display:flex;justify-content:space-between;align-items:center;gap:20px}
+h1{font-size:25px;letter-spacing:-1px}header .sub{text-align:right}
+nav{display:flex;gap:8px;flex-wrap:wrap}nav a,.cta{border:1px solid var(--line);border-radius:99px;padding:10px 18px;color:var(--tx);font-size:13px}
+.hero{padding:40px 0 32px;display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center}
+.eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--mut)}
+.hero h2{font-size:clamp(34px,5vw,62px);line-height:1.04;letter-spacing:-.045em;text-transform:none;color:var(--tx);margin:12px 0 18px;font-weight:700;max-width:750px}
+.hero p{color:var(--mut);max-width:550px;margin:0}.hero .cta{display:inline-block;margin-top:24px;background:var(--tx);color:var(--bg);font-weight:700}
+.version{font-size:80px;font-weight:700;letter-spacing:-.07em;color:var(--ac);line-height:1}.version small{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-top:14px;text-align:right}
+h2{font-size:22px;letter-spacing:-.025em;text-transform:none;color:var(--tx);margin:36px 0 14px}
+.cards{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.release-grid,.help-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.release-column{min-width:0;border-top:2px solid var(--line);padding-top:16px}.release-column.current{border-color:var(--ac)}
+.release-column h3{font-size:24px;margin:8px 0}.release-column .rel{margin-top:12px}
+.rel{padding:20px;border-radius:18px}.rel h3{font-size:19px}.rel .desc{font-size:14px}
+.issue-card{padding:14px 0;border-bottom:1px solid var(--line);min-width:0}.issue-card:last-child{border:0}.issue-card h4{font-size:15px;line-height:1.4;margin:7px 0;font-weight:600}
+.issue-card p{color:var(--mut);font-size:13px;margin:8px 0}.issue-card .tag{font-size:11px}.issue-card details{margin-top:8px}
+summary{cursor:pointer;min-height:44px;padding:10px 0;color:var(--ac);font-size:13px}summary:focus-visible,a:focus-visible,button:focus-visible{outline:2px solid var(--ac);outline-offset:3px}
+.internal{border:1px solid var(--line);border-radius:14px;padding:4px 18px;margin:12px 0}.internal>summary{font-size:15px}.internal h2{font-size:18px}
+.help-grid>.panel{padding:20px;border-radius:18px}.help-grid h3{margin:0;font-size:18px}.help-grid .cards{display:block}
+.section-note{color:var(--mut);font-size:13px;margin:-6px 0 18px}.kpis{margin-bottom:24px}.kpi{border-radius:16px}
+.scroll{max-height:none;overflow:visible}table{min-width:0;table-layout:fixed;font-size:12px}td.tit{min-width:0}th{white-space:normal}td,th{overflow-wrap:anywhere}
+@media(max-width:800px){.release-grid,.help-grid{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.version{display:none}header{align-items:flex-start}nav a{padding:8px 12px}.hero{padding-top:24px}table,tbody,tr,td{display:block;width:100%}thead{display:none}td:empty{display:none}td{border:0;padding:3px 12px}td[data-label]:before{content:attr(data-label) " · ";color:var(--mut)}tr{padding:12px 0;border-bottom:1px solid var(--line)}th{position:static}table tr:has(th){display:none}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.tag{max-width:100%}select{max-width:100%}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
-<header>
-  <h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4v16h16"/><path d="M8 15l3-4 3 2 5-6"/></svg><span>Nuvio Legacy — issues e roadmap</span></h1>
-  <div class="sub" id="meta">carregando...</div>
-  <div class="sub atualiz"><span id="atualiz">atualizado há 0 s</span> <span class="atualiz" id="falha" hidden></span></div>
-</header>
+<header><h1><svg aria-hidden="true"
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z" />
+  <path d="M15 5.764v15" />
+  <path d="M9 3.236v15" />
+</svg>
+<span>Nuvio<span class="sub"> / Legacy</span></span></h1>
+<nav aria-label="Navegação"><a href="#roadmap">Roadmap</a><a href="#ajudar">Como ajudar</a><a href="#tabela">Issues</a></nav></header>
 <main id="app"></main>
 <script>
 "use strict";
@@ -130,13 +171,7 @@ function platDe(i) {
   return "outras";
 }
 function aberta(i) { return i.estado_github === "aberta"; }
-function proximaVersao() {
-  var abertas = ITENS.filter(aberta);
-  for (var k = 0; k < ALVO_ORDEM.length - 3; k++) {
-    if (abertas.some(function (i) { return i.alvo === ALVO_ORDEM[k]; })) return ALVO_ORDEM[k];
-  }
-  return "2.0.4";
-}
+function proximaVersao() { return "2.0.5"; }
 function sortAlvos(keys) {
   return keys.sort(function (a, b) {
     var ia = ALVO_ORDEM.indexOf(a), ib = ALVO_ORDEM.indexOf(b);
@@ -214,7 +249,7 @@ function renderKpis() {
   var ex = function (k, estado) { return function () { F.extra = k; F.estado = estado || ""; F.alvo = ""; F.status = ""; F.plat = ""; F.q = ""; renderAll(); document.getElementById("tabela").scrollIntoView({ behavior: "smooth" }); }; };
   box.appendChild(kpi("total de issues", ITENS.length, ex(""), ""));
   box.appendChild(kpi("abertas no GitHub", abertas.length, ex("", "aberta"), "ab"));
-  box.appendChild(kpi("sai na proxima versao (" + prox + ")", saiProx, function () { F.extra = ""; F.estado = "aberta"; F.alvo = prox; F.status = ""; F.plat = ""; F.q = ""; renderAll(); document.getElementById("tabela").scrollIntoView({ behavior: "smooth" }); }, "px"));
+  box.appendChild(kpi("no escopo da release (" + prox + ")", saiProx, function () { F.extra = ""; F.estado = "aberta"; F.alvo = prox; F.status = ""; F.plat = ""; F.q = ""; renderAll(); document.getElementById("tabela").scrollIntoView({ behavior: "smooth" }); }, "px"));
   box.appendChild(kpi("sem resposta nossa", semResp, ex("semresp", "aberta"), "semresp"));
   box.appendChild(kpi("aguardando log", log, function () { F.extra = ""; F.estado = ""; F.alvo = ""; F.status = "precisa-log"; F.plat = ""; F.q = ""; renderAll(); document.getElementById("tabela").scrollIntoView({ behavior: "smooth" }); }, "log"));
 }
@@ -239,28 +274,81 @@ function renderBars() {
   box.appendChild(barBlock("Por status", ms, ks, "status"));
 }
 
+// Conservative presentation: closed is not shipped, a commit is not device proof.
+function estadoPublico(i) {
+  if (i.status === "lancada") return ["Concluído", "ok"];
+  if (i.status === "consertada-nao-lancada" || /^(precisa-teste|aguardando-teste)$/.test(i.status)) return ["Precisa testar", "warn"];
+  if (/^(bloqueada|bloqueado|precisa-log)$/.test(i.status)) return ["Bloqueado", "bad"];
+  if (/^(em-andamento|em-progresso)$/.test(i.status)) return ["Em andamento", "ac"];
+  return ["Planejado", ""];
+}
+function referencias(i) {
+  var texto = [i.notas, i.proximo_passo].concat(i.conserto || []).join(" ");
+  var tokens = texto.match(RE_LINK) || [], m = D.meta || {};
+  return { branches: (m.branches || []).filter(function (b) { return tokens.indexOf(b) >= 0; }),
+    commits: Object.keys(m.commits || {}).filter(function (h) { return tokens.indexOf(h) >= 0; }) };
+}
+function issueCard(i, contexto) {
+  var st = estadoPublico(i), d = el("article", { class: "issue-card" }, [
+    el("div", null, [issueLink(i.numero), el("span", { class: "tag", text: i.plataforma || "Plataforma não informada" }), el("span", { class: "tag " + st[1], text: st[0] })]),
+    tx(i.titulo, "h4")]);
+  if (contexto) d.appendChild(el("p", { text: contexto }));
+  if (i.proximo_passo && i.proximo_passo !== "triar") d.appendChild(tx(i.proximo_passo, "p"));
+  if (i.notas) d.appendChild(el("details", { "data-preserve": "issue-" + i.numero }, [el("summary", { text: "Contexto e evidências" }), tx(i.notas, "p")]));
+  return d;
+}
+function listaCompacta(box, itens, contexto, limite) {
+  limite = limite || 4;
+  itens.slice(0, limite).forEach(function (i) { box.appendChild(issueCard(i, contexto)); });
+  if (itens.length > limite) {
+    var mais = el("details", { "data-preserve": "lista-" + LISTA_ID++ }, [el("summary", { text: "Ver mais " + (itens.length - limite) + " issues" })]);
+    itens.slice(limite).forEach(function (i) { mais.appendChild(issueCard(i, contexto)); }); box.appendChild(mais);
+  }
+  if (!itens.length) box.appendChild(el("p", { class: "vazio", text: "Nenhum item registrado." }));
+}
+var LISTA_ID = 0;
 function renderRoadmap() {
+  LISTA_ID = 0;
   var box = document.getElementById("roadmap"); box.textContent = "";
-  var rm = Array.isArray(D.roadmap) ? D.roadmap : [];
-  if (!rm.length) { box.appendChild(el("div", { class: "vazio", text: "Sem roadmap neste mapa." })); return; }
-  rm.forEach(function (r) {
-    var card = el("div", { class: "rel" }, [el("h3", null, [el("span", { text: sv(r.release) })])]);
-    if (r.situacao) card.appendChild(el("div", { class: "sit" }, [tx(r.situacao)]));
-    if (r.descricao) card.appendChild(el("p", { class: "desc" }, [tx(r.descricao)]));
-    var its = r.itens || [];
-    if (!its.length) card.appendChild(el("div", { class: "vazio", text: "Nenhum item." }));
-    its.forEach(function (x) {
-      var d = el("div", { class: "it" }, [tx(x.nome, "b")]);
-      if (x.porque) d.appendChild(el("p", null, [tx(x.porque)]));
-      var links = el("div");
-      (x.issues || []).forEach(function (n) { links.appendChild(el("span", { class: "tag ac" }, [issueLink(n)])); });
-      (x.branches || []).forEach(function (b) { links.appendChild(el("span", { class: "tag" }, [tx(b)])); });
-      if (x.origem) links.appendChild(el("span", { class: "tag" }, [document.createTextNode("origem: "), tx(x.origem)]));
-      d.appendChild(links);
-      card.appendChild(d);
-    });
-    box.appendChild(card);
+  var rm = D.roadmap || [];
+  [["Já disponível", "shipped"], ["Release atual", "current"], ["A seguir", "next"]].forEach(function (col) {
+    var lane = el("div", { class: "release-column " + col[1] }, [el("div", { class: "eyebrow", text: col[0] })]);
+    rm.filter(function (r) { return col[1] === "current" ? r.release === "2.0.5" : col[1] === "shipped" ? /lançada|lancada/.test(r.situacao) : r.release !== "2.0.5" && !/lançada|lancada/.test(r.situacao) && r.release !== "nao vamos fazer"; }).forEach(function (r) {
+      var card = el("section", { class: "rel" }, [el("h3", { text: r.release }), tx(r.situacao, "p", "desc")]);
+      var issues = ITENS.filter(function (i) { return col[1] === "shipped" ? i.status === "lancada" && i.release === r.release : i.alvo === r.release && i.status !== "lancada"; });
+      card.appendChild(el("p", { class: "sub", text: issues.length + " issues no mapa" }));
+      listaCompacta(card, issues, "", 3);
+      if ((r.itens || []).length) {
+        var temas = el("details", { "data-preserve": "temas-" + r.release }, [el("summary", { text: "Escopo e temas da release" })]);
+        (r.itens || []).forEach(function (x) {
+          var t = el("div", { class: "it" }, [tx(x.nome, "b")]);
+          (x.issues || []).forEach(function (n) { var i = BY[n]; t.appendChild(el("p", null, [issueLink(n), el("span", { class: "tag", text: i ? i.plataforma : "Plataforma não informada" }), el("span", { class: "tag", text: i ? estadoPublico(i)[0] : "Planejado" })])); });
+          if (!(x.issues || []).length) t.appendChild(el("p", { text: "Sem issue vinculada · status não informado" }));
+          if (x.porque) t.appendChild(tx(x.porque, "p")); temas.appendChild(t);
+        }); card.appendChild(temas);
+      }
+      lane.appendChild(card);
+    }); box.appendChild(lane);
   });
+  var now = document.getElementById("agora"); now.textContent = "";
+  var ativos = ITENS.filter(function (i) { return estadoPublico(i)[0] === "Em andamento" || (i.alvo === "2.0.5" && i.status === "consertada-nao-lancada"); });
+  if (!ativos.length) now.appendChild(el("p", { class: "vazio", text: "Nenhuma issue marcada explicitamente em andamento. Correções integradas aguardando lançamento estão abaixo, em Como ajudar." }));
+  ativos.forEach(function (i) {
+    var c = issueCard(i, i.status === "consertada-nao-lancada" ? "Em integração · correção registrada, ainda não lançada." : ""), refs = referencias(i);
+    refs.branches.forEach(function (b) { var head = ((D.meta || {}).branch_heads || {})[b]; c.appendChild(tx("Branch: " + b + " · Último commit: " + (head || "não informado"), "p")); });
+    if (!refs.branches.length) c.appendChild(el("p", { text: "Branch e último commit não informados." }));
+    if (refs.commits.length) c.appendChild(tx("Commits citados: " + refs.commits.join(", "), "p"));
+    if (ativos.indexOf(i) < 3) now.appendChild(c); else { var mais = document.getElementById("agora-mais"); if (!mais) { mais = el("details", { id: "agora-mais", "data-preserve": "agora-mais", class: "panel" }, [el("summary", { text: "Mais " + (ativos.length - 3) + " correções em trabalho" })]); now.appendChild(mais); } mais.appendChild(c); }
+  });
+  var help = document.getElementById("ajudar"); help.textContent = "";
+  [["Teste no seu aparelho", ITENS.filter(function (i) { return aberta(i) && estadoPublico(i)[0] === "Precisa testar"; }), "Correção no mapa; confirme versão, aparelho e resultado na issue. Não equivale a validação em TV."],
+   ["Envie logs e informações", ITENS.filter(function (i) { return aberta(i) && i.status === "precisa-log"; }), "Informe modelo, versão do app, passos para reproduzir e código do log na issue."],
+   ["Sua primeira contribuição", ITENS.filter(function (i) { return aberta(i) && /^(good-first-issue|boa-primeira-contribuicao)$/.test(i.status); }), "Nenhuma issue sinalizada como primeira contribuição? Comece reproduzindo um relato no seu aparelho."]].forEach(function (g) {
+    var c = el("section", { class: "panel" }, [el("h3", { text: g[0] }), el("p", { class: "sub", text: g[2] })]); listaCompacta(c, g[1], "", 3); help.appendChild(c);
+  });
+  var done = document.getElementById("recentes"); done.textContent = "";
+  var shipped = rm.filter(function (r) { return /lançada|lancada/.test(r.situacao); }).map(function (r) { return r.release; }).reverse();
+  shipped.forEach(function (v) { var group = el("section", { class: "panel" }, [el("h3", { text: "Lançado em " + v })]); listaCompacta(group, ITENS.filter(function (i) { return i.status === "lancada" && i.release === v; }), "Disponível na " + v, 3); done.appendChild(group); });
 }
 
 var API = "api/respostas", RESP = {}, API_OK = false;
@@ -547,6 +635,7 @@ function renderTable() {
       el("td", { text: sv(i.release) }),
       el("td", { text: respTxt(i) })
     ]);
+    row.children && Array.prototype.forEach.call(row.children, function (td, n) { td.setAttribute("data-label", COLS[n][1]); });
     tb.appendChild(row);
     var det = null;
     row.addEventListener("click", function () {
@@ -618,26 +707,30 @@ function esqueleto() {
   var app = document.getElementById("app");
   app.textContent = "";
   function sec(titulo, id, cls) { app.appendChild(el("h2", { text: titulo })); var b = el("div", { id: id, class: cls || "" }); app.appendChild(b); return b; }
-  sec("Resumo", "kpis", "kpis");
-  sec("Distribuicao", "bars", "grid2");
-  sec("Roadmap por release", "roadmap", "cards");
-  app.appendChild(el("h2", { text: "Decisoes do dono" })); app.appendChild(el("div", { id: "decisoes", class: "panel lst" }));
-  app.appendChild(el("div", { class: "grid2" }, [
-    el("div", null, [el("h2", { text: "Fechar com a 2.0.3" }), el("div", { id: "fechar", class: "panel lst" })]),
-    el("div", null, [el("h2", { text: "Nao fechar ainda" }), el("div", { id: "naofechar", class: "panel lst" })])
-  ]));
-  app.appendChild(el("h2", { text: "Auditoria de validacoes" })); app.appendChild(el("div", { id: "auditoria" }));
-  app.appendChild(el("h2", { text: "Fora do GitHub (Reddit e outros)" })); app.appendChild(el("div", { id: "fora", class: "panel lst" }));
+  app.appendChild(el("section", { class: "hero" }, [el("div", null, [el("div", { class: "eyebrow", text: "Desenvolvimento aberto / Nuvio Legacy" }), el("h2", { text: "O próximo capítulo. Feito com você." }), el("p", { text: "Acompanhe as entregas, entenda o que vem a seguir e ajude a melhorar a experiência na sua TV." }), el("a", { href: "#ajudar", class: "cta", text: "Quero ajudar" })]), el("div", { class: "version", text: "2.0.5" }, [el("small", { text: "Release em integração" })])]));
+  app.appendChild(el("div", { class: "sub", id: "meta" }));
+  app.appendChild(el("div", { class: "sub" }, [el("span", { id: "atualiz" }), el("span", { id: "falha", hidden: "" })]));
+  sec("Roadmap por release", "roadmap", "release-grid");
+  sec("Em trabalho agora", "agora", "cards");
+  sec("Como ajudar", "ajudar", "help-grid");
+  sec("Entregas recentes", "recentes", "grid2");
   app.appendChild(el("h2", { id: "tabela", text: "Todas as issues" }));
   app.appendChild(el("div", { id: "tools", class: "tools" }));
   app.appendChild(el("div", { id: "chips", class: "tools" }));
   app.appendChild(el("div", { id: "cnt", class: "cnt" }));
   app.appendChild(el("div", { class: "scroll", id: "scroll-tabela" }, [el("table", { id: "tbl" })]));
+  function interno(titulo, id, cls) { var d = el("details", { class: "internal" }, [el("summary", { text: "Interno · " + titulo }), el("div", { id: id, class: cls || "" })]); app.appendChild(d); }
+  interno("Decisões do dono", "decisoes", "panel lst");
+  interno("Auditoria de validações", "auditoria");
+  interno("Relatos fora do GitHub", "fora", "panel lst");
+  interno("Fechar com a 2.0.3", "fechar", "panel lst");
+  interno("Não fechar ainda", "naofechar", "panel lst");
+  interno("Resumo operacional", "kpis", "kpis");
+  interno("Distribuição", "bars", "grid2");
+
 }
 function meta() {
   var m = (D && D.meta) || {}, partes = [];
-  if (m.commit) partes.push("commit " + m.commit + (m.assunto ? " - " + m.assunto : ""));
-  if (m.branch) partes.push("branch " + m.branch);
   if (m.mapa_atualizado_em) partes.push("mapa de " + m.mapa_atualizado_em);
   if (m.gerado_em) partes.push("gerado em " + m.gerado_em.replace("T", " ").slice(0, 19));
   document.getElementById("meta").textContent = partes.join("  |  ") || "sem metadados";
@@ -656,6 +749,7 @@ function init(d) { ASSINATURA = JSON.stringify(d); esqueleto(); return aplicaDad
 // assincrono dos cartoes de decisao.
 var EV = "scroll wheel click keydown input touchstart";
 function preserva(fn) {
+  var expandidos = [].slice.call(document.querySelectorAll("details[data-preserve]")).filter(function (d) { return d.open; }).map(function (d) { return d.getAttribute("data-preserve"); });
   var y = window.pageYOffset || document.documentElement.scrollTop || 0;
   var caixas = [].slice.call(document.querySelectorAll(".scroll")).map(function (c) { return [c.id, c.scrollTop]; });
   var a = document.activeElement;
@@ -666,6 +760,7 @@ function preserva(fn) {
   var solta = function () { EV.split(" ").forEach(function (ev) { window.removeEventListener(ev, ouve, true); }); };
   return Promise.resolve(fn()).then(function () {
     solta();
+    [].slice.call(document.querySelectorAll("details[data-preserve]")).forEach(function (d) { d.open = expandidos.indexOf(d.getAttribute("data-preserve")) >= 0; });
     if (mexidos) return;   // o dono mexeu durante a espera: nao rouba o foco nem o scroll
     // foco primeiro e sem rolar: senao o foco puxa a pagina para o textarea
     if (id) {

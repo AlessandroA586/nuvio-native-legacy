@@ -58,7 +58,19 @@ def main():
     ramos = git(a.repo, "for-each-ref", "--format=%(refname:short)", "refs/heads").split()
     dados["meta"]["branches"] = sorted(set(ramos) & tokens)
 
+    # Only branch tips have an ordering guarantee; cited hashes are not a timeline.
+    dados["meta"]["branch_heads"] = {}
+    for branch in dados["meta"]["branches"]:
+        head = git(a.repo, "rev-parse", branch + "^{commit}")
+        dados["meta"]["branch_heads"][branch] = head[:12]
+        commits[head[:12]] = head
+
     os.makedirs(a.out, exist_ok=True)
+    fonts = os.path.join(a.out, "fonts")
+    os.makedirs(fonts, exist_ok=True)
+    for name in ("InterDisplay-Regular.ttf", "InterDisplay-Bold.ttf"):
+        shutil.copy2(os.path.join(a.repo, "deploy", "app", "fonts", name), fonts)
+
     with open(os.path.join(a.out, "data.json"), "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=1)
     for nome in sorted(os.listdir(AQUI)):

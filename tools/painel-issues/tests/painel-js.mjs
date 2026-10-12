@@ -156,6 +156,19 @@ const ate = async (pred, ms = 3000) => {
   espera("dono mexeu: nao restaura scroll", 0, WIN.rolou.length);
   espera("dono mexeu: ouvintes soltos", 0, ouvintesVivos().length);
 
+  // Presentation must not turn closure or integrated code into a shipped fix.
+  espera("fechada não significa concluída", "Planejado", ctx.estadoPublico({status: "fechada-sem-resposta"})[0]);
+  espera("integrada ainda precisa testar", "Precisa testar", ctx.estadoPublico({status: "consertada-nao-lancada"})[0]);
+  espera("log pendente bloqueia diagnóstico", "Bloqueado", ctx.estadoPublico({status: "precisa-log"})[0]);
+  espera("lançada é concluída", "Concluído", ctx.estadoPublico({status: "lancada"})[0]);
+  espera("release atual explícita", "2.0.5", ctx.proximaVersao());
+  ctx.D.meta = { branches: ["agente/teste", "agente/teste-extra"], commits: { abcdef12: "full" } };
+  const refs = ctx.referencias({notas: "agente/teste-extra abcdef12"});
+  espera("branch não casa por prefixo", "agente/teste-extra", refs.branches.join(","));
+  espera("hash citado preservado", "abcdef12", refs.commits.join(","));
+  const unsafe = ctx.tx('<img src=x onerror=alert(1)>');
+  espera("texto de terceiros continua texto", '<img src=x onerror=alert(1)>', unsafe.textContent);
+
   console.log(FALHAS ? FALHAS + " falha(s)" : "TUDO OK");
   process.exit(FALHAS ? 1 : 0);
 })();
