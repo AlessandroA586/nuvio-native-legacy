@@ -209,11 +209,11 @@ static void plataformas(void) {
   novcartao_teste_plataforma(NOV_ANDROID);
   and = novcartao_itens_visiveis();
   assert(novcartao_cenas() == 0);
-  assert(lg == 11 && tpk == 11 && wgt == 10 && and == 10);
-  assert(novcartao_paginas() == 3);  // correcoes, fontes/plataforma, apoio
+  assert(lg == 15 && tpk == 15 && wgt == 14 && and == 14);
+  assert(novcartao_paginas() == 4);  // correcoes, fontes/plataforma, apoio
   assert(novcartao_previa_pronta());  // sem artes para esperar
   novcartao_teste_plataforma(NOV_OUTRAS);
-  assert(novcartao_itens_visiveis() == 12);
+  assert(novcartao_itens_visiveis() == 16);
   assert(novcartao_paginas() == 4);  // host mostra as tres plataformas
   novcartao_teste_plataforma(0);
   printf("PASS: itens por plataforma: LG %d, .tpk %d, .wgt %d, Android %d\n", lg, tpk, wgt, and);
@@ -240,13 +240,14 @@ static void espacamento(void) {
   fputs("idioma 0\nfonteInterface 3\n", f); fclose(f);
   ajustes_dir(dados_dir());
   assert(txt_iniciar("deploy/app", 1)); // so TTF; sem janela ou contexto GL
+  static const int tetos[6] = {2, 2, 2, 3, 2, 2};
   static const char *const frases[6] = {
     "A abertura estilo cinema agora é o padrão. O cartão detalhado continua nos Ajustes.",
     "Só depois de reprodução real. Um trailer não marca mais o título como visto.",
     "Novas opções para pular abertura, recapitulação e créditos sozinho.",
+    "O botão de informação da fonte mostra o add-on, a descrição completa e o nome do arquivo.",
+    "Se a TV recusar uma fonte, o app passa para a próxima em vez de parar.",
     "Legendas agrupadas por idioma, com a linha de sincronização automática.",
-    "Segurar OK abre mais opções e desliga a segunda legenda. Tamanho de até 300%.",
-    "Logos e informações do título aparecem sem esperar o detalhe completo.",
   };
   assert(txt_largura(TXT_CAPTION, frases[0]) > 0);
   novcartao_teste_plataforma(NOV_LG);
@@ -254,7 +255,7 @@ static void espacamento(void) {
   // A altura de cada item e o nome (34px) mais a frase medida na lingua atual,
   // com teto de 2 linhas: sem vao extra por reserva fixa.
   for (int i = 0; i < 6; i++) {
-    float h = txt_bloco_corta(TXT_CAPTION, frases[i], 0, 0, 0, 0, 0, 1014, 30, 0, 2);
+    float h = txt_bloco_corta(TXT_CAPTION, frases[i], 0, 0, 0, 0, 0, 1014, 30, 0, tetos[i]);
     assert(novcartao_teste_altura_item(i) == 34.0f + h);
   }
   assert(txt_rasterizadas == 0);
