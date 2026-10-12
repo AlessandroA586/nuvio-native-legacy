@@ -9,6 +9,9 @@ for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/ajustes.c) continue;; esac
   sources+=("$source")
 done
+falhou=0
+dispositivo=$(mktemp /tmp/nuvio-memoria-dispositivo.XXXXXX)
+trap 'rm -f "$dispositivo"' EXIT
 for variante in normal highcache; do
   flags=""
   [ "$variante" = highcache ] && flags="-DNV_TEX_MB_FIXO=300"
@@ -17,5 +20,7 @@ for variante in normal highcache; do
     -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL \
     -Wno-deprecated-declarations -Wno-macro-redefined
   echo "[$variante]"
-  "/tmp/nuvio-ajustes-memoria-$variante"
+  "/tmp/nuvio-ajustes-memoria-$variante" "$dispositivo" || falhou=1
 done
+/tmp/nuvio-ajustes-memoria-normal --reload "$(< "$dispositivo")" || falhou=1
+exit "$falhou"

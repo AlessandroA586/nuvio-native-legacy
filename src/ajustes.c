@@ -2626,6 +2626,7 @@ int ajustes_nota_titulo(int fonte) {
 // opcao valia so enquanto o app estivesse aberto, e voltar depois mostrava tudo
 // no padrao — o que faz a tela inteira parecer decorativa.
 static char dirAjustes[512];
+static int memoriaEscolhida;   // so a confirmacao da opcao marca uma escolha explicita
 
 
 // Valores LITERAIS que o app web grava nas opcoes que nao sao booleanas. A
@@ -3141,13 +3142,14 @@ static const char *SP_ALFA_URL =
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:/.-_?=&%#+~@!,;";
 
 #ifdef NV_TEX_MB_FIXO
-// A ultima highcache (2.0.5) leva a 300 MB quem nao tem texturasMB salvo.
-// A chave presente preserva qualquer escolha, inclusive Automatico (0).
+// A ultima highcache (2.0.5) leva a 300 MB quem nunca escolheu memoria.
+// gravar() salvava zero ao mudar qualquer ajuste: so a marca comprova
+// Automatico explicito. Valores antigos nao zero tambem sao escolhas.
 // A marca e por aparelho e impede repetir a migracao depois de uma troca.
-static void memoriaMigrar(int viuMemoria) {
+static void memoriaMigrar(void) {
   char *m = dados_ler("memoriaimagens-205.txt");
   if (m) { free(m); return; }
-  if (!viuMemoria) {
+  if (!memoriaEscolhida && valor[AJ_TEX_MB] == 0) {
     valor[AJ_TEX_MB] = 4;   // TEX_MB_DE[4] = 300
     printf("[ajustes] memoria para imagens -> 300 MB (migracao unica da 2.0.5)\n");
   }
@@ -3157,13 +3159,11 @@ static void memoriaMigrar(int viuMemoria) {
 #endif
 
 void ajustes_dir(const char *dir) {
-#ifdef NV_TEX_MB_FIXO
-  int viuMemoria = 0;
-#endif
   FILE *f;
   char caminho[600], linha[96];
   if (!dir || !*dir) return;
   snprintf(dirAjustes, sizeof dirAjustes, "%s", dir);
+  memoriaEscolhida = 0;
   fonteregra_carregar();
   fanartCarregar();
   seekrCarregar();
@@ -3183,7 +3183,7 @@ void ajustes_dir(const char *dir) {
     // Nunca gravou nada: o idioma nasce automatico (o padrao de valor[]).
     valor[AJ_IDIOMA] = 0;
 #ifdef NV_TEX_MB_FIXO
-    memoriaMigrar(0);
+    memoriaMigrar();
     if (valor[AJ_TEX_MB] > 0) tex_definir_orcamento_mb(ajustes_tex_mb());
 #endif
     ajSombraSync();
@@ -3201,6 +3201,7 @@ void ajustes_dir(const char *dir) {
       continue;
     }
     if (!strcmp(chave, "idiomaAutoLocal")) { autoGravado = v == 1; viuAuto = 1; continue; }
+    if (!strcmp(chave, "texturasEscolhaLocal")) { memoriaEscolhida = v == 1; continue; }
     // "resolucao_ui" (ate a 2.0.1) virou "resolucaoUi" com Automatica na
     // frente: ver res_migrar. A chave nova, quando existe, vence.
     if (!strcmp(chave, "resolucao_ui")) { resAntiga = v; continue; }
@@ -3221,9 +3222,6 @@ void ajustes_dir(const char *dir) {
       // Valor fora da faixa (arquivo de outra versao, ou editado a mao) cai no
       // padrao em vez de indexar fora do vetor.
       valor[i] = limita(i, v);
-#ifdef NV_TEX_MB_FIXO
-      if (i == AJ_TEX_MB) viuMemoria = 1;
-#endif
       if (i == AJ_MEDIDOR) viuMedidor = 1;
       if (i == AJ_RESOLUCAO) viuRes = 1;
       if (i == AJ_FONTE_PRAZO) viuEspera = 1;
@@ -3358,7 +3356,7 @@ void ajustes_dir(const char *dir) {
       gravar();
     } }
 #ifdef NV_TEX_MB_FIXO
-  memoriaMigrar(viuMemoria);
+  memoriaMigrar();
 #endif
   // O limite mora em fileiras.c; esta linha e so o espelho dele. Ler daqui em
   // vez de gravar evita a divergencia: o arquivo de ajustes nao guarda o
@@ -3402,6 +3400,7 @@ static int gravar(void) {
     }
     fprintf(f, "%s %d\n", CHAVE[i], valor[i]);
   }
+  if (memoriaEscolhida) fprintf(f, "texturasEscolhaLocal 1\n");
   { int erro = ferror(f);
     if (fclose(f)) erro = 1;
     if (erro || rename(tmp, caminho)) { remove(tmp); return 0; } }
@@ -6573,7 +6572,7 @@ static void notaLigarPar(int op) {
 }
 static int ajOrigemDireto = AJLOG_AJUSTES;   // quem chamou: a tela, ou a Central via ajustes_rapido_passo
 static int definirValorDireto(int op, int novo) {
-  int antes;
+  int antes, memoriaAntes = memoriaEscolhida;
   if (op < 0 || op >= AJ_N ||
       (OPCOES[op].tipo != OP_ESCOLHA && OPCOES[op].tipo != OP_NUMERO)) return 0;
   novo = limita(op, novo);
@@ -6582,10 +6581,12 @@ static int definirValorDireto(int op, int novo) {
     return 1;
   }
   antes = valor[op];
-  if (novo == antes) return 1;
+  if (novo == antes && (op != AJ_TEX_MB || memoriaEscolhida)) return 1;
+  if (op == AJ_TEX_MB) memoriaEscolhida = 1;
   valor[op] = novo;
   if (novo == 0) notaLigarPar(op);
-  { int ok; ajOrigem = ajOrigemDireto; ok = gravar(); ajOrigem = 0; if (!ok) { valor[op] = antes; return 0; } }
+  { int ok; ajOrigem = ajOrigemDireto; ok = gravar(); ajOrigem = 0;
+    if (!ok) { valor[op] = antes; memoriaEscolhida = memoriaAntes; return 0; } }
   if (op == AJ_FIL_LIMITE) {
     fil_ajustar_limite(novo);
     valor[op] = fil_limite_gravado();
