@@ -17,15 +17,16 @@ void capmkv_iniciar(const char *s) { (void)s; }
 void capmkv_zerar(void) {}
 int ling_tipo_legenda(const char *s,int f,int d) { (void)s;(void)f;(void)d;return 0; }
 const char *ling_tipo_legenda_rotulo(int t) { (void)t;return ""; }
-static int aberturas, paradas, posicao, busca;
+static int aberturas, paradas, posicao, busca, pausa;
 static void abrir(const char *u,const char *c) { (void)c;assert(!strcmp(u,"http://test/movie"));aberturas++; }
 static void parar(void) { paradas++; }
+static void pausar(int p) { pausa=p; }
 static void buscar(int ms) { busca=ms; }
 static int pos(void) { return posicao; }
 static void passo(unsigned ms) { agora+=ms;video_bombear(); }
 static void prontoHost(void) { nv_tpk_video_evento(1,3600000,0);nv_tpk_video_evento(2,0,0); }
 int main(void) {
-  nv_tpk_video_registrar(abrir,parar,NULL,buscar,NULL,NULL,pos);
+  nv_tpk_video_registrar(abrir,parar,pausar,buscar,NULL,NULL,pos);
   video_definir_mp4(1); // nao ha sonda lateral nesta fixture
   video_definir_reconexao(1);video_tocar("http://test/movie");prontoHost();posicao=1334892;passo(1);
   // Pausa e buffering, inclusive sem um quadro entre os eventos, nao sao travas.
@@ -44,5 +45,25 @@ int main(void) {
   }
   passo(15001);assert(video_falhou() && paradas==4);
   video_parar();int antes=aberturas;passo(60000);assert(aberturas==antes);
+  // InvalidOperation no pause: recuperar mesmo com pausaPedida, e reaplicar.
+  video_definir_reconexao(1);video_tocar("http://test/movie");prontoHost();
+  posicao=1337033;passo(1);video_pausar(1);
+  int stops=paradas;nv_tpk_video_evento(9,-1,0);passo(1);
+  assert(paradas==stops+1 && recon.pendente && recon.alvo==1337.033);
+  passo(3000);prontoHost();passo(1);assert(pausa==1 && busca==1337033);
+  video_parar();video_definir_reconexao(1);video_tocar("http://test/movie");prontoHost();
+  posicao=1337033;passo(1);nv_tpk_video_evento(9,-1,0);passo(1);
+  // Seek forward durante a recuperacao atualiza o alvo, nao volta ao stall.
+  video_buscar(1347.033);video_pausar(0);passo(3000);prontoHost();passo(1);
+  assert(busca==1347033);video_parar();
+  // GetState/position de 5000 ms + relogio parado, mesmo em buffer/pausa pedida.
+  video_definir_reconexao(1);video_tocar("http://test/movie");prontoHost();
+  posicao=1337033;passo(1);video_pausar(1);nv_tpk_video_evento(7,50,0);
+  nv_tpk_video_evento(10,0,0);passo(1);stops=paradas;passo(15001);
+  assert(paradas==stops+1 && recon.pendente);video_parar();
+  // Seek recusado usa o alvo do comando, nao o ultimo relogio.
+  video_definir_reconexao(1);video_tocar("http://test/movie");prontoHost();
+  posicao=1337033;passo(1);nv_tpk_video_evento(9,1347033,0);nv_tpk_video_evento(9,-1,0);passo(1);
+  assert(recon.pendente && recon.alvo==1347.033);video_parar();
   puts("ok: pausa/buffer/seek, retomada na posicao, limite e cancelamento");
 }

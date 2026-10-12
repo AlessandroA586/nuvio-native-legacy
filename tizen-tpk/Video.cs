@@ -92,7 +92,7 @@ namespace NuvioTpk
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate int FnPos();
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void FnEscolher(int tipo, int idx);
 
-        const int EV_PRONTO = 1, EV_TOCANDO = 2, EV_PAUSADO = 3, EV_FIM = 4, EV_ERRO = 5, EV_TAMANHO = 6, EV_BUFFER = 7, EV_VELOCIDADE = 8;
+        const int EV_PRONTO = 1, EV_TOCANDO = 2, EV_PAUSADO = 3, EV_FIM = 4, EV_ERRO = 5, EV_TAMANHO = 6, EV_BUFFER = 7, EV_VELOCIDADE = 8, EV_PRESO = 9, EV_CONSULTA_LENTA = 10;
 
         readonly Func<Display> fazDisplay;
         readonly Action<Action> principal;
@@ -314,10 +314,14 @@ namespace NuvioTpk
                         int ms = p.GetPlayPosition();
                         lock (trocaTrava) { if (minha == sessao && player == p) posMs = ms; }
                     }
+                } catch (InvalidOperationException e) {
+                    Log("posicao: " + e.Message);
+                    if (minha == Volatile.Read(ref sessao)) NvVid.Evento(EV_PRESO, -1, 0);
                 } catch { }
                 finally {
                     long ms = (Stopwatch.GetTimestamp() - inicio) * 1000 / Stopwatch.Frequency;
                     if (ms >= 50) Log("[video] tpk consulta posicao levou " + ms + " ms (fio video)");
+                    if (ms >= 5000 && minha == Volatile.Read(ref sessao)) NvVid.Evento(EV_CONSULTA_LENTA, 0, 0);
                     Volatile.Write(ref f.consulta, 0);
                 }
             }, null);
@@ -388,7 +392,7 @@ namespace NuvioTpk
 
         async void Abrir(string url, string cabecalhos, int minha)
         {
-            posMs = 0;
+            posMs = 0; buscando = false; buscaPend = pausaPend = -1;
             // Player novo nasce no volume cheio; so um pedido DESTA sessao
             // (trailer.c, logo depois do video_tocar) o muda.
             volAlvo = 1f; volPedido = false;
@@ -547,9 +551,13 @@ namespace NuvioTpk
 
         bool Liberar(ref Player p) { if (!Liberar(p)) return false; Volatile.Write(ref p, null); return true; }
 
+        bool buscando;
+        int buscaPend = -1, pausaPend = -1;
+
         void Pausar(bool pausa)
         {
             if (player == null) return;
+            if (buscando) { pausaPend = pausa ? 1 : 0; return; }
             try
             {
                 if (pausa && player.State == PlayerState.Playing) { player.Pause(); NvVid.Evento(EV_PAUSADO, 0, 0); }
@@ -557,19 +565,39 @@ namespace NuvioTpk
             }
             catch (InvalidOperationException e)
             {
-                // #269: o estado mudou entre a checagem e o Pause/Start. Estado ja e outro; avisa uma vez.
-                if (!pausarAvisado) { pausarAvisado = true; Log("pausar: estado mudou (" + e.Message + ")"); }
+                Log("pausar: " + e.Message);
+                NvVid.Evento(EV_PRESO, -1, 0);
             }
             catch (Exception e) { Log("pausar: " + e.Message); }
         }
-        bool pausarAvisado;
 
         async void Buscar(int ms)
         {
             if (player == null) return;
             windowMetrics.Invalidate();
-            try { posMs = ms; await player.SetPlayPositionAsync(ms, false); }
-            catch (Exception e) { Log("buscar: " + e.Message); }
+            if (buscando) { buscaPend = ms; return; }
+            var p = player;
+            int minha = Volatile.Read(ref sessao);
+            buscando = true;
+            try {
+                await p.SetPlayPositionAsync(ms, false);
+                if (minha != Volatile.Read(ref sessao)) return;
+                // PlaybackInterrupted pode ter emitido evento 3 durante o seek.
+                if (p.State == PlayerState.Playing) NvVid.Evento(EV_TOCANDO, 0, 0);
+                else if (p.State == PlayerState.Paused) NvVid.Evento(EV_PAUSADO, 0, 0);
+            }
+            catch (InvalidOperationException e) {
+                Log("buscar: " + e.Message);
+                if (minha == Volatile.Read(ref sessao)) NvVid.Evento(EV_PRESO, buscaPend >= 0 ? buscaPend : ms, 0);
+                return;
+            }
+            catch (Exception e) { Log("buscar: " + e.Message); return; }
+            finally { if (minha == Volatile.Read(ref sessao)) buscando = false; }
+            if (minha != Volatile.Read(ref sessao)) return;
+            // SetPlayPositionAsync terminou: nao disputar Pause/outro seek com
+            // a transicao que produz evento 3; o cache so muda por consulta real.
+            if (buscaPend >= 0) { int alvo = buscaPend; buscaPend = -1; Buscar(alvo); }
+            else if (pausaPend >= 0) { bool pausa = pausaPend != 0; pausaPend = -1; Pausar(pausa); }
         }
 
         // Host 4/5 (Program40): move/redimensiona a janela ElmSharp do video.

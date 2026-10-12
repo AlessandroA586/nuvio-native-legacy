@@ -124,6 +124,8 @@ static Uint32 progressoEm;
 static double progressoPos;
 static int vigiaAtiva, pausaPedida;
 static atomic_int vigiaReiniciar;
+static atomic_int playerPreso, consultaLenta;
+static int reconPausa = -1;
 
 // CABECALHO DO MKV (#206). O player do host so da o idioma de cada faixa; o
 // Name ("Forced", "DD 5.1"), a FlagForced e os canais estao nas TrackEntry, e
@@ -267,7 +269,8 @@ void nv_tpk_video_legenda(const char *texto, int durMs) {
 }
 
 enum { EV_PRONTO = 1, EV_TOCANDO = 2, EV_PAUSADO = 3, EV_FIM = 4, EV_ERRO = 5,
-       EV_TAMANHO = 6, EV_BUFFER = 7, EV_VELOCIDADE = 8 };
+       EV_TAMANHO = 6, EV_BUFFER = 7, EV_VELOCIDADE = 8,
+       EV_PRESO = 9, EV_CONSULTA_LENTA = 10 };
 
 __attribute__((visibility("default")))
 void nv_tpk_video_evento(int tipo, int a, int b) {
@@ -276,6 +279,13 @@ void nv_tpk_video_evento(int tipo, int a, int b) {
       (tipo == EV_BUFFER && bufferando != (a < 100)))
     atomic_store(&vigiaReiniciar, 1);
   switch (tipo) {
+    case EV_PRESO: { // -1 = ultimo relogio; GetState nao apaga alvo de seek.
+      int vazio = -2;
+      if (a >= 0) atomic_store(&playerPreso, a);
+      else atomic_compare_exchange_strong(&playerPreso, &vazio, -1);
+      break;
+    }
+    case EV_CONSULTA_LENTA: atomic_store(&consultaLenta, 1); break;
     case EV_PRONTO:  durMs = a; pronto = 1; break;
     case EV_TOCANDO: tocando = 1; bufferando = 0; break;
     case EV_PAUSADO: tocando = 0; break;
@@ -370,7 +380,8 @@ static int abrirSessao(void) {
   // escolher qualquer faixa.
   mkvass_aceitar_texto(1);
   atomic_store(&temErroDetalhe, 0);
-  vigiaAtiva = pausaPedida = 0;
+  vigiaAtiva = 0;
+  atomic_store(&playerPreso, -2); atomic_store(&consultaLenta, 0);
   atomic_store(&vigiaReiniciar, 1);
   ativo = 1; pronto = falhou = terminou = tocando = 0;
   largura = altura = durMs = 0; bufferando = 1; bufferDesde = SDL_GetTicks(); bufPct = 0;
@@ -396,6 +407,7 @@ int video_tocar(const char *u) {
   mkvGeracao++; mkvN = 0; faixasNovas = 0; mkvOlhou = 0; mkvSondarJa = 0; mkvNaoMkv = 0;
   // Um fio da fonte anterior ainda na rede ve a geracao mudada e descarta.
   mkvEstado = urlAtual[0] ? 1 : 0;
+  pausaPedida = 0; reconPausa = -1;
   nv_recon_zerar(&recon);
   reconPermitida = reconProxima; reconProxima = 0;
   reconIniciou = 0; reconErroPend = 0; reconLinhaRede = 0;
@@ -569,12 +581,20 @@ static void escolhasPendentes(void) {
   }
 }
 
+static void recuperarPlayer(void) {
+  reconPausa = pausaPedida;
+  reconErroCod = -2; reconErroPend = 1; reconLinhaRede = 1; reconIniciou = 1;
+  tocando = 0; vigiaAtiva = 0;
+  if (hParar) hParar(); // host confirma/libera antes de aceitar outra abertura
+}
+
 static void vigiarPlayer(double pos) {
   Uint32 agora = SDL_GetTicks();
   if (atomic_exchange(&vigiaReiniciar, 0)) vigiaAtiva = 0;
-  if (!ativo || !pronto || !tocando || pausaPedida || bufferando || terminou ||
+  if (!ativo || !pronto || ((!tocando || pausaPedida || bufferando) && !atomic_load(&consultaLenta)) || terminou ||
       falhou || recon.pendente || reconBuscarMs >= 0) { vigiaAtiva = 0; return; }
   if (!vigiaAtiva || pos != progressoPos) {
+    if (vigiaAtiva && pos != progressoPos) atomic_store(&consultaLenta, 0);
     vigiaAtiva = 1; progressoPos = pos; progressoEm = agora; return;
   }
   if (agora - progressoEm < TPK_PRESO_MS) return;
@@ -582,9 +602,7 @@ static void vigiarPlayer(double pos) {
          pos, (unsigned)(agora - progressoEm));
   fflush(stdout);
   // Mesma maquina limitada da reconexao: nao cria um loop paralelo infinito.
-  reconErroCod = -2; reconErroPend = 1; reconLinhaRede = 1; reconIniciou = 1;
-  tocando = 0; vigiaAtiva = 0;
-  if (hParar) hParar(); // host confirma/libera antes de aceitar outra abertura
+  recuperarPlayer();
 }
 
 void video_bombear(void) {
@@ -596,6 +614,11 @@ void video_bombear(void) {
     hEscolher(3, velEnviada);
   }
   double pos = video_pos();
+  int preso = atomic_exchange(&playerPreso, -2);
+  if (preso >= -1 && !recon.pendente && !falhou) {
+    recuperarPlayer();
+    if (preso >= 0 && recon.tentativa) recon.alvo = preso / 1000.0;
+  }
   vigiarPlayer(pos);
   sondaMkv(pos);
   if (pronto && pos > 0.5) reconIniciou = 1;
@@ -609,12 +632,16 @@ void video_bombear(void) {
     fflush(stdout);
     reconBuscarMs = -1;
   }
+  if (reconPausa >= 0 && pronto && tocando && reconBuscarMs < 0 && !reconErroPend && !recon.pendente) {
+    if (hPausar) hPausar(reconPausa);
+    reconPausa = -1;
+  }
   if (reconErroPend) {
     int antes = recon.tentativa;
     int rede = nv_recon_rede_tpk(reconErroCod, NULL) || reconLinhaRede;
     reconErroPend = 0; reconLinhaRede = 0;
     if (reconPermitida && urlAtual[0] && (reconIniciou || recon.tentativa) &&
-        nv_recon_erro(&recon, rede, SDL_GetTicks(), pos)) {
+        nv_recon_erro(&recon, rede, SDL_GetTicks(), preso >= 0 ? preso / 1000.0 : pos)) {
       if (!antes) { reconAudio = audioAtual; reconLeg = legAtual; }
       if (recon.tentativa != antes) {
         printf("[video] conexao caiu (0x%x): tentativa %d/%d, espera %us\n",
@@ -643,14 +670,15 @@ void video_parar(void) {
   audioPend = legPend = -1; comecou = 0; comecouEm = 0; audioComecou = 0;
   legendaLimpar(1);
   nv_recon_zerar(&recon);
-  reconErroPend = 0; reconFaixasPend = 0; reconBuscarMs = -1;
+  reconErroPend = 0; reconFaixasPend = 0; reconBuscarMs = -1; reconPausa = -1;
   if (ativo && hParar) hParar();
   ativo = pronto = tocando = 0;
 }
-void video_pausar(int p) { pausaPedida = p != 0; vigiaAtiva = 0; if (hPausar) hPausar(p); }
+void video_pausar(int p) { pausaPedida = p != 0; vigiaAtiva = 0; if (nv_recon_ativa(&recon)) reconPausa = pausaPedida; else if (hPausar) hPausar(p); }
 int video_pausa_confirmada(void) { return 0; } // host nao fornece ack por sessao
 void video_volume(int pct) { if (hVolume) hVolume(pct); }
 void video_buscar(double s) {
+  if (nv_recon_ativa(&recon)) { recon.alvo = s; reconBuscarMs = (int)(s * 1000.0); return; }
   progressoEm = SDL_GetTicks(); progressoPos = video_pos(); vigiaAtiva = 1;
   if (hBuscar) hBuscar((int)(s * 1000.0));
   terminou = 0;
