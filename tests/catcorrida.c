@@ -96,6 +96,24 @@ int main(void) {
   conferirExtra(idx, "tt8888888");
   printf("ok  cat_acrescentar com catalogo crescendo antes da trava\n");
 
+  // Mutacoes de episodio/progresso revalidam o indice DEPOIS da trava.
+  // O bloco cresce de 4 para 40 no gancho: 39 agora e 39, nao 39 % 4.
+  publicar(4, 0);
+  publicarNoGancho = 1;
+  cat_apontar_episodio(39, 2, 3);
+  assert(!publicarNoGancho && cat_n() == GRANDE);
+  assert(cat_item(39)->temporada == 2 && cat_item(39)->episodio == 3);
+  assert(cat_item(3)->temporada == 0);
+  printf("ok  apontar episodio revalida o indice sob a trava\n");
+
+  publicar(4, 0);
+  publicarNoGancho = 1;
+  cat_aplicar_progresso(39, 600, 3000, 2, 4);
+  assert(!publicarNoGancho && cat_n() == GRANDE);
+  assert(cat_item(39)->progresso == 20 && cat_item(39)->episodio == 4);
+  assert(cat_item(3)->progresso == 0);
+  printf("ok  aplicar progresso revalida o indice sob a trava, sem trava recursiva\n");
+
   cat_quadro();
   cat_quadro();
   printf("catcorrida: tudo ok\n");
