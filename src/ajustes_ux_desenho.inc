@@ -1042,7 +1042,7 @@ static void ajMovAtualizar(float dt) {
 // trilho fica cheio no acento e o botao na tinta dele (claro ou escuro), para
 // ler de longe sem depender do texto.
 static float aj2ChipLiga(int op, float xDir, float yc, int ligado, float a) {
-  float ar,ag,ab, on = 1.0f-ajMov(op, valor[op]), k = ajTinta() / 255.0f;
+  float ar,ag,ab, on = 1.0f-ajMov(op, uxValorAtual(op)), k = ajTinta() / 255.0f;
   float kr = 1.0f + (k - 1.0f) * on;
   (void)ligado;
   ajustes_acento(&ar,&ag,&ab);
@@ -1173,7 +1173,7 @@ static void ajDesenharLinha(int item, float y, float f, float a) {
   if ((tipo == AJL_TOG && ed) || ((!aj2TemInsp() || ajRetrato()) && ajSegmentada(op) && !desligada && (ed || emFoco))) {
     int n = nValores(op);
     if (n > 3) n = 3;
-    cauda = aj2Seg(op, n, ed ? uxPendente : valor[op], ed, xDir, yc, aTx);
+    cauda = aj2Seg(op, n, ed ? uxPendente : uxValorAtual(op), ed, xDir, yc, aTx);
   } else if (tipo == AJL_TOG && desligada) {
     // Apagada: o estado escrito, sem pilula (mockup v3, tela 03).
     TxtLinha t = ajTxt(TXT_V3_VAL, lig(op) ? "Ligado" : "Desligado");

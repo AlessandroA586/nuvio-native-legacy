@@ -16,6 +16,7 @@ static int uxValorPadrao(int op) {
 /* Fileiras tem uma fonte propria. valor[] e apenas seu espelho na tela. */
 static int uxValorAtual(int op) {
   if (op < 0 || op >= AJ_N) return 0;
+  if (op == AJ_SEEKR_LIGADO && !seekrChave[0]) return 1;
   return op == AJ_FIL_LIMITE ? fil_limite_gravado() : valor[op];
 }
 

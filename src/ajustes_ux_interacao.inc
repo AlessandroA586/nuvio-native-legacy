@@ -98,7 +98,11 @@ static int uxLigarRequisitos(int op, int aplicar) {
   memcpy(valor, salvo, sizeof salvo);
   if (!aplicar || !res) return res;
   for (k = 0; k < n; k++)
-    if (!definirValorDireto(ligar[k], 0)) { uxNotificar("Não foi possível salvar. O valor anterior foi mantido."); return 0; }
+    if (!definirValorDireto(ligar[k], 0)) {
+      uxNotificar(ligar[k] == AJ_SEEKR_LIGADO && !seekrChave[0] ? seekrPedirChave() :
+                  "Não foi possível salvar. O valor anterior foi mantido.");
+      return 0;
+    }
   if (res == 2) definirValorDireto(op, 0);
   uxNotificar("Ajuste salvo nesta TV.");
   return res;
@@ -130,7 +134,8 @@ static void uxAplicar(void) {
     uxAvisoRisco = bit; uxConfirmar = 0; return;
   }
   if (!definirValorDireto(uxOp, uxPendente)) {
-    uxNotificar("Não foi possível salvar. O valor anterior foi mantido.");
+    uxNotificar(uxOp == AJ_SEEKR_LIGADO && !seekrChave[0] ? seekrPedirChave() :
+                "Não foi possível salvar. O valor anterior foi mantido.");
     return;
   }
   riscoNotar(uxOp, antes);
@@ -150,7 +155,8 @@ static int uxAlternarDireto(int op) {
   uxOp = op;
   if (uxRiscoFinal(op, novo)) return 0;
   if (!definirValorDireto(op, novo)) {
-    uxNotificar("Não foi possível salvar. O valor anterior foi mantido.");
+    uxNotificar(op == AJ_SEEKR_LIGADO && !seekrChave[0] ? seekrPedirChave() :
+                "Não foi possível salvar. O valor anterior foi mantido.");
     return 1;
   }
   riscoNotar(op, antes);
