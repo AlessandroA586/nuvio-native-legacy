@@ -32,6 +32,8 @@
 #include "idiomacod.h"
 #include "badges.h"
 #include "marco.h"
+#include "titulotempo.h"
+static TituloTempo detalheTempo;
 #include "ajustes.h"
 #include "home.h"
 #include "extras.h"
@@ -1333,6 +1335,7 @@ static void abrirInterno(const HomeItem *it) {
   trailerSemFonteLogado = 0;
   trailercinema_zerar(&trailerCinema);
   idx = it->indice;
+  titulo_tempo_inicio(&detalheTempo, "detalhe", cat_item(idx));
   // O TRAILER DO CARTAZ CONTINUA AQUI, COM SOM (pedido do rawldon, canario
   // tpk-janela; so o .tpk, NV_TRAILER_CONTINUA_DETALHE em trailerfonte.h).
   // Se o destaque da home esta tocando o trailer DESTE titulo, a pagina o
@@ -1379,7 +1382,11 @@ static void abrirInterno(const HomeItem *it) {
       idxCopia = *ci0; idxTemCopia = 1;
     } }
   { const CatItem *ci0 = cat_item(idx);
-    artehero_logo_sessao_iniciar(ci0); }
+    artehero_logo_sessao_iniciar(ci0);
+    const char *logo = logoDe(idx);
+    GLuint tex = logo ? tex_obter_logo_larg_qualquer(logo, NV_DETW_LOGO_MAXW) : 0;
+    titulo_tempo_logo(&detalheTempo, "detalhe", logo, tex, 0);
+  }
   // Nota do Trakt, comentarios e relacionados. Pedido na ABERTURA e nao no
   // desenho: as abas so aparecem depois que o dado chega, e pedir no desenho
   // faria a barra de abas surgir com o titulo ja na tela.
@@ -4158,6 +4165,8 @@ static void heroWeb(float a, float desloc) {
   // pedido. Pedindo o teto, o logo sumia por um instante ao abrir o titulo;
   // pedindo a largura real, aparece na hora e troca pela nitida em seguida.
   GLuint texLogo = arqLogo ? tex_obter_logo_larg_qualquer(arqLogo, NV_DETW_LOGO_MAXW) : 0;
+  titulo_tempo_logo(&detalheTempo, "detalhe", arqLogo, texLogo, 0);
+  if (a > 0.05f) titulo_tempo_info(&detalheTempo, "detalhe", ci, 0);
   float baseLogo = ((temRetom > 0.0f || agLinha[0]) ? yEstado : yAcoes)
                    - NV_DETW_LOGO_GAP;
   float espacoLogo = baseLogo - 110.0f - (!nomeAbaixo ? hNome : 0);
@@ -4213,8 +4222,10 @@ static void heroWeb(float a, float desloc) {
     // -1 = ainda carregando: trata como clara e nao tinge. Errar para o lado de
     // nao mexer na arte e o certo enquanto nao se sabe.
     { GfxModo m = tex_marca_escura(arqLogo) ? GFX_MARCA : GFX_TEXTO;
-      if (r.w > 0 && r.h > 0)
-        gfx_rect(r, texLogo, m, 0, 0, 0, 0.0f, 1, 1, 1, aLogo); }
+      if (r.w > 0 && r.h > 0) {
+        gfx_rect(r, texLogo, m, 0, 0, 0, 0.0f, 1, 1, 1, aLogo);
+        titulo_tempo_logo(&detalheTempo, "detalhe", arqLogo, texLogo, aLogo > 0.05f);
+      } }
   } else if (nome && !nomeAbaixo) {
     txt_bloco(TXT_DET_META2, nome, 255, 255, 255, NV_DETW2_X,
               baseLogo - fminf(NV_DETW_LOGO_H, espacoLogo) - hNome,
@@ -5340,6 +5351,7 @@ static void desenhaDetalhes(float x, float y, float f, float a) {
 }
 
 static void desenhaElenco(float x, float y, int c, float f, float a) {
+  if (a > 0.05f) titulo_tempo_info(&detalheTempo, "detalhe", cat_item(idx), 1);
   const CatItem *ci = cat_item(idx);
   const char *nome = NULL, *papel = NULL, *foto = NULL;
   if (ci && c < ci->nElenco) {

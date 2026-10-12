@@ -239,11 +239,13 @@ static void rota(const char *trecho, const char *resp) {
 }
 
 static void (*caudaB)(void);
+static void (*pedidoMetaHook)(const char *);
 char *rede_baixar(const char *u, int t) {
   int r;
   (void)t;
   if (nPedidos < 64) snprintf(pedidos[nPedidos], sizeof pedidos[0], "%s", u);
   nPedidos++;
+  if (pedidoMetaHook) pedidoMetaHook(u);
   for (r = 0; r < nRotas; r++)
     if (strstr(u, rotas[r].trecho)) return rotas[r].resp ? strdup(rotas[r].resp) : NULL;
   if (strstr(u, "cinemeta")) {
