@@ -29,7 +29,25 @@ int main(int argc, char **argv) {
     aceita = sim.aceita = 1;
     video_simular(&sim);
     player_definir_fonte(s->url);
-    fonteManualDesde = SDL_GetTicks();
+    SDL_Delay(1); fonteManualDesde = SDL_GetTicks();
+    if (!strcmp(argv[1], "desconhecida")) {
+      pronto = 1;
+      vigiarAberturaManual();
+      assert(fonteManualDesde && "pronto sem progresso desarmou o vigia");
+      pos = 1.0;
+      vigiarAberturaManual();
+      pos = 180.0; backendFalhou = 1;
+      vigiarAberturaManual();
+      printf("duracao desconhecida: erro aos %.0f s, idade=%ld\n", pos, stream_vod_falhou_ha(0));
+      fflush(stdout);
+      assert(!fonteManualDesde && stream_vod_falhou_ha(0) < 0 &&
+             "erro depois de tocar com duracao desconhecida marcou a fonte");
+      fontesmortas_iniciar();
+      assert(stream_vod_falhou_ha(0) < 0 && "falha tardia chegou ao disco");
+      stream_definir_lista(NULL, 0); free(s);
+      puts("fontesmortas: PASS (duracao desconhecida, progresso e erro tardio)");
+      return 0;
+    }
     if (tardia) {
       fonteManualDesde -= FONTE_MANUAL_PRAZO_MS + 1;
       vigiarAberturaManual();
@@ -37,7 +55,7 @@ int main(int argc, char **argv) {
     } else stream_vod_falhou(0);
     assert(stream_vod_falhou_ha(0) >= 0);
     pronto = 1; pos = 1.0;
-    // Posicao com clipe de aviso ou duracao desconhecida nao prova o titulo.
+    // Progresso desarma o vigia; so a duracao do titulo pode apagar a marca.
     sim.duracao = 30; video_simular(&sim);
     vigiarAberturaManual();
     assert(stream_vod_falhou_ha(0) >= 0 && "clipe de aviso apagou a marca");

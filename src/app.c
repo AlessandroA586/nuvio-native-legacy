@@ -1733,7 +1733,8 @@ static void vigiarAberturaManual(void) {
       fonteVODAutomatica || aguardandoFonte != 0) {
     fonteManualDesde = 0; return;
   }
-  if (fonteVODPrimeiroQuadro) {
+  // Progresso encerra a abertura mesmo sem duracao; limpar a marca exige o titulo.
+  if (fonteVODPrimeiroQuadro || (!video_falhou() && video_pronto() && video_pos() > 0.25)) {
     fonteManualDesde = 0; return;
   }
   desde = SDL_GetTicks() - fonteManualDesde;

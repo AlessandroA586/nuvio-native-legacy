@@ -15,7 +15,9 @@ PY
 flags=(-O1 -g -Isrc -I"$dir" -pthread -I/opt/homebrew/include -I/opt/homebrew/include/SDL2
        -Wall -Wextra -Wno-deprecated-declarations -ffunction-sections -fdata-sections)
 if [ "${SANITIZE:-0}" = 1 ]; then flags+=(-fsanitize=address,undefined -fno-omit-frame-pointer); fi
-cc "${flags[@]}" -DFONTESMORTAS_ORCAMENTO -c tests/fontesmortas.c -o "$dir/streams.o"
+cc "${flags[@]}" -DFONTESMORTAS_ORCAMENTO \
+  -Dfa_concluir=teste_fa_concluir -Dfa_player_falhou_foi=teste_fa_player_falhou_foi \
+  -c tests/fontesmortas.c -o "$dir/streams.o"
 cc "${flags[@]}" tests/fontesmortas_orcamento.c "$dir/streams.o" src/fontesmortas.c src/fonteantecipa.c \
   -Wl,-dead_strip -o "$dir/teste"
 "$dir/teste"

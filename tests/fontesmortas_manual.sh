@@ -22,4 +22,5 @@ if [ "$#" -gt 0 ]; then "$dir/teste" "$@"; else
   "$dir/teste"
   "$dir/teste" aviso
   "$dir/teste" tardia
+  "$dir/teste" desconhecida
 fi

@@ -1,5 +1,11 @@
 // Worker, consumidor de app.c e sondas de streams.c reais; sem rede nem telas.
 #define SDL_MAIN_HANDLED
+#define stream_primeira_boa teste_stream_primeira_boa
+#define stream_canal_primeira_viva teste_stream_canal_primeira_viva
+#define stream_folha_abrir teste_stream_folha_abrir
+#define stream_folha_nome teste_stream_folha_nome
+#define stream_folha_canal teste_stream_folha_canal
+#define stream_folha_item teste_stream_folha_item
 #include "../src/app.c"
 #include <assert.h>
 #include <unistd.h>
