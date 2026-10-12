@@ -2760,6 +2760,12 @@ static void recuarAutomatico(double de, double para) {
   posplay_recuar();
 }
 
+// Busca do dono: se substitui uma busca de creditosAuto ainda armada, desarma.
+static void buscarUsuario(double alvo) {
+  creditosauto_destino(&creditosAuto, alvo);
+  video_buscar(alvo);
+}
+
 static void saltar(int dir, int repeticao) {
   int novo = 0;
   if (!scrubbing) {
@@ -2795,7 +2801,7 @@ static void terminarSalto(void) {
   pausao_fechar();
   seekr_ocioso();   // solta a folha decodificada (~22 MB), fica o JPEG
   if (comVideo) {
-    video_buscar(posSeg);
+    buscarUsuario(posSeg);
     if (scrubTocava) { video_pausar(0); tocando = 1; }
   }
 }
@@ -2936,7 +2942,7 @@ void player_evento(const SDL_Event *e) {
       // ar. Manter esta linha faria o OK disparar a troca duas vezes.
       { double fim;if(trechoPulavel(&fim)){
           { int tp=0;if(intro_botao_visivel(NULL,&tp)&&tp==INTRO_CREDITOS)player_aprender_creditos(); }
-          posSeg=(float)puloDestino(fim);if(comVideo)video_buscar(posSeg);return; } }
+          posSeg=(float)puloDestino(fim);if(comVideo)buscarUsuario(posSeg);return; } }
       // O OK com os controles escondidos e o Play/Pause: os controles sobem
       // com o foco NO PLAY, nao onde ficou da ultima vez (Legendas, Audio,
       // Proporcao). Sem isto o OK seguinte abria aquela folha (#109).
@@ -2983,7 +2989,7 @@ void player_evento(const SDL_Event *e) {
     double fim;
     if (!trechoPulavel(&fim)) skipFoco = 0;          // o trecho acabou por baixo do foco
     else if (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE) {
-      posSeg = (float)puloDestino(fim); if (comVideo) video_buscar(posSeg);
+      posSeg = (float)puloDestino(fim); if (comVideo) buscarUsuario(posSeg);
       skipFoco = 0; acordar(); return;
     } else if (k == SDLK_DOWN) { skipFoco = 0; acordar(); return; }
     else if (k == SDLK_UP) { skipFoco = 0; esconderControles(); return; }   // #305
@@ -3499,7 +3505,7 @@ void player_atualizar(float dt, Uint32 agora) {
     int eSerie = ci && !strcmp(ci->tipo, "series");
     int aguardaBusca = creditosauto_aguardar(&creditosAuto, video_pos(),
       comVideo && video_pronto() && tocando && !scrubbing && !video_bufferando_ms(),
-      comVideo && video_terminou());
+      comVideo && video_terminou(), SDL_GetTicks());
     posplay_aguardar_busca(aguardaBusca);
     // Canal ao vivo nao tem "fim": sem a guarda, o relogio reserva cruzaria os
     // 90% em ~1h42 de exibicao e abriria o painel de relacionados no meio da
@@ -4172,7 +4178,7 @@ static void ponteiroBuscar(int a, int b) {
   double de = comVideo ? video_pos() : posSeg;
   posSeg = f * duracaoSeg;
   recuarAutomatico(de, posSeg);
-  if (comVideo) video_buscar(posSeg);
+  if (comVideo) buscarUsuario(posSeg);
 }
 static void ponteiroSkip(int a, int b) { (void)a; (void)b; skipFoco = 1; barraFoco = 1; acordar(); }
 
