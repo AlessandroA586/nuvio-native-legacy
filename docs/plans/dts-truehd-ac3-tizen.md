@@ -22,25 +22,26 @@ and a short hand-off note appended to this file, so the next session can start c
 | Loopback HTTP server template | `src/proxyts.c` (127.0.0.1, free port, one session) | Not compiled on `.tpk` (`proxyts_disponivel`) |
 | Docs | `docs/features/dts/README.md`, `tools/dts-pipeline/README.md` | LG behaviour, limits, license notes |
 
-## Key design decision (settled in Session 0)
+## Key design decision (settled, 2026-10-12)
 
-How do converted audio + original video reach the Samsung player?
+**Option B (ESPlayer) is ruled out.** `Tizen.TV.Multimedia.ESPlayer` requires the **Partner** privilege
+(`http://developer.samsung.com/privilege/esplay`, Samsung docs: "SDK Support: N"). A normal developer-signed
+.tpk re-signed by DUID cannot carry it, and the repo already recorded that Partner privileges broke
+installation (error 118014, `docs/issues/MAPA.md`, Samsung DTS/TrueHD entry). `tizen-manifest.xml` has only
+`internet`, `appmanager.launch`, `network.get`.
 
-* **Option A (recommended default): loopback remux.** libnuvio runs a one-session HTTP server on
-  127.0.0.1 (copy `proxyts.c`). FFmpeg demuxes the source, **copies video packets unchanged**,
-  converts the selected audio track to AC3 5.1, muxes to **fragmented MP4 (or MKV/TS if S0 shows
-  Samsung prefers it)** and streams it. The existing `Tizen.Multimedia.Player` plays
-  `http://127.0.0.1:P/…` exactly like any URL. Pros: HDR10/Dolby Vision, subtitles hooks, volume,
-  pause, audio-out routing all stay on the proven path; no new Tizen API. Cons: no native seek on a
-  live-generated stream → a seek restarts the remux at the target time (`?t=`) and the app adds the
-  offset (same idea as LG "seeks recreate the pipeline").
-* **Option B (fallback): packet feed through `Tizen.Multimedia.ESPlayer`.** Mirrors the LG design
-  (`dts_pipeline_*` implemented over P/Invoke callbacks into the .NET host). Pros: real seek,
-  closest to existing `dts_playback.c`. Cons: API availability/privileges on Tizen 9 unverified,
-  HDR/DV signalling and subtitles must be redone, bigger blast radius.
+**Option A (loopback remux) is the design.** libnuvio runs a one-session HTTP server on 127.0.0.1 (clone of
+`src/proxyts.c`). FFmpeg demuxes the source, **copies video packets unchanged**, converts the selected audio
+track to AC3 5.1, muxes to fragmented MP4 (or MKV/TS, decided by the S0 tests) and streams it. The existing
+`Tizen.Multimedia.Player` plays `http://127.0.0.1:P/...` like any URL. Seeking restarts the remux at the target
+time (`?t=`) and the app adds the offset.
 
-Session 0 produces a written decision. Sessions 3–5 below are written for Option A; the
-B variant is listed under Session 3.
+Owner facts (S95C): plays AC3/E-AC3; **cannot play Dolby Vision**; cannot play any DTS variant or TrueHD; today
+those tracks go silent. So Dolby Vision is **out of scope** (HDR10 only); DV sources already fall back to their
+HDR10 base layer on this TV.
+
+A third idea, decoding to PCM and playing it with `Tizen.Multimedia.AudioPlayback` next to a muted Player, is
+**not** used: A/V sync would have to be done by hand and multichannel PCM over eARC is unreliable.
 
 ## Fixed behaviour rules (all sessions)
 
@@ -59,21 +60,22 @@ B variant is listed under Session 3.
 6. Logs: `[dts-tpk]` prefix, no URLs/keys (the new "Exportar registro" row scrubs but don't rely on it).
 7. Add tests next to the existing ones in `tests/` (`bash tests/<name>.sh`).
 
-## Session 0: feasibility on the S95C (no feature code, ~1 session)
+## Session 0: feasibility on the S95C (reduced; no feature code)
 
-Deliverable: `docs/plans/dts-truehd-ac3-tizen-S0.md` with measured answers.
-1. Prove the Player accepts AC3 5.1: build a throwaway test hook (or use the "tizen-tpk-spike"
-   harness) that plays a small MKV/MP4 with AC3 5.1 and E-AC3 and HEVC HDR10 + DV P8 video.
-   Record codec/channel info from `[audio]` logs and what the TV/receiver shows.
-2. Prove the Player plays from **loopback HTTP**: the app serves the file from 127.0.0.1 with and
-   without `Content-Length`, with Range, and as chunked/live fMP4 and TS. Which containers start
-   quickly, keep HDR/DV, and keep A/V sync? Does `Player` seek work on Range-capable loopback?
-3. ESPlayer probe: does `Tizen.Multimedia.ESPlayer` exist in the `net8.0-tizen8.0` binding and
-   open on the S95C (needed privileges, tizen-manifest changes, HEVC/AC3 stream info support)?
-4. Capture what the Player does today with a DTS-only and a TrueHD-only MKV (the unproven part of
-   #313): exact error text, whether it lists an empty audio list.
-5. Use **Settings › About › Export logs** (branch `feat/export-logs-qr`) or `sdb pull` to bring logs back.
-Exit: pick A or B; list container + muxer flags that worked.
+Already known (do not re-measure): S95C plays AC3/E-AC3, not DV/DTS/TrueHD; the app goes silent on those.
+How to play a test file without the feature: the app already has a **video request file**. `main.c`
+(`videoSeSolicitado`) polls `/tmp/nuvio-video` every 250 ms and plays the URL written in it (`-` stops).
+From a PC: `python3 -m http.server 8000` next to the test files, then
+`sdb shell "echo http://<PC-IP>:8000/test.mkv > /tmp/nuvio-video"`. If the app's `/tmp` is not the one `sdb`
+sees on Tizen 8+, the S0 session adds the same poll on the app data dir (`NUVIO_DADOS`).
+Measure (logs via `sdb` or Settings › About › Export logs):
+1. AC3 5.1 and E-AC3 in MKV and MP4: sound, receiver shows Dolby Digital, `faixas do player` lists it.
+2. Loopback: a throwaway hook in libnuvio serves the same file from 127.0.0.1 as fMP4, MKV and TS, with and
+   without Content-Length/Range. Per container: starts?, time to first frame, seek works?, A/V sync (clap clip),
+   HDR10 flag kept?
+3. DTS-only and TrueHD-only MKV: exact error/log line and whether the audio list is empty (the unproven part of #313).
+4. Loopback inbound/outbound socket rules on Tizen 9 (also answers the Export logs server question).
+Exit: container + muxer flags chosen; short memo `docs/plans/dts-truehd-ac3-tizen-S0.md`.
 
 ## Session 1: FFmpeg for the .tpk build (~1 session)
 
@@ -108,7 +110,7 @@ Exit: `bash tests/dts_engine.sh` (extended) passes on host, webOS tests unchange
 
 ## Session 3: Tizen output path (~1–2 sessions)
 
-**Option A (remux):** new `src/dts/dts_remux_tpk.c/.h` (+ `tpk` guard):
+New `src/dts/dts_remux_tpk.c/.h` (+ `tpk` guard):
 * Loopback server cloned from `proxyts.c`: one session, token in the path, 127.0.0.1 only, Host
   check, cancel on new session / close.
 * Pipeline: engine → video packets copied (HEVC/H.264 with correct extradata, DV RPU kept) + AC3
@@ -117,9 +119,6 @@ Exit: `bash tests/dts_engine.sh` (extended) passes on host, webOS tests unchange
 * API: `dts_remux_open(src_url, headers, audio_stream, start_seconds, out_url, n)`, `dts_remux_close()`.
   Seek = close + open with new `start_seconds`; the returned URL carries `?t=`.
 * Host test with `curl` + `ffprobe` on the stream (video bit-exact vs source, audio = ac3 6ch).
-**Option B (ESPlayer):** implement `dts_pipeline_*` over callbacks registered from `tizen-tpk/Video.cs`
-  (same pattern as `nv_tpk_video_registrar`), keeping `dts_playback.c` as is; HDR/DV metadata and
-  subtitle path to be re-verified on the TV.
 Exit: a command-line harness plays a DTS test file through the loopback and verifies the stream.
 
 ## Session 4: Wire into the player and Settings (~1 session)
@@ -140,7 +139,7 @@ Exit: end-to-end on the S95C with the test matrix below.
 ## Session 5: Hardening, regression and release prep (~1 session)
 
 * Test matrix on the TV (log each with Export logs): DTS 5.1 MKV, DTS-HD MA 7.1, DTS:X, TrueHD 7.1,
-  TrueHD Atmos, MKV with DTS + AC3 (must stay native), MP4, 4K HDR10, DV P5/P8, 80 GB remux over a
+  TrueHD Atmos, MKV with DTS + AC3 (must stay native), MP4, 4K HDR10, 80 GB remux over a
   slow link, long episode (2 h, memory/CPU steady), seek ×20, pause/resume, audio track switch,
   subtitle track switch, channel/volume via eARC, back-to-menu cleanup (no leaked port/thread).
 * Failure injection: kill the source mid-stream, 403/401 source, encoder missing → fall back cleanly.
@@ -159,7 +158,7 @@ behaviour rules. At the end push, and append a hand-off note to the plan."
   what to install and which test files to put on the TV, and write the decision memo."
 * **S1:** "Do Session 1 (FFmpeg for the .tpk build). Show size and `readelf` results; keep webOS unchanged."
 * **S2:** "Do Session 2 (engine). Extend tests with generated fixtures; do not touch webOS adapter code."
-* **S3:** "Do Session 3 using the option decided in S0. Provide a host harness I can run without the TV."
+* **S3:** "Do Session 3 (loopback remux). Provide a host harness I can run without the TV."
 * **S4:** "Do Session 4 (wire-up and Settings, 28 translations). List every file touched."
 * **S5:** "Do Session 5. Give me the TV test checklist first, then fix what the logs show."
 
@@ -167,7 +166,7 @@ behaviour rules. At the end push, and append a hand-off note to the plan."
 
 | Risk | Mitigation |
 |---|---|
-| Samsung Player may reject fMP4/TS from loopback or lose DV | S0 measures; fallback container list; Option B |
+| Samsung Player may reject fMP4/TS from loopback | S0 measures; try MKV/TS; no ESPlayer fallback (Partner-only) |
 | Seek on a live remux is slow on huge remuxes | Range-prefetch already in engine; restart near keyframe; show buffering state |
 | Inbound/loopback socket rules on Tizen 9 | S0 test (also decides the "Export logs" server question) |
 | TrueHD/DTS-HD decoding CPU on the TV | Measured in S5; budget above |
