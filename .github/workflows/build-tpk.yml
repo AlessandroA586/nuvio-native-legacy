@@ -70,6 +70,10 @@ jobs:
           bash workload-install.sh
           dotnet workload list
 
+      # tools/tizen-art.sh converts the art from webp to png and needs ffmpeg.
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
       # Same workaround used on the owner's computer: the arm/v5 platform name
       # is not accepted by the emulation, plain linux/arm is.
       - name: Use linux/arm instead of linux/arm/v5
