@@ -434,7 +434,7 @@ static int ajTipo(int op) {
   }
 }
 // O valor i no segmentado: traduzido e sem o aposto entre parenteses
-// ("Dinâmica (Apple TV)" vira "Dinâmica"; o nome inteiro fica no inspetor).
+// ("Rótulo (aposto)" vira "Rótulo"; o nome inteiro fica no inspetor).
 static const char *ajRotSeg(int op, int i) {
   static char b[3][96];
   char *p;

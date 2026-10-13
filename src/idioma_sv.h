@@ -1502,7 +1502,6 @@
   T("Dinamarca", "Danmark"),
   T("Dinamarquês", "Danska"),
   T("Dinâmica", "Dynamisk"),
-  T("Dinâmica (Apple TV)", "Dynamisk (Apple TV-stil)"),
   T("Dinâmica estilizada", "Dynamisk stiliserad"),
   T("Dinâmica gradiente", "Dynamisk gradient"),
   T("Dinâmica imersiva", "Dynamisk uppslukande"),
