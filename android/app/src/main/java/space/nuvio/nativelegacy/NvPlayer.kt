@@ -327,7 +327,10 @@ object NvPlayer {
         val pedido = pedidos.incrementAndGet()
         principal.post { if (pedido == pedidos.get()) liberar() }
     }
-    @JvmStatic fun pausar(p: Int) { principal.post { player?.playWhenReady = (p == 0) } }
+    private var pausaPedida = false
+    @JvmStatic fun pausar(p: Int) {
+        principal.post { pausaPedida = p != 0; player?.playWhenReady = !pausaPedida }
+    }
     @JvmStatic fun buscar(ms: Int) {
         val pedido = pedidos.get()
         principal.post { if (pedido == pedidos.get()) player?.seekTo(ms.coerceAtLeast(0).toLong()) }
@@ -361,8 +364,9 @@ object NvPlayer {
         val espera = if (esperaInicio < 0) SystemClock.elapsedRealtime() else esperaInicio
         if (esperaInicio < 0) {
             liberar()
-            // O C envia o ganho depois de abrir; a espera nao pode apaga-lo.
+            // O C envia ganho/pausa depois de abrir; a espera nao pode apaga-los.
             ganhoPct = 100
+            if (!reabrindo) pausaPedida = false
         }
         // MStar/Amlogic: o overlay e o decoder antigos precisam sair antes do novo.
         // Poll no Handler deixa Back/parar funcionar enquanto o release corre em fundo.
@@ -495,6 +499,10 @@ object NvPlayer {
             val p = ExoPlayer.Builder(act, renderizadores)
                 .setLoadControl(carga)
                 .setMediaSourceFactory(DefaultMediaSourceFactory(act)
+                    // ParaleloDataSource faz as tres tentativas de transporte;
+                    // nao empilhar outra rodada invisivel do Loader antes da
+                    // maquina de reconexao 3/10/25 s do nucleo.
+                    .setLoadErrorHandlingPolicy(PoliticaErroParalelo())
                     // DefaultDataSource e nao so http: o trailer da Apple chega como
                     // file:// (master reduzido a uma variante em dados/trailer, trailerapple.c).
                     .setDataSourceFactory(DefaultDataSource.Factory(act, origem)))
@@ -550,7 +558,9 @@ object NvPlayer {
             // recusado no READY); ate la o C espera, sem seek proprio.
             if (inicioMs <= 0 && fracaoAtual > 0) fracaoPendente = fracaoAtual
             else confirmarRetomada(geracao, inicioAceito)
-            p.playWhenReady = true
+            p.playWhenReady = !pausaPedida
+            // false -> false nao gera callback quando a pausa chegou sem player.
+            if (pausaPedida) ev(EV_PAUSADO)
             p.prepare()
             principal.postDelayed(tique(minha), TIQUE_MS)
         } catch (e: Exception) {
@@ -586,9 +596,9 @@ object NvPlayer {
             try { if (ana != null) p.removeAnalyticsListener(ana) } catch (e: Exception) { }
             // Esconde sem destruir a superficie (destruir acorda o callback do Media3).
             try { sv?.layoutParams = FrameLayout.LayoutParams(1, 1) } catch (e: Exception) { }
-            liberarEmFundo(p, sv)
             // A superficie velha fica com o player velho; a proxima abertura cria outra.
             superficie = null
+            liberarEmFundo(p, sv)
         }
         // F07: the session cache goes with its player (released and deleted
         // off the main thread, after the canceled loaders unwind).
@@ -602,21 +612,16 @@ object NvPlayer {
         superficie?.visibility = View.GONE
     }
 
-    // O release roda em outro fio (liberarEmFundo) e o Media3 1.8 lanca se um
-    // fio que nao e o da aplicacao toca o player; o seletor e so do pacote, entao
-    // reflexao. Sem ele (outra versao), o release volta ao fio principal.
+    // Media3 1.8: permite o descarte em fundo do player ja sem listeners.
     private fun semTravaDeFio(p: ExoPlayer) {
         try {
             val m = p.javaClass.getDeclaredMethod("setThrowsWhenUsingWrongThread", Boolean::class.javaPrimitiveType)
             m.isAccessible = true
             m.invoke(p, false)
-            fioLivre = true
         } catch (e: Throwable) {
-            fioLivre = false
-            Log.w(TAG, "[player] sem destravar o fio do release (volta ao fio principal): $e")
+            Log.w(TAG, "[player] sem destravar o fio do release: $e")
         }
     }
-    @Volatile private var fioLivre = false
 
     private fun novaSuperficie(act: Activity) {
         if (superficie != null) return
@@ -657,9 +662,8 @@ object NvPlayer {
         }
     }
 
-    // stop+release do player velho fora do fio principal. A SurfaceView so sai
-    // da tela depois: tirar antes dispararia o callback de superficie do
-    // Media3, que espera o fio de reproducao (justo o que esta preso).
+    // stop+release fora do fio principal. A SurfaceView so sai depois do
+    // descarte: remover antes faz o Media3 esperar o decoder no fio da UI.
     private fun liberarEmFundo(p: ExoPlayer, sv: SurfaceView?) {
         liberacoesEmCurso.incrementAndGet()
         val corpo = Runnable {
@@ -674,8 +678,9 @@ object NvPlayer {
                 if (sv != null && sv !== superficie) (sv.parent as? FrameLayout)?.removeView(sv)
             }
         }
-        if (fioLivre) { val t = Thread(corpo, "nv-release"); t.isDaemon = true; t.start() }
-        else corpo.run()
+        val t = Thread(corpo, "nv-release")
+        t.isDaemon = true
+        t.start()
     }
 
     // Tique de 250 ms: a posicao que o C le sem esperar ninguem.
