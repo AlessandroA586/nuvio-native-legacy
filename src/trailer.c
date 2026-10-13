@@ -299,6 +299,9 @@ int trailer_suportado(void) {
 }
 static void nativoAplicar(void) {
   if (!aberto) return;
+#ifdef NV_TPK
+  video_tpk_cartao_marcar(noCartao);
+#endif
   if(video_tocando())tocouFonte=1;
   // O uMS setVolume funciona nesta TV (provado ao contrario: sem ele o
   // trailer tocou com som).

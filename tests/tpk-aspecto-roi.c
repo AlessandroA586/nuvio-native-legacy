@@ -64,6 +64,11 @@ int main(void) {
 #ifndef NV_TPK40
   confere("trailer opt-in unchanged",0,0,1920,1080);
 #endif
+  // P1: only the card trailer is fitted; others keep the raw destination.
+  nv_tpk_video_evento(6,1440,1080);
+  video_janela_fonte(0,0,1440,1080,0,0,1920,1080);
+  confere("P1 non-card trailer keeps fullscreen",0,0,1920,1080);
+  video_tpk_cartao_marcar(1);
   // P2: a vertical trailer cannot cover 960x540 within a 1080-high panel.
   nv_tpk_video_evento(6,1080,1920);
   video_janela_fonte(0,656,1080,606,400,200,960,540);

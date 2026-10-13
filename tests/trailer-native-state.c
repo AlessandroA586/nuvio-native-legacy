@@ -37,6 +37,7 @@ void video_bombear(void){}
 int video_recorte_fonte(void){return recorte;}
 int video_recorte_fonte_trailer(void){return recorte;}   // NV_TPK: trailer.c asks for the trailer-only setting
 void video_tpk_trailer_marcar(int sim){(void)sim;}
+void video_tpk_cartao_marcar(int sim){(void)sim;}
 void video_recorte_reaplicar(void){}
 void video_janela(int x,int y,int w,int h){(void)x;(void)y;(void)w;(void)h;}
 void video_janela_fonte(int sx,int sy,int sw,int sh,int x,int y,int w,int h){

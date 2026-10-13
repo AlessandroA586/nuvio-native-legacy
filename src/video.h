@@ -256,6 +256,7 @@ void   video_tpk_zoom_roi_definir(int ligado);
 int    video_tpk_zoom_roi(void);
 // trailer.c marca que o que toca agora e um trailer (so ele pode ter ROI fora da tela).
 void   video_tpk_trailer_marcar(int sim);
+void   video_tpk_cartao_marcar(int sim);   // o destino e o furo do cartao da home
 int    video_recorte_fonte_trailer(void);   // so o trailer: o ajuste em execucao
 #else
 static inline int video_recorte_fonte_trailer(void) { return video_recorte_fonte(); }

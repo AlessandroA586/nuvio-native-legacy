@@ -360,6 +360,7 @@ int  video_iniciar_auto(void) { return hAbrir != NULL; }
 int  video_registro_negado(void) { return 0; }
 
 static int emTrailer = 0;   // ver video_tpk_trailer_marcar
+static int emCartao = 0;    // ver video_tpk_cartao_marcar
 // Abre urlAtual no host. Serve a fonte nova e ao recarregar da reconexao.
 static int abrirSessao(void) {
   // video_iniciar() NAO e chamada no .tpk (so video.c, o ramo da LG, a chama;
@@ -381,7 +382,7 @@ static int abrirSessao(void) {
   legendaLimpar(1);
   legendaMarcarEnvio(-1);
   if (travaLeg) { SDL_LockMutex(travaLeg); legCueSessao = 0; legAbriuEm = SDL_GetTicks(); SDL_UnlockMutex(travaLeg); }
-  emTrailer = 0;
+  emTrailer = emCartao = 0;
   temRoi = 0;
   sessao++;
   velEnviada = 100;   // Player novo no host: nasce em 1x
@@ -637,7 +638,7 @@ void video_bombear(void) {
   }
 }
 void video_parar(void) {
-  emTrailer = 0;
+  emTrailer = emCartao = 0;
   temRoi = 0;
   capmkv_zerar();   // fio de capitulos em voo nao alimenta o proximo titulo
   audioPend = legPend = -1; comecou = 0; comecouEm = 0; audioComecou = 0;
@@ -718,6 +719,8 @@ static int zoomRoi = 0;
 // zerado a cada abertura e em video_parar. So informativo desde o #290: com o
 // ajuste ligado o player tambem ganha ROI fora da tela.
 void video_tpk_trailer_marcar(int sim) { emTrailer = sim ? 1 : 0; }
+// #471: o destino atual e o furo do cartao da home (trailer.c, trailer_no_cartao).
+void video_tpk_cartao_marcar(int sim) { emCartao = sim ? 1 : 0; }
 void video_tpk_zoom_roi_definir(int ligado) {
   ligado = ligado ? 1 : 0;
   if (ligado == zoomRoi) return;
@@ -744,14 +747,10 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
 
   // Sem as dimensoes do quadro, ou sem recorte de verdade, o destino cru serve.
   if (qw < 2.0 || qh < 2.0 || sw <= 0 || sh <= 0) { temRoi = 0; video_janela(dx, dy, dw, dh); return; }
-  // Nenhuma familia tem prova visual de cover automatico. ROI dentro do
-  // painel nao prova imagem nas S90C/S90D; sem opt-in usa letterbox.
-  if (emTrailer && ((!NV_TPK_ZOOM_ROI && !zoomRoi) ||
-      (sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh))) {
-    trailerEncaixar(dx, dy, dw, dh);
-    return;
-  }
-  // Quadro inteiro do player preserva os modos Original/Esticar.
+  // Trailer do CARTAO: quadro inteiro encaixado (ver video_tpk_cartao_marcar).
+  // Hero, detalhe e tela cheia seguem o caminho de sempre, abaixo.
+  if (emTrailer && emCartao) { trailerEncaixar(dx, dy, dw, dh); return; }
+  // Recorte que cobre o quadro inteiro E o caso sem zoom: mesma coisa.
   if (sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh) { temRoi = 0; video_janela(dx, dy, dw, dh); return; }
 
   ex = (double)dw / (double)sw;

@@ -104,9 +104,17 @@ int main(void) {
   nj = 0; video_recorte_reaplicar();
   if (nj) { printf("FALHA reaplicar mandou %d,%d %dx%d\n", jx, jy, jw, jh); falhas++; }
   else printf("ok   reaplicar nao manda nada\n");
-  // P2: portrait cover cannot fit the panel. Never stretch it into the card.
-  nv_tpk_video_evento(6, 1080, 1920);
+  // P1: hero/detail/fullscreen trailers keep the raw destination: a 4:3 frame
+  // into 1920x1080 stays the full-screen LetterBox path, never a smaller ROI.
+  nv_tpk_video_evento(6, 1440, 1080);
   video_tpk_trailer_marcar(1);
+  video_janela_fonte(0, 0, 1440, 1080, 0, 0, 1920, 1080);
+  confere("P1 non-card trailer keeps the raw fullscreen destination", 0, 0, 1920, 1080);
+  video_janela_fonte(0, 0, 1440, 1080, 100, 100, 960, 540);
+  confere("P1 non-card trailer keeps the raw destination", 100, 100, 960, 540);
+  // P2: portrait cover cannot fit the panel. Never stretch it into the card.
+  video_tpk_cartao_marcar(1);
+  nv_tpk_video_evento(6, 1080, 1920);
   video_janela_fonte(0, 656, 1080, 606, 400, 200, 960, 540);
   confere("P2 portrait trailer falls back to proportional fit", 728, 200, 304, 540);
   // A panel-contained ROI is not proof of visible video on this family.
@@ -116,6 +124,7 @@ int main(void) {
   confere("unproven model family uses letterbox at panel edge", 40, 469, 360, 202);
   video_janela_fonte(600, 0, 720, 1080, 800, 300, 360, 540);
   confere("unproven model family uses letterbox even with ROI in panel", 800, 469, 360, 202);
+  video_tpk_cartao_marcar(0);
   video_tpk_trailer_marcar(0);
 #endif
   // P1: legacy hosts must also invalidate a cached crop on repositioning.
