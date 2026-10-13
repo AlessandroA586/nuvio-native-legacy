@@ -1618,7 +1618,7 @@ static void botaoExibicao(float a, float x0) {
   int cor = f > 0.5f ? ajustes_tinta_foco() : 214;
   TxtLinha t = txt_linha_corta(TXT_HERO_META, LAY_NOME[lay], cor, cor, cor, 255, maxW - 70.0f);
   // VITRINE: no canto de cima, a direita do nome da colecao.
-  if (lay == VT_LAY_VITRINE) { x = NV_TELA_W - 104.0f - (t.w + 70.0f); y = 40.0f; }
+  if (lay == VT_LAY_VITRINE) { x = NV_TELA_W - NV_ILHA_MARGEM_D - NV_ILHA_REP_W - (t.w + 70.0f); y = NV_ILHA_Y; }
   GfxRect pill = { x, y, t.w + 70.0f, H };
   corFocoFonte(&sr, &sg, &sb);
   // Sobre a arte do destaque a pilula precisa de fundo proprio para ler.
