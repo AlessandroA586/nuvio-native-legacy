@@ -345,7 +345,6 @@ static Uint32 trailerPrazo = 0;
 // 03/10: "pode abrir por cima"). Antes a tecla ligava `saindo` junto e a
 // pagina fechava para a barra abrir sobre a tela de baixo. Voltar/DIREITA na
 // barra devolvem o foco aqui; um destino escolhido fecha a pagina (app.c).
-static int    pediuSocial = 0; // CIMA no alto da pagina: abrir Salvos/Avisos (ver app.c)
 static int    pediuMenu = 0;   // ESQUERDA na borda: abrir a barra por cima (ver app.c)
 // A barra esta aberta por cima (detail_sob_menu): o trailer segue tocando,
 // MUDO, e o som volta quando ela fecha. `somAntesMenu` lembra se tinha som.
@@ -1670,7 +1669,10 @@ static int carDesenhaFundo(void) {
 
 int detail_aberto(void) { return aberto; }
 int detail_relogio_oculto(void) { return aberto && carro && !carCheia && nivel == 0; }
-int detail_pediu_social(void) { int p = pediuSocial; pediuSocial = 0; return p; }
+// #407: detail_pediu_social saiu (CIMA no topo nao abre mais o painel); a
+// accessor fica para o linkage e diz 0, para o caminho de app.c nao crescer
+// um #ifdef a mais por causa de um atalho que nao existe mais.
+int detail_pediu_social(void) { return 0; }
 
 // 0..1 de quanto o detalhe ja tomou a tela. A home le isto para DESCER as
 // fileiras enquanto ele entra: e o movimento que o dono descreve como "so os
@@ -2888,7 +2890,10 @@ void detail_evento(const SDL_Event *e) {
       if (amigosDoTitulo(&at)) { focoAmigos = 1; return; }
     }
     if (k == SDLK_UP && reacao_detalhe_abrir(cat_item(idx))) return;
-    if (k == SDLK_UP && !e->key.repeat) { pediuSocial = 1; return; }
+    // #407: CIMA no alto da pagina NAO abre mais o painel de Salvos/Avisos.
+    // O atalho de cef8c3e8 (alcançar o painel sem tecla AZUL) ficou
+    // redundante com o relogio clicavel e com o CH+/AZUL, e a seta no topo da
+    // pagina abrindo um menu surpreendia (relato #407, Samsung).
     // CARROSSEL: a primeira seta para baixo so estica o cartao (ver carCheia).
     if (k == SDLK_DOWN && carro && !carCheia) { carCheia = 1; return; }
     if (k == SDLK_DOWN) {
