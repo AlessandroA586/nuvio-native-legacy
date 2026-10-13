@@ -748,6 +748,12 @@ static void atualizarHora(void) {
 #define DUO_SOBRE 8.0f          // a capa entra 8 px por cima do rosto
 #define PONTO_VIVO 10.0f
 
+float ilha_relogio_largura(void) {
+  atualizarHora();
+  return (PAD_E + PAD_D + (float)txt_largura(TXT_PG_RELOGIO, hora) +
+          (pontoEnquete ? 12.0f + PONTO_ENQ : 0.0f)) * gfx_escala_ui();
+}
+
 // --- a frase com enfase --------------------------------------------------------
 // "Ana recomendou Fallout": o nome e o titulo em negrito (TXT_ILHA_FORTE, o
 // mesmo corpo do TXT_BODY em Bold), o resto em Medium. Uma textura por trecho,

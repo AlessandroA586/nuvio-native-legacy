@@ -13,6 +13,7 @@
 // Icones derivados dos SVGs originais do sidebar, com alpha e recortes reais.
 #include "horafmt.h"
 #include "menu.h"
+#include "ilha.h"
 #include "iconeapp.h"
 #include "perfis.h"
 #include "tex_cache.h"
@@ -1293,7 +1294,7 @@ static void tvDesenhar(void) {
 #define TOPO_ROT_FIM  MK(16.0f)
 #define TOPO_FIO      MK(13.0f)    // vao do fio antes do perfil
 #define TOPO_AVATAR   MK(40.0f)
-#define TOPO_RELOGIO  (180.0f / NV_MENU_ESCALA)      // vao de cada lado: a ilha do relogio (canto direito) pede ~170, e a barra centrada o espelha
+#define TOPO_RELOGIO  ((NV_ILHA_MARGEM_D * gfx_escala_ui() + ilha_relogio_largura() + 16.0f) / NV_MENU_ESCALA)
 
 // A CAPSULA DE SELECAO DESLIZA entre os itens: uma posicao fracionaria `topoPos`
 // (indice na ordem dos itens visiveis), do item de partida ao de chegada em
