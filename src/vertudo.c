@@ -232,8 +232,9 @@ static const char *wordmarkServico(void) {
   return u;
 }
 // O degrade do destaque na cor da marca, por cima da arte e sob o texto. Cor
-// ja escura (marcastream.h): o branco do texto segue passando de 4,5:1.
-static void degradeMarca(float a) {
+// ja escura (marcastream.h): o branco do texto segue passando de 4,5:1. `h` e
+// a altura: a faixa do cabecalho, ou a tela toda sob a arte inteira da Dinamica.
+static void degradeMarca(float a, float h) {
   const MarcaStream *m = marcaServico();
   float c[3];
   CorvivaPaleta p;
@@ -244,7 +245,7 @@ static void degradeMarca(float a) {
     if (!grupo("Streaming") || !*(w = wordmarkServico()) || !corviva_paleta(w, &p) || !p.ok) return;
     c[0] = p.grad[2][0] * 0.55f; c[1] = p.grad[2][1] * 0.55f; c[2] = p.grad[2][2] * 0.55f;
   }
-  gfx_rect((GfxRect){ 0.0f, 0.0f, NV_TELA_W, NV_SHELF_TOP }, 0, GFX_FUNDO_DIN, 0.15f, 0, 0, 0,
+  gfx_rect((GfxRect){ 0.0f, 0.0f, NV_TELA_W, h }, 0, GFX_FUNDO_DIN, 0.15f, 0, 0, 0,
            c[0], c[1], c[2], 0.78f * a);
 }
 
@@ -959,6 +960,8 @@ static float vitPasso(void) {
   home_vitrine_medida(&w, &h, &p, &rot);
   return VIT_TITULO_H + h + rot + 40.0f;
 }
+// Topo da primeira fileira: o do layout da Home (home_vitrine_topo).
+static float vitTopo(void) { return home_vitrine_topo(vitPasso()); }
 
 static void vitAtualizar(float dt, Uint32 agora) {
   float w, h, passo, rot, alvo;
@@ -1262,7 +1265,7 @@ static void fundoColecao(float a) {
 }
 static void themeBackground(float a) {
   fundoColecao(a);
-  degradeMarca(a);
+  degradeMarca(a, NV_SHELF_TOP);
   if(collection) {
     if(collection->editorial) {
       GLuint art=tex_obter_hero(collection->detailHero);
@@ -1723,7 +1726,7 @@ static void botaoExibicao(float a, float x0) {
 }
 
 static void vitDesenhar(float a, float x0) {
-  float w, h, passo, rot, pas = vitPasso();
+  float w, h, passo, rot, pas = vitPasso(), topo = vitTopo();
   CatItem *hero = vitChave(vitHeroAtual), *ant = vitChave(vitHeroAnt);
   int arte = 0;
   home_vitrine_medida(&w, &h, &passo, &rot);
@@ -1736,18 +1739,18 @@ static void vitDesenhar(float a, float x0) {
     arte |= home_vitrine_arte(hero, a * (ant ? vitHeroEntra : 1.0f));
   }
   if (!arte) fundoColecao(a);
-  degradeMarca(a);
-  if (hero) home_vitrine_texto(hero, a);
+  degradeMarca(a, home_vitrine_layout() == HOME_LAYOUT_DINAMICA ? NV_TELA_H : NV_SHELF_TOP);
+  if (hero) home_vitrine_texto(hero, topo, a);
 
   // As fileiras, recortadas abaixo do texto do destaque.
-  gfx_recorte(0.0f, NV_SHELF_TOP - 8.0f, NV_TELA_W, NV_TELA_H - NV_SHELF_TOP + 8.0f);
+  gfx_recorte(0.0f, topo - 8.0f, NV_TELA_W, NV_TELA_H - topo + 8.0f);
   for (int r = 0; r < vitN; r++) {
-    float y = NV_SHELF_TOP + r * pas - vitScroll, cy = y + VIT_TITULO_H;
+    float y = topo + r * pas - vitScroll, cy = y + VIT_TITULO_H;
     float ac = a * (r == vitFR ? 1.0f : 0.78f);
     VitLin *l = &vitLin[r];
     TxtLinha tt;
     if (y > NV_TELA_H) break;
-    if (y + pas < NV_SHELF_TOP - 8.0f) continue;
+    if (y + pas < topo - 8.0f) continue;
     tt = txt_linha_corta(TXT_ROW_TITULO, l->nome[0] ? l->nome : "—", 245, 246, 249, 255, 900);
     txt_desenhar_alpha(tt, x0, y, ac);
     if (l->n > 0) {
@@ -1788,7 +1791,7 @@ static void vitDesenhar(float a, float x0) {
       : desc_vertudo_erro() ? "Não foi possível carregar. OK para tentar novamente."
       : desc_vertudo_carregando() ? "Carregando títulos…" : "Nenhum título nesta lista.";
     txt_desenhar_alpha(txt_linha_corta(TXT_DET_META2, msg, 196, 202, 213, 255, 1200),
-                       x0, NV_SHELF_TOP + 20.0f, a);
+                       x0, topo + 20.0f, a);
   }
   gfx_sem_recorte();
 

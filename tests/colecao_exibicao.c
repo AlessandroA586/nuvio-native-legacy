@@ -240,6 +240,21 @@ int main(void) {
   assert(celY[3] - celY[1] - celH[1] >= 28.0f - 0.01f);
   assert(fabsf(celH[0] - (celH[1] * 2.0f + VT_GAP_X)) < 0.01f);   // grande = dois pequenos + vao
 
+  // 10. VITRINE NO LAYOUT DA HOME (13/10): o destaque e as fileiras seguem a
+  // Moderna, o Padrao (fileiras rente ao banner) e a Dinamica (arte inteira,
+  // a fileira em foco no pe da tela).
+  for (L = HOME_LAYOUT_MODERNA; L < HOME_LAYOUT_N; L++) {
+    char cam[700]; FILE *f;
+    snprintf(cam, sizeof cam, "%s/ajustes.txt", dados_dir());
+    f = fopen(cam, "w"); assert(f);
+    fprintf(f, "homeLayoutLocal %d\n", L); fclose(f);
+    ajustes_dir(dados_dir());
+    assert(ajustes_home_layout() == L && home_vitrine_layout() == L);
+    if (L == HOME_LAYOUT_MODERNA) assert(vitTopo() == NV_SHELF_TOP);
+    if (L == HOME_LAYOUT_PADRAO) assert(vitTopo() == NV_PAD_TOPO_FIL);
+    if (L == HOME_LAYOUT_DINAMICA) assert(vitTopo() > NV_SHELF_TOP && vitTopo() + vitPasso() == NV_TELA_H);
+  }
+
   printf("colecao_exibicao: ok\n");
   return 0;
 }

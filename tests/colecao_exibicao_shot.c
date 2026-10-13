@@ -261,7 +261,26 @@ int main(int argc, char **argv) {
     tabFocus = 1; tabCursor = nAbas();
     snprintf(nome, sizeof nome, "%s-9-streaming-botao.bmp", saida);
     captura(nome, 60);
-    tabFocus = 0; }
+    tabFocus = 0;
+    // A Vitrine segue o layout da Home: uma foto em cada um.
+    lay = VT_LAY_VITRINE; layEscolha = VT_LAY_VITRINE; celLay = -1;
+    vitIniciar();
+    for (i = 0; i < vitN; i++) {
+      int k;
+      vitLin[i].estado = VIT_PRONTA; vitLin[i].n = 12;
+      for (k = 0; k < 12; k++) vitBuf[i * vitCap + k] = semente[(i * 5 + k) % NF];
+    }
+    vitCarga = vitN; vitMexeu = 1; vitFR = 0; vitFC = 2;
+    for (L = HOME_LAYOUT_MODERNA; L < HOME_LAYOUT_N; L++) {
+      a = fopen(cam, "w"); assert(a);
+      fprintf(a, "idioma 0\nhomeLayoutLocal %d\n", L);
+      if (getenv("NUVIO_SHOT_FONTE")) fprintf(a, "fonteInterface %d\n", atoi(getenv("NUVIO_SHOT_FONTE")));
+      fclose(a);
+      ajustes_dir(dados_dir());
+      snprintf(nome, sizeof nome, "%s-9-streaming-vitrine-%s.bmp", saida,
+               (const char *[]){ "moderna", "padrao", "dinamica" }[L]);
+      captura(nome, 120);
+    } }
 
   tex_encerrar();
   txt_encerrar();
