@@ -61,6 +61,7 @@ static const Item TELA[] = {
     ROT("Segunda legenda"),
       OPC(AJ_LEG_LINGUA2),
       OPC(AJ_LEG2_POS), OPC(AJ_LEG2_TAMANHO), OPC(AJ_LEG2_COR), OPC(AJ_LEG2_FUNDO), OPC(AJ_LEG2_BORDA),
+      OPC(AJ_LEG_CONTORNO_COR),
     MAIS(),
     ROT("Idiomas"), OPC(AJ_TMDB_IDIOMA),
 
