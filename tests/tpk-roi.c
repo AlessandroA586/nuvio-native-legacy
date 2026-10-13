@@ -104,19 +104,30 @@ int main(void) {
   nj = 0; video_recorte_reaplicar();
   if (nj) { printf("FALHA reaplicar mandou %d,%d %dx%d\n", jx, jy, jw, jh); falhas++; }
   else printf("ok   reaplicar nao manda nada\n");
-  // #471: trailer no cartao e cover. Cartaz 360x540 perto da borda esquerda:
-  // o ROI centrado (-260) sairia da tela; vai deslizado para dentro e ainda
-  // cobre o cartaz (sem barras), sem esticar.
+  // P2: portrait cover cannot fit the panel. Never stretch it into the card.
+  nv_tpk_video_evento(6, 1080, 1920);
+  video_tpk_trailer_marcar(1);
+  video_janela_fonte(0, 656, 1080, 606, 400, 200, 960, 540);
+  confere("P2 portrait trailer falls back to proportional fit", 728, 200, 304, 540);
+  // A panel-contained ROI is not proof of visible video on this family.
   nv_tpk_video_evento(6, 1920, 1080);
   video_tpk_trailer_marcar(1);
   video_janela_fonte(600, 0, 720, 1080, 40, 300, 360, 540);
-  confere("trailer no cartao: roi puxado para a tela, cobre o cartaz", 0, 300, 960, 540);
-  assert(jx <= 40 && jx + jw >= 400 && jy <= 300 && jy + jh >= 840);
-  // Centrado cabe: fica centrado.
+  confere("unproven model family uses letterbox at panel edge", 40, 469, 360, 202);
   video_janela_fonte(600, 0, 720, 1080, 800, 300, 360, 540);
-  confere("trailer no cartao: centrado quando cabe", 500, 300, 960, 540);
+  confere("unproven model family uses letterbox even with ROI in panel", 800, 469, 360, 202);
   video_tpk_trailer_marcar(0);
 #endif
+  // P1: legacy hosts must also invalidate a cached crop on repositioning.
+  nv_tpk_video_evento(6, 1920, 1080);
+  video_janela_fonte(480, 270, 960, 540, 400, 300, 640, 360);
+  nj = 0; video_recorte_reaplicar();
+  assert(nj == 1);
+  nj = 0; video_recorte_reaplicar();
+  assert(nj == 1);   // replay itself must keep the crop cached
+  video_janela(0, 0, 1920, 1080);
+  nj = 0; video_recorte_reaplicar();
+  assert(nj == 0);
   // Quadro inteiro num destino pequeno continua passando cru.
   nv_tpk_video_evento(6, 1920, 1080);
   video_janela_fonte(0, 0, 1920, 1080, 10, 10, 640, 360);

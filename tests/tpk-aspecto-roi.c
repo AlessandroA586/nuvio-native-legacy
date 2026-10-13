@@ -42,6 +42,9 @@ int main(void) {
 #else
   check(-328,0,2582,1080,0,0,1920,1080);
 #endif
+  // P1: a new destination invalidates the cached card/player crop.
+  video_janela(0,0,1920,1080);
+  nj=0; video_recorte_reaplicar(); assert(nj==0);
   nv_tpk_video_evento(6,1440,1080);
   video_janela_fonte(0,134,1440,810,0,0,1920,1080);
 #ifdef NV_TPK40
@@ -61,6 +64,14 @@ int main(void) {
 #ifndef NV_TPK40
   confere("trailer opt-in unchanged",0,0,1920,1080);
 #endif
+  // P2: a vertical trailer cannot cover 960x540 within a 1080-high panel.
+  nv_tpk_video_evento(6,1080,1920);
+  video_janela_fonte(0,656,1080,606,400,200,960,540);
+  confere("P2 portrait fit with aspect bridge",728,200,304,540);
+  nj=0; video_recorte_reaplicar(); assert(nj==0);
+  nv_tpk_video_evento(6,1920,1080);
+  video_janela_fonte(600,0,720,1080,40,300,360,540);
+  confere("unproven family uses proportional fit",40,469,360,202);
   assert(falhas==0);
   puts("tpk-aspecto-roi: PASS"); return 0;
 }

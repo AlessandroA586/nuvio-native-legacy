@@ -570,10 +570,22 @@ static int heroTrailerTocando(void);
 // A espera e ajuste; a janela da Apple (NV_TRAILER_HERO_JANELA_MS) conta a
 // partir dela, senao uma espera longa venceria a janela antes de abrir.
 static Uint32 heroTrailerEspera(void) { return ajustes_trailer_hero_espera_ms(); }
-// ONDE O VIDEO FICA DENTRO DO CARTAZ: o cartaz inteiro. O "cover" e de quem
-// toca (trailer_recorte no plano; object-fit no <video>); no .tpk o ROI do
-// plano e puxado para dentro da tela em video_tpk.c (#471).
-static GfxRect cartaoVideoRect(GfxRect c) { return c; }
+// No .tpk nenhuma familia tem prova visual de cover seguro: encaixa o
+// quadro e abre so esse furo, sem expor o plano nas barras do cartaz.
+static GfxRect cartaoVideoRect(GfxRect c) {
+#if defined(NV_TPK) && !defined(__EMSCRIPTEN__)
+  float asp = (video_largura() > 0 && video_altura() > 0)
+            ? (float)video_largura() / (float)video_altura() : 16.0f / 9.0f;
+  GfxRect v = c;
+  if (c.w / c.h > asp) { v.w = c.h * asp; v.x = c.x + (c.w - v.w) * 0.5f; }
+  else                 { v.h = c.w / asp; v.y = c.y + (c.h - v.h) * 0.5f; }
+  v.x = (float)(int)(v.x + 0.5f); v.y = (float)(int)(v.y + 0.5f);
+  v.w = (float)((int)(v.w + 0.5f) & ~1); v.h = (float)((int)(v.h + 0.5f) & ~1);
+  return v;
+#else
+  return c;
+#endif
+}
 static Uint32 heroTrailerMaxEspera(void) { return heroTrailerEspera() + NV_TRAILER_HERO_JANELA_MS; }
 
 static Uint32 heroTrailerPrazoPreparacao(Uint32 agora) {
@@ -6209,7 +6221,7 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
           // TRAILER NO CARTAZ (modo No card): o furo arredondado DEPOIS do anel
           // (que fica inteiro, por fora) e ANTES da arte, que sai com 1 - fade
           // por cima — o video entra por baixo dela, como no destaque. No .tpk o
-          // quadro cobre o cartaz (cover), entao o furo e o proprio cartaz.
+          // quadro fica encaixado, com barras pretas fora do furo.
           float aArteCard = aArte;
           if (k->trailer > 0.004f) {
             GfxRect v = cartaoVideoRect(card);

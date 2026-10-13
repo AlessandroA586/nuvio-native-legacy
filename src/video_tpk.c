@@ -655,7 +655,10 @@ void video_buscar(double s) {
   if (hBuscar) hBuscar((int)(s * 1000.0));
   terminou = 0;
 }
-void video_janela(int x, int y, int w, int h) { if (hJanela) hJanela(x, y, w, h); }
+void video_janela(int x, int y, int w, int h) {
+  temRoi = 0;   // reposicionar invalida o recorte do destino anterior
+  if (hJanela) hJanela(x, y, w, h);
+}
 
 // RECORTE DE FONTE EMULADO PELO RETANGULO DE DESTINO (ROI).
 //
@@ -729,18 +732,11 @@ static unsigned roiForaLogado;
 static int roiNaTela(int x, int y, int w, int h) {
   return w > 0 && h > 0 && x >= 0 && y >= 0 && x + w <= TPK_TELA_W && y + h <= TPK_TELA_H;
 }
-// #471 (cover no cartao): o ROI que cobre o destino e maior que ele e, perto da
-// borda, sai da tela (o plano apaga). Desliza o ROI, sem mudar o tamanho, para
-// dentro do painel mantendo o destino coberto. Sem espaco (ROI maior que a tela)
-// nao mexe e o chamador cai no destino.
-static int deslizaNaTela(int *p, int n, int d, int dn, int tela) {
-  int lo = d + dn - n, hi = d;
-  if (n > tela) return 0;
-  if (lo < 0) lo = 0;
-  if (hi > tela - n) hi = tela - n;
-  if (*p < lo) *p = lo;
-  if (*p > hi) *p = hi;
-  return 1;
+static void trailerEncaixar(int x, int y, int w, int h) {
+  int fw = w, fh = h;
+  if ((double)w * altura > (double)h * largura) fw = (int)((double)h * largura / altura + 0.5) & ~1;
+  else fh = (int)((double)w * altura / largura + 0.5) & ~1;
+  video_janela(x + (w - fw) / 2, y + (h - fh) / 2, fw, fh);
 }
 void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh) {
   double qw = largura, qh = altura, ex, ey;
@@ -748,7 +744,14 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
 
   // Sem as dimensoes do quadro, ou sem recorte de verdade, o destino cru serve.
   if (qw < 2.0 || qh < 2.0 || sw <= 0 || sh <= 0) { temRoi = 0; video_janela(dx, dy, dw, dh); return; }
-  // Recorte que cobre o quadro inteiro E o caso sem zoom: mesma coisa.
+  // Nenhuma familia tem prova visual de cover automatico. ROI dentro do
+  // painel nao prova imagem nas S90C/S90D; sem opt-in usa letterbox.
+  if (emTrailer && ((!NV_TPK_ZOOM_ROI && !zoomRoi) ||
+      (sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh))) {
+    trailerEncaixar(dx, dy, dw, dh);
+    return;
+  }
+  // Quadro inteiro do player preserva os modos Original/Esticar.
   if (sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh) { temRoi = 0; video_janela(dx, dy, dw, dh); return; }
 
   ex = (double)dw / (double)sw;
@@ -757,10 +760,6 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
   H  = (int)(qh * ey + 0.5);
   X  = (int)(dx - sx * ex + 0.5);
   Y  = (int)(dy - sy * ey + 0.5);
-
-  if (emTrailer && !NV_TPK_ZOOM_ROI && !zoomRoi && !roiNaTela(X, Y, W, H) && roiNaTela(dx, dy, dw, dh) &&
-      deslizaNaTela(&X, W, dx, dw, TPK_TELA_W) && deslizaNaTela(&Y, H, dy, dh, TPK_TELA_H))
-    printf("[video] tpk: roi do trailer puxado para a tela\n");
 
   printf("[video] tpk recorte %d,%d %dx%d de %.0fx%.0f -> roi %d,%d %dx%d\n",
          sx, sy, sw, sh, qw, qh, X, Y, W, H);
@@ -795,7 +794,7 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
 
   ultRoiX = X; ultRoiY = Y; ultRoiW = W; ultRoiH = H; temRoi = 1;
   ultLegX=lx; ultLegY=ly; ultLegW=lw; ultLegH=lh;
-  video_janela(X, Y, W, H);
+  if (hJanela) hJanela(X, Y, W, H);
 }
 // #290 ("aspect ratio still doesn't work"): sem recorte o ciclo do player so
 // oferecia modos que cabem na tela, e num 16:9 todos dao o mesmo retangulo. O
@@ -809,7 +808,7 @@ int  video_recorte_fonte_trailer(void) { return NV_TPK_ZOOM_ROI || zoomRoi; }
 void video_recorte_reaplicar(void) {
   if (!temRoi) return;
   if (hAspecto) hAspecto(ultRoiX,ultRoiY,ultRoiW,ultRoiH,ultLegX,ultLegY,ultLegW,ultLegH);
-  else video_janela(ultRoiX,ultRoiY,ultRoiW,ultRoiH);
+  else if (hJanela) hJanela(ultRoiX,ultRoiY,ultRoiW,ultRoiH);
 }
 const char *video_url_atual(void) { return urlAtual; }
 double video_pos(void) { return (hPos && pronto) ? hPos() / 1000.0 : 0; }

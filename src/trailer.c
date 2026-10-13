@@ -22,7 +22,7 @@ static GfxRect rect;
 static char   fonteAtual[1024];
 static Uint32 abertoEm;   // SDL_GetTicks da abertura da fonte atual, para o log
 static int    dono;       // TRAILER_DONO_* (trailer.h)
-static int    noCartao;   // trailer_no_cartao: no .tpk recorta sempre (cover no cartao)
+static int    noCartao;   // trailer_no_cartao: quadro inteiro encaixado no .tpk
 static char   donoImdb[32];
 
 void trailer_recorte(int vw, int vh, float z, float dw, float dh,
@@ -339,8 +339,9 @@ static void nativoAplicar(void) {
     trailer_recorte(video_largura(), video_altura(), ajustes_trailer_zoom(),
                     rect.w, rect.h, &sx, &sy, &sw, &sh);
 #ifdef NV_TPK
-    // No cartao o .tpk recorta sempre (cover no retangulo do cartao; o ROI que
-    // sai da tela e puxado para dentro em video_tpk.c), com ou sem o ajuste.
+    // Cover no cartao ainda sem prova visual por familia: quadro inteiro
+    // com encaixe proporcional, inclusive com zoom experimental ligado.
+    if (noCartao) { sx = sy = 0; sw = video_largura(); sh = video_altura(); }
     if (video_recorte_fonte_trailer() || noCartao)
 #else
     if (video_recorte_fonte_trailer())
@@ -462,6 +463,7 @@ int trailer_continuar(GfxRect r, int som) {
   // Copia: trailer_abrir le `fonte` e grava fonteAtual. Mesma fonte = nao e
   // "nova": so o volume e o retangulo (com o recorte do zoom) mudam.
   snprintf(f, sizeof f, "%s", fonteAtual);
+  noCartao = 0;   // o destino ja pertence ao detalhe antes de recalcular
   trailer_abrir(f, r, som, 0);
   printf("[trailer] continua %.60s %s\n", f, comSom ? "com som" : "mudo");
   fflush(stdout);
