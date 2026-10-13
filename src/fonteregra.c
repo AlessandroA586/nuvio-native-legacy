@@ -98,10 +98,42 @@ static const char *const MODELOS[] = {
 int fonteregra_modelos(void) { return (int)(sizeof MODELOS / sizeof *MODELOS); }
 const char *fonteregra_modelo(int i) { return i > 0 && i < fonteregra_modelos() ? MODELOS[i] : ""; }
 
+// --- resposta lembrada por texto ---------------------------------------------
+// A lista de fontes e TROCADA INTEIRA a cada addon que responde
+// (stream_definir_lista_idade), e o cache por indice de streams.c cai junto:
+// sem isto, cada atualizacao rodava a regex de novo em TODAS as fontes, e na TV
+// isso crescia com o tamanho da regex. Aqui a resposta fica pelo hash do texto
+// (FNV-1a de 64 bits) ate a regex mudar. So o resultado da regex: permitidos e
+// modo continuam sendo conferidos a cada chamada.
+#define LEMBRA_N 4096          // potencia de 2; 64 KB
+#define LEMBRA_SONDA 8
+typedef struct { unsigned long long h; signed char m; } Lembra;
+static Lembra lembra[LEMBRA_N];
+
+static unsigned long long hashTexto(const char *s) {
+  unsigned long long h = 1469598103934665603ULL;
+  for (; *s; s++) { h ^= (unsigned char)*s; h *= 1099511628211ULL; }
+  return h | 1;   // 0 = posicao vazia
+}
+static int casaLembrandoSemTrava(const char *texto) {
+  unsigned long long h = hashTexto(texto ? texto : "");
+  unsigned ini = (unsigned)h & (LEMBRA_N - 1), k, pos = ini;
+  int m;
+  for (k = 0; k < LEMBRA_SONDA; k++) {
+    Lembra *e = &lembra[(ini + k) & (LEMBRA_N - 1)];
+    if (e->h == h) return e->m;
+    if (!e->h) { pos = (ini + k) & (LEMBRA_N - 1); break; }
+  }
+  m = casa(reJs, texto);
+  lembra[pos].h = h; lembra[pos].m = (signed char)m;
+  return m;
+}
+
 // --- estado -----------------------------------------------------------------
 static void recompilarSemTrava(void) {
   regexjs_liberar(reJs); reJs = NULL;
   reEstado = compilar(padrao, &reJs);
+  memset(lembra, 0, sizeof lembra);
 }
 
 static void limparNome(char *dst, size_t tam, const char *src) {
@@ -350,7 +382,7 @@ int fonteregra_grupo(const FonteRegraCfg *c, const char *nome, int plugin, const
   pthread_mutex_lock(&trava);
   perm = permitidoSemTrava(c, nome, plugin);
   if (c->regexModo != FR_REGEX_DESLIGADA && reEstado == 1) {
-    int m = casa(reJs, texto);
+    int m = casaLembrandoSemTrava(texto);
     if (!m && c->regexModo == FR_REGEX_EXIGIR) { pthread_mutex_unlock(&trava); return -1; }
     sub = !m;
   }

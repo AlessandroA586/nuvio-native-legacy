@@ -99,6 +99,32 @@ static void lookahead(void) {
     assert(fonteregra_grupo(&c, "Torrentio", 0, longo) == 0);
     assert(fonteregra_definir_regex("") == 0);
   }
+  // A resposta lembrada por texto (fonteregra.c, casaLembrandoSemTrava) cai
+  // quando a regex muda: o mesmo texto, regex trocada, resposta nova.
+  { FonteRegraCfg c = cfg(FR_ESCOPO_TODAS, FR_REGEX_EXIGIR, 1);
+    const char *dts = "AIOStreams FHD\n\xF0\x9F\x8E\xA7 DTS-HD MA\nMovie.1080p.BluRay.mkv";
+    const char *ac3 = "AIOStreams FHD\n\xF0\x9F\x8E\xA7 DD+ Atmos\nMovie.1080p.WEB-DL.mkv";
+    int k;
+    assert(fonteregra_definir_regex("^(?![\\s\\S]*\\bDTS)") == 1);
+    for (k = 0; k < 3; k++) {   // a segunda e a terceira vem da memoria
+      assert(fonteregra_grupo(&c, "AIOStreams", 0, dts) == -1);
+      assert(fonteregra_grupo(&c, "AIOStreams", 0, ac3) == 0);
+    }
+    assert(fonteregra_definir_regex("^(?=[\\s\\S]*\\bDTS)") == 1);
+    assert(fonteregra_grupo(&c, "AIOStreams", 0, dts) == 0);
+    assert(fonteregra_grupo(&c, "AIOStreams", 0, ac3) == -1);
+    // Preferir: o mesmo resultado lembrado, so o grupo muda.
+    c.regexModo = FR_REGEX_PREFERIR;
+    assert(fonteregra_grupo(&c, "AIOStreams", 0, dts) == 0);
+    assert(fonteregra_grupo(&c, "AIOStreams", 0, ac3) == 1);
+    // Muitos textos diferentes (mais que a tabela): a resposta continua certa.
+    c.regexModo = FR_REGEX_EXIGIR;
+    for (k = 0; k < 20000; k++) {
+      char t[96];
+      snprintf(t, sizeof t, "Fonte %d %s", k, k % 3 ? "DD+" : "DTS");
+      assert(fonteregra_grupo(&c, "AIOStreams", 0, t) == (k % 3 ? -1 : 0));
+    }
+    assert(fonteregra_definir_regex("") == 0); }
   // (?= escapado ou dentro de colchete nao e lookahead.
   assert(fonteregra_regex_testar("a\\(?=b", "a=b") != -1);
   // Invalido continua -1 pelo motor proprio.

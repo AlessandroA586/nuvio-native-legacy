@@ -121,6 +121,17 @@ static void grupos(void) {
   // A lembrada continua na frente, mesmo de outro grupo.
   nf = fonteauto_fila_g(FONTEAUTO_MELHOR, 5, 0, pt, NULL, ex, g, 8, fila);
   CONFERE(fila[0] == 0 && fila[1] == 3, "lembrada em grupos: %d %d", fila[0], fila[1]);
+  // ...mas a recusada pelas regras (grupo -1, a regex em "Exigir") nao: uma
+  // fonte DTS lembrada de antes nao passa por cima da regex.
+  nf = fonteauto_fila_g(FONTEAUTO_MELHOR, 5, 4, pt, NULL, ex, g, 8, fila);
+  CONFERE(nf == 4 && fila[0] == 3, "lembrada recusada tocou: %d [%d]", nf, fila[0]);
+  nf = fonteauto_fila_g(FONTEAUTO_PRIMEIRA, 5, 4, pt, NULL, ex, g, 1, fila);
+  CONFERE(nf == 1 && fila[0] == 3, "lembrada recusada (primeira): %d", fila[0]);
+  { FonteautoParcial q;
+    memset(&q, 0, sizeof q);
+    q.modo = FONTEAUTO_MELHOR; q.total = 5; q.preferida = 4; q.algumPendente = 1; q.prefPendente = 1;
+    q.pontos = pt; q.acimaTeto = ac; q.excluida = ex; q.boa = bo; q.grupo = g;
+    CONFERE(!fonteauto_pode_decidir(&q), "lembrada recusada decidiu sozinha"); }
   // Sem grupos e igual a fila de sempre.
   nf = fonteauto_fila_g(FONTEAUTO_MELHOR, 5, -1, pt, NULL, ex, NULL, 1, fila);
   CONFERE(fila[0] == 4, "sem grupos mudou a fila: %d", fila[0]);

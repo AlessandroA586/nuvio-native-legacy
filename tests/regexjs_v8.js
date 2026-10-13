@@ -54,6 +54,43 @@ for (const [n, fundo, max] of [[2500, 3, 14], [1500, 4, 40], [600, 5, 120]]) {
   }
 }
 
+// --- modo m: repeticao de um caractere (O_STAR) --------------------------------
+// ".*", "[\s\S]*", "\w*?"... seguidos de continuacoes variadas, com e sem "^":
+// o caminho em que o motor so tenta a continuacao nas posicoes cujo byte ela
+// pode consumir (montaSeg) e so tenta a posicao 0 quando o padrao comeca com "^".
+// Sem emoji no texto: o V8 casa \W com METADE de um par UTF-16, o motor (UTF-8)
+// nao — diferenca conhecida e sem uso real.
+const STAR = ["." + "*", ".*?", "[\\s\\S]*", "[\\s\\S]*?", "\\w*", "\\W*", "\\s*", "\\S+", "[ab]*", "[^a]*?",
+              "a*", "b+?", "\\d*", "[^\\n]*", "é*", "[\\s.-]?"];
+const SATOM = ["a", "b", "A", "é", "-", "\\.", " ", "\\n", "DTS", "x", "[ab]", "\\d", "\\w", "\\W", ".", "ñ"];
+const SZW = ["\\b", "\\B", "^", "$", ""];
+function scont(d) {
+  const r = rnd();
+  if (d > 2 || r < 0.3) return pick(SZW) + pick(SATOM);
+  if (r < 0.5) return pick(SZW) + "(" + pick(SATOM) + "|" + pick(SATOM) + pick(SATOM) + ")" + pick(SZW);
+  if (r < 0.6) return "(?=" + speca(d + 1) + ")" + pick(SATOM);
+  if (r < 0.7) return "(?!" + speca(d + 1) + ")";
+  if (r < 0.8) return "(?<=" + pick(SATOM) + pick(STAR) + ")" + pick(SATOM);
+  if (r < 0.9) return "";
+  return speca(d + 1);
+}
+function speca(d) { return pick(STAR) + scont(d); }
+const SALFA = ["a", "b", "A", "B", "é", "ñ", "-", ".", " ", "\n", "D", "T", "S", "x", "1", "_", "DTS"];
+for (let k = 0; k < 4000; ) {
+  let p = "";
+  for (let i = 0, n = 1 + Math.floor(rnd() * 3); i < n; i++) {
+    const r = rnd();
+    p += r < 0.2 ? "(?=" + speca(1) + ")" : r < 0.4 ? "(?!" + speca(1) + ")" : speca(0);
+  }
+  if (rnd() < 0.35) p = "^" + p;
+  let re; try { re = new RegExp(p, "i"); } catch (_) { continue; }
+  for (let j = 0; j < 5; j++) {
+    let t = ""; for (let i = 0, n = Math.floor(rnd() * 40); i < n; i++) t += pick(SALFA);
+    out.push(["m", re.test(t) ? 1 : 0, p, esc(t)].join("\t"));
+  }
+  k++;
+}
+
 // --- modo f: regex longas x textos de fonte longos ----------------------------
 function oficial(pattern, text) {
   if (!/[a-z0-9]/i.test(pattern)) return -1;

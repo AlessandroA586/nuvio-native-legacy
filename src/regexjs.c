@@ -9,7 +9,11 @@
 // terceiros.
 
 typedef struct { unsigned lo, hi; } Faixa;
-typedef struct { Faixa *f; int n, cap; int neg; } Classe;
+// `ascii`: a resposta pronta para os 128 primeiros codigos (com neg e sem-caixa
+// ja aplicados), montada ao compilar. O "[\s\S]*" de cada lookahead passa por
+// todo o texto, e conferir as ~20 faixas de \s/\S a cada caractere era quase
+// metade do tempo de uma regex longa.
+typedef struct { Faixa *f; int n, cap; int neg; unsigned char ascii[16]; int pronta; } Classe;
 
 enum { N_VAZIO, N_BYTE, N_ANY, N_CLASSE, N_SEQ, N_ALT, N_REP, N_ASSERT, N_LOOK };
 enum { A_BOL, A_EOL, A_WB, A_NWB };
@@ -41,6 +45,13 @@ struct RegexJs {
   // e tentada (uma lista "\\bESP\\b|\\bLAT\\b|..." de 45 nomes so roda nas letras
   // iniciais deles, nao em cada byte do texto).
   unsigned char primeiro[32]; int temPrimeiro;
+  // CONTINUACAO DE CADA O_STAR: o conjunto de bytes que a continuacao pode
+  // consumir primeiro (seg[in->y - 1]; y = 0 = sem filtro). Recuando o
+  // "[\s\S]*" de "(?![\s\S]*\bDTS)", so as posicoes com "D"/"d" chamam a
+  // continuacao, e nao cada byte do texto.
+  unsigned char (*seg)[32]; int nseg;
+  // "^" logo no inicio (sem a flag m): so a posicao 0 pode casar.
+  int ancorado;
 };
 
 typedef struct {
@@ -574,7 +585,7 @@ void regexjs_liberar(RegexJs *re) {
   int i;
   if (!re) return;
   for (i = 0; i < re->ncls; i++) free(re->cls[i].f);
-  free(re->cls); free(re->prog); free(re->slot); free(re);
+  free(re->cls); free(re->prog); free(re->slot); free(re->seg); free(re);
 }
 
 // Quem pode ser o `pc` de entrada de roda: o inicio do programa, o ramo x de
@@ -605,6 +616,69 @@ static int montaSlots(RegexJs *re, const Em *em) {
   return 1;
 }
 
+// Bytes que o programa, a partir de `pc`, pode consumir PRIMEIRO (para frente),
+// em `c`. Devolve 1 quando pode chegar ao O_MATCH sem consumir nada ou consome
+// para tras (corpo de lookbehind): ai nao ha filtro. Asserções, marcas e
+// lookarounds nao consomem e sao atravessados (o que vem depois deles e que
+// consome na mesma posicao). `visto` corta os lacos: um pc ja visitado ja somou
+// os seus bytes, e um "1" de qualquer caminho anula o conjunto inteiro.
+static int primeirosProg(const RegexJs *re, int pc, unsigned char *c, unsigned char *visto) {
+  int b;
+  for (;;) {
+    const Ins *in;
+    if (pc < 0 || pc >= re->nprog) return 1;
+    if (visto[pc]) return 0;
+    visto[pc] = 1;
+    in = &re->prog[pc];
+    switch (in->op) {
+      case O_BYTE:
+        if (in->neg) return 1;
+        POE(c, in->x);
+        if ((re->flags & REGEXJS_I) && isalpha(in->x)) { POE(c, tolower(in->x)); POE(c, toupper(in->x)); }
+        return 0;
+      case O_ANY:
+        if (in->neg) return 1;
+        for (b = 0; b < 256; b++) if ((re->flags & REGEXJS_S) || (b != '\n' && b != '\r')) POE(c, b);
+        return 0;
+      case O_CLASSE:
+        if (in->neg) return 1;
+        for (b = 0; b < 128; b++) if (noClasse(&re->cls[in->x], (unsigned)b, re->flags & REGEXJS_I)) POE(c, b);
+        for (b = 128; b < 256; b++) POE(c, b);
+        return 0;
+      case O_STAR:   // o corpo (pc + 1) ou, com zero repeticoes, a continuacao
+        if (primeirosProg(re, pc + 1, c, visto)) return 1;
+        pc = in->x; break;
+      case O_SPLIT:
+        if (primeirosProg(re, in->x, c, visto)) return 1;
+        pc = in->y; break;
+      case O_JMP: case O_LOOK: pc = in->x; break;
+      case O_MARK: case O_CHK: case O_BOL: case O_EOL: case O_WB: case O_NWB: pc++; break;
+      default: return 1;   // O_MATCH
+    }
+  }
+}
+
+static int montaSeg(RegexJs *re) {
+  int i, k = 0;
+  unsigned char *visto, c[32];
+  for (i = 0; i < re->nprog; i++) if (re->prog[i].op == O_STAR) k++;
+  if (!k) return 1;
+  if (!(re->seg = malloc((size_t)k * sizeof *re->seg))) return 0;
+  if (!(visto = malloc((size_t)re->nprog + 1))) return 0;
+  for (i = 0; i < re->nprog; i++) {
+    Ins *in = &re->prog[i];
+    if (in->op != O_STAR) continue;
+    in->y = 0;
+    memset(visto, 0, (size_t)re->nprog + 1);
+    memset(c, 0, sizeof c);
+    if (primeirosProg(re, in->x, c, visto)) continue;
+    memcpy(re->seg[re->nseg], c, sizeof c);
+    in->y = ++re->nseg;
+  }
+  free(visto);
+  return 1;
+}
+
 RegexJs *regexjs_compilar(const char *padrao, int flags, char *erro, size_t errotam) {
   Pr pr; Em em; RegexJs *re; int raiz;
   if (erro && errotam) erro[0] = 0;
@@ -628,12 +702,23 @@ RegexJs *regexjs_compilar(const char *padrao, int flags, char *erro, size_t erro
   emiteNo(&em, raiz);
   emite(&em, O_MATCH, 0, 0, 0);
   re->cls = pr.cls; re->ncls = pr.ncls; re->capcls = pr.capcls;
+  { int i; unsigned cp;
+    for (i = 0; i < re->ncls; i++) {
+      Classe *c = &re->cls[i];
+      memset(c->ascii, 0, sizeof c->ascii);
+      c->pronta = 0;
+      for (cp = 0; cp < 128; cp++)
+        if (noClasse(c, cp, flags & REGEXJS_I)) c->ascii[cp >> 3] |= (unsigned char)(1u << (cp & 7));
+      c->pronta = 1;
+    } }
   if (!em.erro) {
     memset(re->primeiro, 0, sizeof re->primeiro);
     re->temPrimeiro = !primeiros(&pr, pr.cls, flags, raiz, re->primeiro);
   }
   free(pr.no);
   if (!em.erro && !montaSlots(re, &em)) em.erro = 1;
+  if (!em.erro && !montaSeg(re)) em.erro = 1;
+  if (!em.erro) re->ancorado = re->nprog > 0 && re->prog[0].op == O_BOL && !(flags & REGEXJS_M);
   free(em.tr);
   if (em.erro) {
     if (erro && errotam) snprintf(erro, errotam, "pattern too large");
@@ -689,6 +774,7 @@ static int ehQuebra(unsigned c) { return c == '\n' || c == '\r' || c == 0x2028 |
 
 static int noClasse(const Classe *c, unsigned cp, int icase) {
   int i, ach = 0;
+  if (cp < 128 && c->pronta) return (c->ascii[cp >> 3] >> (cp & 7)) & 1;
   for (i = 0; i < c->n && !ach; i++) if (cp >= c->f[i].lo && cp <= c->f[i].hi) ach = 1;
   if (!ach && icase && cp < 128 && isalpha((int)cp)) {
     unsigned o = (unsigned)(islower((int)cp) ? toupper((int)cp) : tolower((int)cp));
@@ -728,6 +814,12 @@ static int consome(const Ctx *cx, const Ins *in, int sp) {
     if (b != in->x && (!(re->flags & REGEXJS_I) || !isalpha(in->x) || tolower(b) != tolower(in->x))) return -1;
     return sp + (in->neg ? -1 : 1);
   }
+  // ASCII para frente (quase todo o texto de uma fonte): sem decodificar UTF-8.
+  if (!in->neg && sp < cx->n && cx->s[sp] < 0x80) {
+    unsigned b = cx->s[sp];
+    if (in->op == O_ANY) return (!(re->flags & REGEXJS_S) && (b == '\n' || b == '\r')) ? -1 : sp + 1;
+    if (re->cls[in->x].pronta) return (re->cls[in->x].ascii[b >> 3] >> (b & 7)) & 1 ? sp + 1 : -1;
+  }
   if (in->neg) {
     if (sp <= 0) return -1;
     ini = inicioChar(cx, sp);
@@ -746,7 +838,7 @@ static int consome(const Ctx *cx, const Ins *in, int sp) {
 static int volta(const Ctx *cx, const Ins *in, int e) {
   int l;
   if (in->op == O_BYTE) return e + (in->neg ? 1 : -1);
-  if (!in->neg) return inicioChar(cx, e);
+  if (!in->neg) return cx->s[e - 1] < 0x80 ? e - 1 : inicioChar(cx, e);
   decodifica(cx->s + e, cx->s + cx->n, &l);
   return e + l;
 }
@@ -775,8 +867,12 @@ static int roda(Ctx *cx, int pc, int sp) {
         // fica lembrada, entao o ".*" que a posicao de inicio seguinte reabre
         // para na hora em vez de reler a linha inteira.
         const Ins *b = &re->prog[pc + 1];
+        const unsigned char *f = in->y ? re->seg[in->y - 1] : NULL;
         int slS = cx->memo ? re->slot[pc] : -1;
         int k = 0, i, m = -1, v = 0, e = sp, e2, topo;
+        // A continuacao so pode casar em `e` se o byte ali esta no conjunto dela
+        // (ver montaSeg); sem conjunto, qualquer posicao.
+#define PODE(e_) (!f || ((e_) < cx->n && (f[cx->s[(e_)] >> 3] & (1u << (cx->s[(e_)] & 7)))))
         for (;;) {   // anda ate o fim do que o corpo aceita, ou ate um estado ja resolvido
           if (slS >= 0 && (v = memoLe(cx, slS, e)) != 0) break;
           if ((e2 = consome(cx, b, e)) < 0) break;
@@ -786,18 +882,19 @@ static int roda(Ctx *cx, int pc, int sp) {
         topo = e;
         if (v && !k) { resultado = v == 2; goto fim; }
         if (!in->lazy) {
-          if (v == 2 || (!v && roda(cx, in->x, topo))) m = k;
+          if (v == 2 || (!v && PODE(topo) && roda(cx, in->x, topo))) m = k;
           for (i = k - 1, e = topo; m < 0 && i >= 0 && !cx->estourou; i--) {
             e = volta(cx, b, e);
-            if (roda(cx, in->x, e)) m = i;
+            if (PODE(e) && roda(cx, in->x, e)) m = i;
           }
         } else {
           for (i = 0, e = sp; i < k && !cx->estourou; i++) {
-            if (roda(cx, in->x, e)) { m = i; break; }
+            if (PODE(e) && roda(cx, in->x, e)) { m = i; break; }
             e = consome(cx, b, e);
           }
-          if (m < 0 && !cx->estourou && (v == 2 || (!v && roda(cx, in->x, topo)))) m = k;
+          if (m < 0 && !cx->estourou && (v == 2 || (!v && PODE(topo) && roda(cx, in->x, topo)))) m = k;
         }
+#undef PODE
         if (cx->estourou) goto fim;
         resultado = m >= 0;
         // Lembra: ate o fim achado casa; acima dele falha (o guloso ja provou
@@ -865,6 +962,7 @@ int regexjs_testar(const RegexJs *re, const char *texto, size_t n) {
   estados = (size_t)re->nslot * (n + 1);
   if (re->slot && re->nslot && estados <= MEMO_MAX_ESTADOS) cx.memo = calloc((estados + 3) / 4, 1);
   for (i = 0; i <= cx.n; i++) {
+    if (i > 0 && re->ancorado) break;
     if (i > 0 && i < cx.n && (cx.s[i] & 0xC0) == 0x80) continue;
     if (re->temPrimeiro && (i == cx.n || !(re->primeiro[cx.s[i] >> 3] & (1u << (cx.s[i] & 7))))) continue;
     if (roda(&cx, 0, i)) { r = 1; break; }
