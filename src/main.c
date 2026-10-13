@@ -927,9 +927,11 @@ int main(int argc, char **argv) {
   // entregue, e o codigo que ela usa tambem nao era o que eu procurava.
   SDL_SetHint("SDL_WEBOS_ACCESS_POLICY_KEYS_BACK", "true");
 #ifdef NV_WEBOS
-  // SDL-webOS handles registerApp/relaunch internally and logs it at INFO.
-  // stderr already shares the session log; keep the actual lifecycle signal.
-  SDL_LogSetPriority(SDL_LOG_CATEGORY_SYSTEM, SDL_LOG_PRIORITY_INFO);
+  // SDL_LOG_CATEGORY_SYSTEM PERMANECE no padrao (#205): o SDL-webOS loga o
+  // lifecycleEvent(v2) inteiro no INFO, e o SAM inclui os parametros de
+  // lancamento (URL autenticada, tokens) naquele payload — iriam direto ao
+  // registro da sessao. O sinal de ciclo chega pelo allowlist ja logado em
+  // [ciclo] (nome/estado do evento de janela/app), sem payload nenhum.
 #endif
 
 #ifdef __EMSCRIPTEN__

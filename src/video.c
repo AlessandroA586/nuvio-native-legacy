@@ -521,6 +521,11 @@ static char        expWin[64];
 static LSHandle *bus;
 static void     *laco;
 static pthread_t fio;
+// 1 a partir do video_encerrar (#205): nenhum callback do laco age depois
+// disto, e o fio e parado/ESPERADO antes do LSUnregister. Sem isso o handle
+// sumia com um callback no meio do lsChamar — a corrida que derrubava o app
+// ao acordar da TV com filme aberto.
+static int      encerrando;   // __atomic sempre
 static long      acb;
 // Retangulo pedido pela UI. Guardado porque o ACB so aceita a janela depois do
 // loadCompleted, que chega muito depois de quem pediu.
@@ -1429,6 +1434,7 @@ static int lsChamar(const char *uri, const char *carga, Filtro cb, void *ctx,
   union { NvLsErro e; char folga[256]; } er;
   unsigned long tok = 0;
   int ok;
+  if (__atomic_load_n(&encerrando, __ATOMIC_ACQUIRE) || !bus) return 0;
   memset(&er, 0, sizeof er);
   if (lsErroIniciar) lsErroIniciar(&er);
   ok = lsCall(bus, uri, carga, cb, ctx, &tok, &er);
@@ -1567,12 +1573,36 @@ static void *rodarLaco(void *u) { (void)u; loopRodar(laco); return NULL; }
 // com o MESMO timestamp o cancela. Sem filme tocando respondemos ack:true para
 // nao segurar o screensaver normal da TV.
 static int protetorLigado;
+// RETRATO DO ACK (#205): o callback roda no fio do laco e NAO pode ler
+// midia/tocando/pausaPedida/terminou/falhou nem o esmaecer — todos escritos
+// pelo fio de desenho (data race, UB). O video_bombear publica, uma vez por
+// quadro, UM inteiro com a decisao pronta e os campos do diagnostico; o
+// callback so le esse inteiro: coerente por construcao e nunca trava o desenho.
+static int ackEstado;   // bits ACK_*; __atomic sempre
+#define ACK_SEGURAR   1   // filme tocando: ack:false
+#define ACK_DESCANSO  2   // tela de descanso do Nuvio: ack:false
+#define ACK_MIDIA     4
+#define ACK_TOCANDO   8
+#define ACK_PAUSA    16
+#define ACK_FIM      32
+#define ACK_ERRO     64
+static void ackPublicar(void) {
+  int e = 0;
+  if (midia[0]) e |= ACK_MIDIA;
+  if (tocando) e |= ACK_TOCANDO;
+  if (pausaPedida) e |= ACK_PAUSA;
+  if (terminou) e |= ACK_FIM;
+  if (falhou) e |= ACK_ERRO;
+  if (midia[0] && tocando && !pausaPedida && !terminou && !falhou) e |= ACK_SEGURAR;
+  else if (esmaecer_segura_protetor_tv()) e |= ACK_DESCANSO;
+  __atomic_store_n(&ackEstado, e, __ATOMIC_RELEASE);
+}
 static int aoPedidoScreensaver(LSHandle *h, LSMessage *m, void *u) {
   const char *p = lsPayload(m);
   char estado[24], ts[64], b[192];
-  int segurar;
+  int e, segurar;
   (void)h; (void)u;
-  if (!ligado || !bus || !p ||
+  if (__atomic_load_n(&encerrando, __ATOMIC_ACQUIRE) || !ligado || !bus || !p ||
       !js_texto_raiz(p, "state", estado, sizeof estado) || strcmp(estado, "Active")) return 1;
   // Preserva o token recebido, inclusive quando string, sem arredondar numeros
   // grandes ou responder com timestamp truncado.
@@ -1583,16 +1613,15 @@ static int aoPedidoScreensaver(LSHandle *h, LSMessage *m, void *u) {
     strtod(ts, &fim);
     if (*fim) return 1;
   }
-  segurar = midia[0] && tocando && !pausaPedida && !terminou && !falhou;
-  // A tela de descanso do Nuvio (vitrine/relogio) e quem cuida da TV parada:
-  // o screensaver da LG entraria por cima dela no mesmo minuto.
-  if (!segurar && esmaecer_segura_protetor_tv()) segurar = 2;
+  e = __atomic_load_n(&ackEstado, __ATOMIC_ACQUIRE);
+  segurar = (e & ACK_SEGURAR) ? 1 : (e & ACK_DESCANSO) ? 2 : 0;
   snprintf(b, sizeof b, "{\"clientName\":\"" NV_APP_ID "\",\"ack\":%s,\"timestamp\":%s}",
            segurar ? "false" : "true", ts);
   printf("[video] screensaver pedido: %s timestamp=%s midia=%d tocando=%d pausa=%d fim=%d erro=%d\n",
          segurar == 2 ? "seguro (tela de descanso do Nuvio)"
                       : segurar ? "seguro (filme tocando)" : "liberado",
-         ts, midia[0] != 0, tocando, pausaPedida, terminou, falhou);
+         ts, !!(e & ACK_MIDIA), !!(e & ACK_TOCANDO), !!(e & ACK_PAUSA),
+         !!(e & ACK_FIM), !!(e & ACK_ERRO));
   fflush(stdout);
   lsChamar("luna://com.webos.service.tvpower/power/responseScreenSaverRequest",
            b, NULL, NULL, "responseScreenSaverRequest");
@@ -1787,7 +1816,16 @@ static int iniciar(int automatico) {
   // Laco proprio: o LS2 exige um GMainLoop girando, e girar isso no laco de
   // desenho custaria quadros. As respostas chegam neste fio e so mexem em
   // variaveis simples, lidas pelo desenho sem trava.
-  pthread_create(&fio, NULL, rodarLaco, NULL);
+  __atomic_store_n(&encerrando, 0, __ATOMIC_RELEASE);   // reinicio pos-encerrar
+  if (pthread_create(&fio, NULL, rodarLaco, NULL) != 0) {
+    // Sem o fio do laco nenhuma resposta chega. Desfaz o registro para nao
+    // deixar o nome preso no hub (video_encerrar so faz join com ligado==1,
+    // e ligado==1 so existe com o fio no ar).
+    printf("[video] fio do laco nao nasceu\n");
+    if (lsUnregister) { erroLimpar(); lsUnregister(bus, ERRO); erroLimpar(); }
+    bus = NULL;
+    return 0;
+  }
 
   if (A) {
     lerAjustesAcb();
@@ -2190,6 +2228,7 @@ static void mkvRetryBombear(void) {
   video_sondar_mkv_agora();
 }
 void video_bombear(void) {
+  ackPublicar();
   velBombear();
   mkvRetryBombear();
   acbBindRecolher();
@@ -3680,11 +3719,19 @@ int  video_velocidade_bloqueada(void) { return 0; }
 void video_encerrar(void) {
   if (!ligado) return;
   video_parar();
+  // Ate aqui o unload ainda vale (bus vivo). Daqui em diante nenhum
+  // callback do laco age, e o fio e parado/ESPERADO antes do handle sumir.
+  __atomic_store_n(&encerrando, 1, __ATOMIC_RELEASE);
   if (bindJoinable) { pthread_join(fioBind, NULL); bindJoinable = 0; }
   if (acb) { if (acbFinalizar) acbFinalizar(acb); acbDestruir(acb); acb = 0; }
   acbTipoAtual = acbTipoFalhou = -1;
   if (expWin[0] && sdlExpDestruir) { sdlExpDestruir(expWin); expWin[0] = 0; }
+  // ANTES do LSUnregister (#205): parar o laco e ESPERAR o fio. O g_main_loop_quit
+  // devolve o controle do laco; o join garante que nenhum callback (screensaver,
+  // eventos do uMS) esta no meio de um lsChamar quando o handle some. Sem isto
+  // a TV acordando da tela de descanso com filme aberto podia derrubar o app.
   if (laco) loopParar(laco);
+  pthread_join(fio, NULL);
   if (bus && lsUnregister) {
     erroLimpar();
     lsUnregister(bus, ERRO);
