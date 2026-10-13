@@ -30,12 +30,10 @@ int fonteauto_fila_o(int modo, int total, int preferida, const long *pontos,
   // A PREFERIDA ENTRA PRIMEIRO nos dois modos: e a fonte que a pessoa escolheu
   // a mao neste titulo (issues #56 e #57). Continua sendo UMA candidata — no
   // modo PRIMEIRA ela e a unica conferida, e nenhuma outra e tocada.
-  // Mas NUNCA a que as regras recusam (grupo -1: regex em "Exigir" ou fora do
-  // escopo): a lembrada e gravada tambem quando o automatico escolhe
-  // (fontepref_auto_guardar), entao uma fonte DTS tocada antes de a regex
-  // existir voltava sempre, por cima da regex.
-  if (preferida >= 0 && preferida < total && !(excluida && excluida[preferida]) &&
-      !(grupo && grupo[preferida] < 0))
+  // Ela vale MAIS que a regex (o dono: "reuse last link" e a prioridade): a
+  // regex so ordena as outras. Fora do escopo ela ja chega como -1 de
+  // streams.c (posPref), nunca daqui.
+  if (preferida >= 0 && preferida < total && !(excluida && excluida[preferida]))
     fila[n++] = preferida;
 
   for (g = 0; g < FONTEAUTO_GRUPOS && n < max; g++) {
@@ -115,8 +113,7 @@ int fonteauto_pode_decidir(const FonteautoParcial *p) {
   if (!temCand) return 0;
   if (!p->algumPendente) return 1;
   if (p->preferida >= 0 && p->preferida < p->total &&
-      !(p->excluida && p->excluida[p->preferida]) &&
-      !(p->grupo && p->grupo[p->preferida] < 0)) return 1;
+      !(p->excluida && p->excluida[p->preferida])) return 1;
   if (p->prefPendente) return 0;
   if (p->prazoPassou) return 1;
   nf = fonteauto_fila_o(p->modo, p->total, -1, p->pontos, p->acimaTeto,

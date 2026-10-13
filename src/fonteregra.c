@@ -22,6 +22,12 @@ static unsigned versao = 1;
 // A regex compilada do padrao em uso, no motor de JS proprio (regexjs.c).
 // `reEstado` e o de fonteregra_regex_estado.
 static RegexJs *reJs;
+// AS CONDICOES de um padrao "^(?=A)(?!B)...": cada lookaround do topo compilado
+// sozinho como "^(?=A)". Juntas equivalem ao padrao (todas na posicao 0), e
+// contar as que falham diz quao perto da regex a fonte ficou (Preferir).
+#define FR_COND_MAX 16
+static RegexJs *reCond[FR_COND_MAX];
+static int nCond;
 static int reEstado;
 
 #define ARQ "fonteregra.txt"
@@ -103,8 +109,8 @@ const char *fonteregra_modelo(int i) { return i > 0 && i < fonteregra_modelos() 
 // (stream_definir_lista_idade), e o cache por indice de streams.c cai junto:
 // sem isto, cada atualizacao rodava a regex de novo em TODAS as fontes, e na TV
 // isso crescia com o tamanho da regex. Aqui a resposta fica pelo hash do texto
-// (FNV-1a de 64 bits) ate a regex mudar. So o resultado da regex: permitidos e
-// modo continuam sendo conferidos a cada chamada.
+// (FNV-1a de 64 bits) ate a regex mudar. So o resultado da regex (as faltas,
+// 0 = casa): permitidos e modo continuam sendo conferidos a cada chamada.
 #define LEMBRA_N 4096          // potencia de 2; 64 KB
 #define LEMBRA_SONDA 8
 typedef struct { unsigned long long h; signed char m; } Lembra;
@@ -115,7 +121,19 @@ static unsigned long long hashTexto(const char *s) {
   for (; *s; s++) { h ^= (unsigned char)*s; h *= 1099511628211ULL; }
   return h | 1;   // 0 = posicao vazia
 }
-static int casaLembrandoSemTrava(const char *texto) {
+// Quantas condicoes `texto` nao cumpre: 0 = casa o padrao inteiro; sem
+// condicoes separaveis, 1 = nao casa. Nunca 0 sem casar (o padrao inteiro
+// decide), no maximo FR_FALTAS_MAX.
+static int faltasSemTrava(const char *texto) {
+  size_t n;
+  int k, f = 0;
+  if (!texto) texto = "";
+  n = strlen(texto);
+  if (casa(reJs, texto)) return 0;
+  for (k = 0; k < nCond; k++) if (!regexjs_testar(reCond[k], texto, n)) f++;
+  return f < 1 ? 1 : f > FR_FALTAS_MAX ? FR_FALTAS_MAX : f;
+}
+static int faltasLembrandoSemTrava(const char *texto) {
   unsigned long long h = hashTexto(texto ? texto : "");
   unsigned ini = (unsigned)h & (LEMBRA_N - 1), k, pos = ini;
   int m;
@@ -124,15 +142,63 @@ static int casaLembrandoSemTrava(const char *texto) {
     if (e->h == h) return e->m;
     if (!e->h) { pos = (ini + k) & (LEMBRA_N - 1); break; }
   }
-  m = casa(reJs, texto);
+  m = faltasSemTrava(texto);
   lembra[pos].h = h; lembra[pos].m = (signed char)m;
   return m;
+}
+
+// "^(?=A)(?!B)(?=C)" -> as partes "(?=A)", "(?!B)", "(?=C)". Flags em linha
+// no inicio ("(?i)") sao puladas. Colchete como no JS: o primeiro "]" fecha.
+// Devolve quantas (2 ou mais), ou 0 se o padrao nao e so isso (um lookaround
+// quantificado, texto solto, "|" no topo...): ai ele vale como uma condicao so.
+static int partes(const char *p, const char **ini, size_t *tam, int max) {
+  int n = 0;
+  while (p[0] == '(' && p[1] == '?') {
+    const char *q = p + 2;
+    while (*q && strchr("imsxIMSX", *q)) q++;
+    if (q == p + 2 || *q != ')') break;
+    p = q + 1;
+  }
+  if (*p != '^') return 0;
+  p++;
+  while (*p) {
+    const char *a = p;
+    int prof = 0, cls = 0;
+    if (p[0] != '(' || p[1] != '?' || (p[2] != '=' && p[2] != '!')) return 0;
+    for (; *p; p++) {
+      if (*p == '\\') { if (!p[1]) return 0; p++; continue; }
+      if (cls) { if (*p == ']') cls = 0; continue; }
+      if (*p == '[') { cls = 1; continue; }
+      if (*p == '(') prof++;
+      else if (*p == ')' && --prof == 0) { p++; break; }
+    }
+    if (prof || n == max) return 0;
+    ini[n] = a; tam[n] = (size_t)(p - a); n++;
+  }
+  return n >= 2 ? n : 0;
+}
+static void condicoesSemTrava(void) {
+  const char *ini[FR_COND_MAX];
+  size_t tam[FR_COND_MAX];
+  int k, n;
+  for (k = 0; k < nCond; k++) regexjs_liberar(reCond[k]);
+  nCond = 0;
+  if (reEstado != 1) return;
+  n = partes(padrao, ini, tam, FR_COND_MAX);
+  for (k = 0; k < n; k++) {
+    char p[FR_REGEX_MAX + 16];
+    snprintf(p, sizeof p, "(?i)^%.*s", (int)tam[k], ini[k]);
+    if (!(reCond[k] = regexjs_compilar_web(p, NULL, 0))) break;
+  }
+  if (k < n) { while (k-- > 0) regexjs_liberar(reCond[k]); return; }
+  nCond = n;
 }
 
 // --- estado -----------------------------------------------------------------
 static void recompilarSemTrava(void) {
   regexjs_liberar(reJs); reJs = NULL;
   reEstado = compilar(padrao, &reJs);
+  condicoesSemTrava();
   memset(lembra, 0, sizeof lembra);
 }
 
@@ -382,13 +448,13 @@ int fonteregra_grupo(const FonteRegraCfg *c, const char *nome, int plugin, const
   pthread_mutex_lock(&trava);
   perm = permitidoSemTrava(c, nome, plugin);
   if (c->regexModo != FR_REGEX_DESLIGADA && reEstado == 1) {
-    int m = casaLembrandoSemTrava(texto);
-    if (!m && c->regexModo == FR_REGEX_EXIGIR) { pthread_mutex_unlock(&trava); return -1; }
-    sub = !m;
+    int f = faltasLembrandoSemTrava(texto);
+    if (f && c->regexModo == FR_REGEX_EXIGIR) { pthread_mutex_unlock(&trava); return -1; }
+    sub = f;   // Preferir: quanto mais condicoes falham, mais para o fim
   }
   pthread_mutex_unlock(&trava);
   if (!perm && !c->usarOutros) return -1;
-  return (perm ? 0 : 2) + sub;
+  return (perm ? 0 : FR_GRUPO_OUTROS) + sub;
 }
 
 int fonteregra_grupo_pendente(const FonteRegraCfg *c, const char *nome, int plugin) {
@@ -398,7 +464,7 @@ int fonteregra_grupo_pendente(const FonteRegraCfg *c, const char *nome, int plug
   pthread_mutex_lock(&trava);
   perm = permitidoSemTrava(c, nome, plugin);
   pthread_mutex_unlock(&trava);
-  return perm ? 0 : c->usarOutros ? 2 : -1;
+  return perm ? 0 : c->usarOutros ? FR_GRUPO_OUTROS : -1;
 }
 
 int fonteregra_ativa(const FonteRegraCfg *c) {

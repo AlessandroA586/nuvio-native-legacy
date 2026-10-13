@@ -179,7 +179,7 @@ static void grupos(void) {
   assert(fonteregra_ativa(&c));
   assert(fonteregra_grupo(&c, "Cuevana ES", 0, "x") == 0);
   assert(fonteregra_grupo(&c, "CUEVANA es", 0, "x") == 0);        // sem caixa
-  assert(fonteregra_grupo(&c, "Torrentio", 0, "x") == 2);          // os outros: depois
+  assert(fonteregra_grupo(&c, "Torrentio", 0, "x") == FR_GRUPO_OUTROS);    // os outros: depois
   // A lista de add-ons nao filtra plugin (listas independentes, como o oficial).
   assert(fonteregra_grupo(&c, "MegaEmbed", 1, "x") == 0);
   // Sem "usar os outros": fora da lista nunca toca.
@@ -188,7 +188,7 @@ static void grupos(void) {
   assert(fonteregra_grupo_pendente(&c, "Torrentio", 0) == -1);
   assert(fonteregra_grupo_pendente(&c, "Cuevana ES", 0) == 0);
   c.usarOutros = 1;
-  assert(fonteregra_grupo_pendente(&c, "Torrentio", 0) == 2);
+  assert(fonteregra_grupo_pendente(&c, "Torrentio", 0) == FR_GRUPO_OUTROS);
 
   // Escopo: so add-ons tira os plugins, E "os outros" NAO os devolve. TCL do
   // dono (2.0.3, 21:24): "Somente add-ons instalados" com "usar os outros"
@@ -199,7 +199,7 @@ static void grupos(void) {
   assert(c.usarOutros == 1);
   assert(fonteregra_grupo(&c, "MegaEmbed", 1, "x") == -1);
   assert(fonteregra_grupo_pendente(&c, "MegaEmbed", 1) == -1);
-  assert(fonteregra_grupo(&c, "Torrentio", 0, "x") == 2);         // os outros add-ons: sim
+  assert(fonteregra_grupo(&c, "Torrentio", 0, "x") == FR_GRUPO_OUTROS);   // os outros add-ons: sim
   assert(!fonteregra_no_escopo(&c, 1) && fonteregra_no_escopo(&c, 0));  // nem a lembrada
   c.usarOutros = 0;
   assert(fonteregra_grupo(&c, "MegaEmbed", 1, "x") == -1);
@@ -214,7 +214,7 @@ static void grupos(void) {
 
   // Plugins permitidos.
   fonteregra_alternar(1, "VidSrc");
-  assert(fonteregra_grupo(&c, "MegaEmbed", 1, "x") == 2);
+  assert(fonteregra_grupo(&c, "MegaEmbed", 1, "x") == FR_GRUPO_OUTROS);
   assert(fonteregra_grupo(&c, "VidSrc", 1, "x") == 0);
   fonteregra_alternar(1, "VidSrc");      // tira: lista vazia = todos
   assert(fonteregra_n(1) == 0);
@@ -226,16 +226,90 @@ static void grupos(void) {
   c.regexModo = FR_REGEX_PREFERIR;
   assert(fonteregra_grupo(&c, "Cuevana ES", 0, "1080p Latino") == 0);
   assert(fonteregra_grupo(&c, "Cuevana ES", 0, "1080p English") == 1);
-  assert(fonteregra_grupo(&c, "Torrentio", 0, "1080p Castellano") == 2);
-  assert(fonteregra_grupo(&c, "Torrentio", 0, "1080p English") == 3);
+  assert(fonteregra_grupo(&c, "Torrentio", 0, "1080p Castellano") == FR_GRUPO_OUTROS);
+  assert(fonteregra_grupo(&c, "Torrentio", 0, "1080p English") == FR_GRUPO_OUTROS + 1);
   // Regex EXIGIR: filtro, em qualquer grupo.
   c.regexModo = FR_REGEX_EXIGIR;
   assert(fonteregra_grupo(&c, "Cuevana ES", 0, "1080p English") == -1);
-  assert(fonteregra_grupo(&c, "Torrentio", 0, "1080p Castellano") == 2);
+  assert(fonteregra_grupo(&c, "Torrentio", 0, "1080p Castellano") == FR_GRUPO_OUTROS);
   // Regex invalida: ignorada (nada vira -1 por causa dela).
   assert(fonteregra_definir_regex("(ESP") == -1);
   assert(fonteregra_regex_estado() == -1);
   assert(fonteregra_grupo(&c, "Cuevana ES", 0, "1080p English") == 0);
+  assert(fonteregra_definir_regex("") == 0);
+}
+
+// PREFERIR PELA DISTANCIA: num padrao "^(?=A)(?!B)...", cada lookaround do topo
+// e uma condicao; quem falha menos vem antes. Assim ha sempre uma escolha, e a
+// mais perto do que a pessoa pediu.
+static void distancia(void) {
+  FonteRegraCfg c = cfg(FR_ESCOPO_TODAS, FR_REGEX_PREFERIR, 1);
+  fonteregra_limpar(0); fonteregra_limpar(1);   // todos permitidos
+  // 3 condicoes: resolucao boa, nada de CAM, DV so com HDR.
+  const char *r = "^(?=[\\s\\S]*\\b(2160p|1080p)\\b)(?![\\s\\S]*\\bCAM\\b)"
+                  "(?!(?=[\\s\\S]*\\bDV\\b)(?![\\s\\S]*\\bHDR))";
+  assert(fonteregra_definir_regex(r) == 1);
+  assert(fonteregra_grupo(&c, "A", 0, "Film 1080p BluRay") == 0);          // cumpre tudo
+  assert(fonteregra_grupo(&c, "A", 0, "Film N/A BluRay") == 1);            // sem resolucao
+  assert(fonteregra_grupo(&c, "A", 0, "Film 2160p DV") == 1);              // DV sem HDR
+  assert(fonteregra_grupo(&c, "A", 0, "Film N/A CAM") == 2);               // duas
+  assert(fonteregra_grupo(&c, "A", 0, "Film N/A CAM DV") == 3);            // as tres
+  assert(fonteregra_grupo(&c, "A", 0, "Film 2160p DV HDR10") == 0);
+  // Os outros add-ons: a mesma conta depois de todos os permitidos.
+  fonteregra_alternar(0, "A");
+  assert(fonteregra_grupo(&c, "B", 0, "Film 1080p BluRay") == FR_GRUPO_OUTROS);
+  assert(fonteregra_grupo(&c, "B", 0, "Film N/A CAM") == FR_GRUPO_OUTROS + 2);
+  assert(fonteregra_grupo_pendente(&c, "B", 0) == FR_GRUPO_OUTROS);
+  fonteregra_alternar(0, "A");
+  // Exigir continua filtro: so quem cumpre tudo.
+  c.regexModo = FR_REGEX_EXIGIR;
+  assert(fonteregra_grupo(&c, "A", 0, "Film 1080p BluRay") == 0);
+  assert(fonteregra_grupo(&c, "A", 0, "Film N/A BluRay") == -1);
+  c.regexModo = FR_REGEX_PREFERIR;
+  // Com "(?i)" na frente e colchete com ")" dentro, as partes sao as mesmas.
+  assert(fonteregra_definir_regex("(?i)^(?=[\\s\\S]*[)]x)(?![\\s\\S]*\\(y\\))(?=[\\s\\S]*z)") == 1);
+  assert(fonteregra_grupo(&c, "A", 0, ")x z") == 0);
+  assert(fonteregra_grupo(&c, "A", 0, ")x (y) z") == 1);
+  assert(fonteregra_grupo(&c, "A", 0, "(y)") == 3);
+  // Sem a forma "^(?..)(?..)": uma condicao so (casa = 0, nao casa = 1).
+  assert(fonteregra_definir_regex("ESP|Latino") == 1);
+  assert(fonteregra_grupo(&c, "A", 0, "1080p Latino") == 0);
+  assert(fonteregra_grupo(&c, "A", 0, "1080p English") == 1);
+  assert(fonteregra_definir_regex("(?=[\\s\\S]*a)(?=[\\s\\S]*b)") == 1);   // sem "^": inteira
+  assert(fonteregra_grupo(&c, "A", 0, "c") == 1);
+  assert(fonteregra_definir_regex("^(?=[\\s\\S]*a)(?=[\\s\\S]*b)c") == 1); // texto solto no fim
+  assert(fonteregra_grupo(&c, "A", 0, "x") == 1);
+  // Mais condicoes que FR_FALTAS_MAX: o grupo para no teto (nao invade "os outros").
+  assert(fonteregra_definir_regex("^(?=a)(?=b)(?=c)(?=d)(?=e)(?=f)(?=g)(?=h)(?=i)(?=j)") == 1);
+  assert(fonteregra_grupo(&c, "A", 0, "zzz") == FR_FALTAS_MAX);
+  // FALTA 0 SO QUANDO A REGEX INTEIRA CASA: as regex do dono em textos de fonte.
+  { static const char *const P[] = {
+      "^(?![\\s\\S]*\\b((HD)?(CAM(Rip)?|T[SC])|TELE(SYNC|CINE)|(DVD)?SCR(EENER)?|R5|LQ|WORKPRINT|XviD|DivX|HC|HCSUB|"
+      "HARDSUBS?|KORSUBS?|3D|H(alf)?-?(SBS|OU)|SBS|(AI[\\s.-]?)?Upscaled?|SAMPLE|(240|360|480|576)p)\\b)"
+      "(?!(?=[\\s\\S]*\\b(DV|DoVi|Dolby[\\s.]?Vision)\\b)(?![\\s\\S]*\\b(HDR|HLG)))",
+      "^(?=[\\s\\S]*\\b(2160p|4K|UHD|1080p|FHD|(?<![-\\w])HD|720p|QHD|1440p)\\b)(?![\\s\\S]*\\b(CAM|TS|LQ)\\b)"
+      "(?!(?=[\\s\\S]*\\b(DV|Dolby[\\s.]?Vision)\\b)(?![\\s\\S]*\\b(HDR|HLG)))" };
+    static const char *const T[] = {
+      "AIOStreams \xF0\x9F\x9A\x80" "FHD | SDR\n\xF0\x9F\x8E\xA5 BluRay\n\xF0\x9F\x8E\xA7 DTS-HD MA Movie.1080p.BluRay.mkv",
+      "AIOStreams \xE2\x9D\x93 N/A\n\xF0\x9F\x8E\xA5 WEB-DL Movie.WEB-DL.mkv",
+      "AIOStreams \xF0\x9F\x94\xA5UHD | DV\n\xF0\x9F\x93\xBA DV Movie.2160p.WEB-DL.DV.mkv",
+      "AIOStreams \xF0\x9F\x92\xA9LQ | SDR Movie.480p.CAM.DV.mkv",
+      "Torrentio 4k DV HDR Movie.2160p.REMUX.DV.HDR10.TrueHD",
+      "Torrentio Movie.2003.576p.DVDRip.TS" };
+    unsigned p, t;
+    for (p = 0; p < sizeof P / sizeof *P; p++) {
+      assert(fonteregra_definir_regex(P[p]) == 1);
+      for (t = 0; t < sizeof T / sizeof *T; t++) {
+        int g = fonteregra_grupo(&c, "A", 0, T[t]);
+        assert(g >= 0 && g <= FR_FALTAS_MAX);
+        assert((g == 0) == (fonteregra_regex_testar(P[p], T[t]) == 1));
+      }
+    }
+    // A reject-only: so a LQ/CAM/DV falha as duas condicoes.
+    assert(fonteregra_definir_regex(P[0]) == 1);
+    assert(fonteregra_grupo(&c, "A", 0, T[3]) == 2);
+    assert(fonteregra_grupo(&c, "A", 0, T[2]) == 1);
+    assert(fonteregra_grupo(&c, "A", 0, T[1]) == 0); }
   assert(fonteregra_definir_regex("") == 0);
 }
 
@@ -328,6 +402,7 @@ int main(void) {
   regex();
   lookahead();
   grupos();
+  distancia();
   perfilEConta();
   ordem();
   puts("fonteregra: ok");
