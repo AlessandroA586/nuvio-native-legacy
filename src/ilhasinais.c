@@ -30,7 +30,7 @@ static char pedPubPend[16];
 static int pediuAmigos;
 static void responderPedido(void);
 
-void ilhasinais_iniciar(void) { rede_avisar_saude(rede_saude_nota); rede_avisar_host(rede_hosts_nota); }
+void ilhasinais_iniciar(void) { rede_avisar_saude(rede_saude_nota_desde); rede_avisar_host(rede_hosts_nota); }
 
 int ilhasinais_pediu_trakt(void) { int p = pediuTrakt; pediuTrakt = 0; return p; }
 
