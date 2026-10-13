@@ -62,11 +62,18 @@ int main(void) {
   assert(last->temporada == 2 && last->episodio == 89);
   puts("farah: native detail publishes 89 episodes and both seasons without IMDb");
   // Opening a TMDB credit must also work when external_ids has no IMDb.
+  char *tv = fixture("tmdb_tv_335918");
+  rota("/tv/335918/external_ids?", tv);
+  catalogoDe("tt21874046", "series", "Original", "cinemeta");
   sobTmdb = 335918;
   snprintf(sobTipo, sizeof sobTipo, "tv");
   sobTemSemente = 0; sobIndice = -1; sobFioVivo = 1;
   buscarTitulo(NULL);
-  assert(sobIndice == 0 && !sobFioVivo);
-  free(meta); nRotas = 0; limparCacheMeta();
+  assert(sobIndice == 1 && !sobFioVivo);
+  assert(!strcmp(cat_item(1)->imdb, "tmdb:335918"));
+  epItem = 1; fioEpVivo = 1; buscarEps(NULL);
+  assert(cat_n_episodios(1) == 89 && cat_item(1)->nTemporadas == 2);
+  puts("farah: on-demand title without external IMDb opens with its native id");
+  free(tv); free(meta); nRotas = 0; limparCacheMeta();
   return 0;
 }
