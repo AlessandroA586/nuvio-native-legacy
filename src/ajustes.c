@@ -18,6 +18,7 @@
 #include "descoberta.h"
 #include "extras.h"
 #include "fileiras.h"
+#include "herocat_regras.h"
 #include "listas.h"
 #include "idioma.h"
 #include "idiomacod.h"
@@ -2036,6 +2037,8 @@ void ajustes_abrir_opcao(int op) {
 // fileiras, mais abaixo.
 static const char *heroFonteRotulo(void);
 static void heroFonteCiclar(int dir);
+static void hcAbrir(void);
+static void desenhaFolhaHeroCat(void);
 
 static char seekrChave[96];
 static int lig(int op)  { return valor[op] == 0 && (op != AJ_SEEKR_LIGADO || seekrChave[0]); }
@@ -6436,7 +6439,7 @@ static void eventoFileiras(SDL_Keycode k) {
 
   if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
     int idx = filIdx(filFoco);
-    if (filIdx(filFoco) == AJ_FIL_DESTAQUE) { heroFonteCiclar(1); return; }
+    if (filIdx(filFoco) == AJ_FIL_DESTAQUE) { hcAbrir(); return; }
     if (n < 1) return;
     if (filAba == 1 && filCampo == FIL_CAMPO_REGUA) { filCampo = 0; return; }   // OK na regua A-Z volta para a linha
     if (filAba == 1) {
@@ -6810,6 +6813,90 @@ static void frEvento(SDL_Keycode k) {
     uxNotificar("Ajuste salvo nesta TV.");
   }
 }
+// --- folha "Catálogos do destaque": busca, sugeridos e catálogos por addon ----
+// Linha 0 e a busca; depois as fontes fixas, "Sugeridos" (herocat_regras.h) e
+// os catálogos agrupados por addon. OK escolhe e fecha; a busca filtra por
+// nome do catálogo e do addon (ao confirmar o teclado).
+enum { HC_BUSCA, HC_FIXA, HC_CAB, HC_CAT, HC_VAZIO };
+#define HC_LINHAS (FIL_MAX + 64)
+static int hcAberta, hcFoco, hcTeclado, hcN;
+static char hcBusca[48];
+static struct { char tipo; int idx; char txt[96]; } hcL[HC_LINHAS];
+static void hcPor(int tipo, int idx, const char *txt) {
+  if (hcN >= HC_LINHAS) return;
+  hcL[hcN].tipo = (char)tipo; hcL[hcN].idx = idx;
+  snprintf(hcL[hcN].txt, sizeof hcL[hcN].txt, "%s", txt ? txt : "");
+  hcN++;
+}
+static int hcFocavel(int i) { return i >= 0 && i < hcN && hcL[i].tipo != HC_CAB && hcL[i].tipo != HC_VAZIO; }
+static void hcMontar(void) {
+  static int el[FIL_MAX], sug[HC_SUG_MAX];
+  static const char *ch[FIL_MAX], *ti[FIL_MAX];
+  int total = fil_n(), n = 0, i, j, ns;
+  const char *atual = fil_hero_fonte();
+  hcN = 0;
+  hcPor(HC_BUSCA, -1, "");
+  if (!hcBusca[0]) { hcPor(HC_FIXA, 0, "Automático"); hcPor(HC_FIXA, 1, "Aleatório do catálogo"); }
+  for (i = 0; i < total && n < FIL_MAX; i++) {
+    int o = fil_origem_de(fil_chave(i));
+    if (o == FIL_ORIGEM_COLECAO) continue;
+    if (!(fil_estado(i) == FIL_NA_HOME || (o == FIL_ORIGEM_CATALOGO && !fil_linha_sem_addon(i)))) continue;
+    if (!hc_filtro(hcBusca, fil_titulo(i), fil_linha_addon(i))) continue;
+    el[n] = i; ch[n] = fil_chave(i); ti[n] = fil_titulo(i); n++;
+  }
+  ns = hcBusca[0] ? 0 : hc_sugeridos(n, ch, ti, atual, sug, HC_SUG_MAX);
+  if (ns) { hcPor(HC_CAB, 0, "Sugeridos"); for (i = 0; i < ns; i++) hcPor(HC_CAT, el[sug[i]], ""); }
+  for (i = 0; i < n; i++) {   // um grupo por addon, na ordem em que aparece
+    const char *ad = fil_linha_addon(el[i]);
+    int visto = 0;
+    for (j = 0; j < i; j++) if (!strcmp(fil_linha_addon(el[j]), ad)) { visto = 1; break; }
+    if (visto) continue;
+    hcPor(HC_CAB, ad[0] ? 1 : 0, ad[0] ? ad : "Outros");
+    for (j = i; j < n; j++) if (!strcmp(fil_linha_addon(el[j]), ad)) hcPor(HC_CAT, el[j], "");
+  }
+  if (!n) hcPor(HC_VAZIO, 0, "Nenhum catálogo encontrado");
+  if (hcFoco >= hcN) hcFoco = hcN - 1;
+  if (!hcFocavel(hcFoco)) hcFoco = 0;
+}
+static void hcAbrir(void) {
+  const char *f = fil_hero_fonte();
+  int i;
+  hcAberta = 1; hcBusca[0] = 0; hcFoco = 0; hcMontar();
+  for (i = 0; i < hcN; i++)
+    if (hcL[i].tipo == HC_CAT && !strcmp(fil_chave(hcL[i].idx), f)) { hcFoco = i; break; }
+}
+static void hcEscolher(int i) {
+  if (!hcFocavel(i)) return;
+  if (hcL[i].tipo == HC_BUSCA) {
+    hcTeclado = 1;
+    teclado_abrir_com("Buscar catálogo", "Nome do catálogo ou do addon. Vazio mostra todos.", (int)sizeof hcBusca - 1,
+                      NULL, hcBusca[0] ? hcBusca : NULL);
+    return;
+  }
+  if (hcL[i].tipo == HC_FIXA) fil_definir_hero_fonte(hcL[i].idx ? "*" : "");
+  else fil_definir_hero_fonte(fil_chave(hcL[i].idx));
+  hcAberta = 0;
+}
+static void hcEvento(SDL_Keycode k) {
+  int p;
+  hcMontar();
+  if (k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE || k == SDLK_DELETE || k == SDLK_LEFT) {
+    hcAberta = 0; return;
+  }
+  if (k == SDLK_UP || k == SDLK_DOWN) {
+    for (p = hcFoco + (k == SDLK_DOWN ? 1 : -1); p >= 0 && p < hcN; p += (k == SDLK_DOWN ? 1 : -1))
+      if (hcFocavel(p)) { hcFoco = p; break; }
+  }
+  if (k == SDLK_RETURN || k == SDLK_KP_ENTER) hcEscolher(hcFoco);
+}
+// Teclado da busca pronto: o texto vira o filtro (cancelar nao muda nada).
+static void hcTecladoLer(void) {
+  int r;
+  if (!hcTeclado) return;
+  r = teclado_resultado();
+  if (r == TECLADO_PRONTO) { snprintf(hcBusca, sizeof hcBusca, "%s", teclado_texto()); hcFoco = 0; }
+  if (r != TECLADO_NADA) hcTeclado = 0;
+}
 // Resumo na linha: "Todos" ou os nomes marcados.
 static const char *frResumo(int plugin) {
   static char b[2][160];
@@ -7019,6 +7106,7 @@ static void eventoTela(const SDL_Event *e) {
     } }
   // A folha de aviso de memoria (mais fileiras/itens) e modal e vem antes de tudo.
   if (riscoFolha) { riscoFolhaEvento(k); return; }
+  if (hcAberta) { hcEvento(k); return; }
   if (frAberta) { frEvento(k); return; }
   // A folha de fileiras e modal, como a do vinculo acima.
   if (filAberta) { eventoFileiras(k); return; }
@@ -7079,7 +7167,7 @@ static void eventoTela(const SDL_Event *e) {
       return;
     }
     if (focoOp == AJ_DIAGNOSTICO) { pediuDiagnostico = 1; return; }
-    if (focoOp == AJ_HERO_CATALOGOS) { if (!inativa(focoOp)) heroFonteCiclar(+1); return; }
+    if (focoOp == AJ_HERO_CATALOGOS) { if (!inativa(focoOp)) hcAbrir(); return; }
     if (focoOp == AJ_VELOCIDADE) { pediuVelocidade = 1; return; }
     if (focoOp == AJ_LIVETV_DIAG) { pediuLivetvDiag = 1; return; }
     if (focoOp == AJ_STALKER_PORTAL || focoOp == AJ_STALKER_MAC) {
@@ -7226,6 +7314,7 @@ void ajustes_atualizar(float dt, Uint32 agora) {
   // TECLADO_NADA na segunda, e por isso a gravacao acontece aqui, uma vez.
   // COM A MODAL DE PESSOAS ABERTA O TECLADO E DELA: ler aqui consumiria o
   // resultado antes de ela ver (e o apelido digitado se perderia em silencio).
+  if (!pessoas_aberto()) hcTecladoLer();
   { int r = pessoas_aberto() ? TECLADO_NADA : teclado_resultado();
     if (r == TECLADO_PRONTO && stCampo) {
       if (stCampo == AJ_STALKER_MAC) stalker_definir_mac(teclado_texto());
@@ -7961,6 +8050,7 @@ static void ajDesenharTudo(Uint32 agora) {
   if (riscoFolha) desenhaRiscoFolha();
   if (frAberta == 3) desenhaFolhaOrdem();
   else if (frAberta) desenhaFolhaPermitidos();
+  if (hcAberta) desenhaFolhaHeroCat();
 
   // Por cima de tudo: enquanto um vinculo esta em andamento, ele e a pergunta
   // da tela.
@@ -8291,6 +8381,9 @@ void ajustes_teste_fonte_interface(int familia) {
 // #202: abre a folha de permitidos (1 add-ons, 2 plugins) com o foco na
 // linha `foco` (0 = "Todos").
 void ajustes_teste_permitidos(int qual, int foco) { frAberta = qual; frFoco = foco; }
+void ajustes_teste_herocat(const char *busca, int foco) {
+  hcAbrir(); snprintf(hcBusca, sizeof hcBusca, "%s", busca ? busca : ""); hcMontar(); hcFoco = foco;
+}
 #endif
 
 #ifdef NV_SHOT_HOOKS
