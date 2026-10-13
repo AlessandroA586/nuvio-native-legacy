@@ -266,3 +266,4 @@
   5, /* owner decision #256: configurable countdown in seconds */
   0, /* interface mode: TV, including on phones until Mobile is selected */
   0, /* menu position (#461): Na lateral, the rail as always */
+  0, /* Mic button in search (.tpk): Automatico, local */

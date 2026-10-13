@@ -2641,6 +2641,7 @@ static void buscarPedido(const char *imdb, const char *tipo, int forcar) {
       snprintf(pendTipo, sizeof pendTipo, "%s", tipo ? tipo : "movie");
       pendRenovar = forcar;
       pendBase[0] = 0;
+      stream_invalidar("pending personal-server target");
       return;
     }
     resumo.valido = 0;
@@ -2683,6 +2684,9 @@ static void buscarPedido(const char *imdb, const char *tipo, int forcar) {
       snprintf(pendTipo, sizeof pendTipo, "%s", tipo ? tipo : "movie");
       pendRenovar = forcar;
       snprintf(pendBase, sizeof pendBase, "%s", alvoBase);
+      // The running search is now obsolete; its partial list must not feed
+      // Play while the new target waits for this worker to finish (#413).
+      stream_invalidar("pending source target");
     } else if (progLigado && !pendId[0] && !stream_lista_do_alvo(id))
       // O MESMO alvo, com a busca dele no ar, e a lista da tela nao e mais
       // dela: devolve o que ja chegou em vez de esperar (ou perder) — senao so
