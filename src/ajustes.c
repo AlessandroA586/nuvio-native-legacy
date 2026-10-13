@@ -5972,8 +5972,10 @@ static const char *efeitoOpcao(int op) {
       return "Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.";
     case AJ_HERO_TRAILER:
       return "O som do trailer no destaque é uma opção à parte, em Som e imagem.";
+#ifndef __EMSCRIPTEN__
     case AJ_MIC_BUSCA:
       return "Para digitar, continua o teclado do Nuvio: o da Samsung só abre por este botão.";
+#endif
     default: return NULL;
   }
 }

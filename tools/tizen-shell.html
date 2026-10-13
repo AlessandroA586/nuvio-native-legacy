@@ -472,10 +472,10 @@
     printErr: function (t) { console.warn(t); if (window.__nvDiag) window.__nvDiag(t, 1); }
   };
 
-  // TECLADO DA SAMSUNG PARA O BOTAO DE MICROFONE DAS BUSCAS
-  // (src/entrada_texto.c). O teclado do app e o de digitar; este campo so
-  // existe para o microfone do teclado da Samsung: OK no botao abre o
-  // teclado, a pessoa aperta o microfone do controle e fala. O C chama
+  // TECLADO DA SAMSUNG PARA DIGITAR E PARA O BOTAO DE MICROFONE DAS BUSCAS
+  // (src/entrada_texto.c). OK no campo abre o teclado da TV para digitar;
+  // OK no botao de microfone abre o mesmo teclado, e a pessoa aperta o
+  // microfone do controle e fala. O C chama
   // nvTexto.abrir/fechar por EM_ASM e LE seq/valor/fim a cada quadro; o JS
   // nunca chama o WASM. nvTexto.microfone: o que a TV diz de
   // http://tizen.org/feature/microphone (1 tem, 0 nao tem, -1 sem resposta);
@@ -490,8 +490,6 @@
   // Este ouvinte de captura vem ANTES dos outros de keydown de proposito: o
   // Return (10009) com o IME aberto fecha so o IME, e nao o Spotlight.
   (function () {
-    // Sem Tizen (PC/VIDAA) nao ha IME Samsung; API ausente na Samsung e outra coisa.
-    if (!window.tizen) return;
     var t = { seq: 0, valor: "", fim: -1, aberto: false, microfone: -1 };
     try {
       if (window.tizen && tizen.systeminfo && tizen.systeminfo.getCapability)

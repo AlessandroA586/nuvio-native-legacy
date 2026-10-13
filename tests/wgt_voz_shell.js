@@ -6,7 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const assert = require("assert");
 const html = fs.readFileSync(path.join(__dirname, "../tools/tizen-shell.html"), "utf8");
-const ini = html.indexOf("  // TECLADO DA SAMSUNG PARA O BOTAO DE MICROFONE DAS BUSCAS");
+const ini = html.indexOf("  // TECLADO DA SAMSUNG PARA DIGITAR E PARA O BOTAO DE MICROFONE DAS BUSCAS");
 assert(ini > 0, "bloco do nvTexto nao achado no shell");
 // Inclui TODOS os tradutores de teclas que vem depois da ponte.
 const codigo = html.slice(ini, html.indexOf("</script>", ini));
@@ -87,8 +87,16 @@ function teste(nome, f) {
   catch (e) { falhas++; console.error("FAIL: " + nome + ": " + e.message); }
 }
 
-teste("sem Tizen (PC/VIDAA) nao anuncia ponte Samsung", () => {
-  assert.strictEqual(montar(undefined).t, undefined);
+teste("sem Tizen (PC/VIDAA) preserva a ponte de texto da integracao", () => {
+  const m = montar(undefined);
+  assert.strictEqual(m.t.microfone, -1);
+  m.t.abrir("matrix", 0);
+  assert.strictEqual(m.document.activeElement, m.el);
+  m.digita("duna");
+  m.tecla("campo", 65376);
+  assert.strictEqual(m.t.fim, 1);
+  assert.strictEqual(m.t.valor, "duna");
+  assert.strictEqual(m.document.activeElement, m.canvas);
 });
 teste("Samsung com capacidade ausente continua desconhecida", () => {
   assert.strictEqual(montar(true).t.microfone, 1);

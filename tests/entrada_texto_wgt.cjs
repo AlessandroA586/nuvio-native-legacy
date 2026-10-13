@@ -2,9 +2,9 @@
 // tools/tizen-shell.html (copiados do arquivo de verdade), com
 // src/entrada_texto.c em WASM. No Chrome nao ha IME da Samsung: o teste faz o
 // papel dele (insertText, composicao, Done 65376, Return 10009, blur).
-// O <input> so serve ao BOTAO DE MICROFONE das buscas (TS_VOZ sem
-// TS_TECLADO): o teclado do app e o de digitar. Sem emsdk, tests/wgt_voz.sh
-// cobre o mesmo com um emscripten.h fingido.
+// O <input> serve a digitacao no teclado da TV e ao botao de microfone
+// (TS_TECLADO | TS_VOZ). Sem emsdk, tests/wgt_voz.sh cobre o mesmo com um
+// emscripten.h fingido.
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -16,7 +16,7 @@ const { chromium } = pw;
 const raiz = path.resolve(__dirname, '..');
 const shell = fs.readFileSync(path.join(raiz, 'tools/tizen-shell.html'), 'utf8');
 const campo = shell.match(/<input id="nvTextoCampo"[\s\S]*?>/)[0];
-const ini = shell.indexOf('  // TECLADO DA SAMSUNG PARA O BOTAO DE MICROFONE DAS BUSCAS');
+const ini = shell.indexOf('  // TECLADO DA SAMSUNG PARA DIGITAR E PARA O BOTAO DE MICROFONE DAS BUSCAS');
 const fim = shell.indexOf('})();', ini) + 5;
 if (ini < 0 || fim < 5) throw new Error('bloco nvTexto nao achado no tizen-shell.html');
 const ponte = shell.slice(ini, fim);
@@ -62,14 +62,12 @@ window.Module = { onRuntimeInitialized() { window.pronto = true; } };</script><s
     const quadro = () => C('t_quadro', null);
 
     await C('t_iniciar', 'number');
-    ok(await C('t_disponivel', 'number') === 2, 'disponivel = TS_VOZ (sem TS_TECLADO) com window.nvTexto');
+    ok(await C('t_disponivel', 'number') === 3, 'disponivel = TS_TECLADO | TS_VOZ com window.nvTexto');
     await C('t_mic_modo', null, ['number'], [2]);
-    ok(await C('t_disponivel', 'number') === 0, 'ajuste Desligado: sem botao');
+    ok(await C('t_disponivel', 'number') === 1, 'ajuste Desligado: teclado da TV continua disponivel');
     await C('t_mic_modo', null, ['number'], [0]);
     await C('t_abrir', null, ['string', 'number'], ['ab', 0]);
-    ok(await C('t_aberto', 'number') === 0, 'sem voz o <input> nao abre (digitar e no teclado do app)');
-
-    await C('t_abrir', null, ['string', 'number'], ['ab', 1]);
+    ok(await C('t_aberto', 'number') === 1, 'OK no campo abre o teclado da TV para digitar');
     ok(await page.evaluate(() => document.activeElement.id) === 'nvTextoCampo', 'abrir foca o input escondido');
     ok(await page.evaluate(() => document.getElementById('nvTextoCampo').value) === 'ab', 'o IME comeca do texto atual');
     await page.keyboard.insertText('c');

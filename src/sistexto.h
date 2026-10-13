@@ -37,7 +37,8 @@
 //     abre o teclado da Samsung, o estado fica ST_DIGITANDO e st_aviso() diz
 //     para apertar o microfone do controle (o teclado ainda nao ouve). O
 //     teclado cobre a tela: o texto so chega ao campo quando ele fecha (ST_FIM).
-//     Digitar continua no teclado do app; nao ha outra via de voz na Samsung.
+//     No .wgt, st_ime_disponivel() tambem permite digitar no teclado da TV;
+//     no .tpk de release, digitar continua no teclado do app.
 //
 // Para captura e teste no Mac, NUVIO_SISTEXTO_TESTE=1
 // finge que existe (abrir so loga) e st_teste_evento injeta o que o Android

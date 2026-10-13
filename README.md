@@ -91,9 +91,9 @@ Not sure which Tizen you have? Apps2Samsung shows it when it connects.
 
 In the native `.tpk` (Tizen 6+) and `.wgt`, the microphone button in Search and
 Spotlight opens the Samsung keyboard. Press the microphone on the remote to
-dictate; Done submits the text and Back cancels. Typing still uses Nuvio's
-keyboard. Settings › Home screen › More options › Sidebar › **Mic button in
-search** offers Automatic, On and Off. Recognition is handled by Samsung's
+dictate; Done submits the text and Back cancels. Typing uses the TV keyboard
+in `.wgt` and Nuvio's keyboard in `.tpk`. Settings › Home screen › More options
+› Sidebar › **Mic button in search** offers Automatic, On and Off. Recognition is handled by Samsung's
 keyboard, not by an audio upload implemented in Nuvio.
 
 **Native `.tpk` installations need a package reinstall to gain this feature**:
