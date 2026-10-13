@@ -1,3 +1,4 @@
+#include "amigoslista.h"
 #include "arteurl.h"
 // Painel "Salvos" — a camada da direita que a tecla AZUL abre. Ver salvospainel.h
 // para o que ele substituiu e por que.
@@ -307,7 +308,9 @@ enum { SPS_CONSENT_NAO = 0, SPS_CONSENT_SIM, SPS_REC, SPS_SUG,
        // lugar para aceitar era o modal da pilula, que vive 10 s, e uma pagina
        // dentro de Encontrar pessoas; esta aba so mostrava "(N)" no fim da
        // lista. Agora os pedidos abrem a aba, cada um com Aceitar e Recusar.
-       SPS_PEDIDO };
+       SPS_PEDIDO,
+       // "Ver mais pessoas": abre as sugestoes cortadas (amigoslista.h).
+       SPS_MAIS };
 // A API do alcance e do nome so existe no socialsrv (branch agente/socialsrv).
 // Ate o merge as linhas ficam desligadas; NV_SOCIAL_V2_UI liga so a tela (o
 // teste de captura o usa com a API de mentira).
@@ -322,6 +325,7 @@ static SPSocial social[SP_SOCIAL_MAX];
 static int nSocial;
 static RecSugestao sugs[REC_SUGESTOES_MAX];
 static int nSugs;
+static int sugAberto;   // 1 = a pessoa pediu todas as sugestoes
 static RecContato ctts[REC_CONTATOS_MAX];
 static int nCtts;
 // Pedidos recebidos (copia, como as outras listas). `pedCol` = a pilula em
@@ -1135,6 +1139,7 @@ static float socialAlt(int i) {
                           ((social[i].idx >= 0 && social[i].idx < REC_CONTATOS_MAX &&
                             cttCadeia[social[i].idx]) ? SPS_CADEIA_H : 0.0f);
     case SPS_ADICIONAR: return SPS_H_PORTA;
+    case SPS_MAIS:      return SPS_H_PORTA;
     case SPS_ENCONTRAR: return SPS_H_PORTA;
     case SPS_APARECER:  return SPS_H_APARECER;
     case SPS_ALCANCE:   return SPS_H_ALCANCE;
@@ -1316,9 +1321,6 @@ static void reconstruirSocial(void) {
   for (i = 0; i < nRecs && nSocial < SP_SOCIAL_MAX; i++) {
     social[nSocial].tipo = SPS_REC; social[nSocial].idx = (short)i; nSocial++;
   }
-  for (i = 0; i < nSugs && nSocial < SP_SOCIAL_MAX; i++) {
-    social[nSocial].tipo = SPS_SUG; social[nSocial].idx = (short)i; nSocial++;
-  }
   // OS AMIGOS JA ADICIONADOS, com foto, antes de "Adicionar um amigo": a aba
   // dizia o codigo e oferecia adicionar, mas nunca mostrava QUEM ja estava
   // na lista.
@@ -1328,9 +1330,25 @@ static void reconstruirSocial(void) {
     cttSv[i] = (short)socialvis_amigo_indice(ctts[i].id);
     cttCadeia[i] = (unsigned char)socialvis_ultima_enviada(ctts[i].id, NULL);
   }
-  for (i = 0; i < nCtts && nSocial < SP_SOCIAL_MAX; i++) {
-    social[nSocial].tipo = SPS_AMIGO; social[nSocial].idx = (short)i; nSocial++;
-  }
+  // QUEM ESTA ASSISTINDO SOBE; os amigos vem ANTES das sugestoes, que sao a
+  // parte secundaria e se cortam em amigoslista.h.
+  { unsigned char vivo[REC_CONTATOS_MAX];
+    int ordem[REC_CONTATOS_MAX], nv, k;
+    for (i = 0; i < nCtts; i++) {
+      const SvAmigo *am = (cttSv[i] >= 0) ? socialvis_amigo(cttSv[i]) : NULL;
+      vivo[i] = (unsigned char)(am && am->agora && am->nTit > 0);
+    }
+    amigoslista_ordem(vivo, nCtts, ordem);
+    for (k = 0; k < nCtts && nSocial < SP_SOCIAL_MAX; k++) {
+      social[nSocial].tipo = SPS_AMIGO; social[nSocial].idx = (short)ordem[k]; nSocial++;
+    }
+    nv = amigoslista_sug_visiveis(nSugs, sugAberto);
+    for (i = 0; i < nv && nSocial < SP_SOCIAL_MAX; i++) {
+      social[nSocial].tipo = SPS_SUG; social[nSocial].idx = (short)i; nSocial++;
+    }
+    if (nv < nSugs && nSocial < SP_SOCIAL_MAX) {
+      social[nSocial].tipo = SPS_MAIS; social[nSocial].idx = 0; nSocial++;
+    } }
   // O INTERRUPTOR FECHA A ABA, e nao mora em Ajustes. Ele responde uma pergunta
   // que so faz sentido olhando para esta lista ("quem me ve?"), e quem quiser
   // mudar de ideia vai procura-lo onde a pergunta foi feita. A alternativa em
@@ -1786,7 +1804,7 @@ void spainel_abrir(void) {
   toquerol_limpar(&toquePainel); toquerol_limpar(&toquePop);
   memset(toqueSocial, 0, sizeof toqueSocial);
 #endif
-  foco = 0;
+  foco = 0; sugAberto = 0;
   okDesde = 0;
   menuId[0] = menuProximo[0] = 0;
   seguirId[0] = 0;
@@ -2095,6 +2113,11 @@ static void okSocial(void) {
         // (a pessoa revogou entre a tela e o OK) volta recusado.
         if (social[foco].idx >= 0 && social[foco].idx < nSugs)
           recomenda_adicionar_sugerido(sugs[social[foco].idx].id);
+        reconstruirSocial();
+        if (foco >= nSocial) foco = nSocial > 0 ? nSocial - 1 : 0;
+        return;
+      case SPS_MAIS:
+        sugAberto = 1;
         reconstruirSocial();
         if (foco >= nSocial) foco = nSocial > 0 ? nSocial - 1 : 0;
         return;
@@ -2838,6 +2861,20 @@ static void desenhaSecao(float x, float y, const char *rotulo, float a, int prim
   txt_desenhar_alpha(t, x + SP_PAD, ty, a);
   gfx_cor((GfxRect){ x + SP_LINHA_X, ty + SP_SECAO_TXT + 10.0f, SP_LINHA_W, 1.0f }, 0.0f,
           1.0f, 1.0f, 1.0f, 0.08f * a);
+}
+
+// Secao com a contagem ao lado (a digito, sem chave de i18n nova), em tinta fraca.
+static void desenhaSecaoN(float x, float y, int n, const char *rotulo, float a, int primeira) {
+  desenhaSecao(x, y, rotulo, a, primeira);
+  if (n > 0) {
+    char num[16];
+    TxtLinha t = txt_linha_corta(TXT_ILHA_SECAO, rotulo, 243, 242, 239, 255, SP_INTERNO);
+    TxtLinha c;
+    snprintf(num, sizeof num, "%d", n);
+    c = txt_linha(TXT_ILHA_SECAO, num, 243, 242, 239, 255);
+    txt_desenhar_alpha(c, x + SP_PAD + (float)t.w + 14.0f,
+                       y + (primeira ? SP_SECAO_AR1 : SP_SECAO_AR), a * 0.45f);
+  }
 }
 
 // --- A LINHA DA ILHA ---------------------------------------------------------
@@ -5112,7 +5149,8 @@ static void desenharPainel(Uint32 agora) {
         if ((social[i].tipo == SPS_SUG || social[i].tipo == SPS_AMIGO || social[i].tipo == SPS_NOME ||
              spsConta(social[i].tipo)) &&
             y + cab >= listaTopo() && y <= SP_LISTA_BASE)
-          desenhaSecao(SP_X + x, y,
+          desenhaSecaoN(SP_X + x, y,
+                       social[i].tipo == SPS_SUG ? nSugs : social[i].tipo == SPS_AMIGO ? nCtts : 0,
                        social[i].tipo == SPS_NOME ? "Você para os outros"
                        : spsConta(social[i].tipo) ? "Contas ligadas"
                        : social[i].tipo == SPS_SUG ? "Pessoas que você talvez conheça"
@@ -5143,6 +5181,9 @@ static void desenharPainel(Uint32 agora) {
           case SPS_ENCONTRAR:
           case SPS_ADICIONAR:
             desenhaPorta(i, x, y, alt, a);
+            break;
+          case SPS_MAIS:
+            desenhaBotaoLinha(i, x, y, alt, a, "Ver mais pessoas", NULL, NULL, 0);
             break;
           case SPS_APARECER:
             // NAO e desenhaBotaoLinha, e a diferenca e o ponto todo desta
@@ -5253,6 +5294,7 @@ const char *spainel_foco_social(void) {
     case SPS_AMIGO: return "amigo";
     case SPS_REC: return "rec";
     case SPS_SUG: return "sug";
+    case SPS_MAIS: return "mais";
     default: return "outra";
   }
 }
