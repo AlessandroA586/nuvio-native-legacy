@@ -26,7 +26,7 @@ float gfx_card_forcar_cover_atual;
 int txt_pendentes;
 int anim_politica_reduzida;
 // Citados como ponteiro em ilhasinais_iniciar (que nao roda aqui).
-void rede_saude_nota(int c, const char *u) { (void)c; (void)u; }
+void rede_saude_nota_desde(int c, const char *u, unsigned ms) { (void)c; (void)u; (void)ms; }
 void rede_hosts_nota(const char *u, int c, int h, unsigned ms) { (void)u; (void)c; (void)h; (void)ms; }
 
 static RecPessoa caixa[REC_PEDIDOS_MAX];

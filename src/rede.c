@@ -367,8 +367,8 @@ static char *juntarCabs(const char *const *cab, const char *extra) {
 static void (*aviso401)(const char *url);
 void rede_avisar_401(void (*f)(const char *url)) { aviso401 = f; }
 // Ouvinte da saude da rede — ver rede_avisar_saude no cabecalho.
-static void (*avisoSaude)(int codigo, const char *url);
-void rede_avisar_saude(void (*f)(int codigo, const char *url)) { avisoSaude = f; }
+static void (*avisoSaude)(int codigo, const char *url, unsigned primeiraMs);
+void rede_avisar_saude(void (*f)(int codigo, const char *url, unsigned primeiraMs)) { avisoSaude = f; }
 // Ouvinte do pedido por host (o painel de registro, aba Rede) — ver rede.h.
 static void (*avisoHost)(const char *url, int codigo, int http, unsigned ms);
 void rede_avisar_host(void (*f)(const char *url, int codigo, int http, unsigned ms)) { avisoHost = f; }
@@ -391,7 +391,7 @@ static char *pedir2(const char *metodo, const char *url, const char *const *cab,
   if (status) *status = http;
   // XHR sem status e sem corpo = nao houve resposta (rede, DNS, CORS): para a
   // saude da rede e o "6" do curl. Qualquer status e transporte que funcionou.
-  if (avisoSaude) avisoSaude(corpoResp || http ? 0 : 6, url);
+  if (avisoSaude) avisoSaude(corpoResp || http ? 0 : 6, url, 0);
   if (avisoHost) avisoHost(url, corpoResp || http ? 0 : 6, http, 0);
   if (http == 401 && aviso401) aviso401(url);
   negcache_nota(url, corpoResp || http ? 0 : 6, http, (long)time(NULL));
@@ -840,8 +840,8 @@ static _Thread_local int redeParcialOk;
 static void (*aviso401)(const char *url);
 void rede_avisar_401(void (*f)(const char *url)) { aviso401 = f; }
 // Ouvinte da saude da rede — ver rede_avisar_saude no cabecalho.
-static void (*avisoSaude)(int codigo, const char *url);
-void rede_avisar_saude(void (*f)(int codigo, const char *url)) { avisoSaude = f; }
+static void (*avisoSaude)(int codigo, const char *url, unsigned primeiraMs);
+void rede_avisar_saude(void (*f)(int codigo, const char *url, unsigned primeiraMs)) { avisoSaude = f; }
 // Ouvinte do pedido por host (o painel de registro, aba Rede) — ver rede.h.
 static void (*avisoHost)(const char *url, int codigo, int http, unsigned ms);
 void rede_avisar_host(void (*f)(const char *url, int codigo, int http, unsigned ms)) { avisoHost = f; }
@@ -1143,18 +1143,28 @@ static void *pegarHandle(const char *url) {
 // da resposta abortada, que sai no pedido seguinte. Download completo segue
 // reaproveitado (e o ganho de 0,5-0,8 s por imagem). Conexao que fica anota o
 // host (e o do fim dos redirecionamentos) para o limite de ociosidade.
-static void soltarHandleR(void *c, int r, const char *url) {
-  // TODO pedido da libcurl passa por aqui com o CURLcode: e o ponto unico da
-  // saude da rede (redesaude.h decide o que e transporte).
-  if (avisoSaude) avisoSaude(r, url);
+static void descartarHandle(void *c) {
+  curl_cleanup(c);
+  if (curl_reset) {
+    pthread_setspecific(handleChave, NULL);
+    hostsEsquecer();
+  }
+}
+static void soltarHandleDesde(void *c, int r, const char *url, unsigned primeiraMs) {
+  // #382: HTTP recebido prova conectividade mesmo se o corpo falhou/parou.
+  // O CURLcode original continua com o chamador e no painel de pedidos.
+  if (avisoSaude) {
+    long http = 0;
+    if (curl_getinfo) curl_getinfo(c, INFO_RESPONSE_CODE, &http);
+    avisoSaude(http > 0 && r != 42 && r != 23 ? 0 : r, url, primeiraMs);
+  }
   if (avisoHost) {
     long http = 0;
     double seg = 0;
     if (curl_getinfo) { curl_getinfo(c, INFO_RESPONSE_CODE, &http); curl_getinfo(c, INFO_TEMPO_TOTAL, &seg); }
     avisoHost(url, r, (int)http, seg > 0 ? (unsigned)(seg * 1000.0 + 0.5) : 0u);
   }
-#ifdef NV_ANDROID
-  // #266/#332: tempos dos primeiros pedidos e de toda falha — DNS, TCP e TLS
+  // #266/#332/#382: tempos dos primeiros pedidos e de toda falha — DNS, TCP e TLS
   // separados (CURLINFO_*_TIME, acumulados desde o inicio). So o host vai ao log.
   { static int vistos;
     int n = __atomic_add_fetch(&vistos, 1, __ATOMIC_RELAXED);
@@ -1171,36 +1181,32 @@ static void soltarHandleR(void *c, int r, const char *url) {
       fflush(stdout);
     }
   }
-#endif
-  if (!curl_reset) { curl_cleanup(c); return; }
-  if (r != 0) {
-    curl_cleanup(c);
-    pthread_setspecific(handleChave, NULL);
-    hostsEsquecer();
-    return;
-  }
+  if (!curl_reset || r != 0) { descartarHandle(c); return; }
   { unsigned long agora = redeAgoraMs();
     char *fim = NULL;
     hostUsado(url, agora);
     if (curl_getinfo && !curl_getinfo(c, INFO_URL_FINAL, &fim) && fim) hostUsado(fim, agora); }
 }
 
+static void soltarHandleR(void *c, int r, const char *url) {
+  soltarHandleDesde(c, r, url, 0);
+}
+
 // OPCOES DE TODO PEDIDO, com o prazo em ms.
 //
 // CONNECTTIMEOUT: DNS + TCP + TLS numa conexao nova levam 0,14-0,7 s na C9
 // (curl da TV, mzstatic). O padrao da libcurl e esperar ate o prazo inteiro, e
-// a resolucao e c-ares (curl -V da TV: AsynchDNS, c-ares 1.12; resolv.conf
-// aponta para o 127.0.0.1 do connman), que pelo padrao dele so reenvia uma
-// consulta sem resposta depois de 5 s — com prazo de 6 s, uma consulta perdida
-// seria curl 28 (padrao do c-ares, NAO medido na TV). Metade do prazo, entre
-// 2 e 5 s, deixa o resto para a segunda tentativa (rede_baixar_interno2).
+// o c-ares antigo pode reenviar uma consulta perdida so depois de ~5 s.
+// Metade do prazo, entre 2 e 10 s: pedidos de 30 s permitem essa retransmissao
+// e ainda deixam tempo para o retry, sem aumentar o prazo total. O backend da
+// biblioteca carregada vai ao log no arranque; curl -V nao prova qual ela usa.
 // KEEPALIVE: sonda a conexao parada no cache a cada 15 s, o que mantem viva a
 // entrada do NAT e faz a morta dar erro no socket (a libcurl a descarta sem
 // tentar mandar nada por ela).
 static unsigned long conexaoMs(unsigned long prazoMs) {
   unsigned long m = prazoMs / 2;
   if (m < 2000) m = 2000;
-  if (m > 5000) m = 5000;
+  if (m > 10000) m = 10000;
   return m < prazoMs ? m : prazoMs;
 }
 static void opcoesComuns(void *c, unsigned long prazoMs) {
@@ -1582,6 +1588,33 @@ static int abrirReal(void) {
 #else
   if (curl_global) curl_global(3 /* CURL_GLOBAL_DEFAULT */);
 #endif
+  // Prefixo ABI de curl_version_info_data ate CURLVERSION_SECOND (7.11.1).
+  // Sem curl.h, como as opcoes acima: a biblioteca carregada vem do aparelho.
+  {
+    typedef struct {
+      int age;
+      const char *version;
+      unsigned version_num;
+      const char *host;
+      int features;
+      const char *ssl_version;
+      long ssl_version_num;
+      const char *libz_version;
+      const char *const *protocols;
+      const char *ares;
+      int ares_num;
+    } CurlVersao;
+    const CurlVersao *(*versao)(int);
+    const CurlVersao *v;
+    *(void **)(&versao) = dlsym(h, "curl_version_info");
+    v = versao ? versao(1 /* CURLVERSION_SECOND */) : NULL;
+    if (v) printf("[rede] libcurl=%s async_dns=%s%s\n", v->version ? v->version : "?",
+                  v->age >= 1 && v->ares ? "c-ares/" :
+                  (v->features & (1 << 7)) ? "threaded" : "no (synchronous)",
+                  v->age >= 1 && v->ares ? v->ares : "");
+    else printf("[rede] curl_version_info indisponivel\n");
+    fflush(stdout);
+  }
   // DEPOIS do global_init e ANTES de soltar a trava: a partir daqui qualquer fio
   // pode entrar em curl_easy_perform, e e la que o OpenSSL comeca a ser usado.
 #ifndef NV_ANDROID   // libcurl do APK nao usa libcrypto 1.0 (e dlopen de libcrypto.so seria do sistema)
@@ -1859,6 +1892,7 @@ static char *rede_baixar_interno3(const char *url, int segundos, long *tam,
   void *c, *lista = NULL;
   int r = 0, tentativa, reusada = 0;
   unsigned long inicio, prazoMs, gasto = 0;
+  unsigned primeiraMs = 0;
   caca.dst = (etag && tamEtag > 1) ? etag : NULL;
   caca.tam = tamEtag;
   caca.retry = retry;
@@ -1930,7 +1964,9 @@ static char *rede_baixar_interno3(const char *url, int segundos, long *tam,
              (long)b.n, gasto);
       fflush(stdout);
       if (lista) { curl_setopt(c, OPT_HTTPHEADER, (void *)0); if (slist_free) slist_free(lista); lista = NULL; }
-      soltarHandleR(c, r, url);            // r != 0: descarta o handle
+      // #382: conta so o resultado final, mas preserva a janela da primeira falha.
+      primeiraMs = (unsigned)(inicio + gasto);
+      descartarHandle(c);
       free(b.p);
       b.p = NULL; b.n = b.cap = 0;
       if (etag && tamEtag) etag[0] = 0;
@@ -1968,7 +2004,7 @@ static char *rede_baixar_interno3(const char *url, int segundos, long *tam,
     negcache_nota(url, r, (int)http, (long)time(NULL));
     if (!r && http >= 400 && !status) {
       if (lista) { curl_setopt(c, OPT_HTTPHEADER, (void *)0); if (slist_free) slist_free(lista); }
-      soltarHandleR(c, r, url);
+      soltarHandleDesde(c, r, url, primeiraMs);
       free(b.p);
       { char seg[120];
         printf("[rede] HTTP %ld em %s\n", http, rede_url_publica(url, seg, sizeof seg)); }
@@ -1976,7 +2012,7 @@ static char *rede_baixar_interno3(const char *url, int segundos, long *tam,
       return NULL;
     } }
   if (lista) { curl_setopt(c, OPT_HTTPHEADER, (void *)0); if (slist_free) slist_free(lista); }
-  soltarHandleR(c, r, url);
+  soltarHandleDesde(c, r, url, primeiraMs);
   // 23 = CURLE_WRITE_ERROR. Quando ha teto, ele e o resultado ESPERADO: o
   // recebedor devolve menos bytes de proposito para cortar a conexao assim que
   // enche. Nesse caso o que ja veio e exatamente o que se queria — tratar como
@@ -2432,7 +2468,7 @@ int rede_medir_vazao(const char *url, const char *const *cab, int segundos,
   curl_setopt(c, OPT_HEADERDATA, &ct);
   curl_setopt(c, OPT_FOLLOWLOCATION, (long)1);
   // Prazo: a janela mais o prazo do 1o byte (8 s, ou o de rede_vazao_espera) para DNS, TLS, redirecionamentos e o primeiro
-  // byte. O conexaoMs de opcoesComuns fica no teto de 5 s.
+  // byte. O conexaoMs de opcoesComuns fica no teto de 10 s.
   opcoesComuns(c, ct.janelaMs + vazEsperaMs);
   curl_setopt(c, OPT_XFERINFOFUNCTION, contadorVigia);
   curl_setopt(c, OPT_XFERINFODATA, &ct);
