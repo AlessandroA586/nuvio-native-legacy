@@ -91,4 +91,7 @@ void dts_remux_gen_interrupt(DtsRemuxGen *);
 
 /* Source time (seconds) a progressive run started at: the keyframe it used. */
 double dts_remux_gen_start_s(const DtsRemuxGen *);
+/* Source time (s) of the last video packet handed to the muxer in the current
+ * run, -1 before the first. Read from another thread (atomic). */
+double dts_remux_gen_emitted_s(const DtsRemuxGen *);
 #endif

@@ -200,6 +200,7 @@ static struct {
   int fonteTocou;       // esta fonte (original ou convertida) ja andou > 0,5 s
   double posConhecida;  // ultima posicao real do convertido (nunca 0 por falta de dado)
   int prefFeito;        // a regra do idioma preferido (trilhaPreferida) ja rodou nesta fonte
+  int folga, folgaFeita; Uint32 folgaEm;   // arranque com folga (folgaVigiar)
 } cv = { .buscarMs = -1 };
 static Uint32 faixasEm;           // quando a ultima lista de faixas do player chegou
 static volatile int naoSupPend;   // NotSupportedAudioCodec veio do host (outro fio)
@@ -459,7 +460,7 @@ static int abrirSessao(void) {
   if (cv.ativo) {
     // O player le do servidor local; os cabecalhos do addon sao da fonte (o
     // servidor ja os usa), nao do 127.0.0.1.
-    cv.abriuEm = SDL_GetTicks(); cv.tocou = 0;
+    cv.abriuEm = SDL_GetTicks(); cv.tocou = 0; cv.folga = cv.folgaFeita = 0;
     hAbrir(cv.url, "");
     return 1;
   }
@@ -1158,9 +1159,46 @@ static void reabrindoVigiar(void) {
   cv.reabrindo = 0;
 }
 
+// ARRANQUE COM FOLGA (Round 2, Fight Club: 111 Mb/s, o TorBox a 1,1x do tempo
+// real). O player da TV comecava com o buffer quase vazio: no TS o som saia
+// ~0,5 s fora de sincronia ate uma pausa longa, que deixava o buffer encher. A
+// cada abertura do convertido, se o que ja foi ENVIADO (dts_tpk_entregue_ate)
+// esta menos de FOLGA_S a frente da posicao, o player fica pausado (rodinha de
+// buffer) ate chegar la ou FOLGA_TETO_MS. Fonte rapida: nem pausa.
+#define FOLGA_S 8.0
+#define FOLGA_TETO_MS 15000u
+static void folgaVigiar(void) {
+  Uint32 agora = SDL_GetTicks();
+  double e, p;
+  if (!cv.ativo || falhou || (cv.folgaFeita && !cv.folga)) return;
+  if (pausaPedida) {   // a pessoa pausou: a pausa e dela
+    if (cv.folga) { printf("[dts-tpk] folga: a pessoa pausou, fica pausado\n"); fflush(stdout); }
+    cv.folga = 0; cv.folgaFeita = 1; return;
+  }
+  if (!pronto || (cv.prog && !cv.deslocOk)) return;
+  e = dts_tpk_entregue_ate(); p = posReal();
+  if (!cv.folga) {
+    if (!tocando) return;
+    if (e < 0 || e - p >= FOLGA_S) { cv.folgaFeita = 1; return; }
+    cv.folga = 1; cv.folgaEm = agora;
+    bufferando = 1; bufferDesde = agora;
+    if (hPausar) hPausar(1);
+    printf("[dts-tpk] folga: so %.1f s enviados a frente da posicao %.1f s; pausado ate %.0f s (teto %u s)\n",
+           e - p, p, FOLGA_S, FOLGA_TETO_MS / 1000u);
+    fflush(stdout);
+    return;
+  }
+  if (e - p < FOLGA_S && agora - cv.folgaEm < FOLGA_TETO_MS) return;
+  printf("[dts-tpk] folga: %.1f s a frente depois de %u ms; tocando\n", e < 0 ? 0.0 : e - p, (unsigned)(agora - cv.folgaEm));
+  fflush(stdout);
+  cv.folga = 0; cv.folgaFeita = 1;
+  if (hPausar) hPausar(0);
+}
+
 void video_bombear(void) {
   convBombear();
   reabrindoVigiar();
+  folgaVigiar();
   escolhasPendentes();
   legendaVigiarSilencio(SDL_GetTicks());
   // O SetPlaybackRate exige Ready/Playing/Paused: so com o prepare feito.
@@ -1239,7 +1277,11 @@ void video_parar(void) {
   if (ativo && hParar) hParar();
   ativo = pronto = tocando = 0;
 }
-void video_pausar(int p) { pausaPedida = p != 0; vigiaAtiva = 0; if (hPausar) hPausar(p); }
+void video_pausar(int p) {
+  pausaPedida = p != 0; vigiaAtiva = 0;
+  if (!p && cv.folga) { cv.folga = 0; cv.folgaFeita = 1; }   // a pessoa mandou tocar: a folga acaba
+  if (hPausar) hPausar(p);
+}
 int video_pausa_confirmada(void) { return 0; } // host nao fornece ack por sessao
 void video_volume(int pct) { if (hVolume) hVolume(pct); }
 void video_buscar(double s) {

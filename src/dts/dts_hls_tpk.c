@@ -35,6 +35,7 @@ const char *dts_tpk_erro(void) { return ""; }
 double dts_tpk_duracao(void) { return 0; }
 int dts_tpk_modo(void) { return -1; }
 double dts_tpk_inicio_stream(void) { return -1; }
+double dts_tpk_entregue_ate(void) { return -1; }
 const char *dts_tpk_caminho(void) { return ""; }
 int dts_tpk_sem_indice(void) { return 0; }
 int dts_tpk_e_url(const char *u) { (void)u; return 0; }
@@ -262,6 +263,7 @@ typedef struct Sessao {
   Gerador ger[GERADORES];
   unsigned uso;
   double inicioStream;            // progressivo: keyframe do fluxo em curso
+  double entregueAte;             // dts_tpk_entregue_ate: fim do video ja enviado ao player
   // Content-Length: o ultimo segmento fica na memoria para o Range
   int cacheSeg; unsigned char *cache; size_t cacheN;
   // resumo
@@ -521,6 +523,8 @@ static int saidaEscrever(void *u, const unsigned char *d, int n) {
         !enviarTudo(o->sock, "\r\n", 2, &o->s->cancelar, &o->ger->parar)) return -1;
   } else if (!enviarTudo(o->sock, d, (size_t)n, &o->s->cancelar, &o->ger->parar)) return -1;
   o->bytes += n;
+  { double e = dts_remux_gen_emitted_s(o->ger->g);
+    if (e >= 0) { pthread_mutex_lock(&o->s->m); o->s->entregueAte = e; pthread_mutex_unlock(&o->s->m); } }
   return n;
 }
 
@@ -903,7 +907,7 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
   gerarToken(s->token, 8);
   s->url = strdup(url); s->cabs = strdup(headers ? headers : "");
   s->track = track; s->stereo = stereo; s->modo = modo; s->corpo = corpo;
-  s->estado = DTSTPK_SONDANDO; s->cacheSeg = -1; s->inicioStream = -1;
+  s->estado = DTSTPK_SONDANDO; s->cacheSeg = -1; s->inicioStream = -1; s->entregueAte = -1;
   s->criadaMs = agoraMs();
   for (int i = 0; i < GERADORES; i++) s->ger[i].seg = -1;
   if (!s->url || !s->cabs) { pthread_mutex_unlock(&G); sessaoDestruir(s); return 0; }
@@ -928,7 +932,7 @@ int dts_tpk_url_em(double t, char *out, size_t n) {
   pthread_mutex_lock(&G);
   if (atual && out && n >= 64) {
     ok = urlDe(atual, t, out, n);
-    pthread_mutex_lock(&atual->m); atual->inicioStream = -1; pthread_mutex_unlock(&atual->m);
+    pthread_mutex_lock(&atual->m); atual->inicioStream = -1; atual->entregueAte = -1; pthread_mutex_unlock(&atual->m);
   }
   pthread_mutex_unlock(&G);
   return ok;
@@ -948,6 +952,7 @@ int dts_tpk_estado(void) { LER_ATUAL(int, estado, DTSTPK_NADA) }
 double dts_tpk_duracao(void) { LER_ATUAL(double, duracao, 0.0) }
 int dts_tpk_modo(void) { LER_ATUAL(int, modo, -1) }
 double dts_tpk_inicio_stream(void) { LER_ATUAL(double, inicioStream, -1.0) }
+double dts_tpk_entregue_ate(void) { LER_ATUAL(double, entregueAte, -1.0) }
 const char *dts_tpk_erro(void) {
   static char b[160];
   b[0] = 0;

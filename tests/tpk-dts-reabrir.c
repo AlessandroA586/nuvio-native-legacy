@@ -121,6 +121,8 @@ const char *dts_tpk_erro(void) { return ""; }
 double dts_tpk_duracao(void) { return 7200; }
 int dts_tpk_modo(void) { return DTSTPK_PROG_TS; }
 double dts_tpk_inicio_stream(void) { return inicioStream; }
+static double entregue = -1;
+double dts_tpk_entregue_ate(void) { return entregue; }
 const char *dts_tpk_caminho(void) { return "DTS core only"; }
 int dts_tpk_sem_indice(void) { return 0; }
 int dts_tpk_e_url(const char *u) { return u && strstr(u, "127.0.0.1") != NULL; }
@@ -142,6 +144,8 @@ static void hAbrir(const char *u, const char *c) { (void)c; nAbriu++; snprintf(u
 static void hSem(void) {}
 static void hInt(int v) { (void)v; }
 static void hBuscar(int ms) { (void)ms; nBuscas++; }
+static int pausas, retomadas;
+static void hPausar(int p) { if (p) pausas++; else retomadas++; }
 static void hJanela(int x, int y, int w, int h) { (void)x; (void)y; (void)w; (void)h; }
 static int hPos(void) { return posMs; }
 static void hEscolher(int tipo, int idx) { (void)tipo; (void)idx; }
@@ -161,7 +165,7 @@ int main(void) {
   SDL_Init(0);
   montarCabecalho();
   cabPronto = 1;
-  nv_tpk_video_registrar(hAbrir, hSem, hInt, hBuscar, hInt, hJanela, hPos);
+  nv_tpk_video_registrar(hAbrir, hSem, hPausar, hBuscar, hInt, hJanela, hPos);
   nv_tpk_video_registrar_faixas(hEscolher);
   video_definir_reconexao(1);
   video_tocar("http://h/a.mkv");
@@ -210,6 +214,35 @@ int main(void) {
 
   video_parar();
   ok(!video_tpk_convertendo() && !video_tpk_fonte_tocou(), "stop clears the converted state");
+
+  // START BUFFER: a slow source gets the player paused until 8 s are sent ahead.
+  misto = 0; montarCabecalho(); cabPronto = 1; pausas = retomadas = 0;
+  video_tocar("http://h/f.mkv");
+  inicioStream = 0; posMs = 1000; entregue = 3.0;
+  playerPronto(); bombear(3);
+  ok(pausas == 1 && retomadas == 0, "start buffer: 2 s ahead -> paused");
+  ok(video_bufferando_ms() >= 0, "start buffer: buffering shown");
+  entregue = 6.0; bombear(3);
+  ok(retomadas == 0, "start buffer: 5 s ahead -> still paused");
+  entregue = 9.5; bombear(3);
+  ok(retomadas == 1, "start buffer: 8.5 s ahead -> playing");
+  nv_tpk_video_evento(2, 0, 0); bombear(3);
+  ok(pausas == 1, "start buffer: once per opening");
+  video_buscar(300);   // a TS seek opens a new stream: the buffer check runs again
+  inicioStream = 299; posMs = 299400; entregue = 300.0;
+  playerPronto(); bombear(3);
+  ok(pausas == 2, "start buffer: again after a seek");
+  video_pausar(1); bombear(2);
+  video_pausar(0); bombear(2);
+  ok(retomadas >= 2, "start buffer: the user's play ends it");
+  video_parar();
+  entregue = 50.0; pausas = 0;
+  video_tocar("http://h/g.mkv");
+  inicioStream = 0; posMs = 1000;
+  playerPronto(); bombear(3);
+  ok(pausas == 0, "start buffer: fast source (50 s ahead) -> no pause");
+  video_parar();
+  entregue = -1;
 
   // PREFERRED LANGUAGE ONLY ON DTS: English DTS + Japanese AAC, English wanted.
   misto = 1; montarCabecalho(); abriuConversor = 0;
