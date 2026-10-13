@@ -1,4 +1,5 @@
 #include "watchstate.h"
+#include "addonurl.h"
 #include "js.h"
 #include "jsw.h"
 #include <ctype.h>
@@ -242,20 +243,21 @@ static int segmento(char *o, size_t n, size_t *k, const char *s) {
 }
 
 int ws_url(const char *base, const WsEvento *e, char *out, size_t n) {
-  size_t k = 0, bl;
-  static const char meio[] = "/watch_state/push/";
+  char caminho[512];
+  size_t k = 0;
+  int w;
   if (!valido(e) || !base || !limpo(base)) return 0;
   if (strncmp(base, "https://", 8) && strncmp(base, "http://", 7)) return 0;
-  bl = strlen(base);
-  while (bl && base[bl - 1] == '/') bl--;
-  if (bl + sizeof meio + 1 >= n) return 0;
-  memcpy(out, base, bl); k = bl;
-  memcpy(out + k, meio, sizeof meio - 1); k += sizeof meio - 1;
-  if (!segmento(out, n, &k, e->tipo) || k + 1 >= n) return 0;
-  out[k++] = '/';
-  if (!segmento(out, n, &k, e->videoId) || k + 6 > n) return 0;
-  memcpy(out + k, ".json", 6);
-  return 1;
+  caminho[k++] = '/';
+  memcpy(caminho + k, "watch_state/push/", 17); k += 17;
+  if (!segmento(caminho, sizeof caminho, &k, e->tipo) || k + 1 >= sizeof caminho) return 0;
+  caminho[k++] = '/';
+  if (!segmento(caminho, sizeof caminho, &k, e->videoId) || k + 6 > sizeof caminho) return 0;
+  memcpy(caminho + k, ".json", 6);
+  // A query da base carrega a configuracao do addon: o caminho vai ANTES dela
+  // (addonurl.h), senao o pedido sai depois da query e a config chega corrompida.
+  w = nv_addon_url(out, n, base, "%s", caminho);
+  return w > 0 && out && out[0];
 }
 
 // ---- Fila com retry --------------------------------------------------------
