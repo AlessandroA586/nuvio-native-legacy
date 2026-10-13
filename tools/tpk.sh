@@ -119,14 +119,17 @@ if [ "${NV_TPK_SEM_DTS:-}" != 1 ]; then
     if [ "$(sha256_de "$ARQ")" != "$DTS_SHA" ]; then
       rm -f "$ARQ"; echo "ffmpeg-$DTS_VER.tar.xz com sha256 errado (apagado; rode de novo)" >&2; exit 1
     fi
-    rm -rf "$CACHE/src/ffmpeg-$DTS_VER" "$DTS_PREFIX"
+    rm -rf "$CACHE/src/ffmpeg-$DTS_VER"
     tar xJf "$ARQ" -C "$CACHE/src"
     cp tools/build-dts-ffmpeg.sh "$CACHE/build-dts-ffmpeg.sh"
+    # O container roda como root e o prefixo e dele: num host Linux (o CI do
+    # GitHub) o usuario do host nao apaga nem escreve la. Apagar o velho e gravar
+    # o carimbo (por ultimo: so build completo vale) ficam dentro do container.
     docker run --rm --platform linux/arm/v5 -v "$CACHE:/w" \
       -e NUVIO_DTS_TARGET=tpk -e NUVIO_DTS_SRC="/w/src/ffmpeg-$DTS_VER" -e NUVIO_DTS_ROOT=/w/prefix-dts \
       -e NUVIO_DTS_BUILD=/tmp/nuvio-dts-build -e NUVIO_DTS_JOBS="${NUVIO_BUILD_JOBS:-6}" \
-      nuvio-tpk-sdk sh /w/build-dts-ffmpeg.sh
-    printf '%s' "$DTS_CARIMBO" > "$DTS_PREFIX/.carimbo"
+      -e NUVIO_DTS_CARIMBO="$DTS_CARIMBO" \
+      nuvio-tpk-sdk sh -c 'rm -rf /w/prefix-dts && sh /w/build-dts-ffmpeg.sh && printf "%s" "$NUVIO_DTS_CARIMBO" > /w/prefix-dts/.carimbo'
   fi
   DTS_VOL="-v $DTS_PREFIX:/dts"
 fi
