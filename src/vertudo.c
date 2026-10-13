@@ -188,6 +188,12 @@ static unsigned char celVisto[VT_MAX];
 static int sagaVistos;
 static Uint32 vistosEm;             // ajustes_conteudo_x() do quadro (desenho)
 
+// LINHA DO TEMPO ANIMADA (13/10): o foco de cada ano (0..1, mola) e o y do
+// preenchimento da linha (coordenada da grade; < 0 = posicionar sem animar).
+// Floats por quadro, nenhuma textura; a mola ja respeita a animacao reduzida.
+static float tlFoco[VT_MAX], tlProg = -1.0f;
+#define VT_TL_PONTO 32.0f         // centro do ponto do ano, do topo do cartao
+
 static int ordenaPorAno(void) {
   return lay == VT_LAY_LINHA || lay == VT_LAY_SAGA || lay == VT_LAY_DECADAS;
 }
@@ -606,6 +612,7 @@ static void montar(int n) {
   if (ordenaPorAno() && n != orderN) ordenar(n);
   switch (lay) {
     case VT_LAY_LINHA:
+      tlProg = -1.0f;
       for (i = 0; i < n; i++) cel(i, 0, i * (VT_LINHA_H + VT_GAP_Y), 1158.0f, VT_LINHA_H, i, 0);
       break;
     case VT_LAY_RANKING: {
@@ -1110,6 +1117,14 @@ void vertudo_atualizar(float dt, Uint32 agora) {
   { float alvoP = collection && tabFocus && tabCursor >= nAbas() ? 1.0f : 0.0f;
     pillAnim = anim_mola(pillAnim, alvoP, dt, alvoP > pillAnim ? NV_MOLA_FOCO : NV_MOLA_DESFOCO); }
   if (lay == VT_LAY_VITRINE) { vitAtualizar(dt, agora); return; }
+  if (lay == VT_LAY_LINHA && celN > 0) {
+    float alvoP = celY[foco < celN ? foco : celN - 1] + VT_TL_PONTO;
+    for (int i = 0; i < celN; i++) {
+      float alvoF = i == foco && !tabFocus ? 1.0f : 0.0f;
+      tlFoco[i] = anim_mola(tlFoco[i], alvoF, dt, alvoF > tlFoco[i] ? NV_MOLA_FOCO : NV_MOLA_DESFOCO);
+    }
+    tlProg = tlProg < 0.0f ? alvoP : anim_mola(tlProg, alvoP, dt, NV_MOLA_FOCO);
+  }
   if (celLay != lay || celN != n) montar(n);
   else if (lay == VT_LAY_SAGA && n <= 200 && (Sint32)(agora - vistosEm) > 1500)
     { contarVistos(n); vistosEm = agora; }
@@ -1469,12 +1484,35 @@ static void themeHeader(float a,float x0) {
 static void timelineCard(int i,float cy,float a,float x0) {
   CatItem it;if(!viewItem(i,&it))return;
   int sel=i==foco&&!tabFocus;float r,g,b;corColecao(&r,&g,&b);
-  // A linha organiza a cronologia; não é uma borda decorativa de card.
-  float rail = vtTimelineRetrato() ? 64.0f : 109.0f;
-  gfx_cor((GfxRect){x0+rail,cy-30,2,VT_CARD_H+VT_GAP_Y},0,.48f,.47f,.46f,a*.6f);
-  gfx_cor((GfxRect){x0+rail-7,cy+24,16,16},.5f,sel?.95f:r,sel?.95f:g,sel?.97f:b,a);
+  // A linha organiza a cronologia; não é uma borda decorativa de card. O
+  // trecho ate o ano em foco fica preenchido (o tempo que ja passou), com
+  // tiques entre um ano e o seguinte.
+  float rail = vtTimelineRetrato() ? 64.0f : 109.0f, rx = x0 + rail;
+  float t = i < VT_MAX ? tlFoco[i] : 0.0f, segY = cy - 30.0f, segH = VT_CARD_H + VT_GAP_Y;
+  float fim = tlProg < 0.0f ? segY : tlProg + cy - celY[i];   // o mesmo deslocamento do cartao
+  gfx_cor((GfxRect){rx,segY,2,segH},0,.48f,.47f,.46f,a*.45f);
+  if(fim>segY)gfx_cor((GfxRect){rx-1,segY,4,fminf(segH,fim-segY)},0,r,g,b,a*.95f);
+  for(int k=1;k<4;k++)gfx_cor((GfxRect){rx-3,segY+segH*k/4.0f,8,1},0,.48f,.47f,.46f,a*.35f);
+  { float d=16.0f+10.0f*t,pc=cy+VT_TL_PONTO,passou=fim>=pc;
+    if(t>.01f)gfx_cor((GfxRect){rx+1-(d+14)*.5f,pc-(d+14)*.5f,d+14,d+14},.5f,r,g,b,a*.28f*t);
+    gfx_cor((GfxRect){rx+1-d*.5f,pc-d*.5f,d,d},.5f,sel?.95f:passou?r:.30f,sel?.95f:passou?g:.30f,
+            sel?.97f:passou?b:.32f,a); }
+  // O ano em foco cresce (troca suave entre o pequeno e o grande), os outros
+  // ficam menores e apagados; ancorado a direita, rente a linha.
   char year[16];int y=yearOf(&it);if(y==9999)snprintf(year,sizeof year,"—");else snprintf(year,sizeof year,"%d",y);
-  TxtLinha yr=txt_linha(vtTimelineRetrato()?TXT_DET_META2:TXT_CW_TITULO,year,219,210,195,255);txt_desenhar_alpha(yr,x0,cy+14,a);
+  if(vtTimelineRetrato()){TxtLinha yr=txt_linha(TXT_DET_META2,year,219,210,195,255);txt_desenhar_alpha(yr,x0,cy+14,a);}
+  else{
+    TxtLinha yp=txt_linha(TXT_HERO_META,year,219,210,195,255);
+    if(t<.99f)txt_desenhar_alpha(yp,rx-22-yp.w,cy+VT_TL_PONTO-yp.h*.5f,a*.55f*(1-t));
+    if(t>.01f){TxtLinha yg=txt_linha(TXT_TITULO2,year,245,240,230,255);
+      txt_desenhar_alpha(yg,rx-22-yg.w,cy+VT_TL_PONTO-yg.h*.5f+(1-t)*10.0f,a*t);
+      // Onde este ano fica na cronologia inteira (o comeco ja rolou para cima).
+      if(celN>1){float bw=yg.w,bx=rx-22-bw,by=cy+VT_TL_PONTO+yg.h*.5f+8.0f;
+        gfx_cor((GfxRect){bx,by,bw,4},.5f,1,1,1,a*t*.18f);
+        gfx_cor((GfxRect){bx,by,fmaxf(4.0f,bw*i/(float)(celN-1)),4},.5f,r,g,b,a*t);}}
+  }
+  // Os cartoes fora do foco recuam um pouco (sem foco na grade, todos iguais).
+  if(!tabFocus)a*=.70f+.30f*t;
   GfxRect card=vtTimelineCard(cy), artRect=vtTimelineArte(card);
   float x=card.x,tx=vtTelefone()?artRect.x+artRect.w+24.0f:x+418.0f;
   float tw=vtTelefone()?card.x+card.w-tx-24.0f:550.0f;

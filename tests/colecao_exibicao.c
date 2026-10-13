@@ -255,6 +255,22 @@ int main(void) {
     if (L == HOME_LAYOUT_DINAMICA) assert(vitTopo() > NV_SHELF_TOP && vitTopo() + vitPasso() == NV_TELA_H);
   }
 
+  // 11. LINHA DO TEMPO ANIMADA (13/10): o ano em foco cresce pela mola e a
+  // linha se preenche ate ele; com animacao reduzida tudo chega num quadro.
+  snprintf(pasta.group, sizeof pasta.group, "Film Collections");
+  lay = layEscolha = VT_LAY_LINHA; timeline = 1; tabFocus = 0; celLay = -1; orderN = -1;
+  montar(nSemente); foco = 3;
+  assert(tlProg < 0.0f);
+  for (i = 0; i < 120; i++) vertudo_atualizar(1.0f / 60.0f, 1000 + i * 16);
+  assert(tlFoco[3] > 0.99f && tlFoco[0] < 0.01f);
+  assert(fabsf(tlProg - (celY[3] + VT_TL_PONTO)) < 0.5f);
+  foco = 7; vertudo_atualizar(1.0f / 60.0f, 4000);
+  assert(tlProg < celY[7] + VT_TL_PONTO - 1.0f && tlFoco[7] < 0.9f);   // anda, nao salta
+  anim_politica_reduzida = 1;
+  foco = 9; vertudo_atualizar(1.0f / 60.0f, 4016);
+  assert(tlProg == celY[9] + VT_TL_PONTO && tlFoco[9] == 1.0f && tlFoco[7] == 0.0f);
+  anim_politica_reduzida = 0;
+
   printf("colecao_exibicao: ok\n");
   return 0;
 }

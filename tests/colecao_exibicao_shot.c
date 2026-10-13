@@ -257,6 +257,12 @@ int main(int argc, char **argv) {
                (const char *[]){ "", "grade", "linha", "ranking", "saga", "decadas", "mural" }[L]);
       captura(nome, 110);
     }
+    // Linha do tempo com o foco no quarto ano: a linha preenchida ate ele.
+    lay = VT_LAY_LINHA; layEscolha = VT_LAY_LINHA; resolverLayout(); celLay = -1; orderN = -1;
+    foco = 0; captura(NULL, 20);
+    for (i = 0; i < 3; i++) { tecla(SDLK_DOWN); captura(NULL, 8); }
+    snprintf(nome, sizeof nome, "%s-9-streaming-linha-foco4.bmp", saida);
+    captura(nome, 90);
     lay = VT_LAY_GRADE; layEscolha = VT_LAY_GRADE; resolverLayout(); celLay = -1;
     tabFocus = 1; tabCursor = nAbas();
     snprintf(nome, sizeof nome, "%s-9-streaming-botao.bmp", saida);
