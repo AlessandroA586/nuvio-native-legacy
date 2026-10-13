@@ -1297,6 +1297,21 @@ static void ponteiroCartaz(int i, int b) {
   if (foco >= nItens() - VT_COLS * 2) desc_vertudo_mais();
 }
 
+// Streaming com a lista pronta: a contagem e "organizado por servico" so
+// poluiam o cabecalho sob o wordmark. Carregando/erro/sem fonte seguem falando.
+static int legendaOculta(void) {
+  return grupo("Streaming")&&nItens()>0&&!semFonte&&!desc_vertudo_erro();
+}
+// Opacidade de uma aba perto das bordas da faixa: some antes de chegar no
+// botao "Exibicao" (ou na borda esquerda rolada) em vez de ser cortada seco.
+#define VT_ABA_FADE 72.0f
+static float abaFade(float x,float larg,float x0,float W,int maisEsq,int maisDir) {
+  float f=1.0f;
+  if(maisDir)f=fminf(f,(x0+W-(x+larg))/VT_ABA_FADE);
+  if(maisEsq)f=fminf(f,(x-x0)/VT_ABA_FADE);
+  return f<0?0:f;
+}
+
 static void themeHeader(float a,float x0) {
   float r,g,b;corColecao(&r,&g,&b);
   TxtLinha eyebrow=vtTelefone()
@@ -1335,7 +1350,7 @@ static void themeHeader(float a,float x0) {
     snprintf(vis,sizeof vis,i18n("%d de %d assistidos"),sagaVistos,n>VT_MAX?VT_MAX:n);
     snprintf(caption+k,sizeof caption-k,"  ·  %s",vis);
   }
-  TxtLinha sub=txt_linha_corta(TXT_DET_META2,caption,196,202,213,255,vtTelefone()?fminf(960.0f,NV_TELA_W-x0-48.0f):960.0f);txt_desenhar_alpha(sub,x0,192,a);
+  if(!legendaOculta()){TxtLinha sub=txt_linha_corta(TXT_DET_META2,caption,196,202,213,255,vtTelefone()?fminf(960.0f,NV_TELA_W-x0-48.0f):960.0f);txt_desenhar_alpha(sub,x0,192,a);}
   if(collection&&collection->nSources>1) {
     // ABAS NO PADRAO DO APP (19/09/2026, "deixar mais parecido com o restante").
     // Antes: pilula de 304x58 fixa com anel, sublinhado e escala no foco —
@@ -1385,7 +1400,11 @@ static void themeHeader(float a,float x0) {
 #ifdef NV_TOUCH_UI
     if (!toqueAbas.livre)
 #endif
-    { if(fim-tabRol>W)tabRol=fim-W; if(ini-tabRol<0)tabRol=ini; }
+    { float fimMax=fmaxf(0.0f,px-GAP-W);
+      // A aba com o cursor entra inteira e fora das zonas de esmaecimento.
+      if(fim-tabRol>W-VT_ABA_FADE)tabRol=fim-(W-VT_ABA_FADE);
+      if(ini-tabRol<VT_ABA_FADE)tabRol=ini-VT_ABA_FADE;
+      if(tabRol>fimMax)tabRol=fimMax; }
     if(tabRol<0)tabRol=0;
 #ifdef NV_TOUCH_UI
     tabRol = anim_clamp(tabRol, 0.0f, fmaxf(0.0f, px-GAP-W));
@@ -1398,17 +1417,19 @@ static void themeHeader(float a,float x0) {
       if(x+larg[i]<=x0-margem||x>=x0+W+margem)continue;
       int f=tabFocus&&tabCursor==i,selecionada=source==i;
       float fa=tabAnim[i];
+      float ah=a*abaFade(x,larg[i],x0,W,tabRol>0.5f,px-GAP-tabRol>W+0.5f);
       GfxRect pill={x,253,larg[i],H};
+      if(ah<.005f)continue;
       ponteiro_alvo(fmaxf(pill.x,x0-margem),pill.y,fminf(pill.x+pill.w,x0+W+margem)-fmaxf(pill.x,x0-margem),pill.h,ponteiroAba,NULL,i,0);
       if (selecionada) {
         float sr, sg, sb; corFocoFonte(&sr, &sg, &sb);
         gfx_cor(pill, NV_RAIO_PILL, sr, sg, sb,
-                a * (0.62f + 0.38f * fa));
-      } else gfx_cor(pill,NV_RAIO_PILL,1,1,1,.04f*a*(1-fa));
-      if(fa>.001f) focoAbaFonte(pill, fa, a);
+                ah * (0.62f + 0.38f * fa));
+      } else gfx_cor(pill,NV_RAIO_PILL,1,1,1,.04f*ah*(1-fa));
+      if(fa>.001f) focoAbaFonte(pill, fa, ah);
       int cor=f?ajustes_tinta_foco():selecionada?ajustes_tinta_foco2():176;
       TxtLinha t=txt_linha_corta(TXT_HERO_META,rot[i],cor,cor,cor,255,textoW);
-      txt_desenhar_alpha(t,x+PAD,pill.y+(H-t.h)*.5f,a);
+      txt_desenhar_alpha(t,x+PAD,pill.y+(H-t.h)*.5f,ah);
     }gfx_sem_recorte();
   }
 }
@@ -1425,7 +1446,8 @@ static void timelineCard(int i,float cy,float a,float x0) {
   GfxRect card=vtTimelineCard(cy), artRect=vtTimelineArte(card);
   float x=card.x,tx=vtTelefone()?artRect.x+artRect.w+24.0f:x+418.0f;
   float tw=vtTelefone()?card.x+card.w-tx-24.0f:550.0f;
-  if(sel)gfx_cor((GfxRect){x-4,cy-4,card.w+8,VT_CARD_H+8},.045f,.94f,.95f,.97f,a);
+  if(sel&&ajustes_borda_foco())foco_anel(card,.04f,1.0f,a);
+  else if(sel)gfx_cor((GfxRect){x-4,cy-4,card.w+8,VT_CARD_H+8},.045f,.94f,.95f,.97f,a);
   gfx_cor(card,.04f,.09f,.095f,.105f,a);
   const char *art=it.backdrop[0]?it.backdrop:it.poster;GLuint tex=art[0]?tex_obter_larg(art,390):0;
   if(tex){gfx_tex_aspect_atual=tex_aspecto(art);gfx_rect(artRect,tex,GFX_CARD,0,0,0,.04f,0,0,0,a);gfx_tex_aspect_atual=0;}
@@ -1434,7 +1456,7 @@ static void timelineCard(int i,float cy,float a,float x0) {
                             vtTelefone()?artRect.x+artRect.w*.5f-32.0f:x+158,vtTelefone()?artRect.y+artRect.h*.5f-10.0f:y+104,a*.9f); }
   TxtLinha name=txt_linha_corta(TXT_CW_TITULO,it.titulo,242,243,247,255,tw);txt_desenhar_alpha(name,tx,cy+22,a);
   TxtLinha genre=txt_linha_corta(TXT_HERO_META,it.genero,187,194,207,255,tw);txt_desenhar_alpha(genre,tx,cy+64,a);
-  txt_bloco(TXT_DET_META2,it.sinopse,209,214,225,tx,cy+106,vtTelefone()?tw:545.0f,30,a,3);
+  txt_bloco_corta(TXT_DET_META2,it.sinopse,209,214,225,tx,cy+106,vtTelefone()?tw:545.0f,30,a,3);
 }
 
 // --- PECAS COMUNS DAS EXIBICOES ----------------------------------------------
@@ -1663,8 +1685,11 @@ static void botaoExibicao(float a, float x0) {
       gfx_cor((GfxRect){ gx + (q & 1) * 10.0f, gy + (q >> 1) * 10.0f, 8.0f, 8.0f }, 0.25f, c, c, c, a); }
   txt_desenhar_alpha(t, x + 50.0f, y + (H - t.h) * 0.5f, a);
   if (f > 0.05f) {
-    TxtLinha d = txt_linha(TXT_MINI, "OK troca a exibição", 186, 192, 204, 255);
-    txt_desenhar_alpha(d, x + 4.0f, y + H + 6.0f, a * f * 0.9f);
+    // Pastilha escura propria: sobre arte clara a dica solta nao se le.
+    TxtLinha d = txt_linha(TXT_MINI, "OK troca a exibição", 236, 239, 245, 255);
+    GfxRect dp = { x, y + H + 8.0f, d.w + 24.0f, d.h + 12.0f };
+    gfx_cor(dp, NV_RAIO_PILL, 0.05f, 0.055f, 0.07f, 0.82f * a * f);
+    txt_desenhar_alpha(d, dp.x + 12.0f, dp.y + 6.0f, a * f);
   }
 }
 

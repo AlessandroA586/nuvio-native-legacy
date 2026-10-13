@@ -212,6 +212,21 @@ int main(void) {
   vitAgrupar(nSemente);
   assert(vitN == 2 && !strcmp(vitLin[0].nome, i18n("Filmes")) && !strcmp(vitLin[1].nome, i18n("Séries")));
 
+  // 8. STREAMING: sem a legenda de depuracao quando a lista esta pronta, e as
+  // abas esmaecem antes da borda em vez de serem cortadas.
+  nSemente = NANOS; semFonte = 0;
+  snprintf(pasta.group, sizeof pasta.group, "Streaming");
+  assert(legendaOculta());
+  snprintf(pasta.group, sizeof pasta.group, "Film Collections");
+  assert(!legendaOculta());
+  snprintf(pasta.group, sizeof pasta.group, "Streaming");
+  semFonte = 1; assert(!legendaOculta()); semFonte = 0;
+  assert(abaFade(700, 100, 100, 800, 0, 1) == 1.0f);      // longe da borda
+  assert(abaFade(870, 100, 100, 800, 0, 1) == 0.0f);      // passaria da borda
+  assert(abaFade(750, 100, 100, 800, 0, 1) < 1.0f);       // dentro da zona
+  assert(abaFade(870, 100, 100, 800, 0, 0) == 1.0f);      // sem mais abas: normal
+  assert(abaFade(136, 100, 100, 800, 1, 0) < 1.0f);       // rolada: some a esquerda
+
   printf("colecao_exibicao: ok\n");
   return 0;
 }
