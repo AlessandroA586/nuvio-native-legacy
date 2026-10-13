@@ -3,6 +3,7 @@
 #include "../src/fpscena.h"
 #include <SDL2/SDL.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static int falhas;
@@ -14,7 +15,15 @@ static void enche(FpsAmostra *a, double base, double lento, int nlentos, int upl
   for (i = 0; i < 100; i++) fps_add(a, i < nlentos ? lento : base, i == 0 ? upl : 0);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+  if (argc == 3 && !strcmp(argv[1], "--log")) {
+    int q;
+    fpscena_iniciar(NULL, NULL);
+    for (q = 0; q < 5000 && fpscena_ativo(); q++) fpscena_quadro(atof(argv[2]), 0);
+    fpscena_iniciar("player-osd", NULL);
+    for (q = 0; q < 5000 && fpscena_ativo(); q++) fpscena_quadro(atof(argv[2]), 0);
+    return 0;
+  }
   FpsAmostra a;
   char l[400];
   double p; long u;
@@ -32,6 +41,15 @@ int main(void) {
 
   ok(fps_base_achar(base, "title-page", &p, &u) && p == 0.5 && u == 2, "base: acha cena");
   ok(!fps_base_achar(base, "title", &p, &u) && !fps_base_achar(base, "nada", &p, &u), "base: nome exato");
+  ok(!fps_base_achar("x nan 0\n", "x", &p, &u) &&
+     !fps_base_achar("x 1 \n", "x", &p, &u) &&
+     !fps_base_achar("x 1 -1\n", "x", &p, &u), "base: rejeita numero invalido ou incompleto");
+  fps_zerar(&a);
+  for (i = 1; i <= 100; i++) fps_add(&a, i, 0);
+  ok(fps_percentil(&a, 50) == 50 && fps_percentil(&a, 95) == 95 && fps_percentil(&a, 99) == 99,
+     "percentis nearest-rank");
+  fps_zerar(&a);
+  ok(!fps_gate(&a, "x", 1, 0, 10, 0.5, l, sizeof l), "gate: nenhuma amostra reprova");
 
   enche(&a, 1.0, 1.0, 0, 4);
   ok(fps_gate(&a, "home-scroll", 1.0, 4, 50, 0.5, l, sizeof l) && strstr(l, " OK "), "gate: igual a base passa");
@@ -56,5 +74,19 @@ int main(void) {
   fpscena_iniciar("", base);   // an empty flag file on the TV = every scene
   for (i = 0; i < 5000 && fpscena_ativo(); i++) fpscena_quadro(5.0, 0);
   ok(fpscena_falhas() == 2, "runner: arquivo vazio roda todas as cenas");
+  fpscena_iniciar("player-osd", "player-osd 16.667 0\n");
+  teclas = 0;
+  for (i = 0; i < 5000 && fpscena_ativo(); i++) {
+    int k = fpscena_quadro(33.334, 0);
+    if (k) teclas++;
+    if (k && k != SDLK_DOWN) falhas++;
+  }
+  ok(i == 420 && teclas > 20 && fpscena_falhas() == 1, "OSD: cena propria, p95 16.667 -> 33.334 ms reprova");
+  fpscena_iniciar("player-osd", "player-osd 16.667 0\n");
+  for (i = 0; i < 5000 && fpscena_ativo(); i++) fpscena_quadro(16.667, 0);
+  ok(fpscena_falhas() == 0, "OSD: p95 16.667 -> 16.667 ms passa");
+  fpscena_iniciar("home-scroll", "title-page 1.0 0\n");
+  for (i = 0; i < 5000 && fpscena_ativo(); i++) fpscena_quadro(0.8, 0);
+  ok(fpscena_falhas() == 1, "baseline incompleta nao pode passar sem medir");
   return falhas ? 1 : (puts("ok"), 0);
 }

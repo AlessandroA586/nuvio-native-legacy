@@ -3,14 +3,19 @@
 //
 // Idea from the plx-native research (their tests/run.py fps scenes + gate):
 // every smoothness decision needs a number, and a scene that fails when the
-// number regresses. Pure C, no GL/SDL, so the gate logic runs headless in
-// tests/fpscena.sh; tests/fps_gate.sh feeds it real frames on the host and
-// main.c feeds it the TV's frames.
+// number regresses. No GL/window, so the gate logic runs headless in
+// tests/fpscena.sh; tests/fps_gate.sh compares captured logs offline, and
+// main.c feeds it the TV's real frame intervals (including swap/waits).
 //
 // On the TV: create `fps-cena` in the data dir (any content; a line with
 // scene names, e.g. "home-scroll", limits the run). The app scripts the D-pad,
 // logs `[fps-cena] ...` per scene and, if `fps-cena-base` exists, the gate
-// verdict. Off by default: no file, no cost.
+// verdict (10% p95 tolerance + 0.5 ms slack). Empty flag = Home + title.
+// Use "player-osd" separately during existing playback: waits for ready video,
+// then toggles OSD with DOWN without pausing, seeking or opening a source.
+// One run per launch; the flag may be created after launch. FPSBASE lines can
+// be saved as fps-cena-base, on the SAME device/settings/sample window.
+// Off by default; flag checked once per second.
 #ifndef NV_FPSCENA_H
 #define NV_FPSCENA_H
 #include <stddef.h>
@@ -42,7 +47,7 @@ int fps_gate(const FpsAmostra *a, const char *cena, double p95Base, long uplBase
              double tolPct, double folgaMs, char *out, size_t cap);
 
 // ---- TV runner ------------------------------------------------------------
-// Scripted scenes: home scroll, title page. fpscena_quadro is called once per
+// Scripted scenes: home scroll, title page, player OSD. fpscena_quadro is called once per
 // frame with that frame's time; it returns an SDL keycode to inject (0 = none).
 // `base` is the fps-cena-base text or NULL; `escolha` limits scenes or NULL.
 void fpscena_iniciar(const char *escolha, const char *base);

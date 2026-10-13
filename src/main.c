@@ -1837,11 +1837,21 @@ int main(int argc, char **argv) {
     // dir runs the scripted scenes once the home has settled and logs
     // [fps-cena]/[fps-gate]. tex_upl_n still holds the previous frame's uploads.
     { static int fpsIni;
+      static Uint32 fpsProcurar;
+      static char *fpsBase;
       int tk;
-      if (!fpsIni && SDL_GetTicks() > 8000u) {
+      if (!fpsIni && agora > 8000u && agora - fpsProcurar >= 1000u) {
         char *so = dados_ler("fps-cena");
-        fpsIni = 1;
-        if (so) { fpscena_iniciar(so, dados_ler("fps-cena-base")); free(so); }   // base text outlives the run
+        fpsProcurar = agora;
+        if (so) {
+          int osd = strstr(so, "player-osd") != NULL;
+          if (osd ? player_aberto() && player_com_video() && video_pronto() : app_na_home()) {
+            fpsBase = dados_ler("fps-cena-base");
+            fpscena_iniciar(osd ? "player-osd" : so, fpsBase);
+            fpsIni = 1;
+          }
+          free(so);
+        }
       }
       if ((tk = fpscena_quadro(dtms, tex_upl_n)) != 0) {
         SDL_Event ke;
@@ -1850,7 +1860,9 @@ int main(int argc, char **argv) {
         ke.key.keysym.scancode = SDL_GetScancodeFromKey((SDL_Keycode)tk);
         ke.type = SDL_KEYDOWN; SDL_PushEvent(&ke);
         ke.type = SDL_KEYUP;   SDL_PushEvent(&ke);
-      } }
+      }
+      if (fpsIni && !fpscena_ativo() && fpsBase) { free(fpsBase); fpsBase = NULL; }
+    }
     // O TETO E DA ANIMACAO, NAO DA MEDICAO, e confundir os dois cegou o
     // diagnostico do issue #33. `dtms` era grampeado em 100 ms ANTES de virar
     // `pior`, entao todo quadro de 100 ms para cima virava exatamente

@@ -1,6 +1,7 @@
 // FPS regression scenes. See fpscena.h.
 #include "fpscena.h"
 #include <SDL2/SDL.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,8 +9,7 @@
 void fps_zerar(FpsAmostra *a) { a->n = 0; a->upl = 0; }
 
 void fps_add(FpsAmostra *a, double ms, int upl) {
-  if (a->n < FPS_MAX) a->ms[a->n++] = ms;
-  a->upl += upl;
+  if (a->n < FPS_MAX) { a->ms[a->n++] = ms; a->upl += upl; }
 }
 
 static int cmpd(const void *a, const void *b) {
@@ -23,7 +23,7 @@ double fps_percentil(const FpsAmostra *a, double p) {
   if (a->n <= 0) return 0.0;
   memcpy(v, a->ms, sizeof(double) * (size_t)a->n);
   qsort(v, (size_t)a->n, sizeof *v, cmpd);
-  k = (int)(p / 100.0 * (a->n - 1) + 0.5);
+  k = (int)ceil(p / 100.0 * a->n) - 1;
   return v[k < 0 ? 0 : k >= a->n ? a->n - 1 : k];
 }
 
@@ -42,8 +42,13 @@ int fps_base_achar(const char *texto, const char *cena, double *p95, long *upl) 
     if (*l != '#' && !strncmp(l, cena, n) && l[n] == ' ') {
       char *fim;
       double p = strtod(l + n, &fim);
-      long u = strtol(fim, NULL, 10);
-      if (fim == l + n) return 0;
+      char *ufim;
+      long u;
+      if (fim == l + n || !isfinite(p) || p < 0 || (*fim != ' ' && *fim != '\t')) return 0;
+      u = strtol(fim, &ufim, 10);
+      if (ufim == fim) return 0;
+      while (*ufim == ' ' || *ufim == '\t' || *ufim == '\r') ufim++;
+      if (ufim == fim || u < 0 || (*ufim && *ufim != '\n')) return 0;
       *p95 = p; *upl = u;
       return 1;
     }
@@ -57,7 +62,9 @@ int fps_gate(const FpsAmostra *a, const char *cena, double p95Base, long uplBase
              double tolPct, double folgaMs, char *out, size_t cap) {
   double p95 = fps_percentil(a, 95), teto = p95Base * (1.0 + tolPct / 100.0) + folgaMs;
   double uteto = uplBase * 1.25 + 2;
-  int ok = p95 <= teto && (double)a->upl <= uteto;
+  int ok = a->n > 0 && isfinite(p95Base) && p95Base >= 0 && uplBase >= 0 &&
+           isfinite(tolPct) && tolPct >= 0 && isfinite(folgaMs) && folgaMs >= 0 &&
+           p95 <= teto && (double)a->upl <= uteto;
   snprintf(out, cap, "[fps-gate] %s %s p95=%.2f (base %.2f, teto %.2f) upl=%ld (base %ld, teto %.0f)",
            cena, ok ? "OK" : "FALHA", p95, p95Base, teto, a->upl, uplBase, uteto);
   return ok;
@@ -77,25 +84,30 @@ static const Passo TITULO[] = {
   { 1, SDLK_DOWN, 1, 0 }, { 180, 0, 0, 0 }, { MED, 0, 0, 1 },
   { 1, SDLK_AC_BACK, 1, 0 }, { 60, 0, 0, 0 }, { 1, SDLK_AC_BACK, 1, 0 }, { 120, 0, 0, 0 },
 };
+// Run separately during existing playback: never start/stop a stream or seek.
+static const Passo OSD[] = {
+  { 1, SDLK_DOWN, 1, 0 }, { 119, 0, 0, 0 }, { MED, SDLK_DOWN, 12, 1 },
+};
 static const Cena CENAS[] = {
   { "home-scroll", HOME, (int)(sizeof HOME / sizeof *HOME) },
   { "title-page", TITULO, (int)(sizeof TITULO / sizeof *TITULO) },
+  { "player-osd", OSD, (int)(sizeof OSD / sizeof *OSD) },
 };
 #define NCENAS ((int)(sizeof CENAS / sizeof *CENAS))
 
 static struct {
-  int ativo, cena, passo, q, alt;
+  int ativo, cena, passo, q;
   FpsAmostra a;
   const char *base;
   char escolha[256];
   int falhas;
 } S;
 
-static int quer(int c) { return !S.escolha[0] || strstr(S.escolha, CENAS[c].nome); }
+static int quer(int c) { return S.escolha[0] ? strstr(S.escolha, CENAS[c].nome) != NULL : c < 2; }
 
 static void proxima(void) {
   while (S.cena < NCENAS && !quer(S.cena)) S.cena++;
-  S.passo = 0; S.q = 0; S.alt = 0; fps_zerar(&S.a);
+  S.passo = 0; S.q = 0; fps_zerar(&S.a);
   if (S.cena >= NCENAS) {
     printf("[fps-cena] fim falhas=%d\n", S.falhas);
     S.ativo = 0;
@@ -133,8 +145,12 @@ int fpscena_quadro(double ms, int upl) {
       double b95; long bu;
       fps_linha(&S.a, c->nome, l, sizeof l);
       printf("%s\n", l);
-      if (S.base && fps_base_achar(S.base, c->nome, &b95, &bu)) {
-        if (!fps_gate(&S.a, c->nome, b95, bu, 50.0, 0.5, l, sizeof l)) S.falhas++;
+      printf("FPSBASE %s %.3f %ld\n", c->nome, fps_percentil(&S.a, 95), S.a.upl);
+      if (S.base) {
+        if (!fps_base_achar(S.base, c->nome, &b95, &bu)) {
+          S.falhas++;
+          snprintf(l, sizeof l, "[fps-gate] %s FALHA baseline ausente/invalida", c->nome);
+        } else if (!fps_gate(&S.a, c->nome, b95, bu, 10.0, 0.5, l, sizeof l)) S.falhas++;
         printf("%s\n", l);
       }
     }
