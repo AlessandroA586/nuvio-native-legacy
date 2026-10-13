@@ -3105,6 +3105,11 @@ void gfx_vidro_folha(GfxRect r, float raio, float a) {
   gfx_vidro_miolo(r, raio, 0.085f, 0.088f, 0.10f, ajustes_vidro_opacidade() * a, a);
   gfx_brilho_topo(r, raio, 0.38f, 0.88f, 0.92f, 1.0f, 0.06f * a);
 }
+void gfx_vidro_borda(GfxRect r, float raio, float a) {
+  if (efeitosMinimos || r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
+  gfx_anel(r, raio, 1.0f, 1, 1, 1, 0.22f * a);
+  gfx_brilho_topo(r, raio, 0.50f, 1.0f, 1.0f, 1.0f, 0.18f * a);
+}
 void gfx_vidro_aro(GfxRect r, float raio, float esp, float cr, float cg, float cb, float ca) {
   if (!ajustes_vidro_contorno()) return;
   gfx_anel(r, raio, esp, cr, cg, cb, ca);

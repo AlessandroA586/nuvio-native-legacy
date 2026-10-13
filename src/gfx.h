@@ -664,6 +664,9 @@ void gfx_cartao_foco_vidro(GfxRect r, float raio, float foco, float alfa,
 // contraste). Em repouso 0,16 x 0,55 sobre o fundo #0D0D0D da 0,11 — o cinza
 // das pilulas do video de referencia.
 void gfx_vidro_folha(GfxRect r, float raio, float a);
+// Borda de vidro (Liquid Glass): fio claro de 1 px e a luz que escorre do alto,
+// por cima do miolo. Nada em efeitos minimos (TVs fracas: so translucido liso).
+void gfx_vidro_borda(GfxRect r, float raio, float a);
 void gfx_vidro_superficie(GfxRect r, float raio, float a);
 // Fio de REPOUSO de um cartao/painel de vidro. Obedece a "Contorno do vidro";
 // o anel de FOCO (gfx_vidro_foco) nunca passa por aqui.
