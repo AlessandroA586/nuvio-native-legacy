@@ -1,0 +1,13 @@
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+work=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-idle-ass.XXXXXX")
+trap 'rm -rf "$work"' EXIT
+flags=()
+if [ "${SANITIZE:-0}" = 1 ]; then flags+=(-fsanitize=address,undefined -fno-omit-frame-pointer); fi
+cc "${flags[@]}" -DNV_ASS_LIBASS -include tests/ass_pisca_gl.h -Isrc \
+  tests/legenda_idle_ass.c src/assrender.c src/bidi.c \
+  $(pkg-config --cflags --libs libass) -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
+  -L/opt/homebrew/lib -lSDL2 -framework OpenGL -Wno-deprecated-declarations \
+  -Wno-macro-redefined -o "$work/test"
+"$work/test"
