@@ -4408,7 +4408,13 @@ static void desenhaHero(Uint32 agora, float saida) {
       // grupo antes da capa, e a sem nada ficava vazia.
       const char *art=col_banner(folder);
       GLuint t=0;
-      if (ehDiretor) diretor_pedir(folder->title);
+      if (ehDiretor) {
+        // Pessoa: o fundo e o backdrop do titulo mais conhecido; sem ele, um
+        // fundo escuro liso. Nunca o retrato (nem o do pacote) ampliado.
+        diretor_pedir(folder->title);
+        art=diretor_hero(folder->title);
+        if (!art[0]) gfx_cor(r,0,0.035f,0.035f,0.05f,aArte);
+      }
       if (!t && art[0]) t=tex_obter_hero(art);
       if (art[0]) corviva_definir(art, CORVIVA_HOME);
       if(t){gfx_tex_aspect_atual=tex_aspecto(art);
@@ -4421,22 +4427,6 @@ static void desenhaHero(Uint32 agora, float saida) {
       TxtLinha group=txt_linha(TXT_HERO_META,folder->group,201,206,218,255);
       txt_desenhar_alpha(group,x,NV_COLLECTION_HERO_GROUP_Y,a);
       if (ehDiretor) {
-        const char *foto=diretor_foto(folder->title);
-        GLuint retrato=foto[0]
-          ?tex_obter_larg(foto,cheio?1280.0f:1100.0f):0;
-        if (retrato) {
-          // O shader conserva a proporcao vertical e dissolve as quatro bordas.
-          // A largura e intencionalmente generosa para a cabeca ter a mesma
-          // presenca visual do exemplo aprovado, sem parecer uma foto espremida.
-          GfxRect pr=cheio ? (GfxRect){840.0f,-20.0f,1080.0f,1120.0f}
-                           : (GfxRect){980.0f,-15.0f,940.0f,700.0f};
-          if (homeRetratoTelefone()) pr = (GfxRect){NV_TELA_W * 0.4f, -20.0f, NV_TELA_W * 0.7f, 1120.0f};
-          pr = heroArtworkOverlayRect(pr, r);
-          gfx_tex_aspect_atual=tex_aspecto(foto);
-          if (pr.w > 0 && pr.h > 0)
-            gfx_rect(pr,retrato,GFX_RETRATO,0,0,0,0,0,0,0,aArte);
-          gfx_tex_aspect_atual=0.0f;
-        }
         TxtLinha name=txt_linha_corta(TXT_TITULO1,folder->title,244,243,247,255,homeTextoLargura(780));
         txt_desenhar_alpha(name,x,NV_COLLECTION_HERO_LOGO_Y,a);
         const char *meta=diretor_meta(folder->title);
