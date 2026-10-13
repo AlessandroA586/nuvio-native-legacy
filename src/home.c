@@ -2406,8 +2406,13 @@ void home_evento(const SDL_Event *e) {
       }
       focoHero = 0; return;
     }
-    // Cima no destaque: nao ha para onde ir. A pagina sobe um pouco e volta.
-    if (k == SDLK_UP) { anim_borda_bater(&bordaPag, -NV_BORDA_AMP); return; }
+    // Cima no destaque: com a barra no topo (#461) sobe para ela; sem, nao ha
+    // para onde ir e a pagina sobe um pouco e volta.
+    if (k == SDLK_UP) {
+      if (ajustes_menu_topo()) pedidoMenu = 1;
+      else anim_borda_bater(&bordaPag, -NV_BORDA_AMP);
+      return;
+    }
   }
   // A FILEIRA DE AMIGOS ANDA POR DENTRO antes da home: direita entra nos
   // cartoes do rosto em foco, esquerda volta ao rosto (amigosfil.h).
@@ -3743,7 +3748,8 @@ int home_streaming_barra(const int **pastas) {
 // topo: 1 com o destaque inteiro na tela, 0 depois de ~140 px de rolagem.
 float home_topo_fracao(void) {
   float f;
-  if (layoutHome() != HOME_LAYOUT_DINAMICA) return 1.0f;
+  // Barra no topo (#461): so com o foco no destaque, como a pilula na pagina rolada.
+  if (layoutHome() != HOME_LAYOUT_DINAMICA) return ajustes_menu_topo() ? (float)focoHero : 1.0f;
   f = 1.0f + dinHeroY() / 140.0f;
   return f < 0.0f ? 0.0f : (f > 1.0f ? 1.0f : f);
 }
