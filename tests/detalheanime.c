@@ -31,6 +31,16 @@ Uint32 SDL_GetTicks(void) { return 0; }
 #include <stdio.h>
 #include <unistd.h>
 #include "jellyfin_stub.inc"
+// Manifest loading is outside this metadata harness.
+void addons_lista_travar(void) {}
+void addons_lista_destravar(void) {}
+void ws_destino(const char *b, const char *u, int p, char out[20]) {
+  (void)b; (void)u; (void)p; out[0] = 0;
+}
+void addons_manifesto_lido_base(int i, const char *b, const char *d,
+                               unsigned v, const char *c) {
+  (void)i; (void)b; (void)d; (void)v; (void)c;
+}
 
 // --- DUBLES: nenhum participa da regra, so fazem descoberta.c linkar ---------
 // (o conjunto e o de tests/colfileiras.c, menos os cat_* — que catalogo.c ja

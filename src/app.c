@@ -675,28 +675,12 @@ static Uint32 trocaPerfilDesde;
 // `exigeArte` = 0 para o pos-play e a grade (abriam mesmo sem arte);
 // `descartarRetido` = 0 so no pos-play (nunca descartou a sessao retida).
 static void abrirTitulo(const HomeItem *it, int exigeArte, int descartarRetido) {
-  const CatItem *c;
   if (!it || (exigeArte && !it->arte)) return;
   // Uma pagina nova pode abrir trailer no mesmo plano. Retomar na ilha ja
   // foi tratado antes deste caminho, sem passar pela pagina nem por fontes.
   if (descartarRetido) player_descartar_retido();
-  // ITEM COM ID "tmdb:<n>" — resultado de busca de um addon do TMDB (o dono,
-  // 20/09/2026: "tem titulos da busca que quando abre nao vem com as artes e
-  // informacoes nenhuma"). O detalhe pede tudo ao Cinemeta por imdb, e
-  // /meta/series/tmdb:456.json responde 404: sem temporadas, sem episodios,
-  // addons sem fonte. O vertudo ja resolvia esse id pelo caminho da
-  // filmografia (external_ids -> imdb -> meta); a busca e a home entravam por
-  // aqui e nao. Um so lugar para os dois: o titulo resolvido entra no catalogo
-  // e trocaDeTituloSeSolicitada abre ele.
-  c = cat_item(it->indice);
-  if (c && !strncmp(c->imdb, "tmdb:", 5) && desc_chave_tmdb() &&
-      desc_chave_tmdb()[0] && !desc_titulo_buscando()) {
-    // Sem chave do TMDB nao ha como resolver: abre como dava (arte e sinopse,
-    // sem episodios) em vez de nao abrir nada.
-    desc_pedir_titulo_tmdb(atol(c->imdb + 5),
-                           !strcmp(c->tipo, "series") ? "tv" : "movie");
-    return;
-  }
+  // Discovery serves native tmdb: ids through Nuvio, including titles with
+  // no IMDb mapping. Open the existing card and let its metadata load there.
   detail_abrir(it);
 }
 

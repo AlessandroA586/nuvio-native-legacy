@@ -904,10 +904,7 @@ static int consultarAlvo(const AlvoBusca *a, const char *termo,
     origemDaBase(a->base, orig, sizeof orig);   // o resultado abre pelo addon que o achou
     while (p && n < max) {
       const char *f = js_fim(p);
-      if (deMeta(p, f, a->tipo, &saida[n]) &&
-          // O Nuvio devolve "tmdb:<id>" para quem nao tem IMDb; o resultado fica
-          // no formato tt... (o Cinemeta de reserva nao entende tmdb:).
-          (!a->nuvio || !strncmp(saida[n].imdb, "tt", 2))) {
+      if (deMeta(p, f, a->tipo, &saida[n])) {
         snprintf(saida[n].origem, sizeof saida[n].origem, "%s", orig);
         n++;
       }
@@ -7420,7 +7417,7 @@ static void *buscarEps(void *u) {
   // item, e o Cinemeta so como complemento. Devolve 0 quando nao ha nada
   // util — ai o caminho de sempre: Cinemeta para "tt", nada para o resto.
   if (catalogoPrimeiro(orig)) viaCatalogo = metaCatalogoResolver(orig, &mf, alvoItem);
-  if (!viaCatalogo && strncmp(orig->imdb, "tt", 2)) {
+  if (!viaCatalogo && strncmp(orig->imdb, "tt", 2) && strncmp(orig->imdb, "tmdb:", 5)) {
     metaFontesLiberar(&mf);
     fioEpVivo = 0;
     return NULL;
@@ -8273,10 +8270,8 @@ static void *buscarTitulo(void *arg) {
       corpo = rede_baixar(url, 15);
       if (corpo) { js_texto(corpo, NULL, "imdb_id", id, sizeof id); free(corpo); }
     }
-    if (!id[0] || id[0] != 't') {
-      printf("[desc] sob demanda tmdb %ld -> sem imdb\n", sobTmdb); fflush(stdout);
-      sobIndice = -1; sobFioVivo = 0; return NULL;
-    }
+    // No IMDb mapping: Nuvio still serves the native TMDB id and its videos.
+    if (!idbase_e_imdb(id)) snprintf(id, sizeof id, "tmdb:%ld", sobTmdb);
     // Ja temos? Entao e so abrir.
     { int j = cat_indice_por_imdb(id);
       if (j >= 0) { sobIndice = j; sobFioVivo = 0; return NULL; } }
@@ -8295,8 +8290,9 @@ static void *buscarTitulo(void *arg) {
     }
   }
 
-  for (passo = 0; passo < 2 && achou < 0; passo++) {
-    const char *tipo = passo ? "series" : "movie";
+  for (passo = 0; passo < (sobTmdb > 0 ? 1 : 2) && achou < 0; passo++) {
+    const char *tipo = sobTmdb > 0 ? (!strcmp(sobTipo, "tv") ? "series" : "movie")
+                                   : passo ? "series" : "movie";
     corpo = metaprov_meta(tipo, id, 20, NULL);   // Nuvio, depois Cinemeta
     if (!corpo) continue;
     { const char *m = strstr(corpo, "\"meta\"");
