@@ -22,7 +22,7 @@ static int falhas;
 static pthread_mutex_t tr = PTHREAD_MUTEX_INITIALIZER;
 static unsigned caps;
 static int nA, nC, nD, nB, prazoOk = 1, postOk = 1, jsonOk = 1;
-static char corpoA[1024], urlA[512];
+static char corpoA[1024], urlA[NV_ADDON_PEDIDO_MAX];
 
 unsigned rede_pedido_capacidades(void) { return caps; }
 int rede_pedir(const RedePedido *p, RedeResposta *r) {
@@ -121,11 +121,42 @@ static int testarArranque(void) {
   return falhas ? 1 : 0;
 }
 
+static int testarUrlLonga(void) {
+  static char base[NV_ADDON_URL_MAX];
+  static const char caminho[] = "/watch_state/push/movie/tt0133093.json";
+  WsEvento e = filme(WS_STOP, 3000);
+  size_t prefixo;
+  int i;
+  snprintf(base, sizeof base, "http://a.test/");
+  prefixo = strlen(base);
+  memset(base + prefixo, 'x', 1500 - prefixo); base[1500] = 0;
+  bases[0] = base;
+  caps = REDE_CAP_CORPO;
+  alarm(8);
+  wsenvio_emitir(&e);
+  for (i = 0; i < 200; i++) {
+    int entregue;
+    pthread_mutex_lock(&tr); entregue = nA == 1; pthread_mutex_unlock(&tr);
+    if (entregue) break;
+    usleep(10000);
+  }
+  pthread_mutex_lock(&tr);
+  OK(nA == 1 && nB == 0);
+  OK(strlen(urlA) == 1500 + strlen(caminho));
+  OK(!strncmp(urlA, base, 1500) && !strcmp(urlA + 1500, caminho));
+  OK(strstr(corpoA, "\"event\":\"stop\"") && strstr(corpoA, "\"positionMs\":3000"));
+  pthread_mutex_unlock(&tr);
+  alarm(0);
+  if (!falhas) printf("OK watchstate_url_longa\n");
+  return falhas ? 1 : 0;
+}
+
 int main(int argc, char **argv) {
   WsEvento e;
   long long t0, dt;
   int a, c, d;
   if (argc > 1 && !strcmp(argv[1], "--arranque")) return testarArranque();
+  if (argc > 1 && !strcmp(argv[1], "--url-longa")) return testarUrlLonga();
   alarm(8);   // start -> pause -> stop deve terminar mesmo com 401/503
 
   // VIDAA (so GET): nada sai, nem o fio nasce

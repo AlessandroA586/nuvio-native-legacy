@@ -90,7 +90,7 @@ void wsenvio_emitir(const WsEvento *e) {
   n = addons_n();
   for (i = 0; i < n; i++) {
     WsDecl d;
-    char url[512], id[WS_ID_MAX + 64], corpo[1024];
+    char url[NV_ADDON_PEDIDO_MAX], id[WS_ID_MAX + 64], corpo[1024];
     const char *base = addons_base(i);
     if (!base || !base[0] || !addons_watchstate(i, &d)) continue;
     if (!ws_decl_aceita(&d, e->ev, e->tipo, e->metaId, e->videoId)) continue;

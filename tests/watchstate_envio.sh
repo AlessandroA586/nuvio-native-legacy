@@ -18,4 +18,7 @@ PY
 cc tests/watchstate_envio.c "$work/arranque.c" src/watchstate_envio.c src/watchstate.c src/js.c src/jsw.c -Isrc -std=gnu11 -Wall -Wextra \
   -Wno-unused-function -Wno-macro-redefined -lpthread -o "$work/t"
 "$work/t" "$@"
-if [ "$#" -eq 0 ]; then "$work/t" --arranque; fi
+if [ "$#" -eq 0 ]; then
+  "$work/t" --arranque
+  "$work/t" --url-longa
+fi
