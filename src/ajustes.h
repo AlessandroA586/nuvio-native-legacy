@@ -285,6 +285,9 @@ void  ajustes_livetv_aplicar_modo(int modo);
 
 // --- LAYOUT: estrutura da home ----------------------------------------------
 int   ajustes_rail_recolhida(void);     // collapseSidebar
+// #461: 1 = o menu e uma barra no topo (menu.c), sem rail na esquerda. 0 no
+// layout Dinamica e no telefone em retrato.
+int   ajustes_menu_topo(void);
 int   ajustes_rail_moderna(void);       // modernSidebar
 int   ajustes_rail_moderna_blur(void);  // modernSidebarBlur
 int   ajustes_hero_ligado(void);        // heroSectionEnabled

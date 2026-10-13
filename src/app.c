@@ -5140,6 +5140,7 @@ static void desenharAtrasDoPainel(void *ctx) {
     // barra abre pelo ESQUERDA na borda e pela faixa do ponteiro.
     menu_pilula_mostrar(vertudo_aberta() || detail_aberto() ? -1.0f   // "Ver tudo"/colecao/pagina tem cabecalho proprio
                         : tela == TELA_HOME ? home_topo_fracao()
+                        : ajustes_menu_topo() ? -1.0f   // #461: a barra no topo fechada so mora na home
                         : (tela == TELA_EXPLORAR || tela == TELA_BUSCA ||
                            tela == TELA_BIBLIOTECA || tela == TELA_AGENDA ||
                            tela == TELA_PERFIL || tela == TELA_AJUSTES) ? 1.0f : -1.0f);
