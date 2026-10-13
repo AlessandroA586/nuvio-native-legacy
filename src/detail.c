@@ -3961,25 +3961,6 @@ static void desenhaBotao(GfxRect r, const char *rot, int icone, int focado, floa
                        r.y + (r.h - l.h) * 0.5f, a); }
 }
 
-// DICA DO CIRCULAR EM FOCO (so o "Assistir trailer"): o circular e mudo, e uma
-// acao que abre video nao pode ser adivinhada pelo glifo. Pilula escura com o
-// nome logo acima do botao, no mesmo vocabulario da legenda do carrossel.
-static void desenhaDicaBotao(GfxRect rc, const char *texto, float a) {
-  float ar, ag, ab;
-  TxtLinha label = txt_linha_corta(TXT_CAPTION2, texto, 232, 235, 240, 255,
-                                   larguraTextoHero() - 28.0f);
-  float w = label.w + 28.0f, h = 34.0f;
-  GfxRect pill = { rc.x + (rc.w - w) * 0.5f, rc.y - h - 14.0f, w, h };
-  if (pill.x < NV_DETW2_X) pill.x = NV_DETW2_X;
-  if (detalheRetrato() && pill.x + pill.w > NV_TELA_W - 96.0f)
-    pill.x = NV_TELA_W - 96.0f - pill.w;
-  ajustes_acento(&ar, &ag, &ab);
-  gfx_cor(pill, .5f, ar, ag, ab, .16f * a);
-  gfx_cor((GfxRect){ pill.x + 1, pill.y + 1, pill.w - 2, pill.h - 2 }, .5f,
-          .075f, .08f, .095f, .76f * a);
-  txt_desenhar_alpha(label, pill.x + 14.0f, pill.y + (h - label.h) * .5f, a);
-}
-
 // Botao secundario: 345x96, raio 64, fundo #222 e texto branco; focado, fundo
 // #f5f5f5 e texto #111, com o mesmo anel de 4px. Nao tem icone — no web e so o
 // rotulo, e por isso a largura sai de `texto + 2 x 34` e nao da conta do
@@ -4590,8 +4571,6 @@ static void heroWeb(float a, float desloc) {
           desenhaLembrete(rc,ci && agenda_lembrete(ci->imdb),selected,a*stagger);
         else desenhaBotao(rc,NULL,action,selected,a*stagger);
         if (action == ACAO_MAIS) maisAncora = rc;
-        if (selected && action == ACAO_MAIS && stagger > .85f && !detmais_aberto())
-          desenhaDicaBotao(rc, i18n("Mais opções"), a);
         if (maisAcoes && a > .3f && stagger > .85f)
           ponteiro_alvo(rc.x,rc.y,rc.w,rc.h,ponteiroDetalhe,NULL,-1,j);
       }
@@ -4603,8 +4582,6 @@ static void heroWeb(float a, float desloc) {
       if (detalheRetrato()) rc = heroAcaoRect(&bx, &cyBtn, rc.w, rc.h);
       desenhaBotao(rc, NULL, acaoEm(nb), nivel == 0 && botao == nb, a);
       if (acaoEm(nb) == ACAO_MAIS) maisAncora = rc;
-      if (nivel == 0 && botao == nb && acaoEm(nb) == ACAO_MAIS && !detmais_aberto())
-        desenhaDicaBotao(rc, i18n("Mais opções"), a);
       if (a > 0.3f) ponteiro_alvo(rc.x, rc.y, rc.w, rc.h, ponteiroDetalhe, NULL, -1, nb);
       bx += NV_DETW2_CIRC + NV_DETW2_BTN_GAP;
     }
