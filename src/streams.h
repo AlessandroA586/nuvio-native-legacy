@@ -292,6 +292,9 @@ unsigned stream_lista_geracao(void);
 // Quantos torrents SEM url (so infoHash) ha na lista: os que so o P2P ou o
 // debrid tocam. Serve ao cartao "nenhuma fonte serve" dizer que ha P2P.
 int  stream_qtd_torrents(void);
+// Torrents descartados (sem debrid nem P2P) que o P2P deste pacote tocaria se
+// ligado; 0 com debrid, P2P ligado ou sem P2P no pacote (#486).
+int  stream_torrents_para_p2p(void);
 int  stream_resolver_escolhida(int i, unsigned geracao, char *url, unsigned nu,
                                char *servico, unsigned ns, int *pct);
 

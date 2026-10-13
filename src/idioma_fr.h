@@ -2393,6 +2393,7 @@
   T("Ligar e desligar sem sair do guia", "Activer et désactiver sans quitter le guide"),
   T("Ligar ou desligar", "Activer ou désactiver"),
   T("Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "Activer ou désactiver ici vaut pour toute l'app, pas seulement pour le guide."),
+  T("Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "Activez le P2P dans Réglages ou connectez un compte debrid."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "Activez Profil recherchable dans Mon profil pour voir la communauté."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "Activez Profil recherchable dans Mon profil pour voir des personnes aux goûts similaires."),
   T("Ligue o Perfil pesquisável para ver", "Activez Profil recherchable pour voir"),

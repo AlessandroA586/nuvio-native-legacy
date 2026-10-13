@@ -2393,6 +2393,7 @@
   { "Ligar e desligar sem sair do guia", "Turn on and off without leaving the guide" },
   { "Ligar ou desligar", "Turn on or off" },
   { "Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "Turning an add-on on or off here applies to the whole app, not only the guide." },
+  { "Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "Turn on P2P in Settings or connect a debrid account." },
   { "Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "Turn on Searchable profile in My profile to see the community." },
   { "Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "Turn on Searchable profile in My profile to see people with similar taste." },
   { "Ligue o Perfil pesquisável para ver", "Turn on Searchable profile to see this" },
