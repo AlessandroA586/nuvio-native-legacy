@@ -1238,6 +1238,12 @@ static void themeBackground(float a) {
         GfxRect rp={NV_TELA_W-560.0f,0,560,560};
         if (vtTelefone()) rp.x = NV_TELA_W - 48.0f - rp.w;
         if (vtTimelineRetrato()) rp = (GfxRect){NV_TELA_W - 204.0f,18,156,180};
+        // Mancha da cor dominante do retrato (cor viva), escurecida para o
+        // texto da esquerda seguir legivel; so quando a paleta ja existe.
+        CorvivaPaleta pal;
+        if(!vtTimelineRetrato()&&corviva_paleta(foto,&pal)&&pal.ok)
+          gfx_rect((GfxRect){rp.x-760,-380,1700,1000},0,GFX_SOMBRA,1.0f,0,0,0.5f,
+                   pal.acento[0]*.55f,pal.acento[1]*.55f,pal.acento[2]*.55f,.85f*a);
         gfx_tex_aspect_atual=tex_aspecto(foto);
         gfx_rect(rp,tp,GFX_RETRATO,
                  0,0,0,0,0,0,0,a);

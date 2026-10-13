@@ -161,6 +161,36 @@ int main(int argc, char **argv) {
   captura(nome, w);
   shotGrade = 0;
 
+  // FILMOGRAFIA DE DIRETOR (205): retrato do pacote, retrato menor ("so TMDB",
+  // sem rede aqui) e sem imagem. NV_SHOT_PACOTE aponta o PNG do pacote.
+  { const char *pacote = getenv("NV_SHOT_PACOTE");
+    const char *fotos[3] = { pacote ? pacote : "deploy/app/art/cinematic/portrait.png",
+                             "deploy/app/art/03.jpg", NULL };
+    const char *rot[3] = { "pacote", "tmdb", "semfoto" };
+    int k;
+    for (k = 0; k < 3; k++) {
+      char cmd[1400];
+      memset(pastaFontes, 0, sizeof pastaFontes);
+      memset(&pasta, 0, sizeof pasta);
+      pasta.sources = pastaFontes;
+      snprintf(pasta.title, sizeof pasta.title, "Quentin Tarantino");
+      snprintf(pasta.group, sizeof pasta.group, "Directors");
+      fonte(0, "Quentin Tarantino", "movie");
+      pasta.nSources = 1;
+      if (fotos[k]) {
+        snprintf(pasta.frameDir, sizeof pasta.frameDir, "%s/dir%d", getenv("NUVIO_DADOS"), k);
+        snprintf(cmd, sizeof cmd, "mkdir -p '%s' && cp '%s' '%s/portrait%s'", pasta.frameDir, fotos[k],
+                 pasta.frameDir, strstr(fotos[k], ".png") ? ".png" : ".jpg");
+        assert(system(cmd) == 0);
+      }
+      snprintf(titulo, sizeof titulo, "%s", pasta.title);
+      shotGrade = 8; tabFocus = 0; tabCursor = 0; foco = 0;
+      snprintf(nome, sizeof nome, "%s-diretor-%s.bmp", saida, rot[k]);
+      captura(nome, w);
+    }
+    shotGrade = 0;
+  }
+
   tex_encerrar();
   txt_encerrar();
   SDL_GL_DeleteContext(gl);
