@@ -595,7 +595,9 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "void main(){\n"
   // uFoco = 1 - gfx_hdr_ui (UI em HDR, esmaecer.h); 0 fora do HDR.
   "  vec4 g = texture2D(uTex, vUv);\n"
-  "  gl_FragColor = vec4(g.rgb * (1.0 - uFoco), g.a * uCor.a);\n"
+  // uPar.x liga o tint RGB do texto em cache; logos mantem a cor original.
+  "  vec3 tint = uPar.x > 0.5 ? uCor.rgb : vec3(1.0);\n"
+  "  gl_FragColor = vec4(g.rgb * tint * (1.0 - uFoco), g.a * uCor.a);\n"
   "}\n",
 
   // GFX_FUNDO — arte desfocada por mipmap (uFoco carrega o bias), com o
