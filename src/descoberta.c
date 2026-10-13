@@ -6775,6 +6775,16 @@ static int episodiosDoAddon(int alvoItem, const char *serie, const char *titulo,
     // LISTA DE ARQUIVOS SO ENTRA SE SOUBER MAIS EPISODIOS que o Cinemeta (20 em
     // 4 variantes contra 12: os 8 a mais nao se perdem). No empate ou com menos
     // ela nao serve nem de lista nem de texto: o "nome" dela e nome de arquivo.
+    // #391: ficha com mais de 4x os episodios de um Cinemeta que ja tem 20+
+    // (10976 contra 176) e numeracao de fonte/torrent, nao lista de serie.
+    if (nCine >= 20 && n2 > nCine * 4) {
+      printf("[desc] %s: %s respondeu %d episodios contra %d do Cinemeta; "
+             "numeracao absurda, mantendo a lista do Cinemeta\n",
+             titulo, addons_nome(i), n2, nCine);
+      fflush(stdout);
+      free(c2);
+      continue;
+    }
     if (arq && n2 <= nCine) {
       printf("[desc] %s: %s respondeu %d videos para %d episodios (lista de arquivos) "
              "contra %d do Cinemeta; nao serve de lista de episodios\n",

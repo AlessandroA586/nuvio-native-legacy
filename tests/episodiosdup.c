@@ -702,6 +702,34 @@ int main(void) {
       callocFalha = 0;
       puts("ok  conjunto cheio sem crescer: 1023 pares, o resto nao entra e a procura termina");
     }
+    // #391: ficha de addon com milhares de "episodios" distintos (numeracao
+    // absurda) para uma serie de 30 no Cinemeta nao troca a lista.
+    k = (size_t)snprintf(cine, cap, "{\"meta\":{\"id\":\"tt13293588\",\"type\":\"series\","
+                         "\"name\":\"Serie\",\"description\":\"S.\",\"videos\":[");
+    for (t = 1; t <= 3; t++)
+      for (ep = 1; ep <= 10; ep++)
+        k += (size_t)snprintf(cine + k, cap - k,
+                              "%s{\"id\":\"tt13293588:%d:%d\",\"season\":%d,\"episode\":%d,"
+                              "\"name\":\"T%dE%d\"}", (t > 1 || ep > 1) ? "," : "", t, ep, t, ep, t, ep);
+    snprintf(cine + k, cap - k, "]}}");
+    k = (size_t)snprintf(maior, cap, "{\"meta\":{\"id\":\"tt13293588\",\"type\":\"series\","
+                         "\"name\":\"Serie\",\"videos\":[");
+    for (t = 1; t <= 3; t++)
+      for (ep = 1; ep <= 400; ep++)
+        k += (size_t)snprintf(maior + k, cap - k,
+                              "%s{\"id\":\"x%d:%d\",\"season\":%d,\"episode\":%d,"
+                              "\"name\":\"X%d\"}", (t > 1 || ep > 1) ? "," : "", t, ep, t, ep, ep);
+    snprintf(maior + k, cap - k, "]}}");
+    assert(desc_meta_n_episodios(cine) == 30 && desc_meta_n_episodios(maior) == 1200);
+    nFake = 0; nRotas = 0; addonMeta = 1; addonTipo = "/series/";
+    cineSerie = cine; addonResp = maior;
+    limparCacheMeta();
+    catalogoCom("tt13293588", "series", "Serie");
+    abrir();
+    printf("1200 contra 30: %d episodios\n", cat_n_episodios(0));
+    assert(cat_n_episodios(0) == 30);
+    assert(!strcmp(cat_episodio(0, 0)->nome, "T1E1"));
+    puts("ok  ficha de addon com 40x os episodios do Cinemeta nao troca a lista");
     nFake = 0; nRotas = 0;
     addonMeta = 0; cineSerie = NULL; addonResp = NULL;
     limparCacheMeta();
