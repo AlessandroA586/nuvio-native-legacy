@@ -20,13 +20,14 @@ NUVIO_DADOS="$work" "$work/test"
 # #205: a corrida do encerramento com o barramento LS2. O callback do
 # screensaver (fio do laco) preso DENTRO do lsChamar enquanto o video_encerrar
 # faz o LSUnregister — reproduzida com o ramo luna real de video.c e o laco
-# dublado (tests/descanso_luna.c). Falha sem o pthread_join do fio.
+# dublado + GLib real com inicio atrasado (tests/descanso_luna.c).
 luna_sources=()
 for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/video.c) continue;; esac
   luna_sources+=("$source")
 done
-cc "${luna_sources[@]}" tests/descanso_luna.c -Isrc -o "$work/test_luna" \
+glib_flags=($(pkg-config --cflags --libs glib-2.0))
+cc "${luna_sources[@]}" tests/descanso_luna.c -Isrc -o "$work/test_luna" "${glib_flags[@]}" \
   -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer \
   -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL \

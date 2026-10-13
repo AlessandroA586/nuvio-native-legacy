@@ -36,6 +36,7 @@
 #include <time.h>
 #include <ctype.h>
 #include <stdint.h>
+#include <stdatomic.h>
 #include <unistd.h>
 
 static DtsPlayback *dtsSessao;
@@ -224,7 +225,7 @@ static char  legUrlAoCarregar[1024];
 // embutida de antes, ou nenhuma.
 static char  legUrlAtual[1024];
 // Avanco pendente: alvo e quando manda-lo. Ver SEEK_REPOUSO_MS.
-static int    pausaPedida;   // 1 enquanto a pausa foi pedida por nos
+static _Atomic int pausaPedida;   // 1 enquanto a pausa foi pedida por nos
 static int    pausaConfirmada;
 // Sonda de MKV pedida, esperando o buffer. Ver a nota no sourceInfo.
 static int    mkvPendente;
@@ -458,6 +459,7 @@ static const char *(*lsPayload)(LSMessage *);
 static void *(*loopNovo)(void *, int);
 static void  (*loopRodar)(void *);
 static void  (*loopParar)(void *);
+static unsigned (*loopAgendar)(int, int (*)(void *), void *, void (*)(void *));
 
 // libAcbAPI e SEMPRE por dlopen. Linkar cria um DT_NEEDED e, se a lib faltar
 // (ela sumiu no webOS 5), o processo morre antes do main e antes do log —
@@ -586,7 +588,10 @@ static int dvPedido;
 
 static char      midia[64];
 static double    posSeg, durSeg;
-static int       tocando, pronto, ligado, falhou, terminou;
+static _Atomic int tocando, falhou, terminou;
+static int       pronto, ligado;
+static _Atomic int ackMidia; // presenca de midia, sem ler a string entre fios
+static void ack_publicar(void);
 // VELOCIDADE (#202, video.h). velPedida e o que a pessoa quer; velEnviada o
 // que este pipeline ja recebeu (nasce 100 a cada load). O setPlayRate do uMS e
 // o mesmo que o app web do Nuvio manda ({mediaId, playRate, audioOutput:true});
@@ -1099,6 +1104,7 @@ static int eventoPayload(const char *p, unsigned minhaSessao) {
       if (matches == 1) { audioAoCarregar = match; video_escolher_audio(match); }
       else {
         falhou = 1;
+        ack_publicar();
         snprintf(erroTexto, sizeof erroTexto, "Cannot safely identify the selected native audio track");
         return 1;
       }
@@ -1363,6 +1369,7 @@ static int eventoPayload(const char *p, unsigned minhaSessao) {
       marco("audio nao suportado pela TV (errorCode 200): video segue");
     } else
     if (strstr(p, "is not running") && urlAtual[0] && !recuperando) {
+      tocando = 0;
       recuperando = 1;
       retomarEm = posSeg;
       // GUARDA AS ESCOLHAS. A posicao sozinha nao basta: o pipeline novo nasce
@@ -1388,9 +1395,10 @@ static int eventoPayload(const char *p, unsigned minhaSessao) {
     } else if (!recuperando) {
       // Qualquer outro erro: pode ser a rede caindo com o episodio andando.
       // Quem decide entre reconectar e `falhou` e o video_bombear.
+      tocando = 0;
       reconErroRede = nv_recon_rede_ums(numeroDe(p, "\"errorCode\":"));
       reconErroPend = 1;
-    } else falhou = 1;
+    } else { tocando = 0; falhou = 1; }
   }
   { double v = numeroDe(p, "\"currentTime\":");
     if (v >= 0) {
@@ -1412,6 +1420,7 @@ static int eventoPayload(const char *p, unsigned minhaSessao) {
     } }
   { double v = numeroDe(p, "\"duration\":");
     if (v >= 0) durSeg = v / 1000.0; }
+  ack_publicar();
   return 1;
 }
 
@@ -1546,6 +1555,8 @@ static int aoCarregar(LSHandle *h, LSMessage *m, void *u) {
     if (!f || f - q >= (int)sizeof midia) return 1;
     memcpy(midia, q, f - q); midia[f - q] = 0; }
 
+  ackMidia = midia[0] != 0;
+  ack_publicar();
   protegerScreensaver();
   snprintf(b, sizeof b, "{\"connectionId\":\"%s\"}", midia);
   chamar("notifyForeground", b, soLog);
@@ -1573,11 +1584,10 @@ static void *rodarLaco(void *u) { (void)u; loopRodar(laco); return NULL; }
 // com o MESMO timestamp o cancela. Sem filme tocando respondemos ack:true para
 // nao segurar o screensaver normal da TV.
 static int protetorLigado;
-// RETRATO DO ACK (#205): o callback roda no fio do laco e NAO pode ler
-// midia/tocando/pausaPedida/terminou/falhou nem o esmaecer — todos escritos
-// pelo fio de desenho (data race, UB). O video_bombear publica, uma vez por
-// quadro, UM inteiro com a decisao pronta e os campos do diagnostico; o
-// callback so le esse inteiro: coerente por construcao e nunca trava o desenho.
+// O ACK e publicado pelos setters e eventos, mesmo sem desenho (#205/#428).
+// O callback le so o retrato atomico; o bombeamento fica como retaguarda.
+// Serializa os publicadores para um retrato calculado antes nao sobrescrever
+// um mais recente. Os inputs lidos aqui tambem sao atomicos.
 static int ackEstado;   // bits ACK_*; __atomic sempre
 #define ACK_SEGURAR   1   // filme tocando: ack:false
 #define ACK_DESCANSO  2   // tela de descanso do Nuvio: ack:false
@@ -1586,16 +1596,20 @@ static int ackEstado;   // bits ACK_*; __atomic sempre
 #define ACK_PAUSA    16
 #define ACK_FIM      32
 #define ACK_ERRO     64
-static void ackPublicar(void) {
+static void ack_publicar(void) {
+  static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
   int e = 0;
-  if (midia[0]) e |= ACK_MIDIA;
+  pthread_mutex_lock(&mutex);
+  if (ackMidia) e |= ACK_MIDIA;
   if (tocando) e |= ACK_TOCANDO;
   if (pausaPedida) e |= ACK_PAUSA;
   if (terminou) e |= ACK_FIM;
   if (falhou) e |= ACK_ERRO;
-  if (midia[0] && tocando && !pausaPedida && !terminou && !falhou) e |= ACK_SEGURAR;
+  if ((e & (ACK_MIDIA | ACK_TOCANDO | ACK_PAUSA | ACK_FIM | ACK_ERRO)) ==
+      (ACK_MIDIA | ACK_TOCANDO)) e |= ACK_SEGURAR;
   else if (esmaecer_segura_protetor_tv()) e |= ACK_DESCANSO;
   __atomic_store_n(&ackEstado, e, __ATOMIC_RELEASE);
+  pthread_mutex_unlock(&mutex);
 }
 static int aoPedidoScreensaver(LSHandle *h, LSMessage *m, void *u) {
   const char *p = lsPayload(m);
@@ -1629,6 +1643,7 @@ static int aoPedidoScreensaver(LSHandle *h, LSMessage *m, void *u) {
 }
 static void protegerScreensaver(void) {
   if (protetorLigado || !ligado || !bus) return;
+  esmaecer_protetor_publicador(ack_publicar);
   protetorLigado = lsChamar("luna://com.webos.service.tvpower/power/registerScreenSaverRequest",
            "{\"subscribe\":true,\"clientName\":\"" NV_APP_ID "\"}",
            aoPedidoScreensaver, NULL, "registerScreenSaverRequest");
@@ -1740,6 +1755,7 @@ static int iniciar(int automatico) {
   SIM(G, loopNovo,   "g_main_loop_new");
   SIM(G, loopRodar,  "g_main_loop_run");
   SIM(G, loopParar,  "g_main_loop_quit");
+  SIM(G, loopAgendar, "g_idle_add_full");
   if (A) {
   SIM(A, acbCriar,    "AcbAPI_create");
   SIM(A, acbIniciar,  "AcbAPI_initialize");
@@ -1832,6 +1848,7 @@ static int iniciar(int automatico) {
     acbConfigurarTipo(0);
   }
   ligado = 1;
+  ack_publicar();
   printf("[video] pronto (webOS %d, acb=%ld, janela=%s)\n",
          webosMaior(), acb, expWin[0] ? expWin : "-");
   fflush(stdout);
@@ -2200,6 +2217,7 @@ int video_tocar(const char *url) {
   reconIniciou = 0; reconErroPend = 0; fonteTocou = 0;
   reconAudio = reconLeg = -1; reconLegUrl[0] = 0;
   falhou = 0; terminou = 0; audioNaoSup = 0;
+  ack_publicar();
   // FONTE NOVA, decisao nova: o "sem HDR" era sobre o arquivo anterior.
   semDVForcado = 0;
   // Titulo novo: o marcador do anterior nao vale. Sem isto um filme sem
@@ -2228,7 +2246,7 @@ static void mkvRetryBombear(void) {
   video_sondar_mkv_agora();
 }
 void video_bombear(void) {
-  ackPublicar();
+  ack_publicar();
   velBombear();
   mkvRetryBombear();
   acbBindRecolher();
@@ -2334,6 +2352,7 @@ void video_bombear(void) {
     } else {
       if (recon.esgotou) marco("reconexao: desistiu depois de 3 tentativas");
       falhou = 1;
+      ack_publicar();
     }
   }
   if (nv_recon_vencida(&recon, SDL_GetTicks())) {
@@ -2462,6 +2481,7 @@ static int tocarInterno(const char *url, int comDV) {
   // entender no titulo seguinte, e insistir so arrisca a imagem de novo.)
   fonX = -1; dstX = dstY = dstW = dstH = -1;
   posSeg = durSeg = bufferSeg = 0; tocando = pronto = 0; midia[0] = 0;
+  ackMidia = 0; ack_publicar();
   velEnviada = 100;   // pipeline novo nasce em 1x; video_bombear reaplica
   bufferandoDesde = 0;
   nAudio = nLeg = 0; audioAtual = 0; legAtual = -1; vidAtmos = 0;
@@ -2578,6 +2598,7 @@ static int tocarInterno(const char *url, int comDV) {
              sizeof carga, strlen(url));
       fflush(stdout);
       falhou = 1;
+      ack_publicar();
       return 0;
     } }
   // A URL INTEIRA NAO VAI AO LOG (#158). Ate a 1.5.3 esta linha imprimia a
@@ -2666,6 +2687,7 @@ static void pararSessao(void) {
     if (dtsEstado != VIDEO_DTS_FALHOU) dtsEstado = 0;
   }
   midia[0] = 0; tocando = pronto = 0; falhou = 0; audioNaoSup = 0;
+  ackMidia = 0; ack_publicar();
   erroTexto[0] = 0;
 }
 
@@ -2830,6 +2852,7 @@ static void dtsVoltarNativo(const char *motivo) {
   fflush(stdout);
   snprintf(lu, sizeof lu, "%s", legUrlAtual);
   if (!recarregarMesmaFonte(posSeg, -1, -1, lu)) falhou = 1;
+  ack_publicar();
 }
 // O caminho do DV nem chegou a abrir (plano MSE, conversor ausente): a mesma
 // nota do caminho que nao abriu, e a tela sai em vez de esperar para sempre.
@@ -2878,6 +2901,7 @@ static int iniciarDts(int stream) {
   dvFonteAberta = 0;
   pararSessao();
   posSeg = alvo; pausaPedida = paused;
+  ack_publicar();
   dtsRevisao = 0; dtsFalhaLogada = 0;
   if (acbCriar && !acbConfigurarTipo(1)) {
     marco("DTS startup failed: MSE video plane initialization");
@@ -2930,6 +2954,7 @@ static void sincronizarPlanoDts(const DtsPlaybackStatus *st) {
   if (!pronto) bindPendente = 0;
   if (st->prepared && novaMidia) {
     snprintf(midia, sizeof midia, "%s", st->media_id);
+    ackMidia = midia[0] != 0; ack_publicar();
     printf("[dts] native media ID ready\n"); fflush(stdout);
     if (expWin[0]) expJanelaAplicar();
   }
@@ -2972,7 +2997,8 @@ static void bombearDts(void) {
     int selectedSub = initial ? -1 : (video_legenda(legAtual) ? video_legenda(legAtual)->stream_index : -1);
     dtsRevisao = st.revision;
     pronto = 0; tocando = 0; bindPendente = 0;
-    if (!st.media_id[0]) midia[0] = 0;
+    if (!st.media_id[0]) { midia[0] = 0; ackMidia = 0; }
+    ack_publicar();
     printf("[dts] prepared revision=%d video=%s %dx%d audio=%s channels=%d stream=%d\n",
            st.revision, st.info.video_codec, st.info.width, st.info.height,
            st.info.audio_codec, st.info.channels, st.info.audio_stream);
@@ -3061,6 +3087,7 @@ void video_pausar(int pausado) {
   char b[128];
   if (dtsSessao) {
     pausaConfirmada = 0; pausaPedida = !!pausado;
+    ack_publicar();
     dts_playback_pause(dtsSessao, pausado); return;
   }
 
@@ -3070,6 +3097,7 @@ void video_pausar(int pausado) {
   pausaPedida = pausado;
   chamar(pausado ? "pause" : "play", b, soLog);
   tocando = !pausado;
+  ack_publicar();
 }
 
 int video_pausa_confirmada(void) {
@@ -3408,6 +3436,7 @@ void video_dv_recusar(void) {
     printf("[dv] a pessoa escolheu HDR10: volta ao player da TV em %.1fs\n", alvo); fflush(stdout);
     snprintf(lu, sizeof lu, "%s", legUrlAtual);
     if (!recarregarMesmaFonte(alvo, -1, -1, lu)) falhou = 1;
+    ack_publicar();
   } else { printf("[dv] a pessoa escolheu HDR10\n"); fflush(stdout); dvVoltarEntrada(); }
 }
 // Ha midia carregada. O furo na superficie usa ISTO e nao o loadCompleted:
@@ -3716,6 +3745,11 @@ void video_velocidade_recusada(void) {
 }
 int  video_velocidade_bloqueada(void) { return 0; }
 
+static int encerrarLaco(void *l) {
+  loopParar(l);
+  return 0; // remove a fonte
+}
+
 void video_encerrar(void) {
   if (!ligado) return;
   video_parar();
@@ -3726,11 +3760,11 @@ void video_encerrar(void) {
   if (acb) { if (acbFinalizar) acbFinalizar(acb); acbDestruir(acb); acb = 0; }
   acbTipoAtual = acbTipoFalhou = -1;
   if (expWin[0] && sdlExpDestruir) { sdlExpDestruir(expWin); expWin[0] = 0; }
-  // ANTES do LSUnregister (#205): parar o laco e ESPERAR o fio. O g_main_loop_quit
-  // devolve o controle do laco; o join garante que nenhum callback (screensaver,
-  // eventos do uMS) esta no meio de um lsChamar quando o handle some. Sem isto
-  // a TV acordando da tela de descanso com filme aberto podia derrubar o app.
-  if (laco) loopParar(laco);
+  // O loop usa o contexto padrao (loopNovo(NULL, 0)). A fonte fica pendente
+  // ate ele rodar: quit direto ANTES do run se perde e trava o join (#205).
+  // Prioridade alta (-100 = G_PRIORITY_HIGH), sem esperar o contexto ficar ocioso.
+  // O join ainda espera callbacks em voo antes de liberar o handle LS2.
+  if (laco) loopAgendar(-100, encerrarLaco, laco, NULL);
   pthread_join(fio, NULL);
   if (bus && lsUnregister) {
     erroLimpar();
@@ -3740,6 +3774,7 @@ void video_encerrar(void) {
   }
   protetorLigado = 0;
   ligado = 0;
+  ack_publicar();
 }
 // Converted playback uses the same GL text overlay as external subtitles.
 int video_legenda_nativa(char *d, int t) {

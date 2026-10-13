@@ -26,6 +26,9 @@
 #include <unistd.h>
 #include <dlfcn.h>
 #include <assert.h>
+#include <signal.h>
+#include <sys/wait.h>
+#include <glib.h>
 #include "dts/dts_playback.h"
 // Antes do #undef __APPLE__: gl_compat.h (via ajustes.h) escolhe o GL do Mac.
 #include "ajustes.h"
@@ -71,13 +74,26 @@ static void fakeRodar(void *l) {
   while (!quit) usleep(1000);
 }
 static void fakeParar(void *l) { (void)l; quit = 1; }
+static unsigned fakeAgendar(int priority, int (*cb)(void *), void *data,
+                            void (*destroy)(void *)) {
+  (void)priority; (void)destroy;
+  cb(data); return 1;
+}
+// Encerrar precisa agendar o quit ANTES de o fio entrar no GLib real.
+static void delayedRodar(void *l) {
+  while (!__atomic_load_n(&encerrando, __ATOMIC_ACQUIRE)) usleep(1000);
+  usleep(50000);
+  g_main_loop_run(l);
+}
 
 int main(void) {
   lsPayload = fakePayload; lsCall = fakeCall; lsUnregister = fakeUnregister;
-  loopRodar = fakeRodar; loopParar = fakeParar;
+  alarm(10); // join travado reprova, sem prender o runner
+  loopRodar = fakeRodar; loopParar = fakeParar; loopAgendar = fakeAgendar;
   bus = (LSHandle *)(uintptr_t)1; laco = (void *)(uintptr_t)1;
   ligado = 1; protetorLigado = 1;
   snprintf(midia, sizeof midia, "fixture-filme");
+  ackMidia = 1;
   tocando = 1; pronto = 1; pausaPedida = 0; terminou = 0; falhou = 0;
   video_bombear();   // publica o retrato do ACK (um quadro do fio de desenho)
   assert(pthread_create(&fio, NULL, rodarLaco, NULL) == 0);
@@ -93,5 +109,32 @@ int main(void) {
   assert(respostas == 1 && strstr(ackVisto, "\"ack\":false"));
   assert(strstr(ackVisto, "\"timestamp\":1730000000000"));
   puts("descanso luna: encerrar espera o fio do laco e so entao libera o barramento");
+
+  laco = g_main_loop_new(NULL, FALSE);
+  loopRodar = delayedRodar;
+  loopParar = (void (*)(void *))g_main_loop_quit;
+  loopAgendar = (unsigned (*)(int, int (*)(void *), void *, void (*)(void *)))g_idle_add_full;
+  bus = (LSHandle *)(uintptr_t)1; ligado = 1; liberado = 0;
+  __atomic_store_n(&encerrando, 0, __ATOMIC_RELEASE);
+  // Controle negativo: quit imediato reproduz o encerramento antigo.
+  pid_t child = fork();
+  assert(child >= 0);
+  if (!child) {
+    alarm(2);
+    loopAgendar = fakeAgendar; // executa quit antes do run
+    assert(pthread_create(&fio, NULL, rodarLaco, NULL) == 0);
+    video_encerrar();
+    _exit(1); // nao deveria retornar: quit perdido
+  }
+  int status;
+  assert(waitpid(child, &status, 0) == child);
+  assert(WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM);
+  puts("descanso luna: controle negativo, quit direto trava join (timeout confirmado)");
+  assert(pthread_create(&fio, NULL, rodarLaco, NULL) == 0);
+  video_encerrar();
+  assert(liberado && !ligado && !bus);
+  g_main_loop_unref(laco); laco = NULL;
+  alarm(0);
+  puts("descanso luna: GLib real, inicio atrasado, quit anterior ao run sem travar join");
   return 0;
 }
