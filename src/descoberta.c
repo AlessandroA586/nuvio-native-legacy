@@ -904,10 +904,7 @@ static int consultarAlvo(const AlvoBusca *a, const char *termo,
     origemDaBase(a->base, orig, sizeof orig);   // o resultado abre pelo addon que o achou
     while (p && n < max) {
       const char *f = js_fim(p);
-      if (deMeta(p, f, a->tipo, &saida[n]) &&
-          // O Nuvio devolve "tmdb:<id>" para quem nao tem IMDb; o resultado fica
-          // no formato tt... (o Cinemeta de reserva nao entende tmdb:).
-          (!a->nuvio || !strncmp(saida[n].imdb, "tt", 2))) {
+      if (deMeta(p, f, a->tipo, &saida[n])) {
         snprintf(saida[n].origem, sizeof saida[n].origem, "%s", orig);
         n++;
       }
