@@ -1589,8 +1589,10 @@ static int aoPedidoScreensaver(LSHandle *h, LSMessage *m, void *u) {
   if (!segurar && esmaecer_segura_protetor_tv()) segurar = 2;
   snprintf(b, sizeof b, "{\"clientName\":\"" NV_APP_ID "\",\"ack\":%s,\"timestamp\":%s}",
            segurar ? "false" : "true", ts);
-  printf("[video] screensaver pedido: %s\n", segurar == 2 ? "seguro (tela de descanso do Nuvio)"
-                                           : segurar ? "seguro (filme tocando)" : "liberado");
+  printf("[video] screensaver pedido: %s timestamp=%s midia=%d tocando=%d pausa=%d fim=%d erro=%d\n",
+         segurar == 2 ? "seguro (tela de descanso do Nuvio)"
+                      : segurar ? "seguro (filme tocando)" : "liberado",
+         ts, midia[0] != 0, tocando, pausaPedida, terminou, falhou);
   fflush(stdout);
   lsChamar("luna://com.webos.service.tvpower/power/responseScreenSaverRequest",
            b, NULL, NULL, "responseScreenSaverRequest");
