@@ -926,6 +926,13 @@ int main(int argc, char **argv) {
   // registro de todos os eventos SDL nao mostrava nada: a tecla nunca era
   // entregue, e o codigo que ela usa tambem nao era o que eu procurava.
   SDL_SetHint("SDL_WEBOS_ACCESS_POLICY_KEYS_BACK", "true");
+#ifdef NV_WEBOS
+  // SDL_LOG_CATEGORY_SYSTEM PERMANECE no padrao (#205): o SDL-webOS loga o
+  // lifecycleEvent(v2) inteiro no INFO, e o SAM inclui os parametros de
+  // lancamento (URL autenticada, tokens) naquele payload — iriam direto ao
+  // registro da sessao. O sinal de ciclo chega pelo allowlist ja logado em
+  // [ciclo] (nome/estado do evento de janela/app), sem payload nenhum.
+#endif
 
 #ifdef __EMSCRIPTEN__
   // SDL_Delay NUNCA via emscripten_sleep. Com -sASYNCIFY o SDL2 troca o
@@ -1662,6 +1669,15 @@ int main(int argc, char **argv) {
         if (e.type == SDL_KEYDOWN && esmaecer_descanso() &&
             (e.key.keysym.sym == SDLK_RETURN || e.key.keysym.sym == SDLK_KP_ENTER))
           descanso_pedir_abrir();
+        if (esmaecer_apagado()) {
+          printf("[descanso] entrada t=%u tipo=0x%x sc=%d sym=%d estagio=%d estilo=%d item=%d player=%d trailer=%d/%d video=%d/%d\n",
+                 SDL_GetTicks(), e.type,
+                 e.type == SDL_KEYDOWN || e.type == SDL_KEYUP ? (int)e.key.keysym.scancode : -1,
+                 e.type == SDL_KEYDOWN || e.type == SDL_KEYUP ? (int)e.key.keysym.sym : -1,
+                 esmaecer_estagio(), esmaecer_estilo_atual(), descanso_indice_em_tela(),
+                 player_aberto(), trailer_aberto(), trailer_pausado(), video_ativo(), video_tocando());
+          fflush(stdout);
+        }
         if (esmaecer_entrada(SDL_GetTicks(), age)) continue;
       }
       // Teclado do sistema (entrada_texto.h): ve o texto ANTES de qualquer tela.
@@ -1686,9 +1702,17 @@ int main(int argc, char **argv) {
           case SDL_WINDOWEVENT_MINIMIZED:    ev = "minimizado"; break;
           case SDL_WINDOWEVENT_FOCUS_LOST:   ev = "foco-perdido"; break;
           case SDL_WINDOWEVENT_FOCUS_GAINED: ev = "foco-voltou"; break;
+          case SDL_WINDOWEVENT_RESTORED:     ev = "restaurado"; break;
+          case SDL_WINDOWEVENT_CLOSE:        ev = "fechar"; break;
           default: break;
         }
-        if (ev) avisos_sinal(ev, (float)rssMB());
+        if (ev) {
+          printf("[ciclo] janela=%s t=%u descanso=%d estagio=%d player=%d trailer=%d/%d video=%d/%d rss=%.1fMB\n",
+                 ev, SDL_GetTicks(), esmaecer_descanso(), esmaecer_estagio(), player_aberto(),
+                 trailer_aberto(), trailer_pausado(), video_ativo(), video_tocando(), rssMB());
+          fflush(stdout);
+          avisos_sinal(ev, (float)rssMB());
+        }
         // VOLTOU DO SEGUNDO PLANO: a reconsulta de versao vencida espera uns
         // segundos em vez de sair junto com tudo o que acorda (atualizacao.h).
         if (e.window.event == SDL_WINDOWEVENT_SHOWN ||
@@ -1696,6 +1720,20 @@ int main(int argc, char **argv) {
             e.window.event == SDL_WINDOWEVENT_RESTORED)
           atualizacao_retomou();
         continue;
+      }
+      if (e.type == SDL_APP_WILLENTERBACKGROUND || e.type == SDL_APP_DIDENTERBACKGROUND ||
+          e.type == SDL_APP_WILLENTERFOREGROUND || e.type == SDL_APP_DIDENTERFOREGROUND ||
+          e.type == SDL_APP_TERMINATING || e.type == SDL_APP_LOWMEMORY || e.type == SDL_QUIT) {
+        printf("[ciclo] app=%s t=%u descanso=%d estagio=%d player=%d trailer=%d/%d video=%d/%d rss=%.1fMB\n",
+               e.type == SDL_APP_WILLENTERBACKGROUND ? "vai-ocultar" :
+               e.type == SDL_APP_DIDENTERBACKGROUND ? "oculto" :
+               e.type == SDL_APP_WILLENTERFOREGROUND ? "vai-voltar" :
+               e.type == SDL_APP_DIDENTERFOREGROUND ? "voltou" :
+               e.type == SDL_APP_LOWMEMORY ? "pouca-memoria" :
+               e.type == SDL_APP_TERMINATING ? "terminando" : "quit",
+               SDL_GetTicks(), esmaecer_descanso(), esmaecer_estagio(), player_aberto(),
+               trailer_aberto(), trailer_pausado(), video_ativo(), video_tocando(), rssMB());
+        fflush(stdout);
       }
       if (e.type == SDL_APP_DIDENTERFOREGROUND) atualizacao_retomou();
       // PONTEIRO (Magic Remote, issue #99): mouse, rodinha e os avisos 484/485
