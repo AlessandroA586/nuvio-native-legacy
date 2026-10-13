@@ -10,4 +10,5 @@ cc "${flags[@]}" -DNV_ASS_LIBASS -include tests/ass_pisca_gl.h -Isrc \
   $(pkg-config --cflags --libs libass) -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -L/opt/homebrew/lib -lSDL2 -framework OpenGL -Wno-deprecated-declarations \
   -Wno-macro-redefined -o "$work/test"
+[ ! -e /opt/homebrew/lib/libSDL3.dylib ] || ln -s /opt/homebrew/lib/libSDL3.dylib "$work/libSDL3.dylib"
 "$work/test"
