@@ -6806,10 +6806,12 @@ static int publicarEpisodios(const char *corpo, int alvoItem, const char *titulo
       for (int i = 0; i < antigos && k < VIDEOS_MAX; i++) {
         const CatEp *e = cat_episodio(alvoItem, i);
         if (!e) continue;
+        estavel[k] = *e;
         for (int j = 0; j < n; j++)
           if (e->temporada == eps[j].temporada && e->episodio == eps[j].episodio) {
-            estavel[k++] = eps[j]; break;
+            estavel[k] = eps[j]; break;
           }
+        k++;
       }
       for (int j = 0; j < n && k < VIDEOS_MAX; j++) {
         int i;

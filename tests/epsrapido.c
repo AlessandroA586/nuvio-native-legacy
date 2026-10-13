@@ -22,7 +22,33 @@ static void esperar(int i, double inicio) {
   assert(cat_n_episodios(i) == 20);
   printf("epsrapido: titulo %d publicado em %.3f s\n", i, agora() - inicio);
 }
+static void fontesDivergentes(void) {
+  const char *a = "{\"videos\":[{\"season\":1,\"episode\":1,\"name\":\"A1\"},"
+                  "{\"season\":1,\"episode\":2},{\"season\":2,\"episode\":1}]}";
+  const char *b = "{\"videos\":[{\"season\":1,\"episode\":1,\"name\":\"B1\"},"
+                  "{\"season\":1,\"episode\":2},{\"season\":1,\"episode\":3},"
+                  "{\"season\":1,\"episode\":4}]}";
+  for (int inversa = 0; inversa < 2; inversa++) {
+    catalogoCom("tt0000205", "series", "Divergentes");
+    EpPedido p = { .item = 0, .geracao = epGeracao };
+    strcpy(p.id, "tt0000205");
+    pthread_once(&epPedidoOnce, epPedidoKeyCriar);
+    pthread_setspecific(epPedidoKey, &p);
+    TempsPub tp = {0};
+    publicarEpisodios(inversa ? b : a, 0, "Teste", NULL, 0, &tp);
+    CatEp foco = *cat_episodio(0, inversa ? 3 : 2);
+    publicarEpisodios(inversa ? a : b, 0, "Teste", NULL, 0, &tp);
+    assert(cat_n_episodios(0) == 5);
+    const CatEp *e = cat_episodio(0, inversa ? 3 : 2);
+    assert(e->temporada == foco.temporada && e->episodio == foco.episodio);
+    assert(!strcmp(cat_episodio(0, 0)->nome, inversa ? "A1" : "B1"));
+    assert(tp.n == 2 && tp.t[0] == 1 && tp.t[1] == 2);
+    pthread_setspecific(epPedidoKey, NULL);
+  }
+  puts("P1.1: fontes divergentes preservam pares, foco e abas");
+}
 int main(void) {
+  fontesDivergentes();
   CatItem itens[2] = {{0}};
   int nc[] = {20}, na[] = {13};
   corpoSerie(cine, sizeof cine, "tt0000205", nc, 1);
