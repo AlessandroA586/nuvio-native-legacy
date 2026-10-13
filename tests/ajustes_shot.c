@@ -131,6 +131,10 @@ static void captura(const char *nome, SDL_Window *win) {
       printf("perf %s fill=%.3f rects=%d cheios=%d snap=%.3f cor=%.3f luz=%.3f sombra=%.3f gpu=%.3f mist=%.3f\n", nome,
              gfx_fill, gfx_n_rect, gfx_n_cheio, gfx_fill_modo[GFX_SNAP], gfx_fill_modo[GFX_COR],
              gfx_fill_modo[GFX_LUZ], gfx_fill_modo[GFX_SOMBRA], gfx_fill_gpu, gfx_fill_gpu_mist);
+    // #205: the C9 (no glass) must not blend Frost + island core full-screen: index fill <= 2.3x.
+    if (getenv("NUVIO_SHOT_FILL_MAX") && i == quadrosCaptura - 1 && strstr(nome, "indice")) {
+      if (gfx_fill > atof(getenv("NUVIO_SHOT_FILL_MAX"))) { printf("FAIL: fill %.3f > %s\n", gfx_fill, getenv("NUVIO_SHOT_FILL_MAX")); exit(1); }
+    }
     if (i == quadrosCaptura - 1) {
       unsigned char *pix = malloc(1920 * 1080 * 4);
       SDL_Surface *s;
