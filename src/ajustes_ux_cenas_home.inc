@@ -423,6 +423,24 @@ static void ajcHSelo(int op) {
   ajc_icone("aj_eye", 320, 282, 22, 0.5f + 0.5f * k);
   ajcChaveCanto(k);
 }
+// Ocultar filmes assistidos: o cartaz marcado sai da descoberta e fecha o vao.
+static void ajcHOcultarVistos(int op) {
+  float k = ajcLig(op), p = k * ajc_onda(3.0f);
+  int i;
+  ajcHTela(60, 24, 520, 280, 1);
+  ajc_barra(86, 52, 80, 0.5f);
+  for (i = 0; i < 5; i++) {
+    float x = 86 + i * 94 - (i > 2 ? p * 94 : 0);
+    float a = i == 2 ? 1 - p : 1;
+    ajcHBloco(x, 72, 82, 130, i, a);
+    if (i == 2) {
+      ajc_bolinha(x + 66, 88, 24, C.ar, C.ag, C.ab, a);
+      ajc_icone_tinta("aj_check", x + 66, 88, 15, a);
+    }
+  }
+  ajc_icone("aj_eye-off", 330, 250, 30, 0.3f + 0.7f * p);
+  ajcChaveCanto(k);
+}
 // Rotulos: o nome escrito abaixo do cartaz.
 static void ajcHRotulos(int op) {
   float k = ajcLig(op);
@@ -847,6 +865,7 @@ static int ajcNovaHome(int sec, int op) {
     case AJ_OCULTAR_NLANC: ajcHNaoLancados(op); return 1;
     case AJ_NOTAS_HOME: ajcHNotas(op); return 1;
     case AJ_SELO_VISTO: ajcHSelo(op); return 1;
+    case AJ_OCULTAR_FILMES_VISTOS: ajcHOcultarVistos(op); return 1;
     case AJ_ROTULOS: ajcHRotulos(op); return 1;
     case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: ajcHTituloFileira(op); return 1;
     case AJ_CW_LIGADO: ajcHCwLigado(op); return 1;
