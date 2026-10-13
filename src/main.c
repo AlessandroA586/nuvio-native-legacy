@@ -1412,6 +1412,7 @@ int main(int argc, char **argv) {
 #ifdef NV_TPK
   video_tpk_zoom_roi_definir(ajustes_trailer_zoom_tpk());
 #endif
+  texto_sistema_mic_modo(ajustes_mic_busca());   // .tpk/.wgt; nas outras nao faz nada
   printf("[arranque] gfx_iniciar (compila os shaders)\n"); fflush(stdout);
   marco("gfx_iniciar");
   NV_ETAPA("gfx_iniciar (shaders)");
@@ -1924,6 +1925,7 @@ int main(int argc, char **argv) {
 #ifdef NV_TPK
     video_tpk_zoom_roi_definir(ajustes_trailer_zoom_tpk());   // #241: Ajustes > Trailers
 #endif
+    texto_sistema_mic_modo(ajustes_mic_busca());              // Ajustes > Tela inicial > Barra lateral
     gpun_quadro_inicio();
     glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1.0f);
     if (!nvPrimeiroQuadroFeito) arranque_etapa("primeiro glClear");
