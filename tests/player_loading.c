@@ -74,7 +74,11 @@ int main(void) {
   quadro(&c); assert(logo == 1 && tem("Abrindo fonte") && !tem("%"));
   esperandoFonte = 0;
   quadro(&c); assert(tem("Carregando") && !tem("%"));
-  stats.bufferPct = 37; reduz = 1;
+  stats.bufferPct = 0; reduz = 1;
+  quadro(&c); assert(tem("0%") && fills == 0);
+  stats.bufferPct = 100;
+  quadro(&c); assert(tem("100%") && fills == 1 && fabsf(fill - 200) < .01f);
+  stats.bufferPct = 37;
   quadro(&c); assert(tem("37%") && fills == 1 && fabsf(fill - 74) < .01f);
   esperandoFonte = 1;
   quadro(&c); assert(!tem("37%") && fills == 0);
@@ -86,7 +90,10 @@ int main(void) {
   tentativaN = 2; tentativaM = 3;
   c.logo[0] = 0;
   quadro(&c); assert(logo == 0 && tem("Fallout") && tem("Fonte 2 de 3"));
-  fonte.provedor[0] = fonte.rotulo[0] = 0;
-  n = 0; desenharCinema(2600, &c, 0); assert(!tem("secret"));
+  snprintf(fonte.provedor, sizeof fonte.provedor, "AIOStreams\n4K\r\t");
+  quadro(&c); assert(!tem("\n") && !tem("\r") && !tem("\t"));
+  fonte.provedor[0] = fonte.rotulo[0] = linhaEp[0] = 0;
+  n = 0; desenharCinema(2600, &c, 0);
+  assert(tem("Fallout") && !tem("S01E03") && !tem("secret"));
   puts("PASS: S5 shared renderer: backdrop, logo/title, episode, stages, safe source, real buffer only");
 }
