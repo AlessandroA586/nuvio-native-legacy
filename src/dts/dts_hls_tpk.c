@@ -42,6 +42,7 @@ int dts_tpk_registro_rede(char *u, size_t n) { (void)u; if (n) u[0] = 0; return 
 #else
 
 #include "../registro.h"
+#include "dts_engine.h"
 #include <arpa/inet.h>
 #include <dlfcn.h>
 #include <errno.h>
@@ -822,15 +823,18 @@ static int tizenMaior(void) {
   return v;
 }
 
-// O escopo do plano e o pacote NuvioTpk (Tizen 8 e 9, a S95C). A mesma .so roda
-// nos hosts 6/6.5/7, onde a conversao (e as linhas dela nos Ajustes) fica fora.
+// Tizen 6 em diante: os tres pacotes 6+ (NuvioTpk60/65/NuvioTpk) carregam a
+// mesma .so, e as TVs de 2021/2022 (6.0/6.5) tambem nao tocam DTS (especificacao
+// de video da Samsung de cada ano). Abaixo do 8 (menos RAM) o anel do leitor da
+// fonte cai de 32 para 16 MiB; no 8/9 nada muda.
 int dts_tpk_disponivel(void) {
   static int c = -1;   // os Ajustes perguntam a cada quadro: decide uma vez
   if (c < 0) {
     int t = tizenMaior();
-    c = (t < 0 || t >= 8) && dts_remux_available();
-    printf("[dts-tpk] conversao DTS/TrueHD %s (tizen %d, FFmpeg %s)\n", c ? "disponivel" : "indisponivel", t,
-           dts_remux_available() ? "ligado" : "ausente");
+    c = (t < 0 || t >= 6) && dts_remux_available();
+    if (c && t >= 6 && t < 8) dts_engine_set_ring_mib(16);
+    printf("[dts-tpk] conversao DTS/TrueHD %s (tizen %d, FFmpeg %s%s)\n", c ? "disponivel" : "indisponivel", t,
+           dts_remux_available() ? "ligado" : "ausente", c && t >= 6 && t < 8 ? ", anel 16 MiB" : "");
     fflush(stdout);
   }
   return c;

@@ -1,8 +1,9 @@
 name: Build TPK
 
-# Builds the full NuvioTpk package (Tizen 8+/9, e.g. Samsung S95C) the same way
-# `NV_TPK_PACOTES=NuvioTpk bash tools/tpk.sh` does on a computer, and uploads
-# the .tpk as a downloadable artifact.
+# Builds the Tizen 6+ packages (NuvioTpk60 for 6.0, NuvioTpk65 for 6.5/7,
+# NuvioTpk for 8/9, e.g. Samsung S95C) the same way
+# `NV_TPK_PACOTES="NuvioTpk60 NuvioTpk65 NuvioTpk" bash tools/tpk.sh` does on a
+# computer, and uploads the .tpk files as one downloadable artifact.
 #
 # Runs on every push to any branch, and by hand: Actions tab -> Build TPK ->
 # Run workflow (that button shows once this file is on the default branch).
@@ -14,7 +15,7 @@ on:
     inputs:
       pacotes:
         description: "Packages to build (space separated)"
-        default: "NuvioTpk"
+        default: "NuvioTpk60 NuvioTpk65 NuvioTpk"
 
 concurrency:
   group: build-tpk-${{ github.ref }}
@@ -25,7 +26,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     env:
-      NV_TPK_PACOTES: ${{ github.event.inputs.pacotes || 'NuvioTpk' }}
+      NV_TPK_PACOTES: ${{ github.event.inputs.pacotes || 'NuvioTpk60 NuvioTpk65 NuvioTpk' }}
       # No P2P engine on CI (it lives on the owner's disk, not in the repo).
       NUVIO_P2P_MOTOR: none
       DOTNET_ROOT: ${{ github.workspace }}/.dotnet

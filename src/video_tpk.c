@@ -553,8 +553,8 @@ int video_tpk_codec_recusado(const char *codecId) {
 }
 
 // --- conversao DTS/TrueHD -------------------------------------------------------
-// A conversao pode acontecer nesta fonte? So no Tizen 8+ (pacote NuvioTpk, o da
-// S95C) com o FFmpeg na .so (dts_tpk_disponivel), ajuste de teste ligado, fonte
+// A conversao pode acontecer nesta fonte? So no Tizen 6+ (pacotes NuvioTpk60/65
+// e NuvioTpk) com o FFmpeg na .so (dts_tpk_disponivel), ajuste de teste ligado, fonte
 // por http(s) e sem desistencia nesta fonte. MKV decide pelo cabecalho; MP4 (e o
 // que nao e MKV) pela sonda do conversor, ao lado do original (convSondar).
 static int convPossivel(void) {

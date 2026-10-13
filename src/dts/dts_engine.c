@@ -9,6 +9,10 @@ struct DtsEngine;
  * 1 = AC3 5.1 at 640 kbps (falls back to AAC when the encoder is absent). */
 static volatile int g_surround_ac3;
 void dts_engine_set_ac3(int on) { g_surround_ac3 = on ? 1 : 0; }
+/* Samsung remux ring (read_fluxo) for engines created after this call, in MiB:
+ * 32 by default; the .tpk asks for 16 on Tizen 6/6.5/7 (less RAM). */
+static volatile int g_fx_cap_mib = 32;
+void dts_engine_set_ring_mib(int mib) { g_fx_cap_mib = mib >= 8 && mib <= 32 ? mib : 32; }
 #ifndef NV_DTS_FFMPEG
 struct DtsEngine { DtsMediaInfo info; };
 DtsEngine *dts_engine_create(void) { return calloc(1, sizeof(DtsEngine)); }
@@ -95,6 +99,7 @@ struct DtsEngine {
   pthread_t fx_thread;
   int fx_thread_ok, fx_stop, fx_eof, fx_err, fx_attempts;
   unsigned char *fx_buf;
+  int64_t fx_cap;            /* ring size, fixed when the ring is allocated */
   int64_t fx_lo, fx_hi;      /* bytes [fx_lo, fx_hi) of the file are in the ring */
   int64_t fx_req;            /* restart the read at this offset (-1: none) */
   int64_t fx_from;           /* where the current read started (read-ahead grows from it) */
@@ -252,7 +257,7 @@ static void queue_ranges(DtsEngine *e) {
   }
   pthread_cond_broadcast(&e->range_wake);
 }
-#define FX_CAP (32 * 1024 * 1024)      /* ring: read-ahead plus history */
+#define FX_CAP (e->fx_cap)             /* ring: read-ahead plus history (dts_engine_set_ring_mib) */
 #define FX_HIST (2 * 1024 * 1024)      /* kept behind the reader (small backward seeks) */
 #define FX_SKIP (1024 * 1024)          /* a forward jump this short waits, no new request */
 #define FX_STALL_MS 20000              /* no byte for this long (not paused by us): drop */
@@ -365,7 +370,7 @@ static int read_fluxo(void *opaque,uint8_t *dst,int n) {
   uint64_t wait_started=0;
   pthread_mutex_lock(&e->range_lock);
   if(!e->fx_thread_ok && !e->fx_stop) {
-    if(!e->fx_buf) e->fx_buf=malloc(FX_CAP);
+    if(!e->fx_buf) { e->fx_cap=(int64_t)g_fx_cap_mib*1024*1024; e->fx_buf=malloc((size_t)e->fx_cap); }
     if(!e->fx_buf) { pthread_mutex_unlock(&e->range_lock); return AVERROR(ENOMEM); }
     e->fx_req=e->pos;
     if(pthread_create(&e->fx_thread,NULL,fx_worker,e)) { pthread_mutex_unlock(&e->range_lock); return AVERROR(ENOMEM); }
