@@ -18,23 +18,25 @@ static int falhas;
 #define OK(c) do { if (!(c)) { printf("FALHOU %d\n", __LINE__); falhas++; } } while (0)
 
 static pthread_mutex_t tr = PTHREAD_MUTEX_INITIALIZER;
-static int posts, postsB, caps = REDE_CAP_CORPO;
+static int posts, postsA, postsB, caps = REDE_CAP_CORPO;
+static char urlPost[NV_ADDON_PEDIDO_MAX];
 static char *disco;
 static pthread_cond_t mudou = PTHREAD_COND_INITIALIZER;
 static pthread_t escritor;
 static int trocarSlot, substituiu;
 
 // O runner intercala a troca depois de destinoAtual(), antes da declaracao/POST.
-// O escritor publica B antes de wsenvio_podar(), que espera a trava do envio.
+// O escritor publica B ou [B,A] antes da poda, que espera a trava do envio.
 void testeListaMudou(void) {
   pthread_mutex_lock(&tr);
   if (trocarSlot) { substituiu = 1; pthread_cond_signal(&mudou); }
   pthread_mutex_unlock(&tr);
 }
 static void *trocar(void *u) {
-  AddonRemoto b = {"B", "https://b.test/config", 1};
+  AddonRemoto lista[] = {{"B", "https://b.test/config", 1},
+                         {"A", "https://addon.test/cfg?apikey=fixture", 1}};
   (void)u;
-  addons_definir_lista(&b, 1);
+  addons_definir_lista(lista, trocarSlot == 2 ? 2 : 1);
   return NULL;
 }
 void testeTrocaSlot(void) {
@@ -51,9 +53,11 @@ int rede_pedir(const RedePedido *p, RedeResposta *r) {
   memset(r, 0, sizeof *r);
   pthread_mutex_lock(&tr);
   posts++;
+  if (strstr(p->url, "addon.test")) postsA++;
   if (strstr(p->url, "b.test")) postsB++;
+  snprintf(urlPost, sizeof urlPost, "%s", p->url);
   pthread_mutex_unlock(&tr);
-  r->erro = REDE_OK; r->status = 503;   // fica pendente de proposito
+  r->erro = REDE_OK; r->status = trocarSlot == 2 ? 204 : 503;
   return 0;
 }
 void rede_resposta_limpar(RedeResposta *r) { (void)r; }
@@ -113,14 +117,15 @@ int main(int argc, char **argv) {
   addons_manifesto_lido(0, MAN);
   OK(addons_watchstate(0, &(WsDecl){0}));
 
-  if (argc > 1 && !strcmp(argv[1], "--trocar-slot")) {
+  if (argc > 1 && (!strcmp(argv[1], "--trocar-slot") || !strcmp(argv[1], "--reordenar"))) {
     WsFila f = {0};
     char destino[20];
+    if (!strcmp(argv[1], "--reordenar")) OK(addons_adicionar("B", "https://b.test/config"));
+    trocarSlot = !strcmp(argv[1], "--reordenar") ? 2 : 1;
     ws_destino(addons_base(0), sessao_usuario(), 1, destino);
     OK(ws_fila_empurrar(&f, destino, "/watch_state/push/movie/tt0133093.json",
                          "id", "{}", (long long)time(NULL)));
     disco = ws_fila_serializar(&f); ws_fila_limpar(&f);
-    trocarSlot = 1;
     wsenvio_iniciar();
     for (i = 0; i < 200; i++) {
       int terminou;
@@ -131,10 +136,16 @@ int main(int argc, char **argv) {
     pthread_mutex_lock(&tr);
     OK(substituiu);
     OK(postsB == 0); // Nunca enviar o evento de A para B, sem manifesto carregado.
-    OK(posts == 0 && disco == NULL);
+    OK(posts == (trocarSlot == 2) && postsA == (trocarSlot == 2) && disco == NULL);
+    if (trocarSlot == 2) {
+      OK(!strcmp(urlPost, "https://addon.test/cfg/watch_state/push/movie/tt0133093.json?apikey=fixture"));
+      OK(addons_n() == 2 && !strcmp(addons_base(0), "https://b.test/config") &&
+         !strcmp(addons_base(1), "https://addon.test/cfg?apikey=fixture"));
+    }
     pthread_mutex_unlock(&tr);
     if (substituiu) pthread_join(escritor, NULL);
-    printf("watchstate_trocar_slot: posts_B=%d, %s\n", postsB, falhas ? "FAIL" : "PASS");
+    printf("watchstate_%s: posts_A=%d, posts_B=%d, %s\n",
+           trocarSlot == 2 ? "reordenar" : "trocar_slot", postsA, postsB, falhas ? "FAIL" : "PASS");
     return falhas ? 1 : 0;
   }
 

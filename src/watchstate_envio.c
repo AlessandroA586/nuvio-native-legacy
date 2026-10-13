@@ -26,7 +26,7 @@ static void gravar(void) {
 }
 
 typedef struct {
-  int indice, sondado;
+  int sondado;
   char base[NV_ADDON_URL_MAX], destino[20];
   WsDecl decl;
 } Destino;
@@ -35,7 +35,6 @@ typedef struct {
 static int copiarDestino(int i, Destino *s) {
   if (perfis_ativo() != perfis_ativo_addons() || !addons_ativo(i)) return 0;
   memset(s, 0, sizeof *s);
-  s->indice = i;
   snprintf(s->base, sizeof s->base, "%s", addons_base(i));
   s->sondado = addons_sondado(i);
   addons_watchstate(i, &s->decl);
@@ -69,7 +68,7 @@ static int enviaReal(const char *addon, const char *caminho, const char *corpo,
   RedeResposta r;
   char url[NV_ADDON_PEDIDO_MAX];
   Destino s, atual;
-  int st = 0, mesmo;
+  int st = 0;
   (void)u;
   if (!destinoAtual(addon, &s)) return 410;
   if (!s.decl.push) return s.sondado ? 410 : 0;
@@ -79,13 +78,9 @@ static int enviaReal(const char *addon, const char *caminho, const char *corpo,
   p.metodo = "POST"; p.url = url; p.cabecalhos = cab;
   p.corpo = corpo; p.n_corpo = strlen(corpo);
   p.prazo_ms = 15000; p.seguir = 0;
-  // A UI pode substituir o slot antes da poda. Se mudou, descarta A; o
-  // pedido usa somente a copia de A mesmo se outra troca vier apos a guarda.
-  addons_lista_travar();
-  mesmo = copiarDestino(s.indice, &atual) && !strcmp(atual.destino, s.destino) &&
-          !strcmp(atual.base, s.base);
-  addons_lista_destravar();
-  if (!mesmo) return 410;
+  // A UI pode reordenar ou substituir a lista antes da poda. Revalida a
+  // identidade em toda a lista; o pedido usa somente a copia de A.
+  if (!destinoAtual(s.destino, &atual) || strcmp(atual.base, s.base)) return 410;
   pthread_mutex_unlock(&trava);
   rede_pedir(&p, &r);
   if (r.erro == REDE_OK) st = r.status;   // 4xx/5xx e resposta; 0 = rede ou prazo

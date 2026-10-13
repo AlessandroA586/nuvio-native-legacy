@@ -25,7 +25,7 @@ cc tests/watchstate_poda.c "$work/addons.c" src/watchstate.c "$work/watchstate_e
   src/addonstats.c -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -std=gnu11 -Wall -Wextra -Wno-unused-function -Wno-macro-redefined -Wno-deprecated-declarations \
   -ffunction-sections -fdata-sections -Wl,-dead_strip -lpthread -o "$work/t"
-for caso in ${1:---desligar --remover --esquecer --antes-do-fio --trocar-slot}; do
+for caso in ${1:---desligar --remover --esquecer --antes-do-fio --trocar-slot --reordenar}; do
   rc=0
   "$work/t" "$caso" > "$work/saida" || rc=$?
   grep -v '^\[addons\]' "$work/saida" || true
