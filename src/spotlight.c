@@ -1083,7 +1083,8 @@ static void spotAbrirBase(int voz, int tecladoAuto) {
 #endif
   fflush(stdout);
   if (voz && ditadoDisponivel()) { painel = P_MIC; ditar(); }
-  else if (tecladoAuto && imeDisponivel() && (st_abre_sozinho() || spTelefone())) abrirTecladoSis();
+  else if (tecladoAuto && imeDisponivel() && !(st_abre_sozinho() && ajustes_teclado_android() == 1) &&
+           (st_abre_sozinho() || spTelefone())) abrirTecladoSis();
 }
 
 void spot_abrir_guia(void) {

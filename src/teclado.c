@@ -144,7 +144,10 @@ static int vozOk(void) {
   return forcaVoz >= 0 ? forcaVoz : st_voz_disponivel() && !texto_sistema_voz_pelo_teclado();
 }
 static int celOk(void) { return (forcaCel >= 0 ? forcaCel : celb_disponivel()) && !semCel; }
-static int teTelefoneIme(void) { return telefoneui_ativo() && imeOk(); }
+// Ajuste "Teclado" (Android): 0 automatico, 1 so a grade do app, 2 o teclado do
+// sistema direto. Fora do Android st_abre_sozinho() e 0 e nada muda.
+static int modoTeclado(void) { return st_abre_sozinho() ? ajustes_teclado_android() : 0; }
+static int teTelefoneIme(void) { return telefoneui_ativo() && imeOk() && modoTeclado() != 1; }
 #ifdef NV_TOUCH_UI
 enum { TE_P_CAMPO=0, TE_P_FALAR, TE_P_CEL, TE_P_APAGAR, TE_P_LIMPAR,
        TE_P_MASCARA, TE_P_PRONTO, TE_P_CANCELAR, TE_P_ATALHO=16 };
@@ -448,7 +451,7 @@ void teclado_tipo(int tipo) {
   if (tipo == TECLADO_TIPO_EMAIL) teMontar(1);
   // Onde o teclado do sistema abre sozinho (Android), ele ja vem aberto: quem
   // toca no campo de e-mail quer o teclado do aparelho, nao a grade.
-  if (semCel && aberto && imeOk() && st_abre_sozinho()) {
+  if (aberto && imeOk() && (modoTeclado() == 2 || (semCel && modoTeclado() == 0))) {
     voltaF = 0; voltaC = 0;
     fileira = -1; coluna = campoFocavel() ? TE_B_CAMPO : TE_B_IME;
     abrirImeAgora();
@@ -547,6 +550,12 @@ void teclado_abrir_com(const char *titulo, const char *dica, int max,
 #ifdef NV_TOUCH_UI
   tePhoneFoco=TE_P_CAMPO;tePhoneOffset=0;tePhoneRol=(ToqueRolagem){0};
 #endif
+  // "Do Android": o teclado do sistema abre direto em todo campo. Voltar o
+  // fecha e deixa a grade do app, com o botao Teclado da TV em foco.
+  if (imeOk() && modoTeclado() == 2) {
+    fileira = -1; coluna = campoFocavel() ? TE_B_CAMPO : TE_B_IME;
+    abrirImeAgora();
+  }
 }
 
 // O texto do sistema passa pelo ALFABETO da modal: o codigo de pareamento e
