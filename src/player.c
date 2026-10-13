@@ -3688,6 +3688,10 @@ void player_atualizar(float dt, Uint32 agora) {
       reacao_player_atualizar(dt, agora, ci, eSerie, posSeg, duracaoSeg, cr,
                               px != NULL, px && px->temporada != epT);
     } else reacao_player_atualizar(dt, agora, NULL, 0, 0, 0, 0, 0, 0); }
+  // EOF sem proximo episodio usa a saida normal; com proximo, o cartao
+  // continua dono da escolha. Pausa e fim de trailer nao encerram o titulo.
+  if (!saindo && fontePrincipal() && video_ativo() && video_terminou() &&
+      !ehCanal() && !player_proximo_episodio()) { saindo = 1; pediuSair = 1; }
   // Com o painel no ar os controles nao somem: eles sao a saida do dono.
   if (posplay_visivel()) ultimoInput = agora;
 
