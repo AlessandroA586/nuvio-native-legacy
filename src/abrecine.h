@@ -1,6 +1,6 @@
 // ABERTURA CINEMA (#205, pedido do dono 11/10): o titulo continua na tela do
-// Play ate o primeiro quadro, sem lista de passos nem nome de debrid. A arte
-// recua (desfoca e escurece), o logo respira no meio, e o video entra por
+// Play ate o primeiro quadro, com episodio, etapa e provedor em linhas curtas.
+// A arte recua (desfoca e escurece), o logo fica no meio, e o video entra por
 // crossfade. A tela Detalhada (o cartao da ilha) segue existindo: e o ajuste
 // "Tela de abertura do video" e, na Cinema, Para cima/Para baixo a mostra.
 // So a regra mora aqui (sem GL): o desenho e de player.c.
@@ -35,7 +35,7 @@ int abrecine_demorando(const AbreCine *a, Uint32 agora);
 // 1 = consumiu a tecla.
 int abrecine_tecla(AbreCine *a, SDL_Keycode k);
 // A etapa mostrada sob o trilho: a URL ainda vem do addon, ou ja chegou e o
-// video enche o buffer. Sem porcentagem: o pipeline nao informa progresso real.
+// video enche o buffer. O desenho usa VideoStats.bufferPct quando informado.
 typedef enum { ABRECINE_RESOLVENDO, ABRECINE_CARREGANDO } AbreCineEtapa;
 AbreCineEtapa abrecine_etapa(int esperandoFonte);
 #endif

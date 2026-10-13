@@ -4873,11 +4873,18 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
     TxtLinha l = txt_linha_corta(TXT_ILHA_SUB, linhaEp, 243, 242, 239, 170, 1100.0f);
     txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, base + 14.0f, v * entra);
   }
-  // O TRILHO: 200 x 3, um brilho de 64 px na cor de acento correndo da
-  // esquerda para a direita. Sem porcentagem: a abertura nao tem progresso real.
-  { float tw = 200.0f, sw = 64.0f, x0 = NV_TELA_W * 0.5f - tw * 0.5f, y = base + 56.0f, r, g, b;
+  // Como na carga da Home: a barra so enche com progresso medido.
+  // Samsung informa porcentagem; segundos de buffer dos demais nao sao %.
+  { VideoStats stats;
+    int pct;
+    video_estatisticas(&stats);
+    pct = !esperandoFonte && stats.bufferPct >= 0 && stats.bufferPct <= 100 ? stats.bufferPct : -1;
+    float tw = 200.0f, sw = 64.0f, x0 = NV_TELA_W * 0.5f - tw * 0.5f, y = base + 64.0f, r, g, b;
     gfx_cor((GfxRect){ x0, y, tw, 3.0f }, 0.5f, 1, 1, 1, 0.16f * v * entra);
-    if (!reduz) {
+    if (pct >= 0) {
+      corFocoPlayer(&r, &g, &b);
+      if (pct > 0) gfx_cor((GfxRect){ x0, y, tw * pct / 100.0f, 3.0f }, 0.5f, r, g, b, 0.9f * v * entra);
+    } else if (!reduz) {
       float p = fmodf(t / 1.6f, 1.0f), e = p * p * (3.0f - 2.0f * p);
       float a0 = x0 - sw + (tw + sw) * e, a1 = a0 + sw;
       if (a0 < x0) a0 = x0;
@@ -4885,19 +4892,18 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
       corFocoPlayer(&r, &g, &b);
       if (a1 > a0) gfx_cor((GfxRect){ a0, y, a1 - a0, 3.0f }, 0.5f, r, g, b, 0.9f * v * entra);
     }
-    // O ESTADO: a etapa real e, embaixo, a fonte escolhida (nome e addon que o
-    // app sabe; nunca a URL, que pode levar a chave do debrid).
+    // Etapa curta e nome do provedor, sem arquivo/descricao bruta do addon.
     { const Stream *st = stream_item(stream_atual());
-      char det[260];
-      TxtLinha l = txt_linha(TXT_G21B, abrecine_etapa(esperandoFonte) == ABRECINE_RESOLVENDO
-                             ? "Abrindo fonte" : "Carregando", 243, 242, 239, 255);
+      char det[260], estado[96];
+      const char *etapa = i18n(abrecine_etapa(esperandoFonte) == ABRECINE_RESOLVENDO
+                              ? "Abrindo fonte" : "Carregando");
+      if (pct >= 0) snprintf(estado, sizeof estado, "%s · %d%%", etapa, pct);
+      else snprintf(estado, sizeof estado, "%s", etapa);
+      TxtLinha l = txt_linha(TXT_G21B, estado, 243, 242, 239, 255);
       txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, y + 18.0f, 0.92f * v * entra);
-      det[0] = 0;
-      if (st && st->rotulo[0]) snprintf(det, sizeof det, "%s", st->rotulo);
-      if (st && st->provedor[0]) {
-        size_t n = strlen(det);
-        snprintf(det + n, sizeof det - n, "%s%s", n ? " \xc2\xb7 " : "", st->provedor);
-      }
+      snprintf(det, sizeof det, "%s", st ? st->provedor : "");
+      // O nome e uma linha, como os rotulos da ilha.
+      for (char *p = det; *p; p++) if ((unsigned char)*p < 32) *p = ' ';
       if (tentativaN >= 2 && tentativaM >= tentativaN) {
         size_t n = strlen(det);
         snprintf(det + n, sizeof det - n, "%s", n ? " \xc2\xb7 " : "");
