@@ -6532,21 +6532,39 @@ static int metaContarEpisodios(const char *corpo, int *brutos) {
 
 int desc_meta_n_episodios(const char *corpo) { return metaContarEpisodios(corpo, NULL); }
 
+static int epSetComparar(const void *a, const void *b) {
+  unsigned long long x = *(const unsigned long long *)a, y = *(const unsigned long long *)b;
+  return (x > y) - (x < y);
+}
+
 // #391: Cinemeta incompleto nao torna uma lista maior corrupta. A proporcao
-// so pesa junto com milhares de pares distintos; numeracao >2000 numa
-// temporada e absurda por si so. Examina o corpo inteiro, antes de VIDEOS_MAX.
+// so pesa com >1000 pares distintos; uma temporada so e corrupta com >2000
+// episodios DISTINTOS, nunca pelo maior numero (series diarias). Antes de VIDEOS_MAX.
 static int metaEpisodiosCorruptos(const char *corpo, int distintos, int nCine,
                                  const char *titulo, const char *nome) {
-  const char *v = js_array(corpo, NULL, "videos");
   int corrupto = nCine > 0 && distintos > 1000 && (long long)distintos > (long long)nCine * 10;
-  while (v && !corrupto) {
-    const char *f = js_fim(v);
-    corrupto = videoTemporada(v, f) > 0 && js_num(v, f, "episode", 0) > 2000;
-    v = js_prox(f);
+  if (!corrupto && distintos > 2000) {
+    const char *v = js_array(corpo, NULL, "videos");
+    EpSet set = {0};
+    unsigned n = 0, porTemp = 0;
+    while (v) {
+      const char *f = js_fim(v);
+      int t = videoTemporada(v, f), e = (int)js_num(v, f, "episode", 0);
+      if (t > 0 && e > 0) epSetNovo(&set, t, e);
+      v = js_prox(f);
+    }
+    for (unsigned i = 0; i < set.cap && set.v; i++)
+      if (set.v[i]) set.v[n++] = set.v[i];
+    if (n) qsort(set.v, n, sizeof *set.v, epSetComparar);
+    for (unsigned i = 0; i < n && !corrupto; i++) {
+      if (!i || (set.v[i] >> 32) != (set.v[i - 1] >> 32)) porTemp = 0;
+      corrupto = ++porTemp > 2000;
+    }
+    free(set.v);
   }
   if (corrupto) {
     printf("[desc] %s: %s respondeu %d episodios contra %d do Cinemeta; "
-           "numeracao absurda, descartando a lista do addon\n", titulo, nome, distintos, nCine);
+           "contagem excessiva, descartando a lista do addon\n", titulo, nome, distintos, nCine);
     fflush(stdout);
   }
   return corrupto;

@@ -704,14 +704,18 @@ int main(void) {
     }
     // #391: a mesma regra nos dois caminhos, contando pares antes do corte.
     {
-      const struct { int cine, addon, porTemp, copias, recusar; } casos[] = {
+      const struct { int cine, addon, porTemp, copias, recusar, inicio; } casos[] = {
         {176, 10976, 1000, 1, 1}, // Z4HDY2: >10x e >1000, sem numero >2000
         {30, 150, 50, 1, 0},     // Cinemeta incompleto: 5x e legitimo
         {30, 1200, 400, 1, 1},   // tambem recusa quando aberto do addon
         {0, 150, 50, 1, 0},      // sem Cinemeta, conserva o addon
         {0, 1200, 400, 1, 0},
-        {300, 2000, 2000, 1, 0}, // numeracao ate 2000 nao basta para recusar
-        {300, 2001, 2001, 1, 1}, // numeracao absurda numa temporada
+        {0, 1, 1, 1, 0, 2000},  // S1E2001 sozinho: numeracao absoluta legitima
+        {0, 2000, 2000, 2, 0, 2000}, // 4000 videos, 2000 pares: aceita
+        {0, 2001, 2001, 1, 1},   // sem Cinemeta: >2000 pares na temporada
+        {0, 2001, 1001, 1, 0, 2000}, // >2000 pares no total, divididos: aceita
+        {300, 2000, 2000, 1, 0}, // o limite por temporada e estrito
+        {300, 2001, 2001, 1, 1}, // >2000 pares numa temporada
         {30, 1000, 1000, 1, 0},  // o limite de 1000 e estrito
         {150, 1500, 1500, 1, 0}, // o limite de 10x e estrito
         {176, 196, 1000, 56, 0}  // 10976 videos, so 196 pares distintos
@@ -727,6 +731,7 @@ int main(void) {
           for (i = 0; i < quantos; i++) {
             int par = fonte ? i % na : i;
             t = par / porTemp + 1; ep = par % porTemp + 1;
+            if (fonte) ep += casos[caso].inicio;
             k += (size_t)snprintf(corpos[fonte] + k, cap - k,
               "%s{\"id\":\"%c%d\",\"season\":%d,\"episode\":%d,\"name\":\"%c%d\"}",
               i ? "," : "", fonte ? 'A' : 'C', i, t, ep, fonte ? 'A' : 'C', i);
@@ -753,10 +758,15 @@ int main(void) {
           printf("#391 caso=%u catalogo-primeiro=%d: %d episodios\n",
                  caso, via, cat_n_episodios(0));
           assert(cat_n_episodios(0) == esperado);
-          assert(cat_episodio(0, 0)->vid[0] == (casos[caso].recusar ? 'C' : 'A'));
-          const CatEp *ultimo = cat_episodio(0, esperado - 1);
-          assert(ultimo->temporada == (esperado - 1) / porTemp + 1);
-          assert(ultimo->episodio == (esperado - 1) % porTemp + 1);
+          if (esperado) {
+            int inicio = casos[caso].recusar ? 0 : casos[caso].inicio;
+            assert(cat_episodio(0, 0)->vid[0] == (casos[caso].recusar ? 'C' : 'A'));
+            assert(cat_episodio(0, 0)->temporada == 1);
+            assert(cat_episodio(0, 0)->episodio == inicio + 1);
+            const CatEp *ultimo = cat_episodio(0, esperado - 1);
+            assert(ultimo->temporada == (esperado - 1) / porTemp + 1);
+            assert(ultimo->episodio == (esperado - 1) % porTemp + 1 + inicio);
+          }
         }
       }
       puts("ok  #391: corrupcao, catalogo incompleto e deduplicacao nos dois caminhos");
