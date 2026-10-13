@@ -65,6 +65,32 @@ static void fontesDivergentes(void) {
   }
   puts("P1.1: fontes divergentes preservam pares, foco e abas");
 }
+static void indiceReutilizado(void) {
+  limparCacheMeta();
+  catalogoCom("tt0000205", "series", "A");
+  redeControlada = 1; liberarCine = 0;
+  desc_episodios(0, 1);
+  unsigned antes = epGeracao;
+  catalogoCom("tt0000206", "series", "B");
+  assert(!desc_episodios_carregando(0));
+  desc_episodios_garantir(0);
+  assert(epGeracao == antes + 1);
+  // O mesmo B movido para outro indice continua sendo o pedido ativo.
+  CatItem itens[2] = {{0}};
+  strcpy(itens[0].imdb, "tt0000205"); strcpy(itens[0].tipo, "series");
+  strcpy(itens[1].imdb, "tt0000206"); strcpy(itens[1].tipo, "series");
+  cat_definir_tudo(itens, 2, NULL, 0);
+  assert(desc_episodios_carregando(1));
+  desc_episodios(1, 1);
+  assert(epGeracao == antes + 1);
+  pthread_mutex_lock(&redeTrava);
+  liberarCine = 1; pthread_cond_broadcast(&redeCond);
+  pthread_mutex_unlock(&redeTrava);
+  juntarPedidos();
+  assert(cat_n_episodios(0) == 0 && cat_n_episodios(1) == 20);
+  redeControlada = 0;
+  puts("P1.3: deduplicacao segue identidade, mesmo com indice reutilizado/movido");
+}
 static void retornoParcial(void) {
   CatItem itens[2] = {{0}};
   for (int i = 0; i < 2; i++) {
@@ -112,6 +138,7 @@ int main(void) {
     origemDaBase(addons_base(0), itens[i].origem, sizeof itens[i].origem);
   }
   retornoParcial();
+  indiceReutilizado();
   limparCacheMeta();
   cat_definir_tudo(itens, 2, NULL, 0);
   double a = agora(); desc_episodios(0, 1); esperar(0, a);

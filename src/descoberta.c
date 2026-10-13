@@ -6716,7 +6716,7 @@ void desc_mesclar_episodios(CatEp *base, int nb, const CatEp *outro, int no, int
 // cat_atualizar_item escreviam na posicao velha — a lista e a ficha de um
 // titulo iam parar em outro. epAlvo re-resolve pelo id antes de cada escrita;
 // -1 = o titulo saiu do catalogo ou o pedido foi substituido.
-static char epAlvoId[64];
+static char epAlvoId[64], epPedidoId[64];
 typedef struct { int item; unsigned geracao; char id[64]; CatItem base; } EpPedido;
 static pthread_key_t epPedidoKey;
 static pthread_once_t epPedidoOnce = PTHREAD_ONCE_INIT;
@@ -7498,8 +7498,7 @@ static void *buscarEps(void *u) {
   if (!base.imdb[0]) { epConcluir(); return NULL; }
   orig = &base;
   if (preCede(orig->imdb)) { epConcluir(); return NULL; }
-  if (pedido) snprintf(pedido->id, sizeof pedido->id, "%s", orig->imdb);
-  else snprintf(epAlvoId, sizeof epAlvoId, "%s", orig->imdb);
+  if (!pedido) snprintf(epAlvoId, sizeof epAlvoId, "%s", orig->imdb);
   snprintf(meuId, sizeof meuId, "%s", orig->imdb);
   // Copia sob a trava antes de sair para a rede; nenhum ponteiro de quadro.
   // CANAL NAO PASSA AQUI. O Cinemeta so conhece filme/serie por id do IMDb
@@ -8303,7 +8302,9 @@ int desc_vertudo_item(int i, CatItem *dst) {
 
 void desc_episodios(int indiceItem, int temporada) {
   pthread_mutex_lock(&epPedidoTrava);
-  int mesmo = fioEpVivo && epItem == indiceItem;
+  CatItem identidade;
+  int mesmo = fioEpVivo && cat_copiar_item(indiceItem, &identidade) &&
+              !strcmp(epPedidoId, identidade.imdb);
   pthread_mutex_unlock(&epPedidoTrava);
   if (mesmo) return;
   // Uma lista antecipada continua visivel, mas precisa retomar a mescla.
@@ -8317,6 +8318,7 @@ void desc_episodios(int indiceItem, int temporada) {
   snprintf(p->id, sizeof p->id, "%s", p->base.imdb);
   pthread_mutex_lock(&epPedidoTrava);
   p->geracao = ++epGeracao;
+  snprintf(epPedidoId, sizeof epPedidoId, "%s", p->id);
   epItem = indiceItem; epTemp = temporada;
   fioEpVivo = 1;
   pthread_mutex_unlock(&epPedidoTrava);
@@ -8351,7 +8353,9 @@ int desc_episodios_precarregar(int indiceItem) {
 
 int desc_episodios_carregando(int indiceItem) {
   pthread_mutex_lock(&epPedidoTrava);
-  int carregando = (fioEpVivo && epItem == indiceItem) || pendItem == indiceItem;
+  CatItem identidade;
+  int carregando = (fioEpVivo && cat_copiar_item(indiceItem, &identidade) &&
+                    !strcmp(epPedidoId, identidade.imdb)) || pendItem == indiceItem;
   pthread_mutex_unlock(&epPedidoTrava);
   return carregando;
 }
