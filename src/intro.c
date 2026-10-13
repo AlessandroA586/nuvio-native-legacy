@@ -69,10 +69,7 @@ int intro_extrair(const char *j,IntroTrecho *out,int max){
       if(a<0)a=0;
       if(b<0)b=-1000.0;             // marcador de "sem fim", tratado abaixo
       if(b>=0&&b<=a)continue;       // trecho invertido ou vazio: descarta
-      out[n].inicio=a/1000.0;
-      out[n].fim=(b<0)?0.0:b/1000.0;
-      out[n].tipo=CHAVES[k].tipo;
-      n++;
+      out[n++]=(IntroTrecho){a/1000.0,(b<0)?0.0:b/1000.0,CHAVES[k].tipo,0};
     }
   }
   return n;
@@ -113,10 +110,8 @@ int intro_extrair_aniskip(const char *j,double dur,IntroTrecho *out,int max){
       if(dur>1.0&&len>1.0&&dif>INTRO_ANISKIP_TOLERA)break;
       if(melhorIdx[k]<0||dif<melhorDif[k]){
         melhorIdx[k]=1;melhorDif[k]=dif;
-        cand[k].inicio=a;
         // fim no fim da midia (ED ate o ultimo segundo): "ate o fim".
-        cand[k].fim=(len>1.0&&b>=len-0.5)?0.0:b;
-        cand[k].tipo=T[k].tipo;
+        cand[k]=(IntroTrecho){a,(len>1.0&&b>=len-0.5)?0.0:b,T[k].tipo,1};
       }
       break;
     }
@@ -472,7 +467,6 @@ static void *baixar(void *u){
   int caps=0,total=0,falhaAni=0,n=pedirAniskip(p,v,8,&falhaAni),r=R_VAZIO,temCred=0,vale,deAni=n>0;
   int nl=0;
   int temIdOutro=p->tmdb>0||!strncmp(p->id,"tt",2);
-  for(int i=0;i<n;i++)v[i].ani=1;
   if(temIdOutro&&!intro_tipos_completos(v,n)){
     IntroTrecho w[8];int nw;
     int rj=pedirEp(p,p->t,p->e,p->dur,&j);

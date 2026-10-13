@@ -11,6 +11,8 @@
 //
 //   bash tests/intro.sh
 #include "../src/intro.h"
+#include "../src/capmkv.h"
+#include "../src/credfonte.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -49,6 +51,17 @@ int rede_pedir(const RedePedido *p, RedeResposta *r) {
   free(j);return ok;
 }
 void rede_resposta_limpar(RedeResposta *r) { (void)r; }
+int mkvass_cabecalho(const char *url, unsigned char **buf, long *n) {
+  (void)url; (void)buf; (void)n; return 0;
+}
+char *rede_baixar_trecho_st(const char *url, int s, long long ini, long long fim,
+                           long *tam, int *status, int *erro, char *final, unsigned tamFinal) {
+  (void)url; (void)s; (void)ini; (void)fim; (void)status; (void)erro; (void)final; (void)tamFinal;
+  *tam = 0; return NULL;
+}
+char *rede_baixar_trecho(const char *url, int s, long ini, long fim, long *tam) {
+  (void)url; (void)s; (void)ini; (void)fim; *tam = 0; return NULL;
+}
 
 // Le uma resposta gravada de tests/fixtures/theintrodb (chamadas reais a
 // api.theintrodb.org/v3/media em 07/10/2026, sem chave). Estatico: cabe.
@@ -156,10 +169,30 @@ int main(int argc,char **argv) {
     intro_desligar();assert(!unlink(caminho));assert(!rmdir(dadosTeste));return 0;
   }
 
+  // Lixo no buffer MKV nao pode atribuir os creditos ao AniSkip.
+  { MkvCap caps[] = {{0, "Prologue"}, {60, "Opening"}, {150, "Part A"},
+                     {1380, "Ending"}, {1450, "Next Episode Preview"}};
+    for (int lixo = 0; lixo < 2; lixo++) {
+      CredEntrada e = {.dur = 1500}; int fonte;
+      intro_desligar(); intro_definir_duracao(e.dur, 0);
+      memset(v, lixo ? 0xa5 : 0, sizeof v);
+      n = capmkv_trechos(caps, 5, v, 8);
+      assert(n == 3);
+      intro_definir_capitulos(v, n);
+      double ic = intro_creditos_seg();
+      if (intro_creditos_aniskip()) e.aniskip = ic; else e.introdb = ic;
+      assert(cred_escolher(&e, &fonte) == 1380 && fonte == CRED_FONTE_INTRODB);
+      for (int i = 0; i < n; i++) assert(v[i].ani == 0);
+    }
+    intro_desligar();
+    puts("ok  lixo no buffer MKV nao muda a decisao dos creditos");
+  }
+
   // FILME: /v3/media?imdb_id=tt0111161 (Shawshank). So creditos, sem fim.
+  memset(v, 0xa5, sizeof v);
   n = intro_extrair("{\"tmdb_id\":278,\"type\":\"movie\","
                     "\"credits\":[{\"start_ms\":8300000,\"end_ms\":null}]}", v, 8);
-  assert(n == 1);
+  assert(n == 1 && v[0].ani == 0);
   { const IntroTrecho *c = achar(v, n, INTRO_CREDITOS);
     assert(c);
     assert(mesmoSeg(c->inicio, 8300.0));   // 8.300.000 ms, e nao 8.300.000 s
@@ -571,12 +604,11 @@ int main(int argc,char **argv) {
 #ifdef NV_SHOT_HOOKS
   // CAPITULOS DO ARQUIVO (203-capitulos): substituem, por tipo, o da rede, e
   // sobrevivem a quem chegou antes.
-  { double fim; int tipo; IntroTrecho cap[2], got[8]; int k;
+  { double fim; int tipo; IntroTrecho cap[2] = {{1380.0, 0.0, INTRO_CREDITOS, 0},
+                                              {60.0, 150.0, INTRO_ABERTURA, 0}}, got[8]; int k;
     n = intro_extrair(fixture("onepiece_s01e01.json"), v, 8);
     intro_shot_definir(v, n);
     intro_definir_duracao(1500.0, 0);
-    cap[0].inicio = 1380.0; cap[0].fim = 0.0; cap[0].tipo = INTRO_CREDITOS;
-    cap[1].inicio = 60.0; cap[1].fim = 150.0; cap[1].tipo = INTRO_ABERTURA;
     intro_definir_capitulos(cap, 2);
     k = intro_trechos(got, 8);
     assert(achar(got, k, INTRO_CREDITOS) && mesmoSeg(achar(got, k, INTRO_CREDITOS)->inicio, 1380.0));
@@ -587,8 +619,10 @@ int main(int argc,char **argv) {
   }
 #endif
   // ANISKIP: leitura e a regra dos 10% (outro corte).
+  memset(v, 0xa5, sizeof v);
   n = intro_extrair_aniskip(fixture("../aniskip/onepiece_mal21_ep1_len0.json"), 1500.0, v, 8);
   assert(n == 3);
+  for (int i = 0; i < n; i++) assert(v[i].ani == 1);
   { const IntroTrecho *a = achar(v, n, INTRO_ABERTURA), *c = achar(v, n, INTRO_CREDITOS);
     assert(a && mesmoSeg(a->inicio, 28.783) && mesmoSeg(a->fim, 118.783));
     assert(c && mesmoSeg(c->inicio, 1387.996) && c->fim == 0.0); }   // ED ate o fim
