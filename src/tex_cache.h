@@ -167,6 +167,10 @@ int  tex_opaca(const char *caminho);
 // Chamar uma vez por quadro, na thread de desenho: sobe para a GPU o que a
 // thread de decode terminou. Devolve quantas subiu.
 int tex_bombear(int max_por_quadro);
+// Estado por tela: aguarda dois quadros parados; no maximo um pedido/quadro.
+typedef struct { float scroll; unsigned long quadro; int parados, direcao; } TexLookahead;
+int tex_lookahead_parado(TexLookahead *s, float scroll);
+int tex_lookahead_pedir(const char *caminho, float largura);
 
 // Telemetria de quadro do cache: quantas buscas por caminho e quanto custaram.
 // acharIndice era LINEAR sobre 192 slots e cada card da lista chama 2-3 vezes
