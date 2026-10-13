@@ -9,14 +9,18 @@
 // Esperado -1 = o oficial recusa a regex (invalida). Qualquer caractere que o
 // filtro perca tambem sai em stderr e faz o gerador falhar.
 const ALFA = process.env.NV_ALFA || "";
-const MAX = parseInt(process.env.NV_MAX || "400", 10);
+const MAX = parseInt(process.env.NV_MAX || "500", 10);
 
-function filtro(t) {                         // espelho de definirDoSistema
+// Espelho de definirDoSistema com teclado_aceitar_utf8(1) (o campo da regex): o
+// caractere fora do ASCII entra inteiro se couber; o teto e em BYTES de UTF-8.
+// (tests/regex_campo.sh passa pelo codigo de verdade.)
+function filtro(t) {
   let w = "";
   for (const ch of t) {
-    const c = ch.charCodeAt(0);
-    if (w.length >= MAX) break;
-    if (c >= 0x80 || !c) continue;
+    const c = ch.codePointAt(0), nb = Buffer.byteLength(w, "utf8");
+    if (nb >= MAX) break;
+    if (c >= 0x80) { if (nb + Buffer.byteLength(ch, "utf8") > MAX) break; w += ch; continue; }
+    if (!c) continue;
     if (ALFA.includes(ch)) w += ch;
     else if (/[A-Z]/.test(ch) && ALFA.includes(ch.toLowerCase())) w += ch.toLowerCase();
     else if (/[a-z]/.test(ch) && ALFA.includes(ch.toUpperCase())) w += ch.toUpperCase();
@@ -30,11 +34,9 @@ function buildExcludeRegex(pattern) {
   if (!words.length) return null;
   try { return new RegExp(`\\b(${words.join("|")})\\b`, "i"); } catch (_) { return null; }
 }
-// Padrao com lookahead/lookbehind: roda no motor de JS (ponto NAO atravessa quebra
-// de linha, como o oficial). Os demais seguem o caminho POSIX de sempre, onde o
-// ponto e o ^ $ veem o texto inteiro: comportamento antigo e mantido de proposito
-// (fonteregra.c), entao esses padroes so sao comparados em texto de UMA linha.
-const temOlhar = (p) => /\(\?(=|<=|<!)/.test(p);
+// Todo padrao roda no motor de JS (fonteregra.c), com o ponto que NAO atravessa
+// quebra de linha, como o oficial: todos sao comparados tambem em texto de varias
+// linhas.
 function oficial(pattern, text) {
   let inc;
   // O oficial so liga o filtro quando ha letra/digito (isRegexSelectionConfigured):
@@ -80,12 +82,25 @@ const padroes = [
   R`.+`, R`^$`, R`\$|\^`, R`[\[\]]`,
   // (?i) no inicio, aceito de proposito:
   R`(?i)1080p`, R`(?i)^(?=.*remux)(?!.*dts)`,
+  // UTF-8 (digitado ou colado pelo celular): antes o campo jogava fora e o modelo
+  // de espanhol virava "Espa(|n)ol|...||", que casa com tudo.
+  R`\bESP\b|\bSPA\b|Spanish|Espa(ñ|n)ol|Castellano|Latino|LATAM|🇪🇸|🇲🇽`,
+  R`Español|Português|Français|Deutsch|日本語`, R`Subt[ií]tulos|Legendado`, R`(?<=🇲🇽 )1080p`,
+  R`^(?=.*(Español|Latino))(?!.*\b(CAM|TS)\b)`, R`[ñÑ]`, R`Espa.ol`,
+  // quantificador duplo: o JS recusa, o C tambem (antes o glibc aceitava):
+  R`a**`, R`a+*`, R`a?*`, R`a{2}{3}`,
+  // "{" sem quantificador valido e literal, nos dois:
+  R`x{`, R`x{,2}`, R`1080p{`,
+  // os que a traducao POSIX antiga errava (bordas no mesmo separador, lookahead
+  // negativo sem grupo dentro):
+  R`\b(Remux|BluRay)\b.*\b2160p\b`, R`2160p\b.*\bHDR`, R`\bWEB\b-\bDL\b`, R`\b1080p\b \bWEB-DL\b`,
+  R`(?!.*CAM)1080p`, R`^(?!.*CAM).*1080p`, R`1080p(?!.*DTS)`, R`^(?!.*(DTS|TrueHD)).*2160p`,
+  R`^.*(1080p|2160p).*$`, R`^Film`, R`WEB-DL$`,
 ];
 
-// CONHECIDAS, nao comparadas (o C difere do V8 e nao vale mudar): quantificador
-// duplo (a** a+* a?* a{2}{3}) o glibc aceita e o JS recusa; "x{" e "x{,2}" sao
-// literais no JS e invalidos aqui; \\p{L}, \\1, \\k<n> e grupo nomeado o regexjs nao tem.
-const conhecidas = [R`a**`, R`a+*`, R`a?*`, R`a{2}{3}`, R`x{`, R`x{,2}`, R`\p{L}`, R`(a)\1`, R`(?<n>a)\k<n>`];
+// CONHECIDAS, nao comparadas (o C difere do V8 e nao vale mudar): \\p{L}, \\1 e
+// \\k<n> o regexjs nao tem (o padrao e recusado, o oficial o aceitaria).
+const conhecidas = [R`\p{L}`, R`(a)\1`, R`(?<n>a)\k<n>`];
 
 const textos = [
   "Film 1080p BluRay x265", "Film 1080p BD-Remux", "Anime BD-Remux 1080p DTS-HD",
@@ -98,6 +113,8 @@ const textos = [
   "Filme ESP Latino 1080p", "Castellano 720p", "Film H.264 5.1 E-AC-3", "Film DD+ 7.1 Atmos",
   "Tom & Jerry 1080p", "Don't Look 1080p", "50% off #1 hit", "user@host a;b ~approx say \"hi\"",
   "Film 4.5 GB", "(2021) [BD]", "aa aaa a", "",
+  "Película Español 1080p", "Torrentio 🇲🇽 1080p Latino", "Filme Português Legendado", "Subtítulos ESP",
+  "日本語 1080p", "Movie 1080p English", "Film Français 2160p CAM",
 ];
 
 let ruim = 0;
@@ -106,7 +123,6 @@ for (const p of padroes) {
   const f = filtro(p);
   if (f !== p) { ruim++; process.stderr.write(`FILTRO ALTERA:\n  digitado: ${p}\n  chegou  : ${f}\n`); }
   for (const t of textos) {
-    if (!temOlhar(p) && t.includes("\n")) continue;
     linhas.push([oficial(p, t), f, t.replace(/\n/g, "\\n")].join("\t"));
   }
 }

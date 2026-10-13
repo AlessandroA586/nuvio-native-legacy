@@ -1050,8 +1050,10 @@ static unsigned grupoCacheGer, grupoCacheVer;
 static FonteRegraCfg grupoCacheCfg;
 static int grupoDaFonte(const FonteRegraCfg *c, const Stream *s) {
   char t[sizeof s->provedor + sizeof s->rotulo + sizeof s->descricao + sizeof s->arquivo + 1200];
-  snprintf(t, sizeof t, "%s %s %s %s %.1024s %s", s->provedor, s->rotulo, s->descricao,
-           s->arquivo, s->url, s->infoHash);
+  // O hash so entra quando existe, como no oficial (streamSearchableText): com
+  // " %s" vazio o texto terminava em espaco e "\.mkv$" nunca casava.
+  snprintf(t, sizeof t, "%s %s %s %s %.1024s%s%s", s->provedor, s->rotulo, s->descricao,
+           s->arquivo, s->url, s->infoHash[0] ? " " : "", s->infoHash);
   return fonteregra_grupo(c, s->provedor, ehPlugin(s), t);
 }
 // Chamar com a lista estavel (verTrava, ou o fio da tela que e quem a troca).

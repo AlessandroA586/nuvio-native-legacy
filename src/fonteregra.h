@@ -87,11 +87,6 @@ int  fonteregra_no_escopo(const FonteRegraCfg *c, int plugin);
 int  fonteregra_ativa(const FonteRegraCfg *c);
 
 // --- regex, sem estado (testes) ---------------------------------------------
-// O padrao do oficial (sintaxe Java) em POSIX ERE: \d \s \w, \b, (?:, (?i),
-// quantificadores preguicosos. Os lookaheads negativos (?!...(A|B)) saem do
-// padrao e as palavras de dentro vao para `excl` ("A|B"), como o oficial faz.
-// 1 = traduziu; 0 = nao coube.
-int  fonteregra_posix(const char *java, char *posix, size_t tam, char *excl, size_t tamExcl);
 // -1 = padrao invalido ou nao configurado; 0 = nao casa; 1 = casa.
 int  fonteregra_regex_testar(const char *padrao, const char *texto);
 

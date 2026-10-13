@@ -15,8 +15,11 @@ import re, shlex
 s = open("src/ajustes.c", encoding="utf8").read()
 m = re.search(r'FR_ALFA_REGEX =\s*"((?:[^"\\]|\\.)*)";', s)
 alfa = bytes(m.group(1), "utf8").decode("unicode_escape")
-h = open("src/teclado.h").read()
-mx = re.search(r'#define\s+TECLADO_LONGO\s+(\d+)', h).group(1)
+# O campo pede FR_REGEX_MAX (ajustes.c frRegexAbrir), limitado a TECLADO_LONGO.
+h = open("src/fonteregra.h").read()
+mx = int(re.search(r'#define\s+FR_REGEX_MAX\s+(\d+)', h).group(1))
+t = open("src/teclado.h").read()
+mx = min(mx, int(re.search(r'#define\s+TECLADO_LONGO\s+(\d+)', t).group(1)))
 print("export NV_ALFA=%s NV_MAX=%s" % (shlex.quote(alfa), mx))
 PY
 )"

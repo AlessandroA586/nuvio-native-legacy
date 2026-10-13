@@ -1,6 +1,6 @@
 // #202: as regras do auto-play (add-ons/plugins permitidos, escopo, regex
-// exigir/preferir, "usar os outros"), a traducao da regex do oficial para
-// POSIX, a regex invalida, o perfil e as chaves da conta. Sem rede e sem SDL.
+// exigir/preferir, "usar os outros"), a regex do oficial no motor de JS, a
+// regex invalida, o perfil e as chaves da conta. Sem rede e sem SDL.
 //
 //   bash tests/fonteregra.sh
 #include "fonteregra.h"
@@ -15,20 +15,24 @@ static FonteRegraCfg cfg(int escopo, int regex, int outros) {
   return c;
 }
 
+// Padroes SEM "(?=" / lookbehind. Antes iam para uma traducao POSIX; agora tudo
+// roda no motor de JS, e estes sao os casos que a traducao errava.
 static void traducao(void) {
-  char p[512], x[128];
-  assert(fonteregra_posix("4K|2160p|Remux", p, sizeof p, x, sizeof x));
-  assert(!strcmp(p, "4K|2160p|Remux") && !x[0]);
-  assert(fonteregra_posix("(?i)\\d{3,4}p", p, sizeof p, x, sizeof x));
-  assert(!strcmp(p, "[0-9]{3,4}p"));
-  assert(fonteregra_posix("^(?!.*(CAM|TS)).*1080p", p, sizeof p, x, sizeof x));
-  assert(!strcmp(p, "^.*1080p") && !strcmp(x, "CAM|TS"));
-  assert(fonteregra_posix("(?:a|b)+?", p, sizeof p, x, sizeof x));
-  assert(!strcmp(p, "(a|b)+"));
-  // \b vira borda que consome (o "contem" nao muda)
+  assert(fonteregra_regex_testar("4K|2160p|Remux", "Film 2160p") == 1);
+  assert(fonteregra_regex_testar("(?i)\\d{3,4}p", "Film 1080P") == 1);
+  assert(fonteregra_regex_testar("(?:a|b)+?", "xbx") == 1);
   assert(fonteregra_regex_testar("\\bES\\b", "Movie [ES] 1080p") == 1);
   assert(fonteregra_regex_testar("\\bES\\b", "Series 1080p") == 0);
   assert(fonteregra_regex_testar("\\bES\\b", "ES") == 1);
+  // Duas bordas no mesmo separador (o POSIX consumia o espaco numa so).
+  assert(fonteregra_regex_testar("\\b(Remux|BluRay)\\b.*\\b2160p\\b", "Film Remux 2160p HDR") == 1);
+  assert(fonteregra_regex_testar("2160p\\b.*\\bHDR", "Movie.2160p.HDR") == 1);
+  assert(fonteregra_regex_testar("\\bWEB\\b-\\bDL\\b", "Film WEB-DL") == 1);
+  // Lookahead negativo sem grupo dentro: o POSIX o jogava fora e CAM/DTS passavam.
+  assert(fonteregra_regex_testar("(?!.*CAM)1080p", "Film 1080p CAM") == 0);
+  assert(fonteregra_regex_testar("(?!.*CAM)1080p", "Film 1080p WEB") == 1);
+  assert(fonteregra_regex_testar("1080p(?!.*DTS)", "Film 1080p DTS") == 0);
+  assert(fonteregra_regex_testar("1080p(?!.*DTS)", "Film 1080p DDP") == 1);
 }
 
 static void regex(void) {
@@ -51,8 +55,8 @@ static void regex(void) {
   assert(fonteregra_regex_testar(fonteregra_modelo(1), "Spider-Man Espanol 4K") == 1);
 }
 
-// Lookahead positivo "(?=" e lookbehind: o POSIX nao tem, entao o padrao roda no
-// motor proprio (regexjs.c). Antes eram rejeitados como invalidos (-1).
+// Lookahead positivo "(?=" e lookbehind (motor proprio, regexjs.c). Antes de ele
+// existir eram rejeitados como invalidos (-1).
 static void lookahead(void) {
   // O idioma "E": todas as condicoes valem a partir do inicio do texto.
   const char *e = "^(?=.*\\b1080p\\b)(?=.*\\bWEB-DL\\b)";
@@ -63,7 +67,7 @@ static void lookahead(void) {
   // linha: o "^(?=.*...)" so enxerga a primeira linha do texto.
   assert(fonteregra_regex_testar(e, "Torrentio film 1080P web-dl") == 1);
   assert(fonteregra_regex_testar(e, "Torrentio\nfilm 1080P\nweb-dl") == 0);
-  // Lookahead negativo REAL junto do positivo (nao a lista de exclusao do POSIX).
+  // Lookahead negativo REAL junto do positivo (nao so a lista de exclusao).
   assert(fonteregra_regex_testar("^(?=.*1080p)(?!.*\\bDTS\\b)", "Film 1080p DDP5.1") == 1);
   assert(fonteregra_regex_testar("^(?=.*1080p)(?!.*\\bDTS\\b)", "Film 1080p DTS") == 0);
   // Exclusao "do oficial": o DTS na 2a linha escapa do lookahead (o ponto nao
@@ -81,7 +85,7 @@ static void lookahead(void) {
     assert(fonteregra_grupo(&c, "Torrentio", 0, longo) == 0);
     assert(fonteregra_definir_regex("") == 0);
   }
-  // (?= escapado ou dentro de colchete nao e lookahead: segue o POSIX.
+  // (?= escapado ou dentro de colchete nao e lookahead.
   assert(fonteregra_regex_testar("a\\(?=b", "a=b") != -1);
   // Invalido continua -1 pelo motor proprio.
   assert(fonteregra_regex_testar("(?=abc", "abc") == -1);
