@@ -14,12 +14,19 @@
 #include <SDL2/SDL.h>
 #include <stdint.h>
 #include "streamfit.h"
+#include "fontefalha.h"
 
 // A lista cresce conforme a resposta dos addons; a UI virtualiza as linhas.
 
 typedef struct {
   char rotulo[192];     // Nome curto da fonte
   char provedor[96];
+  // Origem real da instancia do addon, sem URL/token nem inferencia pelo nome.
+  char addonChave[FONTEFALHA_CHAVE];
+  int addonOrdem;
+  // 0 = URL do addon; servico nativo + 1 quando resolvida pelo failover.
+  int debridServico;
+  int urlP2P; // provenance da resolucao manual; nao e servico de debrid
   // 1024 e nao 512. MEDIDO: os links de reproducao do AIOStreams tem 525 a 547
   // caracteres (dois segmentos assinados), e com 512 TODOS eram cortados em
   // silencio. O servidor entao respondia com um MP4 de aviso de 120s que TOCA
@@ -186,6 +193,13 @@ int  stream_proxima_vod(int atual);
 // Confere a proxima da ordem do addon fora do fio de desenho; -1 se acabou.
 // Devolve tambem quantas candidatas consumiram o orcamento (se nao NULL).
 int  stream_verificar_proxima_vod(int atual, int tentativas, int *conferidas);
+// Politica por reproducao; so o worker altera a sua copia da sessao. Nunca
+// grava URL/exclusoes na lista antes de o consumidor validar as geracoes.
+int stream_falha_verificar(FonteFalhaSessao *sessao, unsigned lista, int escolhida,
+                           int (*cancelado)(void *), void *ctx,
+                           int *indice, int *servico, char *url, unsigned tam);
+int stream_falha_aplicar(int indice, unsigned lista, int servico, const char *url);
+void stream_falha_identidade(const Stream *fonte, char *dst, unsigned tam);
 // A fonte `i` pode ser seguida por um grupo lembrado SEM rebaixar o que o
 // automatico escolheria hoje: nao excluida pelas regras do dono, grupo de
 // regras igual ou melhor, resolucao e Dolby Vision iguais ou maiores e, na LG,

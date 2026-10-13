@@ -538,6 +538,7 @@ static double duracaoTexto(const char *s) {
 }
 static int credFonteAtual;
 static int retomadaAplicada, retomarPct;
+static double retomarFonteSeg = -1.0;
 // BASE DO VISTO (#205): o registro do ponto retomado, lido UMA vez por episodio
 // (baseT/baseE) e nunca no fechamento — reler contaria de novo o que a
 // suspensao (player_suspender) ja gravou. baseDur 0 = retomada so pelo
@@ -772,6 +773,7 @@ double player_regra_retomada_inicial(double posSalva, double durSalva,
   return fabs(pct - percentual) < 1.0 ? posSalva : 0.0;
 }
 void player_do_inicio(void) {
+  retomarFonteSeg = -1.0;
   semRetomada = 1; retomarPct = 0; baseTocou = 0;
 #ifdef NV_ANDROID
   retomarSeg = 0.0;
@@ -779,6 +781,7 @@ void player_do_inicio(void) {
 }
 void player_definir_episodio(int t, int e) {
   const CatItem *c = item();
+  if (t != epT || e != epE) retomarFonteSeg = -1.0;
   epT = t; epE = e; linhaEp[0] = 0;
   retomarPct = 0;
   // !canalSessao: canal nao tem retomada, e se o indice ja foi remapeado o
@@ -1447,7 +1450,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   pedGuia = pedZap = pedGuiaCheio = 0;
   memset(&zapEst, 0, sizeof zapEst); bannerAV = 0.0f; botaoAV = 0; infoAV = 0; pedRecarregar = 0;
   avLat0 = -1.0; avAtraso = 0.0; avPausaDesde = 0;
-  retomadaAplicada=0; semRetomada=0; baseT = baseE = -1;
+  retomadaAplicada=0; semRetomada=0; retomarFonteSeg = -1.0; baseT = baseE = -1;
   abertoEm = SDL_GetTicks(); medirAbertura = 1; tocouMedido = 0; loadEm = 0;
 #ifdef NV_ANDROID
   retomarSeg = 0.0; retomadaNaPreparacao = 0;
@@ -1574,14 +1577,16 @@ static void tocarFonte(const char *url) {
     // vai junto e o Media3 aplica com a duracao do container antes do
     // primeiro quadro. Antes abria em 0, tocava e buscava depois do "pronto"
     // (TCL, 2.0.3: +6,4 s e um primeiro quadro jogado fora).
-    retomadaNaPreparacao = !ehCanal() && !semRetomada && (retomarSeg > 0.0 || retomarPct > 0);
+    double ponto = retomarFonteSeg >= 0.0 ? retomarFonteSeg : retomarSeg;
+    retomadaNaPreparacao = !ehCanal() && (retomarFonteSeg >= 0.0 ||
+                            (!semRetomada && (retomarSeg > 0.0 || retomarPct > 0)));
     if (retomadaNaPreparacao) {
-      if (retomarSeg > 0.0) marco("abrir: ponto salvo vai na abertura (segundos)");
+      if (ponto > 0.0) marco("abrir: ponto salvo vai na abertura (segundos)");
       else marco("abrir: ponto salvo vai na abertura (percentual)");
     }
     comVideo = video_tocar_retomada(proxyts_resolver(url, px, sizeof px),
-                                    retomadaNaPreparacao ? retomarSeg : 0.0,
-                                    retomadaNaPreparacao && retomarSeg <= 0.0 ? retomarPct : 0.0);
+                                    retomadaNaPreparacao ? ponto : 0.0,
+                                    retomadaNaPreparacao && retomarFonteSeg < 0.0 && ponto <= 0.0 ? retomarPct : 0.0);
     if (!comVideo) retomadaNaPreparacao = 0;
 #else
     comVideo = video_tocar(proxyts_resolver(url, px, sizeof px));
@@ -1669,6 +1674,10 @@ static void dvTelaAtualizar(float dt, Uint32 agora) {
 // So depois do loadCompleted. Antes disso o pipeline ainda nao pos nada no
 // plano de hardware, e furar a superficie cedo trocava a arte por um retangulo
 // PRETO enquanto o fluxo abria — que era o "clica em reproduzir e fica preto".
+void player_definir_retomada_fonte(double segundos) {
+  if ((aberto || mini) && !ehCanal() && isfinite(segundos) && segundos >= 0.0)
+    retomarFonteSeg = segundos;
+}
 void player_definir_fonte(const char *url) {
   if ((!aberto && !mini) || !url || !*url) return;
   durFonteAvisada = pedProximaFonte = 0;
@@ -3561,17 +3570,21 @@ void player_atualizar(float dt, Uint32 agora) {
       if (estado != 0) {
         retomadaAplicada = 1;
         if (estado > 0) marco("abrir: ponto salvo na preparacao");
-        if (estado < 0 && retomarPct > 0) {
+        if (estado < 0 && (retomarFonteSeg >= 0.0 || retomarPct > 0)) {
           if (retomadaNaPreparacao) {
             printf("[player] retomada: a abertura nao aplicou o ponto salvo; seek depois do pronto\n");
             fflush(stdout);
           }
-          marco("abrir: seek para o ponto salvo"); video_buscar(d * retomarPct / 100.0);
+          marco("abrir: seek para o ponto salvo");
+          video_buscar(retomarFonteSeg >= 0.0 ? retomarFonteSeg : d * retomarPct / 100.0);
         }
       }
 #else
       retomadaAplicada=1;
-      if(retomarPct>0) { marco("abrir: seek para o ponto salvo"); video_buscar(d*retomarPct/100.0); }
+      if(retomarFonteSeg>=0.0 || retomarPct>0) {
+        marco("abrir: seek para o ponto salvo");
+        video_buscar(retomarFonteSeg >= 0.0 ? retomarFonteSeg : d*retomarPct/100.0);
+      }
 #endif
     }
     tocando = video_tocando();
