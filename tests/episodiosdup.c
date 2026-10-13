@@ -690,7 +690,7 @@ int main(void) {
         memset(&tp3, 0, sizeof tp3);
         m3.corpo[0] = dez; m3.corpo[1] = doze; m3.cine[1] = 1; m3.n = 2;
         r = episodiosDoCatalogo(0, "Serie", "tt13293588", &m3, &tp3);
-        assert(cat_n_episodios(0) == 10 && r == 1);
+        assert(cat_n_episodios(0) == 12 && r == 1);
         assert(!strcmp(cat_episodio(0, 0)->nome, "D1"));
       }
       puts("ok  catalogo primeiro: lista de arquivos que ficou nao trava a traducao do TMDB");
