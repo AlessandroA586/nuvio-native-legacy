@@ -4406,8 +4406,10 @@ void app_atualizar(float dt, Uint32 agora) {
     // buffering por 8 s. EOF de live TPK com progresso reabre imediatamente
     // sem gastar tentativa; as demais quedas reabrem a MESMA fonte, ate
     // NV_LS_MAX vezes (livestall.h); esgotou, cai no caminho de sempre (proxima
-    // fonte). Pausa da pessoa nunca entra. So roda se o watchdog acima nao ja
-    // declarou a fonte morta (erro de verdade tem o seu proprio caminho).
+    // fonte). Pausa da pessoa nunca entra. No webOS o fim do buffer parado
+    // com reserva curta tambem conta (fonte seca, reabre antes de congelar).
+    // So roda se o watchdog acima nao ja declarou a fonte morta (erro de
+    // verdade tem o seu proprio caminho).
     { static int lsIdx = -1;
       static char lsId[64];
       int ls;
@@ -4416,9 +4418,9 @@ void app_atualizar(float dt, Uint32 agora) {
         lsIdx = canalFonteIdx;
         snprintf(lsId, sizeof lsId, "%s", player_id_canal());
       }
-      ls = nv_ls_passo(&liveStall, SDL_GetTicks(), video_pronto() ? video_pos() : 0.0,
-                       video_pronto(), player_pausa_pessoa(), video_terminou(),
-                       video_bufferando_ms());
+      ls = nv_ls_passo_buf(&liveStall, SDL_GetTicks(), video_pronto() ? video_pos() : 0.0,
+                           video_pronto(), player_pausa_pessoa(), video_terminou(),
+                           video_bufferando_ms(), video_buffer_fim());
       if (morta) {
         nv_ls_zerar(&liveStall);
       } else if (ls == NV_LS_AGENDOU) {
