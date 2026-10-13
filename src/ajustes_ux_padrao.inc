@@ -265,3 +265,6 @@
   1, /* auto-skip credits, only with a real start+end marker: Desligado */
   5, /* owner decision #256: configurable countdown in seconds */
   0, /* interface mode: TV, including on phones until Mobile is selected */
+  1, 0, /* provider failover off; order action */
+  3, 3, 3, 3, /* total links per native provider */
+  1, 0, 3, /* addon failover off; instance order action; total links */
