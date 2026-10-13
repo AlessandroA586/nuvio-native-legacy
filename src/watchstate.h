@@ -66,6 +66,10 @@ int ws_url(const char *base, const WsEvento *e, char *out, size_t n);
 #define WS_FILA_MAX   64
 #define WS_VIDA_S     86400      // evento mais velho que isso e descartado
 #define WS_SEGURA_S   21600      // 401/403: o backlog do addon espera 6 h
+#define WS_AUSENTE    (-1)       // destino fora da lista de agora: segura, nao descarta
+#define WS_AUSENTE_S  5          // ...e reconferencia a lista logo (a lista do pacote
+                                // no arranque nao e a lista da conta, e some quando o
+                                // sync da conta aplica a de verdade)
 
 typedef struct {
   char *addon, *caminho, *id, *corpo;
@@ -98,17 +102,19 @@ void  ws_fila_carregar(WsFila *f, const char *texto);
 // Tira itens cujo destino ja nao e autorizado pela lista e contexto atuais.
 int  ws_fila_podar(WsFila *f, int (*ainda)(const char *addon, void *u), void *u);
 
-// Transporte: devolve o status HTTP, 0 para falha de rede ou prazo. Escreve em
-// *retryAfterS o Retry-After (0 se nao veio). Roda com o que o chamador segura;
-// o transporte real solta a trava durante o pedido.
+// Transporte: devolve o status HTTP, 0 para falha de rede ou prazo, ou
+// WS_AUSENTE quando o destino nao esta na lista de agora (o diario segura o
+// item para nao perder backlog contra uma lista que nao e a da conta).
+// Escreve em *retryAfterS o Retry-After (0 se nao veio). Roda com o que o
+// chamador segura; o transporte real solta a trava durante o pedido.
 typedef int (*WsEnvio)(const char *addon, const char *caminho, const char *corpo,
                        int *retryAfterS, void *u);
 
 // Descarta o vencido e tenta tudo o que venceu agora. Por addon a ordem e
 // FIFO: enquanto o item da frente espera, os de tras do MESMO addon esperam.
 // 200/204 entrega; 401/403 segura o addon por WS_SEGURA_S; 429, 5xx e falha de
-// rede voltam a tentar (espera >= Retry-After); outro status descarta o item.
-// Devolve quantas requisicoes fez.
+// rede voltam a tentar (espera >= Retry-After); WS_AUSENTE segura sem contar
+// tentativa; outro status descarta o item. Devolve quantas requisicoes fez.
 int  ws_fila_passo(WsFila *f, long long agoraS, WsEnvio envia, void *u);
 // Quando a proxima cabeca de addon vence (s Unix); -1 se a fila esta vazia.
 long long ws_fila_proxima(const WsFila *f);

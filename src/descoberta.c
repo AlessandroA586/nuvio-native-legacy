@@ -2215,8 +2215,10 @@ static int lerManifesto(int iAddon, const char *base, Decl *saida, int max,
   // O MESMO CORPO SERVE AOS DOIS LEITORES. Ver addons_manifesto_lido: sem esta
   // linha o id e as capacidades do addon so eram aprendidos por quem abrisse a
   // tela de addons nos Ajustes, e sem o id nenhuma colecao da conta encontrava
-  // a URL do proprio addon (issue #10).
-  addons_manifesto_lido(iAddon, corpo);
+  // a URL do proprio addon (issue #10). O _base reconfere que o slot ainda e o
+  // addon de `base`: a lista pode ter trocado durante o download (ate 20 s) e o
+  // manifesto atrasado de A nao pode gravar nada no slot de B.
+  addons_manifesto_lido_base(iAddon, base, corpo);
   // Chave da RAIZ: um manifesto tem "id" tambem dentro de catalogs[] e de
   // behaviorHints, e ha addon que escreve "catalogs" antes de "id" — a leitura
   // crua trazia o id de um CATALOGO como se fosse o do addon. Ver js_texto_raiz.

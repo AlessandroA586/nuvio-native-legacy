@@ -70,8 +70,14 @@ static int enviaReal(const char *addon, const char *caminho, const char *corpo,
   Destino s, atual;
   int st = 0;
   (void)u;
-  if (!destinoAtual(addon, &s)) return 410;
-  if (!s.decl.push) return s.sondado ? 410 : 0;
+  // FORA DA LISTA DE AGORA NAO E ERRO DO ADDON nem ordem de descarte: no
+  // arranque o diario e lido com a lista do PACOTE (art/addons.txt, a de
+  // exemplo), que nao e a lista da conta — o pendente do addon da conta fica
+  // segurado (WS_AUSENTE) ate a lista certa voltar, e nada e POSTado nem
+  // perdido antes disso. Quem o usuario tirou de verdade ja foi podado na
+  // hora, por quem tirou (addons_definir_lista/addons_esquecer/addons_alternar).
+  if (!destinoAtual(addon, &s)) return WS_AUSENTE;
+  if (!s.decl.push) return s.sondado ? 410 : WS_AUSENTE;
   if (s.decl.viewers || nv_addon_url(url, sizeof url, s.base, "%s", caminho) <= 0 ||
       !url[0]) return 410;
   memset(&p, 0, sizeof p);
@@ -95,8 +101,6 @@ static void *fio(void *arg) {
   pthread_mutex_lock(&trava);
   for (;;) {
     long long agora = (long long)time(NULL), prox;
-    // Addon removido, desligado ou de outra conta: o item sai antes do POST.
-    if (ws_fila_podar(fila, autorizado, NULL)) gravar();
     if (ws_fila_passo(fila, agora, enviaReal, NULL)) gravar();
     prox = ws_fila_proxima(fila);
     if (prox < 0) pthread_cond_wait(&acorda, &trava);
@@ -121,32 +125,49 @@ void wsenvio_iniciar(void) {
     if (fila && (rede_pedido_capacidades() & REDE_CAP_CORPO) &&
         pthread_create(&t, NULL, fio, NULL) == 0) {
       pthread_detach(t);
-      if ((txt = dados_ler(ARQ_FILA))) {
-        ws_fila_carregar(fila, txt); free(txt);
-        // O que o diario trazia de addon que a lista atual nao tem mais nao
-        // volta a ser pedido (nem fica no disco).
-        ws_fila_podar(fila, autorizado, NULL); gravar();
-      }
+      // O diario entra INTEIRO. Nenhuma poda aqui: no arranque a lista de
+      // agora e a do PACOTE (o addons_carregar do art/addons.txt roda antes
+      // desta linha), e podar contra ela apagava o pendente dos addons da
+      // CONTA em todo boot — o destino (base+conta+perfil) nunca casava.
+      // Quem a lista de agora nao conhece fica segurado no envio (WS_AUSENTE)
+      // ate a lista da conta voltar; quem o usuario tirou e podado na hora,
+      // por quem tirou.
+      if ((txt = dados_ler(ARQ_FILA))) { ws_fila_carregar(fila, txt); free(txt); }
       pthread_cond_signal(&acorda);
     } else { free(fila); fila = NULL; }
   }
   pthread_mutex_unlock(&trava);
 }
 
+// Poda o diario EM DISCO, com o fio ainda nao nascido.
+static void podarDisco(int (*ainda)(const char *addon, void *u), void *u) {
+  char *txt = dados_ler(ARQ_FILA);
+  WsFila f = {0};
+  if (txt) { ws_fila_carregar(&f, txt); free(txt); }
+  ws_fila_podar(&f, ainda, u);
+  { char *s = f.n ? ws_fila_serializar(&f) : NULL;
+    if (s) { dados_gravar(ARQ_FILA, s); free(s); }
+    else dados_apagar(ARQ_FILA); }
+  ws_fila_limpar(&f);
+}
+
 void wsenvio_podar(void) {
   pthread_mutex_lock(&trava);
   if (fila && ws_fila_podar(fila, autorizado, NULL)) gravar();
-  else if (!fila) {
-    // O fio ainda nao nasceu: poda o diario no disco antes de qualquer envio.
-    char *txt = dados_ler(ARQ_FILA);
-    WsFila f = {0};
-    if (txt) { ws_fila_carregar(&f, txt); free(txt); }
-    ws_fila_podar(&f, autorizado, NULL);
-    { char *s = f.n ? ws_fila_serializar(&f) : NULL;
-      if (s) { dados_gravar(ARQ_FILA, s); free(s); }
-      else dados_apagar(ARQ_FILA); }
-    ws_fila_limpar(&f);
-  }
+  else if (!fila) podarDisco(autorizado, NULL);
+  pthread_mutex_unlock(&trava);
+}
+
+// 0 = e ESTE destino e sai do diario; o resto fica.
+static int naoDestino(const char *addon, void *u) { return strcmp(addon, (const char *)u); }
+
+void wsenvio_podar_addon(const char *base) {
+  char destino[20];
+  if (!base || !base[0]) return;
+  ws_destino(base, sessao_usuario(), perfis_ativo(), destino);
+  pthread_mutex_lock(&trava);
+  if (fila && ws_fila_podar(fila, naoDestino, destino)) gravar();
+  else if (!fila) podarDisco(naoDestino, destino);
   pthread_mutex_unlock(&trava);
 }
 

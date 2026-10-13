@@ -149,6 +149,26 @@ int main(int argc, char **argv) {
     return falhas ? 1 : 0;
   }
 
+  // A descoberta baixou o manifesto de A; durante a viagem a conta trocou a
+  // lista para [B] e a resposta de A chega no slot 0, que agora e B.
+  if (argc > 1 && !strcmp(argv[1], "--manifesto-atrasado")) {
+    AddonRemoto lista = {"B", "https://b.test/config", 1};
+    char baseA[NV_ADDON_URL_MAX];
+    snprintf(baseA, sizeof baseA, "%s", addons_base(0));
+    OK(addons_definir_lista(&lista, 1));
+    OK(!strcmp(addons_base(0), "https://b.test/config"));
+    addons_manifesto_lido_base(0, baseA, MAN);   // atrasado: tem que cair
+    OK(!addons_watchstate(0, &(WsDecl){0}));
+    wsenvio_emitir(&e);
+    usleep(300000);
+    pthread_mutex_lock(&tr);
+    OK(postsB == 0 && posts == 0);
+    pthread_mutex_unlock(&tr);
+    printf("watchstate_manifesto_atrasado: posts_A=%d, posts_B=%d, %s\n",
+           postsA, postsB, falhas ? "FAIL" : "PASS");
+    return falhas ? 1 : 0;
+  }
+
   if (argc > 1 && !strcmp(argv[1], "--antes-do-fio")) {
     WsFila f = {0};
     char destino[20];

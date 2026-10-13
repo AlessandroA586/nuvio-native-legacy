@@ -25,6 +25,7 @@
 #include <stdio.h>
 // A entrega real tem o harness watchstate_poda.sh; aqui nao ha diario.
 void wsenvio_podar(void) {}
+void wsenvio_podar_addon(const char *base) { (void)base; }
 #include <string.h>
 #include <unistd.h>
 #include "../src/fontecache.c"

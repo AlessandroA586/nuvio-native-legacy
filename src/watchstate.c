@@ -405,12 +405,13 @@ int ws_fila_passo(WsFila *f, long long agora, WsEnvio envia, void *u) {
     int ra = 0, st;
     if (!addon || !id || !corpo) { free(addon); free(id); free(corpo); break; }
     st = envia(addon, f->it[i].caminho, corpo, &ra, u);
-    feitas++;
+    if (st != WS_AUSENTE) feitas++;   // WS_AUSENTE nem chegou a ser um pedido
     // O transporte pode ter soltado a trava: o item pode ter saido (fila cheia).
     for (k = 0; k < f->n && !mesmo(&f->it[k], addon, id); k++) ;
     if (k < f->n) {
       WsItem *t = &f->it[k];
-      if (st == 200 || st == 204) tiraItem(f, k);
+      if (st == WS_AUSENTE) t->proxS = agora + WS_AUSENTE_S;
+      else if (st == 200 || st == 204) tiraItem(f, k);
       else if (st == 401 || st == 403) t->proxS = agora + WS_SEGURA_S;
       else if (st == 0 || st == 429 || st >= 500) {
         long long w = ws_espera_s(++t->tentativas);

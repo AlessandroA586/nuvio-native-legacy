@@ -273,6 +273,14 @@ void addons_sondar_manifestos(void);
 // busca usam, nao e tocado aqui.
 void addons_manifesto_lido(int i, const char *corpo);
 
+// O MESMO, com o recheck de identidade da sonda: so grava se `base` (de onde o
+// corpo foi baixado) ainda e o addon do slot `i` agora. E o caminho da
+// descoberta, que baixa com a lista de um instante e pode receber a resposta
+// depois de a conta ter trocado/reordenado a lista — o manifesto atrasado de
+// um addon nao pode instalar capacidades nem declaracao watch_state no slot
+// de outro (ver addons_manifesto_lido_base em addons.c).
+void addons_manifesto_lido_base(int i, const char *base, const char *corpo);
+
 // OS CATALOGOS DE CANAL QUE O MANIFESTO DECLARA (type tv/channel/channels/
 // live/iptv), lidos pela mesma passagem de addons_manifesto_lido. Existe para
 // o Guia de TV NAO baixar o manifesto de novo: a descoberta ja leu todos no

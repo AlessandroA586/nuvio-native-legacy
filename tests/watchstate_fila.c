@@ -155,6 +155,18 @@ int main(void) {
     OK(f->n == 2 && f->it[0].proxS == t0 + 2 * WS_SEGURA_S);
     ws_fila_limpar(f);
 
+    // WS_AUSENTE: destino fora da lista de agora. Segura sem contar tentativa
+    // e sem fazer pedido — no arranque a lista e a de exemplo do pacote e o
+    // pendente da conta tem que sobreviver a ela.
+    memset(&rede, 0, sizeof rede);
+    ws_fila_empurrar(f, "a", "/1", "i1", "{}", t0);
+    rede.n = 1; rede.st[0] = WS_AUSENTE;
+    OK(ws_fila_passo(f, t0, envia, NULL) == 0);
+    OK(f->n == 1 && f->it[0].tentativas == 0 && ws_fila_proxima(f) == t0 + WS_AUSENTE_S);
+    OK(ws_fila_passo(f, t0 + WS_AUSENTE_S - 1, envia, NULL) == 0);   // ainda segurado
+    rede.i = 0; rede.n = 1; rede.st[0] = 204;
+    OK(ws_fila_passo(f, t0 + WS_AUSENTE_S, envia, NULL) == 1 && f->n == 0);
+
     // outro 4xx descarta so aquele evento e o seguinte segue na hora
     memset(&rede, 0, sizeof rede);
     ws_fila_empurrar(f, "a", "/1", "i1", "{}", t0);

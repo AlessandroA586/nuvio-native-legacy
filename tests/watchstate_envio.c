@@ -58,18 +58,33 @@ int perfis_ativo_addons(void) { return perfilAddons; }
 const char *sessao_usuario(void) { return usuario; }
 
 static const char *bases[] = {"http://a.test/x", "http://b.test/x", "http://c.test/x", "http://d.test/x"};
+static int declWs[] = {1, 0, 1, 1};   // so quem declara watch_state (b.test nao)
 static int nAddons = 4;
+static int pacoteVazio;
 static pthread_mutex_t listaTrava = PTHREAD_MUTEX_INITIALIZER;
 void addons_lista_travar(void) { pthread_mutex_lock(&listaTrava); }
 void addons_lista_destravar(void) { pthread_mutex_unlock(&listaTrava); }
-int addons_carregar(const char *dir) { (void)dir; return nAddons; }
+// A lista da CONTA (o que o addonsRestaurar do sync aplica): [A], que declara.
+static void restaurarConta(void) {
+  bases[0] = "http://a.test/x"; declWs[0] = 1; nAddons = 1;
+}
+// O duble faz o que o addons_carregar DE VERDADE faz no arranque: a lista do
+// pacote (art/addons.txt, a de exemplo) SUBSTITUI a que estava valendo. Era
+// isto que o teste antigo nao reproduzia — e sem a troca o arranque nao perdia
+// o diario de ninguem.
+int addons_carregar(const char *dir) {
+  (void)dir;
+  nAddons = pacoteVazio ? 0 : 1;
+  if (!pacoteVazio) { bases[0] = "http://b.test/x"; declWs[0] = 0; }
+  return nAddons;
+}
 int addons_n(void) { return nAddons; }
 int addons_ativo(int i) { return i >= 0 && i < nAddons; }
 int addons_sondado(int i) { (void)i; return 1; }
 const char *addons_base(int i) { return i >= 0 && i < nAddons ? bases[i] : ""; }
 int addons_watchstate(int i, WsDecl *d) {
   memset(d, 0, sizeof *d);
-  if (i == 1) return 0;                       // b.test nao declara watch_state
+  if (i < 0 || i >= nAddons || !declWs[i]) return 0;    // nao declara watch_state
   d->push = 1; d->eventos = WS_TODOS;
   return 1;
 }
@@ -101,9 +116,10 @@ static int testarArranque(int recusa) {
   WsFila f = {0};
   char url[512], destino[20], id[WS_ID_MAX + 64], corpo[1024];
   long long agora = (long long)time(NULL);
-  int i;
+  int i, preservado = 0;
   caps = REDE_CAP_CORPO;
-  alarm(8);
+  alarm(30);
+  restaurarConta();   // o sync restaura a lista da conta ANTES do pacote
   OK(ws_url(bases[0], &e, url, sizeof url));
   OK(ws_id(&e, id, sizeof id));
   OK(ws_corpo(&e, corpo, sizeof corpo));
@@ -113,28 +129,44 @@ static int testarArranque(int recusa) {
   disco = ws_fila_serializar(&f);
   ws_fila_limpar(&f);
 
-  if (recusa == 1) nAddons = 0;
-  if (recusa == 2) usuario = "conta-b";
+  if (recusa == 1) pacoteVazio = 1;       // arranque sem lista nenhuma
+  if (recusa == 2) usuario = "conta-b";  // diario de outra conta
   if (recusa == 3) perfil = perfilAddons = 2;
   if (recusa == 4) perfil = 2; // herda addons do principal
-  arranqueAddons("art");   // processo novo; nenhum wsenvio_emitir
+  arranqueAddons("art");   // o pacote aplica [B]; nenhum wsenvio_emitir
   arranqueAddons("art");   // iniciar de novo nao duplica a entrega
-  for (i = 0; i < 200; i++) {
-    int pendente;
-    pthread_mutex_lock(&tr); pendente = disco != NULL; pthread_mutex_unlock(&tr);
-    if (!pendente) break;
-    usleep(10000);
-  }
+  usleep(500000);          // o fio tenta, nao acha o destino e segura
   pthread_mutex_lock(&tr);
-  OK(nA == !recusa && nB == 0 && nC == 0 && nD == 0);
+  preservado = disco != NULL;
+  OK(preservado);          // boot: o diario sobrevive a lista do pacote
+  OK(nA == 0 && nB == 0 && nC == 0 && nD == 0);
+  pthread_mutex_unlock(&tr);
   if (!recusa) {
+    // A lista da conta volta (o ciclo do sync) e o pendente sai para A
+    restaurarConta();
+    wsenvio_podar();   // o sync poda contra a lista DELE: o pendente fica
+    for (i = 0; i < 700; i++) {
+      int vazio;
+      pthread_mutex_lock(&tr); vazio = disco == NULL; pthread_mutex_unlock(&tr);
+      if (vazio) break;
+      usleep(10000);   // WS_AUSENTE_S: a reconferencia da lista
+    }
+    pthread_mutex_lock(&tr);
+    OK(nA == 1 && nB == 0 && nC == 0 && nD == 0);
     OK(!strcmp(urlA, "http://a.test/x/watch_state/push/movie/tt0133093.json"));
     OK(strstr(corpoA, "\"event\":\"stop\"") && strstr(corpoA, "\"positionMs\":3000"));
+    OK(disco == NULL);
+    pthread_mutex_unlock(&tr);
+  } else {
+    usleep(200000);
+    pthread_mutex_lock(&tr);
+    // outra conta/perfil ou lista vazia: segurado, nunca entregue nem apagado
+    OK(nA == 0 && nB == 0 && nC == 0 && nD == 0);
+    OK(disco != NULL);
+    pthread_mutex_unlock(&tr);
   }
-  OK(disco == NULL);
-  pthread_mutex_unlock(&tr);
   alarm(0);
-  if (!falhas) printf("OK watchstate_arranque\n");
+  if (!falhas) printf("OK watchstate_arranque (pending_preserved=%d)\n", preservado);
   return falhas ? 1 : 0;
 }
 
@@ -193,36 +225,9 @@ static int testarQuery(void) {
   return falhas ? 1 : 0;
 }
 
-// Diario pendente de um addon que a lista atual nao tem mais: no arranque nada
-// sai, nem o diario sobrevive.
-static int testarSemAddon(void) {
-  WsEvento e = filme(WS_STOP, 3000);
-  WsFila f = {0};
-  char url[512], id[WS_ID_MAX + 64], corpo[1024];
-  long long agora = (long long)time(NULL);
-  char destino[20];
-  caps = REDE_CAP_CORPO;
-  nAddons = 0;
-  alarm(8);
-  OK(ws_url("http://a.test/x", &e, url, sizeof url));
-  OK(ws_id(&e, id, sizeof id));
-  OK(ws_corpo(&e, corpo, sizeof corpo));
-  ws_destino("http://a.test/x", usuario, perfil, destino);
-  OK(ws_fila_empurrar(&f, destino, url + strlen("http://a.test/x"), id, corpo, agora - 60));
-  f.it[0].proxS = agora - 1;
-  disco = ws_fila_serializar(&f);
-  ws_fila_limpar(&f);
-
-  arranqueAddons("art");   // nenhum addon autorizado
-  usleep(300000);
-  pthread_mutex_lock(&tr);
-  OK(nA + nB + nC + nD == 0);
-  OK(disco == NULL);
-  pthread_mutex_unlock(&tr);
-  alarm(0);
-  if (!falhas) printf("OK watchstate_sem_addon\n");
-  return falhas ? 1 : 0;
-}
+// Diario pendente de addon que a lista atual nao tem (o --sem-addon e o
+// arranque com pacote vazio, la em testarArranque): nada sai e o diario
+// espera — ausencia da lista de agora nao e motivo de descarte.
 
 int main(int argc, char **argv) {
   WsEvento e;
@@ -236,18 +241,22 @@ int main(int argc, char **argv) {
   if (argc > 1 && !strcmp(argv[1], "--outro-perfil")) return testarArranque(3);
   if (argc > 1 && !strcmp(argv[1], "--herdado")) return testarArranque(4);
   if (argc > 1 && !strcmp(argv[1], "--durante-envio")) {
+    char destinoA[20];
+    ws_destino(bases[0], usuario, perfil, destinoA);
     caps = REDE_CAP_CORPO; trocarDuranteEnvio = 1;
     e = filme(WS_START, 1000); wsenvio_emitir(&e);
     usleep(800000);
     pthread_mutex_lock(&tr);
     OK(nA == 1 && nB + nC + nD == 0);
-    OK(disco == NULL);
+    // O de A saiu (204). O que sobra e de destino da conta antiga: fica
+    // segurado, sem POST — quem troca de conta o poda (definir_lista/esquecer).
+    OK(!disco || !strstr(disco, destinoA));
     pthread_mutex_unlock(&tr);
     return falhas ? 1 : 0;
   }
   if (argc > 1 && !strcmp(argv[1], "--url-longa")) return testarUrlLonga();
   if (argc > 1 && !strcmp(argv[1], "--query")) return testarQuery();
-  if (argc > 1 && !strcmp(argv[1], "--sem-addon")) return testarSemAddon();
+  if (argc > 1 && !strcmp(argv[1], "--sem-addon")) return testarArranque(1);
   alarm(8);   // start -> pause -> stop deve terminar mesmo com 401/503
 
   // VIDAA (so GET): nada sai, nem o fio nasce
