@@ -47,13 +47,14 @@ void rede_resposta_limpar(RedeResposta *r) { (void)r; }
 // ---- Disco, perfil e addons falsos ------------------------------------------
 static char *disco;
 int dados_gravar(const char *n, const char *c) { (void)n; pthread_mutex_lock(&tr); free(disco); disco = strdup(c); pthread_mutex_unlock(&tr); return 1; }
-char *dados_ler(const char *n) { (void)n; return NULL; }
+char *dados_ler(const char *n) { char *s; (void)n; pthread_mutex_lock(&tr); s = disco ? strdup(disco) : NULL; pthread_mutex_unlock(&tr); return s; }
 int dados_apagar(const char *n) { (void)n; pthread_mutex_lock(&tr); free(disco); disco = NULL; pthread_mutex_unlock(&tr); return 1; }
 static int perfil = 1, perfilAddons = 1;
 int perfis_ativo(void) { return perfil; }
 int perfis_ativo_addons(void) { return perfilAddons; }
 
 static const char *bases[] = {"http://a.test/x", "http://b.test/x", "http://c.test/x", "http://d.test/x"};
+int addons_carregar(const char *dir) { (void)dir; return 4; }
 int addons_n(void) { return 4; }
 const char *addons_base(int i) { return bases[i]; }
 int addons_watchstate(int i, WsDecl *d) {
@@ -82,10 +83,49 @@ static long long agoraMs(void) {
   return (long long)t.tv_sec * 1000 + t.tv_nsec / 1000000;
 }
 
-int main(void) {
+// Gerado pelo runner a partir do trecho de main.c que carrega os addons.
+void arranqueAddons(const char *dirArte);
+
+static int testarArranque(void) {
+  WsEvento e = filme(WS_STOP, 3000);
+  WsFila f = {0};
+  char url[512], id[WS_ID_MAX + 64], corpo[1024];
+  long long agora = (long long)time(NULL);
+  int i;
+  caps = REDE_CAP_CORPO;
+  alarm(8);
+  OK(ws_url(bases[0], &e, url, sizeof url));
+  OK(ws_id(&e, id, sizeof id));
+  OK(ws_corpo(&e, corpo, sizeof corpo));
+  OK(ws_fila_empurrar(&f, bases[0], url, id, corpo, agora - 60));
+  f.it[0].proxS = agora - 1; f.it[0].tentativas = 1;
+  disco = ws_fila_serializar(&f);
+  ws_fila_limpar(&f);
+
+  arranqueAddons("art");   // processo novo; nenhum wsenvio_emitir
+  arranqueAddons("art");   // iniciar de novo nao duplica a entrega
+  for (i = 0; i < 200; i++) {
+    int pendente;
+    pthread_mutex_lock(&tr); pendente = disco != NULL; pthread_mutex_unlock(&tr);
+    if (!pendente) break;
+    usleep(10000);
+  }
+  pthread_mutex_lock(&tr);
+  OK(nA == 1 && nB == 0 && nC == 0 && nD == 0);
+  OK(!strcmp(urlA, "http://a.test/x/watch_state/push/movie/tt0133093.json"));
+  OK(strstr(corpoA, "\"event\":\"stop\"") && strstr(corpoA, "\"positionMs\":3000"));
+  OK(disco == NULL);
+  pthread_mutex_unlock(&tr);
+  alarm(0);
+  if (!falhas) printf("OK watchstate_arranque\n");
+  return falhas ? 1 : 0;
+}
+
+int main(int argc, char **argv) {
   WsEvento e;
   long long t0, dt;
   int a, c, d;
+  if (argc > 1 && !strcmp(argv[1], "--arranque")) return testarArranque();
   alarm(8);   // start -> pause -> stop deve terminar mesmo com 401/503
 
   // VIDAA (so GET): nada sai, nem o fio nasce
