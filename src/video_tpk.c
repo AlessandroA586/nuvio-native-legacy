@@ -1159,9 +1159,9 @@ static void reabrindoVigiar(void) {
   cv.reabrindo = 0;
 }
 
-// ARRANQUE COM FOLGA (Round 2, Fight Club: 111 Mb/s, o TorBox a 1,1x do tempo
-// real). O player da TV comecava com o buffer quase vazio: no TS o som saia
-// ~0,5 s fora de sincronia ate uma pausa longa, que deixava o buffer encher. A
+// ARRANQUE COM FOLGA, SO NO HLS (Round 2, Fight Club: 111 Mb/s, o TorBox a 1,1x
+// do tempo real). O player da TV comecava com o buffer quase vazio. No HLS a TV
+// segue pedindo segmentos pausada (log: 8 s a frente em 4-8 s). A
 // cada abertura do convertido, se o que ja foi ENVIADO (dts_tpk_entregue_ate)
 // esta menos de FOLGA_S a frente da posicao, o player fica pausado (rodinha de
 // buffer) ate chegar la ou FOLGA_TETO_MS. Fonte rapida: nem pausa.
@@ -1170,7 +1170,9 @@ static void reabrindoVigiar(void) {
 static void folgaVigiar(void) {
   Uint32 agora = SDL_GetTicks();
   double e, p;
-  if (!cv.ativo || falhou || (cv.folgaFeita && !cv.folga)) return;
+  // So no HLS (Round 2): no TS continuo a TV para de ler com o player pausado,
+  // o enviado nao anda e a folha so esperava o teto, com o video parado.
+  if (!cv.ativo || cv.prog || falhou || (cv.folgaFeita && !cv.folga)) return;
   if (pausaPedida) {   // a pessoa pausou: a pausa e dela
     if (cv.folga) { printf("[dts-tpk] folga: a pessoa pausou, fica pausado\n"); fflush(stdout); }
     cv.folga = 0; cv.folgaFeita = 1; return;
