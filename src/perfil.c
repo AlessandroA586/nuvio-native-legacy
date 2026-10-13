@@ -739,14 +739,14 @@ static void desenharLoading(Uint32 agora, float a) {
 
 static void desenharVazio(float a) {
   const char *titulo = "Nenhuma reprodução neste período";
-  const char *corpo = "Conecte o Trakt e assista a um filme ou episódio. Seu resumo usa somente o histórico disponível.";
+  const char *corpo = "Conecte o Trakt ou Simkl e assista a um filme ou episódio. Seu resumo usa somente o histórico disponível.";
   GfxRect btn={PF_X,452,330,72};
   if (estado == PERFIL_ESTADO_PRIVADO) {
     titulo = "Perfil privado ou histórico não compartilhado";
     corpo = "O Trakt não liberou um histórico público para esta conta.";
   } else if (estado == PERFIL_ESTADO_DESCONECTADO) {
-    titulo = "Trakt desconectado";
-    corpo = "Vincule o Trakt para carregar identidade, obras recentes e estatísticas.";
+    titulo = "Histórico desconectado";
+    corpo = "Vincule o Trakt ou Simkl para carregar identidade, obras recentes e estatísticas.";
   } else if (estado == PERFIL_ESTADO_INDISPONIVEL || estado == PERFIL_ESTADO_ERRO) {
     titulo = "Perfil indisponível";
     corpo = erro[0] ? erro : "Não foi possível confirmar este resumo agora.";
