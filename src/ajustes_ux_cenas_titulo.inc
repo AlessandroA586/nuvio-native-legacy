@@ -546,6 +546,12 @@ static void ajcT_leg2(int op) {
       if (i == vb || (vb == 0 && i == 1)) ajc_foco(x - 14, y - 6, 130, 110, 12, 1);
     }
   }
+  if (op == AJ_LEG_CONTORNO_COR) {   // #475: "Aa" com o contorno na cor escolhida
+    int oR, oG, oB, dx, dy;
+    ajustes_leg_contorno_rgb(&oR, &oG, &oB);
+    for (dx = -3; dx <= 3; dx += 3) for (dy = -3; dy <= 3; dy += 3) if (dx || dy) ajcT_txtc("Aa", 100, 1, 270 + dx, 110 + dy, oR, oG, oB, 1);
+    ajcT_txtc("Aa", 100, 1, 270, 110, 255, 255, 255, 1);
+  }
 }
 
 // --- desempenho ------------------------------------------------------------------------
@@ -832,6 +838,7 @@ static int ajcNovaTitulo(int sec, int op) {
     case AJ_LEG_LINGUA: ajcT_legendaLingua(); return 1;
     case AJ_LEG_FORCADA: ajcT_forcada(op); return 1;
     case AJ_LEG_LINGUA2: case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
+    case AJ_LEG_CONTORNO_COR:
       ajcT_leg2(op); return 1;
     case AJ_QUALIDADE_IMG: ajcT_qualImg(); return 1;
     case AJ_MEDIDOR: ajcT_medidor(); return 1;
