@@ -1230,17 +1230,17 @@ static void themeBackground(float a) {
         diretor_pedir(collection->title);
         foto=diretor_foto(collection->title);
       }
-      GLuint tp=foto[0]?tex_obter_larg(foto,260.0f):0;
+      GLuint tp=foto[0]?tex_obter_larg(foto,640.0f):0;
       if(tp) {
-        // O painel do item selecionado começa em VT_PAN_Y. O retrato ocupa
-        // apenas o cabeçalho e termina antes dele, sem atravessar pôster ou
-        // sinopse como uma segunda camada.
-        GfxRect rp={1660,18,260,300};
+        // Retrato grande a direita, da borda de cima ate antes do painel
+        // (VT_PAN_Y). O GFX_RETRATO corta o topo (some o nome gravado no
+        // pacote) e dissolve as bordas; o relogio desenha por cima.
+        GfxRect rp={NV_TELA_W-560.0f,0,560,560};
         if (vtTelefone()) rp.x = NV_TELA_W - 48.0f - rp.w;
         if (vtTimelineRetrato()) rp = (GfxRect){NV_TELA_W - 204.0f,18,156,180};
         gfx_tex_aspect_atual=tex_aspecto(foto);
         gfx_rect(rp,tp,GFX_RETRATO,
-                 0,0,0,0,0,0,0,a*.88f);
+                 0,0,0,0,0,0,0,a);
         gfx_tex_aspect_atual=0;
       }
     } else {
