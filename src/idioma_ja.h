@@ -853,7 +853,7 @@
   T("Automático mede a TV nos primeiros segundos e, se ela não der conta, tira os efeitos mais pesados. Completos mantém tudo; Leves tira desfoque e brilho para deixar a navegação mais lisa.", "自動は最初の数秒でテレビを測定し、追いつかない場合は重い効果をオフにします。フルはすべて維持し、ライトはぼかしと光彩をオフにして操作をなめらかにします。"),
   T("Automático usa o formato que a conta Xtream declara e lembra o que tocou. HLS ou TS pede esse formato primeiro, mesmo quando a conta só declara o outro.", "自動は Xtream アカウントが申告する形式を使い、再生できた形式を記憶します。HLS か TS を選ぶと、アカウントがもう一方しか申告していなくても、その形式を先に要求します。"),
   T("Automático usa os primeiros títulos do catálogo; o sorteio troca a cada abertura; uma fileira mostra os títulos dela.", "自動はカタログの先頭の作品を使い、シャッフルは起動のたびに入れ替わり、行を選ぶとその行の作品が表示されます。"),
-  T("Automático: o teclado do Android abre sozinho só em e-mail e senha. Do app: a grade do Nuvio; o teclado do Android só pelo botão Teclado da TV. Do Android: abre direto em todo campo; Voltar mostra a grade. Vale só neste aparelho.", "自動：Androidのキーボードはメールとパスワードのときだけ自動で開きます。アプリのもの：Nuvioのキー配列。Androidのキーボードは「TVキーボード」ボタンからのみ。Androidのもの：すべての入力欄ですぐに開き、「戻る」でキー配列を表示します。この端末のみに適用されます。"),
+  T("Automático: o teclado do Android abre sozinho em e-mail, senha e busca. Do app: a grade do Nuvio; o teclado do Android só pelo botão Teclado da TV. Do Android: abre direto em todo campo; Voltar mostra a grade. Vale só neste aparelho.", "自動：Androidのキーボードはメール、パスワード、検索のとき自動で開きます。アプリのもの：Nuvioのキー配列。Androidのキーボードは「TVキーボード」ボタンからのみ。Androidのもの：すべての入力欄ですぐに開き、「戻る」でキー配列を表示します。この端末のみに適用されます。"),
   T("Autorizado. Entrando…", "承認されました。サインインしています…"),
   T("Avaliar no fim", "最後に評価"),
   T("Avaliações", "評価"),

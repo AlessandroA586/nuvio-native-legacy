@@ -5660,7 +5660,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_MENU_TOPO: return "Na lateral: o menu fica na esquerda, como sempre. No topo: o menu vira uma barra no alto da tela e o conteúdo usa a largura toda. Para cima no primeiro item da tela chega à barra e Para baixo volta. Vale para este perfil.";
     case AJ_RAIL_MODERNA: return "Troca a barra lateral pela versão nova, com ícones maiores. Ela ignora a escolha entre recolhida e fixa.";
     case AJ_RAIL_BLUR: return "Desfoca a arte atrás da barra lateral moderna em vez de usar um fundo sólido.";
-    case AJ_TECLADO_ANDROID: return "Automático: o teclado do Android abre sozinho só em e-mail e senha. Do app: a grade do Nuvio; o teclado do Android só pelo botão Teclado da TV. Do Android: abre direto em todo campo; Voltar mostra a grade. Vale só neste aparelho.";
+    case AJ_TECLADO_ANDROID: return "Automático: o teclado do Android abre sozinho em e-mail, senha e busca. Do app: a grade do Nuvio; o teclado do Android só pelo botão Teclado da TV. Do Android: abre direto em todo campo; Voltar mostra a grade. Vale só neste aparelho.";
     case AJ_MIC_BUSCA: return "Mostra nas buscas um microfone ao lado de Digitar pelo celular: ele abre o teclado da Samsung para você falar pelo microfone do controle. Automático esconde o botão se a TV disser que não tem microfone; Ligado mostra sempre; Desligado esconde.";
     case AJ_HERO: return "O bloco grande no topo da Home, com a arte e o nome de um título em destaque.";
     case AJ_HERO_CATALOGOS: return "De onde vêm os títulos do destaque: os primeiros do catálogo, um sorteio, ou uma fileira da Home. OK troca.";
