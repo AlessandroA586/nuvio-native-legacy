@@ -22,6 +22,9 @@ static void abrir(int tipo) {
   st_fechar(ST_TECLADO);
   teclado_abrir("Titulo", "dica", 40);
   if (tipo >= 0) teclado_tipo(tipo);
+  // O modo "Do Android" adia a abertura um quadro (teclado_tipo pode trocar
+  // o tipo logo depois do abrir).
+  teclado_atualizar(0, 0);
 }
 
 int main(void) {
@@ -50,9 +53,16 @@ int main(void) {
   abrir(TECLADO_TIPO_TEXTO); assert(imeAberto());
   abrir(TECLADO_TIPO_EMAIL); assert(imeAberto());
 
-  // Fora do Android o ajuste nao muda nada.
+  // Fora do Android o ajuste nao muda nada. st_teste_ligar(0) desliga o
+  // "abre sozinho", e teclado_teste_modos(1, ...) faz o papel do teclado de
+  // sistema DISPONIVEL (TV Samsung .tpk, web): e-mail/senha tem que continuar
+  // abrindo a GRADE em foco, nao o IME por cima da modal.
   st_teste_ligar(0);
-  abrir(TECLADO_TIPO_TEXTO); assert(!imeAberto());
+  teclado_teste_modos(1, -1, -1);
+  abrir(TECLADO_TIPO_TEXTO); assert(!imeAberto() && teclado_foco_campo() == 0);
+  abrir(TECLADO_TIPO_EMAIL); assert(!imeAberto() && teclado_foco_campo() == 0);
+  abrir(TECLADO_TIPO_SENHA); assert(!imeAberto() && teclado_foco_campo() == 0);
+  teclado_teste_modos(-1, -1, -1);
   puts("teclado_ime_modo: ok");
   return 0;
 }
