@@ -38,6 +38,8 @@ int video_recorte_fonte(void){return recorte;}
 int video_recorte_fonte_trailer(void){return recorte;}   // NV_TPK: trailer.c asks for the trailer-only setting
 void video_tpk_trailer_marcar(int sim){(void)sim;}
 void video_tpk_cartao_marcar(int sim){(void)sim;}
+static int cover;
+int video_tpk_cartao_cover(void){return cover;}
 void video_recorte_reaplicar(void){}
 void video_janela(int x,int y,int w,int h){(void)x;(void)y;(void)w;(void)h;}
 void video_janela_fonte(int sx,int sy,int sw,int sh,int x,int y,int w,int h){
@@ -106,6 +108,7 @@ int main(void) {
   ticks+=1500;trailer_atualizar(ticks);
   assert(cropN==cardCrops && fonteN==cardRequests);
   puts("ok P1 card adoption never crops fullscreen with experimental zoom off");
+  trailer_fechar();
   trailer_fechar();
   return 0;
 }

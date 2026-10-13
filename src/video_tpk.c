@@ -735,21 +735,46 @@ static unsigned roiForaLogado;
 static int roiNaTela(int x, int y, int w, int h) {
   return w > 0 && h > 0 && x >= 0 && y >= 0 && x + w <= TPK_TELA_W && y + h <= TPK_TELA_H;
 }
-static void trailerEncaixar(int x, int y, int w, int h) {
-  int fw = w, fh = h;
-  if ((double)w * altura > (double)h * largura) fw = (int)((double)h * largura / altura + 0.5) & ~1;
-  else fh = (int)((double)w * altura / largura + 0.5) & ~1;
-  video_janela(x + (w - fw) / 2, y + (h - fh) / 2, fw, fh);
+// Quadro (largura x altura) inteiro, proporcional, centrado em (x,y,w,h).
+static void encaixar(int x, int y, int w, int h, int *fx, int *fy, int *fw, int *fh) {
+  int ew = w, eh = h;
+  if ((double)w * altura > (double)h * largura) ew = (int)((double)h * largura / altura + 0.5) & ~1;
+  else eh = (int)((double)w * altura / largura + 0.5) & ~1;
+  *fx = x + (w - ew) / 2; *fy = y + (h - eh) / 2; *fw = ew; *fh = eh;
+}
+// Versao da Tizen (gpunivel.c le platform.version); so o maior importa.
+static int tizenMaior;
+void video_tpk_tizen_definir(const char *v) { tizenMaior = v ? atoi(v) : 0; }
+// COVER NO CARTAO (#471): so na Tizen 6.x (a TV do relato, uma AU7000 6.0) ou com
+// o zoom experimental ligado. ROI com origem negativa nunca foi visto no 4/5 (#426)
+// e apaga o plano na Tizen 9 (#188), entao as demais familias ficam no quadro
+// inteiro encaixado. A prova visual do cover nesta TV ainda e do dono.
+static int coverCartao(void) { return tizenMaior == 6 || NV_TPK_ZOOM_ROI || zoomRoi; }
+int video_tpk_cartao_cover(void) { return coverCartao(); }
+static unsigned cartaoLogado;
+static void cartaoModo(const char *modo, const char *porque) {
+  if (cartaoLogado == sessao) return;
+  cartaoLogado = sessao;
+  printf("[trailer] tpk cartao: %s (%s, tizen %d)\n", modo, porque, tizenMaior);
+  fflush(stdout);
+}
+static void cartaoEncaixar(int x, int y, int w, int h, const char *porque) {
+  int fx, fy, fw, fh;
+  encaixar(x, y, w, h, &fx, &fy, &fw, &fh);
+  cartaoModo("letterbox", porque);
+  video_janela(fx, fy, fw, fh);
 }
 void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh) {
   double qw = largura, qh = altura, ex, ey;
-  int X, Y, W, H, lx, ly, lw, lh;
+  int X, Y, W, H, lx, ly, lw, lh, cartao;
 
   // Sem as dimensoes do quadro, ou sem recorte de verdade, o destino cru serve.
   if (qw < 2.0 || qh < 2.0 || sw <= 0 || sh <= 0) { temRoi = 0; video_janela(dx, dy, dw, dh); return; }
   // Trailer do CARTAO: quadro inteiro encaixado (ver video_tpk_cartao_marcar).
   // Hero, detalhe e tela cheia seguem o caminho de sempre, abaixo.
-  if (emTrailer && emCartao) { trailerEncaixar(dx, dy, dw, dh); return; }
+  cartao = emTrailer && emCartao;
+  if (cartao && sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh) { cartaoEncaixar(dx, dy, dw, dh, "quadro inteiro"); return; }
+  if (cartao && !coverCartao()) { cartaoEncaixar(dx, dy, dw, dh, "cover sem prova nesta familia"); return; }
   // Recorte que cobre o quadro inteiro E o caso sem zoom: mesma coisa.
   if (sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh) { temRoi = 0; video_janela(dx, dy, dw, dh); return; }
 
@@ -760,18 +785,23 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
   X  = (int)(dx - sx * ex + 0.5);
   Y  = (int)(dy - sy * ey + 0.5);
 
+  // O plano maior que o painel (retrato no cartao) nao tem cover possivel.
+  if (cartao && (W > TPK_TELA_W || H > TPK_TELA_H)) { cartaoEncaixar(dx, dy, dw, dh, "cover maior que o painel"); return; }
+
   printf("[video] tpk recorte %d,%d %dx%d de %.0fx%.0f -> roi %d,%d %dx%d\n",
          sx, sy, sw, sh, qw, qh, X, Y, W, H);
   fflush(stdout);
+  if (cartao) cartaoModo("cover", "recorte de fonte");
 
   // Preserve the exact 2.0.4 fallback rectangle, including its opt-in gate.
   lx = X; ly = Y; lw = W; lh = H;
-  if (!NV_TPK_ZOOM_ROI && !NV_TPK_PLAYER_RECORTE && !zoomRoi && !roiNaTela(X,Y,W,H)) {
+  if (cartao) encaixar(dx, dy, dw, dh, &lx, &ly, &lw, &lh);   // host sem ROI: encaixe
+  else if (!NV_TPK_ZOOM_ROI && !NV_TPK_PLAYER_RECORTE && !zoomRoi && !roiNaTela(X,Y,W,H)) {
     lx = dx; ly = dy; lw = dw; lh = dh;
   }
   // New hosts accept B without a diagnostic/experimental flag for the player.
   // Trailer zoom remains opt-in. Old staged hosts retain the previous gate.
-  if (hAspecto && (!emTrailer || NV_TPK_ZOOM_ROI || zoomRoi || roiNaTela(X,Y,W,H))) {
+  if (hAspecto && (!emTrailer || cartao || NV_TPK_ZOOM_ROI || zoomRoi || roiNaTela(X,Y,W,H))) {
     ultRoiX=X; ultRoiY=Y; ultRoiW=W; ultRoiH=H; temRoi=1;
     ultLegX=lx; ultLegY=ly; ultLegW=lw; ultLegH=lh;
     hAspecto(X,Y,W,H,lx,ly,lw,lh);
@@ -779,7 +809,7 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
   }
 
   // #290: old host / trailer path.
-  if (!NV_TPK_ZOOM_ROI && !NV_TPK_PLAYER_RECORTE && !zoomRoi && !roiNaTela(X, Y, W, H)) {
+  if (!cartao && !NV_TPK_ZOOM_ROI && !NV_TPK_PLAYER_RECORTE && !zoomRoi && !roiNaTela(X, Y, W, H)) {
     if (roiForaLogado != sessao) {
       roiForaLogado = sessao;
       printf("[video] tpk: roi fora da tela nao vai ao plano, fica o destino %d,%d %dx%d (sem zoom)\n",

@@ -124,6 +124,24 @@ int main(void) {
   confere("unproven model family uses letterbox at panel edge", 40, 469, 360, 202);
   video_janela_fonte(600, 0, 720, 1080, 800, 300, 360, 540);
   confere("unproven model family uses letterbox even with ROI in panel", 800, 469, 360, 202);
+  // #471: Tizen 6.x card trailer COVERS the card by cropping the source (center
+  // 720x1080 of 1920x1080 into a 360x540 card = roi 960x540 at x-260; the
+  // existing (int)(v+0.5) rounding truncates -259.5 to -259, still covers it).
+  video_tpk_tizen_definir("6.0");
+  if (!video_tpk_cartao_cover()) { printf("FALHA Tizen 6.0 should cover the card\n"); falhas++; }
+  video_janela_fonte(600, 0, 720, 1080, 40, 300, 360, 540);
+  confere("#471 Tizen 6 card trailer covers the card", -259, 300, 960, 540);
+  // Portrait source cannot cover within the panel even on Tizen 6: fit.
+  nv_tpk_video_evento(6, 1080, 1920);
+  video_janela_fonte(0, 656, 1080, 606, 400, 200, 960, 540);
+  confere("#471 Tizen 6 portrait falls back to proportional fit", 728, 200, 304, 540);
+  nv_tpk_video_evento(6, 1920, 1080);
+  // Other families keep the letterbox.
+  video_tpk_tizen_definir("9.0");
+  if (video_tpk_cartao_cover()) { printf("FALHA Tizen 9.0 must not cover the card\n"); falhas++; }
+  video_janela_fonte(600, 0, 720, 1080, 40, 300, 360, 540);
+  confere("#471 Tizen 9 card trailer stays letterboxed", 40, 469, 360, 202);
+  video_tpk_tizen_definir("0");
   video_tpk_cartao_marcar(0);
   video_tpk_trailer_marcar(0);
 #endif

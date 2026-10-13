@@ -339,14 +339,15 @@ static void nativoAplicar(void) {
   if (recortePendente && video_pronto() && video_largura() > 0 && video_altura() > 0 &&
       tocandoDesde && SDL_GetTicks() - tocandoDesde >= 800) {
     int sw, sh, sx, sy;
-    trailer_recorte(video_largura(), video_altura(), ajustes_trailer_zoom(),
-                    rect.w, rect.h, &sx, &sy, &sw, &sh);
 #ifdef NV_TPK
-    // Cover no cartao ainda sem prova visual por familia: quadro inteiro
-    // com encaixe proporcional, inclusive com zoom experimental ligado.
-    if (noCartao) { sx = sy = 0; sw = video_largura(); sh = video_altura(); }
+    // O cartao e cover puro (zoom 1): video_tpk.c recorta a fonte onde ha
+    // prova (Tizen 6.x) e encaixa o quadro inteiro nas demais familias.
+    trailer_recorte(video_largura(), video_altura(), noCartao ? 1.0f : ajustes_trailer_zoom(),
+                    rect.w, rect.h, &sx, &sy, &sw, &sh);
     if (video_recorte_fonte_trailer() || noCartao)
 #else
+    trailer_recorte(video_largura(), video_altura(), ajustes_trailer_zoom(),
+                    rect.w, rect.h, &sx, &sy, &sw, &sh);
     if (video_recorte_fonte_trailer())
 #endif
       video_janela_fonte(sx, sy, sw, sh,

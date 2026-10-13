@@ -570,10 +570,12 @@ static int heroTrailerTocando(void);
 // A espera e ajuste; a janela da Apple (NV_TRAILER_HERO_JANELA_MS) conta a
 // partir dela, senao uma espera longa venceria a janela antes de abrir.
 static Uint32 heroTrailerEspera(void) { return ajustes_trailer_hero_espera_ms(); }
-// No .tpk nenhuma familia tem prova visual de cover seguro: encaixa o
-// quadro e abre so esse furo, sem expor o plano nas barras do cartaz.
+// No .tpk o cover do cartao so tem recorte de fonte na Tizen 6.x (video_tpk.c):
+// la o furo e o cartao inteiro. Nas demais familias encaixa o quadro e abre so
+// esse furo, sem expor o plano nas barras do cartaz.
 static GfxRect cartaoVideoRect(GfxRect c) {
 #if defined(NV_TPK) && !defined(__EMSCRIPTEN__)
+  if (video_tpk_cartao_cover()) return c;
   float asp = (video_largura() > 0 && video_altura() > 0)
             ? (float)video_largura() / (float)video_altura() : 16.0f / 9.0f;
   GfxRect v = c;
