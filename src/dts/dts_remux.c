@@ -151,8 +151,7 @@ struct DtsRemux {
   /* VC-1 / MPEG-2: the sequence header (+ entry point / extensions) from the
    * container's CodecPrivate, repeated in front of each keyframe in the TS. */
   uint8_t *seqHdr; int seqHdrN; uint8_t seqCode; int vc1;
-  /* GOP diagnostics (log only): HEVC keyframe NAL type and leading pictures. */
-  int gopKey, gopRasl, gopRadl, gopPkts, gopLogged;
+  atomic_int gopLogged;             /* GOP line already printed for this source */
   int64_t *segTs, *segB48; double *segS; int nseg;
   double endS;
   pthread_mutex_t lock;
@@ -184,6 +183,7 @@ struct DtsRemuxGen {
   int vseg, vstarted;
   int64_t vdur, lastDts;
   int64_t pend[2 * LOOK + 2]; int npend; int64_t lastPop;   /* video DTS: emitted PTS not yet popped */
+  int gopKey, gopRasl, gopRadl, gopPkts;   /* GOP diagnostics of this generator's first run (log only) */
   double lastDemuxV;                /* source seconds of the last video packet read */
   int demuxEof, encEof;
   int nextSeg;
@@ -925,18 +925,17 @@ static int videoPacket(DtsRemuxGen *g, AVPacket *p, char *err, size_t errn) {
    * RASL pictures that need the previous GOP). One log line per source; it is
    * the first suspect when one file lags on HLS and plays smooth on the TS. */
   { DtsRemux *r = g->src;
-    if (!r->gopLogged && r->vpar->codec_id == AV_CODEC_ID_HEVC) {
+    if (!atomic_load(&r->gopLogged) && g->gopPkts < 48 && r->vpar->codec_id == AV_CODEC_ID_HEVC) {
       int ls = r->vpar->extradata_size > 22 && r->vpar->extradata[0] == 1 ? (r->vpar->extradata[21] & 3) + 1 : 0;
       uint32_t m = hevcTipos(p->data, p->size, ls);
-      if (key && !r->gopKey) r->gopKey = (m & (3u << 19)) ? 19 : (m & (1u << 21)) ? 21 : (m & (7u << 16)) ? 16 : -1;
-      if (r->gopKey) {
-        if (m & (3u << 8)) r->gopRasl++;
-        if (m & (3u << 6)) r->gopRadl++;
-        if (++r->gopPkts >= 48) {
-          r->gopLogged = 1;
+      if (key && !g->gopKey) g->gopKey = (m & (3u << 19)) ? 19 : (m & (1u << 21)) ? 21 : (m & (7u << 16)) ? 16 : -1;
+      if (g->gopKey) {
+        if (m & (3u << 8)) g->gopRasl++;
+        if (m & (3u << 6)) g->gopRadl++;
+        if (++g->gopPkts >= 48 && !atomic_exchange(&r->gopLogged, 1)) {
           printf("[dts-tpk] gop: quadro-chave %s, %d RASL e %d RADL nos 48 pacotes seguintes%s\n",
-                 r->gopKey == 19 ? "IDR (GOP fechado)" : r->gopKey == 21 ? "CRA (GOP aberto)" : r->gopKey == 16 ? "BLA" : "?",
-                 r->gopRasl, r->gopRadl, r->gopRasl ? ": quadros que dependem do GOP anterior" : "");
+                 g->gopKey == 19 ? "IDR (GOP fechado)" : g->gopKey == 21 ? "CRA (GOP aberto)" : g->gopKey == 16 ? "BLA" : "?",
+                 g->gopRasl, g->gopRadl, g->gopRasl ? ": quadros que dependem do GOP anterior" : "");
           fflush(stdout);
         }
       }

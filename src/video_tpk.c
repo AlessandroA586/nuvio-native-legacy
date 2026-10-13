@@ -1195,6 +1195,14 @@ static void folgaVigiar(void) {
     fflush(stdout);
     return;
   }
+  // A TV recusou a pausa ("Failed to pause": o seek ainda estava acontecendo):
+  // o video segue tocando, entao nao ha folga a esperar.
+  if (tocando && agora - cv.folgaEm > 1500u) {
+    printf("[dts-tpk] folga: a TV nao pausou; segue tocando\n");
+    fflush(stdout);
+    cv.folga = 0; cv.folgaFeita = 1; bufferando = 0;
+    return;
+  }
   if (e - p < FOLGA_S && agora - cv.folgaEm < FOLGA_TETO_MS) return;
   printf("[dts-tpk] folga: %.1f s a frente depois de %u ms; tocando\n", e < 0 ? 0.0 : e - p, (unsigned)(agora - cv.folgaEm));
   fflush(stdout);
@@ -1483,9 +1491,15 @@ void video_estatisticas(VideoStats *s) {
   vazao_host_publico(urlAtual, s->host, sizeof s->host);
 }
 unsigned video_bufferando_ms(void) {
+  unsigned ms;
   // Esperando para reconectar: o watchdog (app.c) nao troca de fonte.
   if (nv_recon_ativa(&recon)) return 0;
-  return bufferando ? SDL_GetTicks() - bufferDesde : 0;
+  ms = bufferando ? SDL_GetTicks() - bufferDesde : 0;
+  // Reabrindo o convertido (seek no TS, troca, folga): o anel de buffer aparece
+  // (>= 600 ms), mas nunca os 30 s com que o app.c troca de fonte; o teto de
+  // 60 s do reabrindo (reabrindoVigiar) devolve o estado real ao app.
+  if (cv.reabrindo && ms > 25000u) ms = 25000u;
+  return ms;
 }
 void video_definir_dv(int dv) { (void)dv; }
 void video_definir_cabecalhos(const char *c) { snprintf(cabecalhos, sizeof cabecalhos, "%s", c ? c : ""); }
@@ -1504,7 +1518,9 @@ int video_tpk_fonte_tocou(void) { return cv.ativo && cv.fonteTocou; }
 int video_tpk_convertendo(void) { return cv.ativo || cv.sondando; }
 // player.c: o player novo do convertido ainda nao mostrou quadro numa fonte que
 // ja tocava (seek no TS, reconexao, troca): a tela cobre o preto com uma capa.
-int video_tpk_capa(void) { return cv.reabrindo && !comecou; }
+// Ate o player estar no alvo, nao so no primeiro quadro: no HLS o player novo
+// toca um instante do seg0 (o comeco do filme) antes de o seek pousar.
+int video_tpk_capa(void) { return cv.reabrindo; }
 // video.c (video_dts_estado): o selo/aviso do DTS enquanto este arquivo converte.
 // TrueHD nao tem selo de DTS: 0.
 int video_tpk_dts_estado(void) {

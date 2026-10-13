@@ -146,8 +146,14 @@ static void hAbrir(const char *u, const char *c) { (void)c; nAbriu++; snprintf(u
 static void hSem(void) {}
 static void hInt(int v) { (void)v; }
 static void hBuscar(int ms) { (void)ms; nBuscas++; }
-static int pausas, retomadas;
-static void hPausar(int p) { if (p) pausas++; else retomadas++; }
+static int pausas, retomadas, pausaRecusada;
+void nv_tpk_video_evento(int tipo, int a, int b);
+// Like Video.cs: a pause that takes reports EV_PAUSADO, a play EV_TOCANDO; a
+// pause during a seek is refused ("Failed to pause") and reports nothing.
+static void hPausar(int p) {
+  if (p) { pausas++; if (!pausaRecusada) nv_tpk_video_evento(3, 0, 0); }
+  else { retomadas++; nv_tpk_video_evento(2, 0, 0); }
+}
 static void hJanela(int x, int y, int w, int h) { (void)x; (void)y; (void)w; (void)h; }
 static int hPos(void) { return posMs; }
 static void hEscolher(int tipo, int idx) { (void)tipo; (void)idx; }
@@ -251,6 +257,14 @@ int main(void) {
   video_tocar("http://h/g.mkv");
   playerPronto(); bombear(3);
   ok(pausas == 0, "start buffer (HLS): fast source (50 s ahead) -> no pause");
+  video_parar();
+  entregue = 3.0; pausas = retomadas = 0; pausaRecusada = 1;
+  video_tocar("http://h/h.mkv");
+  playerPronto(); bombear(3);
+  ok(pausas == 1, "start buffer (HLS): pause asked");
+  { Uint32 t0 = SDL_GetTicks(); while (SDL_GetTicks() - t0 < 1700) bombear(1); }
+  ok(retomadas == 0 && video_bufferando_ms() == 0, "start buffer (HLS): the TV refused the pause -> hold dropped, no spinner");
+  pausaRecusada = 0;
   video_parar();
   entregue = -1; modoFake = DTSTPK_PROG_TS;
 
