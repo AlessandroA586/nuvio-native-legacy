@@ -9328,6 +9328,46 @@
    "notas": "Q800T (GQ65Q800TGT, 2020, Tizen 5.5), 2.0.5. Nenhum modo de aspecto muda a imagem. 2.0.5 ja tem c4f344e8 (DisplayRoi + fallback 2.0.4, #426/#341) e 81d2152b (tpk 6+). Suspeita: Tizen 5.5 cai no caminho sem DisplayRoi. Pedir codigo do log e foto.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/469",
    "alvo": "2.0.6"
+  },
+  {
+   "numero": 470,
+   "titulo": "Next Episode Countdown Only Starts After Credits Finish",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "2.0.5",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "rawldon",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "Job diagnostico/conserto: contagem comeca quando o cartao aparece.",
+   "notas": "rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log B9RJZ8 (registro 73397): [posplay] creditos aceito (sobram 265s, janela 300s); cartao aparece nos creditos mas contagem so comeca no fim.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/470",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 471,
+   "titulo": "Trailer Playback Does Not Fill the Cards Properly",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "2.0.5",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "rawldon",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "Job: preencher o cartao (cover/crop) no player nativo tpk.",
+   "notas": "rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log QNHOK2 (registro 73399): \"[trailer] tpk: plano visivel (sem recorte)\" — trailer no cartao sem crop/fill no tpk. Relacionado a #469 (DisplayRoi/aspecto no tpk).",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/471",
+   "alvo": "2.0.6"
   }
  ],
  "validacoes": [
