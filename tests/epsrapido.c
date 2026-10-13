@@ -3,6 +3,8 @@
 static pthread_t pedidosFio[32];
 static int nPedidosFio;
 static int guardarPedido(pthread_t t) { assert(nPedidosFio < 32); pedidosFio[nPedidosFio++] = t; return 0; }
+static int indiceVivoTeste(int i, const char *id);
+#define cat_indice_vivo indiceVivoTeste
 #define pthread_detach guardarPedido
 // Reutiliza os dubles do detalhe; toda a rede e falsa.
 #define main detalhe_main
@@ -11,7 +13,79 @@ static int guardarPedido(pthread_t t) { assert(nPedidosFio < 32); pedidosFio[nPe
 #undef rede_baixar
 #undef main
 #undef pthread_detach
+#undef cat_indice_vivo
+#include <errno.h>
 #include <time.h>
+int cat_indice_vivo(int i, const char *id);
+static pthread_mutex_t corridaTrava = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t corridaCond = PTHREAD_COND_INITIALIZER;
+static int corridaHook, corridaPular, corridaEntrou, corridaTentou;
+static int indiceVivoTeste(int i, const char *id) {
+  int alvo = cat_indice_vivo(i, id);
+  pthread_mutex_lock(&corridaTrava);
+  if (corridaHook && !corridaPular--) {
+    corridaHook = 0; corridaEntrou = 1;
+    pthread_cond_broadcast(&corridaCond);
+    while (!corridaTentou) pthread_cond_wait(&corridaCond, &corridaTrava);
+  }
+  pthread_mutex_unlock(&corridaTrava);
+  return alvo;
+}
+static void publicarNovo(void) {
+  ++epGeracao;
+  CatItem edit;
+  assert(cat_copiar_item(0, &edit));
+  edit.nTemporadas = 1; edit.temporadas[0] = 9;
+  strcpy(edit.titulo, "Pedido novo");
+  cat_atualizar_item(0, &edit);
+  CatEp e = { .temporada = 9, .episodio = 9 };
+  cat_definir_episodios(0, &e, 1);
+}
+static void *invalidarConcorrente(void *u) {
+  (void)u;
+  pthread_mutex_lock(&corridaTrava);
+  while (!corridaEntrou) pthread_cond_wait(&corridaCond, &corridaTrava);
+  pthread_mutex_unlock(&corridaTrava);
+  int rc = pthread_mutex_trylock(&epPedidoTrava);
+  assert(rc == 0 || rc == EBUSY);
+  if (!rc) { publicarNovo(); pthread_mutex_unlock(&epPedidoTrava); }
+  pthread_mutex_lock(&corridaTrava);
+  corridaTentou = 1; pthread_cond_broadcast(&corridaCond);
+  pthread_mutex_unlock(&corridaTrava);
+  if (rc == EBUSY) {
+    pthread_mutex_lock(&epPedidoTrava);
+    publicarNovo();
+    pthread_mutex_unlock(&epPedidoTrava);
+  }
+  return NULL;
+}
+static void publicacaoAtomica(int cedo) {
+  catalogoCom("tt0000205", "series", "Pedido antigo");
+  EpPedido p = { .item = 0, .geracao = epGeracao };
+  strcpy(p.id, "tt0000205");
+  assert(cat_copiar_item(0, &p.base));
+  pthread_once(&epPedidoOnce, epPedidoKeyCriar);
+  pthread_setspecific(epPedidoKey, &p);
+  corridaHook = 1; corridaPular = 0; corridaEntrou = corridaTentou = 0;
+  pthread_t invalidador;
+  assert(!pthread_create(&invalidador, NULL, invalidarConcorrente, NULL));
+  const char *corpo = "{\"videos\":[{\"season\":1,\"episode\":1}]}";
+  TempsPub tp = {0};
+  if (cedo) epPublicarCedo(&p.base, corpo, 0);
+  else publicarEpisodios(corpo, 0, "Antigo", NULL, 0, &tp);
+  assert(!pthread_join(invalidador, NULL));
+  assert(cat_item(0)->nTemporadas == 1 && cat_item(0)->temporadas[0] == 9);
+  assert(!strcmp(cat_item(0)->titulo, "Pedido novo"));
+  assert(cat_n_episodios(0) == 1);
+  assert(cat_episodio(0, 0)->temporada == 9);
+  // Pedido ja invalidado tambem nao publica.
+  epPublicarCedo(&p.base, corpo, 0);
+  metaPublicarPrimario(&p.base, "{\"meta\":{\"id\":\"tt0000205\",\"type\":\"series\",\"name\":\"Velho\",\"poster\":\"https://p.test/a.jpg\",\"description\":\"Velha\"}}", 0);
+  assert(!cat_item(0)->sinopse[0]);
+  assert(cat_item(0)->temporadas[0] == 9);
+  pthread_setspecific(epPedidoKey, NULL);
+  printf("P1.4: publicacao %s atomica com invalidacao\n", cedo ? "antecipada/abas" : "final");
+}
 static void juntarPedidos(void) {
   for (int i = 0; i < nPedidosFio; i++) assert(!pthread_join(pedidosFio[i], NULL));
   nPedidosFio = 0;
@@ -102,8 +176,13 @@ static void retornoParcial(void) {
   redeControlada = 1; liberarCine = 0;
   desc_episodios(0, 1);
   double limite = agora() + 2;
-  while (cat_n_episodios(0) != 13 && agora() < limite) usleep(1000);
-  assert(cat_n_episodios(0) == 13);
+  CatItem parcial;
+  while (agora() < limite) {
+    assert(cat_copiar_item(0, &parcial));
+    if (parcial.epsParciais && cat_n_episodios(0) == 13) break;
+    usleep(1000);
+  }
+  assert(parcial.epsParciais && cat_n_episodios(0) == 13);
   desc_episodios(1, 1);
   desc_episodios_garantir(0);
   pthread_mutex_lock(&epPedidoTrava);
@@ -124,6 +203,11 @@ static void retornoParcial(void) {
   puts("P1.2: A/B/A retoma e conclui a lista parcial");
 }
 int main(void) {
+  if (getenv("EPSRAPIDO_ATOMICO")) {
+    publicacaoAtomica(atoi(getenv("EPSRAPIDO_ATOMICO")));
+    return 0;
+  }
+  publicacaoAtomica(0); publicacaoAtomica(1);
   fontesDivergentes();
   CatItem itens[2] = {{0}};
   int nc[] = {20}, na[] = {13};
