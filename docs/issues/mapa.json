@@ -7190,11 +7190,11 @@
    "ultima_resposta": {
     "nos": false,
     "data": null,
-    "ultimo_comentario_por": null,
+    "ultimo_comentario_por": "ghbarker",
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. | 13/10 ghbarker: logs 6HMRKA (73567) e Cf4whk (73436), Android. Job agente/205-audio345.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/345",
    "criada_em": "2026-10-08",
    "alvo": "2.0.6"
@@ -7888,11 +7888,11 @@
    "ultima_resposta": {
     "nos": true,
     "data": "2026-10-11",
-    "ultimo_comentario_por": "iqui27",
+    "ultimo_comentario_por": "Mizikashi1",
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "pedir log (o formulário veio sem código); perguntar se a TV está em Wi-Fi ou cabo e se o aviso some sozinho em quanto tempo",
-   "notas": "LG 50UT8050PSB, Nuvio 2.0.2 (.ipk). Relato: depois de ligar a TV a frio aparece \"sem internet\" mesmo com internet, some, volta várias vezes até parar de vez. O campo de log ficou sem código. SUSPEITA, sem prova: o aviso nasce do teste de rede do app (redesaude) logo após o boot, quando a rede da TV ainda sobe; não lido no código nem em log. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.",
+   "notas": "LG 50UT8050PSB, Nuvio 2.0.2 (.ipk). Relato: depois de ligar a TV a frio aparece \"sem internet\" mesmo com internet, some, volta várias vezes até parar de vez. O campo de log ficou sem código. SUSPEITA, sem prova: o aviso nasce do teste de rede do app (redesaude) logo após o boot, quando a rede da TV ainda sobe; não lido no código nem em log. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | 13/10 Mizikashi1: voltou ao abrir serie, log RSM044 (registro 73601). Job agente/205-net382.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/382",
    "criada_em": "2026-10-09",
    "alvo": "2.0.6"
@@ -8834,11 +8834,11 @@
    "ultima_resposta": {
     "nos": false,
     "data": "2026-10-12",
-    "ultimo_comentario_por": "Berque-35",
+    "ultimo_comentario_por": "KeijoMika",
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.5",
-   "notas": "Triagem 2026-10-12: 3ba2987a em v2.0.5; c4f344e8 em v2.0.5; release-notes.md v2.0.5: - Samsung aspect ratio: the picture stays where it belongs on Tizen 4 (#426, #341), an off-screen crop is refused instead of pushing the image away, and a refused or queued change gives the sound back and stays in its own video..",
+   "notas": "Triagem 2026-10-12: 3ba2987a em v2.0.5; c4f344e8 em v2.0.5; release-notes.md v2.0.5: - Samsung aspect ratio: the picture stays where it belongs on Tizen 4 (#426, #341), an off-screen crop is refused instead of pushing the image away, and a refused or queued change gives the sound back and stays in its own video.. | 13/10 KeijoMika: zoom ok no Q80R Tizen 5 em 2.0.5, mas pausado so aplica ao retomar. Job agente/205-aspecto426.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/426",
    "criada_em": "2026-10-10",
    "alvo": "ja-lancada"
@@ -9367,6 +9367,86 @@
    "proximo_passo": "Job: preencher o cartao (cover/crop) no player nativo tpk.",
    "notas": "rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log QNHOK2 (registro 73399): \"[trailer] tpk: plano visivel (sem recorte)\" — trailer no cartao sem crop/fill no tpk. Relacionado a #469 (DisplayRoi/aspecto no tpk).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/471",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 484,
+   "titulo": "External subtitles disappear after a few minutes without input",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "2.0.5",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "2026-10-13",
+    "ultimo_comentario_por": "isyrafkhairi10-sudo",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "Job agente/205-leg484 (nv-bug high).",
+   "notas": "LG OLED C1 webOS, 2.0.5: legenda de addon (OpenSubtitlesV3/AIOMetadata) some apos minutos sem tecla; embutida ok. Sem log.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/484",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 479,
+   "titulo": "Formatter mode source list stutters on webOS",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "2.0.5",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "2026-10-13",
+    "ultimo_comentario_por": "Matis94",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "Job agente/205-formatter479 (nv-bug high).",
+   "notas": "LG C5 webOS 26, 2.0.5, log M8C717 (registro 73696): descer na lista de fontes no modo Formatter engasga; modo padrao liso.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/479",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 477,
+   "titulo": "Bigger synopsis font",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "melhoria",
+   "status": "aberta",
+   "release": "2.0.5",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "2026-10-13",
+    "ultimo_comentario_por": "Soufianelz",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "Job agente/205-sinopse477 (sonnet).",
+   "notas": "Pedido: sinopse maior.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/477",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 475,
+   "titulo": "Subtitle outline color setting",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "melhoria",
+   "status": "aberta",
+   "release": "2.0.5",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "2026-10-13",
+    "ultimo_comentario_por": "Matis94",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "Job agente/205-sinopse477 (sonnet), commit separado.",
+   "notas": "Pedido: cor do contorno da legenda.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/475",
    "alvo": "2.0.6"
   }
  ],
