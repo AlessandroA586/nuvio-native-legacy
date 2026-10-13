@@ -88,7 +88,14 @@ int video_dv_ativo(void) { return dtsSessao && dtsModoDv; }
 // (Dolby Vision/DTS path handing back to the TV player, audio switch) is not
 // a source that failed to open. Other targets keep 0.
 static int fonteTocou;
+#ifdef NV_TPK
+// .tpk: so o fluxo DTS/TrueHD convertido responde aqui (video_tpk.c); o resto
+// segue 0, como antes.
+int video_tpk_fonte_tocou(void);
+int video_fonte_tocou(void) { return fonteTocou || video_tpk_fonte_tocou(); }
+#else
 int video_fonte_tocou(void) { return fonteTocou; }
+#endif
 static int dvLiberadoNestaTv(void);
 static int dvPronto(void);
 const char *video_dts_saida(void) { return dtsSaida; }

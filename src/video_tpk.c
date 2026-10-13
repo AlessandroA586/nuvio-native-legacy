@@ -191,6 +191,14 @@ static struct {
   // MP4 / fonte que nao e MKV: a sonda do conversor roda ao lado do original
   // (que segue tocando) e so troca quando acha DTS/TrueHD (convBombear).
   int sondando, naoSup; // naoSup: a TV acusou NotSupportedAudioCodec
+  // REABRINDO: o convertido abre outro player (seek do progressivo, reconexao,
+  // troca no meio do filme) numa fonte que ja mostrou quadro. Para o app isso e
+  // um seek, nao uma fonte abrindo: video_pronto() segue 1 e video_pos() fica
+  // no alvo, senao o cartao "Abrindo fonte" e os prazos de abertura do app.c
+  // (aberturaVencida, escolha manual) tratam a fonte como morta.
+  int reabrindo; double posMantida; Uint32 reabriuEm, reabTocandoEm;
+  int fonteTocou;       // esta fonte (original ou convertida) ja andou > 0,5 s
+  double posConhecida;  // ultima posicao real do convertido (nunca 0 por falta de dado)
 } cv = { .buscarMs = -1 };
 static Uint32 faixasEm;           // quando a ultima lista de faixas do player chegou
 static volatile int naoSupPend;   // NotSupportedAudioCodec veio do host (outro fio)
@@ -199,6 +207,7 @@ static int convIniciar(int track, double pos, const char *motivo);
 static void convDesistir(const char *motivo);
 static void convVoltar(void);
 static int convPossivel(void);
+static double posReal(void);
 
 __attribute__((visibility("default")))
 void nv_tpk_video_registrar(FnAbrir abrir, FnSemArg parar, FnInt pausar, FnInt buscar,
@@ -697,6 +706,15 @@ static int convAbrirSessao(int ordinal, int modo, double pos, char *url, size_t 
 
 static int modoProg(int modo) { return modo == DTSTPK_PROG_TS || modo == DTSTPK_PROG_MKV || modo == DTSTPK_PROG_MP4; }
 
+// Outro player no meio de uma fonte que ja tocou: o app ve um seek ate o
+// convertido mostrar quadro de novo (convBombear solta).
+static void convReabrir(double alvo, const char *porque) {
+  if (!cv.fonteTocou) return;
+  cv.reabrindo = 1; cv.posMantida = alvo; cv.reabriuEm = SDL_GetTicks();
+  printf("[dts-tpk] reabrindo o convertido em %.1f s (%s): para o app e um seek\n", alvo, porque);
+  fflush(stdout);
+}
+
 // O player passa a ler o fluxo convertido `url`, que comeca em `pos` da fonte.
 static void convTrocar(int track, int modo, double pos, const char *url) {
   cv.ativo = 1; cv.sondando = 0; cv.track = track; cv.modo = modo; cv.inicio = pos;
@@ -705,6 +723,8 @@ static void convTrocar(int track, int modo, double pos, const char *url) {
   cv.desloc = 0; cv.deslocOk = !cv.prog; cv.tocou = cv.jaTocou = 0;
   cv.buscarMs = !cv.prog && pos > 1.0 ? (int)(pos * 1000.0) : -1;
   cv.seekPend = 0; cv.voltar = 0;
+  cv.posConhecida = pos;
+  convReabrir(pos, "troca para o convertido");
   // A lista do arquivo ja, antes do player novo responder: a legenda escolhida
   // no original (texto, desenhado pelo overlay do app lendo a fonte) segue na
   // mesma faixa, e abrirSessao nao a zera (ver la).
@@ -780,6 +800,7 @@ static void convDesistir(const char *motivo) {
   dts_tpk_fechar();
   cv.ativo = 0; cv.desistiu = 1; cv.prog = 0; cv.deslocOk = 1;
   cv.buscarMs = pos > 1.0 ? (int)(pos * 1000.0) : -1;
+  convReabrir(pos, "volta ao original");
   abrirSessao();
 }
 
@@ -792,6 +813,7 @@ static void convVoltar(void) {
   dts_tpk_fechar();
   cv.ativo = 0; cv.prog = 0; cv.deslocOk = 1; cv.voltar = 1;
   cv.buscarMs = pos > 1.0 ? (int)(pos * 1000.0) : -1;
+  convReabrir(pos, "volta ao audio da TV");
   abrirSessao();
 }
 
@@ -914,7 +936,7 @@ static void sondaMkv(double pos) {
 #define LEG_QUADRO_S   0.25
 // Progressivo: o relogio cru do player (video_pos ainda soma o deslocamento).
 static int temQuadro(void) {
-  double p = cv.ativo && cv.prog ? (hPos && pronto ? hPos() / 1000.0 : 0) : video_pos();
+  double p = cv.ativo && cv.prog ? (hPos && pronto ? hPos() / 1000.0 : 0) : posReal();
   return pronto && p >= LEG_QUADRO_S;
 }
 static void escolhasPendentes(void) {
@@ -1069,7 +1091,7 @@ static void convBombear(void) {
     }
   }
   if (cv.seekPend && pronto && tocando && cv.deslocOk) {
-    double p = video_pos();
+    double p = posReal();
     if (fabs(p - cv.seekAlvo) < 2.5 && p >= cv.seekAlvo - 0.5) {
       printf("[dts-tpk] seek para %.1f s: tocando de novo em %u ms (posicao %.2f s, modo %s)\n", cv.seekAlvo,
              (unsigned)(agora - cv.seekEm), p, nomeModo(cv.modo));
@@ -1083,8 +1105,32 @@ static void convBombear(void) {
   }
 }
 
+// Solta o "reabrindo" quando o player novo mostra quadro perto do alvo (ou anda
+// 10 s em outro ponto: quadro-chave longe, seek que caiu ao lado). Falha, saida
+// ou 60 s sem player: o app volta a ver o estado real.
+static void reabrindoVigiar(void) {
+  Uint32 agora = SDL_GetTicks();
+  double p;
+  if (!cv.reabrindo) return;
+  if (!ativo || falhou || agora - cv.reabriuEm > 60000u) {
+    if (ativo && !falhou) { printf("[dts-tpk] reabrindo: sem quadro em 60 s, o app ve o estado real\n"); fflush(stdout); }
+    cv.reabrindo = 0; return;
+  }
+  if (!pronto || !tocando || cv.buscarMs >= 0 || reconBuscarMs >= 0 || recon.pendente ||
+      (cv.ativo && cv.prog && !cv.deslocOk)) { cv.reabTocandoEm = 0; return; }
+  if (!cv.reabTocandoEm) cv.reabTocandoEm = agora | 1u;
+  p = posReal();
+  if (p < 0.3 && agora - cv.reabTocandoEm < 10000u) return;
+  if (fabs(p - cv.posMantida) > 20.0 && agora - cv.reabTocandoEm < 10000u) return;
+  printf("[dts-tpk] reaberto em %u ms: posicao %.2f s (alvo %.1f s)\n",
+         (unsigned)(agora - cv.reabriuEm), p, cv.posMantida);
+  fflush(stdout);
+  cv.reabrindo = 0;
+}
+
 void video_bombear(void) {
   convBombear();
+  reabrindoVigiar();
   escolhasPendentes();
   legendaVigiarSilencio(SDL_GetTicks());
   // O SetPlaybackRate exige Ready/Playing/Paused: so com o prepare feito.
@@ -1096,11 +1142,14 @@ void video_bombear(void) {
   vigiarPlayer(pos);
   sondaMkv(pos);
   if (pronto && pos > 0.5) reconIniciou = 1;
+  if (pronto && !cv.reabrindo && posReal() > 0.5) cv.fonteTocou = 1;
+  if (cv.ativo && pronto && !cv.reabrindo && (cv.deslocOk || !cv.prog) && posReal() > 0.5) cv.posConhecida = posReal();
   if (pronto && reconBuscarMs < 0) nv_recon_progresso(&recon, pos);
   // O seek do recarregar sai com o player ja tocando: o host da Start logo
   // depois do prepare, e um seek no meio disso concorre com ele.
   if (reconBuscarMs >= 0 && pronto && tocando) {
     if (hBuscar) hBuscar(reconBuscarMs);
+    if (cv.ativo) { cv.seekPend = 1; cv.seekAlvo = reconBuscarMs / 1000.0; cv.seekEm = SDL_GetTicks(); }
     vigiaAtiva = 0;
     printf("[video] reconexao: retomado em %ds\n", reconBuscarMs / 1000);
     fflush(stdout);
@@ -1130,6 +1179,20 @@ void video_bombear(void) {
     fflush(stdout);
     reconFaixasPend = 1;
     reconBuscarMs = recon.alvo > 1.0 ? (int)(recon.alvo * 1000.0) : -1;
+    if (cv.ativo) {
+      double alvo = recon.alvo > 1.0 ? recon.alvo : cv.posConhecida;
+      convReabrir(alvo, "reconexao");
+      // Progressivo: o fluxo recomeca no alvo (?t=); nunca seek cru nele.
+      if (cv.prog) {
+        reconBuscarMs = -1; cv.deslocOk = 0;
+        if (dts_tpk_url_em(alvo, cv.url, sizeof cv.url)) {
+          cv.seekPend = 1; cv.seekAlvo = alvo; cv.seekEm = SDL_GetTicks();
+        } else {
+          printf("[dts-tpk] reconexao: o servidor nao deu o fluxo em %.1f s; reabrindo o fluxo atual\n", alvo);
+          fflush(stdout);
+        }
+      }
+    }
     if (!abrirSessao()) { reconErroCod = -1; reconErroPend = 1; }
   }
 }
@@ -1158,7 +1221,13 @@ void video_buscar(double s) {
       printf("[dts-tpk] seek progressivo para %.1f s: fluxo novo\n", s);
       fflush(stdout);
       cv.deslocOk = 0;
+      convReabrir(s, "seek");
       abrirSessao();
+    } else {
+      // Nunca um seek cru no fluxo progressivo (o player nao sabe buscar nele).
+      printf("[dts-tpk] seek progressivo para %.1f s: o servidor nao deu o fluxo novo; fica onde esta\n", s);
+      fflush(stdout);
+      cv.seekPend = 0;
     }
     terminou = 0;
     return;
@@ -1306,14 +1375,19 @@ void video_recorte_reaplicar(void) {
   else video_janela(ultRoiX,ultRoiY,ultRoiW,ultRoiH);
 }
 const char *video_url_atual(void) { return urlAtual; }
-double video_pos(void) {
+static double posReal(void) {
   if (cv.ativo && cv.prog) {
-    // Ate o deslocamento ser conhecido, o comeco do fluxo (ou o alvo do seek).
-    if (!cv.deslocOk) { double b = dts_tpk_inicio_stream(); return b >= 0 ? b : (cv.seekPend ? cv.seekAlvo : 0); }
-    return (hPos && pronto) ? hPos() / 1000.0 + cv.desloc : 0;
+    // Ate o deslocamento ser conhecido, o comeco do fluxo (ou o alvo do seek, ou
+    // a ultima posicao conhecida: 0 aqui virava "reconectando: alvo 0s").
+    if (!cv.deslocOk) {
+      double b = dts_tpk_inicio_stream();
+      return b >= 0 ? b : cv.seekPend ? cv.seekAlvo : cv.posConhecida;
+    }
+    return (hPos && pronto) ? hPos() / 1000.0 + cv.desloc : cv.posConhecida;
   }
   return (hPos && pronto) ? hPos() / 1000.0 : 0;
 }
+double video_pos(void) { return cv.reabrindo ? cv.posMantida : posReal(); }
 double video_duracao(void) {
   // Progressivo: o player ve um fluxo sem fim; a duracao e a da fonte.
   if (cv.ativo && cv.prog) return dts_tpk_duracao();
@@ -1339,10 +1413,16 @@ void video_definir_cabecalhos(const char *c) { snprintf(cabecalhos, sizeof cabec
 const char *video_cabecalhos(void) { return cabecalhos; }
 void video_definir_mp4(int m) { fonteMp4 = m != 0; }
 int  video_tocando(void) { return tocando; }
-int  video_pronto(void) { return pronto; }
+int  video_pronto(void) { return pronto || cv.reabrindo; }
 int  video_ativo(void) { return ativo; }
 int  video_falhou(void) { return falhou; }
 int  video_audio_nao_suportado(void) { return cv.ativo ? 0 : audioNaoSup; }
+// video.c (video_fonte_tocou): recarregar uma fonte que ja tocou nao e fonte
+// que nao abre. So convertendo, para o "Desligado" seguir como o master.
+int video_tpk_fonte_tocou(void) { return cv.ativo && cv.fonteTocou; }
+// player.c: o cartao de erro de fonte para o convertido (senao ele segue
+// tocando atras do cartao e da tela inicial).
+int video_tpk_convertendo(void) { return cv.ativo || cv.sondando; }
 // video.c (video_dts_estado): o selo/aviso do DTS enquanto este arquivo converte.
 // TrueHD nao tem selo de DTS: 0.
 int video_tpk_dts_estado(void) {
