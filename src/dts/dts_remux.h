@@ -31,6 +31,7 @@ typedef struct {
   double max_segment_s;
   int64_t size_bytes;          /* -1 while unknown */
   int mp4;                     /* source container is MP4/MOV */
+  double fps;                  /* container frame rate, 0 = unknown (HLS master playlist) */
 } DtsRemuxInfo;
 
 typedef struct {

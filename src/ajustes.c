@@ -2588,7 +2588,7 @@ int ajustes_ps_continuar(void)        { return lig(AJ_PS_CONTINUAR); }
 int ajustes_dts_ac3(void)             { return valor[AJ_DTS_AC3] == 1; }
 int ajustes_dts_tpk_modo(void) {
   int v = valor[AJ_DTS_TPK_MODO];
-  return v >= 0 && v < DTSTPK_MODOS ? v : DTSTPK_HLS;
+  return v >= 0 && v < DTSTPK_MODOS ? v : DTSTPK_PROG_TS;
 }
 int ajustes_dts_tpk_corpo(void) {
   int v = valor[AJ_DTS_TPK_CORPO];

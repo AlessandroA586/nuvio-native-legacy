@@ -662,6 +662,24 @@ static void playlist(Sessao *s, char *b, size_t n) {
   snprintf(b + p, n - p, "#EXT-X-ENDLIST\n");
 }
 
+// MASTER PLAYLIST: a single variant, but it tells the player the frame rate,
+// size and HDR range before the first segment (the media playlist cannot). No
+// CODECS: a wrong string is worse than none. Integers only: the TV's
+// LC_NUMERIC never turns the decimal point into a comma here.
+static void playlistMestre(Sessao *s, char *b, size_t n) {
+  const DtsRemuxInfo *in = dts_remux_info(s->rx);
+  long bw = in->size_bytes > 0 && in->duration_s > 1 ? (long)(in->size_bytes * 8.0 / in->duration_s) : 20000000L;
+  long fps = lround(in->fps * 1000.0);
+  size_t p = 0;
+  if (bw < 1000000L) bw = 1000000L;
+  p += (size_t)snprintf(b + p, n - p, "#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-INDEPENDENT-SEGMENTS\n#EXT-X-STREAM-INF:BANDWIDTH=%ld", bw);
+  if (in->width > 0 && in->height > 0) p += (size_t)snprintf(b + p, n - p, ",RESOLUTION=%dx%d", in->width, in->height);
+  if (fps > 0) p += (size_t)snprintf(b + p, n - p, ",FRAME-RATE=%ld.%03ld", fps / 1000, fps % 1000);
+  if (!strncmp(in->hdr, "PQ", 2) || !strcmp(in->hdr, "HLG"))
+    p += (size_t)snprintf(b + p, n - p, ",VIDEO-RANGE=%s", strncmp(in->hdr, "PQ", 2) ? "HLG" : "PQ");
+  snprintf(b + p, n - p, "\nv.m3u8\n");
+}
+
 static int atenderPedido(int sock, const Pedido *pd, int manter) {
   char tok[16] = "", resto[200] = "";
   const char *c = pd->caminho;
@@ -693,7 +711,8 @@ static int atenderPedido(int sock, const Pedido *pd, int manter) {
     if (s->semIndice) printf("[dts-tpk] #%u <- sem resposta: sem indice para o HLS, o app troca para o TS continuo\n", nr);
     else printf("[dts-tpk] #%u <- 503: %s\n", nr, s->erro[0] ? s->erro : "not ready");
     fflush(stdout);
-  } else if (!strcmp(resto, "v.m3u8")) {
+  } else if (!strcmp(resto, "v.m3u8") || !strcmp(resto, "m.m3u8")) {
+    int mestre = resto[0] == 'm';
     if (dts_remux_info(s->rx)->n_segments < 1) {
       responderSimples(sock, 404, "Not Found", NULL, "no keyframe index\n", manter);
       printf("[dts-tpk] #%u <- 404: fonte sem indice, nao ha playlist\n", nr);
@@ -701,14 +720,16 @@ static int atenderPedido(int sock, const Pedido *pd, int manter) {
       size_t cap = (size_t)dts_remux_info(s->rx)->n_segments * 32 + 512;
       char *b = malloc(cap);
       if (b) {
-        playlist(s, b, cap);
+        if (mestre) playlistMestre(s, b, cap); else playlist(s, b, cap);
         if (pd->head) {
           char cab[300];
           snprintf(cab, sizeof cab, "HTTP/1.1 200 OK\r\nContent-Type: application/vnd.apple.mpegurl\r\n"
                    "Content-Length: %zu\r\nCache-Control: no-cache\r\nConnection: %s\r\n\r\n", strlen(b), manter ? "keep-alive" : "close");
           enviarTudo(sock, cab, strlen(cab), NULL, NULL);
         } else responderSimples(sock, 200, "OK", "application/vnd.apple.mpegurl", b, manter);
-        printf("[dts-tpk] #%u <- 200 playlist: %d segmento(s), %zu B\n", nr, dts_remux_info(s->rx)->n_segments, strlen(b));
+        if (mestre) { const char *v = strstr(b, "BANDWIDTH"); v = v ? v : "";
+                      printf("[dts-tpk] #%u <- 200 playlist mestre: %.*s\n", nr, (int)strcspn(v, "\n"), v); }
+        else printf("[dts-tpk] #%u <- 200 playlist: %d segmento(s), %zu B\n", nr, dts_remux_info(s->rx)->n_segments, strlen(b));
         free(b);
         r = manter;
       }
@@ -835,7 +856,7 @@ static int urlDe(Sessao *s, double t, char *out, size_t n) {
   int porta = s->modo == DTSTPK_HLS_LAN ? portaLan : portaLo;
   switch (s->modo) {
     case DTSTPK_HLS: case DTSTPK_HLS_LAN:
-      snprintf(out, n, "http://%s:%d/%s/v.m3u8", host, porta, s->token); break;
+      snprintf(out, n, "http://%s:%d/%s/m.m3u8", host, porta, s->token); break;
     default: {
       long ms = lround((t > 0 ? t : 0) * 1000.0);
       snprintf(out, n, "http://%s:%d/%s/prog.%s?t=%ld.%03ld", host, porta, s->token,
@@ -888,7 +909,7 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
   pthread_mutex_unlock(&G);
   printf("[dts-tpk] sessao %u: modo %s, corpo %s, endereco %s, audio %d do arquivo, saida %s; player abre %s\n", s->id,
          MODO_NOME[modo], CORPO_NOME[corpo], lan ? ipLanAtual : "127.0.0.1", track, stereo ? "AAC 2.0" : "AC3",
-         strstr(out, "/v.m3u8") ? "a playlist HLS" : "o fluxo progressivo");
+          strstr(out, ".m3u8") ? "a playlist HLS" : "o fluxo progressivo");
   fflush(stdout);
   return 1;
 }
@@ -948,8 +969,12 @@ int dts_tpk_e_url(const char *u) {
 
 // --- registro na rede ---------------------------------------------------------
 // Sem `sdb shell` na TV de varejo: o log do app sai por HTTP na LAN, com token.
-// GET /<token>/log?n=N   ultimas N linhas (padrao 400)
-// GET /<token>/dts?n=N   so as linhas da conversao, do player e do audio
+// GET /<token>/         = dts (o que o teste pede quase sempre)
+// GET /<token>/log?n=N   ultimas N linhas (padrao 3000)
+// GET /<token>/dts?n=N   so as linhas da conversao, do player, do audio e da
+//                        escolha de fonte (padrao 5000): as do menu nao empurram
+//                        a reproducao para fora
+// GET /<token>/help      os enderecos
 // URLs saem cortadas no host, como no painel de log da TV (registro.c).
 static int sockReg = -1, portaReg;
 static char tokenReg[12], urlReg[96];
@@ -971,22 +996,24 @@ static void mascarar(char *s) {
 
 static int linhaDts(const char *l) {
   static const char *const M[] = { "[dts-tpk]", "[dts-range]", "[video] tpk", "[audio]", "[mkv]", "[dts]",
-                                   "[video] faixas", "[video] reconex", "[tv] ", "[etapa-anterior]", NULL };
+                                   "[video] faixas", "[video] reconex", "[video] reconect", "[video] conexao",
+                                   "[fonte]", "[player] saida", "[tv] ", "[etapa-anterior]", NULL };
   for (int i = 0; M[i]; i++) if (strstr(l, M[i])) return 1;
   return 0;
 }
 
 static void servirRegistro(int sock, const char *caminho, const char *query) {
   const char *arq = registro_arquivo();
-  int so = !strcmp(caminho, "dts"), n = 400;
+  int so = !caminho[0] || !strcmp(caminho, "dts"), n = so ? 5000 : 3000;
   const char *q = strstr(query, "n=");
   if (q) n = atoi(q + 2);
   if (n < 1) n = 1;
   if (n > 20000) n = 20000;
   if (strcmp(caminho, "log") && !so) {
-    char b[600];
-    snprintf(b, sizeof b, "Nuvio log (this TV)\n\n  %slog?n=400   last lines of the app log\n  %sdts?n=400   conversion, player and audio lines only\n",
-             urlReg, urlReg);
+    char b[700];
+    snprintf(b, sizeof b, "Nuvio log (this TV)\n\n  %s            conversion, player, audio and source lines (= dts)\n"
+             "  %sdts?n=5000  the same, last 5000 of them\n  %slog?n=3000  last lines of the whole app log\n",
+             urlReg, urlReg, urlReg);
     responderSimples(sock, 200, "OK", "text/plain; charset=utf-8", b, 0);
     return;
   }

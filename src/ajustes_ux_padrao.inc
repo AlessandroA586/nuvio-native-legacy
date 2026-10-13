@@ -269,6 +269,6 @@
   1, /* auto-skip credits, only with a real start+end marker: Desligado */
   5, /* owner decision #256: configurable countdown in seconds */
   0, /* interface mode: TV, including on phones until Mobile is selected */
-  0, /* DTS test delivery (.tpk): HLS on 127.0.0.1 */
+  1, /* DTS delivery (.tpk): continuous TS (HLS judders 24p on the S95C, Round 1) */
   0, /* DTS test HTTP body (.tpk): chunked */
   0, /* app log on the LAN (.tpk): action */
