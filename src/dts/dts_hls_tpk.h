@@ -48,10 +48,6 @@ int  dts_tpk_modo(void);                 /* mode of the session, -1 none */
 /* Progressive: source time of the keyframe the CURRENT stream starts at (the
  * player counts from there). -1 until the stream's request has started. */
 double dts_tpk_inicio_stream(void);
-/* Source time (s) up to which video has been SENT to the player in the current
- * session (end of the last segment / of the stream so far); -1 unknown. The
- * app's start buffer compares it with the playhead. */
-double dts_tpk_entregue_ate(void);
 const char *dts_tpk_caminho(void);       /* decoder path, e.g. "DTS core only" */
 /* 1 when the session FAILED because HLS needs a keyframe index the source
  * lacks (MKV without Cues): a progressive mode can still play it. */

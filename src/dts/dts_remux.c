@@ -62,7 +62,6 @@ int dts_remux_gen_run(DtsRemuxGen *g, int s, double t, const char *f, DtsRemuxWr
 void dts_remux_gen_free(DtsRemuxGen *g) { (void)g; }
 void dts_remux_gen_interrupt(DtsRemuxGen *g) { (void)g; }
 double dts_remux_gen_start_s(const DtsRemuxGen *g) { (void)g; return 0; }
-double dts_remux_gen_emitted_s(const DtsRemuxGen *g) { (void)g; return -1; }
 #else
 
 #include <math.h>
@@ -167,7 +166,6 @@ struct DtsRemuxGen {
   DtsRemux *src;
   DtsEngine *eng;
   atomic_int interrupted;           /* dts_remux_gen_interrupt during this run */
-  atomic_llong emittedMs;           /* dts_remux_gen_emitted_s: ms of the last video packet out, -1 none */
   AVFormatContext *ic;
   AVStream *V, *A;
   AVCodecContext *dec, *enc;
@@ -720,10 +718,6 @@ void dts_remux_gen_interrupt(DtsRemuxGen *g) {
   dts_engine_interrupt(g->eng, 1);
 }
 double dts_remux_gen_start_s(const DtsRemuxGen *g) { return g ? g->progStartS : 0.0; }
-double dts_remux_gen_emitted_s(const DtsRemuxGen *g) {
-  long long ms = g ? atomic_load(&((DtsRemuxGen *)g)->emittedMs) : -1;
-  return ms < 0 ? -1.0 : ms / 1000.0;
-}
 
 static int sinkWrite(void *o, const uint8_t *b, int n) {
   DtsRemuxGen *g = o;
@@ -1085,7 +1079,6 @@ static int emitVideo(DtsRemuxGen *g, int target, DtsRemuxStats *st, char *err, s
     AVPacket *p = qPop(&g->vq);
     p->dts = d;
     double ps = p->pts * tb, dur = p->duration * tb;
-    atomic_store(&g->emittedMs, (long long)llround((ps + dur) * 1000.0));
     if (st) {
       if (st->video_pkts == 0) st->first_pts_s = ps;
       if (ps > st->last_pts_s) st->last_pts_s = ps;
@@ -1207,7 +1200,6 @@ int dts_remux_gen_run(DtsRemuxGen *g, int seg, double startS, const char *fmt,
    * is read, so an interrupt racing with the start is never lost (the caller
    * sets *stop first, then interrupts). */
   atomic_store(&g->interrupted, 0);
-  atomic_store(&g->emittedMs, -1);
   dts_engine_interrupt(g->eng, 0);
   if (stop && *stop) { rr = -2; goto out; }
   if (seg >= 0) {

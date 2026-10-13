@@ -200,7 +200,6 @@ static struct {
   int fonteTocou;       // esta fonte (original ou convertida) ja andou > 0,5 s
   double posConhecida;  // ultima posicao real do convertido (nunca 0 por falta de dado)
   int prefFeito;        // a regra do idioma preferido (trilhaPreferida) ja rodou nesta fonte
-  int folga, folgaFeita; Uint32 folgaEm;   // arranque com folga (folgaVigiar)
 } cv = { .buscarMs = -1 };
 static Uint32 faixasEm;           // quando a ultima lista de faixas do player chegou
 static volatile int naoSupPend;   // NotSupportedAudioCodec veio do host (outro fio)
@@ -460,7 +459,7 @@ static int abrirSessao(void) {
   if (cv.ativo) {
     // O player le do servidor local; os cabecalhos do addon sao da fonte (o
     // servidor ja os usa), nao do 127.0.0.1.
-    cv.abriuEm = SDL_GetTicks(); cv.tocou = 0; cv.folga = cv.folgaFeita = 0;
+    cv.abriuEm = SDL_GetTicks(); cv.tocou = 0;
     hAbrir(cv.url, "");
     return 1;
   }
@@ -1159,61 +1158,9 @@ static void reabrindoVigiar(void) {
   cv.reabrindo = 0;
 }
 
-// ARRANQUE COM FOLGA, SO NO HLS (Round 2, Fight Club: 111 Mb/s, o TorBox a 1,1x
-// do tempo real). O player da TV comecava com o buffer quase vazio. No HLS a TV
-// segue pedindo segmentos pausada (log: 8 s a frente em 4-8 s). A
-// cada abertura do convertido, se o que ja foi ENVIADO (dts_tpk_entregue_ate)
-// esta menos de FOLGA_S a frente da posicao, o player fica pausado (rodinha de
-// buffer) ate chegar la ou FOLGA_TETO_MS. Fonte rapida: nem pausa.
-#define FOLGA_S 8.0
-#define FOLGA_TETO_MS 15000u
-static void folgaVigiar(void) {
-  Uint32 agora = SDL_GetTicks();
-  double e, p;
-  // So no HLS (Round 2): no TS continuo a TV para de ler com o player pausado,
-  // o enviado nao anda e a folha so esperava o teto, com o video parado.
-  if (!cv.ativo || cv.prog || falhou || (cv.folgaFeita && !cv.folga)) return;
-  if (pausaPedida) {   // a pessoa pausou: a pausa e dela
-    if (cv.folga) { printf("[dts-tpk] folga: a pessoa pausou, fica pausado\n"); fflush(stdout); }
-    cv.folga = 0; cv.folgaFeita = 1; return;
-  }
-  if (!pronto || (cv.prog && !cv.deslocOk)) return;
-  e = dts_tpk_entregue_ate(); p = posReal();
-  // HLS: o player pede o seg0 antes do segmento do alvo, e o "enviado" fica
-  // atras da posicao por um instante. Atras = nada a frente ainda.
-  if (e >= 0 && e < p) e = p;
-  if (!cv.folga) {
-    // HLS: o seek para o alvo ainda nao pousou (o player esta no 0 do seg0).
-    if (cv.buscarMs >= 0 || reconBuscarMs >= 0 || (cv.reabrindo && fabs(p - cv.posMantida) > 20.0)) return;
-    if (!tocando) return;
-    if (e < 0 || e - p >= FOLGA_S) { cv.folgaFeita = 1; return; }
-    cv.folga = 1; cv.folgaEm = agora;
-    bufferando = 1; bufferDesde = agora;
-    if (hPausar) hPausar(1);
-    printf("[dts-tpk] folga: so %.1f s enviados a frente da posicao %.1f s; pausado ate %.0f s (teto %u s)\n",
-           e - p, p, FOLGA_S, FOLGA_TETO_MS / 1000u);
-    fflush(stdout);
-    return;
-  }
-  // A TV recusou a pausa ("Failed to pause": o seek ainda estava acontecendo):
-  // o video segue tocando, entao nao ha folga a esperar.
-  if (tocando && agora - cv.folgaEm > 1500u) {
-    printf("[dts-tpk] folga: a TV nao pausou; segue tocando\n");
-    fflush(stdout);
-    cv.folga = 0; cv.folgaFeita = 1; bufferando = 0;
-    return;
-  }
-  if (e - p < FOLGA_S && agora - cv.folgaEm < FOLGA_TETO_MS) return;
-  printf("[dts-tpk] folga: %.1f s a frente depois de %u ms; tocando\n", e < 0 ? 0.0 : e - p, (unsigned)(agora - cv.folgaEm));
-  fflush(stdout);
-  cv.folga = 0; cv.folgaFeita = 1;
-  if (hPausar) hPausar(0);
-}
-
 void video_bombear(void) {
   convBombear();
   reabrindoVigiar();
-  folgaVigiar();
   escolhasPendentes();
   legendaVigiarSilencio(SDL_GetTicks());
   // O SetPlaybackRate exige Ready/Playing/Paused: so com o prepare feito.
@@ -1294,7 +1241,6 @@ void video_parar(void) {
 }
 void video_pausar(int p) {
   pausaPedida = p != 0; vigiaAtiva = 0;
-  if (!p && cv.folga) { cv.folga = 0; cv.folgaFeita = 1; }   // a pessoa mandou tocar: a folga acaba
   if (hPausar) hPausar(p);
 }
 int video_pausa_confirmada(void) { return 0; } // host nao fornece ack por sessao
@@ -1495,7 +1441,7 @@ unsigned video_bufferando_ms(void) {
   // Esperando para reconectar: o watchdog (app.c) nao troca de fonte.
   if (nv_recon_ativa(&recon)) return 0;
   ms = bufferando ? SDL_GetTicks() - bufferDesde : 0;
-  // Reabrindo o convertido (seek no TS, troca, folga): o anel de buffer aparece
+  // Reabrindo o convertido (seek no TS, troca): o anel de buffer aparece
   // (>= 600 ms), mas nunca os 30 s com que o app.c troca de fonte; o teto de
   // 60 s do reabrindo (reabrindoVigiar) devolve o estado real ao app.
   if (cv.reabrindo && ms > 25000u) ms = 25000u;

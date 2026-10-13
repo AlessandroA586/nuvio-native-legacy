@@ -122,8 +122,6 @@ const char *dts_tpk_erro(void) { return ""; }
 double dts_tpk_duracao(void) { return 7200; }
 int dts_tpk_modo(void) { return modoFake; }
 double dts_tpk_inicio_stream(void) { return inicioStream; }
-static double entregue = -1;
-double dts_tpk_entregue_ate(void) { return entregue; }
 const char *dts_tpk_caminho(void) { return "DTS core only"; }
 int dts_tpk_sem_indice(void) { return 0; }
 int dts_tpk_e_url(const char *u) { return u && strstr(u, "127.0.0.1") != NULL; }
@@ -226,47 +224,20 @@ int main(void) {
   video_parar();
   ok(!video_tpk_convertendo() && !video_tpk_fonte_tocou(), "stop clears the converted state");
 
-  // START BUFFER. TS: never (the TV stops reading while paused, so the hold
-  // only waited its 15 s; Round 2). HLS: a slow start pauses until 8 s are sent.
+  // NO START BUFFER (removed, Round 2): the converted stream never pauses itself.
   misto = 0; montarCabecalho(); cabPronto = 1; pausas = retomadas = 0;
   video_tocar("http://h/f.mkv");
-  inicioStream = 0; posMs = 1000; entregue = 3.0;
+  inicioStream = 0; posMs = 1000;
   playerPronto(); bombear(3);
-  ok(pausas == 0, "start buffer: never on the TS");
+  ok(pausas == 0, "no start buffer on the TS");
   video_parar();
-  modoFake = DTSTPK_HLS; pausas = retomadas = 0;
+  modoFake = DTSTPK_HLS;
   video_tocar("http://h/f2.mkv");
-  posMs = 1000; entregue = 3.0;
+  posMs = 1000;
   playerPronto(); bombear(3);
-  ok(pausas == 1 && retomadas == 0, "start buffer (HLS): 2 s ahead -> paused");
-  entregue = 6.0; bombear(3);
-  ok(retomadas == 0, "start buffer (HLS): 5 s ahead -> still paused");
-  entregue = 9.5; bombear(3);
-  ok(retomadas == 1, "start buffer (HLS): 8.5 s ahead -> playing");
-  nv_tpk_video_evento(2, 0, 0); bombear(3);
-  ok(pausas == 1, "start buffer (HLS): once per opening");
+  ok(pausas == 0, "no start buffer on HLS");
   video_parar();
-  entregue = 3.0; pausas = retomadas = 0;
-  video_tocar("http://h/f3.mkv");
-  playerPronto(); bombear(3);
-  video_pausar(1); bombear(2);
-  video_pausar(0); bombear(2);
-  ok(pausas >= 1 && retomadas >= 1, "start buffer (HLS): the user's play ends it");
-  video_parar();
-  entregue = 50.0; pausas = 0;
-  video_tocar("http://h/g.mkv");
-  playerPronto(); bombear(3);
-  ok(pausas == 0, "start buffer (HLS): fast source (50 s ahead) -> no pause");
-  video_parar();
-  entregue = 3.0; pausas = retomadas = 0; pausaRecusada = 1;
-  video_tocar("http://h/h.mkv");
-  playerPronto(); bombear(3);
-  ok(pausas == 1, "start buffer (HLS): pause asked");
-  { Uint32 t0 = SDL_GetTicks(); while (SDL_GetTicks() - t0 < 1700) bombear(1); }
-  ok(retomadas == 0 && video_bufferando_ms() == 0, "start buffer (HLS): the TV refused the pause -> hold dropped, no spinner");
-  pausaRecusada = 0;
-  video_parar();
-  entregue = -1; modoFake = DTSTPK_PROG_TS;
+  modoFake = DTSTPK_PROG_TS;
 
   // PREFERRED LANGUAGE ONLY ON DTS: English DTS + Japanese AAC, English wanted.
   misto = 1; montarCabecalho(); abriuConversor = 0;
