@@ -103,4 +103,9 @@ body[data-mat="vidro"] .vid.foco{background:rgba(52,54,60,.86)}
 .a12{background:radial-gradient(40% 30% at 30% 70%,#f59e3b,transparent 70%),linear-gradient(200deg,#0e1f14,#1f4a2a 50%,#08120b)}
 .a13{background:radial-gradient(30% 22% at 50% 30%,#ff5d73,transparent 70%),linear-gradient(180deg,#0c0c14,#22223a 60%,#0a0a10)}
 .a14{background:linear-gradient(180deg,#7aa6c9,#d8e4ec 48%,#6c7f8c 49%,#28323a)}
+/* mapa de dados (Listas/Trilhas): verde já dá hoje, âmbar precisa do nosso servidor, vermelho bloqueado */
+body.dados [data-d]{outline:3px dashed;outline-offset:-3px}
+body.dados [data-d="hoje"]{outline-color:#4caf50}
+body.dados [data-d="nosso"]{outline-color:#ffb74d}
+body.dados [data-d="bloq"]{outline-color:#ef5350}
 @media (prefers-reduced-motion:reduce){.cz{transition:none}}
