@@ -38,13 +38,32 @@ static void confere(const char *nome, int x, int y, int w, int h) {
   printf("%s %s: %d,%d %dx%d (esperado %d,%d %dx%d)\n", ok ? "ok  " : "FALHA", nome, jx, jy, jw, jh, x, y, w, h);
   if (!ok) falhas++;
 }
-// Home sends the fitted hole as the trailer destination, including delayed crops.
+// Home requests a destination, then punches the final plane, including delayed crops.
 static __attribute__((unused)) void cartaoDaHome(const char *nome, int sx, int sy, int sw, int sh,
                          float cx, float cy, float cw, float ch) {
   float x,y,w,h;
-  video_tpk_cartao_furo(cx,cy,cw,ch,&x,&y,&w,&h);
+  video_tpk_cartao_destino(cx,cy,cw,ch,&x,&y,&w,&h);
   video_janela_fonte(sx,sy,sw,sh,(int)x,(int)y,(int)w,(int)h);
+  video_tpk_cartao_furo(cx,cy,cw,ch,&x,&y,&w,&h);
   confere(nome,(int)x,(int)y,(int)w,(int)h);
+}
+static void cartaoExpandido(void) {
+  video_tocar("http://x/expanded-card.m3u8");
+  video_tpk_trailer_marcar(1); video_tpk_cartao_marcar(1);
+  video_tpk_tizen_definir("6.0");
+  nv_tpk_video_evento(6,1920,1080);
+  assert(video_tpk_cartao_cover());
+  cartaoDaHome("#471 expanded full source: hole equals final plane",0,0,1920,1080,40,300,606,341);
+  confere("#471 expanded full source rounds to even height",40,300,606,340);
+  cartaoDaHome("#471 expanded delayed crop: hole equals final plane",0,0,1920,1080,40,300,606,341);
+  video_recorte_reaplicar();
+  confere("#471 expanded delayed crop keeps the final plane",40,300,606,340);
+  cartaoDaHome("#471 cover ROI: hole equals final plane",600,0,720,1080,40,300,360,540);
+  confere("#471 cover ROI preserves its final plane",-259,300,960,540);
+  video_recorte_reaplicar();
+  confere("#471 replay preserves the cover plane",-259,300,960,540);
+  video_tpk_cartao_marcar(0); video_tpk_trailer_marcar(0);
+  video_tpk_tizen_definir("0");
 }
 static __attribute__((unused)) void naTela(const char *nome) {
   int ok = jx >= 0 && jy >= 0 && jx + jw <= 1920 && jy + jh <= 1080;
@@ -189,6 +208,7 @@ int main(void) {
   video_tpk_cartao_marcar(0);
   video_tpk_trailer_marcar(0);
 #endif
+  cartaoExpandido();
   // P1: legacy hosts must also invalidate a cached crop on repositioning.
   nv_tpk_video_evento(6, 1920, 1080);
   video_janela_fonte(480, 270, 960, 540, 400, 300, 640, 360);

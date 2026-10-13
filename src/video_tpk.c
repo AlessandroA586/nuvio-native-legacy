@@ -50,6 +50,7 @@ static FnRet    hJanela;
 typedef void (*FnAspecto)(int, int, int, int, int, int, int, int);
 static FnAspecto hAspecto;
 static int ultRoiX, ultRoiY, ultRoiW, ultRoiH, temRoi;
+static int planoX, planoY, planoW, planoH;
 static int ultLegX, ultLegY, ultLegW, ultLegH;
 static FnPos    hPos;
 typedef void (*FnEscolher)(int tipo, int idx);
@@ -387,6 +388,7 @@ static int abrirSessao(void) {
   if (travaLeg) { SDL_LockMutex(travaLeg); legCueSessao = 0; legAbriuEm = SDL_GetTicks(); SDL_UnlockMutex(travaLeg); }
   emTrailer = emCartao = 0;
   cartaoSemCover = 0;
+  planoW = planoH = 0;
   temRoi = 0;
   sessao++;
   velEnviada = 100;   // Player novo no host: nasce em 1x
@@ -644,6 +646,7 @@ void video_bombear(void) {
 void video_parar(void) {
   emTrailer = emCartao = 0;
   cartaoSemCover = 0;
+  planoW = planoH = 0;
   temRoi = 0;
   capmkv_zerar();   // fio de capitulos em voo nao alimenta o proximo titulo
   audioPend = legPend = -1; comecou = 0; comecouEm = 0; audioComecou = 0;
@@ -662,6 +665,7 @@ void video_buscar(double s) {
   terminou = 0;
 }
 void video_janela(int x, int y, int w, int h) {
+  planoX=x; planoY=y; planoW=w; planoH=h;
   temRoi = 0;   // reposicionar invalida o recorte do destino anterior
   if (hJanela) hJanela(x, y, w, h);
 }
@@ -757,7 +761,7 @@ void video_tpk_tizen_definir(const char *v) { tizenMaior = v ? atoi(v) : 0; }
 static int coverCartao(void) { return tizenMaior == 6 || NV_TPK_ZOOM_ROI || zoomRoi; }
 // O modo EFETIVO: home.c abre o furo e trailer.c espera o recorte por aqui.
 int video_tpk_cartao_cover(void) { return coverCartao() && !cartaoSemCover; }
-void video_tpk_cartao_furo(float x, float y, float w, float h, float *ox, float *oy, float *ow, float *oh) {
+void video_tpk_cartao_destino(float x, float y, float w, float h, float *ox, float *oy, float *ow, float *oh) {
   float fx=x, fy=y, fw=w, fh=h;
   if (!video_tpk_cartao_cover()) {
     float asp = (largura > 0 && altura > 0) ? (float)largura / (float)altura : 16.0f / 9.0f;
@@ -767,6 +771,12 @@ void video_tpk_cartao_furo(float x, float y, float w, float h, float *ox, float 
     fw = (float)((int)(fw + 0.5f) & ~1); fh = (float)((int)(fh + 0.5f) & ~1);
   }
   if (ox) *ox=fx; if (oy) *oy=fy; if (ow) *ow=fw; if (oh) *oh=fh;
+}
+// O furo segue o plano final, inclusive o encaixe par e o fallback do host.
+void video_tpk_cartao_furo(float x, float y, float w, float h, float *ox, float *oy, float *ow, float *oh) {
+  if (emTrailer && emCartao && planoW > 0 && planoH > 0) {
+    if (ox) *ox=planoX; if (oy) *oy=planoY; if (ow) *ow=planoW; if (oh) *oh=planoH;
+  } else video_tpk_cartao_destino(x,y,w,h,ox,oy,ow,oh);
 }
 static unsigned cartaoLogado;
 static void cartaoModo(const char *modo, const char *porque) {
@@ -822,6 +832,7 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
   else if (!NV_TPK_ZOOM_ROI && !NV_TPK_PLAYER_RECORTE && !zoomRoi && !roiNaTela(X,Y,W,H)) {
     lx = dx; ly = dy; lw = dw; lh = dh;
   }
+  planoX=X; planoY=Y; planoW=W; planoH=H;
   // New hosts accept B without a diagnostic/experimental flag for the player.
   // Trailer zoom remains opt-in. Old staged hosts retain the previous gate.
   if (hAspecto && (!emTrailer || cartao || NV_TPK_ZOOM_ROI || zoomRoi || roiNaTela(X,Y,W,H))) {
@@ -920,6 +931,7 @@ void video_tpk_log_host(const char *linha) {
   // Video.cs: DisplayRoi recusado -> o plano foi para o encaixe (lx..lh).
   if (!strncmp(linha, "[aspecto] ", 10) && strstr(linha, " DisplayRoi") && emTrailer && emCartao) {
     cartaoSemCover = 1;
+    if (temRoi) { planoX=ultLegX; planoY=ultLegY; planoW=ultLegW; planoH=ultLegH; }
     return;
   }
   if (strstr(linha, "[janela] principal visivel=")) {

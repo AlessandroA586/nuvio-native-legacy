@@ -78,6 +78,7 @@ int main(void) {
   cartaoDaHome("aspect bridge: plane equals hole",600,0,720,1080,40,300,360,540);
   cartaoDaHome("aspect bridge: whole-frame plane equals hole",0,0,1920,1080,40,300,360,540);
   confere("unproven family uses proportional fit",40,469,360,202);
+  cartaoExpandido();
   assert(falhas==0);
   puts("tpk-aspecto-roi: PASS"); return 0;
 }

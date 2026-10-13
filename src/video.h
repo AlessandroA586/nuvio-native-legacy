@@ -258,6 +258,7 @@ int    video_tpk_zoom_roi(void);
 void   video_tpk_trailer_marcar(int sim);
 void   video_tpk_cartao_marcar(int sim);   // o destino e o furo do cartao da home
 int    video_tpk_cartao_cover(void);       // 1 = o cartao recebe cover (recorte de fonte), 0 = encaixe
+void   video_tpk_cartao_destino(float x, float y, float w, float h, float *ox, float *oy, float *ow, float *oh);
 void   video_tpk_cartao_furo(float x, float y, float w, float h, float *ox, float *oy, float *ow, float *oh);
 void   video_tpk_tizen_definir(const char *versao);   // gpunivel.c: platform.version
 int    video_recorte_fonte_trailer(void);   // so o trailer: o ajuste em execucao

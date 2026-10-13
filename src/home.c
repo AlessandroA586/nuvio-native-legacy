@@ -570,13 +570,10 @@ static int heroTrailerTocando(void);
 // A espera e ajuste; a janela da Apple (NV_TRAILER_HERO_JANELA_MS) conta a
 // partir dela, senao uma espera longa venceria a janela antes de abrir.
 static Uint32 heroTrailerEspera(void) { return ajustes_trailer_hero_espera_ms(); }
-// No .tpk o cover do cartao so tem recorte de fonte na Tizen 6.x (video_tpk.c):
-// la o furo e o cartao inteiro. Nas demais familias, ou quando o cover caiu no
-// encaixe (retrato maior que o painel, ROI recusado), abre so o quadro encaixado
-// e o resto do cartao fica preto, sem expor o plano nas barras do cartaz.
+// Destino pedido ao trailer; o furo usa o plano final aplicado em video_tpk.c.
 static GfxRect cartaoVideoRect(GfxRect c) {
 #if defined(NV_TPK) && !defined(__EMSCRIPTEN__)
-  GfxRect v; video_tpk_cartao_furo(c.x, c.y, c.w, c.h, &v.x, &v.y, &v.w, &v.h); return v;
+  GfxRect v; video_tpk_cartao_destino(c.x, c.y, c.w, c.h, &v.x, &v.y, &v.w, &v.h); return v;
 #else
   return c;
 #endif
@@ -6220,7 +6217,10 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
           float aArteCard = aArte;
           if (k->trailer > 0.004f) {
             GfxRect v = cartaoVideoRect(card);
-            if (v.x > card.x + 0.5f || v.y > card.y + 0.5f || v.w < card.w - 1.0f || v.h < card.h - 1.0f) {
+#if defined(NV_TPK) && !defined(__EMSCRIPTEN__)
+            video_tpk_cartao_furo(card.x, card.y, card.w, card.h, &v.x, &v.y, &v.w, &v.h);
+#endif
+            if (v.x != card.x || v.y != card.y || v.w != card.w || v.h != card.h) {
               gfx_cor(card, raio, 0.0f, 0.0f, 0.0f, 1.0f);
               gfx_furo(v);
             } else gfx_furo_raio(card, raio);
