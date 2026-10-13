@@ -183,6 +183,7 @@ struct DtsRemuxGen {
   Q vq, aq;
   int vseg, vstarted;
   int64_t vdur, lastDts;
+  int64_t pend[2 * LOOK + 2]; int npend; int64_t lastPop;   /* video DTS: emitted PTS not yet popped */
   double lastDemuxV;                /* source seconds of the last video packet read */
   int demuxEof, encEof;
   int nextSeg;
@@ -969,8 +970,26 @@ static int emitVideo(DtsRemuxGen *g, int target, DtsRemuxStats *st, char *err, s
     int64_t d;
     if (g->src->mov && h->p->dts != AV_NOPTS_VALUE) d = h->p->dts;
     else {
-      int64_t mn = h->p->pts;
-      for (int i = 1; i <= LOOK && i < g->vq.n; i++) if (g->vq.v[i].p->pts < mn) mn = g->vq.v[i].p->pts;
+      /* The n-th packet in decode order gets the n-th SMALLEST pts (the
+       * presentation timeline, one frame per step), minus LOOK frames. The
+       * first version took min(pts[n..n+LOOK]), which with B-pyramids stalls
+       * and jumps: DTS came out in pairs 1 tick apart, then +2 frames (seen in
+       * every TS made here). Popping the smallest pending pts keeps them one
+       * frame apart and still depends only on the packets: a segment made
+       * alone pops the same values as the same span of a continuous run. */
+      int64_t mn = INT64_MAX;
+      for (int i = 0; i <= LOOK && i < g->vq.n; i++) {
+        int64_t q = g->vq.v[i].p->pts;
+        if ((g->lastPop == UNSET || q > g->lastPop) && q < mn) mn = q;
+      }
+      for (int i = 0; i < g->npend; i++)
+        if ((g->lastPop == UNSET || g->pend[i] > g->lastPop) && g->pend[i] < mn) mn = g->pend[i];
+      if (mn == INT64_MAX) mn = h->p->pts;
+      g->lastPop = mn;
+      { int k = 0;   /* drop the popped; keep this packet's pts if still pending */
+        for (int i = 0; i < g->npend; i++) if (g->pend[i] > mn) g->pend[k++] = g->pend[i];
+        g->npend = k;
+        if (h->p->pts > mn && g->npend < (int)(sizeof g->pend / sizeof *g->pend)) g->pend[g->npend++] = h->p->pts; }
       d = mn - LOOK * g->vdur;
     }
     if (g->lastDts != UNSET && d <= g->lastDts) d = g->lastDts + 1;
@@ -1021,6 +1040,7 @@ static int freshStart(DtsRemuxGen *g, int64_t kf, int64_t b48, char *err, size_t
   closeMux(g, 0);
   if (resetAudio(g, err, errn) < 0) return -1;
   g->demuxEof = 0; g->vseg = -1; g->vstarted = 0; g->lastDts = UNSET; g->nextSeg = -1;
+  g->npend = 0; g->lastPop = UNSET;
   g->gridLazy = b48 == GRID_LAZY;
   if (b48 == UNSET || b48 <= 0) g->grid = 0;
   else {
