@@ -3,6 +3,7 @@
  * valor[], nunca uma fotografia de preferencias ja carregadas do usuario. */
 
 static int uxTemPadrao(int op) {
+  if (ajFalhaBackend(op)) return 1;
   return op >= 0 && op < AJ_N &&
     (OPCOES[op].tipo == OP_ESCOLHA || OPCOES[op].tipo == OP_NUMERO) &&
     CHAVE[op] && CHAVE[op][0] && CHAVE[op][0] != '-' &&
@@ -16,6 +17,7 @@ static int uxValorPadrao(int op) {
 /* Fileiras tem uma fonte propria. valor[] e apenas seu espelho na tela. */
 static int uxValorAtual(int op) {
   if (op < 0 || op >= AJ_N) return 0;
+  if (ajFalhaBackend(op)) return ajFalhaValor(op);
   if (op == AJ_SEEKR_LIGADO && !seekrChave[0]) return 1;
   return op == AJ_FIL_LIMITE ? fil_limite_gravado() : valor[op];
 }
@@ -204,6 +206,9 @@ static const char *uxSinonimos(int op) {
     case AJ_FONTE_REGEX: case AJ_FONTE_REGEX_PADRAO: case AJ_FONTE_REGEX_MODELO:
       return "regex expressao regular padrao filtro nome idioma espanhol latino castellano multi dual remux auto-play autoplay regex match pattern";
     case AJ_TAM_MAX: case AJ_TAM_MIN: return "tamanho maximo minimo gb gigabyte arquivo franquia dados internet limite cota plano economizar fonte automatica size quota data cap";
+    case AJ_FALHA_PROVEDORES: case AJ_FALHA_PROVEDOR_ORDEM: case AJ_FALHA_RD_LIMITE: case AJ_FALHA_TB_LIMITE: case AJ_FALHA_PM_LIMITE: case AJ_FALHA_AD_LIMITE:
+    case AJ_FALHA_ADDONS: case AJ_FALHA_ADDON_ORDEM: case AJ_FALHA_ADDON_LIMITE:
+      return "falha erro provedor debrid addon add-on trocar ordem prioridade limite links timeout failover fallback retry";
     case AJ_FONTE_ORDEM_ADDON: return "ordem fontes qualidade addon aiostreams resolucao tamanho instalacao source order quality";
     case AJ_P2P_LIMITE: return "limite espaco p2p torrent armazenamento disco cheio memoria buffer cache tamanho maximo gb space limit storage full";
     case AJ_BUFFER: return "buffer tamanho memoria pequeno medio grande travando carregando rede instavel stats nerds";
