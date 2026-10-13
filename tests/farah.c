@@ -37,5 +37,36 @@ int main(void) {
   }
   nRotas = 0;
   puts("farah: search retains IMDb and TMDB versions, accented and Turkish titles");
+  char *meta = fixture("nuvio_meta_tmdb_335918");
+  rota("/meta/series/tmdb:335918.json", meta);
+  limparCacheMeta(); metaprov_zerar_pausa();
+  catalogoDe("tmdb:335918", "series", "Meu Nome é Farah", "cinemeta");
+  abrir();
+  assert(cat_n_episodios(0) == 89);
+  assert(cat_item(0)->nTemporadas == 2);
+  assert(cat_item(0)->temporadas[0] == 1 && cat_item(0)->temporadas[1] == 2);
+  assert(!strcmp(cat_item(0)->imdb, "tmdb:335918"));
+  assert(!pediu("v3-cinemeta"));
+  int counts[3] = {0};
+  for (int i = 0; i < 89; i++) {
+    const CatEp *e = cat_episodio(0, i);
+    assert(e && e->temporada >= 1 && e->temporada <= 2);
+    counts[e->temporada]++;
+    if (e->temporada == 2 && e->episodio == 89) {
+      assert(!strcmp(e->vid, "tmdb:335918:2:89"));
+      assert(!strcmp(e->duracao, "45 min"));
+    }
+  }
+  assert(counts[1] == 47 && counts[2] == 42);
+  const CatEp *last = cat_episodio(0, 88);
+  assert(last->temporada == 2 && last->episodio == 89);
+  puts("farah: native detail publishes 89 episodes and both seasons without IMDb");
+  // Opening a TMDB credit must also work when external_ids has no IMDb.
+  sobTmdb = 335918;
+  snprintf(sobTipo, sizeof sobTipo, "tv");
+  sobTemSemente = 0; sobIndice = -1; sobFioVivo = 1;
+  buscarTitulo(NULL);
+  assert(sobIndice == 0 && !sobFioVivo);
+  free(meta); nRotas = 0; limparCacheMeta();
   return 0;
 }
