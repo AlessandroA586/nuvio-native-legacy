@@ -19,6 +19,7 @@ DECODERS=dca,dvdsub,pgssub,ass,ssa,subrip,movtext,webvtt
 MUXERS=
 PARSERS=dca,h264,hevc,aac
 BSFS=h264_mp4toannexb,hevc_mp4toannexb,dca_core
+ZLIB=
 mkdir -p "$BUILD" "$PREFIX"
 if [ "$TARGET" = tpk ]; then
   SRC=${NUVIO_DTS_SRC:?tools/tpk.sh passes the extracted ffmpeg-$VERSION source}
@@ -27,6 +28,11 @@ if [ "$TARGET" = tpk ]; then
   MUXERS=mpegts,matroska,mp4
   PARSERS=$PARSERS,mlp,ac3
   BSFS=$BSFS,truehd_core
+  # zlib: Matroska tracks stored zlib-compressed (ContentCompression) and MP4
+  # with a compressed header (cmov) arrive raw without it ("Unsupported encoding
+  # type"). The .tpk already links the SDK's static libz.a (tools/tpk.sh, also
+  # used by epg.c), so this adds no new dependency on the TV.
+  ZLIB=--enable-zlib
   # Out of tree: the source stays clean in the host cache.
   mkdir -p "$BUILD/obj"
   cd "$BUILD/obj"
@@ -47,10 +53,11 @@ else
       --cross-prefix="${CC%-gcc}-" --cc="$CC" --sysroot="${NUVIO_SYSROOT:?SDK sysroot required}"
   fi
 fi
-# --enable-muxer must come AFTER --disable-everything (configure applies them in
-# order). Unquoted on purpose: empty for webOS, so its configure line is unchanged.
+# --enable-muxer must come AFTER --disable-everything and --enable-zlib after
+# --disable-autodetect (configure applies them in order). Unquoted on purpose:
+# both empty for webOS, so its configure line is unchanged.
 "$SRC/configure" "$@" --prefix="$PREFIX" --disable-everything ${MUXERS:+--enable-muxer=$MUXERS} \
-  --disable-autodetect --disable-shared --enable-static --enable-pic \
+  --disable-autodetect $ZLIB --disable-shared --enable-static --enable-pic \
   --disable-programs --disable-doc --disable-debug --disable-network \
   --disable-avdevice --disable-avfilter --disable-swscale --disable-postproc \
   --enable-avcodec --enable-avformat --enable-avutil --enable-swresample \
