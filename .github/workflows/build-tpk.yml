@@ -63,6 +63,16 @@ jobs:
           path: ${{ env.NUVIO_TPK_CACHE }}
           key: tpk-deps-${{ hashFiles('tools/tpk/Dockerfile', 'tools/tpk/deps.sh') }}
 
+      # The static FFmpeg for DTS/TrueHD -> AC3 (tools/build-dts-ffmpeg.sh, built
+      # by tools/tpk.sh into $NUVIO_TPK_CACHE/prefix-dts) takes long under ARM
+      # emulation. Its own cache, keyed on its script, so the deps cache above
+      # (whose key already exists) does not have to be thrown away for it.
+      - name: Restore FFmpeg (DTS) cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.NUVIO_TPK_CACHE }}/prefix-dts
+          key: tpk-dts-ffmpeg-${{ hashFiles('tools/build-dts-ffmpeg.sh') }}
+
       # NuvioTpk targets net6.0-tizen8.0, which needs the .NET 8 SDK plus the
       # Samsung Tizen workload (see tizen-tpk-spike/README.md).
       - name: Install .NET 8 and the Samsung Tizen workload
@@ -94,6 +104,20 @@ jobs:
         with:
           path: ${{ env.NUVIO_TPK_CACHE }}
           key: tpk-deps-${{ hashFiles('tools/tpk/Dockerfile', 'tools/tpk/deps.sh') }}
+
+      # Only a finished FFmpeg build (tpk.sh writes .carimbo last) is cached.
+      - name: Check FFmpeg (DTS) build
+        id: dts
+        if: always()
+        run: |
+          if [ -f "$NUVIO_TPK_CACHE/prefix-dts/.carimbo" ]; then echo "pronto=1" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Save FFmpeg (DTS) cache
+        if: always() && steps.dts.outputs.pronto == '1'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.NUVIO_TPK_CACHE }}/prefix-dts
+          key: tpk-dts-ffmpeg-${{ hashFiles('tools/build-dts-ffmpeg.sh') }}
 
       # On failure, show the last lines of the build at the top of the run page.
       - name: Show build error summary
