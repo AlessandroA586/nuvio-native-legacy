@@ -1349,6 +1349,7 @@ static void prepararExtras(LegBusca *B) {
   fflush(stdout);
 }
 
+#define LEG_FIOS 12   // o ADD_FIOS de fora do Tizen; ver buscarLegendas
 static void *buscarLegendas(void *u) {
   (void)u;
   for (;;) {
@@ -1357,7 +1358,7 @@ static void *buscarLegendas(void *u) {
     static pthread_t th[ADD_MAX];
     static int criado[ADD_MAX];
     unsigned t0 = relogioMs();
-    int i, nAtivos = 0;
+    int i, k, nAtivos = 0, vivos = 0;
 
     memset(&B, 0, sizeof B);
     memset(criado, 0, sizeof criado);
@@ -1383,8 +1384,16 @@ static void *buscarLegendas(void *u) {
     for (i = 0; B.lotes && i < B.nLotes; i++) {
       // Addon que nao declara legenda nao e consultado.
       if (!addon[i].ativo || !addon[i].legenda) continue;
+      // EM LEVAS DE LEG_FIOS (B4). Um fio por addon era ate 128 fios, cada um
+      // com pilha, ~50 KB de lote e um curl — e todo addon da conta nasce
+      // "legenda" ate o manifesto responder. Com a lista cheia de duplicatas,
+      // memoria de sobra numa TV de 32 bits.
+      if (vivos == LEG_FIOS) {
+        for (k = 0; k < i; k++) if (criado[k]) { pthread_join(th[k], NULL); criado[k] = 0; }
+        vivos = 0;
+      }
       fio[i].B = &B; fio[i].i = i;
-      if (pthread_create(&th[i], NULL, buscarUmAddon, &fio[i]) == 0) { criado[i] = 1; nAtivos++; }
+      if (pthread_create(&th[i], NULL, buscarUmAddon, &fio[i]) == 0) { criado[i] = 1; nAtivos++; vivos++; }
       else buscarUmAddon(&fio[i]);      // sem fio novo: faz aqui mesmo
     }
     for (i = 0; i < B.nLotes; i++) if (criado[i]) pthread_join(th[i], NULL);
