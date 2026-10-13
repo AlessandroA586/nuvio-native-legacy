@@ -1,10 +1,24 @@
+#include <pthread.h>
+#include <assert.h>
+static pthread_t pedidosFio[32];
+static int nPedidosFio;
+static int guardarPedido(pthread_t t) { assert(nPedidosFio < 32); pedidosFio[nPedidosFio++] = t; return 0; }
+#define pthread_detach guardarPedido
 // Reutiliza os dubles do detalhe; toda a rede e falsa.
 #define main detalhe_main
 #define rede_baixar detalhe_rede_baixar
 #include "detalheanime.c"
 #undef rede_baixar
 #undef main
+#undef pthread_detach
 #include <time.h>
+static void juntarPedidos(void) {
+  for (int i = 0; i < nPedidosFio; i++) assert(!pthread_join(pedidosFio[i], NULL));
+  nPedidosFio = 0;
+}
+static pthread_mutex_t redeTrava = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t redeCond = PTHREAD_COND_INITIALIZER;
+static int redeControlada, liberarCine;
 static double agora(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec + t.tv_nsec / 1e9; }
 static char cine[8192], addon[8192];
 static int addonMs = 4000, cineMs = 1000;
@@ -12,7 +26,11 @@ char *rede_baixar(const char *u, int t) {
   (void)t;
   if (strstr(u, "/meta/series/")) {
     int lento = strstr(u, "addon.test") != NULL;
-    usleep((lento ? addonMs : cineMs) * 1000);
+    if (redeControlada) {
+      pthread_mutex_lock(&redeTrava);
+      while (!lento && !liberarCine) pthread_cond_wait(&redeCond, &redeTrava);
+      pthread_mutex_unlock(&redeTrava);
+    } else usleep((lento ? addonMs : cineMs) * 1000);
     return strdup(lento ? addon : cine);
   }
   return NULL;
@@ -47,6 +65,38 @@ static void fontesDivergentes(void) {
   }
   puts("P1.1: fontes divergentes preservam pares, foco e abas");
 }
+static void retornoParcial(void) {
+  CatItem itens[2] = {{0}};
+  for (int i = 0; i < 2; i++) {
+    snprintf(itens[i].imdb, sizeof itens[i].imdb, "tt000020%d", 5+i);
+    strcpy(itens[i].tipo, "series"); strcpy(itens[i].titulo, "Retorno");
+    origemDaBase(addons_base(0), itens[i].origem, sizeof itens[i].origem);
+  }
+  limparCacheMeta(); cat_definir_tudo(itens, 2, NULL, 0);
+  redeControlada = 1; liberarCine = 0;
+  desc_episodios(0, 1);
+  double limite = agora() + 2;
+  while (cat_n_episodios(0) != 13 && agora() < limite) usleep(1000);
+  assert(cat_n_episodios(0) == 13);
+  desc_episodios(1, 1);
+  desc_episodios_garantir(0);
+  pthread_mutex_lock(&epPedidoTrava);
+  assert(epItem == 0); // voltar a A precisa retomar, mesmo com lista visivel
+  pthread_mutex_unlock(&epPedidoTrava);
+  assert(cat_n_episodios(0) == 13);
+  pthread_mutex_lock(&redeTrava);
+  liberarCine = 1; pthread_cond_broadcast(&redeCond);
+  pthread_mutex_unlock(&redeTrava);
+  juntarPedidos();
+  assert(cat_n_episodios(0) == 20);
+  assert(cat_item(0)->nTemporadas == 1);
+  assert(!desc_episodios_carregando(0));
+  int antes = nPedidosFio;
+  desc_episodios_garantir(0);
+  assert(nPedidosFio == antes); // concluida nao repete
+  redeControlada = 0;
+  puts("P1.2: A/B/A retoma e conclui a lista parcial");
+}
 int main(void) {
   fontesDivergentes();
   CatItem itens[2] = {{0}};
@@ -61,6 +111,8 @@ int main(void) {
     strcpy(itens[i].tipo, "series"); strcpy(itens[i].titulo, "Teste");
     origemDaBase(addons_base(0), itens[i].origem, sizeof itens[i].origem);
   }
+  retornoParcial();
+  limparCacheMeta();
   cat_definir_tudo(itens, 2, NULL, 0);
   double a = agora(); desc_episodios(0, 1); esperar(0, a);
   usleep(3300000);
@@ -86,6 +138,7 @@ int main(void) {
   assert(cat_n_episodios(0) == 20);
   for (int i = 0; i < 20; i++) assert(cat_episodio(0, i)->episodio == i + 1);
   assert(!strcmp(cat_episodio(0, 0)->nome, "A1"));
+  juntarPedidos();
   puts("epsrapido: mescla, ordem inversa e troca A/B OK");
   return 0;
 }

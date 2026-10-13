@@ -7252,6 +7252,7 @@ static void epPublicarCedo(const CatItem *orig, const char *corpo, int indice) {
   publicarEpisodios(corpo, indice, orig->titulo, NULL, 0, &tp);
   CatItem edit;
   if (cat_copiar_item(indice, &edit)) {
+    edit.epsParciais = 1;
     edit.nTemporadas = tp.n;
     memcpy(edit.temporadas, tp.t, sizeof(int) * (size_t)tp.n);
     cat_atualizar_item(indice, &edit);
@@ -7742,6 +7743,7 @@ static void *buscarEps(void *u) {
       }
     }
     // Publica texto, generos e temporadas antes do enriquecimento de imagens.
+    edit.epsParciais = 0;
     if ((alvoItem = epAlvo(alvoItem)) >= 0) cat_atualizar_item(alvoItem, &edit);
     marco("detalhe: meta basico na tela");
     // A FICHA ESTA NA TELA: ESTE FIO JA NAO SEGURA O PROXIMO TITULO (R2). O que
@@ -8304,10 +8306,10 @@ void desc_episodios(int indiceItem, int temporada) {
   int mesmo = fioEpVivo && epItem == indiceItem;
   pthread_mutex_unlock(&epPedidoTrava);
   if (mesmo) return;
-  // A lista agora e UNICA e cobre todas as temporadas, entao ter qualquer
-  // episodio deste titulo ja basta — trocar de aba nao pede nada.
-  (void)temporada;
-  if (cat_n_episodios(indiceItem) > 0) return;
+  // Uma lista antecipada continua visivel, mas precisa retomar a mescla.
+  CatItem atual;
+  if (!cat_copiar_item(indiceItem, &atual)) return;
+  if (cat_n_episodios(indiceItem) > 0 && !atual.epsParciais) return;
   EpPedido *p = calloc(1, sizeof *p);
   if (!p) return;
   p->item = indiceItem;
@@ -8330,7 +8332,7 @@ void desc_episodios_garantir(int indiceItem) {
   const CatItem *ci = cat_item(indiceItem);
   if (!ci || !ci->imdb[0]) return;
   if (!(!strcmp(ci->tipo, "series") || strcmp(ci->tipo, "movie") || ci->nElenco == 0)) return;
-  if (cat_n_episodios(indiceItem) > 0 || desc_episodios_carregando(indiceItem)) return;
+  if (desc_episodios_carregando(indiceItem)) return;
   desc_episodios(indiceItem, 0);
 }
 
@@ -8341,7 +8343,7 @@ int desc_episodios_precarregar(int indiceItem) {
   const CatItem *ci = cat_item(indiceItem);
   if (!ci || !ci->imdb[0]) return 0;
   if (!(!strcmp(ci->tipo, "series") || strcmp(ci->tipo, "movie") || ci->nElenco == 0)) return 0;
-  if (cat_n_episodios(indiceItem) > 0) return 0;
+  if (cat_n_episodios(indiceItem) > 0 && !ci->epsParciais) return 0;
   if (fioEpVivo || pendItem >= 0) return -1;
   desc_episodios(indiceItem, 0);
   return fioEpVivo ? 1 : 0;
