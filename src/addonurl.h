@@ -294,4 +294,38 @@ static inline char *nv_longa_expandir(const char *u) {
   return out;
 }
 
+// QUAL ADDON E ESTE, para descobrir duplicata (B4, #458). A base de
+// nv_addon_base, com duas diferencas: o apelido de URL grande vale pela URL
+// normalizada que ele guarda (o apelido sai do hash da URL CRUA, entao
+// ".../manifest.json" e ".../" davam dois apelidos para o mesmo addon), e
+// esquema e host sem caixa. So compara: a base guardada continua a de sempre.
+// A URL grande vira o hash dela (inteira nao cabe em `dst`; cortada, duas
+// URLs grandes do mesmo host com o mesmo comeco seriam um addon so).
+static inline void nv_addon_chave(const char *url, char *dst, size_t tam) {
+  const char *norm = NULL, *b = nv_longa_bruto(url);
+  char *p, *fim;
+  int i;
+  if (b) {
+    pthread_mutex_lock(&nv_longa.m);
+    for (i = 0; i < nv_longa.n; i++)
+      if (nv_longa.bruto[i] == b) { norm = nv_longa.norm[i]; break; }
+    pthread_mutex_unlock(&nv_longa.m);   // `norm` nunca e liberado
+  }
+  if (norm) {
+    const char *e = strstr(norm, "://");
+    size_t k, host = e ? (size_t)(e + 3 - norm) + strcspn(e + 3, "/?") : 0;
+    uint64_t h = 1469598103934665603ULL;
+    for (k = 0; norm[k]; k++) {
+      h ^= (unsigned char)(k < host ? tolower((unsigned char)norm[k]) : norm[k]);
+      h *= 1099511628211ULL;
+    }
+    snprintf(dst, tam, "~nv%016llx", (unsigned long long)h);
+    return;
+  }
+  nv_addon_base(url, dst, tam);
+  if (!(fim = strstr(dst, "://"))) return;
+  fim += 3; fim += strcspn(fim, "/?");
+  for (p = dst; p < fim; p++) *p = (char)tolower((unsigned char)*p);
+}
+
 #endif
