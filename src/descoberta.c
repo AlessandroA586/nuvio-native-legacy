@@ -6464,8 +6464,8 @@ int desc_meta_tem_temporadas(const char *corpo) {
 
 // CONJUNTO DE (temporada, episodio) JA VISTOS num videos[]. Um addon de FONTES
 // pode responder o /meta com um video por ARQUIVO de torrent (relato de TV LG,
-// Breaking Bad: 18529 entradas para 62 episodios), entao contar e cortar tem de
-// ser sobre episodios DISTINTOS. Enderecamento aberto, dobra ao passar de meia
+// Breaking Bad: 18529 entradas para 62 episodios), entao contar e deduplicar
+// tem de ser sobre episodios DISTINTOS. Enderecamento aberto, dobra ao passar de meia
 // carga: O(n) no corpo inteiro. Memoria pelos pares DISTINTOS, nao pelas
 // entradas: 8 KiB (1024 casas) ate 511 pares, o caso do relato (62); 18 mil
 // pares distintos chegam a 512 KiB, com 768 KiB no instante da copia.
@@ -6578,7 +6578,7 @@ static int metaArquivosCompativeis(const char *arquivos, const char *catalogo) {
 
 // Em par com CAT_EP_MAX (catalogo.c): um titulo que caiba no store nao pode
 // truncar no parse, e um que nao caiba trunca aqui em vez de zerar os outros.
-#define VIDEOS_MAX 1200
+#define VIDEOS_MAX 2400
 
 // videos[] de um /meta -> lista de CatEp ORDENADA por (temporada, episodio).
 // So entram videos com temporada > 0. Devolve quantos.
@@ -6591,7 +6591,7 @@ static int parsearEpisodios(const char *corpo, CatEp *eps, int max) {
     int t = videoTemporada(p, f);
     int ne = t > 0 ? (int)js_num(p, f, "episode", 0) : 0;
     // Repeticao sai JA AQUI, antes do corte de `max`: descartada so depois de
-    // ordenar, as 1200 vagas iam para copias dos primeiros episodios e o resto
+    // ordenar, as vagas iam para copias dos primeiros episodios e o resto
     // da serie nem era lido. Fica o primeiro da resposta; sem numero de
     // episodio nao e repeticao.
     if (t > 0 && (ne <= 0 || epSetNovo(&set, t, ne))) {
@@ -7461,7 +7461,7 @@ static void *buscarEps(void *u) {
     arte_reserva_episodios(serie, corpo);
     // A disputa e de distintos contra distintos, os dois do corpo INTEIRO: o
     // nCine publicado para em VIDEOS_MAX, e contra ele uma lista com os mesmos
-    // 1300 episodios "sabia mais" (1300 > 1200).
+    // episodios acima do teto "sabia mais" so por nao estar cortada.
     if (nCine >= VIDEOS_MAX) nCine = desc_meta_n_episodios(corpo);
     epsDoAddon = episodiosDoAddon(alvoItem, serie, it->titulo, corpo, nCine, aplicar, &tp);
   }
