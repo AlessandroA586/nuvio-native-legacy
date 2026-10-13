@@ -504,8 +504,11 @@ int trailer_mostra_video(void) {
   // a esperar, o LetterBox de sempre ja e a imagem certa.
   // "Original" so dispensa a espera quando o destino tambem nao pede corte
   // (o cover de trailer_recorte num destino que nao e da proporcao do video).
-  int semCorte = !video_recorte_fonte_trailer() && !noCartao;
-  if (!semCorte && ajustes_trailer_zoom() <= 1.001f && video_largura() > 0 && video_altura() > 0) {
+  // O cartao so espera o recorte onde ele e cover de fonte (Tizen 6.x); nas
+  // demais familias o quadro inteiro encaixado ja e a imagem final.
+  int cartaoCover = noCartao && video_tpk_cartao_cover();
+  int semCorte = !video_recorte_fonte_trailer() && !cartaoCover;
+  if (!semCorte && (cartaoCover || ajustes_trailer_zoom() <= 1.001f) && video_largura() > 0 && video_altura() > 0) {
     int sx, sy, sw, sh;
     trailer_recorte(video_largura(), video_altura(), 1.0f, rect.w, rect.h, &sx, &sy, &sw, &sh);
     semCorte = sw >= (video_largura() & ~1) && sh >= (video_altura() & ~1);

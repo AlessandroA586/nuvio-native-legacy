@@ -109,6 +109,24 @@ int main(void) {
   assert(cropN==cardCrops && fonteN==cardRequests);
   puts("ok P1 card adoption never crops fullscreen with experimental zoom off");
   trailer_fechar();
+  /* P3: a card that will only be letterboxed reveals the plane at once; a card
+   * covered by a source crop (Tizen 6.x) waits for that crop to settle. */
+  recorte=0;cover=0;zoom=1;ticks=20000;
+  trailer_no_cartao(1);
+  trailer_abrir("https://fixture.invalid/lb.mp4",(GfxRect){40,300,360,540},0,0);
+  pronto=tocando=1;pos=.5;trailer_atualizar(ticks);
+  ticks+=800;trailer_atualizar(ticks);
+  assert(trailer_mostra_video());
+  trailer_fechar();
+  cover=1;ticks=30000;
+  trailer_no_cartao(1);
+  trailer_abrir("https://fixture.invalid/cv.mp4",(GfxRect){40,300,360,540},0,0);
+  pronto=tocando=1;pos=.5;trailer_atualizar(ticks);
+  ticks+=800;trailer_atualizar(ticks);
+  assert(!trailer_mostra_video());
+  ticks+=301;assert(trailer_mostra_video());
+  trailer_no_cartao(0);cover=0;
+  puts("ok P3 card reveal: letterbox at once, cover waits for the crop");
   trailer_fechar();
   return 0;
 }
