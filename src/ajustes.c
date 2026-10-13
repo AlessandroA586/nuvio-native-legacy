@@ -544,13 +544,13 @@ typedef enum {
   AJ_PULAR_CREDITOS,
   AJ_PROXIMO_CONTAGEM, // #256: segundos locais; append-only
   AJ_INTERFACE_MODO, // local, append-only; 0 = TV, 1 = Mobile
-  // #461: menu na lateral (0, o de sempre) ou numa barra no topo (1). Por
-  // perfil, so desta TV. No fim: valor[]/CHAVE[] posicionais.
-  AJ_MENU_TOPO,
   // Botao de microfone das buscas no .tpk (Voz.cs): Automatico (a TV que diz
   // nao ter microfone fica sem ele) / Ligado / Desligado. LOCAL, so na tela do
   // .tpk. No fim: valor[]/CHAVE[] posicionais.
   AJ_MIC_BUSCA,
+  // #461: menu na lateral (0, o de sempre) ou numa barra no topo (1). Por
+  // perfil, so desta TV. No fim: valor[]/CHAVE[] posicionais.
+  AJ_MENU_TOPO,
   AJ_N
 } OpcaoId;
 
@@ -1414,8 +1414,8 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Pular os créditos automaticamente", V_LIGA, 2),   // local: pularCreditosLocal
   NUM("Contagem do próximo episódio", 1, 60, 1, "s"),
   ESC("Modo da interface", V_INTERFACE_MODO, 2),
-  ESC("Posição do menu", V_MENU_POS, 2),   // por perfil: menuTopoLocal (#461)
   ESC("Botão de microfone na busca", V_MIC_BUSCA, 3),   // local: micBuscaLocal (.tpk)
+  ESC("Posição do menu", V_MENU_POS, 2),   // por perfil: menuTopoLocal (#461)
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1656,8 +1656,8 @@ static const char *CHAVE[] = {
   "pularCreditosLocal",
   "proximoContagemLocal",
   "interfaceModoLocal",
-  "menuTopoLocal",
   "micBuscaLocal",
+  "menuTopoLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
