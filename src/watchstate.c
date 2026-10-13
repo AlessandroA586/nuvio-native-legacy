@@ -1,5 +1,6 @@
 #include "watchstate.h"
 #include "js.h"
+#include "jsw.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -147,4 +148,255 @@ int ws_decl_aceita(const WsDecl *d, int ev, const char *tipo,
     return 0;
   }
   return 1;
+}
+
+// ---- Evento, corpo, id, URL ------------------------------------------------
+
+static const char *nomeEv(int ev) {
+  switch (ev) {
+    case WS_START: return "start";   case WS_PAUSE: return "pause";
+    case WS_STOP: return "stop";     case WS_PLAYED: return "played";
+    case WS_UNPLAYED: return "unplayed";
+    default: return NULL;
+  }
+}
+
+// Texto que vai para id, URL e diario: sem controle (o diario separa por TAB).
+static int limpo(const char *s) {
+  for (; *s; s++) if ((unsigned char)*s < 0x20 || *s == 0x7f) return 0;
+  return 1;
+}
+
+static int valido(const WsEvento *e) {
+  int serie, scrobble;
+  if (!e || !nomeEv(e->ev)) return 0;
+  serie = !strcmp(e->tipo, "series");
+  if (!serie && strcmp(e->tipo, "movie")) return 0;
+  if (!e->videoId[0] || !limpo(e->videoId) || !limpo(e->metaId) ||
+      !limpo(e->imdb) || !limpo(e->tmdb)) return 0;
+  if (e->atMs < 1000) return 0;
+  if (serie && (e->season < 0 || e->episode < 0)) return 0;   // identidade ambigua
+  scrobble = e->ev == WS_START || e->ev == WS_PAUSE || e->ev == WS_STOP;
+  if (scrobble && (e->posMs < 0 || e->iniMs < 1000)) return 0;
+  return 1;
+}
+
+int ws_id(const WsEvento *e, char *out, size_t n) {
+  int k;
+  if (!valido(e)) return 0;
+  if (e->ev == WS_PLAYED || e->ev == WS_UNPLAYED)
+    k = snprintf(out, n, "e|%s|%s|%lld", e->videoId, nomeEv(e->ev), e->atMs);
+  else
+    k = snprintf(out, n, "e|%s|%s|%lld|%lld", e->videoId, nomeEv(e->ev), e->posMs, e->iniMs);
+  return k > 0 && (size_t)k < n;
+}
+
+int ws_corpo(const WsEvento *e, char *out, size_t n) {
+  char id[160];
+  Jsw w;
+  const char *t;
+  size_t l;
+  if (!ws_id(e, id, sizeof id)) return 0;
+  jsw_iniciar(&w);
+  jsw_obj_ini(&w);
+  jsw_cs(&w, "id", id);
+  jsw_cs(&w, "event", nomeEv(e->ev));
+  jsw_cs(&w, "scope", !strcmp(e->tipo, "series") ? "episode" : "movie");
+  jsw_ci(&w, "at", e->atMs / 1000);
+  if (e->metaId[0]) jsw_cs(&w, "metaId", e->metaId);
+  jsw_cs(&w, "videoId", e->videoId);
+  if (e->posMs >= 0) jsw_ci(&w, "positionMs", e->posMs);
+  if (e->durMs > 0) jsw_ci(&w, "durationMs", e->durMs);
+  jsw_cb(&w, "played", e->played);
+  if (!strcmp(e->tipo, "series")) { jsw_ci(&w, "season", e->season); jsw_ci(&w, "episode", e->episode); }
+  if (e->imdb[0] || e->tmdb[0]) {
+    jsw_chave(&w, "ids");
+    jsw_obj_ini(&w);
+    if (e->imdb[0]) jsw_cs(&w, "imdb", e->imdb);
+    if (e->tmdb[0]) jsw_cs(&w, "tmdb", e->tmdb);
+    jsw_obj_fim(&w);
+  }
+  jsw_obj_fim(&w);
+  t = jsw_texto_final(&w);
+  l = t ? strlen(t) : 0;
+  if (!l || l >= n) { jsw_livre(&w); return 0; }
+  memcpy(out, t, l + 1);
+  jsw_livre(&w);
+  return 1;
+}
+
+// Percent-encoding de um segmento de caminho; ':' fica (os ids de video o usam).
+static int segmento(char *o, size_t n, size_t *k, const char *s) {
+  static const char hex[] = "0123456789ABCDEF";
+  for (; *s; s++) {
+    unsigned char c = (unsigned char)*s;
+    if (isalnum(c) || strchr("-._~:", c)) {
+      if (*k + 1 >= n) return 0;
+      o[(*k)++] = (char)c;
+    } else {
+      if (*k + 3 >= n) return 0;
+      o[(*k)++] = '%'; o[(*k)++] = hex[c >> 4]; o[(*k)++] = hex[c & 15];
+    }
+  }
+  return 1;
+}
+
+int ws_url(const char *base, const WsEvento *e, char *out, size_t n) {
+  size_t k = 0, bl;
+  static const char meio[] = "/watch_state/push/";
+  if (!valido(e) || !base || !limpo(base)) return 0;
+  if (strncmp(base, "https://", 8) && strncmp(base, "http://", 7)) return 0;
+  bl = strlen(base);
+  while (bl && base[bl - 1] == '/') bl--;
+  if (bl + sizeof meio + 1 >= n) return 0;
+  memcpy(out, base, bl); k = bl;
+  memcpy(out + k, meio, sizeof meio - 1); k += sizeof meio - 1;
+  if (!segmento(out, n, &k, e->tipo) || k + 1 >= n) return 0;
+  out[k++] = '/';
+  if (!segmento(out, n, &k, e->videoId) || k + 6 > n) return 0;
+  memcpy(out + k, ".json", 6);
+  return 1;
+}
+
+// ---- Fila com retry --------------------------------------------------------
+
+long long ws_espera_s(int falhas) {
+  static const long long t[] = {30, 120, 600, 3600, 21600};
+  if (falhas < 1) falhas = 1;
+  return falhas > 5 ? 21600 : t[falhas - 1];
+}
+
+static void liberaItem(WsItem *i) {
+  free(i->base); free(i->url); free(i->id); free(i->corpo);
+  memset(i, 0, sizeof *i);
+}
+static void tiraItem(WsFila *f, int k) {
+  liberaItem(&f->it[k]);
+  memmove(&f->it[k], &f->it[k + 1], (size_t)(f->n - k - 1) * sizeof f->it[0]);
+  memset(&f->it[--f->n], 0, sizeof f->it[0]);
+}
+
+void ws_fila_limpar(WsFila *f) {
+  while (f->n) tiraItem(f, f->n - 1);
+}
+
+static int mesmo(const WsItem *i, const char *url, const char *id) {
+  return !strcmp(i->url, url) && !strcmp(i->id, id);
+}
+
+// Anexa um item ja validado (copia as strings); cheia: o mais antigo sai.
+static int anexa(WsFila *f, const char *base, const char *url, const char *id,
+                 const char *corpo, long long criadoS, long long proxS, int tent) {
+  WsItem *i;
+  if (f->n == WS_FILA_MAX) tiraItem(f, 0);
+  i = &f->it[f->n];
+  i->base = strdup(base); i->url = strdup(url); i->id = strdup(id); i->corpo = strdup(corpo);
+  if (!i->base || !i->url || !i->id || !i->corpo) { liberaItem(i); return 0; }
+  i->criadoS = criadoS; i->proxS = proxS; i->tentativas = tent;
+  f->n++;
+  return 1;
+}
+
+int ws_fila_empurrar(WsFila *f, const char *base, const char *url, const char *id,
+                     const char *corpo, long long agoraS) {
+  int k;
+  if (!base || !url || !id || !corpo || !limpo(base) || !limpo(url) || !limpo(id) ||
+      !limpo(corpo)) return 0;
+  for (k = 0; k < f->n; k++) if (mesmo(&f->it[k], url, id)) return 0;
+  return anexa(f, base, url, id, corpo, agoraS, agoraS, 0);
+}
+
+char *ws_fila_serializar(const WsFila *f) {
+  size_t cap = 1, k;
+  char *o, *p;
+  int i;
+  for (i = 0; i < f->n; i++) {
+    const WsItem *t = &f->it[i];
+    cap += strlen(t->base) + strlen(t->url) + strlen(t->id) + strlen(t->corpo) + 80;
+  }
+  o = p = malloc(cap);
+  if (!o) return NULL;
+  for (i = 0; i < f->n; i++) {
+    const WsItem *t = &f->it[i];
+    k = (size_t)snprintf(p, cap - (size_t)(p - o), "%lld\t%lld\t%d\t%s\t%s\t%s\t%s\n",
+                         t->criadoS, t->proxS, t->tentativas, t->base, t->url, t->id, t->corpo);
+    p += k;
+  }
+  *p = 0;
+  return o;
+}
+
+void ws_fila_carregar(WsFila *f, const char *texto) {
+  const char *p = texto;
+  while (p && *p) {
+    const char *fim = strchr(p, '\n');
+    size_t l = fim ? (size_t)(fim - p) : strlen(p);
+    char *ln = malloc(l + 1), *campo[7], *q;
+    int nc = 0;
+    if (!ln) return;
+    memcpy(ln, p, l); ln[l] = 0;
+    for (q = ln; nc < 7; ) {
+      campo[nc++] = q;
+      q = strchr(q, '\t');
+      if (!q) break;
+      *q++ = 0;
+    }
+    if (nc == 7 && campo[4][0] && campo[5][0] && campo[6][0]) {
+      char *e1, *e2, *e3;
+      long long c = strtoll(campo[0], &e1, 10), x = strtoll(campo[1], &e2, 10);
+      long t = strtol(campo[2], &e3, 10);
+      int ja = 0, k;
+      for (k = 0; k < f->n; k++) if (mesmo(&f->it[k], campo[4], campo[5])) ja = 1;
+      if (!*e1 && !*e2 && !*e3 && !ja && c > 0 && t >= 0 && t < 1000)
+        anexa(f, campo[3], campo[4], campo[5], campo[6], c, x, (int)t);
+    }
+    free(ln);
+    if (!fim) break;
+    p = fim + 1;
+  }
+}
+
+long long ws_fila_proxima(const WsFila *f) {
+  long long m = -1;
+  int i;
+  for (i = 0; i < f->n; i++) if (m < 0 || f->it[i].proxS < m) m = f->it[i].proxS;
+  return m;
+}
+
+// Primeiro item vencido que e a frente do seu addon; -1 se nao ha.
+static int devido(const WsFila *f, long long agora) {
+  int i, j;
+  for (i = 0; i < f->n; i++) {
+    for (j = 0; j < i; j++) if (!strcmp(f->it[j].base, f->it[i].base)) break;
+    if (j < i) continue;                      // ha um item mais velho do mesmo addon
+    if (f->it[i].proxS <= agora) return i;
+  }
+  return -1;
+}
+
+int ws_fila_passo(WsFila *f, long long agora, WsEnvio envia, void *u) {
+  int feitas = 0, i, k;
+  for (i = f->n - 1; i >= 0; i--)
+    if (agora - f->it[i].criadoS >= WS_VIDA_S) tiraItem(f, i);
+  while ((i = devido(f, agora)) >= 0) {
+    char *url = strdup(f->it[i].url), *id = strdup(f->it[i].id), *corpo = strdup(f->it[i].corpo);
+    int ra = 0, st;
+    if (!url || !id || !corpo) { free(url); free(id); free(corpo); break; }
+    st = envia(url, corpo, &ra, u);
+    feitas++;
+    // O transporte pode ter soltado a trava: o item pode ter saido (fila cheia).
+    for (k = 0; k < f->n && !mesmo(&f->it[k], url, id); k++) ;
+    if (k < f->n) {
+      WsItem *t = &f->it[k];
+      if (st == 200 || st == 204) tiraItem(f, k);
+      else if (st == 401 || st == 403) t->proxS = agora + WS_SEGURA_S;
+      else if (st == 0 || st == 429 || st >= 500) {
+        long long w = ws_espera_s(++t->tentativas);
+        if (ra > w) w = ra > WS_VIDA_S ? WS_VIDA_S : ra;
+        t->proxS = agora + w;
+      } else tiraItem(f, k);
+    }
+    free(url); free(id); free(corpo);
+  }
+  return feitas;
 }

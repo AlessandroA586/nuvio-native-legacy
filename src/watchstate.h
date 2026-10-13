@@ -1,7 +1,7 @@
 // watch_state v2 (AIOStreams): o player EMPURRA eventos de reproducao para os
 // addons instalados que declaram o resource "watch_state". Este modulo e
 // o contrato, sem rede nem SDL: le o manifesto, filtra, monta corpo e id.
-// Fila/retry ficam em watchstate_fila (mesmo .c, abaixo). Spec local:
+// A fila persistente com retry e o corpo do push ficam aqui tambem. Spec local:
 // .mercado/aiostreams-watch-state.md, plano em docs/issues/PLANO-MERCADO.md (W1-W3).
 #ifndef NV_WATCHSTATE_H
 #define NV_WATCHSTATE_H
@@ -32,5 +32,76 @@ void ws_decl_ler(const char *corpo, WsDecl *d);
 // QUALQUER dos dois ids (W9: meta IMDb com videos Kitsu).
 int ws_decl_aceita(const WsDecl *d, int ev, const char *tipo,
                    const char *metaId, const char *videoId);
+
+// ---- Evento, corpo, id, URL ------------------------------------------------
+
+#define WS_ID_MAX 96
+
+// Uma transicao de reproducao ja resolvida pelo player. Sem identidade clara
+// (tipo, videoId, e season/episode em serie) nao ha evento: ws_corpo devolve 0.
+typedef struct {
+  int       ev;                       // WS_START | WS_PAUSE | WS_STOP | WS_PLAYED | WS_UNPLAYED
+  char      tipo[12];                 // "movie" | "series"
+  char      metaId[WS_ID_MAX], videoId[WS_ID_MAX];
+  long long atMs;                     // quando aconteceu (ms Unix); "at" sai em segundos
+  long long iniMs;                    // quando a reproducao comecou (ms); so start/pause/stop
+  long long posMs;                    // posicao REAL; <0 = desconhecida (so played/unplayed)
+  long long durMs;                    // <=0 = desconhecida: a chave nao sai
+  int       played;
+  int       season, episode;          // -1 = nao se aplica (filme)
+  char      imdb[16], tmdb[16];       // ids do titulo; vazio = nao sai
+} WsEvento;
+
+// Id estavel entre tentativas: start/pause/stop terminam em posicao e inicio da
+// reproducao, played/unplayed no instante. 0 se o evento nao e valido.
+int ws_id(const WsEvento *e, char *out, size_t n);
+// Corpo JSON do push (campos na ordem da spec). 0 se invalido ou nao coube.
+int ws_corpo(const WsEvento *e, char *out, size_t n);
+// {base}/watch_state/push/{tipo}/{videoId}.json, id em percent-encoding. base
+// e o manifesto sem /manifest.json. 0 se base nao e http(s) ou nao coube.
+int ws_url(const char *base, const WsEvento *e, char *out, size_t n);
+
+// ---- Fila com retry --------------------------------------------------------
+
+#define WS_FILA_MAX   64
+#define WS_VIDA_S     86400      // evento mais velho que isso e descartado
+#define WS_SEGURA_S   21600      // 401/403: o backlog do addon espera 6 h
+
+typedef struct {
+  char *base, *url, *id, *corpo;
+  long long criadoS, proxS;      // criacao e proxima tentativa (s Unix)
+  int tentativas;                // falhas ate agora
+} WsItem;
+typedef struct { WsItem it[WS_FILA_MAX]; int n; } WsFila;
+
+// Segundos ate a tentativa seguinte depois de `falhas` falhas seguidas:
+// 30 s, 2 min, 10 min, 1 h, 6 h (e 6 h dai em diante ate o item vencer).
+long long ws_espera_s(int falhas);
+
+// Enfileira para `base`. 1 = entrou; 0 = ja havia o mesmo id para o mesmo url
+// ou os textos sao invalidos. Cheia: o item mais antigo sai.
+int  ws_fila_empurrar(WsFila *f, const char *base, const char *url, const char *id,
+                      const char *corpo, long long agoraS);
+void ws_fila_limpar(WsFila *f);
+
+// Uma linha por item, separada por TAB; nenhum campo carrega TAB ou quebra.
+// Devolve malloc (free) ou NULL. carregar aceita o que serializar escreveu e
+// ignora linha malformada.
+char *ws_fila_serializar(const WsFila *f);
+void  ws_fila_carregar(WsFila *f, const char *texto);
+
+// Transporte: devolve o status HTTP, 0 para falha de rede ou prazo. Escreve em
+// *retryAfterS o Retry-After (0 se nao veio). Roda com o que o chamador segura;
+// o transporte real solta a trava durante o pedido.
+typedef int (*WsEnvio)(const char *url, const char *corpo, int *retryAfterS, void *u);
+
+// Descarta o vencido e tenta tudo o que venceu agora. Por addon a ordem e
+// FIFO: enquanto o item da frente espera, os de tras do MESMO addon esperam.
+// 200/204 entrega; 401/403 segura o addon por WS_SEGURA_S; 429, 5xx e falha de
+// rede voltam a tentar (espera >= Retry-After); outro status descarta o item.
+// Devolve quantas requisicoes fez.
+int  ws_fila_passo(WsFila *f, long long agoraS, WsEnvio envia, void *u);
+// Quando a proxima tentativa vence (s Unix); -1 se a fila esta vazia.
+long long ws_fila_proxima(const WsFila *f);
 
 #endif
