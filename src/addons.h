@@ -11,6 +11,7 @@
 // stream_definir_lista, e a tela so precisa olhar addons_estado().
 #ifndef NV_ADDONS_H
 #define NV_ADDONS_H
+#include "watchstate.h"
 #include "addonurl.h"
 
 typedef enum { ADD_PARADO = 0, ADD_BUSCANDO, ADD_PRONTO, ADD_VAZIO } AddEstado;
@@ -237,6 +238,10 @@ int  addons_sondado(int i);
 //  -1 = nao da para saber (manifesto nao lido, ou sem idPrefixes).
 // `tipo` vazio nao filtra por tipo.
 int  addons_aceita_id(int i, const char *tipo, const char *id);
+// O addon `i` (ligado, manifesto lido) declara push watch_state v2? Copia a
+// declaracao para `out` e devolve 1; 0 = nao participa. Quem empurra e
+// watchstate.c, que cruza isto com tipo/ids/evento (ws_decl_aceita).
+int  addons_watchstate(int i, WsDecl *out);
 // Le o manifesto de cada addon num fio proprio, uma vez por lista.
 //
 // SO SERVE COMO RESERVA hoje, e a distincao importa: ela era chamada de um
