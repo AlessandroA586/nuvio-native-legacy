@@ -154,6 +154,7 @@ int main(void) {
   layEscolha = VT_LAY_AUTO; lay = VT_LAY_GRADE;
   tecla(SDLK_RETURN);
   assert(lay == VT_LAY_LINHA && layEscolha == VT_LAY_LINHA);
+  tecla(SDLK_RETURN); assert(lay == VT_LAY_FLUXO);   // a horizontal logo depois
   tecla(SDLK_RETURN); tecla(SDLK_RETURN);
   assert(lay == VT_LAY_SAGA);
   assert(escolhaGravada(&pasta) == VT_LAY_SAGA);
@@ -270,6 +271,30 @@ int main(void) {
   foco = 9; vertudo_atualizar(1.0f / 60.0f, 4016);
   assert(tlProg == celY[9] + VT_TL_PONTO && tlFoco[9] == 1.0f && tlFoco[7] == 0.0f);
   anim_politica_reduzida = 0;
+
+  // 12. LINHA DO TEMPO HORIZONTAL (Cover Flow, 13/10): no fim do enum (o
+  // numero gravado das outras nao muda), em ordem de ano numa linha so; o foco
+  // no centro, reto e inteiro; os vizinhos estreitos, escuros, sem cobrir ele.
+  assert(VT_LAY_FLUXO == 8 && VT_LAY_VITRINE == 7 && VT_LAY_MURAL == 6);
+  gravarEscolha(&pasta, VT_LAY_FLUXO); assert(escolhaGravada(&pasta) == VT_LAY_FLUXO);
+  lay = layEscolha = VT_LAY_FLUXO; timeline = 0; tabFocus = 0; celLay = -1; orderN = -1;
+  montar(nSemente); foco = 0;
+  assert(ordenaPorAno() && !painelComCartaz());
+  for (i = 0; i < nSemente; i++) assert(celLin[i] == 0 && celCol[i] == i);
+  tecla(SDLK_RIGHT); tecla(SDLK_RIGHT); assert(foco == 2);
+  tecla(SDLK_LEFT); assert(foco == 1);
+  tecla(SDLK_UP); assert(tabFocus == 1); tabFocus = 0;
+  foco = 5;
+  for (i = 0; i < 120; i++) vertudo_atualizar(1.0f / 60.0f, 6000 + i * 16);
+  assert(fabsf(fluxoPos - 5.0f) < 0.01f);
+  { float s0, s1; GfxRect c = fluxoRect(5, vtInicio(), &s0), v = fluxoRect(6, vtInicio(), &s1);
+    GfxRect e = fluxoRect(4, vtInicio(), NULL);
+    assert(fabsf(c.w - VT_FLX_W) < 0.5f && s0 < 0.01f);
+    assert(fabsf(c.x + c.w * 0.5f - fluxoCentro(vtInicio())) < 0.5f);
+    assert(v.w < c.w * 0.6f && v.h < c.h && s1 > 0.3f);
+    assert(v.x >= c.x + c.w && e.x + e.w <= c.x); }
+  foco = 6; vertudo_atualizar(1.0f / 60.0f, 9000);
+  assert(fluxoPos > 5.0f && fluxoPos < 6.0f);   // desliza, nao salta
 
   printf("colecao_exibicao: ok\n");
   return 0;
