@@ -2,9 +2,23 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <time.h>
+#include <pthread.h>
 static unsigned relogio = 1000;
+static int rajada;
+static _Thread_local int rodada;
+static pthread_mutex_t rajadaTrava = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t rajadaCond = PTHREAD_COND_INITIALIZER;
+static int chegaram;
+static void esperarRajada(void) {
+  pthread_mutex_lock(&rajadaTrava);
+  chegaram++;
+  pthread_cond_broadcast(&rajadaCond);
+  while (chegaram < rodada * 3) pthread_cond_wait(&rajadaCond, &rajadaTrava);
+  pthread_mutex_unlock(&rajadaTrava);
+}
 static int clockFalso(clockid_t id, struct timespec *t) {
-  (void)id; t->tv_sec = relogio / 1000; t->tv_nsec = (relogio % 1000) * 1000000;
+  unsigned ms = rajada ? 1000u + (unsigned)rodada * 5000u : relogio;
+  (void)id; t->tv_sec = ms / 1000; t->tv_nsec = (ms % 1000) * 1000000;
   return 0;
 }
 #define clock_gettime clockFalso
@@ -14,6 +28,7 @@ static int clockFalso(clockid_t id, struct timespec *t) {
 typedef struct {
   size_t (*write)(void *, size_t, size_t, void *);
   void *data;
+  long prazo, conexao;
 } Fake;
 static int chamadas, notas, erro, http, recuperar;
 static void *init(void) { return calloc(1, sizeof(Fake)); }
@@ -23,10 +38,20 @@ static int option(void *c, int o, ...) {
   va_start(ap, o);
   if (o == OPT_WRITEFUNCTION) ((Fake *)c)->write = va_arg(ap, size_t (*)(void *, size_t, size_t, void *));
   if (o == OPT_WRITEDATA) ((Fake *)c)->data = va_arg(ap, void *);
+  if (o == OPT_TIMEOUT_MS) ((Fake *)c)->prazo = va_arg(ap, long);
+  if (o == OPT_CONNECTTIMEOUT_MS) ((Fake *)c)->conexao = va_arg(ap, long);
   va_end(ap); return 0;
 }
 static int perform(void *c) {
   Fake *f = c;
+  if (rajada) {
+    assert(f->prazo == (rodada ? 25000 : 30000));
+    assert(f->conexao == 10000);
+    rodada++;
+    __atomic_add_fetch(&chamadas, 1, __ATOMIC_RELAXED);
+    esperarRajada();
+    return 28;
+  }
   chamadas++;
   if (recuperar && chamadas == 2) {
     // Duas falhas finais anteriores, mas este pedido ainda pode recuperar.
@@ -46,9 +71,9 @@ static int info(void *c, int o, ...) {
   if (o == INFO_NUM_CONNECTS) *va_arg(ap, long *) = 0;
   va_end(ap); return 0;
 }
-static void nota(int codigo, const char *url) {
-  notas++;
-  rede_saude_nota(codigo, url);
+static void nota(int codigo, const char *url, unsigned primeiraMs) {
+  __atomic_add_fetch(&notas, 1, __ATOMIC_RELAXED);
+  rede_saude_nota_desde(codigo, url, primeiraMs);
 }
 static void reset(void) {
   memset(&global, 0, sizeof global);
@@ -59,6 +84,58 @@ static void falhasAnteriores(void) {
   rede_saude_nota(6, "https://a.example/meta");
   relogio += 2000;
   rede_saude_nota(6, "https://b.example/meta");
+}
+static void *getRajada(void *url) {
+  int st;
+  assert(!rede_baixar_st(url, 30, NULL, &st) && st == 0);
+  return NULL;
+}
+static void testarRajada(void) {
+  pthread_t fios[3];
+  const char *urls[] = { "https://a.example/meta", "https://b.example/meta", "https://c.example/meta" };
+  reset(); rajada = 1;
+  chegaram = 0;
+  for (int i = 0; i < 3; i++) assert(!pthread_create(&fios[i], NULL, getRajada, (void *)urls[i]));
+  for (int i = 0; i < 3; i++) assert(!pthread_join(fios[i], NULL));
+  rajada = 0; relogio = 11000;
+  assert(chamadas == 6 && notas == 3);
+  assert(global.falhas == 3 && global.nHosts == 3);
+  assert(global.primeira == 6000 && global.offline);
+  assert(rede_saude_offline() && rede_saude_seq() == 1);
+  puts("PASS: 3 GETs paralelos, curl28 em 5 s + retry de 5 s, offline aos 10 s.");
+}
+static void testarTick(void) {
+  reset();
+  rede_saude_nota(28, "https://a.example/meta");
+  rede_saude_nota(28, "https://b.example/meta");
+  rede_saude_nota(28, "https://c.example/meta");
+  relogio = 3999;
+  assert(!rede_saude_offline() && rede_saude_seq() == 0);
+  relogio = 4000;
+  assert(rede_saude_seq() == 1 && rede_saude_offline());
+  assert(global.falhas == 3 && global.nHosts == 3);
+  // Carencia tambem vence pelo tick, sem contar mais pedidos.
+  rede_saude_nota(0, "https://a.example/meta");
+  relogio = 5000;
+  rede_saude_nota(28, "https://a.example/meta");
+  rede_saude_nota(28, "https://b.example/meta");
+  rede_saude_nota(28, "https://c.example/meta");
+  relogio = 13999;
+  assert(rede_saude_seq() == 2 && !rede_saude_offline());
+  relogio = 14000;
+  assert(rede_saude_seq() == 3 && rede_saude_offline());
+
+  // Sucesso concorrente impede retroceder a janela para antes dele.
+  reset(); relogio = 9000;
+  rede_saude_nota(0, "https://ok.example/meta");
+  relogio = 11000;
+  rede_saude_nota_desde(28, "https://a.example/meta", 6000);
+  rede_saude_nota_desde(28, "https://b.example/meta", 6000);
+  rede_saude_nota_desde(28, "https://c.example/meta", 6000);
+  assert(!rede_saude_offline() && global.primeira == 9000);
+  relogio = 12000;
+  assert(rede_saude_seq() == 1 && rede_saude_offline());
+  puts("PASS: tick reavalia janela/carencia sem novas notas e respeita sucesso concorrente.");
 }
 int main(int argc, char **argv) {
   char *r;
@@ -94,5 +171,7 @@ int main(int argc, char **argv) {
   assert(!r);
   assert(!rede_saude_offline() && rede_saude_seq() == 2);
   puts("PASS: retry recuperado, falhas finais distintas e volta por HTTP.");
+  testarRajada();
+  testarTick();
   return 0;
 }
