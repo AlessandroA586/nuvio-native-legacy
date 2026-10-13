@@ -726,10 +726,10 @@ static void recentesEntrar(void) {
 }
 
 // Cima/baixo: a pilula da linha vizinha cujo CENTRO em x esta mais perto.
-static void recentesVertical(int dy) {
+static int recentesVertical(int dy) {
   int alvoLin, i, melhorI = -1;
   float cx, melhor = 1e9f;
-  if (focoRec >= nRecLayout) return;
+  if (focoRec >= nRecLayout) return 0;
   alvoLin = recLin[focoRec] + dy;
   cx = recRect[focoRec].x + recRect[focoRec].w * 0.5f;
   for (i = 0; i < nRecLayout; i++) {
@@ -739,7 +739,7 @@ static void recentesVertical(int dy) {
     if (d < 0) d = -d;
     if (d < melhor) { melhor = d; melhorI = i; }
   }
-  if (melhorI >= 0) focoRec = melhorI;
+  if (melhorI >= 0) { focoRec = melhorI; return 1; }
   // Abaixo da ultima linha de pilulas: a fileira de Populares, na coluna mais
   // proxima. Acima da primeira, nada (o teclado fica a esquerda).
   else if (dy > 0 && sugestao && nFil > 0) {
@@ -748,9 +748,11 @@ static void recentesVertical(int dy) {
     if (c < 0) c = 0;
     if (c >= fil[0].n) c = fil[0].n - 1;
     painel = 1; focoRes.fileira = 0; focoRes.coluna = c;
+    return 1;
   } else if (dy < 0 && buTecladoNativo()) {
-    painel = 0; campoFoco = 1;
+    painel = 0; campoFoco = 1; return 1;
   }
+  return 0;
 }
 
 // OK curto: refaz a busca com o termo (e ele sobe para o topo), ou, no
@@ -1060,7 +1062,9 @@ void busca_evento(const SDL_Event *e) {
           if (focoRec + 1 < nRecLayout && recLin[focoRec + 1] == recLin[focoRec])
             focoRec++;
           break;
-        case SDLK_UP:   recentesVertical(-1); break;
+        case SDLK_UP:
+          if (!recentesVertical(-1) && ajustes_menu_topo()) sair = 1;
+          break;
         case SDLK_DOWN: recentesVertical(1);  break;
         default: break;
       }
@@ -1087,6 +1091,9 @@ void busca_evento(const SDL_Event *e) {
         else if (campoFoco >= 2 && st_ime_disponivel()) campoFoco = 1;
         else if (campoFoco >= 2) campoFoco = 0;
         else { registrarConsulta(); sair = 1; }
+        return;
+      case SDLK_UP:
+        if (ajustes_menu_topo()) sair = 1;
         return;
       case SDLK_RETURN: case SDLK_KP_ENTER: if (!e->key.repeat) campoOk(); return;
       default: break;
@@ -1126,10 +1133,11 @@ void busca_evento(const SDL_Event *e) {
       // CIMA da primeira fileira: o campo, onde ha teclado do sistema.
       case SDLK_UP:
         // Sem teclado do sistema (LG, Samsung) o campo nao e alvo: cima vai
-        // direto ao botao do celular.
+        // direto ao botao do celular. Sem campo, a primeira fileira abre a barra do topo.
         if (!focus_mover_grade(&focoKb, 0, -1)) {
           if (st_ime_disponivel()) campoFoco = 1;
           else if (celb_disponivel()) campoFoco = 3;
+          else if (ajustes_menu_topo()) sair = 1;
         }
         break;
       case SDLK_DOWN:   focus_mover_grade(&focoKb, 0,  1); break;
@@ -1158,6 +1166,7 @@ void busca_evento(const SDL_Event *e) {
       break;
     case SDLK_UP: {
       int moveu = focus_mover(&focoRes, 0, -1);
+      if (!moveu && ajustes_menu_topo()) { sair = 1; break; }
       if (!moveu && sugestao && focoRes.fileira == 0 && recentesVisiveis()) {
         // Do primeiro Populares de volta as pilulas: a mais proxima em x.
         float cx = BU_RES_X + focoRes.coluna * buPasso() - scrollX[0] + buCartazW() * 0.5f;

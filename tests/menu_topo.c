@@ -4,6 +4,8 @@
 #include "ajustes.h"
 #include "layout.h"
 #include "menu.h"
+#include "biblioteca.h"
+#include "ajustes.h"
 #include <SDL2/SDL.h>
 #include <assert.h>
 #include <stdio.h>
@@ -74,6 +76,26 @@ int main(void) {
   abrir(MENU_INICIO);
   tecla(SDLK_DOWN); tecla(SDLK_RIGHT);
   assert(menu_escolheu() && menu_destino() == MENU_EXPLORAR);
+
+  // #461: com a barra no topo, CIMA no primeiro item da tela abre a barra.
+  gravar("homeLayoutLocal 0\nmodernSidebar 0\nmenuTopoLocal 1\n");
+  menu_fechar(); assentar();
+  assert(ajustes_menu_topo());
+  biblioteca_iniciar();
+  { SDL_Event e; SDL_memset(&e, 0, sizeof e); e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_UP;
+    biblioteca_evento(&e);
+    assert(biblioteca_quer_sair()); }
+  menu_fechar(); assentar();
+  ajustes_iniciar();
+  { SDL_Event e; int i; SDL_memset(&e, 0, sizeof e); e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_UP;
+    for (i = 0; i < 8 && !ajustes_quer_sair(); i++) ajustes_evento(&e);
+    assert(ajustes_quer_sair()); }
+  // Sem a barra no topo, CIMA na Biblioteca nao pede saida.
+  gravar("homeLayoutLocal 0\nmodernSidebar 0\nmenuTopoLocal 0\n");
+  biblioteca_iniciar();
+  { SDL_Event e; SDL_memset(&e, 0, sizeof e); e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_UP;
+    biblioteca_evento(&e);
+    assert(!biblioteca_quer_sair()); }
 
   unlink(caminho);
   { char t[700]; snprintf(t, sizeof t, "%s/ajustes.tmp", dir); unlink(t);
