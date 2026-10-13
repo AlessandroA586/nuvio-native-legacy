@@ -7749,6 +7749,7 @@ static const struct { float w, h; } AJ_FIL_FORMA[FIL_TIPO_N] = {
   { 212.0f, 322.0f + NV_TEMPO_FAIXA_H }, // LINHA DO TEMPO — cartaz + a faixa dos anos
   { NV_FICHA_W, 322.0f },                // CARTAZ COM FICHA
   { 212.0f * NV_PALCO_ESC, 322.0f * NV_PALCO_ESC }, // PALCO — o cartaz do centro
+  { NV_REDONDA_D, NV_REDONDA_D },        // REDONDA — o disco da pessoa
 };
 
 // Uma frase por forma. Diz o que a forma E e para que serve, nao como se chama.
@@ -7770,6 +7771,7 @@ static const char *aj_fil_forma_ajuda(int t) {
     case FIL_TIPO_LINHA_TEMPO: return i18n("Cartazes em ordem de lançamento sobre uma linha com os anos, que se desenha conforme você anda.");
     case FIL_TIPO_FICHA:    return i18n("Cartaz com a ficha ao lado: ano, gênero, nota e o começo da sinopse.");
     case FIL_TIPO_PALCO:    return i18n("O título em foco fica grande no centro e os vizinhos diminuem dos dois lados.");
+    case FIL_TIPO_REDONDA:  return i18n("Foto circular com o nome embaixo, para fileiras de pessoas.");
     default:                return i18n("O app escolhe pela fileira: retomada e coleções já têm forma própria.");
   }
 }

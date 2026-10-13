@@ -902,7 +902,9 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   // Era smoothstep(0.500,0.486): 1,4% da altura, 0,4 px num disco de 27.
   "  float m=clamp((0.5-d)*uAlt,0.0,1.0);\n"
   "  if(m<=0.001) discard;\n"
-  "  vec3 c=texture2D(uTex,clamp(cover(vUv),0.0,1.0)).rgb;\n"
+  // uPar.y sobe a janela do cover (fracao da textura): rosto no alto do retrato.
+  "  vec2 uvc=cover(vUv); uvc.y-=uPar.y;\n"
+  "  vec3 c=texture2D(uTex,clamp(uvc,0.0,1.0)).rgb;\n"
   "  gl_FragColor=vec4(c,m*uCor.a);\n"
   "}\n",
 
