@@ -288,6 +288,7 @@ int   ajustes_rail_recolhida(void);     // collapseSidebar
 // #461: 1 = o menu e uma barra no topo (menu.c), sem rail na esquerda. 0 no
 // layout Dinamica e no telefone em retrato.
 int   ajustes_menu_topo(void);
+int   ajustes_abas_estilo(void);   // #205: 0 Chips, 1 Menu suspenso, 2 Barra central, 3 Paginas
 int   ajustes_rail_moderna(void);       // modernSidebar
 int   ajustes_rail_moderna_blur(void);  // modernSidebarBlur
 int   ajustes_hero_ligado(void);        // heroSectionEnabled

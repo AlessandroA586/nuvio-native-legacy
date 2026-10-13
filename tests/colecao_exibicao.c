@@ -296,6 +296,61 @@ int main(void) {
   foco = 6; vertudo_atualizar(1.0f / 60.0f, 9000);
   assert(fluxoPos > 5.0f && fluxoPos < 6.0f);   // desliza, nao salta
 
+  // 11. ESTILO DAS ABAS (#205): Menu suspenso, Barra central e Paginas mexem so
+  // no que o D-pad faz no cabecalho; o modelo (source, tabCursor) e o mesmo.
+  { static ColSource f3[3];
+    static const char *TIPOS[3] = { "movie", "movie", "series" };
+    char cam[700]; FILE *f; int e;
+    for (i = 0; i < 3; i++) {
+      snprintf(f3[i].type, sizeof f3[i].type, "%s", TIPOS[i]);
+      snprintf(f3[i].title, sizeof f3[i].title, "Fonte %d", i);
+    }
+    pasta.sources = f3; pasta.nSources = 3;
+    lay = layEscolha = VT_LAY_GRADE; celLay = -1; orderN = -1; montar(nSemente);
+    for (e = 0; e < 4; e++) {
+      snprintf(cam, sizeof cam, "%s/ajustes.txt", dados_dir());
+      f = fopen(cam, "w"); assert(f);
+      fprintf(f, "abasEstiloLocal %d\n", e); fclose(f);
+      ajustes_dir(dados_dir());
+      assert(ajustes_abas_estilo() == e);
+      ddAberto = 0; pgSlide = 0.0f; source = 0; tabFocus = 1; tabCursor = 0;
+      if (e == VT_AB_CHIPS || e == VT_AB_BARRA) {
+        assert(cabN() == 3);
+        tecla(SDLK_RIGHT); assert(tabCursor == 1 && source == 0);
+        tecla(SDLK_RETURN); assert(source == 1 && tabFocus == 0);
+      }
+      if (e == VT_AB_MENU) {
+        assert(cabN() == 3 && cursorInicial() == 2);   // Filmes, Séries, catalogo
+        tabCursor = 2; tecla(SDLK_RETURN);
+        assert(ddAberto == 1 && ddCursor == 0 && source == 0);
+        tecla(SDLK_DOWN); assert(ddCursor == 1);
+        tecla(SDLK_RETURN); assert(ddAberto == 0 && source == 1 && tabFocus == 0);
+        tabFocus = 1; tabCursor = 2; tecla(SDLK_RETURN); tecla(SDLK_ESCAPE);
+        assert(ddAberto == 0 && aberta == 1 && source == 1);   // Voltar fecha so a lista
+        tabCursor = 1; tecla(SDLK_RETURN);
+        assert(source == 2 && tabCursor == 2 && ddAberto == 0);   // tipo com um catalogo so
+        tabFocus = 1; tabCursor = 0; tecla(SDLK_RETURN);          // Filmes: volta a um filme
+        assert(source < 2 && tabCursor == 2 && ddAberto == 1);
+        ddAberto = 0;
+      }
+      if (e == VT_AB_PAGINAS) {
+        tecla(SDLK_RIGHT); assert(source == 1 && pgSlide > 0.5f);
+        tecla(SDLK_LEFT);  assert(source == 0 && pgSlide < -0.5f);
+        for (i = 0; i < 90; i++) vertudo_atualizar(1.0f / 60.0f, 20000 + i * 16);
+        assert(fabsf(pgSlide) < 0.01f);
+        tecla(SDLK_RIGHT); tecla(SDLK_RIGHT); tecla(SDLK_RIGHT);
+        assert(source == 2 && tabCursor == 3);   // a ultima pagina; depois o botao
+      }
+    }
+    pasta.sources = fontes; pasta.nSources = 1;
+    snprintf(cam, sizeof cam, "%s/ajustes.txt", dados_dir());
+    f = fopen(cam, "w"); assert(f);
+    fprintf(f, "abasEstiloLocal 0\n"); fclose(f); ajustes_dir(dados_dir());
+    assert(ajustes_abas_estilo() == 0);
+    // Sem varias fontes nao ha abas, seja qual for o estilo.
+    assert(estiloAbas() == VT_AB_CHIPS && cabN() == 0);
+  }
+
   printf("colecao_exibicao: ok\n");
   return 0;
 }

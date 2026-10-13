@@ -148,7 +148,7 @@ int main(void) {
   assert(!ajustes_proximo_auto() && ajustes_proximo_contagem() == 5);
   assert(AJ_INTERFACE_MODO == AJ_PROXIMO_CONTAGEM + 1);
   assert(AJ_MIC_BUSCA == AJ_INTERFACE_MODO + 1);
-  assert(AJ_MENU_TOPO == AJ_MIC_BUSCA + 1 && AJ_N == AJ_MENU_TOPO + 1);
+  assert(AJ_MENU_TOPO == AJ_MIC_BUSCA + 1 && AJ_ABAS_ESTILO == AJ_MENU_TOPO + 1 && AJ_N == AJ_ABAS_ESTILO + 1);
   for (int i = 0; i < AJ_N; i++) assert(strcmp(CHAVE[i], "autoCreditosLocal"));
   // 13/10: o layout "Apple TV" se chama Dinamica; o valor gravado nao muda.
   assert(HOME_LAYOUT_DINAMICA == 2 && OPCOES[AJ_HOME_LAYOUT].n == 3);

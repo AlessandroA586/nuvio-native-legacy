@@ -30,6 +30,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_RAIL_MODERNA: return "aj_panel-left";
     case AJ_RAIL: return "aj_panel-left";
     case AJ_MENU_TOPO: return "aj_panel-top";
+    case AJ_ABAS_ESTILO: return "aj_panel-top";
     case AJ_MENU_EXPLORAR: return "aj_panel-left";
     case AJ_MENU_GUIA: return "aj_panel-left";
     case AJ_MENU_AGENDA: return "aj_panel-left";
