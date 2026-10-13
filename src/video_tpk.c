@@ -1177,6 +1177,9 @@ static void folgaVigiar(void) {
   }
   if (!pronto || (cv.prog && !cv.deslocOk)) return;
   e = dts_tpk_entregue_ate(); p = posReal();
+  // HLS: o player pede o seg0 antes do segmento do alvo, e o "enviado" fica
+  // atras da posicao por um instante. Atras = nada a frente ainda.
+  if (e >= 0 && e < p) e = p;
   if (!cv.folga) {
     if (!tocando) return;
     if (e < 0 || e - p >= FOLGA_S) { cv.folgaFeita = 1; return; }
