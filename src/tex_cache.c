@@ -1642,6 +1642,10 @@ static char *baixarImagem(const char *url, long *n, TexFetchTrace *trace) {
       // morto AGORA. 30 s, e nao mais: o recuo do item (2/10/60 s) ainda
       // ganha a tentativa de 60 s se a rede voltar.
       else if (!corpo && md.status == 0 && md.ms >= 6000) negPor(url, NV_NEG_FALHA_S, 0);
+      // "SUCESSO" SEM CORPO (2xx com 0 B): o servidor respondeu, mas o que
+      // veio nao e arte — corpo abortado/conexao cortada que a transferencia
+      // conta como ok. Sem recuo, a mesma URL voltava a cada item para sempre.
+      else if (!corpo && md.status >= 200 && md.status < 300) negPor(url, NV_NEG_FALHA_S, 0);
 #else
       corpo = rede_baixar_bin(url, 8, n);
 #endif
@@ -1665,6 +1669,10 @@ static char *baixarImagem(const char *url, long *n, TexFetchTrace *trace) {
     if (corpo) printf("[tex] corpo curto (%ld B): %s\n", *n, urlLog(url, urlLogBuf, sizeof urlLogBuf));
     else       printf("[tex] download falhou (sem corpo): %s\n", urlLog(url, urlLogBuf, sizeof urlLogBuf));
     fflush(stdout);
+    // #205: corpo curto demais para ser imagem (0 B incluso) e resposta que
+    // "deu certo": falha COM RECUO. Sem isto a URL refetchava a cada item
+    // para sempre — no caminho Android o corpo chegava inteiro e media 0 B.
+    if (corpo) negPor(url, NV_NEG_FALHA_S, 0);
     free(corpo);
     return NULL;
   }

@@ -1726,6 +1726,12 @@ static char *viaAndroid(const char *verbo, const char *url, int segundos,
   if (status) *status = st;
   else if (st < 200 || st > 299) { free(r); return NULL; }  // como rede_baixar sem status
   if (tam) *tam = bytes;
+  // #205: a contagem tambem vai no estado do fio. Quem baixa ARTE le
+  // redeBytesLocal (rede_baixar_bin_medido_controle), nao o `tam`, e este e o
+  // unico caminho de download que nao passa pelo recebedor da libcurl — sem
+  // isto, todo corpo entregue aqui chegava ao tex_cache como "corpo curto
+  // (0 B)" e a fileira inteira ficava sem arte, refetch a cada item (TCL).
+  redeBytesLocal = bytes;
   return r;
 }
 // 1 = este pedido simples vai direto pelo Android (sem tocar na libcurl).
