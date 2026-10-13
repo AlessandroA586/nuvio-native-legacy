@@ -582,7 +582,10 @@ int main(void) {
   assert(somenteDesteAparelho(AJ_ESPACO_FILEIRAS) && somenteDesteAparelho(AJ_ESPACO_TITULOS));
   assert(ajustes_espaco_fileiras() == 1.0f && ajustes_espaco_titulos() == 1.0f);
   assert(ajustes_espaco_fator(0) == 0.5f && ajustes_espaco_fator(50) == 0.5f && ajustes_espaco_fator(100) == 1.0f);
-  assert(ajustes_espaco_fator(150) == 1.5f && ajustes_espaco_fator(900) == 1.5f && ajustes_espaco_fator(-5) == 0.5f);
+  assert(ajustes_espaco_fator(150) == 1.5f && ajustes_espaco_fator(300) == 3.0f && ajustes_espaco_fator(900) == 3.0f && ajustes_espaco_fator(-5) == 0.5f);
+  // 13/10: faixa larga, passos que se veem (25 %); o padrao continua 100.
+  assert(OPCOES[AJ_ESPACO_FILEIRAS].min == 50 && OPCOES[AJ_ESPACO_FILEIRAS].max == 300 && OPCOES[AJ_ESPACO_FILEIRAS].passo == 25);
+  assert(OPCOES[AJ_ESPACO_TITULOS].min == 50 && OPCOES[AJ_ESPACO_TITULOS].max == 300 && OPCOES[AJ_ESPACO_TITULOS].passo == 25);
   // Apoiar o projeto (apoio.h): acao no fim, sem valor, uma vez na tela.
   assert(AJ_APOIAR == AJ_FONTE_ESCOPO - 3 && AJ_APOIAR == AJ_TAM_MIN + 1 && !strcmp(CHAVE[AJ_APOIAR], "-apoiar") && valorPadrao[AJ_APOIAR] == 0);
   assert(AJ_PLR_CLASSIF == AJ_LEG_FORCADA + 1 && AJ_PLR_CLASSIF == AJ_FONTE_ESCOPO - 1 && !strcmp(CHAVE[AJ_PLR_CLASSIF], "classifPlayerLocal") && valorPadrao[AJ_PLR_CLASSIF] == 0);
