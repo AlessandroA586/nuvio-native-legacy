@@ -82,6 +82,7 @@
 #include "seguro.h"
 #include "video.h"
 #include "addons.h"
+#include "watchstate_envio.h"
 #include "ajustes.h"
 #include "perfiltv.h"
 #include "corviva.h"
@@ -1534,6 +1535,7 @@ int main(int argc, char **argv) {
   // lista de exemplo — nunca fica sem nada para mostrar. addons.c olha a pasta
   // gravavel primeiro: a lista da CONTA e guardada la e sobrevive a recarga.
   addons_carregar(dirArte);
+  wsenvio_iniciar();   // retoma o diario mesmo sem nova reproducao
   // Plugins Nuvio (F09, desligados por padrao): estado da conta+perfil e a
   // ligacao como mais uma origem da busca de fontes.
   plugins_iniciar();
