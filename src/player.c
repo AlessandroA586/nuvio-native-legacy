@@ -323,10 +323,6 @@ static AoVivoEpg shotEpg;
 #endif
 static int   pedFaixas = 0;
 static int   esperandoFonte = 0;   // aberto sem URL, esperando o addon responder
-// Pre-busca da legenda ASS segurando o video (ver player_definir_fonte): a url
-// que vai ao pipeline quando ela acabar. "" = nenhuma.
-static char   prebuscaUrl[4096];
-static Uint32 prebuscaDesde;
 static float posSeg = 0.0f;
 // Relogio da LEGENDA (#92): posSeg e o ultimo currentTime do pipeline, que na
 // C9 chega a cada ~200 ms. A legenda desenhada com ele andava aos degraus e em
@@ -727,7 +723,6 @@ void player_definir_tentativa(int n, int max) { tentativaN = n; tentativaM = max
 void player_erro_fonte(void) {
   esperandoFonte = 0; erroFonte = 1; visivel = 0; tocando = 0; soBarra = 0;
   erroBotao = 0;
-  prebuscaUrl[0] = 0;                // erro no meio da pre-busca: o video nao sai
   erroTitulo[0] = erroDica[0] = 0;   // erro sem motivo nao herda o do anterior
 }
 void player_erro_fonte_motivo(const char *titulo, const char *dica) {
@@ -1468,7 +1463,6 @@ void player_abrir(int indiceCatalogo, const char *url) {
   // guarda o ultimo modo escolhido na mao, que continua valendo para "Ultimo usado".
   { int pad = ajustes_proporcao_padrao(); if (pad >= 0 && pad < PLR_ASP_N) aspecto = pad; }
   toastAte = 0; toastTexto[0] = 0; avisouAudio = 0;
-  prebuscaUrl[0] = 0;
   // Reconexao so no filme/episodio: canal ao vivo tem o watchdog de app.c.
   video_definir_reconexao(!ehCanal());
   video_definir_modo_live(ehCanal() ? ajustes_livetv_modo() : 0);
@@ -1516,21 +1510,9 @@ void player_abrir(int indiceCatalogo, const char *url) {
 int player_aberto(void)    { return aberto; }
 int player_quer_sair(void) { return pediuSair; }
 
-// --- PRE-BUSCA DA LEGENDA ASS ANTES DO VIDEO (#92, v1.4.7) -------------------
-//
-// No registro do relato (webOS 25, Torrentio -> Real-Debrid) todo Range do
-// mkvass feito com o video tocando era cortado (77465 e 11929 bytes, sempre)
-// e o resto era recusado, enquanto o video — o mesmo arquivo — tocava. Nao se
-// sabe se e o CDN limitando conexoes ao arquivo com o pipeline segurando uma
-// (hipotese, nao provada), a rede da pessoa ou o webOS 25. O que se pode fazer
-// sem saber: ler o que a legenda precisa ANTES de a URL ir ao pipeline. A tela
-// fica em "abrindo fonte" (esperandoFonte) ate a pre-busca acabar ou vencer
-// MKVASS_PREBUSCA_MS; dai o video comeca com o que chegou e o fio segue.
-//
-// SO PARA MKV COM LEGENDA A COLHER: sessao de VOD em tela cheia, preferencia
-// de legenda ligada e a fonte DIZENDO que e .mkv (url, arquivo ou descricao).
-// MP4, HLS, canal, PiP e quem nao quer legenda nao esperam nada. Um MKV cuja
-// legenda no idioma nao e ASS custa um Range (o cabecalho) antes do video.
+// --- PRE-BUSCA LATERAL DA LEGENDA ------------------------------------------
+// O pipeline abre imediatamente; mkvass colhe pelo playhead em fio proprio.
+// Recusas do CDN seguem o recuo/fallback sem segurar o video.
 #ifndef __EMSCRIPTEN__
 static int temMkv(const char *t) {
   const char *p;
@@ -1684,18 +1666,12 @@ void player_definir_fonte(const char *url) {
   esperandoFonte = 0;
   erroFonte = 0;
   dvTelaFonte(url);
-#ifndef __EMSCRIPTEN__
-  prebuscaUrl[0] = 0;
-  if (prebuscaCabe(url) && mkvass_prebuscar(url, escolherLegendaPrebusca, retomarPct / 100.0)) {
-    // O video espera (player_atualizar solta): a tela segue em "abrindo fonte".
-    if (comVideo) { video_parar(); comVideo = 0; mkvass_video_aberto(0); }
-    snprintf(prebuscaUrl, sizeof prebuscaUrl, "%s", url);
-    prebuscaDesde = SDL_GetTicks();
-    esperandoFonte = 1;
-    return;
-  }
-#endif
+  mkvass_parar();
   tocarFonte(url);
+#ifndef __EMSCRIPTEN__
+  if (comVideo && prebuscaCabe(url))
+    mkvass_prebuscar(url, escolherLegendaPrebusca, retomarPct / 100.0);
+#endif
 }
 
 void player_voltar_a_esperar(void) {
@@ -1706,9 +1682,6 @@ void player_voltar_a_esperar(void) {
   if (comVideo) { video_parar(); comVideo = 0; }
   mkvass_parar();
   mkvass_video_aberto(0);
-#ifndef __EMSCRIPTEN__
-  prebuscaUrl[0] = 0;
-#endif
   esperandoFonte = 1; erroFonte = 0; tocando = 1; pausaPessoa = 0;
   erroTitulo[0] = erroDica[0] = 0;
   retomadaAplicada = 0; inicioImagem = 0;
@@ -2092,7 +2065,6 @@ static void fecharSessao(int manter) {
     // do anterior. mkvass_parar grava o sidecar parcial com o que ja veio.
     mkvass_parar();
     mkvass_video_aberto(0);
-    prebuscaUrl[0] = 0;
     if (!manter) legenda_desligar();
     printf("[player] saida: video %s %u ms, resto %u ms\n", manter ? "retido" : "parar",
            (unsigned)(tv - t0), (unsigned)(SDL_GetTicks() - tv));
@@ -3380,32 +3352,7 @@ void player_atualizar(float dt, Uint32 agora) {
     }
     reconVisto = t; }
   janelaPasso(agora);
-  if (!aberto) {
-    prebuscaUrl[0] = 0;
-    return;
-  }
-
-  // PRE-BUSCA: solta o video quando ela acabou (pronta, desistiu, nada a
-  // colher) ou quando o teto venceu — o que nao chegou vem em segundo plano.
-  // (Na Samsung prebuscaUrl nunca e preenchida: o bloco nao roda.)
-  if (prebuscaUrl[0]) {
-    int fase = mkvass_prebusca_fase();
-    Uint32 esperou = agora - prebuscaDesde;
-    if (fase != 1 || esperou >= (Uint32)MKVASS_PREBUSCA_MS) {
-      char u[sizeof prebuscaUrl];
-      long ped = 0, bytes = 0; int col = 0, tot = 0;
-      mkvass_estatisticas(&ped, &bytes, &col, &tot);
-      printf("[player] pre-busca da legenda: video solto apos %u ms (%s; %d/%d blocos, %ld Ranges, %ld KB)\n",
-             (Sint32)esperou < 0 ? 0u : (unsigned)esperou,
-             fase == 1 ? "teto vencido, o resto segue em segundo plano"
-             : "a pre-busca acabou", col, tot, ped, bytes / 1024);
-      fflush(stdout);
-      snprintf(u, sizeof u, "%s", prebuscaUrl);
-      prebuscaUrl[0] = 0;
-      esperandoFonte = 0;
-      tocarFonte(u);
-    }
-  }
+  if (!aberto) return;
 
   entrada = anim_mola(entrada, saindo ? 0.0f : 1.0f, dt, NV_MOLA_TELA);
   // ZAPPING: o prazo do debounce vence aqui. O banner segura o OSD longe enquanto
