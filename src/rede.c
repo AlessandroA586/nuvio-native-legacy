@@ -1143,10 +1143,21 @@ static void *pegarHandle(const char *url) {
 // da resposta abortada, que sai no pedido seguinte. Download completo segue
 // reaproveitado (e o ganho de 0,5-0,8 s por imagem). Conexao que fica anota o
 // host (e o do fim dos redirecionamentos) para o limite de ociosidade.
+static void descartarHandle(void *c) {
+  curl_cleanup(c);
+  if (curl_reset) {
+    pthread_setspecific(handleChave, NULL);
+    hostsEsquecer();
+  }
+}
 static void soltarHandleR(void *c, int r, const char *url) {
-  // TODO pedido da libcurl passa por aqui com o CURLcode: e o ponto unico da
-  // saude da rede (redesaude.h decide o que e transporte).
-  if (avisoSaude) avisoSaude(r, url);
+  // #382: HTTP recebido prova conectividade mesmo se o corpo falhou/parou.
+  // O CURLcode original continua com o chamador e no painel de pedidos.
+  if (avisoSaude) {
+    long http = 0;
+    if (curl_getinfo) curl_getinfo(c, INFO_RESPONSE_CODE, &http);
+    avisoSaude(http > 0 && r != 42 && r != 23 ? 0 : r, url);
+  }
   if (avisoHost) {
     long http = 0;
     double seg = 0;
@@ -1172,13 +1183,7 @@ static void soltarHandleR(void *c, int r, const char *url) {
     }
   }
 #endif
-  if (!curl_reset) { curl_cleanup(c); return; }
-  if (r != 0) {
-    curl_cleanup(c);
-    pthread_setspecific(handleChave, NULL);
-    hostsEsquecer();
-    return;
-  }
+  if (!curl_reset || r != 0) { descartarHandle(c); return; }
   { unsigned long agora = redeAgoraMs();
     char *fim = NULL;
     hostUsado(url, agora);
@@ -1924,7 +1929,8 @@ static char *rede_baixar_interno3(const char *url, int segundos, long *tam,
              (long)b.n, gasto);
       fflush(stdout);
       if (lista) { curl_setopt(c, OPT_HTTPHEADER, (void *)0); if (slist_free) slist_free(lista); lista = NULL; }
-      soltarHandleR(c, r, url);            // r != 0: descarta o handle
+      // #382: tentativa intermediaria nao decide se ha internet.
+      descartarHandle(c);
       free(b.p);
       b.p = NULL; b.n = b.cap = 0;
       if (etag && tamEtag) etag[0] = 0;
