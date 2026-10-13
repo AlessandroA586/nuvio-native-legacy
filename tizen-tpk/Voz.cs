@@ -1,4 +1,4 @@
-// BOTAO DE MICROFONE DAS BUSCAS (dono, 12/10/2026). O teclado do Nuvio Legacy
+// BOTAO DE MICROFONE DAS BUSCAS. O teclado do Nuvio Legacy
 // continua sendo o teclado das duas buscas (a da barra lateral e o Spotlight do
 // CH-). Ao lado do "Digitar pelo celular" fica um botao de microfone que abre
 // o TECLADO DA SAMSUNG so para usar o microfone dele: a pessoa aperta o

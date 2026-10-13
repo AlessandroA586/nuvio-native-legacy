@@ -1,15 +1,15 @@
 #!/bin/bash
-# No restore/packaging: real Voz + extracted Program lifecycle, then cached API compiles.
+# No restore/packaging: real Voz + extracted Program lifecycle, then release/canary compiles.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
 dotnet_bin="${NUVIO_DOTNET:-$HOME/.dotnet/dotnet}"
 work=$(mktemp -d "${NUVIO_HOST_TEST_DIR:-${TMPDIR:-/private/var/tmp}}/nuvio-voz-host.XXXXXX")
 trap 'rm -rf "$work"' EXIT
-python3 - "$work" "$PWD" <<'PY'
+python3 - "$work" "$PWD" "$dotnet_bin" <<'PY'
 from pathlib import Path
-import os, sys
-w, root = map(Path, sys.argv[1:])
+import json, os, subprocess, sys
+w, root = map(Path, sys.argv[1:3])
 home = Path.home()
 sdk = sorted((home/'.dotnet/sdk').glob('*/Roslyn/bincore/csc.dll'))[-1]
 framework = sorted((home/'.dotnet/packs/Microsoft.NETCore.App.Ref').glob('*/ref/net8.0'))[-1]
@@ -43,6 +43,8 @@ for api in [8, 9, 11]:
     refs = sorted(base.glob('*/ref/*'))[-1]
     (w/f'api{api}.rsp').write_text('\n'.join('-r:"'+str(p)+'"' for p in sorted(refs.glob('*.dll')) if not (framework/p.name).exists()))
 (w/'production.rsp').write_text('\n'.join('"'+str(root/'tizen-tpk'/p)+'"' for p in ['Program.cs','Apps.cs','Video.cs','VideoWindowMetrics.cs','Carga.cs','Voz.cs']))
+canary = json.loads(subprocess.check_output([sys.argv[3], 'msbuild', str(root/'tizen-tpk/NuvioTpk/NuvioTpk.csproj'), '-nologo', '-p:NvTextoCanario=1', '-getProperty:DefineConstants', '-getItem:Compile']))
+(w/'canary.rsp').write_text('-define:'+canary['Properties']['DefineConstants'].replace(';', ',')+'\n'+'\n'.join('"'+p['FullPath']+'"' for p in canary['Items']['Compile']))
 PY
 cat > "$work/native.c" <<'C'
 #include <string.h>
@@ -67,3 +69,5 @@ for api in 8 9 11; do
   "$dotnet_bin" "$csc" -nologo -langversion:8 -target:library -define:NV_API$api -out:"$work/host-api$api.dll" @"$work/framework.rsp" @"$work/api$api.rsp" @"$work/production.rsp"
   echo "PASS: full release host compile against cached Tizen API$api"
 done
+"$dotnet_bin" "$csc" -nologo -langversion:8 -target:library -out:"$work/host-canary-api11.dll" @"$work/framework.rsp" @"$work/api11.rsp" @"$work/canary.rsp"
+echo "PASS: full NvTextoCanario=1 host compile against cached Tizen API11"

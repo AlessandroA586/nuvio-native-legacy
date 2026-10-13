@@ -96,7 +96,7 @@ não tem o host do teclado e fica sem botão. O ajuste só aparece no `.tpk` de 
 
 ## Correção da integração do PR #465 (12/10/2026)
 
-- Decisão do dono: **manter** o teclado da TV no `.wgt`. Removida a atribuição contrária
+- O `.wgt` **mantém** o teclado da TV. Removida a atribuição contrária
   no comentário de `entrada_texto.c`; o botão de microfone permanece.
 - `wgt_voz.sh`: **rc 1 → 0** ao exigir `TS_TECLADO | TS_VOZ`,
   `st_ime_disponivel() == 1` e digitação pelo IME. Com o microfone desligado ou ausente,
