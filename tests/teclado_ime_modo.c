@@ -5,6 +5,8 @@
 #include "dados.h"
 #include "sistexto.h"
 #include "teclado.h"
+#include "spotlight.h"
+#include <string.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +30,7 @@ static void abrir(int tipo) {
 }
 
 int main(void) {
+  assert(SDL_Init(SDL_INIT_EVENTS | SDL_INIT_TIMER) == 0);
   assert(mkdtemp(dir));
   assert(setenv("NUVIO_DADOS", dir, 1) == 0);
   dados_iniciar(dir);
@@ -52,6 +55,30 @@ int main(void) {
   abrir(-1); assert(imeAberto() && teclado_foco_campo() != 0);
   abrir(TECLADO_TIPO_TEXTO); assert(imeAberto());
   abrir(TECLADO_TIPO_EMAIL); assert(imeAberto());
+
+  st_fechar(ST_TECLADO);
+  // Busca: "Do app" deixa OK abrir e usar a grade; os outros modos usam IME.
+  for (int v = 0; v <= 2; v++) {
+    SDL_Event e;
+    modo(v);
+    spot_abrir(0);
+    assert(spot_foco_campo() == 1);
+    assert((st_estado() == ST_DIGITANDO && st_dono() == ST_SPOT) == (v != 1));
+    memset(&e, 0, sizeof e);
+    e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_RETURN;
+    spot_evento(&e);
+    assert(spot_teclado_app_aberto() == (v == 1));
+    assert((st_estado() == ST_DIGITANDO && st_dono() == ST_SPOT) == (v != 1));
+    if (v == 1) {
+      assert(spot_foco_campo() == 0);
+      spot_evento(&e); // OK na primeira tecla realmente escreve na busca.
+      assert(spot_consulta()[0]);
+      e.key.keysym.sym = SDLK_ESCAPE;
+      spot_evento(&e);
+      assert(!spot_teclado_app_aberto() && spot_foco_campo() == 1);
+    }
+    spot_fechar();
+  }
 
   // Fora do Android o ajuste nao muda nada. st_teste_ligar(0) desliga o
   // "abre sozinho", e teclado_teste_modos(1, ...) faz o papel do teclado de

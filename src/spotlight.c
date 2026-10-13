@@ -1006,9 +1006,9 @@ static void abrirTecladoSis(void) {
 }
 static void ditar(void) { if (ditadoDisponivel()) st_voz_iniciar(ST_SPOT); }
 
-// OK no campo: o teclado do sistema onde ha; senao o do app, com o foco nele.
+// OK no campo: respeita "Do app" no Android; senao usa o sistema onde ha.
 static void okCampo(void) {
-  if (imeDisponivel()) { abrirTecladoSis(); return; }
+  if (imeDisponivel() && !(st_abre_sozinho() && ajustes_teclado_android() == 1)) { abrirTecladoSis(); return; }
   kbAberto = 1;
   painel = P_TECLADO;
   if (kbF > kbFil) kbF = 0;
