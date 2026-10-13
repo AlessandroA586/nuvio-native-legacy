@@ -6532,6 +6532,26 @@ static int metaContarEpisodios(const char *corpo, int *brutos) {
 
 int desc_meta_n_episodios(const char *corpo) { return metaContarEpisodios(corpo, NULL); }
 
+// #391: Cinemeta incompleto nao torna uma lista maior corrupta. A proporcao
+// so pesa junto com milhares de pares distintos; numeracao >2000 numa
+// temporada e absurda por si so. Examina o corpo inteiro, antes de VIDEOS_MAX.
+static int metaEpisodiosCorruptos(const char *corpo, int distintos, int nCine,
+                                 const char *titulo, const char *nome) {
+  const char *v = js_array(corpo, NULL, "videos");
+  int corrupto = nCine > 0 && distintos > 1000 && (long long)distintos > (long long)nCine * 10;
+  while (v && !corrupto) {
+    const char *f = js_fim(v);
+    corrupto = videoTemporada(v, f) > 0 && js_num(v, f, "episode", 0) > 2000;
+    v = js_prox(f);
+  }
+  if (corrupto) {
+    printf("[desc] %s: %s respondeu %d episodios contra %d do Cinemeta; "
+           "numeracao absurda, descartando a lista do addon\n", titulo, nome, distintos, nCine);
+    fflush(stdout);
+  }
+  return corrupto;
+}
+
 // O videos[] e uma lista de ARQUIVOS, nao de episodios? Em media mais de tres
 // entradas por episodio so acontece em addon de fontes (o agregador de anime
 // do #328 repete uma ou duas vezes). Lista pequena nunca e.
@@ -6775,13 +6795,7 @@ static int episodiosDoAddon(int alvoItem, const char *serie, const char *titulo,
     // LISTA DE ARQUIVOS SO ENTRA SE SOUBER MAIS EPISODIOS que o Cinemeta (20 em
     // 4 variantes contra 12: os 8 a mais nao se perdem). No empate ou com menos
     // ela nao serve nem de lista nem de texto: o "nome" dela e nome de arquivo.
-    // #391: ficha com mais de 4x os episodios de um Cinemeta que ja tem 20+
-    // (10976 contra 176) e numeracao de fonte/torrent, nao lista de serie.
-    if (nCine >= 20 && n2 > nCine * 4) {
-      printf("[desc] %s: %s respondeu %d episodios contra %d do Cinemeta; "
-             "numeracao absurda, mantendo a lista do Cinemeta\n",
-             titulo, addons_nome(i), n2, nCine);
-      fflush(stdout);
+    if (metaEpisodiosCorruptos(c2, n2, nCine, titulo, addons_nome(i))) {
       free(c2);
       continue;
     }
@@ -7287,12 +7301,17 @@ static void completarFicha(CatItem *d, const MetaFontes *mf, const char *tipo) {
 // dela nao e texto que valha proteger da traducao.
 static int episodiosDoCatalogo(int alvoItem, const char *titulo, const char *serie,
                                const MetaFontes *mf, TempsPub *tp) {
-  int i, fonte = -1, outro = -1, mesmoId = idbase_e_imdb(serie);
+  int i, fonte = -1, outro = -1, mesmoId = idbase_e_imdb(serie), nCine = 0;
   int nEp[META_FONTES_MAX], arq[META_FONTES_MAX];
   for (i = 0; i < mf->n; i++) {
     int brutos = 0;
     nEp[i] = metaContarEpisodios(mf->corpo[i], &brutos);
     arq[i] = metaListaDeArquivos(nEp[i], brutos);
+    if (mesmoId && mf->cine[i] && nEp[i] > nCine) nCine = nEp[i];
+  }
+  for (i = 0; i < mf->n; i++) {
+    if (!mf->cine[i] && metaEpisodiosCorruptos(mf->corpo[i], nEp[i], nCine, titulo, mf->nome[i]))
+      nEp[i] = 0;
     if (nEp[i] > 0 && fonte < 0) fonte = i;
   }
   if (fonte < 0) return 0;

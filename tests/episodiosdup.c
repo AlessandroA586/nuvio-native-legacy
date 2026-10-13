@@ -702,34 +702,65 @@ int main(void) {
       callocFalha = 0;
       puts("ok  conjunto cheio sem crescer: 1023 pares, o resto nao entra e a procura termina");
     }
-    // #391: ficha de addon com milhares de "episodios" distintos (numeracao
-    // absurda) para uma serie de 30 no Cinemeta nao troca a lista.
-    k = (size_t)snprintf(cine, cap, "{\"meta\":{\"id\":\"tt13293588\",\"type\":\"series\","
-                         "\"name\":\"Serie\",\"description\":\"S.\",\"videos\":[");
-    for (t = 1; t <= 3; t++)
-      for (ep = 1; ep <= 10; ep++)
-        k += (size_t)snprintf(cine + k, cap - k,
-                              "%s{\"id\":\"tt13293588:%d:%d\",\"season\":%d,\"episode\":%d,"
-                              "\"name\":\"T%dE%d\"}", (t > 1 || ep > 1) ? "," : "", t, ep, t, ep, t, ep);
-    snprintf(cine + k, cap - k, "]}}");
-    k = (size_t)snprintf(maior, cap, "{\"meta\":{\"id\":\"tt13293588\",\"type\":\"series\","
-                         "\"name\":\"Serie\",\"videos\":[");
-    for (t = 1; t <= 3; t++)
-      for (ep = 1; ep <= 400; ep++)
-        k += (size_t)snprintf(maior + k, cap - k,
-                              "%s{\"id\":\"x%d:%d\",\"season\":%d,\"episode\":%d,"
-                              "\"name\":\"X%d\"}", (t > 1 || ep > 1) ? "," : "", t, ep, t, ep, ep);
-    snprintf(maior + k, cap - k, "]}}");
-    assert(desc_meta_n_episodios(cine) == 30 && desc_meta_n_episodios(maior) == 1200);
-    nFake = 0; nRotas = 0; addonMeta = 1; addonTipo = "/series/";
-    cineSerie = cine; addonResp = maior;
-    limparCacheMeta();
-    catalogoCom("tt13293588", "series", "Serie");
-    abrir();
-    printf("1200 contra 30: %d episodios\n", cat_n_episodios(0));
-    assert(cat_n_episodios(0) == 30);
-    assert(!strcmp(cat_episodio(0, 0)->nome, "T1E1"));
-    puts("ok  ficha de addon com 40x os episodios do Cinemeta nao troca a lista");
+    // #391: a mesma regra nos dois caminhos, contando pares antes do corte.
+    {
+      const struct { int cine, addon, porTemp, copias, recusar; } casos[] = {
+        {176, 10976, 1000, 1, 1}, // Z4HDY2: >10x e >1000, sem numero >2000
+        {30, 150, 50, 1, 0},     // Cinemeta incompleto: 5x e legitimo
+        {30, 1200, 400, 1, 1},   // tambem recusa quando aberto do addon
+        {0, 150, 50, 1, 0},      // sem Cinemeta, conserva o addon
+        {0, 1200, 400, 1, 0},
+        {300, 2000, 2000, 1, 0}, // numeracao ate 2000 nao basta para recusar
+        {300, 2001, 2001, 1, 1}, // numeracao absurda numa temporada
+        {30, 1000, 1000, 1, 0},  // o limite de 1000 e estrito
+        {150, 1500, 1500, 1, 0}, // o limite de 10x e estrito
+        {176, 196, 1000, 56, 0}  // 10976 videos, so 196 pares distintos
+      };
+      for (unsigned caso = 0; caso < sizeof casos / sizeof casos[0]; caso++) {
+        int nc = casos[caso].cine, na = casos[caso].addon;
+        int porTemp = casos[caso].porTemp, copias = casos[caso].copias;
+        char *corpos[] = { cine, maior };
+        for (int fonte = 0; fonte < 2; fonte++) {
+          int quantos = fonte ? na * copias : nc;
+          k = (size_t)snprintf(corpos[fonte], cap,
+            "{\"meta\":{\"id\":\"tt13293588\",\"type\":\"series\",\"name\":\"Serie\",\"videos\":[");
+          for (i = 0; i < quantos; i++) {
+            int par = fonte ? i % na : i;
+            t = par / porTemp + 1; ep = par % porTemp + 1;
+            k += (size_t)snprintf(corpos[fonte] + k, cap - k,
+              "%s{\"id\":\"%c%d\",\"season\":%d,\"episode\":%d,\"name\":\"%c%d\"}",
+              i ? "," : "", fonte ? 'A' : 'C', i, t, ep, fonte ? 'A' : 'C', i);
+            assert(k < cap - 8);
+          }
+          snprintf(corpos[fonte] + k, cap - k, "]}}");
+        }
+        assert(desc_meta_n_episodios(cine) == nc);
+        assert(desc_meta_n_episodios(maior) == na);
+        for (int via = 0; via < 2; via++) {
+          int esperado = casos[caso].recusar ? nc : na;
+          if (esperado > VIDEOS_MAX) esperado = VIDEOS_MAX;
+          nFake = 0; nRotas = 0; addonMeta = 1; addonTipo = "/series/";
+          cineSerie = cine; addonResp = maior;
+          if (via) {
+            addonMeta = 0; addonResp = NULL; nFake = 1;
+            fake[0] = (FakeAddon){ "Meta", "https://fx.test/SEGREDO", "org.fx", "tt", 0 };
+            rota("fx.test/SEGREDO/meta/series/tt13293588.json", maior);
+          }
+          limparCacheMeta();
+          if (via) catalogoDe("tt13293588", "series", "Serie", "org.fx");
+          else catalogoCom("tt13293588", "series", "Serie");
+          abrir();
+          printf("#391 caso=%u catalogo-primeiro=%d: %d episodios\n",
+                 caso, via, cat_n_episodios(0));
+          assert(cat_n_episodios(0) == esperado);
+          assert(cat_episodio(0, 0)->vid[0] == (casos[caso].recusar ? 'C' : 'A'));
+          const CatEp *ultimo = cat_episodio(0, esperado - 1);
+          assert(ultimo->temporada == (esperado - 1) / porTemp + 1);
+          assert(ultimo->episodio == (esperado - 1) % porTemp + 1);
+        }
+      }
+      puts("ok  #391: corrupcao, catalogo incompleto e deduplicacao nos dois caminhos");
+    }
     nFake = 0; nRotas = 0;
     addonMeta = 0; cineSerie = NULL; addonResp = NULL;
     limparCacheMeta();
