@@ -2708,7 +2708,7 @@
   T("Na folha de Áudio, de 0,75x a 2x.", "在音訊面板中，0.75x 到 2x。"),
   T("Na interface e nas legendas, com a Noto Sans Thai.", "介面和字幕均使用 Noto Sans Thai。"),
   T("Na lateral", "側邊"),
-  T("Na lateral: o menu fica na esquerda, como sempre. No topo: o menu vira uma barra no alto da tela e o conteúdo usa a largura toda. Na Home, Para cima no destaque chega à barra e Para baixo volta. Vale para este perfil.", "側邊：選單照常在左側。頂部：選單變成畫面頂部的橫列，內容使用全部寬度。在首頁的精選內容上按上進入橫列，按下返回。僅對此設定檔生效。"),
+  T("Na lateral: o menu fica na esquerda, como sempre. No topo: o menu vira uma barra no alto da tela e o conteúdo usa a largura toda. Para cima no primeiro item da tela chega à barra e Para baixo volta. Vale para este perfil.", "側邊：選單照常在左側。頂部：選單變成畫面頂部的橫列，內容使用全部寬度。在畫面的第一個項目按上進入橫列，按下返回。僅對此設定檔生效。"),
   T("Na lista de fontes, cada selo (4K, HDR, Dolby, codec, serviço) ganha a cor do seu tipo, como no pacote de selos do Nuvio. Desligado, os selos ficam brancos.", "在片源清單中，每個徽章（4K、HDR、Dolby、編碼、服務）都會使用其類型的顏色，與 Nuvio 的徽章包一致。關閉時，徽章維持白色。"),
   T("Na primeira vez que você abre a aba Social ele faz a pergunta, e \"não\" é a primeira opção.", "第一次開啟「社群」分頁時會詢問你，第一個選項是「否」。"),
   T("Na primeira vez que você abre o Social o app pergunta, e Não é a primeira opção. O perfil público só existe se você ligar.", "第一次開啟社交時應用程式會詢問，否 是第一個選項。只有你開啟時才會有公開資料。"),

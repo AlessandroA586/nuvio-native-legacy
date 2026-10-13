@@ -18,6 +18,7 @@
 #include "tex_cache.h"
 #include "gfx.h"
 #include "text.h"
+#include "idioma.h"
 #include "anim.h"
 #include "layout.h"
 #include "segurar.h"
@@ -1293,6 +1294,8 @@ static void topoAtualizar(float dt) {
 
 static const char *topoRotulo(int i) {
   const ContaPerfil *p;
+  // "Perfil e Stats" nao cabe na pilula do topo em pt-BR; na barra vale so "Perfil".
+  if (i == MENU_PERFIL) return i18n("Perfil");
   if (i != MENU_RODAPE) return ROTULOS[i];
   p = perfis_item_ativo();
   return p && p->nome[0] ? p->nome : "Sua conta";

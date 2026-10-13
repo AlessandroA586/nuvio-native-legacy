@@ -2708,7 +2708,7 @@
   T("Na folha de Áudio, de 0,75x a 2x.", "音声パネルで0.75xから2xまで。"),
   T("Na interface e nas legendas, com a Noto Sans Thai.", "インターフェースと字幕で、Noto Sans Thai を使用。"),
   T("Na lateral", "サイド"),
-  T("Na lateral: o menu fica na esquerda, como sempre. No topo: o menu vira uma barra no alto da tela e o conteúdo usa a largura toda. Na Home, Para cima no destaque chega à barra e Para baixo volta. Vale para este perfil.", "サイド: メニューはいつも通り左側に表示されます。上部: メニューが画面上部のバーになり、コンテンツが全幅を使います。ホームでは、注目作品で上を押すとバーへ、下で戻ります。このプロフィールに適用されます。"),
+  T("Na lateral: o menu fica na esquerda, como sempre. No topo: o menu vira uma barra no alto da tela e o conteúdo usa a largura toda. Para cima no primeiro item da tela chega à barra e Para baixo volta. Vale para este perfil.", "サイド: メニューはいつも通り左側に表示されます。上部: メニューが画面上部のバーになり、コンテンツが全幅を使います。画面の最初の項目で上を押すとバーへ、下で戻ります。このプロフィールに適用されます。"),
   T("Na lista de fontes, cada selo (4K, HDR, Dolby, codec, serviço) ganha a cor do seu tipo, como no pacote de selos do Nuvio. Desligado, os selos ficam brancos.", "ソース一覧の各バッジ（4K、HDR、Dolby、コーデック、サービス）が、Nuvio のバッジパックと同じく種類ごとの色になります。オフにするとバッジは白のままです。"),
   T("Na primeira vez que você abre a aba Social ele faz a pergunta, e \"não\" é a primeira opção.", "ソーシャルタブを初めて開くと確認が表示され、最初の選択肢は「いいえ」です。"),
   T("Na primeira vez que você abre o Social o app pergunta, e Não é a primeira opção. O perfil público só existe se você ligar.", "初めてソーシャルを開くとアプリがたずね、最初の選択肢は いいえ です。公開プロフィールは、オンにしたときだけ作られます。"),
