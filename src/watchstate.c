@@ -262,6 +262,17 @@ int ws_url(const char *base, const WsEvento *e, char *out, size_t n) {
 
 // ---- Fila com retry --------------------------------------------------------
 
+void ws_destino(const char *base, const char *usuario, int perfil, char out[20]) {
+  uint64_t h = UINT64_C(14695981039346656037);
+  const char *partes[] = {usuario ? usuario : "", base ? base : ""};
+  int i;
+  for (i = 0; i < 2; i++) {
+    const unsigned char *p = (const unsigned char *)partes[i];
+    do { h ^= *p; h *= UINT64_C(1099511628211); } while (*p++);
+  }
+  snprintf(out, 20, "%016llx-%d", (unsigned long long)h, perfil);
+}
+
 long long ws_espera_s(int falhas) {
   static const long long t[] = {30, 120, 600, 3600, 21600};
   if (falhas < 1) falhas = 1;
@@ -269,7 +280,7 @@ long long ws_espera_s(int falhas) {
 }
 
 static void liberaItem(WsItem *i) {
-  free(i->base); free(i->url); free(i->id); free(i->corpo);
+  free(i->addon); free(i->caminho); free(i->id); free(i->corpo);
   memset(i, 0, sizeof *i);
 }
 static void tiraItem(WsFila *f, int k) {
@@ -282,46 +293,49 @@ void ws_fila_limpar(WsFila *f) {
   while (f->n) tiraItem(f, f->n - 1);
 }
 
-static int mesmo(const WsItem *i, const char *url, const char *id) {
-  return !strcmp(i->url, url) && !strcmp(i->id, id);
+static int mesmo(const WsItem *i, const char *addon, const char *id) {
+  return !strcmp(i->addon, addon) && !strcmp(i->id, id);
 }
 
 // Anexa um item ja validado (copia as strings); cheia: o mais antigo sai.
-static int anexa(WsFila *f, const char *base, const char *url, const char *id,
+static int anexa(WsFila *f, const char *addon, const char *caminho, const char *id,
                  const char *corpo, long long criadoS, long long proxS, int tent) {
   WsItem *i;
   if (f->n == WS_FILA_MAX) tiraItem(f, 0);
   i = &f->it[f->n];
-  i->base = strdup(base); i->url = strdup(url); i->id = strdup(id); i->corpo = strdup(corpo);
-  if (!i->base || !i->url || !i->id || !i->corpo) { liberaItem(i); return 0; }
+  i->addon = strdup(addon); i->caminho = strdup(caminho); i->id = strdup(id); i->corpo = strdup(corpo);
+  if (!i->addon || !i->caminho || !i->id || !i->corpo) { liberaItem(i); return 0; }
   i->criadoS = criadoS; i->proxS = proxS; i->tentativas = tent;
   f->n++;
   return 1;
 }
 
-int ws_fila_empurrar(WsFila *f, const char *base, const char *url, const char *id,
+int ws_fila_empurrar(WsFila *f, const char *addon, const char *caminho, const char *id,
                      const char *corpo, long long agoraS) {
   int k;
-  if (!base || !url || !id || !corpo || !limpo(base) || !limpo(url) || !limpo(id) ||
-      !limpo(corpo)) return 0;
-  for (k = 0; k < f->n; k++) if (mesmo(&f->it[k], url, id)) return 0;
-  return anexa(f, base, url, id, corpo, agoraS, agoraS, 0);
+  if (!addon || !caminho || !id || !corpo || !limpo(addon) || !limpo(caminho) || !limpo(id) ||
+      !limpo(corpo) || !addon[0] || strpbrk(addon, ":/?") ||
+      caminho[0] != '/' || strchr(caminho, '?')) return 0;
+  for (k = 0; k < f->n; k++) if (mesmo(&f->it[k], addon, id)) return 0;
+  return anexa(f, addon, caminho, id, corpo, agoraS, agoraS, 0);
 }
 
 char *ws_fila_serializar(const WsFila *f) {
-  size_t cap = 1, k;
+  static const char versao[] = "NVWATCHSTATE 2\n";
+  size_t cap = sizeof versao, k;
   char *o, *p;
   int i;
   for (i = 0; i < f->n; i++) {
     const WsItem *t = &f->it[i];
-    cap += strlen(t->base) + strlen(t->url) + strlen(t->id) + strlen(t->corpo) + 80;
+    cap += strlen(t->addon) + strlen(t->caminho) + strlen(t->id) + strlen(t->corpo) + 80;
   }
   o = p = malloc(cap);
   if (!o) return NULL;
+  memcpy(p, versao, sizeof versao - 1); p += sizeof versao - 1;
   for (i = 0; i < f->n; i++) {
     const WsItem *t = &f->it[i];
     k = (size_t)snprintf(p, cap - (size_t)(p - o), "%lld\t%lld\t%d\t%s\t%s\t%s\t%s\n",
-                         t->criadoS, t->proxS, t->tentativas, t->base, t->url, t->id, t->corpo);
+                         t->criadoS, t->proxS, t->tentativas, t->addon, t->caminho, t->id, t->corpo);
     p += k;
   }
   *p = 0;
@@ -329,28 +343,31 @@ char *ws_fila_serializar(const WsFila *f) {
 }
 
 void ws_fila_carregar(WsFila *f, const char *texto) {
-  const char *p = texto;
-  while (p && *p) {
+  const char *p;
+  if (!texto || strncmp(texto, "NVWATCHSTATE 2\n", 15)) return;
+  p = texto + 15;
+  while (*p) {
     const char *fim = strchr(p, '\n');
     size_t l = fim ? (size_t)(fim - p) : strlen(p);
-    char *ln = malloc(l + 1), *campo[7], *q;
+    char *ln = malloc(l + 1), *campo[6], *q;
     int nc = 0;
     if (!ln) return;
     memcpy(ln, p, l); ln[l] = 0;
-    for (q = ln; nc < 7; ) {
+    for (q = ln; nc < 6; ) {
       campo[nc++] = q;
       q = strchr(q, '\t');
       if (!q) break;
       *q++ = 0;
     }
-    if (nc == 7 && campo[4][0] && campo[5][0] && campo[6][0]) {
+    if (nc == 6 && q && campo[3][0] && campo[4][0] == '/' && campo[5][0] && q[0]) {
       char *e1, *e2, *e3;
       long long c = strtoll(campo[0], &e1, 10), x = strtoll(campo[1], &e2, 10);
       long t = strtol(campo[2], &e3, 10);
-      int ja = 0, k;
-      for (k = 0; k < f->n; k++) if (mesmo(&f->it[k], campo[4], campo[5])) ja = 1;
-      if (!*e1 && !*e2 && !*e3 && !ja && c > 0 && t >= 0 && t < 1000)
-        anexa(f, campo[3], campo[4], campo[5], campo[6], c, x, (int)t);
+      if (!*e1 && !*e2 && !*e3 && c > 0 && t >= 0 && t < 1000 &&
+          ws_fila_empurrar(f, campo[3], campo[4], campo[5], q, c)) {
+        f->it[f->n - 1].proxS = x;
+        f->it[f->n - 1].tentativas = (int)t;
+      }
     }
     free(ln);
     if (!fim) break;
@@ -362,7 +379,7 @@ long long ws_fila_proxima(const WsFila *f) {
   long long m = -1;
   int i, j;
   for (i = 0; i < f->n; i++) {
-    for (j = 0; j < i && strcmp(f->it[j].base, f->it[i].base); j++) ;
+    for (j = 0; j < i && strcmp(f->it[j].addon, f->it[i].addon); j++) ;
     if (j == i && (m < 0 || f->it[i].proxS < m)) m = f->it[i].proxS;   // so cabecas
   }
   return m;
@@ -372,7 +389,7 @@ long long ws_fila_proxima(const WsFila *f) {
 static int devido(const WsFila *f, long long agora) {
   int i, j;
   for (i = 0; i < f->n; i++) {
-    for (j = 0; j < i; j++) if (!strcmp(f->it[j].base, f->it[i].base)) break;
+    for (j = 0; j < i; j++) if (!strcmp(f->it[j].addon, f->it[i].addon)) break;
     if (j < i) continue;                      // ha um item mais velho do mesmo addon
     if (f->it[i].proxS <= agora) return i;
   }
@@ -384,13 +401,13 @@ int ws_fila_passo(WsFila *f, long long agora, WsEnvio envia, void *u) {
   for (i = f->n - 1; i >= 0; i--)
     if (agora - f->it[i].criadoS >= WS_VIDA_S) tiraItem(f, i);
   while ((i = devido(f, agora)) >= 0) {
-    char *url = strdup(f->it[i].url), *id = strdup(f->it[i].id), *corpo = strdup(f->it[i].corpo);
+    char *addon = strdup(f->it[i].addon), *id = strdup(f->it[i].id), *corpo = strdup(f->it[i].corpo);
     int ra = 0, st;
-    if (!url || !id || !corpo) { free(url); free(id); free(corpo); break; }
-    st = envia(url, corpo, &ra, u);
+    if (!addon || !id || !corpo) { free(addon); free(id); free(corpo); break; }
+    st = envia(addon, f->it[i].caminho, corpo, &ra, u);
     feitas++;
     // O transporte pode ter soltado a trava: o item pode ter saido (fila cheia).
-    for (k = 0; k < f->n && !mesmo(&f->it[k], url, id); k++) ;
+    for (k = 0; k < f->n && !mesmo(&f->it[k], addon, id); k++) ;
     if (k < f->n) {
       WsItem *t = &f->it[k];
       if (st == 200 || st == 204) tiraItem(f, k);
@@ -401,7 +418,14 @@ int ws_fila_passo(WsFila *f, long long agora, WsEnvio envia, void *u) {
         t->proxS = agora + w;
       } else tiraItem(f, k);
     }
-    free(url); free(id); free(corpo);
+    free(addon); free(id); free(corpo);
   }
   return feitas;
+}
+
+int ws_fila_podar(WsFila *f, int (*ainda)(const char *addon, void *u), void *u) {
+  int i, saiu = 0;
+  for (i = f->n - 1; i >= 0; i--)
+    if (!ainda || !ainda(f->it[i].addon, u)) { tiraItem(f, i); saiu++; }
+  return saiu;
 }

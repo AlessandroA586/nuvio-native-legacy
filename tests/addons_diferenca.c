@@ -6,6 +6,8 @@
 //
 //   bash tests/addons_diferenca.sh
 #include <stdio.h>
+// A entrega real tem o harness watchstate_poda.sh; aqui nao ha diario.
+void wsenvio_podar(void) {}
 #include <string.h>
 #include "addons.h"
 #include "fontecache.h"

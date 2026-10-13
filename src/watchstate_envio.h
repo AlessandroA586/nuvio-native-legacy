@@ -15,4 +15,9 @@ void wsenvio_iniciar(void);
 // addons de outro, nem para evento invalido.
 void wsenvio_emitir(const WsEvento *e);
 
+// Tira do diario o que a lista atual nao autoriza mais. Chamar depois de a
+// lista mudar (addon removido, desligado, lista da conta). addons_esquecer
+// esvazia a lista antes da poda, inclusive no logout.
+void wsenvio_podar(void);
+
 #endif

@@ -19,6 +19,7 @@
 #include "descoberta.h"
 #include "legextras.h"
 #include "watchstate.h"
+#include "watchstate_envio.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -235,6 +236,10 @@ static int alvoVod(void) {
 static void listaMudou(void) {
   versaoLista++;
   fontecache_vod_limpar();
+  // O diario do watch_state so vale para a lista de agora. Fica aqui, e nao
+  // em cada tela que mexe na lista: addon removido, desligado ou vindo de
+  // outra conta nao recebe o que ficou pendente.
+  wsenvio_podar();
 }
 
 // A BASE de um addon a partir da URL guardada (arquivo local ou conta). A URL

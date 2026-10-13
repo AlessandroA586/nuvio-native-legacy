@@ -21,4 +21,11 @@ cc tests/watchstate_envio.c "$work/arranque.c" src/watchstate_envio.c src/watchs
 if [ "$#" -eq 0 ]; then
   "$work/t" --arranque
   "$work/t" --url-longa
+  "$work/t" --query
+  "$work/t" --sem-addon
+  "$work/t" --arranque --sem-addon
+  "$work/t" --outra-conta
+  "$work/t" --outro-perfil
+  "$work/t" --herdado
+  "$work/t" --durante-envio
 fi

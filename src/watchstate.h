@@ -68,32 +68,41 @@ int ws_url(const char *base, const WsEvento *e, char *out, size_t n);
 #define WS_SEGURA_S   21600      // 401/403: o backlog do addon espera 6 h
 
 typedef struct {
-  char *base, *url, *id, *corpo;
+  char *addon, *caminho, *id, *corpo;
   long long criadoS, proxS;      // criacao e proxima tentativa (s Unix)
   int tentativas;                // falhas ate agora
 } WsItem;
 typedef struct { WsItem it[WS_FILA_MAX]; int n; } WsFila;
 
+// Identidade opaca da configuracao, vinculada a conta e perfil. Nao guarda
+// credenciais; o envio resolve esta identidade na lista atual de addons.
+void ws_destino(const char *base, const char *usuario, int perfil, char out[20]);
+
 // Segundos ate a tentativa seguinte depois de `falhas` falhas seguidas:
 // 30 s, 2 min, 10 min, 1 h, 6 h (e 6 h dai em diante ate o item vencer).
 long long ws_espera_s(int falhas);
 
-// Enfileira para `base`. 1 = entrou; 0 = ja havia o mesmo id para o mesmo url
-// ou os textos sao invalidos. Cheia: o item mais antigo sai.
-int  ws_fila_empurrar(WsFila *f, const char *base, const char *url, const char *id,
+// Enfileira para a identidade `addon`. 1 = entrou; 0 = duplicado ou invalido.
+// Cheia: o mais antigo sai. Guarda apenas identidade e caminho sem query.
+int  ws_fila_empurrar(WsFila *f, const char *addon, const char *caminho, const char *id,
                       const char *corpo, long long agoraS);
 void ws_fila_limpar(WsFila *f);
 
 // Uma linha por item, separada por TAB; nenhum campo carrega TAB ou quebra.
 // Devolve malloc (free) ou NULL. carregar aceita o que serializar escreveu e
-// ignora linha malformada.
+// ignora linha malformada. Diarios antigos sem vinculo de conta/perfil sao
+// descartados; a versao atual nao persiste URLs nem credenciais.
 char *ws_fila_serializar(const WsFila *f);
 void  ws_fila_carregar(WsFila *f, const char *texto);
+
+// Tira itens cujo destino ja nao e autorizado pela lista e contexto atuais.
+int  ws_fila_podar(WsFila *f, int (*ainda)(const char *addon, void *u), void *u);
 
 // Transporte: devolve o status HTTP, 0 para falha de rede ou prazo. Escreve em
 // *retryAfterS o Retry-After (0 se nao veio). Roda com o que o chamador segura;
 // o transporte real solta a trava durante o pedido.
-typedef int (*WsEnvio)(const char *url, const char *corpo, int *retryAfterS, void *u);
+typedef int (*WsEnvio)(const char *addon, const char *caminho, const char *corpo,
+                       int *retryAfterS, void *u);
 
 // Descarta o vencido e tenta tudo o que venceu agora. Por addon a ordem e
 // FIFO: enquanto o item da frente espera, os de tras do MESMO addon esperam.

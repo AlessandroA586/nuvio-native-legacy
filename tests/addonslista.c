@@ -113,6 +113,8 @@ void stream_definir_alvo(const char *id) { (void)id; }
 Uint32 SDL_GetTicks(void) { return 1000; }
 const char *sessao_usuario(void) { return ""; }
 int perfis_ativo(void) { return 1; }
+// A integracao da poda com addons.c e exercitada em watchstate_poda.sh.
+void wsenvio_podar(void) {}
 void debrid_definir_episodio(int t, int e) { (void)t; (void)e; }
 void debrid_nova_busca(void) { nDebridNovaBusca++; }
 const char *i18n(const char *s) { return s; }

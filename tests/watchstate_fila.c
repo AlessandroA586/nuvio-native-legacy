@@ -9,7 +9,7 @@
 
 static int falhas;
 #define OK(c) do { if (!(c)) { printf("FALHOU %d: %s\n", __LINE__, #c); falhas++; } } while (0)
-#define STR(a, b) do { if (strcmp((a), (b))) { printf("FALHOU %d:\n  tem:  %s\n  quer: %s\n", __LINE__, (a), (b)); falhas++; } } while (0)
+#define STR(a, b) do { if (strcmp((a), (b))) { printf("FALHOU %d: textos diferentes\n", __LINE__); falhas++; } } while (0)
 
 static WsEvento serie(int ev) {
   WsEvento e;
@@ -24,9 +24,9 @@ static WsEvento serie(int ev) {
 
 // HTTP falso: devolve os status roteirizados e guarda o que recebeu.
 static struct { int st[16], ra[16], n, i; char url[16][200]; } rede;
-static int envia(const char *url, const char *corpo, int *ra, void *u) {
+static int envia(const char *addon, const char *caminho, const char *corpo, int *ra, void *u) {
   (void)corpo; (void)u;
-  if (rede.i < 16) snprintf(rede.url[rede.i], sizeof rede.url[0], "%s", url);
+  if (rede.i < 16) snprintf(rede.url[rede.i], sizeof rede.url[0], "https://%s%s", addon, caminho);
   *ra = rede.i < rede.n ? rede.ra[rede.i] : 0;
   return rede.i < rede.n ? rede.st[rede.i++] : (rede.i++, 204);
 }
@@ -91,14 +91,26 @@ int main(void) {
   OK(ws_espera_s(1) == 30 && ws_espera_s(2) == 120 && ws_espera_s(3) == 600 &&
      ws_espera_s(4) == 3600 && ws_espera_s(5) == 21600 && ws_espera_s(9) == 21600);
 
+  // Identidade inclui configuracao, conta e perfil, mesmo para o mesmo addon.
+  { char a[20], b2[20];
+    ws_destino("https://a?apikey=fixture", "conta-a", 1, a);
+    ws_destino("https://a?apikey=fixture", "conta-a", 1, b2); STR(a, b2);
+    ws_destino("https://a?apikey=outra", "conta-a", 1, b2); OK(strcmp(a, b2));
+    ws_destino("https://a?apikey=fixture", "conta-b", 1, b2); OK(strcmp(a, b2));
+    ws_destino("https://a?apikey=fixture", "conta-a", 2, b2); OK(strcmp(a, b2));
+  }
+
   // ---- fila ----
   { WsFila *f = calloc(1, sizeof *f);
     const long long t0 = 1000000;
     memset(&rede, 0, sizeof rede);
-    OK(ws_fila_empurrar(f, "https://a", "https://a/x1", "id1", "{\"a\":1}", t0) == 1);
-    OK(ws_fila_empurrar(f, "https://a", "https://a/x1", "id1", "{\"a\":1}", t0) == 0);  // mesmo id
-    OK(ws_fila_empurrar(f, "https://b", "https://b/x1", "id1", "{\"a\":1}", t0) == 1);  // outro addon
-    OK(!ws_fila_empurrar(f, "https://a", "https://a/x", "id\t2", "{}", t0));            // TAB recusado
+    OK(ws_fila_empurrar(f, "a", "/x1", "id1", "{\"a\":1}", t0) == 1);
+    OK(ws_fila_empurrar(f, "a", "/x1", "id1", "{\"a\":1}", t0) == 0);  // mesmo id
+    OK(ws_fila_empurrar(f, "b", "/x1", "id1", "{\"a\":1}", t0) == 1);  // outro addon
+    OK(!ws_fila_empurrar(f, "a", "/x", "id\t2", "{}", t0));            // TAB recusado
+    OK(!ws_fila_empurrar(f, "a", "https://a/x", "id3", "{}", t0));     // sem caminho relativo
+    OK(!ws_fila_empurrar(f, "a", "/x?apikey=fixture", "id3", "{}", t0));
+    OK(!ws_fila_empurrar(f, "https://a", "/x", "id3", "{}", t0));
     OK(f->n == 2);
 
     // 204 entrega os dois e esvazia
@@ -108,7 +120,7 @@ int main(void) {
 
     // 503: tenta de novo so apos 30 s; 429 com Retry-After maior vale o maior
     memset(&rede, 0, sizeof rede);
-    ws_fila_empurrar(f, "https://a", "https://a/x1", "id1", "{}", t0);
+    ws_fila_empurrar(f, "a", "/x1", "id1", "{}", t0);
     rede.n = 1; rede.st[0] = 503;
     OK(ws_fila_passo(f, t0, envia, NULL) == 1);
     OK(f->n == 1 && f->it[0].tentativas == 1 && ws_fila_proxima(f) == t0 + 30);
@@ -124,15 +136,15 @@ int main(void) {
 
     // 401 segura o addon 6 h e o item de tras do MESMO addon espera; outro addon segue
     memset(&rede, 0, sizeof rede);
-    ws_fila_empurrar(f, "https://a", "https://a/1", "i1", "{}", t0);
-    ws_fila_empurrar(f, "https://a", "https://a/2", "i2", "{}", t0);
-    ws_fila_empurrar(f, "https://b", "https://b/1", "i1", "{}", t0);
+    ws_fila_empurrar(f, "a", "/1", "i1", "{}", t0);
+    ws_fila_empurrar(f, "a", "/2", "i2", "{}", t0);
+    ws_fila_empurrar(f, "b", "/1", "i1", "{}", t0);
     rede.n = 1; rede.st[0] = 401;
     OK(ws_fila_passo(f, t0, envia, NULL) == 2);            // a/1 (401) e b/1 (204)
     OK(f->n == 2 && f->it[0].tentativas == 0 && f->it[0].proxS == t0 + WS_SEGURA_S);
     STR(rede.url[1], "https://b/1");
     OK(ws_fila_proxima(f) == t0 + WS_SEGURA_S);  // a/2 vencido espera a/1
-    ws_fila_empurrar(f, "https://b", "https://b/2", "i2", "{}", t0 + 3600);
+    ws_fila_empurrar(f, "b", "/2", "i2", "{}", t0 + 3600);
     OK(ws_fila_proxima(f) == t0 + 3600);         // outra cabeca vence antes
     OK(ws_fila_passo(f, t0 + 3599, envia, NULL) == 0);
     OK(ws_fila_passo(f, t0 + 3600, envia, NULL) == 1);
@@ -145,39 +157,42 @@ int main(void) {
 
     // outro 4xx descarta so aquele evento e o seguinte segue na hora
     memset(&rede, 0, sizeof rede);
-    ws_fila_empurrar(f, "https://a", "https://a/1", "i1", "{}", t0);
-    ws_fila_empurrar(f, "https://a", "https://a/2", "i2", "{}", t0);
+    ws_fila_empurrar(f, "a", "/1", "i1", "{}", t0);
+    ws_fila_empurrar(f, "a", "/2", "i2", "{}", t0);
     rede.n = 2; rede.st[0] = 404; rede.st[1] = 204;
     OK(ws_fila_passo(f, t0, envia, NULL) == 2 && f->n == 0);
     STR(rede.url[1], "https://a/2");
 
     // vence em 1 dia: nem tenta
     memset(&rede, 0, sizeof rede);
-    ws_fila_empurrar(f, "https://a", "https://a/1", "i1", "{}", t0);
+    ws_fila_empurrar(f, "a", "/1", "i1", "{}", t0);
     OK(ws_fila_passo(f, t0 + WS_VIDA_S, envia, NULL) == 0 && f->n == 0);
 
     // fila cheia: o mais antigo sai
     { int k; char u[40], i2[16];
       for (k = 0; k < WS_FILA_MAX + 3; k++) {
-        snprintf(u, sizeof u, "https://a/%d", k); snprintf(i2, sizeof i2, "i%d", k);
-        ws_fila_empurrar(f, "https://a", u, i2, "{}", t0);
+        snprintf(u, sizeof u, "/%d", k); snprintf(i2, sizeof i2, "i%d", k);
+        ws_fila_empurrar(f, "a", u, i2, "{}", t0);
       }
       OK(f->n == WS_FILA_MAX); STR(f->it[0].id, "i3"); }
     ws_fila_limpar(f);
 
     // diario: ida e volta, preserva tentativas e proxima tentativa; lixo ignorado
-    ws_fila_empurrar(f, "https://a", "https://a/1", "i1", "{\"k\":\"v w\"}", t0);
-    ws_fila_empurrar(f, "https://b", "https://b/1", "i2", "{}", t0 + 5);
+    ws_fila_empurrar(f, "a", "/1", "i1", "{\"k\":\"v w\"}", t0);
+    ws_fila_empurrar(f, "b", "/1", "i2", "{}", t0 + 5);
     f->it[0].tentativas = 3; f->it[0].proxS = t0 + 600;
     { char *s = ws_fila_serializar(f), *lixo;
       WsFila *g = calloc(1, sizeof *g);
       OK(s != NULL);
       lixo = malloc(strlen(s) + 64);
-      sprintf(lixo, "lixo\n\t\t\n%s1\t2\tx\ta\tb\tc\td\n", s);
+      sprintf(lixo, "NVWATCHSTATE 2\nlixo\n\t\t\n%s1\t2\tx\ta\tb\tc\td\n", s + 15);
+      ws_fila_carregar(g, "100\t100\t1\thttps://a\thttps://a/x\tid\t{}\n");
+      OK(g->n == 0); // diario antigo com URL e sem contexto nao e reenviado
       ws_fila_carregar(g, lixo);
       ws_fila_carregar(g, s);                              // repetido: nao duplica
       OK(g->n == 2);
-      STR(g->it[0].corpo, "{\"k\":\"v w\"}"); STR(g->it[1].url, "https://b/1");
+      STR(g->it[0].corpo, "{\"k\":\"v w\"}"); STR(g->it[1].caminho, "/1");
+      STR(g->it[1].addon, "b");
       OK(g->it[0].tentativas == 3 && g->it[0].proxS == t0 + 600 && g->it[0].criadoS == t0);
       OK(g->it[1].criadoS == t0 + 5);
       free(lixo); free(s); ws_fila_limpar(g); free(g); }

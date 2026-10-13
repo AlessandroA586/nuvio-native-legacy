@@ -16,12 +16,14 @@
 #include "watchstate_envio.h"
 
 static int falhas;
-#define OK(c) do { if (!(c)) { printf("FALHOU %d: %s\n", __LINE__, #c); falhas++; } } while (0)
+#define OK(c) do { if (!(c)) { printf("FALHOU %d\n", __LINE__); falhas++; } } while (0)
 
 // ---- Rede falsa ------------------------------------------------------------
 static pthread_mutex_t tr = PTHREAD_MUTEX_INITIALIZER;
 static unsigned caps;
 static int nA, nC, nD, nB, prazoOk = 1, postOk = 1, jsonOk = 1;
+static int trocarDuranteEnvio;
+static const char *usuario = "conta-a";
 static char corpoA[1024], urlA[NV_ADDON_PEDIDO_MAX];
 
 unsigned rede_pedido_capacidades(void) { return caps; }
@@ -32,13 +34,14 @@ int rede_pedir(const RedePedido *p, RedeResposta *r) {
   if (!p->metodo || strcmp(p->metodo, "POST")) postOk = 0;
   if (p->prazo_ms != 15000) prazoOk = 0;
   if (!p->cabecalhos || !p->cabecalhos[0] || !strstr(p->cabecalhos[0], "application/json")) jsonOk = 0;
-  if (strstr(p->url, "a.test")) { nA++; snprintf(urlA, sizeof urlA, "%s", p->url);
+  if (strstr(p->url, "a.test") || strstr(p->url, "addon.test")) { nA++; snprintf(urlA, sizeof urlA, "%s", p->url);
                                   snprintf(corpoA, sizeof corpoA, "%.*s", (int)p->n_corpo, (const char *)p->corpo); }
   else if (strstr(p->url, "b.test")) nB++;
   else if (strstr(p->url, "c.test")) { nC++; st = 401; }
   else if (strstr(p->url, "d.test")) { nD++; st = 503; }
   pthread_mutex_unlock(&tr);
-  if (st == 204 && strstr(p->url, "a.test")) usleep(300000);   // addon lento
+  if (st == 204 && (strstr(p->url, "a.test") || strstr(p->url, "addon.test"))) usleep(300000);   // addon lento
+  if (trocarDuranteEnvio) usuario = "conta-b";
   r->erro = REDE_OK; r->status = st;
   return 0;
 }
@@ -52,11 +55,15 @@ int dados_apagar(const char *n) { (void)n; pthread_mutex_lock(&tr); free(disco);
 static int perfil = 1, perfilAddons = 1;
 int perfis_ativo(void) { return perfil; }
 int perfis_ativo_addons(void) { return perfilAddons; }
+const char *sessao_usuario(void) { return usuario; }
 
 static const char *bases[] = {"http://a.test/x", "http://b.test/x", "http://c.test/x", "http://d.test/x"};
-int addons_carregar(const char *dir) { (void)dir; return 4; }
-int addons_n(void) { return 4; }
-const char *addons_base(int i) { return bases[i]; }
+static int nAddons = 4;
+int addons_carregar(const char *dir) { (void)dir; return nAddons; }
+int addons_n(void) { return nAddons; }
+int addons_ativo(int i) { return i >= 0 && i < nAddons; }
+int addons_sondado(int i) { (void)i; return 1; }
+const char *addons_base(int i) { return i >= 0 && i < nAddons ? bases[i] : ""; }
 int addons_watchstate(int i, WsDecl *d) {
   memset(d, 0, sizeof *d);
   if (i == 1) return 0;                       // b.test nao declara watch_state
@@ -86,10 +93,10 @@ static long long agoraMs(void) {
 // Gerado pelo runner a partir do trecho de main.c que carrega os addons.
 void arranqueAddons(const char *dirArte);
 
-static int testarArranque(void) {
+static int testarArranque(int recusa) {
   WsEvento e = filme(WS_STOP, 3000);
   WsFila f = {0};
-  char url[512], id[WS_ID_MAX + 64], corpo[1024];
+  char url[512], destino[20], id[WS_ID_MAX + 64], corpo[1024];
   long long agora = (long long)time(NULL);
   int i;
   caps = REDE_CAP_CORPO;
@@ -97,11 +104,16 @@ static int testarArranque(void) {
   OK(ws_url(bases[0], &e, url, sizeof url));
   OK(ws_id(&e, id, sizeof id));
   OK(ws_corpo(&e, corpo, sizeof corpo));
-  OK(ws_fila_empurrar(&f, bases[0], url, id, corpo, agora - 60));
+  ws_destino(bases[0], usuario, perfil, destino);
+  OK(ws_fila_empurrar(&f, destino, url + strlen(bases[0]), id, corpo, agora - 60));
   f.it[0].proxS = agora - 1; f.it[0].tentativas = 1;
   disco = ws_fila_serializar(&f);
   ws_fila_limpar(&f);
 
+  if (recusa == 1) nAddons = 0;
+  if (recusa == 2) usuario = "conta-b";
+  if (recusa == 3) perfil = perfilAddons = 2;
+  if (recusa == 4) perfil = 2; // herda addons do principal
   arranqueAddons("art");   // processo novo; nenhum wsenvio_emitir
   arranqueAddons("art");   // iniciar de novo nao duplica a entrega
   for (i = 0; i < 200; i++) {
@@ -111,9 +123,11 @@ static int testarArranque(void) {
     usleep(10000);
   }
   pthread_mutex_lock(&tr);
-  OK(nA == 1 && nB == 0 && nC == 0 && nD == 0);
-  OK(!strcmp(urlA, "http://a.test/x/watch_state/push/movie/tt0133093.json"));
-  OK(strstr(corpoA, "\"event\":\"stop\"") && strstr(corpoA, "\"positionMs\":3000"));
+  OK(nA == !recusa && nB == 0 && nC == 0 && nD == 0);
+  if (!recusa) {
+    OK(!strcmp(urlA, "http://a.test/x/watch_state/push/movie/tt0133093.json"));
+    OK(strstr(corpoA, "\"event\":\"stop\"") && strstr(corpoA, "\"positionMs\":3000"));
+  }
   OK(disco == NULL);
   pthread_mutex_unlock(&tr);
   alarm(0);
@@ -151,12 +165,86 @@ static int testarUrlLonga(void) {
   return falhas ? 1 : 0;
 }
 
+// Base com query: o caminho vai ANTES da query, senao a config do addon chega
+// corrompida (https://addon.test/cfg?apikey=fixture/watch_state/...).
+static int testarQuery(void) {
+  static const char base[] = "https://addon.test/cfg?apikey=fixture";
+  WsEvento e = filme(WS_STOP, 3000);
+  int i;
+  bases[0] = base;
+  caps = REDE_CAP_CORPO;
+  alarm(8);
+  wsenvio_emitir(&e);
+  for (i = 0; i < 200; i++) {
+    int entregue;
+    pthread_mutex_lock(&tr); entregue = nA == 1; pthread_mutex_unlock(&tr);
+    if (entregue) break;
+    usleep(10000);
+  }
+  pthread_mutex_lock(&tr);
+  OK(nA == 1);
+  OK(!strcmp(urlA, "https://addon.test/cfg/watch_state/push/movie/tt0133093.json?apikey=fixture"));
+  pthread_mutex_unlock(&tr);
+  alarm(0);
+  if (!falhas) printf("OK watchstate_query\n");
+  return falhas ? 1 : 0;
+}
+
+// Diario pendente de um addon que a lista atual nao tem mais: no arranque nada
+// sai, nem o diario sobrevive.
+static int testarSemAddon(void) {
+  WsEvento e = filme(WS_STOP, 3000);
+  WsFila f = {0};
+  char url[512], id[WS_ID_MAX + 64], corpo[1024];
+  long long agora = (long long)time(NULL);
+  char destino[20];
+  caps = REDE_CAP_CORPO;
+  nAddons = 0;
+  alarm(8);
+  OK(ws_url("http://a.test/x", &e, url, sizeof url));
+  OK(ws_id(&e, id, sizeof id));
+  OK(ws_corpo(&e, corpo, sizeof corpo));
+  ws_destino("http://a.test/x", usuario, perfil, destino);
+  OK(ws_fila_empurrar(&f, destino, url + strlen("http://a.test/x"), id, corpo, agora - 60));
+  f.it[0].proxS = agora - 1;
+  disco = ws_fila_serializar(&f);
+  ws_fila_limpar(&f);
+
+  arranqueAddons("art");   // nenhum addon autorizado
+  usleep(300000);
+  pthread_mutex_lock(&tr);
+  OK(nA + nB + nC + nD == 0);
+  OK(disco == NULL);
+  pthread_mutex_unlock(&tr);
+  alarm(0);
+  if (!falhas) printf("OK watchstate_sem_addon\n");
+  return falhas ? 1 : 0;
+}
+
 int main(int argc, char **argv) {
   WsEvento e;
   long long t0, dt;
   int a, c, d;
-  if (argc > 1 && !strcmp(argv[1], "--arranque")) return testarArranque();
+  char destinoC[20], destinoD[20];
+  ws_destino(bases[2], usuario, perfil, destinoC);
+  ws_destino(bases[3], usuario, perfil, destinoD);
+  if (argc > 1 && !strcmp(argv[1], "--arranque")) return testarArranque(argc > 2 ? 1 : 0);
+  if (argc > 1 && !strcmp(argv[1], "--outra-conta")) return testarArranque(2);
+  if (argc > 1 && !strcmp(argv[1], "--outro-perfil")) return testarArranque(3);
+  if (argc > 1 && !strcmp(argv[1], "--herdado")) return testarArranque(4);
+  if (argc > 1 && !strcmp(argv[1], "--durante-envio")) {
+    caps = REDE_CAP_CORPO; trocarDuranteEnvio = 1;
+    e = filme(WS_START, 1000); wsenvio_emitir(&e);
+    usleep(800000);
+    pthread_mutex_lock(&tr);
+    OK(nA == 1 && nB + nC + nD == 0);
+    OK(disco == NULL);
+    pthread_mutex_unlock(&tr);
+    return falhas ? 1 : 0;
+  }
   if (argc > 1 && !strcmp(argv[1], "--url-longa")) return testarUrlLonga();
+  if (argc > 1 && !strcmp(argv[1], "--query")) return testarQuery();
+  if (argc > 1 && !strcmp(argv[1], "--sem-addon")) return testarSemAddon();
   alarm(8);   // start -> pause -> stop deve terminar mesmo com 401/503
 
   // VIDAA (so GET): nada sai, nem o fio nasce
@@ -192,7 +280,7 @@ int main(int argc, char **argv) {
      strstr(corpoA, "\"scope\":\"movie\"") && strstr(corpoA, "\"at\":1757441718"));
   OK(prazoOk && postOk && jsonOk);
   // 401 (c) e 503 (d) ficam no diario para depois; o entregue (a) sai dele
-  OK(disco && strstr(disco, "c.test") && strstr(disco, "d.test") && !strstr(disco, "a.test"));
+  OK(disco && strstr(disco, destinoC) && strstr(disco, destinoD) && !strstr(disco, "http"));
   pthread_mutex_unlock(&tr);
 
   // segundo evento: a entrega continua; c (401) segue parado, d (backoff) espera
