@@ -470,6 +470,7 @@ static int abrirSessao(void) {
 static void guardarMkv(const MkvFaixa *fx, int n);
 static int trilhaParaConverter(int tvLista);
 static int trilhaPreferida(void);
+static int videoConvertivel(void);
 
 int video_tocar(const char *u) {
   if (cv.ativo || cv.sondando) dts_tpk_fechar();
@@ -560,11 +561,22 @@ static int convPossivel(void) {
   if (cv.desistiu || emTrailer || !urlAtual[0]) return 0;
   if (strncmp(urlAtual, "http://", 7) && strncmp(urlAtual, "https://", 8)) return 0;
   if (proxyts_e_url(urlAtual) || dts_tpk_e_url(urlAtual)) return 0;
-  if (ajustes_dts_tpk_modo() == DTSTPK_DESLIGADO) return 0;
+  if (ajustes_dts_tpk_modo() == DTSTPK_DESLIGADO || !videoConvertivel()) return 0;
   return dts_tpk_disponivel();
 }
 
 static int faixaRecusada(const MkvFaixa *m) { return m->tipo == 2 && video_tpk_codec_recusado(m->codec); }
+
+// VIDEO QUE O CONVERSOR ACEITA: so HEVC e H.264 (dts_remux). VC-1 e MPEG-2 nao
+// tocam pelo TS/HLS convertido na TV: esses arquivos ficam no original, como no
+// master, sem a troca de player que so voltaria. Sem faixa de video lida
+// (MP4, cabecalho ainda nao lido) quem decide e o conversor.
+static int videoConvertivel(void) {
+  for (int i = 0; i < mkvN; i++)
+    if (mkvFx[i].tipo == 1)
+      return !strcmp(mkvFx[i].codec, "V_MPEGH/ISO/HEVC") || !strcmp(mkvFx[i].codec, "V_MPEG4/ISO/AVC");
+  return 1;
+}
 
 // A faixa (TrackNumber) a converter sem a pessoa pedir, ou 0. tvLista: quantas
 // faixas de audio a TV listou (-1 = ainda nao se sabe). So quando NENHUMA faixa
@@ -573,7 +585,7 @@ static int faixaRecusada(const MkvFaixa *m) { return m->tipo == 2 && video_tpk_c
 static int trilhaParaConverter(int tvLista) {
   const char *pref = ling_audio();
   int i, nArq = 0, nRec = 0, prim = 0, pre = 0;
-  if (tvLista > 0) return 0;
+  if (tvLista > 0 || !videoConvertivel()) return 0;
   for (i = 0; i < mkvN; i++) {
     if (mkvFx[i].tipo != 2) continue;
     nArq++;
@@ -593,7 +605,7 @@ static int trilhaParaConverter(int tvLista) {
 static int trilhaPreferida(void) {
   const char *pref = ling_audio();
   int i, rec = 0;
-  if (cv.prefFeito || !pref[0]) return 0;
+  if (cv.prefFeito || !pref[0] || !videoConvertivel()) return 0;
   cv.prefFeito = 1;
   for (i = 0; i < mkvN; i++) {
     if (mkvFx[i].tipo != 2 || !mkvFx[i].idioma[0] || !ling_casa(mkvFx[i].idioma, pref)) continue;

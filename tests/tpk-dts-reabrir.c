@@ -71,10 +71,11 @@ static long faixa(unsigned char *o, int num, int tipo, const char *codec, const 
   return el(o, 0xAE, 1, d, n);
 }
 static int misto;   // + a Japanese AAC track the TV plays
+static const char *videoCodec = "V_MPEGH/ISO/HEVC";
 static void montarCabecalho(void) {
   unsigned char t[768];
   long n = 0;
-  n += faixa(t + n, 1, 1, "V_MPEGH/ISO/HEVC", NULL, 0);
+  n += faixa(t + n, 1, 1, videoCodec, NULL, 0);
   n += faixa(t + n, 2, 2, "A_DTS", "eng", 6);
   if (misto) n += faixa(t + n, 6, 2, "A_AAC", "jpn", 2);
   n += faixa(t + n, 3, 17, "S_HDMV/PGS", "eng", 0);
@@ -261,6 +262,21 @@ int main(void) {
   pref = ""; abriuConversor = 0;
   video_tocar("http://h/d.mkv");
   ok(!abriuConversor && !dts_tpk_e_url(ultUrl), "mixed file, no preference: the original plays");
+  video_parar();
+  // VC-1 / MPEG-2 video: the converted TS/HLS does not play on the TV, so a
+  // DTS-only file with that video stays on the original, as on master.
+  misto = 0; pref = "";
+  for (int k = 0; k < 2; k++) {
+    videoCodec = k ? "V_MPEG2" : "V_MS/VFW/FOURCC"; montarCabecalho(); abriuConversor = 0;
+    video_tocar("http://h/f.mkv");
+    inicioStream = -1; posMs = 2000;
+    playerPronto(); bombear(20);
+    ok(!abriuConversor && !dts_tpk_e_url(ultUrl), k ? "MPEG-2 video, only DTS: the original plays" : "VC-1 video, only DTS: the original plays");
+    video_parar();
+  }
+  videoCodec = "V_MPEG4/ISO/AVC"; montarCabecalho(); abriuConversor = 0;
+  video_tocar("http://h/g.mkv");
+  ok(abriuConversor == 1 && dts_tpk_e_url(ultUrl), "H.264 video, only DTS: converts");
   video_parar();
   printf(falhas ? "tpk-dts-reabrir: %d FAIL(S)\n" : "tpk-dts-reabrir: ok\n", falhas);
   return falhas != 0;
