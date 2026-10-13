@@ -92,7 +92,7 @@ namespace NuvioTpk
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate int FnPos();
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void FnEscolher(int tipo, int idx);
 
-        const int EV_PRONTO = 1, EV_TOCANDO = 2, EV_PAUSADO = 3, EV_FIM = 4, EV_ERRO = 5, EV_TAMANHO = 6, EV_BUFFER = 7, EV_VELOCIDADE = 8, EV_PRESO = 9, EV_CONSULTA_LENTA = 10;
+        const int EV_PRONTO = 1, EV_TOCANDO = 2, EV_PAUSADO = 3, EV_FIM = 4, EV_ERRO = 5, EV_TAMANHO = 6, EV_BUFFER = 7, EV_VELOCIDADE = 8, EV_PRESO = 9, EV_CONSULTA_LENTA = 10, EV_BUSCOU = 11;
 
         readonly Func<Display> fazDisplay;
         readonly Action<Action> principal;
@@ -581,17 +581,19 @@ namespace NuvioTpk
 
         void Pausar(bool pausa)
         {
-            if (player == null) return;
+            var p = player;
+            int minha = playerSessao;
+            if (p == null) return;
             if (buscando) { pausaPend = pausa ? 1 : 0; return; }
             try
             {
-                if (pausa && player.State == PlayerState.Playing) { player.Pause(); NvVid.Evento(EV_PAUSADO, 0, 0); }
-                else if (!pausa && player.State == PlayerState.Paused) { player.Start(); windowMetrics.Invalidate(); NvVid.Evento(EV_TOCANDO, 0, 0); }
+                if (pausa && p.State == PlayerState.Playing) { p.Pause(); NvVid.Evento(EV_PAUSADO, 0, 0); }
+                else if (!pausa && p.State == PlayerState.Paused) { p.Start(); windowMetrics.Invalidate(); NvVid.Evento(EV_TOCANDO, 0, 0); }
             }
             catch (InvalidOperationException e)
             {
                 Log("pausar: " + e.Message);
-                Preso(playerSessao, -1);
+                Preso(minha, -1);
             }
             catch (Exception e) { Log("pausar: " + e.Message); }
         }
@@ -616,7 +618,12 @@ namespace NuvioTpk
                 }
                 await busca;
                 // So depois do seek aceito: pausado, o Tique nao consulta.
-                lock (trocaTrava) { if (minha == sessao && player == p) posMs = ms; }
+                lock (trocaTrava) {
+                    if (minha == sessao && player == p) {
+                        posMs = ms;
+                        NvVid.Evento(EV_BUSCOU, ms, 0);
+                    }
+                }
                 if (minha != Volatile.Read(ref sessao)) return;
                 // PlaybackInterrupted pode ter emitido evento 3 durante o seek.
                 if (p.State == PlayerState.Playing) NvVid.Evento(EV_TOCANDO, 0, 0);
@@ -631,7 +638,7 @@ namespace NuvioTpk
             finally { if (!expirou && minha == Volatile.Read(ref sessao)) buscando = false; }
             if (minha != Volatile.Read(ref sessao)) return;
             // SetPlayPositionAsync terminou: nao disputar Pause/outro seek com
-            // a transicao que produz evento 3; o cache so muda por consulta real.
+            // a transicao que produz evento 3; o cache ja recebeu o alvo aceito.
             if (buscaPend >= 0) { int alvo = buscaPend; buscaPend = -1; Buscar(alvo); }
             else if (pausaPend >= 0) { bool pausa = pausaPend != 0; pausaPend = -1; Pausar(pausa); }
         }

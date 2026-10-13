@@ -130,10 +130,9 @@ static atomic_int playerPreso;
 #define TPK_LENTA_VALE_MS 11000u   // ~2 consultas de 5 s seguidas
 static atomic_uint consultaLentaEm;
 static int reconPausa = -1;
-// Seek enviado que o relogio ainda nao mostrou: a recuperacao retoma nele.
-// Vale ate o relogio chegar perto dele ou o prazo do seek no host (15 s) passar.
-static int buscaAlvoMs = -1, reconAlvoMs = -1;
-static Uint32 buscaEm;
+// Seek enviado sem confirmacao do host: a recuperacao retoma nele.
+static atomic_int buscaAlvoMs = -1;
+static int reconAlvoMs = -1;
 
 // CABECALHO DO MKV (#206). O player do host so da o idioma de cada faixa; o
 // Name ("Forced", "DD 5.1"), a FlagForced e os canais estao nas TrackEntry, e
@@ -278,7 +277,7 @@ void nv_tpk_video_legenda(const char *texto, int durMs) {
 
 enum { EV_PRONTO = 1, EV_TOCANDO = 2, EV_PAUSADO = 3, EV_FIM = 4, EV_ERRO = 5,
        EV_TAMANHO = 6, EV_BUFFER = 7, EV_VELOCIDADE = 8,
-       EV_PRESO = 9, EV_CONSULTA_LENTA = 10 };
+       EV_PRESO = 9, EV_CONSULTA_LENTA = 10, EV_BUSCOU = 11 };
 
 __attribute__((visibility("default")))
 void nv_tpk_video_evento(int tipo, int a, int b) {
@@ -293,6 +292,9 @@ void nv_tpk_video_evento(int tipo, int a, int b) {
       else atomic_compare_exchange_strong(&playerPreso, &vazio, -1);
       break;
     }
+    case EV_BUSCOU:
+      atomic_compare_exchange_strong(&buscaAlvoMs, &a, -1);
+      break;
     case EV_CONSULTA_LENTA: atomic_store(&consultaLentaEm, SDL_GetTicks() | 1u); break;
     case EV_PRONTO:  durMs = a; pronto = 1; break;
     case EV_TOCANDO: tocando = 1; bufferando = 0; break;
@@ -604,7 +606,7 @@ static void vigiarPlayer(double pos) {
   Uint32 agora = SDL_GetTicks(), lentaEm = atomic_load(&consultaLentaEm);
   int lenta = lentaEm && agora - lentaEm < TPK_LENTA_VALE_MS;
   if (atomic_exchange(&vigiaReiniciar, 0)) vigiaAtiva = 0;
-  if (!ativo || !pronto || ((!tocando || pausaPedida || bufferando) && !lenta) || terminou ||
+  if (!ativo || !reconPermitida || !pronto || ((!tocando || pausaPedida || bufferando) && !lenta) || terminou ||
       falhou || recon.pendente || reconBuscarMs >= 0) { vigiaAtiva = 0; return; }
   if (!vigiaAtiva || pos != progressoPos) {
     if (vigiaAtiva && pos != progressoPos) atomic_store(&consultaLentaEm, 0);
@@ -627,9 +629,6 @@ void video_bombear(void) {
     hEscolher(3, velEnviada);
   }
   double pos = video_pos();
-  if (buscaAlvoMs >= 0 && (SDL_GetTicks() - buscaEm > TPK_PRESO_MS + 5000u ||
-                          (pos * 1000.0 > buscaAlvoMs - 2000 && pos * 1000.0 < buscaAlvoMs + 2000)))
-    buscaAlvoMs = -1;
   int preso = atomic_exchange(&playerPreso, -2);
   // Ao vivo (sem reconexao) a tecla recusada so e ignorada, como antes do #412.
   if (preso >= -1 && ativo && reconPermitida && !recon.pendente && !falhou) recuperarPlayer(preso);
@@ -702,7 +701,7 @@ void video_buscar(double s) {
     if (recon.pendente || reconErroPend || !pronto || reconBuscarMs >= 0) { reconBuscarMs = (int)(s * 1000.0); return; }
   }
   progressoEm = SDL_GetTicks(); progressoPos = video_pos(); vigiaAtiva = 1;
-  buscaAlvoMs = (int)(s * 1000.0); buscaEm = progressoEm;
+  buscaAlvoMs = (int)(s * 1000.0);
   if (hBuscar) hBuscar((int)(s * 1000.0));
   terminou = 0;
 }
