@@ -393,6 +393,9 @@ DtsRemux *dts_remux_open(const char *url, const char *headers, int ordinal, int 
     r->endS = (ic->start_time == AV_NOPTS_VALUE ? 0 : ic->start_time / (double)AV_TIME_BASE) + in->duration_s;
     in->width = V->codecpar->width; in->height = V->codecpar->height;
     in->fps = r->vfps.num > 0 && r->vfps.den > 0 ? av_q2d(r->vfps) : 0;
+    { const AVPacketSideData *dv = av_packet_side_data_get(V->codecpar->coded_side_data, V->codecpar->nb_coded_side_data,
+                                                           AV_PKT_DATA_DOVI_CONF);
+      in->dv_profile = dv && dv->size >= 3 ? dv->data[2] >> 1 : -1; }
     snprintf(in->video_codec, sizeof in->video_codec, "%s", avcodec_get_name(V->codecpar->codec_id));
     snprintf(in->audio_codec, sizeof in->audio_codec, "%s", avcodec_get_name(A->codecpar->codec_id));
     /* Container flag only (no probe): many MKVs leave it to the bitstream. */

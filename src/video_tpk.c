@@ -774,8 +774,8 @@ static void convRefazerProg(void) {
   char url[256];
   double pos = cv.inicio;
   int track = cv.track;
-  printf("[dts-tpk] a fonte nao tem indice de quadros-chave para o HLS (sem Cues): refazendo no modo %s a partir de %.1f s\n",
-         nomeModo(DTSTPK_PROG_TS), pos);
+  printf("[dts-tpk] HLS nao serve para esta fonte (%s): refazendo no modo %s a partir de %.1f s\n",
+         dts_tpk_erro(), nomeModo(DTSTPK_PROG_TS), pos);
   fflush(stdout);
   dts_tpk_fechar();
   cv.refezProg = 1;
@@ -1116,8 +1116,13 @@ static void convBombear(void) {
     }
   }
   if (cv.seekPend && pronto && tocando && cv.deslocOk) {
+    // O player devolve o alvo logo depois do seek, antes de ter quadro: conta
+    // so quando a posicao ANDA a partir do primeiro valor perto do alvo.
+    static Uint32 baseEm; static double base = -1;
     double p = posReal();
-    if (fabs(p - cv.seekAlvo) < 2.5 && p >= cv.seekAlvo - 0.5) {
+    if (baseEm != cv.seekEm) { baseEm = cv.seekEm; base = -1; }
+    if (base < 0 && fabs(p - cv.seekAlvo) < 2.5 && p >= cv.seekAlvo - 0.5) base = p;
+    if (base >= 0 && p >= base + 0.3) {
       printf("[dts-tpk] seek para %.1f s: tocando de novo em %u ms (posicao %.2f s, modo %s)\n", cv.seekAlvo,
              (unsigned)(agora - cv.seekEm), p, nomeModo(cv.modo));
       fflush(stdout);

@@ -32,6 +32,7 @@ typedef struct {
   int64_t size_bytes;          /* -1 while unknown */
   int mp4;                     /* source container is MP4/MOV */
   double fps;                  /* container frame rate, 0 = unknown (HLS master playlist) */
+  int dv_profile;              /* Dolby Vision configuration in the container: profile, -1 = none */
 } DtsRemuxInfo;
 
 typedef struct {
