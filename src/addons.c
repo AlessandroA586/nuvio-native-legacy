@@ -1843,14 +1843,17 @@ void addons_manifesto_lido(int i, const char *corpo) {
 // slot de B, e o fio de envio passava a entregar eventos de reproducao para
 // a URL de B, addon que nunca pediu o resource. Resposta que nao e do addon
 // do slot agora: descartada.
-void addons_manifesto_lido_base(int i, const char *base, const char *corpo) {
-  char atual[NV_ADDON_URL_MAX];
+void addons_manifesto_lido_base(int i, const char *base, const char *destino,
+                                unsigned versao, const char *corpo) {
+  char atual[NV_ADDON_URL_MAX], identidade[20];
   int atrasado = 0;
   if (!base || !*base) return;
   addons_lista_travar();
   baseNormalizada(base, atual, sizeof atual);
   if (i >= 0 && i < nAddon && corpo && *corpo) {
-    if (!strcmp(addon[i].base, atual)) capacidadesDoManifesto(i, corpo);
+    ws_destino(addon[i].base, sessao_usuario(), perfis_ativo(), identidade);
+    if (versao == versaoLista && destino && !strcmp(destino, identidade) &&
+        !strcmp(addon[i].base, atual)) capacidadesDoManifesto(i, corpo);
     else atrasado = 1;
   }
   addons_lista_destravar();

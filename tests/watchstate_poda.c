@@ -23,7 +23,13 @@ static char urlPost[NV_ADDON_PEDIDO_MAX];
 static char *disco;
 static pthread_cond_t mudou = PTHREAD_COND_INITIALIZER;
 static pthread_t escritor;
-static int trocarSlot, substituiu;
+static int trocarSlot, substituiu, manifestoAtrasado, download;
+static int perfil = 1;
+static const char *conta = "";
+static const char *baseSlot;
+static const char *MAN;
+void testeLerManifesto(void);
+void SDL_Delay(unsigned ms) { usleep(ms * 1000u); }
 
 // O runner intercala a troca depois de destinoAtual(), antes da declaracao/POST.
 // O escritor publica B ou [B,A] antes da poda, que espera a trava do envio.
@@ -65,13 +71,26 @@ void rede_resposta_limpar(RedeResposta *r) { (void)r; }
 int dados_gravar(const char *n, const char *c) { (void)n; pthread_mutex_lock(&tr); free(disco); disco = strdup(c); pthread_mutex_unlock(&tr); return 1; }
 char *dados_ler(const char *n) { char *s; (void)n; pthread_mutex_lock(&tr); s = disco ? strdup(disco) : NULL; pthread_mutex_unlock(&tr); return s; }
 int dados_apagar(const char *n) { (void)n; pthread_mutex_lock(&tr); free(disco); disco = NULL; pthread_mutex_unlock(&tr); return 1; }
-int perfis_ativo(void) { return 1; }
-int perfis_ativo_addons(void) { return 1; }
+int perfis_ativo(void) { return perfil; }
+int perfis_ativo_addons(void) { return perfil; }
 
 // addons.c pede estes ao mudar a lista; nenhum muda o que se confere aqui.
 void fontecache_vod_limpar(void) {}
 const char *rede_ultimo_erro(void) { return ""; }
-char *rede_baixar(const char *url, int s) { (void)url; (void)s; return NULL; }
+char *rede_baixar(const char *url, int s) {
+  (void)s;
+  if (!manifestoAtrasado) return NULL;
+  OK(!strcmp(url, "https://addon.test/cfg/manifest.json?apikey=fixture"));
+  download++;
+  if (manifestoAtrasado == 1) {
+    AddonRemoto lista = {"B", "https://b.test/config", 1};
+    OK(addons_definir_lista(&lista, 1));
+    // O MESMO ponteiro de addons_base usado pela descoberta antes da correcao.
+    OK(baseSlot == addons_base(0) && !strcmp(baseSlot, lista.url));
+  } else if (manifestoAtrasado == 2) conta = "outra-conta";
+  else perfil = 2;
+  return strdup(MAN);
+}
 char *rede_baixar_trecho_st(const char *url, int s, long long a, long long b,
                             long *tam, int *st, int *erro, char *fin, unsigned tf) {
   (void)url; (void)s; (void)a; (void)b; (void)tam; (void)st; (void)erro; (void)fin; (void)tf;
@@ -90,7 +109,7 @@ const char *rede_url_publica(const char *url, char *dst, unsigned tam) {
   if (n >= tam) n = tam - 1;
   memcpy(dst, url, n); dst[n] = 0;
   return dst; }
-const char *sessao_usuario(void) { return ""; }
+const char *sessao_usuario(void) { return conta; }
 void marco(const char *s) { (void)s; }
 int dados_gravar_leve(const char *n, const char *c) { (void)n; (void)c; return 1; }
 
@@ -151,21 +170,48 @@ int main(int argc, char **argv) {
 
   // A descoberta baixou o manifesto de A; durante a viagem a conta trocou a
   // lista para [B] e a resposta de A chega no slot 0, que agora e B.
-  if (argc > 1 && !strcmp(argv[1], "--manifesto-atrasado")) {
-    AddonRemoto lista = {"B", "https://b.test/config", 1};
-    char baseA[NV_ADDON_URL_MAX];
-    snprintf(baseA, sizeof baseA, "%s", addons_base(0));
-    OK(addons_definir_lista(&lista, 1));
-    OK(!strcmp(addons_base(0), "https://b.test/config"));
-    addons_manifesto_lido_base(0, baseA, MAN);   // atrasado: tem que cair
+  if (argc > 1 && (!strcmp(argv[1], "--manifesto-atrasado") ||
+                   !strcmp(argv[1], "--manifesto-conta") ||
+                   !strcmp(argv[1], "--manifesto-perfil"))) {
+    // Limpa a declaracao anterior sem mudar o endereco do slot.
+    addons_manifesto_lido(0, "{\"resources\":[\"stream\"]}");
+    manifestoAtrasado = !strcmp(argv[1], "--manifesto-atrasado") ? 1 :
+                        !strcmp(argv[1], "--manifesto-conta") ? 2 : 3;
+    baseSlot = addons_base(0);  // sem pre-copia que esconda a corrida
+    testeLerManifesto();
+    OK(download == 1);
     OK(!addons_watchstate(0, &(WsDecl){0}));
     wsenvio_emitir(&e);
     usleep(300000);
     pthread_mutex_lock(&tr);
-    OK(postsB == 0 && posts == 0);
+    OK(postsA == 0 && postsB == 0 && posts == 0);
     pthread_mutex_unlock(&tr);
     printf("watchstate_manifesto_atrasado: posts_A=%d, posts_B=%d, %s\n",
            postsA, postsB, falhas ? "FAIL" : "PASS");
+    return falhas ? 1 : 0;
+  }
+
+  if (argc > 1 && !strcmp(argv[1], "--expirado-logout")) {
+    WsFila f = {0};
+    char destino[20];
+    ws_destino(addons_base(0), sessao_usuario(), perfil, destino);
+    OK(ws_fila_empurrar(&f, destino, "/watch_state/push/movie/tt0133093.json",
+                         "id", "{}", (long long)time(NULL) - WS_VIDA_S));
+    disco = ws_fila_serializar(&f); ws_fila_limpar(&f);
+    wsenvio_iniciar();
+    for (i = 0; i < 200; i++) {
+      int apagou;
+      pthread_mutex_lock(&tr); apagou = disco == NULL; pthread_mutex_unlock(&tr);
+      if (apagou) break;
+      usleep(10000);
+    }
+    pthread_mutex_lock(&tr); OK(disco == NULL && posts == 0);
+    // Diario obsoleto com fila vazia: logout deve apaga-lo de novo.
+    free(disco); disco = strdup("NVWATCHSTATE 2\n");
+    pthread_mutex_unlock(&tr);
+    addons_esquecer();
+    pthread_mutex_lock(&tr); OK(disco == NULL && posts == 0); pthread_mutex_unlock(&tr);
+    printf("watchstate_expirado_logout: %s\n", falhas ? "FAIL" : "PASS");
     return falhas ? 1 : 0;
   }
 

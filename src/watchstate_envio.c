@@ -101,7 +101,8 @@ static void *fio(void *arg) {
   pthread_mutex_lock(&trava);
   for (;;) {
     long long agora = (long long)time(NULL), prox;
-    if (ws_fila_passo(fila, agora, enviaReal, NULL)) gravar();
+    // Expiracao e WS_AUSENTE tambem alteram a fila, mesmo sem pedido.
+    if (fila->n) { ws_fila_passo(fila, agora, enviaReal, NULL); gravar(); }
     prox = ws_fila_proxima(fila);
     if (prox < 0) pthread_cond_wait(&acorda, &trava);
     else {
@@ -153,8 +154,8 @@ static void podarDisco(int (*ainda)(const char *addon, void *u), void *u) {
 
 void wsenvio_podar(void) {
   pthread_mutex_lock(&trava);
-  if (fila && ws_fila_podar(fila, autorizado, NULL)) gravar();
-  else if (!fila) podarDisco(autorizado, NULL);
+  if (fila) { ws_fila_podar(fila, autorizado, NULL); gravar(); }
+  else podarDisco(autorizado, NULL);
   pthread_mutex_unlock(&trava);
 }
 
@@ -166,8 +167,8 @@ void wsenvio_podar_addon(const char *base) {
   if (!base || !base[0]) return;
   ws_destino(base, sessao_usuario(), perfis_ativo(), destino);
   pthread_mutex_lock(&trava);
-  if (fila && ws_fila_podar(fila, naoDestino, destino)) gravar();
-  else if (!fila) podarDisco(naoDestino, destino);
+  if (fila) { ws_fila_podar(fila, naoDestino, destino); gravar(); }
+  else podarDisco(naoDestino, destino);
   pthread_mutex_unlock(&trava);
 }
 

@@ -21,12 +21,26 @@ assert s.count('  if (d.viewers') + s.count('  if (s.decl.viewers') == 1
 s = 'void testeTrocaSlot(void);\n' + s.replace('  if (d.viewers', '  testeTrocaSlot();\n  if (d.viewers').replace(
     '  if (s.decl.viewers', '  testeTrocaSlot();\n  if (s.decl.viewers')
 (work / 'watchstate_envio.c').write_text(s)
+s = Path('src/descoberta.c').read_text()
+s += '''
+void testeLerManifesto(void) { Decl d; lerManifesto(0, &d, 1, NULL, NULL); }
+int catordem_n(void) { return 0; }
+const char *catordem_chave(int i) { (void)i; return ""; }
+int catordem_oculta(const char *c, const char *d) { (void)c; (void)d; return 0; }
+const ColFolder *col_por_catalogo(const char *b, const char *t, const char *id) { (void)b; (void)t; (void)id; return NULL; }
+void col_chave_pasta(const ColFolder *p, char *d, unsigned n) { (void)p; if (n) d[0] = 0; }
+int fil_adicionada_na_tv(const char *c) { (void)c; return 0; }
+int fil_escolhida(const char *c) { (void)c; return -1; }
+int fil_oculta(const char *c) { (void)c; return 0; }
+const char *i18n(const char *s) { return s; }
+'''
+(work / 'descoberta.c').write_text(s)
 PY
-cc tests/watchstate_poda.c "$work/addons.c" src/watchstate.c "$work/watchstate_envio.c" src/js.c src/jsw.c \
+cc tests/watchstate_poda.c "$work/addons.c" "$work/descoberta.c" src/cotacat.c src/watchstate.c "$work/watchstate_envio.c" src/js.c src/jsw.c \
   src/addonstats.c -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -std=gnu11 -Wall -Wextra -Wno-unused-function -Wno-macro-redefined -Wno-deprecated-declarations \
   -ffunction-sections -fdata-sections -Wl,-dead_strip -lpthread -o "$work/t"
-for caso in ${1:---desligar --remover --esquecer --antes-do-fio --trocar-slot --reordenar --manifesto-atrasado}; do
+for caso in ${1:---desligar --remover --esquecer --antes-do-fio --trocar-slot --reordenar --manifesto-atrasado --manifesto-conta --manifesto-perfil --expirado-logout}; do
   rc=0
   "$work/t" "$caso" > "$work/saida" || rc=$?
   grep -v '^\[addons\]' "$work/saida" || true
