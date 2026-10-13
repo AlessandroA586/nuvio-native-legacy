@@ -71,11 +71,12 @@ int main(void) {
   video_tpk_cartao_marcar(1);
   // P2: a vertical trailer cannot cover 960x540 within a 1080-high panel.
   nv_tpk_video_evento(6,1080,1920);
-  video_janela_fonte(0,656,1080,606,400,200,960,540);
+  cartaoDaHome("P2 aspect bridge: plane equals hole",0,656,1080,606,400,200,960,540);
   confere("P2 portrait fit with aspect bridge",728,200,304,540);
   nj=0; video_recorte_reaplicar(); assert(nj==0);
   nv_tpk_video_evento(6,1920,1080);
-  video_janela_fonte(600,0,720,1080,40,300,360,540);
+  cartaoDaHome("aspect bridge: plane equals hole",600,0,720,1080,40,300,360,540);
+  cartaoDaHome("aspect bridge: whole-frame plane equals hole",0,0,1920,1080,40,300,360,540);
   confere("unproven family uses proportional fit",40,469,360,202);
   assert(falhas==0);
   puts("tpk-aspecto-roi: PASS"); return 0;

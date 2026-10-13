@@ -790,8 +790,14 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
   // Trailer do CARTAO: quadro inteiro encaixado (ver video_tpk_cartao_marcar).
   // Hero, detalhe e tela cheia seguem o caminho de sempre, abaixo.
   cartao = emTrailer && emCartao;
+  if (cartao && !video_tpk_cartao_cover()) {
+    // A home ja encaixou o destino pelo mesmo retangulo usado no furo.
+    // Encaixar de novo perde pixels por arredondamento e expoe o fundo da TV.
+    cartaoModo("letterbox", cartaoSemCover ? "cover recusado nesta sessao" : "cover sem prova nesta familia");
+    video_janela(dx, dy, dw, dh);
+    return;
+  }
   if (cartao && sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh) { cartaoEncaixar(dx, dy, dw, dh, "quadro inteiro"); return; }
-  if (cartao && !video_tpk_cartao_cover()) { cartaoEncaixar(dx, dy, dw, dh, cartaoSemCover ? "cover recusado nesta sessao" : "cover sem prova nesta familia"); return; }
   // Recorte que cobre o quadro inteiro E o caso sem zoom: mesma coisa.
   if (sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh) { temRoi = 0; video_janela(dx, dy, dw, dh); return; }
 

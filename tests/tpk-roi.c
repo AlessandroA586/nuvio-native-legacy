@@ -38,6 +38,14 @@ static void confere(const char *nome, int x, int y, int w, int h) {
   printf("%s %s: %d,%d %dx%d (esperado %d,%d %dx%d)\n", ok ? "ok  " : "FALHA", nome, jx, jy, jw, jh, x, y, w, h);
   if (!ok) falhas++;
 }
+// Home sends the fitted hole as the trailer destination, including delayed crops.
+static __attribute__((unused)) void cartaoDaHome(const char *nome, int sx, int sy, int sw, int sh,
+                         float cx, float cy, float cw, float ch) {
+  float x,y,w,h;
+  video_tpk_cartao_furo(cx,cy,cw,ch,&x,&y,&w,&h);
+  video_janela_fonte(sx,sy,sw,sh,(int)x,(int)y,(int)w,(int)h);
+  confere(nome,(int)x,(int)y,(int)w,(int)h);
+}
 static __attribute__((unused)) void naTela(const char *nome) {
   int ok = jx >= 0 && jy >= 0 && jx + jw <= 1920 && jy + jh <= 1080;
   printf("%s %s: %d,%d %dx%d dentro da tela\n", ok ? "ok  " : "FALHA", nome, jx, jy, jw, jh);
@@ -116,14 +124,14 @@ int main(void) {
   // P2: portrait cover cannot fit the panel. Never stretch it into the card.
   video_tpk_cartao_marcar(1);
   nv_tpk_video_evento(6, 1080, 1920);
-  video_janela_fonte(0, 656, 1080, 606, 400, 200, 960, 540);
+  cartaoDaHome("P2 portrait trailer uses the home fit",0,656,1080,606,400,200,960,540);
   confere("P2 portrait trailer falls back to proportional fit", 728, 200, 304, 540);
   // A panel-contained ROI is not proof of visible video on this family.
   nv_tpk_video_evento(6, 1920, 1080);
   video_tpk_trailer_marcar(1);
-  video_janela_fonte(600, 0, 720, 1080, 40, 300, 360, 540);
+  cartaoDaHome("unproven family: plane equals hole",600,0,720,1080,40,300,360,540);
   confere("unproven model family uses letterbox at panel edge", 40, 469, 360, 202);
-  video_janela_fonte(600, 0, 720, 1080, 800, 300, 360, 540);
+  cartaoDaHome("unproven family: plane equals hole within panel",600,0,720,1080,800,300,360,540);
   confere("unproven model family uses letterbox even with ROI in panel", 800, 469, 360, 202);
   // #471: Tizen 6.x card trailer COVERS the card by cropping the source (center
   // 720x1080 of 1920x1080 into a 360x540 card = roi 960x540 at x-260; the
@@ -152,18 +160,31 @@ int main(void) {
   confere("#471 Tizen 6 cover before the host rejects ROI", -259, 300, 960, 540);
   video_tpk_log_host("[aspecto] sessao=1 DisplayRoi rc=0xffffffa1 fallback=ok");
   if (video_tpk_cartao_cover()) { printf("FALHA rejected ROI must clear effective cover\n"); falhas++; }
-  nj = 0; video_janela_fonte(600, 0, 720, 1080, 40, 300, 360, 540);
+  nj = 0; cartaoDaHome("#471 rejected ROI: plane equals hole",600,0,720,1080,40,300,360,540);
   confere("#471 rejected ROI uses the proportional fit", 40, 469, 360, 202);
   { float x,y,w,h; video_tpk_cartao_furo(40,300,360,540,&x,&y,&w,&h);
     int ok = x==40 && y==469 && w==360 && h==202;
     printf("%s #471 rejected ROI hole: %.0f,%.0f %.0fx%.0f\n", ok?"ok  ":"FALHA", x,y,w,h);
     if (!ok) falhas++; }
+  cartaoDaHome("#471 rejected ROI: whole-frame plane equals hole",0,0,1920,1080,40,300,360,540);
+  cartaoDaHome("#471 rejected ROI: delayed crop plane equals hole",0,2,1920,1076,40,300,360,540);
   nv_tpk_video_evento(6, 1920, 1080);
   // Other families keep the letterbox.
   video_tpk_tizen_definir("9.0");
   if (video_tpk_cartao_cover()) { printf("FALHA Tizen 9.0 must not cover the card\n"); falhas++; }
-  video_janela_fonte(600, 0, 720, 1080, 40, 300, 360, 540);
+  cartaoDaHome("#471 Tizen 9: plane equals hole",600,0,720,1080,40,300,360,540);
   confere("#471 Tizen 9 card trailer stays letterboxed", 40, 469, 360, 202);
+  { const char *familias[] = {"4.0","5.0","7.0","9.0"};
+    for (int i=0;i<4;i++) {
+      video_tocar("http://x/card.m3u8"); video_tpk_trailer_marcar(1); video_tpk_cartao_marcar(1);
+      video_tpk_tizen_definir(familias[i]);
+      nv_tpk_video_evento(6,1920,1080);
+      printf("#471 default fit Tizen %s\n",familias[i]);
+      cartaoDaHome("whole-frame plane equals hole",0,0,1920,1080,40,300,360,540);
+      cartaoDaHome("delayed crop plane equals hole",0,2,1920,1076,40,300,360,540);
+      confere("fitted card destination stays unchanged",40,469,360,202);
+    }
+  }
   video_tpk_tizen_definir("0");
   video_tpk_cartao_marcar(0);
   video_tpk_trailer_marcar(0);
