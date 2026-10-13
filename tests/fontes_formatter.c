@@ -57,6 +57,80 @@ static void measure(const char *dir, int addon, int verify) {
     if(addon) assert(cleanCalls==cleans && "focus must reuse parsed addon cards");
   }
 }
+// Compare the real sheet with the previous opaque RGB rendering, including
+// antialiased edges and animation alpha over both grey and light artwork.
+static int pixelLine(const char *label, TxtEstilo style, const char *s,
+                     int r, int g, int b, float x, float y, float alpha,
+                     int background, const char *icon) {
+  unsigned char actual[640*48*4], expected[sizeof actual];
+  int height=style==TXT_CALLOUT?40:28;
+  size_t bytes=640*height*4;
+  glReadPixels((int)x,1080-(int)y-height,640,height,GL_RGBA,GL_UNSIGNED_BYTE,actual);
+  glClearColor(background/255.0f,background/255.0f,background/255.0f,1);
+  glClear(GL_COLOR_BUFFER_BIT);
+  if(icon) {
+    gfx_icone((GfxRect){x,y+3,22,22},icon,r/255.0f,g/255.0f,b/255.0f,alpha);
+    x+=30;
+  }
+  TxtLinha l=txt_linha(style,s,r,g,b,255);
+  txt_desenhar_alpha(l,x,y,alpha);
+  glReadPixels((int)x-(icon?30:0),1080-(int)y-height,640,height,GL_RGBA,GL_UNSIGNED_BYTE,expected);
+  int mismatches=0, ink=0, iconInk=0;
+  for(size_t p=0;p<bytes;p+=4) {
+    if(expected[p]!=background) { ink++; if((p/4)%640<22) iconInk++; }
+    for(int c=0;c<4;c++) if(abs(actual[p+c]-expected[p+c])>1) { mismatches++; break; }
+  }
+  printf("pixels %s bg=%d alpha=%.1f mismatches=%d ink=%d\n",label,background,alpha,mismatches,ink);
+  return mismatches==0 && ink>0 && (!icon || iconInk>0);
+}
+static void pixels(const char *dir) {
+  assert(tex_iniciar(64)); gfx_icones_dir("deploy/app/art");
+  const char *paths[]={"deploy/app/art/icones/aj_hard-drive.png","deploy/app/art/icones/aj_volume-2.png"};
+  for(int i=0;i<2;i++) {
+    GLuint icon=0;
+    for(int tries=0;tries<200 && !icon;tries++) {
+      tex_bombear(8); icon=tex_obter_larg(paths[i],22);
+      if(!icon) SDL_Delay(5);
+    }
+    assert(icon && "pixel assertion must draw real icons");
+  }
+  int ok=1;
+  for(int addon=0;addon<=1;addon++) for(int failed=0;failed<=1;failed++)
+    for(int bg=77;bg<=220;bg+=143) for(int fade=0;fade<=1;fade++) {
+      setting(dir,addon);
+      Stream s=fixtures[1];
+      snprintf(s.rotulo,sizeof s.rotulo,"Pixel title");
+      snprintf(s.descricao,sizeof s.descricao,"💾 Numbers\n🔊 Secondary");
+      stream_definir_lista(&s,1); stream_folha_abrir();
+      if(failed) stream_vod_falhou(0);
+      grupo=0; linhaAnt=-1; abreAnt=0; rolagem=0;
+      montar(automaticaDaFolha());
+      float a=fade?.6f:1, x=FOLHA_PAD_E+FOLHA_TXT;
+      float y=FOLHA_TOPO+linhaY[0]+20+(failed?FOLHA_MARCA_H:0);
+      char title[96], ep[64]="";
+      if(addon) snprintf(title,sizeof title,"%s",textoAddonDa(0)->titulo);
+      else tituloConteudo(&lista[0],title,sizeof title,ep,sizeof ep);
+      // Redraw for each crop because pixelLine clears the framebuffer.
+      int count=addon?3:1;
+      for(int line=0;line<count;line++) {
+        txt_novo_quadro();
+        glClearColor(bg/255.0f,bg/255.0f,bg/255.0f,1); glClear(GL_COLOR_BUFFER_BIT);
+        corpoFolha(0,1920,a,SDL_GetTicks(),0);
+        if(line==0) ok &= pixelLine(failed?"failed title":"title",TXT_CALLOUT,title,
+                                   failed?105:205,failed?105:205,failed?103:203,x,y,a,bg,NULL);
+        else {
+          const LinhaAddon *l=&textoAddonDa(0)->linhas[line-1];
+          ok &= pixelLine(line==1?"numbers + icon":"secondary + icon",TXT_PG_FIM,l->tx[0],
+                          line==1?180:130,line==1?180:130,line==1?180:130,
+                          x,y+40+(line-1)*FOLHA_ADDON_LD,a,bg,l->ic[0]);
+        }
+      }
+      stream_vod_tocou(0);
+    }
+  fflush(stdout);
+  assert(ok && "unfocused text and icons must preserve the previous RGB and alpha");
+  tex_encerrar();
+}
 int main(int argc,char **argv) {
   int verify=argc==1 || strcmp(argv[1],"--measure");
   char dir[]="/tmp/nuvio-formatter479-XXXXXX"; assert(mkdtemp(dir));
@@ -95,6 +169,7 @@ int main(int argc,char **argv) {
   setting(dir,1); montar(automaticaDaFolha());
   cleans=cleanCalls; montar(automaticaDaFolha()); assert(cleanCalls==cleans);
   puts("formatter cache: append, replacement and setting changes OK");
+  pixels(dir);
   txt_encerrar(); stream_definir_lista(NULL,0);
   SDL_GL_DeleteContext(gl); SDL_DestroyWindow(win); IMG_Quit(); SDL_Quit();
   char path[512]; snprintf(path,sizeof path,"%s/ajustes.txt",dir); unlink(path); rmdir(dir);

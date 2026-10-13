@@ -1,5 +1,5 @@
 #!/bin/bash
-# #479: hidden-window timing and texture/formatting regression; no network.
+# #479: hidden-window RGB/alpha pixel assertions and zero-rasterization regression; no network.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 FF_DIR=$(mktemp -d /tmp/nuvio-fontes-formatter.XXXXXX)

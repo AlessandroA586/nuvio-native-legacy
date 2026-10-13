@@ -296,6 +296,8 @@ TxtLinha txt_linha_corta_enfase(TxtEstilo estilo, const char *s, int r, int g,
 // Desenha no canto superior esquerdo (x,y).
 void txt_desenhar(TxtLinha l, float x, float y);
 void txt_desenhar_alpha(TxtLinha l, float x, float y, float alpha);
+// Multiplica so o RGB da textura (0..1); preserva o alpha e o encaixe no pixel.
+void txt_desenhar_tom(TxtLinha l, float x, float y, float cr, float cg, float cb, float alpha);
 
 // Desenha com ESPACAMENTO entre letras (tracking) e devolve a largura total.
 // SDL_ttf nao tem tracking, e o titulo da pagina do tvOS depende dele: sem o
