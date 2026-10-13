@@ -417,11 +417,15 @@ static void montarTitulos(const char *alvo) {
   // decide o resto. Remoto que nao contem o texto (o addon casou por outro
   // campo) ainda entra, abaixo de qualquer casamento de nome.
   { int a, nAlvos = desc_busca_n_alvos();
-    for (a = 0; a < nAlvos && nc < 40; a++) {
+    // #405: 12 POR ALVO, o mesmo corte da tela de Busca (BUSCA_POR_ALVO; 8
+    // cortava um homonimo na posicao seguinte da listagem). O somatorio fica
+    // no tamanho do vetor de candidatos: 16 alvos x 12 nao cabem em 40 e um
+    // alvo no fim da ordem perdia TUDO, nunca so o excesso.
+    for (a = 0; a < nAlvos && nc < 64; a++) {
       int nRem = desc_busca_alvo_n(a, consulta);
-      CatItem novos[8];
-      int posNovo[8], idxNovos[8], nNovos = 0;
-      for (i = 0; i < nRem && i < 8 && nc < 40; i++) {
+      CatItem novos[12];
+      int posNovo[12], idxNovos[12], nNovos = 0;
+      for (i = 0; i < nRem && i < 12 && nc < 64; i++) {
         CatItem it;
         int idx, k, dup = 0;
         // Sem ID, cada montagem reinseriria o resultado e mudaria a revisao.
@@ -435,7 +439,7 @@ static void montarTitulos(const char *alvo) {
         c[nc].pont += 6 - (a < 6 ? a : 6);   // primeiro addon desempata
         c[nc].ordem = ordem++;
         if (idx >= 0) c[nc++].idx = idx;
-        else if (nNovos < 8) { novos[nNovos] = it; posNovo[nNovos++] = nc; c[nc++].idx = -1; }
+        else if (nNovos < 12) { novos[nNovos] = it; posNovo[nNovos++] = nc; c[nc++].idx = -1; }
       }
       // Os que nao estao no catalogo entram numa troca de bloco so (o porque
       // esta em refiltrar, busca.c: cat_acrescentar por item copia tudo).

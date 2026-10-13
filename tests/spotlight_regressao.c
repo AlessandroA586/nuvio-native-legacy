@@ -30,7 +30,7 @@
 #include "dados.h"
 #include <assert.h>
 
-static CatItem rem[2][4];
+static CatItem rem[2][12];
 static int quant[2], falhas, cortadas, artes, montagens;
 static float fimRecorte;
 static char termo[96];
@@ -42,7 +42,7 @@ static const char *nomeFoco;
 void teste_buscar(const char *t) { montagens++; snprintf(termo, sizeof termo, "%s", t); }
 int teste_alvos(void) { return 2; }
 int teste_n(int a, const char *t) { return !strcmp(t, termo) ? quant[a] : 0; }
-int teste_item(int a, int i, CatItem *it) { *it = rem[a][i]; return 1; }
+int teste_item(int a, int i, CatItem *it) { if (i >= quant[a]) return 0; *it = rem[a][i]; return 1; }
 int teste_total(const char *t) { return teste_n(0, t) + teste_n(1, t); }
 int teste_buscando(void) {
   // Intercala uma publicacao real depois de montar os grupos, antes de
@@ -266,6 +266,32 @@ int main(void) {
   check(montagens == 1, "remoto sem ID: uma montagem em 120 quadros");
   check(cat_n() == nAntes && cat_revisao_itens() == revAntes,
         "remoto sem ID: catalogo e revisao nao crescem");
+
+  // #405: A BUSCA RAPIDA NAO LISTA TODOS OS RESULTADOS. O dono da issue tem
+  // 7 alvos de busca; a tela de Busca aceita 12 itens por catalogo e a caixa
+  // rapida aceitava so 8 — um resultado homonimo (uma "Silo" de 2015 e a de
+  // 2023 vem nas mesmas respostas) atras do 8o lugar do addon nao aparecia.
+  // O corte tem de ser o mesmo 12 por alvo (BU_MAX_POR_FIL) e o teto de 40
+  // soma tem de acompanhar: 7 alvos x 12 sao 84, fora do 40 algum nao entra.
+  quant[0] = 12; quant[1] = 0;
+  for (int i = 0; i < 12; i++) {
+    char id[24]; snprintf(id, sizeof id, "ttSiloPar%d", i);
+    rem[0][i] = item(id, "movie", "2015", 0);
+    if (i < 11) snprintf(rem[0][i].titulo, sizeof rem[0][i].titulo,
+                       "Silo parcial %d", i);
+  }
+  // O exato no 12o lugar da resposta do addon (ultimo que a Busca guarda).
+  rem[0][11] = item("tt14688458", "series", "2023", 81);
+  strcpy(rem[0][11].titulo, "Silo");
+  cat_definir_tudo(&base, 1, NULL, 0);
+  montar();
+  { int achou = 0;
+    for (int i = 0; i < nLin; i++)
+      if ((lin[i].tipo == L_TOPO || lin[i].tipo == L_TITULO) &&
+          !strcmp(cat_item(lin[i].ref)->imdb, "tt14688458")) achou = 1;
+    check(achou, "#405: o 13o resultado do alvo tambem aparece na busca rapida"); }
+  quant[1] = 1;
+
   printf("RESULTADO: %d falhas\n", falhas);
   return falhas ? 1 : 0;
 }
