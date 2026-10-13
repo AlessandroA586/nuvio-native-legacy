@@ -23,7 +23,7 @@ static void frame(void) {
 static void setting(const char *dir, int addon) {
   char path[512]; snprintf(path,sizeof path,"%s/ajustes.txt",dir);
   FILE *f=fopen(path,"w"); assert(f);
-  fprintf(f,"fonteTextoLocal %d\nfonteOrdemAddonLocal 1\nvidroLocal 1\n",addon);
+  fprintf(f,"fonteTextoLocal %d\nvidroLocal 1\n",addon);
   fclose(f); ajustes_dir(dir);
   assert(ajustes_fonte_texto_addon()==addon);
 }
@@ -75,7 +75,26 @@ int main(int argc,char **argv) {
     snprintf(s->descricao,sizeof s->descricao,
       "💾 11.1 GB | 30.1 Mbps |\n🔊 DDP5.1 Atmos\n🌐 English | Portuguese\n⚙️ Release group\nMovie.2026.1080p.Source.%02d.mkv",i);
   }
-  measure(dir,0,0); measure(dir,1,verify);
+  measure(dir,0,verify); measure(dir,1,verify);
+  // Append keeps existing parsed cards, including when the backing array moves.
+  int cleans=cleanCalls;
+  stream_lista_acrescentar(&fixtures[0],1,0);
+  const TextoAddon *old=textoAddonDa(0); assert(old->nl==5);
+  assert(cleanCalls==cleans);
+  const TextoAddon *added=textoAddonDa(CARDS); assert(added->nl==5);
+  assert(cleanCalls>cleans);
+  cleans=cleanCalls; textoAddonDa(CARDS); assert(cleanCalls==cleans);
+  // A replacement of the same length must discard the previous card content.
+  snprintf(fixtures[0].rotulo,sizeof fixtures[0].rotulo,"Replacement");
+  snprintf(fixtures[0].descricao,sizeof fixtures[0].descricao,"New description");
+  stream_definir_lista(fixtures,CARDS);
+  const TextoAddon *replaced=textoAddonDa(0);
+  assert(!strcmp(replaced->titulo,"Replacement") && replaced->nl==1);
+  // Settings switch while the list survives; parsing is independent of style.
+  setting(dir,0); montar(automaticaDaFolha());
+  setting(dir,1); montar(automaticaDaFolha());
+  cleans=cleanCalls; montar(automaticaDaFolha()); assert(cleanCalls==cleans);
+  puts("formatter cache: append, replacement and setting changes OK");
   txt_encerrar(); stream_definir_lista(NULL,0);
   SDL_GL_DeleteContext(gl); SDL_DestroyWindow(win); IMG_Quit(); SDL_Quit();
   char path[512]; snprintf(path,sizeof path,"%s/ajustes.txt",dir); unlink(path); rmdir(dir);
