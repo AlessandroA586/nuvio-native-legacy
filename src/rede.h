@@ -374,10 +374,9 @@ void rede_avisar_401(void (*f)(const char *url));
 // Registra quem OUVE o fim de cada pedido, para a saude da rede (redesaude.h:
 // "sem internet" / "internet de volta" na ilha, 02/10). O callback recebe o
 // CURLcode (0 = ok; no Tizen-wasm 0 = respondeu, 6 = sem resposta) e a URL, e
-// roda no fio do pedido. primeiraMs guarda a primeira falha antes do retry
-// (0 = so o resultado final). Ponteiro e nao chamada direta para os testes que
+// roda no fio do pedido. Ponteiro e nao chamada direta para os testes que
 // compilam rede.c sozinho nao precisarem do modulo.
-void rede_avisar_saude(void (*f)(int codigo, const char *url, unsigned primeiraMs));
+void rede_avisar_saude(void (*f)(int codigo, const char *url));
 // Cada pedido que terminou, com o host, o CURLcode (0 = transporte ok), o
 // HTTP e quantos ms levou (0 = nao medido, no wasm). E de onde a aba Rede do
 // painel de registro tira pedidos, falhas e tempo tipico por host

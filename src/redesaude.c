@@ -9,22 +9,11 @@
 static pthread_mutex_t trava = PTHREAD_MUTEX_INITIALIZER;
 static RedeSaude global;
 
-static int avaliar(RedeSaude *s, unsigned agora) {
-  if (!s->offline && s->falhas >= REDE_SAUDE_FALHAS && s->nHosts >= REDE_SAUDE_HOSTS &&
-      agora - s->primeira >= REDE_SAUDE_JANELA &&
-      !(s->voltouOk && agora - s->voltou < REDE_SAUDE_CARENCIA)) {
-    s->offline = 1; s->seq++;
-    return 1;
-  }
-  return 0;
-}
-
-static int passoDesde(RedeSaude *s, int ok, unsigned host, unsigned primeira, unsigned agora) {
+int rede_saude_passo(RedeSaude *s, int ok, unsigned host, unsigned agora) {
   int i;
   if (!host) return 0;
   if (ok) {
     s->falhas = 0; s->nHosts = 0;
-    s->ultimoOk = agora; s->temOk = 1;
     if (s->offline) {
       s->offline = 0; s->voltou = agora; s->voltouOk = 1; s->seq++;
       return 1;
@@ -32,26 +21,17 @@ static int passoDesde(RedeSaude *s, int ok, unsigned host, unsigned primeira, un
     return 0;
   }
   if (s->offline) return 0;
-  // Um sucesso de outro fio durante o retry reinicia a janela de falhas.
-  if (s->temOk && (int)(primeira - s->ultimoOk) < 0) primeira = s->ultimoOk;
-  if (!s->falhas || (int)(primeira - s->primeira) < 0) s->primeira = primeira;
+  if (!s->falhas) s->primeira = agora;
   s->falhas++;
   for (i = 0; i < s->nHosts; i++) if (s->hosts[i] == host) break;
   if (i == s->nHosts && s->nHosts < 4) s->hosts[s->nHosts++] = host;
-  return avaliar(s, agora);
-}
-
-int rede_saude_passo(RedeSaude *s, int ok, unsigned host, unsigned agora) {
-  return passoDesde(s, ok, host, agora, agora);
-}
-
-// Chamado com trava; stdout faz parte do registro enviado.
-static void transicao(int mudou, unsigned agora) {
-  if (!mudou) return;
-  printf("[rede] saude=%s falhas=%d hosts=%d janela=%u ms\n",
-         global.offline ? "offline" : "online", global.falhas, global.nHosts,
-         global.offline ? agora - global.primeira : 0);
-  fflush(stdout);
+  if (s->falhas >= REDE_SAUDE_FALHAS && s->nHosts >= REDE_SAUDE_HOSTS &&
+      agora - s->primeira >= REDE_SAUDE_JANELA &&
+      !(s->voltouOk && agora - s->voltou < REDE_SAUDE_CARENCIA)) {
+    s->offline = 1; s->seq++;
+    return 1;
+  }
+  return 0;
 }
 
 // FNV-1a do host da URL ("https://a.b/c" -> "a.b"); 0 para endereco local.
@@ -78,12 +58,8 @@ static unsigned agoraMs(void) {
 }
 
 void rede_saude_nota(int codigo, const char *url) {
-  rede_saude_nota_desde(codigo, url, 0);
-}
-
-void rede_saude_nota_desde(int codigo, const char *url, unsigned primeiraMs) {
   int ok;
-  unsigned h, agora;
+  unsigned h;
   switch (codigo) {
     case 0: ok = 1; break;
     case 6: case 7: case 28: case 35: case 52: case 55: case 56: ok = 0; break;
@@ -92,28 +68,21 @@ void rede_saude_nota_desde(int codigo, const char *url, unsigned primeiraMs) {
   h = hostHash(url);
   if (!h) return;
   pthread_mutex_lock(&trava);
-  agora = agoraMs();
-  transicao(passoDesde(&global, ok, h, primeiraMs ? primeiraMs : agora, agora), agora);
+  rede_saude_passo(&global, ok, h, agoraMs());
   pthread_mutex_unlock(&trava);
 }
 
 int rede_saude_offline(void) {
   int o;
-  unsigned agora;
   pthread_mutex_lock(&trava);
-  agora = agoraMs();
-  transicao(avaliar(&global, agora), agora);
   o = global.offline;
   pthread_mutex_unlock(&trava);
   return o;
 }
 
 unsigned rede_saude_seq(void) {
-  unsigned s, agora;
+  unsigned s;
   pthread_mutex_lock(&trava);
-  // ilhasinais_passo consulta por quadro: janela/carencia vencem sem novo pedido.
-  agora = agoraMs();
-  transicao(avaliar(&global, agora), agora);
   s = global.seq;
   pthread_mutex_unlock(&trava);
   return s;

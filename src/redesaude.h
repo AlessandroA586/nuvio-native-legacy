@@ -34,9 +34,7 @@
 
 typedef struct {
   int falhas;               // falhas de transporte seguidas
-  unsigned primeira;        // ms da primeira falha da sequencia, incluindo retry
-  unsigned ultimoOk;        // a janela nunca comeca antes do ultimo sucesso
-  int temOk;
+  unsigned primeira;        // ms da primeira falha da sequencia
   unsigned hosts[4];        // hosts distintos da sequencia (hash)
   int nHosts;
   int offline;              // 1 = "sem internet" declarado
@@ -53,8 +51,6 @@ int  rede_saude_passo(RedeSaude *s, int ok, unsigned host, unsigned agoraMs);
 // no wasm, 0 para resposta e 6 para "sem resposta". Codigos que nao sao de
 // transporte (cancelamento, teto) sao ignorados aqui mesmo.
 void rede_saude_nota(int codigo, const char *url);
-// Resultado final com o instante da primeira falha do retry (0 = agora).
-void rede_saude_nota_desde(int codigo, const char *url, unsigned primeiraMs);
 // Estado atual e o contador de trocas (quem avisa compara com o que viu).
 int      rede_saude_offline(void);
 unsigned rede_saude_seq(void);
