@@ -19,7 +19,7 @@ typedef struct {
   double duration_s;
   int width, height;
   char video_codec[16], audio_codec[16];
-  char hdr[8];                 /* PQ, HLG or SDR (from the container) */
+  char hdr[48];                /* PQ, HLG, SDR or "not in the container" (container flags) */
   int audio_ordinal, stream_index; /* k-th audio track of the file (0-based), FFmpeg index */
   int in_channels, in_rate;    /* from the container header */
   int out_channels, out_bitrate;

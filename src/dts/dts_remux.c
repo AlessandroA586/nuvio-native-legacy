@@ -146,6 +146,9 @@ struct DtsRemux {
   AVRational vtb, atb, vfps;
   char lang[16];
   int64_t *kf; int nkf;             /* keyframe index (video time base), sorted */
+  /* VC-1 / MPEG-2: the sequence header (+ entry point / extensions) from the
+   * container's CodecPrivate, repeated in front of each keyframe in the TS. */
+  uint8_t *seqHdr; int seqHdrN; uint8_t seqCode; int vc1;
   int64_t *segTs, *segB48; double *segS; int nseg;
   double endS;
   pthread_mutex_t lock;
@@ -181,6 +184,7 @@ struct DtsRemuxGen {
   int prog; int64_t progKf, progB48; double progStartS;
   /* muxer kept across consecutive segments (continuity counters run on) */
   AVFormatContext *oc; AVStream *ov, *oa;
+  int esFix;                        /* this muxer is MPEG-TS and the video is VC-1 / MPEG-2 */
   DtsRemuxWrite w; void *wop; int wfail; int64_t bytes;
   /* rolling log, every 30 s of media */
   double logMedia, logCpu, logAudio, logWall, logProc, logBlocked, mediaTotal;
@@ -195,6 +199,46 @@ static void fail(char *err, size_t n, const char *what, int code) {
   if (!err || !n) return;
   if (code < 0) av_strerror(code, d, sizeof d);
   snprintf(err, n, "%s%s%s", what, d[0] ? ": " : "", d);
+}
+
+/* VIDEO CODECS THE TV PLAYS FROM A TS. HEVC and H.264 go as they are (the
+ * muxer adds the Annex B start codes and parameter sets). VC-1 (Blu-ray) and
+ * MPEG-2 (DVD, old Blu-ray) also play on the TV, but Matroska keeps their
+ * sequence header only in CodecPrivate, and VC-1 frames may come without the
+ * frame start code. In a TS the decoder joins at a keyframe (every seek here),
+ * so each keyframe gets the sequence header in front and each VC-1 frame its
+ * start code (dts_remux_es_fix). The video bytes themselves are not touched. */
+static int videoOk(enum AVCodecID id) {
+  return id == AV_CODEC_ID_HEVC || id == AV_CODEC_ID_H264 || id == AV_CODEC_ID_VC1 || id == AV_CODEC_ID_MPEG2VIDEO;
+}
+static int findCode(const uint8_t *d, int n, uint8_t code) {
+  for (int i = 0; i + 3 < n; i++) if (!d[i] && !d[i + 1] && d[i + 2] == 1 && d[i + 3] == code) return i;
+  return -1;
+}
+/* Before the first picture/frame start code: is there a sequence header? */
+static int hasSeqHdr(const uint8_t *d, int n, uint8_t seqCode, uint8_t picCode) {
+  for (int i = 0; i + 3 < n; i++) {
+    if (d[i] || d[i + 1] || d[i + 2] != 1) continue;
+    if (d[i + 3] == seqCode) return 1;
+    if (d[i + 3] == picCode) return 0;
+  }
+  return 0;
+}
+/* Exported for tests/dts-remux-es.c: builds in `out` (allocated here) the packet
+ * as the TS needs it; returns its size, 0 when nothing changes, -1 on memory. */
+int dts_remux_es_fix(int vc1, const uint8_t *seq, int seqN, const uint8_t *d, int n, int key, uint8_t **out) {
+  uint8_t seqCode = vc1 ? 0x0F : 0xB3, picCode = vc1 ? 0x0D : 0x00;
+  int addSeq = key && seq && seqN > 0 && !hasSeqHdr(d, n, seqCode, picCode);
+  int addSc = vc1 && !(n >= 3 && !d[0] && !d[1] && d[2] == 1);
+  int k = 0;
+  *out = NULL;
+  if (!addSeq && !addSc) return 0;
+  if (!(*out = av_malloc((size_t)(n + (addSeq ? seqN : 0) + (addSc ? 4 : 0) + AV_INPUT_BUFFER_PADDING_SIZE)))) return -1;
+  if (addSeq) { memcpy(*out, seq, (size_t)seqN); k += seqN; }
+  if (addSc) { (*out)[k++] = 0; (*out)[k++] = 0; (*out)[k++] = 1; (*out)[k++] = 0x0D; }
+  memcpy(*out + k, d, (size_t)n); k += n;
+  memset(*out + k, 0, AV_INPUT_BUFFER_PADDING_SIZE);
+  return k;
 }
 
 static int isConvertible(enum AVCodecID id) {
@@ -317,8 +361,23 @@ DtsRemux *dts_remux_open(const char *url, const char *headers, int ordinal, int 
     r->info.audio_ordinal = k; }
   {
     AVStream *V = ic->streams[r->vs], *A = ic->streams[r->as];
-    if (V->codecpar->codec_id != AV_CODEC_ID_HEVC && V->codecpar->codec_id != AV_CODEC_ID_H264) {
-      fail(err, errn, "Video codec not HEVC/H.264", 0); goto bad;
+    if (!videoOk(V->codecpar->codec_id)) {
+      fail(err, errn, "Video codec not HEVC/H.264/VC-1/MPEG-2", 0); goto bad;
+    }
+    if (V->codecpar->codec_id == AV_CODEC_ID_VC1 || V->codecpar->codec_id == AV_CODEC_ID_MPEG2VIDEO) {
+      const uint8_t *x = V->codecpar->extradata;
+      int xn = V->codecpar->extradata_size;
+      r->vc1 = V->codecpar->codec_id == AV_CODEC_ID_VC1;
+      r->seqCode = r->vc1 ? 0x0F : 0xB3;
+      int at = x ? findCode(x, xn, r->seqCode) : -1;
+      /* VC-1 Advanced needs it (no other way to learn the picture size); an
+       * MPEG-2 track without CodecPrivate carries it in the frames already. */
+      if (at < 0 && r->vc1) { fail(err, errn, "VC-1 without a sequence header in CodecPrivate", 0); goto bad; }
+      if (at >= 0) {
+        r->seqHdrN = xn - at;
+        if (!(r->seqHdr = malloc((size_t)r->seqHdrN))) { fail(err, errn, "Out of memory", 0); goto bad; }
+        memcpy(r->seqHdr, x + at, (size_t)r->seqHdrN);
+      }
     }
     for (unsigned i = 0; i < ic->nb_streams; i++)
       if ((int)i != r->vs && (int)i != r->as) ic->streams[i]->discard = AVDISCARD_ALL;
@@ -338,7 +397,10 @@ DtsRemux *dts_remux_open(const char *url, const char *headers, int ordinal, int 
     /* Container flag only (no probe): many MKVs leave it to the bitstream. */
     snprintf(in->hdr, sizeof in->hdr, "%s", V->codecpar->color_trc == AVCOL_TRC_SMPTE2084 ? "PQ" :
              V->codecpar->color_trc == AVCOL_TRC_ARIB_STD_B67 ? "HLG" :
-             V->codecpar->color_trc == AVCOL_TRC_UNSPECIFIED ? "?" : "SDR");
+             V->codecpar->color_trc != AVCOL_TRC_UNSPECIFIED ? "SDR" :
+             av_packet_side_data_get(V->codecpar->coded_side_data, V->codecpar->nb_coded_side_data,
+                                     AV_PKT_DATA_MASTERING_DISPLAY_METADATA) ? "PQ (HDR10 metadata)" :
+             "not in the container (bitstream decides)");
     in->stream_index = r->as;
     in->in_channels = A->codecpar->ch_layout.nb_channels; in->in_rate = A->codecpar->sample_rate;
     int ic2 = in->in_channels;
@@ -426,7 +488,7 @@ void dts_remux_close(DtsRemux *r) {
   if (!r) return;
   if (r->probe) { dts_engine_cancel(r->probe); unregisterEngine(r, r->probe); dts_engine_destroy(r->probe); }
   avcodec_parameters_free(&r->vpar); avcodec_parameters_free(&r->apar);
-  free(r->kf); free(r->segTs); free(r->segB48); free(r->segS);
+  free(r->kf); free(r->seqHdr); free(r->segTs); free(r->segB48); free(r->segS);
   free(r->url); free(r->headers);
   pthread_mutex_destroy(&r->lock);
   free(r);
@@ -581,6 +643,7 @@ static int openMux(DtsRemuxGen *g, const char *fmt, char *err, size_t errn) {
   if (!g->oc->pb) { av_free(buf); fail(err, errn, "Out of memory", 0); return -1; }
   g->oc->avoid_negative_ts = AVFMT_AVOID_NEG_TS_DISABLED;
   g->oc->output_ts_offset = (int64_t)TS_OFFSET_S * AV_TIME_BASE;
+  g->esFix = !strcmp(fmt, "mpegts") && (r->vc1 || r->seqHdrN > 0);
   if (!strcmp(fmt, "mp4")) av_dict_set(&o, "movflags", "frag_keyframe+empty_moov+default_base_moof+delay_moov", 0);
   rr = avformat_write_header(g->oc, &o);
   av_dict_free(&o);
@@ -866,6 +929,18 @@ static int emitVideo(DtsRemuxGen *g, int target, DtsRemuxStats *st, char *err, s
       if (ps > st->last_pts_s) st->last_pts_s = ps;
     }
     g->logMedia += dur; g->mediaTotal += dur;
+    if (g->esFix) {
+      uint8_t *nb = NULL;
+      int nn = dts_remux_es_fix(g->src->vc1, g->src->seqHdr, g->src->seqHdrN, p->data, p->size,
+                                (p->flags & AV_PKT_FLAG_KEY) != 0, &nb);
+      if (nn < 0) { av_packet_free(&p); fail(err, errn, "Out of memory", 0); return -1; }
+      if (nn > 0) {
+        AVBufferRef *b = av_buffer_create(nb, (size_t)nn + AV_INPUT_BUFFER_PADDING_SIZE, av_buffer_default_free, NULL, 0);
+        if (!b) { av_free(nb); av_packet_free(&p); fail(err, errn, "Out of memory", 0); return -1; }
+        av_buffer_unref(&p->buf);
+        p->buf = b; p->data = b->data; p->size = nn;
+      }
+    }
     int rr = writePkt(g, p, g->src->vtb, g->ov, st, 1);
     if (rr < 0) { fail(err, errn, g->wfail ? "Client closed" : "Mux video", rr); return g->wfail ? -2 : -1; }
   }
