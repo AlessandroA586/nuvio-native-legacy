@@ -42,6 +42,14 @@
 #include "progresso.h"
 #include "intro.h"
 #include "perfis.h"
+#include "descoberta.h"
+
+// Episode metadata stays under host-test control, without background HTTP.
+static int carregando;
+void desc_episodios(int idx, int temporada) { (void)idx; (void)temporada; }
+void desc_episodios_garantir(int idx) { (void)idx; }
+void desc_episodios_pendente(void) {}
+int desc_episodios_carregando(int idx) { (void)idx; return carregando; }
 
 // Relogio monotono controlado: seek/retomada nao ganham tempo assistido.
 static double agoraMono;
