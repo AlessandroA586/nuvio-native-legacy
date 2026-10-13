@@ -110,3 +110,13 @@ Regras de TV mantidas: tudo anda no D-pad; texto (busca, comentário, descriçã
 8. **"Pessoas nesta trilha / terminaram":** contagem anônima no servidor serve, ou só conta quem tem alcance ≥ 1?
 9. **Listas do Letterboxd do export:** só leitura no app, ou também copiar para uma lista do Trakt?
 10. **Limites da conta grátis do Trakt:** confirmar números antes de prometer "Copiar para minha lista" e "Nova lista".
+
+## Decisões do dono (12/10/2026)
+
+1. **Curadoria Nuvio:** fontes da internet + listas de autoria nossa, em pt e en. Da internet só entra o que a licença permite: Wikidata (CC0) livre; Wikipedia (CC BY-SA) com atribuição e link; listas de terceiros (críticos, sites) só como referência com link e créditos, nunca o texto copiado. Texto das trilhas e notas é nosso.
+2. **Comentários nas nossas listas:** sim. Exige denúncia, moderação, limite por conta e spoiler fechado por padrão.
+3. **Seguir:** só fixa no app; não curte no Trakt.
+4. **MDBList:** sim, como fonte de listas públicas (inclui as do Letterboxd que o MDBList oferece; a coleta é do lado deles). Chave do usuário pela conta Nuvio (PLANO-ECOSSISTEMA Q5).
+5. **Lugar:** Listas fica dentro da Biblioteca.
+
+Abertas: 6–10 acima.
