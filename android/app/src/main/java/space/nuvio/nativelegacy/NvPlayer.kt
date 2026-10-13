@@ -14,6 +14,7 @@ import android.view.View
 import android.widget.FrameLayout
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
@@ -26,12 +27,16 @@ import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.DataSourceException
+import androidx.media3.datasource.HttpDataSource
+import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.mediacodec.MediaCodecDecoderException
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -138,6 +143,7 @@ object NvPlayer {
     @JvmStatic external fun nativeTela(hdr: Int, dv: Int)
     @JvmStatic external fun nativeHdr(hdr: String, dv: Int, atmos: Int)
     @JvmStatic external fun nativeErroTexto(texto: String)
+    @JvmStatic external fun nativeAudioLog(texto: String)
     @JvmStatic external fun nativeRetomada(geracao: Int, aceita: Int)
     @JvmStatic external fun nativeFitPassiva(rede: Long, geracao: Int, origem: String, kbps: IntArray, fimMs: Long)
     @JvmStatic external fun nativeAudioPcm(pcm: ShortArray, n: Int, ptsUs: Long)
@@ -208,6 +214,54 @@ object NvPlayer {
     private fun confirmarRetomada(geracao: Int, aceita: Boolean) {
         if (geracao != 0) try { nativeRetomada(geracao, if (aceita) 1 else 0) }
         catch (e: UnsatisfiedLinkError) { Log.w(TAG, "retomada sem lib: $e") }
+    }
+
+    // #345: uploaded app logs do not include Kotlin's logcat diagnostics.
+    private fun relatarAudio(minha: Int, texto: String) {
+        if (!atual(minha)) return
+        val linha = "sessao=$minha $texto"
+        Log.i(TAG, "[audio] $linha")
+        try { nativeAudioLog(linha) } catch (_: UnsatisfiedLinkError) { }
+    }
+
+    // Exception messages may include stream Format.id/label or URLs (#345).
+    private fun camposErroAudio(erro: Throwable): String {
+        val formato = when (erro) {
+            is AudioSink.InitializationException -> erro.format
+            is AudioSink.WriteException -> erro.format
+            is AudioSink.ConfigurationException -> erro.format
+            else -> null
+        }
+        val codigo = when (erro) {
+            is AudioSink.WriteException -> erro.errorCode
+            is MediaCodecDecoderException -> erro.errorCode
+            is android.media.MediaCodec.CodecException -> erro.errorCode
+            else -> null
+        }
+        val recuperavel = when (erro) {
+            is AudioSink.InitializationException -> erro.isRecoverable
+            is AudioSink.WriteException -> erro.isRecoverable
+            is android.media.MediaCodec.CodecException -> erro.isRecoverable
+            else -> null
+        }
+        return "erro=${erro.javaClass.simpleName}" +
+            (codigo?.let { " errorCode=$it" } ?: "") +
+            (formato?.let { " hz=${it.sampleRate} canais=${it.channelCount} encoding=${it.pcmEncoding} mime=${it.sampleMimeType}" } ?: "") +
+            (recuperavel?.let { " isRecoverable=$it" } ?: "")
+    }
+
+    // Fatal cause chains retain only class names and allowlisted numeric fields.
+    private fun camposErroCausa(erro: Throwable): String {
+        return erro.javaClass.simpleName + when (erro) {
+            is ExoPlaybackException -> " errorCode=${erro.errorCode} type=${erro.type} rendererIndex=${erro.rendererIndex}"
+            is PlaybackException -> " errorCode=${erro.errorCode}"
+            is HttpDataSource.InvalidResponseCodeException -> " responseCode=${erro.responseCode} errorCode=${erro.reason}"
+            is DataSourceException -> " errorCode=${erro.reason}"
+            is AudioSink.WriteException -> " errorCode=${erro.errorCode}"
+            is MediaCodecDecoderException -> " errorCode=${erro.errorCode}"
+            is android.media.MediaCodec.CodecException -> " errorCode=${erro.errorCode}"
+            else -> ""
+        }
     }
 
     private fun ev(tipo: Int, a: Int = 0, b: Int = 0) {
@@ -333,7 +387,12 @@ object NvPlayer {
     }
     @JvmStatic fun buscar(ms: Int) {
         val pedido = pedidos.get()
-        principal.post { if (pedido == pedidos.get()) player?.seekTo(ms.coerceAtLeast(0).toLong()) }
+        principal.post {
+            if (pedido == pedidos.get()) {
+                relatarAudio(sessao, "seek alvoMs=$ms")
+                player?.seekTo(ms.coerceAtLeast(0).toLong())
+            }
+        }
     }
     @JvmStatic fun volume(pct: Int) { principal.post { player?.volume = pct.coerceIn(0, 100) / 100f } }
     // F07: cache limit for the NEXT opens (MB, 0 = off) and the session volume
@@ -988,6 +1047,7 @@ object NvPlayer {
             val par = p.trackSelectionParameters.buildUpon()
             if (tipo == 0) {
                 val (g, i) = audios.getOrNull(idx) ?: return
+                relatarAudio(sessao, "escolha indice=$idx grupoIndice=$i mime=${g.getTrackFormat(i).sampleMimeType}")
                 par.setOverrideForType(TrackSelectionOverride(g.mediaTrackGroup, i))
             } else if (tipo == 1) {
                 if (idx < 0) {
@@ -1013,6 +1073,7 @@ object NvPlayer {
                 Player.STATE_BUFFERING -> ev(EV_BUFFER, 0)
                 Player.STATE_READY -> {
                     ev(EV_BUFFER, 100)
+                    relatarAudio(minha, "pronto volume=${p.volume} playWhenReady=${p.playWhenReady} suppression=${p.playbackSuppressionReason}")
                     if (!pronto) {
                         // Antes do EV_PRONTO: o C le o ack ao ver o "pronto".
                         if (fracaoPendente > 0) {
@@ -1037,8 +1098,17 @@ object NvPlayer {
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
             if (!atual(minha)) return
             val p = player ?: return
+            relatarAudio(minha, "playWhenReady=$playWhenReady reason=$reason")
             if (!playWhenReady && !p.isPlaying && p.playbackState != Player.STATE_ENDED) ev(EV_PAUSADO)
             medirEstado(p)
+        }
+
+        override fun onVolumeChanged(volume: Float) {
+            relatarAudio(minha, "volume=$volume")
+        }
+
+        override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+            relatarAudio(minha, "suppression=$playbackSuppressionReason")
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -1079,6 +1149,12 @@ object NvPlayer {
         override fun onTracksChanged(tracks: Tracks) {
             if (!atual(minha)) return
             publicarFaixas(tracks)
+            for (g in tracks.groups) if (g.type == C.TRACK_TYPE_AUDIO) {
+                for (i in 0 until g.length) if (g.isTrackSelected(i)) {
+                    val f = g.getTrackFormat(i)
+                    relatarAudio(minha, "selecionada grupoIndice=$i idioma=${f.language} mime=${f.sampleMimeType} canais=${f.channelCount} hz=${f.sampleRate}")
+                }
+            }
             publicarHdr(tracks)
         }
 
@@ -1107,14 +1183,12 @@ object NvPlayer {
                 C.TRACK_TYPE_VIDEO -> "video"
                 else -> "desconhecido"
             }
-            Log.w(TAG, "[player] onPlayerError renderer=$renderer nome=${exo?.rendererName} loadMs=${SystemClock.elapsedRealtime() - abriuEm} erro ${error.errorCodeName} (${error.errorCode}): ${error.message}")
-            // The app log (what "Enviar registro" uploads) only got the bare
-            // code: 2000 (IO_UNSPECIFIED) says nothing without its cause. URLs
-            // lose their query, where addons put tokens.
+            // Fatal errors can wrap the same sink/codec exception; never log raw messages.
             val causa = generateSequence(error.cause) { it.cause }.take(3)
-                .joinToString(" <- ") { "${it.javaClass.simpleName}: ${it.message ?: ""}" }
-                .replace(Regex("""\?[^\s"]*"""), "?…").take(400)
-            try { nativeErroTexto("${error.errorCodeName} (${error.errorCode}) renderer=$renderer causa=$causa") } catch (_: Throwable) {}
+                .joinToString(" <- ") { camposErroCausa(it) }
+            val diagnostico = "${error.errorCodeName} (${error.errorCode}) renderer=$renderer erro=${camposErroCausa(error)} causa=$causa"
+            Log.w(TAG, "[player] onPlayerError loadMs=${SystemClock.elapsedRealtime() - abriuEm} $diagnostico")
+            try { nativeErroTexto(diagnostico) } catch (_: Throwable) {}
             // Decoder que falha nos primeiros 5 s: o recurso pode estar sendo
             // solto por outro app (ResourceConflict do Tizen); reabre uma vez.
             val cedo = SystemClock.elapsedRealtime() - abriuEm < RETRY_DECODER_MS
@@ -1137,6 +1211,48 @@ object NvPlayer {
     }
 
     private fun analitico(minha: Int) = object : AnalyticsListener {
+        // Per listener/session and callback/exception type, on the main looper.
+        // First occurrence immediately, then at most once every 30 seconds.
+        private val errosAudio = HashMap<Pair<String, Class<*>>, Pair<Long, Long>>()
+        private fun relatarErroAudio(tipo: String, erro: Exception) {
+            if (!atual(minha)) return
+            val chave = tipo to erro.javaClass
+            val anterior = errosAudio[chave]
+            val agora = SystemClock.elapsedRealtime()
+            val ocorrencias = (anterior?.second ?: 0L) + 1L
+            if (anterior != null && agora - anterior.first < 30_000L) {
+                errosAudio[chave] = anterior.first to ocorrencias
+                return
+            }
+            errosAudio[chave] = agora to ocorrencias
+            relatarAudio(minha, "$tipo ${camposErroAudio(erro)} repeticoes=${ocorrencias - 1L}")
+        }
+
+        override fun onAudioDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String,
+                                               initializedTimestampMs: Long, initializationDurationMs: Long) {
+            relatarAudio(minha, "decoder=$decoderName initMs=$initializationDurationMs")
+        }
+
+        override fun onAudioInputFormatChanged(eventTime: AnalyticsListener.EventTime, format: Format,
+                                               decoderReuseEvaluation: DecoderReuseEvaluation?) {
+            relatarAudio(minha, "entrada mime=${format.sampleMimeType} canais=${format.channelCount} hz=${format.sampleRate}")
+        }
+
+        override fun onAudioTrackInitialized(eventTime: AnalyticsListener.EventTime, audioTrackConfig: AudioSink.AudioTrackConfig) {
+            relatarAudio(minha, "AudioTrack encoding=${audioTrackConfig.encoding} hz=${audioTrackConfig.sampleRate} canaisMask=${audioTrackConfig.channelConfig} offload=${audioTrackConfig.offload} tunneling=${audioTrackConfig.tunneling}")
+        }
+
+        override fun onAudioPositionAdvancing(eventTime: AnalyticsListener.EventTime, playoutStartSystemTimeMs: Long) {
+            relatarAudio(minha, "AudioTrack avancando inicioMs=$playoutStartSystemTimeMs")
+        }
+
+        override fun onAudioSinkError(eventTime: AnalyticsListener.EventTime, audioSinkError: Exception) {
+            relatarErroAudio("sink", audioSinkError)
+        }
+
+        override fun onAudioCodecError(eventTime: AnalyticsListener.EventTime, audioCodecError: Exception) {
+            relatarErroAudio("codec", audioCodecError)
+        }
 
         override fun onDroppedVideoFrames(eventTime: AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) {
             if (atual(minha)) quadrosPerdidos += droppedFrames

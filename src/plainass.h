@@ -6,7 +6,7 @@
  * controls still own the style. Logical Unicode stays unchanged for libass. */
 typedef struct {
   char font[96];
-  int size, rgb, background, border, bold, marginV;
+  int size, rgb, background, border, bold, marginV, outline;
 } PlainAssStyle;
 
 int plainass_has_arabic(const char *text);

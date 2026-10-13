@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import zipfile
 
 root = Path(__file__).resolve().parents[1]
 source = (root / 'android/app/src/main/java/space/nuvio/nativelegacy/NvPlayer.kt').read_text()
@@ -32,6 +33,10 @@ abrir = (abrir.split('        novaSuperficie(act)')[0]
 erro = bloco('        override fun onPlayerError(')
 fixture = r'''
 import space.nuvio.nativelegacy.GanhoMath
+import androidx.media3.datasource.DataSourceException
+import androidx.media3.datasource.HttpDataSource
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.mediacodec.MediaCodecDecoderException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -109,6 +114,7 @@ object Fixture {
             principal.postDelayed({ liberacoesEmCurso.decrementAndGet() }, releaseMs)
         }
     }
+    CAUSE_FIELDS
     ABRIR
     GANHO
     APLICAR_GANHO
@@ -245,7 +251,7 @@ fun main(args: Array<String>) {
     f.reset(); f.abrir("primeira"); check(f.criados == listOf("primeira"))
     println("PASS release: espera, prazo 3s, cancelamento, substituicao, encerramento e TCL")
 }
-'''.replace('ABRIR', abrir).replace('ERRO\n', erro + '\n').replace(
+'''.replace('CAUSE_FIELDS', bloco('    private fun camposErroCausa(')).replace('ABRIR', abrir).replace('ERRO\n', erro + '\n').replace(
     'APLICAR_GANHO', bloco('    private fun aplicarGanho(')).replace(
     '    GANHO\n', bloco('    @JvmStatic fun ganho(') + '\n').replace(
     '    PAUSAR\n', bloco('    @JvmStatic fun pausar(') + '\n').replace(
@@ -262,12 +268,21 @@ classpath = ':'.join([jar('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', 
 java = os.environ.get('NUVIO_TEST_JAVA') or str(next((Path.home() / '.local/jdks').glob('jdk-17*/Contents/Home/bin/java')))
 with tempfile.TemporaryDirectory(prefix='nuvio-decoder409-') as tmp:
     tmp = Path(tmp); file = tmp / 'DecoderFixture.kt'; file.write_text(fixture)
+    sdk = Path(os.environ.get('ANDROID_HOME', str(Path.home() / 'Library/Android/sdk'))) / 'platforms/android-35/android.jar'
+    deps = [stdlib, str(sdk)]
+    for name in ('media3-common', 'media3-datasource', 'media3-exoplayer', 'media3-decoder'):
+        aar = next(cache.glob(f'androidx.media3/{name}/1.8.0/*/*.aar'))
+        dst = tmp / f'{name}.jar'
+        with zipfile.ZipFile(aar) as z:
+            dst.write_bytes(z.read('classes.jar'))
+        deps.append(str(dst))
+    deps = os.pathsep.join(deps)
     subprocess.run([java, '-cp', classpath, 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler',
-                    '-no-stdlib', '-no-reflect', '-nowarn', '-classpath', stdlib,
+                    '-no-stdlib', '-no-reflect', '-nowarn', '-classpath', deps,
                     '-jvm-target', '17', '-d', str(tmp / 'classes'), str(file),
                     str(root / 'android/app/src/main/java/space/nuvio/nativelegacy/GanhoMath.kt')], check=True)
     failed = 0
     for case in ('renderer', 'release', 'descarte', 'ganho', 'pausa', 'retry-pausa'):
         output = sys.argv[2:3] if case == 'pausa' and sys.argv[1:2] == ['--pausa-eventos'] else []
-        failed += subprocess.run([java, '-cp', f'{tmp / "classes"}:{stdlib}', 'DecoderFixtureKt', case, *output]).returncode != 0
+        failed += subprocess.run([java, '-cp', f'{tmp / "classes"}:{deps}', 'DecoderFixtureKt', case, *output]).returncode != 0
     raise SystemExit(bool(failed))

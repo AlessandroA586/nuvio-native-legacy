@@ -551,6 +551,9 @@ typedef enum {
   // #461: menu na lateral (0, o de sempre) ou numa barra no topo (1). Por
   // perfil, so desta TV. No fim: valor[]/CHAVE[] posicionais.
   AJ_MENU_TOPO,
+  // #475: cor do contorno/sombra da legenda que o app desenha. Local, so desta
+  // TV. No fim: valor[]/CHAVE[] posicionais.
+  AJ_LEG_CONTORNO_COR,
   AJ_N
 } OpcaoId;
 
@@ -657,6 +660,7 @@ static const char *V_VIDRO_OPAC[] = { "60%", "70%", "78%", "86%", "92%" };
 static const char *V_VIDRO_FOSCO[] = { "Desligado", "Ligado" };
 // R4: segunda legenda. 0 = No topo (como sempre); 1 = empilhada logo acima da
 // principal, no pe da tela.
+static const char *V_LEG_CONTORNO_COR[] = { "Preto", "Branco", "Cinza", "Amarelo", "Verde", "Azul", "Vermelho" };
 static const char *V_LEG2_POS[] = { "No topo", "Junto da principal" };
 static const char *V_LEG2_TAMANHO[] = { "Automático", "60%", "80%", "100%", "120%", "140%", "160%",
   "170%", "180%", "190%", "200%", "210%", "220%", "230%", "240%",
@@ -1416,6 +1420,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Modo da interface", V_INTERFACE_MODO, 2),
   ESC("Botão de microfone na busca", V_MIC_BUSCA, 3),   // local: micBuscaLocal (.tpk)
   ESC("Posição do menu", V_MENU_POS, 2),   // por perfil: menuTopoLocal (#461)
+  ESC("Cor do contorno da legenda", V_LEG_CONTORNO_COR, 7),   // local: legendaContornoCorLocal (#475)
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1658,6 +1663,7 @@ static const char *CHAVE[] = {
   "interfaceModoLocal",
   "micBuscaLocal",
   "menuTopoLocal",
+  "legendaContornoCorLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2296,6 +2302,14 @@ int ajustes_leg2_tamanho(void) {
 int ajustes_leg2_cor(void) { int v = valor[AJ_LEG2_COR]; return v >= 1 && v <= 6 ? v - 1 : -1; }
 int ajustes_leg2_fundo(void) { int v = valor[AJ_LEG2_FUNDO]; return v >= 1 && v <= 5 ? v - 1 : -1; }
 int ajustes_leg2_borda(void) { int v = valor[AJ_LEG2_BORDA]; return v >= 1 && v <= 3 ? v - 1 : -1; }
+// #475: cor do contorno e da sombra da legenda; 0 = preto, como sempre foi.
+void ajustes_leg_contorno_rgb(int *r, int *g, int *b) {
+  static const unsigned char c[][3] = { {0,0,0}, {255,255,255}, {128,128,128}, {255,222,48},
+                                        {64,224,112}, {78,156,255}, {255,80,80} };
+  int v = valor[AJ_LEG_CONTORNO_COR];
+  if (v < 0 || v >= (int)(sizeof c / sizeof *c)) v = 0;
+  *r = c[v][0]; *g = c[v][1]; *b = c[v][2];
+}
 int ajustes_saida_player_home(void) { return lig(AJ_RELOGIO) && valor[AJ_SAIDA_PLAYER] == 0; }
 int ajustes_manter_video(void) { return ajustes_saida_player_home() && lig(AJ_MANTER_VIDEO) && !SEGURO; }
 int ajustes_selo_visto(void) { return lig(AJ_SELO_VISTO); }
@@ -4391,6 +4405,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_LEG_SYNC_AUDIO: /* PCM e passthrough sao desta TV; o web nao tem */
     case AJ_LEG_FORCADA:    /* #287: o web nao tem esta escolha */
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA: /* estilo da legenda e desta TV */
+    case AJ_LEG_CONTORNO_COR: /* #475: idem */
     case AJ_CACHE_SEEK:     /* F07: o disco e o player sao desta TV */
     case AJ_BUFFER:         /* #338: o buffer e do player desta TV */
     case AJ_TRAILER_ZOOM_TPK: /* #241: o firmware de cada Samsung reage de um jeito */
@@ -5564,6 +5579,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_LEG_MOSTRAR: return valor[op] ? "Todas as legendas, com detalhes" : "Recomendadas";
     case AJ_LEG_LINGUA2: return "Segunda legenda, mostrada no alto da tela junto com a principal. Só arquivos SRT/VTT dos addons. \"Da conta\" segue o que está no seu perfil.";
     case AJ_LEG2_POS: return "No topo, a segunda legenda fica no alto da tela. Junto da principal, ela fica logo acima da principal, no pé da tela.";
+    case AJ_LEG_CONTORNO_COR: return "Cor do contorno e da sombra da legenda desenhada pelo app. Preto é o padrão; vale só nesta TV.";
     case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
       return "Aparência só da segunda legenda. \"Igual à principal\" segue o estilo da principal, definido no player.";
     case AJ_LEG_LINGUA: return "Idioma ligado sozinho quando o vídeo começa. Legendas dos addons aparecem em inglês e no idioma escolhido aqui. \"Da conta\" segue o que está no seu perfil.";
@@ -7800,6 +7816,7 @@ typedef enum {
 
 static AjPreview familiaPreviaOpcao(int op) {
   switch (op) {
+    case AJ_LEG_CONTORNO_COR:
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
     case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK: case AJ_BUFFER:
     case AJ_DV_MKV:

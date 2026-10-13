@@ -26,6 +26,16 @@ Uint32 SDL_GetTicks(void) { return 0; }
 #include <stdio.h>
 #include <unistd.h>
 #include "jellyfin_stub.inc"
+// Manifest loading is outside this metadata harness.
+void addons_lista_travar(void) {}
+void addons_lista_destravar(void) {}
+void ws_destino(const char *b, const char *u, int p, char out[20]) {
+  (void)b; (void)u; (void)p; out[0] = 0;
+}
+void addons_manifesto_lido_base(int i, const char *b, const char *d,
+                               unsigned v, const char *c) {
+  (void)i; (void)b; (void)d; (void)v; (void)c;
+}
 
 // --- DUBLES: nenhum participa da regra, so fazem descoberta.c linkar ---------
 // (o conjunto e o de tests/colfileiras.c, menos os cat_* — que catalogo.c ja
@@ -102,14 +112,6 @@ int fil_marcar_declaradas(const char *const *chaves, int n, int perfil) {
   (void)chaves; (void)n; (void)perfil; return 0;
 }
 int   fil_addon_novo(const char *id, const char *base) { (void)id; (void)base; return 0; }
-void addons_lista_travar(void) { }
-void addons_lista_destravar(void) { }
-void addons_manifesto_lido_base(int i, const char *b, const char *d, unsigned v, const char *c) {
-  (void)i; (void)b; (void)d; (void)v; (void)c;
-}
-void ws_destino(const char *b, const char *u, int p, char out[20]) {
-  (void)b; (void)u; (void)p; out[0] = 0;
-}
 int   addons_perfil_da_lista(void)         { return 0; }
 int addons_base_desligada(const char *b) { (void)b; return 0; }   // 203-desligados
 int   addons_ativo(int i)                  { (void)i; return 1; }
