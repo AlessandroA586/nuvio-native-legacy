@@ -2761,13 +2761,13 @@ void gfx_mascara_opaca(GfxRect r, float raioPx) {
 // camada MISTURADA por quadro dos Ajustes. Sem as condicoes, gfx_cor de sempre.
 void gfx_cor_painel(GfxRect r, float raio, float cr, float cg, float cb, float ca) {
   GfxRect r0 = r;   // gfx_cor/gfx_rect aplicam a transformacao e a escala sozinhos
-  float m, sub[4], ex, ey, area;
+  float m, sub[4], ex, ey, area, x0, y0, x1, y1;
   int sx0, sy0, sx1, sy1;
   if (r.w <= 0.0f || r.h <= 0.0f) return;
   GFX_TR_RECT(r.x, r.y, r.w, r.h);
   if (escAtiva != 1.0f) { r.x *= escAtiva; r.y *= escAtiva; r.w *= escAtiva; r.h *= escAtiva; }
   m = raio * r.h + 2.0f;
-  if (raio <= 0.0f || ca * gfx_opacidade_grupo < 0.999f || snapAtivo || miniAtiva || giroOn ||
+  if (raio <= 0.0f || ca * gfx_opacidade_grupo != 1.0f || snapAtivo || miniAtiva || giroOn ||
       gfxTr.on || recorteAtivo || progs[GFX_COR].sub < 0 ||
       (nv_grad_ativo && cr == nv_acento_viva[0] && cg == nv_acento_viva[1] && cb == nv_acento_viva[2]) ||
       gfx_osd_mult < 0.999f || gfx_hdr_ui < 0.999f ||
@@ -2775,14 +2775,20 @@ void gfx_cor_painel(GfxRect r, float raio, float cr, float cg, float cb, float c
     gfx_cor(r0, raio, cr, cg, cb, ca);
     return;
   }
+  // O clear e as faixas so se encontram sem fresta com o miolo alinhado em pixels.
+  ex = (float)telaW / NV_TELA_W; ey = (float)telaH / NV_TELA_H;
+  x0 = (r.x + m) * ex; x1 = (r.x + r.w - m) * ex;
+  y0 = (NV_TELA_H - (r.y + r.h - m)) * ey;
+  y1 = (NV_TELA_H - (r.y + m)) * ey;
+  sx0 = (int)floorf(x0 + 0.5f); sx1 = (int)floorf(x1 + 0.5f);
+  sy0 = (int)floorf(y0 + 0.5f); sy1 = (int)floorf(y1 + 0.5f);
+  if (x0 != sx0 || x1 != sx1 || y0 != sy0 || y1 != sy1 || sx1 <= sx0 || sy1 <= sy0) {
+    gfx_cor(r0, raio, cr, cg, cb, ca);
+    return;
+  }
   dinDescarregar();
   if (ambPendente) gfx_ambiente_descarregar();   // o clear do miolo cobriria o fundo
   // o interior: clear na cor do painel
-  ex = (float)telaW / NV_TELA_W; ey = (float)telaH / NV_TELA_H;
-  sx0 = (int)floorf((r.x + m) * ex + 0.5f); sx1 = (int)floorf((r.x + r.w - m) * ex + 0.5f);
-  sy0 = (int)floorf((NV_TELA_H - (r.y + r.h - m)) * ey + 0.5f);
-  sy1 = (int)floorf((NV_TELA_H - (r.y + m)) * ey + 0.5f);
-  if (sx1 <= sx0 || sy1 <= sy0) { gfx_cor(r0, raio, cr, cg, cb, ca); return; }
   { float cc[4];
     glGetFloatv(GL_COLOR_CLEAR_VALUE, cc);
     glEnable(GL_SCISSOR_TEST);
