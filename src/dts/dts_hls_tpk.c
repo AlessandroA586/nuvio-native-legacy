@@ -335,12 +335,6 @@ static void *fioSonda(void *u) {
     // video_tpk.c refaz no TS continuo, que busca por tempo.
     s->estado = DTSTPK_FALHOU; s->semIndice = 1;
     snprintf(s->erro, sizeof s->erro, "no keyframe index to the end (no Cues): HLS impossible");
-  } else if ((s->modo == DTSTPK_HLS || s->modo == DTSTPK_HLS_LAN) && fabs(in->fps - 24.0) < 0.002) {
-    // 24.000 fps EXATOS (nao 23,976): no HLS o player da S95C anda aos trancos
-    // o filme inteiro; o mesmo arquivo no TS continuo anda liso (Round 2). Mesmo
-    // caminho do "sem indice": o app refaz no TS continuo.
-    s->estado = DTSTPK_FALHOU; s->semIndice = 1;
-    snprintf(s->erro, sizeof s->erro, "24.000 fps: HLS judders on this TV, continuous TS instead");
   } else {
     s->rx = rx; s->estado = DTSTPK_PRONTO; s->duracao = in->duration_s;
     snprintf(s->caminho, sizeof s->caminho, "%s", in->decoder_path);
