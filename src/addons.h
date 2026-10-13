@@ -242,6 +242,10 @@ int  addons_aceita_id(int i, const char *tipo, const char *id);
 // declaracao para `out` e devolve 1; 0 = nao participa. Quem empurra e
 // watchstate.c, que cruza isto com tipo/ids/evento (ws_decl_aceita).
 int  addons_watchstate(int i, WsDecl *out);
+// Protege snapshots de base/identidade/declaracao com a mesma trava dos
+// escritores da lista e do manifesto. Soltar antes de rede ou wsenvio_podar.
+void addons_lista_travar(void);
+void addons_lista_destravar(void);
 // Le o manifesto de cada addon num fio proprio, uma vez por lista.
 //
 // SO SERVE COMO RESERVA hoje, e a distincao importa: ela era chamada de um

@@ -59,6 +59,9 @@ const char *sessao_usuario(void) { return usuario; }
 
 static const char *bases[] = {"http://a.test/x", "http://b.test/x", "http://c.test/x", "http://d.test/x"};
 static int nAddons = 4;
+static pthread_mutex_t listaTrava = PTHREAD_MUTEX_INITIALIZER;
+void addons_lista_travar(void) { pthread_mutex_lock(&listaTrava); }
+void addons_lista_destravar(void) { pthread_mutex_unlock(&listaTrava); }
 int addons_carregar(const char *dir) { (void)dir; return nAddons; }
 int addons_n(void) { return nAddons; }
 int addons_ativo(int i) { return i >= 0 && i < nAddons; }

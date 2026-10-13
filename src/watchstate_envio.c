@@ -25,23 +25,39 @@ static void gravar(void) {
   else if (!fila->n) dados_apagar(ARQ_FILA);
 }
 
-// Resolve na lista instalada do contexto atual. O manifesto pode ainda
-// estar por sondar no arranque; a entrega confere a declaracao tambem.
-static int destinoAtual(const char *addon) {
-  int i;
-  if (perfis_ativo() != perfis_ativo_addons()) return -1;
+typedef struct {
+  int indice, sondado;
+  char base[NV_ADDON_URL_MAX], destino[20];
+  WsDecl decl;
+} Destino;
+
+// Com a trava da lista, copia tudo: nenhum ponteiro para um slot sobrevive.
+static int copiarDestino(int i, Destino *s) {
+  if (perfis_ativo() != perfis_ativo_addons() || !addons_ativo(i)) return 0;
+  memset(s, 0, sizeof *s);
+  s->indice = i;
+  snprintf(s->base, sizeof s->base, "%s", addons_base(i));
+  s->sondado = addons_sondado(i);
+  addons_watchstate(i, &s->decl);
+  ws_destino(s->base, sessao_usuario(), perfis_ativo(), s->destino);
+  return 1;
+}
+
+// O manifesto pode ainda estar por sondar no arranque.
+static int destinoAtual(const char *addon, Destino *s) {
+  int i, achou = 0;
+  addons_lista_travar();
   for (i = 0; i < addons_n(); i++) {
-    char destino[20];
-    if (!addons_ativo(i)) continue;
-    ws_destino(addons_base(i), sessao_usuario(), perfis_ativo(), destino);
-    if (!strcmp(destino, addon)) return i;
+    if (copiarDestino(i, s) && !strcmp(s->destino, addon)) { achou = 1; break; }
   }
-  return -1;
+  addons_lista_destravar();
+  return achou;
 }
 
 static int autorizado(const char *addon, void *u) {
+  Destino s;
   (void)u;
-  return destinoAtual(addon) >= 0;
+  return destinoAtual(addon, &s);
 }
 
 // Chamado por ws_fila_passo COM a trava: solta durante o pedido para o desenho
@@ -52,18 +68,24 @@ static int enviaReal(const char *addon, const char *caminho, const char *corpo,
   RedePedido p;
   RedeResposta r;
   char url[NV_ADDON_PEDIDO_MAX];
-  WsDecl d;
-  int st = 0, i = destinoAtual(addon);
+  Destino s, atual;
+  int st = 0, mesmo;
   (void)u;
-  // Cada POST revalida: o anterior soltou a trava, e a lista pode ter mudado.
-  if (i < 0) return 410;
-  if (!addons_watchstate(i, &d)) return addons_sondado(i) ? 410 : 0;
-  if (d.viewers || nv_addon_url(url, sizeof url, addons_base(i), "%s", caminho) <= 0 ||
+  if (!destinoAtual(addon, &s)) return 410;
+  if (!s.decl.push) return s.sondado ? 410 : 0;
+  if (s.decl.viewers || nv_addon_url(url, sizeof url, s.base, "%s", caminho) <= 0 ||
       !url[0]) return 410;
   memset(&p, 0, sizeof p);
   p.metodo = "POST"; p.url = url; p.cabecalhos = cab;
   p.corpo = corpo; p.n_corpo = strlen(corpo);
   p.prazo_ms = 15000; p.seguir = 0;
+  // A UI pode substituir o slot antes da poda. Se mudou, descarta A; o
+  // pedido usa somente a copia de A mesmo se outra troca vier apos a guarda.
+  addons_lista_travar();
+  mesmo = copiarDestino(s.indice, &atual) && !strcmp(atual.destino, s.destino) &&
+          !strcmp(atual.base, s.base);
+  addons_lista_destravar();
+  if (!mesmo) return 410;
   pthread_mutex_unlock(&trava);
   rede_pedir(&p, &r);
   if (r.erro == REDE_OK) st = r.status;   // 4xx/5xx e resposta; 0 = rede ou prazo
@@ -140,13 +162,19 @@ void wsenvio_emitir(const WsEvento *e) {
   // que usa os addons de outro nao empurra o que ele assiste para esse dono.
   if (perfis_ativo() != perfis_ativo_addons()) return;
   wsenvio_iniciar();
+  addons_lista_travar();
   n = addons_n();
+  addons_lista_destravar();
   for (i = 0; i < n; i++) {
-    WsDecl d;
-    char url[NV_ADDON_PEDIDO_MAX], destino[20], id[WS_ID_MAX + 64], corpo[1024];
-    const char *base = addons_base(i);
-    if (!base || !base[0] || !addons_watchstate(i, &d)) continue;
-    if (!ws_decl_aceita(&d, e->ev, e->tipo, e->metaId, e->videoId)) continue;
+    Destino s;
+    int tem;
+    char url[NV_ADDON_PEDIDO_MAX], id[WS_ID_MAX + 64], corpo[1024];
+    const char *base = s.base;
+    addons_lista_travar();
+    tem = copiarDestino(i, &s);
+    addons_lista_destravar();
+    if (!tem || !base[0]) continue;
+    if (!ws_decl_aceita(&s.decl, e->ev, e->tipo, e->metaId, e->videoId)) continue;
     if (!ws_url(base, e, url, sizeof url) || !ws_id(e, id, sizeof id) ||
         !ws_corpo(e, corpo, sizeof corpo)) continue;
     // Tira a base e a query; nenhuma credencial entra no diario.
@@ -156,10 +184,9 @@ void wsenvio_emitir(const WsEvento *e) {
       memmove(url, url + lb, strlen(url + lb) + 1);
       if ((q = strchr(url, '?'))) *q = 0;
     }
-    ws_destino(base, sessao_usuario(), perfis_ativo(), destino);
     pthread_mutex_lock(&trava);
-    if (fila && autorizado(destino, NULL) &&
-        ws_fila_empurrar(fila, destino, url, id, corpo, (long long)time(NULL))) novo = 1;
+    if (fila && autorizado(s.destino, NULL) &&
+        ws_fila_empurrar(fila, s.destino, url, id, corpo, (long long)time(NULL))) novo = 1;
     pthread_mutex_unlock(&trava);
   }
   if (novo) {

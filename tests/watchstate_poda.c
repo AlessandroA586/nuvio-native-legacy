@@ -18,14 +18,41 @@ static int falhas;
 #define OK(c) do { if (!(c)) { printf("FALHOU %d\n", __LINE__); falhas++; } } while (0)
 
 static pthread_mutex_t tr = PTHREAD_MUTEX_INITIALIZER;
-static int posts, caps = REDE_CAP_CORPO;
+static int posts, postsB, caps = REDE_CAP_CORPO;
 static char *disco;
+static pthread_cond_t mudou = PTHREAD_COND_INITIALIZER;
+static pthread_t escritor;
+static int trocarSlot, substituiu;
+
+// O runner intercala a troca depois de destinoAtual(), antes da declaracao/POST.
+// O escritor publica B antes de wsenvio_podar(), que espera a trava do envio.
+void testeListaMudou(void) {
+  pthread_mutex_lock(&tr);
+  if (trocarSlot) { substituiu = 1; pthread_cond_signal(&mudou); }
+  pthread_mutex_unlock(&tr);
+}
+static void *trocar(void *u) {
+  AddonRemoto b = {"B", "https://b.test/config", 1};
+  (void)u;
+  addons_definir_lista(&b, 1);
+  return NULL;
+}
+void testeTrocaSlot(void) {
+  pthread_mutex_lock(&tr);
+  if (trocarSlot && !substituiu) {
+    OK(pthread_create(&escritor, NULL, trocar, NULL) == 0);
+    while (!substituiu) pthread_cond_wait(&mudou, &tr);
+  }
+  pthread_mutex_unlock(&tr);
+}
 
 unsigned rede_pedido_capacidades(void) { return (unsigned)caps; }
 int rede_pedir(const RedePedido *p, RedeResposta *r) {
-  (void)p;
   memset(r, 0, sizeof *r);
-  pthread_mutex_lock(&tr); posts++; pthread_mutex_unlock(&tr);
+  pthread_mutex_lock(&tr);
+  posts++;
+  if (strstr(p->url, "b.test")) postsB++;
+  pthread_mutex_unlock(&tr);
   r->erro = REDE_OK; r->status = 503;   // fica pendente de proposito
   return 0;
 }
@@ -85,6 +112,31 @@ int main(int argc, char **argv) {
   OK(addons_adicionar("Fixture", "https://addon.test/cfg?apikey=fixture"));
   addons_manifesto_lido(0, MAN);
   OK(addons_watchstate(0, &(WsDecl){0}));
+
+  if (argc > 1 && !strcmp(argv[1], "--trocar-slot")) {
+    WsFila f = {0};
+    char destino[20];
+    ws_destino(addons_base(0), sessao_usuario(), 1, destino);
+    OK(ws_fila_empurrar(&f, destino, "/watch_state/push/movie/tt0133093.json",
+                         "id", "{}", (long long)time(NULL)));
+    disco = ws_fila_serializar(&f); ws_fila_limpar(&f);
+    trocarSlot = 1;
+    wsenvio_iniciar();
+    for (i = 0; i < 200; i++) {
+      int terminou;
+      pthread_mutex_lock(&tr); terminou = substituiu && disco == NULL; pthread_mutex_unlock(&tr);
+      if (terminou) break;
+      usleep(10000);
+    }
+    pthread_mutex_lock(&tr);
+    OK(substituiu);
+    OK(postsB == 0); // Nunca enviar o evento de A para B, sem manifesto carregado.
+    OK(posts == 0 && disco == NULL);
+    pthread_mutex_unlock(&tr);
+    if (substituiu) pthread_join(escritor, NULL);
+    printf("watchstate_trocar_slot: posts_B=%d, %s\n", postsB, falhas ? "FAIL" : "PASS");
+    return falhas ? 1 : 0;
+  }
 
   if (argc > 1 && !strcmp(argv[1], "--antes-do-fio")) {
     WsFila f = {0};
