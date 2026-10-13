@@ -15,22 +15,32 @@ int ajustes_rail_recolhida(void) { return 0; }
 
 static ContaPerfil conta;
 static float aspectoNoDesenho = -1.0f;
+static float aspectoFoto;
+static GfxModo modoNoDesenho;
 const ContaPerfil *perfis_item_ativo(void) { return &conta; }
 GLuint tex_obter_larg(const char *c, float l) { (void)c; (void)l; return 7; }
-float tex_aspecto(const char *c) { (void)c; return 1.78f; }
+float tex_aspecto(const char *c) { (void)c; return aspectoFoto; }
 void gfx_rect(GfxRect r, GLuint tex, GfxModo m, float foco, float px, float py,
               float raio, float cr, float cg, float cb, float ca) {
-  (void)r; (void)m; (void)foco; (void)px; (void)py; (void)raio;
+  (void)r; (void)foco; (void)px; (void)py; (void)raio;
   (void)cr; (void)cg; (void)cb; (void)ca;
-  if (tex == 7) aspectoNoDesenho = gfx_tex_aspect_atual;
+  if (tex == 7) {
+    aspectoNoDesenho = gfx_tex_aspect_atual;
+    modoNoDesenho = m;
+  }
 }
 
 int main(void) {
   MenuGeo g = geoEm(0, 1);
-  snprintf(conta.avatarUrl, sizeof conta.avatarUrl, "foto-larga");
-  desenhaRodape(&g, 0, 1.0f, 0, 0);
-  assert(aspectoNoDesenho > 1.7f && aspectoNoDesenho < 1.8f);
-  assert(gfx_tex_aspect_atual == 0.0f);
-  puts("PASS #388: avatar do rodape usa o aspecto real da foto");
+  const float aspectos[] = { 16.0f / 9.0f, 9.0f / 16.0f };
+  snprintf(conta.avatarUrl, sizeof conta.avatarUrl, "foto-retangular");
+  for (unsigned i = 0; i < sizeof aspectos / sizeof aspectos[0]; i++) {
+    aspectoFoto = aspectos[i];
+    desenhaRodape(&g, 0, 1.0f, 0, 0);
+    assert(aspectoNoDesenho == aspectoFoto);
+    assert(modoNoDesenho == GFX_AVATAR);
+    assert(gfx_tex_aspect_atual == 0.0f);
+  }
+  puts("PASS #388: avatar largo e vertical usa cover com mascara circular");
   return 0;
 }

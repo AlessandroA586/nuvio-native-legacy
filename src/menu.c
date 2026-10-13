@@ -665,9 +665,9 @@ static void desenhaRodape(const MenuGeo *g, float e, float alpha, float foco, fl
   { GLuint tex = (p && p->avatarUrl[0]) ? tex_obter_larg(p->avatarUrl, av.w) : 0;
     if (tex) {
       // Aspecto real da foto (#388): com 1.0 uma foto retangular era esticada
-      // no quadrado; o card recorta em cover.
+      // no quadrado; GFX_AVATAR recorta em cover sem cair em contain.
       gfx_tex_aspect_atual = tex_aspecto(p->avatarUrl);
-      gfx_rect(av, tex, GFX_CARD, 0, 0, 0, 0.5f, 0, 0, 0, alpha);
+      gfx_rect(av, tex, GFX_AVATAR, 0, 0, 0, 0.5f, 0, 0, 0, alpha);
       gfx_tex_aspect_atual = 0.0f;
     } else {
       corAvatar(p ? p->corHex : NULL, &cr, &cg, &cb);
