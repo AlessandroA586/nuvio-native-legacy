@@ -535,7 +535,7 @@ static int celulaAceitaMenu(void) {
   if (nItens() < 1 || desc_vertudo_erro()) return 0;
   return viewItem(foco, &it);
 }
-static int vistoItem(const CatItem *it) { return cat_visto(it) || it->progresso >= 90; }
+static int vistoItem(const CatItem *it) { return cat_visto(it); }
 static void contarVistos(int n) {
   static VcEntrada ent[VT_MAX];
   static char ids[VT_MAX][64], tipos[VT_MAX][8];
@@ -1249,6 +1249,7 @@ static void themeBackground(float a) {
         foto=diretor_foto(collection->title);
       }
       GLuint tp=foto[0]?tex_obter_larg(foto,640.0f):0;
+      if(foto[0]) tex_publicar_paleta(foto);
       if(tp) {
         // Retrato grande a direita, da borda de cima ate antes do painel
         // (VT_PAN_Y). O GFX_RETRATO corta o topo (some o nome gravado no
@@ -1427,8 +1428,9 @@ static void themeHeader(float a,float x0) {
 // ESTADO DO TITULO NO CARTAO (U4): o check unico do app (badges.c) quando visto,
 // senao a barra fina de "parou em". Serve a todas as exibicoes.
 static void marcaEstado(GfxRect r, const CatItem *it, float a) {
-  if (vistoItem(it)) badges_check_cartao(r, 0, a);
-  else if (it->progresso > 0) badges_progresso(r, it->progresso / 100.0f, a);
+  if (vistoItem(it)) {
+    if (ajustes_selo_visto()) badges_check_cartao(r, 0, a);
+  } else if (it->progresso > 0) badges_progresso(r, it->progresso / 100.0f, a);
 }
 
 // LINHA DE ESTADO DA LINHA DO TEMPO (U5): "Visto em 12 mar 2024" (ultima vez que

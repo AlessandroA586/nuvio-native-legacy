@@ -141,6 +141,7 @@ typedef struct {
   // 1 = TODO pixel tem alfa 255 (conferido inteiro na thread de decode); 0 =
   // ha transparencia ou nao se sabe. Ver tex_opaca.
   int opaca;
+  CorvivaPaleta paleta; // Ja extraida no decode; retratos publicam sob demanda.
   // Quando tentar de novo (ticks) e quantas vezes ja falhou. Ver o enum Estado.
   Uint32 tentarEm;
   int    falhas;
@@ -2780,10 +2781,11 @@ static int threadDecode(void *arg) {
     // Roda em TODA arte (~15 us), mas so ANOTA a de tela cheia e a que tem
     // transparencia — o LOGO do titulo ("Cor da logo"), que e decodificado na
     // largura do desenho, nunca no teto do destaque. Cartaz de fileira e opaco
-    // e pequeno: medido e esquecido, sem empurrar ninguem do anel.
+    // e pequeno: fica no slot, sem empurrar ninguem do anel. Retratos podem
+    // publicar essa paleta sob demanda, sem decodificar de novo.
+    CorvivaPaleta pal = {0};
     if (conv && conv->format->BytesPerPixel == 4) {
       static int medido;
-      CorvivaPaleta pal;
       Uint64 c0 = SDL_GetPerformanceCounter();
       corviva_extrair((const unsigned char *)conv->pixels, conv->w, conv->h,
                       conv->pitch, &pal);
@@ -2846,6 +2848,7 @@ static int threadDecode(void *arg) {
     } else if (itens[idx].estado == PENDENTE) {
       itens[idx].lum = lumMedia;
       itens[idx].opaca = opaca;
+      itens[idx].paleta = pal;
       itens[idx].croma = cromaMedia;
       itens[idx].desvio1 = desvio1;
       itens[idx].corR = corR; itens[idx].corG = corG; itens[idx].corB = corB;
@@ -3858,6 +3861,19 @@ const char *tex_arquivo(const char *url) {
   tex_obter_limite(url, 128, 0, 0);
   pedidoArquivo = 0;
   return NULL;
+}
+
+void tex_publicar_paleta(const char *caminho) {
+  CorvivaPaleta pal;
+  int i, tem = 0;
+  if (!mtx || !caminho || !*caminho || corviva_paleta(caminho, &pal)) return;
+  BUSCA_MEDIDA(i, caminho, hashCaminho(caminho));
+  if (i >= 0 && (itens[i].estado == DECODIFICADO || itens[i].estado == PRONTO)) {
+    pal = itens[i].paleta;
+    tem = 1;
+  }
+  SDL_UnlockMutex(mtx);
+  if (tem) corviva_anotar(caminho, &pal);
 }
 
 int tex_magica(const char *caminho, unsigned char magica[4]) {

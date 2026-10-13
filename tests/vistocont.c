@@ -32,6 +32,14 @@ int main(void) {
   VcEntrada e[] = { { "", 0, "movie", 1 }, { "", 0, "movie", 0 } };
   CHECA(vistocont_contar(e, 2, &n) == 2 && n == 1);
 
+  // Identidades transitivas, incluindo ponte que chega depois dos grupos.
+  VcEntrada f[] = { { "tt1", 0, "movie", 0 }, { "tt1", 100, "movie", 0 }, { "", 100, "movie", 1 } };
+  CHECA(vistocont_contar(f, 3, &n) == 1 && n == 1);
+  VcEntrada g[] = { { "tt1", 0, "movie", 1 }, { "", 100, "movie", 1 }, { "tt1", 100, "movie", 0 } };
+  CHECA(vistocont_contar(g, 3, &n) == 1 && n == 1);
+  VcEntrada h[] = { { "tt1", 0, "movie", 0 }, { "", 100, "movie", 0 }, { "tt1", 100, "movie", 0 } };
+  CHECA(vistocont_contar(h, 3, &n) == 1 && n == 0);
+
   // Percentual para o anel.
   CHECA(vistocont_pct(1, 3) == 33 && vistocont_pct(0, 0) == 0 && vistocont_pct(5, 5) == 100);
 

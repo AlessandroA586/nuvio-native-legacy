@@ -28,14 +28,19 @@ int vistocont_contar(const VcEntrada *e, int n, int *vistos) {
   for (i = 0; i < n; i++) {
     grupo[i] = i;
     for (j = 0; j < i; j++) {
-      if (grupo[j] != j) continue;
       if (mesmoImdb(e[i].imdb, e[j].imdb) ||
           (e[i].tmdb && e[i].tmdb == e[j].tmdb && mesmoTipo(e[i].tipo, e[j].tipo))) {
-        grupo[i] = j;
-        break;
+        int a = i, b = j;
+        while (grupo[a] != a) a = grupo[a];
+        while (grupo[b] != b) b = grupo[b];
+        grupo[a] = b;
       }
     }
-    if (e[i].visto) visto[grupo[i]] = 1;
+  }
+  for (i = 0; i < n; i++) {
+    j = i;
+    while (grupo[j] != j) j = grupo[j];
+    if (e[i].visto) visto[j] = 1;
   }
   for (i = 0; i < n; i++)
     if (grupo[i] == i) { m++; v += visto[i]; }
