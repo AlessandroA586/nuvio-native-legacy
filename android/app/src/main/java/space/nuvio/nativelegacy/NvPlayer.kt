@@ -509,6 +509,7 @@ object NvPlayer {
                 .build()
             player = p
             aplicarGanho()
+            semTravaDeFio(p)
             // Release anterior ainda preso no HAL de audio: sessao de audio nova,
             // para o AudioTrack deste filme nao esperar o patch do velho.
             if (liberacoesEmCurso.get() > 0) {
@@ -558,6 +559,8 @@ object NvPlayer {
             if (inicioMs <= 0 && fracaoAtual > 0) fracaoPendente = fracaoAtual
             else confirmarRetomada(geracao, inicioAceito)
             p.playWhenReady = !pausaPedida
+            // false -> false nao gera callback quando a pausa chegou sem player.
+            if (pausaPedida) ev(EV_PAUSADO)
             p.prepare()
             principal.postDelayed(tique(minha), TIQUE_MS)
         } catch (e: Exception) {
@@ -609,6 +612,17 @@ object NvPlayer {
         superficie?.visibility = View.GONE
     }
 
+    // Media3 1.8: permite o descarte em fundo do player ja sem listeners.
+    private fun semTravaDeFio(p: ExoPlayer) {
+        try {
+            val m = p.javaClass.getDeclaredMethod("setThrowsWhenUsingWrongThread", Boolean::class.javaPrimitiveType)
+            m.isAccessible = true
+            m.invoke(p, false)
+        } catch (e: Throwable) {
+            Log.w(TAG, "[player] sem destravar o fio do release: $e")
+        }
+    }
+
     private fun novaSuperficie(act: Activity) {
         if (superficie != null) return
         val c = camada ?: return
@@ -648,14 +662,13 @@ object NvPlayer {
         }
     }
 
-    // Duas fases no applicationLooper: stop primeiro, release depois de o fio
-    // interno consumir a parada. Mesmo quando chamado do main, liberar() volta
-    // antes do trabalho potencialmente lento; nao viola a afinidade do Media3.
+    // stop+release fora do fio principal. A SurfaceView so sai depois do
+    // descarte: remover antes faz o Media3 esperar o decoder no fio da UI.
     private fun liberarEmFundo(p: ExoPlayer, sv: SurfaceView?) {
         liberacoesEmCurso.incrementAndGet()
-        val looper = Handler(p.applicationLooper)
-        val soltar = Runnable {
+        val corpo = Runnable {
             val ini = SystemClock.elapsedRealtime()
+            try { p.stop() } catch (e: Exception) { Log.w(TAG, "stop: $e") }
             try { p.release() } catch (e: Exception) { Log.w(TAG, "release: $e") }
             val ms = SystemClock.elapsedRealtime() - ini
             if (ms > 5000) Log.w(TAG, "[player] release anterior levou $ms ms (>5 s: HAL de audio preso?)")
@@ -665,13 +678,9 @@ object NvPlayer {
                 if (sv != null && sv !== superficie) (sv.parent as? FrameLayout)?.removeView(sv)
             }
         }
-        looper.post {
-            try { p.playWhenReady = false } catch (e: Exception) { Log.w(TAG, "pause release: $e") }
-            try { p.stop() } catch (e: Exception) { Log.w(TAG, "stop: $e") }
-            // stop() envia a parada ao fio interno; dar-lhe uma volta evita que
-            // release() espere o decoder ocupado no proprio callback de parar.
-            looper.postDelayed(soltar, 50)
-        }
+        val t = Thread(corpo, "nv-release")
+        t.isDaemon = true
+        t.start()
     }
 
     // Tique de 250 ms: a posicao que o C le sem esperar ninguem.

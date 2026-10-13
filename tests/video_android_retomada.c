@@ -80,7 +80,8 @@ static void JNICALL chamar(JNIEnv *e, jclass c, jmethodID m, ...) {
   } else chamadasNormais++;
   va_end(ap);
 }
-int main(void) {
+int main(int argc, char **argv) {
+  assert(argc == 2); // eventos produzidos pelo abrirMain real no teste JVM
   Java_space_nuvio_nativelegacy_NvPlayer_nativeDecoder4k(NULL, NULL, 1, 0, -1, 1);
   assert(cap4k[0] == 1 && cap4k[1] == 0 && cap4k[2] == -1 && cap4k[3] == 1);
 
@@ -194,7 +195,6 @@ int main(void) {
   Java_space_nuvio_nativelegacy_NvPlayer_nativePos(NULL, NULL, 2451000);
   video_bombear();
   video_pausar(1);
-  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_PAUSADO, 0, 0);
   int pausas = chamadasPausa, buscas = chamadasBusca;
   Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_ERRO, 2000, -1);
   video_bombear();
@@ -204,7 +204,14 @@ int main(void) {
   video_bombear();
   assert(chamadasBusca == buscas + 1 && ultimoBuscar == 2451000);
   assert(video_pausa_confirmada() == 0); // espera o ack do player novo
-  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_PAUSADO, 0, 0);
+  FILE *eventos = fopen(argv[1], "r"); assert(eventos);
+  int evento, total = 0;
+  while (fscanf(eventos, "%d", &evento) == 1) {
+    Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, evento, 0, 0);
+    total++;
+  }
+  fclose(eventos); assert(total > 0);
+  assert(video_pausa_confirmada() == 0); // falta o primeiro quadro
   Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_PRIMEIRO_QUADRO, 0, 0);
   assert(video_pausa_confirmada());
   puts("ok reconexao de seek pausado conserva pausa e posicao");

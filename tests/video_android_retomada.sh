@@ -23,4 +23,5 @@ cc "${flags[@]}" -ffunction-sections -fdata-sections tests/video_android_retomad
   src/capmkv.c src/mkv.c tests/capmkv_stub.c \
   $( [ "$(uname)" = Darwin ] && echo -Wl,-dead_strip || echo -Wl,--gc-sections ) \
   -lpthread -lm -o "$dir/test"
-"$dir/test"
+python3 tests/android_decoder409.py --pausa-eventos "$dir/pausa-eventos"
+"$dir/test" "$dir/pausa-eventos"

@@ -5,6 +5,7 @@ A compilacao integral contra Media3 e coberta por cacheboost_android.py.
 from pathlib import Path
 import os
 import subprocess
+import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
@@ -32,6 +33,8 @@ erro = bloco('        override fun onPlayerError(')
 fixture = r'''
 import space.nuvio.nativelegacy.GanhoMath
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 object C { const val TRACK_TYPE_UNKNOWN = -1; const val TRACK_TYPE_AUDIO = 1; const val TRACK_TYPE_VIDEO = 2 }
 object Player { interface Listener { fun onPlayerError(error: PlaybackException) } }
 object SystemClock { var agora = 100L; fun elapsedRealtime() = agora }
@@ -54,7 +57,18 @@ class ExoPlayer(val tipos: List<Int>) {
     val rendererCount get() = tipos.size
     fun getRendererType(i: Int) = tipos[i]
     val currentPosition = 0L
+    val entrouRelease = CountDownLatch(1)
+    val continuarRelease = CountDownLatch(1)
+    var fioRelease: Thread? = null
+    fun stop() {}
+    fun release() {
+        fioRelease = Thread.currentThread()
+        entrouRelease.countDown()
+        check(continuarRelease.await(2, TimeUnit.SECONDS))
+    }
 }
+class FrameLayout { fun removeView(sv: SurfaceView) {} }
+class SurfaceView { val parent: Any? = FrameLayout() }
 class GanhoAudioProcessor { var ganho = 1f }
 class Fila {
     data class Item(val quando: Long, val r: Runnable)
@@ -70,7 +84,7 @@ class Fila {
     }
 }
 object Fixture {
-    const val TAG = "NvPlayer"; const val EV_ERRO = 5; const val RETRY_DECODER_MS = 5000L
+    const val TAG = "NvPlayer"; const val EV_ERRO = 5; const val EV_PAUSADO = 3; const val RETRY_DECODER_MS = 5000L
     val principal = Fila(); var activity: Any? = Any()
     val pedidos = AtomicInteger(1); var pedidoAtivo = 1
     val liberacoesEmCurso = AtomicInteger(); var semRecriar = true
@@ -81,8 +95,11 @@ object Fixture {
     var pausaPedida = false
     var ganhoPct = 100; var processador: GanhoAudioProcessor? = null
     fun atual(minha: Int) = minha == sessao && pedidoAtivo == pedidos.get()
+    var superficie: SurfaceView? = null
+    fun semTravaDeFio(p: ExoPlayer) {}
     fun confirmarRetomada(g: Int, a: Boolean) {}
-    fun ev(t: Int, a: Int, b: Int) { evento = b }
+    val eventos = mutableListOf<Int>()
+    fun ev(t: Int, a: Int = 0, b: Int = 0) { evento = b; eventos.add(t) }
     fun nativeErroTexto(texto: String) {}
     fun liberar() {
         releases++; sessao++
@@ -96,6 +113,8 @@ object Fixture {
     GANHO
     APLICAR_GANHO
     PAUSAR
+    LIBERAR_EM_FUNDO
+    fun descartar(p: ExoPlayer, sv: SurfaceView?) { liberarEmFundo(p, sv) }
     fun ouvinte(minha: Int) = object : Player.Listener {
         ERRO
     }
@@ -103,11 +122,29 @@ object Fixture {
     fun reset() {
         principal.itens.clear(); SystemClock.agora = 100; pedidos.set(1); pedidoAtivo = 1
         liberacoesEmCurso.set(0); criados.clear(); releases = 0; semRecriar = true; releaseMs = 0
-        Log.linhas.clear(); activity = Any(); ganhoPct = 100; player = null; processador = null
+        Log.linhas.clear(); eventos.clear(); activity = Any(); ganhoPct = 100; player = null; processador = null
     }
 }
 fun main(args: Array<String>) {
     val f = Fixture
+    if (args[0] == "descarte") {
+        f.reset()
+        val p = ExoPlayer(emptyList())
+        try {
+            f.descartar(p, SurfaceView())
+            check(p.entrouRelease.await(2, TimeUnit.SECONDS)) { "release nao iniciou" }
+            check(p.fioRelease !== Thread.currentThread()) { "release bloqueou o fio da UI" }
+            check(f.liberacoesEmCurso.get() == 1) { "descarte bloqueado deve permanecer em curso" }
+        } finally {
+            p.continuarRelease.countDown()
+            p.fioRelease?.join(2000)
+        }
+        check(f.liberacoesEmCurso.get() == 0)
+        check(f.principal.itens.size == 1) { "superficie deve sair na UI depois do descarte" }
+        f.principal.ate(SystemClock.agora)
+        println("PASS descarte: release bloqueado fora da UI; contador e superficie apos terminar")
+        return
+    }
     if (args[0] == "renderer") {
         // Ordem invertida: o indice do renderer NAO e o tipo.
         f.player = ExoPlayer(listOf(C.TRACK_TYPE_AUDIO, C.TRACK_TYPE_VIDEO))
@@ -137,11 +174,14 @@ fun main(args: Array<String>) {
         f.reset(); f.releaseMs = 600; f.abrir("pausada"); f.pausar(1)
         f.principal.ate(725)
         check(f.player != null && f.player?.playWhenReady == false) { "pausa perdida na abertura adiada" }
+        check(f.eventos == listOf(f.EV_PAUSADO)) { "abertura adiada nao confirmou pausa: ${f.eventos}" }
+        if (args.size > 1) java.io.File(args[1]).writeText(f.eventos.joinToString("\n", postfix = "\n"))
         f.abrir("nova"); f.principal.ate(1400)
         check(f.player?.playWhenReady == true) { "pausa vazou para fonte nova" }
         f.reset(); f.releaseMs = 600; f.abrir("alternada"); f.pausar(1); f.pausar(0)
         f.principal.ate(725); check(f.player?.playWhenReady == true)
-        println("PASS pausa: abertura adiada conserva pausa/retomar; nova fonte nasce tocando")
+        check(f.eventos.isEmpty()) { "retomar durante a espera emitiu pausa" }
+        println("PASS pausa: abertura adiada confirma pausa; retomar/nova fonte nascem tocando")
         return
     }
     if (args[0] == "ganho") {
@@ -184,7 +224,8 @@ fun main(args: Array<String>) {
 '''.replace('ABRIR', abrir).replace('ERRO\n', erro + '\n').replace(
     'APLICAR_GANHO', bloco('    private fun aplicarGanho(')).replace(
     '    GANHO\n', bloco('    @JvmStatic fun ganho(') + '\n').replace(
-    '    PAUSAR\n', bloco('    @JvmStatic fun pausar(') + '\n')
+    '    PAUSAR\n', bloco('    @JvmStatic fun pausar(') + '\n').replace(
+    '    LIBERAR_EM_FUNDO\n', bloco('    private fun liberarEmFundo(') + '\n')
 cache = Path.home() / '.gradle/caches/modules-2/files-2.1'
 def jar(group, artifact, version):
     return str(next((cache / group / artifact / version).glob('*/*.jar')))
@@ -202,6 +243,7 @@ with tempfile.TemporaryDirectory(prefix='nuvio-decoder409-') as tmp:
                     '-jvm-target', '17', '-d', str(tmp / 'classes'), str(file),
                     str(root / 'android/app/src/main/java/space/nuvio/nativelegacy/GanhoMath.kt')], check=True)
     failed = 0
-    for case in ('renderer', 'release', 'ganho', 'pausa'):
-        failed += subprocess.run([java, '-cp', f'{tmp / "classes"}:{stdlib}', 'DecoderFixtureKt', case]).returncode != 0
+    for case in ('renderer', 'release', 'descarte', 'ganho', 'pausa'):
+        output = sys.argv[2:3] if case == 'pausa' and sys.argv[1:2] == ['--pausa-eventos'] else []
+        failed += subprocess.run([java, '-cp', f'{tmp / "classes"}:{stdlib}', 'DecoderFixtureKt', case, *output]).returncode != 0
     raise SystemExit(bool(failed))
