@@ -31,7 +31,7 @@ int shot_vertudo_item(int i, CatItem *dst) {
   snprintf(dst->tipo, sizeof dst->tipo, "movie");
   snprintf(dst->titulo, sizeof dst->titulo, "Titulo %d", i + 1);
   snprintf(dst->genero, sizeof dst->genero, "Filme · Drama");
-  snprintf(dst->meta, sizeof dst->meta, "2025 · 120 min");
+  snprintf(dst->meta, sizeof dst->meta, "%d · 120 min", 1992 + i * 3);
   snprintf(dst->sinopse, sizeof dst->sinopse, "Sinopse de exemplo para o painel da direita.");
   snprintf(dst->poster, sizeof dst->poster, "deploy/app/art/%02d.jpg", i % 30);
   snprintf(dst->backdrop, sizeof dst->backdrop, "deploy/app/art/%02d.jpg", i % 30);
@@ -168,6 +168,10 @@ int main(int argc, char **argv) {
                              "deploy/app/art/03.jpg", NULL };
     const char *rot[3] = { "pacote", "tmdb", "semfoto" };
     int k;
+    // Vistos conhecidos (historico unificado Nuvio/Trakt/Simkl): 1o, 3o e 4o.
+    cat_historico_definir_id("tt0000100", "movie", 1);
+    cat_historico_definir_id("tt0000102", "movie", 1);
+    cat_historico_definir_id("tt0000103", "movie", 1);
     for (k = 0; k < 3; k++) {
       char cmd[1400];
       memset(pastaFontes, 0, sizeof pastaFontes);

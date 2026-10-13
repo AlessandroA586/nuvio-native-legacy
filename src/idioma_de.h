@@ -4951,6 +4951,7 @@
   T("Você vai notar logo", "Das fällt dir sofort auf"),
   T("Você vira uma pessoa só: Trakt, Simkl e Letterboxd ligados à mesma pessoa, sem amigo nem atividade em dobro.", "Du wirst eine einzige Person: Trakt, Simkl und Letterboxd mit derselben Person verknüpft, ohne doppelte Freunde oder Aktivität."),
   T("Você viu", "Du hast es gesehen"),
+  T("Você viu %d de %d", "Du hast %d von %d gesehen"),
   T("Volta ao degradê antigo sob o cartaz em foco, no lugar do realce atual.", "Kehrt zum alten Verlauf unter dem fokussierten Poster zurück, statt der aktuellen Hervorhebung."),
   T("Volta da meia temporada", "Rückkehr nach der Winterpause"),
   T("Voltar", "Zurück"),

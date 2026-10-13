@@ -21,6 +21,7 @@
 #include "focoprof.h"
 #include "corviva.h"
 #include "ctxlista.h"
+#include "vistocont.h"
 #include "ctxmenu.h"
 #include "ponteiro.h"
 #include "rolagemtoque.h"
@@ -183,6 +184,8 @@ static float x0Atual;
 // player marca um capitulo). Nunca por quadro: cada consulta copia o CatItem.
 static unsigned char celVisto[VT_MAX];
 static int sagaVistos;
+// "Voce viu N de M" do cabecalho: titulos distintos (tt/tmdb/episodio) da lista.
+static int vcVistos, vcTotal;
 static Uint32 vistosEm;             // ajustes_conteudo_x() do quadro (desenho)
 
 static int ordenaPorAno(void) {
@@ -531,13 +534,25 @@ static int celulaAceitaMenu(void) {
 }
 static int vistoItem(const CatItem *it) { return cat_visto(it) || it->progresso >= 90; }
 static void contarVistos(int n) {
+  static VcEntrada ent[VT_MAX];
+  static char ids[VT_MAX][64], tipos[VT_MAX][8];
+  int ne = 0;
   sagaVistos = 0;
   for (int i = 0; i < n && i < VT_MAX; i++) {
     CatItem it;
-    celVisto[i] = viewItem(i, &it) && vistoItem(&it);
+    int ok = viewItem(i, &it);
+    celVisto[i] = ok && vistoItem(&it);
     sagaVistos += celVisto[i];
+    if (!ok) continue;
+    snprintf(ids[ne], sizeof ids[ne], "%s", it.imdb);
+    snprintf(tipos[ne], sizeof tipos[ne], "%s", it.tipo);
+    ent[ne] = (VcEntrada){ ids[ne], it.tmdb, tipos[ne], celVisto[i] };
+    ne++;
   }
+  vcTotal = vistocont_contar(ent, ne, &vcVistos);
 }
+// A lista de pessoas (Directors) mostra o contador e as marcas da timeline.
+static int listaDePessoa(void) { return collection && !strcasecmp(collection->group, "Directors"); }
 
 // --- A TABELA DE CELULAS ------------------------------------------------------
 static void cel(int i, float x, float y, float w, float h, int lin, int col) {
@@ -633,7 +648,7 @@ static void montar(int n) {
   }
   celN = n; celLay = lay;
   if (foco >= n) foco = n ? n - 1 : 0;
-  if (lay == VT_LAY_SAGA) { contarVistos(n); vistosEm = SDL_GetTicks(); }
+  if (lay == VT_LAY_SAGA || listaDePessoa()) { contarVistos(n); vistosEm = SDL_GetTicks(); }
 }
 // O vizinho na linha `lin` (acima ou abaixo) com o centro mais perto do
 // centro do item em foco. As linhas sao contiguas em indice em toda exibicao.
@@ -1077,7 +1092,7 @@ void vertudo_atualizar(float dt, Uint32 agora) {
     pillAnim = anim_mola(pillAnim, alvoP, dt, alvoP > pillAnim ? NV_MOLA_FOCO : NV_MOLA_DESFOCO); }
   if (lay == VT_LAY_VITRINE) { vitAtualizar(dt, agora); return; }
   if (celLay != lay || celN != n) montar(n);
-  else if (lay == VT_LAY_SAGA && n <= 200 && (Sint32)(agora - vistosEm) > 1500)
+  else if ((lay == VT_LAY_SAGA || listaDePessoa()) && n <= 200 && (Sint32)(agora - vistosEm) > 1500)
     { contarVistos(n); vistosEm = agora; }
   // Mira a linha focada a 30% da altura util, como o resto do app faz.
   alvo = n ? VT_TOPO + celY[foco] - NV_TELA_H * 0.30f : 0.0f;
@@ -1315,6 +1330,18 @@ static void themeHeader(float a,float x0) {
     char vis[64]; size_t k=strlen(caption);
     snprintf(vis,sizeof vis,i18n("%d de %d assistidos"),sagaVistos,n>VT_MAX?VT_MAX:n);
     snprintf(caption+k,sizeof caption-k,"  ·  %s",vis);
+  }
+  if(listaDePessoa()&&vcTotal>0&&!semFonte&&!desc_vertudo_erro()&&!vtTelefone()) {
+    // "Voce viu N de M": barra fina na cor da colecao + contagem, sob o nome.
+    char vis[64];snprintf(vis,sizeof vis,i18n("Você viu %d de %d"),vcVistos,vcTotal);
+    TxtLinha vt=txt_linha(TXT_DET_META2,vis,242,243,247,255);
+    float bw=220,bh=8,by=192+(vt.h-bh)*.5f;
+    gfx_cor((GfxRect){x0,by,bw,bh},.5f,1,1,1,.14f*a);
+    float pct=vistocont_pct(vcVistos,vcTotal)/100.0f;
+    if(pct>0){float fr,fg,fb;corFocoFonte(&fr,&fg,&fb);
+      gfx_cor((GfxRect){x0,by,fmaxf(bh,bw*pct),bh},.5f,fr,fg,fb,a);}
+    txt_desenhar_alpha(vt,x0+bw+16,192,a);
+    caption[0]=0;
   }
   TxtLinha sub=txt_linha_corta(TXT_DET_META2,caption,196,202,213,255,vtTelefone()?fminf(960.0f,NV_TELA_W-x0-48.0f):960.0f);txt_desenhar_alpha(sub,x0,192,a);
   if(collection&&collection->nSources>1) {

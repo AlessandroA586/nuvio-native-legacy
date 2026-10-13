@@ -4952,6 +4952,7 @@
   T("Você vai notar logo", "Du märker det direkt"),
   T("Você vira uma pessoa só: Trakt, Simkl e Letterboxd ligados à mesma pessoa, sem amigo nem atividade em dobro.", "Du blir en enda person: Trakt, Simkl och Letterboxd kopplade till samma person, utan dubbla vänner eller aktivitet."),
   T("Você viu", "Du såg den"),
+  T("Você viu %d de %d", "Du har sett %d av %d"),
   T("Volta ao degradê antigo sob o cartaz em foco, no lugar do realce atual.", "Återgår till den gamla gradienten under affischen i fokus, i stället för den nuvarande markeringen."),
   T("Volta da meia temporada", "Återkomst mitt i säsongen"),
   T("Voltar", "Tillbaka"),

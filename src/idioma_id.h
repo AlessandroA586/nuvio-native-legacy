@@ -4952,6 +4952,7 @@
   T("Você vai notar logo", "Anda akan langsung menyadarinya"),
   T("Você vira uma pessoa só: Trakt, Simkl e Letterboxd ligados à mesma pessoa, sem amigo nem atividade em dobro.", "Anda menjadi satu orang: Trakt, Simkl, dan Letterboxd terhubung ke orang yang sama, tanpa teman atau aktivitas ganda."),
   T("Você viu", "Kamu sudah menonton"),
+  T("Você viu %d de %d", "Anda sudah menonton %d dari %d"),
   T("Volta ao degradê antigo sob o cartaz em foco, no lugar do realce atual.", "Kembali ke gradasi lama di bawah poster yang difokuskan, alih-alih sorotan saat ini."),
   T("Volta da meia temporada", "Kembali di tengah musim"),
   T("Voltar", "Kembali"),

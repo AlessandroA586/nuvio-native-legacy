@@ -4952,6 +4952,7 @@
   T("Você vai notar logo", "Du lægger mærke til det med det samme"),
   T("Você vira uma pessoa só: Trakt, Simkl e Letterboxd ligados à mesma pessoa, sem amigo nem atividade em dobro.", "Du bliver til én person: Trakt, Simkl og Letterboxd forbundet til den samme person, uden dobbelte venner eller aktivitet."),
   T("Você viu", "Du så den"),
+  T("Você viu %d de %d", "Du har set %d af %d"),
   T("Volta ao degradê antigo sob o cartaz em foco, no lugar do realce atual.", "Vender tilbage til den gamle gradient under plakaten i fokus i stedet for den nuværende fremhævning."),
   T("Volta da meia temporada", "Tilbagevenden midt i sæsonen"),
   T("Voltar", "Tilbage"),

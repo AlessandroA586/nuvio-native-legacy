@@ -4952,6 +4952,7 @@
   T("Você vai notar logo", "Bạn sẽ nhận ra ngay"),
   T("Você vira uma pessoa só: Trakt, Simkl e Letterboxd ligados à mesma pessoa, sem amigo nem atividade em dobro.", "Bạn trở thành một người duy nhất: Trakt, Simkl và Letterboxd liên kết với cùng một người, không có bạn bè hay hoạt động trùng lặp."),
   T("Você viu", "Bạn đã xem"),
+  T("Você viu %d de %d", "Bạn đã xem %d trên %d"),
   T("Volta ao degradê antigo sob o cartaz em foco, no lugar do realce atual.", "Quay lại dải chuyển màu cũ bên dưới poster đang chọn, thay cho điểm nhấn hiện tại."),
   T("Volta da meia temporada", "Trở lại giữa mùa"),
   T("Voltar", "Quay lại"),

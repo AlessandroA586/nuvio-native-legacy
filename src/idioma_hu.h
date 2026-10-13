@@ -4952,6 +4952,7 @@
   T("Você vai notar logo", "Rögtön észreveszed"),
   T("Você vira uma pessoa só: Trakt, Simkl e Letterboxd ligados à mesma pessoa, sem amigo nem atividade em dobro.", "Egyetlen személlyé válsz: a Trakt, a Simkl és a Letterboxd ugyanahhoz a személyhez kapcsolva, kettőzött barátok és tevékenység nélkül."),
   T("Você viu", "Megnézted"),
+  T("Você viu %d de %d", "%d / %d megnézve"),
   T("Volta ao degradê antigo sob o cartaz em foco, no lugar do realce atual.", "Visszaállítja a régi átmenetet a fókuszban lévő poszter alatt a jelenlegi kiemelés helyett."),
   T("Volta da meia temporada", "Visszatérés az évad közepén"),
   T("Voltar", "Vissza"),

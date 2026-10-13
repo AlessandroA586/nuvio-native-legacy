@@ -4952,6 +4952,7 @@
   T("Você vai notar logo", "Dat merk je meteen"),
   T("Você vira uma pessoa só: Trakt, Simkl e Letterboxd ligados à mesma pessoa, sem amigo nem atividade em dobro.", "Je wordt één persoon: Trakt, Simkl en Letterboxd gekoppeld aan dezelfde persoon, zonder dubbele vrienden of activiteit."),
   T("Você viu", "Je hebt het gezien"),
+  T("Você viu %d de %d", "Je zag %d van %d"),
   T("Volta ao degradê antigo sob o cartaz em foco, no lugar do realce atual.", "Keert terug naar het oude verloop onder de gefocuste poster, in plaats van de huidige markering."),
   T("Volta da meia temporada", "Terugkeer halverwege het seizoen"),
   T("Voltar", "Terug"),

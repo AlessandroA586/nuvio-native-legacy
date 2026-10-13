@@ -4952,6 +4952,7 @@
   T("Você vai notar logo", "Hemen fark edeceksiniz"),
   T("Você vira uma pessoa só: Trakt, Simkl e Letterboxd ligados à mesma pessoa, sem amigo nem atividade em dobro.", "Tek bir kişi oluyorsunuz: Trakt, Simkl ve Letterboxd aynı kişiye bağlı; yinelenen arkadaş ya da etkinlik yok."),
   T("Você viu", "İzledin"),
+  T("Você viu %d de %d", "%d / %d izlediniz"),
   T("Volta ao degradê antigo sob o cartaz em foco, no lugar do realce atual.", "Mevcut vurgu yerine odaktaki afişin altında eski gradyana döner."),
   T("Volta da meia temporada", "Sezon ortası dönüşü"),
   T("Voltar", "Geri"),

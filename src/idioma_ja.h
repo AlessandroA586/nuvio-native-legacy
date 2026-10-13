@@ -4952,6 +4952,7 @@
   T("Você vai notar logo", "すぐに気づきます"),
   T("Você vira uma pessoa só: Trakt, Simkl e Letterboxd ligados à mesma pessoa, sem amigo nem atividade em dobro.", "ひとりの人として統合されます。Trakt、Simkl、Letterboxd を同じ人に連携し、友だちやアクティビティが重複しません。"),
   T("Você viu", "視聴済み"),
+  T("Você viu %d de %d", "%d / %d 本を視聴済み"),
   T("Volta ao degradê antigo sob o cartaz em foco, no lugar do realce atual.", "フォーカス中のポスターの下に、現在のハイライトではなく従来のグラデーションを戻します。"),
   T("Volta da meia temporada", "シーズン途中の再開"),
   T("Voltar", "戻る"),

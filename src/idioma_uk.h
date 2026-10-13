@@ -4951,6 +4951,7 @@
   T("Você vai notar logo", "Ви одразу помітите"),
   T("Você vira uma pessoa só: Trakt, Simkl e Letterboxd ligados à mesma pessoa, sem amigo nem atividade em dobro.", "Ви стаєте однією людиною: Trakt, Simkl і Letterboxd, пов'язані з однією людиною, без дублів друзів чи активності."),
   T("Você viu", "Ви переглянули"),
+  T("Você viu %d de %d", "Ви переглянули %d з %d"),
   T("Volta ao degradê antigo sob o cartaz em foco, no lugar do realce atual.", "Повертає старий градієнт під постером у фокусі замість поточного виділення."),
   T("Volta da meia temporada", "Повернення в середині сезону"),
   T("Voltar", "Назад"),

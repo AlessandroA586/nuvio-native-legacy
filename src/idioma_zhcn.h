@@ -4952,6 +4952,7 @@
   T("Você vai notar logo", "你马上就会注意到"),
   T("Você vira uma pessoa só: Trakt, Simkl e Letterboxd ligados à mesma pessoa, sem amigo nem atividade em dobro.", "你合为一个人：Trakt、Simkl 和 Letterboxd 连接到同一个人，没有重复的好友或动态。"),
   T("Você viu", "你已看过"),
+  T("Você viu %d de %d", "你已观看 %d / %d"),
   T("Volta ao degradê antigo sob o cartaz em foco, no lugar do realce atual.", "在聚焦海报下恢复旧的渐变，而不是当前的高亮。"),
   T("Volta da meia temporada", "季中回归"),
   T("Voltar", "返回"),

@@ -4951,6 +4951,7 @@
   T("Você vai notar logo", "Lo notarás enseguida"),
   T("Você vira uma pessoa só: Trakt, Simkl e Letterboxd ligados à mesma pessoa, sem amigo nem atividade em dobro.", "Pasas a ser una sola persona: Trakt, Simkl y Letterboxd vinculados a la misma persona, sin amigos ni actividad duplicados."),
   T("Você viu", "Lo viste"),
+  T("Você viu %d de %d", "Has visto %d de %d"),
   T("Volta ao degradê antigo sob o cartaz em foco, no lugar do realce atual.", "Vuelve al degradado antiguo bajo el póster en foco, en lugar del realce actual."),
   T("Volta da meia temporada", "Regreso de media temporada"),
   T("Voltar", "Atrás"),

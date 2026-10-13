@@ -4951,6 +4951,7 @@
   T("Você vai notar logo", "Vei observa imediat"),
   T("Você vira uma pessoa só: Trakt, Simkl e Letterboxd ligados à mesma pessoa, sem amigo nem atividade em dobro.", "Devii o singură persoană: Trakt, Simkl și Letterboxd legate de aceeași persoană, fără prieteni sau activitate duplicate."),
   T("Você viu", "L-ai văzut"),
+  T("Você viu %d de %d", "Ai văzut %d din %d"),
   T("Volta ao degradê antigo sob o cartaz em foco, no lugar do realce atual.", "Revine la vechiul gradient sub afișul în focus, în locul evidențierii actuale."),
   T("Volta da meia temporada", "Revenirea de la mijlocul sezonului"),
   T("Voltar", "Înapoi"),

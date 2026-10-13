@@ -4952,6 +4952,7 @@
   T("Você vai notar logo", "Tuoj pat pastebėsite"),
   T("Você vira uma pessoa só: Trakt, Simkl e Letterboxd ligados à mesma pessoa, sem amigo nem atividade em dobro.", "Tapsite vienu žmogumi: Trakt, Simkl ir Letterboxd susieti su tuo pačiu žmogumi, be dubliuotų draugų ar veiklos."),
   T("Você viu", "Pažiūrėjote"),
+  T("Você viu %d de %d", "Matėte %d iš %d"),
   T("Volta ao degradê antigo sob o cartaz em foco, no lugar do realce atual.", "Grąžina seną gradientą po fokusuotu plakatu vietoj dabartinio paryškinimo."),
   T("Volta da meia temporada", "Sezono vidurio sugrįžimas"),
   T("Voltar", "Atgal"),

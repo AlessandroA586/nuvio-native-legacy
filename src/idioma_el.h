@@ -4952,6 +4952,7 @@
   T("Você vai notar logo", "Θα το προσέξετε αμέσως"),
   T("Você vira uma pessoa só: Trakt, Simkl e Letterboxd ligados à mesma pessoa, sem amigo nem atividade em dobro.", "Γίνεστε ένα άτομο: Trakt, Simkl και Letterboxd συνδεδεμένα στο ίδιο άτομο, χωρίς διπλούς φίλους ή δραστηριότητα."),
   T("Você viu", "Το είδατε"),
+  T("Você viu %d de %d", "Είδατε %d από %d"),
   T("Volta ao degradê antigo sob o cartaz em foco, no lugar do realce atual.", "Επιστρέφει στην παλιά διαβάθμιση κάτω από την αφίσα με εστίαση, αντί για την τρέχουσα επισήμανση."),
   T("Volta da meia temporada", "Επιστροφή στα μέσα της σεζόν"),
   T("Voltar", "Πίσω"),

@@ -4951,6 +4951,7 @@
   { "Você vai notar logo", "You'll notice right away" },
   { "Você vira uma pessoa só: Trakt, Simkl e Letterboxd ligados à mesma pessoa, sem amigo nem atividade em dobro.", "You become a single person: Trakt, Simkl and Letterboxd linked to the same person, with no duplicate friends or activity." },
   { "Você viu", "You watched it" },
+  { "Você viu %d de %d", "You watched %d of %d" },
   { "Volta ao degradê antigo sob o cartaz em foco, no lugar do realce atual.", "Returns to the old gradient under the focused poster, instead of the current highlight." },
   { "Volta da meia temporada", "Midseason return" },
   { "Voltar", "Back" },
