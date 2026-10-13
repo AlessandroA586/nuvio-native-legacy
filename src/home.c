@@ -6205,6 +6205,7 @@ static void desenhaRedonda(const CatItem *ci, GLuint t, const char *caminho,
     gfx_rect(miolo, t, GFX_AVATAR, 0, 0.0f, 0.10f, 0, 1, 1, 1, 1);
     gfx_tex_aspect_atual = 0.0f;
   }
+  if (ci && ajustes_selo_visto() && cat_visto(ci)) badges_check_cartao(disco, 1, 1.0f);
   if (ci && ci->titulo[0]) {
     TxtLinha tn = txt_linha_corta(TXT_CAPTION2, ci->titulo, 245, 246, 250, 255, d);
     txt_desenhar_alpha(tn, px + (d - tn.w) * 0.5f, py + d + NV_POSTER_COPY_PADT, 0.98f);

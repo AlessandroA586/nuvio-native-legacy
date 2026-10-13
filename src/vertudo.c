@@ -1421,6 +1421,13 @@ static void themeHeader(float a,float x0) {
   }
 }
 
+// ESTADO DO TITULO NO CARTAO (U4): o check unico do app (badges.c) quando visto,
+// senao a barra fina de "parou em". Serve a todas as exibicoes.
+static void marcaEstado(GfxRect r, const CatItem *it, float a) {
+  if (vistoItem(it)) badges_check_cartao(r, 0, a);
+  else if (it->progresso > 0) badges_progresso(r, it->progresso / 100.0f, a);
+}
+
 static void timelineCard(int i,float cy,float a,float x0) {
   CatItem it;if(!viewItem(i,&it))return;
   int sel=i==foco&&!tabFocus;float r,g,b;corColecao(&r,&g,&b);
@@ -1440,6 +1447,7 @@ static void timelineCard(int i,float cy,float a,float x0) {
   else { gfx_cor(artRect,.04f,.16f,.16f,.18f,a);
          txt_desenhar_alpha(txt_linha(TXT_MINI,"Sem arte",184,188,198,255),
                             vtTelefone()?artRect.x+artRect.w*.5f-32.0f:x+158,vtTelefone()?artRect.y+artRect.h*.5f-10.0f:y+104,a*.9f); }
+  marcaEstado(artRect,&it,a);
   TxtLinha name=txt_linha_corta(TXT_CW_TITULO,it.titulo,242,243,247,255,tw);txt_desenhar_alpha(name,tx,cy+22,a);
   TxtLinha genre=txt_linha_corta(TXT_HERO_META,it.genero,187,194,207,255,tw);txt_desenhar_alpha(genre,tx,cy+64,a);
   txt_bloco(TXT_DET_META2,it.sinopse,209,214,225,tx,cy+106,vtTelefone()?tw:545.0f,30,a,3);
@@ -1511,6 +1519,7 @@ static void cartazGrade(int i, const CatItem *it, float cx, float cy, float w, f
       gfx_tex_aspect_atual = 0.0f;
     }
   } else cartaoArte(i, (GfxRect){ cx, cy, w, h }, artePoster(it), ac, agora, sel);
+  marcaEstado((GfxRect){ cx, cy, w, h }, it, ac);
   { TxtLinha l = txt_linha_corta(TXT_DET_META2, it->titulo, c, c, c, 255, w);
     txt_desenhar_alpha(l, cx, cy + h + 10.0f, ac * (sel ? 1.0f : 0.86f)); }
   if (ranked && lay == VT_LAY_GRADE) {
@@ -1542,6 +1551,7 @@ static void rankingCard(int i, const CatItem *it, float cx, float cy, float w, f
              nu.tex, GFX_TEXTO, 0, 0, 0, 0.0f, ar, ag, ab, ac * (i < 3 ? 0.95f : 0.62f));
   }
   cartaoArte(i, (GfxRect){ cx, cy, w, h }, artePoster(it), ac, agora, sel);
+  marcaEstado((GfxRect){ cx, cy, w, h }, it, ac);
   { int c = sel ? 255 : 214;
     TxtLinha l = txt_linha_corta(TXT_DET_META2, it->titulo, c, c, c, 255, w);
     txt_desenhar_alpha(l, cx, cy + h + 10.0f, ac * (sel ? 1.0f : 0.86f)); }
@@ -1576,17 +1586,8 @@ static void sagaCard(int i, const CatItem *it, float cx, float cy, float w, floa
     snprintf(nn, sizeof nn, "%02d", i + 1);
     l = txt_linha(TXT_TITULO2, nn, 246, 247, 250, 255);
     txt_desenhar_alpha(l, r.x + 20.0f, r.y + r.h - l.h - 14.0f, ac * 0.96f);
-    if (visto) {
-      TxtLinha v = txt_linha(TXT_CAPTION, "Assistido", 20, 20, 24, 255);
-      GfxRect p = { r.x + r.w - v.w - 40.0f, r.y + 14.0f, v.w + 26.0f, v.h + 8.0f };
-      gfx_cor(p, 0.5f, ar, ag, ab, 0.95f * ac);
-      { int tf = ajustes_tinta_foco(); TxtLinha vt = txt_linha(TXT_CAPTION, "Assistido", tf, tf, tf, 255);
-        txt_desenhar_alpha(vt, p.x + 13.0f, p.y + 4.0f, ac); }
-    } else if (it->progresso > 0) {
-      GfxRect tr = { r.x + 20.0f, r.y + r.h - 10.0f, r.w - 40.0f, 4.0f };
-      gfx_cor(tr, 0.5f, 1, 1, 1, 0.25f * ac);
-      gfx_cor((GfxRect){ tr.x, tr.y, tr.w * it->progresso / 100.0f, tr.h }, 0.5f, ar, ag, ab, ac);
-    } }
+    if (visto) badges_check_cartao(r, 0, ac);
+    else if (it->progresso > 0) badges_progresso(r, it->progresso / 100.0f, ac); }
   snprintf(cap, sizeof cap, i18n("Capítulo %d"), i + 1);
   { TxtLinha e = txt_linha(TXT_MINI, cap, 170, 176, 188, 255);
     int c = sel ? 255 : 226;

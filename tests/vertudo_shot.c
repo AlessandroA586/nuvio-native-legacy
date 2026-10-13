@@ -33,6 +33,7 @@ int shot_vertudo_item(int i, CatItem *dst) {
   snprintf(dst->genero, sizeof dst->genero, "Filme · Drama");
   snprintf(dst->meta, sizeof dst->meta, "%d · 120 min", 1992 + i * 3);
   snprintf(dst->sinopse, sizeof dst->sinopse, "Sinopse de exemplo para o painel da direita.");
+  if (i == 1 || i == 5) dst->progresso = 45;   // em andamento ("Parou em")
   snprintf(dst->poster, sizeof dst->poster, "deploy/app/art/%02d.jpg", i % 30);
   snprintf(dst->backdrop, sizeof dst->backdrop, "deploy/app/art/%02d.jpg", i % 30);
   return 1;
@@ -191,6 +192,18 @@ int main(int argc, char **argv) {
       shotGrade = 8; tabFocus = 0; tabCursor = 0; foco = 0;
       snprintf(nome, sizeof nome, "%s-diretor-%s.bmp", saida, rot[k]);
       captura(nome, w);
+      // Mesmo diretor em cada exibicao: o check unico e a barra de progresso.
+      if (k == 0) {
+        static const int lays[4] = { VT_LAY_GRADE, VT_LAY_LINHA, VT_LAY_RANKING, VT_LAY_SAGA };
+        static const char *rl[4] = { "grade", "linha", "ranking", "saga" };
+        int q;
+        for (q = 0; q < 4; q++) {
+          layEscolha = lays[q]; resolverLayout();
+          snprintf(nome, sizeof nome, "%s-estilo-%s.bmp", saida, rl[q]);
+          captura(nome, w);
+        }
+        layEscolha = VT_LAY_AUTO; resolverLayout();
+      }
     }
     shotGrade = 0;
   }
