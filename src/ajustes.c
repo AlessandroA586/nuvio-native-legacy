@@ -4458,7 +4458,7 @@ int ajustes_perfil_restaurar(int perfil) {
   nomePerfil(nome, sizeof nome, perfil);
   t = dados_ler(nome);
   if (!t) return 0;
-  { int focoAntigo = -1, viuFoco = 0;
+  { int focoAntigo = -1, viuFoco = 0, viuTopo = 0;
   for (l = t; l && *l; ) {
     char chave[64], *fim = strchr(l, '\n');
     int v, i;
@@ -4471,6 +4471,7 @@ int ajustes_perfil_restaurar(int perfil) {
         if (!dePerfil(i) || strcmp(CHAVE[i], chave)) continue;
         v = limita(i, v);
         if (i == AJ_FOCO_TRAILER) viuFoco = 1;
+        if (i == AJ_MENU_TOPO) viuTopo = 1;
         if (v != valor[i]) { valor[i] = v; mudou++; }
         break;
       }
@@ -4479,7 +4480,10 @@ int ajustes_perfil_restaurar(int perfil) {
   if (!viuFoco && focoAntigo >= 0) {
     int v = focoTrailerMigrar(focoAntigo);
     if (v != valor[AJ_FOCO_TRAILER]) { valor[AJ_FOCO_TRAILER] = v; mudou++; }
-  } }
+  }
+  // Copia de antes do #461 nao tem menuTopoLocal, e a conta nao o guarda: sem
+  // isto o topo ligado pelo perfil anterior vazaria para este.
+  if (!viuTopo && valor[AJ_MENU_TOPO]) { valor[AJ_MENU_TOPO] = 0; mudou++; } }
   free(t);
   if (mudou) {
     gravar();
@@ -5628,7 +5632,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_ITENS_FILEIRA: return "Quantos títulos cada fileira da Home mostra antes do Ver tudo. Mais itens usam mais memória: em TV com 1 GB de memória a Home pode ficar mais lenta ou fechar. Se o app fechar depois de você aumentar, ele volta sozinho ao valor anterior. Aumentar vale na próxima vez que o app abrir.";
     case AJ_FIL_ORDEM: return "Abre a lista de fileiras para reordenar, ligar, desligar e escolher o card de cada uma. É lá que dá para ver de onde cada fileira vem.";
     case AJ_RAIL: return "A barra de navegação da esquerda fica sempre aberta, ou recolhida até você ir até ela.";
-    case AJ_MENU_TOPO: return "Na lateral: o menu fica na esquerda, como sempre. No topo: o menu vira uma barra no alto da tela e o conteúdo usa a largura toda. Na Home, Para cima no destaque chega à barra e Para baixo volta. Vale para este perfil.";
+    case AJ_MENU_TOPO: return "Na lateral: o menu fica na esquerda, como sempre. No topo: o menu vira uma barra no alto da tela e o conteúdo usa a largura toda. Para cima no primeiro item da tela chega à barra e Para baixo volta. Vale para este perfil.";
     case AJ_RAIL_MODERNA: return "Troca a barra lateral pela versão nova, com ícones maiores. Ela ignora a escolha entre recolhida e fixa.";
     case AJ_RAIL_BLUR: return "Desfoca a arte atrás da barra lateral moderna em vez de usar um fundo sólido.";
     case AJ_HERO: return "O bloco grande no topo da Home, com a arte e o nome de um título em destaque.";
