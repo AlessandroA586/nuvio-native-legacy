@@ -772,11 +772,17 @@ void video_tpk_cartao_destino(float x, float y, float w, float h, float *ox, flo
   }
   if (ox) *ox=fx; if (oy) *oy=fy; if (ow) *ow=fw; if (oh) *oh=fh;
 }
-// O furo segue o plano final, inclusive o encaixe par e o fallback do host.
+// O furo e a intersecao do plano final com o cartao: cover nunca apaga fora dele.
 void video_tpk_cartao_furo(float x, float y, float w, float h, float *ox, float *oy, float *ow, float *oh) {
+  float fx, fy, fw, fh;
   if (emTrailer && emCartao && planoW > 0 && planoH > 0) {
-    if (ox) *ox=planoX; if (oy) *oy=planoY; if (ow) *ow=planoW; if (oh) *oh=planoH;
-  } else video_tpk_cartao_destino(x,y,w,h,ox,oy,ow,oh);
+    fx=planoX; fy=planoY; fw=planoW; fh=planoH;
+  } else video_tpk_cartao_destino(x,y,w,h,&fx,&fy,&fw,&fh);
+  float right = fx + fw < x + w ? fx + fw : x + w;
+  float bottom = fy + fh < y + h ? fy + fh : y + h;
+  if (fx < x) fx=x; if (fy < y) fy=y;
+  fw = right > fx ? right - fx : 0; fh = bottom > fy ? bottom - fy : 0;
+  if (ox) *ox=fx; if (oy) *oy=fy; if (ow) *ow=fw; if (oh) *oh=fh;
 }
 static unsigned cartaoLogado;
 static void cartaoModo(const char *modo, const char *porque) {

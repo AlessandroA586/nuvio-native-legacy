@@ -38,14 +38,19 @@ static void confere(const char *nome, int x, int y, int w, int h) {
   printf("%s %s: %d,%d %dx%d (esperado %d,%d %dx%d)\n", ok ? "ok  " : "FALHA", nome, jx, jy, jw, jh, x, y, w, h);
   if (!ok) falhas++;
 }
-// Home requests a destination, then punches the final plane, including delayed crops.
+// Home requests a destination, then punches its intersection with the final plane.
 static __attribute__((unused)) void cartaoDaHome(const char *nome, int sx, int sy, int sw, int sh,
                          float cx, float cy, float cw, float ch) {
   float x,y,w,h;
   video_tpk_cartao_destino(cx,cy,cw,ch,&x,&y,&w,&h);
   video_janela_fonte(sx,sy,sw,sh,(int)x,(int)y,(int)w,(int)h);
   video_tpk_cartao_furo(cx,cy,cw,ch,&x,&y,&w,&h);
-  confere(nome,(int)x,(int)y,(int)w,(int)h);
+  float left = jx > cx ? jx : cx, top = jy > cy ? jy : cy;
+  float right = jx + jw < cx + cw ? jx + jw : cx + cw;
+  float bottom = jy + jh < cy + ch ? jy + jh : cy + ch;
+  int ok = x == left && y == top && w == right - left && h == bottom - top;
+  printf("%s %s: hole %.0f,%.0f %.0fx%.0f\n", ok ? "ok  " : "FALHA", nome, x,y,w,h);
+  if (!ok) falhas++;
 }
 static void cartaoExpandido(void) {
   video_tocar("http://x/expanded-card.m3u8");
@@ -58,7 +63,7 @@ static void cartaoExpandido(void) {
   cartaoDaHome("#471 expanded delayed crop: hole equals final plane",0,0,1920,1080,40,300,606,341);
   video_recorte_reaplicar();
   confere("#471 expanded delayed crop keeps the final plane",40,300,606,340);
-  cartaoDaHome("#471 cover ROI: hole equals final plane",600,0,720,1080,40,300,360,540);
+  cartaoDaHome("#471 cover ROI: hole is confined to the card",600,0,720,1080,40,300,360,540);
   confere("#471 cover ROI preserves its final plane",-259,300,960,540);
   video_recorte_reaplicar();
   confere("#471 replay preserves the cover plane",-259,300,960,540);
