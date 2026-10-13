@@ -1911,6 +1911,9 @@ int main(int argc, char **argv) {
     // Com o player aberto (filme pausado) fica so o escurecer de antes: a
     // vitrine pediria texturas de tela cheia com o decodificador ocupado.
     esmaecer_estilo(player_aberto() ? ESM_ESTILO_ESCURECER : ajustes_descanso_estilo());
+    // #338: com trailer tocando (destaque da Home ou pagina do titulo) o medidor
+    // some da ilha; volta quando ele para (desempenho.h).
+    desempenho_trailer(trailer_aberto() && trailer_tocando());
     // #422: trailer tocando na pagina do titulo tambem e alguem assistindo. So
     // no titulo: o destaque da Home troca de trailer sem parar e a tela nunca
     // escureceria. Trailer em TELA CHEIA pausado e parado (trailer_pausado so
