@@ -218,16 +218,7 @@ char *rede_baixar(const char *url, int t) {
 }
 char *rede_baixar_com(const char *u, int t, const char *const *c) { (void)c; return rede_baixar(u, t); }
 
-// No account next-up seeds in this Trakt fixture (149f1235, 507d3a6b).
-int contalib_sementes_a_seguir(ContaSemente *s, int max, int doMaisAlto) {
-  (void)s; (void)max; (void)doMaisAlto; return 0;
-}
-int ajustes_cw_do_episodio_mais_alto(void) { return 1; }
-int vistoep_estado(const char *id, int temporada, int episodio) {
-  (void)id; (void)temporada; (void)episodio; return -1;
-}
 // ------------------------------------------------------------- o Trakt
-int trakt_ativo(void) { return 1; }
 int trakt_continuar(CatItem *s, int m) {
   int i;
   for (i = 0; i < 2 && i < m; i++) {
