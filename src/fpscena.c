@@ -106,6 +106,9 @@ void fpscena_iniciar(const char *escolha, const char *base) {
   memset(&S, 0, sizeof S);
   S.ativo = 1; S.base = base;
   if (escolha) snprintf(S.escolha, sizeof S.escolha, "%s", escolha);
+  { int c, algum = 0;   // text with no scene name (an empty flag file) means all scenes
+    for (c = 0; c < NCENAS; c++) algum |= S.escolha[0] && strstr(S.escolha, CENAS[c].nome) != NULL;
+    if (!algum) S.escolha[0] = 0; }
   proxima();
 }
 

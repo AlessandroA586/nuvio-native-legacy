@@ -43,6 +43,7 @@
 #include "gfx.h"
 #include "fundo.h"
 #include "gpunivel.h"
+#include "fpscena.h"
 #include "gputempo.h"
 #include "text.h"
 #include "marco.h"
@@ -1832,6 +1833,24 @@ int main(int argc, char **argv) {
     double dtms = (double)(cQuadro - ultQuadro) * 1000.0 / perFreq;
     ultQuadro = cQuadro;
     if (dtms < 0.0) dtms = 0.0;
+    // FPS REGRESSION SCENES (fpscena.h), opt-in: a `fps-cena` file in the data
+    // dir runs the scripted scenes once the home has settled and logs
+    // [fps-cena]/[fps-gate]. tex_upl_n still holds the previous frame's uploads.
+    { static int fpsIni;
+      int tk;
+      if (!fpsIni && SDL_GetTicks() > 8000u) {
+        char *so = dados_ler("fps-cena");
+        fpsIni = 1;
+        if (so) { fpscena_iniciar(so, dados_ler("fps-cena-base")); free(so); }   // base text outlives the run
+      }
+      if ((tk = fpscena_quadro(dtms, tex_upl_n)) != 0) {
+        SDL_Event ke;
+        memset(&ke, 0, sizeof ke);
+        ke.key.keysym.sym = (SDL_Keycode)tk;
+        ke.key.keysym.scancode = SDL_GetScancodeFromKey((SDL_Keycode)tk);
+        ke.type = SDL_KEYDOWN; SDL_PushEvent(&ke);
+        ke.type = SDL_KEYUP;   SDL_PushEvent(&ke);
+      } }
     // O TETO E DA ANIMACAO, NAO DA MEDICAO, e confundir os dois cegou o
     // diagnostico do issue #33. `dtms` era grampeado em 100 ms ANTES de virar
     // `pior`, entao todo quadro de 100 ms para cima virava exatamente

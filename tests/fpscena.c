@@ -53,5 +53,8 @@ int main(void) {
   fpscena_iniciar("title-page", base);
   for (i = 0; i < 5000 && fpscena_ativo(); i++) fpscena_quadro(5.0, 0);
   ok(fpscena_falhas() == 1, "runner: escolha de cena roda so uma");
+  fpscena_iniciar("", base);   // an empty flag file on the TV = every scene
+  for (i = 0; i < 5000 && fpscena_ativo(); i++) fpscena_quadro(5.0, 0);
+  ok(fpscena_falhas() == 2, "runner: arquivo vazio roda todas as cenas");
   return falhas ? 1 : (puts("ok"), 0);
 }
