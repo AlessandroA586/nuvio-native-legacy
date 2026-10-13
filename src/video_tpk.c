@@ -1181,6 +1181,8 @@ static void folgaVigiar(void) {
   // atras da posicao por um instante. Atras = nada a frente ainda.
   if (e >= 0 && e < p) e = p;
   if (!cv.folga) {
+    // HLS: o seek para o alvo ainda nao pousou (o player esta no 0 do seg0).
+    if (cv.buscarMs >= 0 || reconBuscarMs >= 0 || (cv.reabrindo && fabs(p - cv.posMantida) > 20.0)) return;
     if (!tocando) return;
     if (e < 0 || e - p >= FOLGA_S) { cv.folgaFeita = 1; return; }
     cv.folga = 1; cv.folgaEm = agora;

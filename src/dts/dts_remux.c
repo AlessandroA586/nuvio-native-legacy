@@ -76,6 +76,7 @@ double dts_remux_gen_emitted_s(const DtsRemuxGen *g) { (void)g; return -1; }
 #include <libavutil/audio_fifo.h>
 #include <libavutil/channel_layout.h>
 #include <libavutil/opt.h>
+#include <libavutil/dovi_meta.h>
 #include <libswresample/swresample.h>
 
 #define LOOK 8                   /* video DTS lookahead (>= reorder depth) */
@@ -150,6 +151,8 @@ struct DtsRemux {
   /* VC-1 / MPEG-2: the sequence header (+ entry point / extensions) from the
    * container's CodecPrivate, repeated in front of each keyframe in the TS. */
   uint8_t *seqHdr; int seqHdrN; uint8_t seqCode; int vc1;
+  /* GOP diagnostics (log only): HEVC keyframe NAL type and leading pictures. */
+  int gopKey, gopRasl, gopRadl, gopPkts, gopLogged;
   int64_t *segTs, *segB48; double *segS; int nseg;
   double endS;
   pthread_mutex_t lock;
@@ -241,6 +244,26 @@ int dts_remux_es_fix(int vc1, const uint8_t *seq, int seqN, const uint8_t *d, in
   memcpy(*out + k, d, (size_t)n); k += n;
   memset(*out + k, 0, AV_INPUT_BUFFER_PADDING_SIZE);
   return k;
+}
+
+/* HEVC NAL types of one packet (hvcC length prefix or Annex B), for the GOP
+ * line of the log. Bit k of the result = NAL type k seen (types 0..31 only). */
+static uint32_t hevcTipos(const uint8_t *d, int n, int lenSize) {
+  uint32_t m = 0;
+  if (n >= 4 && !d[0] && !d[1] && (d[2] == 1 || (!d[2] && d[3] == 1))) {
+    for (int i = 0; i + 3 < n; i++)
+      if (!d[i] && !d[i + 1] && d[i + 2] == 1) { int t = (d[i + 3] >> 1) & 0x3F; if (t < 32) m |= 1u << t; i += 2; }
+    return m;
+  }
+  for (int i = 0; lenSize > 0 && i + lenSize < n;) {
+    uint32_t l = 0;
+    for (int k = 0; k < lenSize; k++) l = (l << 8) | d[i + k];
+    i += lenSize;
+    if (l == 0 || l > (uint32_t)(n - i)) break;
+    { int t = (d[i] >> 1) & 0x3F; if (t < 32) m |= 1u << t; }
+    i += (int)l;
+  }
+  return m;
 }
 
 static int isConvertible(enum AVCodecID id) {
@@ -397,7 +420,9 @@ DtsRemux *dts_remux_open(const char *url, const char *headers, int ordinal, int 
     in->fps = r->vfps.num > 0 && r->vfps.den > 0 ? av_q2d(r->vfps) : 0;
     { const AVPacketSideData *dv = av_packet_side_data_get(V->codecpar->coded_side_data, V->codecpar->nb_coded_side_data,
                                                            AV_PKT_DATA_DOVI_CONF);
-      in->dv_profile = dv && dv->size >= 3 ? dv->data[2] >> 1 : -1; }
+      const AVDOVIDecoderConfigurationRecord *c = dv && dv->size >= (int)sizeof *c ? (const void *)dv->data : NULL;
+      in->dv_profile = c ? c->dv_profile : -1;
+      in->dv_el = c ? c->el_present_flag : 0; in->dv_compat = c ? c->dv_bl_signal_compatibility_id : 0; }
     snprintf(in->video_codec, sizeof in->video_codec, "%s", avcodec_get_name(V->codecpar->codec_id));
     snprintf(in->audio_codec, sizeof in->audio_codec, "%s", avcodec_get_name(A->codecpar->codec_id));
     /* Container flag only (no probe): many MKVs leave it to the bitstream. */
@@ -895,6 +920,26 @@ static int videoPacket(DtsRemuxGen *g, AVPacket *p, char *err, size_t errn) {
   }
   if (p->duration <= 0) p->duration = g->vdur;
   g->lastDemuxV = p->pts * av_q2d(g->src->vtb);
+  /* GOP of the first keyframe of the session: IDR (closed) or CRA (open, with
+   * RASL pictures that need the previous GOP). One log line per source; it is
+   * the first suspect when one file lags on HLS and plays smooth on the TS. */
+  { DtsRemux *r = g->src;
+    if (!r->gopLogged && r->vpar->codec_id == AV_CODEC_ID_HEVC) {
+      int ls = r->vpar->extradata_size > 22 && r->vpar->extradata[0] == 1 ? (r->vpar->extradata[21] & 3) + 1 : 0;
+      uint32_t m = hevcTipos(p->data, p->size, ls);
+      if (key && !r->gopKey) r->gopKey = (m & (3u << 19)) ? 19 : (m & (1u << 21)) ? 21 : (m & (7u << 16)) ? 16 : -1;
+      if (r->gopKey) {
+        if (m & (3u << 8)) r->gopRasl++;
+        if (m & (3u << 6)) r->gopRadl++;
+        if (++r->gopPkts >= 48) {
+          r->gopLogged = 1;
+          printf("[dts-tpk] gop: quadro-chave %s, %d RASL e %d RADL nos 48 pacotes seguintes%s\n",
+                 r->gopKey == 19 ? "IDR (GOP fechado)" : r->gopKey == 21 ? "CRA (GOP aberto)" : r->gopKey == 16 ? "BLA" : "?",
+                 r->gopRasl, r->gopRadl, r->gopRasl ? ": quadros que dependem do GOP anterior" : "");
+          fflush(stdout);
+        }
+      }
+    } }
   AVPacket *c = av_packet_alloc();
   if (!c) { fail(err, errn, "Out of memory", 0); return -1; }
   av_packet_move_ref(c, p);

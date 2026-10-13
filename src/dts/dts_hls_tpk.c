@@ -351,10 +351,11 @@ static void *fioSonda(void *u) {
   if (rx) {
     char fpsTxt[24] = "?";
     if (in->fps > 0) { long f = lround(in->fps * 1000.0); snprintf(fpsTxt, sizeof fpsTxt, "%ld.%03ld", f / 1000, f % 1000); }
-    printf("[dts-tpk] sessao %u fonte: %s %dx%d %s fps, dv=%s%.0d hdr(container)=%s, audio %s (audio %d do arquivo) %d ch %d Hz -> %s %d ch %d kb/s "
+    char dvTxt[40] = "nao";
+    if (in->dv_profile >= 0) snprintf(dvTxt, sizeof dvTxt, "perfil %d.%d%s", in->dv_profile, in->dv_compat, in->dv_el ? " com camada EL" : "");
+    printf("[dts-tpk] sessao %u fonte: %s %dx%d %s fps, dv=%s hdr(container)=%s, audio %s (audio %d do arquivo) %d ch %d Hz -> %s %d ch %d kb/s "
            "(%s); %d quadro(s)-chave, %d segmento(s) de ate %.1f s, %.0f s, %.0f MB; sonda %u ms\n",
-           s->id, in->video_codec, in->width, in->height, fpsTxt, in->dv_profile < 0 ? "nao" : "perfil ",
-           in->dv_profile < 0 ? 0 : in->dv_profile, in->hdr, in->audio_codec, in->audio_ordinal, in->in_channels,
+           s->id, in->video_codec, in->width, in->height, fpsTxt, dvTxt, in->hdr, in->audio_codec, in->audio_ordinal, in->in_channels,
            in->in_rate, in->out_codec, in->out_channels, in->out_bitrate / 1000, in->decoder_path, in->n_keyframes,
            in->n_segments, in->max_segment_s, in->duration_s, in->size_bytes > 0 ? in->size_bytes / 1048576.0 : -1.0,
            (unsigned)(s->prontaMs - s->criadaMs));
