@@ -101,6 +101,8 @@ void cat_republicar_fileiras(const CatFileira *f, int n) { guardar(f, n); }
 void  SDL_Delay(Uint32 ms)                 { usleep(ms * 1000); }
 int   ajustes_cw_fonte(void)               { return 0; }
 int   ajustes_cw_ordem(void)               { return 0; }   // Padrao (issue #127)
+int ajustes_cw_concluido(void)             { return 90; }   // padrao (issue #326)
+int ajustes_cw_minimo(void)                { return 1; }    // padrao (issue #326)
 int   ajustes_itens_fileira(void)          { return 12; }   // padrao (#163)
 int   ajustes_cw_mostrar_nao_exibidos(void) { return 1; }
 int   ajustes_cw_proximo(void) { return 1; }

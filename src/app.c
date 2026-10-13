@@ -383,6 +383,7 @@ static void definirFonteVOD(const char *url) { provaZerar(); player_definir_font
 
 static PerfilDados perfilPendente;
 static int perfilSucesso;
+static unsigned long long perfilSimklCredencial;
 static _Atomic int perfilCarga; // 0=ocioso, 1=rede, 2=snapshot pronto
 static _Atomic unsigned perfilGeracao = 1;
 static pthread_mutex_t perfilTrava = PTHREAD_MUTEX_INITIALIZER;
@@ -390,7 +391,16 @@ typedef struct { unsigned geracao; int perfil; char conta[96]; } PerfilPedido;
 static void *carregarPerfil(void *u) {
   PerfilPedido *pedido=u;
   PerfilDados novo={0};
-  int sucesso=trakt_perfil(&novo);
+  int sucesso=0;
+  unsigned long long skCredencial=0;
+  // A pagina pertence a pessoa, nao ao Trakt. Preferimos o Trakt quando os
+  // dois estao ligados para preservar o snapshot antigo; num perfil so com
+  // Simkl, identidade e historico mensal vem do proprio Simkl.
+  if (trakt_ativo()) sucesso=trakt_perfil(&novo);
+  if (!sucesso && simkl_ativo()) {
+    skCredencial=simklauth_credencial_copiar(NULL,0);
+    sucesso=simkl_perfil(&novo);
+  }
   pthread_mutex_lock(&perfilTrava);
   // A troca de conta/perfil invalida a resposta. O worker termina, mas nunca
   // publica uma identidade antiga nem deixa um snapshot obsoleto na fila.
@@ -398,6 +408,7 @@ static void *carregarPerfil(void *u) {
      atomic_load_explicit(&perfilCarga,memory_order_relaxed)==1 && sessao_logada() &&
      perfis_ativo()==pedido->perfil && !strcmp(sessao_usuario(),pedido->conta)){
     perfilSucesso=sucesso;
+    perfilSimklCredencial=skCredencial;
     perfilPendente=novo;
     atomic_store_explicit(&perfilCarga,2,memory_order_release);
   }
@@ -578,7 +589,7 @@ const char *app_tela_nome(void) {
   if ((unsigned)tela < sizeof NOMES / sizeof *NOMES) return NOMES[tela];
   return "?";
 }
-static int saiuPorEsquerda;   // a ultima tecla foi ESQUERDA (ver app_evento)
+static int saiuPorEsquerda, saiuPorCima;   // a ultima tecla foi ESQUERDA ou CIMA (ver app_evento)
 // A barra e uma camada de navegacao, mas nao pode disputar o Guia de TV nem
 // um canal minimizado. Manter a regra aqui evita que cada tela invente sua
 // propria nocao de PiP/Guia.
@@ -593,7 +604,7 @@ static int sidebarToquePode(void) {
 }
 static void sidebarToqueAbrirTela(Tela origem) {
   if (!sidebarToquePode() || tela != origem || detail_aberto() || vertudo_aberta()) return;
-  saiuPorEsquerda = 0;
+  saiuPorEsquerda = saiuPorCima = 0;
   menu_abrir();
 }
 #define SIDEBAR_TOQUE_TELA(nome, origem) static void nome(void) { sidebarToqueAbrirTela(origem); }
@@ -612,12 +623,12 @@ SIDEBAR_TOQUE_TELA(sidebarToquePlugins, TELA_PLUGINS)
 #undef SIDEBAR_TOQUE_TELA
 static void sidebarToqueDetalhe(void) {
   if (!sidebarToquePode() || !detail_aberto()) return;
-  saiuPorEsquerda = 0;
+  saiuPorEsquerda = saiuPorCima = 0;
   menu_abrir_sobre(1);
 }
 static void sidebarToqueLista(void) {
   if (!sidebarToquePode() || !vertudo_aberta() || detail_aberto()) return;
-  saiuPorEsquerda = 0;
+  saiuPorEsquerda = saiuPorCima = 0;
   menu_abrir_sobre(0);
 }
 static void sidebarToqueRegistrar(int contexto) {
@@ -2829,7 +2840,10 @@ void app_evento(const SDL_Event *e) {
   // ESQUERDA quando nao ha mais para onde ir a esquerda; aqui, se a saida foi
   // por essa tecla, a home volta JA com a barra aberta em vez de exigir um
   // segundo ESQUERDA. `saiuPorEsquerda` e o que o bloco de sair le.
-  if (e->type == SDL_KEYDOWN) saiuPorEsquerda = (e->key.keysym.sym == SDLK_LEFT);
+  if (e->type == SDL_KEYDOWN) {
+    saiuPorEsquerda = (e->key.keysym.sym == SDLK_LEFT);
+    saiuPorCima = (e->key.keysym.sym == SDLK_UP);
+  }
   if (spotAtalho(e) && spotPode()) { spotAbrir(e->key.keysym.sym == SPOT_TECLA_VOZ); return; }
   if (player_aberto()) { player_evento(e); return; }
   // A BARRA LATERAL POR CIMA DA PAGINA DO TITULO (dono, 03/10: "pode abrir por
@@ -2853,7 +2867,7 @@ void app_evento(const SDL_Event *e) {
     // do controle ainda cairiam na pagina.
     if (detail_aberto() && detail_pediu_menu() && sidebar_permitida()) {
       menu_abrir_sobre(1);
-      saiuPorEsquerda = 0;
+      saiuPorEsquerda = saiuPorCima = 0;
     }
     { char im[24];
       if (detail_aberto() && detail_pediu_amigos(im, sizeof im)) abrirSocialNoTitulo(im); }
@@ -2877,7 +2891,7 @@ void app_evento(const SDL_Event *e) {
     // Por cima: DIREITA/Voltar voltam para a lista, um destino a fecha.
     if (vertudo_aberta() && vertudo_pediu_menu() && sidebar_permitida()) {
       menu_abrir_sobre(0);
-      saiuPorEsquerda = 0;
+      saiuPorEsquerda = saiuPorCima = 0;
     }
     return;
   }
@@ -2904,7 +2918,7 @@ void app_evento(const SDL_Event *e) {
   // ainda acha que e a dona do foco.
   if (tela == TELA_HOME && home_pediu_menu() && sidebar_permitida()) {
     menu_abrir();
-    saiuPorEsquerda = 0;
+    saiuPorEsquerda = saiuPorCima = 0;
   }
 }
 
@@ -3155,6 +3169,7 @@ void app_atualizar(float dt, Uint32 agora) {
   // integer compare per frame, no network here.
   if (servidores_passo()) desc_repetir_silencioso();
   simklauth_passo((unsigned)agora);
+  if (!player_aberto()) simkl_scrobble_retentar();
 
   if (tela == TELA_ESCOLHA_PERFIL) {
     sync_passo((unsigned)agora);
@@ -3558,10 +3573,13 @@ void app_atualizar(float dt, Uint32 agora) {
   marcarAssistidoSeSolicitado();
   if (atomic_load_explicit(&perfilCarga, memory_order_acquire) == 2) {
     PerfilDados snapshot; int sucesso;
-    pthread_mutex_lock(&perfilTrava); snapshot=perfilPendente; sucesso=perfilSucesso; pthread_mutex_unlock(&perfilTrava);
+    pthread_mutex_lock(&perfilTrava); snapshot=perfilPendente; sucesso=perfilSucesso;
+    if (perfilSimklCredencial && perfilSimklCredencial != simklauth_credencial_copiar(NULL,0)) sucesso=0;
+    pthread_mutex_unlock(&perfilTrava);
     if (sucesso) perfil_definir_dados(&snapshot);
-    else if (!trakt_ativo()) perfil_definir_estado(PERFIL_ESTADO_DESCONECTADO,
-                                                    "Trakt desconectado. Vincule a conta para ver seu perfil.");
+    else if (!trakt_ativo() && !simkl_ativo())
+      perfil_definir_estado(PERFIL_ESTADO_DESCONECTADO,
+                            "Nenhum histórico conectado. Vincule Trakt ou Simkl para ver seu perfil.");
     else perfil_definir_estado(PERFIL_ESTADO_INDISPONIVEL,
                                "Perfil indisponível. O último resumo continua seguro, se houver.");
     atomic_store_explicit(&perfilCarga, 0, memory_order_release);
@@ -3713,7 +3731,7 @@ void app_atualizar(float dt, Uint32 agora) {
   // na linha "Addons" (antes a Esquerda abria a barra lateral e o Voltar caia
   // no indice dos Ajustes).
   if (tela == TELA_ADDONS && addonsui_quer_sair()) {
-    saiuPorEsquerda = 0;
+    saiuPorEsquerda = saiuPorCima = 0;
     ajustes_voltar_de_lista(0);
     trocarTela(TELA_AJUSTES); menu_definir_destino(MENU_AJUSTES);
   }
@@ -3750,7 +3768,7 @@ void app_atualizar(float dt, Uint32 agora) {
   }
   // Plugins (F09): o mesmo caminho da lista de addons (abre de Ajustes, volta a ela).
   if (tela == TELA_PLUGINS && pluginsui_quer_sair()) {
-    saiuPorEsquerda = 0;
+    saiuPorEsquerda = saiuPorCima = 0;
     ajustes_voltar_de_lista(1);
     trocarTela(TELA_AJUSTES); menu_definir_destino(MENU_AJUSTES);
   }
@@ -3815,7 +3833,7 @@ void app_atualizar(float dt, Uint32 agora) {
       // ESQUERDA na borda abre a barra SOBRE a tela atual. Voltar continua
       // sendo a saída normal para a Home; assim o foco da tela não é perdido
       // só para alcançar a navegação principal.
-      if (saiuPorEsquerda && sidebar_permitida()) {
+      if ((saiuPorEsquerda || saiuPorCima) && sidebar_permitida()) {
         menu_abrir();
       } else if (tela == TELA_SOCIAL && socialDoPerfil) {
         trocarTela(TELA_PERFIL);
@@ -3825,7 +3843,7 @@ void app_atualizar(float dt, Uint32 agora) {
         trocarTela(TELA_HOME);
         menu_definir_destino(MENU_INICIO);
       }
-      saiuPorEsquerda = 0;
+      saiuPorEsquerda = saiuPorCima = 0;
     }
   } else if (home_quer_sair()) {
     sair = 1;
@@ -5126,6 +5144,7 @@ static void desenharAtrasDoPainel(void *ctx) {
     // barra abre pelo ESQUERDA na borda e pela faixa do ponteiro.
     menu_pilula_mostrar(vertudo_aberta() || detail_aberto() ? -1.0f   // "Ver tudo"/colecao/pagina tem cabecalho proprio
                         : tela == TELA_HOME ? home_topo_fracao()
+                        : ajustes_menu_topo() ? -1.0f   // #461: a barra no topo fechada so mora na home
                         : (tela == TELA_EXPLORAR || tela == TELA_BUSCA ||
                            tela == TELA_BIBLIOTECA || tela == TELA_AGENDA ||
                            tela == TELA_PERFIL || tela == TELA_AJUSTES) ? 1.0f : -1.0f);
@@ -5616,6 +5635,7 @@ void app_encerrar(void) {
   }
   aguardandoFonte = 0;
   player_encerrar();
+  simkl_scrobble_drenar(3000);   // stop sem resposta fica em disco para retry
   legsync_destruir();   // F05: join dos fios do AutoSync, depois do player
   discord_encerrar();   // a atividade some na hora, sem esperar o Discord notar a queda
   video_encerrar();    // solta o nome LS2 antes do processo sumir (deploy mata sem aviso)

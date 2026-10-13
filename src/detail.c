@@ -345,7 +345,6 @@ static Uint32 trailerPrazo = 0;
 // 03/10: "pode abrir por cima"). Antes a tecla ligava `saindo` junto e a
 // pagina fechava para a barra abrir sobre a tela de baixo. Voltar/DIREITA na
 // barra devolvem o foco aqui; um destino escolhido fecha a pagina (app.c).
-static int    pediuSocial = 0; // CIMA no alto da pagina: abrir Salvos/Avisos (ver app.c)
 static int    pediuMenu = 0;   // ESQUERDA na borda: abrir a barra por cima (ver app.c)
 // A barra esta aberta por cima (detail_sob_menu): o trailer segue tocando,
 // MUDO, e o som volta quando ela fecha. `somAntesMenu` lembra se tinha som.
@@ -1670,7 +1669,10 @@ static int carDesenhaFundo(void) {
 
 int detail_aberto(void) { return aberto; }
 int detail_relogio_oculto(void) { return aberto && carro && !carCheia && nivel == 0; }
-int detail_pediu_social(void) { int p = pediuSocial; pediuSocial = 0; return p; }
+// #407: detail_pediu_social saiu (CIMA no topo nao abre mais o painel); a
+// accessor fica para o linkage e diz 0, para o caminho de app.c nao crescer
+// um #ifdef a mais por causa de um atalho que nao existe mais.
+int detail_pediu_social(void) { return 0; }
 
 // 0..1 de quanto o detalhe ja tomou a tela. A home le isto para DESCER as
 // fileiras enquanto ele entra: e o movimento que o dono descreve como "so os
@@ -2888,7 +2890,10 @@ void detail_evento(const SDL_Event *e) {
       if (amigosDoTitulo(&at)) { focoAmigos = 1; return; }
     }
     if (k == SDLK_UP && reacao_detalhe_abrir(cat_item(idx))) return;
-    if (k == SDLK_UP && !e->key.repeat) { pediuSocial = 1; return; }
+    // #407: CIMA no alto da pagina NAO abre mais o painel de Salvos/Avisos.
+    // O atalho de cef8c3e8 (alcançar o painel sem tecla AZUL) ficou
+    // redundante com o relogio clicavel e com o CH+/AZUL, e a seta no topo da
+    // pagina abrindo um menu surpreendia (relato #407, Samsung).
     // CARROSSEL: a primeira seta para baixo so estica o cartao (ver carCheia).
     if (k == SDLK_DOWN && carro && !carCheia) { carCheia = 1; return; }
     if (k == SDLK_DOWN) {
@@ -3800,6 +3805,27 @@ static void luzFoco(GfxRect r, float a) {
   botao_luz(r, 1.0f, a);
 }
 
+// PROGRESSO NO BOTAO DE RETOMAR, no estilo do app da Apple TV (dono,
+// 12/10/2026): triangulo, trilho curto com o quanto ja foi visto e o tempo que
+// falta. -1 = botao sem trilho. Vale so para o primario, ligado em volta dele.
+static int primarioPct = -1;
+#define NV_DETW2_TRILHO_W 56.0f
+#define NV_DETW2_TRILHO_H  5.0f
+
+// "142 min", "2h 22min", "1 h 53 min" -> minutos; 0 quando nao da para ler.
+static int minutosDe(const char *s) {
+  int total = 0, v;
+  if (!s) return 0;
+  while (*s) {
+    if (*s < '0' || *s > '9') { s++; continue; }
+    v = 0;
+    while (*s >= '0' && *s <= '9') v = v * 10 + (*s++ - '0');
+    while (*s == ' ') s++;
+    total += (*s == 'h' || *s == 'H') ? v * 60 : v;
+  }
+  return total;
+}
+
 static void desenhaBotao(GfxRect r, const char *rot, int icone, int focado, float a) {
   // FOCO E TAMANHO, NAO ANEL.
   //
@@ -3922,31 +3948,22 @@ static void desenhaBotao(GfxRect r, const char *rot, int icone, int focado, floa
       txt_linha_corta(TXT_DET_BOTAO, rot, c, c, c, 255,
                       r.w - NV_DETW2_BTN_PADX * 2 - iw - NV_DETW2_BTN_GAPI * s) :
       txt_linha(TXT_DET_BOTAO, rot, c, c, c, 255);
-    float grupo = iw + NV_DETW2_BTN_GAPI * s + l.w;
+    float tw = primarioPct >= 0 ? NV_DETW2_TRILHO_W * s + NV_DETW2_BTN_GAPI * s : 0.0f;
+    float grupo = iw + NV_DETW2_BTN_GAPI * s + tw + l.w;
     float x = r.x + (r.w - grupo) * 0.5f;
     GfxRect tri = { x, r.y + (r.h - ih) * 0.5f, iw, ih };
     gfx_rect(tri, 0, GFX_PLAY, 0, 0, 0, 0.0f, tintaBotao, tintaBotao, tintaBotao, a);
-    txt_desenhar_alpha(l, x + iw + NV_DETW2_BTN_GAPI * s,
+    if (primarioPct >= 0) {
+      float th = NV_DETW2_TRILHO_H * s;
+      GfxRect t = { x + iw + NV_DETW2_BTN_GAPI * s, r.y + (r.h - th) * 0.5f,
+                    NV_DETW2_TRILHO_W * s, th };
+      gfx_cor(t, 0.5f, tintaBotao, tintaBotao, tintaBotao, 0.30f * a);
+      t.w *= (float)primarioPct / 100.0f;
+      if (t.w < th) t.w = th;
+      gfx_cor(t, 0.5f, tintaBotao, tintaBotao, tintaBotao, a);
+    }
+    txt_desenhar_alpha(l, x + iw + NV_DETW2_BTN_GAPI * s + tw,
                        r.y + (r.h - l.h) * 0.5f, a); }
-}
-
-// DICA DO CIRCULAR EM FOCO (so o "Assistir trailer"): o circular e mudo, e uma
-// acao que abre video nao pode ser adivinhada pelo glifo. Pilula escura com o
-// nome logo acima do botao, no mesmo vocabulario da legenda do carrossel.
-static void desenhaDicaBotao(GfxRect rc, const char *texto, float a) {
-  float ar, ag, ab;
-  TxtLinha label = txt_linha_corta(TXT_CAPTION2, texto, 232, 235, 240, 255,
-                                   larguraTextoHero() - 28.0f);
-  float w = label.w + 28.0f, h = 34.0f;
-  GfxRect pill = { rc.x + (rc.w - w) * 0.5f, rc.y - h - 14.0f, w, h };
-  if (pill.x < NV_DETW2_X) pill.x = NV_DETW2_X;
-  if (detalheRetrato() && pill.x + pill.w > NV_TELA_W - 96.0f)
-    pill.x = NV_TELA_W - 96.0f - pill.w;
-  ajustes_acento(&ar, &ag, &ab);
-  gfx_cor(pill, .5f, ar, ag, ab, .16f * a);
-  gfx_cor((GfxRect){ pill.x + 1, pill.y + 1, pill.w - 2, pill.h - 2 }, .5f,
-          .075f, .08f, .095f, .76f * a);
-  txt_desenhar_alpha(label, pill.x + 14.0f, pill.y + (h - label.h) * .5f, a);
 }
 
 // Botao secundario: 345x96, raio 64, fundo #222 e texto branco; focado, fundo
@@ -3974,6 +3991,7 @@ static void desenhaSecundario(GfxRect r, const char *rot, int focado, float a) {
 static float larguraPrimario(const char *rot) {
   TxtLinha l = txt_linha(TXT_DET_BOTAO, rot, 0, 0, 0, 255);
   float w = NV_DETW2_BTN_PADX * 2 + NV_DETW2_BTN_ICONE_W + NV_DETW2_BTN_GAPI + l.w;
+  if (primarioPct >= 0) w += NV_DETW2_TRILHO_W + NV_DETW2_BTN_GAPI;
   return detalheRetrato() ? fminf(w, (larguraTextoHero() - NV_DETW2_BTN_GAP) * .5f) : w;
 }
 static float larguraSecundario(const char *rot) {
@@ -4097,52 +4115,6 @@ static float desenhaSeloImdb(float x, float yCentro, int nota, float a) {
   return badge_imdb(x, yCentro - BADGE_H * 0.5f, nota, 0, a);
 }
 
-// Selo de CONTORNO da segunda linha de meta. Ele carrega DUAS coisas dentro da
-// mesma caixa — classificacao indicativa e status da producao —, separadas por
-// uma barra vertical: "TV-MA | RENOVADA" na serie, "R | LANÇADO" no filme. A
-// classificacao sai em rgb(179,179,179) e o status em BRANCO, o que faz o olho
-// ler primeiro o que interessa.
-//
-// Antes eram duas coisas soltas na linha e o contorno era falsificado com um
-// retangulo cheio 1px maior por baixo — que so funciona sobre fundo chapado.
-// Aqui e GFX_ANEL, que desenha contorno de verdade e deixa a arte aparecer no
-// miolo, como no aparelho.
-//
-// `dir` pode ser NULL: sem status o selo tem so a classificacao e NENHUMA
-// divisoria. Nao ha valor de reserva — o CatItem nao tem campo de status, e
-// carimbar "LANÇADO" em tudo seria dado inventado, que ja custou caro aqui.
-static float desenhaSeloMeta(float x, float y, const char *esq, const char *dir,
-                             float a) {
-  if (!dir || !dir[0]) {
-    // Classificacao isolada e um badge, nao um contorno de outra altura. O
-    // caso composto (classificacao + status) conserva a divisoria propria.
-    return badge_desenhar(x, y + (NV_DETW2_SELO_H - BADGE_H) * 0.5f, esq,
-                          BADGE_NEUTRO, a);
-  }
-  TxtLinha le = txt_linha(TXT_DET_META2, esq, 179, 179, 179, 255);
-  TxtLinha ld = { 0, 0, 0 };
-  float w = NV_DETW2_SELO_PADX * 2 + le.w;
-  if (dir && dir[0]) {
-    ld = txt_linha(TXT_DET_META2, dir, 255, 255, 255, 255);
-    w += NV_DETW2_DIV_PAD * 2 + NV_DETW2_DIV_W + ld.w;
-  }
-  GfxRect caixa = { x, y, w, NV_DETW2_SELO_H };
-  gfx_rect(caixa, 0, GFX_ANEL, 0, NV_DETW2_SELO_BORDA / NV_DETW2_SELO_H, 0,
-           NV_DETW2_SELO_R / NV_DETW2_SELO_H, 0.42f, 0.42f, 0.42f, a);
-  float cx = x + NV_DETW2_SELO_PADX;
-  float cy = y + NV_DETW2_SELO_H * 0.5f;
-  txt_desenhar_alpha(le, cx, cy - le.h * 0.5f, a);
-  cx += le.w;
-  if (dir && dir[0]) {
-    GfxRect bar = { cx + NV_DETW2_DIV_PAD, cy - NV_DETW2_DIV_H * 0.5f,
-                    NV_DETW2_DIV_W, NV_DETW2_DIV_H };
-    gfx_cor(bar, 0.0f, 0.42f, 0.42f, 0.42f, a);
-    cx += NV_DETW2_DIV_PAD * 2 + NV_DETW2_DIV_W;
-    txt_desenhar_alpha(ld, cx, cy - ld.h * 0.5f, a);
-  }
-  return w;
-}
-
 // Ponto separador: disco de 6, e nao a barrinha de 1x14 do web. Sao dois usos
 // com a MESMA forma e cores diferentes, e a diferenca de cor e o que agrupa a
 // linha: entre generos ele e rgb(179,179,179) (a cor do proprio texto, porque
@@ -4255,8 +4227,10 @@ static void heroWeb(float a, float desloc) {
   const CatItem *ci = cat_item(idx);
 
   char ano[32], dur[64];
+  int durMin = 0;   // minutos do filme, lidos do texto cru (antes da traducao)
   partirMeta(fichaDe(idx), ano, sizeof ano, dur, sizeof dur);
   { char cru[64]; snprintf(cru, sizeof cru, "%s", dur);
+    durMin = minutosDe(cru);
     desc_duracao_txt(cru, dur, sizeof dur); }   // "142 min" -> forma do idioma da UI
 
   const char *sin = sinopseDe(idx);
@@ -4303,9 +4277,11 @@ static void heroWeb(float a, float desloc) {
   // Aqui eram duas linhas — uma so com generos, outra com ano e duracao — e o
   // selo do IMDb ficava sozinho encostado na borda direita da tela, a meio
   // metro do bloco de texto a que pertence.
-  float temRetom = (ci && ci->progresso > 0) ? 1.0f : 0.0f;
+  // A linha "Retomada disponivel N% Episodio TxEy" saiu (dono, 12/10/2026):
+  // o progresso agora e uma barra dentro do proprio botao de retomar.
+  float temRetom = 0.0f;
   float hSin = 0.0f;
-  if (sin) hSin = txt_bloco(TXT_DET_SIN, sin, 255, 255, 255, -1.0f, 0.0f,
+  if (sin) hSin = txt_bloco_corta(TXT_DET_SIN, sin, 255, 255, 255, -1.0f, 0.0f,
                             larguraTextoHero(), NV_DETW2_LD_SIN, 0.0f,
                             NV_DETW2_SIN_LINHAS);
   // DADO A CAMINHO: sinopse e meta chegam da rede depois que a pagina abre.
@@ -4350,8 +4326,10 @@ static void heroWeb(float a, float desloc) {
   float hNome = nome ? txt_bloco(TXT_DET_META2, nome, 255, 255, 255,
                                 -1, 0, larguraLogoHero(), 34, 0, 0) : 0;
   float hCaption = nomeAbaixo ? hNome + 16.0f : 0;
-  float yMeta2 = NV_DETW2_BASE - NV_DETW2_SELO_H;
-  float yMeta1 = yMeta2 - NV_DETW2_META_GAP - NV_DETW2_M1_H;
+  // UMA LINHA DE META SO (dono, 12/10/2026): a de baixo (selo de
+  // classificacao/status, pais, direcao) saiu e a duracao do filme subiu para
+  // a linha dos generos. O bloco inteiro desce o que ela ocupava.
+  float yMeta1 = NV_DETW2_BASE - NV_DETW2_M1_H;
   float ySin   = yMeta1 - NV_DETW2_GAP_SIN - hSin;
   AmigosTitulo amg;
   int temAmg = amigosDoTitulo(&amg);
@@ -4379,7 +4357,7 @@ static void heroWeb(float a, float desloc) {
   // Sobe alguns pixels enquanto entra: continua o movimento da arte em vez de
   // aparecer pronto no lugar. `desloc` e a rolagem do documento.
   float sobe = (1.0f - a) * 26.0f + desloc;
-  yMeta2 += sobe; yMeta1 += sobe; ySin += sobe;
+  yMeta1 += sobe; ySin += sobe;
   yRetom += sobe; yAgenda += sobe; yAcoes += sobe; yEstado += sobe;
 
   // --- logo -----------------------------------------------------------------
@@ -4475,18 +4453,41 @@ static void heroWeb(float a, float desloc) {
   // (primeiro nao assistido) e "Reproduzir" (nunca aberto). O terceiro estado
   // era dado como impossivel aqui; e possivel desde que extras_ep_visto existe.
   char rot[48];
+  int retomando = 0;
   { int t = 0, e = 0, de = 0;
     if (ehSerie() && episodioAlvo(&t, &e, &de) && t > 0 && e > 0 && de >= 2)
       // i18n NO FORMATO E NA PALAVRA. A frase montada nunca casa com uma chave
       // (ver idioma.h), entao traduzir so no desenho deixava "Retomar T1E1" em
       // portugues com a interface em ingles — o issue #12. O T/E tambem muda:
       // em ingles a abreviacao e S/E.
-      snprintf(rot, sizeof rot, i18n("%s T%dE%d"),
-               i18n(de == 2 ? "Retomar" : "Próximo"), t, e);
-    else snprintf(rot, sizeof rot, "%s",
-                  det_rotulo_primario(ci ? ci->progresso : 0, ajustes_cw_concluido())); }
+      { snprintf(rot, sizeof rot, i18n("%s T%dE%d"),
+                 i18n(de == 2 ? "Retomar" : "Próximo"), t, e);
+        retomando = de == 2; }
+    else { snprintf(rot, sizeof rot, "%s",
+                    det_rotulo_primario(ci ? ci->progresso : 0, ajustes_cw_concluido()));
+           retomando = !ehSerie(); } }
+  // Retomando com progresso: trilho no botao e, no lugar de "Retomar", o tempo
+  // que falta, como o app da Apple TV ("1 h 51 min"). Serie mantem o TxEy na
+  // frente. Sem duracao conhecida o rotulo fica como estava.
+  primarioPct = -1;
+  if (retomando && ci && ci->progresso > 0 && ci->progresso < 100) {
+    int total = durMin;   // serie: a duracao do episodio que a ficha traz ("54 min")
+    primarioPct = ci->progresso;
+    if (total > 0) {
+      int falta = (total * (100 - ci->progresso) + 99) / 100;
+      char tf[32];
+      desc_duracao_min(falta > 0 ? falta : 1, tf, sizeof tf);
+      if (ehSerie()) {
+        int t = 0, e = 0, de = 0;
+        if (episodioAlvo(&t, &e, &de) && t > 0 && e > 0) {
+          char ep[16];
+          snprintf(ep, sizeof ep, i18n("T%dE%d"), t, e);
+          snprintf(rot, sizeof rot, "%s · %s", ep, tf);
+        }
+      } else snprintf(rot, sizeof rot, "%s", tf);
+    }
+  }
 
-  float larguraAcoes = 0;
   { float cyBtn = yAcoes + NV_DETW2_BTN_H * 0.5f;
     if (acoesAgrupadas()) {
       int grupo = 1 + (temInicio() ? 1 : 0);
@@ -4501,6 +4502,7 @@ static void heroWeb(float a, float desloc) {
     float bx = NV_DETW2_X;
     GfxRect rp = heroAcaoRect(&bx, &cyBtn, larguraPrimario(rot), NV_DETW2_BTN_H);
     desenhaBotao(rp, rot, 0, nivel == 0 && botao == nb, a);
+    primarioPct = -1;   // os outros botoes nao tem trilho
     if (a > 0.3f) ponteiro_alvo(rp.x, rp.y, rp.w, rp.h, ponteiroDetalhe, NULL, -1, nb);
     bx += rp.w + NV_DETW2_BTN_GAP; nb++;
     if (temInicio()) {
@@ -4539,7 +4541,6 @@ static void heroWeb(float a, float desloc) {
       if (a > 0.3f) ponteiro_alvo(rs.x, rs.y, rs.w, rs.h, ponteiroDetalhe, NULL, -1, nb);
       bx += rs.w + NV_DETW2_BTN_GAP; nb++;
     }
-    larguraAcoes = larguraPrimario(rot);
     if (temLembrar() && !acoesAgrupadas()) {
       const CatItem *ciL = cat_item(idx);
       GfxRect rs = { bx, cyBtn - NV_DETW2_CIRC * 0.5f,
@@ -4575,8 +4576,6 @@ static void heroWeb(float a, float desloc) {
           desenhaLembrete(rc,ci && agenda_lembrete(ci->imdb),selected,a*stagger);
         else desenhaBotao(rc,NULL,action,selected,a*stagger);
         if (action == ACAO_MAIS) maisAncora = rc;
-        if (selected && action == ACAO_MAIS && stagger > .85f && !detmais_aberto())
-          desenhaDicaBotao(rc, i18n("Mais opções"), a);
         if (maisAcoes && a > .3f && stagger > .85f)
           ponteiro_alvo(rc.x,rc.y,rc.w,rc.h,ponteiroDetalhe,NULL,-1,j);
       }
@@ -4588,8 +4587,6 @@ static void heroWeb(float a, float desloc) {
       if (detalheRetrato()) rc = heroAcaoRect(&bx, &cyBtn, rc.w, rc.h);
       desenhaBotao(rc, NULL, acaoEm(nb), nivel == 0 && botao == nb, a);
       if (acaoEm(nb) == ACAO_MAIS) maisAncora = rc;
-      if (nivel == 0 && botao == nb && acaoEm(nb) == ACAO_MAIS && !detmais_aberto())
-        desenhaDicaBotao(rc, i18n("Mais opções"), a);
       if (a > 0.3f) ponteiro_alvo(rc.x, rc.y, rc.w, rc.h, ponteiroDetalhe, NULL, -1, nb);
       bx += NV_DETW2_CIRC + NV_DETW2_BTN_GAP;
     }
@@ -4655,8 +4652,9 @@ static void heroWeb(float a, float desloc) {
       TxtLinha label = txt_linha_corta(TXT_CAPTION2, leg, 232, 235, 240, 255,
                                       larguraTextoHero() - 28.0f);
       float w = label.w + 28.0f, h = 34.0f;
-      GfxRect pill = {NV_DETW2_X + (larguraAcoes - w) * .5f, yAgenda, w, h};
-      if (pill.x < NV_DETW2_X) pill.x = NV_DETW2_X;
+      // O TEXTO do selo na margem do texto, como logo e sinopse (dono,
+      // 12/10/2026); o fundo sai 14px para a esquerda, como o foco do botao.
+      GfxRect pill = {NV_DETW2_X - 14.0f, yAgenda, w, h};
       ajustes_acento(&ar, &ag, &ab);
       gfx_cor(pill, .5f, ar, ag, ab, .16f*a);
       gfx_cor((GfxRect){pill.x+1, pill.y+1, pill.w-2, pill.h-2}, .5f,
@@ -4676,19 +4674,6 @@ static void heroWeb(float a, float desloc) {
     }
   }
 
-  // --- linha de retomada ----------------------------------------------------
-  if (ci && ci->progresso > 0) {
-    char ln[160];
-    if (ci->temporada > 0)
-      snprintf(ln, sizeof ln, i18n("Retomada disponível   %d%%   Episódio T%dE%d"),
-               ci->progresso, ci->temporada, ci->episodio);
-    else
-      snprintf(ln, sizeof ln, i18n("Retomada disponível   %d%%"), ci->progresso);
-    TxtLinha l = txt_linha(TXT_CAPTION, ln, 255, 255, 255, 255);
-    txt_desenhar_alpha(l, NV_DETW2_X, yRetom + (NV_DETW_RETOM_H - l.h) * 0.5f,
-                       a * 0.82f);
-  }
-
   // A confirmed foreign image keeps its localized caption after actions.
   // Reserve it even before decode; missing artwork uses the complete name
   // in the artwork slot, without truncating it.
@@ -4704,12 +4689,12 @@ static void heroWeb(float a, float desloc) {
       else f = revela_saida(f);
     }
     if (f < 1.0f) {   // o que saiu esvanece por baixo do que entra
-      if (sinAnt[0]) txt_bloco(TXT_DET_SIN, sinAnt, 255, 255, 255, NV_DETW2_X, ySin,
+      if (sinAnt[0]) txt_bloco_corta(TXT_DET_SIN, sinAnt, 255, 255, 255, NV_DETW2_X, ySin,
                                larguraTextoHero(), NV_DETW2_LD_SIN, a * (1.0f - f),
                                NV_DETW2_SIN_LINHAS);
       else esqueletoSinopse(NV_DETW2_X, ySin, a * (1.0f - f));
     }
-    if (sin) txt_bloco(TXT_DET_SIN, sin, 255, 255, 255, NV_DETW2_X, ySin,
+    if (sin) txt_bloco_corta(TXT_DET_SIN, sin, 255, 255, 255, NV_DETW2_X, ySin,
                        larguraTextoHero(), NV_DETW2_LD_SIN, a * f,
                        NV_DETW2_SIN_LINHAS);
     else if (esqSin) esqueletoSinopse(NV_DETW2_X, ySin, a * f); }
@@ -4770,7 +4755,7 @@ static void heroWeb(float a, float desloc) {
             desenhaPonto(x + NV_DETW2_BULLET_SEP, yc, 0.702f, a);   // 179
             x += NV_DETW2_BULLET_SEP * 2 + NV_DETW2_PONTO_D;
           }
-          TxtLinha lt = txt_linha(TXT_DET_SIN, termo, 179, 179, 179, 255);
+          TxtLinha lt = txt_linha(TXT_DET_META_GEN, termo, 179, 179, 179, 255);
           txt_desenhar_alpha(lt, x, yc - lt.h * 0.5f, a);
           x += lt.w; algo = 1;
         }
@@ -4784,9 +4769,18 @@ static void heroWeb(float a, float desloc) {
     if (ano[0]) {
       if (algo) { desenhaPonto(x + NV_DETW2_SEP, yc, 0.502f, a);    // 128
                   x += NV_DETW2_SEP * 2 + NV_DETW2_PONTO_D; }
-      TxtLinha la = txt_linha(TXT_DET_SIN, ano, 179, 179, 179, 255);
+      TxtLinha la = txt_linha(TXT_DET_META_FORTE, ano, 255, 255, 255, 255);
       txt_desenhar_alpha(la, x, yc - la.h * 0.5f, a);
       x += la.w; algo = 1;
+    }
+    // DURACAO so em FILME: em serie o campo e a contagem de temporadas, que
+    // as abas logo abaixo ja mostram.
+    if (!ehSerie() && dur[0]) {
+      if (algo) { desenhaPonto(x + NV_DETW2_SEP, yc, 0.502f, a);
+                  x += NV_DETW2_SEP * 2 + NV_DETW2_PONTO_D; }
+      TxtLinha ld = txt_linha(TXT_DET_META_FORTE, dur, 255, 255, 255, 255);
+      txt_desenhar_alpha(ld, x, yc - ld.h * 0.5f, a);
+      x += ld.w; algo = 1;
     }
     // NOTAS DA LINHA: as fontes que a pessoa escolheu em Ajustes > Notas no
     // titulo, cada uma com a marca e a escala do proprio site (IMDb 7,8;
@@ -4839,73 +4833,6 @@ static void heroWeb(float a, float desloc) {
     }
   }
 
-  // --- meta linha 2: [classificacao | status]  ·  duracao  ·  pais -----------
-  //
-  // A classificacao indicativa e o status da producao vivem DENTRO do mesmo
-  // selo de contorno, com uma divisoria entre eles ("TV-MA | RENOVADA",
-  // "R | LANÇADO"). Aqui a classificacao era um selo solto na linha de cima.
-  //
-  // STATUS: o CatItem nao tem o campo. Fica NULL, e o selo sai so com a
-  // classificacao — sem divisoria e sem texto de reserva. Carimbar "LANÇADO"
-  // em tudo seria repetir o erro que ja tirou a classificacao "14" fixa e o
-  // elenco de demonstracao daqui.
-  //
-  // DURACAO so em FILME. Em serie o segundo campo de `meta` e a contagem de
-  // temporadas ("3 temporadas"), e a referencia nao a mostra no hero — quem
-  // conta temporadas sao as abas logo abaixo da dobra, que esta tela ja
-  // desenha. Repetir a informacao aqui seria acrescentar o que o aparelho
-  // tirou.
-  {
-    float a = aHero * fMeta;
-    float x = NV_DETW2_X, yc = yMeta2 + NV_DETW2_SELO_H * 0.5f;
-    int algo = 0;
-    // STATUS: o do Trakt (fichaStatus, so com conta) ou, na falta, o que o TMDB
-    // trouxe na agenda da serie — antes so a grafia minuscula do Trakt casava, e
-    // "Returning Series"/"Ended" do TMDB nunca virava selo. Traduz pela tabela e
-    // poe em MAIUSCULAS como o selo sempre foi.
-    char statusTxt[48] = "";
-    const char *status=NULL;
-    if(ehSerie()) {
-      const char *raw = extras_ficha_status();
-      const char *k = desc_status_chave(raw, 1);
-      if(!k) k = desc_status_chave(extras_agenda_status(), 1);
-      if(k && strcmp(k, "Piloto") && strcmp(k, "Em breve") && strcmp(k, "Planejado")) {
-        idioma_maiusc_em(ajustes_idioma(), statusTxt, sizeof statusTxt, i18n(k));
-        status = statusTxt;
-      }
-    }
-    if ((ci && ci->classificacao[0]) || status) {
-      x += desenhaSeloMeta(x, yMeta2, ci && ci->classificacao[0] ? ci->classificacao : status,
-                           ci && ci->classificacao[0] ? status : NULL, a);
-      algo = 1;
-    }
-    if (!ehSerie() && dur[0]) {
-      if (algo) { desenhaPonto(x + NV_DETW2_SEP, yc, 0.502f, a);
-                  x += NV_DETW2_SEP * 2 + NV_DETW2_PONTO_D; }
-      TxtLinha ld = txt_linha(TXT_DET_META2, dur, 255, 255, 255, 255);
-      txt_desenhar_alpha(ld, x, yc - ld.h * 0.5f, a);
-      x += ld.w; algo = 1;
-    }
-    if (ci && ci->pais[0]) {
-      if (algo) { desenhaPonto(x + NV_DETW2_SEP, yc, 0.502f, a);
-                  x += NV_DETW2_SEP * 2 + NV_DETW2_PONTO_D; }
-      char paisTxt[128];
-      desc_pais_txt(ci->pais, paisTxt, sizeof paisTxt);
-      TxtLinha lp = txt_linha(TXT_DET_META2, paisTxt, 255, 255, 255, 255);
-      txt_desenhar_alpha(lp, x, yc - lp.h * 0.5f, a);
-      x += lp.w; algo = 1;
-    }
-    if (ci && ci->direcao[0]) {
-      float gap = algo ? NV_DETW2_SEP * 2 + NV_DETW2_PONTO_D : 0;
-      float remaining = NV_DETW2_X + larguraTextoHero() - x - gap;
-      if (remaining > 100.0f) {
-        if (algo) desenhaPonto(x + NV_DETW2_SEP, yc, 0.502f, a);
-        TxtLinha ld = txt_linha_corta(TXT_DET_META2, ci->direcao,
-                                     255, 255, 255, 255, remaining);
-        txt_desenhar_alpha(ld, x + gap, yc - ld.h * 0.5f, a);
-      }
-    }
-  }
   if (detalheRetrato()) gfx_sem_recorte();
 }
 #pragma pop_macro("NV_DETW2_X")

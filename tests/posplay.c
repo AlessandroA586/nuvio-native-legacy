@@ -504,21 +504,21 @@ int main(void) {
   }
   intro_shot_definir(NULL, 0);
   puts("ok  prefetch antecipa a janela real em 10 s, com e sem creditos");
-  // #331: a contagem do proximo episodio so adianta com marcador REAL de creditos.
-  assert(posplay_contagem(1000, 1000, 0, 120.0, 1, 1, 5) == 0);           // cartao acabou de subir
-  assert(posplay_contagem(4999, 1000, 0, 120.0, 1, 1, 5) == 0);           // ainda no atraso
-  assert(posplay_contagem(5000, 1000, 0, 120.0, 1, 1, 5) == 10000);       // marcador real: 5 s a partir de agora
-  assert(posplay_contagem(5000, 1000, 0, 120.0, 1, 0, 5) == 0);           // estimativa: nao adianta
-  assert(posplay_contagem(60000, 1000, 0, 100.0, 1, 0, 5) == 0);          // estimativa, cartao ha muito: ainda nao
-  assert(posplay_contagem(5500, 1000, 10000, 100.0, 1, 1, 5) == 10000);   // armado: nao se move
-  assert(posplay_contagem(5000, 1000, 0, 120.0, 0, 1, 5) == 0);           // autoplay desligado: nunca
-  assert(posplay_contagem(2000, 1000, 0, 3.0, 1, 0, 5) == 5000);          // estimativa, 3 s de episodio: so o fim
-  assert(posplay_contagem(2000, 1000, 0, -1.0, 1, 1, 5) == 2000);         // passou do fim: dispara ja
-  assert(posplay_contagem(5000, 1000, 0, 120, 1, 1, 12) == 17000);
-  assert(posplay_contagem(5000, 1000, 0, 120, 1, 1, 1) == 6000);
-  assert(posplay_contagem(5000, 1000, 17000, 100, 0, 1, 12) == 0);
-  assert(posplay_contagem(5000, 1000, 0, 3, 1, 1, 12) == 8000);
-  puts("ok  contagem do proximo episodio: atraso, 5 s, autoplay desligado");
+  // #470: a contagem comeca com o cartao, para toda fonte aceita pelo player.
+  assert(posplay_contagem(1000, 0, 120.0, 1, 5) == 6000);        // conta ao subir
+  assert(posplay_contagem(4999, 0, 120.0, 1, 5) == 9999);        // sem atraso
+  assert(posplay_contagem(5000, 0, 120.0, 1, 5) == 10000);       // marcador real: 5 s a partir de agora
+  assert(posplay_contagem(5000, 0, 120.0, 1, 5) == 10000);       // mesma janela aceita pelo cartao
+  assert(posplay_contagem(60000, 0, 100.0, 1, 5) == 65000);       // estimativa tambem conta
+  assert(posplay_contagem(5500, 10000, 100.0, 1, 5) == 10000);   // armado: nao se move
+  assert(posplay_contagem(5000, 0, 120.0, 0, 5) == 0);           // autoplay desligado: nunca
+  assert(posplay_contagem(2000, 0, 3.0, 1, 5) == 5000);          // estimativa, 3 s de episodio: so o fim
+  assert(posplay_contagem(2000, 0, -1.0, 1, 5) == 2000);         // passou do fim: dispara ja
+  assert(posplay_contagem(5000, 0, 120, 1, 12) == 17000);
+  assert(posplay_contagem(5000, 0, 120, 1, 1) == 6000);
+  assert(posplay_contagem(5000, 17000, 100, 0, 12) == 0);
+  assert(posplay_contagem(5000, 0, 3, 1, 12) == 8000);
+  puts("ok  contagem do proximo episodio: imediata, configuravel, autoplay desligado");
 
   // Cena apos os creditos: o cartao oferece continuar, mas nao troca o
   // episodio enquanto a cena ainda roda. Sem sinal, a contagem antiga vale.
@@ -536,7 +536,6 @@ int main(void) {
     cat_definir_episodios(0, eps, 10);
     posplay_fechar();
     aquecer(3600.0, 1);
-    posplay_marcador_real(1);
     posplay_atualizar(0.016f, 1000, 3450.0, 3600.0, 1, 0, 1);
     assert(posplay_visivel() && posplay_sobre_video());
     posplay_atualizar(0.016f, 12000, 3470.0, 3600.0, 1, 0, 1);
@@ -551,7 +550,6 @@ int main(void) {
     assert(!posplay_visivel() && posplay_pediu_episodio(&t, &e) && e == 4);
     posplay_fechar();   // durante a cena a pessoa ainda pode ir ao proximo na mao
     aquecer(3600.0, 1);
-    posplay_marcador_real(1);
     posplay_atualizar(0.016f, 1000, 3450.0, 3600.0, 1, 0, 1);
     assert(posplay_visivel() && posplay_teste_foco() == 0);
     assert(tecla(SDLK_RIGHT) == 1 && posplay_teste_foco() == 1);
@@ -570,7 +568,6 @@ int main(void) {
     u.posCreditos = 0;
     cat_definir(&u, 1);
     cat_definir_episodios(0, eps, 10);
-    posplay_marcador_real(1);
     aquecer(3600.0, 1);
     posplay_atualizar(0.016f, 1000, 3450.0, 3600.0, 1, 0, 1);
     posplay_atualizar(0.016f, 12000, 3470.0, 3600.0, 1, 0, 1);

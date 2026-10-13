@@ -120,9 +120,11 @@ static void cabeEmTodos(void) {
         // Sem cenas, medir o texto da lista tambem.
         c += novcartao_teste_cortadas();
         desenhados += novcartao_teste_desenhados();
+        // Vao entre itens em pt: entre 12 px (minimo) e 24 px (teto); a pagina de
+        // poucos itens (Colecoes) abre mais que as cheias.
         if (idi == 0 && novcartao_teste_vao_max() > 0) {
-          assert(fabsf(novcartao_teste_vao_min() - 12.0f) < 0.01f);
-          assert(fabsf(novcartao_teste_vao_max() - 12.0f) < 0.01f);
+          assert(novcartao_teste_vao_min() > 11.99f && novcartao_teste_vao_max() < 24.01f);
+          
         }
         assert(novcartao_paginas() == n);
         // Todas as cenas passam pela legenda quando o conteudo tem previa.
@@ -203,6 +205,14 @@ int main(int argc, char **argv) {
           snprintf(nome, sizeof nome, "%s-%s-cena-%d", nomes[plat], idioma_iso(idiomas[idi]), cena + 1);
           captura(saida, nome, novcartao_teste_inicio_cena(cena) + 1.2f, 0);
         }
+        // A cena das colecoes passa pelas sete exibicoes (1,7 s cada): um quadro no
+        // meio de cada uma e um no meio de uma passagem (Grade -> Linha do tempo).
+        if (plat == 0 && idi < 3)
+          for (int ex = 0; ex < 8; ex++) {
+            float seg = ex < 7 ? 1.7f * (float)ex + 0.9f : 1.7f - 0.3f;
+            snprintf(nome, sizeof nome, "%s-%s-exibicao-%d", nomes[plat], idioma_iso(idiomas[idi]), ex + 1);
+            captura(saida, nome, seg, 0);
+          }
         snprintf(nome, sizeof nome, "%s-%s-apoio", nomes[plat], idioma_iso(idiomas[idi]));
         captura(saida, nome, 1.2f, novcartao_paginas() - 1);
       }
