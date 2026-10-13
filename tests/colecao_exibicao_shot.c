@@ -125,6 +125,15 @@ int main(int argc, char **argv) {
     snprintf(c->poster, sizeof c->poster, "deploy/app/art/poster/%02d.jpg", k);
     if (k < 10) snprintf(c->logo, sizeof c->logo, "deploy/app/art/logo/%02d.png", k);
     c->nota = 70 + i % 20;
+    // Ficha do painel: classificacao, direcao e elenco em parte dos titulos.
+    snprintf(c->classificacao, sizeof c->classificacao, "%s", i % 3 ? "14" : "L");
+    if (i % 2 == 1) {
+      snprintf(c->direcao, sizeof c->direcao, "Marta Albuquerque");
+      snprintf(c->elenco[0].nome, sizeof c->elenco[0].nome, "Ana Ribeiro");
+      snprintf(c->elenco[1].nome, sizeof c->elenco[1].nome, "Caio Monteiro");
+      snprintf(c->elenco[2].nome, sizeof c->elenco[2].nome, "Lia Fontes");
+      c->nElenco = 3;
+    }
     // Saga: os tres primeiros lancamentos vistos, o quarto pela metade.
     if (FILMES[i].ano < 1984) c->progresso = 100;
     if (FILMES[i].ano == 1999) c->progresso = 46;
@@ -229,6 +238,30 @@ int main(int argc, char **argv) {
   pasta.nSources = 1; lay = VT_LAY_GRADE; layEscolha = VT_LAY_GRADE; celLay = -1; orderN = -1; foco = 1;
   snprintf(nome, sizeof nome, "%s-8-streaming-grade.bmp", saida);
   captura(nome, 90);
+
+  // STREAMING com seis abas (13/10): as abas esmaecem antes do botao, sem a
+  // legenda de depuracao, e cada exibicao com a ficha nova no painel.
+  { static ColSource seis[6];
+    static const char *ABAS[6] = { "Filmes", "Séries", "Top 10 · Filmes", "Top 10 · Séries",
+                                   "Kids Top 10 · Filmes", "Kids Top 10 · Séries" };
+    for (i = 0; i < 6; i++) {
+      snprintf(seis[i].title, sizeof seis[i].title, "%s", ABAS[i]);
+      snprintf(seis[i].type, sizeof seis[i].type, "%s", i & 1 ? "series" : "movie");
+      snprintf(seis[i].base, sizeof seis[i].base, "http://shot.local");
+    }
+    pasta.sources = seis; pasta.nSources = 6; tabFocus = 0; tabRol = 0;
+    for (L = VT_LAY_GRADE; L < VT_LAY_VITRINE; L++) {
+      lay = L; layEscolha = L; celLay = -1; orderN = -1; foco = 1; scrollY = velY = 0;
+      resolverLayout(); armarOnda();
+      snprintf(nome, sizeof nome, "%s-9-streaming-%s.bmp", saida,
+               (const char *[]){ "", "grade", "linha", "ranking", "saga", "decadas", "mural" }[L]);
+      captura(nome, 110);
+    }
+    lay = VT_LAY_GRADE; layEscolha = VT_LAY_GRADE; resolverLayout(); celLay = -1;
+    tabFocus = 1; tabCursor = nAbas();
+    snprintf(nome, sizeof nome, "%s-9-streaming-botao.bmp", saida);
+    captura(nome, 60);
+    tabFocus = 0; }
 
   tex_encerrar();
   txt_encerrar();

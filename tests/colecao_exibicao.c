@@ -227,6 +227,19 @@ int main(void) {
   assert(abaFade(870, 100, 100, 800, 0, 0) == 1.0f);      // sem mais abas: normal
   assert(abaFade(136, 100, 100, 800, 1, 0) < 1.0f);       // rolada: some a esquerda
 
+  // 9. GRADE E MURAL COM MAIS AR (13/10): vao de 28 entre cartazes, a Grade
+  // sem o nome embaixo (vao vertical menor que o antigo 60 com titulo), o
+  // painel sem o cartaz na Grade e com ele no Mural.
+  lay = VT_LAY_GRADE; timeline = 0; celLay = -1; montar(NANOS);
+  assert(celX[1] - celX[0] - celW[0] >= 28.0f - 0.01f);
+  assert(celY[VT_COLS] - celY[0] - celH[0] == VT_GRADE_GAP_Y && VT_GRADE_GAP_Y < VT_GAP_Y);
+  assert(!painelComCartaz());
+  lay = VT_LAY_MURAL; celLay = -1; montar(NANOS);
+  assert(painelComCartaz());
+  assert(celX[1] - celX[0] - celW[0] >= 28.0f - 0.01f);
+  assert(celY[3] - celY[1] - celH[1] >= 28.0f - 0.01f);
+  assert(fabsf(celH[0] - (celH[1] * 2.0f + VT_GAP_X)) < 0.01f);   // grande = dois pequenos + vao
+
   printf("colecao_exibicao: ok\n");
   return 0;
 }

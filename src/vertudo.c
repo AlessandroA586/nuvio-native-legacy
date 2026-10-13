@@ -51,8 +51,11 @@ static float vtCardAltura(void);
 #define VT_CARD_BASE_W 248.0f
 #define VT_CARD_W   vtCardLargura()
 #define VT_CARD_H   vtCardAltura()
-#define VT_GAP_X    16.0f                 // .seeall-grid: gap 20px 16px
+// .seeall-grid tinha 16; na TV o dono pediu mais ar entre os cartazes (13/10).
+#define VT_GAP_X    (vtTelefone() ? 16.0f : 28.0f)
 #define VT_GAP_Y    (20.0f + 40.0f)       // gap + a linha de titulo sob o cartaz
+// GRADE na TV: sem o nome sob o cartaz (o painel ja diz tudo), so o vao.
+#define VT_GRADE_GAP_Y (vtTelefone() ? VT_GAP_Y : 44.0f)
 #define VT_TOPO    (collection ? 332.0f : 244.0f)
 // LARGURA UTIL DA GRADE: as 5 colunas de sempre (5 x 248 + 4 x 16). Toda
 // exibicao cabe nela, e o painel de detalhe a direita nunca e invadido.
@@ -639,10 +642,13 @@ static void montar(int n) {
       // Blocos de cinco: um grande (2x2) e quatro pequenos, o grande trocando
       // de lado a cada bloco. Linha de cima: o grande e os dois pequenos do
       // alto; linha de baixo: os outros dois.
-      const float bw = 640.0f, bh = 360.0f, sw = 312.0f, sh = 172.0f, g = VT_GAP_X;
+      // Pequenos 16:9 e o grande com a altura exata de dois pequenos e o vao,
+      // cabendo em VT_CW com o vao mais largo da TV (13/10).
+      const float g = VT_GAP_X, sh = vtTelefone() ? 172.0f : 174.0f, sw = sh * 16.0f / 9.0f,
+                  bh = 2.0f * sh + g, bw = bh * 16.0f / 9.0f;
       for (i = 0; i < n; i++) {
         int b = i / 5, k = i % 5;
-        float y = b * (bh + g + 24.0f);
+        float y = b * (bh + g + 28.0f);
         if (!(b & 1)) {
           if (k == 0) cel(i, 0, y, bw, bh, 2 * b, 0);
           else { int q = k - 1; cel(i, bw + g + (q & 1) * (sw + g), y + (q >> 1) * (sh + g), sw, sh,
@@ -657,7 +663,7 @@ static void montar(int n) {
     default: {  // GRADE: preserva o recuo da rail fixa (#359).
       int cols = VT_COLS;
       for (i = 0; i < n; i++)
-        cel(i, (i % cols) * (VT_CARD_W + VT_GAP_X), (i / cols) * (VT_CARD_H + VT_GAP_Y),
+        cel(i, (i % cols) * (VT_CARD_W + VT_GAP_X), (i / cols) * (VT_CARD_H + VT_GRADE_GAP_Y),
             VT_CARD_W, VT_CARD_H, i / cols, i % cols);
       break; }
   }
@@ -1127,14 +1133,33 @@ void vertudo_atualizar(float dt, Uint32 agora) {
 //
 // Sem ele o dono ve 50 cartazes e nenhuma informacao; era o que faltava para a
 // tela deixar de ser so uma parede de imagens.
+//
+// FICHA DIAGRAMADA (dono, 13/10: "na lateral nao colocar o poster de novo,
+// vamos colocar mais informacoes sobre o titulo"). Onde o cartao em foco ja e
+// o cartaz (Grade, Ranking, Decadas) o painel nao o repete e o espaco vai para
+// a ficha; onde o cartao e deitado (Mural, Saga, Linha do tempo) o cartaz fica,
+// porque e outra imagem. Ordem: logo/titulo, ano e duracao com a
+// classificacao, generos, notas, sinopse e, quando o catalogo ja os trouxe,
+// direcao e elenco. Nada aqui pede rede: e so o que o CatItem tem.
+static int painelComCartaz(void) {
+  return lay == VT_LAY_MURAL || lay == VT_LAY_SAGA || lay == VT_LAY_LINHA;
+}
+static float painelCredito(const char *rot, const char *val, float y, float a) {
+  TxtLinha r = txt_linha(TXT_MINI, rot, 160, 168, 182, 255);
+  txt_desenhar_alpha(r, VT_PAN_X, y, a);
+  y += r.h + 4.0f;
+  return y + txt_bloco_corta(TXT_DET_META2, val, 226, 230, 238, VT_PAN_X, y, VT_PAN_W, 30.0f, a, 2) + 14.0f;
+}
 static void painel(float a) {
   CatItem it;
-  float y = VT_PAN_Y;
+  float y = VT_PAN_Y, base = NV_TELA_H - 48.0f;
+  int cartaz = painelComCartaz();
+  char elenco[200] = "";
   if (!viewItem(foco, &it)) return;
 
-  // O contexto lateral usa o cartaz, nunca repete a cena da timeline.
-  // Mantém a geometria 2:3 mesmo sem arte para não deslocar os metadados.
-  { GfxRect r = { VT_PAN_X, y, VT_PAN_ART_W, VT_PAN_ART_H };
+  if (cartaz) {
+    // Mantém a geometria 2:3 mesmo sem arte para não deslocar os metadados.
+    GfxRect r = { VT_PAN_X, y, VT_PAN_ART_W, VT_PAN_ART_H };
     const char *arte = it.poster[0] ? it.poster : it.backdrop;
     float raio = 12.0f / VT_PAN_ART_W;
     GLuint t = arte[0] ? tex_obter_larg(arte, VT_PAN_ART_W) : 0;
@@ -1146,62 +1171,66 @@ static void painel(float a) {
     } else {
       TxtLinha falta = txt_linha_corta(TXT_HERO_META, "Sem pôster", 185, 191, 204, 255, r.w-24);
       txt_desenhar_alpha(falta, r.x+(r.w-falta.w)*.5f, r.y+(r.h-falta.h)*.5f, a);
-    } }
-  y += VT_PAN_ART_H + 18.0f;
-  float badgeW=badges_desenhar(badges_provedor(it.provNome),VT_PAN_X,y,VT_PAN_W,28,a);
-  if(badgeW>0)y+=40;
+    }
+    y += VT_PAN_ART_H + 20.0f;
+  } else y += 8.0f;
 
-  // LOGO no lugar do titulo quando existe (max 264x82 no web); o nome escrito
-  // com a fonte da interface so quando nao ha logo.
-  { GLuint tl = it.logo[0] ? tex_obter_logo_larg(it.logo, 264.0f) : 0;
+  // LOGO no lugar do titulo quando existe; sem o cartaz ele cresce e e a
+  // ancora da ficha. O nome escrito com a fonte da interface so sem logo.
+  { float maxW = VT_PAN_W, maxH = cartaz ? 82.0f : 128.0f;
+    GLuint tl = it.logo[0] ? tex_obter_logo_larg(it.logo, maxW) : 0;
     float ap = it.logo[0] ? tex_aspecto(it.logo) : 0.0f;
     if (tl && ap > 0.0f) {
-      float wL = 264.0f, hL = wL / ap;
-      if (hL > 82.0f) { hL = 82.0f; wL = hL * ap; }
+      float wL = maxW, hL = wL / ap;
+      if (hL > maxH) { hL = maxH; wL = hL * ap; }
       { GfxRect rl = { VT_PAN_X, y, wL, hL };
         GfxModo m = tex_marca_escura(it.logo) ? GFX_MARCA : GFX_TEXTO;
         gfx_tex_aspect_atual = 0.0f;
         gfx_rect(rl, tl, m, 0, 0, 0, 0.0f, 1, 1, 1, a); }
-      y += hL + 4.0f;
+      y += hL + 16.0f;
     } else {
-      TxtLinha t = txt_linha_corta(TXT_HEADLINE, it.titulo, 245, 245, 245, 255,
-                                   VT_PAN_W);
-      txt_desenhar_alpha(t, VT_PAN_X, y, a);
-      y += t.h + 6.0f;
+      y += txt_bloco_corta(cartaz ? TXT_HEADLINE : TXT_TITULO2, it.titulo, 245, 245, 245,
+                           VT_PAN_X, y, VT_PAN_W, cartaz ? 38.0f : 58.0f, a, 2) + 18.0f;
     } }
 
-  if (it.genero[0]) {
-    TxtLinha t = txt_linha_corta(TXT_CAPTION, it.genero, 220, 231, 244, 255,
-                                 VT_PAN_W);
-    txt_desenhar_alpha(t, VT_PAN_X, y, a * 0.72f);
-    y += t.h + 6.0f;
-  }
-  // Pastilha da nota, no amarelo do IMDb que o web usa (245,197,24).
-  int imdbRating = imdbnota_obter(it.imdb, it.nota, !strcmp(it.tipo,"series"));
-  if (imdbRating > 0) {
-    char n[16];
-    snprintf(n, sizeof n, "%.1f", imdbRating / 10.0f); idioma_decimal_texto(n, ajustes_idioma());
-    { TxtLinha t = txt_linha(TXT_CAPTION, n, 23, 19, 10, 255);
-      GfxRect r = { VT_PAN_X, y + 8.0f, t.w + 26.0f, t.h + 8.0f };
-      gfx_cor(r, 8.0f / (t.h + 8.0f), 0.961f, 0.773f, 0.094f, 0.92f * a);
-      txt_desenhar_alpha(t, VT_PAN_X + 13.0f, y + 12.0f, a);
-      y += r.h + 14.0f; }
-  }
-  if (it.meta[0]) {
-    TxtLinha t = txt_linha_corta(TXT_DET_META2, it.meta, 240, 240, 240, 255,
-                                 VT_PAN_W);
-    txt_desenhar_alpha(t, VT_PAN_X, y, a * 0.92f);
-    y += t.h + 12.0f;
-  }
-  if (it.sinopse[0]) {
-    // Ate onde couber sem passar da base util (o web corta em
-    // max-height: 100% - 210).
-    int linhas = (int)((NV_TELA_H - 48.0f - y) / 34.0f);
-    if (linhas > 8) linhas = 8;
-    if (linhas > 0)
-      txt_bloco(TXT_DET_META2, it.sinopse, 236, 236, 236,
-                VT_PAN_X, y, VT_PAN_W, 34.0f, a * 0.86f, linhas);
-  }
+  // Ano · duracao (ou temporadas) e o selo da classificacao na mesma linha.
+  { float x = VT_PAN_X;
+    if (it.meta[0]) {
+      TxtLinha t = txt_linha_corta(TXT_DET_META2, it.meta, 240, 241, 244, 255, VT_PAN_W - 90.0f);
+      txt_desenhar_alpha(t, x, y + (BADGE_H - t.h) * 0.5f, a);
+      x += t.w + 14.0f;
+    }
+    if (it.classificacao[0]) badge_desenhar(x, y, it.classificacao, BADGE_NEUTRO, a);
+    if (it.meta[0] || it.classificacao[0]) y += BADGE_H + 12.0f; }
+  if (it.genero[0])
+    y += txt_bloco_corta(TXT_CAPTION, it.genero, 196, 205, 219, VT_PAN_X, y, VT_PAN_W, 28.0f, a * 0.9f, 2) + 14.0f;
+
+  // Notas: IMDb (amarelo da marca) e os servicos onde o titulo esta.
+  { int nota = imdbnota_obter(it.imdb, it.nota, !strcmp(it.tipo, "series"));
+    float x = VT_PAN_X, w = badge_imdb(x, y, nota, 0, a);
+    if (w > 0) x += w + 18.0f;
+    w = badges_desenhar(badges_provedor(it.provNome), x, y, VT_PAN_X + VT_PAN_W - x, BADGE_H, a);
+    if (x > VT_PAN_X || w > 0) y += BADGE_H + 20.0f; }
+
+  // Os creditos ficam na base; a sinopse ocupa o que sobra entre os dois.
+  for (int k = 0, m = 0; k < it.nElenco && k < 3; k++)
+    if (it.elenco[k].nome[0])
+      m += snprintf(elenco + m, sizeof elenco - (size_t)m, "%s%s", m ? ", " : "", it.elenco[k].nome);
+  { float creditos = (it.direcao[0] ? 92.0f : 0.0f) + (elenco[0] ? 92.0f : 0.0f);
+    if (it.sinopse[0]) {
+      // Sem espaco para tudo, os creditos saem antes das tres linhas da sinopse.
+      int linhas = (int)((base - creditos - y) / 32.0f), cabe = (int)((base - y - 12.0f) / 32.0f);
+      if (linhas < 3) linhas = cabe < 3 ? cabe : 3;
+      if (linhas > (cartaz ? 6 : 9)) linhas = cartaz ? 6 : 9;
+      if (linhas > 0) {
+        gfx_cor((GfxRect){ VT_PAN_X, y - 6.0f, 48.0f, 2.0f }, 0, 1, 1, 1, 0.22f * a);
+        y += 12.0f;
+        y += txt_bloco_corta(TXT_DET_META2, it.sinopse, 226, 229, 236,
+                             VT_PAN_X, y, VT_PAN_W, 32.0f, a * 0.9f, linhas) + 18.0f;
+      }
+    }
+    if (it.direcao[0] && y + 70.0f <= base) y = painelCredito(i18n("Direção"), it.direcao, y, a);
+    if (elenco[0] && y + 70.0f <= base) painelCredito(i18n("Elenco"), elenco, y, a); }
 }
 
 static const char *retratoLocal(const ColFolder *folder) {
@@ -1525,7 +1554,7 @@ static void cartazGrade(int i, const CatItem *it, float cx, float cy, float w, f
       gfx_tex_aspect_atual = 0.0f;
     }
   } else cartaoArte(i, (GfxRect){ cx, cy, w, h }, artePoster(it), ac, agora, sel);
-  { TxtLinha l = txt_linha_corta(TXT_DET_META2, it->titulo, c, c, c, 255, w);
+  if (lay != VT_LAY_GRADE || vtTelefone()) { TxtLinha l = txt_linha_corta(TXT_DET_META2, it->titulo, c, c, c, 255, w);
     txt_desenhar_alpha(l, cx, cy + h + 10.0f, ac * (sel ? 1.0f : 0.86f)); }
   if (ranked && lay == VT_LAY_GRADE) {
     char rank[8];snprintf(rank,sizeof rank,"%d",i+1);
