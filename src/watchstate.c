@@ -358,8 +358,11 @@ void ws_fila_carregar(WsFila *f, const char *texto) {
 
 long long ws_fila_proxima(const WsFila *f) {
   long long m = -1;
-  int i;
-  for (i = 0; i < f->n; i++) if (m < 0 || f->it[i].proxS < m) m = f->it[i].proxS;
+  int i, j;
+  for (i = 0; i < f->n; i++) {
+    for (j = 0; j < i && strcmp(f->it[j].base, f->it[i].base); j++) ;
+    if (j == i && (m < 0 || f->it[i].proxS < m)) m = f->it[i].proxS;   // so cabecas
+  }
   return m;
 }
 

@@ -86,6 +86,7 @@ int main(void) {
   WsEvento e;
   long long t0, dt;
   int a, c, d;
+  alarm(8);   // start -> pause -> stop deve terminar mesmo com 401/503
 
   // VIDAA (so GET): nada sai, nem o fio nasce
   caps = 0; e = filme(WS_START, 1000);
@@ -131,6 +132,18 @@ int main(void) {
   OK(nA == a + 1 && nC == c && nD == d && nB == 0);
   pthread_mutex_unlock(&tr);
 
+  // terceiro evento: o backoff nao pode prender a trava de quem encerra
+  e = filme(WS_STOP, 3000);
+  t0 = agoraMs(); wsenvio_emitir(&e); dt = agoraMs() - t0;
+  OK(dt < 100);
+  espera(&nA, 3);
+  usleep(600000);
+  pthread_mutex_lock(&tr);
+  OK(nA == a + 2 && nC == c && nD == d && nB == 0);
+  OK(disco && strstr(disco, "|pause|2000|") && strstr(disco, "|stop|3000|"));
+  pthread_mutex_unlock(&tr);
+
+  alarm(0);
   if (falhas) { printf("%d FALHAS\n", falhas); return 1; }
   printf("OK watchstate_envio\n");
   return 0;

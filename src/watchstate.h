@@ -101,7 +101,7 @@ typedef int (*WsEnvio)(const char *url, const char *corpo, int *retryAfterS, voi
 // rede voltam a tentar (espera >= Retry-After); outro status descarta o item.
 // Devolve quantas requisicoes fez.
 int  ws_fila_passo(WsFila *f, long long agoraS, WsEnvio envia, void *u);
-// Quando a proxima tentativa vence (s Unix); -1 se a fila esta vazia.
+// Quando a proxima cabeca de addon vence (s Unix); -1 se a fila esta vazia.
 long long ws_fila_proxima(const WsFila *f);
 
 #endif

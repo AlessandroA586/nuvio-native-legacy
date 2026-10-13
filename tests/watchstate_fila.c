@@ -131,6 +131,12 @@ int main(void) {
     OK(ws_fila_passo(f, t0, envia, NULL) == 2);            // a/1 (401) e b/1 (204)
     OK(f->n == 2 && f->it[0].tentativas == 0 && f->it[0].proxS == t0 + WS_SEGURA_S);
     STR(rede.url[1], "https://b/1");
+    OK(ws_fila_proxima(f) == t0 + WS_SEGURA_S);  // a/2 vencido espera a/1
+    ws_fila_empurrar(f, "https://b", "https://b/2", "i2", "{}", t0 + 3600);
+    OK(ws_fila_proxima(f) == t0 + 3600);         // outra cabeca vence antes
+    OK(ws_fila_passo(f, t0 + 3599, envia, NULL) == 0);
+    OK(ws_fila_passo(f, t0 + 3600, envia, NULL) == 1);
+    OK(ws_fila_proxima(f) == t0 + WS_SEGURA_S);
     OK(ws_fila_passo(f, t0 + 3600, envia, NULL) == 0);     // continua segurado
     rede.i = 0; rede.n = 2; rede.st[0] = 403; rede.st[1] = 204;
     OK(ws_fila_passo(f, t0 + WS_SEGURA_S, envia, NULL) == 1);   // 403: segura de novo
