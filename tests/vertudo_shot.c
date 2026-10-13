@@ -33,7 +33,7 @@ int shot_vertudo_item(int i, CatItem *dst) {
   snprintf(dst->genero, sizeof dst->genero, "Filme · Drama");
   snprintf(dst->meta, sizeof dst->meta, "%d · 120 min", 1992 + i * 3);
   snprintf(dst->sinopse, sizeof dst->sinopse, "Sinopse de exemplo para o painel da direita.");
-  if (i == 1 || i == 5) dst->progresso = 45;   // em andamento ("Parou em")
+  if (i == 1 || i == 5) dst->progresso = i == 1 ? 39 : 45;   // em andamento ("Parou em")
   snprintf(dst->poster, sizeof dst->poster, "deploy/app/art/%02d.jpg", i % 30);
   snprintf(dst->backdrop, sizeof dst->backdrop, "deploy/app/art/%02d.jpg", i % 30);
   return 1;
@@ -173,6 +173,22 @@ int main(int argc, char **argv) {
     cat_historico_definir_id("tt0000100", "movie", 1);
     cat_historico_definir_id("tt0000102", "movie", 1);
     cat_historico_definir_id("tt0000103", "movie", 1);
+    { // Datas de visto e uma parada no meio, como o progresso sincronizado traz.
+      static const struct { const char *id; double pos; long long ms; } sem[] = {
+        { "tt0000100", 7200, 1710201600000LL },   // 12 mar 2024
+        { "tt0000102", 7000, 1738368000000LL },   // 1 fev 2025
+        { "tt0000101", 2820, 1760000000000LL } }; // parou em 47 min
+      int q;
+      for (q = 0; q < 3; q++) {
+        ProgRegistro r;
+        memset(&r, 0, sizeof r);
+        snprintf(r.contentId, sizeof r.contentId, "%s", sem[q].id);
+        prog_chave(r.chave, sizeof r.chave, sem[q].id, 0, 0);
+        snprintf(r.tipo, sizeof r.tipo, "movie");
+        r.posSeg = sem[q].pos; r.durSeg = 7200; r.lastWatchedMs = sem[q].ms; r.tocou = 1;
+        prog_aplicar_remoto(&r);
+      }
+    }
     for (k = 0; k < 3; k++) {
       char cmd[1400];
       memset(pastaFontes, 0, sizeof pastaFontes);

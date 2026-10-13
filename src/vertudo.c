@@ -22,6 +22,9 @@
 #include "corviva.h"
 #include "ctxlista.h"
 #include "vistocont.h"
+#include "cwordem.h"
+#include "progresso.h"
+#include <time.h>
 #include "ctxmenu.h"
 #include "ponteiro.h"
 #include "rolagemtoque.h"
@@ -1428,13 +1431,41 @@ static void marcaEstado(GfxRect r, const CatItem *it, float a) {
   else if (it->progresso > 0) badges_progresso(r, it->progresso / 100.0f, a);
 }
 
+// LINHA DE ESTADO DA LINHA DO TEMPO (U5): "Visto em 12 mar 2024" (ultima vez que
+// o app soube: lastWatchedMs do progresso, que Nuvio/Trakt/Simkl alimentam),
+// "Visto" sem data, ou "Parou em 47 min". Vazio quando nao ha estado. A
+// contagem de reproducoes ("2x") nao existe nos dados do app, entao nao entra.
+static void estadoLinha(const CatItem *it, int visto, char *dst, size_t cap) {
+  ProgRegistro rec;
+  char key[64];
+  int tem;
+  dst[0] = 0;
+  prog_chave(key, sizeof key, it->imdb, 0, 0);
+  tem = it->imdb[0] && prog_por_chave(key, &rec);
+  if (visto) {
+    char dt[48];
+    if (tem && rec.lastWatchedMs > 0 &&
+        cwo_data_curta(rec.lastWatchedMs, (long long)time(NULL) * 1000, ajustes_idioma(), 0, dt, sizeof dt)) {
+      snprintf(dst, cap, i18n("Visto em %s"), dt);
+    } else snprintf(dst, cap, "%s", i18n("Visto"));
+  } else if (it->progresso > 0 && tem && rec.posSeg >= 60.0) {
+    snprintf(dst, cap, i18n("Parou em %d min"), (int)(rec.posSeg / 60.0));
+  }
+}
+
 static void timelineCard(int i,float cy,float a,float x0) {
   CatItem it;if(!viewItem(i,&it))return;
   int sel=i==foco&&!tabFocus;float r,g,b;corColecao(&r,&g,&b);
   // A linha organiza a cronologia; não é uma borda decorativa de card.
   float rail = vtTimelineRetrato() ? 64.0f : 109.0f;
   gfx_cor((GfxRect){x0+rail,cy-30,2,VT_CARD_H+VT_GAP_Y},0,.48f,.47f,.46f,a*.6f);
-  gfx_cor((GfxRect){x0+rail-7,cy+24,16,16},.5f,sel?.95f:r,sel?.95f:g,sel?.97f:b,a);
+  int visto=vistoItem(&it);
+  float ar,ag,ab;ajustes_acento(&ar,&ag,&ab);
+  // Visto: disco no acento com o check; nao visto: ponto vazado.
+  if(visto)badges_check_disco(x0+rail+1,cy+32,26.0f,a);
+  else{GfxRect dot={x0+rail-7,cy+24,16,16};
+    gfx_cor(dot,.5f,.07f,.075f,.09f,a);
+    gfx_rect(dot,0,GFX_ANEL,0,2.0f/16.0f,0,.5f,sel?.95f:r,sel?.95f:g,sel?.97f:b,a);}
   char year[16];int y=yearOf(&it);if(y==9999)snprintf(year,sizeof year,"—");else snprintf(year,sizeof year,"%d",y);
   TxtLinha yr=txt_linha(vtTimelineRetrato()?TXT_DET_META2:TXT_CW_TITULO,year,219,210,195,255);txt_desenhar_alpha(yr,x0,cy+14,a);
   GfxRect card=vtTimelineCard(cy), artRect=vtTimelineArte(card);
@@ -1442,6 +1473,8 @@ static void timelineCard(int i,float cy,float a,float x0) {
   float tw=vtTelefone()?card.x+card.w-tx-24.0f:550.0f;
   if(sel)gfx_cor((GfxRect){x-4,cy-4,card.w+8,VT_CARD_H+8},.045f,.94f,.95f,.97f,a);
   gfx_cor(card,.04f,.09f,.095f,.105f,a);
+  if(visto){gfx_cor(card,.04f,ar,ag,ab,.07f*a);
+    gfx_cor((GfxRect){card.x,card.y+12,3,card.h-24},.5f,ar,ag,ab,a);}
   const char *art=it.backdrop[0]?it.backdrop:it.poster;GLuint tex=art[0]?tex_obter_larg(art,390):0;
   if(tex){gfx_tex_aspect_atual=tex_aspecto(art);gfx_rect(artRect,tex,GFX_CARD,0,0,0,.04f,0,0,0,a);gfx_tex_aspect_atual=0;}
   else { gfx_cor(artRect,.04f,.16f,.16f,.18f,a);
@@ -1450,7 +1483,14 @@ static void timelineCard(int i,float cy,float a,float x0) {
   marcaEstado(artRect,&it,a);
   TxtLinha name=txt_linha_corta(TXT_CW_TITULO,it.titulo,242,243,247,255,tw);txt_desenhar_alpha(name,tx,cy+22,a);
   TxtLinha genre=txt_linha_corta(TXT_HERO_META,it.genero,187,194,207,255,tw);txt_desenhar_alpha(genre,tx,cy+64,a);
-  txt_bloco(TXT_DET_META2,it.sinopse,209,214,225,tx,cy+106,vtTelefone()?tw:545.0f,30,a,3);
+  char est[80];estadoLinha(&it,visto,est,sizeof est);
+  if(est[0]){
+    float ix=tx;
+    if(visto){gfx_icone((GfxRect){tx,cy+102,22,22},"check",ar,ag,ab,a);ix=tx+28.0f;}
+    TxtLinha el=txt_linha_corta(TXT_HERO_META,est,visto?ar*255:226,visto?ag*255:230,visto?ab*255:238,255,tw-(ix-tx));
+    txt_desenhar_alpha(el,ix,cy+102+(22-el.h)*.5f,a);
+  }
+  txt_bloco(TXT_DET_META2,it.sinopse,209,214,225,tx,cy+(est[0]?138:106),vtTelefone()?tw:545.0f,30,a,est[0]?2:3);
 }
 
 // --- PECAS COMUNS DAS EXIBICOES ----------------------------------------------
