@@ -7,7 +7,7 @@
 //     lookbehind, preguicoso, quantificador aninhado, UTF-8 de 2 e 3 bytes.
 //   modo "f" (filtro): fonteregra_regex_testar contra a logica do Nuvio OFICIAL
 //     (NuvioTVSmart streamAutoPlaySelector.js: isRegexSelectionConfigured,
-//     new RegExp(p, "i") e buildExcludeRegex) com regex de ~400 caracteres no
+//     new RegExp(p, "i"), sem a exclusao extra do NuvioTVSmart) com regex de ~400 caracteres no
 //     estilo da do dono e textos de fonte de verdade (Torrentio, AIOStreams,
 //     MediaFusion) de 200 a 8000 bytes. Era aqui que o teto de passos estourava
 //     e a fonte boa era recusada.
@@ -55,18 +55,10 @@ for (const [n, fundo, max] of [[2500, 3, 14], [1500, 4, 40], [600, 5, 120]]) {
 }
 
 // --- modo f: regex longas x textos de fonte longos ----------------------------
-function buildExcludeRegex(pattern) {
-  const matches = String(pattern || "").match(/\(\?![^)]*?\(([^)]+)\)/g) || [];
-  const words = matches.map((m) => { const i = /\(\?![^)]*?\(([^)]+)\)/.exec(m); return i ? i[1] : ""; })
-    .join("|").split("|").map((w) => w.trim()).filter(Boolean);
-  if (!words.length) return null;
-  try { return new RegExp(`\\b(${words.join("|")})\\b`, "i"); } catch (_) { return null; }
-}
 function oficial(pattern, text) {
   if (!/[a-z0-9]/i.test(pattern)) return -1;
   let inc; try { inc = new RegExp(pattern, "i"); } catch (_) { return -1; }
-  const exc = buildExcludeRegex(pattern);
-  return inc.test(text) && !(exc && exc.test(text)) ? 1 : 0;
+  return inc.test(text) ? 1 : 0;
 }
 const RES = R`(2160p|4K|UHD|1080p|FHD|BD|HD|720p|SDR)`;
 const SRC = R`(SeaDex|Remux|BD-Remux|Dual[\s-]?Audio|Multi[\s-]?Audio|Multi|Dub|Eng|Jap|10bit|HEVC|x265|H265|Hi10P|BluRay|WEB-DL|WEBRip|BDRip|BRRip|x264|AVC|H264|8bit|HDTV|DVDRip|HDRip|Subs)`;

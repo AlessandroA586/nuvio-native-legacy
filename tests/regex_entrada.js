@@ -5,7 +5,7 @@
 // aplica o MESMO filtro (alfabeto e teto lidos do codigo-fonte, passados por
 // NV_ALFA e NV_MAX) a uma lista grande de regex de verdade e imprime
 // "esperado<TAB>padrao-que-chegou-ao-C<TAB>texto", com o esperado vindo do
-// Nuvio OFICIAL (new RegExp(p,"i") + buildExcludeRegex) sobre a regex ORIGINAL.
+// Nuvio OFICIAL (new RegExp(p,"i"), sem a exclusao extra do NuvioTVSmart) sobre a regex ORIGINAL.
 // Esperado -1 = o oficial recusa a regex (invalida). Qualquer caractere que o
 // filtro perca tambem sai em stderr e faz o gerador falhar.
 const ALFA = process.env.NV_ALFA || "";
@@ -27,13 +27,6 @@ function filtro(t) {
   }
   return w;
 }
-function buildExcludeRegex(pattern) {
-  const matches = String(pattern || "").match(/\(\?![^)]*?\(([^)]+)\)/g) || [];
-  const words = matches.map((m) => { const i = /\(\?![^)]*?\(([^)]+)\)/.exec(m); return i ? i[1] : ""; })
-    .join("|").split("|").map((w) => w.trim()).filter(Boolean);
-  if (!words.length) return null;
-  try { return new RegExp(`\\b(${words.join("|")})\\b`, "i"); } catch (_) { return null; }
-}
 // Todo padrao roda no motor de JS (fonteregra.c), com o ponto que NAO atravessa
 // quebra de linha, como o oficial: todos sao comparados tambem em texto de varias
 // linhas.
@@ -46,8 +39,7 @@ function oficial(pattern, text) {
   // com o padrao sem o grupo de flags, que e o que o C executa.
   pattern = pattern.replace(/^\(\?[ims]+\)/, "");
   try { inc = new RegExp(pattern, "i"); } catch (_) { return -1; }
-  const exc = buildExcludeRegex(pattern);
-  return inc.test(text) && !(exc && exc.test(text)) ? 1 : 0;
+  return inc.test(text) ? 1 : 0;
 }
 
 const R = String.raw;

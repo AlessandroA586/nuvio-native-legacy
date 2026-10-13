@@ -19,10 +19,9 @@ static int nNomes[2];
 static char ordem[FR_ORDEM_MAX][FR_NOME_MAX];
 static int nOrdem;
 static unsigned versao = 1;
-// A regex compilada do padrao em uso, no motor de JS proprio (regexjs.c), e a
-// exclusao "do oficial" (reJsX, ver excluirJs). `reEstado` e o de
-// fonteregra_regex_estado.
-static RegexJs *reJs, *reJsX;
+// A regex compilada do padrao em uso, no motor de JS proprio (regexjs.c).
+// `reEstado` e o de fonteregra_regex_estado.
+static RegexJs *reJs;
 static int reEstado;
 
 #define ARQ "fonteregra.txt"
@@ -42,50 +41,15 @@ static int temLetraOuDigito(const char *s) {
   return 0;
 }
 
-// A EXCLUSAO DO OFICIAL (NuvioTVSmart, streamAutoPlaySelector.js buildExcludeRegex):
-// alem de rodar o padrao inteiro, o oficial acha cada "(?!" com um "(" depois
-// (\(\?![^)]*?\(([^)]+)\)), junta o PRIMEIRO grupo de cada um, separa por "|" e
-// compila \b(palavras)\b. Casou essa regex = fonte descartada, mesmo que o
-// lookahead de verdade nao pegasse. Se ela nao compila (por exemplo, "(?:" vira a
-// palavra "?:\bDV\b"), o oficial fica sem exclusao nenhuma — e este codigo tambem.
-// Devolve NULL quando nao ha palavras ou ela nao compila.
-static RegexJs *excluirJs(const char *java) {
-  char pal[FR_REGEX_MAX + 8], re[FR_REGEX_MAX + 24];
-  size_t n = 0;
-  const char *p = java;
-  pal[0] = 0;
-  while ((p = strstr(p, "(?!")) != NULL) {
-    const char *q = p + 3, *fim, *a, *b;
-    while (*q && *q != ')' && *q != '(') q++;
-    if (*q != '(') { p++; continue; }
-    fim = strchr(q + 1, ')');
-    if (!fim || fim == q + 1) { p++; continue; }
-    // split("|") + trim + filter(Boolean), tudo no mesmo passo.
-    for (a = q + 1; a <= fim; ) {
-      b = a;
-      while (b < fim && *b != '|') b++;
-      { const char *i = a, *j = b;
-        while (i < j && (unsigned char)*i <= ' ') i++;
-        while (j > i && (unsigned char)j[-1] <= ' ') j--;
-        if (j > i) {
-          if (n + (size_t)(j - i) + 2 >= sizeof pal) return NULL;
-          if (n) pal[n++] = '|';
-          memcpy(pal + n, i, (size_t)(j - i)); n += (size_t)(j - i);
-          pal[n] = 0;
-        } }
-      a = b + 1;
-    }
-    p = fim + 1;
-  }
-  if (!n) return NULL;
-  snprintf(re, sizeof re, "\\b(%s)\\b", pal);
-  return regexjs_compilar(re, REGEXJS_I, NULL, 0);
-}
+// SEM A "EXCLUSAO DO OFICIAL": o NuvioTVSmart (streamAutoPlaySelector.js,
+// buildExcludeRegex) tira as palavras de cada "(?!...(...))" e descarta qualquer
+// fonte que tenha uma delas, mesmo quando o lookahead de verdade deixaria passar
+// ("DV sem HDR" virava "nada com DV, HDR ou Multi"). Aqui a regex roda EXATAMENTE
+// como foi escrita: o que ela aceita toca, o que ela recusa nao.
 
-// Compila padrao + exclusao. 1 = ok; 0 = nao configurado; -1 = invalido.
-// TODO padrao roda no motor de JS, com a semantica EXATA do oficial (Android e
-// web: new RegExp(p, "i") + buildExcludeRegex): o ponto NAO atravessa quebra de
-// linha, entao "^(?=.*1080p)" so ve a primeira linha do texto, como la.
+// Compila o padrao. 1 = ok; 0 = nao configurado; -1 = invalido.
+// TODO padrao roda no motor de JS, como new RegExp(p, "i"): o ponto NAO atravessa
+// quebra de linha (use [\s\S]* para ver o texto inteiro), entao "^(?=.*1080p)" so ve a primeira linha do texto, como la.
 //
 // Antes, padrao sem "(?=" / lookbehind ia para uma traducao POSIX que errava em
 // casos comuns: "(?!.*CAM)1080p" e "1080p(?!.*DTS)" perdiam o lookahead (sem
@@ -94,34 +58,28 @@ static RegexJs *excluirJs(const char *java) {
 // "Remux 2160p" (o espaco servia a uma borda so). O motor proprio agora e
 // conferido contra o V8 (tests/regexjs_v8.sh) e lembra estados, entao nao ha
 // mais motivo para dois caminhos.
-static int compilar(const char *java, RegexJs **js, RegexJs **jsx) {
+static int compilar(const char *java, RegexJs **js) {
   char p[FR_REGEX_MAX + 8];
-  *js = *jsx = NULL;
+  *js = NULL;
   if (!java || !java[0] || !temLetraOuDigito(java)) return 0;
   // "(?i)" na frente (Java/Python) e aceito; o resto e sem caixa de qualquer jeito.
   snprintf(p, sizeof p, "(?i)%s", java);
   *js = regexjs_compilar_web(p, NULL, 0);
-  if (!*js) return -1;
-  *jsx = excluirJs(java);
-  return 1;
+  return *js ? 1 : -1;
 }
 
-static int casa(const RegexJs *js, const RegexJs *jsx, const char *texto) {
-  size_t n;
+static int casa(const RegexJs *js, const char *texto) {
   if (!js) return 0;
   if (!texto) texto = "";
-  n = strlen(texto);
-  if (!regexjs_testar(js, texto, n)) return 0;
-  return !(jsx && regexjs_testar(jsx, texto, n));
+  return regexjs_testar(js, texto, strlen(texto)) == 1;
 }
 
 int fonteregra_regex_testar(const char *java, const char *texto) {
-  RegexJs *js, *jsx;
-  int e = compilar(java, &js, &jsx), m;
+  RegexJs *js;
+  int e = compilar(java, &js), m;
   if (e <= 0) return -1;
-  m = casa(js, jsx, texto);
+  m = casa(js, texto);
   regexjs_liberar(js);
-  regexjs_liberar(jsx);
   return m;
 }
 
@@ -143,8 +101,7 @@ const char *fonteregra_modelo(int i) { return i > 0 && i < fonteregra_modelos() 
 // --- estado -----------------------------------------------------------------
 static void recompilarSemTrava(void) {
   regexjs_liberar(reJs); reJs = NULL;
-  regexjs_liberar(reJsX); reJsX = NULL;
-  reEstado = compilar(padrao, &reJs, &reJsX);
+  reEstado = compilar(padrao, &reJs);
 }
 
 static void limparNome(char *dst, size_t tam, const char *src) {
@@ -393,7 +350,7 @@ int fonteregra_grupo(const FonteRegraCfg *c, const char *nome, int plugin, const
   pthread_mutex_lock(&trava);
   perm = permitidoSemTrava(c, nome, plugin);
   if (c->regexModo != FR_REGEX_DESLIGADA && reEstado == 1) {
-    int m = casa(reJs, reJsX, texto);
+    int m = casa(reJs, texto);
     if (!m && c->regexModo == FR_REGEX_EXIGIR) { pthread_mutex_unlock(&trava); return -1; }
     sub = !m;
   }

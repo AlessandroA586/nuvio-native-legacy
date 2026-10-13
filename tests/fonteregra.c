@@ -39,7 +39,7 @@ static void regex(void) {
   // Sem caixa, contra o texto inteiro.
   assert(fonteregra_regex_testar("castellano", "Torrentio\n1080p CASTELLANO") == 1);
   assert(fonteregra_regex_testar("castellano", "Torrentio\n1080p English") == 0);
-  // Exclusao do oficial: o lookahead negativo vira lista de palavras proibidas.
+  // Lookahead negativo comum (sem a exclusao extra, e o proprio (?! que recusa).
   assert(fonteregra_regex_testar("^(?!.*(CAM|TS)).*1080p", "Film 1080p WEB") == 1);
   assert(fonteregra_regex_testar("^(?!.*(CAM|TS)).*1080p", "Film 1080p CAM") == 0);
   // Invalida e nao configurada = -1 (ignorada).
@@ -70,9 +70,23 @@ static void lookahead(void) {
   // Lookahead negativo REAL junto do positivo (nao so a lista de exclusao).
   assert(fonteregra_regex_testar("^(?=.*1080p)(?!.*\\bDTS\\b)", "Film 1080p DDP5.1") == 1);
   assert(fonteregra_regex_testar("^(?=.*1080p)(?!.*\\bDTS\\b)", "Film 1080p DTS") == 0);
-  // Exclusao "do oficial": o DTS na 2a linha escapa do lookahead (o ponto nao
-  // atravessa), mas a lista de palavras extraida do (?!...(...)) o pega, como la.
-  assert(fonteregra_regex_testar("^(?=.*1080p)(?!.*(DTS|CAM))", "Film 1080p\nDTS") == 0);
+  // Sem a exclusao extra do NuvioTVSmart: a regex vale como escrita. O ponto nao
+  // atravessa quebra de linha, entao o DTS na 2a linha escapa de ".*"; com
+  // "[\s\S]*" o lookahead ve o texto inteiro e o pega.
+  assert(fonteregra_regex_testar("^(?=.*1080p)(?!.*(DTS|CAM))", "Film 1080p\nDTS") == 1);
+  assert(fonteregra_regex_testar("^(?=[\\s\\S]*1080p)(?![\\s\\S]*(DTS|CAM))", "Film 1080p\nDTS") == 0);
+  // A palavra de um (?!...(...)) nao bloqueia sozinha: "DV sem HDR" recusa so DV
+  // sem HDR. Antes a exclusao extra virava "nada com DV, HDR ou Multi".
+  { const char *dv = "^(?![\\s\\S]*\\bDV\\b(?![\\s\\S]*\\b(HDR|Multi)\\b))";
+    assert(fonteregra_regex_testar(dv, "Film 2160p HDR10 x265") == 1);
+    assert(fonteregra_regex_testar(dv, "Film 2160p Multi x265") == 1);
+    assert(fonteregra_regex_testar(dv, "Film 2160p DV HDR") == 1);
+    assert(fonteregra_regex_testar(dv, "Film 2160p DV x265") == 0); }
+  // DTS so recusado sem Dual/Multi: o lookahead deixa o Dual com DTS passar, e
+  // agora nada mais o derruba pela palavra "DTS".
+  { const char *d = "^(?!(?![\\s\\S]*\\b(Dual|Multi)\\b)[\\s\\S]*\\bDTS)";
+    assert(fonteregra_regex_testar(d, "Anime 1080p Dual-Audio DTS-HD") == 1);
+    assert(fonteregra_regex_testar(d, "Film 1080p DTS-HD") == 0); }
   // Lookbehind.
   assert(fonteregra_regex_testar("(?<=WEB-)DL", "Film WEB-DL") == 1);
   assert(fonteregra_regex_testar("(?<=WEB-)DL", "Film BD-DL") == 0);
@@ -94,8 +108,8 @@ static void lookahead(void) {
   // O padrao do dono, TAL COMO ESCRITO (".", nao ".*"), igual ao que rodava no
   // Nuvio oficial: as quatro condicoes valem no MESMO ponto (um caractere e logo
   // uma palavra), e a unica palavra que as duas listas aceitam ali e "BD-Remux"
-  // (o \b depois de "BD" cai no hifen). Entao so casa "BD-Remux". A exclusao do
-  // oficial nao compila ("?:" vira palavra), por isso o DTS-HD passa.
+  // (o \b depois de "BD" cai no hifen). Entao so casa "BD-Remux", e o DTS-HD logo
+  // depois nao e visto pelo "(?!.(DTS..." (so olha um caractere adiante).
   // Conferido contra o JS de verdade: tests/fonteregra_oficial.sh.
   const char *dono =
     "(?=.\\b(2160p|4K|UHD|1080p|FHD|BD|HD|720p|SDR)\\b)"
