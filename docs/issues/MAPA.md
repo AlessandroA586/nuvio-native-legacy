@@ -120,8 +120,8 @@ Plano de refatoração: `docs/plans/refatoracao-geral.md` (branch `agente/refato
 | 2.0.3 | 0 |  |
 | 2.0.4 | 0 |  |
 | 2.0.5 | 0 |  |
-| 2.0.6 | 40 | #246, #280, #288, #302, #315, #316, #345, #346, #353, #357, #365, #367, #379, #382, #386, #388, #391, #394, #398, #399, #401, #402, #404, #405, #407, #412, #413, #414, #415, #418, #423, #424, #428, #451, #459, #462, #468, #469, #470, #471 |
-| 2.1 | 18 | #250, #306, #313, #337, #349, #366, #374, #393, #397, #403, #406, #420, #434, #436, #457, #458, #460, #461 |
+| 2.0.6 | 41 | #246, #280, #288, #302, #315, #316, #345, #346, #353, #357, #365, #367, #379, #382, #386, #388, #391, #394, #398, #399, #401, #402, #404, #405, #407, #412, #413, #414, #415, #418, #423, #424, #428, #451, #459, #461, #462, #468, #469, #470, #471 |
+| 2.1 | 17 | #250, #306, #313, #337, #349, #366, #374, #393, #397, #403, #406, #420, #434, #436, #457, #458, #460 |
 | 2.2 | 0 |  |
 | futuro | 13 | #135, #260, #304, #342, #347, #348, #389, #396, #437, #438, #450, #466, #467 |
 | nao vamos fazer | 4 | #292, #307, #324, #354 |
@@ -180,13 +180,14 @@ Por status:
 | Status | Qtd |
 |---|---|
 | lancada | 306 |
-| aberta | 54 |
+| aberta | 53 |
 | respondida | 22 |
 | por-desenho | 15 |
 | precisa-log | 13 |
 | fechada-sem-resposta | 6 |
 | fora-do-escopo | 4 |
 | duplicada | 2 |
+| em-andamento | 1 |
 
 Por release (grupo de planejamento):
 
@@ -273,7 +274,7 @@ Notas:
 
 ## Próximo patch proposto (2.0.6)
 
-30 issues.
+31 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -305,6 +306,7 @@ Notas:
 | [#424](https://github.com/iqui27/nuvio-native-legacy/issues/424) | Live tv not loading categories | Android | bug | aberta | - | 2.0.6 | - | sem comentários | triar/reproduzir; falta conserto comprovado |
 | [#451](https://github.com/iqui27/nuvio-native-legacy/issues/451) | Continue watching subtitles not syncing | Samsung .tpk | bug | aberta | - | 2.0.6 | - | autor 10-11 | Pedir versão exata, perfil usado nos dois clientes, uma série/episódio ausente e sequência |
 | [#459](https://github.com/iqui27/nuvio-native-legacy/issues/459) | Send partial playback progress to Simkl | LG | feature | aberta | - | 2.0.6 | - | sem comentários | Implementar Simkl scrobble (dono aprovou 12/10 para 2.0.6, PLANO-ECOSSISTEMA Q4). |
+| [#461](https://github.com/iqui27/nuvio-native-legacy/issues/461) | Top toolbar | Android | feature | em-andamento | - | 2.0.6 | - | nós 10-12 | Ajuste rail ou barra no topo (dono 12/10); job agente/205-menutopo. |
 | [#462](https://github.com/iqui27/nuvio-native-legacy/issues/462) | Samsung .tpk: test build for automatic subtitle sync (Tizen  | Samsung .tpk | meta | aberta | - | 2.0.6 | - | autor 10-12 | Analisar DND12K e comparar 60F3SE/6OF3SE, ZQSHBN e PFQ7Y3 quando logs estiverem disponívei |
 | [#468](https://github.com/iqui27/nuvio-native-legacy/issues/468) | All Jellyfin catalogs do not show in catalogs list | LG | bug | aberta | - | 2.0.6 | - | sem comentários | Pedir log e nomes/quantidade dos catálogos esperados sem endereço/credenciais; obter fixtu |
 
@@ -338,12 +340,13 @@ Notas:
 - **#424**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.
 - **#451**: QN74F Tizen 9, versão apenas Latest: Continue Watching tem uma série contra quatro em outros clientes; autor corrige título e confirma Nuvio sync, sem Trakt/Simkl. src/syncprog.c:syncprog_puxar já importa sync_pull_watch_progress do perfil ativo, normaliza milissegundos e descarta duração inválida; syncprog_aplicar mescla progresso e src/descoberta.c monta a união da conta/local. SUSPEITA: perfil, importação/normalização ou filtros de CW; não ausência geral de sync nem problema de legendas. Sem log nem conserto comprovado deste caso.
 - **#459**: LG 2.0.4, Simkl conectado diretamente: pede enviar progresso parcial ao pausar/sair para retomar em outros apps. src/simkl.c:simkl_ler_playback e simkl_continuar leem pausados; simkl_episodios_marcar/simkl_titulo_marcar enviam histórico de visto. src/player.c chama trakt_scrobble ao tocar/pausar; não há envio Simkl equivalente neste caminho. Leitura de playback e histórico existem, envio incremental Simkl não comprovado. Limite demonstrado do cliente, sem afirmar capacidade atual da API Simkl offline.
+- **#461**: Pede opção de toolbar no topo; mantenedor responde que hoje há menu lateral e relaciona #407. src/menu.c:desenhaBarra/geoEm implementam rail/painel lateral; src/detail.c roteia CIMA para área social e ESQUERDA para menu. Não há opção top toolbar comprovada; barra social no topo não é substituto da navegação principal. Sem bug ou causa a diagnosticar.
 - **#462**: Chamada de teste v2.0.5-legref.1 para AutoSync Tizen 6+, não release estável; Q80A Tizen 6 relata sync, S95C Tizen 9 relata sucesso e crash DND12K com legenda add-on; PFQ7Y3 também informado. src/legref.c:legref_disponivel desliga Samsung salvo NV_LEGREF_TPK e sempre exclui NV_TPK40/web; src/legsync.c coordena coleta de referência/AutoSync. Manual delay existe; habilitação Samsung é canário. SUSPEITA: coleta/concorrência/render de legenda externa no crash; logs não consultados.
 - **#468**: C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato.
 
 ## Futuro (2.1, 2.2, depois)
 
-32 issues.
+31 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -376,7 +379,6 @@ Notas:
 | [#457](https://github.com/iqui27/nuvio-native-legacy/issues/457) | Add an option to show info for preresolved streams in detail | Android | feature | aberta | - | 2.1 | - | sem comentários | Definir quais campos confiáveis do Stream mostrar na ficha e estado sem fonte/sonda penden |
 | [#458](https://github.com/iqui27/nuvio-native-legacy/issues/458) | Check for duplicate sources | all | feature | aberta | - | 2.1 | - | autor 10-12 | Criar caso local com dois provedores retornando mesmo URL/hash+fileIdx; definir identidade |
 | [#460](https://github.com/iqui27/nuvio-native-legacy/issues/460) | Playback buttons for reloading stream and next episode | Android | feature | aberta | - | 2.1 | - | sem comentários | Conferir #403 e definir botões VOD com episódio disponível; reusar encaminhamento de próxi |
-| [#461](https://github.com/iqui27/nuvio-native-legacy/issues/461) | Top toolbar | Android | feature | aberta | - | 2.1 | - | nós 10-12 | Dono definir navegação/foco do D-pad e preferência por layout, junto de #407; prototipar t |
 | [#466](https://github.com/iqui27/nuvio-native-legacy/issues/466) | Incremental watch tracking with watch_state resource | all | feature | aberta | - | futuro | - | sem comentários | Obter contrato documentado em snapshot local; definir adesão por manifesto, dados mínimos, |
 | [#467](https://github.com/iqui27/nuvio-native-legacy/issues/467) | Watch tracking with Anilist | all | feature | aberta | - | futuro | - | sem comentários | Definir autenticação e mapeamento de anime/episódios AniList; comparar implementação diret |
 
@@ -411,7 +413,6 @@ Notas:
 - **#457**: Pede selos DV/HDR10, tamanho, áudio e release group da fonte pré-resolvida na ficha. src/app.c usa stream_antecipada para iniciar a fonte; src/streams.c:montar e src/streams.h já mantêm metadados e exibem fontes/selos na folha. src/detail.c:detail_desenhar desenha ficha do título, não uma opção de resumo de fonte pré-resolvida com todos esses campos. Funcionalidade relacionada existe na folha, não prova entrega do pedido na ficha.
 - **#458**: Relata fontes iguais entre add-ons, repetição no autoplay e aba All; pede deduplicação por prioridade e agregação por qualidade (corpo disponível é trecho). src/streams.c:mesmaFonte inclui provedor, URL, hash, arquivo e rótulo para manter foco entre atualizações, não dedup global; montar já organiza por qualidade ou preserva ordem do add-on. src/fontesmortas.c registra fontes mortas por provedor/identidade. SUSPEITA: tentativas repetidas entre provedores; não reproduzida. Agrupamento existe parcialmente, filtro transversal por prioridade não comprovado.
 - **#460**: Pede botões recarregar fonte e próximo episódio. src/player.c:player_proximo_episodio e player_janela_proximo já suportam próxima mídia e oferta no fim; player_pediu_recarregar/avAtivar (AV_B_RECARREGAR) atendem Live TV, não provam botão VOD recarregar. Episódios/posplay existem; botões VOD sempre acessíveis são ampliação de UI, relacionada a #403.
-- **#461**: Pede opção de toolbar no topo; mantenedor responde que hoje há menu lateral e relaciona #407. src/menu.c:desenhaBarra/geoEm implementam rail/painel lateral; src/detail.c roteia CIMA para área social e ESQUERDA para menu. Não há opção top toolbar comprovada; barra social no topo não é substituto da navegação principal. Sem bug ou causa a diagnosticar.
 - **#466**: Pede resource watch_state para addons receberem eventos incrementais e delegarem tracking a vários provedores. src/addons.c interpreta resources de metadados/fontes/legendas; src/player.c emite eventos Trakt e progresso local/Nuvio via src/syncprog.c, sem despachante watch_state. Referências externas não consultadas (offline). Infraestrutura de tracking existe, contrato/autorização/entrega de eventos ao addon não estão implementados nesse caminho.
 - **#467**: Pede tracking AniList, sem plataforma. src/artereserva.c:anilist consulta arte GraphQL e src/descoberta.c reconhece IDs anilist; isso é metadado/arte, não autenticação ou envio de histórico. src/visto.c:visto_titulo/visto_episodios distribuem visto para provedores existentes, sem destino AniList. Tracking não implementado no caminho lido; sem bug a reproduzir.
 

@@ -9215,7 +9215,7 @@
    "estado_github": "aberta",
    "plataforma": "Android",
    "tipo": "feature",
-   "status": "aberta",
+   "status": "em-andamento",
    "release": "-",
    "conserto": [],
    "ultima_resposta": {
@@ -9224,10 +9224,10 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-12"
    },
-   "proximo_passo": "Dono definir navegação/foco do D-pad e preferência por layout, junto de #407; prototipar troca lateral/topo antes de mexer em todas as telas.",
+   "proximo_passo": "Ajuste rail ou barra no topo (dono 12/10); job agente/205-menutopo.",
    "notas": "Pede opção de toolbar no topo; mantenedor responde que hoje há menu lateral e relaciona #407. src/menu.c:desenhaBarra/geoEm implementam rail/painel lateral; src/detail.c roteia CIMA para área social e ESQUERDA para menu. Não há opção top toolbar comprovada; barra social no topo não é substituto da navegação principal. Sem bug ou causa a diagnosticar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/461",
-   "alvo": "2.1"
+   "alvo": "2.0.6"
   },
   {
    "numero": 462,
