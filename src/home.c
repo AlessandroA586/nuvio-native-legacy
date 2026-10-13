@@ -570,27 +570,13 @@ static int heroTrailerTocando(void);
 // A espera e ajuste; a janela da Apple (NV_TRAILER_HERO_JANELA_MS) conta a
 // partir dela, senao uma espera longa venceria a janela antes de abrir.
 static Uint32 heroTrailerEspera(void) { return ajustes_trailer_hero_espera_ms(); }
-// ONDE O VIDEO FICA DENTRO DO CARTAZ. LG, Android e .wgt: o cartaz inteiro, e o
-// "cover" e de quem toca (trailer_recorte no plano; object-fit no <video>). No
-// .tpk o recorte de fonte esta desligado (#188, #195: ROI fora da tela mostra a
-// tela da Samsung) e o plano em modo Roi ESTICA o quadro no retangulo: aqui o
-// quadro inteiro e encaixado (LetterBox) no cartaz, pelo centro, e o resto do
-// cartaz fica preto. Nunca maior que o cartaz, nunca fora da tela.
+// Destino pedido ao trailer; o furo usa o plano final aplicado em video_tpk.c.
 static GfxRect cartaoVideoRect(GfxRect c) {
 #if defined(NV_TPK) && !defined(__EMSCRIPTEN__)
-  // Sempre, tambem com o zoom experimental (#241) ligado: no cartao o .tpk nao
-  // recorta (trailer_no_cartao), entao o ROI e este retangulo e nada mais.
-  { float asp = (video_largura() > 0 && video_altura() > 0)
-              ? (float)video_largura() / (float)video_altura() : 16.0f / 9.0f;
-    GfxRect v = c;
-    if (c.w / c.h > asp) { v.w = c.h * asp; v.x = c.x + (c.w - v.w) * 0.5f; }
-    else                 { v.h = c.w / asp; v.y = c.y + (c.h - v.h) * 0.5f; }
-    v.x = (float)(int)(v.x + 0.5f); v.y = (float)(int)(v.y + 0.5f);
-    v.w = (float)((int)(v.w + 0.5f) & ~1); v.h = (float)((int)(v.h + 0.5f) & ~1);
-    return v;
-  }
-#endif
+  GfxRect v; video_tpk_cartao_destino(c.x, c.y, c.w, c.h, &v.x, &v.y, &v.w, &v.h); return v;
+#else
   return c;
+#endif
 }
 static Uint32 heroTrailerMaxEspera(void) { return heroTrailerEspera() + NV_TRAILER_HERO_JANELA_MS; }
 
@@ -6233,12 +6219,14 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
           // TRAILER NO CARTAZ (modo No card): o furo arredondado DEPOIS do anel
           // (que fica inteiro, por fora) e ANTES da arte, que sai com 1 - fade
           // por cima — o video entra por baixo dela, como no destaque. No .tpk o
-          // quadro vai encaixado (cartaoVideoRect): o cartaz vira preto e o furo
-          // e so a area do video, para o plano nunca mostrar o que esta atras.
+          // quadro fica encaixado, com barras pretas fora do furo.
           float aArteCard = aArte;
           if (k->trailer > 0.004f) {
             GfxRect v = cartaoVideoRect(card);
-            if (v.x > card.x + 0.5f || v.y > card.y + 0.5f || v.w < card.w - 1.0f || v.h < card.h - 1.0f) {
+#if defined(NV_TPK) && !defined(__EMSCRIPTEN__)
+            video_tpk_cartao_furo(card.x, card.y, card.w, card.h, &v.x, &v.y, &v.w, &v.h);
+#endif
+            if (v.x != card.x || v.y != card.y || v.w != card.w || v.h != card.h) {
               gfx_cor(card, raio, 0.0f, 0.0f, 0.0f, 1.0f);
               gfx_furo(v);
             } else gfx_furo_raio(card, raio);
