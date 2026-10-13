@@ -506,6 +506,15 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeErroTexto(JN
   fflush(stdout);
 }
 
+// #345: keep audio diagnostics in the uploaded app log, not only logcat.
+JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeAudioLog(JNIEnv *env, jclass cls, jstring texto) {
+  char t[512];
+  (void)cls;
+  deJString(env, texto, t, sizeof t);
+  printf("[video] android audio: %s\n", t);
+  fflush(stdout);
+}
+
 JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeHdr(JNIEnv *env, jclass cls, jstring hdr, jint dv, jint atmos) {
   char h[24];
   (void)cls;
