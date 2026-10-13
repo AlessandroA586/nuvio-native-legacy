@@ -75,6 +75,10 @@ reads the converted stream from a local HTTP server inside the app
 for byte; DTS decodes the core, TrueHD its 5.1 presentation, output AC3 5.1 at
 640 kb/s (stereo sources 2.0). Delivery (HLS / progressive TS, MKV, MP4, loopback
 or LAN address) and HTTP body framing are test settings until the S95C decides.
+MKV sources decide from their track header; MP4 sources (announced as MP4, VOD)
+are probed by the converter beside the original, which keeps playing until a
+DTS/TrueHD track is found. HLS needs the keyframe index to reach the end of the
+file: an MKV without Cues switches to the continuous TS, which seeks by time.
 Design, findings and the TV checklist: `docs/plans/dts-truehd-ac3-tizen-DESIGN.md`
 and the hand-off notes in `docs/plans/dts-truehd-ac3-tizen.md`.
 

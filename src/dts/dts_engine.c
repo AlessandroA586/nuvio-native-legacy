@@ -547,6 +547,16 @@ int dts_engine_open_demux(DtsEngine *e,const char *url,const char *headers) {
   av_dict_set(&opts,"probesize","1048576",0);
   int r=avformat_open_input(&e->fmt,NULL,NULL,&opts); av_dict_free(&opts);
   if(r<0) return fail(e,"Container open",r);
+  if(e->fmt->duration==AV_NOPTS_VALUE || e->fmt->duration<=0) {
+    /* MOV fills only the stream durations (the container's comes from
+     * find_stream_info, which this path skips because it reads packets). */
+    int64_t d=0;
+    for(unsigned i=0;i<e->fmt->nb_streams;i++) {
+      AVStream *s=e->fmt->streams[i];
+      if(s->duration>0) { int64_t v=av_rescale_q(s->duration,s->time_base,AV_TIME_BASE_Q); if(v>d) d=v; }
+    }
+    if(d>0) e->fmt->duration=d;
+  }
   if(e->fmt->duration==AV_NOPTS_VALUE || e->fmt->duration<=0)
     return fail(e,"Finite VOD duration required",0);
   e->info.duration_ns=av_rescale_q(e->fmt->duration,AV_TIME_BASE_Q,NS);

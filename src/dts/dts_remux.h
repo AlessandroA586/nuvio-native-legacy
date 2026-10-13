@@ -26,6 +26,8 @@ typedef struct {
   char out_codec[8];           /* "ac3" or "aac" */
   char decoder_path[40];       /* "DTS core only", "TrueHD 5.1 presentation", ... */
   int n_keyframes, n_segments;
+  int index_complete;          /* the keyframe index reaches the end (HLS needs it): no
+                                * Matroska Cues, or a fragmented MP4 without one, = 0 */
   double max_segment_s;
   int64_t size_bytes;          /* -1 while unknown */
   int mp4;                     /* source container is MP4/MOV */

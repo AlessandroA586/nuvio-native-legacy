@@ -49,6 +49,9 @@ int  dts_tpk_modo(void);                 /* mode of the session, -1 none */
  * player counts from there). -1 until the stream's request has started. */
 double dts_tpk_inicio_stream(void);
 const char *dts_tpk_caminho(void);       /* decoder path, e.g. "DTS core only" */
+/* 1 when the session FAILED because HLS needs a keyframe index the source
+ * lacks (MKV without Cues): a progressive mode can still play it. */
+int  dts_tpk_sem_indice(void);
 int  dts_tpk_e_url(const char *url);     /* is this a URL of this server */
 
 /* LAN log endpoint (no `sdb shell` on retail TVs): started on first call;

@@ -85,6 +85,7 @@ double dts_remux_gen_start_s(const DtsRemuxGen *g) { (void)g; return 0; }
 #define VQ_MAX_BYTES (192u << 20)
 #define ENGINES_MAX 8
 #define UNSET INT64_MIN
+#define GRID_LAZY (INT64_MIN + 1) /* b48: the grid starts at the first audio (seek by time) */
 
 static double now_s(clockid_t c) {
   struct timespec t;
@@ -167,6 +168,7 @@ struct DtsRemuxGen {
   AVPacket *pk, *op;
   int frame;                        /* encoder frame size (1536 AC3, 1024 AAC) */
   int64_t grid;                     /* 48 kHz position of the next fifo sample */
+  int gridLazy;                     /* grid not known yet: set by the first audio placed */
   int64_t lo, hi, cum, off, win;    /* audio anchor, source-rate samples */
   int warm, decoderLogged, layoutWarned;
   long badAudio;
@@ -365,6 +367,10 @@ DtsRemux *dts_remux_open(const char *url, const char *headers, int ordinal, int 
       r->nkf = u;
     }
     in->n_keyframes = r->nkf;
+    /* A GOP is seconds long: an index whose last keyframe is a minute before
+     * the end does not cover the file (partial Cues, fragmented MP4 indexed
+     * only as far as the probe read). The playlist would end there. */
+    in->index_complete = r->nkf > 0 && r->kf[r->nkf - 1] * av_q2d(r->vtb) >= r->endS - 60.0;
     buildSegments(r, segTarget > 0.5 ? segTarget : 6.0);
     in->n_segments = r->nseg;
     in->size_bytes = dts_engine_size(r->probe);
@@ -394,6 +400,7 @@ int dts_remux_segment_at(const DtsRemux *r, double t) {
 double dts_remux_keyframe_before(const DtsRemux *r, double t) {
   if (!r || r->nkf < 1) return t;
   int64_t want = av_rescale_q((int64_t)llround(t * 1000.0), (AVRational){1, 1000}, r->vtb);
+  if (!r->info.index_complete && want > r->kf[r->nkf - 1]) return t;   /* seek by time (gen_run) */
   int k = floorIdx(r->kf, r->nkf, want);
   double s = (k >= 0 ? r->kf[k] : r->kf[0]) * av_q2d(r->vtb);
   return s < 0 ? 0 : s;
@@ -656,6 +663,13 @@ static int fifoSilence(DtsRemuxGen *g, int64_t n) {
  * overlap trimmed, holes padded (a long hole skips ahead on the grid). */
 static int place(DtsRemuxGen *g, uint8_t **buf, int n, int64_t p, char *err, size_t errn) {
   int ch = g->src->info.out_channels, skip = 0;
+  if (g->gridLazy) {
+    /* Seek by time (no index there): the keyframe the demuxer found is not
+     * known in advance, so the grid starts on the first audio after it. */
+    g->gridLazy = 0;
+    g->grid = (p / g->frame) * g->frame;
+    if (g->grid < 0) g->grid = 0;
+  }
   int64_t end = g->grid + av_audio_fifo_size(g->fifo);
   if (p + n <= end) return 0;
   if (p < end) skip = (int)(end - p);
@@ -876,6 +890,7 @@ static int freshStart(DtsRemuxGen *g, int64_t kf, int64_t b48, char *err, size_t
   closeMux(g, 0);
   if (resetAudio(g, err, errn) < 0) return -1;
   g->demuxEof = 0; g->vseg = -1; g->vstarted = 0; g->lastDts = UNSET; g->nextSeg = -1;
+  g->gridLazy = b48 == GRID_LAZY;
   if (b48 == UNSET || b48 <= 0) g->grid = 0;
   else {
     int64_t g0 = (b48 / g->frame) * g->frame - (int64_t)PREROLL * g->frame;
@@ -956,11 +971,16 @@ int dts_remux_gen_run(DtsRemuxGen *g, int seg, double startS, const char *fmt,
   } else {
     int64_t want = av_rescale_q((int64_t)llround(startS * 1000.0), (AVRational){1, 1000}, r->vtb);
     int k = r->nkf > 0 ? floorIdx(r->kf, r->nkf, want) : -1;
-    int64_t kf = k >= 0 ? r->kf[k] : (r->nkf > 0 ? r->kf[0] : want);
+    /* Past the end of an incomplete index (MKV without Cues): seek by time; the
+     * demuxer reads on to the keyframe at or before `want`. */
+    int pastIdx = !r->info.index_complete && (r->nkf < 1 || want > r->kf[r->nkf - 1]);
+    int64_t kf = pastIdx ? want : k >= 0 ? r->kf[k] : (r->nkf > 0 ? r->kf[0] : want);
     fresh = 1; g->prog = 1; target = 0;
     st->fresh = 1;
-    g->progKf = kf; g->progStartS = kf * av_q2d(r->vtb);
-    g->progB48 = startS <= 0.05 ? UNSET : llround(g->progStartS * 48000.0);
+    /* By time, the keyframe the demuxer lands on (at or before `want`) is
+     * not known here: every one after the seek counts. */
+    g->progKf = pastIdx ? INT64_MIN : kf; g->progStartS = kf * av_q2d(r->vtb);
+    g->progB48 = startS <= 0.05 ? UNSET : pastIdx ? GRID_LAZY : llround(g->progStartS * 48000.0);
     if (g->progStartS < 0) g->progStartS = 0;
     if (freshStart(g, kf, g->progB48, err, errn) < 0) { rr = -1; goto out; }
     if (openMux(g, fmt && *fmt ? fmt : "mpegts", err, errn) < 0) { rr = g->wfail ? -2 : -1; goto out; }

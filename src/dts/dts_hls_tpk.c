@@ -36,6 +36,7 @@ double dts_tpk_duracao(void) { return 0; }
 int dts_tpk_modo(void) { return -1; }
 double dts_tpk_inicio_stream(void) { return -1; }
 const char *dts_tpk_caminho(void) { return ""; }
+int dts_tpk_sem_indice(void) { return 0; }
 int dts_tpk_e_url(const char *u) { (void)u; return 0; }
 int dts_tpk_registro_rede(char *u, size_t n) { (void)u; if (n) u[0] = 0; return 0; }
 #else
@@ -254,7 +255,7 @@ typedef struct Sessao {
   pthread_mutex_t m;
   pthread_cond_t c;
   int refs;                       // sob a trava global
-  int estado;
+  int estado, semIndice;
   char erro[160], caminho[40];
   double duracao;
   DtsRemux *rx;
@@ -327,7 +328,12 @@ static void *fioSonda(void *u) {
   pthread_mutex_lock(&s->m);
   if (s->cancelar) { if (rx) dts_remux_close(rx); rx = NULL; s->estado = DTSTPK_FALHOU; snprintf(s->erro, sizeof s->erro, "cancelled"); }
   else if (!rx) { s->estado = DTSTPK_FALHOU; snprintf(s->erro, sizeof s->erro, "%s", err[0] ? err : "probe failed"); }
-  else {
+  else if ((s->modo == DTSTPK_HLS || s->modo == DTSTPK_HLS_LAN) && (in->n_segments < 1 || !in->index_complete)) {
+    // HLS precisa do indice inteiro (a playlist sai dele): sem Cues nao ha HLS.
+    // video_tpk.c refaz no TS continuo, que busca por tempo.
+    s->estado = DTSTPK_FALHOU; s->semIndice = 1;
+    snprintf(s->erro, sizeof s->erro, "no keyframe index to the end (no Cues): HLS impossible");
+  } else {
     s->rx = rx; s->estado = DTSTPK_PRONTO; s->duracao = in->duration_s;
     snprintf(s->caminho, sizeof s->caminho, "%s", in->decoder_path);
   }
@@ -341,8 +347,11 @@ static void *fioSonda(void *u) {
            in->in_rate, in->out_codec, in->out_channels, in->out_bitrate / 1000, in->decoder_path, in->n_keyframes,
            in->n_segments, in->max_segment_s, in->duration_s, in->size_bytes > 0 ? in->size_bytes / 1048576.0 : -1.0,
            (unsigned)(s->prontaMs - s->criadaMs));
-    if (in->n_segments == 0 && (s->modo == DTSTPK_HLS || s->modo == DTSTPK_HLS_LAN))
-      printf("[dts-tpk] sessao %u: fonte sem indice de quadros-chave (sem Cues): HLS impossivel\n", s->id);
+    if (s->semIndice) {
+      printf("[dts-tpk] sessao %u: indice de quadros-chave %s (sem Cues): HLS impossivel\n", s->id,
+             in->n_keyframes ? "nao chega ao fim" : "ausente");
+      dts_remux_close(rx);             // a sessao nao ficou com ele
+    }
   } else if (!s->cancelar)
     printf("[dts-tpk] sessao %u: a fonte nao abriu no conversor: %s (%u ms)\n", s->id, s->erro,
            (unsigned)(s->prontaMs - s->criadaMs));
@@ -358,9 +367,17 @@ static int esperarPronta(Sessao *s, int sock, int manter) {
   pthread_mutex_lock(&s->m);
   while (s->estado == DTSTPK_SONDANDO && !s->cancelar)
     if (pthread_cond_timedwait(&s->c, &s->m, &ts) == ETIMEDOUT) break;
-  int ok = s->estado == DTSTPK_PRONTO && !s->cancelar;
+  // HLS sem indice: o app refaz no TS continuo e fecha esta sessao. O player
+  // fica sem resposta ate la (um 503 viraria erro do player, que chega depois
+  // da troca e derrubaria o fluxo novo).
+  if (s->semIndice) {
+    prazoEm(&ts, 15000);
+    while (!s->cancelar)
+      if (pthread_cond_timedwait(&s->c, &s->m, &ts) == ETIMEDOUT) break;
+  }
+  int ok = s->estado == DTSTPK_PRONTO && !s->cancelar, calar = s->semIndice && s->cancelar;
   pthread_mutex_unlock(&s->m);
-  if (!ok) responderSimples(sock, 503, "Service Unavailable", NULL, "converter not ready\n", manter);
+  if (!ok && !calar) responderSimples(sock, 503, "Service Unavailable", NULL, "converter not ready\n", manter);
   return ok;
 }
 
@@ -655,7 +672,8 @@ static int atenderPedido(int sock, const Pedido *pd, int manter) {
   fflush(stdout);
   int r = 0;
   if (!esperarPronta(s, sock, manter)) {
-    printf("[dts-tpk] #%u <- 503: %s\n", nr, s->erro[0] ? s->erro : "not ready");
+    if (s->semIndice) printf("[dts-tpk] #%u <- sem resposta: sem indice para o HLS, o app troca para o TS continuo\n", nr);
+    else printf("[dts-tpk] #%u <- 503: %s\n", nr, s->erro[0] ? s->erro : "not ready");
     fflush(stdout);
   } else if (!strcmp(resto, "v.m3u8")) {
     if (dts_remux_info(s->rx)->n_segments < 1) {
@@ -891,6 +909,7 @@ const char *dts_tpk_erro(void) {
   pthread_mutex_unlock(&G);
   return b;
 }
+int dts_tpk_sem_indice(void) { LER_ATUAL(int, semIndice, 0) }
 const char *dts_tpk_caminho(void) {
   static char b[40];
   b[0] = 0;
