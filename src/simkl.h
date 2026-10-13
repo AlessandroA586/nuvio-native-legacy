@@ -157,20 +157,22 @@ int simkl_titulo_marcar(const char *imdb, const char *tipo, const int *temporada
 
 // --- scrobble do player (#459) ------------------------------------------------
 
-// Mesma interface e mesma decisao de trakt_scrobble (traktscrobble.h): `evento`
+// Mesma interface de trakt_scrobble (traktscrobble.h), decisao Simkl: `evento`
 // e SCR_EV_*, `id` e "tt123" (filme) ou "tt123:T:E" (episodio), e a posicao,
 // a duracao e o assistido sao em segundos. Manda /scrobble/start|pause|stop com
 // a porcentagem, num fio (nunca bloqueia o desenho). Devolve a acao decidida
-// (SCR_*); SCR_NADA sem vinculo, com id que nao e IMDb, ou com a guarda do
-// Trakt recusando. 401 desfaz o vinculo do perfil; 429/5xx/400 RATE_LIMIT
-// abrem uma janela de espera (30 s, dobra ate 5 min) sem retry. Um STOP que
-// nao chega cai em simkl_*_marcar, entao o "visto" nao se perde.
+// (SCR_*); SCR_NADA sem vinculo, com id que nao e IMDb ou sem prova de
+// reproducao. Pause aceita 80-90% sem visto. 401 desfaz o vinculo do perfil;
+// 429/5xx/400 RATE_LIMIT abrem espera (30 s, dobra ate 5 min). Um STOP que
+// nao chega cai em simkl_*_marcar; fica em disco ate confirmacao para retry.
 int simkl_scrobble(int evento, const char *id, double posSeg, double durSeg,
                    double assistidoSeg, int assistiu);
 // 1 quando o fio de envio nao tem nada pendente nem em voo (para o teste).
 int simkl_scrobble_ocioso(void);
-// Espera ate `ms` o fio de envio esvaziar: o app fecha em seguida e o fio e
-// detached, entao um stop em voo (o visto) morreria com o processo.
+// Retoma stops persistidos do vinculo atual, no maximo uma tentativa a cada
+// 30 s. Chamar do laco principal sem player aberto; rede continua no fio.
+void simkl_scrobble_retentar(void);
+// Espera ate `ms` o fio esvaziar. Stops sem resposta sobrevivem em disco.
 void simkl_scrobble_drenar(unsigned ms);
 
 // Esquece caches, tabelas e o estado do scrobble (logout, troca de perfil,

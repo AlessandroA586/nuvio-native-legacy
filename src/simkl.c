@@ -11,6 +11,7 @@
 #include "trakt.h"
 #include "traktscrobble.h"
 #include "artemetahub.h"
+#include "dados.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -952,9 +953,9 @@ int simkl_playback_remover(const char *imdb) {
 
 // ------------------------------------------------------------ scrobble (#459)
 //
-// O mesmo desenho de trakt_scrobble: a decisao (start/pause/stop) e o corpo
-// moram em traktscrobble.c — o JSON do Simkl e o do Trakt — e um fio unico com
-// uma vaga PENDENTE manda a chamada, entao pausar repetido nao empilha pedido.
+// O corpo e compartilhado com Trakt; a decisao e propria: Simkl permite
+// pause entre 80 e 90% sem marcar visto. Um fio unico com uma vaga PENDENTE
+// manda a chamada, entao pausar repetido nao empilha pedido.
 // Rotas e limites: api.simkl.org/api-reference/simkl/scrobble-*. Pontos que
 // mudam o desenho:
 //   - 1 POST/s por usuario: o fio espera SMK_SCR_ESPACO_MS entre dois;
@@ -971,10 +972,16 @@ int simkl_playback_remover(const char *imdb) {
 
 static pthread_mutex_t travaScr = PTHREAD_MUTEX_INITIALIZER;
 static ScrobbleEstado scrEstado;
-static struct { int acao; char id[64]; double pct; int tem; } scrPend;
+typedef struct {
+  int acao, tem;
+  char id[64], jornal[64];
+  double pct;
+  unsigned long long cred, ger;
+} ScrPedido;
+static ScrPedido scrPend;
 static int scrFioVivo;
 // Janela de espera e espaco entre POSTs, sob travaScr. scrGer muda a cada zerar.
-static unsigned long long scrLivreMs, scrUltimoMs, scrGer;
+static unsigned long long scrLivreMs, scrUltimoMs, scrGer, scrRetentarMs;
 static int scrFalhas;
 
 static unsigned long long agoraMs(void) {
@@ -994,18 +1001,47 @@ static int idScrobble(const char *id, int *t, int *e) {
   return sscanf(dp + 1, "%d:%d", t, e) == 2 && *t > 0 && *e > 0;
 }
 
-// O stop que nao chegou ao Simkl cai no historico: o visto nao se perde.
-static void scrobbleCairNoHistorico(const char *id) {
+// Apenas ids no disco, separados por vinculo (assinatura estavel do token).
+// Nao persiste credenciais, e outra conta/perfil nao retoma este jornal.
+static void scrobbleJornalNome(char *dst, size_t tam, const char *tk) {
+  unsigned long long h = 14695981039346656037ULL;
+  for (; *tk; tk++) h = (h ^ (unsigned char)*tk) * 1099511628211ULL;
+  snprintf(dst, tam, "simkl-vistos-%016llx.txt", h);
+}
+
+// Sob travaScr. Preserva todos os stops sem resposta, inclusive de outros ids.
+static int scrobbleJornal(const char *nome, const char *id, int adicionar) {
+  char *b = dados_ler(nome), *p, *fim, *novo;
+  size_t n = b ? strlen(b) : 0, u = 0;
+  int ok;
+  novo = malloc(n + strlen(id) + 2);
+  if (!novo) { free(b); return 0; }
+  for (p = b; p && *p; p = fim ? fim + 1 : NULL) {
+    size_t k;
+    fim = strchr(p, '\n');
+    k = fim ? (size_t)(fim - p) : strlen(p);
+    if (k == strlen(id) && !strncmp(p, id, k)) continue;
+    memcpy(novo + u, p, k); u += k; novo[u++] = '\n';
+  }
+  if (adicionar) { strcpy(novo + u, id); u += strlen(id); novo[u++] = '\n'; }
+  novo[u] = 0;
+  ok = u ? dados_gravar(nome, novo) : dados_apagar(nome);
+  free(novo); free(b);
+  return ok;
+}
+
+// O stop que nao chegou ao Simkl cai no historico; falha fica no jornal.
+static int scrobbleCairNoHistorico(const char *id) {
   int t, e;
-  if (!idScrobble(id, &t, &e)) return;
+  if (!idScrobble(id, &t, &e)) return 0;
   if (t > 0) {
     VistoPar par;
     char base[24];
     par.temporada = (short)t; par.episodio = (short)e;
-    if (baseImdb(id, base, sizeof base)) simkl_episodios_marcar(base, &par, 1, 1);
-  } else {
-    simkl_titulo_marcar(id, "movie", NULL, 0, 1);
+    if (baseImdb(id, base, sizeof base)) return simkl_episodios_marcar(base, &par, 1, 1);
+    return 0;
   }
+  return simkl_titulo_marcar(id, "movie", NULL, 0, 1);
 }
 
 // Zera a maquina de decisao e a janela de espera: logout e troca de perfil nao
@@ -1017,11 +1053,15 @@ static void scrobbleZerar(void) {
   scrPend.tem = 0;
   scrLivreMs = 0;
   scrFalhas = 0;
+  scrRetentarMs = 0;
   scrGer++;
   pthread_mutex_unlock(&travaScr);
 }
 
-static void scrobbleEnviar(int acao, const char *id, double pct) {
+static void scrobbleEnviar(const ScrPedido *p) {
+  int acao = p->acao;
+  const char *id = p->id;
+  double pct = p->pct;
   char caminho[32], corpo[400], tk[400], *r;
   int st = 0, ok, espera = 0;
   unsigned long long agora = agoraMs(), cred, ger, livre, ultimo;
@@ -1031,18 +1071,31 @@ static void scrobbleEnviar(int acao, const char *id, double pct) {
   pthread_mutex_lock(&travaScr);
   ger = scrGer; livre = scrLivreMs; ultimo = scrUltimoMs;
   pthread_mutex_unlock(&travaScr);
+  if (ger != p->ger || cred != p->cred) { memset(tk, 0, sizeof tk); return; }
   if (!tk[0]) return;   // desvinculado no meio do voo: sem chamada nem janela
   if (agora < livre) {
     // Janela aberta por 429/5xx: nada sai, nem retry. O stop ainda tenta o
     // historico (o que o app fazia antes do scrobble existir).
     printf("[simkl] scrobble %s %s: em espera, descartado\n", scrobble_nome(acao), id);
     fflush(stdout);
-    if (acao == SCR_STOP) scrobbleCairNoHistorico(id);
+    if (acao == SCR_STOP && scrobbleCairNoHistorico(id)) {
+      pthread_mutex_lock(&travaScr);
+      scrobbleJornal(p->jornal, id, 0);
+      pthread_mutex_unlock(&travaScr);
+    }
     memset(tk, 0, sizeof tk);
     return;
   }
   if (ultimo && agora - ultimo < SMK_SCR_ESPACO_MS)
     usleep((useconds_t)(SMK_SCR_ESPACO_MS - (agora - ultimo)) * 1000u);
+  // Logout/troca de perfil durante o intervalo cancela antes de qualquer POST.
+  pthread_mutex_lock(&travaScr);
+  ok = ger == scrGer;
+  pthread_mutex_unlock(&travaScr);
+  if (!ok || cred != simklauth_credencial_copiar(NULL, 0)) {
+    memset(tk, 0, sizeof tk);
+    return;
+  }
   scrobble_corpo(corpo, sizeof corpo, id, pct);
   snprintf(caminho, sizeof caminho, "/scrobble/%s", scrobble_nome(acao));
   r = pedirComToken('P', caminho, NULL, corpo, &st, tk);
@@ -1087,22 +1140,23 @@ static void scrobbleEnviar(int acao, const char *id, double pct) {
   }
   pthread_mutex_unlock(&travaScr);
   free(r);
-  if (!ok && acao == SCR_STOP) scrobbleCairNoHistorico(id);
+  if (acao == SCR_STOP && (ok || scrobbleCairNoHistorico(id))) {
+    pthread_mutex_lock(&travaScr);
+    scrobbleJornal(p->jornal, id, 0);
+    pthread_mutex_unlock(&travaScr);
+  }
 }
 
 static void *fioScrobble(void *u) {
   (void)u;
   for (;;) {
-    int acao;
-    char id[64];
-    double pct;
+    ScrPedido pedido;
     pthread_mutex_lock(&travaScr);
     if (!scrPend.tem) { scrFioVivo = 0; pthread_mutex_unlock(&travaScr); return NULL; }
-    acao = scrPend.acao; pct = scrPend.pct;
-    snprintf(id, sizeof id, "%s", scrPend.id);
+    pedido = scrPend;
     scrPend.tem = 0;
     pthread_mutex_unlock(&travaScr);
-    scrobbleEnviar(acao, id, pct);
+    scrobbleEnviar(&pedido);
   }
 }
 
@@ -1115,9 +1169,33 @@ static int scrobbleRecusar(int evento) {
   return SCR_NADA;
 }
 
+static int scrobbleDecidir(int evento, const char *id, double pct) {
+  int mesmo = !strcmp(scrEstado.id, id);
+  if (evento == SCR_EV_TOCANDO) {
+    if (scrEstado.ativo && mesmo) return SCR_NADA;
+    snprintf(scrEstado.id, sizeof scrEstado.id, "%s", id);
+    scrEstado.ativo = 1;
+    return SCR_START;
+  }
+  if (evento == SCR_EV_PAUSOU) {
+    if (!scrEstado.ativo || !mesmo) return SCR_NADA;
+    scrEstado.ativo = 0;
+    return pct >= 1.0 ? SCR_PAUSE : SCR_NADA;
+  }
+  if (evento == SCR_EV_SAIU) {
+    snprintf(scrEstado.id, sizeof scrEstado.id, "%s", id);
+    scrEstado.ativo = 0;
+    if (pct >= 90.0) return SCR_STOP;
+    return pct >= 1.0 ? SCR_PAUSE : SCR_NADA;
+  }
+  return SCR_NADA;
+}
+
 int simkl_scrobble(int evento, const char *id, double posSeg, double durSeg, double assistidoSeg,
                    int assistiu) {
   int acao, t, e;
+  char tk[400];
+  ScrPedido pedido = {0};
   double pct;
   pthread_t th;
   if (!simkl_ativo() || !nuvem_simkl_cliente()[0] || !id || !idScrobble(id, &t, &e) ||
@@ -1134,10 +1212,20 @@ int simkl_scrobble(int evento, const char *id, double posSeg, double durSeg, dou
     pthread_mutex_unlock(&travaScr);
     return SCR_NADA;
   }
-  acao = scrobble_decidir(&scrEstado, evento, id, pct);
+  acao = scrobbleDecidir(evento, id, pct);
   if (acao != SCR_NADA) {
-    scrPend.acao = acao; scrPend.pct = pct; scrPend.tem = 1;
-    snprintf(scrPend.id, sizeof scrPend.id, "%s", id);
+    pedido.cred = simklauth_credencial_copiar(tk, sizeof tk);
+    pedido.ger = scrGer;
+    scrobbleJornalNome(pedido.jornal, sizeof pedido.jornal, tk);
+    memset(tk, 0, sizeof tk);
+    // Antes do fio: a saida pode matar o POST de 20 s depois da drenagem de 3 s.
+    if (acao == SCR_STOP && !scrobbleJornal(pedido.jornal, id, 1)) {
+      pthread_mutex_unlock(&travaScr);
+      return SCR_NADA;
+    }
+    pedido.acao = acao; pedido.pct = pct; pedido.tem = 1;
+    snprintf(pedido.id, sizeof pedido.id, "%s", id);
+    scrPend = pedido;
     if (!scrFioVivo) {
       scrFioVivo = 1;
       if (pthread_create(&th, NULL, fioScrobble, NULL) != 0) {
@@ -1149,6 +1237,25 @@ int simkl_scrobble(int evento, const char *id, double posSeg, double durSeg, dou
   }
   pthread_mutex_unlock(&travaScr);
   return acao;
+}
+
+void simkl_scrobble_retentar(void) {
+  char tk[400], nome[64], id[64], *b;
+  unsigned long long cred = simklauth_credencial_copiar(tk, sizeof tk);
+  unsigned long long agora = agoraMs();
+  if (!tk[0]) return;
+  scrobbleJornalNome(nome, sizeof nome, tk);
+  memset(tk, 0, sizeof tk);
+  pthread_mutex_lock(&travaScr);
+  if (scrFioVivo || agora < scrRetentarMs) { pthread_mutex_unlock(&travaScr); return; }
+  scrRetentarMs = agora + 30000;
+  b = dados_ler(nome);
+  id[0] = 0;
+  if (b) sscanf(b, "%63s", id);
+  free(b);
+  pthread_mutex_unlock(&travaScr);
+  if (id[0] && cred == simklauth_credencial_copiar(NULL, 0))
+    simkl_scrobble(SCR_EV_SAIU, id, 1000, 1000, 1000, 1);
 }
 
 void simkl_scrobble_drenar(unsigned ms) {

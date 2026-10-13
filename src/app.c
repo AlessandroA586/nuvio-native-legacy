@@ -3166,6 +3166,7 @@ void app_atualizar(float dt, Uint32 agora) {
   // integer compare per frame, no network here.
   if (servidores_passo()) desc_repetir_silencioso();
   simklauth_passo((unsigned)agora);
+  if (!player_aberto()) simkl_scrobble_retentar();
 
   if (tela == TELA_ESCOLHA_PERFIL) {
     sync_passo((unsigned)agora);
@@ -5630,7 +5631,7 @@ void app_encerrar(void) {
   }
   aguardandoFonte = 0;
   player_encerrar();
-  simkl_scrobble_drenar(3000);   // o stop da saida vai num fio detached
+  simkl_scrobble_drenar(3000);   // stop sem resposta fica em disco para retry
   legsync_destruir();   // F05: join dos fios do AutoSync, depois do player
   discord_encerrar();   // a atividade some na hora, sem esperar o Discord notar a queda
   video_encerrar();    // solta o nome LS2 antes do processo sumir (deploy mata sem aviso)

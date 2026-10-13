@@ -20,6 +20,35 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <sys/wait.h>
+
+static char disco[256];
+char *dados_ler(const char *nome) {
+  char caminho[512], buf[8192];
+  FILE *f;
+  size_t n;
+  snprintf(caminho, sizeof caminho, "%s/%s", disco, nome);
+  f = fopen(caminho, "r");
+  if (!f) return NULL;
+  n = fread(buf, 1, sizeof buf - 1, f);
+  fclose(f); buf[n] = 0;
+  return strdup(buf);
+}
+int dados_gravar(const char *nome, const char *buf) {
+  char caminho[512];
+  FILE *f;
+  snprintf(caminho, sizeof caminho, "%s/%s", disco, nome);
+  f = fopen(caminho, "w");
+  if (!f) return 0;
+  fputs(buf, f);
+  return fclose(f) == 0;
+}
+int dados_apagar(const char *nome) {
+  char caminho[512];
+  snprintf(caminho, sizeof caminho, "%s/%s", disco, nome);
+  return unlink(caminho) == 0;
+}
 
 #define TOKEN "TOKEN-SIMKL-SEGREDO-459"
 #define OK(s) fprintf(stderr, "ok  %s\n", s)
@@ -62,8 +91,22 @@ static int nScr, nHist;                 // /scrobble/* e /sync/history
 static char ultimaRota[64], ultimoCorpo[400], ultimaUrl[700];
 static int semBearer;
 static int stScr = 200;                 // status devolvido por /scrobble/*
+static int stHist = 200;
 static const char *corpoScr = "{\"id\":1}";
 static void (*duranteScr)(void);        // roda dentro do POST /scrobble/*
+static int logoutNaEspera;
+
+// So simkl.c e compilado com usleep redirecionado: o logout ocorre exatamente
+// na espera entre POSTs, sem depender da velocidade do escalonador.
+int simkl_teste_usleep(useconds_t us) {
+  if (logoutNaEspera && us > 1000000) {
+    if (logoutNaEspera != 2) { tokenAtual = ""; credGeracao++; }
+    if (logoutNaEspera != 3) simkl_esquecer();
+    logoutNaEspera = 0;
+    return 0;
+  }
+  return usleep(us);
+}
 
 char *rede_postar_st(const char *url, int s, const char *const *cab,
                      const char *corpo, int *st) {
@@ -92,7 +135,7 @@ char *rede_postar_st(const char *url, int s, const char *const *cab,
     return strdup(corpoScr);
   }
   if (!strcmp(ultimaRota, "/sync/history")) nHist++;
-  *st = 200;
+  *st = stHist;
   return strdup("{\"added\":{},\"not_found\":{\"movies\":[],\"shows\":[]}}");
 }
 
@@ -315,7 +358,86 @@ static void esquecerZeraEstado(void) {
   OK("esquecer zera o start em pe e a janela de espera");
 }
 
-int main(void) {
+static void pausaAntesDeConcluir(void) {
+  const double pontos[] = { 80, 85, 89.99 };
+  unsigned i;
+  tokenAtual = TOKEN;
+  for (i = 0; i < sizeof pontos / sizeof pontos[0]; i++) {
+    assert(mandar(SCR_EV_TOCANDO, "tt7000001", 300, 3000, 300, 0) == SCR_START);
+    assert(mandar(SCR_EV_PAUSOU, "tt7000001", pontos[i] * 30, 3000, 2400, 0) == SCR_PAUSE);
+    assert(nScr == 1 && nHist == 0 && !strcmp(ultimaRota, "/scrobble/pause"));
+    assert(mandar(SCR_EV_SAIU, "tt7000001", pontos[i] * 30, 3000, 2400, 0) == SCR_PAUSE);
+    assert(nScr == 1 && nHist == 0 && !strcmp(ultimaRota, "/scrobble/pause"));
+  }
+  OK("P2: pause entre 80 e 90% salva retomada sem marcar visto");
+}
+
+static void logoutDuranteEspera(void) {
+  int modo;
+  for (modo = 1; modo <= 3; modo++) {
+    tokenAtual = TOKEN;
+    assert(mandar(SCR_EV_TOCANDO, "tt7000002", 300, 3000, 300, 0) == SCR_START);
+    logoutNaEspera = modo;   // ambos, so geracao, so credencial
+    assert(mandar(SCR_EV_PAUSOU, "tt7000002", 600, 3000, 600, 0) == SCR_PAUSE);
+    assert(!logoutNaEspera);
+    assert(nScr == 0 && nHist == 0);
+  }
+  OK("P2: logout, geracao e credencial revalidados depois da espera");
+}
+
+static void redeLenta(void) { usleep(4000000); }
+static void vistoSobreviveSaida(void) {
+  pid_t filho = fork();
+  int status, achou = 0;
+  DIR *d;
+  struct dirent *ent;
+  assert(filho >= 0);
+  if (!filho) {
+    tokenAtual = TOKEN;
+    duranteScr = redeLenta;
+    assert(simkl_scrobble(SCR_EV_SAIU, "tt7000003:2:4", 3000, 3000, 2800, 1) == SCR_STOP);
+    simkl_scrobble_drenar(3000);
+    assert(!simkl_scrobble_ocioso());
+    _exit(0);   // o fio e morto ANTES da resposta e do fallback
+  }
+  assert(waitpid(filho, &status, 0) == filho && WIFEXITED(status) && !WEXITSTATUS(status));
+  d = opendir(disco); assert(d);
+  while ((ent = readdir(d))) {
+    char *buf;
+    if (strncmp(ent->d_name, "simkl-vistos-", 13)) continue;
+    buf = dados_ler(ent->d_name);
+    assert(!buf || !strstr(buf, TOKEN));
+    if (buf && strstr(buf, "tt7000003:2:4")) achou = 1;
+    free(buf);
+  }
+  closedir(d);
+  assert(achou);
+  tokenAtual = "OUTRO-VINCULO"; credGeracao++;
+  simkl_esquecer();
+  posts = 0;
+  simkl_scrobble_retentar(); esperar();
+  assert(posts == 0);   // outra credencial nao consome o jornal
+  tokenAtual = TOKEN; credGeracao++;
+  simkl_esquecer();
+  stScr = stHist = 500;
+  simkl_scrobble_retentar(); esperar();
+  assert(nScr == 1 && nHist == 1);
+  posts = 0;
+  simkl_scrobble_retentar(); esperar();
+  assert(posts == 0);   // falhou: sem tempestade de retry
+  simkl_esquecer();
+  stScr = stHist = 200;
+  nScr = nHist = 0;
+  simkl_scrobble_retentar(); esperar();
+  assert(nScr == 1 && nHist == 0 && strstr(ultimoCorpo, "tt7000003"));
+  simkl_esquecer();
+  posts = 0;
+  simkl_scrobble_retentar(); esperar();
+  assert(posts == 0);   // confirmado: nao retoma de novo
+  OK("P2: stop sobrevive saida lenta, retoma so no vinculo certo e sai do disco apos sucesso");
+}
+
+int main(int argc, char **argv) {
   char caminho[] = "/tmp/nuvio-simkl-scr-XXXXXX";
   int fd = mkstemp(caminho), salvo = dup(1);
   FILE *f;
@@ -325,18 +447,25 @@ int main(void) {
   fflush(stdout);
   dup2(fd, 1);
   principal = pthread_self();
-
-  semVinculo();
-  filme();
-  episodio();
-  guardas();
-  indevido();
-  falhaNaoAutorizada();
-  espera();
-  stopQueFalha();
-  naoRespondeAoPerfilErrado();
-  tokenPorCopia();
-  esquecerZeraEstado();
+  snprintf(disco, sizeof disco, "%s", getenv("SIMKL_TEST_DIR"));
+  if (argc > 1) {
+    if (!strcmp(argv[1], "pause")) pausaAntesDeConcluir();
+    else if (!strcmp(argv[1], "logout")) logoutDuranteEspera();
+    else if (!strcmp(argv[1], "shutdown")) vistoSobreviveSaida();
+    else abort();
+  } else {
+    semVinculo();
+    filme();
+    episodio();
+    guardas();
+    indevido();
+    falhaNaoAutorizada();
+    espera();
+    stopQueFalha();
+    naoRespondeAoPerfilErrado();
+    tokenPorCopia();
+    esquecerZeraEstado();
+  }
 
   fflush(stdout);
   dup2(salvo, 1);

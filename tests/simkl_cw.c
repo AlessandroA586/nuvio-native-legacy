@@ -35,6 +35,9 @@ _Static_assert(AJ_SALVOS_LOCAL == 0 && AJ_SALVOS_TRAKT == 1 && AJ_SALVOS_SIMKL =
 
 // ---------------------------------------------------------------- stubs
 
+char *dados_ler(const char *nome) { (void)nome; return NULL; }
+int dados_gravar(const char *nome, const char *buf) { (void)nome; (void)buf; return 1; }
+int dados_apagar(const char *nome) { (void)nome; return 1; }
 static int proximoTeste = 1;
 int ajustes_cw_proximo(void) { return proximoTeste; }
 int ajustes_cw_minimo(void) { return 1; }
