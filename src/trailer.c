@@ -22,7 +22,7 @@ static GfxRect rect;
 static char   fonteAtual[1024];
 static Uint32 abertoEm;   // SDL_GetTicks da abertura da fonte atual, para o log
 static int    dono;       // TRAILER_DONO_* (trailer.h)
-static int    noCartao;   // trailer_no_cartao: sem recorte de fonte no .tpk
+static int    noCartao;   // trailer_no_cartao: no .tpk recorta sempre (cover no cartao)
 static char   donoImdb[32];
 
 void trailer_recorte(int vw, int vh, float z, float dw, float dh,
@@ -339,7 +339,9 @@ static void nativoAplicar(void) {
     trailer_recorte(video_largura(), video_altura(), ajustes_trailer_zoom(),
                     rect.w, rect.h, &sx, &sy, &sw, &sh);
 #ifdef NV_TPK
-    if (video_recorte_fonte_trailer() && !noCartao)
+    // No cartao o .tpk recorta sempre (cover no retangulo do cartao; o ROI que
+    // sai da tela e puxado para dentro em video_tpk.c), com ou sem o ajuste.
+    if (video_recorte_fonte_trailer() || noCartao)
 #else
     if (video_recorte_fonte_trailer())
 #endif
@@ -496,7 +498,7 @@ int trailer_mostra_video(void) {
   // a esperar, o LetterBox de sempre ja e a imagem certa.
   // "Original" so dispensa a espera quando o destino tambem nao pede corte
   // (o cover de trailer_recorte num destino que nao e da proporcao do video).
-  int semCorte = !video_recorte_fonte_trailer() || noCartao;
+  int semCorte = !video_recorte_fonte_trailer() && !noCartao;
   if (!semCorte && ajustes_trailer_zoom() <= 1.001f && video_largura() > 0 && video_altura() > 0) {
     int sx, sy, sw, sh;
     trailer_recorte(video_largura(), video_altura(), 1.0f, rect.w, rect.h, &sx, &sy, &sw, &sh);

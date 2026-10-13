@@ -729,6 +729,19 @@ static unsigned roiForaLogado;
 static int roiNaTela(int x, int y, int w, int h) {
   return w > 0 && h > 0 && x >= 0 && y >= 0 && x + w <= TPK_TELA_W && y + h <= TPK_TELA_H;
 }
+// #471 (cover no cartao): o ROI que cobre o destino e maior que ele e, perto da
+// borda, sai da tela (o plano apaga). Desliza o ROI, sem mudar o tamanho, para
+// dentro do painel mantendo o destino coberto. Sem espaco (ROI maior que a tela)
+// nao mexe e o chamador cai no destino.
+static int deslizaNaTela(int *p, int n, int d, int dn, int tela) {
+  int lo = d + dn - n, hi = d;
+  if (n > tela) return 0;
+  if (lo < 0) lo = 0;
+  if (hi > tela - n) hi = tela - n;
+  if (*p < lo) *p = lo;
+  if (*p > hi) *p = hi;
+  return 1;
+}
 void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh) {
   double qw = largura, qh = altura, ex, ey;
   int X, Y, W, H, lx, ly, lw, lh;
@@ -744,6 +757,10 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
   H  = (int)(qh * ey + 0.5);
   X  = (int)(dx - sx * ex + 0.5);
   Y  = (int)(dy - sy * ey + 0.5);
+
+  if (emTrailer && !NV_TPK_ZOOM_ROI && !zoomRoi && !roiNaTela(X, Y, W, H) && roiNaTela(dx, dy, dw, dh) &&
+      deslizaNaTela(&X, W, dx, dw, TPK_TELA_W) && deslizaNaTela(&Y, H, dy, dh, TPK_TELA_H))
+    printf("[video] tpk: roi do trailer puxado para a tela\n");
 
   printf("[video] tpk recorte %d,%d %dx%d de %.0fx%.0f -> roi %d,%d %dx%d\n",
          sx, sy, sw, sh, qw, qh, X, Y, W, H);
