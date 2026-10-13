@@ -8,7 +8,9 @@
 // 0) through a new stream, and nothing ever sends a raw seek to the TS.
 //
 // Runs src/video_tpk.c against a fake host and a fake converter (continuous
-// TS) with the same hand-built MKV header as tpk-dts-legendas.c.
+// TS) with the same hand-built MKV header as tpk-dts-legendas.c. Also the
+// preferred-language rule: a mixed file converts the DTS/TrueHD track when the
+// preferred audio language exists only there.
 #include <stdio.h>
 #include <string.h>
 #include <SDL2/SDL.h>
@@ -21,7 +23,8 @@
 const char *i18n(const char *s) { return s; }
 const char *ling_nome(const char *c) { return c; }
 int ling_casa(const char *c, const char *p) { return c && p && !strcmp(c, p); }
-const char *ling_audio(void) { return ""; }
+static const char *pref = "";
+const char *ling_audio(void) { return pref; }
 int ling_tipo_legenda(const char *s, int f, int d) { (void)s; (void)f; (void)d; return 0; }
 const char *ling_tipo_legenda_rotulo(int t) { (void)t; return ""; }
 const char *ling_do_nome(const char *nome) { (void)nome; return NULL; }
@@ -67,11 +70,13 @@ static long faixa(unsigned char *o, int num, int tipo, const char *codec, const 
   if (canais) { unsigned char a[8]; long k = uintEl(a, 0x9F, 1, (unsigned)canais); n += el(d + n, 0xE1, 1, a, k); }
   return el(o, 0xAE, 1, d, n);
 }
+static int misto;   // + a Japanese AAC track the TV plays
 static void montarCabecalho(void) {
   unsigned char t[768];
   long n = 0;
   n += faixa(t + n, 1, 1, "V_MPEGH/ISO/HEVC", NULL, 0);
   n += faixa(t + n, 2, 2, "A_DTS", "eng", 6);
+  if (misto) n += faixa(t + n, 6, 2, "A_AAC", "jpn", 2);
   n += faixa(t + n, 3, 17, "S_HDMV/PGS", "eng", 0);
   n += faixa(t + n, 4, 17, "S_TEXT/ASS", "eng", 0);
   n += faixa(t + n, 5, 17, "S_TEXT/UTF8", "por", 0);
@@ -205,6 +210,30 @@ int main(void) {
 
   video_parar();
   ok(!video_tpk_convertendo() && !video_tpk_fonte_tocou(), "stop clears the converted state");
+
+  // PREFERRED LANGUAGE ONLY ON DTS: English DTS + Japanese AAC, English wanted.
+  misto = 1; montarCabecalho(); abriuConversor = 0;
+  pref = "jpn";
+  video_tocar("http://h/b.mkv");
+  ok(!abriuConversor && !dts_tpk_e_url(ultUrl), "mixed file, preferred language playable (jpn): the original plays");
+  video_parar();
+  pref = "eng";
+  video_tocar("http://h/c.mkv");
+  ok(abriuConversor == 1 && dts_tpk_e_url(ultUrl), "mixed file, preferred language only on DTS (eng): converts it");
+  video_parar();
+  // Header only after the original is playing: same rule, mid-film.
+  cabPronto = 0; abriuConversor = 0;
+  video_tocar("http://h/e.mkv");
+  inicioStream = -1; posMs = 2000;
+  playerPronto(); bombear(3);
+  cabPronto = 1;
+  { Uint32 t0 = SDL_GetTicks(); while (!abriuConversor && SDL_GetTicks() - t0 < 3000) bombear(1); }
+  ok(abriuConversor == 1 && dts_tpk_e_url(ultUrl) && video_pronto(), "header read while the original plays: converts, no opening card");
+  video_parar();
+  pref = ""; abriuConversor = 0;
+  video_tocar("http://h/d.mkv");
+  ok(!abriuConversor && !dts_tpk_e_url(ultUrl), "mixed file, no preference: the original plays");
+  video_parar();
   printf(falhas ? "tpk-dts-reabrir: %d FAIL(S)\n" : "tpk-dts-reabrir: ok\n", falhas);
   return falhas != 0;
 }

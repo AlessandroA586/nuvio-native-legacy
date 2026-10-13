@@ -199,6 +199,7 @@ static struct {
   int reabrindo; double posMantida; Uint32 reabriuEm, reabTocandoEm;
   int fonteTocou;       // esta fonte (original ou convertida) ja andou > 0,5 s
   double posConhecida;  // ultima posicao real do convertido (nunca 0 por falta de dado)
+  int prefFeito;        // a regra do idioma preferido (trilhaPreferida) ja rodou nesta fonte
 } cv = { .buscarMs = -1 };
 static Uint32 faixasEm;           // quando a ultima lista de faixas do player chegou
 static volatile int naoSupPend;   // NotSupportedAudioCodec veio do host (outro fio)
@@ -468,6 +469,7 @@ static int abrirSessao(void) {
 
 static void guardarMkv(const MkvFaixa *fx, int n);
 static int trilhaParaConverter(int tvLista);
+static int trilhaPreferida(void);
 
 int video_tocar(const char *u) {
   if (cv.ativo || cv.sondando) dts_tpk_fechar();
@@ -497,7 +499,9 @@ int video_tocar(const char *u) {
       }
       free(fx); free(cab);
       { int t = mkvEstado == 3 ? trilhaParaConverter(-1) : 0;
-        if (t > 0 && convIniciar(t, 0.0, "cabecalho lido antes de abrir: so DTS/TrueHD")) return 1; }
+        if (t > 0 && convIniciar(t, 0.0, "cabecalho lido antes de abrir: so DTS/TrueHD")) return 1;
+        t = mkvEstado == 3 ? trilhaPreferida() : 0;
+        if (t > 0 && convIniciar(t, 0.0, "cabecalho lido antes de abrir: o idioma preferido so existe em DTS/TrueHD")) return 1; }
     }
   }
   return abrirSessao();
@@ -580,6 +584,23 @@ static int trilhaParaConverter(int tvLista) {
   }
   if (!nRec || nRec != nArq) return 0;
   return pre ? pre : prim;
+}
+
+// IDIOMA PREFERIDO SO EM DTS/TrueHD: arquivo misto (ha faixa que a TV toca), mas
+// o idioma de audio preferido so existe numa faixa que ela recusa. Converte
+// essa, uma vez por fonte (depois disso o menu manda). Pelo cabecalho do MKV:
+// a TV toca toda faixa de codec nao recusado.
+static int trilhaPreferida(void) {
+  const char *pref = ling_audio();
+  int i, rec = 0;
+  if (cv.prefFeito || !pref[0]) return 0;
+  cv.prefFeito = 1;
+  for (i = 0; i < mkvN; i++) {
+    if (mkvFx[i].tipo != 2 || !mkvFx[i].idioma[0] || !ling_casa(mkvFx[i].idioma, pref)) continue;
+    if (!faixaRecusada(&mkvFx[i])) return 0;   // ha uma que a TV toca nesse idioma
+    if (!rec) rec = mkvFx[i].numero;
+  }
+  return rec;
 }
 
 static const MkvFaixa *mkvTrack(int numero) {
@@ -845,6 +866,10 @@ static void avaliarAudioTv(void) {
   }
   audioLogado = 1;
   if (!nRec) return;
+  if (nTv > 0 && convPossivel()) {
+    int t = trilhaPreferida();
+    if (t > 0 && convIniciar(t, video_pos(), "o idioma de audio preferido so existe numa faixa DTS/TrueHD")) return;
+  }
   printf("[audio] TV recusou %s: faixas da TV=%d, no arquivo=%d [%s]%s\n", recusados, nTv, nArq, lista,
          nRec == nArq && nTv == 0 ? " -> sem audio tocavel" : "");
   fflush(stdout);
