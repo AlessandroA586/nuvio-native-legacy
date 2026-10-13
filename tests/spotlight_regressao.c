@@ -30,8 +30,8 @@
 #include "dados.h"
 #include <assert.h>
 
-static CatItem rem[2][12];
-static int quant[2], falhas, cortadas, artes, montagens;
+static CatItem rem[7][12];
+static int quant[7], nAlvosTeste = 2, falhas, cortadas, artes, montagens;
 static float fimRecorte;
 static char termo[96];
 static char generoDesenhado[160];
@@ -40,10 +40,14 @@ static CatFileira fileiraPublicacao;
 static int publicarNaMontagem, focoDesenhado;
 static const char *nomeFoco;
 void teste_buscar(const char *t) { montagens++; snprintf(termo, sizeof termo, "%s", t); }
-int teste_alvos(void) { return 2; }
+int teste_alvos(void) { return nAlvosTeste; }
 int teste_n(int a, const char *t) { return !strcmp(t, termo) ? quant[a] : 0; }
 int teste_item(int a, int i, CatItem *it) { if (i >= quant[a]) return 0; *it = rem[a][i]; return 1; }
-int teste_total(const char *t) { return teste_n(0, t) + teste_n(1, t); }
+int teste_total(const char *t) {
+  int n = 0;
+  for (int a = 0; a < nAlvosTeste; a++) n += teste_n(a, t);
+  return n;
+}
 int teste_buscando(void) {
   // Intercala uma publicacao real depois de montar os grupos, antes de
   // remontar registrar as versoes. Determinista, sem corrida de threads.
@@ -291,6 +295,27 @@ int main(void) {
           !strcmp(cat_item(lin[i].ref)->imdb, "tt14688458")) achou = 1;
     check(achou, "#405: o 13o resultado do alvo tambem aparece na busca rapida"); }
   quant[1] = 1;
+
+  // #405: o teto global so vale depois de ranquear todos os alvos.
+  nAlvosTeste = 7;
+  for (int a = 0; a < 7; a++) {
+    quant[a] = 12;
+    for (int i = 0; i < 12; i++) {
+      char id[32]; snprintf(id, sizeof id, "ttAlvo%dItem%d", a, i);
+      rem[a][i] = item(id, "movie", "2015", 0);
+      snprintf(rem[a][i].titulo, sizeof rem[a][i].titulo, "Silo parcial %d-%d", a, i);
+    }
+  }
+  rem[6][11] = item("tt14688458", "series", "2023", 81);
+  cat_definir_tudo(&base, 1, NULL, 0);
+  montar();
+  { int presente = 0;
+    for (int i = 0; i < nLin; i++)
+      if ((lin[i].tipo == L_TOPO || lin[i].tipo == L_TITULO) &&
+          !strcmp(cat_item(lin[i].ref)->imdb, "tt14688458")) presente = 1;
+    printf("#405: presente=%d, indexado=%d\n", presente, cat_indice_por_imdb("tt14688458"));
+    check(presente, "#405: exato do 7o alvo presente entre 84 titulos distintos");
+    check(!strcmp(topoId(), "tt14688458"), "#405: exato do 7o alvo ranqueado em primeiro"); }
 
   printf("RESULTADO: %d falhas\n", falhas);
   return falhas ? 1 : 0;
