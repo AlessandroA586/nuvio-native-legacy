@@ -919,6 +919,16 @@ int busca_iniciar(void) {
 void busca_encerrar(void) { temItemFoco = 0; st_fechar(ST_BUSCA); celb_fechar_dono(CELB_BUSCA); }
 const char *busca_consulta(void) { return consulta; }
 int busca_foco_campo(void) { return painel == 0 ? campoFoco : 0; }
+#ifdef NV_TESTE
+void busca_teste_layout_recentes(void) {
+  int n = buscasrec_n();
+  nRecLayout = n + 1 < BU_REC_ITENS ? n + 1 : BU_REC_ITENS;
+  for (int i = 0; i < nRecLayout; i++) {
+    recRect[i] = (GfxRect){ BU_RES_X + i * 180.0f, BU_REC_Y, 160.0f, BU_REC_H };
+    recLin[i] = 0;
+  }
+}
+#endif
 int  busca_quer_sair(void) { return sair; }
 
 int busca_pediu_abrir(int *indiceCatalogo) {
@@ -1166,7 +1176,6 @@ void busca_evento(const SDL_Event *e) {
       break;
     case SDLK_UP: {
       int moveu = focus_mover(&focoRes, 0, -1);
-      if (!moveu && ajustes_menu_topo()) { sair = 1; break; }
       if (!moveu && sugestao && focoRes.fileira == 0 && recentesVisiveis()) {
         // Do primeiro Populares de volta as pilulas: a mais proxima em x.
         float cx = BU_RES_X + focoRes.coluna * buPasso() - scrollX[0] + buCartazW() * 0.5f;
@@ -1181,6 +1190,7 @@ void busca_evento(const SDL_Event *e) {
         }
         recentesAjustarFoco();
       } else if (!moveu && buTecladoNativo()) { painel = 0; campoFoco = 1; }
+      else if (!moveu && ajustes_menu_topo()) sair = 1;
       break;
     }
     case SDLK_DOWN: focus_mover(&focoRes, 0,  1); break;

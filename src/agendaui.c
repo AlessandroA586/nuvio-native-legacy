@@ -1095,7 +1095,7 @@ void agendaui_evento(const SDL_Event *e) {
       return;
     }
     if (k == SDLK_UP && calCelula < 7) {
-      if (ajustes_menu_topo()) sair = 1; else focoCabecalho = AG_CAB_HOJE;
+      focoCabecalho = AG_CAB_HOJE;
       return;
     }
     // COLUNA 0 DA GRADE (domingo): a barra lateral por cima (dono, 03/10).
@@ -1141,7 +1141,7 @@ void agendaui_evento(const SDL_Event *e) {
     return;
   }
   if (volta || k == SDLK_LEFT) { sair = 1; return; }
-  if (k == SDLK_UP && foco == 0) { if (ajustes_menu_topo()) sair = 1; else focoCabecalho = AG_CAB_LISTA; return; }
+  if (k == SDLK_UP && foco == 0) { focoCabecalho = AG_CAB_LISTA; return; }
   if (k == SDLK_DOWN && foco < n - 1) foco++;
   else if (k == SDLK_UP && foco > 0)  foco--;
   // NO KEYDOWN, e nao no KEYUP como o gesto de segurar pedia: sem duas acoes
