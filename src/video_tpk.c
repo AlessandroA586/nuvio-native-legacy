@@ -124,8 +124,16 @@ static Uint32 progressoEm;
 static double progressoPos;
 static int vigiaAtiva, pausaPedida;
 static atomic_int vigiaReiniciar;
-static atomic_int playerPreso, consultaLenta;
+static atomic_int playerPreso;
+// Ultima consulta de >= 5 s (0 = nenhuma). So vale recente: uma consulta lenta
+// isolada nao pode armar o watchdog numa pausa legitima.
+#define TPK_LENTA_VALE_MS 11000u   // ~2 consultas de 5 s seguidas
+static atomic_uint consultaLentaEm;
 static int reconPausa = -1;
+// Seek enviado que o relogio ainda nao mostrou: a recuperacao retoma nele.
+// Vale ate o relogio chegar perto dele ou o prazo do seek no host (15 s) passar.
+static int buscaAlvoMs = -1, reconAlvoMs = -1;
+static Uint32 buscaEm;
 
 // CABECALHO DO MKV (#206). O player do host so da o idioma de cada faixa; o
 // Name ("Forced", "DD 5.1"), a FlagForced e os canais estao nas TrackEntry, e
@@ -285,7 +293,7 @@ void nv_tpk_video_evento(int tipo, int a, int b) {
       else atomic_compare_exchange_strong(&playerPreso, &vazio, -1);
       break;
     }
-    case EV_CONSULTA_LENTA: atomic_store(&consultaLenta, 1); break;
+    case EV_CONSULTA_LENTA: atomic_store(&consultaLentaEm, SDL_GetTicks() | 1u); break;
     case EV_PRONTO:  durMs = a; pronto = 1; break;
     case EV_TOCANDO: tocando = 1; bufferando = 0; break;
     case EV_PAUSADO: tocando = 0; break;
@@ -380,8 +388,7 @@ static int abrirSessao(void) {
   // escolher qualquer faixa.
   mkvass_aceitar_texto(1);
   atomic_store(&temErroDetalhe, 0);
-  vigiaAtiva = 0;
-  atomic_store(&playerPreso, -2); atomic_store(&consultaLenta, 0);
+  vigiaAtiva = 0; buscaAlvoMs = -1;
   atomic_store(&vigiaReiniciar, 1);
   ativo = 1; pronto = falhou = terminou = tocando = 0;
   largura = altura = durMs = 0; bufferando = 1; bufferDesde = SDL_GetTicks(); bufPct = 0;
@@ -398,6 +405,9 @@ static int abrirSessao(void) {
   velEnviada = 100;   // Player novo no host: nasce em 1x
   if (!hAbrir) { falhou = 1; printf("[video] tpk: host sem player\n"); return 0; }
   hAbrir(urlAtual, cabecalhos);
+  // Depois do hAbrir: o host troca de sessao nele, e um aviso da sessao velha
+  // emitido antes disso nao pode sobrar para matar a nova.
+  atomic_store(&playerPreso, -2); atomic_store(&consultaLentaEm, 0);
   return 1;
 }
 
@@ -581,7 +591,9 @@ static void escolhasPendentes(void) {
   }
 }
 
-static void recuperarPlayer(void) {
+static void recuperarPlayer(int alvoMs) {
+  if (reconErroPend) return; // ja ha recuperacao/erro neste quadro: um hParar so
+  reconAlvoMs = alvoMs >= 0 ? alvoMs : buscaAlvoMs;
   reconPausa = pausaPedida;
   reconErroCod = -2; reconErroPend = 1; reconLinhaRede = 1; reconIniciou = 1;
   tocando = 0; vigiaAtiva = 0;
@@ -589,12 +601,13 @@ static void recuperarPlayer(void) {
 }
 
 static void vigiarPlayer(double pos) {
-  Uint32 agora = SDL_GetTicks();
+  Uint32 agora = SDL_GetTicks(), lentaEm = atomic_load(&consultaLentaEm);
+  int lenta = lentaEm && agora - lentaEm < TPK_LENTA_VALE_MS;
   if (atomic_exchange(&vigiaReiniciar, 0)) vigiaAtiva = 0;
-  if (!ativo || !pronto || ((!tocando || pausaPedida || bufferando) && !atomic_load(&consultaLenta)) || terminou ||
+  if (!ativo || !pronto || ((!tocando || pausaPedida || bufferando) && !lenta) || terminou ||
       falhou || recon.pendente || reconBuscarMs >= 0) { vigiaAtiva = 0; return; }
   if (!vigiaAtiva || pos != progressoPos) {
-    if (vigiaAtiva && pos != progressoPos) atomic_store(&consultaLenta, 0);
+    if (vigiaAtiva && pos != progressoPos) atomic_store(&consultaLentaEm, 0);
     vigiaAtiva = 1; progressoPos = pos; progressoEm = agora; return;
   }
   if (agora - progressoEm < TPK_PRESO_MS) return;
@@ -602,7 +615,7 @@ static void vigiarPlayer(double pos) {
          pos, (unsigned)(agora - progressoEm));
   fflush(stdout);
   // Mesma maquina limitada da reconexao: nao cria um loop paralelo infinito.
-  recuperarPlayer();
+  recuperarPlayer(-1);
 }
 
 void video_bombear(void) {
@@ -614,11 +627,12 @@ void video_bombear(void) {
     hEscolher(3, velEnviada);
   }
   double pos = video_pos();
+  if (buscaAlvoMs >= 0 && (SDL_GetTicks() - buscaEm > TPK_PRESO_MS + 5000u ||
+                          (pos * 1000.0 > buscaAlvoMs - 2000 && pos * 1000.0 < buscaAlvoMs + 2000)))
+    buscaAlvoMs = -1;
   int preso = atomic_exchange(&playerPreso, -2);
-  if (preso >= -1 && !recon.pendente && !falhou) {
-    recuperarPlayer();
-    if (preso >= 0 && recon.tentativa) recon.alvo = preso / 1000.0;
-  }
+  // Ao vivo (sem reconexao) a tecla recusada so e ignorada, como antes do #412.
+  if (preso >= -1 && ativo && reconPermitida && !recon.pendente && !falhou) recuperarPlayer(preso);
   vigiarPlayer(pos);
   sondaMkv(pos);
   if (pronto && pos > 0.5) reconIniciou = 1;
@@ -640,8 +654,11 @@ void video_bombear(void) {
     int antes = recon.tentativa;
     int rede = nv_recon_rede_tpk(reconErroCod, NULL) || reconLinhaRede;
     reconErroPend = 0; reconLinhaRede = 0;
+    int alvoMs = reconAlvoMs;
+    reconAlvoMs = -1;
     if (reconPermitida && urlAtual[0] && (reconIniciou || recon.tentativa) &&
-        nv_recon_erro(&recon, rede, SDL_GetTicks(), preso >= 0 ? preso / 1000.0 : pos)) {
+        nv_recon_erro(&recon, rede, SDL_GetTicks(), alvoMs >= 0 ? alvoMs / 1000.0 : pos)) {
+      if (alvoMs >= 0) recon.alvo = alvoMs / 1000.0;
       if (!antes) { reconAudio = audioAtual; reconLeg = legAtual; }
       if (recon.tentativa != antes) {
         printf("[video] conexao caiu (0x%x): tentativa %d/%d, espera %us\n",
@@ -671,6 +688,8 @@ void video_parar(void) {
   legendaLimpar(1);
   nv_recon_zerar(&recon);
   reconErroPend = 0; reconFaixasPend = 0; reconBuscarMs = -1; reconPausa = -1;
+  reconAlvoMs = buscaAlvoMs = -1;
+  atomic_store(&playerPreso, -2); // aviso de antes da saida nao reabre o video
   if (ativo && hParar) hParar();
   ativo = pronto = tocando = 0;
 }
@@ -683,6 +702,7 @@ void video_buscar(double s) {
     if (recon.pendente || reconErroPend || !pronto || reconBuscarMs >= 0) { reconBuscarMs = (int)(s * 1000.0); return; }
   }
   progressoEm = SDL_GetTicks(); progressoPos = video_pos(); vigiaAtiva = 1;
+  buscaAlvoMs = (int)(s * 1000.0); buscaEm = progressoEm;
   if (hBuscar) hBuscar((int)(s * 1000.0));
   terminou = 0;
 }

@@ -317,7 +317,7 @@ namespace NuvioTpk
                     }
                 } catch (InvalidOperationException e) {
                     Log("posicao: " + e.Message);
-                    if (minha == Volatile.Read(ref sessao)) NvVid.Evento(EV_PRESO, -1, 0);
+                    Preso(minha, -1);
                 } catch { }
                 finally {
                     long ms = (Stopwatch.GetTimestamp() - inicio) * 1000 / Stopwatch.Frequency;
@@ -337,6 +337,13 @@ namespace NuvioTpk
         void Principal(Action a)
         {
             principal(() => { try { a(); } catch (Exception e) { Log("principal: " + e); } });
+        }
+
+        // Checagem da sessao e aviso sob a trava do Trocar: um EV_PRESO da
+        // sessao velha nunca chega depois de o C abrir a nova.
+        void Preso(int minha, int alvo)
+        {
+            lock (trocaTrava) { if (minha == sessao) NvVid.Evento(EV_PRESO, alvo, 0); }
         }
 
         // Invalida tambem comandos que ficaram na fila durante uma troca.
@@ -361,10 +368,15 @@ namespace NuvioTpk
                 fio?.Fechar();
                 var velho = player; player = null;
                 var prime = primer; primer = null; primerGen++;
-                if (velho != null || prime != null) {
+                if (velho != null || prime != null || naoSolto != null) {
                     var anterior = liberacao;
                     liberacao = Task.Run(async () => {
-                        bool ok = await anterior.ConfigureAwait(false);
+                        await anterior.ConfigureAwait(false);
+                        // #412: Dispose recusado no player preso. Cada abertura
+                        // nova tenta de novo; sem Dispose confirmado, nada abre.
+                        bool ok = true;
+                        var resto = Interlocked.Exchange(ref naoSolto, null);
+                        if (resto != null) ok = Soltar(resto);
                         if (prime != null) ok = Liberar(prime) && ok;
                         if (velho != null) ok = Liberar(velho) && ok;
                         return ok;
@@ -382,7 +394,7 @@ namespace NuvioTpk
             novo.Post(async _ => {
                 if (await Task.WhenAny(soltar, Task.Delay(PrazoPararMs)) != soltar || !await soltar) {
                     Log("[video] tpk parar nao confirmou; player indisponivel, processo preservado");
-                    if (minha == Volatile.Read(ref sessao)) NvVid.Evento(EV_ERRO, -3, 0);
+                    lock (trocaTrava) { if (minha == sessao) NvVid.Evento(EV_ERRO, -3, 0); }
                     return;
                 }
                 if (minha != Volatile.Read(ref sessao)) return;
@@ -538,16 +550,28 @@ namespace NuvioTpk
         // Preparing nao admite Unprepare; cada passo ainda tenta o Dispose.
         // Muted e Display=null vem primeiro: silenciam e soltam o plano mesmo
         // quando Stop/Unprepare travam (#412, saida para a Home).
+        Player naoSolto; // Dispose falhou; o proximo Trocar tenta de novo
+
+        bool Soltar(Player p)
+        {
+            try { p.Dispose(); Log("[video] tpk dispose confirmado na nova tentativa"); return true; }
+            catch (Exception e) { Log("parar dispose de novo: " + e.Message); Volatile.Write(ref naoSolto, p); return false; }
+        }
+
         bool Liberar(Player p)
         {
             try { p.Muted = true; } catch (Exception e) { Log("parar muted: " + e.Message); }
             try { p.Display = null; } catch (Exception e) { Log("parar display: " + e.Message); }
-            try { if (p.State == PlayerState.Playing || p.State == PlayerState.Paused) p.Stop(); }
+            // Um GetState so: no player preso cada leitura custa ~5 s (#412) e,
+            // recusada, Stop/Unprepare tambem seriam; segue direto ao Dispose.
+            PlayerState st = PlayerState.Idle;
+            try { st = p.State; } catch (Exception e) { Log("parar estado: " + e.Message); }
+            try { if (st == PlayerState.Playing || st == PlayerState.Paused) { p.Stop(); st = PlayerState.Ready; } }
             catch (Exception e) { Log("parar stop: " + e.Message); }
-            try { if (p.State == PlayerState.Ready || p.State == PlayerState.Playing || p.State == PlayerState.Paused) p.Unprepare(); }
+            try { if (st == PlayerState.Ready || st == PlayerState.Playing || st == PlayerState.Paused) p.Unprepare(); }
             catch (Exception e) { Log("parar unprepare: " + e.Message); }
             try { p.Dispose(); return true; }
-            catch (Exception e) { Log("parar dispose: " + e.Message); return false; }
+            catch (Exception e) { Log("parar dispose: " + e.Message); Volatile.Write(ref naoSolto, p); return false; }
         }
 
         bool Liberar(ref Player p) { if (!Liberar(p)) return false; Volatile.Write(ref p, null); return true; }
@@ -567,7 +591,7 @@ namespace NuvioTpk
             catch (InvalidOperationException e)
             {
                 Log("pausar: " + e.Message);
-                NvVid.Evento(EV_PRESO, -1, 0);
+                Preso(playerSessao, -1);
             }
             catch (Exception e) { Log("pausar: " + e.Message); }
         }
@@ -586,13 +610,13 @@ namespace NuvioTpk
                 _ = busca.ContinueWith(t => { var _e = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
                 if (await Task.WhenAny(busca, Task.Delay(PrazoBuscarMs)) != busca) {
                     expirou = true; // Nao aceitar comandos neste player ate a troca.
-                    if (minha == Volatile.Read(ref sessao)) {
-                        Log("buscar: prazo vencido");
-                        NvVid.Evento(EV_PRESO, buscaPend >= 0 ? buscaPend : ms, 0);
-                    }
+                    Log("buscar: prazo vencido");
+                    Preso(minha, buscaPend >= 0 ? buscaPend : ms);
                     return;
                 }
                 await busca;
+                // So depois do seek aceito: pausado, o Tique nao consulta.
+                lock (trocaTrava) { if (minha == sessao && player == p) posMs = ms; }
                 if (minha != Volatile.Read(ref sessao)) return;
                 // PlaybackInterrupted pode ter emitido evento 3 durante o seek.
                 if (p.State == PlayerState.Playing) NvVid.Evento(EV_TOCANDO, 0, 0);
@@ -600,7 +624,7 @@ namespace NuvioTpk
             }
             catch (InvalidOperationException e) {
                 Log("buscar: " + e.Message);
-                if (minha == Volatile.Read(ref sessao)) NvVid.Evento(EV_PRESO, buscaPend >= 0 ? buscaPend : ms, 0);
+                Preso(minha, buscaPend >= 0 ? buscaPend : ms);
                 return;
             }
             catch (Exception e) { Log("buscar: " + e.Message); return; }

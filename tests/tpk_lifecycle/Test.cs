@@ -131,6 +131,27 @@ class Test {
         old.SeekPending.SetResult(true); Thread.Sleep(50);
         Check(Player.All[1].Starts == 2, "seek tardio nao altera nova sessao");
         Entry("fParar"); Wait(() => Player.All[1].Disposed);
+
+        // #412 P1-c (log AS0D80): player preso recusa mute/display/estado com
+        // InvalidOperation e o Dispose falha uma vez. A primeira reabertura vira
+        // EV_ERRO -3; a seguinte tenta o Dispose de novo e chega a sessao nova.
+        Setup(); OpenTocado(); old = Player.All[0]; old.Wedged = true; old.FailDisposeTimes = 1;
+        Open(); Wait(() => Erros == 1);
+        Check(Player.All.Count == 1 && !old.Disposed, "preso: Dispose recusado nao abre outro player");
+        Open(); Wait(() => Player.All.Count == 2 && Player.All[1].Starts == 1);
+        Check(old.Disposed && Player.Overlap == 0 && Erros == 1, "preso: nova tentativa do Dispose libera e a sessao nova toca");
+        Entry("fParar"); Wait(() => Player.All.Count < 2 || Player.All[1].Disposed);
+        // Sempre recusado: cada reabertura so devolve EV_ERRO -3 (o C limita a 3).
+        Setup(); OpenTocado(); old = Player.All[0]; old.Wedged = true; old.FailDisposeTimes = 1000;
+        for (int i = 1; i <= 3; i++) { Open(); Wait(() => Erros == i); }
+        Check(Player.All.Count == 1 && Player.Overlap == 0, "preso sempre: nenhuma abertura, um erro por tentativa");
+        old.FailDisposeTimes = 0; old.Wedged = false;
+        // P2: seek pausado concluido publica o alvo no relogio.
+        Setup(); OpenTocado(); old = Player.All[0];
+        Entry("fPausar", 1); Wait(() => old.State == PlayerState.Paused);
+        Entry("fBuscar", 1200000); Wait(() => (int)EntryPos() == 1200000);
+        Check((int)EntryPos() == 1200000 && old.State == PlayerState.Paused && old.PositionCalls == 0, "seek pausado atualiza relogio sem consultar o player");
+        Entry("fParar"); Wait(() => old.Disposed);
         return failures == 0 ? 0 : 1;
     }
 }
@@ -154,15 +175,18 @@ namespace Tizen.Multimedia {
         public ManualResetEventSlim StopEntered = new ManualResetEventSlim(), StopRelease = new ManualResetEventSlim(); public int Starts, DisposeCalls, UnprepareCalls;
         public ManualResetEventSlim DisposeEntered = new ManualResetEventSlim(), DisposeRelease = new ManualResetEventSlim();
         public bool FailPause, FailSeek, FailState; public int SeekCalls; public TaskCompletionSource<bool> SeekPending;
-        PlayerState state; public PlayerState State {get { if(FailState) throw new InvalidOperationException("GetState InvalidOperation"); return state; } set { state=value; }} public bool Muted {get;set;} public float Volume {get;set;}
-        public Display Display {get;set;} public string UserAgent,Cookie;
+        public bool Wedged; public int FailDisposeTimes;
+        void Wedge(string o) { if(Wedged) throw new InvalidOperationException("Failed to " + o + " : InvalidOperation."); }
+        PlayerState state; public PlayerState State {get { if(FailState) throw new InvalidOperationException("GetState InvalidOperation"); Wedge("retrieve the state of the player"); return state; } set { state=value; }}
+        bool muted; public bool Muted {get=>muted; set { Wedge("set the mute state of the player"); muted=value; }} public float Volume {get;set;}
+        Display display; public Display Display {get=>display; set { Wedge("set the display"); display=value; }} public string UserAgent,Cookie;
         public Info AudioTrackInfo = new Info(), SubtitleTrackInfo = new Info(); public Stream StreamInfo = new Stream(); public Settings DisplaySettings = new Settings();
         public event EventHandler<Event> PlaybackCompleted, ErrorOccurred, BufferingProgressChanged, PlaybackInterrupted, SubtitleUpdated;
         public void SetSource(MediaUriSource s) {} public void SetSubtitleOffset(int n) {} public void SetPlaybackRate(float n) {}
         public async Task PrepareAsync() { State=PlayerState.Preparing; if(Defer) await Prepared.Task; if(!Disposed) State=PlayerState.Ready; }
         public void Start() { Starts++; State=PlayerState.Playing; } public void Stop() { StopEntered.Set(); if(BlockStop) StopRelease.Wait(); if(FailStop) throw new Exception("stop recusado"); State=PlayerState.Ready; }
         public void Pause() { if(FailPause) throw new InvalidOperationException("pause InvalidOperation"); State=PlayerState.Paused; } public void Unprepare() { UnprepareCalls++; if(State != PlayerState.Ready && State != PlayerState.Playing && State != PlayerState.Paused) throw new InvalidOperationException("unprepare em " + State); if(FailUnprepare) throw new Exception("unprepare recusado"); State=PlayerState.Idle; }
-        public void Dispose() { DisposeCalls++; DisposeEntered.Set(); if(BlockDispose) DisposeRelease.Wait(); if(FailDispose) throw new Exception("dispose recusado"); Disposed=true; }
+        public void Dispose() { DisposeCalls++; DisposeEntered.Set(); if(BlockDispose) DisposeRelease.Wait(); if(FailDispose) throw new Exception("dispose recusado"); if(FailDisposeTimes>0) { FailDisposeTimes--; throw new InvalidOperationException("dispose InvalidOperation"); } Disposed=true; }
         public int PositionDelayMs, PositionCalls;
         public ManualResetEventSlim PositionEntered = new ManualResetEventSlim();
         public int GetPlayPosition() { Interlocked.Increment(ref PositionCalls); PositionEntered.Set(); Thread.Sleep(PositionDelayMs); return 1234; }

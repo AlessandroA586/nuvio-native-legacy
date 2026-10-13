@@ -18,7 +18,13 @@ void capmkv_zerar(void) {}
 int ling_tipo_legenda(const char *s,int f,int d) { (void)s;(void)f;(void)d;return 0; }
 const char *ling_tipo_legenda_rotulo(int t) { (void)t;return ""; }
 static int aberturas, paradas, posicao, busca, pausa;
-static void abrir(const char *u,const char *c) { (void)c;assert(!strcmp(u,"http://test/movie"));aberturas++; }
+// Evento que o host emite durante o proprio hAbrir: 9 = EV_PRESO tardio da
+// sessao velha; 5 = descarte recusado (EV_ERRO -3), n vezes.
+static int abrirEvento, abrirVezes;
+static void abrir(const char *u,const char *c) {
+  (void)c;assert(!strcmp(u,"http://test/movie"));aberturas++;
+  if (abrirVezes > 0) { abrirVezes--; nv_tpk_video_evento(abrirEvento, abrirEvento==5?-3:-1, 0); }
+}
 static void parar(void) { paradas++; }
 static void pausar(int p) { pausa=p; }
 static void buscar(int ms) { busca=ms; }
@@ -66,8 +72,52 @@ int main(void) {
   // GetState/position de 5000 ms + relogio parado, mesmo em buffer/pausa pedida.
   video_definir_reconexao(1);video_tocar("http://test/movie");prontoHost();
   posicao=1337033;passo(1);video_pausar(1);nv_tpk_video_evento(7,50,0);
-  nv_tpk_video_evento(10,0,0);passo(1);stops=paradas;passo(15001);
+  // Player preso: cada consulta leva 5 s e avisa de novo.
+  nv_tpk_video_evento(10,0,0);passo(1);stops=paradas;
+  for(int i=0;i<3;i++){passo(5000);nv_tpk_video_evento(10,0,0);}passo(1);
   assert(paradas==stops+1 && recon.pendente);video_parar();
+  // P2: UMA consulta lenta que cai numa pausa legitima nao arma o watchdog.
+  video_definir_reconexao(1);video_tocar("http://test/movie");prontoHost();
+  posicao=1337033;passo(1);video_pausar(1);nv_tpk_video_evento(3,0,0);
+  nv_tpk_video_evento(10,0,0);stops=paradas;passo(1);for(int i=0;i<10;i++)passo(3000);
+  assert(paradas==stops && !recon.pendente);video_parar();
+  // P1-a: EV_PRESO pouco antes do Voltar nao reabre o video parado.
+  video_definir_reconexao(1);video_tocar("http://test/movie");prontoHost();
+  posicao=1337033;passo(1);nv_tpk_video_evento(9,-1,0);video_parar();
+  antes=aberturas;stops=paradas;passo(1);passo(3000);passo(30000);
+  assert(aberturas==antes && paradas==stops && !video_falhou());
+  // P1-b: seek tocando que nunca conclui; o watchdog retoma no ALVO, nao no stall.
+  video_definir_reconexao(1);video_tocar("http://test/movie");prontoHost();
+  posicao=1337033;passo(1);video_buscar(1200.0);stops=paradas;
+  passo(15001);passo(1);assert(paradas==stops+1 && recon.pendente && recon.alvo==1200.0);
+  nv_tpk_video_evento(9,1200000,0);passo(1); // o prazo do host chega depois: so um hParar
+  assert(paradas==stops+1);
+  passo(3000);prontoHost();posicao=0;passo(1);assert(busca==1200000);
+  posicao=1200000;passo(1);assert(tocando && !falhou);video_parar();
+  // P2: watchdog + EV_PRESO no mesmo quadro chamam hParar uma vez so.
+  video_definir_reconexao(1);video_tocar("http://test/movie");prontoHost();
+  posicao=1337033;passo(1);stops=paradas;
+  for(int i=0;i<3;i++){passo(5000);nv_tpk_video_evento(10,0,0);}
+  nv_tpk_video_evento(9,-1,0);passo(1);assert(paradas==stops+1);video_parar();
+  // P2: EV_PRESO da sessao velha atravessando o hAbrir nao mata a nova.
+  video_definir_reconexao(1);video_tocar("http://test/movie");prontoHost();
+  posicao=1337033;passo(1);nv_tpk_video_evento(9,-1,0);passo(1);
+  abrirEvento=9;abrirVezes=1;passo(3000);prontoHost();stops=paradas;passo(1);
+  assert(paradas==stops && !recon.pendente && recon.tentativa==1);video_parar();
+  // P1-c: descarte recusado (EV_ERRO -3) a cada reabertura: falhou limitado.
+  video_definir_reconexao(1);video_tocar("http://test/movie");prontoHost();
+  posicao=1337033;passo(1);nv_tpk_video_evento(9,-1,0);passo(1);
+  abrirEvento=5;abrirVezes=99;passo(3000);passo(1);passo(10000);passo(1);passo(25000);passo(1);
+  assert(video_falhou() && recon.esgotou);abrirVezes=0;video_parar();
+  // P1-c: recusado uma vez, o Dispose seguinte confirma: sessao nova toca no alvo.
+  video_definir_reconexao(1);video_tocar("http://test/movie");prontoHost();
+  posicao=1337033;passo(1);nv_tpk_video_evento(9,-1,0);passo(1);
+  abrirEvento=5;abrirVezes=1;passo(3000);passo(1);assert(recon.tentativa==2 && recon.pendente);
+  passo(10000);prontoHost();passo(1);assert(busca==1337033 && tocando && !falhou);video_parar();
+  // Ao vivo (sem reconexao): tecla recusada e ignorada, a sessao nao morre.
+  video_tocar("http://test/movie");prontoHost();posicao=5000;passo(1);stops=paradas;
+  nv_tpk_video_evento(9,-1,0);passo(1);nv_tpk_video_evento(9,60000,0);passo(1);
+  assert(paradas==stops && !video_falhou() && video_ativo());video_parar();
   // Prazo do seek vence com PlaybackInterrupted/Paused, sem consulta lenta.
   video_definir_reconexao(1);video_tocar("http://test/movie");prontoHost();
   posicao=1337033;passo(1);video_pausar(1);nv_tpk_video_evento(3,0,0);
