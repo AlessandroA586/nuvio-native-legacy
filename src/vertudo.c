@@ -1,4 +1,5 @@
 #include "imdbnota.h"
+#include "vertudo_pag.h"
 #include "vertudo.h"
 #include "posterprov.h"
 #include "idioma.h"
@@ -1041,7 +1042,8 @@ void vertudo_evento(const SDL_Event *e) {
   else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) abrirFocado();
   // Chegando perto do fim, pede a proxima pagina. Antes de o dono ver o vazio,
   // e nao quando ele ja esta olhando para ele.
-  if (foco >= n - 12) desc_vertudo_mais();
+  if (vertudo_quer_mais(ordenaPorAno(), n, foco, 600, desc_vertudo_carregando(),
+                        desc_vertudo_fim(), desc_vertudo_erro())) desc_vertudo_mais();
 }
 
 void vertudo_atualizar(float dt, Uint32 agora) {
@@ -1053,6 +1055,10 @@ void vertudo_atualizar(float dt, Uint32 agora) {
   // botao (ctxlista.h).
   if (ctxhold_passo(&hold, agora, 1) && menuNoFocado()) ctxhold_cancelar(&hold);
   if (n > VT_MAX) n = VT_MAX;
+  // Tela cronologica pede todas as paginas sem esperar o foco descer.
+  if (ordenaPorAno() && vertudo_quer_mais(1, n, foco, VT_MAX, desc_vertudo_carregando(),
+                                          desc_vertudo_fim(), desc_vertudo_erro()))
+    desc_vertudo_mais();
   // A SONDA PODE CHEGAR DEPOIS DA TELA. Enquanto a fonte nao tem endereco,
   // reconferir por quadro custa uma varredura de poucas strings (addons_n e
   // dezenas, nao milhares) e SO acontece no estado de erro — assim a colecao se

@@ -4,8 +4,9 @@
 // `cronologico`: exibicao ordenada por ano (Linha do tempo, Saga, Decadas).
 static inline int vertudo_quer_mais(int cronologico, int n, int foco, int max,
                                     int carregando, int fim, int erro) {
-  (void)cronologico; (void)max;
   if (carregando || fim || erro) return 0;
+  // Ordenada por ano, a tela so mostra o comeco certo depois de ter tudo.
+  if (cronologico) return n < max;
   return foco >= n - 12;
 }
 #endif
