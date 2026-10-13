@@ -30,7 +30,10 @@ int main(void) {
   }
   // Zoom: production source crop is integer/even; preserve its exact scale.
   nv_tpk_video_evento(6,1912,800);
+  video_pausar(1); nv_tpk_video_evento(3,0,0);
+  int beforePausedCrop = nj;
   video_janela_fonte(244,0,1422,800,0,0,1920,1080);
+  assert(nj == beforePausedCrop + 1 && !video_tocando());
 #ifdef NV_TPK40
   check(-328,0,2582,1080,-328,0,2582,1080);
 #else

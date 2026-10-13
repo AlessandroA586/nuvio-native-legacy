@@ -52,6 +52,14 @@ static int fakeWindow(long handle, long x, long y, long w, long h, int full, lon
   ++windowCalls; return 0;
 }
 
+static int cropCalls;
+static int fakeCrop(long handle, long sx, long sy, long sw, long sh,
+                    long dx, long dy, long dw, long dh, int full, long *task) {
+  assert(handle == 1 && sx == 480 && sy == 270 && sw == 960 && sh == 540);
+  assert(dx == 0 && dy == 0 && dw == 1920 && dh == 1080 && full && task);
+  ++cropCalls; return 1;
+}
+
 int main(void) {
   // webosMaior(): a TV de 2017 (webOS 3.9) so tem o nyx e NAO e webOS 4.
   {
@@ -86,6 +94,14 @@ int main(void) {
   assert(!video_pausa_confirmada()); // callback da sessao anterior
   evento("{\"paused\":true}", 7);
   assert(video_pausa_confirmada());
+  // #426: destination and source crop reach ACB while paused, without LS2 play.
+  acb = 1; acbJanelaCustom = fakeCrop;
+  int beforeWindow = windowCalls, beforeRequests = pedidos;
+  video_janela(240, 0, 1440, 1080);
+  video_janela_fonte(480, 270, 960, 540, 0, 0, 1920, 1080);
+  assert(windowCalls == beforeWindow + 1 && cropCalls == 1);
+  assert(pedidos == beforeRequests && !video_tocando() && video_pausa_confirmada());
+  acb = 0; acbJanelaCustom = NULL;
   video_pausar(0); assert(!video_pausa_confirmada());
   evento("{\"paused\":true}", 7); assert(!video_pausa_confirmada());
   evento("{\"playing\":true}", 7); assert(!video_pausa_confirmada());
