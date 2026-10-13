@@ -467,13 +467,14 @@ static void *baixar(void *u){
   int caps=0,total=0,falhaAni=0,n=pedirAniskip(p,v,8,&falhaAni),r=R_VAZIO,temCred=0,vale,deAni=n>0;
   int nl=0;
   int temIdOutro=p->tmdb>0||!strncmp(p->id,"tt",2);
+  for(int i=0;i<n;i++)if(v[i].tipo==INTRO_CREDITOS)temCred=1;
   if(temIdOutro&&!intro_tipos_completos(v,n)){
     IntroTrecho w[8];int nw;
     int rj=pedirEp(p,p->t,p->e,p->dur,&j);
     nw=j?intro_extrair(j,w,8):0;
-    nl=j?creditosjson_extrair(j,limitados,8):0;
+    nl=j&&!temCred?creditosjson_extrair(j,limitados,8):0;
     n=intro_completar(v,n<0?0:n,w,nw,8);
-    r=n>0?R_OK:deAni?R_OK:rj;
+    r=rj==R_FALHA?R_FALHA:n>0?R_OK:rj;
   }
   else if(n<=0&&falhaAni)r=R_FALHA;
   else if(n>0)r=R_OK;
@@ -486,9 +487,10 @@ static void *baixar(void *u){
   pthread_mutex_lock(&trava);
   vale=p->g==geracao;
   if(vale){
-    if(r==R_FALHA){falhou=1;falhouEm=(long)time(NULL);}
-    else{
-      falhou=0;memcpy(trechos,v,(size_t)n*sizeof *v);nTrechos=n;
+    falhou=r==R_FALHA;
+    if(falhou)falhouEm=(long)time(NULL);
+    if(!falhou||n>0){
+      memcpy(trechos,v,(size_t)n*sizeof *v);nTrechos=n;
       memcpy(creditosLimitados,limitados,(size_t)nl*sizeof *limitados);nCreditosLimitados=nl;
     }
     fundirCapitulos();caps=nCapTr;total=nTrechos;
