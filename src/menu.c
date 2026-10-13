@@ -1280,12 +1280,12 @@ static void tvDesenhar(void) {
 #define TOPO_PAD      MK(6.0f)
 #define TOPO_ITEM     MK(52.0f)
 #define TOPO_H        (TOPO_ITEM + 2.0f * TOPO_PAD)
-#define TOPO_ICONE_X  MK(29.0f)    // centro do icone na pilula aberta (16 + 13)
-#define TOPO_ROT_X    MK(54.0f)    // rotulo: 16 + icone 26 + 12
-#define TOPO_ROT_FIM  MK(20.0f)
+#define TOPO_ICONE_X  MK(25.0f)    // centro do icone na pilula aberta (12 + 13)
+#define TOPO_ROT_X    MK(46.0f)    // rotulo: 12 + icone 26 + 8
+#define TOPO_ROT_FIM  MK(16.0f)
 #define TOPO_FIO      MK(13.0f)    // vao do fio antes do perfil
 #define TOPO_AVATAR   MK(40.0f)
-#define TOPO_RELOGIO  (360.0f / NV_MENU_ESCALA)      // canto direito, da ilha
+#define TOPO_RELOGIO  (260.0f / NV_MENU_ESCALA)      // canto direito: a ilha do relogio (64 + ~150)
 
 static void topoAtualizar(float dt) {
   tvPilAlfa = anim_mola(tvPilAlfa, tvPilAlvo, dt, TV_MOLA_PILULA);
@@ -1298,10 +1298,12 @@ static const char *topoRotulo(int i) {
   return p && p->nome[0] ? p->nome : "Sua conta";
 }
 // Largura de um item na forma `e`: o circulo de 52 fechada; aberta a pilula
-// com o rotulo, cortado em `rotMax` para a barra nunca passar da ilha do relogio.
+// com o rotulo JA CORTADO em `rotMax` (o corte e por palavra: "Guia TV" vira
+// "Guia...", mais curto que o teto), para a barra nunca passar da ilha do relogio.
 static float topoItemW(int i, float e, float rotMax) {
-  float t = (float)txt_largura(TXT_BODY, topoRotulo(i));
-  if (t > rotMax) t = rotMax;
+  float t;
+  if (e <= 0.001f) return TOPO_ITEM;
+  t = txt_linha_corta(TXT_BODY, topoRotulo(i), 243, 242, 239, 255, rotMax).w;
   return anim_mistura(TOPO_ITEM, TOPO_ROT_X + t + TOPO_ROT_FIM, e);
 }
 
@@ -1313,8 +1315,20 @@ static void topoDesenhar(void) {
   MenuGeo g = { 0 };
   for (i = 0; i < MENU_N; i++) if (mostra(i)) ordem[n++] = i;
   ordem[n++] = MENU_RODAPE;
-  rotMax = (NV_TELA_W - TOPO_X - TOPO_RELOGIO - 2.0f * TOPO_PAD - TOPO_FIO
-            - (n - 1) * NV_MENU_ITEM_VAO) / n - TOPO_ROT_X - TOPO_ROT_FIM;
+  // Teto dos rotulos: o que sobra ate a ilha do relogio, repartido de modo que
+  // os curtos (Guia, Perfil) cedam a folga deles aos longos (Biblioteca).
+  { float t[NV_MENU_FOCOS], resto = NV_TELA_W - TOPO_X - TOPO_RELOGIO - 2.0f * TOPO_PAD - TOPO_FIO
+                                    - (n - 1) * NV_MENU_ITEM_VAO - n * (TOPO_ROT_X + TOPO_ROT_FIM);
+    int m = n, mudou = 1;
+    for (k = 0; k < n; k++) t[k] = (float)txt_largura(TXT_BODY, topoRotulo(ordem[k]));
+    rotMax = resto / m;
+    while (mudou && m > 0) {
+      mudou = 0;
+      for (k = 0; k < n; k++)
+        if (t[k] >= 0.0f && t[k] <= rotMax) { resto -= t[k]; m--; t[k] = -1.0f; mudou = 1; }
+      if (m > 0) rotMax = resto / m;
+    }
+    if (m == 0) rotMax = 1e6f; }
   g.x = TOPO_X; g.y = TOPO_Y; g.h = TOPO_H; g.raio = TOPO_H * 0.5f;
   g.w = 2.0f * TOPO_PAD + TOPO_FIO + (n - 1) * NV_MENU_ITEM_VAO;
   for (k = 0; k < n; k++) g.w += topoItemW(ordem[k], e, rotMax);
