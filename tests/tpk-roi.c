@@ -32,6 +32,7 @@ static void hJanela(int x, int y, int w, int h) { jx = x; jy = y; jw = w; jh = h
 static int hPos(void) { return 0; }
 
 static int falhas;
+void video_tpk_log_host(const char *);
 static void confere(const char *nome, int x, int y, int w, int h) {
   int ok = jx == x && jy == y && jw == w && jh == h;
   printf("%s %s: %d,%d %dx%d (esperado %d,%d %dx%d)\n", ok ? "ok  " : "FALHA", nome, jx, jy, jw, jh, x, y, w, h);
@@ -132,9 +133,31 @@ int main(void) {
   video_janela_fonte(600, 0, 720, 1080, 40, 300, 360, 540);
   confere("#471 Tizen 6 card trailer covers the card", -259, 300, 960, 540);
   // Portrait source cannot cover within the panel even on Tizen 6: fit.
+  // Fresh session: the previous card request must not already have cleared cover.
+  video_tocar("http://x/portrait.m3u8"); video_tpk_trailer_marcar(1); video_tpk_cartao_marcar(1);
+  video_tpk_tizen_definir("6.0");
   nv_tpk_video_evento(6, 1080, 1920);
   video_janela_fonte(0, 656, 1080, 606, 400, 200, 960, 540);
   confere("#471 Tizen 6 portrait falls back to proportional fit", 728, 200, 304, 540);
+  if (video_tpk_cartao_cover()) { printf("FALHA portrait fallback must not keep cover\n"); falhas++; }
+  { float x,y,w,h; video_tpk_cartao_furo(400,200,960,540,&x,&y,&w,&h);
+    int ok = x==728 && y==200 && w==304 && h==540;
+    printf("%s #471 card hole follows the 304x540 plane: %.0f,%.0f %.0fx%.0f\n", ok?"ok  ":"FALHA", x,y,w,h);
+    if (!ok) falhas++; }
+  // Host rejected the ROI: the plane is the fallback fit, so the hole shrinks too.
+  video_tocar("http://x/card.m3u8"); video_tpk_trailer_marcar(1); video_tpk_cartao_marcar(1);
+  video_tpk_tizen_definir("6.0");
+  nv_tpk_video_evento(6, 1920, 1080);
+  video_janela_fonte(600, 0, 720, 1080, 40, 300, 360, 540);
+  confere("#471 Tizen 6 cover before the host rejects ROI", -259, 300, 960, 540);
+  video_tpk_log_host("[aspecto] sessao=1 DisplayRoi rc=0xffffffa1 fallback=ok");
+  if (video_tpk_cartao_cover()) { printf("FALHA rejected ROI must clear effective cover\n"); falhas++; }
+  nj = 0; video_janela_fonte(600, 0, 720, 1080, 40, 300, 360, 540);
+  confere("#471 rejected ROI uses the proportional fit", 40, 469, 360, 202);
+  { float x,y,w,h; video_tpk_cartao_furo(40,300,360,540,&x,&y,&w,&h);
+    int ok = x==40 && y==469 && w==360 && h==202;
+    printf("%s #471 rejected ROI hole: %.0f,%.0f %.0fx%.0f\n", ok?"ok  ":"FALHA", x,y,w,h);
+    if (!ok) falhas++; }
   nv_tpk_video_evento(6, 1920, 1080);
   // Other families keep the letterbox.
   video_tpk_tizen_definir("9.0");

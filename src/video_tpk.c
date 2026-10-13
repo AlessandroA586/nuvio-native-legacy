@@ -361,6 +361,9 @@ int  video_registro_negado(void) { return 0; }
 
 static int emTrailer = 0;   // ver video_tpk_trailer_marcar
 static int emCartao = 0;    // ver video_tpk_cartao_marcar
+// #471: o cover do cartao caiu no encaixe nesta sessao (plano maior que o
+// painel, ou o host recusou o ROI). O furo da home segue isto.
+static volatile int cartaoSemCover = 0;
 // Abre urlAtual no host. Serve a fonte nova e ao recarregar da reconexao.
 static int abrirSessao(void) {
   // video_iniciar() NAO e chamada no .tpk (so video.c, o ramo da LG, a chama;
@@ -383,6 +386,7 @@ static int abrirSessao(void) {
   legendaMarcarEnvio(-1);
   if (travaLeg) { SDL_LockMutex(travaLeg); legCueSessao = 0; legAbriuEm = SDL_GetTicks(); SDL_UnlockMutex(travaLeg); }
   emTrailer = emCartao = 0;
+  cartaoSemCover = 0;
   temRoi = 0;
   sessao++;
   velEnviada = 100;   // Player novo no host: nasce em 1x
@@ -639,6 +643,7 @@ void video_bombear(void) {
 }
 void video_parar(void) {
   emTrailer = emCartao = 0;
+  cartaoSemCover = 0;
   temRoi = 0;
   capmkv_zerar();   // fio de capitulos em voo nao alimenta o proximo titulo
   audioPend = legPend = -1; comecou = 0; comecouEm = 0; audioComecou = 0;
@@ -750,7 +755,19 @@ void video_tpk_tizen_definir(const char *v) { tizenMaior = v ? atoi(v) : 0; }
 // e apaga o plano na Tizen 9 (#188), entao as demais familias ficam no quadro
 // inteiro encaixado. A prova visual do cover nesta TV ainda e do dono.
 static int coverCartao(void) { return tizenMaior == 6 || NV_TPK_ZOOM_ROI || zoomRoi; }
-int video_tpk_cartao_cover(void) { return coverCartao(); }
+// O modo EFETIVO: home.c abre o furo e trailer.c espera o recorte por aqui.
+int video_tpk_cartao_cover(void) { return coverCartao() && !cartaoSemCover; }
+void video_tpk_cartao_furo(float x, float y, float w, float h, float *ox, float *oy, float *ow, float *oh) {
+  float fx=x, fy=y, fw=w, fh=h;
+  if (!video_tpk_cartao_cover()) {
+    float asp = (largura > 0 && altura > 0) ? (float)largura / (float)altura : 16.0f / 9.0f;
+    if (w / h > asp) { fw = h * asp; fx = x + (w - fw) * 0.5f; }
+    else             { fh = w / asp; fy = y + (h - fh) * 0.5f; }
+    fx = (float)(int)(fx + 0.5f); fy = (float)(int)(fy + 0.5f);
+    fw = (float)((int)(fw + 0.5f) & ~1); fh = (float)((int)(fh + 0.5f) & ~1);
+  }
+  if (ox) *ox=fx; if (oy) *oy=fy; if (ow) *ow=fw; if (oh) *oh=fh;
+}
 static unsigned cartaoLogado;
 static void cartaoModo(const char *modo, const char *porque) {
   if (cartaoLogado == sessao) return;
@@ -774,7 +791,7 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
   // Hero, detalhe e tela cheia seguem o caminho de sempre, abaixo.
   cartao = emTrailer && emCartao;
   if (cartao && sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh) { cartaoEncaixar(dx, dy, dw, dh, "quadro inteiro"); return; }
-  if (cartao && !coverCartao()) { cartaoEncaixar(dx, dy, dw, dh, "cover sem prova nesta familia"); return; }
+  if (cartao && !video_tpk_cartao_cover()) { cartaoEncaixar(dx, dy, dw, dh, cartaoSemCover ? "cover recusado nesta sessao" : "cover sem prova nesta familia"); return; }
   // Recorte que cobre o quadro inteiro E o caso sem zoom: mesma coisa.
   if (sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh) { temRoi = 0; video_janela(dx, dy, dw, dh); return; }
 
@@ -786,7 +803,7 @@ void video_janela_fonte(int sx, int sy, int sw, int sh, int dx, int dy, int dw, 
   Y  = (int)(dy - sy * ey + 0.5);
 
   // O plano maior que o painel (retrato no cartao) nao tem cover possivel.
-  if (cartao && (W > TPK_TELA_W || H > TPK_TELA_H)) { cartaoEncaixar(dx, dy, dw, dh, "cover maior que o painel"); return; }
+  if (cartao && (W > TPK_TELA_W || H > TPK_TELA_H)) { cartaoSemCover = 1; cartaoEncaixar(dx, dy, dw, dh, "cover maior que o painel"); return; }
 
   printf("[video] tpk recorte %d,%d %dx%d de %.0fx%.0f -> roi %d,%d %dx%d\n",
          sx, sy, sw, sh, qw, qh, X, Y, W, H);
@@ -893,6 +910,11 @@ void video_tpk_log_host(const char *linha) {
     printf("[audio] TV recusou o audio da fonte: player acusou NotSupportedAudioCodec (faixas da TV=%d)\n", nAudio);
     fflush(stdout);
     audioNaoSup = 1;
+  }
+  // Video.cs: DisplayRoi recusado -> o plano foi para o encaixe (lx..lh).
+  if (!strncmp(linha, "[aspecto] ", 10) && strstr(linha, " DisplayRoi") && emTrailer && emCartao) {
+    cartaoSemCover = 1;
+    return;
   }
   if (strstr(linha, "[janela] principal visivel=")) {
     janelaVisivel = strstr(linha, "visivel=True") != NULL;

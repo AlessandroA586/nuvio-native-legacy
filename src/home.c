@@ -571,19 +571,12 @@ static int heroTrailerTocando(void);
 // partir dela, senao uma espera longa venceria a janela antes de abrir.
 static Uint32 heroTrailerEspera(void) { return ajustes_trailer_hero_espera_ms(); }
 // No .tpk o cover do cartao so tem recorte de fonte na Tizen 6.x (video_tpk.c):
-// la o furo e o cartao inteiro. Nas demais familias encaixa o quadro e abre so
-// esse furo, sem expor o plano nas barras do cartaz.
+// la o furo e o cartao inteiro. Nas demais familias, ou quando o cover caiu no
+// encaixe (retrato maior que o painel, ROI recusado), abre so o quadro encaixado
+// e o resto do cartao fica preto, sem expor o plano nas barras do cartaz.
 static GfxRect cartaoVideoRect(GfxRect c) {
 #if defined(NV_TPK) && !defined(__EMSCRIPTEN__)
-  if (video_tpk_cartao_cover()) return c;
-  float asp = (video_largura() > 0 && video_altura() > 0)
-            ? (float)video_largura() / (float)video_altura() : 16.0f / 9.0f;
-  GfxRect v = c;
-  if (c.w / c.h > asp) { v.w = c.h * asp; v.x = c.x + (c.w - v.w) * 0.5f; }
-  else                 { v.h = c.w / asp; v.y = c.y + (c.h - v.h) * 0.5f; }
-  v.x = (float)(int)(v.x + 0.5f); v.y = (float)(int)(v.y + 0.5f);
-  v.w = (float)((int)(v.w + 0.5f) & ~1); v.h = (float)((int)(v.h + 0.5f) & ~1);
-  return v;
+  GfxRect v; video_tpk_cartao_furo(c.x, c.y, c.w, c.h, &v.x, &v.y, &v.w, &v.h); return v;
 #else
   return c;
 #endif
