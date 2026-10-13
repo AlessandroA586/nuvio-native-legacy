@@ -27,6 +27,8 @@ import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.DataSourceException
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
@@ -246,6 +248,20 @@ object NvPlayer {
             (codigo?.let { " errorCode=$it" } ?: "") +
             (formato?.let { " hz=${it.sampleRate} canais=${it.channelCount} encoding=${it.pcmEncoding} mime=${it.sampleMimeType}" } ?: "") +
             (recuperavel?.let { " isRecoverable=$it" } ?: "")
+    }
+
+    // Fatal cause chains retain only class names and allowlisted numeric fields.
+    private fun camposErroCausa(erro: Throwable): String {
+        return erro.javaClass.simpleName + when (erro) {
+            is ExoPlaybackException -> " errorCode=${erro.errorCode} type=${erro.type} rendererIndex=${erro.rendererIndex}"
+            is PlaybackException -> " errorCode=${erro.errorCode}"
+            is HttpDataSource.InvalidResponseCodeException -> " responseCode=${erro.responseCode} errorCode=${erro.reason}"
+            is DataSourceException -> " errorCode=${erro.reason}"
+            is AudioSink.WriteException -> " errorCode=${erro.errorCode}"
+            is MediaCodecDecoderException -> " errorCode=${erro.errorCode}"
+            is android.media.MediaCodec.CodecException -> " errorCode=${erro.errorCode}"
+            else -> ""
+        }
     }
 
     private fun ev(tipo: Int, a: Int = 0, b: Int = 0) {
@@ -1167,12 +1183,12 @@ object NvPlayer {
                 C.TRACK_TYPE_VIDEO -> "video"
                 else -> "desconhecido"
             }
-            Log.w(TAG, "[player] onPlayerError renderer=$renderer loadMs=${SystemClock.elapsedRealtime() - abriuEm} erro=${error.javaClass.simpleName} errorCode=${error.errorCode}")
-            // Fatal errors can wrap the same sink/codec exception; apply the
-            // same allowlist instead of trying to redact arbitrary messages.
+            // Fatal errors can wrap the same sink/codec exception; never log raw messages.
             val causa = generateSequence(error.cause) { it.cause }.take(3)
-                .joinToString(" <- ") { it.javaClass.simpleName }
-            try { nativeErroTexto("${error.errorCodeName} (${error.errorCode}) renderer=$renderer causa=$causa") } catch (_: Throwable) {}
+                .joinToString(" <- ") { camposErroCausa(it) }
+            val diagnostico = "${error.errorCodeName} (${error.errorCode}) renderer=$renderer erro=${camposErroCausa(error)} causa=$causa"
+            Log.w(TAG, "[player] onPlayerError loadMs=${SystemClock.elapsedRealtime() - abriuEm} $diagnostico")
+            try { nativeErroTexto(diagnostico) } catch (_: Throwable) {}
             // Decoder que falha nos primeiros 5 s: o recurso pode estar sendo
             // solto por outro app (ResourceConflict do Tizen); reabre uma vez.
             val cedo = SystemClock.elapsedRealtime() - abriuEm < RETRY_DECODER_MS
