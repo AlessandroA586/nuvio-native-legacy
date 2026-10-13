@@ -8364,6 +8364,9 @@ void ajustes_teste_fonte_interface(int familia) {
 // #202: abre a folha de permitidos (1 add-ons, 2 plugins) com o foco na
 // linha `foco` (0 = "Todos").
 void ajustes_teste_permitidos(int qual, int foco) { frAberta = qual; frFoco = foco; }
+void ajustes_teste_herocat(const char *busca, int foco) {
+  hcAbrir(); snprintf(hcBusca, sizeof hcBusca, "%s", busca ? busca : ""); hcMontar(); hcFoco = foco;
+}
 #endif
 
 #ifdef NV_SHOT_HOOKS
