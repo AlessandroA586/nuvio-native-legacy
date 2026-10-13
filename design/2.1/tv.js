@@ -41,7 +41,12 @@ legenda:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 13h4M13 13
 fecha:'<path d="M18 6 6 18"/><circle cx="12" cy="12" r="9"/>',
 copia:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
 pessoas:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.6c2.6.2 4.6 2 5.5 5.4"/>',
-cadeado:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'
+cadeado:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+trofeu:'<path d="M8 4h8v6a4 4 0 0 1-8 0z"/><path d="M8 6H4v1a4 4 0 0 0 4 4M16 6h4v1a4 4 0 0 1-4 4M12 14v4M8 21h8M9.5 18h5"/>',
+claquete:'<rect x="3" y="9" width="18" height="11" rx="1.5"/><path d="m3.5 9 1.8-4.5 14.2 3-1 1.5M8 4.8 10 9M13 5.8 15 9"/>',
+chat:'<path d="M4 5h16v11H10l-5 4v-4H4z"/>',
+fantasma:'<path d="M5 21V11a7 7 0 0 1 14 0v10l-3-2.5-2 2.5-2-2.5-2 2.5-2-2.5z"/><path d="M9.5 11h.01M14.5 11h.01"/>',
+bandeira:'<path d="M5 21V4M5 5h12l-2.5 4L17 13H5"/>'
 };
 document.querySelectorAll('[data-i]').forEach(e=>{e.classList.add('ic');e.innerHTML='<svg viewBox="0 0 24 24">'+(IC[e.dataset.i]||'')+'</svg>'});
 
