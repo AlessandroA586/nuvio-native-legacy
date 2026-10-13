@@ -171,13 +171,6 @@
 </div></div>
 </section>
 
-<script>
-// QR ilustrativo: padrões de localização reais, miolo pseudoaleatório fixo (não codifica nada)
-document.querySelectorAll('#qr,.qrm').forEach(svg=>{let s=7,r='';const rnd=()=>(s=(s*16807)%2147483647)/2147483647;
-  const fin=(x,y)=>`<rect x="${x}" y="${y}" width="7" height="7"/><rect x="${x+1}" y="${y+1}" width="5" height="5" fill="#fff"/><rect x="${x+2}" y="${y+2}" width="3" height="3"/>`;
-  for(let y=0;y<29;y++)for(let x=0;x<29;x++){const f=(x<8&&y<8)||(x>20&&y<8)||(x<8&&y>20);if(!f&&rnd()<.48)r+=`<rect x="${x}" y="${y}" width="1" height="1"/>`}
-  svg.innerHTML=r+fin(0,0)+fin(22,0)+fin(0,22)});
-</script>
 <script src="tv.js"></script>
 </body>
 </html>

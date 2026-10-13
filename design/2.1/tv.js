@@ -45,6 +45,12 @@ cadeado:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 
 };
 document.querySelectorAll('[data-i]').forEach(e=>{e.classList.add('ic');e.innerHTML='<svg viewBox="0 0 24 24">'+(IC[e.dataset.i]||'')+'</svg>'});
 
+// QR ilustrativo: padrões de localização reais, miolo pseudoaleatório fixo (não codifica nada)
+document.querySelectorAll('#qr,.qrm').forEach(svg=>{let s=7,r='';const rnd=()=>(s=(s*16807)%2147483647)/2147483647;
+  const fin=(x,y)=>`<rect x="${x}" y="${y}" width="7" height="7"/><rect x="${x+1}" y="${y+1}" width="5" height="5" fill="#fff"/><rect x="${x+2}" y="${y+2}" width="3" height="3"/>`;
+  for(let y=0;y<29;y++)for(let x=0;x<29;x++){const f=(x<8&&y<8)||(x>20&&y<8)||(x<8&&y>20);if(!f&&rnd()<.48)r+=`<rect x="${x}" y="${y}" width="1" height="1"/>`}
+  svg.innerHTML=r+fin(0,0)+fin(22,0)+fin(0,22)});
+
 const caixas=[...document.querySelectorAll('.caixa')];
 function escala(){const k=Math.min(innerWidth/1920,(innerHeight-90)/1080);
   caixas.forEach(c=>{c.style.width=1920*k+'px';c.style.height=1080*k+'px';c.firstElementChild.style.transform='scale('+k+')'})}
@@ -54,9 +60,11 @@ addEventListener('resize',escala);escala();
 const ACENTOS=[['#EC407A','#fff'],['#3D8BFF','#fff'],['#7C5CFF','#fff'],['#00A88F','#fff'],['#F5F5F5','#111']];
 const barra=document.createElement('div');barra.className='barra';
 barra.innerHTML=(document.body.dataset.indice?'':'<a href="index.html">← telas</a>')+'<span>acento</span>'+ACENTOS.map((a,i)=>`<button class="cor" style="background:${a[0]}" data-c="${i}" aria-pressed="${!i}" aria-label="acento ${a[0]}"></button>`).join('')+
-  '<span>|</span><button data-m="vidro" aria-pressed="true">vidro</button><button data-m="solido" aria-pressed="false">sólido</button><span>| setas movem o foco</span>';
+  '<span>|</span><button data-m="vidro" aria-pressed="true">vidro</button><button data-m="solido" aria-pressed="false">sólido</button>'+
+  (document.querySelector('[data-d]')?'<span>|</span><button data-dados aria-pressed="false">dados (D): <b style="color:#4caf50">hoje</b> · <b style="color:#ffb74d">nosso</b> · <b style="color:#ef5350">bloqueado</b></button>':'')+'<span>| setas movem o foco</span>';
 document.body.appendChild(barra);document.body.dataset.mat='vidro';
-barra.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+const dados=()=>barra.querySelector('[data-dados]').setAttribute('aria-pressed',document.body.classList.toggle('dados'));
+barra.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-dados'))return dados();
   if(b.dataset.c){const a=ACENTOS[b.dataset.c];document.documentElement.style.setProperty('--ac',a[0]);document.documentElement.style.setProperty('--tinta',a[1])}
   if(b.dataset.m)document.body.dataset.mat=b.dataset.m;
   b.parentNode.querySelectorAll(b.dataset.c?'[data-c]':'[data-m]').forEach(x=>x.setAttribute('aria-pressed',x===b))});
@@ -68,6 +76,7 @@ caixas.forEach(c=>vista.observe(c));
 function focar(el){ativa.querySelectorAll('.foco').forEach(e=>e.classList.remove('foco'));el.classList.add('foco')}
 document.addEventListener('click',e=>{const el=e.target.closest('[data-f]');if(el){ativa=el.closest('.caixa');focar(el)}});
 document.addEventListener('keydown',e=>{
+  if((e.key==='d'||e.key==='D')&&barra.querySelector('[data-dados]'))return dados();
   if(e.key==='Enter'){const a=ativa.querySelector('.foco');if(a&&a.href)location=a.href;return}
   const d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];if(!d)return;
   const cur=ativa.querySelector('.foco');if(!cur)return;e.preventDefault();
