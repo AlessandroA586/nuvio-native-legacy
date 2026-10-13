@@ -94,6 +94,7 @@ static int stScr = 200;                 // status devolvido por /scrobble/*
 static int stHist = 200;
 static const char *corpoScr = "{\"id\":1}";
 static void (*duranteScr)(void);        // roda dentro do POST /scrobble/*
+static volatile int segurarHist, histSegurado, histOutroBearer;
 static int logoutNaEspera;
 
 // So simkl.c e compilado com usleep redirecionado: o logout ocorre exatamente
@@ -134,7 +135,14 @@ char *rede_postar_st(const char *url, int s, const char *const *cab,
     *st = stScr;
     return strdup(corpoScr);
   }
-  if (!strcmp(ultimaRota, "/sync/history")) nHist++;
+  if (!strcmp(ultimaRota, "/sync/history")) {
+    nHist++;
+    if (!bearer) histOutroBearer++;
+    if (segurarHist) {   // outro envio segura travaCorpo ate o teste soltar
+      segurarHist = 0; histSegurado = 1;
+      while (histSegurado) usleep(1000);
+    }
+  }
   *st = stHist;
   return strdup("{\"added\":{},\"not_found\":{\"movies\":[],\"shows\":[]}}");
 }
@@ -437,6 +445,62 @@ static void vistoSobreviveSaida(void) {
   OK("P2: stop sobrevive saida lenta, retoma so no vinculo certo e sai do disco apos sucesso");
 }
 
+static int jornalTem(const char *id) {
+  DIR *d = opendir(disco);
+  struct dirent *ent;
+  int achou = 0;
+  assert(d);
+  while ((ent = readdir(d))) {
+    char *buf;
+    if (strncmp(ent->d_name, "simkl-vistos-", 13)) continue;
+    buf = dados_ler(ent->d_name);
+    if (buf && strstr(buf, id)) achou = 1;
+    free(buf);
+  }
+  closedir(d);
+  return achou;
+}
+
+static void *segurarCorpo(void *u) {
+  VistoPar par = { 1, 1 };
+  (void)u;
+  simkl_episodios_marcar("tt8000001", &par, 1, 1);
+  return NULL;
+}
+
+// Review 3: o fallback do stop de A espera travaCorpo, o perfil vira B, e o
+// historico nao pode sair com o Bearer de B nem apagar a pendencia de A.
+static void fallbackNaoTrocaDePerfil(void) {
+  pthread_t t;
+  int i;
+  tokenAtual = TOKEN;
+  stScr = 500;
+  segurarHist = 1;
+  assert(!pthread_create(&t, NULL, segurarCorpo, NULL));
+  for (i = 0; i < 400 && !histSegurado; i++) usleep(5000);
+  assert(histSegurado);
+  nScr = 0;
+  assert(simkl_scrobble(SCR_EV_SAIU, "tt8000002:1:1", 2400, 2400, 2000, 1) == SCR_STOP);
+  for (i = 0; i < 400 && !nScr; i++) usleep(5000);
+  assert(nScr == 1);
+  usleep(200 * 1000);          // fallback de A ja esta na fila da trava
+  tokenAtual = "TOKEN-PERFIL-B"; credGeracao++;
+  histSegurado = 0;
+  pthread_join(t, NULL);
+  esperar();
+  assert(histOutroBearer == 0);
+  assert(jornalTem("tt8000002:1:1"));
+  // De volta em A, a pendencia sai pela conta certa.
+  tokenAtual = TOKEN; credGeracao++;
+  simkl_esquecer();
+  stScr = 200;
+  nScr = 0;
+  simkl_scrobble_retentar(); esperar();
+  assert(nScr == 1 && strstr(ultimoCorpo, "tt8000002") && !semBearer);
+  assert(!jornalTem("tt8000002:1:1"));
+  OK("P2: fallback do stop nao usa o perfil trocado e fica pendente para o original");
+}
+
 int main(int argc, char **argv) {
   char caminho[] = "/tmp/nuvio-simkl-scr-XXXXXX";
   int fd = mkstemp(caminho), salvo = dup(1);
@@ -452,6 +516,7 @@ int main(int argc, char **argv) {
     if (!strcmp(argv[1], "pause")) pausaAntesDeConcluir();
     else if (!strcmp(argv[1], "logout")) logoutDuranteEspera();
     else if (!strcmp(argv[1], "shutdown")) vistoSobreviveSaida();
+    else if (!strcmp(argv[1], "perfil")) fallbackNaoTrocaDePerfil();
     else abort();
   } else {
     semVinculo();
