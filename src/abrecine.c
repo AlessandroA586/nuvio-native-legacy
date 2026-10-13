@@ -31,3 +31,7 @@ int abrecine_tecla(AbreCine *a, SDL_Keycode k) {
   a->detalhada = 1;
   return 1;
 }
+
+AbreCineEtapa abrecine_etapa(int esperandoFonte) {
+  return esperandoFonte ? ABRECINE_RESOLVENDO : ABRECINE_CARREGANDO;
+}

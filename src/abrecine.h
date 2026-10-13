@@ -34,4 +34,8 @@ int abrecine_demorando(const AbreCine *a, Uint32 agora);
 // Tecla durante a abertura: Para cima/Para baixo na cinema vira detalhada.
 // 1 = consumiu a tecla.
 int abrecine_tecla(AbreCine *a, SDL_Keycode k);
+// A etapa mostrada sob o trilho: a URL ainda vem do addon, ou ja chegou e o
+// video enche o buffer. Sem porcentagem: o pipeline nao informa progresso real.
+typedef enum { ABRECINE_RESOLVENDO, ABRECINE_CARREGANDO } AbreCineEtapa;
+AbreCineEtapa abrecine_etapa(int esperandoFonte);
 #endif

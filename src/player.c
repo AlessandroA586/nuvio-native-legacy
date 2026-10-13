@@ -4868,6 +4868,11 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
     base = cy + l.h * 0.5f;
   }
 
+  // O EPISODIO, entre o logo e o trilho (so serie; filme nao tem linha).
+  if (linhaEp[0]) {
+    TxtLinha l = txt_linha_corta(TXT_ILHA_SUB, linhaEp, 243, 242, 239, 170, 1100.0f);
+    txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, base + 14.0f, v * entra);
+  }
   // O TRILHO: 200 x 3, um brilho de 64 px na cor de acento correndo da
   // esquerda para a direita. Sem porcentagem: a abertura nao tem progresso real.
   { float tw = 200.0f, sw = 64.0f, x0 = NV_TELA_W * 0.5f - tw * 0.5f, y = base + 56.0f, r, g, b;
@@ -4880,11 +4885,34 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
       corFocoPlayer(&r, &g, &b);
       if (a1 > a0) gfx_cor((GfxRect){ a0, y, a1 - a0, 3.0f }, 0.5f, r, g, b, 0.9f * v * entra);
     }
+    // O ESTADO: a etapa real e, embaixo, a fonte escolhida (nome e addon que o
+    // app sabe; nunca a URL, que pode levar a chave do debrid).
+    { const Stream *st = stream_item(stream_atual());
+      char det[260];
+      TxtLinha l = txt_linha(TXT_G21B, abrecine_etapa(esperandoFonte) == ABRECINE_RESOLVENDO
+                             ? "Abrindo fonte" : "Carregando", 243, 242, 239, 255);
+      txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, y + 18.0f, 0.92f * v * entra);
+      det[0] = 0;
+      if (st && st->rotulo[0]) snprintf(det, sizeof det, "%s", st->rotulo);
+      if (st && st->provedor[0]) {
+        size_t n = strlen(det);
+        snprintf(det + n, sizeof det - n, "%s%s", n ? " \xc2\xb7 " : "", st->provedor);
+      }
+      if (tentativaN >= 2 && tentativaM >= tentativaN) {
+        size_t n = strlen(det);
+        snprintf(det + n, sizeof det - n, "%s", n ? " \xc2\xb7 " : "");
+        n = strlen(det);
+        snprintf(det + n, sizeof det - n, i18n("Fonte %d de %d"), tentativaN, tentativaM);
+      }
+      if (det[0]) {
+        TxtLinha d = txt_linha_corta(TXT_G19M, det, 243, 242, 239, 140, 1100.0f);
+        txt_desenhar_alpha(d, NV_TELA_W * 0.5f - d.w * 0.5f, y + 52.0f, v * entra);
+      } }
     // DEMOROU: uma linha so, curta e calma, que entra devagar.
     if (abrecine_demorando(&cine, agora)) {
       float d = (float)(agora - cine.desde - ABRECINE_DEMORA_MS) / 600.0f;
       TxtLinha l = txt_linha(TXT_G19M, i18n("Só mais um instante…"), 243, 242, 239, 255);
-      txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, y + 32.0f,
+      txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, y + 84.0f,
                          0.62f * v * (reduz || d > 1.0f ? 1.0f : d));
     } }
 }
