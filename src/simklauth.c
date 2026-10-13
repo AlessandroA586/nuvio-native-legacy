@@ -151,6 +151,16 @@ void simklauth_esquecer(void) {
   pthread_mutex_unlock(&trava);
 }
 
+// O Simkl respondeu 401 a um pedido com este token: o vinculo morreu la.
+// Desfaz so o do PERFIL ATUAL (o esquecer acima e o logout, varre todos).
+void simklauth_invalidar(void) {
+  pthread_mutex_lock(&trava);
+  geracao++;
+  zerarEstado();
+  dados_apagar(arq(perfil).s);
+  pthread_mutex_unlock(&trava);
+}
+
 // ---------------------------------------------------------------- fluxo
 
 static void *fioPedir(void *u) {

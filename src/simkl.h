@@ -44,9 +44,8 @@
 //     temporada/episodio do TVDB. Converter exigiria /anime/episodes por
 //     titulo. Anime PAUSADO entra, porque /sync/playback manda tvdb_season e
 //     tvdb_number junto.
-//   - scrobble: assistir aqui nao escreve no Simkl. O Simkl so cria playback a
-//     partir de /scrobble/pause|stop, entao o "continuar" do Simkl mostra o que
-//     outros clientes Simkl pausaram. Escrever e outro trabalho (outro issue).
+//   - nada: o scrobble (start/pause/stop do player, #459) e o historico estao
+//     la embaixo. Esta tela so le o playback que o proprio player escreve.
 //
 // MODELO DE FIOS: o de trakt.c. Leituras BLOQUEIAM e so sao chamadas do fio de
 // descoberta (montarContinuar, montar); escritas do "+" e do "tirar da
@@ -146,6 +145,21 @@ const char *simkl_rota_historico(int visto);
 int simkl_episodios_marcar(const char *imdb, const VistoPar *pares, int qtd, int visto);
 int simkl_titulo_marcar(const char *imdb, const char *tipo, const int *temporadas,
                         int nt, int visto);
+
+// --- scrobble do player (#459) ------------------------------------------------
+
+// Mesma interface e mesma decisao de trakt_scrobble (traktscrobble.h): `evento`
+// e SCR_EV_*, `id` e "tt123" (filme) ou "tt123:T:E" (episodio), e a posicao,
+// a duracao e o assistido sao em segundos. Manda /scrobble/start|pause|stop com
+// a porcentagem, num fio (nunca bloqueia o desenho). Devolve a acao decidida
+// (SCR_*); SCR_NADA sem vinculo, com id que nao e IMDb, ou com a guarda do
+// Trakt recusando. 401 desfaz o vinculo do perfil; 429/5xx/400 RATE_LIMIT
+// abrem uma janela de espera (30 s, dobra ate 5 min) sem retry. Um STOP que
+// nao chega cai em simkl_*_marcar, entao o "visto" nao se perde.
+int simkl_scrobble(int evento, const char *id, double posSeg, double durSeg,
+                   double assistidoSeg, int assistiu);
+// 1 quando o fio de envio nao tem nada pendente nem em voo (para o teste).
+int simkl_scrobble_ocioso(void);
 
 // Esquece caches e tabelas (logout, desvincular). O token e de simklauth.c.
 void simkl_esquecer(void);

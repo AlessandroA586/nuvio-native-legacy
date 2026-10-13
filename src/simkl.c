@@ -9,11 +9,15 @@
 #include "js.h"
 #include "idioma.h"
 #include "trakt.h"
+#include "traktscrobble.h"
 #include "artemetahub.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <math.h>
+#include <time.h>
+#include <unistd.h>
 
 #define SMK_API "https://api.simkl.com"
 // Retomada: o mesmo teto da fileira (CONT_MAX de descoberta.c) com folga para
@@ -767,4 +771,184 @@ int simkl_playback_remover(const char *imdb) {
   if (pthread_create(&t, NULL, fioApagar, id) != 0) { free(id); return 0; }
   pthread_detach(t);
   return 1;
+}
+
+// ------------------------------------------------------------ scrobble (#459)
+//
+// O mesmo desenho de trakt_scrobble: a decisao (start/pause/stop) e o corpo
+// moram em traktscrobble.c — o JSON do Simkl e o do Trakt — e um fio unico com
+// uma vaga PENDENTE manda a chamada, entao pausar repetido nao empilha pedido.
+// Rotas e limites: api.simkl.org/api-reference/simkl/scrobble-*. Pontos que
+// mudam o desenho:
+//   - 1 POST/s por usuario: o fio espera SMK_SCR_ESPACO_MS entre dois;
+//   - o lock de 20 s por usuario volta como 400 RATE_LIMIT, nao 429;
+//   - 409 num stop = ja registrado (so vale dentro de 1 h);
+//   - stop >= 80% o Simkl marca como visto; < 80% guarda como pausado.
+#ifndef SMK_SCR_ESPACO_MS
+#define SMK_SCR_ESPACO_MS 1100   // um pouco acima do 1/s da doc
+#endif
+#ifndef SMK_SCR_ESPERA_MS
+#define SMK_SCR_ESPERA_MS 30000  // primeira janela apos 429/5xx/RATE_LIMIT; dobra
+#endif
+#define SMK_SCR_ESPERA_MAX_MS 300000
+
+static pthread_mutex_t travaScr = PTHREAD_MUTEX_INITIALIZER;
+static ScrobbleEstado scrEstado;
+static struct { int acao; char id[64]; double pct; int tem; } scrPend;
+static int scrFioVivo;
+// Janela de espera: so o fio de envio mexe nelas.
+static unsigned long long scrLivreMs, scrUltimoMs;
+static int scrFalhas;
+
+static unsigned long long agoraMs(void) {
+  struct timespec t;
+  clock_gettime(CLOCK_MONOTONIC, &t);
+  return (unsigned long long)t.tv_sec * 1000ULL + (unsigned long long)t.tv_nsec / 1000000ULL;
+}
+
+// "tt123:T:E" -> temporada e episodio; filme "tt123" -> 0, 0. 0 quando o id
+// tem ':' mas nao e temporada/episodio positivos (iria como FILME do show).
+static int idScrobble(const char *id, int *t, int *e) {
+  const char *dp;
+  *t = *e = 0;
+  if (!imdbValido(id)) return 0;
+  dp = strchr(id, ':');
+  if (!dp) return 1;
+  return sscanf(dp + 1, "%d:%d", t, e) == 2 && *t > 0 && *e > 0;
+}
+
+// O stop que nao chegou ao Simkl cai no historico: o visto nao se perde.
+static void scrobbleCairNoHistorico(const char *id) {
+  int t, e;
+  if (!idScrobble(id, &t, &e)) return;
+  if (t > 0) {
+    VistoPar par;
+    char base[24];
+    par.temporada = (short)t; par.episodio = (short)e;
+    if (baseImdb(id, base, sizeof base)) simkl_episodios_marcar(base, &par, 1, 1);
+  } else {
+    simkl_titulo_marcar(id, "movie", NULL, 0, 1);
+  }
+}
+
+static void scrobbleEnviar(int acao, const char *id, double pct) {
+  char caminho[32], corpo[400], *r;
+  int st = 0, ok, espera = 0;
+  unsigned long long agora = agoraMs();
+  if (agora < scrLivreMs) {
+    // Janela aberta por 429/5xx: nada sai, nem retry. O stop ainda tenta o
+    // historico (o que o app fazia antes do scrobble existir).
+    printf("[simkl] scrobble %s %s: em espera, descartado\n", scrobble_nome(acao), id);
+    fflush(stdout);
+    if (acao == SCR_STOP) scrobbleCairNoHistorico(id);
+    return;
+  }
+  if (scrUltimoMs && agora - scrUltimoMs < SMK_SCR_ESPACO_MS)
+    usleep((useconds_t)(SMK_SCR_ESPACO_MS - (agora - scrUltimoMs)) * 1000u);
+  scrobble_corpo(corpo, sizeof corpo, id, pct);
+  snprintf(caminho, sizeof caminho, "/scrobble/%s", scrobble_nome(acao));
+  r = pedir('P', caminho, NULL, corpo, &st);
+  scrUltimoMs = agoraMs();
+  ok = (st >= 200 && st < 300) || st == 409;   // 409: ja registrado
+  // O log NUNCA leva o token: so a rota, o titulo e o status.
+  printf("[simkl] scrobble %s %s %.1f%% -> %s (HTTP %d)\n", scrobble_nome(acao), id, pct,
+         ok ? "ok" : "falhou", st);
+  fflush(stdout);
+  if (st == 401) {
+    // Token recusado: o vinculo morreu. Nada mais sai ate vincular de novo.
+    simklauth_invalidar();
+    simkl_esquecer();
+    pthread_mutex_lock(&travaScr);
+    memset(&scrEstado, 0, sizeof scrEstado);
+    scrPend.tem = 0;
+    pthread_mutex_unlock(&travaScr);
+    free(r);
+    return;
+  }
+  // Janela: 429, 5xx, st 0 (rede/timeout) e o 400 RATE_LIMIT do lock de 20 s.
+  // Dobra a cada falha seguida ate 5 min; qualquer resposta boa zera.
+  if (st == 429 || st >= 500 || st == 0 || (st == 400 && r && strstr(r, "RATE_LIMIT")))
+    espera = 1;
+  if (espera) {
+    unsigned long long w = SMK_SCR_ESPERA_MS;
+    int k;
+    for (k = 0; k < scrFalhas && w < SMK_SCR_ESPERA_MAX_MS; k++) w *= 2;
+    if (w > SMK_SCR_ESPERA_MAX_MS) w = SMK_SCR_ESPERA_MAX_MS;
+    scrFalhas++;
+    scrLivreMs = agoraMs() + w;
+  } else {
+    scrFalhas = 0;
+    scrLivreMs = 0;
+  }
+  free(r);
+  if (!ok && acao == SCR_STOP) scrobbleCairNoHistorico(id);
+}
+
+static void *fioScrobble(void *u) {
+  (void)u;
+  for (;;) {
+    int acao;
+    char id[64];
+    double pct;
+    pthread_mutex_lock(&travaScr);
+    if (!scrPend.tem) { scrFioVivo = 0; pthread_mutex_unlock(&travaScr); return NULL; }
+    acao = scrPend.acao; pct = scrPend.pct;
+    snprintf(id, sizeof id, "%s", scrPend.id);
+    scrPend.tem = 0;
+    pthread_mutex_unlock(&travaScr);
+    scrobbleEnviar(acao, id, pct);
+  }
+}
+
+// Na SAIDA a sessao acabou mesmo sem chamada: com o start "em pe" a proxima
+// abertura do mesmo titulo nao mandaria /scrobble/start.
+static int scrobbleRecusar(int evento) {
+  if (evento == SCR_EV_SAIU) {
+    pthread_mutex_lock(&travaScr); scrEstado.ativo = 0; pthread_mutex_unlock(&travaScr);
+  }
+  return SCR_NADA;
+}
+
+int simkl_scrobble(int evento, const char *id, double posSeg, double durSeg, double assistidoSeg,
+                   int assistiu) {
+  int acao, t, e;
+  double pct;
+  pthread_t th;
+  if (!simkl_ativo() || !nuvem_simkl_cliente()[0] || !id || !idScrobble(id, &t, &e) ||
+      !isfinite(posSeg) || !isfinite(durSeg) || !isfinite(assistidoSeg) ||
+      durSeg < 120.0 || assistidoSeg < 5.0)
+    return scrobbleRecusar(evento);
+  pct = 100.0 * posSeg / durSeg;
+  // Valida ANTES da vaga: nem um stop sem reproducao entra na fila.
+  if (evento == SCR_EV_SAIU && pct >= 90.0 && !assistiu) return scrobbleRecusar(evento);
+  pthread_mutex_lock(&travaScr);
+  // Um stop pendente nunca e trocado: perder o stop e perder o visto. Quem
+  // chama recebe NADA e segue pelo historico.
+  if (scrPend.tem && scrPend.acao == SCR_STOP) {
+    pthread_mutex_unlock(&travaScr);
+    return SCR_NADA;
+  }
+  acao = scrobble_decidir(&scrEstado, evento, id, pct);
+  if (acao != SCR_NADA) {
+    scrPend.acao = acao; scrPend.pct = pct; scrPend.tem = 1;
+    snprintf(scrPend.id, sizeof scrPend.id, "%s", id);
+    if (!scrFioVivo) {
+      scrFioVivo = 1;
+      if (pthread_create(&th, NULL, fioScrobble, NULL) != 0) {
+        scrFioVivo = 0;
+        scrPend.tem = 0;
+        acao = SCR_NADA;
+      } else pthread_detach(th);
+    }
+  }
+  pthread_mutex_unlock(&travaScr);
+  return acao;
+}
+
+int simkl_scrobble_ocioso(void) {
+  int o;
+  pthread_mutex_lock(&travaScr);
+  o = !scrFioVivo && !scrPend.tem;
+  pthread_mutex_unlock(&travaScr);
+  return o;
 }

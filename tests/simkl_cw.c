@@ -40,6 +40,7 @@ int ajustes_cw_minimo(void) { return 1; }
 int ajustes_cw_concluido(void) { return 90; }
 static const char *tokenAtual = "";
 const char *simklauth_token(void) { return tokenAtual; }
+void simklauth_invalidar(void) { tokenAtual = ""; }
 const char *nuvem_simkl_cliente(void) { return "cid-teste"; }
 const char *nuvem_simkl_app(void) { return "nuvio"; }
 void nuvem_url_escapar(const char *v, char *dst, unsigned tam) { snprintf(dst, tam, "%s", v); }

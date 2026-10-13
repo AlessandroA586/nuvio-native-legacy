@@ -57,6 +57,8 @@ int  simklauth_carregar(void);    // le o token guardado; 1 quando havia
 const char *simklauth_token(void);
 // Esquece o vinculo de TODOS os perfis (logout).
 void simklauth_esquecer(void);
+// O Simkl recusou o token (401): desfaz o vinculo do perfil ATUAL, so ele.
+void simklauth_invalidar(void);
 // POR PERFIL, como o Trakt (simkl-p<N>.txt; simkl.txt antigo vira o do perfil
 // 1). carregar_perfil escolhe o perfil e le; trocar_perfil faz o mesmo so
 // quando o perfil mudou e devolve 1 quando o Simkl estava ou ficou ligado —
