@@ -208,6 +208,28 @@ int main(int argc, char **argv) {
   snprintf(nome, sizeof nome, "%s-7-vitrine-botao.bmp", saida);
   captura(nome, 90);
 
+  // STREAMING (13/10): wordmark no lugar do titulo, sem o rotulo, degrade na
+  // cor da marca. O wordmark vem de um logo local (o do TMDB precisa de rede).
+  snprintf(pasta.group, sizeof pasta.group, "Streaming");
+  snprintf(pasta.title, sizeof pasta.title, "Netflix");
+  snprintf(pasta.logo, sizeof pasta.logo, "deploy/app/art/logo/00.png");
+  snprintf(titulo, sizeof titulo, "%s", pasta.title);
+  captura(NULL, 60);
+  snprintf(nome, sizeof nome, "%s-8-streaming-netflix.bmp", saida);
+  captura(nome, 90);
+  snprintf(pasta.title, sizeof pasta.title, "Canal Desconhecido");
+  pasta.logo[0] = 0;
+  snprintf(titulo, sizeof titulo, "%s", pasta.title);
+  captura(NULL, 30);
+  snprintf(nome, sizeof nome, "%s-8-streaming-desconhecido.bmp", saida);
+  captura(nome, 60);
+  snprintf(pasta.title, sizeof pasta.title, "Netflix");
+  snprintf(pasta.logo, sizeof pasta.logo, "deploy/app/art/logo/00.png");
+  snprintf(titulo, sizeof titulo, "%s", pasta.title);
+  pasta.nSources = 1; lay = VT_LAY_GRADE; layEscolha = VT_LAY_GRADE; celLay = -1; orderN = -1; foco = 1;
+  snprintf(nome, sizeof nome, "%s-8-streaming-grade.bmp", saida);
+  captura(nome, 90);
+
   tex_encerrar();
   txt_encerrar();
   SDL_GL_DeleteContext(gl);

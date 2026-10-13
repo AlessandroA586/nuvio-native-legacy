@@ -1,5 +1,6 @@
 #include "imdbnota.h"
 #include "vertudo.h"
+#include "marcastream.h"
 #include "posterprov.h"
 #include "idioma.h"
 #include "badges.h"
@@ -212,6 +213,36 @@ static void corColecao(float *r,float *g,float *b) {
   else if (grupo("Themes")) {*r=.34f;*g=.13f;*b=.38f;}
   else if (grupo("Film Collections") || grupo("TV Collections"))
     {*r=.12f;*g=.27f;*b=.40f;}
+}
+
+// SERVICO DE STREAMING (pedido do dono, 13/10): sem o rotulo "STREAMING" no
+// topo, o wordmark do servico no lugar do titulo e o degrade na cor da marca.
+// O wordmark e o da pasta, ou o do TMDB; sem nenhum, fica o titulo em texto.
+static const MarcaStream *marcaServico(void) {
+  return grupo("Streaming") ? marca_stream(collection->title) : NULL;
+}
+static const char *wordmarkServico(void) {
+  const char *u;
+  if (!grupo("Streaming")) return "";
+  if (collection->logo[0]) return collection->logo;
+  u = marca_stream_logo(marcaServico());
+  return u;
+}
+// O degrade do destaque na cor da marca, por cima da arte e sob o texto. Cor
+// ja escura (marcastream.h): o branco do texto segue passando de 4,5:1.
+static void degradeMarca(float a) {
+  const MarcaStream *m = marcaServico();
+  float c[3];
+  CorvivaPaleta p;
+  const char *w;
+  if (m) { c[0] = m->r; c[1] = m->g; c[2] = m->b; }
+  else {
+    // Servico fora da tabela: a cor sai do wordmark (corviva), escurecida.
+    if (!grupo("Streaming") || !*(w = wordmarkServico()) || !corviva_paleta(w, &p) || !p.ok) return;
+    c[0] = p.grad[2][0] * 0.55f; c[1] = p.grad[2][1] * 0.55f; c[2] = p.grad[2][2] * 0.55f;
+  }
+  gfx_rect((GfxRect){ 0.0f, 0.0f, NV_TELA_W, NV_SHELF_TOP }, 0, GFX_FUNDO_DIN, 0.15f, 0, 0, 0,
+           c[0], c[1], c[2], 0.78f * a);
 }
 
 // As abas de fonte pertencem ao mesmo fluxo de selecao da folha de fontes.
@@ -1202,6 +1233,7 @@ static void fundoColecao(float a) {
 }
 static void themeBackground(float a) {
   fundoColecao(a);
+  degradeMarca(a);
   if(collection) {
     if(collection->editorial) {
       GLuint art=tex_obter_hero(collection->detailHero);
@@ -1270,20 +1302,21 @@ static void themeHeader(float a,float x0) {
   TxtLinha eyebrow=vtTelefone()
     ?txt_linha_corta(TXT_HERO_META,rotuloGrupo(),197,202,211,255,vtCabecalhoLargura(x0,960))
     :txt_linha(TXT_HERO_META,rotuloGrupo(),197,202,211,255);
-  txt_desenhar_alpha(eyebrow,x0,40,a);
+  if(!grupo("Streaming"))txt_desenhar_alpha(eyebrow,x0,40,a);
   int ehDiretor=collection&&!strcasecmp(collection->group,"Directors");
   // O wordmark de uma coleção de diretores pode conter cabeça ou lettering
   // composto. No cabeçalho da filmografia, o nome textual e o retrato limpo
   // deixam a identidade legível sem duplicar a mesma informação visual.
-  GLuint logo=!ehDiretor&&collection&&!collection->editorial&&collection->logo[0]
-             ?tex_obter_logo_larg(collection->logo,560):0;
-  float aspect=logo?tex_aspecto(collection->logo):0;
+  const char *wm=grupo("Streaming")?wordmarkServico():collection?collection->logo:"";
+  GLuint logo=!ehDiretor&&collection&&!collection->editorial&&wm[0]
+             ?tex_obter_logo_larg(wm,560):0;
+  float aspect=logo?tex_aspecto(wm):0;
   if(logo&&aspect>0) {
     // Wordmark oficial, grande o bastante para leitura a distancia. O PNG
     // transparente e importado em ate 800px, portanto 560px nao interpola para
     // cima nem perde a silhueta original da marca.
     float w=vtCabecalhoLargura(x0,560),h=w/aspect;if(h>108){h=108;w=h*aspect;}
-    gfx_rect((GfxRect){x0,83,w,h},logo,tex_marca_escura(collection->logo)?GFX_MARCA:GFX_TEXTO,0,0,0,0,.96f,.97f,.98f,a);
+    gfx_rect((GfxRect){x0,grupo("Streaming")?56:83,w,h},logo,tex_marca_escura(wm)?GFX_MARCA:GFX_TEXTO,0,0,0,0,.96f,.97f,.98f,a);
   } else {TxtLinha title=txt_linha_corta(TXT_TITULO1,titulo,242,243,247,255,vtCabecalhoLargura(x0,940));txt_desenhar_alpha(title,x0,80,a);}
   char caption[180];int n=nItens();
   if(semFonte) {
@@ -1649,6 +1682,7 @@ static void vitDesenhar(float a, float x0) {
     arte |= home_vitrine_arte(hero, a * (ant ? vitHeroEntra : 1.0f));
   }
   if (!arte) fundoColecao(a);
+  degradeMarca(a);
   if (hero) home_vitrine_texto(hero, a);
 
   // As fileiras, recortadas abaixo do texto do destaque.
@@ -1707,8 +1741,18 @@ static void vitDesenhar(float a, float x0) {
   // A faixa de cima: a colecao a que isto pertence e o botao "Exibição".
   { TxtLinha eb = txt_linha(TXT_HERO_META, rotuloGrupo(), 214, 219, 227, 255);
     TxtLinha tt = txt_linha_corta(TXT_TITULO2, titulo, 246, 247, 250, 255, 900);
-    txt_desenhar_alpha(eb, x0, 36.0f, a * 0.85f);
-    txt_desenhar_alpha(tt, x0, 62.0f, a); }
+    const char *wm = wordmarkServico();
+    GLuint tl = wm[0] ? tex_obter_logo_larg(wm, 420.0f) : 0;
+    float ap = tl ? tex_aspecto(wm) : 0.0f;
+    if (tl && ap > 0.0f) {
+      float wl = 420.0f, hl = wl / ap;
+      if (hl > 96.0f) { hl = 96.0f; wl = hl * ap; }
+      gfx_rect((GfxRect){ x0, 28.0f, wl, hl }, tl, tex_marca_escura(wm) ? GFX_MARCA : GFX_TEXTO,
+               0, 0, 0, 0, .96f, .97f, .98f, a);
+    } else {
+      if (!grupo("Streaming")) txt_desenhar_alpha(eb, x0, 36.0f, a * 0.85f);
+      txt_desenhar_alpha(tt, x0, grupo("Streaming") ? 44.0f : 62.0f, a);
+    } }
   botaoExibicao(a, x0);
 }
 
