@@ -430,7 +430,11 @@ static int abrirSessao(void) {
   atomic_store(&vigiaReiniciar, 1);
   ativo = 1; pronto = falhou = terminou = tocando = 0;
   largura = altura = durMs = 0; bufferando = 1; bufferDesde = SDL_GetTicks(); bufPct = 0;
-  nAudio = nLeg = 0; audioAtual = 0; legAtual = -1;
+  // Convertendo um MKV, as listas sao as do ARQUIVO (montarListaConvertida) e
+  // nao mudam com o player: troca, seek do progressivo e reconexao abrem outro
+  // player, mas a legenda escolhida (overlay do app) e o menu ficam. As
+  // faixas_fim do player novo so trocam o audio (0 legendas = releitura).
+  if (!(cv.ativo && mkvN > 0)) { nAudio = nLeg = 0; audioAtual = 0; legAtual = -1; }
   audioNaoSup = faixasLidas = audioLogado = 0;
   comecou = 0; comecouEm = 0; audioComecou = 0; audioPend = legPend = -1;
   if (!travaLeg) travaLeg = SDL_CreateMutex();
@@ -459,6 +463,9 @@ static int trilhaParaConverter(int tvLista);
 int video_tocar(const char *u) {
   if (cv.ativo || cv.sondando) dts_tpk_fechar();
   memset(&cv, 0, sizeof cv); cv.buscarMs = -1; naoSupPend = 0;
+  // As listas do titulo anterior nao passam para o convertido (que as mantem
+  // em abrirSessao); no caminho de sempre abrirSessao ja as zerava.
+  nAudio = nLeg = 0; audioAtual = 0; legAtual = -1;
   snprintf(urlAtual, sizeof urlAtual, "%s", u ? u : "");
   capmkv_iniciar(urlAtual);
   mkvGeracao++; mkvN = 0; faixasNovas = 0; mkvOlhou = 0; mkvSondarJa = 0; mkvNaoMkv = 0;
@@ -593,19 +600,29 @@ static void rotuloConvertido(char *rot, size_t n, int canais) {
   strncat(rot, suf, n - strlen(rot) - 1);
 }
 
-// Todas as faixas de audio e legenda do arquivo, na ordem das TrackEntry, com os
-// rotulos de faixasmkv (mesmo numero de entradas = casamento por ordinal).
-// numero = -1: nada disso e uma faixa do player.
+// Legenda de imagem (PGS, VobSub, DVB): o player da TV nao lista, e o overlay
+// do app so desenha texto. Fora da lista convertida, como no original.
+static int legendaImagemMkv(const MkvFaixa *m) {
+  return !strncmp(m->codec, "S_HDMV/", 7) || !strcmp(m->codec, "S_VOBSUB") || !strcmp(m->codec, "S_DVBSUB");
+}
+
+// As faixas de audio e as legendas de TEXTO do arquivo, na ordem das TrackEntry,
+// com os rotulos (e o codec e o ordinal do mkvass, nas legendas) de faixasmkv.
+// Audio: numero = -1, nada disso e faixa do player. Legenda: numero = posicao
+// entre as de texto, como o player numera o mesmo arquivo no original: a
+// legenda lembrada deste titulo (legmem) e o id da folha (legendasui) casam
+// nos dois modos, e cada entrada tem id proprio.
 static int listaDoArquivo(VideoFaixa *a, int *na, VideoFaixa *l, int *nl) {
   int i;
   *na = *nl = 0;
   for (i = 0; i < mkvN; i++) {
     VideoFaixa *f = NULL;
     if (mkvFx[i].tipo == 2 && *na < MAX_FAIXAS) f = &a[(*na)++];
-    else if (mkvFx[i].tipo == 17 && *nl < MAX_FAIXAS) f = &l[(*nl)++];
+    else if (mkvFx[i].tipo == 17 && !legendaImagemMkv(&mkvFx[i]) && *nl < MAX_FAIXAS) f = &l[(*nl)++];
     if (!f) continue;
     memset(f, 0, sizeof *f);
-    f->numero = -1; f->ordinalMkv = -1; f->stream_index = -1; f->stream_id = mkvFx[i].numero;
+    f->numero = mkvFx[i].tipo == 17 ? *nl - 1 : -1;
+    f->ordinalMkv = -1; f->stream_index = -1; f->stream_id = mkvFx[i].numero;
     snprintf(f->idioma, sizeof f->idioma, "%s", mkvFx[i].idioma);
   }
   faixasmkv_aplicar(a, *na, l, *nl, mkvFx, mkvN);
@@ -616,16 +633,20 @@ static int listaDoArquivo(VideoFaixa *a, int *na, VideoFaixa *l, int *nl) {
   return *na + *nl;
 }
 
-// Convertendo: o menu mostra o arquivo inteiro (a do player e so a AC3).
+// Convertendo: o menu mostra o arquivo inteiro (a do player e so a AC3). A
+// legenda escolhida segue a mesma faixa do arquivo (pelo ordinal do mkvass),
+// venha a lista anterior do player ou desta mesma funcao.
 static void montarListaConvertida(void) {
   static VideoFaixa a[MAX_FAIXAS], l[MAX_FAIXAS];
-  int na, nl, i, sel = 0;
+  int na, nl, i, sel = 0, ordLeg = legAtual >= 0 && legAtual < nLeg ? faixaLeg[legAtual].ordinalMkv : -1;
   listaDoArquivo(a, &na, l, &nl);
   for (i = 0; i < na; i++) if (a[i].stream_id == cv.track) sel = i;
   memcpy(faixaAudio, a, sizeof faixaAudio); memcpy(faixaLeg, l, sizeof faixaLeg);
   audioAtual = sel; nAudio = na; nLeg = nl;
-  printf("[dts-tpk] menu: %d audio e %d legenda do arquivo; tocando faixa %d (%s)\n", na, nl, cv.track,
-         na ? faixaAudio[sel].rotulo : "-");
+  if (legAtual >= nLeg) legAtual = -1;
+  if (ordLeg >= 0) for (i = 0; i < nl; i++) if (l[i].ordinalMkv == ordLeg) legAtual = i;
+  printf("[dts-tpk] menu: %d audio e %d legenda(s) de texto do arquivo; tocando faixa %d (%s)%s\n", na, nl, cv.track,
+         na ? faixaAudio[sel].rotulo : "-", legAtual >= 0 ? ", legenda escolhida mantida" : "");
   fflush(stdout);
 }
 
@@ -684,6 +705,10 @@ static void convTrocar(int track, int modo, double pos, const char *url) {
   cv.desloc = 0; cv.deslocOk = !cv.prog; cv.tocou = cv.jaTocou = 0;
   cv.buscarMs = !cv.prog && pos > 1.0 ? (int)(pos * 1000.0) : -1;
   cv.seekPend = 0; cv.voltar = 0;
+  // A lista do arquivo ja, antes do player novo responder: a legenda escolhida
+  // no original (texto, desenhado pelo overlay do app lendo a fonte) segue na
+  // mesma faixa, e abrirSessao nao a zera (ver la).
+  if (mkvN > 0) montarListaConvertida();
   faixasNovas = 1;
   abrirSessao();
 }
@@ -1414,8 +1439,9 @@ void video_escolher_audio(int i) {
 void video_escolher_legenda(int i) {
   if (i >= nLeg) return;
   // Convertendo, as legendas sao as do arquivo: texto vai ao overlay do app
-  // (faixas.c/mkvass, lendo a fonte original); imagem (PGS) nao vai no fluxo.
-  if (i >= 0 && faixaLeg[i].numero < 0) {
+  // (faixas.c/mkvass, lendo a fonte original); o fluxo convertido nao tem
+  // legenda nenhuma, entao nada vai ao player.
+  if (i >= 0 && cv.ativo) {
     legAtual = i; legPend = -1; legendaLimpar(1);
     printf("[dts-tpk] legenda %d (%s, %s) sem faixa no fluxo convertido: so o overlay do app desenha texto\n",
            i, faixaLeg[i].rotulo, faixaLeg[i].codec[0] ? faixaLeg[i].codec : "?");
