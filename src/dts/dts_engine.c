@@ -89,6 +89,16 @@ struct DtsEngine {
    * range while the player already gave up on that segment). Cleared by the
    * caller before the next run; the demuxer state is then reset by a seek. */
   volatile int interrupt;
+  /* Remux: ONE sequential connection (rede_fluxo64) into a ring buffer, like
+   * the TV's player reads, instead of 4 MiB requests on 4 lanes (TorBox
+   * throttled and then refused those at 60+ Mbit/s). Guarded by range_lock. */
+  pthread_t fx_thread;
+  int fx_thread_ok, fx_stop, fx_eof, fx_err, fx_attempts;
+  unsigned char *fx_buf;
+  int64_t fx_lo, fx_hi;      /* bytes [fx_lo, fx_hi) of the file are in the ring */
+  int64_t fx_req;            /* restart the read at this offset (-1: none) */
+  int64_t fx_from;           /* where the current read started (read-ahead grows from it) */
+  uint64_t fx_resolved_ms;   /* last time the final address was dropped for the add-on's */
   char final_url[8192];
   AVFormatContext *fmt;
   AVIOContext *io;
@@ -242,6 +252,167 @@ static void queue_ranges(DtsEngine *e) {
   }
   pthread_cond_broadcast(&e->range_wake);
 }
+#define FX_CAP (32 * 1024 * 1024)      /* ring: read-ahead plus history */
+#define FX_HIST (2 * 1024 * 1024)      /* kept behind the reader (small backward seeks) */
+#define FX_SKIP (1024 * 1024)          /* a forward jump this short waits, no new request */
+#define FX_STALL_MS 20000              /* no byte for this long (not paused by us): drop */
+#define FX_TRIES 6                     /* 1+2+4+8+15 s of backoff, then the run fails */
+static uint64_t fx_now_ms(void) { return clock_ns(CLOCK_MONOTONIC)/1000000u; }
+/* Read-ahead allowed past the reader: twice what was read since the request
+ * started, at least 2 MiB. A probe that only needs the header and the Cues
+ * then costs a few MiB, not a full ring, at each jump. */
+static int64_t fx_ahead(DtsEngine *e) {
+  int64_t used=e->pos>e->fx_from?e->pos-e->fx_from:0, a=2*used;
+  if(a<2*1024*1024) a=2*1024*1024;
+  if(a>FX_CAP-FX_HIST) a=FX_CAP-FX_HIST;
+  return a;
+}
+/* Called under range_lock by the streaming thread: room for more bytes? */
+static int64_t fx_room(DtsEngine *e) {
+  int64_t floor=e->pos<e->fx_hi?e->pos:e->fx_hi;
+  floor-=FX_HIST; if(floor<e->fx_lo) floor=e->fx_lo;
+  e->fx_lo=floor;                                  /* older bytes may be overwritten */
+  int64_t room=FX_CAP-(e->fx_hi-e->fx_lo);
+  int64_t ahead=fx_ahead(e)-(e->fx_hi-(e->pos>e->fx_hi?e->fx_hi:e->pos));
+  if(e->pos>e->fx_hi) ahead=FX_CAP;                /* reader waits past the end: fill */
+  return room<ahead?room:ahead;
+}
+static int fx_sink(void *opaque,const char *data,size_t n) {
+  DtsEngine *e=opaque;
+  pthread_mutex_lock(&e->range_lock);
+  while(n>0) {
+    if(e->fx_stop || cancelled(e) || e->fx_req>=0) { pthread_mutex_unlock(&e->range_lock); return 0; }
+    int64_t room=fx_room(e);
+    if(room<=0) { pthread_cond_wait(&e->range_wake,&e->range_lock); continue; }
+    size_t k=n<(size_t)room?n:(size_t)room;
+    size_t at=(size_t)(e->fx_hi%FX_CAP), first=FX_CAP-at<k?FX_CAP-at:k;
+    memcpy(e->fx_buf+at,data,first);
+    if(k>first) memcpy(e->fx_buf,data+first,k-first);
+    e->fx_hi+=(int64_t)k; data+=k; n-=k;
+    e->metrics.range_bytes+=(uint64_t)k;
+    pthread_cond_broadcast(&e->range_wake);
+  }
+  pthread_mutex_unlock(&e->range_lock);
+  return 1;
+}
+static void *fx_worker(void *opaque) {
+  DtsEngine *e=opaque;
+  pthread_mutex_lock(&e->range_lock);
+  while(!e->fx_stop && !cancelled(e)) {
+    if(e->fx_req>=0) {                       /* (re)start at the reader's offset */
+      e->fx_lo=e->fx_hi=e->fx_from=e->fx_req; e->fx_req=-1;
+      e->fx_eof=0; e->fx_err=0; e->fx_attempts=0;
+    } else if(e->fx_eof || e->fx_err || (e->total>=0 && e->fx_hi>=e->total)) {
+      if(e->total>=0 && e->fx_hi>=e->total) e->fx_eof=1;
+      pthread_cond_broadcast(&e->range_wake);
+      pthread_cond_wait(&e->range_wake,&e->range_lock);
+      continue;
+    }
+    int64_t at=e->fx_hi;
+    char target[8192], fin[8192]; int direct, cross=0, status=0; int64_t total=-1, got=0;
+    direct=e->final_url[0]!=0;
+    snprintf(target,sizeof target,"%s",direct?e->final_url:e->url);
+    int strip=direct&&e->final_cross;
+    pthread_mutex_unlock(&e->range_lock);
+    uint64_t t0=fx_now_ms();
+    int r=rede_fluxo64(target,strip?"":e->headers,at,fx_sink,e,&total,&status,&e->cancelled,fin,&cross,FX_STALL_MS,&got);
+    uint64_t ms=fx_now_ms()-t0;
+    pthread_mutex_lock(&e->range_lock);
+    e->metrics.range_requests++;
+    if(total>=0) e->total=total;
+    if(!direct && got>0 && fin[0]) { snprintf(e->final_url,sizeof e->final_url,"%s",fin); e->final_cross=cross; }
+    if(r==1 || e->fx_stop || cancelled(e)) continue;          /* restart asked, or closing */
+    if(r==0) {                                                /* body ended */
+      e->fx_attempts=0;
+      if(status==200) { e->total=e->fx_hi; e->fx_eof=1; continue; }   /* whole file, no Range */
+      if(e->total>=0 && e->fx_hi>=e->total) e->fx_eof=1;
+      else if(got==0) e->fx_eof=1;                            /* nothing more: treat as end */
+      continue;                                               /* a capped range: go on from fx_hi */
+    }
+    /* Error. Bytes already received count as progress: the next try resumes at
+     * fx_hi. An expired link (401/403/404/410) goes back through the add-on,
+     * at most once a minute; anything else retries the same address. */
+    if(got>0) e->fx_attempts=0;
+    int expired=status==401||status==403||status==404||status==410;
+    if(expired && direct && fx_now_ms()-e->fx_resolved_ms>60000u) {
+      e->final_url[0]=0; e->fx_resolved_ms=fx_now_ms();
+    }
+    if(status==416 && e->total>=0 && at>=e->total) { e->fx_eof=1; continue; }
+    e->fx_attempts++;
+    printf("[dts-range] leitura caiu: at=%lldMiB http=%d depois de %lld KiB em %llu ms, %s; tentativa %d/%d\n",
+           (long long)(at>>20),status,(long long)(got>>10),(unsigned long long)ms,
+           expired?(e->final_url[0]?"endereco expirado (re-resolve em espera)":"endereco expirado, de novo pelo addon"):"mesmo endereco",
+           e->fx_attempts,FX_TRIES);
+    fflush(stdout);
+    if(e->fx_attempts>=FX_TRIES) {
+      e->fx_err=1;
+      printf("[dts-range] leitura desistiu em %lldMiB depois de %d tentativas\n",(long long)(at>>20),FX_TRIES);
+      fflush(stdout);
+      pthread_cond_broadcast(&e->range_wake);
+      continue;
+    }
+    { int wait_s=1<<(e->fx_attempts-1); if(wait_s>15) wait_s=15;
+      struct timespec ts; clock_gettime(CLOCK_REALTIME,&ts); ts.tv_sec+=wait_s;
+      while(!e->fx_stop && !cancelled(e) && e->fx_req<0 &&
+            pthread_cond_timedwait(&e->range_wake,&e->range_lock,&ts)==0) {} }
+  }
+  pthread_cond_broadcast(&e->range_wake);
+  pthread_mutex_unlock(&e->range_lock);
+  return NULL;
+}
+static int read_fluxo(void *opaque,uint8_t *dst,int n) {
+  DtsEngine *e=opaque;
+  uint64_t wait_started=0;
+  pthread_mutex_lock(&e->range_lock);
+  if(!e->fx_thread_ok && !e->fx_stop) {
+    if(!e->fx_buf) e->fx_buf=malloc(FX_CAP);
+    if(!e->fx_buf) { pthread_mutex_unlock(&e->range_lock); return AVERROR(ENOMEM); }
+    e->fx_req=e->pos;
+    if(pthread_create(&e->fx_thread,NULL,fx_worker,e)) { pthread_mutex_unlock(&e->range_lock); return AVERROR(ENOMEM); }
+    e->fx_thread_ok=1;
+  }
+  for(;;) {
+    if(cancelled(e) || __atomic_load_n(&e->interrupt,__ATOMIC_RELAXED)) { pthread_mutex_unlock(&e->range_lock); return AVERROR_EXIT; }
+    if(e->total>=0 && e->pos>=e->total) { pthread_mutex_unlock(&e->range_lock); return AVERROR_EOF; }
+    if(e->fx_req<0 && e->pos>=e->fx_lo && e->pos<e->fx_hi) {
+      int64_t k=e->fx_hi-e->pos; if(k>n) k=n;
+      size_t at=(size_t)(e->pos%FX_CAP); if((int64_t)(FX_CAP-at)<k) k=FX_CAP-at;
+      memcpy(dst,e->fx_buf+at,(size_t)k); e->pos+=k;
+      if(wait_started) { uint64_t w=clock_ns(CLOCK_MONOTONIC); if(w>=wait_started) e->metrics.range_blocked_ns+=w-wait_started; }
+      pthread_cond_broadcast(&e->range_wake);         /* room for the stream */
+      pthread_mutex_unlock(&e->range_lock);
+      return (int)k;
+    }
+    if(e->fx_req<0 && e->fx_eof && e->pos>=e->fx_hi) { pthread_mutex_unlock(&e->range_lock); return AVERROR_EOF; }
+    if(e->fx_req<0 && e->fx_err) { pthread_mutex_unlock(&e->range_lock); return AVERROR(EIO); }
+    /* Outside what the stream has or will soon have: start over there. */
+    if(e->fx_req<0 && (e->pos<e->fx_lo || e->pos>e->fx_hi+FX_SKIP)) { e->fx_req=e->pos; pthread_cond_broadcast(&e->range_wake); }
+    if(!wait_started) wait_started=clock_ns(CLOCK_MONOTONIC);
+    struct timespec ts; clock_gettime(CLOCK_REALTIME,&ts); ts.tv_sec+=1;
+    pthread_cond_timedwait(&e->range_wake,&e->range_lock,&ts);
+  }
+}
+static int64_t seek_fluxo(void *opaque,int64_t offset,int whence) {
+  DtsEngine *e=opaque;
+  if (cancelled(e)) return AVERROR_EXIT;
+  if (whence==AVSEEK_SIZE) return e->total>=0?e->total:AVERROR(ENOSYS);
+  whence &= ~AVSEEK_FORCE;
+  pthread_mutex_lock(&e->range_lock);
+  int64_t base=whence==SEEK_SET?0:whence==SEEK_CUR?e->pos:whence==SEEK_END?e->total:-1;
+  if (base<0 || (offset>0 && base>INT64_MAX-offset) || (offset<0 && offset<-base)) { pthread_mutex_unlock(&e->range_lock); return AVERROR(EINVAL); }
+  e->pos=base+offset;
+  pthread_cond_broadcast(&e->range_wake);
+  pthread_mutex_unlock(&e->range_lock);
+  return e->pos;
+}
+static void fx_close(DtsEngine *e) {
+  pthread_mutex_lock(&e->range_lock);
+  e->fx_stop=1; pthread_cond_broadcast(&e->range_wake);
+  pthread_mutex_unlock(&e->range_lock);
+  if(e->fx_thread_ok) pthread_join(e->fx_thread,NULL);
+  e->fx_thread_ok=0; e->fx_stop=0; e->fx_req=-1; e->fx_eof=e->fx_err=0; e->fx_lo=e->fx_hi=0;
+  free(e->fx_buf); e->fx_buf=NULL;
+}
 static int read_range(void *opaque,uint8_t *dst,int n) {
   DtsEngine *e=opaque;
   if (cancelled(e) || __atomic_load_n(&e->interrupt,__ATOMIC_RELAXED)) return AVERROR_EXIT;
@@ -324,6 +495,7 @@ static void copy_metadata(char *out,size_t size,AVDictionary *m,const char *key)
   snprintf(out,size,"%s",v?v->value:"");
 }
 static void close_media(DtsEngine *e) {
+  fx_close(e);
   pthread_mutex_lock(&e->range_lock);
   e->range_stop=1;
   for(int i=0;i<RANGE_SLOTS;i++) __atomic_store_n(&e->ranges[i].cancel,1,__ATOMIC_RELAXED);
@@ -538,7 +710,8 @@ int dts_engine_open_demux(DtsEngine *e,const char *url,const char *headers) {
   e->fmt=avformat_alloc_context();
   unsigned char *buffer=av_malloc(65536);
   if (!e->url || !e->headers || !e->fmt || !buffer) { av_free(buffer); return fail(e,"Demux allocation",0); }
-  e->io=avio_alloc_context(buffer,65536,0,e,read_range,NULL,seek_range);
+  e->fx_req=-1;
+  e->io=avio_alloc_context(buffer,65536,0,e,read_fluxo,NULL,seek_fluxo);
   if (!e->io) { av_free(buffer); return fail(e,"IO allocation",0); }
   e->fmt->pb=e->io; e->fmt->flags|=AVFMT_FLAG_CUSTOM_IO;
   e->fmt->interrupt_callback=(AVIOInterruptCB){cancelled,e};
@@ -567,7 +740,12 @@ void *dts_engine_avformat(DtsEngine *e) { return e?e->fmt:NULL; }
 void dts_engine_interrupt(DtsEngine *e,int on) {
   if(!e) return;
   __atomic_store_n(&e->interrupt,on?1:0,__ATOMIC_RELAXED);
-  if(on) { pthread_mutex_lock(&e->range_lock); pthread_cond_broadcast(&e->range_wake); pthread_mutex_unlock(&e->range_lock); }
+  pthread_mutex_lock(&e->range_lock);
+  /* A new run reads again: a reader that gave up (fx_err) gets a fresh set of
+   * tries, from the run's own seek. */
+  if(!on && e->fx_err) { e->fx_err=0; e->fx_attempts=0; e->fx_req=e->pos; }
+  pthread_cond_broadcast(&e->range_wake);
+  pthread_mutex_unlock(&e->range_lock);
 }
 /* Total size of the source, -1 while unknown (first range not answered). */
 int64_t dts_engine_size(DtsEngine *e) { return e?e->total:-1; }

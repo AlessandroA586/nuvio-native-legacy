@@ -407,6 +407,24 @@ static Gerador *pegarGerador(Sessao *s, int seg, int *continua, char *err, size_
     for (i = 0; i < GERADORES; i++)
       if (s->ger[i].g && !s->ger[i].ocupado && (!esc || s->ger[i].uso < esc->uso)) esc = &s->ger[i];
     if (esc) break;
+    // Progressivo: o player le UM fluxo por vez. Pedido novo (seek, ou o player
+    // reconectando) com o anterior ainda ocupado: o anterior para e este fica
+    // com o leitor dele, em vez de abrir outro (cada leitor novo e outra
+    // conexao na fonte e reler o cabecalho; foi isso que o TorBox recusou).
+    if (seg < 0) {
+      Gerador *prog = NULL;
+      for (i = 0; i < GERADORES; i++) if (s->ger[i].g && s->ger[i].ocupado && s->ger[i].seg == -2) prog = &s->ger[i];
+      if (prog) {
+        if (!prog->parar) {
+          prog->parar = 1;
+          dts_remux_gen_interrupt(prog->g);
+          printf("[dts-tpk] sessao %u: fluxo anterior para; o pedido novo usa o mesmo leitor\n", s->id);
+          fflush(stdout);
+        }
+        if (pthread_cond_timedwait(&s->c, &s->m, &ts) == ETIMEDOUT) { snprintf(err, errn, "previous stream did not stop"); break; }
+        continue;
+      }
+    }
     for (i = 0; i < GERADORES; i++) if (!s->ger[i].g && !s->ger[i].ocupado) { vaga = i; break; }
     if (vaga >= 0) {
       Gerador *nv = &s->ger[vaga];
