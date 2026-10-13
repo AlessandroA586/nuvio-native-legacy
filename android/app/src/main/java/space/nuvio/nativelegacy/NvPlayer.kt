@@ -366,7 +366,7 @@ object NvPlayer {
             liberar()
             // O C envia ganho/pausa depois de abrir; a espera nao pode apaga-los.
             ganhoPct = 100
-            pausaPedida = false
+            if (!reabrindo) pausaPedida = false
         }
         // MStar/Amlogic: o overlay e o decoder antigos precisam sair antes do novo.
         // Poll no Handler deixa Back/parar funcionar enquanto o release corre em fundo.

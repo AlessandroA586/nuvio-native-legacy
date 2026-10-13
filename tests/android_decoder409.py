@@ -184,6 +184,30 @@ fun main(args: Array<String>) {
         println("PASS pausa: abertura adiada confirma pausa; retomar/nova fonte nascem tocando")
         return
     }
+    if (args[0] == "retry-pausa") {
+        for (code in listOf(4001, 4003)) for (espera in listOf(0L, 600L)) {
+            f.reset(); f.releaseMs = espera; f.abrir("reconectada")
+            f.principal.ate(725); f.pausar(1); f.principal.ate(725)
+            // Estado da abertura real, omitido junto da construcao Android acima.
+            f.urlAtual = "reconectada"; f.abriuEm = SystemClock.agora; f.retentou = false
+            val anterior = f.player
+            f.ouvinte(f.sessao).onPlayerError(PlaybackException(code))
+            f.principal.ate(1124)
+            check(f.player === anterior && f.player?.playWhenReady == false)
+            f.principal.ate(1800)
+            check(f.criados == listOf("reconectada", "reconectada") && f.player !== anterior)
+            check(f.pausaPedida && f.player?.playWhenReady == false) {
+                "P2 pausa perdida no retry $code (release=${espera}ms): playWhenReady=${f.player?.playWhenReady}"
+            }
+            check(f.eventos.last() == f.EV_PAUSADO) { "retry nao confirmou pausa" }
+            f.pausar(0); f.principal.ate(1800)
+            check(f.player?.playWhenReady == true) { "comando de retomar ignorado apos retry" }
+            f.pausar(1); f.principal.ate(1800); f.abrir("nova"); f.principal.ate(2500)
+            check(!f.pausaPedida && f.player?.playWhenReady == true) { "pausa vazou para abertura nova" }
+        }
+        println("PASS retry-pausa: 4001/4003 preservam pausa com/sem espera; retomar e abertura nova tocam")
+        return
+    }
     if (args[0] == "ganho") {
         for (pct in listOf(50, 150)) {
             f.reset(); f.releaseMs = 600; f.abrir("nova")
@@ -243,7 +267,7 @@ with tempfile.TemporaryDirectory(prefix='nuvio-decoder409-') as tmp:
                     '-jvm-target', '17', '-d', str(tmp / 'classes'), str(file),
                     str(root / 'android/app/src/main/java/space/nuvio/nativelegacy/GanhoMath.kt')], check=True)
     failed = 0
-    for case in ('renderer', 'release', 'descarte', 'ganho', 'pausa'):
+    for case in ('renderer', 'release', 'descarte', 'ganho', 'pausa', 'retry-pausa'):
         output = sys.argv[2:3] if case == 'pausa' and sys.argv[1:2] == ['--pausa-eventos'] else []
         failed += subprocess.run([java, '-cp', f'{tmp / "classes"}:{stdlib}', 'DecoderFixtureKt', case, *output]).returncode != 0
     raise SystemExit(bool(failed))
