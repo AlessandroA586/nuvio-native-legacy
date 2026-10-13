@@ -33,6 +33,7 @@ static char userCode[48];
 static char url[200];
 static char erro[200];
 static char token[300];
+static unsigned long long credGeracao = 1;
 static unsigned proximoPoll, comecouMs, limiteMs = SMK_LIMITE_PADRAO_MS, passoMs = SMK_POLL_MS;
 static unsigned ultimoAgora;
 static int falhasSeguidas;
@@ -103,14 +104,30 @@ int simklauth_carregar(void) {
   if (!b) return 0;
   { char *fim = b + strlen(b);
     while (fim > b && (fim[-1] == '\n' || fim[-1] == '\r')) *--fim = 0; }
-  if (b[0]) { snprintf(token, sizeof token, "%s", b); estado = SMK_LIGADO; }
+  pthread_mutex_lock(&trava);
+  if (b[0]) {
+    if (strcmp(token, b)) credGeracao++;
+    snprintf(token, sizeof token, "%s", b); estado = SMK_LIGADO;
+  }
+  int ligado = token[0] != 0;
+  pthread_mutex_unlock(&trava);
   free(b);
-  return token[0] != 0;
+  return ligado;
 }
 
 const char *simklauth_token(void) { return token; }
 
+unsigned long long simklauth_credencial_copiar(char *dst, size_t tam) {
+  unsigned long long g;
+  pthread_mutex_lock(&trava);
+  if (dst && tam) snprintf(dst, tam, "%s", token);
+  g = credGeracao;
+  pthread_mutex_unlock(&trava);
+  return g;
+}
+
 static void zerarEstado(void) {
+  credGeracao++;
   token[0] = userCode[0] = url[0] = erro[0] = 0;
   tokenNovo = 0;
   comecouMs = 0;
@@ -151,14 +168,22 @@ void simklauth_esquecer(void) {
   pthread_mutex_unlock(&trava);
 }
 
-// O Simkl respondeu 401 a um pedido com este token: o vinculo morreu la.
-// Desfaz so o do PERFIL ATUAL (o esquecer acima e o logout, varre todos).
-void simklauth_invalidar(void) {
+// O Simkl respondeu 401 a um pedido que saiu com a credencial de geracao `cred`
+// (simklauth_credencial_copiar). So desfaz o vinculo se ele ainda e ESSE: com a
+// troca de perfil ou um novo vinculo no meio do voo, o 401 e de um token que ja
+// nao esta aqui e o do perfil atual fica. Devolve 1 quando desfez. (O esquecer
+// acima e o logout, varre todos.)
+int simklauth_invalidar_se(unsigned long long cred) {
+  int atual;
   pthread_mutex_lock(&trava);
-  geracao++;
-  zerarEstado();
-  dados_apagar(arq(perfil).s);
+  atual = cred == credGeracao;
+  if (atual) {
+    geracao++;
+    zerarEstado();
+    dados_apagar(arq(perfil).s);
+  }
   pthread_mutex_unlock(&trava);
+  return atual;
 }
 
 // ---------------------------------------------------------------- fluxo
@@ -283,6 +308,7 @@ static void *fioPoll(void *u) {
   { char t[300];
     switch (simklauth_classificar(st, r, t, sizeof t)) {
       case SMK_POLL_OK:
+        if (strcmp(token, t)) credGeracao++;
         snprintf(token, sizeof token, "%s", t);
         tokenNovo = 1;
         estado = SMK_LIGADO;

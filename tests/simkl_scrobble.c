@@ -15,6 +15,7 @@
 #include "../src/rede.h"
 #include <assert.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,9 +31,23 @@ int ajustes_cw_minimo(void) { return 1; }
 int ajustes_cw_concluido(void) { return 90; }
 static const char *tokenAtual = "";
 static int nInvalidar;
-const char *simklauth_token(void) { return tokenAtual; }
-// O real apaga o arquivo do perfil; aqui basta o token sumir.
-void simklauth_invalidar(void) { tokenAtual = ""; nInvalidar++; }
+static unsigned long long credGeracao = 1;
+static pthread_t principal;
+static int tokenLidoNoFio;   // leituras por ponteiro fora do fio principal
+const char *simklauth_token(void) {
+  if (!pthread_equal(pthread_self(), principal)) tokenLidoNoFio++;
+  return tokenAtual;
+}
+unsigned long long simklauth_credencial_copiar(char *dst, size_t tam) {
+  if (dst && tam) snprintf(dst, tam, "%s", tokenAtual);
+  return credGeracao;
+}
+// O real apaga o arquivo do perfil, e so se a credencial ainda e a recusada.
+int simklauth_invalidar_se(unsigned long long cred) {
+  if (cred != credGeracao) return 0;
+  tokenAtual = ""; nInvalidar++; credGeracao++;
+  return 1;
+}
 const char *nuvem_simkl_cliente(void) { return "cid-teste"; }
 const char *nuvem_simkl_app(void) { return "nuvio"; }
 void nuvem_url_escapar(const char *v, char *dst, unsigned tam) { snprintf(dst, tam, "%s", v); }
@@ -48,6 +63,7 @@ static char ultimaRota[64], ultimoCorpo[400], ultimaUrl[700];
 static int semBearer;
 static int stScr = 200;                 // status devolvido por /scrobble/*
 static const char *corpoScr = "{\"id\":1}";
+static void (*duranteScr)(void);        // roda dentro do POST /scrobble/*
 
 char *rede_postar_st(const char *url, int s, const char *const *cab,
                      const char *corpo, int *st) {
@@ -71,6 +87,7 @@ char *rede_postar_st(const char *url, int s, const char *const *cab,
   posts++;
   if (!strncmp(ultimaRota, "/scrobble/", 10)) {
     nScr++;
+    if (duranteScr) duranteScr();
     *st = stScr;
     return strdup(corpoScr);
   }
@@ -248,6 +265,56 @@ static void stopQueFalha(void) {
   OK("stop 409 conta como registrado");
 }
 
+static void trocaDePerfil(void) { credGeracao++; }
+static void logoutNoVoo(void) { simkl_esquecer(); }
+
+// 401 de um POST em voo que saiu com o token do perfil ANTERIOR nao pode
+// desvincular o perfil que esta ligado agora.
+static void naoRespondeAoPerfilErrado(void) {
+  int antes = nInvalidar;
+  stScr = 401;
+  duranteScr = trocaDePerfil;
+  assert(mandar(SCR_EV_TOCANDO, "tt6000001", 300, 3000, 300, 0) == SCR_START);
+  assert(nScr == 1);
+  duranteScr = NULL;
+  assert(nInvalidar == antes && simkl_ativo());
+  // Nem janela de espera: o proximo titulo sai na hora.
+  stScr = 200;
+  assert(mandar(SCR_EV_TOCANDO, "tt6000002", 300, 3000, 300, 0) == SCR_START && nScr == 1);
+  OK("401 de credencial antiga nao desvincula o perfil atual");
+}
+
+// O Authorization sai da COPIA da credencial, nunca de simklauth_token().
+static void tokenPorCopia(void) {
+  tokenLidoNoFio = 0;
+  assert(mandar(SCR_EV_TOCANDO, "tt6000003", 300, 3000, 300, 0) == SCR_START && nScr == 1);
+  assert(!semBearer && tokenLidoNoFio == 0);
+  OK("o fio de envio le o token por copia");
+}
+
+// Logout / troca de perfil zeram o "start em pe" e a janela de espera.
+static void esquecerZeraEstado(void) {
+  assert(mandar(SCR_EV_TOCANDO, "tt6000004", 300, 3000, 300, 0) == SCR_START);
+  assert(mandar(SCR_EV_TOCANDO, "tt6000004", 330, 3000, 330, 0) == SCR_NADA);
+  simkl_esquecer();
+  assert(mandar(SCR_EV_TOCANDO, "tt6000004", 360, 3000, 360, 0) == SCR_START && nScr == 1);
+  // Janela aberta por 429 some com o esquecer.
+  stScr = 429;
+  assert(mandar(SCR_EV_TOCANDO, "tt6000005", 300, 3000, 300, 0) == SCR_START && nScr == 1);
+  stScr = 200;
+  assert(mandar(SCR_EV_TOCANDO, "tt6000006", 300, 3000, 300, 0) == SCR_START && nScr == 0);
+  simkl_esquecer();
+  assert(mandar(SCR_EV_TOCANDO, "tt6000007", 300, 3000, 300, 0) == SCR_START && nScr == 1);
+  // Esquecer durante o POST: a resposta 429 em voo nao reabre a janela.
+  stScr = 429;
+  duranteScr = logoutNoVoo;
+  assert(mandar(SCR_EV_TOCANDO, "tt6000008", 300, 3000, 300, 0) == SCR_START && nScr == 1);
+  duranteScr = NULL;
+  stScr = 200;
+  assert(mandar(SCR_EV_TOCANDO, "tt6000009", 300, 3000, 300, 0) == SCR_START && nScr == 1);
+  OK("esquecer zera o start em pe e a janela de espera");
+}
+
 int main(void) {
   char caminho[] = "/tmp/nuvio-simkl-scr-XXXXXX";
   int fd = mkstemp(caminho), salvo = dup(1);
@@ -257,6 +324,7 @@ int main(void) {
   assert(fd >= 0 && salvo >= 0);
   fflush(stdout);
   dup2(fd, 1);
+  principal = pthread_self();
 
   semVinculo();
   filme();
@@ -266,6 +334,9 @@ int main(void) {
   falhaNaoAutorizada();
   espera();
   stopQueFalha();
+  naoRespondeAoPerfilErrado();
+  tokenPorCopia();
+  esquecerZeraEstado();
 
   fflush(stdout);
   dup2(salvo, 1);
