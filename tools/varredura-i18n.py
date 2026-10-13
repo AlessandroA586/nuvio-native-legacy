@@ -259,6 +259,7 @@ def contexto(txt, i):
 # virar teste ela nao impede a proxima regressao.
 IGNORAR = {
     "daqui em diante",  # episodios.c nomeModo: so no log [visto] menu, nunca rotulo
+    "fechar",  # main.c: nome do evento de janela so no log "[ciclo] janela="
     # gpunivel.c: motivos passados a aplicar()/decidir(), que so fazem printf do
     # log "[gpu-nivel]"; nunca chegam a tela.
     "GPU fraca: referencia nao termina",
