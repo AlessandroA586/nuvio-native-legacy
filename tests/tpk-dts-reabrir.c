@@ -138,6 +138,7 @@ void nv_tpk_video_evento(int tipo, int a, int b);
 void video_tpk_log_host(const char *linha);
 int video_tpk_fonte_tocou(void);
 int video_tpk_convertendo(void);
+int video_tpk_capa(void);
 static char ultUrl[256];
 static int nAbriu, nBuscas, posMs;
 static void hAbrir(const char *u, const char *c) { (void)c; nAbriu++; snprintf(ultUrl, sizeof ultUrl, "%s", u); }
@@ -171,6 +172,7 @@ int main(void) {
   video_tocar("http://h/a.mkv");
   ok(abriuConversor == 1 && strstr(ultUrl, "v.ts?t=0"), "opens the converted TS from the start");
   ok(!video_pronto(), "first open is an open (the app's opening card shows)");
+  ok(!video_tpk_capa(), "first open: no cover (the opening card is the screen)");
   inicioStream = 0; posMs = 1000;
   playerPronto(); bombear(3);
   posMs = 60000; bombear(3);
@@ -182,10 +184,12 @@ int main(void) {
   ok(urlEmN == 1 && perto(urlEmUlt, 600) && nAbriu == 1 && strstr(ultUrl, "t=600"), "seek: the player opens the stream at 600 s");
   bombear(3);
   ok(video_pronto() && perto(video_pos(), 600), "seek: video_pronto stays 1 and the position is the target");
+  ok(video_tpk_capa(), "seek: the screen covers the black until the new frame");
   inicioStream = 598; posMs = 598500;
   playerPronto(); bombear(3);
   ok(nBuscas == 0, "seek: no raw seek on the progressive stream");
   ok(perto(video_pos(), 598.5), "seek: released once the new player shows the keyframe before 600 s");
+  ok(!video_tpk_capa(), "seek: cover gone with the first frame");
 
   // RECONNECT: resumes at the last real position through a new stream.
   posMs = 620000; bombear(3);

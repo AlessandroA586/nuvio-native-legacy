@@ -1495,6 +1495,9 @@ int video_tpk_fonte_tocou(void) { return cv.ativo && cv.fonteTocou; }
 // player.c: o cartao de erro de fonte para o convertido (senao ele segue
 // tocando atras do cartao e da tela inicial).
 int video_tpk_convertendo(void) { return cv.ativo || cv.sondando; }
+// player.c: o player novo do convertido ainda nao mostrou quadro numa fonte que
+// ja tocava (seek no TS, reconexao, troca): a tela cobre o preto com uma capa.
+int video_tpk_capa(void) { return cv.reabrindo && !comecou; }
 // video.c (video_dts_estado): o selo/aviso do DTS enquanto este arquivo converte.
 // TrueHD nao tem selo de DTS: 0.
 int video_tpk_dts_estado(void) {
