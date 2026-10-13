@@ -151,6 +151,9 @@ struct DtsRemux {
   /* VC-1 / MPEG-2: the sequence header (+ entry point / extensions) from the
    * container's CodecPrivate, repeated in front of each keyframe in the TS. */
   uint8_t *seqHdr; int seqHdrN; uint8_t seqCode; int vc1;
+  /* HEVC from Matroska/MP4 (hvcC): its NAL arrays in Annex B and the NAL
+   * length size, for dts_remux_hevc_annexb. */
+  uint8_t *hvccB; int hvccBN, hvccLen;
   atomic_int gopLogged;             /* GOP line already printed for this source */
   int64_t *segTs, *segB48; double *segS; int nseg;
   double endS;
@@ -191,6 +194,7 @@ struct DtsRemuxGen {
   /* muxer kept across consecutive segments (continuity counters run on) */
   AVFormatContext *oc; AVStream *ov, *oa;
   int esFix;                        /* this muxer is MPEG-TS and the video is VC-1 / MPEG-2 */
+  int hevcFix;                      /* this muxer is MPEG-TS and the video is HEVC with hvcC */
   DtsRemuxWrite w; void *wop; int wfail; int64_t bytes;
   /* rolling log, every 30 s of media */
   double logMedia, logCpu, logAudio, logWall, logProc, logBlocked, mediaTotal;
@@ -265,6 +269,85 @@ static uint32_t hevcTipos(const uint8_t *d, int n, int lenSize) {
     i += (int)l;
   }
   return m;
+}
+
+/* HEVC TO ANNEX B FOR THE TS, keeping the stream's own parameter sets.
+ * FFmpeg's hevc_mp4toannexb (which the TS muxer would insert by itself) puts
+ * the hvcC parameter sets in front of EVERY keyframe, right before the IRAP
+ * slice, so AFTER any VPS/SPS/PPS the packet already carries. A film whose
+ * parameter sets change along the way (encoded in parts; Interstellar, all
+ * three releases, Round 2) then decodes the later parts with the PPS of the
+ * first one: blocks of garbage and frozen half frames that come and go with
+ * the keyframes. Here the hvcC sets go in only when the keyframe packet does
+ * not bring all of VPS, SPS and PPS itself; otherwise the output is what the
+ * filter writes (4-byte start codes, NALs untouched).
+ * Exported for the host check. Returns the size written to *out (allocated
+ * here), 0 when the packet is left as is (already Annex B), -1 on a malformed
+ * packet (also left as is: the muxer's filter takes it, as before). */
+static int dts_remux_hevc_annexb(const uint8_t *hvccB, int hvccBN, int lenSize,
+                          const uint8_t *d, int n, uint8_t **out) {
+  int i, have = 0, irap = -1, total = 0, k = 0;
+  *out = NULL;
+  if (lenSize < 1 || lenSize > 4 || n < lenSize) return 0;
+  if (n >= 4 && !d[0] && !d[1] && (d[2] == 1 || (!d[2] && d[3] == 1))) return 0;
+  for (i = 0; i < n;) {   /* pass 1: sizes, the first IRAP, the sets before it */
+    uint32_t l = 0; int t;
+    if (n - i < lenSize) return -1;
+    for (int b = 0; b < lenSize; b++) l = (l << 8) | d[i + b];
+    i += lenSize;
+    if (l < 2 || l > (uint32_t)(n - i)) return -1;
+    t = (d[i] >> 1) & 0x3F;
+    if (irap < 0 && t >= 16 && t <= 23) irap = i;
+    if (irap < 0 && t >= 32 && t <= 34) have |= 1 << (t - 32);
+    total += 4 + (int)l;
+    i += (int)l;
+  }
+  if (irap >= 0 && have != 7) total += hvccBN; else irap = -1;
+  if (!(*out = av_malloc((size_t)total + AV_INPUT_BUFFER_PADDING_SIZE))) return -1;
+  for (i = 0; i < n;) {   /* pass 2: write */
+    uint32_t l = 0;
+    for (int b = 0; b < lenSize; b++) l = (l << 8) | d[i + b];
+    i += lenSize;
+    if (i == irap && hvccBN > 0) { memcpy(*out + k, hvccB, (size_t)hvccBN); k += hvccBN; }
+    (*out)[k++] = 0; (*out)[k++] = 0; (*out)[k++] = 0; (*out)[k++] = 1;
+    memcpy(*out + k, d + i, l); k += (int)l;
+    i += (int)l;
+  }
+  memset(*out + k, 0, AV_INPUT_BUFFER_PADDING_SIZE);
+  return k;
+}
+/* hvcC -> its NAL arrays in Annex B (what hevc_mp4toannexb prepends).
+ * 1 done, 0 not an hvcC, -1 malformed. */
+static int hvccAnnexB(const uint8_t *x, int xn, uint8_t **out, int *outN, int *lenSize) {
+  int arrays, cap = 0, k = 0;
+  *out = NULL; *outN = 0;
+  if (!x || xn < 23 || x[0] != 1) return 0;
+  *lenSize = (x[21] & 3) + 1;
+  arrays = x[22];
+  for (int pass = 0; pass < 2; pass++) {
+    int i = 23;
+    k = 0;
+    for (int a = 0; a < arrays; a++) {
+      int cnt;
+      if (xn - i < 3) return -1;
+      cnt = (x[i + 1] << 8) | x[i + 2]; i += 3;
+      for (int c = 0; c < cnt; c++) {
+        int l;
+        if (xn - i < 2) return -1;
+        l = (x[i] << 8) | x[i + 1]; i += 2;
+        if (l > xn - i) return -1;
+        if (pass) { (*out)[k] = 0; (*out)[k + 1] = 0; (*out)[k + 2] = 0; (*out)[k + 3] = 1; memcpy(*out + k + 4, x + i, (size_t)l); }
+        k += 4 + l; i += l;
+      }
+    }
+    if (!pass) {
+      cap = k;
+      if (!cap) return 0;
+      if (!(*out = malloc((size_t)cap))) return -1;
+    }
+  }
+  *outN = k;
+  return 1;
 }
 
 static int isConvertible(enum AVCodecID id) {
@@ -405,6 +488,10 @@ DtsRemux *dts_remux_open(const char *url, const char *headers, int ordinal, int 
         memcpy(r->seqHdr, x + at, (size_t)r->seqHdrN);
       }
     }
+    if (V->codecpar->codec_id == AV_CODEC_ID_HEVC &&
+        hvccAnnexB(V->codecpar->extradata, V->codecpar->extradata_size, &r->hvccB, &r->hvccBN, &r->hvccLen) < 0) {
+      free(r->hvccB); r->hvccB = NULL; r->hvccBN = 0;   /* unreadable hvcC: FFmpeg's filter does it, as before */
+    }
     for (unsigned i = 0; i < ic->nb_streams; i++)
       if ((int)i != r->vs && (int)i != r->as) ic->streams[i]->discard = AVDISCARD_ALL;
     r->vpar = avcodec_parameters_alloc(); r->apar = avcodec_parameters_alloc();
@@ -520,7 +607,7 @@ void dts_remux_close(DtsRemux *r) {
   if (!r) return;
   if (r->probe) { dts_engine_cancel(r->probe); unregisterEngine(r, r->probe); dts_engine_destroy(r->probe); }
   avcodec_parameters_free(&r->vpar); avcodec_parameters_free(&r->apar);
-  free(r->kf); free(r->seqHdr); free(r->segTs); free(r->segB48); free(r->segS);
+  free(r->kf); free(r->seqHdr); free(r->hvccB); free(r->segTs); free(r->segB48); free(r->segS);
   free(r->url); free(r->headers);
   pthread_mutex_destroy(&r->lock);
   free(r);
@@ -680,6 +767,7 @@ static int openMux(DtsRemuxGen *g, const char *fmt, char *err, size_t errn) {
   g->oc->avoid_negative_ts = AVFMT_AVOID_NEG_TS_DISABLED;
   g->oc->output_ts_offset = (int64_t)TS_OFFSET_S * AV_TIME_BASE;
   g->esFix = !strcmp(fmt, "mpegts") && (r->vc1 || r->seqHdrN > 0);
+  g->hevcFix = !strcmp(fmt, "mpegts") && r->hvccBN > 0;
   if (!strcmp(fmt, "mp4")) av_dict_set(&o, "movflags", "frag_keyframe+empty_moov+default_base_moof+delay_moov", 0);
   rr = avformat_write_header(g->oc, &o);
   av_dict_free(&o);
@@ -1003,6 +1091,17 @@ static int emitVideo(DtsRemuxGen *g, int target, DtsRemuxStats *st, char *err, s
       if (ps > st->last_pts_s) st->last_pts_s = ps;
     }
     g->logMedia += dur; g->mediaTotal += dur;
+    if (g->hevcFix) {
+      uint8_t *nb = NULL;
+      int nn = dts_remux_hevc_annexb(g->src->hvccB, g->src->hvccBN, g->src->hvccLen, p->data, p->size, &nb);
+      if (nn > 0) {
+        AVBufferRef *b = av_buffer_create(nb, (size_t)nn + AV_INPUT_BUFFER_PADDING_SIZE, av_buffer_default_free, NULL, 0);
+        if (!b) { av_free(nb); av_packet_free(&p); fail(err, errn, "Out of memory", 0); return -1; }
+        av_buffer_unref(&p->buf);
+        p->buf = b; p->data = b->data; p->size = nn;
+      }
+      /* nn <= 0: left as is; the muxer's own filter converts it, as before */
+    }
     if (g->esFix) {
       uint8_t *nb = NULL;
       int nn = dts_remux_es_fix(g->src->vc1, g->src->seqHdr, g->src->seqHdrN, p->data, p->size,
