@@ -2154,7 +2154,11 @@ static void lembrarAutomatica(void) {
     if (base[0]) fontepref_auto_guardar(base, stream_item(at)); }
 }
 static void guardarPosicaoFonteFalha(void) {
-  if (fonteFalha && player_aberto() && !player_quer_sair() &&
+  // GATE e o AUTOMATICO (nao a sessao fonteFalha): o watchdog arma tambem sem
+  // sessao (fonte aberta "enquanto confere", arming que falhou) e a troca
+  // precisa da posicao mesmo nesse caso. limparFonteVOD/iniciarPoliticaFonte
+  // zeram fonteVODAutomatica e fonteFalhaPos juntos a cada reproducao.
+  if (fonteVODAutomatica && player_aberto() && !player_quer_sair() &&
       aguardandoFonte == 0 && video_pronto() && !video_falhou() && !player_fonte_falhou()) {
     double pos = video_pos();
     if (pos >= 0.0 && isfinite(pos)) fonteFalhaPos = pos;
