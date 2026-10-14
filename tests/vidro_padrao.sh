@@ -31,6 +31,14 @@ src/ajustes_ux_desenho.inc|gfx_vidro_material
 src/ilha.c|gfx_vidro_painel
 src/menu.c|gfx_vidro\(
 src/guia.c|gfx_vidro_folha
+src/guia.c|gfx_vidro_ou_solido
+src/home.c|gfx_vidro_ou_solido
+src/badges.c|gfx_vidro_ou_solido
+src/vertudo.c|gfx_vidro_ou_solido
+src/avisos.c|gfx_vidro_ou_solido
+src/novidades.c|gfx_vidro_ou_solido
+src/diagnostico.c|gfx_vidro_ou_solido
+src/telefonecartao.h|gfx_vidro_ou_solido
 src/streams.c|gfx_vidro_folha
 src/amigosfil.c|gfx_vidro_folha
 '
