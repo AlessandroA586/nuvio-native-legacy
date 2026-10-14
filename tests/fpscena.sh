@@ -30,5 +30,9 @@ fi
 if bash tests/fps_gate.sh --grava "$tmp/invalid" "$tmp/base"; then
   echo 'FALHA: recording accepted NaN'; exit 1
 fi
+# Real logs carry unrelated lines (fluidez_perf prints text with spaces).
+{ echo 'reserva CJK: 3 fonte(s) (1 2 3)'; echo '[fps-cena] x n=1'; cat "$tmp/before.log"; } > "$tmp/noisy.log"
+bash tests/fps_gate.sh --grava "$tmp/noisy.log" "$tmp/base2"
+cmp "$tmp/base" "$tmp/base2"
 bash tests/fps_gate.sh --compara "$tmp/base" "$tmp/after.log"
 echo 'ok: headless scene runner + CLI gate (16.667 -> 33.334 ms rejected)'

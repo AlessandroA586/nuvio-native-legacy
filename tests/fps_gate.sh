@@ -12,7 +12,9 @@ import pathlib
 import sys
 
 
-def read(path):
+def read(path, log):
+    # log: raw program output, only FPSBASE lines count, the rest is noise.
+    # baseline: strict, `<scene> <p95> <upl>` (FPSBASE prefix optional).
     scenes = {}
     for line in pathlib.Path(path).read_text().splitlines():
         if not line or line.startswith('#'):
@@ -20,7 +22,7 @@ def read(path):
         fields = line.split()
         if fields[0] == 'FPSBASE':
             fields = fields[1:]
-        elif line.startswith('['):
+        elif log:
             continue
         if len(fields) != 3:
             raise ValueError(f'invalid baseline/sample: {line}')
@@ -37,13 +39,13 @@ def read(path):
 try:
     mode = sys.argv[1]
     if mode == '--grava' and len(sys.argv) == 4:
-        samples = read(sys.argv[2])
+        samples = read(sys.argv[2], True)
         pathlib.Path(sys.argv[3]).write_text(''.join(
             f'{name} {p95:.3f} {uploads}\n' for name, (p95, uploads) in samples.items()))
         sys.exit(0)
     if mode != '--compara' or len(sys.argv) not in (4, 5):
         raise ValueError('use --compara baseline run [percent] or --grava run baseline')
-    baseline, samples = read(sys.argv[2]), read(sys.argv[3])
+    baseline, samples = read(sys.argv[2], False), read(sys.argv[3], True)
     pct = float(sys.argv[4]) if len(sys.argv) == 5 else 10.0
     if not math.isfinite(pct) or pct < 0:
         raise ValueError('invalid tolerance')
