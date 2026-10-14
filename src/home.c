@@ -305,6 +305,10 @@ static Foco foco;
 static HomeItem itemFoco;      // preenchido durante o desenho, lido pela transicao
 static int  temItemFoco = 0;
 static float animFoco[MAX_FIL][MAX_CARDS];
+// O TITULO DA FILEIRA acende (branco) quando a fileira e a focada e volta ao
+// cinza secundario quando nao e (dono, 14/10: "quando a fileira nao tiver
+// focada deixar o titulo da fileira em cinza") — a mesma mola do foco do card.
+static float animFocoFil[MAX_FIL];
 // MICRO-ANIMACOES DE CARD (revela.h). Um registro por lugar da grade para a
 // arte chegando; um so para a luz do foco, porque so ha um card em foco; e o
 // instante em que cada fileira comecou a entrar (0 = ja entrou).
@@ -3203,6 +3207,7 @@ static void sincronizarFileiras(void) {
   filsAplicadas = nCat;
   prefsAplicadas = assin;
   memset(animFoco, 0, sizeof animFoco);
+  memset(animFocoFil, 0, sizeof animFocoFil);
   memset(revArte, 0, sizeof revArte);
   memset(velX, 0, sizeof velX);
   memset(scrollX, 0, sizeof scrollX);
@@ -3655,6 +3660,9 @@ void home_atualizar(float dt, Uint32 agora) {
                      : anim_mola(animFoco[r][c], alvo, dt,
                                  alvo > animFoco[r][c] ? NV_MOLA_FOCO : NV_MOLA_DESFOCO);
     }
+    { float alvoFil = (!focoHero && foco.fileira == r) ? 1.0f : 0.0f;
+      animFocoFil[r] = motionReduzido ? alvoFil
+                      : anim_mola(animFocoFil[r], alvoFil, dt, NV_MOLA_FOCO); }
 #ifdef NV_TOUCH_UI
     if (toqueLivreX[r]) scrollX[r] = anim_clamp(scrollX[r], 0.0f, toqueHomeMaxX(r));
 #endif
@@ -5732,23 +5740,33 @@ static void palcoLegenda(int r, float base, float lw) {
 // CARTAZ COM FICHA: a placa inteira atras, o texto a direita do cartaz. O
 // cartaz e desenhado depois, pelo caminho comum (pintarCartao), na largura 2:3.
 static void desenhaFicha(const CatItem *it, float px, float py, float w, float h, float f) {
-  float pw = h * 2.0f / 3.0f, tx = px + pw + 26.0f, tw = w - pw - 50.0f, y = py + 22.0f;
-  float raio = raioDe(w, h);
-  gfx_cor((GfxRect){ px, py, w, h }, raio, 1, 1, 1, 0.055f + 0.05f * f);
-  gfx_rect((GfxRect){ px, py, w, h }, 0, GFX_ANEL, 0, 1.5f / h, 0, raio, 1, 1, 1, 0.08f + 0.20f * f);
+  float pw = h * 2.0f / 3.0f;
+  float y;
+  // A ILHA AO LADO DO CARTAZ, na cor e no estilo do menu contextual (dono,
+  // 14/10: "deixar parecendo o menu contextual de cor e estilo"): o mesmo
+  // fundo, canto e vidro do cartao do menu (ctx_menu_ilha/ilhaCtx), solto do
+  // cartaz por um vao — e menor que ele, dentro da fileira. Fora do foco ela
+  // fica no quilo do veu de antes (o `a` e baixo), no foco acende inteira,
+  // como a extensao de informacoes do menu do cartaz.
+  GfxRect ilha = { px + pw + NV_FICHA_VAO, py + NV_FICHA_ILHA_DY,
+                   w - pw - NV_FICHA_VAO, h - 2.0f * NV_FICHA_ILHA_DY };
+  float tx = ilha.x + 34.0f, tw = ilha.w - 68.0f;   // PAD+INSET do ctxinfo
+  float a = 0.06f + 0.94f * f;
+  ctx_menu_ilha(ilha, NV_FICHA_RAIO, a);
+  y = ilha.y + 22.0f;
   if (!it) return;
-  { TxtLinha t = txt_linha_corta(TXT_CW_TITULO, it->titulo, 245, 246, 249, 255, tw);
-    txt_desenhar(t, tx, y); y += t.h + 8.0f; }
-  if (it->meta[0]) { TxtLinha m = txt_linha_corta(TXT_CAPTION, it->meta, 205, 210, 220, 255, tw);
-                     txt_desenhar(m, tx, y); y += m.h + 4.0f; }
-  if (it->genero[0]) { TxtLinha g = txt_linha_corta(TXT_CAPTION, it->genero, 160, 167, 180, 255, tw);
-                       txt_desenhar(g, tx, y); y += g.h + 10.0f; }
+  { TxtLinha t = txt_linha_corta(TXT_ILHA_NOME, it->titulo, 243, 242, 239, 255, tw);
+    txt_desenhar_alpha(t, tx, y, a); y += t.h + 8.0f; }
+  if (it->meta[0]) { TxtLinha m = txt_linha_corta(TXT_ILHA_META, it->meta, 243, 242, 239, 255, tw);
+                     txt_desenhar_alpha(m, tx, y, 0.78f * a); y += m.h + 4.0f; }
+  if (it->genero[0]) { TxtLinha g = txt_linha_corta(TXT_ILHA_GENERO, it->genero, 243, 242, 239, 255, tw);
+                       txt_desenhar_alpha(g, tx, y, 0.52f * a); y += g.h + 10.0f; }
   { int nota = imdbnota_obter(it->imdb, it->nota, !strcmp(it->tipo, "series"));
-    if (nota > 0) { badge_imdb(tx, y, nota, 0, 1.0f); y += BADGE_H + 12.0f; } }
+    if (nota > 0) { badge_imdb(tx, y, nota, 0, a); y += BADGE_H + 12.0f; } }
   if (it->sinopse[0]) {
-    int linhas = (int)((py + h - 20.0f - y) / 28.0f);
+    int linhas = (int)((ilha.y + ilha.h - 20.0f - y) / 28.0f);
     if (linhas > 4) linhas = 4;
-    if (linhas > 0) txt_bloco(TXT_CAPTION, it->sinopse, 196, 201, 212, tx, y, tw, 28.0f, 0.92f, linhas);
+    if (linhas > 0) txt_bloco(TXT_ILHA_TEXTO, it->sinopse, 243, 242, 239, tx, y, tw, 28.0f, 0.66f * a, linhas);
   }
 }
 // PÔSTER GRANDE (14/10, dono: "o pôster só que do tamanho do grande, tipo o
@@ -6787,9 +6805,17 @@ void home_desenhar(Uint32 agora) {
           rotFil = semSufixo;
         }
       }
-      TxtLinha tl = txt_linha_corta(TXT_ROW_TITULO, rotFil, 245, 246, 249, 255,
-                                    homeRetratoTelefone() ? homeLarguraUtil() - 76.0f : NV_TELA_W - homeConteudoX() - 180.0f);
-      txt_desenhar(tl, homeConteudoX(), y);
+      // TITULO DA FILEIRA: BRANCO na fileira focada, cinza secundario nas
+      // outras (o #A8ADB5 do titulo do Centro de Controle), esmaecendo pela
+      // mola animFocoFil quando o foco muda de fileira.
+      TxtLinha tl;
+      { float k = animFocoFil[r];
+        int cr = 168 + (int)((245 - 168) * k + 0.5f);
+        int cg = 173 + (int)((246 - 173) * k + 0.5f);
+        int cb = 181 + (int)((249 - 181) * k + 0.5f);
+        tl = txt_linha_corta(TXT_ROW_TITULO, rotFil, cr, cg, cb, 255,
+                             homeRetratoTelefone() ? homeLarguraUtil() - 76.0f : NV_TELA_W - homeConteudoX() - 180.0f);
+        txt_desenhar(tl, homeConteudoX(), y); }
       // A FONTE (Trakt, Simkl...) NAO APARECE NA FILEIRA DE AMIGOS: a pessoa
       // quer saber quem viu e o que achou, nao de onde veio o dado. Ela fica
       // so no perfil do amigo (amigoperfil.c). Era a marca do Trakt aqui.
