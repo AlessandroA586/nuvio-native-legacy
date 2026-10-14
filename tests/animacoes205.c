@@ -47,11 +47,25 @@ static void testeAovivo(void) {
         wm = larguraBotaoAv(&o, AV_B_FAV, 0.5f);
     CHECK(fabsf(w1 - w0) > 20.0f, "OSD: pilula do Favorito cresce (%.1f -> %.1f)", w0, w1);
     CHECK(fabsf(wm - (w0 + w1) * 0.5f) < 1.0f, "OSD: largura no meio (%.1f)", wm); }
-  // Cartao de erro: mesmas molas nos tres botoes. (O seed acima deixou os
-  // tres em zero; o Recarregar entra assentado na mao, como quem ja estava.)
-  erroFocoA[0] = 1.0f;
-  erroFocoAlvo = 2;
+  // REAPARECER NASCE ASSENTADO: some o alvo (OSD escondido), as molas apagam
+  // e o "pronto" zera; a proxima aparecida ja pousa no foco da vez, sem voo.
+  osdFocoAlvo = -1;
+  osdPasso(DT * 30.0f);
+  CHECK(fabsf(osdFoco[AV_B_GUIA]) < 0.02f, "OSD: apagou escondido (%.3f)", osdFoco[AV_B_GUIA]);
+  osdFocoAlvo = AV_B_AUDIO;
   osdPasso(DT);
+  CHECK(fabsf(osdFoco[AV_B_AUDIO] - 1.0f) < 0.001f, "OSD: reapareceu assentado (%.3f)",
+        osdFoco[AV_B_AUDIO]);
+  // Cartao de erro: molas e relogio PROPRIOS — o passo do OSD nao o balanca.
+  erroFocoA[0] = 0.5f;
+  osdPasso(DT);
+  CHECK(fabsf(erroFocoA[0] - 0.5f) < 0.001f, "erro: imune ao passo do OSD (%.3f)", erroFocoA[0]);
+  // Mesmas molas nos tres botoes (seed: o Recarregar nasce assentado).
+  erroFocoAlvo = 0;
+  erroPasso(0.0f);
+  CHECK(fabsf(erroFocoA[0] - 1.0f) < 0.001f, "erro: semeio do foco");
+  erroFocoAlvo = 2;
+  erroPasso(DT);
   CHECK(MEIO(erroFocoA[0]) && MEIO(erroFocoA[2]), "erro: foco em mola (%.3f/%.3f)",
         erroFocoA[0], erroFocoA[2]);
 }
@@ -98,9 +112,6 @@ static void testeCentral(void) {
   centralPassoFoco(DT);
   CHECK(MEIO(animFoco[0]), "central: anel acendendo (%.3f)", animFoco[0]);
   for (i = 0; i < n; i++) {
-    CHECK(fabsf(animLig[i] - (ajustes_rapido_ligado(op[i]) == 1 ? 1.0f : 0.0f)) < 0.9f ||
-          fabsf(animLig[i] - (ajustes_rapido_ligado(op[i]) == 1 ? 1.0f : 0.0f)) > 0.9f,
-          "central: lig inicial");
     if (tog < 0 && ajustes_rapido_ligado(op[i]) >= 0) tog = i;
   }
   CHECK(tog >= 0, "central: ha interruptor na lista");
