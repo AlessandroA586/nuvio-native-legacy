@@ -94,7 +94,10 @@ int main(void) {
   valor[AJ_RESOLUCAO] = RES_720;  assert(!ajustes_4k() && ajustes_720p());
   valor[AJ_RESOLUCAO] = RES_AUTO;
   assert(ajustes_relogio_ligado() && ajustes_relogio_pos() == 0);   // relogio: ligado, automatico
-  assert(ajustes_selo_visto());   // selo de visto no cartaz: ligado (#212)
+  assert(ajustes_selo_visto() && ajustes_selo_visto_modo() == 1);   // selo de visto no cartaz: ligado, Icone (#212)
+  valor[AJ_SELO_VISTO] = 1; assert(!ajustes_selo_visto() && ajustes_selo_visto_modo() == 0);   // gravado antigo "Desligado" continua
+  valor[AJ_SELO_VISTO] = 2; assert(ajustes_selo_visto() && ajustes_selo_visto_modo() == 2);    // Escrito
+  valor[AJ_SELO_VISTO] = 0;
   assert(valor[AJ_TEMA] == AJ_TEMA_DINAMICA && valor[AJ_FUNDO] == 2);   // aparencia de fabrica da 2.0: Da arte + Frost
   assert(valor[AJ_COR_LOGO] == 0 && valor[AJ_VIDRO] == 1);               // Cor da logo ligada, vidro desligado
   // O "+" salva no Trakt. Este assert passava POR ACASO de 22/09 ate o #149:

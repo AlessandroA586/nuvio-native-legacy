@@ -496,6 +496,7 @@ int   ajustes_saida_player_home(void);
 int   ajustes_manter_video(void);
 // Selo de visto no cartaz da home (#212). 1 = ligado (o de fabrica).
 int   ajustes_selo_visto(void);
+int   ajustes_selo_visto_modo(void);   // 0 desligado, 1 icone (check), 2 escrito
 // #366: oculta filmes vistos so na descoberta, por perfil neste aparelho.
 // Desligado de fabrica; busca, biblioteca e historico nao sao filtrados.
 int   ajustes_ocultar_filmes_vistos(void);
