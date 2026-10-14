@@ -294,16 +294,16 @@ static inline char *nv_longa_expandir(const char *u) {
   return out;
 }
 
-// QUAL ADDON E ESTE, para descobrir duplicata (B4, #458). A base de
-// nv_addon_base, com duas diferencas: o apelido de URL grande vale pela URL
-// normalizada que ele guarda (o apelido sai do hash da URL CRUA, entao
-// ".../manifest.json" e ".../" davam dois apelidos para o mesmo addon), e
-// esquema e host sem caixa. So compara: a base guardada continua a de sempre.
-// A URL grande vira o hash dela (inteira nao cabe em `dst`; cortada, duas
-// URLs grandes do mesmo host com o mesmo comeco seriam um addon so).
+// QUAL ADDON E ESTE, para descobrir duplicata (B4, #458). SEMPRE o mesmo hash
+// da URL NORMALIZADA (esquema e host sem caixa), venha ela LITERAL ou como
+// APELIDO de URL grande. A literal valia a URL inteira e a grande, o hash do
+// que o apelido guarda — e no limiar de NV_ADDON_URL_MAX o MESMO addon chegava
+// pelas duas formas (base de 2040 fica literal, a mesma + "/manifest.json"
+// passa do limite e vira apelido) e o dedupe via dois. Uma chave so, hash nas
+// duas vias: quem so compara (jaNaLista, sync.c) nem precisa da URL inteira.
 static inline void nv_addon_chave(const char *url, char *dst, size_t tam) {
   const char *norm = NULL, *b = nv_longa_bruto(url);
-  char *p, *fim;
+  char base[NV_ADDON_URL_MAX];
   int i;
   if (b) {
     pthread_mutex_lock(&nv_longa.m);
@@ -311,7 +311,9 @@ static inline void nv_addon_chave(const char *url, char *dst, size_t tam) {
       if (nv_longa.bruto[i] == b) { norm = nv_longa.norm[i]; break; }
     pthread_mutex_unlock(&nv_longa.m);   // `norm` nunca e liberado
   }
-  if (norm) {
+  if (!norm) { nv_addon_base(url, base, sizeof base); norm = base; }
+  if (!norm[0]) { if (dst && tam) dst[0] = 0; return; }
+  {
     const char *e = strstr(norm, "://");
     size_t k, host = e ? (size_t)(e + 3 - norm) + strcspn(e + 3, "/?") : 0;
     uint64_t h = 1469598103934665603ULL;
@@ -320,12 +322,7 @@ static inline void nv_addon_chave(const char *url, char *dst, size_t tam) {
       h *= 1099511628211ULL;
     }
     snprintf(dst, tam, "~nv%016llx", (unsigned long long)h);
-    return;
   }
-  nv_addon_base(url, dst, tam);
-  if (!(fim = strstr(dst, "://"))) return;
-  fim += 3; fim += strcspn(fim, "/?");
-  for (p = dst; p < fim; p++) *p = (char)tolower((unsigned char)*p);
 }
 
 #endif

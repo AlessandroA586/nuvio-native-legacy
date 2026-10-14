@@ -40,6 +40,7 @@ static AddonRemoto A(const char *url) {
 int main(void) {
   static AddonRemoto l[8];
   static char grande[3000], g1[3100], g2[3100], g3[3100];
+  static char base[2041], m1[2060], m2[2044];
   char dir[512];
   FILE *f;
 
@@ -79,6 +80,18 @@ int main(void) {
     conferir("arquivo-n", addons_carregar(dir), 2);
     remove(caminho); }
   rmdir(dir);
+
+  // LIMIAR DE 2048 (revisao B4), por ultimo (definir_lista troca a lista
+  // inteira): a base que CABE fica LITERAL e a mesma base com
+  // "/manifest.json", que passa do limite, vira APELIDO — e um addon so.
+  // A chave da literal era a URL inteira e a do apelido, o hash: dois addons.
+  memset(base, 'x', 2040); base[2040] = 0;
+  memcpy(base, "https://l.test/", 15);                  // 2040 exatos: literal
+  snprintf(m1, sizeof m1, "%s/manifest.json", base);   // 2054: apelido
+  snprintf(m2, sizeof m2, "%s/", base);                 // 2041: literal
+  l[0] = A(m1); l[1] = A(m2); l[2] = A(base); l[3] = A("https://b.test/");
+  conferir("limiar-aplicou", addons_definir_lista(l, 4), 1);
+  conferir("limiar-n", addons_n(), 2);
 
   if (falhas) return 1;
   printf("addons_duplicados: ok\n");
