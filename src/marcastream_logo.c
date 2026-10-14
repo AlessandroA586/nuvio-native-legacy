@@ -7,9 +7,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define MS_MAX 16
-static struct { long rede; atomic_int estado; char url[200]; } slot[MS_MAX];   // 0 livre, 1 buscando, 2 pronto, 3 falhou
+// Uma falha nao e definitiva (#205): re-tenta quando a chave do TMDB passa a
+// existir (o dono ligou a integracao com a pasta aberta) ou apos o intervalo.
+#define MS_RETRY_S 90
+static struct { long rede; atomic_int estado; char url[200]; long falhouEm; int comChave; } slot[MS_MAX];   // 0 livre, 1 buscando, 2 pronto, 3 falhou
 static pthread_mutex_t trava = PTHREAD_MUTEX_INITIALIZER;
 
 static void *fio(void *arg) {
@@ -32,24 +36,45 @@ static void *fio(void *arg) {
     }
     free(corpo);
   }
+  slot[k].comChave = chave[0] != 0;
+  slot[k].falhouEm = time(NULL);   // escrito antes do estado: quem le 3 ja ve
   atomic_store(&slot[k].estado, ok ? 2 : 3);
   return NULL;
 }
 
+// Dispara o fio do slot k (quem chama segura `trava`).
+static void logoBuscar(int k) {
+  pthread_t t;
+  atomic_store(&slot[k].estado, 1);
+  if (pthread_create(&t, NULL, fio, (void *)(long)k) == 0) pthread_detach(t);
+  else atomic_store(&slot[k].estado, 3);
+}
+
 const char *marca_stream_logo(const MarcaStream *m) {
   int k, livre = -1;
-  pthread_t t;
+  long agora = time(NULL);
+  const char *chave = desc_chave_tmdb();
   if (!m || m->rede <= 0) return "";
   pthread_mutex_lock(&trava);
   for (k = 0; k < MS_MAX; k++) {
-    if (atomic_load(&slot[k].estado) && slot[k].rede == m->rede) break;
-    if (livre < 0 && !atomic_load(&slot[k].estado)) livre = k;
+    int e = atomic_load(&slot[k].estado);
+    if (e && slot[k].rede == m->rede) {
+      // FALHA VELHA NAO E SENTENCA: a chave apareceu ou o intervalo passou —
+      // uma busca que falhou (sem chave, sem rede) volta a ser tentada (#205).
+      if (e == 3 && ((!slot[k].comChave && chave[0]) || agora - slot[k].falhouEm >= MS_RETRY_S)) {
+        slot[k].comChave = chave[0] != 0;
+        slot[k].falhouEm = agora;
+        logoBuscar(k);
+      }
+      break;
+    }
+    if (livre < 0 && !e) livre = k;
   }
   if (k == MS_MAX && livre >= 0) {
     k = livre; slot[k].rede = m->rede;
-    atomic_store(&slot[k].estado, 1);
-    if (pthread_create(&t, NULL, fio, (void *)(long)k) == 0) pthread_detach(t);
-    else atomic_store(&slot[k].estado, 3);
+    slot[k].comChave = chave[0] != 0;
+    slot[k].falhouEm = agora;
+    logoBuscar(k);
   }
   pthread_mutex_unlock(&trava);
   return k < MS_MAX && atomic_load(&slot[k].estado) == 2 ? slot[k].url : "";
