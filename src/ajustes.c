@@ -3532,17 +3532,6 @@ void ajustes_dir(const char *dir) {
     printf("[ajustes] trailer do cartaz em foco: focusedPosterBackdropTrailerEnabled %d -> trailerCartazModo %d\n",
            focoAntigo, valor[AJ_FOCO_TRAILER]);
   }
-  // #509: "Som do trailer na pagina do titulo" virou o UNICO "Som do trailer".
-  // Quem tinha som na pagina mantem o som: o ajuste unico herda a escolha (uma
-  // vez; a chave velha fica Desligada no arquivo e nao força mais nada).
-  if (lig(AJ_DET_TRAILER_SOM)) {
-    valor[AJ_DET_TRAILER_SOM] = 1;
-    if (!lig(AJ_HERO_TRAILER_SOM)) {
-      valor[AJ_HERO_TRAILER_SOM] = 0;
-      printf("[ajustes] som do trailer: trailerDetalheSomLocal ligado -> Som do trailer ligado\n");
-    }
-    gravar();
-  }
   // Escolha manual: "idioma" gravado e SEM a marca de automatico (arquivo de
   // antes da marca, ou de quem escolheu). Sem "idioma" nenhum, nunca houve
   // escolha e o automatico vale.
@@ -3551,6 +3540,20 @@ void ajustes_dir(const char *dir) {
   // No automatico, o gravado e o ultimo resolvido: a TV abre nele e a conta,
   // quando chegar, corrige.
   if (valor[AJ_IDIOMA] == 0 && viuIdioma) idiomaEfetivo = idiomaGravado;
+  // #509: "Som do trailer na pagina do titulo" virou o UNICO "Som do trailer".
+  // Quem tinha som na pagina mantem o som: o ajuste unico herda a escolha (uma
+  // vez; a chave velha fica Desligada no arquivo e nao força mais nada).
+  // gravar() e DEPOIS do idioma restaurado: gravar antes levava ao disco o
+  // idioma do arranque com a marca de automatico, e a escolha manual desta TV
+  // se perdia no arranque seguinte.
+  if (lig(AJ_DET_TRAILER_SOM)) {
+    valor[AJ_DET_TRAILER_SOM] = 1;
+    if (!lig(AJ_HERO_TRAILER_SOM)) {
+      valor[AJ_HERO_TRAILER_SOM] = 0;
+      printf("[ajustes] som do trailer: trailerDetalheSomLocal ligado -> Som do trailer ligado\n");
+    }
+    gravar();
+  }
   }
   fclose(f);
   // "DINAMICA ESTILIZADA" SAIU (03/10/2026): a base tingida virou o Fundo
