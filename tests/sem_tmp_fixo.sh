@@ -16,7 +16,7 @@ is_device() {
   return 1
 }
 while IFS= read -r f; do
-  case "$f" in tests/nvtmp.h) continue;; esac
+  case "$f" in tests/nvtmp.h|tests/sem_tmp_fixo.sh) continue;; esac
   is_device "$f" && continue
   case "$f" in tools/Dockerfile|*.py|*.md) continue;; esac
   n=0

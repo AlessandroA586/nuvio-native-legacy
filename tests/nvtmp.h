@@ -1,6 +1,6 @@
 // Host-side scratch dir for tests: $TMPDIR (trailing slashes stripped) or /tmp.
 // nvt("/x") -> "<tmp>/x" in a small ring of static buffers (valid for the next
-// 16 calls); nvt_set(buf, n, "/x") copies it into a caller buffer, which is what
+// 64 calls); nvt_set(buf, n, "/x") copies it into a caller buffer, which is what
 // char dir[] = "...XXXXXX" + mkdtemp() needs.
 #ifndef NVTMP_H
 #define NVTMP_H
@@ -11,9 +11,9 @@
 #define NVT_MAX 1024
 
 static inline const char *nvt(const char *suf) {
-  static char ring[16][NVT_MAX + 256];
+  static char ring[64][NVT_MAX + 256];
   static unsigned next;
-  char *b = ring[next++ % 16];
+  char *b = ring[next++ % 64];
   const char *t = getenv("TMPDIR");
   size_t n;
   if (!t || !*t) t = "/tmp";
