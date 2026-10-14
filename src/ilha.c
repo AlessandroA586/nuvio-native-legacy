@@ -25,6 +25,7 @@
 #include "recomenda.h"
 #include "salvosintro.h"
 #include "text.h"
+#include "central.h"
 #include "plrui.h"
 #include "desempenho.h"
 #include "idioma.h"
@@ -2045,7 +2046,8 @@ static void ilha_desenharCorpo_(Uint32 agora) {
       corpoWa = molaIlha(&corpoVw, corpoWa, corpoW, dt);
       corpoHa = molaIlha(&corpoVh, corpoHa, corpoH, dt);
     } }
-  vis = alvo != M_RELOGIO || relogioQuer || (modalAviso && (modalAberto || modalT > 0.01f)) || corpoT > 0.0f;
+  vis = alvo != M_RELOGIO || relogioQuer || central_segurar_progresso(agora) > 0.0f ||
+        (modalAviso && (modalAberto || modalT > 0.01f)) || corpoT > 0.0f;
   // O MEDIDOR so ocupa a ilha LIVRE: com aviso, atividade, modal ou voo ele
   // sai (o pouso e os avisos nunca esperam por ele) e volta depois.
   { int ds = desempenho_forma(), livre = !modalAberto && modalT <= 0.0f && !voo;
@@ -2241,6 +2243,7 @@ static void ilha_desenharCorpo_(Uint32 agora) {
         luz = ajustes_animacoes_reduzidas() || modalT > 0.3f ? 0.20f
               : 0.14f + 0.10f * (0.5f + 0.5f * sinf((float)agora * (2.0f * 3.14159265f / 1100.0f)));
       gfx_luz_canto(R, raio, R.w * 0.25f, -R.h * 0.9f, R.w * 0.85f, cr, cg, cb, luz * A); }
+    central_segurar_desenhar(R, raio, A, agora);
     gfx_recorte(R.x + 6.0f, R.y, R.w - 12.0f, R.h);
     if (aPil > 0.0f) {
       if (mostra == M_CARTAO) desenharCartao(&mostraC, mostraQual, r, A * conteudoA * aPil);

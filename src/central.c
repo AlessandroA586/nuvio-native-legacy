@@ -82,6 +82,9 @@ static Uint32 avisoAte;
 static ChSegura chs;
 static SDL_Event chDown;        // o KEYDOWN guardado para reentregar
 static int chLogado;
+static Uint32 chAbriuT;         // hold completion blends into island growth
+static Uint32 chCancelaT;       // silence-ended short press retracts from here
+static float chCancelaP;
 
 // --- A LISTA DO PERFIL -------------------------------------------------------
 static void nomeArquivo(char *d, size_t n) { snprintf(d, n, "central-p%d.txt", perfis_ativo()); }
@@ -314,6 +317,48 @@ void central_desenhar(Uint32 agora) {
 // --- A TECLA CH+ ---------------------------------------------------------------
 int central_tecla_ocupada(void) { return chs_ocupado(&chs); }
 
+// Read the same clock that decides the hold: feedback adds no opening delay.
+static float segurarFracao(Uint32 t) {
+  return anim_clamp((float)(t - chs.t0) / (float)CHS_SEGURAR_MS, 0.0f, 1.0f);
+}
+static void segurarAbrir(Uint32 t) {
+  chAbriuT = t ? t : 1;
+  chCancelaP = 0.0f;
+  central_abrir();
+}
+
+float central_segurar_progresso(Uint32 agora) {
+  float f;
+  if (chs.estado == CHS_APERTADO) {
+    if (!chs.solto) return segurarFracao(agora);
+    if (anim_politica_reduzida) return 0.0f;
+    f = (float)(agora - chs.tSolta) / (float)CHS_EMENDA_MS;
+    return segurarFracao(chs.tSolta) * (1.0f - anim_suave(f));
+  }
+  // At the threshold, fade the completed fill as the existing island grows.
+  if (chs.estado == CHS_SEGURADO && aberta && chAbriuT) {
+    if (anim_politica_reduzida) return agora == chAbriuT ? 1.0f : 0.0f;
+    f = (float)(agora - chAbriuT) / (float)CHS_EMENDA_MS;
+    return 1.0f - anim_suave(f);
+  }
+  if (chs.estado == CHS_LIVRE && chCancelaP > 0.0f && !anim_politica_reduzida) {
+    f = (float)(agora - chCancelaT) / (float)CHS_EMENDA_MS;
+    if (f >= 1.0f) { chCancelaP = 0.0f; return 0.0f; }
+    return chCancelaP * (1.0f - anim_suave(f));
+  }
+  return 0.0f;
+}
+
+// Both clock islands draw the fill before their text, within their own scale.
+void central_segurar_desenhar(GfxRect r, float raio, float a, Uint32 agora) {
+  float p = central_segurar_progresso(agora), cr, cg, cb;
+  if (p <= 0.0f || a <= 0.0f) return;
+  ajustes_acento(&cr, &cg, &cb);
+  gfx_recorte(r.x, r.y, r.w * p, r.h);
+  gfx_cor(r, raio, cr, cg, cb, a);
+  gfx_sem_recorte();
+}
+
 int central_tecla(const SDL_Event *e, int pode) {
   Uint32 t;
   int r = CHS_NADA;
@@ -321,7 +366,7 @@ int central_tecla(const SDL_Event *e, int pode) {
   if (!chs_ocupado(&chs) && (!pode || e->type == SDL_KEYUP)) return 0;
   t = e->key.timestamp ? e->key.timestamp : SDL_GetTicks();
   if (e->type == SDL_KEYDOWN) {
-    if (!chs_ocupado(&chs)) chDown = *e;
+    if (!chs_ocupado(&chs)) { chDown = *e; chCancelaP = 0.0f; chAbriuT = 0; }
     r = chs_desce(&chs, t);
   } else {
     // Uma linha so por sessao: quanto o CH+ deste controle leva entre descer e
@@ -333,28 +378,27 @@ int central_tecla(const SDL_Event *e, int pode) {
     }
     chs_sobe(&chs, t);
   }
-  if (r == CHS_LONGO) central_abrir();
+  if (r == CHS_LONGO) segurarAbrir(t);
   return 1;
 }
 
 void central_tecla_quadro(Uint32 agora, void (*entregar)(SDL_Event *e)) {
   int r;
+  float p;
   if (!chs_ocupado(&chs)) return;
+  p = central_segurar_progresso(agora);
   r = chs_quadro(&chs, agora);
-  if (r == CHS_LONGO) central_abrir();
-  else if (r == CHS_CURTO && entregar) {
-    SDL_Event d = chDown, u = chDown;
-    u.type = SDL_KEYUP;
-    u.key.state = SDL_RELEASED;
-    entregar(&d);
-    entregar(&u);
-  }
-  // SEGURANDO: a barra na ilha, como o "Segure para opcoes" do OK (detail.c).
-  // Os primeiros 150 ms nao contam: e um toque. Aos 600 ms a pilula ja e a
-  // central (a atividade para de ser renovada e sai sozinha).
-  if (!aberta && chs.estado == CHS_APERTADO && !chs.solto && agora - chs.t0 >= 150u) {
-    float p = (float)(agora - chs.t0 - 150u) / (float)(CHS_SEGURAR_MS - 150u);
-    ilha_atividade(i18n("Segure para abrir a central"), p > 1.0f ? 1.0f : p);
+  if (r == CHS_LONGO) segurarAbrir(agora);
+  else if (r == CHS_CURTO) {
+    // Without a valid KEYUP, retract on silence while delivering the original tap.
+    if (p > 0.0f) { chCancelaP = p; chCancelaT = agora ? agora : 1; }
+    if (entregar) {
+      SDL_Event d = chDown, u = chDown;
+      u.type = SDL_KEYUP;
+      u.key.state = SDL_RELEASED;
+      entregar(&d);
+      entregar(&u);
+    }
   }
 }
 
