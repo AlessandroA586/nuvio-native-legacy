@@ -13,6 +13,7 @@
 #include "../src/streams.c"
 
 static int p2pLig, motor = 1, debrid, cargaMotor;
+static pthread_t fioUi;
 static const char *p2pUrl = "";
 int debrid_resolver_cache(const char *h, int f, char *u, unsigned t, int *fora) {
   (void)h; (void)f; (void)u; (void)t; (void)fora; return 0;
@@ -35,7 +36,10 @@ int ajustes_fonte_texto_addon(void) { return 0; }
 int debrid_ativo(void) { return debrid; }
 int p2p_ativo(void) { return p2pLig; }
 // Conta cada pergunta: no .tpk isso e um dlopen perto do fio que pergunta.
-int p2pmotor_disponivel(void) { cargaMotor++; return motor; }
+int p2pmotor_disponivel(void) {
+  assert(!pthread_equal(pthread_self(), fioUi));
+  cargaMotor++; return motor;
+}
 const char *ajustes_p2p_url(void) { return p2pUrl; }
 int selospacote_ativo(void) { return -1; }
 unsigned selospacote_versao(void) { return 1; }
@@ -52,15 +56,25 @@ static const char *TORRENTIO = "{\"streams\":["
   "{\"name\":\"Torrentio\\n1080p\",\"title\":\"Movie.1080p.WEB-DL\",\"infoHash\":\"1123456789abcdef0123456789abcdef01234567\",\"fileIdx\":1},"
   "{\"name\":\"Torrentio\\n720p\",\"title\":\"Movie.720p.WEB-DL\",\"infoHash\":\"2123456789abcdef0123456789abcdef01234567\"}]}";
 
+void *p2p486_enfileirar(void *a);
+void p2p486_publicar(void);
 static void chegar(void) {
   Stream *a = NULL;
+  pthread_t trabalhador;
   assert(stream_extrair(TORRENTIO, "Torrentio", &a) == 3);
   stream_definir_lista(NULL, 0);
-  stream_lista_acrescentar(a, 3, 0);
+  assert(pthread_create(&trabalhador, NULL, p2p486_enfileirar, a) == 0);
+  assert(pthread_join(trabalhador, NULL) == 0);
+  int cargas = cargaMotor;
+  p2p486_publicar();
+  assert(cargaMotor == cargas);
+  stream_definir_lista_idade(a, 3, 100);
+  assert(cargaMotor == cargas);
   free(a);
 }
 
 int main(void) {
+  fioUi = pthread_self();
   // CONSULTA VAZIA: a folha e o cartao perguntam A CADA QUADRO; sem torrent
   // descartado, nenhuma pergunta ao motor pode sair daqui (no .tpk seria um
   // dlopen no fio da tela, com uma consulta vazia).

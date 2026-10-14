@@ -459,13 +459,16 @@ static int temRecebidaEm;
 static int descartadosSemDebrid;
 // #486: a dica "ligue o P2P" so e dita quando este pacote tem P2P. Perguntar o
 // motor AQUI, no fio da tela, abriria a libnuvio_engine.so no .tpk (dlopen em
-// p2pmotor.c, carregamento adiado de proposito); conferirP2pParaDica pergunta
-// uma vez por lista NO FIO DA CONSULTA e guarda a resposta. Atomico: o fio da
-// tela so le.
+// p2pmotor.c, carregamento adiado de proposito); o trabalhador confere antes
+// de enfileirar a resposta. A publicacao e a tela so leem o atomico.
 static _Atomic int motorP2pParaDica;
-static void conferirMotorP2pParaDica(int descartados) {
-  if (!descartados || debrid_ativo() || p2p_ativo() || ajustes_p2p_url()[0]) return;
-  atomic_store(&motorP2pParaDica, p2pmotor_disponivel());
+void stream_preparar_dica_p2p(const Stream *l, int qtd) {
+  if (!l || debrid_ativo() || p2p_ativo() || ajustes_p2p_url()[0]) return;
+  for (int i = 0; i < qtd; i++) {
+    if (l[i].url[0] || !l[i].infoHash[0]) continue;
+    atomic_store(&motorP2pParaDica, p2pmotor_disponivel());
+    return;
+  }
 }
 
 Uint32 stream_idade_ms(void) {
@@ -490,7 +493,6 @@ void stream_definir_lista_idade(const Stream *l, int qtd, Uint32 idade) {
     if (l[i].url[0] || debrid_ativo() || p2p_ativo()) nova[k++] = l[i];
   if (nova && qtd - k) printf("[fonte] %d torrents sem debrid descartados\n", qtd - k);
   descartadosSemDebrid = nova ? qtd - k : 0;
-  conferirMotorP2pParaDica(descartadosSemDebrid);
   for (i = 0; i < k && nova; i++) nova[i].selosPacoteVer = 0;   // os selos saem do fio de fundo (selosAgendar)
   pthread_mutex_lock(&verTrava);
   free(lista); lista = nova; n = nova ? k : 0; atual = -1;
@@ -557,7 +559,6 @@ void stream_lista_acrescentar(const Stream *l, int qtd, int ordemAddon) {
     if (l[i].url[0] || debrid_ativo() || p2p_ativo()) nova[k++] = l[i];
   if (qtd - k) printf("[fonte] %d torrents sem debrid descartados\n", qtd - k);
   descartadosSemDebrid += qtd - k;
-  conferirMotorP2pParaDica(qtd - k);
   if (!k) { free(nova); return; }
   for (i = 0; i < k; i++) nova[i].selosPacoteVer = 0;
   // O CARTAO EM FOCO E O QUE FICA PARADO. Guardado pelo indice da lista (que
@@ -1428,7 +1429,7 @@ int stream_qtd_torrents(void) {
 // O CONTADOR vem ANTES de qualquer pergunta: folha e cartao chamam a cada
 // quadro e uma consulta sem torrent descartado nao pode tocar o resto — a
 // disponibilidade do motor NAO e perguntada aqui (dlopen do .tpk no fio da
-// tela): vem guardada do fio da consulta (conferirMotorP2pParaDica).
+// tela): vem guardada do fio da consulta (stream_preparar_dica_p2p).
 // .wgt: o P2P fica oculto nos Ajustes e ajustes_p2p_ligado() e sempre 0
 // (a8e7685d) — "ligue o P2P" seria uma dica impossivel de seguir.
 int stream_torrents_para_p2p(void) {

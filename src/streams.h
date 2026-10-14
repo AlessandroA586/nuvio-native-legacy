@@ -131,6 +131,8 @@ void stream_definir_lista_idade(const Stream *lista, int n, Uint32 idade);
 // mesma da lista inteira de antes. Com a folha aberta, o foco fica no mesmo
 // cartao e a rolagem compensa as linhas que entraram acima dele.
 void stream_lista_acrescentar(const Stream *lista, int n, int ordemAddon);
+// No trabalhador, antes de publicar: pode carregar o motor P2P do pacote.
+void stream_preparar_dica_p2p(const Stream *lista, int n);
 // O addon (ordemAddon) de cada fonte, como entrou; 0 na lista inteira.
 int  stream_ordem_addon(int i);
 // A escolha automatica ja pode sair com a lista parcial? Ver
