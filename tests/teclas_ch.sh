@@ -27,10 +27,18 @@ int main(void) {
         e.key.keysym.sym = up ? SDLK_F7 : SDLK_F8;
         remapCanal(&e);
         assert(e.type == (release ? SDL_KEYUP : SDL_KEYDOWN));
-        assert(e.key.keysym.sym == (zap ? (up ? SDLK_PAGEUP : SDLK_PAGEDOWN) : (up ? SDLK_s : SDLK_F5)));
-        if (zap) assert(e.key.keysym.scancode == (up ? NV_SCANCODE_CH_UP : NV_SCANCODE_CH_DOWN));
-        else if (!up) assert(e.key.keysym.scancode == SDL_SCANCODE_F5);
-        else assert(e.key.keysym.scancode == NV_SCANCODE_BLUE);
+#ifdef __EMSCRIPTEN__
+        if (up) {
+          assert(e.key.keysym.sym == SDLK_s);
+          assert(e.key.keysym.scancode == NV_SCANCODE_BLUE);
+        } else
+#endif
+        {
+          assert(e.key.keysym.sym == (zap ? (up ? SDLK_PAGEUP : SDLK_PAGEDOWN) : (up ? SDLK_s : SDLK_F5)));
+          if (zap) assert(e.key.keysym.scancode == (up ? NV_SCANCODE_CH_UP : NV_SCANCODE_CH_DOWN));
+          else if (!up) assert(e.key.keysym.scancode == SDL_SCANCODE_F5);
+          else assert(e.key.keysym.scancode == NV_SCANCODE_BLUE);
+        }
       }
     }
   }
@@ -41,5 +49,5 @@ int main(void) {
         binary = Path(tmp) / platform
         subprocess.run(['cc', str(c), '-Isrc', '-I/opt/homebrew/include/SDL2', '-U__APPLE__', '-D'+platform, '-o', str(binary)], check=True)
         subprocess.run([str(binary)], check=True)
-        print('PASS', platform, 'CH+/CH− down/up, Saved/search and zap')
+        print('PASS', platform, 'CH+/CH− down/up, Saved/search and platform zap semantics')
 PY

@@ -668,6 +668,7 @@ static void testeCartoes(void) {
   mover(5, 5); quadros(60);
   d = distintos(lerSi, &n);
   CONFERE(sintro_aberto() && n == 2 && d == 2, "salvos (intro): as duas opcoes sao alvos e ganham o foco");
+  captura("salvosintro-hover.png");
   tela = &GL; cartaoDes = glem_desenhar;
   glem_teste_cartao("Jornal", "Canal 5", 0);
   mover(5, 5); quadros(60);

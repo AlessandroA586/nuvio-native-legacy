@@ -15,24 +15,25 @@ não são "o outro": seguem como estão (lista no fim).
 | Contexto | CH+ | CH− | Cor |
 |---|---|---|---|
 | Fora de zap (Home, telas, Ajustes…) | Salvos / cartão da ilha (= AZUL) | Spotlight, ou fecha o Spotlight (= AMARELO) | AZUL e AMARELO continuam iguais |
-| Guia de TV | categoria anterior (inalterado) | categoria seguinte (inalterado) | AZUL abre/fecha o overlay; AMARELO alterna grade/cartões; dicas de cor mantidas |
-| Player e PiP com canal no ar | zap de canal (inalterado) | zap de canal (inalterado) | AZUL/AMARELO inalterados; dica de cor mantida |
+| Guia de TV | categoria anterior (inalterado) | categoria seguinte (inalterado) | AZUL abre/fecha o overlay; AMARELO alterna grade/cartões; dicas de cor mantidas. **.wgt:** o CH+ é a única "AZUL", então continua categoria seguinte (como sempre foi); só o CH− salta de verdade |
+| Player e PiP com canal no ar | zap de canal (inalterado) | zap de canal (inalterado) | AZUL/AMARELO inalterados; dica de cor mantida. **.wgt:** a casca não traduz a ColorF3Blue (406), então o CH+ segue como AZUL ali (faixa do guia → "Guia completo", PiP → tela cheia) e não zapa; o CH− zapa |
 | Segurar CH+ | abre a Central de controle (`src/chsegura.h`, `src/central.h`) | — | toque curto continua fazendo a ação de AZUL |
 | Detalhe de fonte (`streams.c`) | — | abre, como AMARELO | AMARELO inalterado |
 
 ### Ligações acrescentadas
 
-- **webOS (Emscripten), `src/main.c`**: `remapCanal` agora olha `app_zap_ativo()`.
-  Com canal na tela, F7/F8 viram CH_UP/CH_DOWN (zap de verdade); fora disso
-  CH+ → "s" (Salvos) e **CH− → F5 (Spotlight)**. Antes o CH− não fazia nada fora do zap.
-- **`src/app.c` (`spotAtalho`), `src/spotlight.c`, `src/streams.c`**: CH_DOWN
-  abre/fecha o Spotlight e abre o detalhe de fonte, como AMARELO.
+- **Tizen web `.wgt`, `src/main.c` (`remapCanal`, bloco `__EMSCRIPTEN__`)**: o CH+ (427/F7) segue sempre como a AZUL ("s"/scancode AZUL) — a casca (`tools/tizen-shell.html`) não traduz a ColorF3Blue (406), então o F7 é a única tecla AZUL do Tizen web e não pode virar zap. O CH− (428/F8) é novo: com canal na tela zapa de verdade (PAGEDOWN/CH_DOWN); fora disso é F5 (Spotlight). Antes o CH− não fazia nada fora do zap.
+- **LG/webOS, `src/app.c` (`spotAtalho`), `src/spotlight.c`, `src/streams.c`**: o scancode cru 481 (NV_SCANCODE_CH_DOWN, `SDL_webOS.h`) abre/fecha o Spotlight e abre o detalhe de fonte, como AMARELO. O webOS nativo não passa por `remapCanal` — a ligação é o scancode direto, sem remapeamento.
 - **Tizen .wgt, `tools/tizen-shell.html`**: ChannelDown (428) registrada e
   traduzida para F8 (keydown/keyup), par do F7 do CH+.
 - **Android TV/mobile e .tpk**: já tinham CH+/CH−; só os textos mudaram.
 - Testes: `bash tests/wgt_voz.sh` prova 428 → F8 (119) em keydown e keyup;
   `bash tests/teclas_ch.sh` compila o remapeador real para Android, .tpk,
-  Emscripten/.wgt e Mac, verificando CH+/CH−, down/up, Salvos/busca e zap.
+  Emscripten/.wgt e Mac, verificando CH+/CH−, down/up, Salvos/busca e zap
+  (no .wgt o CH+ nunca zapa — a única AZUL);
+  `bash tests/spot_ch.sh` prova o `spotAtalho` real de app.c: CH− (481)
+  abre como AMARELO, menos no guia e no keyup.
+  `bash tests/spotlight_regressao.sh` prova que o CH− fecha o Spotlight aberto.
   `bash tests/fonte_detalhe.sh` prova que CH− abre/fecha o detalhe como AMARELO.
 - .wgt e Android usam o scancode AZUL para CH+ fora do zap, como .tpk,
   evitando digitar a letra "s" no Spotlight. As ações fora de campos e o zap
@@ -117,8 +118,8 @@ não mudou.
 
 ## Verificação da retomada
 
-- `python3 tools/varredura-i18n.py`, `bash tests/i18n.sh`,
-  `bash tests/wgt_voz.sh`, `bash tests/teclas_ch.sh`,
+- `python3 tools/varredura-i18n.py`, `bash tests/i18n.sh`, `bash tests/wgt_voz.sh`,
+  `bash tests/teclas_ch.sh`, `bash tests/spot_ch.sh`, `bash tests/spotlight_regressao.sh`,
   `bash tests/fonte_detalhe.sh`, `bash tests/central.sh`,
   `bash tests/tpk40_teclas.sh`: rc 0.
 - `bash tests/player.sh`: rc 134, assert em `tests/player_regression.c:176`
