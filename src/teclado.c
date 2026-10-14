@@ -149,8 +149,8 @@ static int vozOk(void) {
 }
 static int celOk(void) { return (forcaCel >= 0 ? forcaCel : celb_disponivel()) && !semCel; }
 // Ajuste "Teclado" (Android): 0 automatico, 1 so a grade do app, 2 o teclado do
-// sistema direto. Fora do Android st_abre_sozinho() e 0 e nada muda.
-static int modoTeclado(void) { return st_abre_sozinho() ? ajustes_teclado_android() : 0; }
+// sistema direto. Onde o ajuste nao existe (Mac) st_teclado_modo() e 0.
+static int modoTeclado(void) { return st_teclado_modo(); }
 static int teTelefoneIme(void) { return telefoneui_ativo() && imeOk() && modoTeclado() != 1; }
 #ifdef NV_TOUCH_UI
 enum { TE_P_CAMPO=0, TE_P_FALAR, TE_P_CEL, TE_P_APAGAR, TE_P_LIMPAR,

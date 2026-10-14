@@ -1,8 +1,11 @@
 #!/bin/bash
 # Painel lateral da colecao (dono, 13/10/2026: "o poster tinha antes, eu so pedi
 # para tirar o poster quando a view e de poster"): o cartaz some na Grade, no
-# Cover Flow E no Ranking (dono, 14/10: "o ranking ainda ta mostrando o poster
-# sendo que ele ja e poster") — nessas o logo segue valendo. Com o cartaz na
+# Cover Flow, no Ranking E nas Decadas (dono, 14/10: "o ranking ainda ta
+# mostrando o poster sendo que ele ja e poster"; "no modo ranking dos streaming
+# ainda ta mostrando o poster, tem que tirar, decades tb") — nessas o logo
+# segue valendo. As paginas de streaming sao a mesma tela e o mesmo painel
+# (vertudo.c, grupo "Streaming"), entao vale o mesmo contrato. Com o cartaz na
 # ficha (as outras exibicoes), a LOGO nao entra: so o nome escrito (dono, 14/10:
 # "quando tem poster nas infos nao colocar a logo"). A Vitrine nao usa painel():
 # o destaque dela e logo+meta+sinopse e o cartaz vem na fileira.
@@ -76,9 +79,10 @@ static void run(int logo, int poster) {
 }
 int main(void) {
   for (lay = VT_LAY_GRADE; lay <= VT_LAY_MURAL; lay++) {
-    if (lay == VT_LAY_GRADE || lay == VT_LAY_RANKING) {
+    if (lay == VT_LAY_GRADE || lay == VT_LAY_RANKING || lay == VT_LAY_DECADAS) {
       // Exibicao de cartazes: o cartaz ja esta na celula, o painel so da as
-      // infos — e a logo vale.
+      // infos — e a logo vale. Decadas e poster na celula tambem (streaming
+      // e colecoes, a mesma tela).
       run(1, 1); assert(posterDraws == 0 && logoDraws == 1);
       run(0, 1); assert(posterDraws == 0 && logoDraws == 0);
       continue;

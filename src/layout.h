@@ -234,7 +234,7 @@ int layout_modo_mobile(void);
 #define NV_COLLECTION_HERO_LOGO_MAX_H   150.0f
 #define NV_COLLECTION_HERO_CAPTION_Y    448.0f
 // line-height do CSS: sinopse 22*1.35, meta 21*1.25, secundaria 18*1.35.
-#define NV_LD_HERO_SIN   32
+#define NV_LD_HERO_SIN   30
 #define NV_LD_HERO_META  26
 #define NV_LD_HERO_SEC   24
 // MEDIDO no app web: o titulo da primeira fileira fica em y=518 e os cards em
@@ -328,6 +328,17 @@ int layout_modo_mobile(void);
 #define NV_DIN_LARGA_VEU  0.62f    // altura do veu da legenda na faixa deitada
 #define NV_DIN_LARGA_PAD  20.0f    // recuo da legenda dentro da faixa
 #define NV_DIN_PAINEL_RAIO 36.0f   // canto do painel de vidro de cada fileira
+// Fileira "Herói" (#205): um cartão só do tamanho da fileira — o banner
+// largo entre fileiras que a Apple TV usa. A altura sai da largura, porque a
+// largura é a fileira inteira (homeLarguraUtil): 0,24 é a proporção medida
+// na foto do dono (fotos1014/appletv-hero-card.jpg) com folga para o selo, o
+// título e as duas linhas.
+#define NV_HEROI_ASPECT  0.24f
+#define NV_HEROI_PAD     28.0f    // recuo do selo, do título e do texto
+#define NV_HEROI_VEU_F   0.82f     // escuro→claro de baixo para cima, para o texto
+#define NV_HEROI_VEU_A   0.72f
+#define NV_HEROI_LOGO_W  0.42f     // o título nunca passa desta fração da largura
+
 // Faixa do numeral do Top 10: o numeral mora no vao a esquerda do cartaz e o
 // cartaz cobre a ponta direita dele (a Apple faz assim), entao o passo da
 // fileira cresce por ela.
@@ -341,6 +352,9 @@ int layout_modo_mobile(void);
 #define NV_FICHA_ILHA_DY  12.0f   // a ilha um pouco menor que o cartaz, dentro da fileira
 #define NV_FICHA_RAIO     32.0f   // o mesmo canto do menu contextual (CTX_ILHA_RAIO)
 #define NV_PALCO_ESC       1.3f
+// A CORTINA do Palco (#205, pedido do dono: "o resto da tela mais dimming
+// ainda"): com o foco numa fileira Palco, um scrim escurece tudo fora dela.
+#define NV_PALCO_CORTINA   0.42f
 // Fileira redonda (pessoas): diametro do disco. O nome vai abaixo, no bloco do rotulo.
 #define NV_REDONDA_D       200.0f
 #define NV_PALCO_VIZ       0.66f
@@ -571,7 +585,7 @@ int layout_modo_mobile(void);
 // .home-modern-hero-secondary: 18/600 na sessao logada.
 #define NV_FT_HERO_SEC   18   // --modern-hero-secondary-size (212*0.085)
 #define NV_FT_HERO_META  21   // --modern-hero-meta-size (212*0.1), peso 500
-#define NV_FT_HERO_SIN   24   // era 22 (#477, sinopse pequena na TV), peso 400
+#define NV_FT_HERO_SIN   22   // original hero synopsis, peso 400
 // Tela de DETALHE, medidos no app web rodando (getBoundingClientRect e
 // getComputedStyle sobre .series-detail-shell), nao lidos da folha.
 #define NV_FT_DET_BOTAO  25   // .series-primary-btn (peso 600)
@@ -584,7 +598,11 @@ int layout_modo_mobile(void);
 // (components.css:15282), ja convertidos para o canvas de 1920; o guia
 // parental nao e refeito la e fica com os 22 da regra base.
 #define NV_FT_PG_RELOGIO 26   // .player-clock
-#define NV_FT_PG_FIM     22   // .player-ends-at
+// Side-sheet typography derives from one body size; text.c applies the readable floor.
+#define NV_FT_SHEET_BODY 26
+#define NV_FT_SHEET_TITLE (NV_FT_SHEET_BODY * 17 / 13)
+#define NV_FT_SHEET_META (NV_FT_SHEET_BODY * 11 / 13)
+#define NV_FT_PG_FIM     NV_FT_SHEET_META   // .player-ends-at
 #define NV_FT_PG_ROTULO  22   // .player-parental-label
 #define NV_FT_PG_GRAV    22   // .player-parental-severity
 // Entrelinha (leading) OFICIAL de cada estilo. Usar a altura que o SDL_ttf

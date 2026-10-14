@@ -180,6 +180,7 @@ int  player_retido_so_voo(void);
 int  player_retomar_retido(const char *imdb, int temporada, int episodio);
 void player_validar_retido(Uint32 agora);
 void player_descartar_retido(void);
+void player_ciclo_evento(Uint32 tipo);
 
 // --- MINI-PLAYER (PiP) DE CANAL ---------------------------------------------
 // Sair de um canal para a home nao mata a transmissao: o destino do plano de

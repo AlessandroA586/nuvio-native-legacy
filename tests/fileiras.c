@@ -151,8 +151,8 @@ int main(void) {
   puts("ok  catalogo e colecao escolhem a forma do card; fileira do app nao");
 
   // 6b. ESTILO PELO MENU DO CARTAZ. O menu grava o MESMO `tipo` da tela de
-  //     Ajustes; colecao so aceita as formas dela, e o ciclo dos Ajustes pula
-  //     o resto.
+  //     Ajustes; a colecao aceita o MESMO conjunto do catalogo (#205), com a
+  //     pasta no lugar do cartaz.
   { int tipos[FIL_TIPO_N], n, k, col = -1, cat = -1; const char *rot[FIL_TIPO_N];
     fil_registrar("collection_formas", "Formas", "", "", 3);
     fil_registrar("addon_movie_formas", "Formas cat", "Addon", "movie", 3);
@@ -175,13 +175,15 @@ int main(void) {
     // AS LINHAS: o que so muda de tamanho divide uma linha so.
     { FilEstiloLinha l[FIL_TIPO_N];
       int nl = fil_estilo_linhas("addon_movie_formas", l, FIL_TIPO_N);
-      // 7 de antes + Linha do tempo, Cartaz com ficha, Palco, Redonda e Pôster
-      // grande (14/10).
-      assert(nl == 12);
+      // 7 de antes + Linha do tempo, Cartaz com ficha, Palco, Redonda, a
+      // fileira Herói (#205) e o Pôster grande (14/10).
+      assert(nl == 13);
       assert(l[7].tipos[0] == FIL_TIPO_LINHA_TEMPO && l[8].tipos[0] == FIL_TIPO_FICHA &&
-             l[9].tipos[0] == FIL_TIPO_PALCO && l[10].tipos[0] == FIL_TIPO_REDONDA &&
-             l[11].tipos[0] == FIL_TIPO_POSTER_GRANDE &&
-             !strcmp(l[11].rotulo, "Pôster grande"));
+             l[9].tipos[0] == FIL_TIPO_PALCO && l[10].tipos[0] == FIL_TIPO_REDONDA);
+      // #205: a fileira Herói — um cartão só do tamanho da fileira.
+      assert(l[11].tipos[0] == FIL_TIPO_HEROI && !strcmp(l[11].rotulo, "Herói"));
+      assert(l[12].tipos[0] == FIL_TIPO_POSTER_GRANDE &&
+             !strcmp(l[12].rotulo, "Pôster grande"));
       assert(!strcmp(l[2].rotulo, "Paisagem") && l[2].n == 3 &&
              l[2].tipos[0] == FIL_TIPO_SERVICO && l[2].tipos[2] == FIL_TIPO_DESTAQUE &&
              !strcmp(l[2].nomes[2], "Paisagem grande"));
@@ -189,7 +191,8 @@ int main(void) {
              l[4].tipos[0] == FIL_TIPO_DESTAQUE_QUADRADO &&
              l[4].tipos[2] == FIL_TIPO_DESTAQUE_QUADRADO_G);
       for (k = 0; k < nl; k++) if (k != 2 && k != 4) assert(l[k].n == 1);
-      assert(fil_estilo_linhas("collection_formas", l, FIL_TIPO_N) == 4 && l[1].n == 1);
+      // A colecao oferece AS MESMAS LINHAS do catalogo.
+      assert(fil_estilo_linhas("collection_formas", l, FIL_TIPO_N) == nl);
       assert(fil_estilo_linhas("continue_watching", l, FIL_TIPO_N) == 0); }
     // OS 4:3 MAIORES: a mesma forma, com fator. O 6 gravado de antes continua
     // sendo o 4:3 de sempre (fator 1), e o Tamanho Grande nao passa do teto.
@@ -200,7 +203,7 @@ int main(void) {
     assert(fil_escala("addon_movie_formas") == 1.5f);
     assert(fil_escala_tipo("addon_movie_formas", FIL_TIPO_DESTAQUE_QUADRADO_M) == 1.25f);
     assert(fil_escala_tipo("addon_movie_formas", FIL_TIPO_CARTAZ) == 1.0f);
-    assert(!fil_definir_tipo("collection_formas", FIL_TIPO_DESTAQUE_QUADRADO_M));
+    assert(fil_definir_tipo("collection_formas", FIL_TIPO_DESTAQUE_QUADRADO_M));  // #205: colecao aceita
     assert(fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_DESTAQUE_QUADRADO_G)[0]);
     assert(!strcmp(fil_tipo_rotulo(FIL_TIPO_DESTAQUE_QUADRADO_G), "Destaque 4:3 grande"));
     for (k = 0; k < fil_n(); k++)
@@ -213,32 +216,43 @@ int main(void) {
       }
     assert(fil_definir_tipo("addon_movie_formas", FIL_TIPO_LARGA));
     assert(fil_tipo("addon_movie_formas") == FIL_TIPO_LARGA);
-    assert(!fil_definir_tipo("collection_formas", FIL_TIPO_LARGA));   // colecao nao
+    assert(fil_definir_tipo("collection_formas", FIL_TIPO_LARGA));    // #205: colecao tambem
     assert(fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_LARGA)[0]);
-    assert(strcmp(fil_estilo_ajuda("collection_formas", FIL_TIPO_CARTAZ),
-                  fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_CARTAZ)));
+    // #205: a ajuda da colecao descreve a PASTA no card do estilo (a capa
+    // da colecao no formato escolhido) e nao promete os enfeites do catalogo
+    // (pilha, numeros, linha do tempo, ficha, palco, recorte redondo); so o
+    // Automatico fala da forma que a colecao tem na conta.
+    { int tA[8], kA, nA = fil_estilos("collection_formas", tA, NULL, 8);
+      for (kA = 0; kA < nA; kA++) {
+        assert(fil_estilo_ajuda("collection_formas", tA[kA])[0]);
+        assert(strcmp(fil_estilo_ajuda("collection_formas", tA[kA]),
+                      fil_estilo_ajuda("addon_movie_formas", tA[kA]))); } }
+    assert(strcmp(fil_estilo_ajuda("collection_formas", FIL_TIPO_AUTO),
+                  fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_AUTO)));
     assert(fil_definir_tipo("addon_movie_formas", FIL_TIPO_RANKING));
     assert(fil_tipo("addon_movie_formas") == FIL_TIPO_RANKING);
-    assert(!fil_definir_tipo("collection_formas", FIL_TIPO_RANKING));   // colecao nao
+    assert(fil_definir_tipo("collection_formas", FIL_TIPO_RANKING));   // #205: colecao tambem
     assert(fil_definir_tipo("addon_movie_formas", FIL_TIPO_LINHA_TEMPO));
     assert(fil_tipo("addon_movie_formas") == FIL_TIPO_LINHA_TEMPO);
-    assert(!fil_definir_tipo("collection_formas", FIL_TIPO_PALCO));     // colecao nao
-    assert(!fil_definir_tipo("collection_formas", FIL_TIPO_REDONDA));
+    assert(fil_definir_tipo("collection_formas", FIL_TIPO_PALCO));     // #205: colecao tambem
+    assert(fil_definir_tipo("collection_formas", FIL_TIPO_REDONDA));
+    assert(fil_definir_tipo("collection_formas", FIL_TIPO_TOP10));    // #205: colecao tambem
+    // 2.0.5: o catalogo ganhou o Poster grande; a colecao aceita todo FilTipo
+    // tambem (tipoValido), com a pasta no lugar do cartaz.
     assert(fil_definir_tipo("addon_movie_formas", FIL_TIPO_POSTER_GRANDE));
     assert(fil_tipo("addon_movie_formas") == FIL_TIPO_POSTER_GRANDE);
-    assert(!fil_definir_tipo("collection_formas", FIL_TIPO_POSTER_GRANDE)); // colecao nao
     assert(fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_POSTER_GRANDE)[0]);
     assert(fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_REDONDA)[0]);
     assert(fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_FICHA)[0]);
-    n = fil_estilos("collection_formas", tipos, rot, 8);
-    assert(n == 4 && tipos[1] == FIL_TIPO_COLECAO &&
-           tipos[2] == FIL_TIPO_DESTAQUE_QUADRADO && tipos[3] == FIL_TIPO_CARTAZ);
+    { int t2[8]; const char *r2[8];
+      n = fil_estilos("collection_formas", tipos, rot, 8);
+      assert(n == 8 && fil_estilos("addon_movie_formas", t2, r2, 8) == n);
+      for (k = 0; k < n; k++) assert(tipos[k] == t2[k] && !strcmp(rot[k], r2[k])); }
     assert(fil_estilos("continue_watching", tipos, rot, 8) == 0);
     assert(!fil_definir_tipo("continue_watching", FIL_TIPO_CARTAZ));
-    assert(!fil_definir_tipo("collection_formas", FIL_TIPO_TOP10));   // nao e forma de colecao
     assert(fil_definir_tipo("collection_formas", FIL_TIPO_CARTAZ));
     assert(fil_tipo("collection_formas") == FIL_TIPO_CARTAZ);
-    assert(!strcmp(fil_estilo_rotulo("collection_formas", FIL_TIPO_CARTAZ), "Pôster"));
+    assert(!strcmp(fil_estilo_rotulo("collection_formas", FIL_TIPO_CARTAZ), "Cartaz em pé"));
     assert(fil_definir_tipo("addon_movie_formas", FIL_TIPO_SERVICO));
     assert(fil_tipo("addon_movie_formas") == FIL_TIPO_SERVICO);
     for (k = 0; k < fil_n(); k++) {
@@ -246,13 +260,15 @@ int main(void) {
       if (!strcmp(fil_chave(k), "addon_movie_formas")) cat = k;
     }
     assert(col >= 0 && cat >= 0);
-    assert(!strcmp(fil_linha_tipo_rotulo(col), "Pôster"));
+    assert(!strcmp(fil_linha_tipo_rotulo(col), fil_tipo_rotulo(FIL_TIPO_CARTAZ)));
     assert(!strcmp(fil_linha_tipo_rotulo(cat), fil_tipo_rotulo(FIL_TIPO_SERVICO)));
-    // Ciclo dos Ajustes numa colecao: Poster -> Automatico -> Paisagem -> Quadrado.
-    fil_ciclar_tipo(col); assert(fil_linha_tipo(col) == FIL_TIPO_AUTO);
-    fil_ciclar_tipo(col); assert(fil_linha_tipo(col) == FIL_TIPO_COLECAO);
-    fil_ciclar_tipo(col); assert(fil_linha_tipo(col) == FIL_TIPO_DESTAQUE_QUADRADO);
+    // #205: o ciclo dos Ajustes numa colecao e o MESMO do catalogo.
+    fil_definir_tipo("collection_formas", FIL_TIPO_AUTO);
     fil_ciclar_tipo(col); assert(fil_linha_tipo(col) == FIL_TIPO_CARTAZ);
+    fil_ciclar_tipo(col); assert(fil_linha_tipo(col) == FIL_TIPO_DESTAQUE);
+    fil_ciclar_tipo(col); assert(fil_linha_tipo(col) == FIL_TIPO_COLECAO);
+    fil_definir_tipo("addon_movie_formas", FIL_TIPO_AUTO);
+    fil_ciclar_tipo(cat); assert(fil_linha_tipo(cat) == FIL_TIPO_CARTAZ);
     fil_definir_tipo("collection_formas", FIL_TIPO_AUTO);
     fil_definir_tipo("addon_movie_formas", FIL_TIPO_AUTO); }
   puts("ok  estilo da fileira: menu e Ajustes gravam o mesmo tipo");

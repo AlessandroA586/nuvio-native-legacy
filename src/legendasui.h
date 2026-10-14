@@ -108,6 +108,9 @@ int  legendasui_montar(const VideoFaixa *const *emb, int nEmb,
 // Short translated kind of an embedded candidate ("Forçada", "Letreiros",
 // "SDH", "Legenda completa"); NULL when there is nothing to say (#287).
 const char *legendasui_tipo_rotulo(const LegUiCand *c);
+// Row title of cs[i] (#511): its track name / add-on file label, else the
+// language; duplicates among cs get " (k)". Returns 1 when it is a name.
+int  legendasui_titulo(const LegUiCand *cs, int n, int i, char *out, size_t sz);
 // 1 when the candidate can be the SECOND subtitle (external, not ASS).
 int  legendasui_cand_secundaria_ok(const LegUiCand *c);
 
