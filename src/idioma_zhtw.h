@@ -1732,6 +1732,7 @@
   T("Episódio", "集數"),
   T("Episódio %d", "第 %d 集"),
   T("Episódio 3", "第 3 集"),
+  T("Episódio aleatório", "隨機劇集"),
   T("Episódio certo", "正確的集數"),
   T("Episódio certo, sem plays repetidos no Trakt.", "下一集更準確，Trakt 不再重複播放。"),
   T("Episódio novo", "新集數"),

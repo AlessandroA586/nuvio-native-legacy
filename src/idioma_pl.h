@@ -1732,6 +1732,7 @@
   T("Episódio", "Odcinek"),
   T("Episódio %d", "Odcinek %d"),
   T("Episódio 3", "Odcinek 3"),
+  T("Episódio aleatório", "Losowy odcinek"),
   T("Episódio certo", "Właściwy odcinek"),
   T("Episódio certo, sem plays repetidos no Trakt.", "Właściwy odcinek, bez powtórek w Trakt."),
   T("Episódio novo", "Nowy odcinek"),

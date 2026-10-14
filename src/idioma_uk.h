@@ -1731,6 +1731,7 @@
   T("Episódio", "Епізод"),
   T("Episódio %d", "Епізод %d"),
   T("Episódio 3", "Епізод 3"),
+  T("Episódio aleatório", "Випадковий епізод"),
   T("Episódio certo", "Потрібний епізод"),
   T("Episódio certo, sem plays repetidos no Trakt.", "Правильний епізод, без повторів у Trakt."),
   T("Episódio novo", "Новий епізод"),

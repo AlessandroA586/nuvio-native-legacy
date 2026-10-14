@@ -1732,6 +1732,7 @@
   T("Episódio", "Epizodas"),
   T("Episódio %d", "%d epizodas"),
   T("Episódio 3", "3 epizodas"),
+  T("Episódio aleatório", "Atsitiktinė serija"),
   T("Episódio certo", "Tinkamas epizodas"),
   T("Episódio certo, sem plays repetidos no Trakt.", "Tinkama serija, be pasikartojimų Trakt."),
   T("Episódio novo", "Naujas epizodas"),

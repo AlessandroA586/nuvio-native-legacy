@@ -1732,6 +1732,7 @@
   T("Episódio", "Episódio"),
   T("Episódio %d", "Episódio %d"),
   T("Episódio 3", "Episódio 3"),
+  T("Episódio aleatório", "Episódio aleatório"),
   T("Episódio certo", "O episódio certo"),
   T("Episódio certo, sem plays repetidos no Trakt.", "Episódio certo, sem plays repetidos no Trakt."),
   T("Episódio novo", "Episódio novo"),

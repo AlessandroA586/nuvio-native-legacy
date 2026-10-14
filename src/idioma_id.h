@@ -1732,6 +1732,7 @@
   T("Episódio", "Episode"),
   T("Episódio %d", "Episode %d"),
   T("Episódio 3", "Episode 3"),
+  T("Episódio aleatório", "Episode acak"),
   T("Episódio certo", "Episode yang tepat"),
   T("Episódio certo, sem plays repetidos no Trakt.", "Episode tepat, tanpa duplikat di Trakt."),
   T("Episódio novo", "Episode baru"),

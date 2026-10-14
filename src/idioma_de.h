@@ -1731,6 +1731,7 @@
   T("Episódio", "Folge"),
   T("Episódio %d", "Folge %d"),
   T("Episódio 3", "Folge 3"),
+  T("Episódio aleatório", "Zufällige Folge"),
   T("Episódio certo", "Die richtige Folge"),
   T("Episódio certo, sem plays repetidos no Trakt.", "Richtige Folge, keine Doppelungen auf Trakt."),
   T("Episódio novo", "Neue Folge"),
