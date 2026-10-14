@@ -262,7 +262,7 @@ class ParaleloDataSource(
         transferInitializing(dataSpec)
         Log.i(TAG, "abrindo ${dataSpec.uri.host} a partir de ${dataSpec.position}")
         pos = dataSpec.position
-        val pedido = if (dataSpec.length != C.LENGTH_UNSET.toLong()) dataSpec.length else C.LENGTH_UNSET.toLong()
+        val pedido = dataSpec.length
         if (pedido == 0L) {
             // Janela vazia (DataSpec de 0 byte): abre vazio, sem pedir um Range
             // invalido (ultimo < primeiro) e sem gastar conexao.
@@ -297,9 +297,12 @@ class ParaleloDataSource(
             Log.i(TAG, "conexao unica: HTTP $code, total=$total, pos=$pos (${dataSpec.uri.host})")
             // Sem Range (ou pequeno demais para valer a pena): conexao unica.
             if (code == 206 || code == 200) {
-                // 206 de um pedaco so: reabre sem teto para o arquivo inteiro.
-                if (code == 206 && pedido == C.LENGTH_UNSET.toLong()) {
-                    desconectar(c); unicaCon = conectarComRetry(URL(dataSpec.uri.toString()), pos, -1)
+                // 206 so da sonda: reabre ate o fim da janela pedida (sem teto
+                // se ela e o arquivo inteiro). Janela que cabe na sonda segue.
+                if (code == 206 && (pedido == C.LENGTH_UNSET.toLong() || pedido > PRIMEIRO)) {
+                    desconectar(c)
+                    unicaCon = conectarComRetry(URL(dataSpec.uri.toString()), pos,
+                        if (pedido == C.LENGTH_UNSET.toLong()) -1 else pos + pedido - 1)
                 } else unicaCon = c
                 val uc = unicaCon!!
                 if (uc.responseCode !in 200..299) {

@@ -4,24 +4,13 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 
 static pthread_mutex_t trava = PTHREAD_MUTEX_INITIALIZER;
 static uint64_t permitida;
-static unsigned ultimoAceito;
-
-// Modulo sem SDL: um relogio monotônico local (mesma semântica de Uint32 do
-// SDL_GetTicks, com wrap) para nao arrastar a dependencia para os testes.
-static unsigned agoraMs(void) {
-  struct timespec t;
-  if (clock_gettime(CLOCK_MONOTONIC, &t)) return 0;
-  return (unsigned)((uint64_t)t.tv_sec * 1000 + (uint64_t)t.tv_nsec / 1000000);
-}
 
 void streamfitpassiva_permitir(uint64_t geracao) {
   pthread_mutex_lock(&trava);
   permitida = geracao;
-  if (!geracao) ultimoAceito = 0;
   pthread_mutex_unlock(&trava);
 }
 uint64_t streamfitpassiva_permitida(void) {
@@ -46,25 +35,12 @@ int streamfitpassiva_receber(uint64_t rede, uint64_t geracao, const char *origem
     if (!geracao || geracao != permitida) motivo = "stale_generation";
     else if (!rede || rede != redemarca_atual()) motivo = "network";
     else if (!(aceitos = streamfit_passiva(rede, origem, kbps, n, fimMs))) motivo = "rejected";
-    else ultimoAceito = agoraMs();
     pthread_mutex_unlock(&trava);
   }
   /* English, counts only: no host, URL, network id or title. */
   printf("[stream_fit] passive %s intervals=%d accepted=%d\n", motivo, n, aceitos);
   fflush(stdout);
   return aceitos;
-}
-
-int streamfitpassiva_recente_ms(uint64_t geracao, unsigned maxMs) {
-  unsigned agora, ultimo;
-  if (!geracao || !maxMs) return 0;
-  pthread_mutex_lock(&trava);
-  ultimo = (permitida == geracao) ? ultimoAceito : 0;
-  pthread_mutex_unlock(&trava);
-  if (!ultimo) return 0;
-  agora = agoraMs();
-  if (agora < ultimo) return 1;
-  return (agora - ultimo) <= maxMs;
 }
 
 #ifdef NV_ANDROID

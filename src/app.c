@@ -53,6 +53,7 @@
 #include "proxyts.h"
 #include "livetv_regras.h"
 #include "livestall.h"
+#include "bufavanco.h"
 #include "guialembrete.h"   /* aviso do lembrete de programa do guia */
 #include "epg.h"
 #include "posplay.h"
@@ -2181,15 +2182,10 @@ static void tentarProximaFonteVOD(void) {
   else if (aberturaVencida(desde)) motivo = 2;
   else if (!fonteFalha && video_bufferando_ms() > VOD_FONTE_BUFFER_MS) {
 #ifdef NV_ANDROID
-    // Janela recente so segura a troca enquanto o buffer ANDA. Fonte que
-    // baixa sem parar mas nunca cobre o bitrate entrega janela a cada
-    // ENTREGA_CADA (10 s) e o veto de 5 s nunca vencia: a troca automatica
-    // morria a sessao inteira. Sem avanco, a janela nao vale mais nada.
-    { static unsigned visto; static double buf;
-      double agora = video_buffer_fim();
-      unsigned ms = video_bufferando_ms();
-      if (ms < visto) { visto = ms; buf = agora; }
-      if (agora > buf + 0.5) { visto = ms; buf = agora; return; }
+    // Segura a troca so enquanto o fim do buffer ANDA (bufavanco.h), por fonte.
+    { static BufAvanco av;
+      if (bufavanco_segura(&av, fonteVODDesde, video_bufferando_ms(), SDL_GetTicks(),
+                           video_buffer_fim())) return;
     }
 #endif
     motivo = 3;

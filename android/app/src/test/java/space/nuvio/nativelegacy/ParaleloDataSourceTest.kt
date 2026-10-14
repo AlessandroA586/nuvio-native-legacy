@@ -190,6 +190,30 @@ class ParaleloDataSourceTest {
         fonte.close()
     }
 
+    @Test fun janelaMediaMaiorQueASondaServeAJanelaInteira() {
+        // 3 MB pedidos: acima da sonda (1 MB), abaixo do limiar do pool. A
+        // conexao unica nao pode herdar o teto da sonda e acabar aos 1 MB.
+        val fonte = ParaleloDataSource(null, emptyMap(), novaConexao = { url ->
+            ConexaoFaixa(url, 24891962527L)
+        }, dormir = { throw AssertionError("conexao viva nao deve esperar retry") })
+        val janela = 3L shl 20
+        val len = fonte.open(DataSpec.Builder()
+            .setUri(android.net.Uri.parse("https://example.invalid/video.mkv"))
+            .setPosition(1000L)
+            .setLength(janela)
+            .build())
+        assertEquals(janela, len)
+        val buf = ByteArray(1 shl 16)
+        var lidos = 0L
+        while (true) {
+            val n = fonte.read(buf, 0, buf.size)
+            if (n == C.RESULT_END_OF_INPUT) break
+            lidos += n
+        }
+        fonte.close()
+        assertEquals(janela, lidos)
+    }
+
     @Test fun buracoGrandeNaoBaixaTudoNaSonda() {
         // Seek para tras sobre 200 MB sem cache: a sonda fica em PRIMEIRO, o
         // resto vai pelo pool, nunca um ByteArray de 200 MB na thread de quem abriu.

@@ -64,11 +64,6 @@ static void ingestion(void) {
   CHECK(classify("https://cdn.invalid/m.mkv", 5000).classe == SF_DESCONHECIDA);
   CHECK(!streamfitpassiva_receber(1, 6, "https://cdn.invalid", v8, 8, NOW + 4));
   CHECK(streamfitpassiva_receber(2, 6, "https://cdn.invalid", v8, 8, NOW + 4) == 8);
-  // Janela aceita ha pouco (a geração permitida, a mesma rede): recente.
-  CHECK(streamfitpassiva_recente_ms(6, 5000) == 1);
-  CHECK(streamfitpassiva_recente_ms(5, 5000) == 0);   // outra geração
-  CHECK(streamfitpassiva_recente_ms(0, 5000) == 0);   // sem geração
-  CHECK(streamfitpassiva_recente_ms(6, 0) == 0);     // maxMs 0 desliga
   redemarca_observar(3, 0);                     // disconnected: unknown network
   CHECK(!streamfitpassiva_receber(3, 6, "https://cdn.invalid", v8, 8, NOW + 5));
   CHECK(classify("https://cdn.invalid/m.mkv", 10).razao == SF_SEM_REDE);
@@ -126,6 +121,6 @@ static void concurrent(void) {
 int main(void) {
   setvbuf(stdout, NULL, _IOFBF, 1 << 16);
   ingestion(); runtime(); concurrent();
-  fprintf(stderr, "streamfit_passiva: PASS (%d checks: generation/epoch/authority/5..48/replay, origin, resolver unknown, recent window, runtime parser, threaded gate)\n", checks);
+  fprintf(stderr, "streamfit_passiva: PASS (%d checks: generation/epoch/authority/5..48/replay, origin, resolver unknown, runtime parser, threaded gate)\n", checks);
   return 0;
 }
