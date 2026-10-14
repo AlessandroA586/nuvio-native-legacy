@@ -13,6 +13,12 @@
 
 typedef struct { unsigned chave, ms, t0; double buf0; int armado; } BufAvanco;
 
+// Borda do buffer em segundos a partir do que o player informa: posicao mais
+// segundos a frente (VideoStats.bufferSeg, < 0 = nao sabe -> 0, sem avanco).
+static inline double bufavanco_borda(double pos, double bufferSeg) {
+  return bufferSeg >= 0.0 ? pos + bufferSeg : 0.0;
+}
+
 // 1 = segura a troca (buffer andou ou ainda dentro da janela); 0 = pode trocar.
 static inline int bufavanco_segura(BufAvanco *s, unsigned chave, unsigned ms,
                                    unsigned agora, double fim) {

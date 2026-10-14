@@ -2183,9 +2183,11 @@ static void tentarProximaFonteVOD(void) {
   else if (!fonteFalha && video_bufferando_ms() > VOD_FONTE_BUFFER_MS) {
 #ifdef NV_ANDROID
     // Segura a troca so enquanto o fim do buffer ANDA (bufavanco.h), por fonte.
-    { static BufAvanco av;
+    // No Android video_buffer_fim() e 0: a borda vem de VideoStats.bufferSeg.
+    { static BufAvanco av; VideoStats vs;
+      video_estatisticas(&vs);
       if (bufavanco_segura(&av, fonteVODDesde, video_bufferando_ms(), SDL_GetTicks(),
-                           video_buffer_fim())) return;
+                           bufavanco_borda(video_pos(), vs.bufferSeg))) return;
     }
 #endif
     motivo = 3;

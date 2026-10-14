@@ -25,6 +25,21 @@ int main(void) {
     CHECK(liberou); }
   // Novo episodio de buffering (ms recomeca) na mesma fonte rearma.
   CHECK(bufavanco_segura(&s, 300, 31000, 90000, 6.0) == 1);
+  // Android: video_buffer_fim() e 0; a borda vem de pos + bufferSeg. Borda
+  // andando 1 s/s com a posicao parada segura alem da janela de 10 s.
+  { BufAvanco a = {0}; int i, solto = 0;
+    CHECK(bufavanco_borda(100.0, -1.0) == 0.0);
+    CHECK(bufavanco_borda(100.0, 4.5) == 104.5);
+    for (i = 0; i < 40; i++)
+      if (!bufavanco_segura(&a, 7, 31000 + i * 1000u, 1000u * i,
+                            bufavanco_borda(100.0, 2.0 + i))) solto = 1;
+    CHECK(!solto);
+    // Estatistica indisponivel (-1): sem avanco, libera a troca.
+    { BufAvanco b = {0}; int l = 0;
+      for (i = 0; i < 40; i++)
+        if (!bufavanco_segura(&b, 8, 31000 + i * 1000u, 1000u * i,
+                              bufavanco_borda(100.0, -1.0))) l = 1;
+      CHECK(l); } }
   if (falhas) return 1;
   fprintf(stderr, "bufavanco: PASS\n");
   return 0;
