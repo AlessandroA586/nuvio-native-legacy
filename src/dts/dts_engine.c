@@ -328,7 +328,7 @@ static void *fx_worker(void *opaque) {
     int strip=direct&&e->final_cross;
     pthread_mutex_unlock(&e->range_lock);
     uint64_t t0=fx_now_ms();
-    int r=rede_fluxo64(target,strip?"":e->headers,at,fx_sink,e,&total,&status,&e->cancelled,fin,&cross,FX_STALL_MS,&got);
+    int r=rede_fluxo64(target,strip?"":e->headers,at,fx_sink,e,&total,&status,&e->cancelled,e->ext_cancel,fin,&cross,FX_STALL_MS,&got);
     uint64_t ms=fx_now_ms()-t0;
     pthread_mutex_lock(&e->range_lock);
     e->metrics.range_requests++;

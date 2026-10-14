@@ -2871,6 +2871,7 @@ char *rede_baixar_trecho64_cab(const char *url, const char *headers,
  * paced by the TV); time spent inside it does not count as a stall. */
 typedef struct {
   DtsRange r;
+  volatile int *cancel2;                   /* owner's stop flag, checked like r.cancel */
   int (*sink)(void *, const char *, size_t);
   void *opaque;
   int stopped, accepted;
@@ -2883,12 +2884,16 @@ static uint64_t fluxoAgoraMs(void) {
   clock_gettime(CLOCK_MONOTONIC, &t);
   return (uint64_t)t.tv_sec * 1000u + (uint64_t)t.tv_nsec / 1000000u;
 }
+static int fluxoParado(DtsFluxo *f) {
+  return (f->r.cancel && __atomic_load_n(f->r.cancel, __ATOMIC_RELAXED)) ||
+         (f->cancel2 && __atomic_load_n(f->cancel2, __ATOMIC_RELAXED));
+}
 static size_t dtsFluxoBody(void *data, size_t size, size_t count, void *user) {
   DtsFluxo *f = user;
   size_t n;
   if (size && count > SIZE_MAX / size) return 0;
   n = size * count;
-  if (f->r.cancel && __atomic_load_n(f->r.cancel, __ATOMIC_RELAXED)) return 0;
+  if (fluxoParado(f)) return 0;
   if (f->r.status >= 300 && f->r.status < 400) return n;
   if (!f->accepted) {
     /* 206 starting exactly where asked; a 200 is the whole file, usable only
@@ -2905,12 +2910,12 @@ static size_t dtsFluxoBody(void *data, size_t size, size_t count, void *user) {
 static int dtsFluxoProgress(void *user, long long dt, long long dn, long long ut, long long un) {
   DtsFluxo *f = user;
   (void)dt; (void)dn; (void)ut; (void)un;
-  if (f->r.cancel && __atomic_load_n(f->r.cancel, __ATOMIC_RELAXED)) return 1;
+  if (fluxoParado(f)) return 1;
   return f->stallMs > 0 && fluxoAgoraMs() - f->lastByteMs > (uint64_t)f->stallMs;
 }
 int rede_fluxo64(const char *url, const char *headers, int64_t start,
                  int (*sink)(void *opaque, const char *data, size_t n), void *opaque,
-                 int64_t *total, int *status, volatile int *cancelled,
+                 int64_t *total, int *status, volatile int *cancelled, volatile int *cancelled2,
                  char *final, int *cross, long stall_ms, int64_t *bytes) {
   char current[8192], range[48], origin[128];
   int hop, public_only = 0, downgraded = 0;
@@ -2930,9 +2935,9 @@ int rede_fluxo64(const char *url, const char *headers, int64_t start,
     int result;
     long http = 0;
     char redirected[8192] = "", *next = NULL;
-    if (cancelled && __atomic_load_n(cancelled, __ATOMIC_RELAXED)) return -1;
     memset(&f, 0, sizeof f);
-    f.r.requested = start; f.r.total = -1; f.r.cancel = cancelled;
+    f.r.requested = start; f.r.total = -1; f.r.cancel = cancelled; f.cancel2 = cancelled2;
+    if (fluxoParado(&f)) return -1;
     f.sink = sink; f.opaque = opaque; f.stallMs = stall_ms; f.lastByteMs = fluxoAgoraMs();
     c = pegarHandle(current);
     if (!c) return -1;
@@ -2989,8 +2994,8 @@ int rede_fluxo64(const char *url, const char *headers, int64_t start,
 
 #ifdef __EMSCRIPTEN__
 int rede_fluxo64(const char *u, const char *h, int64_t s, int (*sk)(void *, const char *, size_t), void *o,
-                 int64_t *t, int *st, volatile int *c, char *f, int *x, long ms, int64_t *b) {
-  (void)u; (void)h; (void)s; (void)sk; (void)o; (void)c; (void)ms;
+                 int64_t *t, int *st, volatile int *c, volatile int *c2, char *f, int *x, long ms, int64_t *b) {
+  (void)u; (void)h; (void)s; (void)sk; (void)o; (void)c; (void)c2; (void)ms;
   if (t) *t = -1;
   if (st) *st = 0;
   if (f) f[0] = 0;

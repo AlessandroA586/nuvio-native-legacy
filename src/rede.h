@@ -126,11 +126,12 @@ char *rede_baixar_trecho64_final(const char *url, const char *headers,
  * sink(opaque, data, n) as it arrives (return 0 to stop; it may block). Same
  * redirect and header rules as rede_baixar_trecho64_final. No limit on the
  * whole transfer; it aborts after stall_ms without a byte (time inside the sink
- * does not count). Returns 0 when the body ended, 1 when the sink stopped it,
+ * does not count). Either cancel flag (each may be NULL) aborts it, also before
+ * the first byte. Returns 0 when the body ended, 1 when the sink stopped it,
  * -1 on error (*status = HTTP code or 0, *bytes = body bytes delivered). */
 int rede_fluxo64(const char *url, const char *headers, int64_t start,
                  int (*sink)(void *opaque, const char *data, size_t n), void *opaque,
-                 int64_t *total, int *status, volatile int *cancelled,
+                 int64_t *total, int *status, volatile int *cancelled, volatile int *cancelled2,
                  char *final, int *cross, long stall_ms, int64_t *bytes);
 char *rede_baixar_trecho64_cab(const char *url, const char *headers,
                               int64_t start, int64_t end, long *size,
