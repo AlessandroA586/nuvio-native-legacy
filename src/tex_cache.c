@@ -3546,8 +3546,10 @@ static GLuint tex_obter_limite(const char *caminho, int limite, int urgente,
   // existe): arte que ja esta no cache, em voo ou aquecida passa, e e ela que
   // serve a janela visivel. Nivel 2 (fora da tela) recusa sempre; nivel 1 (na
   // borda) so em movimento; o lookahead (item 1) aquece a vizinhanca em repouso.
+  // BUSCA_MEDIDA tomou o mutex: sair sem solta-lo congelava rede e decode
+  // (cartazes e icones sumiam na C9/TCL, tests/plx_recusa_trava.sh).
   if (i < 0 && pedidoFora && (pedidoFora >= 2 || gradeMovendo)) {
-    tex_n_recusa++; return 0;
+    tex_n_recusa++; SDL_UnlockMutex(mtx); return 0;
   }
   if (i >= 0 && itens[i].estado == FALHOU) {
     itens[i].ultimoQuadro = quadroAtual;
