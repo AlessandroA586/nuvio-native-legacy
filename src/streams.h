@@ -43,6 +43,11 @@ typedef struct {
   // text/season-pack heuristics. 0 = no trustworthy exact-size provenance.
   // https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/responses/stream.md
   uint64_t tamanhoBytes;
+  // Idiomas declarados pelo addon para ESTA fonte. CSV limitado, sem inferir
+  // faixas pelo nome do arquivo nem sondar o video; vazio = nao informado.
+  // Legendas anexadas pelo addon tambem contam, sem afirmar que sao embutidas.
+  char audioIdiomas[512];
+  char legendaIdiomas[512];
   char descricao[2048];
   char arquivo[512];
   // O QUE O ADDON DECLARA COMO "a mesma fonte" entre episodios:
@@ -107,6 +112,8 @@ typedef struct {
 
 // Parser sem rede: o chamador libera *saida. Retorna -1 se a alocacao falhar.
 int stream_extrair(const char *json, const char *provedor, Stream **saida);
+// Idiomas declarados para exibicao, sem rotulo. 0 = nenhum informado.
+int stream_faixas_texto(const Stream *fonte, int legendas, char *saida, unsigned tam);
 void stream_definir_atual(int indice);
 int stream_atual(void);
 void stream_folha_contexto(const char *texto);
