@@ -459,6 +459,8 @@ int   ajustes_legendas_todas(void); // #425: abrir todas as faixas
 int   ajustes_abertura_detalhada(void);
 // #205: 1 = mostra o nome do add-on na tela Cinema da abertura (padrao: 0).
 int   ajustes_abertura_addon(void);
+// #205: tamanho dos cards de episodio (Moderna): 0 pequeno, 1 medio (padrao), 2 grande.
+int   ajustes_ep_tamanho(void);
 // #338: tamanho de abertura das Estatisticas ao vivo (EV_TAM_*); -1 = o ultimo usado.
 int   ajustes_estat_tamanho(void);
 int   ajustes_estat_lado(void);                 // 0 Direita, 1 Esquerda
