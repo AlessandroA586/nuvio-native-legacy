@@ -196,7 +196,7 @@
   0,                /* medidor de desempenho: DESLIGADO (V_MEDIDOR: 0 = Desligado) */
   0,                /* guia de uso: acao */
   0, 0, 0,          /* pacote de selos (espelho de selospacote_ativo), adicionar e remover: o embutido */
-  0,                /* tamanho da interface: 100%, o de sempre */
+  UI_SIZE_AUTO,     /* Untouched interface size follows the physical panel. */
   2,                /* fundo: Frost desde a 2.0 (FUNDO_FROST; dono, 05/10/2026) */
   2,                /* opacidade do vidro: 78%, a de sempre */
   0,                /* vidro fosco: desligado */
@@ -283,3 +283,5 @@
   0, /* remote tips: action */
   0, /* show genre under the hero logo: Ligado, as always */
   1, /* addon name on the Cinema opening (#205): Desligado, local */
+  0, /* hero synopsis size: Normal, the original 22/30 */
+  1, /* episode card size (#205): Medio, as always */

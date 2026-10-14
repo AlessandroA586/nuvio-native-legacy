@@ -1424,6 +1424,14 @@ void vertudo_evento(const SDL_Event *e) {
                         desc_vertudo_fim(), desc_vertudo_erro())) desc_vertudo_mais();
 }
 
+// TETO DO SCROLL PARA A LINHA EM FOCO (vertudo_atualizar): o maior scroll
+// que mantem o TOPO do cartaz focado inteiro abaixo do recorte do cabecalho
+// (VT_TOPO - 12), com folga para tudo o que o foco puxa para fora da caixa
+// (focoprof.h). Linha 0 devolve negativo — scroll zero, cartaz colado no VT_TOPO.
+static float tetoScrollFoco(float celY, float celH) {
+  return celY + 12.0f - (celH * FOCO_ZOOM * 0.5f + NV_ANEL_FOCO);
+}
+
 void vertudo_atualizar(float dt, Uint32 agora) {
   float alvo, maxY;
   int n = nItens();
@@ -1482,6 +1490,15 @@ void vertudo_atualizar(float dt, Uint32 agora) {
   if (lay == VT_LAY_DECADAS && n)
     for (int k = 0; k < decN; k++) if (decY[k] + VT_DEC_H == celY[foco]) { alvo -= VT_DEC_H; break; }
   if(tabFocus)alvo=0;
+  // O CARTAZ EM FOCO NAO ENTRA POR BAIXO DO RECORTE DO CABECALHO. A mira em
+  // 30% deixa o topo da linha focada a 4 px do corte (VT_TOPO - 12), e o que o
+  // foco tem por fora da caixa — o crescimento de FOCO_ZOOM ou o anel de
+  // NV_ANEL_FOCO (focoprof.h) — era cortado no topo (dono, 14/10: "quando ta
+  // focado, fica cortado no top"). O teto garante a folga; a Home resolve o
+  // mesmo problema mantendo a fileira em foco sempre no mesmo Y, abaixo do
+  // corte dela.
+  if (n && celN > 0 && foco >= 0 && foco < celN) { float teto = tetoScrollFoco(celY[foco], celH[foco]);
+    if (alvo > teto) alvo = teto; }
   maxY = VT_TOPO + celFim + VT_GAP_Y - NV_TELA_H + 120.0f;
   if (maxY < 0.0f) maxY = 0.0f;
   if (alvo < 0.0f) alvo = 0.0f;
@@ -1500,13 +1517,19 @@ void vertudo_atualizar(float dt, Uint32 agora) {
 //
 // FICHA DIAGRAMADA (dono, 13/10: "na lateral nao colocar o poster de novo,
 // vamos colocar mais informacoes sobre o titulo"). So a Grade (a exibicao de
-// cartazes) e o Cover Flow dispensam o cartaz lateral, porque la o cartaz ja
-// esta na celula grande; nas outras o cartaz fica. Ordem: logo/titulo, ano e
+// cartazes), o Cover Flow, o Ranking e as Decadas dispensam o cartaz lateral,
+// porque la o cartaz ja esta na celula grande — Decadas vale para o streaming
+// tambem, a mesma tela (dono, 14/10: "no modo ranking dos streaming ainda ta
+// mostrando o poster, tem que tirar, decades tb"); nas outras o cartaz fica.
+// Com o cartaz na ficha, a LOGO tambem nao entra: so o nome escrito (dono,
+// 14/10: "quando tem poster nas infos nao colocar a logo"). Ordem:
+// logo/titulo, ano e
 // duracao com a classificacao, generos, notas, sinopse e, quando o catalogo ja
 // os trouxe,
 // direcao e elenco. Nada aqui pede rede: e so o que o CatItem tem.
 static int painelComCartaz(void) {
-  return lay != VT_LAY_GRADE && lay != VT_LAY_FLUXO;
+  return lay != VT_LAY_GRADE && lay != VT_LAY_FLUXO && lay != VT_LAY_RANKING &&
+         lay != VT_LAY_DECADAS;
 }
 static float painelCredito(const char *rot, const char *val, float y, float a) {
   TxtLinha r = txt_linha(TXT_MINI, rot, 160, 168, 182, 255);
@@ -1539,11 +1562,12 @@ static void painel(float a) {
     y += VT_PAN_ART_H + 20.0f;
   } else y += 8.0f;
 
-  // LOGO no lugar do titulo quando existe; sem o cartaz ele cresce e e a
-  // ancora da ficha. O nome escrito com a fonte da interface so sem logo.
+  // LOGO so quando a ficha NAO tem o cartaz: com o poster ao lado o nome
+  // escrito com a fonte da interface (dono, 14/10: "quando tem poster nas
+  // infos nao colocar a logo"). Sem o cartaz ele cresce e e a ancora da ficha.
   { float maxW = VT_PAN_W, maxH = cartaz ? 82.0f : 128.0f;
-    GLuint tl = it.logo[0] ? tex_obter_logo_larg(it.logo, maxW) : 0;
-    float ap = it.logo[0] ? tex_aspecto(it.logo) : 0.0f;
+    GLuint tl = !cartaz && it.logo[0] ? tex_obter_logo_larg(it.logo, maxW) : 0;
+    float ap = tl ? tex_aspecto(it.logo) : 0.0f;
     if (tl && ap > 0.0f) {
       float wL = maxW, hL = wL / ap;
       if (hL > maxH) { hL = maxH; wL = hL * ap; }

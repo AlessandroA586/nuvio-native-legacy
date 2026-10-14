@@ -183,7 +183,7 @@ static int ajCenaSecao(int op) {
     case AJ_MENU_PERFIL: case AJ_RAIL_BLUR: case AJ_DESCOBRIR: case AJ_MIC_BUSCA:
       return AJC_HOME_BARRA;
     case AJ_PS_FUNDO: case AJ_PS_CONTINUAR: return AJC_HOME_PERFIL;
-    case AJ_DET_VEU: case AJ_DET_DATA_CHEIA: case AJ_DET_BLUR_NAO_VISTOS: return AJC_TIT_APARECE;
+    case AJ_DET_VEU: case AJ_DET_DATA_CHEIA: case AJ_DET_BLUR_NAO_VISTOS: case AJ_EP_TAMANHO: return AJC_TIT_APARECE;
     case AJ_NT_IMDB: case AJ_NT_TOMATES: case AJ_NT_AUDIENCIA: case AJ_NT_META: case AJ_NT_METAUSER:
     case AJ_NT_TRAKT: case AJ_NT_TMDB: case AJ_NT_LETTER: case AJ_NT_MAL: case AJ_NT_EBERT: case AJ_NT_SCORE:
     case AJ_MDB_LIGADO: case AJ_MDB_TRAKT: case AJ_MDB_IMDB: case AJ_MDB_TMDB: case AJ_MDB_LETTER:
@@ -700,7 +700,7 @@ static void ajcTrlOnde(int A) {
 // Som e imagem: o trailer tocando com a fonte, o som, a espera, a qualidade
 // e a proporcao (tarjas) escolhidas.
 static void ajcTrlSom(int A) {
-  int q = valor[AJ_TRAILER_QUAL], tarja = valor[AJ_TRAILER_ASPECTO] == 0, som = lig(AJ_HERO_TRAILER_SOM) || lig(AJ_DET_TRAILER_SOM);
+  int q = valor[AJ_TRAILER_QUAL], tarja = valor[AJ_TRAILER_ASPECTO] == 0, som = lig(AJ_HERO_TRAILER_SOM);
   FormatoMarca m = q == 3 ? FMT_720 : FMT_1080;
   float mw;
   CIMG(ajArte(AJA_FUNDO, A), 0, 0, 640, 360, 22, 1);
@@ -716,7 +716,7 @@ static void ajcTrlSom(int A) {
     ajcFoco(AJ_TRAILER_FONTE, 28, 54, w2, 32, 16); }
   CVID(570, 54, 42, 42, 21); CICON("aj_audio-lines", 580, 64, 22, som ? 0.95f : 0.3f);
   if (!som) gfx_cor(CR(578, 74, 26, 2.5f), 0.5f, 1, 1, 1, 0.9f);
-  ajcFoco(AJ_HERO_TRAILER_SOM, 570, 54, 42, 42, 21); ajcFoco(AJ_DET_TRAILER_SOM, 570, 54, 42, 42, 21);
+  ajcFoco(AJ_HERO_TRAILER_SOM, 570, 54, 42, 42, 21);
   mw = marca_formato_largura(m, 22 * ajc.s) / ajc.s;
   marca_formato(m, CX(604 - mw), CY(282), 22 * ajc.s, 1, 1, 1, 0.9f);
   ajcFoco(AJ_TRAILER_QUAL, 600 - mw, 280, mw + 8, 26, 6);
