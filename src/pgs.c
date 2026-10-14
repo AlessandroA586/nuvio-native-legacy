@@ -5,6 +5,7 @@
 #define NPAL 32
 #define NOBJ 64
 #define MAX_PIXELS (1920 * 1080)   // um objeto maior que a tela cheia e lixo
+#define MAX_EPOCH_PIXELS ((size_t)MAX_PIXELS * 4) // ate quatro telas de indices por epoca
 #define MAX_RLE (4u << 20)
 
 typedef struct { int w, h; uint8_t *idx; } Obj;
@@ -74,7 +75,7 @@ static void ods(Pgs *d, const uint8_t *p, size_t n) {
     d->fragId = be16(p);
     d->fragN = 0;
     if (tot < 4 || tot - 4 > MAX_RLE || d->fragW <= 0 || d->fragH <= 0 ||
-        (long)d->fragW * d->fragH > MAX_PIXELS || d->fragId >= NOBJ) { d->fragEsp = 0; return; }
+        (size_t)d->fragW * d->fragH > MAX_PIXELS || d->fragId >= NOBJ) { d->fragEsp = 0; return; }
     d->fragEsp = tot - 4;
     if (d->fragEsp > d->fragCap) {
       uint8_t *g = realloc(d->frag, d->fragEsp);
@@ -92,8 +93,14 @@ static void ods(Pgs *d, const uint8_t *p, size_t n) {
   d->fragN += n;
   if (seq & 0x40) {
     Obj *o = &d->obj[d->fragId];
+    size_t pixels = (size_t)d->fragW * d->fragH;
+    int i;
     free(o->idx);
-    o->idx = d->fragN == d->fragEsp ? rle(d->frag, d->fragN, d->fragW, d->fragH) : NULL;
+    o->idx = NULL;
+    for (i = 0; i < NOBJ; i++)
+      if (d->obj[i].idx) pixels += (size_t)d->obj[i].w * d->obj[i].h;
+    if (pixels <= MAX_EPOCH_PIXELS && d->fragN == d->fragEsp)
+      o->idx = rle(d->frag, d->fragN, d->fragW, d->fragH);
     o->w = d->fragW; o->h = d->fragH;
     d->fragEsp = 0;
   }
@@ -121,7 +128,7 @@ static void pcs(Pgs *d, const uint8_t *p, size_t n) {
   for (i = 0; i < nobj && i < PGS_MAX_OBJ; i++) {
     Ref *r = &d->ref[d->n];
     if (o + 8 > n) return;
-    r->id = be16(p + o); r->forcado = (p[o + 3] & 0x80) != 0; r->corta = (p[o + 3] & 0x40) != 0;
+    r->id = be16(p + o); r->forcado = (p[o + 3] & 0x40) != 0; r->corta = (p[o + 3] & 0x80) != 0;
     r->x = be16(p + o + 4); r->y = be16(p + o + 6);
     o += 8;
     if (r->corta) {

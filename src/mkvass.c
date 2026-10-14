@@ -3053,11 +3053,16 @@ static void entregarImagens(Fio *f) {
   int i;
   if (!f->nPend) return;
   if (f->entregas >= 0 && entregarCorpoSeAtual(f, "")) {
-    imgsub_dono(f->legG);
     for (i = 0; i < f->nPend; i++) {
       PgsQuadro q;
       if (pgs_decodificar(f->pgs, f->pend[i].b, (size_t)f->pend[i].n, &q)) {
-        imgsub_por(f->pend[i].ini, f->pend[i].fim, &q);
+        // A troca/parada limpa sob a mesma trava: o fio antigo nao repovoa.
+        pthread_mutex_lock(&S.trava);
+        if (f->g == S.geracao && !S.parar) {
+          imgsub_dono(f->legG);
+          imgsub_por(f->pend[i].ini, f->pend[i].fim, &q);
+        }
+        pthread_mutex_unlock(&S.trava);
         pgs_quadro_liberar(&q);
       }
     }
@@ -3896,8 +3901,8 @@ void mkvass_folga(double segundosAFrente) {
 }
 
 void mkvass_parar(void) {
-  imgsub_limpar();
   pthread_mutex_lock(&S.trava);
+  imgsub_limpar();
   if (S.vivos > 0) S.parar = 1;
   S.prebusca = 0; S.adotar = 0;
   if (S.prebuscaFase == 1) S.prebuscaFase = 2;

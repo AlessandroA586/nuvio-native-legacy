@@ -1888,6 +1888,7 @@ static void lembrarFonte(void) {
 }
 
 static void fecharSessao(int manter) {
+  imgsub_gl_limpar();
   int jaRetido = retido;
   // A tela do DV nao sobrevive a sessao (Voltar ja a tirou; aqui e o resto:
   // troca de titulo, encerramento pelo app).
@@ -4252,7 +4253,10 @@ static void desenharLegendaPrincipal(float *topoPilha){
   float bitmapAlpha = (legEstilo.opacidade==3?.25f:legEstilo.opacidade==2?.5f:
                       legEstilo.opacidade==1?.75f:1.f) * entrada;
   if (video_dts_legenda_desenhar(posLegenda(), legEstilo.atrasoMs,
-        bitmapArea.x, bitmapArea.y, bitmapArea.w, bitmapArea.h, bitmapAlpha)) return;
+        bitmapArea.x, bitmapArea.y, bitmapArea.w, bitmapArea.h, bitmapAlpha)) {
+    imgsub_gl_limpar();
+    return;
+  }
   // PGS decodificado pelo app (mkvass): so ha quadros quando a faixa e de imagem.
   if (imgsub_desenhar(legsync_posicao(posLegenda()) + legsync_offset_ms(legEstilo.atrasoMs) / 1000.0,
         bitmapArea.x, bitmapArea.y, bitmapArea.w, bitmapArea.h, bitmapAlpha)) return;

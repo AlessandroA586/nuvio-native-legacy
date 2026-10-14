@@ -5,15 +5,24 @@
 #include "gfx.h"
 #include <string.h>
 
+static unsigned id;
+static GLuint tex[PGS_MAX_OBJ];
+
+void imgsub_gl_limpar(void) {
+  if (!id) return;
+  glDeleteTextures(PGS_MAX_OBJ, tex);
+  memset(tex, 0, sizeof tex);
+  id = 0;
+  gfx_tex_esquecer(0);
+}
+
 int imgsub_desenhar(double t, float x, float y, float w, float h, float alpha) {
-  static unsigned id;
-  static GLuint tex[PGS_MAX_OBJ];
   ImgsubQuadro *f;
   int i, ok = 0;
   if (!legenda_ligada_em(imgsub_dono_atual())) f = NULL;
   else f = imgsub_pegar(t);
   if (!f) {
-    if (id) { glDeleteTextures(PGS_MAX_OBJ, tex); memset(tex, 0, sizeof tex); id = 0; gfx_tex_esquecer(0); }
+    imgsub_gl_limpar();
     return 0;
   }
   if (f->id != id) {

@@ -29,4 +29,6 @@ void imgsub_soltar(ImgsubQuadro *);
 // Desenha o quadro de `t` no retangulo do video (x,y,w,h); 1 se desenhou. So
 // mostra quando a legenda ainda e do dono do imgsub. Fora de imgsub.c: precisa de GL.
 int imgsub_desenhar(double t, float x, float y, float w, float h, float alpha);
+// Solta o cache de texturas no fio de desenho, com contexto GL atual.
+void imgsub_gl_limpar(void);
 #endif

@@ -83,6 +83,45 @@ int main(void) {
   CHECA(r == 1);
   confere(&q, 1);
   pgs_quadro_liberar(&q);
+  // Flags PCS conforme pgssubdec: 0x40 forced, 0x80 crop.
+  for (int flags = 0x40; flags <= 0xc0; flags += 0x40) {
+    b.n = 0; pcs(&b, 0x80, 1);
+    b.b[17] = (uint8_t)flags;
+    if (flags & 0x80) {
+      Buf crop = {{0}, 0};
+      u16(&crop, 1); u16(&crop, 0); u16(&crop, 2); u16(&crop, 1);
+      memcpy(b.b + b.n, crop.b, crop.n); b.n += crop.n;
+      b.b[2] += (uint8_t)crop.n;
+    }
+    pds(&b); ods(&b, 0); seg(&b, 0x80, NULL, 0);
+    r = pgs_decodificar(d, b.b, b.n, &q);
+    CHECA(r == 1 && q.n == 1);
+    if (q.n == 1) {
+      CHECA(q.obj[0].forcado == !!(flags & 0x40));
+      CHECA(q.obj[0].w == ((flags & 0x80) ? 2 : 6));
+      CHECA(q.obj[0].h == ((flags & 0x80) ? 1 : 2));
+    }
+    pgs_quadro_liberar(&q);
+  }
+  // ODS minimo nao pode reservar 64 telas; substituicao e nova epoca liberam teto.
+  for (int k = 0; k < 7; k++) {
+    int id = k == 5 ? 1 : k == 6 ? 5 : k + 1;
+    uint8_t grande[] = {0, (uint8_t)id, 0, 0xc0, 0, 0, 5, 7, 128, 4, 56, 1};
+    b.n = 0; pcs(&b, k == 0 || k == 6 ? 0x80 : 0, 1);
+    b.b[15] = (uint8_t)id;
+    seg(&b, 0x15, grande, sizeof grande); seg(&b, 0x80, NULL, 0);
+    r = pgs_decodificar(d, b.b, b.n, &q);
+    CHECA(r == (k == 4 ? 0 : 1));
+    pgs_quadro_liberar(&q);
+  }
+  // Dimensoes 65535x65535 sao recusadas tambem em size_t de 32 bits.
+  {
+    uint8_t enorme[] = {0, 7, 0, 0xc0, 0, 0, 5, 255, 255, 255, 255, 1};
+    b.n = 0; pcs(&b, 0x80, 1);
+    seg(&b, 0x15, enorme, sizeof enorme); seg(&b, 0x80, NULL, 0);
+    CHECA(pgs_decodificar(d, b.b, b.n, &q) == 0);
+    pgs_quadro_liberar(&q);
+  }
   // 3) composicao sem objetos limpa a tela: quadro valido com n == 0
   b.n = 0; pcs(&b, 0x00, 0); seg(&b, 0x80, NULL, 0);
   r = pgs_decodificar(d, b.b, b.n, &q);
