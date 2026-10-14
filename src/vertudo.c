@@ -2025,7 +2025,7 @@ static void themeHeader(float a,float x0) {
         if(est==VT_AB_TOPO) {
           float sr,sg,sb;corFocoFonte(&sr,&sg,&sb);
           gfx_cor((GfxRect){cx+PAD,253.0f+H-4.0f,fmaxf(4.0f,capW-PAD*2),3.0f},.5f,sr,sg,sb,ca);
-        } else focoAbaFonte((GfxRect){cx,253.0f,capW,H},capA,a*abaFade(cx,capW,x0,W,tabRol>0.5f,px-GAP-tabRol>W+0.5f));
+        } else focoAbaFonte((GfxRect){cx,253.0f,capW,H},1.0f,ca);
       }
     }
     for(int i=0;i<nAbas;i++) {
