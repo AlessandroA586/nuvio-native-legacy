@@ -409,8 +409,7 @@ int   ajustes_logo_addon(void);
 int   ajustes_col_arte_conta(void);
 // Selos da folha de fontes em peca colorida por tipo (#198). Padrao ligado.
 int   ajustes_selos_coloridos(void);
-int   ajustes_trailer_detalhe_som(void); // o de fundo da pagina do titulo com som (Samsung .wgt sempre mudo)
-int   ajustes_trailer_hero_som(void);  // o do destaque com som (na Samsung .wgt sempre mudo)
+int   ajustes_trailer_som(void);         // UM ajuste de som para todo trailer que toca sozinho (Samsung .wgt sempre mudo)
 Uint32 ajustes_trailer_hero_espera_ms(void); // repouso no titulo antes do trailer do destaque
 int   ajustes_trailer_qualidade(void); // teto em linhas (1080/720/480); 0 = a maior
 int   ajustes_trailer_fonte(void);     // TRF_* de trailerfonte.h; 0 = automatico
@@ -445,7 +444,7 @@ int   ajustes_720p(void);
 int   ajustes_relogio_ligado(void);
 int   ajustes_relogio_pos(void);
 int   ajustes_relogio_12h(void);   // 1 = 12 h com AM/PM (relogio.h)
-// Tamanho da interface: 1, 1.2, 1.3 ou 1.5 (gfx_escala_ui). LOCAL.
+// Local interface factor: 0.8..1.5, or automatic from physical panel size.
 float ajustes_tamanho_ui(void);
 // Settings only: 0.8/0.9/1.0, default 0.9; independent of global UI zoom.
 float ajustes_tamanho_ajustes(void);
@@ -460,6 +459,9 @@ int   ajustes_legendas_todas(void); // #425: abrir todas as faixas
 int   ajustes_abertura_detalhada(void);
 // #205: 1 = mostra o nome do add-on na tela Cinema da abertura (padrao: 0).
 int   ajustes_abertura_addon(void);
+// #508: fundo da tela Cinema da abertura: 0 = Desligado, 1 = Arte (nitida com
+// veu escuro), 2 = Arte borrada (padrao).
+int   ajustes_abertura_fundo(void);
 // #205: tamanho dos cards de episodio (Moderna): 0 pequeno, 1 medio (padrao), 2 grande.
 int   ajustes_ep_tamanho(void);
 // #338: tamanho de abertura das Estatisticas ao vivo (EV_TAM_*); -1 = o ultimo usado.

@@ -220,7 +220,7 @@ static int ajCenaSecao(int op) {
     // 2.0.3: HDR e Dolby Vision mora em Imagem e som.
     case AJ_FONTE_HDR:
     case AJ_QUALIDADE: case AJ_DV: case AJ_DV_MKV: case AJ_ATMOS: case AJ_DTS_AC3: case AJ_CACHE_SEEK: case AJ_BUFFER: return AJC_REP_IMAGEM;
-    case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_ABERTURA_ADDON: case AJ_ESTAT_TAMANHO: case AJ_ESTAT_LADO: case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_AUTO: case AJ_PROXIMO_CONTAGEM: case AJ_REACAO_CREDITOS: case AJ_SAIDA_PLAYER: case AJ_MANTER_VIDEO: case AJ_PROPORCAO_PADRAO: return AJC_REP_DURANTE;
+    case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_ABERTURA_ADDON: case AJ_ABERTURA_FUNDO: case AJ_ESTAT_TAMANHO: case AJ_ESTAT_LADO: case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_AUTO: case AJ_PROXIMO_CONTAGEM: case AJ_REACAO_CREDITOS: case AJ_SAIDA_PLAYER: case AJ_MANTER_VIDEO: case AJ_PROPORCAO_PADRAO: return AJC_REP_DURANTE;
     case AJ_SEEKR_LIGADO: case AJ_SEEKR_CHAVE: case AJ_SEEKR_TESTAR: case AJ_SEEKR_FITA: case AJ_SEEKR_AJUSTE:
       return AJC_REP_SEEKR;
     case AJ_IDIOMA: case AJ_TMDB_IDIOMA: return AJC_IDI_INTERFACE;
@@ -700,7 +700,7 @@ static void ajcTrlOnde(int A) {
 // Som e imagem: o trailer tocando com a fonte, o som, a espera, a qualidade
 // e a proporcao (tarjas) escolhidas.
 static void ajcTrlSom(int A) {
-  int q = valor[AJ_TRAILER_QUAL], tarja = valor[AJ_TRAILER_ASPECTO] == 0, som = lig(AJ_HERO_TRAILER_SOM) || lig(AJ_DET_TRAILER_SOM);
+  int q = valor[AJ_TRAILER_QUAL], tarja = valor[AJ_TRAILER_ASPECTO] == 0, som = lig(AJ_HERO_TRAILER_SOM);
   FormatoMarca m = q == 3 ? FMT_720 : FMT_1080;
   float mw;
   CIMG(ajArte(AJA_FUNDO, A), 0, 0, 640, 360, 22, 1);
@@ -716,7 +716,7 @@ static void ajcTrlSom(int A) {
     ajcFoco(AJ_TRAILER_FONTE, 28, 54, w2, 32, 16); }
   CVID(570, 54, 42, 42, 21); CICON("aj_audio-lines", 580, 64, 22, som ? 0.95f : 0.3f);
   if (!som) gfx_cor(CR(578, 74, 26, 2.5f), 0.5f, 1, 1, 1, 0.9f);
-  ajcFoco(AJ_HERO_TRAILER_SOM, 570, 54, 42, 42, 21); ajcFoco(AJ_DET_TRAILER_SOM, 570, 54, 42, 42, 21);
+  ajcFoco(AJ_HERO_TRAILER_SOM, 570, 54, 42, 42, 21);
   mw = marca_formato_largura(m, 22 * ajc.s) / ajc.s;
   marca_formato(m, CX(604 - mw), CY(282), 22 * ajc.s, 1, 1, 1, 0.9f);
   ajcFoco(AJ_TRAILER_QUAL, 600 - mw, 280, mw + 8, 26, 6);

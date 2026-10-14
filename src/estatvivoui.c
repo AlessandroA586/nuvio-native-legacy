@@ -11,6 +11,13 @@
 #include "idioma.h"
 #include "idiomacod.h"
 #include "layout.h"
+#include "escala.h"
+// Stats formerly used a fixed canvas; preserve that path at 100% and above.
+#define EVU_ESCALA fminf(gfx_escala_ui(), 1.0f)
+#undef NV_TELA_W
+#undef NV_TELA_H
+#define NV_TELA_W (NV_LAYOUT_REAL_W / EVU_ESCALA)
+#define NV_TELA_H (NV_LAYOUT_REAL_H / EVU_ESCALA)
 #include "perfiltv.h"
 #include "player.h"
 #include "plrui.h"
@@ -696,7 +703,7 @@ static void dicas(float x, float y, float a) {
   }
 }
 
-void estatvivo_desenhar(Uint32 agora) {
+static void desenhar(Uint32 agora) {
   int i, quer = aberto || fixado, desenho = tamanho;
   int inicial = entraA == 0;
   float fase, o;
@@ -746,6 +753,13 @@ void estatvivo_desenhar(Uint32 agora) {
   if (aberto) dicas(p.x, p.y + p.h + 14.0f, o);
 }
 
+
+void estatvivo_desenhar(Uint32 agora) {
+  float previous = gfx_escala();
+  gfx_escala_sair(EVU_ESCALA);
+  desenhar(agora);
+  gfx_escala_sair(previous);
+}
 
 #ifdef ESTATVIVO_TESTE
 void estatvivo_teste(const EvEstado *e, const EvTelaTeste *t) {

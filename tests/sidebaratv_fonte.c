@@ -75,6 +75,9 @@ void gfx_vidro_miolo(GfxRect r, float raio, float cr, float cg, float cb, float 
   capMiolo = ca; capMioloA = a;
 }
 void gfx_vidro_fosco(GfxRect r, float raio, float a) { (void)r; (void)raio; (void)a; }
+void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a) {
+  (void)r; (void)raio; (void)tipo; (void)cinza; (void)dens; (void)a;
+}
 void gfx_brilho_topo(GfxRect r, float raio, float al, float cr, float cg, float cb, float ca) {
   (void)r; (void)raio; (void)al; (void)cr; (void)cg; (void)cb; (void)ca;
 }

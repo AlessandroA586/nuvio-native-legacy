@@ -101,9 +101,17 @@ int  menu_pediu_spotlight(void);
 // interface; tudo o que esta API devolve ja vem em px da tela REAL.
 #define NV_MENU_MODERNA_X 48.0f   // px da tela REAL
 float menu_barra_borda(void);
-// Barra no topo: posicao FRACIONARIA da capsula de selecao (indice na ordem dos
-// itens visiveis); desliza entre dois indices em ~180 ms. So os testes leem.
-float menu_topo_pos(void);
+// Barra no topo: a geometria da tira como desenhada agora, em px da tela REAL
+// (retangulos x, y, w, h). `sel`/`foc` sao as capsulas de selecao e de foco
+// (x, w, alfa); `foco[k]` e quanto a de foco cobre a pilula k (a tinta do
+// rotulo); `cortado` 1 se algum rotulo nao coube inteiro. So os testes leem.
+#define MENU_TOPO_MAX 16
+typedef struct {
+  int n, cortado, busca[MENU_TOPO_MAX];
+  float y, h, x[MENU_TOPO_MAX], w[MENU_TOPO_MAX], foco[MENU_TOPO_MAX];
+  float trilha[4], avatar[4], sel[3], foc[3];
+} MenuTopoGeo;
+void menu_topo_geo(MenuTopoGeo *g);
 
 // --- PILULA DO LAYOUT DINAMICA (barra estilo Apple TV) ----------------------
 // No layout Dinamica da home nao ha rail: fechada, a barra e uma pilula

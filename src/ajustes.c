@@ -43,6 +43,7 @@
 #include "qr.h"
 #include "atualizacao.h"
 #include "avisos.h"
+#include "uisizing.h"
 #include "registro.h"
 #include "seguro.h"
 #include "botoes.h"
@@ -581,6 +582,10 @@ typedef enum {
   AJ_HERO_GENERO,
   // #205: nome do add-on na tela Cinema da abertura. 1 = Desligado de fabrica. LOCAL, append-only.
   AJ_ABERTURA_ADDON,
+  // #508: o fundo da tela Cinema da abertura. 0 = Desligado, 1 = Arte (nitida
+  // com veu), 2 = Arte borrada (o de sempre). LOCAL, append-only.
+  AJ_ABERTURA_FUNDO,
+  // Tamanho da sinopse do destaque (0 Normal, 1 Grande). LOCAL, append-only.
   AJ_HERO_SINOPSE,
   // #205: tamanho dos cards de episodio da pagina do titulo (Moderna). 0 Pequeno, 1 Medio (de fabrica), 2 Grande. LOCAL, append-only.
   AJ_EP_TAMANHO,
@@ -605,6 +610,7 @@ static const char *V_ICONE_APP[ICONEAPP_N] = {
 };
 static const char *V_FONTE_ORDEM_ADDON[] = { "Por qualidade", "Do addon" };
 static const char *V_TELA_ABERTURA[] = { "Cinema", "Detalhada" };
+static const char *V_ABERTURA_FUNDO[] = { "Desligado", "Arte", "Arte borrada" };
 static const char *V_QUALIDADE[] = { "Automática", "4K", "1080p", "720p" };
 static const char *V_LIGA[]      = { "Ligado", "Desligado" };
 // TRAILER DO CARTAZ EM FOCO EM TRES MODOS (dono, 07/10/2026). O indice e o
@@ -661,7 +667,7 @@ static const char *V_FONTE_MODELO[] = { "Personalizado", "Espanhol", "Português
 // "Usar a ordem" dos add-ons (fonteregra.h FR_ORDEM_*): o indice e o gravado.
 static const char *V_FONTE_ORDEM_USO[] = { "Não", "Para desempatar", "Ordem estrita" };
 // Indice gravado em tamanhoUiLocal; o fator sai de ajustes_tamanho_ui.
-static const char *V_TAMANHO_UI[] = { "100%", "120%", "130%", "150%" };
+static const char *V_TAMANHO_UI[] = { "100%", "120%", "130%", "150%", "80%", "85%", "90%", "115%", "Automático" };
 static const char *V_TAMANHO_AJUSTES[] = { "80%", "90%", "100%" };
 static const char *V_INTERFACE_MODO[] = { "TV", "Mobile" };
 static const char *V_MENU_POS[] = { "Na lateral", "No topo" };   // #461
@@ -1342,7 +1348,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Perfil pesquisável",              V_LIGA, 2),
   ACAO("Meu perfil público"),
   ESC("Contorno do vidro",               V_LIGA, 2),   // local: vidroContornoLocal
-  ESC("Som do trailer no destaque",      V_LIGA, 2),   // local: trailerDestaqueSomLocal
+  ESC("Som do trailer",              V_LIGA, 2),   // local: trailerDestaqueSomLocal; #509: vale para todo trailer
   // Em DECIMOS de segundo (0,2 s a 10 s): textoValor escreve "2,2 s".
   NUM("Espera do trailer no destaque",   2, 100, 2, " s"), // local: trailerDestaqueEsperaLocal
   // Era o 90 fixo de montarContinuar/home_registrar_retorno/proximo.h. Local:
@@ -1379,7 +1385,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Pacote de selos",                 V_SELOS_PACOTE, 4),   // por perfil: selospacote.c
   ACAO("Adicionar pacote de selos"),
   ACAO("Remover pacote"),
-  ESC("Tamanho da interface",            V_TAMANHO_UI, 4),    // local: tamanhoUiLocal
+  ESC("Tamanho da interface",            V_TAMANHO_UI, 9),    // local: tamanhoUiLocal
   ESC("Fundo",                           V_FUNDO, 3),         // local: fundoLocal
   ESC("Opacidade do vidro",              V_VIDRO_OPAC, 5),    // local: vidroOpacLocal
   ESC("Vidro fosco",                     V_VIDRO_FOSCO, 2),   // local: vidroFoscoLocal
@@ -1487,6 +1493,7 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Dicas do controle"),
   ESC("Mostrar gênero no destaque", V_LIGA, 2),   // local: heroGeneroLocal
   ESC("Mostrar addon na abertura", V_LIGA, 2),   // local: aberturaAddonLocal (#205)
+  ESC("Fundo da tela de abertura", V_ABERTURA_FUNDO, 3),   // local: aberturaFundoLocal (#508)
   ESC("Tamanho da sinopse", V_HERO_SINOPSE, 2),
   ESC("Tamanho dos cards de episódio", V_EP_TAMANHO, 3), // local: epTamanhoLocal (#205)
 };
@@ -1744,6 +1751,7 @@ static const char *CHAVE[] = {
   "-dicasControle",
   "heroGeneroLocal",
   "aberturaAddonLocal",
+  "aberturaFundoLocal",
   "heroSynopsisSizeLocal",
   "epTamanhoLocal",
 };
@@ -2347,10 +2355,28 @@ int ajustes_relogio_12h(void) { return valor[AJ_RELOGIO_12H] == 1; }
 // GB da faixa de tamanho da escolha automatica; 0 = "Sem limite".
 int ajustes_tamanho_max_gb(void) { int v = valor[AJ_TAM_MAX]; return v < 0 || v >= (int)(sizeof TAMANHO_GB / sizeof *TAMANHO_GB) ? 0 : TAMANHO_GB[v]; }
 int ajustes_tamanho_min_gb(void) { int v = valor[AJ_TAM_MIN]; return v < 0 || v >= (int)(sizeof TAMANHO_GB / sizeof *TAMANHO_GB) ? 0 : TAMANHO_GB[v]; }
+static float tamanhoUiAutomatico(void) {
+  static float factor;
+  if (!factor) {
+    const char *env = getenv("NUVIO_PANEL_INCHES");
+    float inches = env ? (float)atof(env) : 0;
+    if (!inches) inches = ui_size_model(getenv("NUVIO_TV_MODEL"));
+#ifdef NV_WEBOS
+    if (!inches) {
+      char line[256], model[64];
+      avisos_tv_linha(line, sizeof line, model, sizeof model);
+      inches = ui_size_model(model);
+    }
+#endif
+    if (!isfinite(inches) || inches < 20 || inches > 120) inches = 0;
+    factor = ui_size_inches(inches);
+    printf("[ui] tamanho automatico: %.0f\" -> %.0f%%\n", inches, factor * 100);
+  }
+  return factor;
+}
 float ajustes_tamanho_ui(void) {
-  static const float F[] = { 1.0f, 1.2f, 1.3f, 1.5f };
   int v = valor[AJ_TAMANHO_UI];
-  return v >= 0 && v < 4 ? F[v] : 1.0f;
+  return ui_size_choice(v, v == UI_SIZE_AUTO ? tamanhoUiAutomatico() : 1.0f);
 }
 #ifdef AJUSTES_TESTE
 static int ajEscalaTestePct;
@@ -2369,6 +2395,7 @@ float ajustes_tamanho_ajustes(void) {
   if (ajEscalaTestePct) return ajEscalaTestePct / 100.0f;
 #endif
   float s = v >= 0 && v < 3 ? F[v] : 0.8f;
+  if (gfx_escala_ui() < 1) s *= gfx_escala_ui();
   return ajRetrato() ? s * 1.25f : s;
 }
 // The phone always uses List. Keep the stored TV preference unchanged.
@@ -2425,6 +2452,8 @@ int ajustes_abertura(void) { int v = valor[AJ_ABERTURA]; return v < 0 || v > 2 ?
 int ajustes_legendas_todas(void) { return valor[AJ_LEG_MOSTRAR] == 1; }
 int ajustes_abertura_detalhada(void) { return valor[AJ_TELA_ABERTURA] == 1; }
 int ajustes_abertura_addon(void) { return lig(AJ_ABERTURA_ADDON); }
+int ajustes_abertura_fundo(void) {   // #508: 0 = off, 1 = sharp, 2 = blurred
+  int v = valor[AJ_ABERTURA_FUNDO]; return v >= 0 && v <= 2 ? v : 2; }
 int ajustes_ep_tamanho(void) { int v = valor[AJ_EP_TAMANHO]; return v >= 0 && v <= 2 ? v : 1; }
 int ajustes_leg2_junto(void) { return valor[AJ_LEG2_POS] == 1; }
 int ajustes_leg2_tamanho(void) {
@@ -2654,8 +2683,11 @@ void ajustes_trailer_hero_vetar(const char *gpu) {
   printf("[trailer] desligado no hero: %s (Mali-4xx)\n", gpu ? gpu : "?");
 }
 int   ajustes_trailer_hero(void)      { return lig(AJ_HERO_TRAILER) && !SEGURO && !trailerHeroVetado; }
-int   ajustes_trailer_hero_som(void)  { return lig(AJ_HERO_TRAILER_SOM); }
-int   ajustes_trailer_detalhe_som(void) { return lig(AJ_DET_TRAILER_SOM); }
+// #509: UM ajuste de som para TODO trailer que toca sozinho — destaque, cartaz
+// em foco (Tela cheia e No card) e fundo da pagina do titulo. O trailer em
+// tela cheia (botao/OK) tambem segue. Na Samsung (.wgt) trailer_abrir forca
+// mudo de qualquer jeito (trailerfonte_com_som).
+int   ajustes_trailer_som(void)       { return lig(AJ_HERO_TRAILER_SOM); }
 int   ajustes_hero_deslizar(void)     { return valor[AJ_HERO_TRANSICAO] == 0; }
 int   ajustes_poster_addon(void)      { return lig(AJ_ADDON_POSTER); }
 int   ajustes_fundo_addon(void)       { return lig(AJ_ADDON_FUNDO); }
@@ -3470,6 +3502,7 @@ void ajustes_dir(const char *dir) {
   if (!dir || !*dir) return;
   snprintf(dirAjustes, sizeof dirAjustes, "%s", dir);
   memoriaEscolhida = 0;
+  valor[AJ_TAMANHO_UI] = UI_SIZE_AUTO;
   fonteregra_carregar();
   fanartCarregar();
   seekrCarregar();
@@ -3493,6 +3526,7 @@ void ajustes_dir(const char *dir) {
     memoriaMigrar();
     if (valor[AJ_TEX_MB] > 0) tex_definir_orcamento_mb(ajustes_tex_mb());
 #endif
+    gfx_escala_ui_definir(ajustes_tamanho_ui());
     interfaceAplicar();
     ajSombraSync();
     return;
@@ -3562,6 +3596,20 @@ void ajustes_dir(const char *dir) {
   // No automatico, o gravado e o ultimo resolvido: a TV abre nele e a conta,
   // quando chegar, corrige.
   if (valor[AJ_IDIOMA] == 0 && viuIdioma) idiomaEfetivo = idiomaGravado;
+  // #509: "Som do trailer na pagina do titulo" virou o UNICO "Som do trailer".
+  // Quem tinha som na pagina mantem o som: o ajuste unico herda a escolha (uma
+  // vez; a chave velha fica Desligada no arquivo e nao força mais nada).
+  // gravar() e DEPOIS do idioma restaurado: gravar antes levava ao disco o
+  // idioma do arranque com a marca de automatico, e a escolha manual desta TV
+  // se perdia no arranque seguinte.
+  if (lig(AJ_DET_TRAILER_SOM)) {
+    valor[AJ_DET_TRAILER_SOM] = 1;
+    if (!lig(AJ_HERO_TRAILER_SOM)) {
+      valor[AJ_HERO_TRAILER_SOM] = 0;
+      printf("[ajustes] som do trailer: trailerDetalheSomLocal ligado -> Som do trailer ligado\n");
+    }
+    gravar();
+  }
   }
   fclose(f);
   // "DINAMICA ESTILIZADA" SAIU (03/10/2026): a base tingida virou o Fundo
@@ -4561,6 +4609,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_LEG_SYNC_AUTO: /* escolha local desta TV */
     case AJ_TELA_ABERTURA: /* #205: o web nao tem; escolha desta TV */
     case AJ_ABERTURA_ADDON: /* idem */
+    case AJ_ABERTURA_FUNDO: /* #508: idem */
     case AJ_EP_TAMANHO:    /* idem */
     case AJ_MIC_BUSCA:     /* o microfone e o controle sao desta TV */
     case AJ_TECLADO_ANDROID: /* o web nao tem; o teclado e deste aparelho */
@@ -5529,10 +5578,13 @@ static int inativa(int op) {
     case AJ_P2P_LIMITE:  return !p2pmotor_disponivel() || p2pEndereco[0];
     case AJ_DTS_AC3:     return !dtsConversaoExiste();
     // Som: na Samsung (.wgt) o trailer e sempre mudo (trailerfonte_com_som).
+    // #509: UM ajuste para todo trailer; ativo sempre que algum trailer
+    // automatico pode tocar (destaque, cartaz em foco ou pagina do titulo).
     case AJ_HERO_TRAILER_SOM:
-      return !lig(AJ_HERO_TRAILER) || !trailerfonte_com_som(trailerfonte_tizen());
-    case AJ_DET_TRAILER_SOM:
-      return !lig(AJ_DET_TRAILER_AUTO) || !trailerfonte_com_som(trailerfonte_tizen());
+      return !(lig(AJ_HERO_TRAILER) ||
+               valor[AJ_FOCO_TRAILER] != AJ_TRAILER_CARTAZ_DESLIGADO ||
+               lig(AJ_DET_TRAILER_AUTO)) ||
+             !trailerfonte_com_som(trailerfonte_tizen());
     case AJ_HERO_TRAILER_ESPERA: return !lig(AJ_HERO_TRAILER);
     // AJ_FOCO_TRAILER nao depende mais de nada (tres modos, 08/10/2026): a
     // regra do cartaz em pe sem Expandir mora no modo No card (home.c).
@@ -5707,13 +5759,13 @@ static const char *ajudaOpcaoBase(int op) {
         ? "Ative Miniatura do episódio para desfocar a imagem do próximo episódio."
         : "Ative Continuar assistindo para ajustar os cards de retomada.";
     if (op == AJ_EXPANDIR_ATRASO) return "Ative Expandir pôster ao focar para ajustar o tempo de espera.";
-    if (op == AJ_HERO_TRAILER_SOM && lig(AJ_HERO_TRAILER))
-      return "Nesta TV o trailer do destaque toca sempre sem som.";
-    if (op == AJ_DET_TRAILER_SOM && lig(AJ_DET_TRAILER_AUTO))
-      return "Nesta TV o trailer da página do título toca sempre sem som.";
-    if (op == AJ_DET_TRAILER_SOM)
-      return "Ative o trailer automático da página do título para ajustar o som.";
-    if (op == AJ_HERO_TRAILER_SOM || op == AJ_HERO_TRAILER_ESPERA)
+    if (op == AJ_HERO_TRAILER_SOM && !trailerfonte_com_som(trailerfonte_tizen()) &&
+        (lig(AJ_HERO_TRAILER) || valor[AJ_FOCO_TRAILER] != AJ_TRAILER_CARTAZ_DESLIGADO ||
+         lig(AJ_DET_TRAILER_AUTO)))
+      return "Nesta TV o trailer toca sempre sem som.";
+    if (op == AJ_HERO_TRAILER_SOM)
+      return "Ative um trailer automático — destaque, cartaz em foco ou página do título — para ajustar o som.";
+    if (op == AJ_HERO_TRAILER_ESPERA)
       return "Ative Trailer no destaque para ajustar o trailer do topo da Home.";
     if (op > AJ_TMDB_LIGADO && op <= AJ_TMDB_CW)
       return "Ative TMDB para ajustar o que ele enriquece.";
@@ -5818,8 +5870,8 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_HERO_CHEIO: return "O destaque do topo ocupa a tela inteira atrás das fileiras, em vez de ficar num bloco.";
     case AJ_HERO_FUNDO: return "De onde vem a arte de fundo do destaque, da página do título e dos cards deitados: catálogo/Cinemeta, IMDb/Metahub, TMDB, Trakt, Apple TV, fanart.tv (com chave) ou Anime (Kitsu/AniList). Automático usa a do catálogo. MDBList fornece notas, não imagens.";
     case AJ_HERO_ARTE_DIF: return "Desligado: card, destaque e página do título mostram a mesma imagem. Ligado: o card fica com a arte do catálogo e o destaque usa outra foto — TMDB vira outro fundo do TMDB; em Automático, ou se a escolhida repetir o card, usa Apple TV, outro fundo do TMDB, fanart.tv, anime ou Trakt.";
-    case AJ_HERO_TRAILER: return "Com o foco parado no destaque do topo, o trailer do título toca no lugar da arte, sem som a menos que Som do trailer no destaque esteja ligado. Mover o foco volta para a arte.";
-    case AJ_HERO_TRAILER_SOM: return "Ligado: o trailer do destaque do topo toca com som. Desligado: toca sem som.";
+    case AJ_HERO_TRAILER: return "Com o foco parado no destaque do topo, o trailer do título toca no lugar da arte, sem som a menos que Som do trailer esteja ligado. Mover o foco volta para a arte.";
+    case AJ_HERO_TRAILER_SOM: return "Ligado: os trailers que tocam sozinhos — destaque, cartaz em foco e página do título — saem com som. Desligado: tocam sem som.";
     case AJ_DET_TRAILER_SOM: return "Ligado: o trailer que toca sozinho na página do título sai com som. Desligado: toca sem som; OK abre em tela cheia com som.";
     case AJ_HERO_TRAILER_ESPERA: return "Quanto tempo o destaque fica parado num título antes de trocar a arte pelo trailer.";
     case AJ_ADDON_POSTER: return "Com um serviço de pôsteres ligado, o título que veio de um catálogo de addon fica com o pôster que o próprio addon manda, e o serviço só entra nos outros (Continuar assistindo, listas do Trakt, pôster genérico do Cinemeta). Sem o serviço, o pôster já é o do addon.";
@@ -5895,10 +5947,11 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_DET_VEU: return "Quanto a vinheta escura cobre a arte na tela do título. Cem por cento é o padrão; zero mostra a arte limpa — o texto pode ficar difícil de ler sobre cenas claras.";
     case AJ_DET_TRAILER_AUTO:
 #if defined(NV_TPK) && NV_TRAILER_CONTINUA_DETALHE
-      // O trailer do cartaz continua na pagina, com som (detail_abrir).
-      return "Alguns segundos depois de abrir um título, o trailer toca sem som no lugar da arte de fundo. Se o trailer do cartaz já estava tocando, ele continua na página, com som. Rolar a página ou sair dela volta para a arte.";
+      // O trailer do cartaz continua na pagina (detail_abrir), com o som do
+      // mesmo ajuste.
+      return "Alguns segundos depois de abrir um título, o trailer toca no lugar da arte de fundo; o som segue Som do trailer. Se o trailer do cartaz já estava tocando, ele continua na página. Rolar a página ou sair dela volta para a arte.";
 #else
-      return "Alguns segundos depois de abrir um título, o trailer toca sem som no lugar da arte de fundo. Rolar a página ou sair dela volta para a arte.";
+      return "Alguns segundos depois de abrir um título, o trailer toca no lugar da arte de fundo; o som segue Som do trailer. Rolar a página ou sair dela volta para a arte.";
 #endif
     case AJ_TRAILER_QUAL: return "Definição do vídeo do trailer. Máxima usa a maior que existir para o título; as outras são um teto, para conexões mais lentas.";
     case AJ_TRAILER_ASPECTO: return "Quanto o trailer é ampliado para encher a tela. Zoom cinema tira a tarja preta de um trailer de cinema; Original mostra o quadro inteiro, com tarja.";
@@ -5923,7 +5976,7 @@ static const char *ajudaOpcaoBase(int op) {
     // --- Posteres e cards
     case AJ_EXPANDIR: return "O cartaz em foco cresce e abre a arte deitada atrás dele depois de um instante parado.";
     case AJ_EXPANDIR_ATRASO: return "Quanto tempo o foco precisa ficar parado antes de o cartaz expandir.";
-    case AJ_FOCO_TRAILER: return "Com o foco parado num cartaz, o trailer toca sem som depois da espera da expansão. Tela cheia: a Home some e fica só o nome. No card: dentro do cartaz; pôster em pé só com Expandir pôster ao focar.";
+    case AJ_FOCO_TRAILER: return "Com o foco parado num cartaz, o trailer toca no destaque depois da espera da expansão. Tela cheia: no lugar da arte do destaque, com a Home no lugar. No card: dentro do cartaz; pôster em pé só com Expandir pôster ao focar.";
     case AJ_NAV_RAPIDA: return "Andar de lado numa fileira não espera a animação terminar. Serve para controle que repete rápido.";
     case AJ_BORDA_FOCO: return "O anel colorido que marca o cartaz em foco na Home. Desligado, o foco fica só pelo tamanho do cartaz.";
     case AJ_PROF: return "Dá relevo aos cartazes: borda iluminada e um reflexo que acompanha o foco.";
@@ -6031,6 +6084,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_EP_TAMANHO: return "Pequeno, Médio (padrão) ou Grande. Só vale no layout Moderno, na página de séries. Vale só nesta TV.";
     case AJ_ABERTURA_ADDON: return "Desligado (padrão): a tela Cinema mostra só a arte, o logo e a barra. Ligado: o nome do add-on aparece sob a barra. Vale só nesta TV.";
     case AJ_TELA_ABERTURA: return "Cinema (padrão): a arte e o logo do título ficam na tela até o vídeo entrar. Detalhada: a fonte, o add-on e cada passo da abertura. Na Cinema, Para cima ou Para baixo mostra os detalhes. Vale só nesta TV.";
+    case AJ_ABERTURA_FUNDO: return "O fundo da tela Cinema da abertura. Desligado: preto. Arte: o backdrop do título, nítido, com véu escuro. Arte borrada (padrão): o mesmo backdrop, desfocado e escurecido, como sempre. Vale só nesta TV.";
     case AJ_PLR_CLASSIF: return "Ligado (padrão): no começo do filme, a ilha mostra a classificação indicativa e os avisos do guia parental (violência, nudez, palavrões). Desligado: o player não mostra nada disso.";
     case AJ_RELOGIO_12H: return "Como a hora aparece no relógio, na tela de descanso, no fim do filme e no guia de TV: 18:30 ou 6:30 PM.";
     case AJ_RELOGIO_POS: return "Em que canto de cima fica a pílula do relógio e dos avisos. Automática fica à direita, em qualquer layout. Esquerda no layout Dinâmica fica ao lado da pílula do menu.";
@@ -8273,7 +8327,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK: case AJ_BUFFER: case AJ_ESTAT_TAMANHO: case AJ_ESTAT_LADO:
     case AJ_DV_MKV:
     case AJ_LEG_FORCADA:
-    case AJ_AUD_LINGUA: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_ABERTURA_ADDON: case AJ_FONTE_MANUAL:
+    case AJ_AUD_LINGUA: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_ABERTURA_ADDON: case AJ_ABERTURA_FUNDO: case AJ_FONTE_MANUAL:
     case AJ_FONTE_AUTO: case AJ_FONTE_REPOR: case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON: case AJ_SELOS_CORES: case AJ_FONTE_TOCAR_CONFERINDO: case AJ_FONTE_AQUECER: case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR:
     case AJ_FONTE_PRIORIDADE: case AJ_FONTE_HDR:
     case AJ_SELOS_PACOTE:

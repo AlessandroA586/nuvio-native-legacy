@@ -186,6 +186,7 @@ static const char *uxSinonimos(int op) {
     case AJ_MENU_TOPO: return "menu barra topo alto cima lateral esquerda rail posicao navegacao top bar toolbar sidebar left position";
     case AJ_EP_TAMANHO: return "tamanho episodio cards cartao moderno pequeno medio grande serie episode card size small medium large";
     case AJ_ABERTURA_ADDON: return "addon add-on provedor fonte nome abertura cinema tela carregando tentativa provider name opening source";
+    case AJ_ABERTURA_FUNDO: return "fundo arte backdrop imagem titulo abertura cinema tela carregando desligado nitida borrada desfocada preto opening backdrop blurred sharp off";
     case AJ_TELA_ABERTURA: return "tela abertura abrindo carregando loading cinema detalhada fonte play transicao opening source screen";
     case AJ_PLR_CLASSIF: return "classificacao indicativa idade faixa etaria 16 12 18 livre guia parental avisos violencia nudez player content rating age parental guide";
     case AJ_APOIAR: return "apoiar apoio doar doacao patreon kofi ko-fi cafe contribuir ajudar projeto qr support donate";
