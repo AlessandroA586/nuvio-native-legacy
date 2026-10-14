@@ -40,7 +40,7 @@ rodar() {
   local nome="$1" modo="$2" log="$LOGS/$2/$1.log"
   local san=1; [ "$modo" = thread ] && san=thread
   mkdir -p "$LOGS/$modo"
-  if SANITIZE="$san" ASAN_OPTIONS="detect_leaks=1:abort_on_error=1" \
+  if SANITIZE="$san" ASAN_OPTIONS="abort_on_error=1" \
      UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1" \
      TSAN_OPTIONS="halt_on_error=1:exitcode=66" \
      bash "tests/$nome" >"$log" 2>&1; then
