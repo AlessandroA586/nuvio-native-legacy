@@ -341,6 +341,14 @@ int layout_modo_mobile(void);
 // Fileira redonda (pessoas): diametro do disco. O nome vai abaixo, no bloco do rotulo.
 #define NV_REDONDA_D       200.0f
 #define NV_PALCO_VIZ       0.66f
+// FILEIRA "PÔSTER GRANDE" (home.c): o card 3:4 grande do pedido de 14/10
+// ("o pôster só que do tamanho do grande tipo o 3:4 grande"). A base do card
+// leva logo, gênero, classificação e duas linhas de sinopse sobre um véu na
+// COR PREDOMINANTE do cartaz (corviva), e não em preto.
+#define NV_POSTER_G_H       460.0f
+#define NV_POSTER_G_W       (NV_POSTER_G_H * 3.0f / 4.0f)
+#define NV_POSTER_G_VEU_F    0.58f   // quanto da altura o véu da base cobre
+#define NV_POSTER_G_VEU_A    0.94f
 // O numeral: corpo do TXT_RANK_GRANDE (os algarismos da Inter medem ~0,73 do
 // corpo, ~190 px contra o cartaz de 322 — perto de 60%, a proporcao da Apple),
 // quanto da largura dele fica POR BAIXO do cartaz, e a folga minima ate o
