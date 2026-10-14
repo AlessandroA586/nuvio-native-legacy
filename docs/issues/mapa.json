@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-14 16:49",
- "base": "b7c2c1f9",
- "nota": "426+24=450 issues reconciliadas com gh issues.json + jobs + branches (snapshot 14/10 16:49). Merges desde 16:11: epslista, notas1, botoes, coverflow2, sidebarfonte. #513 adicionada. Pedidos do dono sem issue ficam em fora_do_github. Sem acao remota.",
+ "atualizado_em": "2026-10-14 19:23",
+ "base": "a82357a4",
+ "nota": "426+25=451 issues reconciliadas com gh issues.json + jobs + branches (snapshot 14/10 19:1x, tip a82357a4). Merges desde 16:47 (tip a82357a4): herocard, shufflepos, i483remux, dicatoque2, heroinfo, bench/mm, tecladolg, i511legnome, retomamorna. #514 adicionada. Jobs rodando: fix abastream/animacoes/estatpainel2/paraleloloop/plx-pgs e reviews -c na fila. Pedidos do dono sem issue ficam em fora_do_github. Sem acao remota. i513autoplay merged a82357a4.",
  "itens": [
   {
    "numero": 1,
@@ -9489,7 +9489,7 @@
    "status": "integrada",
    "release": "2.0.5",
    "conserto": [
-    "1366561a (agente/205-sinopse, nao integrado)",
+    "1366561a (agente/205-sinopse)",
     "6a260e9b (merge em integracao/2.0.5)"
    ],
    "ultima_resposta": {
@@ -9498,8 +9498,8 @@
     "ultimo_comentario_por": "Soufianelz",
     "ultima_nossa": ""
    },
-   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Snapshot 2026-10-14 10:15: 1366561a \"Restore the original hero synopsis size and add a Synopsis size setting\" em agente/205-sinopse (nao ancestral de integracao/2.0.5). j-205-sinopse done e j-revg-sinopse done com veredito OK (testes ajustes_padroes/ajustes_secoes/home_hero_layout/sinopse_tamanho/sinopse_shot rc 0). Falta o merge. Escrivão 14/10 14:47: integrada via sinopse477.",
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Snapshot 2026-10-14 10:15: 1366561a \"Restore the original hero synopsis size and add a Synopsis size setting\" em agente/205-sinopse; j-205-sinopse done e j-revg-sinopse veredito OK. Escrivao 14/10 19:2x: 1366561a ancestral de integracao/2.0.5 (6a260e9b).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/477",
    "alvo": "2.0.6"
   },
@@ -9593,10 +9593,10 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "-",
    "conserto": [
-    "agente/205-i483remux (tip fd6d795d, 1 commit fora)"
+    "251632be (merge agente/205-i483remux em integracao/2.0.5)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -9604,8 +9604,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "revisar i483remux (impl/merge feito, sem review)",
-   "notas": "Snapshot 2026-10-14 10:15: job j-205-i483remux RUNNING (prompt p-205-i483remux, branch agente/205-i483remux); 0 commits fora de integracao/2.0.5 ainda. OPEN no GitHub. Escrivão 14/10 14:47: branch agente/205-i483remux: impl/merge feito, sem review. | Escrivão 2026-10-14 16:11: impl pronto, sem review; job j-205-i483remux-r2 done 11:34.",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Impl fd6d795d; j-revg-i483remux OK 16:52. Merge 251632be (18:01). fetch via SeekHead quando a sonda erra o layout REMUX. Escrivao 14/10 19:1x: merge 18:01.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/483",
    "criada_em": "2026-10-13",
    "alvo": "2.0.6"
@@ -9683,10 +9683,10 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "feature",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
-    "agente/205-retomamorna (tip 8e8fddde, 3 commits fora)"
+    "c624b273 (merge agente/205-retomamorna em integracao/2.0.5)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -9694,8 +9694,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "mergear retomamorna (review j-revc-retomamorna OK)",
-   "notas": "Snapshot 2026-10-14 10:15: pedido do dono, variante barata (warm resume, sem manter decoder vivo) em agente/205-retomamorna; commits ccaafef7/a79489c9 NAO ancestrais de integracao/2.0.5. Titulo da issue e um agregado de sugestoes. OPEN no GitHub. Escrivão 14/10 14:47: branch agente/205-retomamorna: impl/merge feito, sem review. | Escrivão 2026-10-14 16:11: review j-revc-retomamorna OK (14/10 05:24); branch ainda nao integrada.",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Review j-revg-retomamorna OK 17:06. Merge agente/205-retomamorna em integracao/2.0.5 (c624b273, 18:48); j-merge-205-retomamorna done 18:45. Sem acao remota. Escrivao 14/10 19:1x: merge 18:48.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/492",
    "criada_em": "2026-10-14",
    "alvo": "2.0.6"
@@ -10017,17 +10017,19 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "aberta",
+   "status": "em-andamento",
    "release": "",
-   "conserto": [],
+   "conserto": [
+    "a0e14d7c (agente/205-i512temporada, nao integrado)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": null,
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "triagem; sem job ainda",
-   "notas": "Criada 2026-10-14 (snapshot 14:46).",
+   "proximo_passo": "revisar fix a0e14d7c e mergear",
+   "notas": "Criada 2026-10-14 (snapshot 14:46). Escrivao 14/10 19:1x: j-205-i512temporada-2 done 19:06: trakt next-episode/scrobble por addon season/episode; testes + mac.sh rc 0; sem validacao em dispositivo.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/512",
    "criada_em": "2026-10-14",
    "alvo": "futuro"
@@ -10038,17 +10040,19 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "enhancement",
-   "status": "aberta",
+   "status": "integrada",
    "release": "",
-   "conserto": [],
+   "conserto": [
+    "f0ab7c91 (merge agente/205-i511legnome em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": null,
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "triagem; sem job ainda",
-   "notas": "Criada 2026-10-14 (snapshot 14:46).",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Criada 2026-10-14 (snapshot 14:46). Escrivao 14/10 19:1x: Fix 2e05dd94; j-revg-i511legnome-q OK 18:44; merge f0ab7c91 18:45.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/511",
    "criada_em": "2026-10-14",
    "alvo": "futuro"
@@ -10103,9 +10107,32 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "aberta",
+   "status": "integrada",
    "release": "",
+   "conserto": [
+    "a82357a4 (merge agente/205-i513autoplay em integracao/2.0.5)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Criada 2026-10-14 (issues.json 14/10 16:49). Escrivao 14/10 19:1x: j-205-i513autoplay 7df981b9 done 18:35 (review j-revg-i513autoplay-q BLOQUEIA 18:43); fix bcf3ec31 18:57. Escrivao 19:2x: merge a82357a4 (j-revg-i513autoplay-q havia BLOQUEADO 18:43; fix bcf3ec31 mergeado sem nova review).",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/513",
+   "criada_em": "2026-10-14",
+   "alvo": "futuro"
+  },
+  {
+   "numero": 514,
+   "titulo": "Ability to rate a movie or an episode",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "?",
+   "status": "aberta",
    "conserto": [],
+   "release": "",
    "ultima_resposta": {
     "nos": false,
     "data": null,
@@ -10113,8 +10140,8 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triagem; sem job ainda",
-   "notas": "Criada 2026-10-14 (issues.json 14/10 16:49).",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/513",
+   "notas": "Criada 2026-10-14 (issues.json 14/10 19:0x).",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/514",
    "criada_em": "2026-10-14",
    "alvo": "futuro"
   }
@@ -11929,13 +11956,13 @@
    "id": "dono-205-herocard",
    "titulo": "Nova fileira com um card largo so (Apple TV style)",
    "plataforma": "all",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.6",
    "conserto": [
-    "agente/205-herocard (tip 960cf84f, 4 commits fora)"
+    "fd1766cb (merge em integracao/2.0.5)"
    ],
-   "proximo_passo": "merge em curso (j-merge-205-herocard 16:46)",
-   "notas": "Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix3 commitado 960cf84f; review anterior BLOQUEIA (j-revg-herocard-r2). | j-revg-herocard-r3 OK 16:02 (fix3 960cf84f). Escrivão 16:49: branch ainda não integrada."
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix3 commitado 960cf84f; review anterior BLOQUEIA (j-revg-herocard-r2). | j-revg-herocard-r3 OK 16:02 (fix3 960cf84f). Escrivão 16:49: branch ainda não integrada. Escrivao 19:0x: merge em integracao/2.0.5."
   },
   {
    "id": "dono-205-descecol",
@@ -12066,7 +12093,7 @@
    "conserto": [
     "agente/205-perfis21 (tip 7376c250, 1 commits fora)"
    ],
-   "proximo_passo": "revisar/mergear",
+   "proximo_passo": "revisar/mergear (ainda nao mergeado; sem job de merge)",
    "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). rodando; alvo declarado = 2.1. Escrivão 14/10 14:47: review OK, merge pendente. | Escrivão 2026-10-14 16:11: review j-revg-perfis21 OK (11:16); merge pendente."
   },
   {
@@ -12124,22 +12151,23 @@
    "status": "em_job",
    "release": "2.0.6",
    "conserto": [
-    "agente/205-plx-pgs (tip 13dcc6b0, 7 commits fora)"
+    "agente/205-plx-pgs (tip 13dcc6b0, 7 commits fora)",
+    "db9fca6f"
    ],
-   "proximo_passo": "re-review do fix (antes: review BLOQUEIA)",
-   "notas": "Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix 13dcc6b0 commitado; review j-revc-plx-pgs (05:42) BLOQUEIA antes do fix."
+   "proximo_passo": "review j-revg-plx-pgs-q BLOQUEIA 18:56 (P0 stale PGS bitmap); fixc rodando (db9fca6f) -> re-review",
+   "notas": "Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix 13dcc6b0 commitado; review j-revc-plx-pgs (05:42) BLOQUEIA antes do fix. Escrivao 19:1x: j-205-plx-pgs-fixq 18:53; fixc commit db9fca6f/d030b5ba/21aea342/93bd493a 18:59; review q BLOQUEIA."
   },
   {
    "id": "dono-205-tecladolg",
    "titulo": "Opcao \"Teclado\" (do app/do sistema) tambem na webOS/Tizen",
    "plataforma": "all",
-   "status": "em_job",
+   "status": "integrada",
    "release": "2.0.6",
    "conserto": [
-    "agente/205-tecladolg (tip 2a0ef328, 2 commits fora)"
+    "4b333231 (merge agente/205-tecladolg em integracao/2.0.5)"
    ],
-   "proximo_passo": "re-review do fix (j-revg-tecladolg, log vazio 16:47)",
-   "notas": "Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix 2a0ef328 commitado; review j-revf-tecladolg (07:13) BLOQUEIA antes do fix. | Escrivão 16:49: review lançado; sem veredito ainda."
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix 2a0ef328 commitado; review j-revf-tecladolg (07:13) BLOQUEIA antes do fix. | Escrivão 16:49: review lançado; sem veredito ainda. Escrivao 19:0x: merge 4b333231 (18:45); j-revg-tecladolg-r2 OK 18:20."
   },
   {
    "id": "dono-205-tizenbrew",
@@ -12210,7 +12238,7 @@
    "conserto": [
     "agente/205-topotam (356c63b8 2026-10-14 Document the PlxNative glass and tab strip port)"
    ],
-   "proximo_passo": "j-205-vidroplx done",
+   "proximo_passo": "j-205-vidroplx done (ainda nao mergeado; sem job de merge)",
    "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). mesmo branch de dono-205-topotam."
   },
   {
@@ -12243,13 +12271,14 @@
    "id": "dono-205-abastream",
    "titulo": "Fix streaming collection tab strip: catalog order alignment, sliding focus, smooth brand ba",
    "plataforma": "?",
-   "status": "em_revisao",
+   "status": "em_job",
    "release": "2.0.5",
    "conserto": [
-    "7242b442"
+    "7242b442",
+    "28da074c"
    ],
-   "proximo_passo": "review lançado (j-revg-abastream, log vazio 16:47); depois mergear",
-   "notas": "Escrivão 14/10 14:47: impl/merge feito, sem review. | Escrivão 16:49: impl feita; review sem veredito ainda.",
+   "proximo_passo": "fix feito (28da074c); reviews r3/r4 BLOQUEIA -> re-review (j-revg-abastream-c pendente na fila)",
+   "notas": "Escrivão 14/10 14:47: impl/merge feito, sem review. | Escrivão 16:49: impl feita; review sem veredito ainda. Escrivao 19:1x: fix 28da074c (capsula x, icone de estilo, sublinhado unico); j-revg-abastream-r4 BLOQUEIA 18:57.",
    "url": null
   },
   {
@@ -12308,13 +12337,14 @@
    "id": "dono-205-animacoes",
    "titulo": "aovivo: drive the OSD focus springs from the row draw + shot frame sequence",
    "plataforma": "?",
-   "status": "em_revisao",
+   "status": "em_job",
    "release": "2.0.5",
    "conserto": [
-    "ac6d84aa"
+    "ac6d84aa",
+    "059af14f"
    ],
-   "proximo_passo": "review lançado (j-revg-animacoes, log vazio 16:47); depois mergear",
-   "notas": "Escrivão 14/10 14:47: impl/merge feito, sem review. | Escrivão 16:49: impl feita; review sem veredito ainda.",
+   "proximo_passo": "fix feito (059af14f); review j-revg-animacoes-q BLOQUEIA 18:54 -> re-review (j-revg-animacoes-c pendente)",
+   "notas": "Escrivão 14/10 14:47: impl/merge feito, sem review. | Escrivão 16:49: impl feita; review sem veredito ainda. Escrivao 19:1x: j-revg-animacoes-q BLOQUEIA; j-205-animacoes-fixc 059af14f done 18:57.",
    "url": null
   },
   {
@@ -12711,12 +12741,12 @@
    "id": "dono-205-dicatoque2",
    "titulo": "Settings: the register-only footer replay must not paint",
    "plataforma": "?",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
-    "44b4295a"
+    "96c87dc7 (merge agente/205-dicatoque2 em integracao/2.0.5)"
    ],
-   "proximo_passo": "mergear (review r3 OK 15:56); sem job de merge",
+   "proximo_passo": "lancar com 2.0.5",
    "notas": "Escrivão 2026-10-14 16:11: fix2-r commitado 44b4295a; review j-revg-dicatoque2 BLOQUEIA antes. | j-revg-dicatoque2-r3 OK 15:56 (fix2-r 44b4295a). Escrivão 16:49: branch ainda não integrada.",
    "url": null
   },
@@ -12831,10 +12861,11 @@
    "status": "em_job",
    "release": "2.0.5",
    "conserto": [
-    "agente/205-estatpainel2 (tip 60bd9d31, 3 commits fora)"
+    "agente/205-estatpainel2 (tip 60bd9d31, 3 commits fora)",
+    "cb526b5e"
    ],
-   "proximo_passo": "re-review rodando (j-revg-estatpainel2-r2, 16:47)",
-   "notas": "Escrivão 2026-10-14 16:11: review anterior BLOQUEIA (j-revg-estatpainel2-f: P1 plrilha_esconder vs faixas_pedir, P2 UP no foco fixado); job de fix rodando desde 15:47. | fix j-205-estatpainel2-fix concluído 16:08. Escrivão 16:49: re-review em curso.",
+   "proximo_passo": "fixes a4c7859a/cb526b5e; reviews q/q2 BLOQUEIA -> re-review (j-revg-estatpainel2-c pendente)",
+   "notas": "Escrivão 2026-10-14 16:11: review anterior BLOQUEIA (j-revg-estatpainel2-f: P1 plrilha_esconder vs faixas_pedir, P2 UP no foco fixado); job de fix rodando desde 15:47. | fix j-205-estatpainel2-fix concluído 16:08. Escrivão 16:49: re-review em curso. Escrivao 19:1x: j-205-estatpainel2-fixq a4c7859a (18:48) e fixc cb526b5e (19:00); j-revg-q2 BLOQUEIA 18:55.",
    "url": null
   },
   {
@@ -12932,13 +12963,13 @@
    "id": "dono-205-heroinfo",
    "titulo": "Merge agente/205-cardexp",
    "plataforma": "?",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
-    "agente/205-heroinfo (tip 2bb12dfe, 1 commit fora)"
+    "3b66b044 (merge em integracao/2.0.5)"
    ],
-   "proximo_passo": "merge em curso (j-merge-205-heroinfo 16:47)",
-   "notas": "Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: impl em agente/205-heroinfo; review j-revg-heroinfo-r3 OK; branch ainda NAO integrada. | j-revg-heroinfo-r3 OK 15:56. Escrivão 16:49: branch ainda não integrada.",
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: impl em agente/205-heroinfo; review j-revg-heroinfo-r3 OK; branch ainda NAO integrada. | j-revg-heroinfo-r3 OK 15:56. Escrivão 16:49: branch ainda não integrada. Escrivao 19:0x: merge em integracao/2.0.5.",
    "url": null
   },
   {
@@ -13184,7 +13215,7 @@
    "conserto": [
     "agente/205-mock21 (tip 9de13e4e, 1 commit fora)"
    ],
-   "proximo_passo": "mergear (mockup docs apenas)",
+   "proximo_passo": "mergear (mockup docs apenas) (ainda nao mergeado; sem job de merge)",
    "notas": "Escrivão 2026-10-14 16:11: 3 mockups anteriores (gamification/cinephile/redesign) ja em integracao/2.0.5; friends row 9de13e4e ainda fora.",
    "url": null
   },
@@ -13262,8 +13293,8 @@
    "conserto": [
     "fe5e0e92"
    ],
-   "proximo_passo": "re-review do fix (antes: review BLOQUEIA)",
-   "notas": "Escrivão 2026-10-14 16:11: fix fe5e0e92 commitado; review j-revg-p2pusb (11:08) BLOQUEIA antes do fix.",
+   "proximo_passo": "re-review do fix fe5e0e92 nao lancada; sem job desde 16:47",
+   "notas": "Escrivão 2026-10-14 16:11: fix fe5e0e92 commitado; review j-revg-p2pusb (11:08) BLOQUEIA antes do fix. Escrivao 19:1x: nenhum job novo; 2 commits fora em agente/205-p2pusb.",
    "url": null
   },
   {
@@ -13325,10 +13356,11 @@
    "status": "em_job",
    "release": "2.0.5",
    "conserto": [
-    "agente/205-paraleloloop (tip 1788e8fa, 6 commits fora)"
+    "agente/205-paraleloloop (tip 1788e8fa, 6 commits fora)",
+    "07455c12"
    ],
-   "proximo_passo": "re-review r3 (j-revg-paraleloloop-r3) listado RUNNING desde 15:47; processo não confirmado",
-   "notas": "Escrivão 2026-10-14 16:11: fix2 commitado 1788e8fa; review anterior BLOQUEIA; j-revg-paraleloloop-r3 rodando desde 15:47. | Escrivão 16:49: sem veredito de r3 nos logs; verificar antes de mergear.",
+   "proximo_passo": "re-review r4 BLOQUEIA 18:50; fixc 07455c12 done 18:58 (probe cap + veto) -> re-review nova",
+   "notas": "Escrivão 2026-10-14 16:11: fix2 commitado 1788e8fa; review anterior BLOQUEIA; j-revg-paraleloloop-r3 rodando desde 15:47. | Escrivão 16:49: sem veredito de r3 nos logs; verificar antes de mergear. Escrivao 19:1x: j-205-paraleloloop-fixq 18:56 travou em loop de texto; j-205-paraleloloop-fixc 07455c12 done 18:58.",
    "url": null
   },
   {
@@ -13647,12 +13679,12 @@
    "id": "dono-205-shufflepos",
    "titulo": "Series detail: move shuffle button to the start of the season row",
    "plataforma": "?",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
-    "9d19c439"
+    "9eba8c16 (merge agente/205-shufflepos em integracao/2.0.5)"
    ],
-   "proximo_passo": "review lançado (j-revg-shufflepos, log vazio 16:47); depois mergear",
+   "proximo_passo": "lancar com 2.0.5",
    "notas": "Escrivão 14/10 14:47: impl/merge feito, sem review. | Escrivão 16:49: impl feita; review sem veredito ainda.",
    "url": null
   },
@@ -13915,6 +13947,18 @@
    "proximo_passo": "lancar com 2.0.5",
    "notas": "Escrivão 14/10 14:47: integrada.",
    "url": null
+  },
+  {
+   "id": "dono-205-retomamorna",
+   "titulo": "Retomada morna (warm resume)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "c624b273 (merge agente/205-retomamorna em integracao/2.0.5)"
+   ],
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Issue #492. Review j-revg-retomamorna OK 17:06."
   }
  ],
  "fechar_203": [],
