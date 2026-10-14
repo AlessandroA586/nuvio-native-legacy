@@ -2679,7 +2679,8 @@ void app_evento(const SDL_Event *e) {
   // o teclado todo, por cima do player, das folhas e das ilhas.
   if (central_aberta()) { central_evento(e); return; }
   // AS ESTATISTICAS AO VIVO (estatvivoui.h), abertas pela central: modal ate
-  // Voltar (fecha) ou OK (fixa no canto, e ai nao come mais tecla nenhuma).
+  // Voltar fecha; OK ou Esquerda/Direita trocam o tamanho; Baixo fixa no canto
+  // e libera as teclas para o player.
   if (estatvivo_evento(e)) return;
   // O MODAL DA ILHA (ilha.h) e uma camada: aberto, come o teclado todo.
   if (ilha_evento(e)) return;
