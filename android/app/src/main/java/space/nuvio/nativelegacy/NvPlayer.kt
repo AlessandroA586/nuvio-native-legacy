@@ -171,6 +171,12 @@ object NvPlayer {
     // The cache limit is STICKY (the C side sends it only when it changes) and
     // read at each open; any thread writes it, the open reads it on main.
     @Volatile private var cacheMbPedido = 0
+    // Warm resume (#492): id of the title of the NEXT open ("" = trailer or
+    // channel: it neither keeps nor drops the kept cache) and of the cache
+    // being kept when this one closes.
+    @Volatile private var tituloPedido = ""
+    private var tituloAberto = ""
+    private var chaveAberta = ""
     private var cacheMidia: CacheMidia? = null
     private var cacheEstado = CacheSessao.DESLIGADO
     private var cacheTiques = 0
@@ -401,6 +407,9 @@ object NvPlayer {
     @Volatile private var bufferPreset = 0
     @JvmStatic fun buffer(preset: Int) { bufferPreset = preset.coerceIn(0, 3) }
     @JvmStatic fun cache(mb: Int) { cacheMbPedido = mb.coerceIn(0, 1024) }
+    @JvmStatic fun titulo(id: String) { tituloPedido = id }
+    // Profile switch (C side): the kept cache belongs to the old profile.
+    @JvmStatic fun descartarGuardado() { CacheMidia.descartar("profile switch") }
     @JvmStatic fun ganho(pct: Int) {
         principal.post { ganhoPct = GanhoMath.pct(pct); aplicarGanho() }
     }
@@ -486,11 +495,16 @@ object NvPlayer {
             val baixa = url.lowercase()
             val adaptativo = baixa.contains(".m3u8") || baixa.contains("m3u8?") || baixa.contains(".mpd")
             val pedidoCache = cacheMbPedido
+            val titulo = tituloPedido
+            tituloAberto = ""
             var origem: androidx.media3.datasource.DataSource.Factory = rede
-            if (pedidoCache <= 0) cacheEstado = CacheSessao.DESLIGADO
-            else if (adaptativo || !ParaleloDataSource.serve(Uri.parse(url))) cacheEstado = CacheSessao.NAO_SE_APLICA
-            else {
-                val (c, estado) = CacheMidia.criar(act.cacheDir, pedidoCache) { semEspaco ->
+            // Cache off or not applicable for a VOD: whatever was kept is stale.
+            if (pedidoCache <= 0) { cacheEstado = CacheSessao.DESLIGADO; if (titulo.isNotEmpty()) CacheMidia.descartar("setting off") }
+            else if (adaptativo || !ParaleloDataSource.serve(Uri.parse(url))) {
+                cacheEstado = CacheSessao.NAO_SE_APLICA
+                if (titulo.isNotEmpty()) CacheMidia.descartar("not progressive")
+            } else {
+                val aoFalhar: (Boolean) -> Unit = { semEspaco ->
                     // Loader thread: back to main, only for this session.
                     principal.post {
                         if (!atual(minha) || cacheEstado != CacheSessao.ATIVO) return@post
@@ -499,9 +513,14 @@ object NvPlayer {
                         relatarCache(minha)
                     }
                 }
+                chaveAberta = url.substringBefore('#')
+                // WARM RESUME: the same title and source reuse the downloaded part.
+                val guardado = CacheMidia.pegar(titulo, chaveAberta, pedidoCache, aoFalhar)
+                val (c, estado) = if (guardado != null) guardado to CacheSessao.ATIVO
+                                  else CacheMidia.criar(act.cacheDir, pedidoCache, aoFalhar)
                 cacheMidia = c
                 cacheEstado = estado
-                if (c != null) origem = c.fabrica(rede)
+                if (c != null) { origem = c.fabrica(rede); tituloAberto = titulo }
             }
             relatarCache(minha)
 
@@ -661,8 +680,10 @@ object NvPlayer {
         }
         // F07: the session cache goes with its player (released and deleted
         // off the main thread, after the canceled loaders unwind).
-        cacheMidia?.liberar()
+        // WARM RESUME: a healthy cache of a known title is kept for the next open.
+        cacheMidia?.let { if (tituloAberto.isNotEmpty()) CacheMidia.guardar(it, tituloAberto, chaveAberta) else it.liberar() }
         cacheMidia = null
+        tituloAberto = ""
         cacheEstado = CacheSessao.DESLIGADO
         cacheTiques = 0
         processador = null

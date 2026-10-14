@@ -30,7 +30,8 @@ Uint32 SDL_GetTicks(void) { return relogio; }
 SDL_mutex *SDL_CreateMutex(void) { return (SDL_mutex *)(uintptr_t)1; }
 void marco(const char *s) { (void)s; }
 
-// Call log: 'A' open, 'C<n>' cache(n), 'G<n>' ganho(n), 'V<n>' velocidade(n), 'P' stop.
+// Call log: 'A' open, 'C<n>' cache(n), 'G<n>' ganho(n), 'V<n>' velocidade(n), 'P' stop,
+// 'T<id>;' titulo(id) (warm resume #492), 'D' descartarGuardado().
 static char registro[512];
 static void anota(const char *s) { strncat(registro, s, sizeof registro - strlen(registro) - 1); }
 static int semCache;
@@ -44,10 +45,19 @@ static jmethodID JNICALL metodo(JNIEnv *e, jclass c, const char *nome, const cha
   if (!strcmp(nome, "cache")) return semCache ? NULL : (jmethodID)(uintptr_t)13;
   if (!strcmp(nome, "ganho")) return semCache ? NULL : (jmethodID)(uintptr_t)14;
   if (!strcmp(nome, "buffer")) return semCache ? NULL : (jmethodID)(uintptr_t)16;
+  if (!strcmp(nome, "titulo")) return semCache ? NULL : (jmethodID)(uintptr_t)17;
+  if (!strcmp(nome, "descartarGuardado")) return semCache ? NULL : (jmethodID)(uintptr_t)18;
   if (!strcmp(nome, "velocidade")) return semCache ? NULL : (jmethodID)(uintptr_t)15;
   return (jmethodID)(uintptr_t)1;
 }
-static jstring JNICALL texto(JNIEnv *e, const jchar *u, jsize n) { (void)e; (void)u; (void)n; return (jstring)malloc(1); }
+// The fake jstring is the ASCII text itself, so the call log can print it.
+static jstring JNICALL texto(JNIEnv *e, const jchar *u, jsize n) {
+  char *t = malloc((size_t)n + 1);
+  (void)e;
+  for (jsize i = 0; i < n; i++) t[i] = (char)u[i];
+  t[n] = 0;
+  return (jstring)t;
+}
 static void JNICALL apagar(JNIEnv *e, jobject o) { (void)e; free(o); }
 static jboolean JNICALL temExcecao(JNIEnv *e) { (void)e; return 0; }
 static void JNICALL limparExcecao(JNIEnv *e) { (void)e; }
@@ -63,6 +73,8 @@ static void JNICALL chamar(JNIEnv *e, jclass c, jmethodID m, ...) {
     case 14: snprintf(b, sizeof b, "G%d", va_arg(ap, jint)); anota(b); break;
     case 15: snprintf(b, sizeof b, "V%d", va_arg(ap, jint)); anota(b); break;
     case 16: snprintf(b, sizeof b, "B%d", va_arg(ap, jint)); anota(b); break;
+    case 17: anota("T"); anota((const char *)va_arg(ap, jstring)); anota(";"); break;
+    case 18: anota("D"); break;
     default: break;
   }
   va_end(ap);
@@ -82,6 +94,39 @@ int main(void) {
 
   // Player session, cache 512: the limit goes BEFORE the open; volume 100 is
   // not sent.
+  cacheboost_sessao();
+  registro[0] = 0;
+  cacheboost_backend_cache(512);
+  assert(video_tocar_posicao("https://example.invalid/filme.mkv", 0));
+  assert(!strcmp(registro, "C512A"));
+
+  // WARM RESUME (#492): the title armed with the cache crosses JNI before the
+  // open, once per change; the next open of the same title does not resend it.
+  registro[0] = 0;
+  cacheboost_backend_cache(512);
+  cacheboost_backend_titulo("tt1:2:3");
+  assert(video_tocar_posicao("https://example.invalid/filme.mkv", 0));
+  assert(!strcmp(registro, "Ttt1:2:3;A"));
+  registro[0] = 0;
+  cacheboost_backend_cache(512);
+  cacheboost_backend_titulo("tt1:2:3");
+  assert(video_tocar_posicao("https://example.invalid/filme.mkv", 120));
+  assert(!strcmp(registro, "A"));
+  // Reconnection reopen keeps the title; a title armed only for a trailer
+  // (never armed with cache) is ignored: the trailer sends the empty id.
+  registro[0] = 0;
+  assert(abrirSessao(0, 0));
+  assert(!strcmp(registro, "A"));
+  registro[0] = 0;
+  cacheboost_backend_titulo("tt9");   // armed title without arming the cache
+  assert(video_tocar("https://example.invalid/trailer-x.mp4"));
+  assert(!strcmp(registro, "C0T;A"));
+  assert(!tituloArmado[0] && !tituloSessao[0]);
+  // Profile switch / setting off: the drop order reaches Kotlin.
+  registro[0] = 0;
+  cacheboost_backend_descartar();
+  assert(!strcmp(registro, "D"));
+  // Back to the player session the next blocks expect.
   cacheboost_sessao();
   registro[0] = 0;
   cacheboost_backend_cache(512);

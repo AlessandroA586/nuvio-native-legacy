@@ -59,6 +59,8 @@ static jmethodID mAbrirRetomada;
 // F07 (optional, like abrirPosicao): cache(mb) and ganho(pct). A shell without
 // them simply has no seek cache and no boost.
 static jmethodID mCache, mGanho, mBuffer;
+// Warm resume (#492, optional too): titulo(id) and descartarGuardado().
+static jmethodID mTitulo, mDescartar;
 // #202 (opcional, como os de cima): velocidade(centesimos). Casca sem ele =
 // sem a linha da velocidade.
 static jmethodID mVelocidade;
@@ -80,6 +82,10 @@ static int resolverMetodos(JNIEnv *env) {
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mAbrirRetomada = NULL; }
   mCache = (*env)->GetStaticMethodID(env, gCls, "cache", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mCache = NULL; }
+  mTitulo = (*env)->GetStaticMethodID(env, gCls, "titulo", "(Ljava/lang/String;)V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mTitulo = NULL; }
+  mDescartar = (*env)->GetStaticMethodID(env, gCls, "descartarGuardado", "()V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mDescartar = NULL; }
   mBuffer = (*env)->GetStaticMethodID(env, gCls, "buffer", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mBuffer = NULL; }
   mGanho = (*env)->GetStaticMethodID(env, gCls, "ganho", "(I)V");
@@ -274,6 +280,9 @@ static unsigned sessao;
 // at 100%. `cacheSessao` survives the reconnection reopens of that video.
 static int bufferPreset, bufferEnviado;
 static int cacheArmado = -1, cacheSessao, cacheEnviado, playerSessao;
+// Warm resume (#492): id of the title the player armed for the next open, the
+// one of this open (empty for trailers/channels) and the one Kotlin has.
+static char tituloArmado[96], tituloSessao[96], tituloEnviado[96];
 static int ganhoEnviado = CB_VOL_NORMAL;
 static int retomadaInicialEstado = -1;
 static pthread_mutex_t travaRetomada = PTHREAD_MUTEX_INITIALIZER;
@@ -612,6 +621,15 @@ static int abrirSessao(int inicioMs, int fracao) {
     fimChamada(env);
     cacheEnviado = cacheSessao;
   }
+  if (mTitulo && strcmp(tituloSessao, tituloEnviado)) {
+    jstring t = paraJString(env, tituloSessao);
+    if (t) {
+      (*env)->CallStaticVoidMethod(env, gCls, mTitulo, t);
+      (*env)->DeleteLocalRef(env, t);
+      fimChamada(env);
+      snprintf(tituloEnviado, sizeof tituloEnviado, "%s", tituloSessao);
+    }
+  }
   {
     jstring u = paraJString(env, urlAtual), c = paraJString(env, cabecalhos);
     if (!u || !c) {
@@ -671,12 +689,16 @@ int video_tocar_retomada(const char *u, double segundos, double pct) {
   playerSessao = cacheArmado >= 0;
   cacheSessao = cacheArmado > 0 ? cacheArmado : 0;
   cacheArmado = -1;
+  snprintf(tituloSessao, sizeof tituloSessao, "%s", playerSessao ? tituloArmado : "");
+  tituloArmado[0] = 0;
   return abrirSessao(inicioMs, fracao);
 }
 int video_tocar_posicao(const char *u, double segundos) { return video_tocar_retomada(u, segundos, 0.0); }
 
 void cacheboost_backend_buffer(int p) { bufferPreset = p >= 0 && p <= 3 ? p : 0; }
 void cacheboost_backend_cache(int mb) { cacheArmado = mb > 0 ? mb : 0; }
+void cacheboost_backend_titulo(const char *id) { snprintf(tituloArmado, sizeof tituloArmado, "%s", id ? id : ""); }
+void cacheboost_backend_descartar(void) { if (mDescartar) kSemArg(mDescartar); }
 void cacheboost_backend_ganho(int pct) {
   if (pct < CB_VOL_MIN) pct = CB_VOL_MIN;
   if (pct > CB_VOL_MAX) pct = CB_VOL_MAX;
