@@ -218,6 +218,7 @@ static const char *uxSinonimos(int op) {
       return "falha erro provedor debrid addon add-on trocar ordem prioridade limite links timeout failover fallback retry";
     case AJ_FONTE_ORDEM_ADDON: return "ordem fontes qualidade addon aiostreams resolucao tamanho instalacao source order quality";
     case AJ_P2P_LIMITE: return "limite espaco p2p torrent armazenamento disco cheio memoria buffer cache tamanho maximo gb space limit storage full";
+    case AJ_P2P_DESTINO: return "cache p2p pendrive usb armazenamento interno disco externo flash drive storage location";
     case AJ_ESTAT_TAMANHO: return "estatisticas ao vivo stats nerds tamanho completo compacto minimo pequeno linha canto fixar velocidade buffer painel live statistics size full compact minimal";
     case AJ_BUFFER: return "buffer tamanho memoria pequeno medio grande travando carregando rede instavel stats nerds";
     case AJ_CACHE_SEEK: return "cache seek buffer disco armazenamento voltar avancar travando carregando";
@@ -263,7 +264,7 @@ static const char *uxCaminhoAntigo(int op) {
     case AJ_DEBRID_RD_TESTAR: case AJ_DEBRID_TB_TESTAR: case AJ_DEBRID_PM_TESTAR:
     case AJ_MDB_CHAVE: case AJ_FANART_CHAVE:
       return "Chaves";
-    case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: case AJ_P2P_LIMITE:
+    case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: case AJ_P2P_LIMITE: case AJ_P2P_DESTINO:
     case AJ_JF_LIGADO: case AJ_JF_SERVIDOR: case AJ_JF_ENTRAR: case AJ_JF_SAIR:
     case AJ_EM_SERVIDOR: case AJ_EM_ENTRAR: case AJ_EM_SAIR:
     case AJ_PX_ENTRAR: case AJ_PX_SERVIDOR: case AJ_PX_SAIR:

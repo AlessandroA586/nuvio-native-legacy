@@ -78,6 +78,10 @@ unsigned p2pmotor_teto_mb(void);
 // pessoa pediu ate tanto, limitado ao livre menos P2PM_RESERVA_MB e nunca
 // abaixo do Automatico. Vale na proxima subida do motor. Qualquer fio.
 void p2pmotor_definir_limite_mb(unsigned mb);
+// #205: 1 = tentar cache em pendrive USB (cai para interno se nao houver ou falhar).
+void p2pmotor_definir_usb(int usar);
+// 1 se ha pendrive gravavel agora (so para esconder a opcao em Ajustes).
+int p2pmotor_usb_presente(void);
 // A conta acima, pura (testes).
 uint64_t p2pmotor_teto_duro(uint64_t livre, unsigned escolhaMb);
 // #334: janela de streaming que o motor recebe para um teto duro (0 = sem
@@ -188,6 +192,7 @@ typedef int (*P2pmLivreFn)(const char *pasta, uint64_t *livre);      // 0 ok
 typedef int (*P2pmSondaFn)(const char *url, int (*parar)(void *), void *u); // 1 ok, 0 sem bytes, -1 HTTP erro
 void p2pmotor_teste_injetar(const P2pmOps *ops, P2pmLivreFn livre, P2pmSondaFn sonda,
                             const char *raiz, unsigned vigia_ms);
+void p2pmotor_teste_usb_base(const char *base);
 // Quantos eventos velhos (de outro pedido) foram descartados desde o inicio.
 unsigned p2pmotor_teste_descartados(void);
 #endif

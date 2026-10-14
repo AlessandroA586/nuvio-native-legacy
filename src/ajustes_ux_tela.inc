@@ -45,7 +45,7 @@ static const Item TELA[] = {
 #endif
 #ifndef __EMSCRIPTEN__
     // .wgt: sem socket TCP/UDP no navegador, sem motor; P2P escondido (a8e7685d).
-    ROT("P2P"), OPC(AJ_P2P_LIGADO), OPC(AJ_P2P_URL), OPC(AJ_P2P_TESTAR), OPC(AJ_P2P_LIMITE),
+    ROT("P2P"), OPC(AJ_P2P_LIGADO), OPC(AJ_P2P_URL), OPC(AJ_P2P_TESTAR), OPC(AJ_P2P_LIMITE), OPC(AJ_P2P_DESTINO),
 #endif
 
   SEC("Idiomas e legendas", "Idioma da interface, áudio, legenda e metadados", "aj_languages"),

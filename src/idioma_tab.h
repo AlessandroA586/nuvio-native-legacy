@@ -2440,6 +2440,8 @@
   { "Ligue, desligue e mude a ordem de cada fileira. Cada uma pode ter o seu card: cartaz em pé, destaque largo, 4:3 e outros. O que não cabe espera na fila.", "Turn each row on or off and change its order. Each one can have its own card: portrait poster, wide spotlight, 4:3 and others. What doesn't fit waits in the queue." },
   { "Limite de %d fileiras — coleções não contam", "Limit of %d rows — collections don't count" },
   { "Limite de espaço do P2P", "P2P space limit" },
+  { "Cache do P2P", "P2P cache location" },
+  { "Onde o motor P2P guarda o cache temporário enquanto toca. Interno usa o armazenamento da TV; Pendrive USB tenta um pendrive conectado e, se não houver ou falhar, volta para o interno. Não é download offline.", "Where the built-in P2P engine keeps temporary cache while playing. Internal uses the TV storage; USB flash drive tries a connected USB stick and, if missing or it fails, falls back to internal. Not offline download." },
   { "Limite de fileiras", "Row limit" },
   { "Limite de fileiras e Itens por fileira", "Row limit and Items per row" },
   { "Limite diário desta TV atingido", "This TV has reached its daily limit" },

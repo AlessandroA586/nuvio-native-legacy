@@ -54,6 +54,9 @@ static _Atomic unsigned limiteMb;    // escolha de Ajustes (#334); 0 = Automatic
 static const P2pmOps *opsInjetado;
 static int temOpsInjetado;
 static char raizInjetada[600];
+static int usbPreferido;
+static char usbRaiz[600];
+static char usbExtra[600];
 static unsigned vigiaMs = P2PM_VIGIA_MS;
 
 static const P2pmOps *ops(void) {
@@ -140,9 +143,62 @@ static uint64_t percorrer(const char *p, int apagar, int fundo) {
   return percorrerL(p, apagar, fundo, NULL);
 }
 
-// Pasta raiz do motor (<dados>/p2p) e a mae dela (onde o statvfs mede: a raiz
-// pode nem existir ainda). 0 sem pasta de dados.
-static int pastas(char *raiz, unsigned nr, char *mae, unsigned nm) {
+static int devIgual(const char *a, const char *b) {
+  struct stat sa, sb;
+  if (!a || !a[0] || !b || !b[0]) return 0;
+  if (stat(a, &sa) != 0 || stat(b, &sb) != 0) return 0;
+  return sa.st_dev == sb.st_dev;
+}
+
+static int usbServe(const char *candidato, char *raiz, unsigned nr) {
+  char teste[700], p2p[700];
+  FILE *f;
+  const char *dados = dados_dir();
+  if (!candidato || !candidato[0] || (dados && dados[0] && devIgual(candidato, dados))) return 0;
+  if (snprintf(p2p, sizeof p2p, "%s/p2p", candidato) >= (int)sizeof p2p) return 0;
+  mkdir(p2p, 0700);
+  if (snprintf(teste, sizeof teste, "%s/.escrita", p2p) >= (int)sizeof teste) return 0;
+  f = fopen(teste, "w");
+  if (!f) return 0;
+  if (fputs("ok\n", f) < 0) { fclose(f); return 0; }
+  if (fclose(f) != 0) { unlink(teste); return 0; }
+  remove(teste);
+  if (snprintf(raiz, nr, "%s", p2p) >= (int)nr) return 0;
+  return 1;
+}
+
+static int usbEscanearDir(const char *base, char *raiz, unsigned nr, int fundo) {
+  DIR *d;
+  struct dirent *e;
+  char f[700];
+  if (!base || !base[0] || fundo > 3) return 0;
+  if (usbServe(base, raiz, nr)) return 1;
+  d = opendir(base);
+  if (!d) return 0;
+  while ((e = readdir(d))) {
+    if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, "..") || e->d_name[0] == '.') continue;
+    if (snprintf(f, sizeof f, "%s/%s", base, e->d_name) >= (int)sizeof f) continue;
+    if (usbServe(f, raiz, nr) || usbEscanearDir(f, raiz, nr, fundo + 1)) { closedir(d); return 1; }
+  }
+  closedir(d);
+  return 0;
+}
+
+static int usbEscanear(char *raiz, unsigned nr) {
+  const char *bases[8];
+  unsigned n = 0, i;
+  if (usbExtra[0]) bases[n++] = usbExtra;
+  bases[n++] = "/tmp/usb";
+  bases[n++] = "/media/usb";
+#ifdef NV_TPK
+  bases[n++] = "/opt/storage/usb";
+#endif
+  for (i = 0; i < n; i++)
+    if (usbEscanearDir(bases[i], raiz, nr, 0)) return 1;
+  return 0;
+}
+
+static int pastasInternas(char *raiz, unsigned nr, char *mae, unsigned nm) {
   const char *d;
   char *b;
   if (raizInjetada[0]) snprintf(raiz, nr, "%s", raizInjetada);
@@ -156,6 +212,18 @@ static int pastas(char *raiz, unsigned nr, char *mae, unsigned nm) {
   if (b && b != mae) *b = 0;
   else snprintf(mae, nm, ".");
   return 1;
+}
+
+// Pasta raiz do motor (<dados>/p2p ou <usb>/p2p) e a mae dela (statvfs). 0 sem pasta.
+static int pastas(char *raiz, unsigned nr, char *mae, unsigned nm) {
+  if (!raizInjetada[0] && usbPreferido) {
+    if (usbRaiz[0]) snprintf(raiz, nr, "%s", usbRaiz);
+    else if (!usbEscanear(raiz, nr)) return pastasInternas(raiz, nr, mae, nm);
+    snprintf(mae, nm, "%s", raiz);
+    { char *b = strrchr(mae, '/'); if (b && b != mae) *b = 0; else snprintf(mae, nm, "."); }
+    return 1;
+  }
+  return pastasInternas(raiz, nr, mae, nm);
 }
 
 // #334: teto DURO da pasta. Automatico = o de sempre (metade do livre, no
@@ -175,6 +243,22 @@ uint64_t p2pmotor_teto_duro(uint64_t livre, unsigned escolhaMb) {
   return fixo > auto_ ? fixo : auto_;
 }
 void p2pmotor_definir_limite_mb(unsigned mb) { atomic_store(&limiteMb, mb); }
+
+void p2pmotor_definir_usb(int usar) {
+  usbPreferido = usar ? 1 : 0;
+  if (!usbPreferido) usbRaiz[0] = 0;
+}
+
+int p2pmotor_usb_presente(void) {
+  char tmp[600];
+  if (!usbPreferido && usbRaiz[0] && access(usbRaiz, W_OK) == 0) return 1;
+  if (usbEscanear(tmp, sizeof tmp)) {
+    snprintf(usbRaiz, sizeof usbRaiz, "%s", tmp);
+    return 1;
+  }
+  usbRaiz[0] = 0;
+  return 0;
+}
 
 // #334: a janela fica um pouco abaixo do teto duro (a vigia para em > duro e a
 // pasta tem tambem o resume e as pecas de borda com outros arquivos). O motor
@@ -400,6 +484,11 @@ void p2pmotor_teste_injetar(const P2pmOps *o, P2pmLivreFn livre, P2pmSondaFn son
   pthread_mutex_unlock(&trava);
 }
 
+void p2pmotor_teste_usb_base(const char *base) {
+  if (base) snprintf(usbExtra, sizeof usbExtra, "%s", base);
+  else usbExtra[0] = 0;
+}
+
 // ------------------------------------------------------------------ parar
 static void *pararFio(void *x) {
   const P2pmOps *o = x;
@@ -604,6 +693,13 @@ static int subir(const P2pmOps *o, unsigned g) {
   if (!pastas(raiz, sizeof raiz, mae, sizeof mae)) return P2P_ERR_DISCO;
   percorrer(raiz, 1, 0);   // sobra de uma sessao que caiu (ou da saida apressada)
   e = orcamento(mae, &mole, &duro, &livre);
+  if (e != P2P_OK && usbPreferido && !raizInjetada[0] && usbRaiz[0]) {
+    usbRaiz[0] = 0;
+    if (!pastas(raiz, sizeof raiz, mae, sizeof mae)) return P2P_ERR_DISCO;
+    percorrer(raiz, 1, 0);
+    e = orcamento(mae, &mole, &duro, &livre);
+    printf("[p2p-motor] USB indisponivel; caiu para interno\n");
+  }
   if (e != P2P_OK) {
     printf("[p2p-motor] recusado (erro %d): livre %.0f MB\n", e, (double)livre / 1048576.0);
     if (e == P2P_ERR_SEM_ESPACO) ondeFoi(mae);
