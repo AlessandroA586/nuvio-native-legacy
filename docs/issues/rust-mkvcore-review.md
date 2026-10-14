@@ -26,4 +26,10 @@ Findings: **P0: 0; P1: 1; P2: 3. All fixed.** Locations below refer to the revie
 
 Integration: `bash tests/mkvcore_paridade.sh` passed **25,512** guarded C/Rust field comparisons, including truncation, mutation, random bytes and large declared sizes. `NV_RUST_MKVCORE=1` runs of `tests/mkv_contentor.sh`, `tests/mkv_caps.sh`, `tests/mkv_dvrpu.sh` and `tests/mkv_legendas.sh` passed. The latter exercises ASS/SRT extraction and switching tracks against the Rust-backed MKV parser. No need to run the C-only `mkvass.sh` as redundant coverage.
 
-Product build results are recorded after completion below. No push, deployment or device installation is authorized or performed.
+Product checks completed with rc 0:
+
+- `bash tests/rust_mkvcore.sh`: locked Clippy all-targets with `-D warnings`, plus five Rust tests.
+- `NUVIO_RUST_MKVCORE=1 NUVIO_MAC_SO_COMPILAR=1 NUVIO_MAC_BIN=/tmp/nuvio-205-rustbp-mac bash tools/mac.sh`: product Mac link with Rust ON, compile only.
+- `bash tools/arm.sh --alto-cache --build`: high-cache ARM product build only. This branch's webOS ARM script uses the C core (Rust is enabled in Mac/Android product builds); it is a build compatibility check, not an ARM Rust execution test.
+
+The product scripts warned about missing local server configuration; compilation and linking still returned 0. No push, deployment or device installation was performed.
