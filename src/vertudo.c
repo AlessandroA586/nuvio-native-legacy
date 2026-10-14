@@ -1699,6 +1699,7 @@ static int legendaOculta(void) {
 // mesmo texto.
 static void abaRotulos(char rot[][180], int nAbas) {
   static char nomeAba[COL_SOURCE_MAX][128];
+  if(nAbas>COL_SOURCE_MAX)nAbas=COL_SOURCE_MAX;
   for(int i=0;i<nAbas;i++) {
     const ColSource *s=&collection->sources[i];
     col_nome_fonte(s,desc_nome_catalogo(baseDaFonte(s),s->type,s->catId),nomeAba[i],sizeof nomeAba[i]);
@@ -1977,6 +1978,7 @@ static void themeHeader(float a,float x0) {
     float larg[COL_SOURCE_MAX],pos[COL_SOURCE_MAX],px=0;
     static char rot[COL_SOURCE_MAX][180];
     int nAbas=collection->nSources;
+    if(nAbas>COL_SOURCE_MAX)nAbas=COL_SOURCE_MAX;
     abaRotulos(rot,nAbas);
     for(int i=0;i<nAbas;i++) {
       // Medida com a cor de repouso; a cor certa e reaplicada no desenho (o
@@ -2481,7 +2483,7 @@ static void botaoEstiloAbas(float a) {
   rx = fmaxf(rx, 8.0f);
   GfxRect r = {rx, exibPill.y > 0.0f ? exibPill.y : 253.0f, 52, VT_AB_H};
   int f = tabFocus && tabCursor == cabN()+1;
-  if (lay == VT_LAY_VITRINE) r.y = NV_ILHA_Y + 64.0f;
+  if (lay == VT_LAY_VITRINE) r.y = (exibPill.w > 0.0f ? exibPill.y + exibPill.h : NV_ILHA_Y + 52.0f) + 12.0f;
   float c = f ? ajustes_tinta_foco()/255.0f : 1.0f;
   if(f) focoAbaFonte(r,1,a);
   gfx_icone((GfxRect){r.x+13,r.y+13,26,26},"aj_layout-list",c,c,c,a*(f?1:.65f));

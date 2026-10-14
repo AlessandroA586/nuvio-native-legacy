@@ -60,6 +60,15 @@ int main(void) {
   assert(strstr(rot[3], "Top Rated Netflix") && strstr(rot[3], "Séries"));
   assert(strncmp(rot[0], "Latest", 6) == 0 && strncmp(rot[2], "Top Rated", 9) == 0);
 
+  // 1b) more sources than COL_SOURCE_MAX must not overflow the label buffers.
+  { static ColSource many[20]; static ColFolder big; static char r2[16][180];
+    for (int i = 0; i < 20; i++) { snprintf(many[i].title, 128, "Cat %d", i); strcpy(many[i].type, "movie"); }
+    big.sources = many; big.nSources = 20; collection = &big;
+    int n = big.nSources > COL_SOURCE_MAX ? COL_SOURCE_MAX : big.nSources;
+    abaRotulos(r2, big.nSources);
+    assert(n == 16 && strstr(r2[15], "Cat 15"));
+    collection = &pasta; }
+
   // 2) FIRST TAB X: the strip rolls to the logo when the target fits whole.
   {
     float W = 1271.0f, GAP = 12.0f, larg = 330.0f, px = 7.0f * (larg + GAP);
@@ -139,12 +148,21 @@ int main(void) {
     assert(got.x >= 8.0f && got.x + got.w <= NV_TELA_W - 104.0f + 0.01f);
     assert(got.x >= exibPill.x + exibPill.w || got.x + got.w <= exibPill.x);
   }
+  // Vitrine: the icon never lands on the pill, whatever its y/width.
+  lay = VT_LAY_VITRINE;
+  for (float w = 100.0f; w <= 440.0f; w += 1.0f) {
+    exibPill = (GfxRect){1480.0f, 100.0f, w, 52.0f};
+    botaoEstiloAbas(1.0f);
+    assert(got.x + got.w <= exibPill.x || got.x >= exibPill.x + exibPill.w ||
+           got.y >= exibPill.y + exibPill.h || got.y + got.h <= exibPill.y);
+  }
+  lay = VT_LAY_LISTA;
   printf("streamtabs: style icon never overlaps the display pill\\n");
 }
 '''
 with tempfile.TemporaryDirectory() as d:
     p = Path(d) / 'test.c'; p.write_text(code)
-    subprocess.run(['cc', str(p), '-I.', '-o', d + '/test'], check=True)
+    subprocess.run(['cc', '-fsanitize=address', str(p), '-I.', '-o', d + '/test'], check=True)
     subprocess.run([d + '/test'], check=True)
     q = Path(d) / 'icon.c'; q.write_text(icon)
     subprocess.run(['cc', str(q), '-o', d + '/icon'], check=True)
