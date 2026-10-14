@@ -187,6 +187,13 @@ typedef enum {
   // Medium nas outras). Mesmo corpo da sinopse (NV_FT_DET_SIN).
   TXT_DET_META_FORTE,   // ano, duracao       26 / 700
   TXT_DET_META_GEN,     // generos            26 / 600
+  // BARRA DA APPLE TV (menu.c; dono, 14/10: "a font da sidebar tem que ser
+  // mais pesada e o titulo streaming pode ser mais marcante"). Rotulo de
+  // item um peso acima do TXT_DET_META (Regular); cabecalho de secao maior
+  // e em Bold, desenhado em caixa alta com tracking.
+  TXT_TV_ROTULO,        // item da barra       25 / 500
+  TXT_TV_SECAO,         // "STREAMING"         24 / 700
+  TXT_HERO_SIN_GRANDE, // optional hero synopsis, 24/400
   TXT_NFONTES
 } TxtEstilo;
 
@@ -221,6 +228,8 @@ extern const char *const TXT_FAMILIAS_PT[TXT_FAMILIA_N];
 // que o chamador escolheu para a legenda.
 void txt_definir_fonte_interface(TxtFamilia familia);
 TxtFamilia txt_fonte_interface(void);
+// CORPO E PESO de um estilo, para teste e diagnostico (o desenho nao usa).
+void txt_estilo_medidas(TxtEstilo estilo, int *corpo, int *peso);
 // Que fonte desenharia a linha `s` no estilo dado, em texto ("principal",
 // "inter", "reserva:CJK:/caminho"). Para teste e diagnostico; NULL = nenhuma.
 // Linha de legenda ja quebrada -> ordem visual, arabe moldado so se a fonte tem

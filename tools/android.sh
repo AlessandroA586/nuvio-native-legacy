@@ -18,6 +18,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 RAIZ="$PWD"
+# Offline validation must never fetch missing build inputs.
+if [ "${NUVIO_ANDROID_OFFLINE:-0}" = 1 ]; then
+  curl() { echo 'android.sh: network disabled for offline build' >&2; return 1; }
+  export -f curl
+  export CARGO_NET_OFFLINE=true
+fi
 RELEASE_ONLY=0
 case "${1:-}" in "") ;; --release-only) RELEASE_ONLY=1;; *) echo "opcao desconhecida: $1" >&2; exit 2;; esac
 CACHE="${NUVIO_ANDROID_CACHE:-$HOME/.cache/nuvio-android}"
@@ -86,6 +92,7 @@ export ANDROID_NDK_HOME="${ANDROID_NDK_HOME:-$ANDROID_HOME/ndk/27.2.12479018}"
 FFMPEG_AAR="$EST/media3-ffmpeg-16kb.aar"
 bash tools/android/ffmpeg-android.sh "$FFMPEG_AAR" arm64-v8a armeabi-v7a
 GR=(android/gradlew -p android --console=plain -Pnuvio.sdlSrc="$CACHE/src" -Pnuvio.estagio="$EST" -Pnuvio.ffmpegAar="$FFMPEG_AAR")
+[ "${NUVIO_ANDROID_OFFLINE:-0}" != 1 ] || GR+=(--offline)
 # Motor P2P embutido: pasta achada por tools/p2p-motor/pasta.sh (NUVIO_P2P_MOTOR,
 # ou a pasta padrao); configurada e incompleta = erro, nunca pacote sem motor calado.
 . tools/p2p-motor/pasta.sh

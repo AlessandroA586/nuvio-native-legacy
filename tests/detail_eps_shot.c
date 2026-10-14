@@ -523,6 +523,9 @@ int main(int argc, char **argv) {
     // da release (0 pt ... 7 es; ver idiomacod.h): serve a conferir traducao.
     fprintf(f, "idioma %d\n", getenv("NUVIO_SHOT_IDIOMA") ? atoi(getenv("NUVIO_SHOT_IDIOMA")) : 0);
     if (getenv("NV_APPLE_EP")) fprintf(f,"homeLayoutLocal %d\n",HOME_LAYOUT_DINAMICA);
+    // #205: NV_EP_TAMANHO=0/1/2 captura os tres tamanhos dos cards de episodio
+    // da Moderna (Pequeno/Medio/Grande).
+    if (getenv("NV_EP_TAMANHO")) fprintf(f,"epTamanhoLocal %d\n",atoi(getenv("NV_EP_TAMANHO")));
     fclose(f);
     ajustes_dir(dados_dir()); }
 
