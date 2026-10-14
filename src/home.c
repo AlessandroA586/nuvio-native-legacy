@@ -23,6 +23,7 @@
 #include "homevazio.h"
 #include "cachearte.h"
 #include "fileiras.h"
+#include "curadoria.h"
 #include "continuar.h"
 #include "vertudo.h"
 #include "ctxmenu.h"
@@ -864,6 +865,7 @@ static float larguraDe(TipoFileira t) {
     case FILEIRA_FICHA:    return NV_FICHA_W;
     case FILEIRA_PALCO:    return NV_CARD_W * NV_PALCO_ESC;
     case FILEIRA_REDONDA:  return NV_REDONDA_D;
+    case FILEIRA_HEROI:    return homeLarguraUtil();   // o cartão É a fileira
     case FILEIRA_LARGA:    return NV_DIN_LARGA_W;
     // Opção adicional da referência: maior e quase quadrada, em 4:3.
     case FILEIRA_DESTAQUE_QUADRADO: return NV_DESTAQUE_QUADRADO_W;
@@ -1368,6 +1370,7 @@ static float alturaDe(TipoFileira t) {
     case FILEIRA_FICHA:    return NV_CARD_H;
     case FILEIRA_PALCO:    return NV_CARD_H * NV_PALCO_ESC;
     case FILEIRA_REDONDA:  return NV_REDONDA_D;
+    case FILEIRA_HEROI:    return homeLarguraUtil() * NV_HEROI_ASPECT;
     case FILEIRA_LARGA:    return NV_DIN_LARGA_H;
     case FILEIRA_DESTAQUE_QUADRADO: return NV_DESTAQUE_QUADRADO_H;
     case FILEIRA_COLECAO: return 270.0f;
@@ -1558,7 +1561,9 @@ static void desenhaFaixaAberta(const CatItem *ci, int r, float px, float py,
 // um poster de 322 px sobe metade de 322*0,06 = 9,7 px. Os 9% do tvOS subiam
 // 14,5 px e era isso que encostava no titulo.
 static float escalaDe(TipoFileira t) {
-  (void)t;
+  // O cartão Herói já é a fileira inteira: crescer no foco o tiraria da
+  // tela. Quem diz que ele está em foco é o anel, como no redondo.
+  if (t == FILEIRA_HEROI) return 0.0f;
   return ajustes_borda_foco() ? 0.0f : 0.06f;
 }
 // --- MEDIDA POR FILEIRA, e nao por tipo -------------------------------------
@@ -1613,11 +1618,15 @@ static float larguraFil(int r) {
   float w = (r >= 0 && r < MAX_FIL && fileiras[r].stackN)
           ? 680.0f : larguraDe(fileiras[r].tipo);
   if (fileiras[r].tipo == FILEIRA_CATALOGOS) { float h; medidaColecao(fileiras[r].forma, &w, &h); }
+  // O Tamanho (Compacto/Grande) nao entra no Herói: o cartão é a fileira
+  // inteira, e 1,2 x a largura da tela não é um tamanho, é um corte.
+  if (fileiras[r].tipo == FILEIRA_HEROI) return w;
   return w * escalaFil(r);
 }
 static float alturaFil(int r) {
   float h = alturaDe(fileiras[r].tipo);
   if (fileiras[r].tipo == FILEIRA_CATALOGOS) { float w; medidaColecao(fileiras[r].forma, &w, &h); }
+  if (fileiras[r].tipo == FILEIRA_HEROI) return h;
   return h * escalaFil(r);
 }
 // Altura TOTAL que a fileira ocupa: a arte mais o bloco de rotulo, quando ele
@@ -1974,6 +1983,7 @@ static TipoFileira tipoDaEscolha(int t) {
     case FIL_TIPO_FICHA:    return FILEIRA_FICHA;
     case FIL_TIPO_PALCO:    return FILEIRA_PALCO;
     case FIL_TIPO_REDONDA:  return FILEIRA_REDONDA;
+    case FIL_TIPO_HEROI:    return FILEIRA_HEROI;
     default:                return FILEIRA_TOP10;
   }
 }
@@ -2611,6 +2621,24 @@ static void dinAtribuirTipos(int total) {
 // metade da retomada — registra-la em fileiras.c a poria no fim da home (chave
 // nova vai para o fim) e deixaria a pessoa separa-la da outra metade.
 static int proxHome[MAX_CARDS], nProxHome;
+
+// A CURADORIA DA FILEIRA HERÓI RESOLVIDA EM ÍNDICE de catálogo — e só quando
+// muda (curadoria_revisao): cat_indice_por_imdb é uma varredura, e a home
+// remonta toda vez que um catálogo chega. -1 quando a curadoria não existe
+// ou o imdb dela não está no catálogo deste aparelho: aí a fileira cai no
+// título próprio (curadoria_escolher).
+static int heroiCuradoriaIndice(void) {
+  static unsigned rev;
+  static int idx = -2;
+  if (!curadoria_ativa()) return -1;
+  if (idx == -2 || rev != curadoria_revisao()) {
+    rev = curadoria_revisao();
+    idx = cat_indice_por_imdb(curadoria_imdb());
+    if (idx < 0 || idx >= cat_n()) idx = -1;
+  }
+  return idx;
+}
+
 static void sincronizarFileiras(void) {
   desc_ocultar_vistos_atualizar();
   int nCat = cat_n_fileiras(), r, destino = 0;
@@ -2640,10 +2668,14 @@ static void sincronizarFileiras(void) {
   // direto (cat_revisao); cat_revisao e bumpado em cat_definir_tudo,
   // cat_trocar_continuar E cat_republicar_fileiras, cobrindo todo caminho
   // que troca fils[].
-  static unsigned ultCatRev, ultFilRev, ultColRev, ultFilLim, ultCwoRev, ultOrdemRev, ultRetRev, ultItensRev;
+  static unsigned ultCatRev, ultFilRev, ultColRev, ultFilLim, ultCwoRev, ultOrdemRev, ultRetRev, ultItensRev, ultCurRev;
   unsigned catRev = cat_revisao(), filRev = fil_revisao();
   unsigned itensRev = ajustes_ocultar_filmes_vistos() ? cat_revisao_itens() : 0;
   int filLim = fil_limite();
+  // A CURADORIA da fileira Herói entra na guarda: a recomendação chega DEPOIS
+  // do catálogo (e volta a cada 30 min), e sem este termo o cartão só trocaria
+  // na próxima publicação da descoberta — que pode demorar a noite inteira.
+  unsigned curRev = curadoria_revisao();
   unsigned colRev = col_revisao();
   unsigned ordemRev = catordem_revisao();
   // cwo_revisao tambem: o conjunto de futuros pode mudar sem o catalogo mudar
@@ -2654,8 +2686,10 @@ static void sincronizarFileiras(void) {
       colRev == ultColRev && ordemRev == ultOrdemRev &&
       filLim == ultFilLim && cwoRev == ultCwoRev &&
       retomarAplicada == retomarRev && cw_retido_rev() == ultRetRev &&
+      curRev == ultCurRev &&
       ultCatRev) {   // ultCatRev=0: primeira chamada, cai no hash
     ultFilRev = filRev; ultColRev = colRev; ultFilLim = (unsigned)filLim;
+    ultCurRev = curRev;
     return;
   }
   // Local group visibility changes also change which source rows are wrapped.
@@ -2668,6 +2702,7 @@ static void sincronizarFileiras(void) {
   ultCwoRev = cwoRev;
   ultOrdemRev = ordemRev;
   ultRetRev = cw_retido_rev();
+  ultCurRev = curRev;
   unsigned revisao = 2166136261u;
   revisao = (revisao ^ itensRev) * 16777619u;
   revisao = (revisao ^ (unsigned)reservaEstado) * 16777619u;
@@ -2695,6 +2730,8 @@ static void sincronizarFileiras(void) {
   revisao = (revisao ^ cwo_revisao()) * 16777619u;
   // O titulo retido pelo cartao/faixa (cwretido.h) muda a fileira desenhada.
   revisao = (revisao ^ cw_retido_rev()) * 16777619u;
+  // A curadoria também pesa no hash: ela muda sem o catálogo mudar.
+  revisao = (revisao ^ curRev) * 16777619u;
   for (r = 0; r < nCat; r++) {
     const CatFileira *cf = cat_fileira(r);
     if (!cf) break;
@@ -2889,6 +2926,23 @@ static void sincronizarFileiras(void) {
     Fileira *s=&fileiras[i];s->stackN=0;
     if(s->tipo==FILEIRA_TOP10 && s->base[0] && s->catId[0]) {
       s->stackN=s->n;s->n=1;s->verTudo=0;
+    }
+    // A FILEIRA HEROI (#205): um cartao so. A FONTE do titulo, nesta ordem:
+    // a curadoria do Nuvio Legacy (se o imdb baixado esta no catalogo), o
+    // PRIMEIRO titulo da fileira — a colecao onde a pessoa aplicou o estilo
+    // — e, vazia, o sorteio estavel do catalogo (curadoria.h). O "Ver tudo"
+    // sai: nao ha fileira para percorrer atras de um cartao que ja e a dela.
+    if (s->tipo == FILEIRA_HEROI) {
+      static unsigned semente;   // o sorteio da sessao, guardado
+      int c, idx = -1, itens[MAX_CARDS], nIt = 0;
+      for (c = 0; c < s->n && c < MAX_CARDS; c++) {
+        int j = s->usaItens ? s->itens[c] : s->ini + c;
+        if (j >= 0 && j < cat_n()) itens[nIt++] = j;
+      }
+      idx = curadoria_escolher(itens, nIt, cat_n(), heroiCuradoriaIndice(), &semente);
+      if (idx >= 0) { s->itens[0] = idx; s->usaItens = 1; s->n = 1; }
+      else s->n = 0;
+      s->verTudo = 0;
     }
     // LINHA DO TEMPO: os titulos em ordem de lancamento (sem ano no fim).
     // Insercao estavel sobre os indices; o catalogo nao muda de ordem.
@@ -3302,6 +3356,7 @@ static void heroAquecerVizinhos(Uint32 agora) {
 }
 
 void home_atualizar(float dt, Uint32 agora) {
+  curadoria_passo();   // a curadoria da fileira Herói, no seu tempo (curadoria.h)
   sincronizarFileiras();
   // A FILEIRA DE AMIGOS tem tantas colunas quantos rostos (+ "Adicionar"), e
   // isso muda sem o catalogo mudar (um amigo novo chega do recomenda.c).
@@ -3722,6 +3777,7 @@ static const char *dinArteDaCor(void) {
   idx = fileiraItemIndice(f, 0);
   if (idx < 0) return NULL;
   deitado = editorial(f->tipo) || f->tipo == FILEIRA_LARGA ||
+            f->tipo == FILEIRA_HEROI ||
             f->tipo == FILEIRA_CONTINUE || f->tipo == FILEIRA_RETORNO ||
             ajustes_posteres_deitados();
   return arte_por_identidade(idx, deitado);
@@ -5828,7 +5884,8 @@ static void desenhaArteCard(GfxRect card, TipoFileira tipo, const char *caminho,
     // 16:9 ou cartaz) ficava no meio do card com faixas cinza dos lados (dono,
     // 03/10: "tem que colocar uma imagem cropada para preencher tudo").
     gfx_card_forcar_cover_atual = (tipo == FILEIRA_DESTAQUE_QUADRADO ||
-                                   tipo == FILEIRA_RETORNO) ? 1.0f : 0.0f;
+                                   tipo == FILEIRA_RETORNO ||
+                                   tipo == FILEIRA_HEROI) ? 1.0f : 0.0f;
     gfx_tex_aspect_atual = tex_aspecto(caminho);
     // O esqueleto fica por baixo so enquanto a arte esvanece: um
     // desenho do tamanho do card por ~220 ms, e depois nenhum.
@@ -6055,6 +6112,11 @@ static void desenhaEditorialCard(const CatItem *cItem, TipoFileira tipo, float p
 }
 
 // --- PREVIA DO ESTILO DA FILEIRA (modal do cartaz, ctxmenu.c) ---------------
+
+static void desenhaHeroiCard(const CatItem *ci, const char *selo, const char *texto,
+                             const char *caminho, GLuint t, float aArte,
+                             float px, float py, float w, float h, float raio,
+                             float f, float varre);   // o cartão da fileira Herói (#205)
 //
 // A fileira `chave` desenhada na forma `filTipo` (FilTipo de fileiras.h) dentro
 // de `area`, com as ARTES DOS ITENS DELA e os mesmos pedacos de cartao do laco
@@ -6116,7 +6178,7 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
   if (nItens < 1) return 0;
   tipo = previaMedida(fl, chave, filTipo, &forma, &pilha, &lw, &lh);
   gap = gapDe(tipo); xoff = xOffTipo(tipo);
-  deitado = editorial(tipo) || tipo == FILEIRA_LARGA ||
+  deitado = editorial(tipo) || tipo == FILEIRA_LARGA || tipo == FILEIRA_HEROI ||
             ((tipo != FILEIRA_CONTINUE) && ajustes_posteres_deitados());
   rotuloFora = temRotulo(tipo);
   rotH = rotuloFora ? NV_POSTER_COPY_H : 0.0f;
@@ -6167,6 +6229,13 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
         const char *cam = arte_por_identidade(idx, tipo == FILEIRA_CONTINUE ? 3 : deitado);
         if (tipo == FILEIRA_FICHA) { desenhaFicha(ci, px, y0, w, h, 0.0f); card.w = h * 2.0f / 3.0f; }
         GLuint t = cam ? tex_obter_larg(cam, w) : 0;
+        // A previa da fileira Herói é o cartão inteiro (arte, selo, título e
+        // as duas linhas), não só a arte: é o que a pessoa está escolhendo.
+        if (tipo == FILEIRA_HEROI) {
+          desenhaHeroiCard(ci, fl->titulo, ci ? ci->sinopse : NULL, cam, t, 1.0f,
+                           px, y0, w, h, raio, 0.0f, 0.0f);
+          continue;
+        }
         if (tipo == FILEIRA_TOP10_NUM)
           desenhaNumeral(fileiraRanking(fl, c), px, y0, h, passo - w - NV_TOP10_NUM_FOLGA * s, 1.0f);
         gfx_veu_card_limpar();
@@ -6312,6 +6381,67 @@ static void desenhaRedonda(const CatItem *ci, GLuint t, const char *caminho,
   }
 }
 
+// O CARTÃO DA FILEIRA HERÓI (#205): um cartão só do tamanho da fileira, com
+// a arte de fundo em cover, o selo no alto à esquerda, o título (logo quando
+// o título tem) e duas linhas de texto na base — sobre o véu escuro→claro.
+// Como o banner entre fileiras da Apple TV (foto do dono,
+// fotos1014/appletv-hero-card.jpg). O anel é o mesmo dos outros cards; a arte
+// é a de desenhaArteCard (esqueleto, arte ausente, varredura do foco).
+static void desenhaHeroiCard(const CatItem *ci, const char *selo, const char *texto,
+                             const char *caminho, GLuint t, float aArte,
+                             float px, float py, float w, float h, float raio,
+                             float f, float varre) {
+  const float pad = NV_HEROI_PAD;
+  GfxRect card = { px, py, w, h };
+  if (f > 0.01f && ajustes_borda_foco()) {
+    GfxRect borda = { px - NV_ANEL_FOCO, py - NV_ANEL_FOCO,
+                      w + NV_ANEL_FOCO * 2, h + NV_ANEL_FOCO * 2 };
+    float ar, ag, ab; ajustes_acento(&ar, &ag, &ab);
+    { float menor = w < h ? w : h;
+      if (ajustes_vidro()) gfx_vidro_cartao((GfxRect){px, py, w, h}, raio, f, 1.0f);
+      else
+      gfx_cor(borda, (raio * menor + NV_ANEL_FOCO) / (menor + 2 * NV_ANEL_FOCO),
+              ar, ag, ab, f); }
+  }
+  desenhaArteCard(card, FILEIRA_HEROI, caminho, t, ci, f, raio, aArte, varre);
+  // O VÉU DO TEXTO: escuro na base, clareando para cima (o mesmo desenho da
+  // legenda do cartaz deitado e do destaque — só a fração é daqui).
+  gfx_veu_base(card, raio, NV_HEROI_VEU_F, NV_HEROI_VEU_A);
+  // O SELO no alto à esquerda, como o "APPLE MUSIC LIVE" da foto.
+  if (selo && selo[0]) badge_desenhar(px + pad, py + pad, selo, BADGE_NEUTRO, 1.0f);
+  // AS DUAS LINHAS, medidas primeiro: o título senta em cima delas, e sem
+  // medir o bloco não há como saber onde a base do título fica.
+  { float tw = w - pad * 2.0f;
+    float bloco = (texto && texto[0])
+      ? txt_bloco_corta(TXT_HERO_SIN, texto, 226, 228, 233,
+                        px + pad, py + h - pad, tw, 28.0f, 0.0f, 2)
+      : 0.0f;
+    float base = py + h - pad - bloco;
+    if (texto && texto[0])
+      (void)txt_bloco_corta(TXT_HERO_SIN, texto, 226, 228, 233,
+                            px + pad, py + h - pad - bloco, tw, 28.0f, 1.0f, 2);
+    // O TÍTULO: o logo quando o título tem (a tipografia própria, a mesma
+    // regra do destaque), o nome em Bold quando não tem.
+    { const char *urlL = ci ? artehero_logo_sessao_larg(ci, w * NV_HEROI_LOGO_W) : NULL;
+      GLuint tl = urlL ? tex_obter_logo_larg(urlL, w * NV_HEROI_LOGO_W) : 0;
+      if (tl) {
+        float ap = tex_aspecto(urlL);
+        if (ap > 0.0f) {
+          float hL = h * 0.20f, wL = hL * ap;
+          if (wL > w * NV_HEROI_LOGO_W) { wL = w * NV_HEROI_LOGO_W; hL = wL / ap; }
+          { GfxRect rl = { px + pad, base - 10.0f - hL, wL, hL };
+            GfxModo m = tex_marca_escura(urlL) ? GFX_MARCA : GFX_TEXTO;
+            gfx_tex_aspect_atual = 0.0f;
+            gfx_rect(rl, tl, m, 0, 0, 0, 0.0f, 1, 1, 1, 1.0f); }
+        }
+      } else if (ci && ci->titulo[0]) {
+        TxtLinha tn = txt_linha_corta(TXT_TITULO3, ci->titulo, 245, 246, 249, 255, tw);
+        txt_desenhar(tn, px + pad, base - 10.0f - tn.h);
+      }
+    }
+  }
+}
+
 static void pintarCartao(const CartaoFoco *k, float raio) {
   const int r = k->r, c = k->c; const TipoFileira tipo = k->tipo; const CatItem *cItem = k->cItem;
   const char *caminho = k->caminho; const GLuint t = k->t; const float aArte = k->aArte;
@@ -6319,6 +6449,25 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
   const float abre = k->abre, esc = k->esc, f = k->f, px = k->px, py = k->py, w = k->w, h = k->h;
   const float varreFoco = k->varre;
   if (tipo == FILEIRA_REDONDA) { desenhaRedonda(cItem, t, caminho, px, py, w, f); return; }
+  // A FILEIRA HERÓI: o selo e as duas linhas dizem DE ONDE veio o título —
+  // "Curadoria" quando veio do Nuvio Legacy, o nome da própria fileira
+  // quando o cartão é o primeiro título dela. O texto é o da curadoria ou a
+  // sinopse do título. O OK abre o título: o card é um card de catálogo
+  // como outro qualquer, só maior.
+  if (tipo == FILEIRA_HEROI) {
+    const char *selo = NULL, *texto = NULL;
+    if (curadoria_ativa() && cItem && heroiCuradoriaIndice() >= 0 &&
+        fileiraItemIndice(&fileiras[r], c) == heroiCuradoriaIndice()) {
+      selo = i18n("Curadoria");
+      texto = curadoria_texto();
+    } else if (fileiras[r].titulo[0]) {
+      selo = fileiras[r].titulo;
+    }
+    if (!texto || !texto[0]) texto = cItem ? cItem->sinopse : NULL;
+    desenhaHeroiCard(cItem, selo, texto, caminho, t, aArte, px, py, w, h, raio,
+                     f, varreFoco);
+    return;
+  }
           if (f > 0.01f && ajustes_borda_foco()) {
             GfxRect borda = { px - NV_ANEL_FOCO, py - NV_ANEL_FOCO,
                               w + NV_ANEL_FOCO * 2, h + NV_ANEL_FOCO * 2 };
@@ -6631,7 +6780,7 @@ void home_desenhar(Uint32 agora) {
     // sobre a arte da anterior quando a fileira tem cards altos.
     float cardY = y + NV_LEGACY_ROW_HEAD_H;
 
-    int deitado = editorial(tipo) || tipo == FILEIRA_LARGA ||
+    int deitado = editorial(tipo) || tipo == FILEIRA_LARGA || tipo == FILEIRA_HEROI ||
                   ((tipo != FILEIRA_CONTINUE) && ajustes_posteres_deitados());
     int rotuloFora = temRotulo(tipo);
     if (y < NV_TELA_H + 200 && y + NV_LEGACY_ROW_HEAD_H + lh > -200) {
@@ -6970,7 +7119,8 @@ void home_desenhar(Uint32 agora) {
           float trailerCard = 0.0f;
           if (!focoHero && focus_indice(&foco, r, c) && cItem &&
               tipo != FILEIRA_CONTINUE && tipo != FILEIRA_RETORNO &&
-              tipo != FILEIRA_SOCIAL && tipo != FILEIRA_CATALOGOS) {
+              tipo != FILEIRA_SOCIAL && tipo != FILEIRA_CATALOGOS &&
+              tipo != FILEIRA_HEROI) {
             int expande = ajustes_expandir_poster() && podeExpandir(r) &&
                           r == expFileira && c == expColuna;
             int deitadoJa = h > 1.0f && w / h >= NV_CARTAO_TRAILER_ASP;
@@ -7109,7 +7259,7 @@ void home_desenhar(Uint32 agora) {
       if (tipo == FILEIRA_SOCIAL || tipo == FILEIRA_CATALOGOS ||
           fileiraEhCanal(&fileiras[r])) continue;
       float lw = larguraFil(r);
-      int deitado = editorial(tipo) || tipo == FILEIRA_LARGA ||
+      int deitado = editorial(tipo) || tipo == FILEIRA_LARGA || tipo == FILEIRA_HEROI ||
                     (tipo != FILEIRA_CONTINUE && ajustes_posteres_deitados());
       for (int c = 0; c < fileiras[r].n && !pediu; c++) {
         float x = homeFileiraX(r, c);

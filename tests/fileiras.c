@@ -176,9 +176,11 @@ int main(void) {
     { FilEstiloLinha l[FIL_TIPO_N];
       int nl = fil_estilo_linhas("addon_movie_formas", l, FIL_TIPO_N);
       // 7 de antes + Linha do tempo, Cartaz com ficha e Palco (06/10).
-      assert(nl == 11);
+      assert(nl == 12);
       assert(l[7].tipos[0] == FIL_TIPO_LINHA_TEMPO && l[8].tipos[0] == FIL_TIPO_FICHA &&
              l[9].tipos[0] == FIL_TIPO_PALCO && l[10].tipos[0] == FIL_TIPO_REDONDA);
+      // #205: a fileira Herói — um cartão só do tamanho da fileira.
+      assert(l[11].tipos[0] == FIL_TIPO_HEROI && !strcmp(l[11].rotulo, "Herói"));
       assert(!strcmp(l[2].rotulo, "Paisagem") && l[2].n == 3 &&
              l[2].tipos[0] == FIL_TIPO_SERVICO && l[2].tipos[2] == FIL_TIPO_DESTAQUE &&
              !strcmp(l[2].nomes[2], "Paisagem grande"));

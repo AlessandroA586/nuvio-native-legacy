@@ -282,3 +282,4 @@
   0, /* remote tips: action */
   0, /* show genre under the hero logo: Ligado, as always */
   1, /* addon name on the Cinema opening (#205): Desligado, local */
+  0, /* curation address (#205): action; the URL lives in curadoria.txt */
