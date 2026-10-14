@@ -139,6 +139,27 @@ static void testeCentral(void) {
   central_fechar();
 }
 
+// --- 6. Revisao: reaparicao por quadro (nao relogio) e pilula sem opcao --------
+static void testeRevisao(void) {
+  // P2: engasgo de 300 ms COM o OSD na tela (quadros consecutivos) segue em voo.
+  osdUlt = 0; osdQuadro = 0; memset(osdFocoPronto, 0, sizeof osdFocoPronto);
+  gfx_quadro_n = 10; osdFocoAlvo = AV_B_PAUSA; osdTic();
+  gfx_quadro_n = 11; osdFocoAlvo = AV_B_GUIA; SDL_Delay(300); osdTic();
+  CHECK(MEIO(osdFoco[AV_B_GUIA]), "OSD: engasgo nao salta (%.3f)", osdFoco[AV_B_GUIA]);
+  // O cartao de erro desenhado todo quadro nao mexe no OSD; depois de sumir
+  // alguns quadros o OSD reaparece assentado no foco da vez.
+  erroUlt = 0; erroQuadro = 0; memset(erroFocoPronto, 0, sizeof erroFocoPronto);
+  for (gfx_quadro_n = 12; gfx_quadro_n < 40; gfx_quadro_n++) { erroFocoAlvo = 1; erroTic(); }
+  osdFocoAlvo = AV_B_AUDIO; osdTic();
+  CHECK(fabsf(osdFoco[AV_B_AUDIO] - 1.0f) < 0.001f, "OSD: reaparece assentado (%.3f)", osdFoco[AV_B_AUDIO]);
+  // Cartao: o OSD ser o ultimo desenhado nao o faz saltar.
+  erroFocoAlvo = 2; SDL_Delay(300); erroTic();   // quadro 40, o seguinte ao 39
+  CHECK(MEIO(erroFocoA[2]), "erro: engasgo nao salta (%.3f)", erroFocoA[2]);
+  // P1: linha de plugin (op = -1) segue `ligado` e nao toca nas molas.
+  CHECK(aj2PilulaOn(-1, 1) == 1.0f && aj2PilulaOn(-1, 0) == 0.0f, "ajustes: pilula de plugin segue ligado");
+  CHECK(aj2PilulaOn(AJ_N, 1) == 1.0f, "ajustes: op fora da faixa nao escreve");
+}
+
 // --- 5. Ajustes: a pilula Ligado/Desligado troca em mola ----------------------
 static void testeAjustes(void) {
   int op = -1, i;
@@ -169,6 +190,7 @@ int main(void) {
   testeEpisodios();
   testeCentral();
   testeAjustes();
+  testeRevisao();
   if (falhas) { printf("%d falha(s)\n", falhas); return 1; }
   printf("animacoes205: tudo em mola\n");
   return 0;

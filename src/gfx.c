@@ -1772,7 +1772,9 @@ static void dinPintar(float y0);
 static int foscoOk;   // este quadro assou fundo (gfx_ambiente_preparar): o vidro fosco tem fonte
 static int foscoBloq; // este quadro tem video vivo por baixo (gfx_vidro_fosco_bloquear)
 static GLuint foscoFonte; // fonte do fosco posta pelo fundo deste quadro (gfx_vidro_fosco_fonte)
+unsigned gfx_quadro_n;
 void gfx_novo_quadro(void) {
+  gfx_quadro_n++;
   gfx_n_rect = gfx_n_prog = gfx_n_bind = gfx_n_outros = 0;
   gfx_ms_rect = gfx_ms_outros = 0.0;
   gfx_fill = 0.0; gfx_fill_vis = 0.0; gfx_n_cheio = 0; gfx_n_cheio_mistura = 0;

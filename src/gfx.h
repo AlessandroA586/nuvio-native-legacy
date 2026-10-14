@@ -504,6 +504,9 @@ extern int gfx_rastro_grandes;   // rastro: imprime todo desenho >= 12% da tela
 // para medir na TV quanto fps cada tipo de desenho custa, sem recompilar.
 extern unsigned long long gfx_modos_desligados;
 extern double gfx_fill_modo_ult[GFX_NMODOS];
+// Quadros iniciados: quem anima por reaparicao compara com o ultimo quadro em
+// que desenhou (um relogio de parede confunde engasgo com reaparicao).
+extern unsigned gfx_quadro_n;
 void gfx_novo_quadro(void);
 
 // EFEITOS LEVES (nivel 1 de gpunivel.h). 1 = sem o dither dos degrades (o

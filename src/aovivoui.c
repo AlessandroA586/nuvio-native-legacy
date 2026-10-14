@@ -161,6 +161,7 @@ static int toqueRolar(const PonteiroRolagem *e) {
 static float    osdFoco[AV_B_N], erroFocoA[3];
 static unsigned char osdFocoPronto[AV_B_N], erroFocoPronto[3];
 static Uint32 osdUlt, erroUlt;
+static unsigned osdQuadro, erroQuadro;
 static int osdFocoAlvo = -1, erroFocoAlvo = -1;
 static void osdPasso(float dt) {
   int i, red = ajustes_animacoes_reduzidas();
@@ -183,23 +184,26 @@ static void erroPasso(float dt) {
   }
   if (erroFocoAlvo < 0) memset(erroFocoPronto, 0, sizeof erroFocoPronto);
 }
-static void osdTic(void) {
+// dt da superficie (SDL_GetTicks DELA, com teto de 50 ms) e se ela REAPARECEU:
+// reaparecer e nao ter desenhado no quadro anterior (gfx_quadro_n), nao um
+// buraco de relogio — um engasgo de 250 ms com o OSD na tela nao pode virar um
+// salto, e o cartao de erro desenhado todo quadro nao mexe no OSD.
+static float tic(Uint32 *ult, unsigned *quadro, int *reapareceu) {
   Uint32 agora = SDL_GetTicks();
-  float dt = osdUlt ? (float)(agora - osdUlt) / 1000.0f : 0.0f;
-  // Fora da tela o desenho nao roda e o relogio envelhece: um gap deste
-  // tamanho e uma REAPARICAO, e a mola nasce assentada no foco atual.
-  int reapareceu = dt > 0.25f;
-  if (dt > 0.05f) dt = 0.05f;
-  osdUlt = agora;
+  float dt = *ult ? (float)(agora - *ult) / 1000.0f : 0.0f;
+  *reapareceu = gfx_quadro_n - *quadro > 1u;
+  *ult = agora; *quadro = gfx_quadro_n;
+  return dt > 0.05f ? 0.05f : dt;
+}
+static void osdTic(void) {
+  int reapareceu;
+  float dt = tic(&osdUlt, &osdQuadro, &reapareceu);
   if (reapareceu) memset(osdFocoPronto, 0, sizeof osdFocoPronto);
   osdPasso(dt);
 }
 static void erroTic(void) {
-  Uint32 agora = SDL_GetTicks();
-  float dt = erroUlt ? (float)(agora - erroUlt) / 1000.0f : 0.0f;
-  int reapareceu = dt > 0.25f;
-  if (dt > 0.05f) dt = 0.05f;
-  erroUlt = agora;
+  int reapareceu;
+  float dt = tic(&erroUlt, &erroQuadro, &reapareceu);
   if (reapareceu) memset(erroFocoPronto, 0, sizeof erroFocoPronto);
   erroPasso(dt);
 }
