@@ -180,6 +180,9 @@ int ajustes_fonte_usar_outros(void);
 // R9b: 0 Equilibrio, 1 Qualidade maxima, 2 Começar rápido / 0 Preferir, 1 Indiferente, 2 Evitar HDR e DV.
 int ajustes_fonte_prioridade(void);
 int ajustes_fonte_hdr(void);
+// 1 = a escolha automatica prefere fontes que anunciam o Idioma do audio
+// (ling_audio) ou audio duplo, na mesma resolucao; nunca filtra (fontenota.h).
+int ajustes_fonte_idioma_audio(void);
 
 // Idioma da interface: um IDIOMA_* de idiomacod.h (pt, en, ro, uk, ru, fr, de, es). Valor
 // gravado fora do intervalo (arquivo editado a mao) cai em portugues.

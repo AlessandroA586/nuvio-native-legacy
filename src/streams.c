@@ -39,6 +39,8 @@
 #include "p2p.h"
 #include "p2pmotor.h"
 #include "fonteauto.h"
+#include "fontenota.h"
+#include "linguas.h"
 #include "fontesmortas.h"
 #include "video.h"
 #include "botoes.h"
@@ -862,6 +864,90 @@ static int degrauRes(const Stream *s) {
   return s->altura >= 2160 ? 3 : s->altura >= 1080 ? 2 : s->altura >= 720 ? 1 : 0;
 }
 
+// EVIDENCIA DE QUALIDADE ALEM DA RESOLUCAO (fontenota.h): tipo de lancamento,
+// bitrate confiavel, audio, codec, idioma preferido e compatibilidade. Antes
+// disto dois 1080p SDR empatavam e o +300 do MP4 decidia (Code Geass S1E3: um
+// WEB-DL de 2 Mbps em MP4 na frente de um REMUX de 36 Mbps).
+//
+// CACHE POR INDICE DA LISTA: pontos() roda por fonte a cada quadro com a folha
+// aberta, e a nota varre o texto inteiro da fonte. O texto nao muda depois de
+// a fonte entrar; mudam a lista (geracao), a duracao conhecida e a preferencia
+// de idioma — qualquer uma delas zera o cache.
+static pthread_mutex_t notaTrava = PTHREAD_MUTEX_INITIALIZER;
+static FonteNota *notaCache;
+static int notaCacheN, notaCacheCap;
+static unsigned notaCacheGer;
+static double notaCacheDur;
+static char notaCacheIdioma[16];
+static double duracaoDaLista(void) {
+  double seg = 0;
+  pthread_mutex_lock(&fitMetaTrava);
+  if (alvoLista[0])
+    for (int i = 0; i < FIT_DUR_SLOTS; i++)
+      if (!strcmp(fitDur[i].alvo, alvoLista)) {
+        seg = fitDur[i].midiaSeg ? fitDur[i].midiaSeg : fitDur[i].metaSeg;
+        break;
+      }
+  pthread_mutex_unlock(&fitMetaTrava);
+  return seg;
+}
+static const char *idiomaPreferidoFonte(void) {
+  const char *c = ajustes_fonte_idioma_audio() ? ling_audio() : "";
+  return c ? c : "";
+}
+static void notaAvaliar(const Stream *s, double dur, const char *idioma, FonteNota *nt) {
+  FonteNotaEntrada e;
+  memset(&e, 0, sizeof e);
+  e.rotulo = s->rotulo; e.descricao = s->descricao; e.arquivo = s->arquivo;
+  e.altura = s->altura; e.bytes = s->tamanhoBytes; e.tamanhoMB = s->tamanhoMB;
+  e.duracaoSeg = dur; e.idiomaPref = idioma;
+  // Dicas dos selos: cobrem o `title` do addon, que o parser so guarda quando
+  // falta a descricao (fontenota.h).
+  { uint64_t b = s->badges;
+    e.tierDica = b & badges_bit("q-remux") ? FN_TIER_REMUX : b & badges_bit("q-bluray") ? FN_TIER_BLURAY
+               : b & badges_bit("q-webdl") ? FN_TIER_WEBDL : b & badges_bit("q-webrip") ? FN_TIER_WEBRIP : 0;
+    e.audioDica = b & (badges_bit("a-truehd") | badges_bit("a-truehd-dv") | badges_bit("a-dtshdma") |
+                       badges_bit("a-dtsx")) ? FN_AUD_SEM_PERDA
+                : b & (badges_bit("a-atmos") | badges_bit("a-atmos-dv") | badges_bit("a-ddp") | badges_bit("a-dd") |
+                       badges_bit("a-dd-dv") | badges_bit("a-dts") | badges_bit("a-dtshd")) ? FN_AUD_SURROUND : 0;
+    e.codecDica = b & badges_bit("co-x265") ? FN_CODEC_HEVC : b & badges_bit("co-av1") ? FN_CODEC_AV1
+                : b & badges_bit("co-x264") ? FN_CODEC_AVC : 0; }
+#ifdef NV_LINUX_DESKTOP
+  e.semHi10p = 0;   // o desktop decodifica em software
+#else
+  e.semHi10p = 1;   // TV/Android: Hi10P nao tem decodificador de hardware
+#endif
+  fontenota_avaliar(&e, nt);
+}
+static void notaDe(const Stream *s, FonteNota *nt) {
+  double dur = duracaoDaLista();
+  const char *idioma = idiomaPreferidoFonte();
+  int i = lista && s >= lista && s < lista + n ? (int)(s - lista) : -1;
+  if (i < 0) { notaAvaliar(s, dur, idioma, nt); return; }
+  pthread_mutex_lock(&notaTrava);
+  if (notaCacheGer != listaGeracao || notaCacheDur != dur || strcmp(notaCacheIdioma, idioma)) {
+    notaCacheN = 0; notaCacheGer = listaGeracao; notaCacheDur = dur;
+    snprintf(notaCacheIdioma, sizeof notaCacheIdioma, "%s", idioma);
+  }
+  if (i >= notaCacheN) {
+    if (n > notaCacheCap) {
+      FonteNota *nv = realloc(notaCache, sizeof *nv * (size_t)n);
+      if (!nv) { pthread_mutex_unlock(&notaTrava); notaAvaliar(s, dur, idioma, nt); return; }
+      notaCache = nv; notaCacheCap = n;
+    }
+    while (notaCacheN <= i) { notaAvaliar(&lista[notaCacheN], dur, idioma, &notaCache[notaCacheN]); notaCacheN++; }
+  }
+  *nt = notaCache[i];
+  pthread_mutex_unlock(&notaTrava);
+}
+// Evidencia + idioma de uma fonte, para comparar duas da mesma resolucao
+// (memoria do automatico, stream_grupo_sem_perda).
+static long notaComparavel(const Stream *s) {
+  FonteNota nt;
+  notaDe(s, &nt);
+  return fontenota_evidencia(&nt) + nt.ptsIdioma;
+}
+
 // QUALIDADE do modo Equilibrio e Qualidade maxima, sempre < 50000 (as multas de
 // origem/cache/teto abaixo sao >= 140000, entao nenhum HDR compensa um plugin
 // ou uma fonte fora de cache).
@@ -875,6 +961,9 @@ static long qualidade(const Stream *s, int modo) {
   q += s->altura / 10;
   if (s->mp4) q += 300;
   if (s->dolbyAtmos && ajustes_dolby_atmos()) q += 200;
+  // Tipo de lancamento, bitrate, audio, codec e idioma, DENTRO do degrau: um
+  // REMUX 1080p passa do WEB-DL 1080p, nunca de um 4K (fontenota_somar).
+  { FonteNota nt; notaDe(s, &nt); q = fontenota_somar(q, &nt, 1); }
   return q;
 }
 
@@ -963,6 +1052,9 @@ static long pontosDoAlvo(const Stream *s, const char *alvo) {
       p -= gb > 10 ? 40000 : gb * 4000;
       { int pref = ajustes_fonte_hdr(), h = nivelHdr(s);
         if (pref == 0) p += h * 50; else if (pref == 2 && h) p -= 50; }
+      // Sem a evidencia de qualidade (o modo e abrir rapido), mas com o idioma
+      // preferido e a compatibilidade (Hi10P, 4K upscale).
+      { FonteNota nt; notaDe(s, &nt); p = fontenota_somar(p, &nt, 0); }
     } else p += qualidade(s, modo);
   }
   p -= multasDeAlvo(s, alvo);
@@ -1550,12 +1642,21 @@ static void logarEscolha(int escolhida, int pref, int modoPrimeira) {
              r.razao == SF_SEM_DURACAO ? "no runtime" : r.razao == SF_SEM_HOST ? "no host" : "no measurement");
   printf("[fonte] auto pick: \"%s\" [%s] points=%ld reason=%s | prefs: priority=%s hdr=%s dv=%s | size=%s | fit=%s | runner-up=",
          w->rotulo, a, pe, escolhida == pref ? "remembered for this title" : modoPrimeira ? "first in addon order"
-         : "best score (quality/HDR > cached > addon over plugin)",
+         : "best score (resolution > HDR > release/bitrate/audio > cached > addon over plugin)",
          ajustes_fonte_prioridade() == 1 ? "max-quality" : ajustes_fonte_prioridade() == 2 ? "smoothness" : "balanced",
          ajustes_fonte_hdr() == 1 ? "indifferent" : ajustes_fonte_hdr() == 2 ? "avoid" : "prefer",
          ajustes_dolby_vision() ? "on" : "off", tam, fit);
   if (vice >= 0) printf("\"%s\" [%s] points=%ld\n", lista[vice].rotulo, b, pv);
   else printf("none\n");
+  // POR QUE ELA VENCEU, parcela por parcela (fontenota_explicar): so campos
+  // derivados — nenhuma URL, chave de debrid ou texto cru da fonte.
+  { FonteNota nw, nr;
+    char ew[256], er[256] = "none";
+    const char *lp = idiomaPreferidoFonte();
+    notaDe(w, &nw); fontenota_explicar(&nw, ew, sizeof ew);
+    if (vice >= 0) { notaDe(&lista[vice], &nr); fontenota_explicar(&nr, er, sizeof er); }
+    printf("[fonte] auto pick evidence: winner {%s} | runner-up {%s} | lang-pref=%s runtime=%.0fs\n",
+           ew, er, lp[0] ? lp : "off", duracaoDaLista()); }
   pthread_mutex_unlock(&verTrava);
 }
 
@@ -2597,6 +2698,9 @@ int stream_verificar_proxima_vod(int atualIdx, int tentativas, int *conferidas) 
   return -1;
 }
 
+// Diferenca de evidencia (fontenota) a partir da qual a memoria do automatico
+// cede: maior que o desempate de audio/10-bit, menor que um tipo de lancamento.
+#define STREAM_MEMORIA_MARGEM 300
 int stream_grupo_sem_perda(int i) {
   int a, gi, ga;
   if (i < 0 || i >= n || automaticaExcluida(i) || ehInformativa(&lista[i])) return 0;
@@ -2609,10 +2713,56 @@ int stream_grupo_sem_perda(int i) {
   if (lista[i].altura < lista[a].altura || lista[i].dolbyVision < lista[a].dolbyVision) return 0;
   if (lgMp4Primeiro() && lista[i].altura == lista[a].altura &&
       stream_e_mp4(&lista[a]) && !stream_e_mp4(&lista[i])) return 0;
+  // A MEMORIA DO AUTOMATICO NAO PRENDE UMA RELEASE PIOR (Code Geass, 14/10): o
+  // WEB-DL de 2 Mbps escolhido num episodio voltava pelo bingeGroup no
+  // seguinte, mesmo com um REMUX na lista, porque so resolucao e DV contavam
+  // aqui. Na "Melhor fonte" com evidencia (Equilibrio/Qualidade maxima), a
+  // lembrada perde quando a do automatico tem evidencia claramente maior na
+  // mesma resolucao. A escolha MANUAL (fontepref manual) nao passa por aqui.
+  if (!ajustes_fonte_primeira() && ajustes_fonte_prioridade() != 2 && lista[i].altura == lista[a].altura &&
+      notaComparavel(&lista[i]) + STREAM_MEMORIA_MARGEM < notaComparavel(&lista[a])) {
+    printf("[fonte] auto memory: \"%s\" skipped, \"%s\" has stronger release evidence\n",
+           lista[i].rotulo, lista[a].rotulo);
+    return 0;
+  }
   return 1;
 }
 int stream_automatico(void) { return automaticoCom(1); }
 int stream_automatico_canal(void) { return automaticoCom(0); }
+
+// "PRIMEIRA DA LISTA" NA FOLHA: o selo "Melhor para esta TV" e a primeira linha
+// diziam a vencedora da PONTUACAO mesmo com a fonte automatica em "Primeira da
+// lista", enquanto stream_primeira_boa tocava a primeira na ordem do addon. A
+// mesma fila de stream_primeira_boa (fonteauto_fila_o, modo PRIMEIRA, grupos,
+// teto e ordem dos add-ons), sem a lembrada — automaticaDaFolha ja a poe na
+// frente. Chamar com a lista estavel (fio da tela).
+static int automaticoPrimeira(void) {
+  int fila[1], nf, q, r = -1, total = n;
+  long *pts; unsigned char *acima, *excl; signed char *grp; int *rk, *ordem;
+  if (total < 1) return -1;
+  pts = calloc((size_t)total, sizeof *pts); acima = calloc((size_t)total, 1);
+  excl = calloc((size_t)total, 1); grp = calloc((size_t)total, 1);
+  rk = calloc((size_t)total, sizeof *rk); ordem = calloc((size_t)total, sizeof *ordem);
+  if (pts && acima && excl && grp && rk && ordem) {
+    for (q = 0; q < total; q++) {
+      int i = ORD(q);
+      ordem[q] = i;
+      acima[q] = (unsigned char)!cabeNoTeto(&lista[i]);
+      excl[q] = (unsigned char)foraDoAuto(i);
+      grp[q] = (signed char)grupoDe(i);
+      rk[q] = fonteregra_ordem_rank(lista[i].provedor);
+    }
+    nf = fonteauto_fila_o(FONTEAUTO_PRIMEIRA, total, -1, pts, acima, excl, grp, rk,
+                          ajustes_fonte_ordem_uso(), 1, fila);
+    if (nf > 0) r = ordem[fila[0]];
+  }
+  free(pts); free(acima); free(excl); free(grp); free(rk); free(ordem);
+  return r;
+}
+// A que a folha marca como automatica: a do modo em vigor.
+static int automaticoDaFolhaModo(void) {
+  return !canalFolha && ajustes_fonte_primeira() ? automaticoPrimeira() : automaticoCom(!canalFolha);
+}
 
 
 static int grupo, filtro, soMp4, soCache, soDub;
@@ -2704,7 +2854,7 @@ static int nFiltrados(void) {
 // Uma vez por quadro, nunca por linha: stream_automatico percorre a lista.
 static int automaticaDaFolha(void) {
   return preferida >= 0 && !lista[preferida].foraCache && !automaticaExcluida(preferida) &&
-         (canalFolha || !excedeDecoder(&lista[preferida])) ? preferida : automaticoCom(!canalFolha);
+         (canalFolha || !excedeDecoder(&lista[preferida])) ? preferida : automaticoDaFolhaModo();
 }
 
 // A LISTA AGRUPADA POR RESOLUCAO. A ordem da lista (a pontuacao) vale DENTRO
@@ -3514,7 +3664,7 @@ void stream_folha_abrir(void) {
   // nao e a de maior pontuacao, entao abrir na linha 0 poria o realce numa
   // fonte qualquer de 4K enquanto a marca "automatica" fica la embaixo.
   aut = automaticaDaFolha();
-  melhorFolha = automaticoCom(!canalFolha);
+  melhorFolha = automaticoDaFolhaModo();
   alvo = atual >= 0 ? atual : aut;
   abreFoco = 1; abreAnt = 0; linhaAnt = -1; foco = 0;
   montar(aut);
@@ -3754,7 +3904,7 @@ void stream_folha_atualizar(float dt, Uint32 agora) {
   }
   abreFoco = anim_mola(abreFoco, 1, dt, NV_MOLA_TELA);
   abreAnt  = anim_mola(abreAnt, 0, dt, NV_MOLA_TELA);
-  melhorFolha = automaticoCom(!canalFolha);
+  melhorFolha = automaticoDaFolhaModo();
   montar(automaticaDaFolha());
   if (focoFixo >= 0) {
     int r = grupo == 1 ? linhaDe(focoFixo) : -1;
@@ -4279,7 +4429,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       txt_desenhar_alpha(num[qidx],r.x+22+nome[qidx].w+10,r.y+(FOLHA_ABA_H-num[qidx].h)*.5f+1,anim);
       sx+=iw[qidx]+6.0f; } }
   automatica = automaticaDaFolha();
-  melhor = melhorFolha = automaticoCom(!canalFolha);
+  melhor = melhorFolha = automaticoDaFolhaModo();
   montar(automatica);
   nf=nOrdem;
   gfx_recorte(x,FOLHA_TOPO-8,w,folhaBase-(FOLHA_TOPO-8));

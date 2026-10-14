@@ -198,7 +198,7 @@ static int ajCenaSecao(int op) {
     case AJ_FONTE_PRAZO: case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON: case AJ_TAM_MAX: case AJ_TAM_MIN: case AJ_SELOS_CORES: case AJ_SELOS_PACOTE: case AJ_SELOS_PACOTE_ADD:
     case AJ_FONTE_ESCOPO: case AJ_FONTE_ADDONS_PERM: case AJ_FONTE_PLUGINS_PERM: case AJ_FONTE_OUTROS:
     case AJ_FONTE_REGEX: case AJ_FONTE_REGEX_PADRAO: case AJ_FONTE_REGEX_MODELO:
-    case AJ_FONTE_ORDEM: case AJ_FONTE_ORDEM_USO:
+    case AJ_FONTE_ORDEM: case AJ_FONTE_ORDEM_USO: case AJ_FONTE_IDIOMA_AUDIO:
     case AJ_SELOS_PACOTE_REM:
       return AJC_REP_FONTE;
     // 2.0.3: HDR e Dolby Vision mora em Imagem e som.
