@@ -102,7 +102,7 @@ const char *ling_original(void);
 // Indice de "Original do titulo" dentro da lista de opcoes. E o ULTIMO item de
 // proposito: o ajustes.txt grava indice, nao codigo, entao inserir no meio
 // reinterpreta o arquivo de quem ja tem ajuste salvo (ver a nota em linguas.c).
-#define LING_OPC_ORIGINAL 30
+#define LING_OPC_ORIGINAL 33
 int         ling_opcao_n(void);
 const char *ling_opcao_codigo(int i);   // "" para conta, "*" para sem filtro
 

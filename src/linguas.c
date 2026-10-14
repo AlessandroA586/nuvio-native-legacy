@@ -41,7 +41,7 @@ static const struct { const char *cod, *nome; } NOMES[] = {
   // tabela nao nomeava ("HRV", "BUL"...). So as familias de 2 letras: os
   // codigos de 3 letras e as variantes chegam aqui por familia() (ling_nome).
   { "hr", "Croata" },     { "bg", "Búlgaro" },   { "sk", "Eslovaco" },
-  { "sr", "Sérvio" },     { "sl", "Esloveno" },  { "et", "Estoniano" },
+  { "sr", "Sérvio" },     { "bs", "Bósnio" },    { "sl", "Esloveno" },  { "et", "Estoniano" },
   { "lv", "Letão" },      { "lt", "Lituano" },   { "ca", "Catalão" },
   { "eu", "Basco" },      { "gl", "Galego" },    { "is", "Islandês" },
   { "fa", "Persa" },      { "ms", "Malaio" },    { "tl", "Filipino" },
@@ -120,6 +120,11 @@ static const char *familia(const char *c, char *buf) {
     // #429: servo-croata. "hbs"/"sh" e o codigo conjunto que muitos MKV usam
     // para croata, servio e bosnio; ling_casa trata "sh" como os tres.
     { "bos","bs" },{ "hbs","sh" },
+    // #429: variantes regionais do conjunto servo-croata que MKV etiqueta com
+    // tracinho ("hbs-hrv", "hbs-srp"). Sem isto familia() devolvia "hbs" cru
+    // e ling_casa nao casava com preferencia "hr".
+    { "hbs-hrv","hr" },{ "hbs_hrv","hr" },{ "hbs-srp","sr" },{ "hbs_srp","sr" },
+    { "hbs-bos","bs" },{ "hbs_bos","bs" },
   };
   size_t i;
   for (i = 0; i < sizeof F / sizeof *F; i++)
@@ -130,6 +135,8 @@ static const char *familia(const char *c, char *buf) {
     for (k = 0; c[k] && c[k] != '-' && c[k] != '_' && k + 1 < 8; k++)
       d[k] = (char)(c[k] >= 'A' && c[k] <= 'Z' ? c[k] + 32 : c[k]);
     d[k] = 0;
+    for (i = 0; i < sizeof F / sizeof *F; i++)
+      if (!strcasecmp(d, F[i].cod)) return F[i].fam;
     return d; }
 }
 
@@ -310,8 +317,8 @@ const char *ling_audio(void)    { return emVigor(localAud, contaAud); }
 static const char *OPCOES_COD[] = {
   "", "*",
   "pt", "en", "es",
-  "de", "ar", "zh", "da", "ko", "fr", "el", "he", "nl", "hi", "hu", "id",
-  "it", "ja", "no", "pl", "ro", "ru", "sv", "th", "cs", "tr", "uk", "vi", "fi",
+  "de", "ar", "zh", "da", "ko", "fr", "el", "he", "nl", "hi", "hu", "hr", "sr", "bs",
+  "id", "it", "ja", "no", "pl", "ro", "ru", "sv", "th", "cs", "tr", "uk", "vi", "fi",
   // "~" = ORIGINAL DO TITULO. Nao e um idioma: e "descubra qual e o idioma
   // deste filme e toque esse". Quem resolve e ling_definir_original(), chamado
   // por quem abre o titulo; aqui so mora o marcador.

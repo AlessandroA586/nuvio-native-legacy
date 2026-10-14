@@ -943,10 +943,10 @@ _Static_assert(sizeof V_IDIOMA / sizeof *V_IDIOMA == IDIOMA_N + 1,
 // vez de serem uma segunda lista escrita a mao aqui. LING_MAX_OPC e folga: se
 // linguas.c crescer, o excedente simplesmente nao aparece — melhor que ler
 // fora do vetor.
-// 32: a lista de linguas.c tem 30 entradas (2 acoes + 28 idiomas). O valor
+// 36: a lista de linguas.c tem 34 entradas (2 acoes + 31 idiomas). O valor
 // anterior era 24 e TRUNCAVA em silencio — os idiomas do fim da lista existiam
 // em linguas.c e nao apareciam na tela.
-#define LING_MAX_OPC 32
+#define LING_MAX_OPC 36
 // TEMA: a cor de DESTAQUE, e so ela.
 //
 // O app web tem doze temas e cada um troca onze variaveis de CSS, o fundo
