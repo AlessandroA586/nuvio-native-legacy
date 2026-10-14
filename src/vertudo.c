@@ -2425,7 +2425,7 @@ static void botaoExibicao(float a, float x0) {
     // Pastilha escura propria: sobre arte clara a dica solta nao se le.
     TxtLinha d = txt_linha(TXT_MINI, "OK troca a exibição", 236, 239, 245, 255);
     GfxRect dp = { x, y + H + 8.0f, d.w + 24.0f, d.h + 12.0f };
-    gfx_cor(dp, NV_RAIO_PILL, 0.05f, 0.055f, 0.07f, 0.82f * a * f);
+    gfx_vidro_ou_solido(dp, NV_RAIO_PILL, GFX_VIDRO_DENS, a * f, 0.05f, 0.055f, 0.07f, 0.82f);
     txt_desenhar_alpha(d, dp.x + 12.0f, dp.y + 6.0f, a * f);
   }
 }
