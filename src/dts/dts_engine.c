@@ -143,8 +143,8 @@ static int fail(DtsEngine *e,const char *msg,int code) {
 }
 static int cancelled(void *opaque) {
   DtsEngine *e=opaque;
-  /* The owner's flag (the HLS session stop) escalates into the permanent one,
-   * so the network thread that polls &e->cancelled wakes up too. */
+  /* Latch the owner's stop permanently. The streaming transport also polls
+   * ext_cancel directly, including while the reader is waiting for bytes. */
   if(e->ext_cancel && __atomic_load_n((volatile int *)e->ext_cancel,__ATOMIC_RELAXED))
     __atomic_store_n(&e->cancelled,1,__ATOMIC_RELAXED);
   return __atomic_load_n(&e->cancelled,__ATOMIC_RELAXED);

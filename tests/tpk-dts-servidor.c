@@ -22,8 +22,7 @@ static int fails;
 // ---- fake converter ------------------------------------------------------------
 struct DtsRemux { DtsRemuxInfo in; volatile int *cancel; };
 struct DtsRemuxGen { int x; };
-static volatile int *g_probe_cancel;   // flag the server handed to dts_remux_open
-static int g_probe_seen;
+static int g_probe_seen, g_probe_done;
 
 int dts_remux_available(void) { return 1; }
 void dts_engine_set_ring_mib(int mib) { (void)mib; }
@@ -32,8 +31,9 @@ DtsRemux *dts_remux_open(const char *url, const char *h, int ord, int st, double
                          char *err, size_t errn) {
   (void)h; (void)ord; (void)st; (void)seg;
   if (strstr(url, "hang")) {           // blocked on the network until the session is cancelled
-    g_probe_cancel = cancel; g_probe_seen = 1;
-    while (!*cancel) usleep(5000);
+    __atomic_store_n(&g_probe_seen, 1, __ATOMIC_RELAXED);
+    while (!__atomic_load_n(cancel, __ATOMIC_RELAXED)) usleep(5000);
+    __atomic_store_n(&g_probe_done, 1, __ATOMIC_RELAXED);
     snprintf(err, errn, "cancelled");
     return NULL;
   }
@@ -82,9 +82,9 @@ static int conectar(int porta) {
   if (connect(s, (struct sockaddr *)&a, sizeof a) < 0) { close(s); return -1; }
   return s;
 }
-// One request on a fresh connection; the whole response (until close or timeout) in out.
-static int pedir(int porta, const char *req, char *out, size_t n) {
-  int s = conectar(porta), tot = 0;
+// Read one response, retaining the socket for keep-alive teardown tests.
+static int pedirSock(int s, const char *req, char *out, size_t n) {
+  int tot = 0;
   out[0] = 0;
   if (s < 0) return -1;
   send(s, req, strlen(req), 0);
@@ -101,7 +101,12 @@ static int pedir(int porta, const char *req, char *out, size_t n) {
       if (head || tot >= (int)(he + 4 - out) + len) break;
     }
   }
-  close(s);
+  return tot;
+}
+static int pedir(int porta, const char *req, char *out, size_t n) {
+  int s = conectar(porta);
+  int tot = pedirSock(s, req, out, n);
+  if (s >= 0) close(s);
   return tot;
 }
 static void esperar_pronta(void) {
@@ -116,12 +121,13 @@ int main(void) {
   // --- 3b: stop while the probe is blocked on the network ---------------------
   CHECK(dts_tpk_abrir("http://x/hang.mkv", "", -1, 0, DTSTPK_HLS, DTSTPK_CORPO_LENGTH, 0, url, sizeof url) == 1, "open session on a hanging source");
   { double t0 = now();
-    while (!g_probe_seen && now() - t0 < 2) usleep(2000); }
-  CHECK(g_probe_seen && g_probe_cancel != NULL, "probe is blocked in the converter");
+    while (!__atomic_load_n(&g_probe_seen, __ATOMIC_RELAXED) && now() - t0 < 2) usleep(2000); }
+  CHECK(__atomic_load_n(&g_probe_seen, __ATOMIC_RELAXED), "probe is blocked in the converter");
   { double t0 = now();
     dts_tpk_fechar();
     CHECK(now() - t0 < 1.0, "stop returns without waiting for the probe");
-    CHECK(g_probe_cancel && *g_probe_cancel == 1, "stop sets the cancel flag handed to the probe"); }
+    while (!__atomic_load_n(&g_probe_done, __ATOMIC_RELAXED) && now() - t0 < 1) usleep(2000);
+    CHECK(__atomic_load_n(&g_probe_done, __ATOMIC_RELAXED), "stop releases the blocked probe"); }
 
   // --- 3d: loopback only, and closed after stop --------------------------------
   CHECK(dts_tpk_abrir("http://x/ok.mkv", "", -1, 0, DTSTPK_HLS, DTSTPK_CORPO_LENGTH, 0, url, sizeof url) == 1, "open session");
@@ -162,23 +168,34 @@ int main(void) {
     CHECK(n > 0 && strstr(resp, " 200 ") != NULL, "after the idle connections close the server answers again"); }
 
   // --- stop drops the accepted connections: their slots are free at once -----------
-  { int idle[16], k, eof = 0;
+  { int idle[16], fresh[16], k, eof = 0, ready = 0;
     char c;
-    for (k = 0; k < 16; k++) idle[k] = conectar(porta);
-    usleep(300 * 1000);                    // all 16 accepted, parked in the 15 s request wait
+    snprintf(req, sizeof req, "HEAD /%s/v.m3u8 HTTP/1.1\r\nHost: x\r\n\r\n", tok);
+    for (k = 0; k < 16; k++) {
+      idle[k] = conectar(porta);
+      // Half wait for a first request (15 s), half for a keep-alive one (60 s).
+      if (k % 2) CHECK(pedirSock(idle[k], req, resp, sizeof resp) > 0 && strstr(resp, " 200 "), "old keep-alive client ready");
+    }
+    usleep(300 * 1000);
     dts_tpk_fechar();
     CHECK(dts_tpk_abrir("http://x/ok.mkv", "", -1, 0, DTSTPK_HLS, DTSTPK_CORPO_LENGTH, 0, url, sizeof url) == 1, "reopen right after stop");
     porta = porta_de(url);
     { const char *t = strstr(url, "127.0.0.1:"); t = t ? strchr(t, '/') : NULL;
       snprintf(tok, sizeof tok, "%.8s", t ? t + 1 : ""); }
     esperar_pronta();
-    usleep(100 * 1000);
-    snprintf(req, sizeof req, "GET /%s/v.m3u8 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n", tok);
-    n = pedir(porta, req, resp, sizeof resp);
-    CHECK(n > 0 && strstr(resp, " 200 ") != NULL, "new player gets 200 while the old clients are still open");
+    snprintf(req, sizeof req, "HEAD /%s/v.m3u8 HTTP/1.1\r\nHost: x\r\n\r\n", tok);
+    for (k = 0; k < 16; k++) {
+      fresh[k] = conectar(porta);
+      n = pedirSock(fresh[k], req, resp, sizeof resp);
+      if (n > 0 && strstr(resp, " 200 ")) ready++;
+    }
+    CHECK(ready == 16, "all 16 slots available immediately after stop with old clients still open");
     for (k = 0; k < 16; k++) if (idle[k] >= 0 && recv(idle[k], &c, 1, MSG_DONTWAIT) == 0) eof++;
     CHECK(eof == 16, "stop closed the old accepted connections (EOF)");
-    for (k = 0; k < 16; k++) if (idle[k] >= 0) close(idle[k]); }
+    for (k = 0; k < 16; k++) {
+      if (idle[k] >= 0) close(idle[k]);
+      if (fresh[k] >= 0) close(fresh[k]);
+    } }
 
   // --- 3d: listener closed on stop ---------------------------------------------------
   dts_tpk_fechar();

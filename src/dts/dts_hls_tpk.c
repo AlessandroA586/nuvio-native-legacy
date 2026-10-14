@@ -241,17 +241,19 @@ static int portaLo;
 
 // O ouvinte e o fio que aceita: o fio fecha o proprio socket ao ver `parar`
 // (fechar o fd de fora, com um accept() pendente, deixaria o numero reusavel).
-typedef struct { int fd; volatile int parar; } Ouvinte;
+typedef struct { int fd; atomic_int parar; } Ouvinte;
 static Ouvinte *ouvinteLo;              // sob G
-static atomic_int conexoes;             // fios de conexao vivos
-// Sockets aceitos ainda abertos: descer() faz shutdown neles para soltar as
-// vagas na hora (o fio dono segue fazendo o close, entao o fd nao e reusado).
+typedef struct { int fd; } Conexao;
+// O teardown solta as vagas, mas so o fio dono fecha/libera a conexao.
+// Comparar por identidade impede que um fio antigo solte a vaga de um novo.
 static pthread_mutex_t socksM = PTHREAD_MUTEX_INITIALIZER;
-static int socks[MAX_CONEXOES];
-static void sockMarcar(int velho, int novo) {
+static Conexao *socks[MAX_CONEXOES];
+static void sockSoltar(Conexao *c) {
   pthread_mutex_lock(&socksM);
-  for (int i = 0; i < MAX_CONEXOES; i++) if (socks[i] == velho) { socks[i] = novo; break; }
+  for (int i = 0; i < MAX_CONEXOES; i++) if (socks[i] == c) { socks[i] = NULL; break; }
+  close(c->fd);
   pthread_mutex_unlock(&socksM);
+  free(c);
 }
 
 static void sessaoDestruir(Sessao *s) {
@@ -738,7 +740,8 @@ static int atenderPedido(int sock, const Pedido *pd, int manter) {
 }
 
 static void *atender(void *u) {
-  int sock = (int)(intptr_t)u;
+  Conexao *c = u;
+  int sock = c->fd;
   char cab[8192];
   for (int n = 0;; n++) {
     Pedido pd;
@@ -747,15 +750,13 @@ static void *atender(void *u) {
     int manter = pd.http11 ? strcasecmp(pd.conexao, "close") != 0 : strcasecmp(pd.conexao, "keep-alive") == 0;
     if (!atenderPedido(sock, &pd, manter)) break;
   }
-  sockMarcar(sock + 1, 0);
-  close(sock);
-  atomic_fetch_sub(&conexoes, 1);
+  sockSoltar(c);
   return NULL;
 }
 
 static void *aceitar(void *u) {
   Ouvinte *o = u;
-  while (!o->parar) {
+  while (!atomic_load(&o->parar)) {
     struct pollfd p = { o->fd, POLLIN, 0 };
     int s, r = poll(&p, 1, 200);     // acorda para olhar `parar`
     pthread_t t;
@@ -767,15 +768,22 @@ static void *aceitar(void *u) {
 #ifdef SO_NOSIGPIPE
     { int um = 1; setsockopt(s, SOL_SOCKET, SO_NOSIGPIPE, &um, sizeof um); }
 #endif
-    if (atomic_fetch_add(&conexoes, 1) >= MAX_CONEXOES) {   // fios demais: recusa em vez de criar mais um
-      atomic_fetch_sub(&conexoes, 1);
-      responderSimples(s, 503, "Service Unavailable", NULL, "too many connections\n", 0);
+    Conexao *c = NULL;
+    pthread_mutex_lock(&socksM);
+    int parado = atomic_load(&o->parar);
+    if (!parado) for (int i = 0; i < MAX_CONEXOES; i++) if (!socks[i]) {
+      c = malloc(sizeof *c);
+      if (c) { c->fd = s; socks[i] = c; }
+      break;
+    }
+    pthread_mutex_unlock(&socksM);
+    if (!c) {
+      if (!parado) responderSimples(s, 503, "Service Unavailable", NULL, "too many connections\n", 0);
       close(s);
       continue;
     }
-    sockMarcar(0, s + 1);            // guardado como fd+1: 0 = vaga livre
-    if (pthread_create(&t, NULL, atender, (void *)(intptr_t)s) == 0) pthread_detach(t);
-    else { sockMarcar(s + 1, 0); atomic_fetch_sub(&conexoes, 1); close(s); }
+    if (pthread_create(&t, NULL, atender, c) == 0) pthread_detach(t);
+    else sockSoltar(c);
   }
   close(o->fd);
   free(o);
@@ -794,6 +802,7 @@ static int subir(void) {
   o = calloc(1, sizeof *o);
   if (!o) { close(fd); return 0; }
   o->fd = fd;
+  atomic_init(&o->parar, 0);
   if (pthread_create(&t, NULL, aceitar, o) != 0) { close(fd); free(o); return 0; }
   pthread_detach(t);
   ouvinteLo = o; portaLo = porta;
@@ -805,11 +814,14 @@ static int subir(void) {
 // Sob G. O fio de aceite fecha o socket na proxima volta (<= 200 ms).
 static void descer(void) {
   if (!ouvinteLo) return;
-  ouvinteLo->parar = 1;
-  ouvinteLo = NULL; portaLo = 0;
   pthread_mutex_lock(&socksM);
-  for (int i = 0; i < MAX_CONEXOES; i++) if (socks[i]) shutdown(socks[i] - 1, SHUT_RDWR);
+  atomic_store(&ouvinteLo->parar, 1);
+  for (int i = 0; i < MAX_CONEXOES; i++) if (socks[i]) {
+    shutdown(socks[i]->fd, SHUT_RDWR);
+    socks[i] = NULL;
+  }
   pthread_mutex_unlock(&socksM);
+  ouvinteLo = NULL; portaLo = 0;
 }
 
 // Versao maior da Tizen (system-info por dlopen, como gpunivel.c). -1 = nao leu.
