@@ -191,6 +191,16 @@ int main(void) {
   int count = stream_extrair(json, "fixture", &v);
   assert(count == 9);
   debrid_definir_chave("torbox", "chave-de-teste");
+  // #505: as duas fontes notWebReady descartadas com o P2P desligado contam
+  // para a dica "ligue o P2P" — nunca uma folha vazia calada. Sem debrid e
+  // com um endereco P2P configurado a dica existe (o valor real e o de
+  // stream_torrents_para_p2p; aqui ele devolve 0 porque o debrid esta ativo).
+  debrid_esquecer();
+  assert(ajustes_definir_p2p_url("192.168.1.5"));
+  ajustes_definir_p2p_ligado(0);
+  stream_definir_lista(v, count);
+  assert(stream_torrents_para_p2p() == 2);
+  debrid_definir_chave("torbox", "chave-de-teste");
   for (int ligado = 0; ligado <= 1; ligado++) {
     assert(ajustes_definir_p2p_url("192.168.1.5"));
     ajustes_definir_p2p_ligado(ligado);

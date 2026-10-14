@@ -499,7 +499,9 @@ void stream_definir_lista_idade(const Stream *l, int qtd, Uint32 idade) {
   if (nova && qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
   descartadosSemDebrid = 0;
   for (i = 0; i < qtd && nova; i++)
-    if (!l[i].notWebReady && !fonteOferecida(&l[i])) descartadosSemDebrid++;
+    // #505: tambem o notWebReady, que pede P2P — a folha vazia tem de dizer
+    // "ligue o P2P", nunca fingir que o addon nao mandou nada.
+    if (!fonteOferecida(&l[i])) descartadosSemDebrid++;
   for (i = 0; i < k && nova; i++) nova[i].selosPacoteVer = 0;   // os selos saem do fio de fundo (selosAgendar)
   pthread_mutex_lock(&verTrava);
   free(lista); lista = nova; n = nova ? k : 0; atual = -1;
@@ -566,7 +568,7 @@ void stream_lista_acrescentar(const Stream *l, int qtd, int ordemAddon) {
     if (fonteOferecida(&l[i])) nova[k++] = l[i];
   if (qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
   for (i = 0; i < qtd; i++)
-    if (!l[i].notWebReady && !fonteOferecida(&l[i])) descartadosSemDebrid++;
+    if (!fonteOferecida(&l[i])) descartadosSemDebrid++;   // #505: idem
   if (!k) { free(nova); return; }
   for (i = 0; i < k; i++) nova[i].selosPacoteVer = 0;
   // O CARTAO EM FOCO E O QUE FICA PARADO. Guardado pelo indice da lista (que
