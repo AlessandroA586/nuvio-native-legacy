@@ -139,3 +139,33 @@ Estimativas por pessoa: S = até 2 dias, M = 3–10 dias, L = 2–4 semanas ou m
 Verificação deste estudo: `bash tests/js_limites.sh` e `bash tests/selospacote.sh` (ASan/UBSan sempre ligados), `SANITIZE=1 bash tests/guiabusca_faixa.sh` e `SANITIZE=1 bash tests/mkvass_limites.sh`: todos rc=0. O último emite warning já existente de inicializador `prebusca`; não executamos TSan, fuzz ou paridade Rust.
 
 Não consultei novo banco de quedas nem executei firmware/toolchains; números de usuários vêm do estudo antigo. Linhas/includers e suporte declarado a sanitizadores são medidas estáticas, não cobertura. Pisos de TV, bytes/tempo de build, ROI dos parsers e portabilidade efetiva continuam **suspeita** até os gates. Este documento não autoriza implementação, publicação ou instalação.
+
+## 7. Relatório do piloto `mkvcore` (fase 1, flag `-DNV_RUST_MKVCORE`, desligada por padrão)
+
+Feito: `rust/mkvcore` (no_std, staticlib, sem dependências, `panic=abort`, handler → `abort()`, sem estado global, profundidade máx. 8, aritmética checada); `src/mkvcore.h` (structs `#[repr(C)]` campo a campo); `src/mkv.c` com ganchos só sob a flag (assinaturas de `mkv_contentor`, `mkv_quadro_tem_rpu`, `mkv_faixas_do_trecho` e `lerCapitulos` mantidas; rede/diagnóstico seguem C). Ganchos de build opt-in: `NUVIO_RUST_MKVCORE=1` em `tools/mac.sh` e `tools/android.sh`, `-DNUVIO_RUST_MKVCORE=<pasta>` no CMake. **A flag não foi ligada em nenhum build de produto.**
+
+**Tamanho** (strip; release `opt-level=z`, LTO):
+
+| Alvo | Medida | Flag off | Flag on | Delta |
+|---|---|---|---|---|
+| Android arm64-v8a | `libmain.so` inteiro (CMake `main`) | 22 118 216 B | 22 111 992 B | −6 224 B |
+| Android armeabi-v7a | `libmain.so` inteiro (CMake `main`) | 16 815 012 B | 16 814 180 B | −832 B |
+| Android arm64 / armv7 | só `mkv.c` + núcleo, link isolado | 25 000 / 22 568 B | 18 728 / 15 716 B | −6 272 / −6 852 B |
+| Mac (binário) | executável strip | — | — | +432 B |
+
+Delta pequeno: o núcleo Rust troca o C equivalente; `--gc-sections` remove o resto. Sem teto de tamanho violado. Mac: só binário de teste/`mac.sh`, não é alvo de produto.
+
+**Testes** (todos rc=0, flag off **e** on): `mkv_contentor`, `mkv_dvrpu`, `mkv_caps`, `mkv_legendas`, `mkvass_limites`. Novo `tests/mkvcore_paridade.sh`: C×Rust por campos + fuzz limitado (LCG semente fixa, páginas PROT_NONE nas bordas): 25 512 casos, tudo igual. Teste validado por mutação (injeção de diferença é detectada). Android: link completo de `libmain.so` (CMake) com flag on e off, arm64 e armv7, rc=0; símbolos `nv_mkvcore_*` presentes só com flag on.
+
+**Achados no caminho:** (a) `0xFFu8 >> w` com `w=8` (vint de tamanho 8 bytes) estoura em release → Tracks não lidos; corrigido com `u32`. (b) ARM32: `compiler_builtins` referencia `rust_eh_personality`; sem std o link falhava; definido só em `target_arch="arm"`, nunca chamado.
+
+**Diferenças intencionais vs C:** profundidade máx. 8 na recursão; i64 em vez de `long` 32-bit no ARM32; alvo comparado como u64; sem overflow com sinal (UB no C). Rejeição de entrada hostil pode divergir do C nesses casos; não perpetuado para “paridade”.
+
+**Riscos / não coberto:**
+- ARM32 só **linkado**, não executado aqui; sem teste em TV nem reprodução/fluidez.
+- webOS softfp, Tizen `.tpk`/`.wgt` não tocados.
+- `clippy` não instalado: lints `deny` no código não verificados.
+- `lerUint` não exportado: teste `credfonte` não cobre o núcleo Rust.
+- Caminho de capítulos via HTTP coberto só pelo teste HTTP de `mkv_caps`.
+- Medida de tamanho Android é de build com a flag apenas neste worktree; sem soak, sem fuzz longo (só o limitado do teste).
+- Nenhuma redução de quedas demonstrada (já dito na fase 1); ativar em produto depende de aprovação do dono.
