@@ -2968,7 +2968,16 @@ void detail_evento(const SDL_Event *e) {
         // abre a folha do titulo (ver o ramo de NV_HOLD_MS acima). Quem quer
         // trocar de fonte tem dois caminhos; quem quer continuar vendo tem o
         // toque curto, que e o caso comum.
-        pedReproduzir = 1;
+        //
+        // ISSUE #513. "Toca sempre" valia para o ajuste no automatico; com
+        // "Escolher a fonte ao reproduzir" ligado (o auto-play desligado) o
+        // toque num episodio de serie em "Continuar assistindo" ia DIRETO
+        // para a reproducao — a fonte lembrada (fontepref) e a da ultima
+        // sessao (fontevolta) entravam antes de a folha abrir, e o episodio
+        // escolhido a dedo tocava sem perguntar. Aqui a escolha e explicita,
+        // entao o ajuste manda a folha; o "Retomar" do Continuar assistindo
+        // e o botao primario seguem tocando como antes.
+        if (ajustes_fonte_manual()) pedFontes = 1; else pedReproduzir = 1;
     }
     return;
   }

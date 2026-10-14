@@ -1036,7 +1036,13 @@ static const char *urlCanal(const Stream *s, char *buf, size_t n) {
 static int tocarFonteGuardada(void) {
   Stream s;
   char alvo[64];
-  if (fontefalha_ativa() || player_id_canal()[0] || !player_aberto()) return 0;
+  // "Escolher a fonte ao reproduzir": a URL da ultima sessao nao toca
+  // sozinha. A folha e quem escolhe (detail_pediu_fontes, e o #62 quando a
+  // lista chega). O Retomar do Continuar assistindo pede reproducao e cai
+  // aqui tambem — com o ajuste ligado ele espera a folha, como o Play.
+  if (!fontevolta_toca_guardada(ajustes_fonte_manual(), fontefalha_ativa(),
+                                player_id_canal()[0], player_aberto()))
+    return 0;
   alvoPlayer(alvo, sizeof alvo);
   if (!alvo[0] || !fontevolta_pegar(alvo, sessao_usuario(), perfis_ativo(), SDL_GetTicks(), &s))
     return 0;
@@ -1053,6 +1059,8 @@ static int tocarFonteGuardada(void) {
   voltaDesde = SDL_GetTicks();
   return 1;
 }
+// Test hook for tests/detail_ep_fonte.c. Same function the router calls.
+int app_teste_tocar_guardada(void) { return tocarFonteGuardada(); }
 static void vigiarFonteGuardada(void) {
   FontevoltaSinais g;
   const char *motivo = NULL;
