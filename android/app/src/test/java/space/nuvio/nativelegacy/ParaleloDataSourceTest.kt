@@ -38,7 +38,9 @@ class ParaleloDataSourceTest {
             if (key != null && value != null) pedidos[key] = value
         }
         override fun getRequestProperty(key: String?): String? = pedidos[key]
-        override fun getResponseCode(): Int = HTTP_PARTIAL
+        // Range invalido (ultimo < primeiro) e 416, como um servidor de verdade.
+        override fun getResponseCode(): Int =
+            if (fim() < ini()) HTTP_REQ_TOO_LONG else HTTP_PARTIAL
         override fun getContentLengthLong(): Long = fim() - ini() + 1
         override fun getHeaderField(name: String?): String? =
             if (name == "Content-Range") "bytes ${ini()}-${fim()}/$total" else super.getHeaderField(name)
