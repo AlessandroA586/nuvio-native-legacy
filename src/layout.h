@@ -261,7 +261,7 @@ int layout_modo_mobile(void);
 // Altura e respiro do botao do destaque (o "Ver titulo"), e a mesma medida do
 // NV_HERO_BOTAO_H que o layout do hero ja usava para a linha de acoes.
 #define NV_HOME_HERO_BOTAO_GAP 26.0f
-#define NV_LEGACY_ROW_HEAD_H 46.0f // titulo + margem ate os cards (564 - 518)
+#define NV_LEGACY_ROW_HEAD_H 64.0f // titulo + margem ate os cards — dono, 14/10: "os titulos tão saindo muito perto da fileira", no espacamento da referencia da Apple TV
 
 // --- LAYOUTS DA HOME (ajustes_home_layout) ---------------------------------
 // MODERNA e tudo o que esta acima. As medidas abaixo sao DESTES DOIS layouts
@@ -336,7 +336,10 @@ int layout_modo_mobile(void);
 // cartazes. Ficha: cartaz 212 + a ficha de texto. Palco: o cartaz do centro
 // sobre a medida do cartaz comum; os vizinhos caem para NV_PALCO_VIZ dele.
 #define NV_TEMPO_FAIXA_H   96.0f
-#define NV_FICHA_W        600.0f
+#define NV_FICHA_W        540.0f  // dono, 14/10: "deixar ele um pouco menor" — 600 transbordava o cartaz
+#define NV_FICHA_VAO      22.0f   // do cartaz a ilha da ficha: o card sai do filme, como a extensao do menu
+#define NV_FICHA_ILHA_DY  12.0f   // a ilha um pouco menor que o cartaz, dentro da fileira
+#define NV_FICHA_RAIO     32.0f   // o mesmo canto do menu contextual (CTX_ILHA_RAIO)
 #define NV_PALCO_ESC       1.3f
 // Fileira redonda (pessoas): diametro do disco. O nome vai abaixo, no bloco do rotulo.
 #define NV_REDONDA_D       200.0f
@@ -381,10 +384,10 @@ int layout_modo_mobile(void);
 // todo consumido pela expansão lateral; este valor preserva cerca de 24px
 // visíveis entre os cards grandes mesmo no foco.
 #define NV_CARD_GAP_GRANDE 40.0f
-// Passo entre fileiras MEDIDO: titulo da fileira 0 em y=518, da fileira 1 em
-// y=934 -> 416. Desses, 46 sao do cabecalho ate os cards (518 -> 564) e 322 do
-// card, sobrando 48 de respiro entre uma fileira e a proxima.
-#define NV_FILEIRA_GAP  48.0f
+// Passo entre fileiras: era 48 (medido no app web, 518->934), dono, 14/10:
+// "espacamento que nem a da foto" (referencia Apple TV) — o vao largo entre
+// secoes, o mesmo respiro do layout Padrao (NV_PAD_FILEIRA_GAP).
+#define NV_FILEIRA_GAP  80.0f
 
 // POSTER DEITADO (`modernLandscapePostersEnabled`). MEDIDO no app web com a
 // preferencia ligada: `.home-poster-card.is-landscape` = 318 de largura, moldura
