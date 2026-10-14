@@ -175,10 +175,13 @@ int main(void) {
     // AS LINHAS: o que so muda de tamanho divide uma linha so.
     { FilEstiloLinha l[FIL_TIPO_N];
       int nl = fil_estilo_linhas("addon_movie_formas", l, FIL_TIPO_N);
-      // 7 de antes + Linha do tempo, Cartaz com ficha e Palco (06/10).
-      assert(nl == 11);
+      // 7 de antes + Linha do tempo, Cartaz com ficha, Palco, Redonda e Pôster
+      // grande (14/10).
+      assert(nl == 12);
       assert(l[7].tipos[0] == FIL_TIPO_LINHA_TEMPO && l[8].tipos[0] == FIL_TIPO_FICHA &&
-             l[9].tipos[0] == FIL_TIPO_PALCO && l[10].tipos[0] == FIL_TIPO_REDONDA);
+             l[9].tipos[0] == FIL_TIPO_PALCO && l[10].tipos[0] == FIL_TIPO_REDONDA &&
+             l[11].tipos[0] == FIL_TIPO_POSTER_GRANDE &&
+             !strcmp(l[11].rotulo, "Pôster grande"));
       assert(!strcmp(l[2].rotulo, "Paisagem") && l[2].n == 3 &&
              l[2].tipos[0] == FIL_TIPO_SERVICO && l[2].tipos[2] == FIL_TIPO_DESTAQUE &&
              !strcmp(l[2].nomes[2], "Paisagem grande"));
@@ -221,6 +224,10 @@ int main(void) {
     assert(fil_tipo("addon_movie_formas") == FIL_TIPO_LINHA_TEMPO);
     assert(!fil_definir_tipo("collection_formas", FIL_TIPO_PALCO));     // colecao nao
     assert(!fil_definir_tipo("collection_formas", FIL_TIPO_REDONDA));
+    assert(fil_definir_tipo("addon_movie_formas", FIL_TIPO_POSTER_GRANDE));
+    assert(fil_tipo("addon_movie_formas") == FIL_TIPO_POSTER_GRANDE);
+    assert(!fil_definir_tipo("collection_formas", FIL_TIPO_POSTER_GRANDE)); // colecao nao
+    assert(fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_POSTER_GRANDE)[0]);
     assert(fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_REDONDA)[0]);
     assert(fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_FICHA)[0]);
     n = fil_estilos("collection_formas", tipos, rot, 8);

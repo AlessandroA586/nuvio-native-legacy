@@ -109,7 +109,8 @@ static const char *TIPO_ROT[FIL_TIPO_N] = {
   "Automático", "Cartaz em pé", "Destaque largo", "Coleção", "Serviço", "Ranking empilhado",
   "Destaque 4:3", "Ranking numerado", "Faixa com título",
   "Destaque 4:3 médio", "Destaque 4:3 grande",
-  "Linha do tempo", "Cartaz com ficha", "Palco", "Redonda"
+  "Linha do tempo", "Cartaz com ficha", "Palco", "Redonda",
+  "Pôster grande"
 };
 static const char *TAM_ROT[FIL_TAM_N] = { "Compacto", "Padrão", "Grande" };
 // 0,85 e 1,2 e nao 0,5 e 2,0: o card do web mede 212x322 e o passo da fileira
@@ -241,6 +242,7 @@ static const FilEstiloLinha LINHAS_CAT[] = {
   { "Cartaz com ficha",  1, { FIL_TIPO_FICHA }, { "Cartaz com ficha" } },
   { "Palco",             1, { FIL_TIPO_PALCO }, { "Palco" } },
   { "Redonda",           1, { FIL_TIPO_REDONDA }, { "Redonda" } },
+  { "Pôster grande",     1, { FIL_TIPO_POSTER_GRANDE }, { "Pôster grande" } },
 };
 #define N_LINHAS_CAT (int)(sizeof LINHAS_CAT / sizeof *LINHAS_CAT)
 static const int ESTILOS_COL[] = { FIL_TIPO_AUTO, FIL_TIPO_COLECAO,
@@ -1563,6 +1565,7 @@ const char *fil_estilo_ajuda(const char *chave, int t) {
     case FIL_TIPO_LINHA_TEMPO: return "Cartazes em ordem de lançamento sobre uma linha com os anos, que se desenha conforme você anda.";
     case FIL_TIPO_FICHA:    return "Cartaz com a ficha ao lado: ano, gênero, nota e o começo da sinopse.";
     case FIL_TIPO_PALCO:    return "O título em foco fica grande no centro e os vizinhos diminuem dos dois lados.";
+    case FIL_TIPO_POSTER_GRANDE: return "Cartaz 3:4 grande com logo, gênero, classificação e duas linhas de sinopse na base, sobre um véu na cor predominante da arte.";
     case FIL_TIPO_REDONDA:  return "Foto circular com o nome embaixo, para fileiras de pessoas.";
     default:                return "O app escolhe a forma pelo nome do catálogo e pelo layout da Home.";
   }
