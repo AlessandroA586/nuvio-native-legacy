@@ -1731,6 +1731,13 @@ static float alvoScrollFil(int r, int col, float atual, float abre) {
   return alvo;
 }
 
+// PALCO (#205): a geometria comprimida que o toque usa — os corpos moram
+// la embaixo, junto do palcoGeo e do resto do Palco (em NV_TOUCH_UI ou no
+// teste de layout, NV_TESTE_HOME).
+#if defined(NV_TOUCH_UI) || defined(NV_TESTE_HOME)
+static float palcoExtent(int r, int n);
+static int palcoColunaEm(int r, float u);
+#endif
 #ifdef NV_TOUCH_UI
 static float toqueHomeMaxY(void) {
   float fim = topoFileiras();
@@ -1742,6 +1749,10 @@ static float toqueHomeMaxX(int r) {
   int n = fileiras[r].n + (fileiras[r].verTudo ? 1 : 0);
   float extra = r == expFileira ? fmaxf(0.0f, alturaFil(r) * NV_EXP_ASPECTO - larguraFil(r)) * expAbre : 0.0f;
   float util = homeLarguraUtil();
+  // PALCO: os cards se apinham ao redor do foco (palcoGeo) — o alcance segue
+  // a extensao comprimida, senao sobra um vao morto no fim da rolagem.
+  if (fileiras[r].tipo == FILEIRA_PALCO)
+    return fmaxf(0.0f, palcoExtent(r, n) + extra - util);
   return fmaxf(0.0f, (n - 1) * passoFil(r) + larguraFil(r) + xOffTipo(fileiras[r].tipo) + extra - util);
 }
 static void toqueHeroCancelar(void) { memset(&toqueHero, 0, sizeof toqueHero); }
@@ -1926,7 +1937,9 @@ static void toqueHomeRetomarFoco(void) {
     foco.coluna = foco.colunaLembrada[escolhido];
   }
   for (int r = 0; r < nFileiras; r++) if (toqueLivreX[r] && foco.nColunas[r] > 0) {
-    int c = (int)((scrollX[r] + homeLarguraUtil() * 0.35f) / passoFil(r));
+    int c = fileiras[r].tipo == FILEIRA_PALCO
+          ? palcoColunaEm(r, scrollX[r] + homeLarguraUtil() * 0.35f)
+          : (int)((scrollX[r] + homeLarguraUtil() * 0.35f) / passoFil(r));
     if (fileiras[r].tipo == FILEIRA_SOCIAL) { c = foco.colunaLembrada[r]; amigosfil_retomar_foco(&c); }
     if (c >= foco.nColunas[r]) c = foco.nColunas[r] - 1;
     if (c < 0) c = 0;
@@ -5700,6 +5713,42 @@ static void palcoCortinaPasso(Uint32 agora) {
   // fechar; senao o escurecimento some num frame, ainda com alfa.
   if (palcoCortina <= 0.01f) palcoFaixaTopo = palcoFaixaBase = 0.0f;
 }
+// O toque da Palco so existe em NV_TOUCH_UI; no resto a dupla abaixo e
+// compilada so para o teste de layout (home_layout.c define NV_TESTE_HOME).
+#if defined(NV_TOUCH_UI) || defined(NV_TESTE_HOME)
+// Extensao DIREITA da fileira Palco comprimida (origem no scroll zero): o
+// ultimo card para no palcoGeo, nao na vaga dele. O alcance do toque media a
+// fileira em PASSO DE VAGAS e sobrava um vao morto no fim da rolagem (revisao
+// #205). Purinha, sem janela, para o teste cobrar o math do toque.
+static float palcoExtent(int r, int n) {
+  float lw = larguraFil(r), viz = lw * NV_PALCO_VIZ, gap = gapDe(FILEIRA_PALCO);
+  float perto = (lw + viz) * 0.5f + gap, longe = viz + gap;
+  float d = (float)(n - 1) - palcoPos[r], ad = fabsf(d);
+  float off = ad < 1.0f ? d * perto : copysignf(perto + (ad - 1.0f) * longe, d);
+  float s = 1.0f - (1.0f - NV_PALCO_VIZ) * (ad < 1.0f ? ad : 1.0f);
+  return palcoPos[r] * passoFil(r) + lw * 0.5f + off + lw * s * 0.5f;
+}
+// A coluna do Palco cujo card cai na posicao `u` da fileira (origem no scroll
+// zero): inverte o palcoGeo. O toque retomava o foco pela CONTA DAS VAGAS e o
+// anel caia num card ao lado do que a pessoa tinha centrado (revisao #205).
+static int palcoColunaEm(int r, float u) {
+  float lw = larguraFil(r), viz = lw * NV_PALCO_VIZ, gap = gapDe(FILEIRA_PALCO);
+  float perto = (lw + viz) * 0.5f + gap, longe = viz + gap;
+  float t = u - palcoPos[r] * passoFil(r) - lw * 0.5f, ad = fabsf(t);
+  float d = ad < perto ? t / perto : copysignf(1.0f + (ad - perto) / longe, t);
+  return (int)(palcoPos[r] + d + 0.5f);
+}
+#endif // NV_TOUCH_UI || NV_TESTE_HOME
+// A faixa da cortina so existe DENTRO do viewport das fileiras: o toque pode
+// empurrar a fileira em foco para fora da tela, e ai o scrim virava um
+// dimming de tela inteira sem janela nenhuma (revisao #205). Recorta a faixa
+// ao viewport e devolve 0 quando nada dela sobra na tela.
+static int palcoFaixaClamp(float *topo, float *base) {
+  float t = fmaxf(corteFileiras(), palcoFaixaTopo), b = fminf(NV_TELA_H, palcoFaixaBase);
+  if (b <= t) return 0;
+  *topo = t; *base = b;
+  return 1;
+}
 // PALCO: o nome e a linha de meta do titulo do centro, embaixo dele.
 static void palcoLegenda(int r, float base, float lw) {
   int c = (int)(palcoPos[r] + 0.5f);
@@ -7125,8 +7174,8 @@ void home_desenhar(Uint32 agora) {
   // e legenda) fica fora do scrim, inteira e legivel; sobe e desce pela mola.
   if (palcoCortina > 0.01f && palcoFaixaBase > palcoFaixaTopo) {
     float alfa = NV_PALCO_CORTINA * palcoCortina * (1.0f - pd) * (1.0f - cinema);
-    float topo = fmaxf(0.0f, palcoFaixaTopo), base = fminf(NV_TELA_H, palcoFaixaBase);
-    if (alfa > 0.01f) {
+    float topo, base;
+    if (alfa > 0.01f && palcoFaixaClamp(&topo, &base)) {
       if (topo > 0.5f) gfx_cor((GfxRect){ 0.0f, 0.0f, NV_TELA_W, topo }, 0, 0, 0, 0, alfa);
       if (base < NV_TELA_H - 0.5f)
         gfx_cor((GfxRect){ 0.0f, base, NV_TELA_W, NV_TELA_H - base }, 0, 0, 0, 0, alfa);

@@ -13,6 +13,7 @@ static int teste_hero_genero(void) { return testeGenero; }
 static float espacoTit = 1.0f, espacoFil = 1.0f;
 static float teste_espaco_titulos(void) { return espacoTit; }
 static float teste_espaco_fileiras(void) { return espacoFil; }
+#define NV_TESTE_HOME 1
 #include "../src/home.c"
 void desc_sinopse_hero(const int *idx, int n) { (void)idx; (void)n; }
 void desc_ocultar_vistos_atualizar(void) {}
@@ -133,6 +134,54 @@ int main(void) {
     }
     focoHero = 1;
     memset(scrollX, 0, sizeof scrollX);
+    // REVISAO #205: o alcance do toque na Palco e a extensao COMPRIMIDA do
+    // palcoGeo (o passo de vagas sobrava um vao morto no fim da rolagem); a
+    // coluna retomada inverte o palcoGeo (a conta de vagas caia num card ao
+    // lado do que a pessoa tinha centrado); e a faixa da cortina so existe
+    // dentro do viewport das fileiras (foco arrastado para fora, sem scrim).
+    {
+      fileiras[1] = (Fileira){.tipo = FILEIRA_PALCO, .n = 12, .escala = 1.0f};
+      float lw = larguraFil(1), passo = passoFil(1);
+      float cx, s, topo, base, corte = corteFileiras();
+      scrollX[1] = 0.0f;
+      // Foco na primeira coluna: o fim da fileira e a borda do ULTIMO card
+      // comprimido, bem atras da vaga dele — e o vao morto some do maxX.
+      palcoPos[1] = 0.0f;
+      palcoGeo(1, 11, lw, &cx, &s);
+      assert(fabsf(palcoExtent(1, 12) - (cx + lw * s * 0.5f - homeFileiraX(1, 0))) < 0.01f);
+      assert(palcoExtent(1, 12) < (12 - 1) * passo + lw - 100.0f);
+      // Foco na ultima: o card cresce NA vaga, a extensao volta a ser a de
+      // vagas — igual a fileira comum no fim da rolagem.
+      palcoPos[1] = 11.0f;
+      palcoGeo(1, 11, lw, &cx, &s);
+      assert(fabsf(palcoExtent(1, 12) - (cx + lw * s * 0.5f - homeFileiraX(1, 0))) < 0.01f);
+      assert(fabsf(palcoExtent(1, 12) - ((12 - 1) * passo + lw)) < 0.01f);
+      // A coluna retomada e a do card na ancora — inteira e em plena mola.
+      palcoPos[1] = 0.0f;
+      for (int k = 0; k < 12; k++) {
+        palcoGeo(1, k, lw, &cx, &s);
+        assert(palcoColunaEm(1, cx - homeFileiraX(1, 0)) == k);
+      }
+      palcoPos[1] = 3.5f;
+      for (int k = 2; k < 7; k++) {
+        palcoGeo(1, k, lw, &cx, &s);
+        assert(palcoColunaEm(1, cx - homeFileiraX(1, 0)) == k);
+      }
+      palcoPos[1] = 0.0f;
+      // A faixa da cortina e recortada ao viewport; fora dele, o scrim some
+      // em vez de virar um dimming de tela inteira sem janela.
+      palcoFaixaTopo = 300.0f; palcoFaixaBase = 800.0f;
+      assert(palcoFaixaClamp(&topo, &base));
+      assert(topo == fmaxf(corte, 300.0f) && base == fminf(NV_TELA_H, 800.0f));
+      palcoFaixaTopo = corte - 50.0f; palcoFaixaBase = corte + 50.0f;
+      assert(palcoFaixaClamp(&topo, &base));
+      assert(topo == corte && base == corte + 50.0f);
+      palcoFaixaTopo = NV_TELA_H + 100.0f; palcoFaixaBase = NV_TELA_H + 200.0f;
+      assert(!palcoFaixaClamp(&topo, &base));
+      palcoFaixaTopo = corte - 400.0f; palcoFaixaBase = corte - 10.0f;
+      assert(!palcoFaixaClamp(&topo, &base));
+      palcoFaixaTopo = palcoFaixaBase = 0.0f;
+    }
   }
   // A composicao abaixo e a da home SEM o destaque no topo: e nela que a
   // primeira fileira de catalogo vira a vitrine (vitrineNaPrimeira). O #201
