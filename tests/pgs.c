@@ -127,6 +127,17 @@ int main(void) {
   r = pgs_decodificar(d, b.b, b.n, &q);
   CHECA(r == 1 && q.n == 0);
   pgs_quadro_liberar(&q);
+  // 3b) bloco cortado antes do END, no inicio de uma epoca: o objeto que ele
+  // guardou nao pode sobreviver para um display set seguinte.
+  { Pgs *e = pgs_novo();
+    b.n = 0; pcs(&b, 0x80, 1); pds(&b); ods(&b, 0);
+    r = pgs_decodificar(e, b.b, b.n, &q);
+    CHECA(r == 0);
+    b.n = 0; pcs(&b, 0x00, 1); seg(&b, 0x80, NULL, 0);
+    r = pgs_decodificar(e, b.b, b.n, &q);
+    CHECA(r == 0);
+    if (r == 1) pgs_quadro_liberar(&q);
+    pgs_liberar(e); }
   // 4) truncado em qualquer ponto: nunca crasha, nunca devolve objeto torto
   b.n = 0; pcs(&b, 0x80, 1); pds(&b); ods(&b, 0); seg(&b, 0x80, NULL, 0);
   for (size_t corte = 0; corte < b.n; corte++) {

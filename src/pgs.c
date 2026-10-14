@@ -214,6 +214,8 @@ int pgs_decodificar(Pgs *d, const uint8_t *buf, size_t n, PgsQuadro *q) {
     }
     i += 3 + len;
   }
+  // Bloco sem END: a epoca que ele abriu esta incompleta; nao a deixa viver.
+  if (d->temPcs) { limpaEpoca(d); d->temPcs = 0; }
   return 0;
 }
 
