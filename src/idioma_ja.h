@@ -2606,6 +2606,7 @@
   T("Menu do cartão (segurar OK)", "カードメニュー(OK 長押し)"),
   T("Menu em trilho, Dinâmica, Biblioteca e Agenda novas.", "レール型メニュー、ダイナミック、新しいライブラリとスケジュール。"),
   T("Menu lateral", "サイドメニュー"),
+  T("Menu no topo", "上部メニュー"),
   T("Menu, fontes e episódios em vidro. Ajustes › Aparência.", "メニュー、ソース、エピソードがガラス調に。設定 › 外観"),
   T("Mesma opinião em %d de %d títulos", "%d作品で同じ意見（全%d作品）"),
   T("Mesmo protocolo do Jellyfin", "Jellyfin と同じプロトコル"),

@@ -2606,6 +2606,7 @@
   T("Menu do cartão (segurar OK)", "Kart menüsü (OK'a basılı tutun)"),
   T("Menu em trilho, Dinâmica, Biblioteca e Agenda novas.", "Ray menü, Dinamik, yeni Kitaplık ve Program."),
   T("Menu lateral", "Yan menü"),
+  T("Menu no topo", "Üst menü"),
   T("Menu, fontes e episódios em vidro. Ajustes › Aparência.", "Cam görünümlü menü, kaynaklar ve bölümler. Ayarlar › Görünüm."),
   T("Mesma opinião em %d de %d títulos", "%d / %d yapımda aynı görüş"),
   T("Mesmo protocolo do Jellyfin", "Jellyfin ile aynı protokol"),

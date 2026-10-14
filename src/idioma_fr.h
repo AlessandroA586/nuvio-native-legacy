@@ -2605,6 +2605,7 @@
   T("Menu do cartão (segurar OK)", "Menu de la carte (maintenir OK)"),
   T("Menu em trilho, Dinâmica, Biblioteca e Agenda novas.", "Menu en rail, Dynamique, nouvelles Bibliothèque et Agenda."),
   T("Menu lateral", "Menu latéral"),
+  T("Menu no topo", "Menu en haut"),
   T("Menu, fontes e episódios em vidro. Ajustes › Aparência.", "Menu, sources et épisodes en verre. Réglages › Apparence."),
   T("Mesma opinião em %d de %d títulos", "Même avis sur %d titres sur %d"),
   T("Mesmo protocolo do Jellyfin", "Même protocole que Jellyfin"),

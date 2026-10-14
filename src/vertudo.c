@@ -838,10 +838,10 @@ static int nAbas(void) {
 //   Barra   cursor = a aba; pilula de vidro no centro do alto, o realce desliza.
 //   Paginas cursor = a pagina; Esquerda/Direita trocam de pagina na hora.
 // Em todos o cursor == cabN() e o botao "Exibição".
-enum { VT_AB_CHIPS, VT_AB_MENU, VT_AB_BARRA, VT_AB_PAGINAS };
+enum { VT_AB_CHIPS, VT_AB_MENU, VT_AB_BARRA, VT_AB_PAGINAS, VT_AB_TOPO };
 static int estiloAbas(void) {
   int e = ajustes_abas_estilo();
-  return nAbas() && e > VT_AB_CHIPS && e <= VT_AB_PAGINAS ? e : VT_AB_CHIPS;
+  return nAbas() && e > VT_AB_CHIPS && e <= VT_AB_TOPO ? e : VT_AB_CHIPS;
 }
 static int abaSerie(int i) { return !strcmp(collection->sources[i].type, "series"); }
 // So ha primeiro nivel (Filmes/Séries) quando a colecao tem os dois tipos.
@@ -867,6 +867,11 @@ static int cursorInicial(void) {
 }
 static void abasReiniciar(void) {
   ddAberto = ddCursor = 0; ddAnim = pgSlide = 0.0f; barraW = -1.0f;
+}
+static void alternarEstiloAbas(void) {
+  ajustes_definir_abas_estilo((ajustes_abas_estilo() + 1) % (VT_AB_TOPO + 1));
+  abasReiniciar(); tabRol = 0;
+  tabFocus = 1; tabCursor = cabN() + 1;
 }
 #define VT_DD_RH 48.0f   // linha do menu suspenso
 // JANELA DO MENU SUSPENSO (#205): com 16 catalogos a lista parava alem do pe
@@ -1230,9 +1235,11 @@ static void vitEvento(int k) {
   vitProjetar();
   vitMexeu = 1;
   if (tabFocus) {   // o botao "Exibição", acima do destaque
-    if (k == SDLK_LEFT || (k == SDLK_UP && ajustes_menu_topo())) pedMenu = 1;
+    if (k == SDLK_LEFT) { if (tabCursor > cabN()) tabCursor--; else pedMenu = 1; }
+    else if (k == SDLK_UP && ajustes_menu_topo()) pedMenu = 1;
+    else if (k == SDLK_RIGHT) tabCursor = cabN() + 1;
     else if (k == SDLK_DOWN && vitTemItens()) tabFocus = 0;
-    else if (enter) alternarExibicao();
+    else if (enter) { if (tabCursor > cabN()) alternarEstiloAbas(); else alternarExibicao(); }
     return;
   }
   if (vitFR >= vitN) return;
@@ -1371,11 +1378,12 @@ void vertudo_evento(const SDL_Event *e) {
     int na = cabN(), est = estiloAbas();
     if(ddAberto) { ddEvento(k); return; }
     if(k==SDLK_LEFT||(k==SDLK_UP&&ajustes_menu_topo())){ if(k==SDLK_LEFT&&tabCursor>0)tabCursor--; else pedMenu=1; }
-    if(k==SDLK_RIGHT&&tabCursor<na)tabCursor++;
+    if(k==SDLK_RIGHT&&tabCursor<na+1)tabCursor++;
     // Paginas: a seta ja troca de pagina (o deslize e o feedback).
     if((k==SDLK_LEFT||k==SDLK_RIGHT)&&est==VT_AB_PAGINAS&&tabCursor<na&&tabCursor!=source)irPagina(tabCursor);
     if(k==SDLK_RETURN||k==SDLK_KP_ENTER) {
-      if(tabCursor>=na) {
+      if(tabCursor>na) alternarEstiloAbas();
+      else if(tabCursor==na) {
         // O cursor continua no botao: da para passar por todas as exibicoes
         // de uma vez so com OK.
         alternarExibicao();
@@ -1440,7 +1448,7 @@ void vertudo_atualizar(float dt, Uint32 agora) {
     tabAnim[i] = anim_mola(tabAnim[i], alvoTab, dt,
                            alvoTab > tabAnim[i] ? NV_MOLA_FOCO : NV_MOLA_DESFOCO);
   }
-  { float alvoP = collection && tabFocus && tabCursor >= cabN() ? 1.0f : 0.0f;
+  { float alvoP = collection && tabFocus && tabCursor == cabN() ? 1.0f : 0.0f;
     pillAnim = anim_mola(pillAnim, alvoP, dt, alvoP > pillAnim ? NV_MOLA_FOCO : NV_MOLA_DESFOCO); }
   if (!tabFocus) ddAberto = 0;
   ddAnim = anim_mola(ddAnim, ddAberto ? 1.0f : 0.0f, dt, NV_MOLA_FOCO);
@@ -1901,7 +1909,7 @@ static void themeHeader(float a,float x0) {
     // quase transparentes. `tabAnim` cruza o repouso e o foco em vez de
     // escalar.
     // A faixa termina antes da coluna do painel: ali mora o botao "Exibição".
-    const float H=52.0f,PAD=22.0f,GAP=12.0f,W=vtTelefone()?vtFim()-x0:VT_PAN_X-x0-28;
+    const float H=52.0f,PAD=22.0f,GAP=12.0f,W=vtTelefone()?vtFim()-x0-64:VT_PAN_X-x0-28;
     float margem = vtTelefone() ? 0.0f : 6.0f;
     float textoW = vtTelefone() ? fminf(420.0f, W-PAD*2) : 420.0f;
     float larg[COL_SOURCE_MAX],pos[COL_SOURCE_MAX],px=0;
@@ -1932,7 +1940,8 @@ static void themeHeader(float a,float x0) {
     }
     // Estilos novos (#205): desenham o proprio arranjo; a barra que nao cabe na
     // largura cai nas pilulas rolaveis (as de sempre), sem mudar o D-pad.
-    { int est=estiloAbas();
+    int est=estiloAbas();
+    {
       if(est==VT_AB_MENU){abasMenu(x0,W,rot,a);return;}
       if(est==VT_AB_PAGINAS){abasPaginas(x0,W,rot,nAbas,a);return;}
       if(est==VT_AB_BARRA&&abasBarra(x0,W,rot,nAbas,a))return; }
@@ -1940,7 +1949,7 @@ static void themeHeader(float a,float x0) {
     // entao "seis por vez" nao existe mais. A aba com o cursor (ou a aberta,
     // quando o cursor esta na grade) entra inteira; a rolagem so anda o que
     // precisa, e o resto da faixa fica onde estava.
-    int alvo=tabFocus?tabCursor:source;
+    int alvo=tabFocus&&tabCursor<nAbas?tabCursor:source;
     float ini=pos[alvo],fim=pos[alvo]+larg[alvo];
 #ifdef NV_TOUCH_UI
     if (!toqueAbas.livre)
@@ -1966,6 +1975,14 @@ static void themeHeader(float a,float x0) {
       GfxRect pill={x,253,larg[i],H};
       if(ah<.005f)continue;
       ponteiro_alvo(fmaxf(pill.x,x0-margem),pill.y,fminf(pill.x+pill.w,x0+W+margem)-fmaxf(pill.x,x0-margem),pill.h,ponteiroAba,NULL,i,0);
+      if(est==VT_AB_TOPO) {
+        int cor=selecionada?255:160;
+        TxtLinha t=txt_linha_corta(selecionada?TXT_ILHA_SECAO:TXT_HERO_META,rot[i],cor,cor,cor,255,textoW);
+        txt_desenhar_alpha(t,x+PAD,pill.y+(H-t.h)*.5f,ah);
+        if(selecionada)gfx_cor((GfxRect){x+PAD,pill.y+H-4,fminf(t.w,32.0f),3},.5f,1,1,1,ah);
+        if(f)foco_anel(pill,NV_RAIO_PILL,1,ah);
+        continue;
+      }
       if (selecionada) {
         float sr, sg, sb; corFocoFonte(&sr, &sg, &sb);
         gfx_cor(pill, NV_RAIO_PILL, sr, sg, sb,
@@ -2339,7 +2356,7 @@ static void cabecalhoDecada(int k, float x0, float y, float a) {
 // estariam: a coluna do painel e do retrato do diretor fica livre.
 static void botaoExibicao(float a, float x0) {
   float x = nAbas() ? VT_PAN_X : x0, y = 253.0f, H = 52.0f;
-  float maxW = nAbas() && grupo("Directors") ? 172.0f : VT_PAN_W;
+  float maxW = nAbas() && grupo("Directors") ? 172.0f : VT_PAN_W - 64.0f;
   float f = pillAnim, sr, sg, sb;
   int cor = f > 0.5f ? ajustes_tinta_foco() : 214;
   TxtLinha t = txt_linha_corta(TXT_HERO_META, LAY_NOME[lay], cor, cor, cor, 255, maxW - 70.0f);
@@ -2362,6 +2379,15 @@ static void botaoExibicao(float a, float x0) {
     gfx_cor(dp, NV_RAIO_PILL, 0.05f, 0.055f, 0.07f, 0.82f * a * f);
     txt_desenhar_alpha(d, dp.x + 12.0f, dp.y + 6.0f, a * f);
   }
+}
+
+static void botaoEstiloAbas(float a) {
+  GfxRect r = {vtFim()-52.0f, VT_AB_Y, 52, VT_AB_H};
+  int f = tabFocus && tabCursor == cabN()+1;
+  if (lay == VT_LAY_VITRINE) r.y = NV_ILHA_Y + 64.0f;
+  if(f) foco_anel(r,NV_RAIO_PILL,1,a);
+  gfx_icone((GfxRect){r.x+13,r.y+13,26,26},"aj_layout-list",1,1,1,a*(f?1:.65f));
+  ponteiro_alvo(r.x,r.y,r.w,r.h,ponteiroCab,NULL,cabN()+1,0);
 }
 
 static void botaoMaisVistos(float a, float x0) {
@@ -2465,6 +2491,7 @@ static void vitDesenhar(float a, float x0) {
       txt_desenhar_alpha(tt, x0, grupo("Streaming") ? 44.0f : 62.0f, a);
     } }
   botaoExibicao(a, x0);
+  botaoEstiloAbas(a);
 }
 
 void vertudo_desenhar(Uint32 agora) {
@@ -2563,7 +2590,7 @@ void vertudo_desenhar(Uint32 agora) {
 
   // CABECALHO por cima do recorte, entao ele nunca compete com a arte.
   themeHeader(a,x0);
-  if (collection) botaoExibicao(a, x0);
+  if (collection) { botaoExibicao(a, x0); botaoEstiloAbas(a); }
 
   if (n > 0 && !vtTelefone()) painel(a);
   if (vtTelefone()) gfx_escala_sair(escalaAnterior);

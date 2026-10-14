@@ -2606,6 +2606,7 @@
   T("Menu do cartão (segurar OK)", "Kortmeny (håll in OK)"),
   T("Menu em trilho, Dinâmica, Biblioteca e Agenda novas.", "Meny som skena, Dynamisk, nya Bibliotek och Schema."),
   T("Menu lateral", "Sidomeny"),
+  T("Menu no topo", "Meny högst upp"),
   T("Menu, fontes e episódios em vidro. Ajustes › Aparência.", "Meny, källor och avsnitt i glas. Inställningar › Utseende."),
   T("Mesma opinião em %d de %d títulos", "Samma åsikt om %d av %d titlar"),
   T("Mesmo protocolo do Jellyfin", "Samma protokoll som Jellyfin"),

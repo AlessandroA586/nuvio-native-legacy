@@ -2605,6 +2605,7 @@
   T("Menu do cartão (segurar OK)", "Меню картки (утримуйте OK)"),
   T("Menu em trilho, Dinâmica, Biblioteca e Agenda novas.", "Меню-рейка, Динамічна, нові Бібліотека й Розклад."),
   T("Menu lateral", "Бічне меню"),
+  T("Menu no topo", "Меню вгорі"),
   T("Menu, fontes e episódios em vidro. Ajustes › Aparência.", "Скляне меню, джерела й епізоди. Налаштування › Вигляд."),
   T("Mesma opinião em %d de %d títulos", "Однакова думка про %d із %d назв"),
   T("Mesmo protocolo do Jellyfin", "Той самий протокол, що й Jellyfin"),

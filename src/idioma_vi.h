@@ -2606,6 +2606,7 @@
   T("Menu do cartão (segurar OK)", "Menu thẻ (giữ OK)"),
   T("Menu em trilho, Dinâmica, Biblioteca e Agenda novas.", "Menu dạng thanh ray, Động, Thư viện và Lịch chiếu mới."),
   T("Menu lateral", "Menu bên"),
+  T("Menu no topo", "Menu trên cùng"),
   T("Menu, fontes e episódios em vidro. Ajustes › Aparência.", "Menu, nguồn và tập phim kiểu kính. Cài đặt › Giao diện."),
   T("Mesma opinião em %d de %d títulos", "Cùng ý kiến về %d trong %d tựa phim"),
   T("Mesmo protocolo do Jellyfin", "Cùng giao thức với Jellyfin"),

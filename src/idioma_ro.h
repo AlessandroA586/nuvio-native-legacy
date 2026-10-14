@@ -2605,6 +2605,7 @@
   T("Menu do cartão (segurar OK)", "Meniul cardului (ține apăsat OK)"),
   T("Menu em trilho, Dinâmica, Biblioteca e Agenda novas.", "Meniu pe șină, Dinamic, Bibliotecă și Program noi."),
   T("Menu lateral", "Meniu lateral"),
+  T("Menu no topo", "Meniu în partea de sus"),
   T("Menu, fontes e episódios em vidro. Ajustes › Aparência.", "Meniu, surse și episoade din sticlă. Setări › Aspect."),
   T("Mesma opinião em %d de %d títulos", "Aceeași opinie despre %d din %d titluri"),
   T("Mesmo protocolo do Jellyfin", "Același protocol ca Jellyfin"),

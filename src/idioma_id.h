@@ -2606,6 +2606,7 @@
   T("Menu do cartão (segurar OK)", "Menu kartu (tahan OK)"),
   T("Menu em trilho, Dinâmica, Biblioteca e Agenda novas.", "Menu berbentuk rel, Dinamis, serta Pustaka dan Jadwal baru."),
   T("Menu lateral", "Menu samping"),
+  T("Menu no topo", "Menu atas"),
   T("Menu, fontes e episódios em vidro. Ajustes › Aparência.", "Menu, sumber, dan episode bergaya kaca. Pengaturan › Tampilan."),
   T("Mesma opinião em %d de %d títulos", "Pendapat sama pada %d dari %d judul"),
   T("Mesmo protocolo do Jellyfin", "Protokol yang sama dengan Jellyfin"),

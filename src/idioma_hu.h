@@ -2606,6 +2606,7 @@
   T("Menu do cartão (segurar OK)", "Kártyamenü (tartsd nyomva az OK-t)"),
   T("Menu em trilho, Dinâmica, Biblioteca e Agenda novas.", "Sínmenü, Dinamikus, új Könyvtár és Menetrend."),
   T("Menu lateral", "Oldalsó menü"),
+  T("Menu no topo", "Felső menü"),
   T("Menu, fontes e episódios em vidro. Ajustes › Aparência.", "Üveg menü, források és epizódok. Beállítások › Megjelenés."),
   T("Mesma opinião em %d de %d títulos", "Azonos vélemény %d címről a %d közül"),
   T("Mesmo protocolo do Jellyfin", "Ugyanaz a protokoll, mint a Jellyfin"),

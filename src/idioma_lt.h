@@ -2606,6 +2606,7 @@
   T("Menu do cartão (segurar OK)", "Kortelės meniu (palaikykite OK)"),
   T("Menu em trilho, Dinâmica, Biblioteca e Agenda novas.", "Meniu kaip bėgelis, Dinaminis, naujos Biblioteka ir Tvarkaraštis."),
   T("Menu lateral", "Šoninis meniu"),
+  T("Menu no topo", "Meniu viršuje"),
   T("Menu, fontes e episódios em vidro. Ajustes › Aparência.", "Stiklinis meniu, šaltiniai ir serijos. Nustatymai › Išvaizda."),
   T("Mesma opinião em %d de %d títulos", "Ta pati nuomonė apie %d iš %d kūrinių"),
   T("Mesmo protocolo do Jellyfin", "Tas pats protokolas kaip Jellyfin"),

@@ -2606,6 +2606,7 @@
   T("Menu do cartão (segurar OK)", "Kaartmenu (houd OK ingedrukt)"),
   T("Menu em trilho, Dinâmica, Biblioteca e Agenda novas.", "Menu als rail, Dynamisch, nieuwe Bibliotheek en Schema."),
   T("Menu lateral", "Zijmenu"),
+  T("Menu no topo", "Menu bovenaan"),
   T("Menu, fontes e episódios em vidro. Ajustes › Aparência.", "Menu, bronnen en afleveringen van glas. Instellingen › Uiterlijk."),
   T("Mesma opinião em %d de %d títulos", "Dezelfde mening over %d van %d titels"),
   T("Mesmo protocolo do Jellyfin", "Zelfde protocol als Jellyfin"),
