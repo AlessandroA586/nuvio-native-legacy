@@ -129,7 +129,7 @@ static Uint32 progressoEm;
 static double progressoPos;
 static int vigiaAtiva, pausaPedida;
 static atomic_int vigiaReiniciar;
-static atomic_int playerPreso;
+static atomic_int playerPreso = -2;   // -2 = sem aviso (0 e um relogio valido)
 // Ultima consulta de >= 5 s (0 = nenhuma). So vale recente: uma consulta lenta
 // isolada nao pode armar o watchdog numa pausa legitima.
 #define TPK_LENTA_VALE_MS 11000u   // ~2 consultas de 5 s seguidas
@@ -487,9 +487,9 @@ static int abrirSessao(void) {
     // servidor ja os usa), nao do 127.0.0.1.
     cv.abriuEm = SDL_GetTicks(); cv.tocou = 0;
     hAbrir(cv.url, "");
-    return 1;
+  } else {
+    hAbrir(urlAtual, cabecalhos);
   }
-  hAbrir(urlAtual, cabecalhos);
   // Depois do hAbrir: o host troca de sessao nele, e um aviso da sessao velha
   // emitido antes disso nao pode sobrar para matar a nova.
   atomic_store(&playerPreso, -2); atomic_store(&consultaLentaEm, 0);
@@ -1227,12 +1227,24 @@ void video_bombear(void) {
   // O seek do recarregar sai com o player ja tocando: o host da Start logo
   // depois do prepare, e um seek no meio disso concorre com ele.
   if (reconBuscarMs >= 0 && pronto && tocando) {
-    if (hBuscar) hBuscar(reconBuscarMs);
-    if (cv.ativo) { cv.seekPend = 1; cv.seekAlvo = reconBuscarMs / 1000.0; cv.seekEm = SDL_GetTicks(); }
-    vigiaAtiva = 0;
-    printf("[video] reconexao: retomado em %ds\n", reconBuscarMs / 1000);
-    fflush(stdout);
+    int ms = reconBuscarMs;
     reconBuscarMs = -1;
+    if (cv.ativo && cv.prog) {
+      // Progressivo: o seek pendente reabre o fluxo no alvo (?t=); o TS nao tem
+      // seek cru. Sem URL do servidor, fica no ponto atual.
+      double alvo = ms / 1000.0;
+      if (dts_tpk_url_em(alvo, cv.url, sizeof cv.url)) {
+        cv.seekPend = 1; cv.seekAlvo = alvo; cv.seekEm = SDL_GetTicks(); cv.deslocOk = 0;
+        convReabrir(alvo, "seek pendente");
+        abrirSessao();
+      }
+    } else {
+      if (hBuscar) hBuscar(ms);
+      if (cv.ativo) { cv.seekPend = 1; cv.seekAlvo = ms / 1000.0; cv.seekEm = SDL_GetTicks(); }
+    }
+    vigiaAtiva = 0;
+    printf("[video] reconexao: retomado em %ds\n", ms / 1000);
+    fflush(stdout);
   }
   if (reconPausa >= 0 && pronto && tocando && reconBuscarMs < 0 && !reconErroPend && !recon.pendente) {
     if (hPausar) hPausar(reconPausa);
