@@ -338,6 +338,8 @@ int layout_modo_mobile(void);
 #define NV_TEMPO_FAIXA_H   96.0f
 #define NV_FICHA_W        600.0f
 #define NV_PALCO_ESC       1.3f
+// Fileira redonda (pessoas): diametro do disco. O nome vai abaixo, no bloco do rotulo.
+#define NV_REDONDA_D       200.0f
 #define NV_PALCO_VIZ       0.66f
 // O numeral: corpo do TXT_RANK_GRANDE (os algarismos da Inter medem ~0,73 do
 // corpo, ~190 px contra o cartaz de 322 — perto de 60%, a proporcao da Apple),
@@ -653,6 +655,7 @@ int layout_modo_mobile(void);
 #define NV_ILHA_H          52.0f
 #define NV_ILHA_H_ABERTA   64.0f
 #define NV_ILHA_MARGEM_D   64.0f   // da borda direita, quando ancorada a direita
+#define NV_ILHA_REP_W     190.0f   // pilula em repouso (12 h AM/PM e a mais larga) + respiro
 #define NV_ILHA_TEXTO_MAX 760.0f   // frase do aviso: mais que isto, reticencias
 
 // Fundo: #0D0D0D. Aqui estava #252629, com a justificativa de que "o

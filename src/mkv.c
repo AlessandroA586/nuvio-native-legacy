@@ -1,5 +1,8 @@
 #include "mkv.h"
 #include "rede.h"
+#ifdef NV_RUST_MKVCORE
+#include "mkvcore.h"
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -19,6 +22,7 @@
 // o video em todos.
 #define MKV_TRECHO  (320L * 1024)
 
+#ifndef NV_RUST_MKVCORE
 // --- EBML: inteiros de tamanho variavel --------------------------------------
 //
 // O primeiro byte diz, pela posicao do bit 1 mais alto, quantos bytes o numero
@@ -293,6 +297,8 @@ static int lerCapitulos(const unsigned char *p, long n, MkvCap *saida, int max) 
   return achou;
 }
 
+#endif  // !NV_RUST_MKVCORE (EBML core: rust/mkvcore)
+
 // Anda pela arvore ate achar Tracks. Entra em Segment (que e um contentor
 // gigante) e PULA o resto — sem o pulo a busca varreria byte a byte e casaria
 // com qualquer coincidencia dentro dos dados de video.
@@ -307,6 +313,34 @@ static long tkTam;
 // arquivo (-1 = o SeekHead nao disse). 64 bits: Chapters no fim de um remux de
 // mais de 2 GB nao cabe num long de 32 bits.
 static long long segIni, posChapters;
+#ifdef NV_RUST_MKVCORE
+// Mesma busca, feita pelo nucleo Rust (rust/mkvcore): o estado que a versao C
+// deixa em statics volta por NvMkvScan e e copiado para os daqui.
+static int acharTracks(const unsigned char *p, long n, MkvFaixa *saida, int max,
+                       MkvCap *caps, int maxCaps, int *nCaps) {
+  NvMkvScan sc;
+  int nFaixas = nv_mkvcore_achar_tracks(p, n, saida, max, caps, maxCaps, &sc);
+  if (nCaps) *nCaps = sc.n_caps;
+  tracksCortado = sc.tracks_cortado;
+  tkAchado = sc.tk_achado;
+  tkTam = (long)sc.tk_tam;
+  segIni = sc.seg_ini;
+  posChapters = sc.pos_chapters;
+  if (sc.tracks_cortado) {
+    printf("[mkv] Tracks tem %lld bytes e o trecho baixado acaba em %lld: %d faixa(s) lidas, lista pode estar incompleta\n",
+           sc.tk_tam, sc.tk_disp, nFaixas);
+    fflush(stdout);
+  }
+  return nFaixas;
+}
+
+// Os testes que incluem este .c chamam lerCapitulos pelo nome; o corpo mora no
+// nucleo Rust.
+__attribute__((unused))
+static int lerCapitulos(const unsigned char *p, long n, MkvCap *saida, int max) {
+  return nv_mkvcore_capitulos(p, n, saida, max);
+}
+#else
 #define ID_SEEKHEAD 0x114D9B74UL
 #define ID_SEEK     0x4DBBUL
 #define ID_SEEKID   0x53ABUL
@@ -403,6 +437,7 @@ static int acharTracks(const unsigned char *p, long n, MkvFaixa *saida, int max,
   }
   return nFaixas;
 }
+#endif  // NV_RUST_MKVCORE
 
 // O capitulo dos creditos: primeiro pelo NOME, depois pela posicao.
 //
@@ -490,13 +525,20 @@ double mkv_creditos_ultimo(const MkvCap *caps, int n) {
 static int capsPorPosicao(const char *url, long long pos, MkvCap *caps, int max, int *status) {
   long n = 0, need;
   int ui = 0, ut = 0, achou = 0, st = 0;
+#ifndef NV_RUST_MKVCORE
   unsigned long id;
+#endif
   long tam;
   char *b = rede_baixar_trecho_st(url, 15, pos, pos + MKV_CAP_PRIMEIRO - 1, &n, &st, NULL, NULL, 0);
   if (status) *status = st;
   if (!b) return 0;
+#ifdef NV_RUST_MKVCORE
+  { long long t = nv_mkvcore_cap_cabecalho((const unsigned char *)b, n, &ui);
+    tam = (t < 0 || t > MKV_CAP_TETO) ? -1 : (long)t; }
+#else
   id = lerId((const unsigned char *)b, n, &ui);
   tam = id == ID_CHAPTERS ? lerTam((const unsigned char *)b + ui, n - ui, &ut) : -1;
+#endif
   if (tam < 0 || tam > MKV_CAP_TETO) { free(b); return 0; }
   need = ui + ut + tam;
   if (need > n) {
@@ -505,7 +547,11 @@ static int capsPorPosicao(const char *url, long long pos, MkvCap *caps, int max,
     if (status) *status = st;
     if (!b || n < need) { free(b); return 0; }
   }
+#ifdef NV_RUST_MKVCORE
+  achou = nv_mkvcore_capitulos((const unsigned char *)b + ui + ut, tam, caps, max);
+#else
   achou = lerCapitulos((const unsigned char *)b + ui + ut, tam, caps, max);
+#endif
   free(b);
   return achou;
 }
@@ -562,6 +608,25 @@ double mkv_previa_nomeada(const MkvCap *caps, int n) {
 static MkvDiag diag = { 0, 0, 0, 0, -1, 0, -1, -1, -1, -1 };
 const MkvDiag *mkv_diag(void) { return &diag; }
 
+#ifdef NV_RUST_MKVCORE
+int mkv_quadro_tem_rpu(const unsigned char *p, long n, int nalTam, int *rpuTipo, int *rpuPerfil) {
+  return nv_mkvcore_quadro_tem_rpu(p, n, nalTam, rpuTipo, rpuPerfil);
+}
+
+// A varredura do primeiro Cluster mora no nucleo Rust; aqui fica so o estado.
+static void diagTrecho(const unsigned char *p, long n, const MkvFaixa *fx, int nf) {
+  int faixa = 0, nalTam = 0, j;
+  NvDiagOut o;
+  for (j = 0; j < nf; j++) if (fx[j].tipo == 1) { faixa = fx[j].numero; nalTam = fx[j].nalTam; break; }
+  nv_mkvcore_diag_trecho(p, n, faixa, nalTam, &o);
+  memset(&diag, 0, sizeof diag);
+  diag.lidos = n; diag.tracksAchado = tkAchado; diag.tracksTam = tkTam;
+  diag.tracksInteiro = tkAchado && !tracksCortado;
+  diag.rpu = o.rpu; diag.quadros = o.quadros;
+  diag.rpuTipo = o.rpu_tipo; diag.rpuPerfil = o.rpu_perfil;
+  diag.blocoIni = o.bloco_ini; diag.blocoFim = o.bloco_fim;
+}
+#else
 int mkv_quadro_tem_rpu(const unsigned char *p, long n, int nalTam, int *rpuTipo, int *rpuPerfil) {
   long o = 0;
   if (!p || nalTam < 1 || nalTam > 4) return -1;
@@ -671,6 +736,7 @@ static void diagTrecho(const unsigned char *p, long n, const MkvFaixa *fx, int n
     o += tam;
   }
 }
+#endif  // NV_RUST_MKVCORE
 
 int mkv_rpu_alem(const char *url, int nalTam, long teto) {
   long n = 0, quer;
@@ -691,6 +757,7 @@ int mkv_rpu_alem(const char *url, int nalTam, long teto) {
 // Ver a nota em mkv.h (MKV_CONT_*). Estado estatico como `diag`: le-se no
 // mesmo fio, logo depois da sonda.
 static int ultimoContentor;
+#ifndef NV_RUST_MKVCORE
 static int caixaIso(const unsigned char *t) {
   static const char *tipos[] = { "ftyp", "styp", "moov", "mdat", "free", "skip", "wide", "pdin" };
   size_t i;
@@ -709,6 +776,10 @@ int mkv_contentor(const unsigned char *p, long n) {
   if (i < n && (p[i] == '<' || p[i] == '{' || p[i] == '[')) return MKV_CONT_TEXTO;
   return MKV_CONT_OUTRO;
 }
+#endif
+#ifdef NV_RUST_MKVCORE
+int mkv_contentor(const unsigned char *p, long n) { return nv_mkvcore_contentor(p, n); }
+#endif
 int mkv_ultimo_contentor(void) { return ultimoContentor; }
 int mkv_contentor_definitivo(int c) {
   return c == MKV_CONT_MP4 || c == MKV_CONT_TS || c == MKV_CONT_OUTRO;

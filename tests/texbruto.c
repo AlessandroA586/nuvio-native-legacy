@@ -151,6 +151,15 @@ int main(void) {
     printf("     pixel do cartaz: r=%d b=%d\n", p[0], p[2]);
     assert(p[2] > 150 && p[0] < 60);
     SDL_FreeSurface(s); itens[b].sup = NULL; }
+  // Retrato opaco a 640, em cache frio: publica a cor sem decode extra.
+  { CorvivaPaleta pal;
+    assert(!corviva_paleta(POSTER, &pal));
+    tex_publicar_paleta(POSTER);
+    assert(corviva_paleta(POSTER, &pal) && pal.ok);
+    assert(pal.acento[2] > pal.acento[0]);
+    assert(itens[b].estado == DECODIFICADO && !itens[b].naFilaDec);
+    tex_publicar_paleta(POSTER);
+    assert(corviva_paleta(POSTER, &pal)); }
   puts("ok  cartaz que entra no slot vago mostra o cartaz, nao a arte do anterior");
   assert(!sobrou);
   puts("ok  pedido abandonado no decode nao deixa bytes no slot"); }
