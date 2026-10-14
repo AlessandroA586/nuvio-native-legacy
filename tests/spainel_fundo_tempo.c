@@ -81,8 +81,9 @@ static void rodarMs(Uint32 ms) {
 // vazio + veu) na faixa da home a esquerda do painel, do quadro que acabou de
 // ser desenhado (back buffer, antes da troca: refaz um quadro sem trocar).
 static unsigned char pix[1000 * 1080 * 4], ref[1000 * 1080 * 4];
+static double rodapeCheio;   // fracao do rodape (100 px de baixo) com conteudo
 static void medir(const char *rotulo, double *media, double *cheia) {
-  long soma = 0, acima = 0, n = 0;
+  long soma = 0, acima = 0, n = 0, rod = 0;
   int i;
   float dt = 1.0f / 60.0f;
   tex_bombear(3);
@@ -101,8 +102,9 @@ static void medir(const char *rotulo, double *media, double *cheia) {
   for (i = 0; i < 1000 * 1080; i++) {
     int l = (pix[i * 4] + pix[i * 4 + 1] + pix[i * 4 + 2]) / 3;
     soma += l; n++;
-    if (l > 14) acima++;
+    if (l > 14) { acima++; if (i < 1000 * 100) rod++; }
   }
+  rodapeCheio = rod / (1000.0 * 100.0);
   if (getenv("SPFT_PPM")) {
     static int nppm; char nome[600]; FILE *f; int y;
     snprintf(nome, sizeof nome, "%s-%d.ppm", getenv("SPFT_PPM"), nppm++);
@@ -192,6 +194,12 @@ int main(void) {
     if (nc != PORFIL) { printf("FALHA: o que acabou de ser visto nao esta no painel\n"); falhas++; } }
   rodarMs(5500);                       // entrada + as tres repinturas (0,4/1,5/4 s)
   medir("painel aberto, assentado", &b0, &c0);
+  // A repintura de 4 s vem ~2,5 s depois da de 1,5 s: a home nao e desenhada
+  // nesse intervalo e lia a ausencia como "voltou de outra tela", recomecando a
+  // cascata das fileiras no quadro que ficava congelado (relato do dono, 13/10:
+  // "a sidebar ainda esconde a home atras depois de um tempo").
+  printf("rodape assentado: %.1f%% com conteudo\n", rodapeCheio * 100.0);
+  if (rodapeCheio < 0.2) { printf("FALHA: depois da ultima repintura a copia ficou sem as fileiras\n"); falhas++; }
 
   // 1) So o tempo passando, nada muda: a copia tem de continuar igual.
   rodarMs(3000);

@@ -6403,6 +6403,14 @@ int home_cartao_foco_por_cima(int indice) {
   return 1;
 }
 
+// O painel de Salvos parado mostra a copia da home sem desenha-la: as fileiras
+// continuam na tela, so nao passam por home_desenhar. Sem isto a copia refeita
+// depois de um intervalo longo (a repintura de 4 s) lia a ausencia como volta
+// de outra tela e recomecava a cascata de entrada no quadro congelado.
+void home_fileiras_vistas(Uint32 agora) {
+  if (fileirasVistasEm) fileirasVistasEm = agora ? agora : 1u;
+}
+
 void home_desenhar(Uint32 agora) {
   // O cartaz capaz do trailer No card e reescrito por quem o pintar neste quadro.
   cartaoTrailerItem = -1; cartaoTrailerPode = cartaoTrailerServe = 0;

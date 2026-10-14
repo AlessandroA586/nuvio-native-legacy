@@ -68,6 +68,8 @@ void home_shot_trailer(int sim);
 // "[home-trailer] autoplay gate=top-overlay (...)" line; call before the step.
 void home_trailer_topo_motivo(const char *motivo);
 void home_desenhar(Uint32 agora);
+// Fileiras ainda visiveis atras da copia parada do painel (salvospainel.c).
+void home_fileiras_vistas(Uint32 agora);
 
 // Onde a ARTE do hero foi desenhada no ultimo quadro. A tela de detalhe usa
 // isto para nascer com o backdrop no mesmo lugar — o fundo do detalhe E a arte
