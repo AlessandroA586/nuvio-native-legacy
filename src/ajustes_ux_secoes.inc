@@ -1019,7 +1019,7 @@ static void ajcTvProblemas(int A) {
   static const int OP[6] = { AJ_LIVETV_DIAG, AJ_LIVETV_RES, AJ_LIVETV_ESPERA, AJ_LIVETV_FORMATO, AJ_LIVETV_MODO, AJ_LIVETV_PROXY };
   int i;
   CIMG(ajArte(AJA_FUNDO, A), 0, 0, 640, 360, 22, 1);
-  gfx_cor(CR(0, 0, 640, 360), 22.0f / 360, 0.031f, 0.031f, 0.039f, 0.5f);
+  gfx_cor(CR(0, 0, 640, 360), 22.0f / 360, 0.031f, 0.031f, 0.039f, 0.5f); // vidro-ok: Ajustes preview mock
   CVID(28, 26, 92, 32, 16); CACC(42, 37, 10, 10, 1); CBAR(60, 38, 44, 0.85f);
   ajLogo(ajcLogoAmostra(A), CX(36), CY(76), 80 * ajc.s, 40 * ajc.s, 0.95f);
   for (i = 0; i < 12; i++) {
@@ -1228,7 +1228,7 @@ static void ajcDesTela(int A) {
     ajcTxt(textoValor(AJ_RESOLUCAO), 12, 1, 72, 37, 200, 1); ajcFoco(AJ_RESOLUCAO, 36, 30, w2, 30, 15); }
   CVID(300, 30, 304, 130, 22);
   ajcBorrada(ajArte(AJA_FUNDO, A), CR(316, 46, 120, 98), 14 * ajc.s, 1);
-  gfx_cor(CR(316, 46, 120, 98), 14.0f / 98, 0.055f, 0.059f, 0.071f, 0.5f);
+  gfx_cor(CR(316, 46, 120, 98), 14.0f / 98, 0.055f, 0.059f, 0.071f, 0.5f); // vidro-ok: Ajustes preview mock
   CICON("aj_layers", 362, 82, 26, 0.9f);
   ajcTxt(rotuloOpcao(AJ_GPU_EFEITOS), 12, 1, 450, 66, 140, 0.9f);
   ajcTxt(textoValor(AJ_GPU_EFEITOS), 11, 0, 450, 88, 140, 0.6f);
@@ -1244,7 +1244,7 @@ static void ajcDesTela(int A) {
 static void ajcDesDiag(int A) {
   int i;
   ajPreviaHomeArte(ajc.x, ajc.y, 640 * ajc.s, A);
-  gfx_cor(CR(0, 0, 640, 360), 22.0f / 360, 0.031f, 0.031f, 0.039f, 0.45f);
+  gfx_cor(CR(0, 0, 640, 360), 22.0f / 360, 0.031f, 0.031f, 0.039f, 0.45f); // vidro-ok: Ajustes preview mock
   if (valor[AJ_MEDIDOR] != 0) {
     CVID(20, 20, 150, 52, 16);
     ajcTxt("60 fps", 14, 1, 34, 28, 0, 1);

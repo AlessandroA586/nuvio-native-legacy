@@ -1950,7 +1950,7 @@ static void painelFlutuante(GfxRect r, float ar, float ag, float ab, float a) {
   (void)ar; (void)ag; (void)ab;
   gfx_rect((GfxRect){ r.x - 18.0f, r.y - 8.0f, r.w + 36.0f, r.h + 40.0f }, 0, GFX_SOMBRA,
            1.0f, 0, 0, 0.5f, 0, 0, 0, .42f * a);
-  if (vid) { gfx_cor(r, raio, 0.05f, 0.052f, 0.06f, 0.94f * a); gfx_vidro_folha(r, raio, a); }
+  if (vid) { gfx_cor(r, raio, 0.05f, 0.052f, 0.06f, 0.94f * a); gfx_vidro_folha(r, raio, a); } // vidro-ok: opaque base under the glass sheet
   else gfx_cor(r, raio, .071f, .075f, .086f, .99f * a);
   gfx_luz_canto(r, raio, r.w * .25f, -r.h * .25f, r.w * .9f, 1, 1, 1, (vid ? .06f : .04f) * a);
 }
