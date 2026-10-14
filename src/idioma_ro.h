@@ -1840,6 +1840,7 @@
   T("Esta nota vem do MDBList e precisa da chave dele na sua conta Nuvio.", "Această notă vine de la MDBList și are nevoie de cheia lui în contul tău Nuvio."),
   T("Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.", "Această notă vine de la MDBList: pornind-o pornești și interogarea MDBList."),
   T("Esta pessoa não compartilha sua atividade.", "Această persoană nu își partajează activitatea."),
+  T("Esta pessoa não tem página ainda", "Această persoană nu are încă o pagină"),
   T("Esta preferência participa dos ajustes do perfil. Nenhum serviço será desconectado.", "Această preferință ține de profil. Niciun serviciu nu va fi deconectat."),
   T("Esta semana", "Săptămâna aceasta"),
   T("Esta sessão", "Această sesiune"),

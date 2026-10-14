@@ -1841,6 +1841,7 @@
   T("Esta nota vem do MDBList e precisa da chave dele na sua conta Nuvio.", "Rating ini berasal dari MDBList dan butuh kuncinya di akun Nuvio-mu."),
   T("Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.", "Rating ini dari MDBList: menyalakannya juga menyalakan pencarian MDBList."),
   T("Esta pessoa não compartilha sua atividade.", "Orang ini tidak membagikan aktivitasnya."),
+  T("Esta pessoa não tem página ainda", "Orang ini belum punya halaman"),
   T("Esta preferência participa dos ajustes do perfil. Nenhum serviço será desconectado.", "Preferensi ini bagian dari pengaturan profil. Tidak ada layanan yang diputus."),
   T("Esta semana", "Minggu ini"),
   T("Esta sessão", "Sesi ini"),

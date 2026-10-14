@@ -1840,6 +1840,7 @@
   T("Esta nota vem do MDBList e precisa da chave dele na sua conta Nuvio.", "Esta nota viene de MDBList y necesita su clave en tu cuenta de Nuvio."),
   T("Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.", "Esta nota viene de MDBList: activarla también activa la consulta a MDBList."),
   T("Esta pessoa não compartilha sua atividade.", "Esta persona no comparte su actividad."),
+  T("Esta pessoa não tem página ainda", "Esta persona aún no tiene página"),
   T("Esta preferência participa dos ajustes do perfil. Nenhum serviço será desconectado.", "Esta preferencia forma parte de los ajustes del perfil. No se desconectará ningún servicio."),
   T("Esta semana", "Esta semana"),
   T("Esta sessão", "Esta sesión"),

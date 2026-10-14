@@ -1841,6 +1841,7 @@
   T("Esta nota vem do MDBList e precisa da chave dele na sua conta Nuvio.", "Điểm này đến từ MDBList và cần khóa của nó trong tài khoản Nuvio của bạn."),
   T("Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.", "Điểm này lấy từ MDBList: bật nó cũng bật tra cứu MDBList."),
   T("Esta pessoa não compartilha sua atividade.", "Người này không chia sẻ hoạt động của mình."),
+  T("Esta pessoa não tem página ainda", "Người này chưa có trang"),
   T("Esta preferência participa dos ajustes do perfil. Nenhum serviço será desconectado.", "Tùy chọn này thuộc cài đặt hồ sơ. Không dịch vụ nào bị ngắt kết nối."),
   T("Esta semana", "Tuần này"),
   T("Esta sessão", "Phiên này"),

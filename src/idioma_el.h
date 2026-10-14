@@ -1841,6 +1841,7 @@
   T("Esta nota vem do MDBList e precisa da chave dele na sua conta Nuvio.", "Αυτή η βαθμολογία προέρχεται από το MDBList και χρειάζεται το κλειδί του στον λογαριασμό σου στο Nuvio."),
   T("Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.", "Αυτή η βαθμολογία έρχεται από το MDBList: η ενεργοποίηση ενεργοποιεί και την αναζήτηση στο MDBList."),
   T("Esta pessoa não compartilha sua atividade.", "Αυτό το άτομο δεν κοινοποιεί τη δραστηριότητά του."),
+  T("Esta pessoa não tem página ainda", "Αυτό το άτομο δεν έχει ακόμη σελίδα"),
   T("Esta preferência participa dos ajustes do perfil. Nenhum serviço será desconectado.", "Αυτή η προτίμηση ανήκει στο προφίλ. Καμία υπηρεσία δεν θα αποσυνδεθεί."),
   T("Esta semana", "Αυτή την εβδομάδα"),
   T("Esta sessão", "Αυτή η συνεδρία"),

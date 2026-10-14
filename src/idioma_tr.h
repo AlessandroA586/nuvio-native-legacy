@@ -1841,6 +1841,7 @@
   T("Esta nota vem do MDBList e precisa da chave dele na sua conta Nuvio.", "Bu puan MDBList'ten gelir ve Nuvio hesabında onun anahtarı gerekir."),
   T("Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.", "Bu puan MDBList’ten gelir: açmak MDBList sorgusunu da açar."),
   T("Esta pessoa não compartilha sua atividade.", "Bu kişi etkinliğini paylaşmıyor."),
+  T("Esta pessoa não tem página ainda", "Bu kişinin henüz bir sayfası yok"),
   T("Esta preferência participa dos ajustes do perfil. Nenhum serviço será desconectado.", "Bu tercih profil ayarlarının parçası. Hiçbir hizmetin bağlantısı kesilmez."),
   T("Esta semana", "Bu hafta"),
   T("Esta sessão", "Bu oturum"),

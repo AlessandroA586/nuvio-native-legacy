@@ -1841,6 +1841,7 @@
   T("Esta nota vem do MDBList e precisa da chave dele na sua conta Nuvio.", "Denne vurderingen kommer fra MDBList og trenger nøkkelen deres på Nuvio-kontoen din."),
   T("Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.", "Vurderingen kommer fra MDBList: å slå den på slår også på MDBList-oppslaget."),
   T("Esta pessoa não compartilha sua atividade.", "Denne personen deler ikke aktiviteten sin."),
+  T("Esta pessoa não tem página ainda", "Denne personen har ingen side ennå"),
   T("Esta preferência participa dos ajustes do perfil. Nenhum serviço será desconectado.", "Denne innstillingen hører til profilen. Ingen tjeneste kobles fra."),
   T("Esta semana", "Denne uken"),
   T("Esta sessão", "Denne økten"),

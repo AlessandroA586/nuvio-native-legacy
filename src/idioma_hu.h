@@ -1841,6 +1841,7 @@
   T("Esta nota vem do MDBList e precisa da chave dele na sua conta Nuvio.", "Ez az értékelés az MDBList-ből jön, és a kulcsa kell hozzá a Nuvio-fiókodban."),
   T("Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.", "Ez az értékelés az MDBListből jön: bekapcsolása az MDBList-lekérést is bekapcsolja."),
   T("Esta pessoa não compartilha sua atividade.", "Ez a személy nem osztja meg a tevékenységét."),
+  T("Esta pessoa não tem página ainda", "Ennek a személynek még nincs oldala"),
   T("Esta preferência participa dos ajustes do perfil. Nenhum serviço será desconectado.", "Ez a beállítás a profilhoz tartozik. Egyetlen szolgáltatás sem bontja a kapcsolatot."),
   T("Esta semana", "Ezen a héten"),
   T("Esta sessão", "Ez a munkamenet"),
