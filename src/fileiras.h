@@ -117,6 +117,10 @@ typedef enum {
   FIL_TIPO_FICHA,        // FILEIRA_FICHA — cartaz com a ficha (ano, nota, sinopse) ao lado
   FIL_TIPO_PALCO,        // FILEIRA_PALCO — o foco grande no centro, vizinhos menores
   FIL_TIPO_REDONDA,      // FILEIRA_REDONDA — avatar circular com o nome embaixo (fileiras de pessoas)
+  // 14/10 (dono): "o pôster só que do tamanho do grande tipo o 3:4 grande",
+  // com mais informação na base e o véu na cor predominante. No fim, pelo
+  // mesmo motivo: o número gravado dos tipos acima não muda.
+  FIL_TIPO_POSTER_GRANDE, // FILEIRA_POSTER_GRANDE — pôster 3:4 grande com ficha na base
   FIL_TIPO_N
 } FilTipo;
 

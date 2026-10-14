@@ -144,6 +144,12 @@ int main(void) {
       }
     }
     espacoTit = 1.0f; espacoFil = 1.0f; homeCom(HOME_LAYOUT_MODERNA, 0); }
+  // #205 cardexp (dono, 14/10): espacamento da referencia da Apple TV — o
+  // titulo sai de cima dos cards e as fileiras respiram — e o card da ficha
+  // menor, para nao transbordar o cartaz/fileira (NV_FICHA_W).
+  assert(NV_LEGACY_ROW_HEAD_H >= 64.0f);
+  assert(NV_FILEIRA_GAP >= 80.0f);
+  assert(NV_FICHA_W <= 540.0f);
   assert(larguraDe(FILEIRA_COLECAO) > larguraDe(FILEIRA_SERVICO));
   assert(!temRotulo(FILEIRA_DESTAQUE));
   assert(!temRotulo(FILEIRA_CATALOGOS));

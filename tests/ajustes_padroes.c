@@ -152,7 +152,7 @@ int main(void) {
   assert(AJ_INTERFACE_MODO == AJ_PROXIMO_CONTAGEM + 1);
   assert(AJ_MIC_BUSCA == AJ_INTERFACE_MODO + 1);
   assert(AJ_MENU_TOPO == AJ_MIC_BUSCA + 1 && AJ_ABAS_ESTILO == AJ_MENU_TOPO + 1 && AJ_TECLADO_ANDROID == AJ_ABAS_ESTILO + 1 && AJ_LEG_CONTORNO_COR == AJ_TECLADO_ANDROID + 1);
-  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_ESTAT_TAMANHO == AJ_FALHA_ADDON_LIMITE + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_DICASCONTROLE == AJ_OCULTAR_FILMES_VISTOS + 1 && AJ_HERO_GENERO == AJ_DICASCONTROLE + 1 && AJ_ABERTURA_ADDON == AJ_HERO_GENERO + 1 && AJ_ABERTURA_FUNDO == AJ_ABERTURA_ADDON + 1 && AJ_N == AJ_ABERTURA_FUNDO + 1);
+  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_ESTAT_TAMANHO == AJ_FALHA_ADDON_LIMITE + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_ESTAT_LADO == AJ_OCULTAR_FILMES_VISTOS + 1 && AJ_DICASCONTROLE == AJ_ESTAT_LADO + 1 && AJ_HERO_GENERO == AJ_DICASCONTROLE + 1 && AJ_ABERTURA_ADDON == AJ_HERO_GENERO + 1 && AJ_ABERTURA_FUNDO == AJ_ABERTURA_ADDON + 1 && AJ_N == AJ_ABERTURA_FUNDO + 1);
   assert(valor[AJ_HERO_GENERO] == 0 && ajustes_hero_genero());   // Ligado: o visual de sempre
   assert(!strcmp(CHAVE[AJ_HERO_GENERO], "heroGeneroLocal") && somenteDesteAparelho(AJ_HERO_GENERO));
   assert(valor[AJ_ABERTURA_ADDON] == 1 && !ajustes_abertura_addon());
@@ -177,6 +177,9 @@ int main(void) {
   valor[AJ_ESTAT_TAMANHO] = 1; assert(ajustes_estat_tamanho() == 0);
   valor[AJ_ESTAT_TAMANHO] = 3; assert(ajustes_estat_tamanho() == 2);
   valor[AJ_ESTAT_TAMANHO] = 0;
+  assert(!strcmp(CHAVE[AJ_ESTAT_LADO], "estatLadoLocal") && somenteDesteAparelho(AJ_ESTAT_LADO) && OPCOES[AJ_ESTAT_LADO].n == 2);
+  assert(valor[AJ_ESTAT_LADO] == 0 && ajustes_estat_lado() == 0);
+  valor[AJ_ESTAT_LADO] = 1; assert(ajustes_estat_lado() == 1); valor[AJ_ESTAT_LADO] = 0;
   // 13/10: o layout "Apple TV" se chama Dinamica; o valor gravado nao muda.
   assert(HOME_LAYOUT_DINAMICA == 2 && OPCOES[AJ_HOME_LAYOUT].n == 3);
   assert(!strcmp(V_HOME_LAYOUT[HOME_LAYOUT_DINAMICA], "Dinâmica"));

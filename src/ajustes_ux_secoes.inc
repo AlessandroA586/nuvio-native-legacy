@@ -36,6 +36,12 @@ typedef struct {
   int trocando, quadro;     // quadro = o ultimo em que foi desenhado
   int pedida, rapido;       // a chave pedida no quadro anterior; seta segurada
   float desde;              // tempo desde que o pedido mudou
+  // MEMO da cena invisivel: enquanto a alvo espera, o desenho escondido (alfa
+  // 0, que so pede texturas e mede a altura) repetia TODO o layout da cena a
+  // cada quadro. Guarda a altura medida e se as texturas estavam completas;
+  // vale so para a MESMA alvo da espera, e cai quando o pedido muda.
+  int memoChave, memoPronta;
+  float memoW, memoH;
 } AjCenaTrocaE;
 static AjCenaTrocaE ajTroca[AJ_TROCA_N];
 static int ajTrocaQuadro = 1;
@@ -76,6 +82,7 @@ static float ajCenaTroca(int quadro, int sec, int op, float x, float y, float w,
   if (ped.chave != e->pedida) {
     e->rapido = e->desde < AJ_TROCA_RAPIDO;
     e->pedida = ped.chave; e->desde = 0;
+    e->memoPronta = 0;   // a proxima espera e de outra cena
   }
   if (!e->trocando) {
     if (ped.chave == e->mostra.chave) {   // a mesma imagem: desenho direto
@@ -91,15 +98,23 @@ static float ajCenaTroca(int quadro, int sec, int op, float x, float y, float w,
       e->trocando = 0; e->mostra = ped;
       return e->h = ajCenaTrocaDesenhar(quadro, ped, x, y, w, corte);
     }
-    if (ped.chave != e->alvo.chave) e->espera = 0;
+    if (ped.chave != e->alvo.chave) { e->espera = 0; e->memoPronta = 0; }
     e->alvo = ped;
     // A cena nova, invisivel: pede as texturas dela, mede a altura e diz se
-    // falta alguma.
-    faltas = ajCenaFaltas;
-    gfx_opacidade_grupo = 0;
-    h = ajCenaTrocaDesenhar(quadro, e->alvo, x, y, w, corte);
-    gfx_opacidade_grupo = grupo;
-    faltas = ajCenaFaltas - faltas;
+    // falta alguma. Com o memo da MESMA alvo ja pronta, nada de refazer o
+    // layout: a altura e a mesma e as texturas ja estao no cache.
+    if (e->memoPronta && e->memoChave == e->alvo.chave && fabsf(e->memoW - w) <= 0.5f) {
+      h = e->memoH;
+      faltas = 0;
+    } else {
+      faltas = ajCenaFaltas;
+      gfx_opacidade_grupo = 0;
+      h = ajCenaTrocaDesenhar(quadro, e->alvo, x, y, w, corte);
+      gfx_opacidade_grupo = grupo;
+      faltas = ajCenaFaltas - faltas;
+      e->memoChave = e->alvo.chave; e->memoW = w; e->memoH = h;
+      e->memoPronta = faltas <= 0;
+    }
     if (fabsf(h - e->h) > 1.0f) {   // alturas diferentes: corte
       e->trocando = 0; e->mostra = ped;
       return e->h = ajCenaTrocaDesenhar(quadro, ped, x, y, w, corte);
@@ -114,7 +129,7 @@ static float ajCenaTroca(int quadro, int sec, int op, float x, float y, float w,
   }
   if (novoQuadro) e->t += ajTrocaDt / AJ_TROCA_S;
   if (e->t >= 1.0f) {
-    e->mostra = e->alvo; e->trocando = 0;
+    e->mostra = e->alvo; e->trocando = 0; e->memoPronta = 0;   // re-visita: confere as texturas de novo
     h = e->h = ajCenaTrocaDesenhar(quadro, e->mostra, x, y, w, corte);
   } else {
     float k = e->t * e->t * (3.0f - 2.0f * e->t);
@@ -205,7 +220,7 @@ static int ajCenaSecao(int op) {
     // 2.0.3: HDR e Dolby Vision mora em Imagem e som.
     case AJ_FONTE_HDR:
     case AJ_QUALIDADE: case AJ_DV: case AJ_DV_MKV: case AJ_ATMOS: case AJ_DTS_AC3: case AJ_CACHE_SEEK: case AJ_BUFFER: return AJC_REP_IMAGEM;
-    case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_ABERTURA_ADDON: case AJ_ABERTURA_FUNDO: case AJ_ESTAT_TAMANHO: case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_AUTO: case AJ_PROXIMO_CONTAGEM: case AJ_REACAO_CREDITOS: case AJ_SAIDA_PLAYER: case AJ_MANTER_VIDEO: case AJ_PROPORCAO_PADRAO: return AJC_REP_DURANTE;
+    case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_ABERTURA_ADDON: case AJ_ABERTURA_FUNDO: case AJ_ESTAT_TAMANHO: case AJ_ESTAT_LADO: case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_AUTO: case AJ_PROXIMO_CONTAGEM: case AJ_REACAO_CREDITOS: case AJ_SAIDA_PLAYER: case AJ_MANTER_VIDEO: case AJ_PROPORCAO_PADRAO: return AJC_REP_DURANTE;
     case AJ_SEEKR_LIGADO: case AJ_SEEKR_CHAVE: case AJ_SEEKR_TESTAR: case AJ_SEEKR_FITA: case AJ_SEEKR_AJUSTE:
       return AJC_REP_SEEKR;
     case AJ_IDIOMA: case AJ_TMDB_IDIOMA: return AJC_IDI_INTERFACE;
