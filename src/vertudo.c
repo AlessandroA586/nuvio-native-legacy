@@ -2041,15 +2041,11 @@ static void themeHeader(float a,float x0) {
         int cor=selecionada||f?255:160;
         TxtLinha t=txt_linha_corta(selecionada?TXT_ILHA_SECAO:TXT_HERO_META,rot[i],cor,cor,cor,255,textoW);
         txt_desenhar_alpha(t,x+PAD,pill.y+(H-t.h)*.5f,ah);
-        if(selecionada)gfx_cor((GfxRect){x+PAD,pill.y+H-4,fminf(t.w,32.0f),3},.5f,1,1,1,ah);
+        if(selecionada)gfx_cor((GfxRect){x+PAD,pill.y+H-4,fminf(t.w,32.0f),3},.5f,1,1,1,ah*(1.0f-fa));
         continue;
       }
-      if (selecionada) {
-        float sr, sg, sb; corFocoFonte(&sr, &sg, &sb);
-        gfx_cor(pill, NV_RAIO_PILL, sr, sg, sb,
-                ah * (0.62f + 0.38f * fa));
-      } else gfx_cor(pill,NV_RAIO_PILL,1,1,1,.04f*ah*(1-fa));
-      int cor=f?ajustes_tinta_foco():selecionada?ajustes_tinta_foco2():176;
+      gfx_cor(pill,NV_RAIO_PILL,1,1,1,.04f*ah*(1-fa));
+      int cor=f?ajustes_tinta_foco():selecionada?255:176;
       TxtLinha t=txt_linha_corta(TXT_HERO_META,rot[i],cor,cor,cor,255,textoW);
       txt_desenhar_alpha(t,x+PAD,pill.y+(H-t.h)*.5f,ah);
       // A aba aberta, sem o foco em cima: a mesma marca curta do estilo Topo,
@@ -2480,7 +2476,9 @@ static void botaoEstiloAbas(float a) {
   float rx = exibPill.w > 0.0f ? exibPill.x + exibPill.w + 12.0f : NV_TELA_W - 104.0f - 52.0f;
   rx = fminf(rx, NV_TELA_W - 104.0f - 52.0f);
   if (exibPill.w > 0.0f && rx < exibPill.x + exibPill.w + 12.0f)
-    rx = exibPill.x - 12.0f - 52.0f;
+    rx = lay == VT_LAY_VITRINE ? exibPill.x + exibPill.w - 52.0f   // Vitrine: icone vai ABAIXO da pilula
+                               : exibPill.x - 12.0f - 52.0f;
+  rx = fmaxf(rx, 8.0f);
   GfxRect r = {rx, exibPill.y > 0.0f ? exibPill.y : 253.0f, 52, VT_AB_H};
   int f = tabFocus && tabCursor == cabN()+1;
   if (lay == VT_LAY_VITRINE) r.y = NV_ILHA_Y + 64.0f;
