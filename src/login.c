@@ -29,10 +29,6 @@
 #define LG_CAMPO_W       760.0f
 #define LG_CAMPO_H        88.0f
 #define LG_MOSTRAR_W     150.0f
-// Zona de silencio: 4 modulos claros em volta, exigidos pela norma. Vao DENTRO
-// da textura para que nenhum ajuste de layout possa comer a margem por
-// acidente — sem ela, leitor nenhum acha o simbolo.
-#define LG_QR_MARGEM       4
 static float lgBlocoW(void) {
 #ifdef NV_TOUCH_UI
   if (NV_TELA_H > NV_TELA_W) return NV_TELA_W - 2.0f * NV_MARGEM_X;
