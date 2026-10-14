@@ -2889,6 +2889,16 @@ static void sincronizarFileiras(void) {
     // A ordem da home e a ordem que a pessoa escolheu na conta (catordem) ou
     // na TV (fil_unir); esta lista so ACRESCENTA o que a conta tem e a home
     // ainda nao mostra. Nenhuma tabela fixa reordena por cima.
+    //
+    // A ORDEM DAS PASTAS e escolha da fileira (2.0.5: "alem do estilo da
+    // fileira, ordenar elas por ano, ordem alfabetica, ordem da lista ou
+    // aleatorio"). A semente do embaralhado e fixada UMA VEZ por SESSAO: a
+    // home remonta a cada publicacao do catalogo e uma semente nova a cada
+    // remontagem faria as pastas dançarem enquanto a pessoa rola — o
+    // embaralhado so muda de um arranque do app para o outro.
+    static unsigned sementePastas;
+    static int sementePastasOk;
+    if (!sementePastasOk) { sementePastasOk = 1; sementePastas = SDL_GetTicks() | 1u; }
     for(int i=0;i<col_n() && destino<MAX_FIL;i++) {
       const ColFolder *folder=col_folder(i);
       int grupoVisto=0;
@@ -2902,6 +2912,7 @@ static void sincronizarFileiras(void) {
       { Fileira v={0};
         v.n=col_grupo_chave(chaveGrupo,v.folders,MAX_CARDS);
         if(!v.n)continue;
+        col_ordenar_pastas(v.folders,v.n,fil_ordem(chaveGrupo),sementePastas);
         v.tipo=FILEIRA_CATALOGOS;
         v.forma=col_grupo_forma_chave(chaveGrupo);
         snprintf(v.chave,sizeof v.chave,"%s",chaveGrupo);

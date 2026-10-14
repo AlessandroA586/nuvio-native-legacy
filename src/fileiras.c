@@ -60,6 +60,11 @@ typedef struct {
   // para "Fora": a pessoa nunca pediu para tirar, so nao coube. Linha que ja
   // estava no arquivo sem a marca segue a regra antiga (alem do limite = Fora).
   int  nova;
+  // ORDEM DOS ITENS da fileira de COLECAO (FilOrdem, 2.0.5). Gravada como
+  // linha opcional "ordemfileira" — o mesmo truque de "visibilidade": o
+  // formato posicional da linha `linha` nao muda e o arquivo de quem ja usa
+  // o app continua valendo byte a byte.
+  int  ordem;
 } Linha;
 
 static Linha linhas[FIL_MAX];
@@ -320,6 +325,13 @@ static void gravar(void) {
   for (i = 0; i < nLinhas && k < cap; i++)
     if (linhas[i].nova)
       k += (size_t)snprintf(txt + k, cap - k, "nova %s\n", linhas[i].chave);
+  // ORDEM DOS ITENS da fileira de colecao (2.0.5): linha propria e opcional
+  // como "visibilidade" — versao anterior nao a conhece (ignora) e arquivo
+  // antigo, sem ela, volta ao padrao FIL_ORD_LISTA.
+  for (i = 0; i < nLinhas && k < cap; i++)
+    if (linhas[i].ordem > 0 && linhas[i].ordem < FIL_ORD_N)
+      k += (size_t)snprintf(txt + k, cap - k, "ordemfileira %s %d\n",
+                            linhas[i].chave, linhas[i].ordem);
   if (k < cap) dados_gravar(arquivoDoPerfil(), txt);
   free(txt);
   revisao++;
@@ -371,6 +383,18 @@ static void carregar(void) {
     } else if (!strncmp(buf, "nova ", 5)) {
       for (int i = 0; i < nLinhas; i++)
         if (!strcmp(linhas[i].chave, buf + 5)) linhas[i].nova = 1;
+    } else if (!strncmp(buf, "ordemfileira ", 13)) {
+      // A chave termina no PRIMEIRO espaco; o resto e o numero. Chave de
+      // fileira nunca tem espaco (e <addonId>_<tipo>_<catalogoId> ou
+      // collection_<id>), e valor fora da faixa volta ao padrao na leitura.
+      char *esp = strchr(buf + 13, ' ');
+      if (esp) {
+        *esp = 0;
+        int o = atoi(esp + 1);
+        if (o > 0 && o < FIL_ORD_N)
+          for (int i = 0; i < nLinhas; i++)
+            if (!strcmp(linhas[i].chave, buf + 13)) linhas[i].ordem = o;
+      }
     } else if (!strncmp(buf, "visibilidade ", 13)) {
       for (int i = 0; i < nLinhas; i++)
         if (!strcmp(linhas[i].chave, buf + 13)) linhas[i].visPessoal = 1;
@@ -1574,6 +1598,48 @@ const char *fil_estilo_ajuda(const char *chave, int t) {
 const char *fil_linha_tipo_rotulo(int i) {
   if (i < 0 || i >= nLinhas) return fil_tipo_rotulo(FIL_TIPO_AUTO);
   return fil_estilo_rotulo(linhas[i].chave, linhas[i].tipo);
+}
+
+// --- ORDEM DOS ITENS da fileira de colecao (FilOrdem, 2.0.5) ----------------
+// O dono pediu o quatro opcoes ao lado do estilo: "ordenar elas por ano,
+// ordem alfabetica, ordem da lista ou aleatorio". Vale so para fileira de
+// colecao — a de catalogo e a ordem do addon, e Continuar assistindo e a
+// posicao de retomada; em ambas inventar uma ordem aqui seria prometer o que
+// a fonte nao entrega.
+static const char *ORDEM_ROT[FIL_ORD_N] = {
+  "Ordem da lista", "Ano", "Alfabética", "Aleatória"
+};
+
+const char *fil_ordem_rotulo(int o) {
+  return ORDEM_ROT[o >= 0 && o < FIL_ORD_N ? o : 0];
+}
+
+int fil_ordem(const char *chave) {
+  int i, v = FIL_ORD_LISTA;
+  if (!chave || !chave[0]) return v;
+  pthread_mutex_lock(&trava);
+  garantir();
+  i = achar(chave);
+  if (i >= 0 && linhas[i].ordem > 0 && linhas[i].ordem < FIL_ORD_N)
+    v = linhas[i].ordem;
+  pthread_mutex_unlock(&trava);
+  return v;
+}
+
+int fil_definir_ordem(const char *chave, int o) {
+  int i, ok = 0;
+  if (!chave || !chave[0] || o < 0 || o >= FIL_ORD_N ||
+      fil_origem_de(chave) != FIL_ORIGEM_COLECAO) return 0;
+  pthread_mutex_lock(&trava);
+  garantir();
+  i = achar(chave);
+  if (i >= 0) {
+    ok = 1;
+    // Mesma ordem: nao reescreve o arquivo nem remonta a home por nada.
+    if (linhas[i].ordem != o) { linhas[i].ordem = o; gravar(); }
+  }
+  pthread_mutex_unlock(&trava);
+  return ok;
 }
 
 int fil_definir_tipo(const char *chave, int t) {
