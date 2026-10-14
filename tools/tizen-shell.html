@@ -762,12 +762,13 @@
   }
   window.addEventListener("keydown", function (ev) {
     if (imeAberto()) return;
-    // 403 = ColorF0Red, 404 = ColorF1Green, 427 = ChannelUp. F1/F2/F3 servem
-    // para testar no desktop.
+    // 403 = ColorF0Red, 404 = ColorF1Green, 427 = ChannelUp, 428 = ChannelDown.
+    // F1/F2/F3/F4 servem para testar no desktop.
     var vermelha = (ev.keyCode === 403 || ev.key === "F1");
     var verde    = (ev.keyCode === 404 || ev.key === "F2");
     var canal    = (ev.keyCode === 427 || ev.key === "F3");
-    if (!vermelha && !verde && !canal) return;
+    var canalMenos = (ev.keyCode === 428 || ev.key === "F4");
+    if (!vermelha && !verde && !canal && !canalMenos) return;
     ev.preventDefault();
     ev.stopPropagation();
     // CANAL+ ABRE "SALVOS" (toque) E A CENTRAL DE CONTROLE (segurado). O
@@ -779,6 +780,16 @@
       var alvoS = document.getElementById("canvas") || window;
       alvoS.dispatchEvent(new KeyboardEvent("keydown", {
         key: "F7", code: "F7", keyCode: 118, which: 118,
+        bubbles: true, cancelable: true
+      }));
+      return;
+    }
+    // CANAL- (428) VIRA F8, o par do F7: o C faz dele o zap com canal na tela
+    // e o Spotlight fora disso (main.c remapCanal). Descida e subida.
+    if (canalMenos) {
+      var alvoM = document.getElementById("canvas") || window;
+      alvoM.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "F8", code: "F8", keyCode: 119, which: 119,
         bubbles: true, cancelable: true
       }));
       return;
@@ -799,12 +810,17 @@
   // tecla foi solta. Sem ela o toque curto sai pelo silencio (chsegura.h).
   window.addEventListener("keyup", function (ev) {
     if (imeAberto()) return;
-    if (ev.keyCode !== 427 && ev.key !== "F3") return;
+    var mais = (ev.keyCode === 427 || ev.key === "F3");
+    var menos = (ev.keyCode === 428 || ev.key === "F4");
+    if (!mais && !menos) return;
     ev.preventDefault();
     ev.stopPropagation();
     var alvoS = document.getElementById("canvas") || window;
-    alvoS.dispatchEvent(new KeyboardEvent("keyup", {
+    alvoS.dispatchEvent(new KeyboardEvent("keyup", mais ? {
       key: "F7", code: "F7", keyCode: 118, which: 118,
+      bubbles: true, cancelable: true
+    } : {
+      key: "F8", code: "F8", keyCode: 119, which: 119,
       bubbles: true, cancelable: true
     }));
   }, true);

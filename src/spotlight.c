@@ -1343,7 +1343,8 @@ void spot_evento(const SDL_Event *e) {
     spot_fechar();
     return;
   }
-  if (k == SPOT_TECLA_ABRIR || e->key.keysym.scancode == NV_SCANCODE_YELLOW) {
+  if (k == SPOT_TECLA_ABRIR || e->key.keysym.scancode == NV_SCANCODE_YELLOW ||
+      e->key.keysym.scancode == NV_SCANCODE_CH_DOWN) {
     registrar(); spot_fechar(); return;
   }
   // VOLTAR desfaz na ordem inversa (ver o topo).

@@ -120,7 +120,7 @@ static const Cap CAP[N20_NCAP] = {
       { "Recomende, responda <b>Já assisti</b>, e receba enquete no relógio (dá pra desligar).", 0, 0, 0 } },
     { { "Pedido de amizade avisa no relógio", 0, 0, 0 }, { "Recusar não avisa a pessoa", 0, 0, 0 },
       { "Assistidas sincronizam sozinhas", 0, 0, 0 }, { "Lista com capa maior", 0, 0, 0 },
-      { "Painel Social abre com o Azul", 0, 0, 0 }, { "Enquetes", "Depende do servidor", TG_CINZA, 0 } },
+      { "Painel Social abre com o CH+", 0, 0, 0 }, { "Enquetes", "Depende do servidor", TG_CINZA, 0 } },
     { "Painel Social", "Amigos no pôster · enquete", NULL },
     "Pessoa única, amigos nos pôsteres, enquetes." },
   { 3, "aj_user-round", "Perfis 2.0", 1, 0, "00.jpg",
@@ -1364,8 +1364,8 @@ static void dicas(float a) {
       if (aberto && !saindo) ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroNada, ptLater, 0, 0);
       xd -= wl + 22;
     }
-    wb = tecla("Azul", rot, -10000, y, 1, 0) - 26;
-    tecla("Azul", rot, xd - wb, y, 1, a);
+    wb = tecla("CH+", rot, -10000, y, 1, 0) - 26;
+    tecla("CH+", rot, xd - wb, y, 1, a);
     if (aberto && !saindo) ponteiro_alvo(xd - wb, y, wb, 38, ponteiroNada, ptAcao, 4, 0); }
 }
 
