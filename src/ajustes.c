@@ -68,6 +68,7 @@
 #include "seekr.h"
 #include "selospacote.h"
 #include "fonteregra.h"
+#include "fontefalha.h"
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -555,8 +556,14 @@ typedef enum {
   // #475: cor do contorno/sombra da legenda que o app desenha. Local, so desta
   // TV. No fim: valor[]/CHAVE[] posicionais.
   AJ_LEG_CONTORNO_COR,
+  // Backend views: all failover preferences live in fontefalha, locally.
+  AJ_FALHA_PROVEDORES, AJ_FALHA_PROVEDOR_ORDEM,
+  AJ_FALHA_RD_LIMITE, AJ_FALHA_TB_LIMITE, AJ_FALHA_PM_LIMITE, AJ_FALHA_AD_LIMITE,
+  AJ_FALHA_ADDONS, AJ_FALHA_ADDON_ORDEM, AJ_FALHA_ADDON_LIMITE,
   AJ_N
 } OpcaoId;
+_Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
+               "Native provider Settings caps retain their persisted service IDs");
 
 // "Pacote de selos": so o TAMANHO importa aqui (3 pacotes + "Do Nuvio"); o texto
 // de cada valor vem de selospacote_nome (textoValor / uxValorTexto).
@@ -1422,6 +1429,15 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Botão de microfone na busca", V_MIC_BUSCA, 3),   // local: micBuscaLocal (.tpk)
   ESC("Posição do menu", V_MENU_POS, 2),   // por perfil: menuTopoLocal (#461)
   ESC("Cor do contorno da legenda", V_LEG_CONTORNO_COR, 7),   // local: legendaContornoCorLocal (#475)
+  ESC("Trocar provedor se falhar", V_LIGA, 2),
+  ACAO("Ordem e limites dos provedores"),
+  NUM("Links no Real-Debrid", 1, FONTEFALHA_MAX_LINKS, 1, ""),
+  NUM("Links no TorBox", 1, FONTEFALHA_MAX_LINKS, 1, ""),
+  NUM("Links no Premiumize", 1, FONTEFALHA_MAX_LINKS, 1, ""),
+  NUM("Links no AllDebrid", 1, FONTEFALHA_MAX_LINKS, 1, ""),
+  ESC("Trocar add-on se falhar", V_LIGA, 2),
+  ACAO("Ordem e limites dos add-ons"),
+  NUM("Links neste add-on", 1, FONTEFALHA_MAX_LINKS, 1, ""),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1665,6 +1681,9 @@ static const char *CHAVE[] = {
   "micBuscaLocal",
   "menuTopoLocal",
   "legendaContornoCorLocal",
+  "-falhaProvedores", "-falhaProvedorOrdem",
+  "-falhaRDLinks", "-falhaTBLinks", "-falhaPMLinks", "-falhaADLinks",
+  "-falhaAddons", "-falhaAddonOrdem", "-falhaAddonLinks",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -1809,6 +1828,34 @@ static int valor[] = {
 static const int valorPadrao[] = {
 #include "ajustes_ux_padrao.inc"
 };
+static char faAddonEditar[FONTEFALHA_CHAVE];
+static char faAddonTitulo[FR_NOME_MAX + 48];
+static int faRetornarFolha;
+static int ajFalhaBackend(int op) {
+  return op == AJ_FALHA_PROVEDORES || op == AJ_FALHA_ADDONS ||
+         (op >= AJ_FALHA_RD_LIMITE && op <= AJ_FALHA_AD_LIMITE) || op == AJ_FALHA_ADDON_LIMITE;
+}
+static int ajFalhaValor(int op) {
+  if (op == AJ_FALHA_PROVEDORES) return fontefalha_provedores() ? 0 : 1;
+  if (op == AJ_FALHA_ADDONS) return fontefalha_addons() ? 0 : 1;
+  if (op >= AJ_FALHA_RD_LIMITE && op <= AJ_FALHA_AD_LIMITE)
+    return fontefalha_provedor_limite(op - AJ_FALHA_RD_LIMITE);
+  return fontefalha_addon_limite(faAddonEditar);
+}
+static void ajFalhaEspelhar(void) {
+  for (int op = AJ_FALHA_PROVEDORES; op < AJ_N; op++)
+    if (ajFalhaBackend(op)) valor[op] = ajFalhaValor(op);
+}
+static int ajFalhaDefinir(int op, int novo) {
+  int ok;
+  if (op == AJ_FALHA_PROVEDORES) ok = fontefalha_definir_provedores(novo == 0);
+  else if (op == AJ_FALHA_ADDONS) ok = fontefalha_definir_addons(novo == 0);
+  else if (op >= AJ_FALHA_RD_LIMITE && op <= AJ_FALHA_AD_LIMITE)
+    ok = fontefalha_provedor_definir_limite(op - AJ_FALHA_RD_LIMITE, novo);
+  else ok = faAddonEditar[0] && fontefalha_addon_definir_limite(faAddonEditar, novo);
+  if (ok) ajFalhaEspelhar();
+  return ok;
+}
 _Static_assert(sizeof valor / sizeof *valor == AJ_N,
                "valor[]: um padrao por opcao do enum AJ_*, na ordem dele");
 // LOG DE MUDANCA (ajlog.h): gravar() e o unico lugar por onde todo valor muda de
@@ -2041,7 +2088,10 @@ static void hcAbrir(void);
 static void desenhaFolhaHeroCat(void);
 
 static char seekrChave[96];
-static int lig(int op)  { return valor[op] == 0 && (op != AJ_SEEKR_LIGADO || seekrChave[0]); }
+static int lig(int op) {
+  if (op == AJ_FALHA_PROVEDORES || op == AJ_FALHA_ADDONS) return ajFalhaValor(op) == 0;
+  return valor[op] == 0 && (op != AJ_SEEKR_LIGADO || seekrChave[0]);
+}
 // #311: "Buscar no Cinemeta" so governa a BUSCA (o add-on Cinemeta e a reserva
 // do catalogo do Nuvio). Sem o add-on instalado e com o ajuste no padrao ele nao
 // tem o que mostrar, e a pessoa o lia como "esconder o Cinemeta da Home": some da
@@ -2260,6 +2310,7 @@ float ajustes_tamanho_ajustes(void) {
 // The phone always uses List. Keep the stored TV preference unchanged.
 static int ajLayoutSelecionavel(void) { return !telefoneui_ativo(); }
 static int ajOpcaoDisponivel(int op) {
+  if (op == AJ_FALHA_ADDON_LIMITE) return faAddonEditar[0] != 0;
 #ifndef NV_TOUCH_UI
   if (op == AJ_INTERFACE_MODO) return 0;
 #endif
@@ -3325,6 +3376,7 @@ void ajustes_dir(const char *dir) {
   p2pCarregar();
   pstCarregar();
   debCarregar();
+  fontefalha_dir(dirAjustes); ajFalhaEspelhar();
   // ANTES DO LACO, e nao so no fim (#129): limita() confere as duas linhas de
   // idioma contra nValores() -> nLingua, e quem preenche nLingua e esta
   // chamada. No arranque ela ainda nao tinha rodado: a lista tinha "1 valor",
@@ -4310,6 +4362,7 @@ int ajustes_aplicar_blob(const char *json) {
 // exigiria adivinhar a feature e o `type`, e um blob com forma errada e pior
 // que uma chave a menos.
 static int somenteDesteAparelho(int op) {
+  if (op >= AJ_FALHA_PROVEDORES && op < AJ_N) return 1;
   if (op == AJ_ICONE_APP || op == AJ_LOGO_APP || op == AJ_ABERTURA) return 1;
   switch (op) {
     // LAYOUT/APARELHO: nao sobem nem que o blob tenha a chave.
@@ -4793,6 +4846,7 @@ static void conferirPadroes(void) {
 static void ajMovReiniciar(void);
 int ajustes_iniciar(void) {
   ajMovReiniciar();
+  faRetornarFolha = 0; faAddonEditar[0] = 0; ajFalhaEspelhar();
   uxVeioBusca = uxAbrirOp >= 0;
   montarTela();
   conferirTela();
@@ -4855,7 +4909,7 @@ int ajustes_iniciar(void) {
   rotulosDeIdioma();
   return 1;
 }
-void ajustes_encerrar(void) { uxCancelar(); uxRetornarOp = -1; guiaFechar(); ajlog_vazar_tudo(); }
+void ajustes_encerrar(void) { faRetornarFolha = 0; uxCancelar(); uxRetornarOp = -1; guiaFechar(); ajlog_vazar_tudo(); }
 int ajustes_quer_sair(void) { return sair; }
 
 // Valor das linhas so de leitura. O espaco em disco NAO e um numero inventado:
@@ -4904,6 +4958,7 @@ static const char *rotuloNovo(int op) {
   }
 }
 static const char *rotuloOpcao(int op) {
+  if (op == AJ_FALHA_ADDON_LIMITE && faAddonEditar[0]) return faAddonTitulo;
   if (op == AJ_ATUALIZAR && !atualizacao_nova()[0]) return "Procurar atualização";
   if (rotuloNovo(op)) return rotuloNovo(op);
   return OPCOES[op].rotulo;
@@ -5090,6 +5145,7 @@ static void pxAtivar(int op) {
 
 static const char *frResumo(int plugin);
 static const char *frOrdemResumo(void);
+static const char *faResumo(int provedores);
 static const char *frRegexTexto(void);
 static const char *textoLeitura(int op) {
   static char buf[64];
@@ -5148,6 +5204,7 @@ static const char *textoLeitura(int op) {
     recomenda_perfil(&pf);
     return pf.apelido[0] ? pf.apelido : i18n("Não configurado");
   }
+  if (op == AJ_FALHA_PROVEDOR_ORDEM || op == AJ_FALHA_ADDON_ORDEM) return faResumo(op == AJ_FALHA_PROVEDOR_ORDEM);
   if (op == AJ_FONTE_ORDEM) return frOrdemResumo();
   if (op == AJ_FONTE_ADDONS_PERM) return frResumo(0);
   if (op == AJ_FONTE_PLUGINS_PERM) return frResumo(1);
@@ -5438,6 +5495,7 @@ static int maisContar(int sec, char *resumo, size_t n) {
 // Item desenhado agora? Opcao de grupo fechado nao e — nem desenhada, nem
 // alcancada pelo cima/baixo.
 static int visivel(int i) {
+  if (i >= 0 && i < AJ_N_TELA && TELA[i].tipo == IT_OPC && TELA[i].op == AJ_FALHA_ADDON_LIMITE) return 0;
   if (i >= 0 && i < AJ_N_TELA && TELA[i].tipo == IT_OPC &&
       TELA[i].op == AJ_ICONE_APP && !apoiador_ativo()) return 0;
   if (i < 0 || i >= AJ_N_TELA) return 0;
@@ -5630,6 +5688,13 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_FONTE_CONFERIR_VARIAS: return "Confere até 3 fontes já prontas no debrid ao mesmo tempo, em vez de uma por vez, e toca a melhor que servir. Fontes que ainda não estão prontas seguem uma por vez, sem baixar nada a mais. Só vale com a Fonte automática em Melhor fonte.";
     case AJ_FONTE_PREPARAR: return "Ao abrir a página do título, já escolhe e prepara a primeira fonte do automático, para o Play abrir na hora. Isso adiciona o arquivo ao painel do seu debrid mesmo que você não assista.";
     case AJ_FONTE_REPOR: return "Quantas outras fontes o automático tenta quando a escolhida não abre. Cada tentativa pode adicionar um arquivo na sua conta de debrid.";
+    case AJ_FALHA_PROVEDORES: return "Se o vídeo não iniciar a tempo ou der erro, tenta os provedores Debrid configurados na ordem escolhida. O limite de cada provedor conta links distintos de todos os add-ons, incluindo o primeiro. Parar ou Voltar cancela as tentativas.";
+    case AJ_FALHA_PROVEDOR_ORDEM: return "Suba ou desça os provedores Debrid e ajuste o total de links de cada um. O primeiro provedor tenta seus links antes do próximo. Provedores sem chave são ignorados.";
+    case AJ_FALHA_RD_LIMITE: case AJ_FALHA_TB_LIMITE: case AJ_FALHA_PM_LIMITE: case AJ_FALHA_AD_LIMITE:
+      return "Total de links distintos deste provedor, incluindo o primeiro, somando todos os add-ons. De 1 a 10. Se a troca de add-on estiver ligada, o limite de cada add-on também vale; não repete o mesmo link.";
+    case AJ_FALHA_ADDONS: return "Se o vídeo não iniciar a tempo ou der erro, tenta outros add-ons instalados na ordem escolhida. Cada instância tem seu próprio limite de links. A troca de provedor e a troca de add-on podem ser ligadas separadamente.";
+    case AJ_FALHA_ADDON_ORDEM: return "Suba ou desça os add-ons instalados e ajuste o total de links de cada instância. Add-ons com o mesmo nome continuam separados. Os limites recomeçam a cada provedor Debrid.";
+    case AJ_FALHA_ADDON_LIMITE: return "Total de links distintos desta instância do add-on, incluindo o primeiro. De 1 a 10. O limite recomeça a cada provedor Debrid, respeitando o total daquele provedor.";
 
     // --- Home
     case AJ_LANDSCAPE: return "Usa a arte deitada (16:9) no lugar do cartaz em pé nas fileiras que têm as duas.";
@@ -6691,13 +6756,121 @@ static void riscoFolhaEvento(SDL_Keycode k) {
   }
 }
 static void desenhaRiscoFolha(void);
+static void desenhaFolhaFalha(void);
 
 // --- folha "Add-ons permitidos" / "Plugins permitidos" (#202) ----------------
 // Modal dentro desta tela, como a de fileiras: a lista dos instalados (e dos
 // marcados que ja nao estao instalados, para poder tira-los), com "Todos" no
 // topo. OK marca/desmarca e grava na hora (fonteregra.c); Voltar fecha.
 #define FR_FOLHA_MAX 128
-static int frAberta;            // 0 fechada; 1 add-ons; 2 plugins; 3 ordem dos add-ons
+static int frAberta;            // 0 closed; 1/2 allowed; 3 legacy order; 4/5 failover service/instance order
+// Failover order uses native IDs / opaque instance keys, never display names.
+typedef struct {
+  int servico, instalado;
+  char chave[FONTEFALHA_CHAVE], nome[FR_NOME_MAX], apoio[80];
+} FaItem;
+static FaItem faItem[FONTEFALHA_MAX_ADDONS];
+static int faN, faFoco, faCol;
+static void uxAbrirEditor(int op);
+static void faMontar(void) {
+  faN = 0;
+  if (frAberta == 4) {
+    static const char *const nome[4] = { "Real-Debrid", "TorBox", "Premiumize", "AllDebrid" };
+    static const char *const serv[4] = { "realdebrid", "torbox", "premiumize", "alldebrid" };
+    for (int pos = 0; pos < 4; pos++) for (int id = 0; id < 4; id++)
+      if (fontefalha_provedor_posicao(id) == pos) {
+        FaItem *it = &faItem[faN++]; memset(it, 0, sizeof *it); it->servico = id;
+        snprintf(it->nome, sizeof it->nome, "%s", nome[id]);
+        snprintf(it->apoio, sizeof it->apoio, "%s", debrid_origem(serv[id]) ? "" : i18n("Não configurado"));
+      }
+  } else {
+    char chave[FONTEFALHA_MAX_ADDONS][FONTEFALHA_CHAVE];
+    const char *ptr[FONTEFALHA_MAX_ADDONS]; int n = 0;
+    // Hash the complete base before copying any display text: config tokens
+    // and suffixes distinguish instances, but never enter the policy file/UI.
+    for (int i = 0; i < addons_n() && n < FONTEFALHA_MAX_ADDONS; i++) {
+      const char *base = addons_base(i);
+      if (!base || !base[0]) continue;
+      fontefalha_addon_chave(base, chave[n], sizeof chave[n]); ptr[n] = chave[n]; n++;
+    }
+    fontefalha_addons_registrar(ptr, n);
+    for (int i = 0; i < addons_n() && faN < FONTEFALHA_MAX_ADDONS; i++) {
+      const char *base = addons_base(i);
+      if (!base || !base[0] || (addons_sondado(i) && !addons_fornece(i, ADD_STREAM))) continue;
+      FaItem *it = &faItem[faN++]; memset(it, 0, sizeof *it); it->servico = -1; it->instalado = i;
+      fontefalha_addon_chave(base, it->chave, sizeof it->chave);
+      snprintf(it->nome, sizeof it->nome, "%s", addons_nome(i));
+      snprintf(it->apoio, sizeof it->apoio, i18n("Instância %d"), i + 1);
+      if (!addons_ativo(i)) {
+        size_t u = strlen(it->apoio);
+        snprintf(it->apoio + u, sizeof it->apoio - u, " · %s", i18n("Desligado"));
+      }
+    }
+    for (int i = 1; i < faN; i++) {
+      FaItem item = faItem[i]; int j = i;
+      while (j > 0 && fontefalha_addon_posicao(faItem[j - 1].chave) > fontefalha_addon_posicao(item.chave)) {
+        faItem[j] = faItem[j - 1]; j--;
+      }
+      faItem[j] = item;
+    }
+  }
+  if (faFoco >= faN) faFoco = faN ? faN - 1 : 0;
+}
+static int faLimite(int i) {
+  return faItem[i].servico >= 0 ? fontefalha_provedor_limite(faItem[i].servico)
+                              : fontefalha_addon_limite(faItem[i].chave);
+}
+static void faAbrir(int provedores) {
+  faRetornarFolha = 0; frAberta = provedores ? 4 : 5; faFoco = faCol = 0; faMontar();
+}
+static void faAbrirLimite(int i) {
+  if (i < 0 || i >= faN) return;
+  int folha = frAberta, op = AJ_FALHA_ADDON_LIMITE;
+  if (faItem[i].servico >= 0) op = AJ_FALHA_RD_LIMITE + faItem[i].servico;
+  else {
+    snprintf(faAddonEditar, sizeof faAddonEditar, "%s", faItem[i].chave);
+    snprintf(faAddonTitulo, sizeof faAddonTitulo, i18n("Links de %s · instância %d"), faItem[i].nome, faItem[i].instalado + 1);
+  }
+  frAberta = 0; ajFalhaEspelhar(); uxAbrirEditor(op); faRetornarFolha = folha;
+}
+static void faMover(int i, int delta) {
+  if (i < 0 || i >= faN || i + delta < 0 || i + delta >= faN) return;
+  FaItem item = faItem[i];
+  int distancia = delta;
+  if (item.servico < 0) distancia = fontefalha_addon_posicao(faItem[i + delta].chave) - fontefalha_addon_posicao(item.chave);
+  int ok = item.servico >= 0 ? fontefalha_provedor_mover(item.servico, delta)
+                           : fontefalha_addon_mover(item.chave, distancia);
+  if (!ok) { uxNotificar("Não foi possível salvar. O valor anterior foi mantido."); return; }
+  faMontar();
+  for (int k = 0; k < faN; k++) if ((item.servico >= 0 && faItem[k].servico == item.servico) ||
+                                  (item.servico < 0 && !strcmp(faItem[k].chave, item.chave))) faFoco = k;
+}
+static void faEvento(SDL_Keycode k) {
+  faMontar();
+  if (k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE || k == SDLK_DELETE) { frAberta = 0; return; }
+  if (k == SDLK_UP && faFoco > 0) faFoco--;
+  if (k == SDLK_DOWN && faFoco + 1 < faN) faFoco++;
+  if (k == SDLK_LEFT && faCol > 0) faCol--;
+  if (k == SDLK_RIGHT && faCol < 2) faCol++;
+  if ((k == SDLK_RETURN || k == SDLK_KP_ENTER) && faN) {
+    if (faCol == 2) faAbrirLimite(faFoco);
+    else faMover(faFoco, faCol ? 1 : -1);
+  }
+}
+static const char *faResumo(int provedores) {
+  static char buf[160];
+  if (!provedores) {
+    snprintf(buf, sizeof buf, i18n("%d add-ons instalados"), addons_n()); return buf;
+  }
+  static const char *const nome[4] = { "Real-Debrid", "TorBox", "Premiumize", "AllDebrid" };
+  buf[0] = 0;
+  for (int pos = 0; pos < 4; pos++) for (int id = 0; id < 4; id++)
+    if (fontefalha_provedor_posicao(id) == pos) {
+      size_t u = strlen(buf); snprintf(buf + u, sizeof buf - u, "%s%s", pos ? " › " : "", nome[id]);
+    }
+  return buf;
+}
+
 static int frFoco;
 static int frCol;               // folha da ordem: 0 = subir, 1 = descer
 static int frN;
@@ -6798,6 +6971,7 @@ static void frEventoOrdem(SDL_Keycode k) {
 }
 static void frEvento(SDL_Keycode k) {
   int plugin = frAberta == 2;
+  if (frAberta >= 4) { faEvento(k); return; }
   if (frAberta == 3) { frEventoOrdem(k); return; }
   frMontar();
   if (k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE || k == SDLK_DELETE || k == SDLK_LEFT) {
@@ -6969,6 +7143,7 @@ static int definirValorDireto(int op, int novo) {
   if (op < 0 || op >= AJ_N || !ajOpcaoDisponivel(op) ||
       (OPCOES[op].tipo != OP_ESCOLHA && OPCOES[op].tipo != OP_NUMERO)) return 0;
   novo = limita(op, novo);
+  if (ajFalhaBackend(op)) return ajFalhaDefinir(op, novo);
   if (op == AJ_SEEKR_LIGADO && novo == 0 && !seekrChave[0]) {
     uxNotificar(seekrPedirChave());
     return 0;
@@ -7152,6 +7327,7 @@ static void eventoTela(const SDL_Event *e) {
     if (focoOp == AJ_APOIAR) { apoioAbrir(); return; }
     if (focoOp == AJ_ADDONS) { pediuAddons = 1; return; }
     if (focoOp == AJ_PLUGINS) { pediuPlugins = 1; return; }
+    if (focoOp == AJ_FALHA_PROVEDOR_ORDEM || focoOp == AJ_FALHA_ADDON_ORDEM) { faAbrir(focoOp == AJ_FALHA_PROVEDOR_ORDEM); return; }
     if (focoOp == AJ_FONTE_ORDEM) { frAbrir(3); return; }
     if (focoOp == AJ_FONTE_ADDONS_PERM || focoOp == AJ_FONTE_PLUGINS_PERM) {
       frAbrir(focoOp == AJ_FONTE_PLUGINS_PERM); return;
@@ -7473,6 +7649,11 @@ static int nValores(int op) {
 // por vez dentro de desenhaLinha.
 static const char *textoValor(int op) {
   static char buf[48];
+  if (ajFalhaBackend(op)) {
+    int v = ajFalhaValor(op);
+    if (op == AJ_FALHA_PROVEDORES || op == AJ_FALHA_ADDONS) return i18n(V_LIGA[v]);
+    snprintf(buf, sizeof buf, "%d", v); return buf;
+  }
   const Opcao *o = &OPCOES[op];
   if (o->tipo == OP_LEITURA || o->tipo == OP_ACAO) return textoLeitura(op);
   if (op == AJ_SEEKR_LIGADO && !seekrChave[0]) return i18n("Desligado");
@@ -8048,7 +8229,8 @@ static void ajDesenharTudo(Uint32 agora) {
 #endif
     ESCALA_REAL_INI(); desenhaFileiras(); ESCALA_REAL_FIM(); }
   if (riscoFolha) desenhaRiscoFolha();
-  if (frAberta == 3) desenhaFolhaOrdem();
+  if (frAberta >= 4) desenhaFolhaFalha();
+  else if (frAberta == 3) desenhaFolhaOrdem();
   else if (frAberta) desenhaFolhaPermitidos();
   if (hcAberta) desenhaFolhaHeroCat();
 
