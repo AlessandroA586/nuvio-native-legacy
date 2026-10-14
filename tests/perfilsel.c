@@ -24,13 +24,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "nvtmp.h"
 void servidores_perfil_trocou(void) {}   // servidores.c is not linked here
 void plugins_perfil_mudou(void) {}     // plugins.c is not linked here
 
 // --- pasta de dados de mentira ----------------------------------------------
 static const char *pasta(void) {
   const char *p = getenv("NUVIO_TESTE_DIR");
-  return p ? p : "/tmp";
+  return p ? p : nvt_dir();
 }
 static void caminho(char *dst, size_t tam, const char *nome) {
   snprintf(dst, tam, "%s/%s", pasta(), nome);
