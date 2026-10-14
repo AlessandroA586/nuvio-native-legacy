@@ -227,7 +227,7 @@ class ParaleloDataSource(
     // ConnectException escapava daqui e encerrava a fonte, embora os pedacos
     // posteriores aparentassem ter TENTATIVAS. Mantem o retry no Loader (nao no
     // fio do player) e curto o bastante para nao esconder uma rota morta.
-    internal fun conectarComRetry(u: URL, ini: Long, ultimo: Long, atrasoPrimeiraMs: Long = 0L): HttpURLConnection {
+    internal fun conectarComRetry(u: URL, ini: Long, ultimo: Long, atrasoPrimeiraMs: Long = -1L): HttpURLConnection {
         var erro: IOException? = null
         repeat(TENTATIVAS) { tentativa ->
             try { return conectar(u, ini, ultimo) }
@@ -267,7 +267,7 @@ class ParaleloDataSource(
         val primeiroUltimo = if (pedido != C.LENGTH_UNSET.toLong()) pos + pedido - 1 else pos + PRIMEIRO - 1
         // Primeiro pedaco pela URL original: segue os redirecionamentos do debrid
         // uma vez so; os pedacos seguintes vao direto ao endereco final.
-        val c = conectarComRetry(URL(dataSpec.uri.toString()), pos, primeiroUltimo)
+        val c = conectarComRetry(URL(dataSpec.uri.toString()), pos, primeiroUltimo, 0L)
         val code = c.responseCode
         if (code == 206) {
             val cr = c.getHeaderField("Content-Range") ?: ""

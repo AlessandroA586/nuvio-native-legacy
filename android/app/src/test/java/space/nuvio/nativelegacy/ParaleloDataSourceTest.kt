@@ -1,7 +1,5 @@
 package space.nuvio.nativelegacy
 
-import androidx.media3.common.C
-import androidx.media3.datasource.DataSpec
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -154,16 +152,14 @@ class ParaleloDataSourceTest {
         }, dormir = { throw AssertionError("janela pequena nao deve esperar retry") })
         val exec = ParaleloDataSource::class.java.getDeclaredField("exec")
         exec.isAccessible = true
-        val len = fonte.open(DataSpec.Builder()
-            .setUri(android.net.Uri.parse("https://example.invalid/video.mkv"))
-            .setPosition(613230488L)
-            .setLength(2L)
-            .build())
-        assertEquals(2L, len)
+        val pos = 613230488L
+        val c = fonte.conectarComRetry(URL("https://example.invalid/video.mkv"), pos, pos + 1, 0L)
+        assertEquals(HttpURLConnection.HTTP_PARTIAL, c.responseCode)
         assertEquals(1, aberturas.get())
         assertEquals(null, exec.get(fonte))
         val buf = ByteArray(2)
-        assertEquals(2, fonte.read(buf, 0, 2))
+        assertEquals(2, c.inputStream.read(buf))
+        assertEquals(listOf<Byte>(1, 2), buf.toList())
         fonte.close()
     }
 
@@ -178,10 +174,10 @@ class ParaleloDataSourceTest {
                 } else ConexaoFalsa(url)
             },
             dormir = { esperas += it })
-        fonte.conectarComRetry(URL("https://example.invalid/video.mkv"), 0, 1023)
+        fonte.conectarComRetry(URL("https://example.invalid/video.mkv"), 0, 1023, 0L)
         fonte.close()
         assertEquals(2, aberturas.get())
-        assertEquals(listOf(0L), esperas)
+        assertEquals(emptyList<Long>(), esperas)
     }
 
     @Test fun closeDesconectaAberturaEmVoo() {
