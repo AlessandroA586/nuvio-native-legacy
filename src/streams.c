@@ -471,7 +471,7 @@ static int descartadosP2P;
 // de enfileirar a resposta. A publicacao e a tela so leem o atomico.
 static _Atomic int motorP2pParaDica;
 void stream_preparar_dica_p2p(const Stream *l, int qtd) {
-  if (!l || debrid_ativo() || p2p_ativo() || ajustes_p2p_url()[0]) return;
+  if (!l || p2p_ativo() || ajustes_p2p_url()[0]) return;
   for (int i = 0; i < qtd; i++) {
     if (l[i].url[0] || !l[i].infoHash[0]) continue;
     atomic_store(&motorP2pParaDica, p2pmotor_disponivel());
@@ -1449,11 +1449,13 @@ int stream_qtd_torrents(void) {
 // .wgt: o P2P fica oculto nos Ajustes e ajustes_p2p_ligado() e sempre 0
 // (a8e7685d) — "ligue o P2P" seria uma dica impossivel de seguir.
 int stream_torrents_para_p2p(void) {
-  if (descartadosSemDebrid <= 0 || debrid_ativo() || p2p_ativo()) return 0;
+  int p2p = descartadosP2P;
+  if (!debrid_ativo()) p2p += descartadosSemDebrid - descartadosP2P;
+  if (p2p <= 0 || p2p_ativo()) return 0;
 #ifdef __EMSCRIPTEN__
   return 0;
 #else
-  return (ajustes_p2p_url()[0] || atomic_load(&motorP2pParaDica)) ? descartadosSemDebrid : 0;
+  return (ajustes_p2p_url()[0] || atomic_load(&motorP2pParaDica)) ? p2p : 0;
 #endif
 }
 
