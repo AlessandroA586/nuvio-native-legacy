@@ -185,7 +185,6 @@ float plrui_seg(const char *const *rotulos, const int *contagem, int n, float se
   xx = x + SEG_PAD;
   for (i = 0; i < n; i++) {
     GfxRect ir = { xx, y + SEG_PAD, w[i], SEG_IH };
-    float yb = ir.y + (SEG_IH - (float)t[i].h) * 0.5f;
     // A pilula de foco desliza entre os chips (posicao fracionaria) e esmaece
     // ao entrar/sair do segmentado; o realce de SELECAO fica no chip inteiro.
     if (i == selI) {
@@ -197,13 +196,19 @@ float plrui_seg(const char *const *rotulos, const int *contagem, int n, float se
         else gfx_cor(ir, 0.5f, 0.204f, 0.212f, 0.243f, (1.0f - fEd) * a);
       }
     }
+    xx += w[i] + SEG_VAO;
+  }
+  // Pilula antes do texto: o acento nao pode cobrir os rotulos durante a mola.
+  if (fEd > 0.005f && selI >= 0)
+    plrui_pilula_foco(segPilulaRect(w, n, pos, x, y), a * fEd);
+  xx = x + SEG_PAD;
+  for (i = 0; i < n; i++) {
+    float yb = y + SEG_PAD + (SEG_IH - (float)t[i].h) * 0.5f;
     txt_desenhar_alpha(t[i], xx + 20.0f, yb, a);
     if (c[i].w) txt_desenhar_alpha(c[i], xx + 20.0f + (float)t[i].w + 9.0f,
                                    yb + (float)t[i].h - (float)c[i].h - 1.0f, a);
     xx += w[i] + SEG_VAO;
   }
-  if (fEd > 0.005f && selI >= 0)
-    plrui_pilula_foco(segPilulaRect(w, n, pos, x, y), a * fEd);
   return tot;
 }
 
