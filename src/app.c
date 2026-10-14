@@ -1496,11 +1496,13 @@ static void erroSemFonte(void) {
     player_erro_fonte_motivo(i18n("As fontes desta lista são P2P (torrent)"),
         i18n("Abra Fontes e escolha uma: ela toca pelo servidor P2P."));
   } else if (!canal && stream_torrents_para_p2p() > 0) {
-    // #486: torrent sem debrid e com o P2P desligado foi descartado.
-    // addons_motivo_vazio nao explica (o addon trouxe fonte) e saia o generico.
-    snprintf(motivo, sizeof motivo, i18n("%d fontes precisam de uma conta de debrid, e nenhuma está ligada"),
-             stream_torrents_para_p2p());
-    player_erro_fonte_motivo(motivo, i18n("Ligue o P2P em Ajustes ou conecte uma conta de debrid."));
+    // #486/#505: fontes descartadas por falta de debrid ou por P2P desligado
+    // (o notWebReady do .tpk — debrid nao o traz de volta). So com a lista
+    // realmente vazia: com fonte direta que nao serviu, o motivo dela vale.
+    if (stream_n() == 0) {
+      snprintf(motivo, sizeof motivo, "%s", i18n("As fontes desta lista são P2P (torrent)"));
+      player_erro_fonte_motivo(motivo, i18n("Ligue o P2P em Ajustes ou conecte uma conta de debrid."));
+    } else player_erro_fonte();
   } else if (addons_motivo_vazio(motivo, sizeof motivo))
     player_erro_fonte_motivo(motivo, canal
         ? i18n("Escolha outro canal no guia ou tente de novo mais tarde.")

@@ -200,7 +200,11 @@ int main(void) {
   ajustes_definir_p2p_ligado(0);
   stream_definir_lista(v, count);
   assert(stream_torrents_para_p2p() == 2);
+  // COM debrid, a mesma lista: as duas fontes continuam fora (notWebReady pede
+  // P2P, nao debrid) e nada pode sugerir "ligue uma conta" — a dica some.
   debrid_definir_chave("torbox", "chave-de-teste");
+  stream_definir_lista(v, count);
+  assert(stream_n() == 7 && stream_torrents_para_p2p() == 0);
   for (int ligado = 0; ligado <= 1; ligado++) {
     assert(ajustes_definir_p2p_url("192.168.1.5"));
     ajustes_definir_p2p_ligado(ligado);
