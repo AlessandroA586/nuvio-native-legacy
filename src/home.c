@@ -2255,6 +2255,29 @@ int home_iniciar(const char *dirArte) {
   return 1;
 }
 
+// DESCER/SUBIR DE FILEIRA NA MESMA POSICAO DA TELA (issue #205: "quando
+// desce de uma fileira pra outra nao ir pro inicio da fileira, descer na
+// mesma posicao"). O focus_mover pousa na COLUNA LEMBRADA da fileira nova
+// (a que ela tinha quando a pessoa saiu dela), e o salto era um pulo para
+// o comeco da fileira de baixo. Aqui o pouso e refeito na coluna cujo
+// centro x esta mais perto do centro do cartaz que estava em foco — a
+// mesma regra do vertudo (vizinhoNaLinha): largura e rolagem diferentes
+// entre fileiras entram na conta, e nColunas limita o pouso ao que existe.
+static int focoVertical(int dy) {
+  int rAntes = foco.fileira;
+  float cx = homeFileiraX(rAntes, foco.coluna) + larguraFil(rAntes) * 0.5f;
+  if (!focus_mover(&foco, 0, dy)) return 0;
+  int r = foco.fileira;
+  int melhor = foco.coluna;
+  for (int c = 0; c < foco.nColunas[r]; c++) {
+    if (fabsf(homeFileiraX(r, c) + larguraFil(r) * 0.5f - cx) <
+        fabsf(homeFileiraX(r, melhor) + larguraFil(r) * 0.5f - cx)) melhor = c;
+  }
+  foco.coluna = melhor;
+  if (r < FOCUS_MAX_FILEIRAS) foco.colunaLembrada[r] = melhor;
+  return 1;
+}
+
 void home_evento(const SDL_Event *e) {
   if (e->type == SDL_QUIT) { sair = 1; return; }
   if (homevazio_ativo(nFileiras)) {
@@ -2503,8 +2526,8 @@ void home_evento(const SDL_Event *e) {
     if (!focus_mover(&foco, -1, 0) && foco.fileira < MAX_FIL)
       anim_borda_bater(&bordaFil[foco.fileira], -NV_BORDA_AMP);
   }
-  else if (k == SDLK_DOWN)  focus_mover(&foco, 0, 1);
-  else if (k == SDLK_UP && !focus_mover(&foco, 0, -1)) focoHero = 1;
+  else if (k == SDLK_DOWN)  focoVertical(1);
+  else if (k == SDLK_UP && !focoVertical(-1)) focoHero = 1;
 }
 
 // Reconstroi a lista a partir do catalogo. Chamada a cada quadro porque a
