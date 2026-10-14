@@ -63,10 +63,11 @@ static int escolhendoCor, focoCor;   // o seletor da cor de destaque (so os 18 f
 static int foco;                // botao em foco; == nBotoes e "Editar atalhos"
 static int focoEd;              // item do catalogo em foco na edicao
 static float rolaEd;            // rolagem da lista de edicao (px)
+static float rolaBotoes, quadroDt;
 #ifdef NV_TOUCH_UI
 static ToqueRolagem toqueCentral;
 static int toqueCentralRolar(const PonteiroRolagem *e) {
-  if (!aberta || !editando) return 0;
+  if (!aberta || escolhendoCor) return 0;
   return toquerol_evento(&toqueCentral, e);
 }
 #endif
@@ -148,6 +149,10 @@ void central_abrir(void) {
   editando = 0;
   escolhendoCor = 0;
   foco = 0;
+  rolaBotoes = 0;
+#ifdef NV_TOUCH_UI
+  toquerol_limpar(&toqueCentral);
+#endif
   aviso[0] = 0;
   printf("[central] aberta (%d atalhos)\n", botoes(NULL, NULL));
   fflush(stdout);
@@ -278,7 +283,8 @@ static float altura(int comFaixa);
 // sozinha chamando o corpo com o alfa caindo. Mudou a altura (botao posto ou
 // tirado, edicao): a ilha anda ate a nova na mola dela.
 void central_atualizar(float dt, Uint32 agora) {
-  (void)dt; (void)agora;
+  (void)agora;
+  quadroDt = anim_clamp(dt, 0, 0.05f);
   if (!aberta) return;
   carregar();
   if (!player_aberto()) ilha_corpo(CC_W, altura(1), corpo, NULL);
@@ -522,13 +528,36 @@ static void botao(GfxRect r, const char *icone, const char *rot, const char *val
   txt_desenhar_alpha(l, r.x + 14.0f, y - (float)l.h, a);
 }
 
-static void desenhaBotoes(float x, float y, float w, float a) {
+// Center smoothly, while keeping the entire focused tile inside the viewport.
+static float rolagemBotoes(float h) {
+  float passo = CC_BOTAO_H + CC_GAP;
+  float top = (float)(foco / CC_COLS) * passo;
+  float maxR = fmaxf(0, (float)linhasBotoes() * passo - CC_GAP - h);
+  float alvo = anim_clamp(top - (h - CC_BOTAO_H) * 0.5f, 0, maxR);
+  float r = anim_mola(rolaBotoes, alvo, quadroDt, 12.0f);
+  return anim_clamp(r, fmaxf(0, top + CC_BOTAO_H - h), fminf(top, maxR));
+}
+
+static void desenhaBotoes(float x, float y, float w, float h, float a) {
   int op[CENTRAL_MAX + 1], item[CENTRAL_MAX + 1], n = botoes(op, item), i;
   float bw = (w - CC_GAP * (CC_COLS - 1)) / CC_COLS;
+  float scroll = 0;
   if (foco > n) foco = n;
+  if (!previa) {
+#ifdef NV_TOUCH_UI
+    float maxR = fmaxf(0, (float)linhasBotoes() * (CC_BOTAO_H + CC_GAP) - CC_GAP - h);
+    toquerol_vincular(&toqueCentral, (GfxRect){x, y, w, h}, gfx_escala(), 0, maxR, 1, &rolaBotoes);
+    if (aberta && a > 0.5f) ponteiro_rolagem(toqueCentralRolar);
+    if (!toqueCentral.livre)
+#endif
+    rolaBotoes = rolagemBotoes(h);
+    scroll = rolaBotoes;
+  }
+  gfx_recorte(x - 8.0f, y - 6.0f, w + 16.0f, h + 12.0f);
   for (i = 0; i <= n; i++) {
-    GfxRect r = { x + (float)(i % CC_COLS) * (bw + CC_GAP), y + (float)(i / CC_COLS) * (CC_BOTAO_H + CC_GAP),
+    GfxRect r = { x + (float)(i % CC_COLS) * (bw + CC_GAP), y + (float)(i / CC_COLS) * (CC_BOTAO_H + CC_GAP) - scroll,
                   bw, CC_BOTAO_H };
+    if (r.y + r.h < y || r.y > y + h) continue;
     if (i < n && op[i] == CC_OP_ESTAT) botao(r, "aj_gauge", "Estatísticas", "", -1, i == foco, a);
     else if (i < n) {
       const CentralItem *c = central_catalogo(item[i]);
@@ -541,8 +570,10 @@ static void desenhaBotoes(float x, float y, float w, float a) {
         gfx_cor((GfxRect){ r.x + r.w - 14.0f - 14.0f, r.y + 16.0f, 14.0f, 14.0f }, 0.5f, cr, cg, cb, a);
       }
     } else botao(r, "aj_sliders-horizontal", "Editar", "", 0, i == foco, a);
-    if (aberta && a > 0.5f && ponteiro_ativo()) ponteiro_alvo(r.x, r.y, r.w, r.h, ptFoco, ptOk, i, 0);
+    if (aberta && a > 0.5f && ponteiro_ativo())
+      ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, y, y + h, ptFoco, ptOk, i, 0);
   }
+  gfx_sem_recorte();
 }
 
 // O SELETOR: 2 fileiras de 9 discos (claros em cima, profundos embaixo, a
@@ -662,7 +693,7 @@ static void corpo(GfxRect r, float a, void *u) {
     char t[24];
     float kw = ajustes_ui_kicker(i18n("Editar atalhos"), cx, yc - 8.0f, a);
     float base = r.y + r.h - CC_PAD - CC_DICAS_H;
-    snprintf(t, sizeof t, "%d / %d", lista.n, CENTRAL_MAX);
+    snprintf(t, sizeof t, "%d / %d", botoes(NULL, NULL) - temEstat(), ofertas((int[CENTRAL_MAX]){0}));
     { TxtLinha l = txt_linha(TXT_ILHA_HORA, t, 243, 242, 239, 255);
       txt_desenhar_alpha(l, cx + kw + 12.0f, yc - (float)l.h * 0.5f, 0.55f * a); }
     desenhaEdicao(cx, y, cw, base - 14.0f - y, a);
@@ -682,7 +713,7 @@ static void corpo(GfxRect r, float a, void *u) {
       cartaoTocando((GfxRect){ cx, y, cw, CC_TOC_H }, tit, meta, a);
       y += CC_TOC_H + 10.0f;
     } }
-  desenhaBotoes(cx, y, cw, a);
+  desenhaBotoes(cx, y, cw, fmaxf(CC_BOTAO_H, r.y + r.h - CC_PAD - 6.0f - y), a);
   // Falha ao gravar: some sozinha; mora na faixa de cima, no lugar da linha.
   if (!previa && aviso[0] && (Sint32)(avisoAte - agora) > 0) {
     TxtLinha l = txt_linha_corta(TXT_ILHA_HORA, aviso, 240, 184, 107, 255, cw);
