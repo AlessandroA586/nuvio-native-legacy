@@ -1245,7 +1245,12 @@ static const char *arteDe(int i) {
   // (dono, 05/10/2026). So vale nesse sentido: fundo por fundo nao troca.
   if (i == idx && arteFixa[0] && arteFixaPoster) {
     const CatItem *c = cat_item(i);
-    if (c && c->backdrop[0]) { arteFixa[0] = 0; arteFixaPoster = 0; }
+    // Fundo DE VERDADE chegou: o cartaz que a semente repetiu em `backdrop`
+    // (recomendacao/filmografia sem fundo proprio) nao conta — e a mesma url
+    // do poster (#502/#503).
+    if (c && c->backdrop[0] && strcmp(c->backdrop, c->poster)) {
+      arteFixa[0] = 0; arteFixaPoster = 0;
+    }
   }
   if (i == idx && arteFixa[0] && !tex_falhou(arteFixa)) return arteFixa;
   { const char *u = arteDeViva(i);
@@ -1254,7 +1259,11 @@ static const char *arteDe(int i) {
       snprintf(arteFixa, sizeof arteFixa, "%s", u);
       // Marcado AQUI, junto com o congelamento: arteDetalheEhPoster so marcava
       // se fosse chamada antes desta, e depois dela devolvia o 0 de fabrica.
-      arteFixaPoster = c && !c->backdrop[0] && c->poster[0];
+      // Poster no lugar do fundo (semente de recomendacao que repetiu o
+      // cartaz em `backdrop`) conta como cartaz: e o que faz a troca acima
+      // disparar quando o fundo real chega (#502/#503).
+      arteFixaPoster = c && c->poster[0] &&
+                       (!c->backdrop[0] || !strcmp(c->backdrop, c->poster));
     }
     return u; }
 }
@@ -1288,7 +1297,8 @@ static int arteDetalheEhPoster(int i) {
   // que o enriquecimento pode ter posto no catalogo depois.
   if (i == idx && trocaarte_previa_fundo()) return 0;   // previa: sempre fundo
   if (i == idx && arteFixa[0]) return arteFixaPoster;
-  { int r = c && !c->backdrop[0] && c->poster[0];
+  { int r = c && c->poster[0] &&
+            (!c->backdrop[0] || !strcmp(c->backdrop, c->poster));
     if (i == idx) arteFixaPoster = r;
     return r; }
 }
