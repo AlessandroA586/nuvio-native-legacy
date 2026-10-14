@@ -163,6 +163,7 @@ void gfx_transformar(float ox, float oy, float s, float dx, float dy) {
   gfxTr.ox = ox; gfxTr.oy = oy; gfxTr.s = s; gfxTr.dx = dx; gfxTr.dy = dy;
 }
 void gfx_sem_transformar(void) { gfxTr.on = 0; }
+int gfx_transformado(void) { return gfxTr.on; }
 // GIRO DE GRUPO (gfx_girar): cos, sin e o pivo em pixels do alvo. Identidade
 // = (1, 0, 0, 0). Aplicado no vertice, depois do fator da camada.
 static float giroLayout[3];          // angulo e pivo como quem chamou pediu

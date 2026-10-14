@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `b7c2c1f9` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-14 16:11. 454 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `b7c2c1f9` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-14 16:49. 455 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -123,7 +123,7 @@ Plano de refatoração: `docs/plans/refatoracao-geral.md` (branch `agente/refato
 | 2.0.6 | 60 | #246, #280, #288, #302, #315, #316, #345, #346, #353, #357, #365, #367, #379, #382, #386, #388, #391, #394, #398, #399, #401, #402, #404, #405, #407, #412, #413, #414, #415, #418, #423, #424, #451, #459, #461, #462, #468, #469, #471, #475, #477, #479, #481, #482, #483, #488, #492, #494, #495, #496, #497, #500, #501, #502, #503, #504, #505, #506, #507, #508 |
 | 2.1 | 16 | #250, #306, #313, #337, #349, #366, #374, #393, #397, #403, #420, #434, #436, #457, #458, #460 |
 | 2.2 | 0 |  |
-| futuro | 17 | #135, #260, #304, #342, #347, #348, #389, #396, #437, #438, #450, #466, #467, #509, #510, #511, #512 |
+| futuro | 18 | #135, #260, #304, #342, #347, #348, #389, #396, #437, #438, #450, #466, #467, #509, #510, #511, #512, #513 |
 | nao vamos fazer | 4 | #292, #307, #324, #354 |
 | ja-lancada | 40 | #266, #283, #286, #293, #310, #326, #328, #329, #331, #334, #338, #341, #350, #352, #355, #356, #358, #362, #364, #369, #383, #385, #387, #390, #392, #410, #416, #417, #419, #421, #422, #425, #426, #429, #430, #433, #439, #440, #486, #499 |
 
@@ -180,7 +180,7 @@ Por status:
 | Status | Qtd |
 |---|---|
 | lancada | 310 |
-| aberta | 53 |
+| aberta | 54 |
 | integrada | 29 |
 | respondida | 22 |
 | por-desenho | 15 |
@@ -196,15 +196,15 @@ Por release (grupo de planejamento):
 | Grupo | Qtd |
 |---|---|
 | lançadas em tag v* (qualquer versão) | 310 |
-| sem release | 117 |
+| sem release | 118 |
 | 2.0.5 (integração, sem release do conserto) | 20 |
 | futuro (2.1/2.2) | 5 |
 | 2.0.3 lançada, com pendência | 2 |
 
 Lançadas por versão: -: 4, 1.0.7: 10, 1.0.8: 1, 1.0.10: 3, 1.0.11: 3, 1.0.15: 1, 1.0.22: 1, 1.0.24: 1, 1.0.29: 1, 1.0.30: 2, 1.0.31: 2, 1.0.32: 2, 1.0.34: 1, 1.0.35: 1, 1.0.37: 1, 1.0.38: 2, 1.0.39: 1, 1.0.42: 1, 1.0.43: 4, 1.0.44: 4, 1.0.45: 1, 1.0.51: 3, 1.0.52: 1, 1.0.53: 1, 1.0.55: 3, 1.2.1: 4, 1.3.0: 1, 1.3.2: 5, 1.3.4: 5, 1.3.5: 2, 1.3.8: 1, 1.3.9: 1, 1.3.10: 1, 1.3.11: 1, 1.3.12: 5, 1.4: 7, 1.4.1: 2, 1.4.2: 9, 1.4.3: 9, 1.4.4: 3, 1.4.5: 1, 1.4.6: 7, 1.4.7: 1, 1.5.0: 2, 1.5.1: 4, 1.5.2: 9, 1.5.3: 2, 1.5.4: 9, 1.6.0: 8, 1.6.1: 4, 1.6.2: 3, 1.6.3: 2, 1.6.4: 2, 1.6.5: 4, 1.7.0: 10, 1.7.1: 4, 1.7.2: 5, 1.7.4: 5, 2.0.0: 22, 2.0.1: 12, 2.0.2: 20, 2.0.3: 29, 2.0.4: 9, 2.0.5: 25.
 
-Abertas no GitHub: 137. Fechadas: 317.
-Abertas sem nenhum comentário nosso: 80.
+Abertas no GitHub: 138. Fechadas: 317.
+Abertas sem nenhum comentário nosso: 81.
 
 ## 2.0.3 lançada com pendência (precisa-log, respondida ou conserto parcial)
 
@@ -396,7 +396,7 @@ Notas:
 
 ## Futuro (2.1, 2.2, depois)
 
-34 issues.
+35 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -434,6 +434,7 @@ Notas:
 | [#511](https://github.com/iqui27/nuvio-native-legacy/issues/511) | Show subtitle track name instead of only showing language | ? | enhancement | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
 | [#510](https://github.com/iqui27/nuvio-native-legacy/issues/510) | Subtitles list not the same as nuvio in phone applications l | ? | bug | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
 | [#509](https://github.com/iqui27/nuvio-native-legacy/issues/509) | Expanded poster trailer | ? | enhancement | integrada | - | futuro | 13e13b92 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
+| [#513](https://github.com/iqui27/nuvio-native-legacy/issues/513) | Any series episode autoplay even option is disabled | ? | bug | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
 
 Notas:
 
@@ -471,6 +472,7 @@ Notas:
 - **#511**: Criada 2026-10-14 (snapshot 14:46).
 - **#510**: Criada 2026-10-14 (snapshot 14:46).
 - **#509**: Criada 2026-10-14 (snapshot 14:46). Escrivão 14/10 14:47: integrada via i509trailer. | Escrivão 2026-10-14 16:11: conserto 13e13b92 ja em integracao/2.0.5; sem release ainda.
+- **#513**: Criada 2026-10-14 (issues.json 14/10 16:49).
 
 ## Outras pendências
 
@@ -1599,11 +1601,11 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Nova fileira com um card largo so (Apple TV style)
 
 - Plataforma: all
-- Status: em_job
+- Status: em_revisao
 - Release: 2.0.6
 - Conserto: agente/205-herocard (tip 960cf84f, 4 commits fora)
-- Próximo passo: re-review depois do fix3 (15:23)
-- Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix3 commitado 960cf84f; review anterior BLOQUEIA (j-revg-herocard-r2).
+- Próximo passo: merge em curso (j-merge-205-herocard 16:46)
+- Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix3 commitado 960cf84f; review anterior BLOQUEIA (j-revg-herocard-r2). | j-revg-herocard-r3 OK 16:02 (fix3 960cf84f). Escrivão 16:49: branch ainda não integrada.
 
 ### Descer de fileira mantem a coluna horizontal
 
@@ -1635,11 +1637,11 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Cor dos botoes do hero + repensar imersivo/textura
 
 - Plataforma: all
-- Status: em_job
+- Status: integrada
 - Release: 2.0.6
-- Conserto: agente/205-botoes (tip d2aa0f4e, 6 commits fora)
-- Próximo passo: re-review depois do fix3 (15:21)
-- Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix3 commitado d2aa0f4e; review anterior BLOQUEIA.
+- Conserto: d9d8ad6f (merge agente/205-botoes em integracao/2.0.5)
+- Próximo passo: sem ação; lancar com 2.0.5 (testar no TCL antes do release)
+- Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix3 commitado d2aa0f4e; review anterior BLOQUEIA. | Merge d9d8ad6f em integracao/2.0.5 (escrivao 14/10 16:49).
 
 ### Layout do Ranking de colecao + foco cortado no topo
 
@@ -1755,8 +1757,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_job
 - Release: 2.0.6
 - Conserto: agente/205-tecladolg (tip 2a0ef328, 2 commits fora)
-- Próximo passo: re-review do fix (antes: review BLOQUEIA)
-- Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix 2a0ef328 commitado; review j-revf-tecladolg (07:13) BLOQUEIA antes do fix.
+- Próximo passo: re-review do fix (j-revg-tecladolg, log vazio 16:47)
+- Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix 2a0ef328 commitado; review j-revf-tecladolg (07:13) BLOQUEIA antes do fix. | Escrivão 16:49: review lançado; sem veredito ainda.
 
 ### Pesquisa: distribuir pela TizenBrew (Samsung)
 
@@ -1836,8 +1838,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_revisao
 - Release: 2.0.5
 - Conserto: 7242b442
-- Próximo passo: revisar/mergear
-- Notas: Escrivão 14/10 14:47: impl/merge feito, sem review.
+- Próximo passo: review lançado (j-revg-abastream, log vazio 16:47); depois mergear
+- Notas: Escrivão 14/10 14:47: impl/merge feito, sem review. | Escrivão 16:49: impl feita; review sem veredito ainda.
 
 ### fix(gfx): require pixel-aligned opaque panel cores for clear
 
@@ -1881,8 +1883,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_revisao
 - Release: 2.0.5
 - Conserto: ac6d84aa
-- Próximo passo: revisar/mergear
-- Notas: Escrivão 14/10 14:47: impl/merge feito, sem review.
+- Próximo passo: review lançado (j-revg-animacoes, log vazio 16:47); depois mergear
+- Notas: Escrivão 14/10 14:47: impl/merge feito, sem review. | Escrivão 16:49: impl feita; review sem veredito ainda.
 
 ### fix(tex): count bytes from the Android reserve path and back off 0-byte art responses
 
@@ -1941,11 +1943,11 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Hide performance meter while a trailer plays
 
 - Plataforma: ?
-- Status: aberta
+- Status: em_revisao
 - Release: 2.0.5
 - Conserto: de5a9bc6
-- Próximo passo: decidir
-- Notas: Escrivão 14/10 14:47: sem job (perdido).
+- Próximo passo: mergear ou arquivar (review OK em j-revg-bench-mm); sem job de merge
+- Notas: Escrivão 14/10 14:47: sem job (perdido). | j-revg-bench-mm: VEREDITO OK. Escrivão 16:49: 1 commit fora, não integrada.
 
 ### detail: expanding "Play from beginning" pill reveals the label by fade, not clip (#205)
 
@@ -2067,11 +2069,11 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### home: keep palco curtain band through fade-out (#205)
 
 - Plataforma: ?
-- Status: em_job
+- Status: integrada
 - Release: 2.0.5
-- Conserto: agente/205-coverflow2 (tip 3d9cf03d, 3 commits fora)
-- Próximo passo: re-review depois do fix3 (15:25)
-- Notas: Escrivão 2026-10-14 16:11: fix3 commitado 3d9cf03d; review anterior BLOQUEIA (j-revg-coverflow2-r2).
+- Conserto: 02f53b6e (merge agente/205-coverflow2 em integracao/2.0.5)
+- Próximo passo: sem ação; lancar com 2.0.5 (testar no TCL antes do release)
+- Notas: Escrivão 2026-10-14 16:11: fix3 commitado 3d9cf03d; review anterior BLOQUEIA (j-revg-coverflow2-r2). | Merge 02f53b6e em integracao/2.0.5 (escrivao 14/10 16:49).
 
 ### Merge agente/205-ajustesperf
 
@@ -2157,11 +2159,11 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Settings: the register-only footer replay must not paint
 
 - Plataforma: ?
-- Status: em_job
+- Status: em_revisao
 - Release: 2.0.5
 - Conserto: 44b4295a
-- Próximo passo: re-review depois do fix2-r (15:25)
-- Notas: Escrivão 2026-10-14 16:11: fix2-r commitado 44b4295a; review j-revg-dicatoque2 BLOQUEIA antes.
+- Próximo passo: mergear (review r3 OK 15:56); sem job de merge
+- Notas: Escrivão 2026-10-14 16:11: fix2-r commitado 44b4295a; review j-revg-dicatoque2 BLOQUEIA antes. | j-revg-dicatoque2-r3 OK 15:56 (fix2-r 44b4295a). Escrivão 16:49: branch ainda não integrada.
 
 ### fix(directors): correct watched state, identity merging and portrait tint
 
@@ -2220,11 +2222,11 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Merge agente/205-notas0
 
 - Plataforma: ?
-- Status: em_revisao
+- Status: integrada
 - Release: 2.0.5
-- Conserto: agente/205-epslista (tip 3520c678, 1 commit fora)
-- Próximo passo: mergear (review OK)
-- Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: impl em agente/205-epslista; review j-revg-epslista-r3 OK; branch ainda NAO integrada.
+- Conserto: a3b07d6d (merge agente/205-epslista em integracao/2.0.5)
+- Próximo passo: sem ação; lancar com 2.0.5 (testar no TCL antes do release)
+- Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: impl em agente/205-epslista; review j-revg-epslista-r3 OK; branch ainda NAO integrada. | Merge a3b07d6d em integracao/2.0.5 (escrivao 14/10 16:49).
 
 ### Merge integracao/2.0.5 into agente/205-epsrapido
 
@@ -2241,8 +2243,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_job
 - Release: 2.0.5
 - Conserto: agente/205-estatpainel2 (tip 60bd9d31, 3 commits fora)
-- Próximo passo: fix rodando (j-205-estatpainel2-fix), depois re-review
-- Notas: Escrivão 2026-10-14 16:11: review anterior BLOQUEIA (j-revg-estatpainel2-f: P1 plrilha_esconder vs faixas_pedir, P2 UP no foco fixado); job de fix rodando desde 15:47.
+- Próximo passo: re-review rodando (j-revg-estatpainel2-r2, 16:47)
+- Notas: Escrivão 2026-10-14 16:11: review anterior BLOQUEIA (j-revg-estatpainel2-f: P1 plrilha_esconder vs faixas_pedir, P2 UP no foco fixado); job de fix rodando desde 15:47. | fix j-205-estatpainel2-fix concluído 16:08. Escrivão 16:49: re-review em curso.
 
 ### fix(player): keep live statistics open and add animated overlay sizes
 
@@ -2313,8 +2315,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_revisao
 - Release: 2.0.5
 - Conserto: agente/205-heroinfo (tip 2bb12dfe, 1 commit fora)
-- Próximo passo: mergear (review OK)
-- Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: impl em agente/205-heroinfo; review j-revg-heroinfo-r3 OK; branch ainda NAO integrada.
+- Próximo passo: merge em curso (j-merge-205-heroinfo 16:47)
+- Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: impl em agente/205-heroinfo; review j-revg-heroinfo-r3 OK; branch ainda NAO integrada. | j-revg-heroinfo-r3 OK 15:56. Escrivão 16:49: branch ainda não integrada.
 
 ### Merge integracao/2.0.5 into agente/205-homeqr
 
@@ -2508,11 +2510,11 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Merge agente/205-notas0
 
 - Plataforma: ?
-- Status: em_revisao
+- Status: integrada
 - Release: 2.0.5
-- Conserto: agente/205-notas1 (tip 0bf5dacf, 1 commit fora)
-- Próximo passo: mergear (review OK)
-- Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: impl em agente/205-notas1; review j-revg-notas1-r3 OK; branch ainda NAO integrada.
+- Conserto: 1602f90c (merge agente/205-notas1 em integracao/2.0.5)
+- Próximo passo: sem ação; lancar com 2.0.5 (testar no TCL antes do release)
+- Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: impl em agente/205-notas1; review j-revg-notas1-r3 OK; branch ainda NAO integrada. | Merge 1602f90c em integracao/2.0.5 (escrivao 14/10 16:49).
 
 ### fix(tests): debrid parser expects externalUrl-only stream to be dropped
 
@@ -2583,8 +2585,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_job
 - Release: 2.0.5
 - Conserto: agente/205-paraleloloop (tip 1788e8fa, 6 commits fora)
-- Próximo passo: re-review rodando (j-revg-paraleloloop-r3), depois mergear
-- Notas: Escrivão 2026-10-14 16:11: fix2 commitado 1788e8fa; review anterior BLOQUEIA; j-revg-paraleloloop-r3 rodando desde 15:47.
+- Próximo passo: re-review r3 (j-revg-paraleloloop-r3) listado RUNNING desde 15:47; processo não confirmado
+- Notas: Escrivão 2026-10-14 16:11: fix2 commitado 1788e8fa; review anterior BLOQUEIA; j-revg-paraleloloop-r3 rodando desde 15:47. | Escrivão 16:49: sem veredito de r3 nos logs; verificar antes de mergear.
 
 ### tests: plugin runner and Plugins screen / sources sheet captures
 
@@ -2808,17 +2810,17 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_revisao
 - Release: 2.0.5
 - Conserto: 9d19c439
-- Próximo passo: revisar/mergear
-- Notas: Escrivão 14/10 14:47: impl/merge feito, sem review.
+- Próximo passo: review lançado (j-revg-shufflepos, log vazio 16:47); depois mergear
+- Notas: Escrivão 14/10 14:47: impl/merge feito, sem review. | Escrivão 16:49: impl feita; review sem veredito ainda.
 
 ### Merge branch 'integracao/2.0.5' into agente/205-sidebarfonte
 
 - Plataforma: ?
-- Status: em_revisao
+- Status: integrada
 - Release: 2.0.5
-- Conserto: e2fb5ec6
-- Próximo passo: revisar/mergear
-- Notas: Escrivão 14/10 14:47: impl/merge feito, sem review.
+- Conserto: 5c8266ad (merge agente/205-sidebarfonte em integracao/2.0.5)
+- Próximo passo: sem ação; lancar com 2.0.5 (testar no TCL antes do release)
+- Notas: Escrivão 14/10 14:47: impl/merge feito, sem review. | Merge 5c8266ad em integracao/2.0.5 (escrivao 14/10 16:49).
 
 ### fix(simkl): keep history fallback on original profile
 

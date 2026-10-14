@@ -467,7 +467,9 @@ static void abrir(int i, int tc) {
   detail_abrir(&hi);
   nivel = 1;
   foco.fileira = SEC_TEMPORADAS;
-  foco.coluna = tc;
+  // O botao de episodio aleatorio abriu a fileira (#205): temporada t mora na
+  // coluna t+1; em filme a fileira nao existe e a coluna fica onde estava.
+  foco.coluna = secaoN(SEC_TEMPORADAS) > 0 ? tc + 1 : tc;
   quadros(120);
 }
 

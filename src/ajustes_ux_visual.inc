@@ -24,6 +24,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_SUFIXO_TIPO: return "aj_rows-3";
     case AJ_SELO_VISTO: return "aj_rows-3";
     case AJ_OCULTAR_FILMES_VISTOS: return "aj_rows-3";
+    case AJ_CURADORIA_URL: return "aj_rows-3";
     case AJ_CW_LIGADO: return "aj_rotate-ccw-clock";
     case AJ_CW_OK: return "aj_rotate-ccw-clock";
     case AJ_CW_ESTILO: return "aj_rotate-ccw-clock";
@@ -157,6 +158,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_ABERTURA_ADDON: return "aj_clapperboard";
     case AJ_ABERTURA_FUNDO: return "aj_clapperboard";
     case AJ_EP_TAMANHO: return "aj_layout-dashboard";
+    case AJ_HERO_SINOPSE_TAM: return "aj_layout-dashboard";
     case AJ_ESTAT_TAMANHO: return "aj_gauge";
     case AJ_ESTAT_LADO: return "aj_gauge";
     case AJ_REACAO_CREDITOS: return "aj_circle-play";

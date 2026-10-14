@@ -356,12 +356,15 @@ static void aj2CabecalhoA3(GfxRect fr, const char *titulo, float reservaDir, flo
 // RODAPE DA LISTA (A3): as dicas a esquerda e o aviso ("Ajuste salvo nesta
 // TV.") a direita, na mesma faixa abaixo da lista. Antes o aviso era desenhado
 // em cima da ultima linha (foto do dono, 04/10). Sem lugar para os dois, o
-// aviso fica e as dicas somem enquanto ele dura.
-static void aj2RodapeA3(GfxRect fr, const AjDica *d, int nd, float a) {
+// aviso fica e as dicas somem enquanto ele dura. `desenha`: 1 desenha e
+// registra, 2 so registra (replay de TV/desktop: a funcao escolhe de novo o
+// que aparece — mesmas dicas e a mesma supressao pelo aviso, nenhum alvo
+// invisivel).
+static void aj2RodapeA3(GfxRect fr, const AjDica *d, int nd, float a, int desenha) {
   float x = fr.x + 34.0f, w = fr.w - 68.0f, yc = fr.y + fr.h - AJ_A3_RODAPE * 0.5f - 6.0f;
   float wd = aj2DicasLinha(d, nd, x, yc, TXT_V2_KBD18, 34, 38, 10, TXT_V2_24, 8, 22, 0, a), wa = 0;
   int dicas = 1;
-  gfx_cor((GfxRect){ fr.x + 28.0f, fr.y + fr.h - AJ_A3_RODAPE, fr.w - 56.0f, 1 }, 0, 1, 1, 1, 0.07f * a);
+  if (desenha == 1) gfx_cor((GfxRect){ fr.x + 28.0f, fr.y + fr.h - AJ_A3_RODAPE, fr.w - 56.0f, 1 }, 0, 1, 1, 1, 0.07f * a);
 #ifdef NV_TOUCH_UI
   if (ajPontInline) { ajToqueBotoes(x + w, yc, a); return; }
 #endif
@@ -369,10 +372,10 @@ static void aj2RodapeA3(GfxRect fr, const AjDica *d, int nd, float a) {
     TxtLinha t = ajTxtC(TXT_V2_24, uxAviso, w - 34.0f);
     wa = t.w + 34.0f;
     if (wd + 24.0f + wa > w) dicas = 0;
-    ajIcone("aj_check", x + w - wa, yc - 11.0f, 22.0f, 0.7f * a);
-    txt_desenhar_alpha(t, x + w - t.w, yc - t.h * 0.5f, 0.75f * a);
+    if (desenha == 1) { ajIcone("aj_check", x + w - wa, yc - 11.0f, 22.0f, 0.7f * a);
+      txt_desenhar_alpha(t, x + w - t.w, yc - t.h * 0.5f, 0.75f * a); }
   }
-  if (dicas) aj2DicasLinha(d, nd, x, yc, TXT_V2_KBD18, 34, 38, 10, TXT_V2_24, 8, 22, 1, a);
+  if (dicas) aj2DicasLinha(d, nd, x, yc, TXT_V2_KBD18, 34, 38, 10, TXT_V2_24, 8, 22, desenha, a);
 }
 // PONTEIRO (#99) NA LISTA DA CATEGORIA. A linha sob o cursor ganha o foco
 // pelo mesmo focar() das setas (com o foco saindo do indice); o OK do clique
@@ -436,7 +439,7 @@ static void ajDesenharFolha(void) {
   }
   gfx_sem_recorte();
   nd = ajDicasDe(focoIndice ? -1 : focoOp, d);
-  aj2RodapeA3(fr, d, nd, aPag);
+  aj2RodapeA3(fr, d, nd, aPag, 1);
 }
 
 // --- MODAIS ----------------------------------------------------------------------
@@ -1189,6 +1192,20 @@ static void ajDesenharTela(void) {
 #ifdef NV_TOUCH_UI
   if (ajPontInline) ajPontLista = 1;
 #endif
+  // #205: a edicao na linha (Mobile e TV) tem o rodape com os chips clicaveis.
+  // A camada dos alvos comeca aqui: as linhas registraram alvos no quadro
+  // assentado e um clique fora nao pode cair no OK de camada vazia.
+#ifdef NV_TOUCH_UI
+  if (ajPontInline) { ponteiro_camada(); ajToqueCamada(); }
+  else if (uxEditor && !modal)
+#else
+  if (uxEditor && !modal)
+#endif
+    { ponteiro_camada();
+#ifdef NV_TOUCH_UI
+      ajToqueCamada();
+#endif
+    }
   if (p.lA > 0.003f && uxIndice >= 1) {
     GfxRect fr = aj2ListaR();
     float oy = p.lOy > 0 ? p.lOy : aj2GradeOrigemY(uxIndice);
@@ -1202,7 +1219,7 @@ static void ajDesenharTela(void) {
   // sem alvo proprio, o clique e o OK (ponteiro.h, CAMADAS).
   if (modal || (uxEditor
 #ifdef NV_TOUCH_UI
-                && !ajPontInline
+                && !ajPontInline && !ajEditandoLinha(uxOp)
 #endif
                )) { ponteiro_camada();
 #ifdef NV_TOUCH_UI
@@ -1230,6 +1247,22 @@ static void ajDesenharTela(void) {
     TxtLinha t = ajTxtC(TXT_V2_24, uxAviso, fr.w - 100);
     txt_desenhar_alpha(t, fr.x + 50, fr.y + fr.h - 30, 0.7f);
   }
+  // #205: os modais de digitacao/aviso limparam os alvos do rodape. Na edicao
+  // na linha o rodape da lista continua na tela: repete o MESMO rodape sem
+  // desenhar (a funcao escolhe de novo quais chips cabem com o aviso, senao
+  // um alvo de OK/Voltar ficaria debaixo do "Ajuste salvo") para registrar os
+  // chips sobre um anteparo. No Mobile (ajPontInline) a camada do quadro ja e
+  // a da folha e o rodape tem os botoes de toque proprios — nao pode zerar
+  // aqui. TV e desktop sem toque tambem: o clique do ponteiro cancela.
+#ifdef NV_TOUCH_UI
+  if (ajEditandoLinha(uxOp) && !ajPontInline && !modal) { ponteiro_camada(); ajToqueCamada();
+#else
+  if (ajEditandoLinha(uxOp) && !modal) { ponteiro_camada();
+#endif
+    ponteiro_alvo(0, 0, (float)NV_TELA_W, (float)NV_TELA_H, NULL, NULL, 0, 0);
+    AJ_ESCALA_INI();
+    { AjDica d[4]; aj2RodapeA3(aj2ListaR(), d, ajDicasDe(focoIndice ? -1 : focoOp, d), 1.0f, 2); }
+    AJ_ESCALA_FIM(); }
   ajDesenharModais();
   if (registro_envio_aberto()) registro_envio_desenhar();
 }
@@ -1354,7 +1387,7 @@ static void ajSubLista(const AjSubLinha *L, int n, int foco, const AjDica *d, in
     snprintf(uxAviso, sizeof uxAviso, "%s", aviso);
     uxAvisoAte = SDL_GetTicks() + 1000;
   }
-  aj2RodapeA3(fr, d, nd, 1);
+  aj2RodapeA3(fr, d, nd, 1, 1);
 }
 // A coluna da esquerda: a cena gerada da linha (a mesma da categoria) e o
 // kicker, o titulo e o texto da linha em foco.

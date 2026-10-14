@@ -427,6 +427,17 @@ int main(int argc, char **argv) {
     quadros(1, bmp);
   }
 
+  // NV_HEROI=N (com NV_TIPOS="pop_movie=<FilTipo>"): desce N fileiras e
+  // fotografa a fileira em foco — a prova da fileira de um cartão só (#205).
+  if (getenv("NV_HEROI")) {
+    int r, desce = atoi(getenv("NV_HEROI"));
+    for (r = 0; r < 14; r++) tecla(SDLK_UP);
+    quadros(60, NULL);
+    for (r = 0; r < desce; r++) { tecla(SDLK_DOWN); quadros(30, NULL); }
+    snprintf(bmp, sizeof bmp, "%s-heroi.bmp", saida);
+    quadros(1, bmp);
+  }
+
   // NV_SO_CTX=1: pula a volta pelos layouts e vai direto ao menu do cartaz
   // (NV_CTX), no layout do primeiro digito de `camadas`.
   if (!getenv("NV_SO_CTX")) { const char *L;

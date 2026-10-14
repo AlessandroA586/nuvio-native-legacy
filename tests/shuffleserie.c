@@ -4,8 +4,9 @@
 //
 // O QUE SE COBRA:
 //   A. so serie tem o botao (filme: a fileira de temporadas some);
-//   B. o botao e uma coluna a mais DEPOIS das temporadas, alcancavel pela
-//      seta direita, e nao troca a temporada nem abre o menu de visto;
+//   B. o botao e a PRIMEIRA coluna da fileira, ANTES das temporadas (#205:
+//      no fim de uma serie longa ele caia fora da tela), alcancavel pela seta
+//      esquerda, e nao troca a temporada nem abre o menu de visto;
 //   C. OK nele pede a reproducao pelo caminho de sempre (detail_pediu_reproduzir)
 //      com um episodio valido: ja exibido, de qualquer temporada, nunca especial;
 //   D. capturas com e sem foco.
@@ -265,6 +266,7 @@ static void focar(int fileira, int col) {
   quadros(90);
 }
 static void direita(void) { tecla(SDL_KEYDOWN, SDLK_RIGHT); tecla(SDL_KEYUP, SDLK_RIGHT); quadros(30); }
+static void esquerda(void) { tecla(SDL_KEYDOWN, SDLK_LEFT); tecla(SDL_KEYUP, SDLK_LEFT); quadros(30); }
 static void ok(void) { tecla(SDL_KEYDOWN, SDLK_RETURN); tecla(SDL_KEYUP, SDLK_RETURN); quadros(4); }
 
 int main(int argc, char **argv) {
@@ -320,23 +322,25 @@ int main(int argc, char **argv) {
   quadros(5);
 
   abrir(0);
-  focar(SEC_TEMPORADAS, 3);
+  focar(SEC_TEMPORADAS, 1);
   quadros(60);
   CONFERE(secaoN(SEC_TEMPORADAS) == 5, "serie: quatro abas e UMA coluna a mais, o botao de aleatorio");
 
   // --- B. alcance pelo controle ---------------------------------------------
   { int temp0 = temporada;
-    direita();
-    CONFERE(nivel == 1 && foco.fileira == SEC_TEMPORADAS && foco.coluna == 4,
-            "serie: a seta direita na ultima aba chega ao botao");
+    esquerda();
+    CONFERE(nivel == 1 && foco.fileira == SEC_TEMPORADAS && foco.coluna == 0,
+            "serie: a seta esquerda na primeira aba chega ao botao");
     CONFERE(temporada == temp0, "serie: focar o botao nao troca a temporada");
+    esquerda();
+    CONFERE(foco.coluna == 0, "serie: o botao e o comeco da fileira");
     direita();
-    CONFERE(foco.coluna == 4, "serie: o botao e o fim da fileira"); }
+    CONFERE(foco.coluna == 1, "serie: a seta direita do botao volta a primeira aba"); }
   gravar("shuffle-focado");
 
   // --- C. OK sorteia um episodio valido e pede a reproducao ------------------
   for (i = 0; i < 80; i++) {
-    focar(SEC_TEMPORADAS, 4);
+    focar(SEC_TEMPORADAS, 0);
     detail_pediu_reproduzir();           // limpa
     ok();
     if (detail_pediu_reproduzir()) {
@@ -354,9 +358,9 @@ int main(int argc, char **argv) {
   CONFERE(!episodios_menu_aberto(), "OK no botao nao abre o menu de visto");
 
   // --- D. capturas -----------------------------------------------------------
-  focar(SEC_TEMPORADAS, 4);
+  focar(SEC_TEMPORADAS, 0);
   gravar("shuffle-focado-2");
-  focar(SEC_TEMPORADAS, 1);
+  focar(SEC_TEMPORADAS, 2);
   gravar("shuffle-sem-foco");
 
   printf(falhas ? "shuffleserie: %d FALHA(S)\n" : "shuffleserie: tudo ok\n", falhas);
