@@ -295,8 +295,13 @@ int stream_extrair(const char *json, const char *provedor, Stream **saida) {
     char titulo[2048] = "", texto[5000];
     fim = js_fim(p);
     if (!fim || fim <= p) break;
-    js_texto(p, fim, "url", s.url, sizeof s.url);
-    if (!s.url[0]) js_texto(p, fim, "externalUrl", s.url, sizeof s.url);
+    // externalUrl abre fora do player; sem midia/hash a fonte fica oculta.
+    js_texto_raiz_em(p, fim, "url", s.url, sizeof s.url);
+    { const char *bh = valorRaiz(p, fim, "behaviorHints");
+      const char *hint = bh ? valorRaiz(bh, fim, "notWebReady") : NULL;
+      s.notWebReady = hint && fim - hint >= 4 && !memcmp(hint, "true", 4) &&
+        (hint + 4 == fim || hint[4] == ',' || hint[4] == '}' || isspace((unsigned char)hint[4]));
+    }
     s.fileIdx = -1;
     // Torrent puro: sem url, com infoHash (no topo ou dentro de clientResolve,
     // como o AIOStreams manda). A url nasce depois, no debrid.

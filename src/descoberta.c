@@ -636,6 +636,18 @@ static int descOcultaNaoLancado(const CatItem *it) {
   return nlanc_meta_futuro(it->meta, tmv.tm_year + 1900);
 }
 
+// O meta da rede nao tem a posicao local de playback. Reusar so a evidencia
+// do item canonico faz o filtro acompanhar o selo tambem sem historico remoto;
+// cat_visto continua dando precedencia a um "nao visto" explicito. A copia
+// por identidade e sob a trava dos publicadores, inclusive nos fios de rede.
+int desc_filme_visto(const CatItem *it) {
+  CatItem conhecido;
+  if (!it || strcmp(it->tipo, "movie")) return 0;
+  return cat_visto(it) ||
+         (it->imdb[0] && cat_copiar_por_id(it->imdb, it->tipo, &conhecido) &&
+          cat_visto(&conhecido));
+}
+
 // --- DE QUAL ADDON VEIO O ITEM (CatItem.origem) ------------------------------
 //
 // O detalhe pergunta a ficha (/meta) primeiro a quem PUBLICOU o titulo, e para
@@ -1359,6 +1371,74 @@ static int lerCatalogo(const char *base, const char *tipo, const char *id,
   return n;
 }
 
+// #366: o prefixo original continua no catalogo canonico e no cache; so a
+// reserva seguinte pula os vistos, que antes nem cabiam na fileira da Home.
+// Sao ate 24 originais mais ate seis suplementos (~2,1 MB extras em 20
+// fileiras). A reserva tem teto de RAM, alem do teto de slots CAT_MAX.
+// Varremos a resposta inteira: 60 vistos no inicio de uma pagina de 100 nao
+// impedem os 40 seguintes de preencher a tela. Um addon que declara skip pode
+// ceder uma pagina a mais, usando a contagem CRUA recebida como proximo skip.
+#define HOME_VISTOS_MAX (DESC_ITENS_POR_FILEIRA + 6)
+static int lerCatalogoHomeParcial(const char *base, const char *tipo, const char *id,
+                           CatItem *saida, int max, int quantos,
+                           int paginavel, int *respondeu,
+                           int (*primeira)(const CatItem *, int, void *), void *usuario) {
+  int n = 0, visiveis = 0, skip = 0;
+  char orig[96];
+  if (!ajustes_ocultar_filmes_vistos() || strcmp(tipo, "movie"))
+    return lerCatalogo(base, tipo, id, saida, max, quantos, respondeu);
+  if (max > HOME_VISTOS_MAX) max = HOME_VISTOS_MAX;
+  if (respondeu) *respondeu = 0;
+  if (addons_base_desligada(base)) return 0;
+  origemDaBase(base, orig, sizeof orig);
+  for (int pagina = 0; pagina < (paginavel ? 2 : 1); pagina++) {
+    char url[NV_ADDON_PEDIDO_MAX], *corpo;
+    int w, raw = 0, novos = 0;
+    if (skip) w = nv_addon_url(url, sizeof url, base,
+                  "/catalog/%s/%s/skip=%d.json", tipo, id, skip);
+    else w = nv_addon_url(url, sizeof url, base, "/catalog/%s/%s.json", tipo, id);
+    if (!descPedidoCoube(base, w, sizeof url)) break;
+    corpo = rede_baixar(url, 8);
+    if (!corpo) break;
+    if (respondeu && !pagina) *respondeu = 1;
+    for (const char *p = js_array(corpo, NULL, "metas"); p; p = js_prox(js_fim(p))) {
+      const char *f = js_fim(p);
+      raw++;
+      if (n >= max || visiveis >= quantos) continue;
+      if (!deMeta(p, f, tipo, &saida[n]) || descOcultaNaoLancado(&saida[n])) continue;
+      int repetido = 0;
+      // O prefixo conserva ate repeticoes que o addon ja mandava. So a
+      // reserva adicional rejeita ids repetidos, para nao preencher com o
+      // mesmo cartaz nem continuar perseguindo uma pagina que ignora skip.
+      int suplemento = pagina > 0 || n >= DESC_ITENS_POR_FILEIRA;
+      if (suplemento) for (int i = 0; i < n; i++)
+        if (saida[n].imdb[0] && !strcmp(saida[i].imdb, saida[n].imdb) &&
+            !strcmp(saida[i].tipo, saida[n].tipo)) { repetido = 1; break; }
+      if (repetido) continue;
+      saida[n].ranking = skip + raw;
+      int visto = desc_filme_visto(&saida[n]);
+      if (suplemento && visto) continue;
+      snprintf(saida[n].origem, sizeof saida[n].origem, "%s", orig);
+      if (!visto) visiveis++;
+      n++; novos++;
+    }
+    free(corpo);
+    if (!raw || !novos || n >= max || visiveis >= quantos) break;
+    // O montador pode largar um GET lento. A primeira resposta boa fica
+    // disponivel em memoria IMUTAVEL antes da tentativa opcional; assim o
+    // timeout dela nao apaga a fileira que ja respondeu.
+    if (!pagina && paginavel && primeira && !primeira(saida, n, usuario)) break;
+    skip += raw;
+  }
+  return n;
+}
+static int lerCatalogoHome(const char *base, const char *tipo, const char *id,
+                           CatItem *saida, int max, int quantos,
+                           int paginavel, int *respondeu) {
+  return lerCatalogoHomeParcial(base, tipo, id, saida, max, quantos,
+                               paginavel, respondeu, NULL, NULL);
+}
+
 // --- fileiras da home: catalogos declarados pelos addons ---------------------
 // Isto substitui a lista PREF fixa de quatro catalogos. O app web nao tem
 // fileira fixa: cada fileira e um catalogo declarado no manifesto de um addon,
@@ -1412,6 +1492,7 @@ typedef struct {
   // `extra: [{name:"search"}]` (formato novo) ou `extraSupported: ["search"]`
   // (antigo) — os addons do dono usam os dois.
   int buscavel;
+  int paginavel;        // skip declarado: preenchimento limitado do #366
   // 1 quando o manifesto marca o extra `search` como `isRequired` — ou seja, o
   // catalogo so responde a quem digitou um termo, e a home nao tem termo. Ele
   // continua servindo a BUSCA; o que ele nao pode e virar fileira. Ver a nota
@@ -2001,6 +2082,22 @@ static int exigeBusca(const char *p, const char *f) {
   return 0;
 }
 
+static int aceitaSkip(const char *p, const char *f) {
+  const char *ex = js_array(p, f, "extra");
+  for (; ex && ex < f; ex = js_prox(js_fim(ex))) {
+    char nome[32] = "";
+    if (*ex == '{') js_texto_raiz_em(ex, js_fim(ex), "name", nome, sizeof nome);
+    else js_cadeia(ex, nome, sizeof nome);
+    if (!strcmp(nome, "skip")) return 1;
+  }
+  ex = js_array(p, f, "extraSupported");
+  for (; ex && ex < f; ex = js_prox(js_fim(ex))) {
+    char nome[32] = "";
+    if (*ex == '"' && js_cadeia(ex, nome, sizeof nome) && !strcmp(nome, "skip")) return 1;
+  }
+  return 0;
+}
+
 // NOMES DOS CATALOGOS DECLARADOS, por (base, tipo, id) — issue #76. A colecao
 // da conta pode vir SEM o titulo da fonte (o export do Xperience manda so
 // addonId/type/catalogId), e a pagina da colecao mostrava "mdblist.13914 ·
@@ -2337,6 +2434,7 @@ static int lerManifesto(int iAddon, Decl *saida, int max,
                                        : (addonId[0] ? addonId : "addon"));
         } }
       d->exigeParam = exige;
+      d->paginavel = aceitaSkip(p, f);
       snprintf(d->tipo, sizeof d->tipo, "%s", tipo);
       snprintf(d->id,   sizeof d->id,   "%s", id);
       snprintf(d->chave, sizeof d->chave, "%s_%s_%s",
@@ -2395,6 +2493,10 @@ typedef struct {
   const Decl *d;        // so para quem monta; o fio le as copias abaixo
   char base[NV_ADDON_URL_MAX], tipo[8], id[96];
   CatItem itens[MAX_POR_FILEIRA];
+  CatItem *extras;      // #366: cauda crua opcional, so para fileira deficiente
+  CatItem *primeira;    // resposta boa preservada enquanto o suplemento faz rede
+  int nPrimeira;
+  int paginavel;
   int  n;
   int  respondeu;
   int  pronto;
@@ -2411,6 +2513,23 @@ typedef struct {
   int nT, prox, refs, fechada;
   unsigned long long inicioMs, ultimoProntoMs;
 } RodadaCat;
+
+// As reservas de preenchimento nao podem ocupar os slots dos outros
+// catalogos nem das listas privadas que a montagem acrescenta no fim. O
+// primeiro bloco de ate 24 itens conserva o comportamento anterior; so a
+// cauda opcional e reduzida quando CAT_MAX nao deixa folga.
+static int homeVistosReserva(void) {
+  int reserva = trakt_ativo() ? 2 * TRAKT_LISTA_MAX : 0;
+  if (ajustes_salvos_no_simkl() && simkl_ativo()) reserva += 300;
+  if (ajustes_jellyfin_ligado() && servidores_conectado()) reserva += SRV_ITENS_MAX;
+  return reserva;
+}
+static int homeVistosLimitar(int got, int usados, int restantes, int reserva) {
+  if (got <= MAX_POR_FILEIRA) return got;
+  int cabe = CAT_MAX - usados - restantes * MAX_POR_FILEIRA - reserva;
+  if (cabe < MAX_POR_FILEIRA) cabe = MAX_POR_FILEIRA;
+  return got > cabe ? cabe : got;
+}
 
 // O TETO DO CATALOGO LENTO. Os dois precisam valer juntos, com a fila da rodada
 // ja vazia: CAT_ESPERA_SILENCIO_MS sem NENHUM catalogo terminar, e este no ar ha
@@ -2488,7 +2607,7 @@ static void preservarFileirasAusentes(CatItem **lote, int *n, int *cap,
   int r;
   // static pelo mesmo motivo do daLinhaAnterior de montar(): 24 CatItem sao
   // ~375 KB, e o fio que monta tem 2 MB de pilha no Tizen. Um fio so chama.
-  static CatItem tmp[MAX_POR_FILEIRA];
+  static CatItem tmp[HOME_VISTOS_MAX];
   // O TETO DE FILEIRAS VALE AQUI TAMBEM (#195). Linha que ficou de fora
   // porque o limite encheu nao e linha ausente: sem isto o substituto de uma
   // fileira que voltou a responder era reanexado e a home passava do limite.
@@ -2505,7 +2624,8 @@ static void preservarFileirasAusentes(CatItem **lote, int *n, int *cap,
     // profile, and configuration. A still-configured URL does not make items
     // from the previous profile safe to copy.
     if (!fileiraPodeSerPreservada(old)) continue;
-    got = linhaAnterior(old->chave, tmp, MAX_POR_FILEIRA, NULL);
+    got = linhaAnterior(old->chave, tmp, HOME_VISTOS_MAX, NULL);
+    got = homeVistosLimitar(got, *n, teto - *nFil - 1, homeVistosReserva());
     if (!got && !old->estado) continue;
     need = *n + got;
     if (need > *cap) {
@@ -2528,7 +2648,10 @@ static unsigned long long descAgoraMs(void);
 
 // Sob catTrava.
 static void rodadaSoltarLocked(RodadaCat *r) {
-  if (--r->refs == 0) { free(r->t); free(r); }
+  if (--r->refs == 0) {
+    for (int i = 0; i < r->nT; i++) { free(r->t[i].extras); free(r->t[i].primeira); }
+    free(r->t); free(r);
+  }
 }
 // Quem monta acabou com a rodada (inteira, ou desistiu): nenhum fio pega
 // pedido novo dela, e o ultimo a sair libera.
@@ -2537,6 +2660,19 @@ static void rodadaSoltar(RodadaCat *r) {
   r->fechada = 1;
   rodadaSoltarLocked(r);
   pthread_mutex_unlock(&catTrava);
+}
+
+static int catalogoPrimeiraGuardar(const CatItem *itens, int n, void *usuario) {
+  TarefaCat *t = usuario;
+  CatItem *copia = malloc(sizeof *copia * (size_t)n);
+  if (!copia) return 0;   // sem reserva segura, termina com a primeira pagina
+  memcpy(copia, itens, sizeof *copia * (size_t)n);
+  pthread_mutex_lock(&catTrava);
+  int continuar = !t->largada;
+  if (continuar) { t->primeira = copia; t->nPrimeira = n; }
+  pthread_mutex_unlock(&catTrava);
+  if (!continuar) free(copia);
+  return continuar;
 }
 
 static void *fioCatalogo(void *u) {
@@ -2557,11 +2693,30 @@ static void *fioCatalogo(void *u) {
 
     // QUANTOS e o ajuste (12/18/24, #163); o balde tem sempre o teto.
     { int q = ajustes_itens_fileira();
+      CatItem *ampliados = NULL, *extras = NULL;
       if (q > MAX_POR_FILEIRA) q = MAX_POR_FILEIRA;
-      got = lerCatalogo(t->base, t->tipo, t->id, t->itens,
-                        MAX_POR_FILEIRA, q, &respondeu); }
+      if (ajustes_ocultar_filmes_vistos() && !strcmp(t->tipo, "movie"))
+        ampliados = malloc(sizeof *ampliados * HOME_VISTOS_MAX);
+      got = lerCatalogoHomeParcial(t->base, t->tipo, t->id, ampliados ? ampliados : t->itens,
+                            ampliados ? HOME_VISTOS_MAX : MAX_POR_FILEIRA,
+                            q, t->paginavel, &respondeu, catalogoPrimeiraGuardar, t);
+      if (ampliados) {
+        int primeiros = got > MAX_POR_FILEIRA ? MAX_POR_FILEIRA : got;
+        if (primeiros) memcpy(t->itens, ampliados, sizeof *ampliados * (size_t)primeiros);
+        if (got > MAX_POR_FILEIRA) {
+          extras = malloc(sizeof *extras * (size_t)(got - MAX_POR_FILEIRA));
+          if (extras) memcpy(extras, ampliados + MAX_POR_FILEIRA,
+                             sizeof *extras * (size_t)(got - MAX_POR_FILEIRA));
+          else got = MAX_POR_FILEIRA;
+        }
+        free(ampliados);
+      }
+      // O montador so le o balde depois de `pronto`, publicado sob catTrava.
+      t->extras = extras;
+    }
 
     pthread_mutex_lock(&catTrava);
+    if (!t->largada) { free(t->primeira); t->primeira = NULL; t->nPrimeira = 0; }
     t->n = got;
     t->respondeu = respondeu;
     t->pronto = 1;
@@ -4501,6 +4656,7 @@ static void *montar(void *u) {
           snprintf(tarefas[nTarefas].base, sizeof tarefas[nTarefas].base, "%s", d->base);
           snprintf(tarefas[nTarefas].tipo, sizeof tarefas[nTarefas].tipo, "%s", d->tipo);
           snprintf(tarefas[nTarefas].id, sizeof tarefas[nTarefas].id, "%s", d->id);
+          tarefas[nTarefas].paginavel = d->paginavel;
           nTarefas++;
           declPedida[ordem[cursor]] = 1;
         }
@@ -4537,7 +4693,7 @@ static void *montar(void *u) {
             // Rascunho de quem monta para a linha anterior de um catalogo
             // LARGADO: o balde dele ainda e do fio, que pode escrever nele.
             // static: MAX_POR_FILEIRA CatItem passam de 370 KB, e montar() roda num fio so.
-            static CatItem daLinhaAnterior[MAX_POR_FILEIRA];
+            static CatItem daLinhaAnterior[HOME_VISTOS_MAX];
             for (;;) {
               int pr;
               unsigned long long agora = descAgoraMs();
@@ -4562,9 +4718,11 @@ static void *montar(void *u) {
               SDL_Delay(10);
             }
             if (largado) {
-              got = 0; respondeu = 0;
-              printf("[desc] catalogo lento: %s (%s); segue sem ele depois de %llu ms\n",
-                     d->titulo, d->nomeAddon,
+              got = tarefas[k].nPrimeira;
+              respondeu = got > 0;
+              if (got) origem = tarefas[k].primeira;
+              printf("[desc] catalogo lento: %s (%s); primeira pagina: %d titulos depois de %llu ms\n",
+                     d->titulo, d->nomeAddon, got,
                      (unsigned long long)(descAgoraMs() - tarefas[k].inicioMs));
             } else {
               got = tarefas[k].n;
@@ -4600,16 +4758,26 @@ static void *montar(void *u) {
                        d->titulo, d->nomeAddon);
               // Timeout preserva o ultimo lote bom desta chave. No primeiro
               // arranque, sem snapshot, segue omitida de forma segura.
-              got = linhaAnterior(d->chave, daLinhaAnterior, MAX_POR_FILEIRA, NULL);
+              got = linhaAnterior(d->chave, daLinhaAnterior, HOME_VISTOS_MAX, NULL);
               origem = daLinhaAnterior;
               // Sem lote anterior a vaga vai para o seguinte, mas a chave fica
               // no snapshot: a proxima volta pede este de novo (#195).
               if (!got) { pendSnapGuardar(d->chave, nFil); continue; }
             }
-            GARANTE(MAX_POR_FILEIRA + 2);
+            { int restam = teto - nFil - 1;
+              int candidatos = nTarefas - k - 1 + nOrdem - cursor;
+              if (candidatos < restam) restam = candidatos;
+              got = homeVistosLimitar(got, n, restam, homeVistosReserva()); }
+            GARANTE(got + 2);
             if (got > cap - n) got = cap - n;
-            if (got > 0)
-              memcpy(lote + n, origem, sizeof(CatItem) * (size_t)got);
+            if (got > 0) {
+              int primeiros = origem == tarefas[k].itens && got > MAX_POR_FILEIRA
+                             ? MAX_POR_FILEIRA : got;
+              memcpy(lote + n, origem, sizeof(CatItem) * (size_t)primeiros);
+              if (primeiros < got)
+                memcpy(lote + n + primeiros, tarefas[k].extras,
+                       sizeof(CatItem) * (size_t)(got - primeiros));
+            }
           {
             CatFileira *f = &fil[nFil++];
             memset(f, 0, sizeof *f);
@@ -4702,10 +4870,12 @@ static void *montar(void *u) {
         }
         if (dh && dh->base[0] && (fil_estado_chave(dh->chave) == FIL_FORA ||
                                               fil_estado_chave(dh->chave) == FIL_NA_FILA)) {
-          static CatItem hItens[MAX_POR_FILEIRA];
+          static CatItem hItens[HOME_VISTOS_MAX];
           int resp = 0, qtd = ajustes_itens_fileira(), got;
           if (qtd > MAX_POR_FILEIRA) qtd = MAX_POR_FILEIRA;
-          got = lerCatalogo(dh->base, dh->tipo, dh->id, hItens, MAX_POR_FILEIRA, qtd, &resp);
+          got = lerCatalogoHome(dh->base, dh->tipo, dh->id, hItens,
+                                HOME_VISTOS_MAX, qtd, dh->paginavel, &resp);
+          got = homeVistosLimitar(got, n, 0, homeVistosReserva());
           printf("[desc] destaque: catalogo %s so para o destaque (%d titulo(s))\n", dh->titulo, got);
           if (got > 0) {
             GARANTE(got);
@@ -5387,6 +5557,17 @@ void desc_esquecer_catalogo_perfil(void) {
 // unica alocacao persistente entre ciclos que pertence a este modulo.
 void desc_esquecer(void) {
   maniCacheLimpar();
+}
+
+void desc_ocultar_vistos_atualizar(void) {
+  static int anterior = -1;
+  int ocultar = ajustes_ocultar_filmes_vistos();
+  if (anterior == ocultar) return;
+  // O arranque ja monta com o valor salvo. So a transicao pedida na tela
+  // precisa de uma volta extra; revisao de progresso nao dispara nada aqui.
+  int preencher = anterior == 0 && ocultar;
+  anterior = ocultar;
+  if (preencher) desc_repetir_silencioso();
 }
 
 // --- episodios sob demanda ---------------------------------------------------
@@ -7944,6 +8125,40 @@ static ColSource vtFonte;
 static int      vtProvedor;
 static pthread_mutex_t vtTrava = PTHREAD_MUTEX_INITIALIZER;
 
+// #366: o filtro e uma PROJECAO da lista recebida, nunca uma remocao dela.
+// Desligar o ajuste ou desmarcar um filme devolve o mesmo titulo, na ordem do
+// addon, sem outra viagem de rede. vtN/skip/limites continuam contando a lista
+// crua; uma pagina cheia de vistos nao pode ser confundida com fim de catalogo.
+static int vtVisiveis[VT_MAX], vtNVisiveis;
+static int vtProjN = -1, vtProjOcultar;
+static unsigned vtProjGeracao, vtProjItens, vtProjRevisao;
+
+// Chamado sob vtTrava. O historico e o progresso usam as mesmas fontes do selo
+// do cartaz; tipos incertos, series e canais nunca entram no filtro de FILMES.
+static int vtProjetar(void) {
+  int ocultar = ajustes_ocultar_filmes_vistos();
+  unsigned itens = cat_revisao_itens();
+  if (vtProjN == vtN && vtProjGeracao == vtGeracao &&
+      vtProjOcultar == ocultar && (!ocultar || vtProjItens == itens)) return vtNVisiveis;
+  vtNVisiveis = 0;
+  for (int i = 0; i < vtN; i++)
+    if (!ocultar || !desc_filme_visto(&vtItens[i]))
+      vtVisiveis[vtNVisiveis++] = i;
+  vtProjN = vtN; vtProjGeracao = vtGeracao; vtProjOcultar = ocultar;
+  vtProjItens = itens;
+  vtProjRevisao++;
+  return vtNVisiveis;
+}
+
+// Um pedido pode atravessar algumas paginas inteiramente vistas para achar
+// algo para mostrar. O teto torna esse preenchimento limitado mesmo quando um
+// addon ignora skip; duplicatas e os limites crus ainda encerram a leitura.
+#define VT_VISTOS_PAGINAS_MAX 3
+static int vtPaginaSoDeVistos(int antes, int adicionados, int paginas) {
+  return ajustes_ocultar_filmes_vistos() && adicionados > 0 && !vtFim &&
+         !vtErro && paginas < VT_VISTOS_PAGINAS_MAX && vtProjetar() == antes;
+}
+
 // Um item de resultado do TMDB (results[], items[], cast[], crew[],
 // parts[]) vira CatItem. O id fica "tmdb:<n>" — nao e imdb, e quem abre
 // resolve pelo desc_pedir_titulo_tmdb (vertudo checa o prefixo). O tipo vem
@@ -8113,12 +8328,17 @@ static const char *tmdbMontarUrl(const ColSource *f, int pagina,
 
 static void *fioVerTudo(void *u) {
   (void)u;
+  unsigned geracaoPaginas = 0;
+  int paginas = 0;
   for (;;) {
   char url[NV_ADDON_PEDIDO_MAX], base[NV_ADDON_URL_MAX], type[8], id[96], genre[96], encoded[290], *corpo;
-  int raw=0, ocultos=0, skip, cap, prov;unsigned generation;
+  int raw=0, ocultos=0, skip, cap, prov, antes;unsigned generation;
   ColSource fonte;
   pthread_mutex_lock(&vtTrava);
   skip=vtPagina;generation=vtGeracao;prov=vtProvedor;
+  if (geracaoPaginas != generation) { geracaoPaginas = generation; paginas = 0; }
+  paginas++;
+  antes = vtProjetar();
   memset(&fonte,0,sizeof fonte);fonte=vtFonte;
   snprintf(base,sizeof base,"%s",vtBase);snprintf(type,sizeof type,"%s",vtTipo);
   snprintf(id,sizeof id,"%s",vtCat);snprintf(genre,sizeof genre,"%s",vtGenre);
@@ -8196,6 +8416,7 @@ static void *fioVerTudo(void *u) {
     if (prov==2&&nl) trakt_enfeitar_lote(lote,nl);
     pthread_mutex_lock(&vtTrava);
     if(generation!=vtGeracao){pthread_mutex_unlock(&vtTrava);free(lote);continue;}
+    int seguir = 0;
     { int added=ocultos;   // pagina so de futuros nao encerra a paginacao
       for(int i=0;i<nl&&vtN<VT_MAX;i++){
         int dup=0;
@@ -8206,9 +8427,11 @@ static void *fioVerTudo(void *u) {
       }
       vtErro=!ok;
       if(ok){if(semMais||!added||vtN>=VT_MAX)vtFim=1;else vtPagina=skip+1;}
-      vtFioVivo=0; }
+      seguir = vtPaginaSoDeVistos(antes, added, paginas);
+      if (!seguir) vtFioVivo=0; }
     pthread_mutex_unlock(&vtTrava);
     free(lote);
+    if (seguir) continue;
     return NULL;
   }
 
@@ -8237,6 +8460,7 @@ static void *fioVerTudo(void *u) {
       // futuros encerraria a paginacao do catalogo.
       if (descOcultaNaoLancado(&it)) { added++; continue; }
       origemDaBase(base, it.origem, sizeof it.origem);
+      it.ranking = skip + raw;
       pthread_mutex_lock(&vtTrava);
       int duplicate=0;
       for(int i=0;i<vtN;i++)if(it.imdb[0]&&!strcmp(vtItens[i].imdb,it.imdb)&&!strcmp(vtItens[i].tipo,it.tipo)){duplicate=1;break;}
@@ -8251,8 +8475,10 @@ static void *fioVerTudo(void *u) {
   // Skip usa quantidade recebida, não 100 presumidos. Muitos addons entregam
   // 20/50 por página. Repetição sem novos ids também termina a paginação.
   if(valid){vtPagina+=raw;if(!raw||!added||vtN>=cap)vtFim=1;}
-  vtFioVivo=0;
+  int seguir = vtPaginaSoDeVistos(antes, added, paginas);
+  if (!seguir) vtFioVivo=0;
   pthread_mutex_unlock(&vtTrava);
+  if (seguir) continue;
   return NULL;
   }
 }
@@ -8284,7 +8510,11 @@ void desc_vertudo_filtro(const char *base, const char *tipo, const char *catId,c
   // recomecar do zero (o dono pode ter voltado e entrado de novo).
   if (!vtProvedor && !strcmp(vtBase, base) && !strcmp(vtTipo, tipo) && !strcmp(vtCat, catId)
       && !strcmp(vtGenre,genre?genre:"") && vtN > 0) {
+    // Reabrir e um pedido explicito: se o lote limitado anterior so tinha
+    // vistos, deixa procurar mais paginas sem um ciclo automatico sem fim.
+    int preencher = ajustes_ocultar_filmes_vistos() && !vtProjetar() && !vtFim && !vtErro;
     pthread_mutex_unlock(&vtTrava);
+    if (preencher) vtDisparar();
     return;
   }
   snprintf(vtBase, sizeof vtBase, "%s", base);
@@ -8306,7 +8536,10 @@ void desc_vertudo_fonte(const ColSource *s) {
   memset(&copia, 0, sizeof copia); copia = *s;
   pthread_mutex_lock(&vtTrava);
   if (vtProvedor && !memcmp(&vtFonte, &copia, sizeof copia) && vtN > 0) {
-    pthread_mutex_unlock(&vtTrava); return;
+    int preencher = ajustes_ocultar_filmes_vistos() && !vtProjetar() && !vtFim && !vtErro;
+    pthread_mutex_unlock(&vtTrava);
+    if (preencher) vtDisparar();
+    return;
   }
   vtFonte = copia;
   vtProvedor = !strcmp(s->prov, "trakt") ? 2 : 1;
@@ -8317,13 +8550,24 @@ void desc_vertudo_fonte(const ColSource *s) {
 }
 
 void desc_vertudo_mais(void) { vtDisparar(); }
-int  desc_vertudo_n(void) { pthread_mutex_lock(&vtTrava);int n=vtN;pthread_mutex_unlock(&vtTrava);return n; }
+int  desc_vertudo_n(void) { pthread_mutex_lock(&vtTrava);int n=vtProjetar();pthread_mutex_unlock(&vtTrava);return n; }
+int  desc_vertudo_n_bruto(void) { pthread_mutex_lock(&vtTrava);int n=vtN;pthread_mutex_unlock(&vtTrava);return n; }
+unsigned desc_vertudo_revisao(void) { pthread_mutex_lock(&vtTrava);vtProjetar();unsigned r=vtProjRevisao;pthread_mutex_unlock(&vtTrava);return r; }
 int  desc_vertudo_carregando(void) { pthread_mutex_lock(&vtTrava);int n=vtFioVivo;pthread_mutex_unlock(&vtTrava);return n; }
 int  desc_vertudo_fim(void) { pthread_mutex_lock(&vtTrava);int n=vtFim;pthread_mutex_unlock(&vtTrava);return n; }
 int  desc_vertudo_erro(void) { pthread_mutex_lock(&vtTrava);int n=vtErro;pthread_mutex_unlock(&vtTrava);return n; }
 void desc_vertudo_fechar(void) { /* guarda o que leu; ver desc_vertudo_abrir */ }
 
 int desc_vertudo_item(int i, CatItem *dst) {
+  int ok = 0;
+  pthread_mutex_lock(&vtTrava);
+  int n = vtProjetar();
+  if (dst && i >= 0 && i < n) { memcpy(dst, &vtItens[vtVisiveis[i]], sizeof *dst); ok = 1; }
+  pthread_mutex_unlock(&vtTrava);
+  return ok;
+}
+
+int desc_vertudo_item_bruto(int i, CatItem *dst) {
   int ok = 0;
   pthread_mutex_lock(&vtTrava);
   if (dst && i >= 0 && i < vtN) { memcpy(dst, &vtItens[i], sizeof *dst); ok = 1; }

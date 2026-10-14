@@ -451,12 +451,30 @@ static int soP2P(const Stream *s) {
   return !s->url[0] && s->infoHash[0] && !debrid_ativo() && p2p_ativo();
 }
 
+static int fonteOferecida(const Stream *s) {
+  return (!s->notWebReady || p2p_ativo()) &&
+         (s->url[0] || debrid_ativo() || p2p_ativo());
+}
+
 static Uint32 recebidaEm;
 static int temRecebidaEm;
 // Torrents que a ultima lista jogou fora por falta de debrid: com 0 na lista e
 // isto > 0, a causa da folha vazia e "falta conta de debrid", nao "os addons
 // nao tem" (1.3.12: "145 torrents sem debrid descartados" e folha vazia).
 static int descartadosSemDebrid;
+// #486: a dica "ligue o P2P" so e dita quando este pacote tem P2P. Perguntar o
+// motor AQUI, no fio da tela, abriria a libnuvio_engine.so no .tpk (dlopen em
+// p2pmotor.c, carregamento adiado de proposito); o trabalhador confere antes
+// de enfileirar a resposta. A publicacao e a tela so leem o atomico.
+static _Atomic int motorP2pParaDica;
+void stream_preparar_dica_p2p(const Stream *l, int qtd) {
+  if (!l || debrid_ativo() || p2p_ativo() || ajustes_p2p_url()[0]) return;
+  for (int i = 0; i < qtd; i++) {
+    if (l[i].url[0] || !l[i].infoHash[0]) continue;
+    atomic_store(&motorP2pParaDica, p2pmotor_disponivel());
+    return;
+  }
+}
 
 Uint32 stream_idade_ms(void) {
   return temRecebidaEm ? SDL_GetTicks() - recebidaEm : 0xFFFFFFFFu;
@@ -477,9 +495,11 @@ void stream_definir_lista_idade(const Stream *l, int qtd, Uint32 idade) {
   // que nunca toca (shouldListStream do web). O servidor P2P experimental
   // (p2p.h) tambem o resolve, e so quando ligado.
   for (i = 0; i < qtd && nova; i++)
-    if (l[i].url[0] || debrid_ativo() || p2p_ativo()) nova[k++] = l[i];
-  if (nova && qtd - k) printf("[fonte] %d torrents sem debrid descartados\n", qtd - k);
-  descartadosSemDebrid = nova ? qtd - k : 0;
+    if (fonteOferecida(&l[i])) nova[k++] = l[i];
+  if (nova && qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
+  descartadosSemDebrid = 0;
+  for (i = 0; i < qtd && nova; i++)
+    if (!l[i].notWebReady && !fonteOferecida(&l[i])) descartadosSemDebrid++;
   for (i = 0; i < k && nova; i++) nova[i].selosPacoteVer = 0;   // os selos saem do fio de fundo (selosAgendar)
   pthread_mutex_lock(&verTrava);
   free(lista); lista = nova; n = nova ? k : 0; atual = -1;
@@ -543,9 +563,10 @@ void stream_lista_acrescentar(const Stream *l, int qtd, int ordemAddon) {
   nova = malloc(sizeof(Stream) * (size_t)qtd);
   if (!nova) return;
   for (i = 0; i < qtd; i++)
-    if (l[i].url[0] || debrid_ativo() || p2p_ativo()) nova[k++] = l[i];
-  if (qtd - k) printf("[fonte] %d torrents sem debrid descartados\n", qtd - k);
-  descartadosSemDebrid += qtd - k;
+    if (fonteOferecida(&l[i])) nova[k++] = l[i];
+  if (qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
+  for (i = 0; i < qtd; i++)
+    if (!l[i].notWebReady && !fonteOferecida(&l[i])) descartadosSemDebrid++;
   if (!k) { free(nova); return; }
   for (i = 0; i < k; i++) nova[i].selosPacoteVer = 0;
   // O CARTAO EM FOCO E O QUE FICA PARADO. Guardado pelo indice da lista (que
@@ -1410,6 +1431,24 @@ int stream_qtd_torrents(void) {
   for (i = 0; i < n; i++) if (!lista[i].url[0] && lista[i].infoHash[0]) q++;
   pthread_mutex_unlock(&verTrava);
   return q;
+}
+
+// #486: Torrentio sem debrid e P2P desligado = torrents descartados calados; a
+// folha so falava do debrid e o cartao do player era o generico. Com P2P neste
+// pacote (motor ou servidor), quantos ele tocaria; 0 = nada a sugerir.
+// O CONTADOR vem ANTES de qualquer pergunta: folha e cartao chamam a cada
+// quadro e uma consulta sem torrent descartado nao pode tocar o resto — a
+// disponibilidade do motor NAO e perguntada aqui (dlopen do .tpk no fio da
+// tela): vem guardada do fio da consulta (stream_preparar_dica_p2p).
+// .wgt: o P2P fica oculto nos Ajustes e ajustes_p2p_ligado() e sempre 0
+// (a8e7685d) — "ligue o P2P" seria uma dica impossivel de seguir.
+int stream_torrents_para_p2p(void) {
+  if (descartadosSemDebrid <= 0 || debrid_ativo() || p2p_ativo()) return 0;
+#ifdef __EMSCRIPTEN__
+  return 0;
+#else
+  return (ajustes_p2p_url()[0] || atomic_load(&motorP2pParaDica)) ? descartadosSemDebrid : 0;
+#endif
 }
 
 unsigned stream_lista_geracao(void) {
@@ -4136,7 +4175,9 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
         snprintf(causa,sizeof causa,i18n("%d fontes precisam de uma conta de debrid, e nenhuma está ligada"),descartadosSemDebrid);
         tem = 1;
       } else tem = addons_motivo_vazio(causa,sizeof causa);
-      if (tem) { snprintf(frase,sizeof frase,"%s. %s",causa,i18n("Use Recarregar para tentar novamente.")); s=frase; }
+      if (tem) { snprintf(frase,sizeof frase,"%s. %s",causa,stream_torrents_para_p2p() > 0
+          ? i18n("Ligue o P2P em Ajustes ou conecte uma conta de debrid.")
+          : i18n("Use Recarregar para tentar novamente.")); s=frase; }
     }
     // Com servicos de streaming na lista, a frase vem DEPOIS deles.
     txt_bloco(TXT_PG_FIM,s,196,199,204,tx,FOLHA_TOPO+20,rw-52,28,anim,3);

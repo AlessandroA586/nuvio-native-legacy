@@ -1,8 +1,9 @@
 // CAPTURAS DAS ESTATISTICAS AO VIVO (estatvivoui.h) para comparar com o
 // mockup stats-velocidade (telas 2 e 3): o cartao com os numeros de cada
 // plataforma (Android tudo medido, LG com velocidade estimada, Samsung so %)
-// e a pilula fixada no canto. Sem player nem video: o estado e montado a mao.
-// Saida: <prefixo>-N-*.bmp. Ver tests/estatvivo_shot.sh.
+// e os tres tamanhos (completo, compacto e minimo). Sem player nem video: o
+// estado e montado a mao.
+// Saida: <prefixo>-N-*.png. Ver tests/estatvivo_shot.sh.
 #include "estatvivoui.h"
 #include "ajustes.h"
 #include "ajustes_ux.h"
@@ -30,15 +31,15 @@ static void salvar(const char *nome) {
   assert(s);
   for (y = 0; y < 1080; y++)
     memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
-  assert(SDL_SaveBMP(s, nome) == 0);
+  assert(IMG_SavePNG(s, nome) == 0);
   SDL_FreeSurface(s);
   free(pix);
   printf("captura: %s\n", nome);
 }
 
-static void captura(const char *nome) {
+static void captura(const char *nome, int quadros) {
   int i;
-  for (i = 0; i < 30; i++) {
+  for (i = 0; i < quadros; i++) {
     SDL_PumpEvents();
     txt_novo_quadro();
     tex_novo_quadro();
@@ -127,8 +128,8 @@ int main(int argc, char **argv) {
   t.plataforma = PTV_ANDROID;
   estatvivo_teste(&e, &t);
   estatvivo_abrir();
-  snprintf(nome, sizeof nome, "%s-1-android.bmp", saida);
-  captura(nome);
+  snprintf(nome, sizeof nome, "%s-1-android.png", saida);
+  captura(nome, 90);
 
   // 2. LG: buffer em segundos medido, velocidade estimada, servidor do link.
   e = base();
@@ -139,8 +140,8 @@ int main(int argc, char **argv) {
   e.quadrosOrigem = EVO_SEM;
   t.plataforma = PTV_LG;
   estatvivo_teste(&e, &t);
-  snprintf(nome, sizeof nome, "%s-2-lg.bmp", saida);
-  captura(nome);
+  snprintf(nome, sizeof nome, "%s-2-lg.png", saida);
+  captura(nome, 90);
 
   // 3. SAMSUNG: so porcentagem, velocidade estimada, sem quadros.
   e = base();
@@ -152,17 +153,38 @@ int main(int argc, char **argv) {
   snprintf(t.codecHdr, sizeof t.codecHdr, "HEVC · HDR10 (add-on)");
   t.plataforma = PTV_TPK;
   estatvivo_teste(&e, &t);
-  snprintf(nome, sizeof nome, "%s-3-samsung.bmp", saida);
-  captura(nome);
+  snprintf(nome, sizeof nome, "%s-3-samsung.png", saida);
+  captura(nome, 90);
 
-  // 4. OK fixa no canto.
+  // 4. COMPACTO: OK (depois da graca do OK que abriu). A captura no meio da
+  // troca prova que o painel anda, nao salta.
+  SDL_Delay(650);
   memset(&ok, 0, sizeof ok);
   ok.type = SDL_KEYDOWN;
   ok.key.keysym.sym = SDLK_RETURN;
   assert(estatvivo_evento(&ok) == 1);
-  assert(!estatvivo_aberto() && estatvivo_fixado());
-  snprintf(nome, sizeof nome, "%s-4-fixado.bmp", saida);
-  captura(nome);
+  assert(estatvivo_aberto() && estatvivo_tamanho() == EV_TAM_COMPACTO);
+  snprintf(nome, sizeof nome, "%s-5-transicao.png", saida);
+  captura(nome, 6);
+  snprintf(nome, sizeof nome, "%s-4-compacto.png", saida);
+  captura(nome, 90);
+
+  // 5. MINIMO: a linha fina do canto, que nao rouba tecla.
+  assert(estatvivo_evento(&ok) == 1);
+  assert(estatvivo_aberto() && estatvivo_tamanho() == EV_TAM_MINIMO);
+  snprintf(nome, sizeof nome, "%s-6-minimo.png", saida);
+  captura(nome, 90);
+
+  ok.key.keysym.sym = SDLK_DOWN;
+  assert(estatvivo_evento(&ok) == 1 && estatvivo_fixado());
+  snprintf(nome, sizeof nome, "%s-7-fixado.png", saida);
+  captura(nome, 90);
+  estatvivo_abrir();
+  snprintf(nome, sizeof nome, "%s-8-desafixado.png", saida);
+  captura(nome, 90);
+  estatvivo_fechar();
+  snprintf(nome, sizeof nome, "%s-9-fechando.png", saida);
+  captura(nome, 6);
 
   tex_encerrar(); txt_encerrar(); gfx_encerrar();
   SDL_GL_DeleteContext(gl); SDL_DestroyWindow(w); SDL_Quit();
