@@ -96,6 +96,19 @@ static void ajTextoMini(const char *s, float px, int forte, float x, float y, in
   txt_desenhar_alpha(l, x, y + (px * 1.2f - l.h) * 0.5f, a);
 }
 
+// O texto VIVO da cena: muda com o relogio dela (tempo do seek, percentuais, o
+// IP sendo digitado, os selos PT/EN/ES que circulam). Glifo a glifo em
+// txt_glifos: um valor novo nao rasteriza nada, o que era um tranco no meio da
+// rolagem. Altura: todo glifo da mesma fonte tem a mesma superficie, e o
+// '0' serve de referencia para centrar a linha como ajTextoMini centra a dela.
+static void ajTextoVivo(const char *s, float px, int forte, float x, float y, int r, int g, int b, float a) {
+  TxtEstilo e = ajEstiloPx(px, forte);
+  TxtLinha l0;
+  if ((int)e < 0 || !s || !*s) return;
+  l0 = txt_linha(e, "0", 255, 255, 255, 255);
+  txt_glifos(e, s, r, g, b, x, y + (px * 1.2f - l0.h) * 0.5f, a);
+}
+
 // HOME EM MINIATURA: as coordenadas de 1920x1080 da home de verdade, em escala.
 // lay = HOME_LAYOUT_*; relogio: -1 sem pilula, 0 esquerda, 1 direita, 2 o
 // automatico do layout. Desenha com cantos 16 (12 nas pequenas).
@@ -705,19 +718,17 @@ static void ajRotuloValor(int op, int v, float x, float y, float s, float a) {
   ajCenaVidro((GfxRect){ x, y, l.w + 24 * s, l.h + 12 * s }, (l.h + 12 * s) * 0.5f, a);
   txt_desenhar_alpha(l, x + 12 * s, y + 6 * s, a);
 }
-// TAMANHO DA INTERFACE: as quatro telas do player lado a lado, a escolhida
-// acesa e com o anel do acento.
+// Interface sizes in a 3x3 grid; the selected value keeps the accent ring.
 static float ajPreviaTamanhoUi(int op, float x, float y, float w) {
-  static const float F[4] = { 1.0f, 1.2f, 1.3f, 1.5f };
-  float s = w / 640.0f, h = w * 9.0f / 16.0f, tw = 284 * s, th = tw * 9.0f / 16.0f, gx = 16 * s, gy = 14 * s;
-  float x0 = x + (w - 2 * tw - gx) * 0.5f, y0 = y + (h - 2 * th - gy) * 0.5f, ar, ag, ab;
+  float s = w / 640.0f, h = w * 9.0f / 16.0f, tw = 190 * s, th = tw * 9.0f / 16.0f, gx = 10 * s, gy = 8 * s;
+  float x0 = x + (w - 3 * tw - 2 * gx) * 0.5f, y0 = y + (h - 3 * th - 2 * gy) * 0.5f, ar, ag, ab;
   int n = nValores(op), sel = valor[op], k;
   ajustes_acento(&ar, &ag, &ab);
-  if (n > 4) n = 4;
+  if (n > 9) n = 9;
   ajCenaArte(ajArte(AJA_FUNDO, ajCenaArteOp(op)), (GfxRect){ x, y, w, h }, 22, 0.72f);
   for (k = 0; k < n; k++) {
-    GfxRect r = { x0 + (k % 2) * (tw + gx), y0 + (k / 2) * (th + gy), tw, th };
-    ajMiniPlayerUi(r, F[k], 1);
+    GfxRect r = { x0 + (k % 3) * (tw + gx), y0 + (k / 3) * (th + gy), tw, th };
+    ajMiniPlayerUi(r, ui_size_choice(k, tamanhoUiAutomatico()), 1);
     if (k != sel) gfx_cor(r, 12.0f * r.w / 280.0f / r.h, 0.031f, 0.031f, 0.039f, 0.5f);
     ajRotuloValor(op, k, r.x + 10 * s, r.y + 10 * s, s, k == sel ? 1.0f : 0.7f);
     if (k == sel) gfx_anel_fora(r, 12.0f * r.w / 280.0f / r.h, 3 * s, 3 * s, ar, ag, ab, 1);

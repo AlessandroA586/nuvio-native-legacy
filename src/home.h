@@ -24,7 +24,13 @@ typedef enum {
   FILEIRA_LINHA_TEMPO, // cartazes por ano sobre a linha animada dos anos
   FILEIRA_FICHA,       // cartaz com a ficha do titulo ao lado
   FILEIRA_PALCO,       // o foco grande no centro, vizinhos diminuindo
-  FILEIRA_REDONDA      // avatar circular com o nome embaixo (pessoas)
+  FILEIRA_REDONDA,     // avatar circular com o nome embaixo (pessoas)
+  // "Herói" (#205): UM cartão do tamanho da fileira, com fundo, selo,
+  // título e duas linhas — o banner entre fileiras do Apple TV.
+  FILEIRA_HEROI,
+  // 14/10: o pôster 3:4 grande da Apple TV, com logo, gênero, classificação
+  // e sinopse na base, sobre o véu da COR PREDOMINANTE do cartaz.
+  FILEIRA_POSTER_GRANDE
 } TipoFileira;
 
 // O item sob o foco, com o retangulo que ele ocupa na tela NESTE quadro. A

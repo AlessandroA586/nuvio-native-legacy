@@ -13,17 +13,24 @@
 #define NV_TELA_H 1080.0f
 static AbreCine cine = { .viva = 1, .veu = 1, .foco = 1, .desde = 1000 };
 static int esperandoFonte, tentativaN, tentativaM, reduz, addonLigado;
+static int fundoOp = 2;   // #508: 0 off, 1 sharp, 2 blurred (the default)
 static char linhaEp[192] = "S01E03 · The Head";
 static Stream fonte;
 static VideoStats stats;
 static char linhas[16][300];
-static int n, blur, logo, fills;
+static int n, blur, logo, fills, arte, logoFills;
 static float fill;
 float gfx_tex_aspect_atual;
 int ajustes_animacoes_reduzidas(void) { return reduz; }
 int player_carregando(void) { return 1; }
 int ajustes_abertura_addon(void) { return addonLigado; }
+int ajustes_abertura_fundo(void) { return fundoOp; }
+static int logoPronto;
 static void corFocoPlayer(float *r, float *g, float *b) { *r = .8f; *g = .5f; *b = .2f; }
+int corviva_logo_acento(float *r, float *g, float *b) {
+  if (!logoPronto) return 0;
+  *r = .1f; *g = .6f; *b = .9f; return 1;
+}
 const char *i18n(const char *s) { return s; }
 const Stream *stream_item(int idx) { (void)idx; return &fonte; }
 int stream_atual(void) { return 0; }
@@ -37,9 +44,10 @@ float tex_aspecto(const char *s) { (void)s; return 2; }
 int tex_marca_escura(const char *s) { (void)s; return 0; }
 GLuint gfx_desfocado(GLuint t, const char *s) { (void)s; blur++; return t; }
 void gfx_rect(GfxRect r, GLuint t, GfxModo m, float f, float px, float py, float rad,
-              float cr, float cg, float cb, float ca) { if (t == 2) logo++; }
+              float cr, float cg, float cb, float ca) { if (t == 2) logo++; if (t == 1 && r.w > 1900.0f) arte++; }
 void gfx_cor(GfxRect r, float rad, float cr, float cg, float cb, float ca) {
   if (r.h == 3 && cr == .8f) { fills++; fill = r.w; }
+  if (r.h == 3 && cr == .1f && cg == .6f && cb == .9f) { logoFills++; fill = r.w; }
 }
 TxtLinha txt_linha(TxtEstilo es, const char *s, int r, int g, int b, int a) {
   assert(n < 16); snprintf(linhas[n++], sizeof linhas[0], "%s", s);
@@ -55,7 +63,7 @@ static int tem(const char *s) {
   return 0;
 }
 static void quadro(CatItem *c) {
-  n = blur = logo = fills = 0; fill = 0;
+  n = blur = logo = fills = arte = 0; fill = 0;
   desenharCinema(2600, c, 0);
   assert(blur == 1);
   assert(tem("S01E03"));
@@ -103,9 +111,29 @@ int main(void) {
     snprintf(fonte.provedor, sizeof fonte.provedor, "AIOStreams");
     snprintf(c.logo, sizeof c.logo, "local-logo");
   }
+  // The bar takes the logo colour (as the Immersive style), not the focus accent.
+  logoPronto = 1; esperandoFonte = 0; stats.bufferPct = 50; fills = logoFills = 0;
+  desenharCinema(2600, &c, 0);
+  assert(logoFills == 1 && fills == 0 && fabsf(fill - 100) < .01f);
+  stats.bufferPct = -1; reduz = 0; fills = logoFills = 0;
+  desenharCinema(2000, &c, 0);   // indeterminate sweep is logo-coloured too
+  assert(logoFills == 1 && fills == 0);
+  logoPronto = 0; stats.bufferPct = 50; fills = logoFills = 0;
+  desenharCinema(2600, &c, 0);   // no palette yet: the accent
+  assert(fills == 1 && logoFills == 0);
   addonLigado = 1;
   fonte.provedor[0] = fonte.rotulo[0] = linhaEp[0] = 0;
   n = 0; desenharCinema(2600, &c, 0);
   assert(!tem("S01E03") && !tem("secret"));
-  puts("PASS: S5 shared renderer: backdrop, logo/title, episode, no stage text, addon line only with toggle, real buffer only");
+  // #508: the backdrop on the opening screen is a choice — off, sharp, blurred.
+  // Off draws no art at all; sharp draws the backdrop without the blur copy;
+  // blurred (the default) is the receded art of always, blur copy and all.
+  fundoOp = 0; n = blur = arte = 0; desenharCinema(2600, &c, 0);
+  assert(blur == 0 && arte == 0);
+  fundoOp = 1; n = blur = arte = 0; desenharCinema(2600, &c, 0);
+  assert(blur == 0 && arte == 1);
+  fundoOp = 2; n = blur = arte = 0; desenharCinema(2600, &c, 0);
+  assert(blur == 1 && arte == 1);
+  fundoOp = 2;
+  puts("PASS: S5 shared renderer: backdrop, logo/title, episode, no stage text, addon line only with toggle, real buffer only, backdrop option off/sharp/blurred");
 }

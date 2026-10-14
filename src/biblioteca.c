@@ -2392,6 +2392,7 @@ void biblioteca_desenhar(Uint32 agora) {
   // vizinhanca) e por isso a rolagem curta continua revelando cartazes prontos.
   // O limiar e o deles: MOVING_SPEED = 120 px/s medido na TV (card_motion.rs).
   tex_grade_movendo(fabsf(velY) > 120.0f);
+  tex_grade_velocidade(velY / passoL);
 
   // Dois passes: o item focado escala 2% e precisa ser desenhado por ULTIMO,
   // senao o vizinho da direita corta a borda dele.
@@ -2408,13 +2409,18 @@ void biblioteca_desenhar(Uint32 agora) {
       // ainda e desenhada (a faixa de fade), entao e NIVEL 1 (borda): o cache
       // so recusa em movimento. O cartao em FOCO nunca e tratado como fora.
       int fora = (topo < gcy || topo + alturaLinha() > NV_TELA_H) ? 1 : 0;
+      // Fileira CORTADA no lado em que a rolagem entra (rolando): NIVEL 3 —
+      // seus cards viram visiveis nos proximos quadros; recusa-los e o poster
+      // que carrega na frente. Em repouso valem como borda comum (nivel 1).
+      if (fora && tex_grade_direcao() > 0.0f && topo > NV_TELA_H - 4.0f) fora = 3;
+      else if (fora && tex_grade_direcao() < 0.0f && topo + alturaLinha() < gcy + 4.0f) fora = 3;
 
       for (c = 0; c < nc; c++) {
         int i = r * nc + c;
         float f, entra, ac, ty;
         if (i >= nCelulas) break;
         f = (c < BIB_COLUNAS_MAX) ? animFoco[r][c] : 0.0f;
-        tex_pedido_fora(fora && f <= 0.01f ? 1 : 0);
+        tex_pedido_fora(fora && f <= 0.01f ? fora : 0);
         // O alvo e a celula em REPOUSO (sem a escala do foco nem a onda), uma
         // vez por celula, recortado a janela da grade.
         if (passe == 0) {
@@ -2495,6 +2501,28 @@ void biblioteca_desenhar(Uint32 agora) {
         const char *cam = ci ? posterprov_card_addon(ci->origem, ci->imdb,
                           ci->tmdb, ci->tipo, ci->poster) : NULL;
         pediu = tex_lookahead_pedir(cam, exibicao == VIS_LISTA ? 96 : BIB_CARD_W);
+      }
+    }
+  } else if (!ondaEm && !teclado_aberto() && estado() != EST_LISTAS) {
+    // EM MOVIMENTO: a fileira que entra na borda ja foi pedida como nivel 3;
+    // aquece a PRIMEIRA arte da fileira seguinte, na direcao da rolagem.
+    static TexLookahead fileira;
+    int d = tex_lookahead_mover(&fileira);
+    if (d && passoL > 0.0f) {
+      int r = (int)(scrollY / passoL) +
+              (d > 0 ? (int)((NV_TELA_H - gy) / passoL) + 2 : -2);
+      if (r >= 0 && r < linhas) {
+        for (c = 0; c < nc; c++) {
+          int i = r * nc + c;
+          if (i >= nCelulas) break;
+          CatItem tmp;
+          const CatItem *ci = estado() == EST_ITENS
+            ? (lst_item(i, &tmp) ? &tmp : NULL) : itemFiltro(filtro[i], &tmp);
+          const char *cam = ci ? posterprov_card_addon(ci->origem, ci->imdb,
+                            ci->tmdb, ci->tipo, ci->poster) : NULL;
+          if (tex_lookahead_pedir(cam, exibicao == VIS_LISTA ? 96 : BIB_CARD_W))
+            break;
+        }
       }
     }
   }

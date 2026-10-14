@@ -51,6 +51,7 @@ namespace NuvioTpk
         [DllImport("libnuvio.so")] static extern void nv_tpk_ciclo(int memoria);
         [DllImport("libdl.so.2")] static extern IntPtr dlopen(string path, int flags);
         [DllImport("libdl.so.2")] static extern IntPtr dlerror();
+        [DllImport("libc.so.6")] static extern int setenv(string name, string value, int overwrite);
         // Reserva de teclas de midia (#196), ver ReservaTeclasMidia. Assinaturas
         // do Ecore_Wl2.h/Ecore_Wayland2.h do rootstrap tizen-9.0-device.core.
         [DllImport("libecore_wl2.so.1")] static extern IntPtr ecore_wl2_window_find(uint id);
@@ -313,6 +314,8 @@ namespace NuvioTpk
             Etapa("begin nv_tpk_iniciar");
             try
             {
+                // Reuse the model already reported by the [tv] startup line.
+                setenv("NUVIO_TV_MODEL", Tv().Split(' ')[0], 1);
 #if NV_API8
                 nv_tpk_config(-1, 0);
 #else

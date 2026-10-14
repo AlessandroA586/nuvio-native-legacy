@@ -644,8 +644,8 @@ static void rSeekr(int op) {
       if (k > 0.5f) {
         ajc_cartaz(cx - 70, 196, 140, 80, 4 + (int)(cur * 5), 1);
         ajc_foco(cx - 70, 196, 140, 80, 10, 1);
-        ajcTexto(b, 15, 1, cx - 20, 284, 1);
-      } else { ajc_vidro(cx - 30, 284, 60, 24, 12, 1); ajcTexto(b, 14, 1, cx - 19, 287, 1); }
+        ajcTextoVivo(b, 15, 1, cx - 20, 284, 1);
+      } else { ajc_vidro(cx - 30, 284, 60, 24, 12, 1); ajcTextoVivo(b, 14, 1, cx - 19, 287, 1); }
       ajcChaveCanto(k);
       return;
     case AJ_SEEKR_FITA: {   // a fita de quadros (ligada) x um quadro por vez
@@ -775,7 +775,7 @@ static void rPercentual(void) {
   ajc_acento_ret(m, 236, 600 - m, 12, 6, 0.45f);
   ajc_ret(m - 1.5f, 214, 3, 56, 1.5f, 1, 1, 1, 0.9f);
   snprintf(t, sizeof t, "%d%%", (int)(pc + 0.5f));
-  ajcSelo(t, m - ajcLargura(t, 16, 1) * 0.5f - 11, 176, 16, 1, 1);
+  ajcSeloVivo(t, m - ajcLarguraViva(t, 16, 1) * 0.5f - 11, 176, 16, 1, 1);
   ajc_bolinha(cx, 242, 22, 1, 1, 1, 1);
   ajc_ladrilho("aj_check", 560, 80, 64, visto > 0.5f, 0.3f + 0.7f * visto);
   ajc_cartaz(440, 48, 64, 64, 3, 0.9f);
