@@ -1980,6 +1980,44 @@ float txt_tracking(TxtEstilo estilo, const char *s, int r, int g, int b,
   return larg;
 }
 
+// O passo UTF-8 de um caractere (o mesmo calculo do rasterTracking).
+static int glifoUtf8(const unsigned char *p, char *c) {
+  int nb = (*p & 0xF8) == 0xF0 ? 4 : (*p & 0xF0) == 0xE0 ? 3 : (*p & 0xE0) == 0xC0 ? 2 : 1, k = 0;
+  while (k < nb && p[k]) { c[k] = (char)p[k]; k++; }
+  c[k] = 0;
+  return k ? k : 1;
+}
+
+void txt_glifos(TxtEstilo estilo, const char *s, int r, int g, int b,
+                float x, float y, float alpha) {
+  const unsigned char *p = (const unsigned char *)(s ? s : "");
+  if ((int)estilo < 0 || estilo >= TXT_NFONTES) return;
+  while (*p) {
+    char c[5];
+    p += glifoUtf8(p, c);
+    if (c[0] != ' ') {
+      // Toda superficie de glifo da mesma fonte tem a mesma altura (a caixa do
+      // ascento+descenso — medido no Mac: ':' sai 49px como '0'), entao os
+      // glifos assentam no mesmo y e as baselines ficam na linha.
+      TxtLinha l = txt_linha(estilo, c, 255, 255, 255, 255);
+      if (l.w > 0) txt_desenhar_tom(l, x, y, r / 255.0f, g / 255.0f, b / 255.0f, alpha);
+    }
+    x += (float)txt_largura(estilo, c);
+  }
+}
+
+float txt_glifos_largura(TxtEstilo estilo, const char *s) {
+  const unsigned char *p = (const unsigned char *)(s ? s : "");
+  float w = 0.0f;
+  if ((int)estilo < 0 || estilo >= TXT_NFONTES) return 0.0f;
+  while (*p) {
+    char c[5];
+    p += glifoUtf8(p, c);
+    w += (float)txt_largura(estilo, c);
+  }
+  return w;
+}
+
 // Declarada em text.h desde o inicio e NUNCA implementada. Ninguem chamava,
 // entao o link passava; a primeira chamada derrubou o build ARM com
 // "undefined reference". No Mac isso NAO aparece: `cc -fsyntax-only` num

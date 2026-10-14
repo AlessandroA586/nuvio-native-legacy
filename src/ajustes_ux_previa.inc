@@ -96,6 +96,19 @@ static void ajTextoMini(const char *s, float px, int forte, float x, float y, in
   txt_desenhar_alpha(l, x, y + (px * 1.2f - l.h) * 0.5f, a);
 }
 
+// O texto VIVO da cena: muda com o relogio dela (tempo do seek, percentuais, o
+// IP sendo digitado, os selos PT/EN/ES que circulam). Glifo a glifo em
+// txt_glifos: um valor novo nao rasteriza nada, o que era um tranco no meio da
+// rolagem. Altura: todo glifo da mesma fonte tem a mesma superficie, e o
+// '0' serve de referencia para centrar a linha como ajTextoMini centra a dela.
+static void ajTextoVivo(const char *s, float px, int forte, float x, float y, int r, int g, int b, float a) {
+  TxtEstilo e = ajEstiloPx(px, forte);
+  TxtLinha l0;
+  if ((int)e < 0 || !s || !*s) return;
+  l0 = txt_linha(e, "0", 255, 255, 255, 255);
+  txt_glifos(e, s, r, g, b, x, y + (px * 1.2f - l0.h) * 0.5f, a);
+}
+
 // HOME EM MINIATURA: as coordenadas de 1920x1080 da home de verdade, em escala.
 // lay = HOME_LAYOUT_*; relogio: -1 sem pilula, 0 esquerda, 1 direita, 2 o
 // automatico do layout. Desenha com cantos 16 (12 nas pequenas).
