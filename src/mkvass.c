@@ -3751,7 +3751,6 @@ static int iniciarFio(const char *url, int numeroFaixa, int herdar, int segurar,
   f->varreCh = S.varreCh > 0 ? S.varreCh : MKVASS_VARRE_CH;
   S.geracao++;
   f->g = S.geracao;
-  imgsub_limpar();
   snprintf(S.url, sizeof S.url, "%s", url);
   S.faixa = numeroFaixa;
   S.estado = MKVASS_PREPARANDO;
@@ -3764,6 +3763,7 @@ static int iniciarFio(const char *url, int numeroFaixa, int herdar, int segurar,
   S.vivos++;
   pthread_cond_broadcast(&S.sinal);   // acorda o fio antigo para ele ver a geracao nova
   pthread_mutex_unlock(&S.trava);
+  imgsub_limpar();   // fora de S.trava (ver mkvass_parar); o dono mais novo ja expulsa quadro velho
   if (pthread_create(&t, NULL, trabalhar, f) == 0) pthread_detach(t);
   else {
     pthread_mutex_lock(&S.trava);
@@ -3905,8 +3905,8 @@ void mkvass_folga(double segundosAFrente) {
 }
 
 void mkvass_parar(void) {
+  imgsub_limpar();   // fora de S.trava: o desenho segura a trava do imgsub entre pegar e soltar
   pthread_mutex_lock(&S.trava);
-  imgsub_limpar();
   if (S.vivos > 0) S.parar = 1;
   S.prebusca = 0; S.adotar = 0;
   if (S.prebuscaFase == 1) S.prebuscaFase = 2;
