@@ -20,6 +20,9 @@
 #define NV_ESTATVIVOUI_H
 #include <SDL2/SDL.h>
 #include "estatvivo.h"
+#ifdef ESTATVIVO_TESTE
+#include "gfx.h"
+#endif
 
 enum { EV_TAM_COMPLETO, EV_TAM_COMPACTO, EV_TAM_MINIMO, EV_TAM_N };
 
@@ -50,6 +53,11 @@ typedef struct {
 void estatvivo_teste(const EvEstado *e, const EvTelaTeste *t);
 void estatvivo_teste_layout(float *painel, float *dicas);
 int estatvivo_teste_tiles(int *ids);
+typedef struct {
+  GfxRect header, meta, tiles[6], keys[5], separator;
+  int nTiles, nKeys;
+} EvGeometriaTeste;
+void estatvivo_teste_geometria(EvGeometriaTeste *g);
 #endif
 
 #endif

@@ -54,6 +54,62 @@ static void shot(const char *path) {
   SDL_FreeSurface(s);
 }
 
+#define GEO_PAD 32.0f
+#define GEO_GAP 12.0f
+#define GEO_KEY_H 32.0f
+
+static void shotGeom(const char *name) {
+  char path[512];
+  snprintf(path, sizeof path, "%s/%s.png",
+           getenv("NUVIO_REV_PREFIX") ? getenv("NUVIO_REV_PREFIX") : "/Volumes/ExternalSSD/tmp/rev/estatpainel4",
+           name);
+  shot(path);
+}
+
+static void checkGeometry(int t, const float *panel, const float *hints) {
+  EvGeometriaTeste geo;
+  int i, cols, rows;
+  float left = panel[0] + GEO_PAD, right = panel[0] + panel[2] - GEO_PAD;
+  estatvivo_teste_geometria(&geo);
+  CONFERE(fabsf(hints[0] - left) < 0.5f && fabsf(hints[0] + hints[2] - right) < 0.5f,
+          "mode %d: footer follows the content margins", t);
+  CONFERE(fabsf(geo.separator.x - left) < 0.5f && fabsf(geo.separator.x + geo.separator.w - right) < 0.5f,
+          "mode %d: separator aligned to content", t);
+  cols = panel[2] >= 640 ? geo.nKeys : 3;
+  rows = (geo.nKeys + cols - 1) / cols;
+  CONFERE(fabsf(hints[3] - (rows * GEO_KEY_H + (rows - 1) * GEO_GAP)) < 0.5f,
+          "mode %d: footer height is compact", t);
+  CONFERE(fabsf(panel[1] + panel[3] - hints[1] - hints[3] - GEO_PAD) < 0.5f,
+          "mode %d: footer bottom padding", t);
+  for (i = 0; i < geo.nKeys; i++) {
+    GfxRect k = geo.keys[i];
+    CONFERE(k.h == GEO_KEY_H, "mode %d key %d: equal keycap height", t, i);
+    CONFERE(k.x >= left && k.x + k.w <= right && k.y >= hints[1] && k.y + k.h <= hints[1] + hints[3],
+            "mode %d key %d: inside footer", t, i);
+  }
+  if (t == EV_TAM_COMPLETO) {
+    CONFERE(geo.nTiles == 6, "full mode: six default tiles");
+    for (i = 0; i < geo.nTiles; i++) {
+      GfxRect r = geo.tiles[i];
+      CONFERE(fabsf(r.x - (i % 2 ? left + (right - left - GEO_GAP) * 0.5f + GEO_GAP : left)) < 0.5f,
+              "full tile %d: left margin", i);
+      CONFERE(r.y >= panel[1] + GEO_PAD && r.x + r.w <= right + 0.5f,
+              "full tile %d: inside padded content", i);
+      if (i >= 2) CONFERE(fabsf(r.y - geo.tiles[i - 2].y - geo.tiles[i - 2].h - GEO_GAP) < 0.5f,
+                          "full tile %d: vertical tile gap", i);
+    }
+    CONFERE(fabsf(geo.tiles[1].x - geo.tiles[0].x - geo.tiles[0].w - GEO_GAP) < 0.5f,
+            "full mode: horizontal tile gap");
+    CONFERE(fabsf(geo.header.x - geo.tiles[0].x) < 0.5f &&
+            fabsf(geo.header.x + geo.header.w - geo.tiles[1].x - geo.tiles[1].w) < 0.5f,
+            "header aligns exactly with tile grid");
+    CONFERE(geo.meta.x >= geo.header.x && geo.meta.y >= geo.header.y &&
+            geo.meta.x + geo.meta.w <= geo.header.x + geo.header.w + 0.5f &&
+            geo.meta.y + geo.meta.h <= geo.header.y + geo.header.h,
+            "badge data moved inside the subtitle content box");
+  }
+}
+
 int main(void) {
   const char *dir = getenv("NUVIO_DADOS");
   int t, i;
@@ -161,7 +217,8 @@ int main(void) {
     CONFERE(hints[2] > 0 && hints[0] >= panel[0] && hints[1] >= panel[1] &&
             hints[0] + hints[2] <= panel[0] + panel[2] + 0.5f &&
             hints[1] + hints[3] <= panel[1] + panel[3], "size %d: hints inside glass", t);
-    if (t == 0) shot("/Volumes/ExternalSSD/tmp/rev/estatpainel2-full.png");
+    shotGeom(t == EV_TAM_COMPLETO ? "mode-completo" : t == EV_TAM_COMPACTO ? "mode-compacto" : "mode-minimo");
+    checkGeometry(t, panel, hints);
     key(SDLK_RETURN);
   }
   // Clock geometry is virtual; statistics are drawn in screen coordinates.
@@ -208,14 +265,14 @@ int main(void) {
   perfis_definir_ativo(1);
   frame(120);
   CONFERE(estatvivo_teste_tiles(rendered) == 1 && rendered[0] == 1, "minimal loads saved tiles on profile return");
-  shot("/Volumes/ExternalSSD/tmp/rev/estatpainel2-custom-minimal.png");
+  shotGeom("custom-minimo");
   key(SDLK_RETURN);
   frame(120);
   CONFERE(estatvivo_teste_tiles(rendered) == 5 && !memcmp(rendered, (int[]){2, 1, 3, 4, 5}, 5 * sizeof(int)),
           "full loads and renders saved order independently");
-  shot("/Volumes/ExternalSSD/tmp/rev/estatpainel2-custom-full.png");
+  shotGeom("custom-completo");
   key(SDLK_MENU); frame(120);
-  shot("/Volumes/ExternalSSD/tmp/rev/estatpainel2-editor.png");
+  shotGeom("editor");
   key(SDLK_ESCAPE);
   // Restore full defaults for existing pin/navigation checks.
   key(SDLK_MENU);
@@ -236,9 +293,11 @@ int main(void) {
   frame(120);
   estatvivo_teste_layout(panel, hints);
   CONFERE(fabsf(panel[0] - NV_ILHA_MARGEM_D) < 0.5f, "pinned panel settles left");
-  shot("/Volumes/ExternalSSD/tmp/rev/estatpainel2-pinned-left.png");
+  shotGeom("pinned-left");
   key(SDLK_RIGHT);
   CONFERE(!ajustes_estat_lado() && estatvivo_fixado(), "RIGHT moves pinned panel");
+  frame(120);
+  shotGeom("pinned-right");
   key(SDLK_RETURN);
   CONFERE(estatvivo_tamanho() == EV_TAM_COMPACTO && estatvivo_fixado(), "OK resizes while pinned");
   key(SDLK_ESCAPE);
