@@ -455,7 +455,7 @@ static void desenhaPrevia(float x, float y, float a) {
   GfxRect p = { x, y, PV_W, PV_H };
   float total = 0.0f, ini = 0.0f, dentro, dur, e;
   int i, agora = 0, antes;
-  gfx_cor(p, PV_RAIO / p.h, 0.055f, 0.058f, 0.068f, a);
+  gfx_vidro_ou_solido(p, PV_RAIO / p.h, GFX_VIDRO_DENS_MODAL, a, 0.055f, 0.058f, 0.068f, 1.0f);
   if (nCen <= 0) { gfx_anel(p, PV_RAIO / p.h, 1.0f, 1, 1, 1, 0.07f * a); return; }
   for (i = 0; i < nCen; i++) total += duracaoCena(i);
   { float tc = fmodf(relogio, total);

@@ -353,8 +353,7 @@ static void ilhaSuperficie(GfxRect R, float raio, float k, float a) {
   gfx_rect((GfxRect){ R.x - 16.0f - 24.0f * k, R.y - 6.0f - 10.0f * k,
                       R.w + 32.0f + 48.0f * k, R.h + 34.0f + 50.0f * k }, 0, GFX_SOMBRA,
            1.0f, 0, 0, 0.5f, 0, 0, 0, (0.34f + 0.16f * k) * a);
-  if (ajustes_vidro()) gfx_vidro_material(R, raio, GFX_VIDRO_DENS + 0.08f * k, a);
-  else gfx_cor(R, raio, 0.055f, 0.058f, 0.068f, (0.86f + 0.08f * k) * a);
+  gfx_vidro_ou_solido(R, raio, GFX_VIDRO_DENS + 0.08f * k, a, 0.055f, 0.058f, 0.068f, 0.86f + 0.08f * k);
   gfx_luz_canto(R, raio, R.w * 0.25f, -R.h * 0.9f, R.w * 0.85f, 1, 1, 1, 0.07f * a);
 }
 
@@ -537,8 +536,7 @@ static void cenaIlha(float x, float y, float t, float a) {
     float raio = (rIni + (rFim - rIni) * ec) / (F.h > 1.0f ? F.h : 1.0f);
     float ac = anim_clamp((e - 0.45f) / 0.55f, 0.0f, 1.0f);
     if (volta) ac = anim_clamp((e - 0.6f) / 0.4f, 0.0f, 1.0f);
-    if (ajustes_vidro()) gfx_vidro_material(F, raio, GFX_VIDRO_DENS_MODAL, a);
-    else gfx_cor(F, raio, 0.055f, 0.058f, 0.068f, 0.94f * a);
+    gfx_vidro_ou_solido(F, raio, GFX_VIDRO_DENS_MODAL, a, 0.055f, 0.058f, 0.068f, 0.94f);
     recorteDentro(F);
     painelSalvos(P, a * ac);
     recorteVolta();

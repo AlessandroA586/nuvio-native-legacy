@@ -476,7 +476,7 @@ static void desenhaPrevia(float x, float y, float a) {
   int volta = (int)floorf(relogio / CICLO_S), agora = volta % CENAS, antes = (volta + CENAS - 1) % CENAS;
   float dentro = relogio - (float)volta * CICLO_S;
   float e = (volta == 0 || ajustes_animacoes_reduzidas()) ? 1.0f : sai3(dentro / TROCA_S);
-  gfx_cor(p, PV_RAIO / p.h, 0.055f, 0.058f, 0.068f, a);
+  gfx_vidro_ou_solido(p, PV_RAIO / p.h, GFX_VIDRO_DENS_MODAL, a, 0.055f, 0.058f, 0.068f, 1.0f);
   // A cena que sai fica parada no fim dela; a que entra comeca do zero.
   if (e < 1.0f) cena(antes, p, CICLO_S, a * (1.0f - e));
   cena(agora, p, dentro, a * e);
