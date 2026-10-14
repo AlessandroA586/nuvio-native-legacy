@@ -315,9 +315,10 @@ static void testeAddons(void) {
   CONFERE(n >= 4, "addons: as linhas sao alvos");
   CONFERE(d >= 3, "addons: passar por cima foca linhas diferentes");
   captura("addons-hover-linha.png");
-  // Clique na linha mais baixa: o OK liga/desliga AQUELE addon.
+  // Clique na linha de addon mais baixa (a de baixo dela, "Sincronizar addons",
+  // tem a >= 4): o OK liga/desliga AQUELE addon.
   n = alvos(&v);
-  for (int i = 0; i < n; i++) if (k < 0 || v[i].y > v[k].y) k = i;
+  for (int i = 0; i < n; i++) if (v[i].a < 4 && (k < 0 || v[i].y > v[k].y)) k = i;
   if (k >= 0) {
     clicar(cx(&v[k]), cy(&v[k])); quadros(2);
     antes = addonsui_foco();
