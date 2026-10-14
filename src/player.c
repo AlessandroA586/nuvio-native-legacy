@@ -1674,7 +1674,7 @@ void player_definir_retomada_fonte(double segundos) {
 }
 void player_definir_fonte(const char *url) {
   if ((!aberto && !mini) || !url || !*url) return;
-  if (comVideo || prebuscaUrl[0]) legenda_pre_descartar("troca de fonte");
+  legenda_pre_descartar("troca de fonte");
   durFonteAvisada = pedProximaFonte = 0;
   // Fonte nova: a duracao esperada conhecida nao vale mais (mesmo titulo,
   // episodio outro, catalogo pode ter andado).
