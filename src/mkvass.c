@@ -3050,23 +3050,28 @@ static int contarDesistidos(const Fio *f);
 // Decodifica os blocos pendentes para o armazem do desenho. O corpo vazio so
 // confere (e toma) o dono do overlay: se a legenda trocou de dono, o lote some.
 static void entregarImagens(Fio *f) {
-  int i;
+  int i, n;
+  PgsQuadro *dec;
   if (!f->nPend) return;
-  if (f->entregas >= 0 && entregarCorpoSeAtual(f, "")) {
-    for (i = 0; i < f->nPend; i++) {
-      PgsQuadro q;
-      if (pgs_decodificar(f->pgs, f->pend[i].b, (size_t)f->pend[i].n, &q)) {
-        // A troca/parada limpa sob a mesma trava: o fio antigo nao repovoa.
-        pthread_mutex_lock(&S.trava);
-        if (f->g == S.geracao && !S.parar) {
-          imgsub_dono(f->legG);
-          imgsub_por(f->pend[i].ini, f->pend[i].fim, &q);
-        }
-        pthread_mutex_unlock(&S.trava);
-        pgs_quadro_liberar(&q);
-      }
-    }
+  // RLE + paleta de um PGS 1080p passa de um quadro. O passo do player
+  // tambem toma S.trava; a decodificacao fica fora dela. entregarCorpoSeAtual
+  // ja toma a trava so para conferir o dono.
+  n = (f->entregas >= 0 && entregarCorpoSeAtual(f, "")) ? f->nPend : 0;
+  dec = n ? calloc((size_t)n, sizeof *dec) : NULL;
+  if (n && !dec) n = 0;
+  for (i = 0; i < n; i++)
+    if (!pgs_decodificar(f->pgs, f->pend[i].b, (size_t)f->pend[i].n, &dec[i])) dec[i].n = -1;
+  for (i = 0; i < n; i++) {
+    int publica;
+    if (dec[i].n < 0) continue;
+    pthread_mutex_lock(&S.trava);
+    publica = f->g == S.geracao && !S.parar;
+    if (publica) imgsub_dono(f->legG);
+    pthread_mutex_unlock(&S.trava);
+    if (publica) imgsub_por(f->pend[i].ini, f->pend[i].fim, &dec[i]);
+    else pgs_quadro_liberar(&dec[i]);
   }
+  free(dec);
   soltarPendentes(f);
 }
 
