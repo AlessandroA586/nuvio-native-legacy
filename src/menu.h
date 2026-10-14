@@ -131,6 +131,11 @@ int   menu_pilula_rect(float *x, float *y, float *w, float *h);
 int   menu_pilula_titulo(void);
 float menu_pilula_alfa(void);
 void  menu_pilula_mostrar(float alvo);
+// 0 enquanto a BARRA DA APPLE TV esta aberta: o cabecalho do painel ja mostra
+// o relogio e a ilha do canto desenharia a mesma hora duas vezes (captura da
+// TCL: 11:29 sobre 11:29). So o layout Dinamica; na rail classica a ilha
+// continua ao lado (menu_aberto nao a esconde la).
+int   menu_relogio_cabe(void);
 
 void menu_evento(const SDL_Event *e);
 void menu_atualizar(float dt, Uint32 agora);

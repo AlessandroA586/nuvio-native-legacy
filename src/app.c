@@ -5448,6 +5448,9 @@ static int relogioCabe(void) {
   // ilha de categorias — a tela nao tem mais titulo ali. Com folha, vinculo ou
   // teclado por cima ele some, como na home com um cartao na frente.
   if (tela == TELA_AJUSTES) return !menu_aberto() && ajustes_relogio_cabe();
+  // BARRA DA APPLE TV ABERTA: o cabecalho do painel ja tem relogio; a ilha no
+  // canto mostrava a mesma hora duas vezes (captura da TCL, 11:29 + 11:29).
+  if (!menu_relogio_cabe()) return 0;
   // CARROSSEL DE TITULOS DA APPLE TV (cartao de vizinhos, sem expandir): sem
   // relogio (dono, 04/10). Ele volta, pela animacao da ilha, quando o cartao
   // estica para a pagina.
