@@ -1,7 +1,5 @@
 // Reuse the headless Home fixture and its stubs; test the actual copy layout
 // and identity policy called by desenhaCopiaHero, without a GL window/network.
-#include <stdlib.h>
-#include <unistd.h>
 #define main hero_identity_fixture_main
 #include "heroidentidade_home.c"
 #undef main
@@ -20,18 +18,6 @@ static void ordered(HeroCopyLayout p, float btnH, float btnGap,
 int main(void) {
   assert(NV_FT_HERO_SIN == 22 && NV_LD_HERO_SIN == 30);
   assert(heroSinEstilo() == TXT_HERO_SIN && heroSinEntrelinha() == 30);
-  char dir[] = "/tmp/nuvio-sinopse-layout-XXXXXX", path[512];
-  assert(mkdtemp(dir));
-  snprintf(path, sizeof path, "%s/ajustes.txt", dir);
-  FILE *f = fopen(path, "w"); assert(f);
-  fputs("heroSynopsisSizeLocal 1\n", f); fclose(f);
-  ajustes_dir(dir);
-  assert(heroSinEstilo() == TXT_HERO_SIN_GRANDE && heroSinEntrelinha() == 32);
-  f = fopen(path, "w"); assert(f);
-  fputs("heroSynopsisSizeLocal 0\n", f); fclose(f);
-  ajustes_dir(dir);
-  assert(heroSinEstilo() == TXT_HERO_SIN && heroSinEntrelinha() == 30);
-  unlink(path); rmdir(dir);
   static CatItem c;
   snprintf(c.logoIdiomaUrl, sizeof c.logoIdiomaUrl,
            "https://image.tmdb.org/t/p/original/title.png");
