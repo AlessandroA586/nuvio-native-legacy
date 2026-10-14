@@ -288,6 +288,10 @@ void aovivo_osd_desenhar(const AoVivoOsd *o, float a) {
 static void aovivo_osd_desenharCorpo_(const AoVivoOsd *o, float a) {
   time_t agoraT = time(NULL);
   if (a <= 0.004f || !o) return;
+  // O alvo das molas e o foco DESTE quadro; o relogio e interno porque o
+  // desenho nao recebe dt (o player chama por quadro, o shot fotografa).
+  osdFocoAlvo = o->nBotoes > 0 && o->foco >= 0 ? o->botoes[o->foco] : -1;
+  osdTic();
   gfx_veu_css((GfxRect){ 0, 0, NV_TELA_W, 260.0f }, 1, 1.38f, 1.0f, 0.52f * a);
   gfx_veu_css((GfxRect){ 0, NV_TELA_H - 520.0f, NV_TELA_W, 520.0f }, 0, 1.25f, 1.0f, 0.80f * a);
 
