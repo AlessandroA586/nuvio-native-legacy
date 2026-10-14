@@ -12,6 +12,7 @@
 #include "idiomacod.h"
 #include "layout.h"
 #include "perfiltv.h"
+#include "perfis.h"
 #include "player.h"
 #include "plrui.h"
 #include "plrilha.h"
@@ -30,8 +31,8 @@
 
 // Match the clock's top and screen inset. Fixed sizes keep live samples from
 // moving the panel; reserve an internal footer at every size.
-#define EVU_MARG       NV_ILHA_MARGEM_D
-#define EVU_TOPO       NV_ILHA_Y
+#define EVU_MARG       (NV_ILHA_MARGEM_D * gfx_escala_ui())
+#define EVU_TOPO       (NV_ILHA_Y * gfx_escala_ui())
 #define EVU_RAIO       36.0f     // RAIO_CORPO de plrilha.c
 #define EVU_PAD        32.0f
 #define EVU_TILE_PAD   32.0f
@@ -44,7 +45,6 @@
 #define EVU_CH         410.0f
 #define EVU_MW         480.0f    // minimo: a linha fina
 #define EVU_PH         56.0f     // PIL_H de plrilha.c
-#define EVU_MH         (EVU_PH + EVU_DICAS_H + EVU_PAD + 16.0f)
 #define EVU_TX         243, 242, 239, 255
 // Mola do retangulo (frequencia da critica), do alfa de entrada e de cada conteudo.
 #define EVU_W_RET      15.0f
@@ -64,6 +64,80 @@ typedef struct {
 #define EVU_ARQ_TAMANHO "estatvivo-tamanho.txt"
 
 static int aberto, fixado, temSessao, tamanho;
+static int editando, focoEd, perfilTiles = -1, nTiles[EV_TAM_N], tiles[EV_TAM_N][6];
+static const char *const tileNome[] = {
+  "Velocidade", "Buffer à frente", "Fonte", "Conexões e servidor", "Erros e reconexões", "Quadros perdidos"
+};
+static const char *const tileIcone[] = {
+  "aj_gauge", "aj_database", "aj_film", "aj_server", "aj_rotate-cw", "aj_monitor-play"
+};
+static void nomeTiles(char *nome, size_t n, int t) {
+  snprintf(nome, n, "estatvivo-tiles-p%d-%d.txt", perfis_ativo(), t);
+}
+static void carregarTiles(void) {
+  if (perfilTiles == perfis_ativo()) return;
+  perfilTiles = perfis_ativo();
+  editando = 0;
+  for (int t = 0; t < EV_TAM_N; t++) {
+    char nome[64], *texto;
+    nomeTiles(nome, sizeof nome, t);
+    texto = dados_ler(nome);
+    nTiles[t] = 0;
+    if (!texto) {
+      nTiles[t] = t == EV_TAM_MINIMO ? 2 : 6;
+      for (int i = 0; i < nTiles[t]; i++) tiles[t][i] = i;
+    } else {
+      for (char *p = texto; *p; p++) {
+        if (*p < '0' || *p > '5') continue;
+        int id = *p - '0', tem = 0;
+        for (int i = 0; i < nTiles[t]; i++) tem |= tiles[t][i] == id;
+        if (!tem) tiles[t][nTiles[t]++] = id;
+      }
+      free(texto);
+    }
+  }
+}
+static int ofertaTile(int row) {
+  if (row < nTiles[tamanho]) return tiles[tamanho][row];
+  int r = nTiles[tamanho];
+  for (int id = 0; id < 6; id++) {
+    int tem = 0;
+    for (int i = 0; i < nTiles[tamanho]; i++) tem |= tiles[tamanho][i] == id;
+    if (!tem && r++ == row) return id;
+  }
+  return 0;
+}
+static int gravarTiles(void) {
+  char nome[64], texto[32];
+  int u = 0;
+  nomeTiles(nome, sizeof nome, tamanho);
+  for (int i = 0; i < nTiles[tamanho]; i++) u += snprintf(texto + u, sizeof texto - u, "%d ", tiles[tamanho][i]);
+  if (u) u--;
+  texto[u++] = '\n'; texto[u] = 0;
+  return dados_gravar(nome, texto);
+}
+static void editarTile(int row, int mover) {
+  int salvo[6], n = nTiles[tamanho], id = ofertaTile(row);
+  memcpy(salvo, tiles[tamanho], sizeof salvo);
+  if (mover) {
+    int destino = row + mover;
+    if (row >= n || destino < 0 || destino >= n) return;
+    tiles[tamanho][row] = tiles[tamanho][destino];
+    tiles[tamanho][destino] = id;
+    focoEd = destino;
+  } else if (row < n) {
+    memmove(&tiles[tamanho][row], &tiles[tamanho][row + 1], (n - row - 1) * sizeof(int));
+    nTiles[tamanho]--;
+  } else tiles[tamanho][nTiles[tamanho]++] = id;
+  if (!gravarTiles()) {
+    memcpy(tiles[tamanho], salvo, sizeof salvo); nTiles[tamanho] = n; focoEd = row;
+  }
+}
+static void ptEditar(int x, int y) {
+  (void)x; (void)y;
+  if (tamanho == EV_TAM_COMPACTO) return;
+  carregarTiles(); editando = 1; focoEd = 0;
+}
 static Uint32 abriuEm, proxAmostra, amostraEm, quadroEm;
 static unsigned long hashUrl;
 static EvEstado est;    // a amostra de verdade (1x/s)
@@ -78,6 +152,8 @@ static int larguraBase;
 #ifdef ESTATVIVO_TESTE
 static int teste;
 static float testePainel[4], testeDicas[4];
+static int testeTiles[6], testeNTiles;
+int estatvivo_teste_tiles(int *ids) { memcpy(ids, testeTiles, testeNTiles * sizeof(int)); return testeNTiles; }
 void estatvivo_teste_layout(float *painel, float *dicas) {
   memcpy(painel, testePainel, sizeof testePainel);
   memcpy(dicas, testeDicas, sizeof testeDicas);
@@ -112,6 +188,7 @@ static void aplicarTamanho(int t) {
 void estatvivo_abrir(void) {
   int t = ajustes_estat_tamanho();
   if (aberto) return;
+  carregarTiles();
   abriuEm = SDL_GetTicks();
   if (!fixado) tamanho = t >= 0 && t < EV_TAM_N ? t : ultimoTamanho();
   aberto = 1;
@@ -119,7 +196,7 @@ void estatvivo_abrir(void) {
   printf("[estatisticas] aberto (tamanho %d)\n", tamanho);
   fflush(stdout);
 }
-void estatvivo_fechar(void) { aberto = 0; fixado = 0; }
+void estatvivo_fechar(void) { aberto = 0; fixado = 0; editando = 0; }
 int  estatvivo_aberto(void) { return aberto; }
 int  estatvivo_fixado(void) { return fixado; }
 int  estatvivo_tamanho(void) { return tamanho; }
@@ -149,6 +226,19 @@ int estatvivo_evento(const SDL_Event *e) {
     aberto = 1;   // Focus the pinned panel without changing its pin or size.
     return 1;
   }
+  carregarTiles();
+  if (editando) {
+    if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE) editando = 0;
+    else if (!e->key.repeat) {
+      if (k == SDLK_UP && focoEd > 0) focoEd--;
+      else if (k == SDLK_DOWN && focoEd < 5) focoEd++;
+      else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) editarTile(focoEd, 0);
+      else if (k == SDLK_LEFT) editarTile(focoEd, -1);
+      else if (k == SDLK_RIGHT) editarTile(focoEd, 1);
+    }
+    return 1;
+  }
+  if (k == SDLK_MENU && !e->key.repeat) { ptEditar(0, 0); return 1; }
   if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE) {
     if (fixado) aberto = 0;
     else estatvivo_fechar();
@@ -409,9 +499,10 @@ static void kv(const char *k, const char *v, float x, float y, float w, int fio,
   float labelW = fmaxf(w * 0.34f, fminf((float)label.w, w * 0.56f));
   TxtLinha tv = txt_linha_corta(TXT_G20M, v[0] ? v : "—", 236, 236, 236, 255, w - labelW - 12);
   TxtLinha tk = txt_linha_corta(TXT_ILHA_SUB, k, 154, 154, 156, 255, labelW);
-  if (fio) gfx_cor((GfxRect){ x, y, w, 1 }, 0, 0.227f, 0.227f, 0.235f, a);
-  txt_desenhar_alpha(tk, x, y + (40 - (float)tk.h) * 0.5f, a);
-  txt_desenhar_alpha(tv, x + w - (float)tv.w, y + (40 - (float)tv.h) * 0.5f, a);
+  float h = fio < 0 ? 26 : 40;
+  if (fio > 0) gfx_cor((GfxRect){ x, y, w, 1 }, 0, 0.227f, 0.227f, 0.235f, a);
+  txt_desenhar_alpha(tk, x, y + (h - (float)tk.h) * 0.5f, a);
+  txt_desenhar_alpha(tv, x + w - (float)tv.w, y + (h - (float)tv.h) * 0.5f, a);
 }
 
 // --- OS SEIS LADRILHOS -------------------------------------------------------------
@@ -482,12 +573,14 @@ static void tileBuffer(GfxRect r, float a) {
 static void tileFonte(GfxRect r, float a) {
   float x = r.x + EVU_TILE_PAD, y = r.y + 76, w = r.w - 2 * EVU_TILE_PAD;
   ladrilho(r, "aj_film", i18n("Fonte"), tela.addon[0] ? EVO_ADDON : EVO_SEM, a);
-  kv(i18n("Add-on"), tela.addon, x, y, w, 0, a);
-  kv(i18n("Resolução"), tela.resolucao, x, y + 32, w, 1, a);
-  kv(i18n("Codec · HDR"), tela.codecHdr, x, y + 64, w, 1, a);
-  kv(i18n("Taxa do arquivo"), tela.taxa, x, y + 96, w, 1, a);
-  kv(i18n("Áudio"), tela.audio, x, y + 128, w, 1, a);
-  kv(i18n("Legenda"), tela.legenda, x, y + 160, w, 1, a);
+  float step = r.h < 284 ? 26 : 32;
+  int fio = r.h < 284 ? -1 : 1;
+  kv(i18n("Add-on"), tela.addon, x, y, w, fio < 0 ? -1 : 0, a);
+  kv(i18n("Resolução"), tela.resolucao, x, y + step, w, fio, a);
+  kv(i18n("Codec · HDR"), tela.codecHdr, x, y + 2 * step, w, fio, a);
+  kv(i18n("Taxa do arquivo"), tela.taxa, x, y + 3 * step, w, fio, a);
+  kv(i18n("Áudio"), tela.audio, x, y + 4 * step, w, fio, a);
+  kv(i18n("Legenda"), tela.legenda, x, y + 5 * step, w, fio, a);
 }
 
 static void tileServidor(GfxRect r, float a) {
@@ -503,7 +596,7 @@ static void tileServidor(GfxRect r, float a) {
     if (vis.primeiroByteMs >= 0) {
       snprintf(t, sizeof t, "%d ms", vis.primeiroByteMs);
       p[0] = i18n("Resposta do 1º byte"); p[1] = t;
-      apoio(p, 2, x, r.y + 224, w, a);
+      apoio(p, 2, x, r.y + (r.h < 284 ? 212 : 224), w, a);
     }
   } else if (vis.servOrigem == EVO_LINK) {
     TxtLinha h = txt_linha_corta(TXT_ILHA_PERGUNTA, vis.host, EVU_TX, w);
@@ -612,13 +705,29 @@ static void conteudoCompleto(float ox, float oy, float fase, float a) {
   cw = chip("aj_tv-minimal-play", nomePlataforma(tela.plataforma), 0, 0, 36, a, 0);
   chip("aj_tv-minimal-play", nomePlataforma(tela.plataforma), xr - cw, c.y + 62, 36, a, 1);
   // As linhas de ladrilhos abaixo da linha do subtitulo (y + 88 + ~30).
-  { float x0 = x, x1 = x + EVU_TILE_W + EVU_GAP, y0 = c.y + 128, h1 = 252, h2 = 284, h3 = 196;
-    tileVelocidade((GfxRect){ x0, y0, EVU_TILE_W, h1 }, fase, a);
-    tileBuffer((GfxRect){ x1, y0, EVU_TILE_W, h1 }, a);
-    tileFonte((GfxRect){ x0, y0 + h1 + EVU_GAP, EVU_TILE_W, h2 }, a);
-    tileServidor((GfxRect){ x1, y0 + h1 + EVU_GAP, EVU_TILE_W, h2 }, a);
-    tileErros((GfxRect){ x0, y0 + h1 + h2 + 2 * EVU_GAP, EVU_TILE_W, h3 }, a);
-    tileQuadros((GfxRect){ x1, y0 + h1 + h2 + 2 * EVU_GAP, EVU_TILE_W, h3 }, a); }
+  float y = c.y + 128;
+  for (int i = 0; i < nTiles[EV_TAM_COMPLETO]; i += 2) {
+    int id = tiles[EV_TAM_COMPLETO][i];
+    float h = 244;
+    if (nTiles[EV_TAM_COMPLETO] == 6 && !memcmp(tiles[EV_TAM_COMPLETO], (int[]){0, 1, 2, 3, 4, 5}, 6 * sizeof(int)))
+      h = (float[]){252, 284, 196}[i / 2];
+    for (int j = i; j < i + 2 && j < nTiles[EV_TAM_COMPLETO]; j++) {
+      id = tiles[EV_TAM_COMPLETO][j];
+      GfxRect r = { x + (j % 2) * (EVU_TILE_W + EVU_GAP), y, EVU_TILE_W, h };
+#ifdef ESTATVIVO_TESTE
+      if (tamanho == EV_TAM_COMPLETO) testeTiles[testeNTiles++] = id;
+#endif
+      switch (id) {
+        case 0: tileVelocidade(r, fase, a); break;
+        case 1: tileBuffer(r, a); break;
+        case 2: tileFonte(r, a); break;
+        case 3: tileServidor(r, a); break;
+        case 4: tileErros(r, a); break;
+        case 5: tileQuadros(r, a); break;
+      }
+    }
+    y += h + EVU_GAP;
+  }
 }
 
 // COMPACTO: o essencial em cinco linhas (resolucao, codec, velocidade, buffer,
@@ -648,7 +757,35 @@ static void conteudoCompacto(float ox, float oy, float a) {
 // MINIMO: a linha fina, velocidade + buffer + a faisca, numa largura FIXA
 // (EVU_MW): o numero tem casa reservada e a faisca fica no fim da linha.
 static void conteudoMinimo(float ox, float oy, float fase, float a) {
-  char n[24], b[48];
+  char n[24], b[160];
+#ifdef ESTATVIVO_TESTE
+  if (tamanho == EV_TAM_MINIMO) {
+    testeNTiles = nTiles[EV_TAM_MINIMO];
+    memcpy(testeTiles, tiles[EV_TAM_MINIMO], testeNTiles * sizeof(int));
+  }
+#endif
+  if (nTiles[EV_TAM_MINIMO] != 2 || tiles[EV_TAM_MINIMO][0] != 0 || tiles[EV_TAM_MINIMO][1] != 1) {
+    for (int i = 0; i < nTiles[EV_TAM_MINIMO]; i++) {
+      int id = tiles[EV_TAM_MINIMO][i];
+      switch (id) {
+        case 0: fmtVel(n, sizeof n); snprintf(b, sizeof b, "%s Mbps", n); break;
+        case 1:
+          if (vis.bufOrigem == EVO_MEDIDO) snprintf(b, sizeof b, "%d s", (int)(vis.bufSeg + 0.5));
+          else if (vis.bufOrigem == EVO_SO_PCT) snprintf(b, sizeof b, "%d %%", vis.bufPct);
+          else snprintf(b, sizeof b, "%s", i18n("Indisponível"));
+          break;
+        case 2: snprintf(b, sizeof b, "%s", tela.addon[0] ? tela.addon : tela.resolucao); break;
+        case 3: snprintf(b, sizeof b, "%s", vis.host); break;
+        case 4: snprintf(b, sizeof b, "%d", vis.erros); break;
+        default:
+          if (vis.quadrosOrigem == EVO_MEDIDO) ev_fmt_milhar(b, sizeof b, vis.perdidos);
+          else snprintf(b, sizeof b, "%s", i18n("Indisponível"));
+          break;
+      }
+      kv(i18n(tileNome[id]), b, ox + EVU_PAD, oy + 12 + i * 44, EVU_MW - 2 * EVU_PAD, i > 0, a);
+    }
+    return;
+  }
   TxtLinha tn, tb;
   float w = EVU_MW, nw;
   fmtVel(n, sizeof n);
@@ -682,7 +819,11 @@ void estatvivo_retangulo(int tam, int esquerda, float *g) {
   g[0] = esquerda ? EVU_MARG : NV_TELA_W - EVU_MARG - w;
   g[1] = EVU_TOPO;
   g[2] = w;
-  g[3] = tam == EV_TAM_COMPLETO ? EVU_H : tam == EV_TAM_COMPACTO ? EVU_CH : EVU_MH;
+  carregarTiles();
+  g[3] = tam == EV_TAM_COMPLETO ? EVU_H : tam == EV_TAM_COMPACTO ? EVU_CH :
+    (nTiles[tam] == 2 && tiles[tam][0] == 0 && tiles[tam][1] == 1 ? EVU_PH :
+     fmaxf(EVU_PH, nTiles[tam] * 44.0f + 12)) + 124 + EVU_PAD + 16;
+  if (editando) { g[2] = EVU_MW; g[0] = esquerda ? EVU_MARG : NV_TELA_W - EVU_MARG - g[2]; g[3] = 480; }
 }
 void estatvivo_retangulo_atual(float *g) { estatvivo_retangulo(tamanho, ajustes_estat_lado(), g); }
 
@@ -691,20 +832,22 @@ static float ancora(const GfxRect *p, float w) { return ajustes_estat_lado() ? p
 
 static void ptLado(int a, int b) { (void)a; (void)b; ajustes_definir_estat_lado(!ajustes_estat_lado()); }
 
-#define EVU_N_DICAS 4
+#define EVU_N_DICAS 5
 static void ptSoltar(int x, int y) { (void)x; (void)y; fixado = 0; }
 static void dicas(GfxRect p, float a) {
-  const char *K[EVU_N_DICAS] = { "Ok", "← →", fixado ? "↑" : "↓", "Voltar" };
-  const char *L[EVU_N_DICAS] = { "Tamanho", "Lado", fixado ? "Desafixar" : "Fixar", fixado ? "Voltar" : "Fechar" };
-  float x = p.x + EVU_PAD, y = p.y + p.h - EVU_PAD - EVU_DICAS_H;
-  float cell = (p.w - 2 * EVU_PAD - 12) * 0.5f;
+  const char *K[EVU_N_DICAS] = { "Ok", "← →", fixado ? "↑" : "↓", "Voltar", "Menu" };
+  const char *L[EVU_N_DICAS] = { "Tamanho", "Lado", fixado ? "Desafixar" : "Fixar", fixado ? "Voltar" : "Fechar", "Editar" };
+  int n = tamanho == EV_TAM_COMPACTO ? 4 : 5, cols = tamanho == EV_TAM_COMPLETO ? 3 : 2;
+  float h = tamanho == EV_TAM_MINIMO ? 124 : EVU_DICAS_H;
+  float x = p.x + EVU_PAD, y = p.y + p.h - EVU_PAD - h;
+  float cell = (p.w - 2 * EVU_PAD - (cols - 1) * 12) / cols;
   if (cell < 80 || y < p.y + EVU_PH) return;
 #ifdef ESTATVIVO_TESTE
-  memcpy(testeDicas, (float[]){ x, y, p.w - 2 * EVU_PAD, EVU_DICAS_H }, sizeof testeDicas);
+  memcpy(testeDicas, (float[]){ x, y, p.w - 2 * EVU_PAD, h }, sizeof testeDicas);
 #endif
   gfx_cor((GfxRect){ x, y - 10, p.w - 2 * EVU_PAD, 1 }, 0, 1, 1, 1, 0.08f * a);
-  for (int i = 0; i < EVU_N_DICAS; i++) {
-    float xx = x + (i % 2) * (cell + 12), yy = y + (i / 2) * 44;
+  for (int i = 0; i < n; i++) {
+    float xx = x + (i % cols) * (cell + 12), yy = y + (i / cols) * 44;
     TxtLinha k = txt_linha(TXT_V2_KBD18, i18n(K[i]), EVU_TX);
     float kw = fmaxf((float)k.w + 16, 42);
     TxtLinha l = txt_linha_corta(TXT_ILHA_SUB, i18n(L[i]), 196, 196, 196, 255, cell - kw - 8);
@@ -713,7 +856,48 @@ static void dicas(GfxRect p, float a) {
     txt_desenhar_alpha(l, xx + kw + 8, yy + (30 - (float)l.h) * 0.5f, a);
     if (ponteiro_ativo() && a > 0.5f)
       ponteiro_alvo(xx, yy, cell, 30, NULL,
-                    i == 0 ? ptTamanho : i == 1 ? ptLado : i == 2 ? (fixado ? ptSoltar : ptFixar) : ptFora, 0, 0);
+                    i == 0 ? ptTamanho : i == 1 ? ptLado : i == 2 ? (fixado ? ptSoltar : ptFixar) : i == 4 ? ptEditar : ptFora, 0, 0);
+  }
+}
+
+// Control Center checklist: selected entries first; OK toggles, arrows reorder.
+static void ptEdFoco(int row, int action) { (void)action; focoEd = row; }
+static void ptEdOk(int row, int action) { focoEd = row; editarTile(row, action); }
+static void ptEdPronto(int x, int y) { (void)x; (void)y; editando = 0; }
+static void desenhaEdicao(GfxRect p, float a) {
+  float x = p.x + EVU_PAD, w = p.w - 2 * EVU_PAD;
+  ajustes_ui_kicker(i18n("Editar"), x, p.y + 24, a);
+  TxtLinha mode = txt_linha(TXT_ILHA_SUB, i18n(tamanho == EV_TAM_COMPLETO ? "Completo" : "Mínimo"), EVU_TX);
+  txt_desenhar_alpha(mode, x + w - mode.w, p.y + 24, a);
+  for (int row = 0; row < 6; row++) {
+    int id = ofertaTile(row), tem = row < nTiles[tamanho];
+    GfxRect r = { x, p.y + 64 + row * 50, w, 46 };
+    if (row == focoEd) {
+      if (ajustes_vidro()) gfx_cor(r, 0.5f, 1, 1, 1, 0.17f * a);
+      else gfx_cor(r, 0.5f, 0.195f, 0.20f, 0.223f, a);
+    }
+    gfx_icone((GfxRect){r.x + 14, r.y + 12, 22, 22}, tileIcone[id], 0.953f, 0.949f, 0.937f, a);
+    TxtLinha label = txt_linha_corta(TXT_ILHA_SUB, i18n(tileNome[id]), EVU_TX, w - 110);
+    txt_desenhar_alpha(label, r.x + 48, r.y + (46 - label.h) * 0.5f, a);
+    float cr = 0.953f, cg = 0.949f, cb = 0.937f;
+    if (tem) ajustes_acento_marca(&cr, &cg, &cb);
+    gfx_icone((GfxRect){r.x + w - 36, r.y + 12, 22, 22}, tem ? "aj_circle-check" : "aj_plus", cr, cg, cb, a);
+    if (ponteiro_ativo()) ponteiro_alvo(r.x, r.y, r.w, r.h, ptEdFoco, ptEdOk, row, 0);
+  }
+  const char *keys[] = { "Ok", "← →", "Voltar" };
+  const char *labels[] = { "Pôr ou tirar", "Mover", "Pronto" };
+  for (int i = 0; i < 3; i++) {
+    float yy = p.y + 374 + i * 30;
+    TxtLinha key = txt_linha(TXT_V2_KBD18, i18n(keys[i]), EVU_TX);
+    TxtLinha label = txt_linha(TXT_ILHA_SUB, i18n(labels[i]), EVU_TX);
+    txt_desenhar_alpha(key, x, yy, a);
+    txt_desenhar_alpha(label, x + 86, yy, a);
+    if (ponteiro_ativo()) {
+      if (i == 1) {
+        ponteiro_alvo(x, yy, w / 2, 30, NULL, ptEdOk, focoEd, -1);
+        ponteiro_alvo(x + w / 2, yy, w / 2, 30, NULL, ptEdOk, focoEd, 1);
+      } else ponteiro_alvo(x, yy, w, 30, NULL, i == 0 ? ptEdOk : ptEdPronto, focoEd, 0);
+    }
   }
 }
 
@@ -741,7 +925,9 @@ void estatvivo_desenhar(Uint32 agora) {
   // Reuse the player clock's origin and the shared rectangle spring.
   if (quer && inicial) {
     GfxRect clock = { NV_TELA_W - EVU_MARG - NV_ILHA_REP_W, EVU_TOPO, NV_ILHA_REP_W, EVU_PH };
-    plrilha_rect(&clock);
+    if (plrilha_rect(&clock)) {
+      float s = gfx_escala_ui(); clock.x *= s; clock.y *= s; clock.w *= s; clock.h *= s;
+    }
     ret[0] = clock.x; ret[1] = clock.y; ret[2] = clock.w; ret[3] = clock.h;
     for (i = 0; i < 4; i++) retV[i] = 0;
     for (i = 0; i < EV_TAM_N; i++) contA[i] = i == desenho ? 1.0f : 0.0f;
@@ -753,17 +939,19 @@ void estatvivo_desenhar(Uint32 agora) {
   if (aberto && ponteiro_ativo() && o > 0.5f) {
     ponteiro_camada();
     ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ptFora, 0, 0);
-    ponteiro_alvo(alvoRet[0], alvoRet[1], alvoRet[2], alvoRet[3], NULL, ptTamanho, 0, 0);
+    if (!editando) ponteiro_alvo(alvoRet[0], alvoRet[1], alvoRet[2], alvoRet[3], NULL, ptTamanho, 0, 0);
   }
   if (fixado && !aberto && ponteiro_ativo() && o > 0.5f)
     ponteiro_alvo(p.x, p.y, p.w, p.h, NULL, ptAbrir, 0, 0);
 #ifdef ESTATVIVO_TESTE
   memcpy(testePainel, (float[]){ p.x, p.y, p.w, p.h }, sizeof testePainel);
   memset(testeDicas, 0, sizeof testeDicas);
+  testeNTiles = 0;
 #endif
   plrui_material(p, fminf(EVU_RAIO, p.h * 0.5f), 0, o);
   gfx_recorte(p.x, p.y, p.w, p.h);
-  for (i = 0; i < EV_TAM_N; i++) {
+  if (editando) desenhaEdicao(p, o);
+  for (i = 0; !editando && i < EV_TAM_N; i++) {
     float a = o * contA[i];
     if (a < 0.01f) continue;
     larguraBase = i * 8; larguraI = 0;
@@ -771,7 +959,7 @@ void estatvivo_desenhar(Uint32 agora) {
     else if (i == EV_TAM_COMPACTO) conteudoCompacto(ancora(&p, EVU_CW), p.y, a);
     else conteudoMinimo(ancora(&p, EVU_MW), p.y, fase, a);
   }
-  if (aberto) dicas(p, o);
+  if (aberto && !editando) dicas(p, o);
   gfx_sem_recorte();
 }
 

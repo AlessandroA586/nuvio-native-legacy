@@ -49,6 +49,7 @@ typedef struct {
 } EvTelaTeste;
 void estatvivo_teste(const EvEstado *e, const EvTelaTeste *t);
 void estatvivo_teste_layout(float *painel, float *dicas);
+int estatvivo_teste_tiles(int *ids);
 #endif
 
 #endif

@@ -5,6 +5,7 @@
 #include "dados.h"
 #include "estatvivoui.h"
 #include "layout.h"
+#include "perfis.h"
 #include "plrilha.h"
 #include "text.h"
 #include "tex_cache.h"
@@ -34,6 +35,7 @@ static void frame(int n) {
   for (int i = 0; i < n; i++) {
     txt_novo_quadro();
     tex_novo_quadro();
+    tex_bombear(6);
     glClear(GL_COLOR_BUFFER_BIT);
     estatvivo_desenhar(SDL_GetTicks());
   }
@@ -120,7 +122,9 @@ int main(void) {
   gfx_tamanho_alvo(1920, 1080);
   assert(gfx_iniciar() && txt_iniciar("deploy/app", 1));
   ajustes_recursos("deploy/app/art");
-  gfx_icones_dir("deploy/app/art");
+  char art[1024];
+  assert(realpath("deploy/app/art", art));
+  gfx_icones_dir(art);
   tex_iniciar(64);
   GfxRect clock;
   for (i = 0; i < 120; i++) {
@@ -160,6 +164,65 @@ int main(void) {
     if (t == 0) shot("/Volumes/ExternalSSD/tmp/rev/estatpainel2-full.png");
     key(SDLK_RETURN);
   }
+  // Clock geometry is virtual; statistics are drawn in screen coordinates.
+  for (int s = 0; s < 3; s++) {
+    float scale = (float[]){1.0f, 1.2f, 1.5f}[s];
+    gfx_escala_ui_definir(scale);
+    for (t = 0; t < EV_TAM_N; t++) {
+      frame(120);
+      estatvivo_teste_layout(panel, hints);
+      CONFERE(fabsf(panel[1] - clock.y * scale) < 0.5f, "scale %.1f size %d: physical clock top", scale, t);
+      CONFERE(fabsf(NV_TELA_W - panel[0] - panel[2] - NV_ILHA_MARGEM_D * scale) < 0.5f,
+              "scale %.1f size %d: physical clock margin", scale, t);
+      estatvivo_retangulo(t, 1, g);
+      CONFERE(fabsf(g[0] - NV_ILHA_MARGEM_D * scale) < 0.5f && fabsf(g[1] - clock.y * scale) < 0.5f,
+              "scale %.1f size %d: left uses clock inset and top", scale, t);
+      key(SDLK_RETURN);
+    }
+  }
+  gfx_escala_ui_definir(1);
+  frame(120);
+  // Same checklist controls as Control Center; MENU also opens the Edit hint.
+  key(SDLK_MENU);
+  key(SDLK_RETURN); // Remove speed.
+  key(SDLK_RIGHT); // Move buffer after source.
+  key(SDLK_ESCAPE);
+  char *saved = dados_ler("estatvivo-tiles-p1-0.txt");
+  CONFERE(saved && !strcmp(saved, "2 1 3 4 5\n"), "full tile selection and order persisted");
+  free(saved);
+  key(SDLK_RETURN); key(SDLK_RETURN); // Minimal: its own speed/buffer defaults.
+  key(SDLK_MENU); key(SDLK_RETURN); key(SDLK_ESCAPE);
+  saved = dados_ler("estatvivo-tiles-p1-2.txt");
+  CONFERE(saved && !strcmp(saved, "1\n"), "minimal tile selection persisted separately");
+  free(saved);
+  // Force profile reload; verify real rendering, independent settings and defaults.
+  int rendered[6];
+  perfis_definir_ativo(2);
+  frame(120);
+  CONFERE(estatvivo_teste_tiles(rendered) == 2 && rendered[0] == 0 && rendered[1] == 1,
+          "new profile keeps minimal defaults");
+  key(SDLK_MENU); key(SDLK_RIGHT); key(SDLK_ESCAPE);
+  frame(120);
+  CONFERE(estatvivo_teste_tiles(rendered) == 2 && rendered[0] == 1 && rendered[1] == 0,
+          "minimal reorders and renders tiles");
+  perfis_definir_ativo(1);
+  frame(120);
+  CONFERE(estatvivo_teste_tiles(rendered) == 1 && rendered[0] == 1, "minimal loads saved tiles on profile return");
+  shot("/Volumes/ExternalSSD/tmp/rev/estatpainel2-custom-minimal.png");
+  key(SDLK_RETURN);
+  frame(120);
+  CONFERE(estatvivo_teste_tiles(rendered) == 5 && !memcmp(rendered, (int[]){2, 1, 3, 4, 5}, 5 * sizeof(int)),
+          "full loads and renders saved order independently");
+  shot("/Volumes/ExternalSSD/tmp/rev/estatpainel2-custom-full.png");
+  key(SDLK_MENU); frame(120);
+  shot("/Volumes/ExternalSSD/tmp/rev/estatpainel2-editor.png");
+  key(SDLK_ESCAPE);
+  // Restore full defaults for existing pin/navigation checks.
+  key(SDLK_MENU);
+  for (int j = 0; j < 5; j++) key(SDLK_DOWN);
+  key(SDLK_RETURN);
+  for (int j = 0; j < 5; j++) key(SDLK_LEFT);
+  key(SDLK_ESCAPE);
   frame(120);   // Settle the last size change before measuring side motion.
   key(SDLK_DOWN);
   CONFERE(estatvivo_fixado() && !estatvivo_aberto(), "DOWN pins and returns focus");
