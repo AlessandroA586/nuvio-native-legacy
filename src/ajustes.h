@@ -265,7 +265,7 @@ const char *ajustes_qualidade(void);
 // Faixa de tamanho da escolha automatica, em GB (0 = sem limite).
 int ajustes_tamanho_max_gb(void);
 int ajustes_tamanho_min_gb(void);
-float ajustes_espaco_fator(int pct);   // 50..150 % -> 0,5..1,5 (fora da faixa e preso)
+float ajustes_espaco_fator(int pct);   // 50..300 % -> 0,5..3,0 (fora da faixa e preso)
 float ajustes_espaco_fileiras(void);   // espaco vertical entre fileiras da Home
 float ajustes_espaco_titulos(void);    // espaco horizontal entre cartazes
 // LIVE TV. Resolucao principal: 0 Automatica, 1 4K, 2 1080p, 3 720p, 4 SD
@@ -288,6 +288,7 @@ int   ajustes_rail_recolhida(void);     // collapseSidebar
 // #461: 1 = o menu e uma barra no topo (menu.c), sem rail na esquerda. 0 no
 // layout Dinamica e no telefone em retrato.
 int   ajustes_menu_topo(void);
+int   ajustes_abas_estilo(void);   // #205: 0 Chips, 1 Menu suspenso, 2 Barra central, 3 Paginas
 int   ajustes_rail_moderna(void);       // modernSidebar
 int   ajustes_rail_moderna_blur(void);  // modernSidebarBlur
 int   ajustes_hero_ligado(void);        // heroSectionEnabled
@@ -453,6 +454,8 @@ int   ajustes_esconder_logo_trailer(void);   // 1 = hide the corner title logo w
 int   ajustes_legendas_todas(void); // #425: abrir todas as faixas
 // #205: 1 = tela de abertura Detalhada (o cartao com fonte e passos); 0 = Cinema.
 int   ajustes_abertura_detalhada(void);
+// #338: tamanho de abertura das Estatisticas ao vivo (EV_TAM_*); -1 = o ultimo usado.
+int   ajustes_estat_tamanho(void);
 int   ajustes_leg2_junto(void);
 int   ajustes_leg2_tamanho(void);
 int   ajustes_leg2_cor(void);
@@ -513,7 +516,7 @@ int   ajustes_cw_proximo(void);   // 1 = 'a seguir' entra em Continuar assistind
 int   ajustes_cw_mostrar_nao_exibidos(void);  // showUnairedNextUp
 // continueWatchingSortMode: 0 default, 1 streaming_style, 2 split_upcoming
 int   ajustes_cw_ordem(void);
-int   ajustes_dts_ac3(void);             // 1 = DTS convertido em AC3 5.1 (LG); 0 = AAC estereo
+int   ajustes_dts_ac3(void);             // 1 = DTS convertido em AC3 5.1 (LG, e padrao no .tpk); 0 = AAC estereo
 int   ajustes_ps_continuar(void);        // #303: 0 = sem o cartao "continuar" na escolha de perfil
 int   ajustes_hist_conta(void);          // 1 = this profile's history goes to the Nuvio account (per profile, default on)
 int   ajustes_social(void);              // 1 = friends/social features on (per profile, default on)

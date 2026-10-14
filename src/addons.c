@@ -206,6 +206,7 @@ static void fonteExtraCarimbar(Stream *l, int n, int k) {
 static void progMarcar(int i, const Stream *a, int n, int estadoNovo) {
   Stream *copia = NULL;
   if (i < 0 || i >= ADD_MAX) return;
+  stream_preparar_dica_p2p(a, n);
   if (a && n > 0) {
     copia = malloc(sizeof(Stream) * (size_t)n);
     if (copia) memcpy(copia, a, sizeof(Stream) * (size_t)n);
@@ -225,6 +226,7 @@ static void progMarcar(int i, const Stream *a, int n, int estadoNovo) {
 static void progMarcarEx(int k, const char *nome, const Stream *a, int n, int estadoNovo) {
   Stream *copia = NULL;
   if (k < 0 || k >= ADD_EXTRA_MAX) return;
+  stream_preparar_dica_p2p(a, n);
   if (a && n > 0) {
     copia = malloc(sizeof(Stream) * (size_t)n);
     if (copia) {
@@ -2662,6 +2664,7 @@ static int consultar(const char *id, const char *tipo, const char *base, int fio
   free(extra.l);
   // Cancelada, a lista pode estar pela metade: nao e resposta, e lixo.
   if (cancelado && cancelado(ctx)) { free(achados); return -1; }
+  if (!progresso) stream_preparar_dica_p2p(achados, n);
   *saida = achados;
   return n;
 }

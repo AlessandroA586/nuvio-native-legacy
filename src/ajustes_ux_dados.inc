@@ -180,6 +180,7 @@ static const char *uxSinonimos(int op) {
     case AJ_CW_RETIDO_TAMBEM: return "continuar assistindo tambem ilha retomar agora fileira duplicar repetir aparecer dois lugares titulo continue watching also island resume";
     case AJ_HIST_CONTA: return "historico historico vistos progresso conta nuvio enviar scrobble simkl trakt perfil sincronizar sync history watched";
     case AJ_SOCIAL: return "social amigos amigo atividade recomendar recomendacoes friends activity recommend presenca desligar remover";
+    case AJ_ABAS_ESTILO: return "abas estilo colecao streaming chips menu suspenso dropdown barra central paginas carrossel tabs style collection pages carousel";
     case AJ_LEG_CONTORNO_COR: return "legenda contorno sombra borda cor preto branco cinza outline edge shadow subtitle color";
     case AJ_MENU_TOPO: return "menu barra topo alto cima lateral esquerda rail posicao navegacao top bar toolbar sidebar left position";
     case AJ_TELA_ABERTURA: return "tela abertura abrindo carregando loading cinema detalhada fonte play transicao opening source screen";
@@ -215,6 +216,7 @@ static const char *uxSinonimos(int op) {
       return "falha erro provedor debrid addon add-on trocar ordem prioridade limite links timeout failover fallback retry";
     case AJ_FONTE_ORDEM_ADDON: return "ordem fontes qualidade addon aiostreams resolucao tamanho instalacao source order quality";
     case AJ_P2P_LIMITE: return "limite espaco p2p torrent armazenamento disco cheio memoria buffer cache tamanho maximo gb space limit storage full";
+    case AJ_ESTAT_TAMANHO: return "estatisticas ao vivo stats nerds tamanho completo compacto minimo pequeno linha canto fixar velocidade buffer painel live statistics size full compact minimal";
     case AJ_BUFFER: return "buffer tamanho memoria pequeno medio grande travando carregando rede instavel stats nerds";
     case AJ_CACHE_SEEK: return "cache seek buffer disco armazenamento voltar avancar travando carregando";
     case AJ_TMDB_IDIOMA: return "idioma metadados titulo sinopse traducao tmdb";
@@ -255,6 +257,7 @@ static const char *uxCaminhoAntigo(int op) {
     case AJ_ADDONS: case AJ_PLUGINS: case AJ_ADDONS_PRINCIPAL:
       return "Contas e serviços";
     case AJ_DEBRID_RD: case AJ_DEBRID_TB: case AJ_DEBRID_PM: case AJ_DEBRID_AD: case AJ_DEBRID_AD_TESTAR:
+    case AJ_DEBRID_RD_TESTAR: case AJ_DEBRID_TB_TESTAR: case AJ_DEBRID_PM_TESTAR:
     case AJ_MDB_CHAVE: case AJ_FANART_CHAVE:
       return "Chaves";
     case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: case AJ_P2P_LIMITE:

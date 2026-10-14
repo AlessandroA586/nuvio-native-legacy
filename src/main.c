@@ -1,6 +1,7 @@
 // Bootstrap: janela, contexto GL, loop e telemetria. Toda a UI vive nos modulos.
 #include "app_id.h"
 #include "arranque.h"
+#include "swapint.h"
 #include "streams.h"
 #ifdef NV_DTS_DEBUG
 #include "dts/dts_engine.h"
@@ -1587,6 +1588,7 @@ int main(int argc, char **argv) {
   double fPrep = 0, fGlClr = 0;
   int    txtNQuadro = 0, piorTxtN = 0;
   int quadros = 0, janks = 0; double pior = 0;
+  SwapInt swapInt = {0};   // intervalo real entre swaps (swapint.h)
 
   // TELEMETRIA POR FASE. O quadro pior custava 22ms num alvo de 20ms e nao
   // havia como saber ONDE. Os relogios sao de CPU (SDL_GetPerformanceCounter)
@@ -1852,7 +1854,7 @@ int main(int argc, char **argv) {
                          pUplN=fUplN; pUplB=fUplB;
                          pGfxMs=fGfxMs; pTexMs=fTexMs; pNRect=fNRect; pNProg=fNProg;
                          pNBind=fNBind; pNBusca=fNBusca; pOutMs=fOutMs; pNOut=fNOut; pFill=fFill; pNCheio=fNCheio; }
-      if (dtms > 33.0) janks++;
+      if (dtms > swapint_limite_jank(&swapInt)) janks++;
     }
     // RASTRO POR QUADRO, so com /tmp/nuvio-quadros presente (conferido no
     // relatorio de 3 s): cada quadro acima de 25 ms sai com a reparticao, os
@@ -2014,6 +2016,7 @@ int main(int argc, char **argv) {
     t0 = NV_T0();
     if (!nvPrimeiroQuadroFeito) arranque_etapa("primeiro SwapWindow");
     SDL_GL_SwapWindow(win);
+    swapint_marca(&swapInt, (double)SDL_GetPerformanceCounter() * 1000.0 / perFreq);
 #ifdef NV_ANDROID
     android_quadro();   // todo quadro apresentado, de qualquer tela (vigia #266)
 #endif
@@ -2074,6 +2077,9 @@ int main(int argc, char **argv) {
           printf("[locale] numerico trocado por fora (\"%s\"): de volta ao C\n", lc->decimal_point);
           setlocale(LC_NUMERIC, "C");
         } }
+      { double sMed, sPior; int sN = swapint_colher(&swapInt, &sMed, &sPior);
+        if (sN > 0) printf("[swap] periodo=%.2fms med=%.2fms pior=%.1fms n=%d limite-jank=%.1fms\n",
+                           swapint_periodo(&swapInt), sMed, sPior, sN, swapint_limite_jank(&swapInt)); }
       printf("FPS=%.1f pior=%.1fms janks=%d | pior-quadro: texto %.1fms em %d linhas"
              " | gpu-cache=%d %.1fMB tela=%d/%.1fMB fila-tex=%d tex-despejos=%d(q=%d) disco-direto=%d neg-arte=%d"
              " | despejos=%d | cache-arte=%ld/%ldB hit=%ld miss=%ld grav=%ld err=%ld essenciais=%ld/%ld"

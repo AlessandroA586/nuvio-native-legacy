@@ -282,7 +282,7 @@ static void cenaSamsung(float x, float y, float t, float a) {
 // A mesma home nos tres layouts (as abas no alto trocam sozinhas), com a barra
 // lateral de VIDRO por cima, e embaixo duas linhas dos Ajustes em vidro.
 #define N160_LAY_S 2.3f
-static const char *const LAYOUTS[3] = { "Moderna", "Padrão", "Dinâmica (Apple TV)" };
+static const char *const LAYOUTS[3] = { "Moderna", "Padrão", "Dinâmica" };
 
 static void layModerna(GfxRect F, float t, float a) {
   float ar, ag, ab, pw = 84.0f, ph = 126.0f, px0 = F.x + 92.0f, py = F.y + F.h - ph - 18.0f;

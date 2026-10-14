@@ -79,6 +79,7 @@
 #include "abertura.h"
 #include "apoio.h"
 #include "telefoneui.h"
+#include "dts/dts_hls_tpk.h"
 #if defined(NV_ANDROID) && defined(NV_TOUCH_UI)
 #include "android.h"
 #endif
@@ -274,6 +275,7 @@ typedef enum {
   // Chaves de debrid digitadas nesta TV (debrid.h). No fim pelo mesmo motivo.
   // AllDebrid primeiro: e o unico que a conta nao traz.
   AJ_DEBRID_AD, AJ_DEBRID_AD_TESTAR, AJ_DEBRID_RD, AJ_DEBRID_TB, AJ_DEBRID_PM,
+  AJ_DEBRID_RD_TESTAR, AJ_DEBRID_TB_TESTAR, AJ_DEBRID_PM_TESTAR,
   // Ficha do titulo: catalogo primeiro (descoberta.c, metaCatalogo). Ligado =
   // "Usar sempre o Cinemeta" (o comportamento de antes). No fim pelo mesmo
   // motivo: valor[] e CHAVE[] sao posicionais.
@@ -553,6 +555,10 @@ typedef enum {
   // #461: menu na lateral (0, o de sempre) ou numa barra no topo (1). Por
   // perfil, so desta TV. No fim: valor[]/CHAVE[] posicionais.
   AJ_MENU_TOPO,
+  // #205: estilo das abas do cabecalho da colecao de streaming: Chips (0, o de
+  // sempre), Menu suspenso, Barra central, Paginas. Por perfil, so desta TV.
+  // No fim: valor[]/CHAVE[] posicionais.
+  AJ_ABAS_ESTILO,
   // Android: teclado do app (grade) ou do sistema (IME). LOCAL, 0 = automatico
   // (o de sempre). No fim: valor[]/CHAVE[] posicionais.
   AJ_TECLADO_ANDROID,
@@ -563,6 +569,9 @@ typedef enum {
   AJ_FALHA_PROVEDORES, AJ_FALHA_PROVEDOR_ORDEM,
   AJ_FALHA_RD_LIMITE, AJ_FALHA_TB_LIMITE, AJ_FALHA_PM_LIMITE, AJ_FALHA_AD_LIMITE,
   AJ_FALHA_ADDONS, AJ_FALHA_ADDON_ORDEM, AJ_FALHA_ADDON_LIMITE,
+  // #338: tamanho do painel Estatisticas ao vivo ao abrir (0 = o ultimo usado,
+  // 1 Completo, 2 Compacto, 3 Minimo). LOCAL, append-only.
+  AJ_ESTAT_TAMANHO,
   // #366: discovery rows only, per profile on this device. Append-only.
   AJ_OCULTAR_FILMES_VISTOS,
   AJ_N
@@ -642,9 +651,12 @@ static const char *V_TAMANHO_UI[] = { "100%", "120%", "130%", "150%" };
 static const char *V_TAMANHO_AJUSTES[] = { "80%", "90%", "100%" };
 static const char *V_INTERFACE_MODO[] = { "TV", "Mobile" };
 static const char *V_MENU_POS[] = { "Na lateral", "No topo" };   // #461
+static const char *V_ABAS_ESTILO[] = { "Chips", "Menu suspenso", "Barra central", "Páginas" };   // #205
 // F07: the order is cacheboost_cache_mb's (0, 256, 512, 1024 MB).
 // #338: indice = preset do NvPlayer.kt (0 = o de sempre).
 static const char *V_BUFFER[] = { "Automático", "Pequeno", "Médio", "Grande" };
+// #338: o indice menos 1 e o tamanho de estatvivoui.h (0 = lembrar o ultimo).
+static const char *V_ESTAT_TAMANHO[] = { "Lembrar o último", "Completo", "Compacto", "Mínimo" };
 static const char *V_CACHE_SEEK[] = { "Desligado", "256 MB", "512 MB", "1 GB" };
 // #334: indice gravado em p2pLimiteLocal; ajustes_p2p_limite_mb devolve os MB.
 static const char *V_P2P_LIMITE[] = { "Automático", "2 GB", "4 GB", "8 GB", "16 GB" };
@@ -652,9 +664,12 @@ static const unsigned P2P_LIMITE_MB[] = { 0, 2048, 4096, 8192, 16384 };
 // Only the Android player has an app-controlled disk cache (cacheboost.h);
 // LG/Samsung show the row with "Não disponível nesta TV". Compile-time, so the
 // many tests that compile ajustes.c alone need no extra source.
-// DTS -> AC3/AAC conversion lives only in the webOS player (src/dts).
+// DTS -> AC3/AAC conversion: the webOS player (src/dts) and, on the Samsung
+// .tpk, the loopback converter (dts/dts_hls_tpk.c) when FFmpeg is in the .so.
 static int dtsConversaoExiste(void) {
-#if defined(__APPLE__) || defined(NV_LINUX_DESKTOP) || defined(NV_TPK) || defined(NV_ANDROID) || defined(__EMSCRIPTEN__)
+#if defined(NV_TPK)
+  return dts_tpk_disponivel();
+#elif defined(__APPLE__) || defined(NV_LINUX_DESKTOP) || defined(NV_ANDROID) || defined(__EMSCRIPTEN__)
   return 0;
 #else
   return 1;
@@ -700,10 +715,10 @@ static const char *V_POSTER_PROV[] = { "Desligado", "SpatialPosters", "RPDB", "M
 // "DINAMICA" num enum que o app web valida faria os outros aparelhos cairem no
 // padrao. Ver somenteDesteAparelho.
 //
-// O rotulo da terceira leva "(Apple TV)" porque "Dinâmica" a secas e a chave da
-// traducao dos temas de cor ("Matching color"): o mesmo texto nas duas linhas
-// deixaria a home em ingles com o nome do tema.
-static const char *V_HOME_LAYOUT[] = { "Moderna", "Padrão", "Dinâmica (Apple TV)" };
+// A terceira e so "Dinâmica" (dono, 13/10: "pode tirar o apple tv"). A chave
+// era a do antigo tema de cor, que desde 03/10 se chama "Da arte"; a traducao
+// dela agora e a do layout. O valor gravado continua HOME_LAYOUT_DINAMICA.
+static const char *V_HOME_LAYOUT[] = { "Moderna", "Padrão", "Dinâmica" };
 // "Fonte automatica" (issue #130). O INDICE e o gravado (fonteAutoLocal) e o
 // FONTEAUTO_* de fonteauto.h: 0 = a regra de pontuacao, 1 = a primeira da
 // lista do addon, e so ela — o "Auto-play first source" do Nuvio.
@@ -1286,6 +1301,9 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Chave do Real-Debrid"),
   ACAO("Chave do TorBox"),
   ACAO("Chave do Premiumize"),
+  ACAO("Testar chave do Real-Debrid"),
+  ACAO("Testar chave do TorBox"),
+  ACAO("Testar chave do Premiumize"),
   ESC("Usar sempre o catálogo do Nuvio",          V_LIGA, 2),   // local: soCinemetaLocal
   // Notas na linha do titulo (ver o enum). Ligado/Desligado como as demais.
   ESC("IMDb",                       V_LIGA, 2),   // local: notaTituloImdb
@@ -1398,8 +1416,8 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Coincidência por regex",          V_FONTE_REGEX, 3),   // por perfil: fonteRegexLocal
   ACAO("Padrão da regex"),                                     // fonteregra.c (conta)
   ESC("Modelo de regex",                 V_FONTE_MODELO, 7),  // espelho de fonteregra_modelo_atual
-  NUM("Espaço entre fileiras",           50, 150, 10, "%"),     // local: espacoFileirasLocal
-  NUM("Espaço entre títulos",            50, 150, 10, "%"),     // local: espacoTitulosLocal
+  NUM("Espaço entre fileiras",           50, 300, 25, "%"),     // local: espacoFileirasLocal
+  NUM("Espaço entre títulos",            50, 300, 25, "%"),     // local: espacoTitulosLocal
   ESC("Proporção padrão",                V_PROPORCAO, 9),        // local: proporcaoPadraoLocal
   ESC("Também em Continuar assistindo",  V_LIGA, 2),             // local: cwRetidoTambemLocal
   ESC("Continuar na escolha de perfil",  V_LIGA, 2),             // local: psContinuarLocal
@@ -1434,6 +1452,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Modo da interface", V_INTERFACE_MODO, 2),
   ESC("Botão de microfone na busca", V_MIC_BUSCA, 3),   // local: micBuscaLocal (.tpk)
   ESC("Posição do menu", V_MENU_POS, 2),   // por perfil: menuTopoLocal (#461)
+  ESC("Estilo das abas", V_ABAS_ESTILO, 4),   // por perfil: abasEstiloLocal (#205)
   ESC("Teclado", V_TECLADO_AND, 3),   // local: tecladoAndroidLocal (Android)
   ESC("Cor do contorno da legenda", V_LEG_CONTORNO_COR, 7),   // local: legendaContornoCorLocal (#475)
   ESC("Trocar provedor se falhar", V_LIGA, 2),
@@ -1445,6 +1464,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Trocar add-on se falhar", V_LIGA, 2),
   ACAO("Ordem e limites dos add-ons"),
   NUM("Links neste add-on", 1, FONTEFALHA_MAX_LINKS, 1, ""),
+  ESC("Tamanho das estatísticas ao vivo", V_ESTAT_TAMANHO, 4),   // local: estatTamanhoLocal (#338)
   ESC("Ocultar filmes assistidos", V_LIGA, 2), // por perfil, local: hideWatchedMoviesLocal
 };
 
@@ -1574,6 +1594,7 @@ static const char *CHAVE[] = {
   "homeLayoutLocal",
   // Credenciais: moram em debrid.txt (dados), por aparelho, nunca aqui.
   "-debridAD", "-debridADTestar", "-debridRD", "-debridTB", "-debridPM",
+  "-debridRDTestar", "-debridTBTestar", "-debridPMTestar",
   // LOCAL e SEM o "-": o web nao tem esta escolha e ela precisa sobreviver.
   "soCinemetaLocal",
   // LOCAIS e SEM o "-": sobrevivem ao fechamento; o web nao tem a linha.
@@ -1688,11 +1709,13 @@ static const char *CHAVE[] = {
   "interfaceModoLocal",
   "micBuscaLocal",
   "menuTopoLocal",
+  "abasEstiloLocal",
   "tecladoAndroidLocal",
   "legendaContornoCorLocal",
   "-falhaProvedores", "-falhaProvedorOrdem",
   "-falhaRDLinks", "-falhaTBLinks", "-falhaPMLinks", "-falhaADLinks",
   "-falhaAddons", "-falhaAddonOrdem", "-falhaAddonLinks",
+  "estatTamanhoLocal",
   "hideWatchedMoviesLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
@@ -2338,6 +2361,11 @@ int ajustes_legenda_sync_audio(void) { return lig(AJ_LEG_SYNC_AUDIO); }
 int ajustes_legenda_sync_audio(void) { return 0; }   // escondida fora do Android
 #endif
 int ajustes_legenda_forcada_auto(void) { return lig(AJ_LEG_FORCADA); }   // #287, padrao Ligado
+// #338: -1 = lembrar o ultimo tamanho; 0..2 = Completo, Compacto, Minimo.
+int ajustes_estat_tamanho(void) {
+  int v = valor[AJ_ESTAT_TAMANHO];
+  return v >= 1 && v <= 3 ? v - 1 : -1;
+}
 int ajustes_buffer_preset(void) {
 #ifdef NV_ANDROID
   int v = valor[AJ_BUFFER];
@@ -2502,6 +2530,7 @@ int ajustes_rail_moderna(void)        { return lig(AJ_RAIL_MODERNA); }
 int ajustes_menu_topo(void) {
   return valor[AJ_MENU_TOPO] == 1 && ajustes_home_layout() != HOME_LAYOUT_DINAMICA && !ajRetrato();
 }
+int ajustes_abas_estilo(void) { return valor[AJ_ABAS_ESTILO]; }
 int ajustes_rail_recolhida(void) {
   // No telefone em retrato, o menu sobrepoe a pagina. A preferencia salva
   // continua valendo quando a tela volta para paisagem.
@@ -2677,7 +2706,7 @@ int ajustes_social(void)              { return lig(AJ_SOCIAL); }
 // Espaco da Home em fracao do valor medido. Fora da faixa do NUM (arquivo torto)
 // volta para dentro dela; 0 (arquivo sem a chave) nao chega aqui: o padrao e 100.
 float ajustes_espaco_fator(int pct) {
-  return (pct < 50 ? 50 : pct > 150 ? 150 : pct) / 100.0f;
+  return (pct < 50 ? 50 : pct > 300 ? 300 : pct) / 100.0f;
 }
 float ajustes_espaco_fileiras(void) { return ajustes_espaco_fator(valor[AJ_ESPACO_FILEIRAS]); }
 float ajustes_espaco_titulos(void)  { return ajustes_espaco_fator(valor[AJ_ESPACO_TITULOS]); }
@@ -3195,18 +3224,24 @@ static pthread_t adFio;
 static int adFioVivo;
 static _Atomic int adTeste;             // 0 nunca/livre, 1 testando, 2 pronto, 3 fio terminou
 static int adTesteOk;
+static int adTesteServico = DEBRID_AD;
+static int debTesteServico(int op) {
+  return op == AJ_DEBRID_RD_TESTAR ? DEBRID_RD : op == AJ_DEBRID_TB_TESTAR ? DEBRID_TB
+       : op == AJ_DEBRID_PM_TESTAR ? DEBRID_PM : op == AJ_DEBRID_AD_TESTAR ? DEBRID_AD : -1;
+}
 static char adTesteMsg[64], adTesteData[16];
 static void *adTesteFio(void *u) {
   char m[64], d[16];
   (void)u;
-  adTesteOk = debrid_testar_alldebrid(m, sizeof m, d, sizeof d);
+  adTesteOk = debrid_testar_conta(adTesteServico, m, sizeof m, d, sizeof d);
   snprintf(adTesteData, sizeof adTesteData, "%s", d);
   snprintf(adTesteMsg, sizeof adTesteMsg, "%s", m);
   atomic_store_explicit(&adTeste, 3, memory_order_release);
   return NULL;
 }
-static void adTesteIniciar(void) {
+static void adTesteIniciar(int servico) {
   if (adFioVivo) return;
+  adTesteServico = servico;
   atomic_store_explicit(&adTeste, 1, memory_order_release);
   if (pthread_create(&adFio, NULL, adTesteFio, NULL) != 0) {
     snprintf(adTesteMsg, sizeof adTesteMsg, "sem resposta do servidor");
@@ -3225,10 +3260,10 @@ static void adTesteRecolher(void) {
 }
 // O texto vem de debrid_testar_alldebrid como CHAVE de i18n (frases fixas,
 // listadas em idioma_tab.h); a de "premium até %s" leva a data a parte.
-static const char *adTesteTexto(void) {
+static const char *adTesteTexto(int servico) {
   static char buf[64];
   int e = atomic_load_explicit(&adTeste, memory_order_acquire);
-  if (e == 0) return debrid_origem("alldebrid") ? i18n("OK testa") : i18n("informe a chave primeiro");
+  if (e == 0 || servico != adTesteServico) return debrid_origem(debrid_servico_id(servico)) ? i18n("OK testa") : i18n("informe a chave primeiro");
   if (e == 1 || e == 3) return i18n("testando…");
   if (adTesteOk && adTesteData[0]) {
     snprintf(buf, sizeof buf, i18n("premium até %s"), adTesteData);
@@ -4468,6 +4503,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_LAYOUT_AJUSTES: /* #339: o arranjo dos Ajustes e desta TV */
     case AJ_INTERFACE_MODO: /* TV/Mobile follows this device, never the account */
     case AJ_MENU_TOPO:      /* #461: o web nao tem; por perfil (perfilLocal) */
+    case AJ_ABAS_ESTILO:    /* #205: idem */
     case AJ_LOGO_TRAILER:   /* so a protecao de OLED desta TV */
     case AJ_LEG_MOSTRAR:
     case AJ_HDR_UI:         /* o painel e desta TV */
@@ -4481,6 +4517,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_LEG_CONTORNO_COR: /* #475: idem */
     case AJ_CACHE_SEEK:     /* F07: o disco e o player sao desta TV */
     case AJ_BUFFER:         /* #338: o buffer e do player desta TV */
+    case AJ_ESTAT_TAMANHO:  /* #338: o painel de estatisticas e desta TV */
     case AJ_TRAILER_ZOOM_TPK: /* #241: o firmware de cada Samsung reage de um jeito */
     case AJ_FUNDO:          /* o desfoque custa GPU desta TV; o web nao tem */
     case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: /* teste do vidro: visual desta TV */
@@ -4514,7 +4551,7 @@ static int somenteDesteAparelho(int op) {
 // (ajustes-p<N>.txt) e continuam FORA do blob (somenteDesteAparelho).
 static int perfilLocal(int i) {
   return i == AJ_CW_FONTE || i == AJ_CW_PROXIMO || i == AJ_SALVOS_DEST || i == AJ_HIST_CONTA || i == AJ_SOCIAL ||
-         i == AJ_MENU_TOPO || i == AJ_OCULTAR_FILMES_VISTOS;
+         i == AJ_MENU_TOPO || i == AJ_ABAS_ESTILO || i == AJ_OCULTAR_FILMES_VISTOS;
 }
 
 static int dePerfil(int i) {
@@ -4556,7 +4593,7 @@ int ajustes_perfil_restaurar(int perfil) {
   nomePerfil(nome, sizeof nome, perfil);
   t = dados_ler(nome);
   if (!t) return 0;
-  { int focoAntigo = -1, viuFoco = 0, viuTopo = 0;
+  { int focoAntigo = -1, viuFoco = 0, viuTopo = 0, viuAbas = 0;
   for (l = t; l && *l; ) {
     char chave[64], *fim = strchr(l, '\n');
     int v, i;
@@ -4570,6 +4607,7 @@ int ajustes_perfil_restaurar(int perfil) {
         v = limita(i, v);
         if (i == AJ_FOCO_TRAILER) viuFoco = 1;
         if (i == AJ_MENU_TOPO) viuTopo = 1;
+        if (i == AJ_ABAS_ESTILO) viuAbas = 1;
         if (v != valor[i]) { valor[i] = v; mudou++; }
         break;
       }
@@ -4581,7 +4619,9 @@ int ajustes_perfil_restaurar(int perfil) {
   }
   // Copia de antes do #461 nao tem menuTopoLocal, e a conta nao o guarda: sem
   // isto o topo ligado pelo perfil anterior vazaria para este.
-  if (!viuTopo && valor[AJ_MENU_TOPO]) { valor[AJ_MENU_TOPO] = 0; mudou++; } }
+  if (!viuTopo && valor[AJ_MENU_TOPO]) { valor[AJ_MENU_TOPO] = 0; mudou++; }
+  // Idem para o estilo das abas (#205).
+  if (!viuAbas && valor[AJ_ABAS_ESTILO]) { valor[AJ_ABAS_ESTILO] = 0; mudou++; } }
   free(t);
   if (mudou) {
     gravar();
@@ -5239,7 +5279,7 @@ static const char *textoLeitura(int op) {
   if (op == AJ_P2P_TESTAR) return p2pTesteTexto();
   if (op >= AJ_POSTER_INST && op <= AJ_POSTER_TESTAR) return pstTexto(op);
   if (debIdx(op) >= 0) return debValor(op);
-  if (op == AJ_DEBRID_AD_TESTAR) return adTesteTexto();
+  if (debTesteServico(op) >= 0) return adTesteTexto(debTesteServico(op));
   if (op == AJ_ENVIAR_LOG) {
     static char b[48];
     AvisosEnvio env;
@@ -5751,6 +5791,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_ITENS_FILEIRA: return "Quantos títulos cada fileira da Home mostra antes do Ver tudo. Mais itens usam mais memória: em TV com 1 GB de memória a Home pode ficar mais lenta ou fechar. Se o app fechar depois de você aumentar, ele volta sozinho ao valor anterior. Aumentar vale na próxima vez que o app abrir.";
     case AJ_FIL_ORDEM: return "Abre a lista de fileiras para reordenar, ligar, desligar e escolher o card de cada uma. É lá que dá para ver de onde cada fileira vem.";
     case AJ_RAIL: return "A barra de navegação da esquerda fica sempre aberta, ou recolhida até você ir até ela.";
+    case AJ_ABAS_ESTILO: return "Chips: uma fileira de botões, como sempre. Menu suspenso: escolha Filmes ou Séries e depois o catálogo numa lista. Barra central: uma pílula de vidro no centro do alto da tela. Páginas: um catálogo por página; Esquerda e Direita trocam de página. Vale para este perfil.";
     case AJ_MENU_TOPO: return "Na lateral: o menu fica na esquerda, como sempre. No topo: o menu vira uma barra no alto da tela e o conteúdo usa a largura toda. Para cima no primeiro item da tela chega à barra e Para baixo volta. Vale para este perfil.";
     case AJ_RAIL_MODERNA: return "Troca a barra lateral pela versão nova, com ícones maiores. Ela ignora a escolha entre recolhida e fixa.";
     case AJ_RAIL_BLUR: return "Desfoca a arte atrás da barra lateral moderna em vez de usar um fundo sólido.";
@@ -5873,6 +5914,8 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_JF_ENTRAR: return "Usa o Quick Connect se o servidor permitir: aprove o código em outro app do Jellyfin. Senão, pede usuário e senha.";
     case AJ_JF_SAIR: return "Pede o OK duas vezes. Encerra a sessão no servidor e apaga o token desta TV.";
     case AJ_DEBRID_AD: return "Sua chave de API do AllDebrid (alldebrid.com/apikeys). Com ela os torrents das fontes tocam pelo AllDebrid, que precisa de conta premium. Fica só nesta TV, aparece mascarada e vale no lugar da que vier da conta Nuvio.";
+    case AJ_DEBRID_RD_TESTAR: case AJ_DEBRID_TB_TESTAR: case AJ_DEBRID_PM_TESTAR:
+      return "Consulta se a chave vale e se a conta é premium. O resultado fica em cache por cinco minutos.";
     case AJ_DEBRID_AD_TESTAR: return "Pergunta ao AllDebrid se a chave vale e até quando a conta é premium. Não mostra seu usuário nem e-mail.";
     case AJ_DEBRID_RD: return "Chave de API do Real-Debrid (real-debrid.com/apitoken). Só precisa se a sua conta Nuvio não a traz. Fica só nesta TV e aparece mascarada.";
     case AJ_DEBRID_TB: return "Chave de API do TorBox. Só precisa se a sua conta Nuvio não a traz. Fica só nesta TV e aparece mascarada.";
@@ -5919,7 +5962,11 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_ESPACO_FILEIRAS: return "O espaço vertical entre uma fileira da Home e a seguinte. Com menos cabem mais fileiras na tela, com mais a Home fica mais arejada.";
     case AJ_ESPACO_TITULOS: return "O espaço horizontal entre os cartazes de uma fileira da Home.";
     case AJ_TAM_MIN: return "Na escolha automática, fontes menores que este tamanho ficam para o fim da fila. Se for maior que o tamanho máximo, o mínimo é ignorado. Só vale para arquivos com tamanho conhecido; se só houver fontes fora da faixa, a melhor delas ainda toca.";
+#ifdef NV_TPK
+    case AJ_DTS_AC3: return "Esta TV não toca DTS nem TrueHD: o app converte o som na hora. 5.1 (Dolby Digital) mantém o surround para barra de som e receiver; 7.1, Atmos e DTS:X viram 5.1, sem os objetos. Estéreo (AAC) serve qualquer TV. Vale a partir do próximo vídeo.";
+#else
     case AJ_DTS_AC3: return "Como o áudio DTS é entregue à TV quando o app o converte (só na LG). Estéreo (AAC) é o modo provado e serve qualquer TV. 5.1 (Dolby Digital) mantém o som surround para barra de som e receiver por ARC/eARC; vale a partir do próximo vídeo.";
+#endif
     case AJ_PS_CONTINUAR: return "Ligado, cada perfil mostra na escolha de perfil o cartão com o que ele estava assistindo. Desligado, a tela mostra só os perfis.";
     case AJ_HIST_CONTA: return "Ligado (padrão): o que você assiste neste perfil sobe para a conta Nuvio, com o progresso e os vistos. Desligado: nada disso é enviado à conta; o Trakt e o Simkl vinculados a este perfil continuam recebendo. Vale só para este perfil.";
     case AJ_SOCIAL: return "Ligado (padrão): amigos, atividade deles e recomendações. Desligado: tudo isso some, com a fileira de amigos da Home, e o app para de falar com o serviço social. Salvos e Avisos continuam. Vale só para este perfil.";
@@ -5932,6 +5979,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_AVANCADAS: return "Mostra, em todas as categorias, as opções técnicas marcadas como Avançado. Vale só para esta TV.";
     case AJ_LOGO_TRAILER: return "Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.";
     case AJ_TRAILER_ZOOM_TPK: return "Amplia a imagem do trailer e libera os modos de recorte e zoom da proporção no player; em algumas TVs Samsung pode deixar a tela preta ou mostrar a tela inicial da TV.";
+    case AJ_ESTAT_TAMANHO: return "Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fixa no canto. Lembrar o último reabre como você deixou. Com o painel aberto, OK ou Esquerda/Direita trocam o tamanho. Vale só nesta TV.";
     case AJ_BUFFER: return "Quanto vídeo o player baixa à frente. Pequeno poupa memória e rede; Grande aguenta melhor internet instável e arquivos pesados, até o limite de memória da TV. Não muda a qualidade da imagem. Vale a partir do próximo vídeo.";
     case AJ_CACHE_SEEK: return "Guarda no disco o trecho já baixado do vídeo, para voltar sem baixar de novo. Apagado ao fechar o player.";
     case AJ_ANIM: return "Use Reduzidas para movimentos mais discretos ao navegar pela interface.";
@@ -6121,11 +6169,13 @@ static const char *beneficioProprio(int op) {
     case AJ_FONTE_PRAZO: return "Quanto tempo o Nuvio espera os add-ons antes de escolher.";
     case AJ_PLR_CLASSIF: return "No começo do filme, a ilha mostra a classificação e os avisos.";
     case AJ_TELA_ABERTURA: return "O que aparece enquanto o vídeo abre: a arte do título ou os detalhes da fonte.";
+    case AJ_ESTAT_TAMANHO: return "Completo, Compacto ou Mínimo: o tamanho das estatísticas ao vivo no player.";
     case AJ_SAIDA_PLAYER: return "O filme pode ficar na ilha do relógio para você voltar depois.";
     case AJ_LEG_FORCADA: return "Placas e falas em outra língua aparecem; o resto, não.";
     case AJ_BUSCA_CINEMETA: return "A busca também consulta o Cinemeta se o catálogo do Nuvio falhar.";
     case AJ_HOME_LAYOUT: return "Como a Home se organiza: Moderna, Padrão ou Dinâmica.";
     case AJ_MENU_TOPO: return "Onde fica o menu: na esquerda ou no alto da tela.";
+    case AJ_ABAS_ESTILO: return "Como as abas de uma coleção de streaming aparecem: chips, menu suspenso, barra central ou páginas.";
     case AJ_HERO_FUNDO: return "De onde vem a arte grande do destaque e da página do título.";
     case AJ_HERO_ARTE_DIF: return "O destaque pode usar outra arte que não a do cartaz.";
     case AJ_HERO_TRAILER: return "Com o foco parado no destaque, o trailer toca no lugar da arte.";
@@ -6735,6 +6785,11 @@ static void mudarValor(int op, int dir);
 static int passoAdiante(int op, int dir) {
   const Opcao *o = &OPCOES[op];
   if (op == AJ_FIL_LIMITE) return fil_limite_passo(valor[op], dir);   // Android: 40 -> Ilimitado
+  // Valores antigos (passos de 10) ficam intactos ate a primeira seta.
+  if (op == AJ_ESPACO_FILEIRAS || op == AJ_ESPACO_TITULOS) {
+    int v = valor[op] - o->min;
+    return limita(op, o->min + (dir > 0 ? v / o->passo + 1 : (v + o->passo - 1) / o->passo - 1) * o->passo);
+  }
   if (o->tipo == OP_NUMERO) return limita(op, valor[op] + dir * o->passo);
   { int n = nValores(op), v = valor[op], k;
     // Ao girar, pula o que esta TV nao suporta (o 512 numa TV de 160 so enganaria).
@@ -7126,13 +7181,58 @@ static const char *frRegexTexto(void) {
   fonteregra_regex(p, sizeof p);
   if (e < 0) return i18n("Regex inválida: ignorada");
   if (!p[0]) return i18n("Nenhum");
-  snprintf(b, sizeof b, "%.60s%s", p, strlen(p) > 60 ? "…" : "");
+  // 60 bytes, recuando para nao cortar um caractere UTF-8 (ñ, emoji) no meio.
+  { size_t k = strlen(p);
+    if (k > 60) { k = 60; while (k > 0 && ((unsigned char)p[k] & 0xC0) == 0x80) k--; }
+    snprintf(b, sizeof b, "%.*s%s", (int)k, p, strlen(p) > k ? "…" : ""); }
   return b;
 }
 // Sinais de regex que o teclado da TV oferece (o celular digita o que quiser,
-// dentro do mesmo alfabeto).
+// dentro do mesmo alfabeto). "=" e "<" ">" sao dos lookaheads/lookbehinds
+// (?= ?! ?<= ?<!): sem o "=" o "(?=" chegava como "(?" e a regex era recusada.
 static const char *FR_ALFA_REGEX =
-  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789|()[]{}.*+?^$\\-_ :!/,";
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789|()[]{}.*+?^$\\-_ :!/,=<>'\"&;%#@~";
+
+// O campo "Padrão do filtro". O padrao volta para o campo: corrigir um sinal nao
+// pode obrigar a redigitar tudo. Vazio apaga. Ate FR_REGEX_MAX (o teto do
+// oficial e do que fica guardado), e o texto do celular entra com ñ, acento e
+// emoji inteiros (ver teclado_aceitar_utf8).
+static void frRegexAbrir(void) {
+  char atual[FR_REGEX_MAX + 1];
+  fonteregra_regex(atual, sizeof atual);
+  stCampo = AJ_FONTE_REGEX_PADRAO;
+  teclado_abrir_com("Padrão da regex", "Ex.: ESP|Latino|Castellano. Vazio apaga.",
+                    FR_REGEX_MAX, FR_ALFA_REGEX, atual[0] ? atual : NULL);
+  teclado_aceitar_utf8(1);
+}
+#ifdef AJUSTES_TESTE
+// O caminho de verdade do campo: abre com o padrao guardado, recebe `colado`
+// como texto do celular (NULL = so abrir e dar OK; `apagar` toques em "apagar"
+// antes), confirma em "pronto", grava, e devolve o que ficou em fonteregra.txt
+// (relido do disco) e o estado da regex.
+int ajustes_teste_regex_campo(const char *colado, int apagar, char *lido, size_t n) {
+  SDL_Event e;
+  int i;
+  frRegexAbrir();
+  if (!teclado_aberto()) return -9;
+  if (colado) teclado_teste_sistema(colado);
+  memset(&e, 0, sizeof e);
+  e.type = SDL_KEYDOWN;
+  teclado_teste_foco(0, 0);
+  e.key.keysym.sym = SDLK_DOWN;
+  for (i = 0; i < 20; i++) teclado_evento(&e);          // a fileira apagar/limpar/pronto
+  e.key.keysym.sym = SDLK_RETURN;
+  for (i = 0; i < apagar; i++) teclado_evento(&e);      // coluna 0 = apagar
+  e.key.keysym.sym = SDLK_RIGHT; teclado_evento(&e); teclado_evento(&e);
+  e.key.keysym.sym = SDLK_RETURN; teclado_evento(&e);
+  if (teclado_aberto()) return -8;
+  ajustes_atualizar(0.016f, SDL_GetTicks());
+  teclado_esquecer();
+  fonteregra_carregar();
+  fonteregra_regex(lido, n);
+  return fonteregra_regex_estado();
+}
+#endif
 
 // UM PASSO NO VALOR DA OPCAO `op` (dir = +1 ou -1), com tudo o que a mudanca
 // tem de disparar, e a gravacao. Um lugar so para as setas do modo edicao e
@@ -7356,16 +7456,7 @@ static void eventoTela(const SDL_Event *e) {
     if (focoOp == AJ_FONTE_ADDONS_PERM || focoOp == AJ_FONTE_PLUGINS_PERM) {
       frAbrir(focoOp == AJ_FONTE_PLUGINS_PERM); return;
     }
-    if (focoOp == AJ_FONTE_REGEX_PADRAO) {
-      char atual[FR_REGEX_MAX + 1];
-      fonteregra_regex(atual, sizeof atual);
-      stCampo = focoOp;
-      // O padrao volta para o campo: corrigir um sinal nao pode obrigar a
-      // redigitar tudo. Vazio apaga.
-      teclado_abrir_com("Padrão da regex", "Ex.: ESP|Latino|Castellano. Vazio apaga.",
-                        TECLADO_LONGO, FR_ALFA_REGEX, atual[0] ? atual : NULL);
-      return;
-    }
+    if (focoOp == AJ_FONTE_REGEX_PADRAO) { frRegexAbrir(); return; }
     if (focoOp == AJ_DIAGNOSTICO) { pediuDiagnostico = 1; return; }
     if (focoOp == AJ_HERO_CATALOGOS) { if (!inativa(focoOp)) hcAbrir(); return; }
     if (focoOp == AJ_VELOCIDADE) { pediuVelocidade = 1; return; }
@@ -7457,7 +7548,7 @@ static void eventoTela(const SDL_Event *e) {
                         96, DEB_ALFA, NULL);
       return;
     }
-    if (focoOp == AJ_DEBRID_AD_TESTAR) { adTesteIniciar(); return; }
+    if (debTesteServico(focoOp) >= 0) { adTesteIniciar(debTesteServico(focoOp)); return; }
     if (focoOp == AJ_TRAKT) { traktauth_comecar(); return; }
     if (focoOp == AJ_SIMKL) { simklauth_comecar(); return; }
     if (focoOp == AJ_DISCORD) {
@@ -8114,7 +8205,7 @@ static AjPreview familiaPreviaOpcao(int op) {
   switch (op) {
     case AJ_LEG_CONTORNO_COR:
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
-    case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK: case AJ_BUFFER:
+    case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK: case AJ_BUFFER: case AJ_ESTAT_TAMANHO:
     case AJ_DV_MKV:
     case AJ_LEG_FORCADA:
     case AJ_AUD_LINGUA: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_FONTE_MANUAL:
@@ -8133,7 +8224,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_ESPACO_FILEIRAS: case AJ_ESPACO_TITULOS:
     case AJ_HERO_TRAILER_SOM: case AJ_HERO_TRAILER_ESPERA: case AJ_HERO_TRANSICAO: case AJ_LOGO_TRAILER:
     case AJ_ADDON_FUNDO: case AJ_ADDON_LOGO:
-    case AJ_FIL_ORDEM: case AJ_RAIL: case AJ_RAIL_MODERNA: case AJ_MENU_TOPO:
+    case AJ_FIL_ORDEM: case AJ_RAIL: case AJ_RAIL_MODERNA: case AJ_MENU_TOPO: case AJ_ABAS_ESTILO:
     case AJ_RAIL_BLUR: case AJ_MIC_BUSCA: case AJ_HERO: case AJ_HERO_CATALOGOS:
     case AJ_PS_FUNDO: case AJ_PS_CONTINUAR: case AJ_DESCOBRIR: case AJ_ROTULOS:
     case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_OCULTAR_NLANC:
@@ -8206,6 +8297,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_POSTER_CHAVE: case AJ_POSTER_MODELO: case AJ_POSTER_TESTAR:
     case AJ_DEBRID_AD: case AJ_DEBRID_AD_TESTAR: case AJ_DEBRID_RD:
     case AJ_DEBRID_TB: case AJ_DEBRID_PM:
+    case AJ_DEBRID_RD_TESTAR: case AJ_DEBRID_TB_TESTAR: case AJ_DEBRID_PM_TESTAR:
       return AJPV_ACAO;
     default:
       return (AjPreview)-1;

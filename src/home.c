@@ -37,6 +37,7 @@ static void heroTempoInicio(int indice) {
 #include "tex_cache.h"
 #include "focus.h"
 #include "anim.h"
+#include "pressdip.h"
 #include "revela.h"
 #include "layout.h"
 #include "telefoneui.h"
@@ -357,6 +358,7 @@ static int okPressionando = 0;
 static int okLongDisparado = 0;
 static int okConsumirSoltura = 0;
 static float okHold = 0.0f;
+static float okDip = 1.0f;   // escala do card sob o OK apertado (pressdip.h)
 
 // --- hero-carrossel ---
 // O DESTAQUE E A PRIMEIRA FILEIRA DA HOME, e nao um cabecalho decorativo.
@@ -3365,6 +3367,7 @@ void home_atualizar(float dt, Uint32 agora) {
     okHold = anim_clamp((agora - okDesde) / (float)NV_HOLD_MS, 0.0f, 1.0f);
   else if (!okPressionando)
     okHold = 0.0f;
+  okDip = pressdip_passo(okDip, okPressionando && !focoHero, dt);
   if (okPressionando && okHold >= 1.0f && !okLongDisparado) {
     okLongDisparado = 1;
     okConsumirSoltura = 1;
@@ -4305,6 +4308,14 @@ static void alvoAcaoHero(GfxRect r, float saida, float cin, float alpha) {
     ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroHero, NULL, 0, 0);
 }
 #endif
+// O veu do destaque dos layouts novos (GFX_VITRINE), `h` = altura da arte. Na
+// Dinamica o veu de baixo comeca no MESMO y absoluto que tinha com a arte de
+// 780 (0,38 x 780): o texto le igual, e a arte segue escurecendo ate a base.
+static void heroVeuLayout(int lay, float h) {
+  vitVeu = 0.92f; vitDissolve = 1.0f; vitRaio = 0.0f;
+  vitAncora = lay == HOME_LAYOUT_PADRAO ? 0.30f : 0.28f;
+  vitVeuIni = lay == HOME_LAYOUT_DINAMICA ? 0.38f * alturaTextoHeroDin() / h : 0.0f;
+}
 static void desenhaHero(Uint32 agora, float saida) {
   (void)agora;
   const int motionReduzido = ajustes_animacoes_reduzidas();
@@ -4342,8 +4353,7 @@ static void desenhaHero(Uint32 agora, float saida) {
     // borda a borda e do topo da tela e se DISSOLVE na base para o fundo, onde
     // comecam as fileiras (o texto fica no trecho ainda opaco, com o veu).
     cheio = 0; modoHero = GFX_VITRINE;
-    vitVeu = 0.92f; vitAncora = 0.30f; vitDissolve = 1.0f; vitRaio = 0.0f;
-    vitVeuIni = 0.0f;
+    heroVeuLayout(lay, r.h);
     logoH = NV_PAD_LOGO_H; sinW = NV_PAD_SIN_W; sinLinhas = 3;
     btnH = NV_HERO_BOTAO_COMPACTO_H; btnGap = 22.0f;
   } else if (lay == HOME_LAYOUT_DINAMICA) {
@@ -4360,10 +4370,7 @@ static void desenhaHero(Uint32 agora, float saida) {
     // O texto sai ANTES de o destaque terminar de subir: rolar com o texto
     // inteiro na tela le como arrasto, e ele ja nao e o assunto da tela.
     aVis = anim_clamp(1.0f + dinY / 320.0f, 0.0f, 1.0f);
-    vitVeu = 0.92f; vitAncora = 0.28f; vitDissolve = 1.0f; vitRaio = 0.0f;
-    // O veu de baixo comeca no MESMO y absoluto que tinha com a arte de 780
-    // (0,38 x 780): o texto le igual, e a arte segue escurecendo ate a base.
-    vitVeuIni = 0.38f * alturaTextoHeroDin() / r.h;
+    heroVeuLayout(lay, r.h);
     logoH = NV_DIN_LOGO_H; sinW = 760.0f;
     btnH = NV_HERO_BOTAO_COMPACTO_H; btnGap = 22.0f;
   }
@@ -6174,6 +6181,22 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
 // desenhado: e a mesma arte do destaque (arte_hero_do_item), o mesmo bloco de
 // texto (desenhaCopiaHero) e o mesmo cartaz de fileira (desenhaArteCard,
 // veusDoCard, desenhaRotuloCard).
+// O destaque segue o layout da Home (Moderna, Padrao, Dinamica), parado: a
+// Vitrine nao rola o destaque, as fileiras e que sobem por baixo dele. No
+// telefone fica a Moderna (a forma compacta dos outros depende da rolagem).
+int home_vitrine_layout(void) {
+  return homeRetratoTelefone() || heroCompactoTelefone() ? HOME_LAYOUT_MODERNA : layoutHome();
+}
+// Topo do titulo da primeira fileira; `filH` = altura de uma fileira inteira.
+// Padrao: rente ao banner, como na Home. Dinamica: a fileira em foco no pe da
+// tela, embaixo da arte inteira (a da Home com o foco no destaque).
+float home_vitrine_topo(float filH) {
+  switch (home_vitrine_layout()) {
+    case HOME_LAYOUT_PADRAO:   return NV_PAD_TOPO_FIL;
+    case HOME_LAYOUT_DINAMICA: return NV_TELA_H - filH;
+    default:                   return NV_SHELF_TOP;
+  }
+}
 void home_vitrine_medida(float *w, float *h, float *passo, float *rotH) {
   *w = larguraDe(FILEIRA_NORMAL); *h = alturaDe(FILEIRA_NORMAL);
   *passo = *w + gapDe(FILEIRA_NORMAL);
@@ -6188,16 +6211,25 @@ int home_vitrine_arte_pronta(const CatItem *ci) {
 // cheio). 1 se desenhou.
 int home_vitrine_arte(const CatItem *ci, float alfa) {
   const char *a = ci ? arte_hero_do_item(ci) : NULL;
+  int lay = home_vitrine_layout();
   GfxRect r = { 0, 0, NV_TELA_W, NV_HERO_CHEIO_H };
   if (!a || !a[0] || alfa <= 0.004f) return 0;
-  return desenhaArteHero(r, GFX_HERO_CHEIO, ci, a, alfa, 0.0f);
+  if (lay == HOME_LAYOUT_MODERNA) return desenhaArteHero(r, GFX_HERO_CHEIO, ci, a, alfa, 0.0f);
+  if (lay == HOME_LAYOUT_PADRAO) r = (GfxRect){ 0, NV_PAD_BANNER_Y, NV_TELA_W, NV_PAD_BANNER_H };
+  else r.h = NV_DIN_ARTE_H;
+  heroVeuLayout(lay, r.h);
+  return desenhaArteHero(r, GFX_VITRINE, ci, a, alfa, 0.0f);
 }
 // Logo, meta, selos e sinopse do titulo, ancorados acima das fileiras.
-void home_vitrine_texto(const CatItem *ci, float alfa) {
-  float base = NV_SHELF_TOP - NV_HERO_COPY_GAP - 24.0f;
+// `topo` = home_vitrine_topo; o bloco usa o logo e a largura do layout.
+void home_vitrine_texto(const CatItem *ci, float topo, float alfa) {
+  int lay = home_vitrine_layout();
+  float base = topo - NV_HERO_COPY_GAP - 24.0f;
+  float logoH = lay == HOME_LAYOUT_PADRAO ? NV_PAD_LOGO_H : lay == HOME_LAYOUT_DINAMICA ? NV_DIN_LOGO_H : 150.0f;
+  float sinW = lay == HOME_LAYOUT_PADRAO ? NV_PAD_SIN_W : lay == HOME_LAYOUT_DINAMICA ? 760.0f : NV_HERO_SIN_W;
   if (!ci || alfa <= 0.004f) return;
-  (void)desenhaCopiaHero(ci, 0, ajustes_conteudo_x(), base, HOME_LAYOUT_MODERNA, 1,
-                         150.0f, NV_HERO_SIN_W, 3, alfa, alfa, 0.0f,
+  (void)desenhaCopiaHero(ci, 0, ajustes_conteudo_x(), base, lay, lay == HOME_LAYOUT_MODERNA,
+                         logoH, homeTextoLargura(sinW), 3, alfa, alfa, 0.0f,
                          NV_HERO_BOTAO_H, NV_HOME_HERO_BOTAO_GAP, 0.0f);
 }
 // Um cartaz de fileira normal. `base` e a caixa em repouso (o rotulo fica nela)
@@ -6702,6 +6734,7 @@ void home_desenhar(Uint32 agora) {
           float f = animFoco[r][c];
           if (passe == 0 && f < 0.01f) continue;
           float esc = 1.0f + escalaDe(tipo) * f;
+          if (r == foco.fileira && c == foco.coluna) esc *= okDip;
           float w = lw * esc, h = artH * esc;
           // EXPANSAO EM REPOUSO. `abre` so e diferente de zero no card focado
           // desta fileira; os DEPOIS dele sao empurrados pela mesma medida.
@@ -6735,7 +6768,7 @@ void home_desenhar(Uint32 agora) {
           if (abre > 0.0f) w = lw * esc + (larguraAberta - lw * esc) * abre;
           float cx = homeFileiraX(r, c) + lw * 0.5f
                    + empurra + (w - lw * esc) * 0.5f + xOffTipo(tipo);
-          if (tipo == FILEIRA_PALCO) { palcoGeo(r, c, lw, &cx, &esc); w = lw * esc; h = artH * esc; }
+          if (tipo == FILEIRA_PALCO) { palcoGeo(r, c, lw, &cx, &esc); if (r == foco.fileira && c == foco.coluna) esc *= okDip; w = lw * esc; h = artH * esc; }
           // Sem levantamento: no web o card focado nao sai do lugar. O que
           // desloca aqui e so a cascata de entrada, e so enquanto ela dura.
           float cy = cardY + artH * 0.5f + (1.0f - entra) * NV_ENTRA_DY;

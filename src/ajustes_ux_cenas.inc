@@ -884,6 +884,7 @@ static void ajcCenaOpcao(int sec, int op) {
     case AJ_ADDONS: case AJ_PLUGINS: case AJ_ADDONS_PRINCIPAL: case AJ_BUSCA_CINEMETA: case AJ_BUSCA_NUVIO: case AJ_BUSCA_ORIGEM: ajcCenaAddons(op); return;
     case AJ_IDIOMA: case AJ_TMDB_IDIOMA: ajcCenaIdioma(op); return;
     case AJ_DEBRID_RD: case AJ_DEBRID_TB: case AJ_DEBRID_PM: case AJ_DEBRID_AD: case AJ_DEBRID_AD_TESTAR:
+    case AJ_DEBRID_RD_TESTAR: case AJ_DEBRID_TB_TESTAR: case AJ_DEBRID_PM_TESTAR:
       ajcCenaServico(op, "aj_zap"); return;
 #ifndef __EMSCRIPTEN__
     case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: case AJ_P2P_LIMITE: ajcCenaServico(op, "aj_link"); return;

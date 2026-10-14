@@ -84,8 +84,9 @@ static void ajcHDestaque(int op) {
 // Espaco entre fileiras / entre titulos: o valor real, com a regua no vao.
 static void ajcHEspaco(int op) {
   int fil = op == AJ_ESPACO_FILEIRAS, i, j;
-  float f = valor[op] > 0 ? (valor[op] < 50 ? 50 : valor[op] > 150 ? 150 : valor[op]) / 100.0f : 1.0f;
-  float g = (fil ? 6.0f + 24.0f * (f - 0.5f) : 6.0f + 28.0f * (f - 0.5f)) + 3.0f * (ajc_onda(2.4f) - 0.5f);
+  float f = valor[op] > 0 ? ajustes_espaco_fator(valor[op]) : 1.0f;
+  // 50..300 % cabe na tela da previa: 3 fileiras ate 34 px, 5 cartazes ate 49.
+  float g = (fil ? 4.0f + 12.0f * (f - 0.5f) : 4.0f + 18.0f * (f - 0.5f)) + 3.0f * (ajc_onda(2.4f) - 0.5f);
   char b[16];
   ajcHTela(60, 24, 520, 280, 1);
   if (fil) {
