@@ -2572,24 +2572,35 @@ void ajustes_textura_quadro(void) {
       m = 12;
       if (c < 0.04f) snprintf(arq, sizeof arq, "%s/material-neutro.jpg", dirTexturas);
       else { m = ((int)(atan2f(lab[2], lab[1]) * 57.29578f + 375.0f)) % 360 / 30;
-             snprintf(arq, sizeof arq, "%s/material-%03d.jpg", dirTexturas, m); }
+             // A FAIXA e um INDICE 0..11; o ARQUIVO e em GRAUS (000..330). O
+             // %03d recebia m e pedia material-001.jpg, que nao existe — com o
+             // material ausente o botao ficava sem textura e o rotulo na tinta
+             // escura medida para o material: escuro sobre vermelho escuro
+             // (revisao, 14/10).
+             snprintf(arq, sizeof arq, "%s/material-%03d.jpg", dirTexturas, m * 30); }
       url = arq;
       jan[0] = 0.0f; jan[1] = 0.0f; jan[2] = 1.0f; jan[3] = 1.0f;
       logo = 1;   // carrega pelo caminho do logo (local, sem teto de heroi)
-      corviva_textura_tinta(NV_TX_ASSET_Y[m][0], NV_TX_ASSET_Y[m][1], T->base,
-                            forca, &branca, &veu, NULL);
-      escuro = !branca;
-      // A TINTA DO ROTULO vem de nv_textura_viva.tintaBranca
-      // (ajustes_acento_tinta, que todos os modulos usam), e o VEU de
-      // nv_textura_viva.veu — os dois medidos do MATERIAL que entrou, nao do
-      // recorte da arte que saiu: o recorte chapado escuro dizia "branco" e o
-      // rotulo vinha branco no branco do material (~2,2:1). O corviva_quadro
-      // refaz o struct a cada quadro e reescreve aqui embaixo (revisao, 14/10).
-      T->tintaBranca = branca;
-      T->veu = veu;
-    }
-    tex = logo ? tex_obter_larg_qualquer(url, 640.0f) : tex_obter_hero(url);
-    asp = tex_aspecto(url);
+      // A TINTA/VEU do MATERIAL so valem DEPOIS de carregar: a falha de
+      // carregamento ficava com o material fora e o rotulo na tinta escura
+      // dele — escuro no botao escuro da arte que ficou (revisao, 14/10).
+      tex = tex_obter_larg_qualquer(url, 640.0f);
+      asp = tex_aspecto(url);
+      if (tex && asp > 0.0f) {
+        corviva_textura_tinta(NV_TX_ASSET_Y[m][0], NV_TX_ASSET_Y[m][1], T->base,
+                              forca, &branca, &veu, NULL);
+        escuro = !branca;
+        // A TINTA DO ROTULO vem de nv_textura_viva.tintaBranca
+        // (ajustes_acento_tinta, que todos os modulos usam), e o VEU de
+        // nv_textura_viva.veu — os dois medidos do MATERIAL que entrou, nao do
+        // recorte da arte que saiu: o recorte chapado escuro dizia "branco" e o
+        // rotulo vinha branco no branco do material (~2,2:1). O corviva_quadro
+        // refaz o struct a cada quadro e reescreve aqui embaixo (revisao, 14/10).
+        T->tintaBranca = branca;
+        T->veu = veu;
+      } else { tex = 0; asp = 0.0f; }
+    } else { tex = logo ? tex_obter_larg_qualquer(url, 640.0f) : tex_obter_hero(url);
+             asp = tex_aspecto(url); }
   }
   if (!tex || asp <= 0.0f) { gfx_textura_definir(0, NULL, 0, 0, 0, 0); return; }
   gfx_textura_definir(tex, jan, asp, forca, veu, escuro);
