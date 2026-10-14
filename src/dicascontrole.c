@@ -103,7 +103,8 @@ static void compAbrir(int comp) {
       else spainel_abrir();
       break;
     }
-    case COMP_SPOT: if (!spot_aberto()) spot_abrir(0); break;
+    // Demo: abre sem o teclado nativo (spot_abrir chamaria o IME no Android).
+    case COMP_SPOT: if (!spot_aberto()) spot_abrir_demo(); break;
     case COMP_CENTRAL: if (!central_aberta()) central_abrir(); break;
     case COMP_CTX: {
       if (ctx_aberto()) break;

@@ -833,15 +833,12 @@
   window.addEventListener("keydown", function (ev) {
     if (imeAberto()) return;
     if (!ev.isTrusted) return;
-    // O CH- (428) vira F8 e o main.c o remapeia para o Spotlight fora do
-    // zap, como no Android: os Smart Remote novos nao tem fileira de cores e
-    // o rocker de canal e botao fisico em todo controle Samsung.
-    var f = ev.keyCode === 10225 ? "F6" : ev.keyCode === 405 ? "F5" : ev.keyCode === 428 ? "F8" : null;
+    var f = ev.keyCode === 10225 ? "F6" : ev.keyCode === 405 ? "F5" : null;
     if (!f) return;
     ev.preventDefault();
     ev.stopPropagation();
     var alvo = document.getElementById("canvas") || window;
-    var code = f === "F6" ? 117 : f === "F5" ? 116 : 119;
+    var code = f === "F6" ? 117 : 116;
     ["keydown", "keyup"].forEach(function (t) {
       alvo.dispatchEvent(new KeyboardEvent(t, {
         key: f, code: f, keyCode: code, which: code,
