@@ -19,6 +19,7 @@
 // FOCO SEM CONTORNO (regra do Glass UI): o botao em foco e a pilula cheia no
 // acento; o resto e neutro. Material (vidro/solido) e acento seguem Ajustes.
 #include "novidades20.h"
+#include "dicascontrole.h"
 #include "novidadesfila.h"
 #include "ajustes.h"
 #include "anim.h"
@@ -1113,6 +1114,7 @@ static void fechar(const char *aviso, int oQue) {
   saindo = 0;
   pedido = oQue;
   dados_gravar(N20_ARQ, "1\n");
+  dicascontrole_depois_novidades();
   if (aviso) ilha_avisar("novidades20", ILHA_OK, "aj_book-open", i18n(aviso), 4500, 0);
 }
 #define AV_GUARDADO "Guardado em Ajustes › Sobre e ajuda › Novidades 2.0"

@@ -1,4 +1,6 @@
 #!/bin/bash
+export TMPDIR="${TMPDIR:-/tmp}"
+TMPDIR="${TMPDIR%/}"
 # Compila para ARM e instala na TV por COPIA DIRETA. Ciclo completo (~30s).
 #
 #   bash tools/arm.sh            # compila, copia, confere e lanca
@@ -483,10 +485,10 @@ STAMP=${STAMP:0:8}
 #
 # A conferencia de verdade continua sendo /proc/<pid>/exe: o app manager cacheia
 # o appinfo ate reinstalar, e ja aconteceu de o titulo mostrar a build anterior.
-sed "s/\(\"title\": \"[^\"]*\)\"/\1 ($STAMP)\"/" deploy/app/appinfo.json > /tmp/appinfo.stamped.json
-cp /tmp/appinfo.stamped.json deploy/app/appinfo.json.stamped
+sed "s/\(\"title\": \"[^\"]*\)\"/\1 ($STAMP)\"/" deploy/app/appinfo.json > ${TMPDIR:-/tmp}/appinfo.stamped.json
+cp ${TMPDIR:-/tmp}/appinfo.stamped.json deploy/app/appinfo.json.stamped
 
-$SCP /tmp/appinfo.stamped.json "root@$TV_IP:$APPDIR/appinfo.json"
+$SCP ${TMPDIR:-/tmp}/appinfo.stamped.json "root@$TV_IP:$APPDIR/appinfo.json"
 
 echo "==> sincronizando arte"
 # --exclude art/cache: e CACHE DE EXECUCAO, nao arte do pacote. Com ele o tar

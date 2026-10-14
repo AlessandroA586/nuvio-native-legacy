@@ -10,6 +10,7 @@
 //
 // Sem rede e sem SDL de video: so a lista em memoria e a contagem da folha.
 #include "streams.h"
+#include "nvtmp.h"
 #include "ajustes.h"
 #include "debrid.h"
 #include <assert.h>
@@ -106,9 +107,8 @@ static void conferirFolhaCheia(const Stream *l, int n, const char *cenario) {
 
 int main(void) {
   Stream l[N_TOTAL];
-  char dir[512];
+  char dir[NVT_MAX]; nvt_set(dir, sizeof dir, "/nuvio-fontes-lista-XXXXXX");
   int n;
-  snprintf(dir, sizeof dir, "%s/nuvio-fontes-lista-XXXXXX", getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp");
   assert(mkdtemp(dir));
   n = montar(l);
   assert(n == N_TOTAL);
@@ -191,11 +191,38 @@ int main(void) {
   int count = stream_extrair(json, "fixture", &v);
   assert(count == 9);
   debrid_definir_chave("torbox", "chave-de-teste");
+  // #505: as duas fontes notWebReady descartadas com o P2P desligado contam
+  // para a dica "ligue o P2P" — nunca uma folha vazia calada. Sem debrid e
+  // com um endereco P2P configurado a dica existe (o valor real e o de
+  // stream_torrents_para_p2p; aqui ele devolve 0 porque o debrid esta ativo).
+  debrid_esquecer();
+  assert(ajustes_definir_p2p_url("192.168.1.5"));
+  ajustes_definir_p2p_ligado(0);
+  stream_definir_lista(v, count);
+  assert(stream_torrents_para_p2p() == 2);
+  // Connected debrid cannot offer notWebReady sources: keep the P2P hint.
+  debrid_definir_chave("torbox", "chave-de-teste");
+  stream_definir_lista(v, count);
+  assert(stream_n() == 7 && stream_torrents_para_p2p() == 2);
+  Stream onlyP2P[2];
+  int p2pCount = 0;
+  for (int i = 0; i < count; i++)
+    if (v[i].notWebReady) onlyP2P[p2pCount++] = v[i];
+  assert(p2pCount == 2);
+  stream_definir_lista(onlyP2P, p2pCount);
+  assert(stream_n() == 0 && stream_torrents_para_p2p() == 2);
+  stream_definir_lista(NULL, 0);
+  assert(stream_torrents_para_p2p() == 0);
+  stream_lista_acrescentar(onlyP2P, p2pCount, 0);
+  assert(stream_n() == 0 && stream_torrents_para_p2p() == 2);
+  stream_definir_lista(l, n);
+  assert(stream_torrents_para_p2p() == 0);
   for (int ligado = 0; ligado <= 1; ligado++) {
     assert(ajustes_definir_p2p_url("192.168.1.5"));
     ajustes_definir_p2p_ligado(ligado);
     stream_definir_lista(v, count);
     assert(stream_n() == (ligado ? 9 : 7));
+    assert(stream_torrents_para_p2p() == (ligado ? 0 : 2));
     for (int i = 0; i < stream_n(); i++)
       assert(ligado || !stream_item(i)->notWebReady);
     stream_definir_lista(NULL, 0);

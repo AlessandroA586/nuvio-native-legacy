@@ -18,6 +18,7 @@
 //      filme-relacionados filme-colecao filme-fim serie-topo serie-ep
 //      serie-temp serie-baixo
 #include <SDL2/SDL.h>
+#include "nvtmp.h"
 #include <SDL2/SDL_image.h>
 #include <assert.h>
 #include <stdio.h>
@@ -352,7 +353,7 @@ static int quer(int argc, char **argv, const char *id) {
 int main(int argc, char **argv) {
   SDL_GLContext gl;
   const char *dd;
-  saida = argc > 1 ? argv[1] : "/tmp/nuvio-detglass";
+  saida = argc > 1 ? argv[1] : nvt("/nuvio-detglass");
   assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
   IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
@@ -490,8 +491,21 @@ int main(int argc, char **argv) {
   if (quer(argc, argv, "filme-fim")) { abrir(1, 1, SEC_DETALHES, 0); gravar("filme-fim"); }
   if (quer(argc, argv, "serie-topo")) { abrir(0, 0, 0, 0); gravar("serie-topo"); }
   if (quer(argc, argv, "serie-ep")) { abrir(0, 1, SEC_EPISODIOS, 2); gravar("serie-ep"); }
-  if (quer(argc, argv, "serie-temp")) { abrir(0, 1, SEC_TEMPORADAS, 0); gravar("serie-temp"); }
+  if (quer(argc, argv, "serie-temp")) { abrir(0, 1, SEC_TEMPORADAS, 1); gravar("serie-temp"); }
   if (quer(argc, argv, "serie-baixo")) { abrir(0, 1, SEC_ELENCO, 0); gravar("serie-baixo"); }
+  // O botao "Assistir do comeco" (temInicio + layout agrupado, o da TV)
+  // ganhando o foco: TRES QUADROS NO MEIO da animacao. A pilula abre
+  // primeiro e o rotulo entra DEPOIS, inteiro — nunca cortado palavra por
+  // palavra pela largura em crescimento (anim_expande). Sem o SDL_DELAY o
+  // quadro e rapido demais e a animacao assenta antes da captura.
+  if (quer(argc, argv, "serie-inicio")) {
+    abrir(0, 0, 0, 0);                     // assenta com o foco no botao primario
+    botao = 1;                             // foco vai para o "Assistir do comeco"
+    SDL_Delay(80);  quadros(1); gravar("serie-inicio-1");   // largura no meio
+    SDL_Delay(80);  quadros(1); gravar("serie-inicio-2");   // largura no fim, sem rotulo
+    SDL_Delay(60);  quadros(1); gravar("serie-inicio-3");   // rotulo entrando
+    quadros(30); gravar("serie-inicio-fim");
+  }
 
   SDL_GL_DeleteContext(gl);
   SDL_DestroyWindow(janela);

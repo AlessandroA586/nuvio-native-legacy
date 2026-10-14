@@ -309,10 +309,13 @@ static int tracksCortado;
 // Para o mkv_diag: Tracks visto na ultima acharTracks, e o tamanho declarado.
 static int tkAchado;
 static long tkTam;
+// 1 quando a ultima acharTracks deixou o Tracks fora da janela e o SeekHead
+// diz onde ele mora — o caso do #483, resolvido por mkv_tracks_alem.
+static int tracksNaoVisto;
 // Onde o Chapters mora, pelo SeekHead (203-capitulos): posicao ABSOLUTA no
 // arquivo (-1 = o SeekHead nao disse). 64 bits: Chapters no fim de um remux de
-// mais de 2 GB nao cabe num long de 32 bits.
-static long long segIni, posChapters;
+// mais de 2 GB nao cabe num long de 32 bits. `posTracks` idem para o Tracks.
+static long long segIni, posChapters, posTracks;
 #ifdef NV_RUST_MKVCORE
 // Mesma busca, feita pelo nucleo Rust (rust/mkvcore): o estado que a versao C
 // deixa em statics volta por NvMkvScan e e copiado para os daqui.
@@ -326,6 +329,8 @@ static int acharTracks(const unsigned char *p, long n, MkvFaixa *saida, int max,
   tkTam = (long)sc.tk_tam;
   segIni = sc.seg_ini;
   posChapters = sc.pos_chapters;
+  posTracks = sc.pos_tracks;
+  tracksNaoVisto = sc.tracks_nao_visto;
   if (sc.tracks_cortado) {
     printf("[mkv] Tracks tem %lld bytes e o trecho baixado acaba em %lld: %d faixa(s) lidas, lista pode estar incompleta\n",
            sc.tk_tam, sc.tk_disp, nFaixas);
@@ -374,7 +379,9 @@ static void lerSeekHead(const unsigned char *p, long n) {
         else if (fid == ID_SEEKPOS) pos = (long long)lerUint(p + o + q, ftam);
         q += ftam;
       }
-      if (alvo == ID_CHAPTERS && pos >= 0) posChapters = segIni + pos;
+      if (pos < 0) continue;
+      if (alvo == ID_CHAPTERS) posChapters = segIni + pos;
+      else if (alvo == ID_TRACKS) posTracks = segIni + pos;
     }
     o += tam;
   }
@@ -385,22 +392,22 @@ static int acharTracks(const unsigned char *p, long n, MkvFaixa *saida, int max,
   long o = 0;
   int nFaixas = 0;
   if (nCaps) *nCaps = 0;
-  tracksCortado = 0;
+  tracksCortado = 0; tracksNaoVisto = 0;
   tkAchado = 0; tkTam = 0;
-  segIni = 0; posChapters = -1;
+  segIni = 0; posChapters = -1; posTracks = -1;
   while (o < n) {
     int ui = 0, ut = 0;
     unsigned long id = lerId(p + o, n - o, &ui);
     long tam;
-    if (!id) return 0;
+    if (!id) break;
     tam = lerTam(p + o + ui, n - o - ui, &ut);
-    if (tam == -1) return 0;
+    if (tam == -1) break;
     o += ui + ut;
     if (id == ID_SEGMENT || tam == -2) {
       // Segment: descer para dentro. Tamanho desconhecido idem — nao ha por
       // onde pular.
       if (id == ID_SEGMENT) { segIni = o; continue; }
-      return 0;
+      break;
     }
     if (id == ID_SEEKHEAD && o + tam <= n) lerSeekHead(p + o, tam);
     if (id == ID_TRACKS) {
@@ -419,7 +426,7 @@ static int acharTracks(const unsigned char *p, long n, MkvFaixa *saida, int max,
       }
       // NAO devolve aqui: Chapters vem DEPOIS de Tracks no arquivo, e sair no
       // primeiro achado era o que deixava os capitulos para tras.
-      if (!caps || tam > disp) return nFaixas;
+      if (!caps || tam > disp) break;
       o += tam;
       continue;
     }
@@ -427,14 +434,20 @@ static int acharTracks(const unsigned char *p, long n, MkvFaixa *saida, int max,
       long disp = n - o;
       // Chapters CORTADO pelo trecho: lista pela metade erra o "ultimo
       // capitulo". Fica para a leitura por SeekHead (mkv_capitulos_alem).
-      if (tam > disp) { posChapters = o - ui - ut; return nFaixas; }
+      if (tam > disp) { posChapters = o - ui - ut; break; }
       if (nCaps) *nCaps = lerCapitulos(p + o, tam, caps, maxCaps);
       posChapters = -1;
-      return nFaixas;
+      break;
     }
-    if (o + tam > n) return nFaixas;  // elemento passa do que baixamos
+    if (o + tam > n) break;  // elemento passa do que baixamos
     o += tam;
   }
+  // #483: Tracks alem da janela (remux remontado por mkvpropedit, com um
+  // Attachments grande ou o primeiro Cluster antes dele). A busca parou nesse
+  // elemento com 0 faixas — ou leu um Tracks cortado — e toda legenda ficava
+  // "codec=?", devolvendo a faixa ao renderizador da TV (texto simples, falas
+  // caindo). O SeekHead diz onde o Tracks mora; mkv_tracks_alem busca num Range.
+  if (posTracks >= 0 && (nFaixas == 0 || tracksCortado)) tracksNaoVisto = 1;
   return nFaixas;
 }
 #endif  // NV_RUST_MKVCORE
@@ -521,6 +534,61 @@ double mkv_creditos_ultimo(const MkvCap *caps, int n) {
 // declara mais, um segundo pedido com o tamanho exato, limitado a 2 MB.
 #define MKV_CAP_PRIMEIRO (64L * 1024)
 #define MKV_CAP_TETO     (2L * 1024 * 1024)
+
+// #483: o mesmo para o TRACKS que o SeekHead aponta fora da janela (remux
+// remontado, Attachments grande na frente). Teto de 4 MB: o CodecPrivate de
+// um fansub leva o Tracks a ~100 KB; acima disso e arquivo esquisito.
+#define MKV_TRK_PRIMEIRO (64L * 1024)
+#define MKV_TRK_TETO     (4L * 1024 * 1024)
+
+static int tracksPorPosicao(const char *url, long long pos, MkvFaixa *saida, int max, int *status) {
+  long n = 0, need;
+  int ui = 0, ut = 0, achou = 0, st = 0;
+#ifndef NV_RUST_MKVCORE
+  unsigned long id;
+#endif
+  long tam;
+  char *b = rede_baixar_trecho_st(url, 15, pos, pos + MKV_TRK_PRIMEIRO - 1, &n, &st, NULL, NULL, 0);
+  if (status) *status = st;
+  if (!b) return 0;
+#ifdef NV_RUST_MKVCORE
+  { long long t = nv_mkvcore_elem_cabecalho((const unsigned char *)b, n, 0x1654AE6BUL, &ui);
+    tam = (t < 0 || t > MKV_TRK_TETO) ? -1 : (long)t; ut = 0; }
+#else
+  id = lerId((const unsigned char *)b, n, &ui);
+  tam = id == ID_TRACKS ? lerTam((const unsigned char *)b + ui, n - ui, &ut) : -1;
+#endif
+  if (tam < 0 || tam > MKV_TRK_TETO) { free(b); return 0; }
+  need = ui + ut + tam;
+  if (need > n) {
+    free(b);
+    b = rede_baixar_trecho_st(url, 15, pos, pos + need - 1, &n, &st, NULL, NULL, 0);
+    if (status) *status = st;
+    if (!b || n < need) { free(b); return 0; }
+  }
+#ifdef NV_RUST_MKVCORE
+  achou = nv_mkvcore_ler_tracks((const unsigned char *)b + ui + ut, tam, saida, max);
+#else
+  achou = lerTracks((const unsigned char *)b + ui + ut, tam, saida, max);
+#endif
+  free(b);
+  return achou;
+}
+
+// Tracks fora da janela do cabecalho (#483): se a ultima sonda nao o alcancou
+// e o SeekHead diz onde ele mora, UM Range (dois se o elemento for maior que
+// 64 KB) le o elemento inteiro. Devolve quantas faixas; `status` (opcional)
+// recebe o HTTP do pedido (0 = sem resposta), -1 quando nao houve pedido.
+// BLOQUEIA: chamar de fio proprio.
+int mkv_tracks_alem(const char *url, MkvFaixa *saida, int max, int *status) {
+  int n;
+  if (status) *status = -1;
+  if (!url || !url[0] || !saida || max < 1 || posTracks < 0 || !tracksNaoVisto) return 0;
+  n = tracksPorPosicao(url, posTracks, saida, max, status);
+  printf("[mkv] faixas pelo SeekHead (pos %lld): %d\n", posTracks, n);
+  fflush(stdout);
+  return n;
+}
 
 static int capsPorPosicao(const char *url, long long pos, MkvCap *caps, int max, int *status) {
   long n = 0, need;

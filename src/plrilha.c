@@ -3,6 +3,7 @@
 // CUSTO, a mesma regra da ilha.c: uma sombra do tamanho da ilha, o miolo, a
 // luz de canto, o texto do cabecalho e o corpo de quem pediu. Nada de tela
 // cheia (o veu de cima do aviso sozinho e o unico, e so sem o OSD).
+#include "central.h"
 #include "horafmt.h"
 #include "plrilha.h"
 #include "plrui.h"
@@ -166,7 +167,8 @@ static float montar(const PlrIlhaPedido *p, Linha *L) {
   if (L->temIcone) w += 24.0f + 12.0f;
   if (p && p->respira) w += 10.0f + 14.0f;
   if (L->temTxt) {
-    L->txt = txt_linha_corta(TXT_ILHA_NOME, p->texto, 243, 242, 239, 255, PLR_TEXTO_MAX);
+    if (p->tituloLeve) L->txt = txt_linha_corta(PLR_TIT_ESTILO, p->texto, PLR_TIT_R, PLR_TIT_G, PLR_TIT_B, 255, PLR_TEXTO_MAX);
+    else L->txt = txt_linha_corta(TXT_ILHA_NOME, p->texto, 243, 242, 239, 255, PLR_TEXTO_MAX);
     w += (float)L->txt.w + 12.0f;
   }
   if (p && p->pontos > 0) w += 4.0f + p->pontos * 8.0f + (p->pontos - 1) * 7.0f + 12.0f;
@@ -321,7 +323,8 @@ static void plrilha_desenharCorpo_(Uint32 agora) {
   if (prevVolta && !temPed && ajustes_relogio_ligado()) horaAte = agora + HORA_SEGURA_MS;
   prevVolta = temPed && ped.w > 0.0f && ped.voltaRelogio;
   if (temPed || !ajustes_relogio_ligado()) horaAte = 0;
-  quer = !escondida && (temPed || relA > 0.01f || (horaAte && (int)(horaAte - agora) > 0));
+  quer = !escondida && (temPed || relA > 0.01f || central_segurar_progresso(agora) > 0.0f ||
+                       (horaAte && (int)(horaAte - agora) > 0));
 
   // O que a linha da pilula mostra: o pedido, ou (encolhendo depois de um
   // corpo) a linha dele ate o corpo apagar — a hora volta com a forma.
@@ -372,6 +375,7 @@ static void plrilha_desenharCorpo_(Uint32 agora) {
     if (p->ponteiroOk && !corpo && A > 0.99f && fabsf(W - alvoW) < 1.0f && fabsf(H - alvoH) < 1.0f)
       ponteiro_alvo(R.x, R.y, R.w, R.h, p->ponteiroOk, NULL, 0, 0);
     plrui_material(R, raioPx, (temUlt ? ult.modal : 0), A);
+    central_segurar_desenhar(R, raioPx / (R.h > 1.0f ? R.h : 1.0f), A, agora);
     gfx_recorte(R.x, R.y, R.w, R.h);
     { float cabH = h < CAB_H ? h : CAB_H;
       float yc = R.y + cabH * 0.5f;
