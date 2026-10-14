@@ -432,8 +432,19 @@ static const struct { int corpo, peso; } ESTILOS[TXT_NFONTES] = {
   { 28, PESO_BOLD    },   // TXT_V3_INSP_B
   { 26, PESO_BOLD   },   // TXT_DET_META_FORTE (meta fica em 26)
   { 26, PESO_MEDIUM },   // TXT_DET_META_GEN
+  { 25, PESO_MEDIUM },   // TXT_TV_ROTULO: item da barra Apple TV (25/500)
+  { 24, PESO_BOLD   },   // TXT_TV_SECAO: "STREAMING" em caixa alta (24/700)
   { 24, PESO_REGULAR },  // TXT_HERO_SIN_GRANDE
 };
+
+// CORPO E PESO de um estilo, para teste e diagnostico (o desenho nao usa:
+// vai direto ao cache por estilo).
+void txt_estilo_medidas(TxtEstilo estilo, int *corpo, int *peso) {
+  int i = (int)estilo;
+  if (i < 0 || i >= TXT_NFONTES) i = 0;
+  if (corpo) *corpo = ESTILOS[i].corpo;
+  if (peso) *peso = ESTILOS[i].peso;
+}
 
 // One base per style, shared by measuring and rasterizing. Legacy 100% stays exact.
 static float corpoAtual(int style) {

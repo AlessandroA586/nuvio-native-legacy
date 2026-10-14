@@ -502,6 +502,9 @@ IGNORAR = {
     # Marca/nome proprio, igual em toda lingua (mesma regra de "IMDb", "Trakt"):
     # o selo do formato na tela do Dolby Vision (dvtelaui.c) e o letreiro do Simkl.
     "HDR10", "DOLBY VISION", "SIMKL",
+    # menu.c (layout Dinamica): cabecalho de secao em CAIXA ALTA, como no tvOS.
+    # A chave traduzivel e "Streaming"; aqui o desenho fixa o rotulo em ASCII.
+    "STREAMING",
     # Log "[cor] fundo frost" e aviso da copia borrada (fundo.c): so printf.
     " (sem quadro pequeno)", "desenho direto (sem quadro pequeno)",
     "sem a copia desfocada da arte ainda (arte nao decodificada?): fundo liso",

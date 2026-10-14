@@ -831,7 +831,14 @@ static void menu_desenharCorpo_(Uint32 agora) {
 #define TV_ROT_X        66.0f    // x do rotulo, a partir da pilula
 #define TV_LOGO         48.0f    // circulo da pasta de Streaming
 #define TV_AVATAR       44.0f
-#define TV_ROTULO_H     60.0f    // rotulo da secao "Streaming"
+#define TV_ROTULO_H     78.0f    // rotulo da secao "Streaming" (vaio maior
+                                // acima: separacao clara do item de cima)
+#define TV_SECAO_TRK     1.5f    // tracking do cabecalho (caixa alta)
+// O MIOLO DO PAINEL tem um piso: o "Opacidade do vidro" (78 %) deixava os
+// titulos das fileiras da Home lerem ATRAVES do vidro na TCL (captura
+// fotos1014/tcl-sidebar-now.png: "Continuar assistindo" por baixo dos
+// rotulos). Sem frost o piso e o que garante legibilidade.
+#define TV_MIOLO_MIN    0.88f
 // O CHIP: na foto da referencia (appletv-sidebar.jpg) cada icone de linha mora
 // num circulo translucido, quase apagado quando a pilula branca do foco assume
 // e a tinta do icone/rotulo escurece.
@@ -961,6 +968,9 @@ float menu_pilula_alfa(void) {
   if (!tvAtivo()) return 0.0f;
   { float a = tvPilAlfa * (1.0f - tvAbre); return a < 0.0f ? 0.0f : a; }
 }
+// O cabecalho da barra da Apple TV tem relogio proprio: aberta, a ilha do
+// canto duplicava a hora (11:29 + 11:29 na captura da TCL).
+int menu_relogio_cabe(void) { return !(aberto && tvAtivo()); }
 void menu_pilula_mostrar(float alvo) {
   // Negativo = some JA, sem mola: ao trocar para uma tela com titulo no canto
   // a pilula nao pode ficar 300 ms por cima dele.
@@ -1192,7 +1202,13 @@ static void tvDesenhar(void) {
   // sidebar, and the reference panel is translucent tinted glass regardless
   // of the global "Interface de vidro" switch; gfx_vidro_folha still honors
   // the Opacity/Frost/effect settings internally.
-  gfx_vidro_folha(R, raioPx / R.h, A);
+  // The SAME folha, but with the miolo floored at TV_MIOLO_MIN: the 78 % of
+  // "Opacity" let the Home row titles read through the panel (TCL print).
+  { float al = ajustes_vidro_opacidade();
+    if (al < TV_MIOLO_MIN) al = TV_MIOLO_MIN;
+    gfx_vidro(R, raioPx / R.h, GFX_VIDRO_PAINEL, 0.09f, ajustes_vidro_opacidade(), A);
+    gfx_vidro_miolo(R, raioPx / R.h, 0.085f, 0.088f, 0.10f, al * A, A);
+    gfx_brilho_topo(R, raioPx / R.h, 0.38f, 0.88f, 0.92f, 1.0f, 0.06f * A); }
 
   // Conteudo da pilula fechada: some no comeco da abertura.
   { float ap = A * (1.0f - s * 3.0f);
@@ -1256,11 +1272,14 @@ static void tvDesenhar(void) {
       if (aberto && ponteiro_ativo() && cyCab - TV_PILULA_H * 0.5f >= Q.y - 1.0f)
         ponteiro_alvo(Q.x, cyCab - TV_PILULA_H * 0.5f, Q.w, TV_PILULA_H, ponteiroLinha, NULL, MENU_RODAPE, 0); }
 
-    // Rotulo da secao de Streaming: 22 Regular, cinza medio, no recuo do icone.
+    // Rotulo da secao de Streaming, mais marcante (dono, 14/10): um corpo
+    // acima do rotulo, Bold, em CAIXA ALTA com tracking — o padrao das secoes
+    // do tvOS — e mais espaco acima (TV_ROTULO_H) para separar de Ajustes.
     if (np && yRot >= 0.0f) {
-      TxtLinha l = txt_linha(TXT_CAPTION, "Streaming", 218, 221, 229, 255);
-      txt_desenhar_alpha(l, Q.x + TV_PAD_X + TV_COL_CX - TV_ICONE * 0.5f,
-                         topo + yRot + TV_ROTULO_H - l.h - 6.0f, ac);
+      TxtLinha l = txt_linha(TXT_TV_SECAO, "STREAMING", 235, 237, 243, 255);
+      txt_tracking(TXT_TV_SECAO, "STREAMING", 235, 237, 243,
+                   Q.x + TV_PAD_X + TV_COL_CX - TV_ICONE * 0.5f,
+                   topo + yRot + TV_ROTULO_H - l.h - 6.0f, ac, TV_SECAO_TRK);
     }
 
     for (i = 0; i < MENU_N + np; i++) {
@@ -1291,7 +1310,7 @@ static void tvDesenhar(void) {
           tvCirculoPasta(pf, ccx, cy, ac);
           rot = pf ? pf->title : "";
         }
-        { TxtLinha l = txt_linha_corta(TXT_DET_META, rot, c, c, c, 255,
+        { TxtLinha l = txt_linha_corta(TXT_TV_ROTULO, rot, c, c, c, 255,
                                        pill.w - TV_ROT_X - 16.0f);
           txt_desenhar_alpha(l, pill.x + TV_ROT_X, cy - l.h * 0.5f, ac); } }
       if (aberto && ponteiro_ativo() && y >= Q.y - 1.0f && y + TV_LINHA_H <= Q.y + Q.h + 1.0f)
