@@ -106,6 +106,10 @@ char *rede_baixar_com_teste(const char *url, int seg, const char *const *cab) {
   return NULL;
 }
 char *rede_baixar_teste(const char *url, int seg) { (void)url; (void)seg; return NULL; }
+char *rede_baixar_st_teste(const char *url, int seg, const char *const *cab,
+                           int *status) {
+  (void)url; (void)seg; (void)cab; if (status) *status = 0; return NULL;
+}
 char *rede_postar_teste(const char *url, int seg, const char *const *cab,
                         const char *corpo) {
   (void)seg; (void)cab; (void)corpo;
