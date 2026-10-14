@@ -39,7 +39,8 @@ with tempfile.TemporaryDirectory() as d:
     source.write_text(code)
     subprocess.run(['cc',str(source),'-o',str(binary)],check=True)
     subprocess.run([str(binary)],check=True)
-portrait = s[s.index('const char *foto=retratoLocal(collection);'):s.index('// PONTEIRO (#99)')]
-assert 'tex_publicar_paleta(foto)' in portrait
+bg = s[s.index('static void themeBackground('):s.index('// PONTEIRO (#99)')]
+for banned in ('Directors', 'retratoLocal', 'diretor_foto', 'GFX_RETRATO', 'tex_publicar_paleta'):
+    assert banned not in bg, 'director portrait still drawn: ' + banned
 print('vertudo_estado: PASS')
 PY

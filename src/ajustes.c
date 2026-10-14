@@ -553,6 +553,9 @@ typedef enum {
   // #461: menu na lateral (0, o de sempre) ou numa barra no topo (1). Por
   // perfil, so desta TV. No fim: valor[]/CHAVE[] posicionais.
   AJ_MENU_TOPO,
+  // Android: teclado do app (grade) ou do sistema (IME). LOCAL, 0 = automatico
+  // (o de sempre). No fim: valor[]/CHAVE[] posicionais.
+  AJ_TECLADO_ANDROID,
   // #475: cor do contorno/sombra da legenda que o app desenha. Local, so desta
   // TV. No fim: valor[]/CHAVE[] posicionais.
   AJ_LEG_CONTORNO_COR,
@@ -806,6 +809,7 @@ static const char *V_CW_ORDEM[]  = { "Padrão", "Estilo streaming", "Separar fut
 static const char *V_ITENS_FIL[] = { "12", "18", "24" };
 static const char *V_GPU_EF[]    = { "Automático", "Completos", "Leves" };
 static const char *V_MIC_BUSCA[] = { "Automático", "Ligado", "Desligado" };
+static const char *V_TECLADO_AND[] = { "Automático", "Do app", "Do Android" };
 // O que o toque curto de OK faz num card da retomada (issue #93): abre o
 // episodio direto no player, ou abre a pagina do titulo como sempre fez.
 // Local, como cwFonteLocal — o app oficial nao tem esta escolha.
@@ -1428,6 +1432,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Modo da interface", V_INTERFACE_MODO, 2),
   ESC("Botão de microfone na busca", V_MIC_BUSCA, 3),   // local: micBuscaLocal (.tpk)
   ESC("Posição do menu", V_MENU_POS, 2),   // por perfil: menuTopoLocal (#461)
+  ESC("Teclado", V_TECLADO_AND, 3),   // local: tecladoAndroidLocal (Android)
   ESC("Cor do contorno da legenda", V_LEG_CONTORNO_COR, 7),   // local: legendaContornoCorLocal (#475)
   ESC("Trocar provedor se falhar", V_LIGA, 2),
   ACAO("Ordem e limites dos provedores"),
@@ -1680,6 +1685,7 @@ static const char *CHAVE[] = {
   "interfaceModoLocal",
   "micBuscaLocal",
   "menuTopoLocal",
+  "tecladoAndroidLocal",
   "legendaContornoCorLocal",
   "-falhaProvedores", "-falhaProvedorOrdem",
   "-falhaRDLinks", "-falhaTBLinks", "-falhaPMLinks", "-falhaADLinks",
@@ -2319,6 +2325,7 @@ static int ajOpcaoDisponivel(int op) {
 int ajustes_layout_lista(void) { return !ajLayoutSelecionavel() || valor[AJ_LAYOUT_AJUSTES] == 1; }
 int ajustes_esconder_logo_trailer(void) { return lig(AJ_LOGO_TRAILER); }
 int ajustes_legenda_sync_auto(void) { return lig(AJ_LEG_SYNC_AUTO); }
+int ajustes_teclado_android(void) { int v = valor[AJ_TECLADO_ANDROID]; return v < 0 || v > 2 ? 0 : v; }   // 0 auto, 1 do app, 2 do Android
 int ajustes_mic_busca(void) { return valor[AJ_MIC_BUSCA]; }   // 0 auto, 1 ligado, 2 desligado
 int ajustes_trailer_zoom_tpk(void) { return lig(AJ_TRAILER_ZOOM_TPK); }   // 1 = Ligado
 #ifdef NV_ANDROID
@@ -4458,6 +4465,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_LEG_SYNC_AUTO: /* escolha local desta TV */
     case AJ_TELA_ABERTURA: /* #205: o web nao tem; escolha desta TV */
     case AJ_MIC_BUSCA:     /* o microfone e o controle sao desta TV */
+    case AJ_TECLADO_ANDROID: /* o web nao tem; o teclado e deste aparelho */
     case AJ_LEG_SYNC_AUDIO: /* PCM e passthrough sao desta TV; o web nao tem */
     case AJ_LEG_FORCADA:    /* #287: o web nao tem esta escolha */
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA: /* estilo da legenda e desta TV */
@@ -4781,6 +4789,9 @@ static int foraDestaPlataforma(int op) {
   // (.tpk de release e .wgt; o NuvioTpk40 do Tizen 4/5 nao tem o host dele).
 #if !(defined(NV_TPK) || defined(__EMSCRIPTEN__)) || defined(NV_TPK40)
   if (op == AJ_MIC_BUSCA) return 1;
+#endif
+#ifndef NV_ANDROID
+  if (op == AJ_TECLADO_ANDROID) return 1;
 #endif
 #if defined(NV_TPK) || defined(NV_ANDROID)
   if (op == AJ_DV_MKV) return 1;
@@ -5733,6 +5744,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_MENU_TOPO: return "Na lateral: o menu fica na esquerda, como sempre. No topo: o menu vira uma barra no alto da tela e o conteúdo usa a largura toda. Para cima no primeiro item da tela chega à barra e Para baixo volta. Vale para este perfil.";
     case AJ_RAIL_MODERNA: return "Troca a barra lateral pela versão nova, com ícones maiores. Ela ignora a escolha entre recolhida e fixa.";
     case AJ_RAIL_BLUR: return "Desfoca a arte atrás da barra lateral moderna em vez de usar um fundo sólido.";
+    case AJ_TECLADO_ANDROID: return "Automático: o teclado do Android abre sozinho em e-mail, senha e busca. Do app: a grade do Nuvio; o teclado do Android só pelo botão Teclado da TV. Do Android: abre direto em todo campo; Voltar mostra a grade. Vale só neste aparelho.";
     case AJ_MIC_BUSCA: return "Mostra nas buscas um microfone ao lado de Digitar pelo celular: ele abre o teclado da Samsung para você falar pelo microfone do controle. Automático esconde o botão se a TV disser que não tem microfone; Ligado mostra sempre; Desligado esconde.";
     case AJ_HERO: return "O bloco grande no topo da Home, com a arte e o nome de um título em destaque.";
     case AJ_HERO_CATALOGOS: return "De onde vêm os títulos do destaque: os primeiros do catálogo, um sorteio, ou uma fileira da Home. OK troca.";
@@ -6121,6 +6133,7 @@ static const char *beneficioProprio(int op) {
     case AJ_DTS_AC3: return "Para TVs que não tocam DTS: o som é convertido na hora.";
     case AJ_CACHE_SEEK: return "Guarda o que já baixou para voltar no filme sem esperar.";
     case AJ_MIC_BUSCA: return "Busque falando, pelo microfone do controle.";
+    case AJ_TECLADO_ANDROID: return "Escolha entre o teclado do app e o do Android.";
     default: return NULL;
   }
 }
@@ -8137,7 +8150,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_IDIOMA: case AJ_ANIM: case AJ_TEMA:
     case AJ_COR_LOGO: case AJ_FONTE_UI: case AJ_VIDRO: case AJ_VIDRO_CONTORNO:
     case AJ_RELOGIO: case AJ_RELOGIO_POS: case AJ_SAIDA_PLAYER: case AJ_RELOGIO_12H:
-    case AJ_TAMANHO_UI: case AJ_TAMANHO_AJUSTES: case AJ_LAYOUT_AJUSTES: case AJ_INTERFACE_MODO: case AJ_FUNDO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO:
+    case AJ_TAMANHO_UI: case AJ_TAMANHO_AJUSTES: case AJ_LAYOUT_AJUSTES: case AJ_INTERFACE_MODO: case AJ_TECLADO_ANDROID: case AJ_FUNDO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO:
     case AJ_AVANCADAS: case AJ_LOGO_APP: case AJ_ABERTURA:
     case AJ_ESMAECER: case AJ_BRILHO_PLAYER: case AJ_HDR_UI: case AJ_MANTER_VIDEO:
     case AJ_DESCANSO_ESTILO: case AJ_DESCANSO_FONTE:
