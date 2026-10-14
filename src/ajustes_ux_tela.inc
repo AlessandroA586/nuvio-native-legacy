@@ -126,7 +126,7 @@ static const Item TELA[] = {
 #ifdef NV_TOUCH_UI
     OPC(AJ_INTERFACE_MODO),
 #endif
-#ifdef NV_ANDROID
+#ifdef NV_TECLADO_SIS
     OPC(AJ_TECLADO_ANDROID),
 #endif
     ROT("Cores e vidro"),

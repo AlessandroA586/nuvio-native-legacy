@@ -826,7 +826,11 @@ static const char *V_CW_ORDEM[]  = { "Padrão", "Estilo streaming", "Separar fut
 static const char *V_ITENS_FIL[] = { "12", "18", "24" };
 static const char *V_GPU_EF[]    = { "Automático", "Completos", "Leves" };
 static const char *V_MIC_BUSCA[] = { "Automático", "Ligado", "Desligado" };
+#ifdef NV_ANDROID
 static const char *V_TECLADO_AND[] = { "Automático", "Do app", "Do Android" };
+#else
+static const char *V_TECLADO_AND[] = { "Automático", "Do app", "Do sistema" };   // LG / Samsung
+#endif
 // O que o toque curto de OK faz num card da retomada (issue #93): abre o
 // episodio direto no player, ou abre a pagina do titulo como sempre fez.
 // Local, como cwFonteLocal — o app oficial nao tem esta escolha.
@@ -1453,7 +1457,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Botão de microfone na busca", V_MIC_BUSCA, 3),   // local: micBuscaLocal (.tpk)
   ESC("Posição do menu", V_MENU_POS, 2),   // por perfil: menuTopoLocal (#461)
   ESC("Estilo das abas", V_ABAS_ESTILO, 4),   // por perfil: abasEstiloLocal (#205)
-  ESC("Teclado", V_TECLADO_AND, 3),   // local: tecladoAndroidLocal (Android)
+  ESC("Teclado", V_TECLADO_AND, 3),   // local: tecladoAndroidLocal (Android, LG, Samsung)
   ESC("Cor do contorno da legenda", V_LEG_CONTORNO_COR, 7),   // local: legendaContornoCorLocal (#475)
   ESC("Trocar provedor se falhar", V_LIGA, 2),
   ACAO("Ordem e limites dos provedores"),
@@ -4840,7 +4844,7 @@ static int foraDestaPlataforma(int op) {
 #if !(defined(NV_TPK) || defined(__EMSCRIPTEN__)) || defined(NV_TPK40)
   if (op == AJ_MIC_BUSCA) return 1;
 #endif
-#ifndef NV_ANDROID
+#ifndef NV_TECLADO_SIS
   if (op == AJ_TECLADO_ANDROID) return 1;
 #endif
 #if defined(NV_TPK) || defined(NV_ANDROID)
@@ -4855,6 +4859,11 @@ static int foraDestaPlataforma(int op) {
   if (op == AJ_P2P_LIGADO || op == AJ_P2P_URL || op == AJ_P2P_TESTAR || op == AJ_P2P_LIMITE) return 1;
 #endif
   return 0;
+}
+int ajustes_teclado_na_tela(void) {
+  int i, n = 0;
+  for (i = 0; i < AJ_N_TELA; i++) if (TELA[i].tipo == IT_OPC && TELA[i].op == AJ_TECLADO_ANDROID) n++;
+  return n;
 }
 static void conferirTela(void) {
   int i, vezes[AJ_N] = { 0 };
@@ -5795,7 +5804,11 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_MENU_TOPO: return "Na lateral: o menu fica na esquerda, como sempre. No topo: o menu vira uma barra no alto da tela e o conteúdo usa a largura toda. Para cima no primeiro item da tela chega à barra e Para baixo volta. Vale para este perfil.";
     case AJ_RAIL_MODERNA: return "Troca a barra lateral pela versão nova, com ícones maiores. Ela ignora a escolha entre recolhida e fixa.";
     case AJ_RAIL_BLUR: return "Desfoca a arte atrás da barra lateral moderna em vez de usar um fundo sólido.";
+#ifndef NV_ANDROID
+    case AJ_TECLADO_ANDROID: return "Automático: a grade do Nuvio; o teclado da TV abre pelo botão Teclado da TV ou com OK no campo. Do app: só a grade do Nuvio, o teclado da TV nunca abre sozinho. Do sistema: o teclado da TV abre direto em todo campo; Voltar mostra a grade. Vale só nesta TV.";
+#else
     case AJ_TECLADO_ANDROID: return "Automático: o teclado do Android abre sozinho em e-mail, senha e busca. Do app: a grade do Nuvio; o teclado do Android só pelo botão Teclado da TV. Do Android: abre direto em todo campo; Voltar mostra a grade. Vale só neste aparelho.";
+#endif
     case AJ_MIC_BUSCA: return "Mostra nas buscas um microfone ao lado de Digitar pelo celular: ele abre o teclado da Samsung para você falar pelo microfone do controle. Automático esconde o botão se a TV disser que não tem microfone; Ligado mostra sempre; Desligado esconde.";
     case AJ_HERO: return "O bloco grande no topo da Home, com a arte e o nome de um título em destaque.";
     case AJ_HERO_CATALOGOS: return "De onde vêm os títulos do destaque: os primeiros do catálogo, um sorteio, ou uma fileira da Home. OK troca.";
@@ -6194,7 +6207,11 @@ static const char *beneficioProprio(int op) {
     case AJ_DTS_AC3: return "Para TVs que não tocam DTS: o som é convertido na hora.";
     case AJ_CACHE_SEEK: return "Guarda o que já baixou para voltar no filme sem esperar.";
     case AJ_MIC_BUSCA: return "Busque falando, pelo microfone do controle.";
+#ifdef NV_ANDROID
     case AJ_TECLADO_ANDROID: return "Escolha entre o teclado do app e o do Android.";
+#else
+    case AJ_TECLADO_ANDROID: return "Escolha entre o teclado do app e o do sistema.";
+#endif
     default: return NULL;
   }
 }
