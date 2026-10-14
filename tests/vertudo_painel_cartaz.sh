@@ -10,7 +10,7 @@ python3 -I - <<'PY'
 from pathlib import Path
 import re, subprocess, tempfile
 s = Path('src/vertudo.c').read_text()
-start = s.index('static void painel(float a)')
+start = s.index('static int painelComCartaz(void)')
 end = s.index('\nstatic void fundoColecao', start)
 defs = '\n'.join(re.findall(r'^#define (?:VT_TOPO|VT_PAN_W|VT_PAN_X|VT_PAN_Y|VT_PAN_ART_H|VT_PAN_ART_W)\b.*$', s, re.M))
 code = r'''
@@ -20,15 +20,18 @@ code = r'''
 typedef unsigned int GLuint;
 typedef struct { float x,y,w,h; } GfxRect;
 typedef struct { float w,h; } TxtLinha;
+typedef struct { char nome[48]; } Pessoa;
 typedef struct { char poster[64], backdrop[64], logo[64], titulo[64], genero[32], meta[32], sinopse[64],
-  imdb[16], tipo[16], provNome[16]; int nota; } CatItem;
+  imdb[16], tipo[16], provNome[16], classificacao[8], direcao[48]; int nota; int nElenco; Pessoa elenco[3]; } CatItem;
 typedef enum { GFX_CARD, GFX_MARCA, GFX_TEXTO } GfxModo;
-enum { TXT_HEADLINE, TXT_CAPTION, TXT_HERO_META, TXT_DET_META2 };
+enum { TXT_HEADLINE, TXT_CAPTION, TXT_HERO_META, TXT_DET_META2, TXT_MINI, TXT_TITULO2 };
+#define BADGE_H 28.0f
+#define BADGE_NEUTRO 0
 #define NV_TELA_W 1920.0f
 #define NV_TELA_H 1080.0f
 static const void *collection = (void *)1;
 static int foco;
-enum { VT_LAY_AUTO, VT_LAY_GRADE, VT_LAY_LINHA, VT_LAY_RANKING, VT_LAY_SAGA, VT_LAY_DECADAS, VT_LAY_MURAL, VT_LAY_VITRINE };
+enum { VT_LAY_AUTO, VT_LAY_GRADE, VT_LAY_LINHA, VT_LAY_RANKING, VT_LAY_SAGA, VT_LAY_DECADAS, VT_LAY_MURAL, VT_LAY_VITRINE, VT_LAY_FLUXO };
 static int lay;
 float gfx_tex_aspect_atual;
 '''+defs+r'''
@@ -54,6 +57,10 @@ float badges_desenhar(const char *p, float x, float y, float w, float h, float a
 int imdbnota_obter(const char *i, int n, int s) { (void)i;(void)n;(void)s; return 0; }
 void idioma_decimal_texto(char *n, int l) { (void)n;(void)l; }
 int ajustes_idioma(void) { return 0; }
+float txt_bloco_corta(int f, const char *t, int r, int g, int b, float x, float y, float w, float lh, float a, int n) { (void)f;(void)t;(void)r;(void)g;(void)b;(void)x;(void)y;(void)w;(void)lh;(void)a;(void)n; return 10.0f; }
+float badge_imdb(float x, float y, int n, int k, float a) { (void)x;(void)y;(void)n;(void)k;(void)a; return 0; }
+void badge_desenhar(float x, float y, const char *t, int c, float a) { (void)x;(void)y;(void)t;(void)c;(void)a; }
+const char *i18n(const char *s) { return s; }
 '''+s[start:end]+r'''
 static void run(int logo, int poster) {
   memset(&item, 0, sizeof item);

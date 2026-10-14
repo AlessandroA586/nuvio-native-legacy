@@ -50,6 +50,12 @@
 #define AS_MAX_CUSTO_D 1.10
 #define AS_SEG_COBERTURA .72
 #define AS_SEG_CUSTO 1.35
+/* O residuo mediano do terco e o ruido dos DOIS autores (a externa e a faixa
+ * embutida foram escritas por gente diferente, fala a fala), nao um
+ * desalinhamento: o mesmo instante discorda de ~0,3 s sem que nada esteja
+ * torto. O terco so e "regiao em disagreement" quando a discordia e de
+ * SEGUNDOS (corte, outra fonte). Da 3x a tolerancia. */
+#define AS_SEG_ERRO 3
 #define AS_MAX_TRECHOS 4
 #define AS_TROCA 10.0        /* Viterbi: mudar de trecho custa ~5 falas sem par */
 #define AS_MIN_TRECHO_SEG 60.0
@@ -434,7 +440,7 @@ static AutoSyncMotivo medir(const Falas *a,const Falas *b,const Peca *pc,int np,
     if(med*1000>md->erro)md->erro=med*1000;
     int largura=y-x;
     if((double)c/(largura>0?largura:1)>=AS_SEG_COBERTURA&&nr>=(largura<4?largura:4)&&cs/(nr?nr:1)<=AS_SEG_CUSTO&&
-       med*1000<=tolMs)md->tercos++;
+       med*1000<=AS_SEG_ERRO*tolMs)md->tercos++;
   }
   if(r==AUTOSYNC_OK&&md->tercos<nseg)r=AUTOSYNC_REGION_DISAGREEMENT;
   free(res);free(ok);return r;
@@ -889,10 +895,11 @@ static void *trabalhar(void *u) {
     if(publicado) {
       static const char *const tipos[]={"offset","scale","pieces"};
       fprintf(stderr,"[autosync] subtitle_sync %s reason=%s slot=%d kind=%s offset_ms=%d scale=%.5f pieces=%d anchors=%d"
-        " matched=%d coverage=%.3f confidence=%.3f alternative=%.3f kept=%d elapsed_ms=%d\n",
+        " matched=%d coverage=%.3f confidence=%.3f alternative=%.3f kept=%d regions=%d err=%dms elapsed_ms=%d\n",
         resultado.estado==AUTOSYNC_ACCEPTED?"accepted":"rejected",autosync_motivo(resultado.motivo),k,
         tipos[resultado.tipo],resultado.offsetMs,resultado.escala,resultado.trechos,resultado.ancoras,
-        resultado.casadas,resultado.cobertura,resultado.confianca,resultado.alternativa,resultado.mantida,resultado.tempoMs);
+        resultado.casadas,resultado.cobertura,resultado.confianca,resultado.alternativa,resultado.mantida,
+        resultado.regioes,resultado.erroMs,resultado.tempoMs);
     }
     legenda_documento_liberar(doc);legenda_documento_liberar(ref);
   }

@@ -248,7 +248,7 @@ static AjMini ajMiniPadrao(void) {
 }
 static float ajPreviaLayout(float x, float y, float w) {
   AjMini m = ajMiniPadrao(), o[3];
-  static const char *const N[3] = { "Moderna", "Padrão", "Dinâmica (Apple TV)" };
+  static const char *const N[3] = { "Moderna", "Padrão", "Dinâmica" };
   static const char *const N2[3] = { "Moderna", "Padrão", "Dinâmica" };   // v2: o nome inteiro esta no titulo
   int i, sel = valor[AJ_HOME_LAYOUT];
   if (ajEditandoLinha(AJ_HOME_LAYOUT)) sel = uxPendente;

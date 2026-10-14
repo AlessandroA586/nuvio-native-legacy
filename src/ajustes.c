@@ -553,6 +553,10 @@ typedef enum {
   // #461: menu na lateral (0, o de sempre) ou numa barra no topo (1). Por
   // perfil, so desta TV. No fim: valor[]/CHAVE[] posicionais.
   AJ_MENU_TOPO,
+  // #205: estilo das abas do cabecalho da colecao de streaming: Chips (0, o de
+  // sempre), Menu suspenso, Barra central, Paginas. Por perfil, so desta TV.
+  // No fim: valor[]/CHAVE[] posicionais.
+  AJ_ABAS_ESTILO,
   // Android: teclado do app (grade) ou do sistema (IME). LOCAL, 0 = automatico
   // (o de sempre). No fim: valor[]/CHAVE[] posicionais.
   AJ_TECLADO_ANDROID,
@@ -642,6 +646,7 @@ static const char *V_TAMANHO_UI[] = { "100%", "120%", "130%", "150%" };
 static const char *V_TAMANHO_AJUSTES[] = { "80%", "90%", "100%" };
 static const char *V_INTERFACE_MODO[] = { "TV", "Mobile" };
 static const char *V_MENU_POS[] = { "Na lateral", "No topo" };   // #461
+static const char *V_ABAS_ESTILO[] = { "Chips", "Menu suspenso", "Barra central", "Páginas" };   // #205
 // F07: the order is cacheboost_cache_mb's (0, 256, 512, 1024 MB).
 // #338: indice = preset do NvPlayer.kt (0 = o de sempre).
 static const char *V_BUFFER[] = { "Automático", "Pequeno", "Médio", "Grande" };
@@ -700,10 +705,10 @@ static const char *V_POSTER_PROV[] = { "Desligado", "SpatialPosters", "RPDB", "M
 // "DINAMICA" num enum que o app web valida faria os outros aparelhos cairem no
 // padrao. Ver somenteDesteAparelho.
 //
-// O rotulo da terceira leva "(Apple TV)" porque "Dinâmica" a secas e a chave da
-// traducao dos temas de cor ("Matching color"): o mesmo texto nas duas linhas
-// deixaria a home em ingles com o nome do tema.
-static const char *V_HOME_LAYOUT[] = { "Moderna", "Padrão", "Dinâmica (Apple TV)" };
+// A terceira e so "Dinâmica" (dono, 13/10: "pode tirar o apple tv"). A chave
+// era a do antigo tema de cor, que desde 03/10 se chama "Da arte"; a traducao
+// dela agora e a do layout. O valor gravado continua HOME_LAYOUT_DINAMICA.
+static const char *V_HOME_LAYOUT[] = { "Moderna", "Padrão", "Dinâmica" };
 // "Fonte automatica" (issue #130). O INDICE e o gravado (fonteAutoLocal) e o
 // FONTEAUTO_* de fonteauto.h: 0 = a regra de pontuacao, 1 = a primeira da
 // lista do addon, e so ela — o "Auto-play first source" do Nuvio.
@@ -1398,8 +1403,8 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Coincidência por regex",          V_FONTE_REGEX, 3),   // por perfil: fonteRegexLocal
   ACAO("Padrão da regex"),                                     // fonteregra.c (conta)
   ESC("Modelo de regex",                 V_FONTE_MODELO, 7),  // espelho de fonteregra_modelo_atual
-  NUM("Espaço entre fileiras",           50, 150, 10, "%"),     // local: espacoFileirasLocal
-  NUM("Espaço entre títulos",            50, 150, 10, "%"),     // local: espacoTitulosLocal
+  NUM("Espaço entre fileiras",           50, 300, 25, "%"),     // local: espacoFileirasLocal
+  NUM("Espaço entre títulos",            50, 300, 25, "%"),     // local: espacoTitulosLocal
   ESC("Proporção padrão",                V_PROPORCAO, 9),        // local: proporcaoPadraoLocal
   ESC("Também em Continuar assistindo",  V_LIGA, 2),             // local: cwRetidoTambemLocal
   ESC("Continuar na escolha de perfil",  V_LIGA, 2),             // local: psContinuarLocal
@@ -1434,6 +1439,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Modo da interface", V_INTERFACE_MODO, 2),
   ESC("Botão de microfone na busca", V_MIC_BUSCA, 3),   // local: micBuscaLocal (.tpk)
   ESC("Posição do menu", V_MENU_POS, 2),   // por perfil: menuTopoLocal (#461)
+  ESC("Estilo das abas", V_ABAS_ESTILO, 4),   // por perfil: abasEstiloLocal (#205)
   ESC("Teclado", V_TECLADO_AND, 3),   // local: tecladoAndroidLocal (Android)
   ESC("Cor do contorno da legenda", V_LEG_CONTORNO_COR, 7),   // local: legendaContornoCorLocal (#475)
   ESC("Trocar provedor se falhar", V_LIGA, 2),
@@ -1688,6 +1694,7 @@ static const char *CHAVE[] = {
   "interfaceModoLocal",
   "micBuscaLocal",
   "menuTopoLocal",
+  "abasEstiloLocal",
   "tecladoAndroidLocal",
   "legendaContornoCorLocal",
   "-falhaProvedores", "-falhaProvedorOrdem",
@@ -2497,6 +2504,7 @@ int ajustes_rail_moderna(void)        { return lig(AJ_RAIL_MODERNA); }
 int ajustes_menu_topo(void) {
   return valor[AJ_MENU_TOPO] == 1 && ajustes_home_layout() != HOME_LAYOUT_DINAMICA && !ajRetrato();
 }
+int ajustes_abas_estilo(void) { return valor[AJ_ABAS_ESTILO]; }
 int ajustes_rail_recolhida(void) {
   // No telefone em retrato, o menu sobrepoe a pagina. A preferencia salva
   // continua valendo quando a tela volta para paisagem.
@@ -2673,7 +2681,7 @@ int ajustes_social(void)              { return lig(AJ_SOCIAL); }
 // Espaco da Home em fracao do valor medido. Fora da faixa do NUM (arquivo torto)
 // volta para dentro dela; 0 (arquivo sem a chave) nao chega aqui: o padrao e 100.
 float ajustes_espaco_fator(int pct) {
-  return (pct < 50 ? 50 : pct > 150 ? 150 : pct) / 100.0f;
+  return (pct < 50 ? 50 : pct > 300 ? 300 : pct) / 100.0f;
 }
 float ajustes_espaco_fileiras(void) { return ajustes_espaco_fator(valor[AJ_ESPACO_FILEIRAS]); }
 float ajustes_espaco_titulos(void)  { return ajustes_espaco_fator(valor[AJ_ESPACO_TITULOS]); }
@@ -4465,6 +4473,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_LAYOUT_AJUSTES: /* #339: o arranjo dos Ajustes e desta TV */
     case AJ_INTERFACE_MODO: /* TV/Mobile follows this device, never the account */
     case AJ_MENU_TOPO:      /* #461: o web nao tem; por perfil (perfilLocal) */
+    case AJ_ABAS_ESTILO:    /* #205: idem */
     case AJ_LOGO_TRAILER:   /* so a protecao de OLED desta TV */
     case AJ_LEG_MOSTRAR:
     case AJ_HDR_UI:         /* o painel e desta TV */
@@ -4510,7 +4519,7 @@ static int somenteDesteAparelho(int op) {
 // (ajustes-p<N>.txt) e continuam FORA do blob (somenteDesteAparelho).
 static int perfilLocal(int i) {
   return i == AJ_CW_FONTE || i == AJ_CW_PROXIMO || i == AJ_SALVOS_DEST || i == AJ_HIST_CONTA || i == AJ_SOCIAL ||
-         i == AJ_MENU_TOPO;
+         i == AJ_MENU_TOPO || i == AJ_ABAS_ESTILO;
 }
 
 static int dePerfil(int i) {
@@ -4552,7 +4561,7 @@ int ajustes_perfil_restaurar(int perfil) {
   nomePerfil(nome, sizeof nome, perfil);
   t = dados_ler(nome);
   if (!t) return 0;
-  { int focoAntigo = -1, viuFoco = 0, viuTopo = 0;
+  { int focoAntigo = -1, viuFoco = 0, viuTopo = 0, viuAbas = 0;
   for (l = t; l && *l; ) {
     char chave[64], *fim = strchr(l, '\n');
     int v, i;
@@ -4566,6 +4575,7 @@ int ajustes_perfil_restaurar(int perfil) {
         v = limita(i, v);
         if (i == AJ_FOCO_TRAILER) viuFoco = 1;
         if (i == AJ_MENU_TOPO) viuTopo = 1;
+        if (i == AJ_ABAS_ESTILO) viuAbas = 1;
         if (v != valor[i]) { valor[i] = v; mudou++; }
         break;
       }
@@ -4577,7 +4587,9 @@ int ajustes_perfil_restaurar(int perfil) {
   }
   // Copia de antes do #461 nao tem menuTopoLocal, e a conta nao o guarda: sem
   // isto o topo ligado pelo perfil anterior vazaria para este.
-  if (!viuTopo && valor[AJ_MENU_TOPO]) { valor[AJ_MENU_TOPO] = 0; mudou++; } }
+  if (!viuTopo && valor[AJ_MENU_TOPO]) { valor[AJ_MENU_TOPO] = 0; mudou++; }
+  // Idem para o estilo das abas (#205).
+  if (!viuAbas && valor[AJ_ABAS_ESTILO]) { valor[AJ_ABAS_ESTILO] = 0; mudou++; } }
   free(t);
   if (mudou) {
     gravar();
@@ -5748,6 +5760,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_ITENS_FILEIRA: return "Quantos títulos cada fileira da Home mostra antes do Ver tudo. Mais itens usam mais memória: em TV com 1 GB de memória a Home pode ficar mais lenta ou fechar. Se o app fechar depois de você aumentar, ele volta sozinho ao valor anterior. Aumentar vale na próxima vez que o app abrir.";
     case AJ_FIL_ORDEM: return "Abre a lista de fileiras para reordenar, ligar, desligar e escolher o card de cada uma. É lá que dá para ver de onde cada fileira vem.";
     case AJ_RAIL: return "A barra de navegação da esquerda fica sempre aberta, ou recolhida até você ir até ela.";
+    case AJ_ABAS_ESTILO: return "Chips: uma fileira de botões, como sempre. Menu suspenso: escolha Filmes ou Séries e depois o catálogo numa lista. Barra central: uma pílula de vidro no centro do alto da tela. Páginas: um catálogo por página; Esquerda e Direita trocam de página. Vale para este perfil.";
     case AJ_MENU_TOPO: return "Na lateral: o menu fica na esquerda, como sempre. No topo: o menu vira uma barra no alto da tela e o conteúdo usa a largura toda. Para cima no primeiro item da tela chega à barra e Para baixo volta. Vale para este perfil.";
     case AJ_RAIL_MODERNA: return "Troca a barra lateral pela versão nova, com ícones maiores. Ela ignora a escolha entre recolhida e fixa.";
     case AJ_RAIL_BLUR: return "Desfoca a arte atrás da barra lateral moderna em vez de usar um fundo sólido.";
@@ -6122,6 +6135,7 @@ static const char *beneficioProprio(int op) {
     case AJ_BUSCA_CINEMETA: return "A busca também consulta o Cinemeta se o catálogo do Nuvio falhar.";
     case AJ_HOME_LAYOUT: return "Como a Home se organiza: Moderna, Padrão ou Dinâmica.";
     case AJ_MENU_TOPO: return "Onde fica o menu: na esquerda ou no alto da tela.";
+    case AJ_ABAS_ESTILO: return "Como as abas de uma coleção de streaming aparecem: chips, menu suspenso, barra central ou páginas.";
     case AJ_HERO_FUNDO: return "De onde vem a arte grande do destaque e da página do título.";
     case AJ_HERO_GENERO: return "Mostra ou esconde o gênero sob o logo do destaque.";
     case AJ_HERO_ARTE_DIF: return "O destaque pode usar outra arte que não a do cartaz.";
@@ -7123,13 +7137,58 @@ static const char *frRegexTexto(void) {
   fonteregra_regex(p, sizeof p);
   if (e < 0) return i18n("Regex inválida: ignorada");
   if (!p[0]) return i18n("Nenhum");
-  snprintf(b, sizeof b, "%.60s%s", p, strlen(p) > 60 ? "…" : "");
+  // 60 bytes, recuando para nao cortar um caractere UTF-8 (ñ, emoji) no meio.
+  { size_t k = strlen(p);
+    if (k > 60) { k = 60; while (k > 0 && ((unsigned char)p[k] & 0xC0) == 0x80) k--; }
+    snprintf(b, sizeof b, "%.*s%s", (int)k, p, strlen(p) > k ? "…" : ""); }
   return b;
 }
 // Sinais de regex que o teclado da TV oferece (o celular digita o que quiser,
-// dentro do mesmo alfabeto).
+// dentro do mesmo alfabeto). "=" e "<" ">" sao dos lookaheads/lookbehinds
+// (?= ?! ?<= ?<!): sem o "=" o "(?=" chegava como "(?" e a regex era recusada.
 static const char *FR_ALFA_REGEX =
-  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789|()[]{}.*+?^$\\-_ :!/,";
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789|()[]{}.*+?^$\\-_ :!/,=<>'\"&;%#@~";
+
+// O campo "Padrão do filtro". O padrao volta para o campo: corrigir um sinal nao
+// pode obrigar a redigitar tudo. Vazio apaga. Ate FR_REGEX_MAX (o teto do
+// oficial e do que fica guardado), e o texto do celular entra com ñ, acento e
+// emoji inteiros (ver teclado_aceitar_utf8).
+static void frRegexAbrir(void) {
+  char atual[FR_REGEX_MAX + 1];
+  fonteregra_regex(atual, sizeof atual);
+  stCampo = AJ_FONTE_REGEX_PADRAO;
+  teclado_abrir_com("Padrão da regex", "Ex.: ESP|Latino|Castellano. Vazio apaga.",
+                    FR_REGEX_MAX, FR_ALFA_REGEX, atual[0] ? atual : NULL);
+  teclado_aceitar_utf8(1);
+}
+#ifdef AJUSTES_TESTE
+// O caminho de verdade do campo: abre com o padrao guardado, recebe `colado`
+// como texto do celular (NULL = so abrir e dar OK; `apagar` toques em "apagar"
+// antes), confirma em "pronto", grava, e devolve o que ficou em fonteregra.txt
+// (relido do disco) e o estado da regex.
+int ajustes_teste_regex_campo(const char *colado, int apagar, char *lido, size_t n) {
+  SDL_Event e;
+  int i;
+  frRegexAbrir();
+  if (!teclado_aberto()) return -9;
+  if (colado) teclado_teste_sistema(colado);
+  memset(&e, 0, sizeof e);
+  e.type = SDL_KEYDOWN;
+  teclado_teste_foco(0, 0);
+  e.key.keysym.sym = SDLK_DOWN;
+  for (i = 0; i < 20; i++) teclado_evento(&e);          // a fileira apagar/limpar/pronto
+  e.key.keysym.sym = SDLK_RETURN;
+  for (i = 0; i < apagar; i++) teclado_evento(&e);      // coluna 0 = apagar
+  e.key.keysym.sym = SDLK_RIGHT; teclado_evento(&e); teclado_evento(&e);
+  e.key.keysym.sym = SDLK_RETURN; teclado_evento(&e);
+  if (teclado_aberto()) return -8;
+  ajustes_atualizar(0.016f, SDL_GetTicks());
+  teclado_esquecer();
+  fonteregra_carregar();
+  fonteregra_regex(lido, n);
+  return fonteregra_regex_estado();
+}
+#endif
 
 // UM PASSO NO VALOR DA OPCAO `op` (dir = +1 ou -1), com tudo o que a mudanca
 // tem de disparar, e a gravacao. Um lugar so para as setas do modo edicao e
@@ -7353,16 +7412,7 @@ static void eventoTela(const SDL_Event *e) {
     if (focoOp == AJ_FONTE_ADDONS_PERM || focoOp == AJ_FONTE_PLUGINS_PERM) {
       frAbrir(focoOp == AJ_FONTE_PLUGINS_PERM); return;
     }
-    if (focoOp == AJ_FONTE_REGEX_PADRAO) {
-      char atual[FR_REGEX_MAX + 1];
-      fonteregra_regex(atual, sizeof atual);
-      stCampo = focoOp;
-      // O padrao volta para o campo: corrigir um sinal nao pode obrigar a
-      // redigitar tudo. Vazio apaga.
-      teclado_abrir_com("Padrão da regex", "Ex.: ESP|Latino|Castellano. Vazio apaga.",
-                        TECLADO_LONGO, FR_ALFA_REGEX, atual[0] ? atual : NULL);
-      return;
-    }
+    if (focoOp == AJ_FONTE_REGEX_PADRAO) { frRegexAbrir(); return; }
     if (focoOp == AJ_DIAGNOSTICO) { pediuDiagnostico = 1; return; }
     if (focoOp == AJ_HERO_CATALOGOS) { if (!inativa(focoOp)) hcAbrir(); return; }
     if (focoOp == AJ_VELOCIDADE) { pediuVelocidade = 1; return; }
@@ -8130,7 +8180,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_ESPACO_FILEIRAS: case AJ_ESPACO_TITULOS:
     case AJ_HERO_TRAILER_SOM: case AJ_HERO_TRAILER_ESPERA: case AJ_HERO_TRANSICAO: case AJ_LOGO_TRAILER:
     case AJ_ADDON_FUNDO: case AJ_ADDON_LOGO:
-    case AJ_FIL_ORDEM: case AJ_RAIL: case AJ_RAIL_MODERNA: case AJ_MENU_TOPO:
+    case AJ_FIL_ORDEM: case AJ_RAIL: case AJ_RAIL_MODERNA: case AJ_MENU_TOPO: case AJ_ABAS_ESTILO:
     case AJ_RAIL_BLUR: case AJ_MIC_BUSCA: case AJ_HERO: case AJ_HERO_CATALOGOS: case AJ_HERO_GENERO:
     case AJ_PS_FUNDO: case AJ_PS_CONTINUAR: case AJ_DESCOBRIR: case AJ_ROTULOS:
     case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_OCULTAR_NLANC:
