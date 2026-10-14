@@ -28,6 +28,7 @@
 #include "central.h"
 #include "plrui.h"
 #include "desempenho.h"
+#include "trailer.h"
 #include "idioma.h"
 #include "idiomacod.h"
 #define NV_ESCALA_TELA   // o arquivo inteiro mede pela tela virtual (escala.h)
@@ -2048,9 +2049,10 @@ static void ilha_desenharCorpo_(Uint32 agora) {
     } }
   vis = alvo != M_RELOGIO || relogioQuer || central_segurar_progresso(agora) > 0.0f ||
         (modalAviso && (modalAberto || modalT > 0.01f)) || corpoT > 0.0f;
-  // O MEDIDOR so ocupa a ilha LIVRE: com aviso, atividade, modal ou voo ele
-  // sai (o pouso e os avisos nunca esperam por ele) e volta depois.
-  { int ds = desempenho_forma(), livre = !modalAberto && modalT <= 0.0f && !voo;
+  // O MEDIDOR so ocupa a ilha LIVRE: com aviso, atividade, modal, voo ou o
+  // TRAILER tocando (destaque da home, pagina do titulo — dono no S18, 2.0.6)
+  // ele sai (o pouso e os avisos nunca esperam por ele) e volta depois.
+  { int ds = desempenho_forma(), livre = !modalAberto && modalT <= 0.0f && !voo && !trailer_tocando();
     dsVez = alvo == M_RELOGIO && livre ? ds : DS_DESLIGADO;
     dsCartao = alvo == M_CARTAO && livre && ds != DS_DESLIGADO; }
   // O que esta desenhado so troca quando o conteudo velho ja apagou: a pilula
