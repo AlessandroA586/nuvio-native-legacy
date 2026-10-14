@@ -148,8 +148,16 @@ static int ehAss(const VideoFaixa *f) {
 #else
 #define FX_TEXTO_OVERLAY 1
 #endif
+// PGS: so o .tpk decodifica e desenha (imgsub); as outras plataformas seguem.
+static int ehPgs(const VideoFaixa *f) {
+#ifdef NV_TPK
+  return f && faixasmkv_imagem_overlay(f->codec);
+#else
+  (void)f; return 0;
+#endif
+}
 static int vaiOverlay(const VideoFaixa *f) {
-  return f && faixasmkv_overlay(f->codec, FX_TEXTO_OVERLAY);
+  return f && (faixasmkv_overlay(f->codec, FX_TEXTO_OVERLAY) || ehPgs(f));
 }
 
 // O overlay do app assume a faixa embutida `i` (ordinal `ord` no arquivo): a
@@ -160,7 +168,7 @@ static int vaiOverlay(const VideoFaixa *f) {
 // outro bug (a resposta do uMS sai logo abaixo como "[video] {...}").
 static void overlayAssumir(int i, int ord) {
   const VideoFaixa *f = video_legenda(i);
-  int texto = f && !ehAss(f);
+  int texto = f && !ehAss(f) && !ehPgs(f);
   // Texto: a TV segura a legenda enquanto a rede ainda nao entregou cues.
   video_escolher_legenda(texto ? i : -1);
   mkvass_iniciar_ordinal(video_url_atual(), ord);

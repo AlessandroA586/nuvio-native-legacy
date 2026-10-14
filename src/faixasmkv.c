@@ -231,3 +231,31 @@ int faixasmkv_aplicar(VideoFaixa *aud, int nAud, VideoFaixa *leg, int nLeg,
   }
   return mudou;
 }
+
+// PGS: o player do .tpk nao lista, o app decodifica (imgsub). So esta.
+int faixasmkv_imagem_overlay(const char *c) { return c && !strcmp(c, "S_HDMV/PGS"); }
+
+int faixasmkv_tem_imagem(const MkvFaixa *fx, int n) {
+  int j;
+  for (j = 0; fx && j < n; j++) if (fx[j].tipo == MKV_LEG && faixasmkv_imagem_overlay(fx[j].codec)) return 1;
+  return 0;
+}
+
+int faixasmkv_acrescentar_imagem(VideoFaixa *leg, int nLeg, int max, const MkvFaixa *fx, int n) {
+  int j, k, ord = 0;
+  for (j = 0; fx && j < n && nLeg < max; j++) {
+    if (fx[j].tipo != MKV_LEG) continue;
+    ord++;
+    if (!faixasmkv_imagem_overlay(fx[j].codec)) continue;
+    for (k = 0; k < nLeg; k++) if (leg[k].ordinalMkv == ord - 1 && !strcmp(leg[k].codec, fx[j].codec)) break;
+    if (k < nLeg) continue;
+    memset(&leg[nLeg], 0, sizeof leg[nLeg]);
+    leg[nLeg].numero = -1;   // sem faixa no player: so o overlay do app a desenha
+    leg[nLeg].stream_index = -1;
+    snprintf(leg[nLeg].codec, sizeof leg[nLeg].codec, "%s", fx[j].codec);
+    leg[nLeg].ordinalMkv = ord - 1;
+    aplicarUma(&leg[nLeg], &fx[j], nLeg + 1);
+    nLeg++;
+  }
+  return nLeg;
+}
