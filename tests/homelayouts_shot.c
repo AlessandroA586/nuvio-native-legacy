@@ -28,6 +28,8 @@
 #include "fileiras.h"
 #include "gfx.h"
 #include "home.h"
+#include "homevazio.h"
+#include "addons.h"
 #include "layout.h"
 #include "menu.h"
 #include "tex_cache.h"
@@ -241,6 +243,25 @@ int main(int argc, char **argv) {
   gfx_icones_dir("deploy/app/art");
   ajusta(0, 0);
   assert(home_iniciar("deploy/app/art"));
+
+  if (getenv("NV_HOME_VAZIA")) {
+    SDL_Event e = {0};
+    addons_esquecer();
+    assert(homevazio_ativo(0));
+    ajusta(0, 1);
+    tecla(SDLK_DOWN); tecla(SDLK_RIGHT); tecla(SDLK_UP);
+    tecla(SDLK_LEFT);
+    assert(home_pediu_menu());
+    e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_RETURN;
+    home_evento(&e);
+    e.type = SDL_KEYUP; home_evento(&e);
+    assert(!home_pediu_abrir() && !home_pediu_tocar());
+    quadros(90, NULL);
+    snprintf(bmp, sizeof bmp, "%s-empty-glass.bmp", saida);
+    quadros(1, bmp);
+    SDL_Quit();
+    return 0;
+  }
 
   memset(itens, 0, sizeof itens);
   memset(fils, 0, sizeof fils);

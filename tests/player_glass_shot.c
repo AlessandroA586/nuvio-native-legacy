@@ -627,6 +627,29 @@ int main(int argc, char **argv) {
     quadros(90);  salvar("detalhada");
     player_shot_carregando(0);
     ajustes_shot_valor("telaAberturaLocal", 0);
+    // Serie: a linha do episodio, a etapa e a fonte sob o trilho.
+    snprintf(st.rotulo, sizeof st.rotulo, "Fallout.S01E03.The.Head.2160p.WEB-DL.DDP5.1.Atmos.DV.HDR10.H265-NTb\nRAW ADDON DETAILS");
+    stream_definir_lista(&st, 1);
+    abrir(&serie); simular(0, 0, "", 0, 0);
+    stream_definir_atual(0);
+    player_shot_carregando(1);
+    quadros(90);  salvar("cinema-serie");
+    { VideoStats stats;
+      video_stats_vazio(&stats); stats.bufferPct = 37;
+      video_simular_estatisticas(&stats);
+      player_shot_video(1); player_shot_carregando(0);
+      quadros(30); salvar("cinema-buffer");
+      video_simular_estatisticas(NULL);
+      player_shot_video(0);
+    }
+    { CatItem semLogo = serie;
+      semLogo.logo[0] = 0;
+      abrir(&semLogo); simular(0, 0, "", 0, 0);
+      stream_definir_atual(0);
+      player_shot_carregando(1);
+      quadros(90); salvar("cinema-sem-logo");
+    }
+    player_shot_carregando(0);
   }
   if (quer(argc, argv, "carregando")) {
     Stream st;

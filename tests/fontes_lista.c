@@ -178,5 +178,37 @@ int main(void) {
   ajustes_definir_p2p_url("");                     // vazio esquece o endereco
   assert(!ajustes_p2p_url()[0]);
   puts("fontes_lista: P2P so mantem os torrents ligado e com endereco");
+
+  // J5.3: nem a URL direta marcada notWebReady entra com P2P desligado,
+  // mesmo com debrid. Conferir resposta inteira e chegada incremental.
+  char json[4096];
+  FILE *f = fopen("tests/fixtures/streams_notwebready.json", "r");
+  assert(f);
+  size_t bytes = fread(json, 1, sizeof json - 1, f);
+  assert(!ferror(f) && feof(f));
+  fclose(f); json[bytes] = 0;
+  Stream *v = NULL;
+  int count = stream_extrair(json, "fixture", &v);
+  assert(count == 9);
+  debrid_definir_chave("torbox", "chave-de-teste");
+  for (int ligado = 0; ligado <= 1; ligado++) {
+    assert(ajustes_definir_p2p_url("192.168.1.5"));
+    ajustes_definir_p2p_ligado(ligado);
+    stream_definir_lista(v, count);
+    assert(stream_n() == (ligado ? 9 : 7));
+    for (int i = 0; i < stream_n(); i++)
+      assert(ligado || !stream_item(i)->notWebReady);
+    stream_definir_lista(NULL, 0);
+    stream_lista_acrescentar(v, count, 0);
+    assert(stream_n() == (ligado ? 9 : 7));
+    for (int i = 0; i < stream_n(); i++)
+      assert(ligado || !stream_item(i)->notWebReady);
+    stream_folha_abrir();
+    assert(stream_folha_n() == (ligado ? 9 : 7));
+    assert(ligado || !stream_item(stream_automatico())->notWebReady);
+    tecla(SDLK_ESCAPE);
+  }
+  free(v);
+  puts("fontes_lista: notWebReady so oferecido com P2P ativo, externalUrl oculto");
   return 0;
 }

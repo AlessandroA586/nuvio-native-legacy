@@ -25,6 +25,7 @@
 // Blocos que COMECARAM ate isto atras do playhead ainda entram: uma fala longa
 // ou um letreiro de 8 s que comecou antes do seek precisa aparecer.
 #define MKVASS_ATRAS_SEG 8.0
+#define MKVASS_LATERAL_SEG 12.0
 // Teto de Ranges por segundo de relogio. O fio de rede compete com o pipeline
 // pela MESMA conexao/servidor (ver a nota de 320 KB em mkv.c); 8 pedidos
 // pequenos por segundo e uma fracao do que um segmento de video custa.
@@ -393,6 +394,7 @@ static struct {
   // escolheu no cabecalho (-1 = ainda nao). `adotar`/`adotarLegG`: o pedido de
   // adocao de faixas.c e a geracao da legenda a que o fio passa a entregar.
   int      prebusca, prebuscaFase, prebuscaOrdinal, adotar;
+  int      lateral;        // conserva pacing nas retomadas de rede
   unsigned adotarLegG;
   int      videoAberto;     // o pipeline esta com a url (mkvass_video_aberto)
   // Inicio do arquivo lido pela pre-busca, para a sonda (mkvass_cabecalho).
@@ -496,7 +498,7 @@ typedef struct {
   // PRE-BUSCA: `prebusca` = ainda nao adotado (nao entrega); `escolher` decide
   // o ordinal pelo idioma; `fracIni` e onde o player vai comecar; `ordinal` e a
   // faixa escolhida (-1 = nenhuma).
-  int      prebusca, ordinal;
+  int      prebusca, ordinal, lateral;
   MkvassEscolher escolher;
   double   fracIni;
   // O servidor recusou o resto de um Range cortado (rede_resto_recusado): esta
@@ -2620,7 +2622,7 @@ static int proximoVarre(const Fio *f, double pos) {
   for (i = 0; i < f->nPontos; i++) {
     double t = segundosDe(f, f->pontos[i].tempo);
     if (f->pontos[i].colhido) continue;
-    if (t > pos + MKVASS_VARRE_JANELA_SEG) break;
+    if (t > pos + (f->lateral ? MKVASS_LATERAL_SEG : MKVASS_VARRE_JANELA_SEG)) break;
     if (i != ult && t < pos - MKVASS_VARRE_ATRAS_SEG) continue;
     return i;
   }
@@ -2701,6 +2703,7 @@ static int esperarAdocao(Fio *f) {
 //     (o player informa por mkvass_folga; sem informacao nao pausa);
 //   - uma linha por minuto com os bytes varridos.
 // Devolve 1 quando fechou COMPLETO; 0 quando saiu (parar, troca, rede).
+static double alcanceFrente(const Fio *f);
 static int varrerLaco(Fio *f) {
   long ultLog = agoraMs(), bytesMarca, pausas = 0;
   int pausado = 0;
@@ -2730,7 +2733,7 @@ static int varrerLaco(Fio *f) {
       i = proximoVarre(f, pos);
       // Pre-busca: a janela a frente de onde o video vai comecar ja foi lida.
       if (f->prebusca && (i < 0 || (f->pontos[i].cursorTs >= 0.0 &&
-                                    f->pontos[i].cursorTs > pos + MKVASS_PREBUSCA_SEG))) {
+                                    f->pontos[i].cursorTs > pos + alcanceFrente(f)))) {
         entregar(f);
         printf("[mkvass] pre-busca pronta (varredura): cursor %.0f s, %ld ms\n", f->varreTs, agoraMs() - f->t0);
         fflush(stdout);
@@ -2740,11 +2743,11 @@ static int varrerLaco(Fio *f) {
       }
       if (i < 0) ocioso = 1;
       else if (f->pontos[i].cursor > 0 && f->pontos[i].cursorTs >= 0.0 &&
-               f->pontos[i].cursorTs > pos + MKVASS_VARRE_JANELA_SEG) ocioso = 1;
+               f->pontos[i].cursorTs > pos + (f->lateral ? MKVASS_LATERAL_SEG : MKVASS_VARRE_JANELA_SEG)) ocioso = 1;
       else {
         int r;
         f->posRef = pos;
-        r = varrerTrecho(f, i, pos + (f->prebusca ? MKVASS_PREBUSCA_SEG : MKVASS_VARRE_JANELA_SEG));
+        r = varrerTrecho(f, i, pos + (f->lateral ? MKVASS_LATERAL_SEG : f->prebusca ? MKVASS_PREBUSCA_SEG : MKVASS_VARRE_JANELA_SEG));
         if (r == -2) {
           if (definirEstadoSeAtual(f, MKVASS_NOGO_REDE)) {
             printf("[mkvass] Range curto na varredura: desistindo\n"); fflush(stdout);
@@ -3163,7 +3166,8 @@ static void despejar(Fio *f, double pos) {
 // ultimo despejo manteve: colher mais longe seria baixar o que o proximo
 // despejo joga fora. Abaixo do alvo ha espaco, e vale a janela de sempre.
 static double alcanceFrente(const Fio *f) {
-  double a = f->prebusca ? MKVASS_PREBUSCA_SEG : MKVASS_JANELA_SEG;
+  // O leitor lateral conserva a janela depois de adotado por faixas.c.
+  double a = f->lateral ? MKVASS_LATERAL_SEG : f->prebusca ? MKVASS_PREBUSCA_SEG : MKVASS_JANELA_SEG;
   return f->janela && f->manterFrente < a && f->corpoTam >= (size_t)(MKVASS_CORPO_ALTO / 2)
          ? f->manterFrente : a;
 }
@@ -3186,7 +3190,7 @@ static int proximoPendente(const Fio *f, double ini, double fim, int *noJanela) 
     if (f->pontos[i].rel < 0 &&
         (pausa || t > pos + MKVASS_VARRE_JANELA_SEG || t < pos - MKVASS_VARRE_ATRAS_SEG)) continue;
     if (t >= ini && t <= fim) { *noJanela = 1; return i; }
-    if (f->janela) { if (t > fim) break; continue; }
+    if (f->janela || f->lateral) { if (t > fim) break; continue; }
     if (t > fim) { if (frente < 0) frente = i; }
     else atras = i;               // o ultimo antes de ini: o mais perto
   }
@@ -3201,7 +3205,8 @@ static int grupoFim(const Fio *f, int i) {
   while (j + 1 < f->nPontos && !f->pontos[j + 1].colhido &&
          f->pontos[j + 1].cluster == f->pontos[i].cluster &&
          f->pontos[j + 1].rel >= f->pontos[i].rel &&
-         f->pontos[j + 1].rel - f->pontos[i].rel < MKVASS_JUNTAR) j++;
+         f->pontos[j + 1].rel - f->pontos[i].rel < MKVASS_JUNTAR &&
+         (!f->lateral || segundosDe(f, f->pontos[j + 1].tempo) <= f->posRef + MKVASS_LATERAL_SEG)) j++;
   return j;
 }
 
@@ -3209,10 +3214,11 @@ static int grupoFim(const Fio *f, int i) {
 // prioridade do laco (reservados com colhido = 3 so durante a escolha).
 static void preBuscar(Fio *f, double pos) {
   int ii[MKVASS_PARALELOS], jj[MKVASS_PARALELOS], n, k, m, noAr = 0;
+  f->posRef = pos;
   for (k = 0; k < MKVASS_PREBUSCA; k++) if (f->pre[k]) noAr++;
   for (n = 0; n < MKVASS_PARALELOS; n++) {
     int noJ, i = proximoPendente(f, pos - MKVASS_ATRAS_SEG,
-                                 pos + (f->janela ? alcanceFrente(f) : MKVASS_JANELA_SEG), &noJ);
+                                 pos + alcanceFrente(f), &noJ);
     if (i < 0) break;
     ii[n] = i; jj[n] = grupoFim(f, i);
     for (m = ii[n]; m <= jj[n]; m++) f->pontos[m].colhido = 3;
@@ -3455,6 +3461,7 @@ static void *trabalhar(void *arg) {
       }
       t = segundosDe(f, f->pontos[i].tempo);
       // Junta os vizinhos do mesmo Cluster que cabem em MKVASS_JUNTAR.
+      f->posRef = pos;
       j = grupoFim(f, i);
       // Os proximos grupos ja vao para o pool enquanto este e lido.
       preBuscar(f, pos);
@@ -3627,6 +3634,7 @@ static int iniciarFio(const char *url, int numeroFaixa, int herdar, int segurar,
   f->t0 = agoraMs();
   f->ordinal = -1;
   f->prebusca = escolher != NULL;
+  f->lateral = escolher != NULL;
   f->escolher = escolher;
   f->fracIni = fracIni > 0.0 && fracIni < 1.0 ? fracIni : 0.0;
   pthread_mutex_lock(&S.trava);
@@ -3643,6 +3651,12 @@ static int iniciarFio(const char *url, int numeroFaixa, int herdar, int segurar,
     legenda_documento_liberar(S.referencia); S.referencia = NULL; S.refUrl[0] = 0;
   }
   if (strcmp(S.cabUrl, url)) { free(S.cab); S.cab = NULL; S.cabN = 0; S.cabUrl[0] = 0; }
+  // CORRIDA DA ADOCAO: faixas.c escolheu antes de a pre-busca publicar o
+  // ordinal (cabecalho lateral lento, por exemplo no .tpk). A adocao la em
+  // cima falhou e este fio substitui o leitor lateral da MESMA url: conserva
+  // a janela lateral de 12 s em vez de voltar a colher 90 s a frente.
+  if (herdar || (S.prebusca && !strcmp(S.url, url))) f->lateral = S.lateral;
+  S.lateral = f->lateral;
   f->paralelos = S.paralelos > 0 ? S.paralelos : MKVASS_PARALELOS;
   // Host que ja cortou Range nesta sessao (rede_corte_host): comeca com UMA.
   if (rede_corte_host(url) > 0 || (S.urlFinal[0] && rede_corte_host(S.urlFinal) > 0))
@@ -3690,8 +3704,8 @@ void mkvass_iniciar_ordinal(const char *url, int ordinalFaixa) {
 
 int mkvass_prebuscar(const char *url, MkvassEscolher escolher, double fracInicio) {
   if (!url || !*url || !escolher) return 0;
-  printf("[mkvass] pre-busca antes do video: cabecalho, fontes, Cues e %.0f s de legenda "
-         "(teto %d ms, inicio em %.0f %%)\n", MKVASS_PREBUSCA_SEG, MKVASS_PREBUSCA_MS, fracInicio * 100.0);
+  printf("[mkvass] leitura lateral: cabecalho, fontes, Cues e janela de 12 s "
+         "(inicio em %.0f %%)\n", fracInicio * 100.0);
   fflush(stdout);
   return iniciarFio(url, 0, 0, 0, escolher, fracInicio);
 }

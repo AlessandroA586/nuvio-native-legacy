@@ -670,6 +670,30 @@ int main(int argc, char **argv) {
   assert(v.offsetAutoMs == 0 && legsync_offset_ms(320) == 320);
   legsync_encerrar(); legref_fonte_local(NULL); legsync_definir_trocador(NULL); legsync_teste_auto(0); casos++;
 
+  // 12h. PROXIMO EPISODIO (Discord 13/10): player_encerrar + player_abrir sem URL
+  //      (legsync_iniciar("")), a legenda do ep2 escolhida antes OU depois da
+  //      URL real chegar. O sync do ep2 comeca do zero e vale como o de uma
+  //      abertura pela pagina do titulo.
+  legsync_teste_auto(1); legsync_auto_habilitar(1); legsync_audio_habilitar(0);
+  legsync_iniciar(MKV2);                               // controle: abrir o ep2 direto
+  legsync_primaria_externa("ext://0/ext_menos1200.srt", "pt", "P");
+  v = esperarAuto(MKV2, 2); esperarFase(MKV2, LEGSYNC_ACEITA);
+  { int ref = legsync_visao(0).offsetAutoMs; legsync_encerrar();
+    for (int antes = 0; antes < 2; antes++) {
+      legsync_iniciar(MKV);                            // ep1 sincronizado
+      legsync_primaria_externa("ext://0/ext_mais2500.srt", "pt", "P");
+      esperarAuto(MKV, 2);
+      legsync_encerrar(); legsync_iniciar("");         // app.c: proximo episodio
+      if (antes) legsync_primaria_externa("ext://200/ext_menos1200.srt", "pt", "P");   // baixa depois da URL chegar
+      for (int k = 0; k < 5; k++) passo(MKV2, 0);      // URL do ep2 chega
+      if (!antes) legsync_primaria_externa("ext://0/ext_menos1200.srt", "pt", "P");
+      v = esperarAuto(MKV2, 2); v = esperarFase(MKV2, LEGSYNC_ACEITA);
+      printf("[12h] proximo episodio (legenda %s da URL): offset %d (controle %d)\n", antes ? "antes" : "depois", v.offsetAutoMs, ref);
+      assert(abs(v.offsetAutoMs - ref) <= 25 && legsync_offset_ms(0) == v.offsetAutoMs);
+      legsync_encerrar();
+    } }
+  legsync_teste_auto(0); casos++;
+
   // 13. SEGUNDA LEGENDA (slot 1, 2.1): a mesma engine contra a mesma faixa
   //     embutida, sozinha, mesmo com a principal embutida. Offset puro vai
   //     para o offset automatico da legenda2; desligar a segunda zera.

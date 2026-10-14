@@ -20,6 +20,7 @@ typedef struct { int progresso, watched; } CatItem;
 typedef struct { float x,y,w,h; } GfxRect;
 static int enabled=1, checks, bars;
 int cat_visto(const CatItem *it) { return it->watched; }
+int desc_filme_visto(const CatItem *it) { return it->watched; }
 int ajustes_selo_visto(void) { return enabled; }
 void badges_check_cartao(GfxRect r,int round,float a) { checks++; }
 void badges_progresso(GfxRect r,float p,float a) { bars++; }

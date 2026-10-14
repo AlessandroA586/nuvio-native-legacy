@@ -262,6 +262,20 @@ IGNORAR = {
     "fechar",  # main.c: nome do evento de janela so no log "[ciclo] janela="
     # video_tpk.c: motivos de cartaoModo()/cartaoEncaixar(), so no log "[video] tpk cartao".
     "cover maior que o painel", "cover sem prova nesta familia", "recorte de fonte",
+    # video_tpk.c: motivos de convIniciar/convSondar/convDesistir/convReabrir e o
+    # `como` do progressivo — todos impressos pelo proprio printf deles
+    # ("[dts-tpk] motivo: %s"), nenhum chega a tela.
+    "volta ao original", "volta ao audio da TV", "troca para o convertido",
+    "a TV nao listou audio", "a TV nao listou audio e o arquivo so tem DTS/TrueHD",
+    "o idioma de audio preferido so existe numa faixa DTS/TrueHD",
+    "o player nao preparou em 45 s",
+    "cabecalho lido antes de abrir: so DTS/TrueHD",
+    "cabecalho lido antes de abrir: o idioma preferido so existe em DTS/TrueHD",
+    "sem indice de quadros-chave para o HLS",
+    "absoluta (tempo da fonte)", "absoluta com os +10 s do fluxo",
+    "relativa ao comeco do fluxo", ", legenda escolhida mantida",
+    "a fonte nao abriu no conversor (%s)",
+    "o player recusou o fluxo convertido (erro 0x%08x)",
     # gpunivel.c: motivos passados a aplicar()/decidir(), que so fazem printf do
     # log "[gpu-nivel]"; nunca chegam a tela.
     "GPU fraca: referencia nao termina",

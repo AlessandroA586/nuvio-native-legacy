@@ -451,6 +451,11 @@ static int soP2P(const Stream *s) {
   return !s->url[0] && s->infoHash[0] && !debrid_ativo() && p2p_ativo();
 }
 
+static int fonteOferecida(const Stream *s) {
+  return (!s->notWebReady || p2p_ativo()) &&
+         (s->url[0] || debrid_ativo() || p2p_ativo());
+}
+
 static Uint32 recebidaEm;
 static int temRecebidaEm;
 // Torrents que a ultima lista jogou fora por falta de debrid: com 0 na lista e
@@ -490,9 +495,11 @@ void stream_definir_lista_idade(const Stream *l, int qtd, Uint32 idade) {
   // que nunca toca (shouldListStream do web). O servidor P2P experimental
   // (p2p.h) tambem o resolve, e so quando ligado.
   for (i = 0; i < qtd && nova; i++)
-    if (l[i].url[0] || debrid_ativo() || p2p_ativo()) nova[k++] = l[i];
-  if (nova && qtd - k) printf("[fonte] %d torrents sem debrid descartados\n", qtd - k);
-  descartadosSemDebrid = nova ? qtd - k : 0;
+    if (fonteOferecida(&l[i])) nova[k++] = l[i];
+  if (nova && qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
+  descartadosSemDebrid = 0;
+  for (i = 0; i < qtd && nova; i++)
+    if (!l[i].notWebReady && !fonteOferecida(&l[i])) descartadosSemDebrid++;
   for (i = 0; i < k && nova; i++) nova[i].selosPacoteVer = 0;   // os selos saem do fio de fundo (selosAgendar)
   pthread_mutex_lock(&verTrava);
   free(lista); lista = nova; n = nova ? k : 0; atual = -1;
@@ -556,9 +563,10 @@ void stream_lista_acrescentar(const Stream *l, int qtd, int ordemAddon) {
   nova = malloc(sizeof(Stream) * (size_t)qtd);
   if (!nova) return;
   for (i = 0; i < qtd; i++)
-    if (l[i].url[0] || debrid_ativo() || p2p_ativo()) nova[k++] = l[i];
-  if (qtd - k) printf("[fonte] %d torrents sem debrid descartados\n", qtd - k);
-  descartadosSemDebrid += qtd - k;
+    if (fonteOferecida(&l[i])) nova[k++] = l[i];
+  if (qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
+  for (i = 0; i < qtd; i++)
+    if (!l[i].notWebReady && !fonteOferecida(&l[i])) descartadosSemDebrid++;
   if (!k) { free(nova); return; }
   for (i = 0; i < k; i++) nova[i].selosPacoteVer = 0;
   // O CARTAO EM FOCO E O QUE FICA PARADO. Guardado pelo indice da lista (que
@@ -3191,6 +3199,7 @@ const char *stream_detalhe_texto(void) { return detDesc; }
 int  stream_detalhe_tecla_abre(const SDL_Event *e) {
   SDL_Keycode k=e->key.keysym.sym;
   return k==SDLK_i || k==SDLK_F5 || (int)e->key.keysym.scancode==NV_SCANCODE_YELLOW
+      || (int)e->key.keysym.scancode==NV_SCANCODE_CH_DOWN
 #ifdef NV_ANDROID
       || k==SDLK_F9   // o Info do controle Android chega como F9 (NuvioActivity)
 #endif

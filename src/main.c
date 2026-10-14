@@ -215,24 +215,30 @@ static void remapCanal(SDL_Event *e) {
       e->key.keysym.scancode = (SDL_Scancode)(sobe ? NV_SCANCODE_CH_UP : NV_SCANCODE_CH_DOWN);
       e->key.keysym.sym = sobe ? SDLK_PAGEUP : SDLK_PAGEDOWN;
     } else {
-#if defined(NV_TPK) || defined(__APPLE__)
-      // Na Samsung o CH+ vai com o scancode da AZUL de verdade: como a
-      // letra "s" ele era recusado com campo de texto ativo e o Spotlight
-      // o escrevia (relato de 05/10/2026).
+      // CH+ e uma tecla de controle, nao a letra "s": preserva a identidade
+      // da AZUL tambem com campo de texto ativo e no Spotlight.
       e->key.keysym.scancode = sobe ? (SDL_Scancode)NV_SCANCODE_BLUE : SDL_SCANCODE_F5;
-#else
-      e->key.keysym.scancode = sobe ? SDL_SCANCODE_S : SDL_SCANCODE_F5;
-#endif
       e->key.keysym.sym = sobe ? SDLK_s : SDLK_F5;
     }
   }
 #elif defined(__EMSCRIPTEN__)
   // .wgt: tizen-shell.html entrega o CH+ (427) como F7, com keydown e keyup,
-  // para a Central de controle saber quanto ele ficou embaixo. Fora disso ele
-  // e o "s" de sempre (Salvos).
-  if ((e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) && e->key.keysym.sym == SDLK_F7) {
-    e->key.keysym.sym = SDLK_s;
-    e->key.keysym.scancode = SDL_SCANCODE_S;
+  // para a Central de controle saber quanto ele ficou embaixo, e o CH- (428)
+  // como F8. O CH+ NUNCA e zap aqui: a casca nao traduz a ColorF3Blue (406),
+  // entao o F7 e a unica "AZUL" do Tizen web (Guia completo na faixa do guia,
+  // Tela cheia no PiP, categoria seguinte no guia cheio). O CH- e zap com
+  // canal na tela e F5 (Spotlight) fora dela, como no .tpk.
+  if ((e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) &&
+      (e->key.keysym.sym == SDLK_F7 || e->key.keysym.sym == SDLK_F8)) {
+    int sobe = e->key.keysym.sym == SDLK_F7;
+    if (!sobe && app_zap_ativo()) {
+      e->key.keysym.scancode = (SDL_Scancode)NV_SCANCODE_CH_DOWN;
+      e->key.keysym.sym = SDLK_PAGEDOWN;
+    } else {
+      // Controle nao digita "s" nos campos: mesma identidade da AZUL no .tpk.
+      e->key.keysym.scancode = sobe ? (SDL_Scancode)NV_SCANCODE_BLUE : SDL_SCANCODE_F5;
+      e->key.keysym.sym = sobe ? SDLK_s : SDLK_F5;
+    }
   }
 #else
   (void)e;
@@ -1915,6 +1921,11 @@ int main(int argc, char **argv) {
     // Com o player aberto (filme pausado) fica so o escurecer de antes: a
     // vitrine pediria texturas de tela cheia com o decodificador ocupado.
     esmaecer_estilo(player_aberto() ? ESM_ESTILO_ESCURECER : ajustes_descanso_estilo());
+    // #338: com trailer tocando (destaque da Home ou pagina do titulo) o medidor
+    // some da ilha; volta quando ele para (desempenho.h). trailer_medidor
+    // esconde tambem na PAUSA da tela cheia nativa: la trailer_tocando fica
+    // preso em 1 e sem o !trailer_pausado o medidor nao voltava (rev. 205).
+    desempenho_trailer(trailer_medidor_esconde());
     // #422: trailer tocando na pagina do titulo tambem e alguem assistindo. So
     // no titulo: o destaque da Home troca de trailer sem parar e a tela nunca
     // escureceria. Trailer em TELA CHEIA pausado e parado (trailer_pausado so
