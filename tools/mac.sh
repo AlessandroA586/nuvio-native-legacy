@@ -1,4 +1,6 @@
 #!/bin/bash
+export TMPDIR="${TMPDIR:-/tmp}"
+TMPDIR="${TMPDIR%/}"
 # Compila e roda no Mac, com a mesma pasta de arte do pacote da TV.
 #
 # FICA LOGADO ENTRE EXECUCOES. A sessao mora em $NUVIO_DADOS, que aqui aponta
@@ -24,7 +26,7 @@ ENV_D=$(tools/env.sh)
 export NUVIO_DADOS="${NUVIO_DADOS:-$HOME/.nuvio}"
 # NUVIO_MAC_BIN: outro binario (a auditoria nao pisa no /tmp/nuvio-native-legacy-mac
 # de quem estiver rodando o app). NUVIO_MAC_SO_COMPILAR=1: compila e sai.
-BIN="${NUVIO_MAC_BIN:-/tmp/nuvio-native-legacy-mac}"
+BIN="${NUVIO_MAC_BIN:-${TMPDIR:-/tmp}/nuvio-native-legacy-mac}"
 # NUVIO_RUST_MKVCORE=1: nucleo EBML/NAL do mkv.c em Rust (piloto, docs/plans/rust-mapa.md).
 # Desligado por padrao: sem a variavel o caminho C nao muda.
 RUST_D=()
