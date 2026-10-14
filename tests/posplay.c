@@ -383,6 +383,26 @@ int main(void) {
   }
   puts("ok  filme com cena pos-creditos oferece continuar; sem sinal abre relacionado");
 
+  // OK num relacionado FORA do catalogo abre o titulo (semente, como o detalhe):
+  // antes ia por desc_pedir_titulo, um fio de rede, e nada abria no quadro.
+  { CatItem filme = {0};
+    const char *titulos[] = {"Um", "Fora"}, *anos[] = {"2026", "2025"},
+               *posters[] = {"", "https://x/p.jpg"};
+    snprintf(filme.imdb, sizeof filme.imdb, "tt0000100");
+    snprintf(filme.tipo, sizeof filme.tipo, "movie");
+    cat_definir(&filme, 1);
+    extras_shot_relacionados(titulos, anos, posters, 2);
+    posplay_fechar(); aquecer(7200, 0);
+    posplay_atualizar(.016f, 1000, 7100, 7200, 0, 0, 0);
+    assert(posplay_visivel());
+    assert(tecla(SDLK_RIGHT) == 1 && tecla(SDLK_RETURN) == 1);
+    assert(!posplay_visivel() && desc_titulo_pronto() >= 0);
+    extras_shot_relacionados(titulos, anos, posters, 0);
+    cat_definir(&c, 1); cat_definir_episodios(0, eps, 10);
+    posplay_fechar();
+  }
+  puts("ok  OK em relacionado fora do catalogo abre o titulo");
+
   // E a DURACAO PROVISORIA: se o pipeline informa 30 s no primeiro instante,
   // "video de 30 s aos 16 s" acima e verdade para a regra — quem segura e a
   // exigencia de duracao estavel. Um quadro com duracao nova nao decide nada,
