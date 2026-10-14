@@ -30,6 +30,8 @@ static char url[300];
 #define NV_CURADORIA_MIN 30
 static pthread_t fio;
 static int fioVivo;
+static int urlLida;            // carregar() ainda não rodou neste processo
+static unsigned geracaoUrl;    // invalida resposta de fio de endereço antigo
 static Uint32 lidaEm;   // 0 = nunca
 #endif
 
@@ -130,17 +132,28 @@ const char *curadoria_url(void) { return url; }
 void curadoria_passo(void) {}
 
 #else
+static void carregar(void);
+
 static void *fioFn(void *u) {
   char *corpo, endereco[sizeof url];
+  unsigned geracao;
+  int vivo = 1;
   (void)u;
   // O endereço pode mudar em Ajustes enquanto o fio corre: copia sob o
-  // mutex, nunca lê `url` solto enquanto definir_url escreve.
+  // mutex, nunca lê `url` solto enquanto definir_url escreve. A geração
+  // junto garante que a resposta ainda é DO endereço que ela pediu — um
+  // fio antigo não pode republicar recomendação depois de desligar ou
+  // trocar a curadoria.
   pthread_mutex_lock(&trava);
   snprintf(endereco, sizeof endereco, "%s", url);
+  geracao = geracaoUrl;
   pthread_mutex_unlock(&trava);
   corpo = rede_baixar_com(endereco, 15, NULL);
+  pthread_mutex_lock(&trava);
+  vivo = geracao == geracaoUrl && endereco[0] && !strcmp(endereco, url);
+  pthread_mutex_unlock(&trava);
   if (corpo) {
-    if (!curadoria_receber(corpo))
+    if (vivo && !curadoria_receber(corpo))
       printf("[curadoria] corpo sem recomendacao\n");
     free(corpo);
   }
@@ -152,6 +165,9 @@ static void *fioFn(void *u) {
 
 void curadoria_passo(void) {
   Uint32 agora;
+  // Sem depender de Ajustes: Home chama o passo antes de alguém ter lido
+  // curadoria_url(), e é aqui que o endereço gravado entra no ciclo.
+  if (!urlLida) { carregar(); urlLida = 1; }
   pthread_mutex_lock(&trava);
   if (!url[0]) { pthread_mutex_unlock(&trava); return; }
   pthread_mutex_unlock(&trava);
@@ -180,8 +196,7 @@ static void carregar(void) {
 }
 
 const char *curadoria_url(void) {
-  static int lido = 0;
-  if (!lido) { carregar(); lido = 1; }
+  if (!urlLida) { carregar(); urlLida = 1; }
   return url;
 }
 
@@ -193,6 +208,18 @@ int curadoria_definir_url(const char *u) {
     return 0;
   if (u && u[i]) snprintf(nova, sizeof nova, "%s", u + i);
   pthread_mutex_lock(&trava);
+  if (strncmp(url, nova, sizeof url)) {
+    geracaoUrl++;
+    if (!nova[0]) {
+      // Desligar corta a recomendação JUNTO: sem isso o cartão seguia
+      // mostrando o último filme curado (e um fio em voo podia republicá-lo
+      // depois — a geração veta essa resposta).
+      estadoImdb[!ativo][0] = 0;
+      estadoTexto[!ativo][0] = 0;
+      ativo = !ativo;
+      revisao++;
+    }
+  }
   snprintf(url, sizeof url, "%s", nova);
   pthread_mutex_unlock(&trava);
   if (nova[0]) dados_gravar("curadoria.txt", nova);
