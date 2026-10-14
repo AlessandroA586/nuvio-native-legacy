@@ -8,6 +8,7 @@
 static int falhas;
 #define CHECA(c) do { if (!(c)) { printf("FALHOU %s:%d: %s\n", __FILE__, __LINE__, #c); falhas++; } } while (0)
 
+static unsigned donoT = 1;
 static void poe(double ini, double fim, int x, int vazio) {
   PgsQuadro p = {0};
   p.tela_w = 1920; p.tela_h = 1080;
@@ -15,7 +16,7 @@ static void poe(double ini, double fim, int x, int vazio) {
     p.n = 1; p.obj[0].x = x; p.obj[0].w = 4; p.obj[0].h = 2;
     p.obj[0].rgba = calloc(4 * 4 * 2, 1);
   }
-  imgsub_por(ini, fim, &p);
+  imgsub_por(donoT, ini, fim, &p);
   CHECA(!p.obj[0].rgba && p.n == 0);
 }
 static int xEm(double t) {
@@ -68,6 +69,13 @@ int main(void) {
   imgsub_soltar(imgsub_pegar(900));
   poe(901, 903, 7, 0);
   CHECA(xEm(901.5) == 7);
+  // dono: quadro de geracao mais velha e descartado; mais nova expulsa a antiga
+  imgsub_limpar();
+  donoT = 5; poe(10, 12, 1, 0);
+  donoT = 4; poe(20, 22, 2, 0);
+  CHECA(xEm(21) == -1 && xEm(11) == 1 && imgsub_dono_atual() == 5);
+  donoT = 6; poe(30, 32, 3, 0);
+  CHECA(xEm(11) == -1 && xEm(31) == 3 && imgsub_dono_atual() == 6);
   imgsub_limpar();
   if (falhas) { printf("imgsub: %d falha(s)\n", falhas); return 1; }
   puts("imgsub: ok");

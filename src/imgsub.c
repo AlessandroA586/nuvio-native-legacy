@@ -39,7 +39,12 @@ static double dist(const ImgsubQuadro *f) {
   return d < 0 ? -d : d;
 }
 
-void imgsub_por(double ini, double fim, PgsQuadro *src) {
+static unsigned donoGeracao;
+
+// `dono` e a geracao da legenda que decodificou o quadro. O mais novo manda: um
+// quadro de dono mais velho (coletor que saiu no meio da decodificacao) e
+// descartado, e um dono mais novo expulsa os quadros antigos.
+void imgsub_por(unsigned dono, double ini, double fim, PgsQuadro *src) {
   ImgsubQuadro *f = src ? calloc(1, sizeof *f) : NULL;
   int i, pos, cabe;
   if (!f) return;
@@ -49,6 +54,13 @@ void imgsub_por(double ini, double fim, PgsQuadro *src) {
   memset(src->obj, 0, sizeof src->obj);
   src->n = 0;
   pthread_mutex_lock(&trava);
+  if (dono < donoGeracao) {
+    pthread_mutex_unlock(&trava);
+    for (i = 0; i < PGS_MAX_OBJ; i++) free(f->obj[i].rgba);
+    free(f);
+    return;
+  }
+  if (dono > donoGeracao) { while (nq) tira(nq - 1); donoGeracao = dono; }
   f->id = ++proximoId;
   for (pos = 0; pos < nq && q[pos]->ini < ini; pos++) {}
   if (pos < nq && q[pos]->ini == ini) tira(pos);   // mesma fala colhida duas vezes
@@ -68,12 +80,6 @@ void imgsub_por(double ini, double fim, PgsQuadro *src) {
   }
   pthread_mutex_unlock(&trava);
   if (!cabe) { int k; for (k = 0; k < PGS_MAX_OBJ; k++) free(f->obj[k].rgba); free(f); }
-}
-
-static unsigned donoGeracao;
-
-void imgsub_dono(unsigned geracao) {
-  pthread_mutex_lock(&trava); donoGeracao = geracao; pthread_mutex_unlock(&trava);
 }
 
 unsigned imgsub_dono_atual(void) {

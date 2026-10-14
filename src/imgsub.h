@@ -15,11 +15,10 @@ typedef struct ImgsubQuadro {
 } ImgsubQuadro;
 
 // Guarda o quadro decodificado (leva os bitmaps: q->obj[i].rgba fica NULL).
-void imgsub_por(double ini, double fim, PgsQuadro *q);
+void imgsub_por(unsigned dono, double ini, double fim, PgsQuadro *q);
 void imgsub_limpar(void);
 // Geracao da legenda (legenda_geracao) a que os quadros pertencem: o desenho so
 // mostra se a legenda ainda e dessa geracao. imgsub_limpar zera.
-void imgsub_dono(unsigned geracao);
 unsigned imgsub_dono_atual(void);
 // Quadro que deve estar na tela em `t`, ou NULL. Quem recebe devolve com soltar.
 ImgsubQuadro *imgsub_pegar(double t);

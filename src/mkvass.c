@@ -3066,9 +3066,8 @@ static void entregarImagens(Fio *f) {
     if (dec[i].n < 0) continue;
     pthread_mutex_lock(&S.trava);
     publica = f->g == S.geracao && !S.parar;
-    if (publica) imgsub_dono(f->legG);
     pthread_mutex_unlock(&S.trava);
-    if (publica) imgsub_por(f->pend[i].ini, f->pend[i].fim, &dec[i]);
+    if (publica) imgsub_por(f->legG, f->pend[i].ini, f->pend[i].fim, &dec[i]);
     else pgs_quadro_liberar(&dec[i]);
   }
   free(dec);
