@@ -331,8 +331,11 @@ static int borrada(GfxRect r, float raioPx, const char *c, float a) {
     if (!b.d) {
       // A arte ainda nao chegou, ou a copia fica para o proximo quadro: o
       // quadro pequeno desta mesma arte, se ha; senao o fundo liso com o veu.
+      // PONTILHADO como o assado de sempre (abaixo): sem o ruido o degrade
+      // lento da arte desfocada sai em faixas de 8 bits no OLED (dono, 11/10,
+      // fotos1014/gradiente-banding.jpg).
       if (ultimo && ultimoH == h && glIsTexture(ultimo)) {
-        gfx_luz_canal_desenhar(ultimo, a, VEU_BORRADA, 0);
+        gfx_luz_canal_desenhar(ultimo, a, VEU_BORRADA, 1);
         return 1;
       }
       avisoBorrada(&avisoSemCopia, "sem a copia desfocada da arte ainda (arte nao decodificada?): fundo liso");
@@ -351,7 +354,12 @@ static int borrada(GfxRect r, float raioPx, const char *c, float a) {
     }
     if (t) {
       if (ajustes_vidro() && ajustes_vidro_fosco()) gfx_vidro_fosco_fonte(t);
-      gfx_luz_canal_desenhar(t, a, VEU_BORRADA, 0);
+      // PONTILHADO (uPar.x = 1 no GFX_SNAP, o nv_dither de gfx.c): o quadro
+      // pequeno de 320x180 esticado na tela e 8 bits, e o degrade escuro da
+      // arte desfocada quantizava em faixas largas no OLED — o mesmo caminho
+      // do Frost (pontilhar 1) e do Cinema (dfae93b2). Ruido +-1/255, parado,
+      // ~6 ALU: barato no GLES2 de webOS/Tizen/Android.
+      gfx_luz_canal_desenhar(t, a, VEU_BORRADA, 1);
       ultimo = t; ultimoH = h;
     } else {
       // DESENHO DIRETO: a copia em cover na tela e o veu por cima (uma tela

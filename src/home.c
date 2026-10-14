@@ -46,6 +46,7 @@ static void heroTempoInicio(int indice) {
 #include "cwordem.h"
 #include "catalogo.h"
 #include "artehero.h"
+#include "logotitulo.h"
 #include "colecoes.h"
 #include "colfileiras.h"
 #include "addons.h"   /* addons_nome_por_id: o addon de um grupo de colecoes */
@@ -304,6 +305,10 @@ static Foco foco;
 static HomeItem itemFoco;      // preenchido durante o desenho, lido pela transicao
 static int  temItemFoco = 0;
 static float animFoco[MAX_FIL][MAX_CARDS];
+// O TITULO DA FILEIRA acende (branco) quando a fileira e a focada e volta ao
+// cinza secundario quando nao e (dono, 14/10: "quando a fileira nao tiver
+// focada deixar o titulo da fileira em cinza") — a mesma mola do foco do card.
+static float animFocoFil[MAX_FIL];
 // MICRO-ANIMACOES DE CARD (revela.h). Um registro por lugar da grade para a
 // arte chegando; um so para a luz do foco, porque so ha um card em foco; e o
 // instante em que cada fileira comecou a entrar (0 = ja entrou).
@@ -863,6 +868,7 @@ static float larguraDe(TipoFileira t) {
     case FILEIRA_LINHA_TEMPO: return NV_CARD_W;
     case FILEIRA_FICHA:    return NV_FICHA_W;
     case FILEIRA_PALCO:    return NV_CARD_W * NV_PALCO_ESC;
+    case FILEIRA_POSTER_GRANDE: return NV_POSTER_G_W;
     case FILEIRA_REDONDA:  return NV_REDONDA_D;
     case FILEIRA_LARGA:    return NV_DIN_LARGA_W;
     // Opção adicional da referência: maior e quase quadrada, em 4:3.
@@ -1367,6 +1373,7 @@ static float alturaDe(TipoFileira t) {
     case FILEIRA_LINHA_TEMPO:
     case FILEIRA_FICHA:    return NV_CARD_H;
     case FILEIRA_PALCO:    return NV_CARD_H * NV_PALCO_ESC;
+    case FILEIRA_POSTER_GRANDE: return NV_POSTER_G_H;
     case FILEIRA_REDONDA:  return NV_REDONDA_D;
     case FILEIRA_LARGA:    return NV_DIN_LARGA_H;
     case FILEIRA_DESTAQUE_QUADRADO: return NV_DESTAQUE_QUADRADO_H;
@@ -1592,12 +1599,27 @@ static float limita43(float fator, float e) {
        ? eMax : 1.0f + (eMax - 1.0f) * 0.5f;
   return e > teto ? teto : e;
 }
+// O MESMO TETO DO 4:3 MAIOR para o Pôster grande: na Moderna e no Padrao a
+// fileira em foco fica sempre no mesmo Y, embaixo do destaque, e um card mais
+// alto que a base da tela cortaria a sinopse — a informação que só esta
+// fileira tem. Na Dinamica a fileira em foco e centrada e cabe inteira (o
+// mesmo motivo pelo qual limita43 nao pega la).
+static float limitaPosterG(float e) {
+  float hMax;
+  if (layoutHome() == HOME_LAYOUT_DINAMICA) return e;
+  hMax = NV_TELA_H - (topoFileiras() + NV_LEGACY_ROW_HEAD_H) - NV_43_FOLGA_BASE;
+  hMax = hMax / (1.0f + escalaDe(FILEIRA_POSTER_GRANDE))
+       - (ajustes_borda_foco() ? NV_ANEL_FOCO : 0.0f);
+  return e * NV_POSTER_G_H > hMax ? hMax / NV_POSTER_G_H : e;
+}
 static float escalaFil(int r) {
   float e = (r >= 0 && r < MAX_FIL) ? fileiras[r].escala : 0.0f;
   e = e > 0.05f ? e : 1.0f;
   if (r >= 0 && r < MAX_FIL && fileiras[r].fator > 1.0f &&
       fileiras[r].tipo == FILEIRA_DESTAQUE_QUADRADO)
     e = limita43(fileiras[r].fator, e);
+  if (r >= 0 && r < MAX_FIL && fileiras[r].tipo == FILEIRA_POSTER_GRANDE)
+    e = limitaPosterG(e);
   if (homeRetratoTelefone() && r >= 0 && r < MAX_FIL) {
     float w = fileiras[r].stackN ? 680.0f : larguraDe(fileiras[r].tipo);
     if (fileiras[r].tipo == FILEIRA_CATALOGOS) { float h; medidaColecao(fileiras[r].forma, &w, &h); }
@@ -1974,6 +1996,7 @@ static TipoFileira tipoDaEscolha(int t) {
     case FIL_TIPO_FICHA:    return FILEIRA_FICHA;
     case FIL_TIPO_PALCO:    return FILEIRA_PALCO;
     case FIL_TIPO_REDONDA:  return FILEIRA_REDONDA;
+    case FIL_TIPO_POSTER_GRANDE: return FILEIRA_POSTER_GRANDE;
     default:                return FILEIRA_TOP10;
   }
 }
@@ -2236,6 +2259,29 @@ int home_iniciar(const char *dirArte) {
   return 1;
 }
 
+// DESCER/SUBIR DE FILEIRA NA MESMA POSICAO DA TELA (issue #205: "quando
+// desce de uma fileira pra outra nao ir pro inicio da fileira, descer na
+// mesma posicao"). O focus_mover pousa na COLUNA LEMBRADA da fileira nova
+// (a que ela tinha quando a pessoa saiu dela), e o salto era um pulo para
+// o comeco da fileira de baixo. Aqui o pouso e refeito na coluna cujo
+// centro x esta mais perto do centro do cartaz que estava em foco — a
+// mesma regra do vertudo (vizinhoNaLinha): largura e rolagem diferentes
+// entre fileiras entram na conta, e nColunas limita o pouso ao que existe.
+static int focoVertical(int dy) {
+  int rAntes = foco.fileira;
+  float cx = homeFileiraX(rAntes, foco.coluna) + larguraFil(rAntes) * 0.5f;
+  if (!focus_mover(&foco, 0, dy)) return 0;
+  int r = foco.fileira;
+  int melhor = foco.coluna;
+  for (int c = 0; c < foco.nColunas[r]; c++) {
+    if (fabsf(homeFileiraX(r, c) + larguraFil(r) * 0.5f - cx) <
+        fabsf(homeFileiraX(r, melhor) + larguraFil(r) * 0.5f - cx)) melhor = c;
+  }
+  foco.coluna = melhor;
+  if (r < FOCUS_MAX_FILEIRAS) foco.colunaLembrada[r] = melhor;
+  return 1;
+}
+
 void home_evento(const SDL_Event *e) {
   if (e->type == SDL_QUIT) { sair = 1; return; }
   if (homevazio_ativo(nFileiras)) {
@@ -2484,8 +2530,8 @@ void home_evento(const SDL_Event *e) {
     if (!focus_mover(&foco, -1, 0) && foco.fileira < MAX_FIL)
       anim_borda_bater(&bordaFil[foco.fileira], -NV_BORDA_AMP);
   }
-  else if (k == SDLK_DOWN)  focus_mover(&foco, 0, 1);
-  else if (k == SDLK_UP && !focus_mover(&foco, 0, -1)) focoHero = 1;
+  else if (k == SDLK_DOWN)  focoVertical(1);
+  else if (k == SDLK_UP && !focoVertical(-1)) focoHero = 1;
 }
 
 // Reconstroi a lista a partir do catalogo. Chamada a cada quadro porque a
@@ -3161,6 +3207,7 @@ static void sincronizarFileiras(void) {
   filsAplicadas = nCat;
   prefsAplicadas = assin;
   memset(animFoco, 0, sizeof animFoco);
+  memset(animFocoFil, 0, sizeof animFocoFil);
   memset(revArte, 0, sizeof revArte);
   memset(velX, 0, sizeof velX);
   memset(scrollX, 0, sizeof scrollX);
@@ -3613,6 +3660,9 @@ void home_atualizar(float dt, Uint32 agora) {
                      : anim_mola(animFoco[r][c], alvo, dt,
                                  alvo > animFoco[r][c] ? NV_MOLA_FOCO : NV_MOLA_DESFOCO);
     }
+    { float alvoFil = (!focoHero && foco.fileira == r) ? 1.0f : 0.0f;
+      animFocoFil[r] = motionReduzido ? alvoFil
+                      : anim_mola(animFocoFil[r], alvoFil, dt, NV_MOLA_FOCO); }
 #ifdef NV_TOUCH_UI
     if (toqueLivreX[r]) scrollX[r] = anim_clamp(scrollX[r], 0.0f, toqueHomeMaxX(r));
 #endif
@@ -5697,25 +5747,115 @@ static void palcoLegenda(int r, float base, float lw) {
 // CARTAZ COM FICHA: a placa inteira atras, o texto a direita do cartaz. O
 // cartaz e desenhado depois, pelo caminho comum (pintarCartao), na largura 2:3.
 static void desenhaFicha(const CatItem *it, float px, float py, float w, float h, float f) {
-  float pw = h * 2.0f / 3.0f, tx = px + pw + 26.0f, tw = w - pw - 50.0f, y = py + 22.0f;
-  float raio = raioDe(w, h);
-  gfx_cor((GfxRect){ px, py, w, h }, raio, 1, 1, 1, 0.055f + 0.05f * f);
-  gfx_rect((GfxRect){ px, py, w, h }, 0, GFX_ANEL, 0, 1.5f / h, 0, raio, 1, 1, 1, 0.08f + 0.20f * f);
+  float pw = h * 2.0f / 3.0f;
+  float y;
+  // A ILHA AO LADO DO CARTAZ, na cor e no estilo do menu contextual (dono,
+  // 14/10: "deixar parecendo o menu contextual de cor e estilo"): o mesmo
+  // fundo, canto e vidro do cartao do menu (ctx_menu_ilha/ilhaCtx), solto do
+  // cartaz por um vao — e menor que ele, dentro da fileira. Fora do foco ela
+  // fica no quilo do veu de antes (o `a` e baixo), no foco acende inteira,
+  // como a extensao de informacoes do menu do cartaz.
+  GfxRect ilha = { px + pw + NV_FICHA_VAO, py + NV_FICHA_ILHA_DY,
+                   w - pw - NV_FICHA_VAO, h - 2.0f * NV_FICHA_ILHA_DY };
+  float tx = ilha.x + 34.0f, tw = ilha.w - 68.0f;   // PAD+INSET do ctxinfo
+  float a = 0.06f + 0.94f * f;
+  ctx_menu_ilha(ilha, NV_FICHA_RAIO, a);
+  y = ilha.y + 22.0f;
   if (!it) return;
-  { TxtLinha t = txt_linha_corta(TXT_CW_TITULO, it->titulo, 245, 246, 249, 255, tw);
-    txt_desenhar(t, tx, y); y += t.h + 8.0f; }
-  if (it->meta[0]) { TxtLinha m = txt_linha_corta(TXT_CAPTION, it->meta, 205, 210, 220, 255, tw);
-                     txt_desenhar(m, tx, y); y += m.h + 4.0f; }
-  if (it->genero[0]) { TxtLinha g = txt_linha_corta(TXT_CAPTION, it->genero, 160, 167, 180, 255, tw);
-                       txt_desenhar(g, tx, y); y += g.h + 10.0f; }
+  { TxtLinha t = txt_linha_corta(TXT_ILHA_NOME, it->titulo, 243, 242, 239, 255, tw);
+    txt_desenhar_alpha(t, tx, y, a); y += t.h + 8.0f; }
+  if (it->meta[0]) { TxtLinha m = txt_linha_corta(TXT_ILHA_META, it->meta, 243, 242, 239, 255, tw);
+                     txt_desenhar_alpha(m, tx, y, 0.78f * a); y += m.h + 4.0f; }
+  if (it->genero[0]) { TxtLinha g = txt_linha_corta(TXT_ILHA_GENERO, it->genero, 243, 242, 239, 255, tw);
+                       txt_desenhar_alpha(g, tx, y, 0.52f * a); y += g.h + 10.0f; }
   { int nota = imdbnota_obter(it->imdb, it->nota, !strcmp(it->tipo, "series"));
-    if (nota > 0) { badge_imdb(tx, y, nota, 0, 1.0f); y += BADGE_H + 12.0f; } }
+    if (nota > 0) { badge_imdb(tx, y, nota, 0, a); y += BADGE_H + 12.0f; } }
   if (it->sinopse[0]) {
-    int linhas = (int)((py + h - 20.0f - y) / 28.0f);
+    int linhas = (int)((ilha.y + ilha.h - 20.0f - y) / 28.0f);
     if (linhas > 4) linhas = 4;
-    if (linhas > 0) txt_bloco(TXT_CAPTION, it->sinopse, 196, 201, 212, tx, y, tw, 28.0f, 0.92f, linhas);
+    if (linhas > 0) txt_bloco(TXT_ILHA_TEXTO, it->sinopse, 243, 242, 239, tx, y, tw, 28.0f, 0.66f * a, linhas);
   }
 }
+// PÔSTER GRANDE (14/10, dono: "o pôster só que do tamanho do grande, tipo o
+// 3:4 grande. Ele teria mais informação. Com o overlay ao invés de preto com a
+// cor predominante. A letra seguiria o contraste"): a ficha de texto na BASE do
+// cartaz 3:4 — logo, "Filme · Gênero · Gênero" com o selo da classificação e
+// duas linhas de sinopse — sobre um veu na COR PREDOMINANTE do cartaz em vez de
+// preto. A cor sai da paleta que o fio de decode JA extraiu de cada arte
+// (tex_cache; tex_publicar_paleta publica a do retrato sob demanda, sem
+// decodificar de novo), e a tinta do texto e a regra que ja existia do Cor
+// viva: branca quando o branco contrasta mais com o preenchimento que a tinta
+// escura (corviva_tokens). Sem paleta (arte ausente, cinza ou a caminho) o veu
+// cai no preto do card aberto e o texto fica branco — o overlay da Apple TV.
+static void desenhaPosterGrande(const CatItem *ci, const char *caminho,
+                                float px, float py, float w, float h,
+                                float raio, float a) {
+  CorvivaPaleta p;
+  CorvivaTokens tk;
+  int tem, tr, tg, tb, sr, sg, sb;
+  float cr, cg, cb, pad = 34.0f, veuTopo, y, logoMaxH;
+  if (!ci) return;
+  if (caminho && caminho[0]) tex_publicar_paleta(caminho);
+  tem = caminho && caminho[0] && corviva_paleta(caminho, &p) && p.ok;
+  if (tem) { cr = p.acento[0]; cg = p.acento[1]; cb = p.acento[2];
+             corviva_tokens(p.acento, &tk); }
+  else     { cr = 0.02f; cg = 0.02f; cb = 0.03f; tk.tintaBranca = 1; }
+  if (tk.tintaBranca) { tr = 245; tg = 246; tb = 250; sr = 218; sg = 222; sb = 232; }
+  else                { tr = 18;  tg = 19;  tb = 22;  sr = 70;  sg = 74;  sb = 84; }
+  // O veu: a MESMA rampa do gfx_veu_base (cheia ate 42% da faixa, smoothstep ao
+  // quadrado, cantos do card), na cor predominante — GFX_BRILHO_TOPO com
+  // uPar.y > 0 e a rampa de baixo para cima em uCor.rgb.
+  veuTopo = py + h * (1.0f - NV_POSTER_G_VEU_F);
+  { GfxRect v = { px, veuTopo, w, h * NV_POSTER_G_VEU_F };
+    gfx_rect(v, 0, GFX_BRILHO_TOPO, 0, 1.0f, 0.42f,
+             raio / NV_POSTER_G_VEU_F, cr, cg, cb, NV_POSTER_G_VEU_A * a); }
+  // Sinopse: duas linhas ancoradas na base do card.
+  y = py + h - pad - 60.0f;
+  if (ci->sinopse[0])
+    txt_bloco_corta(TXT_HERO_SIN, ci->sinopse, sr, sg, sb,
+                    px + pad, y, w - pad * 2.0f, 30.0f, 0.95f * a, 2);
+  // Linha de meta: o genero ("Filme · Terror · Suspense") e, ao lado, o selo da
+  // classificacao — o mesmo chip do card aberto (desenhaFaixaAberta), na tinta.
+  y -= 46.0f;
+  if (ci->genero[0]) {
+    TxtLinha gm = txt_linha_corta(TXT_CW_META, ci->genero, tr, tg, tb, 255,
+                                  w - pad * 2.0f);
+    txt_desenhar_alpha(gm, px + pad, y, a);
+    if (ci->classificacao[0]) {
+      TxtLinha cl = txt_linha(TXT_MINI, ci->classificacao, tr, tg, tb, 255);
+      float bw = cl.w + 22.0f, ch = 34.0f, cx = px + pad + gm.w + 12.0f;
+      float cy = y + (gm.h - ch) * 0.5f;
+      float fr = tk.tintaBranca ? 1.0f : 0.0f;
+      gfx_cor((GfxRect){ cx, cy, bw, ch }, 0.24f, fr, fr, fr, 0.18f * a);
+      gfx_rect((GfxRect){ cx, cy, bw, ch }, 0, GFX_ANEL, 0, 0.006f, 0,
+               0.28f, 1, 1, 1, 0.35f * a);
+      txt_desenhar_alpha(cl, cx + 11.0f, cy + (ch - cl.h) * 0.5f, a);
+    }
+  }
+  // Logo: a arte de logo do titulo (logotitulo), rente a linha de meta. Sem
+  // logo, o nome em texto NA MESMA CAIXA e na tinta do veu — a caixa e
+  // reservada, o card nao pula quando a logo chega.
+  logoMaxH = y - 18.0f - (veuTopo + 24.0f);
+  if (logoMaxH > 40.0f) {
+    const char *uL = logotitulo_url(ci, w - pad * 2.0f);
+    GLuint tl = uL ? tex_obter_logo_larg_qualquer(uL, w - pad * 2.0f) : 0;
+    float asp = tl ? tex_aspecto(uL) : 0.0f;
+    if (tl && asp > 0.01f) {
+      float wL = w - pad * 2.0f, hL = wL / asp;
+      GfxModo m = tex_marca_escura(uL) ? GFX_MARCA : GFX_TEXTO;
+      if (hL > logoMaxH) { hL = logoMaxH; wL = hL * asp; }
+      gfx_tex_aspect_atual = 0.0f;
+      gfx_rect((GfxRect){ px + pad, y - 18.0f - hL, wL, hL }, tl, m,
+               0, 0, 0, 0.0f, 1, 1, 1, a);
+      gfx_tex_aspect_atual = 0.0f;
+    } else if (ci->titulo[0]) {
+      TxtLinha lt = txt_linha_corta(TXT_CW_TITULO, ci->titulo, tr, tg, tb, 255,
+                                    w - pad * 2.0f);
+      txt_desenhar_alpha(lt, px + pad, y - 18.0f - lt.h, a);
+    }
+  }
+}
+
 // LINHA DO TEMPO: a faixa dos anos sob os cartazes.
 //  - a linha SE DESENHA da esquerda para a direita quando a fileira entra;
 //  - o trecho ate o card em foco acende no acento e anda junto com o foco;
@@ -5835,7 +5975,8 @@ static void desenhaArteCard(GfxRect card, TipoFileira tipo, const char *caminho,
     // 16:9 ou cartaz) ficava no meio do card com faixas cinza dos lados (dono,
     // 03/10: "tem que colocar uma imagem cropada para preencher tudo").
     gfx_card_forcar_cover_atual = (tipo == FILEIRA_DESTAQUE_QUADRADO ||
-                                   tipo == FILEIRA_RETORNO) ? 1.0f : 0.0f;
+                                   tipo == FILEIRA_RETORNO ||
+                                   tipo == FILEIRA_POSTER_GRANDE) ? 1.0f : 0.0f;
     gfx_tex_aspect_atual = tex_aspecto(caminho);
     // O esqueleto fica por baixo so enquanto a arte esvanece: um
     // desenho do tamanho do card por ~220 ms, e depois nenhum.
@@ -6102,6 +6243,7 @@ static TipoFileira previaMedida(const Fileira *fl, const char *chave, int filTip
   // fileira gravada no 4:3 grande nao herda o 1,5 dele.
   e = fil_escala_tipo(chave, filTipo);
   if (tipo == FILEIRA_DESTAQUE_QUADRADO) e = limita43(fil_tipo_fator(filTipo), e);
+  if (tipo == FILEIRA_POSTER_GRANDE) e = limitaPosterG(e);
   if (*pilha) { *lw = 680.0f; *lh = alturaDe(FILEIRA_TOP10); }
   else if (tipo == FILEIRA_CATALOGOS) medidaColecao(*forma, lw, lh);
   else { *lw = larguraDe(tipo); *lh = alturaDe(tipo); }
@@ -6124,7 +6266,8 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
   tipo = previaMedida(fl, chave, filTipo, &forma, &pilha, &lw, &lh);
   gap = gapDe(tipo); xoff = xOffTipo(tipo);
   deitado = editorial(tipo) || tipo == FILEIRA_LARGA ||
-            ((tipo != FILEIRA_CONTINUE) && ajustes_posteres_deitados());
+            ((tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE) &&
+             ajustes_posteres_deitados());
   rotuloFora = temRotulo(tipo);
   rotH = rotuloFora ? NV_POSTER_COPY_H : 0.0f;
   // A REDUCAO SAI DA FORMA DE REFERENCIA. Sozinha, cada forma era reduzida
@@ -6180,6 +6323,8 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
         if (t) veusDoCard(ci, tipo, deitado, 0.0f, 0);
         desenhaArteCard(card, tipo, cam, t, ci, 0.0f, raio, 1.0f, 0.0f);
         if (t) gfx_veu_na_arte = 1; else gfx_veu_card_limpar();
+        if (tipo == FILEIRA_POSTER_GRANDE && ci)
+          desenhaPosterGrande(ci, cam, px, y0, w, h, raio, 1.0f);
         desenhaRotuloCard(ci, tipo, deitado, rotuloFora, px, y0, w, h, raio);
         if (editorial(tipo)) desenhaEditorialCard(ci, tipo, px, y0, w, h, raio);
         gfx_veu_card_limpar(); }
@@ -6422,6 +6567,10 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
           // Apple TV nao deixa cartao sem nome), com o rotulo ligado ou nao.
           desenhaRotuloCard(cItem, tipo, deitado, rotuloFora, px, py, w, h, raio);
 
+          // PÔSTER GRANDE: a ficha na base, sobre o veu da cor predominante.
+          if (tipo == FILEIRA_POSTER_GRANDE && cItem)
+            desenhaPosterGrande(cItem, caminho, px, py, w, h, raio, 1.0f);
+
           if(tipo==FILEIRA_TOP10) desenhaRankPequeno(c+1, px, py, h);
 
           if (tipo == FILEIRA_CONTINUE)
@@ -6639,7 +6788,8 @@ void home_desenhar(Uint32 agora) {
     float cardY = y + NV_LEGACY_ROW_HEAD_H;
 
     int deitado = editorial(tipo) || tipo == FILEIRA_LARGA ||
-                  ((tipo != FILEIRA_CONTINUE) && ajustes_posteres_deitados());
+                  ((tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE) &&
+                   ajustes_posteres_deitados());
     int rotuloFora = temRotulo(tipo);
     if (y < NV_TELA_H + 200 && y + NV_LEGACY_ROW_HEAD_H + lh > -200) {
       // `catalogTypeSuffixEnabled`. formatCatalogRowTitle (homeUtils.js:62) faz
@@ -6662,9 +6812,17 @@ void home_desenhar(Uint32 agora) {
           rotFil = semSufixo;
         }
       }
-      TxtLinha tl = txt_linha_corta(TXT_ROW_TITULO, rotFil, 245, 246, 249, 255,
-                                    homeRetratoTelefone() ? homeLarguraUtil() - 76.0f : NV_TELA_W - homeConteudoX() - 180.0f);
-      txt_desenhar(tl, homeConteudoX(), y);
+      // TITULO DA FILEIRA: BRANCO na fileira focada, cinza secundario nas
+      // outras (o #A8ADB5 do titulo do Centro de Controle), esmaecendo pela
+      // mola animFocoFil quando o foco muda de fileira.
+      TxtLinha tl;
+      { float k = animFocoFil[r];
+        int cr = 168 + (int)((245 - 168) * k + 0.5f);
+        int cg = 173 + (int)((246 - 173) * k + 0.5f);
+        int cb = 181 + (int)((249 - 181) * k + 0.5f);
+        tl = txt_linha_corta(TXT_ROW_TITULO, rotFil, cr, cg, cb, 255,
+                             homeRetratoTelefone() ? homeLarguraUtil() - 76.0f : NV_TELA_W - homeConteudoX() - 180.0f);
+        txt_desenhar(tl, homeConteudoX(), y); }
       // A FONTE (Trakt, Simkl...) NAO APARECE NA FILEIRA DE AMIGOS: a pessoa
       // quer saber quem viu e o que achou, nao de onde veio o dado. Ela fica
       // so no perfil do amigo (amigoperfil.c). Era a marca do Trakt aqui.
@@ -7117,7 +7275,8 @@ void home_desenhar(Uint32 agora) {
           fileiraEhCanal(&fileiras[r])) continue;
       float lw = larguraFil(r);
       int deitado = editorial(tipo) || tipo == FILEIRA_LARGA ||
-                    (tipo != FILEIRA_CONTINUE && ajustes_posteres_deitados());
+                    (tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE &&
+                     ajustes_posteres_deitados());
       for (int c = 0; c < fileiras[r].n && !pediu; c++) {
         float x = homeFileiraX(r, c);
         if (x < -lw * 1.5f || x > NV_TELA_W + lw) continue;

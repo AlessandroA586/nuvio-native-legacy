@@ -1,9 +1,14 @@
 #!/bin/bash
 # Painel lateral da colecao (dono, 13/10/2026: "o poster tinha antes, eu so pedi
-# para tirar o poster quando a view e de poster"): o cartaz fica em todas as
-# exibicoes com painel e some SO na Grade (cartazes). Com logo, cartaz E logo
-# (logo abaixo); sem logo, cartaz + titulo. A Vitrine nao usa painel(): o
-# destaque dela e logo+meta+sinopse e o cartaz vem na fileira.
+# para tirar o poster quando a view e de poster"): o cartaz some na Grade, no
+# Cover Flow E no Ranking (dono, 14/10: "o ranking ainda ta mostrando o poster
+# sendo que ele ja e poster") — nessas o logo segue valendo. Com o cartaz na
+# ficha (as outras exibicoes), a LOGO nao entra: so o nome escrito (dono, 14/10:
+# "quando tem poster nas infos nao colocar a logo"). A Vitrine nao usa painel():
+# o destaque dela e logo+meta+sinopse e o cartaz vem na fileira.
+# O mesmo arquivo prova o TETO DO SCROLL do foco (dono, 14/10: "quando ta
+# focado, fica cortado no top"): o topo do cartaz focado, com o crescimento e o
+# anel, nunca entra por baixo do recorte do cabecalho.
 set -eu
 cd "$(dirname "$0")/.."
 python3 -I - <<'PY'
@@ -71,15 +76,17 @@ static void run(int logo, int poster) {
 }
 int main(void) {
   for (lay = VT_LAY_GRADE; lay <= VT_LAY_MURAL; lay++) {
-    if (lay == VT_LAY_GRADE) {   // exibicao de cartazes: sem cartaz lateral
+    if (lay == VT_LAY_GRADE || lay == VT_LAY_RANKING) {
+      // Exibicao de cartazes: o cartaz ja esta na celula, o painel so da as
+      // infos — e a logo vale.
       run(1, 1); assert(posterDraws == 0 && logoDraws == 1);
       run(0, 1); assert(posterDraws == 0 && logoDraws == 0);
       continue;
     }
-    run(1, 1);   // logo + cartaz: os dois
+    // Com o cartaz na ficha NAO ha logo: so o nome escrito (dono, 14/10).
+    run(1, 1);
     assert(posterDraws == 1);
-    assert(logoDraws == 1);
-    assert(logoY >= posterY + VT_PAN_ART_H);
+    assert(logoDraws == 0);
     run(0, 1);   // sem logo: cartaz + titulo em texto
     assert(posterDraws == 1 && logoDraws == 0);
   }
@@ -89,6 +96,38 @@ int main(void) {
 with tempfile.TemporaryDirectory() as d:
     src = Path(d)/'painel.c'; binf = Path(d)/'painel'
     src.write_text(code)
+    subprocess.run(['cc', str(src), '-o', str(binf), '-lm'], check=True)
+    subprocess.run([str(binf)], check=True)
+
+# TETO DO SCROLL DO FOCO: a linha em foco nunca sobe alem do recorte do
+# cabecalho com o cartaz crescido/anelado inteiro visivel.
+m = re.search(r'static float tetoScrollFoco\([^)]*\)\s*\{[^}]*\}', s)
+assert m, 'missing tetoScrollFoco'
+assert 'tetoScrollFoco(celY[foco], celH[foco])' in s, 'focus scroll ignores the ceiling'
+code2 = r'''
+#include <assert.h>
+#include <math.h>
+#define FOCO_ZOOM 0.06f
+#define NV_ANEL_FOCO 4.0f
+static float perto(float a, float b) { float d = a - b; return d < 0 ? -d : d; }
+''' + m.group(0) + r'''
+int main(void) {
+  // 1a linha da Grade (cartaz de 372): teto negativo — scroll fica em zero e o
+  // topo do foco (zoom de 11.16 + anel de 4) cabe nos 12 px acima do VT_TOPO.
+  float t0 = tetoScrollFoco(0.0f, 372.0f);
+  assert(perto(t0, 12.0f - (372.0f * FOCO_ZOOM * 0.5f + NV_ANEL_FOCO)) < 0.01f);
+  assert(t0 < 0.0f);
+  // Linha de baixo: mesmo teto relativo, deslocado da linha.
+  float t1 = tetoScrollFoco(416.0f, 372.0f);
+  assert(perto(t1, t0 + 416.0f) < 0.01f);
+  // Cartaz maior (Ranking e mural deitados nao chegam; o teto cobre qualquer h).
+  assert(tetoScrollFoco(0.0f, 1000.0f) < 0.0f);
+  return 0;
+}
+'''
+with tempfile.TemporaryDirectory() as d:
+    src = Path(d)/'teto.c'; binf = Path(d)/'teto'
+    src.write_text(code2)
     subprocess.run(['cc', str(src), '-o', str(binf), '-lm'], check=True)
     subprocess.run([str(binf)], check=True)
 print('vertudo_painel_cartaz: PASS')
