@@ -6961,6 +6961,41 @@ void home_desenhar(Uint32 agora) {
   // logo acima.
   gfx_borda_foco_atual = 1.0f;
   gfx_sem_recorte();
+
+  static TexLookahead adiante;
+  int parado = tex_lookahead_parado(&adiante, scrollY);
+  for (int r = 0; r < nFileiras; r++)
+    if (fabsf(velX[r]) > 0.25f) parado = 0;
+  if (parado && pd <= 0.001f && cinema <= 0.001f) {
+    int primeira = -1, ultima = -1;
+    float fy = topoFil - scrollY + bordaPag.x;
+    for (int r = 0; r < nFileiras; r++) {
+      if (fy < NV_TELA_H + 200 && fy + NV_LEGACY_ROW_HEAD_H + alturaFil(r) > -200) {
+        if (primeira < 0) primeira = r;
+        ultima = r;
+      }
+      fy += NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r) + fileiraGap();
+    }
+    int dir = adiante.direcao < 0 ? -1 : 1, pediu = 0;
+    for (int passo = 1; primeira >= 0 && passo <= 3 && !pediu; passo++) {
+      int r = (dir > 0 ? ultima : primeira) + passo * dir;
+      if (r < 0 || r >= nFileiras) break;
+      TipoFileira tipo = fileiras[r].tipo;
+      if (tipo == FILEIRA_SOCIAL || tipo == FILEIRA_CATALOGOS ||
+          fileiraEhCanal(&fileiras[r])) continue;
+      float lw = larguraFil(r);
+      int deitado = editorial(tipo) || tipo == FILEIRA_LARGA ||
+                    (tipo != FILEIRA_CONTINUE && ajustes_posteres_deitados());
+      for (int c = 0; c < fileiras[r].n && !pediu; c++) {
+        float x = homeFileiraX(r, c);
+        if (x < -lw * 1.5f || x > NV_TELA_W + lw) continue;
+        int idx = fileiraItemIndice(&fileiras[r], c);
+        const char *cam = arte_por_identidade(idx,
+          (tipo == FILEIRA_CONTINUE || tipo == FILEIRA_RETORNO) ? 3 : deitado);
+        pediu = tex_lookahead_pedir(cam, lw);
+      }
+    }
+  }
 }
 
 // Rede de seguranca, nao o gatilho principal. Numa TV o app raramente sai por

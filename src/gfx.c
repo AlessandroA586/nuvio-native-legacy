@@ -1581,9 +1581,11 @@ int gfx_iniciar(void) {
   return 1;
 }
 
+static GfxMini warmAlvo;
 static void desfEncerrar(void);
 static void iconesEncerrar(void);
 void gfx_encerrar(void) {
+  gfx_mini_liberar(&warmAlvo);
   iconesEncerrar();
   desfEncerrar();
   for (int m = 0; m < GFX_NMODOS; m++)
@@ -3813,6 +3815,21 @@ void gfx_mini_terminar(void) {
   recorteAtivo = miniRecAnt;
   GFX_OUTRO_FIM();
 }
+void gfx_tex_aquecer(GLuint tex) {
+  if (!tex || !progs[GFX_SNAP].prog || miniAtiva || snapAtivo) return;
+  if (!gfx_mini_alvo(&warmAlvo, 1, 1)) return;
+  GLfloat clear[4];
+  float grupo = gfx_opacidade_grupo, aspecto = gfx_tex_aspect_atual;
+  glGetFloatv(GL_COLOR_CLEAR_VALUE, clear);
+  gfx_mini_comecar(&warmAlvo, 0, 0, 1.0f / NV_TELA_W);
+  gfx_opacidade_grupo = 1.0f; gfx_tex_aspect_atual = 0.0f;
+  gfx_rect((GfxRect){0, 0, NV_TELA_W, NV_TELA_W}, tex, GFX_SNAP,
+           0, 0, 1, 0, 1, 1, 1, 1);
+  gfx_mini_terminar();
+  gfx_opacidade_grupo = grupo; gfx_tex_aspect_atual = aspecto;
+  glClearColor(clear[0], clear[1], clear[2], clear[3]);
+}
+
 void gfx_mini_desenhar(const GfxMini *m, GfxRect r, float raioPx, float a) {
   if (!m->tex || r.w < 1.0f || r.h < 1.0f) return;
   gfx_tex_aspect_atual = 0.0f;

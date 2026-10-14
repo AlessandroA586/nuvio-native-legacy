@@ -1885,7 +1885,9 @@ int main(int argc, char **argv) {
     txtMsQuadro = txt_ms; txtNQuadro = txt_rasterizadas;
     txt_ms = 0.0; txt_rasterizadas = 0;
 
-    // TRES por quadro. O limite de 1 vinha de quando TODA arte era decodificada
+    // Ate TRES por quadro: tex_bombear admite pelo pior custo de cada classe,
+    // aquece offscreen antes de publicar e isola residencia num quadro SOLO.
+    // O limite de 1 vinha de quando TODA arte era decodificada
     // com o teto unico de 640: cada glTexImage2D custava ~2 MB e dois no mesmo
     // quadro passavam de 20 ms, aparecendo como tranco ao entrar numa fileira.
     //
