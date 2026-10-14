@@ -962,7 +962,7 @@ mod tests {
 
     #[test]
     fn quadro_should_return_error_when_nal_length_invalid() {
-        for n in [i64::MIN, -1, 0, 5, i64::MAX] {
+        for n in [i64::MAX, i64::MIN, -1, 0, 5] {
             assert_eq!(quadro_rpu(&[], n), (-1, None));
         }
     }
