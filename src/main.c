@@ -112,7 +112,7 @@
 static int fpsEstado(const char *c) {
   return !strcmp(c, "title-page") ? detail_aberto()
        : !strcmp(c, "player-osd") ? player_aberto() && player_com_video() && !player_eh_canal()
-       : app_na_home();
+       : app_home_recebe_teclas();
 }
 
 static void aoMudarIdiomaAuto(const char *codigo, int fonte, int notificar) {
@@ -1854,7 +1854,7 @@ int main(int argc, char **argv) {
         fpsProcurar = agora;
         if (so) {
           int osd = strstr(so, "player-osd") != NULL;
-          if (osd ? player_aberto() && player_com_video() && video_pronto() && !player_eh_canal() : app_na_home()) {
+          if (osd ? player_aberto() && player_com_video() && video_pronto() && !player_eh_canal() : app_home_recebe_teclas()) {
             fpsBase = dados_ler("fps-cena-base");
             fpscena_estado(fpsEstado);
             fpscena_iniciar(osd ? "player-osd" : so, fpsBase);
