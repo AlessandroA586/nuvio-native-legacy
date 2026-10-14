@@ -581,6 +581,10 @@ typedef enum {
   AJ_HERO_GENERO,
   // #205: nome do add-on na tela Cinema da abertura. 1 = Desligado de fabrica. LOCAL, append-only.
   AJ_ABERTURA_ADDON,
+  // Destaque: sinopse, nota do IMDb, ano e duracao, cada um no seu ajuste
+  // (home.c, desenhaCopiaHero). LOCAIS, ligados de fabrica = o visual de
+  // sempre. No fim: valor[]/CHAVE[] posicionais.
+  AJ_HERO_SINOPSE, AJ_HERO_NOTAS, AJ_HERO_ANO, AJ_HERO_DURACAO,
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -1482,6 +1486,10 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Dicas do controle"),
   ESC("Mostrar gênero no destaque", V_LIGA, 2),   // local: heroGeneroLocal
   ESC("Mostrar addon na abertura", V_LIGA, 2),   // local: aberturaAddonLocal (#205)
+  ESC("Mostrar sinopse no destaque", V_LIGA, 2),   // local: heroSinopseLocal
+  ESC("Mostrar notas no destaque",  V_LIGA, 2),   // local: heroNotasLocal
+  ESC("Mostrar ano no destaque",     V_LIGA, 2),   // local: heroAnoLocal
+  ESC("Mostrar duração no destaque", V_LIGA, 2),   // local: heroDuracaoLocal
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1737,6 +1745,7 @@ static const char *CHAVE[] = {
   "-dicasControle",
   "heroGeneroLocal",
   "aberturaAddonLocal",
+  "heroSinopseLocal", "heroNotasLocal", "heroAnoLocal", "heroDuracaoLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2577,6 +2586,10 @@ int ajustes_rail_recolhida(void) {
 int ajustes_rail_moderna_blur(void)   { return lig(AJ_RAIL_BLUR); }
 int ajustes_hero_ligado(void)         { return lig(AJ_HERO); }
 int ajustes_hero_genero(void) { return lig(AJ_HERO_GENERO); }
+int ajustes_hero_sinopse(void) { return lig(AJ_HERO_SINOPSE); }
+int ajustes_hero_notas(void)   { return lig(AJ_HERO_NOTAS); }
+int ajustes_hero_ano(void)     { return lig(AJ_HERO_ANO); }
+int ajustes_hero_duracao(void) { return lig(AJ_HERO_DURACAO); }
 int ajustes_hero_cheio(void)          { return lig(AJ_HERO_CHEIO); }
 int ajustes_home_layout(void) {
   int v = valor[AJ_HOME_LAYOUT];
@@ -4488,6 +4501,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_HERO_FUNDO:
     case AJ_HERO_ARTE_DIF:
     case AJ_HERO_GENERO:
+    case AJ_HERO_SINOPSE: case AJ_HERO_NOTAS: case AJ_HERO_ANO: case AJ_HERO_DURACAO: /* o web nao tem */
     // Fonte do trailer: o que toca depende da TV (YouTube so na Samsung; o
     // IMDb da Samsung depende do servico de recomendacoes), entao a escolha e
     // deste aparelho.
@@ -5801,6 +5815,10 @@ static const char *ajudaOpcaoBase(int op) {
     // --- Home
     case AJ_LANDSCAPE: return "Usa a arte deitada (16:9) no lugar do cartaz em pé nas fileiras que têm as duas.";
     case AJ_HERO_GENERO: return "Mostra ou esconde o gênero sob o logo do destaque.";
+    case AJ_HERO_SINOPSE: return "Mostra ou esconde a sinopse do destaque.";
+    case AJ_HERO_NOTAS: return "Mostra ou esconde a nota do IMDb no destaque.";
+    case AJ_HERO_ANO: return "Mostra ou esconde o ano no destaque.";
+    case AJ_HERO_DURACAO: return "Mostra ou esconde a duração no destaque.";
     case AJ_HERO_CHEIO: return "O destaque do topo ocupa a tela inteira atrás das fileiras, em vez de ficar num bloco.";
     case AJ_HERO_FUNDO: return "De onde vem a arte de fundo do destaque, da página do título e dos cards deitados: catálogo/Cinemeta, IMDb/Metahub, TMDB, Trakt, Apple TV, fanart.tv (com chave) ou Anime (Kitsu/AniList). Automático usa a do catálogo. MDBList fornece notas, não imagens.";
     case AJ_HERO_ARTE_DIF: return "Desligado: card, destaque e página do título mostram a mesma imagem. Ligado: o card fica com a arte do catálogo e o destaque usa outra foto — TMDB vira outro fundo do TMDB; em Automático, ou se a escolhida repetir o card, usa Apple TV, outro fundo do TMDB, fanart.tv, anime ou Trakt.";
@@ -6224,6 +6242,10 @@ static const char *beneficioProprio(int op) {
     case AJ_ABAS_ESTILO: return "Como as abas de uma coleção de streaming aparecem: chips, menu suspenso, barra central ou páginas.";
     case AJ_HERO_FUNDO: return "De onde vem a arte grande do destaque e da página do título.";
     case AJ_HERO_GENERO: return "Mostra ou esconde o gênero sob o logo do destaque.";
+    case AJ_HERO_SINOPSE: return "Mostra ou esconde a sinopse do destaque.";
+    case AJ_HERO_NOTAS: return "Mostra ou esconde a nota do IMDb no destaque.";
+    case AJ_HERO_ANO: return "Mostra ou esconde o ano no destaque.";
+    case AJ_HERO_DURACAO: return "Mostra ou esconde a duração no destaque.";
     case AJ_HERO_ARTE_DIF: return "O destaque pode usar outra arte que não a do cartaz.";
     case AJ_HERO_TRAILER: return "Com o foco parado no destaque, o trailer toca no lugar da arte.";
     case AJ_FOCO_TRAILER: return "Com o foco parado num cartaz, o trailer toca no destaque.";
@@ -8276,6 +8298,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_ADDON_FUNDO: case AJ_ADDON_LOGO:
     case AJ_FIL_ORDEM: case AJ_RAIL: case AJ_RAIL_MODERNA: case AJ_MENU_TOPO: case AJ_ABAS_ESTILO:
     case AJ_RAIL_BLUR: case AJ_MIC_BUSCA: case AJ_HERO: case AJ_HERO_CATALOGOS: case AJ_HERO_GENERO:
+    case AJ_HERO_SINOPSE: case AJ_HERO_NOTAS: case AJ_HERO_ANO: case AJ_HERO_DURACAO:
     case AJ_PS_FUNDO: case AJ_PS_CONTINUAR: case AJ_DESCOBRIR: case AJ_ROTULOS:
     case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_OCULTAR_NLANC:
     case AJ_NOTAS_HOME: case AJ_GRAD_CLASSICO: case AJ_SELO_VISTO: case AJ_OCULTAR_FILMES_VISTOS:

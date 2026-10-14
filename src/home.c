@@ -94,6 +94,7 @@ int player_aberto(void);
 #include "amigosfil.h"
 #include "socialvis.h"
 #include "anos.h"
+#include "detail.h"   /* partirMeta: o `meta` do catalogo e "ANO  ·  DURACAO" */
 
 #define MAX_ARTE   64
 // Era 32 para as 16 fileiras (CAT_FIL_MAX) do web neste runtime, mais o que a
@@ -4033,6 +4034,66 @@ static void heroPedirLogo(const CatItem *ci, int lay, int cheio) {
   }
 }
 
+// A LINHA DE META DO DESTAQUE, pronta para desenhar: o episodio em andamento
+// ("S1 E2 nome", dono 20/09/2026: "A SEGUIR" e o PROXIMO episodio, quem
+// parou no meio "continua de onde parou"), o genero (com o ajuste "Mostrar
+// genero no destaque"), o ano e a duracao — cada um no seu ajuste, sem
+// buraco: o que sobra junta com o mesmo ponto cheio ("TIPO • GENERO • ANO",
+// dono 06/10, referencia da Apple TV). Separada do desenho para o teste da
+// combinacao dos ajustes (tests/herometa.c).
+void hero_meta_linha(const CatItem *ci, char *dst, size_t n) {
+  int contHero = (ci && ci->progresso > 0 && ci->restanteMin > 0);
+  int seguirHero = (ci && ci->progresso == 0 && (trakt_e_a_seguir(ci->imdb) || simkl_e_a_seguir(ci->imdb) || cwo_conta_a_seguir(ci->imdb)));
+  const char *generoHero = ci && ajustes_hero_genero() ? ci->genero : "";
+  char cab[192];
+  cab[0] = 0;
+  if ((contHero || seguirHero) && ci->temporada > 0)
+    snprintf(cab, sizeof cab, "S%d E%d%s%s", ci->temporada, ci->episodio,
+             ci->nomeEpisodio[0] ? "  \xc2\xb7  " : "", ci->nomeEpisodio);
+  // O `meta` do catalogo ja chega como "ANO  ·  DURACAO" (descoberta.c):
+  // partirMeta separa os dois para cada um obedecer ao seu ajuste.
+  char ano[28], dur[64];
+  if (ci && ci->meta[0]) {
+    partirMeta(ci->meta, ano, sizeof ano, dur, sizeof dur);
+    // SEM ANO NO CATALOGO (meta so com a duracao): partirMeta poe tudo em
+    // `ano`; ano de verdade e so digitos — o que nao for vai para a duracao.
+    if (ano[0] && dur[0] == 0) {
+      int soDigitos = 1;
+      for (const char *p = ano; *p; p++) if (*p < '0' || *p > '9') { soDigitos = 0; break; }
+      if (!soDigitos) { snprintf(dur, sizeof dur, "%s", ano); ano[0] = 0; }
+    }
+  } else { ano[0] = 0; dur[0] = 0; }
+  const char *campos[4];
+  int nc = 0;
+  if (cab[0]) campos[nc++] = cab;
+  if (generoHero[0]) campos[nc++] = generoHero;
+  if (ajustes_hero_ano() && ano[0]) campos[nc++] = ano;
+  if (ajustes_hero_duracao() && dur[0]) campos[nc++] = dur;
+  size_t o = 0;
+  dst[0] = 0;
+  for (int k = 0; k < nc && o + 7 < n; k++) {
+    size_t l = strlen(campos[k]);
+    if (o && o + 7 + l >= n) break;
+    if (o) { memcpy(dst + o, "  \xe2\x80\xa2  ", 7); o += 7; }
+    if (o + l >= n) break;
+    memcpy(dst + o, campos[k], l); o += l;
+    dst[o] = 0;
+  }
+  // O genero chega como "Filme · Terror"; no destaque o separador e o mesmo
+  // ponto cheio da linha toda, com o mesmo respiro.
+  { char t[288]; size_t i = 0, w = 0;
+    const char *de = "  \xc2\xb7  ", *para = "  \xe2\x80\xa2  ";
+    size_t nd = strlen(de), np = strlen(para);
+    size_t tn = n < sizeof t ? n : sizeof t;
+    while (dst[i] && w + np < tn) {
+      if (!strncmp(dst + i, de, nd)) { memcpy(t + w, para, np); w += np; i += nd; }
+      else if (!strncmp(dst + i, " \xc2\xb7 ", 4)) { memcpy(t + w, para, np); w += np; i += 4; }
+      else t[w++] = dst[i++];
+    }
+    t[w] = 0;
+    memcpy(dst, t, w + 1); }
+}
+
 static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
                              float base, int lay, int cheio, float logoH,
                              float sinW, int sinLinhas, float aTexto,
@@ -4044,40 +4105,7 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
   // Linha de meta. No web sao tokens juntados por "•"; ci->genero ja chega
   // como "Filme · Terror", que e o par (tipo, primeiro genero) do web.
   char metaLinha[288];
-  metaLinha[0] = 0;
-  const char *generoHero = ci && ajustes_hero_genero() ? ci->genero : "";
-  // DOIS CASOS, DUAS FRASES (dono, 20/09/2026): "A SEGUIR" e o PROXIMO
-  // episodio, que so faz sentido quando o anterior terminou; quem parou no
-  // meio "continua de onde parou". Os dois dizem QUAL episodio — o item de
-  // "a seguir" ja carrega temporada/episodio do proximo (trakt.c) — e o nome
-  // dele quando o catalogo tem.
-  if ((contHero || seguirHero) && ci->temporada > 0) {
-    char cab[192];
-    snprintf(cab, sizeof cab, "S%d E%d%s%s", ci->temporada, ci->episodio,
-             ci->nomeEpisodio[0] ? "  \xc2\xb7  " : "", ci->nomeEpisodio);
-    snprintf(metaLinha, sizeof metaLinha, "%s%s%s", cab,
-             (generoHero[0] ? "  \xc2\xb7  " : ""), generoHero);
-  } else if (generoHero[0]) {
-    snprintf(metaLinha, sizeof metaLinha, "%s", generoHero);
-  }
-  if (ci && ci->meta[0]) {
-    size_t n = strlen(metaLinha);
-    snprintf(metaLinha + n, sizeof metaLinha - n, "%s%s",
-             n ? "  \xe2\x80\xa2  " : "", ci->meta);
-  }
-  // TIPO • GENERO • ANO (dono, 06/10, referencia da Apple TV): o genero chega
-  // como "Filme · Terror"; no destaque o separador e o mesmo ponto cheio da
-  // linha toda, com o mesmo respiro.
-  { char t[sizeof metaLinha]; size_t i = 0, o = 0;
-    const char *de = "  \xc2\xb7  ", *para = "  \xe2\x80\xa2  ";
-    size_t nd = strlen(de), np = strlen(para);
-    while (metaLinha[i] && o + np < sizeof t) {
-      if (!strncmp(metaLinha + i, de, nd)) { memcpy(t + o, para, np); o += np; i += nd; }
-      else if (!strncmp(metaLinha + i, " \xc2\xb7 ", 4)) { memcpy(t + o, para, np); o += np; i += 4; }
-      else t[o++] = metaLinha[i++];
-    }
-    t[o] = 0;
-    memcpy(metaLinha, t, o + 1); }
+  hero_meta_linha(ci, metaLinha, sizeof metaLinha);
 
   // Linha secundaria: destaque de progresso, selos e a nota do IMDb. O web so
   // mostra o IMDb aqui quando ja existe destaque ou selo (showImdbSecondary);
@@ -4101,10 +4129,14 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
   char nota[8];
   nota[0] = 0;
   int imdbRating = ci ? imdbnota_obter(ci->imdb, ci->nota, !strcmp(ci->tipo,"series")) : 0;
-  if (imdbRating > 0) { snprintf(nota, sizeof nota, "%.1f", imdbRating / 10.0f); idioma_decimal_texto(nota, ajustes_idioma()); }
+  // "Mostrar notas no destaque" desligado: nem o selo, nem a nota na linha
+  // secundaria (nota[0] fica 0 e temSec nao conta com ela).
+  if (ajustes_hero_notas() && imdbRating > 0) { snprintf(nota, sizeof nota, "%.1f", imdbRating / 10.0f); idioma_decimal_texto(nota, ajustes_idioma()); }
   int temSec = (destaque[0] || selo || nota[0]);
 
-  const char *sinopse = (ci && ci->sinopse[0]) ? ci->sinopse : "";
+  // "Mostrar sinopse no destaque" desligado: hSin fica 0 e o layout (heroCopyLayout)
+  // recolhe o espaco — o que esta embaixo sobe, sem buraco.
+  const char *sinopse = (ci && ci->sinopse[0] && ajustes_hero_sinopse()) ? ci->sinopse : "";
 
   float hSin = sinopse[0] ? txt_bloco_corta(TXT_HERO_SIN, sinopse, 255, 255, 255, -1, 0,
                                             sinW, NV_LD_HERO_SIN, 0.0f, sinLinhas)
@@ -4483,12 +4515,29 @@ static void desenhaHero(Uint32 agora, float saida) {
       } else if(p->titulo[0]) {
         txt_desenhar_alpha(txt_linha_corta(TXT_TITULO1,p->titulo,244,243,247,255,homeTextoLargura(680)),x,208,a);
       }
-      if(p->direcao[0])
-        txt_desenhar_alpha(txt_linha_corta(TXT_CALLOUT,p->direcao,230,231,238,255,homeTextoLargura(680)),x,326,a);
-      if(p->meta[0])
-        txt_desenhar_alpha(txt_linha_corta(TXT_HERO_META,p->meta,190,194,205,255,homeTextoLargura(680)),x,364,a);
-      if(p->sinopse[0])
-        txt_bloco(TXT_HERO_SIN,p->sinopse,229,231,237,x,402,homeTextoLargura(700),31,a,2);
+      // Os mesmos ajustes do destaque (sinopse, ano e duracao, cada um no
+      // seu), SEM BURACO: o que some fecha o espaco e o de baixo sobe.
+      { float yS = 326.0f; char mSoc[96];
+        char ano[28], dur[64];
+        mSoc[0] = 0;
+        if (p->meta[0]) {
+          partirMeta(p->meta, ano, sizeof ano, dur, sizeof dur);
+          if (ajustes_hero_ano() && ano[0]) snprintf(mSoc, sizeof mSoc, "%s", ano);
+          if (ajustes_hero_duracao() && dur[0])
+            snprintf(mSoc + strlen(mSoc), sizeof mSoc - strlen(mSoc), "%s%s",
+                     mSoc[0] ? "  \xe2\x80\xa2  " : "", dur);
+        }
+        if(p->direcao[0]) {
+          txt_desenhar_alpha(txt_linha_corta(TXT_CALLOUT,p->direcao,230,231,238,255,homeTextoLargura(680)),x,yS,a);
+          yS += 38.0f;
+        }
+        if(mSoc[0]) {
+          txt_desenhar_alpha(txt_linha_corta(TXT_HERO_META,mSoc,190,194,205,255,homeTextoLargura(680)),x,yS,a);
+          yS += 38.0f;
+        }
+        if(p->sinopse[0] && ajustes_hero_sinopse())
+          txt_bloco(TXT_HERO_SIN,p->sinopse,229,231,237,x,yS,homeTextoLargura(700),31,a,2);
+      }
     } else {
       // Sem a marca do Trakt: a fonte nao aparece na home (amigosfil.h).
       txt_desenhar_alpha(txt_linha(TXT_HERO_META,"SUA COMUNIDADE",210,191,199,255),x,154,a);

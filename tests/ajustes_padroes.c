@@ -152,9 +152,25 @@ int main(void) {
   assert(AJ_INTERFACE_MODO == AJ_PROXIMO_CONTAGEM + 1);
   assert(AJ_MIC_BUSCA == AJ_INTERFACE_MODO + 1);
   assert(AJ_MENU_TOPO == AJ_MIC_BUSCA + 1 && AJ_ABAS_ESTILO == AJ_MENU_TOPO + 1 && AJ_TECLADO_ANDROID == AJ_ABAS_ESTILO + 1 && AJ_LEG_CONTORNO_COR == AJ_TECLADO_ANDROID + 1);
-  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_ESTAT_TAMANHO == AJ_FALHA_ADDON_LIMITE + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_ESTAT_LADO == AJ_OCULTAR_FILMES_VISTOS + 1 && AJ_DICASCONTROLE == AJ_ESTAT_LADO + 1 && AJ_HERO_GENERO == AJ_DICASCONTROLE + 1 && AJ_ABERTURA_ADDON == AJ_HERO_GENERO + 1 && AJ_N == AJ_ABERTURA_ADDON + 1);
+  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_ESTAT_TAMANHO == AJ_FALHA_ADDON_LIMITE + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_ESTAT_LADO == AJ_OCULTAR_FILMES_VISTOS + 1 && AJ_DICASCONTROLE == AJ_ESTAT_LADO + 1 && AJ_HERO_GENERO == AJ_DICASCONTROLE + 1 && AJ_ABERTURA_ADDON == AJ_HERO_GENERO + 1 && AJ_HERO_SINOPSE == AJ_ABERTURA_ADDON + 1 && AJ_HERO_NOTAS == AJ_HERO_SINOPSE + 1 && AJ_HERO_ANO == AJ_HERO_NOTAS + 1 && AJ_HERO_DURACAO == AJ_HERO_ANO + 1 && AJ_N == AJ_HERO_DURACAO + 1);
   assert(valor[AJ_HERO_GENERO] == 0 && ajustes_hero_genero());   // Ligado: o visual de sempre
   assert(!strcmp(CHAVE[AJ_HERO_GENERO], "heroGeneroLocal") && somenteDesteAparelho(AJ_HERO_GENERO));
+  // #205: sinopse, notas, ano e duracao do destaque, cada um no seu ajuste,
+  // LIGADOS de fabrica (o visual de sempre), locais como o genero.
+  assert(valor[AJ_HERO_SINOPSE] == 0 && valor[AJ_HERO_NOTAS] == 0 && valor[AJ_HERO_ANO] == 0 && valor[AJ_HERO_DURACAO] == 0);
+  assert(ajustes_hero_sinopse() && ajustes_hero_notas() && ajustes_hero_ano() && ajustes_hero_duracao());
+  assert(!strcmp(CHAVE[AJ_HERO_SINOPSE], "heroSinopseLocal") && somenteDesteAparelho(AJ_HERO_SINOPSE));
+  assert(!strcmp(CHAVE[AJ_HERO_NOTAS], "heroNotasLocal") && somenteDesteAparelho(AJ_HERO_NOTAS));
+  assert(!strcmp(CHAVE[AJ_HERO_ANO], "heroAnoLocal") && somenteDesteAparelho(AJ_HERO_ANO));
+  assert(!strcmp(CHAVE[AJ_HERO_DURACAO], "heroDuracaoLocal") && somenteDesteAparelho(AJ_HERO_DURACAO));
+  valor[AJ_HERO_SINOPSE] = 1; assert(!ajustes_hero_sinopse()); valor[AJ_HERO_SINOPSE] = 0;
+  valor[AJ_HERO_NOTAS] = 1; assert(!ajustes_hero_notas()); valor[AJ_HERO_NOTAS] = 0;
+  valor[AJ_HERO_ANO] = 1; assert(!ajustes_hero_ano()); valor[AJ_HERO_ANO] = 0;
+  valor[AJ_HERO_DURACAO] = 1; assert(!ajustes_hero_duracao()); valor[AJ_HERO_DURACAO] = 0;
+  assert(!strcmp(i18n(OPCOES[AJ_HERO_SINOPSE].rotulo), "Show synopsis on hero"));
+  assert(!strcmp(i18n(OPCOES[AJ_HERO_NOTAS].rotulo), "Show ratings on hero"));
+  assert(!strcmp(i18n(OPCOES[AJ_HERO_ANO].rotulo), "Show year on hero"));
+  assert(!strcmp(i18n(OPCOES[AJ_HERO_DURACAO].rotulo), "Show runtime on hero"));
   assert(valor[AJ_ABERTURA_ADDON] == 1 && !ajustes_abertura_addon());
   assert(!strcmp(CHAVE[AJ_ABERTURA_ADDON], "aberturaAddonLocal") && somenteDesteAparelho(AJ_ABERTURA_ADDON));
   valor[AJ_ABERTURA_ADDON] = 0; assert(ajustes_abertura_addon()); valor[AJ_ABERTURA_ADDON] = 1;

@@ -283,3 +283,4 @@
   0, /* remote tips: action */
   0, /* show genre under the hero logo: Ligado, as always */
   1, /* addon name on the Cinema opening (#205): Desligado, local */
+  0, 0, 0, 0, /* hero synopsis/ratings/year/runtime: Ligado, the look as always */

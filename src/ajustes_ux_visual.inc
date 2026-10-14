@@ -7,6 +7,10 @@ static const char *ajVisualIcone(int op) {
     case AJ_HERO_CHEIO: return "aj_layout-dashboard";
     case AJ_HERO_CATALOGOS: return "aj_layout-dashboard";
     case AJ_HERO_GENERO: return "aj_layout-dashboard";
+    case AJ_HERO_SINOPSE: return "aj_layout-dashboard";
+    case AJ_HERO_NOTAS: return "aj_layout-dashboard";
+    case AJ_HERO_ANO: return "aj_layout-dashboard";
+    case AJ_HERO_DURACAO: return "aj_layout-dashboard";
     case AJ_HERO_TRANSICAO: return "aj_layout-dashboard";
     case AJ_FIL_ORDEM: return "aj_rows-3";
     case AJ_FIL_LIMITE: return "aj_rows-3";

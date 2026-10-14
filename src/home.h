@@ -78,6 +78,10 @@ void home_fileiras_vistas(Uint32 agora);
 // isto para nascer com o backdrop no mesmo lugar — o fundo do detalhe E a arte
 // do titulo em foco, e ela nao deve reaparecer, deve continuar.
 void home_hero_rect(float *x, float *y, float *w, float *h);
+// A LINHA DE META do destaque do topo: episodio em andamento, genero, ano e
+// duracao — cada um no seu ajuste, sem buraco (o que some fecha o espaco).
+// Separada do desenho para o teste da combinacao dos ajustes (tests/herometa.c).
+void hero_meta_linha(const CatItem *ci, char *dst, size_t n);
 // 1 com a pagina no topo (layout Dinamica), caindo a 0 ao rolar; 1 nos outros.
 float home_topo_fracao(void);
 // Layout Dinamica: as pastas (indices de col_folder) da fileira de colecao
