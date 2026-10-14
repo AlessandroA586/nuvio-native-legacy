@@ -273,6 +273,7 @@ static void tecla(GfxRect r, const char *s, int on, float prensa, float a) {
     gfx_anel(halo, .45f, 2, ar, ag, ab, .5f * a);
   }
   gfx_cor(k, .45f, on ? ar : .16f, on ? ag : .17f, on ? ab : .20f, a);
+  if (r.w < 56) return;   // remoto encolhido no canto: a tecla acesa basta, sem rotulo cortado
   TxtLinha l = txt_linha_corta(TXT_CAPTION, i18n(s), on ? ajustes_tinta_foco() : 243,
                              on ? ajustes_tinta_foco() : 242, on ? ajustes_tinta_foco() : 239, 255, r.w - 10);
   txt_desenhar_alpha(l, r.x + (r.w - l.w) * .5f, r.y + (r.h - l.h) * .5f, on ? a : .55f * a);
@@ -321,8 +322,8 @@ static int teclaDaDica(int modo, int p) {
 // VOL a esquerda, CH a direita, o CH dividido em CH+ (cima) e CH- (baixo).
 static void remotoLG(float x, float y, float s, int tk, float prensa, float a) {
   GfxRect corpo = {x, y, 250 * s, 600 * s};
-  gfx_cor(corpo, .32f, .105f, .11f, .125f, a);
-  gfx_anel(corpo, .32f, 1.5f, 1, 1, 1, .10f * a);
+  gfx_cor(corpo, .17f, .105f, .11f, .125f, a);
+  gfx_anel(corpo, .17f, 1.5f, 1, 1, 1, .10f * a);
   gfx_cor((GfxRect){x + 18 * s, y + 22 * s, 26 * s, 26 * s}, .5f, .30f, .12f, .12f, .7f * a); // power
   gfx_cor((GfxRect){x + 206 * s, y + 22 * s, 26 * s, 26 * s}, .5f, .20f, .21f, .24f, a);     // microfone
   float cx = x + 125 * s;
@@ -348,8 +349,8 @@ static void remotoLG(float x, float y, float s, int tk, float prensa, float a) {
 // lado e a faixa solar embaixo (o detalhe do modelo novo).
 static void remotoSAM(float x, float y, float s, int tk, float prensa, float a) {
   GfxRect corpo = {x, y, 230 * s, 620 * s};
-  gfx_cor(corpo, .30f, .09f, .095f, .11f, a);
-  gfx_anel(corpo, .30f, 1.5f, 1, 1, 1, .10f * a);
+  gfx_cor(corpo, .16f, .09f, .095f, .11f, a);
+  gfx_anel(corpo, .16f, 1.5f, 1, 1, 1, .10f * a);
   gfx_cor((GfxRect){x + 20 * s, y + 24 * s, 24 * s, 24 * s}, .5f, .30f, .12f, .12f, .7f * a); // power
   gfx_cor((GfxRect){x + 186 * s, y + 24 * s, 24 * s, 24 * s}, .5f, .20f, .21f, .24f, a);      // microfone
   float cx = x + 115 * s;

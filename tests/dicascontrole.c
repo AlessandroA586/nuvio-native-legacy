@@ -140,7 +140,10 @@ static void frame(void) {
   ponteiro_quadro(SDL_GetTicks());
   glBindFramebuffer(GL_FRAMEBUFFER, fbo); glViewport(0,0,width,height);
   glClearColor(.05f,.05f,.06f,1); glClear(GL_COLOR_BUFFER_BIT);
-  Uint32 ag = SDL_GetTicks();
+  // Relogio virtual: a mola da ilha mede dt pelo relogio, e o laco roda sem esperar.
+  static Uint32 base, quadros;
+  if (!base) base = SDL_GetTicks();
+  Uint32 ag = base + (quadros++ * 1000u) / 60u;
   // A dica e o caminho real: ela mesma abre e fecha o componente. Aqui so
   // rodamos as atualizacoes que o app rodaria, na mesma ordem.
   dicascontrole_atualizar(1.f/60, ag);
