@@ -3651,7 +3651,11 @@ static int iniciarFio(const char *url, int numeroFaixa, int herdar, int segurar,
     legenda_documento_liberar(S.referencia); S.referencia = NULL; S.refUrl[0] = 0;
   }
   if (strcmp(S.cabUrl, url)) { free(S.cab); S.cab = NULL; S.cabN = 0; S.cabUrl[0] = 0; }
-  if (herdar) f->lateral = S.lateral;
+  // CORRIDA DA ADOCAO: faixas.c escolheu antes de a pre-busca publicar o
+  // ordinal (cabecalho lateral lento, por exemplo no .tpk). A adocao la em
+  // cima falhou e este fio substitui o leitor lateral da MESMA url: conserva
+  // a janela lateral de 12 s em vez de voltar a colher 90 s a frente.
+  if (herdar || (S.prebusca && !strcmp(S.url, url))) f->lateral = S.lateral;
   S.lateral = f->lateral;
   f->paralelos = S.paralelos > 0 ? S.paralelos : MKVASS_PARALELOS;
   // Host que ja cortou Range nesta sessao (rede_corte_host): comeca com UMA.
