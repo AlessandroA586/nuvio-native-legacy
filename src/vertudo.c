@@ -1513,15 +1513,19 @@ void vertudo_atualizar(float dt, Uint32 agora) {
 //
 // FICHA DIAGRAMADA (dono, 13/10: "na lateral nao colocar o poster de novo,
 // vamos colocar mais informacoes sobre o titulo"). So a Grade (a exibicao de
-// cartazes), o Cover Flow e o Ranking dispensam o cartaz lateral, porque la o
-// cartaz ja esta na celula grande; nas outras o cartaz fica. Com o cartaz na
-// ficha, a LOGO tambem nao entra: so o nome escrito (dono, 14/10: "quando tem
-// poster nas infos nao colocar a logo"). Ordem: logo/titulo, ano e
+// cartazes), o Cover Flow, o Ranking e as Decadas dispensam o cartaz lateral,
+// porque la o cartaz ja esta na celula grande — Decadas vale para o streaming
+// tambem, a mesma tela (dono, 14/10: "no modo ranking dos streaming ainda ta
+// mostrando o poster, tem que tirar, decades tb"); nas outras o cartaz fica.
+// Com o cartaz na ficha, a LOGO tambem nao entra: so o nome escrito (dono,
+// 14/10: "quando tem poster nas infos nao colocar a logo"). Ordem:
+// logo/titulo, ano e
 // duracao com a classificacao, generos, notas, sinopse e, quando o catalogo ja
 // os trouxe,
 // direcao e elenco. Nada aqui pede rede: e so o que o CatItem tem.
 static int painelComCartaz(void) {
-  return lay != VT_LAY_GRADE && lay != VT_LAY_FLUXO && lay != VT_LAY_RANKING;
+  return lay != VT_LAY_GRADE && lay != VT_LAY_FLUXO && lay != VT_LAY_RANKING &&
+         lay != VT_LAY_DECADAS;
 }
 static float painelCredito(const char *rot, const char *val, float y, float a) {
   TxtLinha r = txt_linha(TXT_MINI, rot, 160, 168, 182, 255);
