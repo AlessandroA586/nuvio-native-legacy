@@ -1218,10 +1218,14 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   // GFX_FUNDO_DIN — ver gfx.h. SO COR: um degrade vertical de uma cor so. O
   // topo e uCor.rgb, a base e essa cor vezes uFoco (a "queda"), com curva suave,
   // e o dither de sempre para a rampa escura nao virar degrau na C9. Sem
-  // textura, sem laco, sem SDF: uma multiplicacao por pixel.
+  // textura, sem laco, sem SDF: uma multiplicacao por pixel. uPar.x > 0 e o
+  // esvanecer de ALFA da base da faixa (o degrad da marca na pagina de
+  // colecao): sem ele a borda inferior do rect e um degrau duro.
   "void main(){\n"
   "  vec3 c = uCor.rgb * mix(1.0, uFoco, smoothstep(0.0, 1.0, vUv.y));\n"
-  "  gl_FragColor = nv_dither(c, uCor.a);\n"
+  "  float a = uCor.a;\n"
+  "  if (uPar.x > 0.0) a *= 1.0 - smoothstep(uPar.x, 1.0, vUv.y);\n"
+  "  gl_FragColor = nv_dither(c, a);\n"
   "}\n",
 
   // GFX_COPIA — ampliacao do alvo interno (gpunivel.c). RGB E ALPHA da
