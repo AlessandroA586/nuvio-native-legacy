@@ -139,7 +139,17 @@ int  detail_pediu_do_inicio(void);
 // seja caixa 96..735 x 247..660 — 640x414. O card seguinte comeca em x=767.
 #define NV_DETP_EP_W         640.0f
 #define NV_DETP_EP_H         414.0f   // a caixa E a miniatura: o texto fica dentro
-#define NV_DETP_EP_PASSO     672.0f   // 767 - 96 = 671, arredondado para 640+32
+// MARGEM entre os cards da fileira (#205, dono: "dar uma margem entre as
+// listas de episodios"): o passo e o card MAIS este vao. Entrar no passo e nao
+// no card mantem a caixa medida intacta e faz o vao acompanhar a escala dos
+// tres tamanhos da Moderna (e vale tambem para o layout Apple, de card fixo).
+#define NV_DETP_EP_GAP       48.0f
+#define NV_DETP_EP_PASSO     (NV_DETP_EP_W + NV_DETP_EP_GAP)
+// PRATO DE FOCO estilo Apple TV (#205): placa cinza-claro translucida atras
+// do card inteiro, que nasce com a mola do foco (alpha ate ~14% de branco) e
+// cresce 3% a partir do centro. FORA das medidas do card: sobra na fileira.
+#define NV_DETP_EP_PLACA_PAD 18.0f    // a placa respira alem da caixa do card
+#define NV_DETP_EP_PLACA_A   0.14f    // teto do branco translucido (12%~16%)
 #define NV_DETP_EP_THUMB_H   414.0f
 #define NV_DETP_EP_RAIO       32.0f
 #define NV_DETP_EP_PAD        32.0f   // margem do texto dentro da miniatura

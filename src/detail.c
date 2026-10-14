@@ -2022,7 +2022,10 @@ static float epCardH(void) {
   return epThumbH() + NV_DETP_EPM_SIN_DY +
          (float)NV_DETP_EPM_SIN_LINHAS * NV_DETP_EP_LD_SIN + 10.0f;
 }
-static float epCardPasso(void) { return epApple() ? 452.0f : NV_DETP_EP_PASSO * epEscala(); }
+static float epCardPasso(void) { return epApple() ? 420.0f + NV_DETP_EP_GAP : NV_DETP_EP_PASSO * epEscala(); }
+// A placa de foco estilo Apple TV (#205): alpha da mola `f` vezes o teto
+// NV_DETP_EP_PLACA_A. Sem foco (f=0) nao ha placa; o teste le daqui.
+static float epPlacaA(float f) { return NV_DETP_EP_PLACA_A * anim_clamp(f, 0.0f, 1.0f); }
 // Largura do texto abaixo da miniatura (titulo, sinopse e barra): a do card,
 // menos as margens do Padrao (32 de cada lado, o NV_DETP_EP_TEXTO_W medido).
 static float epTextoW(void) { return epCardW() - NV_DETP_EP_PAD * 2.0f; }
@@ -5259,7 +5262,25 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   // FOCO COMO O DA HOME (focoprof.h): anel so com "Foco no cartaz" ligado;
   // desligado, a miniatura cresce com a animacao do foco. O brilho e o
   // realce de profundidade seguem os mesmos Ajustes (Episodios).
+  // O FOCO NA MOLA (0..1), ja com o ajuste de animacoes reduzidas embutido
+  // (anim.h: a primitiva mesma vai direto ao alvo). A placa e o texto leem
+  // `ft` e nunca o f cru.
+  const float ft = anim_clamp(f, 0.0f, 1.0f);
   GfxRect thLayout = th;
+  // O PRATO DE FOCO, estilo Apple TV (#205, dono: "o fundo meio cinza do apple
+  // tv"): placa branca translucida ATRAS do card inteiro (miniatura + texto),
+  // que nasce e cresce ~3% a partir do centro NA MOLA do foco — antes o card
+  // so ganhava anel/zoom e o texto ficava parado. Nao muda a caixa (`r`), logo
+  // nao move nenhum vizinho; some desfocando pelo mesmo caminho.
+  if (!epApple() && f > 0.005f) {
+    GfxRect p = { r.x - NV_DETP_EP_PLACA_PAD, r.y - NV_DETP_EP_PLACA_PAD,
+                  r.w + NV_DETP_EP_PLACA_PAD * 2.0f,
+                  r.h + NV_DETP_EP_PLACA_PAD * 2.0f };
+    float pw = p.w, ph = p.h, s = 1.0f + 0.03f * ft;
+    p.w *= s; p.h *= s;
+    p.x -= (p.w - pw) * 0.5f; p.y -= (p.h - ph) * 0.5f;
+    gfx_cor(p, 24.0f / p.h, 1, 1, 1, epPlacaA(f) * a);
+  }
   if (!epApple()) { foco_anel(th, raioTh, f, a); th = foco_zoom(th, f); }
 
   const CatItem *serie = cat_item(idx);
@@ -5367,7 +5388,8 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     char fallback[40]; snprintf(fallback,sizeof fallback,i18n("Episódio %d"),epNum);
     TxtLinha name = txt_linha_corta(TXT_DET_META2,epNome ? epNome : fallback,
                                    246,247,250,255,textW);
-    txt_desenhar_alpha(name,textX,textY+30,a);
+    // O titulo acende com a mola do foco, como nos outros layouts (#205).
+    txt_desenhar_alpha(name,textX,textY+30,a*(0.86f+0.14f*ft));
     float y = textY+64;
     if (epSin) y += txt_bloco_corta(TXT_CAPTION,epSin,171,177,185,
                                    textX,y,textW,29,a,4);
@@ -5460,7 +5482,9 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
                  nome = reserva; }
     TxtLinha l = txt_linha_corta(epTituloEstilo(), nome, 255, 255, 255, 255,
                                  epTextoW());
-    txt_peso(l, textoX, r.y + (moderna ? epThumbH() + NV_DETP_EPM_TIT_DY : NV_DETP_EP_TIT_Y), a, 1.4f); }
+    // TITULO EM FOCO (#205): clareia e avanca uns pixels com a mesma mola do
+    // prato; em repouso fica meio tom abaixo. So o TEXTO anda — a caixa nao.
+    txt_peso(l, textoX + ft * 6.0f, r.y + (moderna ? epThumbH() + NV_DETP_EPM_TIT_DY : NV_DETP_EP_TIT_Y), a * (0.86f + 0.14f * ft), 1.4f); }
 
   // Sinopse: 4 linhas na Moderna (#205; eram 2), 3 no Padrao, com truncamento
   // do bloco. Sem sinopse o espaco
@@ -5469,10 +5493,12 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   // sinopse da pagina pesava tanto quanto o titulo e empurrava o nome, os logos
   // e as notas em negrito para segundo plano. E o estilo que a sinopse ja usa no
   // card do layout Apple (logo acima), com a entrelinha dele (NV_LD_CAPTION).
+  // Sinopse: o TEXTO SECUNDARIO apaga em repouso e clareia para ler com o
+  // foco (#205, dono: "o texto com animacao"), na mesma mola do prato.
   if (epSin)
     txt_bloco_corta(TXT_CAPTION, epSin, 255, 255, 255, textoX,
                     r.y + (moderna ? epThumbH() + NV_DETP_EPM_SIN_DY : NV_DETP_EP_SIN_Y),
-                    epTextoW(), NV_DETP_EP_LD_SIN, a * 0.9f,
+                    epTextoW(), NV_DETP_EP_LD_SIN, a * (0.62f + 0.33f * ft),
                     epSinLinhas());
 
   // Meta: relogio + duracao + data, 20/400 rgb(179,179,179), com 38 de folga

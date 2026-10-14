@@ -90,8 +90,11 @@ int main(void) {
     assert(h[v] - th[v] >= NV_DETP_EPM_SIN_DY + 4.0f * NV_DETP_EP_LD_SIN);
     // A secao mede o card que sera desenhado: o empilhamento acompanha.
     assert(alturaSecao(SEC_EPISODIOS) == h[v]);
-    // Colunas lado a lado no passo certo, sem atropelar.
+    // Colunas lado a lado no passo certo (card + a margem do #205).
     assert(p[v] > w[v]);
+    assert(fabsf(p[v] - w[v] - NV_DETP_EP_GAP * epEscala()) < 0.01f);
+    // O Medio e o card de sempre mais a margem nova; os passos crescem com o
+    // tamanho porque a margem acompanha a escala.
     assert(fabsf(xItem(SEC_EPISODIOS, 3) - xItem(SEC_EPISODIOS, 2) - p[v]) < 0.01f);
     // O foco anda pela fileira inteira neste tamanho. Um punhado de quadros
     // de atualizacao primeiro: e ali que a pagina reconta as colunas de cada
@@ -118,7 +121,7 @@ int main(void) {
   assert(th[0] < th[1] && th[1] < th[2]);
   assert(w[0] < w[1] && w[1] < w[2]);
   assert(p[0] < p[1] && p[1] < p[2]);
-  assert(w[1] == 640.0f && th[1] == 360.0f && p[1] == 672.0f);
+  assert(w[1] == 640.0f && th[1] == 360.0f && p[1] == 640.0f + NV_DETP_EP_GAP);
 
   // 4. O TITULO UM DEGRAU ABAIXO na Moderna: TXT_CALLOUT (28), e nao o
   //    TXT_PLR_CORPO (32) do Padrao.
