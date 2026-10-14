@@ -27,7 +27,7 @@ for nome in episodios episodios_garantir episodios_carregando episodios_pendente
 done
 cc "${flags[@]}" "${renomes[@]}" -c src/descoberta.c -o "$dir/descoberta.o"
 # Relogio controlado so no player: nao intercepta libc/SDL/sanitizadores.
-cc "${flags[@]}" -DNV_SHOT_HOOKS -Dtrakt_scrobble=nv_cnt_scrobble -Dsimkl_scrobble=nv_cnt_scrobble -Dclock_gettime=nv_test_clock_gettime -c src/player.c -o "$dir/player.o"
+cc "${flags[@]}" -DNV_SHOT_HOOKS -Dtrakt_scrobble=nv_cnt_trakt_scrobble -Dsimkl_scrobble=nv_cnt_simkl_scrobble -Dclock_gettime=nv_test_clock_gettime -c src/player.c -o "$dir/player.o"
 sources=()
 for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/video.c|src/trakt.c|src/visto.c|src/ajustes.c|src/trailer.c|src/player.c|src/descoberta.c) continue;; esac
