@@ -13,6 +13,7 @@
 #include "cwordem.h"
 #include "traktscrobble.h"
 #include "traktult.h"
+#include "metaep.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -410,13 +411,6 @@ int trakt_cw_concluiu(const char *id, long long progressoMs) {
         ult[i].episodio == e && ult[i].quandoMs > progressoMs) return 1;
   return 0;
 }
-// O episodio existe no meta do Cinemeta? Os ids em videos[] sao "tt:S:E".
-static int episodioExiste(const char *corpo, const char *serie, int t, int e) {
-  char chave[48];
-  snprintf(chave, sizeof chave, "\"id\":\"%s:%d:%d\"", serie, t, e);
-  return strstr(corpo, chave) != NULL;
-}
-
 // OBRAS JA TENTADAS NO CINEMETA PARA A NOTA, nesta sessao (#243). Sem isto, quem
 // o Cinemeta nao da nota (ou que estoura o tempo) voltava a rede a cada refacao
 // da fileira. Tentou uma vez (achou, sem nota ou falhou), conta como satisfeito.
@@ -552,8 +546,8 @@ static int enfeitar(CatItem *d, const char *tipo) {
     // "A seguir" que o cache nao confirma pode ser episodio novo: pergunta a
     // rede antes de descartar o item.
     if (corpo && proximo &&
-        !episodioExiste(corpo, serie, d->temporada, d->episodio) &&
-        !episodioExiste(corpo, serie, d->temporada + 1, 1)) {
+        !metaep_existe(corpo, d->temporada, d->episodio) &&
+        !metaep_proximo(corpo, d->temporada, d->episodio, NULL)) {
       free(corpo); corpo = NULL; deCache = 0;
     }
     if (!corpo) {
@@ -575,23 +569,22 @@ static int enfeitar(CatItem *d, const char *tipo) {
   // proximo e o primeiro da seguinte; depois do ultimo da serie nao ha
   // proximo, e a serie nao entra — nao e "continuar", e "acabou".
   epc = corpo;
-  if (proximo && !episodioExiste(corpo, serie, d->temporada, d->episodio) &&
-      !episodioExiste(corpo, serie, d->temporada + 1, 1) &&
+  if (proximo && !metaep_existe(corpo, d->temporada, d->episodio) &&
+      !metaep_proximo(corpo, d->temporada, d->episodio, NULL) &&
       provFicha != METAPROV_CINEMETA && !strcmp(tipo, "series")) {
     // A ficha do Nuvio pode estar atras do Cinemeta (The Rookie: 1 futuro
     // contra 18). Antes de largar o item, confere la; a ficha do Nuvio segue
     // valendo para todo o resto.
     corpoCine = cinemetaDaSerie(tipo, serie);
     if (corpoCine) {
-      int t = -1, e = -1;
-      if (episodioExiste(corpoCine, serie, d->temporada, d->episodio)) {
-        t = d->temporada; e = d->episodio;
-      } else if (episodioExiste(corpoCine, serie, d->temporada + 1, 1)) {
-        t = d->temporada + 1; e = 1;
-      }
-      if (t >= 0) {
+      MetaEpInfo prox;
+      if (metaep_existe(corpoCine, d->temporada, d->episodio)) {
         printf("[trakt] episodio ausente na ficha Nuvio; Cinemeta tem: %s S%dE%d\n",
-               serie, t, e);
+               serie, d->temporada, d->episodio);
+        epc = corpoCine;
+      } else if (metaep_proximo(corpoCine, d->temporada, d->episodio, &prox)) {
+        printf("[trakt] episodio ausente na ficha Nuvio; Cinemeta tem: %s S%dE%d\n",
+               serie, prox.temporada, prox.episodio);
         epc = corpoCine;
       }
     }
@@ -600,24 +593,19 @@ static int enfeitar(CatItem *d, const char *tipo) {
              serie, d->temporada, d->episodio);
   }
   if (proximo) {
-    if (!episodioExiste(epc, serie, d->temporada, d->episodio)) {
-      if (episodioExiste(epc, serie, d->temporada + 1, 1)) {
+    MetaEpInfo prox;
+    if (!metaep_existe(epc, d->temporada, d->episodio)) {
+      if (metaep_proximo(epc, d->temporada, d->episodio, &prox)) {
         char velho[sizeof d->imdb];
         snprintf(velho, sizeof velho, "%s", d->imdb);
-        d->temporada++; d->episodio = 1;
+        d->temporada = prox.temporada;
+        d->episodio = prox.episodio;
         snprintf(d->imdb, sizeof d->imdb, "%s:%d:%d", serie, d->temporada, d->episodio);
-        // So o da conta acompanha o id novo. O do Trakt continua como era
-        // (ehProximo do id novo da 0); mexer nele nao e deste conserto.
         if (daConta) cwo_conta_trocar(velho, d->imdb);
         virou = 1;
       } else { free(corpo); free(corpoCine); return 0; }
     }
-    // O nome do episodio, para a legenda do card.
-    { char chave[48]; const char *v;
-      snprintf(chave, sizeof chave, "\"id\":\"%s:%d:%d\"", serie, d->temporada, d->episodio);
-      v = strstr(epc, chave);
-      if (v) { const char *ini = v; while (ini > epc && *ini != '{') ini--;
-               js_texto(ini, js_fim(ini), "name", d->nomeEpisodio, sizeof d->nomeEpisodio); } }
+    metaep_nome(epc, d->temporada, d->episodio, d->nomeEpisodio, sizeof d->nomeEpisodio);
   }
   // A DATA DE ESTREIA DO EPISODIO "A SEGUIR" (issue #127), do mesmo videos[]
   // que acabou de confirmar que ele existe. E ela que separa o que ja foi ao ar
@@ -626,16 +614,9 @@ static int enfeitar(CatItem *d, const char *tipo) {
   // dele passa por aqui (simkl_continuar -> trakt_enfeitar_lote). Episodio sem
   // `released` fica sem data, e sem data conta como exibido, como no web.
   if (d->progresso == 0 && d->temporada > 0 && d->episodio > 0 && !strcmp(tipo, "series")) {
-    char chave[48], quando[40] = "";
-    const char *v;
-    snprintf(chave, sizeof chave, "\"id\":\"%s:%d:%d\"", serie, d->temporada, d->episodio);
-    v = strstr(epc, chave);
-    if (v) {
-      const char *ini = v;
-      long long ms;
-      while (ini > epc && *ini != '{') ini--;
-      if (!js_texto(ini, js_fim(ini), "released", quando, sizeof quando))
-        js_texto(ini, js_fim(ini), "firstAired", quando, sizeof quando);
+    char quando[40] = "";
+    long long ms;
+    if (metaep_lancamento(epc, d->temporada, d->episodio, quando, sizeof quando)) {
       ms = js_ms_iso(quando);
       cwo_marcar_estreia(d->imdb, ms > 0 ? ms : CWO_SEM_DATA);
       if (ms <= 0)
@@ -2143,14 +2124,34 @@ static ScrobbleEstado scrEstado;
 static struct { int acao; char id[64]; double pct; int tem; } scrPend;
 static int scrFioVivo;
 
+static void idsScrobble(const char *id, ScrobbleEpIds *out) {
+  char base[64], *dp;
+  int t = 0, e = 0;
+  MetaEpInfo ep;
+  char *meta;
+  if (!out) return;
+  memset(out, 0, sizeof *out);
+  snprintf(base, sizeof base, "%s", id);
+  dp = strchr(base, ':');
+  if (!dp || sscanf(dp + 1, "%d:%d", &t, &e) != 2 || t <= 0 || e <= 0) return;
+  *dp = 0;
+  meta = fichaBuscar("series", base);
+  if (!meta) meta = metaprov_meta("series", base, 8, NULL);
+  if (!meta || !metaep_buscar(meta, t, e, &ep)) { free(meta); return; }
+  scrobble_ids_guardar(out, ep.tvdb, ep.tmdb, ep.trakt);
+  free(meta);
+}
+
 static void enviarScrobble(int acao, const char *id, double pct) {
   const char *cab[4];
   char aut[200], chave[140], corpo[400], url[64], *r;
+  ScrobbleEpIds epIds;
   int status = 0;
   snprintf(aut, sizeof aut, "Authorization: Bearer %s", token);
   snprintf(chave, sizeof chave, "trakt-api-key: %s", cliente);
   cab[0] = aut; cab[1] = "trakt-api-version: 2"; cab[2] = chave; cab[3] = NULL;
-  scrobble_corpo(corpo, sizeof corpo, id, pct);
+  idsScrobble(id, &epIds);
+  scrobble_corpo_ep(corpo, sizeof corpo, id, pct, &epIds);
   snprintf(url, sizeof url, "https://api.trakt.tv/scrobble/%s", scrobble_nome(acao));
   r = rede_postar_st(url, 20, cab, corpo, &status);
   // O log NUNCA leva o token. rede_postar devolvia corpo nao nulo tambem em

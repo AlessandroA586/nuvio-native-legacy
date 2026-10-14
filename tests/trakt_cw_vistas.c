@@ -37,7 +37,7 @@ char *rede_baixar(const char *url, int s) {
     char id[24] = "", *o = malloc(600);
     if (t) snprintf(id, sizeof id, "%.9s", t + 1);
     snprintf(o, 600, "{\"imdbRating\":\"7.9\",\"name\":\"x\",\"description\":\"d\",\"runtime\":\"40 min\","
-      "\"videos\":[{\"id\":\"%s:1:2\",\"name\":\"e\",\"released\":\"2026-01-01T00:00:00.000Z\"}]}", id);
+      "\"videos\":[{\"id\":\"%s:1:2\",\"season\":1,\"episode\":2,\"name\":\"e\",\"released\":\"2026-01-01T00:00:00.000Z\"}]}", id);
     return o;
   }
   return NULL;
