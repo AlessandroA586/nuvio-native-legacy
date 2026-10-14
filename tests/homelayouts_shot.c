@@ -263,6 +263,9 @@ int main(int argc, char **argv) {
     return 0;
   }
 
+  // A Home exige um addon ligado mesmo quando o catalogo e um fixture local.
+  AddonRemoto addon = { .nome = "Fixture", .url = "http://127.0.0.1:1/manifest.json", .ativo = 1 };
+  assert(addons_definir_lista(&addon, 1));
   memset(itens, 0, sizeof itens);
   memset(fils, 0, sizeof fils);
   for (k = 0; k < NF; k++) {
@@ -403,6 +406,25 @@ int main(int argc, char **argv) {
       printf("[shot] tipo %s=%s ok=%d\n", p, ig + 1, fil_definir_tipo(p, atoi(ig + 1)));
     }
     quadros(60, NULL);
+  }
+
+  // NV_PALCO=N (com NV_TIPOS="pop_movie=13"): desce N fileiras ate a Palco e
+  // fotografa o foco andando para a direita — a prova visual de que o cartaz
+  // grande segue a fileira em vez de ficar parado no lugar.
+  if (getenv("NV_PALCO")) {
+    int r, desce = atoi(getenv("NV_PALCO"));
+    for (r = 0; r < 14; r++) tecla(SDLK_UP);
+    for (r = 0; r < desce; r++) { tecla(SDLK_DOWN); quadros(90, NULL); }
+    snprintf(bmp, sizeof bmp, "%s-palco-1-foco-inicial.bmp", saida);
+    quadros(1, bmp);
+    for (r = 0; r < 3; r++) { tecla(SDLK_RIGHT); quadros(30, NULL); }
+    quadros(60, NULL);
+    snprintf(bmp, sizeof bmp, "%s-palco-2-foco-andou.bmp", saida);
+    quadros(1, bmp);
+    for (r = 0; r < 5; r++) { tecla(SDLK_RIGHT); quadros(30, NULL); }
+    quadros(60, NULL);
+    snprintf(bmp, sizeof bmp, "%s-palco-3-foco-rolou.bmp", saida);
+    quadros(1, bmp);
   }
 
   // NV_SO_CTX=1: pula a volta pelos layouts e vai direto ao menu do cartaz

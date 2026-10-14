@@ -15,6 +15,7 @@ static float teste_espaco_titulos(void) { return espacoTit; }
 static float teste_espaco_fileiras(void) { return espacoFil; }
 #include "../src/home.c"
 void desc_sinopse_hero(const int *idx, int n) { (void)idx; (void)n; }
+void desc_ocultar_vistos_atualizar(void) {}
 
 void cachearte_marcar_grupo(int grupo, const char *url, int variante, int essencial, int emUso) {
   (void)grupo; (void)url; (void)variante; (void)essencial; (void)emUso;
@@ -70,6 +71,34 @@ const char *i18n(const char *s) { return s; }
 static void homeCom(int layout, int heroLigado) { testeLayout = layout; testeHero = heroLigado; }
 
 int main(void) {
+  // Palco percorre as mesmas vagas e usa a mesma borda das fileiras comuns.
+  // Igualar a largura isola a regra de ancoragem do tamanho de cada forma.
+  {
+    int cols[] = {12, 12};
+    fileiras[0] = (Fileira){.tipo = FILEIRA_NORMAL, .n = 12, .escala = 1.0f};
+    fileiras[1] = (Fileira){.tipo = FILEIRA_PALCO, .n = 12, .escala = 1.0f};
+    fileiras[0].escala = larguraFil(1) / larguraFil(0);
+    float lw = larguraFil(1), anterior = 0.0f;
+    focus_iniciar(&foco, 2, cols);
+    for (int c = 0; c < 12; c++) {
+      if (c) assert(focus_mover(&foco, 1, 0));
+      palcoPos[1] = (float)foco.coluna; // animacao em repouso
+      scrollX[0] = alvoScrollFil(0, c, scrollX[0], 0.0f);
+      scrollX[1] = alvoScrollFil(1, c, scrollX[1], 0.0f);
+      float cx, s, vizX, vizS;
+      palcoGeo(1, c, lw, &cx, &s);
+      assert(fabsf(cx - (homeFileiraX(0, c) + lw * 0.5f)) < 0.01f);
+      assert(s == 1.0f);
+      assert(fabsf(scrollX[1] - scrollX[0]) < 0.01f);
+      if (c == 1) assert(cx > anterior && scrollX[1] == 0.0f);
+      if (c == 11) assert(scrollX[1] > 0.0f);
+      palcoGeo(1, c + 1, lw, &vizX, &vizS);
+      assert(fabsf(vizS - NV_PALCO_VIZ) < 0.01f);
+      assert(vizX - lw * vizS * 0.5f > cx + lw * s * 0.5f);
+      anterior = cx;
+    }
+    memset(scrollX, 0, sizeof scrollX);
+  }
   // A composicao abaixo e a da home SEM o destaque no topo: e nela que a
   // primeira fileira de catalogo vira a vitrine (vitrineNaPrimeira). O #201
   // (com destaque) tem bloco proprio no fim.
