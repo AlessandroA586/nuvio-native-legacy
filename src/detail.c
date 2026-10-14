@@ -1475,13 +1475,14 @@ static void abrirInterno(const HomeItem *it) {
         fflush(stdout);
       } else {
         GfxRect telaA = { 0, 0, NV_TELA_W, NV_TELA_H };
-        adotou = trailer_continuar(telaA, 1);
+        adotou = trailer_continuar(telaA, ajustes_trailer_som());
         if (adotou) {
           trailer_marcar_dono(TRAILER_DONO_DETALHE, ciA->imdb);
           // Ja tocando: sem esperar a arte apagar, e sem o modo cinema de
           // cara (a pessoa abriu para LER a pagina; o trailer segue atras).
           trailerTentado = 1; trailerFade = 1.0f; trailerCinema.tocavaAntes = 1;
-          printf("[trailer] detalhe: continua o trailer do cartaz com som (%s)\n", ciA->imdb);
+          printf("[trailer] detalhe: continua o trailer do cartaz %s (%s)\n",
+                 trailer_com_som() ? "com som" : "mudo", ciA->imdb);
           fflush(stdout);
         }
       }
@@ -2444,7 +2445,7 @@ static void tocarTrailerCheio(int k) {
   if (u) {
     GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
     trailerEtapa = 0; trailerPrazo = 0;   // tela cheia: so o teclado fecha
-    trailer_abrir(u, tela, trailerfonte_com_som(trailerfonte_tizen()), 1);
+    trailer_abrir(u, tela, ajustes_trailer_som(), 1);
   }
 #ifdef __EMSCRIPTEN__
   // SAMSUNG: NUNCA o navegador (#136). O window.open do wgt trocava a
@@ -2456,7 +2457,7 @@ static void tocarTrailerCheio(int k) {
            extras_trailer_yt(k)[0]) {
     GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
     trailerEtapa = 0; trailerPrazo = 0;
-    trailer_abrir(extras_trailer_yt(k), tela, 0, 1);
+    trailer_abrir(extras_trailer_yt(k), tela, ajustes_trailer_som(), 1);
   }
 #else
   else extras_trailer_abrir(k);
@@ -3422,7 +3423,7 @@ void detail_atualizar(float dt, Uint32 agora) {
       if (u) {
         GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
         trailerTentado = 1;
-        trailer_abrir(u, tela, ajustes_trailer_detalhe_som(), 0);
+        trailer_abrir(u, tela, ajustes_trailer_som(), 0);
 #ifdef __EMSCRIPTEN__
         // A etapa e a FONTE aberta (TRF_*), para o prazo saber qual e a
         // proxima na ordem do ajuste (trailerfonte_depois).
@@ -3460,7 +3461,7 @@ void detail_atualizar(float dt, Uint32 agora) {
         if (trailer_aberto()) trailer_fechar();
         if (seg) {
           GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
-          trailer_abrir(seg, tela, ajustes_trailer_detalhe_som(), 0);
+          trailer_abrir(seg, tela, ajustes_trailer_som(), 0);
           trailerEtapa = prox;
           trailerPrazo = agora + NV_TRAILER_PREPARA_MS;
         } else { trailerEtapa = -1; trailerPrazo = 0; }
