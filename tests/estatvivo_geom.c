@@ -72,6 +72,8 @@ static void checkGeometry(int t, const float *panel, const float *hints) {
   EvGeometriaTeste geo;
   int i, cols, rows;
   float left = panel[0] + GEO_PAD, right = panel[0] + panel[2] - GEO_PAD;
+  CONFERE(hints[2] > 0,
+          "size %d: footer visible (focusable panel always draws its hints)", t);
   estatvivo_teste_geometria(&geo);
   CONFERE(fabsf(hints[0] - left) < 0.5f && fabsf(hints[0] + hints[2] - right) < 0.5f,
           "mode %d: footer follows the content margins", t);
@@ -216,9 +218,8 @@ int main(void) {
     estatvivo_teste_layout(panel, hints);
     CONFERE(fabsf(panel[1] - clock.y) < 0.5f, "size %d: panel aligned to clock top", t);
     CONFERE(fabsf(panel[0] + panel[2] - clock.x - clock.w) < 0.5f, "size %d: clock side margin", t);
-    CONFERE(hints[2] > 0 && hints[0] >= panel[0] && hints[1] >= panel[1] &&
-            hints[0] + hints[2] <= panel[0] + panel[2] + 0.5f &&
-            hints[1] + hints[3] <= panel[1] + panel[3], "size %d: hints inside glass", t);
+    CONFERE(panel[1] + panel[3] - hints[1] - hints[3] >= GEO_PAD - 0.5f,
+            "size %d: hints inside glass", t);
     shotGeom(t == EV_TAM_COMPLETO ? "mode-completo" : t == EV_TAM_COMPACTO ? "mode-compacto" : "mode-minimo");
     checkGeometry(t, panel, hints);
     key(SDLK_RETURN);
@@ -273,14 +274,26 @@ int main(void) {
   CONFERE(estatvivo_teste_tiles(rendered) == 5 && !memcmp(rendered, (int[]){2, 1, 3, 4, 5}, 5 * sizeof(int)),
           "full loads and renders saved order independently");
   shotGeom("custom-completo");
+
+  // Empty tile set: deleting the last tile removes the file, and OK on an
+  // offered row adds it back instead of saving a blank line that reverts.
+  dados_apagar("estatvivo-tiles-p1-0.txt");
+  key(SDLK_MENU); frame(2);
+  for (int j = 0; j < 5; j++) key(SDLK_RETURN);   // remove all five
+  CONFERE(!dados_ler("estatvivo-tiles-p1-0.txt"), "removing the last tile deletes the file");
+  key(SDLK_RETURN);   // re-add the offered tile
+  saved = dados_ler("estatvivo-tiles-p1-0.txt");
+  CONFERE(saved && !strcmp(saved, "0\n"), "editor repopulates an empty tile set");
+  free(saved);
+  key(SDLK_RETURN);   // remove it again -> empty
+  for (int j = 0; j < 5; j++) key(SDLK_DOWN);
+  key(SDLK_RETURN);   // add the last offered tile
+  key(SDLK_ESCAPE);
+  frame(2);   // a troca de tiles so aparece depois que a edicao sai
+  CONFERE(estatvivo_teste_tiles(rendered) == 1 && rendered[0] == 5,
+          "empty set accepts a new tile via OK");
   key(SDLK_MENU); frame(120);
   shotGeom("editor");
-  key(SDLK_ESCAPE);
-  // Restore full defaults for existing pin/navigation checks.
-  key(SDLK_MENU);
-  for (int j = 0; j < 5; j++) key(SDLK_DOWN);
-  key(SDLK_RETURN);
-  for (int j = 0; j < 5; j++) key(SDLK_LEFT);
   key(SDLK_ESCAPE);
   frame(120);   // Settle the last size change before measuring side motion.
   key(SDLK_DOWN);

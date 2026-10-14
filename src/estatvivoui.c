@@ -111,6 +111,11 @@ static int gravarTiles(void) {
   char nome[64], texto[32];
   int u = 0;
   nomeTiles(nome, sizeof nome, tamanho);
+  // Sem ladrilhos o arquivo vai embora: a proxima carga acha o padrao do
+  // tamanho. Gravar "\n" era lido como lista vazia e travava o editor — OK
+  // numa linha oferecida salvava e revertia na hora, sem saida. E um arquivo
+  // que ja nao existe e SUCESSO: o estado pedido (nada gravado) ja vale.
+  if (!nTiles[tamanho]) { dados_apagar(nome); return 1; }
   for (int i = 0; i < nTiles[tamanho]; i++) u += snprintf(texto + u, sizeof texto - u, "%d ", tiles[tamanho][i]);
   if (u) u--;
   texto[u++] = '\n'; texto[u] = 0;
@@ -118,6 +123,7 @@ static int gravarTiles(void) {
 }
 static void editarTile(int row, int mover) {
   int salvo[6], n = nTiles[tamanho], id = ofertaTile(row);
+  if (row >= 6 || (row > n && n >= 6)) return;
   memcpy(salvo, tiles[tamanho], sizeof salvo);
   if (mover) {
     int destino = row + mover;
@@ -827,9 +833,11 @@ void estatvivo_retangulo(int tam, int esquerda, float *g) {
   g[1] = EVU_TOPO;
   g[2] = w;
   carregarTiles();
+  // Same bottom reserve at every size: separator + hint row + padding. The
+  // minimal pill grows to fit it, so UP on a pinned panel always shows OK /
+  // arrows / Back instead of silently clipping the footer.
   g[3] = tam == EV_TAM_COMPLETO ? EVU_H : tam == EV_TAM_COMPACTO ? EVU_CH :
-    (nTiles[tam] == 2 && tiles[tam][0] == 0 && tiles[tam][1] == 1 ? EVU_PH :
-     fmaxf(EVU_PH, nTiles[tam] * 44.0f + 32.0f)) + 152.0f;
+    fmaxf(EVU_PH, nTiles[tam] * 44.0f + 32.0f) + 152.0f;
   if (editando) { g[2] = EVU_MW; g[0] = esquerda ? EVU_MARG : NV_TELA_W - EVU_MARG - g[2]; g[3] = 480; }
 }
 void estatvivo_retangulo_atual(float *g) { estatvivo_retangulo(tamanho, ajustes_estat_lado(), g); }
