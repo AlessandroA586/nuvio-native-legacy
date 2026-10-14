@@ -117,11 +117,16 @@ with tempfile.TemporaryDirectory() as d:
 # Anchors of the fixes that the helpers alone cannot see.
 assert 'exibPill' in function('botaoEstiloAbas')          # style icon AFTER the display pill
 assert 'exibPill = pill;' in function('botaoExibicao')
+assert 'fminf(rx, NV_TELA_W' in function('botaoEstiloAbas')  # icon clamped: never off the right edge
+abaBloco = function('themeHeader')
+caps = abaBloco.index('if(capA>.01f)')
+texto = abaBloco.index('txt_desenhar_alpha(t,x+PAD')      # capsule drawn BEFORE the labels
+assert caps < texto, 'focus capsule must draw before the tab labels'
+assert 'foco_anel(pill,NV_RAIO_PILL,1,ah)' not in abaBloco   # stiff ring gone
 assert 'faixas' in function('degradeMarca')               # brand band fades out in alpha
 assert 'tabRol = 0.0f;   // a faixa renasce' in s      # reset on open, not only on touch builds
 assert 'capAlvoX=pos[focoAba]' in s                       # capsule follows the cursor tab
 assert 'abasCapsulaAtualizar(dt);' in s                   # animated every frame
-assert 'foco_anel(pill,NV_RAIO_PILL,1,ah)' not in function('themeHeader')  # stiff ring gone
 g = Path('src/gfx.c').read_text()
 assert 'uPar.x > 0.0' in g                                # GFX_FUNDO_DIN alpha fade
 assert 'if(fa>.001f) focoAbaFonte(pill, fa, ah)' not in s  # per-tab instant focus gone

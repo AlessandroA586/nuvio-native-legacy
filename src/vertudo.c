@@ -2011,6 +2011,21 @@ static void themeHeader(float a,float x0) {
                      0.0f, fmaxf(0.0f, px-GAP-W), 0, &tabRol);
 #endif
     gfx_recorte(x0-margem,244,W+2*margem,H+12);
+    // A CAPSULA DO FOCO DESLIZA da aba antiga para a nova (mola, como a barra
+    // central): no Topo e um sublinhado na cor do acento; nas pílulas e o
+    // preenchimento com a luz de sempre. Sem foco nas abas ela desvanece.
+    // VEM ANTES das abas: os rotulos ficam por cima dela — desenhada por
+    // ultimo, a capsula tampava o texto da aba focada (Chips, Netflix na TCL).
+    if(capA>.01f) {
+      float cx=capX-tabRol;
+      float ca=a*abaFade(cx,capW,x0,W,tabRol>0.5f,px-GAP-tabRol>W+0.5f)*capA;
+      if(ca>.005f) {
+        if(est==VT_AB_TOPO) {
+          float sr,sg,sb;corFocoFonte(&sr,&sg,&sb);
+          gfx_cor((GfxRect){cx+PAD,253.0f+H-4.0f,fmaxf(4.0f,capW-PAD*2),3.0f},.5f,sr,sg,sb,ca);
+        } else focoAbaFonte((GfxRect){cx,253.0f,capW,H},capA,a*abaFade(cx,capW,x0,W,tabRol>0.5f,px-GAP-tabRol>W+0.5f));
+      }
+    }
     for(int i=0;i<nAbas;i++) {
       float x=x0+pos[i]-tabRol;
       if(x+larg[i]<=x0-margem||x>=x0+W+margem)continue;
@@ -2039,19 +2054,6 @@ static void themeHeader(float a,float x0) {
       // branca — sobre o degradê da marca a pílula da cor do tema sozinha nao
       // marcava nada (Netflix na TCL, "sem indicador de aba aberta").
       if(selecionada)gfx_cor((GfxRect){x+PAD,pill.y+H-4,fminf(t.w,32.0f),3},.5f,1,1,1,.85f*ah*(1.0f-fa));
-    }
-    // A CAPSULA DO FOCO DESLIZA da aba antiga para a nova (mola, como a barra
-    // central): no Topo e um sublinhado na cor do acento; nas pílulas e o
-    // preenchimento com a luz de sempre. Sem foco nas abas ela desvanece.
-    if(capA>.01f) {
-      float cx=capX-tabRol;
-      float ca=a*abaFade(cx,capW,x0,W,tabRol>0.5f,px-GAP-tabRol>W+0.5f)*capA;
-      if(ca>.005f) {
-        if(est==VT_AB_TOPO) {
-          float sr,sg,sb;corFocoFonte(&sr,&sg,&sb);
-          gfx_cor((GfxRect){cx+PAD,253.0f+H-4.0f,fmaxf(4.0f,capW-PAD*2),3.0f},.5f,sr,sg,sb,ca);
-        } else focoAbaFonte((GfxRect){cx,253.0f,capW,H},capA,a*abaFade(cx,capW,x0,W,tabRol>0.5f,px-GAP-tabRol>W+0.5f));
-      }
     }
     gfx_sem_recorte();
   }
@@ -2469,7 +2471,12 @@ static void botaoExibicao(float a, float x0) {
 // D-pad anda nessa ordem — antes o icone ficava a ESQUERDA do botao e DIREITA
 // dava um passo para tras no visual (Netflix na TCL, tabs "fora da ordem").
 static void botaoEstiloAbas(float a) {
-  GfxRect r = {exibPill.x + exibPill.w + 12.0f, exibPill.y, 52, VT_AB_H};
+  // A DIREITA do "Exibicao", mas nunca fora da tela: com um nome de exibicao
+  // largo a pilula encosta na margem e o icone ia para alem da borda. Sem
+  // exibPill ainda (1o quadro na Vitrine) ele fica encostado na margem.
+  float rx = exibPill.w > 0.0f ? exibPill.x + exibPill.w + 12.0f : NV_TELA_W;
+  rx = fminf(rx, NV_TELA_W - 104.0f - 52.0f);
+  GfxRect r = {rx, exibPill.y > 0.0f ? exibPill.y : 253.0f, 52, VT_AB_H};
   int f = tabFocus && tabCursor == cabN()+1;
   if (lay == VT_LAY_VITRINE) r.y = NV_ILHA_Y + 64.0f;
   float c = f ? ajustes_tinta_foco()/255.0f : 1.0f;
