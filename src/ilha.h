@@ -235,6 +235,7 @@ typedef struct {
   char avisoId[72];      // ILHA_ESTREIA: id do aviso em avisos.c
   char pessoa[64], rosto[256];   // ILHA_AMIGO: nome e avatar de quem esta vendo
 } IlhaCartao;
+int ilha_retomar_focado(IlhaCartao *c);
 // NULL tira o cartao. A copia e da ilha; quem chama pode descartar o seu.
 void ilha_cartao(int qual, const IlhaCartao *c);
 // Troca de identidade: apaga este cartao e suas copias no modal, no pedido e

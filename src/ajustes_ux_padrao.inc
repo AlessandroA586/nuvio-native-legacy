@@ -277,6 +277,7 @@
   1, 0, /* provider failover off; order action */
   3, 3, 3, 3, /* total links per native provider */
   1, 0, 3, /* addon failover off; instance order action; total links */
+  0, 0, /* #492: warm resume ON; keep-alive duration 2 minutes */
   0, /* live statistics size (#338): remember the last one */
   1, /* hide watched movies (#366): Desligado, per profile on this device */
   0, /* live statistics side: Direita */

@@ -3,6 +3,9 @@ package space.nuvio.nativelegacy
 import android.app.Activity
 import android.content.Context
 import android.net.Uri
+import android.graphics.Bitmap
+import android.view.PixelCopy
+import android.widget.ImageView
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -171,6 +174,74 @@ object NvPlayer {
     // The cache limit is STICKY (the C side sends it only when it changes) and
     // read at each open; any thread writes it, the open reads it on main.
     @Volatile private var cacheMbPedido = 0
+    // Warm resume (#492): id of the title of the NEXT open ("" = trailer or
+    // channel: it neither keeps nor drops the kept cache) and of the cache
+    // being kept when this one closes.
+    @Volatile private var tituloPedido = ""
+    private var tituloAberto = ""
+    private var chaveAberta = ""
+    @Volatile private var mornoLigado = true
+    private var quadroBitmap: Bitmap? = null
+    private var quadroTitulo = ""
+    private var quadroUrl = ""
+    private var quadroAte = 0L
+    private var quadroPedido = 0
+    private var quadroView: ImageView? = null
+    @Volatile private var quadroVisivel = false
+    private var capturando = false
+    @JvmStatic fun morno(ligado: Int) {
+        mornoLigado = ligado != 0
+        if (!mornoLigado) principal.post { esquecerQuadro(); CacheMidia.descartar("warm resume off") }
+    }
+    private fun esconderQuadro() {
+        quadroVisivel = false
+        quadroView?.let { (it.parent as? FrameLayout)?.removeView(it) }
+        quadroView = null
+    }
+    private fun esquecerQuadro() {
+        quadroPedido++; esconderQuadro()
+        quadroBitmap?.recycle(); quadroBitmap = null
+        quadroTitulo = ""; quadroUrl = ""
+    }
+    // PixelCopy reads the hardware Surface, not SDL's transparent framebuffer.
+    // Never wait for it on exit. One small bitmap and one request, no decoder held.
+    @JvmStatic fun quadro(acao: Int): Int {
+        if (acao == 3) return if (quadroVisivel) 1 else 0
+        principal.post {
+            if (acao == 0) { esquecerQuadro(); return@post }
+            if (acao == 2) { mostrarQuadro(quadroUrl, quadroTitulo); return@post }
+            if (acao != 1 || !mornoLigado || capturando || tituloAberto.isEmpty() || !quadroVisto) return@post
+            val sv = superficie ?: return@post
+            if (!sv.holder.surface.isValid) return@post
+            val titulo = tituloAberto; val url = urlAtual; val token = ++quadroPedido
+            val b = try { Bitmap.createBitmap(480, (480 * videoH / videoW.coerceAtLeast(1)).coerceIn(1, 480), Bitmap.Config.ARGB_8888) }
+                    catch (_: OutOfMemoryError) { return@post }
+            capturando = true
+            try {
+                PixelCopy.request(sv, b, { resultado ->
+                    capturando = false
+                    if (resultado == PixelCopy.SUCCESS && token == quadroPedido && mornoLigado) {
+                        quadroBitmap?.recycle(); quadroBitmap = b; quadroTitulo = titulo; quadroUrl = url
+                        quadroAte = SystemClock.elapsedRealtime() + CacheSessao.LIMITE_MS
+                    } else b.recycle()
+                }, principal)
+            } catch (_: Exception) { capturando = false; b.recycle() }
+        }
+        return 0
+    }
+    private fun mostrarQuadro(url: String, titulo: String) {
+        esconderQuadro()
+        if (titulo.isEmpty()) return // Home trailer leaves the last title snapshot alone.
+        if (!mornoLigado || SystemClock.elapsedRealtime() >= quadroAte || titulo != quadroTitulo || url != quadroUrl) { esquecerQuadro(); return }
+        val b = quadroBitmap ?: return
+        val act = activity ?: return; val c = camada ?: return
+        val v = ImageView(act)
+        v.setBackgroundColor(android.graphics.Color.BLACK)
+        v.scaleType = ImageView.ScaleType.FIT_CENTER
+        v.setImageBitmap(b); v.isFocusable = false
+        c.addView(v, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        quadroView = v; quadroVisivel = true
+    }
     private var cacheMidia: CacheMidia? = null
     private var cacheEstado = CacheSessao.DESLIGADO
     private var cacheTiques = 0
@@ -354,6 +425,7 @@ object NvPlayer {
     fun encerrar() {
         pedidos.incrementAndGet()
         liberar()
+        esquecerQuadro(); CacheMidia.descartar("app exit")
         val sv = superficie
         if (sv != null) (sv.parent as? FrameLayout)?.removeView(sv)
         superficie = null
@@ -401,6 +473,9 @@ object NvPlayer {
     @Volatile private var bufferPreset = 0
     @JvmStatic fun buffer(preset: Int) { bufferPreset = preset.coerceIn(0, 3) }
     @JvmStatic fun cache(mb: Int) { cacheMbPedido = mb.coerceIn(0, 1024) }
+    @JvmStatic fun cacheTitle(id: String) { tituloPedido = id }
+    // Profile switch (C side): the kept cache belongs to the old profile.
+    @JvmStatic fun descartarGuardado() { principal.post { CacheMidia.descartar("profile switch"); esquecerQuadro() } }
     @JvmStatic fun ganho(pct: Int) {
         principal.post { ganhoPct = GanhoMath.pct(pct); aplicarGanho() }
     }
@@ -440,6 +515,7 @@ object NvPlayer {
             Log.i(TAG, "[player] esperou o release anterior $ms ms (pendentes=${liberacoesEmCurso.get()})")
         }
         novaSuperficie(act)
+        mostrarQuadro(url, tituloPedido)
         pedidoAtivo = pedido
         hdrRecriadoPara = ""; quadroVisto = false
         recriando = false; recriaAgendada = false; recuperouSuperficie = false; estavelEmitido = false
@@ -485,11 +561,16 @@ object NvPlayer {
             val baixa = url.lowercase()
             val adaptativo = baixa.contains(".m3u8") || baixa.contains("m3u8?") || baixa.contains(".mpd")
             val pedidoCache = cacheMbPedido
+            val titulo = tituloPedido
+            tituloAberto = ""
             var origem: androidx.media3.datasource.DataSource.Factory = rede
-            if (pedidoCache <= 0) cacheEstado = CacheSessao.DESLIGADO
-            else if (adaptativo || !ParaleloDataSource.serve(Uri.parse(url))) cacheEstado = CacheSessao.NAO_SE_APLICA
-            else {
-                val (c, estado) = CacheMidia.criar(act.cacheDir, pedidoCache) { semEspaco ->
+            // Cache off or not applicable for a VOD: whatever was kept is stale.
+            if (pedidoCache <= 0) { cacheEstado = CacheSessao.DESLIGADO; if (titulo.isNotEmpty()) CacheMidia.descartar("setting off") }
+            else if (adaptativo || !ParaleloDataSource.serve(Uri.parse(url))) {
+                cacheEstado = CacheSessao.NAO_SE_APLICA
+                if (titulo.isNotEmpty()) CacheMidia.descartar("not progressive")
+            } else {
+                val aoFalhar: (Boolean) -> Unit = { semEspaco ->
                     // Loader thread: back to main, only for this session.
                     principal.post {
                         if (!atual(minha) || cacheEstado != CacheSessao.ATIVO) return@post
@@ -498,9 +579,14 @@ object NvPlayer {
                         relatarCache(minha)
                     }
                 }
+                chaveAberta = url.substringBefore('#')
+                // WARM RESUME: the same title and source reuse the downloaded part.
+                val guardado = CacheMidia.pegar(titulo, chaveAberta, pedidoCache, aoFalhar)
+                val (c, estado) = if (guardado != null) guardado to CacheSessao.ATIVO
+                                  else CacheMidia.criar(act.cacheDir, pedidoCache, aoFalhar)
                 cacheMidia = c
                 cacheEstado = estado
-                if (c != null) origem = c.fabrica(rede)
+                if (c != null) { origem = c.fabrica(rede); tituloAberto = titulo }
             }
             relatarCache(minha)
 
@@ -662,8 +748,10 @@ object NvPlayer {
         }
         // F07: the session cache goes with its player (released and deleted
         // off the main thread, after the canceled loaders unwind).
-        cacheMidia?.liberar()
+        // WARM RESUME: a healthy cache of a known title is kept for the next open.
+        cacheMidia?.let { if (mornoLigado && tituloAberto.isNotEmpty()) CacheMidia.guardar(it, tituloAberto, chaveAberta) else it.liberar() }
         cacheMidia = null
+        tituloAberto = ""
         cacheEstado = CacheSessao.DESLIGADO
         cacheTiques = 0
         processador = null
@@ -1114,6 +1202,7 @@ object NvPlayer {
         override fun onRenderedFirstFrame() {
             if (!atual(minha)) return
             Log.i(TAG, "[player] onRenderedFirstFrame renderer=video loadMs=${SystemClock.elapsedRealtime() - abriuEm} sessao=$sessao hdr=$ultHdr holder=${System.identityHashCode(superficie?.holder)} soltando=${soltando != null}")
+            esconderQuadro()
             ev(EV_PRIMEIRO_QUADRO)
             quadroVisto = true
             logTaxaDeQuadros()

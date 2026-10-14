@@ -30,6 +30,8 @@
 #include "sessao.h"
 #include "perfis.h"
 #include "fontevolta.h"
+#include "cacheboost.h"
+#include "retomamorna.h"
 #include "fonteescolha.h"
 #include "fontesonda.h"
 #include "fonteantecipa.h"
@@ -431,6 +433,9 @@ static void *carregarPerfil(void *u) {
   return NULL;
 }
 static void invalidarPerfil(void) {
+  retomamorna_cancelar(); cacheboost_backend_quadro(0);
+  player_descartar_retido();
+  cacheboost_backend_descartar();   // #492: o trecho guardado do ultimo titulo era do perfil anterior
   ilhacart_esquecer_vivo();
   home_retomar_esquecer();
   atomic_fetch_add_explicit(&perfilGeracao,1,memory_order_acq_rel);
@@ -2677,7 +2682,7 @@ static void abrirExplorarNoTitulo(void) {
 }
 
 void app_evento(const SDL_Event *e) {
-  if (e->type == SDL_QUIT) { sair = 1; return; }
+  if (e->type == SDL_QUIT) { retomamorna_cancelar(); sair = 1; return; }
   if (dicascontrole_ocupado()) { dicascontrole_evento(e); return; }
   ilhacart_validar_identidade();
   // Qualquer gesto da pessoa: a atividade ao vivo da ilha conta 30 min daqui.
@@ -3207,6 +3212,9 @@ static const char *homeTrailerBloqueio(void) {
 }
 
 void app_atualizar(float dt, Uint32 agora) {
+  { static int morno = -1; int ligado = ajustes_retomada_morna();
+    if (morno != ligado) { morno = ligado; cacheboost_backend_morno(ligado); }
+  }
   if (player_aberto() || player_mini_ativo()) diagnostico_cancelar_vazao();
   // Login e escolha de perfil retornam cedo; a atividade da conta anterior
   // precisa sair antes deles, junto de qualquer modal/pedido ja enfileirado.
@@ -3756,7 +3764,20 @@ void app_atualizar(float dt, Uint32 agora) {
         if (im[0]) spainel_abrir_titulo(im);
         else spainel_ir_aba(1);                       // 1 = aba Atividade
       } }
+    { static char focoChave[80]; IlhaCartao foco; Stream s; char alvo[64];
+      if (ajustes_retomada_morna() && !player_retido() && !player_aberto() &&
+          ilha_retomar_focado(&foco) && ilhacart_vivo_vale(&foco)) {
+        if (strcmp(focoChave, foco.chave)) {
+          snprintf(focoChave, sizeof focoChave, "%s", foco.chave);
+          int idxFoco = cat_indice_por_imdb(foco.imdb);
+          cat_id_stream(idxFoco, foco.serie ? foco.t : 0, foco.serie ? foco.e : 0, alvo, sizeof alvo);
+          if (fontevolta_pegar(alvo, sessao_usuario(), perfis_ativo(), agora, &s)) retomamorna_foco(s.url);
+          else retomamorna_cancelar();
+        }
+      } else { focoChave[0] = 0; retomamorna_cancelar(); }
+    }
     o = ilha_pediu(&ic, &qual);
+    if (o) retomamorna_cancelar();
     if (o && qual == ILHA_VIVO && !ilhacart_vivo_vale(&ic)) o = ILHA_PEDIU_NADA;
     if (o == ILHA_PEDIU_SALVOS) {
       // O PAINEL NASCE DO MODAL: o retangulo de agora e o do modal, que some
@@ -3776,6 +3797,7 @@ void app_atualizar(float dt, Uint32 agora) {
         if (menu_aberto()) menu_fechar();
         ilha_modal_fechar(1);
       } else if (idx >= 0) {
+        if (o == ILHA_PEDIU_TOCAR && qual == ILHA_VIVO && ajustes_retomada_morna()) cacheboost_backend_quadro(2);
         // O mesmo caminho do OK no card de "Continuar assistindo" com "OK no
         // card" = Retomar: a pagina abre e a reproducao e pedida junto, no
         // episodio que o cartao mostrava (cwTocarT/E, issue #93).

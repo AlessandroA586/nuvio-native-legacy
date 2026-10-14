@@ -476,6 +476,11 @@ int ilha_rect(float *x, float *y, float *w, float *h) {
 // serie so sai se eu entrar na serie"). Agora "Depois" tira o cartao ate o app
 // fechar e "Dispensar" tira de vez aquele episodio (ver ILHA_PEDIU_* em ilha.h).
 // AMIGO: Ver tambem · Detalhes · Fechar, o A5 de oportunidades.md.
+int ilha_retomar_focado(IlhaCartao *c) {
+  if (!modalAberto || modalAviso || modalAtividade || modalQual != ILHA_VIVO || modalFoco != 0) return 0;
+  if (c) *c = modalC;
+  return 1;
+}
 static int nBotoes(void) {
   if (modalAtividade) return 1;
   if (modalAviso) return modalM.nBotoes < 1 ? 1 : modalM.nBotoes > ILHA_MODAL_BOTOES ? ILHA_MODAL_BOTOES : modalM.nBotoes;
