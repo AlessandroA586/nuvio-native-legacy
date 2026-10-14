@@ -6792,10 +6792,11 @@ void home_desenhar(Uint32 agora) {
           // desloca aqui e so a cascata de entrada, e so enquanto ela dura.
           float cy = cardY + artH * 0.5f + (1.0f - entra) * NV_ENTRA_DY;
           if (cx < -lw * 1.5f || cx > NV_TELA_W + lw) continue;
-          // Cartao totalmente fora da tela (mas dentro da faixa de cull que
-          // ainda e desenhada). O focado nunca conta como fora.
+          // Cartao TOTALMENTE fora da tela (mas dentro da faixa de cull que
+          // ainda e desenhada): NIVEL 2, recusa sempre. Nao ha tile na tela
+          // para ficar escuro. O focado nunca conta como fora.
           tex_pedido_fora((cx + w * 0.5f < 0.0f || cx - w * 0.5f > NV_TELA_W) &&
-                          !(r == foco.fileira && c == foco.coluna));
+                          !(r == foco.fileira && c == foco.coluna) ? 2 : 0);
           float px = cx - w * 0.5f, py = cy - h * 0.5f;
           // O foco pode aumentar o card. No 4:3 ele nao pode subir sobre o
           // titulo da fileira; a expansão acontece para baixo, preservando a

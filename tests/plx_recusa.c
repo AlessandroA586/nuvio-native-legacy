@@ -4,9 +4,10 @@
 // mediu no aparelho que recusar NO PEDIDO derruba drops de 90/97 para 21/23 e
 // sobe a mediana de 55 para 60 fps; "rate-limit depois do decode" e "um em voo"
 // ficaram PIORES que nada, porque o pedido e o ultimo ponto onde ainda da para
-// recusar de graca. A recusa so pode valer para pedido NOVO de arte FORA da
-// janela num quadro em MOVIMENTO: arte conhecida e quadro parado passam (a
-// recusa fixa deixava tiles escuros, medido por eles).
+// recusar de graca. A recusa so pode valer para pedido NOVO: arte conhecida
+// passa (a recusa fixa deixava tiles escuros, medido por eles). Dois niveis:
+//   2 = arte TOTALMENTE fora da tela  -> recusa sempre (nao ha tile a escurecer)
+//   1 = cartao na BORDA (fade)        -> recusa so em MOVIMENTO
 //
 // Aqui o cache e exercitado sem rede e sem GPU: so o caminho do pedido.
 #include "../src/sdlcompat.h"
@@ -20,7 +21,7 @@
 // Sem o item 4 na arvore: nada recusa, e o teste tem de FALHAR.
 int tex_n_recusa = 0;
 void tex_grade_movendo(int m) { (void)m; }
-void tex_pedido_fora(int f) { (void)f; }
+void tex_pedido_fora(int n) { (void)n; }
 #endif
 
 static void prepararApi(void) {
@@ -45,48 +46,63 @@ static int ocupados(void) {
 
 static int naFila(void) { return filaIni != filaFim; }
 
+// Um pedido NOVO de arte `p`, com o estado atual da grade; devolve a recusa.
+static int pedir(const char *p) {
+  tex_n_recusa = 0;
+  int r = tex_obter(p);
+  assert(r == 0);
+  return tex_n_recusa;
+}
+
 int main(void) {
   prepararApi();
   assert(ocupados() == 0 && !naFila());
 
-  // 1) GRADE EM MOVIMENTO + CARTAO FORA DA JANELA: recusado ANTES do fetch.
+  // 1) TOTALMENTE FORA DA TELA: recusado ANTES do fetch, com a grade PARADA.
   //    Nada entra no cache nem na fila de rede.
-  tex_grade_movendo(1);
-  tex_pedido_fora(1);
-  tex_n_recusa = 0;
-  assert(tex_obter("https://x/fora.jpg") == 0);
-  assert(tex_n_recusa == 1);
+  tex_grade_movendo(0);
+  tex_pedido_fora(2);
+  assert(pedir("https://x/fora-parado.jpg") == 1);
   assert(ocupados() == 0 && !naFila());
   tex_pedido_fora(0);
 
-  // 2) GRADE EM MOVIMENTO, CARTAO NA JANELA: admitido normalmente.
-  assert(ocupados() == 0);
-  tex_n_recusa = 0;
-  assert(tex_obter("https://x/na.jpg") == 0);   // ainda sem textura
-  assert(tex_n_recusa == 0);
-  assert(ocupados() == 1 && naFila());
+  // 2) TOTALMENTE FORA DA TELA em movimento: idem.
+  tex_grade_movendo(1);
+  tex_pedido_fora(2);
+  assert(pedir("https://x/fora-movendo.jpg") == 1);
+  assert(ocupados() == 0 && !naFila());
+  tex_pedido_fora(0);
 
-  // 3) GRADE PARADA: cartao fora da janela NAO e recusado — o lookahead do
-  //    item 1 cuida da vizinhanca e o fetch normal cobre o resto.
+  // 3) NA BORDA (fade) + grade PARADA: NAO recusa — recusar aqui deixaria o
+  //    vizinho escuro para sempre, porque parado nao volta a rolar.
   tex_grade_movendo(0);
   tex_pedido_fora(1);
-  tex_n_recusa = 0;
-  assert(tex_obter("https://x/parado.jpg") == 0);
-  assert(tex_n_recusa == 0);
-  assert(ocupados() == 2);
+  assert(pedir("https://x/borda-parado.jpg") == 0);
+  assert(ocupados() == 1 && naFila());
   tex_pedido_fora(0);
 
-  // 4) ARTE JA CONHECIDA nunca e recusada: e ela que serve a janela. Mesmo em
-  //    movimento e fora da janela, o pedido de um item existente passa.
+  // 4) NA BORDA + MOVIMENTO: recusa.
   tex_grade_movendo(1);
   tex_pedido_fora(1);
-  tex_n_recusa = 0;
-  assert(tex_obter("https://x/na.jpg") == 0);   // ja existe, em voo
-  assert(tex_n_recusa == 0);
+  assert(pedir("https://x/borda-movendo.jpg") == 1);
+  assert(ocupados() == 1);
+  tex_pedido_fora(0);
+
+  // 5) CARTAO VISIVEL em movimento: admitido.
+  tex_grade_movendo(1);
+  tex_pedido_fora(0);
+  assert(pedir("https://x/visivel.jpg") == 0);
+  assert(ocupados() == 2);
+
+  // 6) ARTE JA CONHECIDA nunca e recusada: e ela que serve a janela. Mesmo
+  //    totalmente fora e em movimento, o pedido de um item existente passa.
+  tex_grade_movendo(1);
+  tex_pedido_fora(2);
+  assert(pedir("https://x/visivel.jpg") == 0);
   assert(ocupados() == 2);
   tex_pedido_fora(0);
 
-  puts("recusa: recusa so no pedido novo, fora da janela, em movimento");
+  puts("recusa: fora-da-tela sempre; borda so em movimento; arte conhecida passa");
   puts("plx_recusa: PASS");
   return 0;
 }

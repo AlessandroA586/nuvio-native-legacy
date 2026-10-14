@@ -2405,18 +2405,16 @@ void biblioteca_desenhar(Uint32 agora) {
       a = anim_clamp((topo + alturaLinha() - gcy) / BIB_FADE, 0.0f, 1.0f);
       if (a <= 0.005f) continue;
       // CARTAO FORA DA JANELA: fileira cortada pelo topo ou pelo rodape. Ela
-      // ainda e desenhada (a faixa de fade), mas a arte dela nao e nova: quem
-      // esta rolando rapido pediria isso e o decode chegaria com a fileira ja
-      // fora da tela, roubando quadro do que a pessoa esta vendo. O cartao em
-      // FOCO nunca e tratado como fora: e o que a pessoa esta olhando.
-      int fora = topo < gcy || topo + alturaLinha() > NV_TELA_H;
+      // ainda e desenhada (a faixa de fade), entao e NIVEL 1 (borda): o cache
+      // so recusa em movimento. O cartao em FOCO nunca e tratado como fora.
+      int fora = (topo < gcy || topo + alturaLinha() > NV_TELA_H) ? 1 : 0;
 
       for (c = 0; c < nc; c++) {
         int i = r * nc + c;
         float f, entra, ac, ty;
         if (i >= nCelulas) break;
         f = (c < BIB_COLUNAS_MAX) ? animFoco[r][c] : 0.0f;
-        tex_pedido_fora(fora && f <= 0.01f);
+        tex_pedido_fora(fora && f <= 0.01f ? 1 : 0);
         // O alvo e a celula em REPOUSO (sem a escala do foco nem a onda), uma
         // vez por celula, recortado a janela da grade.
         if (passe == 0) {

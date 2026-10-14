@@ -177,12 +177,13 @@ int tex_lookahead_pedir(const char *caminho, float largura);
 
 // RECUSA NO PONTO DO PEDIDO (item 4 da pesquisa plx). A grade declara uma vez
 // por quadro se esta em movimento (`tex_grade_movendo`) e marca, em volta de
-// cada cartao, se aquela arte esta fora da janela visivel (`tex_pedido_fora`).
-// O cache recusa, ANTES de enfileirar rede/decode, o pedido NOVO de arte fora
-// da janela num quadro em movimento; arte ja conhecida sempre passa. Contagem
-// de recusas em `tex_n_recusa` (telemetria/teste).
+// cada cartao, se aquela arte esta fora da janela visivel (`tex_pedido_fora`,
+// niveis 0/1/2 descritos no .c). O cache recusa, ANTES de enfileirar
+// rede/decode, o pedido NOVO de arte fora da janela: nivel 2 (fora da tela)
+// sempre, nivel 1 (na borda) so em movimento; arte ja conhecida sempre passa.
+// Contagem de recusas em `tex_n_recusa` (telemetria/teste).
 void tex_grade_movendo(int movendo);
-void tex_pedido_fora(int fora);
+void tex_pedido_fora(int nivel);
 extern int tex_n_recusa;
 
 // Telemetria de quadro do cache: quantas buscas por caminho e quanto custaram.
