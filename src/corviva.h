@@ -132,6 +132,9 @@ void corviva_quadro(float dt, int modo, int usarLogo, int reduzido);
 
 // A cor corrente (animada). So faz sentido com o modo ligado.
 void corviva_acento(float *r, float *g, float *b);
+// A cor do logo do titulo em cena (ou da arte, se o logo e branco/preto), como a
+// Imersiva a escolhe, valha o tema que valer. 0 = sem paleta ainda.
+int  corviva_logo_acento(float *r, float *g, float *b);
 // Fundo corrente: NV_COR_FUNDO (#0D0D0D) (o estilizado que o tingia saiu). E este vetor que
 // NV_COR_FUNDO_R/G/B leem (layout.h), e gfx.c o passa as rampas do destaque e
 // do detalhe — por isso o fundo tingido nao exige editar cada tela.

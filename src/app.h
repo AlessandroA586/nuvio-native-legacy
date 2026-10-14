@@ -45,6 +45,8 @@ void app_encerrar(void);
 // 1 = a home e o que esta na frente (sem detalhe, player, login ou escolha de
 // perfil por cima). E a amostra do nivel de GPU (gpunivel.h).
 int  app_na_home(void);
+// Home owns the D-pad without keyboard-capturing layers (FPS scene guard).
+int  app_home_recebe_teclas(void);
 // A tela atual e o login (a abertura dissolve o logo sobre o fundo dele).
 int  app_no_login(void);
 

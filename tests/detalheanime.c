@@ -25,6 +25,7 @@ int ajustes_busca_cinemeta(void) { return 1; }
 int ajustes_busca_nuvio(void) { return 0; }   // #311: Primeiro (padrao)
 int ajustes_ocultar_nao_lancados(void) { return 0; }   // #369: descoberta.c le o ajuste
 #include "../src/descoberta.c"
+#include "nvtmp.h"
 Uint32 SDL_GetTicks(void) { return 0; }
 #include "../src/progresso.h"
 #include <assert.h>
@@ -1158,7 +1159,7 @@ int main(void) {
 
     // 31c) O QUE FOI LOCALIZADO VAI AO DISCO, e a abertura seguinte pinta o
     //      Continuar ja no idioma, sem rede (o ingles de 1-2 s do relato).
-    { char dir[] = "/tmp/nuvio-loc-XXXXXX", arq[600];
+    { char dir[NVT_MAX], arq[600]; nvt_set(dir, sizeof dir, "/nuvio-loc-XXXXXX");
       CatItem it[1];
       FILE *f;
       assert(mkdtemp(dir));

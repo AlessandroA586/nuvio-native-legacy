@@ -46,6 +46,33 @@ int main(void) {
   assert(strstr(v[0].descricao,"\n") && v[0].dolbyVision && v[0].dolbyAtmos);
   assert(!strcmp(v[1].descricao,"Show 1080p\n1.4 GB") && v[1].altura==1080);
   free(v);
+  // #499: only explicit add-on signals claim cache; negatives win conflicts.
+  count=stream_extrair("{\"streams\":["
+    "{\"url\":\"https://example.invalid/1\",\"name\":\"⚡️ AIOStreams FHD\"},"
+    "{\"url\":\"https://example.invalid/2\",\"name\":\"[TB+] Torrentio\"},"
+    "{\"url\":\"https://example.invalid/3\",\"name\":\"[RD+] Torrentio\"},"
+    "{\"url\":\"https://example.invalid/4\",\"name\":\"[AD+] Torrentio\"},"
+    "{\"url\":\"https://example.invalid/5\",\"name\":\"[PM+] Torrentio\"},"
+    "{\"url\":\"https://example.invalid/6\",\"clientResolve\":{\"isCached\":true}},"
+    "{\"infoHash\":\"abc\",\"clientResolve\":{\"isCached\":true}},"
+    "{\"url\":\"https://example.invalid/8\"},"
+    "{\"url\":\"https://example.invalid/9\",\"name\":\"[TB download] Torrentio\"},"
+    "{\"infoHash\":\"def\",\"name\":\"⚡ AIOStreams\",\"clientResolve\":{\"isCached\":false}},"
+    "{\"url\":\"https://example.invalid/11\",\"name\":\"[RD+] uncached\"},"
+    "{\"url\":\"https://example.invalid/12\",\"clientResolve\":{\"isCached\":\"true\"}},"
+    "{\"url\":\"https://example.invalid/13\",\"other\":{\"clientResolve\":{\"isCached\":true}}},"
+    "{\"url\":\"https://example.invalid/14\",\"clientResolve\":{\"other\":{\"isCached\":true}}},"
+    "{\"infoHash\":\"ghi\"},"
+    "{\"url\":\"https://example.invalid/16\",\"name\":\"⚡ AIOStreams\",\"clientResolve\":{\"isCached\":false}},"
+    "{\"url\":\"https://example.invalid/17\",\"description\":\"[TB+] 1080p\"}]}","fixture",&v);
+  assert(count==17);
+  for (int i=0;i<7;i++) assert(v[i].emCache && !v[i].foraCache);
+  assert(!strcmp(v[0].rotulo,"⚡️ AIOStreams FHD")); // raw name survives for details
+  for (int i=7;i<16;i++) assert(!v[i].emCache);
+  assert(v[16].emCache && !v[16].foraCache);
+  assert(!v[7].foraCache && v[8].foraCache && v[9].foraCache && v[10].foraCache);
+  for (int i=11;i<count;i++) assert(!v[i].foraCache);
+  free(v);
   FILE *f = fopen("tests/fixtures/streams_notwebready.json", "r");
   assert(f);
   n = fread(json, 1, sizeof json - 1, f);
@@ -58,5 +85,5 @@ int main(void) {
   for (int i = 3; i < count; i++) assert(!v[i].notWebReady);
   assert(!strcmp(v[8].url, "https://example.invalid/media.mp4"));
   free(v);
-  puts("PASS: parser isolado, notWebReady ancorado e externalUrl sem midia oculto.");
+  puts("PASS: parser isolado, cache explicito, notWebReady ancorado e externalUrl sem midia oculto.");
 }

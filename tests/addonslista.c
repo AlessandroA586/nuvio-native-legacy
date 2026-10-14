@@ -10,6 +10,7 @@
 //
 // So o leitor: nada aqui vai a rede.
 #include <stdio.h>
+#include "nvtmp.h"
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -102,6 +103,7 @@ int servidores_fontes_colher(const char *alvo, Stream **l, int *n) {
   (void)alvo; if (l) *l = NULL; if (n) *n = 0; return JF_FONTES_FALHOU; }
 uint64_t badges_detectar(const char *m) { (void)m; return 0; }
 void stream_definir_lista(const Stream *l, int n) { (void)l; (void)n; }
+void stream_preparar_dica_p2p(const Stream *l, int n) { (void)l; (void)n; }
 void stream_definir_lista_idade(const Stream *l, int n, Uint32 idade) {
   (void)idade; stream_definir_lista(l, n); }
 void stream_lista_acrescentar(const Stream *l, int n, int o) { (void)l; (void)n; (void)o; }
@@ -173,7 +175,7 @@ static void conferirTexto(const char *o_que, const char *obtido, const char *esp
 static int sempreCancelado(void *u) { (void)u; return 1; }
 
 int main(void) {
-  char dir[] = "/tmp/nuvio-addonslista-XXXXXX";
+  char dir[NVT_MAX]; nvt_set(dir, sizeof dir, "/nuvio-addonslista-XXXXXX");
   char caminho[600];
   FILE *f;
   int n;

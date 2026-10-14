@@ -662,6 +662,7 @@ static float alturaCabComentarios(void);
 static int temporadaEm(int c);
 static int epAbsoluto(int c);
 static int epVisiveis(void);
+static int epNaoExibido(const CatEp *ep);
 static float baseDaAbaAtiva(void);
 // A TEMPORADA ESCOLHIDA NA PAGINA, traduzida para o indice de extras.h.
 //
@@ -860,6 +861,52 @@ static void progAbrirTemporada(int col) {
   epAncora = c; foco.colunaLembrada[SEC_EPISODIOS] = c;
   { const CatEp *ep = cat_episodio(idx, epAbsoluto(c));
     comEpT = ep ? ep->temporada : 0; comEpE = ep ? ep->episodio : 0; }
+}
+
+// EPISODIO ALEATORIO: sorteia entre os ja exibidos de qualquer temporada
+// (especiais so se forem a unica), leva a pagina e o foco ate ele e pede a
+// reproducao pelo MESMO caminho do OK num card — fonte, retomada e scrobble
+// saem de app.c sem nada de novo. Devolve 1 se havia episodio para sortear.
+static int sortearEpisodio(int *t, int *e) {
+  int n = cat_n_episodios(idx), i, q = 0, alvo, soEsp = 1;
+  for (i = 0; i < n; i++) {
+    const CatEp *ep = cat_episodio(idx, i);
+    if (ep && ep->temporada > 0 && !epNaoExibido(ep)) { soEsp = 0; break; }
+  }
+  for (i = 0; i < n; i++) {
+    const CatEp *ep = cat_episodio(idx, i);
+    if (ep && ep->episodio > 0 && !epNaoExibido(ep) && (soEsp || ep->temporada > 0)) q++;
+  }
+  if (q <= 0) return 0;
+  alvo = rand() % q;
+  for (i = 0; i < n; i++) {
+    const CatEp *ep = cat_episodio(idx, i);
+    if (ep && ep->episodio > 0 && !epNaoExibido(ep) && (soEsp || ep->temporada > 0) && alvo-- == 0) {
+      *t = ep->temporada; *e = ep->episodio; return 1;
+    }
+  }
+  return 0;
+}
+static void tocarAleatorio(void) {
+  const CatItem *ci = cat_item(idx);
+  int t, e, k, c, q;
+  if (!ci || !sortearEpisodio(&t, &e)) return;
+  for (k = 0; k < ci->nTemporadas; k++) if (ci->temporadas[k] == t) break;
+  if (k >= ci->nTemporadas) return;
+  temporada = k;
+  foco.colunaLembrada[SEC_TEMPORADAS] = k;
+  irParaTemporada(k, 0);
+  q = epVisiveis();
+  for (c = 0; c < q; c++) {
+    const CatEp *ep = cat_episodio(idx, epAbsoluto(c));
+    if (ep && ep->temporada == t && ep->episodio == e) break;
+  }
+  if (c >= q) return;
+  foco.nColunas[SEC_EPISODIOS] = q;
+  foco.fileira = SEC_EPISODIOS; foco.coluna = c;
+  epAncora = c; foco.colunaLembrada[SEC_EPISODIOS] = c;
+  comEpT = t; comEpE = e;
+  pedReproduzir = 1;
 }
 
 // Troca de temporada pela PONTA da fileira de episodios (dir=+1 direita,
@@ -2018,6 +2065,16 @@ static float alturaSecao(int r) {
   return 0.0f;
 }
 
+// Quantas ABAS de temporada a serie tem (sem o botao de aleatorio).
+static int nTemps(void) {
+  const CatItem *ci = cat_item(idx);
+  if (!ehSerie() || !ci || ci->nTemporadas <= 0) return 0;
+  return ci->nTemporadas < N_ITENS - 1 ? ci->nTemporadas : N_ITENS - 1;
+}
+// A ULTIMA coluna da fileira de temporadas nao e aba: e o botao de episodio
+// aleatorio, ao lado do segmentado.
+static int ehShuffle(int c) { int n = nTemps(); return n > 0 && c == n; }
+
 static int secaoN(int r) {
   const CatItem *ci = cat_item(idx);
   switch (r) {
@@ -2025,10 +2082,7 @@ static int secaoN(int r) {
       // Filme nao tem temporada: a fileira SOME em vez de mostrar abas que nao
       // levam a lugar nenhum. E o que o web faz — a `.series-season-row` so
       // existe no layout de serie.
-      if (!ehSerie()) return 0;
-      if (ci && ci->nTemporadas > 0)
-        return ci->nTemporadas < N_ITENS ? ci->nTemporadas : N_ITENS;
-      return 0;
+      return nTemps() > 0 ? nTemps() + 1 : 0;
     case SEC_EPISODIOS: {
       int q = epVisiveis();
       if (q <= 0) return 0;
@@ -2742,6 +2796,9 @@ void detail_evento(const SDL_Event *e) {
       abrirListaColecao();
     } else if (foco.fileira == SEC_PROGTEMP) {
       progAbrirTemporada(foco.coluna);
+    } else if (foco.fileira == SEC_TEMPORADAS && ehShuffle(foco.coluna)) {
+      // Botao de episodio aleatorio: toque curto ou longo, o gesto e o mesmo.
+      tocarAleatorio();
     } else if (foco.fileira == SEC_TEMPORADAS && dur >= NV_HOLD_MS) {
       // PRESSAO LONGA NA ABA: o menu da temporada (issue #108, "Pressing
       // 'Season' brings up option to mark all as watched"). O toque curto
@@ -3034,7 +3091,7 @@ static float yItem(int r, int c) { (void)r; (void)c; return 0; }
 // e uma constante como a do episodio.
 static float larguraItem(int r, int c) {
   switch (r) {
-    case SEC_TEMPORADAS:  return larguraTemporada(c);
+    case SEC_TEMPORADAS:  return ehShuffle(c) ? NV_DETP_TEMP_H : larguraTemporada(c);
     case SEC_EPISODIOS:   return epCardW();
     case SEC_ABAS_INFO:   return larguraAbaInfo(c);
     case SEC_TRAILERS:     return NV_DETF_TR_W;
@@ -3086,7 +3143,7 @@ static float xItem(int r, int c) {
     // Frases idem, com a coluna unica.
     if (EH_AUD(r) || r == SEC_FRASES || r == SEC_NOTAS || r == SEC_NOTAS_EP ||
         r == SEC_PROGTEMP) continue;
-    if (r == SEC_TEMPORADAS) x += larguraTemporada(k) + NV_DETP_TEMP_GAP;
+    if (r == SEC_TEMPORADAS) x += larguraItem(r, k) + NV_DETP_TEMP_GAP;
     else x += larguraAbaInfo(k) + NV_DETP_ABA_SEP * 2 + 9.0f;  // 9 = largura do "|"
   }
   return x;
@@ -3436,7 +3493,7 @@ void detail_atualizar(float dt, Uint32 agora) {
   // mostra. Esperar meio segundo para trocar uma VISTA e a propria "demora ao
   // trocar de temporada" que o repouso tentava evitar.
   if (nivel >= 1 && foco.fileira == SEC_TEMPORADAS) {
-    if (foco.coluna != temporada) {
+    if (foco.coluna != temporada && !ehShuffle(foco.coluna)) {
       temporada = foco.coluna;
       irParaTemporada(temporada, 0);
     }
@@ -3637,7 +3694,8 @@ void detail_atualizar(float dt, Uint32 agora) {
   // para estado em andamento. Os primeiros 150 ms nao contam: e um toque.
   if (okDesceEm && !ctx_aberto()) {
     Uint32 dur = agora - okDesceEm;
-    int alvoHold = (nivel >= 1 && (foco.fileira == SEC_EPISODIOS || foco.fileira == SEC_TEMPORADAS)) ||
+    int alvoHold = (nivel >= 1 && (foco.fileira == SEC_EPISODIOS ||
+                                   (foco.fileira == SEC_TEMPORADAS && !ehShuffle(foco.coluna)))) ||
                    (nivel >= 1 && foco.fileira == SEC_COMENTARIOS && ehSerie() && foco.coluna == 1) ||
                    (nivel == 0 && !focoAmigos && acaoEm(botao) == ACAO_PRIMARIO);
     if (alvoHold && dur >= 150u) {
@@ -4967,7 +5025,7 @@ static void contarTemporada(int *total, int *vistos, int *futuros, int *sabe) {
 
 // Largura do trilho inteiro do segmentado (itens + vaos + folga).
 static float larguraSegTemporadas(void) {
-  int c, n = secaoN(SEC_TEMPORADAS);
+  int c, n = nTemps();
   float w = DET_SEG_PAD * 2.0f;
   for (c = 0; c < n; c++) w += larguraTemporada(c) + (c ? NV_DETP_TEMP_GAP : 0.0f);
   return w;
@@ -5006,6 +5064,23 @@ static void trilhoTemporadas(float y, float a) {
                  larguraSegTemporadas(), NV_DETP_TEMP_H + DET_SEG_PAD * 2.0f };
   if (ajustes_vidro()) gfx_cor(tr, 0.5f, 1, 1, 1, 0.06f * a);
   else gfx_cor(tr, 0.5f, 0.114f, 0.118f, 0.137f, a);
+}
+
+// Botao de episodio aleatorio: circulo do tamanho da fileira com o shuffle do
+// Lucide, na mesma pele dos chips de temporada (repouso #222, focado no realce).
+static void desenhaShuffle(GfxRect r, float f, float a) {
+  float fr, fg, fb, ti = ajustes_acento_tinta(&fr, &fg, &fb);
+  float raio = 0.5f, base = 0.133f, ic = 0.70f + (ti - 0.70f) * f;
+  GfxRect ig = { r.x + r.w * 0.26f, r.y + r.h * 0.26f, r.w * 0.48f, r.h * 0.48f };
+  foco_anel(r, raio, f, a);
+  if (ajustes_vidro()) { gfx_vidro_painel(r, raio, 0.4f, a); gfx_vidro_pilula_cheia(r, raio, f, a); }
+  else gfx_cor(r, raio, base + (fr - base) * f, base + (fg - base) * f, base + (fb - base) * f, a);
+  gfx_icone(ig, "aj_shuffle", ic, ic, ic, a);
+  // A dica so aparece com o foco, acima do botao: o icone sozinho nao diz o que faz.
+  if (f > 0.05f) {
+    TxtLinha l = txt_linha(TXT_DET_META2, i18n("Episódio aleatório"), 190, 192, 200, 255);
+    txt_desenhar_alpha(l, r.x + (r.w - l.w) * 0.5f, r.y - l.h - 8.0f, a * f);
+  }
 }
 
 // Item do segmentado de temporadas (Glass UI, mockup "detalhe-retomar"). Tres
@@ -6827,6 +6902,7 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
     switch (r) {
       case SEC_TEMPORADAS: {
         GfxRect b = { x, y, w, NV_DETP_TEMP_H };
+        if (ehShuffle(c)) { desenhaShuffle(b, f, a); break; }
         if (foco.fileira == r && c == foco.coluna) { menuOrigem = b; menuOrigemCol = c; menuOrigemF = f; menuOrigemA = a; }
         desenhaTemporada(b, c, f, a); break;
       }

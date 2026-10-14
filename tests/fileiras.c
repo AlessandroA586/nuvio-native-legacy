@@ -9,6 +9,7 @@
 // no primeiro fil_mover a ordem local vira autoridade e a home inteira salta
 // para a ordem de registro, derrubando as fixas para o fim.
 #include "fileiras.h"
+#include "nvtmp.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -24,7 +25,7 @@ int dados_gravar(const char *nome, const char *conteudo) {
   if (usaArquivo) {
     char caminho[600];
     FILE *f;
-    snprintf(caminho, sizeof caminho, "/tmp/%s", nome);
+    snprintf(caminho, sizeof caminho, "%s/%s", nvt_dir(), nome);
     f = fopen(caminho, "w");
     if (!f) return 0;
     fputs(conteudo, f);
@@ -39,7 +40,7 @@ int dados_gravar(const char *nome, const char *conteudo) {
 // mediria outra coisa.
 char *dados_caminho(char *dst, unsigned tam, const char *nome) {
   if (!usaArquivo) { (void)dst; (void)tam; (void)nome; return NULL; }
-  snprintf(dst, tam, "/tmp/%s", nome);
+  snprintf(dst, tam, "%s/%s", nvt_dir(), nome);
   return dst;
 }
 void fil_teste_recarregar(void);
@@ -407,7 +408,7 @@ int main(void) {
     // As mortas vem DO ARQUIVO: e assim que elas existem de verdade — carregadas
     // no arranque, nunca declaradas nesta sessao (vista=0). Pelo registrador elas
     // seriam vistas e o resgate, certamente, nao as tocaria.
-    FILE *arq = fopen("/tmp/fileirasui.txt", "w");
+    FILE *arq = fopen(nvt("/fileirasui.txt"), "w");
     assert(arq);
     // campos: chave \t oculta \t tipo \t tamanho \t titulo — 0/0/1 sao os
     // PADROES de quem nunca foi escolhida (tipo AUTO=0, tamanho PADRAO=1).
@@ -450,7 +451,7 @@ int main(void) {
   // home MESMO com forma escolhida.
   fil_esquecer();
   { int j;
-    FILE *arq = fopen("/tmp/fileirasui.txt", "w");
+    FILE *arq = fopen(nvt("/fileirasui.txt"), "w");
     assert(arq);
     fprintf(arq, "limite 7\nordem 1\n");
     fprintf(arq, "linha continue_watching\t0\t0\t1\tContinuar assistindo\n");
@@ -484,7 +485,7 @@ int main(void) {
   // NAO e dispensavel: o catalogo novo toma a vaga de um catalogo.
   fil_esquecer();
   { int j, c = 0, n = 0;
-    FILE *arq = fopen("/tmp/fileirasui.txt", "w");
+    FILE *arq = fopen(nvt("/fileirasui.txt"), "w");
     assert(arq);
     fprintf(arq, "limite 7\nordem 1\n");
     for (j = 0; j < FIL_MAX; j++)
@@ -624,7 +625,7 @@ int main(void) {
   fil_esquecer();
   { int j, achouVelha = 0, achouNova = 0;
     usaArquivo = 1;
-    { FILE *f = fopen("/tmp/fileirasui-p1.txt", "w");
+    { FILE *f = fopen(nvt("/fileirasui-p1.txt"), "w");
       fprintf(f, "limite 3\nordem 0\n");
       fprintf(f, "linha v1\t0\t0\t1\t0\tV1\n");
       fprintf(f, "linha v2\t0\t0\t1\t0\tV2\n");
@@ -645,7 +646,7 @@ int main(void) {
     fil_teste_recarregar();
     for (j = 0; j < fil_n(); j++)
       if (!strcmp(fil_chave(j), "nv")) assert(!fil_linha_oculta(j) && fil_estado(j) == FIL_NA_FILA);
-    remove("/tmp/fileirasui-p1.txt");
+    remove(nvt("/fileirasui-p1.txt"));
     fil_definir_perfil(0);
     usaArquivo = 0; }
   puts("ok  #358: linha antiga alem do limite segue Fora; marca e fila persistem");
@@ -658,7 +659,7 @@ int main(void) {
     // Nada visto == tudo candidato; mas so catalogo de addon ausente cai.
     // Antes: simula linha lida do disco (vista=0) para o fantasma.
     usaArquivo = 1;
-    { FILE *f = fopen("/tmp/fileirasui-p1.txt", "w");
+    { FILE *f = fopen(nvt("/fileirasui-p1.txt"), "w");
       fprintf(f, "limite 7\nordem 0\n");
       fprintf(f, "linha addonvivo_movie_top\t0\t0\t1\tTop\n");
       fprintf(f, "linha addonmorto_movie_top\t0\t0\t1\tFantasma\n");
@@ -675,7 +676,7 @@ int main(void) {
     for (j = 0; j < fil_n(); j++) assert(strcmp(fil_chave(j), "addonmorto_movie_top") != 0);
     // Chamar de novo nao tira mais nada.
     assert(fil_podar_catalogos(ids, bases, 1, 1) == 0);
-    remove("/tmp/fileirasui-p1.txt");
+    remove(nvt("/fileirasui-p1.txt"));
     fil_definir_perfil(0);
     usaArquivo = 0; }
   puts("ok  poda: catalogo de addon removido sai, app e colecao ficam");
@@ -689,7 +690,7 @@ int main(void) {
     const char *bases[] = { "https://os.example", "https://xp.example", "https://ak.example" };
     int j, achouPluto = 0, achouBinge = 0, achouFut = 0;
     usaArquivo = 1;
-    { FILE *f = fopen("/tmp/fileirasui-p1.txt", "w");
+    { FILE *f = fopen(nvt("/fileirasui-p1.txt"), "w");
       fprintf(f, "limite 16\nordem 1\n");
       fprintf(f, "linha app.xperience_movie_top\t0\t0\t1\t0\tTop\n");
       // Desligada na TV: "Pluto TV - Channels" fora da home.
@@ -720,7 +721,7 @@ int main(void) {
     fil_teste_recarregar();
     fil_definir_perfil(0); fil_definir_perfil(1);
     assert(fil_oculta("org.plutotv_tv_pluto"));
-    remove("/tmp/fileirasui-p1.txt");
+    remove(nvt("/fileirasui-p1.txt"));
     fil_definir_perfil(0);
     usaArquivo = 0; }
   puts("ok  poda: lista do pacote ou de outro perfil nao poda; escolha nunca e podada");
@@ -729,7 +730,7 @@ int main(void) {
   // sobre o qual nao decidiu nada.
   fil_esquecer();
   { usaArquivo = 1;
-    { FILE *f = fopen("/tmp/fileirasui-p1.txt", "w");
+    { FILE *f = fopen(nvt("/fileirasui-p1.txt"), "w");
       fprintf(f, "limite 7\nordem 0\n");
       fprintf(f, "linha org.visto_movie_a\t0\t0\t1\t0\tJa visto\n");
       fclose(f); }
@@ -750,7 +751,7 @@ int main(void) {
     assert(!fil_addon_novo("org.novo", "https://novo.example"));
     // Prefixo parecido nao e o mesmo addon.
     assert(fil_addon_novo("org.nov", "https://nov.example"));
-    remove("/tmp/fileirasui-p1.txt");
+    remove(nvt("/fileirasui-p1.txt"));
     fil_definir_perfil(0);
     usaArquivo = 0; }
   puts("ok  addon novo: so o nunca visto e sem escolha");
@@ -858,7 +859,7 @@ int main(void) {
   // versao que nao a conhece continua valendo.
   fil_esquecer();
   usaArquivo = 1;
-  remove("/tmp/fileirasui.txt");
+  remove(nvt("/fileirasui.txt"));
   fil_teste_recarregar();
   assert(!strcmp(fil_hero_fonte(), ""));          // padrao: automatico
   fil_registrar("continuar", "Continuar assistindo", "", "", 5);
@@ -871,7 +872,7 @@ int main(void) {
   assert(!strcmp(fil_hero_fonte(), "continuar"));
   // Arquivo de uma versao ANTERIOR (sem a linha `hero`): le sem reclamar e o
   // destaque volta ao automatico, em vez de herdar lixo.
-  { FILE *f = fopen("/tmp/fileirasui.txt", "w");
+  { FILE *f = fopen(nvt("/fileirasui.txt"), "w");
     assert(f);
     fputs("limite 7\nordem 1\nlinha continuar\t0\t0\t1\t0\tContinuar assistindo\n", f);
     fclose(f); }
@@ -885,9 +886,9 @@ int main(void) {
   // Perfil sem arquivo proprio que nao e o 1 comeca do padrao.
   fil_esquecer();
   usaArquivo = 1;
-  remove("/tmp/fileirasui-p1.txt");
-  remove("/tmp/fileirasui-p2.txt");
-  { FILE *f = fopen("/tmp/fileirasui.txt", "w");
+  remove(nvt("/fileirasui-p1.txt"));
+  remove(nvt("/fileirasui-p2.txt"));
+  { FILE *f = fopen(nvt("/fileirasui.txt"), "w");
     assert(f);
     fputs("limite 11\nordem 1\nhero *\nlinha catDoUm\t0\t0\t1\t0\tDo perfil 1\n", f);
     fclose(f); }
@@ -903,9 +904,9 @@ int main(void) {
   // Voltar ao 2 continua sem nada do 1 (e o destaque zera, como antes).
   fil_definir_perfil(2);
   assert(fil_n() == 0 && !strcmp(fil_hero_fonte(), "") && fil_limite() == FIL_LIMITE_PADRAO);
-  remove("/tmp/fileirasui.txt");
-  remove("/tmp/fileirasui-p1.txt");
-  remove("/tmp/fileirasui-p2.txt");
+  remove(nvt("/fileirasui.txt"));
+  remove(nvt("/fileirasui-p1.txt"));
+  remove(nvt("/fileirasui-p2.txt"));
   fil_definir_perfil(0);
   usaArquivo = 0;
   puts("ok  fileirasui.txt antigo semeia so o perfil 1");
@@ -1002,7 +1003,7 @@ int main(void) {
     for (j = 0; j < 9; j++) contaP[j] = conta[j];
     fil_esquecer();
     usaArquivo = 1;
-    f = fopen("/tmp/fileirasui.txt", "w");
+    f = fopen(nvt("/fileirasui.txt"), "w");
     assert(f);
     fputs("# Fileiras da Home\nlimite 12\nordem 1\n", f);
     fputs("linha continue_watching\t0\t0\t1\t0\tContinuar assistindo\n", f); total++;
@@ -1033,7 +1034,7 @@ int main(void) {
     assert(fil_n_na_home() == 13 && fil_n_capacidade() == 10);
     assert(fil_n_fila() == 0); // CW/social/collection do not consume catalogue slots
     // UMA VEZ SO: a marca foi gravada no arquivo, e na memoria ja nao roda.
-    { static char buf[300000]; size_t n; FILE *g = fopen("/tmp/fileirasui.txt", "r");
+    { static char buf[300000]; size_t n; FILE *g = fopen(nvt("/fileirasui.txt"), "r");
       assert(g); n = fread(buf, 1, sizeof buf - 1, g); buf[n] = 0; fclose(g);
       assert(strstr(buf, "\nmigracao 197\n")); }
     assert(fil_migrar_197(contaP, 9) == 0); }
@@ -1045,23 +1046,23 @@ int main(void) {
     const char *conta[] = { "xp_movie_a" };
     int j;
     fil_esquecer();
-    f = fopen("/tmp/fileirasui.txt", "w");
+    f = fopen(nvt("/fileirasui.txt"), "w");
     fputs("limite 7\nordem 1\nmigracao 197\nlinha xp_movie_a\t1\t0\t1\t0\tA\n", f);
     for (j = 0; j < 300; j++) fprintf(f, "linha xp_movie_i%d\t%d\t0\t1\t0\tI%d\n", j, j < 150, j);
     fclose(f);
     fil_teste_recarregar();
     assert(fil_migrar_197(conta, 1) == 0 && fil_oculta("xp_movie_a"));
     fil_esquecer();
-    f = fopen("/tmp/fileirasui.txt", "w");
+    f = fopen(nvt("/fileirasui.txt"), "w");
     fputs("limite 7\nordem 1\nlinha xp_movie_a\t1\t0\t1\t0\tA\nlinha xp_movie_b\t0\t0\t1\t0\tB\n", f);
     fclose(f);
     fil_teste_recarregar();
     assert(fil_migrar_197(conta, 1) == 0 && fil_oculta("xp_movie_a"));   // pequeno: fora do padrao
-    { char buf[256]; size_t n; f = fopen("/tmp/fileirasui.txt", "r"); n = fread(buf, 1, sizeof buf - 1, f); buf[n] = 0; fclose(f);
+    { char buf[256]; size_t n; f = fopen(nvt("/fileirasui.txt"), "r"); n = fread(buf, 1, sizeof buf - 1, f); buf[n] = 0; fclose(f);
       assert(strstr(buf, "migracao 197")); }
     assert(fil_migrar_197(conta, 1) == 0);
     fil_esquecer();
-    remove("/tmp/fileirasui.txt");
+    remove(nvt("/fileirasui.txt"));
     usaArquivo = 0; }
   puts("ok  #197 limpeza: marca no arquivo; fora do padrao nao mexe");
 
@@ -1095,7 +1096,7 @@ int main(void) {
     const char *bases[] = { "https://vivo.example", "https://off.example" };
     const int ativos[]  = { 1, 0 };
     usaArquivo = 1;
-    { FILE *f = fopen("/tmp/fileirasui-p1.txt", "w");
+    { FILE *f = fopen(nvt("/fileirasui-p1.txt"), "w");
       fprintf(f, "limite 3\nordem 1\n");
       // fantasma com escolha (forma = 2) ANTES das reais: sem o fix ele gasta
       // uma das 2 vagas e "real2" cai para a fila.
@@ -1132,7 +1133,7 @@ int main(void) {
       assert(fil_marcar_sem_addon(ids2, bases2, todos, 2, 1) == 1);
       assert(fil_estado_chave("addonmorto_movie_top") != FIL_FORA);
       assert(fil_linha_tipo(0) == 2); }
-    remove("/tmp/fileirasui-p1.txt");
+    remove(nvt("/fileirasui-p1.txt"));
     fil_definir_perfil(0);
     usaArquivo = 0; }
   puts("ok  #319: addon removido/desligado nao ocupa vaga da home e a poda nao fica adiada");
@@ -1153,7 +1154,7 @@ int main(void) {
     char nomeLixo[FIL_CHAVE], tituloLixo[FIL_TITULO];
     int k, lixo = 0;
     usaArquivo = 1;
-    { FILE *f = fopen("/tmp/fileirasui-p1.txt", "w");
+    { FILE *f = fopen(nvt("/fileirasui-p1.txt"), "w");
       fprintf(f, "limite 16\n");
       fprintf(f, "linha addonvivo_movie_a\t0\t0\t1\tVivo A\n");
       // Oculta pela pessoa um dia, sem mais nada de escolha guardada.
@@ -1192,7 +1193,7 @@ int main(void) {
       if (!strncmp(fil_chave(k), "addonmorto_movie_lixo", 21)) lixo++;
     assert(lixo == 100);
     assert(fil_teste_achar("addonvivo_movie_a") >= 0);
-    remove("/tmp/fileirasui-p1.txt");
+    remove(nvt("/fileirasui-p1.txt"));
     fil_definir_perfil(0);
     usaArquivo = 0; }
   puts("ok  #365: catalogo intocado de addon removido sai da aba Fora da Home");
@@ -1277,7 +1278,7 @@ int main(void) {
     fil_registrar("cine_movie_top", "Featured", "Cinemeta", "movie", 5);
     fil_conta_reconciliar(chs, contaOff, nada, 1);
     assert(fil_estado_chave("cine_movie_top") == FIL_NA_HOME);
-    remove("/tmp/fileirasui.txt");
+    remove(nvt("/fileirasui.txt"));
     usaArquivo = 0; }
   puts("ok  #360: add contra o desligado sobrevive ao restart (addvence no arquivo)");
   // #204: TABELA CHEIA DE CATALOGOS QUE NINGUEM DECLARA. Log MD8G2R: 768 linhas
@@ -1294,7 +1295,7 @@ int main(void) {
       fil_esquecer();
       usaArquivo = 1;
       fil_definir_perfil(0); fil_definir_perfil(1);
-      arq = fopen("/tmp/fileirasui-p1.txt", "w");
+      arq = fopen(nvt("/fileirasui-p1.txt"), "w");
       assert(arq);
       for (j = 0; j < nLixo; j++)   // oculta=1: "Fora" automatico, sem escolha
         fprintf(arq, "linha binge_seed_%d\t1\t0\t1\tSeed %d\n", j, j);
@@ -1338,7 +1339,7 @@ int main(void) {
           if (!strcmp(c, "binge_seed_3") || !strcmp(c, "binge_seed_7")) esc++;
         }
         assert(vivos == nDecl && novos == nNovos && esc == 2); }
-      remove("/tmp/fileirasui-p1.txt");
+      remove(nvt("/fileirasui-p1.txt"));
       fil_definir_perfil(0);
       usaArquivo = 0;
     } }
