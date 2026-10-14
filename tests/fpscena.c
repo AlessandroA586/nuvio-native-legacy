@@ -43,7 +43,9 @@ int main(int argc, char **argv) {
   ok(!fps_base_achar(base, "title", &p, &u) && !fps_base_achar(base, "nada", &p, &u), "base: nome exato");
   ok(!fps_base_achar("x nan 0\n", "x", &p, &u) &&
      !fps_base_achar("x 1 \n", "x", &p, &u) &&
-     !fps_base_achar("x 1 -1\n", "x", &p, &u), "base: rejeita numero invalido ou incompleto");
+     !fps_base_achar("x 1 -1\n", "x", &p, &u) &&
+     !fps_base_achar("x \n1 0\n", "x", &p, &u) &&
+     !fps_base_achar("x 1 \n0\n", "x", &p, &u), "base: rejeita numero invalido ou incompleto");
   fps_zerar(&a);
   for (i = 1; i <= 100; i++) fps_add(&a, i, 0);
   ok(fps_percentil(&a, 50) == 50 && fps_percentil(&a, 95) == 95 && fps_percentil(&a, 99) == 99,

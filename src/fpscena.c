@@ -1,6 +1,7 @@
 // FPS regression scenes. See fpscena.h.
 #include "fpscena.h"
 #include <SDL2/SDL.h>
+#include <errno.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,15 +41,23 @@ int fps_base_achar(const char *texto, const char *cena, double *p95, long *upl) 
   const char *l = texto;
   while (l && *l) {
     if (*l != '#' && !strncmp(l, cena, n) && l[n] == ' ') {
-      char *fim;
-      double p = strtod(l + n, &fim);
-      char *ufim;
+      char *fim, *ufim;
+      const char *inicio = l + n;
+      double p;
       long u;
-      if (fim == l + n || !isfinite(p) || p < 0 || (*fim != ' ' && *fim != '\t')) return 0;
-      u = strtol(fim, &ufim, 10);
-      if (ufim == fim) return 0;
+      while (*inicio == ' ' || *inicio == '\t') inicio++;
+      if (!*inicio || *inicio == '\n' || *inicio == '\r') return 0;
+      errno = 0;
+      p = strtod(inicio, &fim);
+      if (fim == inicio || errno || !isfinite(p) || p < 0 || (*fim != ' ' && *fim != '\t')) return 0;
+      inicio = fim;
+      while (*inicio == ' ' || *inicio == '\t') inicio++;
+      if (!*inicio || *inicio == '\n' || *inicio == '\r') return 0;
+      errno = 0;
+      u = strtol(inicio, &ufim, 10);
+      if (ufim == inicio || errno) return 0;
       while (*ufim == ' ' || *ufim == '\t' || *ufim == '\r') ufim++;
-      if (ufim == fim || u < 0 || (*ufim && *ufim != '\n')) return 0;
+      if (u < 0 || (*ufim && *ufim != '\n')) return 0;
       *p95 = p; *upl = u;
       return 1;
     }
@@ -118,7 +127,7 @@ void fpscena_iniciar(const char *escolha, const char *base) {
   memset(&S, 0, sizeof S);
   S.ativo = 1; S.base = base;
   if (escolha) snprintf(S.escolha, sizeof S.escolha, "%s", escolha);
-  { int c, algum = 0;   // text with no scene name (an empty flag file) means all scenes
+  { int c, algum = 0;   // text with no scene name means Home + title (OSD needs playback)
     for (c = 0; c < NCENAS; c++) algum |= S.escolha[0] && strstr(S.escolha, CENAS[c].nome) != NULL;
     if (!algum) S.escolha[0] = 0; }
   proxima();
