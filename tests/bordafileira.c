@@ -174,8 +174,10 @@ static void parteHome(void) {
   teclaSo(SDLK_UP);
   assert(focoHero);
   assert(maxAbs(&bordaPag, 60) == 0.0f);
+  (void)home_pediu_ilha();
   teclaSo(SDLK_UP);
   assert(focoHero);
+  assert(home_pediu_ilha() == 1);   // #495: CIMA no destaque pede a ilha
   quadro(4);
   assert(bordaPag.x < -10.0f);      // a pagina sobe
   quadro(60);

@@ -3077,6 +3077,8 @@ void app_evento(const SDL_Event *e) {
     menu_abrir();
     saiuPorEsquerda = saiuPorCima = 0;
   }
+  // CIMA no alto da home (#495): o mesmo caminho do CH+.
+  if (tela == TELA_HOME && home_pediu_ilha() && azulPodeAbrirSalvos(e)) alternarSalvos(1);
 }
 
 // A tela de detalhe pode pedir para abrir OUTRO titulo (um credito da
