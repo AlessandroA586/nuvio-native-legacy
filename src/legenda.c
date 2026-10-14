@@ -1,6 +1,7 @@
 #include "legenda.h"
 #include "assrender.h"
 #include "rede.h"
+#include "idioma.h"
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -706,7 +707,7 @@ void legenda_pre_baixar(const char *url) {
     snprintf(p->url, sizeof p->url, "%s", url);
     p->refs = 2; p->sessao = preGeracao; preDownload = p;
     if (pthread_create(&fio, NULL, preBaixar, p) == 0) pthread_detach(fio);
-    else { preDescartar("sem fio"); preLiberar(p); }
+    else { preDescartar(i18n("sem fio")); preLiberar(p); }
   }
   pthread_mutex_unlock(&trava);
 }
@@ -873,7 +874,7 @@ void legenda_atualizar_corpo(const char *corpo) {
 
 void legenda_desligar(void) {
   pthread_mutex_lock(&trava);
-  preDescartar("legenda desligada");
+  preDescartar(i18n("legenda desligada"));
   ligada=0;geracao++;free(cues);cues=NULL;nCues=0;maiorDur=0;
   pthread_mutex_unlock(&trava);
   assrender_geracao(geracao);
