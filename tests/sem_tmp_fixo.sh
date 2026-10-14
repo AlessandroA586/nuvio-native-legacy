@@ -9,10 +9,8 @@
 set -u
 cd "$(dirname "$0")/.."
 falhas=0
-# Container-only: todo o /tmp destes arquivos roda dentro da imagem nuvio-tpk-sdk.
-guia_proximo_armazem="tools/tpk/hostfalso.c tools/tpk-testa.sh tests/tpk40_tls.sh tests/mkvass_grande.sh"
 is_device() {
-  case "$1" in tools/arm.sh|tools/tpk.sh|tools/tpk/x64.sh|tools/tizen-uep-spike.sh|tools/tizen-memfd-spike.sh|tests/mkvass_grande.sh|tests/tpk40_tls.sh|tools/tpk-testa.sh|tools/tpk/hostfalso.c|tools/auditoria-release.sh|tests/texbruto.c|tests/plx_arte.c) return 0;; esac
+  case "$1" in tools/arm.sh|tools/tpk.sh|tools/tpk/x64.sh|tools/tizen-uep-spike.sh|tools/tizen-memfd-spike.sh|tests/mkvass_grande.sh|tests/tpk40_tls.sh|tools/tpk-testa.sh|tools/tpk/hostfalso.c|tools/auditoria-release.sh) return 0;; esac
   return 1
 }
 while IFS= read -r f; do
