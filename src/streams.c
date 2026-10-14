@@ -457,6 +457,16 @@ static int temRecebidaEm;
 // isto > 0, a causa da folha vazia e "falta conta de debrid", nao "os addons
 // nao tem" (1.3.12: "145 torrents sem debrid descartados" e folha vazia).
 static int descartadosSemDebrid;
+// #486: a dica "ligue o P2P" so e dita quando este pacote tem P2P. Perguntar o
+// motor AQUI, no fio da tela, abriria a libnuvio_engine.so no .tpk (dlopen em
+// p2pmotor.c, carregamento adiado de proposito); conferirP2pParaDica pergunta
+// uma vez por lista NO FIO DA CONSULTA e guarda a resposta. Atomico: o fio da
+// tela so le.
+static _Atomic int motorP2pParaDica;
+static void conferirMotorP2pParaDica(int descartados) {
+  if (!descartados || debrid_ativo() || p2p_ativo() || ajustes_p2p_url()[0]) return;
+  atomic_store(&motorP2pParaDica, p2pmotor_disponivel());
+}
 
 Uint32 stream_idade_ms(void) {
   return temRecebidaEm ? SDL_GetTicks() - recebidaEm : 0xFFFFFFFFu;
@@ -480,6 +490,7 @@ void stream_definir_lista_idade(const Stream *l, int qtd, Uint32 idade) {
     if (l[i].url[0] || debrid_ativo() || p2p_ativo()) nova[k++] = l[i];
   if (nova && qtd - k) printf("[fonte] %d torrents sem debrid descartados\n", qtd - k);
   descartadosSemDebrid = nova ? qtd - k : 0;
+  conferirMotorP2pParaDica(descartadosSemDebrid);
   for (i = 0; i < k && nova; i++) nova[i].selosPacoteVer = 0;   // os selos saem do fio de fundo (selosAgendar)
   pthread_mutex_lock(&verTrava);
   free(lista); lista = nova; n = nova ? k : 0; atual = -1;
@@ -546,6 +557,7 @@ void stream_lista_acrescentar(const Stream *l, int qtd, int ordemAddon) {
     if (l[i].url[0] || debrid_ativo() || p2p_ativo()) nova[k++] = l[i];
   if (qtd - k) printf("[fonte] %d torrents sem debrid descartados\n", qtd - k);
   descartadosSemDebrid += qtd - k;
+  conferirMotorP2pParaDica(qtd - k);
   if (!k) { free(nova); return; }
   for (i = 0; i < k; i++) nova[i].selosPacoteVer = 0;
   // O CARTAO EM FOCO E O QUE FICA PARADO. Guardado pelo indice da lista (que
@@ -1413,9 +1425,19 @@ int stream_qtd_torrents(void) {
 // #486: Torrentio sem debrid e P2P desligado = torrents descartados calados; a
 // folha so falava do debrid e o cartao do player era o generico. Com P2P neste
 // pacote (motor ou servidor), quantos ele tocaria; 0 = nada a sugerir.
+// O CONTADOR vem ANTES de qualquer pergunta: folha e cartao chamam a cada
+// quadro e uma consulta sem torrent descartado nao pode tocar o resto — a
+// disponibilidade do motor NAO e perguntada aqui (dlopen do .tpk no fio da
+// tela): vem guardada do fio da consulta (conferirMotorP2pParaDica).
+// .wgt: o P2P fica oculto nos Ajustes e ajustes_p2p_ligado() e sempre 0
+// (a8e7685d) — "ligue o P2P" seria uma dica impossivel de seguir.
 int stream_torrents_para_p2p(void) {
-  if (debrid_ativo() || p2p_ativo() || !(p2pmotor_disponivel() || ajustes_p2p_url()[0])) return 0;
-  return descartadosSemDebrid;
+  if (descartadosSemDebrid <= 0 || debrid_ativo() || p2p_ativo()) return 0;
+#ifdef __EMSCRIPTEN__
+  return 0;
+#else
+  return (ajustes_p2p_url()[0] || atomic_load(&motorP2pParaDica)) ? descartadosSemDebrid : 0;
+#endif
 }
 
 unsigned stream_lista_geracao(void) {

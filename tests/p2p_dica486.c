@@ -2,10 +2,18 @@
 // eram descartados calados: a folha so falava do debrid e o cartao do player
 // era o generico. Com P2P neste pacote, a lista tem de dizer quantos o P2P
 // tocaria; ligado (ou com debrid), nada a sugerir.
+//
+// Revisao do #486: duas formas de a dica sair errada. O motor e perguntado
+// UMA VEZ, no fio da consulta (cargaMotor conta as perguntas ao motor: no
+// .tpk cada uma abrira a libnuvio_engine.so por dlopen) — a folha e o cartao
+// chamam stream_torrents_para_p2p a cada quadro e nada podem perguntar ali.
+// E no .wgt (compilado segunda vez com -D__EMSCRIPTEN__) o P2P fica oculto
+// nos Ajustes: "ligue o P2P" seria uma dica impossivel de seguir.
 #include <assert.h>
 #include "../src/streams.c"
 
-static int p2pLig, motor = 1, debrid;
+static int p2pLig, motor = 1, debrid, cargaMotor;
+static const char *p2pUrl = "";
 int debrid_resolver_cache(const char *h, int f, char *u, unsigned t, int *fora) {
   (void)h; (void)f; (void)u; (void)t; (void)fora; return 0;
 }
@@ -26,8 +34,9 @@ int ajustes_fonte_ordem_addon(void) { return 0; }
 int ajustes_fonte_texto_addon(void) { return 0; }
 int debrid_ativo(void) { return debrid; }
 int p2p_ativo(void) { return p2pLig; }
-int p2pmotor_disponivel(void) { return motor; }
-const char *ajustes_p2p_url(void) { return ""; }
+// Conta cada pergunta: no .tpk isso e um dlopen perto do fio que pergunta.
+int p2pmotor_disponivel(void) { cargaMotor++; return motor; }
+const char *ajustes_p2p_url(void) { return p2pUrl; }
 int selospacote_ativo(void) { return -1; }
 unsigned selospacote_versao(void) { return 1; }
 int selospacote_casar(const char *const *p, int q, unsigned short *o, int m) {
@@ -52,16 +61,55 @@ static void chegar(void) {
 }
 
 int main(void) {
+  // CONSULTA VAZIA: a folha e o cartao perguntam A CADA QUADRO; sem torrent
+  // descartado, nenhuma pergunta ao motor pode sair daqui (no .tpk seria um
+  // dlopen no fio da tela, com uma consulta vazia).
+  stream_definir_lista(NULL, 0);
+  assert(stream_torrents_para_p2p() == 0);
+  assert(cargaMotor == 0);
+
+  // TORRENT SEM DEBRID CHEGOU: o motor e perguntado UMA vez, no fio da
+  // consulta, e a tela so le o que ficou guardado.
   chegar();
   assert(n == 0);                                   // descartados: nada toca
+  assert(cargaMotor == 1);
+#ifdef __EMSCRIPTEN__
+  // .WGT COM CONFIGURACAO ANTIGA: URL P2P persistida (ou motor), torrents
+  // descartados — mas o P2P fica oculto nos Ajustes e ajustes_p2p_ligado() e
+  // sempre 0. A dica "ligue o P2P" seria impossivel de seguir: nada a sugerir.
+  p2pUrl = "http://servidor:1"; chegar();
+  assert(stream_torrents_para_p2p() == 0);
+  p2pUrl = ""; chegar();
+  assert(stream_torrents_para_p2p() == 0);
+  puts("p2p_dica486: PASS (.wgt: P2P oculto, nenhuma dica)");
+  return 0;
+#else
   if (stream_torrents_para_p2p() != 3) {
     fprintf(stderr, "FAIL: P2P desligado, 3 torrents descartados, dica=%d\n", stream_torrents_para_p2p());
     return 1;
   }
-  motor = 0; assert(stream_torrents_para_p2p() == 0); motor = 1;   // .wgt: sem P2P
-  debrid = 1; assert(stream_torrents_para_p2p() == 0); debrid = 0;
+  assert(cargaMotor == 1);                           // a tela nao pergunta nada
+#endif
+
+  // PACOTE SEM MOTOR: nada a sugerir (perguntado na chegada, nao na tela).
+  motor = 0; cargaMotor = 0; chegar();
+  assert(cargaMotor == 1 && stream_torrents_para_p2p() == 0);
+  motor = 1;
+
+  // SERVIDOR P2P PESSOAL: toca sem motor.
+#ifndef __EMSCRIPTEN__
+  p2pUrl = "http://servidor:1"; motor = 0; chegar();
+  assert(stream_torrents_para_p2p() == 3);
+  p2pUrl = ""; motor = 1;
+
+  debrid = 1; chegar(); assert(stream_torrents_para_p2p() == 0); debrid = 0;
   p2pLig = 1; chegar();
   assert(n == 3 && stream_qtd_torrents() == 3 && stream_torrents_para_p2p() == 0);
+#endif
+#ifdef __EMSCRIPTEN__
+  puts("p2p_dica486: PASS (.wgt: P2P oculto, nenhuma dica)");
+  return 0;
+#endif
   puts("p2p_dica486: PASS (P2P desligado aponta o ajuste; ligado, sem motor ou com debrid, nada)");
   return 0;
 }
