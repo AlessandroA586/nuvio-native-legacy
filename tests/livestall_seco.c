@@ -79,6 +79,17 @@ int main(void) {
   t += NV_LS_SEMDADO_MS;
   assert(nv_ls_passo_buf(&s, t, 1.9, 1, 0, 0, 0, 2.0) == NV_LS_DESISTIR);
 
+  // Buffer recuperou durante o backoff: a reabertura pendente e cancelada
+  // (revisao 205). Buffer parado em 17 s, posicao 15,5 s -> agenda; um segundo
+  // depois o provedor voltou (buffer 47 s, 30,5 s de reserva): nao reabre.
+  nv_ls_zerar(&s);
+  nv_ls_passo_buf(&s, 1000, 1.0, 1, 0, 0, 0, 17.0);
+  assert(nv_ls_passo_buf(&s, 16000, 15.5, 1, 0, 0, 0, 17.0) == NV_LS_AGENDOU);
+  assert(nv_ls_passo_buf(&s, 17000, 16.5, 1, 0, 0, 0, 47.0) == NV_LS_NADA);
+  assert(!s.pendente && s.tentativa == 0);
+  for (t = 17500, p = 17.0; t < 60000; t += 500, p += 0.5)   // segue tocando
+    assert(nv_ls_passo_buf(&s, t, p, 1, 0, 0, 0, p + 30.0) == NV_LS_NADA);
+
   puts("livestall_seco: ok");
   return 0;
 }

@@ -77,9 +77,17 @@ static inline int nv_ls_passo_buf(NvLiveStall *s, unsigned agora, double pos, in
     s->movEm = agora; s->movDesde = 0; s->pos = pos; s->fimEm = agora;
     return s->pendente ? NV_LS_ESPERA : NV_LS_NADA;
   }
+  if (fimBuf > 0.5 && (fimBuf > s->fim + 0.05 || fimBuf < s->fim - 1.0 || !s->fim)) {
+    s->fim = fimBuf; s->fimEm = agora;   // cresceu (ou o buffer recomecou)
+  }
   if (s->pendente) {
     if ((int)(agora - s->quando) < 0) return NV_LS_ESPERA;
-    return NV_LS_REABRIR;
+    // Prazo venceu e o buffer voltou a crescer durante a espera: a fonte nao
+    // secou, a reabertura pendente e cancelada (revisao 205) e o quadro e
+    // reavaliado pelo caminho normal abaixo.
+    if (s->fim > 0.5 && (unsigned)(agora - s->fimEm) < NV_LS_SEMDADO_MS) {
+      s->pendente = 0; s->tentativa--;
+    } else return NV_LS_REABRIR;
   }
 #ifdef NV_TPK
   // #302: o primeiro EOF com video e continuidade de live, nao fim de arquivo.
@@ -91,9 +99,6 @@ static inline int nv_ls_passo_buf(NvLiveStall *s, unsigned agora, double pos, in
     return NV_LS_REABRIR;
   }
 #endif
-  if (fimBuf > 0.5 && (fimBuf > s->fim + 0.05 || fimBuf < s->fim - 1.0 || !s->fim)) {
-    s->fim = fimBuf; s->fimEm = agora;   // cresceu (ou o buffer recomecou)
-  }
   if (pronto && s->andou && s->fim > 0.5 && pos <= s->fim &&
       s->fim - pos <= NV_LS_RESERVA_S && (unsigned)(agora - s->fimEm) >= NV_LS_SEMDADO_MS)
     seco = 1;
