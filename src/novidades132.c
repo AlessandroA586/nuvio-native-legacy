@@ -133,13 +133,8 @@ static void novidades132_desenharCorpo_(Uint32 agora) {
   { float fx = N132_TXT_X, fw = N132_TXT_W;
     y += feature(fx, y, fw, "lembrete",
           "Central de avisos",
-#ifdef NV_ANDROID
           "Recomendação de amigo, estreia, versão nova e avisos de quem faz o "
           "app: um toast quando chega, CH+ abre, e a aba Avisos em Salvos.", a);
-#else
-          "Recomendação de amigo, estreia, versão nova e avisos de quem faz o "
-          "app: um toast quando chega, AZUL abre, e a aba Avisos em Salvos.", a);
-#endif
     y += feature(fx, y, fw, "menu_guide",
           "O Guia de TV abre na hora",
           "A última lista de canais fica guardada e aparece de imediato; a rede "

@@ -173,7 +173,26 @@ int tex_bombear(int max_por_quadro);
 // Estado por tela: aguarda dois quadros parados; no maximo um pedido/quadro.
 typedef struct { float scroll; unsigned long quadro; int parados, direcao; } TexLookahead;
 int tex_lookahead_parado(TexLookahead *s, float scroll);
+// Versao em movimento: devolve o sinal da rolagem (+1/-1) uma vez por quadro
+// por chamador, para aquecer o proximo cartao da borda que entra.
+int tex_lookahead_mover(TexLookahead *s);
 int tex_lookahead_pedir(const char *caminho, float largura);
+
+// RECUSA NO PONTO DO PEDIDO (item 4 da pesquisa plx). A grade declara uma vez
+// por quadro se esta em movimento (`tex_grade_movendo`), a direcao dela em
+// cards por quadro (`tex_grade_velocidade`) e marca, em volta de cada cartao,
+// se aquela arte esta fora da janela visivel (`tex_pedido_fora`, niveis
+// 0/1/2/3 descritos no .c). O cache recusa, ANTES de enfileirar rede/decode,
+// o pedido NOVO de arte fora da janela: nivel 2 (fora da tela) sempre, nivel
+// 1 (na borda) so em movimento; o nivel 3 (fora, no lado em que a rolagem
+// entra) NUNCA recusa — vira passageiro, primeiro a sair no despejo — e arte
+// ja conhecida sempre passa. Contagem em `tex_n_recusa` (telemetria/teste).
+void tex_grade_movendo(int movendo);
+void tex_grade_velocidade(float passos);
+// A direcao declarada, como quem desenha a usa para marcar quem entra.
+float tex_grade_direcao(void);
+void tex_pedido_fora(int nivel);
+extern int tex_n_recusa;
 
 // Telemetria de quadro do cache: quantas buscas por caminho e quanto custaram.
 // acharIndice era LINEAR sobre 192 slots e cada card da lista chama 2-3 vezes

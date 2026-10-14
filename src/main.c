@@ -44,6 +44,7 @@
 #include "gfx.h"
 #include "fundo.h"
 #include "gpunivel.h"
+#include "fpscena.h"
 #include "gputempo.h"
 #include "text.h"
 #include "marco.h"
@@ -107,6 +108,13 @@
 // e a pessoa fica sabendo por que a tela trocou sozinha — uma vez por idioma
 // (o aviso tem um id por codigo e avisos-vistos.txt lembra). O texto ja sai no
 // idioma novo: i18n le ajustes_idioma().
+// Guard for the FPS scenes (fpscena.h): screen the measurement must be on.
+static int fpsEstado(const char *c) {
+  return !strcmp(c, "title-page") ? detail_aberto()
+       : !strcmp(c, "player-osd") ? player_aberto() && player_com_video() && !player_eh_canal()
+       : app_home_recebe_teclas();
+}
+
 static void aoMudarIdiomaAuto(const char *codigo, int fonte, int notificar) {
   desc_repetir();
   if (!notificar) return;
@@ -215,24 +223,42 @@ static void remapCanal(SDL_Event *e) {
       e->key.keysym.scancode = (SDL_Scancode)(sobe ? NV_SCANCODE_CH_UP : NV_SCANCODE_CH_DOWN);
       e->key.keysym.sym = sobe ? SDLK_PAGEUP : SDLK_PAGEDOWN;
     } else {
-#if defined(NV_TPK) || defined(__APPLE__)
-      // Na Samsung o CH+ vai com o scancode da AZUL de verdade: como a
-      // letra "s" ele era recusado com campo de texto ativo e o Spotlight
-      // o escrevia (relato de 05/10/2026).
+      // CH+ e uma tecla de controle, nao a letra "s": preserva a identidade
+      // da AZUL tambem com campo de texto ativo e no Spotlight.
       e->key.keysym.scancode = sobe ? (SDL_Scancode)NV_SCANCODE_BLUE : SDL_SCANCODE_F5;
-#else
-      e->key.keysym.scancode = sobe ? SDL_SCANCODE_S : SDL_SCANCODE_F5;
-#endif
       e->key.keysym.sym = sobe ? SDLK_s : SDLK_F5;
     }
   }
 #elif defined(__EMSCRIPTEN__)
   // .wgt: tizen-shell.html entrega o CH+ (427) como F7, com keydown e keyup,
-  // para a Central de controle saber quanto ele ficou embaixo. Fora disso ele
-  // e o "s" de sempre (Salvos).
-  if ((e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) && e->key.keysym.sym == SDLK_F7) {
-    e->key.keysym.sym = SDLK_s;
-    e->key.keysym.scancode = SDL_SCANCODE_S;
+  // para a Central de controle saber quanto ele ficou embaixo, e o CH- (428)
+  // como F8. O CH+ NUNCA e zap aqui: a casca nao traduz a ColorF3Blue (406),
+  // entao o F7 e a unica "AZUL" do Tizen web (Guia completo na faixa do guia,
+  // Tela cheia no PiP, categoria seguinte no guia cheio). O CH- e zap com
+  // canal na tela e F5 (Spotlight) fora dela, como no .tpk.
+  if ((e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) &&
+      (e->key.keysym.sym == SDLK_F7 || e->key.keysym.sym == SDLK_F8)) {
+    int sobe = e->key.keysym.sym == SDLK_F7;
+    if (!sobe && app_zap_ativo()) {
+      e->key.keysym.scancode = (SDL_Scancode)NV_SCANCODE_CH_DOWN;
+      e->key.keysym.sym = SDLK_PAGEDOWN;
+    } else {
+      // Controle nao digita "s" nos campos: mesma identidade da AZUL no .tpk.
+      e->key.keysym.scancode = sobe ? (SDL_Scancode)NV_SCANCODE_BLUE : SDL_SCANCODE_F5;
+      e->key.keysym.sym = sobe ? SDLK_s : SDLK_F5;
+    }
+  }
+  // O CH- (428) chega como F8 (tizen-shell.html) e fora do zap e o Spotlight
+  // (F5), como no Android e na LG. Com canal na tela segue sendo CH- de
+  // verdade, pelos scancodes do webOS que guia.c e player.c ja tratam.
+  if ((e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) && e->key.keysym.sym == SDLK_F8) {
+    if (app_zap_ativo()) {
+      e->key.keysym.scancode = (SDL_Scancode)NV_SCANCODE_CH_DOWN;
+      e->key.keysym.sym = SDLK_PAGEDOWN;
+    } else {
+      e->key.keysym.sym = SDLK_F5;
+      e->key.keysym.scancode = SDL_SCANCODE_F5;
+    }
   }
 #else
   (void)e;
@@ -1432,6 +1458,7 @@ int main(int argc, char **argv) {
   // no lugar em que o splash do sistema a deixou.
   logoapp_iniciar(dirArte);
   abertura_iniciar(dirArte);
+  ajustes_texturas_dir(dirArte);   // materiais CC0 do tema Textura (recorte fraco)
 #ifdef __EMSCRIPTEN__
   // O ARRANQUE CEDE AO NAVEGADOR EM DOIS PONTOS (24/09/2026). Do topo do main
   // ate o primeiro quadro era UMA tarefa so do fio principal: 1,0 a 3,4 s nos
@@ -1834,6 +1861,37 @@ int main(int argc, char **argv) {
     double dtms = (double)(cQuadro - ultQuadro) * 1000.0 / perFreq;
     ultQuadro = cQuadro;
     if (dtms < 0.0) dtms = 0.0;
+    // FPS REGRESSION SCENES (fpscena.h), opt-in: a `fps-cena` file in the data
+    // dir runs the scripted scenes once the home has settled and logs
+    // [fps-cena]/[fps-gate]. tex_upl_n still holds the previous frame's uploads.
+    { static int fpsIni;
+      static Uint32 fpsProcurar;
+      static char *fpsBase;
+      int tk;
+      if (!fpsIni && agora > 8000u && agora - fpsProcurar >= 1000u) {
+        char *so = dados_ler("fps-cena");
+        fpsProcurar = agora;
+        if (so) {
+          int osd = strstr(so, "player-osd") != NULL;
+          if (osd ? player_aberto() && player_com_video() && video_pronto() && !player_eh_canal() : app_home_recebe_teclas()) {
+            fpsBase = dados_ler("fps-cena-base");
+            fpscena_estado(fpsEstado);
+            fpscena_iniciar(osd ? "player-osd" : so, fpsBase);
+            fpsIni = 1;
+          }
+          free(so);
+        }
+      }
+      if ((tk = fpscena_quadro(dtms, tex_upl_n)) != 0) {
+        SDL_Event ke;
+        memset(&ke, 0, sizeof ke);
+        ke.key.keysym.sym = (SDL_Keycode)tk;
+        ke.key.keysym.scancode = SDL_GetScancodeFromKey((SDL_Keycode)tk);
+        ke.type = SDL_KEYDOWN; SDL_PushEvent(&ke);
+        ke.type = SDL_KEYUP;   SDL_PushEvent(&ke);
+      }
+      if (fpsIni && !fpscena_ativo() && fpsBase) { free(fpsBase); fpsBase = NULL; }
+    }
     // O TETO E DA ANIMACAO, NAO DA MEDICAO, e confundir os dois cegou o
     // diagnostico do issue #33. `dtms` era grampeado em 100 ms ANTES de virar
     // `pior`, entao todo quadro de 100 ms para cima virava exatamente
@@ -1964,7 +2022,6 @@ int main(int argc, char **argv) {
     gfx_sem_recorte();
     fPrep = NV_DT(t0);
     gfx_ambiente_preparar();
-    fundo_fosco_quadro();   // vidro fosco: a arte borrada do titulo em cena
     fPrep = NV_DT(t0) - fPrep;
     // Nivel 3 (so com "720p" escolhido) ou 4K que nao aguentou: o quadro
     // inteiro vai para o alvo interno (o clear abaixo ja limpa ele);

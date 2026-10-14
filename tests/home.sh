@@ -1,6 +1,17 @@
 #!/bin/bash
+export TMPDIR="${TMPDIR:-/tmp}"
+TMPDIR="${TMPDIR%/}"
 set -eu
 cd "$(dirname "$0")/.."
+# Band resets must share the fade step so drawing cannot erase an outgoing band.
+python3 - <<'PY'
+from pathlib import Path
+source = Path('src/home.c').read_text()
+start = source.index('static void palcoCortinaPasso(')
+end = source.index('\n}', start) + 2
+reset = 'palcoFaixaTopo = palcoFaixaBase = 0.0f;'
+assert reset not in source[:start] + source[end:], 'draw loop clears the curtain band before fade-out completes'
+PY
 flags=()
 if [ "${SANITIZE:-0}" = 1 ]; then flags+=(-fsanitize=address,undefined -fno-omit-frame-pointer); fi
 # Linka somente a lógica exercitada, sem inicializar SDL/AppKit nem vídeo.
@@ -12,7 +23,7 @@ if [ "${SANITIZE:-0}" = 1 ]; then flags+=(-fsanitize=address,undefined -fno-omit
 # ficou sem linkar ("_fil_unir referenced from _sincronizarFileiras") e o
 # script morria antes de rodar um caso sequer.
 cc ${flags[@]+"${flags[@]}"} src/catalogo.c src/progresso.c src/focus.c src/ajustes.c src/posterprov.c src/redeurl.c src/colecoes.c src/js.c src/catordem.c src/fileiras.c src/artehero.c tests/home_tex_duble.c src/cwordem.c src/cwretido.c tests/home_layout.c tests/amigosfil_stub.c \
-  -Isrc -o /tmp/nuvio-home-tests -O1 -g -ffunction-sections -fdata-sections \
+  -Isrc -o ${TMPDIR:-/tmp}/nuvio-home-tests -O1 -g -ffunction-sections -fdata-sections \
   -Wl,-dead_strip -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -Wno-deprecated-declarations -Wno-macro-redefined
-/tmp/nuvio-home-tests
+${TMPDIR:-/tmp}/nuvio-home-tests

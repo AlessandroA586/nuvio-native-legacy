@@ -3221,7 +3221,9 @@ static int montarContinuar(CatItem *saida, int max) {
   if (max > CONT_MAX) max = CONT_MAX;
   cwGer++;
   nAjustados = 0;
-  nT = querTrakt ? trakt_continuar(doTrakt, CONT_MAX) : 0;
+  // O sync de vistos alimenta os cartazes mesmo quando outra fonte de CW foi escolhida.
+  nT = trakt_ativo() ? trakt_continuar(doTrakt, CONT_MAX) : 0;
+  if (!querTrakt) nT = 0;
   // Os limites AGORA valem para todas as fontes. Sem isto, o /sync/playback
   // devolve o que qualquer cliente pausou uma vez — inclusive titulos em 0% e
   // titulos praticamente terminados, que e o "nunca assisti isso" do relato.
@@ -4531,10 +4533,13 @@ static void *montar(void *u) {
     // S3R7Q0, Pluto TV desligado) e nenhum fantasma saia. So o addon LIGADO sem
     // id e uma volta incompleta; o desligado casa pela base (doAddon) e as
     // linhas dele nao valem nada para a home de qualquer jeito.
-    { const char *ids[16], *bases[16];
-      int ativos[16];
+    // 128 = ADD_MAX (addons.c). Com 16, o addon da posicao 16 em diante parecia
+    // removido e as fileiras dele eram podadas (B4: duplicatas empurravam os
+    // addons de verdade para la).
+    { const char *ids[128], *bases[128];
+      int ativos[128];
       int na = addons_n(), q, semId = 0;
-      if (na > 16) na = 16;
+      if (na > 128) na = 128;
       for (q = 0; q < na; q++) {
         ids[q] = addons_id_manifesto(q); bases[q] = addons_base(q);
         ativos[q] = addons_ativo(q);
@@ -8789,8 +8794,14 @@ void desc_pedir_titulo_semente(const char *imdb, long tmdb, const char *tipo,
   snprintf(s.titulo, sizeof s.titulo, "%s", titulo);
   snprintf(s.meta, sizeof s.meta, "%.4s", ano ? ano : "");
   snprintf(s.poster, sizeof s.poster, "%s", poster);
-  if (strlen(poster) < sizeof s.backdrop)   // cortado seria 404 (#361)
-    snprintf(s.backdrop, sizeof s.backdrop, "%s", poster);
+  // O cartaz da lista NAO vira fundo (#502/#503): recomendacao e filmografia
+  // trazem o poster pequeno (w185/w342) e, em `backdrop`, ele 1) nao passa na
+  // subida w1280/w780 -> original de artehero_url (o detalhe fica com a
+  // miniatura esticada) e 2) mantem arteFixaPoster em 0 no detalhe, entao a
+  // arte congelada nunca solta quando a ficha traz o fundo de verdade. Sem
+  // fundo, arteDeViva cai no poster (arte contida, nao esticada) e marca
+  // arteFixaPoster; o /meta escreve o w1280 e a pagina troca sozinha.
+  s.backdrop[0] = 0;
   if (tipo && (!strcmp(tipo, "tv") || !strcmp(tipo, "series"))) snprintf(s.tipo, sizeof s.tipo, "series");
   else if (tipo && !strcmp(tipo, "movie")) snprintf(s.tipo, sizeof s.tipo, "movie");
   if (s.tipo[0]) snprintf(s.genero, sizeof s.genero, "%s", i18n(rotuloTipoSing(s.tipo)));

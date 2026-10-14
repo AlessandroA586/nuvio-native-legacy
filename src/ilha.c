@@ -25,6 +25,7 @@
 #include "recomenda.h"
 #include "salvosintro.h"
 #include "text.h"
+#include "central.h"
 #include "plrui.h"
 #include "desempenho.h"
 #include "idioma.h"
@@ -747,6 +748,21 @@ static void atualizarHora(void) {
 #define MINI_H  44.0f
 #define DUO_SOBRE 8.0f          // a capa entra 8 px por cima do rosto
 #define PONTO_VIVO 10.0f
+
+// Largura da pilula em repouso, para o menu do topo reservar (TOPO_RELOGIO):
+// a hora + o ponto de enquete + o MEDIDOR DE DESEMPENHO quando ligado — sem
+// ele a barra do topo cobre a ilha que cresceu ~200 px a esquerda. Em Menor/
+// Grande o corpo por baixo pode ser mais largo que a linha (Grande: GR_W).
+float ilha_relogio_largura(void) {
+  int ds = desempenho_forma();
+  float w, bw, bh;
+  atualizarHora();
+  w = PAD_E + PAD_D + (float)txt_largura(TXT_PG_RELOGIO, hora) +
+      (pontoEnquete ? 12.0f + PONTO_ENQ : 0.0f) + desempenho_linha_w(ds);
+  desempenho_corpo_tam(ds, &bw, &bh);
+  if (bw > w) w = bw;
+  return w * gfx_escala_ui();
+}
 
 // --- a frase com enfase --------------------------------------------------------
 // "Ana recomendou Fallout": o nome e o titulo em negrito (TXT_ILHA_FORTE, o
@@ -2030,7 +2046,8 @@ static void ilha_desenharCorpo_(Uint32 agora) {
       corpoWa = molaIlha(&corpoVw, corpoWa, corpoW, dt);
       corpoHa = molaIlha(&corpoVh, corpoHa, corpoH, dt);
     } }
-  vis = alvo != M_RELOGIO || relogioQuer || (modalAviso && (modalAberto || modalT > 0.01f)) || corpoT > 0.0f;
+  vis = alvo != M_RELOGIO || relogioQuer || central_segurar_progresso(agora) > 0.0f ||
+        (modalAviso && (modalAberto || modalT > 0.01f)) || corpoT > 0.0f;
   // O MEDIDOR so ocupa a ilha LIVRE: com aviso, atividade, modal ou voo ele
   // sai (o pouso e os avisos nunca esperam por ele) e volta depois.
   { int ds = desempenho_forma(), livre = !modalAberto && modalT <= 0.0f && !voo;
@@ -2226,6 +2243,7 @@ static void ilha_desenharCorpo_(Uint32 agora) {
         luz = ajustes_animacoes_reduzidas() || modalT > 0.3f ? 0.20f
               : 0.14f + 0.10f * (0.5f + 0.5f * sinf((float)agora * (2.0f * 3.14159265f / 1100.0f)));
       gfx_luz_canto(R, raio, R.w * 0.25f, -R.h * 0.9f, R.w * 0.85f, cr, cg, cb, luz * A); }
+    central_segurar_desenhar(R, raio, A, agora);
     gfx_recorte(R.x + 6.0f, R.y, R.w - 12.0f, R.h);
     if (aPil > 0.0f) {
       if (mostra == M_CARTAO) desenharCartao(&mostraC, mostraQual, r, A * conteudoA * aPil);

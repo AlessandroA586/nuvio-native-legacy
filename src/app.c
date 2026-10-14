@@ -23,6 +23,7 @@
 #include "iconeapp.h"
 #include "logoapp.h"
 #include "registro.h"
+#include "entrada_texto.h"
 #include "addonsui.h"
 #include "pluginsui.h"
 #include "login.h"
@@ -99,6 +100,7 @@
 #include "novidades201.h"
 #include "novidades202.h"
 #include "novidades_cartao.h"
+#include "dicascontrole.h"
 #include "apoio.h"
 #include "telemetria.h"
 #include "avisos.h"
@@ -314,6 +316,7 @@ static Uint32 canalFonteDesde;            // quando a fonte atual foi pedida
 // do dono e nao pode ser trocada por outra fonte por tras da tela.
 static int    fonteVODAutomatica;
 static int    fonteVODTentativas;
+static int    fonteVODRetentou;
 // Retomar pela fonte guardada em curso (tocarFonteGuardada); 0 = caminho normal.
 static int    voltaAtiva;
 static Stream voltaFonte;  // fonte aberta fora da lista; vive alem da conferencia
@@ -361,7 +364,10 @@ static void marcarFonteMorta(int indice) {
   else stream_vod_falhou(indice);
 }
 // A fonte que vai para o player e outra candidata: a prova recomeca.
-static void definirFonteVOD(const char *url) { provaZerar(); player_definir_fonte(url); }
+static void definirFonteVOD(const char *url) {
+  fonteVODRetentou = 0;
+  provaZerar(); player_definir_fonte(url);
+}
 #define CANAL_FONTE_PRAZO_MS 25000
 // PRAZO CURTO para fonte que JA PROVOU estar ruim. A conferencia de playlist
 // (stream_canal_primeira_viva) classifica cada candidata antes de tocar; quando
@@ -530,6 +536,7 @@ static void limparFonteVOD(void) {
   voltaAtiva = 0;
   memset(&voltaFonte, 0, sizeof voltaFonte);
   fonteVODTentativas = 0;
+  fonteVODRetentou = 0;
   provaZerar();
   fonteVODDesde = 0;
   fonteManualDesde = 0;
@@ -1494,11 +1501,13 @@ static void erroSemFonte(void) {
     player_erro_fonte_motivo(i18n("As fontes desta lista são P2P (torrent)"),
         i18n("Abra Fontes e escolha uma: ela toca pelo servidor P2P."));
   } else if (!canal && stream_torrents_para_p2p() > 0) {
-    // #486: torrent sem debrid e com o P2P desligado foi descartado.
-    // addons_motivo_vazio nao explica (o addon trouxe fonte) e saia o generico.
-    snprintf(motivo, sizeof motivo, i18n("%d fontes precisam de uma conta de debrid, e nenhuma está ligada"),
-             stream_torrents_para_p2p());
-    player_erro_fonte_motivo(motivo, i18n("Ligue o P2P em Ajustes ou conecte uma conta de debrid."));
+    // #486/#505: fontes descartadas por falta de debrid ou por P2P desligado
+    // (o notWebReady do .tpk — debrid nao o traz de volta). So com a lista
+    // realmente vazia: com fonte direta que nao serviu, o motivo dela vale.
+    if (stream_n() == 0) {
+      snprintf(motivo, sizeof motivo, "%s", i18n("As fontes desta lista são P2P (torrent)"));
+      player_erro_fonte_motivo(motivo, i18n("Ligue o P2P em Ajustes ou conecte uma conta de debrid."));
+    } else player_erro_fonte();
   } else if (addons_motivo_vazio(motivo, sizeof motivo))
     player_erro_fonte_motivo(motivo, canal
         ? i18n("Escolha outro canal no guia ou tente de novo mais tarde.")
@@ -2194,12 +2203,29 @@ static void tentarProximaFonteVOD(void) {
     }
     return;
   }
-  if (atual >= 0) {
-    marcarFonteMorta(atual);
+  // A post-open player failure is not a dead URL. Retry this candidate once
+  // without consuming another selection slot, then keep sibling links eligible.
+  int abriu = video_fonte_tocou() || fonteVODRetentou;
+#ifdef NV_ANDROID
+  abriu |= video_quadro_visto();
+#endif
+  if (atual >= 0 && motivo == 1 && abriu && !fonteVODRetentou) {
+    const Stream *s = stream_item(atual);
+    if (s && s->url[0]) {
+      double pos = video_pos();
+      fonteVODRetentou = 1;
+      if (pos >= 0.0 && isfinite(pos)) player_definir_retomada_fonte(pos);
+      player_voltar_a_esperar();
+      player_definir_fonte(s->url);
+      fonteVODDesde = SDL_GetTicks();
+      return;
+    }
   }
-  // Erro do PLAYER (nao prazo nem buffer): as irmas desta fonte saem junto,
-  // senao as vagas que sobram vao todas para links que falham igual.
-  if (atual >= 0 && motivo == 1) {
+  if (atual >= 0) {
+    if (abriu) stream_automatico_excluir(atual);
+    else marcarFonteMorta(atual);
+  }
+  if (atual >= 0 && motivo == 1 && !abriu) {
 #ifdef NV_ANDROID
     stream_automatico_erro_decoder(atual, video_erro_decoder_codigo(), 0);
 #endif
@@ -2482,7 +2508,10 @@ static int spotAtalho(const SDL_Event *e) {
   if (e->type != SDL_KEYDOWN) return 0;
   k = e->key.keysym.sym;
   if (k == SPOT_TECLA_VOZ || k == SPOT_TECLA_ABRIR) return 1;
-  return e->key.keysym.scancode == NV_SCANCODE_YELLOW && tela != TELA_GUIA;
+  // AMARELA e CH- abrem o Spotlight fora do guia; no guia o CH- e o salto de
+  // categoria (guia.c). As dicas do controle ensinam CH+/CH- nas tres plataformas.
+  return (e->key.keysym.scancode == NV_SCANCODE_YELLOW ||
+          e->key.keysym.scancode == NV_SCANCODE_CH_DOWN) && tela != TELA_GUIA;
 }
 static int spotPode(void) {
   return tela != TELA_LOGIN && tela != TELA_ESCOLHA_PERFIL && !player_aberto() &&
@@ -2578,7 +2607,7 @@ int app_no_login(void) { return tela == TELA_LOGIN; }
 int app_na_home(void) {
   return tela == TELA_HOME && homePronta && !player_aberto() && !detail_aberto() &&
          !novidades170_aberto() && !novidades180_aberto() && !novidades20_aberto() &&
-         !novcartao_aberto();
+         !novcartao_aberto() && !dicascontrole_ocupado();
 }
 
 // ONDE A AZUL/CH+ ABRE O PAINEL DE SALVOS/AVISOS (dono, 04/10: "tem que dar
@@ -2649,6 +2678,7 @@ static void abrirExplorarNoTitulo(void) {
 
 void app_evento(const SDL_Event *e) {
   if (e->type == SDL_QUIT) { sair = 1; return; }
+  if (dicascontrole_ocupado()) { dicascontrole_evento(e); return; }
   ilhacart_validar_identidade();
   // Qualquer gesto da pessoa: a atividade ao vivo da ilha conta 30 min daqui.
   if (e->type == SDL_KEYDOWN || e->type == SDL_MOUSEBUTTONDOWN || e->type == SDL_MOUSEWHEEL)
@@ -3167,7 +3197,7 @@ static const char *homeTrailerBloqueio(void) {
       novidades133_aberto() || novidades134_aberto() || novidades139_aberto() || novidades1312_aberto() ||
       novidades142_aberto() || novidades148_aberto() || novidades170_aberto() || novidades180_aberto() ||
       novidades20_aberto() || novidades201_aberto() || novidades202_aberto() ||
-      novcartao_aberto()) return "whats-new";
+      novcartao_aberto() || dicascontrole_ocupado()) return "whats-new";
   if (atualizacao_aberta() || agendaviso_aberto()) return "update-notice";
   if (recomenda_aberta() || recenviar_aberto() || pessoas_aberto()) return "recommend";
   if (faixas_aberta() || episodios_aberto() || stream_folha_aberta()) return "sheet";
@@ -3495,7 +3525,7 @@ void app_atualizar(float dt, Uint32 agora) {
     novidades201_primeira_vez();
     novidades20_primeira_vez();
   }
-  if (tela == TELA_HOME && homePronta && !player_aberto() && !detail_aberto() && !novidades170_aberto() && !novidades180_aberto() && !novidades20_aberto() && !novidades201_aberto() && !novidades202_aberto() && !novcartao_aberto()) {
+  if (tela == TELA_HOME && homePronta && !player_aberto() && !detail_aberto() && !novidades170_aberto() && !novidades180_aberto() && !novidades20_aberto() && !novidades201_aberto() && !novidades202_aberto() && !novcartao_aberto() && !dicascontrole_ocupado()) {
     // Esta e a primeira explicacao da versao: aparece antes dos demais
     // cartoes de onboarding. Depois de OK, o bloco abaixo continua a fila
     // antiga no quadro seguinte.
@@ -3856,6 +3886,7 @@ void app_atualizar(float dt, Uint32 agora) {
   // Ajustes › Sobre e ajuda › Novidades 2.0: o guia por cima de Ajustes, do
   // comeco; ao fechar, Ajustes continua onde estava.
   if (tela == TELA_AJUSTES && ajustes_pediu_novidades20()) novidades20_abrir(0);
+  if (tela == TELA_AJUSTES && ajustes_pediu_dicascontrole()) dicascontrole_abrir();
   if (tela == TELA_AJUSTES && ajustes_pediu_novidades()) {
     trocarTela(TELA_HOME);
     menu_definir_destino(MENU_INICIO);
@@ -5162,6 +5193,7 @@ void app_atualizar(float dt, Uint32 agora) {
   novidades201_atualizar(dt, agora);
   novidades202_atualizar(dt, agora);
   novcartao_atualizar(dt, agora);
+  dicascontrole_atualizar(dt, agora);
   telemetria_atualizar(dt, agora);
   recintro_atualizar(dt, agora);
   atualizacao_atualizar(dt, agora);
@@ -5424,11 +5456,25 @@ static int relogioCamadaAberta(void) {
       glem_cartao_aberto() || recenviar_aberto() || pessoas_aberto() ||
       recomenda_aberta() || pipintro_aberto() || diagnostico_intro_aberto();
 }
+// FPS scenes need the Home to own the D-pad, not merely be underneath a modal.
+int app_home_recebe_teclas(void) {
+  return app_na_home() && !relogioCamadaAberta() &&
+      !ctx_aberto() && !menu_aberto() && !spainel_aberto() && !vertudo_aberta() &&
+      !central_aberta() && !ilha_modal_aberto() && !celb_aberto() && !spot_aberto() &&
+      !registro_aberto() && !registro_envio_aberto() && !estatvivo_aberto() &&
+      !avisos_aberto() && !teclado_aberto() && !texto_sistema_aberto() &&
+      !faixas_aberta() && !episodios_aberto() && !stream_folha_aberta() &&
+      !guia_overlay_aberta();
+}
+
 static int relogioCabe(void) {
   // AJUSTES NO GLASS UI (mockup de 03/10): o relogio fica no canto, em cima da
   // ilha de categorias — a tela nao tem mais titulo ali. Com folha, vinculo ou
   // teclado por cima ele some, como na home com um cartao na frente.
   if (tela == TELA_AJUSTES) return !menu_aberto() && ajustes_relogio_cabe();
+  // BARRA DA APPLE TV ABERTA: o cabecalho do painel ja tem relogio; a ilha no
+  // canto mostrava a mesma hora duas vezes (captura da TCL, 11:29 + 11:29).
+  if (!menu_relogio_cabe()) return 0;
   // CARROSSEL DE TITULOS DA APPLE TV (cartao de vizinhos, sem expandir): sem
   // relogio (dono, 04/10). Ele volta, pela animacao da ilha, quando o cartao
   // estica para a pagina.
@@ -5748,6 +5794,15 @@ void app_desenhar(Uint32 agora) {
 #endif
     ilha_desenhar(agora);
   }
+  // AS DICAS DO CONTROLE por ultimo, por cima de tudo: a dica abre o
+  // componente DE VERDADE pelo caminho normal (spainel, Spotlight, Central
+  // e o menu do cartaz ja foram desenhados acima) e esta camada so soma o
+  // controle animado, a legenda e os pontinhos. O app continua desenhado
+  // por baixo — sem FBO nem desfoque proprio (TV fraca).
+  if (dicascontrole_visivel()) {
+    CAMADA_SE(dicascontrole_ocupado());
+    dicascontrole_desenhar(agora);
+  }
 }
 
 int app_quer_sair(void) { return sair; }
@@ -5760,7 +5815,7 @@ int app_central_pode(void) {
   return tela != TELA_LOGIN && tela != TELA_ESCOLHA_PERFIL && login_concluido() &&
          perfilsel_concluido() && !registro_aberto() && !spot_aberto() &&
          !teclado_aberto() && !diagnostico_intro_aberto() && !novidades20_aberto() &&
-         !novidades201_aberto() && !novidades202_aberto() && !novcartao_aberto();
+         !novidades201_aberto() && !novidades202_aberto() && !novcartao_aberto() && !dicascontrole_ocupado();
 }
 
 void app_encerrar(void) {

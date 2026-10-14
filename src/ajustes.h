@@ -25,6 +25,7 @@ void ajustes_desenhar(Uint32 agora);
 int  ajustes_quer_sair(void);
 // 1 quando a linha "Addons" foi acionada. Lido e zerado na chamada.
 int  ajustes_pediu_addons(void);
+int  ajustes_pediu_dicascontrole(void); // Settings > About and help
 int  ajustes_pediu_novidades20(void);   // OK em Sobre e ajuda › Novidades 2.0: o app.c abre o guia
 int  ajustes_pediu_plugins(void);   // OK em Plugins (F09): o app.c abre a tela   // 1 quando o Back deve fechar a tela
 int  ajustes_pediu_diagnostico(void);
@@ -257,8 +258,12 @@ void  ajustes_acento_hdr(float *r, float *g, float *b);
 // A luz do Frost e da Imersiva: o matiz do acento com L 0,42 e croma <= 0,11.
 void  ajustes_acento_luz(float *r, float *g, float *b);
 // Uma vez por quadro, depois de corviva_quadro: com Textura, entrega ao gfx a
-// textura do titulo em cena (gfx_textura_definir); senao a desliga.
+// textura do titulo em cena (gfx_textura_definir); senao a desliga. O recorte
+// FRACO (chapado) e trocado pelo material CC0 de deploy/app/art/texturas/.
 void  ajustes_textura_quadro(void);
+// A pasta de arte do pacote (main.c passa o dirArte): onde os materiais CC0
+// moram. Sem isto o recorte fraco apenas desliga a textura.
+void  ajustes_texturas_dir(const char *dirArte);
 // "Automática", "4K", "1080p" ou "720p" — o rotulo exibido, para quem seleciona
 // a fonte de video mostrar exatamente o que o usuario escolheu.
 const char *ajustes_qualidade(void);
@@ -288,10 +293,13 @@ int   ajustes_rail_recolhida(void);     // collapseSidebar
 // #461: 1 = o menu e uma barra no topo (menu.c), sem rail na esquerda. 0 no
 // layout Dinamica e no telefone em retrato.
 int   ajustes_menu_topo(void);
-int   ajustes_abas_estilo(void);   // #205: 0 Chips, 1 Menu suspenso, 2 Barra central, 3 Paginas
+int   ajustes_abas_estilo(void);   // 0 Chips, 1 Menu suspenso, 2 Barra central, 3 Paginas, 4 Menu no topo
+void  ajustes_definir_abas_estilo(int estilo);
 int   ajustes_rail_moderna(void);       // modernSidebar
 int   ajustes_rail_moderna_blur(void);  // modernSidebarBlur
 int   ajustes_hero_ligado(void);        // heroSectionEnabled
+int   ajustes_hero_genero(void);        // heroGeneroLocal: genero sob o logo do destaque
+int   ajustes_hero_sinopse_grande(void); // Normal (22/30) ou Grande (24/32)
 int   ajustes_hero_cheio(void);         // modernHeroFullScreenBackdropEnabled
 // LAYOUT DA HOME (local): a estrutura da tela inicial. Moderna e o desenho de
 // sempre; Padrao contem o destaque num banner; Dinamica e o estilo Apple TV.
@@ -405,8 +413,7 @@ int   ajustes_logo_addon(void);
 int   ajustes_col_arte_conta(void);
 // Selos da folha de fontes em peca colorida por tipo (#198). Padrao ligado.
 int   ajustes_selos_coloridos(void);
-int   ajustes_trailer_detalhe_som(void); // o de fundo da pagina do titulo com som (Samsung .wgt sempre mudo)
-int   ajustes_trailer_hero_som(void);  // o do destaque com som (na Samsung .wgt sempre mudo)
+int   ajustes_trailer_som(void);         // UM ajuste de som para todo trailer que toca sozinho (Samsung .wgt sempre mudo)
 Uint32 ajustes_trailer_hero_espera_ms(void); // repouso no titulo antes do trailer do destaque
 int   ajustes_trailer_qualidade(void); // teto em linhas (1080/720/480); 0 = a maior
 int   ajustes_trailer_fonte(void);     // TRF_* de trailerfonte.h; 0 = automatico
@@ -441,7 +448,7 @@ int   ajustes_720p(void);
 int   ajustes_relogio_ligado(void);
 int   ajustes_relogio_pos(void);
 int   ajustes_relogio_12h(void);   // 1 = 12 h com AM/PM (relogio.h)
-// Tamanho da interface: 1, 1.2, 1.3 ou 1.5 (gfx_escala_ui). LOCAL.
+// Local interface factor: 0.8..1.5, or automatic from physical panel size.
 float ajustes_tamanho_ui(void);
 // Settings only: 0.8/0.9/1.0, default 0.9; independent of global UI zoom.
 float ajustes_tamanho_ajustes(void);
@@ -454,8 +461,17 @@ int   ajustes_esconder_logo_trailer(void);   // 1 = hide the corner title logo w
 int   ajustes_legendas_todas(void); // #425: abrir todas as faixas
 // #205: 1 = tela de abertura Detalhada (o cartao com fonte e passos); 0 = Cinema.
 int   ajustes_abertura_detalhada(void);
+// #205: 1 = mostra o nome do add-on na tela Cinema da abertura (padrao: 0).
+int   ajustes_abertura_addon(void);
+// #508: fundo da tela Cinema da abertura: 0 = Desligado, 1 = Arte (nitida com
+// veu escuro), 2 = Arte borrada (padrao).
+int   ajustes_abertura_fundo(void);
+// #205: tamanho dos cards de episodio (Moderna): 0 pequeno, 1 medio (padrao), 2 grande.
+int   ajustes_ep_tamanho(void);
 // #338: tamanho de abertura das Estatisticas ao vivo (EV_TAM_*); -1 = o ultimo usado.
 int   ajustes_estat_tamanho(void);
+int   ajustes_estat_lado(void);                 // 0 Direita, 1 Esquerda
+void  ajustes_definir_estat_lado(int esquerda);
 int   ajustes_leg2_junto(void);
 int   ajustes_leg2_tamanho(void);
 int   ajustes_leg2_cor(void);
@@ -493,6 +509,7 @@ int   ajustes_saida_player_home(void);
 int   ajustes_manter_video(void);
 // Selo de visto no cartaz da home (#212). 1 = ligado (o de fabrica).
 int   ajustes_selo_visto(void);
+int   ajustes_selo_visto_modo(void);   // 0 desligado, 1 icone (check), 2 escrito
 // #366: oculta filmes vistos so na descoberta, por perfil neste aparelho.
 // Desligado de fabrica; busca, biblioteca e historico nao sao filtrados.
 int   ajustes_ocultar_filmes_vistos(void);

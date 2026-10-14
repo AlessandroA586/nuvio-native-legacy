@@ -1087,6 +1087,16 @@ static void spotAbrirBase(int voz, int tecladoAuto) {
            (st_abre_sozinho() || spTelefone())) abrirTecladoSis();
 }
 
+// Abre a caixa SEM pedir o teclado do sistema: e a abertura que a
+// demonstracao das Dicas do controle usa (dicascontrole.c), onde o IME do
+// Android tomaria o foco e cobriria a apresentacao.
+void spot_abrir_demo(void) {
+  modoAjustes = 0;
+  modoGuia = 0;
+  retornoAjustesValido = 0;
+  spotAbrirBase(0, 0);
+}
+
 void spot_abrir_guia(void) {
   modoAjustes = 1;
   modoGuia = 1;
@@ -1343,7 +1353,8 @@ void spot_evento(const SDL_Event *e) {
     spot_fechar();
     return;
   }
-  if (k == SPOT_TECLA_ABRIR || e->key.keysym.scancode == NV_SCANCODE_YELLOW) {
+  if (k == SPOT_TECLA_ABRIR || e->key.keysym.scancode == NV_SCANCODE_YELLOW ||
+      e->key.keysym.scancode == NV_SCANCODE_CH_DOWN) {
     registrar(); spot_fechar(); return;
   }
   // VOLTAR desfaz na ordem inversa (ver o topo).
