@@ -3,6 +3,7 @@
 // outra referencia, seek, troca de fonte, troca de dono e teardown.
 //   bash tests/legsync.sh     SANITIZE=1 / SANITIZE=thread
 #include "legsync.h"
+#include "nvtmp.h"
 #include "legenda2.h"
 #include "autosync.h"
 #include "legref.h"
@@ -290,7 +291,7 @@ static LegendaDocumento *janelaLocal(const char *url, uint64_t sessao, const int
 
 int main(int argc, char **argv) {
   LegSyncVisao v; int casos = 0;
-  DIR = argc > 1 ? argv[1] : "/tmp/nv-legref-fx";
+  DIR = argc > 1 ? argv[1] : nvt("/nv-legref-fx");
   legsync_teste_leitor(lerMkv, NULL);
   if (getenv("AUTOSYNC_PGS")) {
     const char *pgs = "local:/pgs.mkv";

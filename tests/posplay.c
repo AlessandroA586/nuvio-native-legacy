@@ -5,6 +5,7 @@
 // tela depois do OK. Este teste cobre o caminho inteiro que o app.c consome:
 // posplay_evento -> posplay_pediu_episodio.
 #include "posplay.h"
+#include "nvtmp.h"
 #include "catalogo.h"
 #include "player.h"
 #include "ajustes.h"
@@ -43,7 +44,7 @@ static int quadroFilmeDecide(float dt, double pos, double dur) {
   int decidiu = 0, salvo, arq;
   fflush(stdout);
   salvo = dup(fileno(stdout));
-  arq = open("/tmp/nuvio-posplay-log.txt", O_WRONLY | O_CREAT | O_TRUNC, 0600);
+  arq = open(nvt("/nuvio-posplay-log.txt"), O_WRONLY | O_CREAT | O_TRUNC, 0600);
   if (arq >= 0) {
     dup2(arq, fileno(stdout));
     close(arq);
@@ -52,13 +53,13 @@ static int quadroFilmeDecide(float dt, double pos, double dur) {
     dup2(salvo, fileno(stdout));
   }
   close(salvo);
-  f = fopen("/tmp/nuvio-posplay-log.txt", "r");
+  f = fopen(nvt("/nuvio-posplay-log.txt"), "r");
   if (f) {
     while (fgets(linha, sizeof linha, f))
       if (strstr(linha, "[posplay] relacionados em")) decidiu = 1;
     fclose(f);
   }
-  remove("/tmp/nuvio-posplay-log.txt");
+  remove(nvt("/nuvio-posplay-log.txt"));
   return decidiu;
 }
 
@@ -288,7 +289,7 @@ int main(void) {
       // saida do resto do arquivo, e foi o que aconteceu na primeira versao.
       fflush(stdout);
       salvo = dup(fileno(stdout));
-      arq = open("/tmp/nuvio-posplay-log.txt", O_WRONLY | O_CREAT | O_TRUNC, 0600);
+      arq = open(nvt("/nuvio-posplay-log.txt"), O_WRONLY | O_CREAT | O_TRUNC, 0600);
       if (arq >= 0) {
         dup2(arq, fileno(stdout));
         close(arq);
@@ -297,7 +298,7 @@ int main(void) {
         dup2(salvo, fileno(stdout));
       }
       close(salvo);
-      f = fopen("/tmp/nuvio-posplay-log.txt", "r");
+      f = fopen(nvt("/nuvio-posplay-log.txt"), "r");
       if (f) {
         while (fgets(linha, sizeof linha, f))
           if (strstr(linha, "[posplay] relacionados em")) decidiu = 1;
@@ -309,7 +310,7 @@ int main(void) {
         assert(0);
       }
     }
-    remove("/tmp/nuvio-posplay-log.txt");
+    remove(nvt("/nuvio-posplay-log.txt"));
     posplay_fechar(); }
   puts("ok  o painel de filme nao sobe no comeco, e ainda sobe no fim");
 

@@ -10,6 +10,7 @@
 //
 // Sem rede e sem SDL de video: so a lista em memoria e a contagem da folha.
 #include "streams.h"
+#include "nvtmp.h"
 #include "ajustes.h"
 #include "debrid.h"
 #include <assert.h>
@@ -106,7 +107,7 @@ static void conferirFolhaCheia(const Stream *l, int n, const char *cenario) {
 
 int main(void) {
   Stream l[N_TOTAL];
-  char dir[] = "/tmp/nuvio-fontes-lista-XXXXXX";
+  char dir[NVT_MAX]; nvt_set(dir, sizeof dir, "/nuvio-fontes-lista-XXXXXX");
   int n;
   assert(mkdtemp(dir));
   n = montar(l);

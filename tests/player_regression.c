@@ -1,4 +1,5 @@
 #include "streams.h"
+#include "nvtmp.h"
 #include "catalogo.h"
 #include "episodios.h"
 #include "player.h"
@@ -362,7 +363,7 @@ static void testar(void) {
   assert(menu_destino()==MENU_BUSCAR && menu_mudou_destino());
   menu_abrir();teclaMenu(SDLK_DOWN);teclaMenu(SDLK_ESCAPE);
   assert(!menu_aberto() && menu_destino()==MENU_BUSCAR);
-  char pasta[]="/tmp/nuvio-progress-test-XXXXXX",arquivo[256];assert(mkdtemp(pasta));
+  char pasta[NVT_MAX],arquivo[256]; nvt_set(pasta, sizeof pasta, "/nuvio-progress-test-XXXXXX");assert(mkdtemp(pasta));
   snprintf(arquivo,sizeof arquivo,"%s/catalogo.txt",pasta);
   FILE *fp=fopen(arquivo,"w");assert(fp);fclose(fp);
   cat_carregar(pasta);strcpy(c.imdb,"tt0000001");cat_definir(&c,1);
@@ -547,15 +548,15 @@ int main(int argc,char **argv) {
     tex_cache_dir("deploy/app/art/cache");
     assert(trakt_carregar("deploy/app/art"));assert(trakt_perfil(&d));
     perfil_iniciar();perfil_abrir();perfil_definir_dados(&d);
-    captura("/tmp/nuvio-profile.bmp",w,5);
+    captura(nvt("/nuvio-profile.bmp"),w,5);
     SDL_Event e={0};e.type=SDL_KEYDOWN;e.key.keysym.sym=SDLK_DOWN;
-    perfil_evento(&e);captura("/tmp/nuvio-profile-calendar.bmp",w,5);
+    perfil_evento(&e);captura(nvt("/nuvio-profile-calendar.bmp"),w,5);
     for(int i=0;i<6;i++)perfil_evento(&e);
-    captura("/tmp/nuvio-profile-ranks.bmp",w,5);
+    captura(nvt("/nuvio-profile-ranks.bmp"),w,5);
     // O painel lateral do perfil deixou de existir; a captura equivalente hoje
     // e a do painel de Salvos, que ocupa a mesma moldura.
     spainel_abrir();spainel_atualizar(1.0f,SDL_GetTicks());
-    captura("/tmp/nuvio-salvos-painel.bmp",w,5);
+    captura(nvt("/nuvio-salvos-painel.bmp"),w,5);
     return 0;
   }
   cat_carregar("deploy/app/art");
@@ -573,16 +574,16 @@ int main(int argc,char **argv) {
     snprintf(ep[i].sinopse,sizeof ep[i].sinopse,"Juliette sets out on a dangerous quest to retrieve a suit so she can return home.");
   }
   cat_definir_episodios(0,ep,5);player_abrir(0,NULL);player_definir_episodio(2,4);
-  captura("/tmp/nuvio-player-loading.bmp",w,0);
+  captura(nvt("/nuvio-player-loading.bmp"),w,0);
   // #128: busca comecada com os controles escondidos — so barra e tempo. O
   // par de capturas mostra o antes (so a barra) e o depois do BAIXO (tudo).
   { SDL_Event e={0};e.type=SDL_KEYDOWN;
-    e.key.keysym.sym=SDLK_DOWN;player_evento(&e);captura("/tmp/nuvio-player-escondido.bmp",w,0);
+    e.key.keysym.sym=SDLK_DOWN;player_evento(&e);captura(nvt("/nuvio-player-escondido.bmp"),w,0);
     e.key.keysym.sym=SDLK_RIGHT;player_evento(&e);assert(player_so_barra());
-    captura("/tmp/nuvio-player-busca.bmp",w,0);
+    captura(nvt("/nuvio-player-busca.bmp"),w,0);
     e.key.keysym.sym=SDLK_DOWN;player_evento(&e);assert(!player_so_barra());
-    captura("/tmp/nuvio-player-busca-cheio.bmp",w,0); }
-  episodios_abrir(0,2,4);captura("/tmp/nuvio-player-episodes.bmp",w,1);episodios_fechar();
+    captura(nvt("/nuvio-player-busca-cheio.bmp"),w,0); }
+  episodios_abrir(0,2,4);captura(nvt("/nuvio-player-episodes.bmp"),w,1);episodios_fechar();
   Stream s[5]={0};
   for(int i=0;i<5;i++) {
     snprintf(s[i].rotulo,sizeof s[i].rotulo,"Silo S02 E04");snprintf(s[i].provedor,sizeof s[i].provedor,"Addon de teste");
@@ -590,10 +591,10 @@ int main(int argc,char **argv) {
     s[i].mp4=s[i].dolbyVision=s[i].dolbyAtmos=1;s[i].altura=2160;s[i].tamanhoMB=11264;
   }
   stream_definir_lista(s,5);stream_folha_contexto(player_linha_episodio());stream_folha_abrir();
-  captura("/tmp/nuvio-player-sources.bmp",w,2);
-  faixas_abrir_em(1);captura("/tmp/nuvio-player-subtitles.bmp",w,3);
-  menu_iniciar();captura("/tmp/nuvio-player-cards.bmp",w,4);
-  menu_abrir();captura("/tmp/nuvio-player-menu.bmp",w,4);
+  captura(nvt("/nuvio-player-sources.bmp"),w,2);
+  faixas_abrir_em(1);captura(nvt("/nuvio-player-subtitles.bmp"),w,3);
+  menu_iniciar();captura(nvt("/nuvio-player-cards.bmp"),w,4);
+  menu_abrir();captura(nvt("/nuvio-player-menu.bmp"),w,4);
   tex_encerrar();txt_encerrar();gfx_encerrar();SDL_GL_DeleteContext(gl);SDL_DestroyWindow(w);SDL_Quit();
-  puts("PASS: seis capturas de revisão em /tmp/nuvio-player-*.bmp (dados de teste, sem reprodução real).");return 0;
+  printf("PASS: seis capturas de revisão em %s/nuvio-player-*.bmp (dados de teste, sem reprodução real).\n", nvt_dir());return 0;
 }

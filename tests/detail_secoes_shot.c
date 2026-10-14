@@ -41,6 +41,7 @@
 // rodar se dados_dir() nao for ela: ele ESCREVE cache, e sem a trava escreveria
 // dentro do ~/.nuvio de quem executa.
 #include <SDL2/SDL.h>
+#include "nvtmp.h"
 #include <SDL2/SDL_image.h>
 #include <assert.h>
 #include <stdio.h>
@@ -485,7 +486,7 @@ static void abrir(int i, int secao, int col) {
 static void escolherAba(int visivel) { abaInfo = visivel; quadros(60); }
 
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nuvio-detsec";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nuvio-detsec");
   char nome[600];
   SDL_GLContext gl;
   const char *dd;
