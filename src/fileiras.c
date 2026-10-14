@@ -674,9 +674,29 @@ int fil_adicionar(int i, int *estado) {
 // aqui, mesmo alem do limite — e o caso da "vaga garantida por addon", que a
 // descoberta promove para dentro da janela por conta propria.
 void fil_normalizar(void) {
-  int i, p = 0, mudou = 0;
+  int i, p = 0, mudou = 0, w = 0;
   pthread_mutex_lock(&trava);
   garantir();
+  // #504: a folha abre com a lista DO ARQUIVO, e a limpeza da remocao do addon
+  // (#365, em fil_marcar_sem_addon) e mais estreita: ela exige !vista, e uma
+  // linha que a descoberta chegou a registrar — ou oculta pelo arquivo antigo
+  // com a marca vista relida como tal — fica na aba "Fora da Home" para
+  // sempre. Aqui nao se sabe a lista de addons da volta, so o semAddon ja
+  // marcado: e a mesma barra de escolha da #365 (intocada pela pessoa), que e o
+  // que separa "fantasma" de "a pessoa pediu isto e o addon pode voltar".
+  for (i = 0; i < nLinhas; i++) {
+    int morto = fil_origem_de(linhas[i].chave) == FIL_ORIGEM_CATALOGO &&
+                linhas[i].semAddon && !linhas[i].naHome &&
+                !linhas[i].ocultaConta && !linhas[i].emColecao &&
+                linhas[i].oculta != OC_COLECAO &&
+                !linhas[i].visPessoal && !linhas[i].fila &&
+                linhas[i].tipo == FIL_TIPO_AUTO && linhas[i].tam == FIL_TAM_PADRAO &&
+                !(heroFonte[0] && !strcmp(heroFonte, linhas[i].chave));
+    if (morto) { mudou = 1; continue; }
+    if (w != i) linhas[w] = linhas[i];
+    w++;
+  }
+  if (w != nLinhas) { nLinhas = w; revisao++; }
   for (i = 0; i < nLinhas; i++) {
     int nova = linhas[i].nova;
     if (linhas[i].oculta || linhas[i].ocultaConta || linhas[i].emColecao || linhas[i].semAddon) {
