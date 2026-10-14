@@ -41,6 +41,9 @@ int main(int argc, char **argv) {
 
   ok(fps_base_achar(base, "title-page", &p, &u) && p == 0.5 && u == 2, "base: acha cena");
   ok(!fps_base_achar(base, "title", &p, &u) && !fps_base_achar(base, "nada", &p, &u), "base: nome exato");
+  ok(fps_base_achar("FPSBASE home-scroll 16.667 0\n", "home-scroll", &p, &u) && p == 16.667 && u == 0 &&
+     fps_base_achar("# c\nFPSBASE\ttitle-page 2.5 3\n", "title-page", &p, &u) && p == 2.5 && u == 3 &&
+     !fps_base_achar("FPSBASEx home-scroll 1 0\n", "home-scroll", &p, &u), "base: aceita prefixo FPSBASE");
   ok(!fps_base_achar("x nan 0\n", "x", &p, &u) &&
      !fps_base_achar("x 1 \n", "x", &p, &u) &&
      !fps_base_achar("x 1 -1\n", "x", &p, &u) &&

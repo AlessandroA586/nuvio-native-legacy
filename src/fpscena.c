@@ -40,9 +40,15 @@ int fps_base_achar(const char *texto, const char *cena, double *p95, long *upl) 
   size_t n = strlen(cena);
   const char *l = texto;
   while (l && *l) {
-    if (*l != '#' && !strncmp(l, cena, n) && l[n] == ' ') {
+    const char *inicio = l;
+    // FPSBASE is emitted by the runner and documented as a valid file format.
+    if (!strncmp(inicio, "FPSBASE", 7) && (inicio[7] == ' ' || inicio[7] == '\t')) {
+      inicio += 7;
+      while (*inicio == ' ' || *inicio == '\t') inicio++;
+    }
+    if (*l != '#' && !strncmp(inicio, cena, n) && inicio[n] == ' ') {
       char *fim, *ufim;
-      const char *inicio = l + n;
+      inicio += n;
       double p;
       long u;
       while (*inicio == ' ' || *inicio == '\t') inicio++;
