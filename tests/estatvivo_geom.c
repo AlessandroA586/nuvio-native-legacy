@@ -324,6 +324,28 @@ int main(void) {
   key(SDLK_ESCAPE);
   CONFERE(!estatvivo_aberto() && !estatvivo_fixado(), "Back closes unpinned panel");
 
+  // P0: player aberto, estatistica FECHADA, lado padrao (direita). O relogio
+  // e a folha de Audio pedem a ilha e a estatistica desenha depois (app.c).
+  // Fechada ela nao pode esconder a ilha — a pilula e a folha sumiam.
+  ajustes_definir_estat_lado(0);
+  estatvivo_fechar();
+  { PlrIlhaPedido p;
+    GfxRect r;
+    memset(&p, 0, sizeof p);
+    p.w = 720; p.h = 400; p.corpo = corpoFake;
+    plrilha_relogio(1, 3600);
+    estatvivo_desenhar(SDL_GetTicks());
+    plrilha_desenhar(SDL_GetTicks());
+    CONFERE(plrilha_rect(&r) && r.w > 8.0f, "relogio vive com estatistica fechada na direita");
+    corpoChamado = 0;
+    for (i = 0; i < 200 && !corpoChamado; i++) {
+      plrilha_pedir(&p);
+      estatvivo_desenhar(SDL_GetTicks());
+      plrilha_desenhar(SDL_GetTicks());
+      SDL_Delay(16);
+    }
+    CONFERE(corpoChamado > 0, "folha de Audio vive com estatistica fechada na direita"); }
+
   // P1: a ilha com um corpo de pe (folha de Audio) e a estatistica na direita
   // escondendo-a NO MESMO QUADRO. Na ordem do app.c a folha pede primeiro e a
   // estatistica esconde depois: um pedido sem corpo (pilula de aviso) nao pode

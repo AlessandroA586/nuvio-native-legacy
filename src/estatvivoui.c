@@ -962,7 +962,10 @@ void estatvivo_desenhar(Uint32 agora) {
   for (i = 0; i < 4; i++) ret[i] = anim_mola2(&retV[i], ret[i], alvoRet[i], dtq, EVU_W_RET);
   for (i = 0; i < EV_TAM_N; i++) contA[i] = anim_mola(contA[i], i == desenho ? 1.0f : 0.0f, dtq, EVU_K_CONT);
   p = (GfxRect){ ret[0], ret[1], ret[2], ret[3] };
-  if (!ajustes_estat_lado()) plrilha_esconder();
+  // So o painel de pe ocupa o canto da ilha. Fechado (lado padrao e a
+  // direita) a pilula do relogio e as folhas (Audio, Legendas, Fontes)
+  // continuam — esconder aqui as apagava no mesmo quadro.
+  if ((aberto || fixado) && !ajustes_estat_lado()) plrilha_esconder();
   if (aberto && ponteiro_ativo() && o > 0.5f) {
     ponteiro_camada();
     ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ptFora, 0, 0);
