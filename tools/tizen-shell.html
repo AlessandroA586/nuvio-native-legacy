@@ -576,7 +576,7 @@
       // controle Samsung e o app nao usa canal para nada. Na LG a azul continua,
       // que e onde ela funciona bem.
       ["MediaPlay", "MediaPause", "MediaPlayPause", "MediaStop",
-       "MediaRewind", "MediaFastForward", "ChannelUp",
+       "MediaRewind", "MediaFastForward", "ChannelUp", "ChannelDown",
        "ColorF0Red", "ColorF1Green", "ColorF2Yellow", "ColorF3Blue", "Search"]
         .forEach(function (k) {
           try { tizen.tvinputdevice.registerKey(k); } catch (e) {}
@@ -817,14 +817,18 @@
   window.addEventListener("keydown", function (ev) {
     if (imeAberto()) return;
     if (!ev.isTrusted) return;
-    var f = ev.keyCode === 10225 ? "F6" : ev.keyCode === 405 ? "F5" : null;
+    // O CH- (428) vira F8 e o main.c o remapeia para o Spotlight fora do
+    // zap, como no Android: os Smart Remote novos nao tem fileira de cores e
+    // o rocker de canal e botao fisico em todo controle Samsung.
+    var f = ev.keyCode === 10225 ? "F6" : ev.keyCode === 405 ? "F5" : ev.keyCode === 428 ? "F8" : null;
     if (!f) return;
     ev.preventDefault();
     ev.stopPropagation();
     var alvo = document.getElementById("canvas") || window;
+    var code = f === "F6" ? 117 : f === "F5" ? 116 : 119;
     ["keydown", "keyup"].forEach(function (t) {
       alvo.dispatchEvent(new KeyboardEvent(t, {
-        key: f, code: f, keyCode: f === "F6" ? 117 : 116, which: f === "F6" ? 117 : 116,
+        key: f, code: f, keyCode: code, which: code,
         bubbles: true, cancelable: true
       }));
     });

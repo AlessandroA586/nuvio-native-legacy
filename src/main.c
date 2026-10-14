@@ -234,6 +234,18 @@ static void remapCanal(SDL_Event *e) {
     e->key.keysym.sym = SDLK_s;
     e->key.keysym.scancode = SDL_SCANCODE_S;
   }
+  // O CH- (428) chega como F8 (tizen-shell.html) e fora do zap e o Spotlight
+  // (F5), como no Android e na LG. Com canal na tela segue sendo CH- de
+  // verdade, pelos scancodes do webOS que guia.c e player.c ja tratam.
+  if ((e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) && e->key.keysym.sym == SDLK_F8) {
+    if (app_zap_ativo()) {
+      e->key.keysym.scancode = (SDL_Scancode)NV_SCANCODE_CH_DOWN;
+      e->key.keysym.sym = SDLK_PAGEDOWN;
+    } else {
+      e->key.keysym.sym = SDLK_F5;
+      e->key.keysym.scancode = SDL_SCANCODE_F5;
+    }
+  }
 #else
   (void)e;
 #endif

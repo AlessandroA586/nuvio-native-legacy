@@ -2477,6 +2477,11 @@ static int spotAtalho(const SDL_Event *e) {
   if (e->type != SDL_KEYDOWN) return 0;
   k = e->key.keysym.sym;
   if (k == SPOT_TECLA_VOZ || k == SPOT_TECLA_ABRIR) return 1;
+  // CH- NA LG: o Magic Remote tem o rocker de canal e, fora do zap, o CH-
+  // nao tinha dono (o CH+ abre Salvos). Vira o atalho do Spotlight, como no
+  // Android e na Samsung — as dicas do controle ensinam CH+/CH- nas tres
+  // plataformas. No Guia o CH- continua trocando de canal (guia.c).
+  if (e->key.keysym.scancode == NV_SCANCODE_CH_DOWN && tela != TELA_GUIA) return 1;
   return e->key.keysym.scancode == NV_SCANCODE_YELLOW && tela != TELA_GUIA;
 }
 static int spotPode(void) {
