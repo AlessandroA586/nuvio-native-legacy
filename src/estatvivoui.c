@@ -216,12 +216,15 @@ static void proximoTamanho(void) {
 }
 static void ptTamanho(int a, int b) { (void)a; (void)b; proximoTamanho(); }
 
-int estatvivo_evento(const SDL_Event *e) {
+int estatvivo_evento(const SDL_Event *e, int cimaDela) {
   SDL_Keycode k;
   if (!e || e->type != SDL_KEYDOWN) return aberto && e && e->type == SDL_KEYUP;
   k = e->key.keysym.sym;
   if (!aberto) {
-    if (!fixado || k != SDLK_UP || e->key.repeat) return 0;
+    // CIMA foca o painel fixado — MENOS quando outra camada/foco e dona da
+    // tecla neste quadro (cimaDela: folha, avisos, guia, barra, "Pular
+    // abertura"). Sem isso o primeiro CIMA era engolido e a lista nao andava.
+    if (!fixado || cimaDela || k != SDLK_UP || e->key.repeat) return 0;
 #ifndef ESTATVIVO_TESTE
     if (!player_aberto()) return 0;
 #endif

@@ -109,6 +109,9 @@ int  player_carregando(void);
 int  player_controles_visiveis(void);
 // Idem, para #121: foco na barra de tempo e a posicao que ela mostra.
 int   player_foco_na_barra(void);
+// Idem: o "Pular abertura" focado usa CIMA para dispensar (#305) — camadas
+// que disputam o CIMA (estatisticas fixadas) cedem enquanto ele estiver na tela.
+int   player_foco_no_pulo(void);
 // #128: 1 na busca que comecou com os controles escondidos, quando so a barra
 // e o tempo estao na tela.
 int   player_so_barra(void);

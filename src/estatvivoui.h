@@ -35,8 +35,10 @@ int  estatvivo_tamanho(void);      // EV_TAM_*
 // das laterais do player, FIXAS por tamanho (nao dependem de numero nenhum).
 void estatvivo_retangulo(int tam, int esquerda, float *g);
 void estatvivo_retangulo_atual(float *g);   // do tamanho e do lado de agora
-// Teclado do cartao aberto. 1 = consumiu.
-int  estatvivo_evento(const SDL_Event *e);
+// Teclado do cartao aberto. `cimaDela` = outra camada/foco usa CIMA neste
+// quadro (folha, avisos, overlay do guia, barra de tempo, "Pular abertura"):
+// o CIMA que focaria o painel fixado fica dela. 1 = consumiu.
+int  estatvivo_evento(const SDL_Event *e, int cimaDela);
 // Uma vez por quadro (barato: so trabalha 1x/s).
 void estatvivo_atualizar(Uint32 agora);
 void estatvivo_desenhar(Uint32 agora);

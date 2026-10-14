@@ -28,7 +28,7 @@ static int key(SDL_Keycode k) {
   SDL_Event e = {0};
   e.type = SDL_KEYDOWN;
   e.key.keysym.sym = k;
-  return estatvivo_evento(&e);
+  return estatvivo_evento(&e, 0);
 }
 
 static void frame(int n) {
@@ -58,6 +58,8 @@ static void shot(const char *path) {
 #define GEO_GAP 12.0f
 #define GEO_KEY_H 32.0f
 
+static int corpoChamado;
+static void corpoFake(GfxRect c, float a, void *u) { (void)c; (void)a; (void)u; corpoChamado++; }
 static void shotGeom(const char *name) {
   char path[512];
   snprintf(path, sizeof path, "%s/%s.png",
@@ -308,6 +310,47 @@ int main(void) {
   CONFERE(estatvivo_aberto() && !estatvivo_fixado(), "UP in panel unpins");
   key(SDLK_ESCAPE);
   CONFERE(!estatvivo_aberto() && !estatvivo_fixado(), "Back closes unpinned panel");
+
+  // P1: a ilha com um corpo de pe (folha de Audio) e a estatistica na direita
+  // escondendo-a NO MESMO QUADRO. Na ordem do app.c a folha pede primeiro e a
+  // estatistica esconde depois: um pedido sem corpo (pilula de aviso) nao pode
+  // herdar o corpo antigo — a pilula nova nasceria com o corpo de outra folha
+  // desenhando embaixo por alguns quadros (rasgo). Sem pedido com corpo no
+  // quadro, o ultimo e esquecido na hora.
+  estatvivo_abrir();      // reabre no lado esquerdo (o lado ficou 1): ilha livre
+  frame(10);
+  { PlrIlhaPedido p, pill;
+    memset(&p, 0, sizeof p);
+    p.w = 720; p.h = 400; p.corpo = corpoFake;
+    memset(&pill, 0, sizeof pill);
+    pill.texto = "Aviso"; pill.aberta = 1;   // so a pilula, como o aviso da legenda
+    // Assenta o corpo A com o painel do outro lado.
+    ajustes_definir_estat_lado(1);
+    corpoChamado = 0;
+    for (i = 0; i < 200 && !corpoChamado; i++) {
+      plrilha_pedir(&p);
+      estatvivo_desenhar(SDL_GetTicks());
+      plrilha_desenhar(SDL_GetTicks());
+      SDL_Delay(16);
+    }
+    CONFERE(corpoChamado > 0, "corpo A assentou");
+    corpoChamado = 0;
+    // O quadro da troca: pedido so de pilula + esconder, na ordem do app.c.
+    // O corpo A nao pode desenhar nem aqui nem quando a ilha volta (a pilula
+    // ficaria com o corpo da folha antiga embaixo por alguns quadros).
+    ajustes_definir_estat_lado(0);
+    plrilha_pedir(&pill);
+    estatvivo_desenhar(SDL_GetTicks());
+    plrilha_desenhar(SDL_GetTicks());
+    ajustes_definir_estat_lado(1);
+    for (i = 0; i < 8; i++) {
+      plrilha_pedir(&pill);
+      estatvivo_desenhar(SDL_GetTicks());
+      plrilha_desenhar(SDL_GetTicks());
+      SDL_Delay(16);
+    }
+    CONFERE(corpoChamado == 0, "pilula nova nao herda o corpo da folha antiga"); }
+  estatvivo_fechar();
   tex_encerrar(); txt_encerrar(); gfx_encerrar();
   SDL_GL_DeleteContext(context); SDL_DestroyWindow(window); SDL_Quit();
   if (falhas) { printf("%d falha(s)\n", falhas); return 1; }
