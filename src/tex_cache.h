@@ -71,6 +71,9 @@ void tex_piramide_liberar(struct SDL_Surface *base);
 //
 // Prefira esta a tex_obter em qualquer arte de lista: e onde o cache estoura.
 GLuint tex_obter_larg(const char *caminho, float largLayout);
+// Publica sob demanda a paleta ja extraida, inclusive de retratos opacos.
+// Chamar a cada quadro enquanto o decode nao terminou; nao pede novo decode.
+void tex_publicar_paleta(const char *caminho);
 // Entrega a textura menor ja existente enquanto a maior e reprocessada.
 GLuint tex_obter_larg_qualquer(const char *caminho, float largLayout);
 // Para LOGO DE TITULO: igual as duas acima, mas o pedido fura a fila de rede e
