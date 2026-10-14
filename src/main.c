@@ -1912,8 +1912,10 @@ int main(int argc, char **argv) {
     // vitrine pediria texturas de tela cheia com o decodificador ocupado.
     esmaecer_estilo(player_aberto() ? ESM_ESTILO_ESCURECER : ajustes_descanso_estilo());
     // #338: com trailer tocando (destaque da Home ou pagina do titulo) o medidor
-    // some da ilha; volta quando ele para (desempenho.h).
-    desempenho_trailer(trailer_aberto() && trailer_tocando());
+    // some da ilha; volta quando ele para (desempenho.h). trailer_medidor
+    // esconde tambem na PAUSA da tela cheia nativa: la trailer_tocando fica
+    // preso em 1 e sem o !trailer_pausado o medidor nao voltava (rev. 205).
+    desempenho_trailer(trailer_medidor_esconde());
     // #422: trailer tocando na pagina do titulo tambem e alguem assistindo. So
     // no titulo: o destaque da Home troca de trailer sem parar e a tela nunca
     // escureceria. Trailer em TELA CHEIA pausado e parado (trailer_pausado so
