@@ -4567,6 +4567,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fixa no canto. Lembrar o último reabre como você deixou. Com o painel aberto, OK ou Esquerda/Direita trocam o tamanho. Vale só nesta TV.", "Velikost, s katero se Statistika v živo odpre iz Nadzornega središča. Polno prikaže vse meritve; Kompaktno glavne; Minimalno tanko vrstico, pripeto v kotu. Zapomni si zadnje odpre tako, kot ste ga pustili. Ko je plošča odprta, velikost spremenita OK ali Levo/Desno. Velja samo za ta televizor."),
   T("Tamanho da interface", "Velikost vmesnika"),
   T("Tamanho da segunda legenda", "Velikost drugih podnapisov"),
+  T("Tamanho da sinopse", "Velikost povzetka"),
   T("Tamanho das estatísticas ao vivo", "Velikost statistike v živo"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "Velikost datoteke, ki se na tem televizorju predvaja brez zaustavitve"),
   T("Tamanho do buffer", "Velikost medpomnilnika"),

@@ -4566,6 +4566,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fixa no canto. Lembrar o último reabre como você deixou. Com o painel aberto, OK ou Esquerda/Direita trocam o tamanho. Vale só nesta TV.", "Die Größe, mit der sich die Live-Statistik im Kontrollzentrum öffnet. Vollständig zeigt alle Messwerte; Kompakt die wichtigsten; Minimal eine dünne, in der Ecke fixierte Zeile. Zuletzt gewählt öffnet so, wie Sie es verlassen haben. Bei geöffnetem Panel wechseln OK oder Links/Rechts die Größe. Gilt nur für diesen Fernseher."),
   T("Tamanho da interface", "Größe der Oberfläche"),
   T("Tamanho da segunda legenda", "Größe der Zweituntertitel"),
+  T("Tamanho da sinopse", "Größe der Inhaltsangabe"),
   T("Tamanho das estatísticas ao vivo", "Größe der Live-Statistik"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "Dateigröße, die auf diesem TV ohne Unterbrechung läuft"),
   T("Tamanho do buffer", "Puffergröße"),

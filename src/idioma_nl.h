@@ -4567,6 +4567,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fixa no canto. Lembrar o último reabre como você deixou. Com o painel aberto, OK ou Esquerda/Direita trocam o tamanho. Vale só nesta TV.", "De grootte waarmee de live-statistieken openen vanuit het Controlecentrum. Volledig toont alle metingen; Compact de belangrijkste; Minimaal een dunne regel vastgezet in de hoek. Laatste onthouden opent zoals je het liet. Met het paneel open veranderen OK of Links/Rechts de grootte. Geldt alleen voor deze tv."),
   T("Tamanho da interface", "Grootte van de interface"),
   T("Tamanho da segunda legenda", "Grootte van tweede ondertitel"),
+  T("Tamanho da sinopse", "Grootte van de synopsis"),
   T("Tamanho das estatísticas ao vivo", "Grootte van de live-statistieken"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "Bestandsgrootte die zonder haperen afspeelt op deze tv"),
   T("Tamanho do buffer", "Buffergrootte"),

@@ -4567,6 +4567,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fixa no canto. Lembrar o último reabre como você deixou. Com o painel aberto, OK ou Esquerda/Direita trocam o tamanho. Vale só nesta TV.", "Veľkosť, v akej sa Živé štatistiky otvárajú z Ovládacieho centra. Plný zobrazí všetky merania; Kompaktné hlavné; Minimálny tenký riadok pripnutý v rohu. Pamätať si posledný otvorí tak, ako ste ho nechali. Pri otvorenom paneli veľkosť mení OK alebo Vľavo/Vpravo. Platí len pre tento televízor."),
   T("Tamanho da interface", "Veľkosť rozhrania"),
   T("Tamanho da segunda legenda", "Veľkosť druhých titulkov"),
+  T("Tamanho da sinopse", "Veľkosť synopsy"),
   T("Tamanho das estatísticas ao vivo", "Veľkosť živých štatistík"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "Veľkosť súboru, ktorý sa na tomto televízore prehrá bez zastavenia"),
   T("Tamanho do buffer", "Veľkosť vyrovnávacej pamäte"),

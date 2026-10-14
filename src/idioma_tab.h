@@ -4566,6 +4566,7 @@
   { "Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fixa no canto. Lembrar o último reabre como você deixou. Com o painel aberto, OK ou Esquerda/Direita trocam o tamanho. Vale só nesta TV.", "The size Live statistics opens with from the Control Center. Full shows every metric; Compact, the main ones; Minimal, a thin line pinned to the corner. Remember last reopens the way you left it. With the panel open, OK or Left/Right change the size. Applies to this TV only." },
   { "Tamanho da interface", "Interface size" },
   { "Tamanho da segunda legenda", "Second subtitle size" },
+  { "Tamanho da sinopse", "Synopsis size" },
   { "Tamanho das estatísticas ao vivo", "Live statistics size" },
   { "Tamanho de arquivo que toca sem parar nesta TV", "File size that plays without stopping on this TV" },
   { "Tamanho do buffer", "Buffer size" },

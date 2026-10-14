@@ -46,6 +46,15 @@ int main(void) {
     assert(!ajustes_abertura_detalhada());
     valor[ab] = 1; assert(ajustes_abertura_detalhada()); valor[ab] = 0;
     assert(ajCenaSecao(ab) == AJC_REP_DURANTE); }
+  assert(!ajustes_hero_sinopse_grande());
+  assert(!strcmp(CHAVE[AJ_HERO_SINOPSE], "heroSynopsisSizeLocal"));
+  assert(somenteDesteAparelho(AJ_HERO_SINOPSE));
+  assert(!strcmp(OPCOES[AJ_HERO_SINOPSE].rotulo, "Tamanho da sinopse"));
+  assert(!strcmp(V_HERO_SINOPSE[0], "Normal"));
+  assert(!strcmp(V_HERO_SINOPSE[1], "Grande"));
+  valor[AJ_HERO_SINOPSE] = 1;
+  assert(ajustes_hero_sinopse_grande());
+  valor[AJ_HERO_SINOPSE] = 0;
   // Home: layout e arte do destaque.
   assert(valor[AJ_HERO_FUNDO] == 0);          // Automatico
   assert(valor[AJ_HERO_ARTE_DIF] == 1);       // Desligado: mesma foto do card
@@ -149,7 +158,7 @@ int main(void) {
   assert(AJ_INTERFACE_MODO == AJ_PROXIMO_CONTAGEM + 1);
   assert(AJ_MIC_BUSCA == AJ_INTERFACE_MODO + 1);
   assert(AJ_MENU_TOPO == AJ_MIC_BUSCA + 1 && AJ_ABAS_ESTILO == AJ_MENU_TOPO + 1 && AJ_TECLADO_ANDROID == AJ_ABAS_ESTILO + 1 && AJ_LEG_CONTORNO_COR == AJ_TECLADO_ANDROID + 1);
-  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_ESTAT_TAMANHO == AJ_FALHA_ADDON_LIMITE + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_N == AJ_OCULTAR_FILMES_VISTOS + 1);
+  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_ESTAT_TAMANHO == AJ_FALHA_ADDON_LIMITE + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_HERO_SINOPSE == AJ_OCULTAR_FILMES_VISTOS + 1 && AJ_N == AJ_HERO_SINOPSE + 1);
   for (int i = 0; i < AJ_N; i++) assert(strcmp(CHAVE[i], "autoCreditosLocal"));
   // #338: o tamanho das estatisticas ao vivo: "Lembrar o ultimo" por padrao, local,
   // em Reproducao, com Lembrar + Completo/Compacto/Minimo.

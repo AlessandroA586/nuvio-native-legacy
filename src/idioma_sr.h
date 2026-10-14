@@ -4567,6 +4567,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fixa no canto. Lembrar o último reabre como você deixou. Com o painel aberto, OK ou Esquerda/Direita trocam o tamanho. Vale só nesta TV.", "Veličina u kojoj se Statistika uživo otvara iz Kontrolnog centra. Potpuno prikazuje sva merenja; Kompaktno glavna; Minimalno tanku liniju prikačenu u uglu. Zapamti poslednje otvara onako kako ste ostavili. Kad je panel otvoren, OK ili Levo/Desno menjaju veličinu. Važi samo za ovaj TV."),
   T("Tamanho da interface", "Veličina interfejsa"),
   T("Tamanho da segunda legenda", "Veličina drugog titla"),
+  T("Tamanho da sinopse", "Veličina sinopsisa"),
   T("Tamanho das estatísticas ao vivo", "Veličina statistike uživo"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "Veličina datoteke koja se na ovom TV-u reprodukuje bez zastajanja"),
   T("Tamanho do buffer", "Veličina bafera"),

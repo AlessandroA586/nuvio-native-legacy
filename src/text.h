@@ -187,6 +187,7 @@ typedef enum {
   // Medium nas outras). Mesmo corpo da sinopse (NV_FT_DET_SIN).
   TXT_DET_META_FORTE,   // ano, duracao       26 / 700
   TXT_DET_META_GEN,     // generos            26 / 600
+  TXT_HERO_SIN_GRANDE, // optional hero synopsis, 24/400
   TXT_NFONTES
 } TxtEstilo;
 

@@ -4567,6 +4567,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fixa no canto. Lembrar o último reabre como você deixou. Com o painel aberto, OK ou Esquerda/Direita trocam o tamanho. Vale só nesta TV.", "Canlı istatistiklerin Kontrol Merkezi'nden hangi boyutta açılacağı. Tam tüm ölçümleri gösterir; Kompakt, ana olanları; Minimum, köşeye sabitlenmiş ince bir satırı. Sonuncuyu hatırla, bıraktığınız gibi açar. Panel açıkken OK veya Sol/Sağ boyutu değiştirir. Yalnızca bu TV için geçerlidir."),
   T("Tamanho da interface", "Arayüz boyutu"),
   T("Tamanho da segunda legenda", "İkincil altyazı boyutu"),
+  T("Tamanho da sinopse", "Özet boyutu"),
   T("Tamanho das estatísticas ao vivo", "Canlı istatistik boyutu"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "Bu TV'de takılmadan oynayan dosya boyutu"),
   T("Tamanho do buffer", "Arabellek boyutu"),

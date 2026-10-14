@@ -4567,6 +4567,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fixa no canto. Lembrar o último reabre como você deixou. Com o painel aberto, OK ou Esquerda/Direita trocam o tamanho. Vale só nesta TV.", "Ukuran saat Statistik langsung dibuka dari Pusat kontrol. Lengkap menampilkan semua pengukuran; Ringkas, yang utama; Minimal, satu baris tipis yang disematkan di sudut. Ingat yang terakhir membuka seperti yang Anda tinggalkan. Saat panel terbuka, OK atau Kiri/Kanan mengubah ukuran. Hanya berlaku untuk TV ini."),
   T("Tamanho da interface", "Ukuran antarmuka"),
   T("Tamanho da segunda legenda", "Ukuran subtitle kedua"),
+  T("Tamanho da sinopse", "Ukuran sinopsis"),
   T("Tamanho das estatísticas ao vivo", "Ukuran statistik langsung"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "Ukuran file yang diputar tanpa berhenti di TV ini"),
   T("Tamanho do buffer", "Ukuran buffer"),

@@ -4567,6 +4567,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fixa no canto. Lembrar o último reabre como você deixou. Com o painel aberto, OK ou Esquerda/Direita trocam o tamanho. Vale só nesta TV.", "O tamanho com que as Estatísticas em direto abrem a partir do Centro de controlo. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fixa no canto. Lembrar o último reabre como o deixou. Com o painel aberto, OK ou Esquerda/Direita mudam o tamanho. Aplica-se só a esta TV."),
   T("Tamanho da interface", "Tamanho da interface"),
   T("Tamanho da segunda legenda", "Tamanho da segunda legenda"),
+  T("Tamanho da sinopse", "Tamanho da sinopse"),
   T("Tamanho das estatísticas ao vivo", "Tamanho das estatísticas em direto"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "Tamanho de ficheiro que reproduz sem paragens nesta TV"),
   T("Tamanho do buffer", "Tamanho do buffer"),

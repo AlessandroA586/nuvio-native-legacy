@@ -3839,6 +3839,13 @@ static int heroNomeLogo(const CatItem *ci, const char *url, int loaded,
   return same && strncmp(ci->logoIdioma, language, 2) != 0;
 }
 
+static float heroSinEntrelinha(void) {
+  return ajustes_hero_sinopse_grande() ? 32.0f : NV_LD_HERO_SIN;
+}
+static TxtEstilo heroSinEstilo(void) {
+  return ajustes_hero_sinopse_grande() ? TXT_HERO_SIN_GRANDE : TXT_HERO_SIN;
+}
+
 typedef struct {
   float logo, logoHeight, action, caption, friends, meta, secondary, synopsis;
 } HeroCopyLayout;
@@ -3883,7 +3890,7 @@ static HeroCopyLayout heroCopyTelefone(float base, float *hSin, int hasMeta,
                                        float btnH, float btnGap, float minTop,
                                        float slot, float *friendsH, float minLogo) {
   HeroCopyLayout p;
-  *hSin = fminf(*hSin, 2.0f * NV_LD_HERO_SIN);
+  *hSin = fminf(*hSin, 2.0f * heroSinEntrelinha());
   for (;;) {
     p = heroCopyLayout(base, *hSin, hasMeta, hasSec, *captionH, logoH,
                        btnH, btnGap, minTop, slot, *friendsH);
@@ -3894,7 +3901,7 @@ static HeroCopyLayout heroCopyTelefone(float base, float *hSin, int hasMeta,
       p.logo = bottom - p.logoHeight;
       return p;
     }
-    if (*hSin > NV_LD_HERO_SIN) *hSin -= NV_LD_HERO_SIN;
+    if (*hSin > heroSinEntrelinha()) *hSin -= heroSinEntrelinha();
     else if (*friendsH > 0.0f) *friendsH = 0.0f;
     else if (*hSin > 0.0f) *hSin = 0.0f;
     else if (*captionH > 0.0f) *captionH = 0.0f;
@@ -4055,8 +4062,8 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
 
   const char *sinopse = (ci && ci->sinopse[0]) ? ci->sinopse : "";
 
-  float hSin = sinopse[0] ? txt_bloco_corta(TXT_HERO_SIN, sinopse, 255, 255, 255, -1, 0,
-                                            sinW, NV_LD_HERO_SIN, 0.0f, sinLinhas)
+  float hSin = sinopse[0] ? txt_bloco_corta(heroSinEstilo(), sinopse, 255, 255, 255, -1, 0,
+                                            sinW, heroSinEntrelinha(), 0.0f, sinLinhas)
                           : 0.0f;
 
   // Logo do titulo, ou o nome em texto quando nao ha logo
@@ -4124,7 +4131,7 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
       minTop += base - (alturaTextoHeroDin() - NV_DIN_TEXTO_BASE);
     copy = heroCopyTelefone(base, &hSin, metaLinha[0] != 0, temSec, &captionH,
                             logoH * 0.75f, btnH, btnGap, minTop, slot, &friendsH, minLogo);
-    sinLinhas = hSin > 0.0f ? (int)ceilf(hSin / NV_LD_HERO_SIN) : 0;
+    sinLinhas = hSin > 0.0f ? (int)ceilf(hSin / heroSinEntrelinha()) : 0;
     temAmigos = friendsH > 0.0f;
     caption = captionH > 0.0f;
   }
@@ -4240,8 +4247,8 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
   }
 
   if (sinopse[0] && (!heroCompactoTelefone() || hSin > 0.0f) && aCopy > 0.004f)
-    txt_bloco_corta(TXT_HERO_SIN, sinopse, 255, 255, 255, x, ySin, sinW,
-                    NV_LD_HERO_SIN, aCopy, sinLinhas);
+    txt_bloco_corta(heroSinEstilo(), sinopse, 255, 255, 255, x, ySin, sinW,
+                    heroSinEntrelinha(), aCopy, sinLinhas);
   return copy.action;
 }
 

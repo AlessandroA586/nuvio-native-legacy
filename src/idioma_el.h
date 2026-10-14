@@ -4567,6 +4567,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fixa no canto. Lembrar o último reabre como você deixou. Com o painel aberto, OK ou Esquerda/Direita trocam o tamanho. Vale só nesta TV.", "Το μέγεθος με το οποίο ανοίγουν τα Ζωντανά στατιστικά από το Κέντρο ελέγχου. Το Πλήρες δείχνει όλες τις μετρήσεις· το Συμπαγές, τις βασικές· το Ελάχιστο, μια λεπτή γραμμή καρφιτσωμένη στη γωνία. Το Θυμήσου το τελευταίο ανοίγει όπως το αφήσατε. Με ανοιχτό πάνελ, το OK ή το Αριστερά/Δεξιά αλλάζουν το μέγεθος. Ισχύει μόνο σε αυτή την τηλεόραση."),
   T("Tamanho da interface", "Μέγεθος διεπαφής"),
   T("Tamanho da segunda legenda", "Μέγεθος δεύτερων υποτίτλων"),
+  T("Tamanho da sinopse", "Μέγεθος σύνοψης"),
   T("Tamanho das estatísticas ao vivo", "Μέγεθος ζωντανών στατιστικών"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "Μέγεθος αρχείου που παίζει χωρίς διακοπή σε αυτή την τηλεόραση"),
   T("Tamanho do buffer", "Μέγεθος buffer"),

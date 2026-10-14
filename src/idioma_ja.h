@@ -4567,6 +4567,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fixa no canto. Lembrar o último reabre como você deixou. Com o painel aberto, OK ou Esquerda/Direita trocam o tamanho. Vale só nesta TV.", "コントロールセンターからライブ統計を開くときのサイズです。フルはすべての数値、コンパクトは主な数値、最小は隅に固定した細い1行を表示します。前回の設定を使うは、最後に選んだサイズで開きます。パネルを開いている間は、OKまたは左右キーでサイズを切り替えられます。このテレビのみ有効です。"),
   T("Tamanho da interface", "インターフェースの大きさ"),
   T("Tamanho da segunda legenda", "第2字幕のサイズ"),
+  T("Tamanho da sinopse", "あらすじのサイズ"),
   T("Tamanho das estatísticas ao vivo", "ライブ統計のサイズ"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "このテレビで途切れず再生できるファイルサイズ"),
   T("Tamanho do buffer", "バッファサイズ"),

@@ -4567,6 +4567,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fixa no canto. Lembrar o último reabre como você deixou. Com o painel aberto, OK ou Esquerda/Direita trocam o tamanho. Vale só nesta TV.", "从控制中心打开实时统计时使用的大小。完整显示所有数据；紧凑显示主要数据；最小是固定在角落的一行细条。记住上次会按你上次留下的大小打开。面板打开时，按确定键或左/右键可切换大小。仅对这台电视有效。"),
   T("Tamanho da interface", "界面大小"),
   T("Tamanho da segunda legenda", "第二字幕大小"),
+  T("Tamanho da sinopse", "简介字号"),
   T("Tamanho das estatísticas ao vivo", "实时统计大小"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "这台电视上能不卡顿播放的文件大小"),
   T("Tamanho do buffer", "缓冲区大小"),

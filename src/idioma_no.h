@@ -4567,6 +4567,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fixa no canto. Lembrar o último reabre como você deixou. Com o painel aberto, OK ou Esquerda/Direita trocam o tamanho. Vale só nesta TV.", "Størrelsen live-statistikken åpnes med fra Kontrollsenteret. Full viser alle målinger; Kompakt de viktigste; Minimal en tynn linje festet i hjørnet. Husk den siste åpner slik du forlot den. Med panelet åpent bytter OK eller Venstre/Høyre størrelse. Gjelder bare denne TV-en."),
   T("Tamanho da interface", "Størrelse på grensesnittet"),
   T("Tamanho da segunda legenda", "Størrelse på sekundær undertekst"),
+  T("Tamanho da sinopse", "Størrelse på sammendrag"),
   T("Tamanho das estatísticas ao vivo", "Størrelse på live-statistikk"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "Filstørrelse som spilles av uten avbrudd på denne TV-en"),
   T("Tamanho do buffer", "Bufferstørrelse"),
