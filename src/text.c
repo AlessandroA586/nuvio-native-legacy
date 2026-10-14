@@ -6,6 +6,7 @@
 #include "idioma.h"
 #include "ajustes.h"
 #include "gfx.h"
+#include "uisizing.h"
 #include "layout.h"
 #include "marco.h"
 #include "bidi.h"
@@ -72,6 +73,7 @@ static int camada;
 static char arabeBoldCaminho[600];   // face Bold real do Noto Naskh (#335), vazio ate txt_iniciar
 static int arabeCorpo;
 static void arabeBoldFechar(void);
+static int pisoCam[TXT_NCAM];
 static float escCamSlot[TXT_NCAM];   // o fator de cada casa (0 = livre; a 0 e sempre 1x)
 static unsigned long usoCam[TXT_NCAM];
 static unsigned long relogioCam;
@@ -292,8 +294,8 @@ static const struct { int corpo, peso; } ESTILOS[TXT_NFONTES] = {
   // ESCALA DOS PAINEIS (30/09, revisao de proporcao): titulo 34, item 26,
   // apoio 22 (NV_FT_PG_FIM). Eram 36 Regular / 24 Bold / 20: o item em Bold
   // pesava mais que o titulo, e o apoio ficava abaixo do piso de leitura.
-  { 34, PESO_MEDIUM },              // cabecalhos dos paineis (Fontes, Legendas, Episodios)
-  { 26, PESO_MEDIUM },              // episodio/fonte/faixa dentro da lista
+  { NV_FT_SHEET_TITLE, PESO_MEDIUM }, // headers
+  { NV_FT_SHEET_BODY, PESO_MEDIUM },  // episode/source/track rows
   { 28, PESO_MEDIUM },              // titulo no card Continuar assistindo
   { 23, PESO_REGULAR },             // temporada e nome do episodio
   { 20, PESO_MEDIUM },              // tempo restante no badge do card
@@ -311,7 +313,7 @@ static const struct { int corpo, peso; } ESTILOS[TXT_NFONTES] = {
   { NV_TOP10_NUM_CORPO, PESO_BOLD },   // numeral do Top 10 da Dinamica
   // Escala das ilhas (text.h). 600 e 800 claros sobre o vidro escuro vao para
   // Bold pela regra optica escrita acima; 400 fica Regular.
-  { 40, PESO_BOLD    },   // TXT_ILHA_TITULO
+  { NV_FT_SHEET_BODY * 20 / 13, PESO_BOLD }, // TXT_ILHA_TITULO
   { 22, PESO_BOLD    },   // TXT_ILHA_SECAO
   { 24, PESO_BOLD    },   // TXT_ILHA_NOME
   { 24, PESO_REGULAR },   // TXT_ILHA_CORPO
@@ -431,6 +433,11 @@ static const struct { int corpo, peso; } ESTILOS[TXT_NFONTES] = {
   { 26, PESO_BOLD   },   // TXT_DET_META_FORTE (meta fica em 26)
   { 26, PESO_MEDIUM },   // TXT_DET_META_GEN
 };
+
+// One base per style, shared by measuring and rasterizing. Legacy 100% stays exact.
+static float corpoAtual(int style) {
+  return pisoCam[camada] ? ui_size_text(ESTILOS[style].corpo, escCam) : ESTILOS[style].corpo;
+}
 
 // RESERVA PARA O QUE A INTER NAO TEM.
 //
@@ -635,7 +642,7 @@ static TTF_Font *reservaDe(Escrita e, TxtEstilo estilo, const char *s) {
     int falta;
     if (!f && !reservaFalhou[e][c][estilo]) {
       f = reservas[e][c][estilo] = TTF_OpenFont(caminhoReserva[e][c],
-                                                (int)(ESTILOS[estilo].corpo * ESC_T + 0.5f));
+                                                (int)(corpoAtual(estilo) * ESC_T + 0.5f));
       if (!f) reservaFalhou[e][c][estilo] = 1;
     }
     if (!f) continue;
@@ -928,7 +935,7 @@ static TTF_Font *fonteLegendaDe(TxtEstilo estilo, const char *s,
 #else
       fontesLegendaLG[i] = TTF_OpenFont("/usr/share/fonts/LG_Display-Regular.ttf",
 #endif
-          (int)(ESTILOS[estilo].corpo * ESC_T + 0.5f));
+          (int)(corpoAtual(estilo) * ESC_T + 0.5f));
       if (!fontesLegendaLG[i] && !avisoFallback[TXT_FAMILIA_LG]) {
         printf("fonte de legenda LG Display indisponivel; usando fallback\n");
         avisoFallback[TXT_FAMILIA_LG] = 1;
@@ -993,7 +1000,7 @@ static TTF_Font *fonteNegritoReal(TxtFamilia familia, TxtEstilo estilo, TTF_Font
     SDL_RWops *rw = SDL_RWFromConstMem(bytesPeso[familia][PESO_BOLD], (int)tamPeso[familia][PESO_BOLD]);
     tentouNegCam[camada][familia][i] = 1;
     if (rw) {
-      int corpo = (int)(ESTILOS[estilo].corpo * ESC_T + 0.5f);
+      int corpo = (int)(corpoAtual(estilo) * ESC_T + 0.5f);
       TTF_Font *bold = TTF_OpenFontRW(rw, 0, corpo);
       int ajustado = bold ? corpoNegrito(fonte, bold, corpo, 0) : corpo;
       if (bold && ajustado != corpo && ajustado >= 4) {
@@ -1099,7 +1106,7 @@ static int carregarFamilia(TxtFamilia familia) {
     } else { buf = bytesPeso[familia][peso]; tam = tamPeso[familia][peso]; }
     rw = SDL_RWFromConstMem(buf, (int)tam);
     fontes[familia][i] = rw
-      ? TTF_OpenFontRW(rw, 0, (int)(ESTILOS[i].corpo * ESC_T + 0.5f))
+      ? TTF_OpenFontRW(rw, 0, (int)(corpoAtual(i) * ESC_T + 0.5f))
       : NULL;
     rwFonte[familia][i] = rw;
     if (!fontes[familia][i]) {
@@ -1139,7 +1146,7 @@ static void abrirEstiloCamada(TxtFamilia familia, int i) {
   if (!buf) return;
   rw = SDL_RWFromConstMem(buf, (int)tam);
   if (!rw) return;
-  fontes[familia][i] = TTF_OpenFontRW(rw, 0, (int)(ESTILOS[i].corpo * ESC_T + 0.5f));
+  fontes[familia][i] = TTF_OpenFontRW(rw, 0, (int)(corpoAtual(i) * ESC_T + 0.5f));
   if (!fontes[familia][i]) { SDL_FreeRW(rw); return; }
   rwFonte[familia][i] = rw;
   if ((familia == TXT_FAMILIA_LG || familia == TXT_FAMILIA_DROID) && peso == PESO_BOLD)
@@ -1170,8 +1177,8 @@ static void fecharCamadaAmpliada(int k) {
       for (int i = 0; i < TXT_NFONTES; i++)
         if (reservasCam[k][e][c][i]) { TTF_CloseFont(reservasCam[k][e][c][i]); reservasCam[k][e][c][i] = NULL; }
   memset(reservaFalhouCam[k], 0, sizeof reservaFalhouCam[k]);
-  // So as linhas DESTE fator: a chave da camada comeca por "E<fator*100>:".
-  snprintf(pre, sizeof pre, "E%d:", (int)(escCamSlot[k] * 100.0f + 0.5f));
+  // Remove only this factor and floor policy from the text cache.
+  snprintf(pre, sizeof pre, "E%dF%d:", (int)(escCamSlot[k] * 100.0f + 0.5f), pisoCam[k]);
   np = strlen(pre);
   for (int i = 0; i < MAX_LINHAS; i++)
     if (cache[i].ocupado && escCamSlot[k] > 0.0f && !strncmp(cache[i].chave, pre, np)) {
@@ -1189,11 +1196,12 @@ static void fecharCamadaAmpliada(int k) {
 // comparacao por casa — e chamada na entrada de quem rasteriza, mede ou desenha.
 static void camadaAtualizar(void) {
   float e = gfx_escala();
+  int floor = e < 1 && gfx_escala_ui() < 1;
   int k, livre = -1, velha = 1;
   if (e == 1.0f) { camada = 0; return; }
-  if (camada > 0 && escCamSlot[camada] == e) { usoCam[camada] = ++relogioCam; return; }
+  if (camada > 0 && escCamSlot[camada] == e && pisoCam[camada] == floor) { usoCam[camada] = ++relogioCam; return; }
   for (k = 1; k < TXT_NCAM; k++) {
-    if (escCamSlot[k] == e) { camada = k; usoCam[k] = ++relogioCam; return; }
+    if (escCamSlot[k] == e && pisoCam[k] == floor) { camada = k; usoCam[k] = ++relogioCam; return; }
     if (escCamSlot[k] <= 0.0f && livre < 0) livre = k;
     if (usoCam[k] < usoCam[velha]) velha = k;
   }
@@ -1201,6 +1209,7 @@ static void camadaAtualizar(void) {
   k = livre > 0 ? livre : velha;
   if (livre < 0) fecharCamadaAmpliada(k);
   escCamSlot[k] = e;
+  pisoCam[k] = floor;
   usoCam[k] = ++relogioCam;
   camada = k;
 }
@@ -1638,7 +1647,7 @@ static TxtLinha linhaCache(TxtEstilo estilo, const char *s, int r, int g, int b,
   // simplificado e de tradicional (ver Escrita), e trocar o idioma da interface
   // nao pode devolver a textura da lingua anterior.
   if (camada)
-    snprintf(chave, sizeof chave, "%sE%d:%d:%d:%d:%d|%02x%02x%02x|%.226s", pre, (int)(escCam * 100.0f + 0.5f),
+    snprintf(chave, sizeof chave, "%sE%dF%d:%d:%d:%d:%d|%02x%02x%02x|%.226s", pre, (int)(escCam * 100.0f + 0.5f), pisoCam[camada],
              (int)familia, (int)estilo, enfase & 3, (int)variacaoCjk(), r & 255, g & 255, b & 255, s);
   else
     snprintf(chave, sizeof chave, "%s%d:%d:%d:%d|%02x%02x%02x|%.232s", pre, (int)familia,
@@ -1754,7 +1763,7 @@ static SDL_Surface *rasterLinha(TxtEstilo estilo, const char *s, SDL_Color cor,
   // reserva nascem com TTF_STYLE_BOLD ligado (ver txt_iniciar); zerar aqui
   // tiraria delas o peso que o app inteiro conta com.
   int estiloAnt, novo = 0;
-  arabeCorpo = (int)(ESTILOS[estilo].corpo * ESC_T + 0.5f);
+  arabeCorpo = (int)(corpoAtual(estilo) * ESC_T + 0.5f);
   if (enfase && bidi_tem_arabe(v) && !txtTemLatim(v) && (enfase & TXT_ENF_NEGRITO)) {   // #335
     TTF_Font *bf = arabeBoldFace(fonte);
     if (bf) fonte = bf;               // a face Bold de verdade
@@ -1899,7 +1908,7 @@ static int larguraLinhaMedir(TxtEstilo estilo, const char *s, TxtFamilia familia
   altDe(familia, estilo, fonte, &a1, &a2);
   const char *v = visualDe(fonte, s, vis, sizeof vis);
   int estiloAnt, novo = 0;
-  arabeCorpo = (int)(ESTILOS[estilo].corpo * ESC_T + 0.5f);
+  arabeCorpo = (int)(corpoAtual(estilo) * ESC_T + 0.5f);
   if (enfase && bidi_tem_arabe(v) && !txtTemLatim(v) && (enfase & TXT_ENF_NEGRITO)) {   // #335
     TTF_Font *bf = arabeBoldFace(fonte);
     if (bf) fonte = bf;               // a face Bold de verdade

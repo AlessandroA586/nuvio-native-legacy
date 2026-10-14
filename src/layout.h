@@ -584,7 +584,11 @@ int layout_modo_mobile(void);
 // (components.css:15282), ja convertidos para o canvas de 1920; o guia
 // parental nao e refeito la e fica com os 22 da regra base.
 #define NV_FT_PG_RELOGIO 26   // .player-clock
-#define NV_FT_PG_FIM     22   // .player-ends-at
+// Side-sheet typography derives from one body size; text.c applies the readable floor.
+#define NV_FT_SHEET_BODY 26
+#define NV_FT_SHEET_TITLE (NV_FT_SHEET_BODY * 17 / 13)
+#define NV_FT_SHEET_META (NV_FT_SHEET_BODY * 11 / 13)
+#define NV_FT_PG_FIM     NV_FT_SHEET_META   // .player-ends-at
 #define NV_FT_PG_ROTULO  22   // .player-parental-label
 #define NV_FT_PG_GRAV    22   // .player-parental-severity
 // Entrelinha (leading) OFICIAL de cada estilo. Usar a altura que o SDL_ttf

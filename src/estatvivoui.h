@@ -26,7 +26,7 @@ void estatvivo_fechar(void);
 int  estatvivo_aberto(void);       // o cartao grande (modal)
 int  estatvivo_fixado(void);       // fixo no tamanho escolhido, sem capturar teclas
 int  estatvivo_tamanho(void);      // EV_TAM_*
-// O retangulo (x y w h, layout 1920x1080) de cada tamanho em cada lado: as medidas
+// Rectangle (x y w h) in the virtual canvas for each size and side: fixed dimensions
 // das laterais do player, FIXAS por tamanho (nao dependem de numero nenhum).
 void estatvivo_retangulo(int tam, int esquerda, float *g);
 void estatvivo_retangulo_atual(float *g);   // do tamanho e do lado de agora

@@ -142,7 +142,7 @@ void gfx_tamanho_alvo(int w, int h) {
 // o fator: elas falam em tela real, nao em layout de camada.
 static float escUi = 1.0f, escAtiva = 1.0f, miniEscAnt = 1.0f;
 static int escUiFixa;   // NUVIO_TAMANHO_UI (capturas): Ajustes nao sobrescreve
-void gfx_escala_ui_definir(float s) { if (!escUiFixa) escUi = (s >= 1.0f && s <= 2.0f) ? s : 1.0f; }
+void gfx_escala_ui_definir(float s) { if (!escUiFixa) escUi = (s >= 0.8f && s <= 2.0f) ? s : 1.0f; }
 float gfx_escala_ui(void) { return escUi; }
 float gfx_escala(void) { return escAtiva; }
 float gfx_escala_entrar(void) { float a = escAtiva; escAtiva = escUi; return a; }
