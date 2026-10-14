@@ -585,6 +585,9 @@ static const char *V_HDR_UI[] = { "Automático", "Desligado" };
 static const char *V_LEG_MOSTRAR[] = { "Só meus idiomas", "Todas" };
 static const char *V_SELOS_PACOTE[] = { "Do Nuvio", "Pacote 1", "Pacote 2", "Pacote 3" };
 
+// Selo de assistido: a ordem e a do disco (0 = Ligado do V_LIGA antigo vira Icone,
+// 1 = Desligado continua), entao o que ja foi gravado nao precisa migrar.
+static const char *V_SELO_VISTO[] = { "Ícone", "Desligado", "Escrito" };
 static const char *V_ICONE_APP[ICONEAPP_N] = {
   "Original", "Fênix", "N verde-água", "TV laranja", "N pixel",
   "Play tricolor", "Arco", "TV viva", "Clube retrô", "Arcade N",
@@ -1347,7 +1350,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Proxy de TS da Live TV",          V_LIGA, 2),          // local: liveTvProxyLocal
   ESC("Relógio na tela",                 V_LIGA, 2),          // local: relogioTelaLocal
   ESC("Posição do relógio",              V_RELOGIO_POS, 3),   // local: relogioPosLocal
-  ESC("Selo de assistido nos pôsteres",  V_LIGA, 2),          // local: seloVistoLocal
+  ESC("Selo de assistido nos pôsteres",  V_SELO_VISTO, 3),    // local: seloVistoLocal
   ESC("Miniaturas na barra de tempo",    V_LIGA, 2),          // local: seekrLocal
   ACAO("Chave do Seekr"),
   ACAO("Testar chave do Seekr"),
@@ -2405,7 +2408,8 @@ void ajustes_leg_contorno_rgb(int *r, int *g, int *b) {
 }
 int ajustes_saida_player_home(void) { return lig(AJ_RELOGIO) && valor[AJ_SAIDA_PLAYER] == 0; }
 int ajustes_manter_video(void) { return ajustes_saida_player_home() && lig(AJ_MANTER_VIDEO) && !SEGURO; }
-int ajustes_selo_visto(void) { return lig(AJ_SELO_VISTO); }
+int ajustes_selo_visto(void) { return valor[AJ_SELO_VISTO] != 1; }
+int ajustes_selo_visto_modo(void) { return valor[AJ_SELO_VISTO] == 1 ? 0 : valor[AJ_SELO_VISTO] == 2 ? 2 : 1; }
 int ajustes_ocultar_filmes_vistos(void) { return lig(AJ_OCULTAR_FILMES_VISTOS); }
 void ajustes_definir_ocultar_filmes_vistos(int ligado) {
   valor[AJ_OCULTAR_FILMES_VISTOS] = ligado ? 0 : 1;
@@ -5801,7 +5805,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_HERO_CATALOGOS: return "De onde vêm os títulos do destaque: os primeiros do catálogo, um sorteio, ou uma fileira da Home. OK troca.";
     case AJ_PS_FUNDO: return "Fundo da tela de escolha de perfil. Filmes: os cartazes do que cada perfil assistiu, numa parede inclinada. Luz: preto com uma luz na cor do perfil. Projetor: sala de cinema antes da sessão. Arte do perfil: o fundo escolhido ao editar o perfil no app Nuvio; sem ele, o avatar desfocado. Ou as listras do login.";
     case AJ_DESCOBRIR: return "Onde fica a tela Descobrir: junto da Busca, como item próprio na barra lateral, ou em lugar nenhum.";
-    case AJ_SELO_VISTO: return "Um check pequeno no canto de cima do pôster dos títulos que você já assistiu, pelo Trakt, pela conta ou marcados nesta TV.";
+    case AJ_SELO_VISTO: return "Marca no pôster dos títulos que você já assistiu: um ícone de check ou a palavra Assistido.";
     case AJ_OCULTAR_FILMES_VISTOS: return "Oculta filmes já assistidos nas fileiras de descoberta. Busca e Biblioteca continuam mostrando todos. Vale para este perfil neste aparelho.";
     case AJ_ROTULOS: return "Escreve o nome do título abaixo do cartaz. A maior parte da arte já traz o nome impresso.";
     case AJ_NOME_ADDON: return "Acrescenta o nome do addon ao título da fileira, para separar dois catálogos com o mesmo nome.";
