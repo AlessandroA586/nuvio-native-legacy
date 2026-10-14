@@ -43,6 +43,7 @@
 #include "qr.h"
 #include "atualizacao.h"
 #include "avisos.h"
+#include "uisizing.h"
 #include "registro.h"
 #include "seguro.h"
 #include "botoes.h"
@@ -661,7 +662,7 @@ static const char *V_FONTE_MODELO[] = { "Personalizado", "Espanhol", "Português
 // "Usar a ordem" dos add-ons (fonteregra.h FR_ORDEM_*): o indice e o gravado.
 static const char *V_FONTE_ORDEM_USO[] = { "Não", "Para desempatar", "Ordem estrita" };
 // Indice gravado em tamanhoUiLocal; o fator sai de ajustes_tamanho_ui.
-static const char *V_TAMANHO_UI[] = { "100%", "120%", "130%", "150%" };
+static const char *V_TAMANHO_UI[] = { "100%", "120%", "130%", "150%", "80%", "85%", "90%", "115%", "Automático" };
 static const char *V_TAMANHO_AJUSTES[] = { "80%", "90%", "100%" };
 static const char *V_INTERFACE_MODO[] = { "TV", "Mobile" };
 static const char *V_MENU_POS[] = { "Na lateral", "No topo" };   // #461
@@ -1379,7 +1380,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Pacote de selos",                 V_SELOS_PACOTE, 4),   // por perfil: selospacote.c
   ACAO("Adicionar pacote de selos"),
   ACAO("Remover pacote"),
-  ESC("Tamanho da interface",            V_TAMANHO_UI, 4),    // local: tamanhoUiLocal
+  ESC("Tamanho da interface",            V_TAMANHO_UI, 9),    // local: tamanhoUiLocal
   ESC("Fundo",                           V_FUNDO, 3),         // local: fundoLocal
   ESC("Opacidade do vidro",              V_VIDRO_OPAC, 5),    // local: vidroOpacLocal
   ESC("Vidro fosco",                     V_VIDRO_FOSCO, 2),   // local: vidroFoscoLocal
@@ -2347,10 +2348,28 @@ int ajustes_relogio_12h(void) { return valor[AJ_RELOGIO_12H] == 1; }
 // GB da faixa de tamanho da escolha automatica; 0 = "Sem limite".
 int ajustes_tamanho_max_gb(void) { int v = valor[AJ_TAM_MAX]; return v < 0 || v >= (int)(sizeof TAMANHO_GB / sizeof *TAMANHO_GB) ? 0 : TAMANHO_GB[v]; }
 int ajustes_tamanho_min_gb(void) { int v = valor[AJ_TAM_MIN]; return v < 0 || v >= (int)(sizeof TAMANHO_GB / sizeof *TAMANHO_GB) ? 0 : TAMANHO_GB[v]; }
+static float tamanhoUiAutomatico(void) {
+  static float factor;
+  if (!factor) {
+    const char *env = getenv("NUVIO_PANEL_INCHES");
+    float inches = env ? (float)atof(env) : 0;
+    if (!inches) inches = ui_size_model(getenv("NUVIO_TV_MODEL"));
+#ifdef NV_WEBOS
+    if (!inches) {
+      char line[256], model[64];
+      avisos_tv_linha(line, sizeof line, model, sizeof model);
+      inches = ui_size_model(model);
+    }
+#endif
+    if (!isfinite(inches) || inches < 20 || inches > 120) inches = 0;
+    factor = ui_size_inches(inches);
+    printf("[ui] tamanho automatico: %.0f\" -> %.0f%%\n", inches, factor * 100);
+  }
+  return factor;
+}
 float ajustes_tamanho_ui(void) {
-  static const float F[] = { 1.0f, 1.2f, 1.3f, 1.5f };
   int v = valor[AJ_TAMANHO_UI];
-  return v >= 0 && v < 4 ? F[v] : 1.0f;
+  return ui_size_choice(v, v == UI_SIZE_AUTO ? tamanhoUiAutomatico() : 1.0f);
 }
 #ifdef AJUSTES_TESTE
 static int ajEscalaTestePct;
@@ -2369,6 +2388,7 @@ float ajustes_tamanho_ajustes(void) {
   if (ajEscalaTestePct) return ajEscalaTestePct / 100.0f;
 #endif
   float s = v >= 0 && v < 3 ? F[v] : 0.8f;
+  if (gfx_escala_ui() < 1) s *= gfx_escala_ui();
   return ajRetrato() ? s * 1.25f : s;
 }
 // The phone always uses List. Keep the stored TV preference unchanged.
@@ -3470,6 +3490,7 @@ void ajustes_dir(const char *dir) {
   if (!dir || !*dir) return;
   snprintf(dirAjustes, sizeof dirAjustes, "%s", dir);
   memoriaEscolhida = 0;
+  valor[AJ_TAMANHO_UI] = UI_SIZE_AUTO;
   fonteregra_carregar();
   fanartCarregar();
   seekrCarregar();
@@ -3493,6 +3514,7 @@ void ajustes_dir(const char *dir) {
     memoriaMigrar();
     if (valor[AJ_TEX_MB] > 0) tex_definir_orcamento_mb(ajustes_tex_mb());
 #endif
+    gfx_escala_ui_definir(ajustes_tamanho_ui());
     interfaceAplicar();
     ajSombraSync();
     return;
