@@ -5,6 +5,13 @@ TMPDIR="${TMPDIR%/}"
 # pastas de um grupo e a escolha gravada por fileira. Sem SDL, sem rede.
 set -eu
 cd "$(dirname "$0")/.."
+# O ciclo da linha "Ordem" no TELEFONE (ctxmenu.c): o tap chama focar E ativar
+# (ponteiro.c), entao o ciclar so pode ser o ativar — de (fn, fn) cada toque
+# andava duas ordens e metade das escolhas ficava inacessivel.
+if grep -nE 'ponteiroOrdemToque, ponteiroOrdemToque' src/ctxmenu.c; then
+  echo "colordem: FALHOU — ctxmenu.c cicla a ordem no focar E no ativar" >&2
+  exit 1
+fi
 flags=()
 if [ "${SANITIZE:-0}" = 1 ]; then flags+=(-fsanitize=address,undefined -fno-omit-frame-pointer); fi
 cc ${flags[@]+"${flags[@]}"} -DFIL_TESTE src/colecoes.c src/redeurl.c src/js.c src/fileiras.c \

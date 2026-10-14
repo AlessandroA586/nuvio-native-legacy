@@ -1578,7 +1578,9 @@ static void desenhaEstilosTelefone(float a) {
   }
   // A LINHA DA ORDEM da colecao no telefone: o mesmo corpo das formas, e o
   // TOQUE (nao a seta) anda as quatro ordens — aplicar continua sendo o toque
-  // numa forma, que grava estilo e ordem juntos (aplicarEstilo).
+  // numa forma, que grava estilo e ordem juntos (aplicarEstilo). O tap chama
+  // focar E ativar (ponteiro.c alvoPorToque): o ciclar so pode ser o ativar —
+  // de (fn, fn) cada toque andava DUAS ordens e pulava o Ano.
   if (ordemLinha) {
     GfxRect r = {g.lista.x, g.lista.y + nEstilos * (EST_TOQUE_LINHA + EST_GAP) - estRolY,
                  g.lista.w, EST_TOQUE_LINHA};
@@ -1588,7 +1590,7 @@ static void desenhaEstilosTelefone(float a) {
       snprintf(rot, sizeof rot, i18n("Ordem: %s"), i18n(fil_ordem_rotulo(ordemSel)));
       if (a > .5f)
         ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, g.lista.y, g.lista.y + g.lista.h,
-                            ponteiroOrdemToque, ponteiroOrdemToque, nEstilos, 0);
+                            ponteiroEstFoco, ponteiroOrdemToque, nEstilos, 0);
       if (k > .01f) {
         if (ajustes_vidro()) gfx_cor(r, .5f, 1, 1, 1, .14f * k * a);
         else gfx_cor(r, .5f, .19f, .195f, .215f, k * a);
