@@ -1449,6 +1449,7 @@
   T("Depois, o CH+ abre sua lista quando quiser.", "Depois, CH+ abre a tua lista quando quiseres."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "Depois, o botão AZUL abre a tua lista quando quiseres."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "Depois, o botão CANAL + abre a tua lista quando quiseres."),
+  T("Desafixar", "Desafixar"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Desativa a barra lateral moderna para escolher entre recolhida e fixa."),
   T("Descanso", "Descanso"),
   T("Descobrir", "Descobrir"),

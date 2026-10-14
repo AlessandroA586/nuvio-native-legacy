@@ -1449,6 +1449,7 @@
   T("Depois, o CH+ abre sua lista quando quiser.", "CH+ odpre vaš seznam, kadar želite."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "Modri gumb odpre vaš seznam, kadar želite."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "Gumb CHANNEL + odpre vaš seznam, kadar želite."),
+  T("Desafixar", "Odpni"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Izklopite sodobno stransko vrstico, da izberete med strnjeno in pripeto."),
   T("Descanso", "Mirovanje"),
   T("Descobrir", "Odkrivaj"),

@@ -4,9 +4,11 @@
 //
 // Tres tamanhos: Completo (todas as medidas), Compacto (as principais) e Minimo
 // (uma linha fina). O painel usa o vidro e as medidas das laterais do player e
-// fica FIXO no tamanho escolhido, no lado da direita ou da esquerda (Ajustes,
+// shares the clock's top/inset and stays fixed at the selected size and side (Ajustes,
 // "Lado das estatisticas"). Modal: OK troca o tamanho; Esquerda/Direita trocam o
-// lado; Baixo fixa onde esta sem roubar teclas; a Central desafixa. Voltar fecha.
+// side; DOWN pins and returns focus to the player. UP focuses a pinned panel;
+// OK resizes, LEFT/RIGHT change side, UP unpins, Back/DOWN return to the player.
+// Back closes an unpinned panel; the Central also unpins.
 // O tamanho de abertura e o dos Ajustes (ou o ultimo usado). Tudo anda na mola
 // (anim.h): abrir/fechar, trocar de tamanho e de lado e os numeros. A amostra corre 1x/s
 // enquanto houver video no player, aberto ou nao — e o que da o pico, a media e
@@ -23,8 +25,8 @@ enum { EV_TAM_COMPLETO, EV_TAM_COMPACTO, EV_TAM_MINIMO, EV_TAM_N };
 
 void estatvivo_abrir(void);
 void estatvivo_fechar(void);
-int  estatvivo_aberto(void);       // o cartao grande (modal)
-int  estatvivo_fixado(void);       // fixo no tamanho escolhido, sem capturar teclas
+int  estatvivo_aberto(void);       // panel owns focus (modal)
+int  estatvivo_fixado(void);       // pinned; UP can focus it without unpinning
 int  estatvivo_tamanho(void);      // EV_TAM_*
 // O retangulo (x y w h, layout 1920x1080) de cada tamanho em cada lado: as medidas
 // das laterais do player, FIXAS por tamanho (nao dependem de numero nenhum).
@@ -46,6 +48,7 @@ typedef struct {
   int plataforma;   // PtvPlataforma
 } EvTelaTeste;
 void estatvivo_teste(const EvEstado *e, const EvTelaTeste *t);
+void estatvivo_teste_layout(float *painel, float *dicas);
 #endif
 
 #endif

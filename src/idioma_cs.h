@@ -1449,6 +1449,7 @@
   T("Depois, o CH+ abre sua lista quando quiser.", "CH+ otevře váš seznam, kdykoli chcete."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "Modré tlačítko otevře váš seznam, kdykoli chcete."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "Tlačítko CHANNEL + otevře váš seznam, kdykoli chcete."),
+  T("Desafixar", "Odepnout"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Vypněte moderní postranní panel, abyste mohli vybírat mezi sbaleným a připnutým."),
   T("Descanso", "Klid"),
   T("Descobrir", "Objevovat"),

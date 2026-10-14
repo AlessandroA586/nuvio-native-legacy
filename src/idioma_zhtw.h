@@ -1449,6 +1449,7 @@
   T("Depois, o CH+ abre sua lista quando quiser.", "之後隨時可按 CH+ 鍵開啟你的清單。"),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "之後隨時可按藍色鍵開啟你的清單。"),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "之後隨時可按頻道 + 鍵開啟你的清單。"),
+  T("Desafixar", "取消固定"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "關閉現代側邊欄後，可選擇收合或固定。"),
   T("Descanso", "螢幕保護"),
   T("Descobrir", "探索"),

@@ -1449,6 +1449,7 @@
   T("Depois, o CH+ abre sua lista quando quiser.", "CH+ bet kada atidaro jūsų sąrašą."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "MĖLYNAS mygtukas bet kada atidaro jūsų sąrašą."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "Mygtukas CHANNEL + bet kada atidaro jūsų sąrašą."),
+  T("Desafixar", "Atsegti"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Išjunkite modernią šoninę juostą, kad galėtumėte rinktis tarp suskleistos ir prisegtos."),
   T("Descanso", "Poilsis"),
   T("Descobrir", "Atraskite"),

@@ -1449,6 +1449,7 @@
   T("Depois, o CH+ abre sua lista quando quiser.", "Sedan öppnar CH+ din lista när du vill."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "Sedan öppnar den BLÅ knappen din lista när du vill."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "Sedan öppnar knappen KANAL + din lista när du vill."),
+  T("Desafixar", "Lossa"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Stäng av det moderna sidofältet för att välja mellan hopfällt och fast."),
   T("Descanso", "Vila"),
   T("Descobrir", "Upptäck"),

@@ -1,10 +1,15 @@
-// Estatisticas ao vivo: o retangulo do painel de cada tamanho e igual as medidas
-// das laterais do player (margem, largura, topo), nao muda com os numeros e o lado
-// esquerdo e o espelho do direito. Sem GL. Ver tests/estatvivo_geom.sh.
+// Live statistics: clock alignment, internal footer, animated side changes and
+// pinned focus navigation. Render the real panel into an offscreen GL target.
 #include "ajustes.h"
+#include "ajustes_ux.h"
 #include "dados.h"
 #include "estatvivoui.h"
 #include "layout.h"
+#include "plrilha.h"
+#include "text.h"
+#include "tex_cache.h"
+#include "perfiltv.h"
+#include <SDL2/SDL_image.h>
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -14,10 +19,38 @@
 static int falhas;
 #define CONFERE(c, ...) do { if (!(c)) { printf("FALHA: " __VA_ARGS__); printf("\n"); falhas++; } } while (0)
 
-// As medidas da lateral de legendas/audio: x = 1920 - margem - IL_W (faixas.c),
-// o corpo logo abaixo da pilula da hora (plrilha.c: Y_TOPO + PIL_H + vao).
+// Sidebar width, with the same top and screen inset as the player clock.
 #define LAT_W 720.0f
-#define LAT_TOPO (NV_ILHA_Y + 56.0f + 14.0f)
+#define LAT_TOPO NV_ILHA_Y
+
+static int key(SDL_Keycode k) {
+  SDL_Event e = {0};
+  e.type = SDL_KEYDOWN;
+  e.key.keysym.sym = k;
+  return estatvivo_evento(&e);
+}
+
+static void frame(int n) {
+  for (int i = 0; i < n; i++) {
+    txt_novo_quadro();
+    tex_novo_quadro();
+    glClear(GL_COLOR_BUFFER_BIT);
+    estatvivo_desenhar(SDL_GetTicks());
+  }
+}
+
+static void shot(const char *path) {
+  SDL_Surface *s = SDL_CreateRGBSurfaceWithFormat(0, 1920, 1080, 32, SDL_PIXELFORMAT_RGBA32);
+  unsigned char *pixels = malloc(1920 * 1080 * 4);
+  assert(s && pixels);
+  glFinish();
+  glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+  for (int y = 0; y < 1080; y++)
+    memcpy((char *)s->pixels + y * s->pitch, pixels + (1079 - y) * 1920 * 4, 1920 * 4);
+  assert(IMG_SavePNG(s, path) == 0);
+  free(pixels);
+  SDL_FreeSurface(s);
+}
 
 int main(void) {
   const char *dir = getenv("NUVIO_DADOS");
@@ -38,7 +71,7 @@ int main(void) {
   for (t = 0; t < EV_TAM_N; t++) {
     CONFERE(fabsf(d[t][0] + d[t][2] - (NV_TELA_W - NV_ILHA_MARGEM_D)) < 0.5f, "tam %d: direita na margem", t);
     CONFERE(fabsf(e[t][0] - NV_ILHA_MARGEM_D) < 0.5f, "tam %d: esquerda na margem", t);
-    CONFERE(fabsf(d[t][1] - LAT_TOPO) < 0.5f && fabsf(e[t][1] - LAT_TOPO) < 0.5f, "tam %d: abaixo da pilula da hora", t);
+    CONFERE(fabsf(d[t][1] - LAT_TOPO) < 0.5f && fabsf(e[t][1] - LAT_TOPO) < 0.5f, "size %d: aligned to clock top", t);
     CONFERE(d[t][2] == e[t][2] && d[t][3] == e[t][3], "tam %d: o lado esquerdo e o espelho do direito", t);
     CONFERE(e[t][0] + e[t][2] / 2 + (d[t][0] + d[t][2] / 2) > 0 && fabsf((e[t][0] - NV_ILHA_MARGEM_D) - (NV_TELA_W - NV_ILHA_MARGEM_D - (d[t][0] + d[t][2]))) < 0.5f,
             "tam %d: x espelhado", t);
@@ -61,6 +94,100 @@ int main(void) {
       CONFERE(memcmp(g, (i & 1) ? e[t] : d[t], sizeof g) == 0, "tam %d quadro %d: retangulo muda com os valores", t, i);
     }
   ajustes_definir_estat_lado(0);
+  char settings[700];
+  snprintf(settings, sizeof settings, "%s/ajustes.txt", dir);
+  FILE *f = fopen(settings, "w");
+  assert(f);
+  fputs("idioma 1\n", f);
+  fclose(f);
+  ajustes_dir(dir);
+  assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+  SDL_Window *window = SDL_CreateWindow("Statistics layout", 0, 0, 64, 64, SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN);
+  assert(window);
+  SDL_GLContext context = SDL_GL_CreateContext(window);
+  assert(context);
+  GLuint texture, fbo;
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1920, 1080, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+  glGenFramebuffers(1, &fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+  assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+  glViewport(0, 0, 1920, 1080);
+  gfx_tamanho_alvo(1920, 1080);
+  assert(gfx_iniciar() && txt_iniciar("deploy/app", 1));
+  ajustes_recursos("deploy/app/art");
+  gfx_icones_dir("deploy/app/art");
+  tex_iniciar(64);
+  GfxRect clock;
+  for (i = 0; i < 120; i++) {
+    plrilha_relogio(1, 3600);
+    plrilha_desenhar(SDL_GetTicks());
+  }
+  assert(plrilha_rect(&clock));
+  memset(&tela, 0, sizeof tela);
+  snprintf(tela.titulo, sizeof tela.titulo, "Animals");
+  snprintf(tela.sub, sizeof tela.sub, "2026 · 106 min · 4K Dolby Vision");
+  snprintf(tela.audio, sizeof tela.audio, "E-AC-3 5.1 · English");
+  snprintf(tela.resolucao, sizeof tela.resolucao, "3840 × 2160");
+  snprintf(tela.codecHdr, sizeof tela.codecHdr, "Dolby Vision");
+  tela.plataforma = PTV_ANDROID;
+  ev_zerar(&est);
+  est.velOrigem = est.bufOrigem = est.servOrigem = est.quadrosOrigem = EVO_MEDIDO;
+  est.kbps = 53100; est.mediaKbps = 62000; est.picoKbps = 113000;
+  est.bufSeg = 46; est.bufAlvo = 50; est.conexoes = 1;
+  est.primeiroByteMs = 448; est.quadros = 589;
+  snprintf(est.host, sizeof est.host, "20.download.real-debrid.com");
+  estatvivo_teste(&est, &tela);
+  estatvivo_abrir();
+  SDL_Delay(650);
+  float panel[4], hints[4];
+  frame(1);
+  estatvivo_teste_layout(panel, hints);
+  CONFERE(panel[2] < LAT_W - 1 && panel[3] < d[0][3] - 1, "opening grows from clock, not final size");
+  CONFERE(fabsf(panel[1] - clock.y) < 0.5f, "opening shares clock top");
+  for (t = 0; t < EV_TAM_N; t++) {
+    frame(120);
+    estatvivo_teste_layout(panel, hints);
+    CONFERE(fabsf(panel[1] - clock.y) < 0.5f, "size %d: panel aligned to clock top", t);
+    CONFERE(fabsf(panel[0] + panel[2] - clock.x - clock.w) < 0.5f, "size %d: clock side margin", t);
+    CONFERE(hints[2] > 0 && hints[0] >= panel[0] && hints[1] >= panel[1] &&
+            hints[0] + hints[2] <= panel[0] + panel[2] + 0.5f &&
+            hints[1] + hints[3] <= panel[1] + panel[3], "size %d: hints inside glass", t);
+    if (t == 0) shot("/Volumes/ExternalSSD/tmp/rev/estatpainel2-full.png");
+    key(SDLK_RETURN);
+  }
+  frame(120);   // Settle the last size change before measuring side motion.
+  key(SDLK_DOWN);
+  CONFERE(estatvivo_fixado() && !estatvivo_aberto(), "DOWN pins and returns focus");
+  CONFERE(!key(SDLK_LEFT) && !key(SDLK_RETURN), "pinned player keeps seek/OK");
+  CONFERE(key(SDLK_UP) && estatvivo_aberto() && estatvivo_fixado(), "UP focuses pinned panel");
+  key(SDLK_LEFT);
+  CONFERE(ajustes_estat_lado() && estatvivo_fixado(), "LEFT moves pinned panel");
+  frame(1);
+  estatvivo_teste_layout(panel, hints);
+  CONFERE(panel[0] > NV_ILHA_MARGEM_D && panel[0] < d[0][0], "pinned side switch animates");
+  frame(120);
+  estatvivo_teste_layout(panel, hints);
+  CONFERE(fabsf(panel[0] - NV_ILHA_MARGEM_D) < 0.5f, "pinned panel settles left");
+  shot("/Volumes/ExternalSSD/tmp/rev/estatpainel2-pinned-left.png");
+  key(SDLK_RIGHT);
+  CONFERE(!ajustes_estat_lado() && estatvivo_fixado(), "RIGHT moves pinned panel");
+  key(SDLK_RETURN);
+  CONFERE(estatvivo_tamanho() == EV_TAM_COMPACTO && estatvivo_fixado(), "OK resizes while pinned");
+  key(SDLK_ESCAPE);
+  CONFERE(!estatvivo_aberto() && estatvivo_fixado() && !key(SDLK_RETURN), "Back returns focus, preserves pin");
+  key(SDLK_UP); key(SDLK_DOWN);
+  CONFERE(!estatvivo_aberto() && estatvivo_fixado(), "DOWN returns focus, preserves pin");
+  key(SDLK_UP); key(SDLK_UP);
+  CONFERE(estatvivo_aberto() && !estatvivo_fixado(), "UP in panel unpins");
+  key(SDLK_ESCAPE);
+  CONFERE(!estatvivo_aberto() && !estatvivo_fixado(), "Back closes unpinned panel");
+  tex_encerrar(); txt_encerrar(); gfx_encerrar();
+  SDL_GL_DeleteContext(context); SDL_DestroyWindow(window); SDL_Quit();
   if (falhas) { printf("%d falha(s)\n", falhas); return 1; }
   puts("PASS: estatisticas ao vivo (geometria)");
   return 0;

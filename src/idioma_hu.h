@@ -1449,6 +1449,7 @@
   T("Depois, o CH+ abre sua lista quando quiser.", "CH+ bármikor megnyitja a listádat."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "A KÉK gomb bármikor megnyitja a listádat."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "A CHANNEL + gomb bármikor megnyitja a listádat."),
+  T("Desafixar", "Leválasztás"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Kapcsold ki a modern oldalsávot, hogy válaszhass az összecsukott és a rögzített között."),
   T("Descanso", "Pihenő"),
   T("Descobrir", "Felfedezés"),

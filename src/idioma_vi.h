@@ -1449,6 +1449,7 @@
   T("Depois, o CH+ abre sua lista quando quiser.", "CH+ mở danh sách của bạn bất cứ khi nào bạn muốn."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "Nút XANH DƯƠNG mở danh sách của bạn bất cứ khi nào bạn muốn."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "Nút CHANNEL + mở danh sách của bạn bất cứ khi nào bạn muốn."),
+  T("Desafixar", "Bỏ ghim"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Tắt thanh bên hiện đại để chọn giữa thu gọn và ghim cố định."),
   T("Descanso", "Nghỉ"),
   T("Descobrir", "Khám phá"),

@@ -1448,6 +1448,7 @@
   T("Depois, o CH+ abre sua lista quando quiser.", "Після цього CH+ відкриває ваш список, коли захочете."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "Після цього СИНЯ кнопка відкриває ваш список, коли захочете."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "Після цього кнопка КАНАЛ + відкриває ваш список, коли захочете."),
+  T("Desafixar", "Відкріпити"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Вимкніть сучасну бічну панель, щоб обрати між згорнутою й закріпленою."),
   T("Descanso", "Заставка"),
   T("Descobrir", "Відкривайте"),
