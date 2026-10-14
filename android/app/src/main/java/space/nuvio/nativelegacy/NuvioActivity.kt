@@ -267,7 +267,7 @@ class NuvioActivity : SDLActivity() {
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= 5) org.libsdl.app.SDLActivity.nativeLowMemory()
+        if (level >= 5) SDLActivity.nativeLowMemory()
         // Antes de a libmain.so carregar nao ha para quem avisar.
         try { nativeTrimMemoria(level) } catch (_: UnsatisfiedLinkError) { }
     }
