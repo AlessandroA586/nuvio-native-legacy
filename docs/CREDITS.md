@@ -12,3 +12,6 @@ copyright, noted here and in a header comment at the adapted code.
   Kawase taps, `fs_glass` shading, lowbias32 dither texture) from
   `rust-modules/gfx/src/gfx.rs`, `shaders/fs_blur.frag` and
   `shaders/fs_glass.frag`. See `docs/issues/vidro-plx.md`.
+- Adapted in `src/menu.c` (top bar: tab strip geometry, travelling selection
+  and focus capsules) from `rust-modules/ui/src/widgets.rs` (`draw_tab_row`,
+  `TabStrip`, `Capsule`) and its geometry/motion tests.
