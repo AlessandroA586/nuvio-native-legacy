@@ -1155,7 +1155,10 @@ static void soltarHandleDesde(void *c, int r, const char *url, unsigned primeira
   if (avisoSaude) {
     long http = 0;
     if (curl_getinfo) curl_getinfo(c, INFO_RESPONSE_CODE, &http);
-    avisoSaude(http > 0 && r != 42 && r != 23 ? 0 : r, url, primeiraMs);
+    // #382: "Resolving timed out" (28 sem resolver) vai como codigo proprio:
+    // o resolvedor da TV demora minutos depois do boot sem a casa estar fora.
+    avisoSaude(http > 0 && r != 42 && r != 23 ? 0
+               : r == 28 && strstr(redeErroBuf, "Resolving timed out") ? 1028 : r, url, primeiraMs);
   }
   if (avisoHost) {
     long http = 0;
@@ -2311,6 +2314,29 @@ char *rede_postar_st(const char *url, int segundos, const char *const *cab,
 #else
   return postarNativo(url, segundos, cab, corpo, status, 0);
 #endif
+}
+
+// #382: o resolvedor da TV falha por minutos depois do boot ("Resolving timed out").
+// Falha de transporte (status 0) tenta de novo com espera crescente; resposta
+// HTTP, ou tentativa que gastou o prazo inteiro, encerra.
+#ifndef REDE_POST_ESPERA_MS
+#define REDE_POST_ESPERA_MS 1000
+#endif
+char *rede_postar_repetindo(const char *url, int segundos, const char *const *cab,
+                            const char *corpo, int *status, int tentativas) {
+  char *r = NULL;
+  int k;
+  for (k = 0; k < tentativas || k == 0; k++) {
+    unsigned long t0 = redeAgoraMs();
+    r = rede_postar_st(url, segundos, cab, corpo, status);
+    if (r || !status || *status != 0 || k + 1 >= tentativas) break;
+    if (redeAgoraMs() - t0 >= (unsigned long)segundos * 1000UL * 3 / 4) break;
+    { struct timespec d;
+      unsigned long ms = (unsigned long)REDE_POST_ESPERA_MS << k;
+      d.tv_sec = (time_t)(ms / 1000); d.tv_nsec = (long)(ms % 1000) * 1000000L;
+      nanosleep(&d, NULL); }
+  }
+  return r;
 }
 
 char *rede_postar_seguro_st(const char *url, int segundos, const char *const *cab,
