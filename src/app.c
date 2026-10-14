@@ -5119,7 +5119,8 @@ void app_atualizar(float dt, Uint32 agora) {
     case TELA_AJUSTES:    ajustes_atualizar(dt, agora);    break;
     case TELA_DIAGNOSTICO: diagnostico_atualizar(dt, agora); break;
     case TELA_LIVETV_DIAG: livetvdiag_atualizar(dt, agora); break;
-    default:              home_atualizar(dt, agora);       break;
+    default:              home_painel_aberto(spainel_aberto());
+                          home_atualizar(dt, agora);       break;
   }
   // TRAILER NO DESTAQUE: so com a home na frente de tudo. A lista e a mesma
   // ordem de app_evento — o que come tecla antes da home tambem esta na

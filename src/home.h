@@ -84,6 +84,7 @@ int home_streaming_barra(const int **pastas);
 // A home continua se montando mas NAO esta na tela (escolha de perfil): o
 // destaque nao gira nem pre-busca enquanto estiver escondida.
 void home_oculta(int oculta);
+void home_painel_aberto(int aberto);   // painel de Salvos/Social na frente: o carrossel nao gira
 void home_encerrar(void);
 // Registra o titulo interrompido para a faixa contextual "Retomar agora".
 // A faixa so existe enquanto o progresso fizer sentido (nem inicio nem fim).

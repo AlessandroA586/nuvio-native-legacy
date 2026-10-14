@@ -3188,6 +3188,14 @@ void home_ir_topo(void) {
 // detalhe/player na frente: o hero nao muda e o relogio e rearmado na volta.
 static int homeOculta;
 void home_oculta(int oculta) { homeOculta = oculta ? 1 : 0; }
+// O painel de Salvos/Social na frente: a home de tras fica congelada numa copia
+// (spainel_fundo) e so e desenhada nas repinturas dela, entao o carrossel nao
+// pode girar por baixo: a troca e efetivada no DESENHO e uma repintura caia no
+// quadro inicial dela (texto em opacidade 0, arte velha ja despejada), que a
+// copia guardava ate fechar o painel (relato do dono, 13/10: sem fileiras e sem
+// destaque atras do painel).
+static int homePainel, homePainelFoi;
+void home_painel_aberto(int aberto) { homePainel = aberto ? 1 : 0; }
 
 // Pede (uma vez por posicao) a arte do hero de heroAtual+-1, em prioridade
 // baixa. Barato no quadro: depois de pedidos os dois, so compara dois inteiros;
@@ -3277,7 +3285,8 @@ void home_atualizar(float dt, Uint32 agora) {
   // troca vencer nesse intervalo, a volta exibiria uma arte que nunca foi
   // observada e a seleção de logo poderia divergir do detalhe que acabou de
   // sair. O relógio é rearmado na volta, preservando a escolha visível.
-  const int heroOculto = detail_aberto() || player_aberto() || homeOculta;
+  const int heroOculto = detail_aberto() || player_aberto() || homeOculta || homePainel;
+  if (homePainel) homePainelFoi = 1;
   static int heroOcultoAntes;
   if (heroOculto) {
     if (!heroOcultoAntes) {
@@ -3294,6 +3303,12 @@ void home_atualizar(float dt, Uint32 agora) {
     heroTrocaEm = agora + NV_HERO_INTERVALO_MS;
     heroDesejado = -1;
     heroOcultoAntes = 0;
+    // Fechar o painel nao e "voltar de outra tela" (a copia mantem
+    // fileirasVistasEm fresco, ver home_fileiras_vistas), entao `reentra` nao
+    // dispara: quem tinha voltado um titulo na home (heroAutoDesligado) ficava
+    // sem o carrossel ate sair e entrar de novo.
+    if (homePainelFoi) heroAutoDesligado = 0;
+    homePainelFoi = 0;
   }
 
   const int motionReduzido = ajustes_animacoes_reduzidas();
