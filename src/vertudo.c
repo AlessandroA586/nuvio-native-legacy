@@ -827,7 +827,7 @@ static void menuOk(void) {
     tabCursor = cat;
   }
   n = abasDoTipo(abaSerie(source), idx);
-  if (n < 2) { tabFocus = 0; return; }
+  if (n < 2) { tabFocus = 0; if (desc_vertudo_erro()) desc_vertudo_mais(); return; }
   ddAberto = 1; ddCursor = 0;
   for (int i = 0; i < n; i++) if (idx[i] == source) ddCursor = i;
 }
@@ -838,7 +838,7 @@ static void ddEvento(SDL_Keycode k) {
   else if (k == SDLK_LEFT || k == SDLK_RIGHT) ddAberto = 0;
   else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
     ddAberto = 0;
-    if (ddCursor < n && idx[ddCursor] != source) { source = idx[ddCursor]; openSource(); }
+    if (ddCursor < n && (idx[ddCursor] != source || desc_vertudo_erro())) { source = idx[ddCursor]; openSource(); }
     tabFocus = 0;
   }
 }
@@ -1210,6 +1210,12 @@ void vertudo_evento(const SDL_Event *e) {
   }
   if (n > VT_MAX) n = VT_MAX;
   if (lay == VT_LAY_VITRINE) { vitEvento(k); return; }
+  // #414: OK on the current catalog retries even while the header has focus.
+  // Other tabs, the layout button and the Menu selector (menuOk) keep theirs.
+  if ((k == SDLK_RETURN || k == SDLK_KP_ENTER) && desc_vertudo_erro() &&
+      (!collection || !tabFocus || (estiloAbas() != VT_AB_MENU && tabCursor < cabN() && tabCursor == cursorInicial()))) {
+    desc_vertudo_mais(); return;
+  }
   if(collection&&tabFocus) {
     int na = cabN(), est = estiloAbas();
     if(ddAberto) { ddEvento(k); return; }
@@ -1233,7 +1239,6 @@ void vertudo_evento(const SDL_Event *e) {
   }
   if (celLay != lay || celN != n) montar(n);
   if(k==SDLK_UP&&collection&&(n<1||celLin[foco]==0)){tabFocus=1;tabCursor=cursorInicial();return;}
-  if((k==SDLK_RETURN||k==SDLK_KP_ENTER)&&desc_vertudo_erro()){desc_vertudo_mais();return;}
   // ESQUERDA no primeiro item de uma linha: a barra lateral (ver pedMenu).
   if (k == SDLK_LEFT && (n < 1 || foco == 0 || celLin[foco - 1] != celLin[foco])) { pedMenu = 1; return; }
   if (n < 1) return;
