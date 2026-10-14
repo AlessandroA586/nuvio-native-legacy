@@ -2696,8 +2696,7 @@ void app_evento(const SDL_Event *e) {
   // "Pular abertura"), so o painel ABERTO come o teclado: o CIMA que o
   // focaria fica de quem esta na frente (a folha mora mais abaixo nesta fila).
   if (estatvivo_evento(e, faixas_aberta() || episodios_aberto() || stream_folha_aberta() ||
-                        guia_overlay_aberta() || avisos_aberto() || player_foco_na_barra() ||
-                        player_foco_no_pulo())) return;
+                        guia_overlay_aberta() || avisos_aberto() || player_cima_dele())) return;
   // O MODAL DA ILHA (ilha.h) e uma camada: aberto, come o teclado todo.
   if (ilha_evento(e)) return;
   // A CENTRAL DE AVISOS vem logo depois do painel de log: com o toast na tela

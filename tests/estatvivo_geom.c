@@ -224,18 +224,18 @@ int main(void) {
     checkGeometry(t, panel, hints);
     key(SDLK_RETURN);
   }
-  // Clock geometry is virtual; statistics are drawn in screen coordinates.
+  // Clock and panel both lay out in the virtual screen; gfx scales them once.
   for (int s = 0; s < 3; s++) {
     float scale = (float[]){1.0f, 1.2f, 1.5f}[s];
     gfx_escala_ui_definir(scale);
     for (t = 0; t < EV_TAM_N; t++) {
       frame(120);
       estatvivo_teste_layout(panel, hints);
-      CONFERE(fabsf(panel[1] - clock.y * scale) < 0.5f, "scale %.1f size %d: physical clock top", scale, t);
-      CONFERE(fabsf(NV_TELA_W - panel[0] - panel[2] - NV_ILHA_MARGEM_D * scale) < 0.5f,
-              "scale %.1f size %d: physical clock margin", scale, t);
+      CONFERE(fabsf(panel[1] - clock.y) < 0.5f, "scale %.1f size %d: virtual clock top", scale, t);
+      CONFERE(fabsf(NV_TELA_W - panel[0] - panel[2] - NV_ILHA_MARGEM_D) < 0.5f,
+              "scale %.1f size %d: virtual clock margin", scale, t);
       estatvivo_retangulo(t, 1, g);
-      CONFERE(fabsf(g[0] - NV_ILHA_MARGEM_D * scale) < 0.5f && fabsf(g[1] - clock.y * scale) < 0.5f,
+      CONFERE(fabsf(g[0] - NV_ILHA_MARGEM_D) < 0.5f && fabsf(g[1] - clock.y) < 0.5f,
               "scale %.1f size %d: left uses clock inset and top", scale, t);
       key(SDLK_RETURN);
     }
@@ -299,6 +299,11 @@ int main(void) {
   key(SDLK_DOWN);
   CONFERE(estatvivo_fixado() && !estatvivo_aberto(), "DOWN pins and returns focus");
   CONFERE(!key(SDLK_LEFT) && !key(SDLK_RETURN), "pinned player keeps seek/OK");
+  {
+    SDL_Event up = {0};
+    up.type = SDL_KEYDOWN; up.key.keysym.sym = SDLK_UP;
+    CONFERE(!estatvivo_evento(&up, 1) && !estatvivo_aberto(), "UP stays with player when it owns UP");
+  }
   CONFERE(key(SDLK_UP) && estatvivo_aberto() && estatvivo_fixado(), "UP focuses pinned panel");
   key(SDLK_LEFT);
   CONFERE(ajustes_estat_lado() && estatvivo_fixado(), "LEFT moves pinned panel");

@@ -7,6 +7,7 @@
 #include "linguas.h"
 #include "catalogo.h"
 #include "dados.h"
+#include "escala.h"
 #include "gfx.h"
 #include "idioma.h"
 #include "idiomacod.h"
@@ -31,8 +32,8 @@
 
 // Match the clock's top and screen inset. Fixed sizes keep live samples from
 // moving the panel; reserve an internal footer at every size.
-#define EVU_MARG       (NV_ILHA_MARGEM_D * gfx_escala_ui())
-#define EVU_TOPO       (NV_ILHA_Y * gfx_escala_ui())
+#define EVU_MARG       NV_ILHA_MARGEM_D
+#define EVU_TOPO       NV_ILHA_Y
 #define EVU_RAIO       36.0f     // RAIO_CORPO de plrilha.c
 #define EVU_PAD        32.0f
 #define EVU_TILE_PAD   32.0f
@@ -928,7 +929,7 @@ static void desenhaEdicao(GfxRect p, float a) {
   }
 }
 
-void estatvivo_desenhar(Uint32 agora) {
+static void desenharVirtual(Uint32 agora) {
   int i, quer = aberto || fixado, desenho = tamanho;
   int inicial = entraA == 0;
   float fase, o;
@@ -952,9 +953,7 @@ void estatvivo_desenhar(Uint32 agora) {
   // Reuse the player clock's origin and the shared rectangle spring.
   if (quer && inicial) {
     GfxRect clock = { NV_TELA_W - EVU_MARG - NV_ILHA_REP_W, EVU_TOPO, NV_ILHA_REP_W, EVU_PH };
-    if (plrilha_rect(&clock)) {
-      float s = gfx_escala_ui(); clock.x *= s; clock.y *= s; clock.w *= s; clock.h *= s;
-    }
+    plrilha_rect(&clock);
     ret[0] = clock.x; ret[1] = clock.y; ret[2] = clock.w; ret[3] = clock.h;
     for (i = 0; i < 4; i++) retV[i] = 0;
     for (i = 0; i < EV_TAM_N; i++) contA[i] = i == desenho ? 1.0f : 0.0f;
@@ -994,6 +993,12 @@ void estatvivo_desenhar(Uint32 agora) {
   gfx_sem_recorte();
 }
 
+// The panel lays out in the virtual screen like the clock island (Interface size).
+void estatvivo_desenhar(Uint32 agora) {
+  ESCALA_INI();
+  desenharVirtual(agora);
+  ESCALA_FIM();
+}
 
 #ifdef ESTATVIVO_TESTE
 void estatvivo_teste(const EvEstado *e, const EvTelaTeste *t) {
