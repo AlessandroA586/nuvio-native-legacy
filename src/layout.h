@@ -234,7 +234,7 @@ int layout_modo_mobile(void);
 #define NV_COLLECTION_HERO_LOGO_MAX_H   150.0f
 #define NV_COLLECTION_HERO_CAPTION_Y    448.0f
 // line-height do CSS: sinopse 22*1.35, meta 21*1.25, secundaria 18*1.35.
-#define NV_LD_HERO_SIN   32
+#define NV_LD_HERO_SIN   30
 #define NV_LD_HERO_META  26
 #define NV_LD_HERO_SEC   24
 // MEDIDO no app web: o titulo da primeira fileira fica em y=518 e os cards em
@@ -571,7 +571,7 @@ int layout_modo_mobile(void);
 // .home-modern-hero-secondary: 18/600 na sessao logada.
 #define NV_FT_HERO_SEC   18   // --modern-hero-secondary-size (212*0.085)
 #define NV_FT_HERO_META  21   // --modern-hero-meta-size (212*0.1), peso 500
-#define NV_FT_HERO_SIN   24   // era 22 (#477, sinopse pequena na TV), peso 400
+#define NV_FT_HERO_SIN   22   // original hero synopsis, peso 400
 // Tela de DETALHE, medidos no app web rodando (getBoundingClientRect e
 // getComputedStyle sobre .series-detail-shell), nao lidos da folha.
 #define NV_FT_DET_BOTAO  25   // .series-primary-btn (peso 600)

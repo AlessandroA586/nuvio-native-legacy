@@ -4609,6 +4609,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fina. Lembrar o último reabre como você deixou. Com o painel aberto, OK troca o tamanho, Esquerda/Direita trocam o lado e Baixo fixa o painel no tamanho escolhido. Vale só nesta TV.", "Dydis, kuriuo Tiesioginė statistika atsidaro iš Valdymo centro. Pilnas rodo visus matavimus; Kompaktiškas – pagrindinius; Minimalus – ploną eilutę. Prisiminti paskutinį atidaro taip, kaip palikote. Kai skydelis atidarytas, OK keičia dydį, Kairė/Dešinė keičia pusę, o Žemyn užfiksuoja skydelį pasirinkto dydžio. Galioja tik šiam televizoriui."),
   T("Tamanho da interface", "Sąsajos dydis"),
   T("Tamanho da segunda legenda", "Antrųjų subtitrų dydis"),
+  T("Tamanho da sinopse", "Santraukos dydis"),
   T("Tamanho das estatísticas ao vivo", "Tiesioginės statistikos dydis"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "Failo dydis, kuris šiame televizoriuje groja be sustojimų"),
   T("Tamanho do buffer", "Buferio dydis"),

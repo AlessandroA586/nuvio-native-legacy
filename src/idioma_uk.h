@@ -4608,6 +4608,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fina. Lembrar o último reabre como você deixou. Com o painel aberto, OK troca o tamanho, Esquerda/Direita trocam o lado e Baixo fixa o painel no tamanho escolhido. Vale só nesta TV.", "Розмір, з яким Статистика наживо відкривається через Пункт керування. Повний показує всі виміри; Компактно — основні; Мінімальний — тонкий рядок. Останній вибір відкриває так, як ви залишили. Коли панель відкрита, OK змінює розмір, Ліворуч/Праворуч змінюють бік, а Вниз фіксує панель у вибраному розмірі. Діє лише на цьому телевізорі."),
   T("Tamanho da interface", "Розмір інтерфейсу"),
   T("Tamanho da segunda legenda", "Розмір других субтитрів"),
+  T("Tamanho da sinopse", "Розмір синопсису"),
   T("Tamanho das estatísticas ao vivo", "Розмір статистики наживо"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "Розмір файлу, який відтворюється без зупинок на цьому телевізорі"),
   T("Tamanho do buffer", "Розмір буфера"),

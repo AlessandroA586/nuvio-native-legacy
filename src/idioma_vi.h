@@ -4609,6 +4609,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fina. Lembrar o último reabre como você deixou. Com o painel aberto, OK troca o tamanho, Esquerda/Direita trocam o lado e Baixo fixa o painel no tamanho escolhido. Vale só nesta TV.", "Kích thước khi Thống kê trực tiếp mở từ Trung tâm điều khiển. Đầy đủ hiện mọi số đo; Gọn hiện số đo chính; Tối giản là một dòng mảnh. Nhớ lần cuối mở lại như bạn đã để. Khi bảng đang mở, OK đổi kích thước, Trái/Phải đổi bên và Xuống ghim bảng ở kích thước đã chọn. Chỉ áp dụng cho TV này."),
   T("Tamanho da interface", "Kích thước giao diện"),
   T("Tamanho da segunda legenda", "Cỡ phụ đề thứ hai"),
+  T("Tamanho da sinopse", "Kích thước tóm tắt"),
   T("Tamanho das estatísticas ao vivo", "Kích thước thống kê trực tiếp"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "Dung lượng tệp phát không ngắt quãng trên TV này"),
   T("Tamanho do buffer", "Kích thước bộ đệm"),

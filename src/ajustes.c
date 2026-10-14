@@ -581,6 +581,7 @@ typedef enum {
   AJ_HERO_GENERO,
   // #205: nome do add-on na tela Cinema da abertura. 1 = Desligado de fabrica. LOCAL, append-only.
   AJ_ABERTURA_ADDON,
+  AJ_HERO_SINOPSE,
   // #205: tamanho dos cards de episodio da pagina do titulo (Moderna). 0 Pequeno, 1 Medio (de fabrica), 2 Grande. LOCAL, append-only.
   AJ_EP_TAMANHO,
   AJ_N
@@ -859,6 +860,7 @@ static const char *V_NOTAS[]     = { "Mostrar", "Ocultar" };
 // O INDICE e o gravado ("heroFundoLocal N"): ordem e contrato (ARTEHERO_*).
 // 23/09/2026: Apple TV, fanart.tv e Anime entraram NO FIM (5, 6, 7), pelo
 // mesmo contrato — quem ja tinha 1..4 gravado continua lendo a mesma fonte.
+static const char *V_HERO_SINOPSE[] = { "Normal", "Grande" };
 static const char *V_HERO_FONTE[] = {
   "Automático", "Catálogo / Cinemeta", "IMDb / Metahub", "TMDB", "Trakt",
   "Apple TV", "fanart.tv", "Anime (Kitsu / AniList)"
@@ -1485,6 +1487,7 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Dicas do controle"),
   ESC("Mostrar gênero no destaque", V_LIGA, 2),   // local: heroGeneroLocal
   ESC("Mostrar addon na abertura", V_LIGA, 2),   // local: aberturaAddonLocal (#205)
+  ESC("Tamanho da sinopse", V_HERO_SINOPSE, 2),
   ESC("Tamanho dos cards de episódio", V_EP_TAMANHO, 3), // local: epTamanhoLocal (#205)
 };
 
@@ -1741,6 +1744,7 @@ static const char *CHAVE[] = {
   "-dicasControle",
   "heroGeneroLocal",
   "aberturaAddonLocal",
+  "heroSynopsisSizeLocal",
   "epTamanhoLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
@@ -2584,6 +2588,7 @@ int ajustes_rail_moderna_blur(void)   { return lig(AJ_RAIL_BLUR); }
 int ajustes_hero_ligado(void)         { return lig(AJ_HERO); }
 int ajustes_hero_genero(void) { return lig(AJ_HERO_GENERO); }
 int ajustes_hero_cheio(void)          { return lig(AJ_HERO_CHEIO); }
+int ajustes_hero_sinopse_grande(void) { return valor[AJ_HERO_SINOPSE] == 1; }
 int ajustes_home_layout(void) {
   int v = valor[AJ_HOME_LAYOUT];
   return v >= 0 && v < HOME_LAYOUT_N ? v : HOME_LAYOUT_MODERNA;
@@ -4492,6 +4497,7 @@ static int somenteDesteAparelho(int op) {
     // heroDifferentFromCard); ficam neste aparelho mesmo que um blob futuro
     // traga algo com o mesmo nome.
     case AJ_HERO_FUNDO:
+    case AJ_HERO_SINOPSE:
     case AJ_HERO_ARTE_DIF:
     case AJ_HERO_GENERO:
     // Fonte do trailer: o que toca depende da TV (YouTube so na Samsung; o
@@ -8278,6 +8284,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_FONTE_ORDEM: case AJ_FONTE_ORDEM_USO:
       return AJPV_REPRO;
     case AJ_HOME_LAYOUT:
+    case AJ_HERO_SINOPSE:
     case AJ_LANDSCAPE: case AJ_HERO_CHEIO: case AJ_HERO_FUNDO:
     case AJ_HERO_ARTE_DIF: case AJ_HERO_TRAILER: case AJ_FIL_LIMITE:
     case AJ_ESPACO_FILEIRAS: case AJ_ESPACO_TITULOS:

@@ -4608,6 +4608,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fina. Lembrar o último reabre como você deixou. Com o painel aberto, OK troca o tamanho, Esquerda/Direita trocam o lado e Baixo fixa o painel no tamanho escolhido. Vale só nesta TV.", "Dimensiunea cu care se deschid Statisticile live din Centru de control. Complet arată toate măsurătorile; Compact, pe cele principale; Minim, o linie subțire. Ultimul ales se redeschide cum l-ai lăsat. Cu panoul deschis, OK schimbă dimensiunea, Stânga/Dreapta schimbă partea, iar Jos fixează panoul la dimensiunea aleasă. Se aplică doar pe acest TV."),
   T("Tamanho da interface", "Dimensiunea interfeței"),
   T("Tamanho da segunda legenda", "Dimensiunea subtitrării secundare"),
+  T("Tamanho da sinopse", "Dimensiunea sinopsisului"),
   T("Tamanho das estatísticas ao vivo", "Dimensiunea statisticilor live"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "Dimensiunea fișierului care rulează fără oprire pe acest televizor"),
   T("Tamanho do buffer", "Dimensiunea bufferului"),

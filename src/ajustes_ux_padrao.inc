@@ -283,4 +283,5 @@
   0, /* remote tips: action */
   0, /* show genre under the hero logo: Ligado, as always */
   1, /* addon name on the Cinema opening (#205): Desligado, local */
+  0, /* hero synopsis size: Normal, the original 22/30 */
   1, /* episode card size (#205): Medio, as always */

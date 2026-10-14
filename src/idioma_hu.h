@@ -4609,6 +4609,7 @@
   T("Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fina. Lembrar o último reabre como você deixou. Com o painel aberto, OK troca o tamanho, Esquerda/Direita trocam o lado e Baixo fixa o painel no tamanho escolhido. Vale só nesta TV.", "Ekkora méretben nyílik meg az Élő statisztika a Vezérlőközpontból. A Teljes minden mérést mutat; a Kompakt a fontosakat; a Minimális egy vékony sort. Az Utolsó megjegyzése úgy nyitja meg, ahogy hagyta. Nyitott panelnél az OK méretet vált, a Bal/Jobb oldalt vált, a Le pedig rögzíti a panelt a választott méretben. Csak ezen a TV-n érvényes."),
   T("Tamanho da interface", "A felület mérete"),
   T("Tamanho da segunda legenda", "A második felirat mérete"),
+  T("Tamanho da sinopse", "Szinopszis mérete"),
   T("Tamanho das estatísticas ao vivo", "Az élő statisztika mérete"),
   T("Tamanho de arquivo que toca sem parar nesta TV", "A fájl mérete, amely megállás nélkül lejátszódik ezen a TV-n"),
   T("Tamanho do buffer", "Pufferméret"),
