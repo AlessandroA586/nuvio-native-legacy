@@ -1303,8 +1303,8 @@ static void *buscarUmAddon(void *u) {
 // ela acabar. A fila substitui a LEVA (esperar o lote inteiro antes de criar o
 // proximo fio): a leva prendia o addon rapido ao MAIS LENTO do lote — 12
 // lentos de 30 s seguravam o 13. por 60 s, e a escolha automatica desiste em
-// FX_AUTO_FIM_MS (faixas.c). Sem barreira, o rapido entra no prazo; o teto de
-// fios, que limita memoria, continua o mesmo.
+// FX_AUTO_FIM_MS (faixas.c). O teto cobre a lista inteira aceita pelo app,
+// para nenhum addon esperar um pedido lento liberar um trabalhador.
 static void *legFioPuxa(void *u) {
   LegBusca *B = ((LegFio *)u)->B;
   LegFio F;
@@ -1416,11 +1416,9 @@ static void prepararExtras(LegBusca *B) {
   fflush(stdout);
 }
 
-// Uma fila de 12 ainda deixa 24 pedidos de 30 s esconderem o 25o por 60 s,
-// depois do prazo da selecao automatica. 32 e o teto de addons do app
-// oficial: cobre uma lista normal de uma vez; acima disso (ate ADD_MAX) a fila
-// continua limitando os fios.
-#define LEG_FIOS 32
+// Todos os addons aceitos precisam iniciar antes do prazo da selecao
+// automatica: 32 pedidos lentos nao podem esconder o 33o por 30 s.
+#define LEG_FIOS ADD_MAX
 static void *buscarLegendas(void *u) {
   (void)u;
   for (;;) {
@@ -1450,13 +1448,9 @@ static void *buscarLegendas(void *u) {
     B.lotes = calloc((size_t)(B.nLotes > 0 ? B.nLotes : 1), sizeof *B.lotes);
     if (!B.lotes) printf("[legendas] candidatos: memoria indisponivel\n");
 
-    // UMA FILA, LEG_FIOS TRABALHADORES (B4). Um fio por addon era ate 128
-    // fios, cada um com pilha, ~50 KB de lote e um curl — e todo addon da
-    // conta nasce "legenda" ate o manifesto responder. Com a lista cheia de
-    // duplicatas, memoria de sobra numa TV de 32 bits. Cada trabalhador puxa
-    // o proximo quando termina o seu (legFioPuxa): sem barreira por lote,
-    // quem responde rapido entra no prazo da escolha automatica.
-    for (i = 0; B.lotes && i < LEG_FIOS; i++) {
+    // A lista ja elimina duplicatas. Cobrir todos os addons permite que o
+    // ultimo responda mesmo quando os anteriores ocupam todo o teto de rede.
+    for (i = 0; B.lotes && i < B.nLotes && i < LEG_FIOS; i++) {
       fio[i].B = &B;
       if (pthread_create(&th[i], NULL, legFioPuxa, &fio[i]) == 0) nFios++;
       else { legFioPuxa(&fio[i]); break; }   // sem fio novo: drena a fila aqui mesmo

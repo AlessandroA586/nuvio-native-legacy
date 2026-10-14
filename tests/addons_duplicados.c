@@ -54,6 +54,14 @@ int main(void) {
   // A mesma lista de novo nao e mudanca (senao cada sync zera as sondas).
   conferir("conta-igual", addons_definir_lista(l, 4), 0);
 
+  // Credenciais distinguem configuracoes; esquema e host continuam sem caixa.
+  l[0] = A("https://u:AbC@addon.test/cfg");
+  l[1] = A("https://u:abc@addon.test/cfg");
+  l[2] = A("HTTPS://u:AbC@ADDON.TEST/cfg/manifest.json");
+  l[3] = A("https://U:AbC@addon.test/cfg");
+  conferir("credenciais-aplicou", addons_definir_lista(l, 4), 1);
+  conferir("credenciais-n", addons_n(), 3);
+
   // URL GRANDE (AIOLists): tres variantes, tres apelidos crus.
   memset(grande, 'x', sizeof grande - 1);
   memcpy(grande, "https://g.test/", 15);
@@ -92,6 +100,16 @@ int main(void) {
   l[0] = A(m1); l[1] = A(m2); l[2] = A(base); l[3] = A("https://b.test/");
   conferir("limiar-aplicou", addons_definir_lista(l, 4), 1);
   conferir("limiar-n", addons_n(), 2);
+
+  // A mesma regra vale para URLs grandes guardadas como apelidos.
+  memset(grande, 'x', sizeof grande - 1);
+  memcpy(grande, "https://u:AbC@addon.test/", sizeof "https://u:AbC@addon.test/" - 1);
+  snprintf(g1, sizeof g1, "%s/manifest.json", grande);
+  grande[10] = 'a';
+  snprintf(g2, sizeof g2, "%s", grande);
+  l[0] = A(g1); l[1] = A(g2);
+  conferir("credenciais-grandes-aplicou", addons_definir_lista(l, 2), 1);
+  conferir("credenciais-grandes-n", addons_n(), 2);
 
   if (falhas) return 1;
   printf("addons_duplicados: ok\n");

@@ -315,10 +315,15 @@ static inline void nv_addon_chave(const char *url, char *dst, size_t tam) {
   if (!norm[0]) { if (dst && tam) dst[0] = 0; return; }
   {
     const char *e = strstr(norm, "://");
-    size_t k, host = e ? (size_t)(e + 3 - norm) + strcspn(e + 3, "/?") : 0;
+    size_t k, inicioHost = e ? (size_t)(e + 3 - norm) : 0;
+    size_t fimHost = inicioHost + (e ? strcspn(e + 3, "/?#") : 0);
     uint64_t h = 1469598103934665603ULL;
+    // Userinfo tem caixa: so o esquema e o host podem virar minusculas.
+    for (k = inicioHost; k < fimHost; k++)
+      if (norm[k] == '@') inicioHost = k + 1;
     for (k = 0; norm[k]; k++) {
-      h ^= (unsigned char)(k < host ? tolower((unsigned char)norm[k]) : norm[k]);
+      int semCaixa = e && (k < (size_t)(e - norm) || (k >= inicioHost && k < fimHost));
+      h ^= (unsigned char)(semCaixa ? tolower((unsigned char)norm[k]) : norm[k]);
       h *= 1099511628211ULL;
     }
     snprintf(dst, tam, "~nv%016llx", (unsigned long long)h);
