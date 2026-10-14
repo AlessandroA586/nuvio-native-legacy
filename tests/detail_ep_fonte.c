@@ -1,26 +1,36 @@
-// ISSUE #513: O TOQUE NO CARD DE EPISODIO respeita "Escolher a fonte ao
-// reproduzir" (escolherFonteManual = o auto-play desligado), sem janela e sem
-// rede.
+// ISSUE #513: short OK on an episode, with "Escolher a fonte ao reproduzir"
+// on, must not start the saved source. The sheet flag is set in detail.c.
+// The router still called tocarFonteGuardada() and handed the live
+// fontevolta URL to the player; the sheet only drew on top.
 //
-// Relato (Samsung, 2.0.5): serie em "Continuar assistindo", QUALQUER episodio
-// escolhido na pagina do titulo tocava direto, sem a folha de fontes — a fonte
-// lembrada (fontepref) e a da ultima sessao (fontevolta) entravam antes de
-// perguntar. Serie fora da retomada mostrava a folha como esperado.
-//
-// A prova: serie COM progresso (a condicao do Continuar assistindo) e ajuste
-// ligado; OK curto num card de episodio tem de pedir a FOLHA (pedFontes) e
-// nao a reproducao (pedReproduzir). Com o ajuste desligado o toque continua
-// tocando, como sempre. E o "Retomar" do Continuar assistindo — o pedido
-// vindo de fora (detail_pedir_reproduzir) — nao muda: ele e quem pode reusar
-// a fonte guardada.
+// This compiles src/app.c and calls that function (app_teste_tocar_guardada
+// is tocarFonteGuardada). player_definir_fonte is the only override: the
+// assertion is the URL the real function gives the player.
 #include "nvtmp.h"
-#include "dados.h"
 #include <assert.h>
-#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 
-#include "../src/detail.c"
+static char urlDoPlayer[128];
+static int chamadasFonte, playerAbertoFlag;
+
+#define player_definir_fonte teste_definir_fonte
+#define player_aberto teste_player_aberto
+#define sessao_usuario teste_sessao_usuario
+#define perfis_ativo teste_perfis_ativo
+#include "../src/app.c"
+#undef player_definir_fonte
+#undef player_aberto
+#undef sessao_usuario
+#undef perfis_ativo
+
+void teste_definir_fonte(const char *u) {
+  chamadasFonte++;
+  snprintf(urlDoPlayer, sizeof urlDoPlayer, "%s", u ? u : "");
+}
+int teste_player_aberto(void) { return playerAbertoFlag; }
+const char *teste_sessao_usuario(void) { return "conta"; }
+int teste_perfis_ativo(void) { return 1; }
 
 static char dir[NVT_MAX], caminho[700];
 static void gravar(const char *txt) {
@@ -31,80 +41,48 @@ static void gravar(const char *txt) {
   ajustes_dir(dir);
 }
 
-// OK curto = KEYDOWN seguido de KEYUP sem esperar (dur < NV_HOLD_MS), como um
-// toque no controle. Em serie, na fileira de episodios.
-static void toqueOk(void) {
-  SDL_Event e;
-  memset(&e, 0, sizeof e);
-  e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_RETURN;
-  detail_evento(&e);
-  e.type = SDL_KEYUP;
-  detail_evento(&e);
-}
-
 int main(void) {
   CatItem c;
-  CatEp eps[6];
-  int i;
+  Stream g;
 
   nvt_set(dir, sizeof dir, "/nuvio-detail-epfonte-XXXXXX");
   assert(mkdtemp(dir));
-  assert(setenv("NUVIO_DADOS", dir, 1) == 0);
-  dados_iniciar(dir);
   snprintf(caminho, sizeof caminho, "%s/ajustes.txt", dir);
   ajustes_iniciar();
 
-  // Uma serie COM progresso: e a condicao para entrar em "Continuar
-  // assistindo" — progresso no T1E3 e 6 episodios na T1.
   memset(&c, 0, sizeof c);
   snprintf(c.tipo, sizeof c.tipo, "series");
-  snprintf(c.titulo, sizeof c.titulo, "Série de Ensaio");
   snprintf(c.imdb, sizeof c.imdb, "tt0000513");
-  c.temporadas[0] = 1; c.nTemporadas = 1;
   c.progresso = 40; c.temporada = 1; c.episodio = 3;
-  cat_definir_tudo(&c, 1, NULL, 0); idx = 0;
-  memset(eps, 0, sizeof eps);
-  for (i = 0; i < 6; i++) {
-    eps[i].temporada = 1;
-    eps[i].episodio = i + 1;
-    snprintf(eps[i].nome, sizeof eps[i].nome, "Episódio %d", i + 1);
-  }
-  cat_definir_episodios(0, eps, 6);
+  cat_definir(&c, 1);
 
-  aberto = 1; saindo = 0; nivel = 1;
-  foco.fileira = SEC_EPISODIOS; foco.coluna = 1;   // um OUTRO episodio (E2)
-  for (i = 0; i < 10; i++) detail_atualizar(1.0f / 60.0f, 1000 + i * 16);
+  memset(&g, 0, sizeof g);
+  snprintf(g.url, sizeof g.url, "https://cdn.invalid/ep3");
+  // Same key alvoPlayer builds for T1E3 of this title, live (< 3h).
+  // Movie key is the imdb. This series has no episode row loaded, so
+  // alvoPlayer resolves the same way: the title, which is what Continue
+  // Watching stores for the last session.
+  fontevolta_guardar("tt0000513", "conta", 1, &g, 0, SDL_GetTicks());
 
-  // AUTOMATICO (padrao): o toque curto toca — o caso do #57, mantido.
-  gravar("escolherFonteManual 1\n");   // V_LIGA: 1 = Desligado
-  assert(!ajustes_fonte_manual());
-  toqueOk();
-  assert(detail_pediu_reproduzir() == 1 && detail_pediu_fontes() == 0);
-  puts("ok com o automatico: o toque no episodio toca direto");
+  // Player open: that is the state when the sheet path used to start the URL.
+  playerAbertoFlag = 1;
 
-  // AUTO-PLAY DESLIGADO ("Escolher a fonte ao reproduzir" ligado): o toque num
-  // OUTRO episodio abre a folha de fontes, nao a reproducao.
-  gravar("escolherFonteManual 0\n");   // V_LIGA: 0 = Ligado
+  // V_LIGA 0 = Ligado. The saved URL must not reach the player.
+  gravar("escolherFonteManual 0\n");
   assert(ajustes_fonte_manual());
-  toqueOk();
-  assert(detail_pediu_fontes() == 1 && detail_pediu_reproduzir() == 0);
-  puts("ok com escolha manual: outro episodio abre a folha de fontes");
+  urlDoPlayer[0] = 0; chamadasFonte = 0;
+  assert(!app_teste_tocar_guardada());
+  assert(chamadasFonte == 0 && !urlDoPlayer[0]);
+  puts("ok manual: saved source does not start");
 
-  // O MESMO episodio do progresso (T1E3, o que o card de Continuar assistindo
-  // anunciava): escolhido a dedo na fileira, tambem abre a folha.
-  foco.coluna = 2;
-  for (i = 0; i < 10; i++) detail_atualizar(1.0f / 60.0f, 2000 + i * 16);
-  toqueOk();
-  assert(detail_pediu_fontes() == 1 && detail_pediu_reproduzir() == 0);
-  puts("ok com escolha manual: o episodio do progresso tambem abre a folha");
+  // V_LIGA 1 = Desligado. Resume, including Continue Watching, still reuses it.
+  gravar("escolherFonteManual 1\n");
+  assert(!ajustes_fonte_manual());
+  urlDoPlayer[0] = 0; chamadasFonte = 0;
+  assert(app_teste_tocar_guardada());
+  assert(chamadasFonte == 1 && !strcmp(urlDoPlayer, g.url));
+  puts("ok auto: resume still plays the saved source");
 
-  // O "RETOMAR" DE FORA (o OK no card de Continuar assistindo, ou o primario
-  // quando ele e "Retomar T1E3") continua sendo um PEDIDO DE REPRODUCAO: e o
-  // gesto desenhado para reusar a fonte guardada, e nao muda.
-  detail_pedir_reproduzir();
-  assert(detail_pediu_reproduzir() == 1 && detail_pediu_fontes() == 0);
-  puts("ok o Retomar do Continuar assistindo segue pedindo reproducao");
-
-  puts("detail_ep_fonte: o toque no episodio obedece \"Escolher a fonte ao reproduzir\"");
+  puts("detail_ep_fonte: saved source waits for the sheet when choose-on-play is on");
   return 0;
 }

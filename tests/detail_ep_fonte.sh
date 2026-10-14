@@ -10,7 +10,8 @@ set -eu
 cd "$(dirname "$0")/.."
 sources=()
 for source in src/*.c src/dts/*.c; do
-  if [ "$source" != src/main.c ] && [ "$source" != src/detail.c ]; then sources+=("$source"); fi
+  case "$source" in src/main.c|src/app.c) continue;; esac
+  sources+=("$source")
 done
 cc "${sources[@]}" tests/detail_ep_fonte.c -Isrc -o ${TMPDIR:-/tmp}/nuvio-detail-epfonte-tests \
   -O1 -g -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
