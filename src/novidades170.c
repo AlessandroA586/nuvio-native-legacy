@@ -792,11 +792,8 @@ static void cenaSpot(float x, float y, float t, float a) {
   { float raio = rr(30.0f, P);
     gfx_rect((GfxRect){ P.x - 40.0f, P.y - 34.0f, P.w + 80.0f, 300.0f }, 0, GFX_SOMBRA,
              1.0f, 0, 0, 0.5f, ar, ag, ab, 0.10f * a);
-    if (ajustes_vidro()) gfx_vidro_material(P, raio, GFX_VIDRO_DENS_MODAL, a);
-    else {
-      gfx_cor(P, raio, 0.058f, 0.062f, 0.074f, 0.94f * a);
-      gfx_luz_canto(P, raio, P.w * 0.18f, -40.0f, 560.0f, ar, ag, ab, 0.07f * a);
-    }
+    gfx_vidro_ou_solido(P, raio, GFX_VIDRO_DENS_MODAL, a, 0.058f, 0.062f, 0.074f, 0.94f);
+    if (!ajustes_vidro()) gfx_luz_canto(P, raio, P.w * 0.18f, -40.0f, 560.0f, ar, ag, ab, 0.07f * a);
     gfx_vidro_aro(P, raio, 1.5f, 1.0f, 1.0f, 1.0f, 0.10f * a); }
 
   // ---- o campo: a lupa, o que ja foi digitado e o cursor.
@@ -1433,7 +1430,7 @@ static void novidades170_desenharCorpo_(Uint32 agora) {
   dy = (1.0f - a) * 34.0f;
   y0 = N170_Y + dy;
   card = (GfxRect){ N170_X, y0, N170_W, N170_H };
-  gfx_cor(card, N170_RAIO / N170_H, 0.050f, 0.053f, 0.062f, 0.96f * a);
+  gfx_vidro_ou_solido(card, N170_RAIO / N170_H, GFX_VIDRO_DENS_MODAL, a, 0.050f, 0.053f, 0.062f, 0.96f);
   gfx_rect(card, 0, GFX_ANEL, 0, 1.2f / N170_H, 0, N170_RAIO / N170_H, 1, 1, 1, 0.06f * a);
   gfx_luz_canto(card, N170_RAIO / N170_H, N170_PAD + N170_PV_W * 0.5f, -120.0f, 820.0f,
                 ar, ag, ab, 0.10f * a);
