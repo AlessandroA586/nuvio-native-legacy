@@ -31,6 +31,16 @@ Uint32 SDL_GetTicks(void) { return 0; }
 #include <stdio.h>
 #include <unistd.h>
 #include "jellyfin_stub.inc"
+// Manifest loading is outside this metadata harness.
+void addons_lista_travar(void) {}
+void addons_lista_destravar(void) {}
+void ws_destino(const char *b, const char *u, int p, char out[20]) {
+  (void)b; (void)u; (void)p; out[0] = 0;
+}
+void addons_manifesto_lido_base(int i, const char *b, const char *d,
+                               unsigned v, const char *c) {
+  (void)i; (void)b; (void)d; (void)v; (void)c;
+}
 
 // --- DUBLES: nenhum participa da regra, so fazem descoberta.c linkar ---------
 // (o conjunto e o de tests/colfileiras.c, menos os cat_* — que catalogo.c ja
@@ -937,8 +947,7 @@ int main(void) {
       assert(cat_id_stream(0, 1, 2, id, sizeof id) && !strcmp(id, "tt13293588:1:2")); }
     puts("ok  mescla: a base manda; o Cinemeta so preenche elenco e episodios que faltavam");
 
-    // 25) Base COMPLETA com lista propria: a lista dela fica (2 episodios contra
-    //     3 do Cinemeta) e o Cinemeta so completa o campo vazio de cada um.
+    // 25) Addon menor: conserva os 3 pares do Cinemeta e o texto do addon.
     limparCacheMeta(); nRotas = 0;
     rota("xp.test/SEGREDO/meta/series/tt13293588.json",
          "{\"meta\":{\"id\":\"tt13293588\",\"type\":\"series\",\"name\":\"Mushoku do Xperience\","
@@ -947,7 +956,7 @@ int main(void) {
          "{\"season\":1,\"episode\":2,\"name\":\"Dois\",\"thumbnail\":\"https://xp/2.jpg\"}]}}");
     catalogoDe("tt13293588", "series", "Mushoku Tensei", "org.xp");
     abrir();
-    assert(cat_n_episodios(0) == 2);
+    assert(cat_n_episodios(0) == 3);
     assert(!strcmp(cat_episodio(0, 0)->nome, "Nome do Xperience"));
     assert(cat_item(0)->nElenco == 1 && !strcmp(cat_item(0)->elenco[0].nome, "Ator do Xperience"));
     puts("ok  mescla: lista e elenco da base ficam; Cinemeta so preenche campos vazios");

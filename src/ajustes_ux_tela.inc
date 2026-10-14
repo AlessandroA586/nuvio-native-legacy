@@ -61,6 +61,7 @@ static const Item TELA[] = {
     ROT("Segunda legenda"),
       OPC(AJ_LEG_LINGUA2),
       OPC(AJ_LEG2_POS), OPC(AJ_LEG2_TAMANHO), OPC(AJ_LEG2_COR), OPC(AJ_LEG2_FUNDO), OPC(AJ_LEG2_BORDA),
+      OPC(AJ_LEG_CONTORNO_COR),
     MAIS(),
     ROT("Idiomas"), OPC(AJ_TMDB_IDIOMA),
 
@@ -70,6 +71,10 @@ static const Item TELA[] = {
     ROT("Addons"),
       OPC(AJ_ADDONS), OPC(AJ_PLUGINS), OPC(AJ_ADDONS_PRINCIPAL), OPC(AJ_BUSCA_CINEMETA),
       OPC(AJ_BUSCA_NUVIO), OPC(AJ_BUSCA_ORIGEM),   // #311
+    ROT("Falha na reprodução"),
+      OPC(AJ_FALHA_PROVEDORES), OPC(AJ_FALHA_PROVEDOR_ORDEM),
+      OPC(AJ_FALHA_RD_LIMITE), OPC(AJ_FALHA_TB_LIMITE), OPC(AJ_FALHA_PM_LIMITE), OPC(AJ_FALHA_AD_LIMITE),
+      OPC(AJ_FALHA_ADDONS), OPC(AJ_FALHA_ADDON_ORDEM), OPC(AJ_FALHA_ADDON_LIMITE),
     ROT("Debrid"),
       OPC(AJ_DEBRID_RD), OPC(AJ_DEBRID_TB), OPC(AJ_DEBRID_PM), OPC(AJ_DEBRID_AD),
       OPC(AJ_DEBRID_AD_TESTAR),
@@ -118,6 +123,9 @@ static const Item TELA[] = {
   SEC("Aparência", "Cor, transparência, fonte, animações e relógio", "aj_palette"),
 #ifdef NV_TOUCH_UI
     OPC(AJ_INTERFACE_MODO),
+#endif
+#ifdef NV_ANDROID
+    OPC(AJ_TECLADO_ANDROID),
 #endif
     ROT("Cores e vidro"),
       OPC(AJ_TEMA), OPC(AJ_FUNDO), OPC(AJ_COR_LOGO), OPC(AJ_VIDRO), OPC(AJ_VIDRO_CONTORNO),

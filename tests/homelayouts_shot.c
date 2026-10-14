@@ -283,6 +283,15 @@ int main(int argc, char **argv) {
         snprintf(c->origem, sizeof c->origem, "%s", "xperience");
         snprintf(c->backdropTmdb, sizeof c->backdropTmdb, "deploy/app/art/%02d.jpg", (a + 17) % NA);
       }
+      // NV_PESSOAS=<png>: os catalogos viram uma fileira de diretores, todos com o
+      // retrato do pacote Xperience (nome assado embaixo) como poster.
+      if (FILS[k].catalogo && getenv("NV_PESSOAS")) {
+        static const char *DIR[] = { "Quentin Tarantino", "Christopher Nolan", "Greta Gerwig",
+          "Denis Villeneuve", "Martin Scorsese", "Bong Joon-ho", "Ava DuVernay", "Wes Anderson" };
+        snprintf(c->titulo, sizeof c->titulo, "%s", DIR[i % 8]);
+        snprintf(c->poster, sizeof c->poster, "%s", getenv("NV_PESSOAS"));
+        c->logo[0] = 0;
+      }
       c->nota = 68 + (ini + i) % 25;
       if (k == 0) { c->progresso = 20 + i * 12; c->restanteMin = 90 - i * 10; }
     }

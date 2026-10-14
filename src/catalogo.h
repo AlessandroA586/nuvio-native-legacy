@@ -108,6 +108,7 @@ typedef struct {
   // a nota sobre sizeof(CatItem) abaixo).
   int  temporadas[CAT_TEMP_MAX];
   int  nTemporadas;
+  int  epsParciais; // lista antecipada visivel; ainda falta concluir a mescla
   // Vem do Trakt: 1 se esta na watchlist do dono, 1 se esta na colecao dele.
   // Ficam no item e nao numa tabela a parte da biblioteca porque o catalogo e
   // reconstruido da rede — uma tabela por indice apontaria para outro titulo

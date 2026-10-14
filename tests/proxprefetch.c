@@ -118,16 +118,20 @@ static void testarContagem(void) {
       int antes = pedidos, t, e;
       double inicio = (marcador ? 1050 : 1150) - 10 * velocidade / 100.0;
       quadro(inicio, 1); esperarFim(); assert(cacheProximo() == 2);
-      for (double p = inicio + velocidade / 100.0; p <= 1200; p += velocidade / 100.0) {
+      // #470: a contagem comeca com o cartao e o pedido sai antes de qualquer
+      // renovacao; a resposta do preparo ainda e valida nesse instante.
+      int pediu = 0;
+      for (double p = inicio + velocidade / 100.0; p <= 1200 && !pediu; p += velocidade / 100.0) {
         atomic_fetch_add(&relogio, 1000);
         quadro(p, 1); esperarFim();
+        pediu = posplay_pediu_episodio(&t, &e);
       }
-      assert(posplay_pediu_episodio(&t, &e) && t == 1 && e == 2);
-      assert(cacheProximo() == 2); // a resposta original expirou ha >30 s
+      assert(pediu && t == 1 && e == 2);
+      assert(cacheProximo() == 2);
       int antesBusca = pedidos;
       posplay_fechar(); buscarTitulo("tt42:1:2", "series");
       assert(pedidos == antesBusca && nLista == 2);
-      assert(pedidos == antes + 2); // so uma renovacao perto do fim, nao polling
+      assert(pedidos == antes + 1); // so o preparo, nao polling
     }
   }
   velocidade = 100; credito = 0;

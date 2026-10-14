@@ -531,7 +531,7 @@ static void ass_plain_style_locked(const PlainAssStyle *p) {
   }
   s->FontSize = p->size;
   s->PrimaryColour = s->SecondaryColour = ((uint32_t)p->rgb << 8);
-  s->OutlineColour = 0x00000000u;
+  s->OutlineColour = (uint32_t)p->outline << 8;   /* 0xRRGGBB00 like PrimaryColour; 0 = black */
   s->BackColour = p->background ? (unsigned)(255 - (p->background * 255 * 16 / 100)) : 46u;
   s->Bold = (p->bold && !assArabe) ? 1 : 0;
   s->BorderStyle = p->background ? 4 : 1;

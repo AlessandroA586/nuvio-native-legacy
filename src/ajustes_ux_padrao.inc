@@ -268,3 +268,8 @@
   0, /* Mic button in search (.tpk): Automatico, local */
   0, /* menu position (#461): Na lateral, the rail as always */
   0, /* collection tabs style (#205): Chips, as always */
+  0, /* Android keyboard: Automatico, the IME opens by itself as always */
+  0, /* subtitle outline colour (#475): Preto, as always */
+  1, 0, /* provider failover off; order action */
+  3, 3, 3, 3, /* total links per native provider */
+  1, 0, 3, /* addon failover off; instance order action; total links */

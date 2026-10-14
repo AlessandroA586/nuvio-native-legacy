@@ -24,6 +24,7 @@ int ajustes_leg2_tamanho(void) { return segundaPct; }
 int ajustes_leg2_cor(void) { return -1; }
 int ajustes_leg2_fundo(void) { return -1; }
 int ajustes_leg2_borda(void) { return -1; }
+void ajustes_leg_contorno_rgb(int *r, int *g, int *b) { *r = *g = *b = 0; }
 
 int video_n_legenda(void) { return nEmb; }
 const VideoFaixa *video_legenda(int i) { return i >= 0 && i < nEmb ? &emb[i] : NULL; }
