@@ -274,6 +274,7 @@ typedef enum {
   // Chaves de debrid digitadas nesta TV (debrid.h). No fim pelo mesmo motivo.
   // AllDebrid primeiro: e o unico que a conta nao traz.
   AJ_DEBRID_AD, AJ_DEBRID_AD_TESTAR, AJ_DEBRID_RD, AJ_DEBRID_TB, AJ_DEBRID_PM,
+  AJ_DEBRID_RD_TESTAR, AJ_DEBRID_TB_TESTAR, AJ_DEBRID_PM_TESTAR,
   // Ficha do titulo: catalogo primeiro (descoberta.c, metaCatalogo). Ligado =
   // "Usar sempre o Cinemeta" (o comportamento de antes). No fim pelo mesmo
   // motivo: valor[] e CHAVE[] sao posicionais.
@@ -1289,6 +1290,9 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Chave do Real-Debrid"),
   ACAO("Chave do TorBox"),
   ACAO("Chave do Premiumize"),
+  ACAO("Testar chave do Real-Debrid"),
+  ACAO("Testar chave do TorBox"),
+  ACAO("Testar chave do Premiumize"),
   ESC("Usar sempre o catálogo do Nuvio",          V_LIGA, 2),   // local: soCinemetaLocal
   // Notas na linha do titulo (ver o enum). Ligado/Desligado como as demais.
   ESC("IMDb",                       V_LIGA, 2),   // local: notaTituloImdb
@@ -1577,6 +1581,7 @@ static const char *CHAVE[] = {
   "homeLayoutLocal",
   // Credenciais: moram em debrid.txt (dados), por aparelho, nunca aqui.
   "-debridAD", "-debridADTestar", "-debridRD", "-debridTB", "-debridPM",
+  "-debridRDTestar", "-debridTBTestar", "-debridPMTestar",
   // LOCAL e SEM o "-": o web nao tem esta escolha e ela precisa sobreviver.
   "soCinemetaLocal",
   // LOCAIS e SEM o "-": sobrevivem ao fechamento; o web nao tem a linha.
@@ -3194,18 +3199,24 @@ static pthread_t adFio;
 static int adFioVivo;
 static _Atomic int adTeste;             // 0 nunca/livre, 1 testando, 2 pronto, 3 fio terminou
 static int adTesteOk;
+static int adTesteServico = DEBRID_AD;
+static int debTesteServico(int op) {
+  return op == AJ_DEBRID_RD_TESTAR ? DEBRID_RD : op == AJ_DEBRID_TB_TESTAR ? DEBRID_TB
+       : op == AJ_DEBRID_PM_TESTAR ? DEBRID_PM : op == AJ_DEBRID_AD_TESTAR ? DEBRID_AD : -1;
+}
 static char adTesteMsg[64], adTesteData[16];
 static void *adTesteFio(void *u) {
   char m[64], d[16];
   (void)u;
-  adTesteOk = debrid_testar_alldebrid(m, sizeof m, d, sizeof d);
+  adTesteOk = debrid_testar_conta(adTesteServico, m, sizeof m, d, sizeof d);
   snprintf(adTesteData, sizeof adTesteData, "%s", d);
   snprintf(adTesteMsg, sizeof adTesteMsg, "%s", m);
   atomic_store_explicit(&adTeste, 3, memory_order_release);
   return NULL;
 }
-static void adTesteIniciar(void) {
+static void adTesteIniciar(int servico) {
   if (adFioVivo) return;
+  adTesteServico = servico;
   atomic_store_explicit(&adTeste, 1, memory_order_release);
   if (pthread_create(&adFio, NULL, adTesteFio, NULL) != 0) {
     snprintf(adTesteMsg, sizeof adTesteMsg, "sem resposta do servidor");
@@ -3224,10 +3235,10 @@ static void adTesteRecolher(void) {
 }
 // O texto vem de debrid_testar_alldebrid como CHAVE de i18n (frases fixas,
 // listadas em idioma_tab.h); a de "premium até %s" leva a data a parte.
-static const char *adTesteTexto(void) {
+static const char *adTesteTexto(int servico) {
   static char buf[64];
   int e = atomic_load_explicit(&adTeste, memory_order_acquire);
-  if (e == 0) return debrid_origem("alldebrid") ? i18n("OK testa") : i18n("informe a chave primeiro");
+  if (e == 0 || servico != adTesteServico) return debrid_origem(debrid_servico_id(servico)) ? i18n("OK testa") : i18n("informe a chave primeiro");
   if (e == 1 || e == 3) return i18n("testando…");
   if (adTesteOk && adTesteData[0]) {
     snprintf(buf, sizeof buf, i18n("premium até %s"), adTesteData);
@@ -5241,7 +5252,7 @@ static const char *textoLeitura(int op) {
   if (op == AJ_P2P_TESTAR) return p2pTesteTexto();
   if (op >= AJ_POSTER_INST && op <= AJ_POSTER_TESTAR) return pstTexto(op);
   if (debIdx(op) >= 0) return debValor(op);
-  if (op == AJ_DEBRID_AD_TESTAR) return adTesteTexto();
+  if (debTesteServico(op) >= 0) return adTesteTexto(debTesteServico(op));
   if (op == AJ_ENVIAR_LOG) {
     static char b[48];
     AvisosEnvio env;
@@ -5875,6 +5886,8 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_JF_ENTRAR: return "Usa o Quick Connect se o servidor permitir: aprove o código em outro app do Jellyfin. Senão, pede usuário e senha.";
     case AJ_JF_SAIR: return "Pede o OK duas vezes. Encerra a sessão no servidor e apaga o token desta TV.";
     case AJ_DEBRID_AD: return "Sua chave de API do AllDebrid (alldebrid.com/apikeys). Com ela os torrents das fontes tocam pelo AllDebrid, que precisa de conta premium. Fica só nesta TV, aparece mascarada e vale no lugar da que vier da conta Nuvio.";
+    case AJ_DEBRID_RD_TESTAR: case AJ_DEBRID_TB_TESTAR: case AJ_DEBRID_PM_TESTAR:
+      return "Consulta se a chave vale e se a conta é premium. O resultado fica em cache por cinco minutos.";
     case AJ_DEBRID_AD_TESTAR: return "Pergunta ao AllDebrid se a chave vale e até quando a conta é premium. Não mostra seu usuário nem e-mail.";
     case AJ_DEBRID_RD: return "Chave de API do Real-Debrid (real-debrid.com/apitoken). Só precisa se a sua conta Nuvio não a traz. Fica só nesta TV e aparece mascarada.";
     case AJ_DEBRID_TB: return "Chave de API do TorBox. Só precisa se a sua conta Nuvio não a traz. Fica só nesta TV e aparece mascarada.";
@@ -7496,7 +7509,7 @@ static void eventoTela(const SDL_Event *e) {
                         96, DEB_ALFA, NULL);
       return;
     }
-    if (focoOp == AJ_DEBRID_AD_TESTAR) { adTesteIniciar(); return; }
+    if (debTesteServico(focoOp) >= 0) { adTesteIniciar(debTesteServico(focoOp)); return; }
     if (focoOp == AJ_TRAKT) { traktauth_comecar(); return; }
     if (focoOp == AJ_SIMKL) { simklauth_comecar(); return; }
     if (focoOp == AJ_DISCORD) {
@@ -8245,6 +8258,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_POSTER_CHAVE: case AJ_POSTER_MODELO: case AJ_POSTER_TESTAR:
     case AJ_DEBRID_AD: case AJ_DEBRID_AD_TESTAR: case AJ_DEBRID_RD:
     case AJ_DEBRID_TB: case AJ_DEBRID_PM:
+    case AJ_DEBRID_RD_TESTAR: case AJ_DEBRID_TB_TESTAR: case AJ_DEBRID_PM_TESTAR:
       return AJPV_ACAO;
     default:
       return (AjPreview)-1;

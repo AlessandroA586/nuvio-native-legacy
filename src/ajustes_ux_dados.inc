@@ -256,6 +256,7 @@ static const char *uxCaminhoAntigo(int op) {
     case AJ_ADDONS: case AJ_PLUGINS: case AJ_ADDONS_PRINCIPAL:
       return "Contas e serviços";
     case AJ_DEBRID_RD: case AJ_DEBRID_TB: case AJ_DEBRID_PM: case AJ_DEBRID_AD: case AJ_DEBRID_AD_TESTAR:
+    case AJ_DEBRID_RD_TESTAR: case AJ_DEBRID_TB_TESTAR: case AJ_DEBRID_PM_TESTAR:
     case AJ_MDB_CHAVE: case AJ_FANART_CHAVE:
       return "Chaves";
     case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: case AJ_P2P_LIMITE:
