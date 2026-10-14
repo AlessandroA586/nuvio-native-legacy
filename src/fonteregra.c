@@ -40,10 +40,10 @@ static void bput(Buf *b, const char *s) {
 }
 static void bputc(Buf *b, char c) { char s[2] = { c, 0 }; bput(b, s); }
 
-// O oficial so liga o filtro com uma letra ou digito ASCII (isRegexSelectionConfigured:
-// /[a-z0-9]/i): "🇪🇸|🇲🇽" ou "[ñÑ]" sozinhos la nao filtram nada, e aqui tambem nao.
+// Filtro ativo so com letra, digito ou caractere nao ASCII ("日本語", "[ñÑ]",
+// "🇪🇸|🇲🇽"): so pontuacao/flags ("(?i)", "|") nao filtra nada.
 static int temLetraOuDigito(const char *s) {
-  for (; *s; s++) if (isalnum((unsigned char)*s) && (unsigned char)*s < 0x80) return 1;
+  for (; *s; s++) if (isalnum((unsigned char)*s) || (unsigned char)*s >= 0x80) return 1;
   return 0;
 }
 
@@ -151,7 +151,8 @@ static int faltasLembrandoSemTrava(const char *texto) {
 // no inicio ("(?i)") sao puladas. Colchete como no JS: o primeiro "]" fecha.
 // Devolve quantas (2 ou mais), ou 0 se o padrao nao e so isso (um lookaround
 // quantificado, texto solto, "|" no topo...): ai ele vale como uma condicao so.
-static int partes(const char *p, const char **ini, size_t *tam, int max) {
+static int partes(const char *p, const char **ini, size_t *tam, int max, size_t *pre) {
+  const char *p0 = p;
   int n = 0;
   while (p[0] == '(' && p[1] == '?') {
     const char *q = p + 2;
@@ -160,6 +161,7 @@ static int partes(const char *p, const char **ini, size_t *tam, int max) {
     p = q + 1;
   }
   if (*p != '^') return 0;
+  *pre = (size_t)(p - p0);
   p++;
   while (*p) {
     const char *a = p;
@@ -179,15 +181,15 @@ static int partes(const char *p, const char **ini, size_t *tam, int max) {
 }
 static void condicoesSemTrava(void) {
   const char *ini[FR_COND_MAX];
-  size_t tam[FR_COND_MAX];
+  size_t tam[FR_COND_MAX], pre = 0;
   int k, n;
   for (k = 0; k < nCond; k++) regexjs_liberar(reCond[k]);
   nCond = 0;
   if (reEstado != 1) return;
-  n = partes(padrao, ini, tam, FR_COND_MAX);
+  n = partes(padrao, ini, tam, FR_COND_MAX, &pre);
   for (k = 0; k < n; k++) {
     char p[FR_REGEX_MAX + 16];
-    snprintf(p, sizeof p, "(?i)^%.*s", (int)tam[k], ini[k]);
+    snprintf(p, sizeof p, "(?i)%.*s^%.*s", (int)pre, padrao, (int)tam[k], ini[k]);
     if (!(reCond[k] = regexjs_compilar_web(p, NULL, 0))) break;
   }
   if (k < n) { while (k-- > 0) regexjs_liberar(reCond[k]); return; }

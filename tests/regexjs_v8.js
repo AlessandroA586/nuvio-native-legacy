@@ -93,7 +93,7 @@ for (let k = 0; k < 4000; ) {
 
 // --- modo f: regex longas x textos de fonte longos ----------------------------
 function oficial(pattern, text) {
-  if (!/[a-z0-9]/i.test(pattern)) return -1;
+  if (!/[a-z0-9]|[^\x00-\x7f]/i.test(pattern)) return -1;
   let inc; try { inc = new RegExp(pattern, "i"); } catch (_) { return -1; }
   return inc.test(text) ? 1 : 0;
 }

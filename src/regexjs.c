@@ -1,8 +1,13 @@
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE   // pthread_getattr_np (pilhaLimite)
+#endif
 #include "regexjs.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <pthread.h>
+#include <stdint.h>
 
 // Ver regexjs.h. Compila para um programa de VM com retrocesso (alternativas por
 // recursao), como o regexp.c do mujs mas escrito aqui: pequeno e sem licenca de
@@ -562,7 +567,7 @@ static int primeiros(const Pr *pr, const Classe *cls, int flags, int n, unsigned
       if ((flags & REGEXJS_I) && isalpha(o->a)) { POE(c, tolower(o->a)); POE(c, toupper(o->a)); }
       return 0;
     case N_ANY:
-      for (b = 0; b < 256; b++) if (b != '\n' && b != '\r') POE(c, b);
+      for (b = 0; b < 256; b++) if ((flags & REGEXJS_S) || (b != '\n' && b != '\r')) POE(c, b);
       return 0;
     case N_CLASSE:
       for (b = 0; b < 128; b++) if (noClasse(&cls[o->classe], (unsigned)b, flags & REGEXJS_I)) POE(c, b);
@@ -764,10 +769,41 @@ typedef struct {
   int estourou;
   int *reg;
   unsigned char *memo;
+  uintptr_t base;   // endereco de um local em regexjs_testar: marca o topo da pilha nativa
+  size_t limite;    // bytes de pilha que roda() pode gastar desde `base` (ver pilhaLimite)
+  int medido;
 } Ctx;
 
 #define PASSOS_MAX 2000000
 #define PROF_MAX 6000
+// roda() recursa (grupo repetido, O_SPLIT/O_STAR/O_MARK), e PROF_MAX conta
+// quadros, nao bytes: numa fio de 64 KB 6000 quadros estouram a pilha (SIGBUS),
+// e um ".{0,600}" legitimo gasta mais de 80 KB. O teto de verdade e em bytes de
+// pilha nativa desde regexjs_testar: passou, o casamento para como os outros
+// tetos (estourou = sem casar), nunca derruba. Ate PILHA_LIVRE nem se pergunta
+// o tamanho da fio; alem disso vale o que sobra dela menos PILHA_FOLGA.
+#define PILHA_LIVRE (16u * 1024u)
+#define PILHA_FOLGA (16u * 1024u)
+#define PILHA_PADRAO (256u * 1024u)   // plataforma que nao diz o tamanho da fio
+static size_t pilhaLimite(uintptr_t base) {
+  uintptr_t baixo = 0;   // 0 = a plataforma nao diz
+  size_t livre;
+#if defined(__APPLE__)
+  pthread_t t = pthread_self();
+  baixo = (uintptr_t)pthread_get_stackaddr_np(t) - pthread_get_stacksize_np(t);
+#elif defined(__linux__) && !defined(__EMSCRIPTEN__)
+  pthread_attr_t at;
+  void *fim;
+  size_t tam;
+  if (!pthread_getattr_np(pthread_self(), &at)) {
+    if (!pthread_attr_getstack(&at, &fim, &tam)) baixo = (uintptr_t)fim;
+    pthread_attr_destroy(&at);
+  }
+#endif
+  if (!baixo) return PILHA_PADRAO;
+  livre = base > baixo ? (size_t)(base - baixo) : 0;
+  return livre > PILHA_FOLGA ? livre - PILHA_FOLGA : 0;
+}
 
 static int ehPalavra(int c) { return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'; }
 static int ehQuebra(unsigned c) { return c == '\n' || c == '\r' || c == 0x2028 || c == 0x2029; }
@@ -849,6 +885,10 @@ static int roda(Ctx *cx, int pc, int sp) {
   int sl = cx->memo ? re->slot[pc] : -1, sp0 = sp;
   if (sl >= 0) { int v = memoLe(cx, sl, sp); if (v) return v == 2; }
   if (++cx->prof > PROF_MAX) { cx->estourou = 1; cx->prof--; return 0; }
+  { char marca; uintptr_t a = (uintptr_t)&marca;
+    size_t gasto = a > cx->base ? a - cx->base : cx->base - a;
+    if (gasto > cx->limite && !cx->medido) { cx->limite = pilhaLimite(cx->base); cx->medido = 1; }
+    if (gasto > cx->limite) { cx->estourou = 1; cx->prof--; return 0; } }
   for (;;) {
     const Ins *in = &re->prog[pc];
     if (++cx->passos > PASSOS_MAX) { cx->estourou = 1; break; }
@@ -955,6 +995,8 @@ int regexjs_testar(const RegexJs *re, const char *texto, size_t n) {
   if (n > 8192) n = 8192;
   memset(&cx, 0, sizeof cx);
   cx.re = re; cx.s = (const unsigned char *)texto; cx.n = (int)n;
+  cx.base = (uintptr_t)&cx;
+  cx.limite = PILHA_LIVRE;
   // Registradores: um por lookbehind / repeticao que pode casar vazio. Antes
   // eram 64 fixos, e um padrao com mais lookbehinds nunca casava, em silencio.
   if (re->nreg <= (int)(sizeof regFixo / sizeof *regFixo)) { memset(regFixo, 0, sizeof regFixo); cx.reg = regFixo; }
