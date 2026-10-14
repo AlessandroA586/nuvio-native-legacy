@@ -357,7 +357,7 @@ static void ajCenaArte(const char *arte, GfxRect q, float rr, float escuro) {
 }
 // Peca de ilha sobre a foto: o miolo escuro do vidro (ou o solido #15161A).
 static void ajCenaVidro(GfxRect r, float raioPx, float a) {
-  if (ajVid()) gfx_cor(r, raioPx / r.h, 0.055f, 0.059f, 0.071f, 0.74f * a);
+  if (ajVid()) gfx_vidro_material(r, raioPx / r.h, GFX_VIDRO_DENS, a);
   else gfx_cor(r, raioPx / r.h, 0.082f, 0.086f, 0.102f, 0.97f * a);
 }
 // O logo da marca de uma fonte de nota (deploy/app/art/marcas) e a nota de
