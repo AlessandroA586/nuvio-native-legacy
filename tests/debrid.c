@@ -901,12 +901,11 @@ static void parser(void) {
     "{\"name\":\"Y\",\"url\":\"magnet:?xt=urn:btih:ff\"},"
     "{\"name\":\"Z\",\"title\":\"cached\",\"clientResolve\":{\"type\":\"debrid\",\"service\":\"realdebrid\",\"infoHash\":\"0011\",\"isCached\":true}}]}",
     "Torrentio", &v);
-  assert(n == 3);
+  assert(n == 2);
   assert(!v[0].url[0] && !strcmp(v[0].infoHash, "abcdef0123") && v[0].fileIdx == 1);
-  assert(!strcmp(v[1].url, "https://cdn/x.mp4") && !v[1].infoHash[0]);
-  assert(!v[2].url[0] && !strcmp(v[2].infoHash, "0011"));
+  assert(!v[1].url[0] && !strcmp(v[1].infoHash, "0011"));
   free(v);
-  OK("parser: infoHash no topo e em clientResolve, externalUrl, magnet fora");
+  OK("parser: infoHash no topo e em clientResolve, externalUrl sozinho fora, magnet fora");
 
   // Marcas de "fora de cache" que os addons mandam de verdade (registros
   // 1136/2191/2501: "⏳ UHD" do AIOStreams; "[TB download]" do Torrentio).
