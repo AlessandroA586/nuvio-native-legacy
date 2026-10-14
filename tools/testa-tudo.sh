@@ -15,7 +15,7 @@
 # ".." porque este script mora em tools/, e a suite e relativa a RAIZ do
 # repositorio. Ele nasceu na raiz e o `cd` de la ficou para tras na mudanca:
 # o sintoma era `tests/*.sh: No such file or directory`.
-# cd "$(dirname "$0")/.." || exit 1
+cd "$(dirname "$0")/.." || exit 1
 # --sanitizers: depois da suite normal, roda tools/sanitiza.sh (ASan+UBSan e o
 # job TSan separado). Falha de sanitizador reprodutivel bloqueia a integracao
 # com o mesmo rc da suite; sem a flag o comportamento e o de sempre.
