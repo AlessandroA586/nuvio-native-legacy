@@ -123,6 +123,19 @@ static void testeCentral(void) {
           antes, animLig[tog]);
     CHECK((animLig[tog] > antes) == (alvoAntes < 0.5f), "central: na direcao certa (%.3f)", animLig[tog]);
     previa = 0; previaInverte = -1; }
+  // PREVIA DESENHA SEM UPDATE (aberta=0). Sem o snap, o anel fica no botao
+  // da ultima sessao e o flip do interruptor nao aparece. dt=0 pousa no alvo.
+  { int alvo = tog > 0 ? tog : 1, lig = ajustes_rapido_ligado(op[alvo]);
+    float salvoF = animFoco[0], salvoL = animLig[tog];
+    previa = 1; previaInverte = alvo; foco = alvo;
+    centralPassoFoco(0.0f);
+    CHECK(fabsf(animFoco[alvo] - 1.0f) < 0.001f, "previa: anel no alvo (%.3f)", animFoco[alvo]);
+    CHECK(animFoco[0] < 0.001f || alvo == 0, "previa: anel saiu do botao velho (%.3f)", animFoco[0]);
+    if (lig >= 0)
+      CHECK(fabsf(animLig[alvo] - (lig ? 0.0f : 1.0f)) < 0.001f,
+            "previa: interruptor virado (lig=%d anim=%.3f)", lig, animLig[alvo]);
+    previa = 0; previaInverte = -1;
+    animFoco[0] = salvoF; animLig[tog] = salvoL; }
   central_fechar();
 }
 

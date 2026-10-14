@@ -148,8 +148,9 @@ static void centralPassoFoco(float dt) {
       if (previa && i == previaInverte && lig >= 0) lig = !lig;
       aL = lig == 1 ? 1.0f : 0.0f;
     }
-    animFoco[i] = red ? aF : anim_mola(animFoco[i], aF, dt, NV_MOLA_FOCO);
-    animLig[i] = red ? aL : anim_mola(animLig[i], aL, dt, NV_MOLA_FOCO);
+    // dt<=0 (a previa) pousa no alvo: a cena ja traz o quadro final.
+    animFoco[i] = (red || dt <= 0.0f) ? aF : anim_mola(animFoco[i], aF, dt, NV_MOLA_FOCO);
+    animLig[i] = (red || dt <= 0.0f) ? aL : anim_mola(animLig[i], aL, dt, NV_MOLA_FOCO);
   }
 }
 // O catalogo oferecido na edicao: so o que este build tem.
@@ -748,6 +749,9 @@ void central_previa_desenhar(float x, float y, float a, int f, int inverte) {
   previaEntrar(&s, e);
   foco = f;
   previaInverte = inverte;
+  // A previa nao passa por central_atualizar, entao as molas ficariam onde
+  // a ultima sessao real as deixou. O demo pede o quadro final (dt=0).
+  centralPassoFoco(0.0f);
   corpo((GfxRect){ x, y, CC_W, altura(1) }, a, NULL);
   previaSair(&s, e);
 }
