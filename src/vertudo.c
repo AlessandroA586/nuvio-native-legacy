@@ -1199,23 +1199,10 @@ static void painel(float a) {
   }
 }
 
-static const char *retratoLocal(const ColFolder *folder) {
-  static char caminho[700];
-  if (!folder || !folder->frameDir[0]) return "";
-  snprintf(caminho, sizeof caminho, "%s/portrait.png", folder->frameDir);
-  if (access(caminho, R_OK) == 0) return caminho;
-  snprintf(caminho, sizeof caminho, "%s/portrait.jpg", folder->frameDir);
-  return access(caminho, R_OK) == 0 ? caminho : "";
-}
-
-// Uma única arte full-width, dissolvendo na mesma cor do corpo. Directors usa
-// o retrato vertical local quando o pacote ja o tem; o hero horizontal dessa
-// colecao e um placeholder neutro e so acrescenta uma camada sem informacao.
-// Usa os shaders e o cache existentes, sem blur ou novas texturas por frame.
 // FUNDO DA COLECAO: sempre Frost ou a arte borrada da pasta, nunca a arte crua
 // ("em colecoes deixa o fundo sempre frost ou blur", 04/10/2026). Ajustes >
 // Fundo = Frost fica Frost; senao a arte borrada (fundo.c), e sem a arte
-// ainda cai no Frost. A arte de cabecalho (editorial, retrato) vem POR CIMA.
+// ainda cai no Frost. A arte de cabecalho (editorial) vem POR CIMA.
 static void fundoColecao(float a) {
   GfxRect tela={0,0,NV_TELA_W,NV_TELA_H};
   GLuint t=0;
@@ -1241,36 +1228,6 @@ static void themeBackground(float a) {
       }
       if(art)gfx_rect(header,art,collection->editorial==2?GFX_EDITORIAL:GFX_TEXTO,0,0,0,0,1,1,1,a);
       return;
-    }
-    if(grupo("Directors")) {
-      const char *foto=retratoLocal(collection);
-      if(!foto[0]) {
-        diretor_pedir(collection->title);
-        foto=diretor_foto(collection->title);
-      }
-      GLuint tp=foto[0]?tex_obter_larg(foto,640.0f):0;
-      if(foto[0]) tex_publicar_paleta(foto);
-      if(tp) {
-        // Retrato grande a direita, da borda de cima ate antes do painel
-        // (VT_PAN_Y). O GFX_RETRATO corta o topo (some o nome gravado no
-        // pacote) e dissolve as bordas; o relogio desenha por cima.
-        GfxRect rp={NV_TELA_W-560.0f,0,560,560};
-        if (vtTelefone()) rp.x = NV_TELA_W - 48.0f - rp.w;
-        if (vtTimelineRetrato()) rp = (GfxRect){NV_TELA_W - 204.0f,18,156,180};
-        // Mancha da cor dominante do retrato (cor viva), escurecida para o
-        // texto da esquerda seguir legivel; so quando a paleta ja existe.
-        CorvivaPaleta pal;
-        if(!vtTimelineRetrato()&&corviva_paleta(foto,&pal)&&pal.ok)
-          gfx_rect((GfxRect){rp.x-760,-380,1700,1000},0,GFX_SOMBRA,1.0f,0,0,0.5f,
-                   pal.acento[0]*.55f,pal.acento[1]*.55f,pal.acento[2]*.55f,.85f*a);
-        gfx_tex_aspect_atual=tex_aspecto(foto);
-        gfx_rect(rp,tp,GFX_RETRATO,
-                 0,0,0,0,0,0,0,a);
-        gfx_tex_aspect_atual=0;
-      }
-    } else {
-      const char *art=col_banner(collection);
-      (void)art;   /* o banner agora e o fundo borrado (fundoColecao) */
     }
   }
 }
@@ -1306,8 +1263,7 @@ static void themeHeader(float a,float x0) {
   txt_desenhar_alpha(eyebrow,x0,40,a);
   int ehDiretor=collection&&!strcasecmp(collection->group,"Directors");
   // O wordmark de uma coleção de diretores pode conter cabeça ou lettering
-  // composto. No cabeçalho da filmografia, o nome textual e o retrato limpo
-  // deixam a identidade legível sem duplicar a mesma informação visual.
+  // composto: no cabeçalho da filmografia entra so o nome em texto.
   GLuint logo=!ehDiretor&&collection&&!collection->editorial&&collection->logo[0]
              ?tex_obter_logo_larg(collection->logo,560):0;
   float aspect=logo?tex_aspecto(collection->logo):0;
