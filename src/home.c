@@ -6211,6 +6211,21 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
   gfx_recorte(area.x, area.y, area.w, area.h);
   if (pilha) {
     desenhaPilha(fl, 0, nItens, x0, y0, h, s);
+  } else if (tipo == FILEIRA_HEROI) {
+    // A PREVIA DO HERÓI É UM CARTÃO, não o começo de uma fileira: a fileira
+    // aplicada é um card só (larguraDe/6239 — o card é a fileira) e o laço de
+    // 8 desenhou oito mini-banner despedaçados — selo e texto têm métrica
+    // fixa (28 px) e não reduzem com o resto. O cartão enche a área, como
+    // a Home: o que a pessoa escolhe é o que ela vê.
+    { int idx = fl->usaItens ? fl->itens[0] : fl->ini;
+      const CatItem *ci = cat_item_exato(idx);
+      const char *cam = arte_por_identidade(idx, 1);
+      GLuint t = cam ? tex_obter_larg(cam, area.w) : 0;
+      float hw = area.w, hh = hw * NV_HEROI_ASPECT;
+      if (hh > area.h) { hh = area.h; hw = hh / NV_HEROI_ASPECT; }
+      desenhaHeroiCard(ci, fl->titulo, ci ? ci->sinopse : NULL, cam, t, 1.0f,
+                       area.x + (area.w - hw) * .5f, y0, hw, hh,
+                       raioDe(hw, hh), 0.0f, 0.0f); }
   } else {
     for (c = 0; c < nItens && c < 8; c++) {
       float px = x0 + (float)c * passo;
@@ -6234,13 +6249,6 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
         const char *cam = arte_por_identidade(idx, tipo == FILEIRA_CONTINUE ? 3 : deitado);
         if (tipo == FILEIRA_FICHA) { desenhaFicha(ci, px, y0, w, h, 0.0f); card.w = h * 2.0f / 3.0f; }
         GLuint t = cam ? tex_obter_larg(cam, w) : 0;
-        // A previa da fileira Herói é o cartão inteiro (arte, selo, título e
-        // as duas linhas), não só a arte: é o que a pessoa está escolhendo.
-        if (tipo == FILEIRA_HEROI) {
-          desenhaHeroiCard(ci, fl->titulo, ci ? ci->sinopse : NULL, cam, t, 1.0f,
-                           px, y0, w, h, raio, 0.0f, 0.0f);
-          continue;
-        }
         if (tipo == FILEIRA_TOP10_NUM)
           desenhaNumeral(fileiraRanking(fl, c), px, y0, h, passo - w - NV_TOP10_NUM_FOLGA * s, 1.0f);
         gfx_veu_card_limpar();

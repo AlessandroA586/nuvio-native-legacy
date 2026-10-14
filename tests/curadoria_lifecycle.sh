@@ -15,3 +15,4 @@ cc ${flags[@]+"${flags[@]}"} src/js.c tests/curadoria_lifecycle.c \
 "${TMPDIR:-/tmp}/nuvio-curadoria-lifecycle" startup
 "${TMPDIR:-/tmp}/nuvio-curadoria-lifecycle" clear
 "${TMPDIR:-/tmp}/nuvio-curadoria-lifecycle" pending
+"${TMPDIR:-/tmp}/nuvio-curadoria-lifecycle" change

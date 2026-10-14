@@ -158,8 +158,13 @@ static void *fioFn(void *u) {
     free(corpo);
   }
   fflush(stdout);
-  lidaEm = SDL_GetTicks();
+  // fioVivo e lidaEm sao lidos no passo sem mutex nenhum: sob `trava`, como
+  // o resto do estado. E o prazo de uma resposta VENCIDA e zero — o endereco
+  // ja trocou, nao vale adiar a leitura do novo pelo ciclo de 30 min do velho.
+  pthread_mutex_lock(&trava);
+  lidaEm = vivo ? SDL_GetTicks() : 0;
   fioVivo = 0;
+  pthread_mutex_unlock(&trava);
   return NULL;
 }
 
@@ -172,13 +177,26 @@ void curadoria_passo(void) {
   if (!url[0]) { pthread_mutex_unlock(&trava); return; }
   pthread_mutex_unlock(&trava);
   agora = SDL_GetTicks();
-  if (fioVivo || (lidaEm && agora - lidaEm < (Uint32)NV_CURADORIA_MIN * 60000u))
+  pthread_mutex_lock(&trava);
+  if (fioVivo || (lidaEm && agora - lidaEm < (Uint32)NV_CURADORIA_MIN * 60000u)) {
+    pthread_mutex_unlock(&trava);
     return;
+  }
+  // ANTES DO CREATE, como o canal do dono (avisos.c): a rede pode recusar em
+  // ~50µs e o fio terminar antes do create voltar — na ordem antiga o 1 do
+  // passo cobria o 0 do fio e a curadoria congelava até reiniciar o app.
+  fioVivo = 1;
+  pthread_mutex_unlock(&trava);
   // Detach como o resto da casa (avisos.c): a TV vive dias, cada ciclo é um
   // fio de 30 em 30 min — sem detach vaza um por ciclo. E se o create falhar
   // (EAGAIN), marcar o prazo também: sem isso tentaria a cada quadro.
-  if (pthread_create(&fio, NULL, fioFn, NULL) == 0) { pthread_detach(fio); fioVivo = 1; }
-  else lidaEm = agora;
+  if (pthread_create(&fio, NULL, fioFn, NULL) == 0) pthread_detach(fio);
+  else {
+    pthread_mutex_lock(&trava);
+    fioVivo = 0;
+    lidaEm = agora;
+    pthread_mutex_unlock(&trava);
+  }
 }
 
 // O endereço mora em curadoria.txt na pasta de dados, por aparelho — o mesmo
@@ -210,15 +228,17 @@ int curadoria_definir_url(const char *u) {
   pthread_mutex_lock(&trava);
   if (strncmp(url, nova, sizeof url)) {
     geracaoUrl++;
-    if (!nova[0]) {
-      // Desligar corta a recomendação JUNTO: sem isso o cartão seguia
-      // mostrando o último filme curado (e um fio em voo podia republicá-lo
-      // depois — a geração veta essa resposta).
-      estadoImdb[!ativo][0] = 0;
-      estadoTexto[!ativo][0] = 0;
-      ativo = !ativo;
-      revisao++;
-    }
+    // TROCAR DE ENDEREÇO RECOMEÇA O CICLO: sem o zero o passo esperava os
+    // 30 min da leitura do endereço VELHO, e o filme do A ficava na tela
+    // com a configuração do B (o selo dizendo "Curadoria" de outro JSON).
+    lidaEm = 0;
+    // E corta a recomendação junto, como no desligar: o filme do A não é a
+    // curadoria do B (e um fio em voo não pode republicá-lo — a geração
+    // veta a resposta).
+    estadoImdb[!ativo][0] = 0;
+    estadoTexto[!ativo][0] = 0;
+    ativo = !ativo;
+    revisao++;
   }
   snprintf(url, sizeof url, "%s", nova);
   pthread_mutex_unlock(&trava);

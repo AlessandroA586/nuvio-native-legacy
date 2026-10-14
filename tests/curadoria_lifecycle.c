@@ -37,6 +37,15 @@ static void wait_fetch(void) {
   while (!entered) assert(pthread_cond_timedwait(&ready, &network, &deadline) == 0);
   pthread_mutex_unlock(&network);
 }
+// Between two fetches: wait_fetch watches `entered`, and the release of the
+// previous fetch leaves both set — the second wait would pass before the
+// second thread even started asking for the address.
+static void reset_fetch(void) {
+  pthread_mutex_lock(&network);
+  entered = 0;
+  release_fetch = 0;
+  pthread_mutex_unlock(&network);
+}
 static void finish_fetch(void) {
   pthread_mutex_lock(&network);
   release_fetch = 1;
@@ -58,6 +67,25 @@ int main(int argc, char **argv) {
     curadoria_passo(); // Home startup, without opening Settings.
     wait_fetch();
     assert(!strcmp(requested, "https://example.test/curation"));
+    finish_fetch();
+    assert(curadoria_ativa());
+  } else if (!strcmp(argv[1], "change")) {
+    // Review #205: changing A->B must clear the old pick and fetch B NOW —
+    // not after the 30-min cycle of A's read (and not with A's movie still
+    // wearing the "Curadoria" badge under B's address).
+    assert(curadoria_definir_url("https://example.test/a"));
+    curadoria_passo();
+    wait_fetch();
+    assert(!strcmp(requested, "https://example.test/a"));
+    finish_fetch();
+    assert(curadoria_ativa());
+    assert(curadoria_definir_url("https://example.test/b"));
+    assert(!curadoria_ativa());          // A's pick is not B's curation
+    assert(!curadoria_texto()[0]);
+    reset_fetch();
+    curadoria_passo();                   // lidaEm reset: fetch B immediately
+    wait_fetch();
+    assert(!strcmp(requested, "https://example.test/b"));
     finish_fetch();
     assert(curadoria_ativa());
   } else {

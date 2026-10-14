@@ -1085,9 +1085,11 @@ static int stCampo;
 static const char *ST_ALFA_PORTAL =
   "abcdefghijklmnopqrstuvwxyz0123456789.:-/_";
 static const char *ST_ALFA_MAC = "0123456789abcdef:";
-// Endereço da curadoria (curadoria.h): uma URL, inclusive com consulta.
+// Endereço da curadoria (curadoria.h): uma URL do dono da TV — não uma que
+// o sistema gera, então tem maiúsculas (hosts são sensíveis a caixa no caminho)
+// e os sinais que faltavam ao alfabeto do portal.
 static const char *CUR_ALFA_URL =
-  "abcdefghijklmnopqrstuvwxyz0123456789.:-/?=&%";
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.:-/?=&%~_";
 // Usuario e senha de Xtream sao o que o provedor gerou: letras dos dois casos,
 // digitos e uns poucos sinais. Sem espaco — nenhum painel Xtream o aceita.
 static const char *XT_ALFA_CONTA =
