@@ -1115,7 +1115,8 @@ static int quebrar(const LegendaCue *c, TxtEstilo est, int r, int g, int b, int 
   char texto[768], *linha, *salva;
   TxtFamilia fam = (TxtFamilia)player_leg_estilo()->familia;
   int enf = (c->negrito || player_leg_estilo()->negrito ? TXT_ENF_NEGRITO : 0) | (c->italico ? TXT_ENF_ITALICO : 0);
-  int n = 0;
+  int n = 0, oR, oG, oB;
+  ajustes_leg_contorno_rgb(&oR, &oG, &oB);
   snprintf(texto, sizeof texto, "%s", c->texto);
   for (linha = strtok_r(texto, "\n", &salva); linha && n < max; linha = strtok_r(NULL, "\n", &salva)) {
     char atual[768] = "", tent[768], *pal, *sp;
@@ -1125,7 +1126,7 @@ static int quebrar(const LegendaCue *c, TxtEstilo est, int r, int g, int b, int 
         if (n >= max) break;
         visualLinha(fam, est, atual);
         out[n].cor = txt_linha_corta_enfase(est, atual, r, g, b, 255, maxW, fam, enf);
-        out[n].borda = borda ? txt_linha_corta_enfase(est, atual, 0, 0, 0, 255, maxW, fam, enf) : (TxtLinha){0};
+        out[n].borda = borda ? txt_linha_corta_enfase(est, atual, oR, oG, oB, 255, maxW, fam, enf) : (TxtLinha){0};
         n++;
         snprintf(atual, sizeof atual, "%s", pal);
       } else snprintf(atual, sizeof atual, "%s", tent);
@@ -1133,7 +1134,7 @@ static int quebrar(const LegendaCue *c, TxtEstilo est, int r, int g, int b, int 
     if (atual[0] && n < max) {
       visualLinha(fam, est, atual);
       out[n].cor = txt_linha_corta_enfase(est, atual, r, g, b, 255, maxW, fam, enf);
-      out[n].borda = borda ? txt_linha_corta_enfase(est, atual, 0, 0, 0, 255, maxW, fam, enf) : (TxtLinha){0};
+      out[n].borda = borda ? txt_linha_corta_enfase(est, atual, oR, oG, oB, 255, maxW, fam, enf) : (TxtLinha){0};
       n++;
     }
   }

@@ -3,6 +3,7 @@
  * valor[], nunca uma fotografia de preferencias ja carregadas do usuario. */
 
 static int uxTemPadrao(int op) {
+  if (ajFalhaBackend(op)) return 1;
   return op >= 0 && op < AJ_N &&
     (OPCOES[op].tipo == OP_ESCOLHA || OPCOES[op].tipo == OP_NUMERO) &&
     CHAVE[op] && CHAVE[op][0] && CHAVE[op][0] != '-' &&
@@ -16,6 +17,7 @@ static int uxValorPadrao(int op) {
 /* Fileiras tem uma fonte propria. valor[] e apenas seu espelho na tela. */
 static int uxValorAtual(int op) {
   if (op < 0 || op >= AJ_N) return 0;
+  if (ajFalhaBackend(op)) return ajFalhaValor(op);
   if (op == AJ_SEEKR_LIGADO && !seekrChave[0]) return 1;
   return op == AJ_FIL_LIMITE ? fil_limite_gravado() : valor[op];
 }
@@ -178,6 +180,8 @@ static const char *uxSinonimos(int op) {
     case AJ_CW_RETIDO_TAMBEM: return "continuar assistindo tambem ilha retomar agora fileira duplicar repetir aparecer dois lugares titulo continue watching also island resume";
     case AJ_HIST_CONTA: return "historico historico vistos progresso conta nuvio enviar scrobble simkl trakt perfil sincronizar sync history watched";
     case AJ_SOCIAL: return "social amigos amigo atividade recomendar recomendacoes friends activity recommend presenca desligar remover";
+    case AJ_ABAS_ESTILO: return "abas estilo colecao streaming chips menu suspenso dropdown barra central paginas carrossel tabs style collection pages carousel";
+    case AJ_LEG_CONTORNO_COR: return "legenda contorno sombra borda cor preto branco cinza outline edge shadow subtitle color";
     case AJ_MENU_TOPO: return "menu barra topo alto cima lateral esquerda rail posicao navegacao top bar toolbar sidebar left position";
     case AJ_TELA_ABERTURA: return "tela abertura abrindo carregando loading cinema detalhada fonte play transicao opening source screen";
     case AJ_PLR_CLASSIF: return "classificacao indicativa idade faixa etaria 16 12 18 livre guia parental avisos violencia nudez player content rating age parental guide";
@@ -188,6 +192,7 @@ static const char *uxSinonimos(int op) {
     case AJ_ENQUETES: return "enquete enquetes votacao votar pesquisa opiniao notificacao notificacoes aviso convite ilha relogio poll";
     case AJ_LEG_LINGUA2: return "idioma legenda secundaria segunda dupla dual second subtitle subtitles";
     case AJ_TRAILER_ZOOM_TPK: return "trailer zoom barras pretas tarja ampliar recorte tela preta samsung experimental";
+    case AJ_TECLADO_ANDROID: return "teclado android app grade ime sistema digitar keyboard virtual tela";
     case AJ_MIC_BUSCA: return "microfone mic voz falar ditar ditado busca buscar teclado samsung controle remoto voice";
     case AJ_FONTE_ORDEM: case AJ_FONTE_ORDEM_USO:
       return "ordem ordenar subir descer prioridade add-on addon plugin primeiro desempate estrita auto-play autoplay automatico order priority tie strict";
@@ -206,8 +211,12 @@ static const char *uxSinonimos(int op) {
     case AJ_FONTE_REGEX: case AJ_FONTE_REGEX_PADRAO: case AJ_FONTE_REGEX_MODELO:
       return "regex expressao regular padrao filtro nome idioma espanhol latino castellano multi dual remux auto-play autoplay regex match pattern";
     case AJ_TAM_MAX: case AJ_TAM_MIN: return "tamanho maximo minimo gb gigabyte arquivo franquia dados internet limite cota plano economizar fonte automatica size quota data cap";
+    case AJ_FALHA_PROVEDORES: case AJ_FALHA_PROVEDOR_ORDEM: case AJ_FALHA_RD_LIMITE: case AJ_FALHA_TB_LIMITE: case AJ_FALHA_PM_LIMITE: case AJ_FALHA_AD_LIMITE:
+    case AJ_FALHA_ADDONS: case AJ_FALHA_ADDON_ORDEM: case AJ_FALHA_ADDON_LIMITE:
+      return "falha erro provedor debrid addon add-on trocar ordem prioridade limite links timeout failover fallback retry";
     case AJ_FONTE_ORDEM_ADDON: return "ordem fontes qualidade addon aiostreams resolucao tamanho instalacao source order quality";
     case AJ_P2P_LIMITE: return "limite espaco p2p torrent armazenamento disco cheio memoria buffer cache tamanho maximo gb space limit storage full";
+    case AJ_ESTAT_TAMANHO: return "estatisticas ao vivo stats nerds tamanho completo compacto minimo pequeno linha canto fixar velocidade buffer painel live statistics size full compact minimal";
     case AJ_BUFFER: return "buffer tamanho memoria pequeno medio grande travando carregando rede instavel stats nerds";
     case AJ_CACHE_SEEK: return "cache seek buffer disco armazenamento voltar avancar travando carregando";
     case AJ_TMDB_IDIOMA: return "idioma metadados titulo sinopse traducao tmdb";

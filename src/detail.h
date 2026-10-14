@@ -272,7 +272,7 @@ int  detail_pediu_do_inicio(void);
 // y=999) e a sinopse cresce PARA CIMA — 5 linhas na serie, 4 no filme, e a
 // ULTIMA linha cai no mesmo y nas duas. Por isso a pilha e montada de baixo
 // para cima, e nao do logo para baixo.
-#define NV_DETW2_LD_SIN       40.0f   // passo entre linhas da sinopse (medido)
+#define NV_DETW2_LD_SIN       42.0f   // passo entre linhas da sinopse (medido)
 #define NV_DETW2_SIN_LINHAS       3   // dono, 12/10/2026: 5 linhas pesavam; o resto vira "..."
 #define NV_DETW2_TEXTO_W    1040.0f   // sinopse e linha de apoio (96..1136)
 // Distancia entre TOPOS DE CAIXA de linhas vizinhas, ja descontada a metrica da

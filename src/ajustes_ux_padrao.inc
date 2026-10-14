@@ -239,7 +239,11 @@
   0, /* default aspect ratio: Ultimo usado */
   1, /* also in Continue watching (2.0.2): Desligado (V_LIGA: 1 = Desligado) = one title, one place */
   0, /* continue on the profile picker (#303): Ligado (V_LIGA: 0 = Ligado) = as before */
+#ifdef NV_TPK
+  1, /* DTS converted to: 5.1 (Dolby Digital) on the Samsung .tpk (design rule 3) */
+#else
   0, /* DTS converted to: Estereo (AAC) = the proven path */
+#endif
   1, /* Dolby Vision in MKV (2.0.2, experimental): Desligado */
   0, /* send history to the Nuvio account (2.0.2, per profile): Ligado */
   0, /* social features (2.0.2, per profile): Ligado */
@@ -267,3 +271,10 @@
   0, /* interface mode: TV, including on phones until Mobile is selected */
   0, /* Mic button in search (.tpk): Automatico, local */
   0, /* menu position (#461): Na lateral, the rail as always */
+  0, /* collection tabs style (#205): Chips, as always */
+  0, /* Android keyboard: Automatico, the IME opens by itself as always */
+  0, /* subtitle outline colour (#475): Preto, as always */
+  1, 0, /* provider failover off; order action */
+  3, 3, 3, 3, /* total links per native provider */
+  1, 0, 3, /* addon failover off; instance order action; total links */
+  0, /* live statistics size (#338): remember the last one */

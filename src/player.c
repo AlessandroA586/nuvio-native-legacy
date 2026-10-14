@@ -538,6 +538,7 @@ static double duracaoTexto(const char *s) {
 }
 static int credFonteAtual;
 static int retomadaAplicada, retomarPct;
+static double retomarFonteSeg = -1.0;
 // BASE DO VISTO (#205): o registro do ponto retomado, lido UMA vez por episodio
 // (baseT/baseE) e nunca no fechamento — reler contaria de novo o que a
 // suspensao (player_suspender) ja gravou. baseDur 0 = retomada so pelo
@@ -724,7 +725,19 @@ static void erroEscolher(int i) {
 #endif
 }
 void player_definir_tentativa(int n, int max) { tentativaN = n; tentativaM = max; }
+#ifdef NV_TPK
+int video_tpk_convertendo(void);   // video_tpk.c
+#endif
 void player_erro_fonte(void) {
+#ifdef NV_TPK
+  // O fluxo DTS/TrueHD convertido nao fica tocando atras do cartao de erro (e da
+  // tela inicial depois dele). So convertendo: o resto segue como antes.
+  if (comVideo && video_tpk_convertendo()) {
+    printf("[dts-tpk] erro de fonte na tela: o fluxo convertido para\n");
+    fflush(stdout);
+    video_parar();
+  }
+#endif
   esperandoFonte = 0; erroFonte = 1; visivel = 0; tocando = 0; soBarra = 0;
   erroBotao = 0;
   prebuscaUrl[0] = 0;                // erro no meio da pre-busca: o video nao sai
@@ -772,6 +785,7 @@ double player_regra_retomada_inicial(double posSalva, double durSalva,
   return fabs(pct - percentual) < 1.0 ? posSalva : 0.0;
 }
 void player_do_inicio(void) {
+  retomarFonteSeg = -1.0;
   semRetomada = 1; retomarPct = 0; baseTocou = 0;
 #ifdef NV_ANDROID
   retomarSeg = 0.0;
@@ -779,6 +793,7 @@ void player_do_inicio(void) {
 }
 void player_definir_episodio(int t, int e) {
   const CatItem *c = item();
+  if (t != epT || e != epE) retomarFonteSeg = -1.0;
   epT = t; epE = e; linhaEp[0] = 0;
   retomarPct = 0;
   // !canalSessao: canal nao tem retomada, e se o indice ja foi remapeado o
@@ -1447,7 +1462,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   pedGuia = pedZap = pedGuiaCheio = 0;
   memset(&zapEst, 0, sizeof zapEst); bannerAV = 0.0f; botaoAV = 0; infoAV = 0; pedRecarregar = 0;
   avLat0 = -1.0; avAtraso = 0.0; avPausaDesde = 0;
-  retomadaAplicada=0; semRetomada=0; baseT = baseE = -1;
+  retomadaAplicada=0; semRetomada=0; retomarFonteSeg = -1.0; baseT = baseE = -1;
   abertoEm = SDL_GetTicks(); medirAbertura = 1; tocouMedido = 0; loadEm = 0;
 #ifdef NV_ANDROID
   retomarSeg = 0.0; retomadaNaPreparacao = 0;
@@ -1574,14 +1589,16 @@ static void tocarFonte(const char *url) {
     // vai junto e o Media3 aplica com a duracao do container antes do
     // primeiro quadro. Antes abria em 0, tocava e buscava depois do "pronto"
     // (TCL, 2.0.3: +6,4 s e um primeiro quadro jogado fora).
-    retomadaNaPreparacao = !ehCanal() && !semRetomada && (retomarSeg > 0.0 || retomarPct > 0);
+    double ponto = retomarFonteSeg >= 0.0 ? retomarFonteSeg : retomarSeg;
+    retomadaNaPreparacao = !ehCanal() && (retomarFonteSeg >= 0.0 ||
+                            (!semRetomada && (retomarSeg > 0.0 || retomarPct > 0)));
     if (retomadaNaPreparacao) {
-      if (retomarSeg > 0.0) marco("abrir: ponto salvo vai na abertura (segundos)");
+      if (ponto > 0.0) marco("abrir: ponto salvo vai na abertura (segundos)");
       else marco("abrir: ponto salvo vai na abertura (percentual)");
     }
     comVideo = video_tocar_retomada(proxyts_resolver(url, px, sizeof px),
-                                    retomadaNaPreparacao ? retomarSeg : 0.0,
-                                    retomadaNaPreparacao && retomarSeg <= 0.0 ? retomarPct : 0.0);
+                                    retomadaNaPreparacao ? ponto : 0.0,
+                                    retomadaNaPreparacao && retomarFonteSeg < 0.0 && ponto <= 0.0 ? retomarPct : 0.0);
     if (!comVideo) retomadaNaPreparacao = 0;
 #else
     comVideo = video_tocar(proxyts_resolver(url, px, sizeof px));
@@ -1669,6 +1686,10 @@ static void dvTelaAtualizar(float dt, Uint32 agora) {
 // So depois do loadCompleted. Antes disso o pipeline ainda nao pos nada no
 // plano de hardware, e furar a superficie cedo trocava a arte por um retangulo
 // PRETO enquanto o fluxo abria — que era o "clica em reproduzir e fica preto".
+void player_definir_retomada_fonte(double segundos) {
+  if ((aberto || mini) && !ehCanal() && isfinite(segundos) && segundos >= 0.0)
+    retomarFonteSeg = segundos;
+}
 void player_definir_fonte(const char *url) {
   if ((!aberto && !mini) || !url || !*url) return;
   durFonteAvisada = pedProximaFonte = 0;
@@ -2931,7 +2952,12 @@ static void avMontarOsd(AoVivoOsd *o) {
       switch (video_dts_estado()) {
         case VIDEO_DTS_NATIVO:     d = "Áudio: DTS, decodificado pela TV"; break;
         case VIDEO_DTS_PREPARANDO: d = "Áudio: DTS, preparando a conversão"; break;
+#ifdef NV_TPK
+        case VIDEO_DTS_CONVERTIDO: d = ajustes_dts_ac3() ? "Áudio: DTS convertido para Dolby Digital nesta TV"
+                                                          : "Áudio: DTS convertido para AAC estéreo nesta TV"; break;
+#else
         case VIDEO_DTS_CONVERTIDO: d = "Áudio: DTS convertido para AAC estéreo nesta TV"; break;
+#endif
         case VIDEO_DTS_FALHOU:     d = "Áudio: DTS, a conversão falhou (sem som)"; break;
         case VIDEO_DTS_SEM_SOM:    d = "Áudio: DTS, esta TV não toca (sem som)"; break;
       }
@@ -3561,17 +3587,21 @@ void player_atualizar(float dt, Uint32 agora) {
       if (estado != 0) {
         retomadaAplicada = 1;
         if (estado > 0) marco("abrir: ponto salvo na preparacao");
-        if (estado < 0 && retomarPct > 0) {
+        if (estado < 0 && (retomarFonteSeg >= 0.0 || retomarPct > 0)) {
           if (retomadaNaPreparacao) {
             printf("[player] retomada: a abertura nao aplicou o ponto salvo; seek depois do pronto\n");
             fflush(stdout);
           }
-          marco("abrir: seek para o ponto salvo"); video_buscar(d * retomarPct / 100.0);
+          marco("abrir: seek para o ponto salvo");
+          video_buscar(retomarFonteSeg >= 0.0 ? retomarFonteSeg : d * retomarPct / 100.0);
         }
       }
 #else
       retomadaAplicada=1;
-      if(retomarPct>0) { marco("abrir: seek para o ponto salvo"); video_buscar(d*retomarPct/100.0); }
+      if(retomarFonteSeg>=0.0 || retomarPct>0) {
+        marco("abrir: seek para o ponto salvo");
+        video_buscar(retomarFonteSeg >= 0.0 ? retomarFonteSeg : d*retomarPct/100.0);
+      }
 #endif
     }
     tocando = video_tocando();
@@ -3666,7 +3696,8 @@ void player_atualizar(float dt, Uint32 agora) {
   // curto (<120 s, clipe de erro do provedor) e canal ao vivo nao falam.
   { int ok = fontePrincipal() && video_pronto() && video_ativo() && tocando && !scrubbing &&
              !saindo && !erroFonte && !esperandoFonte && !ehCanal() &&
-             duracaoSeg >= 120.0f;
+             duracaoSeg >= 120.0f &&
+             !player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo());   // PRONTO do trailer (129 s) nao e deste titulo
     static float tocouS;
     const CatItem *cs = item();
     if (cs && jfid_e(cs->imdb)) cs = NULL;   // never scrobble personal-server items
@@ -3683,7 +3714,8 @@ void player_atualizar(float dt, Uint32 agora) {
     } else {
       // Pausou (ou o video parou de andar): so fala se ha um start em pe.
       if (tocouS > 0.0f && cs && cs->imdb[0] && fontePrincipal() && video_pronto() && !ehCanal() &&
-          duracaoSeg >= 120.0f && !scrubbing) {
+          duracaoSeg >= 120.0f && !scrubbing &&
+          !player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo())) {
         char id[64];
         if (epT > 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
         else snprintf(id, sizeof id, "%s", cs->imdb);
@@ -4078,7 +4110,8 @@ static void blocoLinha(LegBloco *bl, TxtEstilo est, const char *linha, int r, in
   // Latin text comes back byte-identical.
   if (txt_bidi_legenda(fam, est, linha, visual, sizeof visual) > 0) linha = visual;
   bl->cor[bl->n]   = txt_linha_corta_enfase(est, linha, r, g, b, 255, PLR_LEG_LARG, fam, enf);
-  bl->borda[bl->n] = legEstilo.borda ? txt_linha_corta_enfase(est, linha, 0, 0, 0, 255, PLR_LEG_LARG, fam, enf) : (TxtLinha){0};
+  { int oR, oG, oB; ajustes_leg_contorno_rgb(&oR, &oG, &oB);
+    bl->borda[bl->n] = legEstilo.borda ? txt_linha_corta_enfase(est, linha, oR, oG, oB, 255, PLR_LEG_LARG, fam, enf) : (TxtLinha){0}; }
   if (bl->cor[bl->n].w > bl->w) bl->w = bl->cor[bl->n].w;
   bl->h += bl->cor[bl->n].h + (bl->n ? 5 : 0);
   bl->n++;
@@ -4307,6 +4340,7 @@ static void desenharLegendaPrincipal(float *topoPilha){
       style.rgb = (r << 16) | (g << 8) | b;
       style.background = legEstilo.fundo >= 0 && legEstilo.fundo <= 4 ? legEstilo.fundo : 0;
       style.border = legEstilo.borda; style.bold = legEstilo.negrito;
+      { int oR, oG, oB; ajustes_leg_contorno_rgb(&oR, &oG, &oB); style.outline = (oR << 16) | (oG << 8) | oB; }
       style.marginV = (int)(1080.f - base);
       assrender_definir_texto_estilo(&style);
       /* Plain captions follow the old screen-space layout; authored ASS
@@ -4887,6 +4921,40 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
     } }
 }
 
+#ifdef NV_TPK
+int video_tpk_capa(void);   // video_tpk.c
+// CAPA DA REABERTURA (DTS/TrueHD convertido). No TS continuo cada seek, a
+// reconexao e a troca para o convertido abrem OUTRO player, e o plano de video
+// fica preto ate o primeiro quadro novo. No lugar do preto: a miniatura do
+// ponto de destino (a mesma do scrub, seekr) ou, sem ela, a arte do titulo,
+// escurecida, com o anel de buffer por cima (video_bufferando_ms). Some em
+// 250 ms quando o quadro chega. So o convertido chama isto (o resto: 0).
+static void capaReabertura(GfxRect furo, const CatItem *c, Uint32 agora) {
+  static float a; static Uint32 ult; static int usouSeekr;
+  float dt = ult && agora - ult < 100u ? (float)(agora - ult) / 1000.0f : 1.0f / 60.0f;
+  GLuint tex = 0;
+  const char *arte = NULL;
+  int on = video_tpk_capa() && !ehCanal();
+  ult = agora;
+  a += (on ? dt : -dt) / 0.25f;
+  if (a > 1.0f) a = 1.0f;
+  if (a <= 0.0f) { a = 0.0f; if (usouSeekr) { seekr_ocioso(); usouSeekr = 0; } return; }
+  if (ajustes_seekr_habilitado() && seekr_tem_chave() && seekr_estado() == SEEKR_PRONTO) {
+    double cue = -1;
+    seekr_definir_ajuste_ms((long)ajustes_seekr_ajuste_s() * 1000L);
+    tex = seekr_quadro(video_pos(), &cue);
+    if (tex && seekr_quadro_velho()) tex = 0;   // a de outro ponto confundiria
+    if (tex) usouSeekr = 1;
+  }
+  if (!tex && c && c->backdrop[0]) { arte = artehero_url(c); tex = tex_obter_hero(arte); }
+  if (!tex) return;   // fica o preto, com o anel
+  gfx_tex_aspect_atual = arte ? tex_aspecto(arte) : 16.0f / 9.0f;
+  gfx_rect(furo, tex, GFX_CARD, 0, 0, 0, 0.0f, 0, 0, 0, a);
+  gfx_tex_aspect_atual = 0.0f;
+  gfx_cor(furo, 0.0f, 0.0f, 0.0f, 0.0f, 0.45f * a);
+}
+#endif
+
 void player_desenhar(Uint32 agora) {
   if (!aberto) return;
   const CatItem *c = item();
@@ -5004,6 +5072,9 @@ void player_desenhar(Uint32 agora) {
       if (furo.w > 0.0f && furo.h > 0.0f) {
         if (recuado) gfx_furo_raio(furo, 22.0f / furo.h);
         else gfx_furo(furo);
+#ifdef NV_TPK
+        if (!recuado) capaReabertura(furo, c, agora);
+#endif
       }
     }
   } else {

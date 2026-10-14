@@ -26,8 +26,9 @@
 #define AD "https://api.alldebrid.com"
 #define AD_AGENTE "agent=nuvio"
 
-enum { SRD, STB, SPM, SAD, SN };
+enum { SRD = DEBRID_RD, STB = DEBRID_TB, SPM = DEBRID_PM, SAD = DEBRID_AD, SN = DEBRID_N };
 static const char *nomeServ[SN] = { "Real-Debrid", "TorBox", "Premiumize", "AllDebrid" };
+static const char *idServ[SN] = { "realdebrid", "torbox", "premiumize", "alldebrid" };
 
 // UMA CHAVE POR SERVICO, e nao uma so. A conta pode trazer mais de uma
 // credencial "debrid:*" (sync.c chama esta funcao uma vez por provedor), e
@@ -75,6 +76,12 @@ static _Atomic int recusado[SN];
 static _Atomic int semPlano[SN];
 static _Atomic int avisado[SN];
 
+const char *debrid_servico_nome(int q) { return q >= 0 && q < SN ? nomeServ[q] : ""; }
+const char *debrid_servico_id(int q) { return q >= 0 && q < SN ? idServ[q] : ""; }
+int debrid_servico_disponivel(int q) {
+  return q >= 0 && q < SN && chave[q][0] && !atomic_load(&recusado[q]) && !atomic_load(&semPlano[q]);
+}
+
 // Torrents que a busca atual achou fora de cache (debrid_fora_de_cache).
 static _Atomic int foraCache;
 
@@ -92,6 +99,7 @@ static int idServico(const char *s) {
       || !strcasecmp(s, "all_debrid") || !strcasecmp(s, "ad")) return SAD;
   return -1;
 }
+int debrid_servico_por_nome(const char *nome) { return nome && *nome ? idServico(nome) : -1; }
 
 // Recalcula a efetiva de um servico. Chave nova zera "sem plano" e o aviso: a
 // pessoa trocou a chave justamente para sair daquele estado.
@@ -1027,7 +1035,7 @@ int debrid_testar_alldebrid(char *msg, unsigned n, char *data, unsigned nd) {
 // em *qb/*pct), ou 0. `*fora` recebe a mascara dos servicos que responderam
 // "fora de cache".
 static int volta(const char *infoHash, int fileIdx, char *url, unsigned n,
-                 int baixarTB, int so, int *qb, int *pct, int *fora) {
+                 int baixarTB, int so, int *qb, int *pct, int *fora, int *winner) {
   int q;
   unsigned g = atomic_load(&geracao);
 
@@ -1082,6 +1090,7 @@ static int volta(const char *infoHash, int fileIdx, char *url, unsigned n,
       char seg[120];
       printf("[debrid] %s: %s -> %s\n", nomeServ[q], infoHash,
              rede_url_publica(url, seg, sizeof seg));
+      if (winner) *winner = q;
       return 1;
     }
     url[0] = 0;
@@ -1089,11 +1098,25 @@ static int volta(const char *infoHash, int fileIdx, char *url, unsigned n,
   return qb && *qb >= 0 ? DEBRID_BAIXANDO : 0;
 }
 
+int debrid_resolver_servico_cache(int servico, const char *infoHash, int fileIdx,
+                                  char *url, unsigned n, int *foraResultado) {
+  int fora = 0, r;
+  if (foraResultado) *foraResultado = 0;
+  if (url && n) url[0] = 0;
+  if (!debrid_servico_disponivel(servico) || !infoHash || !*infoHash || !url || !n) return 0;
+  r = volta(infoHash, fileIdx, url, n, 0, servico, NULL, NULL, &fora, NULL);
+  if (r != 1 && (fora & (1 << servico))) {
+    atomic_fetch_add(&foraCache, 1);
+    if (foraResultado) *foraResultado = 1;
+  }
+  return r == 1;
+}
+
 int debrid_resolver_cache(const char *infoHash, int fileIdx, char *url, unsigned n, int *foraResultado) {
   int fora = 0, r;
   if (foraResultado) *foraResultado = 0;
   if (!infoHash || !*infoHash || !url || n == 0) return 0;
-  r = volta(infoHash, fileIdx, url, n, 0, -1, NULL, NULL, &fora);
+  r = volta(infoHash, fileIdx, url, n, 0, -1, NULL, NULL, &fora, NULL);
   if (r != 1 && fora) atomic_fetch_add(&foraCache, 1);
   if (foraResultado && r != 1 && fora) {
     int ativos = 0;
@@ -1109,24 +1132,27 @@ int debrid_resolver(const char *infoHash, int fileIdx, char *url, unsigned n) {
 
 int debrid_resolver_escolhido(const char *infoHash, int fileIdx, char *url,
                               unsigned n, char *servico, unsigned ns, int *pct) {
-  int fora = 0, qb = -1, p = -1, r;
+  int fora = 0, qb = -1, p = -1, r, winner = -1;
   if (servico && ns) servico[0] = 0;
   if (pct) *pct = -1;
   if (!infoHash || !*infoHash || !url || n == 0) return 0;
   printf("[debrid] escolha manual do torrent %s: em cache primeiro, depois baixar\n",
          infoHash);
   // 1a volta: em cache em qualquer servico — exatamente como o automatico.
-  r = volta(infoHash, fileIdx, url, n, 0, -1, &qb, &p, &fora);
+  r = volta(infoHash, fileIdx, url, n, 0, -1, &qb, &p, &fora, &winner);
   // 2a volta: o TorBox respondeu "fora de cache" e a pessoa quer ESTE
   // torrent: manda baixar. So o TorBox precisa disto — o Real-Debrid ja
   // comecou a baixar na 1a volta (addMagnet), e o Premiumize fica como estava
   // (o transfer/create dele ninguem pediu e nao tem teste).
   if (r != 1 && (fora & (1 << STB))) {
     int qb2 = -1, p2 = -1;
-    r = volta(infoHash, fileIdx, url, n, 1, STB, &qb2, &p2, NULL);
+    r = volta(infoHash, fileIdx, url, n, 1, STB, &qb2, &p2, NULL, &winner);
     if (r == DEBRID_BAIXANDO) { qb = qb2; p = p2; }
   }
-  if (r == 1) return 1;
+  if (r == 1) {
+    if (servico && ns && winner >= 0 && winner < SN) snprintf(servico, ns, "%s", nomeServ[winner]);
+    return 1;
+  }
   if (qb >= 0) {
     if (servico && ns) snprintf(servico, ns, "%s", nomeServ[qb]);
     if (pct) *pct = p;

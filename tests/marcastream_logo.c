@@ -1,64 +1,86 @@
-// Worker real, rede e relogio controlados: recuperacao sem reiniciar o app.
-#include <assert.h>
-#include <stdatomic.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-static atomic_long agora = 100;
-static int relogio(clockid_t id, struct timespec *ts) {
-  (void)id; ts->tv_sec = atomic_load(&agora); ts->tv_nsec = 0; return 0;
-}
-#define clock_gettime relogio
+// O WORKER DO WORDMARK (marcastream_logo.c) NAO DESISTE PARA SEMPRE (#205).
+//
+// Cenario da revisao: abrir a colecao com o TMDB desligado (ou sem rede) grava
+// o estado 3 e chamadas posteriores nunca repetem a busca — nem ativando o
+// TMDB, nem recuperando a rede. Este teste cobra:
+//   1. sem chave, a busca falha e fica no estado 3;
+//   2. ligar a chave do TMDB re-tenta na hora e o wordmark chega;
+//   3. a chave nao mudou, mas o intervalo passou: re-tenta tambem;
+//   4. falha recente sem mudanca de chave NAO martela o TMDB a cada quadro.
+//
+// Inclui src/marcastream_logo.c (o estado e estatico) e troca a rede e a chave
+// por stubs; o leitor de JSON e o de sempre (src/js.c).
 #include "../src/marcastream_logo.c"
-#undef clock_gettime
-static const char *chave = "";
-static atomic_int pedidos;
-static int rede_ok;
-const char *desc_chave_tmdb(void) { return chave; }
+#undef desc_chave_tmdb
+#undef rede_baixar
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
+static char chaveTmdb[64] = "";
+const char *desc_chave_tmdb(void) { return chaveTmdb; }
+
+static int redeFalha = 1;   // 1: sem rede; 0: o TMDB responde o corpo abaixo
+static const char CORPO[] =
+  "{\"id\":213,\"logos\":[{\"file_path\":\"/n.svg\"},{\"file_path\":\"/logo.png\"}]}";
 char *rede_baixar(const char *url, int segundos) {
-  assert(strstr(url, "/network/213/images?api_key=key"));
-  assert(segundos == 20);
-  atomic_fetch_add(&pedidos, 1);
-  return rede_ok ? strdup("{\"logos\":[{\"file_path\":\"/logo.svg\"},{\"file_path\":\"/logo.png\"}]}") : NULL;
+  (void)url; (void)segundos;
+  return redeFalha ? NULL : strdup(CORPO);
 }
-static void esperar(void) {
-  struct timespec pausa = {0, 1000000};
-  for (int i = 0; i < 2000; i++) {
-    if (atomic_load(&slot[0].estado) != 1) return;
-    nanosleep(&pausa, NULL);
-  }
-  assert(!"worker nao terminou");
+
+static int slotDaRede(long rede) {
+  for (int k = 0; k < MS_MAX; k++)
+    if (slot[k].rede == rede) return k;
+  return -1;
 }
-int main(int argc, char **argv) {
-  const MarcaStream *m = marca_stream("Netflix");
-  assert(argc == 2);
-  if (!strcmp(argv[1], "config")) {
-    assert(!marca_stream_logo(m)[0]); esperar();
-    assert(atomic_load(&pedidos) == 0);
-    chave = "key"; rede_ok = 1;
-    marca_stream_logo(m); esperar();
-  } else {
-    chave = "key";
-    marca_stream_logo(m); esperar();
-    assert(atomic_load(&pedidos) == 1);
-    if (!strcmp(argv[1], "key")) {
-      chave = "key-new"; rede_ok = 1;
-      marca_stream_logo(m); esperar();
-      assert(atomic_load(&pedidos) == 2);
-    } else {
-    rede_ok = 1;
-    for (int i = 0; i < 100; i++) assert(!marca_stream_logo(m)[0]);
-    assert(atomic_load(&pedidos) == 1);
-    atomic_store(&agora, 129);
-    assert(!marca_stream_logo(m)[0]);
-    assert(atomic_load(&pedidos) == 1);
-    atomic_store(&agora, 130);
-    marca_stream_logo(m); esperar();
-    }
-  }
-  assert(!strcmp(marca_stream_logo(m), "https://image.tmdb.org/t/p/w500/logo.png"));
-  int n = atomic_load(&pedidos);
-  marca_stream_logo(m); assert(atomic_load(&pedidos) == n);
-  printf("ok  marcastream worker %s\n", argv[1]);
+static int esperar(long rede, int estado) {
+  int k = slotDaRede(rede);
+  assert(k >= 0);
+  for (int i = 0; i < 500 && atomic_load(&slot[k].estado) != estado; i++)
+    usleep(10000);
+  return atomic_load(&slot[k].estado) == estado;
+}
+
+int main(void) {
+  MarcaStream netflix = { "netflix", 213, 0, 0, 0 };
+  MarcaStream prime = { "prime video", 1024, 0, 0, 0 };
+  const char *u;
+
+  // 1. SEM CHAVE: falha e grava o estado 3.
+  assert(!marca_stream_logo(&netflix)[0]);
+  assert(esperar(213, 3));
+  assert(!marca_stream_logo(&netflix)[0]);
+  assert(atomic_load(&slot[slotDaRede(213)].estado) == 3);   // nao re-tenta sozinho
+
+  // 2. O DONO LIGOU O TMDB: a chave apareceu, a busca volta AGORA.
+  snprintf(chaveTmdb, sizeof chaveTmdb, "chave-de-teste");
+  redeFalha = 0;
+  marca_stream_logo(&netflix);
+  assert(esperar(213, 2));
+  u = marca_stream_logo(&netflix);
+  assert(u[0] && !strcmp(u, marca_stream_logo(&netflix)));
+  assert(strstr(marca_stream_logo(&netflix), "/logo.png"));   // o SVG e ignorado
+
+  // 3. INTERVALO: chave igual, rede que voltou — re-tenta quando o prazo passa.
+  redeFalha = 1;
+  assert(!marca_stream_logo(&prime)[0]);
+  assert(esperar(1024, 3));
+  assert(atomic_load(&slot[slotDaRede(1024)].estado) == 3);   // falha recente
+  slot[slotDaRede(1024)].falhouEm -= MS_RETRY_S + 1;          // o prazo passou
+  redeFalha = 0;
+  marca_stream_logo(&prime);
+  assert(esperar(1024, 2));
+  u = marca_stream_logo(&prime);
+  assert(strstr(u, "/logo.png"));
+
+  // 4. FALHA RECENTE, NADA MUDOU: nao martela o servico a cada chamada.
+  int k = slotDaRede(213);
+  slot[k].falhouEm = time(NULL);
+  atomic_store(&slot[k].estado, 3);
+  for (int i = 0; i < 3; i++) assert(!marca_stream_logo(&netflix)[0]);
+  assert(atomic_load(&slot[k].estado) == 3);
+
+  puts("ok  marcastream_logo");
+  return 0;
 }

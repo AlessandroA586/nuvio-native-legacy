@@ -161,7 +161,7 @@ static int ajCenaSecao(int op) {
     case AJ_LANDSCAPE: case AJ_HERO: case AJ_HERO_CHEIO: case AJ_HERO_CATALOGOS: case AJ_HERO_TRANSICAO:
       return AJC_HOME_ESTILO;
     case AJ_FIL_ORDEM: case AJ_FIL_LIMITE: case AJ_ITENS_FILEIRA: case AJ_ESPACO_FILEIRAS: case AJ_ESPACO_TITULOS: case AJ_OCULTAR_NLANC: case AJ_NOTAS_HOME:
-    case AJ_ROTULOS: case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_SELO_VISTO:
+    case AJ_ROTULOS: case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_SELO_VISTO: case AJ_ABAS_ESTILO:
       return AJC_HOME_FILEIRAS;
     case AJ_MENU_TOPO: case AJ_RAIL_MODERNA: case AJ_RAIL: case AJ_MENU_EXPLORAR: case AJ_MENU_GUIA: case AJ_MENU_AGENDA:
     case AJ_MENU_PERFIL: case AJ_RAIL_BLUR: case AJ_DESCOBRIR: case AJ_MIC_BUSCA:
@@ -204,12 +204,13 @@ static int ajCenaSecao(int op) {
     // 2.0.3: HDR e Dolby Vision mora em Imagem e som.
     case AJ_FONTE_HDR:
     case AJ_QUALIDADE: case AJ_DV: case AJ_DV_MKV: case AJ_ATMOS: case AJ_DTS_AC3: case AJ_CACHE_SEEK: case AJ_BUFFER: return AJC_REP_IMAGEM;
-    case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_AUTO: case AJ_PROXIMO_CONTAGEM: case AJ_REACAO_CREDITOS: case AJ_SAIDA_PLAYER: case AJ_MANTER_VIDEO: case AJ_PROPORCAO_PADRAO: return AJC_REP_DURANTE;
+    case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_ESTAT_TAMANHO: case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_AUTO: case AJ_PROXIMO_CONTAGEM: case AJ_REACAO_CREDITOS: case AJ_SAIDA_PLAYER: case AJ_MANTER_VIDEO: case AJ_PROPORCAO_PADRAO: return AJC_REP_DURANTE;
     case AJ_SEEKR_LIGADO: case AJ_SEEKR_CHAVE: case AJ_SEEKR_TESTAR: case AJ_SEEKR_FITA: case AJ_SEEKR_AJUSTE:
       return AJC_REP_SEEKR;
     case AJ_IDIOMA: case AJ_TMDB_IDIOMA: return AJC_IDI_INTERFACE;
     case AJ_LEG_MOSTRAR: case AJ_AUD_LINGUA: case AJ_LEG_LINGUA: case AJ_LEG_SYNC_AUTO: case AJ_LEG_SYNC_AUDIO: case AJ_LEG_FORCADA: return AJC_IDI_FAIXAS;
     case AJ_LEG_LINGUA2: case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
+    case AJ_LEG_CONTORNO_COR:
       return AJC_IDI_LEGENDA2;
     case AJ_XTREAM_SERVIDOR: case AJ_XTREAM_USUARIO: case AJ_XTREAM_SENHA: case AJ_XTREAM_CONTA:
     case AJ_XTREAM_LIMPAR: case AJ_STALKER_PORTAL: case AJ_STALKER_MAC: case AJ_STALKER_LIMPAR: case AJ_EPG_PAIS:
@@ -953,13 +954,15 @@ static void ajcIdiLegenda2(int A) {
   gfx_veu_css(CR(0, 240, 640, 120), 0, 0, 1.0f, 0.55f);
   gfx_cor(CR(190, 286, 260, 22), 0.25f, 0, 0, 0, 0.5f); CBAR(200, 293, 240, 0.95f);
   gfx_cor(CR(bx - 10, by - 6, bw + 20, bh + 12), 0.25f, 0, 0, 0, f >= 0 && f < 5 ? FU[f] : 0.5f);
-  if (b > 0) gfx_cor(CR(bx - 1.5f, by - 1.5f, bw + 3, bh + 3), 0.5f, 0, 0, 0, 0.9f);
+  { int oR, oG, oB; ajustes_leg_contorno_rgb(&oR, &oG, &oB);
+    if (b > 0) gfx_cor(CR(bx - 1.5f, by - 1.5f, bw + 3, bh + 3), 0.5f, oR / 255.0f, oG / 255.0f, oB / 255.0f, 0.9f); }
   gfx_cor(CR(bx, by, bw, bh), 0.5f, cc[0], cc[1], cc[2], 0.95f);
   ajcFoco(AJ_LEG2_POS, bx - 10, by - 6, bw + 20, bh + 12, 6);
   ajcFoco(AJ_LEG2_TAMANHO, bx - 10, by - 6, bw + 20, bh + 12, 6);
   ajcFoco(AJ_LEG2_COR, bx - 10, by - 6, bw + 20, bh + 12, 6);
   ajcFoco(AJ_LEG2_FUNDO, bx - 10, by - 6, bw + 20, bh + 12, 6);
   ajcFoco(AJ_LEG2_BORDA, bx - 10, by - 6, bw + 20, bh + 12, 6);
+  ajcFoco(AJ_LEG_CONTORNO_COR, bx - 10, by - 6, bw + 20, bh + 12, 6);
   if (ajc.op >= 0) { float w2 = ajcTxt(textoValor(ajc.op), 12, 1, 0, 0, 240, 0) + 28;
     CVID(604 - w2, 312, w2, 30, 15); ajcTxt(textoValor(ajc.op), 12, 1, 618 - w2, 319, 240, 1); }
 }

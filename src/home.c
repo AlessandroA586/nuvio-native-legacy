@@ -37,6 +37,7 @@ static void heroTempoInicio(int indice) {
 #include "tex_cache.h"
 #include "focus.h"
 #include "anim.h"
+#include "pressdip.h"
 #include "revela.h"
 #include "layout.h"
 #include "telefoneui.h"
@@ -331,6 +332,7 @@ static int okPressionando = 0;
 static int okLongDisparado = 0;
 static int okConsumirSoltura = 0;
 static float okHold = 0.0f;
+static float okDip = 1.0f;   // escala do card sob o OK apertado (pressdip.h)
 
 // --- hero-carrossel ---
 // O DESTAQUE E A PRIMEIRA FILEIRA DA HOME, e nao um cabecalho decorativo.
@@ -834,6 +836,7 @@ static float larguraDe(TipoFileira t) {
     case FILEIRA_LINHA_TEMPO: return NV_CARD_W;
     case FILEIRA_FICHA:    return NV_FICHA_W;
     case FILEIRA_PALCO:    return NV_CARD_W * NV_PALCO_ESC;
+    case FILEIRA_REDONDA:  return NV_REDONDA_D;
     case FILEIRA_LARGA:    return NV_DIN_LARGA_W;
     // Opção adicional da referência: maior e quase quadrada, em 4:3.
     case FILEIRA_DESTAQUE_QUADRADO: return NV_DESTAQUE_QUADRADO_W;
@@ -1326,6 +1329,7 @@ static float alturaDe(TipoFileira t) {
     case FILEIRA_LINHA_TEMPO:
     case FILEIRA_FICHA:    return NV_CARD_H;
     case FILEIRA_PALCO:    return NV_CARD_H * NV_PALCO_ESC;
+    case FILEIRA_REDONDA:  return NV_REDONDA_D;
     case FILEIRA_LARGA:    return NV_DIN_LARGA_H;
     case FILEIRA_DESTAQUE_QUADRADO: return NV_DESTAQUE_QUADRADO_H;
     case FILEIRA_COLECAO: return 270.0f;
@@ -1345,6 +1349,7 @@ static int temRotulo(TipoFileira t) {
   // O rotulo abaixo do poster so existe no poster EM PE. No card deitado o web
   // poe a legenda DENTRO da moldura (.home-poster-landscape-copy) e esconde o
   // bloco de fora (.home-poster-card.is-landscape .home-poster-copy{display:none}).
+  if (t == FILEIRA_REDONDA) return 1;   // pessoa sem nome embaixo nao se reconhece
   return t == FILEIRA_NORMAL && ajustes_rotulos_poster()
       && !ajustes_posteres_deitados();
 }
@@ -1930,6 +1935,7 @@ static TipoFileira tipoDaEscolha(int t) {
     case FIL_TIPO_LINHA_TEMPO: return FILEIRA_LINHA_TEMPO;
     case FIL_TIPO_FICHA:    return FILEIRA_FICHA;
     case FIL_TIPO_PALCO:    return FILEIRA_PALCO;
+    case FIL_TIPO_REDONDA:  return FILEIRA_REDONDA;
     default:                return FILEIRA_TOP10;
   }
 }
@@ -3184,6 +3190,14 @@ void home_ir_topo(void) {
 // detalhe/player na frente: o hero nao muda e o relogio e rearmado na volta.
 static int homeOculta;
 void home_oculta(int oculta) { homeOculta = oculta ? 1 : 0; }
+// O painel de Salvos/Social na frente: a home de tras fica congelada numa copia
+// (spainel_fundo) e so e desenhada nas repinturas dela, entao o carrossel nao
+// pode girar por baixo: a troca e efetivada no DESENHO e uma repintura caia no
+// quadro inicial dela (texto em opacidade 0, arte velha ja despejada), que a
+// copia guardava ate fechar o painel (relato do dono, 13/10: sem fileiras e sem
+// destaque atras do painel).
+static int homePainel, homePainelFoi;
+void home_painel_aberto(int aberto) { homePainel = aberto ? 1 : 0; }
 
 // Pede (uma vez por posicao) a arte do hero de heroAtual+-1, em prioridade
 // baixa. Barato no quadro: depois de pedidos os dois, so compara dois inteiros;
@@ -3273,7 +3287,8 @@ void home_atualizar(float dt, Uint32 agora) {
   // troca vencer nesse intervalo, a volta exibiria uma arte que nunca foi
   // observada e a seleção de logo poderia divergir do detalhe que acabou de
   // sair. O relógio é rearmado na volta, preservando a escolha visível.
-  const int heroOculto = detail_aberto() || player_aberto() || homeOculta;
+  const int heroOculto = detail_aberto() || player_aberto() || homeOculta || homePainel;
+  if (homePainel) homePainelFoi = 1;
   static int heroOcultoAntes;
   if (heroOculto) {
     if (!heroOcultoAntes) {
@@ -3290,6 +3305,12 @@ void home_atualizar(float dt, Uint32 agora) {
     heroTrocaEm = agora + NV_HERO_INTERVALO_MS;
     heroDesejado = -1;
     heroOcultoAntes = 0;
+    // Fechar o painel nao e "voltar de outra tela" (a copia mantem
+    // fileirasVistasEm fresco, ver home_fileiras_vistas), entao `reentra` nao
+    // dispara: quem tinha voltado um titulo na home (heroAutoDesligado) ficava
+    // sem o carrossel ate sair e entrar de novo.
+    if (homePainelFoi) heroAutoDesligado = 0;
+    homePainelFoi = 0;
   }
 
   const int motionReduzido = ajustes_animacoes_reduzidas();
@@ -3303,6 +3324,7 @@ void home_atualizar(float dt, Uint32 agora) {
     okHold = anim_clamp((agora - okDesde) / (float)NV_HOLD_MS, 0.0f, 1.0f);
   else if (!okPressionando)
     okHold = 0.0f;
+  okDip = pressdip_passo(okDip, okPressionando && !focoHero, dt);
   if (okPressionando && okHold >= 1.0f && !okLongDisparado) {
     okLongDisparado = 1;
     okConsumirSoltura = 1;
@@ -4412,7 +4434,13 @@ static void desenhaHero(Uint32 agora, float saida) {
       // grupo antes da capa, e a sem nada ficava vazia.
       const char *art=col_banner(folder);
       GLuint t=0;
-      if (ehDiretor) diretor_pedir(folder->title);
+      if (ehDiretor) {
+        // Pessoa: o fundo e o backdrop do titulo mais conhecido; sem ele, um
+        // fundo escuro liso. Nunca o retrato (nem o do pacote) ampliado.
+        diretor_pedir(folder->title);
+        art=diretor_hero(folder->title);
+        if (!art[0]) gfx_cor(r,0,0.035f,0.035f,0.05f,aArte);
+      }
       if (!t && art[0]) t=tex_obter_hero(art);
       if (art[0]) corviva_definir(art, CORVIVA_HOME);
       if(t){gfx_tex_aspect_atual=tex_aspecto(art);
@@ -4425,22 +4453,6 @@ static void desenhaHero(Uint32 agora, float saida) {
       TxtLinha group=txt_linha(TXT_HERO_META,folder->group,201,206,218,255);
       txt_desenhar_alpha(group,x,NV_COLLECTION_HERO_GROUP_Y,a);
       if (ehDiretor) {
-        const char *foto=diretor_foto(folder->title);
-        GLuint retrato=foto[0]
-          ?tex_obter_larg(foto,cheio?1280.0f:1100.0f):0;
-        if (retrato) {
-          // O shader conserva a proporcao vertical e dissolve as quatro bordas.
-          // A largura e intencionalmente generosa para a cabeca ter a mesma
-          // presenca visual do exemplo aprovado, sem parecer uma foto espremida.
-          GfxRect pr=cheio ? (GfxRect){840.0f,-20.0f,1080.0f,1120.0f}
-                           : (GfxRect){980.0f,-15.0f,940.0f,700.0f};
-          if (homeRetratoTelefone()) pr = (GfxRect){NV_TELA_W * 0.4f, -20.0f, NV_TELA_W * 0.7f, 1120.0f};
-          pr = heroArtworkOverlayRect(pr, r);
-          gfx_tex_aspect_atual=tex_aspecto(foto);
-          if (pr.w > 0 && pr.h > 0)
-            gfx_rect(pr,retrato,GFX_RETRATO,0,0,0,0,0,0,0,aArte);
-          gfx_tex_aspect_atual=0.0f;
-        }
         TxtLinha name=txt_linha_corta(TXT_TITULO1,folder->title,244,243,247,255,homeTextoLargura(780));
         txt_desenhar_alpha(name,x,NV_COLLECTION_HERO_LOGO_Y,a);
         const char *meta=diretor_meta(folder->title);
@@ -6223,12 +6235,37 @@ static void desenhaChipAmigos(const CatItem *ci, float px, float py, float w, fl
   svd_amigos_chip(px + m, py + m, h, limiteX - 6.0f - (px + m), &at, a);
 }
 
+// Fileira redonda: disco com anel de foco que segue a curva, foto cortada no alto
+// (o pacote do Xperience traz o nome assado nos ~20% de baixo; fora do disco) e
+// o nome centrado embaixo.
+static void desenhaRedonda(const CatItem *ci, GLuint t, const char *caminho,
+                           float px, float py, float d, float f) {
+  float pad = 5.0f * f, ar, ag, ab;
+  GfxRect disco = { px, py, d, d }, miolo = { px + pad, py + pad, d - pad * 2, d - pad * 2 };
+  ajustes_acento(&ar, &ag, &ab);
+  if (f > 0.01f && ajustes_borda_foco())
+    gfx_rect(disco, 0, GFX_DISCO, 0, 0, 0, 0, ar, ag, ab, f);
+  gfx_rect(miolo, 0, GFX_DISCO, 0, 0, 0, 0, NV_COR_ESQUELETO_R, NV_COR_ESQUELETO_G,
+           NV_COR_ESQUELETO_B, 1);
+  if (t) {
+    gfx_tex_aspect_atual = tex_aspecto(caminho);
+    gfx_rect(miolo, t, GFX_AVATAR, 0, 0.0f, 0.10f, 0, 1, 1, 1, 1);
+    gfx_tex_aspect_atual = 0.0f;
+  }
+  if (ci && ajustes_selo_visto() && cat_visto(ci)) badges_check_cartao(disco, 1, 1.0f);
+  if (ci && ci->titulo[0]) {
+    TxtLinha tn = txt_linha_corta(TXT_CAPTION2, ci->titulo, 245, 246, 250, 255, d);
+    txt_desenhar_alpha(tn, px + (d - tn.w) * 0.5f, py + d + NV_POSTER_COPY_PADT, 0.98f);
+  }
+}
+
 static void pintarCartao(const CartaoFoco *k, float raio) {
   const int r = k->r, c = k->c; const TipoFileira tipo = k->tipo; const CatItem *cItem = k->cItem;
   const char *caminho = k->caminho; const GLuint t = k->t; const float aArte = k->aArte;
   const int deitado = k->deitado, rotuloFora = k->rotuloFora;
   const float abre = k->abre, esc = k->esc, f = k->f, px = k->px, py = k->py, w = k->w, h = k->h;
   const float varreFoco = k->varre;
+  if (tipo == FILEIRA_REDONDA) { desenhaRedonda(cItem, t, caminho, px, py, w, f); return; }
           if (f > 0.01f && ajustes_borda_foco()) {
             GfxRect borda = { px - NV_ANEL_FOCO, py - NV_ANEL_FOCO,
                               w + NV_ANEL_FOCO * 2, h + NV_ANEL_FOCO * 2 };
@@ -6411,6 +6448,14 @@ int home_cartao_foco_por_cima(int indice) {
   pintarCartao(&cartaoFoco, cartaoFocoRaio);
   gfx_opacidade_grupo = og;
   return 1;
+}
+
+// O painel de Salvos parado mostra a copia da home sem desenha-la: as fileiras
+// continuam na tela, so nao passam por home_desenhar. Sem isto a copia refeita
+// depois de um intervalo longo (a repintura de 4 s) lia a ausencia como volta
+// de outra tela e recomecava a cascata de entrada no quadro congelado.
+void home_fileiras_vistas(Uint32 agora) {
+  if (fileirasVistasEm) fileirasVistasEm = agora ? agora : 1u;
 }
 
 void home_desenhar(Uint32 agora) {
@@ -6646,6 +6691,7 @@ void home_desenhar(Uint32 agora) {
           float f = animFoco[r][c];
           if (passe == 0 && f < 0.01f) continue;
           float esc = 1.0f + escalaDe(tipo) * f;
+          if (r == foco.fileira && c == foco.coluna) esc *= okDip;
           float w = lw * esc, h = artH * esc;
           // EXPANSAO EM REPOUSO. `abre` so e diferente de zero no card focado
           // desta fileira; os DEPOIS dele sao empurrados pela mesma medida.
@@ -6679,7 +6725,7 @@ void home_desenhar(Uint32 agora) {
           if (abre > 0.0f) w = lw * esc + (larguraAberta - lw * esc) * abre;
           float cx = homeFileiraX(r, c) + lw * 0.5f
                    + empurra + (w - lw * esc) * 0.5f + xOffTipo(tipo);
-          if (tipo == FILEIRA_PALCO) { palcoGeo(r, c, lw, &cx, &esc); w = lw * esc; h = artH * esc; }
+          if (tipo == FILEIRA_PALCO) { palcoGeo(r, c, lw, &cx, &esc); if (r == foco.fileira && c == foco.coluna) esc *= okDip; w = lw * esc; h = artH * esc; }
           // Sem levantamento: no web o card focado nao sai do lugar. O que
           // desloca aqui e so a cascata de entrada, e so enquanto ela dura.
           float cy = cardY + artH * 0.5f + (1.0f - entra) * NV_ENTRA_DY;
@@ -6971,6 +7017,41 @@ void home_desenhar(Uint32 agora) {
   // logo acima.
   gfx_borda_foco_atual = 1.0f;
   gfx_sem_recorte();
+
+  static TexLookahead adiante;
+  int parado = tex_lookahead_parado(&adiante, scrollY);
+  for (int r = 0; r < nFileiras; r++)
+    if (fabsf(velX[r]) > 0.25f) parado = 0;
+  if (parado && pd <= 0.001f && cinema <= 0.001f) {
+    int primeira = -1, ultima = -1;
+    float fy = topoFil - scrollY + bordaPag.x;
+    for (int r = 0; r < nFileiras; r++) {
+      if (fy < NV_TELA_H + 200 && fy + NV_LEGACY_ROW_HEAD_H + alturaFil(r) > -200) {
+        if (primeira < 0) primeira = r;
+        ultima = r;
+      }
+      fy += NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r) + fileiraGap();
+    }
+    int dir = adiante.direcao < 0 ? -1 : 1, pediu = 0;
+    for (int passo = 1; primeira >= 0 && passo <= 3 && !pediu; passo++) {
+      int r = (dir > 0 ? ultima : primeira) + passo * dir;
+      if (r < 0 || r >= nFileiras) break;
+      TipoFileira tipo = fileiras[r].tipo;
+      if (tipo == FILEIRA_SOCIAL || tipo == FILEIRA_CATALOGOS ||
+          fileiraEhCanal(&fileiras[r])) continue;
+      float lw = larguraFil(r);
+      int deitado = editorial(tipo) || tipo == FILEIRA_LARGA ||
+                    (tipo != FILEIRA_CONTINUE && ajustes_posteres_deitados());
+      for (int c = 0; c < fileiras[r].n && !pediu; c++) {
+        float x = homeFileiraX(r, c);
+        if (x < -lw * 1.5f || x > NV_TELA_W + lw) continue;
+        int idx = fileiraItemIndice(&fileiras[r], c);
+        const char *cam = arte_por_identidade(idx,
+          (tipo == FILEIRA_CONTINUE || tipo == FILEIRA_RETORNO) ? 3 : deitado);
+        pediu = tex_lookahead_pedir(cam, lw);
+      }
+    }
+  }
 }
 
 // Rede de seguranca, nao o gatilho principal. Numa TV o app raramente sai por

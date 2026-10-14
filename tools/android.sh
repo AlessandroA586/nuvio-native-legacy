@@ -2,6 +2,7 @@
 # Build do Nuvio para Android TV/Mobile (SDL2 + GLES2, nucleo C em libmain.so).
 #
 #   tools/android.sh            -> APK debug em build/android/Nuvio-<v>-android-debug.apk
+#   NUVIO_RUST_MKVCORE=1 tools/android.sh -> nucleo mkv em Rust (piloto; padrao desligado)
 #   NUVIO_P2P_MOTOR=<raiz> tools/android.sh -> motor P2P (padrao: pasta achada por tools/p2p-motor/pasta.sh; =none desliga)
 #   NUVIO_KEYSTORE=... NUVIO_KEYSTORE_PASS=... NUVIO_KEY_ALIAS=... NUVIO_KEY_PASS=... tools/android.sh
 #                               -> tambem o release assinado, Nuvio-<v>-android.apk
@@ -90,6 +91,12 @@ GR=(android/gradlew -p android --console=plain -Pnuvio.sdlSrc="$CACHE/src" -Pnuv
 . tools/p2p-motor/pasta.sh
 nv_p2p_resolver android
 [ -n "$NV_P2P_DIR" ] && GR+=(-Pnuvio.p2pMotor="$NV_P2P_DIR")
+# NUVIO_RUST_MKVCORE=1: nucleo EBML/NAL do mkv.c em Rust (piloto, desligado por padrao).
+if [ "${NUVIO_RUST_MKVCORE:-0}" = 1 ]; then
+  NV_RUST_MKV_DIR="$EST/rust-mkvcore"
+  tools/rust-mkvcore.sh --android "$NV_RUST_MKV_DIR" >&2
+  GR+=(-Pnuvio.rustMkvcore="$NV_RUST_MKV_DIR")
+fi
 TAREFAS=()
 [ "$RELEASE_ONLY" = 1 ] || TAREFAS=(assembleDebug)
 # Chave de release FIXA (o Android so atualiza por cima com a mesma
