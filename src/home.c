@@ -5668,16 +5668,10 @@ static int colunaDaFileira(int r) {
   if (c >= fileiras[r].n) c = fileiras[r].n - 1;
   return c < 0 ? 0 : c;
 }
-// PALCO: centro e escala do card `c`. O do centro mede `lw`; a um passo dele o
-// vizinho ja caiu para NV_PALCO_VIZ, e dai em diante todos ficam desse tamanho,
-// encostados pelo gap — nunca um por cima do outro, entao a ordem de desenho
-// nao importa. O centro fica uma vaga de vizinho depois da margem.
+// PALCO: as vagas seguem a rolagem comum; so a escala acompanha o foco.
 static void palcoGeo(int r, int c, float lw, float *cx, float *s) {
-  float gap = NV_CARD_GAP, wn = lw * NV_PALCO_VIZ;
-  float d = (float)c - palcoPos[r], ad = fabsf(d), um = lw * 0.5f + wn * 0.5f + gap, o;
-  float ancora = ajustes_conteudo_x() + bordaX(r) + wn + gap + lw * 0.5f;
-  o = ad <= 1.0f ? ad * um : um + (ad - 1.0f) * (wn + gap);
-  *cx = ancora + (d < 0.0f ? -o : o);
+  float ad = fabsf((float)c - palcoPos[r]);
+  *cx = homeFileiraX(r, c) + lw * 0.5f;
   *s = 1.0f - (1.0f - NV_PALCO_VIZ) * (ad < 1.0f ? ad : 1.0f);
 }
 // PALCO: o nome e a linha de meta do titulo do centro, embaixo dele.
