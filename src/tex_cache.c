@@ -353,6 +353,23 @@ __attribute__((unused)) static void publicarCacheDisco(void) {
 #endif
 static unsigned long quadroAtual = 1;
 
+// ITEM 4 DA PESQUISA PLX: recusa no ponto do pedido.
+//
+// O pedido e o ULTIMO ponto onde ainda da para recusar de graca: rate-limit
+// depois do decode e "um em voo" foram medidos por eles e ficaram PIORES que
+// nada ("pacing nao torna o trabalho acessivel"). A grade declara aqui, uma vez
+// por quadro, se esta em movimento, e cada desenho de cartao marca se aquela
+// arte esta FORA da janela visivel. O cache entao recusa, antes de enfileirar
+// rede ou decode, o pedido novo de uma arte fora da janela num quadro em
+// movimento. Arte ja conhecida (pronta, em voo ou aquecida) NUNCA e recusada:
+// e o que evita o tile escuro que eles mediram com a recusa fixa.
+static int gradeMovendo;
+static int pedidoFora;
+int tex_n_recusa = 0;
+
+void tex_grade_movendo(int movendo) { gradeMovendo = movendo ? 1 : 0; }
+void tex_pedido_fora(int fora) { pedidoFora = fora ? 1 : 0; }
+
 // O driver tambem aloca a piramide de mipmaps. Contar apenas o nivel base
 // deixava o cache ultrapassar o teto real em cerca de 33% nas artes de card.
 // COBRAR A PIRAMIDE SO QUANDO ELA EXISTE.
@@ -3517,6 +3534,11 @@ static GLuint tex_obter_limite(const char *caminho, int limite, int urgente,
   GLuint saida = 0;
   unsigned long h = hashCaminho(caminho);
   int i; BUSCA_MEDIDA(i, caminho, h);
+  // ITEM 4: recusa ANTES do fetch. So vale para pedido NOVO (slot ainda nao
+  // existe): arte que ja esta no cache, em voo ou aquecida passa, e e ela que
+  // serve a janela visivel. Fora da janela num quadro em movimento nao entra
+  // fila — o lookahead (item 1) ja aquece a vizinhanca em repouso.
+  if (i < 0 && pedidoFora && gradeMovendo) { tex_n_recusa++; return 0; }
   if (i >= 0 && itens[i].estado == FALHOU) {
     itens[i].ultimoQuadro = quadroAtual;
     itens[i].ultimoPedido = SDL_GetTicks();
