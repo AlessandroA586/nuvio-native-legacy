@@ -171,9 +171,12 @@ class ParaleloDataSource(
         c.disconnect()
     }
 
-    private fun esperarTentativa(indice: Int) {
+    private fun esperarTentativa(indice: Int, atrasoMs: Long = -1L) {
         conferirCancelamento()
-        try { dormir(ESPERA_TENTATIVA_MS[indice.coerceAtMost(ESPERA_TENTATIVA_MS.lastIndex)]) }
+        val ms = if (atrasoMs >= 0) atrasoMs
+                   else ESPERA_TENTATIVA_MS[indice.coerceAtMost(ESPERA_TENTATIVA_MS.lastIndex)]
+        if (ms <= 0) return
+        try { dormir(ms) }
         catch (e: InterruptedException) { Thread.currentThread().interrupt(); throw cancelado(e) }
         conferirCancelamento()
     }
@@ -224,7 +227,7 @@ class ParaleloDataSource(
     // ConnectException escapava daqui e encerrava a fonte, embora os pedacos
     // posteriores aparentassem ter TENTATIVAS. Mantem o retry no Loader (nao no
     // fio do player) e curto o bastante para nao esconder uma rota morta.
-    internal fun conectarComRetry(u: URL, ini: Long, ultimo: Long): HttpURLConnection {
+    internal fun conectarComRetry(u: URL, ini: Long, ultimo: Long, atrasoPrimeiraMs: Long = 0L): HttpURLConnection {
         var erro: IOException? = null
         repeat(TENTATIVAS) { tentativa ->
             try { return conectar(u, ini, ultimo) }
@@ -235,7 +238,7 @@ class ParaleloDataSource(
                 if (foiCancelado(e)) throw cancelado(e)
                 if (tentativa + 1 < TENTATIVAS) {
                     Log.w(TAG, "conexao ${tentativa + 1}/$TENTATIVAS falhou em ${u.host}; tentando de novo")
-                    esperarTentativa(tentativa)
+                    esperarTentativa(tentativa, if (tentativa == 0) atrasoPrimeiraMs else -1L)
                 }
             }
         }
@@ -259,21 +262,32 @@ class ParaleloDataSource(
         transferInitializing(dataSpec)
         Log.i(TAG, "abrindo ${dataSpec.uri.host} a partir de ${dataSpec.position}")
         pos = dataSpec.position
+        val pedido = if (dataSpec.length != C.LENGTH_UNSET.toLong()) dataSpec.length else C.LENGTH_UNSET.toLong()
+        val janela = if (pedido != C.LENGTH_UNSET.toLong()) pedido else PRIMEIRO.toLong()
+        val primeiroUltimo = if (pedido != C.LENGTH_UNSET.toLong()) pos + pedido - 1 else pos + PRIMEIRO - 1
         // Primeiro pedaco pela URL original: segue os redirecionamentos do debrid
         // uma vez so; os pedacos seguintes vao direto ao endereco final.
-        val c = conectarComRetry(URL(dataSpec.uri.toString()), pos, pos + PRIMEIRO - 1)
+        val c = conectarComRetry(URL(dataSpec.uri.toString()), pos, primeiroUltimo)
         val code = c.responseCode
         if (code == 206) {
             val cr = c.getHeaderField("Content-Range") ?: ""
             total = cr.substringAfter('/', "").trim().toLongOrNull() ?: C.LENGTH_UNSET.toLong()
         }
-        if (code != 206 || total <= 0 || total - pos <= pedaco.toLong() * 2) {
+        val restante = when {
+            pedido != C.LENGTH_UNSET.toLong() -> pedido
+            total > 0 -> total - pos
+            else -> C.LENGTH_UNSET.toLong()
+        }
+        val paralelo = code == 206 && total > 0 && restante > pedaco.toLong() * 2 &&
+            janela > pedaco.toLong() / 2
+        if (!paralelo) {
             Log.i(TAG, "conexao unica: HTTP $code, total=$total, pos=$pos (${dataSpec.uri.host})")
             // Sem Range (ou pequeno demais para valer a pena): conexao unica.
             if (code == 206 || code == 200) {
                 // 206 de um pedaco so: reabre sem teto para o arquivo inteiro.
-                if (code == 206) { desconectar(c); unicaCon = conectarComRetry(URL(dataSpec.uri.toString()), pos, -1) }
-                else unicaCon = c
+                if (code == 206 && pedido == C.LENGTH_UNSET.toLong()) {
+                    desconectar(c); unicaCon = conectarComRetry(URL(dataSpec.uri.toString()), pos, -1)
+                } else unicaCon = c
                 val uc = unicaCon!!
                 if (uc.responseCode !in 200..299) {
                     val erro = HttpDataSource.InvalidResponseCodeException(
@@ -297,8 +311,14 @@ class ParaleloDataSource(
             desconectar(c)
             throw HttpDataSource.InvalidResponseCodeException(code, msg, null, hdr, dataSpec, ByteArray(0))
         }
+        if (restante == 0L) {
+            desconectar(c)
+            aberto = true
+            transferStarted(dataSpec)
+            return 0L
+        }
         urlFinal = c.url
-        fim = if (dataSpec.length != C.LENGTH_UNSET.toLong()) minOf(total, pos + dataSpec.length) else total
+        fim = if (pedido != C.LENGTH_UNSET.toLong()) minOf(total, pos + pedido) else total
         val primeiro = try { lerTudo(c) } finally { desconectar(c) }
         bufIni = pos
         buf = primeiro

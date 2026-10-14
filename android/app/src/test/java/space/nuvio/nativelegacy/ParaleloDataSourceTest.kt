@@ -1,5 +1,7 @@
 package space.nuvio.nativelegacy
 
+import androidx.media3.common.C
+import androidx.media3.datasource.DataSpec
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -134,6 +136,52 @@ class ParaleloDataSourceTest {
         assertEquals(listOf(250L, 750L), esperas)
         assertTrue(conexoes.all { it.desconectou.get() })
         assertEquals(0, ParaleloDataSource.Estat.conexoes.get())
+    }
+
+    @Test fun janelaPequenaUsaConexaoUnicaSemPool() {
+        val aberturas = AtomicInteger()
+        val fonte = ParaleloDataSource(null, emptyMap(), novaConexao = { url ->
+            aberturas.incrementAndGet()
+            object : ConexaoFalsa(url) {
+                override fun getResponseCode(): Int = HTTP_PARTIAL
+                override fun getHeaderField(name: String?): String? = when (name) {
+                    "Content-Range" -> "bytes 613230488-613230489/24891962527"
+                    else -> super.getHeaderField(name)
+                }
+                override fun getInputStream(): InputStream = ByteArrayInputStream(byteArrayOf(1, 2))
+                override fun getContentLengthLong(): Long = 2
+            }
+        }, dormir = { throw AssertionError("janela pequena nao deve esperar retry") })
+        val exec = ParaleloDataSource::class.java.getDeclaredField("exec")
+        exec.isAccessible = true
+        val len = fonte.open(DataSpec.Builder()
+            .setUri(android.net.Uri.parse("https://example.invalid/video.mkv"))
+            .setPosition(613230488L)
+            .setLength(2L)
+            .build())
+        assertEquals(2L, len)
+        assertEquals(1, aberturas.get())
+        assertEquals(null, exec.get(fonte))
+        val buf = ByteArray(2)
+        assertEquals(2, fonte.read(buf, 0, 2))
+        fonte.close()
+    }
+
+    @Test fun aberturaInicialRepeteSemEsperarNaPrimeiraFalha() {
+        val aberturas = AtomicInteger()
+        val esperas = ArrayList<Long>()
+        val fonte = ParaleloDataSource(null, emptyMap(),
+            novaConexao = { url ->
+                val tentativa = aberturas.incrementAndGet()
+                if (tentativa == 1) object : ConexaoFalsa(url) {
+                    override fun getResponseCode(): Int = throw IOException("sem rota")
+                } else ConexaoFalsa(url)
+            },
+            dormir = { esperas += it })
+        fonte.conectarComRetry(URL("https://example.invalid/video.mkv"), 0, 1023)
+        fonte.close()
+        assertEquals(2, aberturas.get())
+        assertEquals(listOf(0L), esperas)
     }
 
     @Test fun closeDesconectaAberturaEmVoo() {

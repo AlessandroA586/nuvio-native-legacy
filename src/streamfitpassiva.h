@@ -18,6 +18,8 @@ uint64_t streamfitpassiva_permitida(void);
 // a path or query. Returns the intervals accepted (0 = rejected).
 int streamfitpassiva_receber(uint64_t rede, uint64_t geracao, const char *origem,
                              const int *kbps, int n, uint64_t fimMs);
+// Recent accepted passive windows for the allowed generation (0 = none).
+int streamfitpassiva_recente_ms(uint64_t geracao, unsigned maxMs);
 
 #ifdef NV_ANDROID
 // Native session of the Android backend (video_android.c), the generation the

@@ -2175,7 +2175,12 @@ static void tentarProximaFonteVOD(void) {
   // the C9 the 30 s deadline, counted from the first open, swapped a playing
   // film to another source and lost the position.
   else if (aberturaVencida(desde)) motivo = 2;
-  else if (!fonteFalha && video_bufferando_ms() > VOD_FONTE_BUFFER_MS) motivo = 3;
+  else if (!fonteFalha && video_bufferando_ms() > VOD_FONTE_BUFFER_MS) {
+#ifdef NV_ANDROID
+    if (streamfitpassiva_recente_ms(video_android_sessao(), 5000)) return;
+#endif
+    motivo = 3;
+  }
   if (!motivo) return;
 
   atual = stream_atual();
@@ -2196,6 +2201,8 @@ static void tentarProximaFonteVOD(void) {
     }
     return;
   }
+  guardarPosicaoFonteFalha();
+  if (fonteFalhaPos >= 0.0) player_definir_retomada_fonte(fonteFalhaPos);
   if (atual >= 0) {
     marcarFonteMorta(atual);
   }
