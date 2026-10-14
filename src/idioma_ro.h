@@ -1730,6 +1730,7 @@
   T("Episódio", "Episod"),
   T("Episódio %d", "Episodul %d"),
   T("Episódio 3", "Episodul 3"),
+  T("Episódio aleatório", "Episod aleatoriu"),
   T("Episódio certo", "Episodul potrivit"),
   T("Episódio certo, sem plays repetidos no Trakt.", "Episod corect, fără redări repetate în Trakt."),
   T("Episódio novo", "Episod nou"),

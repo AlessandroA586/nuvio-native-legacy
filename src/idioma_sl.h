@@ -1731,6 +1731,7 @@
   T("Episódio", "Epizoda"),
   T("Episódio %d", "Epizoda %d"),
   T("Episódio 3", "Epizoda 3"),
+  T("Episódio aleatório", "Naključna epizoda"),
   T("Episódio certo", "Prava epizoda"),
   T("Episódio certo, sem plays repetidos no Trakt.", "Pravi del, brez dvojnikov v Trakt."),
   T("Episódio novo", "Nova epizoda"),

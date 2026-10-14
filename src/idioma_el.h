@@ -1731,6 +1731,7 @@
   T("Episódio", "Επεισόδιο"),
   T("Episódio %d", "Επεισόδιο %d"),
   T("Episódio 3", "Επεισόδιο 3"),
+  T("Episódio aleatório", "Τυχαίο επεισόδιο"),
   T("Episódio certo", "Το σωστό επεισόδιο"),
   T("Episódio certo, sem plays repetidos no Trakt.", "Σωστό επεισόδιο, χωρίς διπλά στο Trakt."),
   T("Episódio novo", "Νέο επεισόδιο"),
