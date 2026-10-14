@@ -2628,11 +2628,16 @@ static int proxHome[MAX_CARDS], nProxHome;
 // ou o imdb dela não está no catálogo deste aparelho: aí a fileira cai no
 // título próprio (curadoria_escolher).
 static int heroiCuradoriaIndice(void) {
-  static unsigned rev;
+  static unsigned rev, catRevAntes;
   static int idx = -2;
   if (!curadoria_ativa()) return -1;
-  if (idx == -2 || rev != curadoria_revisao()) {
+  // Re-resolve também quando o CATÁLOGO muda (cat_revisao), não só quando a
+  // curadoria muda: o feed pode trocar/reordenar os itens no meio da sessão, e
+  // o índice antigo passaria a apontar outro filme — com o selo e o texto da
+  // curadoria mentindo sobre ele até o próximo baixe (30 min).
+  if (idx == -2 || rev != curadoria_revisao() || catRevAntes != cat_revisao()) {
     rev = curadoria_revisao();
+    catRevAntes = cat_revisao();
     idx = cat_indice_por_imdb(curadoria_imdb());
     if (idx < 0 || idx >= cat_n()) idx = -1;
   }

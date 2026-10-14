@@ -49,6 +49,20 @@ static void teste_escolher(void) {
     assert(a == b); }
   // fileira vazia E catalogo vazio: nao ha cartao.
   assert(curadoria_escolher(NULL, 0, 0, -1, &semente) == -1);
+  // O CATALOGO ENCOLHEU DEPOIS DO SORTEIO (#205, revisao): "Ocultar filmes
+  // assistidos" come um titulo e o feed encurta a lista — a semente da
+  // sessao pode ter ficado fora dos limites novos. Fora dele NAO e estavel,
+  // e cartao em branco: o sorteio tem que recair DENTRO do catalogo novo.
+  {
+    unsigned s = 0;
+    int a = curadoria_escolher(NULL, 0, 40, -1, &s);
+    assert(a >= 0 && a < 40);
+    assert(a == curadoria_escolher(NULL, 0, 40, -1, &s));   // estavel no catálogo antigo
+    int b = curadoria_escolher(NULL, 0, 30, -1, &s);        // catálogo encolheu
+    assert(b >= 0 && b < 30);
+    assert(b == curadoria_escolher(NULL, 0, 30, -1, &s));   // e re-estabilizou
+    assert(curadoria_escolher(NULL, 0, 1, -1, &s) == 0);     // catálogo de um só
+  }
   // curadoria fora do catalogo nao vale (o chamador resolve imdb -> indice).
   assert(curadoria_escolher(row, 4, 40, 999, &semente) == 7);
   // fileira de um titulo so, sem curadoria: ele.

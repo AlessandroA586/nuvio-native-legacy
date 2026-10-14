@@ -10,8 +10,14 @@
 // --- estado -----------------------------------------------------------------
 
 static pthread_mutex_t trava = PTHREAD_MUTEX_INITIALIZER;
-static char estadoImdb[64];      // "" sem curadoria
-static char estadoTexto[240];
+// DUAS CÓPIAS, uma em uso e uma sobrando (curadoria.h: "o laço de desenho só
+// lê"): o fio de rede escreve na sobrando e troca as duas sob o mutex — quem
+// desenha segura o ponteiro da antiga por um quadro sem ler palavra pela
+// metade. O próximo fio (30 min depois) escreve na outra; ninguém reescreve
+// um buffer que ainda está na mão de quem desenhou.
+static char estadoImdb[2][64];   // "" sem curadoria
+static char estadoTexto[2][240];
+static int ativo;                // qual cópia está na mão dos getters
 static unsigned revisao;
 static char url[300];
 
@@ -36,19 +42,19 @@ unsigned curadoria_revisao(void) {
 }
 
 const char *curadoria_imdb(void) {
-  const char *r;
+  int i;
   pthread_mutex_lock(&trava);
-  r = estadoImdb;
+  i = ativo;
   pthread_mutex_unlock(&trava);
-  return r;   // estático: válido até a próxima chamada
+  return estadoImdb[i];   // estático: válido até a próxima chamada
 }
 
 const char *curadoria_texto(void) {
-  const char *r;
+  int i;
   pthread_mutex_lock(&trava);
-  r = estadoTexto;
+  i = ativo;
   pthread_mutex_unlock(&trava);
-  return r;
+  return estadoTexto[i];
 }
 
 int curadoria_ativa(void) { return curadoria_imdb()[0] != 0; }
@@ -62,8 +68,9 @@ static int receberObjeto(const char *ini, const char *fim) {
   js_texto(ini, fim, "texto", texto, sizeof texto);
   if (!imdb[0]) return 0;
   pthread_mutex_lock(&trava);
-  snprintf(estadoImdb, sizeof estadoImdb, "%s", imdb);
-  snprintf(estadoTexto, sizeof estadoTexto, "%s", texto);
+  snprintf(estadoImdb[!ativo], sizeof estadoImdb[0], "%s", imdb);
+  snprintf(estadoTexto[!ativo], sizeof estadoTexto[0], "%s", texto);
+  ativo = !ativo;   // a cópia velha segue válida para quem a segurava
   revisao++;
   pthread_mutex_unlock(&trava);
   return 1;
@@ -82,9 +89,10 @@ int curadoria_receber(const char *corpo) {
     // um {"erro":...} ou o JSON sem imdb — em todos eles a fileira cai na
     // fonte própria e o selo não pode dizer "Curadoria".
     pthread_mutex_lock(&trava);
-    if (estadoImdb[0] || estadoTexto[0]) revisao++;
-    estadoImdb[0] = 0;
-    estadoTexto[0] = 0;
+    if (estadoImdb[ativo][0] || estadoTexto[ativo][0]) revisao++;
+    estadoImdb[!ativo][0] = 0;
+    estadoTexto[!ativo][0] = 0;
+    ativo = !ativo;
     pthread_mutex_unlock(&trava);
   }
   return ok;
@@ -99,7 +107,12 @@ int curadoria_escolher(const int *itens, int n, int catN, int curadoria,
   if (itens && n > 0) return itens[0];
   if (catN < 1) return -1;
   if (!semente) return 0;
-  if (*semente) return (int)*semente - 1;   // o sorteio da sessão, guardado
+  if (*semente) {
+    // O CATÁLOGO ENCOLHEU: o sorteio da sessão pode ter ficado fora dele
+    // ("Ocultar filmes assistidos" come um título, o feed encurta a lista).
+    // Fora dos limites NÃO é estável — é cartão em branco: sorteia de novo.
+    if ((int)*semente <= catN) return (int)*semente - 1;
+  }
   s = (unsigned)time(NULL);
   *semente = (unsigned)(rand_r(&s) % (unsigned)catN) + 1;
   return (int)*semente - 1;
@@ -118,9 +131,14 @@ void curadoria_passo(void) {}
 
 #else
 static void *fioFn(void *u) {
-  char *corpo;
+  char *corpo, endereco[sizeof url];
   (void)u;
-  corpo = rede_baixar_com(url, 15, NULL);
+  // O endereço pode mudar em Ajustes enquanto o fio corre: copia sob o
+  // mutex, nunca lê `url` solto enquanto definir_url escreve.
+  pthread_mutex_lock(&trava);
+  snprintf(endereco, sizeof endereco, "%s", url);
+  pthread_mutex_unlock(&trava);
+  corpo = rede_baixar_com(endereco, 15, NULL);
   if (corpo) {
     if (!curadoria_receber(corpo))
       printf("[curadoria] corpo sem recomendacao\n");
@@ -140,7 +158,11 @@ void curadoria_passo(void) {
   agora = SDL_GetTicks();
   if (fioVivo || (lidaEm && agora - lidaEm < (Uint32)NV_CURADORIA_MIN * 60000u))
     return;
-  if (pthread_create(&fio, NULL, fioFn, NULL) == 0) fioVivo = 1;
+  // Detach como o resto da casa (avisos.c): a TV vive dias, cada ciclo é um
+  // fio de 30 em 30 min — sem detach vaza um por ciclo. E se o create falhar
+  // (EAGAIN), marcar o prazo também: sem isso tentaria a cada quadro.
+  if (pthread_create(&fio, NULL, fioFn, NULL) == 0) { pthread_detach(fio); fioVivo = 1; }
+  else lidaEm = agora;
 }
 
 // O endereço mora em curadoria.txt na pasta de dados, por aparelho — o mesmo
