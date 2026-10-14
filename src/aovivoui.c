@@ -154,31 +154,54 @@ static int toqueRolar(const PonteiroRolagem *e) {
 // duro"). O disco vira a pilula com o nome crescendo, em ~120 ms na mola
 // padrao de foco (NV_MOLA_FOCO), em vez de saltar num quadro. O desenho
 // fotografa o estado (tests/aovivo_shot) e NAO recebe dt do player: o relogio
-// e o SDL_GetTicks da ultima passada, e `osdPasso` e puro para o teste
+// e o SDL_GetTicks da ultima passada DAQUELA superficie (um por superficie,
+// para o erro desenhado todo quadro nao manter o OSD "fresco" e entregar o
+// quadro no meio do voo), e `osdPasso` e puro para o teste
 // (tests/animacoes205.c) dirigir os quadros que quiser.
 static float    osdFoco[AV_B_N], erroFocoA[3];
 static unsigned char osdFocoPronto[AV_B_N], erroFocoPronto[3];
-static Uint32 osdUlt;
+static Uint32 osdUlt, erroUlt;
 static int osdFocoAlvo = -1, erroFocoAlvo = -1;
 static void osdPasso(float dt) {
   int i, red = ajustes_animacoes_reduzidas();
   for (i = 0; i < AV_B_N; i++) {
     float alvo = (i == osdFocoAlvo) ? 1.0f : 0.0f;
-    if (!osdFocoPronto[i]) { osdFoco[i] = alvo; osdFocoPronto[i] = 1; }   // 1a vez: ja no lugar
+    // Cada APARICAO nasce assentada no foco atual (o alvo e zerado quando a
+    // superficie sai da tela, antes do passo): "pronto" vale por visita, nao
+    // por processo.
+    if (!osdFocoPronto[i]) { osdFoco[i] = alvo; osdFocoPronto[i] = 1; }
     else osdFoco[i] = red ? alvo : anim_mola(osdFoco[i], alvo, dt, NV_MOLA_FOCO);
   }
+  if (osdFocoAlvo < 0) memset(osdFocoPronto, 0, sizeof osdFocoPronto);
+}
+static void erroPasso(float dt) {
+  int i, red = ajustes_animacoes_reduzidas();
   for (i = 0; i < 3; i++) {
     float alvo = (i == erroFocoAlvo) ? 1.0f : 0.0f;
     if (!erroFocoPronto[i]) { erroFocoA[i] = alvo; erroFocoPronto[i] = 1; }
     else erroFocoA[i] = red ? alvo : anim_mola(erroFocoA[i], alvo, dt, NV_MOLA_FOCO);
   }
+  if (erroFocoAlvo < 0) memset(erroFocoPronto, 0, sizeof erroFocoPronto);
 }
 static void osdTic(void) {
   Uint32 agora = SDL_GetTicks();
   float dt = osdUlt ? (float)(agora - osdUlt) / 1000.0f : 0.0f;
+  // Fora da tela o desenho nao roda e o relogio envelhece: um gap deste
+  // tamanho e uma REAPARICAO, e a mola nasce assentada no foco atual.
+  int reapareceu = dt > 0.25f;
   if (dt > 0.05f) dt = 0.05f;
   osdUlt = agora;
+  if (reapareceu) memset(osdFocoPronto, 0, sizeof osdFocoPronto);
   osdPasso(dt);
+}
+static void erroTic(void) {
+  Uint32 agora = SDL_GetTicks();
+  float dt = erroUlt ? (float)(agora - erroUlt) / 1000.0f : 0.0f;
+  int reapareceu = dt > 0.25f;
+  if (dt > 0.05f) dt = 0.05f;
+  erroUlt = agora;
+  if (reapareceu) memset(erroFocoPronto, 0, sizeof erroFocoPronto);
+  erroPasso(dt);
 }
 
 // Com nome em repouso: os sem icone (Canal -/+) e o Guia, a porta principal.
@@ -513,7 +536,7 @@ static void aovivo_erro_desenharCorpo_(const char *nome, const char *logo, const
   static const char *ic[3] = { "pl_rotate-ccw", "pl_layers", "pl_list" };
   float x = (NV_TELA_W - w) * 0.5f, y = 290.0f, h, hTit, hDica, yy, lead;
   erroFocoAlvo = erroFoco;
-  osdTic();
+  erroTic();
   int i;
   if (a <= 0.004f) return;
   lead = (float)txt_linha(TXT_ILHA_PERGUNTA, "Ag", 0, 0, 0, 255).h + 7.0f;
