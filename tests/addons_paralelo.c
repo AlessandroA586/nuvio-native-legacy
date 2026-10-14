@@ -20,16 +20,15 @@ char *rede_baixar_medido_controle(const char *url, int seconds, const char *cons
     if (idx == 0) { pthread_mutex_lock(&legTrava); legParar = 1; legGeracao++; pthread_mutex_unlock(&legTrava); }
     else usleep(300000);
   }
-  else if (modo == 3) {   // 14 provedores: o rapido atras de um lento do primeiro lote
-    if (idx == 0) usleep(2000000);        // o lento que segura um fio
-    else if (idx == 13) visto13 = agoraMs();   // o rapido valido: quando foi consultado?
-    else usleep(100000);                  // os outros ocupam os fios
+  else if (modo == 3) {   // 25 provedores: 24 lentos ocupam os 12 trabalhadores
+    if (idx < 24) usleep(2000000);
+    else visto13 = agoraMs();             // o valido precisa entrar antes do prazo
   }
   else if (modo == 1 && idx == 0) { static int uma; if (!uma++) { usleep(150000); pthread_mutex_lock(&legTrava); legGeracao++; pthread_mutex_unlock(&legTrava); } }
   else if (idx == 0) { usleep(500000); if (nLegs >= 1) vistoParcial = 1; }   // o rapido (2) ja publicou
   else if (idx == 1) usleep(500000);
   *m = (RedeMedida){ .status = 200, .bytes = 10, .ms = 1 };
-  if (modo == 3 ? idx == 13 : idx == 2) return strdup("{\"subtitles\":[{\"lang\":\"PORTUGUESE\",\"url\":\"https://fixture.invalid/pt.srt\"}]}");
+  if (modo == 3 ? idx == 24 : idx == 2) return strdup("{\"subtitles\":[{\"lang\":\"PORTUGUESE\",\"url\":\"https://fixture.invalid/pt.srt\"}]}");
   return strdup("{\"subtitles\":[{\"lang\":\"eng\",\"url\":\"https://fixture.invalid/en.srt\"}]}");
 }
 const char *i18n(const char *t) { return t; }
@@ -55,20 +54,19 @@ int main(void) {
   // Parar (fechou o player) enquanto respondem: nada entra na lista.
   modo = 2; nLegs = 0; legParar = 0; fioLegVivo = 1; buscarLegendas(NULL);
   assert(nLegs == 0 && !fioLegVivo);
-  // MAIS DE LEG_FIOS PROVEDORES, O RAPIDO ATRAS DO LENTO (revisao B4): a LEVA
-  // esperava o lote inteiro — o lento de 2 s do primeiro lote segurava o 14.
-  // ate la, e a escolha automatica desiste em 30 s (FX_AUTO_FIM_MS, faixas.c).
-  // A fila consulta o rapido assim que um fio vaga.
+  // SATURACAO: 24 lentos antes do valido. Com 12 trabalhadores, a fila inicia
+  // o valido so na terceira leva (~4000 ms; 60 s com o teto real), tarde para
+  // FX_AUTO_FIM_MS. O teto precisa cobrir esta poda normal da lista.
   modo = 3; nLegs = 0; legParar = 0; fioLegVivo = 1; visto13 = 0;
-  memset(addon, 0, sizeof addon); nAddon = 14;
-  for (int i = 0; i < 14; i++) {
+  memset(addon, 0, sizeof addon); nAddon = 25;
+  for (int i = 0; i < 25; i++) {
     addon[i].ativo = addon[i].legenda = 1;
     snprintf(addon[i].base, sizeof addon[i].base, "https://fixture.invalid/provider%d", i);
     snprintf(addon[i].nome, sizeof addon[i].nome, "%d", i);
   }
   t0 = agoraMs(); buscarLegendas(NULL);
-  assert(visto13 && visto13 - t0 < 1200);   // a barreira dava ~2000 ms
-  assert(nLegs >= 1 && !strcmp(legs[0].provedor, "13") && ling_casa(legs[0].idioma, "pt"));
-  puts("addons paralelo: 3 addons em paralelo, publica ao vivo, PORTUGUESE casa, titulo novo e parar descartam, 14 provedores sem barreira por lote ok");
+  assert(visto13 && visto13 - t0 < 1200);
+  assert(nLegs >= 1 && !strcmp(legs[0].provedor, "24") && ling_casa(legs[0].idioma, "pt"));
+  puts("addons paralelo: 3 addons em paralelo, publica ao vivo, PORTUGUESE casa, titulo novo e parar descartam, 24 lentos nao bloqueiam o valido ok");
   return 0;
 }

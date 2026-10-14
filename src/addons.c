@@ -1416,7 +1416,10 @@ static void prepararExtras(LegBusca *B) {
   fflush(stdout);
 }
 
-#define LEG_FIOS 12   // o ADD_FIOS de fora do Tizen; ver buscarLegendas
+// Uma fila de 12 ainda deixa 24 pedidos de 30 s esconderem o 25o por 60 s,
+// depois do prazo da selecao automatica. 32 cobre a lista podada (<= 32) de
+// uma vez; acima disso a fila continua limitando os fios.
+#define LEG_FIOS 32
 static void *buscarLegendas(void *u) {
   (void)u;
   for (;;) {
