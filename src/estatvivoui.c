@@ -578,12 +578,12 @@ static void fmtVel(char *n, size_t cap) {
 static void conteudoCompleto(float ox, float oy, float fase, float a) {
   GfxRect c = { ox, oy, EVU_W, EVU_H };
   float x = c.x + EVU_PAD, cw, xr;
-  caps("Estatísticas ao vivo", x, c.y + 30, a);
+  caps("Estatísticas ao vivo", x, c.y + 24, a);
   { TxtLinha t = txt_linha_corta(TXT_ILHA_PERGUNTA, tela.titulo[0] ? tela.titulo : i18n("Tocando agora"), EVU_TX, 400);
-    txt_desenhar_alpha(t, x, c.y + 56, a); }
+    txt_desenhar_alpha(t, x, c.y + 48, a); }
   if (tela.sub[0]) {
     TxtLinha s = txt_linha_corta(TXT_AJ_TEXTO, tela.sub, 180, 180, 182, 255, 400);
-    txt_desenhar_alpha(s, x, c.y + 100, a);
+    txt_desenhar_alpha(s, x, c.y + 88, a);
   }
   // Chips a direita, um sobre o outro: cadencia e plataforma.
   xr = c.x + c.w - EVU_PAD;
@@ -591,13 +591,14 @@ static void conteudoCompleto(float ox, float oy, float fase, float a) {
   chip("aj_clock", i18n("atualiza a cada 1 s"), xr - cw, c.y + 18, 36, a, 1);
   cw = chip("aj_tv-minimal-play", nomePlataforma(tela.plataforma), 0, 0, 36, a, 0);
   chip("aj_tv-minimal-play", nomePlataforma(tela.plataforma), xr - cw, c.y + 62, 36, a, 1);
-  { float x0 = x, x1 = x + EVU_TILE_W + EVU_GAP, y0 = c.y + 108;
-    tileVelocidade((GfxRect){ x0, y0, EVU_TILE_W, 244 }, fase, a);
-    tileBuffer((GfxRect){ x1, y0, EVU_TILE_W, 244 }, a);
-    tileFonte((GfxRect){ x0, y0 + 244 + EVU_GAP, EVU_TILE_W, 276 }, a);
-    tileServidor((GfxRect){ x1, y0 + 244 + EVU_GAP, EVU_TILE_W, 276 }, a);
-    tileErros((GfxRect){ x0, y0 + 276 + 244 + 2 * EVU_GAP, EVU_TILE_W, 210 }, a);
-    tileQuadros((GfxRect){ x1, y0 + 276 + 244 + 2 * EVU_GAP, EVU_TILE_W, 210 }, a); }
+  // As linhas de ladrilhos abaixo da linha do subtitulo (y + 88 + ~30).
+  { float x0 = x, x1 = x + EVU_TILE_W + EVU_GAP, y0 = c.y + 128, h1 = 240, h2 = 272, h3 = 206;
+    tileVelocidade((GfxRect){ x0, y0, EVU_TILE_W, h1 }, fase, a);
+    tileBuffer((GfxRect){ x1, y0, EVU_TILE_W, h1 }, a);
+    tileFonte((GfxRect){ x0, y0 + h1 + EVU_GAP, EVU_TILE_W, h2 }, a);
+    tileServidor((GfxRect){ x1, y0 + h1 + EVU_GAP, EVU_TILE_W, h2 }, a);
+    tileErros((GfxRect){ x0, y0 + h1 + h2 + 2 * EVU_GAP, EVU_TILE_W, h3 }, a);
+    tileQuadros((GfxRect){ x1, y0 + h1 + h2 + 2 * EVU_GAP, EVU_TILE_W, h3 }, a); }
 }
 
 // COMPACTO: o essencial em cinco linhas (resolucao, codec, velocidade, buffer,
