@@ -213,10 +213,15 @@ int main(void) {
     assert(fil_tipo("addon_movie_formas") == FIL_TIPO_LARGA);
     assert(fil_definir_tipo("collection_formas", FIL_TIPO_LARGA));    // #205: colecao tambem
     assert(fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_LARGA)[0]);
-    // #205: o texto de ajuda e o MESMO do catalogo; so o Automatico fala da
-    // forma que a colecao tem na conta.
-    assert(!strcmp(fil_estilo_ajuda("collection_formas", FIL_TIPO_CARTAZ),
-                   fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_CARTAZ)));
+    // #205: a ajuda da colecao descreve a PASTA no card do estilo (a capa
+    // da colecao no formato escolhido) e nao promete os enfeites do catalogo
+    // (pilha, numeros, linha do tempo, ficha, palco, recorte redondo); so o
+    // Automatico fala da forma que a colecao tem na conta.
+    { int tA[8], kA, nA = fil_estilos("collection_formas", tA, NULL, 8);
+      for (kA = 0; kA < nA; kA++) {
+        assert(fil_estilo_ajuda("collection_formas", tA[kA])[0]);
+        assert(strcmp(fil_estilo_ajuda("collection_formas", tA[kA]),
+                      fil_estilo_ajuda("addon_movie_formas", tA[kA]))); } }
     assert(strcmp(fil_estilo_ajuda("collection_formas", FIL_TIPO_AUTO),
                   fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_AUTO)));
     assert(fil_definir_tipo("addon_movie_formas", FIL_TIPO_RANKING));

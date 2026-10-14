@@ -1496,8 +1496,33 @@ const char *fil_estilo_rotulo(const char *chave, int t) {
 }
 
 const char *fil_estilo_ajuda(const char *chave, int t) {
-  if (fil_origem_de(chave) == FIL_ORIGEM_COLECAO && t == FIL_TIPO_AUTO)
-    return "A forma que a coleção tem na sua conta.";
+  if (fil_origem_de(chave) == FIL_ORIGEM_COLECAO) {
+    if (t == FIL_TIPO_AUTO) return "A forma que a coleção tem na sua conta.";
+    // #205: todo estilo vale para a fileira de colecao, mas o card e sempre a
+    // PASTA — a capa da colecao no formato do estilo. O que a ajuda do
+    // catalogo promete alem do formato (pilha do Top 10, numeros do Ranking,
+    // linha do tempo, ficha, palco, recorte redondo) a pasta nao desenha:
+    // a frase diz so o que renderiza de verdade.
+    switch (t) {
+      case FIL_TIPO_CARTAZ:
+      case FIL_TIPO_TOP10:
+      case FIL_TIPO_RANKING:
+      case FIL_TIPO_LINHA_TEMPO:
+        return "Cartaz em pé com a capa da coleção.";
+      case FIL_TIPO_PALCO:   return "Cartaz em pé maior com a capa da coleção.";
+      case FIL_TIPO_REDONDA: return "Card quadrado com a capa da coleção.";
+      case FIL_TIPO_FICHA:   return "Cartaz com a capa da coleção num card mais largo.";
+      case FIL_TIPO_DESTAQUE:
+      case FIL_TIPO_LARGA:   return "Card deitado 16:9 com a capa da coleção.";
+      case FIL_TIPO_COLECAO:  return "Card deitado médio com a capa da coleção.";
+      case FIL_TIPO_SERVICO:  return "Card deitado compacto com a capa da coleção.";
+      case FIL_TIPO_DESTAQUE_QUADRADO:
+      case FIL_TIPO_DESTAQUE_QUADRADO_M:
+      case FIL_TIPO_DESTAQUE_QUADRADO_G:
+        return "Card em 4:3 com a capa da coleção.";
+      default:                return "A capa da coleção no card do formato escolhido.";
+    }
+  }
   // As frases das formas sao as da tela de Ajustes (aj_fil_forma_ajuda): as
   // mesmas chaves, ja traduzidas nos 28 idiomas.
   switch (t) {

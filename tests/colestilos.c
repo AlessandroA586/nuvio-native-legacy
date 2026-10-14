@@ -110,6 +110,37 @@ int main(void) {
     }
   }
 
+  // 2b. O VAO E O NUMERAL DO RANKING: a faixa dele (xOffTipo, os 138 px) segue
+  //     no vao da fileira de TITULOS como sempre — sem a guarda, ela sumia de
+  //     TODO mundo. A pasta nao desenha numeral: o vao da colecao e o do
+  //     estilo SEM a faixa (a previa do modal segue o mesmo vao).
+  {
+    const Fileira *col, *cat;
+    int rCol, rCat;
+    assert(fil_definir_tipo("collection_c1", FIL_TIPO_RANKING));
+    assert(fil_definir_tipo("addon_movie_a", FIL_TIPO_RANKING));
+    sincronizarFileiras();
+    col = naHome("collection_c1"); cat = naHome("addon_movie_a");
+    assert(col && cat);
+    rCol = (int)(col - fileiras); rCat = (int)(cat - fileiras);
+    assert(cat->tipo == FILEIRA_TOP10_NUM);
+    assert(col->estiloCol == FILEIRA_TOP10_NUM);
+    // Titulo: o vao traz a faixa do numeral (gapDe ja a inclui).
+    assert(passoFil(rCat) == larguraFil(rCat) + gapDe(FILEIRA_TOP10_NUM));
+    // Pasta: o mesmo vao, menos a faixa que ela nao desenha.
+    assert(passoFil(rCol) ==
+           larguraFil(rCol) + gapDe(FILEIRA_TOP10_NUM) - xOffTipo(FILEIRA_TOP10_NUM));
+    // Sem numeral no meio, o vao e inteiro para os dois (Cartaz).
+    assert(fil_definir_tipo("collection_c1", FIL_TIPO_CARTAZ));
+    assert(fil_definir_tipo("addon_movie_a", FIL_TIPO_CARTAZ));
+    sincronizarFileiras();
+    col = naHome("collection_c1"); cat = naHome("addon_movie_a");
+    assert(col && cat);
+    rCol = (int)(col - fileiras); rCat = (int)(cat - fileiras);
+    assert(passoFil(rCat) == larguraFil(rCat) + gapDe(cat->tipo));
+    assert(passoFil(rCol) == larguraFil(rCol) + gapDe(col->estiloCol));
+  }
+
   // 3. A escolha PERSISTE por fileirasui.txt como a do catalogo: mesmo arquivo,
   //    mesmo campo, e a remontagem da Home devolve o estilo escolhido.
   {

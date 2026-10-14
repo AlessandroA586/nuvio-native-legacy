@@ -1664,10 +1664,14 @@ static float alfaFileiraHome(int r, float y, float topo, float corte) {
 static float passoFil(int r) {
   // Fileira de colecao com estilo escolhido: o vao e o do estilo — os cards
   // grandes pedem o gap grande —, menos a faixa do numeral do ranking, que
-  // nao existe para pasta.
-  TipoFileira t = fileiras[r].tipo == FILEIRA_CATALOGOS ? fileiras[r].estiloCol
-                                                       : fileiras[r].tipo;
-  return larguraFil(r) + gapDe(t) - xOffTipo(t);
+  // nao existe para pasta. Nas DEMAIS fileiras o vao e o de sempre: o gapDe de
+  // cada tipo ja traz o que ela pede (a faixa do numeral do Ranking numerado
+  // entra no vao dos titulos, como sempre entrou).
+  if (fileiras[r].tipo == FILEIRA_CATALOGOS) {
+    TipoFileira e = fileiras[r].estiloCol;
+    return larguraFil(r) + gapDe(e) - xOffTipo(e);
+  }
+  return larguraFil(r) + gapDe(fileiras[r].tipo);
 }
 static float homeFileiraX(int r, int c) {
   return homeConteudoX() + (float)c * passoFil(r) - scrollX[r] + bordaX(r);
@@ -6137,6 +6141,10 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
   if (nItens < 1) return 0;
   tipo = previaMedida(fl, chave, filTipo, &forma, &pilha, &lw, &lh);
   gap = gapDe(tipo); xoff = xOffTipo(tipo);
+  // Colecao: como na Home (passoFil/homeFileiraX) — a pasta nao desenha o
+  // numeral do Ranking, entao o vao vem SEM a faixa dele e o card sai no
+  // comeco da area, sem o recuo que abre espaco para o numero.
+  if (fl->tipo == FILEIRA_CATALOGOS) { gap -= xOffTipo(tipo); xoff = 0.0f; }
   deitado = editorial(tipo) || tipo == FILEIRA_LARGA ||
             ((tipo != FILEIRA_CONTINUE) && ajustes_posteres_deitados());
   rotuloFora = temRotulo(tipo);
@@ -6152,6 +6160,7 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
     if (refTipo != filTipo && refTipo >= 0 && refTipo < FIL_TIPO_N) {
       TipoFileira tR = previaMedida(fl, chave, refTipo, &fR, &pR, &lwR, &lhR);
       gapR = gapDe(tR); xoffR = xOffTipo(tR);
+      if (fl->tipo == FILEIRA_CATALOGOS) { gapR -= xOffTipo(tR); xoffR = 0.0f; }
       rotR = temRotulo(tR) ? NV_POSTER_COPY_H : 0.0f;
       if (fl->tipo == FILEIRA_CATALOGOS) rotR = 0.0f;
     } else pR = pilha;
