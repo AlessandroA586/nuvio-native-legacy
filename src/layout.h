@@ -341,6 +341,9 @@ int layout_modo_mobile(void);
 #define NV_FICHA_ILHA_DY  12.0f   // a ilha um pouco menor que o cartaz, dentro da fileira
 #define NV_FICHA_RAIO     32.0f   // o mesmo canto do menu contextual (CTX_ILHA_RAIO)
 #define NV_PALCO_ESC       1.3f
+// A CORTINA do Palco (#205, pedido do dono: "o resto da tela mais dimming
+// ainda"): com o foco numa fileira Palco, um scrim escurece tudo fora dela.
+#define NV_PALCO_CORTINA   0.42f
 // Fileira redonda (pessoas): diametro do disco. O nome vai abaixo, no bloco do rotulo.
 #define NV_REDONDA_D       200.0f
 #define NV_PALCO_VIZ       0.66f
