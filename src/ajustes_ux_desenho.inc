@@ -1065,20 +1065,26 @@ static float aj2ChipLiga(int op, float xDir, float yc, int ligado, float a) {
 // 2.0.3 (decisao do dono): o interruptor e uma PILULA COM O ESTADO ESCRITO.
 // Ligado = pilula clara cheia, ponto escuro, texto escuro. Desligado = so o
 // contorno, ponto vazado, texto cinza. Nunca a bolinha sozinha.
+// A TROCA E UMA MOLA (ajMov, ~140 ms): o contorno esvai enquanto a pilula
+// cheia cresce, em vez de trocar num quadro. O texto rasterizado nao recolore
+// por quadro (cache): troca no ponto medio, como o resto da tela.
 static float aj2PilulaEstado(int op, float xDir, float yc, int ligado, float a) {
-  const char *rot = ligado ? "Ligado" : "Desligado";
-  TxtLinha t = ligado ? txt_linha(TXT_V3_PILL, rot, 22, 22, 26, 255) : ajTxt(TXT_V3_PILL, rot);
+  float on = 1.0f - ajMov(op, uxValorAtual(op));   // valor 1 = Desligado (ver lig())
+  TxtLinha tOff = ajTxt(TXT_V3_PILL, "Desligado");
+  TxtLinha tOn = txt_linha(TXT_V3_PILL, "Ligado", 22, 22, 26, 255);
+  TxtLinha t = on > 0.5f ? tOn : tOff;
   float h = 50.0f, w = 20.0f + 12.0f + 10.0f + t.w + 22.0f;
   GfxRect r = { xDir - w, yc - h * 0.5f, w, h }, d = { r.x + 20.0f, yc - 6.0f, 12.0f, 12.0f };
-  (void)op;
-  if (ligado) {
-    gfx_cor(r, 0.5f, 0.953f, 0.949f, 0.937f, a);
-    gfx_cor(d, 0.5f, 0.086f, 0.086f, 0.102f, a);
-    txt_desenhar_alpha(t, d.x + 22.0f, yc - t.h * 0.5f, a);
-  } else {
-    gfx_anel(r, 0.5f, 2.0f, 1, 1, 1, 0.28f * a);
-    gfx_anel(d, 0.5f, 2.0f, 1, 1, 1, 0.55f * a);
-    txt_desenhar_alpha(t, d.x + 22.0f, yc - t.h * 0.5f, 0.62f * a);
+  (void)ligado;
+  if (on < 0.995f) {
+    gfx_anel(r, 0.5f, 2.0f, 1, 1, 1, 0.28f * (1.0f - on) * a);
+    gfx_anel(d, 0.5f, 2.0f, 1, 1, 1, 0.55f * (1.0f - on) * a);
+    txt_desenhar_alpha(tOff, d.x + 22.0f, yc - tOff.h * 0.5f, 0.62f * (1.0f - on) * a);
+  }
+  if (on > 0.005f) {
+    gfx_cor(r, 0.5f, 0.953f, 0.949f, 0.937f, on * a);
+    gfx_cor(d, 0.5f, 0.086f, 0.086f, 0.102f, on * a);
+    txt_desenhar_alpha(tOn, d.x + 22.0f, yc - tOn.h * 0.5f, on * a);
   }
   return w;
 }
