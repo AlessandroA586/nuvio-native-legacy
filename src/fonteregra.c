@@ -491,15 +491,20 @@ void fonteregra_perfil_guardar(int perfil) {
 
 int fonteregra_perfil_restaurar(int perfil) {
   char nome[40], *t;
+  int tinhaCopia;
   if (perfil <= 0) return 0;
   nomePerfil(nome, sizeof nome, perfil);
-  if (!(t = dados_ler(nome))) return 0;
+  t = dados_ler(nome);
+  tinhaCopia = t != NULL;
   pthread_mutex_lock(&trava);
-  lerSemTrava(t);
+  // Primeira visita: as listas, a ordem e o texto do perfil que saiu nao
+  // sao os padroes deste. A leitura vazia tambem libera a regex compilada,
+  // avanca a versao e atualiza a copia de trabalho usada no proximo boot.
+  lerSemTrava(t ? t : "");
   gravarSemTrava(ARQ);
   pthread_mutex_unlock(&trava);
   free(t);
-  return 1;
+  return tinhaCopia;
 }
 
 void fonteregra_perfil_esquecer(void) {

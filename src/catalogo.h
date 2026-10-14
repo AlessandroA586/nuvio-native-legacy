@@ -9,6 +9,7 @@
 #ifndef NV_CATALOGO_H
 #define NV_CATALOGO_H
 #include "addonurl.h"
+#include <stdint.h>
 
 // 40 titulos hoje (14 do historico do dono + 26 dos catalogos). A folga evita
 // o corte silencioso que ja aconteceu: com 32 os oito ultimos sumiam sem aviso.
@@ -219,7 +220,11 @@ int  cat_carregar(const char *dirArte);
 // pedidos e os 14,5 s medidos acima. A escolha fica dentro de catalogo.c, e nao
 // nos chamadores, porque quem le (home.c) e quem grava (descoberta.c) sao
 // arquivos diferentes e tem de concordar. Ver a nota longa em caminhoCache.
+// App opt-in keeps one validated disk snapshot per account/profile.
+void cat_cache_perfis(int ligado);
 int  cat_gravar_cache(const char *dirArte);
+int  cat_gravar_cache_se_sessao(const char *dirArte, const char *donoEsperado,
+                                  int perfilEsperado, uint64_t sessaoEsperada);
 int  cat_gravar_cache_se_identidade(const char *dirArte, const char *donoEsperado,
                                     int perfilEsperado);
 // Devolve 1 se carregou. Chamar DEPOIS de cat_carregar: ele substitui o

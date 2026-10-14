@@ -63,6 +63,8 @@ void addons_diferenca(const AddonRemoto *antes, int na, const AddonRemoto *depoi
 // primeiro sync terminar. Ficar sem fonte por alguns segundos e o
 // comportamento correto de "ninguem logado".
 void addons_esquecer(void);
+// Abre uma sessao de perfil limpa; nao espera nem refaz pedidos anteriores.
+void addons_abrir_sessao(void);
 int  addons_n(void);
 // Numero que sobe a cada mudanca na lista de addons (conta, liga/desliga,
 // adicao). app.c refaz a busca de fontes do titulo aberto quando ele muda —

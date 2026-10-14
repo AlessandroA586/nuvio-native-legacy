@@ -199,6 +199,9 @@ int stream_falha_verificar(FonteFalhaSessao *sessao, unsigned lista, int escolhi
                            int (*cancelado)(void *), void *ctx,
                            int *indice, int *servico, char *url, unsigned tam);
 int stream_falha_aplicar(int indice, unsigned lista, int servico, const char *url);
+// A resolved candidate belongs to the profile opening that requested it.
+int stream_falha_aplicar_sessao(int indice, unsigned lista, int servico,
+                              const char *url, uint64_t sessao);
 void stream_falha_identidade(const Stream *fonte, char *dst, unsigned tam);
 // A fonte `i` pode ser seguida por um grupo lembrado SEM rebaixar o que o
 // automatico escolheria hoje: nao excluida pelas regras do dono, grupo de
@@ -372,4 +375,8 @@ void stream_folha_desenhar(Uint32 agora);
 // Devolve 1 uma vez quando o usuario escolheu, com o indice em *escolhido.
 int  stream_folha_escolheu(int *escolhido);
 
+// Captured at dispatch, so a delayed worker cannot adopt another profile's list.
+int stream_canal_primeira_viva_sessao(int tentativas, uint64_t sessao);
+int stream_primeira_boa_sessao(int tentativas, uint64_t sessao);
+int stream_verificar_proxima_vod_sessao(int atualIdx, int tentativas, int *conferidas, uint64_t sessao);
 #endif

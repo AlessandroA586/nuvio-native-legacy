@@ -347,6 +347,12 @@ IGNORAR = {
     "-perfil",                      # sufixo de nome de arquivo (ajustes.c)
     "recomendacoes-perfil.txt",     # nome de arquivo do perfil publico (recomenda.c)
     "amigos-vistos.txt",            # nome de arquivo das novidades vistas (socialvis.c)
+    # Caches privados por conta/perfil e seus temporarios (catalogo.c), e o
+    # arquivo das novidades vistas por perfil (recomenda.c/socialvis.c).
+    # Usados apenas para ler, gravar e apagar arquivos; nunca texto de tela.
+    "%s/catalogo-%016llx-p%d.bin", "%s/catalogo-%016llx-p%d.bin.tmp",
+    "catalogo-%016llx-p%d.bin.tmp-", "catalogo-rede.bin.tmp-",
+    "amigos-vistos-p%d.txt",
     "%s/poster/%02d.jpg",           # caminho da arte dos dados de exemplo (socialvis.c, so teste)
     "biblioteca.h", "catalogo.h", "fileiras.h", "perfil.h", "legenda.h",
     "perfil.txt",                   # #include e nome de arquivo

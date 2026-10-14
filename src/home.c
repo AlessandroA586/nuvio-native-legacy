@@ -3,6 +3,7 @@
 // hero no topo, rail fixa à esquerda e fileiras horizontais de posters. A
 // infraestrutura nativa cuida de cache assíncrono, foco e transições.
 #include "home.h"
+#include "perfis.h"
 #include "botoes.h"
 #include "cwretido.h"
 #include "focoprof.h"
@@ -275,6 +276,13 @@ static int editorial(TipoFileira t) {
 static Foco foco;
 static HomeItem itemFoco;      // preenchido durante o desenho, lido pela transicao
 static int  temItemFoco = 0;
+static uint64_t itemFocoSessao;
+static unsigned itemFocoCatalogo;
+static void publicarItemFoco(void) {
+  itemFocoSessao = perfis_sessao_geracao();
+  itemFocoCatalogo = cat_revisao();
+  temItemFoco = 1;
+}
 static float animFoco[MAX_FIL][MAX_CARDS];
 // MICRO-ANIMACOES DE CARD (revela.h). Um registro por lugar da grade para a
 // arte chegando; um so para a luz do foco, porque so ha um card em foco; e o
@@ -3186,7 +3194,7 @@ void home_ir_topo(void) {
 // na C9 (08/10, 2.0.3): 38 min na escolha de perfil, 0 linhas `[hero] espera` e
 // 327 de `pre-busca nao saiu: desejado=322`. Escondida, vale o mesmo que o
 // detalhe/player na frente: o hero nao muda e o relogio e rearmado na volta.
-static int homeOculta;
+static int homeOculta, heroOcultoAntes;
 void home_oculta(int oculta) { homeOculta = oculta ? 1 : 0; }
 // O painel de Salvos/Social na frente: a home de tras fica congelada numa copia
 // (spainel_fundo) e so e desenhada nas repinturas dela, entao o carrossel nao
@@ -3287,7 +3295,6 @@ void home_atualizar(float dt, Uint32 agora) {
   // sair. O relógio é rearmado na volta, preservando a escolha visível.
   const int heroOculto = detail_aberto() || player_aberto() || homeOculta || homePainel;
   if (homePainel) homePainelFoi = 1;
-  static int heroOcultoAntes;
   if (heroOculto) {
     if (!heroOcultoAntes) {
       // Um desejo armado antes da abertura nao pode ser efetivado pelo
@@ -3741,7 +3748,7 @@ static void heroPublicarFoco(const CatItem *ci, float aTexto) {
   itemFoco.titulo = ci->titulo;
   itemFoco.genero = ci->genero;
   itemFoco.meta = ci->meta;
-  temItemFoco = 1;
+  publicarItemFoco();
 }
 #endif
 int home_streaming_barra(const int **pastas) {
@@ -4330,7 +4337,7 @@ static void desenhaHero(Uint32 agora, float saida) {
   }
 
   sinW = homeTextoLargura(sinW);
-  if(lay==HOME_LAYOUT_MODERNA && foco.fileira>=0 && foco.fileira<nFileiras && fileiras[foco.fileira].tipo==FILEIRA_SOCIAL) {
+  if(!focoHero && lay==HOME_LAYOUT_MODERNA && foco.fileira>=0 && foco.fileira<nFileiras && fileiras[foco.fileira].tipo==FILEIRA_SOCIAL) {
     float x=homeConteudoX(),a=(1-saida)*heroVisivelToque();
     const Fileira *s=&fileiras[foco.fileira];
     const CatItem *p=(fileiraItemIndice(s, foco.coluna) >= 0)
@@ -4398,7 +4405,7 @@ static void desenhaHero(Uint32 agora, float saida) {
   // COLECAO EM FOCO: o destaque vira o banner da pasta. Moderna e Padrao; a
   // Dinamica nao tem destaque parado no topo e mostra o mesmo banner por tras
   // do cabecalho da fileira (dinArteColecao).
-  if(lay!=HOME_LAYOUT_DINAMICA&&foco.fileira>=0&&foco.fileira<nFileiras&&fileiras[foco.fileira].tipo==FILEIRA_CATALOGOS) {
+  if(!focoHero&&lay!=HOME_LAYOUT_DINAMICA&&foco.fileira>=0&&foco.fileira<nFileiras&&fileiras[foco.fileira].tipo==FILEIRA_CATALOGOS) {
     const ColFolder *folder=col_folder(fileiras[foco.fileira].folders[foco.coluna]);
     if(folder) {
       if(folder->editorial) {
@@ -4926,7 +4933,7 @@ static void desenhaHero(Uint32 agora, float saida) {
         itemFoco.titulo = ci->titulo;
         itemFoco.genero = ci->genero;
         itemFoco.meta   = ci->meta;
-        temItemFoco = 1;
+        publicarItemFoco();
       }
 #endif
     } }
@@ -5001,10 +5008,17 @@ static void desenhaAtalhos(int r, float y) {
   // o GIF passou a poder sair da CAPA, e a troca de fonte no mesmo cartaz
   // tambem zera a pergunta ao arquivo. Ver gifcolecao.h.
   static GcFoco gcFoco; static int gcIniciado;
-  if (!gcIniciado) { gifcol_foco_iniciar(&gcFoco); gcIniciado = 1; }
   // Quadro da sequencia de JPEG que ja esta resolvido, para nao reconsultar
   // o cache nos ~4 quadros de tela que cabem entre dois passos de 67 ms.
   static int seqIndice=-1;static GLuint seqTex;
+  static uint64_t sessaoColecao;
+  uint64_t sessao = perfis_sessao_geracao();
+  if (!gcIniciado || sessaoColecao != sessao) {
+    gifcol_foco_iniciar(&gcFoco); gcIniciado = 1;
+    sessaoColecao = sessao; ultimo = -1; desde = 0;
+    seqIndice = -1; seqTex = 0;
+    gif_parar();
+  }
   for (int c = 0; c < fileiras[r].n; c++) {
     float x0 = homeFileiraX(r, c);
     if (x0 + w < 0 || x0 > NV_TELA_W) continue;
@@ -6456,6 +6470,9 @@ void home_fileiras_vistas(Uint32 agora) {
 }
 
 void home_desenhar(Uint32 agora) {
+  // Nao conservar ponteiros para o catalogo de outro quadro/perfil quando
+  // nenhuma tela de titulo publica um item (pasta, social ou estado vazio).
+  temItemFoco = 0;
   // O cartaz capaz do trailer No card e reescrito por quem o pintar neste quadro.
   cartaoTrailerItem = -1; cartaoTrailerPode = cartaoTrailerServe = 0;
   amigostitulo_atualizar();   // barato: so remonta quando o feed social mudou
@@ -6871,7 +6888,7 @@ void home_desenhar(Uint32 agora) {
             itemFoco.titulo = cItem ? cItem->titulo : NULL;
             itemFoco.genero = cItem ? cItem->genero : NULL;
             itemFoco.meta   = cItem ? cItem->meta : NULL;
-            temItemFoco = 1;
+            publicarItemFoco();
           }
           // Pede pela largura REAL do card: e esta fileira que multiplica.
           // Com o teto unico de 640 cada poster custava 2,4 MB e o cache
@@ -7106,7 +7123,8 @@ void home_retomar_esquecer(void) {
 int home_quer_sair(void) { return sair; }
 
 int home_item_focado(HomeItem *out) {
-  if (!temItemFoco) return 0;
+  if (!out || !temItemFoco || !perfis_sessao_atual(itemFocoSessao) ||
+      itemFocoCatalogo != cat_revisao()) return 0;
   *out = itemFoco;
   return 1;
 }
@@ -7193,5 +7211,59 @@ void home_focar_titulo(int indice) {
       velX[foco.fileira] = 0.0f;
       return;
     }
+}
+
+void home_abrir_sessao(void) {
+  Uint32 agora = SDL_GetTicks();
+  home_ir_topo();
+  // So estado derivado/transitorio. A arte cacheada pode ser reutilizada;
+  // escolhas e dados persistidos continuam sendo do perfil que os carregou.
+  temItemFoco = temCartaoFoco = 0;
+  memset(&itemFoco, 0, sizeof itemFoco);
+  memset(&cartaoFoco, 0, sizeof cartaoFoco);
+  itemFocoSessao = 0; itemFocoCatalogo = 0;
+  sair = pedidoAbrir = pedidoTocar = pedidoMenu = 0;
+  pedidoSocial = pedidoPessoaSocial = pedidoGuia = 0;
+  memset(&pessoaSocial, 0, sizeof pessoaSocial); guiaId[0] = 0;
+  okDesde = 0; okPressionando = okLongDisparado = okConsumirSoltura = 0;
+  okHold = 0.0f;
+  home_retomar_esquecer();
+  nFileiras = nStreamBarra = nProxHome = 0;
+  memset(fileiras, 0, sizeof fileiras);
+  filsAplicadas = prefsAplicadas = -1;
+  memset(animFoco, 0, sizeof animFoco);
+  memset(revArte, 0, sizeof revArte); revVarre = (RevelaVarre){ -1, 0, 0 };
+  memset(filEntraEm, 0, sizeof filEntraEm); memset(filNAntes, 0, sizeof filNAntes);
+  memset(bordaFil, 0, sizeof bordaFil); memset(&bordaPag, 0, sizeof bordaPag);
+  memset(numPedidoEm, 0, sizeof numPedidoEm); memset(numProntoEm, 0, sizeof numProntoEm);
+  memset(palcoPos, 0, sizeof palcoPos); memset(palcoUlt, 0, sizeof palcoUlt);
+  memset(tempoCol, 0, sizeof tempoCol); memset(tempoAno, 0, sizeof tempoAno);
+  memset(tempoEntraEm, 0, sizeof tempoEntraEm); memset(tempoUlt, 0, sizeof tempoUlt);
+  fileirasVistasEm = 0;
+  expFileira = expColuna = -1; expDesde = 0; expAbre = 0.0f;
+  heroAtual = heroAnterior = heroPendente = 0;
+  heroDesejado = heroTardeItem = heroPreItem = heroPreLogado = heroInfoItem = -1;
+  heroPendenteEm = heroUltTecla = agora;
+  heroDesejadoEm = heroTardeEm = heroPreDiagEm = 0;
+  heroSai = 0.0f; heroEntra = heroDesliza = 1.0f;
+  heroDeslizaDir = heroDirDesejado = heroAutoDesligado = heroOcultoAntes = 0;
+  heroTrocaEm = agora + NV_HERO_INTERVALO_MS;
+  heroSetN = heroSetCat = heroSetNFil = 0;
+  heroSetRev = heroSetFilRev = heroSemente = 0;
+  heroVizBase = -1; heroVizFeito = 0; heroVizTentaEm = 0;
+  heroPontosPos = -1.0f; heroPontosT = 0;
+  memset(&heroTempo, 0, sizeof heroTempo);
+  if (trailer_aberto() && trailer_dono() == TRAILER_DONO_HOME) trailer_fechar();
+  heroTrailerItem = cartaoTrailerItem = -1;
+  heroTrailerImdb[0] = heroTrailerYoutubeId[0] = 0;
+  heroTrailerDesde = heroTrailerPreparandoAte = 0;
+  heroTrailerTentado = heroTrailerFonte = heroTrailerAppleFalhou = heroTrailerQual = 0;
+  heroTrailerFalhas = 0; heroTrailerFade = 0.0f;
+  heroTrailerNoCartao = cartaoTrailerPode = cartaoTrailerServe = 0;
+  free(heroTrailerTocou); heroTrailerTocou = NULL;
+  heroTrailerTocouN = heroTrailerTocouCap = 0; heroTrailerMemoriaFalhou = 0;
+  trailercinema_zerar(&heroCinema);
+  dinColArte[0] = 0; dinColAlfa = 0.0f; dinUlt = 0;
+  for (int i = 0; i < 3; i++) dinCor[i] = dinAlvo[i] = 0.051f;
 }
 
