@@ -326,6 +326,10 @@ extern float gfx_opacidade_grupo;
 // Nao aninha. Miniaturas e passadas internas ficam de fora.
 void gfx_transformar(float ox, float oy, float s, float dx, float dy);
 void gfx_sem_transformar(void);
+// Ha um gfx_transformar ativo? Durante uma transicao o desenho sai escalado
+// e os retangulos das funcoes nao sao os da tela: quem registra alvos de
+// ponteiro/toque espera ele voltar 0.
+int  gfx_transformado(void);
 // GIRO DE GRUPO: todo retangulo desenhado ate gfx_sem_girar sai girado `rad`
 // radianos em torno de (cx, cy), em coordenadas de layout. Existe para a parede
 // inclinada da escolha de perfil e o feixe do projetor (perfilsel.c). O recorte
