@@ -62,7 +62,25 @@ Não há servidor HLS próprio em `src/dts/`: usa AVIO/`libavformat`. `proxyts.c
 | Harness libFuzzer/AFL em `tests/`/`tools/` | Não identificado | Não identificado | Não identificado | Fixtures/regressões não substituem fuzz de bytes hostis |
 | ASan do app inteiro | Manual no histórico | `15cd67e5`: `descanso_wake` exercita GL/cache com ASan/UBSan | idem + suíte completa instrumentada | Automatizado, mas ainda não reproduziu queda da TV |
 
-`tools/depura-mac.sh` continua sendo LLDB, sem `-fsanitize`, e não é o runner. `tpk.sh` tem guards ELF; `tests/tpk40_tls.sh` pode sair 0 com “pulado” sem Docker/binários — o runner conta isso como sem prova, não como passou. Observer no primeiro uso: `ASAN_OPTIONS` não pode levar `detect_leaks` no macOS (o clang aborta o run inteiro); `tests/abrirtitulo.sh` não linka sem `addons_lista_*` e `tests/p2pmotor_real.sh` depende do motor P2P pré-compilado, incompatível com o `src/` atual.
+`tools/depura-mac.sh` continua sendo LLDB, sem `-fsanitize`, e não é o runner. `tpk.sh` tem guards ELF; `tests/tpk40_tls.sh` pode sair 0 com “pulado” sem Docker/binários — o runner conta isso como sem prova, não como passou. Observado no primeiro uso: `ASAN_OPTIONS` não pode levar `detect_leaks` no macOS (o clang aborta o run inteiro). `tests/abrirtitulo.sh` não linka sem `addons_lista_*`, e `tests/p2pmotor_real.sh` depende do motor P2P pré-compilado, incompatível com o `src/` atual — os dois saem como dependência, não como falha. Os testes que ligam a SDL2 do brew (`aovivo`, `cwremover`, `bordafileira`, `atividade_corrida`, `artetamanho`) travam no dyld sob ASan, exatamente o que `tests/bordafileira.sh:5` já descreve: o runner os conta como “sem terminar”, que não é prova nem é erro de sanitizador.
+
+### 1.3 Primeira execução obrigatória (este ramo, Mac do dono, `TMPDIR` em SSD externo)
+
+`bash tools/sanitiza.sh`, suíte inteira, ASan+UBSan em 6 paralelo (`SANITIZA_TIMEOUT=900`) e TSan serial. **588 execuções** = 560 ASan + 28 TSan; os 114 `*_shot`/`cinematic`/`director`/`*_perf` ficam fora, como em `testa-tudo.sh`, e os 2 com TSan fixo contam só no passo thread.
+
+| Veredito | Qtd. | Leitura |
+|---|---:|---|
+| `ok` | 514 | Passou instrumentado |
+| `ok*` | 2 | Passou com casos pulados no log (`herocat_regras`, `recomenda_e2e`) |
+| `ERRO` (sanitizer) | **0** | Nenhum relatório de ASan/UBSan/TSan nas 588 execuções |
+| `FALHA` | 31 | 24 já falhavam **sem** sanitizer (iguais aqui) |
+| `DEP` | 23 | Sem dependência: FFmpeg/curl headers, motor P2P velho, `tpk_x64`, link de `abrirtitulo` |
+| `SKIP` | 0 | Nenhum teste pediu pular |
+| `TIMEOUT` | 18 | Sem prova; a maioria é a classe SDL2+ASan do dyld |
+
+Os 31 `FALHA` foram rodados de novo **sem** sanitizer: 24 reproduzem igual (`ajustes_padroes`, `ajustes_ux_dados`, `ajustes_ux_interacao`, `detail_eps_repede`, `dts_pipeline`, `espaco`, `gpunivel_ajuda`, `player`, `proxprefetch`, `conta`, `cachearte-wasm`, `carrossel_cede`, `corviva`, `discord_ca_assets`, `dts_sonda_cache`, `dts_sonda_repetida`, `entrada_texto_wgt`, `i18n`, `ponteiro_telas`, `relogiofim`, `salvos_segurar`, `tizen-despedida`, `tizen-globalthis`, `trailer-hero-contract`) — estão fora do escopo desta fase. Os 7 restantes passam sem sanitizer e travam sob ASan (`aovivo`, `cwremover`, `bordafileira`, `atividade_corrida`, `artetamanho`, mais `dvsonda_contentor` e `tpk-responsive`), todos da mesma família SDL2/dyld já anotada em `tests/bordafileira.sh`. **Nenhum deles é erro de memória**: é ASan que não sobe com a SDL2 do brew.
+
+O gate sai em rc=1 por causa dos 24 `FALHA` pré-existentes. Para o piloto isso não é bloqueio novo: é a suíte que já estava vermelha antes da fase 0, e nenhum deles é sanitizer.
 
 ## 2. Mapa de candidatos: problema, FFI e custo alternativo
 
