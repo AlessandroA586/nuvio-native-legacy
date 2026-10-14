@@ -173,6 +173,11 @@ typedef struct {
   // previa so saberia mostrar a forma atual.
   TipoFileira tipoAuto;
   int formaAuto;
+  // O ESTILO ESCOLHIDO de uma fileira de colecao, ja traduzido (tipoDaEscolha):
+  // a pasta e desenhada no card DO ESTILO — a mesma medida do catalogo, so
+  // que com a capa da colecao. FILEIRA_CATALOGOS e o Automatico: vale a forma
+  // que a conta deu a pasta (`forma`).
+  TipoFileira estiloCol;
 } Fileira;
 
 static int fileiraItemIndice(const Fileira *f, int coluna) {
@@ -1599,6 +1604,14 @@ static float limita43(float fator, float e) {
        ? eMax : 1.0f + (eMax - 1.0f) * 0.5f;
   return e > teto ? teto : e;
 }
+// A MEDIDA DO CARD DA FILEIRA DE COLECAO: a do estilo escolhido (a mesma
+// larguraDe/alturaDe do catalogo, com a pasta no lugar do cartaz) ou, em
+// Automatico, a da forma que a conta deu a pasta (medidaColecao).
+static void medidaCol(const Fileira *f, float *w, float *h) {
+  if (f->estiloCol != FILEIRA_CATALOGOS) { *w = larguraDe(f->estiloCol); *h = alturaDe(f->estiloCol); }
+  else medidaColecao(f->forma, w, h);
+}
+
 // O MESMO TETO DO 4:3 MAIOR para o Pôster grande: na Moderna e no Padrao a
 // fileira em foco fica sempre no mesmo Y, embaixo do destaque, e um card mais
 // alto que a base da tela cortaria a sinopse — a informação que só esta
@@ -1615,14 +1628,18 @@ static float limitaPosterG(float e) {
 static float escalaFil(int r) {
   float e = (r >= 0 && r < MAX_FIL) ? fileiras[r].escala : 0.0f;
   e = e > 0.05f ? e : 1.0f;
+  // O teto dos 4:3 maiores vale tambem para a fileira de colecao vestida de
+  // 4:3: o card e o mesmo do catalogo.
   if (r >= 0 && r < MAX_FIL && fileiras[r].fator > 1.0f &&
-      fileiras[r].tipo == FILEIRA_DESTAQUE_QUADRADO)
+      (fileiras[r].tipo == FILEIRA_DESTAQUE_QUADRADO ||
+       (fileiras[r].tipo == FILEIRA_CATALOGOS &&
+        fileiras[r].estiloCol == FILEIRA_DESTAQUE_QUADRADO)))
     e = limita43(fileiras[r].fator, e);
   if (r >= 0 && r < MAX_FIL && fileiras[r].tipo == FILEIRA_POSTER_GRANDE)
     e = limitaPosterG(e);
   if (homeRetratoTelefone() && r >= 0 && r < MAX_FIL) {
     float w = fileiras[r].stackN ? 680.0f : larguraDe(fileiras[r].tipo);
-    if (fileiras[r].tipo == FILEIRA_CATALOGOS) { float h; medidaColecao(fileiras[r].forma, &w, &h); }
+    if (fileiras[r].tipo == FILEIRA_CATALOGOS) { float h; medidaCol(&fileiras[r], &w, &h); }
     float limite = (homeLarguraUtil() - xOffTipo(fileiras[r].tipo)) * 0.9f;
     if (w > 0.0f && e * w > limite) e = limite / w;
   }
@@ -1634,12 +1651,12 @@ static float larguraFil(int r) {
   // lugares que mediam a fileira e agora esta num.
   float w = (r >= 0 && r < MAX_FIL && fileiras[r].stackN)
           ? 680.0f : larguraDe(fileiras[r].tipo);
-  if (fileiras[r].tipo == FILEIRA_CATALOGOS) { float h; medidaColecao(fileiras[r].forma, &w, &h); }
+  if (fileiras[r].tipo == FILEIRA_CATALOGOS) { float h; medidaCol(&fileiras[r], &w, &h); }
   return w * escalaFil(r);
 }
 static float alturaFil(int r) {
   float h = alturaDe(fileiras[r].tipo);
-  if (fileiras[r].tipo == FILEIRA_CATALOGOS) { float w; medidaColecao(fileiras[r].forma, &w, &h); }
+  if (fileiras[r].tipo == FILEIRA_CATALOGOS) { float w; medidaCol(&fileiras[r], &w, &h); }
   return h * escalaFil(r);
 }
 // Altura TOTAL que a fileira ocupa: a arte mais o bloco de rotulo, quando ele
@@ -1667,7 +1684,18 @@ static float alfaFileiraHome(int r, float y, float topo, float corte) {
 #endif
   return fade;
 }
-static float passoFil(int r)       { return larguraFil(r) + gapDe(fileiras[r].tipo); }
+static float passoFil(int r) {
+  // Fileira de colecao com estilo escolhido: o vao e o do estilo — os cards
+  // grandes pedem o gap grande —, menos a faixa do numeral do ranking, que
+  // nao existe para pasta. Nas DEMAIS fileiras o vao e o de sempre: o gapDe de
+  // cada tipo ja traz o que ela pede (a faixa do numeral do Ranking numerado
+  // entra no vao dos titulos, como sempre entrou).
+  if (fileiras[r].tipo == FILEIRA_CATALOGOS) {
+    TipoFileira e = fileiras[r].estiloCol;
+    return larguraFil(r) + gapDe(e) - xOffTipo(e);
+  }
+  return larguraFil(r) + gapDe(fileiras[r].tipo);
+}
 static float homeFileiraX(int r, int c) {
   return homeConteudoX() + (float)c * passoFil(r) - scrollX[r] + bordaX(r);
 }
@@ -2932,14 +2960,14 @@ static void sincronizarFileiras(void) {
     fileiras[i].fator = fil_tipo_fator(t);
     fileiras[i].tipoAuto = fileiras[i].tipo;
     fileiras[i].formaAuto = fileiras[i].forma;
-    // Grupo de colecao: a escolha troca a FORMA da pasta e o tipo fica — e ele
-    // que faz a fileira abrir colecoes em vez de titulos. Os numeros sao os de
-    // fil_estilos (fileiras.c).
-    if (fileiras[i].tipo == FILEIRA_CATALOGOS) {
-      if (t == FIL_TIPO_COLECAO) fileiras[i].forma = COL_FORMA_PAISAGEM;
-      else if (t == FIL_TIPO_DESTAQUE_QUADRADO) fileiras[i].forma = COL_FORMA_QUADRADO;
-      else if (t == FIL_TIPO_CARTAZ) fileiras[i].forma = COL_FORMA_POSTER;
-    } else if (t != FIL_TIPO_AUTO) fileiras[i].tipo = tipoDaEscolha(t);
+    // Grupo de colecao: TODOS os estilos do catalogo valem, com a pasta no
+    // lugar do cartaz. O tipo continua FILEIRA_CATALOGOS — e ele que diz "isto
+    // abre colecoes" para o resto da home; a medida do card vem do estilo
+    // (estiloCol, medidaCol). Em Automatico vale a forma que a conta deu a
+    // pasta (forma, medidaColecao).
+    if (fileiras[i].tipo == FILEIRA_CATALOGOS)
+      fileiras[i].estiloCol = t != FIL_TIPO_AUTO ? tipoDaEscolha(t) : FILEIRA_CATALOGOS;
+    else if (t != FIL_TIPO_AUTO) fileiras[i].tipo = tipoDaEscolha(t);
   }
   if (ajustes_home_layout() == HOME_LAYOUT_DINAMICA) dinAtribuirTipos(destino);
   for(int i=0;i<destino;i++) {
@@ -6236,13 +6264,11 @@ static TipoFileira previaMedida(const Fileira *fl, const char *chave, int filTip
   float e;
   *forma = fl->forma;
   if (fl->tipo == FILEIRA_CATALOGOS) {
-    // Os numeros de fil_estilos para colecao (fileiras.c), como em
-    // sincronizarFileiras.
-    tipo = FILEIRA_CATALOGOS;
-    if (filTipo == FIL_TIPO_COLECAO) *forma = COL_FORMA_PAISAGEM;
-    else if (filTipo == FIL_TIPO_DESTAQUE_QUADRADO) *forma = COL_FORMA_QUADRADO;
-    else if (filTipo == FIL_TIPO_CARTAZ) *forma = COL_FORMA_POSTER;
-    else *forma = fl->formaAuto;
+    // Colecao: o card do estilo escolhido E o do catalogo, com a pasta no
+    // lugar do cartaz (medidaCol, como na Home). Em Automatico, a forma que a
+    // conta deu a pasta.
+    tipo = filTipo != FIL_TIPO_AUTO ? tipoDaEscolha(filTipo) : FILEIRA_CATALOGOS;
+    *forma = fl->formaAuto;
   } else if (filTipo == FIL_TIPO_AUTO) {
     // Em Automatico agora: a forma desenhada E a automatica (com a da
     // Dinamica). Com outra escolha, a de antes dela.
@@ -6277,10 +6303,16 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
   if (nItens < 1) return 0;
   tipo = previaMedida(fl, chave, filTipo, &forma, &pilha, &lw, &lh);
   gap = gapDe(tipo); xoff = xOffTipo(tipo);
+  // Colecao: como na Home (passoFil/homeFileiraX) — a pasta nao desenha o
+  // numeral do Ranking, entao o vao vem SEM a faixa dele e o card sai no
+  // comeco da area, sem o recuo que abre espaco para o numero.
+  if (fl->tipo == FILEIRA_CATALOGOS) { gap -= xOffTipo(tipo); xoff = 0.0f; }
   deitado = editorial(tipo) || tipo == FILEIRA_LARGA ||
             ((tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE) &&
              ajustes_posteres_deitados());
   rotuloFora = temRotulo(tipo);
+  // A pasta da colecao nao tem rotulo fora do card, em nenhum estilo.
+  if (fl->tipo == FILEIRA_CATALOGOS) rotuloFora = 0;
   rotH = rotuloFora ? NV_POSTER_COPY_H : 0.0f;
   // A REDUCAO SAI DA FORMA DE REFERENCIA. Sozinha, cada forma era reduzida
   // para caber 2,6 cards — e as tres paisagens, ou os tres 4:3, saiam do MESMO
@@ -6291,7 +6323,9 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
     if (refTipo != filTipo && refTipo >= 0 && refTipo < FIL_TIPO_N) {
       TipoFileira tR = previaMedida(fl, chave, refTipo, &fR, &pR, &lwR, &lhR);
       gapR = gapDe(tR); xoffR = xOffTipo(tR);
+      if (fl->tipo == FILEIRA_CATALOGOS) { gapR -= xOffTipo(tR); xoffR = 0.0f; }
       rotR = temRotulo(tR) ? NV_POSTER_COPY_H : 0.0f;
+      if (fl->tipo == FILEIRA_CATALOGOS) rotR = 0.0f;
     } else pR = pilha;
     s = area.w / (xoffR + (pR ? 1.0f : 2.6f) * (lwR + gapR));
     if (s > 1.0f) s = 1.0f;
@@ -6312,7 +6346,10 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
       GfxRect card = { px, y0, w, h };
       int idx = fl->usaItens ? fl->itens[c] : fl->ini + c;
       if (px > area.x + area.w) break;
-      if (tipo == FILEIRA_CATALOGOS) {
+      // A fileira de COLECAO desenha sempre a pasta, EM QUALQUER ESTILO: o
+      // card e o do estilo, a arte e a da pasta (o cartao parado de
+      // desenhaAtalhos).
+      if (fl->tipo == FILEIRA_CATALOGOS) {
         // O cartao parado de desenhaAtalhos: esqueleto, capa, profundidade.
         const ColFolder *folder = col_folder(fl->folders[c]);
         const char *arte = folder ? col_capa(folder) : NULL;

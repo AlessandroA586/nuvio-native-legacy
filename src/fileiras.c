@@ -250,20 +250,15 @@ static const FilEstiloLinha LINHAS_CAT[] = {
   { "Pôster grande",     1, { FIL_TIPO_POSTER_GRANDE }, { "Pôster grande" } },
 };
 #define N_LINHAS_CAT (int)(sizeof LINHAS_CAT / sizeof *LINHAS_CAT)
-static const int ESTILOS_COL[] = { FIL_TIPO_AUTO, FIL_TIPO_COLECAO,
-                                   FIL_TIPO_DESTAQUE_QUADRADO, FIL_TIPO_CARTAZ };
-static const char *ESTILOS_COL_ROT[] = { "Automático", "Paisagem", "Quadrado", "Pôster" };
-#define N_ESTILOS_COL (int)(sizeof ESTILOS_COL / sizeof *ESTILOS_COL)
 
-// A forma `t` vale para esta chave? Catalogo aceita todo FilTipo (a tela de
-// Ajustes oferece tambem Top 10 e 4:3); colecao so as quatro de ESTILOS_COL.
+// A forma `t` vale para esta chave? Catalogo e colecao aceitam todo FilTipo (a
+// tela de Ajustes oferece tambem Top 10 e 4:3): a fileira de colecao tem o MESMO
+// conjunto de estilos da de catalogo, com a pasta no lugar do cartaz.
 static int tipoValido(const char *chave, int t) {
-  int o = fil_origem_de(chave), k;
+  int o = fil_origem_de(chave);
   if (t == FIL_TIPO_AUTO) return 1;
-  if (o == FIL_ORIGEM_CATALOGO) return t > 0 && t < FIL_TIPO_N;
-  if (o != FIL_ORIGEM_COLECAO) return 0;
-  for (k = 0; k < N_ESTILOS_COL; k++) if (ESTILOS_COL[k] == t) return 1;
-  return 0;
+  if (o != FIL_ORIGEM_CATALOGO && o != FIL_ORIGEM_COLECAO) return 0;
+  return t > 0 && t < FIL_TIPO_N;
 }
 
 static int limita(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
@@ -1512,13 +1507,7 @@ void fil_alternar(int i) {
 void fil_ciclar_tipo(int i) {
   pthread_mutex_lock(&trava);
   if (i >= 0 && i < nLinhas && !formaFixa(linhas[i].chave)) {
-    int t = linhas[i].tipo, k;
-    // Numa colecao o ciclo e o das quatro formas dela, na ordem do menu.
-    if (fil_origem_de(linhas[i].chave) == FIL_ORIGEM_COLECAO) {
-      for (k = 0; k < N_ESTILOS_COL && ESTILOS_COL[k] != t; k++) {}
-      t = ESTILOS_COL[(k + 1) % N_ESTILOS_COL];
-    } else t = (t + 1) % FIL_TIPO_N;
-    linhas[i].tipo = t;
+    linhas[i].tipo = (linhas[i].tipo + 1) % FIL_TIPO_N;
     gravar();
   }
   pthread_mutex_unlock(&trava);
@@ -1526,15 +1515,8 @@ void fil_ciclar_tipo(int i) {
 
 int fil_estilo_linhas(const char *chave, FilEstiloLinha *l, int max) {
   int o = fil_origem_de(chave), n = 0, k;
-  if (o == FIL_ORIGEM_CATALOGO) {
+  if (o == FIL_ORIGEM_CATALOGO || o == FIL_ORIGEM_COLECAO)
     for (k = 0; k < N_LINHAS_CAT && n < max; k++, n++) if (l) l[n] = LINHAS_CAT[k];
-  } else if (o == FIL_ORIGEM_COLECAO) {
-    for (k = 0; k < N_ESTILOS_COL && n < max; k++, n++) if (l) {
-      memset(&l[n], 0, sizeof l[n]);
-      l[n].rotulo = l[n].nomes[0] = ESTILOS_COL_ROT[k];
-      l[n].n = 1; l[n].tipos[0] = ESTILOS_COL[k];
-    }
-  }
   return n;
 }
 
@@ -1555,19 +1537,36 @@ const char *fil_estilo_tam_palavra(int k) {
 }
 
 const char *fil_estilo_rotulo(const char *chave, int t) {
-  int o = fil_origem_de(chave), k;
-  if (o == FIL_ORIGEM_COLECAO)
-    for (k = 0; k < N_ESTILOS_COL; k++) if (ESTILOS_COL[k] == t) return ESTILOS_COL_ROT[k];
+  (void)chave;
   return fil_tipo_rotulo(t);
 }
 
 const char *fil_estilo_ajuda(const char *chave, int t) {
   if (fil_origem_de(chave) == FIL_ORIGEM_COLECAO) {
+    if (t == FIL_TIPO_AUTO) return "A forma que a coleção tem na sua conta.";
+    // #205: todo estilo vale para a fileira de colecao, mas o card e sempre a
+    // PASTA — a capa da colecao no formato do estilo. O que a ajuda do
+    // catalogo promete alem do formato (pilha do Top 10, numeros do Ranking,
+    // linha do tempo, ficha, palco, recorte redondo) a pasta nao desenha:
+    // a frase diz so o que renderiza de verdade.
     switch (t) {
-      case FIL_TIPO_COLECAO:           return "Pasta deitada, com a capa da coleção.";
-      case FIL_TIPO_DESTAQUE_QUADRADO: return "Pasta quadrada, da altura do cartaz.";
-      case FIL_TIPO_CARTAZ:            return "Pasta em pé, do tamanho do cartaz.";
-      default:                         return "A forma que a coleção tem na sua conta.";
+      case FIL_TIPO_CARTAZ:
+      case FIL_TIPO_TOP10:
+      case FIL_TIPO_RANKING:
+      case FIL_TIPO_LINHA_TEMPO:
+        return "Cartaz em pé com a capa da coleção.";
+      case FIL_TIPO_PALCO:   return "Cartaz em pé maior com a capa da coleção.";
+      case FIL_TIPO_REDONDA: return "Card quadrado com a capa da coleção.";
+      case FIL_TIPO_FICHA:   return "Cartaz com a capa da coleção num card mais largo.";
+      case FIL_TIPO_DESTAQUE:
+      case FIL_TIPO_LARGA:   return "Card deitado 16:9 com a capa da coleção.";
+      case FIL_TIPO_COLECAO:  return "Card deitado médio com a capa da coleção.";
+      case FIL_TIPO_SERVICO:  return "Card deitado compacto com a capa da coleção.";
+      case FIL_TIPO_DESTAQUE_QUADRADO:
+      case FIL_TIPO_DESTAQUE_QUADRADO_M:
+      case FIL_TIPO_DESTAQUE_QUADRADO_G:
+        return "Card em 4:3 com a capa da coleção.";
+      default:                return "A capa da coleção no card do formato escolhido.";
     }
   }
   // As frases das formas sao as da tela de Ajustes (aj_fil_forma_ajuda): as
