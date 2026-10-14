@@ -27,6 +27,7 @@ static int g_probe_seen;
 
 int dts_remux_available(void) { return 1; }
 void dts_engine_set_ring_mib(int mib) { (void)mib; }
+void dts_remux_set_queue_budget_mib(int mib) { (void)mib; }
 DtsRemux *dts_remux_open(const char *url, const char *h, int ord, int st, double seg, volatile int *cancel,
                          char *err, size_t errn) {
   (void)h; (void)ord; (void)st; (void)seg;

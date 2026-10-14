@@ -47,6 +47,9 @@ typedef struct {
 typedef int (*DtsRemuxWrite)(void *opaque, const unsigned char *data, int n);
 
 int dts_remux_available(void);
+/* Bytes of packets all generators together may hold queued (default 192 MiB;
+ * the lower-RAM TVs set less). A generator that would pass it fails cleanly. */
+void dts_remux_set_queue_budget_mib(int mib);
 
 /* Opens the source and reads its keyframe index (one seek: Matroska parses
  * Cues lazily). audio_ordinal: which audio track to convert, counted among the

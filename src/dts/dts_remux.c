@@ -26,6 +26,7 @@
  * has real samples (~0.1 s), which is fine at a seek. */
 #include "dts_remux.h"
 #include "dts_engine.h"
+#include "dts_qcap.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,6 +62,7 @@ int dts_remux_gen_run(DtsRemuxGen *g, int s, double t, const char *f, DtsRemuxWr
 void dts_remux_gen_free(DtsRemuxGen *g) { (void)g; }
 void dts_remux_gen_interrupt(DtsRemuxGen *g) { (void)g; }
 double dts_remux_gen_start_s(const DtsRemuxGen *g) { (void)g; return 0; }
+void dts_remux_set_queue_budget_mib(int mib) { (void)mib; }
 #else
 
 #include <math.h>
@@ -83,6 +85,10 @@ double dts_remux_gen_start_s(const DtsRemuxGen *g) { (void)g; return 0; }
 #define MAX_GAP_S 5              /* longer audio holes skip ahead instead of padding */
 #define TS_OFFSET_S 10           /* fixed output offset (design 2.2-4) */
 #define VQ_MAX_BYTES (192u << 20)
+#define AQ_MAX_BYTES (16u << 20)  /* ~200 s of AC3 5.1 640 kb/s; audio runs seconds, not minutes, ahead */
+#define AQ_MAX_PKTS  16384
+#define VQ_MAX_PKTS  (1 << 18)
+#define QUEUE_BUDGET_MIB 192      /* video + audio queued, all generators together (dts_remux_set_queue_budget_mib) */
 #define ENGINES_MAX 8
 #define UNSET INT64_MIN
 #define GRID_LAZY (INT64_MIN + 1) /* b48: the grid starts at the first audio (seek by time) */
@@ -113,6 +119,21 @@ static void logInit(void) { av_log_set_callback(avLog); }
 
 typedef struct { AVPacket *p; int seg; } QPkt;
 typedef struct { QPkt *v; int n, cap; size_t bytes; } Q;
+static atomic_size_t gQueued;                       /* bytes in every generator's queues */
+static atomic_size_t gBudget = (size_t)QUEUE_BUDGET_MIB << 20;
+void dts_remux_set_queue_budget_mib(int mib) {
+  if (mib >= 32 && mib <= 512) atomic_store(&gBudget, (size_t)mib << 20);
+}
+/* 0 = room for `add` bytes in `q` (cap for the queue's kind); else the reason, as text. */
+static const char *qFull(const Q *q, size_t add, int video) {
+  switch (dtsQcapAdmit(q->bytes, q->n, add, video ? VQ_MAX_BYTES : AQ_MAX_BYTES, video ? VQ_MAX_PKTS : AQ_MAX_PKTS,
+                       &gQueued, atomic_load(&gBudget))) {
+    case DTS_QCAP_BYTES:  return video ? "Video queue full (audio missing?)" : "Audio queue full (video missing?)";
+    case DTS_QCAP_PKTS:   return video ? "Video queue: too many packets" : "Audio queue: too many packets";
+    case DTS_QCAP_BUDGET: return "Queue memory budget reached";
+    default: return NULL;
+  }
+}
 
 static int qPush(Q *q, AVPacket *p, int seg) {
   if (q->n == q->cap) {
@@ -123,11 +144,13 @@ static int qPush(Q *q, AVPacket *p, int seg) {
   }
   q->v[q->n].p = p; q->v[q->n].seg = seg; q->n++;
   q->bytes += (size_t)p->size;
+  atomic_fetch_add(&gQueued, (size_t)p->size);
   return 0;
 }
 static AVPacket *qPop(Q *q) {
   AVPacket *p = q->v[0].p;
   q->bytes -= (size_t)p->size;
+  atomic_fetch_sub(&gQueued, (size_t)p->size);
   memmove(q->v, q->v + 1, (size_t)(q->n - 1) * sizeof *q->v);
   q->n--;
   return p;
@@ -744,6 +767,8 @@ static int drainEncoder(DtsRemuxGen *g, char *err, size_t errn) {
     if (rr == AVERROR(EAGAIN)) return 0;
     if (rr == AVERROR_EOF) { g->encEof = 1; return 0; }
     if (rr < 0) { fail(err, errn, "Audio encode", rr); return -1; }
+    { const char *why = qFull(&g->aq, (size_t)g->op->size, 0);
+      if (why) { av_packet_unref(g->op); fail(err, errn, why, 0); return -1; } }
     AVPacket *p = av_packet_clone(g->op);
     av_packet_unref(g->op);
     if (!p || qPush(&g->aq, p, tagAudio(g, p->pts)) < 0) { av_packet_free(&p); fail(err, errn, "Out of memory", 0); return -1; }
@@ -968,11 +993,12 @@ static int videoPacket(DtsRemuxGen *g, AVPacket *p, char *err, size_t errn) {
         }
       }
     } }
+  { const char *why = qFull(&g->vq, (size_t)p->size, 1);
+    if (why) { fail(err, errn, why, 0); return -1; } }
   AVPacket *c = av_packet_alloc();
   if (!c) { fail(err, errn, "Out of memory", 0); return -1; }
   av_packet_move_ref(c, p);
   if (qPush(&g->vq, c, g->vseg) < 0) { av_packet_free(&c); fail(err, errn, "Out of memory", 0); return -1; }
-  if (g->vq.bytes > VQ_MAX_BYTES) { fail(err, errn, "Video queue over 192 MiB (audio missing?)", 0); return -1; }
   return 0;
 }
 

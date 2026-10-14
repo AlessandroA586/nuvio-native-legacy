@@ -823,7 +823,7 @@ int dts_tpk_disponivel(void) {
   if (c < 0) {
     int t = tizenMaior();
     c = (t < 0 || t >= 6) && dts_remux_available();
-    if (c && t >= 6 && t < 8) dts_engine_set_ring_mib(16);
+    if (c && t >= 6 && t < 8) { dts_engine_set_ring_mib(16); dts_remux_set_queue_budget_mib(128); }
     printf("[dts-tpk] conversao DTS/TrueHD %s (tizen %d, FFmpeg %s%s)\n", c ? "disponivel" : "indisponivel", t,
            dts_remux_available() ? "ligado" : "ausente", c && t >= 6 && t < 8 ? ", anel 16 MiB" : "");
     fflush(stdout);
