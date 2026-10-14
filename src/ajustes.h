@@ -459,6 +459,9 @@ int   ajustes_legendas_todas(void); // #425: abrir todas as faixas
 int   ajustes_abertura_detalhada(void);
 // #205: 1 = mostra o nome do add-on na tela Cinema da abertura (padrao: 0).
 int   ajustes_abertura_addon(void);
+// #508: fundo da tela Cinema da abertura: 0 = Desligado, 1 = Arte (nitida com
+// veu escuro), 2 = Arte borrada (padrao).
+int   ajustes_abertura_fundo(void);
 // #338: tamanho de abertura das Estatisticas ao vivo (EV_TAM_*); -1 = o ultimo usado.
 int   ajustes_estat_tamanho(void);
 int   ajustes_leg2_junto(void);
