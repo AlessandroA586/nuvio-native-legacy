@@ -134,6 +134,10 @@ int   player_duracao_midia(double *seg);
 // no ultimo instante (ver stream_idade_ms), entao a tela abre antes de haver
 // URL e o video entra quando chega.
 void player_definir_fonte(const char *url);
+// Troca automatica do mesmo filme/episodio: preservar segundos, inclusive
+// quando a sessao foi iniciada com "Assistir do comeco". Chamar antes de parar.
+// Zero e um ponto valido (a pessoa voltou ao inicio), nao retomada ausente.
+void player_definir_retomada_fonte(double segundos);
 // Desfaz a fonte em curso SEM fechar a tela: o video para e a sessao volta a
 // "abrindo fonte", como logo depois de player_abrir. E o recuo da fonte
 // guardada (fontevolta.h) para a busca normal, sem a pessoa ver o player

@@ -116,6 +116,7 @@ typedef enum {
   FIL_TIPO_LINHA_TEMPO,  // FILEIRA_LINHA_TEMPO — cartazes por ano sobre a linha animada
   FIL_TIPO_FICHA,        // FILEIRA_FICHA — cartaz com a ficha (ano, nota, sinopse) ao lado
   FIL_TIPO_PALCO,        // FILEIRA_PALCO — o foco grande no centro, vizinhos menores
+  FIL_TIPO_REDONDA,      // FILEIRA_REDONDA — avatar circular com o nome embaixo (fileiras de pessoas)
   FIL_TIPO_N
 } FilTipo;
 

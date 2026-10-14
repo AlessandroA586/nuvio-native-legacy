@@ -59,7 +59,7 @@ static int arqDiscoTem(const char *dst);
 #define NV_TEX_STALE_FRAMES 8
 #define NV_TEX_STALE_MS 200
 #ifndef NV_TEX_UPLOAD_BUDGET_MS
-#define NV_TEX_UPLOAD_BUDGET_MS 4.0
+#define NV_TEX_UPLOAD_BUDGET_MS 5.0
 #endif
 // Telemetria curta de uma sessao: so registra esperas que ja sao visiveis para
 // quem navega. O identificador e FNV do caminho; nenhuma URL entra no trace.
@@ -141,6 +141,7 @@ typedef struct {
   // 1 = TODO pixel tem alfa 255 (conferido inteiro na thread de decode); 0 =
   // ha transparencia ou nao se sabe. Ver tex_opaca.
   int opaca;
+  CorvivaPaleta paleta; // Ja extraida no decode; retratos publicam sob demanda.
   // Quando tentar de novo (ticks) e quantas vezes ja falhou. Ver o enum Estado.
   Uint32 tentarEm;
   int    falhas;
@@ -185,6 +186,7 @@ typedef struct {
   // ARTE DE PASSAGEM: quadro de sequencia animada, que vale por 67 ms e nunca
   // mais. Ver tex_obter_passageira e a nota em despejar().
   int passageiro;
+  int lookahead; // pedido especulativo limitado; nao expira antes do decode
   // OS BYTES BAIXADOS, no lugar do arquivo de cache (20/09/2026, #72). No
   // Emscripten toda chamada de arquivo feita por um pthread e PROXIADA ao fio
   // principal — fopen/fwrite/rename/fread/remove de cada arte eram viagens
@@ -586,7 +588,7 @@ static void amostrar(void);
 static int pedidoObsoleto(const Item *it) {
   Uint32 agora;
   if (!it->ultimoPedido || !it->ultimoQuadro) return 0;
-  if (it->sup) return 0;   /* ja decodificado: nao se joga fora o que custou */
+  if (it->sup || it->lookahead) return 0;   /* ja decodificado: nao se joga fora o que custou */
   agora = SDL_GetTicks();
   return quadroAtual > it->ultimoQuadro + NV_TEX_STALE_FRAMES &&
          agora - it->ultimoPedido >= NV_TEX_STALE_MS;
@@ -1642,6 +1644,10 @@ static char *baixarImagem(const char *url, long *n, TexFetchTrace *trace) {
       // morto AGORA. 30 s, e nao mais: o recuo do item (2/10/60 s) ainda
       // ganha a tentativa de 60 s se a rede voltar.
       else if (!corpo && md.status == 0 && md.ms >= 6000) negPor(url, NV_NEG_FALHA_S, 0);
+      // "SUCESSO" SEM CORPO (2xx com 0 B): o servidor respondeu, mas o que
+      // veio nao e arte — corpo abortado/conexao cortada que a transferencia
+      // conta como ok. Sem recuo, a mesma URL voltava a cada item para sempre.
+      else if (!corpo && md.status >= 200 && md.status < 300) negPor(url, NV_NEG_FALHA_S, 0);
 #else
       corpo = rede_baixar_bin(url, 8, n);
 #endif
@@ -1665,6 +1671,10 @@ static char *baixarImagem(const char *url, long *n, TexFetchTrace *trace) {
     if (corpo) printf("[tex] corpo curto (%ld B): %s\n", *n, urlLog(url, urlLogBuf, sizeof urlLogBuf));
     else       printf("[tex] download falhou (sem corpo): %s\n", urlLog(url, urlLogBuf, sizeof urlLogBuf));
     fflush(stdout);
+    // #205: corpo curto demais para ser imagem (0 B incluso) e resposta que
+    // "deu certo": falha COM RECUO. Sem isto a URL refetchava a cada item
+    // para sempre — no caminho Android o corpo chegava inteiro e media 0 B.
+    if (corpo) negPor(url, NV_NEG_FALHA_S, 0);
     free(corpo);
     return NULL;
   }
@@ -2780,10 +2790,11 @@ static int threadDecode(void *arg) {
     // Roda em TODA arte (~15 us), mas so ANOTA a de tela cheia e a que tem
     // transparencia — o LOGO do titulo ("Cor da logo"), que e decodificado na
     // largura do desenho, nunca no teto do destaque. Cartaz de fileira e opaco
-    // e pequeno: medido e esquecido, sem empurrar ninguem do anel.
+    // e pequeno: fica no slot, sem empurrar ninguem do anel. Retratos podem
+    // publicar essa paleta sob demanda, sem decodificar de novo.
+    CorvivaPaleta pal = {0};
     if (conv && conv->format->BytesPerPixel == 4) {
       static int medido;
-      CorvivaPaleta pal;
       Uint64 c0 = SDL_GetPerformanceCounter();
       corviva_extrair((const unsigned char *)conv->pixels, conv->w, conv->h,
                       conv->pitch, &pal);
@@ -2846,6 +2857,7 @@ static int threadDecode(void *arg) {
     } else if (itens[idx].estado == PENDENTE) {
       itens[idx].lum = lumMedia;
       itens[idx].opaca = opaca;
+      itens[idx].paleta = pal;
       itens[idx].croma = cromaMedia;
       itens[idx].desvio1 = desvio1;
       itens[idx].corR = corR; itens[idx].corG = corG; itens[idx].corB = corB;
@@ -3557,6 +3569,7 @@ static GLuint tex_obter_limite(const char *caminho, int limite, int urgente,
   }
   if (i >= 0) {
     itens[i].ultimoQuadro = quadroAtual;
+    itens[i].lookahead = 0;
     itens[i].ultimoPedido = SDL_GetTicks();
     itens[i].uso = ++relogio;
     if (pedidoArquivo > itens[i].limiteArquivo) itens[i].limiteArquivo = pedidoArquivo;
@@ -3743,6 +3756,44 @@ GLuint tex_obter_larg(const char *caminho, float largLayout) {
   return tex_obter_limite(caminho, cap, cap > NV_TEX_LARG_MAX, 0);
 }
 
+int tex_lookahead_parado(TexLookahead *s, float scroll) {
+  float delta = scroll - s->scroll;
+  if (!s->quadro || fabsf(delta) > 0.25f || s->quadro + 1 != quadroAtual) {
+    s->parados = 0;
+    if (fabsf(delta) > 0.25f) s->direcao = delta > 0 ? 1 : -1;
+  } else if (s->parados < 2) s->parados++;
+  s->scroll = scroll; s->quadro = quadroAtual;
+  return s->parados >= 2;
+}
+
+int tex_lookahead_pedir(const char *caminho, float largura) {
+  static unsigned long pedidoQuadro;
+  if (!mtx || !caminho || !*caminho || pedidoQuadro == quadroAtual) return 0;
+  SDL_LockMutex(mtx);
+  int i = acharIndice(caminho, hashCaminho(caminho));
+  // Nao promove nem despeja arte para especular. Em voo inclui trabalho que
+  // os consumidores ja retiraram das filas, mas ainda nao publicaram.
+  int livre = 0, adiante = 0;
+  for (int j = 0; j < nMax; j++) {
+    if (itens[j].estado == VAZIO) livre++;
+    if (itens[j].lookahead) adiante++;
+  }
+  int pode = i < 0 && !emVoo() && filaIni == filaFim && decIni == decFim &&
+             livre > 0 && adiante < 30 && !pressaoAtiva() && bytesUsados < orcamento * 3 / 4;
+  SDL_UnlockMutex(mtx);
+  if (!pode) return 0;
+  pedidoQuadro = quadroAtual;
+  (void)tex_obter_larg(caminho, largura);
+  SDL_LockMutex(mtx);
+  i = acharIndice(caminho, hashCaminho(caminho));
+  if (i >= 0) {
+    itens[i].lookahead = 1;
+    itens[i].ultimoQuadro = 0; // nao conta como card visivel/quente
+  }
+  SDL_UnlockMutex(mtx);
+  return 1;
+}
+
 // Como tex_obter_larg, mas ENTREGA O QUE JA EXISTE: se o arquivo foi
 // decodificado menor (o logo do card aberto, ~370 px) e o pedido e maior, a
 // textura pequena volta ja, ampliada, enquanto a grande e reprocessada — em
@@ -3858,6 +3909,19 @@ const char *tex_arquivo(const char *url) {
   tex_obter_limite(url, 128, 0, 0);
   pedidoArquivo = 0;
   return NULL;
+}
+
+void tex_publicar_paleta(const char *caminho) {
+  CorvivaPaleta pal;
+  int i, tem = 0;
+  if (!mtx || !caminho || !*caminho || corviva_paleta(caminho, &pal)) return;
+  BUSCA_MEDIDA(i, caminho, hashCaminho(caminho));
+  if (i >= 0 && (itens[i].estado == DECODIFICADO || itens[i].estado == PRONTO)) {
+    pal = itens[i].paleta;
+    tem = 1;
+  }
+  SDL_UnlockMutex(mtx);
+  if (tem) corviva_anotar(caminho, &pal);
 }
 
 int tex_magica(const char *caminho, unsigned char magica[4]) {
@@ -4060,6 +4124,7 @@ static void publicarEnvio(int alvo, GLuint t, SDL_Surface *sup, Uint32 uploadEm,
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   gfx_tex_esquecer(0);  // o bind do upload passou por fora do gfx_rect
+  gfx_tex_aquecer(t);
   glMs += SDL_GetTicks() - mipEm;
 
   SDL_LockMutex(mtx);
@@ -4095,13 +4160,22 @@ static void publicarEnvio(int alvo, GLuint t, SDL_Surface *sup, Uint32 uploadEm,
              uploadBytes, comMip, (unsigned)filaWait); }
 }
 
+// Custos iniciais conservadores da pesquisa plx (ms); o pior observado neste
+// contexto GL, incluindo mip e warm-up, so aumenta durante a sessao.
+static double uplPiorMs[3] = { 2.5, 1.0, 6.0 }; // cartaz, logo, residencia SOLO
+static void medirEnvio(int classe, Uint64 inicio) {
+  double ms = (SDL_GetPerformanceCounter() - inicio) * 1000.0 /
+              SDL_GetPerformanceFrequency();
+  if (ms > uplPiorMs[classe]) uplPiorMs[classe] = ms;
+}
+
 static void uplAbortar(void) {
   if (uplTex) glDeleteTextures(1, &uplTex);
   uplTex = 0; uplIdx = -1; uplSup = NULL; uplY = 0; uplNiveis = 0;
 }
 
 int tex_bombear(int max_por_quadro) {
-  int subiu = 0, trabalhou = 0;
+  int subiu = 0, trabalhou = 0, porClasse[3] = {0};
   // UMA LINHA POR SESSAO com o caminho da piramide e a GPU: e o que separa,
   // num log de usuario, "lixo com mip=gpu" de "lixo com mip=cpu".
   { static int logado;
@@ -4124,6 +4198,8 @@ int tex_bombear(int max_por_quadro) {
 
     // 1. Ha um envio em faixas em curso: a proxima faixa.
     if (uplIdx >= 0) {
+      if (trabalhou) break;  // residencia ocupa o quadro sozinha
+      Uint64 passoEm = SDL_GetPerformanceCounter();
       int ok, alvo = uplIdx;
       SDL_LockMutex(mtx);
       ok = itens[alvo].estado == DECODIFICADO && itens[alvo].sup == uplSup &&
@@ -4150,8 +4226,8 @@ int tex_bombear(int max_por_quadro) {
         gfx_tex_esquecer(0);
         uplGlMs += SDL_GetTicks() - em;
         trabalhou = 1;
-        if (uplY < sup->h) continue;
-        if (sup->userdata && !uplNiveis) { uplNiveis = 1; continue; }
+        if (uplY < sup->h) { medirEnvio(2, passoEm); break; }
+        if (sup->userdata && !uplNiveis) { uplNiveis = 1; medirEnvio(2, passoEm); break; }
         // Ultima faixa: a textura esta inteira, publica.
         { GLuint t = uplTex;
           SDL_LockMutex(mtx);
@@ -4162,13 +4238,14 @@ int tex_bombear(int max_por_quadro) {
           publicarEnvio(alvo, t, sup, uplEm, uplGlMs, uplFila, uplPath);
           subiu++; }
       }
-      continue;
+      medirEnvio(2, passoEm);
+      break;
     }
 
     // 2. O proximo decodificado: LOGO (2) e TELA CHEIA (1) antes do resto,
     //    empate na ordem dos slots (a de sempre). Um cartaz que chega antes
     //    nao segura o heroi, que e o que a pessoa esta olhando.
-    SDL_Surface *sup = NULL; int alvo = -1, nivel = -1;
+    SDL_Surface *sup = NULL; int alvo = -1, nivel = -1, classe = 0;
     Uint32 filaEm = 0, filaWait = 0;
     char uploadPath[512] = "";
     SDL_LockMutex(mtx);
@@ -4178,7 +4255,17 @@ int tex_bombear(int max_por_quadro) {
         if (nivel >= 2) break;
       }
     if (alvo >= 0) {
-      sup = itens[alvo].sup;
+      SDL_Surface *s = itens[alvo].sup;
+      classe = (long)s->w * s->h * 4 > 1024L * 1024 ? 2 : nivel == 2 ? 1 : 0;
+      double gasto = (SDL_GetPerformanceCounter() - inicio) * 1000.0 / freq;
+      // Um passo caro pode exceder o teto SOLO (8 ms), mas nunca trava a fila.
+      // Depois do primeiro passo, so admite o proximo se seu pior caso cabe.
+      if (porClasse[classe] >= 3 ||
+          (trabalhou && (classe == 2 || gasto + uplPiorMs[classe] > NV_TEX_UPLOAD_BUDGET_MS))) {
+        SDL_UnlockMutex(mtx);
+        break;
+      }
+      sup = s;
       filaEm = itens[alvo].filaUploadEm; itens[alvo].filaUploadEm = 0;
       snprintf(uploadPath, sizeof uploadPath, "%s", itens[alvo].caminho);
       // Grande: a superficie FICA no item durante o envio em faixas.
@@ -4194,6 +4281,7 @@ int tex_bombear(int max_por_quadro) {
                hashCaminho(uploadPath), (unsigned)filaWait);
     }
 
+    Uint64 passoEm = SDL_GetPerformanceCounter();
     Uint32 uploadEm = SDL_GetTicks();
     GLuint t; glGenTextures(1, &t); glBindTexture(GL_TEXTURE_2D, t);
     if ((long)sup->w * sup->h * 4 > NV_TEX_FAIXA_BYTES) {
@@ -4204,6 +4292,8 @@ int tex_bombear(int max_por_quadro) {
       uplIdx = alvo; uplTex = t; uplSup = sup; uplY = 0; uplNiveis = 0;
       uplEm = uploadEm; uplGlMs = SDL_GetTicks() - uploadEm; uplFila = filaWait;
       snprintf(uplPath, sizeof uplPath, "%s", uploadPath);
+      medirEnvio(2, passoEm);
+      if ((SDL_GetPerformanceCounter() - inicio) * 1000.0 / freq >= 8.0) break;
       continue;
     }
     tex_upl_n++;
@@ -4213,6 +4303,9 @@ int tex_bombear(int max_por_quadro) {
     trabalhou = 1;
     publicarEnvio(alvo, t, sup, uploadEm, SDL_GetTicks() - uploadEm, filaWait, uploadPath);
     subiu++;
+    medirEnvio(classe, passoEm);
+    porClasse[classe]++;
+    if (classe == 2) break;
   }
   return subiu;
 }

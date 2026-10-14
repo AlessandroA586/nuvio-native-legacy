@@ -210,6 +210,7 @@ static int ajCenaSecao(int op) {
     case AJ_IDIOMA: case AJ_TMDB_IDIOMA: return AJC_IDI_INTERFACE;
     case AJ_LEG_MOSTRAR: case AJ_AUD_LINGUA: case AJ_LEG_LINGUA: case AJ_LEG_SYNC_AUTO: case AJ_LEG_SYNC_AUDIO: case AJ_LEG_FORCADA: return AJC_IDI_FAIXAS;
     case AJ_LEG_LINGUA2: case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
+    case AJ_LEG_CONTORNO_COR:
       return AJC_IDI_LEGENDA2;
     case AJ_XTREAM_SERVIDOR: case AJ_XTREAM_USUARIO: case AJ_XTREAM_SENHA: case AJ_XTREAM_CONTA:
     case AJ_XTREAM_LIMPAR: case AJ_STALKER_PORTAL: case AJ_STALKER_MAC: case AJ_STALKER_LIMPAR: case AJ_EPG_PAIS:
@@ -953,13 +954,15 @@ static void ajcIdiLegenda2(int A) {
   gfx_veu_css(CR(0, 240, 640, 120), 0, 0, 1.0f, 0.55f);
   gfx_cor(CR(190, 286, 260, 22), 0.25f, 0, 0, 0, 0.5f); CBAR(200, 293, 240, 0.95f);
   gfx_cor(CR(bx - 10, by - 6, bw + 20, bh + 12), 0.25f, 0, 0, 0, f >= 0 && f < 5 ? FU[f] : 0.5f);
-  if (b > 0) gfx_cor(CR(bx - 1.5f, by - 1.5f, bw + 3, bh + 3), 0.5f, 0, 0, 0, 0.9f);
+  { int oR, oG, oB; ajustes_leg_contorno_rgb(&oR, &oG, &oB);
+    if (b > 0) gfx_cor(CR(bx - 1.5f, by - 1.5f, bw + 3, bh + 3), 0.5f, oR / 255.0f, oG / 255.0f, oB / 255.0f, 0.9f); }
   gfx_cor(CR(bx, by, bw, bh), 0.5f, cc[0], cc[1], cc[2], 0.95f);
   ajcFoco(AJ_LEG2_POS, bx - 10, by - 6, bw + 20, bh + 12, 6);
   ajcFoco(AJ_LEG2_TAMANHO, bx - 10, by - 6, bw + 20, bh + 12, 6);
   ajcFoco(AJ_LEG2_COR, bx - 10, by - 6, bw + 20, bh + 12, 6);
   ajcFoco(AJ_LEG2_FUNDO, bx - 10, by - 6, bw + 20, bh + 12, 6);
   ajcFoco(AJ_LEG2_BORDA, bx - 10, by - 6, bw + 20, bh + 12, 6);
+  ajcFoco(AJ_LEG_CONTORNO_COR, bx - 10, by - 6, bw + 20, bh + 12, 6);
   if (ajc.op >= 0) { float w2 = ajcTxt(textoValor(ajc.op), 12, 1, 0, 0, 240, 0) + 28;
     CVID(604 - w2, 312, w2, 30, 15); ajcTxt(textoValor(ajc.op), 12, 1, 618 - w2, 319, 240, 1); }
 }

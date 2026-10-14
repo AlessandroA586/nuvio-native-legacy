@@ -171,7 +171,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_AVANCADAS: return "aj_eye";
     case AJ_LOGO_TRAILER: return "aj_eye-off";
     case AJ_LEG_SYNC_AUTO: case AJ_LEG_SYNC_AUDIO: return "aj_audio-lines";
-    case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA: return "aj_captions";
+    case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA: case AJ_LEG_CONTORNO_COR: return "aj_captions";
     case AJ_ICONE_APP: return "aj_image-plus";
     case AJ_LOGO_APP: return "aj_image";
     case AJ_ABERTURA: return "aj_clapperboard";
@@ -297,7 +297,7 @@ static TxtEstilo ajEstiloPxS(float px, int forte) { return ajEstiloPx(px < 6.0f 
 static const signed char AJ_ARTE_SEC[AJS_N + 1][AJ_ARTE_BLOCOS] = {
   { 18,  7, 22, 32,  7, 18, 19, -1, -1 },   // Reproducao: Imagem e som, Escolha da fonte, Durante e depois, Miniatura; Mais: fonte, som e video, P2P
   { 21, 24, 21, -1, -1, -1, -1, -1, -1 },   // Idiomas e legendas: Idiomas, Segunda legenda; Mais: idiomas
-  {  5, 37, 10, -1, -1, -1, -1, -1, -1 },   // Fontes e addons: Addons, Debrid, Servidores
+  {  5, 28, 37, 10, -1, -1, -1, -1, -1 },   // Fontes e addons: Addons, Falha na reproducao, Debrid, Servidores
   {  2, 14, 14, -1, -1, -1, -1, -1, -1 },   // TV ao vivo: Provedor, Se o canal nao abre; Mais
   { 12,  0, 20,  1, 31, 12,  0, 20,  1 },   // Tela inicial: Estilo, Fileiras, Continuar, Barra lateral, Escolha de perfil; Mais
   {  9, 39, 38,  6, 11,  9, -1, -1, -1 },   // Aparencia: Cores e vidro, Logo e abertura, Texto e tamanho, Movimento e relogio, Tela de descanso; Mais

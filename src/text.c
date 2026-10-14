@@ -427,8 +427,8 @@ static const struct { int corpo, peso; } ESTILOS[TXT_NFONTES] = {
   { 18, PESO_BOLD    },   // TXT_V3_SELO
   { 28, PESO_REGULAR },   // TXT_V3_INSP
   { 28, PESO_BOLD    },   // TXT_V3_INSP_B
-  { NV_FT_DET_SIN, PESO_BOLD   },   // TXT_DET_META_FORTE
-  { NV_FT_DET_SIN, PESO_MEDIUM },   // TXT_DET_META_GEN
+  { 26, PESO_BOLD   },   // TXT_DET_META_FORTE (meta fica em 26)
+  { 26, PESO_MEDIUM },   // TXT_DET_META_GEN
 };
 
 // RESERVA PARA O QUE A INTER NAO TEM.
@@ -1876,11 +1876,15 @@ static float encaixa(float v) {
 }
 
 void txt_desenhar_alpha(TxtLinha l, float x, float y, float alpha) {
+  txt_desenhar_tom(l, x, y, 1, 1, 1, alpha);
+}
+
+void txt_desenhar_tom(TxtLinha l, float x, float y, float cr, float cg, float cb, float alpha) {
   if (!l.tex) return;
   camadaAtualizar();
   GfxRect r = { encaixa(x), encaixa(y), (float)l.w, (float)l.h };
   if (camada && l.pw > 0) { r.w = (float)l.pw / ESC_T; r.h = (float)l.ph / ESC_T; }
-  gfx_rect(r, l.tex, GFX_TEXTO, 0, 0, 0, 0.0f, 1, 1, 1, alpha);
+  gfx_rect(r, l.tex, GFX_TEXTO, 0, cr != 1 || cg != 1 || cb != 1, 0, 0.0f, cr, cg, cb, alpha);
 }
 
 float txt_tracking(TxtEstilo estilo, const char *s, int r, int g, int b,

@@ -1,4 +1,5 @@
 #include "imdbnota.h"
+#include "vertudo_pag.h"
 #include "vertudo.h"
 #include "posterprov.h"
 #include "idioma.h"
@@ -20,6 +21,10 @@
 #include "focoprof.h"
 #include "corviva.h"
 #include "ctxlista.h"
+#include "vistocont.h"
+#include "cwordem.h"
+#include "progresso.h"
+#include <time.h>
 #include "ctxmenu.h"
 #include "ponteiro.h"
 #include "rolagemtoque.h"
@@ -182,6 +187,8 @@ static float x0Atual;
 // player marca um capitulo). Nunca por quadro: cada consulta copia o CatItem.
 static unsigned char celVisto[VT_MAX];
 static int sagaVistos;
+// "Voce viu N de M" do cabecalho: titulos distintos (tt/tmdb/episodio) da lista.
+static int vcVistos, vcTotal;
 static Uint32 vistosEm;             // ajustes_conteudo_x() do quadro (desenho)
 
 static int ordenaPorAno(void) {
@@ -528,15 +535,27 @@ static int celulaAceitaMenu(void) {
   if (nItens() < 1 || desc_vertudo_erro()) return 0;
   return viewItem(foco, &it);
 }
-static int vistoItem(const CatItem *it) { return cat_visto(it) || it->progresso >= 90; }
+static int vistoItem(const CatItem *it) { return cat_visto(it); }
 static void contarVistos(int n) {
+  static VcEntrada ent[VT_MAX];
+  static char ids[VT_MAX][64], tipos[VT_MAX][8];
+  int ne = 0;
   sagaVistos = 0;
   for (int i = 0; i < n && i < VT_MAX; i++) {
     CatItem it;
-    celVisto[i] = viewItem(i, &it) && vistoItem(&it);
+    int ok = viewItem(i, &it);
+    celVisto[i] = ok && vistoItem(&it);
     sagaVistos += celVisto[i];
+    if (!ok) continue;
+    snprintf(ids[ne], sizeof ids[ne], "%s", it.imdb);
+    snprintf(tipos[ne], sizeof tipos[ne], "%s", it.tipo);
+    ent[ne] = (VcEntrada){ ids[ne], it.tmdb, tipos[ne], celVisto[i] };
+    ne++;
   }
+  vcTotal = vistocont_contar(ent, ne, &vcVistos);
 }
+// A lista de pessoas (Directors) mostra o contador e as marcas da timeline.
+static int listaDePessoa(void) { return collection && !strcasecmp(collection->group, "Directors"); }
 
 // --- A TABELA DE CELULAS ------------------------------------------------------
 static void cel(int i, float x, float y, float w, float h, int lin, int col) {
@@ -632,7 +651,7 @@ static void montar(int n) {
   }
   celN = n; celLay = lay;
   if (foco >= n) foco = n ? n - 1 : 0;
-  if (lay == VT_LAY_SAGA) { contarVistos(n); vistosEm = SDL_GetTicks(); }
+  if (lay == VT_LAY_SAGA || listaDePessoa()) { contarVistos(n); vistosEm = SDL_GetTicks(); }
 }
 // O vizinho na linha `lin` (acima ou abaixo) com o centro mais perto do
 // centro do item em foco. As linhas sao contiguas em indice em toda exibicao.
@@ -1041,7 +1060,8 @@ void vertudo_evento(const SDL_Event *e) {
   else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) abrirFocado();
   // Chegando perto do fim, pede a proxima pagina. Antes de o dono ver o vazio,
   // e nao quando ele ja esta olhando para ele.
-  if (foco >= n - 12) desc_vertudo_mais();
+  if (vertudo_quer_mais(ordenaPorAno(), n, foco, 600, desc_vertudo_carregando(),
+                        desc_vertudo_fim(), desc_vertudo_erro())) desc_vertudo_mais();
 }
 
 void vertudo_atualizar(float dt, Uint32 agora) {
@@ -1053,6 +1073,10 @@ void vertudo_atualizar(float dt, Uint32 agora) {
   // botao (ctxlista.h).
   if (ctxhold_passo(&hold, agora, 1) && menuNoFocado()) ctxhold_cancelar(&hold);
   if (n > VT_MAX) n = VT_MAX;
+  // Tela cronologica pede todas as paginas sem esperar o foco descer.
+  if (ordenaPorAno() && vertudo_quer_mais(1, n, foco, VT_MAX, desc_vertudo_carregando(),
+                                          desc_vertudo_fim(), desc_vertudo_erro()))
+    desc_vertudo_mais();
   // A SONDA PODE CHEGAR DEPOIS DA TELA. Enquanto a fonte nao tem endereco,
   // reconferir por quadro custa uma varredura de poucas strings (addons_n e
   // dezenas, nao milhares) e SO acontece no estado de erro — assim a colecao se
@@ -1071,7 +1095,7 @@ void vertudo_atualizar(float dt, Uint32 agora) {
     pillAnim = anim_mola(pillAnim, alvoP, dt, alvoP > pillAnim ? NV_MOLA_FOCO : NV_MOLA_DESFOCO); }
   if (lay == VT_LAY_VITRINE) { vitAtualizar(dt, agora); return; }
   if (celLay != lay || celN != n) montar(n);
-  else if (lay == VT_LAY_SAGA && n <= 200 && (Sint32)(agora - vistosEm) > 1500)
+  else if ((lay == VT_LAY_SAGA || listaDePessoa()) && n <= 200 && (Sint32)(agora - vistosEm) > 1500)
     { contarVistos(n); vistosEm = agora; }
   // Mira a linha focada a 30% da altura util, como o resto do app faz.
   alvo = n ? VT_TOPO + celY[foco] - NV_TELA_H * 0.30f : 0.0f;
@@ -1101,9 +1125,11 @@ static void painel(float a) {
   float y = VT_PAN_Y;
   if (!viewItem(foco, &it)) return;
 
+  // Logo OU cartaz: com logo o painel e logo+meta+sinopse; sem logo, cartaz+titulo.
+  int temLogo = it.logo[0] && tex_obter_logo_larg(it.logo, 264.0f) && tex_aspecto(it.logo) > 0.0f;
   // O contexto lateral usa o cartaz, nunca repete a cena da timeline.
   // Mantém a geometria 2:3 mesmo sem arte para não deslocar os metadados.
-  { GfxRect r = { VT_PAN_X, y, VT_PAN_ART_W, VT_PAN_ART_H };
+  if (!temLogo) { GfxRect r = { VT_PAN_X, y, VT_PAN_ART_W, VT_PAN_ART_H };
     const char *arte = it.poster[0] ? it.poster : it.backdrop;
     float raio = 12.0f / VT_PAN_ART_W;
     GLuint t = arte[0] ? tex_obter_larg(arte, VT_PAN_ART_W) : 0;
@@ -1116,7 +1142,7 @@ static void painel(float a) {
       TxtLinha falta = txt_linha_corta(TXT_HERO_META, "Sem pôster", 185, 191, 204, 255, r.w-24);
       txt_desenhar_alpha(falta, r.x+(r.w-falta.w)*.5f, r.y+(r.h-falta.h)*.5f, a);
     } }
-  y += VT_PAN_ART_H + 18.0f;
+  if (!temLogo) y += VT_PAN_ART_H + 18.0f;
   float badgeW=badges_desenhar(badges_provedor(it.provNome),VT_PAN_X,y,VT_PAN_W,28,a);
   if(badgeW>0)y+=40;
 
@@ -1222,17 +1248,24 @@ static void themeBackground(float a) {
         diretor_pedir(collection->title);
         foto=diretor_foto(collection->title);
       }
-      GLuint tp=foto[0]?tex_obter_larg(foto,260.0f):0;
+      GLuint tp=foto[0]?tex_obter_larg(foto,640.0f):0;
+      if(foto[0]) tex_publicar_paleta(foto);
       if(tp) {
-        // O painel do item selecionado começa em VT_PAN_Y. O retrato ocupa
-        // apenas o cabeçalho e termina antes dele, sem atravessar pôster ou
-        // sinopse como uma segunda camada.
-        GfxRect rp={1660,18,260,300};
+        // Retrato grande a direita, da borda de cima ate antes do painel
+        // (VT_PAN_Y). O GFX_RETRATO corta o topo (some o nome gravado no
+        // pacote) e dissolve as bordas; o relogio desenha por cima.
+        GfxRect rp={NV_TELA_W-560.0f,0,560,560};
         if (vtTelefone()) rp.x = NV_TELA_W - 48.0f - rp.w;
         if (vtTimelineRetrato()) rp = (GfxRect){NV_TELA_W - 204.0f,18,156,180};
+        // Mancha da cor dominante do retrato (cor viva), escurecida para o
+        // texto da esquerda seguir legivel; so quando a paleta ja existe.
+        CorvivaPaleta pal;
+        if(!vtTimelineRetrato()&&corviva_paleta(foto,&pal)&&pal.ok)
+          gfx_rect((GfxRect){rp.x-760,-380,1700,1000},0,GFX_SOMBRA,1.0f,0,0,0.5f,
+                   pal.acento[0]*.55f,pal.acento[1]*.55f,pal.acento[2]*.55f,.85f*a);
         gfx_tex_aspect_atual=tex_aspecto(foto);
         gfx_rect(rp,tp,GFX_RETRATO,
-                 0,0,0,0,0,0,0,a*.88f);
+                 0,0,0,0,0,0,0,a);
         gfx_tex_aspect_atual=0;
       }
     } else {
@@ -1295,12 +1328,24 @@ static void themeHeader(float a,float x0) {
   }
   else if(desc_vertudo_erro())snprintf(caption,sizeof caption,"Não foi possível carregar. OK para tentar novamente.");
   else if(!n)snprintf(caption,sizeof caption,"%s",desc_vertudo_carregando()?"Carregando títulos…":"Nenhum título nesta lista.");
-  else snprintf(caption,sizeof caption,i18n("%d títulos%s  ·  %s"),n,desc_vertudo_fim()?"":i18n(" carregados"),i18n(legendaGrupo()));
+  else snprintf(caption,sizeof caption,i18n("%d títulos%s  ·  %s"),n,"",i18n(legendaGrupo()));
   // SAGA: quanto da franquia ja foi visto, na mesma linha.
   if(lay==VT_LAY_SAGA&&n>0&&!semFonte&&!desc_vertudo_erro()) {
     char vis[64]; size_t k=strlen(caption);
     snprintf(vis,sizeof vis,i18n("%d de %d assistidos"),sagaVistos,n>VT_MAX?VT_MAX:n);
     snprintf(caption+k,sizeof caption-k,"  ·  %s",vis);
+  }
+  if(listaDePessoa()&&vcTotal>0&&!semFonte&&!desc_vertudo_erro()&&!vtTelefone()) {
+    // "Voce viu N de M": barra fina na cor da colecao + contagem, sob o nome.
+    char vis[64];snprintf(vis,sizeof vis,i18n("Você viu %d de %d"),vcVistos,vcTotal);
+    TxtLinha vt=txt_linha(TXT_DET_META2,vis,242,243,247,255);
+    float bw=220,bh=8,by=192+(vt.h-bh)*.5f;
+    gfx_cor((GfxRect){x0,by,bw,bh},.5f,1,1,1,.14f*a);
+    float pct=vistocont_pct(vcVistos,vcTotal)/100.0f;
+    if(pct>0){float fr,fg,fb;corFocoFonte(&fr,&fg,&fb);
+      gfx_cor((GfxRect){x0,by,fmaxf(bh,bw*pct),bh},.5f,fr,fg,fb,a);}
+    txt_desenhar_alpha(vt,x0+bw+16,192,a);
+    caption[0]=0;
   }
   TxtLinha sub=txt_linha_corta(TXT_DET_META2,caption,196,202,213,255,vtTelefone()?fminf(960.0f,NV_TELA_W-x0-48.0f):960.0f);txt_desenhar_alpha(sub,x0,192,a);
   if(collection&&collection->nSources>1) {
@@ -1380,13 +1425,49 @@ static void themeHeader(float a,float x0) {
   }
 }
 
+// ESTADO DO TITULO NO CARTAO (U4): o check unico do app (badges.c) quando visto,
+// senao a barra fina de "parou em". Serve a todas as exibicoes.
+static void marcaEstado(GfxRect r, const CatItem *it, float a) {
+  if (vistoItem(it)) {
+    if (ajustes_selo_visto()) badges_check_cartao(r, 0, a);
+  } else if (it->progresso > 0) badges_progresso(r, it->progresso / 100.0f, a);
+}
+
+// LINHA DE ESTADO DA LINHA DO TEMPO (U5): "Visto em 12 mar 2024" (ultima vez que
+// o app soube: lastWatchedMs do progresso, que Nuvio/Trakt/Simkl alimentam),
+// "Visto" sem data, ou "Parou em 47 min". Vazio quando nao ha estado. A
+// contagem de reproducoes ("2x") nao existe nos dados do app, entao nao entra.
+static void estadoLinha(const CatItem *it, int visto, char *dst, size_t cap) {
+  ProgRegistro rec;
+  char key[64];
+  int tem;
+  dst[0] = 0;
+  prog_chave(key, sizeof key, it->imdb, 0, 0);
+  tem = it->imdb[0] && prog_por_chave(key, &rec);
+  if (visto) {
+    char dt[48];
+    if (tem && rec.lastWatchedMs > 0 &&
+        cwo_data_curta(rec.lastWatchedMs, (long long)time(NULL) * 1000, ajustes_idioma(), 0, dt, sizeof dt)) {
+      snprintf(dst, cap, i18n("Visto em %s"), dt);
+    } else snprintf(dst, cap, "%s", i18n("Visto"));
+  } else if (it->progresso > 0 && tem && rec.posSeg >= 60.0) {
+    snprintf(dst, cap, i18n("Parou em %d min"), (int)(rec.posSeg / 60.0));
+  }
+}
+
 static void timelineCard(int i,float cy,float a,float x0) {
   CatItem it;if(!viewItem(i,&it))return;
   int sel=i==foco&&!tabFocus;float r,g,b;corColecao(&r,&g,&b);
   // A linha organiza a cronologia; não é uma borda decorativa de card.
   float rail = vtTimelineRetrato() ? 64.0f : 109.0f;
   gfx_cor((GfxRect){x0+rail,cy-30,2,VT_CARD_H+VT_GAP_Y},0,.48f,.47f,.46f,a*.6f);
-  gfx_cor((GfxRect){x0+rail-7,cy+24,16,16},.5f,sel?.95f:r,sel?.95f:g,sel?.97f:b,a);
+  int visto=vistoItem(&it);
+  float ar,ag,ab;ajustes_acento(&ar,&ag,&ab);
+  // Visto: disco no acento com o check; nao visto: ponto vazado.
+  if(visto)badges_check_disco(x0+rail+1,cy+32,26.0f,a);
+  else{GfxRect dot={x0+rail-7,cy+24,16,16};
+    gfx_cor(dot,.5f,.07f,.075f,.09f,a);
+    gfx_rect(dot,0,GFX_ANEL,0,2.0f/16.0f,0,.5f,sel?.95f:r,sel?.95f:g,sel?.97f:b,a);}
   char year[16];int y=yearOf(&it);if(y==9999)snprintf(year,sizeof year,"—");else snprintf(year,sizeof year,"%d",y);
   TxtLinha yr=txt_linha(vtTimelineRetrato()?TXT_DET_META2:TXT_CW_TITULO,year,219,210,195,255);txt_desenhar_alpha(yr,x0,cy+14,a);
   GfxRect card=vtTimelineCard(cy), artRect=vtTimelineArte(card);
@@ -1394,14 +1475,24 @@ static void timelineCard(int i,float cy,float a,float x0) {
   float tw=vtTelefone()?card.x+card.w-tx-24.0f:550.0f;
   if(sel)gfx_cor((GfxRect){x-4,cy-4,card.w+8,VT_CARD_H+8},.045f,.94f,.95f,.97f,a);
   gfx_cor(card,.04f,.09f,.095f,.105f,a);
+  if(visto){gfx_cor(card,.04f,ar,ag,ab,.07f*a);
+    gfx_cor((GfxRect){card.x,card.y+12,3,card.h-24},.5f,ar,ag,ab,a);}
   const char *art=it.backdrop[0]?it.backdrop:it.poster;GLuint tex=art[0]?tex_obter_larg(art,390):0;
   if(tex){gfx_tex_aspect_atual=tex_aspecto(art);gfx_rect(artRect,tex,GFX_CARD,0,0,0,.04f,0,0,0,a);gfx_tex_aspect_atual=0;}
   else { gfx_cor(artRect,.04f,.16f,.16f,.18f,a);
          txt_desenhar_alpha(txt_linha(TXT_MINI,"Sem arte",184,188,198,255),
                             vtTelefone()?artRect.x+artRect.w*.5f-32.0f:x+158,vtTelefone()?artRect.y+artRect.h*.5f-10.0f:y+104,a*.9f); }
+  marcaEstado(artRect,&it,a);
   TxtLinha name=txt_linha_corta(TXT_CW_TITULO,it.titulo,242,243,247,255,tw);txt_desenhar_alpha(name,tx,cy+22,a);
   TxtLinha genre=txt_linha_corta(TXT_HERO_META,it.genero,187,194,207,255,tw);txt_desenhar_alpha(genre,tx,cy+64,a);
-  txt_bloco(TXT_DET_META2,it.sinopse,209,214,225,tx,cy+106,vtTelefone()?tw:545.0f,30,a,3);
+  char est[80];estadoLinha(&it,visto,est,sizeof est);
+  if(est[0]){
+    float ix=tx;
+    if(visto){gfx_icone((GfxRect){tx,cy+102,22,22},"check",ar,ag,ab,a);ix=tx+28.0f;}
+    TxtLinha el=txt_linha_corta(TXT_HERO_META,est,visto?ar*255:226,visto?ag*255:230,visto?ab*255:238,255,tw-(ix-tx));
+    txt_desenhar_alpha(el,ix,cy+102+(22-el.h)*.5f,a);
+  }
+  txt_bloco(TXT_DET_META2,it.sinopse,209,214,225,tx,cy+(est[0]?138:106),vtTelefone()?tw:545.0f,30,a,est[0]?2:3);
 }
 
 // --- PECAS COMUNS DAS EXIBICOES ----------------------------------------------
@@ -1470,6 +1561,7 @@ static void cartazGrade(int i, const CatItem *it, float cx, float cy, float w, f
       gfx_tex_aspect_atual = 0.0f;
     }
   } else cartaoArte(i, (GfxRect){ cx, cy, w, h }, artePoster(it), ac, agora, sel);
+  marcaEstado((GfxRect){ cx, cy, w, h }, it, ac);
   { TxtLinha l = txt_linha_corta(TXT_DET_META2, it->titulo, c, c, c, 255, w);
     txt_desenhar_alpha(l, cx, cy + h + 10.0f, ac * (sel ? 1.0f : 0.86f)); }
   if (ranked && lay == VT_LAY_GRADE) {
@@ -1501,6 +1593,7 @@ static void rankingCard(int i, const CatItem *it, float cx, float cy, float w, f
              nu.tex, GFX_TEXTO, 0, 0, 0, 0.0f, ar, ag, ab, ac * (i < 3 ? 0.95f : 0.62f));
   }
   cartaoArte(i, (GfxRect){ cx, cy, w, h }, artePoster(it), ac, agora, sel);
+  marcaEstado((GfxRect){ cx, cy, w, h }, it, ac);
   { int c = sel ? 255 : 214;
     TxtLinha l = txt_linha_corta(TXT_DET_META2, it->titulo, c, c, c, 255, w);
     txt_desenhar_alpha(l, cx, cy + h + 10.0f, ac * (sel ? 1.0f : 0.86f)); }
@@ -1535,17 +1628,8 @@ static void sagaCard(int i, const CatItem *it, float cx, float cy, float w, floa
     snprintf(nn, sizeof nn, "%02d", i + 1);
     l = txt_linha(TXT_TITULO2, nn, 246, 247, 250, 255);
     txt_desenhar_alpha(l, r.x + 20.0f, r.y + r.h - l.h - 14.0f, ac * 0.96f);
-    if (visto) {
-      TxtLinha v = txt_linha(TXT_CAPTION, "Assistido", 20, 20, 24, 255);
-      GfxRect p = { r.x + r.w - v.w - 40.0f, r.y + 14.0f, v.w + 26.0f, v.h + 8.0f };
-      gfx_cor(p, 0.5f, ar, ag, ab, 0.95f * ac);
-      { int tf = ajustes_tinta_foco(); TxtLinha vt = txt_linha(TXT_CAPTION, "Assistido", tf, tf, tf, 255);
-        txt_desenhar_alpha(vt, p.x + 13.0f, p.y + 4.0f, ac); }
-    } else if (it->progresso > 0) {
-      GfxRect tr = { r.x + 20.0f, r.y + r.h - 10.0f, r.w - 40.0f, 4.0f };
-      gfx_cor(tr, 0.5f, 1, 1, 1, 0.25f * ac);
-      gfx_cor((GfxRect){ tr.x, tr.y, tr.w * it->progresso / 100.0f, tr.h }, 0.5f, ar, ag, ab, ac);
-    } }
+    if (visto) badges_check_cartao(r, 0, ac);
+    else if (it->progresso > 0) badges_progresso(r, it->progresso / 100.0f, ac); }
   snprintf(cap, sizeof cap, i18n("Capítulo %d"), i + 1);
   { TxtLinha e = txt_linha(TXT_MINI, cap, 170, 176, 188, 255);
     int c = sel ? 255 : 226;
