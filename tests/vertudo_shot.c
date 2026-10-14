@@ -18,6 +18,7 @@ static int shotGrade;
 #define desc_vertudo_n shot_vertudo_n
 #define desc_vertudo_item shot_vertudo_item
 #include "../src/vertudo.c"
+#include "nvtmp.h"
 #undef desc_vertudo_n
 #undef desc_vertudo_item
 int desc_vertudo_n(void);
@@ -69,7 +70,7 @@ static void captura(const char *nome, SDL_Window *win) {
       assert(s);
       for (y = 0; y < 1080; y++)
         memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
-      assert(SDL_SaveBMP(s, nome) == 0);
+      assert((strstr(nome,".png") ? IMG_SavePNG(s,nome) : SDL_SaveBMP(s,nome)) == 0);
       SDL_FreeSurface(s);
       free(pix);
     }
@@ -87,7 +88,7 @@ static void fonte(int i, const char *titulo, const char *tipo) {
 }
 
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nuvio-vertudo";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nuvio-vertudo");
   char nome[600];
   SDL_Window *w;
   pasta.sources = pastaFontes;
@@ -124,6 +125,31 @@ int main(int argc, char **argv) {
   collection = &pasta;
   snprintf(titulo, sizeof titulo, "%s", pasta.title);
   aberta = 1; anim = 1.0f; source = 0;
+
+  if (getenv("NUVIO_SHOT_ABASTOPO")) {
+    static const int idiomas[] = {IDIOMA_PT, IDIOMA_DE, IDIOMA_RU};
+    static const char *cod[] = {"pt", "de", "ru"};
+    for (int k = 0; k < 3; k++) {
+      char config[600];
+      snprintf(config,sizeof config,"%s/ajustes.txt",getenv("NUVIO_DADOS"));
+      FILE *f=fopen(config,"w"); assert(f);
+      fprintf(f,"idioma %d\n",idiomas[k]); fclose(f);
+      ajustes_dir(getenv("NUVIO_DADOS"));
+      ajustes_definir_abas_estilo(VT_AB_TOPO);
+      assert(estiloAbas()==VT_AB_TOPO);
+      shotGrade=12; tabFocus=0; tabCursor=0; foco=0;
+      snprintf(nome,sizeof nome,"%s-%s-menu.png",saida,cod[k]); captura(nome,w);
+      tabFocus=1; tabCursor=cabN()+1;
+      snprintf(nome,sizeof nome,"%s-%s-icone.png",saida,cod[k]); captura(nome,w);
+      SDL_Event e={0}; e.type=SDL_KEYDOWN; e.key.keysym.sym=SDLK_RETURN;
+      vertudo_evento(&e); assert(ajustes_abas_estilo()==VT_AB_CHIPS);
+      for(int j=0;j<4;j++)vertudo_evento(&e);
+      assert(estiloAbas()==VT_AB_TOPO && tabCursor==cabN()+1);
+      e.key.keysym.sym=SDLK_LEFT; vertudo_evento(&e); assert(tabCursor==cabN());
+      e.key.keysym.sym=SDLK_RIGHT; vertudo_evento(&e); assert(tabCursor==cabN()+1);
+    }
+    goto fim;
+  }
 
   tabFocus = 1; tabCursor = 1;
   snprintf(nome, sizeof nome, "%s-abas-foco.bmp", saida);
@@ -224,6 +250,7 @@ int main(int argc, char **argv) {
     shotGrade = 0;
   }
 
+fim:
   tex_encerrar();
   txt_encerrar();
   SDL_GL_DeleteContext(gl);

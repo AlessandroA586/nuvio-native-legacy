@@ -15,6 +15,7 @@
 // Inclui src/vertudo.c (o estado e estatico) e troca a lista que a descoberta
 // leu por uma semeada aqui.
 #include "gfx.h"
+#include "nvtmp.h"
 #include "tex_cache.h"
 static int pedidosArte, sombrasFluxo, pedidosPagina;
 static void fluxo_mais(void) { pedidosPagina++; }
@@ -87,7 +88,7 @@ static ColSource fontes[2];
 int main(int argc, char **argv) {
   int L, i, j;
   char dir[600];
-  snprintf(dir, sizeof dir, "%s/nv-colexib.XXXXXX", getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp");
+  snprintf(dir, sizeof dir, "%s/nv-colexib.XXXXXX", nvt_dir());
   assert(mkdtemp(dir));
   setenv("NUVIO_DADOS", dir, 1);
   dados_iniciar("deploy/app/art");

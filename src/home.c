@@ -3995,6 +3995,7 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
   // como "Filme · Terror", que e o par (tipo, primeiro genero) do web.
   char metaLinha[288];
   metaLinha[0] = 0;
+  const char *generoHero = ci && ajustes_hero_genero() ? ci->genero : "";
   // DOIS CASOS, DUAS FRASES (dono, 20/09/2026): "A SEGUIR" e o PROXIMO
   // episodio, que so faz sentido quando o anterior terminou; quem parou no
   // meio "continua de onde parou". Os dois dizem QUAL episodio — o item de
@@ -4005,9 +4006,9 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
     snprintf(cab, sizeof cab, "S%d E%d%s%s", ci->temporada, ci->episodio,
              ci->nomeEpisodio[0] ? "  \xc2\xb7  " : "", ci->nomeEpisodio);
     snprintf(metaLinha, sizeof metaLinha, "%s%s%s", cab,
-             (ci->genero[0] ? "  \xc2\xb7  " : ""), ci->genero);
-  } else if (ci && ci->genero[0]) {
-    snprintf(metaLinha, sizeof metaLinha, "%s", ci->genero);
+             (generoHero[0] ? "  \xc2\xb7  " : ""), generoHero);
+  } else if (generoHero[0]) {
+    snprintf(metaLinha, sizeof metaLinha, "%s", generoHero);
   }
   if (ci && ci->meta[0]) {
     size_t n = strlen(metaLinha);
@@ -5668,16 +5669,10 @@ static int colunaDaFileira(int r) {
   if (c >= fileiras[r].n) c = fileiras[r].n - 1;
   return c < 0 ? 0 : c;
 }
-// PALCO: centro e escala do card `c`. O do centro mede `lw`; a um passo dele o
-// vizinho ja caiu para NV_PALCO_VIZ, e dai em diante todos ficam desse tamanho,
-// encostados pelo gap — nunca um por cima do outro, entao a ordem de desenho
-// nao importa. O centro fica uma vaga de vizinho depois da margem.
+// PALCO: as vagas seguem a rolagem comum; so a escala acompanha o foco.
 static void palcoGeo(int r, int c, float lw, float *cx, float *s) {
-  float gap = NV_CARD_GAP, wn = lw * NV_PALCO_VIZ;
-  float d = (float)c - palcoPos[r], ad = fabsf(d), um = lw * 0.5f + wn * 0.5f + gap, o;
-  float ancora = ajustes_conteudo_x() + bordaX(r) + wn + gap + lw * 0.5f;
-  o = ad <= 1.0f ? ad * um : um + (ad - 1.0f) * (wn + gap);
-  *cx = ancora + (d < 0.0f ? -o : o);
+  float ad = fabsf((float)c - palcoPos[r]);
+  *cx = homeFileiraX(r, c) + lw * 0.5f;
   *s = 1.0f - (1.0f - NV_PALCO_VIZ) * (ad < 1.0f ? ad : 1.0f);
 }
 // PALCO: o nome e a linha de meta do titulo do centro, embaixo dele.
@@ -5986,7 +5981,13 @@ static void desenhaEditorialCard(const CatItem *cItem, TipoFileira tipo, float p
   // Sem dado, sem texto — nao a lista de demonstracao que ficava
   // aqui e carimbava nome e genero de outro titulo no card.
   const char *nome   = (ci && ci->titulo[0]) ? ci->titulo : NULL;
-  const char *genero = (ci && ci->genero[0]) ? ci->genero
+  // "Mostrar genero no destaque" desligado: so arte e logo no DESTAQUE —
+  // a linha de baixo inteira (genero, IMDb, classificacao) sai. As
+  // fileiras COLECAO/SERVICO/SOCIAL nao sao destaque e ficam como estao.
+  const int semMeta = (tipo == FILEIRA_DESTAQUE || tipo == FILEIRA_DESTAQUE_QUADRADO)
+                    && !ajustes_hero_genero();
+  const char *genero = semMeta ? NULL
+                      : (ci && ci->genero[0]) ? ci->genero
                       : ci ? i18n(!strcmp(ci->tipo, "series") ? "Série" : "Filme") : NULL;
   TxtLinha tg = genero
               ? txt_linha_corta(TXT_HERO_META, genero, 226, 228, 233, 255, w - 64)
@@ -6030,7 +6031,7 @@ static void desenhaEditorialCard(const CatItem *cItem, TipoFileira tipo, float p
   // da linha (a referencia nao a tem); sem nota atribuivel ao IMDb
   // (sem ID, ou `tmdb:` sem vínculo IMDb verificado), a classificacao volta como antes.
   int notaFeita = 0;
-  int imdbRating = orig && ci ? imdbnota_obter(ci->imdb, ci->nota, !strcmp(ci->tipo,"series")) : 0;
+  int imdbRating = orig && ci && !semMeta ? imdbnota_obter(ci->imdb, ci->nota, !strcmp(ci->tipo,"series")) : 0;
   if (imdbRating > 0) {
     float bx = px + pad + tg.w + (genero ? 14.0f : 0.0f);
     if (bx + badge_imdb_largura(imdbRating) < px + w - pad) {
@@ -6044,7 +6045,7 @@ static void desenhaEditorialCard(const CatItem *cItem, TipoFileira tipo, float p
   // todo card sem classificacao, e o selo vermelho tem cara de aviso
   // oficial — e o mesmo defeito do "14" cravado em descoberta.c, so
   // que na home.
-  if (!notaFeita && ci && ci->classificacao[0] && tg.w + BADGE_H + 24.0f < w - pad*2) {
+  if (!notaFeita && !semMeta && ci && ci->classificacao[0] && tg.w + BADGE_H + 24.0f < w - pad*2) {
     char clas[8];
     snprintf(clas, sizeof clas, "%s%s", (ci->classificacao[0] >= '0' && ci->classificacao[0] <= '9') ? "A" : "", ci->classificacao);
     { float bx = px + pad + tg.w + (genero ? 14.0f : 0.0f);

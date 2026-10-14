@@ -1087,6 +1087,16 @@ static void spotAbrirBase(int voz, int tecladoAuto) {
            (st_abre_sozinho() || spTelefone())) abrirTecladoSis();
 }
 
+// Abre a caixa SEM pedir o teclado do sistema: e a abertura que a
+// demonstracao das Dicas do controle usa (dicascontrole.c), onde o IME do
+// Android tomaria o foco e cobriria a apresentacao.
+void spot_abrir_demo(void) {
+  modoAjustes = 0;
+  modoGuia = 0;
+  retornoAjustesValido = 0;
+  spotAbrirBase(0, 0);
+}
+
 void spot_abrir_guia(void) {
   modoAjustes = 1;
   modoGuia = 1;

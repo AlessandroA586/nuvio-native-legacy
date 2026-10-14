@@ -5,6 +5,7 @@
 // estado e montado a mao.
 // Saida: <prefixo>-N-*.png. Ver tests/estatvivo_shot.sh.
 #include "estatvivoui.h"
+#include "nvtmp.h"
 #include "ajustes.h"
 #include "ajustes_ux.h"
 #include "gfx.h"
@@ -79,7 +80,7 @@ static EvEstado base(void) {
 }
 
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nuvio-estatvivo";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nuvio-estatvivo");
   const char *dir = getenv("NUVIO_DADOS");
   char nome[600], arq[700];
   SDL_Window *w;

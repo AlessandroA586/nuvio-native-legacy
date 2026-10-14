@@ -3,6 +3,7 @@
 #include "ajustes.h"
 #include "menu.h"
 #include "dados.h"
+#include "nvtmp.h"
 #include <SDL2/SDL.h>
 #include <assert.h>
 #include <stdio.h>
@@ -18,7 +19,7 @@ static void tecla(SDL_Keycode k) {
 }
 static void passo(float s) { menu_atualizar(s, 0); }
 
-static char dir[] = "/tmp/nuvio-menu-slide-XXXXXX", caminho[700];
+static char dir[NVT_MAX], caminho[700];
 static void gravar(const char *txt) {
   FILE *f = fopen(caminho, "w"); assert(f);
   fputs(txt, f); fclose(f);
@@ -28,6 +29,7 @@ static void gravar(const char *txt) {
 int main(void) {
   float p;
   int i;
+  nvt_set(dir, sizeof dir, "/nuvio-menu-slide-XXXXXX");
   assert(mkdtemp(dir));
   assert(setenv("NUVIO_DADOS", dir, 1) == 0);
   dados_iniciar(dir);

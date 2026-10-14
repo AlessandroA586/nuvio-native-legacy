@@ -10,6 +10,7 @@
 // de quem nunca abriu o app) e a captura nao mexe no fileirasui.txt de quem
 // roda o teste.
 #include "ajustes.h"
+#include "nvtmp.h"
 #include "ajustes_ux.h"
 #include "atualizacao.h"
 #include "badges.h"
@@ -156,7 +157,7 @@ static void captura(const char *nome, SDL_Window *win) {
 }
 
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nuvio-ajustes";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nuvio-ajustes");
   char nome[600];
   SDL_Window *w;
   SDL_GLContext gl;
