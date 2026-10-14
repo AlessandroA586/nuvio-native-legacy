@@ -413,6 +413,13 @@
     // componente, entao /app/art => /app/fonts, que e onde o --preload-file
     // monta as fontes.
     arguments: ["/app/art"],
+    preRun: [function () {
+      try {
+        var model = webapis.productinfo.getModel();
+        ENV.NUVIO_TV_MODEL = model;
+        console.log("[tv] modelo=" + model);
+      } catch (_) { /* Unknown panel keeps the 100% fallback. */ }
+    }],
     canvas: (function () { return document.getElementById("canvas"); })(),
     // O QUE O RUNTIME JA SABIA E NINGUEM PERGUNTAVA. O Emscripten anuncia o
     // andamento do preload por aqui, em texto ("Downloading data... (8/28 MB)").

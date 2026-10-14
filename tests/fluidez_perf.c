@@ -138,7 +138,6 @@ static void quadro(SDL_Window *w, Quadro *q, Uint32 agora) {
   tex_novo_quadro();
   gfx_sem_recorte();
   gfx_ambiente_preparar();
-  fundo_fosco_quadro();   // main.c: vidro fosco
   glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
   gfx_ambiente(1.0f);

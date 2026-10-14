@@ -380,7 +380,7 @@ static void hero(int i) {
 static void secaoFoco(int i, int sec) {
   abrirItem(i);
   nivel = 1;
-  if (!strcmp(itens[i].imdb, IMDB_SERIE)) { foco.fileira = SEC_TEMPORADAS; foco.coluna = 1; quadros(3); }
+  if (!strcmp(itens[i].imdb, IMDB_SERIE)) { foco.fileira = SEC_TEMPORADAS; foco.coluna = 2; quadros(3); }
   else quadros(1);
   foco.fileira = sec; foco.coluna = 0;
   quadros(220);

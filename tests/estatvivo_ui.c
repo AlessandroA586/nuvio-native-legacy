@@ -22,7 +22,14 @@ static int tecla(SDL_Keycode k, int repetida) {
   e.type = SDL_KEYDOWN;
   e.key.keysym.sym = k;
   e.key.repeat = (Uint8)repetida;
-  return estatvivo_evento(&e);
+  return estatvivo_evento(&e, 0);
+}
+static int teclaCima(SDL_Keycode k) {
+  SDL_Event e;
+  memset(&e, 0, sizeof e);
+  e.type = SDL_KEYDOWN;
+  e.key.keysym.sym = k;
+  return estatvivo_evento(&e, 1);   // outra camada e dona do CIMA neste quadro
 }
 static void espera(void) { SDL_Delay(650); }   // passa a graca do OK
 
@@ -96,6 +103,15 @@ int main(void) {
   tecla(SDLK_RETURN, 0);   // Completo
   tecla(SDLK_DOWN, 0);
   CONFERE(estatvivo_fixado() && estatvivo_tamanho() == EV_TAM_COMPLETO, "fixa o Completo tambem");
+  // P2: com uma camada de pe (cimaDela), o CIMA que focaria o fixado e dela;
+  // as demais teclas continuam do player (fixado nao rouba nada).
+  CONFERE(teclaCima(SDLK_UP) == 0 && !estatvivo_aberto() && estatvivo_fixado(),
+          "CIMA com camada de pe fica dela, nao foca o fixado");
+  CONFERE(teclaCima(SDLK_LEFT) == 0 && teclaCima(SDLK_RETURN) == 0,
+          "as outras teclas passam do mesmo jeito");
+  CONFERE(tecla(SDLK_UP, 0) == 1 && estatvivo_aberto() && estatvivo_fixado(),
+          "sem camada o CIMA volta a focar o fixado");
+  tecla(SDLK_ESCAPE, 0);   // devolve o foco (fixado segue)
   estatvivo_abrir(); espera();
 
   // Lembrar o ultimo: fechar e abrir de novo reabre no mesmo tamanho.

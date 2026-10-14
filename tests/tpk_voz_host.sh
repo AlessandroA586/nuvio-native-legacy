@@ -34,6 +34,7 @@ bool pausado, jaPausou, principalVisivel = true, glVisivel = true, soltou;
 const bool JanelaUnica = true;
 public Program(Voz v) { voz = v; }
 void Janela(string s) {} void Etapa(string s) {} string Contagem() => "";
+void nv_tpk_ciclo(int memoria) {}
 public void Pause() { OnPause(); } public void Resume() { OnResume(); } public void Close() { SoltaTudo("test"); }
 '''+ '\n'.join(method(x) for x in ['protected override void OnPause()', 'protected override void OnResume()', 'void SoltaTudo(string porque)'])+'\n}}')
 (w/'host.rsp').write_text('\n'.join('"'+str(p)+'"' for p in [root/'tests/tpk_voz_host.cs', root/'tizen-tpk/Voz.cs', w/'Lifecycle.cs']))
