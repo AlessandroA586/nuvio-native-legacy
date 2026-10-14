@@ -43,7 +43,8 @@ __attribute__((weak)) void addons_diferenca(const AddonRemoto *a, int na,
 #include "debrid.h"
 #define WEAK __attribute__((weak))
 WEAK void recomenda_esquecer_conta(void) {}
-WEAK int perfis_puxar_sessao(uint64_t s, const char *u, const char *j) { (void)s; (void)u; (void)j; return 0; }
+int perfis_puxar(void);
+WEAK int perfis_puxar_sessao(uint64_t s, const char *u, const char *j) { (void)s; (void)u; (void)j; return perfis_puxar(); }
 WEAK void perfis_invalidar_sessao(void) {}
 // The cycle now pins identity and token up front and calls nuvem_*; the
 // fixtures still intercept at sessao_tabela / sessao_rpc, so forward there.
@@ -64,5 +65,7 @@ WEAK void debrid_conta_iniciar(DebridConta *c) { (void)c; }
 WEAK void debrid_conta_definir(DebridConta *c, const char *s, const char *k) { (void)c; (void)s; (void)k; }
 WEAK int debrid_aplicar_chaves_conta(const DebridConta *c, uint64_t s) { (void)c; (void)s; return 0; }
 WEAK void ajustes_perfil_padrao(void) {}
-WEAK int syncprog_puxar_sessao(int p, uint64_t s) { (void)p; (void)s; return 0; }
-WEAK int syncprog_empurrar_sessao(int p, uint64_t s) { (void)p; (void)s; return 0; }
+int syncprog_puxar(void);
+int syncprog_empurrar(void);
+WEAK int syncprog_puxar_sessao(int p, uint64_t s) { (void)p; (void)s; return syncprog_puxar(); }
+WEAK int syncprog_empurrar_sessao(int p, uint64_t s) { (void)p; (void)s; return syncprog_empurrar(); }
