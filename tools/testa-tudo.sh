@@ -15,7 +15,12 @@
 # ".." porque este script mora em tools/, e a suite e relativa a RAIZ do
 # repositorio. Ele nasceu na raiz e o `cd` de la ficou para tras na mudanca:
 # o sintoma era `tests/*.sh: No such file or directory`.
-cd "$(dirname "$0")/.." || exit 1
+# cd "$(dirname "$0")/.." || exit 1
+# --sanitizers: depois da suite normal, roda tools/sanitiza.sh (ASan+UBSan e o
+# job TSan separado). Falha de sanitizador reprodutivel bloqueia a integracao
+# com o mesmo rc da suite; sem a flag o comportamento e o de sempre.
+san=0
+[ "${1:-}" = --sanitizers ] && san=1
 LOGS=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-testes.XXXXXX") || exit 1
 falhou=0
 passaram=0
@@ -43,5 +48,9 @@ for f in tests/*.sh; do
     echo "FALHA $n"; tail -15 "$LOGS/$n.log"; falhou=$((falhou + 1))
   fi
 done
+if [ "$san" = 1 ]; then
+  echo "== sanitizadores (tools/sanitiza.sh) =="
+  bash tools/sanitiza.sh || falhou=$((falhou + 1))
+fi
 echo "testes: $passaram passaram, $falhou falharam, $semProva SKIP sem prova, $pulados fora da suite; logs: $LOGS"
 [ "$falhou" -eq 0 ]
