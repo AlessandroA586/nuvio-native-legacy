@@ -302,14 +302,24 @@ uint64_t p2pmotor_teto_duro(uint64_t livre, unsigned escolhaMb) {
 }
 void p2pmotor_definir_limite_mb(unsigned mb) { atomic_store(&limiteMb, mb); }
 
-// Apaga `dup` (strdup feita pelo chamador, consumida em qualquer caso) num
-// fio solto, recusando quando o motor esta de pe — a parada normal ja apaga
-// pastaRaiz. Usada para a pasta que fica orfa num pendrive.
-static void apagarSobraAsync(char *dup);
+// Junta uma pasta de sobra na fila de apagamento em fio solto, recusando
+// quando o motor esta de pe — a parada normal ja apaga pastaRaiz. UMA fila
+// (nao uma por pasta): limpar_sobra acha a interna e as de pendrive na mesma
+// passada e um segundo agendar() nao pode ser recusado pela primeira limpeza
+// — era o que deixava a sobra interna viva quando uma USB existia (revisao).
+typedef struct SobraNo { struct SobraNo *prox; char *raiz; } SobraNo;
+static SobraNo *sobraFila;      // so com a trava
+static void sobraAgendar(const char *raiz);
+static void sobraLancar(void);
 
 void p2pmotor_definir_usb(int usar) {
   char velha[600];
-  atomic_store(&usbPreferido, usar ? 1 : 0);
+  // Chamada a cada quadro (vigiarMotorP2p) e quase sempre com a MESMA
+  // escolha: so transicao faz trabalho. Sem isto, com o ajuste em Interno,
+  // usbResolvido/usbQuando zeravam a cada quadro, o cache de ~2 s de
+  // usb_presente nunca vingava e a UI re-escaneava /tmp/usb inteiro por
+  // quadro (mkdir + sonda de escrita) — travada com volume lento ou ausente.
+  if (atomic_exchange(&usbPreferido, usar ? 1 : 0) == (usar ? 1 : 0)) return;
   if (usar) return;
   // Desligou: esquece a raiz e agenda apagar a pasta que ficou no pendrive —
   // so se o motor nao estiver de pe nela (a parada normal ja apaga pastaRaiz).
@@ -320,7 +330,7 @@ void p2pmotor_definir_usb(int usar) {
   atomic_store(&usbTem, 0);
   usbQuando = 0;
   pthread_mutex_unlock(&usbTrava);
-  if (velha[0]) apagarSobraAsync(strdup(velha));
+  if (velha[0]) sobraAgendar(velha);
 }
 
 int p2pmotor_usb_presente(void) {
@@ -486,33 +496,46 @@ void p2pmotor_arquivo_atual(uint64_t *tam, uint64_t *teto, uint64_t *livre) {
 // desligada com o filme tocando = ate o teto duro preso no disco ate a pessoa
 // abrir outro torrent. Agora o inicio do app tambem apaga.
 static void *limparFio(void *x) {
-  char *raiz = x;
-  uint64_t b = percorrer(raiz, 0, 0);
-  percorrer(raiz, 1, 0);
-  printf("[p2p-motor] inicio: sobra de %.0f MB apagada em %s\n", (double)b / 1048576.0, raiz);
-  fflush(stdout);
-  free(raiz);
+  SobraNo *no, *fila = x;
+  for (no = fila; no; no = no->prox) {
+    uint64_t b = percorrer(no->raiz, 0, 0);
+    percorrer(no->raiz, 1, 0);
+    printf("[p2p-motor] inicio: sobra de %.0f MB apagada em %s\n", (double)b / 1048576.0, no->raiz);
+    fflush(stdout);
+    free(no->raiz);
+  }
+  while (fila) { no = fila->prox; free(fila); fila = no; }
   pthread_mutex_lock(&trava);
   limpando = 0;
+  sobraLancar();   // ninguem agendou durante a varredura? sobraFila vazia: sai
   pthread_cond_broadcast(&sinal);
   pthread_mutex_unlock(&trava);
   return NULL;
 }
-static void apagarSobraAsync(char *dup) {
+static void sobraLancar(void) {
   pthread_t t;
   pthread_attr_t a;
-  if (!dup) return;
-  pthread_mutex_lock(&trava);
-  if (motor || resolvendo || parando || limpando) {
-    pthread_mutex_unlock(&trava);
-    free(dup);
-    return;
-  }
+  SobraNo *fila;
+  if (!sobraFila || motor || resolvendo || parando || limpando) return;
+  fila = sobraFila;
+  sobraFila = NULL;
   limpando = 1;
   pthread_attr_init(&a);
   pthread_attr_setdetachstate(&a, PTHREAD_CREATE_DETACHED);
-  if (pthread_create(&t, &a, limparFio, dup) != 0) { limpando = 0; free(dup); }
+  if (pthread_create(&t, &a, limparFio, fila) != 0) { limpando = 0; sobraFila = fila; }
   pthread_attr_destroy(&a);
+}
+static void sobraAgendar(const char *raiz) {
+  SobraNo *no;
+  if (!raiz || !raiz[0]) return;
+  no = malloc(sizeof *no);
+  if (!no) return;
+  no->raiz = strdup(raiz);
+  if (!no->raiz) { free(no); return; }
+  pthread_mutex_lock(&trava);
+  no->prox = sobraFila;
+  sobraFila = no;
+  sobraLancar();
   pthread_mutex_unlock(&trava);
 }
 // #205: pasta p2p/ que sobrou num pendrive de uma sessao anterior (raiz
@@ -526,7 +549,7 @@ static void usbVarreSobraDir(const char *base, int fundo, const char *raizAtual)
   if (!base || !base[0] || fundo > 3) return;
   if (snprintf(p2p, sizeof p2p, "%s/p2p", base) < (int)sizeof p2p &&
       lstat(p2p, &st) == 0 && S_ISDIR(st.st_mode) && strcmp(p2p, raizAtual))
-    apagarSobraAsync(strdup(p2p));
+    sobraAgendar(p2p);
   if (!(d = opendir(base))) return;
   while ((e = readdir(d))) {
     if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, "..") || e->d_name[0] == '.') continue;
@@ -561,7 +584,7 @@ void p2pmotor_limpar_sobra(void) {
   if (p2pmotor_ativo()) return;          // motor de pe cuida da pasta dele
   usbVarreSobra(raiz);                   // sobras de pendrive, com motor parado
   if (lstat(raiz, &st) != 0) return;     // nada sobrou: nem fio
-  apagarSobraAsync(strdup(raiz));
+  sobraAgendar(raiz);
 }
 
 void p2pmotor_cancelar(void) {

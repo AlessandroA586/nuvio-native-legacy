@@ -5,7 +5,11 @@
 //   2. a raiz escolhida e lembrada e usada pelo resumo (statvfs na mae);
 //   3. pendrive removido -> cai para o interno (promessa do ajuste);
 //   4. desligar o ajuste apaga a pasta p2p/ deixada no pendrive;
-//   5. sem volume nenhum -> usb_presente = 0.
+//   5. sem volume nenhum -> usb_presente = 0;
+//   6. limpar_sobra com ajuste ainda nao lido (boot) apaga a sobra do
+//      pendrive E a interna na mesma passada (P1: so uma era agendada);
+//   7. definir_usb(0) a cada quadro nao derruba o cache de ~2 s de
+//      usb_presente (P2: a UI re-escaneava /tmp/usb por quadro).
 //
 //   bash tests/p2pusb.sh
 #include "p2pmotor.h"
@@ -91,6 +95,38 @@ int main(int argc, char **argv) {
   chmod(vol, 0755);
   assert(!p2pmotor_usb_presente());
   p2pmotor_definir_usb(0);
+
+  // 6. boot: limpar_sobra roda ANTES de ajustes_dir (usbPreferido=0). Sobra
+  // no pendrive e no interno na mesma passada: as duas somem.
+  {
+    char usbp[780], intp[780], f[800];
+    FILE *fp;
+    snprintf(usbp, sizeof usbp, "%s/p2p", vol);
+    snprintf(intp, sizeof intp, "%s/p2p", dados);
+    mkdir(usbp, 0755);
+    mkdir(intp, 0755);
+    snprintf(f, sizeof f, "%s/peca.bin", usbp); fp = fopen(f, "w"); fputs("x", fp); fclose(fp);
+    snprintf(f, sizeof f, "%s/peca.bin", intp); fp = fopen(f, "w"); fputs("x", fp); fclose(fp);
+    p2pmotor_teste_usb_base(mnt);
+    p2pmotor_limpar_sobra();
+    assert(someAte(usbp, 5000));
+    assert(someAte(intp, 5000));
+  }
+
+  // 7. UI parada em Interno chama definir_usb(0) todo quadro: o cache de
+  // ~2 s de usb_presente tem de segurar (sem isto, cada quadro re-escaneava).
+  {
+    char vaz[700], v2[760];
+    int i;
+    snprintf(vaz, sizeof vaz, "%s/vazio", mnt);
+    p2pmotor_teste_usb_base(vaz);
+    assert(!p2pmotor_usb_presente());           // mede e lembra "nao"
+    mkdir(vaz, 0755);
+    snprintf(v2, sizeof v2, "%s/vol2", vaz);
+    mkdir(v2, 0755);                           // agora ha volume gravavel
+    for (i = 0; i < 200; i++) p2pmotor_definir_usb(0);
+    assert(!p2pmotor_usb_presente());          // cache de 2 s segurou
+  }
   puts("ok");
   return 0;
 }
