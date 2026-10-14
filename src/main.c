@@ -1970,7 +1970,6 @@ int main(int argc, char **argv) {
     gfx_sem_recorte();
     fPrep = NV_DT(t0);
     gfx_ambiente_preparar();
-    fundo_fosco_quadro();   // vidro fosco: a arte borrada do titulo em cena
     fPrep = NV_DT(t0) - fPrep;
     // Nivel 3 (so com "720p" escolhido) ou 4K que nao aguentou: o quadro
     // inteiro vai para o alvo interno (o clear abaixo ja limpa ele);

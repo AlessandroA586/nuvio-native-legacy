@@ -306,8 +306,9 @@ static void alvosDasLinhas(const MenuGeo *g, float x, float w) {
 //           largura, 40 % ACIMA do topo, morrendo a 60 % do raio de 80 % da
 //           altura); sombra 0 14 40 a 36 %;
 //   solido: #15161a opaco, sem a luz; sombra 0 10 30 a 45 %.
-// O miolo obedece a "Opacidade do vidro" e ao "Vidro fosco" como as outras
-// ilhas (gfx_vidro_opacidade, gfx_vidro_fosco). Na Padrao o retangulo comeca
+// Com "Vidro" e o vidro do PlxNative (gfx_vidro): a barra do topo no perfil
+// de barra, a rail no de painel; obedece a "Opacidade do vidro", ao "Vidro
+// fosco" e ao "Contorno do vidro" como as outras ilhas. Na Padrao o retangulo comeca
 // FORA da tela a esquerda (o raio a mais), e os cantos da esquerda nunca
 // aparecem: o lado colado na borda e reto.
 static void desenhaMaterial(const MenuGeo *g, float a) {
@@ -331,15 +332,10 @@ static void desenhaMaterial(const MenuGeo *g, float a) {
     // rotulos (captura de tests/homelayouts_shot.sh): sobe a 86 %.
     float al = anim_mistura(.80f, .86f, limita01((g->w - NV_MENU_W_RAIL) / (NV_MENU_W_ABERTO - NV_MENU_W_RAIL)))
              * gfx_vidro_opacidade();
-    // A barra do topo e vidro de verdade (Liquid Glass): bem mais translucida,
-    // o cartaz que passa atras aparece borrado; a legibilidade vem do fosco.
-    if (topo() && !gfx_efeitos_minimos()) al *= 0.72f;
-    if (al > 1.0f) al = 1.0f;
-    gfx_vidro_fosco(r, raio, a);
-    gfx_vidro_miolo(r, raio, 14.0f / 255.0f, 15.0f / 255.0f, 18.0f / 255.0f, al * a, a);
-    gfx_luz_canto(r, raio, g->w * .22f + (r.w - g->w), -0.40f * r.h, 0.48f * r.h,
-                  1, 1, 1, .10f * a);
-    if (topo()) gfx_vidro_borda(r, raio, a);
+    // A barra do topo e o perfil de barra deles (scrim proprio, resolvido
+    // pelo que passa atras); a rail, painel com o miolo de sempre.
+    if (topo()) gfx_vidro(r, raio, GFX_VIDRO_BARRA, 14.0f / 255.0f, 0.0f, a);
+    else gfx_vidro(r, raio, GFX_VIDRO_PAINEL, 15.0f / 255.0f, al, a);
   } else {
     gfx_cor(r, raio, 21.0f / 255.0f, 22.0f / 255.0f, 26.0f / 255.0f, a);
   }
