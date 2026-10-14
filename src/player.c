@@ -3679,7 +3679,8 @@ void player_atualizar(float dt, Uint32 agora) {
   // curto (<120 s, clipe de erro do provedor) e canal ao vivo nao falam.
   { int ok = fontePrincipal() && video_pronto() && video_ativo() && tocando && !scrubbing &&
              !saindo && !erroFonte && !esperandoFonte && !ehCanal() &&
-             duracaoSeg >= 120.0f;
+             duracaoSeg >= 120.0f &&
+             !player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo());   // PRONTO do trailer (129 s) nao e deste titulo
     static float tocouS;
     const CatItem *cs = item();
     if (cs && jfid_e(cs->imdb)) cs = NULL;   // never scrobble personal-server items
@@ -3696,7 +3697,8 @@ void player_atualizar(float dt, Uint32 agora) {
     } else {
       // Pausou (ou o video parou de andar): so fala se ha um start em pe.
       if (tocouS > 0.0f && cs && cs->imdb[0] && fontePrincipal() && video_pronto() && !ehCanal() &&
-          duracaoSeg >= 120.0f && !scrubbing) {
+          duracaoSeg >= 120.0f && !scrubbing &&
+          !player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo())) {
         char id[64];
         if (epT > 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
         else snprintf(id, sizeof id, "%s", cs->imdb);
