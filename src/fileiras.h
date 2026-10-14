@@ -117,6 +117,9 @@ typedef enum {
   FIL_TIPO_FICHA,        // FILEIRA_FICHA — cartaz com a ficha (ano, nota, sinopse) ao lado
   FIL_TIPO_PALCO,        // FILEIRA_PALCO — o foco grande no centro, vizinhos menores
   FIL_TIPO_REDONDA,      // FILEIRA_REDONDA — avatar circular com o nome embaixo (fileiras de pessoas)
+  // "Herói" (#205): FILEIRA_HEROI — um cartão só do tamanho da fileira, com
+  // fundo, selo, título e duas linhas. No fim pelo mesmo motivo dos outros.
+  FIL_TIPO_HEROI,        // fonte: a própria fileira; curadoria do Nuvio Legacy; sorteio
   // 14/10 (dono): "o pôster só que do tamanho do grande tipo o 3:4 grande",
   // com mais informação na base e o véu na cor predominante. No fim, pelo
   // mesmo motivo: o número gravado dos tipos acima não muda.
