@@ -5419,7 +5419,7 @@ static int relogioCamadaAberta(void) {
       novidades13_aberto() || novidades131_aberto() || novidades132_aberto() ||
       novidades133_aberto() || novidades134_aberto() || novidades139_aberto() ||
       novidades1312_aberto() || novidades142_aberto() || novidades148_aberto() ||
-      novidades170_aberto() || novidades180_aberto() || novidades20_aberto() || novidades201_aberto() || novidades202_aberto() || novcartao_aberto() || dicascontrole_ocupado() || telemetria_aberto() || recintro_aberto() ||
+      novidades170_aberto() || novidades180_aberto() || novidades20_aberto() || novidades201_aberto() || novidades202_aberto() || novcartao_aberto() || telemetria_aberto() || recintro_aberto() ||
       atualizacao_aberta() || agendaviso_aberto() || avisos_cartao_aberto() ||
       glem_cartao_aberto() || recenviar_aberto() || pessoas_aberto() ||
       recomenda_aberta() || pipintro_aberto() || diagnostico_intro_aberto();
@@ -5465,11 +5465,6 @@ static int miniToquePermitido(void) {
 #endif
 
 void app_desenhar(Uint32 agora) {
-  if (dicascontrole_visivel()) {
-    dicascontrole_fundo(desenharTelas, agora);
-    dicascontrole_desenhar(agora);
-    return;
-  }
   // O GUIA DA 2.0 e tela inteira e opaco: nada do app por baixo (uma camada
   // de tela cheia a menos; o fundo dele e o assado do Borrada).
   if (novidades20_aberto() && !registro_aberto() && !player_aberto()) {
@@ -5753,6 +5748,15 @@ void app_desenhar(Uint32 agora) {
 #endif
     ilha_desenhar(agora);
   }
+  // AS DICAS DO CONTROLE por ultimo, por cima de tudo: a dica abre o
+  // componente DE VERDADE pelo caminho normal (spainel, Spotlight, Central
+  // e o menu do cartaz ja foram desenhados acima) e esta camada so soma o
+  // controle animado, a legenda e os pontinhos. O app continua desenhado
+  // por baixo — sem FBO nem desfoque proprio (TV fraca).
+  if (dicascontrole_visivel()) {
+    CAMADA_SE(dicascontrole_ocupado());
+    dicascontrole_desenhar(agora);
+  }
 }
 
 int app_quer_sair(void) { return sair; }
@@ -5769,7 +5773,6 @@ int app_central_pode(void) {
 }
 
 void app_encerrar(void) {
-  dicascontrole_encerrar();
   avisos_encerrar();   // saida limpa: apaga a marca de sessao viva
   if (fioFonteVivo) {
     // O encerramento acontece depois do laco de desenho: aqui podemos
