@@ -1198,6 +1198,40 @@ int main(void) {
     usaArquivo = 0; }
   puts("ok  #365: catalogo intocado de addon removido sai da aba Fora da Home");
 
+  // #504 (Tizen 6.0, 2.0.5): a mesma linha, mas VISTA nesta sessao — a
+  // descoberta a registrou na volta em que o addon saiu — escapa das duas
+  // limpezas: fil_podar_catalogos e o bloco #365 exigem !vista. semAddon
+  // marcado, oculta=0, escolha nenhuma: vira FIL_FORA e fica na aba "Not on
+  // home" para sempre. A folha (fil_normalizar, que roda a cada abertura)
+  // tem de larga-la, junto com qualquer outra intocada de addon removido.
+  fil_esquecer();
+  { const char *vivos[] = { "addonvivo" };
+    const char *bases[] = { "https://vivo.example" };
+    int ativos[] = { 1 };
+    fil_definir_perfil(1);
+    fil_definir_limite(16);
+    // O vivo ocupa a home; os dois do morto: um ligado e visto (o buraco),
+    // um com escolha real (visPessoal), que NAO pode sair.
+    fil_registrar("addonvivo_movie_a", "Vivo A", "Vivo", "movie", 5);
+    fil_registrar("bingecat_movie_top", "Top - Filme", "BingCat", "movie", 5);
+    { int i;
+      fil_registrar("bingecat_movie_keep", "Keep", "BingCat", "movie", 5);
+      i = fil_teste_achar("bingecat_movie_keep");
+      fil_alternar(i);   // a pessoa desligou: escolha (visPessoal)
+    }
+    // o addon saiu da conta: semAddon marca, mas a vista e a escolhida ficam
+    fil_marcar_sem_addon(vivos, bases, ativos, 1, 1);
+    assert(fil_teste_achar("bingecat_movie_top") >= 0);   // ainda la: vista
+    assert(fil_estado_chave("bingecat_movie_top") == FIL_FORA);
+    // abrir a folha: some o fantasma, fica a escolha
+    fil_normalizar();
+    assert(fil_teste_achar("bingecat_movie_top") < 0);
+    assert(fil_teste_achar("bingecat_movie_keep") >= 0);
+    assert(fil_teste_achar("addonvivo_movie_a") >= 0);
+    assert(fil_estado_chave("addonvivo_movie_a") == FIL_NA_HOME);
+    fil_definir_perfil(0); }
+  puts("ok  #504: fileira vista de addon removido sai da lista ao abrir a folha");
+
   // #327: "Adicionada a Home" de um catalogo engolido por pasta de colecao nao
   // mudava nada (emColecao seguia ligado). A escolha local vence a colecao.
   { int est = -1, i, dentro[2] = { 1, 1 }, fora[2] = { 0, 0 };
