@@ -55,6 +55,8 @@ int main(int argc, char **argv) {
       assert(desc_vertudo_erro() && !desc_vertudo_n());
       falhar = 0;
       tecla(pasta ? SDLK_KP_ENTER : SDLK_RETURN);
+      // Menu with two catalogs: OK opens the selector even while failed.
+      assert(ddAberto == (estilo == VT_AB_MENU && !pasta));
       if (ddAberto) tecla(SDLK_RETURN); // Select the same failed catalog.
       esperar();
       assert(!desc_vertudo_erro() && desc_vertudo_n() == 1);
@@ -66,9 +68,12 @@ int main(int argc, char **argv) {
         desc_vertudo_abrir("https://example.invalid", "movie", "recent"); esperar();
         openSource(); esperar();
         assert(desc_vertudo_erro());
-        tabFocus = 1; tabCursor = cursorInicial(); ddAberto = 1; ddCursor = 0;
+        tabFocus = 1; tabCursor = cursorInicial(); ddAberto = 0;
         falhar = 0;
-        tecla(SDLK_RETURN); esperar();
+        tecla(SDLK_RETURN);
+        assert(ddAberto == !pasta);
+        if (ddAberto) tecla(SDLK_RETURN);
+        esperar();
         assert(!ddAberto && !desc_vertudo_erro() && desc_vertudo_n() == 1);
       }
       // A failed catalog must not hijack the layout button or a different tab.
@@ -81,7 +86,11 @@ int main(int argc, char **argv) {
       assert(lay == VT_LAY_LINHA && tabCursor == cabN() && desc_vertudo_erro());
       falhar = 0;
       if (estilo == VT_AB_MENU && !pasta) {
-        tabCursor = cursorInicial(); ddAberto = 1; ddCursor = 1;
+        // Persistent failure: the selector still reaches the second catalog.
+        falhar = 1;
+        tabCursor = cursorInicial();
+        tecla(SDLK_RETURN); assert(ddAberto && ddCursor == 0);
+        tecla(SDLK_DOWN); falhar = 0;
       } else tabCursor = 1;
       tecla(SDLK_RETURN);
       esperar();

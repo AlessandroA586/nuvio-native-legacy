@@ -827,7 +827,7 @@ static void menuOk(void) {
     tabCursor = cat;
   }
   n = abasDoTipo(abaSerie(source), idx);
-  if (n < 2) { tabFocus = 0; return; }
+  if (n < 2) { tabFocus = 0; if (desc_vertudo_erro()) desc_vertudo_mais(); return; }
   ddAberto = 1; ddCursor = 0;
   for (int i = 0; i < n; i++) if (idx[i] == source) ddCursor = i;
 }
@@ -1211,9 +1211,9 @@ void vertudo_evento(const SDL_Event *e) {
   if (n > VT_MAX) n = VT_MAX;
   if (lay == VT_LAY_VITRINE) { vitEvento(k); return; }
   // #414: OK on the current catalog retries even while the header has focus.
-  // Other tabs, the dropdown and the layout button retain their own actions.
+  // Other tabs, the layout button and the Menu selector (menuOk) keep theirs.
   if ((k == SDLK_RETURN || k == SDLK_KP_ENTER) && desc_vertudo_erro() &&
-      (!collection || !tabFocus || (!ddAberto && tabCursor < cabN() && tabCursor == cursorInicial()))) {
+      (!collection || !tabFocus || (estiloAbas() != VT_AB_MENU && tabCursor < cabN() && tabCursor == cursorInicial()))) {
     desc_vertudo_mais(); return;
   }
   if(collection&&tabFocus) {
