@@ -6743,6 +6743,11 @@ void home_desenhar(Uint32 agora) {
       if (tipo == FILEIRA_PALCO)
         palcoPos[r] = anim_mola(palcoPos[r], (float)colunaDaFileira(r),
                                 dtFil(&palcoUlt[r], agora), NV_MOLA_FOCO);
+      // ITEM 4 (plx): recusa no ponto do pedido. A fileira diz se esta em
+      // movimento (limiar MOVING_SPEED = 120 px/s, o mesmo da grade) e marca os
+      // cartoes fora da tela; o cache recusa so pedido NOVO dessa arte enquanto
+      // a fileira corre, antes de enfileirar rede/decode. Parada, nada recusa.
+      tex_grade_movendo(fabsf(velX[r]) > 120.0f);
       for (int passe = 1; passe < 2; passe++) {
         for (int c = 0; c < fileiras[r].n; c++) {
           float f = animFoco[r][c];
@@ -6787,6 +6792,10 @@ void home_desenhar(Uint32 agora) {
           // desloca aqui e so a cascata de entrada, e so enquanto ela dura.
           float cy = cardY + artH * 0.5f + (1.0f - entra) * NV_ENTRA_DY;
           if (cx < -lw * 1.5f || cx > NV_TELA_W + lw) continue;
+          // Cartao totalmente fora da tela (mas dentro da faixa de cull que
+          // ainda e desenhada). O focado nunca conta como fora.
+          tex_pedido_fora((cx + w * 0.5f < 0.0f || cx - w * 0.5f > NV_TELA_W) &&
+                          !(r == foco.fileira && c == foco.coluna));
           float px = cx - w * 0.5f, py = cy - h * 0.5f;
           // O foco pode aumentar o card. No 4:3 ele nao pode subir sobre o
           // titulo da fileira; a expansão acontece para baixo, preservando a
@@ -7021,6 +7030,7 @@ void home_desenhar(Uint32 agora) {
           }
         }
       }
+      tex_pedido_fora(0);
       gfx_opacidade_grupo = grupoFil;
       if (tipo == FILEIRA_LINHA_TEMPO) desenhaLinhaTempo(r, y, cardY + artH, passo, lw, agora);
       if (tipo == FILEIRA_PALCO) palcoLegenda(r, cardY + artH, lw);
