@@ -2476,7 +2476,9 @@ static int spotAtalho(const SDL_Event *e) {
   if (e->type != SDL_KEYDOWN) return 0;
   k = e->key.keysym.sym;
   if (k == SPOT_TECLA_VOZ || k == SPOT_TECLA_ABRIR) return 1;
-  return e->key.keysym.scancode == NV_SCANCODE_YELLOW && tela != TELA_GUIA;
+  // AMARELA e CH- (webOS) abrem igual; no guia o CH- e o salto de categoria.
+  return (e->key.keysym.scancode == NV_SCANCODE_YELLOW ||
+          e->key.keysym.scancode == NV_SCANCODE_CH_DOWN) && tela != TELA_GUIA;
 }
 static int spotPode(void) {
   return tela != TELA_LOGIN && tela != TELA_ESCOLHA_PERFIL && !player_aberto() &&

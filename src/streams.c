@@ -3157,6 +3157,7 @@ const char *stream_detalhe_texto(void) { return detDesc; }
 int  stream_detalhe_tecla_abre(const SDL_Event *e) {
   SDL_Keycode k=e->key.keysym.sym;
   return k==SDLK_i || k==SDLK_F5 || (int)e->key.keysym.scancode==NV_SCANCODE_YELLOW
+      || (int)e->key.keysym.scancode==NV_SCANCODE_CH_DOWN
 #ifdef NV_ANDROID
       || k==SDLK_F9   // o Info do controle Android chega como F9 (NuvioActivity)
 #endif

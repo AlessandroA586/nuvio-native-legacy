@@ -1181,9 +1181,9 @@ typedef struct { int id; const char *icone, *nome, *linha; } Item;
 // A LISTA: so o essencial, nome e uma frase com o caminho quando ha um.
 static const Item ITENS[] = {
   { ID_ILHA,      "sino",                "Ilha do relógio",
-    "O episódio pela metade e a estreia nova ficam no relógio. AZUL ou CH+ abre, → leva aos Salvos." },
+    "O episódio pela metade e a estreia nova ficam no relógio. CH+ abre, → leva aos Salvos." },
   { ID_SPOT,      "menu_search",         "Spotlight",
-    "A tecla amarela abre a busca em qualquer tela. A lista muda a cada letra." },
+    "A tecla CH− abre a busca em qualquer tela. A lista muda a cada letra." },
   { ID_SALVOS,    "aj_folders",          "Organizar Salvos",
     "Categorias suas, a ordem que quiser e o estilo da lista, no painel de Salvos." },
   { ID_ATV,       "aj_layout-dashboard", "Layout Apple TV",

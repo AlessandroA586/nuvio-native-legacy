@@ -227,11 +227,19 @@ static void remapCanal(SDL_Event *e) {
   }
 #elif defined(__EMSCRIPTEN__)
   // .wgt: tizen-shell.html entrega o CH+ (427) como F7, com keydown e keyup,
-  // para a Central de controle saber quanto ele ficou embaixo. Fora disso ele
-  // e o "s" de sempre (Salvos).
-  if ((e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) && e->key.keysym.sym == SDLK_F7) {
-    e->key.keysym.sym = SDLK_s;
-    e->key.keysym.scancode = SDL_SCANCODE_S;
+  // para a Central de controle saber quanto ele ficou embaixo, e o CH- (428)
+  // como F8. Igual ao .tpk: com canal na tela sao o zap de verdade; fora disso
+  // CH+ e o "s" de sempre (Salvos) e CH- e o F5 (Spotlight).
+  if ((e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) &&
+      (e->key.keysym.sym == SDLK_F7 || e->key.keysym.sym == SDLK_F8)) {
+    int sobe = e->key.keysym.sym == SDLK_F7;
+    if (app_zap_ativo()) {
+      e->key.keysym.scancode = (SDL_Scancode)(sobe ? NV_SCANCODE_CH_UP : NV_SCANCODE_CH_DOWN);
+      e->key.keysym.sym = sobe ? SDLK_PAGEUP : SDLK_PAGEDOWN;
+    } else {
+      e->key.keysym.scancode = sobe ? SDL_SCANCODE_S : SDL_SCANCODE_F5;
+      e->key.keysym.sym = sobe ? SDLK_s : SDLK_F5;
+    }
   }
 #else
   (void)e;
