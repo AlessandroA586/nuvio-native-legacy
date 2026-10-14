@@ -1068,8 +1068,14 @@ static float aj2ChipLiga(int op, float xDir, float yc, int ligado, float a) {
 // A TROCA E UMA MOLA (ajMov, ~140 ms): o contorno esvai enquanto a pilula
 // cheia cresce, em vez de trocar num quadro. O texto rasterizado nao recolore
 // por quadro (cache): troca no ponto medio, como o resto da tela.
+// Linhas de add-on/plugin nao tem opcao (op < 0): o estado vem de `ligado` e
+// nao ha mola por linha, entao nao tocam em ajMovValor/ajMovPronto.
+static float aj2PilulaOn(int op, int ligado) {
+  if (op < 0 || op >= AJ_N) return ligado ? 1.0f : 0.0f;
+  return 1.0f - ajMov(op, uxValorAtual(op));   // valor 1 = Desligado (ver lig())
+}
 static float aj2PilulaEstado(int op, float xDir, float yc, int ligado, float a) {
-  float on = 1.0f - ajMov(op, uxValorAtual(op));   // valor 1 = Desligado (ver lig())
+  float on = aj2PilulaOn(op, ligado);
   TxtLinha tOff = ajTxt(TXT_V3_PILL, "Desligado");
   TxtLinha tOn = txt_linha(TXT_V3_PILL, "Ligado", 22, 22, 26, 255);
   // As DUAS strings sao desenhadas em crossfade: a largura nao pode seguir so
@@ -1077,7 +1083,6 @@ static float aj2PilulaEstado(int op, float xDir, float yc, int ligado, float a) 
   // meio visiveis). A pilula mistura as duas larguras com o mesmo `on`.
   float h = 50.0f, w = 20.0f + 12.0f + 10.0f + anim_mistura((float)tOff.w, (float)tOn.w, on) + 22.0f;
   GfxRect r = { xDir - w, yc - h * 0.5f, w, h }, d = { r.x + 20.0f, yc - 6.0f, 12.0f, 12.0f };
-  (void)ligado;
   if (on < 0.995f) {
     gfx_anel(r, 0.5f, 2.0f, 1, 1, 1, 0.28f * (1.0f - on) * a);
     gfx_anel(d, 0.5f, 2.0f, 1, 1, 1, 0.55f * (1.0f - on) * a);
