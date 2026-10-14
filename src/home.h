@@ -123,7 +123,9 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
 void home_vitrine_medida(float *w, float *h, float *passo, float *rotH);
 int  home_vitrine_arte_pronta(const CatItem *ci);
 int  home_vitrine_arte(const CatItem *ci, float alfa);
-void home_vitrine_texto(const CatItem *ci, float alfa);
+int  home_vitrine_layout(void);
+float home_vitrine_topo(float filH);
+void home_vitrine_texto(const CatItem *ci, float topo, float alfa);
 void home_vitrine_cartao(const CatItem *ci, GfxRect base, GfxRect card, float alfa);
 #endif
 const char *home_rastro_foco(void);

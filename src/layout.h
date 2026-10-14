@@ -655,6 +655,7 @@ int layout_modo_mobile(void);
 #define NV_ILHA_H          52.0f
 #define NV_ILHA_H_ABERTA   64.0f
 #define NV_ILHA_MARGEM_D   64.0f   // da borda direita, quando ancorada a direita
+#define NV_ILHA_REP_W     190.0f   // pilula em repouso (12 h AM/PM e a mais larga) + respiro
 #define NV_ILHA_TEXTO_MAX 760.0f   // frase do aviso: mais que isto, reticencias
 
 // Fundo: #0D0D0D. Aqui estava #252629, com a justificativa de que "o
