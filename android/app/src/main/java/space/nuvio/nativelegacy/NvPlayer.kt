@@ -868,20 +868,27 @@ object NvPlayer {
         // Surface (GONE -> VISIBLE) faz o compositor montar camada nova com a
         // geometria nova; o ExoPlayer troca a saida do decoder sem recarregar.
         //
-        // SO EM SDR. No HDR/DV cada recriacao aqui obrigava o Media3 a soltar a
-        // saida do decoder e o C2MtkVdecTv a religar o DispLink: o aspecto salvo
-        // aplicado apos o primeiro quadro, e cada troca manual de modo, mudava o
-        // tamanho e recriava (~12 vezes em 30 s; TCL 2160p DV, 11/10), com o fio
-        // principal parado no glClear ("renderer soltou em 7057 ms", pior quadro
-        // 6612.7 ms). HDR layout changes must not reconnect TCL's Dolby
-        // display pipeline; native DV also skips startup recreation.
+        // SO EM SDR ATE A SUPERFICIE ESTAR ESTAVEL. No HDR/DV cada recriacao
+        // aqui obrigava o Media3 a soltar a saida do decoder e o C2MtkVdecTv a
+        // religar o DispLink: o aspecto salvo aplicado apos o primeiro quadro,
+        // e cada troca manual de modo, mudava o tamanho e recriava (~12 vezes
+        // em 30 s; TCL 2160p DV, 11/10), com o fio principal parado no glClear
+        // ("renderer soltou em 7057 ms", pior quadro 6612.7 ms). Antes de
+        // estavel a recriacao fica so nas TRANSICOES DE MODO (hdrNaSuperficie);
+        // DEPOIS dela, uma recriacao por mudanca com a espera longa, senao o
+        // plano da TCL fica preso na geometria de abertura e a troca Crop ->
+        // Ajuste nao aparece (revisao 14/10). DV nativo nunca recria: o veto e
+        // do recriarSuperficie e o `recriar` reconfirma na hora de rodar.
         if (ultHdr.isEmpty() || ultHdr == "none") recriarSuperficie(RECRIA_ESPERA_MS)
+        else if (estavelEmitido) recriarSuperficie(RECRIA_ESPERA_HDR_MS)
     }
 
     // Recriar a Surface custa um quadro preto e, em rajada (aspecto apertado
     // varias vezes), travava: as trocas JUNTAM numa so, RECRIA_ESPERA_MS depois
     // da ultima. A mesma recriacao liga o HDR da TCL (ver onRenderedFirstFrame).
     private const val RECRIA_ESPERA_MS = 350L
+    // HDR/DV: recriar e caro (DispLink religa), so depois de a superficie parar.
+    private const val RECRIA_ESPERA_HDR_MS = 600L
     private var recriando = false
     private var recriaAgendada = false
     private var recuperouSuperficie = false
@@ -918,6 +925,11 @@ object NvPlayer {
     }
     private val recriar = Runnable {
         recriaAgendada = false
+        // O pedido nasce antes do decoder existir (abertura da fonte): se ele
+        // virou DV nativo enquanto a recriacao esperava, desistir agora e mais
+        // barato que desligar a saida do decoder e religar o DispLink da TCL
+        // (15 s no log do dono). O evento de superficie estavel segue normal.
+        if (decoderDv) { avaliarEstavel(); return@Runnable }
         val p = player
         val sv = superficie
         Log.i(TAG, "[dvtrace] recriar player=${System.identityHashCode(p)} holder=${System.identityHashCode(sv?.holder)} soltando=${soltando === p} vis=${sv?.visibility} valida=${sv?.holder?.surface?.isValid}")
