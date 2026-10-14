@@ -10,12 +10,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Optional imports belong to consumers: public declarations keep producers strong.
-extern int trakt_destino_capturar(TraktDestino *) NV_PERFIL_OPCIONAL;
-extern int trakt_episodios_marcar_destino(const TraktDestino *, const char *, const VistoPar *, int, int) NV_PERFIL_OPCIONAL;
-extern int simkl_destino_capturar(SimklDestino *) NV_PERFIL_OPCIONAL;
-extern int simkl_episodios_marcar_destino(const SimklDestino *, const char *, const VistoPar *, int, int) NV_PERFIL_OPCIONAL;
-extern int simkl_titulo_marcar_destino(const SimklDestino *, const char *, const char *, const int *, int, int) NV_PERFIL_OPCIONAL;
+// Weak defaults for fixtures that omit the scoped Trakt/Simkl producers: capture
+// nothing, then fall back to the legacy account-free entry points.
+__attribute__((weak)) int trakt_destino_capturar(TraktDestino *d) { (void)d; return 1; }
+__attribute__((weak)) int trakt_episodios_marcar_destino(const TraktDestino *d, const char *imdb, const VistoPar *pares, int qtd, int visto) {
+  (void)d; return trakt_episodios_marcar(imdb, pares, qtd, visto);
+}
+__attribute__((weak)) int simkl_destino_capturar(SimklDestino *d) { (void)d; return 1; }
+__attribute__((weak)) int simkl_episodios_marcar_destino(const SimklDestino *d, const char *imdb, const VistoPar *pares, int qtd, int visto) {
+  (void)d; return simkl_episodios_marcar(imdb, pares, qtd, visto);
+}
+__attribute__((weak)) int simkl_titulo_marcar_destino(const SimklDestino *d, const char *imdb, const char *tipo, const int *temps, int nt, int visto) {
+  (void)d; return simkl_titulo_marcar(imdb, tipo, temps, nt, visto);
+}
 
 // Teto do lote: o mesmo do Simkl, que e o menor dos tres (Trakt aceita 256
 // desde este mesmo conserto; a conta nao tem teto no cliente).
@@ -76,16 +83,13 @@ static void *fio(void *u) {
   // The UI/journal already received the gesture before this worker started.
   // Remote destinations own copied authentication, never the active profile.
   if (e->destinos & VISTO_TRAKT) {
-    if (trakt_episodios_marcar_destino) trakt_episodios_marcar_destino(&e->trakt, e->imdb, e->pares, e->n, e->visto);
-    else trakt_episodios_marcar(e->imdb, e->pares, e->n, e->visto);
+    trakt_episodios_marcar_destino(&e->trakt, e->imdb, e->pares, e->n, e->visto);
   }
   if (e->destinos & VISTO_SIMKL) {
     if (e->titulo) {
-      if (simkl_titulo_marcar_destino) simkl_titulo_marcar_destino(&e->simkl, e->imdb, e->tipo, e->temps, e->nt, e->visto);
-      else simkl_titulo_marcar(e->imdb, e->tipo, e->temps, e->nt, e->visto);
+      simkl_titulo_marcar_destino(&e->simkl, e->imdb, e->tipo, e->temps, e->nt, e->visto);
     } else {
-      if (simkl_episodios_marcar_destino) simkl_episodios_marcar_destino(&e->simkl, e->imdb, e->pares, e->n, e->visto);
-      else simkl_episodios_marcar(e->imdb, e->pares, e->n, e->visto);
+      simkl_episodios_marcar_destino(&e->simkl, e->imdb, e->pares, e->n, e->visto);
     }
   }
   if (e->destinos & VISTO_CONTA) contapend_enviar(); // each journal record owns its account/profile
@@ -102,8 +106,8 @@ static int lancar(Envio *e) {
 }
 
 static void capturarDestinos(Envio *e) { // caller holds the profile opening gate
-  if ((e->destinos & VISTO_TRAKT) && trakt_destino_capturar && !trakt_destino_capturar(&e->trakt)) e->destinos &= ~VISTO_TRAKT;
-  if ((e->destinos & VISTO_SIMKL) && simkl_destino_capturar && !simkl_destino_capturar(&e->simkl)) e->destinos &= ~VISTO_SIMKL;
+  if ((e->destinos & VISTO_TRAKT) && !trakt_destino_capturar(&e->trakt)) e->destinos &= ~VISTO_TRAKT;
+  if ((e->destinos & VISTO_SIMKL) && !simkl_destino_capturar(&e->simkl)) e->destinos &= ~VISTO_SIMKL;
 }
 int visto_episodios(const char *imdb, const char *tipo, const VistoPar *pares,
                     int n, int visto, int destinos) {

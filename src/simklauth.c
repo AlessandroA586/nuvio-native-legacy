@@ -55,16 +55,14 @@ static pthread_mutex_t trava = PTHREAD_MUTEX_INITIALIZER;
 
 // O perfil pode mudar enquanto o PIN responde; a conta Nuvio nao pode herdar
 // a autorizacao de quem saiu. Captura local, sem renovacao/rede na UI.
-extern int sessao_identidade_local_copiar(char *, size_t, char *, size_t) NV_PERFIL_OPCIONAL;
-extern const char *sessao_usuario(void) NV_PERFIL_OPCIONAL;
+#include "sessaoopcional.h"
 static char usuarioFio[80], usuarioEstado[80];
 static void usuarioCopiar(char dst[80]) {
   char jwt[3000];
   dst[0] = 0;
-  if (sessao_identidade_local_copiar) {
-    sessao_identidade_local_copiar(dst, 80, jwt, sizeof jwt);
-    memset(jwt, 0, sizeof jwt);
-  } else if (sessao_usuario) snprintf(dst, 80, "%s", sessao_usuario());
+  int r = sessao_identidade_local_copiar(dst, 80, jwt, sizeof jwt);
+  memset(jwt, 0, sizeof jwt);
+  if (r < 0) snprintf(dst, 80, "%s", sessao_usuario()); // account-free fixture
 }
 static int mesmaConta(const char *usuario) {
   char atual[80];

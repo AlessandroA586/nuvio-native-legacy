@@ -82,15 +82,7 @@ static int gravado;        // 1 quando perfil.txt existia no arranque
 
 // Existing isolated fixtures omit sessao.c. A complete app always captures
 // both fields locally, without refreshing or doing HTTP on the UI thread.
-#if defined(__APPLE__) && (defined(__GNUC__) || defined(__clang__))
-// This producer must keep its epoch definitions strong. Import only the two
-// optional session helpers; Mach-O needs weak_import for an absent provider.
-extern int sessao_identidade_local_copiar(char *, size_t, char *, size_t) __attribute__((weak_import));
-extern void sessao_token_recusado(const char *) __attribute__((weak_import));
-#elif defined(__GNUC__) || defined(__clang__)
-#pragma weak sessao_identidade_local_copiar
-#pragma weak sessao_token_recusado
-#endif
+#include "sessaoopcional.h"
 typedef struct {
   uint64_t sessao;
   char usuario[80], jwt[3000];
@@ -106,8 +98,7 @@ static char *rpcPerfis(PedidoPerfis *p, const char *funcao, int *st) {
   if (!pedidoPerfisAtual(p) || (!p->legado && !p->jwt[0])) return NULL;
   r = p->legado ? sessao_rpc(funcao, "{}", &status)
                 : nuvem_rpc_com(funcao, "{}", p->jwt, &status);
-  if (!p->legado && status == 401 && pedidoPerfisAtual(p) &&
-      sessao_identidade_local_copiar && sessao_token_recusado) {
+  if (!p->legado && status == 401 && pedidoPerfisAtual(p)) {
     char usuario[80], jwt[3000];
     sessao_token_recusado(p->jwt);
     if (sessao_identidade_local_copiar(usuario, sizeof usuario, jwt, sizeof jwt) &&
@@ -409,14 +400,13 @@ int perfis_puxar_sessao(uint64_t sessao, const char *usuario, const char *jwt) {
 }
 int perfis_puxar(void) {
   PedidoPerfis pedido = { .sessao = perfis_sessao_geracao() };
-  if (sessao_identidade_local_copiar) {
-    if (!sessao_identidade_local_copiar(pedido.usuario, sizeof pedido.usuario,
-                                      pedido.jwt, sizeof pedido.jwt)) return 0;
-  } else {
+  int r = sessao_identidade_local_copiar(pedido.usuario, sizeof pedido.usuario,
+                                         pedido.jwt, sizeof pedido.jwt);
+  if (r < 0) {
     // Fixtures that omit sessao.c provide their original synchronous RPC fake.
     pedido.legado = 1;
     snprintf(pedido.usuario, sizeof pedido.usuario, "%s", sessao_usuario());
-  }
+  } else if (!r) return 0;
   int quantidade = puxarPerfis(&pedido);
   memset(pedido.jwt, 0, sizeof pedido.jwt);
   return quantidade;

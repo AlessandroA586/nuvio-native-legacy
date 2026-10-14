@@ -22,7 +22,9 @@
 #include <unistd.h>
 
 // Optional imports belong to consumers: public declarations keep producers strong.
-extern int trakt_enfeitar_lote_sessao(CatItem *, int, uint64_t) NV_PERFIL_OPCIONAL;
+__attribute__((weak)) int trakt_enfeitar_lote_sessao(CatItem *itens, int n, uint64_t sessao) {
+  (void)sessao; return trakt_enfeitar_lote(itens, n);
+}
 
 #define SMK_API "https://api.simkl.com"
 // Retomada: o mesmo teto da fileira (CONT_MAX de descoberta.c) com folga para
@@ -748,8 +750,7 @@ int simkl_continuar(CatItem *saida, int max) {
   }
   printf("[simkl] retomada: %d pausado(s) + %d a seguir candidato(s) -> %d\n", nPausados, nP, n);
   fflush(stdout);
-  if (n) n = trakt_enfeitar_lote_sessao ? trakt_enfeitar_lote_sessao(saida, n, pedido.sessao)
-                                       : trakt_enfeitar_lote(saida, n);
+  if (n) n = trakt_enfeitar_lote_sessao(saida, n, pedido.sessao);
   return pedidoAtual(pedido) ? n : 0;
 }
 

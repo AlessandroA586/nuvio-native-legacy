@@ -67,6 +67,7 @@ int main(void) {
   pthread_mutex_init(&c.trava, NULL);
   progLigado = 1;
   addons_capturar_escopo(&fioEscopo);
+  c.origens = capturarPedidos(c.sessao, &c.nOrigens, NULL); // PR: the search owns a snapshot
   fioFontes(&c);
   for (int i = 0; i < 2; i++) {
     assert(baldes[i].n == 1);
@@ -95,6 +96,7 @@ int main(void) {
   c.id = "channel1"; c.tipo = "tv"; c.tipoAlt = "channel";
   c.timeout = 1; c.baldes = baldes; c.nBaldes = 1;
   pthread_mutex_init(&c.trava, NULL);
+  c.origens = capturarPedidos(c.sessao, &c.nOrigens, NULL);
   fioFontes(&c);
   assert(baldes[0].n == 1 && !strcmp(baldes[0].achados[0].addonChave, esperado[0]));
   assert(baldes[0].achados[0].addonOrdem == 0);

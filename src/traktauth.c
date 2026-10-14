@@ -90,16 +90,14 @@ static int  pushPendente;          // a conta ainda nao tem este token (push fal
 // Os arquivos por perfil pertencem a conta Nuvio que iniciou o fluxo. Uma
 // resposta pode sobreviver a troca de perfil, mas nunca ao logout/login.
 // A copia local nao renova o JWT nem faz rede no fio principal.
-extern int sessao_identidade_local_copiar(char *, size_t, char *, size_t) NV_PERFIL_OPCIONAL;
-extern const char *sessao_usuario(void) NV_PERFIL_OPCIONAL;
+#include "sessaoopcional.h"
 static char usuarioFio[80], usuarioEstado[80];
 static void usuarioCopiar(char dst[80]) {
   char jwt[3000];
   dst[0] = 0;
-  if (sessao_identidade_local_copiar) {
-    sessao_identidade_local_copiar(dst, 80, jwt, sizeof jwt);
-    memset(jwt, 0, sizeof jwt);
-  } else if (sessao_usuario) snprintf(dst, 80, "%s", sessao_usuario());
+  int r = sessao_identidade_local_copiar(dst, 80, jwt, sizeof jwt);
+  memset(jwt, 0, sizeof jwt);
+  if (r < 0) snprintf(dst, 80, "%s", sessao_usuario()); // account-free fixture
 }
 static int mesmaConta(const char *usuario) {
   char atual[80];

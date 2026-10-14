@@ -41,8 +41,12 @@
 #include <time.h>
 
 // Optional imports belong to consumers: public declarations keep producers strong.
-extern int trakt_enfeitar_lote_sessao(CatItem *, int, uint64_t) NV_PERFIL_OPCIONAL;
-extern int recomenda_social_mesclar_sessao(CatItem *, int, int, uint64_t) NV_PERFIL_OPCIONAL;
+__attribute__((weak)) int trakt_enfeitar_lote_sessao(CatItem *itens, int n, uint64_t sessao) {
+  (void)sessao; return trakt_enfeitar_lote(itens, n);
+}
+__attribute__((weak)) int recomenda_social_mesclar_sessao(CatItem *itens, int n, int max, uint64_t sessao) {
+  (void)sessao; return recomenda_social_mesclar(itens, n, max);
+}
 
 // Detached jobs retain the session of their request, including A -> B -> A.
 static pthread_key_t descSessaoChave;
@@ -65,8 +69,7 @@ static NvPerfilSessao descSessao(void) {
 static int descSessaoAtual(void) { return nv_perfil_sessao_atual(descSessao()); }
 static int descEnfeitar(CatItem *itens, int n) {
   if (!descSessaoAtual()) return 0;
-  return trakt_enfeitar_lote_sessao ? trakt_enfeitar_lote_sessao(itens, n, descSessao())
-                                  : trakt_enfeitar_lote(itens, n);
+  return trakt_enfeitar_lote_sessao(itens, n, descSessao());
 }
 #define DESC_PUBLICAR(expr) do { \
   if (nv_perfil_sessao_travar(descSessao())) { \
@@ -4069,9 +4072,7 @@ static void *fioSocial(void *u) {
   if (!ajustes_social()) { f->n = 0; return NULL; }
   f->n = trakt_social(f->itens, 8);
   if (descSessaoAtual()) {
-    f->n = recomenda_social_mesclar_sessao
-         ? recomenda_social_mesclar_sessao(f->itens, f->n, 8, f->sessao)
-         : recomenda_social_mesclar(f->itens, f->n, 8);
+    f->n = recomenda_social_mesclar_sessao(f->itens, f->n, 8, f->sessao);
   } else f->n = 0;
   return NULL;
 }

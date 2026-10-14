@@ -45,8 +45,14 @@
 #include "escala.h"
 
 // Optional imports belong to consumers: public declarations keep producers strong.
-extern int tirarremoto_capturar(TirarRemotoPedido *, const char *) NV_PERFIL_OPCIONAL;
-extern void tirarremoto_executar_pedido(const TirarRemotoPedido *, const char *, int) NV_PERFIL_OPCIONAL;
+// Weak defaults for fixtures that omit tirarremoto.c: the request only carries
+// the imdb and runs through the legacy synchronous entry.
+__attribute__((weak)) int tirarremoto_capturar(TirarRemotoPedido *p, const char *imdb) {
+  memset(p, 0, sizeof *p); snprintf(p->trakt.imdb, sizeof p->trakt.imdb, "%s", imdb); return 1;
+}
+__attribute__((weak)) void tirarremoto_executar_pedido(const TirarRemotoPedido *p, const char *chave, int ocultar) {
+  tirarremoto_executar(p->trakt.imdb, chave, ocultar);
+}
 
 // Mantem o header publico de Trakt estavel: estas leituras sao o contrato
 // interno entre a modal e as escritas assincronas do proprio port.
@@ -311,8 +317,7 @@ static float estRolY;
 typedef struct { char imdb[64]; char chave[192]; int ocultar; TirarRemotoPedido pedido; } TirarRemoto;
 static void *fioTirarRemoto(void *u) {
   TirarRemoto *tr = (TirarRemoto *)u;
-  if (tirarremoto_executar_pedido) tirarremoto_executar_pedido(&tr->pedido, tr->chave, tr->ocultar);
-  else tirarremoto_executar(tr->imdb, tr->chave, tr->ocultar);
+  tirarremoto_executar_pedido(&tr->pedido, tr->chave, tr->ocultar);
   memset(tr, 0, sizeof *tr);
   free(tr);
   return NULL;
@@ -326,7 +331,7 @@ static void *fioTirarRemoto(void *u) {
 static void tirarRemotoEmFio(TirarRemoto *tr) {
   pthread_t t;
   if (!tr) return;
-  if (tirarremoto_capturar && !tirarremoto_capturar(&tr->pedido, tr->imdb)) { free(tr); return; }
+  if (!tirarremoto_capturar(&tr->pedido, tr->imdb)) { free(tr); return; }
   if (pthread_create(&t, NULL, fioTirarRemoto, tr) == 0) { pthread_detach(t); return; }
   printf("[ctx] sem fio para tirar %s do Trakt/conta: so o efeito local vale\n", tr->imdb);
   fflush(stdout);

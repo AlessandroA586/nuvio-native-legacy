@@ -10,6 +10,10 @@
 #include "ondever.h"
 #include "addonstats.h"
 #include "fontecache.h"
+// Fixtures that stub only the legacy cache entry get the unscoped store.
+__attribute__((weak)) void fontecache_guardar_sessao(const char *id, const char *tipo, const Stream *lista, int n, uint64_t sessao) {
+  (void)sessao; fontecache_guardar(id, tipo, lista, n);
+}
 #include "fontefalha.h"
 #include "sessao.h"
 #include "perfis.h"
@@ -2200,6 +2204,20 @@ static int consultaCancelada(const Consulta *c) {
 // vezes nem tenta (addonstats.h). Responder rapido na segunda continua
 // possivel para quem so estava frio (AIOStreams, #182): a primeira falha dele
 // nao o marca como mudo seguido.
+// The probe can finish AFTER the search captured its snapshot, so the verdict
+// "manifest says no stream" is read live while the list is still the one the
+// snapshot came from (same identity test the probe uses to publish).
+static int semStreamSondado(const Consulta *c, int i) {
+  const AddonPedido *o = &c->origens[i];
+  int sondado = o->sondado, fonte = o->fonte;
+  pthread_mutex_lock(&addonTrava);
+  if (c->versao == versaoLista && i < nAddon && !strcmp(o->base, addon[i].base)) {
+    sondado = __atomic_load_n(&addon[i].sondado, __ATOMIC_ACQUIRE);
+    fonte = __atomic_load_n(&addon[i].fonte, __ATOMIC_RELAXED);
+  }
+  pthread_mutex_unlock(&addonTrava);
+  return sondado && !fonte;
+}
 static int semSegunda(const AddonPedido *a) {
   return a->mudoSeg >= 2 || addonstats_segunda_s(a->estatistica, ADD_PRAZO_VOD_S) == 0;
 }
@@ -2229,7 +2247,7 @@ static void *fioFontes(void *u) {
     if (consultaCancelada(c)) continue;
     i = c->baldes[meu].idx; origem = &c->origens[i];
     if (!origem->ativo) continue;   // desligado na conta: nunca consultado
-    if ((origem->sondado && !origem->fonte)) continue;   // a sonda terminou depois dos baldes
+    if (semStreamSondado(c, i)) continue;   // a sonda terminou depois dos baldes
     // Id codificado como o Nuvio web (nv_addon_id): "tt123:1:2" sai igual.
     if (!nv_addon_id(idUrl, sizeof idUrl, c->id)) idUrl[0] = 0;
     // O NOME QUE O MANIFESTO DECLARA VAI PRIMEIRO (issue #112). Ver
@@ -2386,7 +2404,7 @@ static void segundaChance(Consulta *c, int fios) {
   if (!orig || !c2.baldes) { free(orig); free(c2.baldes); return; }
   for (q = 0; q < c->nBaldes; q++) {
     int i = c->baldes[q].idx;
-    if (c->baldes[q].respondeu || (c->origens[i].sondado && !c->origens[i].fonte)) continue;
+    if (c->baldes[q].respondeu || semStreamSondado(c, i)) continue;
     if (semSegunda(&c->origens[i])) { pulados++; continue; }
     c2.baldes[m].idx = i; orig[m++] = q;
   }
@@ -2691,7 +2709,7 @@ static int consultar(const char *id, const char *tipo, const char *base, int fio
       int k = c.baldes[q].n;
       // Tambem quem respondeu 200 vazio: sem recurso stream, "veio vazio" nao
       // diz nada. Limite que fica: a sonda terminando DEPOIS deste resumo.
-      if (k <= 0 && (c.origens[c.baldes[q].idx].sondado && !c.origens[c.baldes[q].idx].fonte)) {
+      if (k <= 0 && semStreamSondado(&c, c.baldes[q].idx)) {
         printf("[addons] %s: o manifesto nao declara stream; fora do resumo da busca\n",
                c.origens[c.baldes[q].idx].nome);
         if (c.progresso && c.baldes[q].idx < ADD_MAX) progMarcarSessao(c.sessao, c.baldes[q].idx, NULL, 0, 0);
