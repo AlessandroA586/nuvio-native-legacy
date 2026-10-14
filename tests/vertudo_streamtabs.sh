@@ -118,6 +118,8 @@ with tempfile.TemporaryDirectory() as d:
 assert 'exibPill' in function('botaoEstiloAbas')          # style icon AFTER the display pill
 assert 'exibPill = pill;' in function('botaoExibicao')
 assert 'fminf(rx, NV_TELA_W' in function('botaoEstiloAbas')  # icon clamped: never off the right edge
+assert 'exibPill.x - 12.0f - 52.0f' in function('botaoEstiloAbas')  # wide pill: icon jumps LEFT of it, never overlaps
+assert 'float cx=x0+capX-tabRol;' in function('themeHeader')  # capsule is absolute: strip offset + the logo inset
 abaBloco = function('themeHeader')
 caps = abaBloco.index('if(capA>.01f)')
 texto = abaBloco.index('txt_desenhar_alpha(t,x+PAD')      # capsule drawn BEFORE the labels

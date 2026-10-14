@@ -2017,7 +2017,9 @@ static void themeHeader(float a,float x0) {
     // VEM ANTES das abas: os rotulos ficam por cima dela — desenhada por
     // ultimo, a capsula tampava o texto da aba focada (Chips, Netflix na TCL).
     if(capA>.01f) {
-      float cx=capX-tabRol;
+      // capX e relativo a faixa (pos[]); as abas desenham em x0+pos-tabRol.
+      // Sem o +x0 a capsula nasce x0 px a esquerda da aba (sob o logo).
+      float cx=x0+capX-tabRol;
       float ca=a*abaFade(cx,capW,x0,W,tabRol>0.5f,px-GAP-tabRol>W+0.5f)*capA;
       if(ca>.005f) {
         if(est==VT_AB_TOPO) {
@@ -2471,11 +2473,14 @@ static void botaoExibicao(float a, float x0) {
 // D-pad anda nessa ordem — antes o icone ficava a ESQUERDA do botao e DIREITA
 // dava um passo para tras no visual (Netflix na TCL, tabs "fora da ordem").
 static void botaoEstiloAbas(float a) {
-  // A DIREITA do "Exibicao", mas nunca fora da tela: com um nome de exibicao
-  // largo a pilula encosta na margem e o icone ia para alem da borda. Sem
-  // exibPill ainda (1o quadro na Vitrine) ele fica encostado na margem.
-  float rx = exibPill.w > 0.0f ? exibPill.x + exibPill.w + 12.0f : NV_TELA_W;
+  // A DIREITA do "Exibicao", mas nunca por cima dele nem fora da tela: um
+  // nome de exibicao largo ("Linha do tempo") termina alem da margem e o
+  // clamp antigo pousava o icone em cima da cauda da pilula. Sem exibPill
+  // ainda (1o quadro na Vitrine) ele fica encostado na margem.
+  float rx = exibPill.w > 0.0f ? exibPill.x + exibPill.w + 12.0f : NV_TELA_W - 104.0f - 52.0f;
   rx = fminf(rx, NV_TELA_W - 104.0f - 52.0f);
+  if (exibPill.w > 0.0f && rx < exibPill.x + exibPill.w + 12.0f)
+    rx = exibPill.x - 12.0f - 52.0f;
   GfxRect r = {rx, exibPill.y > 0.0f ? exibPill.y : 253.0f, 52, VT_AB_H};
   int f = tabFocus && tabCursor == cabN()+1;
   if (lay == VT_LAY_VITRINE) r.y = NV_ILHA_Y + 64.0f;
