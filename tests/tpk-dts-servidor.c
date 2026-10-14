@@ -161,6 +161,25 @@ int main(void) {
     n = pedir(porta, req, resp, sizeof resp);
     CHECK(n > 0 && strstr(resp, " 200 ") != NULL, "after the idle connections close the server answers again"); }
 
+  // --- stop drops the accepted connections: their slots are free at once -----------
+  { int idle[16], k, eof = 0;
+    char c;
+    for (k = 0; k < 16; k++) idle[k] = conectar(porta);
+    usleep(300 * 1000);                    // all 16 accepted, parked in the 15 s request wait
+    dts_tpk_fechar();
+    CHECK(dts_tpk_abrir("http://x/ok.mkv", "", -1, 0, DTSTPK_HLS, DTSTPK_CORPO_LENGTH, 0, url, sizeof url) == 1, "reopen right after stop");
+    porta = porta_de(url);
+    { const char *t = strstr(url, "127.0.0.1:"); t = t ? strchr(t, '/') : NULL;
+      snprintf(tok, sizeof tok, "%.8s", t ? t + 1 : ""); }
+    esperar_pronta();
+    usleep(100 * 1000);
+    snprintf(req, sizeof req, "GET /%s/v.m3u8 HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n", tok);
+    n = pedir(porta, req, resp, sizeof resp);
+    CHECK(n > 0 && strstr(resp, " 200 ") != NULL, "new player gets 200 while the old clients are still open");
+    for (k = 0; k < 16; k++) if (idle[k] >= 0 && recv(idle[k], &c, 1, MSG_DONTWAIT) == 0) eof++;
+    CHECK(eof == 16, "stop closed the old accepted connections (EOF)");
+    for (k = 0; k < 16; k++) if (idle[k] >= 0) close(idle[k]); }
+
   // --- 3d: listener closed on stop ---------------------------------------------------
   dts_tpk_fechar();
   usleep(600 * 1000);

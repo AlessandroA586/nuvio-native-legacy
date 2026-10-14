@@ -244,6 +244,15 @@ static int portaLo;
 typedef struct { int fd; volatile int parar; } Ouvinte;
 static Ouvinte *ouvinteLo;              // sob G
 static atomic_int conexoes;             // fios de conexao vivos
+// Sockets aceitos ainda abertos: descer() faz shutdown neles para soltar as
+// vagas na hora (o fio dono segue fazendo o close, entao o fd nao e reusado).
+static pthread_mutex_t socksM = PTHREAD_MUTEX_INITIALIZER;
+static int socks[MAX_CONEXOES];
+static void sockMarcar(int velho, int novo) {
+  pthread_mutex_lock(&socksM);
+  for (int i = 0; i < MAX_CONEXOES; i++) if (socks[i] == velho) { socks[i] = novo; break; }
+  pthread_mutex_unlock(&socksM);
+}
 
 static void sessaoDestruir(Sessao *s) {
   for (int i = 0; i < GERADORES; i++) dts_remux_gen_free(s->ger[i].g);
@@ -738,6 +747,7 @@ static void *atender(void *u) {
     int manter = pd.http11 ? strcasecmp(pd.conexao, "close") != 0 : strcasecmp(pd.conexao, "keep-alive") == 0;
     if (!atenderPedido(sock, &pd, manter)) break;
   }
+  sockMarcar(sock + 1, 0);
   close(sock);
   atomic_fetch_sub(&conexoes, 1);
   return NULL;
@@ -763,8 +773,9 @@ static void *aceitar(void *u) {
       close(s);
       continue;
     }
+    sockMarcar(0, s + 1);            // guardado como fd+1: 0 = vaga livre
     if (pthread_create(&t, NULL, atender, (void *)(intptr_t)s) == 0) pthread_detach(t);
-    else { atomic_fetch_sub(&conexoes, 1); close(s); }
+    else { sockMarcar(s + 1, 0); atomic_fetch_sub(&conexoes, 1); close(s); }
   }
   close(o->fd);
   free(o);
@@ -796,6 +807,9 @@ static void descer(void) {
   if (!ouvinteLo) return;
   ouvinteLo->parar = 1;
   ouvinteLo = NULL; portaLo = 0;
+  pthread_mutex_lock(&socksM);
+  for (int i = 0; i < MAX_CONEXOES; i++) if (socks[i]) shutdown(socks[i] - 1, SHUT_RDWR);
+  pthread_mutex_unlock(&socksM);
 }
 
 // Versao maior da Tizen (system-info por dlopen, como gpunivel.c). -1 = nao leu.
