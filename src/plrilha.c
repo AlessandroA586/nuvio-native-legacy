@@ -372,14 +372,14 @@ static void plrilha_desenharCorpo_(Uint32 agora) {
       lx = lx + (ex - lx) * k;
       desenharLinha(p, &L, lx, yc, A * textoA);
       if (p->direita && k > 0.0f)
-        txt_desenhar_alpha(L.dir, R.x + 28.0f, yc - (float)L.dir.h * 0.5f + 1.0f, A * k);
+        txt_desenhar_alpha(L.dir, R.x + 20.0f, yc - (float)L.dir.h * 0.5f + 1.0f, A * k);
       // Sem `direita`, o lado esquerdo leva o titulo, cortado na largura
       // final do painel (a da mola mudaria a textura a cada quadro).
       else if (titulo[0] && k > 0.0f) {
-        float max = alvoW - L.w - 28.0f * 2.0f - 24.0f;
+        float max = alvoW - L.w - 28.0f - 20.0f - 24.0f;
         if (max > 40.0f) {
           TxtLinha t = txt_linha_corta(TXT_G19M, titulo, 243, 242, 239, 200, max);
-          txt_desenhar_alpha(t, R.x + 28.0f, yc - (float)t.h * 0.5f + 1.0f, A * k);
+          txt_desenhar_alpha(t, R.x + 20.0f, yc - (float)t.h * 0.5f + 1.0f, A * k);
         }
       }
       // Fio de 1 px sob o cabecalho, so com o corpo de pe.
