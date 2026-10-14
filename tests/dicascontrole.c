@@ -199,6 +199,7 @@ static void shots(const char *out) {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION,2); SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,1);
   SDL_Window *w=SDL_CreateWindow("remote-tips-shot",0,0,64,64,SDL_WINDOW_OPENGL|SDL_WINDOW_HIDDEN); assert(w);
   SDL_GLContext gl=SDL_GL_CreateContext(w); assert(gl);
+  glGenTextures(1,&tex); glGenFramebuffers(1,&fbo);
   assert(gfx_iniciar()); assert(txt_iniciar("deploy/app",1));
   ponteiro_iniciar(); gfx_icones_dir("deploy/app/art");
   catalogo();
@@ -207,7 +208,7 @@ static void shots(const char *out) {
     dicascontrole_teste_modo(m);
     width=m==DICAS_TOQUE?1080:1920; height=m==DICAS_TOQUE?1920:1080;
     layout_modo_definir(m==DICAS_TOQUE); layout_tela_definir(width,height);
-    gfx_tamanho_alvo(width,height);
+    gfx_tamanho_alvo(width,height); gfx_snap_encerrar(); assert(gfx_snap_iniciar(width,height));
     glBindTexture(GL_TEXTURE_2D,tex); glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
     gfx_tex_esquecer(0);
     glBindFramebuffer(GL_FRAMEBUFFER,fbo); glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,tex,0);
@@ -241,6 +242,7 @@ static void shots(const char *out) {
   puts("PASS: components open and close cleanly in all modes and languages");
   touch();
   width=1920; height=1080; layout_tela_definir(width,height); gfx_tamanho_alvo(width,height);
+  gfx_snap_encerrar(); assert(gfx_snap_iniciar(width,height));
   glBindTexture(GL_TEXTURE_2D,tex); glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
   gfx_tex_esquecer(0);
   // RECUO DE MOVIMENTO: quadro estatico, nada anima, e o ciclo fecha igual.
