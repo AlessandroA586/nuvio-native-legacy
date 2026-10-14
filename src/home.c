@@ -173,7 +173,7 @@ typedef struct {
 } Fileira;
 
 static int fileiraItemIndice(const Fileira *f, int coluna) {
-  if (!f || coluna < 0 || coluna >= f->n) return -1;
+  if (!f || coluna < 0 || coluna >= (f->stackN ? f->stackN : f->n)) return -1;
   // A FILEIRA DE AMIGOS (amigosfil.h): as colunas sao ROSTOS, e nao itens do
   // catalogo. O item dela e o cartao em foco (ou o titulo mais novo do rosto),
   // que e o que o destaque e a memoria de posicao precisam.
@@ -198,6 +198,13 @@ static void filtrarFilmesVistos(Fileira *f, const CatFileira *cf) {
   }
   f->usaItens = 1;
   f->n = visiveis;
+  if (!visiveis) f->verTudo = 0;
+}
+
+static int fileiraRanking(const Fileira *f, int coluna) {
+  int idx = fileiraItemIndice(f, coluna);
+  const CatItem *it = idx >= 0 ? cat_item(idx) : NULL;
+  return it && it->ranking > 0 ? it->ranking : idx - f->ini + 1;
 }
 
 static char bd[MAX_ARTE][512];    int nBd = 0;    // backdrops 16:9
@@ -5590,7 +5597,7 @@ static float numeraisAlfa(int r, Uint32 agora) {
     char rank[8];
     if (!numPedidoEm[r]) numPedidoEm[r] = agora ? agora : 1u;
     for (c = 0; c < fileiras[r].n; c++) {
-      snprintf(rank, sizeof rank, "%d", c + 1);
+      snprintf(rank, sizeof rank, "%d", fileiraRanking(&fileiras[r], c));
       if (!txt_linha(TXT_RANK_GRANDE, rank, NUM_COR).tex) falta = 1;
     }
     if (falta && (Uint32)(agora - numPedidoEm[r]) < 400u) return 0.0f;
@@ -5758,14 +5765,14 @@ static void desenhaLinhaTempo(int r, float topoFil, float top, float passo, floa
 
 // A pilha do ranking empilhado: ate seis cartazes num card so. `s` e a escala
 // da previa (1 na fileira).
-static void desenhaPilha(int idxCat, int stackN, float px, float py, float h, float s) {
+static void desenhaPilha(const Fileira *f, int coluna, int stackN, float px, float py, float h, float s) {
   // Compact phone rows reduce the artwork offsets along with the target.
   // The preview already supplies its scale; default/large rows retain it.
   if (telefoneui_ativo()) s = fminf(s, h / alturaDe(FILEIRA_TOP10));
   // Sem placa de fundo: os cartazes empilhados ja formam o card.
   int count=stackN<6?stackN:6;
   for(int k=0;k<count;k++) {
-    const CatItem *it=cat_item_exato(idxCat+k);if(!it)continue;
+    const CatItem *it=cat_item_exato(fileiraItemIndice(f, coluna + k));if(!it)continue;
     GfxRect pr={px+(20+k*78)*s,py+18*s,178*s,h-72*s};
     const char *pa=arte_por_formato(it,0);
     GLuint tx=pa?tex_obter_larg(pa,178*s):0;
@@ -6119,7 +6126,7 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
   gfx_opacidade_grupo = alfa;
   gfx_recorte(area.x, area.y, area.w, area.h);
   if (pilha) {
-    desenhaPilha(fl->usaItens ? fl->itens[0] : fl->ini, nItens, x0, y0, h, s);
+    desenhaPilha(fl, 0, nItens, x0, y0, h, s);
   } else {
     for (c = 0; c < nItens && c < 8; c++) {
       float px = x0 + (float)c * passo;
@@ -6144,7 +6151,7 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
         if (tipo == FILEIRA_FICHA) { desenhaFicha(ci, px, y0, w, h, 0.0f); card.w = h * 2.0f / 3.0f; }
         GLuint t = cam ? tex_obter_larg(cam, w) : 0;
         if (tipo == FILEIRA_TOP10_NUM)
-          desenhaNumeral(c + 1, px, y0, h, passo - w - NV_TOP10_NUM_FOLGA * s, 1.0f);
+          desenhaNumeral(fileiraRanking(fl, c), px, y0, h, passo - w - NV_TOP10_NUM_FOLGA * s, 1.0f);
         gfx_veu_card_limpar();
         if (t) veusDoCard(ci, tipo, deitado, 0.0f, 0);
         desenhaArteCard(card, tipo, cam, t, ci, 0.0f, raio, 1.0f, 0.0f);
@@ -6758,9 +6765,9 @@ void home_desenhar(Uint32 agora) {
           // invadir o cartaz anterior. So aparece quando os dez ja existem
           // como textura (numeraisAlfa): entram juntos, nunca um a um.
           if (tipo == FILEIRA_TOP10_NUM && numA > 0.003f)
-            desenhaNumeral(c + 1, px, py, h, passo - lw - NV_TOP10_NUM_FOLGA, numA);
+            desenhaNumeral(fileiraRanking(&fileiras[r], c), px, py, h, passo - lw - NV_TOP10_NUM_FOLGA, numA);
           if(tipo==FILEIRA_TOP10 && fileiras[r].stackN) {
-            desenhaPilha(idxCat, fileiras[r].stackN, px, py, h, 1.0f);
+            desenhaPilha(&fileiras[r], c, fileiras[r].stackN, px, py, h, 1.0f);
             if(foco.fileira==r)temItemFoco=0;
             continue;
           }

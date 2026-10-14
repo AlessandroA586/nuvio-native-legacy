@@ -1373,11 +1373,12 @@ static int lerCatalogo(const char *base, const char *tipo, const char *id,
 
 // #366: o prefixo original continua no catalogo canonico e no cache; so a
 // reserva seguinte pula os vistos, que antes nem cabiam na fileira da Home.
-// Sao ate 24 originais mais ate 24 suplementos, quando o prefixo nao basta.
+// Sao ate 24 originais mais ate seis suplementos (~2,1 MB extras em 20
+// fileiras). A reserva tem teto de RAM, alem do teto de slots CAT_MAX.
 // Varremos a resposta inteira: 60 vistos no inicio de uma pagina de 100 nao
 // impedem os 40 seguintes de preencher a tela. Um addon que declara skip pode
 // ceder uma pagina a mais, usando a contagem CRUA recebida como proximo skip.
-#define HOME_VISTOS_MAX (DESC_ITENS_POR_FILEIRA * 2)
+#define HOME_VISTOS_MAX (DESC_ITENS_POR_FILEIRA + 6)
 static int lerCatalogoHomeParcial(const char *base, const char *tipo, const char *id,
                            CatItem *saida, int max, int quantos,
                            int paginavel, int *respondeu,
@@ -1414,6 +1415,7 @@ static int lerCatalogoHomeParcial(const char *base, const char *tipo, const char
         if (saida[n].imdb[0] && !strcmp(saida[i].imdb, saida[n].imdb) &&
             !strcmp(saida[i].tipo, saida[n].tipo)) { repetido = 1; break; }
       if (repetido) continue;
+      saida[n].ranking = skip + raw;
       int visto = desc_filme_visto(&saida[n]);
       if (suplemento && visto) continue;
       snprintf(saida[n].origem, sizeof saida[n].origem, "%s", orig);
@@ -8458,6 +8460,7 @@ static void *fioVerTudo(void *u) {
       // futuros encerraria a paginacao do catalogo.
       if (descOcultaNaoLancado(&it)) { added++; continue; }
       origemDaBase(base, it.origem, sizeof it.origem);
+      it.ranking = skip + raw;
       pthread_mutex_lock(&vtTrava);
       int duplicate=0;
       for(int i=0;i<vtN;i++)if(it.imdb[0]&&!strcmp(vtItens[i].imdb,it.imdb)&&!strcmp(vtItens[i].tipo,it.tipo)){duplicate=1;break;}

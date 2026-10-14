@@ -1683,7 +1683,7 @@ static void cartazGrade(int i, const CatItem *it, float cx, float cy, float w, f
   { TxtLinha l = txt_linha_corta(TXT_DET_META2, it->titulo, c, c, c, 255, w);
     txt_desenhar_alpha(l, cx, cy + h + 10.0f, ac * (sel ? 1.0f : 0.86f)); }
   if (ranked && lay == VT_LAY_GRADE) {
-    char rank[8];snprintf(rank,sizeof rank,"%d",i+1);
+    char rank[8];snprintf(rank,sizeof rank,"%d",it->ranking > 0 ? it->ranking : i+1);
     TxtLinha edge=txt_linha(TXT_RANK,rank,234,236,241,255),ink=txt_linha(TXT_RANK,rank,17,18,22,255);
     float x=cx-10,y=cy+h-edge.h;
     for(int dx=-2;dx<=2;dx+=2)for(int dy=-2;dy<=2;dy+=2)txt_desenhar_alpha(edge,x+dx,y+dy,ac);
@@ -1697,7 +1697,7 @@ static void rankingCard(int i, const CatItem *it, float cx, float cy, float w, f
                         float ac, Uint32 agora, int sel) {
   char num[8];
   TxtLinha nu;
-  snprintf(num, sizeof num, "%d", i + 1);
+  snprintf(num, sizeof num, "%d", it->ranking > 0 ? it->ranking : i + 1);
   nu = txt_linha(TXT_RANK_GRANDE, num, 255, 255, 255, 255);
   if (nu.tex && nu.w > 0) {
     // Cabe no vao (100 px) mais o pedaco que o cartaz cobre; "100" encolhe.
