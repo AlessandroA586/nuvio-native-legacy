@@ -5695,6 +5695,10 @@ static void palcoCortinaPasso(Uint32 agora) {
              fileiras[foco.fileira].tipo == FILEIRA_PALCO;
   palcoCortina = anim_mola(palcoCortina, alvo ? 1.0f : 0.0f,
                            dtFil(&palcoCortinaUlt, agora), NV_MOLA_FOCO);
+  // A faixa sai daqui e nao do laco de desenho: o Palco em foco repoe a sua
+  // cada quadro, mas a que ficou tem de continuar onde estava ate a cortina
+  // fechar; senao o escurecimento some num frame, ainda com alfa.
+  if (palcoCortina <= 0.01f) palcoFaixaTopo = palcoFaixaBase = 0.0f;
 }
 // PALCO: o nome e a linha de meta do titulo do centro, embaixo dele.
 static void palcoLegenda(int r, float base, float lw) {
@@ -6580,7 +6584,6 @@ void home_desenhar(Uint32 agora) {
 #endif
   descida += cinema * NV_CINEMA_DESCE;   // detalhe assentado: nada da home aparece
   palcoCortinaPasso(agora);              // a cortina do Palco sobe/desce pela mola
-  palcoFaixaTopo = palcoFaixaBase = 0.0f;
 
   // VIEWPORT DAS FILEIRAS. `.home-modern-rows-viewport` (components.css:6929) e
   // um bloco absoluto com bottom:0, height 52% e overflow-y:auto — ou seja as

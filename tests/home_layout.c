@@ -111,9 +111,26 @@ int main(void) {
     for (int i = 1; i <= 40; i++) palcoCortinaPasso((Uint32)(i * 16));
     assert(palcoCortina > 0.99f);
     assert(NV_PALCO_CORTINA * palcoCortina >= 0.40f);
-    foco.fileira = 0;
-    for (int i = 41; i <= 80; i++) palcoCortinaPasso((Uint32)(i * 16));
-    assert(palcoCortina < 0.01f);
+    // Both exits retain the outgoing band while the curtain is still visible.
+    for (int hero = 0; hero <= 1; hero++) {
+      palcoCortina = 1.0f;
+      palcoCortinaUlt = 640;
+      palcoFaixaTopo = 300.0f; palcoFaixaBase = 800.0f;
+      focoHero = hero; foco.fileira = 0;
+      float previous = palcoCortina;
+      for (int i = 41; i <= 80; i++) {
+        palcoCortinaPasso((Uint32)(i * 16));
+        assert(palcoCortina <= previous);
+        if (i == 41) assert(palcoCortina > 0.01f && palcoCortina < previous);
+        if (palcoCortina > 0.01f) {
+          assert(palcoFaixaTopo == 300.0f && palcoFaixaBase == 800.0f);
+        } else {
+          assert(palcoFaixaTopo == 0.0f && palcoFaixaBase == 0.0f);
+        }
+        previous = palcoCortina;
+      }
+      assert(palcoCortina < 0.01f);
+    }
     focoHero = 1;
     memset(scrollX, 0, sizeof scrollX);
   }
