@@ -20,7 +20,7 @@ char *rede_baixar_com(const char *url, int s, const char *const *cab) {
   if (strstr(url, "/sync/last_activities"))
     return strdup("{\"movies\":{\"watched_at\":\"2026-03-01T00:00:00.000Z\"}}");
   if (strstr(url, "/progress/watched")) {
-    if (strstr(url, "tt3000003"))   // tudo visto, sem proximo
+    if (strstr(url, "tt3000003") || strstr(url, "tt4000"))   // tudo visto, sem proximo
       return strdup("{\"aired\":3,\"completed\":3,\"next_episode\":null,\"seasons\":[]}");
     if (strstr(url, "tt2000002"))
       return strdup("{\"aired\":10,\"completed\":4,\"seasons\":[],"
@@ -55,6 +55,17 @@ char *rede_baixar_st(const char *u, int s, const char *const *c, int *st) {
         "\"show\":{\"title\":\"So Trakt\",\"ids\":{\"imdb\":\"tt2000002\"}}},"
         "{\"last_watched_at\":\"2026-02-01T10:00:00.000Z\","
         "\"show\":{\"title\":\"Toda Vista\",\"ids\":{\"imdb\":\"tt3000003\"}}}]");
+    if (strstr(u, "page=2")) {
+      char *r = calloc(1, 16000);
+      strcat(r, "[");
+      for (int i = 0; i < 70; i++) {
+        char item[180];
+        snprintf(item, sizeof item, "%s{\"show\":{\"ids\":{\"imdb\":\"tt400%04d\"}}}", i ? "," : "", i);
+        strcat(r, item);
+      }
+      strcat(r, "]");
+      return r;
+    }
     return strdup("[]");
   }
   if (strstr(u, "/sync/watched/movies")) return strdup("[]");
@@ -70,15 +81,16 @@ const char *ajustes_tmdb_idioma(void) { return "en-US"; }
 const char *desc_chave_tmdb(void) { return ""; }
 const char *desc_tmdb_idioma(void) { return "en"; }
 const char *i18n(const char *s) { return s; }
-int ajustes_cw_proximo(void) { return 1; }
+static int proximo = 1;
+int ajustes_cw_proximo(void) { return proximo; }
 
 unsigned long long cat_historico_geracao(void) { return 1; }
-static char marcados[16][24];
-static int marcadoVisto[16], nMarcados;
+static char marcados[256][24];
+static int marcadoVisto[256], nMarcados;
 int cat_historico_definir_se_geracao(const char *id, const char *tipo, int visto,
                                      unsigned long long g) {
   (void)g;
-  if (tipo && !strcmp(tipo, "series") && nMarcados < 16) {
+  if (tipo && !strcmp(tipo, "series") && nMarcados < 256) {
     snprintf(marcados[nMarcados], sizeof marcados[0], "%s", id);
     marcadoVisto[nMarcados++] = visto;
   }
@@ -95,12 +107,19 @@ int main(void) {
   int n, i, achou = 0;
   trakt_definir("token", "client");
   n = trakt_continuar(v, 12);
-  for (i = 0; i < n; i++) if (!strncmp(v[i].imdb, "tt2000002", 9)) achou = 1;
+  for (i = 0; i < n; i++) if (!strcmp(v[i].imdb, "tt2000002:1:2")) achou = 1;
   printf("[trakt-cw-vistas] continuar=%d so-trakt=%d marca(toda)=%d marca(so-trakt)=%d\n",
          n, achou, marca("tt3000003"), marca("tt2000002"));
   assert(achou);                       // Bug A: "a seguir" de serie fora do historico
   assert(marca("tt3000003") == 1);     // Bug B: selo sem abrir o titulo
   assert(marca("tt2000002") == 0);     // incompleta nao ganha selo
+  assert(marca("tt4000069") == 1);     // selo alem das 64 candidatas antigas
+  proximo = 0;
+  nMarcados = 0;
+  n = trakt_continuar(v, 12);
+  assert(n == 0);
+  assert(marca("tt3000003") == 1);
+  assert(marca("tt4000069") == 1);
   puts("trakt_cw_vistas: PASS");
   return 0;
 }

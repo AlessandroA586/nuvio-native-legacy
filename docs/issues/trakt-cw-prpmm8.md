@@ -20,7 +20,18 @@ sem rede; nenhum token/URL de addon copiado).
   `[visto] marcado por trakt-importacao ... id=tt9288030 n=32 (sem reproducao local)`
   (1163). Idem `tt0981456` (1634). So `progress/watched` aparece 2 vezes no log todo,
   ambas disparadas pela abertura do titulo.
-- Nada no log lê o Trakt para series em segundo plano: coerente com os dois sintomas.
+- Antes disso, `[cw] tt20234568:2:5 terminado sem lista de episodios: pedindo para achar o proximo`
+  (144) registra a tentativa de avancar um episodio local, nao uma lista Trakt de up next.
+  `[t] 49624 extras: parte trakt pronta` (229) pertence aos detalhes.
+- O segundo detalhe importa 48 episodios de `tt0981456` (1698): junto dos 32 do
+  primeiro, sao 80 episodios explicitamente importados por detalhes neste trecho.
+- `[sync] progresso: 95 linhas, 0 aceitas, 0 no catalogo` (1777) e o sync da conta
+  Nuvio, nao uma resposta de `/sync/playback`. As linhas de lista (275, 607–608)
+  tambem sao da conta, nao o historico Trakt.
+- Nenhum `/sync/watched/shows`, `/sync/playback` ou total de up next e registrado
+  no trecho. Seus totais no arranque sao **desconhecidos**, nao zero; o pareamento
+  tambem nao esta presente. As operacoes HTTP 200/201 confirmam uso autenticado
+  posterior. O mecanismo de arranque foi confirmado pelo codigo e pelos testes.
 
 ## Causas
 
@@ -36,12 +47,20 @@ B. Selo sem abrir. O mapa de "visto" de serie (`cat_visto`) so era escrito em
 ## Correcao (src/trakt.c)
 
 - `carregarSeriesVistas`: `/sync/watched/shows?extended=noseasons` paginado (leve,
-  sem mapa de episodios), junto do historico. `unirSeriesVistas` junta ao `ult[]`
-  as series que o historico recente nao cobriu (mais novas primeiro, ate o limite),
-  com temporada -1 = episodio desconhecido; o "proximo" so vem do
-  `/progress/watched` (sem ele, sem palpite).
+  sem mapa de episodios), junto do historico. Junta todas as series com IMDb que
+  o historico recente nao cobriu, sem o limite anterior de 64 candidatas, em
+  memoria dinamica. Temporada -1 = episodio desconhecido; o "proximo" so vem do
+  `/progress/watched` (sem ele, sem palpite). Pagina invalida nao publica lista parcial.
 - `fioProximo`: o mesmo GET de progresso grava o selo (`aired`/`completed` do
   cabecalho => serie vista), sem abrir o detalhe. O GET sai mesmo com o toggle
   "Proximo episodio" desligado; o card continua respeitando os toggles do Trakt no
   Continuar e os filtros de ocultar vistos.
-- Teste: `bash tests/trakt_cw_vistas.sh` (rede falsa). Falhava antes, passa depois.
+- `descoberta.c` faz o sync mesmo com outra fonte de CW escolhida; descarta os
+  cards Trakt nesse caso, preservando a escolha e atualizando o mapa dos cartazes.
+  Series pausadas tambem recebem consulta de progresso; resposta positiva em
+  cache reaplica o estado incompleto. Os filtros existentes continuam consumindo
+  o mesmo mapa `cat_visto`.
+- Teste: `bash tests/trakt_cw_vistas.sh` (rede falsa, sem detalhes nem historico
+  local): episodio exato `tt2000002:1:2`, selo completo/incompleto, segunda pagina
+  com 70 series e toggle desligado. A regressao alem da 64a serie falhou com rc 134
+  no commit inicial `28d9a957` e passou apos remover esse limite.
