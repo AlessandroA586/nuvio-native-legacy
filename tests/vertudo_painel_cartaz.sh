@@ -1,7 +1,9 @@
 #!/bin/bash
-# Painel lateral da colecao: o cartaz fica SEMPRE (dono, 13/10/2026: "nas
-# colecoes nao ta mostrando mais o poster, so a logo na lateral"). Com logo, o
-# painel desenha cartaz E logo (logo abaixo do cartaz); sem logo, cartaz + titulo.
+# Painel lateral da colecao (dono, 13/10/2026: "o poster tinha antes, eu so pedi
+# para tirar o poster quando a view e de poster"): o cartaz fica em todas as
+# exibicoes com painel e some SO na Grade (cartazes). Com logo, cartaz E logo
+# (logo abaixo); sem logo, cartaz + titulo. A Vitrine nao usa painel(): o
+# destaque dela e logo+meta+sinopse e o cartaz vem na fileira.
 set -eu
 cd "$(dirname "$0")/.."
 python3 -I - <<'PY'
@@ -26,6 +28,8 @@ enum { TXT_HEADLINE, TXT_CAPTION, TXT_HERO_META, TXT_DET_META2 };
 #define NV_TELA_H 1080.0f
 static const void *collection = (void *)1;
 static int foco;
+enum { VT_LAY_AUTO, VT_LAY_GRADE, VT_LAY_LINHA, VT_LAY_RANKING, VT_LAY_SAGA, VT_LAY_DECADAS, VT_LAY_MURAL, VT_LAY_VITRINE };
+static int lay;
 float gfx_tex_aspect_atual;
 '''+defs+r'''
 static CatItem item; static int hasLogo, hasPoster;
@@ -59,12 +63,19 @@ static void run(int logo, int poster) {
   painel(1.0f);
 }
 int main(void) {
-  run(1, 1);   // logo + cartaz: os dois
-  assert(posterDraws == 1);
-  assert(logoDraws == 1);
-  assert(logoY >= posterY + VT_PAN_ART_H);
-  run(0, 1);   // sem logo: cartaz + titulo em texto
-  assert(posterDraws == 1 && logoDraws == 0);
+  for (lay = VT_LAY_GRADE; lay <= VT_LAY_MURAL; lay++) {
+    if (lay == VT_LAY_GRADE) {   // exibicao de cartazes: sem cartaz lateral
+      run(1, 1); assert(posterDraws == 0 && logoDraws == 1);
+      run(0, 1); assert(posterDraws == 0 && logoDraws == 0);
+      continue;
+    }
+    run(1, 1);   // logo + cartaz: os dois
+    assert(posterDraws == 1);
+    assert(logoDraws == 1);
+    assert(logoY >= posterY + VT_PAN_ART_H);
+    run(0, 1);   // sem logo: cartaz + titulo em texto
+    assert(posterDraws == 1 && logoDraws == 0);
+  }
   return 0;
 }
 '''

@@ -1125,9 +1125,12 @@ static void painel(float a) {
   float y = VT_PAN_Y;
   if (!viewItem(foco, &it)) return;
 
-  // O contexto lateral usa o cartaz, nunca repete a cena da timeline.
+  // O contexto lateral usa o cartaz, nunca repete a cena da timeline. So a
+  // Grade (a exibicao de cartazes) o dispensa: la o cartaz ja esta na celula
+  // (dono, 13/10: "so pedi para tirar o poster quando a view e de poster").
   // Mantém a geometria 2:3 mesmo sem arte para não deslocar os metadados.
-  { GfxRect r = { VT_PAN_X, y, VT_PAN_ART_W, VT_PAN_ART_H };
+  int semCartaz = lay == VT_LAY_GRADE;
+  if (!semCartaz) { GfxRect r = { VT_PAN_X, y, VT_PAN_ART_W, VT_PAN_ART_H };
     const char *arte = it.poster[0] ? it.poster : it.backdrop;
     float raio = 12.0f / VT_PAN_ART_W;
     GLuint t = arte[0] ? tex_obter_larg(arte, VT_PAN_ART_W) : 0;
@@ -1140,7 +1143,7 @@ static void painel(float a) {
       TxtLinha falta = txt_linha_corta(TXT_HERO_META, "Sem pôster", 185, 191, 204, 255, r.w-24);
       txt_desenhar_alpha(falta, r.x+(r.w-falta.w)*.5f, r.y+(r.h-falta.h)*.5f, a);
     } }
-  y += VT_PAN_ART_H + 18.0f;
+  if (!semCartaz) y += VT_PAN_ART_H + 18.0f;
   float badgeW=badges_desenhar(badges_provedor(it.provNome),VT_PAN_X,y,VT_PAN_W,28,a);
   if(badgeW>0)y+=40;
 
