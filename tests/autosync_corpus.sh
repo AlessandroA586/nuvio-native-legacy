@@ -22,4 +22,4 @@ if [ "${ANTES:-0}" = 1 ]; then
 fi
 echo "== AFTER (current engine) =="
 "$D/novo" "$R" ${VERBOSO:+v} | tee "$D/saida"
-grep -q '^TOTAL wrong=0$' "$D/saida"
+grep -q '^TOTAL wrong=0 refused=0$' "$D/saida"

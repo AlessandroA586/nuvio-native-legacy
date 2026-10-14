@@ -70,6 +70,10 @@ int main(void) {
   abrecine_passo(&a, 0, 1, 0, t, dt, 1);
   assert(a.veu == 0.0f);
 
+  // Linha de estado: resolvendo ate a URL chegar, depois carregando o video.
+  assert(abrecine_etapa(1) == ABRECINE_RESOLVENDO);
+  assert(abrecine_etapa(0) == ABRECINE_CARREGANDO);
+
   puts("PASS: abrecine: padrao Cinema, tecla, demora e crossfade so com quadro real");
   return 0;
 }

@@ -447,6 +447,7 @@ float gfx_escala(void);
 float gfx_escala_entrar(void);
 void  gfx_escala_sair(float anterior);
 int  gfx_iniciar(void);
+void gfx_tex_aquecer(GLuint tex); // amostra offscreen antes de publicar arte nova
 void gfx_encerrar(void);
 
 // O gfx_rect lembra a ultima textura que ele mesmo bindou e pula rebinds

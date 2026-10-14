@@ -434,7 +434,7 @@ static int ajTipo(int op) {
   }
 }
 // O valor i no segmentado: traduzido e sem o aposto entre parenteses
-// ("Dinâmica (Apple TV)" vira "Dinâmica"; o nome inteiro fica no inspetor).
+// ("Rótulo (aposto)" vira "Rótulo"; o nome inteiro fica no inspetor).
 static const char *ajRotSeg(int op, int i) {
   static char b[3][96];
   char *p;
@@ -448,6 +448,7 @@ static float aj2SegLargura(int op, int n);
 static int ajSegmentada(int op) {
   int n;
   if (op < 0 || ajTipo(op) != AJL_ESC || op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA || op == AJ_FUNDO ||
+      op == AJ_INTERFACE_MODO /* o seletor com alvos proprios permite sair de TV usando so o toque */ ||
       op == AJ_LOGO_APP /* abre o seletor com miniaturas de 64 px, como o icone do app */) return 0;
   n = nValores(op);
   if (n < 2 || n > 3 || !OPCOES[op].valores) return 0;
