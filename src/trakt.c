@@ -2138,9 +2138,7 @@ static void idsScrobble(const char *id, ScrobbleEpIds *out) {
   meta = fichaBuscar("series", base);
   if (!meta) meta = metaprov_meta("series", base, 8, NULL);
   if (!meta || !metaep_buscar(meta, t, e, &ep)) { free(meta); return; }
-  out->tvdb = ep.tvdb[0] ? ep.tvdb : NULL;
-  out->tmdb = ep.tmdb[0] ? ep.tmdb : NULL;
-  out->trakt = ep.trakt[0] ? ep.trakt : NULL;
+  scrobble_ids_guardar(out, ep.tvdb, ep.tmdb, ep.trakt);
   free(meta);
 }
 

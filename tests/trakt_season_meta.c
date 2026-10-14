@@ -77,6 +77,17 @@ int main(void) {
   assert(!metaep_existe(meta, 1, 13));
   assert(metaep_proximo(meta, 1, 12, &ep));
   assert(ep.temporada == 2 && ep.episodio == 1);
+  // Fixture stores episode ids as JSON numbers, not strings.
+  assert(metaep_buscar(meta, 2, 1, &ep));
+  assert(!strcmp(ep.tvdb, "10600123"));
+  assert(!strcmp(ep.tmdb, "5234501"));
+  assert(!strcmp(ep.trakt, "9923456"));
+  metaep_scrobble_corpo(corpo, sizeof corpo, "tt29422052", 2, 1, &ep, 41.0);
+  assert(strstr(corpo, "\"tvdb\":10600123"));
+  assert(strstr(corpo, "\"tmdb\":5234501"));
+  assert(strstr(corpo, "\"trakt\":9923456"));
+  assert(strstr(corpo, "\"season\":2"));
+  assert(strstr(corpo, "\"number\":1"));
 
   scrobble_corpo_ep(corpo, sizeof corpo, "tt29422052:2:1", 41.0, &ids);
   assert(strstr(corpo, "\"tvdb\":10600123"));

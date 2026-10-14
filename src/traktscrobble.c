@@ -33,6 +33,23 @@ int scrobble_decidir(ScrobbleEstado *s, int evento, const char *id, double pct) 
   return SCR_NADA;
 }
 
+void scrobble_ids_guardar(ScrobbleEpIds *out, const char *tvdb,
+                          const char *tmdb, const char *trakt) {
+  if (!out) return;
+  memset(out->proprio, 0, sizeof out->proprio);
+  if (tvdb && tvdb[0]) snprintf(out->proprio[0], sizeof out->proprio[0], "%s", tvdb);
+  if (tmdb && tmdb[0]) snprintf(out->proprio[1], sizeof out->proprio[1], "%s", tmdb);
+  if (trakt && trakt[0]) snprintf(out->proprio[2], sizeof out->proprio[2], "%s", trakt);
+  out->tvdb = out->proprio[0][0] ? out->proprio[0] : NULL;
+  out->tmdb = out->proprio[1][0] ? out->proprio[1] : NULL;
+  out->trakt = out->proprio[2][0] ? out->proprio[2] : NULL;
+}
+
+void scrobble_ids_limpar(ScrobbleEpIds *out) {
+  if (!out) return;
+  memset(out, 0, sizeof *out);
+}
+
 void scrobble_corpo_ep(char *dst, size_t n, const char *id, double pct,
                        const ScrobbleEpIds *ep) {
   char base[64];

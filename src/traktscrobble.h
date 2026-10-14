@@ -26,7 +26,12 @@ typedef struct {
   const char *tvdb;
   const char *tmdb;
   const char *trakt;
+  char proprio[3][24];
 } ScrobbleEpIds;
+// Copies episode ids into proprio[] so the pointers outlive the meta parse.
+void scrobble_ids_guardar(ScrobbleEpIds *out, const char *tvdb,
+                          const char *tmdb, const char *trakt);
+void scrobble_ids_limpar(ScrobbleEpIds *out);
 void scrobble_corpo(char *dst, size_t n, const char *id, double pct);
 void scrobble_corpo_ep(char *dst, size_t n, const char *id, double pct,
                        const ScrobbleEpIds *ep);

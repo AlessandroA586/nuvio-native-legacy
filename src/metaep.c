@@ -9,6 +9,16 @@ int metaep_temporada(const char *video, const char *fim) {
   return t;
 }
 
+static void id_num_ou_texto(const char *ini, const char *fim, const char *chave,
+                            char *dst, size_t n) {
+  double v;
+  if (js_texto(ini, fim, chave, dst, n) && dst[0]) return;
+  if (!js_tem(ini, fim, chave)) return;
+  v = js_num(ini, fim, chave, -1);
+  if (v <= 0 || v != (double)(long long)v) return;
+  snprintf(dst, n, "%.0f", v);
+}
+
 static void ids_do_video(const char *video, const char *fim, MetaEpInfo *out) {
   const char *ids = strstr(video, "\"ids\"");
   const char *ini;
@@ -18,9 +28,9 @@ static void ids_do_video(const char *video, const char *fim, MetaEpInfo *out) {
   if (!ini || ini >= fim) return;
   fids = js_fim(ini);
   if (!fids || fids > fim) return;
-  js_texto(ini, fids, "tvdb", out->tvdb, sizeof out->tvdb);
-  js_texto(ini, fids, "tmdb", out->tmdb, sizeof out->tmdb);
-  js_texto(ini, fids, "trakt", out->trakt, sizeof out->trakt);
+  id_num_ou_texto(ini, fids, "tvdb", out->tvdb, sizeof out->tvdb);
+  id_num_ou_texto(ini, fids, "tmdb", out->tmdb, sizeof out->tmdb);
+  id_num_ou_texto(ini, fids, "trakt", out->trakt, sizeof out->trakt);
 }
 
 int metaep_buscar(const char *corpo, int t, int e, MetaEpInfo *out) {
