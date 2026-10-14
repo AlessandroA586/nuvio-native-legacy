@@ -4882,6 +4882,11 @@ static int foraDestaPlataforma(int op) {
 #else
   if (op == AJ_GPU_EFEITOS) return 1;
 #endif
+#ifdef NV_ANDROID
+  // #205: o Android nao tem os pontos de montagem do scan do p2pmotor
+  // (/tmp/usb, /media/usb) — a opcao seria sempre um beco sem saida.
+  if (op == AJ_P2P_DESTINO) return 1;
+#endif
 #ifndef NV_ANDROID
   if (op == AJ_LEG_SYNC_AUDIO) return 1;
 #endif
@@ -5506,7 +5511,9 @@ static int inativa(int op) {
     case AJ_CACHE_SEEK:  return !cacheSeekExiste();
     // #334: so o motor embutido usa o limite; com servidor na rede quem guarda e ele.
     case AJ_P2P_LIMITE:  return !p2pmotor_disponivel() || p2pEndereco[0];
-    case AJ_P2P_DESTINO: return !p2pmotor_disponivel() || p2pEndereco[0];
+    // #205: sem pendrive gravavel a linha fica cinza (a sonda e cacheada ~2 s
+    // e nao cria nem apaga pasta no volume).
+    case AJ_P2P_DESTINO: return !p2pmotor_disponivel() || p2pEndereco[0] || !p2pmotor_usb_presente();
     case AJ_DTS_AC3:     return !dtsConversaoExiste();
     // Som: na Samsung (.wgt) o trailer e sempre mudo (trailerfonte_com_som).
     case AJ_HERO_TRAILER_SOM:

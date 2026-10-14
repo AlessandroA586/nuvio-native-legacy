@@ -80,7 +80,8 @@ unsigned p2pmotor_teto_mb(void);
 void p2pmotor_definir_limite_mb(unsigned mb);
 // #205: 1 = tentar cache em pendrive USB (cai para interno se nao houver ou falhar).
 void p2pmotor_definir_usb(int usar);
-// 1 se ha pendrive gravavel agora (so para esconder a opcao em Ajustes).
+// 1 se ha pendrive gravavel agora — Ajustes cinza a opcao "Pendrive USB" com
+// isto. Resposta cacheada por ~2 s; a sonda nao cria nem apaga nada no volume.
 int p2pmotor_usb_presente(void);
 // A conta acima, pura (testes).
 uint64_t p2pmotor_teto_duro(uint64_t livre, unsigned escolhaMb);

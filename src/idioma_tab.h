@@ -2441,6 +2441,8 @@
   { "Limite de %d fileiras — coleções não contam", "Limit of %d rows — collections don't count" },
   { "Limite de espaço do P2P", "P2P space limit" },
   { "Cache do P2P", "P2P cache location" },
+  { "Interno", "Internal" },
+  { "Pendrive USB", "USB flash drive" },
   { "Onde o motor P2P guarda o cache temporário enquanto toca. Interno usa o armazenamento da TV; Pendrive USB tenta um pendrive conectado e, se não houver ou falhar, volta para o interno. Não é download offline.", "Where the built-in P2P engine keeps temporary cache while playing. Internal uses the TV storage; USB flash drive tries a connected USB stick and, if missing or it fails, falls back to internal. Not offline download." },
   { "Limite de fileiras", "Row limit" },
   { "Limite de fileiras e Itens por fileira", "Row limit and Items per row" },
