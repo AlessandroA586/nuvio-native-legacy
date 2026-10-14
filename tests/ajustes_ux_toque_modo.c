@@ -37,6 +37,7 @@ static void clique(float x, float y) {
   e.type = SDL_MOUSEBUTTONUP; relogio += 60;
   ponteiro_evento(&e, entregar);
 }
+#ifdef NV_TOUCH_UI
 static void fileiras(int mobile) {
   const PonteiroAlvo *v;
   layout_modo_definir(mobile);
@@ -88,10 +89,12 @@ static void fileiras(int mobile) {
   ajFilToqueFocar(2, 3); ajFilToqueAba(1, 0);
   CONFERE(filFoco == 1 && filCampo == 0 && filAba == 0, "TV: callbacks de foco e aba sao inertes");
 }
+#endif
 
 // A TV-mode phone still needs real targets to select Mobile: the closed app
 // sidebar registers a target after Settings, so the empty-layer Enter fallback
 // is unavailable. Exercise the production editor and pointer dispatch together.
+#ifdef NV_TOUCH_UI
 static void alvoLateral(int a, int b) { (void)a; (void)b; assert(!"clicou a barra lateral"); }
 static void quadroInterface(void) {
   ponteiro_teste_janela((int)NV_TELA_W, (int)NV_TELA_H);
@@ -131,6 +134,7 @@ static void clicarInterface(float x, float y) {
   ponteiro_evento(&e, ajustes_evento);
   relogio += 400;
 }
+#endif
 static void clicarMouseInterface(float x, float y) {
   SDL_Event e; SDL_zero(e);
   e.type = SDL_MOUSEBUTTONDOWN; e.button.button = SDL_BUTTON_LEFT;
@@ -140,6 +144,20 @@ static void clicarMouseInterface(float x, float y) {
   ponteiro_evento(&e, ajustes_evento);
   relogio += 400;
 }
+#ifndef NV_TOUCH_UI
+// The cursor comes back with a continuous movement (as in tests/menuep.c):
+// without it ponteiro_ativo() is false and the desktop frame registers nothing.
+static void acordarInterface(void) {
+  SDL_Event e; SDL_zero(e);
+  e.type = SDL_MOUSEMOTION;
+  relogio += 400;
+  for (int i = 0; i < 6; i++) {
+    e.motion.x = 1700 + i * 30; e.motion.y = 20 + i * 4;
+    relogio += 40;
+    ponteiro_evento(&e, ajustes_evento);
+  }
+}
+#endif
 static char *arquivoAjustes(void) {
   char caminho[700];
   snprintf(caminho, sizeof caminho, "%s/ajustes.txt", getenv("NUVIO_DADOS"));
@@ -149,6 +167,7 @@ static char *arquivoAjustes(void) {
   assert(fread(s, 1, (size_t)n, f) == (size_t)n); s[n] = 0; fclose(f);
   return s;
 }
+#ifdef NV_TOUCH_UI
 static int abrirInterface(void) {
   ajustes_iniciar(); focarOpcao(AJ_INTERFACE_MODO); uxAbrirEditor(AJ_INTERFACE_MODO);
   CONFERE(uxEditor == 1 && uxOp == AJ_INTERFACE_MODO, "Modo da interface: abre para editar");
@@ -202,6 +221,7 @@ static void interfacePorToque(void) {
   valor[AJ_INTERFACE_MODO] = 1; layout_modo_definir(1); ajustes_dir(dir);
   CONFERE(valor[AJ_INTERFACE_MODO] == 0 && !layout_modo_mobile(), "TV tambem fica salva na nova leitura");
 }
+#endif
 
 // #205: the footer hint chips ("OK Confirmar", "Voltar Cancelar") are tappable
 // in TV mode too. The taps go through ponteiro + ajustes_evento and confirm
@@ -214,6 +234,7 @@ static SDL_GLContext glRodape;
 static void quadroRodape(void) {
   ponteiro_teste_janela((int)NV_TELA_W, (int)NV_TELA_H);
   ponteiro_quadro(relogio);
+  txt_novo_quadro();   // o orcamento de rasterizacao por quadro (4 linhas) sem isto nao renova
   for (int i = 0; i < 8; i++) ajustes_atualizar(0.05f, relogio);   // settle the ramps
   ajustes_desenhar(relogio);
   ponteiro_desenhar();
@@ -229,6 +250,7 @@ static int alvoRodape(int voltar, float *x, float *y) {
   }
   return 0;
 }
+#ifdef NV_TOUCH_UI
 static void rodapePorToque(void) {
   const char *dir = getenv("NUVIO_DADOS");
   char *antes, *depois;
@@ -312,10 +334,68 @@ static void rodapePorToque(void) {
     CONFERE(ok == 1, "Tema na TV: so o chip OK desenhado registra alvo");
     CONFERE(voltar == 0, "Tema na TV: nenhum alvo Voltar fora do rodape desenhado"); }
   uxCancelar();
+
+  // P2: the saved notice fills the footer width — the footer hides the chips,
+  // so the replay must leave no OK/Voltar target behind the notice text.
+  snprintf(uxAviso, sizeof uxAviso, "%s",
+           "Ajuste salvo nesta TV. Este aviso aqui e comprido de proposito, para nao caber na faixa do rodape ao lado das dicas do controle, e assim empurrar os chips para fora");
+  uxAvisoAte = relogio + 4500;
+  valor[AJ_TAMANHO_AJUSTES] = 2;   // 100%: a faixa do rodape encolhe e o aviso empurra os chips
+  focarOpcao(AJ_TEMA); uxAbrirEditor(AJ_TEMA);
+  CONFERE(uxEditor == 1 && ajEditandoLinha(AJ_TEMA), "Aviso: Tema abre na linha");
+  for (int i = 0; i < 6; i++) quadroRodape();   // o rodape por inteiro rasteriza o aviso
+  { const PonteiroAlvo *v; int n = ponteiro_teste_lista(&v), chips = 0;
+    for (int i = 0; i < n; i++)
+      if (v[i].focar == aj2DicaOk || v[i].ativar == aj2DicaVoltar) chips++;
+    CONFERE(chips == 0, "Rodape TV: o aviso esconde os chips e nao sobra alvo invisivel"); }
+  uxCancelar(); uxAviso[0] = 0;
   layout_modo_definir(0);
 }
+#endif
+
+#ifndef NV_TOUCH_UI
+// P1: the same footer replay runs on a non-touch desktop/TV build — a click
+// on the Voltar chip cancels the pending edit instead of confirming it.
+static void rodapePorClique(void) {
+  const char *dir = getenv("NUVIO_DADOS");
+  char *antes;
+  float x, y;
+  ajustes_dir(dir);
+  valor[AJ_VIDRO] = 0; assert(gravar());
+  ponteiro_iniciar();
+  focarOpcao(AJ_VIDRO); uxAbrirEditor(AJ_VIDRO);
+  CONFERE(uxEditor == 1 && ajEditandoLinha(AJ_VIDRO), "Vidro: edita na linha");
+  uxEvento(SDLK_RIGHT); assert(uxPendente == 1 && valor[AJ_VIDRO] == 0);
+  uxAviso[0] = 0;
+  acordarInterface();
+  quadroRodape();
+  CONFERE(alvoRodape(1, &x, &y), "Rodape desktop: o chip Voltar registra alvo");
+  antes = arquivoAjustes();
+  if (alvoRodape(1, &x, &y)) clicarMouseInterface(x, y);
+  CONFERE(!uxEditor && valor[AJ_VIDRO] == 0, "Clique no chip Voltar cancela");
+  CONFERE(!strcmp(antes, arquivoAjustes()), "Chip Voltar nao grava nada");
+  free(antes);
+  uxCancelar();
+
+  // P2: the saved notice fills the footer width — the footer hides the chips,
+  // so the replay must leave no OK/Voltar target behind the notice text.
+  snprintf(uxAviso, sizeof uxAviso, "%s",
+           "Ajuste salvo nesta TV. Este aviso aqui e comprido de proposito, para nao caber na faixa do rodape ao lado das dicas do controle, e assim empurrar os chips para fora");
+  uxAvisoAte = relogio + 4500;
+  valor[AJ_TAMANHO_AJUSTES] = 2;   // 100%: a faixa do rodape encolhe e o aviso empurra os chips
+  focarOpcao(AJ_VIDRO); uxAbrirEditor(AJ_VIDRO);
+  CONFERE(uxEditor == 1 && ajEditandoLinha(AJ_VIDRO), "Aviso: Vidro abre na linha");
+  for (int i = 0; i < 6; i++) quadroRodape();   // o rodape por inteiro rasteriza o aviso
+  { const PonteiroAlvo *v; int n = ponteiro_teste_lista(&v), chips = 0;
+    for (int i = 0; i < n; i++)
+      if (v[i].focar == aj2DicaOk || v[i].ativar == aj2DicaVoltar) chips++;
+    CONFERE(chips == 0, "Rodape desktop: o aviso esconde os chips e nao sobra alvo invisivel"); }
+  uxCancelar(); uxAviso[0] = 0;
+}
+#endif
 
 int main(void) {
+#ifdef NV_TOUCH_UI
   Aj2Pose p = {0};
   p.lA = 1.0f; p.lS = 1.0f;
   uxIndice = 2; uxEditor = 1; uxOp = AJ_TEMA; uxRestaurar = 0; uxAvisoRisco = 0;
@@ -326,6 +406,7 @@ int main(void) {
   assert(ajInlineAtivo(0, &p));
   assert(!ajInlineAtivo(1, &p));   // a modal still wins in Mobile
   puts("PASS: inline editor is Mobile only");
+#endif
   // A hidden GL window, as in tests/ajustes_shot.c: the footer frames below run
   // the real ajustes_desenhar, and its background needs a GL context. txt first,
   // before anything measures a line (text.c only tries each family once).
@@ -347,11 +428,16 @@ int main(void) {
   ajustes_iniciar();
   layout_tela_definir(1920, 1080);
   ponteiro_teste_relogio(agora); ponteiro_teste_janela(1920, 1080);
+#ifdef NV_TOUCH_UI
   fileiras(0); fileiras(1);
   if (!falhas) puts("PASS: Fileiras targets, callbacks and hints are Mobile only");
   interfacePorToque();
   if (!falhas) puts("PASS: interface selector confirms and saves TV/Mobile by touch");
   rodapePorToque();
   if (!falhas) puts("PASS: footer hint chips confirm and cancel by touch");
+#else
+  rodapePorClique();
+  if (!falhas) puts("PASS: footer hint chips cancel by click and the saved notice hides them");
+#endif
   return falhas ? 1 : 0;
 }
