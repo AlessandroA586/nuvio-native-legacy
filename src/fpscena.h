@@ -12,7 +12,7 @@
 // logs `[fps-cena] ...` per scene and, if `fps-cena-base` exists, the gate
 // verdict (10% p95 tolerance + 0.5 ms slack). Empty flag = Home + title.
 // Use "player-osd" separately during existing playback: waits for ready video,
-// then toggles OSD with DOWN without pausing, seeking or opening a source.
+// then toggles OSD with DOWN (never on live channels: DOWN opens the guide) without pausing, seeking or opening a source.
 // One run per launch; the flag may be created after launch. FPSBASE lines can
 // be saved as fps-cena-base, on the SAME device/settings/sample window.
 // Off by default; flag checked once per second.
@@ -47,11 +47,15 @@ int fps_gate(const FpsAmostra *a, const char *cena, double p95Base, long uplBase
              double tolPct, double folgaMs, char *out, size_t cap);
 
 // ---- TV runner ------------------------------------------------------------
-// Scripted scenes: home scroll, title page, player OSD. fpscena_quadro is called once per
+// Home needs a row of 4+ cards. Scripted scenes: home scroll, title page, player OSD. fpscena_quadro is called once per
 // frame with that frame's time; it returns an SDL keycode to inject (0 = none).
 // `base` is the fps-cena-base text or NULL; `escolha` limits scenes or NULL.
 void fpscena_iniciar(const char *escolha, const char *base);
 int  fpscena_ativo(void);
 int  fpscena_falhas(void);   // gate failures so far
 int  fpscena_quadro(double ms, int upl);
+// Optional guard: ok(cena) must say the app is on that scene's expected screen.
+// Checked at the start and end of each measured window; a miss fails the scene
+// instead of measuring something else. Survives fpscena_iniciar.
+void fpscena_estado(int (*ok)(const char *cena));
 #endif

@@ -9,6 +9,16 @@
 static int falhas;
 static void ok(int c, const char *m) { printf("%s %s\n", c ? "ok   " : "FALHA", m); if (!c) falhas++; }
 
+// Model of the real Home row handler: RIGHT saturates at the last card, LEFT on
+// the first card opens the side menu (home.c).
+static int col, menu, cartoes = 5;
+static int estadoMenu(const char *c) { (void)c; return !menu; }
+static void tecla(int k) {
+  if (k == SDLK_RIGHT && col < cartoes - 1) col++;
+  else if (k == SDLK_LEFT) { if (col == 0) menu = 1; else col--; }
+}
+static int estadoFalso(const char *c) { (void)c; return 0; }
+
 static void enche(FpsAmostra *a, double base, double lento, int nlentos, int upl) {
   int i;
   fps_zerar(a);
@@ -90,6 +100,20 @@ int main(int argc, char **argv) {
   fpscena_iniciar("player-osd", "player-osd 16.667 0\n");
   for (i = 0; i < 5000 && fpscena_ativo(); i++) fpscena_quadro(16.667, 0);
   ok(fpscena_falhas() == 0, "OSD: p95 16.667 -> 16.667 ms passa");
+  // home-scroll must never push LEFT past the first card, even on a 4-card row.
+  for (q = 4; q <= 5; q++) {
+    col = menu = 0; cartoes = q;
+    fpscena_estado(estadoMenu);
+    fpscena_iniciar("home-scroll", NULL);
+    for (i = 0; i < 5000 && fpscena_ativo(); i++) { int k = fpscena_quadro(1.0, 0); if (k && i > 130) tecla(k); }
+    ok(!menu && fpscena_falhas() == 0, "home-scroll: nunca abre o menu lateral");
+  }
+  // wrong screen: scene fails closed, not measured
+  fpscena_estado(estadoFalso);
+  fpscena_iniciar("home-scroll", "home-scroll 1.0 0\n");
+  for (i = 0; i < 5000 && fpscena_ativo(); i++) fpscena_quadro(0.8, 0);
+  ok(fpscena_falhas() == 1, "estado errado reprova a cena");
+  fpscena_estado(NULL);
   fpscena_iniciar("home-scroll", "title-page 1.0 0\n");
   for (i = 0; i < 5000 && fpscena_ativo(); i++) fpscena_quadro(0.8, 0);
   ok(fpscena_falhas() == 1, "baseline incompleta nao pode passar sem medir");

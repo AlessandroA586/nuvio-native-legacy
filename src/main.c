@@ -108,6 +108,13 @@
 // e a pessoa fica sabendo por que a tela trocou sozinha — uma vez por idioma
 // (o aviso tem um id por codigo e avisos-vistos.txt lembra). O texto ja sai no
 // idioma novo: i18n le ajustes_idioma().
+// Guard for the FPS scenes (fpscena.h): screen the measurement must be on.
+static int fpsEstado(const char *c) {
+  return !strcmp(c, "title-page") ? detail_aberto()
+       : !strcmp(c, "player-osd") ? player_aberto() && player_com_video() && !player_eh_canal()
+       : app_na_home();
+}
+
 static void aoMudarIdiomaAuto(const char *codigo, int fonte, int notificar) {
   desc_repetir();
   if (!notificar) return;
@@ -1847,8 +1854,9 @@ int main(int argc, char **argv) {
         fpsProcurar = agora;
         if (so) {
           int osd = strstr(so, "player-osd") != NULL;
-          if (osd ? player_aberto() && player_com_video() && video_pronto() : app_na_home()) {
+          if (osd ? player_aberto() && player_com_video() && video_pronto() && !player_eh_canal() : app_na_home()) {
             fpsBase = dados_ler("fps-cena-base");
+            fpscena_estado(fpsEstado);
             fpscena_iniciar(osd ? "player-osd" : so, fpsBase);
             fpsIni = 1;
           }

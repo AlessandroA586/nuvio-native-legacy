@@ -116,7 +116,10 @@ static struct {
   const char *base;
   char escolha[256];
   int falhas;
+  int (*estado)(const char *cena);
 } S;
+
+void fpscena_estado(int (*ok)(const char *cena)) { S.estado = ok; }
 
 static int quer(int c) { return S.escolha[0] ? strstr(S.escolha, CENAS[c].nome) != NULL : c < 2; }
 
@@ -130,7 +133,9 @@ static void proxima(void) {
 }
 
 void fpscena_iniciar(const char *escolha, const char *base) {
+  int (*estado)(const char *) = S.estado;
   memset(&S, 0, sizeof S);
+  S.estado = estado;
   S.ativo = 1; S.base = base;
   if (escolha) snprintf(S.escolha, sizeof S.escolha, "%s", escolha);
   { int c, algum = 0;   // text with no scene name means Home + title (OSD needs playback)
@@ -149,10 +154,17 @@ int fpscena_quadro(double ms, int upl) {
   if (!S.ativo) return 0;
   c = &CENAS[S.cena];
   p = &c->passos[S.passo];
+  if (p->medir && (S.q == 0 || S.q + 1 >= p->quadros) && S.estado && !S.estado(c->nome)) {
+    // wrong screen/focus: the numbers would belong to another scene
+    printf("[fps-gate] %s FALHA tela inesperada\n", c->nome);
+    S.falhas++; S.cena++; proxima();
+    return 0;
+  }
   if (p->medir) fps_add(&S.a, ms, upl);
   if (p->tecla && p->cada && S.q % p->cada == 0) {
-    // measured steps swing right then left, so the row scrolls both ways
-    tecla = p->tecla == SDLK_RIGHT && S.q >= p->quadros / 2 ? SDLK_LEFT : p->tecla;
+    // RIGHT steps swing 3 right / 3 left from the first card, so the row scrolls
+    // both ways and never reaches the left edge (that opens the side menu).
+    tecla = p->tecla == SDLK_RIGHT && (S.q / p->cada / 3) % 2 ? SDLK_LEFT : p->tecla;
   }
   if (++S.q >= p->quadros) {
     char l[320];
