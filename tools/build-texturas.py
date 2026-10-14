@@ -12,9 +12,9 @@
 # O QUE FAZ: tira a LUMINANCIA do displacement (o grao), limita os pontos
 # quentes a 1,6x (fibra isolada nao vira ruido na pilula), tinge cada
 # variante num matiz de 30 em 30 graus (OKLCh, C 0,09, L normalizado para
-# Y 0,42 — o mesmo Y em todas, para a tinta/veu do rotulo usar UM par de
-# percentis p10/p90), e grava 13 JPG de 512: material-neutro.jpg e
-# material-000..011.jpg.
+# Y 0,42), e grava 13 JPG de 512: material-neutro.jpg e
+# material-000..011.jpg. A tinta/veu do rotulo usa o par de percentis p10/p90
+# MEDIDO DE CADA ARQUIVO (impresso no fim e copiado para NV_TX_ASSET_Y).
 #
 #   /tmp/pilvenv/bin/python3 tools/build-texturas.py /tmp/paper002/Paper002_1K-JPG_Color.jpg
 #
@@ -94,11 +94,14 @@ def main():
                 q[x, y] = tuple(min(255, int(c * g + 0.5)) for c in tinta)
         im.save(os.path.join(SAIDA, nome), quality=80)
         print("%s: tinta #%02x%02x%02x" % (nome, *tinta))
-    # AS CONSTANTES que o runtime usa (NV_TX_ASSET_P10/P90, ajustes.c): medidas
-    # do ARQUIVO FINAL, nao da conta intermediaria — o clamp e o JPEG contam.
-    im = Image.open(os.path.join(SAIDA, "material-000.jpg")).convert("RGB")
-    px = im.load()
-    ys = sorted(ylin(px[x, y]) for y in range(TAM) for x in range(TAM))
-    print("CONSTANTES NV_TX_ASSET_P10=%.4f NV_TX_ASSET_P90=%.4f" % (ys[len(ys) // 10], ys[len(ys) * 9 // 10]))
+    # AS CONSTANTES que o runtime usa (NV_TX_ASSET_Y, ajustes.c): medidas do
+    # ARQUIVO FINAL de CADA variante, nao da conta intermediaria — o clamp e o
+    # JPEG contam, e cada matiz mediu um par diferente (p90 0,69-0,79).
+    for h in [None] + list(range(0, 360, 30)):
+        n = "material-neutro.jpg" if h is None else "material-%03d.jpg" % h
+        im = Image.open(os.path.join(SAIDA, n)).convert("RGB")
+        px = im.load()
+        ys = sorted(ylin(px[x, y]) for y in range(TAM) for x in range(TAM))
+        print("NV_TX_ASSET_Y %s {%.4f, %.4f}" % (n, ys[len(ys) // 10], ys[len(ys) * 9 // 10]))
 
 main()
