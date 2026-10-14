@@ -2297,7 +2297,7 @@ static void tocarCanal(const CatItem *it) {
     // So o addon que publicou o canal responde por ele; ver alvoBase em
     // addons.c e o que o FrostView fora do ar custava.
     addons_definir_origem(guia_canal_origem());
-    addons_buscar(it->imdb, "tv");
+    addons_buscar(it->imdb, guia_canal_tipo());
     addons_definir_origem(NULL);
   }
   aguardandoFonte = 1;

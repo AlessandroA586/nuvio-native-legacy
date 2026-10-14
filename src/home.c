@@ -259,7 +259,12 @@ int home_pediu_social(void) { int v=pedidoSocial;pedidoSocial=0;return v; }
 static int pedidoGuia;
 static char guiaId[80];
 static int fileiraEhCanal(const Fileira *f) {
-  return f && (!strcmp(f->catTipo, "channel") || !strcmp(f->catTipo, "tv"));
+  static const char *tipos[] = { "channel", "tv", "channels", "live", "iptv" };
+  int i;
+  if (!f) return 0;
+  for (i = 0; i < (int)(sizeof tipos / sizeof tipos[0]); i++)
+    if (!strcmp(f->catTipo, tipos[i])) return 1;
+  return 0;
 }
 int home_pediu_guia(char *id, int tam) {
   if (!pedidoGuia) return 0;

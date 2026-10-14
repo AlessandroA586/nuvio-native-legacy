@@ -2153,17 +2153,24 @@ typedef struct {
   pthread_mutex_t trava;
 } Consulta;
 
-// O NOME DE TIPO DE CANAL QUE O MANIFESTO DO ADDON USA: "tv", "channel" ou
+// O NOME DE TIPO DE CANAL QUE O MANIFESTO DO ADDON USA: a literal do
+// catalogo declarado ("channel", "tv", "channels", "live", "iptv") ou
 // NULL (manifesto nao lido, ou nenhum catalogo de canal). Sai de catalogs[],
 // que capacidadesDoManifesto ja guarda para o guia: FrostView declara
-// "channel", IPTV Bridge e Meu Futebol "tv". Devolve a literal, nunca o campo
-// do addon, porque o fio que le nao segura trava nenhuma.
+// "channel", IPTV Bridge e Meu Futebol "tv", e addon de lista traz
+// "live"/"iptv" — num manifesto MISTO (filme+serie+canal, como o do M3U
+// Mux) so o tipo declarado responde ao /stream/ dele. Devolve a literal,
+// nunca o campo do addon, porque o fio que le nao segura trava nenhuma.
 static const char *tipoCanalDeclarado(int i) {
   int k;
   if (i < 0 || i >= nAddon || !addon[i].canalLido) return NULL;
   for (k = 0; k < addon[i].nCanal; k++) {
-    if (!strcasecmp(addon[i].canal[k].tipo, "channel")) return "channel";
-    if (!strcasecmp(addon[i].canal[k].tipo, "tv")) return "tv";
+    const char *t = addon[i].canal[k].tipo;
+    if (!strcasecmp(t, "channel"))  return "channel";
+    if (!strcasecmp(t, "tv"))       return "tv";
+    if (!strcasecmp(t, "channels")) return "channels";
+    if (!strcasecmp(t, "live"))     return "live";
+    if (!strcasecmp(t, "iptv"))     return "iptv";
   }
   return NULL;
 }
@@ -2211,9 +2218,22 @@ static void *fioFontes(void *u) {
     // tipoCanalDeclarado: o FrostView declara "channel" e o app perguntava
     // "tv" antes, gastando uma viagem inteira por canal aberto so para
     // receber a lista vazia que agora dispara o segundo nome logo abaixo.
-    { const char *dec = c->tipoAlt && c->tipoAlt[0] ? tipoCanalDeclarado(i) : NULL;
+    { // So consulta o manifesto para pedido DE CANAL (tv/channel tem par em
+      // tipoAlt; "live"/"channels"/"iptv" sao canal tambem — a lista e a
+      // mesma do guia e do manifesto, ver tipoCanalDeclarado).
+      int canalReq = !strcmp(c->tipo, "tv") || !strcmp(c->tipo, "channel") ||
+                     !strcmp(c->tipo, "channels") || !strcmp(c->tipo, "live") ||
+                     !strcmp(c->tipo, "iptv");
+      const char *dec = canalReq ? tipoCanalDeclarado(i) : NULL;
       t1 = c->tipo; t2 = c->tipoAlt;
-      if (dec && !strcmp(dec, c->tipoAlt)) { t1 = c->tipoAlt; t2 = c->tipo; } }
+      if (dec && t2[0] && !strcmp(dec, t2)) { t1 = t2; t2 = c->tipo; }
+      // Canal FORA do par tv/channel ("live", "channels", "iptv"): tipoAlt
+      // nao tem par para ele, entao a segunda tentativa usa o nome declarado
+      // no manifesto — o mesmo do catalogo de onde o canal saiu. E quando o
+      // pedido veio por um dos dois nomes comuns mas o manifesto declara
+      // outro (addon misto que serve canais so por "live", por exemplo), o
+      // declarado e a segunda tentativa, e nao o par que ele nao tem.
+      if (dec && strcmp(dec, t1) && (!t2[0] || strcmp(dec, t2))) t2 = dec; }
     // Prazo da consulta (c->timeout): 30 s para filme/serie, 12 s para canal e
     // prefetch. Ver ADD_PRAZO_VOD_S em consultar().
     prazoS = prazoDoAddon(c, i);
@@ -2330,9 +2350,14 @@ unsigned addons_fora_do_ar(char *nome, unsigned tam) {
 }
 
 // O segundo nome de tipo de canal ao vivo; "" para os demais. Ver fioFontes.
+// Os raros "channels"/"live"/"iptv" alternam com "channel", o nome que a
+// maioria dos addons de lista usa para o /stream/ — quando o manifesto foi
+// lido o tipo declarado dele e que manda na segunda tentativa (fioFontes).
 static const char *tipoAlternativo(const char *tipo) {
   if (!strcmp(tipo, "tv"))      return "channel";
   if (!strcmp(tipo, "channel")) return "tv";
+  if (!strcmp(tipo, "channels") || !strcmp(tipo, "live") || !strcmp(tipo, "iptv"))
+    return "channel";
   return "";
 }
 
@@ -2744,7 +2769,9 @@ static void resumoDaLista(Resumo *rs) {
 // AGORA nao ha link para ele — os mesmos canais voltam a ter fonte depois.
 int addons_motivo_vazio(char *dst, unsigned n) {
   const Resumo *r = &resumo;
-  int canal = !strcmp(alvoTipo, "tv") || !strcmp(alvoTipo, "channel");
+  int canal = !strcmp(alvoTipo, "tv") || !strcmp(alvoTipo, "channel") ||
+              !strcmp(alvoTipo, "channels") || !strcmp(alvoTipo, "live") ||
+              !strcmp(alvoTipo, "iptv");
   if (!dst || !n || !r->valido) return 0;
   if (!r->instalados || !r->comFonte)
     snprintf(dst, n, "%s", i18n("Nenhum add-on de fontes instalado"));
