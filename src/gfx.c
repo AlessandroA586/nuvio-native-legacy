@@ -1913,6 +1913,12 @@ static int vidroCruza(const float a[4], const float b[4]) {
 static int vidroContem(const float a[4], const float b[4]) {
   return a[2] > a[0] && a[0] <= b[0] && a[1] <= b[1] && a[2] >= b[2] && a[3] >= b[3];
 }
+static int vidroDentro(GfxRect r) {
+  float b[4] = { r.x, r.y, r.x + r.w, r.y + r.h };
+  int i;
+  for (i = 0; i < vidroNVidros; i++) if (vidroContem(vidroVidros[i], b)) return 1;
+  return 0;
+}
 // Conteudo que muda sem passar pelo hash (textura reenviada no lugar, nome
 // de textura reaproveitado): nenhum vidro reaproveita a captura antiga.
 void gfx_vidro_sujar(void) { vidroSujo = 1; }
@@ -1945,8 +1951,14 @@ static void vidroDesenho(GfxRect r, GLuint tex, GfxModo modo, float foco, float 
   if (P->din >= 0) vidroSoma(dinPend, sizeof dinPend);
   if (P->texB >= 0) { vidroSoma(&camTexB, sizeof camTexB); vidroSoma(&camAlfaB, sizeof camAlfaB); }
   // So o que cai na TELA (nao num assado, snapshot ou miniatura) e nao o
-  // proprio vidro: dois vidros que se cruzam ja vao chapados.
-  if (modo != GFX_VIDRO && !snapAtivo && !miniAtiva && telaW == telaRealW && telaH == telaRealH)
+  // proprio vidro: dois vidros que se cruzam ja vao chapados. Nem a SOMBRA
+  // caida de cada vidro, nem o conteudo DENTRO de um vidro ja pintado (rotulo,
+  // capsula, icone): com eles os vidros do quadro convergem numa captura so,
+  // como no PlxNative (gfx::blur_region_union, um cache de desfoque por quadro;
+  // widgets_glass_budget_tests.rs). Sem isso a barra, o perfil, a ilha e o
+  // painel recapturavam um a um: 4 capturas, 20 passadas por quadro.
+  if (modo != GFX_VIDRO && modo != GFX_SOMBRA && !snapAtivo && !miniAtiva &&
+      telaW == telaRealW && telaH == telaRealH && !vidroDentro(r))
     vidroUne(vidroDesde, r.x, r.y, r.x + r.w, r.y + r.h);
 }
 // Furo para o video (alfa 0): o vidro que o cruza vai chapado — o que esta
