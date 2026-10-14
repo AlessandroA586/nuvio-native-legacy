@@ -46,6 +46,7 @@ int main(void) {
   char cam[700];
   FILE *f;
   int k, cap, pas;
+  Uint64 t0;
   GLuint fbo, tex;
   SDL_SetHint("SDL_MAC_BACKGROUND_APP", "1");
   assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
@@ -78,13 +79,17 @@ int main(void) {
   for (k = 0; k < 150; k++) quadro(0.0f, 16u * k);
 
   // Rolando: a pagina muda todo quadro, o vidro tem de recapturar, UMA vez.
+  // O ms (com glFinish) so informa: a GPU do Mac nao e a da TV.
   cap = pas = 0;
+  glFinish(); t0 = SDL_GetPerformanceCounter();
   for (k = 0; k < 20; k++) {
     quadro(4.0f * (k + 1), 16u * (150 + k));
     if (gfx_vidro_capturas > cap) cap = gfx_vidro_capturas;
     if (gfx_vidro_passadas > pas) pas = gfx_vidro_passadas;
   }
-  printf("rolando: ate %d capturas e %d passadas por quadro\n", cap, pas);
+  glFinish();
+  printf("rolando: ate %d capturas e %d passadas por quadro, %.2f ms/quadro\n", cap, pas,
+         (double)(SDL_GetPerformanceCounter() - t0) * 1000.0 / SDL_GetPerformanceFrequency() / 20.0);
   confere(cap == 1, "barra, perfil, ilha e painel dividem uma captura por quadro");
   confere(pas <= PASSADAS_POR_CAPTURA, "no maximo as 5 passadas de uma captura");
 
