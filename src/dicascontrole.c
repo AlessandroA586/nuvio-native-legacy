@@ -337,7 +337,7 @@ static void remotoLG(float x, float y, float s, int tk, float prensa, float a) {
   forma(volta.x + volta.w * .5f, volta.y + volta.h * .5f, 14 * s, 0, .6f * a);
   forma(inicio.x + inicio.w * .5f, inicio.y + inicio.h * .5f, 13 * s, 1, .6f * a);
   GfxRect vol = {x + 22 * s, y + 372 * s, 86 * s, 186 * s};
-  gfx_cor(vol, .42f, .16f, .17f, .20f, a);
+  gfx_cor(vol, .22f, .16f, .17f, .20f, a);
   texto("+", TXT_CAPTION, vol.x, vol.y + 20 * s, vol.w, .5f * a);
   texto("−", TXT_CAPTION, vol.x, vol.y + vol.h - 62 * s, vol.w, .5f * a);
   tecla((GfxRect){x + 142 * s, y + 372 * s, 86 * s, 88 * s}, "CH+", tk == TK_CHMAIS, prensa, a);
@@ -365,7 +365,7 @@ static void remotoSAM(float x, float y, float s, int tk, float prensa, float a) 
   forma(x + 118 * s, y + 292 * s, 12 * s, 1, .6f * a);
   forma(x + 186 * s, y + 292 * s, 12 * s, 2, .6f * a);
   GfxRect vol = {x + 24 * s, y + 352 * s, 84 * s, 196 * s};
-  gfx_cor(vol, .40f, .16f, .17f, .20f, a);
+  gfx_cor(vol, .22f, .16f, .17f, .20f, a);
   texto("+", TXT_CAPTION, vol.x, vol.y + 20 * s, vol.w, .5f * a);
   texto("−", TXT_CAPTION, vol.x, vol.y + vol.h - 62 * s, vol.w, .5f * a);
   tecla((GfxRect){x + 122 * s, y + 352 * s, 84 * s, 94 * s}, "CH+", tk == TK_CHMAIS, prensa, a);
@@ -381,8 +381,8 @@ static void remotoSAM(float x, float y, float s, int tk, float prensa, float a) 
 // os rockers VOL e CH na metade de baixo.
 static void remotoGTV(float x, float y, float s, int tk, float prensa, float a) {
   GfxRect corpo = {x, y, 240 * s, 600 * s};
-  gfx_cor(corpo, .5f, .88f, .89f, .91f, a);
-  gfx_cor((GfxRect){x + 3 * s, y + 3 * s, corpo.w - 6 * s, corpo.h - 6 * s}, .5f, .93f, .94f, .95f, a);
+  gfx_cor(corpo, .2f, .88f, .89f, .91f, a);
+  gfx_cor((GfxRect){x + 3 * s, y + 3 * s, corpo.w - 6 * s, corpo.h - 6 * s}, .19f, .93f, .94f, .95f, a);
   float cx = x + 120 * s;
   GfxRect dpad = {cx - 86 * s, y + 26 * s, 172 * s, 172 * s};
   gfx_cor(dpad, .5f, .82f, .83f, .85f, a);
@@ -395,7 +395,7 @@ static void remotoGTV(float x, float y, float s, int tk, float prensa, float a) 
   forma(x + 121 * s, y + 263 * s, 12 * s, 3, .6f * a);
   forma(x + 189 * s, y + 263 * s, 12 * s, 1, .6f * a);
   GfxRect vol = {x + 28 * s, y + 330 * s, 84 * s, 190 * s};
-  gfx_cor(vol, .40f, .82f, .83f, .85f, a);
+  gfx_cor(vol, .22f, .82f, .83f, .85f, a);
   texto("+", TXT_CAPTION, vol.x, vol.y + 20 * s, vol.w, .5f * a);
   texto("−", TXT_CAPTION, vol.x, vol.y + vol.h - 62 * s, vol.w, .5f * a);
   tecla((GfxRect){x + 128 * s, y + 330 * s, 84 * s, 90 * s}, "CH+", tk == TK_CHMAIS, prensa, a);
