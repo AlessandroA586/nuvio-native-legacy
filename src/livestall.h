@@ -48,6 +48,7 @@ typedef struct {
   int      tentativa;  // reaberturas usadas nesta queda
   int      eofGratis;  // TPK: a reabertura imediata desta queda ja foi usada
   int      pendente;   // esperando o prazo da reabertura
+  int      fonteSeca;  // agendamento apenas por fonte seca, cancelavel se voltar
   unsigned quando;     // instante (ms) da reabertura
 } NvLiveStall;
 
@@ -61,7 +62,7 @@ static inline unsigned nv_ls_espera_ms(int n) {
 
 // Depois de reabrir: nova abertura, vigia desarmado ate a posicao andar de novo.
 static inline void nv_ls_reaberto(NvLiveStall *s, unsigned agora) {
-  s->pos = 0.0; s->movEm = agora; s->movDesde = 0; s->andou = 0; s->pendente = 0;
+  s->pos = 0.0; s->movEm = agora; s->movDesde = 0; s->andou = 0; s->pendente = 0; s->fonteSeca = 0;
   s->fim = 0.0; s->fimEm = agora;
 }
 
@@ -82,10 +83,9 @@ static inline int nv_ls_passo_buf(NvLiveStall *s, unsigned agora, double pos, in
   }
   if (s->pendente) {
     if ((int)(agora - s->quando) < 0) return NV_LS_ESPERA;
-    // Prazo venceu e o buffer voltou a crescer durante a espera: a fonte nao
-    // secou, a reabertura pendente e cancelada (revisao 205) e o quadro e
-    // reavaliado pelo caminho normal abaixo.
-    if (s->fim > 0.5 && (unsigned)(agora - s->fimEm) < NV_LS_SEMDADO_MS) {
+    // So cancela fonte seca que voltou a receber dados; buffer crescendo
+    // nao prova que o decoder recuperou de posicao parada, EOF ou buffering.
+    if (s->fonteSeca && s->fim > 0.5 && (unsigned)(agora - s->fimEm) < NV_LS_SEMDADO_MS) {
       s->pendente = 0; s->tentativa--;
     } else return NV_LS_REABRIR;
   }
@@ -111,14 +111,15 @@ static inline int nv_ls_passo_buf(NvLiveStall *s, unsigned agora, double pos, in
     if (!seco) return NV_LS_NADA;
   }
   if (!pronto) return NV_LS_NADA;      // abrindo: quem vigia e o prazo de abertura
-  parado = terminou || seco ||
+  parado = terminou ||
            (s->andou && (unsigned)(agora - s->movEm) >= NV_LS_PARADO_MS) ||
            (s->andou && bufMs >= NV_LS_PARADO_MS);
-  if (!parado) return NV_LS_NADA;
+  if (!parado && !seco) return NV_LS_NADA;
   s->movDesde = 0;
   if (s->tentativa >= NV_LS_MAX) return NV_LS_DESISTIR;
   s->tentativa++;
   s->pendente = 1;
+  s->fonteSeca = seco && !parado;
   s->quando = agora + nv_ls_espera_ms(s->tentativa);
   return NV_LS_AGENDOU;
 }

@@ -90,6 +90,31 @@ int main(void) {
   for (t = 17500, p = 17.0; t < 60000; t += 500, p += 0.5)   // segue tocando
     assert(nv_ls_passo_buf(&s, t, p, 1, 0, 0, 0, p + 30.0) == NV_LS_NADA);
 
+  // Decoder parado, EOF ou buffering: buffer crescendo nao cancela a recuperacao.
+  for (int motivo = 0; motivo < 3; motivo++) {
+    int reabriu = 0;
+    nv_ls_zerar(&s);
+    nv_ls_passo_buf(&s, 1000, 1.0, 1, 0, 0, 0, 10.0);
+    nv_ls_passo_buf(&s, 2000, 2.0, 1, 0, 0, 0, 10.0);
+    for (t = 3000; t <= 60000; t += 1000) {
+      double fim = 10.0 * (t / 10000 + 1);
+      int r = nv_ls_passo_buf(&s, t, 2.0, 1, 0, motivo == 1,
+                             motivo == 2 ? NV_LS_PARADO_MS : 0, fim);
+      if (r == NV_LS_REABRIR) { reabriu = 1; break; }
+    }
+    assert(reabriu && t == (motivo == 0 ? 11000u : 4000u));
+    assert(s.tentativa == 1);
+  }
+
+  // Fonte seca junto com posicao parada/EOF: preservar o motivo de recuperacao.
+  for (int eof = 0; eof <= 1; eof++) {
+    nv_ls_zerar(&s);
+    nv_ls_passo_buf(&s, 1000, 1.0, 1, 0, 0, 0, 3.0);
+    assert(nv_ls_passo_buf(&s, 16000, 1.0, 1, 0, eof, 0, 3.0) == NV_LS_AGENDOU);
+    assert(nv_ls_passo_buf(&s, 17000, 1.0, 1, 0, eof, 0, 30.0) == NV_LS_REABRIR);
+    assert(s.tentativa == 1);
+  }
+
   puts("livestall_seco: ok");
   return 0;
 }
