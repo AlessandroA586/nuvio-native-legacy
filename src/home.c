@@ -5913,7 +5913,12 @@ static void desenhaEditorialCard(const CatItem *cItem, TipoFileira tipo, float p
   // Sem dado, sem texto — nao a lista de demonstracao que ficava
   // aqui e carimbava nome e genero de outro titulo no card.
   const char *nome   = (ci && ci->titulo[0]) ? ci->titulo : NULL;
-  const char *genero = !ajustes_hero_genero() ? NULL
+  // "Mostrar genero no destaque" desligado: so arte e logo no DESTAQUE —
+  // a linha de baixo inteira (genero, IMDb, classificacao) sai. As
+  // fileiras COLECAO/SERVICO/SOCIAL nao sao destaque e ficam como estao.
+  const int semMeta = (tipo == FILEIRA_DESTAQUE || tipo == FILEIRA_DESTAQUE_QUADRADO)
+                    && !ajustes_hero_genero();
+  const char *genero = semMeta ? NULL
                       : (ci && ci->genero[0]) ? ci->genero
                       : ci ? i18n(!strcmp(ci->tipo, "series") ? "Série" : "Filme") : NULL;
   TxtLinha tg = genero
@@ -5958,7 +5963,7 @@ static void desenhaEditorialCard(const CatItem *cItem, TipoFileira tipo, float p
   // da linha (a referencia nao a tem); sem nota atribuivel ao IMDb
   // (sem ID, ou `tmdb:` sem vínculo IMDb verificado), a classificacao volta como antes.
   int notaFeita = 0;
-  int imdbRating = orig && ci ? imdbnota_obter(ci->imdb, ci->nota, !strcmp(ci->tipo,"series")) : 0;
+  int imdbRating = orig && ci && !semMeta ? imdbnota_obter(ci->imdb, ci->nota, !strcmp(ci->tipo,"series")) : 0;
   if (imdbRating > 0) {
     float bx = px + pad + tg.w + (genero ? 14.0f : 0.0f);
     if (bx + badge_imdb_largura(imdbRating) < px + w - pad) {
@@ -5972,7 +5977,7 @@ static void desenhaEditorialCard(const CatItem *cItem, TipoFileira tipo, float p
   // todo card sem classificacao, e o selo vermelho tem cara de aviso
   // oficial — e o mesmo defeito do "14" cravado em descoberta.c, so
   // que na home.
-  if (!notaFeita && ci && ci->classificacao[0] && tg.w + BADGE_H + 24.0f < w - pad*2) {
+  if (!notaFeita && !semMeta && ci && ci->classificacao[0] && tg.w + BADGE_H + 24.0f < w - pad*2) {
     char clas[8];
     snprintf(clas, sizeof clas, "%s%s", (ci->classificacao[0] >= '0' && ci->classificacao[0] <= '9') ? "A" : "", ci->classificacao);
     { float bx = px + pad + tg.w + (genero ? 14.0f : 0.0f);

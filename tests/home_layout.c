@@ -7,7 +7,7 @@
 #define ajustes_espaco_titulos teste_espaco_titulos
 #define ajustes_hero_genero teste_hero_genero
 #define txt_desenhar teste_txt_desenhar
-static int testeGenero = 1, nTxtDesenhado = 0;
+static int testeGenero = 1, nTxtDesenhado = 0, nBadge = 0, testeImdb = 0;
 static int teste_hero_genero(void) { return testeGenero; }
 #define ajustes_espaco_fileiras teste_espaco_fileiras
 static float espacoTit = 1.0f, espacoFil = 1.0f;
@@ -62,10 +62,10 @@ GLuint tex_obter_logo_larg(const char *c, float l) { (void)c; (void)l; return 0;
 int  tex_marca_escura(const char *c) { (void)c; return 0; }
 TxtLinha txt_linha_corta(TxtEstilo e, const char *s, int r, int g, int b, int a, float w) {
   (void)e; (void)s; (void)r; (void)g; (void)b; (void)a; (void)w; return (TxtLinha){ 1, 10, 10, 0, 0 }; }
-float badge_desenhar(float x, float y, const char *t, BadgeEstilo e, float a) { (void)x; (void)y; (void)t; (void)e; (void)a; return 0; }
-float badge_imdb(float x, float y, int n, int e, float a) { (void)x; (void)y; (void)n; (void)e; (void)a; return 0; }
+float badge_desenhar(float x, float y, const char *t, BadgeEstilo e, float a) { nBadge++; (void)x; (void)y; (void)t; (void)e; (void)a; return 0; }
+float badge_imdb(float x, float y, int n, int e, float a) { nBadge++; (void)x; (void)y; (void)n; (void)e; (void)a; return 0; }
 float badge_imdb_largura(int n) { (void)n; return 0; }
-int  imdbnota_obter(const char *i, int c, int s) { (void)i; (void)c; (void)s; return 0; }
+int  imdbnota_obter(const char *i, int c, int s) { (void)i; (void)c; (void)s; return testeImdb; }
 const char *i18n(const char *s) { return s; }
 static void homeCom(int layout, int heroLigado) { testeLayout = layout; testeHero = heroLigado; }
 
@@ -393,8 +393,36 @@ int main(void) {
     nTxtDesenhado = 0; testeGenero = 0;
     desenhaEditorialCard(&it, FILEIRA_DESTAQUE, 0, 0, 640, 360, 8);
     desligado = nTxtDesenhado;
-    testeGenero = 1;
-    assert(ligado == desligado + 1); }
+    assert(ligado == desligado + 1);
+    // Desligado tira a linha de baixo INTEIRA do destaque: classificacao
+    // (Moderna) e selo IMDb (Padrao/Dinamica) tambem saem.
+    snprintf(it.classificacao, sizeof it.classificacao, "16");
+    nBadge = 0; desenhaEditorialCard(&it, FILEIRA_DESTAQUE, 0, 0, 640, 360, 8);
+    assert(nBadge == 0);
+    testeImdb = 75;
+    for (int lay = HOME_LAYOUT_PADRAO; lay <= HOME_LAYOUT_DINAMICA; lay++) {
+      homeCom(lay, 1);
+      nBadge = 0; desenhaEditorialCard(&it, FILEIRA_DESTAQUE, 0, 0, 640, 360, 8);
+      assert(nBadge == 0);
+      testeGenero = 1;
+      nBadge = 0; desenhaEditorialCard(&it, FILEIRA_DESTAQUE, 0, 0, 640, 360, 8);
+      assert(nBadge == 1);
+      testeGenero = 0;
+    }
+    testeImdb = 0; homeCom(HOME_LAYOUT_MODERNA, 1);
+    // So o destaque: COLECAO/SERVICO/SOCIAL mantem genero e selo.
+    TipoFileira outras[] = { FILEIRA_COLECAO, FILEIRA_SERVICO, FILEIRA_SOCIAL };
+    for (int k = 0; k < 3; k++) {
+      int on, onB, off, offB;
+      testeGenero = 1; nTxtDesenhado = 0; nBadge = 0;
+      desenhaEditorialCard(&it, outras[k], 0, 0, 640, 360, 8);
+      on = nTxtDesenhado; onB = nBadge;
+      testeGenero = 0; nTxtDesenhado = 0; nBadge = 0;
+      desenhaEditorialCard(&it, outras[k], 0, 0, 640, 360, 8);
+      off = nTxtDesenhado; offB = nBadge;
+      assert(on == off && onB == offB && onB == 1);
+    }
+    testeGenero = 1; }
 
   free(itensTeste);
   puts("home layout: PASS (fallback, colecoes, ordem, ranks, foco, rolagem #103)");
