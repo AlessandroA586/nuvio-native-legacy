@@ -351,6 +351,76 @@ int main(void) {
     assert(estiloAbas() == VT_AB_CHIPS && cabN() == 0);
   }
 
+  // 12. MENU SUSPENSO LONGO (#205): com 16 catalogos a lista nao cabe entre o
+  // cabecalho e o pe da tela (parava em Y~1093, alem dos 1080). A lista se
+  // limita ao espaco util e a janela segue o cursor: o foco nunca some.
+  { static ColSource f16[16];
+    char cam[700]; FILE *f; int vis, base;
+    float py = VT_AB_Y + VT_AB_H + 8.0f;
+    for (i = 0; i < 16; i++) {
+      memset(&f16[i], 0, sizeof f16[i]);
+      snprintf(f16[i].type, sizeof f16[i].type, "movie");
+      snprintf(f16[i].title, sizeof f16[i].title, "Catálogo %d", i + 1);
+      snprintf(f16[i].base, sizeof f16[i].base, "https://exemplo.invalid/%d", i);
+    }
+    pasta.sources = f16; pasta.nSources = 16;
+    snprintf(cam, sizeof cam, "%s/ajustes.txt", dados_dir());
+    f = fopen(cam, "w"); assert(f);
+    fprintf(f, "abasEstiloLocal 1\n"); fclose(f);
+    ajustes_dir(dados_dir());
+    lay = layEscolha = VT_LAY_GRADE; celLay = -1; orderN = -1; montar(nSemente);
+    source = 0; tabFocus = 1; tabCursor = 0;
+    assert(cabN() == 1 && cursorInicial() == 0);
+    tecla(SDLK_RETURN);   // abre a lista suspensa
+    assert(ddAberto == 1 && ddCursor == 0);
+    base = ddJanela(16, ddCursor, py, &vis);
+    assert(base == 0 && vis < 16);                       // rola, nao transborda
+    assert(py + vis * VT_DD_RH + 12.0f <= NV_TELA_H);
+    for (i = 0; i < 15; i++) tecla(SDLK_DOWN);
+    assert(ddCursor == 15);
+    base = ddJanela(16, ddCursor, py, &vis);
+    assert(base > 0 && ddCursor >= base && ddCursor < base + vis);   // foco visivel
+    assert(py + vis * VT_DD_RH + 12.0f <= NV_TELA_H);
+    tecla(SDLK_RETURN);
+    assert(ddAberto == 0 && source == 15 && tabFocus == 0);
+    ddAberto = 0;
+  }
+
+  // 13. ABERTURA DA COLECAO NO MENU SUSPENSO (#205): o cursor do cabecalho
+  // nasce no botao do catalogo, nao no indice da primeira fonte com endereco
+  // (com ele em 4 e cabN()==3, o OK nascia em "Exibição"). O botao "Exibição"
+  // tambem mantem o cursor na posicao dele, nao no numero de abas.
+  { static ColSource f5[5];
+    static ColFolder pasta5;
+    char cam[700]; FILE *f;
+    for (i = 0; i < 5; i++) {
+      memset(&f5[i], 0, sizeof f5[i]);
+      snprintf(f5[i].type, sizeof f5[i].type, i < 4 ? "movie" : "series");
+      snprintf(f5[i].title, sizeof f5[i].title, "Fonte %d", i);
+      snprintf(f5[i].catId, sizeof f5[i].catId, "cat%d", i);
+    }
+    snprintf(f5[4].base, sizeof f5[4].base, "https://exemplo.invalid/series");
+    memset(&pasta5, 0, sizeof pasta5);
+    snprintf(pasta5.id, sizeof pasta5.id, "cursor205");
+    snprintf(pasta5.title, sizeof pasta5.title, "Cursor");
+    pasta5.sources = f5; pasta5.nSources = 5;
+    vertudo_colecao(&pasta5);
+    assert(source == 4);                                 // a unica com endereco
+    assert(tabFocus == 1);
+    assert(tabCursor == cursorInicial() && tabCursor == 2);   // antes: 4
+    tabFocus = 1; tabCursor = cabN();
+    assert(tabCursor == 3);
+    tecla(SDLK_RETURN);   // "Exibição": troca e o cursor segue no botao
+    assert(lay != VT_LAY_GRADE);
+    assert(tabCursor == cabN() && tabCursor == 3);       // antes: nAbas()==5
+    // restaura o estilo e a pasta do resto do teste
+    pasta.sources = fontes; pasta.nSources = 1;
+    snprintf(cam, sizeof cam, "%s/ajustes.txt", dados_dir());
+    f = fopen(cam, "w"); assert(f);
+    fprintf(f, "abasEstiloLocal 0\n"); fclose(f); ajustes_dir(dados_dir());
+    assert(ajustes_abas_estilo() == 0);
+  }
+
   printf("colecao_exibicao: ok\n");
   return 0;
 }

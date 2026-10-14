@@ -488,6 +488,7 @@ static void carregarFonte(void) {
   desc_vertudo_filtro(base,s->type,s->catId,s->genre);
 }
 
+static int cursorInicial(void);
 void vertudo_colecao(const ColFolder *folder) {
   int i;
   if(!folder||!folder->nSources)return;
@@ -504,6 +505,10 @@ void vertudo_colecao(const ColFolder *folder) {
     if (folder->sources[i].prov[0] || baseDaFonte(&folder->sources[i])[0])
       { source = tabCursor = i; break; }
   snprintf(titulo,sizeof titulo,"%s",folder->title);openSource();
+  // O cursor do cabecalho nasce na posicao certa (no Menu suspenso e o botao
+  // do catalogo, nao o indice da fonte aberta), senao o OK nasce em "Exibição"
+  // quando a primeira fonte com endereco e a quinta ou mais (#205).
+  tabCursor = cursorInicial();
   if(lay==VT_LAY_VITRINE)tabFocus=0;   // sem barra de abas: o foco nasce nas fileiras
 }
 
@@ -773,6 +778,20 @@ static int cursorInicial(void) {
 static void abasReiniciar(void) {
   ddAberto = ddCursor = 0; ddAnim = pgSlide = 0.0f; barraW = -1.0f;
 }
+#define VT_DD_RH 48.0f   // linha do menu suspenso
+// JANELA DO MENU SUSPENSO (#205): com 16 catalogos a lista parava alem do pe
+// da tela e o foco sumia ao descer. A altura fica no espaco util e a janela
+// segue o cursor; devolve em *vis quantas linhas cabem.
+static int ddJanela(int n, int cursor, float py, int *vis) {
+  int v = (int)((NV_TELA_H - py - 24.0f - 12.0f) / VT_DD_RH), base;
+  if (v < 1) v = 1;
+  if (v > n) v = n;
+  *vis = v;
+  base = v < n ? cursor - v + 1 : 0;
+  if (base < 0) base = 0;
+  if (base > n - v) base = n - v;
+  return base;
+}
 // Paginas: trocar de pagina e abrir a fonte; o deslize e so da pagina nova.
 static void irPagina(int novo) {
   pgSlide = anim_politica_reduzida ? 0.0f : (novo > source ? 1.0f : -1.0f);
@@ -1038,7 +1057,7 @@ static void alternarExibicao(void) {
     // fonte volta para a primeira que tem endereco, e o cursor para o botao.
     source = primeiraFonte(); openSource();
   }
-  tabCursor = nAbas();
+  tabCursor = cabN();   // o botao "Exibição", em qualquer estilo de abas
 }
 
 static void vitEvento(int k) {
@@ -1061,7 +1080,7 @@ static void vitEvento(int k) {
   } else if (k == SDLK_UP) {
     int r = vitLinhaVizinha(vitFR, -1);
     if (r >= 0) { vitColLemb[vitFR] = vitFC; vitFR = r; vitFC = vitColLemb[r]; }
-    else tabFocus = 1, tabCursor = nAbas();
+    else tabFocus = 1, tabCursor = cabN();
   } else if (enter) {
     const CatItem *it = vitItem(vitFR, vitFC);
     if (it) abrirItem(it);
@@ -1554,15 +1573,16 @@ static void abasMenu(float x0, float W, char rot[][180], float a) {
   if (ddAnim < .01f) return;
   int idx[COL_SOURCE_MAX], n = abasDoTipo(abaSerie(source), idx);
   if (!n) return;
-  const float RH = 48.0f, RPAD = 18.0f;
+  const float RH = VT_DD_RH, RPAD = 18.0f;
   float pw = catW;
   for (int k = 0; k < n; k++) pw = fmaxf(pw, abaTexto(rot[idx[k]], 420.0f) + RPAD * 2);
-  float ph = n * RH + 12.0f, aa = a * ddAnim;
   float px = catX, py = Y + H + 8.0f - (1.0f - ddAnim) * 10.0f;
+  int vis, base = ddJanela(n, ddCursor, py, &vis);   // limitada, segue o foco
+  float ph = vis * RH + 12.0f, aa = a * ddAnim;
   if (px + pw > x0 + W) px = fmaxf(x0, x0 + W - pw);
   gfx_vidro_painel((GfxRect){px, py, pw, ph}, 22.0f, .78f, aa);
-  for (int k = 0; k < n; k++) {
-    GfxRect row = {px + 6.0f, py + 6.0f + k * RH, pw - 12.0f, RH};
+  for (int k = base; k < base + vis; k++) {
+    GfxRect row = {px + 6.0f, py + 6.0f + (k - base) * RH, pw - 12.0f, RH};
     int f = ddAberto && ddCursor == k, atual = idx[k] == source;
     if (ddAberto) ponteiro_alvo(row.x, row.y, row.w, row.h, ponteiroDd, NULL, k, 0);
     if (f) {
