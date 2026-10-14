@@ -1,7 +1,7 @@
 #!/bin/bash
 export TMPDIR="${TMPDIR:-/tmp}"
 TMPDIR="${TMPDIR%/}"
-# mdblist ratings[] (#205): GET ?i=tt... devolve source/value/score; o parser
+# mdblist ratings[] (#205): GET /imdb/movie/tt... devolve source/value/score; o parser
 # antigo (POST + "rating") deixava 0/N no aparelho.
 set -eu
 cd "$(dirname "$0")/.."
