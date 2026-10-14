@@ -20,7 +20,7 @@ void plrui_material(GfxRect r, float raioPx, int modal, float a) {
     // box-shadow 0 14 40 rgba(0,0,0,.36): caida, nunca halo.
     gfx_rect((GfxRect){ r.x - 20.0f, r.y - 6.0f, r.w + 40.0f, r.h + 40.0f }, 0, GFX_SOMBRA,
              1.0f, 0, 0, 0.5f, 0, 0, 0, 0.36f * a);
-    gfx_cor(r, raio, 0.055f, 0.059f, 0.071f, (modal ? 0.86f : 0.80f) * a);
+    gfx_vidro_material(r, raio, modal ? GFX_VIDRO_DENS_MODAL : GFX_VIDRO_DENS, a);
     // radial-gradient(120% 80% at 22% -40%, branco 10% -> 0 a 60%)
     gfx_luz_canto(r, raio, r.w * 0.22f, -r.h * 0.40f,
                   (r.w > r.h ? r.w : r.h) * 0.62f, 1, 1, 1, 0.10f * a);
@@ -57,7 +57,7 @@ void plrui_botao_repouso(GfxRect r, float a) {
 }
 
 void plrui_disco_osd(GfxRect r, float a) {
-  if (ajustes_vidro()) gfx_cor(r, 0.5f, 0.055f, 0.059f, 0.071f, 0.52f * a);
+  if (ajustes_vidro()) gfx_vidro_material(r, 0.5f, 0.52f, a);
   else gfx_cor(r, 0.5f, 0.082f, 0.086f, 0.102f, a);
 }
 

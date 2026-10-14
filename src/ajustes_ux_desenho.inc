@@ -144,7 +144,7 @@ static void ajIlhaMaterial(GfxRect r, float raioPx, float a, int modal, int pagi
   if (!pagina) ajIlhaSombra(r, raioPx, (ajVid() ? 0.36f : 0.45f) * a, !ajVid() && a >= 0.999f);
   if (ajVid()) {
     // Teste do vidro: opacidade (78% = 0.80/0.86 de sempre) e fosco.
-    gfx_vidro(r, raio, GFX_VIDRO_PAINEL, 0.06f, (modal ? 0.86f : 0.80f) * gfx_vidro_opacidade(), a);
+    gfx_vidro_material(r, raio, modal ? GFX_VIDRO_DENS_MODAL : GFX_VIDRO_DENS, a);
   } else {
     gfx_cor_painel(r, raio, 0.082f, 0.086f, 0.102f, a);
   }
@@ -161,7 +161,7 @@ static void ajIlhaMiolo(GfxRect r, float raioPx, float miolo) {
   float raio = raioPx / r.h;
   if (!ajTelaCheia()) ajIlhaSombra(r, raioPx, ajVid() ? 0.36f : 0.45f, !ajVid());
   if (ajVid()) {
-    gfx_vidro(r, raio, GFX_VIDRO_PAINEL, 0.06f, miolo * gfx_vidro_opacidade(), 1);
+    gfx_vidro_material(r, raio, miolo, 1);
   } else gfx_cor_painel(r, raio, 0.082f, 0.086f, 0.102f, 1);
 }
 // Superficie de FOCO de linha: um degrau mais clara (vidro 12%, solido #2B2D34).

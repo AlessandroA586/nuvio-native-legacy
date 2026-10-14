@@ -580,6 +580,15 @@ void gfx_ambiente_preparar(void);
 // fosco" desligado, efeitos minimos, video por baixo, ou sobre outro vidro.
 enum { GFX_VIDRO_PAINEL = 0, GFX_VIDRO_BARRA = 1 };
 void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a);
+// O MATERIAL PADRAO de todo popup/dialogo/painel/ilha no vidro: o gfx_vidro do
+// cinza 0,06 na densidade `dens` (GFX_VIDRO_DENS, GFX_VIDRO_DENS_MODAL) vezes a
+// "Opacidade do vidro". Compartilha o backdrop do quadro; nunca um gfx_cor.
+#define GFX_VIDRO_DENS       0.80f
+#define GFX_VIDRO_DENS_MODAL 0.86f
+void gfx_vidro_material(GfxRect r, float raio, float dens, float a);
+// O mesmo com "Interface de vidro" desligada: a cor lisa (sr,sg,sb) a `sa`.
+void gfx_vidro_ou_solido(GfxRect r, float raio, float dens, float a,
+                         float sr, float sg, float sb, float sa);
 // Conteudo mudou sem passar por gfx_rect (textura reenviada no lugar): o
 // proximo quadro recaptura.
 void gfx_vidro_sujar(void);
