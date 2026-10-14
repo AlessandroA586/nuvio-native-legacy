@@ -4572,21 +4572,27 @@ static void heroWeb(float a, float desloc) {
       // "Assistir do comeco" entre o primario e os circulares (issue #46).
       const char *rotIni = i18n("Assistir do começo");
       int selIni = nivel == 0 && botao == nb;
-      static float inicioExp;
+      static float inicioExp;   // largura da pilula (0..1)
+      static float inicioRot;   // alpha do rotulo (0..1)
       static Uint32 inicioTick;
       static int inicioIdx = -1;
       Uint32 tick = SDL_GetTicks();
       float dtIni = inicioTick ? (float)(Uint32)(tick - inicioTick) : 0;
       if (dtIni > 80) dtIni = 80;
-      if (inicioIdx != idx) { inicioExp = 0; inicioIdx = idx; }
+      if (inicioIdx != idx) { inicioExp = inicioRot = 0; inicioIdx = idx; }
       inicioTick = tick;
-      float alvoIni = selIni ? 1.0f : 0.0f;
-      inicioExp = ajustes_animacoes_reduzidas() ? alvoIni :
-        inicioExp + (alvoIni-inicioExp)*(1.0f-expf(-dtIni/65.0f));
+      // A LARGURA ABRE PRIMEIRO e o ROTULO entra DEPOIS, inteiro (anim_expande).
+      // Antes o rotulo era cortado pela largura em crescimento
+      // (txt_linha_corta com rs.w): cada palavra aparecia conforme a pilula
+      // crescia, como se o texto estivesse sendo digitado na hora — "a
+      // animacao dessa play from beginning nao ta legal, o texto ta meio
+      // que escrevendo". Ordenado, o rotulo so existe com a pilula aberta.
+      anim_expande(&inicioExp, &inicioRot, selIni ? 1.0f : 0.0f,
+                   dtIni * 0.001f, 160.0f, 120.0f);
       float fechado = acoesAgrupadas() ? NV_DETW2_CIRC : larguraSecundario(rotIni);
       float abertoIni = larguraSecundario(rotIni) + 44.0f;
       GfxRect rs = { bx, cyBtn-fechado*.5f,
-        acoesAgrupadas() ? fechado+(abertoIni-fechado)*inicioExp : fechado,
+        acoesAgrupadas() ? fechado+(abertoIni-fechado)*anim_suave(inicioExp) : fechado,
         acoesAgrupadas() ? NV_DETW2_CIRC : NV_DETW2_BTN_H };
       rs.y = cyBtn - rs.h*.5f;
       if (detalheRetrato()) rs = heroAcaoRect(&bx, &cyBtn, rs.w, rs.h);
@@ -4595,10 +4601,13 @@ static void heroWeb(float a, float desloc) {
         float tinta = selIni ? ajustes_acento_tinta(NULL,NULL,NULL) : 235.0f/255.0f;
         gfx_icone((GfxRect){rs.x+22,rs.y+(rs.h-28)*.5f,28,28},
                   "aj_rotate-ccw-clock", tinta,tinta,tinta,a);
-        if (rs.w > fechado+10) {
+        // Rotulo INTEIRO, sem corte: inicioRot so existe com a largura no
+        // fim (anim_expande), e o texto cabe sem encostar na borda da pilula
+        // (abertoIni = rotulo + 100 de folga contra os 64 do inicio dele).
+        if (inicioRot > 0.003f) {
           int cor = (int)(tinta*255);
-          TxtLinha label = txt_linha_corta(TXT_DET_BOTAO,rotIni,cor,cor,cor,255,rs.w-86);
-          txt_desenhar_alpha(label,rs.x+64,rs.y+(rs.h-label.h)*.5f,a*inicioExp);
+          TxtLinha label = txt_linha(TXT_DET_BOTAO,rotIni,cor,cor,cor,255);
+          txt_desenhar_alpha(label,rs.x+64,rs.y+(rs.h-label.h)*.5f,a*inicioRot);
         }
       } else desenhaSecundario(rs, rotIni, selIni, a);
       if (a > 0.3f) ponteiro_alvo(rs.x, rs.y, rs.w, rs.h, ponteiroDetalhe, NULL, -1, nb);
