@@ -218,6 +218,9 @@ static int    posVisSolto;   // 1 = ainda deslizando ate o alvo
 static int   aberto = 0, saindo = 0, pediuSair = 0;
 static int   idx = 0;
 #define PLR_SCR_TOCOU_S 5.0f   // #179: reproducao continua antes do /scrobble/start
+// Reproducao real minima para a SAIDA gravar o ponto (ver `prova`). Nao e o
+// limiar do start: um seek logo depois de abrir nao pode custar o ponto.
+#define PLR_PROVA_MIN_S 1.0
 static int   tocando = 1;
 static int   pausaPessoa;   // pausa pedida pela pessoa (player_pausa_pessoa, #302)
 static int retomandoSalto; // seek requested playback; buffering is not user pause
@@ -359,8 +362,11 @@ static char fonteSessao[4096];
 static double assistidoSeg, assistidoMono, assistidoPos;
 static int assistidoAmostra;
 static unsigned trailerSessao;
+// Ultima posicao gravada DURANTE a sessao (gravarProgressoParcial); -1 = nenhuma.
+static double parcialPos = -1.0;
 static void zerarAssistido(void) {
   assistidoSeg = 0; assistidoAmostra = 0; trailerSessao = trailer_geracao();
+  parcialPos = -1.0;
   snprintf(fonteSessao, sizeof fonteSessao, "%s", comVideo ? video_url_atual() : "");
 }
 static int fontePrincipal(void) {
@@ -2029,15 +2035,34 @@ static void fecharSessao(int manter) {
            (double)duracaoSeg, catDur);
     fflush(stdout);
   }
+  // PARIDADE COM O NUVIOTV OFICIAL (saveWatchProgress / saveWatchProgressInternal):
+  // grava ao sair se o video da fonte principal chegou a aparecer, a duracao e
+  // a real e a posicao passa de 1 s — quem pula para 94% e sai encontra 94% no
+  // Continuar assistindo, como no oficial. Ate aqui eram 5 s TOCADOS: com um
+  // seek logo depois de abrir (4,5 s tocados), a saida nao gravava nada.
+  // O que fica de Legacy e PLR_PROVA_MIN_S de reproducao real: aqui o trailer
+  // usa a MESMA pipeline (#205) e, sem nada tocado, a duracao pode ser a dele.
   int prova = fontePrincipal() && duracaoReal && !esperandoFonte && !erroFonte && !video_falhou() &&
-              isfinite(posSeg) && isfinite(duracaoSeg) && assistidoSeg >= PLR_SCR_TOCOU_S;
+              isfinite(posSeg) && isfinite(duracaoSeg) && posSeg >= 1.0f &&
+              assistidoSeg >= PLR_PROVA_MIN_S;
   // Prova do VISTO (#205): o que esta sessao tocou desde a base — o ponto
   // retomado, e so quando o registro diz que ele foi alcancado tocando e a
   // duracao e a mesma (a de um trailer de 129 s nao empresta a base do filme).
   double base = baseDur > 0.0 ? basePos : duracaoSeg * basePct / 100.0;
   if (!baseTocou || (baseDur > 0.0 && fabs(baseDur - duracaoSeg) > fmax(5.0, duracaoSeg * 0.02))) base = 0.0;
   int chegou;
-  int assistiu = player_regra_visto(base, assistidoSeg, posSeg, concluiuAgora(credEfetivo()), &chegou);
+  // `chegou` (alcancado tocando) continua sendo a regra #205: ele so diz COMO a
+  // posicao foi alcancada, para a base da proxima sessao. O VISTO segue o
+  // oficial: posicao >= 90% (ou o fim de Legacy: creditos / cartao A seguir).
+  // VISTO = a regra de Legacy OU a do oficial. A de Legacy (#205/#100) conclui
+  // antes dos 90% — no marcador de creditos ou no cartao A seguir — mas so com
+  // o trecho realmente tocado. A do oficial (WatchProgress.isCompleted) e so a
+  // POSICAO >= 90%, inclusive depois de um seek.
+  int fimLegacy = player_regra_visto(base, assistidoSeg, posSeg, concluiuAgora(credEfetivo()), &chegou);
+  int assistiu = scrobble_concluiu(posSeg, duracaoSeg, fimLegacy);
+  // Concluido e concluido: o registro leva o "alcancado tocando" que o selo
+  // de visto do catalogo (cat_visto) le, como o markAsCompleted do oficial.
+  if (assistiu) chegou = 1;
   // Sem ela a posicao REAL continua gravada (barra, Continuar assistindo,
   // conta): so o arredondamento para 100% e o visto ficam de fora.
   if (!duracaoErrada && !jaRetido && prova && video_pronto() && duracaoSeg >= 120.0f &&
@@ -2224,6 +2249,37 @@ void player_preparar_retencao(void) {
   saidaIlhaDesde = SDL_GetTicks() | 1u;
 #endif
   video_pausar(1);
+}
+
+// O PONTO GRAVADO DURANTE A SESSAO, e nao so ao sair — paridade com o NuvioTV
+// oficial (PlayerRuntimeControllerPlaybackEvents.kt): saveWatchProgress ao
+// pausar e ~0,7 s depois de um seek, e saveWatchProgressIfNeeded a cada 90 s
+// tocando, so quando a posicao andou >= 5 s. Mesmas guardas da saida (fonte
+// principal com video, duracao real e nao suspeita, nao canal). So o PONTO:
+// o visto e o scrobble continuam com a saida e com o pause do Trakt/Simkl.
+#define PLR_PARCIAL_INTERVALO_S 90.0f
+#define PLR_PARCIAL_SEEK_S 0.7f
+#define PLR_PARCIAL_LIMIAR_S 5.0
+static void gravarProgressoParcial(int conta, const char *porque) {
+  const CatItem *ci = item();
+  double base;
+  int chegou;
+  if (!ci || !ci->imdb[0] || jfid_e(ci->imdb) || !comVideo || !fontePrincipal() || !duracaoReal ||
+      !video_pronto() || esperandoFonte || erroFonte || video_falhou() || ehCanal() || scrubbing ||
+      !isfinite(posSeg) || !isfinite(duracaoSeg) || duracaoSeg < 120.0f || posSeg < 1.0f ||
+      assistidoSeg < PLR_PROVA_MIN_S ||
+      player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo()))
+    return;
+  if (parcialPos >= 0.0 && fabs(posSeg - parcialPos) < PLR_PARCIAL_LIMIAR_S) return;
+  base = baseDur > 0.0 ? basePos : duracaoSeg * basePct / 100.0;
+  if (!baseTocou || (baseDur > 0.0 && fabs(baseDur - duracaoSeg) > fmax(5.0, duracaoSeg * 0.02))) base = 0.0;
+  (void)player_regra_visto(base, assistidoSeg, posSeg, 0, &chegou);
+  cat_salvar_progresso_ep(idxAtual(), posSeg, duracaoSeg, epT, epE, chegou);
+  if (conta) sync_sujar_progresso();
+  parcialPos = posSeg;
+  printf("[visto] ponto gravado (%s) pos=%.1f dur=%.1f (%.0f%%)\n", porque, (double)posSeg,
+         (double)duracaoSeg, 100.0 * posSeg / duracaoSeg);
+  fflush(stdout);
 }
 
 int player_suspender(void) {
@@ -3763,7 +3819,8 @@ void player_atualizar(float dt, Uint32 agora) {
   { int ok = fontePrincipal() && video_pronto() && video_ativo() && tocando && !scrubbing &&
              !saindo && !erroFonte && !esperandoFonte && !ehCanal() &&
              duracaoSeg >= 120.0f;
-    static float tocouS;
+    static float tocouS, parcialRelogio, parcialSeek;
+    static int scrubAnterior;
     const CatItem *cs = item();
     if (cs && jfid_e(cs->imdb)) cs = NULL;   // never scrobble personal-server items
     if (ok && cs && cs->imdb[0]) {
@@ -3772,6 +3829,11 @@ void player_atualizar(float dt, Uint32 agora) {
       else snprintf(id, sizeof id, "%s", cs->imdb);
       tocouS += dt;
       if (tocouS >= PLR_SCR_TOCOU_S) trakt_scrobble(SCR_EV_TOCANDO, id, posSeg, duracaoSeg, assistidoSeg, 0);
+      parcialRelogio += dt;
+      if (parcialRelogio >= PLR_PARCIAL_INTERVALO_S) {
+        parcialRelogio = 0.0f;
+        gravarProgressoParcial(0, "90 s tocando");
+      }
     } else {
       // Pausou (ou o video parou de andar): so fala se ha um start em pe.
       if (tocouS > 0.0f && cs && cs->imdb[0] && fontePrincipal() && video_pronto() && !ehCanal() &&
@@ -3780,8 +3842,18 @@ void player_atualizar(float dt, Uint32 agora) {
         if (epT > 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
         else snprintf(id, sizeof id, "%s", cs->imdb);
         trakt_scrobble(SCR_EV_PAUSOU, id, posSeg, duracaoSeg, assistidoSeg, 0);
+        if (!video_bufferando_ms()) gravarProgressoParcial(1, "pausa");
       }
       tocouS = 0.0f;
+      parcialRelogio = 0.0f;
+    }
+    // ~0,7 s depois de soltar um seek, grava o ponto novo (oficial:
+    // scheduleProgressSyncAfterSeek). Vale pausado ou tocando.
+    if (scrubAnterior && !scrubbing) parcialSeek = PLR_PARCIAL_SEEK_S;
+    scrubAnterior = scrubbing;
+    if (parcialSeek > 0.0f && (parcialSeek -= dt) <= 0.0f) {
+      parcialSeek = 0.0f;
+      gravarProgressoParcial(1, "seek");
     } }
 
   // "A SEGUIR" QUE SOME (#151). Aberto pelo Continuar assistindo, o episodio
