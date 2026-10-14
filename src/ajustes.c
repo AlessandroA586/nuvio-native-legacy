@@ -2537,6 +2537,30 @@ static int texturaAtiva(void) {
          nv_textura_viva.ok;
 }
 
+// OS MATERIAIS CC0 (deploy/app/art/texturas/, gerados por
+// tools/build-texturas.py a partir do Paper002 do ambientCG, CC0 1.0): o que
+// substitui o recorte da arte quando ele e FRACO (chapado, sem material —
+// dono, 14/10: "acho melhor a gente procurar um repositorio com assets para o
+// botao"). Treze arquivos de 512, SEM REDE em runtime: um NEUTRO para acento
+// sem cor e um por FAIXA DE 30 GRAUS de matiz, tingidos no Y 0,42. Os
+// percentis medidos do ARQUIVO FINAL (p10/p90 de luminancia relativa) dao
+// a tinta e o veu do rotulo pela mesma conta do recorte da arte — mas CADA
+// ARQUIVO tem o seu par (tools/build-texturas.py imprime os 13): o par do
+// material-000 so vale para o material-000, e um veu medido pelo par errado
+// undershoota o rotulo (o neutro chega a p90 0,79 contra 0,69 do 000).
+// Indice 0..11 = faixa de matiz; 12 = neutro.
+static const float NV_TX_ASSET_Y[13][2] = {
+  { 0.1861f, 0.6935f }, { 0.1889f, 0.6868f }, { 0.1893f, 0.7153f },
+  { 0.1889f, 0.7747f }, { 0.1907f, 0.7788f }, { 0.1935f, 0.7566f },
+  { 0.2012f, 0.7473f }, { 0.2004f, 0.7448f }, { 0.1947f, 0.7439f },
+  { 0.1888f, 0.7434f }, { 0.1840f, 0.7589f }, { 0.1837f, 0.7383f },
+  { 0.1845f, 0.7913f }
+};
+static char dirTexturas[600];
+void ajustes_texturas_dir(const char *dirArte) {
+  if (dirArte && dirArte[0]) snprintf(dirTexturas, sizeof dirTexturas, "%s/texturas", dirArte);
+}
+
 #define AJ_TINTA_ESCURA (18.0f / 255.0f)   // #121316
 float ajustes_acento_tinta(float *r, float *g, float *b) {
   int i = temaFixoAtual();
@@ -2581,15 +2605,58 @@ void ajustes_acento_luz(float *r, float *g, float *b) {
 // GFX_COR cheio pintado exatamente com o destaque (gfx_rect). Sem titulo, sem
 // textura decodificada ou fora da Textura: desliga, e a pilula fica no Da arte.
 void ajustes_textura_quadro(void) {
-  const CorvivaTextura *T = &nv_textura_viva;
+  CorvivaTextura *T = &nv_textura_viva;
+  const char *url = T->url;
+  float jan[4], forca = T->forca, veu = T->veu;
+  int logo = T->logo, escuro = !T->tintaBranca;
   GLuint tex = 0;
   float asp = 0.0f;
-  if (texturaAtiva() && T->url[0]) {
-    tex = T->logo ? tex_obter_larg_qualquer(T->url, 640.0f) : tex_obter_hero(T->url);
-    asp = tex_aspecto(T->url);
+  memcpy(jan, T->janela, sizeof jan);
+  if (texturaAtiva() && url[0]) {
+    char arq[700];
+    // O RECORTE FRACO sai e entra o MATERIAL CC0 na cor do destaque: o matiz
+    // do acento escolhe a faixa (30 graus, +-15), sem cor nenhuma e o neutro.
+    if (T->fraca && dirTexturas[0]) {
+      float r, g, b, lab[3], c;
+      int branca, m;
+      ajustes_acento(&r, &g, &b);
+      corviva_srgb_para_oklab((float[3]){ r, g, b }, lab);
+      c = sqrtf(lab[1] * lab[1] + lab[2] * lab[2]);
+      m = 12;
+      if (c < 0.04f) snprintf(arq, sizeof arq, "%s/material-neutro.jpg", dirTexturas);
+      else { m = ((int)(atan2f(lab[2], lab[1]) * 57.29578f + 375.0f)) % 360 / 30;
+             // A FAIXA e um INDICE 0..11; o ARQUIVO e em GRAUS (000..330). O
+             // %03d recebia m e pedia material-001.jpg, que nao existe — com o
+             // material ausente o botao ficava sem textura e o rotulo na tinta
+             // escura medida para o material: escuro sobre vermelho escuro
+             // (revisao, 14/10).
+             snprintf(arq, sizeof arq, "%s/material-%03d.jpg", dirTexturas, m * 30); }
+      url = arq;
+      jan[0] = 0.0f; jan[1] = 0.0f; jan[2] = 1.0f; jan[3] = 1.0f;
+      logo = 1;   // carrega pelo caminho do logo (local, sem teto de heroi)
+      // A TINTA/VEU do MATERIAL so valem DEPOIS de carregar: a falha de
+      // carregamento ficava com o material fora e o rotulo na tinta escura
+      // dele — escuro no botao escuro da arte que ficou (revisao, 14/10).
+      tex = tex_obter_larg_qualquer(url, 640.0f);
+      asp = tex_aspecto(url);
+      if (tex && asp > 0.0f) {
+        corviva_textura_tinta(NV_TX_ASSET_Y[m][0], NV_TX_ASSET_Y[m][1], T->base,
+                              forca, &branca, &veu, NULL);
+        escuro = !branca;
+        // A TINTA DO ROTULO vem de nv_textura_viva.tintaBranca
+        // (ajustes_acento_tinta, que todos os modulos usam), e o VEU de
+        // nv_textura_viva.veu — os dois medidos do MATERIAL que entrou, nao do
+        // recorte da arte que saiu: o recorte chapado escuro dizia "branco" e o
+        // rotulo vinha branco no branco do material (~2,2:1). O corviva_quadro
+        // refaz o struct a cada quadro e reescreve aqui embaixo (revisao, 14/10).
+        T->tintaBranca = branca;
+        T->veu = veu;
+      } else { tex = 0; asp = 0.0f; }
+    } else { tex = logo ? tex_obter_larg_qualquer(url, 640.0f) : tex_obter_hero(url);
+             asp = tex_aspecto(url); }
   }
   if (!tex || asp <= 0.0f) { gfx_textura_definir(0, NULL, 0, 0, 0, 0); return; }
-  gfx_textura_definir(tex, T->janela, asp, T->forca, T->veu, !T->tintaBranca);
+  gfx_textura_definir(tex, jan, asp, forca, veu, escuro);
 }
 
 // `collapseSidebar: modernSidebar ? false : Boolean(collapseSidebar)` — a barra

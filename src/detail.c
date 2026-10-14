@@ -5549,7 +5549,19 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
                                       (float)prog, SDL_GetTicks());
       GfxRect at = { tr.x, tr.y, tr.w * (mostra / 100.0f), tr.h };
       gfx_cor(tr, 0.5f, 0, 0, 0, 0.45f * a);
-      gfx_cor(at, 0.5f, 0.62f, 0.62f, 0.62f, a);
+      // IMERSIVA (14/10): o preenchimento ganha a LUZ do destaque — o mesmo
+      // matiz do vidro tingido (nv_luz_viva), entrando e saindo com a luz
+      // ambiente. E o primeiro dos "acentos ao longo da interface" da
+      // proposta (docs/imersivo-acentos.md): o imersivo passa a colorir nao so
+      // as ilhas de vidro. Fora da Imersiva, o cinza rgb(158,158,158) do web.
+      { float f = nv_ambiente_forca;
+        if (f > 0.003f) {
+          float fr = 0.62f + (nv_luz_viva[0] - 0.62f) * f;
+          float fg = 0.62f + (nv_luz_viva[1] - 0.62f) * f;
+          float fb = 0.62f + (nv_luz_viva[2] - 0.62f) * f;
+          gfx_cor(at, 0.5f, fr, fg, fb, a);
+        } else
+          gfx_cor(at, 0.5f, 0.62f, 0.62f, 0.62f, a); }
     } }
 }
 

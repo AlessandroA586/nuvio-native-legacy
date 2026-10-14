@@ -258,8 +258,12 @@ void  ajustes_acento_hdr(float *r, float *g, float *b);
 // A luz do Frost e da Imersiva: o matiz do acento com L 0,42 e croma <= 0,11.
 void  ajustes_acento_luz(float *r, float *g, float *b);
 // Uma vez por quadro, depois de corviva_quadro: com Textura, entrega ao gfx a
-// textura do titulo em cena (gfx_textura_definir); senao a desliga.
+// textura do titulo em cena (gfx_textura_definir); senao a desliga. O recorte
+// FRACO (chapado) e trocado pelo material CC0 de deploy/app/art/texturas/.
 void  ajustes_textura_quadro(void);
+// A pasta de arte do pacote (main.c passa o dirArte): onde os materiais CC0
+// moram. Sem isto o recorte fraco apenas desliga a textura.
+void  ajustes_texturas_dir(const char *dirArte);
 // "Automática", "4K", "1080p" ou "720p" — o rotulo exibido, para quem seleciona
 // a fonte de video mostrar exatamente o que o usuario escolheu.
 const char *ajustes_qualidade(void);
