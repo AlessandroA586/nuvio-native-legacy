@@ -84,8 +84,9 @@ static void ajcHDestaque(int op) {
 // Espaco entre fileiras / entre titulos: o valor real, com a regua no vao.
 static void ajcHEspaco(int op) {
   int fil = op == AJ_ESPACO_FILEIRAS, i, j;
-  float f = valor[op] > 0 ? (valor[op] < 50 ? 50 : valor[op] > 150 ? 150 : valor[op]) / 100.0f : 1.0f;
-  float g = (fil ? 6.0f + 24.0f * (f - 0.5f) : 6.0f + 28.0f * (f - 0.5f)) + 3.0f * (ajc_onda(2.4f) - 0.5f);
+  float f = valor[op] > 0 ? ajustes_espaco_fator(valor[op]) : 1.0f;
+  // 50..300 % cabe na tela da previa: 3 fileiras ate 34 px, 5 cartazes ate 49.
+  float g = (fil ? 4.0f + 12.0f * (f - 0.5f) : 4.0f + 18.0f * (f - 0.5f)) + 3.0f * (ajc_onda(2.4f) - 0.5f);
   char b[16];
   ajcHTela(60, 24, 520, 280, 1);
   if (fil) {
@@ -421,6 +422,24 @@ static void ajcHSelo(int op) {
     }
   }
   ajc_icone("aj_eye", 320, 282, 22, 0.5f + 0.5f * k);
+  ajcChaveCanto(k);
+}
+// Ocultar filmes assistidos: o cartaz marcado sai da descoberta e fecha o vao.
+static void ajcHOcultarVistos(int op) {
+  float k = ajcLig(op), p = k * ajc_onda(3.0f);
+  int i;
+  ajcHTela(60, 24, 520, 280, 1);
+  ajc_barra(86, 52, 80, 0.5f);
+  for (i = 0; i < 5; i++) {
+    float x = 86 + i * 94 - (i > 2 ? p * 94 : 0);
+    float a = i == 2 ? 1 - p : 1;
+    ajcHBloco(x, 72, 82, 130, i, a);
+    if (i == 2) {
+      ajc_bolinha(x + 66, 88, 24, C.ar, C.ag, C.ab, a);
+      ajc_icone_tinta("aj_check", x + 66, 88, 15, a);
+    }
+  }
+  ajc_icone("aj_eye-off", 330, 250, 30, 0.3f + 0.7f * p);
   ajcChaveCanto(k);
 }
 // Rotulos: o nome escrito abaixo do cartaz.
@@ -847,6 +866,7 @@ static int ajcNovaHome(int sec, int op) {
     case AJ_OCULTAR_NLANC: ajcHNaoLancados(op); return 1;
     case AJ_NOTAS_HOME: ajcHNotas(op); return 1;
     case AJ_SELO_VISTO: ajcHSelo(op); return 1;
+    case AJ_OCULTAR_FILMES_VISTOS: ajcHOcultarVistos(op); return 1;
     case AJ_ROTULOS: ajcHRotulos(op); return 1;
     case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: ajcHTituloFileira(op); return 1;
     case AJ_CW_LIGADO: ajcHCwLigado(op); return 1;

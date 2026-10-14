@@ -89,7 +89,14 @@ int video_dv_ativo(void) { return dtsSessao && dtsModoDv; }
 // (Dolby Vision/DTS path handing back to the TV player, audio switch) is not
 // a source that failed to open. Other targets keep 0.
 static int fonteTocou;
+#ifdef NV_TPK
+// .tpk: so o fluxo DTS/TrueHD convertido responde aqui (video_tpk.c); o resto
+// segue 0, como antes.
+int video_tpk_fonte_tocou(void);
+int video_fonte_tocou(void) { return fonteTocou || video_tpk_fonte_tocou(); }
+#else
 int video_fonte_tocou(void) { return fonteTocou; }
+#endif
 static int dvLiberadoNestaTv(void);
 static int dvPronto(void);
 const char *video_dts_saida(void) { return dtsSaida; }
@@ -109,8 +116,14 @@ int video_faixa_dts(const VideoFaixa *f) {
 // So o ramo webOS escreve aqui (PREPARANDO, CONVERTIDO, FALHOU): o resto sai
 // da faixa e do pipeline, igual em todos os alvos. No Mac, video_simular.
 static int dtsEstado;
+#ifdef NV_TPK
+int video_tpk_dts_estado(void);   // video_tpk.c: enquanto o .tpk converte o DTS
+#endif
 int video_dts_estado(void) {
   if (dtsEstado) return dtsEstado;
+#ifdef NV_TPK
+  { int e = video_tpk_dts_estado(); if (e) return e; }
+#endif
   if (!video_pronto() || !video_faixa_dts(video_audio(video_audio_atual()))) return VIDEO_DTS_NENHUM;
   return video_audio_nao_suportado() ? VIDEO_DTS_SEM_SOM : VIDEO_DTS_NATIVO;
 }

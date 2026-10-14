@@ -46,5 +46,17 @@ int main(void) {
   assert(strstr(v[0].descricao,"\n") && v[0].dolbyVision && v[0].dolbyAtmos);
   assert(!strcmp(v[1].descricao,"Show 1080p\n1.4 GB") && v[1].altura==1080);
   free(v);
-  puts("PASS ASan/UBSan: parser isolado, 100 fontes, MP4/DV na última posição.");
+  FILE *f = fopen("tests/fixtures/streams_notwebready.json", "r");
+  assert(f);
+  n = fread(json, 1, sizeof json - 1, f);
+  assert(!ferror(f) && feof(f));
+  fclose(f); json[n] = 0;
+  count = stream_extrair(json, "fixture", &v);
+  assert(count == 9);
+  assert(!v[0].notWebReady && v[1].notWebReady && v[2].notWebReady);
+  assert(!v[2].url[0] && !strcmp(v[2].infoHash, "abc"));
+  for (int i = 3; i < count; i++) assert(!v[i].notWebReady);
+  assert(!strcmp(v[8].url, "https://example.invalid/media.mp4"));
+  free(v);
+  puts("PASS: parser isolado, notWebReady ancorado e externalUrl sem midia oculto.");
 }

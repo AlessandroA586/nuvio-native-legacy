@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <stdatomic.h>
 #include <time.h>
+#include <pthread.h>
 
 // As tres bases. A versao esta EMBUTIDA no caminho de proposito: o TorBox pede
 // /v1/ antes de /api/ (api.torbox.app/v1/api/...), e deixar isso implicito na
@@ -26,8 +27,9 @@
 #define AD "https://api.alldebrid.com"
 #define AD_AGENTE "agent=nuvio"
 
-enum { SRD, STB, SPM, SAD, SN };
+enum { SRD = DEBRID_RD, STB = DEBRID_TB, SPM = DEBRID_PM, SAD = DEBRID_AD, SN = DEBRID_N };
 static const char *nomeServ[SN] = { "Real-Debrid", "TorBox", "Premiumize", "AllDebrid" };
+static const char *idServ[SN] = { "realdebrid", "torbox", "premiumize", "alldebrid" };
 
 // UMA CHAVE POR SERVICO, e nao uma so. A conta pode trazer mais de uma
 // credencial "debrid:*" (sync.c chama esta funcao uma vez por provedor), e
@@ -74,6 +76,28 @@ static _Atomic int recusado[SN];
 // `avisado` e o "ja mostrei o aviso" de cada servico, pelo mesmo tempo.
 static _Atomic int semPlano[SN];
 static _Atomic int avisado[SN];
+// Uma consulta por chave a cada cinco minutos, compartilhada por Ajustes e play.
+static pthread_mutex_t contaMutex = PTHREAD_MUTEX_INITIALIZER;
+// ponytail: consultas serializadas; separar por provedor se houver contencao.
+static pthread_mutex_t consultaMutex = PTHREAD_MUTEX_INITIALIZER;
+static time_t contaConsultada[SN], contaAte[SN];
+static int contaEstado[SN]; // 0 desconhecida, 1 premium, 2 sem plano, 3 chave recusada
+
+const char *debrid_servico_nome(int q) { return q >= 0 && q < SN ? nomeServ[q] : ""; }
+const char *debrid_servico_id(int q) { return q >= 0 && q < SN ? idServ[q] : ""; }
+// Um resultado negativo vencido precisa chegar ao resolvedor para ser reconsultado.
+// Sem rede aqui: estes leitores tambem rodam no fio da interface.
+static int contaBloqueada(int q) {
+  int bloqueada;
+  pthread_mutex_lock(&contaMutex);
+  bloqueada = atomic_load(&semPlano[q]) &&
+      (!contaConsultada[q] || time(NULL) - contaConsultada[q] < 300);
+  pthread_mutex_unlock(&contaMutex);
+  return bloqueada;
+}
+int debrid_servico_disponivel(int q) {
+  return q >= 0 && q < SN && chave[q][0] && !atomic_load(&recusado[q]) && !contaBloqueada(q);
+}
 
 // Torrents que a busca atual achou fora de cache (debrid_fora_de_cache).
 static _Atomic int foraCache;
@@ -92,13 +116,20 @@ static int idServico(const char *s) {
       || !strcasecmp(s, "all_debrid") || !strcasecmp(s, "ad")) return SAD;
   return -1;
 }
+int debrid_servico_por_nome(const char *nome) { return nome && *nome ? idServico(nome) : -1; }
 
 // Recalcula a efetiva de um servico. Chave nova zera "sem plano" e o aviso: a
 // pessoa trocou a chave justamente para sair daquele estado.
 static void efetiva(int q) {
   const char *k = chaveLocal[q][0] ? chaveLocal[q] : chaveConta[q];
-  if (strcmp(chave[q], k)) { atomic_store(&semPlano[q], 0); atomic_store(&avisado[q], 0); }
+  pthread_mutex_lock(&contaMutex);
+  if (strcmp(chave[q], k)) {
+    atomic_store(&semPlano[q], 0); atomic_store(&avisado[q], 0);
+    contaConsultada[q] = contaAte[q] = 0; contaEstado[q] = 0;
+    atomic_store(&recusado[q], 0);
+  }
   snprintf(chave[q], sizeof chave[q], "%s", k);
+  pthread_mutex_unlock(&contaMutex);
 }
 
 void debrid_definir_chave(const char *servico, const char *k) {
@@ -148,12 +179,12 @@ int debrid_origens(const char **o, int max) {
                                        "https://www.premiumize.me", "https://api.alldebrid.com" };
   int q, k = 0;
   for (q = 0; q < SN && k < max; q++)
-    if (chave[q][0] && !atomic_load(&semPlano[q])) o[k++] = API[q];
+    if (chave[q][0] && !contaBloqueada(q)) o[k++] = API[q];
   return k;
 }
 int debrid_ativo(void) {
   int q;
-  for (q = 0; q < SN; q++) if (chave[q][0] && !atomic_load(&semPlano[q])) return 1;
+  for (q = 0; q < SN; q++) if (chave[q][0] && !contaBloqueada(q)) return 1;
   return 0;
 }
 void debrid_esquecer(void) {
@@ -165,6 +196,9 @@ void debrid_esquecer(void) {
     atomic_store(&recusado[q], 0);
     atomic_store(&semPlano[q], 0);
     atomic_store(&avisado[q], 0);
+    pthread_mutex_lock(&contaMutex);
+    contaConsultada[q] = contaAte[q] = 0; contaEstado[q] = 0;
+    pthread_mutex_unlock(&contaMutex);
     efetiva(q);
   }
 }
@@ -203,6 +237,15 @@ int debrid_sem_plano(void) {
 const char *debrid_sem_plano_frase(int mascara) {
   int tb = (mascara & (1 << STB)) != 0, pm = (mascara & (1 << SPM)) != 0;
   int rd = (mascara & (1 << SRD)) != 0, ad = (mascara & (1 << SAD)) != 0;
+  for (int q = 0; q < SN; q++)
+    if (q != SAD && (mascara & (1 << q)) && atomic_load(&semPlano[q]) == 2)
+      return "Chave de debrid recusada — confira em Ajustes > Integrações > Debrid";
+  pthread_mutex_lock(&contaMutex);
+  int vencida = 0;
+  for (int q = 0; q < SN; q++)
+    if ((mascara & (1 << q)) && contaEstado[q] == 2 && contaAte[q] > 0 && contaAte[q] <= time(NULL)) vencida = 1;
+  pthread_mutex_unlock(&contaMutex);
+  if (vencida) return "Sua conta de debrid expirou — renove o plano em seu provedor";
   if (tb + pm + rd + ad > 1)
     return "Suas contas de debrid são gratuitas e não permitem uso pela API — as fontes torrent ficam de fora";
   if (tb) return "Sua conta TorBox é gratuita e não permite uso pela API — fontes torrent do TorBox ficam de fora";
@@ -220,6 +263,8 @@ const char *debrid_sem_plano_nome(int mascara) {
   int tb = (mascara & (1 << STB)) != 0, pm = (mascara & (1 << SPM)) != 0;
   int rd = (mascara & (1 << SRD)) != 0, ad = (mascara & (1 << SAD)) != 0;
   if (tb + pm + rd + ad != 1) return NULL;
+  for (int q = 0; q < SN; q++)
+    if ((mascara & (1 << q)) && atomic_load(&semPlano[q]) == 2) return NULL;
   if (tb) return "TorBox";
   if (pm) return "Premiumize";
   if (rd) return "Real-Debrid";
@@ -1019,6 +1064,86 @@ int debrid_testar_alldebrid(char *msg, unsigned n, char *data, unsigned nd) {
     return premium; }
 }
 
+// RD e TorBox usam Bearer; Premiumize recebe apikey no formulario. Nenhum corpo de conta vai ao log (pode conter e-mail/token).
+int debrid_testar_conta(int q, char *msg, unsigned n, char *data, unsigned nd) {
+  int e = 0;
+  time_t agora = time(NULL), ate = 0;
+  if (msg && n) msg[0] = 0;
+  if (data && nd) data[0] = 0;
+  if (q == SAD) return debrid_testar_alldebrid(msg, n, data, nd);
+  if (q < 0 || q >= SN) return 0;
+  pthread_mutex_lock(&consultaMutex);
+  pthread_mutex_lock(&contaMutex);
+  if (!chave[q][0]) {
+    if (msg && n) snprintf(msg, n, "sem chave");
+    pthread_mutex_unlock(&contaMutex);
+    pthread_mutex_unlock(&consultaMutex); return 0;
+  }
+  if (!contaConsultada[q] || agora - contaConsultada[q] >= 300) {
+    char *r, b[64] = "", status[32] = "", k[200], auth[260];
+    const char *cab[] = { auth, "Content-Type: application/x-www-form-urlencoded", NULL };
+    int st = 0;
+    snprintf(k, sizeof k, "%s", chave[q]);
+    snprintf(auth, sizeof auth, "Authorization: Bearer %s", k);
+    pthread_mutex_unlock(&contaMutex);
+    if (q == SPM) {
+      char enc[600], corpo[620];
+      urlenc(enc, sizeof enc, k);
+      snprintf(corpo, sizeof corpo, "apikey=%s", enc);
+      r = rede_postar_st(PM "/account/info", 15, cab, corpo, &st);
+    } else r = rede_baixar_st(q == SRD ? RD "/user" : TB "/user/me?settings=false", 15, cab, &st);
+    if (st == 401 || (r && (strstr(r, "BAD_TOKEN") || strstr(r, "Invalid API key")
+        || strstr(r, "Invalid API Key") || strstr(r, "Not logged in")))) e = 3;
+    else if (ok2xx(r, st)) {
+      if (q == SRD && js_texto(r, NULL, "type", status, sizeof status)
+          && js_tem(r, NULL, "premium") && js_texto(r, NULL, "expiration", b, sizeof b)) {
+        ate = (time_t)(js_ms_iso(b) / 1000);
+        if (ate) e = !strcmp(status, "premium") && js_num(r, NULL, "premium", 0) > 0 && ate > agora ? 1 : 2;
+        if (!strcmp(status, "free")) { e = 2; ate = 0; }
+      } else if (q == SPM && js_texto(r, NULL, "status", status, sizeof status)
+                 && !strcmp(status, "success") && js_tem(r, NULL, "premium_until")) {
+        ate = (time_t)js_num(r, NULL, "premium_until", -1);
+        if (ate >= 0) e = ate > agora ? 1 : 2;
+      } else if (q == STB && js_bruto(r, NULL, "success", status, sizeof status)
+                 && !strcmp(status, "true") && js_num(r, NULL, "plan", -1) >= 0) {
+        if (js_num(r, NULL, "plan", -1) == 0) e = 2;
+        else if (js_texto(r, NULL, "premium_expires_at", b, sizeof b)) {
+          ate = (time_t)(js_ms_iso(b) / 1000);
+          if (ate) e = ate > agora ? 1 : 2;
+        }
+      }
+    }
+    free(r);
+    pthread_mutex_lock(&contaMutex);
+    // A pessoa pode trocar a chave ou sair da conta durante a consulta.
+    if (strcmp(k, chave[q])) {
+      pthread_mutex_unlock(&contaMutex);
+      pthread_mutex_unlock(&consultaMutex);
+      if (msg && n) snprintf(msg, n, "sem resposta válida");
+      return 0;
+    }
+    contaConsultada[q] = agora; contaAte[q] = ate; contaEstado[q] = e;
+    if (e) {
+      atomic_store(&semPlano[q], e == 1 ? 0 : e == 3 ? 2 : 1);
+      if (e == 1) atomic_store(&avisado[q], 0);
+    }
+  }
+  e = contaEstado[q]; ate = contaAte[q];
+  // Mesmo dentro do TTL, nao deixa passar um vencimento conhecido.
+  if (e == 1 && ate && ate <= agora) {
+    e = contaEstado[q] = 2; atomic_store(&semPlano[q], 1);
+  }
+  if (msg && n) snprintf(msg, n, "%s", e == 1 ? "premium" : e == 2 ? (ate > 0 ? "vencida" : "conta sem premium")
+                                               : e == 3 ? "chave recusada" : "sem resposta válida");
+  if (e == 1 && ate && data && nd) {
+    struct tm m;
+    if (localtime_r(&ate, &m)) strftime(data, nd, "%d/%m/%Y", &m);
+  }
+  pthread_mutex_unlock(&contaMutex);
+  pthread_mutex_unlock(&consultaMutex);
+  return e == 1;
+}
+
 // ---------------------------------------------------------------- resolver
 
 // Uma volta pelos servicos com chave, na ORDEM FIXA. `baixarTB` 1 = o TorBox
@@ -1027,9 +1152,10 @@ int debrid_testar_alldebrid(char *msg, unsigned n, char *data, unsigned nd) {
 // em *qb/*pct), ou 0. `*fora` recebe a mascara dos servicos que responderam
 // "fora de cache".
 static int volta(const char *infoHash, int fileIdx, char *url, unsigned n,
-                 int baixarTB, int so, int *qb, int *pct, int *fora) {
+                 int baixarTB, int so, int *qb, int *pct, int *fora, int *winner) {
   int q;
   unsigned g = atomic_load(&geracao);
+  url[0] = 0;
 
   // ORDEM FIXA: Real-Debrid, TorBox, Premiumize; ganha o PRIMEIRO QUE
   // RESOLVER, nao o primeiro que tem chave. Quem tem duas contas costuma ter
@@ -1042,6 +1168,7 @@ static int volta(const char *infoHash, int fileIdx, char *url, unsigned n,
     // Recusado pela conta nesta busca: nem tenta, passa ao proximo servico.
     // E o que faltava no registro 1541 — o Premiumize so era perguntado
     // depois de cada 403 do TorBox, torrent por torrent.
+    if (q != SAD) debrid_testar_conta(q, NULL, 0, NULL, 0);
     if (atomic_load(&recusado[q]) || atomic_load(&semPlano[q])) continue;
     url[0] = 0;
     // `qb != NULL` e a escolha MANUAL (ver debrid_resolver_escolhido): o
@@ -1082,6 +1209,7 @@ static int volta(const char *infoHash, int fileIdx, char *url, unsigned n,
       char seg[120];
       printf("[debrid] %s: %s -> %s\n", nomeServ[q], infoHash,
              rede_url_publica(url, seg, sizeof seg));
+      if (winner) *winner = q;
       return 1;
     }
     url[0] = 0;
@@ -1089,11 +1217,25 @@ static int volta(const char *infoHash, int fileIdx, char *url, unsigned n,
   return qb && *qb >= 0 ? DEBRID_BAIXANDO : 0;
 }
 
+int debrid_resolver_servico_cache(int servico, const char *infoHash, int fileIdx,
+                                  char *url, unsigned n, int *foraResultado) {
+  int fora = 0, r;
+  if (foraResultado) *foraResultado = 0;
+  if (url && n) url[0] = 0;
+  if (servico < 0 || servico >= SN || !chave[servico][0] || !infoHash || !*infoHash || !url || !n) return 0;
+  r = volta(infoHash, fileIdx, url, n, 0, servico, NULL, NULL, &fora, NULL);
+  if (r != 1 && (fora & (1 << servico))) {
+    atomic_fetch_add(&foraCache, 1);
+    if (foraResultado) *foraResultado = 1;
+  }
+  return r == 1;
+}
+
 int debrid_resolver_cache(const char *infoHash, int fileIdx, char *url, unsigned n, int *foraResultado) {
   int fora = 0, r;
   if (foraResultado) *foraResultado = 0;
   if (!infoHash || !*infoHash || !url || n == 0) return 0;
-  r = volta(infoHash, fileIdx, url, n, 0, -1, NULL, NULL, &fora);
+  r = volta(infoHash, fileIdx, url, n, 0, -1, NULL, NULL, &fora, NULL);
   if (r != 1 && fora) atomic_fetch_add(&foraCache, 1);
   if (foraResultado && r != 1 && fora) {
     int ativos = 0;
@@ -1109,24 +1251,27 @@ int debrid_resolver(const char *infoHash, int fileIdx, char *url, unsigned n) {
 
 int debrid_resolver_escolhido(const char *infoHash, int fileIdx, char *url,
                               unsigned n, char *servico, unsigned ns, int *pct) {
-  int fora = 0, qb = -1, p = -1, r;
+  int fora = 0, qb = -1, p = -1, r, winner = -1;
   if (servico && ns) servico[0] = 0;
   if (pct) *pct = -1;
   if (!infoHash || !*infoHash || !url || n == 0) return 0;
   printf("[debrid] escolha manual do torrent %s: em cache primeiro, depois baixar\n",
          infoHash);
   // 1a volta: em cache em qualquer servico — exatamente como o automatico.
-  r = volta(infoHash, fileIdx, url, n, 0, -1, &qb, &p, &fora);
+  r = volta(infoHash, fileIdx, url, n, 0, -1, &qb, &p, &fora, &winner);
   // 2a volta: o TorBox respondeu "fora de cache" e a pessoa quer ESTE
   // torrent: manda baixar. So o TorBox precisa disto — o Real-Debrid ja
   // comecou a baixar na 1a volta (addMagnet), e o Premiumize fica como estava
   // (o transfer/create dele ninguem pediu e nao tem teste).
   if (r != 1 && (fora & (1 << STB))) {
     int qb2 = -1, p2 = -1;
-    r = volta(infoHash, fileIdx, url, n, 1, STB, &qb2, &p2, NULL);
+    r = volta(infoHash, fileIdx, url, n, 1, STB, &qb2, &p2, NULL, &winner);
     if (r == DEBRID_BAIXANDO) { qb = qb2; p = p2; }
   }
-  if (r == 1) return 1;
+  if (r == 1) {
+    if (servico && ns && winner >= 0 && winner < SN) snprintf(servico, ns, "%s", nomeServ[winner]);
+    return 1;
+  }
   if (qb >= 0) {
     if (servico && ns) snprintf(servico, ns, "%s", nomeServ[qb]);
     if (pct) *pct = p;

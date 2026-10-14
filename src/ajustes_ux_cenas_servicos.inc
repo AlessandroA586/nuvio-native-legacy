@@ -739,6 +739,9 @@ static int ajcNovaServicos(int sec, int op) {
     case AJ_DEBRID_TB: ajcSvDebrid("TorBox", "aj_package", 7, 0x6, 0); return 1;
     case AJ_DEBRID_PM: ajcSvDebrid("Premiumize", "aj_sparkle", 9, 0xB, 0); return 1;
     case AJ_DEBRID_AD: ajcSvDebrid("AllDebrid", "aj_hard-drive", 12, 0x3, 0); return 1;
+    case AJ_DEBRID_RD_TESTAR: ajcSvDebrid("Real-Debrid", "aj_download", 10, 0x5, 1); return 1;
+    case AJ_DEBRID_TB_TESTAR: ajcSvDebrid("TorBox", "aj_package", 7, 0x6, 1); return 1;
+    case AJ_DEBRID_PM_TESTAR: ajcSvDebrid("Premiumize", "aj_sparkle", 9, 0xB, 1); return 1;
     case AJ_DEBRID_AD_TESTAR: ajcSvDebrid("AllDebrid", "aj_hard-drive", 12, 0x3, 1); return 1;
     case AJ_JF_LIGADO: ajcSvServ(SV_LIGA, "Jellyfin", "aj_server", "", 2, 0, ""); return 1;
     case AJ_JF_SERVIDOR: ajcSvServ(SV_URL, "Jellyfin", "aj_server", "192.168.1.20:8096", 2, 0, ""); return 1;

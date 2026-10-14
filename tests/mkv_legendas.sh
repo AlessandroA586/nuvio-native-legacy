@@ -60,8 +60,9 @@ for _ in $(seq 1 50); do grep -q porta "$DIR/porta.txt" 2>/dev/null && break; sl
 PORTA=$(awk '/porta/{print $2}' "$DIR/porta.txt")
 [ -n "$PORTA" ] || { echo "mkv_legendas.sh: servidor nao subiu"; exit 1; }
 
+. tests/mkvcore_flag.sh
 cc -Isrc tests/mkv_legendas.c src/mkv.c src/mkvass.c src/assrender.c src/legenda.c \
   src/rede.c src/redeurl.c src/dados.c -o /tmp/nuvio-mkv-legendas-tests -O1 -g -Wall \
-  -I/opt/homebrew/include -Wno-deprecated-declarations
+  -I/opt/homebrew/include -Wno-deprecated-declarations ${MKVCORE_CC[@]+"${MKVCORE_CC[@]}"}
 mkdir -p "$DIR/dados"
 NUVIO_DADOS="$DIR/dados" /tmp/nuvio-mkv-legendas-tests "http://127.0.0.1:$PORTA/multi.mkv"

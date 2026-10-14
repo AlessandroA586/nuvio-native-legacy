@@ -109,6 +109,12 @@
 // dois lados — como a trilha.
 #define FONTEPREF_BINGE 128
 
+// Size of the release-name key (fileKey in fontepref.c): the release name
+// without the episode marker. What is kept is short (the name of the work,
+// at most with the year); anything longer is cut, and cutting both sides the
+// same way still matches, which is the discipline of the other two keys.
+#define FONTEPREF_ARQUIVO 256
+
 // VALIDADE DA PREFERENCIA — 180 dias.
 //
 // O app web tambem expira a dele, e a comparacao importa porque os dois
@@ -145,6 +151,7 @@ typedef struct {
   char trilha[FONTEPREF_TRILHA];
   char bingeGroup[FONTEPREF_BINGE]; // o que o addon declarou; vazio e comum
   char rotulo[192];                 // desempate e log
+  char arquivo[FONTEPREF_ARQUIVO];  // fileKey(): release name, no episode marker
   int  altura;
   long long quandoS;                // time(NULL) da escolha
 } FontePref;

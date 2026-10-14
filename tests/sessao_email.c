@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
     confere("frase esperada", !strncmp(sessao_erro_email(), esperado, strlen(esperado)));
     // #223: sem HTTP, o codigo da libcurl vai junto na tela (e no log).
     if (!strcmp(caso, "semservidor"))
-      confere("codigo curl na tela", strstr(sessao_erro_email(), "[curl 7") != NULL);
+      confere("codigo curl na tela", strstr(sessao_erro_email(), "[connection; curl 7]") != NULL);
     free(b);
     // Tentar de novo funciona (o pedido nao fica preso).
     sessao_login_email("pessoa@exemplo.test", "outra");

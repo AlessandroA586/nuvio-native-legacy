@@ -72,10 +72,19 @@ void stream_folha_abrir(void) { assert(!"nao abrir a folha"); }
 void stream_folha_nome(const char *s) { (void)s; }
 void stream_folha_canal(int c) { (void)c; }
 void stream_folha_item(int i) { (void)i; }
+int stream_falha_verificar(FonteFalhaSessao *sessao, unsigned lista, int escolhida,
+                          int (*cancelado)(void *), void *ctx,
+                          int *indice, int *servico, char *url, unsigned tam) {
+  (void)sessao; (void)lista; (void)escolhida; (void)cancelado; (void)ctx;
+  (void)indice; (void)servico; (void)url; (void)tam;
+  assert(!"politica desligada nao pode substituir o worker legado");
+  return FONTEFALHA_FIM;
+}
 
 int main(int argc, char **argv) {
   (void)argv;
   int sucesso = argc > 1;
+  assert(!fontefalha_ativa());
   prepararOrcamento(sucesso ? 2 : 3);
   // Primeira sonda falha; app.c tem duas reposicoes no mesmo orcamento.
   fonteEscolhida = stream_verificar_proxima_vod(-1, 1, NULL);
