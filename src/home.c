@@ -361,7 +361,7 @@ static float velY = 0.0f;
 static AnimBorda bordaFil[MAX_FIL];
 static AnimBorda bordaPag;
 static float bordaX(int r) { return (r >= 0 && r < MAX_FIL) ? bordaFil[r].x : 0.0f; }
-static int sair = 0, pedidoAbrir = 0, pedidoTocar = 0, pedidoMenu = 0;
+static int sair = 0, pedidoAbrir = 0, pedidoTocar = 0, pedidoMenu = 0, pedidoIlha = 0;
 // VOLTAR NA HOME PEDE CONFIRMACAO. Ver home_evento; o aviso e desenhado em
 // home_desenhar enquanto a janela esta aberta.
 #define HOME_SAIR_MS 3000
@@ -2542,11 +2542,11 @@ void home_evento(const SDL_Event *e) {
       }
       focoHero = 0; return;
     }
-    // Cima no destaque: com a barra no topo (#461) sobe para ela; sem, nao ha
-    // para onde ir e a pagina sobe um pouco e volta.
+    // Cima no destaque: com a barra no topo (#461) sobe para ela; sem, vai
+    // para a ilha do topo, como o CH+ (#495).
     if (k == SDLK_UP) {
       if (ajustes_menu_topo()) pedidoMenu = 1;
-      else anim_borda_bater(&bordaPag, -NV_BORDA_AMP);
+      else { pedidoIlha = 1; anim_borda_bater(&bordaPag, -NV_BORDA_AMP); }
       return;
     }
   }
@@ -7762,6 +7762,7 @@ int home_pediu_tocar(void) { int v = pedidoTocar; pedidoTocar = 0; return v; }
 
 // Consome o pedido de abrir o menu lateral: quem le, zera.
 int home_pediu_menu(void) { int v = pedidoMenu; pedidoMenu = 0; return v; }
+int home_pediu_ilha(void) { int v = pedidoIlha; pedidoIlha = 0; return v; }
 
 // CARROSSEL DA DINAMICA (detail.c): os titulos da fileira em foco, na ordem
 // da fileira, e a posicao do card focado entre eles. So nas fileiras de
