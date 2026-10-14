@@ -20,6 +20,7 @@
 #include "idioma.h"
 #include "catordem.h"
 #include "homeestado.h"
+#include "homevazio.h"
 #include "cachearte.h"
 #include "fileiras.h"
 #include "continuar.h"
@@ -2198,6 +2199,14 @@ int home_iniciar(const char *dirArte) {
 
 void home_evento(const SDL_Event *e) {
   if (e->type == SDL_QUIT) { sair = 1; return; }
+  if (homevazio_ativo(nFileiras)) {
+    if (homevazio_evento(e)) return;
+    if (e->type == SDL_KEYDOWN) {
+      SDL_Keycode k = e->key.keysym.sym;
+      if (k == SDLK_LEFT || (k == SDLK_UP && ajustes_menu_topo())) { pedidoMenu = 1; return; }
+      if (k == SDLK_UP || k == SDLK_DOWN || k == SDLK_RIGHT) return;
+    }
+  }
 #ifdef NV_TOUCH_UI
   if (e->type == SDL_KEYDOWN) {
     toqueHeroCancelar();
@@ -6465,8 +6474,9 @@ void home_desenhar(Uint32 agora) {
   gfx_borda_foco_atual = ajustes_borda_foco() ? 1.0f : 0.0f;
   desenhaFundo(agora);
   float pd = detail_progresso();
-  if (ajustes_hero_ligado()) desenhaHero(agora, pd);
-  if (ajustes_hero_ligado() && heroVisivelToque() > 0.25f) {
+  const int vazioQr = homevazio_ativo(nFileiras);   // sem add-ons: o cartao com o QR no lugar da Home
+  if (ajustes_hero_ligado() && !vazioQr) desenhaHero(agora, pd);
+  if (ajustes_hero_ligado() && !vazioQr && heroVisivelToque() > 0.25f) {
     float heroBaixo = layoutHome() == HOME_LAYOUT_DINAMICA
                     ? dinHeroY() + alturaTextoHeroDin() : corteFileiras();
     if (heroBaixo > 0.0f)
@@ -6518,7 +6528,11 @@ void home_desenhar(Uint32 agora) {
   // ou o do cache): e o caso de a pessoa ter desligado todas em Ajustes. Sem
   // texto, o hero sozinho com o resto da tela vazia le como travamento — e ela
   // nao teria como adivinhar que foi ela quem apagou a home.
-  if (nFileiras < 1 && !fileirasOcultas) {
+  if (vazioQr && !fileirasOcultas) {
+    gfx_sem_recorte();
+    homevazio_desenhar(1.0f - pd);
+    gfx_recorte(0.0f, corte, NV_TELA_W, NV_TELA_H - corte);
+  } else if (nFileiras < 1 && !fileirasOcultas) {
     float tx = homeConteudoX();
     TxtLinha t = txt_linha(TXT_ROW_TITULO, "Nenhuma fileira ativa", 240, 241, 245, 255);
     txt_desenhar(t, tx, topoFil);
@@ -6539,7 +6553,7 @@ void home_desenhar(Uint32 agora) {
   // A LUZ DO FOCO: uma varredura por foco novo, nenhuma com a tecla presa.
   float varreFoco = revela_varre(&revVarre,
                                  focoHero ? -1 : foco.fileira * 64 + foco.coluna, agora);
-  for (int r = 0; r < (fileirasOcultas ? 0 : nFileiras); r++) {
+  for (int r = 0; r < (fileirasOcultas || vazioQr ? 0 : nFileiras); r++) {
     TipoFileira tipo = fileiras[r].tipo;
     // No retrato a visibilidade acompanha o recorte real, inclusive antes
     // do primeiro gesto; a memoria do foco nao esconde fileiras acessiveis.
@@ -6981,7 +6995,7 @@ void home_desenhar(Uint32 agora) {
   // O texto diz O CAMINHO e nao so o fato. "Ha mais catalogos" sem dizer onde
   // mudar seria informar e nao resolver.
   { int fora = desc_catalogos_fora() + cortadasPeloLimite;
-    if (fora > 0 && nFileiras > 0 && !fileirasOcultas) {
+    if (fora > 0 && nFileiras > 0 && !fileirasOcultas && !vazioQr) {
       char aviso[160];
       snprintf(aviso, sizeof aviso,
                fora == 1 ? i18n("Cabe %d fileira a mais aqui")
