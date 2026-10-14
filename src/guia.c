@@ -2159,8 +2159,8 @@ void guia_evento(const SDL_Event *e) {
 
   // CH+/- do controle da LG (scancodes 480/481 do SDL_webOS.h): dentro do
   // guia eles pulam CATEGORIA, nao canal — e a mesma leitura do "segurar"
-  // sem exigir o gesto. No Tizen o CH+ chega como "s" (tizen-shell.html), e o
-  // CH- nao chega — a casca nao o registra.
+  // sem exigir o gesto. No .wgt o CH+ chega como "s" (tizen-shell.html),
+  // azul de mentira, e o CH- como CH_DOWN cru.
   if (e->key.keysym.scancode == NV_SCANCODE_CH_UP ||
       e->key.keysym.scancode == NV_SCANCODE_CH_DOWN ||
       (!overlay && k == SDLK_s)) {
