@@ -654,6 +654,30 @@ int main(int argc, char **argv) {
     }
     player_shot_carregando(0);
   }
+  if (quer(argc, argv, "cinema-fundo-off") || quer(argc, argv, "cinema-fundo-nitida") ||
+      quer(argc, argv, "cinema-fundo-borrada")) {
+    // #508: o fundo da tela Cinema da abertura em tres modos — Desligado, Arte
+    // (nitida) e Arte borrada (o padrao) — mesma abertura, so o ajuste muda.
+    Stream st;
+    int q;
+    static const char *ids[3] = { "cinema-fundo-off", "cinema-fundo-nitida", "cinema-fundo-borrada" };
+    memset(&st, 0, sizeof st);
+    snprintf(st.rotulo, sizeof st.rotulo, "Project Hail Mary 2160p");
+    snprintf(st.provedor, sizeof st.provedor, "AIOStreams");
+    snprintf(st.url, sizeof st.url, "http://exemplo/phm.mkv");
+    stream_definir_lista(&st, 1);
+    for (q = 0; q < 3; q++) {
+      if (!quer(argc, argv, ids[q])) continue;
+      ajustes_shot_valor("aberturaFundoLocal", q);
+      abrir(&filme); simular(0, 0, "", 0, 0);
+      stream_definir_atual(0);
+      player_shot_carregando(1);
+      quadros(120);
+      salvar(ids[q]);
+      player_shot_carregando(0);
+    }
+    ajustes_shot_valor("aberturaFundoLocal", 2);   // o padrao de volta
+  }
   if (quer(argc, argv, "carregando")) {
     Stream st;
     memset(&st, 0, sizeof st);

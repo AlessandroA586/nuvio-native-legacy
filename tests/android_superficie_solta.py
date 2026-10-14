@@ -13,10 +13,15 @@ that is an ANR.
 The doubles keep that contract: SurfaceView.visibility = GONE blocks the
 calling thread until the playback thread detached the renderer (or 2 s), and
 the playback thread starts busy for 600 ms. The real `recriar` (and the
-members it may use, `soltando` / `soltarSaida`) is extracted from NvPlayer.kt.
+members it may use, `soltando` / `soltarSaida` / `avaliarEstavel` /
+`estavelRun` / the recreation state) is extracted from NvPlayer.kt.
 Invariant: no main-thread task takes 100 ms, and the surface is still
 recreated (GONE then VISIBLE, focus returned) once the playback thread
-answers. Android/Media3 runtime behaviour still needs the TV.
+answers. A queued recreation must also re-check the decoder: if it turned
+out to be native Dolby Vision, the runnable gives up instead of detaching
+the decoder output (TCL reconnects DispLink, 15 s in the owner's log) and
+still emits the stable-surface event. Android/Media3 runtime behaviour
+still needs the TV.
 """
 import os
 from pathlib import Path
@@ -43,11 +48,23 @@ def bloco(inicio, obrigatorio=True):
 
 def linha(inicio):
     start = source.find(inicio)
-    return '' if start < 0 else source[start:source.index('\n', start)]
+    return '' if start < 0 else source[start:source.index('\n', start)].replace('private ', '', 1)
 
 
 membros = '\n'.join([linha('    private var soltando'),
+                     linha('    private var recriando'),
+                     linha('    private var recriaAgendada'),
+                     linha('    private var recuperouSuperficie'),
+                     linha('    private var superficiePos'),
+                     linha('    private var quadroVisto'),
+                     linha('    private var estavelEmitido'),
+                     linha('    private var decoderDv'),
+                     linha('    private var ultHdr'),
+                     linha('    private var sessao'),
+                     linha('    private const val EV_SUPERFICIE_ESTAVEL'),
                      bloco('    private fun soltarSaida(', False),
+                     bloco('    private val estavelRun = Runnable {'),
+                     bloco('    private fun avaliarEstavel('),
                      bloco('    private val recriar = Runnable {')])
 fixture = r'''
 import java.util.concurrent.CountDownLatch
@@ -82,6 +99,7 @@ class ExoPlayer {
     val renderers = listOf(Decoder(C.TRACK_TYPE_AUDIO), Decoder(C.TRACK_TYPE_VIDEO))
     @Volatile var liberado = false
     val rendererCount get() = renderers.size
+    val currentPosition get() = 0L
     fun getRendererType(i: Int) = renderers[i].tipo
     fun getRenderer(i: Int): Renderer = renderers[i]
     fun createMessage(t: PlayerMessage.Target) = PlayerMessage(this, t)
@@ -137,6 +155,8 @@ object Fixture {
     var activity: Any? = NuvioActivity()
     var player: ExoPlayer? = null
     var superficie: SurfaceView? = null
+    val eventos = java.util.concurrent.CopyOnWriteArrayList<Int>()
+    fun ev(tipo: Int, a: Int = 0, b: Int = 0) { eventos.add(tipo) }
 MEMBROS
     fun recriarAgora() { principal.post(recriar) }
 }
@@ -187,7 +207,28 @@ fun main() {
     check(sv2.historia == listOf("GONE-solto", "VISIBLE"))
     check(f.principal.falha == null) { "excecao no fio principal: ${f.principal.falha}" }
     check(f.principal.pior < 100) { "fio principal preso ${f.principal.pior} ms" }
-    println("android_superficie_solta: fio principal livre (pior ${f.principal.pior} ms), recriacao unica e player liberado ok")
+
+    // 4. Pedido de recriacao em fila e o decoder virou DV nativo antes de ele
+    //    rodar (abertura: aplicarEncaixe agenda em 350 ms, o decoder chega
+    //    antes): desistir nao pode custar mais barato que religar o DispLink,
+    //    a saida do decoder fica ligada e o evento de superficie estavel
+    //    segue, para o nucleo aplicar o aspecto salvo.
+    val p3 = ExoPlayer(); val sv3 = SurfaceView(p3)
+    f.principal.post { f.player = p3; f.superficie = sv3 }
+    f.quadroVisto = true
+    f.principal.post { f.decoderDv = true }
+    f.recriarAgora()
+    f.principal.esperar()
+    check(sv3.historia.isEmpty()) { "recriou superficie com decoder DV nativo: ${sv3.historia}" }
+    check(p3.renderers[1].saida === sv3.holder.surface) { "decoder DV perdeu a superficie" }
+    check(f.recriaAgendada == false) { "pedido de recriacao ficou agendado" }
+    check(esperarAte(1000) { f.eventos.contains(Fixture.EV_SUPERFICIE_ESTAVEL) }) {
+        "superficie estavel nao chegou ao nucleo: ${f.eventos}"
+    }
+    f.principal.esperar()
+    check(f.principal.falha == null) { "excecao no fio principal: ${f.principal.falha}" }
+    check(f.principal.pior < 100) { "fio principal preso ${f.principal.pior} ms" }
+    println("android_superficie_solta: fio principal livre (pior ${f.principal.pior} ms), recriacao unica, player liberado e decoder DV nativo ok")
 }
 '''.replace('MEMBROS', membros)
 cache = Path.home() / '.gradle/caches/modules-2/files-2.1'

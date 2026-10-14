@@ -13,6 +13,7 @@ static int teste_hero_genero(void) { return testeGenero; }
 static float espacoTit = 1.0f, espacoFil = 1.0f;
 static float teste_espaco_titulos(void) { return espacoTit; }
 static float teste_espaco_fileiras(void) { return espacoFil; }
+#define NV_TESTE_HOME 1
 #include "../src/home.c"
 void desc_sinopse_hero(const int *idx, int n) { (void)idx; (void)n; }
 void desc_ocultar_vistos_atualizar(void) {}
@@ -95,9 +96,92 @@ int main(void) {
       palcoGeo(1, c + 1, lw, &vizX, &vizS);
       assert(fabsf(vizS - NV_PALCO_VIZ) < 0.01f);
       assert(vizX - lw * vizS * 0.5f > cx + lw * s * 0.5f);
+      // #205: os vizinhos encolhem E se chegam. O passo entre vizinhos segue
+      // a largura escalada — o gap e o da fileira comum (±2 px) — e o foco so
+      // empurra o PRIMEIRO vizinho pelo que cresceu.
+      { float vizX2, vizS2, gap = gapDe(FILEIRA_PALCO);
+        palcoGeo(1, c + 2, lw, &vizX2, &vizS2);
+        assert(fabsf((vizX2 - vizX) - (lw * vizS + gap)) < 2.0f);
+        assert(fabsf((vizX - cx) - (lw * (1.0f + NV_PALCO_VIZ) * 0.5f + gap)) < 2.0f); }
       anterior = cx;
     }
+    // A CORTINA (#205): foco na fileira Palco, o resto da tela escurece MAIS
+    // que o fundo comum (alfa da cortina >= 0.40 assentado); o foco saindo
+    // dela, a cortina desce de volta.
+    focoHero = 0; foco.fileira = 1;
+    for (int i = 1; i <= 40; i++) palcoCortinaPasso((Uint32)(i * 16));
+    assert(palcoCortina > 0.99f);
+    assert(NV_PALCO_CORTINA * palcoCortina >= 0.40f);
+    // Both exits retain the outgoing band while the curtain is still visible.
+    for (int hero = 0; hero <= 1; hero++) {
+      palcoCortina = 1.0f;
+      palcoCortinaUlt = 640;
+      palcoFaixaTopo = 300.0f; palcoFaixaBase = 800.0f;
+      focoHero = hero; foco.fileira = 0;
+      float previous = palcoCortina;
+      for (int i = 41; i <= 80; i++) {
+        palcoCortinaPasso((Uint32)(i * 16));
+        assert(palcoCortina <= previous);
+        if (i == 41) assert(palcoCortina > 0.01f && palcoCortina < previous);
+        if (palcoCortina > 0.01f) {
+          assert(palcoFaixaTopo == 300.0f && palcoFaixaBase == 800.0f);
+        } else {
+          assert(palcoFaixaTopo == 0.0f && palcoFaixaBase == 0.0f);
+        }
+        previous = palcoCortina;
+      }
+      assert(palcoCortina < 0.01f);
+    }
+    focoHero = 1;
     memset(scrollX, 0, sizeof scrollX);
+    // REVISAO #205: o alcance do toque na Palco e a extensao COMPRIMIDA do
+    // palcoGeo (o passo de vagas sobrava um vao morto no fim da rolagem); a
+    // coluna retomada inverte o palcoGeo (a conta de vagas caia num card ao
+    // lado do que a pessoa tinha centrado); e a faixa da cortina so existe
+    // dentro do viewport das fileiras (foco arrastado para fora, sem scrim).
+    {
+      fileiras[1] = (Fileira){.tipo = FILEIRA_PALCO, .n = 12, .escala = 1.0f};
+      float lw = larguraFil(1), passo = passoFil(1);
+      float cx, s, topo, base, corte = corteFileiras();
+      scrollX[1] = 0.0f;
+      // Foco na primeira coluna: o fim da fileira e a borda do ULTIMO card
+      // comprimido, bem atras da vaga dele — e o vao morto some do maxX.
+      palcoPos[1] = 0.0f;
+      palcoGeo(1, 11, lw, &cx, &s);
+      assert(fabsf(palcoExtent(1, 12) - (cx + lw * s * 0.5f - homeFileiraX(1, 0))) < 0.01f);
+      assert(palcoExtent(1, 12) < (12 - 1) * passo + lw - 100.0f);
+      // Foco na ultima: o card cresce NA vaga, a extensao volta a ser a de
+      // vagas — igual a fileira comum no fim da rolagem.
+      palcoPos[1] = 11.0f;
+      palcoGeo(1, 11, lw, &cx, &s);
+      assert(fabsf(palcoExtent(1, 12) - (cx + lw * s * 0.5f - homeFileiraX(1, 0))) < 0.01f);
+      assert(fabsf(palcoExtent(1, 12) - ((12 - 1) * passo + lw)) < 0.01f);
+      // A coluna retomada e a do card na ancora — inteira e em plena mola.
+      palcoPos[1] = 0.0f;
+      for (int k = 0; k < 12; k++) {
+        palcoGeo(1, k, lw, &cx, &s);
+        assert(palcoColunaEm(1, cx - homeFileiraX(1, 0)) == k);
+      }
+      palcoPos[1] = 3.5f;
+      for (int k = 2; k < 7; k++) {
+        palcoGeo(1, k, lw, &cx, &s);
+        assert(palcoColunaEm(1, cx - homeFileiraX(1, 0)) == k);
+      }
+      palcoPos[1] = 0.0f;
+      // A faixa da cortina e recortada ao viewport; fora dele, o scrim some
+      // em vez de virar um dimming de tela inteira sem janela.
+      palcoFaixaTopo = 300.0f; palcoFaixaBase = 800.0f;
+      assert(palcoFaixaClamp(&topo, &base));
+      assert(topo == fmaxf(corte, 300.0f) && base == fminf(NV_TELA_H, 800.0f));
+      palcoFaixaTopo = corte - 50.0f; palcoFaixaBase = corte + 50.0f;
+      assert(palcoFaixaClamp(&topo, &base));
+      assert(topo == corte && base == corte + 50.0f);
+      palcoFaixaTopo = NV_TELA_H + 100.0f; palcoFaixaBase = NV_TELA_H + 200.0f;
+      assert(!palcoFaixaClamp(&topo, &base));
+      palcoFaixaTopo = corte - 400.0f; palcoFaixaBase = corte - 10.0f;
+      assert(!palcoFaixaClamp(&topo, &base));
+      palcoFaixaTopo = palcoFaixaBase = 0.0f;
+    }
   }
   // A composicao abaixo e a da home SEM o destaque no topo: e nela que a
   // primeira fileira de catalogo vira a vitrine (vitrineNaPrimeira). O #201
@@ -144,6 +228,12 @@ int main(void) {
       }
     }
     espacoTit = 1.0f; espacoFil = 1.0f; homeCom(HOME_LAYOUT_MODERNA, 0); }
+  // #205 cardexp (dono, 14/10): espacamento da referencia da Apple TV — o
+  // titulo sai de cima dos cards e as fileiras respiram — e o card da ficha
+  // menor, para nao transbordar o cartaz/fileira (NV_FICHA_W).
+  assert(NV_LEGACY_ROW_HEAD_H >= 64.0f);
+  assert(NV_FILEIRA_GAP >= 80.0f);
+  assert(NV_FICHA_W <= 540.0f);
   assert(larguraDe(FILEIRA_COLECAO) > larguraDe(FILEIRA_SERVICO));
   assert(!temRotulo(FILEIRA_DESTAQUE));
   assert(!temRotulo(FILEIRA_CATALOGOS));

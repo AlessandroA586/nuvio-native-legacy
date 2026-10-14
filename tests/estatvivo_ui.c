@@ -77,28 +77,32 @@ int main(void) {
   CONFERE(estatvivo_aberto() && estatvivo_tamanho() == EV_TAM_MINIMO, "OK: Compacto -> Minimo");
   tecla(SDLK_RETURN, 0);
   CONFERE(estatvivo_tamanho() == EV_TAM_COMPLETO, "OK: Minimo -> Completo");
+
+  // 3. Esquerda/Direita trocam o LADO (e ficam nos Ajustes), nao o tamanho.
+  CONFERE(!ajustes_estat_lado(), "o lado padrao e a direita");
   tecla(SDLK_LEFT, 0);
-  CONFERE(estatvivo_tamanho() == EV_TAM_MINIMO, "Esquerda da a volta");
+  CONFERE(ajustes_estat_lado() == 1 && estatvivo_tamanho() == EV_TAM_COMPLETO, "Esquerda: lado esquerdo, mesmo tamanho");
+  tecla(SDLK_RIGHT, 0);
+  CONFERE(ajustes_estat_lado() == 0 && estatvivo_tamanho() == EV_TAM_COMPLETO, "Direita: lado direito, mesmo tamanho");
+  tecla(SDLK_RETURN, 0); tecla(SDLK_RETURN, 0);
+  CONFERE(estatvivo_tamanho() == EV_TAM_MINIMO, "Minimo");
+
+  // 4. Baixo fixa NO TAMANHO ESCOLHIDO (nao vira a linha fina) e nao rouba tecla.
   tecla(SDLK_DOWN, 0);
-  CONFERE(!estatvivo_aberto() && estatvivo_fixado(), "Baixo fixa no canto");
+  CONFERE(!estatvivo_aberto() && estatvivo_fixado() && estatvivo_tamanho() == EV_TAM_MINIMO, "Baixo fixa no tamanho escolhido");
   CONFERE(tecla(SDLK_RIGHT, 0) == 0 && tecla(SDLK_RETURN, 0) == 0, "fixado nao rouba tecla");
   estatvivo_abrir(); espera();
   CONFERE(estatvivo_aberto() && !estatvivo_fixado() && estatvivo_tamanho() == EV_TAM_MINIMO, "central desafixa");
+  tecla(SDLK_RETURN, 0);   // Completo
+  tecla(SDLK_DOWN, 0);
+  CONFERE(estatvivo_fixado() && estatvivo_tamanho() == EV_TAM_COMPLETO, "fixa o Completo tambem");
+  estatvivo_abrir(); espera();
 
-  // 3. Lembrar o ultimo: fechar e abrir de novo reabre no Minimo.
+  // Lembrar o ultimo: fechar e abrir de novo reabre no mesmo tamanho.
   estatvivo_fechar();
   estatvivo_abrir();
-  CONFERE(estatvivo_tamanho() == EV_TAM_MINIMO && estatvivo_aberto(), "reabre no ultimo tamanho (Minimo)");
+  CONFERE(estatvivo_tamanho() == EV_TAM_COMPLETO && estatvivo_aberto(), "reabre no ultimo tamanho");
   espera();
-  tecla(SDLK_RIGHT, 0);
-
-  // 4. Esquerda/Direita trocam o tamanho; Voltar fecha.
-  CONFERE(tecla(SDLK_LEFT, 0) == 1 && estatvivo_tamanho() == EV_TAM_MINIMO, "Esquerda no Completo da a volta");
-  tecla(SDLK_RIGHT, 0);
-  tecla(SDLK_RIGHT, 0);
-  CONFERE(estatvivo_tamanho() == EV_TAM_COMPACTO && estatvivo_aberto(), "Direita: Compacto");
-  tecla(SDLK_LEFT, 0);
-  CONFERE(estatvivo_tamanho() == EV_TAM_COMPLETO && estatvivo_aberto(), "Esquerda: Completo");
   tecla(SDLK_ESCAPE, 0);
   CONFERE(!estatvivo_aberto() && !estatvivo_fixado(), "Voltar fecha");
 

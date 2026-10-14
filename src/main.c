@@ -1458,6 +1458,7 @@ int main(int argc, char **argv) {
   // no lugar em que o splash do sistema a deixou.
   logoapp_iniciar(dirArte);
   abertura_iniciar(dirArte);
+  ajustes_texturas_dir(dirArte);   // materiais CC0 do tema Textura (recorte fraco)
 #ifdef __EMSCRIPTEN__
   // O ARRANQUE CEDE AO NAVEGADOR EM DOIS PONTOS (24/09/2026). Do topo do main
   // ate o primeiro quadro era UMA tarefa so do fio principal: 1,0 a 3,4 s nos
@@ -2021,7 +2022,6 @@ int main(int argc, char **argv) {
     gfx_sem_recorte();
     fPrep = NV_DT(t0);
     gfx_ambiente_preparar();
-    fundo_fosco_quadro();   // vidro fosco: a arte borrada do titulo em cena
     fPrep = NV_DT(t0) - fPrep;
     // Nivel 3 (so com "720p" escolhido) ou 4K que nao aguentou: o quadro
     // inteiro vai para o alvo interno (o clear abaixo ja limpa ele);
