@@ -299,6 +299,10 @@ int   ajustes_rail_moderna(void);       // modernSidebar
 int   ajustes_rail_moderna_blur(void);  // modernSidebarBlur
 int   ajustes_hero_ligado(void);        // heroSectionEnabled
 int   ajustes_hero_genero(void);        // heroGeneroLocal: genero sob o logo do destaque
+int   ajustes_hero_sinopse(void);       // heroSinopseLocal: sinopse do destaque
+int   ajustes_hero_notas(void);        // heroNotasLocal: nota do IMDb no destaque
+int   ajustes_hero_ano(void);          // heroAnoLocal: ano no destaque
+int   ajustes_hero_duracao(void);      // heroDuracaoLocal: duracao no destaque
 int   ajustes_hero_sinopse_grande(void); // Normal (22/30) ou Grande (24/32)
 int   ajustes_hero_cheio(void);         // modernHeroFullScreenBackdropEnabled
 // LAYOUT DA HOME (local): a estrutura da tela inicial. Moderna e o desenho de

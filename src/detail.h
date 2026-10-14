@@ -16,6 +16,8 @@ void detail_abrir(const HomeItem *item);
 // nao faz nada; Voltar fecha o painel e deixa a pagina do titulo.
 void detail_mostrar_pessoa(long tmdb, const char *nome, const char *foto);
 int  detail_aberto(void);
+// Ano solto do campo `meta` ("2025 · 1 h 54 min" -> "2025" e "1 h 54 min").
+void partirMeta(const char *meta, char *ano, size_t na, char *resto, size_t nr);
 // Fecha a pagina pela mesma saida animada do Voltar (Spotlight: uma colecao ou
 // um catalogo escolhido com a pagina aberta abriria POR TRAS dela).
 void detail_fechar(void);
