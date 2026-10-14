@@ -193,6 +193,7 @@ typedef enum {
   // e em Bold, desenhado em caixa alta com tracking.
   TXT_TV_ROTULO,        // item da barra       25 / 500
   TXT_TV_SECAO,         // "STREAMING"         24 / 700
+  TXT_HERO_SIN_GRANDE, // optional hero synopsis, 24/400
   TXT_NFONTES
 } TxtEstilo;
 

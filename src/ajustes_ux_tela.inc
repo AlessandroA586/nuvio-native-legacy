@@ -99,7 +99,7 @@ static const Item TELA[] = {
   SEC("Tela inicial", "Estilo, fileiras, barra lateral e Continuar assistindo", "aj_layout-dashboard"),
     ROT("Estilo"),
       OPC(AJ_HOME_LAYOUT), OPC(AJ_LANDSCAPE), OPC(AJ_HERO), OPC(AJ_HERO_CHEIO),
-      OPC(AJ_HERO_CATALOGOS), OPC(AJ_HERO_GENERO),
+      OPC(AJ_HERO_CATALOGOS), OPC(AJ_HERO_GENERO), OPC(AJ_HERO_SINOPSE),
     ROT("Fileiras"),
       OPC(AJ_FIL_ORDEM), OPC(AJ_FIL_LIMITE), OPC(AJ_ITENS_FILEIRA),
       OPC(AJ_ESPACO_FILEIRAS), OPC(AJ_ESPACO_TITULOS),
@@ -147,7 +147,7 @@ static const Item TELA[] = {
   // conta: ligar uma nota liga o par dela e o MDBList por baixo (notaLigarPar).
   SEC("Página do título", "O que aparece, notas e dados do título", "aj_file-text"),
     ROT("O que aparece"),
-      OPC(AJ_DET_VEU), OPC(AJ_DET_DATA_CHEIA), OPC(AJ_DET_BLUR_NAO_VISTOS),
+      OPC(AJ_DET_VEU), OPC(AJ_DET_DATA_CHEIA), OPC(AJ_DET_BLUR_NAO_VISTOS), OPC(AJ_EP_TAMANHO),
     ROT("Notas"),
       OPC(AJ_NT_IMDB), OPC(AJ_NT_TOMATES), OPC(AJ_NT_AUDIENCIA), OPC(AJ_NT_META),
       OPC(AJ_NT_METAUSER), OPC(AJ_NT_TRAKT), OPC(AJ_NT_TMDB), OPC(AJ_NT_LETTER),

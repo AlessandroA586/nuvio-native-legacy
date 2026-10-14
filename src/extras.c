@@ -24,6 +24,17 @@ extern void cat_historico_definir_id(const char *imdb, const char *tipo, int vis
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
+#ifdef NV_EXTRAS_TESTE
+// Costura de teste (tests/notas0.c): a rede sai por macros para que o fio de
+// extras_pedir rode num binario de mesa, sem libcurl e sem conta.
+char *rede_baixar_teste(const char *url, int segundos);
+char *rede_baixar_com_teste(const char *url, int segundos, const char *const *cab);
+char *rede_postar_teste(const char *url, int segundos, const char *const *cab,
+                        const char *corpo);
+#define rede_baixar      rede_baixar_teste
+#define rede_baixar_com  rede_baixar_com_teste
+#define rede_postar      rede_postar_teste
+#endif
 
 static int  notaTrakt, votosTrakt;
 static int  notas[EX_NFONTES];
@@ -646,6 +657,11 @@ static void *buscar(void *arg) {
   if (parte != 1 && temTrakt) {
   snprintf(url, sizeof url, "https://api.trakt.tv/%s/%s/ratings", tipo, id);
   corpo = rede_baixar_com(url, 12, cab);
+  // Diagnostico: "notas=0/11" nao dizia se o Trakt nao respondeu ou respondeu
+  // sem rating; uma linha por resultado separa rede de parse.
+  if (!corpo) printf("[extras] %s: ratings trakt sem resposta\n", id);
+  else if (js_num(corpo, NULL, "rating", 0.0) <= 0.0)
+    printf("[extras] %s: ratings trakt respondeu sem nota\n", id);
   if (corpo) {
     int n = para100(js_num(corpo, NULL, "rating", 0.0));
     int v = (int)js_num(corpo, NULL, "votes", 0.0);
@@ -690,7 +706,7 @@ static void *buscar(void *arg) {
     const char *cabJ[3];
     char kj[64];
     char corpoPost[80];
-    int k;
+    int k, pedidas = 0, comNota = 0;
     snprintf(kj, sizeof kj, "content-type: application/json");
     cabJ[0] = kj; cabJ[1] = NULL; cabJ[2] = NULL;
     snprintf(corpoPost, sizeof corpoPost,
@@ -700,6 +716,7 @@ static void *buscar(void *arg) {
       // As fontes extras so custam a viagem quando a pessoa as pediu na linha
       // do titulo (o padrao e desligado): sao quatro POSTs a mais por titulo.
       if (k >= EX_METAUSER && !ajustes_nota_titulo(k)) continue;
+      pedidas++;
       snprintf(u, sizeof u, "https://api.mdblist.com/rating/%s/%s?apikey=%s",
                serie ? "show" : "movie", FONTE[k], mdbChave);
       rp = rede_postar(u, 12, cabJ, corpoPost);
@@ -708,6 +725,7 @@ static void *buscar(void *arg) {
         free(rp);
         if (v >= 0.0) {
           int c = emDecimos(v);
+          comNota++;
           pthread_mutex_lock(&trava);
           if (!strcmp(id, idPedido)) {
             notas[k] = c;
@@ -716,6 +734,14 @@ static void *buscar(void *arg) {
           pthread_mutex_unlock(&trava);
         } }
     }
+    // O mesmo silencio do Trakt: "0/11" numa so linha nao dizia se o POST
+    // falhou, se a fonte voltou sem nota ou se nenhuma foi pedida.
+    printf("[extras] %s: mdblist pediu %d fontes, %d com nota\n",
+           id, pedidas, comNota);
+  } else if (parte != 0) {
+    // Ate aqui um "notas=0/11" parecia igual com ou sem chave configurada.
+    printf("[extras] %s: mdblist nao consultado (%s)\n", id,
+           !mdbChave[0] ? "sem chave" : "ajuste desligado");
   }
 
   // --- comentarios, os mais curtidos primeiro ---
