@@ -579,6 +579,8 @@ typedef enum {
   AJ_HERO_GENERO,
   // #205: nome do add-on na tela Cinema da abertura. 1 = Desligado de fabrica. LOCAL, append-only.
   AJ_ABERTURA_ADDON,
+  // #205: tamanho dos cards de episodio da pagina do titulo (Moderna). 0 Pequeno, 1 Medio (de fabrica), 2 Grande. LOCAL, append-only.
+  AJ_EP_TAMANHO,
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -592,6 +594,7 @@ static const char *V_SELOS_PACOTE[] = { "Do Nuvio", "Pacote 1", "Pacote 2", "Pac
 
 // Selo de assistido: a ordem e a do disco (0 = Ligado do V_LIGA antigo vira Icone,
 // 1 = Desligado continua), entao o que ja foi gravado nao precisa migrar.
+static const char *V_EP_TAMANHO[] = { "Pequeno", "Médio", "Grande" };
 static const char *V_SELO_VISTO[] = { "Ícone", "Desligado", "Escrito" };
 static const char *V_ICONE_APP[ICONEAPP_N] = {
   "Original", "Fênix", "N verde-água", "TV laranja", "N pixel",
@@ -1477,6 +1480,7 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Dicas do controle"),
   ESC("Mostrar gênero no destaque", V_LIGA, 2),   // local: heroGeneroLocal
   ESC("Mostrar addon na abertura", V_LIGA, 2),   // local: aberturaAddonLocal (#205)
+  ESC("Tamanho dos cards de episódio", V_EP_TAMANHO, 3), // local: epTamanhoLocal (#205)
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1731,6 +1735,7 @@ static const char *CHAVE[] = {
   "-dicasControle",
   "heroGeneroLocal",
   "aberturaAddonLocal",
+  "epTamanhoLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2402,6 +2407,7 @@ int ajustes_abertura(void) { int v = valor[AJ_ABERTURA]; return v < 0 || v > 2 ?
 int ajustes_legendas_todas(void) { return valor[AJ_LEG_MOSTRAR] == 1; }
 int ajustes_abertura_detalhada(void) { return valor[AJ_TELA_ABERTURA] == 1; }
 int ajustes_abertura_addon(void) { return lig(AJ_ABERTURA_ADDON); }
+int ajustes_ep_tamanho(void) { int v = valor[AJ_EP_TAMANHO]; return v >= 0 && v <= 2 ? v : 1; }
 int ajustes_leg2_junto(void) { return valor[AJ_LEG2_POS] == 1; }
 int ajustes_leg2_tamanho(void) {
   static const int P[] = { 0, 60, 80, 100, 120, 140, 160, 170, 180, 190, 200,
@@ -4535,6 +4541,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_LEG_SYNC_AUTO: /* escolha local desta TV */
     case AJ_TELA_ABERTURA: /* #205: o web nao tem; escolha desta TV */
     case AJ_ABERTURA_ADDON: /* idem */
+    case AJ_EP_TAMANHO:    /* idem */
     case AJ_MIC_BUSCA:     /* o microfone e o controle sao desta TV */
     case AJ_TECLADO_ANDROID: /* o web nao tem; o teclado e deste aparelho */
     case AJ_LEG_SYNC_AUDIO: /* PCM e passthrough sao desta TV; o web nao tem */
@@ -5471,6 +5478,7 @@ static int inativa(int op) {
     // O fundo em tela cheia e da Moderna: no Padrao o destaque e um banner e na
     // Dinamica ele e sempre de ponta a ponta e rola junto com as fileiras.
     case AJ_HERO_CHEIO:   return ajustes_home_layout() != HOME_LAYOUT_MODERNA;
+    case AJ_EP_TAMANHO:   return ajustes_home_layout() != HOME_LAYOUT_MODERNA;
     // #162: o Descobrir do app web (navegar catalogos por tipo e genero) ainda
     // nao existe nesta TV — o "Explorar" daqui e outra tela. A escolha vem e
     // vai para a conta, mas aqui nao muda nada, e a linha tem de dizer isso.
@@ -5999,6 +6007,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_SOCIAL: return "Ligado (padrão): amigos, atividade deles e recomendações. Desligado: tudo isso some, com a fileira de amigos da Home, e o app para de falar com o serviço social. Salvos e Avisos continuam. Vale só para este perfil.";
     case AJ_DV_MKV: return "Arquivos MKV em Dolby Vision perfil 5 ou 8 tocam com o Dolby Vision ligado, em vez de HDR10. O áudio Dolby Digital e Dolby Digital Plus vai direto para a TV. Se a conexão não acompanhar, o vídeo continua em HDR10. Só em TVs LG com webOS 4 ou mais novo.";
     case AJ_CW_RETIDO_TAMBEM: return "Quando o título está na ilha ou em Retomar agora, mostra também na fileira Continuar assistindo.";
+    case AJ_EP_TAMANHO: return "Pequeno, Médio (padrão) ou Grande. Só vale no layout Moderno, na página de séries. Vale só nesta TV.";
     case AJ_ABERTURA_ADDON: return "Desligado (padrão): a tela Cinema mostra só a arte, o logo e a barra. Ligado: o nome do add-on aparece sob a barra. Vale só nesta TV.";
     case AJ_TELA_ABERTURA: return "Cinema (padrão): a arte e o logo do título ficam na tela até o vídeo entrar. Detalhada: a fonte, o add-on e cada passo da abertura. Na Cinema, Para cima ou Para baixo mostra os detalhes. Vale só nesta TV.";
     case AJ_PLR_CLASSIF: return "Ligado (padrão): no começo do filme, a ilha mostra a classificação indicativa e os avisos do guia parental (violência, nudez, palavrões). Desligado: o player não mostra nada disso.";
@@ -8265,6 +8274,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_CW_ESTILO: case AJ_CW_THUMB: case AJ_CW_BLUR_PROX:
     case AJ_CW_FURTHEST: case AJ_CW_NAO_EXIBIDOS: case AJ_CW_ORDEM: case AJ_CW_RETIDO_TAMBEM:
       return AJPV_CONTINUAR;
+    case AJ_EP_TAMANHO:
     case AJ_DET_BLUR_NAO_VISTOS: case AJ_DET_TRAILER: case AJ_DET_META_EXT:
     case AJ_DET_SO_CINEMETA: case AJ_BUSCA_CINEMETA: case AJ_BUSCA_NUVIO: case AJ_BUSCA_ORIGEM:
     case AJ_DET_DATA_CHEIA: case AJ_DET_VEU: case AJ_DET_TRAILER_AUTO:

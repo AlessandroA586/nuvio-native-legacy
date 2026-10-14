@@ -152,12 +152,23 @@ int main(void) {
   assert(AJ_INTERFACE_MODO == AJ_PROXIMO_CONTAGEM + 1);
   assert(AJ_MIC_BUSCA == AJ_INTERFACE_MODO + 1);
   assert(AJ_MENU_TOPO == AJ_MIC_BUSCA + 1 && AJ_ABAS_ESTILO == AJ_MENU_TOPO + 1 && AJ_TECLADO_ANDROID == AJ_ABAS_ESTILO + 1 && AJ_LEG_CONTORNO_COR == AJ_TECLADO_ANDROID + 1);
-  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_ESTAT_TAMANHO == AJ_FALHA_ADDON_LIMITE + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_DICASCONTROLE == AJ_OCULTAR_FILMES_VISTOS + 1 && AJ_HERO_GENERO == AJ_DICASCONTROLE + 1 && AJ_ABERTURA_ADDON == AJ_HERO_GENERO + 1 && AJ_N == AJ_ABERTURA_ADDON + 1);
+  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_ESTAT_TAMANHO == AJ_FALHA_ADDON_LIMITE + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_DICASCONTROLE == AJ_OCULTAR_FILMES_VISTOS + 1 && AJ_HERO_GENERO == AJ_DICASCONTROLE + 1 && AJ_ABERTURA_ADDON == AJ_HERO_GENERO + 1 && AJ_EP_TAMANHO == AJ_ABERTURA_ADDON + 1 && AJ_N == AJ_EP_TAMANHO + 1);
   assert(valor[AJ_HERO_GENERO] == 0 && ajustes_hero_genero());   // Ligado: o visual de sempre
   assert(!strcmp(CHAVE[AJ_HERO_GENERO], "heroGeneroLocal") && somenteDesteAparelho(AJ_HERO_GENERO));
   assert(valor[AJ_ABERTURA_ADDON] == 1 && !ajustes_abertura_addon());
   assert(!strcmp(CHAVE[AJ_ABERTURA_ADDON], "aberturaAddonLocal") && somenteDesteAparelho(AJ_ABERTURA_ADDON));
   valor[AJ_ABERTURA_ADDON] = 0; assert(ajustes_abertura_addon()); valor[AJ_ABERTURA_ADDON] = 1;
+  // #205: o tamanho dos cards de episodio da Moderna — Medio de fabrica, local,
+  // na secao da pagina do titulo, com tres valores.
+  assert(!strcmp(CHAVE[AJ_EP_TAMANHO], "epTamanhoLocal"));
+  assert(valor[AJ_EP_TAMANHO] == 1 && ajustes_ep_tamanho() == 1);
+  assert(somenteDesteAparelho(AJ_EP_TAMANHO) && !dePerfil(AJ_EP_TAMANHO));
+  assert(OPCOES[AJ_EP_TAMANHO].n == 3 && !strcmp(V_EP_TAMANHO[1], "Médio"));
+  assert(!strcmp(i18n(OPCOES[AJ_EP_TAMANHO].rotulo), "Episode card size"));
+  valor[AJ_EP_TAMANHO] = 0; assert(ajustes_ep_tamanho() == 0);
+  valor[AJ_EP_TAMANHO] = 2; assert(ajustes_ep_tamanho() == 2);
+  valor[AJ_EP_TAMANHO] = 7; assert(ajustes_ep_tamanho() == 1);   // fora da faixa: o medio
+  valor[AJ_EP_TAMANHO] = 1;
   for (int i = 0; i < AJ_N; i++) assert(strcmp(CHAVE[i], "autoCreditosLocal"));
   // #338: o tamanho das estatisticas ao vivo: "Lembrar o ultimo" por padrao, local,
   // em Reproducao, com Lembrar + Completo/Compacto/Minimo.
