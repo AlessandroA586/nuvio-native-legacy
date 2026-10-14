@@ -25,6 +25,7 @@ void ajustes_desenhar(Uint32 agora);
 int  ajustes_quer_sair(void);
 // 1 quando a linha "Addons" foi acionada. Lido e zerado na chamada.
 int  ajustes_pediu_addons(void);
+int  ajustes_pediu_dicascontrole(void); // Settings > About and help
 int  ajustes_pediu_novidades20(void);   // OK em Sobre e ajuda › Novidades 2.0: o app.c abre o guia
 int  ajustes_pediu_plugins(void);   // OK em Plugins (F09): o app.c abre a tela   // 1 quando o Back deve fechar a tela
 int  ajustes_pediu_diagnostico(void);
@@ -288,10 +289,12 @@ int   ajustes_rail_recolhida(void);     // collapseSidebar
 // #461: 1 = o menu e uma barra no topo (menu.c), sem rail na esquerda. 0 no
 // layout Dinamica e no telefone em retrato.
 int   ajustes_menu_topo(void);
-int   ajustes_abas_estilo(void);   // #205: 0 Chips, 1 Menu suspenso, 2 Barra central, 3 Paginas
+int   ajustes_abas_estilo(void);   // 0 Chips, 1 Menu suspenso, 2 Barra central, 3 Paginas, 4 Menu no topo
+void  ajustes_definir_abas_estilo(int estilo);
 int   ajustes_rail_moderna(void);       // modernSidebar
 int   ajustes_rail_moderna_blur(void);  // modernSidebarBlur
 int   ajustes_hero_ligado(void);        // heroSectionEnabled
+int   ajustes_hero_genero(void);        // heroGeneroLocal: genero sob o logo do destaque
 int   ajustes_hero_cheio(void);         // modernHeroFullScreenBackdropEnabled
 // LAYOUT DA HOME (local): a estrutura da tela inicial. Moderna e o desenho de
 // sempre; Padrao contem o destaque num banner; Dinamica e o estilo Apple TV.
@@ -454,8 +457,12 @@ int   ajustes_esconder_logo_trailer(void);   // 1 = hide the corner title logo w
 int   ajustes_legendas_todas(void); // #425: abrir todas as faixas
 // #205: 1 = tela de abertura Detalhada (o cartao com fonte e passos); 0 = Cinema.
 int   ajustes_abertura_detalhada(void);
+// #205: 1 = mostra o nome do add-on na tela Cinema da abertura (padrao: 0).
+int   ajustes_abertura_addon(void);
 // #338: tamanho de abertura das Estatisticas ao vivo (EV_TAM_*); -1 = o ultimo usado.
 int   ajustes_estat_tamanho(void);
+int   ajustes_estat_lado(void);                 // 0 Direita, 1 Esquerda
+void  ajustes_definir_estat_lado(int esquerda);
 int   ajustes_leg2_junto(void);
 int   ajustes_leg2_tamanho(void);
 int   ajustes_leg2_cor(void);
@@ -493,6 +500,7 @@ int   ajustes_saida_player_home(void);
 int   ajustes_manter_video(void);
 // Selo de visto no cartaz da home (#212). 1 = ligado (o de fabrica).
 int   ajustes_selo_visto(void);
+int   ajustes_selo_visto_modo(void);   // 0 desligado, 1 icone (check), 2 escrito
 // #366: oculta filmes vistos so na descoberta, por perfil neste aparelho.
 // Desligado de fabrica; busca, biblioteca e historico nao sao filtrados.
 int   ajustes_ocultar_filmes_vistos(void);

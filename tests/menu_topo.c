@@ -16,6 +16,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
+#include "nvtmp.h"
 
 static SDL_Event evento(SDL_Keycode k) {
   SDL_Event e;
@@ -44,7 +45,7 @@ static void abrir(int destino) {
   menu_abrir();
 }
 
-static char dir[] = "/tmp/nuvio-menu-topo-XXXXXX", caminho[700];
+static char dir[NVT_MAX], caminho[700];
 static void gravar(const char *txt) {
   FILE *f = fopen(caminho, "w"); assert(f);
   fputs(txt, f); fclose(f);
@@ -52,7 +53,7 @@ static void gravar(const char *txt) {
 }
 
 int main(void) {
-  assert(mkdtemp(dir));
+  nvt_set(dir, sizeof dir, "/nuvio-menu-topo-XXXXXX"); assert(mkdtemp(dir));
   assert(setenv("NUVIO_DADOS", dir, 1) == 0);
   dados_iniciar(dir);
   // Larguras reais dos rotulos: a fonte precisa de um contexto GL (os glifos).

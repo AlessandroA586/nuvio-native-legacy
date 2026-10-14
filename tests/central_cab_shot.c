@@ -27,6 +27,7 @@
 #include "video.h"
 #include "badges.h"
 #include "idioma.h"
+#include "nvtmp.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <assert.h>
@@ -83,7 +84,7 @@ static void tecla(SDL_Keycode k) {
 
 int main(int argc, char **argv) {
   const char *li = getenv("NUVIO_SHOT_IDIOMA");
-  saida = argc > 1 ? argv[1] : "/tmp/nv-fontes-cab";
+  saida = argc > 1 ? argv[1] : nvt("/nv-fontes-cab");
   noPlayer = 1;
   video_shot_pode_forcar_sdr(getenv("NUVIO_SHOT_SEMHDR") && atoi(getenv("NUVIO_SHOT_SEMHDR")));
   SDL_SetHint("SDL_MAC_BACKGROUND_APP", "1");

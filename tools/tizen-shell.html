@@ -838,9 +838,10 @@
     ev.preventDefault();
     ev.stopPropagation();
     var alvo = document.getElementById("canvas") || window;
+    var code = f === "F6" ? 117 : 116;
     ["keydown", "keyup"].forEach(function (t) {
       alvo.dispatchEvent(new KeyboardEvent(t, {
-        key: f, code: f, keyCode: f === "F6" ? 117 : 116, which: f === "F6" ? 117 : 116,
+        key: f, code: f, keyCode: code, which: code,
         bubbles: true, cancelable: true
       }));
     });

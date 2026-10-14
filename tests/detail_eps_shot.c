@@ -30,6 +30,7 @@
 //
 //   bash tests/detail_eps_shot.sh /tmp/nuvio-deteps
 #include <SDL2/SDL.h>
+#include "nvtmp.h"
 #include <SDL2/SDL_image.h>
 #include <assert.h>
 #include <stdio.h>
@@ -478,7 +479,7 @@ static void nosEpisodios(int col) {
 }
 
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nuvio-deteps";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nuvio-deteps");
   char nome[600];
   SDL_GLContext gl;
 

@@ -21,9 +21,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "nvtmp.h"
 
 // ------------------------------------------------------------ disco dublado
-static const char *pasta(void) { const char *d = getenv("NV_T_DIR"); return d && *d ? d : "/tmp"; }
+static const char *pasta(void) { const char *d = getenv("NV_T_DIR"); return d && *d ? d : nvt_dir(); }
 char *dados_ler(const char *nome) {
   char c[600]; FILE *f; long n; char *b;
   snprintf(c, sizeof c, "%s/%s", pasta(), nome);

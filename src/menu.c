@@ -809,15 +809,17 @@ static void menu_desenharCorpo_(Uint32 agora) {
 
 // MEDIDAS DO ORIGINAL (print do app oficial no layout Apple TV, medido pelo
 // coordenador em 2000 px e convertido x0,96 para 1920; dono, 01/10: "muito
-// pesada", "a letra ta grande demais"):
+// pesada", "a letra ta grande demais"; reaberto 14/10 contra a foto
+// fotos1014/appletv-sidebar.jpg — margem, largura, chip e foco voltam ao medido):
 //   painel x 38, topo 38, ~355 de largura, raio ~40, vidro escuro translucido
-//   com aro fino; avatar 44, nome 26 Medium, relogio ~24 Regular; itens sem
-//   circulo atras do icone (icone de linha 28 a 85%), rotulo 25 Regular,
-//   passo 79, foco = pilula BRANCA cheia de 74; "Streaming" 22 cinza medio;
+//   com aro fino; avatar 44, nome 26 Medium, relogio ~24 Regular; icone de
+//   linha num CIRCULO translucido (46), rotulo 25 Regular, passo 79, foco =
+//   pilula BRANCA cheia de 74, um pouco MAIOR (cresce 3 px por lado); item
+//   atual sem foco = pilula clara translucida; "Streaming" 22 cinza medio;
 //   logo da pasta em circulo de 48.
-#define TV_PAINEL_X     54.0f
+#define TV_PAINEL_X     38.0f
 #define TV_PAINEL_Y     38.0f
-#define TV_PAINEL_W    384.0f
+#define TV_PAINEL_W    355.0f
 #define TV_RAIO         40.0f
 #define TV_CAB_H       120.0f    // cabecalho: avatar, nome, relogio
 #define TV_LINHA_H      79.0f
@@ -830,6 +832,13 @@ static void menu_desenharCorpo_(Uint32 agora) {
 #define TV_LOGO         48.0f    // circulo da pasta de Streaming
 #define TV_AVATAR       44.0f
 #define TV_ROTULO_H     60.0f    // rotulo da secao "Streaming"
+// O CHIP: na foto da referencia (appletv-sidebar.jpg) cada icone de linha mora
+// num circulo translucido, quase apagado quando a pilula branca do foco assume
+// e a tinta do icone/rotulo escurece.
+#define TV_CHIP         46.0f
+#define TV_CHIP_REPOUSO  0.16f    // circulo claro translucido em repouso
+#define TV_CHIP_FOCO     0.07f    // quase apagado na pilula do foco
+#define TV_FOCO_CRESC    3.0f     // a pilula em foco cresce 3 px por lado
 // Pilula fechada: mais baixa e com a letra do item (25), nao a de titulo.
 #define TV_PIL_CIRC     46.0f
 #define TV_ALTURA_MAX  (NV_TELA_H - 2.0f * TV_PAINEL_Y)
@@ -1027,6 +1036,24 @@ static void tvRelogio(char *buf, size_t tam) {
   hora_tela(buf, tam, &tmv);
 }
 
+// A PILULA DO FOCO E UM POUCO MAIOR (referencia: o item em foco cresce sobre
+// os vizinhos). O repique da mola passa de 1; a geometria aceita um pouco.
+static GfxRect tvPillFoco(GfxRect p, float f) {
+  if (f < 0.0f) f = 0.0f;
+  if (f > 1.15f) f = 1.15f;
+  return (GfxRect){ p.x - TV_FOCO_CRESC * f, p.y - TV_FOCO_CRESC * f,
+                    p.w + 2.0f * TV_FOCO_CRESC * f, p.h + 2.0f * TV_FOCO_CRESC * f };
+}
+
+// O CHIP do icone da linha: circulo translucido em repouso, quase apagado (e
+// escuro) quando a pilula branca do foco assume.
+static void tvChip(float cx, float cy, float foco, float alfa) {
+  float c = 1.0f - limita01(foco);   // branco no repouso, escuro no foco
+  float a = anim_mistura(TV_CHIP_REPOUSO, TV_CHIP_FOCO, limita01(foco));
+  gfx_cor((GfxRect){ cx - TV_CHIP * 0.5f, cy - TV_CHIP * 0.5f, TV_CHIP, TV_CHIP },
+          0.5f, c, c, c, a * alfa);
+}
+
 // Icone de linha, sem bolha atras: branco a 85% em repouso, a tinta escura
 // sobre a pilula branca do foco.
 static void tvIcone(int d, float cx, float cy, float foco, float alfa) {
@@ -1160,12 +1187,12 @@ static void tvDesenhar(void) {
 #endif
   }
 
-  // Keep the polished Apple TV shape and focus; its material follows the
-  // same opacity/Frost settings as the other glass islands.
-  {
-    if (ajustes_vidro()) gfx_vidro_folha(R, raioPx / R.h, A);
-    else gfx_cor(R, raioPx / R.h, 0.085f, 0.090f, 0.105f, A);
-  }
+  // Keep the polished Apple TV shape and focus. THE MATERIAL IS ALWAYS
+  // GLASS (fotos1014/appletv-sidebar.jpg): this layout mimics the tvOS
+  // sidebar, and the reference panel is translucent tinted glass regardless
+  // of the global "Interface de vidro" switch; gfx_vidro_folha still honors
+  // the Opacity/Frost/effect settings internally.
+  gfx_vidro_folha(R, raioPx / R.h, A);
 
   // Conteudo da pilula fechada: some no comeco da abertura.
   { float ap = A * (1.0f - s * 3.0f);
@@ -1192,8 +1219,9 @@ static void tvDesenhar(void) {
     float ys[NV_MENU_FOCOS_TV], yRot, f, topo;
     const int *pastas;
     int i, np = tvPastas(&pastas);
-    // Foco: pilula BRANCA cheia, texto e icone escuros (como o original).
-    const float FR = 0.95f, FG = 0.95f, FB = 0.96f;
+    // Foco: pilula BRANCA cheia e um pouco maior, texto e icone escuros
+    // (como o original; a foto mostra branco-azulado, nao cinza).
+    const float FR = 0.97f, FG = 0.97f, FB = 1.00f;
     const int TINTA_FOCO = 22;
     if (ac <= 0.01f) return;
     if (ac > 1.0f) ac = 1.0f;
@@ -1213,7 +1241,7 @@ static void tvDesenhar(void) {
       f = animFoco[MENU_RODAPE];
       if (f > 0.01f) {
         GfxRect pill = { Q.x + TV_PAD_X, cyCab - TV_PILULA_H * 0.5f, Q.w - TV_PAD_X * 2.0f, TV_PILULA_H };
-        gfx_cor(pill, 0.5f, FR, FG, FB, f * ac);
+        gfx_cor(tvPillFoco(pill, f), 0.5f, FR, FG, FB, f * ac);
       }
       emFoco = f > 0.5f;
       c = emFoco ? TINTA_FOCO : 240;
@@ -1246,14 +1274,16 @@ static void tvDesenhar(void) {
       cy = y + TV_LINHA_H * 0.5f;
       pill = (GfxRect){ Q.x + TV_PAD_X, cy - TV_PILULA_H * 0.5f, Q.w - TV_PAD_X * 2.0f, TV_PILULA_H };
       f = animFoco[d];
-      // ATUAL sem foco: so um veu claro bem leve, nada de pilula pesada.
-      if (atual && f < 0.99f) gfx_cor(pill, 0.5f, 1.0f, 1.0f, 1.0f, 0.09f * (1.0f - f) * ac);
-      if (f > 0.01f) gfx_cor(pill, 0.5f, FR, FG, FB, f * ac);
+      // ATUAL sem foco: pilula clara translucida, sutil (a "barra" cinza da
+      // foto), nada de pilula pesada.
+      if (atual && f < 0.99f) gfx_cor(pill, 0.5f, 1.0f, 1.0f, 1.0f, 0.12f * (1.0f - f) * ac);
+      if (f > 0.01f) gfx_cor(tvPillFoco(pill, f), 0.5f, FR, FG, FB, f * ac);
       { int emFoco = f > 0.5f;
         int c = emFoco ? TINTA_FOCO : 235;
         const char *rot;
         float ccx = pill.x + TV_COL_CX;
         if (d < MENU_ST0) {
+          tvChip(ccx, cy, f, ac);
           tvIcone(d, ccx, cy, f, ac);
           rot = tvRotulo(d);
         } else {

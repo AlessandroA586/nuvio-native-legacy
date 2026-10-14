@@ -10,7 +10,7 @@ from pathlib import Path
 source = Path('src/app.c').read_text()
 start = source.index('static int spotAtalho(')
 end = source.index('static int spotPode(', start)
-with tempfile.TemporaryDirectory(prefix='spot-ch-', dir=os.environ.get('TMPDIR', '/tmp')) as tmp:
+with tempfile.TemporaryDirectory(prefix='spot-ch-', dir=os.environ.get('TMPDIR') or None) as tmp:
     c = Path(tmp) / 'test.c'
     c.write_text('''#include <SDL.h>
 #include "layout.h"
