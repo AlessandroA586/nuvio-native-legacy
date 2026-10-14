@@ -168,6 +168,16 @@ static void variantes(void) {
   dvtela_apresentacao(0, "", "Titulo", "T1E1");
   dvtela_entrar(1000);
   assert(dvtela_variante() == DVT_VAR_CINEMA);
+  // Mesmo depois dos 800 ms, OK nao ativa o botao oculto da Cinema.
+  { const SDL_Keycode oks[] = { SDLK_RETURN, SDLK_KP_ENTER, SDLK_SPACE };
+    unsigned i;
+    for (i = 0; i < sizeof oks / sizeof *oks; i++) {
+      e = tecla(oks[i]);
+      assert(dvtela_evento(&e, 5000) == DVT_EV_ENGOLIU && dvtela_ativa());
+      assert(dvtela_variante() == DVT_VAR_CINEMA);
+      assert(dvtela_estado()->saida == DVT_SAIDA_NADA);
+    }
+  }
   e = tecla(SDLK_DOWN);
   assert(dvtela_evento(&e, 5000) == DVT_EV_ENGOLIU && dvtela_ativa());
   assert(dvtela_variante() == DVT_VAR_DETALHADA);
@@ -176,7 +186,10 @@ static void variantes(void) {
   // Tela nova volta a Cinema; com Detalhada as setas nao mudam nada.
   dvtela_entrar(9000);
   assert(dvtela_variante() == DVT_VAR_CINEMA);
-  dvtela_sair(DVT_SAIDA_FONTE, 9100);
+  e = tecla(SDLK_UP);
+  assert(dvtela_evento(&e, 10000) == DVT_EV_ENGOLIU && dvtela_ativa());
+  e = tecla(SDLK_RETURN);
+  assert(dvtela_evento(&e, 10000) == DVT_EV_HDR10 && !dvtela_ativa());
   dvtela_apresentacao(1, "", "Titulo", "");
   dvtela_entrar(10000);
   assert(dvtela_variante() == DVT_VAR_DETALHADA);

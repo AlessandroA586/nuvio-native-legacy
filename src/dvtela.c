@@ -204,8 +204,9 @@ int dvtela_evento(const SDL_Event *e, Uint32 agora) {
   if (e->type != SDL_KEYDOWN) return DVT_EV_ENGOLIU;
   if (nv_tecla_voltar(e)) { dvtela_sair(DVT_SAIDA_VOLTAR, agora); return DVT_EV_VOLTAR; }
   if (ehOk(e)) {
-    // Tecla segurada ou o segundo toque do Play: nao e escolha.
-    if (e->key.repeat || (Uint32)(agora - E.entrouEm) < DVT_OK_ESPERA_MS) return DVT_EV_ENGOLIU;
+    // Botao oculto, tecla segurada ou o segundo toque do Play: nao e escolha.
+    if (dvtela_variante() == DVT_VAR_CINEMA || e->key.repeat ||
+        (Uint32)(agora - E.entrouEm) < DVT_OK_ESPERA_MS) return DVT_EV_ENGOLIU;
     dvtela_sair(DVT_SAIDA_HDR10, agora);
     return DVT_EV_HDR10;
   }

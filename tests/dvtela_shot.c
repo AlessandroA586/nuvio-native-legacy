@@ -273,6 +273,12 @@ int main(int argc, char **argv) {
     quadros(2);
     assert(dvtela_ativa() && video_simulado_dv_recusas() == antes);
     quadros(60);
+    if (dvtela_variante() == DVT_VAR_CINEMA) {
+      tecla(SDLK_RETURN); quadros(2);
+      assert(dvtela_ativa() && video_simulado_dv_recusas() == antes);
+      tecla(SDLK_DOWN); quadros(2);
+      assert(dvtela_variante() == DVT_VAR_DETALHADA);
+    }
     tecla(SDLK_RETURN);
     quadros(2);
     assert(video_simulado_dv_recusas() == antes + 1);
