@@ -1,4 +1,5 @@
 #include "traktscrobble.h"
+#include "metaep.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -32,23 +33,28 @@ int scrobble_decidir(ScrobbleEstado *s, int evento, const char *id, double pct) 
   return SCR_NADA;
 }
 
-void scrobble_corpo(char *dst, size_t n, const char *id, double pct) {
+void scrobble_corpo_ep(char *dst, size_t n, const char *id, double pct,
+                       const ScrobbleEpIds *ep) {
   char base[64];
   int t = 0, e = 0;
   char *dp;
+  MetaEpInfo info;
   if (pct < 0.0) pct = 0.0;
   if (pct > 100.0) pct = 100.0;
   snprintf(base, sizeof base, "%s", id);
   dp = strchr(base, ':');
   if (dp) { sscanf(dp + 1, "%d:%d", &t, &e); *dp = 0; }
-  if (t > 0 && e > 0)
-    snprintf(dst, n,
-             "{\"show\":{\"ids\":{\"imdb\":\"%s\"}},"
-             "\"episode\":{\"season\":%d,\"number\":%d},\"progress\":%.2f}",
-             base, t, e, pct);
-  else
-    snprintf(dst, n, "{\"movie\":{\"ids\":{\"imdb\":\"%s\"}},\"progress\":%.2f}",
-             base, pct);
+  memset(&info, 0, sizeof info);
+  if (ep) {
+    if (ep->tvdb) snprintf(info.tvdb, sizeof info.tvdb, "%s", ep->tvdb);
+    if (ep->tmdb) snprintf(info.tmdb, sizeof info.tmdb, "%s", ep->tmdb);
+    if (ep->trakt) snprintf(info.trakt, sizeof info.trakt, "%s", ep->trakt);
+  }
+  metaep_scrobble_corpo(dst, n, base, t, e, (t > 0 && e > 0) ? &info : NULL, pct);
+}
+
+void scrobble_corpo(char *dst, size_t n, const char *id, double pct) {
+  scrobble_corpo_ep(dst, n, id, pct, NULL);
 }
 
 const char *scrobble_nome(int acao) {

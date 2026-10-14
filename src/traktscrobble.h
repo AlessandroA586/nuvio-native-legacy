@@ -20,7 +20,15 @@ typedef struct { char id[64]; int ativo; } ScrobbleEstado;
 int scrobble_decidir(ScrobbleEstado *s, int evento, const char *id, double pct);
 
 // JSON do corpo. `id` e "tt123" (filme) ou "tt123:T:E" (episodio: id do SHOW
-// mais temporada/numero, que o Trakt resolve sozinho).
+// mais temporada/numero, que o Trakt resolve sozinho). `ep` opcional traz ids
+// do episodio quando o meta do addon ja os conhece (TVDB/TMDB/Trakt).
+typedef struct {
+  const char *tvdb;
+  const char *tmdb;
+  const char *trakt;
+} ScrobbleEpIds;
 void scrobble_corpo(char *dst, size_t n, const char *id, double pct);
+void scrobble_corpo_ep(char *dst, size_t n, const char *id, double pct,
+                       const ScrobbleEpIds *ep);
 const char *scrobble_nome(int acao);
 #endif
