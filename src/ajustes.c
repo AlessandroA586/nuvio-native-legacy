@@ -574,6 +574,8 @@ typedef enum {
   AJ_ESTAT_TAMANHO,
   // #366: discovery rows only, per profile on this device. Append-only.
   AJ_OCULTAR_FILMES_VISTOS,
+  // Estatisticas ao vivo: o lado em que o painel fica (0 Direita, 1 Esquerda). LOCAL, append-only.
+  AJ_ESTAT_LADO,
   AJ_DICASCONTROLE, // append-only action; preserves all stored option indices
   // Destaque: genero sob o logo (local). No fim: valor[]/CHAVE[] posicionais.
   AJ_HERO_GENERO,
@@ -668,6 +670,8 @@ static const char *V_ABAS_ESTILO[] = { "Chips", "Menu suspenso", "Barra central"
 static const char *V_BUFFER[] = { "Automático", "Pequeno", "Médio", "Grande" };
 // #338: o indice menos 1 e o tamanho de estatvivoui.h (0 = lembrar o ultimo).
 static const char *V_ESTAT_TAMANHO[] = { "Lembrar o último", "Completo", "Compacto", "Mínimo" };
+// 0 = Direita (como as outras laterais do player), 1 = Esquerda.
+static const char *V_ESTAT_LADO[] = { "Direita", "Esquerda" };
 static const char *V_CACHE_SEEK[] = { "Desligado", "256 MB", "512 MB", "1 GB" };
 // #334: indice gravado em p2pLimiteLocal; ajustes_p2p_limite_mb devolve os MB.
 static const char *V_P2P_LIMITE[] = { "Automático", "2 GB", "4 GB", "8 GB", "16 GB" };
@@ -1477,6 +1481,7 @@ static const Opcao OPCOES[AJ_N] = {
   NUM("Links neste add-on", 1, FONTEFALHA_MAX_LINKS, 1, ""),
   ESC("Tamanho das estatísticas ao vivo", V_ESTAT_TAMANHO, 4),   // local: estatTamanhoLocal (#338)
   ESC("Ocultar filmes assistidos", V_LIGA, 2), // por perfil, local: hideWatchedMoviesLocal
+  ESC("Lado das estatísticas", V_ESTAT_LADO, 2),   // local: estatLadoLocal
   ACAO("Dicas do controle"),
   ESC("Mostrar gênero no destaque", V_LIGA, 2),   // local: heroGeneroLocal
   ESC("Mostrar addon na abertura", V_LIGA, 2),   // local: aberturaAddonLocal (#205)
@@ -1732,6 +1737,7 @@ static const char *CHAVE[] = {
   "-falhaAddons", "-falhaAddonOrdem", "-falhaAddonLinks",
   "estatTamanhoLocal",
   "hideWatchedMoviesLocal",
+  "estatLadoLocal",
   "-dicasControle",
   "heroGeneroLocal",
   "aberturaAddonLocal",
@@ -2386,6 +2392,14 @@ int ajustes_legenda_forcada_auto(void) { return lig(AJ_LEG_FORCADA); }   // #287
 int ajustes_estat_tamanho(void) {
   int v = valor[AJ_ESTAT_TAMANHO];
   return v >= 1 && v <= 3 ? v - 1 : -1;
+}
+// 0 = Direita (padrao), 1 = Esquerda.
+int ajustes_estat_lado(void) { return valor[AJ_ESTAT_LADO] == 1; }
+void ajustes_definir_estat_lado(int esquerda) {
+  int v = esquerda ? 1 : 0;
+  if (valor[AJ_ESTAT_LADO] == v) return;
+  valor[AJ_ESTAT_LADO] = v;
+  AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar());
 }
 int ajustes_buffer_preset(void) {
 #ifdef NV_ANDROID
@@ -4551,6 +4565,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_CACHE_SEEK:     /* F07: o disco e o player sao desta TV */
     case AJ_BUFFER:         /* #338: o buffer e do player desta TV */
     case AJ_ESTAT_TAMANHO:  /* #338: o painel de estatisticas e desta TV */
+    case AJ_ESTAT_LADO:     /* idem: o lado do painel */
     case AJ_TRAILER_ZOOM_TPK: /* #241: o firmware de cada Samsung reage de um jeito */
     case AJ_FUNDO:          /* o desfoque custa GPU desta TV; o web nao tem */
     case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: /* teste do vidro: visual desta TV */
@@ -6016,7 +6031,8 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_AVANCADAS: return "Mostra, em todas as categorias, as opções técnicas marcadas como Avançado. Vale só para esta TV.";
     case AJ_LOGO_TRAILER: return "Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.";
     case AJ_TRAILER_ZOOM_TPK: return "Amplia a imagem do trailer e libera os modos de recorte e zoom da proporção no player; em algumas TVs Samsung pode deixar a tela preta ou mostrar a tela inicial da TV.";
-    case AJ_ESTAT_TAMANHO: return "Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fixa no canto. Lembrar o último reabre como você deixou. Com o painel aberto, OK ou Esquerda/Direita trocam o tamanho. Vale só nesta TV.";
+    case AJ_ESTAT_TAMANHO: return "Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fina. Lembrar o último reabre como você deixou. Com o painel aberto, OK troca o tamanho, Esquerda/Direita trocam o lado e Baixo fixa o painel no tamanho escolhido. Vale só nesta TV.";
+    case AJ_ESTAT_LADO: return "O lado do player onde as Estatísticas ao vivo ficam, com a mesma margem das listas de Áudio e Legendas. Direita é o padrão. Com o painel aberto, Esquerda/Direita trocam o lado. Vale só nesta TV.";
     case AJ_BUFFER: return "Quanto vídeo o player baixa à frente. Pequeno poupa memória e rede; Grande aguenta melhor internet instável e arquivos pesados, até o limite de memória da TV. Não muda a qualidade da imagem. Vale a partir do próximo vídeo.";
     case AJ_CACHE_SEEK: return "Guarda no disco o trecho já baixado do vídeo, para voltar sem baixar de novo. Apagado ao fechar o player.";
     case AJ_ANIM: return "Use Reduzidas para movimentos mais discretos ao navegar pela interface.";
@@ -6208,6 +6224,7 @@ static const char *beneficioProprio(int op) {
     case AJ_PLR_CLASSIF: return "No começo do filme, a ilha mostra a classificação e os avisos.";
     case AJ_TELA_ABERTURA: return "O que aparece enquanto o vídeo abre: a arte do título ou os detalhes da fonte.";
     case AJ_ESTAT_TAMANHO: return "Completo, Compacto ou Mínimo: o tamanho das estatísticas ao vivo no player.";
+    case AJ_ESTAT_LADO: return "Direita ou Esquerda: o lado do player onde as estatísticas ao vivo ficam.";
     case AJ_SAIDA_PLAYER: return "O filme pode ficar na ilha do relógio para você voltar depois.";
     case AJ_LEG_FORCADA: return "Placas e falas em outra língua aparecem; o resto, não.";
     case AJ_BUSCA_CINEMETA: return "A busca também consulta o Cinemeta se o catálogo do Nuvio falhar.";
@@ -8191,6 +8208,7 @@ static const struct { float w, h; } AJ_FIL_FORMA[FIL_TIPO_N] = {
   { NV_FICHA_W, 322.0f },                // CARTAZ COM FICHA
   { 212.0f * NV_PALCO_ESC, 322.0f * NV_PALCO_ESC }, // PALCO — o cartaz do centro
   { NV_REDONDA_D, NV_REDONDA_D },        // REDONDA — o disco da pessoa
+  { NV_POSTER_G_W, NV_POSTER_G_H },      // PÔSTER GRANDE — 3:4 com a ficha na base
 };
 
 // Uma frase por forma. Diz o que a forma E e para que serve, nao como se chama.
@@ -8213,6 +8231,7 @@ static const char *aj_fil_forma_ajuda(int t) {
     case FIL_TIPO_FICHA:    return i18n("Cartaz com a ficha ao lado: ano, gênero, nota e o começo da sinopse.");
     case FIL_TIPO_PALCO:    return i18n("O título em foco fica grande no centro e os vizinhos diminuem dos dois lados.");
     case FIL_TIPO_REDONDA:  return i18n("Foto circular com o nome embaixo, para fileiras de pessoas.");
+    case FIL_TIPO_POSTER_GRANDE: return i18n("Cartaz 3:4 grande com logo, gênero, classificação e duas linhas de sinopse na base, sobre um véu na cor predominante da arte.");
     default:                return i18n("O app escolhe pela fileira: retomada e coleções já têm forma própria.");
   }
 }
@@ -8245,7 +8264,7 @@ static AjPreview familiaPreviaOpcao(int op) {
   switch (op) {
     case AJ_LEG_CONTORNO_COR:
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
-    case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK: case AJ_BUFFER: case AJ_ESTAT_TAMANHO:
+    case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK: case AJ_BUFFER: case AJ_ESTAT_TAMANHO: case AJ_ESTAT_LADO:
     case AJ_DV_MKV:
     case AJ_LEG_FORCADA:
     case AJ_AUD_LINGUA: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_ABERTURA_ADDON: case AJ_FONTE_MANUAL:
@@ -8460,6 +8479,8 @@ void ajustes_teste_cena_desenhar(int op, float t, float x, float y, float w) {
   ajCenaGerada(uxSecaoDe(op), op, x, y, w);
   ajcTesteT = -1.0f;
 }
+// A cena no relogio de quem testa (t >= 0) em vez do SDL_GetTicks; -1 volta.
+void ajustes_teste_cena_t(float t) { ajcTesteT = t; }
 void ajustes_teste_tema(int tema, int vidro);
 void ajustes_teste_ux_captura(int cenario) {
   memcpy(valor, valorPadrao, sizeof valor);

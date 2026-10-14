@@ -215,22 +215,26 @@ static Uint32 vistosEm;             // ajustes_conteudo_x() do quadro (desenho)
 static float tlFoco[VT_MAX], tlProg = -1.0f;
 #define VT_TL_PONTO 32.0f         // centro do ponto do ano, do topo do cartao
 
-// LINHA DO TEMPO HORIZONTAL (Cover Flow, 13/10): o cartaz em foco no centro,
-// reto e grande; os vizinhos estreitos (a inclinacao do Cover Flow, fingida
-// espremendo a arte: o gfx nao tem perspectiva), menores e escuros, empilhados
-// para os lados. Embaixo, a linha do tempo com o ano de cada um. `fluxoPos` e
+// LINHA DO TEMPO HORIZONTAL (Cover Flow, 13/10; 14/10 sem inclinacao): o cartaz
+// em foco no centro, grande; os vizinhos RETOS atras dele, menores, escuros e
+// sobrepostos (profundidade so por escala, recobrimento e veu). A faixa vai de
+// ponta a ponta e a ficha do titulo fica ABAIXO da linha do tempo. `fluxoPos` e
 // o foco em mola (< 0 = posicionar sem animar).
-#define VT_FLX_W (vtTelefone() ? 200.0f : 300.0f)
+#define VT_FLX_W (vtTelefone() ? 200.0f : 220.0f)
 #define VT_FLX_H (VT_FLX_W * 1.5f)
 static float fluxoPos = -1.0f;
-static float fluxoCentro(float x0) { return (x0 + vtFim()) * 0.5f; }
-// Caixa do titulo i e quanto ele escurece (0 no foco).
+static float fluxoFim(void) { return vtTelefone() ? vtFim() : NV_TELA_W - 48.0f; }
+static float fluxoCentro(float x0) { return (x0 + fluxoFim()) * 0.5f; }
+static float fluxoLinhaY(void) { return VT_TOPO + 40.0f + VT_FLX_H + 64.0f; }
+static float fluxoInfoY(void) { return fluxoLinhaY() + 76.0f; }
+// Caixa do titulo i e quanto ele escurece (0 no foco). O 6o vizinho cai na ponta.
 static GfxRect fluxoRect(int i, float x0, float *sombra) {
   float W = VT_FLX_W, H = VT_FLX_H, d = i - fluxoPos, ad = fabsf(d), s = fminf(ad, 1.0f);
-  float A = W * 0.84f, S = W * 0.32f, alem = fmaxf(0.0f, ad - 1.0f);
+  float A = W * 0.78f, alem = fmaxf(0.0f, ad - 1.0f);
+  float S = fmaxf(W * 0.3f, (fluxoFim() - x0) * 0.5f - A) / 5.0f * 0.97f;
   float off = ad < 1.0f ? d * A : copysignf(A + alem * S, d);
-  float w = W * (1.0f - 0.5f * s), h = H * (1.0f - 0.14f * s - 0.03f * alem);
-  if (sombra) *sombra = fminf(0.8f, 0.4f * s + 0.12f * alem);
+  float k = fmaxf(0.4f, 1.0f - 0.18f * s - 0.07f * alem), w = W * k, h = H * k;
+  if (sombra) *sombra = fminf(0.85f, 0.5f * s + 0.1f * alem);
   return (GfxRect){ fluxoCentro(x0) + off - w * 0.5f, VT_TOPO + 40.0f + (H - h) * 0.5f, w, h };
 }
 
@@ -1420,6 +1424,14 @@ void vertudo_evento(const SDL_Event *e) {
                         desc_vertudo_fim(), desc_vertudo_erro())) desc_vertudo_mais();
 }
 
+// TETO DO SCROLL PARA A LINHA EM FOCO (vertudo_atualizar): o maior scroll
+// que mantem o TOPO do cartaz focado inteiro abaixo do recorte do cabecalho
+// (VT_TOPO - 12), com folga para tudo o que o foco puxa para fora da caixa
+// (focoprof.h). Linha 0 devolve negativo — scroll zero, cartaz colado no VT_TOPO.
+static float tetoScrollFoco(float celY, float celH) {
+  return celY + 12.0f - (celH * FOCO_ZOOM * 0.5f + NV_ANEL_FOCO);
+}
+
 void vertudo_atualizar(float dt, Uint32 agora) {
   float alvo, maxY;
   int n = nItens();
@@ -1478,6 +1490,15 @@ void vertudo_atualizar(float dt, Uint32 agora) {
   if (lay == VT_LAY_DECADAS && n)
     for (int k = 0; k < decN; k++) if (decY[k] + VT_DEC_H == celY[foco]) { alvo -= VT_DEC_H; break; }
   if(tabFocus)alvo=0;
+  // O CARTAZ EM FOCO NAO ENTRA POR BAIXO DO RECORTE DO CABECALHO. A mira em
+  // 30% deixa o topo da linha focada a 4 px do corte (VT_TOPO - 12), e o que o
+  // foco tem por fora da caixa — o crescimento de FOCO_ZOOM ou o anel de
+  // NV_ANEL_FOCO (focoprof.h) — era cortado no topo (dono, 14/10: "quando ta
+  // focado, fica cortado no top"). O teto garante a folga; a Home resolve o
+  // mesmo problema mantendo a fileira em foco sempre no mesmo Y, abaixo do
+  // corte dela.
+  if (n && celN > 0 && foco >= 0 && foco < celN) { float teto = tetoScrollFoco(celY[foco], celH[foco]);
+    if (alvo > teto) alvo = teto; }
   maxY = VT_TOPO + celFim + VT_GAP_Y - NV_TELA_H + 120.0f;
   if (maxY < 0.0f) maxY = 0.0f;
   if (alvo < 0.0f) alvo = 0.0f;
@@ -1496,13 +1517,15 @@ void vertudo_atualizar(float dt, Uint32 agora) {
 //
 // FICHA DIAGRAMADA (dono, 13/10: "na lateral nao colocar o poster de novo,
 // vamos colocar mais informacoes sobre o titulo"). So a Grade (a exibicao de
-// cartazes) e o Cover Flow dispensam o cartaz lateral, porque la o cartaz ja
-// esta na celula grande; nas outras o cartaz fica. Ordem: logo/titulo, ano e
+// cartazes), o Cover Flow e o Ranking dispensam o cartaz lateral, porque la o
+// cartaz ja esta na celula grande; nas outras o cartaz fica. Com o cartaz na
+// ficha, a LOGO tambem nao entra: so o nome escrito (dono, 14/10: "quando tem
+// poster nas infos nao colocar a logo"). Ordem: logo/titulo, ano e
 // duracao com a classificacao, generos, notas, sinopse e, quando o catalogo ja
 // os trouxe,
 // direcao e elenco. Nada aqui pede rede: e so o que o CatItem tem.
 static int painelComCartaz(void) {
-  return lay != VT_LAY_GRADE && lay != VT_LAY_FLUXO;
+  return lay != VT_LAY_GRADE && lay != VT_LAY_FLUXO && lay != VT_LAY_RANKING;
 }
 static float painelCredito(const char *rot, const char *val, float y, float a) {
   TxtLinha r = txt_linha(TXT_MINI, rot, 160, 168, 182, 255);
@@ -1535,11 +1558,12 @@ static void painel(float a) {
     y += VT_PAN_ART_H + 20.0f;
   } else y += 8.0f;
 
-  // LOGO no lugar do titulo quando existe; sem o cartaz ele cresce e e a
-  // ancora da ficha. O nome escrito com a fonte da interface so sem logo.
+  // LOGO so quando a ficha NAO tem o cartaz: com o poster ao lado o nome
+  // escrito com a fonte da interface (dono, 14/10: "quando tem poster nas
+  // infos nao colocar a logo"). Sem o cartaz ele cresce e e a ancora da ficha.
   { float maxW = VT_PAN_W, maxH = cartaz ? 82.0f : 128.0f;
-    GLuint tl = it.logo[0] ? tex_obter_logo_larg(it.logo, maxW) : 0;
-    float ap = it.logo[0] ? tex_aspecto(it.logo) : 0.0f;
+    GLuint tl = !cartaz && it.logo[0] ? tex_obter_logo_larg(it.logo, maxW) : 0;
+    float ap = tl ? tex_aspecto(it.logo) : 0.0f;
     if (tl && ap > 0.0f) {
       float wL = maxW, hL = wL / ap;
       if (hL > maxH) { hL = maxH; wL = hL * ap; }
@@ -2089,71 +2113,6 @@ static void timelineCard(int i,float cy,float a,float x0) {
   txt_bloco_corta(TXT_DET_META2,it.sinopse,209,214,225,tx,cy+(est[0]?138:106),vtTelefone()?tw:545.0f,30,a,est[0]?2:3);
 }
 
-static void fluxoCartaz(int i, float x0, float a) {
-  CatItem it;
-  float sombra, raio;
-  GfxRect r = fluxoRect(i, x0, &sombra);
-  int sel = i == foco && !tabFocus;
-  const char *arte;
-  GLuint t;
-  // Mesmo recorte de fluxoDesenhar: descarte antes de pedir arte ou textura.
-  if (r.x + r.w <= x0 - 24.0f || r.x >= vtFim() + 24.0f ||
-      r.y + r.h <= VT_TOPO - 12.0f || r.y >= NV_TELA_H) return;
-  if (!viewItem(i, &it)) return;
-  ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, VT_TOPO - 12.0f, NV_TELA_H, ponteiroCartaz, NULL, i, 0);
-  raio = ajustes_raio_poster_px() / r.h;
-  if (sel && ajustes_borda_foco()) foco_anel(r, ajustes_raio_poster_px() / r.w, 1.0f, a);
-  arte = posterprov_card_addon(it.origem, it.imdb, it.tmdb, it.tipo, it.poster);
-  if (!arte[0]) arte = it.backdrop;
-  t = arte[0] ? tex_obter_larg(arte, VT_FLX_W) : 0;
-  if (!t) gfx_cor(r, raio, NV_COR_ESQUELETO_R, NV_COR_ESQUELETO_G, NV_COR_ESQUELETO_B, a);
-  else {   // a arte inteira espremida na largura (a inclinacao), sem recorte
-    gfx_tex_aspect_atual = tex_aspecto(arte) * (r.w / r.h) / (VT_FLX_W / VT_FLX_H);
-    gfx_rect(r, t, GFX_CARD, sel ? 1.0f : 0.0f, 0, 0, raio, 0, 0, 0, a);
-    gfx_tex_aspect_atual = 0.0f;
-  }
-  if (sombra > 0.01f) gfx_cor(r, raio, 0.0f, 0.0f, 0.0f, a * sombra);
-}
-static void fluxoDesenhar(int n, float x0, float a) {
-  float ax = x0, aw = vtFim() - x0, cx = fluxoCentro(x0), ly = VT_TOPO + 40.0f + VT_FLX_H + 64.0f;
-  float r, g, b;
-  int c = (int)lroundf(fluxoPos), k;
-  int vizinhos = ptv_gpu_fraca_atual() || gfx_efeitos_leves() ? 2 : 6;
-  if (n <= 0 || fluxoPos < 0.0f) return;
-  corColecao(&r, &g, &b);
-  gfx_recorte(ax - 24.0f, VT_TOPO - 12.0f, aw + 48.0f, NV_TELA_H - VT_TOPO + 12.0f);
-  // Do mais longe para o foco: o vizinho mais perto cobre o de tras.
-  for (k = vizinhos; k >= 1; k--) {
-    if (c - k >= 0) fluxoCartaz(c - k, x0, a);
-    if (c + k < n) fluxoCartaz(c + k, x0, a);
-  }
-  if (c >= 0 && c < n) fluxoCartaz(c, x0, a);
-  // A linha do tempo: preenchida ate o centro (o tempo que ja passou), um
-  // tique e o ano sob cada titulo; o do foco cresce como na vertical.
-  gfx_cor((GfxRect){ ax, ly, aw, 2 }, 0, .48f, .47f, .46f, a * .45f);
-  if (fluxoPos > 0.0f) gfx_cor((GfxRect){ ax, ly - 1, (cx - ax) * fminf(fluxoPos, 1.0f), 4 }, 0, r, g, b, a * .95f);
-  for (k = c - vizinhos; k <= c + vizinhos; k++) {
-    CatItem it;
-    char ano[16];
-    float sombra, t, tx;
-    GfxRect q;
-    int y;
-    if (k < 0 || k >= n || !viewItem(k, &it)) continue;
-    q = fluxoRect(k, x0, &sombra); tx = q.x + q.w * 0.5f;
-    if (tx < ax || tx > ax + aw) continue;
-    t = 1.0f - fminf(fabsf(k - fluxoPos), 1.0f);
-    gfx_cor((GfxRect){ tx - 1.0f, ly - 6.0f, 2, 14 }, 0, .62f, .61f, .60f, a * (1.0f - sombra));
-    y = yearOf(&it);
-    if (y == 9999) snprintf(ano, sizeof ano, "—"); else snprintf(ano, sizeof ano, "%d", y);
-    if (t < 0.99f) { TxtLinha yp = txt_linha(TXT_HERO_META, ano, 219, 210, 195, 255);
-      txt_desenhar_alpha(yp, tx - yp.w * 0.5f, ly + 18.0f, a * 0.55f * (1.0f - t) * (1.0f - sombra * 0.5f)); }
-    if (t > 0.01f) { TxtLinha yg = txt_linha(TXT_TITULO2, ano, 245, 240, 230, 255);
-      txt_desenhar_alpha(yg, tx - yg.w * 0.5f, ly + 14.0f + (1.0f - t) * 10.0f, a * t); }
-  }
-  gfx_cor((GfxRect){ cx - 9.0f, ly - 8.0f, 18, 18 }, .5f, .95f, .95f, .97f, a);
-  gfx_sem_recorte();
-}
-
 // --- PECAS COMUNS DAS EXIBICOES ----------------------------------------------
 // Raio do cartao em fracao da ALTURA, que e o que o shader mede (ver raioDe em
 // home.c); o teto e metade da largura.
@@ -2186,6 +2145,92 @@ static GfxRect cartaoArte(int i, GfxRect r0, const char *arte, float ac, Uint32 
 static const char *artePoster(const CatItem *it) {
   const char *pp = posterprov_card_addon(it->origem, it->imdb, it->tmdb, it->tipo, it->poster);
   return pp[0] ? pp : it->backdrop;
+}
+
+static void fluxoCartaz(int i, float x0, float a, Uint32 agora) {
+  CatItem it;
+  float sombra;
+  GfxRect r = fluxoRect(i, x0, &sombra), c;
+  // Mesmo recorte de fluxoDesenhar: descarte antes de pedir arte ou textura.
+  if (r.x + r.w <= x0 - 24.0f || r.x >= fluxoFim() + 24.0f ||
+      r.y + r.h <= VT_TOPO - 12.0f || r.y >= NV_TELA_H) return;
+  if (!viewItem(i, &it)) return;
+  ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, VT_TOPO - 12.0f, NV_TELA_H, ponteiroCartaz, NULL, i, 0);
+  c = cartaoArte(i, r, artePoster(&it), a, agora, i == foco && !tabFocus);   // o foco da Home
+  if (sombra > 0.01f) gfx_cor(c, raioCard(c.w, c.h), 0.0f, 0.0f, 0.0f, a * sombra);
+}
+static void fluxoDesenhar(int n, float x0, float a, Uint32 agora) {
+  float ax = x0, aw = fluxoFim() - x0, cx = fluxoCentro(x0), ly = fluxoLinhaY();
+  float r, g, b;
+  int c = (int)lroundf(fluxoPos), k;
+  int vizinhos = ptv_gpu_fraca_atual() || gfx_efeitos_leves() ? 2 : 6;
+  if (n <= 0 || fluxoPos < 0.0f) return;
+  corColecao(&r, &g, &b);
+  gfx_recorte(ax - 24.0f, VT_TOPO - 12.0f, aw + 48.0f, NV_TELA_H - VT_TOPO + 12.0f);
+  // Do mais longe para o foco: o vizinho mais perto cobre o de tras.
+  for (k = vizinhos; k >= 1; k--) {
+    if (c - k >= 0) fluxoCartaz(c - k, x0, a, agora);
+    if (c + k < n) fluxoCartaz(c + k, x0, a, agora);
+  }
+  if (c >= 0 && c < n) fluxoCartaz(c, x0, a, agora);
+  // A linha do tempo: preenchida ate o centro (o tempo que ja passou), um
+  // tique e o ano sob cada titulo; o do foco cresce como na vertical.
+  gfx_cor((GfxRect){ ax, ly, aw, 2 }, 0, .48f, .47f, .46f, a * .45f);
+  if (fluxoPos > 0.0f) gfx_cor((GfxRect){ ax, ly - 1, (cx - ax) * fminf(fluxoPos, 1.0f), 4 }, 0, r, g, b, a * .95f);
+  for (k = c - vizinhos; k <= c + vizinhos; k++) {
+    CatItem it;
+    char ano[16];
+    float sombra, t, tx;
+    GfxRect q;
+    int y;
+    if (k < 0 || k >= n || !viewItem(k, &it)) continue;
+    q = fluxoRect(k, x0, &sombra); tx = q.x + q.w * 0.5f;
+    if (tx < ax || tx > ax + aw) continue;
+    t = 1.0f - fminf(fabsf(k - fluxoPos), 1.0f);
+    gfx_cor((GfxRect){ tx - 1.0f, ly - 6.0f, 2, 14 }, 0, .62f, .61f, .60f, a * (1.0f - sombra));
+    y = yearOf(&it);
+    if (y == 9999) snprintf(ano, sizeof ano, "—"); else snprintf(ano, sizeof ano, "%d", y);
+    if (t < 0.99f) { TxtLinha yp = txt_linha(TXT_HERO_META, ano, 219, 210, 195, 255);
+      txt_desenhar_alpha(yp, tx - yp.w * 0.5f, ly + 18.0f, a * 0.55f * (1.0f - t) * (1.0f - sombra * 0.5f)); }
+    if (t > 0.01f) { TxtLinha yg = txt_linha(TXT_TITULO2, ano, 245, 240, 230, 255);
+      txt_desenhar_alpha(yg, tx - yg.w * 0.5f, ly + 14.0f + (1.0f - t) * 10.0f, a * t); }
+  }
+  gfx_cor((GfxRect){ cx - 9.0f, ly - 8.0f, 18, 18 }, .5f, .95f, .95f, .97f, a);
+  gfx_sem_recorte();
+}
+
+// A ficha do titulo do Cover Flow, ABAIXO da linha do tempo e rente a esquerda:
+// logo (ou nome), ano · duracao, generos, IMDb e a sinopse, compacta.
+static void fluxoInfo(float a, float x0) {
+  CatItem it;
+  float y = fluxoInfoY(), x = x0, w = fminf(1000.0f, fluxoFim() - x0);
+  int nota;
+  GLuint tl;
+  if (!viewItem(foco, &it)) return;
+  tl = it.logo[0] ? tex_obter_logo_larg(it.logo, 360.0f) : 0;
+  if (tl && tex_aspecto(it.logo) > 0.0f) {
+    float ap = tex_aspecto(it.logo), hL = 52.0f, wL = hL * ap;
+    if (wL > 360.0f) { wL = 360.0f; hL = wL / ap; }
+    gfx_rect((GfxRect){ x, y, wL, hL }, tl, tex_marca_escura(it.logo) ? GFX_MARCA : GFX_TEXTO,
+             0, 0, 0, 0.0f, 1, 1, 1, a);
+    y += hL + 10.0f;
+  } else y += txt_bloco_corta(TXT_HEADLINE, it.titulo, 245, 245, 245, x, y, w, 38.0f, a, 1) + 10.0f;
+  if (it.meta[0]) {
+    TxtLinha t = txt_linha_corta(TXT_DET_META2, it.meta, 240, 241, 244, 255, 260.0f);
+    txt_desenhar_alpha(t, x, y + (BADGE_H - t.h) * 0.5f, a);
+    x += t.w + 14.0f;
+  }
+  if (it.classificacao[0]) { badge_desenhar(x, y, it.classificacao, BADGE_NEUTRO, a); x += 70.0f; }
+  if (it.genero[0]) {
+    TxtLinha g = txt_linha_corta(TXT_CAPTION, it.genero, 196, 205, 219, 255, 420.0f);
+    txt_desenhar_alpha(g, x, y + (BADGE_H - g.h) * 0.5f, a * 0.9f);
+    x += g.w + 18.0f;
+  }
+  nota = imdbnota_obter(it.imdb, it.nota, !strcmp(it.tipo, "series"));
+  badge_imdb(x, y, nota, 0, a);
+  y += BADGE_H + 8.0f;
+  if (it.sinopse[0])
+    txt_bloco_corta(TXT_DET_META2, it.sinopse, 226, 229, 236, x0, y, w, 30.0f, a * 0.9f, 2);
 }
 static const char *arteDeitada(const CatItem *it) {
   return it->backdrop[0] ? it->backdrop : it->poster;
@@ -2549,7 +2594,7 @@ void vertudo_desenhar(Uint32 agora) {
     if (presa >= 0 && presaA > 0.01f) cabecalhoDecada(presa, x0, VT_TOPO, a * presaA);
     gfx_sem_recorte();
   }
-  if (lay == VT_LAY_FLUXO) fluxoDesenhar(n, x0, a);
+  if (lay == VT_LAY_FLUXO) fluxoDesenhar(n, x0, a, agora);
   gfx_recorte(0.0f, corteTopo, NV_TELA_W, NV_TELA_H - corteTopo);
   gradePonteiroRevisao = gradeRevisao; gradePonteiroValido = 1;
   for (i = 0; lay != VT_LAY_FLUXO && i < n; i++) {
@@ -2593,6 +2638,6 @@ void vertudo_desenhar(Uint32 agora) {
   themeHeader(a,x0);
   if (collection) { botaoExibicao(a, x0); botaoEstiloAbas(a); }
 
-  if (n > 0 && !vtTelefone()) painel(a);
+  if (n > 0 && !vtTelefone()) { if (lay == VT_LAY_FLUXO) fluxoInfo(a, x0); else painel(a); }
   if (vtTelefone()) gfx_escala_sair(escalaAnterior);
 }

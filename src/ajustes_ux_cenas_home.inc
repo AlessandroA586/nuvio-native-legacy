@@ -112,7 +112,7 @@ static void ajcHEspaco(int op) {
     ajc_icone("aj_move-horizontal", 86 + w + g * 0.5f, 52 + 14 + 42, g > 20 ? 18 : 12, 1);
   }
   snprintf(b, sizeof b, "%d%%", (int)(f * 100.0f + 0.5f));
-  ajcHNum(b, 22, 270, 322, 1);
+  ajcTextoVivo(b, 22, 1, 270, 322, 1);
 }
 // Barra lateral moderna: icones pequenos (antiga) contra ladrilhos grandes.
 static void ajcHRailModerna(int op) {

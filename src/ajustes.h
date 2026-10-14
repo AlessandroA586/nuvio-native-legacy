@@ -463,6 +463,8 @@ int   ajustes_abertura_addon(void);
 int   ajustes_ep_tamanho(void);
 // #338: tamanho de abertura das Estatisticas ao vivo (EV_TAM_*); -1 = o ultimo usado.
 int   ajustes_estat_tamanho(void);
+int   ajustes_estat_lado(void);                 // 0 Direita, 1 Esquerda
+void  ajustes_definir_estat_lado(int esquerda);
 int   ajustes_leg2_junto(void);
 int   ajustes_leg2_tamanho(void);
 int   ajustes_leg2_cor(void);

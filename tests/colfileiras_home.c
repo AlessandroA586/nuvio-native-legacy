@@ -5,6 +5,10 @@
 #undef main
 #include "../src/colfileiras.h"
 
+// src/descoberta.c nao entra na lista curta de fontes deste fixture: o que a
+// home consulta ao remontar (ocultar vistos) nao tem efeito aqui.
+void desc_ocultar_vistos_atualizar(void) {}
+
 static Uint32 ticks = 1000;
 Uint32 SDL_GetTicks(void) { return ticks; }
 

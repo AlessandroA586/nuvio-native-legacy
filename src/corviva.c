@@ -606,6 +606,14 @@ void corviva_acento(float *r, float *g, float *b) {
   if (g) *g = nv_acento_viva[1];
   if (b) *b = nv_acento_viva[2];
 }
+// A cor do LOGO do titulo em cena, a mesma fonte que a Imersiva usa com "Cor da
+// logo" (corviva_quadro: logo de cor, senao a arte). 0 = ainda sem paleta.
+int corviva_logo_acento(float *r, float *g, float *b) {
+  const CorvivaPaleta *p = (temLogo && cenaLogo.ok) ? &cenaLogo : (temCena && cena.ok) ? &cena : NULL;
+  if (!p) return 0;
+  *r = p->acento[0]; *g = p->acento[1]; *b = p->acento[2];
+  return 1;
+}
 int corviva_retargets(void) { return retargets; }
 
 void corviva_quadro(float dt, int modo, int usarLogo, int reduzido) {
