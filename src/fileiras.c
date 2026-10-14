@@ -109,7 +109,7 @@ static const char *TIPO_ROT[FIL_TIPO_N] = {
   "Automático", "Cartaz em pé", "Destaque largo", "Coleção", "Serviço", "Ranking empilhado",
   "Destaque 4:3", "Ranking numerado", "Faixa com título",
   "Destaque 4:3 médio", "Destaque 4:3 grande",
-  "Linha do tempo", "Cartaz com ficha", "Palco"
+  "Linha do tempo", "Cartaz com ficha", "Palco", "Redonda"
 };
 static const char *TAM_ROT[FIL_TAM_N] = { "Compacto", "Padrão", "Grande" };
 // 0,85 e 1,2 e nao 0,5 e 2,0: o card do web mede 212x322 e o passo da fileira
@@ -240,6 +240,7 @@ static const FilEstiloLinha LINHAS_CAT[] = {
   { "Linha do tempo",    1, { FIL_TIPO_LINHA_TEMPO }, { "Linha do tempo" } },
   { "Cartaz com ficha",  1, { FIL_TIPO_FICHA }, { "Cartaz com ficha" } },
   { "Palco",             1, { FIL_TIPO_PALCO }, { "Palco" } },
+  { "Redonda",           1, { FIL_TIPO_REDONDA }, { "Redonda" } },
 };
 #define N_LINHAS_CAT (int)(sizeof LINHAS_CAT / sizeof *LINHAS_CAT)
 static const int ESTILOS_COL[] = { FIL_TIPO_AUTO, FIL_TIPO_COLECAO,
@@ -887,7 +888,7 @@ int fil_podar_catalogos(const char *const *ids, const char *const *bases, int n,
 // row back exactly as the person left it.
 int fil_marcar_sem_addon(const char *const *ids, const char *const *bases,
                          const int *ativos, int n, int perfilDaLista) {
-  int i, mudou = 0;
+  int i, mudou = 0, w = 0, limpeza = 0;
   pthread_mutex_lock(&trava);
   garantir();
   if (perfilDaLista <= 0 || perfilDaLista != perfil) {
@@ -901,8 +902,37 @@ int fil_marcar_sem_addon(const char *const *ids, const char *const *bases,
       if (ativos[k] && doAddon(linhas[i].chave, ids[k], bases[k])) vivo = 1;
     if (linhas[i].semAddon != !vivo) { linhas[i].semAddon = !vivo; mudou++; }
   }
-  if (mudou) revisao++;
+  // #365: FANTASMAS EM "FORA DA HOME". A linha sem escolha valida — tipo e
+  // tamanho padrao, sem fila, sem visPessoal, nao e fonte do destaque e
+  // so foi escondida (OC_SUGESTAO — a proposta automatica — ou OC_PESSOA
+  // sem visPessoal, que e o arquivo antigo escondendo sem registrar
+  // vinculo proprio — e a aparencia do relato: a linha fica "Not on Home
+  // Screen" para sempre mesmo depois do addon sair) NAO tem mais volta
+  // possivel. Quem guardou valor de verdade tem visPessoal/destaque e
+  // fica. O passo nao usa orfaDespejavel: esse exige !vista, e o relato e
+  // do arranque que NUNCA publicou a linha nesta sessao.
+  for (i = 0; i < nLinhas; i++) {
+    int morto = fil_origem_de(linhas[i].chave) == FIL_ORIGEM_CATALOGO &&
+                linhas[i].semAddon && !linhas[i].vista && !linhas[i].naHome &&
+                !linhas[i].ocultaConta && !linhas[i].emColecao &&
+                linhas[i].oculta != OC_COLECAO &&
+                !linhas[i].visPessoal && !linhas[i].fila &&
+                linhas[i].tipo == FIL_TIPO_AUTO && linhas[i].tam == FIL_TAM_PADRAO &&
+                (linhas[i].oculta == OC_SUGESTAO ||
+                 linhas[i].oculta == OC_PESSOA) &&
+                !(heroFonte[0] && !strcmp(heroFonte, linhas[i].chave));
+    if (morto) { limpeza++; continue; }
+    if (w != i) linhas[w] = linhas[i];
+    w++;
+  }
+  if (w != nLinhas) nLinhas = w;
+  if (mudou || limpeza) { revisao++; if (limpeza) gravar(); }
   pthread_mutex_unlock(&trava);
+  if (limpeza) {
+    printf("[fileiras] #365: %d catalogo(s) sem escolha de addon removido "
+           "sairam da aba Fora da Home\n", limpeza);
+    fflush(stdout);
+  }
   return mudou;
 }
 
@@ -1513,6 +1543,7 @@ const char *fil_estilo_ajuda(const char *chave, int t) {
     case FIL_TIPO_LINHA_TEMPO: return "Cartazes em ordem de lançamento sobre uma linha com os anos, que se desenha conforme você anda.";
     case FIL_TIPO_FICHA:    return "Cartaz com a ficha ao lado: ano, gênero, nota e o começo da sinopse.";
     case FIL_TIPO_PALCO:    return "O título em foco fica grande no centro e os vizinhos diminuem dos dois lados.";
+    case FIL_TIPO_REDONDA:  return "Foto circular com o nome embaixo, para fileiras de pessoas.";
     default:                return "O app escolhe a forma pelo nome do catálogo e pelo layout da Home.";
   }
 }
@@ -1929,6 +1960,14 @@ void fil_teste_recarregar(void) { carregado = 0; }
 // da C9 percorreu (linhas antigas, lidas do disco, com vista=0).
 void fil_teste_esquecer_vista(int i) {
   if (i >= 0 && i < nLinhas) linhas[i].vista = 0;
+}
+// Indice da linha de uma chave: com a mexida no resumo da tabela as linhas se
+// reordenam, e quem testa a mudanca do addon precisa da linha MARCADA, nao
+// de uma posicao fixa.
+int fil_teste_achar(const char *chave) {
+  int i;
+  for (i = 0; i < nLinhas; i++) if (chave && !strcmp(linhas[i].chave, chave)) return i;
+  return -1;
 }
 #endif
 

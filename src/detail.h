@@ -22,7 +22,7 @@ void detail_fechar(void);
 // Fecha sem a mola de saida (o player saiu para a home: ilha_minimizar).
 void detail_fechar_seco(void);
 int  detail_relogio_oculto(void);  // 1 no carrossel de titulos (cartao com vizinhos), ainda sem esticar: a ilha do relogio some
-int  detail_pediu_social(void);   // 1 uma vez: CIMA no alto da pagina pediu o painel de Salvos/Avisos
+int  detail_pediu_social(void);   // sempre 0 desde #407 (CIMA no topo nao abre Salvos/Avisos; AZUL/CH+ abre)
 int  detail_pediu_menu(void);   // 1 uma vez: ESQUERDA na borda pediu o menu lateral (a pagina NAO fecha; Voltar e quem sai)
 // app.c, a cada quadro: 1 enquanto a barra lateral esta aberta POR CIMA da
 // pagina. O trailer do fundo fica mudo (sem fechar) e recupera o som depois.
@@ -166,6 +166,15 @@ int  detail_pediu_do_inicio(void);
 #define NV_DETP_EP_ICONE      28.0f
 #define NV_DETP_EP_BARRA_Y   390.0f   // barra 576x8, raio 999
 #define NV_DETP_EP_BARRA_H     8.0f
+// MODERNA: titulo e sinopse ficam ABAIXO da miniatura (16:9), nao sobre ela. Na
+// miniatura sobram o selo, o rodape de duracao/notas/data, a barra e o visto.
+#define NV_DETP_EPM_THUMB_H  360.0f
+#define NV_DETP_EPM_H        490.0f   // miniatura + titulo (1 linha) + sinopse (2 linhas)
+#define NV_DETP_EPM_SELO_Y    24.0f
+#define NV_DETP_EPM_META_Y   290.0f
+#define NV_DETP_EPM_BARRA_Y  336.0f
+#define NV_DETP_EPM_TIT_DY    16.0f   // base da miniatura ao topo do titulo
+#define NV_DETP_EPM_SIN_DY    62.0f   // base da miniatura ao topo da sinopse
 #define NV_DETP_EP_STATUS     48.0f   // circulo tracejado de "nao assistido"
 // Anel de foco. O web usa 2px na miniatura do episodio e 4px nos botoes do
 // hero; aqui fica 4 nos dois, porque a folha declara pixels de CSS e a tela
@@ -272,8 +281,8 @@ int  detail_pediu_do_inicio(void);
 // y=999) e a sinopse cresce PARA CIMA — 5 linhas na serie, 4 no filme, e a
 // ULTIMA linha cai no mesmo y nas duas. Por isso a pilha e montada de baixo
 // para cima, e nao do logo para baixo.
-#define NV_DETW2_LD_SIN       40.0f   // passo entre linhas da sinopse (medido)
-#define NV_DETW2_SIN_LINHAS       5   // o maximo visto na referencia
+#define NV_DETW2_LD_SIN       42.0f   // passo entre linhas da sinopse (medido)
+#define NV_DETW2_SIN_LINHAS       3   // dono, 12/10/2026: 5 linhas pesavam; o resto vira "..."
 #define NV_DETW2_TEXTO_W    1040.0f   // sinopse e linha de apoio (96..1136)
 // Distancia entre TOPOS DE CAIXA de linhas vizinhas, ja descontada a metrica da
 // fonte: entre a tinta a referencia da 62 do alto do "R" de "Roteirista" ao

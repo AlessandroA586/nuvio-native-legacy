@@ -287,6 +287,7 @@ static volatile int reconErroPend, reconErroCod, reconErroVideo;
 static int reconAudio = -1, reconLeg = -1;
 static volatile int reconFaixasPend;
 static int reconBuscarMs = -1;
+static int reconPausado;
 static char erroTxt[64];
 
 // Codigos do PlaybackException (Media3) que sao de REDE: IO_UNSPECIFIED 2000,
@@ -505,6 +506,15 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeErroTexto(JN
   fflush(stdout);
 }
 
+// #345: keep audio diagnostics in the uploaded app log, not only logcat.
+JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeAudioLog(JNIEnv *env, jclass cls, jstring texto) {
+  char t[512];
+  (void)cls;
+  deJString(env, texto, t, sizeof t);
+  printf("[video] android audio: %s\n", t);
+  fflush(stdout);
+}
+
 JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeHdr(JNIEnv *env, jclass cls, jstring hdr, jint dv, jint atmos) {
   char h[24];
   (void)cls;
@@ -657,7 +667,7 @@ int video_tocar_retomada(const char *u, double segundos, double pct) {
   nv_recon_zerar(&recon);
   reconPermitida = reconProxima; reconProxima = 0;
   reconIniciou = 0; reconErroPend = 0;
-  reconAudio = reconLeg = -1; reconFaixasPend = 0; reconBuscarMs = -1;
+  reconAudio = reconLeg = -1; reconFaixasPend = 0; reconBuscarMs = -1; reconPausado = 0;
   playerSessao = cacheArmado >= 0;
   cacheSessao = cacheArmado > 0 ? cacheArmado : 0;
   cacheArmado = -1;
@@ -693,7 +703,7 @@ void video_bombear(void) {
   if (prontoLoad && pos > 0.5) reconIniciou = 1;
   if (prontoLoad && reconBuscarMs < 0) nv_recon_progresso(&recon, pos);
   // O seek do recarregar sai com o player ja tocando.
-  if (reconBuscarMs >= 0 && prontoLoad && tocando) {
+  if (reconBuscarMs >= 0 && prontoLoad && (tocando || reconPausado)) {
     kInt(mBuscar, reconBuscarMs);
     printf("[video] reconexao: retomado em %ds\n", reconBuscarMs / 1000);
     fflush(stdout);
@@ -705,7 +715,10 @@ void video_bombear(void) {
     reconErroPend = 0;
     if (reconPermitida && urlAtual[0] && (reconIniciou || recon.tentativa) &&
         nv_recon_erro(&recon, rede, SDL_GetTicks(), pos)) {
-      if (!antes) { reconAudio = audioAtual; reconLeg = legAtual; }
+      if (!antes) {
+        reconAudio = audioAtual; reconLeg = legAtual;
+        reconPausado = pausaPedida;
+      }
       if (recon.tentativa != antes) {
         printf("[video] conexao caiu (%d): tentativa %d/%d, espera %us\n",
                reconErroCod, recon.tentativa, NV_RECON_MAX,
@@ -724,18 +737,29 @@ void video_bombear(void) {
     reconFaixasPend = 1;
     reconBuscarMs = recon.alvo > 1.0 ? (int)(recon.alvo * 1000.0) : -1;
     if (!abrirSessao(0, 0)) { reconErroCod = -1; reconErroPend = 1; }
+    else if (reconPausado) {
+      // abrirSessao nasce tocando. Enfileirar pause logo depois da abertura
+      // conserva o estado de um seek feito pausado; o seek de retomada acima
+      // aceita prontoLoad mesmo sem EV_TOCANDO.
+      pausaPedida = 1; pausaVista = 0;
+      kInt(mPausar, 1);
+    }
   }
 }
 void video_parar(void) {
   novaRetomada(-1);
   capmkv_zerar();   // fio de capitulos em voo nao alimenta o proximo titulo
   nv_recon_zerar(&recon);
-  reconErroPend = 0; reconErroVideo = 0; reconFaixasPend = 0; reconBuscarMs = -1;
+  reconErroPend = 0; reconErroVideo = 0; reconFaixasPend = 0; reconBuscarMs = -1; reconPausado = 0;
   if (ativo) kSemArg(mParar);
   ativo = prontoLoad = primeiroQuadro = tocando = 0; superficieEstavel = 0;
   pausaPedida = pausaVista = 0;
 }
-void video_pausar(int p) { pausaVista = 0; pausaPedida = p ? 1 : 0; kInt(mPausar, p ? 1 : 0); }
+void video_pausar(int p) {
+  pausaVista = 0; pausaPedida = p ? 1 : 0;
+  if (nv_recon_ativa(&recon)) reconPausado = pausaPedida;
+  kInt(mPausar, pausaPedida);
+}
 int video_pausa_confirmada(void) {
   return pausaPedida && pausaVista && !tocando && ativo && prontoLoad && primeiroQuadro &&
          !falhou && !terminou && !video_reconectando();

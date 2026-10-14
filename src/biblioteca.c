@@ -1041,6 +1041,7 @@ static void eventoAberta(SDL_Keycode k) {
     if (k == SDLK_LEFT  && acaoSel > 0) { acaoSel--; foco.coluna = acaoSel; return; }
     if (k == SDLK_LEFT) { sair = 1; return; }   // comeco da fileira: o app abre a barra
     if (k == SDLK_DOWN) { if (nCelulas) focus_mover_grade(&foco, 0, 1); return; }
+    if (k == SDLK_UP && ajustes_menu_topo()) { sair = 1; return; }
     if (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE) executarAcao(acaoSel);
     return;
   }
@@ -1114,6 +1115,7 @@ void biblioteca_evento(const SDL_Event *e) {
     if (k == SDLK_LEFT) { sair = 1; return; }   // 1a aba: o app abre a barra
     if (k == SDLK_RIGHT && foco.coluna < BIB_N_MODOS - 1) { foco.coluna++; return; }
     if (k == SDLK_RIGHT) { pickSel = 0; foco.fileira = BIB_FIL_PICK; foco.coluna = 0; return; }
+    if (k == SDLK_UP && ajustes_menu_topo()) { sair = 1; return; }
     if (k == SDLK_DOWN) { descerDaFaixa(); return; }
     if (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE) {
       int novo = foco.coluna;
@@ -1135,6 +1137,7 @@ void biblioteca_evento(const SDL_Event *e) {
     if (k == SDLK_RIGHT && pickSel < 2) { pickSel++; foco.coluna = pickSel; return; }
     if (k == SDLK_LEFT  && pickSel > 0) { pickSel--; foco.coluna = pickSel; return; }
     if (k == SDLK_LEFT)  { foco.fileira = BIB_FIL_MODO; foco.coluna = BIB_N_MODOS - 1; return; }
+    if (k == SDLK_UP && ajustes_menu_topo()) { sair = 1; return; }
     if (k == SDLK_DOWN) { descerDaFaixa(); return; }
     if (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE) {
       if (modo == MODO_LISTAS) {
@@ -2454,4 +2457,32 @@ void biblioteca_desenhar(Uint32 agora) {
   gfx_sem_recorte();
   if (teclado_aberto()) teclado_desenhar(agora);
   gfx_borda_foco_atual = 1.0f;
+
+  static TexLookahead adiante;
+  if (tex_lookahead_parado(&adiante, scrollY) && !ondaEm &&
+      !teclado_aberto() && estado() != EST_LISTAS) {
+    int primeira = -1, ultima = -1, pediu = 0;
+    for (r = 0; r < linhas; r++) {
+      float topo = gy + r * passoL - scrollY;
+      if (topo <= NV_TELA_H && topo + alturaLinha() > gcy) {
+        if (primeira < 0) primeira = r;
+        ultima = r;
+      }
+    }
+    int dir = adiante.direcao < 0 ? -1 : 1;
+    for (int passo = 1; primeira >= 0 && passo <= 3 && !pediu; passo++) {
+      r = (dir > 0 ? ultima : primeira) + passo * dir;
+      if (r < 0 || r >= linhas) break;
+      for (c = 0; c < nc && !pediu; c++) {
+        int i = r * nc + c;
+        CatItem tmp;
+        if (i >= nCelulas) break;
+        const CatItem *ci = estado() == EST_ITENS
+          ? (lst_item(i, &tmp) ? &tmp : NULL) : itemFiltro(filtro[i], &tmp);
+        const char *cam = ci ? posterprov_card_addon(ci->origem, ci->imdb,
+                          ci->tmdb, ci->tipo, ci->poster) : NULL;
+        pediu = tex_lookahead_pedir(cam, exibicao == VIS_LISTA ? 96 : BIB_CARD_W);
+      }
+    }
+  }
 }

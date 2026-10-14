@@ -182,6 +182,11 @@ typedef enum {
   TXT_V3_SELO,     // ESTA TV, ESTE PERFIL, AVANCADO, SO LG (14 / 700, caixa alta)
   TXT_V3_INSP,     // texto do inspetor (22 / 400)
   TXT_V3_INSP_B,   // "O que muda:" (22 / 700)
+  // Linha de meta do detalhe no peso do Nuvio Desktop (dono, 12/10/2026): ano e
+  // duracao em Bold branco, generos no peso do meio (SemiBold na JetBrains Sans,
+  // Medium nas outras). Mesmo corpo da sinopse (NV_FT_DET_SIN).
+  TXT_DET_META_FORTE,   // ano, duracao       26 / 700
+  TXT_DET_META_GEN,     // generos            26 / 600
   TXT_NFONTES
 } TxtEstilo;
 
@@ -204,6 +209,7 @@ typedef enum {
   TXT_FAMILIA_MONTSERRAT,
   TXT_FAMILIA_ROBOTO,
   TXT_FAMILIA_ATKINSON,
+  TXT_FAMILIA_JETBRAINS,
   TXT_FAMILIA_N
 } TxtFamilia;
 
@@ -290,6 +296,8 @@ TxtLinha txt_linha_corta_enfase(TxtEstilo estilo, const char *s, int r, int g,
 // Desenha no canto superior esquerdo (x,y).
 void txt_desenhar(TxtLinha l, float x, float y);
 void txt_desenhar_alpha(TxtLinha l, float x, float y, float alpha);
+// Multiplica so o RGB da textura (0..1); preserva o alpha e o encaixe no pixel.
+void txt_desenhar_tom(TxtLinha l, float x, float y, float cr, float cg, float cb, float alpha);
 
 // Desenha com ESPACAMENTO entre letras (tracking) e devolve a largura total.
 // SDL_ttf nao tem tracking, e o titulo da pagina do tvOS depende dele: sem o

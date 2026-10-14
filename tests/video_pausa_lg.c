@@ -45,10 +45,19 @@ static const char *fakePayload(LSMessage *m) { return (const char *)m; }
 static void evento(const char *p, unsigned geracao) {
   aoEvento(NULL, (LSMessage *)p, (void *)(uintptr_t)geracao);
 }
+static void *fakeLoop(void *u) { return u; }
 static int windowCalls;
 static int fakeWindow(long handle, long x, long y, long w, long h, int full, long *task) {
   (void)handle; (void)x; (void)y; (void)w; (void)h; (void)full; (void)task;
   ++windowCalls; return 0;
+}
+
+static int cropCalls;
+static int fakeCrop(long handle, long sx, long sy, long sw, long sh,
+                    long dx, long dy, long dw, long dh, int full, long *task) {
+  assert(handle == 1 && sx == 480 && sy == 270 && sw == 960 && sh == 540);
+  assert(dx == 0 && dy == 0 && dw == 1920 && dh == 1080 && full && task);
+  ++cropCalls; return 1;
 }
 
 int main(void) {
@@ -76,6 +85,7 @@ int main(void) {
   puts("video_window_lg: 1001 stable requests -> 1 native call; transitions preserved");
 
   lsCall = fakeCall; lsPayload = fakePayload;
+  bus = (LSHandle *)(uintptr_t)1;
   ligado = pronto = tocando = 1; sessao = 7;
   snprintf(midia, sizeof midia, "fixture-media-id");
   video_pausar(1);
@@ -84,6 +94,14 @@ int main(void) {
   assert(!video_pausa_confirmada()); // callback da sessao anterior
   evento("{\"paused\":true}", 7);
   assert(video_pausa_confirmada());
+  // #426: destination and source crop reach ACB while paused, without LS2 play.
+  acb = 1; acbJanelaCustom = fakeCrop;
+  int beforeWindow = windowCalls, beforeRequests = pedidos;
+  video_janela(240, 0, 1440, 1080);
+  video_janela_fonte(480, 270, 960, 540, 0, 0, 1920, 1080);
+  assert(windowCalls == beforeWindow + 1 && cropCalls == 1);
+  assert(pedidos == beforeRequests && !video_tocando() && video_pausa_confirmada());
+  acb = 0; acbJanelaCustom = NULL;
   video_pausar(0); assert(!video_pausa_confirmada());
   evento("{\"paused\":true}", 7); assert(!video_pausa_confirmada());
   evento("{\"playing\":true}", 7); assert(!video_pausa_confirmada());
@@ -104,25 +122,47 @@ int main(void) {
   assert(assinaturas == 1 && protetorLigado && screensaverCallback);
   protegerScreensaver(); assert(assinaturas == 1); // sem duplicar assinatura
   const char *active = "{\"state\":\"Active\",\"timestamp\":1700000000123456}";
-  tocando = 1;
+  evento("{\"playing\":true}", sessao);
+  video_bombear(); // ultimo quadro: tocando; os proximos eventos nao desenham
   screensaverCallback(NULL, (LSMessage *)active, NULL);
   assert(respostas == 1 && strstr(resposta, "\"ack\":false") &&
          strstr(resposta, "\"timestamp\":1700000000123456}"));
   // Sem a tela de descanso do Nuvio (esmaecer real, linkado): ela segura o protetor da TV.
   esmaecer_estilo(ESM_ESTILO_ESCURECER);
-  pausaPedida = 1;
+  video_pausar(1);
   screensaverCallback(NULL, (LSMessage *)active, NULL);
   assert(strstr(resposta, "\"ack\":true"));
-  pausaPedida = 0; tocando = 0; // pausa enviada pelo pipeline
+  video_pausar(0); video_bombear();
+  evento("{\"paused\":true}", sessao); // pausa do pipeline, sem quadro
   screensaverCallback(NULL, (LSMessage *)active, NULL);
   assert(strstr(resposta, "\"ack\":true"));
-  tocando = 1; terminou = 1;
+  evento("{\"playing\":true}", sessao); video_bombear();
+  evento("{\"errorCode\":100,\"errorText\":\"Playing error\"}", sessao);
   screensaverCallback(NULL, (LSMessage *)active, NULL);
   assert(strstr(resposta, "\"ack\":true"));
-  terminou = 0; falhou = 1;
+  evento("{\"playing\":true}", sessao); // retomada publicada sem quadro
+  screensaverCallback(NULL, (LSMessage *)active, NULL);
+  assert(strstr(resposta, "\"ack\":false"));
+  evento("{\"errorCode\":200,\"errorText\":\"Audio Codec Not Supported\"}", sessao);
+  screensaverCallback(NULL, (LSMessage *)active, NULL);
+  assert(strstr(resposta, "\"ack\":false")); // aviso nao para o video
+  evento("{\"endOfStream\":true}", sessao);
   screensaverCallback(NULL, (LSMessage *)active, NULL);
   assert(strstr(resposta, "\"ack\":true"));
-  falhou = 0; midia[0] = 0;
+  video_parar();
+  evento("{\"playing\":true}", sessao - 1); // sessao encerrada nao revive ACK
+  screensaverCallback(NULL, (LSMessage *)active, NULL);
+  assert(strstr(resposta, "\"ack\":true"));
+  // A politica tambem muda sem quadros (sem filme).
+  esmaecer_estilo(ESM_ESTILO_VITRINE);
+  esmaecer_escolha(ESM_PADRAO);
+  screensaverCallback(NULL, (LSMessage *)active, NULL);
+  assert(strstr(resposta, "\"ack\":false"));
+  esmaecer_escolha(0);
+  screensaverCallback(NULL, (LSMessage *)active, NULL);
+  assert(strstr(resposta, "\"ack\":true"));
+  esmaecer_escolha(ESM_PADRAO);
+  esmaecer_estilo(ESM_ESTILO_ESCURECER);
   screensaverCallback(NULL, (LSMessage *)active, NULL);
   assert(strstr(resposta, "\"ack\":true"));
   int antes = respostas;
@@ -137,6 +177,7 @@ int main(void) {
   protegerScreensaver(); assert(!protetorLigado && assinaturas == 2);
   aceita = 1; protegerScreensaver(); assert(protetorLigado && assinaturas == 3);
   // Fechar LS2 permite uma nova assinatura no proximo ciclo do backend.
+  assert(pthread_create(&fio, NULL, fakeLoop, NULL) == 0);
   video_encerrar(); assert(!protetorLigado);
   antes = respostas;
   screensaverCallback(NULL, (LSMessage *)active, NULL); assert(respostas == antes);

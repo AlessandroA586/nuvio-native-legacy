@@ -71,6 +71,9 @@ void tex_piramide_liberar(struct SDL_Surface *base);
 //
 // Prefira esta a tex_obter em qualquer arte de lista: e onde o cache estoura.
 GLuint tex_obter_larg(const char *caminho, float largLayout);
+// Publica sob demanda a paleta ja extraida, inclusive de retratos opacos.
+// Chamar a cada quadro enquanto o decode nao terminou; nao pede novo decode.
+void tex_publicar_paleta(const char *caminho);
 // Entrega a textura menor ja existente enquanto a maior e reprocessada.
 GLuint tex_obter_larg_qualquer(const char *caminho, float largLayout);
 // Para LOGO DE TITULO: igual as duas acima, mas o pedido fura a fila de rede e
@@ -167,6 +170,10 @@ int  tex_opaca(const char *caminho);
 // Chamar uma vez por quadro, na thread de desenho: sobe para a GPU o que a
 // thread de decode terminou. Devolve quantas subiu.
 int tex_bombear(int max_por_quadro);
+// Estado por tela: aguarda dois quadros parados; no maximo um pedido/quadro.
+typedef struct { float scroll; unsigned long quadro; int parados, direcao; } TexLookahead;
+int tex_lookahead_parado(TexLookahead *s, float scroll);
+int tex_lookahead_pedir(const char *caminho, float largura);
 
 // Telemetria de quadro do cache: quantas buscas por caminho e quanto custaram.
 // acharIndice era LINEAR sobre 192 slots e cada card da lista chama 2-3 vezes

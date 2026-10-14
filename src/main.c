@@ -1,6 +1,7 @@
 // Bootstrap: janela, contexto GL, loop e telemetria. Toda a UI vive nos modulos.
 #include "app_id.h"
 #include "arranque.h"
+#include "swapint.h"
 #include "streams.h"
 #ifdef NV_DTS_DEBUG
 #include "dts/dts_engine.h"
@@ -82,6 +83,7 @@
 #include "seguro.h"
 #include "video.h"
 #include "addons.h"
+#include "watchstate_envio.h"
 #include "ajustes.h"
 #include "perfiltv.h"
 #include "corviva.h"
@@ -926,6 +928,13 @@ int main(int argc, char **argv) {
   // registro de todos os eventos SDL nao mostrava nada: a tecla nunca era
   // entregue, e o codigo que ela usa tambem nao era o que eu procurava.
   SDL_SetHint("SDL_WEBOS_ACCESS_POLICY_KEYS_BACK", "true");
+#ifdef NV_WEBOS
+  // SDL_LOG_CATEGORY_SYSTEM PERMANECE no padrao (#205): o SDL-webOS loga o
+  // lifecycleEvent(v2) inteiro no INFO, e o SAM inclui os parametros de
+  // lancamento (URL autenticada, tokens) naquele payload — iriam direto ao
+  // registro da sessao. O sinal de ciclo chega pelo allowlist ja logado em
+  // [ciclo] (nome/estado do evento de janela/app), sem payload nenhum.
+#endif
 
 #ifdef __EMSCRIPTEN__
   // SDL_Delay NUNCA via emscripten_sleep. Com -sASYNCIFY o SDL2 troca o
@@ -1412,6 +1421,7 @@ int main(int argc, char **argv) {
 #ifdef NV_TPK
   video_tpk_zoom_roi_definir(ajustes_trailer_zoom_tpk());
 #endif
+  texto_sistema_mic_modo(ajustes_mic_busca());   // .tpk/.wgt; nas outras nao faz nada
   printf("[arranque] gfx_iniciar (compila os shaders)\n"); fflush(stdout);
   marco("gfx_iniciar");
   NV_ETAPA("gfx_iniciar (shaders)");
@@ -1526,6 +1536,7 @@ int main(int argc, char **argv) {
   // lista de exemplo — nunca fica sem nada para mostrar. addons.c olha a pasta
   // gravavel primeiro: a lista da CONTA e guardada la e sobrevive a recarga.
   addons_carregar(dirArte);
+  wsenvio_iniciar();   // retoma o diario mesmo sem nova reproducao
   // Plugins Nuvio (F09, desligados por padrao): estado da conta+perfil e a
   // ligacao como mais uma origem da busca de fontes.
   plugins_iniciar();
@@ -1536,7 +1547,9 @@ int main(int argc, char **argv) {
   // Icone do app (apoiadores): a arte vem do pacote; o alias do launcher do
   // Android e a abertura do .wgt seguem o que ficou gravado (idempotente).
   iconeapp_iniciar(dirArte);
-  iconeapp_aplicar_plataforma();
+  { char *g = dados_ler("iconeapp-arte.txt");   // art changed since last apply -> apply again
+    if (iconeapp_arte_mudou(iconeapp_atual(), g)) iconeapp_aplicar_plataforma();
+    free(g); }
   ajustes_idioma_auto_iniciar(aoMudarIdiomaAuto);
   // A estrutura persistida só pode ser comparada após carregar a configuração.
   homeestado_iniciar();
@@ -1575,6 +1588,7 @@ int main(int argc, char **argv) {
   double fPrep = 0, fGlClr = 0;
   int    txtNQuadro = 0, piorTxtN = 0;
   int quadros = 0, janks = 0; double pior = 0;
+  SwapInt swapInt = {0};   // intervalo real entre swaps (swapint.h)
 
   // TELEMETRIA POR FASE. O quadro pior custava 22ms num alvo de 20ms e nao
   // havia como saber ONDE. Os relogios sao de CPU (SDL_GetPerformanceCounter)
@@ -1659,6 +1673,15 @@ int main(int argc, char **argv) {
         if (e.type == SDL_KEYDOWN && esmaecer_descanso() &&
             (e.key.keysym.sym == SDLK_RETURN || e.key.keysym.sym == SDLK_KP_ENTER))
           descanso_pedir_abrir();
+        if (esmaecer_apagado()) {
+          printf("[descanso] entrada t=%u tipo=0x%x sc=%d sym=%d estagio=%d estilo=%d item=%d player=%d trailer=%d/%d video=%d/%d\n",
+                 SDL_GetTicks(), e.type,
+                 e.type == SDL_KEYDOWN || e.type == SDL_KEYUP ? (int)e.key.keysym.scancode : -1,
+                 e.type == SDL_KEYDOWN || e.type == SDL_KEYUP ? (int)e.key.keysym.sym : -1,
+                 esmaecer_estagio(), esmaecer_estilo_atual(), descanso_indice_em_tela(),
+                 player_aberto(), trailer_aberto(), trailer_pausado(), video_ativo(), video_tocando());
+          fflush(stdout);
+        }
         if (esmaecer_entrada(SDL_GetTicks(), age)) continue;
       }
       // Teclado do sistema (entrada_texto.h): ve o texto ANTES de qualquer tela.
@@ -1683,9 +1706,17 @@ int main(int argc, char **argv) {
           case SDL_WINDOWEVENT_MINIMIZED:    ev = "minimizado"; break;
           case SDL_WINDOWEVENT_FOCUS_LOST:   ev = "foco-perdido"; break;
           case SDL_WINDOWEVENT_FOCUS_GAINED: ev = "foco-voltou"; break;
+          case SDL_WINDOWEVENT_RESTORED:     ev = "restaurado"; break;
+          case SDL_WINDOWEVENT_CLOSE:        ev = "fechar"; break;
           default: break;
         }
-        if (ev) avisos_sinal(ev, (float)rssMB());
+        if (ev) {
+          printf("[ciclo] janela=%s t=%u descanso=%d estagio=%d player=%d trailer=%d/%d video=%d/%d rss=%.1fMB\n",
+                 ev, SDL_GetTicks(), esmaecer_descanso(), esmaecer_estagio(), player_aberto(),
+                 trailer_aberto(), trailer_pausado(), video_ativo(), video_tocando(), rssMB());
+          fflush(stdout);
+          avisos_sinal(ev, (float)rssMB());
+        }
         // VOLTOU DO SEGUNDO PLANO: a reconsulta de versao vencida espera uns
         // segundos em vez de sair junto com tudo o que acorda (atualizacao.h).
         if (e.window.event == SDL_WINDOWEVENT_SHOWN ||
@@ -1693,6 +1724,20 @@ int main(int argc, char **argv) {
             e.window.event == SDL_WINDOWEVENT_RESTORED)
           atualizacao_retomou();
         continue;
+      }
+      if (e.type == SDL_APP_WILLENTERBACKGROUND || e.type == SDL_APP_DIDENTERBACKGROUND ||
+          e.type == SDL_APP_WILLENTERFOREGROUND || e.type == SDL_APP_DIDENTERFOREGROUND ||
+          e.type == SDL_APP_TERMINATING || e.type == SDL_APP_LOWMEMORY || e.type == SDL_QUIT) {
+        printf("[ciclo] app=%s t=%u descanso=%d estagio=%d player=%d trailer=%d/%d video=%d/%d rss=%.1fMB\n",
+               e.type == SDL_APP_WILLENTERBACKGROUND ? "vai-ocultar" :
+               e.type == SDL_APP_DIDENTERBACKGROUND ? "oculto" :
+               e.type == SDL_APP_WILLENTERFOREGROUND ? "vai-voltar" :
+               e.type == SDL_APP_DIDENTERFOREGROUND ? "voltou" :
+               e.type == SDL_APP_LOWMEMORY ? "pouca-memoria" :
+               e.type == SDL_APP_TERMINATING ? "terminando" : "quit",
+               SDL_GetTicks(), esmaecer_descanso(), esmaecer_estagio(), player_aberto(),
+               trailer_aberto(), trailer_pausado(), video_ativo(), video_tocando(), rssMB());
+        fflush(stdout);
       }
       if (e.type == SDL_APP_DIDENTERFOREGROUND) atualizacao_retomou();
       // PONTEIRO (Magic Remote, issue #99): mouse, rodinha e os avisos 484/485
@@ -1809,7 +1854,7 @@ int main(int argc, char **argv) {
                          pUplN=fUplN; pUplB=fUplB;
                          pGfxMs=fGfxMs; pTexMs=fTexMs; pNRect=fNRect; pNProg=fNProg;
                          pNBind=fNBind; pNBusca=fNBusca; pOutMs=fOutMs; pNOut=fNOut; pFill=fFill; pNCheio=fNCheio; }
-      if (dtms > 33.0) janks++;
+      if (dtms > swapint_limite_jank(&swapInt)) janks++;
     }
     // RASTRO POR QUADRO, so com /tmp/nuvio-quadros presente (conferido no
     // relatorio de 3 s): cada quadro acima de 25 ms sai com a reparticao, os
@@ -1842,7 +1887,9 @@ int main(int argc, char **argv) {
     txtMsQuadro = txt_ms; txtNQuadro = txt_rasterizadas;
     txt_ms = 0.0; txt_rasterizadas = 0;
 
-    // TRES por quadro. O limite de 1 vinha de quando TODA arte era decodificada
+    // Ate TRES por quadro: tex_bombear admite pelo pior custo de cada classe,
+    // aquece offscreen antes de publicar e isola residencia num quadro SOLO.
+    // O limite de 1 vinha de quando TODA arte era decodificada
     // com o teto unico de 640: cada glTexImage2D custava ~2 MB e dois no mesmo
     // quadro passavam de 20 ms, aparecendo como tranco ao entrar numa fileira.
     //
@@ -1868,6 +1915,11 @@ int main(int argc, char **argv) {
     // Com o player aberto (filme pausado) fica so o escurecer de antes: a
     // vitrine pediria texturas de tela cheia com o decodificador ocupado.
     esmaecer_estilo(player_aberto() ? ESM_ESTILO_ESCURECER : ajustes_descanso_estilo());
+    // #338: com trailer tocando (destaque da Home ou pagina do titulo) o medidor
+    // some da ilha; volta quando ele para (desempenho.h). trailer_medidor
+    // esconde tambem na PAUSA da tela cheia nativa: la trailer_tocando fica
+    // preso em 1 e sem o !trailer_pausado o medidor nao voltava (rev. 205).
+    desempenho_trailer(trailer_medidor_esconde());
     // #422: trailer tocando na pagina do titulo tambem e alguem assistindo. So
     // no titulo: o destaque da Home troca de trailer sem parar e a tela nunca
     // escureceria. Trailer em TELA CHEIA pausado e parado (trailer_pausado so
@@ -1922,6 +1974,7 @@ int main(int argc, char **argv) {
 #ifdef NV_TPK
     video_tpk_zoom_roi_definir(ajustes_trailer_zoom_tpk());   // #241: Ajustes > Trailers
 #endif
+    texto_sistema_mic_modo(ajustes_mic_busca());              // Ajustes > Tela inicial > Barra lateral
     gpun_quadro_inicio();
     glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1.0f);
     if (!nvPrimeiroQuadroFeito) arranque_etapa("primeiro glClear");
@@ -1968,6 +2021,7 @@ int main(int argc, char **argv) {
     t0 = NV_T0();
     if (!nvPrimeiroQuadroFeito) arranque_etapa("primeiro SwapWindow");
     SDL_GL_SwapWindow(win);
+    swapint_marca(&swapInt, (double)SDL_GetPerformanceCounter() * 1000.0 / perFreq);
 #ifdef NV_ANDROID
     android_quadro();   // todo quadro apresentado, de qualquer tela (vigia #266)
 #endif
@@ -2028,6 +2082,9 @@ int main(int argc, char **argv) {
           printf("[locale] numerico trocado por fora (\"%s\"): de volta ao C\n", lc->decimal_point);
           setlocale(LC_NUMERIC, "C");
         } }
+      { double sMed, sPior; int sN = swapint_colher(&swapInt, &sMed, &sPior);
+        if (sN > 0) printf("[swap] periodo=%.2fms med=%.2fms pior=%.1fms n=%d limite-jank=%.1fms\n",
+                           swapint_periodo(&swapInt), sMed, sPior, sN, swapint_limite_jank(&swapInt)); }
       printf("FPS=%.1f pior=%.1fms janks=%d | pior-quadro: texto %.1fms em %d linhas"
              " | gpu-cache=%d %.1fMB tela=%d/%.1fMB fila-tex=%d tex-despejos=%d(q=%d) disco-direto=%d neg-arte=%d"
              " | despejos=%d | cache-arte=%ld/%ldB hit=%ld miss=%ld grav=%ld err=%ld essenciais=%ld/%ld"

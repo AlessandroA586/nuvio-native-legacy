@@ -108,7 +108,7 @@ static void padroesEValores(void) {
   for (op = 0; op < AJ_N; op++) {
     assert(!uxDiferente(op));
     if (OPCOES[op].tipo == OP_ACAO || OPCOES[op].tipo == OP_LEITURA ||
-        CHAVE[op][0] == '-' || op == AJ_PERFIL_PESQ)
+        (CHAVE[op][0] == '-' && !ajFalhaBackend(op)) || op == AJ_PERFIL_PESQ)
       assert(!uxTemPadrao(op));
     else {
       assert(uxTemPadrao(op));
@@ -582,7 +582,10 @@ int main(void) {
   assert(somenteDesteAparelho(AJ_ESPACO_FILEIRAS) && somenteDesteAparelho(AJ_ESPACO_TITULOS));
   assert(ajustes_espaco_fileiras() == 1.0f && ajustes_espaco_titulos() == 1.0f);
   assert(ajustes_espaco_fator(0) == 0.5f && ajustes_espaco_fator(50) == 0.5f && ajustes_espaco_fator(100) == 1.0f);
-  assert(ajustes_espaco_fator(150) == 1.5f && ajustes_espaco_fator(900) == 1.5f && ajustes_espaco_fator(-5) == 0.5f);
+  assert(ajustes_espaco_fator(150) == 1.5f && ajustes_espaco_fator(300) == 3.0f && ajustes_espaco_fator(900) == 3.0f && ajustes_espaco_fator(-5) == 0.5f);
+  // 13/10: faixa larga, passos que se veem (25 %); o padrao continua 100.
+  assert(OPCOES[AJ_ESPACO_FILEIRAS].min == 50 && OPCOES[AJ_ESPACO_FILEIRAS].max == 300 && OPCOES[AJ_ESPACO_FILEIRAS].passo == 25);
+  assert(OPCOES[AJ_ESPACO_TITULOS].min == 50 && OPCOES[AJ_ESPACO_TITULOS].max == 300 && OPCOES[AJ_ESPACO_TITULOS].passo == 25);
   // Apoiar o projeto (apoio.h): acao no fim, sem valor, uma vez na tela.
   assert(AJ_APOIAR == AJ_FONTE_ESCOPO - 3 && AJ_APOIAR == AJ_TAM_MIN + 1 && !strcmp(CHAVE[AJ_APOIAR], "-apoiar") && valorPadrao[AJ_APOIAR] == 0);
   assert(AJ_PLR_CLASSIF == AJ_LEG_FORCADA + 1 && AJ_PLR_CLASSIF == AJ_FONTE_ESCOPO - 1 && !strcmp(CHAVE[AJ_PLR_CLASSIF], "classifPlayerLocal") && valorPadrao[AJ_PLR_CLASSIF] == 0);
@@ -676,7 +679,16 @@ int main(void) {
     valor[AJ_CW_MINIMO] = 99; assert(ajustes_cw_minimo() == 20);
     valor[AJ_CW_MINIMO] = antes; }
   // #400: acrescentado no fim, sem deslocar os indices antigos.
-  assert(AJ_LEG_SYNC_AUTO == AJ_FONTE_ORDEM_ADDON + 1 && AJ_LEG_MOSTRAR == AJ_LEG_SYNC_AUTO + 1 && AJ_AVISO_LEGAL == AJ_LEG_MOSTRAR + 1 && AJ_HDR_UI == AJ_AVISO_LEGAL + 1 && AJ_TELA_ABERTURA == AJ_HDR_UI + 1 && AJ_CW_MINIMO == AJ_TELA_ABERTURA + 1 && AJ_BUFFER == AJ_CW_MINIMO + 1 && AJ_PULAR_ABERTURA == AJ_BUFFER + 1 && AJ_PULAR_RESUMO == AJ_PULAR_ABERTURA + 1 && AJ_PROXIMO_AUTO == AJ_PULAR_RESUMO + 1 && AJ_PULAR_CREDITOS == AJ_PROXIMO_AUTO + 1 && AJ_PROXIMO_CONTAGEM == AJ_PULAR_CREDITOS + 1 && AJ_INTERFACE_MODO == AJ_PROXIMO_CONTAGEM + 1 && AJ_N == AJ_INTERFACE_MODO + 1);
+  assert(AJ_LEG_SYNC_AUTO == AJ_FONTE_ORDEM_ADDON + 1 && AJ_LEG_MOSTRAR == AJ_LEG_SYNC_AUTO + 1 && AJ_AVISO_LEGAL == AJ_LEG_MOSTRAR + 1 && AJ_HDR_UI == AJ_AVISO_LEGAL + 1 && AJ_TELA_ABERTURA == AJ_HDR_UI + 1 && AJ_CW_MINIMO == AJ_TELA_ABERTURA + 1 && AJ_BUFFER == AJ_CW_MINIMO + 1 && AJ_PULAR_ABERTURA == AJ_BUFFER + 1 && AJ_PULAR_RESUMO == AJ_PULAR_ABERTURA + 1 && AJ_PROXIMO_AUTO == AJ_PULAR_RESUMO + 1 && AJ_PULAR_CREDITOS == AJ_PROXIMO_AUTO + 1 && AJ_PROXIMO_CONTAGEM == AJ_PULAR_CREDITOS + 1 && AJ_INTERFACE_MODO == AJ_PROXIMO_CONTAGEM + 1 && AJ_MIC_BUSCA == AJ_INTERFACE_MODO + 1 && AJ_MENU_TOPO == AJ_MIC_BUSCA + 1 && AJ_ABAS_ESTILO == AJ_MENU_TOPO + 1 && AJ_TECLADO_ANDROID == AJ_ABAS_ESTILO + 1 && AJ_LEG_CONTORNO_COR == AJ_TECLADO_ANDROID + 1 && AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_ESTAT_TAMANHO == AJ_FALHA_ADDON_LIMITE + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_N == AJ_OCULTAR_FILMES_VISTOS + 1);
+  assert(!strcmp(CHAVE[AJ_MENU_TOPO], "menuTopoLocal") && valorPadrao[AJ_MENU_TOPO] == 0);
+  assert(!strcmp(CHAVE[AJ_LEG_CONTORNO_COR], "legendaContornoCorLocal") && valorPadrao[AJ_LEG_CONTORNO_COR] == 0 && somenteDesteAparelho(AJ_LEG_CONTORNO_COR));
+  { int r, g, b; valor[AJ_LEG_CONTORNO_COR] = 0; ajustes_leg_contorno_rgb(&r, &g, &b); assert(!r && !g && !b);
+    valor[AJ_LEG_CONTORNO_COR] = 1; ajustes_leg_contorno_rgb(&r, &g, &b); assert(r == 255 && g == 255 && b == 255);
+    valor[AJ_LEG_CONTORNO_COR] = 9; ajustes_leg_contorno_rgb(&r, &g, &b); assert(!r && !g && !b); valor[AJ_LEG_CONTORNO_COR] = 0; }
+  assert(!strcmp(CHAVE[AJ_ABAS_ESTILO], "abasEstiloLocal") && valorPadrao[AJ_ABAS_ESTILO] == 0);
+  assert(!strcmp(CHAVE[AJ_MIC_BUSCA], "micBuscaLocal") && valorPadrao[AJ_MIC_BUSCA] == 0);
+  assert(!strcmp(OPCOES[AJ_MIC_BUSCA].valores[0], "Automático") && OPCOES[AJ_MIC_BUSCA].n == 3);
+  assert(somenteDesteAparelho(AJ_MIC_BUSCA) && !dePerfil(AJ_MIC_BUSCA));
   assert(!strcmp(CHAVE[AJ_FONTE_ORDEM_ADDON], "fonteOrdemLocal"));
   assert(OPCOES[AJ_FONTE_ORDEM_ADDON].n == 2 && valorPadrao[AJ_FONTE_ORDEM_ADDON] == 0);
   assert(somenteDesteAparelho(AJ_FONTE_ORDEM_ADDON) && !dePerfil(AJ_FONTE_ORDEM_ADDON));

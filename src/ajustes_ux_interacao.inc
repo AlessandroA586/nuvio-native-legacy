@@ -17,6 +17,7 @@ static void uxNotificar(const char *s) {
 static void uxCancelar(void) {
   uxEditor = uxRestaurar = uxConfirmar = uxRodape = uxAvisoRisco = 0;
   emEdicao = 0;
+  if (faRetornarFolha) { frAberta = faRetornarFolha; faRetornarFolha = 0; faAddonEditar[0] = 0; }
 }
 static void uxListarDiferencas(void);
 static void uxLayoutDisponibilidade(void) {
@@ -148,6 +149,7 @@ static void uxAplicar(void) {
 // memoria tem, e esses continuam passando pelo editor).
 static int uxAlternarDireto(int op) {
   int antes, novo;
+  if (ajFalhaBackend(op)) ajFalhaEspelhar();
   if (!ehInterruptor(op) || soLeitura(op) || inativa(op)) return 0;
   uxCancelar();
   antes = uxValorAtual(op);
@@ -310,6 +312,7 @@ static int uxEvento(SDL_Keycode k) {
       } else if (k == SDLK_UP) {
         if (t == AJ2_T_TOUR) uxTopo = AJ2_T_BUSCA;
         else if (t == AJ2_T_RESOLVER) uxTopo = AJ2_T_PERFIL;
+        else if (ajustes_menu_topo()) { sair = 1; return 1; }
       }
       return 1;
     }

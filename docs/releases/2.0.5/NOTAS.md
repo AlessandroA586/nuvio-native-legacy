@@ -17,6 +17,9 @@ The update after 2.0.4: a new opening, a full subtitle list and a long list of f
 - **Samsung .tpk.** The native player no longer freezes the interface, and the aspect button changes the picture.
 - **LG webOS.** Its own Homebrew Channel repository, to install and update.
 - **Source details** (#355): the info button on a source opens a card with the add-on, the label, the full description and the file name. The link itself is never shown.
+- **Title page, cleaner.** The synopsis stops at 3 lines, the details sit on one line (genres, year, runtime and rating, with year and runtime in bold), and the "next episode" badge lines up with the text.
+- **Resume button.** Shows how much you have watched as a small bar and the time left (like "1h 51min"), instead of a separate "resume available" line.
+- **New font.** JetBrains Sans, the font of Nuvio Desktop, is now an option in Settings > Interface font.
 - **Library** (#352): a watched badge on the poster and on the row, and sorting by watched / unwatched.
 
 ## Fixed

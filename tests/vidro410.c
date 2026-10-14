@@ -4,6 +4,7 @@
 #define NV_TPK 1
 #endif
 #include "../src/ajustes.c"
+#include "../src/focoprof.h"
 #include <OpenGL/OpenGL.h>
 #include <assert.h>
 #include <math.h>
@@ -117,6 +118,16 @@ int main(void) {
     confere(antes==depois && vp[2]==1920 && vp[3]==1080 && gfx_escala()==1,
             "Tamanho 80/90/100% preserva alvo 1080p e restaura escala");
   }
+  // #410 item 4: contorno do cartao (gfx_vidro_cartao, Home/Biblioteca/Amigos).
+  // Antes o fio ficava igual com a opcao desligada.
+  double aro[2];
+  for(int on=0;on<2;on++) {
+    quadro(); valor[AJ_VIDRO_CONTORNO]=on?0:1;
+    gfx_vidro_cartao((GfxRect){100,100,200,300},0.05f,1.0f,1.0f);
+    aro[on]=media(96,180,3,20);
+  }
+  printf("contorno do cartao: desligado=%.2f ligado=%.2f\n",aro[0],aro[1]);
+  confere(aro[1]>aro[0]+20,"Contorno liga o fio do cartao em foco");
   assert(glGetError()==GL_NO_ERROR);
   printf("vidro410: %d falha(s)\n",falhas);
   return falhas ? 1 : 0;

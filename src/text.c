@@ -135,7 +135,7 @@ static unsigned char tentouLegendaLGCam[TXT_NCAM][TXT_LEG_N];
 #define tentouLegendaLG (tentouLegendaLGCam[camada])
 const char *const TXT_FAMILIAS_PT[TXT_FAMILIA_N] = {
   "Inter", "LG Display", "Droid Sans", "Montserrat", "Roboto",
-  "Atkinson Hyperlegible Next"
+  "Atkinson Hyperlegible Next", "JetBrains Sans"
 };
 
 static Entrada cache[MAX_LINHAS];
@@ -427,6 +427,8 @@ static const struct { int corpo, peso; } ESTILOS[TXT_NFONTES] = {
   { 18, PESO_BOLD    },   // TXT_V3_SELO
   { 28, PESO_REGULAR },   // TXT_V3_INSP
   { 28, PESO_BOLD    },   // TXT_V3_INSP_B
+  { 26, PESO_BOLD   },   // TXT_DET_META_FORTE (meta fica em 26)
+  { 26, PESO_MEDIUM },   // TXT_DET_META_GEN
 };
 
 // RESERVA PARA O QUE A INTER NAO TEM.
@@ -1225,6 +1227,10 @@ int txt_iniciar(const char *dirRecursos, float escala) {
   snprintf(caminhoPeso[TXT_FAMILIA_ATKINSON][0], 512, "%sfonts/AtkinsonHyperlegibleNext-Regular.ttf", base);
   snprintf(caminhoPeso[TXT_FAMILIA_ATKINSON][1], 512, "%sfonts/AtkinsonHyperlegibleNext-Medium.ttf", base);
   snprintf(caminhoPeso[TXT_FAMILIA_ATKINSON][2], 512, "%sfonts/AtkinsonHyperlegibleNext-Bold.ttf", base);
+  // JetBrains Sans (a do Nuvio Desktop) nao tem Medium: o peso do meio e o SemiBold.
+  snprintf(caminhoPeso[TXT_FAMILIA_JETBRAINS][0], 512, "%sfonts/JetBrainsSans-Regular.ttf", base);
+  snprintf(caminhoPeso[TXT_FAMILIA_JETBRAINS][1], 512, "%sfonts/JetBrainsSans-SemiBold.ttf", base);
+  snprintf(caminhoPeso[TXT_FAMILIA_JETBRAINS][2], 512, "%sfonts/JetBrainsSans-Bold.ttf", base);
   snprintf(caminhoMono[0], 512, "%sfonts/JetBrainsMonoNL-Regular.ttf", base);
   snprintf(caminhoMono[1], 512, "%sfonts/JetBrainsMonoNL-SemiBold.ttf", base);
   snprintf(caminhoMono[2], 512, "%sfonts/Montserrat-ExtraLight-Relogio.ttf", base);
@@ -1870,11 +1876,15 @@ static float encaixa(float v) {
 }
 
 void txt_desenhar_alpha(TxtLinha l, float x, float y, float alpha) {
+  txt_desenhar_tom(l, x, y, 1, 1, 1, alpha);
+}
+
+void txt_desenhar_tom(TxtLinha l, float x, float y, float cr, float cg, float cb, float alpha) {
   if (!l.tex) return;
   camadaAtualizar();
   GfxRect r = { encaixa(x), encaixa(y), (float)l.w, (float)l.h };
   if (camada && l.pw > 0) { r.w = (float)l.pw / ESC_T; r.h = (float)l.ph / ESC_T; }
-  gfx_rect(r, l.tex, GFX_TEXTO, 0, 0, 0, 0.0f, 1, 1, 1, alpha);
+  gfx_rect(r, l.tex, GFX_TEXTO, 0, cr != 1 || cg != 1 || cb != 1, 0, 0.0f, cr, cg, cb, alpha);
 }
 
 float txt_tracking(TxtEstilo estilo, const char *s, int r, int g, int b,

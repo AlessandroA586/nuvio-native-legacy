@@ -47,6 +47,7 @@ typedef struct {
   // tamanho da pilula assentada; o clique entrega OK a quem trata a tecla dela
   // (a de falha da legenda: faixas_pilula_tecla). NULL = so informativa.
   void (*ponteiroOk)(int a, int b);
+  float insetEsq;           // recuo esquerdo do cabecalho do corpo (o titulo); 0 = 28
 } PlrIlhaPedido;
 
 void plrilha_pedir(const PlrIlhaPedido *p);
@@ -74,6 +75,8 @@ float plrilha_corpo_alfa(void);
 #ifdef NV_SHOT_HOOKS
 // Capturas: hora fixa (0 = a do relogio).
 void plrilha_shot_hora(time_t t);
+// A linha do ultimo quadro: x do texto, x do fim da linha, se tinha "termina as".
+void plrilha_shot_linha(float *txtX, float *fimX, int *temFim);
 #endif
 
 #endif
