@@ -69,6 +69,7 @@ int dts_tpk_e_url(const char *u) { (void)u; return 0; }
 #define ESPERA_SONDA_MS  30000
 #define ESPERA_GERADOR_MS 30000
 #define GERADORES        2
+#define MAX_CONEXOES     16            /* player + retries; beyond this the connection gets a 503 */
 
 static const char *const MODO_NOME[DTSTPK_MODOS] = {
   "HLS 127.0.0.1", "progressive TS", "progressive MKV", "progressive MP4" };
@@ -236,7 +237,13 @@ typedef struct Sessao {
 static pthread_mutex_t G = PTHREAD_MUTEX_INITIALIZER;
 static Sessao *atual;
 static unsigned contador;
-static int sockLo = -1, portaLo;
+static int portaLo;
+
+// O ouvinte e o fio que aceita: o fio fecha o proprio socket ao ver `parar`
+// (fechar o fd de fora, com um accept() pendente, deixaria o numero reusavel).
+typedef struct { int fd; volatile int parar; } Ouvinte;
+static Ouvinte *ouvinteLo;              // sob G
+static atomic_int conexoes;             // fios de conexao vivos
 
 static void sessaoDestruir(Sessao *s) {
   for (int i = 0; i < GERADORES; i++) dts_remux_gen_free(s->ger[i].g);
@@ -482,14 +489,14 @@ static int saidaEscrever(void *u, const unsigned char *d, int n) {
 
 // Corpo da memoria (Content-Length), com Range "bytes=a-b" / "bytes=a-".
 static void enviarMemoria(int sock, Sessao *s, const char *tipo, const unsigned char *b, size_t n,
-                          const char *range, int manter, int *status, int64_t *enviados) {
+                          const char *range, int manter, int soCab, int *status, int64_t *enviados) {
   char cab[400];
   size_t ini = 0, fim = n ? n - 1 : 0;
   int parcial = 0;
   unsigned long long a, z;
   if (range[0] && sscanf(range, "bytes=%llu-%llu", &a, &z) >= 1) {
     if (sscanf(range, "bytes=%llu-%llu", &a, &z) < 2) z = n ? n - 1 : 0;
-    if (a >= n) {
+    if (a >= n || z < a) {   // fora do corpo, ou invertido ("bytes=8-0")
       snprintf(cab, sizeof cab, "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */%zu\r\n"
                "Content-Length: 0\r\nConnection: %s\r\n\r\n", n, manter ? "keep-alive" : "close");
       enviarTudo(sock, cab, strlen(cab), &s->cancelar, NULL);
@@ -505,8 +512,8 @@ static void enviarMemoria(int sock, Sessao *s, const char *tipo, const unsigned 
     snprintf(cab, sizeof cab, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %zu\r\nAccept-Ranges: bytes\r\n"
              "Cache-Control: no-cache\r\nConnection: %s\r\n\r\n", tipo, n, manter ? "keep-alive" : "close");
   *status = parcial ? 206 : 200;
-  if (enviarTudo(sock, cab, strlen(cab), &s->cancelar, NULL) && n && enviarTudo(sock, b + ini, fim - ini + 1, &s->cancelar, NULL))
-    *enviados = (int64_t)(fim - ini + 1);
+  if (!enviarTudo(sock, cab, strlen(cab), &s->cancelar, NULL) || soCab) return;   // HEAD: so o cabecalho
+  if (n && enviarTudo(sock, b + ini, fim - ini + 1, &s->cancelar, NULL)) *enviados = (int64_t)(fim - ini + 1);
 }
 
 // Um segmento (seg >= 0) ou o fluxo progressivo (seg < 0, a partir de `t`).
@@ -530,7 +537,7 @@ static int servirFluxo(int sock, Sessao *s, const Pedido *pd, unsigned nr, int s
       s->cache = NULL;                     // emprestado: volta depois de enviar
       pthread_mutex_unlock(&s->m);
       int status = 0; int64_t env = 0;
-      if (!pd->head) enviarMemoria(sock, s, tipo, b, n, pd->range, manter, &status, &env);
+      enviarMemoria(sock, s, tipo, b, n, pd->range, manter, pd->head, &status, &env);
       pthread_mutex_lock(&s->m);
       if (!s->cache) { s->cache = b; s->cacheN = n; s->cacheSeg = seg; } else free(b);
       s->bytes += env;
@@ -572,7 +579,7 @@ static int servirFluxo(int sock, Sessao *s, const Pedido *pd, unsigned nr, int s
   int status = o.status, ok = rr == 0 && !o.estourou;
   int64_t enviados = o.bytes;
   if (ok && corpo == DTSTPK_CORPO_LENGTH) {
-    enviarMemoria(sock, s, tipo, o.mem, o.memN, pd->range, manter, &status, &enviados);
+    enviarMemoria(sock, s, tipo, o.mem, o.memN, pd->range, manter, 0, &status, &enviados);
     pthread_mutex_lock(&s->m);
     free(s->cache); s->cache = o.mem; s->cacheN = o.memN; s->cacheSeg = seg; o.mem = NULL;
     pthread_mutex_unlock(&s->m);
@@ -732,39 +739,63 @@ static void *atender(void *u) {
     if (!atenderPedido(sock, &pd, manter)) break;
   }
   close(sock);
+  atomic_fetch_sub(&conexoes, 1);
   return NULL;
 }
 
 static void *aceitar(void *u) {
-  int ls = (int)(intptr_t)u;
-  for (;;) {
-    int s = accept(ls, NULL, NULL);
+  Ouvinte *o = u;
+  while (!o->parar) {
+    struct pollfd p = { o->fd, POLLIN, 0 };
+    int s, r = poll(&p, 1, 200);     // acorda para olhar `parar`
     pthread_t t;
-    if (s < 0) { if (errno == EINTR) continue; usleep(200 * 1000); continue; }
+    if (r <= 0) { if (r < 0 && errno != EINTR) usleep(200 * 1000); continue; }
+    s = accept(o->fd, NULL, NULL);
+    if (s < 0) continue;
     { struct timeval tv = { 1, 0 };   // envio em fatias de 1 s: o cancelamento e checado entre elas
       setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof tv); }
 #ifdef SO_NOSIGPIPE
     { int um = 1; setsockopt(s, SOL_SOCKET, SO_NOSIGPIPE, &um, sizeof um); }
 #endif
+    if (atomic_fetch_add(&conexoes, 1) >= MAX_CONEXOES) {   // fios demais: recusa em vez de criar mais um
+      atomic_fetch_sub(&conexoes, 1);
+      responderSimples(s, 503, "Service Unavailable", NULL, "too many connections\n", 0);
+      close(s);
+      continue;
+    }
     if (pthread_create(&t, NULL, atender, (void *)(intptr_t)s) == 0) pthread_detach(t);
-    else close(s);
+    else { atomic_fetch_sub(&conexoes, 1); close(s); }
   }
+  close(o->fd);
+  free(o);
   return NULL;
 }
 
 // Sob G. So 127.0.0.1: nada do servidor sai da TV.
 static int subir(void) {
-  int *ls = &sockLo, *porta = &portaLo;
   pthread_t t;
-  if (*ls >= 0) return 1;
+  Ouvinte *o;
+  int fd, porta;
+  if (ouvinteLo) return 1;
   signal(SIGPIPE, SIG_IGN);
-  *ls = ouvir(INADDR_LOOPBACK, 0, porta);
-  if (*ls < 0) return 0;
-  if (pthread_create(&t, NULL, aceitar, (void *)(intptr_t)*ls) != 0) { close(*ls); *ls = -1; return 0; }
+  fd = ouvir(INADDR_LOOPBACK, 0, &porta);
+  if (fd < 0) return 0;
+  o = calloc(1, sizeof *o);
+  if (!o) { close(fd); return 0; }
+  o->fd = fd;
+  if (pthread_create(&t, NULL, aceitar, o) != 0) { close(fd); free(o); return 0; }
   pthread_detach(t);
-  printf("[dts-tpk] servidor ouvindo em %s:%d\n", "127.0.0.1", *porta);
+  ouvinteLo = o; portaLo = porta;
+  printf("[dts-tpk] servidor ouvindo em %s:%d\n", "127.0.0.1", porta);
   fflush(stdout);
   return 1;
+}
+
+// Sob G. O fio de aceite fecha o socket na proxima volta (<= 200 ms).
+static void descer(void) {
+  if (!ouvinteLo) return;
+  ouvinteLo->parar = 1;
+  ouvinteLo = NULL; portaLo = 0;
 }
 
 // Versao maior da Tizen (system-info por dlopen, como gpunivel.c). -1 = nao leu.
@@ -889,6 +920,7 @@ int dts_tpk_url_em(double t, char *out, size_t n) {
 void dts_tpk_fechar(void) {
   pthread_mutex_lock(&G);
   encerrarAtual();
+  descer();
   pthread_mutex_unlock(&G);
 }
 
