@@ -754,9 +754,8 @@ void rede_tls_fechar(RedeTls *t) { (void)t; }
 // rede_baixar_trecho_st le: o resto do modulo segue devolvendo NULL e logando.
 static _Thread_local int redeCurlLocal;
 #endif
-// Texto do ultimo erro de TRANSPORTE deste fio ("curl 35: ..."), para a tela de
-// login e o log do APK de release (#223): o stderr da libcurl nao chega a lugar
-// nenhum la. Sem segredo: a libcurl so descreve a falha, nunca o corpo.
+// Numeric transport error for this thread. Raw backend errors may contain
+// request URLs/credentials, so never publish them in the UI or log (#418).
 #ifdef NV_TPK40
 // 4/5: sem TLS de compilador (ver o RedeFio la em cima).
 #define redeErroTxt (redeFio()->erroTxt)
@@ -1233,11 +1232,10 @@ static void opcoesComuns(void *c, unsigned long prazoMs) {
   curl_setopt(c, OPT_ERRORBUFFER, redeErroBuf);
 }
 
-// Guarda o texto da falha (so o codigo e a frase da libcurl, sem URL nem corpo).
+// Keep only the curl code: raw error buffers can repeat secret request data.
 static void anotarErro(int r) {
   if (!r) { redeErroTxt[0] = 0; return; }
-  snprintf(redeErroTxt, sizeof redeErroTxt, "curl %d%s%.150s", r,
-           redeErroBuf[0] ? ": " : "", redeErroBuf);
+  snprintf(redeErroTxt, sizeof redeErroTxt, "curl %d", r);
 }
 const char *rede_ultimo_erro(void) { return redeErroTxt; }
 
@@ -1608,7 +1606,8 @@ static int abrirReal(void) {
     const CurlVersao *v;
     *(void **)(&versao) = dlsym(h, "curl_version_info");
     v = versao ? versao(1 /* CURLVERSION_SECOND */) : NULL;
-    if (v) printf("[rede] libcurl=%s async_dns=%s%s\n", v->version ? v->version : "?",
+    if (v) printf("[rede] libcurl=%s tls_backend=%s async_dns=%s%s\n", v->version ? v->version : "?",
+                  v->ssl_version ? v->ssl_version : "none",
                   v->age >= 1 && v->ares ? "c-ares/" :
                   (v->features & (1 << 7)) ? "threaded" : "no (synchronous)",
                   v->age >= 1 && v->ares ? v->ares : "");
@@ -2042,10 +2041,9 @@ static char *rede_baixar_interno3(const char *url, int segundos, long *tam,
   // rede lenta (bytes > 0, prazo inteiro) e DNS/conexao que nao abriu (nova,
   // 0 bytes). O comeco da linha fica igual para quem ja procura por ele.
   if (r != 0) { char seg[120]; free(b.p);
-    printf("[rede] falha %d em %s (conexao %s, %ld bytes, %lu ms%s)%s%s\n", r,
+    printf("[rede] falha %d em %s (conexao %s, %ld bytes, %lu ms%s)\n", r,
            rede_url_publica(url, seg, sizeof seg), reusada ? "reusada" : "nova",
-           (long)b.n, gasto, tentativa ? ", 2a tentativa" : "",
-           redeErroBuf[0] ? ": " : "", redeErroBuf);
+           (long)b.n, gasto, tentativa ? ", 2a tentativa" : "");
     fflush(stdout);
     return NULL; }
   redeBytesLocal = (long)b.n;
@@ -2245,9 +2243,11 @@ static char *postarNativo(const char *url, int segundos, const char *const *cab,
   void *c, *lista = NULL;
   int r;
   if (status) *status = 0;
-  if (!url || !*url || !abrir()) return NULL;
+  anotarErro(0);
+  if (!url || !*url) { anotarErro(3); return NULL; }
+  if (!abrir()) { anotarErro(2); return NULL; }
   c = seguro ? curl_init() : pegarHandle(url);
-  if (!c) return NULL;
+  if (!c) { anotarErro(27); return NULL; }
   curl_setopt(c, OPT_URL, url);
   curl_setopt(c, OPT_WRITEFUNCTION, receber);
   curl_setopt(c, OPT_WRITEDATA, &b);
