@@ -59,7 +59,7 @@ class CacheMidia private constructor(
         // Player closed: keep this session's cache for `titulo` instead of
         // deleting it (when it is healthy, has bytes and the disk has room).
         fun guardar(c: CacheMidia, titulo: String, chave: String) {
-            val sadio = !c.estado.desligado && c.usadoMb() > 0
+            val sadio = !c.estado.desligado && c.cache.cacheSpace > 0
             val livre = try { c.pasta.usableSpace } catch (e: SecurityException) { 0L }
             val ficou = vaga.guardar(c, if (sadio) titulo else "", chave, c.pedidoMb, System.currentTimeMillis(), livre)
             if (ficou) { raizVaga = c.pasta.parentFile?.parentFile; Log.i(TAG, "kept for the next open: $titulo (${c.usadoMb()} MB)"); vigiar() }
@@ -67,6 +67,8 @@ class CacheMidia private constructor(
 
         // A VOD opens: the kept cache, rebound to this session, or null.
         fun pegar(titulo: String, chave: String, pedidoMb: Int, aoFalhar: (Boolean) -> Unit): CacheMidia? {
+            val livre = try { raizVaga?.usableSpace ?: 0L } catch (_: SecurityException) { 0L }
+            vaga.vencer(System.currentTimeMillis(), livre)
             val c = vaga.pegar(titulo, chave, pedidoMb, System.currentTimeMillis()) ?: return null
             c.estado.aoFalhar = aoFalhar
             Log.i(TAG, "reusing the kept cache: $titulo (${c.usadoMb()} MB)")

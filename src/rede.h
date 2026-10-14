@@ -416,6 +416,7 @@ const char *rede_ultimo_erro(void);
 // hosts. ms[i] recebe o tempo de cada origem (0 = falhou). Devolve quantas
 // abriram. Chamar de um fio descartavel; no .wgt nao faz nada (devolve 0).
 int rede_aquecer_lote(const char *const *origens, int n, unsigned *ms);
+int rede_aquecer_job(const char *const *origens, int n, unsigned *ms, RedeJob *job);
 const char *rede_url_publica(const char *url, char *dst, unsigned tam);
 
 // URL DE IMAGEM/META PARA LOG, mais util que rede_url_publica mas igualmente

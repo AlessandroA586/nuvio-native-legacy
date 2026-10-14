@@ -60,7 +60,7 @@ static jmethodID mAbrirRetomada;
 // them simply has no seek cache and no boost.
 static jmethodID mCache, mGanho, mBuffer;
 // Warm resume (#492, optional too): titulo(id) and descartarGuardado().
-static jmethodID mTitulo, mDescartar;
+static jmethodID mTitulo, mDescartar, mMorno, mQuadro;
 // #202 (opcional, como os de cima): velocidade(centesimos). Casca sem ele =
 // sem a linha da velocidade.
 static jmethodID mVelocidade;
@@ -82,10 +82,14 @@ static int resolverMetodos(JNIEnv *env) {
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mAbrirRetomada = NULL; }
   mCache = (*env)->GetStaticMethodID(env, gCls, "cache", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mCache = NULL; }
-  mTitulo = (*env)->GetStaticMethodID(env, gCls, "titulo", "(Ljava/lang/String;)V");
+  mTitulo = (*env)->GetStaticMethodID(env, gCls, "cacheTitle", "(Ljava/lang/String;)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mTitulo = NULL; }
   mDescartar = (*env)->GetStaticMethodID(env, gCls, "descartarGuardado", "()V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mDescartar = NULL; }
+  mMorno = (*env)->GetStaticMethodID(env, gCls, "morno", "(I)V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mMorno = NULL; }
+  mQuadro = (*env)->GetStaticMethodID(env, gCls, "quadro", "(I)I");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mQuadro = NULL; }
   mBuffer = (*env)->GetStaticMethodID(env, gCls, "buffer", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mBuffer = NULL; }
   mGanho = (*env)->GetStaticMethodID(env, gCls, "ganho", "(I)V");
@@ -699,6 +703,12 @@ void cacheboost_backend_buffer(int p) { bufferPreset = p >= 0 && p <= 3 ? p : 0;
 void cacheboost_backend_cache(int mb) { cacheArmado = mb > 0 ? mb : 0; }
 void cacheboost_backend_titulo(const char *id) { snprintf(tituloArmado, sizeof tituloArmado, "%s", id ? id : ""); }
 void cacheboost_backend_descartar(void) { if (mDescartar) kSemArg(mDescartar); }
+void cacheboost_backend_morno(int ligado) { if (mMorno) kInt(mMorno, ligado); }
+int cacheboost_backend_quadro(int acao) {
+  JNIEnv *env = ambiente(); int r = 0;
+  if (env && mQuadro) { r = (*env)->CallStaticIntMethod(env, gCls, mQuadro, acao); fimChamada(env); }
+  return r;
+}
 void cacheboost_backend_ganho(int pct) {
   if (pct < CB_VOL_MIN) pct = CB_VOL_MIN;
   if (pct > CB_VOL_MAX) pct = CB_VOL_MAX;

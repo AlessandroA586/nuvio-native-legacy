@@ -273,3 +273,4 @@
   1, 0, /* provider failover off; order action */
   3, 3, 3, 3, /* total links per native provider */
   1, 0, 3, /* addon failover off; instance order action; total links */
+  0, 0, /* #492: warm resume ON; keep-alive duration 2 minutes */

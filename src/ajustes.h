@@ -489,6 +489,8 @@ int   ajustes_saida_player_home(void);
 // reter a sessao pausada ao sair para a ilha (player.c, PLR_RETIDO_MS). So com
 // a saida para a home valendo; sempre 0 no perfil seguro.
 int   ajustes_manter_video(void);
+int   ajustes_retomada_morna(void);
+unsigned ajustes_manter_video_ms(void); // 0 = unlimited
 // Selo de visto no cartaz da home (#212). 1 = ligado (o de fabrica).
 int   ajustes_selo_visto(void);
 // MODO SEGURO (seguro.h). Chamar no arranque, DEPOIS de ajustes_dir e de

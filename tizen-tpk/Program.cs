@@ -48,6 +48,7 @@ namespace NuvioTpk
         [DllImport("libnuvio.so")] static extern void nv_tpk_config(int esperaMs, int swapZero);
         [DllImport("libnuvio.so")] static extern void nv_tpk_tecla(string nome, int apertou);
         [DllImport("libnuvio.so")] static extern void nv_tpk_log(string linha);
+        [DllImport("libnuvio.so")] static extern void nv_tpk_ciclo(int memoria);
         [DllImport("libdl.so.2")] static extern IntPtr dlopen(string path, int flags);
         [DllImport("libdl.so.2")] static extern IntPtr dlerror();
         // Reserva de teclas de midia (#196), ver ReservaTeclasMidia. Assinaturas
@@ -947,7 +948,14 @@ namespace NuvioTpk
             try { voz?.Cancelar(); } catch { }
 #endif
             video?.PausarPeloSistema();
+            try { nv_tpk_ciclo(0); } catch (EntryPointNotFoundException) { }
             base.OnPause();
+        }
+
+        protected override void OnLowMemory(Tizen.Applications.LowMemoryEventArgs e)
+        {
+            try { nv_tpk_ciclo(1); } catch (EntryPointNotFoundException) { }
+            base.OnLowMemory(e);
         }
 
         protected override void OnResume()

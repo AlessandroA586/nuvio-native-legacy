@@ -78,6 +78,10 @@ static void abrirModal(int qual) {
   relogioQuer = 1; cartaoVez = qual;
   mostra = M_CARTAO; mostraQual = qual; mostraC = cartoes[qual]; conteudoA = 1;
   assert(ilha_modal_abrir()); modalT = 1;
+  if (qual == ILHA_VIVO) {
+    IlhaCartao foco; assert(ilha_retomar_focado(&foco) && !strcmp(foco.chave, modalC.chave));
+    modalFoco = 1; assert(!ilha_retomar_focado(NULL)); modalFoco = 0;
+  }
 }
 static void pedirRetomar(void) {
   SDL_Event ev = {0}; ev.type = SDL_KEYDOWN; ev.key.keysym.sym = SDLK_RETURN;

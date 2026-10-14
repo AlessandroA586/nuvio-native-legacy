@@ -45,7 +45,7 @@ static jmethodID JNICALL metodo(JNIEnv *e, jclass c, const char *nome, const cha
   if (!strcmp(nome, "cache")) return semCache ? NULL : (jmethodID)(uintptr_t)13;
   if (!strcmp(nome, "ganho")) return semCache ? NULL : (jmethodID)(uintptr_t)14;
   if (!strcmp(nome, "buffer")) return semCache ? NULL : (jmethodID)(uintptr_t)16;
-  if (!strcmp(nome, "titulo")) return semCache ? NULL : (jmethodID)(uintptr_t)17;
+  if (!strcmp(nome, "cacheTitle")) return semCache ? NULL : (jmethodID)(uintptr_t)17;
   if (!strcmp(nome, "descartarGuardado")) return semCache ? NULL : (jmethodID)(uintptr_t)18;
   if (!strcmp(nome, "velocidade")) return semCache ? NULL : (jmethodID)(uintptr_t)15;
   return (jmethodID)(uintptr_t)1;

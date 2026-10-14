@@ -15,6 +15,7 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/heap.h>
+#include <emscripten/html5.h>
 #include <malloc.h>
 #endif
 // Alvos SEM webOS. O Mac ja pulava estes trechos por um ifndef __APPLE__;
@@ -91,6 +92,7 @@
 #include "descoberta.h"
 #include "trakt.h"
 #include "player.h"
+#include "retomamorna.h"
 #include "ilha.h"
 #include "resolucao.h"
 #include "trailer.h"
@@ -826,6 +828,14 @@ static void nv_log_egl(void) {
   fflush(stdout);
 }
 #endif
+#ifdef __EMSCRIPTEN__
+static EM_BOOL cicloWgt(int tipo, const EmscriptenVisibilityChangeEvent *e, void *u) {
+  (void)tipo; (void)u;
+  if (e->hidden) { SDL_Event ev = {0}; ev.type = SDL_APP_WILLENTERBACKGROUND; SDL_PushEvent(&ev); }
+  return EM_FALSE;
+}
+#endif
+
 int main(int argc, char **argv) {
   // NUMERO COM PONTO, SEMPRE. O host .NET do .tpk poe o processo no locale do
   // idioma da TV, e em alemao/portugues/russo o printf("%.2f") sai "0,50" e o
@@ -948,6 +958,9 @@ int main(int argc, char **argv) {
   NV_ETAPA("SDL_Init");
   arranque_etapa("SDL_Init");
   if (SDL_Init(SDL_INIT_VIDEO) != 0) { printf("SDL_Init: %s\n", SDL_GetError()); return 1; }
+#ifdef __EMSCRIPTEN__
+  emscripten_set_visibilitychange_callback(NULL, EM_TRUE, cicloWgt);
+#endif
   IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
   // Antes de qualquer fio: ver nv_blindar_formatos em sdlcompat.h (issue #65).
   nv_blindar_formatos();
@@ -1685,8 +1698,10 @@ int main(int argc, char **argv) {
       // Teclado do sistema (entrada_texto.h): ve o texto ANTES de qualquer tela.
       texto_sistema_observar(&e);
       if (e.type == SDL_WINDOWEVENT) {
-        if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
+        if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
+          player_descartar_retido(); retomamorna_cancelar();
           ponteiro_evento(&e, app_evento);
+        }
 #ifdef NV_TOUCH_UI
         if (e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED ||
             e.window.event == SDL_WINDOWEVENT_RESIZED) {
@@ -1737,6 +1752,7 @@ int main(int argc, char **argv) {
                trailer_aberto(), trailer_pausado(), video_ativo(), video_tocando(), rssMB());
         fflush(stdout);
       }
+      player_ciclo_evento(e.type);
       if (e.type == SDL_APP_DIDENTERFOREGROUND) atualizacao_retomou();
       // PONTEIRO (Magic Remote, issue #99): mouse, rodinha e os avisos 484/485
       // de cursor do webOS ficam la; o que ele traduz em tecla chega a
@@ -2051,6 +2067,8 @@ int main(int argc, char **argv) {
       int itens, pend, quentes; long bytes, bytesQ;
       char memoria[96];
       memlog_amostra(memoria, sizeof memoria);
+      // webOS has no Android trim callback: use the existing /proc threshold.
+      if (player_retido() && memlog_pouca_memoria()) player_ciclo_evento(SDL_APP_LOWMEMORY);
       NvCacheArteStats cacheArteStats;
       tex_estatisticas(&itens, &pend, &bytes, &quentes, &bytesQ);
       memset(&cacheArteStats, 0, sizeof cacheArteStats);

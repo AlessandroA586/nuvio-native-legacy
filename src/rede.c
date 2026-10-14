@@ -739,6 +739,10 @@ int rede_aquecer_lote(const char *const *origens, int n, unsigned *ms) {
   return 0;
 }
 
+int rede_aquecer_job(const char *const *origens, int n, unsigned *ms, RedeJob *job) {
+  (void)job; return rede_aquecer_lote(origens, n, ms);
+}
+
 // Navegador nao abre socket. O websocket do Tizen web usa o WebSocket do
 // proprio navegador (discordws.c); estes existem para o modulo linkar.
 RedeTls *rede_tls_abrir(const char *url, int segundos) { (void)url; (void)segundos; return NULL; }
@@ -2154,7 +2158,11 @@ int rede_url_final(const char *url, int segundos, char *dst, unsigned tam) {
 // sai da chave para ficar no estacionamento. ms[i] = tempo da origem i (0 =
 // falhou). Devolve quantas abriram.
 static size_t descartarCorpo(void *d, size_t t, size_t q, void *u) { (void)d; (void)u; return t * q; }
-int rede_aquecer_lote(const char *const *origens, int n, unsigned *ms) {
+static int vigiarMorno(void *u, long long a, long long b, long long c, long long d) {
+  (void)a; (void)b; (void)c; (void)d;
+  return rede_job_estado((RedeJob *)u) != REDE_OK;
+}
+int rede_aquecer_job(const char *const *origens, int n, unsigned *ms, RedeJob *job) {
   char ok[REDE_ESTAC_HOSTS][96];
   int i, abriu = 0, nok = 0;
   void *c;
@@ -2174,8 +2182,18 @@ int rede_aquecer_lote(const char *const *origens, int n, unsigned *ms) {
     curl_setopt(c, OPT_WRITEFUNCTION, descartarCorpo);
     curl_setopt(c, OPT_FOLLOWLOCATION, (long)0);
     opcoesComuns(c, 4000UL);
+    if (rede_job_estado(job) != REDE_OK) { soltarHandleR(c, 42, u); break; }
+    if (job) {
+      curl_setopt(c, OPT_XFERINFOFUNCTION, vigiarMorno);
+      curl_setopt(c, OPT_XFERINFODATA, job);
+      curl_setopt(c, OPT_NOPROGRESS, 0L);
+    }
     t0 = redeAgoraMs();
     r = performTmdb(c, u);
+    curl_setopt(c, OPT_XFERINFOFUNCTION, (void *)0);
+    curl_setopt(c, OPT_XFERINFODATA, (void *)0);
+    curl_setopt(c, OPT_NOPROGRESS, 1L);
+    if (rede_job_estado(job) != REDE_OK) r = 42;
     if (ms) { unsigned long dt = redeAgoraMs() - t0; ms[i] = r ? 0 : (unsigned)(dt ? dt : 1); }
     soltarHandleR(c, r, u);
     if (!r) {
@@ -2191,6 +2209,9 @@ int rede_aquecer_lote(const char *const *origens, int n, unsigned *ms) {
     estacionar(c, ok, nok);
   }
   return abriu;
+}
+int rede_aquecer_lote(const char *const *origens, int n, unsigned *ms) {
+  return rede_aquecer_job(origens, n, ms, NULL);
 }
 
 char *rede_postar(const char *url, int segundos, const char *const *cab,
