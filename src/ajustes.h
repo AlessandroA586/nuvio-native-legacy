@@ -462,6 +462,8 @@ int   ajustes_abertura_addon(void);
 // #508: fundo da tela Cinema da abertura: 0 = Desligado, 1 = Arte (nitida com
 // veu escuro), 2 = Arte borrada (padrao).
 int   ajustes_abertura_fundo(void);
+// #205: tamanho dos cards de episodio (Moderna): 0 pequeno, 1 medio (padrao), 2 grande.
+int   ajustes_ep_tamanho(void);
 // #338: tamanho de abertura das Estatisticas ao vivo (EV_TAM_*); -1 = o ultimo usado.
 int   ajustes_estat_tamanho(void);
 int   ajustes_estat_lado(void);                 // 0 Direita, 1 Esquerda
