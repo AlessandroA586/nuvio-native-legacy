@@ -912,6 +912,12 @@ int busca_iniciar(void) {
   focoRec = 0; nRecLayout = 0;
   okPress = okLongo = 0; okDesde = 0;
   campoFoco = buTecladoNativo() ? 1 : 0; animFocoCampo = animMic = 0.0f;
+  // "Do sistema" no ajuste Teclado: abre o IME logo ao entrar na busca.
+  if (st_ime_disponivel() && st_teclado_modo() != 1 &&
+      (st_abre_sozinho() || buTelefone() || st_teclado_modo() == 2)) {
+    campoFoco = 1;
+    st_ime_abrir(ST_BUSCA, consulta, BU_MAX_CONSULTA - 1);
+  }
   refiltrar();
   return 1;
 }
