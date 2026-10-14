@@ -13,10 +13,13 @@ typedef struct {
   double ema;        // periodo medido (ms), 0 = sem amostra
   double soma, pior; // janela de relatorio
   int    n;
+  int    lentos;     // amostras lentas seguidas fora do periodo
 } SwapInt;
 
 // Acima disto o intervalo e suspensao/parada, nao o ritmo da tela.
 #define SWAPINT_MAX_MS 250.0
+// Quadros lentos seguidos que valem como mudanca de cadencia.
+#define SWAPINT_TROCA_N 8
 
 // Chamar logo depois de cada swap, com o relogio em ms.
 static inline void swapint_marca(SwapInt *s, double agora_ms) {
@@ -24,7 +27,11 @@ static inline void swapint_marca(SwapInt *s, double agora_ms) {
   int tinha = s->ult > 0.0;
   s->ult = agora_ms;
   if (!tinha || d <= 0.0 || d > SWAPINT_MAX_MS) return;
-  s->ema = s->ema > 0.0 ? s->ema + (d - s->ema) * 0.1 : d;
+  // Engasgo (> 1,5 periodo) conta como jank mas nao entra no periodo; so uma
+  // sequencia de lentos seguidos e troca de ritmo da tela (60 -> 30 Hz).
+  if (s->ema <= 0.0) s->ema = d;
+  else if (d <= s->ema * 1.5) { s->ema += (d - s->ema) * 0.1; s->lentos = 0; }
+  else if (++s->lentos >= SWAPINT_TROCA_N) { s->ema = d; s->lentos = 0; }
   s->soma += d; s->n++;
   if (d > s->pior) s->pior = d;
 }

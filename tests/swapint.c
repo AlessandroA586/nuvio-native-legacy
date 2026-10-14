@@ -26,5 +26,13 @@ int main(void) {
   double med, pior; int n = swapint_colher(&a, &med, &pior);
   CHECK(n == 59 && fabs(med - 16.67) < 0.05 && pior < 16.8, "janela: n=%d med=%.2f pior=%.2f", n, med, pior);
   CHECK(swapint_colher(&a, &med, &pior) == 0, "janela zera depois de colhida");
+  /* 60 Hz com engasgo de 100 ms alternado: periodo nao sobe, jank continua < 100 ms */
+  SwapInt j = {0}; t = 9000;
+  roda(&j, 16.67, 60, &t);
+  for (int i = 0; i < 30; i++) { roda(&j, 100, 1, &t); roda(&j, 16.67, 1, &t); }
+  CHECK(swapint_limite_jank(&j) < 40.0, "engasgos contaminaram o periodo: limite %.2f", swapint_limite_jank(&j));
+  /* troca real de cadencia 60 -> 30 Hz ainda e seguida */
+  roda(&j, 33.3, 40, &t);
+  CHECK(swapint_limite_jank(&j) > 55.0, "troca para 30 Hz nao seguida: limite %.2f", swapint_limite_jank(&j));
   return falhas ? 1 : 0;
 }
