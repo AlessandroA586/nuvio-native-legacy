@@ -232,6 +232,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_DEBRID_TB: return "aj_key-round";
     case AJ_DEBRID_PM: return "aj_key-round";
     case AJ_DEBRID_AD: return "aj_key-round";
+    case AJ_DEBRID_RD_TESTAR: case AJ_DEBRID_TB_TESTAR: case AJ_DEBRID_PM_TESTAR:
     case AJ_DEBRID_AD_TESTAR: return "aj_key-round";
     case AJ_MDB_CHAVE: return "aj_key-round";
     case AJ_FANART_CHAVE: return "aj_key-round";
