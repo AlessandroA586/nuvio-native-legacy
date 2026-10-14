@@ -156,7 +156,7 @@
   0,                /* posteres personalizados: DESLIGADO (indice 0) */
   0, 0, 0, 0, 0, 0,/* endereco, token, parametros, chave, modelo, testar: acoes */
   0,                /* layout da home: Moderna (a de sempre) */
-  0, 0, 0, 0, 0,    /* chaves de debrid (AllDebrid, testar, RD, TB, PM): acoes */
+  0, 0, 0, 0, 0, 0, 0, 0, /* chaves e testes de debrid: acoes */
   1,                /* usar sempre o Cinemeta: DESLIGADO (V_LIGA: 1 = Desligado) -> catalogo primeiro */
   // Notas na linha do titulo: de fabrica so o que a linha ja mostrava antes de
   // existir a escolha (IMDb, Rotten Tomatoes, Trakt). V_LIGA: 0 = Ligado.
@@ -277,3 +277,5 @@
   1, 0, /* provider failover off; order action */
   3, 3, 3, 3, /* total links per native provider */
   1, 0, 3, /* addon failover off; instance order action; total links */
+  0, /* live statistics size (#338): remember the last one */
+  1, /* hide watched movies (#366): Desligado, per profile on this device */

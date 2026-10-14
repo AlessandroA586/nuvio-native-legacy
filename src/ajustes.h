@@ -454,6 +454,8 @@ int   ajustes_esconder_logo_trailer(void);   // 1 = hide the corner title logo w
 int   ajustes_legendas_todas(void); // #425: abrir todas as faixas
 // #205: 1 = tela de abertura Detalhada (o cartao com fonte e passos); 0 = Cinema.
 int   ajustes_abertura_detalhada(void);
+// #338: tamanho de abertura das Estatisticas ao vivo (EV_TAM_*); -1 = o ultimo usado.
+int   ajustes_estat_tamanho(void);
 int   ajustes_leg2_junto(void);
 int   ajustes_leg2_tamanho(void);
 int   ajustes_leg2_cor(void);
@@ -491,6 +493,10 @@ int   ajustes_saida_player_home(void);
 int   ajustes_manter_video(void);
 // Selo de visto no cartaz da home (#212). 1 = ligado (o de fabrica).
 int   ajustes_selo_visto(void);
+// #366: oculta filmes vistos so na descoberta, por perfil neste aparelho.
+// Desligado de fabrica; busca, biblioteca e historico nao sao filtrados.
+int   ajustes_ocultar_filmes_vistos(void);
+void  ajustes_definir_ocultar_filmes_vistos(int ligado);
 // MODO SEGURO (seguro.h). Chamar no arranque, DEPOIS de ajustes_dir e de
 // avisos_iniciar: `caiu` = a sessao anterior nao se despediu. Desfaz o ajuste
 // arriscado que estava em prova, liga o perfil seguro se as quedas se repetem e

@@ -1941,10 +1941,15 @@ static int nLinhasDetalhe(void) {
 // desenho, e uma secao nova herdava a altura do elenco em silencio.
 static int epApple(void) { return ajustes_home_layout() == HOME_LAYOUT_DINAMICA; }
 static float epCardW(void) { return epApple() ? 420.0f : NV_DETP_EP_W; }
-static float epCardH(void) { return epApple() ? 500.0f : NV_DETP_EP_H; }
+static int epModerna(void) { return ajustes_home_layout() == HOME_LAYOUT_MODERNA; }
+static float epCardH(void) {
+  return epApple() ? 500.0f : epModerna() ? NV_DETP_EPM_H : NV_DETP_EP_H;
+}
 static float epCardPasso(void) { return epApple() ? 452.0f : NV_DETP_EP_PASSO; }
-static float epThumbH(void) { return epApple() ? 236.0f : NV_DETP_EP_THUMB_H; }
-static float epAppleExtra(void) { return epApple() ? epCardH() - 414.0f : 0.0f; }
+static float epThumbH(void) {
+  return epApple() ? 236.0f : epModerna() ? NV_DETP_EPM_THUMB_H : NV_DETP_EP_THUMB_H;
+}
+static float epAppleExtra(void) { return epCardH() - 414.0f; }
 // Bloco das Notas na serie (cabecalho + fileira + vao), que empurra abas e
 // elenco; 0 enquanto as notas nao chegaram.
 // Topo do cabecalho: fundo dos cartoes de episodio + o vao antes das notas (60,
@@ -5254,6 +5259,9 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   }
 
   float tx = r.x + NV_DETP_EP_PAD;
+  const int moderna = epModerna();
+  const float textoX = moderna ? r.x + 6.0f : tx;   // abaixo da miniatura nao ha margem interna
+  const float epSeloY = moderna ? NV_DETP_EPM_SELO_Y : NV_DETP_EP_SELO_Y;
 
   // Ausencia de check nao afirma que o historico ja chegou. Evita um selo
   // "nao assistido" inventado enquanto o Trakt ainda esta consultando.
@@ -5271,7 +5279,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     snprintf(cab, sizeof cab, i18n("EPISÓDIO %d"), epNum);
     { TxtLinha l = txt_linha(TXT_CAPTION2, cab, 255, 255, 255, 255);
       float w = l.w + NV_DETP_EP_SELO_PADX * 2;
-      GfxRect s = { xs, r.y + NV_DETP_EP_SELO_Y, w, NV_DETP_EP_SELO_H };
+      GfxRect s = { xs, r.y + epSeloY, w, NV_DETP_EP_SELO_H };
       if (ajustes_vidro()) gfx_vidro_painel(s, 12.0f / NV_DETP_EP_SELO_H, 0.6f, a);
       else
       gfx_cor(s, 12.0f / NV_DETP_EP_SELO_H, 0.05f, 0.05f, 0.06f, 0.78f * a);
@@ -5303,7 +5311,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
       TxtLinha l = vid ? txt_linha(TXT_CAPTION2, rot, 245, 199, 77, 255)
                        : txt_linha(TXT_CAPTION2, rot, 20, 20, 20, 255);
       float w = l.w + NV_DETP_EP_SELO_PADX * 2;
-      GfxRect s = { xs, r.y + NV_DETP_EP_SELO_Y, w, NV_DETP_EP_SELO_H };
+      GfxRect s = { xs, r.y + epSeloY, w, NV_DETP_EP_SELO_H };
       if (vid) { gfx_cor(s, 12.0f / NV_DETP_EP_SELO_H, 0.961f, 0.780f, 0.302f, 0.14f * a);
                  gfx_anel(s, 12.0f / NV_DETP_EP_SELO_H, 1.5f, 0.961f, 0.780f, 0.302f, 0.6f * a); }
       else
@@ -5325,7 +5333,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
                  nome = reserva; }
     TxtLinha l = txt_linha_corta(TXT_PLR_CORPO, nome, 255, 255, 255, 255,
                                  NV_DETP_EP_TEXTO_W);
-    txt_peso(l, tx, r.y + NV_DETP_EP_TIT_Y, a, 1.4f); }
+    txt_peso(l, textoX, r.y + (moderna ? epThumbH() + NV_DETP_EPM_TIT_DY : NV_DETP_EP_TIT_Y), a, 1.4f); }
 
   // Sinopse: tres linhas, como a referencia, com truncamento do bloco.
   // Sem sinopse o espaco
@@ -5335,13 +5343,14 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   // e as notas em negrito para segundo plano. E o estilo que a sinopse ja usa no
   // card do layout Apple (logo acima), com a entrelinha dele (NV_LD_CAPTION).
   if (epSin)
-    txt_bloco_corta(TXT_CAPTION, epSin, 255, 255, 255, tx,
-                    r.y + NV_DETP_EP_SIN_Y, NV_DETP_EP_TEXTO_W,
-                    NV_DETP_EP_LD_SIN, a * 0.9f, 3);
+    txt_bloco_corta(TXT_CAPTION, epSin, 255, 255, 255, textoX,
+                    r.y + (moderna ? epThumbH() + NV_DETP_EPM_SIN_DY : NV_DETP_EP_SIN_Y),
+                    NV_DETP_EP_TEXTO_W, NV_DETP_EP_LD_SIN, a * 0.9f,
+                    moderna ? 2 : 3);
 
   // Meta: relogio + duracao + data, 20/400 rgb(179,179,179), com 38 de folga
   // entre os dois blocos.
-  { float x = tx, y = r.y + NV_DETP_EP_META_Y;
+  { float x = tx, y = r.y + (moderna ? NV_DETP_EPM_META_Y : NV_DETP_EP_META_Y);
     // Relogio de 28x28. O glifo do web e um disco CHEIO em rgb(179,179,179) com
     // os ponteiros VAZADOS — o `path` do SVG recorta o L do ponteiro do disco.
     // Aqui o vazado sai pintando os ponteiros de preto por cima: naquele ponto
@@ -5404,7 +5413,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     if (ci && ci->progresso > 0 && ep && ci->temporada == ep->temporada &&
         ci->episodio == ep->episodio) prog = ci->progresso;
     if (prog > 2 && prog < 98) {
-      GfxRect tr = { tx, r.y + NV_DETP_EP_BARRA_Y, NV_DETP_EP_TEXTO_W,
+      GfxRect tr = { tx, r.y + (moderna ? NV_DETP_EPM_BARRA_Y : NV_DETP_EP_BARRA_Y), NV_DETP_EP_TEXTO_W,
                      NV_DETP_EP_BARRA_H };
       // Anda do valor que esta tela mostrava ate o novo (revela.h): na volta
       // do player a barra do episodio cresce ate onde a pessoa parou.
@@ -6892,15 +6901,17 @@ static void desenhaEsqueletoEpisodios(float a) {
   if (ye < NV_TELA_H && ye + epCardH() > 0) {
     for (c = 0; c < 3; c++) {
       float x = NV_DETP_X + c * epCardPasso();
-      GfxRect card = { x, ye, epCardW(), epCardH() };
-      GfxRect selo = { x + NV_DETP_EP_PAD, ye + NV_DETP_EP_SELO_Y,
+      const int m = epModerna();
+      GfxRect card = { x, ye, epCardW(), m ? epThumbH() : epCardH() };
+      GfxRect selo = { x + NV_DETP_EP_PAD, ye + (m ? NV_DETP_EPM_SELO_Y : NV_DETP_EP_SELO_Y),
                        108.0f, NV_DETP_EP_SELO_H };
-      GfxRect titulo = { x + NV_DETP_EP_PAD, ye + NV_DETP_EP_TIT_Y,
+      GfxRect titulo = { x + (m ? 6.0f : NV_DETP_EP_PAD),
+                         ye + (m ? epThumbH() + NV_DETP_EPM_TIT_DY : NV_DETP_EP_TIT_Y),
                          292.0f, 25.0f };
-      GfxRect sin1 = { x + NV_DETP_EP_PAD, ye + NV_DETP_EP_SIN_Y,
+      GfxRect sin1 = { titulo.x, ye + (m ? epThumbH() + NV_DETP_EPM_SIN_DY : NV_DETP_EP_SIN_Y),
                        NV_DETP_EP_TEXTO_W, 18.0f };
       GfxRect sin2 = { sin1.x, sin1.y + NV_DETP_EP_LD_SIN, 420.0f, 18.0f };
-      gfx_cor(card, NV_DETP_EP_RAIO / epCardH(),
+      gfx_cor(card, NV_DETP_EP_RAIO / card.h,
               0.105f, 0.11f, 0.12f, a * 0.82f);
       gfx_cor(selo, 0.48f, 0.19f, 0.20f, 0.22f, a * 0.70f);
       gfx_cor(titulo, 0.5f, 0.25f, 0.26f, 0.28f, a * 0.62f);

@@ -185,7 +185,7 @@ static void gerarTexQr(const char *texto) {
   unsigned char *px;
   if (!texto || !texto[0]) return;
   if (!strcmp(qrDe, texto) && texQr) return;
-  if (!qr_gerar(&q, texto)) { printf("[login] URL nao cabe num QR: %s\n", texto); return; }
+  if (!qr_gerar(&q, texto)) { printf("[login] stage=qr class=capacity\n"); return; }
 
   lado = q.lado + 2 * LG_QR_MARGEM;
   px = (unsigned char *)malloc((size_t)lado * lado * 3);

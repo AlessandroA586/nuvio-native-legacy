@@ -417,7 +417,7 @@ void rede_preparar(void);
 //
 // Escreve em `dst` e devolve `dst`, para poder ir direto num printf. Texto sem
 // "://" e copiado como esta (nao e URL, nao ha caminho a esconder).
-// Texto da falha de transporte do ULTIMO pedido deste fio ("curl 35: ..."), ou
+// Codigo da falha de transporte do ULTIMO pedido deste fio ("curl 35"), ou
 // "" quando ele passou. Sem URL, corpo ou segredo; serve a tela e ao log (#223).
 const char *rede_ultimo_erro(void);
 
