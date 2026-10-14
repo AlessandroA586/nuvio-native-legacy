@@ -203,6 +203,8 @@ int  desc_busca_base_oculta(const char *base);
 // lista vazia. `f` devolve 0 (nao espere: sem conta), 1 (espere: perfil ainda
 // nao escolhido) ou 2 (espere ate 10 s). Sem gancho, nao ha espera.
 void desc_espera_addons_definir(int (*f)(void));
+// Troca de perfil: a proxima volta espera de novo o ciclo da conta antes de ler a lista.
+void desc_esperar_conta(void);
 void desc_alvo_busca(const char *base, const char *tipo, const char *id,
                      const char *titulo, const char *addon);
 

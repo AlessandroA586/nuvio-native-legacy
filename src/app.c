@@ -3462,6 +3462,7 @@ void app_atualizar(float dt, Uint32 agora) {
         // volta nova publicaria o certo, mas nada a pedia: addonsRestaurar ja
         // marcou a lista como deste perfil, o pull a via igual e a Home ficava so
         // com o Continuar. Pedir a volta DEPOIS do sync_iniciar (lista ja do perfil).
+        desc_esperar_conta();   // a volta nova espera o ciclo do perfil novo
         desc_repetir();
         // Fica nesta tela, com o indicador no cartao, ate a home estar pronta
         // (bloco acima). Confirmar o mesmo perfil nao espera nada: a home ja e
