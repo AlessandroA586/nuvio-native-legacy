@@ -68,6 +68,8 @@ void home_shot_trailer(int sim);
 // "[home-trailer] autoplay gate=top-overlay (...)" line; call before the step.
 void home_trailer_topo_motivo(const char *motivo);
 void home_desenhar(Uint32 agora);
+// Fileiras ainda visiveis atras da copia parada do painel (salvospainel.c).
+void home_fileiras_vistas(Uint32 agora);
 
 // Onde a ARTE do hero foi desenhada no ultimo quadro. A tela de detalhe usa
 // isto para nascer com o backdrop no mesmo lugar — o fundo do detalhe E a arte
@@ -82,6 +84,7 @@ int home_streaming_barra(const int **pastas);
 // A home continua se montando mas NAO esta na tela (escolha de perfil): o
 // destaque nao gira nem pre-busca enquanto estiver escondida.
 void home_oculta(int oculta);
+void home_painel_aberto(int aberto);   // painel de Salvos/Social na frente: o carrossel nao gira
 void home_encerrar(void);
 // Registra o titulo interrompido para a faixa contextual "Retomar agora".
 // A faixa so existe enquanto o progresso fizer sentido (nem inicio nem fim).
