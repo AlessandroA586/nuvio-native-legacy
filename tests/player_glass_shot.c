@@ -611,6 +611,9 @@ int main(int argc, char **argv) {
     player_shot_carregando(1);
     quadros(90);  salvar("cinema-inicio");
     quadros(460); salvar("cinema-demorando");
+    ajustes_shot_valor("aberturaAddonLocal", 0);   // 0 = Ligado
+    quadros(2);   salvar("cinema-addon-ligado");
+    ajustes_shot_valor("aberturaAddonLocal", 1);
     // O primeiro quadro: a fonte abriu e o video anda. O veu sai por cima dele.
     player_shot_carregando(0); player_shot_video(1);
     memset(&v, 0, sizeof v);
