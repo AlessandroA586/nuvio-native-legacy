@@ -1189,6 +1189,20 @@ static void ajDesenharTela(void) {
 #ifdef NV_TOUCH_UI
   if (ajPontInline) ajPontLista = 1;
 #endif
+  // #205: a edicao na linha (Mobile e TV) tem o rodape com os chips clicaveis.
+  // A camada dos alvos comeca aqui: as linhas registraram alvos no quadro
+  // assentado e um clique fora nao pode cair no OK de camada vazia.
+#ifdef NV_TOUCH_UI
+  if (ajPontInline) { ponteiro_camada(); ajToqueCamada(); }
+  else if (uxEditor && !modal)
+#else
+  if (uxEditor && !modal)
+#endif
+    { ponteiro_camada();
+#ifdef NV_TOUCH_UI
+      ajToqueCamada();
+#endif
+    }
   if (p.lA > 0.003f && uxIndice >= 1) {
     GfxRect fr = aj2ListaR();
     float oy = p.lOy > 0 ? p.lOy : aj2GradeOrigemY(uxIndice);
@@ -1202,7 +1216,7 @@ static void ajDesenharTela(void) {
   // sem alvo proprio, o clique e o OK (ponteiro.h, CAMADAS).
   if (modal || (uxEditor
 #ifdef NV_TOUCH_UI
-                && !ajPontInline
+                && !ajPontInline && !ajEditandoLinha(uxOp)
 #endif
                )) { ponteiro_camada();
 #ifdef NV_TOUCH_UI
@@ -1230,6 +1244,18 @@ static void ajDesenharTela(void) {
     TxtLinha t = ajTxtC(TXT_V2_24, uxAviso, fr.w - 100);
     txt_desenhar_alpha(t, fr.x + 50, fr.y + fr.h - 30, 0.7f);
   }
+  // #205: os modais de digitacao/aviso limparam os alvos do rodape. Na edicao
+  // na linha (TV tambem) o rodape da lista reclassificou os chips: devolve a
+  // camada dele, para o clique chegar onde a tela mostra.
+#ifdef NV_TOUCH_UI
+  if (ajEditandoLinha(uxOp) && !modal) { ponteiro_camada(); ajToqueCamada();
+    ponteiro_alvo(0, 0, (float)NV_TELA_W, (float)NV_TELA_H, NULL, NULL, 0, 0);
+    { AjDica d[3] = { { "← →", "Ajustar" }, { "OK", "Confirmar" }, { "Voltar", "Cancelar" } };
+      GfxRect fr = aj2ListaR();
+      AJ_ESCALA_INI();
+      aj2RodapeA3(fr, d, 3, 1.0f);
+      AJ_ESCALA_FIM(); } }
+#endif
   ajDesenharModais();
   if (registro_envio_aberto()) registro_envio_desenhar();
 }
