@@ -96,6 +96,7 @@ typedef struct {
   // naovideo.h): linha de aviso do addon. A folha a mostra apagada ("Nao e
   // video") e o automatico a pula. Marcada na verificacao, nunca no parser.
   int  naoVideo;
+  int  notWebReady;     // behaviorHints: so oferecer quando P2P esta ativo
   // PACOTE DE SELOS ATIVO (selospacote.h): os filtros que casaram com esta
   // fonte, calculados UMA vez (quando a lista chega, ou quando o pacote muda;
   // `selosPacoteVer` != selospacote_versao() manda recalcular), nunca no
