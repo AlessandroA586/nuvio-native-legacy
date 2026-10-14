@@ -30,6 +30,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -135,5 +136,14 @@ int main(int argc, char **argv) {
   central_abrir();
   quadros(240);
   salvar("central");
+  // #205: o titulo recua para CC_PAD (20) e so ele; a linha do relogio (com o
+  // "termina as", ha duracao) segue encostada a direita (recuo de 28).
+  { GfxRect r; float tx, fx; int tf, ok = plrilha_rect(&r);
+    plrilha_shot_linha(&tx, &fx, &tf);
+    printf("ilha x=%.1f w=%.1f titulo=%.1f fim=%.1f terminaAs=%d\n", r.x, r.w, tx, fx, tf);
+    if (!ok || fabsf(tx - (r.x + 20.0f)) > 1.0f) { puts("FALHA: titulo fora do recuo de 20"); return 1; }
+    if (fabsf(fx - (r.x + r.w - 28.0f)) > 1.0f) { puts("FALHA: relogio saiu da direita"); return 1; }
+    if (!tf) { puts("FALHA: sem \"termina as\""); return 1; } }
+  puts("PASS: cabecalho da central");
   return 0;
 }

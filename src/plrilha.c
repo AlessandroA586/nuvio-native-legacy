@@ -57,6 +57,9 @@ static float dsA;
 #ifdef NV_SHOT_HOOKS
 static time_t horaFixa;
 void plrilha_shot_hora(time_t t) { horaFixa = t; }
+static float shotTxtX, shotFimX;
+static int shotTemFim;
+void plrilha_shot_linha(float *t, float *f, int *tf) { *t = shotTxtX; *f = shotFimX; *tf = shotTemFim; }
 #endif
 
 static float mola(float *v, float x, float alvo, float dt) {
@@ -190,7 +193,10 @@ static float montar(const PlrIlhaPedido *p, Linha *L) {
   return w;
 }
 
-static void desenharLinha(const PlrIlhaPedido *p, const Linha *L, float x, float yc, float a) {
+// tOff/tK: o texto sai da linha (#205, `insetEsq`): ele desenha em x+tOff e
+// abre mao do seu espaco na razao tK (1 = fora da linha; o resto encolhe para
+// a direita, onde o relogio continua encostado).
+static void desenharLinha(const PlrIlhaPedido *p, const Linha *L, float x, float yc, float a, float tOff, float tK) {
   float cr = 1, cg = 1, cb = 1;
   if (a < 0.01f) return;
   if (L->temIcone) {
@@ -204,8 +210,11 @@ static void desenharLinha(const PlrIlhaPedido *p, const Linha *L, float x, float
     x += 10.0f + 14.0f;
   }
   if (L->temTxt) {
-    txt_desenhar_alpha(L->txt, x, yc - (float)L->txt.h * 0.5f, a);
-    x += (float)L->txt.w + 12.0f;
+    txt_desenhar_alpha(L->txt, x + tOff, yc - (float)L->txt.h * 0.5f, a);
+#ifdef NV_SHOT_HOOKS
+    shotTxtX = x + tOff;
+#endif
+    x += ((float)L->txt.w + 12.0f) * (1.0f - tK);
   }
   if (p && p->pontos > 0) {
     float ar, ag, ab;
@@ -238,6 +247,9 @@ static void desenharLinha(const PlrIlhaPedido *p, const Linha *L, float x, float
     x += (float)L->vel.w;
   }
   if (L->ds > 0.0f) desempenho_linha(dsP, x, yc, a);
+#ifdef NV_SHOT_HOOKS
+  shotFimX = x; shotTemFim = L->temFim;
+#endif
 }
 
 static void plrilha_desenharCorpo_(Uint32 agora);
@@ -364,14 +376,19 @@ static void plrilha_desenharCorpo_(Uint32 agora) {
     { float cabH = h < CAB_H ? h : CAB_H;
       float yc = R.y + cabH * 0.5f;
       // A linha: centrada na pilula; com corpo, encostada a DIREITA do
-      // cabecalho (o recuo de 28) — dono, 11/10: o relogio do lado direito
-      // nos paineis que nascem da ilha. O texto `direita` troca de lado.
-      float lx = R.x + (R.w - L.w) * 0.5f;
-      float ex = p->insetEsq > 0.0f ? R.x + p->insetEsq : R.x + R.w - 28.0f - L.w;
-      float ie = p->insetEsq > 0.0f ? p->insetEsq : 28.0f;
-      float k = anim_clamp((R.w - (L.w + pad * 2.0f)) / 40.0f, 0.0f, 1.0f);
-      lx = lx + (ex - lx) * k;
-      desenharLinha(p, &L, lx, yc, A * textoA);
+      // cabecalho — dono, 11/10: o relogio do lado direito nos paineis que
+      // nascem da ilha. `insetEsq` (#205) tira so o TEXTO da conta: ele fica
+      // no recuo pedido, a esquerda, e o relogio (com o "termina as") continua
+      // encostado a direita — a linha inteira caberia de menos no painel.
+      float ie, k;
+      { float lx = R.x + (R.w - L.w) * 0.5f;
+        int ins = p->insetEsq > 0.0f && L.temTxt;
+        float wAnc = L.w - (ins ? (float)L.txt.w + 12.0f : 0.0f);
+        float ex = R.x + R.w - 28.0f - wAnc;
+        ie = p->insetEsq > 0.0f ? p->insetEsq : 28.0f;
+        k = anim_clamp((R.w - (wAnc + pad * 2.0f)) / 40.0f, 0.0f, 1.0f);
+        lx = lx + (ex - lx) * k;
+        desenharLinha(p, &L, lx, yc, A * textoA, ins ? (R.x + ie - lx) * k : 0.0f, ins ? k : 0.0f); }
       if (p->direita && k > 0.0f)
         txt_desenhar_alpha(L.dir, R.x + ie, yc - (float)L.dir.h * 0.5f + 1.0f, A * k);
       // Sem `direita`, o lado esquerdo leva o titulo, cortado na largura
