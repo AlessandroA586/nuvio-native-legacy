@@ -76,6 +76,11 @@ static void conferir(const char *nome, const int *v, const int *esperado) {
 
 int main(void) {
   int v[NP], v2[NP];
+  // HERMETICO: a rodada anterior pode ter deixado o fileirasui.txt dela no
+  // TMPDIR (o duplo de dados grava la), e a ordem que sobrou valeria aqui.
+  { char caminho[600];
+    snprintf(caminho, sizeof caminho, "%s/fileirasui.txt", nvt_dir());
+    remove(caminho); }
   carregarGrupo();
   pastas(v);
   conferir("ordem da lista: a da propria colecao, nada mexido", v, (int[]){ 0, 1, 2, 3, 4 });
