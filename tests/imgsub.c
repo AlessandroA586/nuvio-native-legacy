@@ -20,7 +20,7 @@ static void poe(double ini, double fim, int x, int vazio) {
 }
 static int xEm(double t) {
   ImgsubQuadro *f = imgsub_pegar(t);
-  int x = f ? f->obj[0].x : -1;
+  int x = !f ? -1 : f->n == 0 ? -2 : f->obj[0].x;
   imgsub_soltar(f);
   return x;
 }
@@ -36,12 +36,24 @@ int main(void) {
   CHECA(xEm(9.9) == -1);
   CHECA(xEm(10) == 100);
   CHECA(xEm(11.99) == 100);
-  CHECA(xEm(12) == -1);     // marca de limpar
-  CHECA(xEm(14) == -1);
+  CHECA(xEm(12) == -2);     // marca de limpar (quadro vazio, nao ausencia)
+  CHECA(xEm(14) == -2);
   CHECA(xEm(15) == 200);
   CHECA(xEm(19.99) == 200);
   CHECA(xEm(20) == 300);    // o proximo quadro troca antes do padrao
+  // limpar sem fim, no meio da janela: vale ate o proximo quadro, nao +5 s
+  poe(16, -1, 0, 1);
+  CHECA(xEm(15.9) == 200);
+  CHECA(xEm(16) == -2);
+  CHECA(xEm(19.9) == -2);
   CHECA(xEm(22) == -1);     // fim explicito
+  // Limpar DENTRO da janela do quadro anterior (fim 15, clear em 12).
+  imgsub_limpar();
+  poe(10, 15, 100, 0);
+  poe(12, -1, 0, 1);
+  CHECA(xEm(11.5) == 100);
+  CHECA(xEm(12) == -2);     // limpa no meio da janela do quadro anterior
+  CHECA(xEm(14) == -2);
   poe(10, 12, 111, 0);      // mesma fala de novo: substitui
   CHECA(xEm(11) == 111);
   seg = imgsub_pegar(11);

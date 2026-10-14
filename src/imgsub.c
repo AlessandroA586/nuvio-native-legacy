@@ -40,28 +40,34 @@ static double dist(const ImgsubQuadro *f) {
 }
 
 void imgsub_por(double ini, double fim, PgsQuadro *src) {
-  ImgsubQuadro *f = calloc(1, sizeof *f);
-  int i, pos;
+  ImgsubQuadro *f = src ? calloc(1, sizeof *f) : NULL;
+  int i, pos, cabe;
   if (!f) return;
-  f->ini = ini; f->fim = fim; f->refs = 1; f->id = ++proximoId;
+  f->ini = ini; f->fim = fim; f->refs = 1;
   f->tela_w = src->tela_w; f->tela_h = src->tela_h; f->n = src->n;
-  memcpy(f->obj, src->obj, sizeof f->obj);
+  memcpy(f->obj, src->obj, sizeof f->obj);   // transfere o rgba; sem copia
   memset(src->obj, 0, sizeof src->obj);
   src->n = 0;
   pthread_mutex_lock(&trava);
+  f->id = ++proximoId;
   for (pos = 0; pos < nq && q[pos]->ini < ini; pos++) {}
   if (pos < nq && q[pos]->ini == ini) tira(pos);   // mesma fala colhida duas vezes
+  // ponytail: varre ate 512 sob a trava. So ponteiro, o bitmap ja e nosso.
   while (nq >= MAX_QUADROS || (nq && bytes + pesoDe(f) > MAX_BYTES)) {
     int longe = 0;
     for (i = 1; i < nq; i++) if (dist(q[i]) > dist(q[longe])) longe = i;
-    if (dist(q[longe]) < dist(f)) { solta(f); pthread_mutex_unlock(&trava); return; }
+    if (dist(q[longe]) < dist(f)) break;
     tira(longe);
   }
-  for (pos = 0; pos < nq && q[pos]->ini < ini; pos++) {}
-  memmove(q + pos + 1, q + pos, (size_t)(nq - pos) * sizeof *q);
-  q[pos] = f; nq++;
-  bytes += pesoDe(f);
+  cabe = nq < MAX_QUADROS && (nq == 0 || bytes + pesoDe(f) <= MAX_BYTES);
+  if (cabe) {
+    for (pos = 0; pos < nq && q[pos]->ini < ini; pos++) {}
+    memmove(q + pos + 1, q + pos, (size_t)(nq - pos) * sizeof *q);
+    q[pos] = f; nq++;
+    bytes += pesoDe(f);
+  }
   pthread_mutex_unlock(&trava);
+  if (!cabe) { int k; for (k = 0; k < PGS_MAX_OBJ; k++) free(f->obj[k].rgba); free(f); }
 }
 
 static unsigned donoGeracao;
@@ -91,8 +97,11 @@ ImgsubQuadro *imgsub_pegar(double t) {
   for (i = nq - 1; i >= 0 && q[i]->ini > t; i--) {}
   if (i >= 0) {
     ImgsubQuadro *c = q[i];
-    double fim = c->fim >= 0 ? c->fim : c->ini + IMGSUB_DUR_PADRAO;
-    if (c->n > 0 && t < fim) { f = c; f->refs++; }
+    double fim = c->fim;
+    // n==0 e a marca de limpar: vale ja, mesmo com o quadro anterior ainda
+    // na janela. Sem fim proprio, dura ate o proximo quadro (ou o padrao).
+    if (fim < 0) fim = (c->n == 0 && i + 1 < nq) ? q[i + 1]->ini : c->ini + IMGSUB_DUR_PADRAO;
+    if (t < fim) { f = c; f->refs++; }
   }
   pthread_mutex_unlock(&trava);
   return f;

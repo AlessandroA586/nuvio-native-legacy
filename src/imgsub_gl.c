@@ -21,7 +21,8 @@ int imgsub_desenhar(double t, float x, float y, float w, float h, float alpha) {
   int i, ok = 0;
   if (!legenda_ligada_em(imgsub_dono_atual())) f = NULL;
   else f = imgsub_pegar(t);
-  if (!f) {
+  if (!f || f->n < 1) {
+    imgsub_soltar(f);
     imgsub_gl_limpar();
     return 0;
   }

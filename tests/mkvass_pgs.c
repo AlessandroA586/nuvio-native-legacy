@@ -66,9 +66,12 @@ int main(int argc, char **argv) {
   assert(q->obj[0].rgba[0] == 255 && q->obj[0].rgba[3] == 255 && q->obj[0].rgba[7] == 128);
   assert(q->ini == 1.25 && q->fim == 3.0);
   imgsub_soltar(q);
-  // Depois do fim do cue e no bloco que so limpa a tela: nada a desenhar.
+  // Depois do fim do cue: nada. O bloco que so limpa devolve o quadro vazio
+  // (a tela apaga mesmo se o cue anterior ainda estivesse na janela).
   assert(!imgsub_pegar(3.5));
-  assert(!imgsub_pegar(5.5));
+  q = imgsub_pegar(5.5);
+  assert(q && q->n == 0 && q->ini == 5.0);
+  imgsub_soltar(q);
   assert(imgsub_dono_atual() == legenda_geracao());
   // Sem aceitar imagem a faixa nao e colhida (o app cai na rota anterior).
   parar(); imgsub_limpar(); legenda_desligar();
