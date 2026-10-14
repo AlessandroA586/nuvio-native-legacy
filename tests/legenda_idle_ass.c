@@ -1,5 +1,5 @@
-/* #484: the real asynchronous libass overlay, without GL or remote input.
- * Reuse the font/GL fixture; count actual submissions, not only cue lookup. */
+/* libass regression guard, not a reproduction of webOS issue #484.
+ * Reuse the font/GL fixture and count actual submissions without a GL context. */
 #define main ass_pisca_fixture_main
 #define gfx_rect fixtureRect
 #include "ass_pisca.c"
@@ -46,5 +46,5 @@ int main(void) {
   }
   assrender_geracao(485);
   assrender_limpar();
-  puts("PASS: libass external cues drawn after 25 minutes without input");
+  puts("PASS: libass external cue regression guard (not #484 reproduction)");
 }
