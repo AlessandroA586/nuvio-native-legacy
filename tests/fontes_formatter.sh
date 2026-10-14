@@ -1,8 +1,10 @@
 #!/bin/bash
+export TMPDIR="${TMPDIR:-/tmp}"
+TMPDIR="${TMPDIR%/}"
 # #479: hidden-window RGB/alpha pixel assertions and zero-rasterization regression; no network.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-FF_DIR=$(mktemp -d /tmp/nuvio-fontes-formatter.XXXXXX)
+FF_DIR=$(mktemp -d ${TMPDIR:-/tmp}/nuvio-fontes-formatter.XXXXXX)
 trap 'rm -rf "$FF_DIR"' EXIT
 sources=()
 for source in src/*.c src/dts/*.c; do

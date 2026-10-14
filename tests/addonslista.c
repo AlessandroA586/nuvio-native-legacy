@@ -10,6 +10,7 @@
 //
 // So o leitor: nada aqui vai a rede.
 #include <stdio.h>
+#include "nvtmp.h"
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -173,7 +174,7 @@ static void conferirTexto(const char *o_que, const char *obtido, const char *esp
 static int sempreCancelado(void *u) { (void)u; return 1; }
 
 int main(void) {
-  char dir[] = "/tmp/nuvio-addonslista-XXXXXX";
+  char dir[NVT_MAX]; nvt_set(dir, sizeof dir, "/nuvio-addonslista-XXXXXX");
   char caminho[600];
   FILE *f;
   int n;

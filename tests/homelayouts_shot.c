@@ -18,6 +18,7 @@
 // o numero de retangulos do quadro — o que da para medir no Mac do custo de
 // desenho; o custo em ms de GPU so existe na TV.
 #include "ajustes.h"
+#include "nvtmp.h"
 #include "artehero.h"
 #include "catalogo.h"
 #include "colecoes.h"
@@ -196,7 +197,7 @@ static void ajusta(int layout, int vidro) {
 }
 
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nv-home-layouts-shots/h";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nv-home-layouts-shots/h");
   const char *camadas = argc > 2 ? argv[2] : "012";
   static CatItem itens[200];
   static CatFileira fils[8];

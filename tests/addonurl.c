@@ -19,6 +19,7 @@
 //
 // So addons.c e js.c; a rede e um duble que anota a URL pedida.
 #include <stdio.h>
+#include "nvtmp.h"
 // A entrega real tem o harness watchstate_poda.sh; aqui nao ha diario.
 void wsenvio_podar(void) {}
 void wsenvio_podar_addon(const char *base) { (void)base; }
@@ -138,7 +139,7 @@ static void buscar(const char *id) {
 int main(void) {
   static char longa[1501], grande[2101], base[1501], esperado[1700];
   static AddonRemoto conta[2];
-  char dir[] = "/tmp/nuvio-addonurl-XXXXXX";
+  char dir[NVT_MAX]; nvt_set(dir, sizeof dir, "/nuvio-addonurl-XXXXXX");
   char caminho[600];
   FILE *f;
 

@@ -1,5 +1,6 @@
 // #479: real source sheet, hidden GL window, local fixtures only.
 #include "streams.h"
+#include "nvtmp.h"
 #include "limpa.h"
 static int cleanCalls;
 static size_t countedClean(const char *s, char *d, size_t n, int flags) {
@@ -133,7 +134,7 @@ static void pixels(const char *dir) {
 }
 int main(int argc,char **argv) {
   int verify=argc==1 || strcmp(argv[1],"--measure");
-  char dir[]="/tmp/nuvio-formatter479-XXXXXX"; assert(mkdtemp(dir));
+  char dir[NVT_MAX]; nvt_set(dir, sizeof dir, "/nuvio-formatter479-XXXXXX"); assert(mkdtemp(dir));
   SDL_SetHint("SDL_MAC_BACKGROUND_APP","1");
   assert(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER)==0); IMG_Init(IMG_INIT_PNG);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION,2); SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,1);

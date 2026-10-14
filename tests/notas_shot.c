@@ -12,6 +12,7 @@
 // rodar de outro jeito.
 
 #include <SDL2/SDL.h>
+#include "nvtmp.h"
 #include <SDL2/SDL_image.h>
 #include <assert.h>
 #include <stdio.h>
@@ -404,7 +405,7 @@ static void cacheAudiencia(int temp, int ate) {
 }
 
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nv-notas-shots/n";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nv-notas-shots/n");
   char nome[600];
   SDL_GLContext gl;
 

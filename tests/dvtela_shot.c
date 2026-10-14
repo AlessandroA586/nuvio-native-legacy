@@ -14,6 +14,7 @@
 //   6. "Assistir agora em HDR10" chama video_dv_recusar; Voltar sai do player.
 // E salva uma captura 1920x1080 de cada passo.
 #include "catalogo.h"
+#include "nvtmp.h"
 #include "player.h"
 #include "pausao.h"
 #include "plrilha.h"
@@ -144,7 +145,7 @@ static void abrirFonte(void) {
 }
 
 int main(int argc, char **argv) {
-  saida = argc > 1 ? argv[1] : "/tmp/nv-dvtela/dv";
+  saida = argc > 1 ? argv[1] : nvt("/nv-dvtela/dv");
   SDL_SetHint("SDL_MAC_BACKGROUND_APP", "1");
   assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
   IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG);

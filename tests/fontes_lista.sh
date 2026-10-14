@@ -1,4 +1,6 @@
 #!/bin/bash
+export TMPDIR="${TMPDIR:-/tmp}"
+TMPDIR="${TMPDIR%/}"
 # Issue #132: a folha de Fontes lista tudo que os addons mandaram, nos dois
 # modos de "Fonte automatica". Ver tests/fontes_lista.c.
 #

@@ -12,6 +12,7 @@
 // O que e de rede (Seekr, intro, guia parental) entra por gancho de captura
 // (NV_SHOT_HOOKS): nada aqui consulta servico nem gasta cota.
 #include "catalogo.h"
+#include "nvtmp.h"
 #include "player.h"
 #include "pausao.h"
 #include "ajustes.h"
@@ -328,7 +329,7 @@ static int quer(int argc, char **argv, const char *id) {
 }
 
 int main(int argc, char **argv) {
-  saida = argc > 1 ? argv[1] : "/tmp/nv-player-glass";
+  saida = argc > 1 ? argv[1] : nvt("/nv-player-glass");
   { const char *v = getenv("NUVIO_SHOT_VIDRO"); material = v && *v == '1' ? "vidro" : "solido"; }
   { const char *m = getenv("NUVIO_SHOT_MOCK"); snprintf(mock, sizeof mock, "%s", m ? m : ""); }
   SDL_SetHint("SDL_MAC_BACKGROUND_APP", "1");

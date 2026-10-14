@@ -1,4 +1,6 @@
 #!/bin/bash
+export TMPDIR="${TMPDIR:-/tmp}"
+TMPDIR="${TMPDIR%/}"
 # Inline editor and Fileiras touch UI are Mobile only; no window or network.
 #   bash tests/ajustes_ux_toque_modo.sh
 set -eu
@@ -8,7 +10,7 @@ for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/ajustes.c) continue;; esac
   sources+=("$source")
 done
-NUVIO_DADOS="$(mktemp -d /tmp/nuvio-ajustes-ux-toque-modo.XXXXXX)"
+NUVIO_DADOS="$(mktemp -d ${TMPDIR:-/tmp}/nuvio-ajustes-ux-toque-modo.XXXXXX)"
 export NUVIO_DADOS
 binary="$NUVIO_DADOS/teste"
 trap 'rm -rf "$NUVIO_DADOS"' EXIT

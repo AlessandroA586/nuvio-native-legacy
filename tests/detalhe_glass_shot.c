@@ -18,6 +18,7 @@
 //      filme-relacionados filme-colecao filme-fim serie-topo serie-ep
 //      serie-temp serie-baixo
 #include <SDL2/SDL.h>
+#include "nvtmp.h"
 #include <SDL2/SDL_image.h>
 #include <assert.h>
 #include <stdio.h>
@@ -352,7 +353,7 @@ static int quer(int argc, char **argv, const char *id) {
 int main(int argc, char **argv) {
   SDL_GLContext gl;
   const char *dd;
-  saida = argc > 1 ? argv[1] : "/tmp/nuvio-detglass";
+  saida = argc > 1 ? argv[1] : nvt("/nuvio-detglass");
   assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
   IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);

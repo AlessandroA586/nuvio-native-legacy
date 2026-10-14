@@ -43,6 +43,7 @@ int ajustes_busca_nuvio(void) { return 0; }   // #311: Primeiro (padrao)
 int ajustes_ocultar_nao_lancados(void) { return 0; }   // #369: descoberta.c le o ajuste
 #include "../src/descoberta.c"
 #include "jellyfin_stub.inc"
+#include "nvtmp.h"
 unsigned recomenda_geracao(void) { return 1; }
 Uint32 SDL_GetTicks(void) { return 0; }
 
@@ -315,7 +316,7 @@ static void volta(void) {
 int main(void) {
   const char *tmp = getenv("TMPDIR");
   snprintf(dirDados, sizeof dirDados, "%snuvio-snapshot-falha-%d",
-           tmp && *tmp ? tmp : "/tmp/", (int)getpid());
+           nvt("/"), (int)getpid());
   assert(mkdir(dirDados, 0700) == 0);
   desc_tmdb(dirDados);
   homeestado_iniciar();
