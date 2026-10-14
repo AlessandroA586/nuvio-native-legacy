@@ -3925,6 +3925,7 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
   // como "Filme · Terror", que e o par (tipo, primeiro genero) do web.
   char metaLinha[288];
   metaLinha[0] = 0;
+  const char *generoHero = ci && ajustes_hero_genero() ? ci->genero : "";
   // DOIS CASOS, DUAS FRASES (dono, 20/09/2026): "A SEGUIR" e o PROXIMO
   // episodio, que so faz sentido quando o anterior terminou; quem parou no
   // meio "continua de onde parou". Os dois dizem QUAL episodio — o item de
@@ -3935,9 +3936,9 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
     snprintf(cab, sizeof cab, "S%d E%d%s%s", ci->temporada, ci->episodio,
              ci->nomeEpisodio[0] ? "  \xc2\xb7  " : "", ci->nomeEpisodio);
     snprintf(metaLinha, sizeof metaLinha, "%s%s%s", cab,
-             (ci->genero[0] ? "  \xc2\xb7  " : ""), ci->genero);
-  } else if (ci && ci->genero[0]) {
-    snprintf(metaLinha, sizeof metaLinha, "%s", ci->genero);
+             (generoHero[0] ? "  \xc2\xb7  " : ""), generoHero);
+  } else if (generoHero[0]) {
+    snprintf(metaLinha, sizeof metaLinha, "%s", generoHero);
   }
   if (ci && ci->meta[0]) {
     size_t n = strlen(metaLinha);
@@ -5912,7 +5913,8 @@ static void desenhaEditorialCard(const CatItem *cItem, TipoFileira tipo, float p
   // Sem dado, sem texto — nao a lista de demonstracao que ficava
   // aqui e carimbava nome e genero de outro titulo no card.
   const char *nome   = (ci && ci->titulo[0]) ? ci->titulo : NULL;
-  const char *genero = (ci && ci->genero[0]) ? ci->genero
+  const char *genero = !ajustes_hero_genero() ? NULL
+                      : (ci && ci->genero[0]) ? ci->genero
                       : ci ? i18n(!strcmp(ci->tipo, "series") ? "Série" : "Filme") : NULL;
   TxtLinha tg = genero
               ? txt_linha_corta(TXT_HERO_META, genero, 226, 228, 233, 255, w - 64)
