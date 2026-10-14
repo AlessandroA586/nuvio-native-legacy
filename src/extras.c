@@ -790,14 +790,16 @@ static void *buscar(void *arg) {
   }
 
   //
-  // Um GET por titulo: a api publica devolve todas as fontes em ratings[].
+  // Um GET por titulo: /imdb/{movie|show}/{id} devolve todas as fontes em ratings[].
+  // O antigo /?i= agora so responde a pagina de ajuda da api (http 200, sem notas).
   // O POST por provedor so lia "rating" e voltava 0/11 com o corpo novo.
   // mdblist_enabled corta a CONSULTA — as notas que o app tem por conta
   // propria (Trakt direto, IMDb do catalogo) nao dependem desta chave.
   if (parte != 0 && mdbChave[0] && ajustes_mdblist_ligado()) {
     char u[300], amostra[128];
     int status = 0, pedidas = 0, comNota = 0;
-    snprintf(u, sizeof u, "https://api.mdblist.com/?i=%s&apikey=%s", id, mdbChave);
+    snprintf(u, sizeof u, "https://api.mdblist.com/imdb/%s/%s?apikey=%s",
+             serie ? "show" : "movie", id, mdbChave);
     corpo = rede_baixar_st(u, 12, NULL, &status);
     if (corpo) {
       comNota = aplicarMdblist(id, corpo, tmdbId, serie, &pedidas);
@@ -2263,7 +2265,8 @@ static void *lacoResumo(void *ignorado) {
     // 3. MDBList, so o que a linha do titulo mostra.
     if (mdbChave[0] && ajustes_mdblist_ligado()) {
       int status = 0, comNota = 0;
-      snprintf(url, sizeof url, "https://api.mdblist.com/?i=%s&apikey=%s", id, mdbChave);
+      snprintf(url, sizeof url, "https://api.mdblist.com/imdb/%s/%s?apikey=%s",
+               serie ? "show" : "movie", id, mdbChave);
       corpo = rede_baixar_st(url, 8, NULL, &status);
       if (corpo) {
         const char *p, *fim = corpo + strlen(corpo);
