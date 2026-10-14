@@ -95,8 +95,26 @@ int main(void) {
       palcoGeo(1, c + 1, lw, &vizX, &vizS);
       assert(fabsf(vizS - NV_PALCO_VIZ) < 0.01f);
       assert(vizX - lw * vizS * 0.5f > cx + lw * s * 0.5f);
+      // #205: os vizinhos encolhem E se chegam. O passo entre vizinhos segue
+      // a largura escalada — o gap e o da fileira comum (±2 px) — e o foco so
+      // empurra o PRIMEIRO vizinho pelo que cresceu.
+      { float vizX2, vizS2, gap = gapDe(FILEIRA_PALCO);
+        palcoGeo(1, c + 2, lw, &vizX2, &vizS2);
+        assert(fabsf((vizX2 - vizX) - (lw * vizS + gap)) < 2.0f);
+        assert(fabsf((vizX - cx) - (lw * (1.0f + NV_PALCO_VIZ) * 0.5f + gap)) < 2.0f); }
       anterior = cx;
     }
+    // A CORTINA (#205): foco na fileira Palco, o resto da tela escurece MAIS
+    // que o fundo comum (alfa da cortina >= 0.40 assentado); o foco saindo
+    // dela, a cortina desce de volta.
+    focoHero = 0; foco.fileira = 1;
+    for (int i = 1; i <= 40; i++) palcoCortinaPasso((Uint32)(i * 16));
+    assert(palcoCortina > 0.99f);
+    assert(NV_PALCO_CORTINA * palcoCortina >= 0.40f);
+    foco.fileira = 0;
+    for (int i = 41; i <= 80; i++) palcoCortinaPasso((Uint32)(i * 16));
+    assert(palcoCortina < 0.01f);
+    focoHero = 1;
     memset(scrollX, 0, sizeof scrollX);
   }
   // A composicao abaixo e a da home SEM o destaque no topo: e nela que a

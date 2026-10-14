@@ -5669,11 +5669,32 @@ static int colunaDaFileira(int r) {
   if (c >= fileiras[r].n) c = fileiras[r].n - 1;
   return c < 0 ? 0 : c;
 }
-// PALCO: as vagas seguem a rolagem comum; so a escala acompanha o foco.
+// PALCO (#205): o foco cresce na vaga dele e os vizinhos encolhem E se
+// chegam — o passo de cada um segue a largura ESCALADA (o mesmo gap de sempre
+// entre vizinhos; antes a vaga cheia sobrava um vao de ~2x), e o card em foco
+// so empurra o PRIMEIRO vizinho pelo que cresceu. Todo o resto acompanha o
+// foco pela mola de palcoPos, e a rolagem de sempre manda no conjunto.
 static void palcoGeo(int r, int c, float lw, float *cx, float *s) {
-  float ad = fabsf((float)c - palcoPos[r]);
-  *cx = homeFileiraX(r, c) + lw * 0.5f;
+  float d = (float)c - palcoPos[r], ad = fabsf(d);
+  float viz = lw * NV_PALCO_VIZ, gap = gapDe(FILEIRA_PALCO);
+  float perto = (lw + viz) * 0.5f + gap;        // foco -> 1o vizinho
+  float longe = viz + gap;                      // vizinho -> vizinho
+  float off = ad < 1.0f ? d * perto : copysignf(perto + (ad - 1.0f) * longe, d);
   *s = 1.0f - (1.0f - NV_PALCO_VIZ) * (ad < 1.0f ? ad : 1.0f);
+  *cx = homeFileiraX(r, 0) + palcoPos[r] * passoFil(r) + lw * 0.5f + off;
+}
+// A CORTINA do Palco (#205): 0..1 em mola enquanto o foco esta numa fileira
+// Palco. O scrim em si (duas faixas, tudo fora da fileira em foco) e desenhado
+// no fim de home_desenhar; aqui so o estado, para o teste poder assentar a
+// mola sem janela.
+static float  palcoCortina;
+static Uint32 palcoCortinaUlt;
+static float  palcoFaixaTopo, palcoFaixaBase;  // a fileira em foco, por quadro
+static void palcoCortinaPasso(Uint32 agora) {
+  int alvo = !focoHero && foco.fileira >= 0 && foco.fileira < nFileiras &&
+             fileiras[foco.fileira].tipo == FILEIRA_PALCO;
+  palcoCortina = anim_mola(palcoCortina, alvo ? 1.0f : 0.0f,
+                           dtFil(&palcoCortinaUlt, agora), NV_MOLA_FOCO);
 }
 // PALCO: o nome e a linha de meta do titulo do centro, embaixo dele.
 static void palcoLegenda(int r, float base, float lw) {
@@ -6558,6 +6579,8 @@ void home_desenhar(Uint32 agora) {
   if (!fileirasOcultas) ponteiro_rolagem(toqueHomeRolar);
 #endif
   descida += cinema * NV_CINEMA_DESCE;   // detalhe assentado: nada da home aparece
+  palcoCortinaPasso(agora);              // a cortina do Palco sobe/desce pela mola
+  palcoFaixaTopo = palcoFaixaBase = 0.0f;
 
   // VIEWPORT DAS FILEIRAS. `.home-modern-rows-viewport` (components.css:6929) e
   // um bloco absoluto com bottom:0, height 52% e overflow-y:auto — ou seja as
@@ -6602,6 +6625,12 @@ void home_desenhar(Uint32 agora) {
                                  focoHero ? -1 : foco.fileira * 64 + foco.coluna, agora);
   for (int r = 0; r < (fileirasOcultas || vazioQr ? 0 : nFileiras); r++) {
     TipoFileira tipo = fileiras[r].tipo;
+    // A fileira Palco em foco e a unica fora da cortina: titulo, cartazes e
+    // legenda inteiros (a faixa cobre o bloco todo dela, ate o +70 da legenda).
+    if (tipo == FILEIRA_PALCO && r == foco.fileira && !focoHero) {
+      palcoFaixaTopo = y;
+      palcoFaixaBase = y + NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r);
+    }
     // No retrato a visibilidade acompanha o recorte real, inclusive antes
     // do primeiro gesto; a memoria do foco nao esconde fileiras acessiveis.
     float fade=alfaFileiraHome(r, y, topoFil, corte);
@@ -7086,6 +7115,20 @@ void home_desenhar(Uint32 agora) {
   // logo acima.
   gfx_borda_foco_atual = 1.0f;
   gfx_sem_recorte();
+
+  // A CORTINA DO PALCO (#205, pedido do dono: "o resto da tela mais dimming
+  // ainda"): fileira Palco em foco, duas faixas escuras cobrem tudo fora dela —
+  // as outras fileiras e o topo. A faixa da fileira em foco (titulo, cartazes
+  // e legenda) fica fora do scrim, inteira e legivel; sobe e desce pela mola.
+  if (palcoCortina > 0.01f && palcoFaixaBase > palcoFaixaTopo) {
+    float alfa = NV_PALCO_CORTINA * palcoCortina * (1.0f - pd) * (1.0f - cinema);
+    float topo = fmaxf(0.0f, palcoFaixaTopo), base = fminf(NV_TELA_H, palcoFaixaBase);
+    if (alfa > 0.01f) {
+      if (topo > 0.5f) gfx_cor((GfxRect){ 0.0f, 0.0f, NV_TELA_W, topo }, 0, 0, 0, 0, alfa);
+      if (base < NV_TELA_H - 0.5f)
+        gfx_cor((GfxRect){ 0.0f, base, NV_TELA_W, NV_TELA_H - base }, 0, 0, 0, 0, alfa);
+    }
+  }
 
   static TexLookahead adiante;
   int parado = tex_lookahead_parado(&adiante, scrollY);

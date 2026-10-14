@@ -338,6 +338,9 @@ int layout_modo_mobile(void);
 #define NV_TEMPO_FAIXA_H   96.0f
 #define NV_FICHA_W        600.0f
 #define NV_PALCO_ESC       1.3f
+// A CORTINA do Palco (#205, pedido do dono: "o resto da tela mais dimming
+// ainda"): com o foco numa fileira Palco, um scrim escurece tudo fora dela.
+#define NV_PALCO_CORTINA   0.42f
 // Fileira redonda (pessoas): diametro do disco. O nome vai abaixo, no bloco do rotulo.
 #define NV_REDONDA_D       200.0f
 #define NV_PALCO_VIZ       0.66f
