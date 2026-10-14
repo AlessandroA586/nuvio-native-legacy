@@ -109,7 +109,8 @@ static const char *TIPO_ROT[FIL_TIPO_N] = {
   "Automático", "Cartaz em pé", "Destaque largo", "Coleção", "Serviço", "Ranking empilhado",
   "Destaque 4:3", "Ranking numerado", "Faixa com título",
   "Destaque 4:3 médio", "Destaque 4:3 grande",
-  "Linha do tempo", "Cartaz com ficha", "Palco", "Redonda"
+  "Linha do tempo", "Cartaz com ficha", "Palco", "Redonda",
+  "Pôster grande"
 };
 static const char *TAM_ROT[FIL_TAM_N] = { "Compacto", "Padrão", "Grande" };
 // 0,85 e 1,2 e nao 0,5 e 2,0: o card do web mede 212x322 e o passo da fileira
@@ -241,6 +242,7 @@ static const FilEstiloLinha LINHAS_CAT[] = {
   { "Cartaz com ficha",  1, { FIL_TIPO_FICHA }, { "Cartaz com ficha" } },
   { "Palco",             1, { FIL_TIPO_PALCO }, { "Palco" } },
   { "Redonda",           1, { FIL_TIPO_REDONDA }, { "Redonda" } },
+  { "Pôster grande",     1, { FIL_TIPO_POSTER_GRANDE }, { "Pôster grande" } },
 };
 #define N_LINHAS_CAT (int)(sizeof LINHAS_CAT / sizeof *LINHAS_CAT)
 
@@ -669,9 +671,29 @@ int fil_adicionar(int i, int *estado) {
 // aqui, mesmo alem do limite — e o caso da "vaga garantida por addon", que a
 // descoberta promove para dentro da janela por conta propria.
 void fil_normalizar(void) {
-  int i, p = 0, mudou = 0;
+  int i, p = 0, mudou = 0, w = 0;
   pthread_mutex_lock(&trava);
   garantir();
+  // #504: a folha abre com a lista DO ARQUIVO, e a limpeza da remocao do addon
+  // (#365, em fil_marcar_sem_addon) e mais estreita: ela exige !vista, e uma
+  // linha que a descoberta chegou a registrar — ou oculta pelo arquivo antigo
+  // com a marca vista relida como tal — fica na aba "Fora da Home" para
+  // sempre. Aqui nao se sabe a lista de addons da volta, so o semAddon ja
+  // marcado: e a mesma barra de escolha da #365 (intocada pela pessoa), que e o
+  // que separa "fantasma" de "a pessoa pediu isto e o addon pode voltar".
+  for (i = 0; i < nLinhas; i++) {
+    int morto = fil_origem_de(linhas[i].chave) == FIL_ORIGEM_CATALOGO &&
+                linhas[i].semAddon && !linhas[i].naHome &&
+                !linhas[i].ocultaConta && !linhas[i].emColecao &&
+                linhas[i].oculta != OC_COLECAO &&
+                !linhas[i].visPessoal && !linhas[i].fila &&
+                linhas[i].tipo == FIL_TIPO_AUTO && linhas[i].tam == FIL_TAM_PADRAO &&
+                !(heroFonte[0] && !strcmp(heroFonte, linhas[i].chave));
+    if (morto) { mudou = 1; continue; }
+    if (w != i) linhas[w] = linhas[i];
+    w++;
+  }
+  if (w != nLinhas) { nLinhas = w; revisao++; }
   for (i = 0; i < nLinhas; i++) {
     int nova = linhas[i].nova;
     if (linhas[i].oculta || linhas[i].ocultaConta || linhas[i].emColecao || linhas[i].semAddon) {
@@ -1542,6 +1564,7 @@ const char *fil_estilo_ajuda(const char *chave, int t) {
     case FIL_TIPO_LINHA_TEMPO: return "Cartazes em ordem de lançamento sobre uma linha com os anos, que se desenha conforme você anda.";
     case FIL_TIPO_FICHA:    return "Cartaz com a ficha ao lado: ano, gênero, nota e o começo da sinopse.";
     case FIL_TIPO_PALCO:    return "O título em foco fica grande no centro e os vizinhos diminuem dos dois lados.";
+    case FIL_TIPO_POSTER_GRANDE: return "Cartaz 3:4 grande com logo, gênero, classificação e duas linhas de sinopse na base, sobre um véu na cor predominante da arte.";
     case FIL_TIPO_REDONDA:  return "Foto circular com o nome embaixo, para fileiras de pessoas.";
     default:                return "O app escolhe a forma pelo nome do catálogo e pelo layout da Home.";
   }

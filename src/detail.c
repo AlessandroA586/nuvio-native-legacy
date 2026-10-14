@@ -662,6 +662,7 @@ static float alturaCabComentarios(void);
 static int temporadaEm(int c);
 static int epAbsoluto(int c);
 static int epVisiveis(void);
+static int epNaoExibido(const CatEp *ep);
 static float baseDaAbaAtiva(void);
 // A TEMPORADA ESCOLHIDA NA PAGINA, traduzida para o indice de extras.h.
 //
@@ -860,6 +861,52 @@ static void progAbrirTemporada(int col) {
   epAncora = c; foco.colunaLembrada[SEC_EPISODIOS] = c;
   { const CatEp *ep = cat_episodio(idx, epAbsoluto(c));
     comEpT = ep ? ep->temporada : 0; comEpE = ep ? ep->episodio : 0; }
+}
+
+// EPISODIO ALEATORIO: sorteia entre os ja exibidos de qualquer temporada
+// (especiais so se forem a unica), leva a pagina e o foco ate ele e pede a
+// reproducao pelo MESMO caminho do OK num card — fonte, retomada e scrobble
+// saem de app.c sem nada de novo. Devolve 1 se havia episodio para sortear.
+static int sortearEpisodio(int *t, int *e) {
+  int n = cat_n_episodios(idx), i, q = 0, alvo, soEsp = 1;
+  for (i = 0; i < n; i++) {
+    const CatEp *ep = cat_episodio(idx, i);
+    if (ep && ep->temporada > 0 && !epNaoExibido(ep)) { soEsp = 0; break; }
+  }
+  for (i = 0; i < n; i++) {
+    const CatEp *ep = cat_episodio(idx, i);
+    if (ep && ep->episodio > 0 && !epNaoExibido(ep) && (soEsp || ep->temporada > 0)) q++;
+  }
+  if (q <= 0) return 0;
+  alvo = rand() % q;
+  for (i = 0; i < n; i++) {
+    const CatEp *ep = cat_episodio(idx, i);
+    if (ep && ep->episodio > 0 && !epNaoExibido(ep) && (soEsp || ep->temporada > 0) && alvo-- == 0) {
+      *t = ep->temporada; *e = ep->episodio; return 1;
+    }
+  }
+  return 0;
+}
+static void tocarAleatorio(void) {
+  const CatItem *ci = cat_item(idx);
+  int t, e, k, c, q;
+  if (!ci || !sortearEpisodio(&t, &e)) return;
+  for (k = 0; k < ci->nTemporadas; k++) if (ci->temporadas[k] == t) break;
+  if (k >= ci->nTemporadas) return;
+  temporada = k;
+  foco.colunaLembrada[SEC_TEMPORADAS] = k;
+  irParaTemporada(k, 0);
+  q = epVisiveis();
+  for (c = 0; c < q; c++) {
+    const CatEp *ep = cat_episodio(idx, epAbsoluto(c));
+    if (ep && ep->temporada == t && ep->episodio == e) break;
+  }
+  if (c >= q) return;
+  foco.nColunas[SEC_EPISODIOS] = q;
+  foco.fileira = SEC_EPISODIOS; foco.coluna = c;
+  epAncora = c; foco.colunaLembrada[SEC_EPISODIOS] = c;
+  comEpT = t; comEpE = e;
+  pedReproduzir = 1;
 }
 
 // Troca de temporada pela PONTA da fileira de episodios (dir=+1 direita,
@@ -1245,7 +1292,12 @@ static const char *arteDe(int i) {
   // (dono, 05/10/2026). So vale nesse sentido: fundo por fundo nao troca.
   if (i == idx && arteFixa[0] && arteFixaPoster) {
     const CatItem *c = cat_item(i);
-    if (c && c->backdrop[0]) { arteFixa[0] = 0; arteFixaPoster = 0; }
+    // Fundo DE VERDADE chegou: o cartaz que a semente repetiu em `backdrop`
+    // (recomendacao/filmografia sem fundo proprio) nao conta — e a mesma url
+    // do poster (#502/#503).
+    if (c && c->backdrop[0] && strcmp(c->backdrop, c->poster)) {
+      arteFixa[0] = 0; arteFixaPoster = 0;
+    }
   }
   if (i == idx && arteFixa[0] && !tex_falhou(arteFixa)) return arteFixa;
   { const char *u = arteDeViva(i);
@@ -1254,7 +1306,11 @@ static const char *arteDe(int i) {
       snprintf(arteFixa, sizeof arteFixa, "%s", u);
       // Marcado AQUI, junto com o congelamento: arteDetalheEhPoster so marcava
       // se fosse chamada antes desta, e depois dela devolvia o 0 de fabrica.
-      arteFixaPoster = c && !c->backdrop[0] && c->poster[0];
+      // Poster no lugar do fundo (semente de recomendacao que repetiu o
+      // cartaz em `backdrop`) conta como cartaz: e o que faz a troca acima
+      // disparar quando o fundo real chega (#502/#503).
+      arteFixaPoster = c && c->poster[0] &&
+                       (!c->backdrop[0] || !strcmp(c->backdrop, c->poster));
     }
     return u; }
 }
@@ -1288,7 +1344,8 @@ static int arteDetalheEhPoster(int i) {
   // que o enriquecimento pode ter posto no catalogo depois.
   if (i == idx && trocaarte_previa_fundo()) return 0;   // previa: sempre fundo
   if (i == idx && arteFixa[0]) return arteFixaPoster;
-  { int r = c && !c->backdrop[0] && c->poster[0];
+  { int r = c && c->poster[0] &&
+            (!c->backdrop[0] || !strcmp(c->backdrop, c->poster));
     if (i == idx) arteFixaPoster = r;
     return r; }
 }
@@ -1940,15 +1997,39 @@ static int nLinhasDetalhe(void) {
 // filme e ao culling. Antes cada numero destes vivia cravado no meio do
 // desenho, e uma secao nova herdava a altura do elenco em silencio.
 static int epApple(void) { return ajustes_home_layout() == HOME_LAYOUT_DINAMICA; }
-static float epCardW(void) { return epApple() ? 420.0f : NV_DETP_EP_W; }
 static int epModerna(void) { return ajustes_home_layout() == HOME_LAYOUT_MODERNA; }
-static float epCardH(void) {
-  return epApple() ? 500.0f : epModerna() ? NV_DETP_EPM_H : NV_DETP_EP_H;
+// #205 (dono): tres tamanhos de card de episodio na Moderna — Pequeno, Medio
+// (o de sempre) e Grande, no Ajustes. UMA escala so (ajustes_ep_tamanho):
+// largura, passo e miniatura saem daqui multiplicados, e o que e ancorado na
+// BASE da miniatura (rodape, barra) acompanha porque e medido a partir dela.
+// Nao escala: o texto (as fontes sao as de sempre) e o selo "EPISODIO n",
+// cuja base tem de continuar na altura da base do selo Assistido, fixo.
+static float epEscala(void) {
+  static const float S[3] = { 0.80f, 1.0f, 1.25f };
+  return epModerna() ? S[ajustes_ep_tamanho()] : 1.0f;
 }
-static float epCardPasso(void) { return epApple() ? 452.0f : NV_DETP_EP_PASSO; }
 static float epThumbH(void) {
-  return epApple() ? 236.0f : epModerna() ? NV_DETP_EPM_THUMB_H : NV_DETP_EP_THUMB_H;
+  return epApple() ? 236.0f : epModerna() ? NV_DETP_EPM_THUMB_H * epEscala() : NV_DETP_EP_THUMB_H;
 }
+static float epCardW(void) { return epApple() ? 420.0f : NV_DETP_EP_W * epEscala(); }
+static float epCardH(void) {
+  if (epApple()) return 500.0f;
+  if (!epModerna()) return NV_DETP_EP_H;
+  // Miniatura + bloco de texto: titulo (1 linha) + sinopse de 4 linhas (#205),
+  // com o mesmo respiro de 10 do card de sempre. As fontes nao escalam, entao
+  // o bloco e o mesmo nos tres tamanhos — so a miniatura muda.
+  return epThumbH() + NV_DETP_EPM_SIN_DY +
+         (float)NV_DETP_EPM_SIN_LINHAS * NV_DETP_EP_LD_SIN + 10.0f;
+}
+static float epCardPasso(void) { return epApple() ? 452.0f : NV_DETP_EP_PASSO * epEscala(); }
+// Largura do texto abaixo da miniatura (titulo, sinopse e barra): a do card,
+// menos as margens do Padrao (32 de cada lado, o NV_DETP_EP_TEXTO_W medido).
+static float epTextoW(void) { return epCardW() - NV_DETP_EP_PAD * 2.0f; }
+// Sinopse: 4 linhas na Moderna (#205), 3 no Padrao (sobre a miniatura).
+static int epSinLinhas(void) { return epModerna() ? NV_DETP_EPM_SIN_LINHAS : 3; }
+// Titulo do episodio: um degrau abaixo na escala de sempre na Moderna (#205) —
+// 28 (TXT_CALLOUT) em vez de 32 (TXT_PLR_CORPO), pedido do dono.
+static TxtEstilo epTituloEstilo(void) { return epModerna() ? TXT_CALLOUT : TXT_PLR_CORPO; }
 static float epAppleExtra(void) { return epCardH() - 414.0f; }
 // Bloco das Notas na serie (cabecalho + fileira + vao), que empurra abas e
 // elenco; 0 enquanto as notas nao chegaram.
@@ -2018,6 +2099,16 @@ static float alturaSecao(int r) {
   return 0.0f;
 }
 
+// Quantas ABAS de temporada a serie tem (sem o botao de aleatorio).
+static int nTemps(void) {
+  const CatItem *ci = cat_item(idx);
+  if (!ehSerie() || !ci || ci->nTemporadas <= 0) return 0;
+  return ci->nTemporadas < N_ITENS - 1 ? ci->nTemporadas : N_ITENS - 1;
+}
+// A ULTIMA coluna da fileira de temporadas nao e aba: e o botao de episodio
+// aleatorio, ao lado do segmentado.
+static int ehShuffle(int c) { int n = nTemps(); return n > 0 && c == n; }
+
 static int secaoN(int r) {
   const CatItem *ci = cat_item(idx);
   switch (r) {
@@ -2025,10 +2116,7 @@ static int secaoN(int r) {
       // Filme nao tem temporada: a fileira SOME em vez de mostrar abas que nao
       // levam a lugar nenhum. E o que o web faz — a `.series-season-row` so
       // existe no layout de serie.
-      if (!ehSerie()) return 0;
-      if (ci && ci->nTemporadas > 0)
-        return ci->nTemporadas < N_ITENS ? ci->nTemporadas : N_ITENS;
-      return 0;
+      return nTemps() > 0 ? nTemps() + 1 : 0;
     case SEC_EPISODIOS: {
       int q = epVisiveis();
       if (q <= 0) return 0;
@@ -2742,6 +2830,9 @@ void detail_evento(const SDL_Event *e) {
       abrirListaColecao();
     } else if (foco.fileira == SEC_PROGTEMP) {
       progAbrirTemporada(foco.coluna);
+    } else if (foco.fileira == SEC_TEMPORADAS && ehShuffle(foco.coluna)) {
+      // Botao de episodio aleatorio: toque curto ou longo, o gesto e o mesmo.
+      tocarAleatorio();
     } else if (foco.fileira == SEC_TEMPORADAS && dur >= NV_HOLD_MS) {
       // PRESSAO LONGA NA ABA: o menu da temporada (issue #108, "Pressing
       // 'Season' brings up option to mark all as watched"). O toque curto
@@ -2771,6 +2862,11 @@ void detail_evento(const SDL_Event *e) {
 #ifdef NV_TOUCH_UI
         toquerol_limpar(&toquePessoa); toquePessoaOffset = 0;
 #endif
+      } else if (ci && foco.coluna < ci->nElenco) {
+        // Sem id de pessoa (o TMDB nao respondeu, ou o titulo e novo demais):
+        // o OK nao pode ser um clique morto — diz por que e nao abre nada.
+        ilha_avisar("det-elenco-sem-pagina", ILHA_INFO, NULL,
+                    i18n("Esta pessoa não tem página ainda"), 4000u, 0);
       }
     } else if (foco.fileira == SEC_ABAS_INFO) {
       abaInfo = foco.coluna;
@@ -3034,7 +3130,7 @@ static float yItem(int r, int c) { (void)r; (void)c; return 0; }
 // e uma constante como a do episodio.
 static float larguraItem(int r, int c) {
   switch (r) {
-    case SEC_TEMPORADAS:  return larguraTemporada(c);
+    case SEC_TEMPORADAS:  return ehShuffle(c) ? NV_DETP_TEMP_H : larguraTemporada(c);
     case SEC_EPISODIOS:   return epCardW();
     case SEC_ABAS_INFO:   return larguraAbaInfo(c);
     case SEC_TRAILERS:     return NV_DETF_TR_W;
@@ -3086,7 +3182,7 @@ static float xItem(int r, int c) {
     // Frases idem, com a coluna unica.
     if (EH_AUD(r) || r == SEC_FRASES || r == SEC_NOTAS || r == SEC_NOTAS_EP ||
         r == SEC_PROGTEMP) continue;
-    if (r == SEC_TEMPORADAS) x += larguraTemporada(k) + NV_DETP_TEMP_GAP;
+    if (r == SEC_TEMPORADAS) x += larguraItem(r, k) + NV_DETP_TEMP_GAP;
     else x += larguraAbaInfo(k) + NV_DETP_ABA_SEP * 2 + 9.0f;  // 9 = largura do "|"
   }
   return x;
@@ -3436,7 +3532,7 @@ void detail_atualizar(float dt, Uint32 agora) {
   // mostra. Esperar meio segundo para trocar uma VISTA e a propria "demora ao
   // trocar de temporada" que o repouso tentava evitar.
   if (nivel >= 1 && foco.fileira == SEC_TEMPORADAS) {
-    if (foco.coluna != temporada) {
+    if (foco.coluna != temporada && !ehShuffle(foco.coluna)) {
       temporada = foco.coluna;
       irParaTemporada(temporada, 0);
     }
@@ -3637,7 +3733,8 @@ void detail_atualizar(float dt, Uint32 agora) {
   // para estado em andamento. Os primeiros 150 ms nao contam: e um toque.
   if (okDesceEm && !ctx_aberto()) {
     Uint32 dur = agora - okDesceEm;
-    int alvoHold = (nivel >= 1 && (foco.fileira == SEC_EPISODIOS || foco.fileira == SEC_TEMPORADAS)) ||
+    int alvoHold = (nivel >= 1 && (foco.fileira == SEC_EPISODIOS ||
+                                   (foco.fileira == SEC_TEMPORADAS && !ehShuffle(foco.coluna)))) ||
                    (nivel >= 1 && foco.fileira == SEC_COMENTARIOS && ehSerie() && foco.coluna == 1) ||
                    (nivel == 0 && !focoAmigos && acaoEm(botao) == ACAO_PRIMARIO);
     if (alvoHold && dur >= 150u) {
@@ -4514,21 +4611,27 @@ static void heroWeb(float a, float desloc) {
       // "Assistir do comeco" entre o primario e os circulares (issue #46).
       const char *rotIni = i18n("Assistir do começo");
       int selIni = nivel == 0 && botao == nb;
-      static float inicioExp;
+      static float inicioExp;   // largura da pilula (0..1)
+      static float inicioRot;   // alpha do rotulo (0..1)
       static Uint32 inicioTick;
       static int inicioIdx = -1;
       Uint32 tick = SDL_GetTicks();
       float dtIni = inicioTick ? (float)(Uint32)(tick - inicioTick) : 0;
       if (dtIni > 80) dtIni = 80;
-      if (inicioIdx != idx) { inicioExp = 0; inicioIdx = idx; }
+      if (inicioIdx != idx) { inicioExp = inicioRot = 0; inicioIdx = idx; }
       inicioTick = tick;
-      float alvoIni = selIni ? 1.0f : 0.0f;
-      inicioExp = ajustes_animacoes_reduzidas() ? alvoIni :
-        inicioExp + (alvoIni-inicioExp)*(1.0f-expf(-dtIni/65.0f));
+      // A LARGURA ABRE PRIMEIRO e o ROTULO entra DEPOIS, inteiro (anim_expande).
+      // Antes o rotulo era cortado pela largura em crescimento
+      // (txt_linha_corta com rs.w): cada palavra aparecia conforme a pilula
+      // crescia, como se o texto estivesse sendo digitado na hora — "a
+      // animacao dessa play from beginning nao ta legal, o texto ta meio
+      // que escrevendo". Ordenado, o rotulo so existe com a pilula aberta.
+      anim_expande(&inicioExp, &inicioRot, selIni ? 1.0f : 0.0f,
+                   dtIni * 0.001f, 160.0f, 120.0f);
       float fechado = acoesAgrupadas() ? NV_DETW2_CIRC : larguraSecundario(rotIni);
       float abertoIni = larguraSecundario(rotIni) + 44.0f;
       GfxRect rs = { bx, cyBtn-fechado*.5f,
-        acoesAgrupadas() ? fechado+(abertoIni-fechado)*inicioExp : fechado,
+        acoesAgrupadas() ? fechado+(abertoIni-fechado)*anim_suave(inicioExp) : fechado,
         acoesAgrupadas() ? NV_DETW2_CIRC : NV_DETW2_BTN_H };
       rs.y = cyBtn - rs.h*.5f;
       if (detalheRetrato()) rs = heroAcaoRect(&bx, &cyBtn, rs.w, rs.h);
@@ -4537,10 +4640,13 @@ static void heroWeb(float a, float desloc) {
         float tinta = selIni ? ajustes_acento_tinta(NULL,NULL,NULL) : 235.0f/255.0f;
         gfx_icone((GfxRect){rs.x+22,rs.y+(rs.h-28)*.5f,28,28},
                   "aj_rotate-ccw-clock", tinta,tinta,tinta,a);
-        if (rs.w > fechado+10) {
+        // Rotulo INTEIRO, sem corte: inicioRot so existe com a largura no
+        // fim (anim_expande), e o texto cabe sem encostar na borda da pilula
+        // (abertoIni = rotulo + 100 de folga contra os 64 do inicio dele).
+        if (inicioRot > 0.003f) {
           int cor = (int)(tinta*255);
-          TxtLinha label = txt_linha_corta(TXT_DET_BOTAO,rotIni,cor,cor,cor,255,rs.w-86);
-          txt_desenhar_alpha(label,rs.x+64,rs.y+(rs.h-label.h)*.5f,a*inicioExp);
+          TxtLinha label = txt_linha(TXT_DET_BOTAO,rotIni,cor,cor,cor,255);
+          txt_desenhar_alpha(label,rs.x+64,rs.y+(rs.h-label.h)*.5f,a*inicioRot);
         }
       } else desenhaSecundario(rs, rotIni, selIni, a);
       if (a > 0.3f) ponteiro_alvo(rs.x, rs.y, rs.w, rs.h, ponteiroDetalhe, NULL, -1, nb);
@@ -4967,7 +5073,7 @@ static void contarTemporada(int *total, int *vistos, int *futuros, int *sabe) {
 
 // Largura do trilho inteiro do segmentado (itens + vaos + folga).
 static float larguraSegTemporadas(void) {
-  int c, n = secaoN(SEC_TEMPORADAS);
+  int c, n = nTemps();
   float w = DET_SEG_PAD * 2.0f;
   for (c = 0; c < n; c++) w += larguraTemporada(c) + (c ? NV_DETP_TEMP_GAP : 0.0f);
   return w;
@@ -5006,6 +5112,23 @@ static void trilhoTemporadas(float y, float a) {
                  larguraSegTemporadas(), NV_DETP_TEMP_H + DET_SEG_PAD * 2.0f };
   if (ajustes_vidro()) gfx_cor(tr, 0.5f, 1, 1, 1, 0.06f * a);
   else gfx_cor(tr, 0.5f, 0.114f, 0.118f, 0.137f, a);
+}
+
+// Botao de episodio aleatorio: circulo do tamanho da fileira com o shuffle do
+// Lucide, na mesma pele dos chips de temporada (repouso #222, focado no realce).
+static void desenhaShuffle(GfxRect r, float f, float a) {
+  float fr, fg, fb, ti = ajustes_acento_tinta(&fr, &fg, &fb);
+  float raio = 0.5f, base = 0.133f, ic = 0.70f + (ti - 0.70f) * f;
+  GfxRect ig = { r.x + r.w * 0.26f, r.y + r.h * 0.26f, r.w * 0.48f, r.h * 0.48f };
+  foco_anel(r, raio, f, a);
+  if (ajustes_vidro()) { gfx_vidro_painel(r, raio, 0.4f, a); gfx_vidro_pilula_cheia(r, raio, f, a); }
+  else gfx_cor(r, raio, base + (fr - base) * f, base + (fg - base) * f, base + (fb - base) * f, a);
+  gfx_icone(ig, "aj_shuffle", ic, ic, ic, a);
+  // A dica so aparece com o foco, acima do botao: o icone sozinho nao diz o que faz.
+  if (f > 0.05f) {
+    TxtLinha l = txt_linha(TXT_DET_META2, i18n("Episódio aleatório"), 190, 192, 200, 255);
+    txt_desenhar_alpha(l, r.x + (r.w - l.w) * 0.5f, r.y - l.h - 8.0f, a * f);
+  }
 }
 
 // Item do segmentado de temporadas (Glass UI, mockup "detalhe-retomar"). Tres
@@ -5106,11 +5229,13 @@ static float desenhaNotaEpisodio(float x, float y, int fonte, int nota, float a)
 }
 
 static void desenhaAssistidoEpisodio(GfxRect th, float a) {
-  const float h = 46, pad = 12, icone = 28, gap = 10;
+  const float h = NV_DETP_EP_VISTO_H, pad = 12, icone = 28, gap = 10;
   TxtLinha texto = txt_linha_corta(TXT_CAPTION2, "Assistido", 255, 255, 255, 255,
                                   th.w * .5f - pad * 2 - icone - gap);
   float w = pad * 2 + icone + gap + texto.w;
-  GfxRect selo = {th.x + th.w - w - 18, th.y + 18, w, h};
+  // Fixo no canto superior direito da miniatura nos tres tamanhos (#205): a
+  // base do selo "EPISODIO n" e que se alinha a base daqui, e nao o contrario.
+  GfxRect selo = {th.x + th.w - w - 18, th.y + NV_DETP_EP_VISTO_Y, w, h};
   gfx_cor(selo, .5f, .055f, .068f, .09f, .96f * a);
   gfx_anel(selo, .5f, 1, .68f, .75f, .86f, .30f * a);
   GfxRect disco = {selo.x + pad, selo.y + (h - icone) * .5f, icone, icone};
@@ -5323,20 +5448,21 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
                s.y + (NV_DETP_EP_SELO_H - l.h) * 0.5f, a, 1.0f);
     } }
 
-  // Titulo: 32/800. O 800 nao existe na familia embarcada e o 32 so existe em
-  // Regular na tabela de estilos, entao vem de tres passadas.
+  // Titulo: UM DEGRAU ABAIXO na escala de sempre (#205, dono: "pode diminuir
+  // um pouco a fonte do titulo de cada episodio"). O peso extra do txt_peso
+  // vem de passadas, nao da familia embarcada.
   // Sem nome do episodio, "Episodio N" — que e um rotulo VERDADEIRO, deduzido
   // do numero, e nao o titulo de outra serie.
   { char reserva[32];
     const char *nome = epNome;
     if (!nome) { snprintf(reserva, sizeof reserva, i18n("Episódio %d"), epNum);
                  nome = reserva; }
-    TxtLinha l = txt_linha_corta(TXT_PLR_CORPO, nome, 255, 255, 255, 255,
-                                 NV_DETP_EP_TEXTO_W);
+    TxtLinha l = txt_linha_corta(epTituloEstilo(), nome, 255, 255, 255, 255,
+                                 epTextoW());
     txt_peso(l, textoX, r.y + (moderna ? epThumbH() + NV_DETP_EPM_TIT_DY : NV_DETP_EP_TIT_Y), a, 1.4f); }
 
-  // Sinopse: tres linhas, como a referencia, com truncamento do bloco.
-  // Sem sinopse o espaco
+  // Sinopse: 4 linhas na Moderna (#205; eram 2), 3 no Padrao, com truncamento
+  // do bloco. Sem sinopse o espaco
   // fica vazio: melhor um card com menos texto que um card com texto errado.
   // TXT_CAPTION (22/400) e nao TXT_DET_SIN (26), dono 08/10: no corpo do card a
   // sinopse da pagina pesava tanto quanto o titulo e empurrava o nome, os logos
@@ -5345,12 +5471,13 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   if (epSin)
     txt_bloco_corta(TXT_CAPTION, epSin, 255, 255, 255, textoX,
                     r.y + (moderna ? epThumbH() + NV_DETP_EPM_SIN_DY : NV_DETP_EP_SIN_Y),
-                    NV_DETP_EP_TEXTO_W, NV_DETP_EP_LD_SIN, a * 0.9f,
-                    moderna ? 2 : 3);
+                    epTextoW(), NV_DETP_EP_LD_SIN, a * 0.9f,
+                    epSinLinhas());
 
   // Meta: relogio + duracao + data, 20/400 rgb(179,179,179), com 38 de folga
-  // entre os dois blocos.
-  { float x = tx, y = r.y + (moderna ? NV_DETP_EPM_META_Y : NV_DETP_EP_META_Y);
+  // entre os dois blocos. Na Moderna e ancorado na BASE da miniatura
+  // (NV_DETP_EPM_META_DY), para acompanhar os tres tamanhos do card.
+  { float x = tx, y = r.y + (moderna ? epThumbH() - NV_DETP_EPM_META_DY : NV_DETP_EP_META_Y);
     // Relogio de 28x28. O glifo do web e um disco CHEIO em rgb(179,179,179) com
     // os ponteiros VAZADOS — o `path` do SVG recorta o L do ponteiro do disco.
     // Aqui o vazado sai pintando os ponteiros de preto por cima: naquele ponto
@@ -5413,7 +5540,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     if (ci && ci->progresso > 0 && ep && ci->temporada == ep->temporada &&
         ci->episodio == ep->episodio) prog = ci->progresso;
     if (prog > 2 && prog < 98) {
-      GfxRect tr = { tx, r.y + (moderna ? NV_DETP_EPM_BARRA_Y : NV_DETP_EP_BARRA_Y), NV_DETP_EP_TEXTO_W,
+      GfxRect tr = { tx, r.y + (moderna ? epThumbH() - NV_DETP_EPM_BARRA_DY : NV_DETP_EP_BARRA_Y), epTextoW(),
                      NV_DETP_EP_BARRA_H };
       // Anda do valor que esta tela mostrava ate o novo (revela.h): na volta
       // do player a barra do episodio cresce ate onde a pessoa parou.
@@ -6827,6 +6954,7 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
     switch (r) {
       case SEC_TEMPORADAS: {
         GfxRect b = { x, y, w, NV_DETP_TEMP_H };
+        if (ehShuffle(c)) { desenhaShuffle(b, f, a); break; }
         if (foco.fileira == r && c == foco.coluna) { menuOrigem = b; menuOrigemCol = c; menuOrigemF = f; menuOrigemA = a; }
         desenhaTemporada(b, c, f, a); break;
       }
@@ -6909,14 +7037,19 @@ static void desenhaEsqueletoEpisodios(float a) {
                          ye + (m ? epThumbH() + NV_DETP_EPM_TIT_DY : NV_DETP_EP_TIT_Y),
                          292.0f, 25.0f };
       GfxRect sin1 = { titulo.x, ye + (m ? epThumbH() + NV_DETP_EPM_SIN_DY : NV_DETP_EP_SIN_Y),
-                       NV_DETP_EP_TEXTO_W, 18.0f };
+                       epTextoW(), 18.0f };
       GfxRect sin2 = { sin1.x, sin1.y + NV_DETP_EP_LD_SIN, 420.0f, 18.0f };
+      GfxRect sin3 = { sin1.x, sin2.y + NV_DETP_EP_LD_SIN, 460.0f, 18.0f };
+      GfxRect sin4 = { sin1.x, sin3.y + NV_DETP_EP_LD_SIN, 380.0f, 18.0f };
       gfx_cor(card, NV_DETP_EP_RAIO / card.h,
               0.105f, 0.11f, 0.12f, a * 0.82f);
       gfx_cor(selo, 0.48f, 0.19f, 0.20f, 0.22f, a * 0.70f);
       gfx_cor(titulo, 0.5f, 0.25f, 0.26f, 0.28f, a * 0.62f);
       gfx_cor(sin1, 0.5f, 0.20f, 0.21f, 0.23f, a * 0.52f);
       gfx_cor(sin2, 0.5f, 0.20f, 0.21f, 0.23f, a * 0.52f);
+      if (!m) continue;   // as duas extras sao as linhas 3 e 4 da Moderna
+      gfx_cor(sin3, 0.5f, 0.20f, 0.21f, 0.23f, a * 0.52f);
+      gfx_cor(sin4, 0.5f, 0.20f, 0.21f, 0.23f, a * 0.52f);
     }
   }
 }

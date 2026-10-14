@@ -18,6 +18,7 @@
 #include "ajustes.h"
 #include "anim.h"
 #include "botoes.h"
+#include "corviva.h"
 #include "gfx.h"
 #include "idioma.h"
 #include "layout.h"
@@ -383,6 +384,7 @@ static void cinema(const DvtelaEstado *e, const Molas *m, Uint32 agora, float v)
   }
   prog = anim_clamp((prog + 0.15f) / (float)(n + 0.15f), 0.0f, 1.0f);
   y = base + 64.0f;
+  corviva_logo_acento(&r, &g, &b);   // o trilho leva a cor do logo, como na abertura; sem paleta, o realce
   gfx_cor((GfxRect){ x0, y, tw, 3.0f }, 0.5f, 1, 1, 1, 0.16f * v * entra);
   gfx_cor((GfxRect){ x0, y, tw * prog, 3.0f }, 0.5f, r, g, b, 0.9f * v * entra);
 

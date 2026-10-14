@@ -424,6 +424,9 @@ IGNORAR = {
     "conta-%s-p%d.json", "conta-fora",
     # Chaves da ilha e do avisodisp da pilula "Episódio" dos comentarios (detail.c).
     "det-com-ep", "dica:comentarios-episodio",
+    # Chave do aviso "pessoa sem pagina" do OK no elenco (detail.c): chave
+    # interna da ilha, como "det-com-ep" — nunca texto de tela.
+    "det-elenco-sem-pagina",
     "conta-addons-pend-",  # prefixo de arquivo da fila offline, nunca texto de tela
     "hdr do pipeline: %s (fonte DV=%d)",
     # Tres marcos de video.c/video_tizen.c. O buffer e montado numa instrucao

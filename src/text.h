@@ -187,6 +187,7 @@ typedef enum {
   // Medium nas outras). Mesmo corpo da sinopse (NV_FT_DET_SIN).
   TXT_DET_META_FORTE,   // ano, duracao       26 / 700
   TXT_DET_META_GEN,     // generos            26 / 600
+  TXT_HERO_SIN_GRANDE, // optional hero synopsis, 24/400
   TXT_NFONTES
 } TxtEstilo;
 
@@ -305,6 +306,19 @@ void txt_desenhar_tom(TxtLinha l, float x, float y, float cr, float cg, float cb
 // cabecalho. Passe x = -1 para so medir, sem desenhar.
 float txt_tracking(TxtEstilo estilo, const char *s, int r, int g, int b,
                    float x, float y, float alpha, float tracking);
+
+// TEXTO VIVO: desenha `s` glifo a glifo, cada caractere uma linha de UMA letra
+// rasterizada em BRANCO e tintada na hora (o GFX_TEXTO pega a cor no uniforme,
+// nao no RGB da textura). Para o texto que muda com o relogio da cena — tempo
+// do seek, percentuais, o IP sendo digitado: um valor novo reusa glifos que ja
+// estao no cache em vez de rasterizar + subir uma textura nova (~2,4 ms na C9,
+// medido) no meio da rolagem. Perde o kerning ENTRE caracteres, o que nao
+// aparece em digitos e selos curtos; frase com palavra vai em txt_linha.
+void txt_glifos(TxtEstilo estilo, const char *s, int r, int g, int b,
+                float x, float y, float alpha);
+// A largura do que txt_glifos desenharia, SEM desenhar: quem centra o texto
+// vivo tem de medir do mesmo jeito que desenha.
+float txt_glifos_largura(TxtEstilo estilo, const char *s);
 
 // Desenha texto QUEBRADO em linhas que cabem em `larg`, devolvendo a altura
 // usada. Sem isso, qualquer texto de tamanho variavel (sinopse de episodio,

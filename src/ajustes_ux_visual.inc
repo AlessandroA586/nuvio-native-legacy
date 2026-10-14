@@ -151,7 +151,9 @@ static const char *ajVisualIcone(int op) {
     case AJ_PLR_CLASSIF: return "aj_shield";
     case AJ_TELA_ABERTURA: return "aj_clapperboard";
     case AJ_ABERTURA_ADDON: return "aj_clapperboard";
+    case AJ_EP_TAMANHO: return "aj_layout-dashboard";
     case AJ_ESTAT_TAMANHO: return "aj_gauge";
+    case AJ_ESTAT_LADO: return "aj_gauge";
     case AJ_REACAO_CREDITOS: return "aj_circle-play";
     case AJ_CW_CONCLUIDO: return "aj_circle-play";
     case AJ_CW_MINIMO: return "aj_circle-play";
