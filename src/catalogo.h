@@ -152,6 +152,7 @@ typedef struct {
   // conheceu. Vazio = origem desconhecida (Trakt, Salvos, progresso, pacote).
   // Mudar o tamanho invalida o cache em disco sozinho (ver sizeof(CatItem)).
   char origem[96];
+  int ranking; // Posicao original no catalogo, antes dos filtros.
 } CatItem;
 
 // Um episodio de serie. Vem de art/episodios.txt, gerado a partir do campo

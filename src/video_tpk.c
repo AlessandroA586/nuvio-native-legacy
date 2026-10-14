@@ -530,9 +530,9 @@ int video_tocar(const char *u) {
       }
       free(fx); free(cab);
       { int t = mkvEstado == 3 ? trilhaParaConverter(-1) : 0;
-        if (t > 0 && convIniciar(t, 0.0, "cabecalho lido antes de abrir: so DTS/TrueHD")) return 1;
+        if (t > 0 && convIniciar(t, 0.0, i18n("cabecalho lido antes de abrir: so DTS/TrueHD"))) return 1;
         t = mkvEstado == 3 ? trilhaPreferida() : 0;
-        if (t > 0 && convIniciar(t, 0.0, "cabecalho lido antes de abrir: o idioma preferido so existe em DTS/TrueHD")) return 1; }
+        if (t > 0 && convIniciar(t, 0.0, i18n("cabecalho lido antes de abrir: o idioma preferido so existe em DTS/TrueHD"))) return 1; }
     }
   }
   return abrirSessao();
@@ -718,7 +718,7 @@ static void montarListaConvertida(void) {
   if (legAtual >= nLeg) legAtual = -1;
   if (ordLeg >= 0) for (i = 0; i < nl; i++) if (l[i].ordinalMkv == ordLeg) legAtual = i;
   printf("[dts-tpk] menu: %d audio e %d legenda(s) de texto do arquivo; tocando faixa %d (%s)%s\n", na, nl, cv.track,
-         na ? faixaAudio[sel].rotulo : "-", legAtual >= 0 ? ", legenda escolhida mantida" : "");
+         na ? faixaAudio[sel].rotulo : "-", legAtual >= 0 ? i18n(", legenda escolhida mantida") : "");
   fflush(stdout);
 }
 
@@ -787,7 +787,7 @@ static void convTrocar(int track, int modo, double pos, const char *url) {
   cv.buscarMs = !cv.prog && pos > 1.0 ? (int)(pos * 1000.0) : -1;
   cv.seekPend = 0; cv.voltar = 0;
   cv.posConhecida = pos;
-  convReabrir(pos, "troca para o convertido");
+  convReabrir(pos, i18n("troca para o convertido"));
   // A lista do arquivo ja, antes do player novo responder: a legenda escolhida
   // no original (texto, desenhado pelo overlay do app lendo a fonte) segue na
   // mesma faixa, e abrirSessao nao a zera (ver la).
@@ -863,7 +863,7 @@ static void convDesistir(const char *motivo) {
   dts_tpk_fechar();
   cv.ativo = 0; cv.desistiu = 1; cv.prog = 0; cv.deslocOk = 1;
   cv.buscarMs = pos > 1.0 ? (int)(pos * 1000.0) : -1;
-  convReabrir(pos, "volta ao original");
+  convReabrir(pos, i18n("volta ao original"));
   abrirSessao();
 }
 
@@ -876,7 +876,7 @@ static void convVoltar(void) {
   dts_tpk_fechar();
   cv.ativo = 0; cv.prog = 0; cv.deslocOk = 1; cv.voltar = 1;
   cv.buscarMs = pos > 1.0 ? (int)(pos * 1000.0) : -1;
-  convReabrir(pos, "volta ao audio da TV");
+  convReabrir(pos, i18n("volta ao audio da TV"));
   abrirSessao();
 }
 
@@ -910,14 +910,14 @@ static void avaliarAudioTv(void) {
   if (!nRec) return;
   if (nTv > 0 && convPossivel()) {
     int t = trilhaPreferida();
-    if (t > 0 && convIniciar(t, video_pos(), "o idioma de audio preferido so existe numa faixa DTS/TrueHD")) return;
+    if (t > 0 && convIniciar(t, video_pos(), i18n("o idioma de audio preferido so existe numa faixa DTS/TrueHD"))) return;
   }
   printf("[audio] TV recusou %s: faixas da TV=%d, no arquivo=%d [%s]%s\n", recusados, nTv, nArq, lista,
          nRec == nArq && nTv == 0 ? " -> sem audio tocavel" : "");
   fflush(stdout);
   if (nRec == nArq && nTv == 0) {
     int t = convPossivel() ? trilhaParaConverter(0) : 0;
-    if (t > 0 && convIniciar(t, video_pos(), "a TV nao listou audio e o arquivo so tem DTS/TrueHD")) return;
+    if (t > 0 && convIniciar(t, video_pos(), i18n("a TV nao listou audio e o arquivo so tem DTS/TrueHD"))) return;
     audioNaoSup = 1;
   }
 }
@@ -1085,7 +1085,7 @@ static void convBombear(void) {
     }
   }
   if (!cv.ativo && !cv.sondando && semCabecalho() && pronto && faixasLidas && !faixasDaTv() && convPossivel())
-    convSondar(DTSTPK_HLS, "a TV nao listou audio");
+    convSondar(DTSTPK_HLS, i18n("a TV nao listou audio"));
   if (cv.sondando) {
     int e = dts_tpk_estado(), nTv = faixasDaTv();
     if (nTv > 0) {
@@ -1096,7 +1096,7 @@ static void convBombear(void) {
       // MP4 fragmentado sem indice inteiro: a sonda de novo, no TS continuo.
       int modo = DTSTPK_PROG_TS;
       dts_tpk_fechar(); cv.sondando = 0; cv.refezProg = 1;
-      convSondar(modo, "sem indice de quadros-chave para o HLS");
+      convSondar(modo, i18n("sem indice de quadros-chave para o HLS"));
     } else if (e == DTSTPK_FALHOU) {
       printf("[dts-tpk] o conversor nao converte esta fonte (%s): fica o original\n", dts_tpk_erro());
       fflush(stdout);
@@ -1110,7 +1110,7 @@ static void convBombear(void) {
       if (modoProg(cv.modo)) dts_tpk_url_em(pos, url, sizeof url);
       printf("[dts-tpk] convertendo o audio da fonte sem cabecalho MKV (%s) a partir de %.1f s, modo %s, corpo %s, saida %s; motivo: %s\n",
              dts_tpk_caminho(), pos, nomeModo(cv.modo), dts_tpk_corpo_nome(DTSTPK_CORPO_CHUNKED), saidaRotulo(6),
-             cv.naoSup ? "a TV acusou NotSupportedAudioCodec" : "a TV nao listou audio");
+             cv.naoSup ? "a TV acusou NotSupportedAudioCodec" : i18n("a TV nao listou audio"));
       fflush(stdout);
       convTrocar(0, cv.modo, pos, url);
     }
@@ -1126,15 +1126,15 @@ static void convBombear(void) {
   }
   if (!cv.jaTocou) {
     if (dts_tpk_estado() == DTSTPK_FALHOU && dts_tpk_sem_indice() && !cv.prog && !cv.refezProg) { convRefazerProg(); return; }
-    if (dts_tpk_estado() == DTSTPK_FALHOU) { char m[200]; snprintf(m, sizeof m, "a fonte nao abriu no conversor (%s)", dts_tpk_erro()); convDesistir(m); return; }
+    if (dts_tpk_estado() == DTSTPK_FALHOU) { char m[200]; snprintf(m, sizeof m, i18n("a fonte nao abriu no conversor (%s)"), dts_tpk_erro()); convDesistir(m); return; }
     if (reconErroPend) {
       char m[64];
-      snprintf(m, sizeof m, "o player recusou o fluxo convertido (erro 0x%08x)", (unsigned)reconErroCod);
+      snprintf(m, sizeof m, i18n("o player recusou o fluxo convertido (erro 0x%08x)"), (unsigned)reconErroCod);
       reconErroPend = 0;
       convDesistir(m);
       return;
     }
-    if (!pronto && agora - cv.abriuEm > 45000u) { convDesistir("o player nao preparou em 45 s"); return; }
+    if (!pronto && agora - cv.abriuEm > 45000u) { convDesistir(i18n("o player nao preparou em 45 s")); return; }
   }
   // Troca no meio do filme (HLS): o player abriu do zero, e o seek vai depois
   // do Start, como no recarregar da reconexao.
@@ -1151,9 +1151,9 @@ static void convBombear(void) {
     double raw = hPos() / 1000.0, base = dts_tpk_inicio_stream();
     if (raw >= 0.3 && base >= 0) {
       const char *como;
-      if (fabs(raw - base) < 3.0) { cv.desloc = 0; como = "absoluta (tempo da fonte)"; }
-      else if (fabs(raw - (base + 10.0)) < 3.0) { cv.desloc = -10.0; como = "absoluta com os +10 s do fluxo"; }
-      else if (raw < 3.0) { cv.desloc = base; como = "relativa ao comeco do fluxo"; }
+      if (fabs(raw - base) < 3.0) { cv.desloc = 0; como = i18n("absoluta (tempo da fonte)"); }
+      else if (fabs(raw - (base + 10.0)) < 3.0) { cv.desloc = -10.0; como = i18n("absoluta com os +10 s do fluxo"); }
+      else if (raw < 3.0) { cv.desloc = base; como = i18n("relativa ao comeco do fluxo"); }
       else { cv.desloc = base - raw; como = "desconhecida (ajustada pelo quadro-chave)"; }
       cv.deslocOk = 1;
       printf("[dts-tpk] progressivo: o player informou %.2f s com o fluxo comecando em %.3f s: posicao %s, desloc %+.2f s\n",

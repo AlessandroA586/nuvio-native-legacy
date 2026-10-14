@@ -18,6 +18,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_NOME_ADDON: return "aj_rows-3";
     case AJ_SUFIXO_TIPO: return "aj_rows-3";
     case AJ_SELO_VISTO: return "aj_rows-3";
+    case AJ_OCULTAR_FILMES_VISTOS: return "aj_rows-3";
     case AJ_CW_LIGADO: return "aj_rotate-ccw-clock";
     case AJ_CW_OK: return "aj_rotate-ccw-clock";
     case AJ_CW_ESTILO: return "aj_rotate-ccw-clock";
@@ -232,6 +233,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_DEBRID_TB: return "aj_key-round";
     case AJ_DEBRID_PM: return "aj_key-round";
     case AJ_DEBRID_AD: return "aj_key-round";
+    case AJ_DEBRID_RD_TESTAR: case AJ_DEBRID_TB_TESTAR: case AJ_DEBRID_PM_TESTAR:
     case AJ_DEBRID_AD_TESTAR: return "aj_key-round";
     case AJ_MDB_CHAVE: return "aj_key-round";
     case AJ_FANART_CHAVE: return "aj_key-round";

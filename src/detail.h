@@ -166,6 +166,15 @@ int  detail_pediu_do_inicio(void);
 #define NV_DETP_EP_ICONE      28.0f
 #define NV_DETP_EP_BARRA_Y   390.0f   // barra 576x8, raio 999
 #define NV_DETP_EP_BARRA_H     8.0f
+// MODERNA: titulo e sinopse ficam ABAIXO da miniatura (16:9), nao sobre ela. Na
+// miniatura sobram o selo, o rodape de duracao/notas/data, a barra e o visto.
+#define NV_DETP_EPM_THUMB_H  360.0f
+#define NV_DETP_EPM_H        490.0f   // miniatura + titulo (1 linha) + sinopse (2 linhas)
+#define NV_DETP_EPM_SELO_Y    24.0f
+#define NV_DETP_EPM_META_Y   290.0f
+#define NV_DETP_EPM_BARRA_Y  336.0f
+#define NV_DETP_EPM_TIT_DY    16.0f   // base da miniatura ao topo do titulo
+#define NV_DETP_EPM_SIN_DY    62.0f   // base da miniatura ao topo da sinopse
 #define NV_DETP_EP_STATUS     48.0f   // circulo tracejado de "nao assistido"
 // Anel de foco. O web usa 2px na miniatura do episodio e 4px nos botoes do
 // hero; aqui fica 4 nos dois, porque a folha declara pixels de CSS e a tela
