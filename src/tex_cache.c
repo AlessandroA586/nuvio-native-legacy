@@ -4287,6 +4287,7 @@ int tex_bombear(int max_por_quadro) {
         Uint32 em = SDL_GetTicks();
         if (linhas < 16) linhas = 16;
         glBindTexture(GL_TEXTURE_2D, uplTex);
+        gfx_vidro_sujar();   // a textura muda no lugar: o hash do vidro nao ve
         if (uplY < sup->h) {
           if (uplY + linhas > sup->h) linhas = sup->h - uplY;
           glTexSubImage2D(GL_TEXTURE_2D, 0, 0, uplY, sup->w, linhas, GL_RGBA, GL_UNSIGNED_BYTE,
