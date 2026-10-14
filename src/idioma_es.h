@@ -1471,6 +1471,7 @@ T("Com retomada rápida, guarda só o último título por até 3 horas. Trocar d
   T("Depois, o CH+ abre sua lista quando quiser.", "Después, CH+ abre tu lista cuando quieras."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "Después, el botón AZUL abre tu lista cuando quieras."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "Después, el botón CANAL + abre tu lista cuando quieras."),
+  T("Desafixar", "Desfijar"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Desactiva la barra lateral moderna para elegir entre contraída y fija."),
   T("Descanso", "Reposo"),
   T("Descobrir", "Descubrir"),

@@ -1472,6 +1472,7 @@ T("Com retomada rápida, guarda só o último título por até 3 horas. Trocar d
   T("Depois, o CH+ abre sua lista quando quiser.", "CH+ отваря списъка ви, когато поискате."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "СИНИЯТ бутон отваря списъка ви, когато поискате."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "Бутонът CHANNEL + отваря списъка ви, когато поискате."),
+  T("Desafixar", "Откачи"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Изключете модерната странична лента, за да избирате между свита и закачена."),
   T("Descanso", "Покой"),
   T("Descobrir", "Открийте"),

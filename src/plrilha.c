@@ -126,7 +126,11 @@ void plrilha_velocidade(int cent) { velCent = cent > 0 ? cent : VEL_NORMAL; }
 static char titulo[256];
 void plrilha_titulo(const char *t) { snprintf(titulo, sizeof titulo, "%s", t ? t : ""); }
 
-void plrilha_esconder(void) { escondida = 1; }
+// Sem pedido com corpo NO QUADRO o ultimo nao vale mais (ver plrilha_desenhar):
+// quem esconde a ilha antes dos pedidos (estatisticas) impediria ate a troca
+// de um corpo pelo outro — a ilha nova nasceria com o cabecalho dela sobre o
+// corpo antigo um quadro inteiro.
+void plrilha_esconder(void) { escondida = 1; temUlt = 0; corpoA = 0.0f; }
 
 int plrilha_direita(void) {
   return 1;   // sempre a direita (dono, 03/10)
@@ -314,6 +318,7 @@ static void plrilha_desenharCorpo_(Uint32 agora) {
   dir = plrilha_direita();
 
   if (temPed && ped.w > 0.0f) { copiar(&ult, &ped, ultTexto, ultDir, ultIcone); temUlt = 1; }
+  else if (!corpoA) temUlt = 0;   // escondida neste quadro zerou o ultimo
   p = temPed ? &ped : &vazio;
   corpo = temPed && ped.w > 0.0f;
   // VOLTA AO RELOGIO: o corpo que pediu `voltaRelogio` acabou. Com o relogio

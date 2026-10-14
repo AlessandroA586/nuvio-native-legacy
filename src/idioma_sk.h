@@ -1472,6 +1472,7 @@ T("Com retomada rápida, guarda só o último título por até 3 horas. Trocar d
   T("Depois, o CH+ abre sua lista quando quiser.", "CH+ otvorí váš zoznam, kedykoľvek chcete."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "Modré tlačidlo otvorí váš zoznam, kedykoľvek chcete."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "Tlačidlo CHANNEL + otvorí váš zoznam, kedykoľvek chcete."),
+  T("Desafixar", "Odopnúť"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Vypnite moderný bočný panel, aby ste mohli vyberať medzi zbaleným a pripnutým."),
   T("Descanso", "Pokoj"),
   T("Descobrir", "Objavovať"),

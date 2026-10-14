@@ -1472,6 +1472,7 @@ T("Com retomada rápida, guarda só o último título por até 3 horas. Trocar d
   T("Depois, o CH+ abre sua lista quando quiser.", "その後はCH+でいつでもリストを開けます。"),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "その後は青ボタンでいつでもリストを開けます。"),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "その後はチャンネル + ボタンでいつでもリストを開けます。"),
+  T("Desafixar", "ピン留めを解除"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "モダンなサイドバーをオフにすると、折りたたみと固定を選べます。"),
   T("Descanso", "休止画面"),
   T("Descobrir", "見つける"),

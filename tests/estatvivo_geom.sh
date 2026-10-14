@@ -1,7 +1,6 @@
 #!/bin/bash
-# Estatisticas ao vivo: o retangulo do painel de cada tamanho e igual as medidas
-# das laterais do player, fixo com os numeros mudando, e o lado esquerdo espelha o
-# direito. Sem GL. Ver tests/estatvivo_geom.c.
+# Live statistics: stable geometry, clock alignment, internal hints and pinned
+# focus/side navigation. Uses an offscreen GL target. See estatvivo_geom.c.
 #   bash tests/estatvivo_geom.sh
 set -eu
 cd "$(dirname "$0")/.."

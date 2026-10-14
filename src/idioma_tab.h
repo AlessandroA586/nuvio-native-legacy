@@ -1471,6 +1471,7 @@
   { "Depois, o CH+ abre sua lista quando quiser.", "CH+ opens your list whenever you want." },
   { "Depois, o botão AZUL abre sua lista quando quiser.", "The BLUE button opens your list whenever you want." },
   { "Depois, o botão CANAL + abre sua lista quando quiser.", "The CHANNEL + button opens your list whenever you want." },
+  { "Desafixar", "Unpin" },
   { "Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Turn off the modern sidebar to choose between collapsed and pinned." },
   { "Descanso", "Screensaver" },
   { "Descobrir", "Discover" },

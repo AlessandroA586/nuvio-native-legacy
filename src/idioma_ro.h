@@ -1471,6 +1471,7 @@ T("Com retomada rápida, guarda só o último título por até 3 horas. Trocar d
   T("Depois, o CH+ abre sua lista quando quiser.", "După aceea, CH+ îți deschide lista oricând vrei."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "După aceea, butonul ALBASTRU îți deschide lista oricând vrei."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "După aceea, butonul CANAL + îți deschide lista oricând vrei."),
+  T("Desafixar", "Anulează fixarea"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Dezactivează bara laterală modernă pentru a alege între restrânsă și fixă."),
   T("Descanso", "Repaus"),
   T("Descobrir", "Descoperă"),

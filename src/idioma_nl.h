@@ -1472,6 +1472,7 @@ T("Com retomada rápida, guarda só o último título por até 3 horas. Trocar d
   T("Depois, o CH+ abre sua lista quando quiser.", "CH+ opent je lijst wanneer je wilt."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "De BLAUWE knop opent je lijst wanneer je wilt."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "De knop KANAAL + opent je lijst wanneer je wilt."),
+  T("Desafixar", "Losmaken"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Zet de moderne zijbalk uit om te kiezen tussen ingeklapt en vastgezet."),
   T("Descanso", "Rust"),
   T("Descobrir", "Ontdekken"),

@@ -2727,10 +2727,13 @@ void app_evento(const SDL_Event *e) {
   // A CENTRAL DE CONTROLE (central.h, CH+ segurado) e uma camada: aberta, come
   // o teclado todo, por cima do player, das folhas e das ilhas.
   if (central_aberta()) { central_evento(e); return; }
-  // AS ESTATISTICAS AO VIVO (estatvivoui.h), abertas pela central: modal ate
-  // Voltar fecha; OK ou Esquerda/Direita trocam o tamanho; Baixo fixa no canto
-  // e libera as teclas para o player.
-  if (estatvivo_evento(e)) return;
+  // Statistics owns input while focused. UP enters a pinned panel; Back/DOWN
+  // return to the player. OK resizes, LEFT/RIGHT move it, UP unpins.
+  // Com uma folha/aviso/overlay de pe ou foco no player que usa CIMA (barra,
+  // "Pular abertura"), so o painel ABERTO come o teclado: o CIMA que o
+  // focaria fica de quem esta na frente (a folha mora mais abaixo nesta fila).
+  if (estatvivo_evento(e, faixas_aberta() || episodios_aberto() || stream_folha_aberta() ||
+                        guia_overlay_aberta() || avisos_aberto() || player_cima_dele())) return;
   // O MODAL DA ILHA (ilha.h) e uma camada: aberto, come o teclado todo.
   if (ilha_evento(e)) return;
   // A CENTRAL DE AVISOS vem logo depois do painel de log: com o toast na tela

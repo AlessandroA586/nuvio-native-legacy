@@ -1472,6 +1472,7 @@ T("Com retomada rápida, guarda só o último título por até 3 horas. Trocar d
   T("Depois, o CH+ abre sua lista quando quiser.", "Deretter åpner CH+ listen din når du vil."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "Deretter åpner den BLÅ knappen listen din når du vil."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "Deretter åpner knappen KANAL + listen din når du vil."),
+  T("Desafixar", "Løsne"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Slå av det moderne sidefeltet for å velge mellom skjult og fast."),
   T("Descanso", "Hvile"),
   T("Descobrir", "Oppdag"),

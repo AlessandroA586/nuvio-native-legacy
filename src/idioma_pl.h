@@ -1472,6 +1472,7 @@ T("Com retomada rápida, guarda só o último título por até 3 horas. Trocar d
   T("Depois, o CH+ abre sua lista quando quiser.", "CH+ otwiera Twoją listę, kiedy chcesz."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "Niebieski przycisk otwiera Twoją listę, kiedy chcesz."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "Przycisk KANAŁ + otwiera Twoją listę, kiedy chcesz."),
+  T("Desafixar", "Odepnij"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Wyłącz nowoczesny pasek boczny, aby wybierać między zwiniętym a przypiętym."),
   T("Descanso", "Wygaszacz"),
   T("Descobrir", "Odkrywaj"),

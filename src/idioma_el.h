@@ -1472,6 +1472,7 @@ T("Com retomada rápida, guarda só o último título por até 3 horas. Trocar d
   T("Depois, o CH+ abre sua lista quando quiser.", "CH+ κουμπί ανοίγει τη λίστα σου όποτε θέλεις."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "Το ΜΠΛΕ κουμπί ανοίγει τη λίστα σου όποτε θέλεις."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "Το κουμπί CHANNEL + ανοίγει τη λίστα σου όποτε θέλεις."),
+  T("Desafixar", "Ξεκαρφίτσωμα"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Απενεργοποίησε τη μοντέρνα πλαϊνή μπάρα για να διαλέξεις ανάμεσα σε συμπτυγμένη και καρφιτσωμένη."),
   T("Descanso", "Αδράνεια"),
   T("Descobrir", "Ανακάλυψε"),

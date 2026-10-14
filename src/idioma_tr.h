@@ -1472,6 +1472,7 @@ T("Com retomada rápida, guarda só o último título por até 3 horas. Trocar d
   T("Depois, o CH+ abre sua lista quando quiser.", "CH+, istediğin zaman listeni açar."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "MAVİ düğme, istediğin zaman listeni açar."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "KANAL + düğmesi, istediğin zaman listeni açar."),
+  T("Desafixar", "Sabitlemeyi kaldır"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Daraltılmış ile sabitlenmiş arasında seçim yapmak için modern kenar çubuğunu kapat."),
   T("Descanso", "Bekleme"),
   T("Descobrir", "Keşfet"),

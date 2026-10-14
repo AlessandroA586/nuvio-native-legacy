@@ -1764,6 +1764,9 @@ int player_duracao_midia(double *seg) {
 int  player_carregando(void) { return esperandoFonte || (comVideo && !video_pronto()); }
 int  player_controles_visiveis(void) { return visivel; }
 int   player_foco_na_barra(void) { return barraFoco; }
+// UP belongs to the player while controls are up (button row -> seek bar, bar ->
+// Skip Intro), the loading card expands, or the pause panel is shown.
+int   player_cima_dele(void) { return visivel || skipFoco || player_carregando() || pausao_visivel(); }
 float player_fileira(void) { return fileira; }
 int   player_so_barra(void) { return soBarra && visivel; }
 float player_posicao_seg(void) { return posSeg; }

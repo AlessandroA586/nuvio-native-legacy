@@ -1472,6 +1472,7 @@ T("Com retomada rápida, guarda só o último título por até 3 horas. Trocar d
   T("Depois, o CH+ abre sua lista quando quiser.", "CH+ membuka daftarmu kapan pun kamu mau."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "Tombol BIRU membuka daftarmu kapan pun kamu mau."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "Tombol CHANNEL + membuka daftarmu kapan pun kamu mau."),
+  T("Desafixar", "Lepaskan"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Matikan bilah samping modern untuk memilih antara diciutkan dan disematkan."),
   T("Descanso", "Istirahat"),
   T("Descobrir", "Jelajahi"),

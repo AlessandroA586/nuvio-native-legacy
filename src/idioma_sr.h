@@ -1472,6 +1472,7 @@ T("Com retomada rápida, guarda só o último título por até 3 horas. Trocar d
   T("Depois, o CH+ abre sua lista quando quiser.", "CH+ otvara vašu listu kad god poželite."),
   T("Depois, o botão AZUL abre sua lista quando quiser.", "PLAVO dugme otvara vašu listu kad god poželite."),
   T("Depois, o botão CANAL + abre sua lista quando quiser.", "Dugme CHANNEL + otvara vašu listu kad god poželite."),
+  T("Desafixar", "Откачи"),
   T("Desative a barra lateral moderna para escolher entre recolhida e fixa.", "Isključite modernu bočnu traku da biste birali između sklopljene i zakačene."),
   T("Descanso", "Mirovanje"),
   T("Descobrir", "Otkrij"),
