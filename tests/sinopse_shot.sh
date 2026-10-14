@@ -14,7 +14,7 @@ for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c) continue;; esac
   sources+=("$source")
 done
-eval cc '"${sources[@]}"' tests/sinopse_shot.c -Isrc -o /tmp/nuvio-sinopse-shot \
+eval cc -DNV_SHOT_HOOKS '"${sources[@]}"' tests/sinopse_shot.c -Isrc -o /tmp/nuvio-sinopse-shot \
   -O1 -g "$ENV_D" \
   -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL \
