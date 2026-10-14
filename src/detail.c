@@ -660,6 +660,8 @@ static float serieGrupo(int r);
 static const NotasSecao *notasDados(void);
 static float alturaCabComentarios(void);
 static int temporadaEm(int c);
+static int colTemp(int pos);   // coluna da fileira de temporadas (0 = shuffle)
+static int posTemp(int c);
 static int epAbsoluto(int c);
 static int epVisiveis(void);
 static int epNaoExibido(const CatEp *ep);
@@ -846,7 +848,7 @@ static void progAbrirTemporada(int col) {
   for (k = 0; k < ci->nTemporadas; k++) if (ci->temporadas[k] == d->t[col].numero) break;
   if (k >= ci->nTemporadas) return;
   temporada = k;
-  foco.colunaLembrada[SEC_TEMPORADAS] = k;
+  foco.colunaLembrada[SEC_TEMPORADAS] = colTemp(k);
   irParaTemporada(k, 0);
   q = epVisiveis();
   if (q < 1) return;
@@ -894,7 +896,7 @@ static void tocarAleatorio(void) {
   for (k = 0; k < ci->nTemporadas; k++) if (ci->temporadas[k] == t) break;
   if (k >= ci->nTemporadas) return;
   temporada = k;
-  foco.colunaLembrada[SEC_TEMPORADAS] = k;
+  foco.colunaLembrada[SEC_TEMPORADAS] = colTemp(k);
   irParaTemporada(k, 0);
   q = epVisiveis();
   for (c = 0; c < q; c++) {
@@ -924,7 +926,7 @@ static int detail_ep_borda(int dir) {
   foco.nColunas[SEC_EPISODIOS] = q;
   foco.fileira = SEC_EPISODIOS; foco.coluna = col;
   epAncora = col; foco.colunaLembrada[SEC_EPISODIOS] = col;
-  foco.colunaLembrada[SEC_TEMPORADAS] = temporada;
+  foco.colunaLembrada[SEC_TEMPORADAS] = colTemp(temporada);
   { const CatEp *ep = cat_episodio(idx, epAbsoluto(col));
     comEpT = ep ? ep->temporada : 0; comEpE = ep ? ep->episodio : 0; }
   return 1;
@@ -1564,7 +1566,7 @@ static void abrirInterno(const HomeItem *it) {
   // focus_mover consulta ao entrar numa fileira (focus.c:26), e ela nasce
   // zerada pelo memset de focus_iniciar. Semea-la aqui e o unico jeito de a
   // pagina lembrar onde o progresso estava.
-  foco.colunaLembrada[SEC_TEMPORADAS] = temporada;
+  foco.colunaLembrada[SEC_TEMPORADAS] = colTemp(temporada);
   foco.colunaLembrada[SEC_EPISODIOS]  = epAncora;
   memset(animFoco, 0, sizeof animFoco);
   memset(scrollSec, 0, sizeof scrollSec); memset(velSec, 0, sizeof velSec);
@@ -1847,7 +1849,7 @@ static void comentariosEscolher(void) {
       if (ci->temporadas[k] == comEpT) {
         temporada = k;
         irParaTemporada(k, 0);
-        foco.colunaLembrada[SEC_TEMPORADAS] = k;
+        foco.colunaLembrada[SEC_TEMPORADAS] = colTemp(k);
         n = foco.nColunas[SEC_EPISODIOS] = epVisiveis();
         for (c = 0; c < n; c++) {
           const CatEp *e = cat_episodio(idx, epAbsoluto(c));
@@ -2071,9 +2073,13 @@ static int nTemps(void) {
   if (!ehSerie() || !ci || ci->nTemporadas <= 0) return 0;
   return ci->nTemporadas < N_ITENS - 1 ? ci->nTemporadas : N_ITENS - 1;
 }
-// A ULTIMA coluna da fileira de temporadas nao e aba: e o botao de episodio
-// aleatorio, ao lado do segmentado.
-static int ehShuffle(int c) { int n = nTemps(); return n > 0 && c == n; }
+// O botao de episodio aleatorio e a PRIMEIRA coluna da fileira, antes da
+// Temporada 1 (dono, #205): no fim de uma serie de muitas temporadas ele caia
+// fora da tela. Daqui para baixo a coluna 0 e dele e as abas comecam na 1.
+static int ehShuffle(int c) { int n = nTemps(); return n > 0 && c == 0; }
+// Coluna da fileira que carrega a temporada na posicao `pos`, e a volta.
+static int colTemp(int pos) { return pos + 1; }
+static int posTemp(int c)   { return c - 1; }
 
 static int secaoN(int r) {
   const CatItem *ci = cat_item(idx);
@@ -2806,13 +2812,13 @@ void detail_evento(const SDL_Event *e) {
       // temporada inteira nao pode sair por engano num OK comum. A aba
       // segurada passa a ser a escolhida, para os checks que mudarem estarem
       // na lista que aparece por tras.
-      temporada = foco.coluna;
+      temporada = posTemp(foco.coluna);
       irParaTemporada(temporada, 0);
-      episodios_menu_temporada(idx, temporadaEm(foco.coluna));
+      episodios_menu_temporada(idx, temporadaEm(posTemp(foco.coluna)));
     } else if (foco.fileira == SEC_TEMPORADAS) {
       // Trocar de aba BUSCA a temporada. Antes so mudava o realce e a lista
       // continuava a mesma, o que fazia a aba parecer quebrada.
-      temporada = foco.coluna;
+      temporada = posTemp(foco.coluna);
       irParaTemporada(temporada, 1);
     } else if (foco.fileira == SEC_ELENCO && abaIdDe(abaInfo) == ABA_ELENCO) {
       // OK num rosto abre a FILMOGRAFIA da pessoa. E o `openCastDetail` do web
@@ -3091,7 +3097,7 @@ static float yItem(int r, int c) { (void)r; (void)c; return 0; }
 // e uma constante como a do episodio.
 static float larguraItem(int r, int c) {
   switch (r) {
-    case SEC_TEMPORADAS:  return ehShuffle(c) ? NV_DETP_TEMP_H : larguraTemporada(c);
+    case SEC_TEMPORADAS:  return ehShuffle(c) ? NV_DETP_TEMP_H : larguraTemporada(posTemp(c));
     case SEC_EPISODIOS:   return epCardW();
     case SEC_ABAS_INFO:   return larguraAbaInfo(c);
     case SEC_TRAILERS:     return NV_DETF_TR_W;
@@ -3493,8 +3499,8 @@ void detail_atualizar(float dt, Uint32 agora) {
   // mostra. Esperar meio segundo para trocar uma VISTA e a propria "demora ao
   // trocar de temporada" que o repouso tentava evitar.
   if (nivel >= 1 && foco.fileira == SEC_TEMPORADAS) {
-    if (foco.coluna != temporada && !ehShuffle(foco.coluna)) {
-      temporada = foco.coluna;
+    if (!ehShuffle(foco.coluna) && posTemp(foco.coluna) != temporada) {
+      temporada = posTemp(foco.coluna);
       irParaTemporada(temporada, 0);
     }
   } else if (foco.fileira == SEC_EPISODIOS) {
@@ -6903,8 +6909,8 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
       case SEC_TEMPORADAS: {
         GfxRect b = { x, y, w, NV_DETP_TEMP_H };
         if (ehShuffle(c)) { desenhaShuffle(b, f, a); break; }
-        if (foco.fileira == r && c == foco.coluna) { menuOrigem = b; menuOrigemCol = c; menuOrigemF = f; menuOrigemA = a; }
-        desenhaTemporada(b, c, f, a); break;
+        if (foco.fileira == r && c == foco.coluna) { menuOrigem = b; menuOrigemCol = posTemp(c); menuOrigemF = f; menuOrigemA = a; }
+        desenhaTemporada(b, posTemp(c), f, a); break;
       }
       case SEC_EPISODIOS: {
         GfxRect b = { x, y, epCardW(), epCardH() };
