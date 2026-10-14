@@ -8,10 +8,15 @@
 #   bash tools/sanitiza.sh asan     # so ASan+UBSan
 #   bash tools/sanitiza.sh thread   # so TSan
 #
-# Regra de gate: rc != 0 (erro de sanitizador reproduzivel) BLOQUEIA.
-# SKIP / dependencia ausente e reported separado e NAO conta como passou.
+# Regra de gate: rc != 0 por ERRO DE SANITIZADOR (reproduzivel) ou por teste
+# que quebra sozinho BLOQUEIA. SKIP e DEPENDENCIA (motor/SDK ausente ou
+# pre-compilado incompativel) sao reportados a parte e NAO contam como passou.
+# A passada ASan e paralela (SANITIZA_JOBS, 4 por padrao); a TSan e sempre
+# serial, porque TSan sob maquina saturada gera falso positivo e timeout.
 cd "$(dirname "$0")/.." || exit 1
 LOGS=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-sanitiza.XXXXXX") || exit 1
+RES="$LOGS/resultados"; : > "$RES"
+mkdir -p "$LOGS/asan" "$LOGS/thread"
 
 # Os 28 scripts com -fsanitize=thread fora de comentario. Lista estatica de
 # proposito: e o contrato do job TSan e nao deve depender de grep no proprio
@@ -31,69 +36,70 @@ foraDaSuite() {
   return 1
 }
 
-# Regras de gate: rc!=0 por ERRO DE SANITIZADOR (reproduzivel) ou por teste
-# que quebra sozinho BLOQUEIA. SKIP e DEPENDENCIA (motor/SDK ausente ou
-# pre-compilado incompativel) sao reportados a parte e NAO contam como passou.
-passou=0; bloqueou=0; semProva=0; fora=0; dep=""
-mkdir -p "$LOGS/asan" "$LOGS/thread"
+# Roda um teste e registra "<veredito>\t<modo>\t<nome>" em $RES. Parallel-safe:
+# nada de contador em memoria, so o arquivo. Vereditos: ok, ok*, SKIP, DEP,
+# ERRO, FALHA. Ultimos dois bloqueiam.
 rodar() {
   local nome="$1" modo="$2" log="$LOGS/$2/$1.log"
   local san=1; [ "$modo" = thread ] && san=thread
-  mkdir -p "$LOGS/$modo"
   if SANITIZE="$san" ASAN_OPTIONS="abort_on_error=1" \
      UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1" \
      TSAN_OPTIONS="halt_on_error=1:exitcode=66" \
      bash "tests/$nome" >"$log" 2>&1; then
     if grep -Eq '(^|[^A-Za-z])SKIP([^A-Za-z]|$)' "$log"; then
-      echo "SKIP  $nome ($modo: $(grep -Em1 'SKIP' "$log" | cut -c1-80))"
-      semProva=$((semProva + 1)); return 0
+      printf 'SKIP\t%s\t%s\t%s\n' "$modo" "$nome" "$(grep -Em1 SKIP "$log" | cut -c1-80)" >> "$RES"
+    elif grep -Eq 'PULADO|pulados|sem resultado' "$log"; then
+      printf 'ok*\t%s\t%s\tcasos pulados no log\n' "$modo" "$nome" >> "$RES"
+    else
+      printf 'ok\t%s\t%s\t\n' "$modo" "$nome" >> "$RES"
     fi
-    grep -Eq 'PULADO|pulados|sem resultado' "$log" && echo "ok*   $nome ($modo: casos pulados no log)"
-    echo "ok    $nome ($modo)"
-    passou=$((passou + 1)); return 0
+    return 0
   fi
-  local sanEro='ERROR: (Address|Leak)Sanitizer|SUMMARY: .*Sanitizer|runtime error:|WARNING: ThreadSanitizer'
-  # Falha de compilacao/link = dependencia ausente ou pre-compiladovelho:
-  # o script nem chegou a rodar instrumentado.
-  if grep -Eq '(^|:)[0-9]+:[0-9]+: error:|No such file or directory|ld: |fatal error:' "$log" \
-     && ! grep -Eq "$sanEro" "$log"; then
-    echo "DEP   $nome ($modo: $(grep -Em1 'error:|No such file' "$log" | cut -c1-80))"
-    dep="$dep $nome"; semProva=$((semProva + 1)); return 0
-  fi
-  if grep -Eq "$sanEro" "$log"; then
-    echo "ERRO DE SANITIZADOR  $nome ($modo)"
-    grep -E "$sanEro" "$log" | head -4
+  local sanErro='ERROR: (Address|Leak)Sanitizer|SUMMARY: .*Sanitizer|runtime error:|WARNING: ThreadSanitizer'
+  # Erro de compilacao/link = dependencia ausente ou pre-compilado velho: o
+  # script nem chegou a rodar instrumentado.
+  if grep -Eq '(^|:)[0-9]+:[0-9]+: error:|No such file or directory|^ld: |fatal error:' "$log" \
+     && ! grep -Eq "$sanErro" "$log"; then
+    printf 'DEP\t%s\t%s\t%s\n' "$modo" "$nome" "$(grep -Em1 'error:|No such file' "$log" | cut -c1-80)" >> "$RES"
+  elif grep -Eq "$sanErro" "$log"; then
+    printf 'ERRO\t%s\t%s\t%s\n' "$modo" "$nome" "$(grep -Em1 "$sanErro" "$log" | cut -c1-90)" >> "$RES"
   else
-    echo "FALHA $nome ($modo)"
+    printf 'FALHA\t%s\t%s\t%s\n' "$modo" "$nome" "$(tail -1 "$log" | cut -c1-90)" >> "$RES"
   fi
-  tail -8 "$log"
-  bloqueou=$((bloqueou + 1))
 }
+
+export -f rodar
+export LOGS RES
+
+conta() { awk -F'\t' -v v="$1" '$1==v' "$RES" | wc -l | tr -d ' '; }
 
 modo="${1:-todos}"
 case "$modo" in asan|thread|todos) ;; *) echo "uso: $0 [asan|thread|todos]"; exit 2 ;; esac
 
 if [ "$modo" != thread ]; then
-  echo "== ASan+UBSan =="
+  echo "== ASan+UBSan (${SANITIZA_JOBS:-4} em paralelo) =="
   for f in tests/*.sh; do
     n=$(basename "$f")
-    foraDaSuite "$n" && { fora=$((fora + 1)); continue; }
+    foraDaSuite "$n" && continue
     # sync_resumo_corrida e trakt_play_corrida tem TSan fixo no codigo: nao
     # aceitam ASan. Rodam no passo thread.
     case "$n" in sync_resumo_corrida.sh|trakt_play_corrida.sh) continue ;; esac
-    rodar "$n" asan
-  done
-  echo "asan: $passou passaram, $bloqueou bloquearam, $semProva sem prova; fora da suite: $fora"
+    echo "$n"
+  done | xargs -P "${SANITIZA_JOBS:-4}" -I{} bash -c 'rodar "$1" asan' _ {}
 fi
 
 if [ "$modo" != asan ]; then
-  p=$passou; b=$bloqueou; sp=$semProva
-  echo "== ThreadSanitizer (28 testes de fio) =="
+  echo "== ThreadSanitizer (28 testes de fio, serial) =="
   for t in $TSAN_TESTS; do rodar "$t.sh" thread; done
-  echo "thread: $((passou - p)) passaram, $((bloqueou - b)) bloquearam, $((semProva - sp)) sem prova"
 fi
 
 echo
-echo "TOTAL: $passou passaram, $bloqueou bloquearam, $semProva sem prova (SKIP+dependencia); logs: $LOGS"
-[ -n "$dep" ] && echo "sem dependencia: $dep"
-[ "$bloqueou" -eq 0 ]
+echo "--- detalhe ---"
+sort -t"$(printf '\t')" -k1,1 -k2,2 "$RES" | while IFS=$'\t' read -r v m n obs; do
+  printf '%-6s %-6s %-28s %s\n' "$v" "$m" "$n" "$obs"
+done
+
+echo
+echo "TOTAL: $(conta ok) ok, $(conta 'ok*') ok com casos pulados, $(conta SKIP) SKIP sem prova, $(conta DEP) sem dependencia"
+echo "BLOQUEIO: $(conta ERRO) erro de sanitizador, $(conta FALHA) falha de teste; logs: $LOGS"
+[ "$(conta ERRO)" -eq 0 ] && [ "$(conta FALHA)" -eq 0 ]
