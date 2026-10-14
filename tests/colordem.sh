@@ -18,3 +18,6 @@ cc ${flags[@]+"${flags[@]}"} -DFIL_TESTE src/colecoes.c src/redeurl.c src/js.c s
   tests/colordem.c -Isrc -o "${TMPDIR}/nuvio-colordem-tests" -O1 -g -Wall -Wextra \
   -Wno-deprecated-declarations -Wno-macro-redefined
 "${TMPDIR}/nuvio-colordem-tests"
+# Os achados do review no modal (estilo pendente perdido na linha Ordem; clique
+# do mouse no MESA): o .py compila e RODA os callbacks de ctxmenu.c.
+python3 tests/colordem_menu.py

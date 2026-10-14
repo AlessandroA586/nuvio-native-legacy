@@ -281,6 +281,9 @@ static float confAnim[2];// A PAGINA DE ESTILOS E UM MODAL PROPRIO (dono, 01/10/
 // OK, e o segmentado os mostra o tempo todo.
 static FilEstiloLinha estLin[FIL_TIPO_N];
 static int   nEstilos, estFoco, estTam[FIL_TIPO_N];
+// A ultima FORMA tocada fica guardada fora do foco: indo ate a linha Ordem e
+// voltando, o OK aplica a ultima forma escolhida, nao a que teve foco por ultimo.
+static int   estSel;
 static float estAnim[FIL_TIPO_N];
 // ORDEM DOS ITENS da fileira de COLECAO (2.0.5): a ultima linha do modal de
 // estilo, embaixo das formas. Cima/baixo chegam nela, esquerda/direita trocam
@@ -422,10 +425,10 @@ static void montar(void) {
       estRolY = 0.0f;
       toquerol_limpar(&toqueEst);
 #endif
-      for (estFoco = 0, k = 0; k < nEstilos; k++) {
+      for (estFoco = estSel = 0, k = 0; k < nEstilos; k++) {
         estTam[k] = 0;
         for (j = 0; j < estLin[k].n; j++)
-          if (estLin[k].tipos[j] == atual) { estFoco = k; estTam[k] = j; }
+          if (estLin[k].tipos[j] == atual) { estFoco = estSel = k; estTam[k] = j; }
       }
     }
     return;
@@ -831,7 +834,7 @@ static int estRef(int i) {
 }
 
 static void aplicarEstilo(void) {
-  if (estFoco >= 0 && estFoco < nEstilos) fil_definir_tipo(filChave, estTipo(estFoco));
+  if (estSel >= 0 && estSel < nEstilos) fil_definir_tipo(filChave, estTipo(estSel));
   // A ordem escolhida na linha dela; gravando igual a que ja valia, e nada.
   if (ordemLinha && ordemSel != fil_ordem(filChave)) fil_definir_ordem(filChave, ordemSel);
   aberto = 0;
@@ -1122,8 +1125,8 @@ void ctx_evento(const SDL_Event *e) {
 #ifdef NV_TOUCH_UI
     if (toquerol_navegacao(e)) toquerol_limpar(&toqueEst);
 #endif
-    if (k == SDLK_UP)   { if (estFoco > 0) estFoco--; return; }
-    if (k == SDLK_DOWN) { if (estFoco + 1 < nEstilos + (ordemLinha ? 1 : 0)) estFoco++; return; }
+    if (k == SDLK_UP)   { if (estFoco > 0) estFoco--; if (estFoco < nEstilos) estSel = estFoco; return; }
+    if (k == SDLK_DOWN) { if (estFoco + 1 < nEstilos + (ordemLinha ? 1 : 0)) estFoco++; if (estFoco < nEstilos) estSel = estFoco; return; }
     if (ordemLinha && estFoco == nEstilos) {
       if (k == SDLK_LEFT)  { if (ordemSel > 0) ordemSel--; return; }
       if (k == SDLK_RIGHT) { if (ordemSel + 1 < FIL_ORD_N) ordemSel++; return; }
@@ -1261,6 +1264,7 @@ static void ponteiroCtxFora(int a, int b) { (void)a; (void)b; aberto = 0; }
 static void ponteiroEstFoco(int i, int b) {
   if (i < 0 || i >= nEstilos + (ordemLinha ? 1 : 0)) return;
   estFoco = i;
+  if (i < nEstilos) estSel = i;
   if (i < nEstilos && b > 0 && b - 1 < estLin[i].n) estTam[i] = b - 1;
 }
 static void ponteiroEstOk(int i, int b) {
@@ -1268,16 +1272,18 @@ static void ponteiroEstOk(int i, int b) {
   ponteiroEstFoco(i, b);
   aplicarEstilo();
 }
-#ifdef NV_TOUCH_UI
-// No TELEFONE a linha da ordem nao tem seta: cada toque anda uma ordem e a
-// linha mesma mostra a que ficou. Aplicar e o toque numa forma (ou Fechar).
+// A linha da ordem nao tem clique de "aplicar": cada toque/ciclo anda UMA
+// ordem e a linha mostra a que ficou (o foco so nao grava nada). Aplicar e o
+// clique numa forma (ou Fechar).
 static void ponteiroOrdemToque(int i, int b) {
   (void)i; (void)b;
   if (!ordemLinha) return;
   estFoco = nEstilos;
   ordemSel = (ordemSel + 1) % FIL_ORD_N;
 }
-#endif
+// O mesmo ciclar do toque serve o clique no MESA na linha Ordem: ali o mouse e
+// o Magic Remote nao tem esquerda/direita. Aplicar continua na forma/Fechar.
+#define ponteiroOrdemAtivar ponteiroOrdemToque
 
 // GLASS UI (dono, 02/10, mockup "ilha" tela 7): TODO MODAL E UMA ILHA — o
 // material da folha de Fontes e da ilha do relogio. Sombra curta, miolo de
@@ -1689,7 +1695,9 @@ static void desenhaEstilos(float a) {
     char rot[96];
     snprintf(rot, sizeof rot, i18n("Ordem: %s"), i18n(fil_ordem_rotulo(ordemSel)));
     if (aberto && a > 0.5f)
-      ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroEstFoco, ponteiroEstOk, nEstilos, 0);
+      // O clique na linha da ordem CICLA (mouse/Magic Remote nao tem
+      // esquerda/direita nela); aplicar e o clique numa forma ou Fechar.
+      ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroEstFoco, ponteiroOrdemAtivar, nEstilos, 0);
     linhaCtx(r, rot, fil_ordem(filChave) == ordemSel ? "check" : "", ordemAnim, a);
   }
 
