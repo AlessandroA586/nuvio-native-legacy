@@ -1417,8 +1417,9 @@ static void prepararExtras(LegBusca *B) {
 }
 
 // Uma fila de 12 ainda deixa 24 pedidos de 30 s esconderem o 25o por 60 s,
-// depois do prazo da selecao automatica. 32 cobre a lista podada (<= 32) de
-// uma vez; acima disso a fila continua limitando os fios.
+// depois do prazo da selecao automatica. 32 e o teto de addons do app
+// oficial: cobre uma lista normal de uma vez; acima disso (ate ADD_MAX) a fila
+// continua limitando os fios.
 #define LEG_FIOS 32
 static void *buscarLegendas(void *u) {
   (void)u;
