@@ -156,7 +156,35 @@ static void esvai(void) {
   assert(!dvtela_visivel() && dvtela_alfa() < 0.01f);
 }
 
+// #205: Cinema + DV desenha a cara cinematografica; Detalhada + DV, a antiga.
+// Para cima / Para baixo na Cinema mostram a antiga; Voltar segue o mesmo.
+static void variantes(void) {
+  DvtelaSinais s;
+  SDL_Event e;
+  memset(&s, 0, sizeof s);
+  assert(dvt_variante(0, 0) == DVT_VAR_CINEMA);
+  assert(dvt_variante(1, 0) == DVT_VAR_DETALHADA);
+  assert(dvt_variante(0, 1) == DVT_VAR_DETALHADA);
+  dvtela_apresentacao(0, "", "Titulo", "T1E1");
+  dvtela_entrar(1000);
+  assert(dvtela_variante() == DVT_VAR_CINEMA);
+  e = tecla(SDLK_DOWN);
+  assert(dvtela_evento(&e, 5000) == DVT_EV_ENGOLIU && dvtela_ativa());
+  assert(dvtela_variante() == DVT_VAR_DETALHADA);
+  e = tecla(SDLK_ESCAPE);
+  assert(dvtela_evento(&e, 5100) == DVT_EV_VOLTAR && !dvtela_ativa());
+  // Tela nova volta a Cinema; com Detalhada as setas nao mudam nada.
+  dvtela_entrar(9000);
+  assert(dvtela_variante() == DVT_VAR_CINEMA);
+  dvtela_sair(DVT_SAIDA_FONTE, 9100);
+  dvtela_apresentacao(1, "", "Titulo", "");
+  dvtela_entrar(10000);
+  assert(dvtela_variante() == DVT_VAR_DETALHADA);
+  dvtela_sair(DVT_SAIDA_FONTE, 10100);
+}
+
 int main(void) {
+  variantes();
   ficaAteConfirmar();
   tocandoAntesDoCaminhoNaoSai();
   audioTrocadoViraPasso();
