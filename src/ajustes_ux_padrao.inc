@@ -284,6 +284,7 @@
   0, /* remote tips: action */
   0, /* show genre under the hero logo: Ligado, as always */
   1, /* addon name on the Cinema opening (#205): Desligado, local */
+  0, 0, 0, 0, /* hero synopsis/ratings/year/runtime: Ligado, the look as always */
   0, /* curation address (#205): action; the URL lives in curadoria.txt */
   2, /* opening screen backdrop (#508): Arte borrada, as always, local */
   0, /* hero synopsis size: Normal, the original 22/30 */

@@ -4193,7 +4193,7 @@ glifo:
 }
 
 // Ano solto do campo `meta` ("2025 · 1 h 54 min" -> "2025" e "1 h 54 min").
-static void partirMeta(const char *meta, char *ano, size_t na, char *resto, size_t nr) {
+void partirMeta(const char *meta, char *ano, size_t na, char *resto, size_t nr) {
   ano[0] = 0; resto[0] = 0;
   if (!meta || !meta[0]) return;
   const char *sep = strstr(meta, "\xc2\xb7");        // U+00B7
