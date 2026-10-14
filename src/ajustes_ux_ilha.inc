@@ -364,7 +364,7 @@ static void aj2RodapeA3(GfxRect fr, const AjDica *d, int nd, float a, int desenh
   float x = fr.x + 34.0f, w = fr.w - 68.0f, yc = fr.y + fr.h - AJ_A3_RODAPE * 0.5f - 6.0f;
   float wd = aj2DicasLinha(d, nd, x, yc, TXT_V2_KBD18, 34, 38, 10, TXT_V2_24, 8, 22, 0, a), wa = 0;
   int dicas = 1;
-  gfx_cor((GfxRect){ fr.x + 28.0f, fr.y + fr.h - AJ_A3_RODAPE, fr.w - 56.0f, 1 }, 0, 1, 1, 1, 0.07f * a);
+  if (desenha == 1) gfx_cor((GfxRect){ fr.x + 28.0f, fr.y + fr.h - AJ_A3_RODAPE, fr.w - 56.0f, 1 }, 0, 1, 1, 1, 0.07f * a);
 #ifdef NV_TOUCH_UI
   if (ajPontInline) { ajToqueBotoes(x + w, yc, a); return; }
 #endif
@@ -372,8 +372,8 @@ static void aj2RodapeA3(GfxRect fr, const AjDica *d, int nd, float a, int desenh
     TxtLinha t = ajTxtC(TXT_V2_24, uxAviso, w - 34.0f);
     wa = t.w + 34.0f;
     if (wd + 24.0f + wa > w) dicas = 0;
-    ajIcone("aj_check", x + w - wa, yc - 11.0f, 22.0f, 0.7f * a);
-    txt_desenhar_alpha(t, x + w - t.w, yc - t.h * 0.5f, 0.75f * a);
+    if (desenha == 1) { ajIcone("aj_check", x + w - wa, yc - 11.0f, 22.0f, 0.7f * a);
+      txt_desenhar_alpha(t, x + w - t.w, yc - t.h * 0.5f, 0.75f * a); }
   }
   if (dicas) aj2DicasLinha(d, nd, x, yc, TXT_V2_KBD18, 34, 38, 10, TXT_V2_24, 8, 22, desenha, a);
 }
