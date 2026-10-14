@@ -392,6 +392,7 @@ DtsRemux *dts_remux_open(const char *url, const char *headers, int ordinal, int 
   r->url = strdup(url); r->headers = strdup(headers ? headers : "");
   r->probe = dts_engine_create();
   if (!r->url || !r->headers || !r->probe) { fail(err, errn, "Out of memory", 0); goto bad; }
+  dts_engine_set_cancel(r->probe, cancel);
   registerEngine(r, r->probe);
   if (cancel && *cancel) { fail(err, errn, "Cancelled", 0); goto bad; }
   if (dts_engine_open_demux(r->probe, r->url, r->headers) < 0) {
@@ -607,6 +608,7 @@ DtsRemuxGen *dts_remux_gen_new(DtsRemux *r, char *err, size_t errn) {
     double t0 = now_s(CLOCK_MONOTONIC);
     g->eng = dts_engine_create();
     if (!g->eng) { fail(err, errn, "Out of memory", 0); free(g); return NULL; }
+    dts_engine_set_cancel(g->eng, r->extCancel);
     registerEngine(r, g->eng);
     if (dts_engine_open_demux(g->eng, r->url, r->headers) < 0) {
       fail(err, errn, dts_engine_error(g->eng), 0); dts_remux_gen_free(g); return NULL;

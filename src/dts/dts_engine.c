@@ -28,6 +28,7 @@ const void *dts_engine_subtitle_parameters(DtsEngine *e,int i) { (void)e;(void)i
 int dts_engine_next(DtsEngine *e,DtsFrame *f) { (void)e;(void)f; return -1; }
 int dts_engine_seek(DtsEngine *e,double s) { (void)e;(void)s; return -1; }
 void dts_engine_cancel(DtsEngine *e) { (void)e; }
+void dts_engine_set_cancel(DtsEngine *e, volatile int *flag) { (void)e; (void)flag; }
 void dts_engine_destroy(DtsEngine *e) { free(e); }
 const char *dts_engine_error(DtsEngine *e) { (void)e; return "DTS conversion not built"; }
 int dts_engine_open_demux(DtsEngine *e,const char *u,const char *h) { (void)e;(void)u;(void)h; return -1; }
@@ -93,6 +94,8 @@ struct DtsEngine {
    * range while the player already gave up on that segment). Cleared by the
    * caller before the next run; the demuxer state is then reset by a seek. */
   volatile int interrupt;
+  /* Owner's stop flag (read only), set before any I/O; see dts_engine_set_cancel. */
+  volatile int *ext_cancel;
   /* Remux: ONE sequential connection (rede_fluxo64) into a ring buffer, like
    * the TV's player reads, instead of 4 MiB requests on 4 lanes (TorBox
    * throttled and then refused those at 60+ Mbit/s). Guarded by range_lock. */
@@ -139,7 +142,12 @@ static int fail(DtsEngine *e,const char *msg,int code) {
   return -1;
 }
 static int cancelled(void *opaque) {
-  return __atomic_load_n(&((DtsEngine *)opaque)->cancelled,__ATOMIC_RELAXED);
+  DtsEngine *e=opaque;
+  /* The owner's flag (the HLS session stop) escalates into the permanent one,
+   * so the network thread that polls &e->cancelled wakes up too. */
+  if(e->ext_cancel && __atomic_load_n((volatile int *)e->ext_cancel,__ATOMIC_RELAXED))
+    __atomic_store_n(&e->cancelled,1,__ATOMIC_RELAXED);
+  return __atomic_load_n(&e->cancelled,__ATOMIC_RELAXED);
 }
 /* Persistent HTTP lanes retain independent curl connection caches. The bounded
  * queue keeps fetching while native playback backpressures the demux consumer,
@@ -539,6 +547,7 @@ const void *dts_engine_subtitle_parameters(DtsEngine *e,int i) {
   return p->codec_type==AVMEDIA_TYPE_SUBTITLE?p:NULL;
 }
 const char *dts_engine_error(DtsEngine *e) { return e?e->error:"No DTS engine"; }
+void dts_engine_set_cancel(DtsEngine *e, volatile int *flag) { if(e) e->ext_cancel=flag; }
 void dts_engine_cancel(DtsEngine *e) {
   if(!e) return;
   __atomic_store_n(&e->cancelled,1,__ATOMIC_RELAXED);

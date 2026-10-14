@@ -44,6 +44,10 @@ const char *dts_engine_error(DtsEngine *);
  * then returns the AVFormatContext (as void *: no FFmpeg type crosses this
  * header), valid until the next open or destroy. Cancel stays permanent. */
 int dts_engine_open_demux(DtsEngine *, const char *url, const char *headers);
+/* The owner's stop flag (may be NULL), read-only: once it is non-zero every
+ * read and wait of this engine aborts as if dts_engine_cancel() was called.
+ * Set before the first I/O so a stop reaches the initial probe too. */
+void dts_engine_set_cancel(DtsEngine *, volatile int *flag);
 void *dts_engine_avformat(DtsEngine *);
 int64_t dts_engine_size(DtsEngine *);
 /* Remux: on = 1 makes the read in progress (and the next ones) fail until it
