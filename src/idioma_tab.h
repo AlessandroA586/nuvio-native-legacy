@@ -2623,6 +2623,7 @@
   { "Menu do cartão (segurar OK)", "Card menu (hold OK)" },
   { "Menu em trilho, Dinâmica, Biblioteca e Agenda novas.", "Rail menu, Dynamic, new Library and Schedule." },
   { "Menu lateral", "Side menu" },
+  { "Menu no topo", "Top menu" },
   { "Menu, fontes e episódios em vidro. Ajustes › Aparência.", "Glass menu, sources and episodes. Settings › Appearance." },
   { "Mesma opinião em %d de %d títulos", "Same opinion on %d of %d titles" },
   { "Mesmo protocolo do Jellyfin", "Same protocol as Jellyfin" },

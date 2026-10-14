@@ -2624,6 +2624,7 @@
   T("Menu do cartão (segurar OK)", "Meni kartice (drži OK)"),
   T("Menu em trilho, Dinâmica, Biblioteca e Agenda novas.", "Meni kao šina, Dinamična, nove Biblioteka i Raspored."),
   T("Menu lateral", "Bočni meni"),
+  T("Menu no topo", "Meni na vrhu"),
   T("Menu, fontes e episódios em vidro. Ajustes › Aparência.", "Stakleni meni, izvori i epizode. Podešavanja › Izgled."),
   T("Mesma opinião em %d de %d títulos", "Isto mišljenje o %d od %d naslova"),
   T("Mesmo protocolo do Jellyfin", "Isti protokol kao Jellyfin"),

@@ -658,7 +658,7 @@ static const char *V_TAMANHO_UI[] = { "100%", "120%", "130%", "150%" };
 static const char *V_TAMANHO_AJUSTES[] = { "80%", "90%", "100%" };
 static const char *V_INTERFACE_MODO[] = { "TV", "Mobile" };
 static const char *V_MENU_POS[] = { "Na lateral", "No topo" };   // #461
-static const char *V_ABAS_ESTILO[] = { "Chips", "Menu suspenso", "Barra central", "Páginas" };   // #205
+static const char *V_ABAS_ESTILO[] = { "Chips", "Menu suspenso", "Barra central", "Páginas", "Menu no topo" };   // #205
 // F07: the order is cacheboost_cache_mb's (0, 256, 512, 1024 MB).
 // #338: indice = preset do NvPlayer.kt (0 = o de sempre).
 static const char *V_BUFFER[] = { "Automático", "Pequeno", "Médio", "Grande" };
@@ -1459,7 +1459,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Modo da interface", V_INTERFACE_MODO, 2),
   ESC("Botão de microfone na busca", V_MIC_BUSCA, 3),   // local: micBuscaLocal (.tpk)
   ESC("Posição do menu", V_MENU_POS, 2),   // por perfil: menuTopoLocal (#461)
-  ESC("Estilo das abas", V_ABAS_ESTILO, 4),   // por perfil: abasEstiloLocal (#205)
+  ESC("Estilo das abas", V_ABAS_ESTILO, 5),   // por perfil: abasEstiloLocal (#205)
   ESC("Teclado", V_TECLADO_AND, 3),   // local: tecladoAndroidLocal (Android)
   ESC("Cor do contorno da legenda", V_LEG_CONTORNO_COR, 7),   // local: legendaContornoCorLocal (#475)
   ESC("Trocar provedor se falhar", V_LIGA, 2),
@@ -2544,6 +2544,11 @@ int ajustes_menu_topo(void) {
   return valor[AJ_MENU_TOPO] == 1 && ajustes_home_layout() != HOME_LAYOUT_DINAMICA && !ajRetrato();
 }
 int ajustes_abas_estilo(void) { return valor[AJ_ABAS_ESTILO]; }
+void ajustes_definir_abas_estilo(int estilo) {
+  if (estilo < 0 || estilo >= OPCOES[AJ_ABAS_ESTILO].n) return;
+  valor[AJ_ABAS_ESTILO] = estilo;
+  AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar());
+}
 int ajustes_rail_recolhida(void) {
   // No telefone em retrato, o menu sobrepoe a pagina. A preferencia salva
   // continua valendo quando a tela volta para paisagem.

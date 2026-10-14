@@ -2624,6 +2624,7 @@
   T("Menu do cartão (segurar OK)", "Μενού κάρτας (κρατήστε πατημένο το OK)"),
   T("Menu em trilho, Dinâmica, Biblioteca e Agenda novas.", "Μενού ως ράγα, Δυναμικό, νέες Βιβλιοθήκη και Πρόγραμμα."),
   T("Menu lateral", "Πλαϊνό μενού"),
+  T("Menu no topo", "Μενού στην κορυφή"),
   T("Menu, fontes e episódios em vidro. Ajustes › Aparência.", "Γυάλινο μενού, πηγές και επεισόδια. Ρυθμίσεις › Εμφάνιση."),
   T("Mesma opinião em %d de %d títulos", "Ίδια γνώμη για %d από %d τίτλους"),
   T("Mesmo protocolo do Jellyfin", "Ίδιο πρωτόκολλο με το Jellyfin"),

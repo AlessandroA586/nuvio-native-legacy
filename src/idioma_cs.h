@@ -2624,6 +2624,7 @@
   T("Menu do cartão (segurar OK)", "Menu karty (podržte OK)"),
   T("Menu em trilho, Dinâmica, Biblioteca e Agenda novas.", "Menu jako lišta, Dynamická, nová Knihovna a Rozvrh."),
   T("Menu lateral", "Boční menu"),
+  T("Menu no topo", "Horní nabídka"),
   T("Menu, fontes e episódios em vidro. Ajustes › Aparência.", "Skleněná nabídka, zdroje a epizody. Nastavení › Vzhled."),
   T("Mesma opinião em %d de %d títulos", "Stejný názor na %d z %d titulů"),
   T("Mesmo protocolo do Jellyfin", "Stejný protokol jako Jellyfin"),

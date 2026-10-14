@@ -2624,6 +2624,7 @@
   T("Menu do cartão (segurar OK)", "卡片菜单（长按 OK）"),
   T("Menu em trilho, Dinâmica, Biblioteca e Agenda novas.", "轨道式菜单、动态，以及全新的媒体库和日程。"),
   T("Menu lateral", "侧边菜单"),
+  T("Menu no topo", "顶部菜单"),
   T("Menu, fontes e episódios em vidro. Ajustes › Aparência.", "菜单、片源和剧集改为玻璃质感。设置 › 外观"),
   T("Mesma opinião em %d de %d títulos", "对%d部作品的看法相同（共%d部）"),
   T("Mesmo protocolo do Jellyfin", "与 Jellyfin 相同的协议"),
