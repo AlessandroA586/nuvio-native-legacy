@@ -96,7 +96,7 @@ float corviva_contraste_y(float ya, float yb);
 // e o menor alfa de um veu macio atras do rotulo (preto para tinta branca,
 // branco para escura) que chega la, em passos de 5%.
 typedef struct {
-  int   ok, logo, tintaBranca;
+  int   ok, logo, tintaBranca, fraca;   // fraca: recorte chapado, sem material
   char  url[512];
   float janela[4];
   float veu, contraste, forca;   // forca: 1 = Textura, 0,35 = Textura sutil

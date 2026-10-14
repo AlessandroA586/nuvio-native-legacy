@@ -2484,6 +2484,21 @@ static int texturaAtiva(void) {
          nv_textura_viva.ok;
 }
 
+// OS MATERIAIS CC0 (deploy/app/art/texturas/, gerados por
+// tools/build-texturas.py a partir do Paper002 do ambientCG, CC0 1.0): o que
+// substitui o recorte da arte quando ele e FRACO (chapado, sem material —
+// dono, 14/10: "acho melhor a gente procurar um repositorio com assets para o
+// botao"). Treze arquivos de 512, SEM REDE em runtime: um NEUTRO para acento
+// sem cor e um por FAIXA DE 30 GRAUS de matiz, tingidos no Y 0,42. Os
+// percentis medidos do ARQUIVO FINAL (p10/p90 de luminancia relativa) dao a
+// tinta e o veu do rotulo pela mesma conta do recorte da arte.
+#define NV_TX_ASSET_P10 0.1861f
+#define NV_TX_ASSET_P90 0.6935f
+static char dirTexturas[600];
+void ajustes_texturas_dir(const char *dirArte) {
+  if (dirArte && dirArte[0]) snprintf(dirTexturas, sizeof dirTexturas, "%s/texturas", dirArte);
+}
+
 #define AJ_TINTA_ESCURA (18.0f / 255.0f)   // #121316
 float ajustes_acento_tinta(float *r, float *g, float *b) {
   int i = temaFixoAtual();
@@ -2529,14 +2544,37 @@ void ajustes_acento_luz(float *r, float *g, float *b) {
 // textura decodificada ou fora da Textura: desliga, e a pilula fica no Da arte.
 void ajustes_textura_quadro(void) {
   const CorvivaTextura *T = &nv_textura_viva;
+  const char *url = T->url;
+  float jan[4], forca = T->forca, veu = T->veu;
+  int logo = T->logo, escuro = !T->tintaBranca;
   GLuint tex = 0;
   float asp = 0.0f;
-  if (texturaAtiva() && T->url[0]) {
-    tex = T->logo ? tex_obter_larg_qualquer(T->url, 640.0f) : tex_obter_hero(T->url);
-    asp = tex_aspecto(T->url);
+  memcpy(jan, T->janela, sizeof jan);
+  if (texturaAtiva() && url[0]) {
+    // O RECORTE FRACO sai e entra o MATERIAL CC0 na cor do destaque: o matiz
+    // do acento escolhe a faixa (30 graus, +-15), sem cor nenhuma e o neutro.
+    if (T->fraca && dirTexturas[0]) {
+      float r, g, b, lab[3], c;
+      int branca;
+      char arq[700];
+      ajustes_acento(&r, &g, &b);
+      corviva_srgb_para_oklab((float[3]){ r, g, b }, lab);
+      c = sqrtf(lab[1] * lab[1] + lab[2] * lab[2]);
+      if (c < 0.04f) snprintf(arq, sizeof arq, "%s/material-neutro.jpg", dirTexturas);
+      else { int g30 = ((int)(atan2f(lab[2], lab[1]) * 57.29578f + 375.0f)) % 360 / 30;
+             snprintf(arq, sizeof arq, "%s/material-%03d.jpg", dirTexturas, g30); }
+      url = arq;
+      jan[0] = 0.0f; jan[1] = 0.0f; jan[2] = 1.0f; jan[3] = 1.0f;
+      logo = 1;   // carrega pelo caminho do logo (local, sem teto de heroi)
+      corviva_textura_tinta(NV_TX_ASSET_P10, NV_TX_ASSET_P90, T->base, forca,
+                            &branca, &veu, NULL);
+      escuro = !branca;
+    }
+    tex = logo ? tex_obter_larg_qualquer(url, 640.0f) : tex_obter_hero(url);
+    asp = tex_aspecto(url);
   }
   if (!tex || asp <= 0.0f) { gfx_textura_definir(0, NULL, 0, 0, 0, 0); return; }
-  gfx_textura_definir(tex, T->janela, asp, T->forca, T->veu, !T->tintaBranca);
+  gfx_textura_definir(tex, jan, asp, forca, veu, escuro);
 }
 
 // `collapseSidebar: modernSidebar ? false : Boolean(collapseSidebar)` — a barra

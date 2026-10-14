@@ -404,6 +404,27 @@ int main(void) {
         ok(croma(pl.acento) > 0.175f, m);
         regraDeContraste(&pl, "multicolor"); } } }
 
+  // [17] TEXTURA FRACA: recorte CHAPADO e fraco (ajustes o troca pelo
+  // material CC0 embutido); com grao, fica o recorte da arte. A conta e a
+  // mesma do tema: p90 - p10 de luminancia do recorte abaixo de 0,12.
+  { CorvivaPaleta pf, pg;
+    int y;
+    pinta(W, H, 0, 0, W, H, 220, 30, 30, 255, 0);                       // chapado
+    ok(corviva_extrair(img, W, H, W * 4, &pf) == 1, "fraca: chapada tem cor");
+    for (y = 0; y < H; y += 18) pinta(W, H, 0, y, W, y + 18 < H ? y + 18 : H,
+                                      (y / 18) & 1 ? 255 : 120, (y / 18) & 1 ? 80 : 10,
+                                      (y / 18) & 1 ? 80 : 10, 255, 4);
+    ok(corviva_extrair(img, W, H, W * 4, &pg) == 1, "fraca: grao tem cor");
+    corviva_zerar();
+    corviva_anotar("arte/chapada", &pf);
+    corviva_anotar("arte/graada", &pg);
+    quadros(40, 1 / 60.0f, CORVIVA_TEXTURA, 0, "arte/chapada", CORVIVA_HOME);
+    ok(nv_textura_viva.ok && nv_textura_viva.fraca,
+       "recorte chapado: fraca (troca pelo material CC0)");
+    quadros(40, 1 / 60.0f, CORVIVA_TEXTURA, 0, "arte/graada", CORVIVA_HOME);
+    ok(nv_textura_viva.ok && !nv_textura_viva.fraca,
+       "recorte com grao: fica o material da arte"); }
+
   // [9] corviva.txt: o arranque seguinte ja nasce com a cor da ultima cena.
   corviva_zerar();
   corviva_anotar("https://arte/azul", &azul);

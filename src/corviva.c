@@ -680,6 +680,12 @@ void corviva_quadro(float dt, int modo, int usarLogo, int reduzido) {
       T->forca = modo == CORVIVA_TEXTURA_SUTIL ? 0.35f : 1.0f;
       corviva_textura_tinta(f->txY[0], f->txY[1], f->acento, T->forca,
                             &T->tintaBranca, &T->veu, &T->contraste);
+      // (14/10, dono: "os com textura tem alguns que sao muito bons e outros
+      // nao") O RECORTE CHAPADO e o que nao presta: p90 - p10 de luminancia
+      // abaixo de 0,12 nao tem material nenhum (glifo liso, faixa unica) e a
+      // pilula sai como cor lisa com o tema fazendo nada. Ajustes troca estes
+      // pelo MATERIAL CC0 embutido (ajustes_textura_quadro).
+      T->fraca = (f->txY[1] - f->txY[0]) < 0.12f;
     } }
   fonteOk = modo != CORVIVA_DESLIGADA && temCena && fonte->ok;
   if (!fonteOk && modo != CORVIVA_DESLIGADA && temLogo && cenaLogo.ok) {
