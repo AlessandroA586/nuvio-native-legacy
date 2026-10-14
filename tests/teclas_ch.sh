@@ -10,7 +10,7 @@ from pathlib import Path
 source = Path('src/main.c').read_text()
 start = source.index('static void remapCanal(')
 end = source.index('// O CH+ CRU', start)
-with tempfile.TemporaryDirectory(prefix='teclas-ch-', dir=os.environ.get('TMPDIR', '/tmp')) as tmp:
+with tempfile.TemporaryDirectory(prefix='teclas-ch-', dir=os.environ.get('TMPDIR') or None) as tmp:
     c = Path(tmp) / 'test.c'
     c.write_text('''#include <SDL.h>
 #include "layout.h"

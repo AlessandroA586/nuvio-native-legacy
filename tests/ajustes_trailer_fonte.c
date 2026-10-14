@@ -9,6 +9,7 @@
 // Fora do .wgt a linha tem 3 valores: o 3 gravado por uma versao anterior le
 // como fora da faixa e fica Automatico; a seta nunca chega nele.
 #include "../src/ajustes.c"
+#include "nvtmp.h"
 #include <assert.h>
 #include <unistd.h>
 
@@ -20,7 +21,7 @@ static void escrever(const char *caminho, const char *texto) {
 }
 
 int main(void) {
-  char dir[] = "/tmp/nuvio-aj-trailerfonte-XXXXXX";
+  char dir[NVT_MAX]; nvt_set(dir, sizeof dir, "/nuvio-aj-trailerfonte-XXXXXX");
   char caminho[700];
   assert(mkdtemp(dir));
   snprintf(caminho, sizeof caminho, "%s/ajustes.txt", dir);

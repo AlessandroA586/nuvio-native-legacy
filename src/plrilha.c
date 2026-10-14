@@ -166,7 +166,8 @@ static float montar(const PlrIlhaPedido *p, Linha *L) {
   if (L->temIcone) w += 24.0f + 12.0f;
   if (p && p->respira) w += 10.0f + 14.0f;
   if (L->temTxt) {
-    L->txt = txt_linha_corta(TXT_ILHA_NOME, p->texto, 243, 242, 239, 255, PLR_TEXTO_MAX);
+    if (p->tituloLeve) L->txt = txt_linha_corta(PLR_TIT_ESTILO, p->texto, PLR_TIT_R, PLR_TIT_G, PLR_TIT_B, 255, PLR_TEXTO_MAX);
+    else L->txt = txt_linha_corta(TXT_ILHA_NOME, p->texto, 243, 242, 239, 255, PLR_TEXTO_MAX);
     w += (float)L->txt.w + 12.0f;
   }
   if (p && p->pontos > 0) w += 4.0f + p->pontos * 8.0f + (p->pontos - 1) * 7.0f + 12.0f;

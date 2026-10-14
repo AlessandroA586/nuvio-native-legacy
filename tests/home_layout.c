@@ -5,12 +5,17 @@
 #define ajustes_home_layout teste_home_layout
 #define ajustes_hero_ligado teste_hero_ligado
 #define ajustes_espaco_titulos teste_espaco_titulos
+#define ajustes_hero_genero teste_hero_genero
+#define txt_desenhar teste_txt_desenhar
+static int testeGenero = 1, nTxtDesenhado = 0, nBadge = 0, testeImdb = 0;
+static int teste_hero_genero(void) { return testeGenero; }
 #define ajustes_espaco_fileiras teste_espaco_fileiras
 static float espacoTit = 1.0f, espacoFil = 1.0f;
 static float teste_espaco_titulos(void) { return espacoTit; }
 static float teste_espaco_fileiras(void) { return espacoFil; }
 #include "../src/home.c"
 void desc_sinopse_hero(const int *idx, int n) { (void)idx; (void)n; }
+void desc_ocultar_vistos_atualizar(void) {}
 
 void cachearte_marcar_grupo(int grupo, const char *url, int variante, int essencial, int emUso) {
   (void)grupo; (void)url; (void)variante; (void)essencial; (void)emUso;
@@ -48,9 +53,52 @@ const char *addons_nome_por_id(const char *id) { (void)id; return ""; }
 static int testeLayout = HOME_LAYOUT_MODERNA, testeHero = 1;
 int teste_home_layout(void) { return testeLayout; }
 int teste_hero_ligado(void) { return testeHero; }
+void teste_txt_desenhar(TxtLinha l, float x, float y) { (void)l; (void)x; (void)y; nTxtDesenhado++; }
+// Duble do desenho do card editorial: sem GL, so o que o teste do genero conta.
+float gfx_tex_aspect_atual;
+void gfx_veu_base(GfxRect c, float r, float f, float a) { (void)c; (void)r; (void)f; (void)a; }
+void gfx_rect(GfxRect r, GLuint t, GfxModo m, float f, float a, float b, float c, float d, float e, float g, float h) {
+  (void)r; (void)t; (void)m; (void)f; (void)a; (void)b; (void)c; (void)d; (void)e; (void)g; (void)h; }
+GLuint tex_obter_logo_larg(const char *c, float l) { (void)c; (void)l; return 0; }
+int  tex_marca_escura(const char *c) { (void)c; return 0; }
+TxtLinha txt_linha_corta(TxtEstilo e, const char *s, int r, int g, int b, int a, float w) {
+  (void)e; (void)s; (void)r; (void)g; (void)b; (void)a; (void)w; return (TxtLinha){ 1, 10, 10, 0, 0 }; }
+float badge_desenhar(float x, float y, const char *t, BadgeEstilo e, float a) { nBadge++; (void)x; (void)y; (void)t; (void)e; (void)a; return 0; }
+float badge_imdb(float x, float y, int n, int e, float a) { nBadge++; (void)x; (void)y; (void)n; (void)e; (void)a; return 0; }
+float badge_imdb_largura(int n) { (void)n; return 0; }
+int  imdbnota_obter(const char *i, int c, int s) { (void)i; (void)c; (void)s; return testeImdb; }
+const char *i18n(const char *s) { return s; }
 static void homeCom(int layout, int heroLigado) { testeLayout = layout; testeHero = heroLigado; }
 
 int main(void) {
+  // Palco percorre as mesmas vagas e usa a mesma borda das fileiras comuns.
+  // Igualar a largura isola a regra de ancoragem do tamanho de cada forma.
+  {
+    int cols[] = {12, 12};
+    fileiras[0] = (Fileira){.tipo = FILEIRA_NORMAL, .n = 12, .escala = 1.0f};
+    fileiras[1] = (Fileira){.tipo = FILEIRA_PALCO, .n = 12, .escala = 1.0f};
+    fileiras[0].escala = larguraFil(1) / larguraFil(0);
+    float lw = larguraFil(1), anterior = 0.0f;
+    focus_iniciar(&foco, 2, cols);
+    for (int c = 0; c < 12; c++) {
+      if (c) assert(focus_mover(&foco, 1, 0));
+      palcoPos[1] = (float)foco.coluna; // animacao em repouso
+      scrollX[0] = alvoScrollFil(0, c, scrollX[0], 0.0f);
+      scrollX[1] = alvoScrollFil(1, c, scrollX[1], 0.0f);
+      float cx, s, vizX, vizS;
+      palcoGeo(1, c, lw, &cx, &s);
+      assert(fabsf(cx - (homeFileiraX(0, c) + lw * 0.5f)) < 0.01f);
+      assert(s == 1.0f);
+      assert(fabsf(scrollX[1] - scrollX[0]) < 0.01f);
+      if (c == 1) assert(cx > anterior && scrollX[1] == 0.0f);
+      if (c == 11) assert(scrollX[1] > 0.0f);
+      palcoGeo(1, c + 1, lw, &vizX, &vizS);
+      assert(fabsf(vizS - NV_PALCO_VIZ) < 0.01f);
+      assert(vizX - lw * vizS * 0.5f > cx + lw * s * 0.5f);
+      anterior = cx;
+    }
+    memset(scrollX, 0, sizeof scrollX);
+  }
   // A composicao abaixo e a da home SEM o destaque no topo: e nela que a
   // primeira fileira de catalogo vira a vitrine (vitrineNaPrimeira). O #201
   // (com destaque) tem bloco proprio no fim.
@@ -361,6 +409,49 @@ int main(void) {
                  - (lw * escalaDe(FILEIRA_NORMAL) * 0.5f
                     + (ajustes_borda_foco() ? NV_ANEL_FOCO : 0.0f))) < 0.01f);
   }
+
+  // "Mostrar genero no destaque": o card editorial sem logo desenha nome +
+  // genero; desligado, so o nome (a arte e o logo ficam, o genero sai).
+  { CatItem it = {0}; int ligado, desligado;
+    snprintf(it.titulo, sizeof it.titulo, "Titulo");
+    snprintf(it.genero, sizeof it.genero, "Terror");
+    snprintf(it.tipo, sizeof it.tipo, "movie");
+    nTxtDesenhado = 0; testeGenero = 1;
+    desenhaEditorialCard(&it, FILEIRA_DESTAQUE, 0, 0, 640, 360, 8);
+    ligado = nTxtDesenhado;
+    nTxtDesenhado = 0; testeGenero = 0;
+    desenhaEditorialCard(&it, FILEIRA_DESTAQUE, 0, 0, 640, 360, 8);
+    desligado = nTxtDesenhado;
+    assert(ligado == desligado + 1);
+    // Desligado tira a linha de baixo INTEIRA do destaque: classificacao
+    // (Moderna) e selo IMDb (Padrao/Dinamica) tambem saem.
+    snprintf(it.classificacao, sizeof it.classificacao, "16");
+    nBadge = 0; desenhaEditorialCard(&it, FILEIRA_DESTAQUE, 0, 0, 640, 360, 8);
+    assert(nBadge == 0);
+    testeImdb = 75;
+    for (int lay = HOME_LAYOUT_PADRAO; lay <= HOME_LAYOUT_DINAMICA; lay++) {
+      homeCom(lay, 1);
+      nBadge = 0; desenhaEditorialCard(&it, FILEIRA_DESTAQUE, 0, 0, 640, 360, 8);
+      assert(nBadge == 0);
+      testeGenero = 1;
+      nBadge = 0; desenhaEditorialCard(&it, FILEIRA_DESTAQUE, 0, 0, 640, 360, 8);
+      assert(nBadge == 1);
+      testeGenero = 0;
+    }
+    testeImdb = 0; homeCom(HOME_LAYOUT_MODERNA, 1);
+    // So o destaque: COLECAO/SERVICO/SOCIAL mantem genero e selo.
+    TipoFileira outras[] = { FILEIRA_COLECAO, FILEIRA_SERVICO, FILEIRA_SOCIAL };
+    for (int k = 0; k < 3; k++) {
+      int on, onB, off, offB;
+      testeGenero = 1; nTxtDesenhado = 0; nBadge = 0;
+      desenhaEditorialCard(&it, outras[k], 0, 0, 640, 360, 8);
+      on = nTxtDesenhado; onB = nBadge;
+      testeGenero = 0; nTxtDesenhado = 0; nBadge = 0;
+      desenhaEditorialCard(&it, outras[k], 0, 0, 640, 360, 8);
+      off = nTxtDesenhado; offB = nBadge;
+      assert(on == off && onB == offB && onB == 1);
+    }
+    testeGenero = 1; }
 
   free(itensTeste);
   puts("home layout: PASS (fallback, colecoes, ordem, ranks, foco, rolagem #103)");

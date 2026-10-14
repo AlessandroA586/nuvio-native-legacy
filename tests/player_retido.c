@@ -6,6 +6,7 @@
 #include "streams.h"
 #include "fontevolta.h"
 #include "ajustes.h"
+#include "descoberta.h"
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
@@ -32,8 +33,16 @@ double video_pos(void) { return posicao; }
 double video_duracao(void) { return duracao; }
 const char *video_url_atual(void) { return fonte; }
 
+// A refacao de Continuar assistindo pode substituir o fixture antes de abrir.
+// Espere a publicacao terminar antes de definir o catalogo do teste.
+static void esperar_catalogo(void) {
+  Uint32 ini = SDL_GetTicks();
+  while (desc_montando() && SDL_GetTicks() - ini < 5000u) SDL_Delay(1);
+  assert(!desc_montando());
+}
 static void abrir(const char *tipo) {
   CatItem c = {0};
+  esperar_catalogo();
   snprintf(c.imdb, sizeof c.imdb, "fixture-titulo");
   snprintf(c.titulo, sizeof c.titulo, "Titulo ficticio");
   snprintf(c.tipo, sizeof c.tipo, "%s", tipo);

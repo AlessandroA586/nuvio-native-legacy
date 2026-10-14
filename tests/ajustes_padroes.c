@@ -94,7 +94,10 @@ int main(void) {
   valor[AJ_RESOLUCAO] = RES_720;  assert(!ajustes_4k() && ajustes_720p());
   valor[AJ_RESOLUCAO] = RES_AUTO;
   assert(ajustes_relogio_ligado() && ajustes_relogio_pos() == 0);   // relogio: ligado, automatico
-  assert(ajustes_selo_visto());   // selo de visto no cartaz: ligado (#212)
+  assert(ajustes_selo_visto() && ajustes_selo_visto_modo() == 1);   // selo de visto no cartaz: ligado, Icone (#212)
+  valor[AJ_SELO_VISTO] = 1; assert(!ajustes_selo_visto() && ajustes_selo_visto_modo() == 0);   // gravado antigo "Desligado" continua
+  valor[AJ_SELO_VISTO] = 2; assert(ajustes_selo_visto() && ajustes_selo_visto_modo() == 2);    // Escrito
+  valor[AJ_SELO_VISTO] = 0;
   assert(valor[AJ_TEMA] == AJ_TEMA_DINAMICA && valor[AJ_FUNDO] == 2);   // aparencia de fabrica da 2.0: Da arte + Frost
   assert(valor[AJ_COR_LOGO] == 0 && valor[AJ_VIDRO] == 1);               // Cor da logo ligada, vidro desligado
   // O "+" salva no Trakt. Este assert passava POR ACASO de 22/09 ate o #149:
@@ -149,7 +152,20 @@ int main(void) {
   assert(AJ_INTERFACE_MODO == AJ_PROXIMO_CONTAGEM + 1);
   assert(AJ_MIC_BUSCA == AJ_INTERFACE_MODO + 1);
   assert(AJ_MENU_TOPO == AJ_MIC_BUSCA + 1 && AJ_ABAS_ESTILO == AJ_MENU_TOPO + 1 && AJ_TECLADO_ANDROID == AJ_ABAS_ESTILO + 1 && AJ_LEG_CONTORNO_COR == AJ_TECLADO_ANDROID + 1);
-  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_RETOMADA_MORNA == AJ_FALHA_ADDON_LIMITE + 1 && AJ_MANTER_PRAZO == AJ_RETOMADA_MORNA + 1 && AJ_ESTAT_TAMANHO == AJ_MANTER_PRAZO + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_N == AJ_OCULTAR_FILMES_VISTOS + 1);
+  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_RETOMADA_MORNA == AJ_FALHA_ADDON_LIMITE + 1 && AJ_MANTER_PRAZO == AJ_RETOMADA_MORNA + 1 && AJ_ESTAT_TAMANHO == AJ_MANTER_PRAZO + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_DICASCONTROLE == AJ_OCULTAR_FILMES_VISTOS + 1 && AJ_HERO_GENERO == AJ_DICASCONTROLE + 1 && AJ_ABERTURA_ADDON == AJ_HERO_GENERO + 1 && AJ_N == AJ_ABERTURA_ADDON + 1);
+  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_RETOMADA_MORNA == AJ_FALHA_ADDON_LIMITE + 1 && AJ_MANTER_PRAZO == AJ_RETOMADA_MORNA + 1);   // #492: retomada morna e o prazo do video pronto
+  assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
+  assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));
+  assert(valorPadrao[AJ_RETOMADA_MORNA] == 0 && ajustes_manter_video_ms() == 120000u);   // 2 min
+  valor[AJ_MANTER_PRAZO] = 0; assert(ajustes_manter_video_ms() == 120000u);
+  valor[AJ_MANTER_PRAZO] = 4; assert(ajustes_manter_video_ms() == 0u);
+  valor[AJ_MANTER_PRAZO] = 99; assert(ajustes_manter_video_ms() == 120000u);
+  valor[AJ_MANTER_PRAZO] = 2; assert(ajustes_manter_video_ms() == 600000u);
+  assert(valor[AJ_HERO_GENERO] == 0 && ajustes_hero_genero());   // Ligado: o visual de sempre
+  assert(!strcmp(CHAVE[AJ_HERO_GENERO], "heroGeneroLocal") && somenteDesteAparelho(AJ_HERO_GENERO));
+  assert(valor[AJ_ABERTURA_ADDON] == 1 && !ajustes_abertura_addon());
+  assert(!strcmp(CHAVE[AJ_ABERTURA_ADDON], "aberturaAddonLocal") && somenteDesteAparelho(AJ_ABERTURA_ADDON));
+  valor[AJ_ABERTURA_ADDON] = 0; assert(ajustes_abertura_addon()); valor[AJ_ABERTURA_ADDON] = 1;
   for (int i = 0; i < AJ_N; i++) assert(strcmp(CHAVE[i], "autoCreditosLocal"));
   // #338: o tamanho das estatisticas ao vivo: "Lembrar o ultimo" por padrao, local,
   // em Reproducao, com Lembrar + Completo/Compacto/Minimo.

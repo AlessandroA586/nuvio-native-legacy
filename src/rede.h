@@ -292,6 +292,9 @@ char *rede_apagar(const char *url, int segundos, const char *const *cabecalhos,
                   int *status);
 char *rede_postar_st(const char *url, int segundos, const char *const *cabecalhos,
                      const char *corpo, int *status);
+// POST que repete (espera 1 s, 2 s, ...) so quando nao houve resposta (status 0).
+char *rede_postar_repetindo(const char *url, int segundos, const char *const *cabecalhos,
+                            const char *corpo, int *status, int tentativas);
 
 // GET com cabecalhos E codigo HTTP. Pelo mesmo motivo do POST acima: a leitura
 // de tabela do Supabase precisa distinguir "tabela nao existe" (404 com

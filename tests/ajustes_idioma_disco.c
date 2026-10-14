@@ -14,6 +14,7 @@
 // arranque) e confere o indice E o que chega em linguas.c, que e o que o
 // player consulta (ling_legenda/ling_audio).
 #include "../src/ajustes.c"
+#include "nvtmp.h"
 #include <assert.h>
 #include <unistd.h>
 
@@ -46,7 +47,7 @@ static int linhaDoArquivo(const char *caminho, const char *chave) {
 }
 
 int main(void) {
-  char dir[] = "/tmp/nuvio-aj-idioma-XXXXXX";
+  char dir[NVT_MAX]; nvt_set(dir, sizeof dir, "/nuvio-aj-idioma-XXXXXX");
   char caminho[700];
   FILE *f;
   int en = -1, es = -1, i;

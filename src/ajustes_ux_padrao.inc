@@ -280,3 +280,6 @@
   0, 0, /* #492: warm resume ON; keep-alive duration 2 minutes */
   0, /* live statistics size (#338): remember the last one */
   1, /* hide watched movies (#366): Desligado, per profile on this device */
+  0, /* remote tips: action */
+  0, /* show genre under the hero logo: Ligado, as always */
+  1, /* addon name on the Cinema opening (#205): Desligado, local */
