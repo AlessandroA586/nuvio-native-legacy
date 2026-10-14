@@ -6926,6 +6926,9 @@ void home_desenhar(Uint32 agora) {
       // cartoes fora da tela; o cache recusa so pedido NOVO dessa arte enquanto
       // a fileira corre, antes de enfileirar rede/decode. Parada, nada recusa.
       tex_grade_movendo(fabsf(velX[r]) > 120.0f);
+      // A direcao, em cards por quadro, alimenta o nivel 3 (lado que entra)
+      // e o tex_lookahead_mover da fileira.
+      tex_grade_velocidade(velX[r] / passo);
       for (int passe = 1; passe < 2; passe++) {
         for (int c = 0; c < fileiras[r].n; c++) {
           float f = animFoco[r][c];
@@ -6971,10 +6974,16 @@ void home_desenhar(Uint32 agora) {
           float cy = cardY + artH * 0.5f + (1.0f - entra) * NV_ENTRA_DY;
           if (cx < -lw * 1.5f || cx > NV_TELA_W + lw) continue;
           // Cartao TOTALMENTE fora da tela (mas dentro da faixa de cull que
-          // ainda e desenhada): NIVEL 2, recusa sempre. Nao ha tile na tela
-          // para ficar escuro. O focado nunca conta como fora.
-          tex_pedido_fora((cx + w * 0.5f < 0.0f || cx - w * 0.5f > NV_TELA_W) &&
-                          !(r == foco.fileira && c == foco.coluna) ? 2 : 0);
+          // ainda e desenhada): NIVEL 2, recusa sempre — EXCETO no lado em
+          // que a rolagem entra (NIVEL 3): aquele card vira visivel nos
+          // proximos quadros, e recusa-lo e o "poster que carrega na frente".
+          // O focado nunca conta como fora.
+          tex_pedido_fora(
+            (cx + w * 0.5f < 0.0f || cx - w * 0.5f > NV_TELA_W) &&
+            !(r == foco.fileira && c == foco.coluna)
+              ? ((velX[r] > 0.0f && cx > NV_TELA_W) ||
+                 (velX[r] < 0.0f && cx < 0.0f) ? 3 : 2)
+              : 0);
           float px = cx - w * 0.5f, py = cy - h * 0.5f;
           // O foco pode aumentar o card. No 4:3 ele nao pode subir sobre o
           // titulo da fileira; a expansão acontece para baixo, preservando a
@@ -7210,6 +7219,24 @@ void home_desenhar(Uint32 agora) {
         }
       }
       tex_pedido_fora(0);
+      // EM MOVIMENTO: pede a arte do proximo card que vai entrar na borda,
+      // antes de a rolagem chegar nele. Parado, o lookahead de repouso cobre.
+      { static TexLookahead lado[MAX_FIL];
+        int d = tex_lookahead_mover(&lado[r]);
+        if (d) {
+          // Um passo alem do card que JA entra na borda pela frente: esse ja
+          // foi pedido como nivel 3 (ou esta na tela); a pre-busca antecipa
+          // o seguinte.
+          int c2 = (int)(scrollX[r] / passo) +
+                   (d > 0 ? (int)(NV_TELA_W / passo) + 2 : -2);
+          if (c2 >= 0 && c2 < fileiras[r].n) {
+            int idx2 = fileiraItemIndice(&fileiras[r], c2);
+            tex_lookahead_pedir(arte_por_identidade(idx2,
+              (tipo == FILEIRA_CONTINUE || tipo == FILEIRA_RETORNO) ? 3 : deitado),
+              lw);
+          }
+        }
+      }
       gfx_opacidade_grupo = grupoFil;
       if (tipo == FILEIRA_LINHA_TEMPO) desenhaLinhaTempo(r, y, cardY + artH, passo, lw, agora);
       if (tipo == FILEIRA_PALCO) palcoLegenda(r, cardY + artH, lw);
