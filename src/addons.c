@@ -1108,6 +1108,8 @@ static int distribuirLegendas(const LegLote *lotes, int nLotes, int nGrupos,
 typedef struct {
   LegLote *lotes;          // um por addon
   int nLotes, nGrupos;
+  int proximo;            // fila dos trabalhadores: proximo addon a consultar
+  int consultados;        // para o log do "concluida"
   int manter;              // extras: mescla so no fim, preservando indices
   char extras[1200];       // segmento legextras_segmento; "" = sem extras
   const char *grupos[3];
@@ -1257,6 +1259,31 @@ static void *buscarUmAddon(void *u) {
   return NULL;
 }
 
+// UM TRABALHADOR da busca de legendas (B4): puxa o proximo addon da fila ate
+// ela acabar. A fila substitui a LEVA (esperar o lote inteiro antes de criar o
+// proximo fio): a leva prendia o addon rapido ao MAIS LENTO do lote — 12
+// lentos de 30 s seguravam o 13. por 60 s, e a escolha automatica desiste em
+// FX_AUTO_FIM_MS (faixas.c). Sem barreira, o rapido entra no prazo; o teto de
+// fios, que limita memoria, continua o mesmo.
+static void *legFioPuxa(void *u) {
+  LegBusca *B = ((LegFio *)u)->B;
+  LegFio F;
+  for (;;) {
+    int i;
+    pthread_mutex_lock(&B->m);
+    i = B->proximo < B->nLotes ? B->proximo++ : -1;
+    pthread_mutex_unlock(&B->m);
+    if (i < 0) return NULL;
+    // Addon que nao declara legenda nao e consultado.
+    if (!addon[i].ativo || !addon[i].legenda) continue;
+    pthread_mutex_lock(&B->m);
+    B->consultados++;
+    pthread_mutex_unlock(&B->m);
+    F.B = B; F.i = i;
+    buscarUmAddon(&F);
+  }
+}
+
 static unsigned relogioMs(void) {
   struct timespec t;
   clock_gettime(CLOCK_MONOTONIC, &t);
@@ -1354,14 +1381,12 @@ static void *buscarLegendas(void *u) {
   (void)u;
   for (;;) {
     LegBusca B;
-    static LegFio fio[ADD_MAX]; // uma busca de legendas por vez
-    static pthread_t th[ADD_MAX];
-    static int criado[ADD_MAX];
+    LegFio fio[LEG_FIOS]; // uma busca de legendas por vez
+    pthread_t th[LEG_FIOS];
     unsigned t0 = relogioMs();
-    int i, k, nAtivos = 0, vivos = 0;
+    int i, nFios = 0;
 
     memset(&B, 0, sizeof B);
-    memset(criado, 0, sizeof criado);
     pthread_mutex_init(&B.m, NULL);
     pthread_mutex_lock(&legTrava);
     if (legParar) { fioLegVivo = 0; pthread_mutex_unlock(&legTrava); pthread_mutex_destroy(&B.m); return NULL; }
@@ -1381,22 +1406,18 @@ static void *buscarLegendas(void *u) {
     B.lotes = calloc((size_t)(B.nLotes > 0 ? B.nLotes : 1), sizeof *B.lotes);
     if (!B.lotes) printf("[legendas] candidatos: memoria indisponivel\n");
 
-    for (i = 0; B.lotes && i < B.nLotes; i++) {
-      // Addon que nao declara legenda nao e consultado.
-      if (!addon[i].ativo || !addon[i].legenda) continue;
-      // EM LEVAS DE LEG_FIOS (B4). Um fio por addon era ate 128 fios, cada um
-      // com pilha, ~50 KB de lote e um curl — e todo addon da conta nasce
-      // "legenda" ate o manifesto responder. Com a lista cheia de duplicatas,
-      // memoria de sobra numa TV de 32 bits.
-      if (vivos == LEG_FIOS) {
-        for (k = 0; k < i; k++) if (criado[k]) { pthread_join(th[k], NULL); criado[k] = 0; }
-        vivos = 0;
-      }
-      fio[i].B = &B; fio[i].i = i;
-      if (pthread_create(&th[i], NULL, buscarUmAddon, &fio[i]) == 0) { criado[i] = 1; nAtivos++; vivos++; }
-      else buscarUmAddon(&fio[i]);      // sem fio novo: faz aqui mesmo
+    // UMA FILA, LEG_FIOS TRABALHADORES (B4). Um fio por addon era ate 128
+    // fios, cada um com pilha, ~50 KB de lote e um curl — e todo addon da
+    // conta nasce "legenda" ate o manifesto responder. Com a lista cheia de
+    // duplicatas, memoria de sobra numa TV de 32 bits. Cada trabalhador puxa
+    // o proximo quando termina o seu (legFioPuxa): sem barreira por lote,
+    // quem responde rapido entra no prazo da escolha automatica.
+    for (i = 0; B.lotes && i < LEG_FIOS; i++) {
+      fio[i].B = &B;
+      if (pthread_create(&th[i], NULL, legFioPuxa, &fio[i]) == 0) nFios++;
+      else { legFioPuxa(&fio[i]); break; }   // sem fio novo: drena a fila aqui mesmo
     }
-    for (i = 0; i < B.nLotes; i++) if (criado[i]) pthread_join(th[i], NULL);
+    for (i = 0; i < nFios; i++) pthread_join(th[i], NULL);
 
     // Refazer com extras: soma a lista nova de uma vez, agora que todos
     // responderam (publicarLegendas descarta se a geracao ja mudou).
@@ -1410,7 +1431,7 @@ static void *buscarLegendas(void *u) {
     legManter = 0;
     i = nLegs;
     pthread_mutex_unlock(&legTrava);
-    printf("[legendas] concluida: %d (%d addon(s) em paralelo, %u ms)\n", i, nAtivos,
+    printf("[legendas] concluida: %d (%d addon(s) em paralelo, %u ms)\n", i, B.consultados,
            relogioMs() - t0);
     fflush(stdout);
     return NULL;
