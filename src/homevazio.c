@@ -45,10 +45,10 @@ void homevazio_desenhar(float alfa) {
   l = txt_linha_corta(TXT_HEADLINE, "Sua Home está vazia", 255, 255, 255, 255, tw);
   txt_desenhar_alpha(l, tx, y, alfa);
   y += l.h + 22.0f;
-  y = txt_bloco(TXT_BODY, "Configure seus add-ons no celular, na sua conta Nuvio. A TV acompanha sozinha.",
-                200, 203, 210, tx, y, tw, 40, 1, 3) + 14.0f;
+  y += txt_bloco(TXT_BODY, "Configure seus add-ons no celular, na sua conta Nuvio. A TV acompanha sozinha.",
+                200, 203, 210, tx, y, tw, 40, alfa, 3) + 14.0f;
   txt_bloco(TXT_CAPTION, "Aponte a câmera do celular para o QR code e siga o guia.",
-            160, 163, 172, tx, y, tw, 34, 1, 2);
+            160, 163, 172, tx, y, tw, 34, alfa, 2);
   l = txt_linha(TXT_BODY, rot, 24, 24, 26, 255);
   b = (GfxRect){ tx, p.y + p.h - 64.0f - 76.0f, (float)l.w + 88.0f, 76.0f };
   gfx_vidro_pilula_cheia(b, 0.5f, 1.0f, alfa);   // sempre focado: e o unico alvo
