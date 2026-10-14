@@ -149,8 +149,16 @@ int main(void) {
   assert(AJ_INTERFACE_MODO == AJ_PROXIMO_CONTAGEM + 1);
   assert(AJ_MIC_BUSCA == AJ_INTERFACE_MODO + 1);
   assert(AJ_MENU_TOPO == AJ_MIC_BUSCA + 1 && AJ_ABAS_ESTILO == AJ_MENU_TOPO + 1 && AJ_TECLADO_ANDROID == AJ_ABAS_ESTILO + 1 && AJ_LEG_CONTORNO_COR == AJ_TECLADO_ANDROID + 1);
-  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_N == AJ_FALHA_ADDON_LIMITE + 1);
+  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_ESTAT_TAMANHO == AJ_FALHA_ADDON_LIMITE + 1 && AJ_N == AJ_ESTAT_TAMANHO + 1);
   for (int i = 0; i < AJ_N; i++) assert(strcmp(CHAVE[i], "autoCreditosLocal"));
+  // #338: o tamanho das estatisticas ao vivo: "Lembrar o ultimo" por padrao, local,
+  // em Reproducao, com Lembrar + Completo/Compacto/Minimo.
+  assert(!strcmp(CHAVE[AJ_ESTAT_TAMANHO], "estatTamanhoLocal"));
+  assert(valor[AJ_ESTAT_TAMANHO] == 0 && ajustes_estat_tamanho() == -1);
+  assert(somenteDesteAparelho(AJ_ESTAT_TAMANHO) && !dePerfil(AJ_ESTAT_TAMANHO) && OPCOES[AJ_ESTAT_TAMANHO].n == 4);
+  valor[AJ_ESTAT_TAMANHO] = 1; assert(ajustes_estat_tamanho() == 0);
+  valor[AJ_ESTAT_TAMANHO] = 3; assert(ajustes_estat_tamanho() == 2);
+  valor[AJ_ESTAT_TAMANHO] = 0;
   // 13/10: o layout "Apple TV" se chama Dinamica; o valor gravado nao muda.
   assert(HOME_LAYOUT_DINAMICA == 2 && OPCOES[AJ_HOME_LAYOUT].n == 3);
   assert(!strcmp(V_HOME_LAYOUT[HOME_LAYOUT_DINAMICA], "Dinâmica"));

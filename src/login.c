@@ -178,7 +178,7 @@ void login_soltar(void) {
 static void gerarTexQr(const char *texto) {
   if (!texto || !texto[0]) return;
   if (!strcmp(qrDe, texto) && texQr) return;
-  if (!qr_textura(&texQr, texto)) return;
+  if (!qr_textura(&texQr, texto)) { printf("[login] stage=qr class=capacity\n"); return; }
   snprintf(qrDe, sizeof qrDe, "%s", texto);
 }
 

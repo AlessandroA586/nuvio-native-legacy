@@ -67,6 +67,18 @@ For TV reports include model, firmware, revision, selected track and output;
 check native DTS, conversion, seeks, track changes and A/V sync using the
 [DTS Debug app](../../../tools/dts-pipeline/DEBUG.md).
 
+## Samsung .tpk (Tizen 8–9)
+
+The Samsung build converts with its own path: the TV's `Tizen.Multimedia.Player`
+reads the converted stream from a local HTTP server inside the app
+(`src/dts/dts_hls_tpk.c`; converter `src/dts/dts_remux.c`). Video is copied byte
+for byte; DTS decodes the core, TrueHD its 5.1 presentation, output AC3 5.1 at
+640 kb/s (stereo sources 2.0). Delivery is HLS on 127.0.0.1 only.
+MKV sources decide from their track header; MP4 sources (announced as MP4, VOD)
+are probed by the converter beside the original, which keeps playing until a
+DTS/TrueHD track is found. HLS needs the keyframe index to reach the end of the
+file: an MKV without Cues switches to the continuous TS, which seeks by time.
+
 ## Dependency provenance and distribution
 
 The static FFmpeg libraries (`avformat`, `avcodec`, `swresample`, `avutil`) use
