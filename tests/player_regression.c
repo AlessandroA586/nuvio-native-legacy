@@ -56,6 +56,12 @@ static int saidaVisto(double pos, double dur, double cred, double assistido, dou
   int chegou;
   return player_regra_visto(de, assistido, pos, player_regra_concluiu(pos, dur, cred), &chegou);
 }
+// Fonte simulada pronta: com a fonte ainda abrindo, BAIXO expande o cartao
+// (8bf0ae88) em vez de esconder os controles, que e o que estes casos testam.
+static void comFonte(void) {
+  static const VideoSimulacao sim={.aceita=1,.pronto=1};
+  video_simular(&sim);player_definir_fonte("https://example.invalid/e.mp4");
+}
 static void testar(void) {
   // #205 NAO PODE REGREDIR O #100. Aqui em cima porque nao dependem de estado.
   assert(saidaVisto(2400, 2700, 2400, 2400, 0));    // aceitou o proximo nos creditos (88,9%)
@@ -151,6 +157,7 @@ static void testar(void) {
   assert(episodios_escolheu(&t,&e) && t==2 && e==5);
   assert(!episodios_escolheu(&t,&e));
   player_abrir(0,NULL);player_definir_episodio(2,4);
+  assert(player_carregando());comFonte();assert(!player_carregando());
   // A ABREVIACAO SEGUE O IDIOMA: T de Temporada em portugues, S de Season em
   // ingles. Foi o conserto do issue #12 — a frase e montada com snprintf, e o
   // i18n passou a envolver o FORMATO, entao "T%dE%d" tem par na tabela.
@@ -173,12 +180,12 @@ static void testar(void) {
   teclaPlayer(SDLK_UP);assert(player_controles_visiveis());
   teclaPlayer(SDLK_RIGHT);teclaPlayer(SDLK_RIGHT);teclaPlayer(SDLK_RIGHT);teclaPlayer(SDLK_RETURN);
   assert(player_pediu_fontes());   /* legendas -> audio -> proporcao -> fontes */
-  assert(player_carregando());player_encerrar();
+  player_encerrar();
   // #109: a tecla que revela os controles decide o foco. Com o foco em
   // Legendas e os controles escondidos, OK pausa e os controles sobem NO PLAY
   // — o OK seguinte alterna de novo em vez de abrir a folha de legendas.
   // Sessao sem URL tambem nao tem video proprio (registro 1518).
-  player_abrir(0,NULL);assert(!player_tem_video());player_definir_episodio(2,4);
+  player_abrir(0,NULL);assert(!player_tem_video());player_definir_episodio(2,4);comFonte();
   teclaPlayer(SDLK_RIGHT);      // foco em Legendas
   teclaPlayer(SDLK_DOWN);assert(!player_controles_visiveis());
   teclaPlayer(SDLK_RETURN);assert(player_controles_visiveis());
@@ -207,7 +214,7 @@ static void testar(void) {
   // YouTube e na Netflix — os controles sobem com o foco NA BARRA e o primeiro
   // toque ja anda 10 s. Antes subiam com o foco nos botoes e o toque seguinte
   // trocava de botao em vez de avancar.
-  player_abrir(0,NULL);player_definir_episodio(2,4);
+  player_abrir(0,NULL);player_definir_episodio(2,4);comFonte();
   teclaPlayer(SDLK_DOWN);assert(!player_controles_visiveis());
   { float p0=player_posicao_seg();
     teclaPlayer(SDLK_RIGHT);
@@ -239,7 +246,7 @@ static void testar(void) {
   player_encerrar();
   // FOCO NA BARRA (pedido do dono, 03/10): a fileira de botoes FECHA e volta
   // quando o foco desce; e CIMA na barra nao faz NADA — abria o Audio.
-  player_abrir(0,NULL);player_definir_episodio(2,4);
+  player_abrir(0,NULL);player_definir_episodio(2,4);comFonte();
   assert(player_controles_visiveis()&&!player_foco_na_barra());
   { Uint32 t0=SDL_GetTicks();int i;
     for(i=0;i<60;i++)player_atualizar(1.f/60,t0);
@@ -247,14 +254,14 @@ static void testar(void) {
     teclaPlayer(SDLK_UP);assert(player_foco_na_barra());
     for(i=0;i<60;i++)player_atualizar(1.f/60,t0);
     assert(player_fileira()<0.05f);
-    teclaPlayer(SDLK_UP);
-    assert(player_pediu_faixas()==0&&player_foco_na_barra()&&player_controles_visiveis());
+    teclaPlayer(SDLK_UP);   // #305: CIMA na barra esconde, nao abre o Audio
+    assert(player_pediu_faixas()==0&&!player_controles_visiveis());
     teclaPlayer(SDLK_UP);teclaPlayer(SDLK_UP);
     assert(player_pediu_faixas()==0&&player_foco_na_barra());
     teclaPlayer(SDLK_DOWN);assert(!player_foco_na_barra()&&player_controles_visiveis());
     for(i=0;i<60;i++)player_atualizar(1.f/60,t0);
     assert(player_fileira()>0.95f); }
-  player_encerrar();
+  player_encerrar();video_simular(NULL);
   strcpy(c.tipo,"movie");cat_definir(&c,1);player_abrir(0,NULL);
   player_definir_episodio(2,4);assert(!player_linha_episodio()[0]);
   for(int i=0;i<10;i++)teclaPlayer(SDLK_RIGHT);
