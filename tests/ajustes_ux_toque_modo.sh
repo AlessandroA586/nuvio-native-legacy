@@ -1,5 +1,6 @@
 #!/bin/bash
-# Inline editor and Fileiras touch UI are Mobile only; no window or network.
+# Inline editor and Fileiras touch UI are Mobile only; no network. The footer
+# frames run the real draw in a hidden GL window (like tests/ajustes_shot.sh).
 #   bash tests/ajustes_ux_toque_modo.sh
 set -eu
 cd "$(dirname "$0")/.."

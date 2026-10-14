@@ -204,21 +204,18 @@ static void interfacePorToque(void) {
 }
 
 // #205: the footer hint chips ("OK Confirmar", "Voltar Cancelar") are tappable
-// in TV mode too. A synthetic tap on the OK chip goes through ponteiro +
-// ajustes_evento and confirms the pending edit, exactly like the OK key.
+// in TV mode too. The taps go through ponteiro + ajustes_evento and confirm
+// or cancel the pending edit, exactly like the remote keys. The frames run
+// the REAL ajustes_atualizar + ajustes_desenhar in a hidden GL window, so the
+// pointer layer the production code leaves behind is what the taps hit —
+// the hand-built frame of the first version missed the Mobile regression.
+static SDL_Window *janRodape;
+static SDL_GLContext glRodape;
 static void quadroRodape(void) {
   ponteiro_teste_janela((int)NV_TELA_W, (int)NV_TELA_H);
   ponteiro_quadro(relogio);
-  ponteiro_camada();
-  // Como na tela assentada: as linhas ja registraram alvos, entao um clique
-  // fora dos chips NAO pode cair no OK de camada vazia.
-  ponteiro_alvo(0, 0, (float)NV_TELA_W, (float)NV_TELA_H, NULL, NULL, 0, 0);
-  // O rodape e medido na tela virtual dos Ajustes, como no desenho de verdade.
-  { AjDica d[3] = { { "← →", "Escolher" }, { "OK", "Confirmar" }, { "Voltar", "Cancelar" } };
-    GfxRect fr = aj2ListaR();
-    AJ_ESCALA_INI();
-    aj2RodapeA3(fr, d, 3, 1.0f);
-    AJ_ESCALA_FIM(); }
+  for (int i = 0; i < 8; i++) ajustes_atualizar(0.05f, relogio);   // settle the ramps
+  ajustes_desenhar(relogio);
   ponteiro_desenhar();
   relogio += 400;
 }
@@ -281,6 +278,41 @@ static void rodapePorToque(void) {
   if (alvoRodape(0, &x, &y)) clicarMouseInterface(x, y);
   CONFERE(!uxEditor && valor[AJ_VIDRO] == 1, "Clique do mouse no chip OK confirma a edicao");
   valor[AJ_VIDRO] = 0; gravar();
+
+  // P0 regression: Mobile inline editing keeps its own sheet targets. The
+  // real frame (ajustes_desenhar) must leave the choice targets, the scroll
+  // region and the Confirm/Cancel pills behind — the TV footer replay must
+  // not wipe the Mobile layer.
+  layout_modo_definir(1);
+  focarOpcao(AJ_TEMA); uxAbrirEditor(AJ_TEMA);
+  CONFERE(uxEditor == 1 && ajEditandoLinha(AJ_TEMA), "Tema: edita na linha no Mobile");
+  quadroRodape();
+  CONFERE(ajPontInline, "Tema: o quadro real entra na edicao na linha");
+  { const PonteiroAlvo *v; int n = ponteiro_teste_lista(&v), ok = 0;
+    for (int i = 0; i < n; i++)
+      if (v[i].ativar == ajToqueInlineValor) { ok = 1; break; }
+    CONFERE(ok, "Mobile inline: os alvos de escolha sobrevivem ao quadro");
+    CONFERE(ajToqueN > 0, "Mobile inline: a regiao de rolagem sobrevive ao quadro");
+    for (int i = 0; i < n; i++)
+      if (v[i].ativar == ajToqueCancelar) { ok = 2; break; }
+    CONFERE(ok == 2, "Mobile inline: os botoes do rodape seguem registrados"); }
+  uxCancelar();
+
+  // P1: the TV replay registers only the chips the footer DREW (ajDicasDe).
+  // Tema inline draws no Voltar chip, so no Voltar target may exist.
+  layout_modo_definir(0);
+  focarOpcao(AJ_TEMA); uxAbrirEditor(AJ_TEMA);
+  CONFERE(uxEditor == 1 && ajEditandoLinha(AJ_TEMA), "Tema: edita na linha na TV");
+  quadroRodape();
+  { const PonteiroAlvo *v; int n = ponteiro_teste_lista(&v), ok = 0, voltar = 0;
+    for (int i = 0; i < n; i++) {
+      if (v[i].focar == aj2DicaOk && !v[i].ativar) ok++;
+      if (v[i].ativar == aj2DicaVoltar && !v[i].focar) voltar++;
+    }
+    CONFERE(ok == 1, "Tema na TV: so o chip OK desenhado registra alvo");
+    CONFERE(voltar == 0, "Tema na TV: nenhum alvo Voltar fora do rodape desenhado"); }
+  uxCancelar();
+  layout_modo_definir(0);
 }
 
 int main(void) {
@@ -294,6 +326,22 @@ int main(void) {
   assert(ajInlineAtivo(0, &p));
   assert(!ajInlineAtivo(1, &p));   // a modal still wins in Mobile
   puts("PASS: inline editor is Mobile only");
+  // A hidden GL window, as in tests/ajustes_shot.c: the footer frames below run
+  // the real ajustes_desenhar, and its background needs a GL context. txt first,
+  // before anything measures a line (text.c only tries each family once).
+  assert(SDL_Init(SDL_INIT_VIDEO) == 0);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+  janRodape = SDL_CreateWindow("Nuvio: rodape dos Ajustes", SDL_WINDOWPOS_CENTERED,
+                               SDL_WINDOWPOS_CENTERED, 1920, 1080,
+                               SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN);
+  assert(janRodape);
+  glRodape = SDL_GL_CreateContext(janRodape); assert(glRodape);
+  SDL_GL_SetSwapInterval(0);
+  glViewport(0, 0, 1920, 1080);
+  gfx_tamanho_alvo(1920, 1080);
+  assert(gfx_iniciar());
+  assert(txt_iniciar("deploy/app", 1));
   dados_iniciar(getenv("NUVIO_DADOS"));
   gfx_opacidade_grupo = 0;  // exercise registration and hint measurement, skip pixels
   ajustes_iniciar();

@@ -1245,15 +1245,17 @@ static void ajDesenharTela(void) {
     txt_desenhar_alpha(t, fr.x + 50, fr.y + fr.h - 30, 0.7f);
   }
   // #205: os modais de digitacao/aviso limparam os alvos do rodape. Na edicao
-  // na linha (TV tambem) o rodape da lista reclassificou os chips: devolve a
-  // camada dele, para o clique chegar onde a tela mostra.
+  // na linha da TV o rodape da lista continua na tela: repete as MESMAS dicas
+  // (ajDicasDe, sem desenhar) so para registrar os alvos dos chips sobre um
+  // anteparo. No Mobile (ajPontInline) a camada do quadro ja e a da folha e o
+  // rodape tem os botoes de toque proprios — nao pode zerar aqui.
 #ifdef NV_TOUCH_UI
-  if (ajEditandoLinha(uxOp) && !modal) { ponteiro_camada(); ajToqueCamada();
+  if (ajEditandoLinha(uxOp) && !ajPontInline && !modal) { ponteiro_camada(); ajToqueCamada();
     ponteiro_alvo(0, 0, (float)NV_TELA_W, (float)NV_TELA_H, NULL, NULL, 0, 0);
-    { AjDica d[3] = { { "← →", "Ajustar" }, { "OK", "Confirmar" }, { "Voltar", "Cancelar" } };
-      GfxRect fr = aj2ListaR();
+    { AjDica d[4]; GfxRect fr = aj2ListaR();
+      float x = fr.x + 34.0f, yc = fr.y + fr.h - AJ_A3_RODAPE * 0.5f - 6.0f;
       AJ_ESCALA_INI();
-      aj2RodapeA3(fr, d, 3, 1.0f);
+      aj2DicasLinha(d, ajDicasDe(focoIndice ? -1 : focoOp, d), x, yc, TXT_V2_KBD18, 34, 38, 10, TXT_V2_24, 8, 22, 2, 1.0f);
       AJ_ESCALA_FIM(); } }
 #endif
   ajDesenharModais();
