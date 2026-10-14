@@ -1498,6 +1498,12 @@ static void erroSemFonte(void) {
     // ficaria parada). A folha toca.
     player_erro_fonte_motivo(i18n("As fontes desta lista são P2P (torrent)"),
         i18n("Abra Fontes e escolha uma: ela toca pelo servidor P2P."));
+  } else if (!canal && stream_torrents_para_p2p() > 0) {
+    // #486: torrent sem debrid e com o P2P desligado foi descartado.
+    // addons_motivo_vazio nao explica (o addon trouxe fonte) e saia o generico.
+    snprintf(motivo, sizeof motivo, i18n("%d fontes precisam de uma conta de debrid, e nenhuma está ligada"),
+             stream_torrents_para_p2p());
+    player_erro_fonte_motivo(motivo, i18n("Ligue o P2P em Ajustes ou conecte uma conta de debrid."));
   } else if (addons_motivo_vazio(motivo, sizeof motivo))
     player_erro_fonte_motivo(motivo, canal
         ? i18n("Escolha outro canal no guia ou tente de novo mais tarde.")
@@ -2481,7 +2487,9 @@ static int spotAtalho(const SDL_Event *e) {
   if (e->type != SDL_KEYDOWN) return 0;
   k = e->key.keysym.sym;
   if (k == SPOT_TECLA_VOZ || k == SPOT_TECLA_ABRIR) return 1;
-  return e->key.keysym.scancode == NV_SCANCODE_YELLOW && tela != TELA_GUIA;
+  // AMARELA e CH- (webOS) abrem igual; no guia o CH- e o salto de categoria.
+  return (e->key.keysym.scancode == NV_SCANCODE_YELLOW ||
+          e->key.keysym.scancode == NV_SCANCODE_CH_DOWN) && tela != TELA_GUIA;
 }
 static int spotPode(void) {
   return tela != TELA_LOGIN && tela != TELA_ESCOLHA_PERFIL && !player_aberto() &&
@@ -2684,7 +2692,8 @@ void app_evento(const SDL_Event *e) {
   // o teclado todo, por cima do player, das folhas e das ilhas.
   if (central_aberta()) { central_evento(e); return; }
   // AS ESTATISTICAS AO VIVO (estatvivoui.h), abertas pela central: modal ate
-  // Voltar (fecha) ou OK (fixa no canto, e ai nao come mais tecla nenhuma).
+  // Voltar fecha; OK ou Esquerda/Direita trocam o tamanho; Baixo fixa no canto
+  // e libera as teclas para o player.
   if (estatvivo_evento(e)) return;
   // O MODAL DA ILHA (ilha.h) e uma camada: aberto, come o teclado todo.
   if (ilha_evento(e)) return;
@@ -4563,8 +4572,10 @@ void app_atualizar(float dt, Uint32 agora) {
     // buffering por 8 s. EOF de live TPK com progresso reabre imediatamente
     // sem gastar tentativa; as demais quedas reabrem a MESMA fonte, ate
     // NV_LS_MAX vezes (livestall.h); esgotou, cai no caminho de sempre (proxima
-    // fonte). Pausa da pessoa nunca entra. So roda se o watchdog acima nao ja
-    // declarou a fonte morta (erro de verdade tem o seu proprio caminho).
+    // fonte). Pausa da pessoa nunca entra. No webOS o fim do buffer parado
+    // com reserva curta tambem conta (fonte seca, reabre antes de congelar).
+    // So roda se o watchdog acima nao ja declarou a fonte morta (erro de
+    // verdade tem o seu proprio caminho).
     { static int lsIdx = -1;
       static char lsId[64];
       int ls;
@@ -4573,9 +4584,9 @@ void app_atualizar(float dt, Uint32 agora) {
         lsIdx = canalFonteIdx;
         snprintf(lsId, sizeof lsId, "%s", player_id_canal());
       }
-      ls = nv_ls_passo(&liveStall, SDL_GetTicks(), video_pronto() ? video_pos() : 0.0,
-                       video_pronto(), player_pausa_pessoa(), video_terminou(),
-                       video_bufferando_ms());
+      ls = nv_ls_passo_buf(&liveStall, SDL_GetTicks(), video_pronto() ? video_pos() : 0.0,
+                           video_pronto(), player_pausa_pessoa(), video_terminou(),
+                           video_bufferando_ms(), video_buffer_fim());
       if (morta) {
         nv_ls_zerar(&liveStall);
       } else if (ls == NV_LS_AGENDOU) {

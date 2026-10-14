@@ -756,6 +756,7 @@ static int resolverCom(Pedido *p, const char *h, int fileIdx, const char *fontes
   pthread_mutex_unlock(&trava);
   if (sidVelho[0] && p->o->parar_stream) p->o->parar_stream(p->m, sidVelho);
   if (!mesmo) {
+    double t0 = agora();
     // Um torrent por vez: outro hash solta o anterior (pecas, pares e cache).
     soltarTorrent(p);
     if (!p2p_magnet(h, fontes, magnet, sizeof magnet)) return P2P_ERR_HASH;
@@ -784,6 +785,8 @@ static int resolverCom(Pedido *p, const char *h, int fileIdx, const char *fontes
     pthread_mutex_lock(&trava);
     metaPronta = 1;
     pthread_mutex_unlock(&trava);
+    // #486: "lento" sem log nao separa metadados (peers) de primeiros bytes.
+    printf("[p2p-motor] %.8s: metadados em %.1f s\n", h, agora() - t0);
   }
   if (cancelado(p)) { r = -2; goto falhou; }
   // Arquivos. O teto vem ANTES de alocar: torrent com 100 mil arquivos nao
@@ -913,6 +916,8 @@ int p2pmotor_resolver(const char *hash, int fileIdx, const char *fontes,
     pthread_mutex_unlock(&trava);
     e = subir(o, g);
     pthread_mutex_lock(&trava);
+    // #486: subida (inclui apagar sobra de cache) e espera de parada anterior.
+    printf("[p2p-motor] %.8s: motor de pe em %.1f s (erro %d)\n", h, agora() - t0, e);
   }
   if (e != P2P_OK) {
     resolvendo = 0;

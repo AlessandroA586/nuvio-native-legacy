@@ -299,6 +299,7 @@ void central_desenhar(Uint32 agora) {
     p.aberta = 1;
     p.modal = 1;
     p.ancoraTopo = 1;
+    p.insetEsq = CC_PAD;
     plrilha_pedir(&p);
   }
 }

@@ -353,6 +353,31 @@ __attribute__((unused)) static void publicarCacheDisco(void) {
 #endif
 static unsigned long quadroAtual = 1;
 
+// ITEM 4 DA PESQUISA PLX: recusa no ponto do pedido.
+//
+// O pedido e o ULTIMO ponto onde ainda da para recusar de graca: rate-limit
+// depois do decode e "um em voo" foram medidos por eles e ficaram PIORES que
+// nada ("pacing nao torna o trabalho acessivel"). A grade declara aqui, uma vez
+// por quadro, se esta em movimento, e cada desenho de cartao marca se aquela
+// arte esta FORA da janela visivel. O cache entao recusa, antes de enfileirar
+// rede ou decode, o pedido NOVO de uma arte fora da janela.
+//
+// DOIS NIVEIS, porque o risco de tile escuro nao e o mesmo nos dois casos:
+//   1 = cartao NA BORDA (fileira cortada, ainda desenhada no fade): so recusa
+//       em MOVIMENTO. Parado, o vizinho da borda e atendido — se recusasse,
+//       ele ficaria escuro para sempre, porque parado nao volta a rolar.
+//   2 = cartao TOTALMENTE fora da tela: recusa SEMPRE (em movimento ou parado),
+//       porque nao ha tile nenhum na tela para ficar escuro — e pedi-lo parado
+//       e justamente o trabalho especulativo que o lookahead do item 1 limita.
+// Arte ja conhecida (pronta, em voo ou aquecida) NUNCA e recusada: e o que
+// evita o tile escuro que eles mediram com a recusa fixa.
+static int gradeMovendo;
+static int pedidoFora;
+int tex_n_recusa = 0;
+
+void tex_grade_movendo(int movendo) { gradeMovendo = movendo ? 1 : 0; }
+void tex_pedido_fora(int nivel) { pedidoFora = nivel < 0 ? 0 : nivel; }
+
 // O driver tambem aloca a piramide de mipmaps. Contar apenas o nivel base
 // deixava o cache ultrapassar o teto real em cerca de 33% nas artes de card.
 // COBRAR A PIRAMIDE SO QUANDO ELA EXISTE.
@@ -3517,6 +3542,13 @@ static GLuint tex_obter_limite(const char *caminho, int limite, int urgente,
   GLuint saida = 0;
   unsigned long h = hashCaminho(caminho);
   int i; BUSCA_MEDIDA(i, caminho, h);
+  // ITEM 4: recusa ANTES do fetch. So vale para pedido NOVO (slot ainda nao
+  // existe): arte que ja esta no cache, em voo ou aquecida passa, e e ela que
+  // serve a janela visivel. Nivel 2 (fora da tela) recusa sempre; nivel 1 (na
+  // borda) so em movimento; o lookahead (item 1) aquece a vizinhanca em repouso.
+  if (i < 0 && pedidoFora && (pedidoFora >= 2 || gradeMovendo)) {
+    tex_n_recusa++; return 0;
+  }
   if (i >= 0 && itens[i].estado == FALHOU) {
     itens[i].ultimoQuadro = quadroAtual;
     itens[i].ultimoPedido = SDL_GetTicks();

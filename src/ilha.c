@@ -753,6 +753,21 @@ static void atualizarHora(void) {
 #define DUO_SOBRE 8.0f          // a capa entra 8 px por cima do rosto
 #define PONTO_VIVO 10.0f
 
+// Largura da pilula em repouso, para o menu do topo reservar (TOPO_RELOGIO):
+// a hora + o ponto de enquete + o MEDIDOR DE DESEMPENHO quando ligado — sem
+// ele a barra do topo cobre a ilha que cresceu ~200 px a esquerda. Em Menor/
+// Grande o corpo por baixo pode ser mais largo que a linha (Grande: GR_W).
+float ilha_relogio_largura(void) {
+  int ds = desempenho_forma();
+  float w, bw, bh;
+  atualizarHora();
+  w = PAD_E + PAD_D + (float)txt_largura(TXT_PG_RELOGIO, hora) +
+      (pontoEnquete ? 12.0f + PONTO_ENQ : 0.0f) + desempenho_linha_w(ds);
+  desempenho_corpo_tam(ds, &bw, &bh);
+  if (bw > w) w = bw;
+  return w * gfx_escala_ui();
+}
+
 // --- a frase com enfase --------------------------------------------------------
 // "Ana recomendou Fallout": o nome e o titulo em negrito (TXT_ILHA_FORTE, o
 // mesmo corpo do TXT_BODY em Bold), o resto em Medium. Uma textura por trecho,

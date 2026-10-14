@@ -13,6 +13,7 @@
 // Icones derivados dos SVGs originais do sidebar, com alpha e recortes reais.
 #include "horafmt.h"
 #include "menu.h"
+#include "ilha.h"
 #include "iconeapp.h"
 #include "perfis.h"
 #include "tex_cache.h"
@@ -330,11 +331,15 @@ static void desenhaMaterial(const MenuGeo *g, float a) {
     // rotulos (captura de tests/homelayouts_shot.sh): sobe a 86 %.
     float al = anim_mistura(.80f, .86f, limita01((g->w - NV_MENU_W_RAIL) / (NV_MENU_W_ABERTO - NV_MENU_W_RAIL)))
              * gfx_vidro_opacidade();
+    // A barra do topo e vidro de verdade (Liquid Glass): bem mais translucida,
+    // o cartaz que passa atras aparece borrado; a legibilidade vem do fosco.
+    if (topo() && !gfx_efeitos_minimos()) al *= 0.72f;
     if (al > 1.0f) al = 1.0f;
     gfx_vidro_fosco(r, raio, a);
     gfx_vidro_miolo(r, raio, 14.0f / 255.0f, 15.0f / 255.0f, 18.0f / 255.0f, al * a, a);
     gfx_luz_canto(r, raio, g->w * .22f + (r.w - g->w), -0.40f * r.h, 0.48f * r.h,
                   1, 1, 1, .10f * a);
+    if (topo()) gfx_vidro_borda(r, raio, a);
   } else {
     gfx_cor(r, raio, 21.0f / 255.0f, 22.0f / 255.0f, 26.0f / 255.0f, a);
   }
@@ -1289,10 +1294,38 @@ static void tvDesenhar(void) {
 #define TOPO_ROT_FIM  MK(16.0f)
 #define TOPO_FIO      MK(13.0f)    // vao do fio antes do perfil
 #define TOPO_AVATAR   MK(40.0f)
-#define TOPO_RELOGIO  (260.0f / NV_MENU_ESCALA)      // canto direito: a ilha do relogio (64 + ~150)
+#define TOPO_RELOGIO  ((NV_ILHA_MARGEM_D * gfx_escala_ui() + ilha_relogio_largura() + 16.0f) / NV_MENU_ESCALA)
+
+// A CAPSULA DE SELECAO DESLIZA entre os itens: uma posicao fracionaria `topoPos`
+// (indice na ordem dos itens visiveis), do item de partida ao de chegada em
+// TOPO_DESLIZA_S com ease-out cubico, por TEMPO (dt), nao por mola: o mesmo
+// 180 ms a 30 ou 60 quadros. Animacoes reduzidas: salta.
+#define TOPO_DESLIZA_S 0.18f
+static float topoPos, topoDe, topoPara, topoT = TOPO_DESLIZA_S;
+
+static int topoIndice(int id) {
+  int i, k = 0;
+  for (i = 0; i < MENU_N && i < id; i++) if (mostra(i)) k++;
+  return k;
+}
+float menu_topo_pos(void) { return topoPos; }
 
 static void topoAtualizar(float dt) {
+  float cob = 0.0f, t;
+  int i, alvo = topoIndice(linha);
   tvPilAlfa = anim_mola(tvPilAlfa, tvPilAlvo, dt, TV_MOLA_PILULA);
+  for (i = 0; i < NV_MENU_FOCOS; i++) cob += animFoco[i];
+  // Barra sem foco: a capsula espera no item atual, sem deslizar de longe.
+  if ((!aberto && cob < 0.02f) || anim_politica_reduzida || ajustes_animacoes_reduzidas()) {
+    topoPos = topoDe = topoPara = (float)alvo; topoT = TOPO_DESLIZA_S;
+    return;
+  }
+  if ((float)alvo != topoPara) { topoDe = topoPos; topoPara = (float)alvo; topoT = 0.0f; }
+  if (topoT >= TOPO_DESLIZA_S) return;
+  topoT += dt > 0.05f ? 0.05f : dt;
+  t = limita01(topoT / TOPO_DESLIZA_S);
+  t = 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t);
+  topoPos = anim_mistura(topoDe, topoPara, t);
 }
 
 static const char *topoRotulo(int i) {
@@ -1317,13 +1350,14 @@ static void topoDesenhar(void) {
   int ordem[NV_MENU_FOCOS], n = 0, i, k;
   float e = expande, ec = limita01(e), x, rotMax, a;
   int focos = aberto || desliza >= 0.002f || expande > 0.004f;
-  float ar, ag, ab;
+  float ar, ag, ab, xs[NV_MENU_FOCOS], ws[NV_MENU_FOCOS], capA, capPos;
+  GfxRect cap;
   MenuGeo g = { 0 };
   for (i = 0; i < MENU_N; i++) if (mostra(i)) ordem[n++] = i;
   ordem[n++] = MENU_RODAPE;
   // Teto dos rotulos: o que sobra ate a ilha do relogio, repartido de modo que
   // os curtos (Guia, Perfil) cedam a folga deles aos longos (Biblioteca).
-  { float t[NV_MENU_FOCOS], resto = NV_TELA_W - TOPO_X - TOPO_RELOGIO - 2.0f * TOPO_PAD - TOPO_FIO
+  { float t[NV_MENU_FOCOS], resto = NV_TELA_W - 2.0f * TOPO_RELOGIO - 2.0f * TOPO_PAD - TOPO_FIO
                                     - (n - 1) * NV_MENU_ITEM_VAO - n * (TOPO_ROT_X + TOPO_ROT_FIM);
     int m = n, mudou = 1;
     for (k = 0; k < n; k++) t[k] = (float)txt_largura(TXT_BODY, topoRotulo(ordem[k]));
@@ -1335,9 +1369,10 @@ static void topoDesenhar(void) {
       if (m > 0) rotMax = resto / m;
     }
     if (m == 0) rotMax = 1e6f; }
-  g.x = TOPO_X; g.y = TOPO_Y; g.h = TOPO_H; g.raio = TOPO_H * 0.5f;
+  g.y = TOPO_Y; g.h = TOPO_H; g.raio = TOPO_H * 0.5f;
   g.w = 2.0f * TOPO_PAD + TOPO_FIO + (n - 1) * NV_MENU_ITEM_VAO;
   for (k = 0; k < n; k++) g.w += topoItemW(ordem[k], e, rotMax);
+  g.x = floorf((NV_TELA_W - g.w) * 0.5f);   // compacta e centrada na tela
   // Fechada vale a opacidade que a tela pediu (0 fora da home); abrindo ela
   // nasce pela rampa do veu, e fechando volta para la.
   a = fmaxf(tvPilAlfa, anim_suave(desliza));
@@ -1357,6 +1392,28 @@ static void topoDesenhar(void) {
   ajustes_acento(&ar, &ag, &ab);
   desenhaMaterial(&g, a);
   gfx_recorte(g.x, g.y, g.w, g.h);
+  // Largura e x de cada item, para a capsula achar o vao entre dois deles.
+  x = g.x + TOPO_PAD;
+  for (k = 0; k < n; k++) {
+    if (ordem[k] == MENU_RODAPE) x += TOPO_FIO;
+    xs[k] = x; ws[k] = topoItemW(ordem[k], e, rotMax);
+    x += ws[k] + NV_MENU_ITEM_VAO;
+  }
+  { float p = topoPos < 0.0f ? 0.0f : topoPos > n - 1 ? (float)(n - 1) : topoPos;
+    int i0 = (int)p, i1 = i0 + 1 < n ? i0 + 1 : i0;
+    float fr = p - (float)i0, cob = 0.0f;
+    for (k = 0; k < NV_MENU_FOCOS; k++) cob += animFoco[k];
+    capA = focos ? limita01(cob) : 0.0f;
+    capPos = p;
+    cap = (GfxRect){ anim_mistura(xs[i0], xs[i1], fr), g.y + TOPO_PAD,
+                     anim_mistura(ws[i0], ws[i1], fr), TOPO_ITEM };
+    if (capA > 0.01f) {
+      if (ajustes_vidro() && !gfx_efeitos_minimos()) {
+        // Capsula de vidro mais clara que a barra, com o fio de luz no alto.
+        gfx_cor(cap, 0.5f, 1, 1, 1, .20f * capA * a);
+        gfx_vidro_borda(cap, 0.5f, .75f * capA * a);
+      } else focoLinha(cap, capA, a);
+    } }
   x = g.x + TOPO_PAD;
   for (k = 0; k < n; k++) {
     float w, f, cx, cy, base, op, br, bw;
@@ -1368,13 +1425,14 @@ static void topoDesenhar(void) {
               0, 1, 1, 1, .10f * a);
       x += TOPO_FIO;
     }
-    w = topoItemW(i, e, rotMax);
+    w = ws[k];
     r = (GfxRect){ x, g.y + TOPO_PAD, w, TOPO_ITEM };
-    f = focos ? animFoco[i] : 0.0f;
+    // Quanto da capsula cobre este item: some pela distancia, nao por mola, entao
+    // o icone e o rotulo trocam de tom junto com o deslize.
+    f = capA * limita01(1.0f - fabsf(capPos - (float)k));
     atual = i == destino;
     cx = x + anim_mistura(TOPO_ITEM * 0.5f, TOPO_ICONE_X, ec);
     cy = r.y + TOPO_ITEM * 0.5f;
-    focoLinha(r, f, a);
     if (ponteiro_ativo() && a > 0.5f) ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroLinha, NULL, i, 0);
     // Os tons da rail: repouso no --fg a 72 %, a pagina ativa e o foco brancos.
     base = atual ? 1.0f : anim_mistura(NV_MENU_INATIVO, 1.0f, ec);

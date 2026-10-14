@@ -285,6 +285,8 @@ int  ilha_minimizando(void);
 // quadro: e de onde o painel de Salvos nasce e para onde ele recolhe. 0 quando
 // a ilha nao esta na tela.
 int  ilha_rect(float *x, float *y, float *w, float *h);
+// Largura do relogio em pixels reais, incluindo recuos e ponto de enquete.
+float ilha_relogio_largura(void);
 // 1 = outra superficie nasceu da pilula e esta no lugar dela (o painel de
 // Salvos): a ilha continua medindo, mas nao se desenha. Vale um quadro.
 void ilha_coberta(int coberta);

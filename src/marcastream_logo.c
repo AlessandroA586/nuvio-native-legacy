@@ -10,16 +10,16 @@
 #include <time.h>
 
 #define MS_MAX 16
-// Uma falha nao e definitiva (#205): re-tenta quando a chave do TMDB passa a
-// existir (o dono ligou a integracao com a pasta aberta) ou apos o intervalo.
+// Uma falha nao e definitiva (#205): re-tenta quando a chave do TMDB muda
+// (o dono ligou a integracao com a pasta aberta) ou apos o intervalo.
 #define MS_RETRY_S 90
-static struct { long rede; atomic_int estado; char url[200]; long falhouEm; int comChave; } slot[MS_MAX];   // 0 livre, 1 buscando, 2 pronto, 3 falhou
+static struct { long rede; atomic_int estado; char url[200], chave[64]; long falhouEm; } slot[MS_MAX];   // 0 livre, 1 buscando, 2 pronto, 3 falhou
 static pthread_mutex_t trava = PTHREAD_MUTEX_INITIALIZER;
 
 static void *fio(void *arg) {
   int k = (int)(long)arg;
   char url[256], *corpo;
-  const char *chave = desc_chave_tmdb();
+  const char *chave = slot[k].chave;
   int ok = 0;
   snprintf(url, sizeof url, "https://api.themoviedb.org/3/network/%ld/images?api_key=%s", slot[k].rede, chave);
   corpo = chave[0] ? rede_baixar(url, 20) : NULL;
@@ -36,7 +36,6 @@ static void *fio(void *arg) {
     }
     free(corpo);
   }
-  slot[k].comChave = chave[0] != 0;
   slot[k].falhouEm = time(NULL);   // escrito antes do estado: quem le 3 ja ve
   atomic_store(&slot[k].estado, ok ? 2 : 3);
   return NULL;
@@ -59,10 +58,10 @@ const char *marca_stream_logo(const MarcaStream *m) {
   for (k = 0; k < MS_MAX; k++) {
     int e = atomic_load(&slot[k].estado);
     if (e && slot[k].rede == m->rede) {
-      // FALHA VELHA NAO E SENTENCA: a chave apareceu ou o intervalo passou —
-      // uma busca que falhou (sem chave, sem rede) volta a ser tentada (#205).
-      if (e == 3 && ((!slot[k].comChave && chave[0]) || agora - slot[k].falhouEm >= MS_RETRY_S)) {
-        slot[k].comChave = chave[0] != 0;
+      // FALHA VELHA NAO E SENTENCA: a chave mudou (ou apareceu) ou o intervalo
+      // passou — uma busca que falhou (sem chave, sem rede) volta a ser tentada.
+      if (e == 3 && (strcmp(slot[k].chave, chave) || agora - slot[k].falhouEm >= MS_RETRY_S)) {
+        snprintf(slot[k].chave, sizeof slot[k].chave, "%s", chave);
         slot[k].falhouEm = agora;
         logoBuscar(k);
       }
@@ -72,7 +71,7 @@ const char *marca_stream_logo(const MarcaStream *m) {
   }
   if (k == MS_MAX && livre >= 0) {
     k = livre; slot[k].rede = m->rede;
-    slot[k].comChave = chave[0] != 0;
+    snprintf(slot[k].chave, sizeof slot[k].chave, "%s", chave);
     slot[k].falhouEm = agora;
     logoBuscar(k);
   }

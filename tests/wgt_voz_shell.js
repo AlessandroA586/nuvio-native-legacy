@@ -121,7 +121,7 @@ for (const foco of ["ausente", "recusa", "lanca"]) teste("falha de campo/foco ca
 
 // Cada tradutor de captura, incluindo keyup de CH+ e aliases do desktop.
 const atalhos = [
-  [403], [404], [427], [427, "keyup"],
+  [403], [404], [427], [427, "keyup"], [428], [428, "keyup"],
   [112, "keydown", "F1"], [113, "keydown", "F2"],
   [114, "keydown", "F3"], [114, "keyup", "F3"],
   [10225], [405], [10252], [415], [19], [413], [412], [417]
@@ -190,6 +190,12 @@ teste("atalhos, log e aliases intactos fora do IME (tambem sem Tizen)", () => {
       m.recebidas.length = 0;
       m.tecla("canvas", k, "keydown", key); m.tecla("canvas", k, "keyup", key);
       assert.deepStrictEqual(m.recebidas, [["keydown", 118], ["keyup", 118]]);
+    }
+    // CH- (428) vira F8 (119), o par do F7: o C o faz de zap ou de Spotlight.
+    for (const tipo of ["keydown", "keyup"]) {
+      m.recebidas.length = 0;
+      m.tecla("canvas", 428, tipo);
+      assert.deepStrictEqual(m.recebidas, [[tipo, 119]]);
     }
     m.tecla("canvas", 404);
     assert.strictEqual(m.diag.hidden, false); assert.strictEqual(m.pintou(), 1);

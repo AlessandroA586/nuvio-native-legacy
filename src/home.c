@@ -20,6 +20,7 @@
 #include "idioma.h"
 #include "catordem.h"
 #include "homeestado.h"
+#include "homevazio.h"
 #include "cachearte.h"
 #include "fileiras.h"
 #include "continuar.h"
@@ -37,6 +38,7 @@ static void heroTempoInicio(int indice) {
 #include "tex_cache.h"
 #include "focus.h"
 #include "anim.h"
+#include "pressdip.h"
 #include "revela.h"
 #include "layout.h"
 #include "telefoneui.h"
@@ -173,12 +175,38 @@ typedef struct {
 } Fileira;
 
 static int fileiraItemIndice(const Fileira *f, int coluna) {
-  if (!f || coluna < 0 || coluna >= f->n) return -1;
+  if (!f || coluna < 0 || coluna >= (f->stackN ? f->stackN : f->n)) return -1;
   // A FILEIRA DE AMIGOS (amigosfil.h): as colunas sao ROSTOS, e nao itens do
   // catalogo. O item dela e o cartao em foco (ou o titulo mais novo do rosto),
   // que e o que o destaque e a memoria de posicao precisam.
   if (f->tipo == FILEIRA_SOCIAL) return amigosfil_indice_cat(coluna);
   return f->usaItens ? f->itens[coluna] : f->ini + coluna;
+}
+
+// #366: somente a descoberta muda. O catalogo, as listas e o historico
+// continuam inteiros; os indices visiveis conservam a ordem do provedor.
+static int filmeVistoOculto(const CatItem *item) {
+  return ajustes_ocultar_filmes_vistos() && item &&
+         !strcmp(item->tipo, "movie") && cat_visto(item);
+}
+static void filtrarFilmesVistos(Fileira *f, const CatFileira *cf) {
+  if (!f || !cf || !ajustes_ocultar_filmes_vistos() ||
+      !cf->base[0] || !cf->catId[0]) return;
+  int teto = f->n, visiveis = 0;
+  for (int c = 0; c < cf->n && visiveis < teto && visiveis < MAX_CARDS; c++) {
+    int indice = cf->ini + c;
+    const CatItem *item = cat_item(indice);
+    if (item && !filmeVistoOculto(item)) f->itens[visiveis++] = indice;
+  }
+  f->usaItens = 1;
+  f->n = visiveis;
+  if (!visiveis) f->verTudo = 0;
+}
+
+static int fileiraRanking(const Fileira *f, int coluna) {
+  int idx = fileiraItemIndice(f, coluna);
+  const CatItem *it = idx >= 0 ? cat_item(idx) : NULL;
+  return it && it->ranking > 0 ? it->ranking : idx - f->ini + 1;
 }
 
 static char bd[MAX_ARTE][512];    int nBd = 0;    // backdrops 16:9
@@ -331,6 +359,7 @@ static int okPressionando = 0;
 static int okLongDisparado = 0;
 static int okConsumirSoltura = 0;
 static float okHold = 0.0f;
+static float okDip = 1.0f;   // escala do card sob o OK apertado (pressdip.h)
 
 // --- hero-carrossel ---
 // O DESTAQUE E A PRIMEIRA FILEIRA DA HOME, e nao um cabecalho decorativo.
@@ -868,7 +897,8 @@ static int heroSetN;
 // Assinatura do que a lista depende. Refazer a lista a cada quadro custaria o
 // strcmp da preferencia e uma varredura das fileiras; refazer so quando algo
 // mudou custa tres comparacoes de inteiro.
-static unsigned heroSetRev, heroSetFilRev;
+static unsigned heroSetRev, heroSetFilRev, heroSetItensRev;
+static int heroSetOcultaVistos;
 static int heroSetCat, heroSetNFil;
 
 // Sorteio ESTAVEL dentro da sessao: o embaralhamento usa uma semente propria
@@ -890,7 +920,11 @@ static void heroMontarSet(void) {
     int m = total < (int)(sizeof baralho / sizeof *baralho)
           ? total : (int)(sizeof baralho / sizeof *baralho);
     unsigned x = heroSemente ? heroSemente : (heroSemente = (unsigned)SDL_GetTicks() | 1u);
-    for (i = 0; i < m; i++) baralho[i] = i;
+    int candidatos = 0;
+    for (i = 0; i < m; i++)
+      if (!filmeVistoOculto(cat_item(i))) baralho[candidatos++] = i;
+    m = candidatos;
+    if (n > m) n = m;
     for (i = 0; i < n && i < m; i++) {
       int j;
       x = x * 1103515245u + 12345u;
@@ -922,20 +956,26 @@ static void heroMontarSet(void) {
         int k;
         if (!cf || strcmp(cf->chave, fonte)) continue;
         for (k = 0; k < cf->n && heroSetN < HOME_HERO_LISTA; k++)
-          if (cf->ini + k >= 0 && cf->ini + k < cat_n()) heroSet[heroSetN++] = cf->ini + k;
+          if (cf->ini + k >= 0 && cf->ini + k < cat_n() &&
+              !filmeVistoOculto(cat_item(cf->ini + k))) heroSet[heroSetN++] = cf->ini + k;
         break;
       }
     }
     if (heroSetN) return;
   }
-  for (i = 0; i < total && heroSetN < HOME_HERO_LISTA; i++) heroSet[heroSetN++] = i;
+  for (i = 0; i < total && heroSetN < HOME_HERO_LISTA; i++)
+    if (!filmeVistoOculto(cat_item(i))) heroSet[heroSetN++] = i;
 }
 
 static void heroSetGarantir(void) {
   unsigned fr = fil_revisao();
+  int ocultar = ajustes_ocultar_filmes_vistos();
+  unsigned ir = ocultar ? cat_revisao_itens() : 0;
   int cn = cat_n(), nf = nFileiras;
-  if (heroSetRev && fr == heroSetFilRev && cn == heroSetCat && nf == heroSetNFil)
+  if (heroSetRev && fr == heroSetFilRev && cn == heroSetCat && nf == heroSetNFil &&
+      ocultar == heroSetOcultaVistos && ir == heroSetItensRev)
     return;
+  heroSetOcultaVistos = ocultar; heroSetItensRev = ir;
   heroSetFilRev = fr; heroSetCat = cn; heroSetNFil = nf; heroSetRev = 1;
   heroMontarSet();
   // Os candidatos ja sao conhecidos: completa em segundo plano a sinopse dos
@@ -2198,6 +2238,14 @@ int home_iniciar(const char *dirArte) {
 
 void home_evento(const SDL_Event *e) {
   if (e->type == SDL_QUIT) { sair = 1; return; }
+  if (homevazio_ativo(nFileiras)) {
+    if (homevazio_evento(e)) return;
+    if (e->type == SDL_KEYDOWN) {
+      SDL_Keycode k = e->key.keysym.sym;
+      if (k == SDLK_LEFT || (k == SDLK_UP && ajustes_menu_topo())) { pedidoMenu = 1; return; }
+      if (k == SDLK_UP || k == SDLK_DOWN || k == SDLK_RIGHT) return;
+    }
+  }
 #ifdef NV_TOUCH_UI
   if (e->type == SDL_KEYDOWN) {
     toqueHeroCancelar();
@@ -2461,7 +2509,8 @@ static int assinaturaPrefs(void) {
        | (ajustes_home_layout() << 8)
        // Ligar/desligar o destaque decide se a primeira fileira vira vitrine
        // (vitrineNaPrimeira).
-       | (ajustes_hero_ligado() ? 1 << 12 : 0);
+       | (ajustes_hero_ligado() ? 1 << 12 : 0)
+       | (ajustes_ocultar_filmes_vistos() ? 1 << 13 : 0);
 }
 
 // A PRIMEIRA FILEIRA DE CATALOGO VIRA VITRINE (cartoes 16:9 grandes) so quando
@@ -2563,6 +2612,7 @@ static void dinAtribuirTipos(int total) {
 // nova vai para o fim) e deixaria a pessoa separa-la da outra metade.
 static int proxHome[MAX_CARDS], nProxHome;
 static void sincronizarFileiras(void) {
+  desc_ocultar_vistos_atualizar();
   int nCat = cat_n_fileiras(), r, destino = 0;
   int assin = assinaturaPrefs();
   // #392: reservas expiram em 30 s, mesmo sem nova resposta da rede.
@@ -2590,8 +2640,9 @@ static void sincronizarFileiras(void) {
   // direto (cat_revisao); cat_revisao e bumpado em cat_definir_tudo,
   // cat_trocar_continuar E cat_republicar_fileiras, cobrindo todo caminho
   // que troca fils[].
-  static unsigned ultCatRev, ultFilRev, ultColRev, ultFilLim, ultCwoRev, ultOrdemRev, ultRetRev;
+  static unsigned ultCatRev, ultFilRev, ultColRev, ultFilLim, ultCwoRev, ultOrdemRev, ultRetRev, ultItensRev;
   unsigned catRev = cat_revisao(), filRev = fil_revisao();
+  unsigned itensRev = ajustes_ocultar_filmes_vistos() ? cat_revisao_itens() : 0;
   int filLim = fil_limite();
   unsigned colRev = col_revisao();
   unsigned ordemRev = catordem_revisao();
@@ -2599,7 +2650,7 @@ static void sincronizarFileiras(void) {
   // (a mesma lista publicada, so a divisao outra), e o hash abaixo ja o pesa.
   unsigned cwoRev = cwo_revisao();
   if (nCat == filsAplicadas && assin == prefsAplicadas &&
-      catRev == ultCatRev && filRev == ultFilRev &&
+      catRev == ultCatRev && filRev == ultFilRev && itensRev == ultItensRev &&
       colRev == ultColRev && ordemRev == ultOrdemRev &&
       filLim == ultFilLim && cwoRev == ultCwoRev &&
       retomarAplicada == retomarRev && cw_retido_rev() == ultRetRev &&
@@ -2613,10 +2664,12 @@ static void sincronizarFileiras(void) {
     colfileiras_sincronizar();
   filRev = fil_revisao(); colRev = col_revisao();
   ultCatRev = catRev; ultFilRev = filRev; ultColRev = colRev; ultFilLim = (unsigned)filLim;
+  ultItensRev = itensRev;
   ultCwoRev = cwoRev;
   ultOrdemRev = ordemRev;
   ultRetRev = cw_retido_rev();
   unsigned revisao = 2166136261u;
+  revisao = (revisao ^ itensRev) * 16777619u;
   revisao = (revisao ^ (unsigned)reservaEstado) * 16777619u;
   // A escolha LOCAL de fileiras entra na mesma assinatura do catalogo: ordem,
   // liga/desliga, forma, tamanho e limite mudam a lista tanto quanto uma
@@ -2732,6 +2785,7 @@ static void sincronizarFileiras(void) {
     snprintf(fileiras[destino].catId, sizeof fileiras[destino].catId, "%s", cf->catId);
     snprintf(fileiras[destino].catTipo, sizeof fileiras[destino].catTipo, "%s", cf->tipo);
     fileiras[destino].ini = cf->ini;
+    filtrarFilmesVistos(&fileiras[destino], cf);
     if(!strcmp(cf->chave,"social_activity"))fileiras[destino].tipo=FILEIRA_SOCIAL;
     // UM TITULO, UM LUGAR (cwretido.h): o que o cartao da ilha ou a faixa
     // "Retomar agora" segura nao entra aqui. So a lista desenhada muda; o
@@ -2767,14 +2821,14 @@ static void sincronizarFileiras(void) {
     Fileira *d = &fileiras[destaqueIndice];
     int baseN = d->n;
     int c, r;
-    for (c = 0; c < baseN && c < MAX_CARDS; c++) d->itens[c] = d->ini + c;
+    for (c = 0; c < baseN && c < MAX_CARDS; c++) d->itens[c] = fileiraItemIndice(d, c);
     d->usaItens = 1;
     for (r = destaqueIndice + 1;
          r < destino && d->n < DESTAQUE_OPCOES; r++) {
       Fileira *fonte = &fileiras[r];
       if (!fonte->base[0] || !fonte->catId[0]) continue;
       for (c = 0; c < fonte->n && d->n < DESTAQUE_OPCOES; c++) {
-        int idx = fonte->ini + c;
+        int idx = fileiraItemIndice(fonte, c);
         int repetido = 0, k;
         if (idx < 0 || idx >= cat_n()) continue;
         for (k = 0; k < d->n; k++)
@@ -3322,6 +3376,7 @@ void home_atualizar(float dt, Uint32 agora) {
     okHold = anim_clamp((agora - okDesde) / (float)NV_HOLD_MS, 0.0f, 1.0f);
   else if (!okPressionando)
     okHold = 0.0f;
+  okDip = pressdip_passo(okDip, okPressionando && !focoHero, dt);
   if (okPressionando && okHold >= 1.0f && !okLongDisparado) {
     okLongDisparado = 1;
     okConsumirSoltura = 1;
@@ -5558,7 +5613,7 @@ static float numeraisAlfa(int r, Uint32 agora) {
     char rank[8];
     if (!numPedidoEm[r]) numPedidoEm[r] = agora ? agora : 1u;
     for (c = 0; c < fileiras[r].n; c++) {
-      snprintf(rank, sizeof rank, "%d", c + 1);
+      snprintf(rank, sizeof rank, "%d", fileiraRanking(&fileiras[r], c));
       if (!txt_linha(TXT_RANK_GRANDE, rank, NUM_COR).tex) falta = 1;
     }
     if (falta && (Uint32)(agora - numPedidoEm[r]) < 400u) return 0.0f;
@@ -5726,14 +5781,14 @@ static void desenhaLinhaTempo(int r, float topoFil, float top, float passo, floa
 
 // A pilha do ranking empilhado: ate seis cartazes num card so. `s` e a escala
 // da previa (1 na fileira).
-static void desenhaPilha(int idxCat, int stackN, float px, float py, float h, float s) {
+static void desenhaPilha(const Fileira *f, int coluna, int stackN, float px, float py, float h, float s) {
   // Compact phone rows reduce the artwork offsets along with the target.
   // The preview already supplies its scale; default/large rows retain it.
   if (telefoneui_ativo()) s = fminf(s, h / alturaDe(FILEIRA_TOP10));
   // Sem placa de fundo: os cartazes empilhados ja formam o card.
   int count=stackN<6?stackN:6;
   for(int k=0;k<count;k++) {
-    const CatItem *it=cat_item_exato(idxCat+k);if(!it)continue;
+    const CatItem *it=cat_item_exato(fileiraItemIndice(f, coluna + k));if(!it)continue;
     GfxRect pr={px+(20+k*78)*s,py+18*s,178*s,h-72*s};
     const char *pa=arte_por_formato(it,0);
     GLuint tx=pa?tex_obter_larg(pa,178*s):0;
@@ -6087,7 +6142,7 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
   gfx_opacidade_grupo = alfa;
   gfx_recorte(area.x, area.y, area.w, area.h);
   if (pilha) {
-    desenhaPilha(fl->usaItens ? fl->itens[0] : fl->ini, nItens, x0, y0, h, s);
+    desenhaPilha(fl, 0, nItens, x0, y0, h, s);
   } else {
     for (c = 0; c < nItens && c < 8; c++) {
       float px = x0 + (float)c * passo;
@@ -6112,7 +6167,7 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
         if (tipo == FILEIRA_FICHA) { desenhaFicha(ci, px, y0, w, h, 0.0f); card.w = h * 2.0f / 3.0f; }
         GLuint t = cam ? tex_obter_larg(cam, w) : 0;
         if (tipo == FILEIRA_TOP10_NUM)
-          desenhaNumeral(c + 1, px, y0, h, passo - w - NV_TOP10_NUM_FOLGA * s, 1.0f);
+          desenhaNumeral(fileiraRanking(fl, c), px, y0, h, passo - w - NV_TOP10_NUM_FOLGA * s, 1.0f);
         gfx_veu_card_limpar();
         if (t) veusDoCard(ci, tipo, deitado, 0.0f, 0);
         desenhaArteCard(card, tipo, cam, t, ci, 0.0f, raio, 1.0f, 0.0f);
@@ -6465,8 +6520,9 @@ void home_desenhar(Uint32 agora) {
   gfx_borda_foco_atual = ajustes_borda_foco() ? 1.0f : 0.0f;
   desenhaFundo(agora);
   float pd = detail_progresso();
-  if (ajustes_hero_ligado()) desenhaHero(agora, pd);
-  if (ajustes_hero_ligado() && heroVisivelToque() > 0.25f) {
+  const int vazioQr = homevazio_ativo(nFileiras);   // sem add-ons: o cartao com o QR no lugar da Home
+  if (ajustes_hero_ligado() && !vazioQr) desenhaHero(agora, pd);
+  if (ajustes_hero_ligado() && !vazioQr && heroVisivelToque() > 0.25f) {
     float heroBaixo = layoutHome() == HOME_LAYOUT_DINAMICA
                     ? dinHeroY() + alturaTextoHeroDin() : corteFileiras();
     if (heroBaixo > 0.0f)
@@ -6518,7 +6574,11 @@ void home_desenhar(Uint32 agora) {
   // ou o do cache): e o caso de a pessoa ter desligado todas em Ajustes. Sem
   // texto, o hero sozinho com o resto da tela vazia le como travamento — e ela
   // nao teria como adivinhar que foi ela quem apagou a home.
-  if (nFileiras < 1 && !fileirasOcultas) {
+  if (vazioQr && !fileirasOcultas) {
+    gfx_sem_recorte();
+    homevazio_desenhar(1.0f - pd);
+    gfx_recorte(0.0f, corte, NV_TELA_W, NV_TELA_H - corte);
+  } else if (nFileiras < 1 && !fileirasOcultas) {
     float tx = homeConteudoX();
     TxtLinha t = txt_linha(TXT_ROW_TITULO, "Nenhuma fileira ativa", 240, 241, 245, 255);
     txt_desenhar(t, tx, topoFil);
@@ -6539,7 +6599,7 @@ void home_desenhar(Uint32 agora) {
   // A LUZ DO FOCO: uma varredura por foco novo, nenhuma com a tecla presa.
   float varreFoco = revela_varre(&revVarre,
                                  focoHero ? -1 : foco.fileira * 64 + foco.coluna, agora);
-  for (int r = 0; r < (fileirasOcultas ? 0 : nFileiras); r++) {
+  for (int r = 0; r < (fileirasOcultas || vazioQr ? 0 : nFileiras); r++) {
     TipoFileira tipo = fileiras[r].tipo;
     // No retrato a visibilidade acompanha o recorte real, inclusive antes
     // do primeiro gesto; a memoria do foco nao esconde fileiras acessiveis.
@@ -6683,11 +6743,17 @@ void home_desenhar(Uint32 agora) {
       if (tipo == FILEIRA_PALCO)
         palcoPos[r] = anim_mola(palcoPos[r], (float)colunaDaFileira(r),
                                 dtFil(&palcoUlt[r], agora), NV_MOLA_FOCO);
+      // ITEM 4 (plx): recusa no ponto do pedido. A fileira diz se esta em
+      // movimento (limiar MOVING_SPEED = 120 px/s, o mesmo da grade) e marca os
+      // cartoes fora da tela; o cache recusa so pedido NOVO dessa arte enquanto
+      // a fileira corre, antes de enfileirar rede/decode. Parada, nada recusa.
+      tex_grade_movendo(fabsf(velX[r]) > 120.0f);
       for (int passe = 1; passe < 2; passe++) {
         for (int c = 0; c < fileiras[r].n; c++) {
           float f = animFoco[r][c];
           if (passe == 0 && f < 0.01f) continue;
           float esc = 1.0f + escalaDe(tipo) * f;
+          if (r == foco.fileira && c == foco.coluna) esc *= okDip;
           float w = lw * esc, h = artH * esc;
           // EXPANSAO EM REPOUSO. `abre` so e diferente de zero no card focado
           // desta fileira; os DEPOIS dele sao empurrados pela mesma medida.
@@ -6721,11 +6787,16 @@ void home_desenhar(Uint32 agora) {
           if (abre > 0.0f) w = lw * esc + (larguraAberta - lw * esc) * abre;
           float cx = homeFileiraX(r, c) + lw * 0.5f
                    + empurra + (w - lw * esc) * 0.5f + xOffTipo(tipo);
-          if (tipo == FILEIRA_PALCO) { palcoGeo(r, c, lw, &cx, &esc); w = lw * esc; h = artH * esc; }
+          if (tipo == FILEIRA_PALCO) { palcoGeo(r, c, lw, &cx, &esc); if (r == foco.fileira && c == foco.coluna) esc *= okDip; w = lw * esc; h = artH * esc; }
           // Sem levantamento: no web o card focado nao sai do lugar. O que
           // desloca aqui e so a cascata de entrada, e so enquanto ela dura.
           float cy = cardY + artH * 0.5f + (1.0f - entra) * NV_ENTRA_DY;
           if (cx < -lw * 1.5f || cx > NV_TELA_W + lw) continue;
+          // Cartao TOTALMENTE fora da tela (mas dentro da faixa de cull que
+          // ainda e desenhada): NIVEL 2, recusa sempre. Nao ha tile na tela
+          // para ficar escuro. O focado nunca conta como fora.
+          tex_pedido_fora((cx + w * 0.5f < 0.0f || cx - w * 0.5f > NV_TELA_W) &&
+                          !(r == foco.fileira && c == foco.coluna) ? 2 : 0);
           float px = cx - w * 0.5f, py = cy - h * 0.5f;
           // O foco pode aumentar o card. No 4:3 ele nao pode subir sobre o
           // titulo da fileira; a expansão acontece para baixo, preservando a
@@ -6751,9 +6822,9 @@ void home_desenhar(Uint32 agora) {
           // invadir o cartaz anterior. So aparece quando os dez ja existem
           // como textura (numeraisAlfa): entram juntos, nunca um a um.
           if (tipo == FILEIRA_TOP10_NUM && numA > 0.003f)
-            desenhaNumeral(c + 1, px, py, h, passo - lw - NV_TOP10_NUM_FOLGA, numA);
+            desenhaNumeral(fileiraRanking(&fileiras[r], c), px, py, h, passo - lw - NV_TOP10_NUM_FOLGA, numA);
           if(tipo==FILEIRA_TOP10 && fileiras[r].stackN) {
-            desenhaPilha(idxCat, fileiras[r].stackN, px, py, h, 1.0f);
+            desenhaPilha(&fileiras[r], c, fileiras[r].stackN, px, py, h, 1.0f);
             if(foco.fileira==r)temItemFoco=0;
             continue;
           }
@@ -6960,6 +7031,7 @@ void home_desenhar(Uint32 agora) {
           }
         }
       }
+      tex_pedido_fora(0);
       gfx_opacidade_grupo = grupoFil;
       if (tipo == FILEIRA_LINHA_TEMPO) desenhaLinhaTempo(r, y, cardY + artH, passo, lw, agora);
       if (tipo == FILEIRA_PALCO) palcoLegenda(r, cardY + artH, lw);
@@ -6981,7 +7053,7 @@ void home_desenhar(Uint32 agora) {
   // O texto diz O CAMINHO e nao so o fato. "Ha mais catalogos" sem dizer onde
   // mudar seria informar e nao resolver.
   { int fora = desc_catalogos_fora() + cortadasPeloLimite;
-    if (fora > 0 && nFileiras > 0 && !fileirasOcultas) {
+    if (fora > 0 && nFileiras > 0 && !fileirasOcultas && !vazioQr) {
       char aviso[160];
       snprintf(aviso, sizeof aviso,
                fora == 1 ? i18n("Cabe %d fileira a mais aqui")
