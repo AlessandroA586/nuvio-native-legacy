@@ -10,6 +10,7 @@ int ling_casa(const char *a, const char *b) { (void)a;(void)b;return 0; }
 const char *ling_do_nome(const char *s) { (void)s;return NULL; }
 int ling_letreiro(const char *s,int n) { (void)s;(void)n;return 0; }
 void mkvass_aceitar_texto(int s) { (void)s; }
+void mkvass_aceitar_imagem(int s) { (void)s; }
 int mkvass_cabecalho(const char *u,unsigned char **b,long *n) { (void)u;(void)b;(void)n;return 0; }
 int mkv_faixas(const char *u,MkvFaixa *f,int n) { (void)u;(void)f;(void)n;return 0; }
 void rede_lateral(int s) { (void)s; }
