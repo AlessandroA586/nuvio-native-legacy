@@ -8419,6 +8419,8 @@ void ajustes_teste_cena_desenhar(int op, float t, float x, float y, float w) {
   ajCenaGerada(uxSecaoDe(op), op, x, y, w);
   ajcTesteT = -1.0f;
 }
+// A cena no relogio de quem testa (t >= 0) em vez do SDL_GetTicks; -1 volta.
+void ajustes_teste_cena_t(float t) { ajcTesteT = t; }
 void ajustes_teste_tema(int tema, int vidro);
 void ajustes_teste_ux_captura(int cenario) {
   memcpy(valor, valorPadrao, sizeof valor);

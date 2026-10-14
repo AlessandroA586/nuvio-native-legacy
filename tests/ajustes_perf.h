@@ -1,12 +1,19 @@
 // Host walk: real Settings drawing, no account, network or device writes.
+// The preview scenes run on the walk's own clock, not SDL_GetTicks, so two
+// runs draw the same frames.
+extern void ajustes_teste_cena_t(float t);
 static void perf_frame(unsigned frame, FILE *csv, int check) {
   int r0 = txt_rasterizadas;
-  Uint64 t0 = SDL_GetPerformanceCounter();
+  struct timespec t0, t1;
+  ajustes_teste_cena_t(frame * 0.016f);
+  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t0);
   gfx_novo_quadro(); txt_novo_quadro(); tex_novo_quadro();
   ajustes_atualizar(1.0f / 60.0f, frame * 16);
   glClear(GL_COLOR_BUFFER_BIT);
   ajustes_desenhar(frame * 16);
-  double ms = (SDL_GetPerformanceCounter() - t0) * 1000.0 / SDL_GetPerformanceFrequency();
+  // Thread CPU time: wall time on a loaded host measures the scheduler.
+  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t1);
+  double ms = (t1.tv_sec - t0.tv_sec) * 1e3 + (t1.tv_nsec - t0.tv_nsec) / 1e6;
   if (csv) fprintf(csv, "%u,%.6f,%d,%d,%d,%d\n", frame, ms, gfx_n_rect, txt_rasterizadas - r0, perf_uploads, gfx_n_outros);
   if (check && txt_rasterizadas != r0) {
     fprintf(stderr, "FAIL unchanged scroll frame %u recreated %d text textures\n", frame, txt_rasterizadas - r0);
