@@ -1072,8 +1072,10 @@ static float aj2PilulaEstado(int op, float xDir, float yc, int ligado, float a) 
   float on = 1.0f - ajMov(op, uxValorAtual(op));   // valor 1 = Desligado (ver lig())
   TxtLinha tOff = ajTxt(TXT_V3_PILL, "Desligado");
   TxtLinha tOn = txt_linha(TXT_V3_PILL, "Ligado", 22, 22, 26, 255);
-  TxtLinha t = on > 0.5f ? tOn : tOff;
-  float h = 50.0f, w = 20.0f + 12.0f + 10.0f + t.w + 22.0f;
+  // As DUAS strings sao desenhadas em crossfade: a largura nao pode seguir so
+  // uma delas (pulo de varios pixels no meio do voo, com os dois textos
+  // meio visiveis). A pilula mistura as duas larguras com o mesmo `on`.
+  float h = 50.0f, w = 20.0f + 12.0f + 10.0f + anim_mistura((float)tOff.w, (float)tOn.w, on) + 22.0f;
   GfxRect r = { xDir - w, yc - h * 0.5f, w, h }, d = { r.x + 20.0f, yc - 6.0f, 12.0f, 12.0f };
   (void)ligado;
   if (on < 0.995f) {
