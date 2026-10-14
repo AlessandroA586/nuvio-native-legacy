@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "固定在角落"),
   T("Fixe, ou mande para a Home", "固定它，或把它送到主页"),
   T("Fixo", "固定"),
+  T("Fluxo de capas", "封面流"),
   T("Foco no Pôster", "海报聚焦"),
   T("Foco no pôster", "海报聚焦"),
   T("Folha de Fontes", "片源面板"),

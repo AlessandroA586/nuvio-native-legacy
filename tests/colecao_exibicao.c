@@ -14,6 +14,28 @@
 //
 // Inclui src/vertudo.c (o estado e estatico) e troca a lista que a descoberta
 // leu por uma semeada aqui.
+#include "gfx.h"
+#include "tex_cache.h"
+static int pedidosArte, sombrasFluxo, pedidosPagina;
+static void fluxo_mais(void) { pedidosPagina++; }
+#define desc_vertudo_mais fluxo_mais
+static GLuint fluxo_tex(const char *p, float w) { (void)p; (void)w; pedidosArte++; return 0; }
+static void fluxo_cor(GfxRect r, float raio, float cr, float cg, float cb, float ca) {
+  (void)raio; (void)ca;
+  if (r.h > 100 && cr == 0 && cg == 0 && cb == 0) sombrasFluxo++;
+}
+static void fluxo_rect(GfxRect r, GLuint t, GfxModo m, float f, float x, float y,
+                       float raio, float cr, float cg, float cb, float ca) {
+  (void)r; (void)t; (void)m; (void)f; (void)x; (void)y; (void)raio;
+  (void)cr; (void)cg; (void)cb; (void)ca;
+}
+static void fluxo_recorte(float x, float y, float w, float h) { (void)x; (void)y; (void)w; (void)h; }
+static void fluxo_sem_recorte(void) {}
+#define tex_obter_larg fluxo_tex
+#define gfx_cor fluxo_cor
+#define gfx_rect fluxo_rect
+#define gfx_recorte fluxo_recorte
+#define gfx_sem_recorte fluxo_sem_recorte
 #define desc_vertudo_n shot_vt_n
 #define desc_vertudo_item shot_vt_item
 #include "../src/vertudo.c"
@@ -62,7 +84,7 @@ static int sobrepoe(int a, int b) {
 static ColFolder pasta;
 static ColSource fontes[2];
 
-int main(void) {
+int main(int argc, char **argv) {
   int L, i, j;
   char dir[600];
   snprintf(dir, sizeof dir, "%s/nv-colexib.XXXXXX", getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp");
@@ -276,12 +298,19 @@ int main(void) {
   // numero gravado das outras nao muda), em ordem de ano numa linha so; o foco
   // no centro, reto e inteiro; os vizinhos estreitos, escuros, sem cobrir ele.
   assert(VT_LAY_FLUXO == 8 && VT_LAY_VITRINE == 7 && VT_LAY_MURAL == 6);
+  assert(!strcmp(LAY_NOME[VT_LAY_FLUXO], "Fluxo de capas"));
   gravarEscolha(&pasta, VT_LAY_FLUXO); assert(escolhaGravada(&pasta) == VT_LAY_FLUXO);
   lay = layEscolha = VT_LAY_FLUXO; timeline = 0; tabFocus = 0; celLay = -1; orderN = -1;
   montar(nSemente); foco = 0;
   assert(ordenaPorAno() && !painelComCartaz());
   for (i = 0; i < nSemente; i++) assert(celLin[i] == 0 && celCol[i] == i);
   tecla(SDLK_RIGHT); tecla(SDLK_RIGHT); assert(foco == 2);
+  if (argc > 1 && !strcmp(argv[1], "down")) {
+    pedidosPagina = 0;
+    tecla(SDLK_DOWN); assert(foco == 2 && !tabFocus && pedidosPagina == 0);
+    foco = nSemente - 1; tecla(SDLK_DOWN); assert(foco == nSemente - 1 && pedidosPagina == 0);
+    puts("fluxo down: ok"); return 0;
+  }
   tecla(SDLK_LEFT); assert(foco == 1);
   tecla(SDLK_UP); assert(tabFocus == 1); tabFocus = 0;
   foco = 5;
@@ -296,6 +325,26 @@ int main(void) {
   foco = 6; vertudo_atualizar(1.0f / 60.0f, 9000);
   assert(fluxoPos > 5.0f && fluxoPos < 6.0f);   // desliza, nao salta
 
+  if (argc > 1 && !strcmp(argv[1], "cost")) {
+    float x0 = vtInicio();
+    for (i = 0; i < nSemente; i++) snprintf(semente[i].poster, sizeof semente[i].poster, "poster-%d", i);
+    fluxoPos = 6; foco = 6;
+    ptv_definir_gpu_fraca(0);
+    pedidosArte = 0; fluxoDesenhar(nSemente, x0, 1);
+    int fortes = pedidosArte;
+    assert(fortes == 13);
+    ptv_definir_gpu_fraca(1);
+    pedidosArte = sombrasFluxo = 0; fluxoDesenhar(nSemente, x0, 1);
+    assert(pedidosArte == 5 && pedidosArte < fortes && sombrasFluxo <= 4);
+    pedidosArte = sombrasFluxo = 0;
+    fluxoPos = 0; fluxoCartaz(nSemente - 1, x0, 1);  // totalmente fora do recorte: nem textura nem veu
+    assert(pedidosArte == 0 && sombrasFluxo == 0);
+    fluxoPos = 6.5f; pedidosArte = 0;
+    fluxoDesenhar(nSemente, x0, 1); assert(pedidosArte <= 5);
+    ptv_definir_gpu_fraca(0);
+    puts("fluxo cost: ok"); return 0;
+  }
+  tecla(SDLK_DOWN); assert(foco == 6 && !tabFocus);
   printf("colecao_exibicao: ok\n");
   return 0;
 }

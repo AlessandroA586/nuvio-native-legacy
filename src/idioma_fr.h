@@ -1983,6 +1983,7 @@
   T("Fixar no canto", "Épingler dans le coin"),
   T("Fixe, ou mande para a Home", "Épinglez-le, ou envoyez-le à l'Accueil"),
   T("Fixo", "Fixe"),
+  T("Fluxo de capas", "Défilement des jaquettes"),
   T("Foco no Pôster", "Focus sur l'affiche"),
   T("Foco no pôster", "Focus sur l'affiche"),
   T("Folha de Fontes", "Feuille Sources"),

@@ -1983,6 +1983,7 @@
   T("Fixar no canto", "Закріпити в куті"),
   T("Fixe, ou mande para a Home", "Закріпіть або надішліть на головну"),
   T("Fixo", "Закріплено"),
+  T("Fluxo de capas", "Потік обкладинок"),
   T("Foco no Pôster", "Фокус на постері"),
   T("Foco no pôster", "Фокус на постері"),
   T("Folha de Fontes", "Панель Джерел"),

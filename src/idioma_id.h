@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "Sematkan di sudut"),
   T("Fixe, ou mande para a Home", "Sematkan, atau kirim ke Beranda"),
   T("Fixo", "Tetap"),
+  T("Fluxo de capas", "Aliran sampul"),
   T("Foco no Pôster", "Fokus poster"),
   T("Foco no pôster", "Fokus poster"),
   T("Folha de Fontes", "Lembar Sumber"),

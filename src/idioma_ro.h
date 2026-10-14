@@ -1983,6 +1983,7 @@
   T("Fixar no canto", "Fixează în colț"),
   T("Fixe, ou mande para a Home", "Fixează-l sau trimite-l pe Acasă"),
   T("Fixo", "Fix"),
+  T("Fluxo de capas", "Flux de coperți"),
   T("Foco no Pôster", "Focus pe afiș"),
   T("Foco no pôster", "Focus pe afiș"),
   T("Folha de Fontes", "Foaia Surse"),

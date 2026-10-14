@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "Rögzítés a sarokba"),
   T("Fixe, ou mande para a Home", "Rögzítsd, vagy küldd a főoldalra"),
   T("Fixo", "Rögzített"),
+  T("Fluxo de capas", "Borítófolyam"),
   T("Foco no Pôster", "Poszter fókusza"),
   T("Foco no pôster", "Poszter fókusza"),
   T("Folha de Fontes", "Források lap"),

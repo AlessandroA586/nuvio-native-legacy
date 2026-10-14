@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "Fissa nell'angolo"),
   T("Fixe, ou mande para a Home", "Fissalo, oppure mandalo nella Home"),
   T("Fixo", "Fisso"),
+  T("Fluxo de capas", "Flusso di copertine"),
   T("Foco no Pôster", "Focus delle locandine"),
   T("Foco no pôster", "Focus delle locandine"),
   T("Folha de Fontes", "Foglio Fonti"),

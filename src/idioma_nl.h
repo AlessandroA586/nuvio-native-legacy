@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "Vastzetten in hoek"),
   T("Fixe, ou mande para a Home", "Zet vast, of stuur naar Start"),
   T("Fixo", "Vast"),
+  T("Fluxo de capas", "Omslagstroom"),
   T("Foco no Pôster", "Posterfocus"),
   T("Foco no pôster", "Posterfocus"),
   T("Folha de Fontes", "Bronnenblad"),

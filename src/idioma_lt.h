@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "Prisegti kampe"),
   T("Fixe, ou mande para a Home", "Prisekite arba siųskite į Pradžią"),
   T("Fixo", "Fiksuota"),
+  T("Fluxo de capas", "Viršelių srautas"),
   T("Foco no Pôster", "Plakato fokusas"),
   T("Foco no pôster", "Plakato fokusas"),
   T("Folha de Fontes", "Šaltinių lapas"),

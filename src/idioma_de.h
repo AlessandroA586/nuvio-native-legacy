@@ -1983,6 +1983,7 @@
   T("Fixar no canto", "In der Ecke anheften"),
   T("Fixe, ou mande para a Home", "Anpinnen oder an die Startseite schicken"),
   T("Fixo", "Fest"),
+  T("Fluxo de capas", "Cover-Fluss"),
   T("Foco no Pôster", "Poster-Fokus"),
   T("Foco no pôster", "Poster-Fokus"),
   T("Folha de Fontes", "Quellen-Blatt"),

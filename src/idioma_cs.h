@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "Připnout do rohu"),
   T("Fixe, ou mande para a Home", "Připněte, nebo pošlete na úvodní obrazovku"),
   T("Fixo", "Pevný"),
+  T("Fluxo de capas", "Tok obalů"),
   T("Foco no Pôster", "Fokus plakátu"),
   T("Foco no pôster", "Fokus plakátu"),
   T("Folha de Fontes", "List Zdrojů"),

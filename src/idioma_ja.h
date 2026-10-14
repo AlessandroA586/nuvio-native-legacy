@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "隅に固定"),
   T("Fixe, ou mande para a Home", "固定するか、ホームに送ります"),
   T("Fixo", "固定"),
+  T("Fluxo de capas", "カバーフロー"),
   T("Foco no Pôster", "ポスターのフォーカス"),
   T("Foco no pôster", "ポスターのフォーカス"),
   T("Folha de Fontes", "ソースのシート"),

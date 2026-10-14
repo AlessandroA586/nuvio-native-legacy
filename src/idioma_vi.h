@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "Ghim vào góc"),
   T("Fixe, ou mande para a Home", "Ghim nó, hoặc đưa lên Trang chủ"),
   T("Fixo", "Cố định"),
+  T("Fluxo de capas", "Dòng ảnh bìa"),
   T("Foco no Pôster", "Tiêu điểm poster"),
   T("Foco no pôster", "Tiêu điểm poster"),
   T("Folha de Fontes", "Bảng Nguồn"),

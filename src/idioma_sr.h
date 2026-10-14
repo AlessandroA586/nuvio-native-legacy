@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "Zakači u ugao"),
   T("Fixe, ou mande para a Home", "Zakačite ili pošaljite na Početnu"),
   T("Fixo", "Fiksno"),
+  T("Fluxo de capas", "Tok omota"),
   T("Foco no Pôster", "Fokus postera"),
   T("Foco no pôster", "Fokus postera"),
   T("Folha de Fontes", "List Izvora"),

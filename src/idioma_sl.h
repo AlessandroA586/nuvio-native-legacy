@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "Pripni v kot"),
   T("Fixe, ou mande para a Home", "Pripnite ali pošljite na domači zaslon"),
   T("Fixo", "Fiksen"),
+  T("Fluxo de capas", "Tok naslovnic"),
   T("Foco no Pôster", "Fokus plakata"),
   T("Foco no pôster", "Fokus plakata"),
   T("Folha de Fontes", "List Virov"),

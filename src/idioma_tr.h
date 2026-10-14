@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "Köşeye sabitle"),
   T("Fixe, ou mande para a Home", "Sabitle veya Ana ekrana gönder"),
   T("Fixo", "Sabit"),
+  T("Fluxo de capas", "Kapak akışı"),
   T("Foco no Pôster", "Afiş odağı"),
   T("Foco no pôster", "Afiş odağı"),
   T("Folha de Fontes", "Kaynaklar sayfası"),

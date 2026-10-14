@@ -1983,6 +1983,7 @@
   { "Fixar no canto", "Pin to corner" },
   { "Fixe, ou mande para a Home", "Pin it, or send it Home" },
   { "Fixo", "Fixed" },
+  { "Fluxo de capas", "Cover Flow" },
   { "Foco no Pôster", "Poster focus" },
   { "Foco no pôster", "Poster focus" },
   { "Folha de Fontes", "Sources sheet" },

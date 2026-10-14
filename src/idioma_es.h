@@ -1983,6 +1983,7 @@
   T("Fixar no canto", "Fijar en la esquina"),
   T("Fixe, ou mande para a Home", "Fíjala, o mándala al Inicio"),
   T("Fixo", "Fijo"),
+  T("Fluxo de capas", "Flujo de carátulas"),
   T("Foco no Pôster", "Foco en el póster"),
   T("Foco no pôster", "Foco en el póster"),
   T("Folha de Fontes", "Hoja de Fuentes"),

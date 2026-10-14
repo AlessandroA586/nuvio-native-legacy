@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "Fixar no canto"),
   T("Fixe, ou mande para a Home", "Fixa-a, ou envia-a para o Início"),
   T("Fixo", "Fixo"),
+  T("Fluxo de capas", "Fluxo de capas"),
   T("Foco no Pôster", "Foco no cartaz"),
   T("Foco no pôster", "Foco no cartaz"),
   T("Folha de Fontes", "Folha de Fontes"),

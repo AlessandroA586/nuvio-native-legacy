@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "Καρφίτσωμα στη γωνία"),
   T("Fixe, ou mande para a Home", "Καρφίτσωσέ το ή στείλ' το στην Αρχική"),
   T("Fixo", "Σταθερό"),
+  T("Fluxo de capas", "Ροή εξωφύλλων"),
   T("Foco no Pôster", "Εστίαση αφίσας"),
   T("Foco no pôster", "Εστίαση αφίσας"),
   T("Folha de Fontes", "Φύλλο Πηγών"),

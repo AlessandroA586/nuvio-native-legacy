@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "Закачи в ъгъла"),
   T("Fixe, ou mande para a Home", "Закачете го или го пратете в Начало"),
   T("Fixo", "Фиксирано"),
+  T("Fluxo de capas", "Поток от обложки"),
   T("Foco no Pôster", "Фокус на плаката"),
   T("Foco no pôster", "Фокус на плаката"),
   T("Folha de Fontes", "Панел Източници"),

@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "Fest i hjørnet"),
   T("Fixe, ou mande para a Home", "Fest den, eller send den til Hjem"),
   T("Fixo", "Fast"),
+  T("Fluxo de capas", "Omslagsflyt"),
   T("Foco no Pôster", "Plakatfokus"),
   T("Foco no pôster", "Plakatfokus"),
   T("Folha de Fontes", "Kildearket"),

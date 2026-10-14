@@ -1984,6 +1984,7 @@
   T("Fixar no canto", "Przypnij w rogu"),
   T("Fixe, ou mande para a Home", "Przypnij lub wyślij na ekran główny"),
   T("Fixo", "Stałe"),
+  T("Fluxo de capas", "Przepływ okładek"),
   T("Foco no Pôster", "Fokus plakatu"),
   T("Foco no pôster", "Fokus plakatu"),
   T("Folha de Fontes", "Arkusz Źródeł"),
