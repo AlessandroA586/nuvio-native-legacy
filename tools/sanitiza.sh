@@ -13,6 +13,9 @@
 # pre-compilado incompativel) sao reportados a parte e NAO contam como passou.
 # A passada ASan e paralela (SANITIZA_JOBS, 4 por padrao); a TSan e sempre
 # serial, porque TSan sob maquina saturada gera falso positivo e timeout.
+# Todo teste tem SANITIZA_TIMEOUT (900 s): um teste que trava em loop nao pode
+# prender um slot para sempre. TIMEOUT e reportado a parte e NAO conta como
+# passou — nao e prova nem e erro de sanitizador.
 cd "$(dirname "$0")/.." || exit 1
 LOGS=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-sanitiza.XXXXXX") || exit 1
 RES="$LOGS/resultados"; : > "$RES"
@@ -38,14 +41,16 @@ foraDaSuite() {
 
 # Roda um teste e registra "<veredito>\t<modo>\t<nome>" em $RES. Parallel-safe:
 # nada de contador em memoria, so o arquivo. Vereditos: ok, ok*, SKIP, DEP,
-# ERRO, FALHA. Ultimos dois bloqueiam.
+# TIMEOUT, ERRO, FALHA. So ERRO e FALHA bloqueiam.
 rodar() {
   local nome="$1" modo="$2" log="$LOGS/$2/$1.log"
   local san=1; [ "$modo" = thread ] && san=thread
-  if SANITIZE="$san" ASAN_OPTIONS="abort_on_error=1" \
+  timeout "${SANITIZA_TIMEOUT:-900}" env SANITIZE="$san" ASAN_OPTIONS="abort_on_error=1" \
      UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1" \
      TSAN_OPTIONS="halt_on_error=1:exitcode=66" \
-     bash "tests/$nome" >"$log" 2>&1; then
+     bash "tests/$nome" >"$log" 2>&1
+  local rc=$?
+  if [ "$rc" = 0 ]; then
     if grep -Eq '(^|[^A-Za-z])SKIP([^A-Za-z]|$)' "$log"; then
       printf 'SKIP\t%s\t%s\t%s\n' "$modo" "$nome" "$(grep -Em1 SKIP "$log" | cut -c1-80)" >> "$RES"
     elif grep -Eq 'PULADO|pulados|sem resultado' "$log"; then
@@ -56,9 +61,11 @@ rodar() {
     return 0
   fi
   local sanErro='ERROR: (Address|Leak)Sanitizer|SUMMARY: .*Sanitizer|runtime error:|WARNING: ThreadSanitizer'
+  if [ "$rc" = 124 ] || [ "$rc" = 137 ]; then
+    printf 'TIMEOUT\t%s\t%s\t%ss sem terminar\n' "$modo" "$nome" "${SANITIZA_TIMEOUT:-900}" >> "$RES"
   # Erro de compilacao/link = dependencia ausente ou pre-compilado velho: o
   # script nem chegou a rodar instrumentado.
-  if grep -Eq '(^|:)[0-9]+:[0-9]+: error:|No such file or directory|^ld: |fatal error:' "$log" \
+  elif grep -Eq '(^|:)[0-9]+:[0-9]+: error:|No such file or directory|^ld: |fatal error:' "$log" \
      && ! grep -Eq "$sanErro" "$log"; then
     printf 'DEP\t%s\t%s\t%s\n' "$modo" "$nome" "$(grep -Em1 'error:|No such file' "$log" | cut -c1-80)" >> "$RES"
   elif grep -Eq "$sanErro" "$log"; then
@@ -100,6 +107,6 @@ sort -t"$(printf '\t')" -k1,1 -k2,2 "$RES" | while IFS=$'\t' read -r v m n obs; 
 done
 
 echo
-echo "TOTAL: $(conta ok) ok, $(conta 'ok*') ok com casos pulados, $(conta SKIP) SKIP sem prova, $(conta DEP) sem dependencia"
+echo "TOTAL: $(conta ok) ok, $(conta 'ok*') ok com casos pulados, $(conta SKIP) SKIP sem prova, $(conta DEP) sem dependencia, $(conta TIMEOUT) sem terminar"
 echo "BLOQUEIO: $(conta ERRO) erro de sanitizador, $(conta FALHA) falha de teste; logs: $LOGS"
 [ "$(conta ERRO)" -eq 0 ] && [ "$(conta FALHA)" -eq 0 ]
