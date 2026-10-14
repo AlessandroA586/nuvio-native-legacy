@@ -263,7 +263,13 @@ class ParaleloDataSource(
         Log.i(TAG, "abrindo ${dataSpec.uri.host} a partir de ${dataSpec.position}")
         pos = dataSpec.position
         val pedido = if (dataSpec.length != C.LENGTH_UNSET.toLong()) dataSpec.length else C.LENGTH_UNSET.toLong()
-        val janela = if (pedido != C.LENGTH_UNSET.toLong()) pedido else PRIMEIRO.toLong()
+        if (pedido == 0L) {
+            // Janela vazia (DataSpec de 0 byte): abre vazio, sem pedir um Range
+            // invalido (ultimo < primeiro) e sem gastar conexao.
+            aberto = true
+            transferStarted(dataSpec)
+            return 0L
+        }
         val primeiroUltimo = if (pedido != C.LENGTH_UNSET.toLong()) pos + pedido - 1 else pos + PRIMEIRO - 1
         // Primeiro pedaco pela URL original: segue os redirecionamentos do debrid
         // uma vez so; os pedacos seguintes vao direto ao endereco final.
@@ -273,13 +279,16 @@ class ParaleloDataSource(
             val cr = c.getHeaderField("Content-Range") ?: ""
             total = cr.substringAfter('/', "").trim().toLongOrNull() ?: C.LENGTH_UNSET.toLong()
         }
-        val restante = when {
+        // Janela que ESTA abertura pode servir: o tamanho que o ExoPlayer
+        // pediu ou, na abertura progressiva comum (length UNSET), o resto do
+        // arquivo — nunca o pedaco de sonda, senao nenhuma abertura comum
+        // caberia no paralelo e tudo viraria conexao unica.
+        val janela = when {
             pedido != C.LENGTH_UNSET.toLong() -> pedido
             total > 0 -> total - pos
             else -> C.LENGTH_UNSET.toLong()
         }
-        val paralelo = code == 206 && total > 0 && restante > pedaco.toLong() * 2 &&
-            janela > pedaco.toLong() / 2
+        val paralelo = code == 206 && total > 0 && janela > pedaco.toLong() * 2
         if (!paralelo) {
             Log.i(TAG, "conexao unica: HTTP $code, total=$total, pos=$pos (${dataSpec.uri.host})")
             // Sem Range (ou pequeno demais para valer a pena): conexao unica.
@@ -310,12 +319,6 @@ class ParaleloDataSource(
             val hdr = c.headerFields
             desconectar(c)
             throw HttpDataSource.InvalidResponseCodeException(code, msg, null, hdr, dataSpec, ByteArray(0))
-        }
-        if (restante == 0L) {
-            desconectar(c)
-            aberto = true
-            transferStarted(dataSpec)
-            return 0L
         }
         urlFinal = c.url
         fim = if (pedido != C.LENGTH_UNSET.toLong()) minOf(total, pos + pedido) else total

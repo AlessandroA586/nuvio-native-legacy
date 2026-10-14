@@ -1,5 +1,7 @@
 package space.nuvio.nativelegacy
 
+import androidx.media3.common.C
+import androidx.media3.datasource.DataSpec
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -26,6 +28,30 @@ class ParaleloDataSourceTest {
         override fun getInputStream(): InputStream = ByteArrayInputStream(byteArrayOf(1))
         override fun getResponseCode(): Int = HTTP_OK
         override fun getResponseMessage(): String = "OK"
+    }
+
+    // Responde 206 honrando o Range pedido: devolve exatamente os bytes da
+    // janela, como um servidor de Range de verdade.
+    private open class ConexaoFaixa(url: URL, private val total: Long) : ConexaoFalsa(url) {
+        private val pedidos = HashMap<String, String>()
+        override fun setRequestProperty(key: String?, value: String?) {
+            if (key != null && value != null) pedidos[key] = value
+        }
+        override fun getRequestProperty(key: String?): String? = pedidos[key]
+        override fun getResponseCode(): Int = HTTP_PARTIAL
+        override fun getContentLengthLong(): Long = fim() - ini() + 1
+        override fun getHeaderField(name: String?): String? =
+            if (name == "Content-Range") "bytes ${ini()}-${fim()}/$total" else super.getHeaderField(name)
+        override fun getInputStream(): InputStream =
+            ByteArrayInputStream(ByteArray((fim() - ini() + 1).toInt()))
+        private fun ini(): Long = faixa().first
+        private fun fim(): Long = faixa().second
+        private fun faixa(): Pair<Long, Long> {
+            val corpo = (pedidos["Range"] ?: "bytes=0-").removePrefix("bytes=")
+            val ini = corpo.substringBefore('-').toLong()
+            val fim = corpo.substringAfter('-', "")
+            return if (fim.isEmpty()) ini to (total - 1) else ini to fim.toLong()
+        }
     }
 
     @Test fun aberturaInicialRepeteFalhaDeConexaoComBackoffLimitado() {
@@ -137,29 +163,81 @@ class ParaleloDataSourceTest {
     }
 
     @Test fun janelaPequenaUsaConexaoUnicaSemPool() {
+        // Buraco pequeno do seek-cache: 2 bytes num arquivo de 24 GB. Sobra da
+        // regressao do paralelo: o reopen em offset-2 com 0 MB restante.
         val aberturas = AtomicInteger()
         val fonte = ParaleloDataSource(null, emptyMap(), novaConexao = { url ->
             aberturas.incrementAndGet()
-            object : ConexaoFalsa(url) {
-                override fun getResponseCode(): Int = HTTP_PARTIAL
-                override fun getHeaderField(name: String?): String? = when (name) {
-                    "Content-Range" -> "bytes 613230488-613230489/24891962527"
-                    else -> super.getHeaderField(name)
-                }
-                override fun getInputStream(): InputStream = ByteArrayInputStream(byteArrayOf(1, 2))
-                override fun getContentLengthLong(): Long = 2
-            }
+            ConexaoFaixa(url, 24891962527L)
         }, dormir = { throw AssertionError("janela pequena nao deve esperar retry") })
         val exec = ParaleloDataSource::class.java.getDeclaredField("exec")
         exec.isAccessible = true
         val pos = 613230488L
-        val c = fonte.conectarComRetry(URL("https://example.invalid/video.mkv"), pos, pos + 1, 0L)
-        assertEquals(HttpURLConnection.HTTP_PARTIAL, c.responseCode)
-        assertEquals(1, aberturas.get())
-        assertEquals(null, exec.get(fonte))
+        val len = fonte.open(DataSpec.Builder()
+            .setUri(android.net.Uri.parse("https://example.invalid/video.mkv"))
+            .setPosition(pos)
+            .setLength(2L)
+            .build())
+        assertEquals(2L, len)
+        assertEquals(1, aberturas.get())      // uma conexao, nenhum reopen
+        assertEquals(null, exec.get(fonte))   // sem pool
         val buf = ByteArray(2)
-        assertEquals(2, c.inputStream.read(buf))
-        assertEquals(listOf<Byte>(1, 2), buf.toList())
+        assertEquals(2, fonte.read(buf, 0, 2))
+        assertEquals(0, buf[0].toInt() and 0xFF)
+        assertEquals(C.RESULT_END_OF_INPUT.toLong(), fonte.read(buf, 0, 2).toLong())
+        fonte.close()
+    }
+
+    @Test fun aberturaComumUsaParalelo() {
+        // Abertura progressiva comum (length UNSET, arquivo de 24 GB): tem que
+        // criar o pool. A janela e o resto do arquivo, nao o pedaco de sonda.
+        val fonte = ParaleloDataSource(null, emptyMap(), novaConexao = { url ->
+            ConexaoFaixa(url, 24891962527L)
+        }, dormir = { throw AssertionError("conexao viva nao deve esperar retry") })
+        val exec = ParaleloDataSource::class.java.getDeclaredField("exec")
+        exec.isAccessible = true
+        var pool: java.util.concurrent.ExecutorService? = null
+        try {
+            val len = fonte.open(DataSpec.Builder()
+                .setUri(android.net.Uri.parse("https://example.invalid/video.mkv"))
+                .setPosition(0L)
+                .setLength(C.LENGTH_UNSET.toLong())
+                .build())
+            assertEquals(24891962527L, len)
+            pool = exec.get(fonte) as java.util.concurrent.ExecutorService
+            assertTrue("abertura comum deve criar o pool", pool != null)
+            val buf = ByteArray(16)
+            assertEquals(16, fonte.read(buf, 0, 16))
+        } finally {
+            fonte.close()
+            // Os fios do pool contam +1/-1 em Estat.conexoes: sem espera-los,
+            // o saldo vaza para o assert do teste seguinte.
+            pool?.let { assertTrue(it.awaitTermination(10, TimeUnit.SECONDS)) }
+            assertEquals(0, ParaleloDataSource.Estat.conexoes.get())
+        }
+    }
+
+    @Test fun janelaVaziaAbreSemConectar() {
+        // DataSpec de 0 byte: abre vazio, sem Range invalido (pos-1) nem 416.
+        val aberturas = AtomicInteger()
+        val fonte = ParaleloDataSource(null, emptyMap(), novaConexao = { url ->
+            aberturas.incrementAndGet()
+            ConexaoFaixa(url, 24891962527L)
+        }, dormir = { throw AssertionError("janela vazia nao deve esperar retry") })
+        val len = fonte.open(DataSpec.Builder()
+            .setUri(android.net.Uri.parse("https://example.invalid/video.mkv"))
+            .setPosition(613230448L)
+            .setLength(1L)
+            .build().also { d ->
+                // O Builder do media3 recusa length=0, mas o campo e public: abrir()
+                // tem que abrir vazio em vez de pedir o Range invalido (pos-1).
+                val campo = DataSpec::class.java.getDeclaredField("length")
+                campo.isAccessible = true
+                campo.set(d, 0L)
+            })
+        assertEquals(0L, len)
+        assertEquals(0, aberturas.get())
+        assertEquals(C.RESULT_END_OF_INPUT.toLong(), fonte.read(ByteArray(2), 0, 2).toLong())
         fonte.close()
     }
 
