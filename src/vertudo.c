@@ -1125,11 +1125,9 @@ static void painel(float a) {
   float y = VT_PAN_Y;
   if (!viewItem(foco, &it)) return;
 
-  // Logo OU cartaz: com logo o painel e logo+meta+sinopse; sem logo, cartaz+titulo.
-  int temLogo = it.logo[0] && tex_obter_logo_larg(it.logo, 264.0f) && tex_aspecto(it.logo) > 0.0f;
   // O contexto lateral usa o cartaz, nunca repete a cena da timeline.
   // Mantém a geometria 2:3 mesmo sem arte para não deslocar os metadados.
-  if (!temLogo) { GfxRect r = { VT_PAN_X, y, VT_PAN_ART_W, VT_PAN_ART_H };
+  { GfxRect r = { VT_PAN_X, y, VT_PAN_ART_W, VT_PAN_ART_H };
     const char *arte = it.poster[0] ? it.poster : it.backdrop;
     float raio = 12.0f / VT_PAN_ART_W;
     GLuint t = arte[0] ? tex_obter_larg(arte, VT_PAN_ART_W) : 0;
@@ -1142,7 +1140,7 @@ static void painel(float a) {
       TxtLinha falta = txt_linha_corta(TXT_HERO_META, "Sem pôster", 185, 191, 204, 255, r.w-24);
       txt_desenhar_alpha(falta, r.x+(r.w-falta.w)*.5f, r.y+(r.h-falta.h)*.5f, a);
     } }
-  if (!temLogo) y += VT_PAN_ART_H + 18.0f;
+  y += VT_PAN_ART_H + 18.0f;
   float badgeW=badges_desenhar(badges_provedor(it.provNome),VT_PAN_X,y,VT_PAN_W,28,a);
   if(badgeW>0)y+=40;
 
