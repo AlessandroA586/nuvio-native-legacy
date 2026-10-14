@@ -10,6 +10,7 @@
 #include "ondever.h"
 #include "addonstats.h"
 #include "fontecache.h"
+#include "fontefalha.h"
 #include "sessao.h"
 #include "perfis.h"
 #include "servidores.h"
@@ -168,6 +169,40 @@ static Chegada progPub[ADD_MAX * 2 + ADD_EXTRA_MAX];
 static int progPubN;
 static Uint32 progInicio;
 
+// O nome do manifesto e so para exibicao: duas instalacoes do AIOStreams
+// podem ter o mesmo nome e bases/configuracoes diferentes. O carimbo nasce
+// antes de qualquer copia para publicacao parcial ou cache, sem guardar URL.
+static void fonteAddonCarimbar(Stream *l, int n, int i) {
+  char chave[FONTEFALHA_CHAVE];
+  if (!l || n <= 0 || i < 0 || i >= nAddon) return;
+  fontefalha_addon_chave(addon[i].base, chave, sizeof chave);
+  for (int k = 0; k < n; k++) {
+    snprintf(l[k].addonChave, sizeof l[k].addonChave, "%s", chave);
+    l[k].addonOrdem = i;
+  }
+}
+// A origem extra nao entrega a URL do repositorio no callback. Para plugins,
+// o ID estavel do scraper vem no bingeGroup; qualidade nao faz parte do ID.
+// IDs iguais em repositorios diferentes compartilham este fallback. Outros
+// extras sem ID (Plex) ficam sem chave; nunca adivinhar pelo nome da tela.
+static void fonteExtraChave(const Stream *s, char *chave, unsigned n) {
+  const char *id, *fim;
+  char base[80];
+  if (!chave || !n) return;
+  chave[0] = 0;
+  if (!s || strncmp(s->bingeGroup, "nuvio-plugin|", 13)) return;
+  id = s->bingeGroup + 13; fim = strchr(id, '|');
+  if (!fim || fim == id || fim - id > 64) return;
+  snprintf(base, sizeof base, "plugin:%.*s", (int)(fim - id), id);
+  fontefalha_addon_chave(base, chave, n);
+}
+static void fonteExtraCarimbar(Stream *l, int n, int k) {
+  for (int i = 0; l && i < n; i++) {
+    if (!l[i].addonChave[0]) fonteExtraChave(&l[i], l[i].addonChave, sizeof l[i].addonChave);
+    l[i].addonOrdem = ADD_MAX + k;
+  }
+}
+
 static void progMarcar(int i, const Stream *a, int n, int estadoNovo) {
   Stream *copia = NULL;
   if (i < 0 || i >= ADD_MAX) return;
@@ -192,7 +227,10 @@ static void progMarcarEx(int k, const char *nome, const Stream *a, int n, int es
   if (k < 0 || k >= ADD_EXTRA_MAX) return;
   if (a && n > 0) {
     copia = malloc(sizeof(Stream) * (size_t)n);
-    if (copia) memcpy(copia, a, sizeof(Stream) * (size_t)n);
+    if (copia) {
+      memcpy(copia, a, sizeof(Stream) * (size_t)n);
+      fonteExtraCarimbar(copia, n, k);
+    }
   }
   pthread_mutex_lock(&progTrava);
   progEstadoEx[k] = (unsigned char)estadoNovo;
@@ -2198,6 +2236,7 @@ static void *fioFontes(void *u) {
         progMarcar(i, NULL, 0, c->rodada == 2 || semSegunda(i) ? 3 : 1);
       continue;
     }
+    fonteAddonCarimbar(achados, n, i);
     if (c->progresso) progMarcar(i, achados, n, 2);
     c->baldes[meu].respondeu = 1;
     c->baldes[meu].ms = (unsigned)(SDL_GetTicks() - c->inicio);
@@ -2346,12 +2385,26 @@ typedef struct {
   Stream *l; int n;
   _Atomic int pendentes, incompleta;
 } PedidoExtra;
+typedef struct {
+  PedidoExtra *pai;
+  OrigemExtra f;
+  Stream *l; int n, indice;
+  // Callbacks de scrapers distintos escrevem linhas distintas; a leitura
+  // final acontece so depois de a origem terminar e juntar seus workers.
+  char chaves[ADD_EXTRA_MAX][FONTEFALHA_CHAVE];
+} UmaOrigem;
 static int cancelaExtra(void *u) {
   PedidoExtra *p = u;
   return p->cancelado && p->cancelado(p->ctx) ? 1 : 0;
 }
 static void avisoExtra(void *u, int k, const char *nome, int estado, const void *fontes, int n) {
-  PedidoExtra *p = u;
+  UmaOrigem *o = u;
+  PedidoExtra *p = o->pai;
+  if (fontes && n > 0 && k >= 0 && k < ADD_EXTRA_MAX) {
+    const Stream *s = fontes;
+    if (s->addonChave[0]) snprintf(o->chaves[k], sizeof o->chaves[k], "%s", s->addonChave);
+    else fonteExtraChave(s, o->chaves[k], sizeof o->chaves[k]);
+  }
   // Cada parte anuncia inicio (1) e fim (2/3), inclusive no prefetch.
   // Contadores atomicos cobrem scrapers paralelos e indices de origens distintas.
   if (estado == 1) atomic_fetch_add(&p->pendentes, 1);
@@ -2363,10 +2416,17 @@ static void avisoExtra(void *u, int k, const char *nome, int estado, const void 
     addonstats_registrar(nome, (unsigned)(SDL_GetTicks() - progInicio), estado == 2);
   progMarcarEx(k, nome, (const Stream *)fontes, n, estado);
 }
-typedef struct { PedidoExtra *pai; OrigemExtra f; Stream *l; int n; } UmaOrigem;
 static void *fioUmaOrigem(void *u) {
   UmaOrigem *o = u;
-  o->n = o->f(o->pai->id, o->pai->tipo, cancelaExtra, o->pai, avisoExtra, o->pai, &o->l);
+  o->n = o->f(o->pai->id, o->pai->tipo, cancelaExtra, o->pai, avisoExtra, o, &o->l);
+  for (int i = 0; o->l && i < o->n; i++) {
+    int ordem = o->indice;
+    fonteExtraCarimbar(&o->l[i], 1, ordem);
+    if (o->l[i].addonChave[0])
+      for (int k = 0; k < ADD_EXTRA_MAX; k++)
+        if (!strcmp(o->l[i].addonChave, o->chaves[k])) { ordem = k; break; }
+    o->l[i].addonOrdem = ADD_MAX + ordem;
+  }
   // ponytail: zero tambem pode ser falha sem callbacks (Plex/TMDB).
   // Nao cachear ate as origens distinguirem falha de resposta vazia.
   if (o->n <= 0) atomic_store(&o->pai->incompleta, 1);
@@ -2381,7 +2441,7 @@ static void *fioExtra(void *u) {
   for (i = 0; i < nOrigensExtra; i++) {
     vivo[i] = 0;
     if (!origemExtraViva(i)) continue;
-    o[i].pai = p; o[i].f = origensExtra[i];
+    o[i].pai = p; o[i].f = origensExtra[i]; o[i].indice = i;
     // A ultima origem roda neste fio; as anteriores em fios proprios.
     if (i + 1 < nOrigensExtra) {
       pthread_attr_t a;

@@ -1,4 +1,5 @@
 #include "colecoes.h"
+#include "marcastream.h"
 #include "rede.h"
 #include "js.h"
 #include "addons.h"
@@ -568,10 +569,8 @@ const char *col_capa(const ColFolder *f) {
 }
 void col_cor(const ColFolder *f,float *r,float *g,float *b) {
   *r=.16f;*g=.23f;*b=.30f;if(!f)return;
-  if(strstr(f->title,"Netflix")){*r=.52f;*g=.035f;*b=.065f;}
-  else if(strstr(f->title,"Prime")){*r=.025f;*g=.32f;*b=.58f;}
-  else if(strstr(f->title,"Disney")){*r=.10f;*g=.13f;*b=.46f;}
-  else if(strstr(f->title,"Max")||strstr(f->title,"HBO")){*r=.27f;*g=.12f;*b=.44f;}
+  const MarcaStream *m=marca_stream(f->title);
+  if(m){*r=m->r;*g=m->g;*b=m->b;}
   else if(strstr(f->title,"Letterboxd")){*r=.07f;*g=.32f;*b=.21f;}
   else if(!strcmp(f->group,"Awards")){*r=.40f;*g=.31f;*b=.095f;}
   else if(!strcmp(f->group,"Directors")){*r=.29f;*g=.24f;*b=.19f;}

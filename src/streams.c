@@ -1423,7 +1423,8 @@ unsigned stream_lista_geracao(void) {
 int stream_resolver_escolhida(int i, unsigned geracao, char *url, unsigned nu,
                               char *servico, unsigned ns, int *pct) {
   char infoHash[48], fontes[sizeof lista->fontes];
-  int fileIdx, r;
+  int fileIdx, r, viaP2P = 0;
+  if (servico && ns) servico[0] = 0;
   if (url && nu) url[0] = 0;
   if (!url || !nu) return 0;
   pthread_mutex_lock(&verTrava);
@@ -1433,8 +1434,11 @@ int stream_resolver_escolhida(int i, unsigned geracao, char *url, unsigned nu,
   }
   // Ja resolvida (pelo automatico, ou por uma escolha anterior desta lista):
   // e a url pronta, sem ir a rede.
-  if (lista[i].url[0]) {
+  if (lista[i].url[0] && (!lista[i].infoHash[0] || !fontefalha_ativa() ||
+                          !debrid_ativo() || lista[i].urlP2P || lista[i].debridServico > 0)) {
     snprintf(url, nu, "%s", lista[i].url);
+    if (servico && ns && lista[i].debridServico > 0)
+      snprintf(servico, ns, "%s", debrid_servico_nome(lista[i].debridServico - 1));
     pthread_mutex_unlock(&verTrava);
     return 1;
   }
@@ -1450,7 +1454,10 @@ int stream_resolver_escolhida(int i, unsigned geracao, char *url, unsigned nu,
   // tem o torrent na conta e o certo e esperar por ele, nao abrir um segundo
   // caminho para o mesmo arquivo.
   if (r == 0 && p2p_ativo()) {
-    if (p2p_resolver(infoHash, fileIdx, fontes, url, nu) == P2P_OK) r = 1;
+    if (p2p_resolver(infoHash, fileIdx, fontes, url, nu) == P2P_OK) {
+      r = 1; viaP2P = 1;
+      if (servico && ns) servico[0] = 0;
+    }
     else { url[0] = 0; r = STREAM_P2P_FALHOU; }
   }
   if (r == 1) {
@@ -1459,7 +1466,12 @@ int stream_resolver_escolhida(int i, unsigned geracao, char *url, unsigned nu,
     // torrent e pedido (um por vez) ou o player fecha, e escolher esta fonte
     // de novo tem de passar pelo motor outra vez.
     if (listaGeracao != geracao || i >= n) r = -1;
-    else if (!p2pmotor_e_url(url)) snprintf(lista[i].url, sizeof lista[i].url, "%s", url);
+    else {
+      lista[i].urlP2P = viaP2P;
+      lista[i].debridServico = viaP2P ? 0 : debrid_servico_por_nome(servico) + 1;
+      if (!p2pmotor_e_url(url)) snprintf(lista[i].url, sizeof lista[i].url, "%s", url);
+      else lista[i].url[0] = 0;
+    }
     pthread_mutex_unlock(&verTrava);
     if (r < 0) url[0] = 0;
   } else if (r == STREAM_P2P_FALHOU) {
@@ -1535,6 +1547,168 @@ static void logarEscolha(int escolhida, int pref, int modoPrimeira) {
 static int prontaNoDebrid(int i, void *u) {
   (void)u;
   return i >= 0 && i < n && lista[i].url[0] && !lista[i].foraCache && !soP2P(&lista[i]);
+}
+
+// A ordem/qualidade continua sendo a das regras de fontes. A politica nova
+// agrupa esta fila por servico e instancia do addon, sem o teto antigo de
+// sondas e sem excluir um hash inteiro quando so um servico recusou o link.
+void stream_falha_identidade(const Stream *s, char *dst, unsigned tam) {
+  if (!dst || !tam) return;
+  dst[0] = 0;
+  if (!s) return;
+  if (s->infoHash[0]) {
+    char hash[sizeof s->infoHash];
+    unsigned j;
+    for (j = 0; j + 1 < sizeof hash && s->infoHash[j]; j++)
+      hash[j] = (char)tolower((unsigned char)s->infoHash[j]);
+    hash[j] = 0;
+    snprintf(dst, tam, "%s:%d", hash, s->fileIdx);
+  } else snprintf(dst, tam, "%s\n%s", s->url, s->cabecalhos);
+}
+static int falhaCandidatas(unsigned geracao, int escolhida, int primeira, FonteFalhaCandidata **saida,
+                           Stream **fontes, int *quantidade) {
+  int total, nf = 0, pref = -1, livres = 0;
+  int *ordem = NULL, *fila = NULL, *rk = NULL;
+  long *pts = NULL;
+  unsigned char *acima = NULL, *excl = NULL;
+  signed char *grp = NULL;
+  Stream *copia = NULL;
+  FonteFalhaCandidata *c = NULL;
+  FonteRegraCfg escopo = regraCfg();
+  *saida = NULL; *fontes = NULL; *quantidade = 0;
+  pthread_mutex_lock(&verTrava);
+  if (geracao != listaGeracao) { pthread_mutex_unlock(&verTrava); return 0; }
+  total = n;
+  if (!total) { pthread_mutex_unlock(&verTrava); return 1; }
+  ordem = malloc(sizeof *ordem * (size_t)total);
+  fila = malloc(sizeof *fila * (size_t)total);
+  rk = malloc(sizeof *rk * (size_t)total);
+  pts = malloc(sizeof *pts * (size_t)total);
+  acima = calloc((size_t)total, 1); excl = calloc((size_t)total, 1);
+  grp = malloc(sizeof *grp * (size_t)total);
+  copia = malloc(sizeof *copia * (size_t)total);
+  c = calloc((size_t)total, sizeof *c);
+  if (!ordem || !fila || !rk || !pts || !acima || !excl || !grp || !copia || !c) goto fim;
+  memcpy(copia, lista, sizeof *copia * (size_t)total);
+  for (int q = 0; q < total; q++) {
+    int i = ORD(q);
+    const Stream *s = &lista[i];
+    ordem[q] = i;
+    if (i == preferida && fonteregra_no_escopo(&escopo, ehPlugin(s))) pref = q;
+    pts[q] = pontos(s); acima[q] = (unsigned char)!cabeNoTeto(s);
+    // A marca historica nao sabe qual debrid falhou. Aplicar a mesma marca a
+    // outro servico esconderia justamente a alternativa que a pessoa pediu.
+    // O addon pode estar dizendo "fora de cache no TB"; isso nao responde
+    // pelo RD/PM/AD. Hash nativo passa apenas pelo resolvedor cache-only da
+    // rota escolhida. URL direta fora de cache continua fora do automatico.
+    excl[q] = (unsigned char)(s->urlP2P || (s->foraCache && !s->infoHash[0]) || ehInformativa(s) || excedeDecoder(s) ||
+                 (!s->infoHash[0] && (automaticaExcluida(i) || fontesmortas_idade(s) >= 0)));
+    grp[q] = (signed char)grupoDe(i);
+    // Escolha explicita continua podendo tocar fora das regras do automatico.
+    // As alternativas conservam os filtros; somente esta linha e preferida.
+    if (i == escolhida) {
+      pref = q; grp[q] = 0;
+      excl[q] = primeira ? 0 : (unsigned char)(s->urlP2P || excedeDecoder(s));
+    }
+    rk[q] = fonteregra_ordem_rank(s->provedor);
+    if (!excl[q]) livres++;
+  }
+  if (lgMp4Primeiro()) mp4PrimeiroNaFaixa(ordem, pts, grp, excl, total);
+  nf = fonteauto_fila_o(ajustes_fonte_primeira() ? FONTEAUTO_PRIMEIRA : FONTEAUTO_MELHOR,
+                       total, pref, pts, acima, excl, grp, rk,
+                       ajustes_fonte_ordem_uso(), total, fila);
+  regraBloqueou = !nf && livres > 0;
+  for (int q = 0; q < nf; q++) {
+    int i = ordem[fila[q]];
+    const Stream *s = &copia[i];
+    size_t tam = s->infoHash[0] ? sizeof s->infoHash + 32 : strlen(s->url) + strlen(s->cabecalhos) + 2;
+    char *id = malloc(tam);
+    if (!id) {
+      for (int j = 0; j < q; j++) free((void *)c[j].identidade);
+      nf = 0; goto fim;
+    }
+    stream_falha_identidade(s, id, (unsigned)tam);
+    c[q].indice = i; c[q].nativa = s->infoHash[0] != 0;
+    c[q].ordemAddon = s->addonOrdem;
+    snprintf(c[q].addon, sizeof c[q].addon, "%s", s->addonChave);
+    c[q].identidade = id;
+  }
+  *saida = c; c = NULL; *fontes = copia; copia = NULL; *quantidade = nf;
+fim:
+  pthread_mutex_unlock(&verTrava);
+  free(ordem); free(fila); free(rk); free(pts); free(acima); free(excl); free(grp);
+  free(copia); free(c);
+  return *fontes != NULL;
+}
+static int falhaCancelada(unsigned geracao, int (*cancelado)(void *), void *ctx) {
+  int mudou;
+  if (cancelado && cancelado(ctx)) return 1;
+  pthread_mutex_lock(&verTrava);
+  mudou = geracao != listaGeracao;
+  pthread_mutex_unlock(&verTrava);
+  return mudou;
+}
+int stream_falha_verificar(FonteFalhaSessao *sessao, unsigned geracao, int escolhida,
+                           int (*cancelado)(void *), void *ctx,
+                           int *indice, int *servico, char *url, unsigned tam) {
+  FonteFalhaCandidata *c = NULL;
+  Stream *fontes = NULL;
+  int nc = 0, resultado = FONTEFALHA_FIM;
+  if (indice) *indice = -1;
+  if (servico) *servico = FONTEFALHA_DIRETA;
+  if (url && tam) url[0] = 0;
+  if (!sessao || !url || !tam || falhaCancelada(geracao, cancelado, ctx) ||
+      !falhaCandidatas(geracao, escolhida, fontefalha_tentativas(sessao) == 0,
+                       &c, &fontes, &nc)) return FONTEFALHA_FIM;
+  for (;;) {
+    FonteFalhaRota r;
+    char resolvida[4096] = "", fim[4096], mime[96] = "";
+    long corpo = -1;
+    int ok = 0, fora = 0;
+    if (falhaCancelada(geracao, cancelado, ctx)) break;
+    resultado = fontefalha_proxima(sessao, c, nc, addons_estado() != ADD_BUSCANDO, &r);
+    if (resultado != FONTEFALHA_PROXIMA) break;
+    const Stream *s = &fontes[r.indice];
+    if (!fontefalha_tentar(sessao, &c[r.candidata], r.servico)) { resultado = FONTEFALHA_FIM; break; }
+    if (falhaCancelada(geracao, cancelado, ctx)) { resultado = FONTEFALHA_FIM; break; }
+    if (r.servico >= 0) {
+      ok = debrid_resolver_servico_cache(r.servico, s->infoHash, s->fileIdx,
+                                         resolvida, sizeof resolvida, &fora);
+      if (!debrid_servico_disponivel(r.servico)) fontefalha_provedor_recusado(sessao, r.servico);
+    } else if (s->infoHash[0]) {
+      ok = debrid_resolver_cache(s->infoHash, s->fileIdx, resolvida, sizeof resolvida, &fora);
+    } else if (s->url[0] && resolverUrl(s->url, s->cabecalhos, 10, fim, sizeof fim,
+                                      mime, sizeof mime, &corpo) &&
+               !naovideo_mime(mime, fim, corpo) && !enderecoDeAviso(fim) &&
+               !playlistVazia(fim, s->cabecalhos)) {
+      snprintf(resolvida, sizeof resolvida, "%s", fim); ok = 1;
+    }
+    if (falhaCancelada(geracao, cancelado, ctx)) { resultado = FONTEFALHA_FIM; break; }
+    if (!ok || !resolvida[0]) continue;
+    // Dedup da URL final acontece antes de qualquer abertura do pipeline.
+    if (strlen(resolvida) >= tam || !fontefalha_url_registrar(sessao, resolvida)) continue;
+    snprintf(url, tam, "%s", resolvida);
+    if (indice) *indice = r.indice;
+    if (servico) *servico = r.servico;
+    resultado = FONTEFALHA_PROXIMA;
+    break;
+  }
+  for (int q = 0; q < nc; q++) free((void *)c[q].identidade);
+  free(c); free(fontes);
+  return resultado;
+}
+int stream_falha_aplicar(int indice, unsigned geracao, int servico, const char *url) {
+  int ok = 0;
+  pthread_mutex_lock(&verTrava);
+  if (geracao == listaGeracao && indice >= 0 && indice < n && url && *url &&
+      strlen(url) < sizeof lista[indice].url) {
+    memmove(lista[indice].url, url, strlen(url) + 1);
+    lista[indice].debridServico = servico + 1;
+    lista[indice].urlP2P = 0;
+    ok = 1;
+  }
+  pthread_mutex_unlock(&verTrava);
+  return ok;
 }
 
 int stream_primeira_boa(int tentativas) {

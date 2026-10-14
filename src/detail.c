@@ -351,7 +351,7 @@ static int    pediuMenu = 0;   // ESQUERDA na borda: abrir a barra por cima (ver
 static int    sobMenu = 0, somAntesMenu = 0;
 static float  trailerFade = 0.0f;
 
-// --- CARROSSEL DA DINAMICA (layout "Dinâmica (Apple TV)" da home) ----------
+// --- CARROSSEL DA DINAMICA (layout "Dinâmica" da home) ----------
 //
 // Na Dinamica o titulo aberto de uma fileira vira um CARTAO grande, quase da
 // tela, com a borda dos vizinhos da mesma fileira espiando dos dois lados; a

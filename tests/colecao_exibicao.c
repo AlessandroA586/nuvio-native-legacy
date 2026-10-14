@@ -154,6 +154,7 @@ int main(void) {
   layEscolha = VT_LAY_AUTO; lay = VT_LAY_GRADE;
   tecla(SDLK_RETURN);
   assert(lay == VT_LAY_LINHA && layEscolha == VT_LAY_LINHA);
+  tecla(SDLK_RETURN); assert(lay == VT_LAY_FLUXO);   // a horizontal logo depois
   tecla(SDLK_RETURN); tecla(SDLK_RETURN);
   assert(lay == VT_LAY_SAGA);
   assert(escolhaGravada(&pasta) == VT_LAY_SAGA);
@@ -211,6 +212,214 @@ int main(void) {
   snprintf(semente[1].tipo, sizeof semente[1].tipo, "series");
   vitAgrupar(nSemente);
   assert(vitN == 2 && !strcmp(vitLin[0].nome, i18n("Filmes")) && !strcmp(vitLin[1].nome, i18n("Séries")));
+
+  // 8. STREAMING: sem a legenda de depuracao quando a lista esta pronta, e as
+  // abas esmaecem antes da borda em vez de serem cortadas.
+  nSemente = NANOS; semFonte = 0;
+  snprintf(pasta.group, sizeof pasta.group, "Streaming");
+  assert(legendaOculta());
+  snprintf(pasta.group, sizeof pasta.group, "Film Collections");
+  assert(!legendaOculta());
+  snprintf(pasta.group, sizeof pasta.group, "Streaming");
+  semFonte = 1; assert(!legendaOculta()); semFonte = 0;
+  assert(abaFade(700, 100, 100, 800, 0, 1) == 1.0f);      // longe da borda
+  assert(abaFade(870, 100, 100, 800, 0, 1) == 0.0f);      // passaria da borda
+  assert(abaFade(750, 100, 100, 800, 0, 1) < 1.0f);       // dentro da zona
+  assert(abaFade(870, 100, 100, 800, 0, 0) == 1.0f);      // sem mais abas: normal
+  assert(abaFade(136, 100, 100, 800, 1, 0) < 1.0f);       // rolada: some a esquerda
+
+  // 9. GRADE E MURAL COM MAIS AR (13/10): vao de 28 entre cartazes, a Grade
+  // sem o nome embaixo (vao vertical menor que o antigo 60 com titulo), o
+  // painel sem o cartaz na Grade e com ele no Mural.
+  lay = VT_LAY_GRADE; timeline = 0; celLay = -1; montar(NANOS);
+  assert(celX[1] - celX[0] - celW[0] >= 28.0f - 0.01f);
+  assert(celY[VT_COLS] - celY[0] - celH[0] == VT_GRADE_GAP_Y && VT_GRADE_GAP_Y < VT_GAP_Y);
+  assert(!painelComCartaz());
+  lay = VT_LAY_MURAL; celLay = -1; montar(NANOS);
+  assert(painelComCartaz());
+  assert(celX[1] - celX[0] - celW[0] >= 28.0f - 0.01f);
+  assert(celY[3] - celY[1] - celH[1] >= 28.0f - 0.01f);
+  assert(fabsf(celH[0] - (celH[1] * 2.0f + VT_GAP_X)) < 0.01f);   // grande = dois pequenos + vao
+
+  // 10. VITRINE NO LAYOUT DA HOME (13/10): o destaque e as fileiras seguem a
+  // Moderna, o Padrao (fileiras rente ao banner) e a Dinamica (arte inteira,
+  // a fileira em foco no pe da tela).
+  for (L = HOME_LAYOUT_MODERNA; L < HOME_LAYOUT_N; L++) {
+    char cam[700]; FILE *f;
+    snprintf(cam, sizeof cam, "%s/ajustes.txt", dados_dir());
+    f = fopen(cam, "w"); assert(f);
+    fprintf(f, "homeLayoutLocal %d\n", L); fclose(f);
+    ajustes_dir(dados_dir());
+    assert(ajustes_home_layout() == L && home_vitrine_layout() == L);
+    if (L == HOME_LAYOUT_MODERNA) assert(vitTopo() == NV_SHELF_TOP);
+    if (L == HOME_LAYOUT_PADRAO) assert(vitTopo() == NV_PAD_TOPO_FIL);
+    if (L == HOME_LAYOUT_DINAMICA) assert(vitTopo() > NV_SHELF_TOP && vitTopo() + vitPasso() == NV_TELA_H);
+  }
+
+  // 11. LINHA DO TEMPO ANIMADA (13/10): o ano em foco cresce pela mola e a
+  // linha se preenche ate ele; com animacao reduzida tudo chega num quadro.
+  snprintf(pasta.group, sizeof pasta.group, "Film Collections");
+  lay = layEscolha = VT_LAY_LINHA; timeline = 1; tabFocus = 0; celLay = -1; orderN = -1;
+  montar(nSemente); foco = 3;
+  assert(tlProg < 0.0f);
+  for (i = 0; i < 120; i++) vertudo_atualizar(1.0f / 60.0f, 1000 + i * 16);
+  assert(tlFoco[3] > 0.99f && tlFoco[0] < 0.01f);
+  assert(fabsf(tlProg - (celY[3] + VT_TL_PONTO)) < 0.5f);
+  foco = 7; vertudo_atualizar(1.0f / 60.0f, 4000);
+  assert(tlProg < celY[7] + VT_TL_PONTO - 1.0f && tlFoco[7] < 0.9f);   // anda, nao salta
+  anim_politica_reduzida = 1;
+  foco = 9; vertudo_atualizar(1.0f / 60.0f, 4016);
+  assert(tlProg == celY[9] + VT_TL_PONTO && tlFoco[9] == 1.0f && tlFoco[7] == 0.0f);
+  anim_politica_reduzida = 0;
+
+  // 12. LINHA DO TEMPO HORIZONTAL (Cover Flow, 13/10): no fim do enum (o
+  // numero gravado das outras nao muda), em ordem de ano numa linha so; o foco
+  // no centro, reto e inteiro; os vizinhos estreitos, escuros, sem cobrir ele.
+  assert(VT_LAY_FLUXO == 8 && VT_LAY_VITRINE == 7 && VT_LAY_MURAL == 6);
+  gravarEscolha(&pasta, VT_LAY_FLUXO); assert(escolhaGravada(&pasta) == VT_LAY_FLUXO);
+  lay = layEscolha = VT_LAY_FLUXO; timeline = 0; tabFocus = 0; celLay = -1; orderN = -1;
+  montar(nSemente); foco = 0;
+  assert(ordenaPorAno() && !painelComCartaz());
+  for (i = 0; i < nSemente; i++) assert(celLin[i] == 0 && celCol[i] == i);
+  tecla(SDLK_RIGHT); tecla(SDLK_RIGHT); assert(foco == 2);
+  tecla(SDLK_LEFT); assert(foco == 1);
+  tecla(SDLK_UP); assert(tabFocus == 1); tabFocus = 0;
+  foco = 5;
+  for (i = 0; i < 120; i++) vertudo_atualizar(1.0f / 60.0f, 6000 + i * 16);
+  assert(fabsf(fluxoPos - 5.0f) < 0.01f);
+  { float s0, s1; GfxRect c = fluxoRect(5, vtInicio(), &s0), v = fluxoRect(6, vtInicio(), &s1);
+    GfxRect e = fluxoRect(4, vtInicio(), NULL);
+    assert(fabsf(c.w - VT_FLX_W) < 0.5f && s0 < 0.01f);
+    assert(fabsf(c.x + c.w * 0.5f - fluxoCentro(vtInicio())) < 0.5f);
+    assert(v.w < c.w * 0.6f && v.h < c.h && s1 > 0.3f);
+    assert(v.x >= c.x + c.w && e.x + e.w <= c.x); }
+  foco = 6; vertudo_atualizar(1.0f / 60.0f, 9000);
+  assert(fluxoPos > 5.0f && fluxoPos < 6.0f);   // desliza, nao salta
+
+  // 11. ESTILO DAS ABAS (#205): Menu suspenso, Barra central e Paginas mexem so
+  // no que o D-pad faz no cabecalho; o modelo (source, tabCursor) e o mesmo.
+  { static ColSource f3[3];
+    static const char *TIPOS[3] = { "movie", "movie", "series" };
+    char cam[700]; FILE *f; int e;
+    for (i = 0; i < 3; i++) {
+      snprintf(f3[i].type, sizeof f3[i].type, "%s", TIPOS[i]);
+      snprintf(f3[i].title, sizeof f3[i].title, "Fonte %d", i);
+    }
+    pasta.sources = f3; pasta.nSources = 3;
+    lay = layEscolha = VT_LAY_GRADE; celLay = -1; orderN = -1; montar(nSemente);
+    for (e = 0; e < 4; e++) {
+      snprintf(cam, sizeof cam, "%s/ajustes.txt", dados_dir());
+      f = fopen(cam, "w"); assert(f);
+      fprintf(f, "abasEstiloLocal %d\n", e); fclose(f);
+      ajustes_dir(dados_dir());
+      assert(ajustes_abas_estilo() == e);
+      ddAberto = 0; pgSlide = 0.0f; source = 0; tabFocus = 1; tabCursor = 0;
+      if (e == VT_AB_CHIPS || e == VT_AB_BARRA) {
+        assert(cabN() == 3);
+        tecla(SDLK_RIGHT); assert(tabCursor == 1 && source == 0);
+        tecla(SDLK_RETURN); assert(source == 1 && tabFocus == 0);
+      }
+      if (e == VT_AB_MENU) {
+        assert(cabN() == 3 && cursorInicial() == 2);   // Filmes, Séries, catalogo
+        tabCursor = 2; tecla(SDLK_RETURN);
+        assert(ddAberto == 1 && ddCursor == 0 && source == 0);
+        tecla(SDLK_DOWN); assert(ddCursor == 1);
+        tecla(SDLK_RETURN); assert(ddAberto == 0 && source == 1 && tabFocus == 0);
+        tabFocus = 1; tabCursor = 2; tecla(SDLK_RETURN); tecla(SDLK_ESCAPE);
+        assert(ddAberto == 0 && aberta == 1 && source == 1);   // Voltar fecha so a lista
+        tabCursor = 1; tecla(SDLK_RETURN);
+        assert(source == 2 && tabCursor == 2 && ddAberto == 0);   // tipo com um catalogo so
+        tabFocus = 1; tabCursor = 0; tecla(SDLK_RETURN);          // Filmes: volta a um filme
+        assert(source < 2 && tabCursor == 2 && ddAberto == 1);
+        ddAberto = 0;
+      }
+      if (e == VT_AB_PAGINAS) {
+        tecla(SDLK_RIGHT); assert(source == 1 && pgSlide > 0.5f);
+        tecla(SDLK_LEFT);  assert(source == 0 && pgSlide < -0.5f);
+        for (i = 0; i < 90; i++) vertudo_atualizar(1.0f / 60.0f, 20000 + i * 16);
+        assert(fabsf(pgSlide) < 0.01f);
+        tecla(SDLK_RIGHT); tecla(SDLK_RIGHT); tecla(SDLK_RIGHT);
+        assert(source == 2 && tabCursor == 3);   // a ultima pagina; depois o botao
+      }
+    }
+    pasta.sources = fontes; pasta.nSources = 1;
+    snprintf(cam, sizeof cam, "%s/ajustes.txt", dados_dir());
+    f = fopen(cam, "w"); assert(f);
+    fprintf(f, "abasEstiloLocal 0\n"); fclose(f); ajustes_dir(dados_dir());
+    assert(ajustes_abas_estilo() == 0);
+    // Sem varias fontes nao ha abas, seja qual for o estilo.
+    assert(estiloAbas() == VT_AB_CHIPS && cabN() == 0);
+  }
+
+  // 12. MENU SUSPENSO LONGO (#205): com 16 catalogos a lista nao cabe entre o
+  // cabecalho e o pe da tela (parava em Y~1093, alem dos 1080). A lista se
+  // limita ao espaco util e a janela segue o cursor: o foco nunca some.
+  { static ColSource f16[16];
+    char cam[700]; FILE *f; int vis, base;
+    float py = VT_AB_Y + VT_AB_H + 8.0f;
+    for (i = 0; i < 16; i++) {
+      memset(&f16[i], 0, sizeof f16[i]);
+      snprintf(f16[i].type, sizeof f16[i].type, "movie");
+      snprintf(f16[i].title, sizeof f16[i].title, "Catálogo %d", i + 1);
+      snprintf(f16[i].base, sizeof f16[i].base, "https://exemplo.invalid/%d", i);
+    }
+    pasta.sources = f16; pasta.nSources = 16;
+    snprintf(cam, sizeof cam, "%s/ajustes.txt", dados_dir());
+    f = fopen(cam, "w"); assert(f);
+    fprintf(f, "abasEstiloLocal 1\n"); fclose(f);
+    ajustes_dir(dados_dir());
+    lay = layEscolha = VT_LAY_GRADE; celLay = -1; orderN = -1; montar(nSemente);
+    source = 0; tabFocus = 1; tabCursor = 0;
+    assert(cabN() == 1 && cursorInicial() == 0);
+    tecla(SDLK_RETURN);   // abre a lista suspensa
+    assert(ddAberto == 1 && ddCursor == 0);
+    base = ddJanela(16, ddCursor, py, &vis);
+    assert(base == 0 && vis < 16);                       // rola, nao transborda
+    assert(py + vis * VT_DD_RH + 12.0f <= NV_TELA_H);
+    for (i = 0; i < 15; i++) tecla(SDLK_DOWN);
+    assert(ddCursor == 15);
+    base = ddJanela(16, ddCursor, py, &vis);
+    assert(base > 0 && ddCursor >= base && ddCursor < base + vis);   // foco visivel
+    assert(py + vis * VT_DD_RH + 12.0f <= NV_TELA_H);
+    tecla(SDLK_RETURN);
+    assert(ddAberto == 0 && source == 15 && tabFocus == 0);
+    ddAberto = 0;
+  }
+
+  // 13. ABERTURA DA COLECAO NO MENU SUSPENSO (#205): o cursor do cabecalho
+  // nasce no botao do catalogo, nao no indice da primeira fonte com endereco
+  // (com ele em 4 e cabN()==3, o OK nascia em "Exibição"). O botao "Exibição"
+  // tambem mantem o cursor na posicao dele, nao no numero de abas.
+  { static ColSource f5[5];
+    static ColFolder pasta5;
+    char cam[700]; FILE *f;
+    for (i = 0; i < 5; i++) {
+      memset(&f5[i], 0, sizeof f5[i]);
+      snprintf(f5[i].type, sizeof f5[i].type, i < 4 ? "movie" : "series");
+      snprintf(f5[i].title, sizeof f5[i].title, "Fonte %d", i);
+      snprintf(f5[i].catId, sizeof f5[i].catId, "cat%d", i);
+    }
+    snprintf(f5[4].base, sizeof f5[4].base, "https://exemplo.invalid/series");
+    memset(&pasta5, 0, sizeof pasta5);
+    snprintf(pasta5.id, sizeof pasta5.id, "cursor205");
+    snprintf(pasta5.title, sizeof pasta5.title, "Cursor");
+    pasta5.sources = f5; pasta5.nSources = 5;
+    vertudo_colecao(&pasta5);
+    assert(source == 4);                                 // a unica com endereco
+    assert(tabFocus == 1);
+    assert(tabCursor == cursorInicial() && tabCursor == 2);   // antes: 4
+    tabFocus = 1; tabCursor = cabN();
+    assert(tabCursor == 3);
+    tecla(SDLK_RETURN);   // "Exibição": troca e o cursor segue no botao
+    assert(lay != VT_LAY_GRADE);
+    assert(tabCursor == cabN() && tabCursor == 3);       // antes: nAbas()==5
+    // restaura o estilo e a pasta do resto do teste
+    pasta.sources = fontes; pasta.nSources = 1;
+    snprintf(cam, sizeof cam, "%s/ajustes.txt", dados_dir());
+    f = fopen(cam, "w"); assert(f);
+    fprintf(f, "abasEstiloLocal 0\n"); fclose(f); ajustes_dir(dados_dir());
+    assert(ajustes_abas_estilo() == 0);
+  }
 
   printf("colecao_exibicao: ok\n");
   return 0;

@@ -265,7 +265,7 @@ const char *ajustes_qualidade(void);
 // Faixa de tamanho da escolha automatica, em GB (0 = sem limite).
 int ajustes_tamanho_max_gb(void);
 int ajustes_tamanho_min_gb(void);
-float ajustes_espaco_fator(int pct);   // 50..150 % -> 0,5..1,5 (fora da faixa e preso)
+float ajustes_espaco_fator(int pct);   // 50..300 % -> 0,5..3,0 (fora da faixa e preso)
 float ajustes_espaco_fileiras(void);   // espaco vertical entre fileiras da Home
 float ajustes_espaco_titulos(void);    // espaco horizontal entre cartazes
 // LIVE TV. Resolucao principal: 0 Automatica, 1 4K, 2 1080p, 3 720p, 4 SD
@@ -288,6 +288,7 @@ int   ajustes_rail_recolhida(void);     // collapseSidebar
 // #461: 1 = o menu e uma barra no topo (menu.c), sem rail na esquerda. 0 no
 // layout Dinamica e no telefone em retrato.
 int   ajustes_menu_topo(void);
+int   ajustes_abas_estilo(void);   // #205: 0 Chips, 1 Menu suspenso, 2 Barra central, 3 Paginas
 int   ajustes_rail_moderna(void);       // modernSidebar
 int   ajustes_rail_moderna_blur(void);  // modernSidebarBlur
 int   ajustes_hero_ligado(void);        // heroSectionEnabled
@@ -463,6 +464,7 @@ int   ajustes_legenda_forcada_auto(void);    // #287: 1 = audio in the subtitle 
 int   ajustes_legenda_sync_auto(void);       // local, ligada por padrão
 int   ajustes_legenda_sync_audio(void);      // 1 = offer "Por audio" in subtitle AutoSync (F06; local, default off)
 int   ajustes_trailer_zoom_tpk(void);        // #241: 1 = experimental trailer zoom on the native .tpk (local, default off)
+int   ajustes_teclado_android(void);          // Android keyboard: 0 automatic, 1 app grid, 2 system IME (local)
 int   ajustes_mic_busca(void);               // Samsung (.tpk/.wgt) search mic button: 0 automatic, 1 on, 2 off (local)
 unsigned ajustes_p2p_limite_mb(void);           // #334: P2P space limit in MB (0 = Automatic)
 int   ajustes_buffer_preset(void);           // #338: 0 Automatico, 1 Baixo, 2 Medio, 3 Alto (0 fora do Android)
