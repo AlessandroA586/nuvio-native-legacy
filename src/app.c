@@ -3415,6 +3415,9 @@ void app_atualizar(float dt, Uint32 agora) {
         // com as do anterior para sempre.
         col_esquecer_perfil();
         desc_esquecer_catalogo_perfil();   // #294: fileiras do outro perfil saem da Home
+        // #482: biblioteca e vistos da conta sao POR PERFIL (p_profile_id); sem
+        // isto as sementes do "a seguir" do perfil novo vinham da lista do outro.
+        contalib_esquecer();
         // OS SALVOS SAO DO PERFIL: a lista do anterior sai da tela (so os
         // titulos que o novo nao tem) e entra a deste.
         trocarSalvosDePerfil();
@@ -3455,6 +3458,11 @@ void app_atualizar(float dt, Uint32 agora) {
         if (tk || sk) desc_repetir(); }
       sync_iniciar();
       if (trocou) {
+        // #488: desc_esquecer_catalogo_perfil apagou o catalogo achando que uma
+        // volta nova publicaria o certo, mas nada a pedia: addonsRestaurar ja
+        // marcou a lista como deste perfil, o pull a via igual e a Home ficava so
+        // com o Continuar. Pedir a volta DEPOIS do sync_iniciar (lista ja do perfil).
+        desc_repetir();
         // Fica nesta tela, com o indicador no cartao, ate a home estar pronta
         // (bloco acima). Confirmar o mesmo perfil nao espera nada: a home ja e
         // a dele.
