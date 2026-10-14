@@ -4533,10 +4533,13 @@ static void *montar(void *u) {
     // S3R7Q0, Pluto TV desligado) e nenhum fantasma saia. So o addon LIGADO sem
     // id e uma volta incompleta; o desligado casa pela base (doAddon) e as
     // linhas dele nao valem nada para a home de qualquer jeito.
-    { const char *ids[16], *bases[16];
-      int ativos[16];
+    // 128 = ADD_MAX (addons.c). Com 16, o addon da posicao 16 em diante parecia
+    // removido e as fileiras dele eram podadas (B4: duplicatas empurravam os
+    // addons de verdade para la).
+    { const char *ids[128], *bases[128];
+      int ativos[128];
       int na = addons_n(), q, semId = 0;
-      if (na > 16) na = 16;
+      if (na > 128) na = 128;
       for (q = 0; q < na; q++) {
         ids[q] = addons_id_manifesto(q); bases[q] = addons_base(q);
         ativos[q] = addons_ativo(q);

@@ -316,6 +316,20 @@ static void baseNormalizada(const char *url, char *dst, size_t tam) {
   nv_addon_base(url, dst, tam);
 }
 
+// O MESMO ADDON JA ESTA entre addon[0..ate)? (B4) A conta, a copia salva e o
+// addons.txt podiam trazer o addon repetido em variantes de URL, e cada copia
+// virava uma linha da lista, um manifesto, uma consulta. Fica a primeira.
+static int jaNaLista(const char *url, int ate) {
+  char c[NV_ADDON_URL_MAX], ci[NV_ADDON_URL_MAX];
+  int i;
+  nv_addon_chave(url, c, sizeof c);
+  for (i = 0; i < ate; i++) {
+    nv_addon_chave(addon[i].base, ci, sizeof ci);
+    if (!strcmp(c, ci)) return 1;
+  }
+  return 0;
+}
+
 // O pedido ao addon `i` coube no buffer? Ver nv_addon_pedido_coube (addonurl.h).
 static int pedidoCoube(int i, int w, size_t tam) {
   return nv_addon_pedido_coube(addon[i].nome, w, tam);
@@ -394,6 +408,7 @@ int addons_carregar(const char *dirArte) {
     addon[nAddon].ativo = 1;
     snprintf(addon[nAddon].nome, sizeof addon[nAddon].nome, "%s", linha);
     baseNormalizada(tab + 1, addon[nAddon].base, sizeof addon[nAddon].base);
+    if (jaNaLista(addon[nAddon].base, nAddon)) continue;
     nAddon++;
   }
   fclose(f);
@@ -418,6 +433,7 @@ static int listaIgual(const AddonRemoto *nova, int n) {
     char base[NV_ADDON_URL_MAX];
     if (!nova[i].url[0]) continue;
     baseNormalizada(nova[i].url, base, sizeof base);
+    if (jaNaLista(base, k)) continue;   // a duplicata que addons_definir_lista pula
     if (k >= nAddon) return 0;
     if (strcmp(addon[k].base, base)) return 0;
     if (addon[k].ativo != (nova[i].ativo ? 1 : 0)) return 0;
@@ -427,7 +443,7 @@ static int listaIgual(const AddonRemoto *nova, int n) {
 }
 
 int addons_definir_lista(const AddonRemoto *nova, int n) {
-  int i, aceitos = 0;
+  int i, aceitos = 0, dup = 0;
   if (!nova || n <= 0) {
     // Vazio nao substitui. Ver o comentario no cabecalho: uma resposta vazia
     // nao se distingue de uma delecao, e a diferenca entre as duas e a pessoa
@@ -457,6 +473,7 @@ int addons_definir_lista(const AddonRemoto *nova, int n) {
     snprintf(addon[aceitos].nome, sizeof addon[aceitos].nome, "%s",
              nova[i].nome[0] ? nova[i].nome : "Addon");
     baseNormalizada(nova[i].url, addon[aceitos].base, sizeof addon[aceitos].base);
+    if (jaNaLista(addon[aceitos].base, aceitos)) { dup++; continue; }
     // A conta nao diz o que cada addon fornece; o manifesto e que diria, e
     // consultar todos no arranque custaria uma viagem por addon. Assumir que
     // fornece tudo faz no maximo uma consulta vazia a mais por titulo — o
@@ -491,9 +508,10 @@ int addons_definir_lista(const AddonRemoto *nova, int n) {
   // de um addon que a conta nao tem.
   { int uteis = 0, q;
     for (q = 0; q < n; q++) if (nova[q].url[0]) uteis++;
-    if (uteis > aceitos)
+    if (dup) printf("[addons] %d repetidos na conta: ficou um de cada\n", dup);
+    if (uteis > aceitos + dup)
       printf("[addons] %d da conta ficaram de fora: o app guarda no maximo %d\n",
-             uteis - aceitos, ADD_MAX); }
+             uteis - aceitos - dup, ADD_MAX); }
   listaMudou();
   // A lista da conta E a lista certa do usuario: o diario pode ser podado
   // contra ela — e so agora, com a trava da lista ja solta (a poda toma
@@ -1130,6 +1148,8 @@ static int distribuirLegendas(const LegLote *lotes, int nLotes, int nGrupos,
 typedef struct {
   LegLote *lotes;          // um por addon
   int nLotes, nGrupos;
+  int proximo;            // fila dos trabalhadores: proximo addon a consultar
+  int consultados;        // para o log do "concluida"
   int manter;              // extras: mescla so no fim, preservando indices
   char extras[1200];       // segmento legextras_segmento; "" = sem extras
   const char *grupos[3];
@@ -1279,6 +1299,31 @@ static void *buscarUmAddon(void *u) {
   return NULL;
 }
 
+// UM TRABALHADOR da busca de legendas (B4): puxa o proximo addon da fila ate
+// ela acabar. A fila substitui a LEVA (esperar o lote inteiro antes de criar o
+// proximo fio): a leva prendia o addon rapido ao MAIS LENTO do lote — 12
+// lentos de 30 s seguravam o 13. por 60 s, e a escolha automatica desiste em
+// FX_AUTO_FIM_MS (faixas.c). O teto cobre a lista inteira aceita pelo app,
+// para nenhum addon esperar um pedido lento liberar um trabalhador.
+static void *legFioPuxa(void *u) {
+  LegBusca *B = ((LegFio *)u)->B;
+  LegFio F;
+  for (;;) {
+    int i;
+    pthread_mutex_lock(&B->m);
+    i = B->proximo < B->nLotes ? B->proximo++ : -1;
+    pthread_mutex_unlock(&B->m);
+    if (i < 0) return NULL;
+    // Addon que nao declara legenda nao e consultado.
+    if (!addon[i].ativo || !addon[i].legenda) continue;
+    pthread_mutex_lock(&B->m);
+    B->consultados++;
+    pthread_mutex_unlock(&B->m);
+    F.B = B; F.i = i;
+    buscarUmAddon(&F);
+  }
+}
+
 static unsigned relogioMs(void) {
   struct timespec t;
   clock_gettime(CLOCK_MONOTONIC, &t);
@@ -1371,18 +1416,19 @@ static void prepararExtras(LegBusca *B) {
   fflush(stdout);
 }
 
+// Todos os addons aceitos precisam iniciar antes do prazo da selecao
+// automatica: 32 pedidos lentos nao podem esconder o 33o por 30 s.
+#define LEG_FIOS ADD_MAX
 static void *buscarLegendas(void *u) {
   (void)u;
   for (;;) {
     LegBusca B;
-    static LegFio fio[ADD_MAX]; // uma busca de legendas por vez
-    static pthread_t th[ADD_MAX];
-    static int criado[ADD_MAX];
+    LegFio fio[LEG_FIOS]; // uma busca de legendas por vez
+    pthread_t th[LEG_FIOS];
     unsigned t0 = relogioMs();
-    int i, nAtivos = 0;
+    int i, nFios = 0;
 
     memset(&B, 0, sizeof B);
-    memset(criado, 0, sizeof criado);
     pthread_mutex_init(&B.m, NULL);
     pthread_mutex_lock(&legTrava);
     if (legParar) { fioLegVivo = 0; pthread_mutex_unlock(&legTrava); pthread_mutex_destroy(&B.m); return NULL; }
@@ -1402,14 +1448,14 @@ static void *buscarLegendas(void *u) {
     B.lotes = calloc((size_t)(B.nLotes > 0 ? B.nLotes : 1), sizeof *B.lotes);
     if (!B.lotes) printf("[legendas] candidatos: memoria indisponivel\n");
 
-    for (i = 0; B.lotes && i < B.nLotes; i++) {
-      // Addon que nao declara legenda nao e consultado.
-      if (!addon[i].ativo || !addon[i].legenda) continue;
-      fio[i].B = &B; fio[i].i = i;
-      if (pthread_create(&th[i], NULL, buscarUmAddon, &fio[i]) == 0) { criado[i] = 1; nAtivos++; }
-      else buscarUmAddon(&fio[i]);      // sem fio novo: faz aqui mesmo
+    // A lista ja elimina duplicatas. Cobrir todos os addons permite que o
+    // ultimo responda mesmo quando os anteriores ocupam todo o teto de rede.
+    for (i = 0; B.lotes && i < B.nLotes && i < LEG_FIOS; i++) {
+      fio[i].B = &B;
+      if (pthread_create(&th[i], NULL, legFioPuxa, &fio[i]) == 0) nFios++;
+      else { legFioPuxa(&fio[i]); break; }   // sem fio novo: drena a fila aqui mesmo
     }
-    for (i = 0; i < B.nLotes; i++) if (criado[i]) pthread_join(th[i], NULL);
+    for (i = 0; i < nFios; i++) pthread_join(th[i], NULL);
 
     // Refazer com extras: soma a lista nova de uma vez, agora que todos
     // responderam (publicarLegendas descarta se a geracao ja mudou).
@@ -1423,7 +1469,7 @@ static void *buscarLegendas(void *u) {
     legManter = 0;
     i = nLegs;
     pthread_mutex_unlock(&legTrava);
-    printf("[legendas] concluida: %d (%d addon(s) em paralelo, %u ms)\n", i, nAtivos,
+    printf("[legendas] concluida: %d (%d addon(s) em paralelo, %u ms)\n", i, B.consultados,
            relogioMs() - t0);
     fflush(stdout);
     return NULL;
@@ -1506,7 +1552,6 @@ int addons_alternar(int i) {
 // "<base>/manifest.json" sao o mesmo addon.
 int addons_adicionar(const char *nome, const char *urlManifest) {
   char nova[NV_ADDON_URL_MAX];
-  int i;
   if (!urlManifest || !*urlManifest) return 0;
   // Antes de normalizar: o que nao cabe nao entra, nem cortado (addonurl.h).
   // #203: URL grande vira apelido (addonurl.h) em vez de ser recusada.
@@ -1522,15 +1567,11 @@ int addons_adicionar(const char *nome, const char *urlManifest) {
     fflush(stdout);
     return 0;
   }
-  for (i = 0; i < nAddon; i++) {
-    char base[NV_ADDON_URL_MAX];
-    baseNormalizada(addon[i].base, base, sizeof base);
-    if (!strcmp(base, nova)) {
-      printf("[addons] ja instalado: %s\n", addon[i].nome);
-      fflush(stdout);
-      addons_lista_destravar();
-      return 0;
-    }
+  if (jaNaLista(nova, nAddon)) {
+    printf("[addons] ja instalado\n");
+    fflush(stdout);
+    addons_lista_destravar();
+    return 0;
   }
   memset(&addon[nAddon], 0, sizeof addon[nAddon]);
   snprintf(addon[nAddon].nome, sizeof addon[nAddon].nome, "%s",
