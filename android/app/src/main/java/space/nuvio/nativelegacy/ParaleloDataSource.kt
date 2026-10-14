@@ -270,7 +270,11 @@ class ParaleloDataSource(
             transferStarted(dataSpec)
             return 0L
         }
-        val primeiroUltimo = if (pedido != C.LENGTH_UNSET.toLong()) pos + pedido - 1 else pos + PRIMEIRO - 1
+        // A sonda cabe no que foi pedido, mas nunca passa de PRIMEIRO: um
+        // buraco do cache maior que a janela (seek para tras sobre regiao
+        // sem cache) entraria inteiro num ByteArray so, na thread de quem
+        // chamou, antes do pool existir.
+        val primeiroUltimo = pos + (if (pedido != C.LENGTH_UNSET.toLong()) minOf(pedido, PRIMEIRO.toLong()) else PRIMEIRO.toLong()) - 1
         // Primeiro pedaco pela URL original: segue os redirecionamentos do debrid
         // uma vez so; os pedacos seguintes vao direto ao endereco final.
         val c = conectarComRetry(URL(dataSpec.uri.toString()), pos, primeiroUltimo, 0L)

@@ -190,6 +190,26 @@ class ParaleloDataSourceTest {
         fonte.close()
     }
 
+    @Test fun buracoGrandeNaoBaixaTudoNaSonda() {
+        // Seek para tras sobre 200 MB sem cache: a sonda fica em PRIMEIRO, o
+        // resto vai pelo pool, nunca um ByteArray de 200 MB na thread de quem abriu.
+        val conexoes = java.util.Collections.synchronizedList(ArrayList<ConexaoFaixa>())
+        val fonte = ParaleloDataSource(null, emptyMap(), novaConexao = { url ->
+            ConexaoFaixa(url, 24891962527L).also { conexoes += it }
+        }, dormir = { throw AssertionError("conexao viva nao deve esperar retry") })
+        try {
+            val len = fonte.open(DataSpec.Builder()
+                .setUri(android.net.Uri.parse("https://example.invalid/video.mkv"))
+                .setPosition(0L)
+                .setLength(200L shl 20)
+                .build())
+            assertEquals(200L shl 20, len)
+            assertEquals("bytes=0-${(1 shl 20) - 1}", conexoes[0].getRequestProperty("Range"))
+        } finally {
+            fonte.close()
+        }
+    }
+
     @Test fun aberturaComumUsaParalelo() {
         // Abertura progressiva comum (length UNSET, arquivo de 24 GB): tem que
         // criar o pool. A janela e o resto do arquivo, nao o pedaco de sonda.

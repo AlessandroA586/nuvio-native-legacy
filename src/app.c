@@ -2181,7 +2181,16 @@ static void tentarProximaFonteVOD(void) {
   else if (aberturaVencida(desde)) motivo = 2;
   else if (!fonteFalha && video_bufferando_ms() > VOD_FONTE_BUFFER_MS) {
 #ifdef NV_ANDROID
-    if (streamfitpassiva_recente_ms(video_android_sessao(), 5000)) return;
+    // Janela recente so segura a troca enquanto o buffer ANDA. Fonte que
+    // baixa sem parar mas nunca cobre o bitrate entrega janela a cada
+    // ENTREGA_CADA (10 s) e o veto de 5 s nunca vencia: a troca automatica
+    // morria a sessao inteira. Sem avanco, a janela nao vale mais nada.
+    { static unsigned visto; static double buf;
+      double agora = video_buffer_fim();
+      unsigned ms = video_bufferando_ms();
+      if (ms < visto) { visto = ms; buf = agora; }
+      if (agora > buf + 0.5) { visto = ms; buf = agora; return; }
+    }
 #endif
     motivo = 3;
   }
