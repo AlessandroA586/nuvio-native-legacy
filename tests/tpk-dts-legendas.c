@@ -91,8 +91,6 @@ int mkvass_cabecalho(const char *url, unsigned char **buf, long *n) {
 // --- the converter: always there, HLS ---------------------------------------
 static int abriuConversor;
 int proxyts_e_url(const char *u) { (void)u; return 0; }
-int ajustes_dts_tpk_modo(void) { return DTSTPK_HLS; }
-int ajustes_dts_tpk_corpo(void) { return DTSTPK_CORPO_CHUNKED; }
 int ajustes_dts_ac3(void) { return 1; }
 int dts_tpk_disponivel(void) { return 1; }
 const char *dts_tpk_modo_nome(int m) { (void)m; return "HLS"; }

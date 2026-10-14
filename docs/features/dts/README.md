@@ -73,14 +73,11 @@ The Samsung build converts with its own path: the TV's `Tizen.Multimedia.Player`
 reads the converted stream from a local HTTP server inside the app
 (`src/dts/dts_hls_tpk.c`; converter `src/dts/dts_remux.c`). Video is copied byte
 for byte; DTS decodes the core, TrueHD its 5.1 presentation, output AC3 5.1 at
-640 kb/s (stereo sources 2.0). Delivery (HLS / progressive TS, MKV, MP4, loopback
-or LAN address) and HTTP body framing are test settings until the S95C decides.
+640 kb/s (stereo sources 2.0). Delivery is HLS on 127.0.0.1 only.
 MKV sources decide from their track header; MP4 sources (announced as MP4, VOD)
 are probed by the converter beside the original, which keeps playing until a
 DTS/TrueHD track is found. HLS needs the keyframe index to reach the end of the
 file: an MKV without Cues switches to the continuous TS, which seeks by time.
-Design, findings and the TV checklist: `docs/plans/dts-truehd-ac3-tizen-DESIGN.md`
-and the hand-off notes in `docs/plans/dts-truehd-ac3-tizen.md`.
 
 ## Dependency provenance and distribution
 

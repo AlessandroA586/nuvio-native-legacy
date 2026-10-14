@@ -1,10 +1,7 @@
 /* DTS / TrueHD -> Dolby Digital on the Samsung .tpk: the local HTTP server the
- * TV's own player reads the converted stream from (docs/plans/
- * dts-truehd-ac3-tizen-DESIGN.md, "Option B"). The converter is dts_remux.c.
- *
- * Delivery is a TEST SETTING for now (Settings > Playback > More options, .tpk
- * only): the S95C decides which one stays. Values are the persisted indexes
- * of ajustes.c (V_DTS_TPK_MODO / V_DTS_TPK_CORPO): append only.
+ * TV's own player reads the converted stream from, bound to 127.0.0.1 only.
+ * The converter is dts_remux.c. video_tpk.c picks HLS and falls back to the
+ * progressive TS when the source has no keyframe index.
  *
  * Every function is safe from the app thread: nothing here blocks on the
  * network. Only the .tpk compiles the server; elsewhere these are stubs. */
@@ -17,8 +14,6 @@ enum {
   DTSTPK_PROG_TS,      /* 2: one progressive MPEG-TS, restarted on seek   */
   DTSTPK_PROG_MKV,     /* 3: one progressive Matroska, restarted on seek  */
   DTSTPK_PROG_MP4,     /* 3: one progressive fragmented MP4               */
-  DTSTPK_HLS_LAN,      /* 4: HLS like 1, served on the TV's LAN address   */
-  DTSTPK_DESLIGADO,    /* 5: off, the app behaves as before (control)     */
   DTSTPK_MODOS
 };
 enum { DTSTPK_CORPO_CHUNKED = 0, DTSTPK_CORPO_LENGTH, DTSTPK_CORPO_CLOSE, DTSTPK_CORPOS };
@@ -53,8 +48,4 @@ const char *dts_tpk_caminho(void);       /* decoder path, e.g. "DTS core only" *
  * lacks (MKV without Cues): a progressive mode can still play it. */
 int  dts_tpk_sem_indice(void);
 int  dts_tpk_e_url(const char *url);     /* is this a URL of this server */
-
-/* LAN log endpoint (no `sdb shell` on retail TVs): started on first call;
- * writes http://<TV-IP>:<port>/<token>/ into url. 0 without a LAN address. */
-int dts_tpk_registro_rede(char *url, size_t n);
 #endif

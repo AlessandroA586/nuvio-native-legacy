@@ -1,5 +1,4 @@
-/* DTS / TrueHD -> Dolby Digital remux for the Samsung .tpk (docs/plans/
- * dts-truehd-ac3-tizen-DESIGN.md). Video packets are copied untouched; ONE
+/* DTS / TrueHD -> Dolby Digital remux for the Samsung .tpk. Video packets are copied untouched; ONE
  * DTS/TrueHD/MLP track is decoded and re-encoded as AC3 (5.1 640 kb/s, or 2.0
  * 192 kb/s for stereo sources) or, with the "Stereo" setting, AAC 2.0. Output
  * goes to a writer callback: MPEG-TS segments for HLS, or one progressive

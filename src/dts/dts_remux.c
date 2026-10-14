@@ -1,7 +1,6 @@
-/* DTS / TrueHD -> Dolby Digital remux for the Samsung .tpk. See dts_remux.h and
- * docs/plans/dts-truehd-ac3-tizen-DESIGN.md (sections 2.2 and 4).
+/* DTS / TrueHD -> Dolby Digital remux for the Samsung .tpk. See dts_remux.h.
  *
- * What the PC prototype (tools/dts-tizen-lab/tvconv.c) proved, kept here:
+ * Design rules kept here:
  *  - VIDEO is never decoded: packets go to the muxer byte for byte. Matroska
  *    stores PTS only and there is no software video decoder to learn the
  *    reorder depth, so DTS = min(pts[n..n+LOOK]) - LOOK*frame, from an 8-packet

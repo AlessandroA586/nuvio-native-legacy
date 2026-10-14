@@ -276,6 +276,3 @@
   1, 0, /* provider failover off; order action */
   3, 3, 3, 3, /* total links per native provider */
   1, 0, 3, /* addon failover off; instance order action; total links */
-  0, /* DTS delivery (.tpk): HLS; an MKV without Cues switches to the continuous TS by itself */
-  0, /* DTS test HTTP body (.tpk): chunked */
-  0, /* app log on the LAN (.tpk): action */

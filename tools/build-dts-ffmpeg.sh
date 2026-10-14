@@ -7,7 +7,7 @@
 #   tpk             Samsung .tpk (tools/tpk.sh). Native build INSIDE the nuvio-tpk-sdk ARM
 #                   container, from the source tree tpk.sh already downloaded and checked on the
 #                   host (NUVIO_DTS_SRC; the container has no curl). Adds what the Samsung loopback
-#                   converter needs (docs/plans/dts-truehd-ac3-tizen-DESIGN.md): TrueHD/MLP
+#                   converter needs: TrueHD/MLP
 #                   decoders, mpegts/matroska/mp4 muxers, mlp/ac3 parsers, truehd_core.
 set -eu
 VERSION=7.1.5

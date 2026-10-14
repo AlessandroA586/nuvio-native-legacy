@@ -510,8 +510,6 @@ int   ajustes_cw_mostrar_nao_exibidos(void);  // showUnairedNextUp
 // continueWatchingSortMode: 0 default, 1 streaming_style, 2 split_upcoming
 int   ajustes_cw_ordem(void);
 int   ajustes_dts_ac3(void);             // 1 = DTS convertido em AC3 5.1 (LG, e padrao no .tpk); 0 = AAC estereo
-int   ajustes_dts_tpk_modo(void);        // .tpk: teste de entrega do convertido (DTSTPK_*, dts/dts_hls_tpk.h)
-int   ajustes_dts_tpk_corpo(void);       // .tpk: corpo HTTP do convertido (DTSTPK_CORPO_*)
 int   ajustes_ps_continuar(void);        // #303: 0 = sem o cartao "continuar" na escolha de perfil
 int   ajustes_hist_conta(void);          // 1 = this profile's history goes to the Nuvio account (per profile, default on)
 int   ajustes_social(void);              // 1 = friends/social features on (per profile, default on)

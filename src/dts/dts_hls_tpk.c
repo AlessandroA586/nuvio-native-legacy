@@ -1,15 +1,13 @@
 // DTS / TrueHD -> Dolby Digital no .tpk da Samsung: o servidor HTTP local de
-// onde o player da TV le o fluxo convertido. Ver dts_hls_tpk.h e
-// docs/plans/dts-truehd-ac3-tizen-DESIGN.md (secao 4.1). O andaime e o do
+// onde o player da TV le o fluxo convertido. Ver dts_hls_tpk.h. O andaime e o do
 // src/proxyts.c (127.0.0.1, porta livre, um fio por conexao, sessao por
 // geracao); o conversor e o dts_remux.c.
 //
-// MODOS (ajuste de teste, um so fica depois da S95C):
+// MODOS:
 //  1 HLS sob demanda: playlist VOD montada do indice de quadros-chave; cada
 //    segmento sai do conversor quando o player pede. Seek, posicao e duracao
 //    ficam com o player.
 //  2/3 progressivo (TS, MKV, MP4): um fluxo so, reaberto a cada seek (?t=).
-//  4 o HLS do modo 1 no IP da rede da TV, em vez de 127.0.0.1.
 // CORPO (pergunta 3 do teste): chunked, Content-Length (o segmento inteiro e
 // gerado antes; Range respondido da memoria) ou fechar a conexao no fim.
 //
@@ -38,10 +36,8 @@ double dts_tpk_inicio_stream(void) { return -1; }
 const char *dts_tpk_caminho(void) { return ""; }
 int dts_tpk_sem_indice(void) { return 0; }
 int dts_tpk_e_url(const char *u) { (void)u; return 0; }
-int dts_tpk_registro_rede(char *u, size_t n) { (void)u; if (n) u[0] = 0; return 0; }
 #else
 
-#include "../registro.h"
 #include "dts_engine.h"
 #include <arpa/inet.h>
 #include <dlfcn.h>
@@ -75,7 +71,7 @@ int dts_tpk_registro_rede(char *u, size_t n) { (void)u; if (n) u[0] = 0; return 
 #define GERADORES        2
 
 static const char *const MODO_NOME[DTSTPK_MODOS] = {
-  "HLS 127.0.0.1", "progressive TS", "progressive MKV", "progressive MP4", "HLS LAN IP", "off" };
+  "HLS 127.0.0.1", "progressive TS", "progressive MKV", "progressive MP4" };
 static const char *const CORPO_NOME[DTSTPK_CORPOS] = { "chunked", "content-length", "close" };
 const char *dts_tpk_modo_nome(int m) { return m >= 0 && m < DTSTPK_MODOS ? MODO_NOME[m] : "?"; }
 const char *dts_tpk_corpo_nome(int c) { return c >= 0 && c < DTSTPK_CORPOS ? CORPO_NOME[c] : "?"; }
@@ -91,7 +87,7 @@ static void prazoEm(struct timespec *ts, int ms) {
   if (ts->tv_nsec >= 1000000000L) { ts->tv_nsec -= 1000000000L; ts->tv_sec++; }
 }
 
-// --- token e IP -------------------------------------------------------------
+// --- token -------------------------------------------------------------
 static void gerarToken(char *t, int n) {
   static const char A[] = "abcdefghjkmnpqrstuvwxyz23456789";
   unsigned char b[32];
@@ -104,41 +100,6 @@ static void gerarToken(char *t, int n) {
   }
   for (int i = 0; i < (int)sizeof b && k < n; i++) if (b[i] < 248) t[k++] = A[b[i] % 31];
   t[k] = 0;
-}
-
-static int privado(in_addr_t a) {
-  unsigned long h = ntohl(a);
-  return (h >> 24) == 10 || (h >> 20) == 0xAC1 || (h >> 16) == 0xC0A8;
-}
-// Mesma regra do celular.c: a interface da rota padrao, senao a primeira privada.
-static int ipLan(char *dst, size_t n) {
-  struct sockaddr_in alvo, eu;
-  socklen_t tam = sizeof eu;
-  struct ifaddrs *lista = NULL, *i;
-  int s = socket(AF_INET, SOCK_DGRAM, 0);
-  in_addr_t achou = 0;
-  if (s >= 0) {
-    memset(&alvo, 0, sizeof alvo);
-    alvo.sin_family = AF_INET; alvo.sin_port = htons(9);
-    inet_pton(AF_INET, "192.0.2.1", &alvo.sin_addr);
-    if (!connect(s, (struct sockaddr *)&alvo, sizeof alvo) &&
-        !getsockname(s, (struct sockaddr *)&eu, &tam) && privado(eu.sin_addr.s_addr))
-      achou = eu.sin_addr.s_addr;
-    close(s);
-  }
-  if (!achou && !getifaddrs(&lista)) {
-    for (i = lista; i; i = i->ifa_next) {
-      if (!i->ifa_addr || i->ifa_addr->sa_family != AF_INET) continue;
-      if (!(i->ifa_flags & IFF_UP) || (i->ifa_flags & IFF_LOOPBACK)) continue;
-      if (privado(((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr)) {
-        achou = ((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr; break;
-      }
-    }
-    freeifaddrs(lista);
-  }
-  if (!achou) return 0;
-  struct in_addr a; a.s_addr = achou;
-  return inet_ntop(AF_INET, &a, dst, (socklen_t)n) != NULL;
 }
 
 // --- sockets ------------------------------------------------------------------
@@ -275,8 +236,7 @@ typedef struct Sessao {
 static pthread_mutex_t G = PTHREAD_MUTEX_INITIALIZER;
 static Sessao *atual;
 static unsigned contador;
-static int sockLo = -1, portaLo, sockLan = -1, portaLan;
-static char ipLanAtual[48];
+static int sockLo = -1, portaLo;
 
 static void sessaoDestruir(Sessao *s) {
   for (int i = 0; i < GERADORES; i++) dts_remux_gen_free(s->ger[i].g);
@@ -329,7 +289,7 @@ static void *fioSonda(void *u) {
   pthread_mutex_lock(&s->m);
   if (s->cancelar) { if (rx) dts_remux_close(rx); rx = NULL; s->estado = DTSTPK_FALHOU; snprintf(s->erro, sizeof s->erro, "cancelled"); }
   else if (!rx) { s->estado = DTSTPK_FALHOU; snprintf(s->erro, sizeof s->erro, "%s", err[0] ? err : "probe failed"); }
-  else if ((s->modo == DTSTPK_HLS || s->modo == DTSTPK_HLS_LAN) && (in->n_segments < 1 || !in->index_complete)) {
+  else if (s->modo == DTSTPK_HLS && (in->n_segments < 1 || !in->index_complete)) {
     // HLS precisa do indice inteiro (a playlist sai dele): sem Cues nao ha HLS.
     // video_tpk.c refaz no TS continuo, que busca por tempo.
     s->estado = DTSTPK_FALHOU; s->semIndice = 1;
@@ -792,17 +752,17 @@ static void *aceitar(void *u) {
   return NULL;
 }
 
-// Sob G. lan = 0: 127.0.0.1; 1: todas as interfaces (o player usa o IP da rede).
-static int subir(int lan) {
-  int *ls = lan ? &sockLan : &sockLo, *porta = lan ? &portaLan : &portaLo;
+// Sob G. So 127.0.0.1: nada do servidor sai da TV.
+static int subir(void) {
+  int *ls = &sockLo, *porta = &portaLo;
   pthread_t t;
   if (*ls >= 0) return 1;
   signal(SIGPIPE, SIG_IGN);
-  *ls = ouvir(lan ? INADDR_ANY : INADDR_LOOPBACK, 0, porta);
+  *ls = ouvir(INADDR_LOOPBACK, 0, porta);
   if (*ls < 0) return 0;
   if (pthread_create(&t, NULL, aceitar, (void *)(intptr_t)*ls) != 0) { close(*ls); *ls = -1; return 0; }
   pthread_detach(t);
-  printf("[dts-tpk] servidor ouvindo em %s:%d\n", lan ? "0.0.0.0" : "127.0.0.1", *porta);
+  printf("[dts-tpk] servidor ouvindo em %s:%d\n", "127.0.0.1", *porta);
   fflush(stdout);
   return 1;
 }
@@ -859,10 +819,10 @@ static void encerrarAtual(void) {   // sob G
 }
 
 static int urlDe(Sessao *s, double t, char *out, size_t n) {
-  const char *host = s->modo == DTSTPK_HLS_LAN ? ipLanAtual : "127.0.0.1";
-  int porta = s->modo == DTSTPK_HLS_LAN ? portaLan : portaLo;
+  const char *host = "127.0.0.1";
+  int porta = portaLo;
   switch (s->modo) {
-    case DTSTPK_HLS: case DTSTPK_HLS_LAN:
+    case DTSTPK_HLS:
       snprintf(out, n, "http://%s:%d/%s/m.m3u8", host, porta, s->token); break;
     default: {
       long ms = lround((t > 0 ? t : 0) * 1000.0);
@@ -877,21 +837,14 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
                   double inicio, char *out, size_t n) {
   Sessao *s;
   pthread_t t;
-  int lan = modo == DTSTPK_HLS_LAN;
   if (out && n) out[0] = 0;
-  if (!url || !*url || !out || n < 64 || modo < 0 || modo >= DTSTPK_DESLIGADO || !dts_remux_available()) return 0;
+  if (!url || !*url || !out || n < 64 || modo < 0 || modo >= DTSTPK_MODOS || !dts_remux_available()) return 0;
   if (corpo < 0 || corpo >= DTSTPK_CORPOS) corpo = DTSTPK_CORPO_CHUNKED;
   pthread_mutex_lock(&G);
   encerrarAtual();
-  if (lan && !ipLan(ipLanAtual, sizeof ipLanAtual)) {
+  if (!subir()) {
     pthread_mutex_unlock(&G);
-    printf("[dts-tpk] modo HLS no IP da rede: a TV nao tem IP de rede local\n");
-    fflush(stdout);
-    return 0;
-  }
-  if (!subir(lan)) {
-    pthread_mutex_unlock(&G);
-    printf("[dts-tpk] o servidor nao subiu em %s (%s)\n", lan ? "0.0.0.0" : "127.0.0.1", strerror(errno));
+    printf("[dts-tpk] o servidor nao subiu em 127.0.0.1 (%s)\n", strerror(errno));
     fflush(stdout);
     return 0;
   }
@@ -915,7 +868,7 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
   urlDe(s, inicio, out, n);
   pthread_mutex_unlock(&G);
   printf("[dts-tpk] sessao %u: modo %s, corpo %s, endereco %s, audio %d do arquivo, saida %s; player abre %s\n", s->id,
-         MODO_NOME[modo], CORPO_NOME[corpo], lan ? ipLanAtual : "127.0.0.1", track, stereo ? "AAC 2.0" : "AC3",
+         MODO_NOME[modo], CORPO_NOME[corpo], "127.0.0.1", track, stereo ? "AAC 2.0" : "AC3",
           strstr(out, ".m3u8") ? "a playlist HLS" : "o fluxo progressivo");
   fflush(stdout);
   return 1;
@@ -965,148 +918,11 @@ const char *dts_tpk_caminho(void) {
   return b;
 }
 int dts_tpk_e_url(const char *u) {
-  char a[80] = "", b[80] = "";
+  char a[80] = "";
   if (!u) return 0;
   pthread_mutex_lock(&G);
   if (portaLo) snprintf(a, sizeof a, "http://127.0.0.1:%d/", portaLo);
-  if (portaLan && ipLanAtual[0]) snprintf(b, sizeof b, "http://%s:%d/", ipLanAtual, portaLan);
   pthread_mutex_unlock(&G);
-  return (a[0] && !strncmp(u, a, strlen(a))) || (b[0] && !strncmp(u, b, strlen(b)));
-}
-
-// --- registro na rede ---------------------------------------------------------
-// Sem `sdb shell` na TV de varejo: o log do app sai por HTTP na LAN, com token.
-// GET /<token>/         = dts (o que o teste pede quase sempre)
-// GET /<token>/log?n=N   ultimas N linhas (padrao 3000)
-// GET /<token>/dts?n=N   so as linhas da conversao, do player, do audio e da
-//                        escolha de fonte (padrao 5000): as do menu nao empurram
-//                        a reproducao para fora
-// GET /<token>/help      os enderecos
-// URLs saem cortadas no host, como no painel de log da TV (registro.c).
-static int sockReg = -1, portaReg;
-static char tokenReg[12], urlReg[96];
-
-static void mascarar(char *s) {
-  char *p = s;
-  while ((p = strstr(p, "://")) != NULL) {
-    char *h = p + 3, *fim;
-    while (*h && *h != '/' && *h != '?' && *h != ' ') h++;
-    if (*h != '/' && *h != '?') { p = h; continue; }
-    fim = h;
-    while (*fim && *fim != ' ' && *fim != '\n') fim++;
-    if (fim - h < 4) { p = fim; continue; }
-    memmove(h + 4, fim, strlen(fim) + 1);
-    memcpy(h, "/...", 4);
-    p = h + 4;
-  }
-}
-
-static int linhaDts(const char *l) {
-  static const char *const M[] = { "[dts-tpk]", "[dts-range]", "[video] tpk", "[audio]", "[mkv]", "[dts]",
-                                   "[video] faixas", "[video] reconex", "[video] reconect", "[video] conexao",
-                                   "[fonte]", "[player] saida", "[tv] ", "[etapa-anterior]", NULL };
-  for (int i = 0; M[i]; i++) if (strstr(l, M[i])) return 1;
-  return 0;
-}
-
-static void servirRegistro(int sock, const char *caminho, const char *query) {
-  const char *arq = registro_arquivo();
-  int so = !caminho[0] || !strcmp(caminho, "dts"), n = so ? 5000 : 3000;
-  const char *q = strstr(query, "n=");
-  if (q) n = atoi(q + 2);
-  if (n < 1) n = 1;
-  if (n > 20000) n = 20000;
-  if (strcmp(caminho, "log") && !so) {
-    char b[700];
-    snprintf(b, sizeof b, "Nuvio log (this TV)\n\n  %s            conversion, player, audio and source lines (= dts)\n"
-             "  %sdts?n=5000  the same, last 5000 of them\n  %slog?n=3000  last lines of the whole app log\n",
-             urlReg, urlReg, urlReg);
-    responderSimples(sock, 200, "OK", "text/plain; charset=utf-8", b, 0);
-    return;
-  }
-  FILE *f = arq ? fopen(arq, "rb") : NULL;
-  if (!f) { responderSimples(sock, 404, "Not Found", NULL, "no log file\n", 0); return; }
-  long tam, ini;
-  fseek(f, 0, SEEK_END); tam = ftell(f);
-  ini = tam > (8L << 20) ? tam - (8L << 20) : 0;
-  char *b = malloc((size_t)(tam - ini) + 1);
-  if (!b) { fclose(f); responderSimples(sock, 500, "Internal Server Error", NULL, "", 0); return; }
-  fseek(f, ini, SEEK_SET);
-  size_t lidos = fread(b, 1, (size_t)(tam - ini), f);
-  fclose(f);
-  b[lidos] = 0;
-  // De tras para a frente ate juntar n linhas (filtradas, no modo dts).
-  char **lin = malloc((size_t)n * sizeof *lin);
-  int k = 0;
-  char *p = b + lidos;
-  while (lin && p > b && k < n) {
-    char *fim = p;
-    if (fim > b && fim[-1] == '\n') fim--;
-    char *c = fim;
-    while (c > b && c[-1] != '\n') c--;
-    *fim = 0;
-    if (!so || linhaDts(c)) lin[k++] = c;
-    p = c;
-  }
-  size_t cap = 256;
-  for (int i = 0; i < k; i++) cap += strlen(lin[i]) + 1;
-  char *saida = malloc(cap);
-  if (saida && lin) {
-    size_t o = 0;
-    for (int i = k - 1; i >= 0; i--) { size_t l = strlen(lin[i]); memcpy(saida + o, lin[i], l); o += l; saida[o++] = '\n'; }
-    saida[o] = 0;
-    mascarar(saida);
-    responderSimples(sock, 200, "OK", "text/plain; charset=utf-8", saida, 0);
-  } else responderSimples(sock, 500, "Internal Server Error", NULL, "", 0);
-  free(saida); free(lin); free(b);
-}
-
-static void *atenderRegistro(void *u) {
-  int sock = (int)(intptr_t)u;
-  char cab[4096];
-  Pedido pd;
-  if (lerPedido(sock, cab, sizeof cab, 10000) && lerLinha(cab, &pd)) {
-    const char *c = pd.caminho[0] == '/' ? pd.caminho + 1 : pd.caminho;
-    size_t k = strlen(tokenReg);
-    if (!strncmp(c, tokenReg, k) && (c[k] == '/' || !c[k])) servirRegistro(sock, c[k] ? c + k + 1 : "", pd.query);
-    else responderSimples(sock, 404, "Not Found", NULL, "", 0);
-  }
-  close(sock);
-  return NULL;
-}
-
-static void *aceitarRegistro(void *u) {
-  (void)u;
-  for (;;) {
-    int s = accept(sockReg, NULL, NULL);
-    pthread_t t;
-    if (s < 0) { if (errno == EINTR) continue; usleep(200 * 1000); continue; }
-    { struct timeval tv = { 10, 0 }; setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof tv); }
-    if (pthread_create(&t, NULL, atenderRegistro, (void *)(intptr_t)s) == 0) pthread_detach(t);
-    else close(s);
-  }
-  return NULL;
-}
-
-int dts_tpk_registro_rede(char *url, size_t n) {
-  char ip[48];
-  int ok = 0;
-  if (url && n) url[0] = 0;
-  pthread_mutex_lock(&G);
-  if (sockReg < 0 && ipLan(ip, sizeof ip)) {
-    pthread_t t;
-    signal(SIGPIPE, SIG_IGN);
-    sockReg = ouvir(INADDR_ANY, 8099, &portaReg);   // porta fixa quando livre: facil de lembrar
-    if (sockReg >= 0 && pthread_create(&t, NULL, aceitarRegistro, NULL) == 0) {
-      pthread_detach(t);
-      gerarToken(tokenReg, 6);
-      snprintf(urlReg, sizeof urlReg, "http://%s:%d/%s/", ip, portaReg, tokenReg);
-      printf("[dts-tpk] registro na rede: %s\n", urlReg);
-      fflush(stdout);
-    } else if (sockReg >= 0) { close(sockReg); sockReg = -1; }
-  }
-  if (sockReg >= 0 && url && n) { snprintf(url, n, "%s", urlReg); ok = 1; }
-  pthread_mutex_unlock(&G);
-  return ok;
+  return a[0] && !strncmp(u, a, strlen(a));
 }
 #endif

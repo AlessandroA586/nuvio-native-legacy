@@ -1,12 +1,10 @@
 // Stubs da conversao DTS/TrueHD do .tpk (src/dts/dts_hls_tpk.c, ajustes.c,
 // proxyts.c) para os testes que linkam src/video_tpk.c contra um host falso.
-// O ajuste de teste fica em "Desligado" e o conversor indisponivel: o
-// video_tpk.c se comporta como o master, que e o que esses testes fixam.
+// O conversor fica indisponivel: o video_tpk.c se comporta como o master, que
+// e o que esses testes fixam.
 #include "../src/dts/dts_hls_tpk.h"
 #include "../src/video.h"
 int proxyts_e_url(const char *u) { (void)u; return 0; }
-int ajustes_dts_tpk_modo(void) { return DTSTPK_DESLIGADO; }
-int ajustes_dts_tpk_corpo(void) { return DTSTPK_CORPO_CHUNKED; }
 int ajustes_dts_ac3(void) { return 1; }
 int dts_tpk_disponivel(void) { return 0; }
 const char *dts_tpk_modo_nome(int m) { (void)m; return "-"; }

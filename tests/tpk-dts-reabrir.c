@@ -98,18 +98,20 @@ int mkvass_cabecalho(const char *url, unsigned char **buf, long *n) {
 static int abriuConversor, urlEmN;
 static double urlEmUlt = -1, inicioStream = -1;
 int proxyts_e_url(const char *u) { (void)u; return 0; }
-static int modoFake = DTSTPK_PROG_TS;
-int ajustes_dts_tpk_modo(void) { return modoFake; }
-int ajustes_dts_tpk_corpo(void) { return DTSTPK_CORPO_CHUNKED; }
+// The app always asks for HLS. semIndice = the source has no keyframe index
+// (MKV without Cues): the HLS probe fails and the app redoes it on the TS.
+static int modoFake = DTSTPK_HLS, semIndice = 1;
 int ajustes_dts_ac3(void) { return 1; }
 int dts_tpk_disponivel(void) { return 1; }
 const char *dts_tpk_modo_nome(int m) { (void)m; return "TS"; }
 const char *dts_tpk_corpo_nome(int c) { (void)c; return "chunked"; }
 int dts_tpk_abrir(const char *url, const char *headers, int audio_ordinal, int stereo_aac,
                   int modo, int corpo, double inicio, char *out, size_t n) {
-  (void)url; (void)headers; (void)audio_ordinal; (void)stereo_aac; (void)modo; (void)corpo;
+  (void)url; (void)headers; (void)audio_ordinal; (void)stereo_aac; (void)corpo;
   abriuConversor++;
-  snprintf(out, n, "http://127.0.0.1:1/tok/v.ts?t=%.0f", inicio);
+  modoFake = modo;
+  if (modo == DTSTPK_HLS) snprintf(out, n, "http://127.0.0.1:1/tok/m.m3u8");
+  else snprintf(out, n, "http://127.0.0.1:1/tok/v.ts?t=%.0f", inicio);
   return 1;
 }
 int dts_tpk_url_em(double s, char *out, size_t n) {
@@ -118,13 +120,13 @@ int dts_tpk_url_em(double s, char *out, size_t n) {
   return 1;
 }
 void dts_tpk_fechar(void) {}
-int dts_tpk_estado(void) { return DTSTPK_PRONTO; }
+int dts_tpk_estado(void) { return modoFake == DTSTPK_HLS && semIndice ? DTSTPK_FALHOU : DTSTPK_PRONTO; }
 const char *dts_tpk_erro(void) { return ""; }
 double dts_tpk_duracao(void) { return 7200; }
 int dts_tpk_modo(void) { return modoFake; }
 double dts_tpk_inicio_stream(void) { return inicioStream; }
 const char *dts_tpk_caminho(void) { return "DTS core only"; }
-int dts_tpk_sem_indice(void) { return 0; }
+int dts_tpk_sem_indice(void) { return modoFake == DTSTPK_HLS && semIndice; }
 int dts_tpk_e_url(const char *u) { return u && strstr(u, "127.0.0.1") != NULL; }
 int video_faixa_dts(const VideoFaixa *f) { return f && !strncmp(f->codec, "A_DTS", 5); }
 
@@ -176,7 +178,8 @@ int main(void) {
   nv_tpk_video_registrar_faixas(hEscolher);
   video_definir_reconexao(1);
   video_tocar("http://h/a.mkv");
-  ok(abriuConversor == 1 && strstr(ultUrl, "v.ts?t=0"), "opens the converted TS from the start");
+  bombear(3);   // the HLS probe reports no index: the app redoes it on the TS
+  ok(abriuConversor == 2 && strstr(ultUrl, "v.ts?t=0"), "opens the converted TS from the start");
   ok(!video_pronto(), "first open is an open (the app's opening card shows)");
   ok(!video_tpk_capa(), "first open: no cover (the opening card is the screen)");
   inicioStream = 0; posMs = 1000;
@@ -232,13 +235,13 @@ int main(void) {
   playerPronto(); bombear(3);
   ok(pausas == 0, "no start buffer on the TS");
   video_parar();
-  modoFake = DTSTPK_HLS;
+  semIndice = 0;
   video_tocar("http://h/f2.mkv");
   posMs = 1000;
   playerPronto(); bombear(3);
   ok(pausas == 0, "no start buffer on HLS");
   video_parar();
-  modoFake = DTSTPK_PROG_TS;
+  semIndice = 1;
 
   // PREFERRED LANGUAGE ONLY ON DTS: English DTS + Japanese AAC, English wanted.
   misto = 1; montarCabecalho(); abriuConversor = 0;
