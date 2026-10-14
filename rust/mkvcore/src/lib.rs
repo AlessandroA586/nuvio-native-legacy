@@ -29,6 +29,12 @@ fn on_panic(_: &core::panic::PanicInfo) -> ! {
     unsafe { abort() }
 }
 
+// ARM32 EHABI: compiler_builtins' unwind tables reference this symbol and the C
+// link has no Rust std to provide it. panic = abort, so it is never called.
+#[cfg(all(not(test), target_arch = "arm"))]
+#[no_mangle]
+pub extern "C" fn rust_eh_personality() {}
+
 // --- C ABI ----------------------------------------------------------------------
 
 /// `MkvFaixa` of src/mkv.h, field for field.
