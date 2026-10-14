@@ -3221,7 +3221,9 @@ static int montarContinuar(CatItem *saida, int max) {
   if (max > CONT_MAX) max = CONT_MAX;
   cwGer++;
   nAjustados = 0;
-  nT = querTrakt ? trakt_continuar(doTrakt, CONT_MAX) : 0;
+  // O sync de vistos alimenta os cartazes mesmo quando outra fonte de CW foi escolhida.
+  nT = trakt_ativo() ? trakt_continuar(doTrakt, CONT_MAX) : 0;
+  if (!querTrakt) nT = 0;
   // Os limites AGORA valem para todas as fontes. Sem isto, o /sync/playback
   // devolve o que qualquer cliente pausou uma vez — inclusive titulos em 0% e
   // titulos praticamente terminados, que e o "nunca assisti isso" do relato.
