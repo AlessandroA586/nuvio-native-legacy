@@ -23,6 +23,7 @@
 #include "iconeapp.h"
 #include "logoapp.h"
 #include "registro.h"
+#include "entrada_texto.h"
 #include "addonsui.h"
 #include "pluginsui.h"
 #include "login.h"
@@ -5426,6 +5427,17 @@ static int relogioCamadaAberta(void) {
       glem_cartao_aberto() || recenviar_aberto() || pessoas_aberto() ||
       recomenda_aberta() || pipintro_aberto() || diagnostico_intro_aberto();
 }
+// FPS scenes need the Home to own the D-pad, not merely be underneath a modal.
+int app_home_recebe_teclas(void) {
+  return app_na_home() && !relogioCamadaAberta() &&
+      !ctx_aberto() && !menu_aberto() && !spainel_aberto() && !vertudo_aberta() &&
+      !central_aberta() && !ilha_modal_aberto() && !celb_aberto() && !spot_aberto() &&
+      !registro_aberto() && !registro_envio_aberto() && !estatvivo_aberto() &&
+      !avisos_aberto() && !teclado_aberto() && !texto_sistema_aberto() &&
+      !faixas_aberta() && !episodios_aberto() && !stream_folha_aberta() &&
+      !guia_overlay_aberta();
+}
+
 static int relogioCabe(void) {
   // AJUSTES NO GLASS UI (mockup de 03/10): o relogio fica no canto, em cima da
   // ilha de categorias — a tela nao tem mais titulo ali. Com folha, vinculo ou
