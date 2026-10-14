@@ -10,6 +10,7 @@ static pthread_mutex_t trava = PTHREAD_MUTEX_INITIALIZER;
 static ImgsubQuadro *q[MAX_QUADROS];    // ordenado por ini
 static int nq;
 static size_t bytes;
+static unsigned proximoId;
 static double ultimo;                   // ultimo `t` pedido: o que fica longe sai primeiro
 
 static size_t pesoDe(const ImgsubQuadro *f) {
@@ -42,7 +43,7 @@ void imgsub_por(double ini, double fim, PgsQuadro *src) {
   ImgsubQuadro *f = calloc(1, sizeof *f);
   int i, pos;
   if (!f) return;
-  f->ini = ini; f->fim = fim; f->refs = 1;
+  f->ini = ini; f->fim = fim; f->refs = 1; f->id = ++proximoId;
   f->tela_w = src->tela_w; f->tela_h = src->tela_h; f->n = src->n;
   memcpy(f->obj, src->obj, sizeof f->obj);
   memset(src->obj, 0, sizeof src->obj);
@@ -63,8 +64,21 @@ void imgsub_por(double ini, double fim, PgsQuadro *src) {
   pthread_mutex_unlock(&trava);
 }
 
+static unsigned donoGeracao;
+
+void imgsub_dono(unsigned geracao) {
+  pthread_mutex_lock(&trava); donoGeracao = geracao; pthread_mutex_unlock(&trava);
+}
+
+unsigned imgsub_dono_atual(void) {
+  unsigned g;
+  pthread_mutex_lock(&trava); g = donoGeracao; pthread_mutex_unlock(&trava);
+  return g;
+}
+
 void imgsub_limpar(void) {
   pthread_mutex_lock(&trava);
+  donoGeracao = 0;
   while (nq) tira(nq - 1);
   pthread_mutex_unlock(&trava);
 }

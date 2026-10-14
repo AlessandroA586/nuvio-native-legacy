@@ -163,6 +163,8 @@ int  mkvass_estado(void);
 // Android conserva padrao 0: Media3 ja entrega o texto ao overlay.
 // Desligavel para testes/consumidores que precisem somente de ASS.
 void mkvass_aceitar_texto(int sim);
+// Faixas de imagem (S_HDMV/PGS): colhe os blocos e decodifica para o imgsub.
+void mkvass_aceitar_imagem(int sim);
 // 1 quando o estado e um dos no-go.
 int  mkvass_nogo(void);
 // 1 quando a colheita e por VARREDURA dos Clusters (o indice nao apontava os

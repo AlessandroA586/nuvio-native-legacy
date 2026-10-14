@@ -11,14 +11,22 @@ typedef struct ImgsubQuadro {
   int tela_w, tela_h, n;     // n == 0: marca "limpar a tela"
   PgsObjeto obj[PGS_MAX_OBJ];
   int refs;
+  unsigned id;               // unico por quadro: chave do cache de textura do desenho
 } ImgsubQuadro;
 
 // Guarda o quadro decodificado (leva os bitmaps: q->obj[i].rgba fica NULL).
 void imgsub_por(double ini, double fim, PgsQuadro *q);
 void imgsub_limpar(void);
+// Geracao da legenda (legenda_geracao) a que os quadros pertencem: o desenho so
+// mostra se a legenda ainda e dessa geracao. imgsub_limpar zera.
+void imgsub_dono(unsigned geracao);
+unsigned imgsub_dono_atual(void);
 // Quadro que deve estar na tela em `t`, ou NULL. Quem recebe devolve com soltar.
 ImgsubQuadro *imgsub_pegar(double t);
 void imgsub_soltar(ImgsubQuadro *);
 // Quanto um quadro de duracao desconhecida fica na tela sem outro que o troque.
 #define IMGSUB_DUR_PADRAO 5.0
+// Desenha o quadro de `t` no retangulo do video (x,y,w,h); 1 se desenhou. So
+// mostra quando a legenda ainda e do dono do imgsub. Fora de imgsub.c: precisa de GL.
+int imgsub_desenhar(double t, float x, float y, float w, float h, float alpha);
 #endif
