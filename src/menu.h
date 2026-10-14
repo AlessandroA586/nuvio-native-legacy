@@ -101,6 +101,9 @@ int  menu_pediu_spotlight(void);
 // interface; tudo o que esta API devolve ja vem em px da tela REAL.
 #define NV_MENU_MODERNA_X 48.0f   // px da tela REAL
 float menu_barra_borda(void);
+// Barra no topo: posicao FRACIONARIA da capsula de selecao (indice na ordem dos
+// itens visiveis); desliza entre dois indices em ~180 ms. So os testes leem.
+float menu_topo_pos(void);
 
 // --- PILULA DO LAYOUT DINAMICA (barra estilo Apple TV) ----------------------
 // No layout Dinamica da home nao ha rail: fechada, a barra e uma pilula

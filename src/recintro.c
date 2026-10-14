@@ -429,11 +429,7 @@ static void recintro_desenharCorpo_(Uint32 agora) {
   y = RI_Y + dy + 96.0f;
   if (pagina == 0) {
     y += feature(RI_TXT_X + dx, y, RI_TXT_W, "menu_library",
-#ifdef NV_ANDROID
           "Está no CH+",
-#else
-          "Está na tecla AZUL",
-#endif
           "O painel de Salvos ganhou uma segunda aba, Social — é ali que chega "
           "o que os seus amigos mandaram.", ap);
     y += feature(RI_TXT_X + dx, y, RI_TXT_W, "recomendar",

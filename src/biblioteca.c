@@ -2387,6 +2387,12 @@ void biblioteca_desenhar(Uint32 agora) {
   gfx_recorte(0.0f, gcy, NV_TELA_W, BIB_GRADE_BASE - gcy);
   { int lin0 = passoL > 0.0f ? (int)(scrollY / passoL) : 0;
 
+  // ITEM 4 (plx): recusa no ponto do pedido. A grade diz ao cache se esta em
+  // movimento; um quadro parado nao recusa nada (o lookahead do item 1 cobre a
+  // vizinhanca) e por isso a rolagem curta continua revelando cartazes prontos.
+  // O limiar e o deles: MOVING_SPEED = 120 px/s medido na TV (card_motion.rs).
+  tex_grade_movendo(fabsf(velY) > 120.0f);
+
   // Dois passes: o item focado escala 2% e precisa ser desenhado por ULTIMO,
   // senao o vizinho da direita corta a borda dele.
   for (int passe = 0; passe < 2; passe++)
@@ -2398,12 +2404,17 @@ void biblioteca_desenhar(Uint32 agora) {
       // crosses the header. The clip above protects the header itself.
       a = anim_clamp((topo + alturaLinha() - gcy) / BIB_FADE, 0.0f, 1.0f);
       if (a <= 0.005f) continue;
+      // CARTAO FORA DA JANELA: fileira cortada pelo topo ou pelo rodape. Ela
+      // ainda e desenhada (a faixa de fade), entao e NIVEL 1 (borda): o cache
+      // so recusa em movimento. O cartao em FOCO nunca e tratado como fora.
+      int fora = (topo < gcy || topo + alturaLinha() > NV_TELA_H) ? 1 : 0;
 
       for (c = 0; c < nc; c++) {
         int i = r * nc + c;
         float f, entra, ac, ty;
         if (i >= nCelulas) break;
         f = (c < BIB_COLUNAS_MAX) ? animFoco[r][c] : 0.0f;
+        tex_pedido_fora(fora && f <= 0.01f ? 1 : 0);
         // O alvo e a celula em REPOUSO (sem a escala do foco nem a onda), uma
         // vez por celula, recortado a janela da grade.
         if (passe == 0) {
@@ -2452,8 +2463,10 @@ void biblioteca_desenhar(Uint32 agora) {
             }
           } }
       }
+      tex_pedido_fora(0);
     }
   }
+  tex_pedido_fora(0);
   gfx_sem_recorte();
   if (teclado_aberto()) teclado_desenhar(agora);
   gfx_borda_foco_atual = 1.0f;
