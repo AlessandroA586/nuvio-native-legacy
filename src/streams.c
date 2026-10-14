@@ -2630,7 +2630,13 @@ static void tituloAddon(const Stream *s, char *buf, size_t tam) {
     t[k++] = (char)c;
   }
   t[k] = 0;
-  nv_limpar_texto(t, lim, sizeof lim, NV_LIMPA_UMA_LINHA);
+  const char *nome = t;
+  if (s->emCache && !s->foraCache && !strncmp(nome, "⚡", strlen("⚡"))) {
+    nome += strlen("⚡");
+    if (!strncmp(nome, "\xEF\xB8\x8F", 3)) nome += 3;
+    while (*nome == ' ') nome++;
+  }
+  nv_limpar_texto(nome, lim, sizeof lim, NV_LIMPA_UMA_LINHA);
   snprintf(buf, tam, "%s", lim[0] ? lim : s->provedor);
 }
 
@@ -4007,7 +4013,12 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       tira=0;
       if(ajustes_fonte_texto_addon()) snprintf(nome,sizeof nome,"%s",textoAddonDa(i)->titulo);
       else tituloConteudo(s,nome,sizeof nome,ep,sizeof ep);
-      { TxtLinha l=txt_linha_corta(TXT_CALLOUT,nome,255,255,253,255,txtW);
+      float nomeX=tx, nomeW=txtW;
+      if(s->emCache && !s->foraCache) {
+        gfx_icone((GfxRect){tx,cy+4,26,26},"aj_zap",ar,ag,ab,anim);
+        nomeX+=34; nomeW-=34;
+      }
+      { TxtLinha l=txt_linha_corta(TXT_CALLOUT,nome,255,255,253,255,nomeW);
         // LOGO DO TITULO no lugar do nome (ajuste em teste): a mesma logo do
         // hero/detalhe, encostada a esquerda numa caixa da altura do nome.
         // Sem logo (ausente ou ainda baixando) fica o nome escrito.
@@ -4022,16 +4033,16 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
           // A base da logo fica FOLHA_LOGO_VAO acima dos selos (que comecam em
           // cy + 40), e nao no meio da altura do nome: centrada, a logo de 40 px
           // encostava nos selos.
-          gfx_rect((GfxRect){tx, floorf(cy + 40.0f - FOLHA_LOGO_VAO - lh), lw, lh}, lt,
+          gfx_rect((GfxRect){nomeX, floorf(cy + 40.0f - FOLHA_LOGO_VAO - lh), lw, lh}, lt,
                    tex_marca_escura(lu) ? GFX_MARCA : GFX_TEXTO, 0, 0, 0, 0.0f, 1, 1, 1,
                    anim * (sel ? 1.0f : .80f));
           l.w = (int)(lw + .5f);
         } else
-        txt_desenhar_tom(l,tx,cy,c/255.0f,c/255.0f,(c-2)/253.0f,anim);
+        txt_desenhar_tom(l,nomeX,cy,c/255.0f,c/255.0f,(c-2)/253.0f,anim);
         if(ep[0]){ int ce=sel?175:135;
           TxtLinha le=txt_linha(TXT_PG_FIM,ep,175,175,175,255);
           // Na linha de base do nome, nao no meio da altura dele.
-          if(l.w+14+le.w<=txtW) txt_desenhar_tom(le,tx+l.w+14,cy+l.h-le.h-3,ce/175.0f,ce/175.0f,ce/175.0f,anim); } } }
+          if(l.w+14+le.w<=nomeW) txt_desenhar_tom(le,nomeX+l.w+14,cy+l.h-le.h-3,ce/175.0f,ce/175.0f,ce/175.0f,anim); } } }
     cy+=40;
     if(ajustes_fonte_texto_addon()) {
       const TextoAddon *t=textoAddonDa(i);

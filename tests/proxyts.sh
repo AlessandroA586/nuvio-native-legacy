@@ -1,4 +1,6 @@
 #!/bin/bash
+export TMPDIR="${TMPDIR:-/tmp}"
+TMPDIR="${TMPDIR%/}"
 # Proxy de TS da Live TV (src/proxyts.c) contra o servidor Xtream falso do
 # diagnostico. Precisa de python3, ffmpeg e curl.
 set -eu
@@ -7,7 +9,7 @@ flags=(-ffunction-sections -fdata-sections)
 if [ "$(uname -s)" = Darwin ]; then flags+=(-Wl,-dead_strip); else flags+=(-Wl,--gc-sections); fi
 if [ "${TPK:-0}" = 1 ]; then flags+=(-DNV_TPK); fi
 command -v ffmpeg >/dev/null || { echo "sem ffmpeg: pulado"; exit 0; }
-M=$(mktemp -d /tmp/nuvio-proxyts.XXXXXX)
+M=$(mktemp -d ${TMPDIR:-/tmp}/nuvio-proxyts.XXXXXX)
 mkdir -p "$M/hls"
 ffmpeg -loglevel error -y -f lavfi -i testsrc2=size=1280x720:rate=25 -f lavfi -i sine -t 12 \
   -c:v libx264 -preset ultrafast -b:v 3M -c:a aac -f mpegts "$M/h264.ts"

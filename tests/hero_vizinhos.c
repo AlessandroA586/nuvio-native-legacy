@@ -15,6 +15,7 @@
 //   d) um pedido urgente de hero feito com aquecimentos na fila passa na frente
 //      do que ainda esperava.
 #include "../src/sdlcompat.h"
+#include "nvtmp.h"
 #include <SDL2/SDL_image.h>
 #include <assert.h>
 #include <pthread.h>
@@ -82,7 +83,7 @@ static const char *arteDe(int i) { return arte_por_identidade(heroIdxEm(i), 2); 
 
 int main(void) {
   CatItem v[NT];
-  char dir[] = "/tmp/nuvio-hervizinhos-XXXXXX";
+  char dir[NVT_MAX]; nvt_set(dir, sizeof dir, "/nuvio-hervizinhos-XXXXXX");
   FILE *f;
   int i, falhas = 0, antes;
   f = fopen("tests/amostra.jpg", "rb"); assert(f);

@@ -1646,6 +1646,9 @@ static void dvTelaAtualizar(float dt, Uint32 agora) {
   DvtelaSinais s;
   int saiu;
   if (!dvtela_visivel()) return;
+  { const CatItem *c = item();
+    dvtela_apresentacao(ajustes_abertura_detalhada(), c ? artehero_logo_sessao(c) : "",
+                        c ? c->titulo : "", linhaEp); }
   memset(&s, 0, sizeof s);
   if (dvtela_ativa()) {
     video_dv_fase(&f);
@@ -1674,6 +1677,8 @@ void player_definir_retomada_fonte(double segundos) {
 }
 void player_definir_fonte(const char *url) {
   if ((!aberto && !mini) || !url || !*url) return;
+  // A primeira fonte ainda pode aproveitar a legenda antecipada na espera.
+  if (comVideo) legenda_pre_descartar(i18n("troca de fonte"));
   durFonteAvisada = pedProximaFonte = 0;
   // Fonte nova: a duracao esperada conhecida nao vale mais (mesmo titulo,
   // episodio outro, catalogo pode ter andado).
@@ -1697,6 +1702,7 @@ void player_definir_fonte(const char *url) {
 
 void player_voltar_a_esperar(void) {
   if (!aberto) return;
+  legenda_pre_descartar(i18n("fonte descartada"));
   // A fonte foi descartada: a tela do DV sai e o cartao de sempre conta a
   // troca ("Fonte falhou, tentando a proxima"); a proxima, se for DV, a traz.
   if (dvtela_ativa()) { dvtela_sair(DVT_SAIDA_FONTE, dvRelogio()); video_dv_tela(0); }
@@ -4858,7 +4864,7 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
     int pct;
     video_estatisticas(&stats);
     pct = !esperandoFonte && stats.bufferPct >= 0 && stats.bufferPct <= 100 ? stats.bufferPct : -1;
-    float tw = 200.0f, sw = 64.0f, x0 = NV_TELA_W * 0.5f - tw * 0.5f, y = base + 64.0f, r, g, b;
+    float tw = 200.0f, sw = 64.0f, x0 = NV_TELA_W * 0.5f - tw * 0.5f, y = base + 48.0f, r, g, b;
     gfx_cor((GfxRect){ x0, y, tw, 3.0f }, 0.5f, 1, 1, 1, 0.16f * v * entra);
     if (pct >= 0) {
       corFocoPlayer(&r, &g, &b);
@@ -4871,15 +4877,11 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
       corFocoPlayer(&r, &g, &b);
       if (a1 > a0) gfx_cor((GfxRect){ a0, y, a1 - a0, 3.0f }, 0.5f, r, g, b, 0.9f * v * entra);
     }
-    // Etapa curta e nome do provedor, sem arquivo/descricao bruta do addon.
-    { const Stream *st = stream_item(stream_atual());
-      char det[260], estado[96];
-      const char *etapa = i18n(abrecine_etapa(esperandoFonte) == ABRECINE_RESOLVENDO
-                              ? "Abrindo fonte" : "Carregando");
-      if (pct >= 0) snprintf(estado, sizeof estado, "%s · %d%%", etapa, pct);
-      else snprintf(estado, sizeof estado, "%s", etapa);
-      TxtLinha l = txt_linha(TXT_G21B, estado, 243, 242, 239, 255);
-      txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, y + 18.0f, 0.92f * v * entra);
+    // O nome do add-on (e a tentativa), so com o ajuste ligado. A barra ja diz
+    // que esta carregando; nao ha texto de etapa.
+    if (ajustes_abertura_addon()) {
+      const Stream *st = stream_item(stream_atual());
+      char det[260];
       snprintf(det, sizeof det, "%s", st ? st->provedor : "");
       // O nome e uma linha, como os rotulos da ilha.
       for (char *p = det; *p; p++) if ((unsigned char)*p < 32) *p = ' ';
@@ -4891,13 +4893,13 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
       }
       if (det[0]) {
         TxtLinha d = txt_linha_corta(TXT_G19M, det, 243, 242, 239, 140, 1100.0f);
-        txt_desenhar_alpha(d, NV_TELA_W * 0.5f - d.w * 0.5f, y + 52.0f, v * entra);
+        txt_desenhar_alpha(d, NV_TELA_W * 0.5f - d.w * 0.5f, y + 22.0f, v * entra);
       } }
     // DEMOROU: uma linha so, curta e calma, que entra devagar.
     if (abrecine_demorando(&cine, agora)) {
       float d = (float)(agora - cine.desde - ABRECINE_DEMORA_MS) / 600.0f;
       TxtLinha l = txt_linha(TXT_G19M, i18n("Só mais um instante…"), 243, 242, 239, 255);
-      txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, y + 84.0f,
+      txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, y + (ajustes_abertura_addon() ? 56.0f : 22.0f),
                          0.62f * v * (reduz || d > 1.0f ? 1.0f : d));
     } }
 }

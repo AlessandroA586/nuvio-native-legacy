@@ -18,6 +18,7 @@ static int shotGrade;
 #define desc_vertudo_n shot_vertudo_n
 #define desc_vertudo_item shot_vertudo_item
 #include "../src/vertudo.c"
+#include "nvtmp.h"
 #undef desc_vertudo_n
 #undef desc_vertudo_item
 int desc_vertudo_n(void);
@@ -87,7 +88,7 @@ static void fonte(int i, const char *titulo, const char *tipo) {
 }
 
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nuvio-vertudo";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nuvio-vertudo");
   char nome[600];
   SDL_Window *w;
   pasta.sources = pastaFontes;

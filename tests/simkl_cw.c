@@ -11,6 +11,7 @@
 // STDOUT E CAPTURADO e conferido no fim: o token nao pode aparecer no que o
 // modulo imprime. O progresso do proprio teste sai por stderr.
 #include "../src/simkl.h"
+#include "nvtmp.h"
 #include "../src/ajustes.h"
 #include "../src/js.h"
 #include "../src/rede.h"
@@ -427,7 +428,7 @@ static void perfilStats(void) {
 }
 
 int main(void) {
-  char caminho[] = "/tmp/nuvio-simkl-cw-XXXXXX";
+  char caminho[NVT_MAX]; nvt_set(caminho, sizeof caminho, "/nuvio-simkl-cw-XXXXXX");
   int fd = mkstemp(caminho), salvo = dup(1);
   FILE *f;
   char linha[512];

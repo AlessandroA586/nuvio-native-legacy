@@ -184,6 +184,7 @@ static const char *uxSinonimos(int op) {
     case AJ_ABAS_ESTILO: return "abas estilo colecao streaming chips menu suspenso dropdown barra central paginas carrossel tabs style collection pages carousel";
     case AJ_LEG_CONTORNO_COR: return "legenda contorno sombra borda cor preto branco cinza outline edge shadow subtitle color";
     case AJ_MENU_TOPO: return "menu barra topo alto cima lateral esquerda rail posicao navegacao top bar toolbar sidebar left position";
+    case AJ_ABERTURA_ADDON: return "addon add-on provedor fonte nome abertura cinema tela carregando tentativa provider name opening source";
     case AJ_TELA_ABERTURA: return "tela abertura abrindo carregando loading cinema detalhada fonte play transicao opening source screen";
     case AJ_PLR_CLASSIF: return "classificacao indicativa idade faixa etaria 16 12 18 livre guia parental avisos violencia nudez player content rating age parental guide";
     case AJ_APOIAR: return "apoiar apoio doar doacao patreon kofi ko-fi cafe contribuir ajudar projeto qr support donate";
@@ -221,6 +222,7 @@ static const char *uxSinonimos(int op) {
     case AJ_BUFFER: return "buffer tamanho memoria pequeno medio grande travando carregando rede instavel stats nerds";
     case AJ_CACHE_SEEK: return "cache seek buffer disco armazenamento voltar avancar travando carregando";
     case AJ_TMDB_IDIOMA: return "idioma metadados titulo sinopse traducao tmdb";
+    case AJ_HERO_GENERO: return "genero destaque hero logo titulo categoria esconder mostrar card genre";
     case AJ_HERO_TRAILER: return "trailer trailers destaque topo hero autoplay automatico";
     case AJ_FOCO_TRAILER: return "trailer trailers cartaz poster foco autoplay";
     case AJ_DET_TRAILER_AUTO: return "trailer trailers pagina titulo detalhes autoplay automatico";

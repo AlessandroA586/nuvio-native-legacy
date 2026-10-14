@@ -224,6 +224,11 @@ int stream_texto_fora_de_cache(const char *t) {
       || contem(t, " download]") || contem(t, "uncached") || contem(t, "not cached");
 }
 
+static int textoEmCache(const char *t) {
+  return strstr(t, "⚡") || contem(t, "[TB+]") || contem(t, "[RD+]") ||
+         contem(t, "[AD+]") || contem(t, "[PM+]");
+}
+
 // "sources": ["tracker:udp://...", "dht:<hash>"] de um stream de torrent, uma
 // entrada por linha em `dst`. So as que o servidor de streaming do Stremio
 // entende (prefixo tracker: ou dht:); uma URL solta de tracker ganha o prefixo.
@@ -328,6 +333,7 @@ int stream_extrair(const char *json, const char *provedor, Stream **saida) {
           fhd = fhdNoNome(nome); }
       js_texto_linhas(p, fim, "description", s.descricao, sizeof s.descricao);
       js_texto_linhas(p, fim, "title", titulo, sizeof titulo);
+      s.emCache = textoEmCache(s.rotulo) || textoEmCache(s.descricao) || textoEmCache(titulo);
       js_texto(p, fim, "filename", s.arquivo, sizeof s.arquivo);
       // behaviorHints.bingeGroup — ANCORADO NO OBJETO, e nao procurado solto.
       //
@@ -377,13 +383,19 @@ int stream_extrair(const char *json, const char *provedor, Stream **saida) {
       s.mp4 = token(texto, "mp4") || contem(s.url, ".mp4");
       s.foraCache = stream_texto_fora_de_cache(texto);
       // AIOStreams: clientResolve.isCached e explicito; ausente nao e false.
-      if (s.infoHash[0] && !s.url[0]) {
+      {
         const char *cr = valorRaiz(p, fim, "clientResolve");
         const char *v = cr ? valorRaiz(cr, fim, "isCached") : NULL;
         if (v && fim - v >= 5 && !memcmp(v, "false", 5) &&
-            (v + 5 == fim || v[5] == ',' || v[5] == '}' || isspace((unsigned char)v[5])))
-          s.foraCache = 1;
+            (v + 5 == fim || v[5] == ',' || v[5] == '}' || isspace((unsigned char)v[5]))) {
+          if (s.infoHash[0] && !s.url[0]) s.foraCache = 1;
+          s.emCache = 0;
+        }
+        if (v && fim - v >= 4 && !memcmp(v, "true", 4) &&
+            (v + 4 == fim || v[4] == ',' || v[4] == '}' || isspace((unsigned char)v[4])))
+          s.emCache = 1;
       }
+      if (s.foraCache) s.emCache = 0;
       if (s.infoHash[0]) s.temSemeadores = lerSemeadores(texto, &s.semeadores);
       s.tamanhoBytes = bytesExatos(p, fim);
       double bytes = js_num(p, fim, "videoSize", 0);
