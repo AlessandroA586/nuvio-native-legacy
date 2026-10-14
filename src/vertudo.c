@@ -1909,7 +1909,7 @@ static void themeHeader(float a,float x0) {
     // quase transparentes. `tabAnim` cruza o repouso e o foco em vez de
     // escalar.
     // A faixa termina antes da coluna do painel: ali mora o botao "Exibição".
-    const float H=52.0f,PAD=22.0f,GAP=12.0f,W=vtTelefone()?vtFim()-x0-64:VT_PAN_X-x0-28;
+    const float H=52.0f,PAD=22.0f,GAP=12.0f,W=vtFim()-x0-64;
     float margem = vtTelefone() ? 0.0f : 6.0f;
     float textoW = vtTelefone() ? fminf(420.0f, W-PAD*2) : 420.0f;
     float larg[COL_SOURCE_MAX],pos[COL_SOURCE_MAX],px=0;
@@ -2356,7 +2356,7 @@ static void cabecalhoDecada(int k, float x0, float y, float a) {
 // estariam: a coluna do painel e do retrato do diretor fica livre.
 static void botaoExibicao(float a, float x0) {
   float x = nAbas() ? VT_PAN_X : x0, y = 253.0f, H = 52.0f;
-  float maxW = nAbas() && grupo("Directors") ? 172.0f : VT_PAN_W - 64.0f;
+  float maxW = nAbas() && grupo("Directors") ? 172.0f : VT_PAN_W;
   float f = pillAnim, sr, sg, sb;
   int cor = f > 0.5f ? ajustes_tinta_foco() : 214;
   TxtLinha t = txt_linha_corta(TXT_HERO_META, LAY_NOME[lay], cor, cor, cor, 255, maxW - 70.0f);
@@ -2385,8 +2385,9 @@ static void botaoEstiloAbas(float a) {
   GfxRect r = {vtFim()-52.0f, VT_AB_Y, 52, VT_AB_H};
   int f = tabFocus && tabCursor == cabN()+1;
   if (lay == VT_LAY_VITRINE) r.y = NV_ILHA_Y + 64.0f;
-  if(f) foco_anel(r,NV_RAIO_PILL,1,a);
-  gfx_icone((GfxRect){r.x+13,r.y+13,26,26},"aj_layout-list",1,1,1,a*(f?1:.65f));
+  float c = f ? ajustes_tinta_foco()/255.0f : 1.0f;
+  if(f) focoAbaFonte(r,1,a);
+  gfx_icone((GfxRect){r.x+13,r.y+13,26,26},"aj_layout-list",c,c,c,a*(f?1:.65f));
   ponteiro_alvo(r.x,r.y,r.w,r.h,ponteiroCab,NULL,cabN()+1,0);
 }
 

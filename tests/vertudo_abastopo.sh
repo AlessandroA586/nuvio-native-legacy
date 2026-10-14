@@ -33,7 +33,7 @@ with tempfile.TemporaryDirectory() as d:
 assert 'VT_AB_TOPO' in s
 assert 'ponteiro_alvo(' in function('botaoEstiloAbas')
 assert 'aj_layout-list' in function('botaoEstiloAbas')
-assert 'foco_anel(' in function('botaoEstiloAbas')
+assert 'focoAbaFonte(' in function('botaoEstiloAbas')
 assert 'alternarEstiloAbas();' in s
 assert 'tabCursor<na+1' in s
 assert 'if(est==VT_AB_TOPO)' in s
