@@ -47,6 +47,7 @@ typedef struct {
   // tamanho da pilula assentada; o clique entrega OK a quem trata a tecla dela
   // (a de falha da legenda: faixas_pilula_tecla). NULL = so informativa.
   void (*ponteiroOk)(int a, int b);
+  float insetEsq;           // recuo esquerdo do cabecalho do corpo (o titulo); 0 = 28
 } PlrIlhaPedido;
 
 void plrilha_pedir(const PlrIlhaPedido *p);
