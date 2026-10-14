@@ -6,67 +6,174 @@
 #include "badges.h"
 #include "linguas.h"
 #include "catalogo.h"
+#include "dados.h"
 #include "gfx.h"
 #include "idioma.h"
 #include "idiomacod.h"
 #include "layout.h"
+#include "escala.h"
+// Stats formerly used a fixed canvas; preserve that path at 100% and above.
+#define EVU_ESCALA fminf(gfx_escala_ui(), 1.0f)
+#undef NV_TELA_W
+#undef NV_TELA_H
+#define NV_TELA_W (NV_LAYOUT_REAL_W / EVU_ESCALA)
+#define NV_TELA_H (NV_LAYOUT_REAL_H / EVU_ESCALA)
 #include "perfiltv.h"
 #include "player.h"
+#include "plrui.h"
 #include "ponteiro.h"
 #include "streams.h"
 #include "text.h"
 #include "video.h"
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
-#define EVU_X 800.0f
-#define EVU_Y 76.0f
-#define EVU_W 1036.0f
-#define EVU_H 928.0f
-#define EVU_TILE_W 472.0f
-#define EVU_GAP 18.0f
-#define EVU_TX 243, 242, 239, 255
+
+#include "anim.h"
+
+// As MEDIDAS DAS LATERAIS do player (plrilha.c / faixas.c): a mesma margem das
+// listas de Audio e Legendas nos dois lados, o completo na largura delas (IL_W) e
+// logo abaixo da pilula da hora (Y_TOPO + PIL_H + vao). O material e o de
+// plrui_material, o mesmo vidro. Cada tamanho tem largura e altura FIXAS: o
+// painel nao cresce, nao encolhe e nao pula quando os numeros mudam.
+#define EVU_MARG       NV_ILHA_MARGEM_D
+#define EVU_TOPO       (NV_ILHA_Y + 56.0f + 14.0f)   // Y_TOPO + PIL_H de plrilha.c + vao
+#define EVU_RAIO       36.0f     // RAIO_CORPO de plrilha.c
+#define EVU_PAD        18.0f     // IL_PAD_X de faixas.c
+#define EVU_W          720.0f    // IL_W de faixas.c
+#define EVU_H          896.0f    // ate a base, com 34 de respiro para as dicas
+#define EVU_TILE_W     ((EVU_W - 2.0f * EVU_PAD - EVU_GAP) * 0.5f)
+#define EVU_GAP        12.0f
+#define EVU_CW         440.0f    // compacto
+#define EVU_CH         330.0f
+#define EVU_MW         480.0f    // minimo: a linha fina
+#define EVU_PH         56.0f     // PIL_H de plrilha.c
+#define EVU_TX         243, 242, 239, 255
+// Mola do retangulo (frequencia da critica), do alfa de entrada e de cada conteudo.
+#define EVU_W_RET      15.0f
+#define EVU_K_ENTRA    11.0f
+#define EVU_K_SAI      14.0f
+#define EVU_K_CONT     18.0f
+#define EVU_K_NUM      9.0f
 
 typedef struct {
   char titulo[160], sub[160], addon[64], resolucao[32], codecHdr[64], taxa[24], audio[96], legenda[64];
   int plataforma;
 } EvTela;
 
-static int aberto, fixado, temSessao;
-static Uint32 abriuEm, proxAmostra;
+// OK logo depois de abrir e eco da tecla que abriu (o OK da central, o clique do
+// Magic Remote que vira tecla, a repeticao de quem segura): nao anda de tamanho.
+#define EVU_GRACA_OK 600u
+#define EVU_ARQ_TAMANHO "estatvivo-tamanho.txt"
+
+static int aberto, fixado, temSessao, tamanho;
+static Uint32 abriuEm, proxAmostra, amostraEm, quadroEm;
 static unsigned long hashUrl;
-static EvEstado est;
+static EvEstado est;    // a amostra de verdade (1x/s)
+static EvEstado vis;    // o que se DESENHA: os numeros andam ate ela na mola
 static EvTela tela;
+// Animacao: retangulo do painel (x y w h) com a velocidade de cada, alfa geral,
+// alfa de cada tamanho e os numeros suavizados (-1 = ainda sem valor).
+static float ret[4], retV[4], alvoRet[4], entraA, contA[EV_TAM_N];
+static float sm[5], dtq = 1.0f / 60.0f;
+static float larg[EV_TAM_N * 8], larguraI;
+static int larguraBase;
 #ifdef ESTATVIVO_TESTE
 static int teste;
 #endif
 
 static char sepDec(void) { return idioma_ponto_decimal(ajustes_idioma()) ? '.' : ','; }
 
-void estatvivo_abrir(void) {
-  if (!aberto) abriuEm = SDL_GetTicks();
+// O ultimo tamanho escolhido com o cartao aberto (vale para "Lembrar o ultimo").
+static int ultimoTamanho(void) {
+  char *t = dados_ler(EVU_ARQ_TAMANHO);
+  int v = t && t[0] >= '0' && t[0] < '0' + EV_TAM_N ? t[0] - '0' : EV_TAM_COMPLETO;
+  free(t);
+  return v;
+}
+static void lembrarTamanho(void) {
+  char b[4] = { (char)('0' + tamanho), '\n', 0, 0 };
+  dados_gravar(EVU_ARQ_TAMANHO, b);
+}
+
+// Os tres tamanhos sao modais; fixar e uma acao separada. O retangulo
+// persegue o alvo novo na mola, sem saltar.
+static void aplicarTamanho(int t) {
+  tamanho = t;
   aberto = 1;
   fixado = 0;
-  printf("[estatisticas] aberto\n");
+  lembrarTamanho();
+}
+
+// Abrir pela central: o tamanho dos Ajustes (ou o ultimo usado). Ja aberto nao faz
+// nada (o eco do OK nao refaz o fade nem o prazo de graca). Do canto, reabre
+// no tamanho escolhido antes de fixar.
+void estatvivo_abrir(void) {
+  int t = ajustes_estat_tamanho();
+  if (aberto) return;
+  abriuEm = SDL_GetTicks();
+  if (!fixado) tamanho = t >= 0 && t < EV_TAM_N ? t : ultimoTamanho();
+  aberto = 1;
+  fixado = 0;
+  printf("[estatisticas] aberto (tamanho %d)\n", tamanho);
   fflush(stdout);
 }
 void estatvivo_fechar(void) { aberto = 0; fixado = 0; }
 int  estatvivo_aberto(void) { return aberto; }
 int  estatvivo_fixado(void) { return fixado; }
+int  estatvivo_tamanho(void) { return tamanho; }
 int  estatvivo_kbps(int *estimada) {
   if (estimada) *estimada = est.velOrigem != EVO_MEDIDO;
   return temSessao ? est.kbps : -1;
 }
+
+// Completo -> Compacto -> Minimo. Dentro da graca do OK o eco da tecla que abriu
+// nao conta: era isso que encolhia o cartao na hora ("o live nao abre").
+static int graca(void) { return (Sint32)(SDL_GetTicks() - abriuEm) < (Sint32)EVU_GRACA_OK; }
+static void proximoTamanho(void) {
+  if (graca()) return;
+  aplicarTamanho((tamanho + 1) % EV_TAM_N);
+}
+static void ptTamanho(int a, int b) { (void)a; (void)b; proximoTamanho(); }
 
 int estatvivo_evento(const SDL_Event *e) {
   SDL_Keycode k;
   if (!aberto || !e || e->type != SDL_KEYDOWN) return aberto && e && e->type == SDL_KEYUP;
   k = e->key.keysym.sym;
   if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE) { estatvivo_fechar(); return 1; }
-  if (k == SDLK_RETURN || k == SDLK_KP_ENTER) { aberto = 0; fixado = 1; return 1; }
+  if (e->key.repeat) return 1;   // segurar OK/seta nao corre pelos tres tamanhos
+  // OK anda de tamanho; Esquerda/Direita mandam o painel para o lado (e o
+  // Ajustes guarda); Baixo fixa onde esta, no tamanho escolhido.
+  if (k == SDLK_RETURN || k == SDLK_KP_ENTER) proximoTamanho();
+  else if (k == SDLK_LEFT && !graca()) ajustes_definir_estat_lado(1);
+  else if (k == SDLK_RIGHT && !graca()) ajustes_definir_estat_lado(0);
+  else if (k == SDLK_DOWN && !graca()) { aberto = 0; fixado = 1; }
   return 1;   // modal: as setas nao vazam para o player por baixo
+}
+
+// Numero na mola: o valor novo chega 1x/s e o que se desenha anda ate ele, entao
+// nada salta nem pisca. O primeiro valor entra direto; sem valor (< 0) apaga.
+static float suave(float *s, float alvo) {
+  if (alvo < 0.0f) return *s = -1.0f;
+  if (*s < 0.0f) return *s = alvo;
+  return *s = anim_mola(*s, alvo, dtq, EVU_K_NUM);
+}
+// Largura de cada numero grande (para a unidade nao tremer): um slot por chamada
+// de numero(), reiniciado a cada conteudo desenhado.
+static float suaveLargura(float w) {
+  float *s = &larg[larguraBase + ((int)larguraI++ & 7)];
+  if (*s <= 0.0f) return *s = w;
+  return *s = anim_mola(*s, w, dtq, EVU_K_NUM);
+}
+
+
+static void zerarAnim(void) {
+  int i;
+  for (i = 0; i < 5; i++) sm[i] = -1.0f;
+  for (i = 0; i < EV_TAM_N * 8; i++) larg[i] = 0;
 }
 
 // --- A AMOSTRA -----------------------------------------------------------------
@@ -150,6 +257,8 @@ void estatvivo_atualizar(Uint32 agora) {
   if (!player_aberto() || !player_com_video()) {
     if (temSessao) { ev_zerar(&est); temSessao = 0; }
     aberto = fixado = 0;
+    entraA = 0;
+    zerarAnim();
     return;
   }
   hu = fnv(video_url_atual());
@@ -158,6 +267,7 @@ void estatvivo_atualizar(Uint32 agora) {
   if (!temSessao || hu != hashUrl) { ev_zerar(&est); hashUrl = hu; temSessao = 1; proxAmostra = 0; }
   if (proxAmostra && (Sint32)(agora - proxAmostra) < 0) return;
   proxAmostra = agora + 1000u;
+  amostraEm = agora;
   memset(&in, 0, sizeof in);
   video_estatisticas(&in.vs);
   in.pos = video_pos();
@@ -172,6 +282,7 @@ void estatvivo_atualizar(Uint32 agora) {
   ev_amostra(&est, agora, &in, lt ? lt->tm_hour : 0, lt ? lt->tm_min : 0);
   if (aberto || fixado) montarTela(in.taxaKbps);
 }
+
 
 // --- PECAS DO DESENHO ------------------------------------------------------------
 static float caps(const char *s, float x, float y, float a) {
@@ -208,16 +319,23 @@ static void ladrilho(GfxRect r, const char *icone, const char *rotulo, int orige
   gfx_cor(r, 18.0f / r.h, 0.118f, 0.118f, 0.125f, a);
   gfx_cor((GfxRect){ r.x + 24, r.y + 24, 44, 44 }, 12.0f / 44.0f, 0.165f, 0.165f, 0.176f, a);
   gfx_icone((GfxRect){ r.x + 24 + 9, r.y + 24 + 9, 26, 26 }, icone, 0.953f, 0.949f, 0.937f, a);
-  cw = chip(iconeOrigem(origem), i18n(ev_origem_rotulo((EvOrigem)origem)), 0, 0, 40, a, 0);
-  chip(iconeOrigem(origem), i18n(ev_origem_rotulo((EvOrigem)origem)), r.x + r.w - 20 - cw, r.y + 26, 40, a, 1);
+  // Na largura da lateral so cabe o selo da origem como icone (o rotulo ficaria sem lugar).
+  cw = 40.0f;
+  gfx_cor((GfxRect){ r.x + r.w - 20 - cw, r.y + 26, cw, 40 }, 0.5f, 1, 1, 1, 0.08f * a);
+  gfx_anel((GfxRect){ r.x + r.w - 20 - cw, r.y + 26, cw, 40 }, 0.5f, 1.0f, 1, 1, 1, 0.08f * a);
+  gfx_icone((GfxRect){ r.x + r.w - 20 - cw + 10, r.y + 36, 20, 20 }, iconeOrigem(origem), 0.85f, 0.85f, 0.85f, a);
   l = txt_linha_corta(TXT_G22M, rotulo, 180, 180, 182, 255, r.w - 24 - 58 - cw - 30);
   txt_desenhar_alpha(l, r.x + 24 + 58, r.y + 24 + (44 - (float)l.h) * 0.5f, a);
 }
 
-// Numero grande e unidade na mesma linha de base. Devolve a largura.
+// Numero grande e unidade na mesma linha de base. Devolve a largura. A unidade
+// anda na largura SUAVIZADA do numero (um slot por chamada, ver desenharConteudo):
+// 9,9 -> 10,1 empurrava o "Mbps" de um quadro para o outro.
 static float numero(const char *n, const char *unidade, float x, float y, float a, int apagado) {
   TxtLinha t = apagado ? txt_linha(TXT_ILHA_TITULO, n, 111, 111, 114, 255) : txt_linha(TXT_AJ_NUM58, n, EVU_TX);
-  float w = (float)t.w;
+  // Casa reservada (4 digitos e a virgula): a unidade fica no mesmo X enquanto o
+  // valor muda, so passa dela se o numero for maior.
+  float w = fmaxf(suaveLargura((float)t.w), apagado ? 0.0f : (float)txt_linha(TXT_AJ_NUM58, "88,8", EVU_TX).w);
   txt_desenhar_alpha(t, x, y, a);
   if (unidade && unidade[0]) {
     TxtLinha u = txt_linha(TXT_V2_LN, unidade, 180, 180, 182, 255);
@@ -248,19 +366,26 @@ static void segmento(float x0, float y0, float x1, float y1, float esp, float r,
   gfx_rect(q, 0, GFX_LINHA, esp / q.h, (dx * dy < 0.0f) ? 1.0f : 0.0f, 0, halo / q.h, r, g, b, a);
 }
 
-// A linha de velocidade com a area embaixo: um retangulo por amostra.
-static void faisca(const int *v, int n, GfxRect r, float a) {
+// A linha de velocidade com a area embaixo: um retangulo por amostra. O passo e
+// FIXO (r.w / EV_HIST) e o grafico desliza um passo entre uma amostra e a outra
+// (`fase` 0..1 desde a ultima): sem o salto de 1 s e sem esticar enquanto enche.
+// O recorte e feito na conta (nao com gfx_recorte): o painel inteiro ja esta
+// recortado e o recorte de tesoura nao empilha.
+static void faisca(const int *v, int n, GfxRect r, float fase, float a) {
   int i, mx = 1;
-  float passo, px = 0, py = 0;
+  float passo = r.w / (float)(EV_HIST - 1), px = 0, py = 0, desl = passo * (1.0f - anim_suave(fase));
+  float xe = r.x, xd = r.x + r.w;
   if (n < 2) return;
   for (i = 0; i < n; i++) if (v[i] > mx) mx = v[i];
-  passo = r.w / (float)(n - 1);
   for (i = 0; i < n; i++) {
-    float x = r.x + r.w - (float)(n - 1 - i) * passo;
+    float x = r.x + r.w - (float)(n - 1 - i) * passo + desl;
     float y = r.y + r.h - r.h * 0.85f * (float)v[i] / (float)mx;
-    if (i) {
-      gfx_cor((GfxRect){ px, fminf(py, y), x - px, r.y + r.h - fminf(py, y) }, 0, 1, 1, 1, 0.07f * a);
-      segmento(px, py, x, y, 2.0f, 0.95f, 0.95f, 0.94f, 0.9f * a);
+    if (i && x > xe && px < xd) {
+      float x0 = px, y0 = py, x1 = x, y1 = y;
+      if (x0 < xe) { y0 += (y1 - y0) * (xe - x0) / (x1 - x0); x0 = xe; }
+      if (x1 > xd) { y1 = y0 + (y1 - y0) * (xd - x0) / (x1 - x0); x1 = xd; }
+      gfx_cor((GfxRect){ x0, fminf(y0, y1), x1 - x0, r.y + r.h - fminf(y0, y1) }, 0, 1, 1, 1, 0.07f * a);
+      segmento(x0, y0, x1, y1, 2.0f, 0.95f, 0.95f, 0.94f, 0.9f * a);
     }
     px = x; py = y;
   }
@@ -282,63 +407,63 @@ static void kv(const char *k, const char *v, float x, float y, float w, int fio,
 }
 
 // --- OS SEIS LADRILHOS -------------------------------------------------------------
-static void tileVelocidade(GfxRect r, float a) {
+static void tileVelocidade(GfxRect r, float fase, float a) {
   char n[24], p[24], m[24], t[64];
   float x = r.x + 24, y = r.y + 86, w = r.w - 48;
-  int medido = est.velOrigem == EVO_MEDIDO;
-  ladrilho(r, "aj_gauge", medido ? i18n("Velocidade agora") : i18n("Velocidade"), est.velOrigem, a);
-  ev_fmt_mbps(n, sizeof n, est.kbps, sepDec());
+  int medido = vis.velOrigem == EVO_MEDIDO;
+  ladrilho(r, "aj_gauge", medido ? i18n("Velocidade agora") : i18n("Velocidade"), vis.velOrigem, a);
+  ev_fmt_mbps(n, sizeof n, vis.kbps, sepDec());
   // Estimado nao tem casa decimal: a precisao seria inventada.
-  if (est.kbps >= 0 && !medido) snprintf(n, sizeof n, "%d", (est.kbps + 500) / 1000);
-  if (est.kbps >= 0 && !medido) {
+  if (vis.kbps >= 0 && !medido) snprintf(n, sizeof n, "%d", (vis.kbps + 500) / 1000);
+  if (vis.kbps >= 0 && !medido) {
     TxtLinha q = txt_linha(TXT_AJ_NUM58, "≈", EVU_TX);
     txt_desenhar_alpha(q, x, y, a);
     x += (float)q.w + 14;
   }
   numero(n, "Mbps", x, y, a, 0);
   x = r.x + 24;
-  if (medido && est.picoKbps > 0) {
+  if (medido && vis.picoKbps > 0) {
     const char *partes[4];
-    ev_fmt_mbps(p, sizeof p, est.picoKbps, sepDec());
-    ev_fmt_mbps(m, sizeof m, est.mediaKbps, sepDec());
+    ev_fmt_mbps(p, sizeof p, vis.picoKbps, sepDec());
+    ev_fmt_mbps(m, sizeof m, vis.mediaKbps, sepDec());
     snprintf(t, sizeof t, "%s Mbps", p);
     partes[0] = i18n("Pico"); partes[1] = t; partes[2] = i18n("· média"); partes[3] = m;
     apoio(partes, 4, x, r.y + 160, w, a);
   } else {
-    const char *s = est.velOrigem == EVO_SEM ? "Esta TV não informa a velocidade"
-                  : est.kbps < 0 && !est.nHist ? "Medindo…"
-                  : est.bufOrigem == EVO_MEDIDO ? "Pelo ritmo em que o buffer enche"
+    const char *s = vis.velOrigem == EVO_SEM ? "Esta TV não informa a velocidade"
+                  : vis.kbps < 0 && !vis.nHist ? "Medindo…"
+                  : vis.bufOrigem == EVO_MEDIDO ? "Pelo ritmo em que o buffer enche"
                   : "Pelo ritmo em que o vídeo toca";
     TxtLinha l = txt_linha_corta(TXT_AJ_TEXTO, s, 180, 180, 182, 255, w);
     txt_desenhar_alpha(l, x, r.y + 160, a);
   }
-  faisca(est.hist, est.nHist, (GfxRect){ x, r.y + 188, w, 38 }, a);
+  faisca(vis.hist, vis.nHist, (GfxRect){ x, r.y + 188, w, 38 }, fase, a);
 }
 
 static void tileBuffer(GfxRect r, float a) {
   char n[24], t[96];
   float x = r.x + 24, y = r.y + 86, w = r.w - 48;
-  ladrilho(r, "aj_database", i18n("Buffer à frente"), est.bufOrigem, a);
-  if (est.bufOrigem == EVO_MEDIDO) {
+  ladrilho(r, "aj_database", i18n("Buffer à frente"), vis.bufOrigem, a);
+  if (vis.bufOrigem == EVO_MEDIDO) {
     float nw;
-    snprintf(n, sizeof n, "%d", (int)(est.bufSeg + 0.5));
+    snprintf(n, sizeof n, "%d", (int)(vis.bufSeg + 0.5));
     nw = numero(n, "s", x, y, a, 0);
-    if (est.bufMb >= 0) {
+    if (vis.bufMb >= 0) {
       TxtLinha l;
-      snprintf(t, sizeof t, "≈ %d MB", (int)(est.bufMb + 0.5));
+      snprintf(t, sizeof t, "≈ %d MB", (int)(vis.bufMb + 0.5));
       l = txt_linha(TXT_V2_LN, t, 180, 180, 182, 255);
       txt_desenhar_alpha(l, x + nw + 32, y + (float)txt_linha(TXT_AJ_NUM58, "0", EVU_TX).h * 0.80f - (float)l.h, a);
     }
-    barra(x, r.y + 166, w, (float)(est.bufSeg / (est.bufAlvo > 0 ? est.bufAlvo : 60.0)), a);
-    if (est.bufAlvo > 0) snprintf(t, sizeof t, i18n("de %d s que o player tenta manter"), (int)(est.bufAlvo + 0.5));
+    barra(x, r.y + 166, w, (float)(vis.bufSeg / (vis.bufAlvo > 0 ? vis.bufAlvo : 60.0)), a);
+    if (vis.bufAlvo > 0) snprintf(t, sizeof t, i18n("de %d s que o player tenta manter"), (int)(vis.bufAlvo + 0.5));
     else snprintf(t, sizeof t, "%s", i18n("segundos de vídeo já baixados"));
     { TxtLinha l = txt_linha_corta(TXT_AJ_TEXTO, t, 180, 180, 182, 255, w); txt_desenhar_alpha(l, x, r.y + 190, a); }
-  } else if (est.bufOrigem == EVO_SO_PCT) {
-    snprintf(n, sizeof n, "%d", est.bufPct);
+  } else if (vis.bufOrigem == EVO_SO_PCT) {
+    snprintf(n, sizeof n, "%d", vis.bufPct);
     numero(n, "%", x, y, a, 0);
-    barra(x, r.y + 166, w, (float)est.bufPct / 100.0f, a);
+    barra(x, r.y + 166, w, (float)vis.bufPct / 100.0f, a);
     txt_bloco(TXT_AJ_TEXTO, i18n("A Samsung informa a porcentagem, não os segundos"), 180, 180, 182,
-              x, r.y + 186, w, 28, a, 2);
+              x, r.y + 182, w, 28, a, 2);
   } else {
     numero(i18n("Indisponível"), NULL, x, y + 8, a, 1);
     txt_bloco(TXT_AJ_TEXTO, i18n("Esta TV não informa o buffer"), 180, 180, 182, x, r.y + 160, w, 28, a, 2);
@@ -346,33 +471,33 @@ static void tileBuffer(GfxRect r, float a) {
 }
 
 static void tileFonte(GfxRect r, float a) {
-  float x = r.x + 24, y = r.y + 78, w = r.w - 48;
+  float x = r.x + 24, y = r.y + 70, w = r.w - 48;
   ladrilho(r, "aj_film", i18n("Fonte"), tela.addon[0] ? EVO_ADDON : EVO_SEM, a);
   kv(i18n("Add-on"), tela.addon, x, y, w, 0, a);
-  kv(i18n("Resolução"), tela.resolucao, x, y + 34, w, 1, a);
-  kv(i18n("Codec · HDR"), tela.codecHdr, x, y + 68, w, 1, a);
-  kv(i18n("Taxa do arquivo"), tela.taxa, x, y + 102, w, 1, a);
-  kv(i18n("Áudio"), tela.audio, x, y + 136, w, 1, a);
-  kv(i18n("Legenda"), tela.legenda, x, y + 170, w, 1, a);
+  kv(i18n("Resolução"), tela.resolucao, x, y + 32, w, 1, a);
+  kv(i18n("Codec · HDR"), tela.codecHdr, x, y + 64, w, 1, a);
+  kv(i18n("Taxa do arquivo"), tela.taxa, x, y + 96, w, 1, a);
+  kv(i18n("Áudio"), tela.audio, x, y + 128, w, 1, a);
+  kv(i18n("Legenda"), tela.legenda, x, y + 160, w, 1, a);
 }
 
 static void tileServidor(GfxRect r, float a) {
   char n[16], t[64];
   float x = r.x + 24, y = r.y + 86, w = r.w - 48;
-  if (est.servOrigem == EVO_MEDIDO) {
+  if (vis.servOrigem == EVO_MEDIDO) {
     const char *p[2];
     ladrilho(r, "aj_server", i18n("Conexões e servidor"), EVO_MEDIDO, a);
-    snprintf(n, sizeof n, "%d", est.conexoes);
-    numero(n, i18n(est.conexoes == 1 ? "conexão" : "conexões"), x, y, a, 0);
-    p[0] = i18n("Servidor"); p[1] = est.host[0] ? est.host : "—";
+    snprintf(n, sizeof n, "%d", vis.conexoes);
+    numero(n, i18n(vis.conexoes == 1 ? "conexão" : "conexões"), x, y, a, 0);
+    p[0] = i18n("Servidor"); p[1] = vis.host[0] ? vis.host : "—";
     apoio(p, 2, x, r.y + 160, w, a);
-    if (est.primeiroByteMs >= 0) {
-      snprintf(t, sizeof t, "%d ms", est.primeiroByteMs);
+    if (vis.primeiroByteMs >= 0) {
+      snprintf(t, sizeof t, "%d ms", vis.primeiroByteMs);
       p[0] = i18n("Resposta do 1º byte"); p[1] = t;
       apoio(p, 2, x, r.y + 192, w, a);
     }
-  } else if (est.servOrigem == EVO_LINK) {
-    TxtLinha h = txt_linha_corta(TXT_ILHA_PERGUNTA, est.host, EVU_TX, w);
+  } else if (vis.servOrigem == EVO_LINK) {
+    TxtLinha h = txt_linha_corta(TXT_ILHA_PERGUNTA, vis.host, EVU_TX, w);
     ladrilho(r, "aj_server", i18n("Servidor"), EVO_LINK, a);
     txt_desenhar_alpha(h, x, y, a);
     txt_bloco(TXT_AJ_TEXTO, i18n("A TV não diz quantas conexões o player abre"), 180, 180, 182,
@@ -387,12 +512,12 @@ static void tileErros(GfxRect r, float a) {
   char n[16], t[128];
   float x = r.x + 24, y = r.y + 86, w = r.w - 48;
   ladrilho(r, "aj_rotate-cw", i18n("Erros e reconexões"), EVO_MEDIDO, a);
-  snprintf(n, sizeof n, "%d", est.erros);
-  numero(n, i18n(est.erros == 1 ? "erro" : "erros"), x, y, a, 0);
-  if (!est.reconexoes) snprintf(t, sizeof t, "%s", i18n("nenhuma reconexão"));
-  else if (est.reconexoes == 1) snprintf(t, sizeof t, i18n("1 reconexão às %02d:%02d"), est.reconHora, est.reconMin);
-  else snprintf(t, sizeof t, i18n("%d reconexões, a última às %02d:%02d"), est.reconexoes, est.reconHora, est.reconMin);
-  if (est.reconexoes && !est.erros) {
+  snprintf(n, sizeof n, "%d", vis.erros);
+  numero(n, i18n(vis.erros == 1 ? "erro" : "erros"), x, y, a, 0);
+  if (!vis.reconexoes) snprintf(t, sizeof t, "%s", i18n("nenhuma reconexão"));
+  else if (vis.reconexoes == 1) snprintf(t, sizeof t, i18n("1 reconexão às %02d:%02d"), vis.reconHora, vis.reconMin);
+  else snprintf(t, sizeof t, i18n("%d reconexões, a última às %02d:%02d"), vis.reconexoes, vis.reconHora, vis.reconMin);
+  if (vis.reconexoes && !vis.erros) {
     size_t u = strlen(t);
     snprintf(t + u, sizeof t - u, " · %s", i18n("sem falha"));
   }
@@ -402,14 +527,14 @@ static void tileErros(GfxRect r, float a) {
 static void tileQuadros(GfxRect r, float a) {
   char n[24], q[32], p[24], t[64];
   float x = r.x + 24, y = r.y + 86, w = r.w - 48;
-  ladrilho(r, "aj_monitor-play", i18n("Quadros perdidos"), est.quadrosOrigem, a);
-  if (est.quadrosOrigem == EVO_MEDIDO) {
+  ladrilho(r, "aj_monitor-play", i18n("Quadros perdidos"), vis.quadrosOrigem, a);
+  if (vis.quadrosOrigem == EVO_MEDIDO) {
     const char *partes[2];
-    ev_fmt_milhar(n, sizeof n, est.perdidos);
-    ev_fmt_milhar(q, sizeof q, est.quadros);
+    ev_fmt_milhar(n, sizeof n, vis.perdidos);
+    ev_fmt_milhar(q, sizeof q, vis.quadros);
     snprintf(t, sizeof t, i18n("de %s"), q);
     numero(n, t, x, y, a, 0);
-    ev_fmt_pct2(p, sizeof p, est.perdidos, est.quadros, sepDec());
+    ev_fmt_pct2(p, sizeof p, vis.perdidos, vis.quadros, sepDec());
     snprintf(t, sizeof t, "%s %%", p);
     (void)partes;
     { TxtLinha l = txt_linha(TXT_G21B, t, 255, 255, 255, 255);
@@ -439,89 +564,201 @@ static const char *nomePlataforma(int p) {
 }
 
 static void ptFora(int x, int y) { (void)x; (void)y; estatvivo_fechar(); }
-
-static void desenharCartao(float a) {
-  GfxRect c = { EVU_X, EVU_Y, EVU_W, EVU_H };
-  float x = c.x + 36, cw, xr;
-  if (ponteiro_ativo() && a > 0.5f) {
-    ponteiro_camada();
-    ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ptFora, 0, 0);
-    ponteiro_alvo(c.x, c.y, c.w, c.h, NULL, NULL, 0, 0);
-  }
-  gfx_cor(c, 26.0f / c.h, 0.078f, 0.078f, 0.086f, 0.97f * a);
-  gfx_anel(c, 26.0f / c.h, 1.0f, 1, 1, 1, 0.05f * a);
-  caps("Estatísticas ao vivo", x, c.y + 30, a);
-  { TxtLinha t = txt_linha_corta(TXT_ILHA_PERGUNTA, tela.titulo[0] ? tela.titulo : i18n("Tocando agora"), EVU_TX, 470);
-    txt_desenhar_alpha(t, x, c.y + 58, a); }
-  if (tela.sub[0]) {
-    TxtLinha s = txt_linha_corta(TXT_AJ_TEXTO, tela.sub, 180, 180, 182, 255, 470);
-    txt_desenhar_alpha(s, x, c.y + 108, a);
-  }
-  // Chips a direita: plataforma e cadencia.
-  xr = c.x + c.w - 36;
-  cw = chip("aj_clock", i18n("atualiza a cada 1 s"), 0, 0, 40, a, 0);
-  xr -= cw;
-  chip("aj_clock", i18n("atualiza a cada 1 s"), xr, c.y + 34, 40, a, 1);
-  cw = chip("aj_tv-minimal-play", nomePlataforma(tela.plataforma), 0, 0, 40, a, 0);
-  xr -= 12 + cw;
-  chip("aj_tv-minimal-play", nomePlataforma(tela.plataforma), xr, c.y + 34, 40, a, 1);
-  { float x0 = x, x1 = x + EVU_TILE_W + 24, y0 = c.y + 140;
-    tileVelocidade((GfxRect){ x0, y0, EVU_TILE_W, 244 }, a);
-    tileBuffer((GfxRect){ x1, y0, EVU_TILE_W, 244 }, a);
-    tileFonte((GfxRect){ x0, y0 + 244 + EVU_GAP, EVU_TILE_W, 284 }, a);
-    tileServidor((GfxRect){ x1, y0 + 244 + EVU_GAP, EVU_TILE_W, 284 }, a);
-    tileErros((GfxRect){ x0, y0 + 284 + 244 + 2 * EVU_GAP, EVU_TILE_W, 214 }, a);
-    tileQuadros((GfxRect){ x1, y0 + 284 + 244 + 2 * EVU_GAP, EVU_TILE_W, 214 }, a); }
-  // Dicas embaixo do cartao.
-  { static const char *const K[2] = { "OK", "Voltar" };
-    static const char *const L[2] = { "Fixar no canto", "Fechar" };
-    float hx = x, hy = c.y + c.h + 18;
-    int i;
-    for (i = 0; i < 2; i++) {
-      TxtLinha k = txt_linha(TXT_V2_KBD18, K[i], EVU_TX), l = txt_linha(TXT_AJ_TEXTO, L[i], 196, 196, 196, 255);
-      float kw = (float)k.w + 20 < 48 ? 48 : (float)k.w + 20;
-      gfx_cor((GfxRect){ hx, hy, kw, 30 }, 0.5f, 0.165f, 0.165f, 0.176f, a);
-      txt_desenhar_alpha(k, hx + (kw - (float)k.w) * 0.5f, hy + (30 - (float)k.h) * 0.5f, a);
-      txt_desenhar_alpha(l, hx + kw + 10, hy + (30 - (float)l.h) * 0.5f, a);
-      hx += kw + 10 + (float)l.w + 24;
-    } }
+static void ptAbrir(int x, int y) { (void)x; (void)y; estatvivo_abrir(); }
+static void ptFixar(int x, int y) {
+  (void)x; (void)y;
+  if (!graca()) { aberto = 0; fixado = 1; }
 }
 
-// FIXADO NO CANTO: a velocidade e o buffer numa pilula no alto a esquerda,
-// fora do caminho da ilha do relogio (direita) e das legendas (embaixo).
-static void desenharPilula(void) {
+// "≈ 41" (estimada, sem casa decimal: a precisao seria inventada) ou "42,8".
+static void fmtVel(char *n, size_t cap) {
+  ev_fmt_mbps(n, cap, vis.kbps, sepDec());
+  if (vis.kbps >= 0 && vis.velOrigem != EVO_MEDIDO) snprintf(n, cap, "≈ %d", (vis.kbps + 500) / 1000);
+}
+
+// --- OS TRES TAMANHOS --------------------------------------------------------------
+// Cada conteudo mora no SEU canto do painel (completo e compacto no de cima a
+// direita, minimo no da esquerda) e o painel recorta: ao trocar de tamanho nada
+// se reposiciona, o painel anda e o conteudo cobre/descobre.
+
+// COMPLETO: o cartao do mockup com os seis ladrilhos.
+static void conteudoCompleto(float ox, float oy, float fase, float a) {
+  GfxRect c = { ox, oy, EVU_W, EVU_H };
+  float x = c.x + EVU_PAD, cw, xr;
+  caps("Estatísticas ao vivo", x, c.y + 24, a);
+  { TxtLinha t = txt_linha_corta(TXT_ILHA_PERGUNTA, tela.titulo[0] ? tela.titulo : i18n("Tocando agora"), EVU_TX, 400);
+    txt_desenhar_alpha(t, x, c.y + 48, a); }
+  if (tela.sub[0]) {
+    TxtLinha s = txt_linha_corta(TXT_AJ_TEXTO, tela.sub, 180, 180, 182, 255, 400);
+    txt_desenhar_alpha(s, x, c.y + 88, a);
+  }
+  // Chips a direita, um sobre o outro: cadencia e plataforma.
+  xr = c.x + c.w - EVU_PAD;
+  cw = chip("aj_clock", i18n("atualiza a cada 1 s"), 0, 0, 36, a, 0);
+  chip("aj_clock", i18n("atualiza a cada 1 s"), xr - cw, c.y + 18, 36, a, 1);
+  cw = chip("aj_tv-minimal-play", nomePlataforma(tela.plataforma), 0, 0, 36, a, 0);
+  chip("aj_tv-minimal-play", nomePlataforma(tela.plataforma), xr - cw, c.y + 62, 36, a, 1);
+  // As linhas de ladrilhos abaixo da linha do subtitulo (y + 88 + ~30).
+  { float x0 = x, x1 = x + EVU_TILE_W + EVU_GAP, y0 = c.y + 128, h1 = 240, h2 = 272, h3 = 206;
+    tileVelocidade((GfxRect){ x0, y0, EVU_TILE_W, h1 }, fase, a);
+    tileBuffer((GfxRect){ x1, y0, EVU_TILE_W, h1 }, a);
+    tileFonte((GfxRect){ x0, y0 + h1 + EVU_GAP, EVU_TILE_W, h2 }, a);
+    tileServidor((GfxRect){ x1, y0 + h1 + EVU_GAP, EVU_TILE_W, h2 }, a);
+    tileErros((GfxRect){ x0, y0 + h1 + h2 + 2 * EVU_GAP, EVU_TILE_W, h3 }, a);
+    tileQuadros((GfxRect){ x1, y0 + h1 + h2 + 2 * EVU_GAP, EVU_TILE_W, h3 }, a); }
+}
+
+// COMPACTO: o essencial em cinco linhas (resolucao, codec, velocidade, buffer,
+// quadros perdidos).
+static void conteudoCompacto(float ox, float oy, float a) {
+  float x = ox + 20, w = EVU_CW - 40, y = oy + 60;
+  char n[48], p[32], q[32], t[96];
+  caps("Estatísticas ao vivo", x, oy + 26, a);
+  kv(i18n("Resolução"), tela.resolucao, x, y, w, 0, a);
+  kv(i18n("Codec · HDR"), tela.codecHdr, x, y + 50, w, 1, a);
+  fmtVel(n, sizeof n);
+  if (vis.kbps >= 0) snprintf(t, sizeof t, "%s Mbps", n);
+  else t[0] = 0;
+  kv(i18n("Velocidade"), t, x, y + 100, w, 1, a);
+  if (vis.bufOrigem == EVO_MEDIDO) snprintf(t, sizeof t, "%d s", (int)(vis.bufSeg + 0.5));
+  else if (vis.bufOrigem == EVO_SO_PCT) snprintf(t, sizeof t, "%d %%", vis.bufPct);
+  else snprintf(t, sizeof t, "%s", i18n("Indisponível"));
+  kv(i18n("Buffer à frente"), t, x, y + 150, w, 1, a);
+  if (vis.quadrosOrigem == EVO_MEDIDO) {
+    ev_fmt_milhar(q, sizeof q, vis.perdidos);
+    ev_fmt_pct2(p, sizeof p, vis.perdidos, vis.quadros, sepDec());
+    snprintf(t, sizeof t, "%s (%s %%)", q, p);
+  } else snprintf(t, sizeof t, "%s", i18n("Indisponível"));
+  kv(i18n("Quadros perdidos"), t, x, y + 200, w, 1, a);
+}
+
+// MINIMO: a linha fina, velocidade + buffer + a faisca, numa largura FIXA
+// (EVU_MW): o numero tem casa reservada e a faisca fica no fim da linha.
+static void conteudoMinimo(float ox, float oy, float fase, float a) {
   char n[24], b[48];
-  GfxRect r = { 48, 40, 0, 64 };
   TxtLinha tn, tb;
-  ev_fmt_mbps(n, sizeof n, est.kbps, sepDec());
-  if (est.kbps >= 0 && est.velOrigem != EVO_MEDIDO) snprintf(n, sizeof n, "≈ %d", (est.kbps + 500) / 1000);
-  tn = txt_linha(TXT_G26B, n, EVU_TX);
-  if (est.bufOrigem == EVO_MEDIDO) snprintf(b, sizeof b, i18n("Mbps · buffer %d s"), (int)(est.bufSeg + 0.5));
-  else if (est.bufOrigem == EVO_SO_PCT) snprintf(b, sizeof b, i18n("Mbps · buffer %d%%"), est.bufPct);
+  float w = EVU_MW, nw;
+  fmtVel(n, sizeof n);
+  tn = txt_linha(TXT_G23B, n, EVU_TX);
+  if (vis.bufOrigem == EVO_MEDIDO) snprintf(b, sizeof b, i18n("Mbps · buffer %d s"), (int)(vis.bufSeg + 0.5));
+  else if (vis.bufOrigem == EVO_SO_PCT) snprintf(b, sizeof b, i18n("Mbps · buffer %d%%"), vis.bufPct);
   else snprintf(b, sizeof b, "Mbps");
   tb = txt_linha(TXT_AJ_TEXTO, b, 196, 196, 196, 255);
-  r.w = 20 + 26 + 12 + (float)tn.w + 10 + (float)tb.w + 22 + 120 + 20;
-  gfx_cor(r, 0.5f, 0.078f, 0.078f, 0.086f, 0.92f);
-  gfx_anel(r, 0.5f, 1.0f, 1, 1, 1, 0.06f);
-  gfx_icone((GfxRect){ r.x + 20, r.y + 19, 26, 26 }, "aj_gauge", 0.953f, 0.949f, 0.937f, 1);
-  txt_desenhar(tn, r.x + 58, r.y + (64 - (float)tn.h) * 0.5f);
-  txt_desenhar(tb, r.x + 58 + (float)tn.w + 10, r.y + (64 - (float)tb.h) * 0.5f);
-  faisca(est.hist, est.nHist, (GfxRect){ r.x + r.w - 20 - 120, r.y + 16, 120, 32 }, 1);
+  nw = fmaxf(suaveLargura((float)tn.w), (float)txt_linha(TXT_G23B, "≈ 88,8", EVU_TX).w);
+  gfx_icone((GfxRect){ ox + 18, oy + (EVU_PH - 22) * 0.5f, 22, 22 }, "aj_gauge", 0.953f, 0.949f, 0.937f, a);
+  txt_desenhar_alpha(tn, ox + 52, oy + (EVU_PH - (float)tn.h) * 0.5f, a);
+  txt_desenhar_alpha(tb, ox + 52 + nw + 8, oy + (EVU_PH - (float)tb.h) * 0.5f, a);
+  faisca(vis.hist, vis.nHist, (GfxRect){ ox + w - 18 - 84, oy + 10, 84, EVU_PH - 20 }, fase, a);
 }
 
-void estatvivo_desenhar(Uint32 agora) {
-  float a = 1.0f;
-  if (!aberto && !fixado) return;
+// O que se desenha agora: a amostra de verdade com os numeros na mola.
+static void atualizarVis(void) {
+  float v;
+  vis = est;
+  v = suave(&sm[0], (float)est.kbps);      if (v >= 0) vis.kbps = (int)(v + 0.5f);
+  v = suave(&sm[1], (float)est.mediaKbps); if (v >= 0) vis.mediaKbps = (int)(v + 0.5f);
+  v = suave(&sm[2], (float)est.bufSeg);    if (v >= 0) vis.bufSeg = v;
+  v = suave(&sm[3], (float)est.bufMb);     if (v >= 0) vis.bufMb = v;
+  v = suave(&sm[4], (float)est.bufPct);    if (v >= 0) vis.bufPct = (int)(v + 0.5f);
+}
+
+// O retangulo do painel de cada tamanho, num lado: a mesma margem das laterais
+// do player, logo abaixo da pilula da hora. Funcao pura de (tamanho, lado): nao
+// depende de numero nenhum, e e por isso que o painel nao pula.
+void estatvivo_retangulo(int tam, int esquerda, float *g) {
+  float w = tam == EV_TAM_COMPLETO ? EVU_W : tam == EV_TAM_COMPACTO ? EVU_CW : EVU_MW;
+  g[0] = esquerda ? EVU_MARG : NV_TELA_W - EVU_MARG - w;
+  g[1] = EVU_TOPO;
+  g[2] = w;
+  g[3] = tam == EV_TAM_COMPLETO ? EVU_H : tam == EV_TAM_COMPACTO ? EVU_CH : EVU_PH;
+}
+void estatvivo_retangulo_atual(float *g) { estatvivo_retangulo(tamanho, ajustes_estat_lado(), g); }
+
+// O conteudo mora no canto do lado escolhido do painel (que anda na mola).
+static float ancora(const GfxRect *p, float w) { return ajustes_estat_lado() ? p->x : p->x + p->w - w; }
+
+static void ptLado(int a, int b) { (void)a; (void)b; ajustes_definir_estat_lado(!ajustes_estat_lado()); }
+
+#define EVU_N_DICAS 4
+static void dicas(float x, float y, float a) {
+  static const char *const K[EVU_N_DICAS] = { "OK", "← →", "↓", "Voltar" };
+  static const char *const L[EVU_N_DICAS] = { "Tamanho", "Lado", "Fixar", "Fechar" };
+  int i;
+  float total = 0;
+  for (i = 0; i < EVU_N_DICAS; i++) {
+    TxtLinha k = txt_linha(TXT_V2_KBD18, K[i], EVU_TX), l = txt_linha(TXT_AJ_TEXTO, i18n(L[i]), 196, 196, 196, 255);
+    total += fmaxf((float)k.w + 20, 48) + 10 + (float)l.w + (i < EVU_N_DICAS - 1 ? 24 : 0);
+  }
+  x = fmaxf(EVU_MARG, fminf(x, NV_TELA_W - EVU_MARG - total));
+  for (i = 0; i < EVU_N_DICAS; i++) {
+    TxtLinha k = txt_linha(TXT_V2_KBD18, K[i], EVU_TX), l = txt_linha(TXT_AJ_TEXTO, i18n(L[i]), 196, 196, 196, 255);
+    float kw = (float)k.w + 20 < 48 ? 48 : (float)k.w + 20;
+    gfx_cor((GfxRect){ x, y, kw, 30 }, 0.5f, 0.165f, 0.165f, 0.176f, a);
+    txt_desenhar_alpha(k, x + (kw - (float)k.w) * 0.5f, y + (30 - (float)k.h) * 0.5f, a);
+    txt_desenhar_alpha(l, x + kw + 10, y + (30 - (float)l.h) * 0.5f, a);
+    if (aberto && ponteiro_ativo() && a > 0.5f)
+      ponteiro_alvo(x, y, kw + 10 + (float)l.w, 30, NULL,
+                    i == 0 ? ptTamanho : i == 1 ? ptLado : i == 2 ? ptFixar : ptFora, 0, 0);
+    x += kw + 10 + (float)l.w + 24;
+  }
+}
+
+static void desenhar(Uint32 agora) {
+  int i, quer = aberto || fixado, desenho = tamanho;
+  int inicial = entraA == 0;
+  float fase, o;
+  GfxRect p;
 #ifndef ESTATVIVO_TESTE
   if (!player_aberto()) return;
 #endif
-  if (fixado) { desenharPilula(); return; }
-  if (!ajustes_animacoes_reduzidas()) {
-    float t = (float)(agora - abriuEm) / 180.0f;
-    a = t >= 1.0f ? 1.0f : t < 0 ? 0 : t;
-  }
+#ifdef ESTATVIVO_TESTE
+  dtq = 1.0f / 60.0f;   // quadros de captura sem relogio: a mola anda igual sempre
+#else
+  dtq = quadroEm ? anim_clamp((float)(Sint32)(agora - quadroEm) / 1000.0f, 0.0f, 0.05f) : 1.0f / 60.0f;
+#endif
+  quadroEm = agora;
+  entraA = anim_mola(entraA, quer ? 1.0f : 0.0f, dtq, quer ? EVU_K_ENTRA : EVU_K_SAI);
+  if (!quer && entraA < 0.01f) { entraA = 0; zerarAnim(); return; }
+  o = entraA;
   if (!tela.titulo[0] && !tela.addon[0] && temSessao) montarTela(0);
-  desenharCartao(a);
+  atualizarVis();
+  fase = amostraEm ? anim_clamp((float)(Sint32)(agora - amostraEm) / 1000.0f, 0.0f, 1.0f) : 1.0f;
+  estatvivo_retangulo_atual(alvoRet);
+  // Recem-aberto: o painel nasce no tamanho certo (so o alfa e o deslize entram).
+  if (quer && inicial) {
+    for (i = 0; i < 4; i++) { ret[i] = alvoRet[i]; retV[i] = 0; }
+    for (i = 0; i < EV_TAM_N; i++) contA[i] = i == desenho ? 1.0f : 0.0f;
+  }
+  for (i = 0; i < 4; i++) ret[i] = anim_mola2(&retV[i], ret[i], alvoRet[i], dtq, EVU_W_RET);
+  for (i = 0; i < EV_TAM_N; i++) contA[i] = anim_mola(contA[i], i == desenho ? 1.0f : 0.0f, dtq, EVU_K_CONT);
+  p = (GfxRect){ ret[0], ret[1] - (1.0f - o) * 14.0f, ret[2], ret[3] };
+  if (aberto && ponteiro_ativo() && o > 0.5f) {
+    ponteiro_camada();
+    ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ptFora, 0, 0);
+    ponteiro_alvo(alvoRet[0], alvoRet[1], alvoRet[2], alvoRet[3], NULL, ptTamanho, 0, 0);
+  }
+  if (fixado && ponteiro_ativo() && o > 0.5f)
+    ponteiro_alvo(p.x, p.y, p.w, p.h, NULL, ptAbrir, 0, 0);
+  plrui_material(p, fminf(EVU_RAIO, p.h * 0.5f), 0, o);
+  gfx_recorte(p.x, p.y, p.w, p.h);
+  for (i = 0; i < EV_TAM_N; i++) {
+    float a = o * contA[i];
+    if (a < 0.01f) continue;
+    larguraBase = i * 8; larguraI = 0;
+    if (i == EV_TAM_COMPLETO) conteudoCompleto(ancora(&p, EVU_W), p.y, fase, a);
+    else if (i == EV_TAM_COMPACTO) conteudoCompacto(ancora(&p, EVU_CW), p.y, a);
+    else conteudoMinimo(ancora(&p, EVU_MW), p.y, fase, a);
+  }
+  gfx_sem_recorte();
+  if (aberto) dicas(p.x, p.y + p.h + 14.0f, o);
+}
+
+
+void estatvivo_desenhar(Uint32 agora) {
+  float previous = gfx_escala();
+  gfx_escala_sair(EVU_ESCALA);
+  desenhar(agora);
+  gfx_escala_sair(previous);
 }
 
 #ifdef ESTATVIVO_TESTE
@@ -540,5 +777,9 @@ void estatvivo_teste(const EvEstado *e, const EvTelaTeste *t) {
   snprintf(tela.legenda, sizeof tela.legenda, "%s", t->legenda);
   tela.plataforma = t->plataforma;
   abriuEm = 0;
+  amostraEm = 0;
+  quadroEm = 0;
+  entraA = 0;
+  zerarAnim();
 }
 #endif

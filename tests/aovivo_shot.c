@@ -4,6 +4,7 @@
 //
 //   bash tests/aovivo_shot.sh /tmp/nv-player-live-shots/aovivo
 #include "catalogo.h"
+#include "nvtmp.h"
 #include "player.h"
 #include "aovivo.h"
 #include "ajustes.h"
@@ -88,7 +89,7 @@ static void dErroSo(void *u) { Erro *e = u; aovivo_erro_desenhar(e->n, e->l, e->
 static void dPlayer(void *u) { (void)u; player_atualizar(1.f / 60, SDL_GetTicks()); player_desenhar(SDL_GetTicks()); }
 
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nv-player-live-shots/aovivo";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nv-player-live-shots/aovivo");
   char nome[600];
   const char *e4 = getenv("NUVIO_SHOT_4K");
   if (e4 && *e4 == '1') { LW = 3840; LH = 2160; }

@@ -14,6 +14,7 @@
 // CUSTO DE GPU: nenhuma passada de desfoque; artes do pacote, veus e
 // retangulos pequenos (a copia desfocada do gfx_desfocado e feita uma vez).
 #include "novidades_cartao.h"
+#include "dicascontrole.h"
 #include "novidades201.h"
 #include "novidades202.h"
 #include "apoio.h"
@@ -394,6 +395,7 @@ void novcartao_decidir(int homePronta, int playerAberto, int detalheAberto) {
 static void fechar(void) {
   aberto = 0;
   dados_gravar(CT.arquivo, "1\n");
+  dicascontrole_depois_novidades();
 }
 
 static void irPagina(int p) {

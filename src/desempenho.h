@@ -30,6 +30,9 @@ void desempenho_amostra(float fps, float piorMs, int janks, int texTela, float t
                         int filaTex, int despejos, int despejosTela, float rssMb);
 // A forma escolhida em Ajustes; DS_DESLIGADO enquanto nao ha amostra.
 int   desempenho_forma(void);
+// Com um trailer tocando (destaque da Home ou pagina do titulo; main.c manda a
+// cada quadro) o medidor some: a forma vira DS_DESLIGADO ate o trailer parar.
+void  desempenho_trailer(int tocando);
 // O TRECHO NA LINHA DA HORA, logo depois dela: largura (com o vao e o fio da
 // frente; 0 = nada) e desenho, com `x` na ponta direita da hora e `yc` o meio
 // da linha. Em Menor/Grande e so o ponto e o fps.

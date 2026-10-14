@@ -47,6 +47,7 @@ char *sessao_rpc(const char *funcao, const char *corpo, int *st) {
 // Os pontos de cache sao estaticos; incluir a implementacao permite controlar
 // a resposta no instante preciso, sem sleeps nem corrida entre fios do teste.
 #include "../src/sync.c"
+#include "nvtmp.h"
 
 static void cicloTeste(void) {
   perfilTeste = perfilDoCiclo = 1;

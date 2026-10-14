@@ -52,6 +52,12 @@ void  ajustes_acento(float *r, float *g, float *b) { *r = 1.0f; *g = 1.0f; *b = 
 // estado real e o do app, so isolado aqui.
 static int tocando;
 int trailer_tocando(void) { return tocando; }
+// Control Center hold fill (central.c): the island asks it for visibility and
+// draws it; stubbed to "no hold" — the meter test does not touch the central.
+float central_segurar_progresso(Uint32 a) { (void)a; return 0.0f; }
+void  central_segurar_desenhar(GfxRect r, float ra, float a, Uint32 ag) {
+  (void)r; (void)ra; (void)a; (void)ag;
+}
 static int forma = DS_GRANDE;
 int desempenho_forma(void) { return forma; }
 float desempenho_linha_w(int f) { (void)f; return f == DS_DESLIGADO ? 0.0f : 90.0f; }

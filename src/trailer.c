@@ -605,6 +605,16 @@ int trailer_pausado(void) {
   return aberto && cheia && pausado;
 #endif
 }
+// MEDIDOR DE DESEMPENHO (#338, revisao do job 205): main chama isto por quadro
+// para desempenho_trailer. No nativo (webOS/Android/.tpk) trailer_tocando
+// fica preso em 1 durante a pausa da tela cheia (o furo segura o ultimo
+// quadro), entao o medidor pergunta a pausa a parte e VOLTA quando o trailer
+// pausa. No iframe (__EMSCRIPTEN__) o estado pausado ja nao e PLAYING nem
+// BUFFERING, trailer_tocando ja responde 0 e o !trailer_pausado() e so
+// cinto de seguranca.
+int trailer_medidor_esconde(void) {
+  return trailer_aberto() && trailer_tocando() && !trailer_pausado();
+}
 void trailer_osd_desenhar(const char *titulo, float a) {
   double pos = video_pos(), dur = video_duracao();
   if (!trailer_pausado() || a < 0.01f) return;

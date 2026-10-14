@@ -451,12 +451,33 @@ static int soP2P(const Stream *s) {
   return !s->url[0] && s->infoHash[0] && !debrid_ativo() && p2p_ativo();
 }
 
+static int fonteOferecida(const Stream *s) {
+  return (!s->notWebReady || p2p_ativo()) &&
+         (s->url[0] || debrid_ativo() || p2p_ativo());
+}
+
 static Uint32 recebidaEm;
 static int temRecebidaEm;
 // Torrents que a ultima lista jogou fora por falta de debrid: com 0 na lista e
 // isto > 0, a causa da folha vazia e "falta conta de debrid", nao "os addons
 // nao tem" (1.3.12: "145 torrents sem debrid descartados" e folha vazia).
 static int descartadosSemDebrid;
+// #505: subconjunto descartado por pedir P2P (notWebReady). Separado porque a
+// causa muda: debrid nao o oferece — ligar uma conta nao o traz de volta.
+static int descartadosP2P;
+// #486: a dica "ligue o P2P" so e dita quando este pacote tem P2P. Perguntar o
+// motor AQUI, no fio da tela, abriria a libnuvio_engine.so no .tpk (dlopen em
+// p2pmotor.c, carregamento adiado de proposito); o trabalhador confere antes
+// de enfileirar a resposta. A publicacao e a tela so leem o atomico.
+static _Atomic int motorP2pParaDica;
+void stream_preparar_dica_p2p(const Stream *l, int qtd) {
+  if (!l || p2p_ativo() || ajustes_p2p_url()[0]) return;
+  for (int i = 0; i < qtd; i++) {
+    if (l[i].url[0] || !l[i].infoHash[0]) continue;
+    atomic_store(&motorP2pParaDica, p2pmotor_disponivel());
+    return;
+  }
+}
 
 Uint32 stream_idade_ms(void) {
   return temRecebidaEm ? SDL_GetTicks() - recebidaEm : 0xFFFFFFFFu;
@@ -477,9 +498,14 @@ void stream_definir_lista_idade(const Stream *l, int qtd, Uint32 idade) {
   // que nunca toca (shouldListStream do web). O servidor P2P experimental
   // (p2p.h) tambem o resolve, e so quando ligado.
   for (i = 0; i < qtd && nova; i++)
-    if (l[i].url[0] || debrid_ativo() || p2p_ativo()) nova[k++] = l[i];
-  if (nova && qtd - k) printf("[fonte] %d torrents sem debrid descartados\n", qtd - k);
-  descartadosSemDebrid = nova ? qtd - k : 0;
+    if (fonteOferecida(&l[i])) nova[k++] = l[i];
+  if (nova && qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
+  descartadosSemDebrid = 0;
+  descartadosP2P = 0;
+  for (i = 0; i < qtd && nova; i++)
+    // #505: tambem o notWebReady, que pede P2P — a folha vazia tem de dizer
+    // "ligue o P2P", nunca fingir que o addon nao mandou nada.
+    if (!fonteOferecida(&l[i])) { descartadosSemDebrid++; descartadosP2P += l[i].notWebReady; }
   for (i = 0; i < k && nova; i++) nova[i].selosPacoteVer = 0;   // os selos saem do fio de fundo (selosAgendar)
   pthread_mutex_lock(&verTrava);
   free(lista); lista = nova; n = nova ? k : 0; atual = -1;
@@ -543,9 +569,10 @@ void stream_lista_acrescentar(const Stream *l, int qtd, int ordemAddon) {
   nova = malloc(sizeof(Stream) * (size_t)qtd);
   if (!nova) return;
   for (i = 0; i < qtd; i++)
-    if (l[i].url[0] || debrid_ativo() || p2p_ativo()) nova[k++] = l[i];
-  if (qtd - k) printf("[fonte] %d torrents sem debrid descartados\n", qtd - k);
-  descartadosSemDebrid += qtd - k;
+    if (fonteOferecida(&l[i])) nova[k++] = l[i];
+  if (qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
+  for (i = 0; i < qtd; i++)
+    if (!fonteOferecida(&l[i])) { descartadosSemDebrid++; descartadosP2P += l[i].notWebReady; }   // #505: idem
   if (!k) { free(nova); return; }
   for (i = 0; i < k; i++) nova[i].selosPacoteVer = 0;
   // O CARTAO EM FOCO E O QUE FICA PARADO. Guardado pelo indice da lista (que
@@ -1052,8 +1079,10 @@ static unsigned grupoCacheGer, grupoCacheVer;
 static FonteRegraCfg grupoCacheCfg;
 static int grupoDaFonte(const FonteRegraCfg *c, const Stream *s) {
   char t[sizeof s->provedor + sizeof s->rotulo + sizeof s->descricao + sizeof s->arquivo + 1200];
-  snprintf(t, sizeof t, "%s %s %s %s %.1024s %s", s->provedor, s->rotulo, s->descricao,
-           s->arquivo, s->url, s->infoHash);
+  // O hash so entra quando existe, como no oficial (streamSearchableText): com
+  // " %s" vazio o texto terminava em espaco e "\.mkv$" nunca casava.
+  snprintf(t, sizeof t, "%s %s %s %s %.1024s%s%s", s->provedor, s->rotulo, s->descricao,
+           s->arquivo, s->url, s->infoHash[0] ? " " : "", s->infoHash);
   return fonteregra_grupo(c, s->provedor, ehPlugin(s), t);
 }
 // Chamar com a lista estavel (verTrava, ou o fio da tela que e quem a troca).
@@ -1408,6 +1437,26 @@ int stream_qtd_torrents(void) {
   for (i = 0; i < n; i++) if (!lista[i].url[0] && lista[i].infoHash[0]) q++;
   pthread_mutex_unlock(&verTrava);
   return q;
+}
+
+// #486: Torrentio sem debrid e P2P desligado = torrents descartados calados; a
+// folha so falava do debrid e o cartao do player era o generico. Com P2P neste
+// pacote (motor ou servidor), quantos ele tocaria; 0 = nada a sugerir.
+// O CONTADOR vem ANTES de qualquer pergunta: folha e cartao chamam a cada
+// quadro e uma consulta sem torrent descartado nao pode tocar o resto — a
+// disponibilidade do motor NAO e perguntada aqui (dlopen do .tpk no fio da
+// tela): vem guardada do fio da consulta (stream_preparar_dica_p2p).
+// .wgt: o P2P fica oculto nos Ajustes e ajustes_p2p_ligado() e sempre 0
+// (a8e7685d) — "ligue o P2P" seria uma dica impossivel de seguir.
+int stream_torrents_para_p2p(void) {
+  int p2p = descartadosP2P;
+  if (!debrid_ativo()) p2p += descartadosSemDebrid - descartadosP2P;
+  if (p2p <= 0 || p2p_ativo()) return 0;
+#ifdef __EMSCRIPTEN__
+  return 0;
+#else
+  return (ajustes_p2p_url()[0] || atomic_load(&motorP2pParaDica)) ? p2p : 0;
+#endif
 }
 
 unsigned stream_lista_geracao(void) {
@@ -1844,13 +1893,14 @@ int stream_primeira_boa(int tentativas) {
     if (escolhida >= 0 && (fonteregra_ativa(&c) || ordemUso)) {
       static const char *const ESC_[3] = { "all", "addons-only", "plugins-only" };
       static const char *const RX[3] = { "off", "require", "prefer" };
+      // Grupo = (permitida 0 | os outros FR_GRUPO_OUTROS) + condicoes falhas.
       static const char *const GR[4] = { "allowed+match", "allowed", "other+match", "other" };
-      int g = grupoDe(escolhida);
+      int g = grupoDe(escolhida), gi = g < 0 ? -1 : (g >= FR_GRUPO_OUTROS ? 2 : 0) + (g % FR_GRUPO_OUTROS ? 1 : 0);
       static const char *const OU[3] = { "off", "tie-break", "strict" };
       printf("[fonte] auto-play rules: order=%s(%d) scope=%s addons=%d plugins=%d regex=%s(%s) others=%s -> winner %s\n",
              OU[ordemUso], fonteregra_ordem_n(), ESC_[c.escopo], fonteregra_n(0), fonteregra_n(1), RX[c.regexModo],
              fonteregra_regex_estado() > 0 ? "ok" : fonteregra_regex_estado() < 0 ? "invalid, ignored" : "empty",
-             c.usarOutros ? "on" : "off", g >= 0 && g < 4 ? GR[g] : "remembered");
+             c.usarOutros ? "on" : "off", gi >= 0 ? GR[gi] : "remembered");
     } }
   return escolhida;
 }
@@ -2588,7 +2638,13 @@ static void tituloAddon(const Stream *s, char *buf, size_t tam) {
     t[k++] = (char)c;
   }
   t[k] = 0;
-  nv_limpar_texto(t, lim, sizeof lim, NV_LIMPA_UMA_LINHA);
+  const char *nome = t;
+  if (s->emCache && !s->foraCache && !strncmp(nome, "⚡", strlen("⚡"))) {
+    nome += strlen("⚡");
+    if (!strncmp(nome, "\xEF\xB8\x8F", 3)) nome += 3;
+    while (*nome == ' ') nome++;
+  }
+  nv_limpar_texto(nome, lim, sizeof lim, NV_LIMPA_UMA_LINHA);
   snprintf(buf, tam, "%s", lim[0] ? lim : s->provedor);
 }
 
@@ -3157,6 +3213,7 @@ const char *stream_detalhe_texto(void) { return detDesc; }
 int  stream_detalhe_tecla_abre(const SDL_Event *e) {
   SDL_Keycode k=e->key.keysym.sym;
   return k==SDLK_i || k==SDLK_F5 || (int)e->key.keysym.scancode==NV_SCANCODE_YELLOW
+      || (int)e->key.keysym.scancode==NV_SCANCODE_CH_DOWN
 #ifdef NV_ANDROID
       || k==SDLK_F9   // o Info do controle Android chega como F9 (NuvioActivity)
 #endif
@@ -3964,7 +4021,12 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       tira=0;
       if(ajustes_fonte_texto_addon()) snprintf(nome,sizeof nome,"%s",textoAddonDa(i)->titulo);
       else tituloConteudo(s,nome,sizeof nome,ep,sizeof ep);
-      { TxtLinha l=txt_linha_corta(TXT_CALLOUT,nome,255,255,253,255,txtW);
+      float nomeX=tx, nomeW=txtW;
+      if(s->emCache && !s->foraCache) {
+        gfx_icone((GfxRect){tx,cy+4,26,26},"aj_zap",ar,ag,ab,anim);
+        nomeX+=34; nomeW-=34;
+      }
+      { TxtLinha l=txt_linha_corta(TXT_CALLOUT,nome,255,255,253,255,nomeW);
         // LOGO DO TITULO no lugar do nome (ajuste em teste): a mesma logo do
         // hero/detalhe, encostada a esquerda numa caixa da altura do nome.
         // Sem logo (ausente ou ainda baixando) fica o nome escrito.
@@ -3979,16 +4041,16 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
           // A base da logo fica FOLHA_LOGO_VAO acima dos selos (que comecam em
           // cy + 40), e nao no meio da altura do nome: centrada, a logo de 40 px
           // encostava nos selos.
-          gfx_rect((GfxRect){tx, floorf(cy + 40.0f - FOLHA_LOGO_VAO - lh), lw, lh}, lt,
+          gfx_rect((GfxRect){nomeX, floorf(cy + 40.0f - FOLHA_LOGO_VAO - lh), lw, lh}, lt,
                    tex_marca_escura(lu) ? GFX_MARCA : GFX_TEXTO, 0, 0, 0, 0.0f, 1, 1, 1,
                    anim * (sel ? 1.0f : .80f));
           l.w = (int)(lw + .5f);
         } else
-        txt_desenhar_tom(l,tx,cy,c/255.0f,c/255.0f,(c-2)/253.0f,anim);
+        txt_desenhar_tom(l,nomeX,cy,c/255.0f,c/255.0f,(c-2)/253.0f,anim);
         if(ep[0]){ int ce=sel?175:135;
           TxtLinha le=txt_linha(TXT_PG_FIM,ep,175,175,175,255);
           // Na linha de base do nome, nao no meio da altura dele.
-          if(l.w+14+le.w<=txtW) txt_desenhar_tom(le,tx+l.w+14,cy+l.h-le.h-3,ce/175.0f,ce/175.0f,ce/175.0f,anim); } } }
+          if(l.w+14+le.w<=nomeW) txt_desenhar_tom(le,nomeX+l.w+14,cy+l.h-le.h-3,ce/175.0f,ce/175.0f,ce/175.0f,anim); } } }
     cy+=40;
     if(ajustes_fonte_texto_addon()) {
       const TextoAddon *t=textoAddonDa(i);
@@ -4128,12 +4190,20 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     char causa[160], frase[320];
     const char *s=addons_estado()==ADD_BUSCANDO?"Buscando fontes nos addons…":"Nenhuma fonte direta disponível. Use Recarregar para tentar novamente.";
     if (addons_estado()!=ADD_BUSCANDO && n==0) {
-      int tem = 0;
-      if (descartadosSemDebrid > 0) {
-        snprintf(causa,sizeof causa,i18n("%d fontes precisam de uma conta de debrid, e nenhuma está ligada"),descartadosSemDebrid);
+      int tem = 0, p2p = stream_torrents_para_p2p();
+      // #505: o descarte que pede P2P (o notWebReady do .tpk) nao e falta de
+      // debrid — debrid ativo nao o oferece (fonteOferecida), e ligar uma
+      // conta nao o traz de volta. A causa certa e o P2P desligado.
+      if (p2p > 0) {
+        snprintf(causa,sizeof causa,"%s",i18n("As fontes desta lista são P2P (torrent)"));
+        tem = 1;
+      } else if (descartadosSemDebrid - descartadosP2P > 0 && !debrid_ativo()) {
+        snprintf(causa,sizeof causa,i18n("%d fontes precisam de uma conta de debrid, e nenhuma está ligada"),descartadosSemDebrid - descartadosP2P);
         tem = 1;
       } else tem = addons_motivo_vazio(causa,sizeof causa);
-      if (tem) { snprintf(frase,sizeof frase,"%s. %s",causa,i18n("Use Recarregar para tentar novamente.")); s=frase; }
+      if (tem) { snprintf(frase,sizeof frase,"%s. %s",causa,p2p > 0
+          ? i18n("Ligue o P2P em Ajustes ou conecte uma conta de debrid.")
+          : i18n("Use Recarregar para tentar novamente.")); s=frase; }
     }
     // Com servicos de streaming na lista, a frase vem DEPOIS deles.
     txt_bloco(TXT_PG_FIM,s,196,199,204,tx,FOLHA_TOPO+20,rw-52,28,anim,3);

@@ -18,6 +18,7 @@ static int shotGrade;
 #define desc_vertudo_n shot_vertudo_n
 #define desc_vertudo_item shot_vertudo_item
 #include "../src/vertudo.c"
+#include "nvtmp.h"
 #undef desc_vertudo_n
 #undef desc_vertudo_item
 int desc_vertudo_n(void);
@@ -31,8 +32,9 @@ int shot_vertudo_item(int i, CatItem *dst) {
   snprintf(dst->tipo, sizeof dst->tipo, "movie");
   snprintf(dst->titulo, sizeof dst->titulo, "Titulo %d", i + 1);
   snprintf(dst->genero, sizeof dst->genero, "Filme · Drama");
-  snprintf(dst->meta, sizeof dst->meta, "2025 · 120 min");
+  snprintf(dst->meta, sizeof dst->meta, "%d · 120 min", 1992 + i * 3);
   snprintf(dst->sinopse, sizeof dst->sinopse, "Sinopse de exemplo para o painel da direita.");
+  if (i == 1 || i == 5) dst->progresso = i == 1 ? 39 : 45;   // em andamento ("Parou em")
   snprintf(dst->poster, sizeof dst->poster, "deploy/app/art/%02d.jpg", i % 30);
   snprintf(dst->backdrop, sizeof dst->backdrop, "deploy/app/art/%02d.jpg", i % 30);
   return 1;
@@ -68,7 +70,7 @@ static void captura(const char *nome, SDL_Window *win) {
       assert(s);
       for (y = 0; y < 1080; y++)
         memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
-      assert(SDL_SaveBMP(s, nome) == 0);
+      assert((strstr(nome,".png") ? IMG_SavePNG(s,nome) : SDL_SaveBMP(s,nome)) == 0);
       SDL_FreeSurface(s);
       free(pix);
     }
@@ -86,7 +88,7 @@ static void fonte(int i, const char *titulo, const char *tipo) {
 }
 
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nuvio-vertudo";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nuvio-vertudo");
   char nome[600];
   SDL_Window *w;
   pasta.sources = pastaFontes;
@@ -123,6 +125,31 @@ int main(int argc, char **argv) {
   collection = &pasta;
   snprintf(titulo, sizeof titulo, "%s", pasta.title);
   aberta = 1; anim = 1.0f; source = 0;
+
+  if (getenv("NUVIO_SHOT_ABASTOPO")) {
+    static const int idiomas[] = {IDIOMA_PT, IDIOMA_DE, IDIOMA_RU};
+    static const char *cod[] = {"pt", "de", "ru"};
+    for (int k = 0; k < 3; k++) {
+      char config[600];
+      snprintf(config,sizeof config,"%s/ajustes.txt",getenv("NUVIO_DADOS"));
+      FILE *f=fopen(config,"w"); assert(f);
+      fprintf(f,"idioma %d\n",idiomas[k]); fclose(f);
+      ajustes_dir(getenv("NUVIO_DADOS"));
+      ajustes_definir_abas_estilo(VT_AB_TOPO);
+      assert(estiloAbas()==VT_AB_TOPO);
+      shotGrade=12; tabFocus=0; tabCursor=0; foco=0;
+      snprintf(nome,sizeof nome,"%s-%s-menu.png",saida,cod[k]); captura(nome,w);
+      tabFocus=1; tabCursor=cabN()+1;
+      snprintf(nome,sizeof nome,"%s-%s-icone.png",saida,cod[k]); captura(nome,w);
+      SDL_Event e={0}; e.type=SDL_KEYDOWN; e.key.keysym.sym=SDLK_RETURN;
+      vertudo_evento(&e); assert(ajustes_abas_estilo()==VT_AB_CHIPS);
+      for(int j=0;j<4;j++)vertudo_evento(&e);
+      assert(estiloAbas()==VT_AB_TOPO && tabCursor==cabN()+1);
+      e.key.keysym.sym=SDLK_LEFT; vertudo_evento(&e); assert(tabCursor==cabN());
+      e.key.keysym.sym=SDLK_RIGHT; vertudo_evento(&e); assert(tabCursor==cabN()+1);
+    }
+    goto fim;
+  }
 
   tabFocus = 1; tabCursor = 1;
   snprintf(nome, sizeof nome, "%s-abas-foco.bmp", saida);
@@ -161,6 +188,69 @@ int main(int argc, char **argv) {
   captura(nome, w);
   shotGrade = 0;
 
+  // FILMOGRAFIA DE DIRETOR (205): retrato do pacote, retrato menor ("so TMDB",
+  // sem rede aqui) e sem imagem. NV_SHOT_PACOTE aponta o PNG do pacote.
+  { const char *pacote = getenv("NV_SHOT_PACOTE");
+    const char *fotos[3] = { pacote ? pacote : "deploy/app/art/cinematic/portrait.png",
+                             "deploy/app/art/03.jpg", NULL };
+    const char *rot[3] = { "pacote", "tmdb", "semfoto" };
+    int k;
+    // Vistos conhecidos (historico unificado Nuvio/Trakt/Simkl): 1o, 3o e 4o.
+    cat_historico_definir_id("tt0000100", "movie", 1);
+    cat_historico_definir_id("tt0000102", "movie", 1);
+    cat_historico_definir_id("tt0000103", "movie", 1);
+    { // Datas de visto e uma parada no meio, como o progresso sincronizado traz.
+      static const struct { const char *id; double pos; long long ms; } sem[] = {
+        { "tt0000100", 7200, 1710201600000LL },   // 12 mar 2024
+        { "tt0000102", 7000, 1738368000000LL },   // 1 fev 2025
+        { "tt0000101", 2820, 1760000000000LL } }; // parou em 47 min
+      int q;
+      for (q = 0; q < 3; q++) {
+        ProgRegistro r;
+        memset(&r, 0, sizeof r);
+        snprintf(r.contentId, sizeof r.contentId, "%s", sem[q].id);
+        prog_chave(r.chave, sizeof r.chave, sem[q].id, 0, 0);
+        snprintf(r.tipo, sizeof r.tipo, "movie");
+        r.posSeg = sem[q].pos; r.durSeg = 7200; r.lastWatchedMs = sem[q].ms; r.tocou = 1;
+        prog_aplicar_remoto(&r);
+      }
+    }
+    for (k = 0; k < 3; k++) {
+      char cmd[1400];
+      memset(pastaFontes, 0, sizeof pastaFontes);
+      memset(&pasta, 0, sizeof pasta);
+      pasta.sources = pastaFontes;
+      snprintf(pasta.title, sizeof pasta.title, "Quentin Tarantino");
+      snprintf(pasta.group, sizeof pasta.group, "Directors");
+      fonte(0, "Quentin Tarantino", "movie");
+      pasta.nSources = 1;
+      if (fotos[k]) {
+        snprintf(pasta.frameDir, sizeof pasta.frameDir, "%s/dir%d", getenv("NUVIO_DADOS"), k);
+        snprintf(cmd, sizeof cmd, "mkdir -p '%s' && cp '%s' '%s/portrait%s'", pasta.frameDir, fotos[k],
+                 pasta.frameDir, strstr(fotos[k], ".png") ? ".png" : ".jpg");
+        assert(system(cmd) == 0);
+      }
+      snprintf(titulo, sizeof titulo, "%s", pasta.title);
+      shotGrade = 8; tabFocus = 0; tabCursor = 0; foco = 0;
+      snprintf(nome, sizeof nome, "%s-diretor-%s.bmp", saida, rot[k]);
+      captura(nome, w);
+      // Mesmo diretor em cada exibicao: o check unico e a barra de progresso.
+      if (k == 0) {
+        static const int lays[4] = { VT_LAY_GRADE, VT_LAY_LINHA, VT_LAY_RANKING, VT_LAY_SAGA };
+        static const char *rl[4] = { "grade", "linha", "ranking", "saga" };
+        int q;
+        for (q = 0; q < 4; q++) {
+          layEscolha = lays[q]; resolverLayout();
+          snprintf(nome, sizeof nome, "%s-estilo-%s.bmp", saida, rl[q]);
+          captura(nome, w);
+        }
+        layEscolha = VT_LAY_AUTO; resolverLayout();
+      }
+    }
+    shotGrade = 0;
+  }
+
+fim:
   tex_encerrar();
   txt_encerrar();
   SDL_GL_DeleteContext(gl);

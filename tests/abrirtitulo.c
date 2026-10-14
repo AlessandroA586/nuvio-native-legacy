@@ -20,6 +20,9 @@ int ajustes_hist_conta(void) { return 1; }
 int ajustes_busca_cinemeta(void) { return cinemetaLig; }
 int ajustes_busca_nuvio(void) { return 0; }   // #311: Primeiro (padrao)
 int ajustes_ocultar_nao_lancados(void) { return 0; }   // #369: descoberta.c le o ajuste
+int ajustes_ocultar_filmes_vistos(void) { return 0; }
+void addons_lista_travar(void) {}
+void addons_lista_destravar(void) {}
 #include "../src/descoberta.c"
 Uint32 SDL_GetTicks(void) { return 0; }
 #include "../src/progresso.h"
@@ -406,8 +409,40 @@ int main(void) {
     k = desc_titulo_pronto();
     assert(k >= 0 && nMeta() == 0 && pediu("/tv/777/external_ids"));
     assert(!strcmp(cat_item(k)->imdb, "tt0000998") && cat_item(k)->tmdb == 777);
-    assert(!strcmp(cat_item(k)->tipo, "series") && !strcmp(cat_item(k)->titulo, "Titulo Z")); }
+    assert(!strcmp(cat_item(k)->tipo, "series") && !strcmp(cat_item(k)->titulo, "Titulo Z"));
+    // #502/#503: o cartaz da lista NAO entra em `backdrop` — com ele la o
+    // detalhe nao marcava arteFixaPoster e ficava com a miniatura w342
+    // esticada para sempre, mesmo depois do /meta trazer o fundo w1280.
+    assert(cat_item(k)->backdrop[0] == 0);
+    assert(!strcmp(cat_item(k)->poster, "https://p.test/z.jpg")); }
   puts("ok  semente tmdb: um pedido (external_ids), titulo pronto sem esperar o /meta");
+
+  // 3b) A semente abre SEM fundo e o /meta completa: o detalhe congela no
+  //     cartaz (arteFixaPoster) e solta quando o w1280 chega — a arte final e
+  //     o fundo grande, nao a miniatura da lista.
+  limparCacheMeta(); nRotas = 0;
+  rota("/movie/778/external_ids", "{\"imdb_id\":\"tt0000996\"}");
+  rota("/meta/movie/tt0000996.json",
+       "{\"meta\":{\"id\":\"tt0000996\",\"type\":\"movie\",\"name\":\"Filme Rec\","
+       "\"poster\":\"https://p.test/rec.jpg\","
+       "\"background\":\"https://image.tmdb.org/t/p/w1280/fundo.jpg\","
+       "\"cast\":[\"Ator R\"],\"videos\":[]}}");
+  nPedidos = 0;
+  desc_pedir_titulo_semente("", 778, "movie", "Filme Rec", "2020",
+                            "https://image.tmdb.org/t/p/w342/rec.jpg");
+  { int k, w = 0;
+    while (desc_titulo_buscando() && w++ < 500) usleep(10 * 1000);
+    k = desc_titulo_pronto();
+    assert(k >= 0);
+    assert(!strcmp(cat_item(k)->poster, "https://image.tmdb.org/t/p/w342/rec.jpg"));
+    assert(cat_item(k)->backdrop[0] == 0);   // sem fundo: cartaz como arte contida
+    // O que a abertura faz (app.c): a ficha chega e publica o fundo w1280.
+    nPedidos = 0; epItem = k; fioEpVivo = 1; pendItem = -1;
+    buscarEps(NULL);
+    assert(!strcmp(cat_item(k)->backdrop,
+                  "https://image.tmdb.org/t/p/w1280/fundo.jpg"));
+    assert(!strcmp(cat_item(k)->backdrop, cat_item(k)->backdropCatalogo)); }
+  puts("ok  semente sem fundo: o /meta traz o w1280 e o detalhe solta o cartaz");
 
   // 4) Sem cartaz ou sem nome nao ha semente: caminho de sempre.
   limparCacheMeta(); nRotas = 0; nPedidos = 0;

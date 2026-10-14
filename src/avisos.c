@@ -546,7 +546,7 @@ static void *enviarRegistro(void *u) {
   { char url[300];
     Uint32 t0 = SDL_GetTicks();
     snprintf(url, sizeof url, "%s/v1/registro", NV_REC_URL);
-    resp = rede_postar_st(url, 30, cab, corpo, &status);
+    resp = rede_postar_repetindo(url, 30, cab, corpo, &status, 3);
     if (automatico && status >= 200 && status < 300) ultimoHashAuto = hAuto;
     if (!automatico) {
       char id[32], cod[8] = "";

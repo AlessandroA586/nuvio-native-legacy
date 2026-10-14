@@ -139,7 +139,17 @@ int  detail_pediu_do_inicio(void);
 // seja caixa 96..735 x 247..660 — 640x414. O card seguinte comeca em x=767.
 #define NV_DETP_EP_W         640.0f
 #define NV_DETP_EP_H         414.0f   // a caixa E a miniatura: o texto fica dentro
-#define NV_DETP_EP_PASSO     672.0f   // 767 - 96 = 671, arredondado para 640+32
+// MARGEM entre os cards da fileira (#205, dono: "dar uma margem entre as
+// listas de episodios"): o passo e o card MAIS este vao. Entrar no passo e nao
+// no card mantem a caixa medida intacta e faz o vao acompanhar a escala dos
+// tres tamanhos da Moderna (e vale tambem para o layout Apple, de card fixo).
+#define NV_DETP_EP_GAP       48.0f
+#define NV_DETP_EP_PASSO     (NV_DETP_EP_W + NV_DETP_EP_GAP)
+// PRATO DE FOCO estilo Apple TV (#205): placa cinza-claro translucida atras
+// do card inteiro, que nasce com a mola do foco (alpha ate ~14% de branco) e
+// cresce 3% a partir do centro. FORA das medidas do card: sobra na fileira.
+#define NV_DETP_EP_PLACA_PAD 18.0f    // a placa respira alem da caixa do card
+#define NV_DETP_EP_PLACA_A   0.14f    // teto do branco translucido (12%~16%)
 #define NV_DETP_EP_THUMB_H   414.0f
 #define NV_DETP_EP_RAIO       32.0f
 #define NV_DETP_EP_PAD        32.0f   // margem do texto dentro da miniatura
@@ -166,6 +176,33 @@ int  detail_pediu_do_inicio(void);
 #define NV_DETP_EP_ICONE      28.0f
 #define NV_DETP_EP_BARRA_Y   390.0f   // barra 576x8, raio 999
 #define NV_DETP_EP_BARRA_H     8.0f
+// MODERNA: titulo e sinopse ficam ABAIXO da miniatura (16:9), nao sobre ela. Na
+// miniatura sobram o selo, o rodape de duracao/notas/data, a barra e o visto.
+//
+// #205 (dono): TRES TAMANHOS de card (Pequeno / Medio / Grande, no Ajustes)
+// e a sinopse passa a ter 4 linhas. Nenhuma destas medidas e mais fixa: as que
+// sao GEOMETRIA do card (largura, passo e miniatura) saem multiplicadas pela
+// escala de epEscala() em detail.c — o texto nao escala, as fontes sao as de
+// sempre. Por isso nao ha mais NV_DETP_EPM_H: epCardH() monta miniatura +
+// bloco de texto (titulo + 4 linhas de sinopse).
+#define NV_DETP_EPM_THUMB_H  360.0f   // do tamanho Medio: a base da escala
+// Selo "EPISODIO n": a BASE na mesma altura da base do selo Assistido
+// (dono, #205: "a base do episodio na mesma altura do watched"). O selo
+// Assistido e fixo no canto da miniatura (NV_DETP_EP_VISTO_*), entao o do
+// numero desce 2 px para as duas bases cairem juntas — e nao escala com o
+// tamanho do card, senao a base andava junto com a miniatura e nao com o
+// Assistido.
+#define NV_DETP_EPM_SELO_Y    26.0f   // 26+38 = 18+46: bases alinhadas
+#define NV_DETP_EPM_META_DY   70.0f   // da base da miniatura ao rodape de duracao
+#define NV_DETP_EPM_BARRA_DY  24.0f   // da base da miniatura a barra de progresso
+#define NV_DETP_EPM_TIT_DY    16.0f   // base da miniatura ao topo do titulo
+#define NV_DETP_EPM_SIN_DY    62.0f   // base da miniatura ao topo da sinopse
+#define NV_DETP_EPM_SIN_LINHAS 4      // #205: eram 2; o dono pediu 4
+// Selo "Assistido": disco de check no canto superior direito da miniatura.
+// Medido no card de sempre; fixo nos tres tamanhos (nao escala), porque e
+// ele quem ancora a base do selo do numero.
+#define NV_DETP_EP_VISTO_Y    18.0f
+#define NV_DETP_EP_VISTO_H    46.0f
 #define NV_DETP_EP_STATUS     48.0f   // circulo tracejado de "nao assistido"
 // Anel de foco. O web usa 2px na miniatura do episodio e 4px nos botoes do
 // hero; aqui fica 4 nos dois, porque a folha declara pixels de CSS e a tela

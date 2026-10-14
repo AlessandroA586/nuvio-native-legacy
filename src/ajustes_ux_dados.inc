@@ -173,6 +173,7 @@ static const char *uxSinonimos(int op) {
     case AJ_PROPORCAO_PADRAO: return "proporcao padrao aspecto aspect ratio zoom original recortar esticar preencher cinema tarja barras pretas formato tela tamanho imagem player";
     case AJ_HDR_UI: return "brilho interface hdr dolby vision dv branco esbranquicado leitoso vidro cor player legenda";
     case AJ_BRILHO_PLAYER: return "brilho interface player controles barra escurecer forte claro oled hdr osd luz";
+    case AJ_DICASCONTROLE: return "controle dicas atalhos remote tips CH+ CH- toque";
     case AJ_NOVIDADES20: return "novidades novo versao 2.0 tour guia o que mudou mudancas whats new";
     case AJ_DTS_AC3: return "dts convertido ac3 aac dolby digital 5.1 surround estereo audio som barra de som receiver arc earc conversao lg converted stereo";
     case AJ_PS_CONTINUAR: return "continuar escolha perfil cartao card tela abertura inicial assistindo retomar remover esconder desligar quem esta assistindo continue watching profile picker";
@@ -180,8 +181,12 @@ static const char *uxSinonimos(int op) {
     case AJ_CW_RETIDO_TAMBEM: return "continuar assistindo tambem ilha retomar agora fileira duplicar repetir aparecer dois lugares titulo continue watching also island resume";
     case AJ_HIST_CONTA: return "historico historico vistos progresso conta nuvio enviar scrobble simkl trakt perfil sincronizar sync history watched";
     case AJ_SOCIAL: return "social amigos amigo atividade recomendar recomendacoes friends activity recommend presenca desligar remover";
+    case AJ_ABAS_ESTILO: return "abas estilo colecao streaming chips menu suspenso dropdown barra central paginas carrossel tabs style collection pages carousel";
     case AJ_LEG_CONTORNO_COR: return "legenda contorno sombra borda cor preto branco cinza outline edge shadow subtitle color";
     case AJ_MENU_TOPO: return "menu barra topo alto cima lateral esquerda rail posicao navegacao top bar toolbar sidebar left position";
+    case AJ_EP_TAMANHO: return "tamanho episodio cards cartao moderno pequeno medio grande serie episode card size small medium large";
+    case AJ_ABERTURA_ADDON: return "addon add-on provedor fonte nome abertura cinema tela carregando tentativa provider name opening source";
+    case AJ_ABERTURA_FUNDO: return "fundo arte backdrop imagem titulo abertura cinema tela carregando desligado nitida borrada desfocada preto opening backdrop blurred sharp off";
     case AJ_TELA_ABERTURA: return "tela abertura abrindo carregando loading cinema detalhada fonte play transicao opening source screen";
     case AJ_PLR_CLASSIF: return "classificacao indicativa idade faixa etaria 16 12 18 livre guia parental avisos violencia nudez player content rating age parental guide";
     case AJ_APOIAR: return "apoiar apoio doar doacao patreon kofi ko-fi cafe contribuir ajudar projeto qr support donate";
@@ -191,6 +196,7 @@ static const char *uxSinonimos(int op) {
     case AJ_ENQUETES: return "enquete enquetes votacao votar pesquisa opiniao notificacao notificacoes aviso convite ilha relogio poll";
     case AJ_LEG_LINGUA2: return "idioma legenda secundaria segunda dupla dual second subtitle subtitles";
     case AJ_TRAILER_ZOOM_TPK: return "trailer zoom barras pretas tarja ampliar recorte tela preta samsung experimental";
+    case AJ_TECLADO_ANDROID: return "teclado android app grade ime sistema digitar keyboard virtual tela";
     case AJ_MIC_BUSCA: return "microfone mic voz falar ditar ditado busca buscar teclado samsung controle remoto voice";
     case AJ_FONTE_ORDEM: case AJ_FONTE_ORDEM_USO:
       return "ordem ordenar subir descer prioridade add-on addon plugin primeiro desempate estrita auto-play autoplay automatico order priority tie strict";
@@ -214,9 +220,12 @@ static const char *uxSinonimos(int op) {
       return "falha erro provedor debrid addon add-on trocar ordem prioridade limite links timeout failover fallback retry";
     case AJ_FONTE_ORDEM_ADDON: return "ordem fontes qualidade addon aiostreams resolucao tamanho instalacao source order quality";
     case AJ_P2P_LIMITE: return "limite espaco p2p torrent armazenamento disco cheio memoria buffer cache tamanho maximo gb space limit storage full";
+    case AJ_ESTAT_TAMANHO: return "estatisticas ao vivo stats nerds tamanho completo compacto minimo pequeno linha canto fixar velocidade buffer painel live statistics size full compact minimal";
+    case AJ_ESTAT_LADO: return "estatisticas ao vivo stats nerds lado direita esquerda direito esquerdo posicao painel live statistics side left right position";
     case AJ_BUFFER: return "buffer tamanho memoria pequeno medio grande travando carregando rede instavel stats nerds";
     case AJ_CACHE_SEEK: return "cache seek buffer disco armazenamento voltar avancar travando carregando";
     case AJ_TMDB_IDIOMA: return "idioma metadados titulo sinopse traducao tmdb";
+    case AJ_HERO_GENERO: return "genero destaque hero logo titulo categoria esconder mostrar card genre";
     case AJ_HERO_TRAILER: return "trailer trailers destaque topo hero autoplay automatico";
     case AJ_FOCO_TRAILER: return "trailer trailers cartaz poster foco autoplay";
     case AJ_DET_TRAILER_AUTO: return "trailer trailers pagina titulo detalhes autoplay automatico";
@@ -254,6 +263,7 @@ static const char *uxCaminhoAntigo(int op) {
     case AJ_ADDONS: case AJ_PLUGINS: case AJ_ADDONS_PRINCIPAL:
       return "Contas e serviços";
     case AJ_DEBRID_RD: case AJ_DEBRID_TB: case AJ_DEBRID_PM: case AJ_DEBRID_AD: case AJ_DEBRID_AD_TESTAR:
+    case AJ_DEBRID_RD_TESTAR: case AJ_DEBRID_TB_TESTAR: case AJ_DEBRID_PM_TESTAR:
     case AJ_MDB_CHAVE: case AJ_FANART_CHAVE:
       return "Chaves";
     case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: case AJ_P2P_LIMITE:

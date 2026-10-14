@@ -63,10 +63,11 @@ static int escolhendoCor, focoCor;   // o seletor da cor de destaque (so os 18 f
 static int foco;                // botao em foco; == nBotoes e "Editar atalhos"
 static int focoEd;              // item do catalogo em foco na edicao
 static float rolaEd;            // rolagem da lista de edicao (px)
+static float rolaBotoes, quadroDt;
 #ifdef NV_TOUCH_UI
 static ToqueRolagem toqueCentral;
 static int toqueCentralRolar(const PonteiroRolagem *e) {
-  if (!aberta || !editando) return 0;
+  if (!aberta || escolhendoCor) return 0;
   return toquerol_evento(&toqueCentral, e);
 }
 #endif
@@ -81,6 +82,9 @@ static Uint32 avisoAte;
 static ChSegura chs;
 static SDL_Event chDown;        // o KEYDOWN guardado para reentregar
 static int chLogado;
+static Uint32 chAbriuT;         // hold completion blends into island growth
+static Uint32 chCancelaT;       // silence-ended short press retracts from here
+static float chCancelaP;
 
 // --- A LISTA DO PERFIL -------------------------------------------------------
 static void nomeArquivo(char *d, size_t n) { snprintf(d, n, "central-p%d.txt", perfis_ativo()); }
@@ -148,6 +152,10 @@ void central_abrir(void) {
   editando = 0;
   escolhendoCor = 0;
   foco = 0;
+  rolaBotoes = 0;
+#ifdef NV_TOUCH_UI
+  toquerol_limpar(&toqueCentral);
+#endif
   aviso[0] = 0;
   printf("[central] aberta (%d atalhos)\n", botoes(NULL, NULL));
   fflush(stdout);
@@ -278,7 +286,8 @@ static float altura(int comFaixa);
 // sozinha chamando o corpo com o alfa caindo. Mudou a altura (botao posto ou
 // tirado, edicao): a ilha anda ate a nova na mola dela.
 void central_atualizar(float dt, Uint32 agora) {
-  (void)dt; (void)agora;
+  (void)agora;
+  quadroDt = anim_clamp(dt, 0, 0.05f);
   if (!aberta) return;
   carregar();
   if (!player_aberto()) ilha_corpo(CC_W, altura(1), corpo, NULL);
@@ -299,12 +308,56 @@ void central_desenhar(Uint32 agora) {
     p.aberta = 1;
     p.modal = 1;
     p.ancoraTopo = 1;
+    p.insetEsq = CC_PAD;
+    p.tituloLeve = 1;
     plrilha_pedir(&p);
   }
 }
 
 // --- A TECLA CH+ ---------------------------------------------------------------
 int central_tecla_ocupada(void) { return chs_ocupado(&chs); }
+
+// Read the same clock that decides the hold: feedback adds no opening delay.
+static float segurarFracao(Uint32 t) {
+  return anim_clamp((float)(t - chs.t0) / (float)CHS_SEGURAR_MS, 0.0f, 1.0f);
+}
+static void segurarAbrir(Uint32 t) {
+  chAbriuT = t ? t : 1;
+  chCancelaP = 0.0f;
+  central_abrir();
+}
+
+float central_segurar_progresso(Uint32 agora) {
+  float f;
+  if (chs.estado == CHS_APERTADO) {
+    if (!chs.solto) return segurarFracao(agora);
+    if (anim_politica_reduzida) return 0.0f;
+    f = (float)(agora - chs.tSolta) / (float)CHS_EMENDA_MS;
+    return segurarFracao(chs.tSolta) * (1.0f - anim_suave(f));
+  }
+  // At the threshold, fade the completed fill as the existing island grows.
+  if (chs.estado == CHS_SEGURADO && aberta && chAbriuT) {
+    if (anim_politica_reduzida) return agora == chAbriuT ? 1.0f : 0.0f;
+    f = (float)(agora - chAbriuT) / (float)CHS_EMENDA_MS;
+    return 1.0f - anim_suave(f);
+  }
+  if (chs.estado == CHS_LIVRE && chCancelaP > 0.0f && !anim_politica_reduzida) {
+    f = (float)(agora - chCancelaT) / (float)CHS_EMENDA_MS;
+    if (f >= 1.0f) { chCancelaP = 0.0f; return 0.0f; }
+    return chCancelaP * (1.0f - anim_suave(f));
+  }
+  return 0.0f;
+}
+
+// Both clock islands draw the fill before their text, within their own scale.
+void central_segurar_desenhar(GfxRect r, float raio, float a, Uint32 agora) {
+  float p = central_segurar_progresso(agora), cr, cg, cb;
+  if (p <= 0.0f || a <= 0.0f) return;
+  ajustes_acento(&cr, &cg, &cb);
+  gfx_recorte(r.x, r.y, r.w * p, r.h);
+  gfx_cor(r, raio, cr, cg, cb, a);
+  gfx_sem_recorte();
+}
 
 int central_tecla(const SDL_Event *e, int pode) {
   Uint32 t;
@@ -313,7 +366,7 @@ int central_tecla(const SDL_Event *e, int pode) {
   if (!chs_ocupado(&chs) && (!pode || e->type == SDL_KEYUP)) return 0;
   t = e->key.timestamp ? e->key.timestamp : SDL_GetTicks();
   if (e->type == SDL_KEYDOWN) {
-    if (!chs_ocupado(&chs)) chDown = *e;
+    if (!chs_ocupado(&chs)) { chDown = *e; chCancelaP = 0.0f; chAbriuT = 0; }
     r = chs_desce(&chs, t);
   } else {
     // Uma linha so por sessao: quanto o CH+ deste controle leva entre descer e
@@ -325,28 +378,27 @@ int central_tecla(const SDL_Event *e, int pode) {
     }
     chs_sobe(&chs, t);
   }
-  if (r == CHS_LONGO) central_abrir();
+  if (r == CHS_LONGO) segurarAbrir(t);
   return 1;
 }
 
 void central_tecla_quadro(Uint32 agora, void (*entregar)(SDL_Event *e)) {
   int r;
+  float p;
   if (!chs_ocupado(&chs)) return;
+  p = central_segurar_progresso(agora);
   r = chs_quadro(&chs, agora);
-  if (r == CHS_LONGO) central_abrir();
-  else if (r == CHS_CURTO && entregar) {
-    SDL_Event d = chDown, u = chDown;
-    u.type = SDL_KEYUP;
-    u.key.state = SDL_RELEASED;
-    entregar(&d);
-    entregar(&u);
-  }
-  // SEGURANDO: a barra na ilha, como o "Segure para opcoes" do OK (detail.c).
-  // Os primeiros 150 ms nao contam: e um toque. Aos 600 ms a pilula ja e a
-  // central (a atividade para de ser renovada e sai sozinha).
-  if (!aberta && chs.estado == CHS_APERTADO && !chs.solto && agora - chs.t0 >= 150u) {
-    float p = (float)(agora - chs.t0 - 150u) / (float)(CHS_SEGURAR_MS - 150u);
-    ilha_atividade(i18n("Segure para abrir a central"), p > 1.0f ? 1.0f : p);
+  if (r == CHS_LONGO) segurarAbrir(agora);
+  else if (r == CHS_CURTO) {
+    // Without a valid KEYUP, retract on silence while delivering the original tap.
+    if (p > 0.0f) { chCancelaP = p; chCancelaT = agora ? agora : 1; }
+    if (entregar) {
+      SDL_Event d = chDown, u = chDown;
+      u.type = SDL_KEYUP;
+      u.key.state = SDL_RELEASED;
+      entregar(&d);
+      entregar(&u);
+    }
   }
 }
 
@@ -520,13 +572,36 @@ static void botao(GfxRect r, const char *icone, const char *rot, const char *val
   txt_desenhar_alpha(l, r.x + 14.0f, y - (float)l.h, a);
 }
 
-static void desenhaBotoes(float x, float y, float w, float a) {
+// Center smoothly, while keeping the entire focused tile inside the viewport.
+static float rolagemBotoes(float h) {
+  float passo = CC_BOTAO_H + CC_GAP;
+  float top = (float)(foco / CC_COLS) * passo;
+  float maxR = fmaxf(0, (float)linhasBotoes() * passo - CC_GAP - h);
+  float alvo = anim_clamp(top - (h - CC_BOTAO_H) * 0.5f, 0, maxR);
+  float r = anim_mola(rolaBotoes, alvo, quadroDt, 12.0f);
+  return anim_clamp(r, fmaxf(0, top + CC_BOTAO_H - h), fminf(top, maxR));
+}
+
+static void desenhaBotoes(float x, float y, float w, float h, float a) {
   int op[CENTRAL_MAX + 1], item[CENTRAL_MAX + 1], n = botoes(op, item), i;
   float bw = (w - CC_GAP * (CC_COLS - 1)) / CC_COLS;
+  float scroll = 0;
   if (foco > n) foco = n;
+  if (!previa) {
+#ifdef NV_TOUCH_UI
+    float maxR = fmaxf(0, (float)linhasBotoes() * (CC_BOTAO_H + CC_GAP) - CC_GAP - h);
+    toquerol_vincular(&toqueCentral, (GfxRect){x, y, w, h}, gfx_escala(), 0, maxR, 1, &rolaBotoes);
+    if (aberta && a > 0.5f) ponteiro_rolagem(toqueCentralRolar);
+    if (!toqueCentral.livre)
+#endif
+    rolaBotoes = rolagemBotoes(h);
+    scroll = rolaBotoes;
+  }
+  gfx_recorte(x - 8.0f, y - 6.0f, w + 16.0f, h + 12.0f);
   for (i = 0; i <= n; i++) {
-    GfxRect r = { x + (float)(i % CC_COLS) * (bw + CC_GAP), y + (float)(i / CC_COLS) * (CC_BOTAO_H + CC_GAP),
+    GfxRect r = { x + (float)(i % CC_COLS) * (bw + CC_GAP), y + (float)(i / CC_COLS) * (CC_BOTAO_H + CC_GAP) - scroll,
                   bw, CC_BOTAO_H };
+    if (r.y + r.h < y || r.y > y + h) continue;
     if (i < n && op[i] == CC_OP_ESTAT) botao(r, "aj_gauge", "Estatísticas", "", -1, i == foco, a);
     else if (i < n) {
       const CentralItem *c = central_catalogo(item[i]);
@@ -539,8 +614,10 @@ static void desenhaBotoes(float x, float y, float w, float a) {
         gfx_cor((GfxRect){ r.x + r.w - 14.0f - 14.0f, r.y + 16.0f, 14.0f, 14.0f }, 0.5f, cr, cg, cb, a);
       }
     } else botao(r, "aj_sliders-horizontal", "Editar", "", 0, i == foco, a);
-    if (aberta && a > 0.5f && ponteiro_ativo()) ponteiro_alvo(r.x, r.y, r.w, r.h, ptFoco, ptOk, i, 0);
+    if (aberta && a > 0.5f && ponteiro_ativo())
+      ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, y, y + h, ptFoco, ptOk, i, 0);
   }
+  gfx_sem_recorte();
 }
 
 // O SELETOR: 2 fileiras de 9 discos (claros em cima, profundos embaixo, a
@@ -660,7 +737,7 @@ static void corpo(GfxRect r, float a, void *u) {
     char t[24];
     float kw = ajustes_ui_kicker(i18n("Editar atalhos"), cx, yc - 8.0f, a);
     float base = r.y + r.h - CC_PAD - CC_DICAS_H;
-    snprintf(t, sizeof t, "%d / %d", lista.n, CENTRAL_MAX);
+    snprintf(t, sizeof t, "%d / %d", botoes(NULL, NULL) - temEstat(), ofertas((int[CENTRAL_MAX]){0}));
     { TxtLinha l = txt_linha(TXT_ILHA_HORA, t, 243, 242, 239, 255);
       txt_desenhar_alpha(l, cx + kw + 12.0f, yc - (float)l.h * 0.5f, 0.55f * a); }
     desenhaEdicao(cx, y, cw, base - 14.0f - y, a);
@@ -680,7 +757,7 @@ static void corpo(GfxRect r, float a, void *u) {
       cartaoTocando((GfxRect){ cx, y, cw, CC_TOC_H }, tit, meta, a);
       y += CC_TOC_H + 10.0f;
     } }
-  desenhaBotoes(cx, y, cw, a);
+  desenhaBotoes(cx, y, cw, fmaxf(CC_BOTAO_H, r.y + r.h - CC_PAD - 6.0f - y), a);
   // Falha ao gravar: some sozinha; mora na faixa de cima, no lugar da linha.
   if (!previa && aviso[0] && (Sint32)(avisoAte - agora) > 0) {
     TxtLinha l = txt_linha_corta(TXT_ILHA_HORA, aviso, 240, 184, 107, 255, cw);

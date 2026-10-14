@@ -1006,9 +1006,9 @@ static void abrirTecladoSis(void) {
 }
 static void ditar(void) { if (ditadoDisponivel()) st_voz_iniciar(ST_SPOT); }
 
-// OK no campo: o teclado do sistema onde ha; senao o do app, com o foco nele.
+// OK no campo: respeita "Do app" no Android; senao usa o sistema onde ha.
 static void okCampo(void) {
-  if (imeDisponivel()) { abrirTecladoSis(); return; }
+  if (imeDisponivel() && !(st_abre_sozinho() && ajustes_teclado_android() == 1)) { abrirTecladoSis(); return; }
   kbAberto = 1;
   painel = P_TECLADO;
   if (kbF > kbFil) kbF = 0;
@@ -1083,7 +1083,18 @@ static void spotAbrirBase(int voz, int tecladoAuto) {
 #endif
   fflush(stdout);
   if (voz && ditadoDisponivel()) { painel = P_MIC; ditar(); }
-  else if (tecladoAuto && imeDisponivel() && (st_abre_sozinho() || spTelefone())) abrirTecladoSis();
+  else if (tecladoAuto && imeDisponivel() && !(st_abre_sozinho() && ajustes_teclado_android() == 1) &&
+           (st_abre_sozinho() || spTelefone())) abrirTecladoSis();
+}
+
+// Abre a caixa SEM pedir o teclado do sistema: e a abertura que a
+// demonstracao das Dicas do controle usa (dicascontrole.c), onde o IME do
+// Android tomaria o foco e cobriria a apresentacao.
+void spot_abrir_demo(void) {
+  modoAjustes = 0;
+  modoGuia = 0;
+  retornoAjustesValido = 0;
+  spotAbrirBase(0, 0);
 }
 
 void spot_abrir_guia(void) {
@@ -1342,7 +1353,8 @@ void spot_evento(const SDL_Event *e) {
     spot_fechar();
     return;
   }
-  if (k == SPOT_TECLA_ABRIR || e->key.keysym.scancode == NV_SCANCODE_YELLOW) {
+  if (k == SPOT_TECLA_ABRIR || e->key.keysym.scancode == NV_SCANCODE_YELLOW ||
+      e->key.keysym.scancode == NV_SCANCODE_CH_DOWN) {
     registrar(); spot_fechar(); return;
   }
   // VOLTAR desfaz na ordem inversa (ver o topo).

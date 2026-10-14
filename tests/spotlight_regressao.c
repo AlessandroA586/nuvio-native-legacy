@@ -317,6 +317,13 @@ int main(void) {
     check(presente, "#405: exato do 7o alvo presente entre 84 titulos distintos");
     check(!strcmp(topoId(), "tt14688458"), "#405: exato do 7o alvo ranqueado em primeiro"); }
 
+  // CH− da LG (481 cru) fecha o Spotlight, como a AMARELA.
+  { aberto = 1;
+    SDL_Event ch = {0}; ch.type = SDL_KEYDOWN;
+    ch.key.keysym.scancode = (SDL_Scancode)NV_SCANCODE_CH_DOWN;
+    spot_evento(&ch);
+    check(!spot_aberto(), "CH− (481) fecha o Spotlight"); }
+
   printf("RESULTADO: %d falhas\n", falhas);
   return falhas ? 1 : 0;
 }

@@ -156,7 +156,7 @@
   0,                /* posteres personalizados: DESLIGADO (indice 0) */
   0, 0, 0, 0, 0, 0,/* endereco, token, parametros, chave, modelo, testar: acoes */
   0,                /* layout da home: Moderna (a de sempre) */
-  0, 0, 0, 0, 0,    /* chaves de debrid (AllDebrid, testar, RD, TB, PM): acoes */
+  0, 0, 0, 0, 0, 0, 0, 0, /* chaves e testes de debrid: acoes */
   1,                /* usar sempre o Cinemeta: DESLIGADO (V_LIGA: 1 = Desligado) -> catalogo primeiro */
   // Notas na linha do titulo: de fabrica so o que a linha ja mostrava antes de
   // existir a escolha (IMDb, Rotten Tomatoes, Trakt). V_LIGA: 0 = Ligado.
@@ -196,7 +196,7 @@
   0,                /* medidor de desempenho: DESLIGADO (V_MEDIDOR: 0 = Desligado) */
   0,                /* guia de uso: acao */
   0, 0, 0,          /* pacote de selos (espelho de selospacote_ativo), adicionar e remover: o embutido */
-  0,                /* tamanho da interface: 100%, o de sempre */
+  UI_SIZE_AUTO,     /* Untouched interface size follows the physical panel. */
   2,                /* fundo: Frost desde a 2.0 (FUNDO_FROST; dono, 05/10/2026) */
   2,                /* opacidade do vidro: 78%, a de sempre */
   0,                /* vidro fosco: desligado */
@@ -239,7 +239,11 @@
   0, /* default aspect ratio: Ultimo usado */
   1, /* also in Continue watching (2.0.2): Desligado (V_LIGA: 1 = Desligado) = one title, one place */
   0, /* continue on the profile picker (#303): Ligado (V_LIGA: 0 = Ligado) = as before */
+#ifdef NV_TPK
+  1, /* DTS converted to: 5.1 (Dolby Digital) on the Samsung .tpk (design rule 3) */
+#else
   0, /* DTS converted to: Estereo (AAC) = the proven path */
+#endif
   1, /* Dolby Vision in MKV (2.0.2, experimental): Desligado */
   0, /* send history to the Nuvio account (2.0.2, per profile): Ligado */
   0, /* social features (2.0.2, per profile): Ligado */
@@ -267,7 +271,19 @@
   0, /* interface mode: TV, including on phones until Mobile is selected */
   0, /* Mic button in search (.tpk): Automatico, local */
   0, /* menu position (#461): Na lateral, the rail as always */
+  0, /* collection tabs style (#205): Chips, as always */
+  0, /* Android keyboard: Automatico, the IME opens by itself as always */
   0, /* subtitle outline colour (#475): Preto, as always */
   1, 0, /* provider failover off; order action */
   3, 3, 3, 3, /* total links per native provider */
   1, 0, 3, /* addon failover off; instance order action; total links */
+  0, /* live statistics size (#338): remember the last one */
+  1, /* hide watched movies (#366): Desligado, per profile on this device */
+  0, /* live statistics side: Direita */
+  0, /* remote tips: action */
+  0, /* show genre under the hero logo: Ligado, as always */
+  1, /* addon name on the Cinema opening (#205): Desligado, local */
+  0, /* curation address (#205): action; the URL lives in curadoria.txt */
+  2, /* opening screen backdrop (#508): Arte borrada, as always, local */
+  0, /* hero synopsis size: Normal, the original 22/30 */
+  1, /* episode card size (#205): Medio, as always */

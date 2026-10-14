@@ -92,10 +92,12 @@ typedef struct {
   // poe estas no fim e o automatico as exclui; a escolha manual avisa que esta
   // baixando. Nao exclui nada: escolhida a dedo, toca como na 1.3.5.
   int  foraCache;
+  int  emCache;        // 1: addon confirma cache; 0: desconhecido (nunca inferir da URL)
   // A SONDA VIU A URL RESPONDER PAGINA (HTML/JSON/texto) e nao video (2.0.2,
   // naovideo.h): linha de aviso do addon. A folha a mostra apagada ("Nao e
   // video") e o automatico a pula. Marcada na verificacao, nunca no parser.
   int  naoVideo;
+  int  notWebReady;     // behaviorHints: so oferecer quando P2P esta ativo
   // PACOTE DE SELOS ATIVO (selospacote.h): os filtros que casaram com esta
   // fonte, calculados UMA vez (quando a lista chega, ou quando o pacote muda;
   // `selosPacoteVer` != selospacote_versao() manda recalcular), nunca no
@@ -138,6 +140,8 @@ void stream_definir_lista_idade(const Stream *lista, int n, Uint32 idade);
 // mesma da lista inteira de antes. Com a folha aberta, o foco fica no mesmo
 // cartao e a rolagem compensa as linhas que entraram acima dele.
 void stream_lista_acrescentar(const Stream *lista, int n, int ordemAddon);
+// No trabalhador, antes de publicar: pode carregar o motor P2P do pacote.
+void stream_preparar_dica_p2p(const Stream *lista, int n);
 // O addon (ordemAddon) de cada fonte, como entrou; 0 na lista inteira.
 int  stream_ordem_addon(int i);
 // A escolha automatica ja pode sair com a lista parcial? Ver
@@ -306,6 +310,9 @@ unsigned stream_lista_geracao(void);
 // Quantos torrents SEM url (so infoHash) ha na lista: os que so o P2P ou o
 // debrid tocam. Serve ao cartao "nenhuma fonte serve" dizer que ha P2P.
 int  stream_qtd_torrents(void);
+// Torrents descartados (sem debrid nem P2P) que o P2P deste pacote tocaria se
+// ligado; 0 com debrid, P2P ligado ou sem P2P no pacote (#486).
+int  stream_torrents_para_p2p(void);
 int  stream_resolver_escolhida(int i, unsigned geracao, char *url, unsigned nu,
                                char *servico, unsigned ns, int *pct);
 

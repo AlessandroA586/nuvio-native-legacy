@@ -4,6 +4,7 @@
 // cursor e estado vazio depois de duas letras. A lista real e assincrona e fica
 // para o teste manual do aparelho; aqui o importante e a casca da interacao.
 #include "busca.h"
+#include "nvtmp.h"
 #include "buscasrec.h"
 #include "dados.h"
 #include "ajustes.h"
@@ -81,7 +82,7 @@ static void capturaEm(const char *nome, Uint32 ms) {
 static void captura(const char *nome) { capturaEm(nome, 0); }
 
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nuvio-busca";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nuvio-busca");
   const char *dir = getenv("NUVIO_DADOS");
   char nome[600];
   SDL_GLContext gl;

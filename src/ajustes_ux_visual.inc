@@ -6,6 +6,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_HERO: return "aj_layout-dashboard";
     case AJ_HERO_CHEIO: return "aj_layout-dashboard";
     case AJ_HERO_CATALOGOS: return "aj_layout-dashboard";
+    case AJ_HERO_GENERO: return "aj_layout-dashboard";
     case AJ_HERO_TRANSICAO: return "aj_layout-dashboard";
     case AJ_FIL_ORDEM: return "aj_rows-3";
     case AJ_FIL_LIMITE: return "aj_rows-3";
@@ -18,6 +19,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_NOME_ADDON: return "aj_rows-3";
     case AJ_SUFIXO_TIPO: return "aj_rows-3";
     case AJ_SELO_VISTO: return "aj_rows-3";
+    case AJ_OCULTAR_FILMES_VISTOS: return "aj_rows-3";
     case AJ_CW_LIGADO: return "aj_rotate-ccw-clock";
     case AJ_CW_OK: return "aj_rotate-ccw-clock";
     case AJ_CW_ESTILO: return "aj_rotate-ccw-clock";
@@ -30,6 +32,11 @@ static const char *ajVisualIcone(int op) {
     case AJ_RAIL_MODERNA: return "aj_panel-left";
     case AJ_RAIL: return "aj_panel-left";
     case AJ_MENU_TOPO: return "aj_panel-top";
+    case AJ_ABAS_ESTILO: return "aj_panel-top";
+    case AJ_TECLADO_ANDROID: return "aj_keyboard";
+    case AJ_FALHA_PROVEDORES: case AJ_FALHA_PROVEDOR_ORDEM: case AJ_FALHA_RD_LIMITE:
+    case AJ_FALHA_TB_LIMITE: case AJ_FALHA_PM_LIMITE: case AJ_FALHA_AD_LIMITE:
+    case AJ_FALHA_ADDONS: case AJ_FALHA_ADDON_ORDEM: case AJ_FALHA_ADDON_LIMITE: return "aj_plug";
     case AJ_MENU_EXPLORAR: return "aj_panel-left";
     case AJ_MENU_GUIA: return "aj_panel-left";
     case AJ_MENU_AGENDA: return "aj_panel-left";
@@ -143,6 +150,11 @@ static const char *ajVisualIcone(int op) {
     case AJ_PAUSA_OVERLAY: return "aj_circle-play";
     case AJ_PLR_CLASSIF: return "aj_shield";
     case AJ_TELA_ABERTURA: return "aj_clapperboard";
+    case AJ_ABERTURA_ADDON: return "aj_clapperboard";
+    case AJ_ABERTURA_FUNDO: return "aj_clapperboard";
+    case AJ_EP_TAMANHO: return "aj_layout-dashboard";
+    case AJ_ESTAT_TAMANHO: return "aj_gauge";
+    case AJ_ESTAT_LADO: return "aj_gauge";
     case AJ_REACAO_CREDITOS: return "aj_circle-play";
     case AJ_CW_CONCLUIDO: return "aj_circle-play";
     case AJ_CW_MINIMO: return "aj_circle-play";
@@ -226,6 +238,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_DEBRID_TB: return "aj_key-round";
     case AJ_DEBRID_PM: return "aj_key-round";
     case AJ_DEBRID_AD: return "aj_key-round";
+    case AJ_DEBRID_RD_TESTAR: case AJ_DEBRID_TB_TESTAR: case AJ_DEBRID_PM_TESTAR:
     case AJ_DEBRID_AD_TESTAR: return "aj_key-round";
     case AJ_MDB_CHAVE: return "aj_key-round";
     case AJ_FANART_CHAVE: return "aj_key-round";
@@ -249,6 +262,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_ESPACO: return "aj_database";
     case AJ_TEX_MB: return "aj_memory-stick";
     case AJ_GUIA: return "aj_book-open";
+    case AJ_DICASCONTROLE: return "aj_circle-dot";
     case AJ_NOVIDADES20: return "aj_sparkles";
     case AJ_APOIAR: return "aj_heart";
     case AJ_VERSAO_I: return "aj_info";
@@ -297,7 +311,7 @@ static TxtEstilo ajEstiloPxS(float px, int forte) { return ajEstiloPx(px < 6.0f 
 static const signed char AJ_ARTE_SEC[AJS_N + 1][AJ_ARTE_BLOCOS] = {
   { 18,  7, 22, 32,  7, 18, 19, -1, -1 },   // Reproducao: Imagem e som, Escolha da fonte, Durante e depois, Miniatura; Mais: fonte, som e video, P2P
   { 21, 24, 21, -1, -1, -1, -1, -1, -1 },   // Idiomas e legendas: Idiomas, Segunda legenda; Mais: idiomas
-  {  5, 37, 10, -1, -1, -1, -1, -1, -1 },   // Fontes e addons: Addons, Debrid, Servidores
+  {  5, 28, 37, 10, -1, -1, -1, -1, -1 },   // Fontes e addons: Addons, Falha na reproducao, Debrid, Servidores
   {  2, 14, 14, -1, -1, -1, -1, -1, -1 },   // TV ao vivo: Provedor, Se o canal nao abre; Mais
   { 12,  0, 20,  1, 31, 12,  0, 20,  1 },   // Tela inicial: Estilo, Fileiras, Continuar, Barra lateral, Escolha de perfil; Mais
   {  9, 39, 38,  6, 11,  9, -1, -1, -1 },   // Aparencia: Cores e vidro, Logo e abertura, Texto e tamanho, Movimento e relogio, Tela de descanso; Mais

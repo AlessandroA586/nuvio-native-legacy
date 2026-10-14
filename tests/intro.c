@@ -28,7 +28,8 @@
 // (intro_definir_buscador) por um que serve as respostas GRAVADAS de
 // tests/fixtures. Os dois simbolos abaixo so existem para linkar.
 #include "../src/rede.h"
-static char dadosTeste[]="/tmp/nuvio-intro-XXXXXX";
+#include "nvtmp.h"
+static char dadosTeste[NVT_MAX];
 const char *dados_dir(void){return dadosTeste;}
 void dados_fs_travar(void){}
 void dados_fs_liberar(void){}
@@ -150,7 +151,7 @@ static int mesmoSeg(double a, double esperado) {
 int main(int argc,char **argv) {
   IntroTrecho v[8];
   int n;
-  assert(mkdtemp(dadosTeste));
+  nvt_set(dadosTeste, sizeof dadosTeste, "/nuvio-intro-XXXXXX"); assert(mkdtemp(dadosTeste));
   if(argc==2){ // Medicao reproduzivel com captura real, sem buffer da lista.
     fribbFonte=argv[1];intro_definir_buscador(fakeBuscar);
     intro_registrar_tmdb("tt5607616",65942,"{\"genres\":[{\"id\":16}],\"original_language\":\"ja\"}");

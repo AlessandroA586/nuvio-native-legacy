@@ -16,6 +16,7 @@
 // atalho mais rapido do controle abriria vazio por ~20 s toda vez que a TV
 // liga, que e justamente quando alguem aperta.
 #include "salvospainel.h"
+#include "home.h"
 #include "cwretido.h"
 #include "salvos.h"
 #include "salvosorg.h"
@@ -4830,7 +4831,7 @@ void spainel_fundo(int podeParar, unsigned rev, void (*fundo)(void *), void *ctx
   }
   if (parado && !pronto && !motivo[0]) motivo = "abertura";
   veuNoFundo = parado;
-  if (parado && pronto) { gfx_snap_desenhar(); return; }
+  if (parado && pronto) { home_fileiras_vistas(SDL_GetTicks()); gfx_snap_desenhar(); return; }
   if (parado) {
     gfx_snap_comecar();
     gfx_sem_recorte();
