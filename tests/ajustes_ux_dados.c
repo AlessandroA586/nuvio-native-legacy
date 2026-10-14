@@ -219,10 +219,19 @@ static void bloqueadosESegredos(void) {
   char texto[160];
   valor[AJ_HERO_TRAILER] = 1;
   valor[AJ_TMDB_LIGADO] = 1;
+  /* #509: "Som do trailer" vale para todo trailer; sem NENHUM automatico
+     ligado ele fica bloqueado (inativa). */
+  valor[AJ_DET_TRAILER_AUTO] = 1;
+  valor[AJ_FOCO_TRAILER] = AJ_TRAILER_CARTAZ_DESLIGADO;
   memcpy(copia, valor, sizeof copia);
-  n = ajustes_buscar("som do trailer no destaque", resultados, AJ_N);
+  n = ajustes_buscar("som do trailer", resultados, AJ_N);
   i = indiceResultado(AJ_HERO_TRAILER_SOM, n);
   assert(i >= 0 && resultados[i].bloqueado);
+  valor[AJ_DET_TRAILER_AUTO] = 0;
+  n = ajustes_buscar("som do trailer", resultados, AJ_N);
+  i = indiceResultado(AJ_HERO_TRAILER_SOM, n);
+  assert(i >= 0 && !resultados[i].bloqueado);
+  valor[AJ_DET_TRAILER_AUTO] = 1;
   assert(strstr(resultados[i].caminho, "Cartazes e trailers"));
   n = ajustes_buscar("idioma dos metadados", resultados, AJ_N);
   i = indiceResultado(AJ_TMDB_IDIOMA, n);

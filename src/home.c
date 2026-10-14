@@ -505,7 +505,7 @@ static struct {
 // TRAILER NO DESTAQUE (trailer.h; dono, 20/09/2026: "coloca para tocar no
 // hero tb"). Com o foco parado no hero e a arte assentada, espera o ajuste
 // "Espera do trailer no destaque" (heroTrailerEspera) e troca a arte pelo
-// trailer do titulo, mudo salvo com "Som do trailer no destaque", no mesmo
+// trailer do titulo, mudo salvo com "Som do trailer", no mesmo
 // retangulo. Mover o foco, sair da home ou abrir qualquer coisa por
 // cima (app.c diz, por `topo`) volta para a arte. Uma tentativa por titulo
 // por parada de foco: o trailer que acabou nao recomeca.
@@ -526,9 +526,9 @@ static float  heroTrailerFade = 0.0f;
 // MODO CINEMA no destaque (dono, 29/09/2026: "quando o trailer comecar no hero,
 // deixar ele igual a quando ta no details do titulo: so a arte do titulo
 // embaixo e passando o trailer, e voltar ao normal quando acabar"). A conta e
-// a do detalhe (trailercinema.h). Vale para o trailer do DESTAQUE e para o do
-// cartaz em foco no modo Tela cheia (08/10/2026); no modo No card as fileiras
-// sao o assunto, esconde-las apagaria o cartaz.
+// a do detalhe (trailercinema.h). Vale so para o trailer do DESTAQUE; o do
+// cartaz em foco (Tela cheia e No card) toca com a Home no lugar, como no
+// 2.0.4 (#509) — esconder as fileiras apagaria o cartaz e o resto da home.
 static TrailerCinema heroCinema;
 // TRAILER DENTRO DO CARTAZ EM FOCO (modo "No card" do "Trailer do cartaz em
 // foco", dono 08/10/2026). E o MESMO trailer do destaque — mesma maquina de
@@ -5326,7 +5326,7 @@ static void shotTrailerPasso(int topo, float dt, Uint32 agora, int heroSetting, 
   heroTrailerNoCartao = dest == 1;
   alvo = dest >= 0 ? 1.0f : 0.0f;
   heroTrailerFade = anim_mola(heroTrailerFade, alvo, dt, NV_MOLA_SCROLL);
-  { int toca = topo && dest == 0 && layoutHome() != HOME_LAYOUT_PADRAO;
+  { int toca = topo && dest == 0 && focoHero && layoutHome() != HOME_LAYOUT_PADRAO;
     trailercinema_passo(&heroCinema, toca, dt, ajustes_animacoes_reduzidas()); }
 }
 #endif
@@ -5538,12 +5538,13 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
       heroTrailerFonte = qual==TRF_APPLE?1:2;
       heroTrailerQual = qual;
       heroTrailerPreparandoAte = heroTrailerPrazoPreparacao(agora);
-      // SOM: so no destaque (o do cartaz em foco segue mudo) e so com o
-      // ajuste. Na Samsung (.wgt) trailer_abrir forca mudo de qualquer jeito.
+      // SOM (#509): UM ajuste ("Som do trailer") vale onde quer que o
+      // trailer toca na home — destaque, Tela cheia ou No card. Na Samsung
+      // (.wgt) trailer_abrir forca mudo de qualquer jeito.
       heroTrailerNoCartao = destCartao;
       trailer_no_cartao(destCartao);
       trailer_abrir(u, destCartao ? cartaoVideoRect(cartaoTrailerRect) : heroArteRect,
-                    focoHero && ajustes_trailer_hero_som(), 0);
+                    ajustes_trailer_som(), 0);
       trailer_marcar_dono(TRAILER_DONO_HOME, ci->imdb);
       // trailer_abrir e void por compatibilidade com o player nativo; no
       // browser ainda pode recusar a criacao (canvas ausente). Tratar isso
@@ -5580,16 +5581,16 @@ trailer_hero_fim:
     // O `playing` chegou: este titulo ja teve o seu trailer (ver heroTrailerTocou).
     if (alvo > 0.5f) heroTrailerMarcarTocou(heroTrailerImdb);
     // MODO CINEMA: so com o trailer do DESTAQUE tocando (foco no hero). No do
-    // cartaz em foco as fileiras sao o assunto. Fora do topo zera de vez, senao
-    // a volta de outra tela mostraria um quadro do estado velho.
+    // cartaz em foco as fileiras sao o assunto — Tela cheia (e No card) tocam
+    // com a Home no lugar, como no 2.0.4 (#509: o modo cinema do cartaz, que
+    // sumia com a home, voltou a ser apenas o trailer na arte do destaque).
+    // Fora do topo zera de vez, senao a volta de outra tela mostraria um quadro
+    // do estado velho.
     // O modo cinema tira as fileiras da tela para o trailer ficar inteiro. No
     // Padrao o trailer toca num BANNER e as fileiras sao o assunto da tela:
     // sem cinema, o texto e a arte seguem como estao.
-    // Tela cheia do cartaz em foco (08/10/2026): o mesmo modo cinema do
-    // trailer do destaque — so o nome/logo fica, e "Nao mostrar logo" vale
-    // para os dois. No card, nao: la as fileiras sao o palco.
     { int toca = topo && alvo > 0.5f && !heroTrailerNoCartao &&
-                 (focoHero ? ajustes_trailer_hero() : posterSetting == AJ_TRAILER_CARTAZ_CHEIA) &&
+                 focoHero && ajustes_trailer_hero() &&
                  layoutHome() != HOME_LAYOUT_PADRAO;
       trailercinema_passo(&heroCinema, toca, dt, ajustes_animacoes_reduzidas());
       if (!topo) trailercinema_zerar(&heroCinema); } }

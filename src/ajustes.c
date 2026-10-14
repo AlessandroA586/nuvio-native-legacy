@@ -1333,7 +1333,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Perfil pesquisável",              V_LIGA, 2),
   ACAO("Meu perfil público"),
   ESC("Contorno do vidro",               V_LIGA, 2),   // local: vidroContornoLocal
-  ESC("Som do trailer no destaque",      V_LIGA, 2),   // local: trailerDestaqueSomLocal
+  ESC("Som do trailer",              V_LIGA, 2),   // local: trailerDestaqueSomLocal; #509: vale para todo trailer
   // Em DECIMOS de segundo (0,2 s a 10 s): textoValor escreve "2,2 s".
   NUM("Espera do trailer no destaque",   2, 100, 2, " s"), // local: trailerDestaqueEsperaLocal
   // Era o 90 fixo de montarContinuar/home_registrar_retorno/proximo.h. Local:
@@ -2629,8 +2629,11 @@ void ajustes_trailer_hero_vetar(const char *gpu) {
   printf("[trailer] desligado no hero: %s (Mali-4xx)\n", gpu ? gpu : "?");
 }
 int   ajustes_trailer_hero(void)      { return lig(AJ_HERO_TRAILER) && !SEGURO && !trailerHeroVetado; }
-int   ajustes_trailer_hero_som(void)  { return lig(AJ_HERO_TRAILER_SOM); }
-int   ajustes_trailer_detalhe_som(void) { return lig(AJ_DET_TRAILER_SOM); }
+// #509: UM ajuste de som para TODO trailer que toca sozinho — destaque, cartaz
+// em foco (Tela cheia e No card) e fundo da pagina do titulo. O trailer em
+// tela cheia (botao/OK) tambem segue. Na Samsung (.wgt) trailer_abrir forca
+// mudo de qualquer jeito (trailerfonte_com_som).
+int   ajustes_trailer_som(void)       { return lig(AJ_HERO_TRAILER_SOM); }
 int   ajustes_hero_deslizar(void)     { return valor[AJ_HERO_TRANSICAO] == 0; }
 int   ajustes_poster_addon(void)      { return lig(AJ_ADDON_POSTER); }
 int   ajustes_fundo_addon(void)       { return lig(AJ_ADDON_FUNDO); }
@@ -3528,6 +3531,17 @@ void ajustes_dir(const char *dir) {
     valor[AJ_FOCO_TRAILER] = focoTrailerMigrar(focoAntigo);
     printf("[ajustes] trailer do cartaz em foco: focusedPosterBackdropTrailerEnabled %d -> trailerCartazModo %d\n",
            focoAntigo, valor[AJ_FOCO_TRAILER]);
+  }
+  // #509: "Som do trailer na pagina do titulo" virou o UNICO "Som do trailer".
+  // Quem tinha som na pagina mantem o som: o ajuste unico herda a escolha (uma
+  // vez; a chave velha fica Desligada no arquivo e nao força mais nada).
+  if (lig(AJ_DET_TRAILER_SOM)) {
+    valor[AJ_DET_TRAILER_SOM] = 1;
+    if (!lig(AJ_HERO_TRAILER_SOM)) {
+      valor[AJ_HERO_TRAILER_SOM] = 0;
+      printf("[ajustes] som do trailer: trailerDetalheSomLocal ligado -> Som do trailer ligado\n");
+    }
+    gravar();
   }
   // Escolha manual: "idioma" gravado e SEM a marca de automatico (arquivo de
   // antes da marca, ou de quem escolheu). Sem "idioma" nenhum, nunca houve
@@ -5500,10 +5514,13 @@ static int inativa(int op) {
     case AJ_P2P_LIMITE:  return !p2pmotor_disponivel() || p2pEndereco[0];
     case AJ_DTS_AC3:     return !dtsConversaoExiste();
     // Som: na Samsung (.wgt) o trailer e sempre mudo (trailerfonte_com_som).
+    // #509: UM ajuste para todo trailer; ativo sempre que algum trailer
+    // automatico pode tocar (destaque, cartaz em foco ou pagina do titulo).
     case AJ_HERO_TRAILER_SOM:
-      return !lig(AJ_HERO_TRAILER) || !trailerfonte_com_som(trailerfonte_tizen());
-    case AJ_DET_TRAILER_SOM:
-      return !lig(AJ_DET_TRAILER_AUTO) || !trailerfonte_com_som(trailerfonte_tizen());
+      return !(lig(AJ_HERO_TRAILER) ||
+               valor[AJ_FOCO_TRAILER] != AJ_TRAILER_CARTAZ_DESLIGADO ||
+               lig(AJ_DET_TRAILER_AUTO)) ||
+             !trailerfonte_com_som(trailerfonte_tizen());
     case AJ_HERO_TRAILER_ESPERA: return !lig(AJ_HERO_TRAILER);
     // AJ_FOCO_TRAILER nao depende mais de nada (tres modos, 08/10/2026): a
     // regra do cartaz em pe sem Expandir mora no modo No card (home.c).
@@ -5678,13 +5695,13 @@ static const char *ajudaOpcaoBase(int op) {
         ? "Ative Miniatura do episódio para desfocar a imagem do próximo episódio."
         : "Ative Continuar assistindo para ajustar os cards de retomada.";
     if (op == AJ_EXPANDIR_ATRASO) return "Ative Expandir pôster ao focar para ajustar o tempo de espera.";
-    if (op == AJ_HERO_TRAILER_SOM && lig(AJ_HERO_TRAILER))
-      return "Nesta TV o trailer do destaque toca sempre sem som.";
-    if (op == AJ_DET_TRAILER_SOM && lig(AJ_DET_TRAILER_AUTO))
-      return "Nesta TV o trailer da página do título toca sempre sem som.";
-    if (op == AJ_DET_TRAILER_SOM)
-      return "Ative o trailer automático da página do título para ajustar o som.";
-    if (op == AJ_HERO_TRAILER_SOM || op == AJ_HERO_TRAILER_ESPERA)
+    if (op == AJ_HERO_TRAILER_SOM && !trailerfonte_com_som(trailerfonte_tizen()) &&
+        (lig(AJ_HERO_TRAILER) || valor[AJ_FOCO_TRAILER] != AJ_TRAILER_CARTAZ_DESLIGADO ||
+         lig(AJ_DET_TRAILER_AUTO)))
+      return "Nesta TV o trailer toca sempre sem som.";
+    if (op == AJ_HERO_TRAILER_SOM)
+      return "Ative um trailer automático — destaque, cartaz em foco ou página do título — para ajustar o som.";
+    if (op == AJ_HERO_TRAILER_ESPERA)
       return "Ative Trailer no destaque para ajustar o trailer do topo da Home.";
     if (op > AJ_TMDB_LIGADO && op <= AJ_TMDB_CW)
       return "Ative TMDB para ajustar o que ele enriquece.";
@@ -5789,8 +5806,8 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_HERO_CHEIO: return "O destaque do topo ocupa a tela inteira atrás das fileiras, em vez de ficar num bloco.";
     case AJ_HERO_FUNDO: return "De onde vem a arte de fundo do destaque, da página do título e dos cards deitados: catálogo/Cinemeta, IMDb/Metahub, TMDB, Trakt, Apple TV, fanart.tv (com chave) ou Anime (Kitsu/AniList). Automático usa a do catálogo. MDBList fornece notas, não imagens.";
     case AJ_HERO_ARTE_DIF: return "Desligado: card, destaque e página do título mostram a mesma imagem. Ligado: o card fica com a arte do catálogo e o destaque usa outra foto — TMDB vira outro fundo do TMDB; em Automático, ou se a escolhida repetir o card, usa Apple TV, outro fundo do TMDB, fanart.tv, anime ou Trakt.";
-    case AJ_HERO_TRAILER: return "Com o foco parado no destaque do topo, o trailer do título toca no lugar da arte, sem som a menos que Som do trailer no destaque esteja ligado. Mover o foco volta para a arte.";
-    case AJ_HERO_TRAILER_SOM: return "Ligado: o trailer do destaque do topo toca com som. Desligado: toca sem som.";
+    case AJ_HERO_TRAILER: return "Com o foco parado no destaque do topo, o trailer do título toca no lugar da arte, sem som a menos que Som do trailer esteja ligado. Mover o foco volta para a arte.";
+    case AJ_HERO_TRAILER_SOM: return "Ligado: os trailers que tocam sozinhos — destaque, cartaz em foco e página do título — saem com som. Desligado: tocam sem som.";
     case AJ_DET_TRAILER_SOM: return "Ligado: o trailer que toca sozinho na página do título sai com som. Desligado: toca sem som; OK abre em tela cheia com som.";
     case AJ_HERO_TRAILER_ESPERA: return "Quanto tempo o destaque fica parado num título antes de trocar a arte pelo trailer.";
     case AJ_ADDON_POSTER: return "Com um serviço de pôsteres ligado, o título que veio de um catálogo de addon fica com o pôster que o próprio addon manda, e o serviço só entra nos outros (Continuar assistindo, listas do Trakt, pôster genérico do Cinemeta). Sem o serviço, o pôster já é o do addon.";
@@ -5866,10 +5883,11 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_DET_VEU: return "Quanto a vinheta escura cobre a arte na tela do título. Cem por cento é o padrão; zero mostra a arte limpa — o texto pode ficar difícil de ler sobre cenas claras.";
     case AJ_DET_TRAILER_AUTO:
 #if defined(NV_TPK) && NV_TRAILER_CONTINUA_DETALHE
-      // O trailer do cartaz continua na pagina, com som (detail_abrir).
-      return "Alguns segundos depois de abrir um título, o trailer toca sem som no lugar da arte de fundo. Se o trailer do cartaz já estava tocando, ele continua na página, com som. Rolar a página ou sair dela volta para a arte.";
+      // O trailer do cartaz continua na pagina (detail_abrir), com o som do
+      // mesmo ajuste.
+      return "Alguns segundos depois de abrir um título, o trailer toca no lugar da arte de fundo; o som segue Som do trailer. Se o trailer do cartaz já estava tocando, ele continua na página. Rolar a página ou sair dela volta para a arte.";
 #else
-      return "Alguns segundos depois de abrir um título, o trailer toca sem som no lugar da arte de fundo. Rolar a página ou sair dela volta para a arte.";
+      return "Alguns segundos depois de abrir um título, o trailer toca no lugar da arte de fundo; o som segue Som do trailer. Rolar a página ou sair dela volta para a arte.";
 #endif
     case AJ_TRAILER_QUAL: return "Definição do vídeo do trailer. Máxima usa a maior que existir para o título; as outras são um teto, para conexões mais lentas.";
     case AJ_TRAILER_ASPECTO: return "Quanto o trailer é ampliado para encher a tela. Zoom cinema tira a tarja preta de um trailer de cinema; Original mostra o quadro inteiro, com tarja.";
@@ -5894,7 +5912,7 @@ static const char *ajudaOpcaoBase(int op) {
     // --- Posteres e cards
     case AJ_EXPANDIR: return "O cartaz em foco cresce e abre a arte deitada atrás dele depois de um instante parado.";
     case AJ_EXPANDIR_ATRASO: return "Quanto tempo o foco precisa ficar parado antes de o cartaz expandir.";
-    case AJ_FOCO_TRAILER: return "Com o foco parado num cartaz, o trailer toca sem som depois da espera da expansão. Tela cheia: a Home some e fica só o nome. No card: dentro do cartaz; pôster em pé só com Expandir pôster ao focar.";
+    case AJ_FOCO_TRAILER: return "Com o foco parado num cartaz, o trailer toca no destaque depois da espera da expansão. Tela cheia: no lugar da arte do destaque, com a Home no lugar. No card: dentro do cartaz; pôster em pé só com Expandir pôster ao focar.";
     case AJ_NAV_RAPIDA: return "Andar de lado numa fileira não espera a animação terminar. Serve para controle que repete rápido.";
     case AJ_BORDA_FOCO: return "O anel colorido que marca o cartaz em foco na Home. Desligado, o foco fica só pelo tamanho do cartaz.";
     case AJ_PROF: return "Dá relevo aos cartazes: borda iluminada e um reflexo que acompanha o foco.";
