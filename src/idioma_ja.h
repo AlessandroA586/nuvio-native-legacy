@@ -1842,6 +1842,7 @@
   T("Esta nota vem do MDBList e precisa da chave dele na sua conta Nuvio.", "この評価は MDBList のもので、Nuvio アカウントに MDBList のキーが必要です。"),
   T("Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.", "この評価は MDBList から。オンにすると MDBList の取得もオンになります。"),
   T("Esta pessoa não compartilha sua atividade.", "このユーザーはアクティビティを共有していません。"),
+  T("Esta pessoa não tem página ainda", "この人物にはまだページがありません"),
   T("Esta preferência participa dos ajustes do perfil. Nenhum serviço será desconectado.", "この設定はプロフィールの設定に含まれます。サービスの接続は解除されません。"),
   T("Esta semana", "今週"),
   T("Esta sessão", "このセッション"),

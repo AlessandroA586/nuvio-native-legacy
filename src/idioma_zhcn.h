@@ -1842,6 +1842,7 @@
   T("Esta nota vem do MDBList e precisa da chave dele na sua conta Nuvio.", "此评分来自 MDBList，需要在你的 Nuvio 账号中填写它的密钥。"),
   T("Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.", "此评分来自 MDBList：开启它也会开启 MDBList 查询。"),
   T("Esta pessoa não compartilha sua atividade.", "此用户不分享观看活动。"),
+  T("Esta pessoa não tem página ainda", "此人还没有页面"),
   T("Esta preferência participa dos ajustes do perfil. Nenhum serviço será desconectado.", "此偏好属于个人资料设置。不会断开任何服务。"),
   T("Esta semana", "本周"),
   T("Esta sessão", "本次会话"),

@@ -1841,6 +1841,7 @@
   T("Esta nota vem do MDBList e precisa da chave dele na sua conta Nuvio.", "Diese Bewertung stammt von MDBList und braucht dessen Schlüssel in deinem Nuvio-Konto."),
   T("Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.", "Diese Wertung kommt von MDBList: Einschalten schaltet auch die MDBList-Abfrage ein."),
   T("Esta pessoa não compartilha sua atividade.", "Diese Person teilt ihre Aktivität nicht."),
+  T("Esta pessoa não tem página ainda", "Diese Person hat noch keine Seite"),
   T("Esta preferência participa dos ajustes do perfil. Nenhum serviço será desconectado.", "Diese Einstellung gehört zum Profil. Kein Dienst wird getrennt."),
   T("Esta semana", "Diese Woche"),
   T("Esta sessão", "Diese Sitzung"),

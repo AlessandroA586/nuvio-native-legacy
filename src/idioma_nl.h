@@ -1842,6 +1842,7 @@
   T("Esta nota vem do MDBList e precisa da chave dele na sua conta Nuvio.", "Dit cijfer komt van MDBList en heeft de sleutel ervan nodig in je Nuvio-account."),
   T("Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.", "Deze score komt van MDBList: aanzetten zet ook het opvragen bij MDBList aan."),
   T("Esta pessoa não compartilha sua atividade.", "Deze persoon deelt geen activiteit."),
+  T("Esta pessoa não tem página ainda", "Deze persoon heeft nog geen pagina"),
   T("Esta preferência participa dos ajustes do perfil. Nenhum serviço será desconectado.", "Deze voorkeur hoort bij het profiel. Er wordt geen dienst losgekoppeld."),
   T("Esta semana", "Deze week"),
   T("Esta sessão", "Deze sessie"),

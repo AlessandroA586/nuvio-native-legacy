@@ -1841,6 +1841,7 @@
   { "Esta nota vem do MDBList e precisa da chave dele na sua conta Nuvio.", "This rating comes from MDBList and needs its key in your Nuvio account." },
   { "Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.", "This rating comes from MDBList: turning it on also turns on the MDBList lookup." },
   { "Esta pessoa não compartilha sua atividade.", "This person does not share their activity." },
+  { "Esta pessoa não tem página ainda", "This person has no page yet" },
   { "Esta preferência participa dos ajustes do perfil. Nenhum serviço será desconectado.", "This preference is part of the profile settings. No services will be disconnected." },
   { "Esta semana", "This week" },
   { "Esta sessão", "This session" },

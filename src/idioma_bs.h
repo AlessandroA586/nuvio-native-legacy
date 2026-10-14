@@ -1842,6 +1842,7 @@
   T("Esta nota vem do MDBList e precisa da chave dele na sua conta Nuvio.", "Ova ocjena dolazi s MDBList-a i treba njegov ključ u vašem Nuvio računu."),
   T("Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.", "Ova ocjena dolazi s MDBLista: uključivanje uključuje i upit MDBListu."),
   T("Esta pessoa não compartilha sua atividade.", "Ova osoba ne dijeli svoju aktivnost."),
+  T("Esta pessoa não tem página ainda", "Ova osoba još nema stranicu"),
   T("Esta preferência participa dos ajustes do perfil. Nenhum serviço será desconectado.", "Ova postavka pripada profilu. Nijedna usluga neće biti isključena."),
   T("Esta semana", "Ove sedmice"),
   T("Esta sessão", "Ova sesija"),

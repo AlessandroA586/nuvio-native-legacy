@@ -1842,6 +1842,7 @@
   T("Esta nota vem do MDBList e precisa da chave dele na sua conta Nuvio.", "Тази оценка идва от MDBList и изисква негов ключ във вашия акаунт в Nuvio."),
   T("Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.", "Тази оценка идва от MDBList: включването включва и заявката към MDBList."),
   T("Esta pessoa não compartilha sua atividade.", "Този човек не споделя своята активност."),
+  T("Esta pessoa não tem página ainda", "Този човек все още няма страница"),
   T("Esta preferência participa dos ajustes do perfil. Nenhum serviço será desconectado.", "Тази настройка е част от профила. Никоя услуга няма да бъде прекъсната."),
   T("Esta semana", "Тази седмица"),
   T("Esta sessão", "Тази сесия"),

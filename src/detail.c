@@ -2862,6 +2862,11 @@ void detail_evento(const SDL_Event *e) {
 #ifdef NV_TOUCH_UI
         toquerol_limpar(&toquePessoa); toquePessoaOffset = 0;
 #endif
+      } else if (ci && foco.coluna < ci->nElenco) {
+        // Sem id de pessoa (o TMDB nao respondeu, ou o titulo e novo demais):
+        // o OK nao pode ser um clique morto — diz por que e nao abre nada.
+        ilha_avisar("det-elenco-sem-pagina", ILHA_INFO, NULL,
+                    i18n("Esta pessoa não tem página ainda"), 4000u, 0);
       }
     } else if (foco.fileira == SEC_ABAS_INFO) {
       abaInfo = foco.coluna;
