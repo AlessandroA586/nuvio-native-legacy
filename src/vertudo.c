@@ -172,7 +172,7 @@ typedef enum {
 } VtLayout;
 static const char *LAY_NOME[VT_LAY_N] = {
   "Automático", "Grade", "Linha do tempo", "Ranking", "Saga", "Décadas", "Mural", "Vitrine",
-  "Cover Flow"
+  "Fluxo de capas"
 };
 // A ordem do botao "Exibição": a horizontal logo depois da vertical.
 static const unsigned char LAY_CICLO[] = {
@@ -1244,6 +1244,7 @@ void vertudo_evento(const SDL_Event *e) {
   if (n < 1) return;
   if (k == SDLK_RIGHT && foco + 1 < n) foco++;
   else if (k == SDLK_LEFT) foco--;
+  else if (k == SDLK_DOWN && lay == VT_LAY_FLUXO) return;
   else if (k == SDLK_DOWN) { int v = vizinhoNaLinha(n, celLin[foco] + 1);
                              foco = v >= 0 ? v : n - 1; }
   else if (k == SDLK_UP) { int v = vizinhoNaLinha(n, celLin[foco] - 1);
@@ -1916,6 +1917,9 @@ static void fluxoCartaz(int i, float x0, float a) {
   int sel = i == foco && !tabFocus;
   const char *arte;
   GLuint t;
+  // Mesmo recorte de fluxoDesenhar: descarte antes de pedir arte ou textura.
+  if (r.x + r.w <= x0 - 24.0f || r.x >= vtFim() + 24.0f ||
+      r.y + r.h <= VT_TOPO - 12.0f || r.y >= NV_TELA_H) return;
   if (!viewItem(i, &it)) return;
   ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, VT_TOPO - 12.0f, NV_TELA_H, ponteiroCartaz, NULL, i, 0);
   raio = ajustes_raio_poster_px() / r.h;
@@ -1935,11 +1939,12 @@ static void fluxoDesenhar(int n, float x0, float a) {
   float ax = x0, aw = vtFim() - x0, cx = fluxoCentro(x0), ly = VT_TOPO + 40.0f + VT_FLX_H + 64.0f;
   float r, g, b;
   int c = (int)lroundf(fluxoPos), k;
+  int vizinhos = ptv_gpu_fraca_atual() || gfx_efeitos_leves() ? 2 : 6;
   if (n <= 0 || fluxoPos < 0.0f) return;
   corColecao(&r, &g, &b);
   gfx_recorte(ax - 24.0f, VT_TOPO - 12.0f, aw + 48.0f, NV_TELA_H - VT_TOPO + 12.0f);
   // Do mais longe para o foco: o vizinho mais perto cobre o de tras.
-  for (k = 6; k >= 1; k--) {
+  for (k = vizinhos; k >= 1; k--) {
     if (c - k >= 0) fluxoCartaz(c - k, x0, a);
     if (c + k < n) fluxoCartaz(c + k, x0, a);
   }
@@ -1948,7 +1953,7 @@ static void fluxoDesenhar(int n, float x0, float a) {
   // tique e o ano sob cada titulo; o do foco cresce como na vertical.
   gfx_cor((GfxRect){ ax, ly, aw, 2 }, 0, .48f, .47f, .46f, a * .45f);
   if (fluxoPos > 0.0f) gfx_cor((GfxRect){ ax, ly - 1, (cx - ax) * fminf(fluxoPos, 1.0f), 4 }, 0, r, g, b, a * .95f);
-  for (k = c - 6; k <= c + 6; k++) {
+  for (k = c - vizinhos; k <= c + vizinhos; k++) {
     CatItem it;
     char ano[16];
     float sombra, t, tx;
