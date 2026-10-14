@@ -131,6 +131,15 @@ static void clicarInterface(float x, float y) {
   ponteiro_evento(&e, ajustes_evento);
   relogio += 400;
 }
+static void clicarMouseInterface(float x, float y) {
+  SDL_Event e; SDL_zero(e);
+  e.type = SDL_MOUSEBUTTONDOWN; e.button.button = SDL_BUTTON_LEFT;
+  e.button.x = (int)x; e.button.y = (int)y;
+  ponteiro_evento(&e, ajustes_evento);
+  e.type = SDL_MOUSEBUTTONUP; relogio += 60;
+  ponteiro_evento(&e, ajustes_evento);
+  relogio += 400;
+}
 static char *arquivoAjustes(void) {
   char caminho[700];
   snprintf(caminho, sizeof caminho, "%s/ajustes.txt", getenv("NUVIO_DADOS"));
@@ -194,6 +203,86 @@ static void interfacePorToque(void) {
   CONFERE(valor[AJ_INTERFACE_MODO] == 0 && !layout_modo_mobile(), "TV tambem fica salva na nova leitura");
 }
 
+// #205: the footer hint chips ("OK Confirmar", "Voltar Cancelar") are tappable
+// in TV mode too. A synthetic tap on the OK chip goes through ponteiro +
+// ajustes_evento and confirms the pending edit, exactly like the OK key.
+static void quadroRodape(void) {
+  ponteiro_teste_janela((int)NV_TELA_W, (int)NV_TELA_H);
+  ponteiro_quadro(relogio);
+  ponteiro_camada();
+  // Como na tela assentada: as linhas ja registraram alvos, entao um clique
+  // fora dos chips NAO pode cair no OK de camada vazia.
+  ponteiro_alvo(0, 0, (float)NV_TELA_W, (float)NV_TELA_H, NULL, NULL, 0, 0);
+  // O rodape e medido na tela virtual dos Ajustes, como no desenho de verdade.
+  { AjDica d[3] = { { "← →", "Escolher" }, { "OK", "Confirmar" }, { "Voltar", "Cancelar" } };
+    GfxRect fr = aj2ListaR();
+    AJ_ESCALA_INI();
+    aj2RodapeA3(fr, d, 3, 1.0f);
+    AJ_ESCALA_FIM(); }
+  ponteiro_desenhar();
+  relogio += 400;
+}
+static int alvoRodape(PonteiroFn focar, PonteiroFn ativar, float *x, float *y) {
+  const PonteiroAlvo *v;
+  int n = ponteiro_teste_lista(&v);
+  for (int i = 0; i < n; i++) {
+    if (v[i].focar != focar || v[i].ativar != ativar) continue;
+    *x = v[i].x + v[i].w * 0.5f; *y = v[i].y + v[i].h * 0.5f;
+    return 1;
+  }
+  return 0;
+}
+static void rodapePorToque(void) {
+  const char *dir = getenv("NUVIO_DADOS");
+  char *antes, *depois;
+  float x, y;
+  valor[AJ_INTERFACE_MODO] = 0; interfaceAplicar();
+  layout_tela_definir(1080, 2340);   // phone drawable, saved TV canvas
+  ponteiro_iniciar(); ponteiro_teste_toque(1);
+  assert(!layout_modo_mobile());
+  ajustes_dir(dir);
+  valor[AJ_VIDRO] = 0; assert(gravar());
+  uxAviso[0] = 0;
+
+  // Inline editing of a switch row (TV mode): the footer keeps the TV hint chips.
+  focarOpcao(AJ_VIDRO); uxAbrirEditor(AJ_VIDRO);
+  CONFERE(uxEditor == 1 && ajEditandoLinha(AJ_VIDRO), "Vidro: edita na linha, chips no rodape");
+  uxEvento(SDLK_RIGHT); assert(uxPendente == 1 && valor[AJ_VIDRO] == 0);
+  quadroRodape();
+  CONFERE(alvoRodape(aj2DicaOk, NULL, &x, &y), "Rodape TV: o chip OK registra alvo");
+  antes = arquivoAjustes();
+  if (alvoRodape(aj2DicaOk, NULL, &x, &y)) clicarInterface(x, y);   // tap on the OK chip = OK on the focused row
+  CONFERE(!uxEditor && valor[AJ_VIDRO] == 1, "Toque no chip OK confirma a edicao");
+  depois = arquivoAjustes();
+  CONFERE(strcmp(antes, depois) != 0 && strstr(depois, "vidroLocal") != NULL, "Chip OK grava o valor pendente");
+  free(antes); free(depois);
+
+  // The Back chip cancels without touching the saved value.
+  if (valor[AJ_VIDRO] != 1) { valor[AJ_VIDRO] = 1; assert(gravar()); }   // estado da confirmacao acima
+  focarOpcao(AJ_VIDRO); uxAbrirEditor(AJ_VIDRO); assert(uxEditor == 1);
+  uxEvento(SDLK_LEFT); assert(uxPendente == 0);
+  uxAviso[0] = 0;   // o "Ajuste salvo" anterior nao pode comer o rodape
+  quadroRodape();
+  CONFERE(alvoRodape(NULL, aj2DicaVoltar, &x, &y), "Rodape TV: o chip Voltar registra alvo");
+  antes = arquivoAjustes();
+  if (alvoRodape(NULL, aj2DicaVoltar, &x, &y)) clicarInterface(x, y);
+  CONFERE(!uxEditor && valor[AJ_VIDRO] == 1, "Toque no chip Voltar cancela");
+  depois = arquivoAjustes();
+  CONFERE(!strcmp(antes, depois), "Chip Voltar nao grava nada");
+  free(antes); free(depois);
+
+  // The same OK chip by mouse click (Magic Remote / desktop).
+  valor[AJ_VIDRO] = 0; assert(gravar());
+  focarOpcao(AJ_VIDRO); uxAbrirEditor(AJ_VIDRO);
+  uxEvento(SDLK_RIGHT); assert(uxPendente == 1 && valor[AJ_VIDRO] == 0);
+  uxAviso[0] = 0;
+  quadroRodape();
+  CONFERE(alvoRodape(aj2DicaOk, NULL, &x, &y), "Rodape TV: o chip OK registra alvo (mouse)");
+  if (alvoRodape(aj2DicaOk, NULL, &x, &y)) clicarMouseInterface(x, y);
+  CONFERE(!uxEditor && valor[AJ_VIDRO] == 1, "Clique do mouse no chip OK confirma a edicao");
+  valor[AJ_VIDRO] = 0; gravar();
+}
+
 int main(void) {
   Aj2Pose p = {0};
   p.lA = 1.0f; p.lS = 1.0f;
@@ -214,5 +303,7 @@ int main(void) {
   if (!falhas) puts("PASS: Fileiras targets, callbacks and hints are Mobile only");
   interfacePorToque();
   if (!falhas) puts("PASS: interface selector confirms and saves TV/Mobile by touch");
+  rodapePorToque();
+  if (!falhas) puts("PASS: footer hint chips confirm and cancel by touch");
   return falhas ? 1 : 0;
 }
