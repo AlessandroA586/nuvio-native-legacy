@@ -19,6 +19,7 @@
 #define rede_baixar_com   teste_rede_com
 #define sessao_token_copiar teste_sessao_token_copiar
 #define sessao_logada teste_sessao_logada
+#define perfis_sessao_geracao teste_geracao
 #define sessao_identidade_local_copiar teste_sessao_identidade
 #ifndef REC_C
 #define REC_C "../src/recomenda.c"
@@ -28,6 +29,7 @@
 // sessao.c (#203) entrega o token por copia.
 int teste_sessao_token_copiar(char *d, size_t n) { snprintf(d, n, "tok-teste"); return 1; }
 int teste_sessao_logada(void) { return 1; }
+uint64_t teste_geracao(void) { return 1; }
 // The bearer now comes from the local identity copy, not sessao_token_copiar.
 int teste_sessao_identidade(char *u, size_t nu, char *j, size_t nj) {
   snprintf(u, nu, "conta-teste"); snprintf(j, nj, "tok-teste"); return 1; }
@@ -58,6 +60,7 @@ int main(void) {
   dados_iniciar(dir);
   if (strcmp(dados_dir(), dir)) { printf("pedidos_ciclo: dados_dir errado; recusando\n"); return 2; }
   if (!mtx) mtx = SDL_CreateMutex();
+  recomenda_iniciar();                              // novo contrato: sessao Social aberta
   registrado = 1;                                   // ja falou com o servidor
   contatosMs = SDL_GetTicks() + REC_CONTATOS_MS;    // relogio dos contatos longe
   for (k = 0; k < 3; k++) ciclo();
