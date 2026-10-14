@@ -11,7 +11,7 @@ from pathlib import Path
 import re, subprocess, tempfile
 s = Path('src/vertudo.c').read_text()
 start = s.index('static void painel(float a)')
-end = s.index('\nstatic const char *retratoLocal', start)
+end = s.index('\nstatic void fundoColecao', start)
 defs = '\n'.join(re.findall(r'^#define (?:VT_TOPO|VT_PAN_W|VT_PAN_X|VT_PAN_Y|VT_PAN_ART_H|VT_PAN_ART_W)\b.*$', s, re.M))
 code = r'''
 #include <assert.h>
