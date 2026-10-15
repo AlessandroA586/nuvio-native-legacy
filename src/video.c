@@ -3614,6 +3614,10 @@ void video_escolher_legenda(int i) {
     return;
   }
   if (!ligado || !midia[0]) return;
+  if (i >= 0) {
+    const VideoFaixa *f = video_legenda(i);
+    if (f && f->numero < 0) i = -1;
+  }
   if (i < 0) {
     snprintf(b, sizeof b, "{\"mediaId\":\"%s\",\"enable\":false}", midia);
     chamar("setSubtitleEnable", b, soLog);
