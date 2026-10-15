@@ -9,7 +9,8 @@
 //   4. o idioma original do titulo (ling_original, do TMDB);
 //   5. nada: fica a que o arquivo/player escolheu.
 // Em cada idioma (2-4), uma faixa que nao e DTS/TrueHD ganha; DTS/TrueHD so
-// quando e a unica naquele idioma. Uma faixa que o alvo nao consegue tocar
+// quando e a unica naquele idioma. No Android (o FFmpeg do player decodifica
+// tudo) nao ha essa regra: o alvo marca dts = 0 e vale a primeira do idioma. Uma faixa que o alvo nao consegue tocar
 // (`pode` = 0: DTS/TrueHD no .wgt, ou no .tpk com a conversao desligada) nao
 // entra. Quem toca a escolhida (converter ou nao) e o alvo.
 #ifndef NV_AUDIOESCOLHA_H

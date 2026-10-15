@@ -307,8 +307,10 @@ static void escolherAudioPreferido(void) {
   for (i = 0; i < nAudio; i++) {
     c[i].idioma = faixaAudio[i].idioma; c[i].codec = faixaAudio[i].codec; c[i].rotulo = faixaAudio[i].rotulo;
     c[i].canais = faixaAudio[i].canais;
-    // O FFmpeg do player decodifica DTS/TrueHD: entra, depois das outras do idioma.
-    c[i].dts = audioesc_dts_truehd(faixaAudio[i].codec, faixaAudio[i].rotulo); c[i].pode = 1;
+    // O FFmpeg do player decodifica DTS/TrueHD: aqui nao ha o limite da LG e
+    // da Samsung, entao DTS/TrueHD concorre igual (dts = 0): no idioma vale a
+    // primeira faixa do arquivo, seja qual for o codec (dono, 15/10).
+    c[i].dts = 0; c[i].pode = 1;
   }
   k = audioesc_escolher(c, nAudio, &o);
   if (k < 0 || k == audioAtual) return;
