@@ -185,6 +185,7 @@ static int aplicarUma(VideoFaixa *f, const MkvFaixa *m, int ordinal) {
              (meio[0] || poeCh) ? SEP : "", meio,
              (meio[0] && poeCh) ? " " : "", poeCh ? ch : "");
   } else {
+    if (m->nome[0]) snprintf(f->nome, sizeof f->nome, "%s", m->nome);
     // LETREIROS/FORCADA (FlagForced, "Forced", "Signs & Songs"): a pessoa
     // precisa saber que essa nao traduz o dialogo. O nome do arquivo, quando
     // ele ja diz isso ("Forced"), e o que o .wgt mostra; so a flag vira
