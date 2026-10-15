@@ -2178,6 +2178,8 @@
   T("Idioma definido pela sua conta · mudar em Ajustes", "Limba a fost aleasă de contul tău · schimb-o în Setări"),
   T("Idioma definido pelo sistema da TV · mudar em Ajustes", "Limba a fost aleasă de sistemul televizorului · schimb-o în Setări"),
   T("Idioma do app", "Limba aplicației"),
+  T("Idioma do filtro de áudio: %s. OK liga o filtro.", "Limba filtrului audio: %s. OK activează filtrul."),
+  T("Idioma do filtro de áudio: %s. OK tira o filtro.", "Limba filtrului audio: %s. OK elimină filtrul."),
   T("Idioma do áudio", "Limba sunetului"),
   T("Idioma dos dados do título", "Limba datelor titlului"),
   T("Idioma dos metadados", "Limba metadatelor"),

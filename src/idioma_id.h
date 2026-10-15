@@ -2179,6 +2179,8 @@
   T("Idioma definido pela sua conta · mudar em Ajustes", "Bahasa ditentukan oleh akunmu · ubah di Pengaturan"),
   T("Idioma definido pelo sistema da TV · mudar em Ajustes", "Bahasa ditentukan oleh sistem TV · ubah di Pengaturan"),
   T("Idioma do app", "Bahasa aplikasi"),
+  T("Idioma do filtro de áudio: %s. OK liga o filtro.", "Bahasa filter audio: %s. OK mengaktifkan filter."),
+  T("Idioma do filtro de áudio: %s. OK tira o filtro.", "Bahasa filter audio: %s. OK menghapus filter."),
   T("Idioma do áudio", "Bahasa audio"),
   T("Idioma dos dados do título", "Bahasa data judul"),
   T("Idioma dos metadados", "Bahasa metadata"),

@@ -2178,6 +2178,8 @@
   { "Idioma definido pela sua conta · mudar em Ajustes", "Language set by your account · change it in Settings" },
   { "Idioma definido pelo sistema da TV · mudar em Ajustes", "Language set by the TV system · change it in Settings" },
   { "Idioma do app", "App language" },
+  { "Idioma do filtro de áudio: %s. OK liga o filtro.", "Audio filter language: %s. OK enables the filter." },
+  { "Idioma do filtro de áudio: %s. OK tira o filtro.", "Audio filter language: %s. OK removes the filter." },
   { "Idioma do áudio", "Audio language" },
   { "Idioma dos dados do título", "Language of title data" },
   { "Idioma dos metadados", "Metadata language" },

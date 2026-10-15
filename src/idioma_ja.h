@@ -2179,6 +2179,8 @@
   T("Idioma definido pela sua conta · mudar em Ajustes", "言語はアカウントの設定によります · 変更は「設定」で"),
   T("Idioma definido pelo sistema da TV · mudar em Ajustes", "言語はテレビのシステム設定によります · 変更は「設定」で"),
   T("Idioma do app", "アプリの言語"),
+  T("Idioma do filtro de áudio: %s. OK liga o filtro.", "音声フィルターの言語: %s。OKでフィルターを有効にします。"),
+  T("Idioma do filtro de áudio: %s. OK tira o filtro.", "音声フィルターの言語: %s。OKでフィルターを解除します。"),
   T("Idioma do áudio", "音声の言語"),
   T("Idioma dos dados do título", "作品データの言語"),
   T("Idioma dos metadados", "メタデータの言語"),

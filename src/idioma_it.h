@@ -2179,6 +2179,8 @@
   T("Idioma definido pela sua conta · mudar em Ajustes", "Lingua impostata dal tuo account · cambiala in Impostazioni"),
   T("Idioma definido pelo sistema da TV · mudar em Ajustes", "Lingua impostata dal sistema della TV · cambiala in Impostazioni"),
   T("Idioma do app", "Lingua dell’app"),
+  T("Idioma do filtro de áudio: %s. OK liga o filtro.", "Lingua del filtro audio: %s. OK attiva il filtro."),
+  T("Idioma do filtro de áudio: %s. OK tira o filtro.", "Lingua del filtro audio: %s. OK rimuove il filtro."),
   T("Idioma do áudio", "Lingua dell'audio"),
   T("Idioma dos dados do título", "Lingua dei dati del titolo"),
   T("Idioma dos metadados", "Lingua dei metadati"),

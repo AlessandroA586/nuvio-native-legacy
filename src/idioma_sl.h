@@ -2179,6 +2179,8 @@
   T("Idioma definido pela sua conta · mudar em Ajustes", "Jezik je nastavljen z vašim računom · spremenite ga v Nastavitve"),
   T("Idioma definido pelo sistema da TV · mudar em Ajustes", "Jezik je nastavljen s sistemom televizorja · spremenite ga v Nastavitve"),
   T("Idioma do app", "Jezik aplikacije"),
+  T("Idioma do filtro de áudio: %s. OK liga o filtro.", "Jezik zvočnega filtra: %s. OK vklopi filter."),
+  T("Idioma do filtro de áudio: %s. OK tira o filtro.", "Jezik zvočnega filtra: %s. OK odstrani filter."),
   T("Idioma do áudio", "Jezik zvoka"),
   T("Idioma dos dados do título", "Jezik podatkov o naslovu"),
   T("Idioma dos metadados", "Jezik metapodatkov"),
