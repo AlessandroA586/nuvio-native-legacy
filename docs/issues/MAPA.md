@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `5544c3e4c` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-15 04:48. 457 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `5544c3e4c` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-15 05:50. 457 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -259,7 +259,7 @@ Notas:
 | [#415](https://github.com/iqui27/nuvio-native-legacy/issues/415) | constant crashing, no matter if I play or not | LG | bug | precisa-log | 2.0.5 | 2.0.6 | 5c266499 | nós 10-10 | triar |
 | [#419](https://github.com/iqui27/nuvio-native-legacy/issues/419) | [Samsung Tizen 6 / v2.0.4] Clicking a Recommendations card d | Samsung .tpk | bug | integrada | 2.0.5 | ja-lancada | 7f338254, 8b5ed6c0, d6b41e1 | nós 10-11 | lancar com 2.0.5; testar no TCL |
 | [#428](https://github.com/iqui27/nuvio-native-legacy/issues/428) | Constant freezes | LG | bug | precisa-log | 2.0.5 | - | - | nós 10-11 | triar |
-| [#429](https://github.com/iqui27/nuvio-native-legacy/issues/429) | Subtitles auto select | Android | bug | em_revisao | 2.0.5 | ja-lancada | 2d42c8e0, b1da4311, b144dbfd | nós 10-11 | review y OK (j-revg-i429hbs-y); merge agente/205-i429hbs; testar no TCL |
+| [#429](https://github.com/iqui27/nuvio-native-legacy/issues/429) | Subtitles auto select | Android | bug | em_revisao | 2.0.5 | ja-lancada | agente/205-i429hbs | nós 10-11 | merge agente/205-i429hbs (review OK j-revg-i429hbs-y); testar no TCL |
 | [#469](https://github.com/iqui27/nuvio-native-legacy/issues/469) | all movies shows not correct aspect ratio , original, stretc | Samsung .tpk | bug | precisa-log | 2.0.5 | 2.0.6 | - | sem comentários | Pedir log (codigo) com troca de modo de aspecto; ver qual pacote .tpk e qual caminho (Disp |
 | [#470](https://github.com/iqui27/nuvio-native-legacy/issues/470) | Next Episode Countdown Only Starts After Credits Finish | Samsung .tpk | bug | integrada | 2.0.5 | - | 7839b119 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#471](https://github.com/iqui27/nuvio-native-legacy/issues/471) | Trailer Playback Does Not Fill the Cards Properly | Samsung .tpk | bug | integrada | 2.0.5 | 2.0.6 | 38369f89 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
@@ -434,7 +434,7 @@ Notas:
 | [#511](https://github.com/iqui27/nuvio-native-legacy/issues/511) | Show subtitle track name instead of only showing language | ? | enhancement | integrada |  | futuro | f0ab7c91 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#510](https://github.com/iqui27/nuvio-native-legacy/issues/510) | Subtitles list not the same as nuvio in phone applications l | ? | bug | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
 | [#509](https://github.com/iqui27/nuvio-native-legacy/issues/509) | Expanded poster trailer | ? | enhancement | integrada | - | futuro | 13e13b92 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
-| [#513](https://github.com/iqui27/nuvio-native-legacy/issues/513) | Any series episode autoplay even option is disabled | ? | bug | em_revisao |  | futuro | a82357a4 | sem comentários | review w rodando (j-revg-i513autoplay-w, sem veredito 04:48); se OK merge agente/205-i513a |
+| [#513](https://github.com/iqui27/nuvio-native-legacy/issues/513) | Any series episode autoplay even option is disabled | ? | bug | em_revisao |  | futuro | agente/205-i513autoplay | sem comentários | fix do BLOQUEIA (j-revg-i513autoplay-w); depois review |
 | [#514](https://github.com/iqui27/nuvio-native-legacy/issues/514) | Ability to rate a movie or an episode | ? | ? | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
 | [#521](https://github.com/iqui27/nuvio-native-legacy/issues/521) | Layout | ? | bug | aberta |  | futuro | - | sem comentários | triagem; sem job ainda; alvo a definir |
 
@@ -473,7 +473,7 @@ Notas:
 - **#511**: Criada 2026-10-14 (snapshot 14:46). Escrivao 14/10 19:1x: Fix 2e05dd94; j-revg-i511legnome-q OK 18:44; merge f0ab7c91 18:45.
 - **#510**: Criada 2026-10-14 (snapshot 14:46).
 - **#509**: Criada 2026-10-14 (snapshot 14:46). Escrivão 14/10 14:47: integrada via i509trailer. | Escrivão 2026-10-14 16:11: conserto 13e13b92 ja em integracao/2.0.5; sem release ainda.
-- **#513**: Criada 2026-10-14 (issues.json 14/10 16:49). Escrivao 14/10 19:1x: j-205-i513autoplay 7df981b9 done 18:35 (review j-revg-i513autoplay-q BLOQUEIA 18:43); fix bcf3ec31 18:57. Escrivao 19:2x: merge a82357a4 (j-revg-i513autoplay-q havia BLOQUEADO 18:43; fix bcf3ec31 mergeado sem nova review). | a82357a4 mergeado antes; review y BLOQUEIA, fix em curso | Escrivao 10-15 02:44: fixy sem veredito ainda. Escrivao 10-15 02:49: ultimo BLOQUEIA y 22:35 foi antes do fixy 23:07; sem review posterior ao fix; tip 66c6c61ee. | Escrivao 10-15 04:48: fix-i513x DONE 03:59; x BLOQUEIA 02:52; w em curso.
+- **#513**: review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando
 - **#514**: Issue nova 14/10 20:52 (rating de filme/episodio). Feature, nao 2.0.5.
 - **#521**: Issue nova 2026-10-15 06:48 (issues.json). Sem descrição de contexto; triar.
 
@@ -1215,6 +1215,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 | Data | Quem | O que | Issues | Ref | Resultado | Evidência |
 |---|---|---|---|---|---|---|
+| 2026-10-15 04:50 | escrivao (mapa keeper) | instalacao Android do HEAD 71c00499e | - | 71c00499e | passou | instalado.txt: android rc=0 Success (apk Nuvio-2.0.5-android.apk) |
+| 2026-10-15 04:50 | escrivao (mapa keeper) | instalacao C9 do HEAD 71c00499e | - | 71c00499e | inconclusivo | instalado.txt: c9 rc=255 (sem saida util); confirmar na TV |
 | 2026-10-15 03:53 | job-pi magpie/group/nv-revisao (revisao) | Revisao aspvolta: VEREDITO OK | - | agente/205-aspvolta (merged 04:47 em HEAD 71c00499e) | passou | /Volumes/ExternalSSD/tmp/rev/j-revg-aspvolta.log |
 | 2026-10-15 03:16 | job-pi magpie/group/nv-revisao (revisao) | Revisao pr491 limpo r2: VEREDITO BLOQUEIA | #491 | pr/491-limpo | falhou | /Volumes/ExternalSSD/tmp/rev/j-revpr491-limpo-r2.log |
 | 2026-10-15 03:14 | job-pi magpie/group/nv-revisao (revisao) | Revisao pr490 fix: VEREDITO BLOQUEIA | #490 | pr/490-fix | falhou | /Volumes/ExternalSSD/tmp/rev/j-revpr490-fix.log |
@@ -1714,10 +1716,10 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Gerenciar/adicionar perfil no quick switch + 3 tamanhos (alvo 2.1)
 
 - Plataforma: all
-- Status: em_revisao
+- Status: aberta
 - Release: 2.0.6
 - Conserto: agente/205-perfis21 (tip 7376c250, 1 commits fora)
-- Próximo passo: review OK (j-revg-perfis21); mergear ou adiar p/ 2.1
+- Próximo passo: backlog 2.1 (review OK, 1 ahead)
 - Notas: Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). rodando; alvo declarado = 2.1. Escrivão 14/10 14:47: review OK, merge pendente. | Escrivão 2026-10-14 16:11: review j-revg-perfis21 OK (11:16); merge pendente. | Escrivão 14/10 19:48: sem job
 
 ### Dicas de controle: tema/chips do rodape
@@ -1780,7 +1782,7 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: adiado
 - Release: 2.0.6
 - Conserto: agente/205-tizenbrew (tip 25693f33, 1 commits fora)
-- Próximo passo: adiado para depois do 2.0.5 (memoria homebrew/tizenbrew)
+- Próximo passo: adiado pelo dono; rascunho na branch
 - Notas: Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). docs em docs/tizenbrew; sem job recente. Escrivão 14/10 14:47: adiado (pesquisa; sem merge).
 
 ### Homebrew Channel webOS / mercado
@@ -1789,7 +1791,7 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: adiado
 - Release: 2.0.6
 - Conserto: agente/205-homebrew (tip bcb1cdea, 1 commits fora)
-- Próximo passo: adiado para depois do 2.0.5 (memoria homebrew/tizenbrew)
+- Próximo passo: adiado pelo dono; rascunho na branch
 - Notas: Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). branch com 1 commit, sem job recente. Escrivão 14/10 14:47: adiado (pesquisa; sem merge).
 
 ### OK nos relacionados do player de filme nao fazia nada
@@ -1813,10 +1815,10 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Triagem de branches velhas + decisao do dono feat/* = 2.2
 
 - Plataforma: all
-- Status: em_revisao
+- Status: integrada
 - Release: 2.0.6
 - Conserto: agente/205-triagem-velhas (tip 3d791e8a, 1 commits fora)
-- Próximo passo: fix doc 23:23 sem re-review; revisar e mergear
+- Próximo passo: lancar com 2.0.5 (merged em agente/205-triagem-velhas)
 - Notas: Branch agente/205-triagem-velhas 1 commit fora.
 
 ### Glass/top bar portados do plx (tambem em dono-205-topotam)
@@ -2497,10 +2499,10 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### design(2.1): friends row mockup with 5 modern styles (#205)
 
 - Plataforma: ?
-- Status: em_revisao
+- Status: aberta
 - Release: 2.0.5
 - Conserto: agente/205-mock21 (tip 9de13e4e, 1 commit fora)
-- Próximo passo: doc-only; review pendente; mergear se OK
+- Próximo passo: triagem (1 ahead, sem job, sem log)
 - Notas: Escrivão 2026-10-14 16:11: 3 mockups anteriores (gamification/cinephile/redesign) ja em integracao/2.0.5; friends row 9de13e4e ainda fora.
 
 ### fix(network): preserve offline detection across retries and allow DNS retransmission
@@ -2554,8 +2556,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_revisao
 - Release: 2.1
 - Conserto: fe5e0e92; agente/205-p2pusb (7 commits fora, review BLOQUEIA)
-- Próximo passo: BLOQUEIA j-revg-p2pusb-y 22:30; fix j-205-p2pusb-fixy RODANDO; depois review (alvo 2.1)
-- Notas: Pedido de usuario (cache USB P2P, #505). Alvo 2.1 (nao assumir merge em 2.0.6). Fix2 feito, nao esta lost.
+- Próximo passo: fix do BLOQUEIA (j-revg-p2pusb-w); depois review
+- Notas: 8 ahead; nao mergeado; sem job rodando
 
 ### Merge agente/205-legsyncprox
 
@@ -2725,7 +2727,7 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: aberta
 - Release: 2.0.5
 - Conserto: e81c1f40
-- Próximo passo: decidir
+- Próximo passo: triagem (1 ahead, sem job, sem log)
 - Notas: Escrivão 14/10 14:47: sem job (perdido).
 
 ### test(player): wait for catalog refresh before opening fixture
@@ -3028,19 +3030,19 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Vidro padrao: auditoria de superficies glass (PLX glass port)
 
 - Plataforma: ?
-- Status: em_revisao
+- Status: integrada
 - Release: 2.0.5
 - Conserto: nenhum encontrado
-- Próximo passo: review OK j-revg-vidropadrao-z 22:37 (antes do sync); sync 3dfa5d9 no branch sem re-review: revisar sync e mergear
+- Próximo passo: lancar com 2.0.5 (merged em agente/205-vidropadrao)
 - Notas: Branch agente/205-vidropadrao 10 commits fora, 2 atras. Job sonnet high.
 
 ### M3U misto: canal/catalogo pelo tipo declarado (bug)
 
 - Plataforma: ?
-- Status: em_revisao
+- Status: integrada
 - Release: 2.0.5
 - Conserto: nenhum encontrado
-- Próximo passo: review: job j-205-m3umisto done 20:25 (nv-bug high), sem review
+- Próximo passo: lancar com 2.0.5 (merged em agente/205-m3umisto)
 - Notas: Pendente: sem validacao no aparelho. Testes guia_catalogo_tv.sh e addonslista.sh rc 0.
 
 ### Chdelay (delay de canal/troca de canal)
@@ -3055,47 +3057,47 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Glass mockup: estudo de design (somente mockups)
 
 - Plataforma: ?
-- Status: em_job
+- Status: aberta
 - Release: 2.1
 - Conserto: nenhum encontrado
-- Próximo passo: aguardar job j-205-glassmock (RUNNING 20:41); sem merge de codigo
+- Próximo passo: review ou drop (2 ahead, sem review)
 - Notas: Branch agente/205-glassmock ja integrada. Estudo/mockups, nao lancar.
 
 ### Barra 27 (branch agente/205-barra27)
 
 - Plataforma: Android/TCL?
-- Status: em_job
+- Status: integrada
 - Release: 2.0.5
 - Conserto: agente/205-barra27: 2 commits fora
-- Próximo passo: review fixy BLOQUEIA (j-205-barra27-fixy); fix pendente
+- Próximo passo: lancar com 2.0.5 (merged em agente/205-barra27)
 - Notas: criado pelo escrivao 22:4x
 
 ### Cabecalho colunas (agente/205-colhdr)
 
 - Plataforma: ?
-- Status: em_revisao
+- Status: aberta
 - Release: 2.0.5
 - Conserto: agente/205-colhdr: 1 commit fora
-- Próximo passo: job j-205-colhdr done 21:18 sem review: revisar
-- Notas: criado pelo escrivao 22:4x
+- Próximo passo: verificar se colhdrlinha (merged) substitui; senao review ou drop
+- Notas: 1 ahead; fix 21:18, sem review depois
 
 ### VIDAA (agente/205-vidaa)
 
 - Plataforma: VIDAA
-- Status: em_revisao
+- Status: aberta
 - Release: 2.0.5
 - Conserto: agente/205-vidaa: 14 commits fora
-- Próximo passo: 14 commits, job sem log de review; revisar
+- Próximo passo: review (14 ahead; fix 22:46 sem review)
 - Notas: criado pelo escrivao 22:4x
 
 ### PR #493 (ghbarker, ligado a #488)
 
 - Plataforma: Android/TCL?
-- Status: em_job
+- Status: em_revisao
 - Release: 2.0.5
 - Conserto: agente/205-pr493: 12 commits fora
-- Próximo passo: review BLOQUEIA (j-revg-pr493); fix pendente
-- Notas: criado pelo escrivao 22:4x
+- Próximo passo: substituido por pr/493-fix (review OK); nao mergear o branch velho
+- Notas: agente/205-pr493 12 ahead; pr/493-fix e o fix
 
 ### PR #498 limpo (pr/498-limpo)
 
@@ -3103,8 +3105,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_revisao
 - Release: 2.0.5
 - Conserto: pr/498-limpo: 12 commits fora
-- Próximo passo: merge pr/498-limpo (review OK 23:15, 12 commits à frente)
-- Notas: criado pelo escrivao 2026-10-15
+- Próximo passo: review OK (j-revpr498-limpo); merge pr/498-limpo
+- Notas: PR #498; 12 ahead; nao mergeado
 
 ### PR #491 limpo (pr/491-limpo)
 
@@ -3112,8 +3114,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_revisao
 - Release: 2.0.5
 - Conserto: pr/491-limpo: 50 commits fora
-- Próximo passo: review pr/491-limpo (fix 03:55 após BLOQUEIA r2 03:16); sem review nova
-- Notas: criado pelo escrivao 2026-10-15
+- Próximo passo: fix do BLOQUEIA r3 (j-revpr491-limpo-r3); depois review
+- Notas: PR #491; 51 ahead; nao mergeado
 
 ### PR #489 fix (pr/489-fix)
 
@@ -3122,7 +3124,7 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Release: 2.0.5
 - Conserto: pr/489-fix: 23 commits fora
 - Próximo passo: review OK (j-revpr489-fix); merge pr/489-fix
-- Notas: criado pelo escrivao 2026-10-15
+- Notas: PR #489; 23 ahead; nao mergeado
 
 ### PR #490 fix (pr/490-fix)
 
@@ -3130,8 +3132,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_revisao
 - Release: 2.0.5
 - Conserto: pr/490-fix: 6 commits fora
-- Próximo passo: review pr/490-fix (fix 03:55 após BLOQUEIA 03:14); sem review nova
-- Notas: criado pelo escrivao 2026-10-15
+- Próximo passo: fix do BLOQUEIA (j-revpr490-fix2); depois review; merge pr/490-fix
+- Notas: PR #490; 7 ahead; nao mergeado
 
 ### PR #493 fix (pr/493-fix)
 
@@ -3139,32 +3141,32 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_revisao
 - Release: 2.0.5
 - Conserto: pr/493-fix: 9 commits fora
-- Próximo passo: review pr/493-fix (fix 03:52 após BLOQUEIA 02:47); sem review nova
-- Notas: criado pelo escrivao 2026-10-15
+- Próximo passo: review OK (j-revpr493-fix2); merge pr/493-fix
+- Notas: PR #493 (carrega #488); 10 ahead; nao mergeado
 
 ### Vidro todo (agente/205-vidrotodo)
 
 - Plataforma: ?
-- Status: em_revisao
+- Status: aberta
 - Release: 2.0.5
 - Conserto: agente/205-vidrotodo: 7 commits fora
-- Próximo passo: job done 03:06 sem review; revisar
+- Próximo passo: review (9 ahead; build job done 04:11, sem log de review)
 - Notas: criado pelo escrivao 2026-10-15
 
 ### Aspecto volta (agente/205-aspvolta)
 
 - Plataforma: ?
-- Status: em_revisao
+- Status: integrada
 - Release: 2.0.5
 - Conserto: agente/205-aspvolta: 1 commit fora
-- Próximo passo: job done 03:05 sem review; revisar
+- Próximo passo: lancar com 2.0.5 (merged em agente/205-aspvolta)
 - Notas: criado pelo escrivao 2026-10-15
 
 ### Estilo 2 (agente/205-estilo2)
 
 - Plataforma: ?
-- Status: em_revisao
+- Status: aberta
 - Release: 2.0.5
 - Conserto: agente/205-estilo2: 2 commits fora
-- Próximo passo: job estilo3 done sem review; revisar
+- Próximo passo: review ou drop (2 ahead, sem review)
 - Notas: criado pelo escrivao 2026-10-15
