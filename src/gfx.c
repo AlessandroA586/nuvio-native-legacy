@@ -3586,6 +3586,14 @@ int gfx_tela_bmp(const char *caminho) {
 }
 // 78% e o vidro de sempre: o fator escala o alfa do miolo (folha e painel).
 float gfx_vidro_opacidade(void) { return ajustes_vidro_opacidade() / 0.78f; }
+void gfx_vidro_material(GfxRect r, float raio, float dens, float a) {
+  gfx_vidro(r, raio, GFX_VIDRO_PAINEL, 0.06f, dens * gfx_vidro_opacidade(), a);
+}
+void gfx_vidro_ou_solido(GfxRect r, float raio, float dens, float a,
+                         float sr, float sg, float sb, float sa) {
+  if (ajustes_vidro()) gfx_vidro_material(r, raio, dens, a);
+  else gfx_cor(r, raio, sr, sg, sb, sa * a);
+}
 void gfx_vidro_painel(GfxRect r, float raio, float fundo, float a) {
   gfx_vidro(r, raio, GFX_VIDRO_PAINEL, VIDRO_MIOLO, fundo * gfx_vidro_opacidade(), a);
 }
