@@ -2180,6 +2180,8 @@
   T("Idioma definido pela sua conta · mudar em Ajustes", "Γλώσσα που ορίζεται από τον λογαριασμό σου · άλλαξέ την στις Ρυθμίσεις"),
   T("Idioma definido pelo sistema da TV · mudar em Ajustes", "Γλώσσα που ορίζεται από το σύστημα της τηλεόρασης · άλλαξέ την στις Ρυθμίσεις"),
   T("Idioma do app", "Γλώσσα εφαρμογής"),
+  T("Idioma do filtro de áudio: %s. OK liga o filtro.", "Γλώσσα φίλτρου ήχου: %s. Το OK ενεργοποιεί το φίλτρο."),
+  T("Idioma do filtro de áudio: %s. OK tira o filtro.", "Γλώσσα φίλτρου ήχου: %s. Το OK καταργεί το φίλτρο."),
   T("Idioma do áudio", "Γλώσσα ήχου"),
   T("Idioma dos dados do título", "Γλώσσα στοιχείων τίτλου"),
   T("Idioma dos metadados", "Γλώσσα μεταδεδομένων"),

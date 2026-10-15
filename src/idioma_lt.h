@@ -2180,6 +2180,8 @@
   T("Idioma definido pela sua conta · mudar em Ajustes", "Kalbą nustato jūsų paskyra · pakeiskite Nustatymuose"),
   T("Idioma definido pelo sistema da TV · mudar em Ajustes", "Kalbą nustato televizoriaus sistema · pakeiskite Nustatymuose"),
   T("Idioma do app", "Programėlės kalba"),
+  T("Idioma do filtro de áudio: %s. OK liga o filtro.", "Garso filtro kalba: %s. OK įjungia filtrą."),
+  T("Idioma do filtro de áudio: %s. OK tira o filtro.", "Garso filtro kalba: %s. OK pašalina filtrą."),
   T("Idioma do áudio", "Garso kalba"),
   T("Idioma dos dados do título", "Pavadinimo duomenų kalba"),
   T("Idioma dos metadados", "Metaduomenų kalba"),

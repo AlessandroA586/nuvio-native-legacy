@@ -2180,6 +2180,8 @@
   T("Idioma definido pela sua conta · mudar em Ajustes", "Езикът е зададен от вашия акаунт · променете го в Настройки"),
   T("Idioma definido pelo sistema da TV · mudar em Ajustes", "Езикът е зададен от системата на телевизора · променете го в Настройки"),
   T("Idioma do app", "Език на приложението"),
+  T("Idioma do filtro de áudio: %s. OK liga o filtro.", "Език на аудио филтъра: %s. OK включва филтъра."),
+  T("Idioma do filtro de áudio: %s. OK tira o filtro.", "Език на аудио филтъра: %s. OK премахва филтъра."),
   T("Idioma do áudio", "Език на звука"),
   T("Idioma dos dados do título", "Език на данните за заглавието"),
   T("Idioma dos metadados", "Език на метаданните"),

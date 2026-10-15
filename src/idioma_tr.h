@@ -2180,6 +2180,8 @@
   T("Idioma definido pela sua conta · mudar em Ajustes", "Dil, hesabına göre ayarlandı · Ayarlar'dan değiştir"),
   T("Idioma definido pelo sistema da TV · mudar em Ajustes", "Dil, TV sistemine göre ayarlandı · Ayarlar'dan değiştir"),
   T("Idioma do app", "Uygulama dili"),
+  T("Idioma do filtro de áudio: %s. OK liga o filtro.", "Ses filtresi dili: %s. OK filtreyi açar."),
+  T("Idioma do filtro de áudio: %s. OK tira o filtro.", "Ses filtresi dili: %s. OK filtreyi kaldırır."),
   T("Idioma do áudio", "Ses dili"),
   T("Idioma dos dados do título", "Başlık verilerinin dili"),
   T("Idioma dos metadados", "Üst veri dili"),
