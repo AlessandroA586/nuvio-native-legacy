@@ -29,7 +29,6 @@ void dts_tpk_fechar(void) {}
 int dts_tpk_estado(void) { return DTSTPK_NADA; }
 const char *dts_tpk_erro(void) { return ""; }
 double dts_tpk_duracao(void) { return 0; }
-int dts_tpk_modo(void) { return -1; }
 double dts_tpk_inicio_stream(void) { return -1; }
 const char *dts_tpk_caminho(void) { return ""; }
 int dts_tpk_sem_indice(void) { return 0; }
@@ -66,6 +65,7 @@ int dts_tpk_e_url(const char *u) { (void)u; return 0; }
 #define ESPERA_SONDA_MS  30000
 #define ESPERA_GERADOR_MS 30000
 #define GERADORES        2             /* each one is one more connection to the source */
+#define TIPO_TS          "video/mp2t"
 
 static const char *const MODO_NOME[DTSTPK_MODOS] = { "HLS", "continuous TS", "off" };
 const char *dts_tpk_modo_nome(int m) { return m >= 0 && m < DTSTPK_MODOS ? MODO_NOME[m] : "?"; }
@@ -193,7 +193,7 @@ static void responderSimples(int s, int cod, const char *msg, const char *tipo, 
 
 // --- porteiro ---------------------------------------------------------------
 // Review blocker 3: no thread per connection before its token is checked. One
-// thread per listener holds the new connections (up to PORT_PEND, the oldest
+// thread holds the new connections (up to PORT_PEND, the oldest
 // dropped when full, PORT_PRAZO_MS each to send the request head), reads the
 // head without blocking, and only a head with the live token gets a thread,
 // up to maxVivos at once. Anything else is answered (404/503) and closed here.
@@ -462,7 +462,7 @@ static int esperarPronta(Sessao *s, int sock, int manter) {
 }
 
 // --- geradores ----------------------------------------------------------------
-// Ordem (design 4.1): (1) um ocioso que CONTINUA em `seg`; (2) se outro esta
+// Ordem: (1) um ocioso que CONTINUA em `seg`; (2) se outro esta
 // fazendo seg-1, espera por ele (o player pediu dois em paralelo: continuar
 // custa nada, buscar baixaria o mesmo trecho duas vezes); (3) um ocioso
 // qualquer (busca); (4) um novo, ate GERADORES; (5) para o mais antigo.
@@ -550,7 +550,6 @@ static void soltarGerador(Sessao *s, Gerador *g) {
 // --- saida de um run ------------------------------------------------------------
 typedef struct {
   int sock, manter, cabEnviado, status;
-  const char *tipo;
   Sessao *s;
   Gerador *ger;
   int64_t bytes;
@@ -560,7 +559,7 @@ typedef struct {
 static int enviarCab(Saida *o) {
   char cab[400];
   snprintf(cab, sizeof cab, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nTransfer-Encoding: chunked\r\n"
-           "Cache-Control: no-cache\r\nConnection: %s\r\n\r\n", o->tipo, o->manter ? "keep-alive" : "close");
+           "Cache-Control: no-cache\r\nConnection: %s\r\n\r\n", TIPO_TS, o->manter ? "keep-alive" : "close");
   o->cabEnviado = 1; o->status = 200;
   return enviarTudo(o->sock, cab, strlen(cab), &o->s->cancelar, &o->ger->parar);
 }
@@ -582,8 +581,7 @@ static int saidaEscrever(void *u, const unsigned char *d, int n) {
 
 // Um segmento (seg >= 0) ou o fluxo progressivo (seg < 0, a partir de `t`).
 // Devolve se a conexao pode seguir aberta.
-static int servirFluxo(int sock, Sessao *s, const Pedido *pd, unsigned nr, int seg, double t, const char *fmt,
-                       const char *tipo, int manter) {
+static int servirFluxo(int sock, Sessao *s, const Pedido *pd, unsigned nr, int seg, double t, int manter) {
   char err[160] = "";
   int continua = 0, rr;
   uint64_t t0 = agoraMs();
@@ -594,7 +592,7 @@ static int servirFluxo(int sock, Sessao *s, const Pedido *pd, unsigned nr, int s
     // HEAD: so o cabecalho; o tamanho de um segmento nao existe antes de gera-lo.
     char cab[300];
     snprintf(cab, sizeof cab, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nCache-Control: no-cache\r\nConnection: %s\r\n\r\n",
-             tipo, manter ? "keep-alive" : "close");
+             TIPO_TS, manter ? "keep-alive" : "close");
     enviarTudo(sock, cab, strlen(cab), &s->cancelar, NULL);
     printf("[dts-tpk] #%u <- 200 HEAD (sem corpo)\n", nr);
     fflush(stdout);
@@ -612,10 +610,10 @@ static int servirFluxo(int sock, Sessao *s, const Pedido *pd, unsigned nr, int s
     pthread_mutex_lock(&s->m); s->inicioStream = dts_remux_keyframe_before(s->rx, t); pthread_mutex_unlock(&s->m);
   }
   memset(&o, 0, sizeof o);
-  o.sock = sock; o.manter = manter; o.tipo = tipo; o.s = s; o.ger = ger; o.t0 = t0;
+  o.sock = sock; o.manter = manter; o.s = s; o.ger = ger; o.t0 = t0;
   if (pd->range[0] && strncmp(pd->range, "bytes=0-", 8))
     printf("[dts-tpk] #%u: Range ignorado (gera do inicio, 200 inteiro)\n", nr);
-  rr = dts_remux_gen_run(ger->g, seg, t, fmt, saidaEscrever, &o, &ger->parar, &st, err, sizeof err);
+  rr = dts_remux_gen_run(ger->g, seg, t, saidaEscrever, &o, &ger->parar, &st, err, sizeof err);
   soltarGerador(s, ger);
   int status = o.status, ok = rr == 0;
   int64_t enviados = o.bytes;
@@ -644,7 +642,7 @@ static int servirFluxo(int sock, Sessao *s, const Pedido *pd, unsigned nr, int s
            st.fresh ? "buscou" : "continuou", st.cpu_s * 1000.0, st.audio_cpu_s * 1000.0, st.range_wait_s * 1000.0,
            ok ? "" : rr == -2 ? ", player fechou" : ", ERRO: ", ok || rr == -2 ? "" : err);
   else
-    printf("[dts-tpk] #%u <- %s %s desde %.3f s: %lld B em %u ms, %s%s\n", nr, stTxt, fmt, dts_remux_gen_start_s(ger->g),
+    printf("[dts-tpk] #%u <- %s TS continuo desde %.3f s: %lld B em %u ms, %s%s\n", nr, stTxt, dts_remux_gen_start_s(ger->g),
            (long long)enviados, (unsigned)(fim - t0), ok ? "fim do arquivo" : rr == -2 ? "player fechou" : "ERRO: ",
            ok || rr == -2 ? "" : err);
   fflush(stdout);
@@ -747,11 +745,11 @@ static int atenderPedido(int sock, const Pedido *pd, int manter) {
       printf("[dts-tpk] #%u <- 404 segmento %d fora da playlist\n", nr, k);
       fflush(stdout);
       r = manter;
-    } else r = servirFluxo(sock, s, pd, nr, k, 0, "mpegts", "video/mp2t", manter);
+    } else r = servirFluxo(sock, s, pd, nr, k, 0, manter);
   } else if (!strcmp(resto, "prog.ts")) {
     const char *q = strstr(pd->query, "t=");
     double t = q ? atof(q + 2) : 0.0;
-    r = servirFluxo(sock, s, pd, nr, -1, t, "mpegts", "video/mp2t", manter);
+    r = servirFluxo(sock, s, pd, nr, -1, t, manter);
   } else {
     responderSimples(sock, 404, "Not Found", NULL, "", manter);
     r = manter;
@@ -1037,7 +1035,6 @@ void dts_tpk_fechar(void) {
   pthread_mutex_unlock(&G); return v;
 int dts_tpk_estado(void) { LER_ATUAL(int, estado, DTSTPK_NADA) }
 double dts_tpk_duracao(void) { LER_ATUAL(double, duracao, 0.0) }
-int dts_tpk_modo(void) { LER_ATUAL(int, modo, -1) }
 double dts_tpk_inicio_stream(void) { LER_ATUAL(double, inicioStream, -1.0) }
 const char *dts_tpk_erro(void) {
   static char b[160];

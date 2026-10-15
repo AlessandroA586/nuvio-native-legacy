@@ -6,7 +6,6 @@
 //   dts_tpk_servidor <port> padrao <dir>   HLS: 2 s segments, 1 s prebuffer
 //   dts_tpk_servidor <port> cancelar|fila|escuta|faixa <dir>   review blockers
 #include "../src/dts/dts_hls_tpk.h"
-#include <libavformat/avformat.h>
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <ifaddrs.h>
@@ -165,65 +164,6 @@ static void testeCancelar(int origem) {
   sleep(4);
 }
 
-// Rewrites `in` so each audio packet sits in the file next to the video of
-// `lead` seconds EARLIER: the audio runs that far ahead of its video (a badly
-// interleaved file). Timestamps are untouched; only the order changes.
-typedef struct { AVPacket *p; double k; } Ord;
-static int cmpOrd(const void *a, const void *b) {
-  double x = ((const Ord *)a)->k, y = ((const Ord *)b)->k;
-  return x < y ? -1 : x > y;
-}
-// The .tpk FFmpeg has no protocols at all (no "file"): plain stdio here.
-static int fLer(void *f, uint8_t *b, int n) { size_t k = fread(b, 1, (size_t)n, f); return k ? (int)k : AVERROR_EOF; }
-static int fEscrever(void *f, const uint8_t *b, int n) { return fwrite(b, 1, (size_t)n, f) == (size_t)n ? n : -1; }
-static int64_t fBuscar(void *f, int64_t o, int w) {
-  if (w == AVSEEK_SIZE) { long a = ftell(f), z; fseek(f, 0, SEEK_END); z = ftell(f); fseek(f, a, SEEK_SET); return z; }
-  return fseek(f, (long)o, w & ~AVSEEK_FORCE) ? -1 : ftell(f);
-}
-static int adiantar(const char *in, const char *out, double lead) {
-  AVFormatContext *ic = avformat_alloc_context(), *oc = NULL;
-  Ord *v = NULL;
-  int n = 0, cap = 0, rr = -1;
-  FILE *fi = fopen(in, "rb"), *fo = fopen(out, "w+b");
-  av_log_set_level(AV_LOG_ERROR);
-  if (!ic || !fi || !fo) return -1;
-  ic->pb = avio_alloc_context(av_malloc(65536), 65536, 0, fi, fLer, NULL, fBuscar);
-  if (avformat_open_input(&ic, NULL, NULL, NULL) < 0 || avformat_find_stream_info(ic, NULL) < 0) return -1;
-  if (avformat_alloc_output_context2(&oc, NULL, "matroska", NULL) < 0) return -1;
-  for (unsigned i = 0; i < ic->nb_streams; i++) {
-    AVStream *o = avformat_new_stream(oc, NULL);
-    avcodec_parameters_copy(o->codecpar, ic->streams[i]->codecpar);
-    o->codecpar->codec_tag = 0;
-    o->time_base = ic->streams[i]->time_base;
-  }
-  for (;;) {
-    AVPacket *p = av_packet_alloc();
-    if (av_read_frame(ic, p) < 0) { av_packet_free(&p); break; }
-    if (n == cap) { cap = cap ? cap * 2 : 4096; v = realloc(v, (size_t)cap * sizeof *v); }
-    int64_t ts = p->dts != AV_NOPTS_VALUE ? p->dts : p->pts;
-    double t = ts != AV_NOPTS_VALUE ? ts * av_q2d(ic->streams[p->stream_index]->time_base) : 0;
-    if (ic->streams[p->stream_index]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) t -= lead;
-    v[n].p = p; v[n].k = t; n++;
-  }
-  qsort(v, (size_t)n, sizeof *v, cmpOrd);
-  oc->pb = avio_alloc_context(av_malloc(65536), 65536, 1, fo, NULL, fEscrever, fBuscar);
-  if (oc->pb && avformat_write_header(oc, NULL) >= 0) {
-    rr = 0;
-    for (int i = 0; i < n; i++) {
-      av_packet_rescale_ts(v[i].p, ic->streams[v[i].p->stream_index]->time_base, oc->streams[v[i].p->stream_index]->time_base);
-      if (av_write_frame(oc, v[i].p) < 0) rr = -1;
-    }
-    av_write_trailer(oc);
-    avio_flush(oc->pb);
-  }
-  fclose(fo); fclose(fi);
-  for (int i = 0; i < n; i++) av_packet_free(&v[i].p);
-  free(v);
-  avformat_free_context(oc);
-  avformat_close_input(&ic);
-  return rr;
-}
-
 // Audio 70 s ahead of the video (review blocker 2): the converter keeps the
 // AC3 of later segments queued until their video comes. The queue has a cap:
 // past it the segment fails (500) instead of growing until out of memory.
@@ -346,7 +286,6 @@ static void testeFaixa(int origem) {
 }
 
 int main(int argc, char **argv) {
-  if (argc == 5 && !strcmp(argv[1], "adiantar")) return adiantar(argv[2], argv[3], atof(argv[4])) ? 1 : 0;
   if (argc < 4) { fprintf(stderr, "usage: %s <origin port> <test> <dir>\n", argv[0]); return 2; }
   int origem = atoi(argv[1]);
   const char *t = argv[2];

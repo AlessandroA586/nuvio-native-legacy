@@ -39,7 +39,6 @@ void dts_tpk_fechar(void);
 int  dts_tpk_estado(void);
 const char *dts_tpk_erro(void);          /* reason of DTSTPK_FALHOU, no URL */
 double dts_tpk_duracao(void);            /* seconds, once ready */
-int  dts_tpk_modo(void);                 /* mode of the session, -1 none */
 /* Progressive: source time of the keyframe the CURRENT stream starts at (the
  * player counts from there). -1 until the stream's request has started. */
 double dts_tpk_inicio_stream(void);

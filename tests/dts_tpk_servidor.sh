@@ -3,7 +3,9 @@
 # FFmpeg built with the .tpk component set (NUVIO_DTS_TARGET=tpk
 # tools/build-dts-ffmpeg.sh, prefix in NUVIO_DTS_ROOT, default /opt/nuvio-dts),
 # fixtures made by the system ffmpeg CLI (libx264 + the experimental DTS
-# encoder), source served by tests/dts_tpk_servidor_origem.py.
+# encoder) and, for the audio-queue check, tests/dts_tpk_adiantar.c built
+# against the system FFmpeg (pkg-config), source served by
+# tests/dts_tpk_servidor_origem.py.
 set -eu
 cd "$(dirname "$0")/.."
 ROOT=${NUVIO_DTS_ROOT:-/opt/nuvio-dts}
@@ -35,7 +37,13 @@ ${CC:-gcc} -O1 -g -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-mis
   tests/dts_tpk_servidor.c src/dts/dts_hls_tpk.c src/dts/dts_remux.c src/dts/dts_engine.c src/rede.c src/redeurl.c \
   "$ROOT/lib/libavformat.a" "$ROOT/lib/libavcodec.a" "$ROOT/lib/libswresample.a" "$ROOT/lib/libavutil.a" \
   -lz -lm -lpthread -ldl -o "$work/test"
-"$work/test" adiantar "$work/longo.mkv" "$work/src/adiantado.mkv" 70
+# The audio-ahead file needs a Matroska muxer, which the .tpk FFmpeg leaves out.
+adiantado=0
+if pkg-config --exists libavformat libavcodec libavutil 2>/dev/null &&
+   ${CC:-gcc} -O1 -Wall tests/dts_tpk_adiantar.c $(pkg-config --cflags --libs libavformat libavcodec libavutil) \
+     -o "$work/adiantar" && "$work/adiantar" "$work/longo.mkv" "$work/src/adiantado.mkv" 70; then
+  adiantado=1
+fi
 fail=0
 dur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1"; }
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
@@ -62,11 +70,15 @@ check "cancel: the probe's request to the source ended within 2 s of the close (
 check "cancel: no 'did not open' line for a cancelled probe" "! grep -q 'a fonte nao abriu no conversor' '$work/t3.log'"
 
 # 3. Audio far ahead of its video: the AC3 queue stops at its cap (blocker 2).
-"$work/test" "$port" fila "$work" > "$work/t4.log" 2>&1 || fail=1
-grep -E '^(ok|FAIL)' "$work/t4.log"
-check "queue: the error names the audio queue cap" "grep -q 'Audio queue over 60 s' '$work/t4.log'"
-check "queue: the converter stayed under 100 MB RSS ($(sed -n 's/.*app RSS peak \([0-9]*\) MB.*/\1/p' "$work/t4.log") MB)" \
-  "[ \"\$(sed -n 's/.*app RSS peak \([0-9]*\) MB.*/\1/p' '$work/t4.log')\" -lt 100 ]"
+if [ "$adiantado" = 1 ]; then
+  "$work/test" "$port" fila "$work" > "$work/t4.log" 2>&1 || fail=1
+  grep -E '^(ok|FAIL)' "$work/t4.log"
+  check "queue: the error names the audio queue cap" "grep -q 'Audio queue over 60 s' '$work/t4.log'"
+  check "queue: the converter stayed under 100 MB RSS ($(sed -n 's/.*app RSS peak \([0-9]*\) MB.*/\1/p' "$work/t4.log") MB)" \
+    "[ \"\$(sed -n 's/.*app RSS peak \([0-9]*\) MB.*/\1/p' '$work/t4.log')\" -lt 100 ]"
+else
+  echo "skip queue: no FFmpeg development files (pkg-config libavformat) for tests/dts_tpk_adiantar.c"
+fi
 
 # 4. Listeners: HLS on 127.0.0.1 only; no thread before the token (blocker 3).
 "$work/test" "$port" escuta "$work" > "$work/t5.log" 2>&1 || fail=1

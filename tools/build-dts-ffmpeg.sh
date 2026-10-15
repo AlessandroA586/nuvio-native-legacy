@@ -6,9 +6,11 @@
 #   webos (default) cross build with the LG SDK (tools/Dockerfile); output unchanged.
 #   tpk             Samsung .tpk (tools/tpk.sh). Native build INSIDE the nuvio-tpk-sdk ARM
 #                   container, from the source tree tpk.sh already downloaded and checked on the
-#                   host (NUVIO_DTS_SRC; the container has no curl). Adds what the Samsung loopback
-#                   converter needs (docs/plans/dts-truehd-ac3-tizen-DESIGN.md): TrueHD/MLP
-#                   decoders, mpegts/matroska/mp4 muxers, mlp/ac3 parsers, truehd_core.
+#                   host (NUVIO_DTS_SRC; the container has no curl). Only what the Samsung loopback
+#                   converter uses (src/dts/dts_remux.c, docs/features/dts/README.md): DTS and
+#                   TrueHD/MLP decoders, the MPEG-TS muxer, mlp/ac3 parsers. No subtitle decoders
+#                   and no *_core filters: the .tpk app draws subtitles itself and the DTS
+#                   decoder takes core_only.
 set -eu
 VERSION=7.1.5
 SHA256=de668509caf9e35e3cd162473441fdb29538c6d96ed080292b3cf9e6fc5d558f
@@ -24,10 +26,10 @@ mkdir -p "$BUILD" "$PREFIX"
 if [ "$TARGET" = tpk ]; then
   SRC=${NUVIO_DTS_SRC:?tools/tpk.sh passes the extracted ffmpeg-$VERSION source}
   CC=${CC:-gcc}
-  DECODERS=$DECODERS,truehd,mlp
-  MUXERS=mpegts,matroska,mp4
+  DECODERS=dca,truehd,mlp
+  MUXERS=mpegts
   PARSERS=$PARSERS,mlp,ac3
-  BSFS=$BSFS,truehd_core
+  BSFS=h264_mp4toannexb,hevc_mp4toannexb
   # zlib: Matroska tracks stored zlib-compressed (ContentCompression) and MP4
   # with a compressed header (cmov) arrive raw without it ("Unsupported encoding
   # type"). The .tpk already links the SDK's static libz.a (tools/tpk.sh, also

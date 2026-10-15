@@ -109,7 +109,6 @@ void dts_tpk_fechar(void) {}
 int dts_tpk_estado(void) { return DTSTPK_PRONTO; }
 const char *dts_tpk_erro(void) { return ""; }
 double dts_tpk_duracao(void) { return 7200; }
-int dts_tpk_modo(void) { return DTSTPK_HLS; }
 double dts_tpk_inicio_stream(void) { return -1; }
 const char *dts_tpk_caminho(void) { return "DTS core only"; }
 int dts_tpk_prebuffer_ms(void) { return 0; }
