@@ -1195,7 +1195,7 @@ static int linhaDts(const char *l) {
 
 // GET /<token>/tune?ring=16&gens=1&seg0=2 sets the tuning test (next video on).
 static void servirAjuste(int sock, const char *query) {
-  char b[900], txt[96], erro[80] = "";
+  char b[1400], txt[96], erro[80] = "";
   Ajuste a;
   pthread_mutex_lock(&G);
   ajusteCarregar();

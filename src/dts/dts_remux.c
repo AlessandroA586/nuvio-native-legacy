@@ -91,6 +91,11 @@ void dts_remux_gen_limit(DtsRemuxGen *g, double s) { (void)g; (void)s; }
 #define MAX_GAP_S 5              /* longer audio holes skip ahead instead of padding */
 #define TS_OFFSET_S 10           /* fixed output offset (design 2.2-4) */
 #define VQ_MAX_BYTES (192u << 20)
+/* Encoded audio waiting for its video: in a sane file well under a segment.
+ * Audio interleaved this far ahead of its video (or video gone while the audio
+ * goes on) fails the run instead of growing until the TV runs out of memory:
+ * 60 s is 4.8 MB of AC3 640k. */
+#define AQ_MAX_S 60
 #define ENGINES_MAX 8
 #define UNSET INT64_MIN
 #define GRID_LAZY (INT64_MIN + 1) /* b48: the grid starts at the first audio (seek by time) */
@@ -411,7 +416,7 @@ DtsRemux *dts_remux_open(const char *url, const char *headers, int ordinal, int 
 int dts_remux_probe(DtsRemux *r, const char *url, const char *headers, int ordinal, int stereoAac,
                     double segTarget, char *err, size_t errn) {
   AVFormatContext *ic;
-  int rr, nAudio = 0, ordAs = -1, ordPedido = -1, primeiro = -1, primeiroOrd = -1;
+  int nAudio = 0, ordAs = -1, ordPedido = -1, primeiro = -1, primeiroOrd = -1;
   pthread_once(&logOnce, logInit);
   atomic_store(&logBudget, 40);
   if (err && errn) err[0] = 0;
@@ -507,7 +512,7 @@ int dts_remux_probe(DtsRemux *r, const char *url, const char *headers, int ordin
     in->mp4 = r->mov;
     /* Matroska parses Cues only on the first seek (design 2.2-6). */
     int64_t t0 = V->start_time != AV_NOPTS_VALUE ? V->start_time : 0;
-    rr = avformat_seek_file(ic, r->vs, INT64_MIN, t0, t0, AVSEEK_FLAG_BACKWARD);
+    avformat_seek_file(ic, r->vs, INT64_MIN, t0, t0, AVSEEK_FLAG_BACKWARD);
     if (isCancelled(r)) { fail(err, errn, "Cancelled", 0); goto bad; }
     int n = avformat_index_get_entries_count(V);
     r->kf = n > 0 ? malloc((size_t)n * sizeof *r->kf) : NULL;
@@ -782,6 +787,9 @@ static int drainEncoder(DtsRemuxGen *g, char *err, size_t errn) {
     AVPacket *p = av_packet_clone(g->op);
     av_packet_unref(g->op);
     if (!p || qPush(&g->aq, p, tagAudio(g, p->pts)) < 0) { av_packet_free(&p); fail(err, errn, "Out of memory", 0); return -1; }
+    if ((int64_t)g->aq.n * g->frame > (int64_t)AQ_MAX_S * 48000) {
+      fail(err, errn, "Audio queue over 60 s (video missing?)", 0); return -1;
+    }
   }
 }
 

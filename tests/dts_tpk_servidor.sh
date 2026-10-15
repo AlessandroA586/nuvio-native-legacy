@@ -20,6 +20,12 @@ ffmpeg -v error -f lavfi -i testsrc2=s=640x360:r=24 -f lavfi -i "sine=f=440:r=48
   -filter_complex "[1:a]pan=5.1|FL=c0|FR=c0|FC=c0|LFE=c0|BL=c0|BR=c0[a]" -map 0:v -map "[a]" \
   -c:v libx264 -preset ultrafast -g 48 -keyint_min 48 -sc_threshold 0 -pix_fmt yuv420p \
   -c:a dca -strict -2 -b:a 768k "$work/src/fx.mkv"
+# 150 s at 64x64 for the audio-queue cap: the test binary moves the audio 70 s
+# ahead of its video below, so up to 80 s of AC3 wait for their video.
+ffmpeg -v error -f lavfi -i testsrc2=s=64x64:r=24 -f lavfi -i "sine=f=440:r=48000" -t 150 \
+  -filter_complex "[1:a]pan=5.1|FL=c0|FR=c0|FC=c0|LFE=c0|BL=c0|BR=c0[a]" -map 0:v -map "[a]" \
+  -c:v libx264 -preset ultrafast -g 48 -keyint_min 48 -sc_threshold 0 -pix_fmt yuv420p \
+  -c:a dca -strict -2 -b:a 768k "$work/longo.mkv"
 python3 tests/dts_tpk_servidor_origem.py "$work/src" "$work/port" "$work/origem.log" &
 pid=$!
 for _ in $(seq 50); do [ -s "$work/port" ] && break; sleep 0.1; done
@@ -29,6 +35,7 @@ ${CC:-gcc} -O1 -g -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-mis
   tests/dts_tpk_servidor.c src/dts/dts_hls_tpk.c src/dts/dts_remux.c src/dts/dts_engine.c src/rede.c src/redeurl.c \
   "$ROOT/lib/libavformat.a" "$ROOT/lib/libavcodec.a" "$ROOT/lib/libswresample.a" "$ROOT/lib/libavutil.a" \
   -lz -lm -lpthread -ldl -o "$work/test"
+"$work/test" adiantar "$work/longo.mkv" "$work/src/adiantado.mkv" 70
 fail=0
 dur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1"; }
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
@@ -65,7 +72,14 @@ check "cancel: the probe's request to the source ended within 2 s of the close (
   "[ -n '$solto' ] && [ -n '$fechou' ] && awk 'BEGIN{exit !($solto - $fechou < 2.0)}'"
 check "cancel: no 'did not open' line for a cancelled probe" "! grep -q 'a fonte nao abriu no conversor' '$work/t3.log'"
 
-cp "$work/t1.log" "$work/t2.log" "$work/t3.log" "${DTS_TPK_LOGS:-$work}/" 2>/dev/null || true
-if [ "$fail" != 0 ]; then echo "--- t1.log"; grep '\[dts-tpk\]' "$work/t1.log" | tail -30; echo "--- t2.log"; grep '\[dts-tpk\]' "$work/t2.log" | tail -30; echo "--- t3.log"; tail -20 "$work/t3.log"; fi
+# 4. Audio far ahead of its video: the AC3 queue stops at its cap (blocker 2).
+"$work/test" "$port" fila "$work" > "$work/t4.log" 2>&1 || fail=1
+grep -E '^(ok|FAIL)' "$work/t4.log"
+check "queue: the error names the audio queue cap" "grep -q 'Audio queue over 60 s' '$work/t4.log'"
+check "queue: the converter stayed under 100 MB RSS ($(sed -n 's/.*app RSS peak \([0-9]*\) MB.*/\1/p' "$work/t4.log") MB)" \
+  "[ \"\$(sed -n 's/.*app RSS peak \([0-9]*\) MB.*/\1/p' '$work/t4.log')\" -lt 100 ]"
+
+cp "$work/t1.log" "$work/t2.log" "$work/t3.log" "$work/t4.log" "${DTS_TPK_LOGS:-$work}/" 2>/dev/null || true
+if [ "$fail" != 0 ]; then echo "--- t1.log"; grep '\[dts-tpk\]' "$work/t1.log" | tail -30; echo "--- t2.log"; grep '\[dts-tpk\]' "$work/t2.log" | tail -30; echo "--- t3.log"; tail -20 "$work/t3.log"; echo "--- t4.log"; grep -v '^\[dts-tpk\] #' "$work/t4.log" | tail -20; fi
 [ "$fail" = 0 ] && echo "dts_tpk_servidor: ok"
 exit "$fail"
