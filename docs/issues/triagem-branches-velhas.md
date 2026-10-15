@@ -49,7 +49,7 @@ o que já está dentro do integ.
 | feat/vidaa | 10 | 2.2 (guardada) | Dentro: parte do servidor (`servidor/tv/src/index.js`, `servidor/tv/wrangler.toml`, `tools/vidaa-publicar.sh`). Cliente `fio1*.c`/`video_html5.c` ausente. |
 | feat/watch-together | 16 | 2.2 (guardada) | Dentro: parte do servidor (`servidor/juntos/src/{index,sala,logica,celular}.js`, `servidor/juntos/wrangler.toml`, `tools/juntos-publicar.sh`). Cliente `juntos*.c` ausente. |
 | fix/frost-ambiente-lg | 1 | OBSOLETO | WIP de agente "rescue uncommitted agent work (not reviewed)". Só harness de captura (`PERF_ALFA`, `PERF_BMP`), sem efeito no app. Base `NV_GLES_NO_MAC` já existe. |
-| fix/player-retido-flaky | 1 | PORTAR S (2.0.6) | Só teste. Falta `esperar_catalogo()` antes de `player_abrir` no teste de retenção (flake). WIP não revisado: revisar antes de portar. |
+| fix/player-retido-flaky | 1 | JA_DENTRO | Só teste. `tests/player_retido.c:38` já tem `esperar_catalogo()` (espera `desc_montando()` antes de `cat_definir`), chamado em `:45`. WIP não revisado: nada a portar. |
 | fix/tpk-selo-hdr | 2 | JA_DENTRO | Fade da grade já usa `topo + alturaLinha() - gcy`: `src/biblioteca.c:2399`. Tela de protetor (`registerScreenSaverRequest`) já está em `src/`. |
 | nacl/app-completo | 2 | OBSOLETO | Spike NaCl/PPAPI para Tizen 4/5 (`src/plat_nacl.c` ausente). Caminho substituído por tpk40/wgt. `docs/ROADMAP.md:105` já lista como spike. |
 | perf/trim-fileira | 1 | JA_DENTRO | `onTrimMemory` já em `android/.../NuvioActivity.kt:268`, `src/tex_cache.c:793-816`, `src/tex_cache.h:228`, `tests/texpressao.c`. Desenho diferente, mesma função. |
@@ -59,7 +59,7 @@ o que já está dentro do integ.
 | pr-493 | 1 | PORTAR L (2.1) | Reset de sessões de perfil e isolamento de fios. `src/perfisessao.h` ausente; `src/addons.c` do integ usa outro desenho (`listaTrava`, `progTrava`, `versaoLista`). 123 arquivos. |
 | pr-493-novo | 1 | PORTAR L (2.1) | Mesmo commit de pr-493 (`4cc89807`). Duplicata. |
 | webos3 | 7 | JA_DENTRO (fix de addons) + pendente (arte) | Fix `uses_primary_addons` em `src/perfis.c:268`; `NV_SDLCOMPAT_H` em `src/sdlcompat.h`. Os commits de arte/teto de textura (`312d2202`, `28ac6906`) não foram verificados. |
-| agente/205-dicatoque | 1 | PORTAR S (2.0.6) | Dicas do rodapé clicáveis (`aj2DicaOk`, `aj2DicaVoltar`) não existem no integ. Usa `ponteiro_alvo`, que já existe. Visual intacto. |
+| agente/205-dicatoque | 1 | PORTAR S (2.0.6) | Dicas do rodapé clicáveis (`aj2DicaOk`, `aj2DicaVoltar`) não existem no integ (nem `aj2DicaVoltar`; `aj2DicaOk`/`aj2DicaVoltar` não aparecem em `src/ajustes_ux_v2.inc`). Usa `ponteiro_alvo`, que já existe. Visual intacto. |
 | agente/205-bench-mm | 1 | JA_DENTRO | Medidor some com trailer: `src/desempenho.c:33,40`; chamado em `src/main.c:1922` via `trailer_medidor_esconde()`. |
 
 ## Pendências
@@ -67,5 +67,5 @@ o que já está dentro do integ.
 - Verificar linha a linha: pr-491 (DTS Tizen 6+), webos3 (arte).
 - `agente/2031-dvp5-hdr10` e `agente/203-323` ficam fora do 2.0.6: o integ já resolve os dois de outro jeito.
 - `experimento/dv-webos` não está morto (flags `/tmp/nuvio-dv-*` vivas em `src/video.c`, 4 commits com código em `src/dts/`).
-- Commits WIP "rescue uncommitted agent work (not reviewed)" (fix/player-retido-flaky, fix/frost-ambiente-lg) precisam de revisão antes de qualquer porte.
+- Commits WIP "rescue uncommitted agent work (not reviewed)" (fix/frost-ambiente-lg) precisa de revisão antes de qualquer porte.
 - Nada foi portado nem apagado. feat/* seguem para 2.2.
