@@ -7,6 +7,7 @@
 #include "catalogo.h"
 #include "gfx.h"
 #include "text.h"
+#include "sinopse.h"
 #include "tex_cache.h"
 #include "perfiltv.h"
 #include "layout.h"
@@ -1311,13 +1312,16 @@ static void painel(float a) {
   CatItem it;
   float y = VT_PAN_Y;
   if (!viewItem(foco, &it)) return;
+  float artH = VT_PAN_ART_H;
+  if (it.sinopse[0]) artH -= fmaxf(0, sinopse_entrelinha(TXT_DET_META2, 34) - 34);
+  float artW = artH * (VT_PAN_ART_W / VT_PAN_ART_H);
 
   // O contexto lateral usa o cartaz, nunca repete a cena da timeline.
   // Mantém a geometria 2:3 mesmo sem arte para não deslocar os metadados.
-  { GfxRect r = { VT_PAN_X, y, VT_PAN_ART_W, VT_PAN_ART_H };
+  { GfxRect r = { VT_PAN_X, y, artW, artH };
     const char *arte = it.poster[0] ? it.poster : it.backdrop;
-    float raio = 12.0f / VT_PAN_ART_W;
-    GLuint t = arte[0] ? tex_obter_larg(arte, VT_PAN_ART_W) : 0;
+    float raio = 12.0f / artW;
+    GLuint t = arte[0] ? tex_obter_larg(arte, artW) : 0;
     gfx_cor(r, raio, 1, 1, 1, 0.05f * a);
     if (t) {
       gfx_tex_aspect_atual = tex_aspecto(arte);
@@ -1327,7 +1331,7 @@ static void painel(float a) {
       TxtLinha falta = txt_linha_corta(TXT_HERO_META, "Sem pôster", 185, 191, 204, 255, r.w-24);
       txt_desenhar_alpha(falta, r.x+(r.w-falta.w)*.5f, r.y+(r.h-falta.h)*.5f, a);
     } }
-  y += VT_PAN_ART_H + 18.0f;
+  y += artH + 18.0f;
   float badgeW=badges_desenhar(badges_provedor(it.provNome),VT_PAN_X,y,VT_PAN_W,28,a);
   if(badgeW>0)y+=40;
 
@@ -1379,7 +1383,7 @@ static void painel(float a) {
     int linhas = (int)((NV_TELA_H - 48.0f - y) / 34.0f);
     if (linhas > 8) linhas = 8;
     if (linhas > 0)
-      txt_bloco(TXT_DET_META2, it.sinopse, 236, 236, 236,
+      sinopse_bloco(TXT_DET_META2, it.sinopse, 236, 236, 236,
                 VT_PAN_X, y, VT_PAN_W, 34.0f, a * 0.86f, linhas);
   }
 }
@@ -1617,7 +1621,7 @@ static void timelineCard(int i,float cy,float a,float x0) {
                             vtTelefone()?artRect.x+artRect.w*.5f-32.0f:x+158,vtTelefone()?artRect.y+artRect.h*.5f-10.0f:y+104,a*.9f); }
   TxtLinha name=txt_linha_corta(TXT_CW_TITULO,it.titulo,242,243,247,255,tw);txt_desenhar_alpha(name,tx,cy+22,a);
   TxtLinha genre=txt_linha_corta(TXT_HERO_META,it.genero,187,194,207,255,tw);txt_desenhar_alpha(genre,tx,cy+64,a);
-  txt_bloco(TXT_DET_META2,it.sinopse,209,214,225,tx,cy+106,vtTelefone()?tw:545.0f,30,a,3);
+  sinopse_bloco(TXT_DET_META2, it.sinopse,209,214,225,tx,cy+106,vtTelefone()?tw:545.0f,30,a,3);
 }
 
 // --- PECAS COMUNS DAS EXIBICOES ----------------------------------------------

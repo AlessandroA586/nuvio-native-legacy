@@ -274,3 +274,4 @@
 #ifdef NV_ANDROID
   0, /* Baixar registro: acao local, sem preferencia gravada */
 #endif
+  0, /* synopsis text size (#477): 100%, current typography */

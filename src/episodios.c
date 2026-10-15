@@ -8,6 +8,7 @@
 #include "gfx.h"
 #include "tex_cache.h"
 #include "text.h"
+#include "sinopse.h"
 #include "layout.h"
 #include "anim.h"
 #include "vistoep.h"
@@ -91,7 +92,7 @@ static int semMolaScroll;
 // este menu, entao ele precisa carregar a porta que tomou. Dentro da folha de
 // episodios a opcao nao existe — quem abriu a folha veio do player e ja tem
 // fonte tocando; oferece-la ali seria uma linha que nao leva a lugar nenhum.
-enum { VM_ESTE = 0, VM_ATE, VM_TEMP, VM_FONTES, VM_DAQUI, VM_N };
+enum { VM_ESTE = 0, VM_ATE, VM_TEMP, VM_FONTES, VM_DAQUI, VM_SINOPSE, VM_N };
 static int vmAcoes[VM_N], vmN; // linhas visiveis -> gesto (daqui em diante e opcional)
 // O MENU DA TEMPORADA (issue #108, "Pressing 'Season' brings up option to mark
 // all as watched"): o mesmo cartao, aberto pela ABA e nao por um episodio, com
@@ -119,7 +120,7 @@ static int vmFeito, vmFeitoN, vmFeitoVisto; static Uint32 vmFeitoAte;
 // desta tela —, e por isso so podia existir dentro dela. Guardando o alvo o
 // menu passa a servir tambem a pagina de detalhe, onde a folha nem esta aberta.
 static int  vmIdx = -1, vmT, vmE;
-static char vmNome[96];
+static char vmNome[96], vmSinopse[420];
 // O TITULO, e nao so a posicao (#190). `titulo` e `vmIdx` sao indices no
 // catalogo, e o catalogo e refeito com a folha aberta — a refacao de
 // "Continuar assistindo" roda com o player tocando. A mesma posicao passava a
@@ -189,6 +190,9 @@ static void montarRotulos(void) {
     } else if (modo == VM_TEMP) {
       snprintf(vmRot[i], sizeof vmRot[i], quantos == 1 ? i18n("Temporada inteira (%d episódio)") : i18n("Temporada inteira (%d episódios)"), quantos);
       ic = "aj_list-video";
+    } else if (modo == VM_SINOPSE) {
+      snprintf(vmRot[i], sizeof vmRot[i], "%s", i18n("Ler sinopse"));
+      ic = "aj_file-text";
     } else {
       snprintf(vmRot[i], sizeof vmRot[i], "%s", i18n("Fontes deste episódio"));
       ic = "aj_layers";
@@ -239,6 +243,16 @@ static void menuAbrir(int idx, int t, int e, const char *nome, int so) {
   }
   vmAcoes[vmN++] = VM_TEMP;
   if (so) vmAcoes[vmN++] = VM_FONTES;
+  vmSinopse[0] = 0;
+  if (so && e > 0) {
+    for (int i = 0; i < cat_n_episodios(idx); i++) {
+      const CatEp *ep = cat_episodio(idx, i);
+      if (ep && ep->temporada == t && ep->episodio == e) {
+        snprintf(vmSinopse, sizeof vmSinopse, "%s", ep->sinopse); break;
+      }
+    }
+    if (vmSinopse[0]) vmAcoes[vmN++] = VM_SINOPSE;
+  }
   // Abre do zero: a mola de um menu que acabou de fechar nao e a deste.
   vmAnim = vmAnimV = 0.0f;
   memset(vmFocoAnim, 0, sizeof vmFocoAnim);
@@ -551,6 +565,7 @@ static void menuDesenhar(GfxRect area, float a0) {
   else gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0, 0, 0, 0, 0.55f * a);
   if (vmFeito) meta = vmMsg;
   else if (vmModoTemp) { const CatItem *ci = cat_item(vmIdx); meta = ci ? ci->titulo : ""; }
+  else if (vmAcoes[vmFoco] == VM_SINOPSE) meta = "Ler sinopse";
   else meta = vmAcoes[vmFoco] != VM_DAQUI && vmVisto ? "Marcar como assistido" : "Desmarcar como assistido";
   ctx_menu_desenhar(m, vmCab, meta, vmFeito ? 0.8f : 0.5f, vmLin, vmOpcoes(), vmFocoAnim,
                     vmFeito ? 0.35f : 1.0f, a, vmAberto && !vmFeito ? ponteiroVmOpcao : NULL);
@@ -582,6 +597,7 @@ static void menuEvento(const SDL_Event *ev) {
     }
     int modo = vmAcoes[vmFoco], v = modo == VM_DAQUI ? 0 : vmVisto;
     if (modo == VM_FONTES) { vmFontesPed = 1; vmAberto = 0; return; }
+    if (modo == VM_SINOPSE) { sinopse_abrir(vmNome, vmSinopse); vmAberto = 0; return; }
     menuFeito(aplicarVisto(modo, v), v);
     return;
   }
@@ -868,7 +884,7 @@ static void linhaEp(int i, const CatItem *ci, float lx, float lw, float y, float
     }
     ty += 20.0f + 8.0f;
     if (sel && ep->sinopse[0])
-      txt_bloco_corta(TXT_ILHA_APOIO, ep->sinopse, 243, 242, 239, tx, ty, w, 23.0f, ra * 0.5f, 2);
+      sinopse_bloco_corta(TXT_ILHA_APOIO, ep->sinopse, 243, 242, 239, tx, ty, w, 23.0f, ra * 0.5f, 2);
   }
 }
 
