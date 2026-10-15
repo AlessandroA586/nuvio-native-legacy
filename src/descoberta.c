@@ -7752,30 +7752,53 @@ static int metaCatalogoResolver(const CatItem *orig, MetaFontes *mf, int indice)
   return 1;
 }
 
-// Elenco/direcao/generos/nota/pais a partir de uma ficha, so nos campos que
-// `d` ainda tem vazios (`soVazios`=1) ou todos os que a ficha traz (0).
-static void fichaDe(CatItem *d, const char *corpo, int soVazios) {
+// Metadata portraits are already usable before optional TMDB enrichment (#528).
+// Complements fill matching people only; their order must not swap portraits.
+static void elencoDaFicha(CatItem *d, const char *corpo, int soVazios) {
   const char *c = js_array(corpo, NULL, "cast");
   if (!soVazios || !d->nElenco) {
     int k = 0;
-    while (c && k < CAT_ELENCO_MAX) {
-      size_t n2 = 0;
-      const char *p2 = c;
-      if (*p2 != '"') break;
-      p2++;
-      while (*p2 && *p2 != '"' && n2 + 1 < sizeof d->elenco[k].nome) d->elenco[k].nome[n2++] = *p2++;
-      d->elenco[k].nome[n2] = 0;
-      d->elenco[k].papel[0] = 0;
-      d->elenco[k].foto[0] = 0;
-      d->elenco[k].tmdb = 0;
-      k++;
-      p2++;
-      while (*p2 == ' ') p2++;
-      c = (*p2 == ',') ? p2 + 1 : NULL;
-      while (c && *c == ' ') c++;
+    while (c && *c == '"' && k < CAT_ELENCO_MAX) {
+      char nome[64] = "";
+      if (js_cadeia(c, nome, sizeof nome) && nome[0]) {
+        memset(&d->elenco[k], 0, sizeof d->elenco[k]);
+        snprintf(d->elenco[k++].nome, sizeof d->elenco[0].nome, "%s", nome);
+      }
+      for (c++; *c && *c != '"'; c++) if (*c == '\\' && c[1]) c++;
+      c = *c ? js_prox(c + 1) : NULL;
     }
     if (k) d->nElenco = k;
   }
+  const char *extras = corpo ? strstr(corpo, "\"app_extras\"") : NULL;
+  if (!extras || !(extras = strchr(extras, ':'))) return;
+  do { extras++; } while (*extras && (unsigned char)*extras <= ' ');
+  if (*extras != '{') return;
+  const char *fim = js_fim(extras);
+  for (c = js_array(extras, fim, "cast"); c && c < fim && *c == '{'; c = js_prox(js_fim(c))) {
+    const char *f = js_fim(c);
+    char nome[64] = "", alvo[64], outro[64], foto[512] = "", papel[64] = "";
+    if (!js_texto_raiz_em(c, f, "name", nome, sizeof nome)) continue;
+    normElenco(nome, alvo, sizeof alvo);
+    if (!alvo[0]) continue;
+    js_texto_raiz_em(c, f, "photo", foto, sizeof foto);
+    js_texto_raiz_em(c, f, "character", papel, sizeof papel);
+    if (strncmp(foto, "https://", 8) && strncmp(foto, "http://", 7)) foto[0] = 0;
+    for (int k = 0; k < d->nElenco; k++) {
+      normElenco(d->elenco[k].nome, outro, sizeof outro);
+      if (strcmp(alvo, outro)) continue;
+      if (!d->elenco[k].foto[0] && foto[0])
+        snprintf(d->elenco[k].foto, sizeof d->elenco[k].foto, "%s", foto);
+      if (!d->elenco[k].papel[0] && papel[0])
+        snprintf(d->elenco[k].papel, sizeof d->elenco[k].papel, "%s", papel);
+      break;
+    }
+  }
+}
+
+// Elenco/direcao/generos/nota/pais a partir de uma ficha, so nos campos que
+// `d` ainda tem vazios (`soVazios`=1) ou todos os que a ficha traz (0).
+static void fichaDe(CatItem *d, const char *corpo, int soVazios) {
+  elencoDaFicha(d, corpo, soVazios);
   if (!soVazios || !d->direcao[0]) {
     const char *dr = js_array(corpo, NULL, "director");
     if (dr && *dr == '"') {
@@ -8037,25 +8060,8 @@ static void *buscarEps(void *u) {
   {
     CatItem edit = *it;
     int manter = 0;
-    const char *c = js_array(corpo, NULL, "cast");
-    int k = 0;
-    while (c && k < CAT_ELENCO_MAX) {
-      size_t n2 = 0;
-      const char *p2 = c;
-      if (*p2 != '"') break;
-      p2++;
-      while (*p2 && *p2 != '"' && n2 + 1 < sizeof edit.elenco[k].nome)
-        edit.elenco[k].nome[n2++] = *p2++;
-      edit.elenco[k].nome[n2] = 0;
-      edit.elenco[k].papel[0] = 0;   // o Cinemeta nao diz o personagem
-      edit.elenco[k].foto[0] = 0;
-      k++;
-      p2++;
-      while (*p2 == ' ') p2++;
-      c = (*p2 == ',') ? p2 + 1 : NULL;
-      while (c && *c == ' ') c++;
-    }
-    edit.nElenco = k;
+    edit.nElenco = 0;
+    elencoDaFicha(&edit, corpo, 0);
     { const char *dr = js_array(corpo, NULL, "director");
       if (dr && *dr == '"') {
         size_t n2 = 0;
@@ -8149,6 +8155,7 @@ static void *buscarEps(void *u) {
           if (metaTextos(c5, tA, sizeof tA, NULL, 0)) {
             generosDe(c5, lista, sizeof lista, tipoA);
             if (lista[0]) snprintf(edit.genero, sizeof edit.genero, "%s", lista);
+            elencoDaFicha(&edit, c5, 1);
             cA = c5;
           } else free(c5);
         }
