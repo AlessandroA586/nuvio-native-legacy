@@ -251,6 +251,22 @@ static int autoParcialPronto(void) {
 // instante ainda nao tem a lista de episodios nem o "proximo" que
 // continuar_desenhar calculou para desenhar o card.
 static int cwTocarT, cwTocarE;
+// Episode the source sheet was opened FOR (#513). Not cwTocar: that slot is
+// rewritten every frame by Continue Watching, the island and the agenda, and
+// the sheet stays up across frames (stream_folha_aberta eats the keys). A
+// later writer used to replace the latched T/E before the pick, or stamp one
+// onto a title-level sheet that had none.
+static int folhaTocarT, folhaTocarE;
+static void gravarFolhaTocar(int t, int e, int tem) {
+  if (tem && t > 0 && e > 0) { folhaTocarT = t; folhaTocarE = e; }
+  else folhaTocarT = folhaTocarE = 0;
+}
+static int consumirFolhaTocar(int *t, int *e) {
+  if (folhaTocarT <= 0 || folhaTocarE <= 0) return 0;
+  if (t) *t = folhaTocarT; if (e) *e = folhaTocarE;
+  folhaTocarT = folhaTocarE = 0;
+  return 1;
+}
 // O MESMO OK num card cujo episodio TERMINOU e cuja lista de episodios ainda
 // nao chegou: a pagina abre e o toque fica esperando a lista para achar o
 // proximo, em vez de recomecar o terminado. `cwEsperaItem` e uma copia: a
@@ -1062,6 +1078,10 @@ static int tocarFonteGuardada(void) {
 }
 // Test hook for tests/detail_ep_fonte.c. Same function the router calls.
 int app_teste_tocar_guardada(void) { return tocarFonteGuardada(); }
+// Test hooks for tests/detail_ep_fonte_trava.c.
+void app_teste_cw_tocar(int t, int e) { cwTocarT = t; cwTocarE = e; }
+void app_teste_gravar_folha(int t, int e, int tem) { gravarFolhaTocar(t, e, tem); }
+int app_teste_consumir_folha(int *t, int *e) { return consumirFolhaTocar(t, e); }
 static void vigiarFonteGuardada(void) {
   FontevoltaSinais g;
   const char *motivo = NULL;
@@ -3242,6 +3262,12 @@ static const char *homeTrailerBloqueio(void) {
   return NULL;
 }
 
+static void atualizarFolha(float dt, Uint32 agora) {
+  stream_folha_atualizar(dt, agora);
+  // Picks consume the latch before this step; every other close discards it.
+  if (!stream_folha_aberta()) gravarFolhaTocar(0, 0, 0);
+}
+
 void app_atualizar(float dt, Uint32 agora) {
   { static int morno = -1; int ligado = ajustes_retomada_morna();
     if (morno != ligado) { morno = ligado; cacheboost_backend_morno(ligado); }
@@ -4329,6 +4355,17 @@ void app_atualizar(float dt, Uint32 agora) {
       // A lembrada e localizada ANTES de abrir, para a folha ja desenhar a
       // marca no primeiro quadro. E so uma varredura da lista em memoria.
       char base[24];
+      int epT, epE;
+      // O pedido pode trazer um episodio travado (toque no card com
+      // "Escolher a fonte ao reproduzir", ou "Fontes deste episodio" no
+      // menu, #513): a folha rouba o foco e detail_ep_foco passa a responder
+      // pelo episodio EM ANDAMENTO. O episodio travado vai por folhaTocarT/E,
+      // NAO por cwTocar: esse e o slot do Continuar assistindo e os ramos de
+      // cima (card, ilha, agenda) o reescrevem no quadro seguinte, com a
+      // folha ainda aberta (#513). Sem trava (folha do titulo) zera, senao
+      // um "Assistir T2E5" da agenda colaria no pedido.
+      int temEp = detail_pediu_fontes_ep(&epT, &epE);
+      gravarFolhaTocar(epT, epE, temEp);
       idBaseDoTitulo(base, sizeof base);
       stream_preferir(base[0] ? fontepref_escolher_manual(base) : -1);
       nomeParaFolha(); stream_folha_abrir();
@@ -4879,6 +4916,12 @@ void app_atualizar(float dt, Uint32 agora) {
       int titulo=player_aberto()?player_indice():detail_indice(), t=0,e=0;
       if (player_aberto()) { player_episodio_atual(&t,&e); player_encerrar(); }
       else detail_ep_foco(&t,&e);
+      // O EPISODIO TRAVADO NO PEDIDO DA FOLHA ganha do foco (#513): com a
+      // folha aberta o foco da pagina ja nao diz qual card pediu fontes —
+      // sem isto a escolha tocava o episodio em andamento. folhaTocar, nao
+      // cwTocar: o Continuar assistindo reescreve o outro no quadro seguinte.
+      // Consumida aqui uma unica vez; o titulo continua o da pagina aberta.
+      consumirFolhaTocar(&t, &e);
       diagnostico_cancelar_vazao();
       player_abrir(titulo,NULL);
       player_definir_episodio(t,e);
@@ -5028,7 +5071,7 @@ void app_atualizar(float dt, Uint32 agora) {
   { int q = player_pediu_faixas();
     if (q) faixas_abrir_em(q == 2 ? 1 : 0); }
   if (!player_retido()) faixas_atualizar(dt, agora);
-  stream_folha_atualizar(dt, agora);
+  atualizarFolha(dt, agora);
   // FOLHA FECHADA SEM ESCOLHER, com o player esperando por ela. Voltar na
   // folha e "desisti", nao "tente sozinho": abrir a fonte que a pessoa acabou
   // de recusar seria contradizer o gesto. O player mostra o erro de fonte, que

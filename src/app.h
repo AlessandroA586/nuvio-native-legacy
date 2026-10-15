@@ -55,4 +55,8 @@ void app_abrir_titulo(const char *imdb);
 // Porta de teste: a funcao que app_atualizar chama antes de entregar a URL
 // guardada ao player (tocarFonteGuardada). 1 = o player recebeu a URL.
 int app_teste_tocar_guardada(void);
+// Test hooks for the sheet latch (#513). cwTocar is Continue Watching only.
+void app_teste_cw_tocar(int temporada, int episodio);
+void app_teste_gravar_folha(int temporada, int episodio, int tem);
+int app_teste_consumir_folha(int *temporada, int *episodio);
 #endif
