@@ -35,7 +35,7 @@ assert 'VT_AB_TOPO' in s
 assert 'botaoEstiloAbas' not in s
 assert 'ponteiro_alvo(' in function('botaoExibicao')
 assert 'aj_layout-list' in function('botaoExibicao')
-assert 'focoAbaFonte(' in function('botaoExibicao')
+assert 'gfx_vidro_pilula_cheia(' in function('botaoExibicao')  # focus = white glass pill (direction A)
 assert 'alternarEstiloAbas();' in s
 assert 'tabCursor<na+(nAbas()>0)' in s
 assert 'if(est==VT_AB_TOPO)' in s
