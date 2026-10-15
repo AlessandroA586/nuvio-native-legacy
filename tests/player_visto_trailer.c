@@ -470,8 +470,22 @@ int main(void) {
 
   // Credits beyond the reported duration disprove percentage completion.
   sessao("tt90000032", 0, 536); creditos = 1335;
-  tocar(500, 1); player_encerrar();
-  assert(nVisto == 0 && nTrakt == 0 && cat_item(0)->progresso < 100);
+  tocar(500, 1);
+  { SDL_Event e = {0}; e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_PAUSE; player_evento(&e); }
+  quadro(); quadro();
+  assert(cat_item(0)->progresso == 93 && !cat_visto(cat_item(0)));
+  assert(prog_tocou("tt90000032") == 0);
+  player_encerrar();
+  assert(nVisto == 0 && nTrakt == 0 && cat_item(0)->progresso == 93);
+  assert(!cat_visto(cat_item(0)) && prog_tocou("tt90000032") == 0);
+  // Reconstruct the catalogue from the saved record, as after a reload.
+  { ProgRegistro r;
+    assert(prog_por_chave("tt90000032", &r) && r.tocou == 0);
+    CatItem c = {0};
+    strcpy(c.imdb, "tt90000032"); strcpy(c.tipo, "movie");
+    c.progresso = (int)(100.0 * r.posSeg / r.durSeg);
+    cat_definir(&c, 1);
+    assert(c.progresso == 93 && !cat_visto(cat_item(0))); }
 
   // A pause during buffering must persist once buffering clears, before exit.
   sessao("tt90000031", 0, 1449);

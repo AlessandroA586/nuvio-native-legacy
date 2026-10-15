@@ -2067,6 +2067,7 @@ static void fecharSessao(int manter) {
   // Concluido e concluido: o registro leva o "alcancado tocando" que o selo
   // de visto do catalogo (cat_visto) le, como o markAsCompleted do oficial.
   if (assistiu) chegou = 1;
+  if (duracaoContradita) chegou = 0;
   // Sem ela a posicao REAL continua gravada (barra, Continuar assistindo,
   // conta): so o arredondamento para 100% e o visto ficam de fora.
   if (!duracaoErrada && !jaRetido && prova && video_pronto() && duracaoSeg >= 120.0f &&
@@ -2279,6 +2280,9 @@ static void gravarProgressoParcial(int conta, const char *porque) {
   base = baseDur > 0.0 ? basePos : duracaoSeg * basePct / 100.0;
   if (!baseTocou || (baseDur > 0.0 && fabs(baseDur - duracaoSeg) > fmax(5.0, duracaoSeg * 0.02))) base = 0.0;
   (void)player_regra_visto(base, assistidoSeg, posSeg, 0, &chegou);
+  // Contradictory credits also invalidate the catalogue's watched proof.
+  double cred = credEfetivo();
+  if (cred > 1.0 && cred - duracaoSeg > intro_creditos_janela(duracaoSeg)) chegou = 0;
   cat_salvar_progresso_ep(idxAtual(), posSeg, duracaoSeg, epT, epE, chegou);
   if (conta) sync_sujar_progresso();
   parcialPos = posSeg;
