@@ -1548,8 +1548,9 @@ static int lerCatalogoHome(const char *base, const char *tipo, const char *id,
 // SOZINHO tomando tudo; o que ela nao resolve e o TOTAL — com muitos addons
 // modestos (nenhum sozinho estoura a cota) a SOMA dos catalogos legitimos
 // passava de 256 e os ultimos, por addon, eram cortados mesmo cabendo de
-// sobra na memoria (Decl tem ~950 bytes; 512 custam ~475 KB, uma unica vez,
-// por ciclo). 512 nao e "o numero certo" — nao ha um; e so mais folga antes de
+// sobra na memoria. Cada declaracao guarda tambem a propria URL: o vetor
+// persistente ocupa cerca de 1,4 MiB, sem depender da pilha de lerManifesto.
+// 512 nao e "o numero certo" — nao ha um; e so mais folga antes de
 // o mesmo corte voltar a acontecer com addons de sobra.
 #define DECL_MAX 512
 // Quantos itens cada fileira mostra. A home desenha no maximo MAX_CARDS (12) e
@@ -1577,7 +1578,7 @@ typedef struct {
   char titulo[96];
   char tipo[8];
   char id[96];
-  const char *base;
+  char base[NV_ADDON_URL_MAX]; // copia propria; a declaracao sobrevive ao leitor
   // 1 quando o catalogo aceita BUSCA. O manifesto declara isso em
   // `extra: [{name:"search"}]` (formato novo) ou `extraSupported: ["search"]`
   // (antigo) — os addons do dono usam os dois.
@@ -2516,7 +2517,7 @@ static int lerManifesto(int iAddon, const char *base, Decl *saida, int max,
       // Fora do vetor: usa um Decl de rascunho so para decidir/registrar a busca.
       d = guardar ? &saida[n] : &local;
       memset(d, 0, sizeof *d);
-      d->base = base;
+      snprintf(d->base, sizeof d->base, "%s", base);
       // BUSCA: procura "search" dentro do bloco `extra`/`extraSupported` DESTE
       // catalogo (a faixa [p,f) e o objeto dele, entao nao vaza para o vizinho).
       //
@@ -3838,7 +3839,7 @@ static int ordenarCandidatos(Decl *decls, int nDecl, int *ordem, int nFixas,
         const char *b = addons_base(i2);
         if (!b || !b[0]) continue;
         for (j = 0; j < nDecl; j++)
-          if (!vistos[j] && decls[j].base && !strcmp(decls[j].base, b)) {
+          if (!vistos[j] && decls[j].base[0] && !strcmp(decls[j].base, b)) {
             ordem[nOrdem++] = j; vistos[j] = 1; pegou = 1; break;
           }
       }
@@ -3958,7 +3959,7 @@ static int ordenarCandidatos(Decl *decls, int nDecl, int *ordem, int nFixas,
       deslig[c] = (char)desligada(&decls[c]);
       for (q = 0; q < nAd3; q++) {
         const char *b = addons_base(q);
-        if (b && b[0] && decls[c].base && !strcmp(decls[c].base, b)) { addonDe[c] = q; break; }
+        if (b && b[0] && decls[c].base[0] && !strcmp(decls[c].base, b)) { addonDe[c] = q; break; }
       }
     }
     for (q = 0; q < nAd3; q++) {
@@ -4822,7 +4823,7 @@ static void *montar(void *u) {
           tarefas[nTarefas].d = d;
           // COPIAS para o fio: um fio largado por lento sobrevive a esta volta,
           // e `decls` (estatico) e a lista de addons ja podem ser de outra.
-          snprintf(tarefas[nTarefas].base, sizeof tarefas[nTarefas].base, "%s", d->base ? d->base : "");
+          snprintf(tarefas[nTarefas].base, sizeof tarefas[nTarefas].base, "%s", d->base);
           snprintf(tarefas[nTarefas].tipo, sizeof tarefas[nTarefas].tipo, "%s", d->tipo);
           snprintf(tarefas[nTarefas].id, sizeof tarefas[nTarefas].id, "%s", d->id);
           tarefas[nTarefas].paginavel = d->paginavel;
@@ -4953,7 +4954,7 @@ static void *montar(void *u) {
             snprintf(f->chave,  sizeof f->chave,  "%s", d->chave);
             snprintf(f->titulo, sizeof f->titulo, "%s", d->titulo);
             snprintf(f->tipo,   sizeof f->tipo,   "%s", d->tipo);
-            snprintf(f->base,   sizeof f->base,   "%s", d->base ? d->base : "");
+            snprintf(f->base,   sizeof f->base,   "%s", d->base);
             snprintf(f->catId,  sizeof f->catId,  "%s", d->id);
             f->ini = n; f->n = got; f->estado = estadoLinha;
           }
@@ -5037,7 +5038,7 @@ static void *montar(void *u) {
           for (q = 0; q < nOrdem && !dh; q++) if (!fil_oculta(decls[ordem[q]].chave)) dh = &decls[ordem[q]];
           for (q = 0; q < nOrdem && !dh; q++) dh = &decls[ordem[q]];
         }
-        if (dh && dh->base && dh->base[0] && (fil_estado_chave(dh->chave) == FIL_FORA ||
+        if (dh && dh->base[0] && (fil_estado_chave(dh->chave) == FIL_FORA ||
                                               fil_estado_chave(dh->chave) == FIL_NA_FILA)) {
           static CatItem hItens[HOME_VISTOS_MAX];
           int resp = 0, qtd = ajustes_itens_fileira(), got;
