@@ -1,6 +1,7 @@
 // Glifos complementares: SVG Lucide embarcado, rasterizado no pacote para OpenGL.
 static const char *ajVisualIcone(int op) {
   switch (op) {
+    case AJ_COLECAO_EXIBICAO: return "aj_layout-dashboard";
     case AJ_HOME_LAYOUT: return "aj_layout-dashboard";
     case AJ_LANDSCAPE: return "aj_layout-dashboard";
     case AJ_HERO: return "aj_layout-dashboard";
