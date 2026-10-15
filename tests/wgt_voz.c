@@ -1,7 +1,7 @@
 // BOTAO DE MICROFONE no .wgt: o caminho __EMSCRIPTEN__ de src/entrada_texto.c
 // contra um window.nvTexto fingido (tests/wgt_stub/emscripten.h). Confere o
-// mesmo que tests/tpk_voz.c: sem TS_TECLADO (o teclado do app e o de digitar),
-// o ajuste x o que a TV disse do microfone, o aviso, e que o texto so chega ao
+// teclado da TV para digitar, independente do ajuste do microfone;
+// o ajuste x o que a TV disse do microfone, o aviso, e que a voz so chega ao
 // campo quando o teclado da Samsung fecha.
 //   bash tests/wgt_voz.sh
 #include "sistexto.h"
@@ -54,12 +54,23 @@ int main(int argc, char **argv) {
   assert(SDL_Init(SDL_INIT_EVENTS) == 0);
   st_teste_ligar(0);
 
-  // Nunca ha teclado do sistema para digitar no .wgt.
-  assert(!st_ime_disponivel() && !(texto_sistema_disponivel() & TS_TECLADO));
-  assert(!st_ime_abrir(ST_BUSCA, "", 64) && abriu == 0);
+  // O campo continua abrindo o IME da TV; o botao de microfone e adicional.
+  assert(texto_sistema_disponivel() == (temCampo ? TS_TECLADO | (mic != 0 ? TS_VOZ : 0) : 0));
+  assert(st_ime_disponivel() == temCampo);
+  assert(st_ime_abrir(ST_BUSCA, "ma", 64) == temCampo);
+  if (temCampo) {
+    assert(abriu == 1 && abriuVoz == 0);
+    jsDigita("matrix");
+    assert(ler(ST_BUSCA, t, sizeof t) == ST_TEXTO && !strcmp(t, "matrix"));
+    fim = 1;
+    assert(ler(ST_BUSCA, t, sizeof t) == ST_FIM && !strcmp(t, "matrix"));
+  }
+  abriu = 0;
 
   texto_sistema_mic_modo(TS_MIC_DESLIGADO);
   assert(!st_voz_disponivel() && !st_voz_iniciar(ST_BUSCA) && abriu == 0);
+  assert(texto_sistema_disponivel() == (temCampo ? TS_TECLADO : 0));
+  assert(st_ime_disponivel() == temCampo);
   texto_sistema_mic_modo(TS_MIC_LIGADO);
   assert(st_voz_disponivel() == temCampo);
   texto_sistema_mic_modo(TS_MIC_AUTO);
@@ -101,6 +112,6 @@ int main(int argc, char **argv) {
   assert(r == ST_NADA);
 
   SDL_Quit();
-  printf("PASS: wgt_voz mic=%d (botao abre o teclado da Samsung; teclado do app intacto)\n", mic);
+  printf("PASS: wgt_voz mic=%d (teclado da TV para digitar e botao de microfone)\n", mic);
   return 0;
 }

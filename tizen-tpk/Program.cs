@@ -942,6 +942,9 @@ namespace NuvioTpk
             pausado = true;
             if (!jaPausou) { jaPausou = true; Janela("primeira pausa (canario 8: video no gl, gl opaco, sem prime, sobe no appcontrol; ela ainda vem?)"); }
             Etapa("note pause" + Contagem() + " mainVisible=" + principalVisivel + (JanelaUnica ? " (glview)" : " glVisible=" + glVisivel));
+#if !NV_TEXTO
+            try { voz?.Cancelar(); } catch { }
+#endif
             video?.PausarPeloSistema();
             base.OnPause();
         }
@@ -1007,6 +1010,9 @@ namespace NuvioTpk
         {
             if (soltou) return;
             soltou = true;
+#if !NV_TEXTO
+            try { voz?.Cancelar(); } catch { }
+#endif
             try { video?.Encerrar(); Janela("saida: player solto (" + porque + ")"); } catch (Exception e) { Janela("saida: player falhou " + e.GetType().Name + ": " + e.Message); }
 #if NV_API11
             try { glView?.Hide(); } catch { }

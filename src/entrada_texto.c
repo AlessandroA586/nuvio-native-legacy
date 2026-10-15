@@ -45,9 +45,8 @@
 // "Keyboard/IME"). Done = keyCode 65376, Cancel = 65385. O JS guarda o valor e
 // um contador; texto_sistema_quadro le os dois por EM_ASM (sem chamar o WASM de
 // dentro de um evento JS, que com ASYNCIFY pode cair no meio de um sono).
-// Como no .tpk de release, o <input> serve SO ao botao de microfone das buscas
-// (dono, 12/10/2026: o teclado do app e o de digitar nas duas plataformas
-// Samsung); nvTexto.microfone diz o que a TV respondeu sobre microfone.
+// O <input> serve a digitacao e ao botao de microfone das buscas;
+// nvTexto.microfone diz o que a TV respondeu sobre microfone.
 //
 // Samsung .tpk: o host .NET registra abrir/fechar por nv_tpk_texto_registrar
 // (canario, Texto.cs) ou so o botao de microfone por nv_tpk_voz_registrar
@@ -107,9 +106,9 @@ void nv_tpk_voz_registrar(FnVoz iniciar, FnVoz parar, int microfone) {
 #endif
 
 #if defined(NV_TPK) || defined(__EMSCRIPTEN__)
-// BOTAO DE MICROFONE DAS BUSCAS (.tpk e .wgt). O teclado do app continua
-// sendo o de digitar; o botao abre o teclado da Samsung so para o microfone
-// dele. O ajuste "Botao de microfone na busca" (texto_sistema_mic_modo) decide
+// BOTAO DE MICROFONE DAS BUSCAS (.tpk e .wgt). O botao abre o teclado da
+// Samsung para usar o microfone dele. No .wgt o campo tambem abre o IME para
+// digitar. O ajuste "Botao de microfone na busca" (texto_sistema_mic_modo) decide
 // com o que a TV respondeu: Automatico so esconde na TV que diz NAO ter
 // microfone.
 #define SAMSUNG_MIC 1
@@ -173,7 +172,8 @@ int texto_sistema_disponivel(void) {
 #if defined(NV_TPK)
   return (hAbrir ? (TS_TECLADO | (hFlags & TS_VOZ)) : 0) | (micPermitido() ? TS_VOZ : 0);
 #elif defined(__EMSCRIPTEN__)
-  return micPermitido() ? TS_VOZ : 0;   // so o botao de microfone
+  return (EM_ASM_INT({ return (typeof window !== "undefined" && window.nvTexto) ? 1 : 0; }) ? TS_TECLADO : 0)
+       | (micPermitido() ? TS_VOZ : 0);
 #elif defined(NV_ANDROID) || defined(NV_TEXTO_SDL_TESTE)
   return TS_TECLADO;
 #elif defined(__linux__)
@@ -218,7 +218,7 @@ void texto_sistema_abrir(const char *atual, int voz) {
   // do sistema registrado para digitar.
   peloMic = voz && (tem & TS_VOZ) && !hAbrir;
 #elif defined(__EMSCRIPTEN__)
-  peloMic = voz && (tem & TS_VOZ);      // o <input> so serve ao botao
+  peloMic = voz && (tem & TS_VOZ);
 #endif
   if (!peloMic && !(tem & TS_TECLADO)) return;
   if (!(tem & TS_VOZ)) voz = 0;

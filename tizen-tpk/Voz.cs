@@ -1,4 +1,4 @@
-// BOTAO DE MICROFONE DAS BUSCAS (dono, 12/10/2026). O teclado do Nuvio Legacy
+// BOTAO DE MICROFONE DAS BUSCAS. O teclado do Nuvio Legacy
 // continua sendo o teclado das duas buscas (a da barra lateral e o Spotlight do
 // CH-). Ao lado do "Digitar pelo celular" fica um botao de microfone que abre
 // o TECLADO DA SAMSUNG so para usar o microfone dele: a pessoa aperta o
@@ -32,6 +32,7 @@
 // "[texto] host voz ...".
 using System;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Tizen.NUI;
 using Tizen.NUI.BaseComponents;
 
@@ -52,11 +53,18 @@ namespace NuvioTpk
         TextField campo;
         InputMethodContext imf;
         bool aberto, viuPainel;
+        Tizen.NUI.Timer prazo;
+        int sessao, aberturaPendente;
 
         public Voz(Action<Action> principal, Action<string> log)
         {
             this.log = log;
-            fIniciar = () => principal(Iniciar);
+            fIniciar = () =>
+            {
+                int minha = Volatile.Read(ref sessao);
+                Interlocked.Exchange(ref aberturaPendente, 1);
+                principal(() => { if (minha == Volatile.Read(ref sessao)) Iniciar(); });
+            };
             fParar = () => principal(Parar);
             int mic = Microfone();
             if (!MontarCampo()) return;
@@ -112,7 +120,7 @@ namespace NuvioTpk
                 imf.StatusChanged += (s, e) =>
                 {
                     Log("teclado da Samsung " + (e.StatusChanged ? "aberto" : "fechado"));
-                    if (e.StatusChanged) viuPainel = true;
+                    if (aberto && e.StatusChanged) { viuPainel = true; SoltarPrazo(); }
                     // Fechou pelo proprio teclado: o que foi dito vale.
                     else if (aberto && viuPainel) Terminar(true);
                 };
@@ -123,17 +131,36 @@ namespace NuvioTpk
 
         void Iniciar()
         {
+            Interlocked.Exchange(ref aberturaPendente, 0);
             if (aberto) return;
-            // Limpo ANTES de abrir: o TextChanged deste "" nao pode apagar a
-            // busca que ja esta no campo do app.
-            campo.Text = "";
-            aberto = true;
-            viuPainel = false;
-            campo.Focusable = true;
-            FocusManager.Instance.SetCurrentFocusView(campo);
-            try { imf.Activate(); imf.ShowInputPanel(); }
-            catch (Exception e) { Log("ShowInputPanel: " + e.Message); Terminar(false); return; }
-            Log("teclado da Samsung pedido (foco=" + (FocusManager.Instance.GetCurrentFocusView() == campo) + ")");
+            try
+            {
+                // Limpo ANTES de abrir: TextChanged nao apaga a busca do app.
+                campo.Text = "";
+                aberto = true;
+                viuPainel = false;
+                campo.Focusable = true;
+                if (!FocusManager.Instance.SetCurrentFocusView(campo))
+                    throw new InvalidOperationException("TextField nao ganhou foco");
+                // O IME pode aceitar ShowInputPanel sem nunca aparecer (GLWindow).
+                prazo = new Tizen.NUI.Timer(3000);
+                prazo.Tick += (s, e) =>
+                {
+                    if (aberto && !viuPainel) { Log("teclado nao apareceu em 3 s"); Terminar(false); }
+                    return false;
+                };
+                prazo.Start();
+                imf.Activate();
+                imf.ShowInputPanel();
+                Log("teclado da Samsung pedido");
+            }
+            catch (Exception e)
+            {
+                Log("abrir teclado: " + e.Message);
+                // Inclui falhas anteriores a aberto=true (Text/Focusable/foco).
+                aberto = true;
+                Terminar(false);
+            }
         }
 
         // Concluido / painel fechado (confirmou) ou Voltar. So entrega com texto;
@@ -148,6 +175,15 @@ namespace NuvioTpk
             Esconder();
         }
 
+        // Pausa/fim da janela: cancela a sessao (e abertura enfileirada) antes de esconder.
+        public void Cancelar()
+        {
+            Interlocked.Increment(ref sessao);
+            bool pendente = Interlocked.Exchange(ref aberturaPendente, 0) == 1;
+            if (aberto) Terminar(false);
+            else if (pendente) nv_tpk_texto_fim(0);
+        }
+
         // O app fechou (Voltar na tela, tela fechou): esconde sem avisar de volta.
         void Parar()
         {
@@ -156,8 +192,15 @@ namespace NuvioTpk
             Esconder();
         }
 
+        void SoltarPrazo()
+        {
+            try { prazo?.Stop(); } catch { }
+            prazo = null;
+        }
+
         void Esconder()
         {
+            SoltarPrazo();
             try { imf?.HideInputPanel(); imf?.Deactivate(); } catch { }
             try { FocusManager.Instance.ClearFocus(); } catch { }
             campo.Focusable = false;
