@@ -1269,8 +1269,10 @@ static void escolherExibicao(int prox) {
 
 // OK no botao recolhido: abre o trilho com o cursor na exibicao aberta.
 static void abrirSeletor(void) {
-  exibAberta = 1;
   for (int k = 0; k < (int)sizeof LAY_CICLO; k++) if (LAY_CICLO[k] == lay) exibCursor = k;
+  // Telefone: o trilho aberto nao e desenhado, entao OK troca direto para a proxima.
+  if (vtTelefone()) { escolherExibicao(LAY_CICLO[(exibCursor + 1) % (int)sizeof LAY_CICLO]); return; }
+  exibAberta = 1;
 }
 
 static void vitEvento(int k) {
