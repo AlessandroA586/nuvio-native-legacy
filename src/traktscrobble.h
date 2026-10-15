@@ -16,8 +16,18 @@ typedef struct { char id[64]; int ativo; } ScrobbleEstado;
 // Devolve a chamada a fazer (SCR_*) e avanca o estado.
 //   TOCANDO: start, salvo se ja ha um start em pe para o MESMO id (sem spam).
 //   PAUSOU : pause, so se ha start em pe para o id (pausar de novo e ruido).
-//   SAIU   : sempre fala: stop a partir de 90%, senao pause (guarda o ponto).
+//   SAIU   : sempre fala: stop a partir de SCR_STOP_PCT, senao pause.
 int scrobble_decidir(ScrobbleEstado *s, int evento, const char *id, double pct);
+
+// PARIDADE COM O NUVIOTV OFICIAL (PlayerRuntimeController*.kt, WatchProgress.kt):
+//   - sair do player manda STOP; a partir de 80% e o stop de conclusao, que o
+//     Trakt e o Simkl contam como assistido (emitStopScrobbleForCurrentProgress);
+//   - o progresso LOCAL vira "visto" a partir de 90% (COMPLETED_THRESHOLD), pela
+//     POSICAO — inclusive depois de um seek, sem exigir tempo tocado.
+// Aqui o "fim" de Legacy (marcador de creditos / cartao A seguir) tambem conclui.
+#define SCR_STOP_PCT 80.0
+#define SCR_VISTO_PCT 90.0
+int scrobble_concluiu(double posSeg, double durSeg, int fimDeLegacy);
 
 // JSON do corpo. `id` e "tt123" (filme) ou "tt123:T:E" (episodio: id do SHOW
 // mais temporada/numero, que o Trakt resolve sozinho).
