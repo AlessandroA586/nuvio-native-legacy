@@ -68,6 +68,7 @@ static char usbExtra[600];
 #define USB_MAX_VISTOS 64
 #define USB_DONO ".nuvio"   // marca: so apaga p2p/ que a gente criou
 static void usbMarcarDono(const char *raiz);
+static int usbENossa(const char *p2p);
 static struct stat usbVistos[USB_MAX_VISTOS];   // (dev,ino) ja olhados no scan
 static unsigned usbNVistos;
 static unsigned vigiaMs = P2PM_VIGIA_MS;
@@ -186,7 +187,10 @@ static int usbServe(const char *candidato, char *raiz, unsigned nr, int criar) {
         (!strncmp(dados, candidato, nc) && (dados[nc] == 0 || dados[nc] == '/'))) return 0;
   }
   if (snprintf(p2p, sizeof p2p, "%s/p2p", candidato) >= (int)sizeof p2p) return 0;
-  if (criar) nosso = mkdir(p2p, 0700) == 0;
+  if (criar) {
+    nosso = mkdir(p2p, 0700) == 0;
+    if (!nosso && (lstat(p2p, &st) != 0 || !S_ISDIR(st.st_mode) || !usbENossa(p2p))) return 0;
+  }
   if (snprintf(teste, sizeof teste, "%s/.escrita", criar ? p2p : candidato) >= (int)sizeof teste)
     { if (nosso) rmdir(p2p); return 0; }
   f = fopen(teste, "w");
@@ -210,7 +214,7 @@ static int usbEscanearDir(const char *base, char *raiz, unsigned nr, int fundo, 
   d = opendir(base);
   if (!d) return 0;
   while ((e = readdir(d))) {
-    if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, "..") || e->d_name[0] == '.') continue;
+    if (!strcmp(e->d_name, "p2p") || e->d_name[0] == '.') continue;
     if (snprintf(f, sizeof f, "%s/%s", base, e->d_name) >= (int)sizeof f) continue;
     // Links nao sao ponto de montagem: um link dentro de /tmp/usb poderia
     // apontar para o disco interno e furar a rejeicao por caminho acima.
@@ -278,7 +282,6 @@ static int pastas(char *raiz, unsigned nr, char *mae, unsigned nm) {
     }
     if (usbRaiz[0]) {
       snprintf(raiz, nr, "%s", usbRaiz);
-      usbMarcarDono(usbRaiz);   // sobra de antes da marca: subir apaga a pasta inteira
       ok = 1;
     }
     else ok = 0;
@@ -349,7 +352,7 @@ int p2pmotor_usb_presente(void) {
   if (agora() - usbQuando >= 2.0) {
     if (usbRaiz[0] && access(usbRaiz, W_OK) != 0) { usbRaiz[0] = 0; usbResolvido = 0; }
     if (!usbResolvido) {
-      usbResolvido = 1;
+      // Presence alone does not authorize allocation of the cached path.
       if (usbEscanear(tmp, sizeof tmp, 0)) snprintf(usbRaiz, sizeof usbRaiz, "%s", tmp);
       else usbRaiz[0] = 0;
     }
@@ -607,8 +610,8 @@ static void usbVarreSobra(const char *raizAtual) {
 void p2pmotor_limpar_sobra(void) {
   char raiz[600], mae[600];
   struct stat st;
-  if (!pastas(raiz, sizeof raiz, mae, sizeof mae)) return;
   if (p2pmotor_ativo()) return;          // motor de pe cuida da pasta dele
+  if (!pastasInternas(raiz, sizeof raiz, mae, sizeof mae)) return;
   usbVarreSobra(raiz);                   // sobras de pendrive, com motor parado
   if (lstat(raiz, &st) != 0) return;     // nada sobrou: nem fio
   sobraAgendar(raiz);

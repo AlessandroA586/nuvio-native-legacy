@@ -12,8 +12,8 @@
 //      usb_presente (P2: a UI re-escaneava /tmp/usb por quadro);
 //   8. p2p/ da pessoa (Movies/p2p, p2p/ na raiz do volume, sem .nuvio) sobrevive
 //      ao boot mesmo com o ajuste em Interno (usbPreferido segue 0);
-//   9. p2p/ sem marca que o scan escolhe (sobra de antes da marca) ganha .nuvio
-//      ao ligar o USB, senao subir apagaria a pasta e a proxima limpeza a perderia.
+//   9. USB allocation never adopts an unmarked user directory, even after
+//      the presence probe cached its path.
 //
 //   bash tests/p2pusb.sh
 #include "p2pmotor.h"
@@ -25,6 +25,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <utime.h>
 
 static char dados[700];
 
@@ -86,6 +87,23 @@ int main(int argc, char **argv) {
     assert(existe(strcat(strcpy((char[800]){0}, p2pdir), "/.nuvio")));
     p2pmotor_definir_usb(0);
     assert(someAte(p2pdir, 5000));
+    p2pmotor_definir_usb(1);
+  }
+
+  // Repeated summaries must not rewrite the ownership marker.
+  {
+    char marker[800], contents[32];
+    FILE *fp;
+    assert(p2pmotor_resumo(det, sizeof det) == P2P_OK);
+    snprintf(marker, sizeof marker, "%s/p2p/.nuvio", vol);
+    fp = fopen(marker, "w"); assert(fp); fputs("unchanged\n", fp); fclose(fp);
+    assert(p2pmotor_resumo(det, sizeof det) == P2P_OK);
+    fp = fopen(marker, "r"); assert(fp);
+    assert(fgets(contents, sizeof contents, fp)); fclose(fp);
+    assert(!strcmp(contents, "unchanged\n"));
+    p2pmotor_definir_usb(0);
+    snprintf(marker, sizeof marker, "%s/p2p", vol);
+    assert(someAte(marker, 5000));
     p2pmotor_definir_usb(1);
   }
 
@@ -168,9 +186,7 @@ int main(int argc, char **argv) {
     assert(lstat(rootp, &st) == 0 && S_ISDIR(st.st_mode));
   }
 
-  // 9. sobra antiga, sem .nuvio, unico volume gravavel: ligar USB a marca.
-  // mnt e 0555 e vol ja tem p2p/ da pessoa (caso 8): a sobra fica numa base
-  // sozinha, senao o scan pararia no primeiro gravavel.
+  // 9. A cached presence probe must not authorize ownership of user data.
   {
     char base[780], oldp[800], marca[820];
     FILE *fp;
@@ -182,11 +198,37 @@ int main(int argc, char **argv) {
     fp = fopen(marca, "w"); assert(fp); fclose(fp);
     p2pmotor_teste_usb_base(base);
     p2pmotor_definir_usb(1);
-    assert(p2pmotor_resumo(marca, sizeof marca) == P2P_OK);   // pastas() cria=1 marca
+    assert(p2pmotor_usb_presente());
+    assert(p2pmotor_resumo(marca, sizeof marca) == P2P_OK);
     snprintf(marca, sizeof marca, "%s/.nuvio", oldp);
-    assert(existe(marca));
+    assert(!existe(marca));
+    snprintf(marca, sizeof marca, "%s/p2p", oldp);
+    assert(!existe(marca));
+    p2pmotor_teste_usb_base(base);   // Also cover allocation without a presence probe.
+    assert(p2pmotor_resumo(marca, sizeof marca) == P2P_OK);
+    snprintf(marca, sizeof marca, "%s/.nuvio", oldp);
+    assert(!existe(marca));
     p2pmotor_definir_usb(0);
-    assert(someAte(oldp, 5000));
+    snprintf(marca, sizeof marca, "%s/velha.bin", oldp);
+    assert(existe(marca));
+    assert(unlink(marca) == 0);
+    assert(rmdir(oldp) == 0);
+    assert(rmdir(base) == 0);
+  }
+  // Cleanup with USB preferred must not create and delete a fresh cache.
+  {
+    char base[780];
+    struct stat st;
+    struct utimbuf times = { .actime = 1000000000, .modtime = 1000000000 };
+    snprintf(base, sizeof base, "%s-clean", argv[2]);
+    assert(mkdir(base, 0755) == 0);
+    p2pmotor_teste_usb_base(base);
+    p2pmotor_definir_usb(1);
+    assert(utime(base, &times) == 0);
+    p2pmotor_limpar_sobra();
+    assert(stat(base, &st) == 0 && st.st_mtime == times.modtime);
+    p2pmotor_definir_usb(0);
+    assert(rmdir(base) == 0);
   }
   puts("ok");
   return 0;
