@@ -1163,10 +1163,19 @@ int desc_buscando(void) {
 //
 // Antes disto tudo que nao fosse "series" era FILME, e um canal de TV ao vivo
 // aparecia como "Filme" na linha de genero e "- Filme" no titulo da fileira
-// (issue #37). Os tipos que o Stremio usa para canal sao `channel` e `tv`; os
-// dois chegam nos addons do dono.
+// (issue #37). A lista e a MESMA do guia e do leitor de manifesto de
+// addons.c — "channel" e "tv" sao os do Stremio, e "channels"/"live"/
+// "iptv" sao os que addons de lista usam: um manifesto MISTO (filme+serie+
+// canal, como o do M3U Mux e os de IPTV caseiros) declara cada catalogo com
+// o tipo dele, e um que venha como "live" tem de ir para o guia, nao virar
+// fileira de filmes quebrada.
 static int ehCanal(const char *tipo) {
-  return tipo && (!strcmp(tipo, "channel") || !strcmp(tipo, "tv"));
+  static const char *tipos[] = { "channel", "tv", "channels", "live", "iptv" };
+  int i;
+  if (!tipo || !tipo[0]) return 0;
+  for (i = 0; i < (int)(sizeof tipos / sizeof tipos[0]); i++)
+    if (!strcasecmp(tipo, tipos[i])) return 1;
+  return 0;
 }
 static const char *rotuloTipoSing(const char *tipo) {
   if (ehCanal(tipo)) return "Canal";
@@ -4111,6 +4120,32 @@ static void *fioSocial(void *u) {
   return NULL;
 }
 
+// Uma espera por execucao, MAIS uma por troca de perfil (desc_esperar_conta):
+// a troca zera o ciclo da conta (sync_perfil_pronto = 0) e a volta pedida logo
+// depois leria a lista de addons ainda vazia, publicando um catalogo ralo por
+// cima das fileiras e gravando-o como cache do perfil (#488).
+static int jaEsperou, esperaContaPendente;
+void desc_esperar_conta(void) { esperaContaPendente = 1; }
+static void esperarConta(unsigned minhaGeracao) {
+  int k, deTroca = esperaContaPendente;
+  if (deTroca) { esperaContaPendente = 0; jaEsperou = 0; }
+  if (jaEsperou || !esperaAddons || !esperaAddons()) return;
+  {
+    Uint32 desde = 0;
+    jaEsperou = 1;
+    printf("[desc] esperando a conta (addons, colecoes, ordem) antes de montar a Home\n"); fflush(stdout);
+    while (minhaGeracao == montagemGeracao && (k = esperaAddons()) != 0) {
+      if (k == 2) {   // perfil ja escolhido: o prazo corre
+        if (!desde) desde = SDL_GetTicks();
+        else if (SDL_GetTicks() - desde > 10000u) break;
+      }
+      SDL_Delay(50);
+    }
+    printf("[desc] conta pronta: %d addon(s) (espera encerrada)\n", addons_n()); fflush(stdout);
+  }
+  // Condenada no meio: a volta que a substitui ainda precisa esperar a conta.
+  if (deTroca && minhaGeracao != montagemGeracao) esperaContaPendente = 1;
+}
 static void *montar(void *u) {
   // O lote tambem cresce: era dimensionado por CAT_MAX e por isso herdava o
   // mesmo teto arbitrario.
@@ -4352,26 +4387,7 @@ static void *montar(void *u) {
     // (o sync pede uma ao aplicar a conta: montagemGeracao muda).
     // Quem sabe de conta e de perfil e o app (desc_espera_addons_definir): os
     // testes que compilam este arquivo sozinho nao tem sessao nem perfis.
-    { static int jaEsperou;
-      int k;
-      // ESPERA O CICLO INTEIRO DA CONTA, nao so os addons: as colecoes e a
-      // ordem chegam ~3 s depois deles (TCL: addons 06.05, "sync aplicado"
-      // 09.31), e a volta que ja tinha escolhido os catalogos refazia a Home
-      // no meio — 14 fileiras, cai para 8, volta para 14 com outras. Enquanto
-      // isso a tela e a do cache.
-      if (!jaEsperou && esperaAddons && esperaAddons()) {
-        Uint32 desde = 0;
-        jaEsperou = 1;
-        printf("[desc] esperando a conta (addons, colecoes, ordem) antes de montar a Home\n"); fflush(stdout);
-        while (minhaGeracao == montagemGeracao && (k = esperaAddons()) != 0) {
-          if (k == 2) {   // perfil ja escolhido: o prazo corre
-            if (!desde) desde = SDL_GetTicks();
-            else if (SDL_GetTicks() - desde > 10000u) break;
-          }
-          SDL_Delay(50);
-        }
-        printf("[desc] conta pronta: %d addon(s) (espera encerrada)\n", addons_n()); fflush(stdout);
-      } }
+    esperarConta(minhaGeracao);
     // A LISTA DE ADDONS E LIDA AQUI. Marcar o instante e o que permite dizer,
     // no fim, se um pedido de remontagem que chegou no meio do caminho ja foi
     // atendido por esta volta. Ver geracaoPedida.
@@ -8794,8 +8810,14 @@ void desc_pedir_titulo_semente(const char *imdb, long tmdb, const char *tipo,
   snprintf(s.titulo, sizeof s.titulo, "%s", titulo);
   snprintf(s.meta, sizeof s.meta, "%.4s", ano ? ano : "");
   snprintf(s.poster, sizeof s.poster, "%s", poster);
-  if (strlen(poster) < sizeof s.backdrop)   // cortado seria 404 (#361)
-    snprintf(s.backdrop, sizeof s.backdrop, "%s", poster);
+  // O cartaz da lista NAO vira fundo (#502/#503): recomendacao e filmografia
+  // trazem o poster pequeno (w185/w342) e, em `backdrop`, ele 1) nao passa na
+  // subida w1280/w780 -> original de artehero_url (o detalhe fica com a
+  // miniatura esticada) e 2) mantem arteFixaPoster em 0 no detalhe, entao a
+  // arte congelada nunca solta quando a ficha traz o fundo de verdade. Sem
+  // fundo, arteDeViva cai no poster (arte contida, nao esticada) e marca
+  // arteFixaPoster; o /meta escreve o w1280 e a pagina troca sozinha.
+  s.backdrop[0] = 0;
   if (tipo && (!strcmp(tipo, "tv") || !strcmp(tipo, "series"))) snprintf(s.tipo, sizeof s.tipo, "series");
   else if (tipo && !strcmp(tipo, "movie")) snprintf(s.tipo, sizeof s.tipo, "movie");
   if (s.tipo[0]) snprintf(s.genero, sizeof s.genero, "%s", i18n(rotuloTipoSing(s.tipo)));

@@ -46,6 +46,15 @@ int main(void) {
     assert(!ajustes_abertura_detalhada());
     valor[ab] = 1; assert(ajustes_abertura_detalhada()); valor[ab] = 0;
     assert(ajCenaSecao(ab) == AJC_REP_DURANTE); }
+  assert(!ajustes_hero_sinopse_grande());
+  assert(!strcmp(CHAVE[AJ_HERO_SINOPSE_TAM], "heroSynopsisSizeLocal"));
+  assert(somenteDesteAparelho(AJ_HERO_SINOPSE_TAM));
+  assert(!strcmp(OPCOES[AJ_HERO_SINOPSE_TAM].rotulo, "Tamanho da sinopse"));
+  assert(!strcmp(V_HERO_SINOPSE[0], "Normal"));
+  assert(!strcmp(V_HERO_SINOPSE[1], "Grande"));
+  valor[AJ_HERO_SINOPSE_TAM] = 1;
+  assert(ajustes_hero_sinopse_grande());
+  valor[AJ_HERO_SINOPSE_TAM] = 0;
   // Home: layout e arte do destaque.
   assert(valor[AJ_HERO_FUNDO] == 0);          // Automatico
   assert(valor[AJ_HERO_ARTE_DIF] == 1);       // Desligado: mesma foto do card
@@ -152,12 +161,57 @@ int main(void) {
   assert(AJ_INTERFACE_MODO == AJ_PROXIMO_CONTAGEM + 1);
   assert(AJ_MIC_BUSCA == AJ_INTERFACE_MODO + 1);
   assert(AJ_MENU_TOPO == AJ_MIC_BUSCA + 1 && AJ_ABAS_ESTILO == AJ_MENU_TOPO + 1 && AJ_TECLADO_ANDROID == AJ_ABAS_ESTILO + 1 && AJ_LEG_CONTORNO_COR == AJ_TECLADO_ANDROID + 1);
-  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_ESTAT_TAMANHO == AJ_FALHA_ADDON_LIMITE + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_DICASCONTROLE == AJ_OCULTAR_FILMES_VISTOS + 1 && AJ_HERO_GENERO == AJ_DICASCONTROLE + 1 && AJ_ABERTURA_ADDON == AJ_HERO_GENERO + 1 && AJ_N == AJ_ABERTURA_ADDON + 1);
+  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_RETOMADA_MORNA == AJ_FALHA_ADDON_LIMITE + 1 && AJ_MANTER_PRAZO == AJ_RETOMADA_MORNA + 1 && AJ_ESTAT_TAMANHO == AJ_MANTER_PRAZO + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_ESTAT_LADO == AJ_OCULTAR_FILMES_VISTOS + 1 && AJ_DICASCONTROLE == AJ_ESTAT_LADO + 1 && AJ_HERO_GENERO == AJ_DICASCONTROLE + 1 && AJ_ABERTURA_ADDON == AJ_HERO_GENERO + 1 && AJ_HERO_SINOPSE == AJ_ABERTURA_ADDON + 1 && AJ_HERO_NOTAS == AJ_HERO_SINOPSE + 1 && AJ_HERO_ANO == AJ_HERO_NOTAS + 1 && AJ_HERO_DURACAO == AJ_HERO_ANO + 1 && AJ_CURADORIA_URL == AJ_HERO_DURACAO + 1 && AJ_ABERTURA_FUNDO == AJ_CURADORIA_URL + 1 && AJ_HERO_SINOPSE_TAM == AJ_ABERTURA_FUNDO + 1 && AJ_EP_TAMANHO == AJ_HERO_SINOPSE_TAM + 1 && AJ_N == AJ_EP_TAMANHO + 1);
+  // #492: retomada morna e o prazo do video pronto
+  assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
+  assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));
+  assert(valorPadrao[AJ_RETOMADA_MORNA] == 0 && ajustes_manter_video_ms() == 120000u);   // 2 min
+  valor[AJ_MANTER_PRAZO] = 0; assert(ajustes_manter_video_ms() == 120000u);
+  valor[AJ_MANTER_PRAZO] = 4; assert(ajustes_manter_video_ms() == 0u);
+  valor[AJ_MANTER_PRAZO] = 99; assert(ajustes_manter_video_ms() == 120000u);
+  valor[AJ_MANTER_PRAZO] = 2; assert(ajustes_manter_video_ms() == 600000u);
   assert(valor[AJ_HERO_GENERO] == 0 && ajustes_hero_genero());   // Ligado: o visual de sempre
   assert(!strcmp(CHAVE[AJ_HERO_GENERO], "heroGeneroLocal") && somenteDesteAparelho(AJ_HERO_GENERO));
+  // #205: sinopse, notas, ano e duracao do destaque, cada um no seu ajuste,
+  // LIGADOS de fabrica (o visual de sempre), locais como o genero.
+  assert(valor[AJ_HERO_SINOPSE] == 0 && valor[AJ_HERO_NOTAS] == 0 && valor[AJ_HERO_ANO] == 0 && valor[AJ_HERO_DURACAO] == 0);
+  assert(ajustes_hero_sinopse() && ajustes_hero_notas() && ajustes_hero_ano() && ajustes_hero_duracao());
+  assert(!strcmp(CHAVE[AJ_HERO_SINOPSE], "heroSinopseLocal") && somenteDesteAparelho(AJ_HERO_SINOPSE));
+  assert(!strcmp(CHAVE[AJ_HERO_NOTAS], "heroNotasLocal") && somenteDesteAparelho(AJ_HERO_NOTAS));
+  assert(!strcmp(CHAVE[AJ_HERO_ANO], "heroAnoLocal") && somenteDesteAparelho(AJ_HERO_ANO));
+  assert(!strcmp(CHAVE[AJ_HERO_DURACAO], "heroDuracaoLocal") && somenteDesteAparelho(AJ_HERO_DURACAO));
+  valor[AJ_HERO_SINOPSE] = 1; assert(!ajustes_hero_sinopse()); valor[AJ_HERO_SINOPSE] = 0;
+  valor[AJ_HERO_NOTAS] = 1; assert(!ajustes_hero_notas()); valor[AJ_HERO_NOTAS] = 0;
+  valor[AJ_HERO_ANO] = 1; assert(!ajustes_hero_ano()); valor[AJ_HERO_ANO] = 0;
+  valor[AJ_HERO_DURACAO] = 1; assert(!ajustes_hero_duracao()); valor[AJ_HERO_DURACAO] = 0;
+  assert(!strcmp(i18n(OPCOES[AJ_HERO_SINOPSE].rotulo), "Show synopsis on hero"));
+  assert(!strcmp(i18n(OPCOES[AJ_HERO_NOTAS].rotulo), "Show ratings on hero"));
+  assert(!strcmp(i18n(OPCOES[AJ_HERO_ANO].rotulo), "Show year on hero"));
+  assert(!strcmp(i18n(OPCOES[AJ_HERO_DURACAO].rotulo), "Show runtime on hero"));
   assert(valor[AJ_ABERTURA_ADDON] == 1 && !ajustes_abertura_addon());
   assert(!strcmp(CHAVE[AJ_ABERTURA_ADDON], "aberturaAddonLocal") && somenteDesteAparelho(AJ_ABERTURA_ADDON));
   valor[AJ_ABERTURA_ADDON] = 0; assert(ajustes_abertura_addon()); valor[AJ_ABERTURA_ADDON] = 1;
+  // #508: o fundo da tela Cinema da abertura: Arte borrada por padrao (o de
+  // sempre), local, com os valores na ordem Desligado/Arte/Arte borrada.
+  assert(valor[AJ_ABERTURA_FUNDO] == 2 && ajustes_abertura_fundo() == 2);
+  assert(!strcmp(CHAVE[AJ_ABERTURA_FUNDO], "aberturaFundoLocal") && somenteDesteAparelho(AJ_ABERTURA_FUNDO));
+  valor[AJ_ABERTURA_FUNDO] = 0; assert(ajustes_abertura_fundo() == 0);
+  valor[AJ_ABERTURA_FUNDO] = 1; assert(ajustes_abertura_fundo() == 1);
+  valor[AJ_ABERTURA_FUNDO] = 7; assert(ajustes_abertura_fundo() == 2);   // fora da lista: o padrao
+  valor[AJ_ABERTURA_FUNDO] = 2;
+  assert(OPCOES[AJ_ABERTURA_FUNDO].n == 3 && !strcmp(OPCOES[AJ_ABERTURA_FUNDO].valores[0], "Desligado") &&
+         !strcmp(OPCOES[AJ_ABERTURA_FUNDO].valores[1], "Arte") && !strcmp(OPCOES[AJ_ABERTURA_FUNDO].valores[2], "Arte borrada"));
+  // #205: o tamanho dos cards de episodio da Moderna — Medio de fabrica, local,
+  // na secao da pagina do titulo, com tres valores.
+  assert(!strcmp(CHAVE[AJ_EP_TAMANHO], "epTamanhoLocal"));
+  assert(valor[AJ_EP_TAMANHO] == 1 && ajustes_ep_tamanho() == 1);
+  assert(somenteDesteAparelho(AJ_EP_TAMANHO) && !dePerfil(AJ_EP_TAMANHO));
+  assert(OPCOES[AJ_EP_TAMANHO].n == 3 && !strcmp(V_EP_TAMANHO[1], "Médio"));
+  assert(!strcmp(i18n(OPCOES[AJ_EP_TAMANHO].rotulo), "Episode card size"));
+  valor[AJ_EP_TAMANHO] = 0; assert(ajustes_ep_tamanho() == 0);
+  valor[AJ_EP_TAMANHO] = 2; assert(ajustes_ep_tamanho() == 2);
+  valor[AJ_EP_TAMANHO] = 7; assert(ajustes_ep_tamanho() == 1);   // fora da faixa: o medio
+  valor[AJ_EP_TAMANHO] = 1;
   for (int i = 0; i < AJ_N; i++) assert(strcmp(CHAVE[i], "autoCreditosLocal"));
   // #338: o tamanho das estatisticas ao vivo: "Lembrar o ultimo" por padrao, local,
   // em Reproducao, com Lembrar + Completo/Compacto/Minimo.
@@ -167,6 +221,9 @@ int main(void) {
   valor[AJ_ESTAT_TAMANHO] = 1; assert(ajustes_estat_tamanho() == 0);
   valor[AJ_ESTAT_TAMANHO] = 3; assert(ajustes_estat_tamanho() == 2);
   valor[AJ_ESTAT_TAMANHO] = 0;
+  assert(!strcmp(CHAVE[AJ_ESTAT_LADO], "estatLadoLocal") && somenteDesteAparelho(AJ_ESTAT_LADO) && OPCOES[AJ_ESTAT_LADO].n == 2);
+  assert(valor[AJ_ESTAT_LADO] == 0 && ajustes_estat_lado() == 0);
+  valor[AJ_ESTAT_LADO] = 1; assert(ajustes_estat_lado() == 1); valor[AJ_ESTAT_LADO] = 0;
   // 13/10: o layout "Apple TV" se chama Dinamica; o valor gravado nao muda.
   assert(HOME_LAYOUT_DINAMICA == 2 && OPCOES[AJ_HOME_LAYOUT].n == 3);
   assert(!strcmp(V_HOME_LAYOUT[HOME_LAYOUT_DINAMICA], "Dinâmica"));

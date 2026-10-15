@@ -424,6 +424,9 @@ IGNORAR = {
     "conta-%s-p%d.json", "conta-fora",
     # Chaves da ilha e do avisodisp da pilula "Episódio" dos comentarios (detail.c).
     "det-com-ep", "dica:comentarios-episodio",
+    # Chave do aviso "pessoa sem pagina" do OK no elenco (detail.c): chave
+    # interna da ilha, como "det-com-ep" — nunca texto de tela.
+    "det-elenco-sem-pagina",
     "conta-addons-pend-",  # prefixo de arquivo da fila offline, nunca texto de tela
     "hdr do pipeline: %s (fonte DV=%d)",
     # Tres marcos de video.c/video_tizen.c. O buffer e montado numa instrucao
@@ -499,6 +502,9 @@ IGNORAR = {
     # Marca/nome proprio, igual em toda lingua (mesma regra de "IMDb", "Trakt"):
     # o selo do formato na tela do Dolby Vision (dvtelaui.c) e o letreiro do Simkl.
     "HDR10", "DOLBY VISION", "SIMKL",
+    # menu.c (layout Dinamica): cabecalho de secao em CAIXA ALTA, como no tvOS.
+    # A chave traduzivel e "Streaming"; aqui o desenho fixa o rotulo em ASCII.
+    "STREAMING",
     # Log "[cor] fundo frost" e aviso da copia borrada (fundo.c): so printf.
     " (sem quadro pequeno)", "desenho direto (sem quadro pequeno)",
     "sem a copia desfocada da arte ainda (arte nao decodificada?): fundo liso",

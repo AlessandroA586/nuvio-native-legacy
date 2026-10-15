@@ -607,13 +607,17 @@ static void rSaida(void) {   // sair no meio: o video vai para a ilha da Home ou
     ajc_video(vx, vy, vw, vh, 14 * k, 1 - (v ? 0.8f * k : 0));
     ajc_foco(vx, vy, vw, vh, 14, k * 0.8f); }
 }
-static void rManter(int op) {   // o video fica pronto na ilha por 2 minutos
+static void rManter(int op) {   // paused player for the chosen duration
   float k = ajcLig(op), f = ajc_fase(5.0f), cd = k > 0.5f ? 1 - f : 0;
   ajc_vidro(120, 100, 400, 130, 26, 0.35f + 0.65f * k);
   ajc_video(142, 120, 160, 90, 12, k);
   ajc_ret(142, 120, 160, 90, 12, 0.07f, 0.07f, 0.09f, 0.6f * (1 - k));
   ajc_icone("aj_pause", 222, 165, 34, 0.95f * k + 0.3f * (1 - k));
-  ajcTexto("2:00", 26, 1, 330, 126, k);
+  { char b[16]; unsigned ms = ajustes_manter_video_ms();
+    if (ms) snprintf(b, sizeof b, "%u:00", ms / 60000u);
+    else snprintf(b, sizeof b, "%s", i18n("Sem limite"));
+    ajcTexto(b, 26, 1, 330, 126, k);
+  }
   ajc_progresso(330, 168, 160, cd, k);
   ajc_acento_ret(330, 186, 90, 26, 13, k * (0.6f + 0.4f * ajc_onda(1.4f)));
   ajc_icone_tinta("aj_play", 375, 199, 13, k);
@@ -640,8 +644,8 @@ static void rSeekr(int op) {
       if (k > 0.5f) {
         ajc_cartaz(cx - 70, 196, 140, 80, 4 + (int)(cur * 5), 1);
         ajc_foco(cx - 70, 196, 140, 80, 10, 1);
-        ajcTexto(b, 15, 1, cx - 20, 284, 1);
-      } else { ajc_vidro(cx - 30, 284, 60, 24, 12, 1); ajcTexto(b, 14, 1, cx - 19, 287, 1); }
+        ajcTextoVivo(b, 15, 1, cx - 20, 284, 1);
+      } else { ajc_vidro(cx - 30, 284, 60, 24, 12, 1); ajcTextoVivo(b, 14, 1, cx - 19, 287, 1); }
       ajcChaveCanto(k);
       return;
     case AJ_SEEKR_FITA: {   // a fita de quadros (ligada) x um quadro por vez
@@ -777,7 +781,7 @@ static void rPercentual(void) {
   ajc_acento_ret(m, 236, 600 - m, 12, 6, 0.45f);
   ajc_ret(m - 1.5f, 214, 3, 56, 1.5f, 1, 1, 1, 0.9f);
   snprintf(t, sizeof t, "%d%%", (int)(pc + 0.5f));
-  ajcSelo(t, m - ajcLargura(t, 16, 1) * 0.5f - 11, 176, 16, 1, 1);
+  ajcSeloVivo(t, m - ajcLarguraViva(t, 16, 1) * 0.5f - 11, 176, 16, 1, 1);
   ajc_bolinha(cx, 242, 22, 1, 1, 1, 1);
   ajc_ladrilho("aj_check", 560, 80, 64, visto > 0.5f, 0.3f + 0.7f * visto);
   ajc_cartaz(440, 48, 64, 64, 3, 0.9f);

@@ -24,7 +24,13 @@ typedef enum {
   FILEIRA_LINHA_TEMPO, // cartazes por ano sobre a linha animada dos anos
   FILEIRA_FICHA,       // cartaz com a ficha do titulo ao lado
   FILEIRA_PALCO,       // o foco grande no centro, vizinhos diminuindo
-  FILEIRA_REDONDA      // avatar circular com o nome embaixo (pessoas)
+  FILEIRA_REDONDA,     // avatar circular com o nome embaixo (pessoas)
+  // "Herói" (#205): UM cartão do tamanho da fileira, com fundo, selo,
+  // título e duas linhas — o banner entre fileiras do Apple TV.
+  FILEIRA_HEROI,
+  // 14/10: o pôster 3:4 grande da Apple TV, com logo, gênero, classificação
+  // e sinopse na base, sobre o véu da COR PREDOMINANTE do cartaz.
+  FILEIRA_POSTER_GRANDE
 } TipoFileira;
 
 // O item sob o foco, com o retangulo que ele ocupa na tela NESTE quadro. A
@@ -75,6 +81,10 @@ void home_fileiras_vistas(Uint32 agora);
 // isto para nascer com o backdrop no mesmo lugar — o fundo do detalhe E a arte
 // do titulo em foco, e ela nao deve reaparecer, deve continuar.
 void home_hero_rect(float *x, float *y, float *w, float *h);
+// A LINHA DE META do destaque do topo: episodio em andamento, genero, ano e
+// duracao — cada um no seu ajuste, sem buraco (o que some fecha o espaco).
+// Separada do desenho para o teste da combinacao dos ajustes (tests/herometa.c).
+void hero_meta_linha(const CatItem *ci, char *dst, size_t n);
 // 1 com a pagina no topo (layout Dinamica), caindo a 0 ao rolar; 1 nos outros.
 float home_topo_fracao(void);
 // Layout Dinamica: as pastas (indices de col_folder) da fileira de colecao
@@ -104,6 +114,7 @@ void home_pedir_abrir(void);   // pede a pagina do titulo focado (menu do cartao
 int  home_foco_retomada(void); // card focado e de retomada (OK nele toca)
 int  home_pediu_tocar(void);   // OK num card de retomada com "OK no card" = Retomar
 int  home_pediu_menu(void);    // ESQUERDA na primeira coluna: chama o menu
+int  home_pediu_ilha(void);   // CIMA no alto da home: foco na ilha (#495), como o CH+
 int home_pediu_social(void);
 int home_pediu_pessoa_social(CatItem *saida);
 // OK numa fileira de canal ("Ver tudo" dela, ou num cartao de canal — que ai

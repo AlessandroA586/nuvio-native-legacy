@@ -167,6 +167,8 @@ static const char *uxSinonimos(int op) {
     case AJ_LOGO_APP: return "logo marca simbolo novo classico icone identidade nuvio tv retro play gradiente splash";
     case AJ_ABERTURA: return "abertura splash inicio animacao zoom esmaecer fade direto rapido logo entrada boot arranque";
     case AJ_ESMAECER: return "esmaecer escurecer apagar tela parado ocioso inatividade protecao oled burn-in screensaver descanso tempo minutos dim";
+    case AJ_MANTER_PRAZO: return "tempo video pronto sem limite pausa retencao ilimitado minutos memoria";
+    case AJ_RETOMADA_MORNA: return "retomada rapida morna cache disco quadro conexao ilha retomar";
     case AJ_MANTER_VIDEO: return "manter video pronto sair retomar rapido instantaneo pausado reter memoria pipeline ilha trailer avancado";
     case AJ_DESCANSO_ESTILO: return "descanso screensaver protetor vitrine relogio hora filmes escurecer estilo";
     case AJ_DESCANSO_FONTE: return "descanso vitrine titulos lista continuar catalogo filmes series";
@@ -184,7 +186,9 @@ static const char *uxSinonimos(int op) {
     case AJ_ABAS_ESTILO: return "abas estilo colecao streaming chips menu suspenso dropdown barra central paginas carrossel tabs style collection pages carousel";
     case AJ_LEG_CONTORNO_COR: return "legenda contorno sombra borda cor preto branco cinza outline edge shadow subtitle color";
     case AJ_MENU_TOPO: return "menu barra topo alto cima lateral esquerda rail posicao navegacao top bar toolbar sidebar left position";
+    case AJ_EP_TAMANHO: return "tamanho episodio cards cartao moderno pequeno medio grande serie episode card size small medium large";
     case AJ_ABERTURA_ADDON: return "addon add-on provedor fonte nome abertura cinema tela carregando tentativa provider name opening source";
+    case AJ_ABERTURA_FUNDO: return "fundo arte backdrop imagem titulo abertura cinema tela carregando desligado nitida borrada desfocada preto opening backdrop blurred sharp off";
     case AJ_TELA_ABERTURA: return "tela abertura abrindo carregando loading cinema detalhada fonte play transicao opening source screen";
     case AJ_PLR_CLASSIF: return "classificacao indicativa idade faixa etaria 16 12 18 livre guia parental avisos violencia nudez player content rating age parental guide";
     case AJ_APOIAR: return "apoiar apoio doar doacao patreon kofi ko-fi cafe contribuir ajudar projeto qr support donate";
@@ -220,10 +224,16 @@ static const char *uxSinonimos(int op) {
     case AJ_P2P_LIMITE: return "limite espaco p2p torrent armazenamento disco cheio memoria buffer cache tamanho maximo gb space limit storage full";
     case AJ_P2P_DESTINO: return "cache p2p pendrive usb armazenamento interno disco externo flash drive storage location";
     case AJ_ESTAT_TAMANHO: return "estatisticas ao vivo stats nerds tamanho completo compacto minimo pequeno linha canto fixar velocidade buffer painel live statistics size full compact minimal";
+    case AJ_ESTAT_LADO: return "estatisticas ao vivo stats nerds lado direita esquerda direito esquerdo posicao painel live statistics side left right position";
     case AJ_BUFFER: return "buffer tamanho memoria pequeno medio grande travando carregando rede instavel stats nerds";
     case AJ_CACHE_SEEK: return "cache seek buffer disco armazenamento voltar avancar travando carregando";
     case AJ_TMDB_IDIOMA: return "idioma metadados titulo sinopse traducao tmdb";
     case AJ_HERO_GENERO: return "genero destaque hero logo titulo categoria esconder mostrar card genre";
+    case AJ_HERO_SINOPSE: return "sinopse destaque hero texto descricao resumo esconder mostrar synopsis description";
+    case AJ_HERO_SINOPSE_TAM: return "sinopse tamanho destaque hero texto grande normal synopsis size";
+    case AJ_HERO_NOTAS: return "nota notas imdb destaque hero avaliacao rating ratings esconder mostrar";
+    case AJ_HERO_ANO: return "ano destaque hero lancamento year data esconder mostrar";
+    case AJ_HERO_DURACAO: return "duracao tempo destaque hero runtime minutos horas esconder mostrar";
     case AJ_HERO_TRAILER: return "trailer trailers destaque topo hero autoplay automatico";
     case AJ_FOCO_TRAILER: return "trailer trailers cartaz poster foco autoplay";
     case AJ_DET_TRAILER_AUTO: return "trailer trailers pagina titulo detalhes autoplay automatico";
