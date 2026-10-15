@@ -18,7 +18,7 @@
 
 // A lista cresce conforme a resposta dos addons; a UI virtualiza as linhas.
 
-typedef struct {
+typedef struct Stream {
   char rotulo[192];     // Nome curto da fonte
   char provedor[96];
   // Origem real da instancia do addon, sem URL/token nem inferencia pelo nome.
@@ -199,7 +199,38 @@ int stream_falha_verificar(FonteFalhaSessao *sessao, unsigned lista, int escolhi
                            int (*cancelado)(void *), void *ctx,
                            int *indice, int *servico, char *url, unsigned tam);
 int stream_falha_aplicar(int indice, unsigned lista, int servico, const char *url);
+int stream_falha_aplicar_sessao(int indice, unsigned lista, int servico, const char *url, uint64_t sessao);
+// Renova somente a rota ja escolhida, sem reservar outra tentativa na
+// politica. O consumidor aceita e publica a URL depois de validar o alvo.
+int stream_falha_renovar(int indice, unsigned lista, int servico,
+                         int (*cancelado)(void *), void *ctx, char *url, unsigned tam);
 void stream_falha_identidade(const Stream *fonte, char *dst, unsigned tam);
+// Lista de outro episodio: construir na UI, onde as preferencias estao
+// estaveis. O snapshot possui sua lista/fila/credenciais/politica e nunca
+// instala a lista nem altera exclusoes da reproducao atual.
+typedef struct StreamPreparo StreamPreparo;
+StreamPreparo *stream_preparo_criar(const Stream *fontes, int n, int preferida);
+// Usa somente o runtime comprovado deste alvo para StreamFit; nunca herda
+// a duracao da reproducao em andamento. Sem alvo, a duracao e desconhecida.
+StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int n, int preferida, const char *alvo);
+void stream_preparo_definir_episodio(StreamPreparo *preparo, int temporada, int episodio);
+// Marca interna de preferencias/credenciais; nunca publicar em diagnosticos.
+uint64_t stream_preparo_config_atual(void);
+int stream_preparo_contexto_atual(const StreamPreparo *preparo);
+// BLOQUEIA no worker. 1 = fonte pronta, 0 = esgotou, -1 = cancelado.
+// `politica` recebe ownership da sessao (NULL sem failover); seus indices
+// pertencem a stream_preparo_lista. Fonte/indice so saem quando serve.
+int stream_preparo_resolver(StreamPreparo *preparo, int (*cancelado)(void *), void *ctx,
+                            Stream *fonte, int *indice, FonteFalhaSessao **politica);
+int stream_preparo_renovar(StreamPreparo *preparo, int indice, int (*cancelado)(void *),
+                           void *ctx, Stream *fonte);
+// Devolve ao snapshot a mesma politica ja gasta depois de uma falha nativa.
+// O resolver seguinte continua pares/URLs/limites sem recomecar a escolha.
+int stream_preparo_continuar(StreamPreparo *preparo, FonteFalhaSessao **politica);
+FonteFalhaSessao *stream_preparo_tomar_politica(StreamPreparo *preparo);
+const Stream *stream_preparo_lista(const StreamPreparo *preparo, int *n);
+Stream *stream_preparo_tomar_lista(StreamPreparo *preparo, int *n);
+void stream_preparo_liberar(StreamPreparo *preparo);
 // A fonte `i` pode ser seguida por um grupo lembrado SEM rebaixar o que o
 // automatico escolheria hoje: nao excluida pelas regras do dono, grupo de
 // regras igual ou melhor, resolucao e Dolby Vision iguais ou maiores e, na LG,
@@ -253,6 +284,7 @@ Uint32 stream_idade_ms(void);
 // que vai tocar e conferida. As que falham saem da fila desta lista
 // (stream_automatico_excluir) e nao sao conferidas de novo.
 int  stream_primeira_boa(int tentativas);
+int stream_primeira_boa_sessao(int tentativas, uint64_t sessao);
 // TOCAR ENQUANTO CONFERE (fonteantecipa.h): o indice da candidata que o player
 // ja pode abrir enquanto a conferencia dela roda, e o estado (FA_*). -1 = nada.
 int  stream_antecipada(int *estado);
