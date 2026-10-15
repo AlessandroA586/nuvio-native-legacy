@@ -295,6 +295,7 @@ static int  amigosDoTitulo(AmigosTitulo *t) {
 // "Rafa terminou a série". 0/0 = nao se sabe ainda: a frase nunca e afirmada.
 static void ultimoEpisodio(int *t, int *e);
 static int  pedReproduzir = 0, pedMarcar = 0, pedFontes = 0;
+static int pedFontesT, pedFontesE; // Episode captured before the source sheet takes focus.
 // Marcar como ASSISTIDO. Separado de pedMarcar, que e "adicionar a lista".
 static int  pedAssistido = 0;
 static int  pedDoInicio = 0;         // botao "Reproduzir desde o inicio"
@@ -2518,7 +2519,10 @@ void detail_evento(const SDL_Event *e) {
     episodios_menu_evento(e);
     // "Fontes deste episodio" e a porta que a pressao longa tomou do card:
     // antes dela, qualquer OK ali abria as fontes.
-    if (episodios_menu_pediu_fontes()) pedFontes = 1;
+    if (episodios_menu_pediu_fontes()) {
+      pedFontes = 1;
+      episodios_menu_fontes(&pedFontesT, &pedFontesE);
+    }
     return;
   }
 
@@ -2829,12 +2833,10 @@ void detail_evento(const SDL_Event *e) {
       if (comPicando) comentariosVoltar();
       else if (dur >= NV_HOLD_MS && ep)
         episodios_menu_visto(idx, ep->temporada, ep->episodio, ep->nome);
-      else if (ajustes_fonte_manual()) {
-        // O card escolhe ESTE episodio, nao o Retomar do titulo (#513).
-        // Uma fonte lembrada da serie nao pode dispensar a escolha pedida
-        // em Ajustes. O caminho de Fontes ja conserva o episodio em foco.
-        // Retomar no primario e o proximo episodio seguem como antes (#57/#62).
+      else if (ajustes_fonte_manual() && ep) {
+        // Match integration #513: capture the card before the sheet takes focus.
         pedFontes = 1;
+        pedFontesT = ep->temporada; pedFontesE = ep->episodio;
       } else
         pedReproduzir = 1;
     }
@@ -7403,6 +7405,12 @@ int detail_pediu_amigos(char *imdb, size_t tam) {
   pedAmigos = 0;
   if (imdb && tam) snprintf(imdb, tam, "%s", c ? c->imdb : "");
   return 1;
+}
+int detail_pediu_fontes_ep(int *t, int *e) {
+  int tt = pedFontesT, te = pedFontesE;
+  pedFontesT = pedFontesE = 0;
+  if (t) *t = tt; if (e) *e = te;
+  return tt > 0 && te > 0;
 }
 int detail_pediu_fontes(void)     { int v = pedFontes;     pedFontes = 0;     return v; }
 int detail_pediu_explorar(void)   { int v = pedExplorar;   pedExplorar = 0;   return v; }
