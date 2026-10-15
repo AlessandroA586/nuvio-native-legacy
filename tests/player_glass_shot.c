@@ -357,6 +357,7 @@ int main(int argc, char **argv) {
     ajustes_dir(getenv("NUVIO_DADOS")); }
   ajustes_iniciar();
   if (!strcmp(material, "vidro")) ajustes_definir_vidro(1);
+  ajustes_teste_vidro_env();   // NUVIO_SHOT_VIDRO_OPAC / _FOSCO
   { struct tm lt; time_t t = time(NULL);
     localtime_r(&t, &lt); lt.tm_hour = 20; lt.tm_min = 19; lt.tm_sec = 0;
     plrilha_shot_hora(mktime(&lt)); }

@@ -190,6 +190,7 @@ static void ajusta(int layout, int vidro) {
   if (getenv("NV_AJ")) fprintf(a, "%s\n", getenv("NV_AJ"));   // ex.: "heroSectionEnabled 1"
   fclose(a);
   ajustes_dir(dirDados);
+  ajustes_teste_vidro_env();   // NUVIO_SHOT_VIDRO_OPAC / _FOSCO
   // O roteamento de app.c (app_atualizar), que este teste nao roda.
   artehero_fundo_addon(ajustes_fundo_addon());
   posterprov_preferir_addon(ajustes_poster_addon());
