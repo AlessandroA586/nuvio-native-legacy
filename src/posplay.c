@@ -667,7 +667,7 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
     if (dur[0]) { size_t k = strlen(num); snprintf(num + k, sizeof num - k, " \xc2\xb7 %s", dur); }
     { TxtLinha l = txt_linha(TXT_MINI, num, 243, 242, 239, 255);
       GfxRect chip = { tr.x + 14.0f, tr.y + tr.h - 14.0f - 32.0f, (float)l.w + 24.0f, 32.0f };
-      if (ajustes_vidro()) gfx_cor(chip, 0.5f, 0.055f, 0.059f, 0.071f, 0.80f * a);
+      if (ajustes_vidro()) gfx_cor(chip, 0.5f, 0.055f, 0.059f, 0.071f, 0.80f * a); // vidro-ok: 32px chip over a still; budget
       else gfx_cor(chip, 0.5f, 0.082f, 0.086f, 0.102f, a);
       txt_desenhar_alpha(l, chip.x + 12.0f, chip.y + (32.0f - (float)l.h) * 0.5f, a); }
     { float tx = tr.x + tr.w + 30.0f, tw = ilha.x + ilha.w - 28.0f - tx, ty = ilha.y + 28.0f;

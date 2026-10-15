@@ -144,7 +144,7 @@ static void ajIlhaMaterial(GfxRect r, float raioPx, float a, int modal, int pagi
   if (!pagina) ajIlhaSombra(r, raioPx, (ajVid() ? 0.36f : 0.45f) * a, !ajVid() && a >= 0.999f);
   if (ajVid()) {
     // Teste do vidro: opacidade (78% = 0.80/0.86 de sempre) e fosco.
-    gfx_vidro(r, raio, GFX_VIDRO_PAINEL, 0.06f, (modal ? 0.86f : 0.80f) * gfx_vidro_opacidade(), a);
+    gfx_vidro_material(r, raio, modal ? GFX_VIDRO_DENS_MODAL : GFX_VIDRO_DENS, a);
   } else {
     gfx_cor_painel(r, raio, 0.082f, 0.086f, 0.102f, a);
   }
@@ -161,7 +161,7 @@ static void ajIlhaMiolo(GfxRect r, float raioPx, float miolo) {
   float raio = raioPx / r.h;
   if (!ajTelaCheia()) ajIlhaSombra(r, raioPx, ajVid() ? 0.36f : 0.45f, !ajVid());
   if (ajVid()) {
-    gfx_vidro(r, raio, GFX_VIDRO_PAINEL, 0.06f, miolo * gfx_vidro_opacidade(), 1);
+    gfx_vidro_material(r, raio, miolo, 1);
   } else gfx_cor_painel(r, raio, 0.082f, 0.086f, 0.102f, 1);
 }
 // Superficie de FOCO de linha: um degrau mais clara (vidro 12%, solido #2B2D34).
@@ -550,7 +550,7 @@ static void aj2Bolinha(int v, float cx, float cy, int foco, int gravada, float a
   }
   if (ajTemaNovo(v)) {   // as seis novas: o ponto claro no canto
     float px = cx + d * 0.5f * 0.707f, py = cy - d * 0.5f * 0.707f;
-    gfx_cor((GfxRect){ px - 8.5f, py - 8.5f, 17, 17 }, 0.5f, 0.055f, 0.059f, 0.071f, 0.95f * a);
+    gfx_cor((GfxRect){ px - 8.5f, py - 8.5f, 17, 17 }, 0.5f, 0.055f, 0.059f, 0.071f, 0.95f * a); // vidro-ok: slider knob
     gfx_cor((GfxRect){ px - 6, py - 6, 12, 12 }, 0.5f, 0.953f, 0.949f, 0.937f, a);
   }
 }
@@ -629,7 +629,7 @@ static void aj2Regua(GfxRect ln, float y, float a) {
           gfx_anel_fora(p, 28.0f / 56.0f, 2.0f, 3.0f, 0.953f, 0.949f, 0.937f, 0.92f * a);
         } else ajNeutro(p, 28, 0.07f, AJ_CHIP_SOL, a);
         aj2CorDin(v, url, c1, c2);
-        gfx_cor((GfxRect){ px + 7, cy - 21, 42, 42 }, 0.5f, 0.055f, 0.059f, 0.071f, 0.85f * a);
+        gfx_cor((GfxRect){ px + 7, cy - 21, 42, 42 }, 0.5f, 0.055f, 0.059f, 0.071f, 0.85f * a); // vidro-ok: knob disc
         if (v == sel && !foc) gfx_icone((GfxRect){ px + 16, cy - 12, 24, 24 }, "aj_check", 1, 1, 1, a);
         else {
           if (v == AJ_TEMA_GRADIENTE) c1[0] = (c1[0] + c2[0]) * 0.5f, c1[1] = (c1[1] + c2[1]) * 0.5f, c1[2] = (c1[2] + c2[2]) * 0.5f;

@@ -1544,7 +1544,7 @@ static void desenharDica(void) {
                  (gRetrato() ? gTopoFim : G_TOPO_Y + G_TOPO_H) + 16.0f,
                  (float)t.w + 40.0f, 44.0f };
   if (gRetrato() && p.x < G_AREA_X) p.x = G_AREA_X;
-  gfx_cor(p, 0.5f, 0.13f, 0.14f, 0.18f, 0.97f * da);
+  gfx_vidro_ou_solido(p, 0.5f, GFX_VIDRO_DENS, da, 0.13f, 0.14f, 0.18f, 0.97f);
   gfx_anel_fora(p, 0.5f, 0.0f, 2.0f, ar, ag, ab, 0.85f * da);
   txt_desenhar_alpha(t, p.x + 20.0f, p.y + (p.h - (float)t.h) * 0.5f, da);
 }

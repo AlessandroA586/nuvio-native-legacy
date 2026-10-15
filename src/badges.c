@@ -484,7 +484,7 @@ static float seloEscritoEm(float mx, float my, float w, float a, int ancora_dir,
   if (ancora_dir) mx -= pw;
   ajustes_acento(&ar, &ag, &ab);
   gfx_cor((GfxRect){ mx, my + 3.0f, pw, h }, 0.5f, 0, 0, 0, 0.28f * a);
-  gfx_cor((GfxRect){ mx, my, pw, h }, 0.5f, 0.05f, 0.055f, 0.067f, 0.80f * a);
+  gfx_vidro_ou_solido((GfxRect){ mx, my, pw, h }, 0.5f, GFX_VIDRO_DENS, a, 0.05f, 0.055f, 0.067f, 0.80f);
   { float ix = compacto ? mx + (h - ic) * 0.5f : mx + h * 0.36f;
     gfx_icone((GfxRect){ ix, my + (h - ic) * 0.5f, ic, ic }, "check", ar, ag, ab, a);
     if (!compacto) txt_desenhar_alpha(t, ix + ic + 6.0f, my + (h - t.h) * 0.5f, a); }

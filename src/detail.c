@@ -5273,7 +5273,7 @@ static void desenhaAssistidoEpisodio(GfxRect th, float a) {
   // Fixo no canto superior direito da miniatura nos tres tamanhos (#205): a
   // base do selo "EPISODIO n" e que se alinha a base daqui, e nao o contrario.
   GfxRect selo = {th.x + th.w - w - 18, th.y + NV_DETP_EP_VISTO_Y, w, h};
-  gfx_cor(selo, .5f, .055f, .068f, .09f, .96f * a);
+  gfx_cor(selo, .5f, .055f, .068f, .09f, .96f * a); // vidro-ok: badge over art
   gfx_anel(selo, .5f, 1, .68f, .75f, .86f, .30f * a);
   GfxRect disco = {selo.x + pad, selo.y + (h - icone) * .5f, icone, icone};
   gfx_cor(disco, .5f, .451f, .839f, .694f, a);
@@ -5463,7 +5463,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
       GfxRect s = { xs, r.y + epSeloY, w, NV_DETP_EP_SELO_H };
       if (ajustes_vidro()) gfx_vidro_painel(s, 12.0f / NV_DETP_EP_SELO_H, 0.6f, a);
       else
-      gfx_cor(s, 12.0f / NV_DETP_EP_SELO_H, 0.05f, 0.05f, 0.06f, 0.78f * a);
+      gfx_cor(s, 12.0f / NV_DETP_EP_SELO_H, 0.05f, 0.05f, 0.06f, 0.78f * a); // vidro-ok: badge over art
       txt_peso(l, s.x + NV_DETP_EP_SELO_PADX,
                s.y + (NV_DETP_EP_SELO_H - l.h) * 0.5f, a, 1.0f);
       xs += w + NV_DETP_EP_SELO_GAP; }
@@ -7308,7 +7308,7 @@ static void carFundo(void) {
       fundo_borrada_veu(DET_VEU_BORRADA);
       fundo_desenhar_modo(modo, tela, 0.0f, arteAtual, expandida * a);
       fundo_borrada_veu(-1.0f);
-      if (pg > 0.005f) gfx_cor(tela, 0.0f, 0.043f, 0.047f, 0.055f, 0.55f * pg * expandida * a);
+      if (pg > 0.005f) gfx_cor(tela, 0.0f, 0.043f, 0.047f, 0.055f, 0.55f * pg * expandida * a); // vidro-ok: full-screen scrim
       nv_ambiente_forca = 1.0f;
     } else gfx_ambiente(expandida * a);
   }
@@ -7441,7 +7441,7 @@ static void detalheFundo(float s) {
     fundo_desenhar_modo(modo, tela, 0.0f, arte, aEntrada);
     fundo_borrada_veu(-1.0f);
     // Ao rolar: o veu do .dt-cobre do imersivo (50-60%) por cima das cores.
-    if (pg > 0.005f) gfx_cor(tela, 0.0f, 0.043f, 0.047f, 0.055f, 0.55f * pg * aEntrada); }
+    if (pg > 0.005f) gfx_cor(tela, 0.0f, 0.043f, 0.047f, 0.055f, 0.55f * pg * aEntrada); } // vidro-ok: full-screen scrim
   // A arte nitida do topo, vazando nas bordas (o GFX_DETALHE com o caminho
   // "vazar": alfa = 1 - vinheta, em vez de misturar no #0d0d0d).
   if (tex && (1.0f - pg) * aEntrada > 0.005f) {

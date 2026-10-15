@@ -2527,6 +2527,13 @@ static void botaoExibicao(float a, float x0) {
     gfx_icone((GfxRect){ seg.x + (seg.w - 26.0f) * 0.5f, y + (H - 26.0f) * 0.5f, 26, 26 }, "aj_layout-list", c, c, c, a);
     ponteiro_alvo(seg.x, seg.y, seg.w, seg.h, ponteiroCab, NULL, cabN() + 1, 0);
   }
+  if (f > 0.05f) {
+    // Pastilha escura propria: sobre arte clara a dica solta nao se le.
+    TxtLinha d = txt_linha(TXT_MINI, "OK troca a exibição", 236, 239, 245, 255);
+    GfxRect dp = { x, y + H + 8.0f, d.w + 24.0f, d.h + 12.0f };
+    gfx_vidro_ou_solido(dp, NV_RAIO_PILL, GFX_VIDRO_DENS, a * f, 0.05f, 0.055f, 0.07f, 0.82f);
+    txt_desenhar_alpha(d, dp.x + 12.0f, dp.y + 6.0f, a * f);
+  }
 }
 
 static void botaoMaisVistos(float a, float x0) {
