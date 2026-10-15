@@ -366,7 +366,16 @@ static void aj2RodapeA3(GfxRect fr, const AjDica *d, int nd, float a, int desenh
   int dicas = 1;
   if (desenha == 1) gfx_cor((GfxRect){ fr.x + 28.0f, fr.y + fr.h - AJ_A3_RODAPE, fr.w - 56.0f, 1 }, 0, 1, 1, 1, 0.07f * a);
 #ifdef NV_TOUCH_UI
-  if (ajTelaCheia() && ajPontInline) { ajToqueBotoes(x + w, yc, a); return; }
+  if (ajTelaCheia() && ajPontInline) {
+    if (uxAviso[0]) {
+      TxtLinha t = ajTxtC(TXT_V2_24, uxAviso, w - 40.0f);
+      GfxRect r = { x, fr.y + fr.h - AJ_A3_RODAPE - 8.0f - t.h - 24.0f, w, t.h + 24.0f };
+      gfx_cor(r, 12.0f / r.h, AJ_CHIP_SOL, 0.96f * a);
+      txt_desenhar_alpha(t, r.x + 20.0f, r.y + 12.0f, a);
+    }
+    ajToqueBotoes(x + w, yc, a);
+    return;
+  }
 #endif
   if (uxAviso[0] && !(uxEditor && (uxRestaurar || uxAvisoRisco || uxEditor == 2))) {
     TxtLinha t = ajTxtC(TXT_V2_24, uxAviso, w - 34.0f);
