@@ -96,7 +96,7 @@ static int    dispensado;
 static float  anim;
 static Uint32 fecharEm;              // 0 = sem contagem
 static int    pedT, pedE, pedTitulo = -1;
-static int    pedAutomatico, recuou, aguardaBusca;
+static int    pedAutomatico, automaticoEntregue, recuou, aguardaBusca;
 static int    proxT, proxE;          // proximo episodio, quando ha
 static char   proxNome[120];
 static char   preEpisodio[64], preAlvo[64];
@@ -139,7 +139,7 @@ int posplay_sobre_video(void) { return visivel && (serie || aguardaCena); }
 // (janelaSerie) continua verdadeira e o painel volta no quadro seguinte —
 // no video do relato o cartao nem sequer some depois do OK, que era este
 // segundo defeito somado ao primeiro.
-static void esconder(void) { cancelarPreparo(!pedT); visivel = 0; fecharEm = 0; foco = 0; dispensado = 1; }
+static void esconder(void) { automaticoEntregue = 0; cancelarPreparo(!pedT); visivel = 0; fecharEm = 0; foco = 0; dispensado = 1; }
 
 void posplay_fechar(void) {
   // Uma lista JA completa continua disponivel ao buscarParaPlayer do proximo.
@@ -150,7 +150,7 @@ void posplay_fechar(void) {
   cenaPendente = cenaNoFim = aguardaCena = 0;
   durVista = 0.0; durEstavel = 0.0;   // titulo novo: a duracao comeca de novo
   pedT = pedE = 0; pedTitulo = -1;
-  pedAutomatico = recuou = aguardaBusca = 0;
+  pedAutomatico = automaticoEntregue = recuou = aguardaBusca = 0;
   dispensado = 0;   // titulo novo: a dispensa do anterior nao vale mais
 #ifdef NV_TOUCH_UI
   scrollPP = 0; memset(&toquePP, 0, sizeof toquePP);
@@ -167,6 +167,20 @@ static void cancelarAutomatico(void) {
       dispensado = 0;
     }
   }
+}
+
+// Busca explicita cancela a contagem e o preparo antes de confirmar o salto.
+// O pulo automatico de creditos usa so aguardar_busca.
+void posplay_busca_usuario(void) {
+  cancelarAutomatico();
+  if (automaticoEntregue && serie && proxT > 0 && proxE > 0) {
+    visivel = 1;
+    dispensado = 0;
+  }
+  automaticoEntregue = 0;
+  cancelarPreparo(0);
+  preTentou = 0;
+  aguardaBusca = 1;
 }
 
 // Recuar e pedir para ficar neste episodio. O cartao continua servindo ao OK,
@@ -188,6 +202,7 @@ int posplay_pediu_episodio(int *t, int *e) {
   if (t) *t = pedT;
   if (e) *e = pedE;
   pedT = pedE = 0;
+  automaticoEntregue = pedAutomatico;
   pedAutomatico = 0;
   return 1;
 }
@@ -256,7 +271,7 @@ static void prepararProximo(int ehSerie, double resta) {
   // Uma renovacao, 10 s antes da contagem final: o preparo feito antes dos
   // creditos pode ter expirado. Nao consulta periodicamente durante o episodio.
   if (preTentou == 2 || (preTentou && resta > ajustes_proximo_contagem() + 10.0) ||
-      dispensado || durEstavel < PP_DUR_ESTAVEL_S ||
+      dispensado || recuou || aguardaBusca || durEstavel < PP_DUR_ESTAVEL_S ||
       !player_janela_proximo(10.0)) return;
   player_episodio_atual(&t, &e);
   if (t <= 0 || e <= 0) return;
@@ -464,7 +479,7 @@ void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
   // Arma depois de abrir o cartao: marcador real permite antecipar a contagem;
   // sem ele, conta apenas os segundos restantes. Desligado, espera OK.
   // Recuo e busca pendente suspendem a mesma contagem configuravel.
-  if (visivel && serie && !recuou && !aguardaBusca) {
+  if (visivel && serie && janelaSerie && !recuou && !aguardaBusca) {
     // #202: a 1,5x os segundos do arquivo passam mais depressa que os do relogio.
     double resta = vel_tempo_real(durSeg - posSeg, player_velocidade_efetiva());
     if (aguardaCena) fecharEm = 0;
