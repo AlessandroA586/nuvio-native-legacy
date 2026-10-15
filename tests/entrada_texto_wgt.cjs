@@ -2,8 +2,9 @@
 // tools/tizen-shell.html (copiados do arquivo de verdade), com
 // src/entrada_texto.c em WASM. No Chrome nao ha IME da Samsung: o teste faz o
 // papel dele (insertText, composicao, Done 65376, Return 10009, blur).
-// O <input> serve a digitacao e ao botao de microfone (TS_TECLADO | TS_VOZ).
-// Sem emsdk, tests/wgt_voz.sh cobre o mesmo com um emscripten.h fingido.
+// O <input> serve a digitacao no teclado da TV e ao botao de microfone
+// (TS_TECLADO | TS_VOZ). Sem emsdk, tests/wgt_voz.sh cobre o mesmo com um
+// emscripten.h fingido.
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -15,7 +16,7 @@ const { chromium } = pw;
 const raiz = path.resolve(__dirname, '..');
 const shell = fs.readFileSync(path.join(raiz, 'tools/tizen-shell.html'), 'utf8');
 const campo = shell.match(/<input id="nvTextoCampo"[\s\S]*?>/)[0];
-const ini = shell.indexOf('  // TECLADO DA SAMSUNG PARA O BOTAO DE MICROFONE DAS BUSCAS');
+const ini = shell.indexOf('  // TECLADO DA SAMSUNG PARA DIGITAR E PARA O BOTAO DE MICROFONE DAS BUSCAS');
 const fim = shell.indexOf('})();', ini) + 5;
 if (ini < 0 || fim < 5) throw new Error('bloco nvTexto nao achado no tizen-shell.html');
 const ponte = shell.slice(ini, fim);
@@ -31,7 +32,13 @@ function ok(c, m) { if (!c) throw new Error('FALHOU: ' + m); console.log('ok - '
       '-sUSE_SDL=2', '-sEXPORTED_RUNTIME_METHODS=["ccall","UTF8ToString"]', '-o', path.join(dir, 't.js')], { encoding: 'utf8' });
     if (b.status !== 0) throw new Error(b.stderr || String(b.error));
     const html = `<!doctype html><meta charset="utf-8"><canvas id="canvas" tabindex="0"></canvas>${campo}
-<script>${ponte}
+<script>
+// Chrome nao tem Tizen: emula a Samsung explicitamente antes de carregar a ponte.
+window.tizen = { systeminfo: { getCapability(k) {
+  if (k !== 'http://tizen.org/feature/microphone') throw new Error('capacidade inesperada');
+  return true;
+} } };
+${ponte}
 window.chegouNoWindow = []; window.addEventListener('keydown', e => chegouNoWindow.push(e.keyCode));
 window.capturaDepois = []; window.addEventListener('keydown', e => capturaDepois.push(e.keyCode), true);
 window.Module = { onRuntimeInitialized() { window.pronto = true; } };</script><script src="t.js"></script>`;
@@ -113,6 +120,17 @@ window.Module = { onRuntimeInitialized() { window.pronto = true; } };</script><s
     ok(await C('t_n_fim', 'number') === 5 && await C('t_aberto', 'number') === 0, 'fechar pelo app avisa o fim uma vez');
     await quadro();
     ok(await C('t_n_fim', 'number') === 5, 'sem fim duplicado depois do blur');
+
+    await page.evaluate(() => { document.getElementById('nvTextoCampo').focus = () => {}; });
+    await C('t_abrir', null, ['string', 'number'], ['', 1]);
+    await quadro();
+    ok(await C('t_n_fim', 'number') === 6 && await C('t_fim_confirmou', 'number') === 0 &&
+       await C('t_aberto', 'number') === 0, 'focus recusado cancela a sessao C');
+    await page.evaluate(() => document.getElementById('nvTextoCampo').remove());
+    await C('t_abrir', null, ['string', 'number'], ['', 1]);
+    await quadro();
+    ok(await C('t_n_fim', 'number') === 7 && await C('t_fim_confirmou', 'number') === 0 &&
+       await C('t_aberto', 'number') === 0, 'campo ausente cancela a sessao C');
     ok(erros.length === 0, 'sem erro de pagina ' + erros.join(' | '));
   } finally {
     if (browser) await browser.close();

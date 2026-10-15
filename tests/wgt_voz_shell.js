@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const assert = require("assert");
 const html = fs.readFileSync(path.join(__dirname, "../tools/tizen-shell.html"), "utf8");
-const ini = html.indexOf("  // TECLADO DA SAMSUNG PARA O BOTAO DE MICROFONE DAS BUSCAS");
+const ini = html.indexOf("  // TECLADO DA SAMSUNG PARA DIGITAR E PARA O BOTAO DE MICROFONE DAS BUSCAS");
 assert(ini > 0, "bloco do nvTexto nao achado no shell");
 const fimBloco = html.indexOf("\n  })();", ini);
 const codigo = html.slice(ini, fimBloco + "\n  })();".length);
@@ -16,8 +16,8 @@ function montar(capacidade) {
   const ouv = {};
   const el = { value: "", focado: false, ouv: {},
     addEventListener(t, f) { (this.ouv[t] = this.ouv[t] || []).push(f); },
-    focus() { this.focado = true; },
-    blur() { if (!this.focado) return; this.focado = false; (this.ouv.blur || []).forEach(f => f({})); },
+    focus() { this.focado = true; document.activeElement = this; },
+    blur() { if (!this.focado) return; this.focado = false; document.activeElement = null; (this.ouv.blur || []).forEach(f => f({})); },
     setSelectionRange() {} };
   const canvas = { focus() {} };
   const window = {
