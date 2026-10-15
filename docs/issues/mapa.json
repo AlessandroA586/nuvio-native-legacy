@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-15 09:48",
+ "atualizado_em": "2026-10-15 10:50",
  "base": "5544c3e4c",
- "nota": "Sync 2026-10-15 09:48, HEAD integracao/2.0.5 84add4581 (instalado Android 84add4581 Success; C9 rc=255). Ver escrivao/estado.md.",
+ "nota": "Sync 2026-10-15 10:50, HEAD integracao/2.0.5 bf617f00a (instalado Android 84add4581 Success; C9 rc=255). Ver escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,
@@ -2948,7 +2948,7 @@
   {
    "numero": 135,
    "titulo": "Looking for testers: experimental Hisense VIDAA port (Hisense/Toshiba/Sharp TVs with VIDAA)",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "VIDAA",
    "tipo": "feature",
    "status": "respondida",
@@ -2965,10 +2965,9 @@
     "ultima_nossa": "2026-10-06"
    },
    "proximo_passo": "responder (feedback do gabo748 em 06/10 sem retorno)",
-   "notas": "Porte experimental VIDAA; issue de chamada de testadores. Commits faacf493 (2.0.2) e feat/vidaa. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.",
+   "notas": "Porte experimental VIDAA; issue de chamada de testadores. Commits faacf493 (2.0.2) e feat/vidaa. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: futuro; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/135",
-   "criada_em": "2026-09-24",
-   "alvo": "futuro"
+   "criada_em": "2026-09-24"
   },
   {
    "numero": 136,
@@ -5188,7 +5187,7 @@
   {
    "numero": 246,
    "titulo": "HEVC anime videos can’t be “seeked in player”",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "bug",
    "status": "precisa-log",
@@ -5205,10 +5204,9 @@
     "ultima_nossa": "2026-10-06"
    },
    "proximo_passo": "pedir log (pedido em 06/10, sem retorno)",
-   "notas": "NOTAS 2.0.3: \"LG: resume no longer drops the source on a failed seek (#246)\". Não confirmado que cobre o relato HEVC/anime; plataforma do relato desconhecida. ALVO 2.0.3 = SUSPEITA: o conserto está nas NOTAS mas não está confirmado que cobre o relato; falta log do autor. COMMITS vs v2.0.3 (09/10): a7f23592, a8048e0d, 023497dd estão na tag; status mantido porque o conserto é suspeita/parcial e sem confirmação do autor. Revisão 2026-10-12: Seek manual/HEVC não é corrigido pela proteção de retomada contra troca de fonte.",
+   "notas": "NOTAS 2.0.3: \"LG: resume no longer drops the source on a failed seek (#246)\". Não confirmado que cobre o relato HEVC/anime; plataforma do relato desconhecida. ALVO 2.0.3 = SUSPEITA: o conserto está nas NOTAS mas não está confirmado que cobre o relato; falta log do autor. COMMITS vs v2.0.3 (09/10): a7f23592, a8048e0d, 023497dd estão na tag; status mantido porque o conserto é suspeita/parcial e sem confirmação do autor. Revisão 2026-10-12: Seek manual/HEVC não é corrigido pela proteção de retomada contra troca de fonte. [alvo antes: 2.0.6; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/246",
-   "criada_em": "2026-10-04",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-04"
   },
   {
    "numero": 247,
@@ -5279,7 +5277,7 @@
   {
    "numero": 250,
    "titulo": "Add Arabic language support",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "all",
    "tipo": "feature",
    "status": "respondida",
@@ -5292,10 +5290,9 @@
     "ultima_nossa": "2026-10-06"
    },
    "proximo_passo": "nada",
-   "notas": "Metadados em árabe na 2.0.1; menus em árabe planejados para 2.1 (segundo a resposta em #325). Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.",
+   "notas": "Metadados em árabe na 2.0.1; menus em árabe planejados para 2.1 (segundo a resposta em #325). Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: 2.1; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/250",
-   "criada_em": "2026-10-05",
-   "alvo": "2.1"
+   "criada_em": "2026-10-05"
   },
   {
    "numero": 252,
@@ -5448,7 +5445,7 @@
   {
    "numero": 260,
    "titulo": "Add an optional layout switch to change UI direction from Right-to-Left (RTL) 🌍",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "all",
    "tipo": "feature",
    "status": "respondida",
@@ -5461,10 +5458,9 @@
     "ultima_nossa": "2026-10-06"
    },
    "proximo_passo": "nada",
-   "notas": "Layout RTL \"planejado para depois\"; sem branch. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.",
+   "notas": "Layout RTL \"planejado para depois\"; sem branch. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: futuro; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/260",
-   "criada_em": "2026-10-05",
-   "alvo": "futuro"
+   "criada_em": "2026-10-05"
   },
   {
    "numero": 261,
@@ -5557,7 +5553,7 @@
   {
    "numero": 266,
    "titulo": "Bug: Doesn't open on ATv",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "bug",
    "status": "lancada",
@@ -5572,10 +5568,9 @@
     "ultima_nossa": "2026-10-07"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.2",
-   "notas": "Triagem 2026-10-12: a1d5e039 em v2.0.2; release-notes.md v2.0.2: - **Android 11:** a black screen at launch now shows a rescue screen, and the log is sent even without login (#266)..",
+   "notas": "Triagem 2026-10-12: a1d5e039 em v2.0.2; release-notes.md v2.0.2: - **Android 11:** a black screen at launch now shows a rescue screen, and the log is sent even without login (#266).. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/266",
-   "criada_em": "2026-10-06",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-06"
   },
   {
    "numero": 267,
@@ -5821,7 +5816,7 @@
   {
    "numero": 280,
    "titulo": "Home Row does not update properly (Bingecat Addon) and Some Home Rows Missing",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "LG",
    "tipo": "bug",
    "status": "precisa-log",
@@ -5836,10 +5831,9 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "pedir log (autor mandou só captura \"See logs\", sem código)",
-   "notas": "SUSPEITA: único commit que cita #280 é 3c51d5b7 (remontagens da descoberta, 2.0.3); a correção é genérica de fileiras. ALVO 2.0.3 = SUSPEITA: o conserto está nas NOTAS mas não está confirmado que cobre o relato; falta log do autor. COMMITS vs v2.0.3 (09/10): 3c51d5b7 estão na tag; status mantido porque o conserto é suspeita/parcial e sem confirmação do autor. Revisão 2026-10-12: Remontagem espaçada não comprova correção da contagem/configuração; mantenedor ainda pede log em 11/10.",
+   "notas": "SUSPEITA: único commit que cita #280 é 3c51d5b7 (remontagens da descoberta, 2.0.3); a correção é genérica de fileiras. ALVO 2.0.3 = SUSPEITA: o conserto está nas NOTAS mas não está confirmado que cobre o relato; falta log do autor. COMMITS vs v2.0.3 (09/10): 3c51d5b7 estão na tag; status mantido porque o conserto é suspeita/parcial e sem confirmação do autor. Revisão 2026-10-12: Remontagem espaçada não comprova correção da contagem/configuração; mantenedor ainda pede log em 11/10. [alvo antes: 2.0.6; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/280",
-   "criada_em": "2026-10-06",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-06"
   },
   {
    "numero": 281,
@@ -5888,7 +5882,7 @@
   {
    "numero": 283,
    "titulo": "Minha tv lg nao consegue abrir nenhum canal dos meus addons",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "LG",
    "tipo": "bug",
    "status": "lancada",
@@ -5903,10 +5897,9 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.2",
-   "notas": "Triagem 2026-10-12: b68bad96 em v2.0.2; release-notes.md v2.0.2: - **LG:** add-on live channels work (#283). CH+ opens Salvos, like on the other platforms..",
+   "notas": "Triagem 2026-10-12: b68bad96 em v2.0.2; release-notes.md v2.0.2: - **LG:** add-on live channels work (#283). CH+ opens Salvos, like on the other platforms.. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/283",
-   "criada_em": "2026-10-06",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-06"
   },
   {
    "numero": 284,
@@ -5934,7 +5927,7 @@
   {
    "numero": 286,
    "titulo": "Performance on older Samsung UA40N5300",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "lancada",
@@ -5949,10 +5942,9 @@
     "ultima_nossa": "2026-10-08"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.2",
-   "notas": "Triagem 2026-10-12: e03080dd em v2.0.2; release-notes.md v2.0.2: - **Samsung Tizen 4 with Mali-400:** the \"Light\" effects level now drops to minimal (#286)..",
+   "notas": "Triagem 2026-10-12: e03080dd em v2.0.2; release-notes.md v2.0.2: - **Samsung Tizen 4 with Mali-400:** the \"Light\" effects level now drops to minimal (#286).. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/286",
-   "criada_em": "2026-10-06",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-06"
   },
   {
    "numero": 287,
@@ -5979,7 +5971,7 @@
   {
    "numero": 288,
    "titulo": "Profile selection background is grainy dark video",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "LG",
    "tipo": "bug",
    "status": "aberta",
@@ -5992,10 +5984,9 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/288",
-   "criada_em": "2026-10-06",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-06"
   },
   {
    "numero": 289,
@@ -6049,7 +6040,7 @@
   {
    "numero": 292,
    "titulo": "GoogleTV performance UPDATE",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "question",
    "status": "por-desenho",
@@ -6062,15 +6053,14 @@
     "ultima_nossa": null
    },
    "proximo_passo": "nada",
-   "notas": "Aviso nosso (virou issue a partir da discussão #291): resolução da interface em 4K deixa o Android lento. Alvo nao vamos fazer: é aviso/pergunta, não há mudança de código planejada (ver decisões). Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.",
+   "notas": "Aviso nosso (virou issue a partir da discussão #291): resolução da interface em 4K deixa o Android lento. Alvo nao vamos fazer: é aviso/pergunta, não há mudança de código planejada (ver decisões). Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: nao vamos fazer; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/292",
-   "criada_em": "2026-10-06",
-   "alvo": "nao vamos fazer"
+   "criada_em": "2026-10-06"
   },
   {
    "numero": 293,
    "titulo": "Audio codec details on player",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "all",
    "tipo": "feature",
    "status": "lancada",
@@ -6085,10 +6075,9 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.2",
-   "notas": "Triagem 2026-10-12: db1f5891 em v2.0.2; release-notes.md v2.0.2: - **Player:** audio codec shown (#293), forced subtitles (#287), resolution in the sources list, Arabic subtitles (#273)..",
+   "notas": "Triagem 2026-10-12: db1f5891 em v2.0.2; release-notes.md v2.0.2: - **Player:** audio codec shown (#293), forced subtitles (#287), resolution in the sources list, Arabic subtitles (#273).. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/293",
-   "criada_em": "2026-10-06",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-06"
   },
   {
    "numero": 294,
@@ -6226,7 +6215,7 @@
   {
    "numero": 302,
    "titulo": "Live TV issue persists with 2.1 tpk65",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "precisa-log",
@@ -6243,10 +6232,9 @@
     "ultima_nossa": "2026-10-08"
    },
    "proximo_passo": "triar",
-   "notas": "Rascunho de correção: o conserto do live TV NÃO está na 2.0.2 (resposta anterior dizia que sim). 0021b573 (2.0.2) é parcial. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag. Log BKPH09 ainda não foi lido; sem conserto confirmado para este relato. Revisão 2026-10-12: Reconexão publicada, mas autor relata persistência em 2.0.4 em 10/10.",
+   "notas": "Rascunho de correção: o conserto do live TV NÃO está na 2.0.2 (resposta anterior dizia que sim). 0021b573 (2.0.2) é parcial. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag. Log BKPH09 ainda não foi lido; sem conserto confirmado para este relato. Revisão 2026-10-12: Reconexão publicada, mas autor relata persistência em 2.0.4 em 10/10. [alvo antes: 2.0.6; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/302",
-   "criada_em": "2026-10-07",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 303,
@@ -6273,7 +6261,7 @@
   {
    "numero": 304,
    "titulo": "Apple tv dynamic homeacreen",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "aberta",
@@ -6286,10 +6274,9 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: futuro; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/304",
-   "criada_em": "2026-10-07",
-   "alvo": "futuro"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 305,
@@ -6316,7 +6303,7 @@
   {
    "numero": 306,
    "titulo": "Refresh Live TV",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "LG",
    "tipo": "feature",
    "status": "aberta",
@@ -6329,15 +6316,14 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/306",
-   "criada_em": "2026-10-07",
-   "alvo": "2.1"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 307,
    "titulo": "Request",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "iOS",
    "tipo": "feature",
    "status": "fora-do-escopo",
@@ -6350,10 +6336,9 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "responder (sem resposta; pedido de .ipa)",
-   "notas": "SUSPEITA de fora-do-escopo: pedido de .ipa, app é C/SDL para TVs. O dono decide. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.",
+   "notas": "SUSPEITA de fora-do-escopo: pedido de .ipa, app é C/SDL para TVs. O dono decide. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: nao vamos fazer; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/307",
-   "criada_em": "2026-10-07",
-   "alvo": "nao vamos fazer"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 308,
@@ -6405,7 +6390,7 @@
   {
    "numero": 310,
    "titulo": "[port] regex/options for autoplay",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "lancada",
@@ -6420,10 +6405,9 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.2",
-   "notas": "Triagem 2026-10-12: release-notes.md v2.0.2: - **Auto-play rules like official Nuvio:** allowed add-ons and plugins, regex filter, and an instant-wait option.. Parcial: cache de link e regex por tipo continuam propostos para 2.1.",
+   "notas": "Triagem 2026-10-12: release-notes.md v2.0.2: - **Auto-play rules like official Nuvio:** allowed add-ons and plugins, regex filter, and an instant-wait option.. Parcial: cache de link e regex por tipo continuam propostos para 2.1. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/310",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 311,
@@ -6472,7 +6456,7 @@
   {
    "numero": 313,
    "titulo": "[suggestion] downmix DTS to AC3 5.1",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung",
    "tipo": "feature",
    "status": "aberta",
@@ -6485,15 +6469,14 @@
     "ultima_nossa": "2026-10-07"
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. bf3e71e4 implementa AC3 no webOS; f45ddc14 só avisa na Samsung. Nenhum atende ao downmix Samsung pedido.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. bf3e71e4 implementa AC3 no webOS; f45ddc14 só avisa na Samsung. Nenhum atende ao downmix Samsung pedido. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/313",
-   "criada_em": "2026-10-07",
-   "alvo": "2.1"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 315,
    "titulo": ".avi media files fail to play (\"Could not open the source\")",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "aberta",
@@ -6506,15 +6489,14 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/315",
-   "criada_em": "2026-10-07",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 316,
    "titulo": "Live tv schedule",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "integrada",
@@ -6529,10 +6511,9 @@
     "ultima_nossa": null
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via livetv.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via livetv. [alvo antes: 2.0.6; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/316",
-   "criada_em": "2026-10-07",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 317,
@@ -6692,7 +6673,7 @@
   {
    "numero": 324,
    "titulo": "Relatório de logs",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "all",
    "tipo": "meta",
    "status": "por-desenho",
@@ -6707,10 +6688,9 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "nada",
-   "notas": "Relatório automático de triagem de logs (comentários nossos); não é bug. Alvo nao vamos fazer: não é bug nem pedido. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.",
+   "notas": "Relatório automático de triagem de logs (comentários nossos); não é bug. Alvo nao vamos fazer: não é bug nem pedido. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: nao vamos fazer; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/324",
-   "criada_em": "2026-10-07",
-   "alvo": "nao vamos fazer"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 325,
@@ -6735,7 +6715,7 @@
   {
    "numero": 326,
    "titulo": "Add continue watching options",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "feature",
    "status": "lancada",
@@ -6754,10 +6734,9 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.5",
-   "notas": "Triagem 2026-10-12: 1cc512dd em v2.0.5; 56868756 em v2.0.5; 95fc93c5 em v2.0.5.",
+   "notas": "Triagem 2026-10-12: 1cc512dd em v2.0.5; 56868756 em v2.0.5; 95fc93c5 em v2.0.5. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/326",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 327,
@@ -6785,7 +6764,7 @@
   {
    "numero": 328,
    "titulo": "🐛 Bug Report: Episodes Are Being Duplicated",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "lancada",
@@ -6801,15 +6780,14 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.3",
-   "notas": "Triagem 2026-10-12: 7edab4b0 em v2.0.3; 9c5d0027 em v2.0.3; release-notes.md v2.0.3: - **Duplicate episodes** in the episode list (#328)..",
+   "notas": "Triagem 2026-10-12: 7edab4b0 em v2.0.3; 9c5d0027 em v2.0.3; release-notes.md v2.0.3: - **Duplicate episodes** in the episode list (#328).. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/328",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 329,
    "titulo": "Add skip intro, recaps and credits.",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "feature",
    "status": "lancada",
@@ -6827,10 +6805,9 @@
     "ultima_nossa": null
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.5",
-   "notas": "Triagem 2026-10-12: 4193781f em v2.0.5; 95fc93c5 em v2.0.5; a0a392fb em v2.0.5.",
+   "notas": "Triagem 2026-10-12: 4193781f em v2.0.5; 95fc93c5 em v2.0.5; a0a392fb em v2.0.5. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/329",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 330,
@@ -6857,7 +6834,7 @@
   {
    "numero": 331,
    "titulo": "💡 Feature Request: Netflix-Style Next Episode Countdown",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "lancada",
@@ -6878,10 +6855,9 @@
     "ultima_nossa": null
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.5",
-   "notas": "Triagem 2026-10-12: 11791eda em v2.0.5; 4193781f em v2.0.5; 4c17e680 em v2.0.5.",
+   "notas": "Triagem 2026-10-12: 11791eda em v2.0.5; 4193781f em v2.0.5; 4c17e680 em v2.0.5. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/331",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 332,
@@ -6929,7 +6905,7 @@
   {
    "numero": 334,
    "titulo": "P2P filled the TV's free space\" error when playing large/4K streams",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "lancada",
@@ -6945,10 +6921,9 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.3",
-   "notas": "Triagem 2026-10-12: c3e19d00 em v2.0.3; d3ca720b em v2.0.3; release-notes.md v2.0.3: - **P2P space limit** in the P2P settings (#334). Leftovers from a session that crashed are deleted at start..",
+   "notas": "Triagem 2026-10-12: c3e19d00 em v2.0.3; d3ca720b em v2.0.3; release-notes.md v2.0.3: - **P2P space limit** in the P2P settings (#334). Leftovers from a session that crashed are deleted at start.. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/334",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 335,
@@ -7000,7 +6975,7 @@
   {
    "numero": 337,
    "titulo": "Be able to hide the \"skip\" intro button",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "aberta",
@@ -7013,15 +6988,14 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/337",
-   "criada_em": "2026-10-07",
-   "alvo": "2.1"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 338,
    "titulo": "Add Stats for Nerds and Custom Buffer Size",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "all",
    "tipo": "feature",
    "status": "lancada",
@@ -7040,10 +7014,9 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.5",
-   "notas": "Triagem 2026-10-12: 74f781f3 em v2.0.5; 8c856535 em v2.0.5; 95fc93c5 em v2.0.5.",
+   "notas": "Triagem 2026-10-12: 74f781f3 em v2.0.5; 8c856535 em v2.0.5; 95fc93c5 em v2.0.5. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/338",
-   "criada_em": "2026-10-07",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-07"
   },
   {
    "numero": 339,
@@ -7094,7 +7067,7 @@
   {
    "numero": 341,
    "titulo": "Aspect Ratio / Crop feature to fill screen does not work on Tizen 5 TVs 📺",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "lancada",
@@ -7109,15 +7082,14 @@
     "ultima_nossa": null
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.3",
-   "notas": "Triagem 2026-10-12: release-notes.md v2.0.3: - **Samsung:** Pause and subtitle list errors (#269); aspect/zoom button on Tizen 4/5 (#341, probable fix, not yet confirmed on a TV); Arabic subtitles when an older install left old fonts. When the TV hides an audio track it can't play (DTS, TrueHD), the other tracks keep the names from the file instead of a generic one.. Aspecto tem conserto publicado; crop de barras embutidas é pedido separado aprovado para 2.1.",
+   "notas": "Triagem 2026-10-12: release-notes.md v2.0.3: - **Samsung:** Pause and subtitle list errors (#269); aspect/zoom button on Tizen 4/5 (#341, probable fix, not yet confirmed on a TV); Arabic subtitles when an older install left old fonts. When the TV hides an audio track it can't play (DTS, TrueHD), the other tracks keep the names from the file instead of a generic one.. Aspecto tem conserto publicado; crop de barras embutidas é pedido separado aprovado para 2.1. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/341",
-   "criada_em": "2026-10-08",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 342,
    "titulo": "Add an optional \"Skip Scene\" floating button for explicit content",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "all",
    "tipo": "feature",
    "status": "aberta",
@@ -7130,10 +7102,9 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: futuro; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/342",
-   "criada_em": "2026-10-08",
-   "alvo": "futuro"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 343,
@@ -7183,7 +7154,7 @@
   {
    "numero": 345,
    "titulo": "Audio non-existent on startup",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "bug",
    "status": "aberta",
@@ -7196,15 +7167,14 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. | 13/10 ghbarker: logs 6HMRKA (73567) e Cf4whk (73436), Android. Job agente/205-audio345.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. | 13/10 ghbarker: logs 6HMRKA (73567) e Cf4whk (73436), Android. Job agente/205-audio345. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/345",
-   "criada_em": "2026-10-08",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 346,
    "titulo": "Continue Watching unselectable",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "bug",
    "status": "aberta",
@@ -7217,15 +7187,14 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/346",
-   "criada_em": "2026-10-08",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 347,
    "titulo": "[suggestion] search by microphone",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "aberta",
@@ -7238,15 +7207,14 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: futuro; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/347",
-   "criada_em": "2026-10-08",
-   "alvo": "futuro"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 348,
    "titulo": "Dots y imdb",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "aberta",
@@ -7259,15 +7227,14 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: futuro; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/348",
-   "criada_em": "2026-10-08",
-   "alvo": "futuro"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 349,
    "titulo": "Source Preference Option for MP4 and P2P",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "aberta",
@@ -7280,15 +7247,14 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/349",
-   "criada_em": "2026-10-08",
-   "alvo": "2.1"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 350,
    "titulo": "Major bug",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "lancada",
@@ -7303,15 +7269,14 @@
     "ultima_nossa": "2026-10-08"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.3",
-   "notas": "Triagem 2026-10-12: 4b8ba24b em v2.0.3; release-notes.md v2.0.3: - **\"View details\"** in the Continue Watching hold menu, when OK on the card plays (#350).; release-notes.md v2.0.3: - **Live TV:** the reconnect watcher took the provider's end of stream for a manual pause and never reopened the channel. Manual pause is now tracked on its own (#302, #350)..",
+   "notas": "Triagem 2026-10-12: 4b8ba24b em v2.0.3; release-notes.md v2.0.3: - **\"View details\"** in the Continue Watching hold menu, when OK on the card plays (#350).; release-notes.md v2.0.3: - **Live TV:** the reconnect watcher took the provider's end of stream for a manual pause and never reopened the channel. Manual pause is now tracked on its own (#302, #350).. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/350",
-   "criada_em": "2026-10-08",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 352,
    "titulo": "[Feature Request] Library Watched Indicators, Watched/Unwatched Sorting & Arabic UI Support",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "lancada",
@@ -7328,15 +7293,14 @@
     "ultima_nossa": "2026-10-08"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.5",
-   "notas": "Triagem 2026-10-12: 402e2438 em v2.0.5; d4d72639 em v2.0.5; fab062b3 em v2.0.5. Parcial: indicadores/ordenação lançados; menus árabes e limites maiores continuam na 2.1.",
+   "notas": "Triagem 2026-10-12: 402e2438 em v2.0.5; d4d72639 em v2.0.5; fab062b3 em v2.0.5. Parcial: indicadores/ordenação lançados; menus árabes e limites maiores continuam na 2.1. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/352",
-   "criada_em": "2026-10-08",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 353,
    "titulo": "Hero page trailer only plays once and has no sound",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "LG",
    "tipo": "bug",
    "status": "aberta",
@@ -7349,15 +7313,14 @@
     "ultima_nossa": "2026-10-08"
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/353",
-   "criada_em": "2026-10-08",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 354,
    "titulo": "Bring the Full TV Experience to PC - Same App, No Compromises",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "PC",
    "tipo": "feature",
    "status": "fora-do-escopo",
@@ -7370,15 +7333,14 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "responder (sem resposta)",
-   "notas": "SUSPEITA: versão desktop está fora do escopo (app é para TVs). Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.",
+   "notas": "SUSPEITA: versão desktop está fora do escopo (app é para TVs). Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: nao vamos fazer; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/354",
-   "criada_em": "2026-10-08",
-   "alvo": "nao vamos fazer"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 355,
    "titulo": "Option to view full/untruncated text and metadata for addon source streams",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "lancada",
@@ -7395,15 +7357,14 @@
     "ultima_nossa": "2026-10-08"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.5",
-   "notas": "Triagem 2026-10-12: ac055d54 em v2.0.5; b176eff5 em v2.0.5; c8dbfda5 em v2.0.5.",
+   "notas": "Triagem 2026-10-12: ac055d54 em v2.0.5; b176eff5 em v2.0.5; c8dbfda5 em v2.0.5. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/355",
-   "criada_em": "2026-10-08",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 356,
    "titulo": "Upcoming shows not appearing in continue watching",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "bug",
    "status": "lancada",
@@ -7418,15 +7379,14 @@
     "ultima_nossa": "2026-10-08"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.3",
-   "notas": "Triagem 2026-10-12: d47a78c8 em v2.0.3; release-notes.md v2.0.3: - **Up next** no longer disappears when the Nuvio catalog does not list the episode; Cinemeta is checked first (#356)..",
+   "notas": "Triagem 2026-10-12: d47a78c8 em v2.0.3; release-notes.md v2.0.3: - **Up next** no longer disappears when the Nuvio catalog does not list the episode; Cinemeta is checked first (#356).. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/356",
-   "criada_em": "2026-10-08",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 357,
    "titulo": "Nuvio v2.0.1/2.0.2 – Crashes on Zidoo Z9X 8K and Ugoos AM9 Pro + Missing Source Options",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "bug",
    "status": "precisa-log",
@@ -7439,15 +7399,14 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "responder: como tirar log sem abrir o app (adb logcat)",
-   "notas": "Zidoo Z9X 8K (Android 11) fecha ao abrir; Ugoos AM9 Pro. Autor comentou que não achou o aparelho no relatório #324 e não consegue enviar log. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.",
+   "notas": "Zidoo Z9X 8K (Android 11) fecha ao abrir; Ugoos AM9 Pro. Autor comentou que não achou o aparelho no relatório #324 e não consegue enviar log. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: 2.0.6; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/357",
-   "criada_em": "2026-10-08",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 358,
    "titulo": "🐛 Bug Report: Some Add-on Catalogs Are Incorrectly Moved to “Not on Home Screen”",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "lancada",
@@ -7463,10 +7422,9 @@
     "ultima_nossa": "2026-10-08"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.5",
-   "notas": "Triagem 2026-10-12: 29c640b7 em v2.0.5; c4edb7c6 em v2.0.5; release-notes.md v2.0.5: - A new add-on catalog that no longer fits on Home goes to the queue instead of being switched off (#358), and a row switch now takes effect instead of flipping back..",
+   "notas": "Triagem 2026-10-12: 29c640b7 em v2.0.5; c4edb7c6 em v2.0.5; release-notes.md v2.0.5: - A new add-on catalog that no longer fits on Home goes to the queue instead of being switched off (#358), and a row switch now takes effect instead of flipping back.. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/358",
-   "criada_em": "2026-10-08",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 359,
@@ -7543,7 +7501,7 @@
   {
    "numero": 362,
    "titulo": "Collection View Options",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "lancada",
@@ -7559,10 +7517,9 @@
     "ultima_nossa": "2026-10-08"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.5",
-   "notas": "Triagem 2026-10-12: 22320582 em v2.0.5; 491fcee3 em v2.0.5.",
+   "notas": "Triagem 2026-10-12: 22320582 em v2.0.5; 491fcee3 em v2.0.5. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/362",
-   "criada_em": "2026-10-08",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 363,
@@ -7590,7 +7547,7 @@
   {
    "numero": 364,
    "titulo": "Sources unable to open",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "lancada",
@@ -7607,15 +7564,14 @@
     "ultima_nossa": null
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.5",
-   "notas": "Triagem 2026-10-12: 8f2c1701 em v2.0.5; bf666aa7 em v2.0.5; d78963ab em v2.0.5.",
+   "notas": "Triagem 2026-10-12: 8f2c1701 em v2.0.5; bf666aa7 em v2.0.5; d78963ab em v2.0.5. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/364",
-   "criada_em": "2026-10-08",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 365,
    "titulo": "🐛 Bug Report: Ghost Catalogs Still Remain in “Not on Home Screen”",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "integrada",
@@ -7630,15 +7586,14 @@
     "ultima_nossa": null
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. suspeita: catálogos removidos persistem; #51 também relata isso, exigir reprodução atual; acompanhar #254. Escrivão 14/10 14:47: integrada via i504, tpkui.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. suspeita: catálogos removidos persistem; #51 também relata isso, exigir reprodução atual; acompanhar #254. Escrivão 14/10 14:47: integrada via i504, tpkui. [alvo antes: 2.0.6; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/365",
-   "criada_em": "2026-10-08",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 366,
    "titulo": "[Feature request] Optional setting to hide watched movies from discovery rows",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "LG",
    "tipo": "feature",
    "status": "aberta",
@@ -7651,15 +7606,14 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/366",
-   "criada_em": "2026-10-08",
-   "alvo": "2.1"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 367,
    "titulo": "[Bug][webOS] Audio control sometimes opens Subtitles on first attempt after starting playback",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "LG",
    "tipo": "bug",
    "status": "aberta",
@@ -7672,10 +7626,9 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/367",
-   "criada_em": "2026-10-08",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 368,
@@ -7702,7 +7655,7 @@
   {
    "numero": 369,
    "titulo": "[Bug] Multiple issues/Missing Features on Android TV version and Perhaps on other verisons too",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "bug",
    "status": "lancada",
@@ -7718,10 +7671,9 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.3",
-   "notas": "Triagem 2026-10-12: 5f04c36b em v2.0.3; 712557ca em v2.0.3; release-notes.md v2.0.3: - **Thai** is drawn with a bundled Noto Sans Thai font, in the interface and in subtitles (#369).. Parcial: tailandês e ocultar não lançados têm conserto; o relatório contém outros pedidos sem prova.",
+   "notas": "Triagem 2026-10-12: 5f04c36b em v2.0.3; 712557ca em v2.0.3; release-notes.md v2.0.3: - **Thai** is drawn with a bundled Noto Sans Thai font, in the interface and in subtitles (#369).. Parcial: tailandês e ocultar não lançados têm conserto; o relatório contém outros pedidos sem prova. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/369",
-   "criada_em": "2026-10-08",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 370,
@@ -7816,7 +7768,7 @@
   {
    "numero": 374,
    "titulo": "[port] sync subtitles by line \"auto sync\"",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "aberta",
@@ -7829,10 +7781,9 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Pedido é sync pela linha clicada e limite maior de atraso; AutoSync existente não atende ao recurso solicitado.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Pedido é sync pela linha clicada e limite maior de atraso; AutoSync existente não atende ao recurso solicitado. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/374",
-   "criada_em": "2026-10-08",
-   "alvo": "2.1"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 378,
@@ -7862,7 +7813,7 @@
   {
    "numero": 379,
    "titulo": "Movie or TV show at the end never return to homescreen.",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "integrada",
@@ -7877,15 +7828,14 @@
     "ultima_nossa": null
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkfim.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkfim. [alvo antes: 2.0.6; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/379",
-   "criada_em": "2026-10-08",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-08"
   },
   {
    "numero": 382,
    "titulo": "No internet error despite having internet",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "LG",
    "tipo": "bug",
    "status": "integrada",
@@ -7900,15 +7850,14 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "LG 50UT8050PSB, Nuvio 2.0.2 (.ipk). Relato: depois de ligar a TV a frio aparece \"sem internet\" mesmo com internet, some, volta várias vezes até parar de vez. O campo de log ficou sem código. SUSPEITA, sem prova: o aviso nasce do teste de rede do app (redesaude) logo após o boot, quando a rede da TV ainda sobe; não lido no código nem em log. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | 13/10 Mizikashi1: voltou ao abrir serie, log RSM044 (registro 73601). Job agente/205-net382. Escrivão 14/10 14:47: integrada via 382dns.",
+   "notas": "LG 50UT8050PSB, Nuvio 2.0.2 (.ipk). Relato: depois de ligar a TV a frio aparece \"sem internet\" mesmo com internet, some, volta várias vezes até parar de vez. O campo de log ficou sem código. SUSPEITA, sem prova: o aviso nasce do teste de rede do app (redesaude) logo após o boot, quando a rede da TV ainda sobe; não lido no código nem em log. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | 13/10 Mizikashi1: voltou ao abrir serie, log RSM044 (registro 73601). Job agente/205-net382. Escrivão 14/10 14:47: integrada via 382dns. [alvo antes: 2.0.6; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/382",
-   "criada_em": "2026-10-09",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 383,
    "titulo": "[port] subtitle memory same as nuvio",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "all",
    "tipo": "feature",
    "status": "lancada",
@@ -7923,10 +7872,9 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.5",
-   "notas": "Triagem 2026-10-12: 3654b88e em v2.0.5; release-notes.md v2.0.5: - A subtitle you picked by hand survives into the next episode (#383); forced subtitles and unknown types keep their behaviour, and picking the active subtitle from outside the recommendations no longer lands on \"Off\"..",
+   "notas": "Triagem 2026-10-12: 3654b88e em v2.0.5; release-notes.md v2.0.5: - A subtitle you picked by hand survives into the next episode (#383); forced subtitles and unknown types keep their behaviour, and picking the active subtitle from outside the recommendations no longer lands on \"Off\".. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/383",
-   "criada_em": "2026-10-09",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 384,
@@ -7955,7 +7903,7 @@
   {
    "numero": 385,
    "titulo": "Internet Connection Drop and Reconnecting Bug to no end",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .wgt",
    "tipo": "bug",
    "status": "lancada",
@@ -7971,15 +7919,14 @@
     "ultima_nossa": "2026-10-09"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.3",
-   "notas": "Triagem 2026-10-12: 4151683c em v2.0.3; 9ee093ac em v2.0.3; release-notes.md v2.0.3: - **Video server refusing connections** (#385). When the server of the video refuses a connection (seen on Samsung .tpk with TorBox links), the embedded subtitle reader, the track probe and the chapter reader stop and wait 10 to 60 s before trying that server again, with one connection at a time, instead of retrying several times while the video opens. It does not make a refused source play: if the server also refuses the TV player, the source still fails..",
+   "notas": "Triagem 2026-10-12: 4151683c em v2.0.3; 9ee093ac em v2.0.3; release-notes.md v2.0.3: - **Video server refusing connections** (#385). When the server of the video refuses a connection (seen on Samsung .tpk with TorBox links), the embedded subtitle reader, the track probe and the chapter reader stop and wait 10 to 60 s before trying that server again, with one connection at a time, instead of retrying several times while the video opens. It does not make a refused source play: if the server also refuses the TV player, the source still fails.. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/385",
-   "criada_em": "2026-10-09",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 386,
    "titulo": "[bug] glitchy info in playback at the top left when pressing left right",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "integrada",
@@ -7994,15 +7941,14 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkfim.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkfim. [alvo antes: 2.0.6; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/386",
-   "criada_em": "2026-10-09",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 387,
    "titulo": "[bug] instant long press in library",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .wgt",
    "tipo": "bug",
    "status": "lancada",
@@ -8020,15 +7966,14 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.5",
-   "notas": "Triagem 2026-10-12: 03213598 em v2.0.5; 0f98379f em v2.0.5; c82fa422 em v2.0.5.",
+   "notas": "Triagem 2026-10-12: 03213598 em v2.0.5; 0f98379f em v2.0.5; c82fa422 em v2.0.5. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/387",
-   "criada_em": "2026-10-09",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 388,
    "titulo": "Profile picture on side bar is squashed",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "integrada",
@@ -8043,15 +7988,14 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkui.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/388",
-   "criada_em": "2026-10-09",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 389,
    "titulo": "Card depth effect",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung (tpk/wgt?)",
    "tipo": "feature",
    "status": "aberta",
@@ -8064,15 +8008,14 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: futuro; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/389",
-   "criada_em": "2026-10-09",
-   "alvo": "futuro"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 390,
    "titulo": "Custom poster source not setting",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "lancada",
@@ -8090,15 +8033,14 @@
     "ultima_nossa": "2026-10-12"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.4",
-   "notas": "Triagem 2026-10-12: a7bb794c em v2.0.4; a8fcd146 em v2.0.4; adfba576 em v2.0.4. Conserto inicial na 2.0.4; aliases e aviso imediato também na 2.0.5.",
+   "notas": "Triagem 2026-10-12: a7bb794c em v2.0.4; a8fcd146 em v2.0.4; adfba576 em v2.0.4. Conserto inicial na 2.0.4; aliases e aviso imediato também na 2.0.5. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/390",
-   "criada_em": "2026-10-09",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 391,
    "titulo": "Episodes and Seasons fail",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "integrada",
@@ -8113,14 +8055,13 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "QN55Q60RAG, 2.0.3: só primeira temporada e episódios incompletos; log Z4HDY2 já fornecido. src/descoberta.c:parsearEpisodios, episodiosDoCatalogo e temporadasDosEps leem videos[], deduplicam (temporada, episódio), escolhem a lista de metadados e derivam as abas da lista publicada. A seleção descarta temporadas <= 0 e pode preferir outra lista quando a base parece lista de arquivos. SUSPEITA: cobertura/numeração ou escolha da lista de metadados; não prova duplicata de #372 nem resolução de #391. Há tratamento implementado, mas nenhum conserto estável especificamente comprovado para este relato. Escrivão 14/10 14:47: integrada via tpkui.",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/391",
-   "alvo": "2.0.6"
+   "notas": "QN55Q60RAG, 2.0.3: só primeira temporada e episódios incompletos; log Z4HDY2 já fornecido. src/descoberta.c:parsearEpisodios, episodiosDoCatalogo e temporadasDosEps leem videos[], deduplicam (temporada, episódio), escolhem a lista de metadados e derivam as abas da lista publicada. A seleção descarta temporadas <= 0 e pode preferir outra lista quando a base parece lista de arquivos. SUSPEITA: cobertura/numeração ou escolha da lista de metadados; não prova duplicata de #372 nem resolução de #391. Há tratamento implementado, mas nenhum conserto estável especificamente comprovado para este relato. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15]",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/391"
   },
   {
    "numero": 392,
    "titulo": "Profile switching still rearrange my home screen",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "lancada",
@@ -8139,15 +8080,14 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.4",
-   "notas": "Triagem 2026-10-12: 1d4b5e97 em v2.0.4; 2d3e472e em v2.0.4; 9023ebdb em v2.0.4.",
+   "notas": "Triagem 2026-10-12: 1d4b5e97 em v2.0.4; 2d3e472e em v2.0.4; 9023ebdb em v2.0.4. [alvo antes: ja-lancada; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/392",
-   "criada_em": "2026-10-09",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 393,
    "titulo": "[Feature Request] Option to change the library source from Trakt to Simkl",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "aberta",
@@ -8160,15 +8100,14 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/393",
-   "criada_em": "2026-10-09",
-   "alvo": "2.1"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 394,
    "titulo": "ASS subtitles: lag on large tracks, shadow/color shift, occasional desync (.tpk)",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "aberta",
@@ -8181,15 +8120,14 @@
     "ultima_nossa": "2026-10-09"
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/394",
-   "criada_em": "2026-10-09",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 396,
    "titulo": "Why C and not Rust, and the plan for the next releases and Discord",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "all",
    "tipo": "meta",
    "status": "respondida",
@@ -8202,14 +8140,13 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "Dono revisar resposta informativa e estado atual do Discord/roadmap; fechar como informativa se desejar, sem marcar migração Rust como lançada.",
-   "notas": "Publicação informativa do mantenedor sobre C, Rust e roadmap; comentários pedem Discord. src/menu.c usa SDL/OpenGL e android/app/src/main/java/space/nuvio/nativelegacy/NvPlayer.kt contém o backend Media3: implementação C compartilhada com pontes de plataforma, não migração Rust. Não há bug reproduzível nem conserto a atribuir; o trecho do corpo é incompleto e não comprova entrega do piloto Rust. .triagem/release-notes.md v2.0.5 já anuncia o servidor comunitário Discord; o pedido de Discord tem evidência de atendimento, não de migração Rust.",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/396",
-   "alvo": "futuro"
+   "notas": "Publicação informativa do mantenedor sobre C, Rust e roadmap; comentários pedem Discord. src/menu.c usa SDL/OpenGL e android/app/src/main/java/space/nuvio/nativelegacy/NvPlayer.kt contém o backend Media3: implementação C compartilhada com pontes de plataforma, não migração Rust. Não há bug reproduzível nem conserto a atribuir; o trecho do corpo é incompleto e não comprova entrega do piloto Rust. .triagem/release-notes.md v2.0.5 já anuncia o servidor comunitário Discord; o pedido de Discord tem evidência de atendimento, não de migração Rust. [alvo antes: futuro; fechada no GH 10-15]",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/396"
   },
   {
    "numero": 397,
    "titulo": "[Feature Request] Playback Engine Robustness: Native Codec Optimization, On-the-Fly Subtitle Tuning, and AV Sync",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "LG",
    "tipo": "feature",
    "status": "respondida",
@@ -8222,15 +8159,14 @@
     "ultima_nossa": "2026-10-09"
    },
    "proximo_passo": "postar o rascunho (EN, nas notas): o que já existe e o caminho; o que falta (atraso do áudio, passo de quadro) vai ao roadmap",
-   "notas": "Pedido em quatro partes (formulário diz LG webOS / All; o texto fala de Android/Fire TV). Caminhos conferidos NO CÓDIGO (09/10), sem prova em TV. (a) HDR/Dolby Vision e passthrough: JÁ HÁ o que o app controla. Preferência de fonte em Ajustes › Reprodução › \"Dolby Vision e HDR\" (AJ_FONTE_HDR) e \"Preferir som Dolby Atmos\" (AJ_ATMOS, ajustes.c:4452-4453); \"Dolby Vision em MKV (experimental)\" só LG webOS 4+, desligado por padrão (AJ_DV_MKV, ajustes.c:5399): na 2.0.3 troca TrueHD por E-AC-3/AC-3 no idioma ouvido para manter o Dolby Vision (docs/releases/2.0.3/NOTAS.md:17). \"Converter DTS para a TV ouvir\" (AJ_DTS_AC3, ajustes.c:4464): só LG, converte o DTS em estéreo (AAC) ou 5.1 (Dolby Digital) via src/dts/; na Samsung o app só AVISA quando a TV recusa DTS/TrueHD (video_tpk.c:130-141, #313; esconder as faixas é 2.0.5, fase 1). LIMITADO PELA TV/PLATAFORMA, não dá para prometer: na LG e na Samsung quem decodifica HDR/DV e faz o passthrough é a TV (uMS / AVPlay / player .tpk), o app só escolhe a fonte e o caminho; no Android o Media3 usa o passthrough por AudioCapabilities (NvPlayer.kt:374-386; video_android.c:27) e com bitstream o app não mexe no áudio (sem reforço de volume, sem velocidade: video_android.c:260, 836-841). Não há \"robustez garantida\" a implementar sem um caso de TV com log. (b) Estilo da legenda na hora: JÁ EXISTE no player. Botão Legendas (PLR_CC, player.c:189) › aba \"Estilo\" (legendasui.c:824; faixas.c:1489, corpo faixas.c:533-600), com Tamanho (50% a 250%, de 10 em 10, padrão 120%, faixas.c:590), Fonte OpenSubtitles, Cor, Opacidade (100/75/50/25%), Fundo (Nenhum, Escuro 25/50/75/100%), Posição (1 a 8), Borda (Nenhuma/Contorno/Sombra), Atraso, Negrito (Ligado/Desligado) e Restaurar padrão; OK cicla o valor e aplica na hora. Ressalvas: com ASS desenhado pelo app, fonte/cor/fundo/posição/borda/negrito ficam \"Preservado pelo ASS\" (faixas.c:536-541) e o tamanho vira escala; o negrito vale só para legenda externa/OpenSubtitles, a faixa que a TV desenha segue o peso da TV (faixas.c:571-572). Os valores são cíclicos (sem slider). (c) Atraso: legenda JÁ EXISTE: Legendas › linha \"Atraso\" (LR_ATRASO, legendasui.c:671-676), régua de -10 s a +10 s, 0,1 s por toque e 0,5 s segurando a seta (legendasui.c:444-451); a legenda secundária tem o seu; e \"Sincronização automática\" (AutoSync, linha LR_SYNC) que acerta pelo áudio (Ajustes \"Sincronizar pelo áudio\", AJ_LEG_SYNC_AUDIO, só onde o player entrega PCM, hoje Android: audsync.h:1-6). ATRASO DO ÁUDIO NÃO EXISTE (sem backend nem linha: grep audio_atraso/audioDelay vazio). (d) Proporção JÁ EXISTE: botão Proporção (PLR_ASPECTO) ou tecla 0, 8 modos: Original, Recortar, Esticar, Zoom leve, Zoom cinema, Zoom ultra, Ajustar altura, Ajustar largura (player.c:877-881, player.h:218-226); padrão em Ajustes › Reprodução › \"Proporção padrão\" (AJ_PROPORCAO_PADRAO). Em TVs que não recortam a imagem os modos de zoom caem para Original (player.c:1173); o .wgt Samsung (AVPlay/WebAssembly) não tem o zoom que corta a barra preta. Velocidade JÁ EXISTE: folha de Áudio, linha \"Velocidade\" (faixas.c:1448; \"Playback speed\" no i18n), 0,75x 1x 1,25x 1,5x 1,75x 2x (velocidade.c:7), por vídeo; disponível na LG, no .tpk e no Android; AUSENTE na Samsung .wgt (AVPlay só tem trick play inteiro, video_tizen.c:1531-1539) e bloqueada no Android com áudio em passthrough (\"Indisponível com áudio pelo receptor\", faixas.c:1449, #202). Salto de QUADROS (frame step/skip) NÃO EXISTE (só saltos de 10/30/60/120 s); o pedido é ambíguo (passo de quadro ou pular quadros?). FALTA, sugestao: atraso do áudio na 2.1 (começar onde o backend deixa, Android/Media3; LG e Samsung podem não ter API, a confirmar); passo de quadro em futuro (precisa de pausa + avanço por quadro nos 4 backends, sem prova de que a TV deixa); faixa de velocidade mais larga (0,25x-3x) e slider de tamanho/opacidade da legenda em 2.0.5 se o dono quiser (pequeno). Alvo geral = o mais cedo entre as peças que faltam (atraso do áudio, 2.1). Origem: pedido do autor somprakashpathakoneplus-cell. Rascunho (EN): The subtitle style (size up to 250%, color, opacity, background, bold), the subtitle delay ruler (-10 s to +10 s) and AutoSync are already in the player under Subtitles, tab Style; aspect modes are on the Aspect ratio button (or key 0) and playback speed (0.75x-2x) is on the Audio sheet. Audio delay and frame stepping are not there yet and are on the roadmap, while HDR, Dolby Vision and passthrough depend on what each TV or player decodes, so we can only choose the source and path. Which device are you on, so we know which of these you are missing? Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.",
+   "notas": "Pedido em quatro partes (formulário diz LG webOS / All; o texto fala de Android/Fire TV). Caminhos conferidos NO CÓDIGO (09/10), sem prova em TV. (a) HDR/Dolby Vision e passthrough: JÁ HÁ o que o app controla. Preferência de fonte em Ajustes › Reprodução › \"Dolby Vision e HDR\" (AJ_FONTE_HDR) e \"Preferir som Dolby Atmos\" (AJ_ATMOS, ajustes.c:4452-4453); \"Dolby Vision em MKV (experimental)\" só LG webOS 4+, desligado por padrão (AJ_DV_MKV, ajustes.c:5399): na 2.0.3 troca TrueHD por E-AC-3/AC-3 no idioma ouvido para manter o Dolby Vision (docs/releases/2.0.3/NOTAS.md:17). \"Converter DTS para a TV ouvir\" (AJ_DTS_AC3, ajustes.c:4464): só LG, converte o DTS em estéreo (AAC) ou 5.1 (Dolby Digital) via src/dts/; na Samsung o app só AVISA quando a TV recusa DTS/TrueHD (video_tpk.c:130-141, #313; esconder as faixas é 2.0.5, fase 1). LIMITADO PELA TV/PLATAFORMA, não dá para prometer: na LG e na Samsung quem decodifica HDR/DV e faz o passthrough é a TV (uMS / AVPlay / player .tpk), o app só escolhe a fonte e o caminho; no Android o Media3 usa o passthrough por AudioCapabilities (NvPlayer.kt:374-386; video_android.c:27) e com bitstream o app não mexe no áudio (sem reforço de volume, sem velocidade: video_android.c:260, 836-841). Não há \"robustez garantida\" a implementar sem um caso de TV com log. (b) Estilo da legenda na hora: JÁ EXISTE no player. Botão Legendas (PLR_CC, player.c:189) › aba \"Estilo\" (legendasui.c:824; faixas.c:1489, corpo faixas.c:533-600), com Tamanho (50% a 250%, de 10 em 10, padrão 120%, faixas.c:590), Fonte OpenSubtitles, Cor, Opacidade (100/75/50/25%), Fundo (Nenhum, Escuro 25/50/75/100%), Posição (1 a 8), Borda (Nenhuma/Contorno/Sombra), Atraso, Negrito (Ligado/Desligado) e Restaurar padrão; OK cicla o valor e aplica na hora. Ressalvas: com ASS desenhado pelo app, fonte/cor/fundo/posição/borda/negrito ficam \"Preservado pelo ASS\" (faixas.c:536-541) e o tamanho vira escala; o negrito vale só para legenda externa/OpenSubtitles, a faixa que a TV desenha segue o peso da TV (faixas.c:571-572). Os valores são cíclicos (sem slider). (c) Atraso: legenda JÁ EXISTE: Legendas › linha \"Atraso\" (LR_ATRASO, legendasui.c:671-676), régua de -10 s a +10 s, 0,1 s por toque e 0,5 s segurando a seta (legendasui.c:444-451); a legenda secundária tem o seu; e \"Sincronização automática\" (AutoSync, linha LR_SYNC) que acerta pelo áudio (Ajustes \"Sincronizar pelo áudio\", AJ_LEG_SYNC_AUDIO, só onde o player entrega PCM, hoje Android: audsync.h:1-6). ATRASO DO ÁUDIO NÃO EXISTE (sem backend nem linha: grep audio_atraso/audioDelay vazio). (d) Proporção JÁ EXISTE: botão Proporção (PLR_ASPECTO) ou tecla 0, 8 modos: Original, Recortar, Esticar, Zoom leve, Zoom cinema, Zoom ultra, Ajustar altura, Ajustar largura (player.c:877-881, player.h:218-226); padrão em Ajustes › Reprodução › \"Proporção padrão\" (AJ_PROPORCAO_PADRAO). Em TVs que não recortam a imagem os modos de zoom caem para Original (player.c:1173); o .wgt Samsung (AVPlay/WebAssembly) não tem o zoom que corta a barra preta. Velocidade JÁ EXISTE: folha de Áudio, linha \"Velocidade\" (faixas.c:1448; \"Playback speed\" no i18n), 0,75x 1x 1,25x 1,5x 1,75x 2x (velocidade.c:7), por vídeo; disponível na LG, no .tpk e no Android; AUSENTE na Samsung .wgt (AVPlay só tem trick play inteiro, video_tizen.c:1531-1539) e bloqueada no Android com áudio em passthrough (\"Indisponível com áudio pelo receptor\", faixas.c:1449, #202). Salto de QUADROS (frame step/skip) NÃO EXISTE (só saltos de 10/30/60/120 s); o pedido é ambíguo (passo de quadro ou pular quadros?). FALTA, sugestao: atraso do áudio na 2.1 (começar onde o backend deixa, Android/Media3; LG e Samsung podem não ter API, a confirmar); passo de quadro em futuro (precisa de pausa + avanço por quadro nos 4 backends, sem prova de que a TV deixa); faixa de velocidade mais larga (0,25x-3x) e slider de tamanho/opacidade da legenda em 2.0.5 se o dono quiser (pequeno). Alvo geral = o mais cedo entre as peças que faltam (atraso do áudio, 2.1). Origem: pedido do autor somprakashpathakoneplus-cell. Rascunho (EN): The subtitle style (size up to 250%, color, opacity, background, bold), the subtitle delay ruler (-10 s to +10 s) and AutoSync are already in the player under Subtitles, tab Style; aspect modes are on the Aspect ratio button (or key 0) and playback speed (0.75x-2x) is on the Audio sheet. Audio delay and frame stepping are not there yet and are on the roadmap, while HDR, Dolby Vision and passthrough depend on what each TV or player decodes, so we can only choose the source and path. Which device are you on, so we know which of these you are missing? Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: 2.1; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/397",
-   "criada_em": "2026-10-09",
-   "alvo": "2.1"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 398,
    "titulo": "Subtitle outline transparrency",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "aberta",
@@ -8243,14 +8179,13 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "Pedir exemplo visual local, tipo de legenda (embutida/add-on, SRT/ASS), ajustes e código de log em 2.0.5; reproduzir contorno. Separar refinamentos de controles/opacidade para 2.1.",
-   "notas": "S95C, 2.0.3: transparência do contorno; pede opacidade em passos de 10 e redução de tamanho sem ciclo. Exemplos estão em issue externa não disponível offline; sem log. src/player.c:desenharLegendaPrincipal aplica alpha 1/.75/.5/.25 e passa borda ao PlainAssStyle; ASS autoral preserva estilo, texto simples recebe estilo do app. src/legendasui.c usa os mesmos quatro níveis. SUSPEITA: composição do contorno/alpha ou diferença de caminho ASS/texto, não comprovada. Tamanho já é limitado em 50–300% no código; isso não prova correção do contorno nem passos de 10% de opacidade.",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/398",
-   "alvo": "2.0.6"
+   "notas": "S95C, 2.0.3: transparência do contorno; pede opacidade em passos de 10 e redução de tamanho sem ciclo. Exemplos estão em issue externa não disponível offline; sem log. src/player.c:desenharLegendaPrincipal aplica alpha 1/.75/.5/.25 e passa borda ao PlainAssStyle; ASS autoral preserva estilo, texto simples recebe estilo do app. src/legendasui.c usa os mesmos quatro níveis. SUSPEITA: composição do contorno/alpha ou diferença de caminho ASS/texto, não comprovada. Tamanho já é limitado em 50–300% no código; isso não prova correção do contorno nem passos de 10% de opacidade. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/398"
   },
   {
    "numero": 399,
    "titulo": "Feature request: Audio decoder selection and Dolby TrueHD 7.1 playback on Android TV",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "bug",
    "status": "aberta",
@@ -8263,9 +8198,8 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "Pedir versão exata, Android, configuração de saída HDMI e log após congelar; comparar AC3/TrueHD da mesma mídia com passthrough desligado. Bug em 2.0.6; decisão do seletor em 2.1.",
-   "notas": "Ugoos SK2 ligado por HDMI à Sony HT-CT790: AC3 toca, TrueHD 7.1 congela vídeo; pede preferir decoder do app. android/app/src/main/java/space/nuvio/nativelegacy/NvPlayer.kt:abrirMain usa DefaultRenderersFactory com EXTENSION_RENDERER_MODE_ON e fallback: plataforma/passthrough primeiro, FFmpeg para codec não suportado. android/app/build.gradle.kts já inclui decoder FFmpeg (inclui TrueHD); presença do decoder não prova fallback quando passthrough anuncia suporte e trava. SUSPEITA: capacidades HDMI/passthrough/AudioSink, sem reprodução. Seletor explícito não está neste caminho.",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/399",
-   "alvo": "2.0.6"
+   "notas": "Ugoos SK2 ligado por HDMI à Sony HT-CT790: AC3 toca, TrueHD 7.1 congela vídeo; pede preferir decoder do app. android/app/src/main/java/space/nuvio/nativelegacy/NvPlayer.kt:abrirMain usa DefaultRenderersFactory com EXTENSION_RENDERER_MODE_ON e fallback: plataforma/passthrough primeiro, FFmpeg para codec não suportado. android/app/build.gradle.kts já inclui decoder FFmpeg (inclui TrueHD); presença do decoder não prova fallback quando passthrough anuncia suporte e trava. SUSPEITA: capacidades HDMI/passthrough/AudioSink, sem reprodução. Seletor explícito não está neste caminho. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/399"
   },
   {
    "estado_github": "fechada",
@@ -8294,7 +8228,7 @@
   {
    "numero": 401,
    "titulo": "Long update time on Homebrew channel (15 mins +)",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "LG",
    "tipo": "bug",
    "status": "respondida",
@@ -8307,15 +8241,14 @@
     "ultima_nossa": "2026-10-09"
    },
    "proximo_passo": "conserto na 2.0.5 (dados fora da pasta do app + limpeza de sobras; strip do binário)",
-   "notas": "SUSPEITA nova (09/10, relato do autor: 'Updating 1%..99%' lento, instalação nova da 2.0.2 em segundos): dados do app dentro da pasta do app (.nuvio 359 MB/3980 arquivos na C9, incluindo cache.suspeito-1853 de 195 MB nunca apagado). LG C5 webOS 26, 2.0.32 para 2.0.3 pelo Homebrew Channel, 15+ min. NAO e regressao de tamanho (ipk 2.0.3 61,1 MB/1218 arquivos; 2.0.2 60,7 MB/1215). MEDIDO no ipk 2.0.4 (58,3 MB, 1190 arquivos, 99,5 MB descomprimido): o binário nuvio-proto tem 55,3 MB e VEM COM debug_info e símbolos (file: not stripped), 30,8 MB de seções .debug*/.symtab/.strtab que gzip reduz a 10,5 MB; a arte (art/) tem 39 MB em 1142 arquivos, já comprimida (JPG/PNG/WebP). Estimativa (nao medida): strip tira ~10 MB do ipk (58,3 para ~48 MB). O Homebrew Channel baixa o ipk inteiro para /tmp, confere sha256 e chama appInstallService/dev/install (services/service.ts); a barra de download usa o content-length do servidor, nao o ipkSize (tools/hb-repo.sh ja grava ipkSize). Onde estao os 15 min (download do GitHub pela TV, gravacao em /tmp, ou appInstallService instalando 1190 arquivos) NAO foi medido: SUSPEITA. Pedir ao autor a duracao de cada fase (a barra mostra Downloading/Verifying/Installing). Alvo 2.0.5. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.",
+   "notas": "SUSPEITA nova (09/10, relato do autor: 'Updating 1%..99%' lento, instalação nova da 2.0.2 em segundos): dados do app dentro da pasta do app (.nuvio 359 MB/3980 arquivos na C9, incluindo cache.suspeito-1853 de 195 MB nunca apagado). LG C5 webOS 26, 2.0.32 para 2.0.3 pelo Homebrew Channel, 15+ min. NAO e regressao de tamanho (ipk 2.0.3 61,1 MB/1218 arquivos; 2.0.2 60,7 MB/1215). MEDIDO no ipk 2.0.4 (58,3 MB, 1190 arquivos, 99,5 MB descomprimido): o binário nuvio-proto tem 55,3 MB e VEM COM debug_info e símbolos (file: not stripped), 30,8 MB de seções .debug*/.symtab/.strtab que gzip reduz a 10,5 MB; a arte (art/) tem 39 MB em 1142 arquivos, já comprimida (JPG/PNG/WebP). Estimativa (nao medida): strip tira ~10 MB do ipk (58,3 para ~48 MB). O Homebrew Channel baixa o ipk inteiro para /tmp, confere sha256 e chama appInstallService/dev/install (services/service.ts); a barra de download usa o content-length do servidor, nao o ipkSize (tools/hb-repo.sh ja grava ipkSize). Onde estao os 15 min (download do GitHub pela TV, gravacao em /tmp, ou appInstallService instalando 1190 arquivos) NAO foi medido: SUSPEITA. Pedir ao autor a duracao de cada fase (a barra mostra Downloading/Verifying/Installing). Alvo 2.0.5. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: 2.0.6; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/401",
-   "criada_em": "2026-10-09",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 402,
    "titulo": "Wrong sorting in sources",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "integrada",
@@ -8331,15 +8264,14 @@
     "ultima_nossa": "2026-10-10"
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Namer03, S95C, .tpk 2.0.3. A imagem mostra, na aba NMR, o cabecalho do grupo \"Other SDR\" com fileiras cujo nome (formatter do addon) diz \"FHD | REMUX | SDR\" e \"FHD | SDR\"; so a ultima diz \"N/A | SDR\" (essa realmente nao declara resolucao). CAUSA (lida no codigo, sem teste ainda): o grupo vem de grupoRes (src/streams.c:2105) que usa s->altura ou os selos r-4k/r-1080/r-720; a altura sai de stream_parse.c:281-283, que so procura os numeros 2160/1440/1080/720/480 e 4k/uhd, e badges_detectar (badges.c:40-42) so tem 1080p/1080i/1080. A palavra FHD sozinha (comum em formatter de AIOStreams) nao casa, entao altura=0 e o grupo e Outras (GRUPO_NOME, streams.c:2072). O app ja conhece FHD para canal ao vivo (nv_res_do_texto, livetv_regras.h:38) mas nao usa no filme/serie. NAO e ordenacao (nivelHdr, MP4 primeiro da LG e perfil 5 nao entram: e a Samsung .tpk e o problema e o grupo, nao a ordem dentro dele). Nao e configuracao (fonteregra.h trata auto-play, nao grupos). Cuidado no conserto: nv_res_do_texto aceita \"hd\" solto como 720, o que casaria DTS-HD; copiar so fhd/fullhd/full hd. Candidato a 2.0.4 (muda so o parser, 2 linhas + teste), decisao do dono. SUSPEITA: o JSON bruto do autor pode ter a resolucao em outro campo; sem o log/JSON da fonte nao foi provado. Diagnóstico atualizado: torrents sem cache; sem conserto identificado. Revisão 2026-10-12: FHD corrigido parcialmente; autor reabriu com ordenação ainda errada em 2.0.4. Escrivão 14/10 14:47: integrada via tpkui.",
+   "notas": "Namer03, S95C, .tpk 2.0.3. A imagem mostra, na aba NMR, o cabecalho do grupo \"Other SDR\" com fileiras cujo nome (formatter do addon) diz \"FHD | REMUX | SDR\" e \"FHD | SDR\"; so a ultima diz \"N/A | SDR\" (essa realmente nao declara resolucao). CAUSA (lida no codigo, sem teste ainda): o grupo vem de grupoRes (src/streams.c:2105) que usa s->altura ou os selos r-4k/r-1080/r-720; a altura sai de stream_parse.c:281-283, que so procura os numeros 2160/1440/1080/720/480 e 4k/uhd, e badges_detectar (badges.c:40-42) so tem 1080p/1080i/1080. A palavra FHD sozinha (comum em formatter de AIOStreams) nao casa, entao altura=0 e o grupo e Outras (GRUPO_NOME, streams.c:2072). O app ja conhece FHD para canal ao vivo (nv_res_do_texto, livetv_regras.h:38) mas nao usa no filme/serie. NAO e ordenacao (nivelHdr, MP4 primeiro da LG e perfil 5 nao entram: e a Samsung .tpk e o problema e o grupo, nao a ordem dentro dele). Nao e configuracao (fonteregra.h trata auto-play, nao grupos). Cuidado no conserto: nv_res_do_texto aceita \"hd\" solto como 720, o que casaria DTS-HD; copiar so fhd/fullhd/full hd. Candidato a 2.0.4 (muda so o parser, 2 linhas + teste), decisao do dono. SUSPEITA: o JSON bruto do autor pode ter a resolucao em outro campo; sem o log/JSON da fonte nao foi provado. Diagnóstico atualizado: torrents sem cache; sem conserto identificado. Revisão 2026-10-12: FHD corrigido parcialmente; autor reabriu com ordenação ainda errada em 2.0.4. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/402",
-   "criada_em": "2026-10-09",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 403,
    "titulo": "feature-request: Add a next button to go to next episode",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "all",
    "tipo": "feature",
    "status": "aberta",
@@ -8352,15 +8284,14 @@
     "ultima_nossa": "2026-10-09"
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/403",
-   "criada_em": "2026-10-09",
-   "alvo": "2.1"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 404,
    "titulo": "Continue watching mixes up",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "aberta",
@@ -8373,13 +8304,12 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/404",
-   "criada_em": "2026-10-09",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-09"
   },
   {
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "release": "-",
    "conserto": [
     "219d3bf4 (merge em integracao/2.0.5)"
@@ -8391,14 +8321,13 @@
     "ultima_nossa": null
    },
    "criada_em": "2026-10-09",
-   "alvo": "2.0.6",
    "numero": 405,
    "titulo": "Quick search doesn't list all results",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "integrada",
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkui.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/405"
   },
   {
@@ -8447,7 +8376,7 @@
   {
    "numero": 409,
    "titulo": "The source didn't answer in time error even though the server is working",
-   "estado_github": "fechada",
+   "estado_github": "aberta",
    "plataforma": "Android",
    "tipo": "bug",
    "status": "lancada",
@@ -8465,9 +8394,10 @@
     "ultima_nossa": "2026-10-10"
    },
    "proximo_passo": "sem ação; conserto publicado",
-   "notas": "Triagem 2026-10-12: 2051869e em v2.0.4; 5cd60adf em v2.0.4; 6d46e336 em v2.0.4.",
+   "notas": "Triagem 2026-10-12: 2051869e em v2.0.4; 5cd60adf em v2.0.4; 6d46e336 em v2.0.4. Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/409",
-   "criada_em": "2026-10-09"
+   "criada_em": "2026-10-09",
+   "alvo": "ja-lancada"
   },
   {
    "numero": 410,
@@ -8501,7 +8431,7 @@
   {
    "numero": 411,
    "titulo": "[Tizen 4.0 / v2.0.3] Play/Pause works but shows Samsung \"Not Available\" toast (#196 follow-up)",
-   "estado_github": "fechada",
+   "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "lancada",
@@ -8516,9 +8446,10 @@
     "ultima_nossa": "2026-10-10"
    },
    "proximo_passo": "sem ação; conserto publicado",
-   "notas": "Triagem 2026-10-12: release-notes.md v2.0.4: - **Samsung Tizen 4 / 5: no more \"Not Available\" toast** on Play/Pause and other media keys (#411)..",
+   "notas": "Triagem 2026-10-12: release-notes.md v2.0.4: - **Samsung Tizen 4 / 5: no more \"Not Available\" toast** on Play/Pause and other media keys (#411).. Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/411",
-   "criada_em": "2026-10-09"
+   "criada_em": "2026-10-09",
+   "alvo": "ja-lancada"
   },
   {
    "numero": 412,
@@ -8869,7 +8800,7 @@
   {
    "numero": 427,
    "titulo": "Memory for images capped at 160 MB",
-   "estado_github": "fechada",
+   "estado_github": "aberta",
    "plataforma": "LG",
    "tipo": "bug",
    "status": "lancada",
@@ -8884,14 +8815,15 @@
     "ultima_nossa": "2026-10-12"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.5",
-   "notas": "Triagem 2026-10-12: 92ee6141 em v2.0.5. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13).",
+   "notas": "Triagem 2026-10-12: 92ee6141 em v2.0.5. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/427",
-   "criada_em": "2026-10-10"
+   "criada_em": "2026-10-10",
+   "alvo": "ja-lancada"
   },
   {
    "numero": 428,
    "titulo": "Constant freezes",
-   "estado_github": "fechada",
+   "estado_github": "aberta",
    "plataforma": "LG",
    "tipo": "bug",
    "status": "precisa-log",
@@ -8904,9 +8836,10 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "triar",
-   "notas": "Aguarda código/log para diagnóstico. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13).",
+   "notas": "Aguarda código/log para diagnóstico. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/428",
-   "criada_em": "2026-10-10"
+   "criada_em": "2026-10-10",
+   "alvo": "2.0.6"
   },
   {
    "numero": 429,
@@ -8925,7 +8858,7 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "merge agente/205-i429hbs (review OK j-revg-i429hbs-y 23:11, 2 ahead, nao mergeado); testar no TCL",
+   "proximo_passo": "merge agente/205-i429hbs (review OK y 23:11; commits f59554839, b144dbfd1 nao mergeados); testar no TCL",
    "notas": "Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839. Escrivao 10-15 07:10: review y OK (23:11) apos fixz 22:28; branch ainda 2 ahead, merge pendente. | Escrivao 2026-10-15 07:50: sem merge ainda; review OK y, branch nao mergeado | Escrivao 15/10 09:48: review OK ainda sem merge.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/429",
    "criada_em": "2026-10-10",
@@ -9360,7 +9293,7 @@
   {
    "numero": 470,
    "titulo": "Next Episode Countdown Only Starts After Credits Finish",
-   "estado_github": "fechada",
+   "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "integrada",
@@ -9375,8 +9308,9 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log B9RJZ8 (registro 73397): [posplay] creditos aceito (sobram 265s, janela 300s); cartao aparece nos creditos mas contagem so comeca no fim. Escrivão 14/10 14:47: integrada via i18nordem, i470. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13).",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/470"
+   "notas": "rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log B9RJZ8 (registro 73397): [posplay] creditos aceito (sobram 265s, janela 300s); cartao aparece nos creditos mas contagem so comeca no fim. Escrivão 14/10 14:47: integrada via i18nordem, i470. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/470",
+   "alvo": "2.0.5"
   },
   {
    "numero": 471,
@@ -9403,10 +9337,10 @@
   {
    "numero": 473,
    "titulo": "Sound does not start",
-   "estado_github": "fechada",
+   "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "lancada",
+   "status": "aberta",
    "release": "-",
    "conserto": [],
    "ultima_resposta": {
@@ -9415,18 +9349,19 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "sem acao; issue fechada no GitHub em 13/10",
-   "notas": "Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub sem conserto local identificado. Sem commit citando a issue.",
+   "proximo_passo": "triar: reaberta no GH 10-15; sem commit de conserto identificado",
+   "notas": "Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub sem conserto local identificado. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/473",
-   "criada_em": "2026-10-13"
+   "criada_em": "2026-10-13",
+   "alvo": "2.0.6"
   },
   {
    "numero": 474,
    "titulo": "Top right bar is unreachable",
-   "estado_github": "fechada",
+   "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "lancada",
+   "status": "aberta",
    "release": "-",
    "conserto": [],
    "ultima_resposta": {
@@ -9435,10 +9370,11 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "sem acao; issue fechada no GitHub em 13/10",
-   "notas": "Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub; barra do topo, ver tambem #461 (agente/205-menutopo integrado). Sem commit citando a issue.",
+   "proximo_passo": "triar: reaberta no GH 10-15; sem commit de conserto identificado",
+   "notas": "Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub; barra do topo, ver tambem #461 (agente/205-menutopo integrado). Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/474",
-   "criada_em": "2026-10-13"
+   "criada_em": "2026-10-13",
+   "alvo": "2.0.6"
   },
   {
    "numero": 475,
@@ -9465,10 +9401,10 @@
   {
    "numero": 476,
    "titulo": "No internet",
-   "estado_github": "fechada",
+   "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "lancada",
+   "status": "aberta",
    "release": "-",
    "conserto": [],
    "ultima_resposta": {
@@ -9477,10 +9413,11 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "sem acao; issue fechada no GitHub em 13/10",
-   "notas": "Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub; #382 tratada por b212cec1 ja em integracao/2.0.5. Sem commit citando a issue.",
+   "proximo_passo": "triar: reaberta no GH 10-15; sem commit de conserto identificado",
+   "notas": "Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub; #382 tratada por b212cec1 ja em integracao/2.0.5. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/476",
-   "criada_em": "2026-10-13"
+   "criada_em": "2026-10-13",
+   "alvo": "2.0.6"
   },
   {
    "numero": 477,
@@ -9528,10 +9465,10 @@
   {
    "numero": 480,
    "titulo": "Remember Preferred Audio Language Across Sources",
-   "estado_github": "fechada",
+   "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "feature",
-   "status": "lancada",
+   "status": "aberta",
    "release": "-",
    "conserto": [],
    "ultima_resposta": {
@@ -9540,15 +9477,16 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "sem acao; issue fechada no GitHub em 13/10",
-   "notas": "Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub sem conserto local identificado. Sem commit citando a issue.",
+   "proximo_passo": "triar: reaberta no GH 10-15; sem commit de conserto identificado",
+   "notas": "Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub sem conserto local identificado. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/480",
-   "criada_em": "2026-10-13"
+   "criada_em": "2026-10-13",
+   "alvo": "2.0.6"
   },
   {
    "numero": 481,
    "titulo": "Show audio and subtitle metadata in the stream source list",
-   "estado_github": "fechada",
+   "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "feature",
    "status": "em_revisao",
@@ -9563,14 +9501,15 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "review OK (j-rev-pr487-v2); dono decide entrada na 2.0.6",
-   "notas": "Snapshot 2026-10-14 10:15: \"Sources: show declared audio and subtitle languages\" (e4fb8c08) e o merge c9932635 \"Merge PR #487 v2\" existem so em agente/205-pr487v2, nao ancestral de integracao/2.0.5. OPEN no GitHub. | fechada no GH 2026-10-14 (CLOSED); alvo antigo 2.0.6 removido por regra do mapa.py; decidir com dono",
+   "notas": "Snapshot 2026-10-14 10:15: \"Sources: show declared audio and subtitle languages\" (e4fb8c08) e o merge c9932635 \"Merge PR #487 v2\" existem so em agente/205-pr487v2, nao ancestral de integracao/2.0.5. OPEN no GitHub. | fechada no GH 2026-10-14 (CLOSED); alvo antigo 2.0.6 removido por regra do mapa.py; decidir com dono Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15: agente/205-pr487v2 (ac1ba9725) review OK j-rev-pr487-v2; nao mergeado; dono decide 2.0.6.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/481",
-   "criada_em": "2026-10-13"
+   "criada_em": "2026-10-13",
+   "alvo": "2.0.6"
   },
   {
    "numero": 482,
    "titulo": "Continue Watching content leaks between profiles",
-   "estado_github": "fechada",
+   "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
    "status": "integrada",
@@ -9586,9 +9525,10 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "testar troca de perfil no TCL",
-   "notas": "Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix. Escrivao 10-15 07:10: mesmo caso de #488; correcoes portadas na head nova do autor (pr/493-v3), review OK 06:50. | Escrivao 10-15 08:50: pr/493-v3 carrega #482 (review OK 06:50, nao mergeado). | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15).",
+   "notas": "Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix. Escrivao 10-15 07:10: mesmo caso de #488; correcoes portadas na head nova do autor (pr/493-v3), review OK 06:50. | Escrivao 10-15 08:50: pr/493-v3 carrega #482 (review OK 06:50, nao mergeado). | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/482",
-   "criada_em": "2026-10-13"
+   "criada_em": "2026-10-13",
+   "alvo": "2.0.5"
   },
   {
    "numero": 483,
@@ -9616,7 +9556,7 @@
   {
    "numero": 484,
    "titulo": "External subtitles disappear after a few minutes without input",
-   "estado_github": "fechada",
+   "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "integrada",
@@ -9631,8 +9571,9 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "LG OLED C1 webOS, 2.0.5: legenda de addon (OpenSubtitlesV3/AIOMetadata) some apos minutos sem tecla; embutida ok. Sem log. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-14). | Escrivão 2026-10-14 16:11: conserto integrado via agente/205-leg484 (merge 027fd3c7); fechada no GitHub.",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/484"
+   "notas": "LG OLED C1 webOS, 2.0.5: legenda de addon (OpenSubtitlesV3/AIOMetadata) some apos minutos sem tecla; embutida ok. Sem log. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-14). | Escrivão 2026-10-14 16:11: conserto integrado via agente/205-leg484 (merge 027fd3c7); fechada no GitHub. Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/484",
+   "alvo": "2.0.5"
   },
   {
    "numero": 486,
@@ -9652,7 +9593,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "fix P2P USB rodando (j-fix-p2pusb-w 09:46); depois review, merge e testar addon P2P na TV",
+   "proximo_passo": "review fix 90fb9cff7 (j-fix-p2pusb-w 09:50, sem review; BLOQUEIA 08:49 antes); merge agente/205-p2pusb; testar addon P2P USB na TV",
    "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo. | Escrivao 15/10 09:48: fix j-fix-p2pusb-w em curso.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/486",
    "criada_em": "2026-10-13",
@@ -9661,7 +9602,7 @@
   {
    "numero": 488,
    "titulo": "Profiles switching",
-   "estado_github": "fechada",
+   "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
    "status": "integrada",
@@ -9678,10 +9619,11 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "testar troca de perfil no TCL",
-   "notas": "pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL. Escrivao 10-15 07:10: pr/493-fix review OK fix2; autor publicou head nova 5694694cc; fixes portados 65613c562 (pr/493-v3) e review OK 06:50 (j-revpr493-v3). Mergear pr/493-v3 para carregar #488 no PR. | Escrivao 10-15 08:50: pr/493-v3 (3 ahead, review OK 06:50, nao mergeado) substitui o pr/493 velho; #488 segue nele. | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15).",
+   "proximo_passo": "merge pr/493-v3 (65613c562, review OK 06:50); testar troca de perfil no TCL",
+   "notas": "pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL. Escrivao 10-15 07:10: pr/493-fix review OK fix2; autor publicou head nova 5694694cc; fixes portados 65613c562 (pr/493-v3) e review OK 06:50 (j-revpr493-v3). Mergear pr/493-v3 para carregar #488 no PR. | Escrivao 10-15 08:50: pr/493-v3 (3 ahead, review OK 06:50, nao mergeado) substitui o pr/493 velho; #488 segue nele. | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15 10:50: reaberta no GH; pr/493-v3 review OK sem merge.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/488",
-   "criada_em": "2026-10-13"
+   "criada_em": "2026-10-13",
+   "alvo": "2.0.5"
   },
   {
    "numero": 492,
@@ -9947,7 +9889,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "lancar com 2.0.5; review do fix P2P USB agente/205-p2pusb pendente (BLOQUEIA v 06:49, fix 07:52)",
+   "proximo_passo": "review fix 90fb9cff7 (j-fix-p2pusb-w 09:50); merge agente/205-p2pusb; lancar com 2.0.5",
    "notas": "Snapshot 2026-10-14 10:15: 3fc691d4 \"fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)\" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead. | Escrivao 10-15 08:50: liga ao dono P2P USB (agente/205-p2pusb); fix 07:52 sem review.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/505",
    "criada_em": "2026-10-14",
@@ -11494,6 +11436,65 @@
    "ref": "pr/493-v3 (65613c562)",
    "resultado": "passou",
    "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revpr493-v3.log VEREDITO OK"
+  },
+  {
+   "data": "2026-10-15 08:48",
+   "quem": "job-pi group/nv-revisao",
+   "o_que": "Revisao master1015 (merge 28 commits): BLOQUEIA",
+   "issues": [],
+   "ref": "agente/205-master1015 (rev antes de 12f000886)",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-master1015.log"
+  },
+  {
+   "data": "2026-10-15 08:49",
+   "quem": "job-pi group/nv-revisao",
+   "o_que": "Revisao p2pusb v2 (fix USB P2P): BLOQUEIA",
+   "issues": [
+    486,
+    505
+   ],
+   "ref": "agente/205-p2pusb (rev antes de 90fb9cff7)",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-p2pusb-v2.log"
+  },
+  {
+   "data": "2026-10-15 08:50",
+   "quem": "job-pi group/nv-revisao",
+   "o_que": "Revisao pr490 fix4: BLOQUEIA",
+   "issues": [],
+   "ref": "pr/490-fix (rev antes de 1f8309961)",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revpr490-fix4.log"
+  },
+  {
+   "data": "2026-10-15 04:52",
+   "quem": "job-pi group/nv-revisao",
+   "o_que": "Revisao pr491 limpo r3: BLOQUEIA",
+   "issues": [],
+   "ref": "pr/491-limpo (r3, antes de f8fe27fad)",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revpr491-limpo-r3.log"
+  },
+  {
+   "data": "2026-10-14 23:15",
+   "quem": "job-pi group/nv-revisao",
+   "o_que": "Revisao pr498 limpo: OK",
+   "issues": [],
+   "ref": "pr/498-limpo",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revpr498-limpo.log"
+  },
+  {
+   "data": "2026-10-14 10:26",
+   "quem": "job-pi",
+   "o_que": "Revisao PR487 v2 (linguas declaradas addon): OK",
+   "issues": [
+    481
+   ],
+   "ref": "agente/205-pr487v2 (tip ac1ba9725)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-rev-pr487-v2.log"
   }
  ],
  "decisoes": [
@@ -13581,12 +13582,13 @@
    "id": "dono-205-p2pusb",
    "titulo": "fix(p2p): USB cache — persist scanned root, race/litter/orphan fixes (#205)",
    "plataforma": "?",
-   "status": "em_job",
+   "status": "em_revisao",
    "release": "2.1",
    "conserto": [
-    "agente/205-p2pusb: 9 commits fora"
+    "agente/205-p2pusb: 9 commits fora",
+    "90fb9cff7 fix(p2p): bound synchronous USB discovery work (fix, sem review)"
    ],
-   "proximo_passo": "fix j-fix-p2pusb-w rodando desde 09:46 (BLOQUEIA v2 08:49); depois review, merge, testar addon P2P na TV",
+   "proximo_passo": "review fix 90fb9cff7 (j-fix-p2pusb-w 09:50); merge; teste P2P USB na TV",
    "notas": "8 ahead; nao mergeado; sem job rodando Escrivao 10-15 07:10: fix w 05:51; review v 06:49 BLOQUEIA. | Escrivao 2026-10-15 07:50: lost-ish: sem job apos BLOQUEIA v | Escrivao 10-15 08:50: fix 07:52 sem review; nao perdido (fix depois do bloqueio).",
    "url": null
   },
@@ -13782,7 +13784,7 @@
    "conserto": [
     "22a34af1"
    ],
-   "proximo_passo": "superseded por pr-489-fix (review OK 03:05): merge pr/489-fix, nao este",
+   "proximo_passo": "merge pr/489-fix (review OK 03:05); TCL test",
    "notas": "Escrivão 14/10 14:47: integrada.",
    "url": null
   },
@@ -13793,9 +13795,10 @@
    "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
-    "75059d26"
+    "75059d26",
+    "1f8309961 Fix Vitrine resume preservation (fix, sem review)"
    ],
-   "proximo_passo": "BLOQUEIA j-revpr490 22:30; fix j-pr490-fix RODANDO; depois review",
+   "proximo_passo": "review fix 1f8309961 (j-fix-pr490-w 09:53; fix4 BLOQUEIA 08:50 antes)",
    "notas": "Escrivão 14/10 14:47: integrada.",
    "url": null
   },
@@ -13808,7 +13811,7 @@
    "conserto": [
     "6dd374db"
    ],
-   "proximo_passo": "build Tizen 6+ e teste em TV (branch agente/205-pr491resto ja em integracao/2.0.5; review OK j-revf-pr491resto 07:29)",
+   "proximo_passo": "review fix c f8fe27fad (job 05:53, sem review depois de BLOQUEIA r3 04:52)",
    "notas": "Escrivão 14/10 14:47: integrada. | Escrivao 10-15 08:50: branch 0 ahead: merged.",
    "url": null
   },
@@ -14355,7 +14358,7 @@
    "conserto": [
     "agente/205-pr493: 12 commits fora"
    ],
-   "proximo_passo": "superseded por pr-493-v3 (review OK 06:50): merge pr/493-v3; nao mergear agente/205-pr493",
+   "proximo_passo": "merge pr/493-v3 (65613c562, review OK 06:50); substitui pr/493 velho; TV teste troca de perfil",
    "notas": "agente/205-pr493 12 ahead; pr/493-fix e o fix"
   },
   {
@@ -14367,7 +14370,7 @@
    "conserto": [
     "pr/498-limpo: 12 commits fora (tip 22ed066e2 22:31)"
    ],
-   "proximo_passo": "merge pr/498-limpo (review OK j-revpr498-limpo 23:15, 12 ahead); testar IME na TV",
+   "proximo_passo": "merge pr/498-limpo (review OK 23:15); Samsung IME na TV",
    "notas": "PR #498; 12 ahead; nao mergeado Escrivao 10-15 07:10: 12 ahead, review OK mantido; falta merge. | Escrivao 2026-10-15 07:50: review OK, falta merge | Escrivao 10-15 08:50: ainda nao mergeado."
   },
   {
@@ -14471,11 +14474,35 @@
    "id": "dono-205-master1015",
    "titulo": "Merge master 1015 em integracao/2.0.5 (28 commits)",
    "plataforma": "todas",
-   "status": "em_job",
+   "status": "em_revisao",
    "release": "2.0.5",
+   "conserto": [
+    "12f000886 fix: publish probe manifests outside addon locks (fix, sem review)"
+   ],
+   "proximo_passo": "review fix 12f000886 (j-fix-master1015-w 09:49; suite addonslista rc=1 por fixture ausente, pre-existente); depois merge",
+   "notas": "Escrivao 15/10 09:48: branch agente/205-master1015 (28 ahead) sem item de issue; criado pelo escrivao. Escrivao 10-15 10:50: BLOQUEIA 08:48; fix pronto 09:49."
+  },
+  {
+   "id": "dono-21-avaliar-apos-assistir",
+   "titulo": "2.1: avaliar filme/episodio apos assistir (pagina do titulo ou popup nos creditos finais)",
+   "plataforma": "todas",
+   "status": "aberta",
+   "release": "2.1",
    "conserto": [],
-   "proximo_passo": "fix j-fix-master1015-w rodando desde 09:46 (BLOQUEIA 08:48); depois review e merge",
-   "notas": "Escrivao 15/10 09:48: branch agente/205-master1015 (28 ahead) sem item de issue; criado pelo escrivao."
+   "proximo_passo": "backlog 2.1; sem job",
+   "notas": "Pedido de usuario erolasan, 2026-10-14. Escrivao 10-15: backlog-21.",
+   "url": ""
+  },
+  {
+   "id": "dono-21-sync-legenda-manual",
+   "titulo": "2.1: sync manual de legenda com menu superior estilo Stremio TV, ajustar enquanto assiste",
+   "plataforma": "todas",
+   "status": "aberta",
+   "release": "2.1",
+   "conserto": [],
+   "proximo_passo": "backlog 2.1; sem job",
+   "notas": "Discord the last envoy 14/10. Escrivao 10-15: backlog-21.",
+   "url": ""
   }
  ],
  "fechar_203": [],
