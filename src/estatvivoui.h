@@ -58,6 +58,7 @@ int estatvivo_teste_tiles(int *ids);
 typedef struct {
   GfxRect header, meta, tiles[6], keys[5], separator;
   int nTiles, nKeys;
+  char dicas[256];   // the hint row text, as drawn
 } EvGeometriaTeste;
 void estatvivo_teste_geometria(EvGeometriaTeste *g);
 #endif
