@@ -6485,6 +6485,8 @@ static TipoFileira previaMedida(const Fileira *fl, const char *chave, int filTip
   return tipo;
 }
 
+static void desenhaRedonda(const CatItem *ci, GLuint t, const char *caminho,
+                           float px, float py, float d, float f);
 int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect area,
                         float alfa) {
   const Fileira *fl = NULL;
@@ -6577,6 +6579,9 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
         const char *cam = arte_por_identidade(idx, tipo == FILEIRA_CONTINUE ? 3 : deitado);
         if (tipo == FILEIRA_FICHA) { desenhaFicha(ci, px, y0, w, h, 0.0f); card.w = h * 2.0f / 3.0f; }
         GLuint t = cam ? tex_obter_larg(cam, w) : 0;
+        // A Redonda e o disco com o nome, como na Home: pelo card comum ela
+        // saia retangulo e a pessoa nao a reconhecia na lista.
+        if (tipo == FILEIRA_REDONDA) { desenhaRedonda(ci, t, cam, px, y0, w, 0.0f); continue; }
         if (tipo == FILEIRA_TOP10_NUM)
           desenhaNumeral(fileiraRanking(fl, c), px, y0, h, passo - w - NV_TOP10_NUM_FOLGA * s, 1.0f);
         gfx_veu_card_limpar();
