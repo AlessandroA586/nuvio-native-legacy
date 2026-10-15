@@ -115,7 +115,11 @@ jobs:
 
       - name: Install Tizen Workload
         run: |
-          dotnet workload install tizen || echo "Workload optional for Tizen 4/6"
+          DOTNET_DIR="$(dirname "$(which dotnet)")"
+          echo "Installing Samsung Tizen Workload into $DOTNET_DIR"
+          curl -sSL https://raw.githubusercontent.com/Samsung/Tizen.NET/main/workload/scripts/workload-install.sh -o /tmp/workload-install.sh
+          sudo env "PATH=$PATH" bash /tmp/workload-install.sh -d "$DOTNET_DIR" -u || true
+          dotnet workload list || true
 
       - name: Setup local.properties
         run: |
@@ -183,7 +187,7 @@ jobs:
           files: |
             dist/*
           body: |
-            ## Nuvio Native Legacy 2.0.5 - Compilación Personal
+            ## Nuvio Legacy 2.0.5 - Compilación Personal
             
             Versión personalizada compilada para Android TV y Samsung Tizen con optimizaciones para español y configuración de autoactualización independiente.
             
@@ -192,28 +196,21 @@ jobs:
             - Filtro de fuentes preconfigurado con expresiones regulares en español / latino en modo `Exigir` (`padrao` regex).
             - Mecanismo de actualización automática apuntando a este repositorio (`AlessandroA586/nuvio-native-legacy`).
             - Paquetes APK firmados con la clave de lanzamiento personal.
-            - Paquetes TPK y bibliotecas de actualización nativa para Samsung Smart TV (Tizen 4.0, 6.0, 6.5 y 8+).
+            - Paquetes TPK y bibliotecas de actualización nativa para Samsung Smart TV (Tizen 4.0, 6.0, 6.5 y 8/9).
+
+            | Platform | File |
+            | :--- | :--- |
+            | Samsung Tizen 4 / 5 / 5.5 | `Nuvio-2.0.5-NuvioTpk40.tpk` |
+            | Samsung Tizen 6 | `Nuvio-2.0.5-NuvioTpk60.tpk` |
+            | Samsung Tizen 6.5 / 7 | `Nuvio-2.0.5-NuvioTpk65.tpk` |
+            | Samsung Tizen 8 / 9 | `Nuvio-2.0.5-NuvioTpk.tpk` |
+            | Android TV / Google TV, Android 7+ | `Nuvio-2.0.5-android.apk` |
 
             ---
 
-            ### Guía de Archivos y Paquetes de Instalación
-
-            | Archivo | Plataforma Destino | Modelos Compatibles | Descripción y Uso |
-            | :--- | :--- | :--- | :--- |
-            | `Nuvio-2.0.5-android.apk` | Android TV / Google TV / TV Box | Android 7.0 o superior | Paquete de instalación para televisores y dispositivos Android TV. Incluye aceleración por hardware OpenGL ES 2, motor ExoPlayer y soporte para control remoto. |
-            | `Nuvio-2.0.5-NuvioTpk40.tpk` | Samsung Smart TV (Tizen 4.0 a 5.5) | Modelos 2018 a 2020 | Paquete de instalación nativo para televisores Samsung basados en Tizen 4 y 5. Diseñado con cargador memfd y compatibilidad DT_HASH para kernels anteriores. |
-            | `Nuvio-2.0.5-NuvioTpk60.tpk` | Samsung Smart TV (Tizen 6.0) | Modelos 2021 | Paquete de instalación nativo para televisores Samsung de 2021, basado en GLWindow y Tizen .NET API 8. |
-            | `Nuvio-2.0.5-NuvioTpk65.tpk` | Samsung Smart TV (Tizen 6.5 a 7.0) | Modelos 2022 a 2023 | Paquete de instalación nativo para televisores Samsung de 2022 y 2023, basado en GLWindow y Tizen .NET API 9. |
-            | `libnuvio-2.0.5-tpk-arm.so` | Samsung Smart TV (Tizen 6.0 o superior) | Modelos 2021 en adelante | Biblioteca binaria compartida para actualización automática en segundo plano. Permite actualizar la aplicación sin requerir reinstalación del paquete TPK. |
-            | `libnuvio-2.0.5-tpk40-arm.so` | Samsung Smart TV (Tizen 4.0 a 5.5) | Modelos 2018 a 2020 | Biblioteca binaria compartida para actualización automática en modelos Tizen 4 y 5. |
-            | `SHA256SUMS.txt` | Todas las plataformas | Universal | Listado de sumas de comprobación criptográficas SHA-256 para verificar la integridad de todos los archivos descargados. |
-
-            ---
-
-            ### Procedimiento de Instalación en Samsung Smart TV
-            1. Identifique el año o la versión de Tizen de su televisor Samsung.
-            2. Descargue el archivo `.tpk` correspondiente a su modelo de la tabla anterior.
-            3. Instale el paquete mediante herramientas como Apps2Samsung o la consola de desarrollo de Tizen.
-            4. Una vez instalada esta versión inicial, las futuras actualizaciones se descargarán e instalarán automáticamente a través de las bibliotecas `.so` sin necesidad de reinstalar manualmente el archivo `.tpk`.
+            ### Bibliotecas de Autoactualización en Segundo Plano
+            - `libnuvio-2.0.5-tpk-arm.so` (Samsung Tizen 6.0 o superior / 2021+)
+            - `libnuvio-2.0.5-tpk40-arm.so` (Samsung Tizen 4.0 a 5.5 / 2018-2020)
+            - `SHA256SUMS.txt` (Sumas de comprobación SHA-256 de todos los archivos)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
