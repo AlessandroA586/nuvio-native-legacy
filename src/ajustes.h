@@ -671,6 +671,13 @@ int         ajustes_rapido_cor_atual(void);
 const char *ajustes_rapido_cor_atual_nome(void);
 int         ajustes_rapido_cor_definir(int i);
 
+// Contas nativas compartilhadas (legado) ou uma copia separada por conta+perfil.
+int  ajustes_provedores_compartilhados(void);
+int  ajustes_definir_provedores_compartilhados(int compartilhados);
+void ajustes_provedores_abrir_sessao(void);
+int  ajustes_provedores_arquivo(char *dst, unsigned tam, const char *base);
+void ajustes_perfil_padrao(void);
+
 #ifdef NV_SHOT_HOOKS
 int ajustes_shot_valor(const char *chave, int v);   // capturas: opcao pela chave
 #endif

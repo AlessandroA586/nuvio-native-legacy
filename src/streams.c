@@ -132,6 +132,7 @@ static pthread_mutex_t verTrava = PTHREAD_MUTEX_INITIALIZER;
 // Sobe a cada lista nova, sob verTrava. A verificacao compara antes de gravar a
 // url resolvida: indice de uma lista nao vale na seguinte (ver verificarUma).
 static unsigned listaGeracao;
+static void cancelarConferenciasSemTrava(void);
 static int atual = -1, recarregar;
 static char contexto[320];
 // O ALVO DA LISTA — issue #101. Ver a nota longa em streams.h: `alvoPedido` e
@@ -497,6 +498,7 @@ void stream_definir_lista_idade(const Stream *l, int qtd, Uint32 idade) {
   recebidaEm = SDL_GetTicks() - idade;
   temRecebidaEm = 1;
   listaGeracao++;
+  cancelarConferenciasSemTrava();
   pthread_mutex_unlock(&verTrava);
   selosAgendar(0, n);
   pthread_mutex_lock(&autoExclTrava);
@@ -2262,11 +2264,21 @@ int stream_n_candidatas(void) {
 // zero byte). Esperar mais so adia o inevitavel — e este prazo entra INTEIRO no
 // tempo que a pessoa fica olhando para a tela preta quando o canal esta fora.
 #define CANAL_PRAZO_S 3
-static int canalProx, canalN;
-// Classe de cada candidata: 0 = nao conferida ainda, 1 = VIVA (playlist com
-// segmento), 2 = MORTA (respondeu sem segmento), 3 = MUDA (nao respondeu),
-// 4 = INCERTA (respondeu com corpo grande que nao e playlist — ver fioCanal).
-static unsigned char *canalClasse;
+typedef struct {
+  char url[4096], cabecalhos[512];
+  int altura, cabe, preferida;
+} CanalCandidata;
+typedef struct CanalConferencia {
+  unsigned geracao;
+  uint64_t sessao;
+  int prox, n, total;
+  volatile int cancelar;
+  CanalCandidata *candidatas;
+  unsigned char *classes;
+  pthread_mutex_t trava;
+  struct CanalConferencia *proxima;
+} CanalConferencia;
+static CanalConferencia *canalConferencias;
 static int classeEscolhida;
 // A FILA INTEIRA, e nao so a primeira. MEDIDO na C9 em 25/09 (HBO Mundi,
 // FrostView, 7 fontes): a sonda deu 2 "mortas" (a 4K entre elas) e 5 mudas,
@@ -2278,8 +2290,17 @@ static int classeEscolhida;
 static int canalOrdem[CANAL_ORDEM_MAX], canalOrdemN;
 static unsigned char canalOrdemClasse[CANAL_ORDEM_MAX];
 static unsigned canalOrdemGeracao;
+static uint64_t canalOrdemSessao;
 static int canalInformativa;
-static pthread_mutex_t canalTrava = PTHREAD_MUTEX_INITIALIZER;
+static void cancelarConferenciasSemTrava(void) {
+  for (CanalConferencia *c = canalConferencias; c; c = c->proxima)
+    __atomic_store_n(&c->cancelar, 1, __ATOMIC_RELEASE);
+  canalOrdemN = canalInformativa = classeEscolhida = 0;
+  regraBloqueou = 0;
+}
+static int canalCancelado(const CanalConferencia *c) {
+  return __atomic_load_n(&c->cancelar, __ATOMIC_ACQUIRE) || !nv_perfil_sessao_atual(c->sessao);
+}
 
 // Acima disto, resposta sem segmento e INCERTA, nao morta (ver fioCanal).
 #define CANAL_MORTA_MAX_B 4096
@@ -2296,79 +2317,44 @@ static const char *tipoCorpo(const char *c) {
 }
 
 static void *fioCanal(void *u) {
-  (void)u;
+  CanalConferencia *c = u;
   for (;;) {
     int meu;
-    char *corpo;
-    long n = 0;
-    pthread_mutex_lock(&canalTrava);
-    if (canalProx >= canalN) { pthread_mutex_unlock(&canalTrava); return NULL; }
-    meu = canalProx++;
-    pthread_mutex_unlock(&canalTrava);
-    if (!lista[meu].url[0]) { canalClasse[meu] = 2; continue; }
-    { const char *vetor[8];
-      char copia[512];
-      int nc = 0, status = 0;
-      if (lista[meu].cabecalhos[0]) {
-        char *l, *ctx = NULL;
-        snprintf(copia, sizeof copia, "%s", lista[meu].cabecalhos);
-        for (l = strtok_r(copia, "\n", &ctx); l && nc < 7; l = strtok_r(NULL, "\n", &ctx))
-          vetor[nc++] = l;
-      }
-      vetor[nc] = NULL;
-      corpo = rede_baixar_st(lista[meu].url, CANAL_PRAZO_S, nc ? vetor : NULL, &status);
-      if (corpo) n = (long)strlen(corpo);
-      // RECUSA NAO E MORTE, QUANDO O ADDON PEDIU CABECALHO.
-      //
-      // Este e o caminho do relato de 17/09: canal aparece no guia e some ao
-      // abrir, com "nao foi possivel abrir a fonte". Medido contra o addon do
-      // relator: o CDN responde 403 sem Referer/Origin/User-Agent e 200 com
-      // eles. O corpo do 403 — 4,5 KB de HTML — chegava aqui, nao tinha
-      // #EXTINF, e o canal virava classe 2 (MORTA). Todas mortas, nenhuma para
-      // tocar, erro na tela.
-      //
-      // No alvo Samsung isto nao se resolve mandando o cabecalho daqui: a
-      // requisicao sai por XHR e o navegador PROIBE definir Referer, Origin e
-      // User-Agent — sao cabecalhos controlados pelo agente. Quem sabe manda-los
-      // na TV e o AVPlay, que e nativo. Ou seja, esta sonda NAO E AUTORIDADE
-      // sobre esta fonte: ela responde 403 para nos e 200 para o player.
-      //
-      // Entao, quando o addon DECLAROU cabecalhos e a resposta foi recusa, a
-      // fonte entra como VIVA e quem decide e o player. Sem cabecalho
-      // declarado, 403 continua valendo como morta — ali a sonda e o player
-      // veem a mesma coisa.
-      if (corpo && status >= 400 && lista[meu].cabecalhos[0]) {
-        canalClasse[meu] = 1;
-        printf("[fonte] %d respondeu HTTP %d, mas o addon exige cabecalho: quem decide e o player\n",
-               meu, status);
-        free(corpo);
-        continue;
-      }
+    pthread_mutex_lock(&c->trava);
+    if (canalCancelado(c) || c->prox >= c->n) { pthread_mutex_unlock(&c->trava); return NULL; }
+    meu = c->prox++;
+    pthread_mutex_unlock(&c->trava);
+    const CanalCandidata *a = &c->candidatas[meu];
+    if (!a->url[0]) { c->classes[meu] = 2; continue; }
+    const char *vetor[8];
+    char copia[512];
+    int nc = 0;
+    if (a->cabecalhos[0]) {
+      char *l, *ctx = NULL;
+      snprintf(copia, sizeof copia, "%s", a->cabecalhos);
+      for (l = strtok_r(copia, "\n", &ctx); l && nc < 7; l = strtok_r(NULL, "\n", &ctx)) vetor[nc++] = l;
     }
-    if (!corpo) {
-      // MUDA. MEDIDO na LG com o curl do proprio aparelho: estas URLs do proxy
-      // do FrostView nao devolvem NADA — `http=000`, 12 s de espera, zero byte.
-      // Nao e a rede da casa: outra URL do mesmo host responde 200 em 0,5 s.
-      // Fonte que nao entrega a playlist em CANAL_PRAZO_S tambem nao vai
-      // entregar segmento ao pipeline, entao ela cai para ultimo recurso — mas
-      // NAO e descartada, porque uma rede ruim de verdade se pareceria com isto.
-      canalClasse[meu] = 3;
+    vetor[nc] = NULL;
+    RedeMedida medida = {0};
+    RedeControle controle = { .cancelado = &c->cancelar };
+    if (canalCancelado(c)) return NULL;
+    char *corpo = rede_baixar_medido_controle(a->url, CANAL_PRAZO_S, nc ? vetor : NULL, &controle, &medida);
+    if (canalCancelado(c) || medida.cancelado) { free(corpo); return NULL; }
+    long tamanho = corpo ? (long)strlen(corpo) : 0;
+    // Header refusals are uncertain on WGT: AVPlay can send headers XHR cannot.
+    if (corpo && medida.status >= 400 && a->cabecalhos[0]) {
+      c->classes[meu] = 1;
+      printf("[fonte] %d respondeu HTTP %d, mas o addon exige cabecalho: quem decide e o player\n", meu, medida.status);
+    } else if (!corpo) {
+      c->classes[meu] = 3;
       printf("[fonte] %d muda: playlist nao respondeu em %ds\n", meu, CANAL_PRAZO_S);
-    } else if (strstr(corpo, "#EXTINF") || strstr(corpo, "#EXT-X-STREAM-INF")) {
-      canalClasse[meu] = 1;
-    } else if (n > CANAL_MORTA_MAX_B) {
-      // GRANDE DEMAIS PARA SER A MORTA CONHECIDA. A morta medida e uma
-      // playlist de 98 B, cabecalho e nada. Na C9 em 25/09 a 4K da HBO Mundi
-      // devolveu 71751 B sem #EXTINF a sonda e TOCOU quando escolhida a mao
-      // (relay que ainda estava aquecendo, ou formato que a sonda nao le).
-      // Corpo grande sem marca de HLS nao prova nada: quem decide e o player.
-      canalClasse[meu] = 4;
-      printf("[fonte] %d incerta: %ld B sem segmento (%s); quem decide e o player\n",
-             meu, n, tipoCorpo(corpo));
+    } else if (strstr(corpo, "#EXTINF") || strstr(corpo, "#EXT-X-STREAM-INF")) c->classes[meu] = 1;
+    else if (tamanho > CANAL_MORTA_MAX_B) {
+      c->classes[meu] = 4;
+      printf("[fonte] %d incerta: %ld B sem segmento (%s); quem decide e o player\n", meu, tamanho, tipoCorpo(corpo));
     } else {
-      canalClasse[meu] = 2;
-      printf("[fonte] %d morta: playlist com %ld B e nenhum segmento (%s)\n", meu, n,
-             tipoCorpo(corpo));
+      c->classes[meu] = 2;
+      printf("[fonte] %d morta: playlist com %ld B e nenhum segmento (%s)\n", meu, tamanho, tipoCorpo(corpo));
     }
     free(corpo);
   }
@@ -2383,109 +2369,96 @@ static int alturaCanal(const Stream *s) {
   return a;
 }
 
-int stream_canal_primeira_viva(int tentativas) {
-  int total = stream_n(), q, criados = 0, escolhida = -1;
+int stream_canal_primeira_viva_sessao(int tentativas, uint64_t sessao) {
+  CanalConferencia c = { .sessao = sessao };
   pthread_t fios[CANAL_FIOS];
-  if (total < 1) return -1;
-  if (tentativas < 1 || tentativas > total) tentativas = total;
-  canalClasse = calloc((size_t)tentativas, 1);
-  if (!canalClasse) return -1;
-  marco("canal: conferindo playlists");
-  canalProx = 0; canalN = tentativas;
-  for (q = 0; q < CANAL_FIOS && q < tentativas; q++)
-    if (pthread_create(&fios[criados], NULL, fioCanal, NULL) == 0) criados++;
-  if (!criados) fioCanal(NULL);
-  for (q = 0; q < criados; q++) pthread_join(fios[q], NULL);
-
-  // PREFERENCIA POR CLASSE, e dentro da classe pela ORDEM DO ADDON — que para
-  // canal ao vivo e o ranking dele (FHD/HD/SD). Viva ganha de muda; muda ganha
-  // de nada. Morta nao e escolhida: ela JA respondeu sem segmento — mas fica
-  // no fim da fila do watchdog (canalOrdem), porque "morta" pela sonda ja
-  // tocou pelo player.
-  // Ordem de preferencia: viva dentro do teto, viva acima do teto, muda dentro
-  // do teto, muda. O teto nunca tira a ultima fonte da mesa.
-  // A mesma regra monta a FILA INTEIRA: viva, incerta, muda (cada uma dentro
-  // do teto antes de acima dele), a morta por ultimo e, depois das conferidas,
-  // as que ficaram fora da sonda na ordem do addon. A escolhida e a cabeca da
-  // fila, se nao for morta.
-  // RESOLUCAO PRINCIPAL (Ajustes > Live TV): dentro de cada classe e de cada
-  // lado do teto, a fonte da resolucao escolhida vem antes das outras — a
-  // classe continua mandando (uma viva em HD ganha de uma muda em FHD).
-  { static const unsigned char ordemClasse[] = { 1, 4, 3, 2 };
-    int c, t, pr, alvo = nv_res_opcao_altura(ajustes_livetv_resolucao());
-    canalOrdemN = 0;
-    for (c = 0; c < 4; c++)
-      for (t = 1; t >= 0; t--)
-        for (pr = 1; pr >= 0; pr--)
-          for (q = 0; q < tentativas && canalOrdemN < CANAL_ORDEM_MAX; q++)
-            if (canalClasse[q] == ordemClasse[c] && cabeNoTeto(&lista[q]) == t &&
-                nv_res_preferida(alturaCanal(&lista[q]), alvo) == pr) {
-              canalOrdemClasse[canalOrdemN] = canalClasse[q];
-              canalOrdem[canalOrdemN++] = q;
-            }
-    for (q = tentativas; q < total && canalOrdemN < CANAL_ORDEM_MAX; q++) {
-      canalOrdemClasse[canalOrdemN] = 0;
-      canalOrdem[canalOrdemN++] = q;
-    }
-    pthread_mutex_lock(&verTrava);
-    canalOrdemGeracao = listaGeracao;
-    pthread_mutex_unlock(&verTrava);
-    canalInformativa = 0;
-    for (q = 0; q < tentativas; q++) if (canalClasse[q] == 1) canalInformativa = 1;
-    if (canalOrdemN > 0 && canalOrdemClasse[0] != 2) escolhida = canalOrdem[0];
+  int criados = 0, escolhida = -1, q;
+  pthread_mutex_init(&c.trava, NULL);
+  pthread_mutex_lock(&verTrava);
+  c.total = n; c.geracao = listaGeracao;
+  if (c.total < 1 || !nv_perfil_sessao_atual(sessao)) {
+    pthread_mutex_unlock(&verTrava); pthread_mutex_destroy(&c.trava); return -1;
   }
-  if (escolhida >= 0 && !cabeNoTeto(&lista[escolhida]))
-    printf("[fonte] canal: nenhuma fonte dentro do teto de %dp; usando %dp\n",
-           alturaMax(), lista[escolhida].altura);
-  { int vivas = 0, mortas = 0, mudas = 0;
-    int incertas = 0;
-    for (q = 0; q < tentativas; q++) {
-      if (canalClasse[q] == 1) vivas++;
-      else if (canalClasse[q] == 2) mortas++;
-      else if (canalClasse[q] == 3) mudas++;
-      else if (canalClasse[q] == 4) incertas++;
+  if (tentativas < 1 || tentativas > c.total) tentativas = c.total;
+  c.n = tentativas;
+  c.candidatas = calloc((size_t)c.n, sizeof *c.candidatas);
+  c.classes = calloc((size_t)c.n, 1);
+  if (!c.candidatas || !c.classes) {
+    pthread_mutex_unlock(&verTrava); free(c.candidatas); free(c.classes); pthread_mutex_destroy(&c.trava); return -1;
+  }
+  int alvo = nv_res_opcao_altura(ajustes_livetv_resolucao());
+  for (q = 0; q < c.n; q++) {
+    CanalCandidata *a = &c.candidatas[q];
+    snprintf(a->url, sizeof a->url, "%s", lista[q].url);
+    snprintf(a->cabecalhos, sizeof a->cabecalhos, "%s", lista[q].cabecalhos);
+    a->altura = alturaCanal(&lista[q]); a->cabe = cabeNoTeto(&lista[q]);
+    a->preferida = nv_res_preferida(a->altura, alvo);
+  }
+  c.proxima = canalConferencias; canalConferencias = &c;
+  pthread_mutex_unlock(&verTrava);
+  marco("canal: conferindo playlists");
+  for (q = 0; q < CANAL_FIOS && q < c.n; q++)
+    if (pthread_create(&fios[criados], NULL, fioCanal, &c) == 0) criados++;
+  if (!criados) fioCanal(&c);
+  for (q = 0; q < criados; q++) pthread_join(fios[q], NULL);
+  int atual = nv_perfil_sessao_travar(sessao);
+  pthread_mutex_lock(&verTrava);
+  CanalConferencia **link = &canalConferencias;
+  while (*link && *link != &c) link = &(*link)->proxima;
+  if (*link) *link = c.proxima;
+  if (atual && !canalCancelado(&c) && listaGeracao == c.geracao) {
+    static const unsigned char ordemClasse[] = {1, 4, 3, 2};
+    canalOrdemN = 0;
+    for (int cl = 0; cl < 4; cl++)
+      for (int t = 1; t >= 0; t--)
+        for (int pr = 1; pr >= 0; pr--)
+          for (q = 0; q < c.n && canalOrdemN < CANAL_ORDEM_MAX; q++)
+            if (c.classes[q] == ordemClasse[cl] && c.candidatas[q].cabe == t && c.candidatas[q].preferida == pr) {
+              canalOrdemClasse[canalOrdemN] = c.classes[q]; canalOrdem[canalOrdemN++] = q;
+            }
+    for (q = c.n; q < c.total && canalOrdemN < CANAL_ORDEM_MAX; q++) {
+      canalOrdemClasse[canalOrdemN] = 0; canalOrdem[canalOrdemN++] = q;
     }
-    printf("[fonte] canal: %d viva(s), %d incerta(s), %d morta(s), %d muda(s) de %d; escolhida %d\n",
-           vivas, incertas, mortas, mudas, tentativas, escolhida); }
-  marco(escolhida >= 0 ? "canal: fonte escolhida por playlist"
-                       : "canal: nenhuma playlist utilizavel");
-  // A CLASSE DA ESCOLHIDA fica disponivel para quem chamou: uma fonte MUDA que
-  // entrou por falta de opcao nao merece o mesmo prazo de uma viva. Ver
-  // stream_canal_classe_escolhida e o watchdog em app.c.
-  classeEscolhida = (escolhida >= 0) ? canalClasse[escolhida] : 0;
-  free(canalClasse); canalClasse = NULL;
+    canalOrdemGeracao = c.geracao; canalOrdemSessao = c.sessao; canalInformativa = 0;
+    for (q = 0; q < c.n; q++) if (c.classes[q] == 1) canalInformativa = 1;
+    if (canalOrdemN && canalOrdemClasse[0] != 2) escolhida = canalOrdem[0];
+    classeEscolhida = escolhida >= 0 ? c.classes[escolhida] : 0;
+  }
+  pthread_mutex_unlock(&verTrava);
+  if (atual) nv_perfil_sessao_destravar();
+  free(c.candidatas); free(c.classes); pthread_mutex_destroy(&c.trava);
+  marco(escolhida >= 0 ? "canal: fonte escolhida por playlist" : "canal: nenhuma playlist utilizavel");
   return escolhida;
 }
-
-int stream_canal_classe_escolhida(void) { return classeEscolhida; }
-
-static int ordemValida(void) {
-  int ok;
-  pthread_mutex_lock(&verTrava);
-  ok = canalOrdemN > 0 && canalOrdemGeracao == listaGeracao;
-  pthread_mutex_unlock(&verTrava);
-  return ok;
+int stream_canal_primeira_viva(int tentativas) {
+  return stream_canal_primeira_viva_sessao(tentativas, nv_perfil_sessao_ler());
 }
-
+int stream_canal_classe_escolhida(void) {
+  int classe;
+  pthread_mutex_lock(&verTrava); classe = classeEscolhida; pthread_mutex_unlock(&verTrava);
+  return classe;
+}
+static int ordemValidaSemTrava(void) {
+  return canalOrdemN > 0 && canalOrdemGeracao == listaGeracao && nv_perfil_sessao_atual(canalOrdemSessao);
+}
 int stream_canal_proxima(int atualIdx) {
-  int q;
-  if (ordemValida())
-    for (q = 0; q < canalOrdemN; q++)
-      if (canalOrdem[q] == atualIdx) return q + 1 < canalOrdemN ? canalOrdem[q + 1] : -1;
-  // Sem fila (lista que nao passou pela sonda, ou indice fora dela): a ordem
-  // do addon, como sempre foi.
-  return atualIdx + 1 < stream_n() ? atualIdx + 1 : -1;
+  int resultado;
+  pthread_mutex_lock(&verTrava);
+  resultado = atualIdx + 1 < n ? atualIdx + 1 : -1;
+  if (ordemValidaSemTrava())
+    for (int q = 0; q < canalOrdemN; q++)
+      if (canalOrdem[q] == atualIdx) { resultado = q + 1 < canalOrdemN ? canalOrdem[q+1] : -1; break; }
+  pthread_mutex_unlock(&verTrava);
+  return resultado;
 }
-
 int stream_canal_prazo_longo(int idx) {
-  int q;
-  // Sonda que nao achou NENHUMA viva nao informou nada: todas mudas/incertas
-  // e o que se ve quando o relay e lento (HBO Mundi, 25/09: curl 28 a 3 s em
-  // todas, e a 4K abriu em 11,8 s). Ai o prazo curto so garantia a falha.
-  if (!ordemValida() || !canalInformativa) return 1;
-  for (q = 0; q < canalOrdemN; q++)
-    if (canalOrdem[q] == idx) return canalOrdemClasse[q] == 1 || canalOrdemClasse[q] == 4;
-  return 1;
+  int longo = 1;
+  pthread_mutex_lock(&verTrava);
+  if (ordemValidaSemTrava() && canalInformativa)
+    for (int q = 0; q < canalOrdemN; q++)
+      if (canalOrdem[q] == idx) { longo = canalOrdemClasse[q] == 1 || canalOrdemClasse[q] == 4; break; }
+  pthread_mutex_unlock(&verTrava);
+  return longo;
 }
 
 // LINHA INFORMATIVA DO ADDON, nao filme. Log da 2.0.0 (Samsung): a lista
@@ -2575,8 +2548,8 @@ int stream_proxima_vod(int atualIdx) {
   pthread_mutex_unlock(&verTrava);
   return i;
 }
-int stream_verificar_proxima_vod(int atualIdx, int tentativas, int *conferidas) {
-  Conferencia c = { 0, 0, 0, -1, nv_perfil_sessao_ler() };
+int stream_verificar_proxima_vod_sessao(int atualIdx, int tentativas, int *conferidas, uint64_t sessao) {
+  Conferencia c = { 0, 0, 0, -1, sessao };
   if (conferidas) *conferidas = 0;
   int i = atualIdx;
   c.geracao = stream_lista_geracao();
@@ -2584,20 +2557,24 @@ int stream_verificar_proxima_vod(int atualIdx, int tentativas, int *conferidas) 
   // Limita tambem a conferencia: todas mortas nao podem custar dezenas de GETs.
   while (tentativas-- > 0) {
     pthread_mutex_lock(&verTrava);
-    if (listaGeracao != c.geracao) c.abortou = 1;
+    if (!nv_perfil_sessao_atual(c.sessao) || listaGeracao != c.geracao) c.abortou = 1;
     i = c.abortou ? -1 : proximaVODSemTrava(atualIdx);
     pthread_mutex_unlock(&verTrava);
     if (i < 0) break;
     if (conferidas) (*conferidas)++;
     if (verificarOuParar(i, &c)) return c.abortou ? -1 : i;
     pthread_mutex_lock(&verTrava);
-    if (listaGeracao != c.geracao) c.abortou = 1;
+    if (!nv_perfil_sessao_atual(c.sessao) || listaGeracao != c.geracao) c.abortou = 1;
     // Sonda ruim nao prova erro de abertura, nem pode excluir na lista nova.
     if (!c.abortou) stream_automatico_excluir(i);
     pthread_mutex_unlock(&verTrava);
     if (c.abortou) break;
   }
   return -1;
+}
+
+int stream_verificar_proxima_vod(int atualIdx, int tentativas, int *conferidas) {
+  return stream_verificar_proxima_vod_sessao(atualIdx, tentativas, conferidas, nv_perfil_sessao_ler());
 }
 
 int stream_grupo_sem_perda(int i) {
@@ -2616,6 +2593,7 @@ int stream_grupo_sem_perda(int i) {
 }
 int stream_automatico(void) { return automaticoCom(1); }
 int stream_automatico_canal(void) { return automaticoCom(0); }
+
 
 
 static int grupo, filtro, soMp4, soCache, soDub;

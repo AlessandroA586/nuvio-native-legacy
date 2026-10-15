@@ -1,14 +1,17 @@
 #define _POSIX_C_SOURCE 200809L
 #include "fontefalha.h"
 #include <ctype.h>
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 static FonteFalhaConfig configuracao;
 static char diretorio[1024];
+static char arquivoAtivo[128] = "fontefalha.txt";
 static int iniciada;
 
 static void padrao(FonteFalhaConfig *c) {
@@ -44,21 +47,28 @@ static int addonAdicionar(FonteFalhaConfig *c, const char *chave) {
   c->addon[i].limite = 3;
   return i;
 }
-static int caminho(char *dst, size_t n, const char *sufixo) {
-  if (!diretorio[0]) return 0;
-  int r = snprintf(dst, n, "%s/fontefalha.txt%s", diretorio, sufixo);
+static int nomeVale(const char *nome) {
+  if (!nome || !*nome || strlen(nome) >= sizeof arquivoAtivo || nome[0] == '.') return 0;
+  for (const unsigned char *p = (const unsigned char *)nome; *p; p++)
+    if (!isalnum(*p) && *p != '-' && *p != '_' && *p != '.') return 0;
+  return 1;
+}
+static int caminhoNome(char *dst, size_t n, const char *nome, const char *sufixo) {
+  if (!diretorio[0] || !nomeVale(nome)) return 0;
+  int r = snprintf(dst, n, "%s/%s%s", diretorio, nome, sufixo);
   return r >= 0 && (size_t)r < n;
 }
 void fontefalha_dir(const char *dir) {
   diretorio[0] = 0;
   if (dir && strlen(dir) < sizeof diretorio) strcpy(diretorio, dir);
+  snprintf(arquivoAtivo, sizeof arquivoAtivo, "fontefalha.txt");
   fontefalha_config_ler();
 }
-void fontefalha_config_ler(void) {
+static void lerArquivo(const char *arquivo, FonteFalhaConfig *saida) {
   FonteFalhaConfig c;
   char nome[1100], linha[512], k[40], extra;
-  padrao(&c); iniciada = 1;
-  FILE *f = caminho(nome, sizeof nome, "") ? fopen(nome, "r") : NULL;
+  padrao(&c);
+  FILE *f = caminhoNome(nome, sizeof nome, arquivo, "") ? fopen(nome, "r") : NULL;
   if (f) {
     while (fgets(linha, sizeof linha, f)) {
       int a, b, d, e;
@@ -75,11 +85,15 @@ void fontefalha_config_ler(void) {
     }
     fclose(f);
   }
-  configuracao = c;
+  *saida = c;
 }
-static int gravar(const FonteFalhaConfig *c) {
+void fontefalha_config_ler(void) {
+  lerArquivo(arquivoAtivo, &configuracao); iniciada = 1;
+}
+static int gravarArquivo(const FonteFalhaConfig *c, const char *arquivo) {
   char nome[1100], temp[1120];
-  if (!caminho(nome, sizeof nome, "") || !caminho(temp, sizeof temp, ".tmp.XXXXXX")) return 0;
+  if (!caminhoNome(nome, sizeof nome, arquivo, "") ||
+      !caminhoNome(temp, sizeof temp, arquivo, ".tmp.XXXXXX")) return 0;
   int fd = mkstemp(temp);
   if (fd < 0) return 0;
   FILE *f = fdopen(fd, "w");
@@ -95,8 +109,26 @@ static int gravar(const FonteFalhaConfig *c) {
   if (!ok) unlink(temp);
   return ok;
 }
+int fontefalha_preparar_privado(const char *arquivo) {
+  char nome[1100];
+  struct stat st;
+  FonteFalhaConfig compartilhada;
+  if (!caminhoNome(nome, sizeof nome, arquivo, "")) return 0;
+  // Uma copia existente, mesmo vazia, pertence a este perfil. Nao substitui-la
+  // por causa de erro de leitura ou por uma configuracao de outro perfil.
+  if (lstat(nome, &st) == 0) return S_ISREG(st.st_mode);
+  if (errno != ENOENT) return 0;
+  lerArquivo("fontefalha.txt", &compartilhada);
+  return gravarArquivo(&compartilhada, arquivo);
+}
+int fontefalha_arquivo(const char *arquivo) {
+  if (!nomeVale(arquivo) || !diretorio[0]) return 0;
+  snprintf(arquivoAtivo, sizeof arquivoAtivo, "%s", arquivo);
+  fontefalha_config_ler();
+  return 1;
+}
 static int publicar(const FonteFalhaConfig *c) {
-  if (!gravar(c)) return 0;
+  if (!gravarArquivo(c, arquivoAtivo)) return 0;
   configuracao = *c; return 1;
 }
 void fontefalha_config(FonteFalhaConfig *c) { iniciar(); if (c) *c = configuracao; }
