@@ -272,6 +272,7 @@
   1, /* hide watched movies (#366): Desligado, per profile on this device */
   0, /* provider setup: shared legacy accounts; choice itself belongs to this profile */
   0, /* Mic button in search (.tpk): Automatico, local */
+  1, /* audio language in the automatic choice: off (V_LIGA 1), behaviour unchanged */
 #ifdef NV_ANDROID
   0, /* Baixar registro: acao local, sem preferencia gravada */
 #endif

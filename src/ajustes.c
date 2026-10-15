@@ -560,6 +560,7 @@ typedef enum {
   // nao ter microfone fica sem ele) / Ligado / Desligado. LOCAL, so na tela do
   // .tpk. No fim: valor[]/CHAVE[] posicionais.
   AJ_MIC_BUSCA,
+  AJ_FONTE_IDIOMA_AUDIO, // V_LIGA: 0 preferir o idioma do audio na escolha automatica; local, append-only
 #ifdef NV_ANDROID
   AJ_BAIXAR_REGISTRO, // acao local; no fim para preservar os IDs existentes
 #endif
@@ -1442,6 +1443,7 @@ static const Opcao OPCOES[AJ_N] = {
 
   ESC("Configuração dos provedores", V_PROVEDORES_ESCOPO, 2),
   ESC("Botão de microfone na busca", V_MIC_BUSCA, 3),   // local: micBuscaLocal (.tpk)
+  ESC("Preferir o idioma do áudio",    V_LIGA, 2),   // local: fonteIdiomaAudioLocal (fontenota.h)
 #ifdef NV_ANDROID
   ACAO("Baixar registro"),
 #endif
@@ -1693,6 +1695,7 @@ static const char *CHAVE[] = {
 
   "-provedoresEscopo",
   "micBuscaLocal",
+  "fonteIdiomaAudioLocal",
 #ifdef NV_ANDROID
   "-baixarRegistro",
 #endif
@@ -2355,6 +2358,7 @@ int ajustes_buffer_preset(void) {
   return 0;   // so o ExoPlayer deixa o app escolher o buffer
 #endif
 }
+int ajustes_fonte_idioma_audio(void) { return valor[AJ_FONTE_IDIOMA_AUDIO] == 0; }
 int ajustes_cache_seek_mb(void) {
   static const int MB[] = { 0, 256, 512, 1024 };
   int v = valor[AJ_CACHE_SEEK];
@@ -4598,6 +4602,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA: /* estilo da legenda e desta TV */
     case AJ_CACHE_SEEK:     /* F07: o disco e o player sao desta TV */
     case AJ_BUFFER:         /* #338: o buffer e do player desta TV */
+    case AJ_FONTE_IDIOMA_AUDIO: /* como a prioridade da fonte: escolha desta TV */
     case AJ_TRAILER_ZOOM_TPK: /* #241: o firmware de cada Samsung reage de um jeito */
     case AJ_FUNDO:          /* o desfoque custa GPU desta TV; o web nao tem */
     case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: /* teste do vidro: visual desta TV */
@@ -6046,6 +6051,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_LOGO_TRAILER: return "Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.";
     case AJ_TRAILER_ZOOM_TPK: return "Amplia a imagem do trailer e libera os modos de recorte e zoom da proporção no player; em algumas TVs Samsung pode deixar a tela preta ou mostrar a tela inicial da TV.";
     case AJ_BUFFER: return "Quanto vídeo o player baixa à frente. Pequeno poupa memória e rede; Grande aguenta melhor internet instável e arquivos pesados, até o limite de memória da TV. Não muda a qualidade da imagem. Vale a partir do próximo vídeo.";
+    case AJ_FONTE_IDIOMA_AUDIO: return "Na escolha automática, fontes com o seu Idioma do áudio ou áudio duplo passam na frente na mesma resolução. Não é filtro: sem elas, a melhor das outras toca.";
     case AJ_CACHE_SEEK: return "Guarda no disco o trecho já baixado do vídeo, para voltar sem baixar de novo. Apagado ao fechar o player.";
     case AJ_ANIM: return "Use Reduzidas para movimentos mais discretos ao navegar pela interface.";
     case AJ_RESOLUCAO: return "Automática começa em 1080p e testa o 4K sozinha: só usa 4K se a tela for 4K e a TV aguentar com folga; se travar depois, volta para 1080p. Nunca baixa para 720p. Escolher 4K força 4K (se a TV não aguentar, o app volta para 1080p e avisa). 720p desenha em 1280x720 e amplia: mais leve, com texto mais suave. Reinicie o app depois de mudar. O vídeo não muda.";
@@ -8150,7 +8156,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_LEG_FORCADA:
     case AJ_AUD_LINGUA: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_FONTE_MANUAL:
     case AJ_FONTE_AUTO: case AJ_FONTE_REPOR: case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON: case AJ_SELOS_CORES: case AJ_FONTE_TOCAR_CONFERINDO: case AJ_FONTE_AQUECER: case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR: case AJ_FONTE_PRECARREGAR:
-    case AJ_FONTE_PRIORIDADE: case AJ_FONTE_HDR:
+    case AJ_FONTE_PRIORIDADE: case AJ_FONTE_HDR: case AJ_FONTE_IDIOMA_AUDIO:
     case AJ_SELOS_PACOTE:
     case AJ_REACAO_CREDITOS: case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PROXIMO_AUTO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_CONTAGEM:
     case AJ_FONTE_PRAZO: case AJ_TAM_MAX: case AJ_TAM_MIN: case AJ_PROPORCAO_PADRAO: case AJ_DTS_AC3:
