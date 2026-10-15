@@ -65,6 +65,7 @@ membros = '\n'.join([linha('    private var soltando'),
                      bloco('    private fun soltarSaida(', False),
                      bloco('    private val estavelRun = Runnable {'),
                      bloco('    private fun avaliarEstavel('),
+                     bloco('    private fun recriarSuperficie('),
                      bloco('    private val recriar = Runnable {')])
 fixture = r'''
 import java.util.concurrent.CountDownLatch
@@ -155,10 +156,14 @@ object Fixture {
     var activity: Any? = NuvioActivity()
     var player: ExoPlayer? = null
     var superficie: SurfaceView? = null
+    // RecriaHdr.dispensa(): a fixture nao e MStar/Amlogic — recria sempre.
+    val semRecriar = false
     val eventos = java.util.concurrent.CopyOnWriteArrayList<Int>()
     fun ev(tipo: Int, a: Int = 0, b: Int = 0) { eventos.add(tipo) }
 MEMBROS
     fun recriarAgora() { principal.post(recriar) }
+    // O caminho do aplicarJanela: pedido agendado pelo recriarSuperficie.
+    fun pedirRecriacao(ms: Long) { principal.post { recriarSuperficie(ms) } }
 }
 fun esperarAte(ms: Long, ok: () -> Boolean): Boolean {
     val fim = System.currentTimeMillis() + ms
@@ -228,7 +233,32 @@ fun main() {
     f.principal.esperar()
     check(f.principal.falha == null) { "excecao no fio principal: ${f.principal.falha}" }
     check(f.principal.pior < 100) { "fio principal preso ${f.principal.pior} ms" }
-    println("android_superficie_solta: fio principal livre (pior ${f.principal.pior} ms), recriacao unica, player liberado e decoder DV nativo ok")
+
+    // 5. Decoder DV nativo ANTES de estavel: o pedido da abertura (e o que a
+    //    transicao de HDR agenda) ainda e dispensado — religar o DispLink da
+    //    TCL no meio do start e o travamento que motivou o veto.
+    check(f.estavelEmitido) { "cenario 4 nao emitiu a superficie estavel" }
+    val p4 = ExoPlayer(); val sv4 = SurfaceView(p4)
+    f.principal.post { f.player = p4; f.superficie = sv4; f.estavelEmitido = false }
+    f.principal.post { f.decoderDv = true }
+    f.pedirRecriacao(600)
+    Thread.sleep(300); f.principal.esperar()
+    check(sv4.historia.isEmpty()) { "recriacao de abertura rodou em DV nativo: ${sv4.historia}" }
+    check(p4.renderers[1].saida === sv4.holder.surface) { "decoder DV perdeu a superficie" }
+
+    // 6. DEPOIS de estavel, com o MESMO decoder DV: a troca de aspecto e o
+    //    gesto do dono — sem ela o plano da TCL fica preso na geometria de
+    //    abertura e NENHUM modo muda (o "aspect ratio parou" desta rodada).
+    //    Recria uma vez, na espera longa, como o HDR10.
+    f.principal.post { f.estavelEmitido = true }
+    f.pedirRecriacao(600)
+    check(esperarAte(3000) { sv4.historia.size == 2 }) {
+        "troca de aspecto em DV nao recriou a superficie: ${sv4.historia}"
+    }
+    check(sv4.historia == listOf("GONE-solto", "VISIBLE"))
+    check(esperarAte(1000) { p4.renderers[1].saida === sv4.holder.surface }) { "decoder sem a superficie nova" }
+    check(f.principal.pior < 100) { "fio principal preso ${f.principal.pior} ms" }
+    println("android_superficie_solta: fio principal livre (pior ${f.principal.pior} ms), recriacao unica, player liberado, DV vetado na abertura e honrado depois de estavel")
 }
 '''.replace('MEMBROS', membros)
 cache = Path.home() / '.gradle/caches/modules-2/files-2.1'
