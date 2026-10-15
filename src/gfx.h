@@ -588,9 +588,13 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
 // A27 TOP CHROME (avatar chip, top bar, clock island): one material, one tint.
 // gfx_chrome_tinta = scrim alpha from "Opacidade do vidro", >= the floor;
 // gfx_chrome = the glass (BARRA), or opaque #1A1C21 + 1 px rim .22 without vidro.
+// gfx_chrome_dens = the density solve for that glass (luma ceiling, top cap,
+// bottom cap). Higher opacity lowers the ceiling and raises the caps, so the
+// scrim over bright art thickens. 78% stays 0.125 / 0.72 / 0.82.
 #define GFX_CHROME_TINTA_MIN 0.30f
 float gfx_chrome_tinta(void);
 void gfx_chrome(GfxRect r, float raio, float a);
+void gfx_chrome_dens(float out[3]);
 // Conteudo mudou sem passar por gfx_rect (textura reenviada no lugar): o
 // proximo quadro recaptura.
 void gfx_vidro_sujar(void);

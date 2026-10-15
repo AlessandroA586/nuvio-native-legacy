@@ -22,6 +22,14 @@
 #include <unistd.h>
 
 #define PERTO(a, b, e) (fabsf((a) - (b)) <= (e))
+// Luminancia relativa sRGB (WCAG): o contraste que o relatorio mede. O solve
+// do shader usa outra conta (canal ao quadrado); aqui vale o que o olho ve.
+static float rel(int r, int g, int b) {
+  float c[3] = { r / 255.0f, g / 255.0f, b / 255.0f };
+  int n;
+  for (n = 0; n < 3; n++) c[n] = c[n] <= 0.04045f ? c[n] / 12.92f : powf((c[n] + 0.055f) / 1.055f, 2.4f);
+  return 0.2126f * c[0] + 0.7152f * c[1] + 0.0722f * c[2];
+}
 
 static void tecla(SDL_Keycode k) {
   SDL_Event e;
@@ -111,6 +119,44 @@ int main(void) {
       ant = t;
     }
     assert(ant > GFX_CHROME_TINTA_MIN + 0.2f);   // a faixa e real, nao um valor so
+    unsetenv("NUVIO_SHOT_VIDRO_OPAC"); }
+
+  // DENSIDADE: o slider engrossa o scrim sobre arte clara. Teto de luminancia
+  // desce e os tetos de alfa sobem; 78% fica nos numeros de sempre
+  // (0,125 / 0,72 / 0,82). O inverso antigo (0,125/k^2, tetos*k) fazia os 60%
+  // lavarem o relogio #F4F5F8 e as abas #F3F2EF .74 sobre branco (~1,9:1).
+  { static const char *op[] = { "60", "78", "92" };
+    float ant = 0.0f;
+    for (k = 0; k < 3; k++) {
+      float d[3] = { 0, 0, 0 }, t, need, base, a, R, G, B, cr, ca;
+      setenv("NUVIO_SHOT_VIDRO_OPAC", op[k], 1);
+      ajustes_teste_vidro_env();
+      gfx_chrome_dens(d);
+      t = gfx_chrome_tinta();
+      need = 1.0f > d[0] ? 1.0f - sqrtf(d[0] / 1.0f) : 0.0f;   // arte branca, luma 1
+      base = 0.90f * t;
+      a = base > (need < d[1] ? need : d[1]) ? base : (need < d[1] ? need : d[1]);
+      // mix do shader: scrim #121418 sobre branco, depois a tinta por cima.
+      R = (0x12 / 255.0f) * a + (1.0f - a);
+      G = (0x14 / 255.0f) * a + (1.0f - a);
+      B = (0x18 / 255.0f) * a + (1.0f - a);
+      cr = (rel(0xf4, 0xf5, 0xf8) + 0.05f) / (rel((int)(R * 255 + 0.5f), (int)(G * 255 + 0.5f), (int)(B * 255 + 0.5f)) + 0.05f);
+      R = (0xf3 / 255.0f) * 0.74f + R * 0.26f;   // aba ociosa #F3F2EF a .74
+      G = (0xf2 / 255.0f) * 0.74f + G * 0.26f;
+      B = (0xef / 255.0f) * 0.74f + B * 0.26f;
+      ca = (rel(0xf3, 0xf2, 0xef) + 0.05f) / (rel((int)(R * 255 + 0.5f), (int)(G * 255 + 0.5f), (int)(B * 255 + 0.5f)) + 0.05f);
+      printf("dens %s: teto %.4f cap %.3f/%.3f alfa %.3f relogio %.2f aba %.2f\n",
+             op[k], d[0], d[1], d[2], a, cr, ca);
+      assert(d[2] + 1e-5f >= d[1]);
+      // O solve antigo subia o teto para 0,211 nos 60% e o relogio caia a
+      // ~1,9:1 sobre branco. Abaixo de 78% o teto nao passa de 0,125, e o
+      // contraste do relogio nunca volta atras quando o slider sobe.
+      assert(d[0] <= 0.125f + 1e-4f && cr >= 4.5f && ca >= 1.4f);
+      if (k) assert(cr + 1e-3f >= ant);
+      if (k == 1)
+        assert(PERTO(d[0], 0.125f, 1e-4f) && PERTO(d[1], 0.72f, 1e-4f) && PERTO(d[2], 0.82f, 1e-4f));
+      ant = cr;
+    }
     unsetenv("NUVIO_SHOT_VIDRO_OPAC"); }
 
   // MOVIMENTO.

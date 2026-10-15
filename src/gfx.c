@@ -3435,13 +3435,8 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   // A densidade resolvida pelo fundo: o texto #cdd3dd com contraste 4 pede
   // luminancia <= 0,125 atras dele; tetos de 0,72 em cima e 0,82 embaixo.
   vidPend.dens[0] = 0.125f; vidPend.dens[1] = 0.72f; vidPend.dens[2] = 0.82f; vidPend.dens[3] = 1.0f;
-  // A27 chrome: "Opacidade do vidro" also scales that luma-driven density
-  // (material.md 5, alpha *= opacityUser), or over bright art the setting
-  // would change nothing; the gfx_chrome_tinta floor still holds under it.
-  if (tipo == GFX_VIDRO_BARRA) {
-    float k = gfx_vidro_opacidade();
-    vidPend.dens[0] = 0.125f / (k * k); vidPend.dens[1] = 0.72f * k; vidPend.dens[2] = 0.82f * k;
-  }
+  // A27 chrome: the same solve, scaled by "Opacidade do vidro" (gfx_chrome_dens).
+  if (tipo == GFX_VIDRO_BARRA) gfx_chrome_dens(vidPend.dens);
   vidPend.aro = contorno ? 0.14f : 0.0f;
   vidPend.aroLuz = contorno ? 0.28f : 0.0f;
   gfx_rect(r, vidPend.fonte ? vidH2 : 0, GFX_VIDRO, 0, 0, 0, raio, 1, 1, 1, a);
@@ -3613,6 +3608,16 @@ float gfx_chrome_tinta(void) {
   t = t < 0.0f ? 0.0f : t > 1.0f ? 1.0f : t;
   al = 0.16f + 0.62f * t;
   return al < GFX_CHROME_TINTA_MIN ? GFX_CHROME_TINTA_MIN : al;
+}
+// k = opacidade/0.78. Below 78% the old 0.125/(k*k) raised the luma ceiling
+// (0.211 at 60%) and dropped the caps, so over white the scrim thinned and the
+// clock fell to ~1.9:1. The clear end must not go thinner than the 78% glass:
+// clamp k up to 1. Above 78% the ceiling still falls and the caps still rise,
+// so more opacity keeps adding tint. At 78% the numbers stay 0.125/0.72/0.82.
+void gfx_chrome_dens(float out[3]) {
+  float k = gfx_vidro_opacidade();
+  if (k < 1.0f) k = 1.0f;
+  out[0] = 0.125f / (k * k); out[1] = 0.72f * k; out[2] = 0.82f * k;
 }
 void gfx_chrome(GfxRect r, float raio, float a) {
   if (ajustes_vidro()) { gfx_vidro(r, raio, GFX_VIDRO_BARRA, 0.0f, 0.0f, a); return; }
