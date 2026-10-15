@@ -2171,6 +2171,8 @@ static void *lerMkv(void *arg) {
       }
     }
     fflush(stdout); }
+  // #510: sourceInfo can omit embedded text tracks the app can render itself.
+  nLeg = faixasmkv_acrescentar_texto(faixaLeg, nLeg, NV_FAIXA_MAX, fx, n);
   { char m[64];
     snprintf(m, sizeof m, "mkv: %d faixas lidas, %d legendas com idioma", n, casou);
     marco(m); }

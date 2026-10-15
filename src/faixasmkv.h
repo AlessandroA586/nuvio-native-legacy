@@ -55,4 +55,8 @@ int faixasmkv_tem_imagem(const MkvFaixa *fx, int n);
 // ordinalMkv do arquivo. Idempotente. Devolve o novo `nLeg`.
 int faixasmkv_acrescentar_imagem(VideoFaixa *leg, int nLeg, int max, const MkvFaixa *fx, int n);
 
+// Append omitted ASS/SSA/SRT/WebVTT tracks for the LG overlay. Native entries
+// stay unchanged; recovered entries have unique negative numbers. Idempotent.
+int faixasmkv_acrescentar_texto(VideoFaixa *leg, int nLeg, int max, const MkvFaixa *fx, int n);
+
 #endif
