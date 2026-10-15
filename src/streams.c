@@ -1681,6 +1681,15 @@ int stream_resolver_escolhida(int i, unsigned geracao, char *url, unsigned nu,
     printf("[fonte] %d torrent escolhido nao abriu no servidor P2P (erro %d)\n", i,
            p2p_ultimo_erro());
   } else if (r == DEBRID_BAIXANDO) {
+    pthread_mutex_lock(&verTrava);
+    if (listaGeracao == geracao && i < n) {
+      lista[i].emCache = 0;
+      lista[i].cacheNativo = 0;
+      lista[i].cacheNegado = 1;
+      lista[i].foraCache = 1;
+      atomic_store(&foraCacheFoco, i);
+    }
+    pthread_mutex_unlock(&verTrava);
     printf("[fonte] %d torrent escolhido esta baixando no %s (%d%%)\n", i,
            servico && servico[0] ? servico : "debrid", pct ? *pct : -1);
   } else {
@@ -3141,7 +3150,13 @@ static void tituloAddon(const Stream *s, char *buf, size_t tam) {
     t[k++] = (char)c;
   }
   t[k] = 0;
-  nv_limpar_texto(t, lim, sizeof lim, NV_LIMPA_UMA_LINHA);
+  const char *nome = t;
+  if (cacheConfirmado(s) && !strncmp(nome, "⚡", strlen("⚡"))) {
+    nome += strlen("⚡");
+    if (!strncmp(nome, "\xEF\xB8\x8F", 3)) nome += 3;
+    while (*nome == ' ') nome++;
+  }
+  nv_limpar_texto(nome, lim, sizeof lim, NV_LIMPA_UMA_LINHA);
   snprintf(buf, tam, "%s", lim[0] ? lim : s->provedor);
 }
 
