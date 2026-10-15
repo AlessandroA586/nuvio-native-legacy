@@ -1700,6 +1700,7 @@
   T("Episódio", "Tập"),
   T("Episódio %d", "Tập %d"),
   T("Episódio 3", "Tập 3"),
+  T("Episódio anterior", "Tập trước"),
   T("Episódio certo", "Đúng tập"),
   T("Episódio certo, sem plays repetidos no Trakt.", "Đúng tập, không lặp lượt phát trên Trakt."),
   T("Episódio novo", "Tập mới"),

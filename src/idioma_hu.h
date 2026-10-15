@@ -1700,6 +1700,7 @@
   T("Episódio", "Epizód"),
   T("Episódio %d", "%d. epizód"),
   T("Episódio 3", "3. epizód"),
+  T("Episódio anterior", "Előző epizód"),
   T("Episódio certo", "A megfelelő epizód"),
   T("Episódio certo, sem plays repetidos no Trakt.", "Helyes epizód, nincs duplázás a Trakton."),
   T("Episódio novo", "Új epizód"),

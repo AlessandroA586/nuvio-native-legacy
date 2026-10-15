@@ -1700,6 +1700,7 @@
   T("Episódio", "Bölüm"),
   T("Episódio %d", "Bölüm %d"),
   T("Episódio 3", "Bölüm 3"),
+  T("Episódio anterior", "Önceki bölüm"),
   T("Episódio certo", "Doğru bölüm"),
   T("Episódio certo, sem plays repetidos no Trakt.", "Doğru bölüm, Trakt’ta tekrar yok."),
   T("Episódio novo", "Yeni bölüm"),

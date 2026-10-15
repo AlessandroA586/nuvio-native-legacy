@@ -1700,6 +1700,7 @@
   T("Episódio", "Avsnitt"),
   T("Episódio %d", "Avsnitt %d"),
   T("Episódio 3", "Avsnitt 3"),
+  T("Episódio anterior", "Föregående avsnitt"),
   T("Episódio certo", "Rätt avsnitt"),
   T("Episódio certo, sem plays repetidos no Trakt.", "Rätt avsnitt, inga dubbletter i Trakt."),
   T("Episódio novo", "Nytt avsnitt"),

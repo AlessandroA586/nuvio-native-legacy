@@ -1700,6 +1700,7 @@
   T("Episódio", "エピソード"),
   T("Episódio %d", "エピソード %d"),
   T("Episódio 3", "エピソード 3"),
+  T("Episódio anterior", "前のエピソード"),
   T("Episódio certo", "正しいエピソード"),
   T("Episódio certo, sem plays repetidos no Trakt.", "正しい次の話。Trakt の重複再生もなし。"),
   T("Episódio novo", "新エピソード"),

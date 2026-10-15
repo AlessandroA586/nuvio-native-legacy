@@ -1699,6 +1699,7 @@
   { "Episódio", "Episode" },
   { "Episódio %d", "Episode %d" },
   { "Episódio 3", "Episode 3" },
+  { "Episódio anterior", "Previous episode" },
   { "Episódio certo", "The right episode" },
   { "Episódio certo, sem plays repetidos no Trakt.", "The right episode, no repeated plays on Trakt." },
   { "Episódio novo", "New episode" },
