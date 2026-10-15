@@ -1744,7 +1744,7 @@ static void corpoLista(GfxRect c, float a) {
   visiveis = IL_VIS_COL(col);
 #ifdef NV_TOUCH_UI
   if (telefoneui_ativo()) {
-    if (!toqueAudio.livre) {
+    if (!toquerol_livre(&toqueAudio)) {
       ajustarRolagem();
       toqueAudioOffset = rolagem[col] * (IL_LN_H + IL_LN_VAO);
     }

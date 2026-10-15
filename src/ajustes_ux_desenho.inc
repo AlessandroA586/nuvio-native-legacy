@@ -481,7 +481,7 @@ static void ajToqueConfirmar(int a, int b) {
 }
 static void ajToqueCancelar(int a, int b) { (void)a; (void)b; if (uxEditor) uxCancelar(); }
 static void ajToqueEscolhaAlvo(GfxRect r, int v, int op, float topo, float base) {
-  if (ajPontInline && ajEditandoLinha(op))
+  if (ajTelaCheia() && ajPontInline && ajEditandoLinha(op))
     ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, topo, base, NULL, ajToqueInlineValor, v, op);
 }
 static void ajToqueBotoes(float direita, float yc, float a) {

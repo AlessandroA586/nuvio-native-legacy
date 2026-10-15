@@ -823,7 +823,7 @@ static int sidebar_permitida(void) {
 }
 #ifdef NV_TOUCH_UI
 static int sidebarToquePode(void) {
-  return sidebar_permitida() && !menu_aberto() && !player_aberto() &&
+  return layout_modo_mobile() && sidebar_permitida() && !menu_aberto() && !player_aberto() &&
          !central_aberta() && !ilha_modal_aberto() && !celb_aberto() &&
          !ctx_aberto() && !spainel_aberto() && app_central_pode();
 }
@@ -6366,7 +6366,7 @@ void app_desenhar(Uint32 agora) {
     // ele esta na tela, ela fica por baixo, medindo, sem se desenhar.
     ilha_coberta(spainel_da_ilha() || atualizacao_cobre_ilha());
 #ifdef NV_TOUCH_UI
-    CAMADA_SE(central_aberta() || ilha_modal_aberto());
+    if (layout_modo_mobile()) CAMADA_SE(central_aberta() || ilha_modal_aberto());
 #endif
     ilha_desenhar(agora);
   }
@@ -6385,13 +6385,13 @@ void app_desenhar(Uint32 agora) {
   if (!registro_aberto()) pipintro_desenhar(agora);
   if (!registro_aberto()) {
 #ifdef NV_TOUCH_UI
-    CAMADA_SE(spot_aberto());
+    if (layout_modo_mobile()) CAMADA_SE(spot_aberto());
 #endif
     spot_desenhar(agora, spotVeuPronto);
   }
   if (!registro_aberto()) {
 #ifdef NV_TOUCH_UI
-    CAMADA_SE(celb_aberto());
+    if (layout_modo_mobile()) CAMADA_SE(celb_aberto());
 #endif
     celb_desenhar();
   }
@@ -6406,7 +6406,7 @@ void app_desenhar(Uint32 agora) {
     ilha_relogio_visivel(ajustes_relogio_ligado());
     ilha_posicionar(1);
 #ifdef NV_TOUCH_UI
-    CAMADA_SE(central_aberta() || ilha_modal_aberto());
+    if (layout_modo_mobile()) CAMADA_SE(central_aberta() || ilha_modal_aberto());
 #endif
     ilha_desenhar(agora);
   }

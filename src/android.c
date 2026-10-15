@@ -34,6 +34,10 @@ static void interfaceBool(const char *nome, int ativa) {
 }
 
 void android_interface_modo(int mobile) { interfaceBool("interfaceModo", mobile); }
+int android_interface_mobile_auto(void) {
+  const char *modo = getenv("NUVIO_INTERFACE_AUTO");
+  return modo && !strcmp(modo, "1");
+}
 
 void android_baixar_registro(const char *arquivo, const char *sucesso, const char *falha) {
   JNIEnv *env = (JNIEnv *)SDL_AndroidGetJNIEnv();

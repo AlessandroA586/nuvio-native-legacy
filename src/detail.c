@@ -93,7 +93,7 @@ static void heroReiniciar(void);
 
 static int detalheRetrato(void) {
 #ifdef NV_TOUCH_UI
-  return NV_TELA_W < NV_TELA_H;
+  return telefoneui_ativo() && NV_TELA_W < NV_TELA_H;
 #else
   return 0;
 #endif
@@ -329,6 +329,25 @@ static float velSec[N_SECOES], velY = 0.0f;
 static ToqueRolagem toqueDetalhe, toqueSec[N_SECOES], toqueColecao, toquePessoa;
 static int toqueSecAtiva = -1;
 static float toquePessoaOffset;
+static void toqueDetalheLimpar(void) {
+  toquerol_limpar(&toqueDetalhe); toquerol_limpar(&toqueColecao); toquerol_limpar(&toquePessoa);
+  for (int r = 0; r < N_SECOES; r++) toquerol_limpar(&toqueSec[r]);
+  toqueSecAtiva = -1;
+}
+static void toqueDetalheSincronizarModo(void) {
+  static int mobileAntes;
+  int mobile = telefoneui_ativo();
+  if (!mobile) {
+    toqueDetalheLimpar();
+    toquePessoaOffset = 0;
+    if (mobileAntes && pessoaAberta) {
+      int linha = pessoaFoco / PES_POR_LINHA;
+      if (pessoaLinha > linha) pessoaLinha = linha;
+      else if (pessoaLinha + 1 < linha) pessoaLinha = linha - 1;
+    }
+  }
+  mobileAntes = mobile;
+}
 #endif
 // Miniatura de episodio e cartaz relacionado chegando: esvanecem sobre o
 // esqueleto em vez de trocar num quadro (revela.h). Um registro por coluna.
@@ -2603,14 +2622,16 @@ static void executarMais(int dm) {
 
 void detail_evento(const SDL_Event *e) {
   if (sinopse_aberta()) { sinopse_evento(e); return; }
+#ifdef NV_TOUCH_UI
+  toqueDetalheSincronizarModo();
+#endif
   if (corpoSobArte()) {
     if (trocaarte_aberto()) trocaarte_evento(e);
     return;
   }
 #ifdef NV_TOUCH_UI
   if (toquerol_navegacao(e)) {
-    toquerol_limpar(&toqueDetalhe); toquerol_limpar(&toqueColecao); toquerol_limpar(&toquePessoa);
-    for (int r = 0; r < N_SECOES; r++) toquerol_limpar(&toqueSec[r]);
+    toqueDetalheLimpar();
   }
 #endif
   if (saindo) return;
@@ -3376,7 +3397,7 @@ static void trailerDetalheTela(void) {
 }
 static int toqueDetalheRolar(const PonteiroRolagem *e) {
   int r = 0;
-  if (!aberto || saindo || pessoaAberta || colListaAberta || trailer_cheia() || corpoSobArte()) return 0;
+  if (!telefoneui_ativo() || !aberto || saindo || pessoaAberta || colListaAberta || trailer_cheia() || corpoSobArte()) return 0;
   if (e->eixoY) r = toquerol_evento(&toqueDetalhe, e);
   else {
     if (e->fase == PONT_ROL_INICIO) {
@@ -3394,14 +3415,14 @@ static int toqueDetalheRolar(const PonteiroRolagem *e) {
 }
 static int toqueColecaoRolar(const PonteiroRolagem *e) {
   int r;
-  if (!colListaAberta) return 0;
+  if (!telefoneui_ativo() || !colListaAberta) return 0;
   r = toquerol_evento(&toqueColecao, e);
   if (r) { colListaVel = 0; ctxhold_cancelar(&holdLista); okDesceEm = 0; }
   return r;
 }
 static int toquePessoaRolar(const PonteiroRolagem *e) {
   int r;
-  if (!pessoaAberta) return 0;
+  if (!telefoneui_ativo() || !pessoaAberta) return 0;
   r = toquerol_evento(&toquePessoa, e);
   if (r) { ctxhold_cancelar(&holdLista); okDesceEm = 0; }
   return r;
@@ -3413,6 +3434,9 @@ static void toquePessoaFocar(int i, int b) { (void)b; pessoaFoco = i; }
 static float blocoAnt[3] = { -1.0f, -1.0f, -1.0f };   // Notas / Numeros / Progresso no quadro anterior
 
 void detail_atualizar(float dt, Uint32 agora) {
+#ifdef NV_TOUCH_UI
+  toqueDetalheSincronizarModo();
+#endif
   // `agora` ficou sem uso quando o repouso da troca de temporada saiu (ver a
   // nota mais abaixo). Fica na assinatura porque ela e a mesma de todas as
   // telas e app.c chama todas do mesmo jeito.
@@ -3420,7 +3444,7 @@ void detail_atualizar(float dt, Uint32 agora) {
   episodios_menu_atualizar(dt);   // as molas do menu de visto / painel da temporada
   if (!aberto) { blocoAnt[0] = blocoAnt[1] = blocoAnt[2] = -1.0f; return; }
 #ifdef NV_TOUCH_UI
-  trailerDetalheTela();
+  if (telefoneui_ativo()) trailerDetalheTela();
   if (detalheRetrato() && carro) {
     carCheia = 1; cartao = carTxt = cartaoVel = carTxtVel = 0;
   }
@@ -3440,7 +3464,7 @@ void detail_atualizar(float dt, Uint32 agora) {
     if (alvo > maxY) alvo = maxY;
     if (alvo < 0.0f) alvo = 0.0f;
 #ifdef NV_TOUCH_UI
-    if (toqueColecao.livre) { colListaScroll = toquerol_clamp(colListaScroll, 0, maxY); colListaVel = 0; }
+    if (toquerol_livre(&toqueColecao)) { colListaScroll = toquerol_clamp(colListaScroll, 0, maxY); colListaVel = 0; }
     else
 #endif
     colListaScroll = anim_mola2(&colListaVel, colListaScroll, alvo, dt, NV_MOLA2_SCROLL);
@@ -3736,7 +3760,7 @@ void detail_atualizar(float dt, Uint32 agora) {
   // continua com o tempo do web.
   { float alvoPg = nivel >= 1 && !focoNoTopo() ? 1.0f : 0.0f;
 #ifdef NV_TOUCH_UI
-    if (toqueDetalhe.livre) alvoPg = scrollY > 1.0f ? 1.0f : 0.0f;
+    if (toquerol_livre(&toqueDetalhe)) alvoPg = scrollY > 1.0f ? 1.0f : 0.0f;
 #endif
     pg = anim_mola(pg, alvoPg, dt, alvoPg < pg ? NV_MOLA_PAGINA * 2.0f : NV_MOLA_PAGINA); }
   if (carro) {
@@ -3852,7 +3876,7 @@ void detail_atualizar(float dt, Uint32 agora) {
       }
       if (alvo < 0.0f) alvo = 0.0f;
 #ifdef NV_TOUCH_UI
-      if (!toqueSec[r].livre)
+      if (!toquerol_livre(&toqueSec[r]))
 #endif
       scrollSec[r] = anim_mola2(&velSec[r], scrollSec[r], alvo, dt, NV_MOLA2_SCROLL);
     }
@@ -3861,7 +3885,7 @@ void detail_atualizar(float dt, Uint32 agora) {
     // arrastar o foco junto.
     if (r != SEC_EPISODIOS && secaoN(SEC_EPISODIOS) > 0 &&
 #ifdef NV_TOUCH_UI
-        !toqueSec[SEC_EPISODIOS].livre &&
+        !toquerol_livre(&toqueSec[SEC_EPISODIOS]) &&
 #endif
         epAncora < foco.nColunas[SEC_EPISODIOS]) {
       float ax = xItem(SEC_EPISODIOS, epAncora) - NV_DETP_X;
@@ -3896,7 +3920,7 @@ void detail_atualizar(float dt, Uint32 agora) {
         }
         if (depois
 #ifdef NV_TOUCH_UI
-            && !toqueDetalhe.livre
+            && !toquerol_livre(&toqueDetalhe)
 #endif
            ) scrollY += bloco - blocoAnt[kb];
       }
@@ -3930,7 +3954,7 @@ void detail_atualizar(float dt, Uint32 agora) {
     if (alvoY < 0.0f) alvoY = 0.0f;
   }
 #ifdef NV_TOUCH_UI
-  if (toqueDetalhe.livre) { scrollY = toquerol_clamp(scrollY, 0, fmaxf(0, docFim - NV_TELA_H)); velY = 0; }
+  if (toquerol_livre(&toqueDetalhe)) { scrollY = toquerol_clamp(scrollY, 0, fmaxf(0, docFim - NV_TELA_H)); velY = 0; }
   else
 #endif
   scrollY = anim_mola2(&velY, scrollY, alvoY, dt, NV_MOLA2_SCROLL);
@@ -6384,7 +6408,7 @@ static void desenhaListaColecao(float a) {
 
   // --- partes -----------------------------------------------------------
 #ifdef NV_TOUCH_UI
-  { float area = areaLista.h;
+  if (telefoneui_ativo()) { float area = areaLista.h;
     toquerol_vincular(&toqueColecao, areaLista, gfx_escala(),
                      0, n * passo - area, 1, &colListaScroll);
     ponteiro_rolagem(toqueColecaoRolar);
@@ -6457,7 +6481,7 @@ static void desenhaListaColecao(float a) {
                       tx, ty, tw, 31.0f, a, 3);
   }
 #ifdef NV_TOUCH_UI
-  gfx_sem_recorte();
+  if (telefoneui_ativo()) gfx_sem_recorte();
 #endif
 }
 
@@ -7237,29 +7261,37 @@ static void desenhaPessoa(float a) {
     txt_desenhar_alpha(lt, x0, 96.0f, a);
 #ifdef NV_TOUCH_UI
     float topo = 96.0f + lt.h + 28.0f, area = NV_TELA_H - 24.0f - topo;
-    if (!toquePessoa.livre) toquePessoaOffset = pessoaLinha * (PES_CARD_H + 92.0f);
-    toquerol_vincular(&toquePessoa, (GfxRect){x0, topo, NV_TELA_W - x0, area}, gfx_escala(),
-                     0, ((n + pessoaColunas() - 1) / pessoaColunas()) * (PES_CARD_H + 92.0f) - area, 1, &toquePessoaOffset);
-    ponteiro_rolagem(toquePessoaRolar);
-    gfx_recorte(x0, topo, NV_TELA_W - x0, area);
+    if (telefoneui_ativo()) {
+      if (!toquerol_livre(&toquePessoa)) toquePessoaOffset = pessoaLinha * (PES_CARD_H + 92.0f);
+      toquerol_vincular(&toquePessoa, (GfxRect){x0, topo, NV_TELA_W - x0, area}, gfx_escala(),
+                       0, ((n + pessoaColunas() - 1) / pessoaColunas()) * (PES_CARD_H + 92.0f) - area, 1, &toquePessoaOffset);
+      ponteiro_rolagem(toquePessoaRolar);
+      gfx_recorte(x0, topo, NV_TELA_W - x0, area);
+    }
 #endif
     for (i = 0; i < n; i++) {
       int col = i % pessoaColunas(), lin = i / pessoaColunas();
       float x = x0 + col * (PES_CARD_W + PES_CARD_GAP);
       float y = 96.0f + lt.h + 28.0f + (lin - pessoaLinha) * (PES_CARD_H + 92.0f);
 #ifdef NV_TOUCH_UI
-      y = topo + lin * (PES_CARD_H + 92.0f) - toquePessoaOffset;
-      if (y + PES_CARD_H + 92.0f < topo || y > topo + area) continue;
-#else
-      if (lin < pessoaLinha) continue;
+      if (telefoneui_ativo()) {
+        y = topo + lin * (PES_CARD_H + 92.0f) - toquePessoaOffset;
+        if (y + PES_CARD_H + 92.0f < topo || y > topo + area) continue;
+      } else
 #endif
+      if (lin < pessoaLinha) continue;
       GfxRect r = { x, y, PES_CARD_W, PES_CARD_H };
       const char *po = pessoa_credito_poster(i);
       GLuint t = po[0] ? tex_obter_larg(po, PES_CARD_W) : 0;
 #ifdef NV_TOUCH_UI
-      ponteiro_alvo_faixa(r.x, r.y, r.w, PES_CARD_H + 92.0f, topo, topo + area, toquePessoaFocar, NULL, i, 0);
-#else
-      if (y + PES_CARD_H > NV_TELA_H - 24.0f) break;
+      if (telefoneui_ativo())
+        ponteiro_alvo_faixa(r.x, r.y, r.w, PES_CARD_H + 92.0f, topo, topo + area, toquePessoaFocar, NULL, i, 0);
+      else {
+#endif
+        if (y + PES_CARD_H > NV_TELA_H - 24.0f) break;
+#ifdef NV_TOUCH_UI
+        ponteiro_alvo(r.x, r.y, r.w, PES_CARD_H + 92.0f, toquePessoaFocar, NULL, i, 0);
+      }
 #endif
       if (i == pessoaFoco) { pesFocoRect = r; snprintf(pesFocoArte, sizeof pesFocoArte, "%s", po); }
       // Foco da Home (focoprof.h): anel so com o ajuste ligado, senao cresce.
@@ -7290,7 +7322,7 @@ static void desenhaPessoa(float a) {
           } } }
     }
 #ifdef NV_TOUCH_UI
-    gfx_sem_recorte();
+    if (telefoneui_ativo()) gfx_sem_recorte();
 #endif
   }
 }
@@ -7501,6 +7533,9 @@ static void maisDesenhar(void) {
 }
 
 void detail_desenhar(Uint32 agora) {
+#ifdef NV_TOUCH_UI
+  toqueDetalheSincronizarModo();
+#endif
   if (!aberto) return;
   amigostitulo_atualizar();   // barato: so remonta quando o feed social mudou
   // COR VIVA: a pagina do titulo manda na cor, acima da home que pode estar

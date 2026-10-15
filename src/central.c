@@ -687,7 +687,7 @@ static void desenhaEdicao(float x, float y, float w, float h, float a) {
 #ifdef NV_TOUCH_UI
   toquerol_vincular(&toqueCentral, (GfxRect){x, y, w, h}, gfx_escala(), 0, maxR, 1, &rolaEd);
   if (aberta && a > 0.5f) ponteiro_rolagem(toqueCentralRolar);
-  if (!toqueCentral.livre)
+  if (!toquerol_livre(&toqueCentral))
 #endif
   rolaEd = alvo;
   gfx_recorte(x - 8.0f, y, w + 16.0f, h);
@@ -710,10 +710,11 @@ static void desenhaEdicao(float x, float y, float w, float h, float a) {
     } else gfx_icone(ic, "aj_plus", 0.953f, 0.949f, 0.937f, 0.45f * a);
     if (aberta && a > 0.5f && ponteiro_ativo()) {
 #ifdef NV_TOUCH_UI
+      if (layout_modo_mobile())
       ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, y, y + h, ptFoco, ptOk, j, 1);
-#else
-      ponteiro_alvo(r.x, r.y, r.w, r.h, ptFoco, ptOk, j, 1);
+      else
 #endif
+      ponteiro_alvo(r.x, r.y, r.w, r.h, ptFoco, ptOk, j, 1);
     }
   }
   gfx_sem_recorte();

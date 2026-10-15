@@ -4219,7 +4219,7 @@ void stream_folha_atualizar(float dt, Uint32 agora) {
     int r = grupo == 1 ? linhaDe(focoFixo) : -1;
     if (r >= 0) {
 #ifdef NV_TOUCH_UI
-      if (!toqueFontes.livre)
+      if (!toquerol_livre(&toqueFontes))
 #endif
       rolagem += linhaY[r] - focoFixoY;
       foco = r; focoVisto = r;
@@ -4227,7 +4227,7 @@ void stream_folha_atualizar(float dt, Uint32 agora) {
     focoFixo = -1;
   }
 #ifdef NV_TOUCH_UI
-  if (toqueFontes.livre) { rolagem = toquerol_clamp(rolagem, 0, fmaxf(0, alturaTotal - areaLista() + 40)); velRol = 0; }
+  if (toquerol_livre(&toqueFontes)) { rolagem = toquerol_clamp(rolagem, 0, fmaxf(0, alturaTotal - areaLista() + 40)); velRol = 0; }
   else
 #endif
   rolagem=anim_mola2(&velRol,rolagem,alvoRolagem(),dt,NV_MOLA2_SCROLL);
@@ -4711,9 +4711,10 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     while(fim<nProvedores && soma+iw[fim+1]+6.0f<=maxW){ soma+=iw[fim+1]+6.0f; fim++; }
     if(fim==ini) fim=ini+1;
 #ifdef NV_TOUCH_UI
+    if (layout_modo_mobile())
     { float total = 2 * pin, antes = 0;
       for (int i = -1; i < nProvedores; i++) { total += iw[i + 1] + 6; if (i < ini) antes += iw[i + 1] + 6; }
-      if (!toqueFontesAbas.livre) toqueFontesAbasOffset = antes;
+      if (!toquerol_livre(&toqueFontesAbas)) toqueFontesAbasOffset = antes;
       toquerol_vincular(&toqueFontesAbas, (GfxRect){lx - 2, segY, maxW, FOLHA_ABAS_H}, gfx_escala(),
                        0, total - 6 - maxW, 0, &toqueFontesAbasOffset);
       ini = -1; fim = nProvedores; soma = fminf(total, maxW + 6);
@@ -4725,18 +4726,19 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     else gfx_cor((GfxRect){sx,segY,soma-6.0f,FOLHA_ABAS_H},.5f,.113f,.118f,.137f,anim);
     sx+=pin;
 #ifdef NV_TOUCH_UI
-    sx -= toqueFontesAbasOffset;
+    if (layout_modo_mobile()) sx -= toqueFontesAbasOffset;
 #endif
     for(int i=ini;i<fim;i++){
       int qidx=i+1;
       GfxRect r={sx,segY+pin,iw[qidx],FOLHA_ABA_H}; int sel=i==filtro;
       if (ptr) {
 #ifdef NV_TOUCH_UI
+        if (layout_modo_mobile()) {
         float l = fmaxf(r.x, lx - 2), d = fminf(r.x + r.w, lx - 2 + maxW);
         if (d > l) ponteiro_alvo(l, r.y, d - l, r.h, NULL, ponteiroFolhaFiltro, i, 0);
-#else
-        ponteiro_alvo(r.x, r.y, r.w, r.h, NULL, ponteiroFolhaFiltro, i, 0);
+        } else
 #endif
+        ponteiro_alvo(r.x, r.y, r.w, r.h, NULL, ponteiroFolhaFiltro, i, 0);
       }
       if(sel&&grupo==0) focoFonte(r,.5f,anim);
       else if(sel) { if (ajustes_vidro()) gfx_cor(r,.5f,1,1,1,.12f*anim); else gfx_cor(r,.5f,.204f,.212f,.243f,anim); }

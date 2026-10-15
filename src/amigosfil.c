@@ -125,7 +125,7 @@ static void amigosfilToqueVincular(float x0, float y, float alt, float corte, in
                    gfx_escala(), 0.0f, n > 0 ? maxX : 0.0f, 0, &scroll);
 }
 void amigosfil_retomar_foco(int *coluna) {
-  if (toque.livre && coluna) {
+  if (toquerol_livre(&toque) && coluna) {
     float ponto = toque.regiao.x + toque.regiao.w * 0.35f, melhor = 1e9f;
     int n = amigosfil_n_colunas();
     for (int i = 0; i < n; i++) {
@@ -301,7 +301,7 @@ void amigosfil_atualizar(float dt, int focada, int *colunaP) {
   if (ultX0 >= 0.0f) {
     float alvo = n > 0 && focada ? alvoScroll(coluna, ultX0, ultAlt) : (n > 0 ? scroll : 0.0f);
 #ifdef NV_TOUCH_UI
-    if (!toque.livre)
+    if (!toquerol_livre(&toque))
 #endif
       scroll = anim_mola2_reduzida(&vScroll, scroll, alvo, dt, NV_MOLA2_SCROLL, red);
   }

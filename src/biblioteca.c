@@ -516,6 +516,7 @@ static float toqueBibliotecaMax(void) {
   return linhas > 0 ? fmaxf(0.0f, gradeY() + (linhas - 1) * passoLinha() + alturaLinha() - BIB_GRADE_BASE) : 0.0f;
 }
 static int toqueBibliotecaRolar(const PonteiroRolagem *e) {
+  if (!layout_modo_mobile()) { toqueLivre = 0; return 0; }
   if (e->fase == PONT_ROL_INICIO) {
     if (!e->eixoY || e->x < bibX() || e->x >= bibX() + bibW() || e->y < gradeY() || e->y >= BIB_GRADE_BASE || nCelulas < 1 || teclado_aberto()) return 0;
     toqueLivre = 1; velY = 0.0f; okDesde = 0;
@@ -530,7 +531,7 @@ static int toqueBibliotecaRolar(const PonteiroRolagem *e) {
   return 1;
 }
 static void toqueBibliotecaRetomarFoco(void) {
-  if (toqueLivre && nCelulas > 0) {
+  if (layout_modo_mobile() && toqueLivre && nCelulas > 0) {
     int r = (int)((scrollY + (BIB_GRADE_BASE - gradeY()) * 0.35f) / passoLinha());
     int i = r * colunas() + foco.coluna;
     if (i >= nCelulas) i = nCelulas - 1;
@@ -1187,6 +1188,9 @@ void biblioteca_evento(const SDL_Event *e) {
 
 void biblioteca_atualizar(float dt, Uint32 agora) {
   int linhas, r, c, ini = gradeIni();
+#ifdef NV_TOUCH_UI
+  if (!layout_modo_mobile()) toqueLivre = 0;
+#endif
   (void)agora;
   lerPref();
   if (teclado_aberto()) teclado_atualizar(dt, agora);

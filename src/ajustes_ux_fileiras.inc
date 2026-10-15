@@ -302,7 +302,7 @@ static void desenhaFileiras(void) {
   }
   // ROLAGEM: a primeira linha desenhada (filTopo) acompanha o foco.
 #ifdef NV_TOUCH_UI
-  if (!ajToqueLivre[AJT_FILEIRAS])
+  if (!layout_modo_mobile() || !ajToqueLivre[AJT_FILEIRAS])
 #endif
   { float area = base - topo, h = 0;
     int f = filFoco < n ? filFoco : n - 1, j;

@@ -50,7 +50,7 @@ static int toqueRolar(const PonteiroRolagem *e) {
   return toqueFila >= 0 && toqueFila < AP_NFILAS ? toquerol_evento(&toque[toqueFila], e) : 0;
 }
 static void toqueRetomar(void) {
-  if (toqueFila >= 0 && toque[toqueFila].livre) {
+  if (toqueFila >= 0 && toquerol_livre(&toque[toqueFila])) {
     fila = toqueFila;
     col = (int)((toqueX[fila] + toque[fila].regiao.w * 0.35f) / (AP_PW + AP_PGAP));
     if (col >= nFila(fila)) col = nFila(fila) - 1;
@@ -443,12 +443,14 @@ void amigoperfil_desenhar(Uint32 agora) {
 #ifdef NV_TOUCH_UI
     float util = fmaxf(0.0f, NV_TELA_W - 40.0f - rx);
     float maxX = fmaxf(0.0f, (n - 1) * (AP_PW + AP_PGAP) + AP_PW - util);
+    if (layout_modo_mobile()) {
     toquerol_vincular(&toque[f], (GfxRect){ rx, y + 46.0f, util, AP_PH + 40.0f }, gfx_escala(), 0.0f, maxX, 0, &toqueX[f]);
-    if (f == fila && !toque[f].livre) {
+    if (f == fila && !toquerol_livre(&toque[f])) {
       float esq = col * (AP_PW + AP_PGAP), dir = esq + AP_PW;
       if (esq < toqueX[f]) toqueX[f] = esq;
       if (dir > toqueX[f] + util) toqueX[f] = dir - util;
       toqueX[f] = toquerol_clamp(toqueX[f], 0.0f, maxX);
+    }
     }
 #endif
     tituloFila(rx, y, i18n(tit), a);
@@ -466,25 +468,28 @@ void amigoperfil_desenhar(Uint32 agora) {
       continue;
     }
 #ifdef NV_TOUCH_UI
-    gfx_recorte(rx, y - 4.0f, util, AP_PH + 48.0f);
+    if (layout_modo_mobile()) gfx_recorte(rx, y - 4.0f, util, AP_PH + 48.0f);
 #endif
     for (c = 0; c < n && c < SV_FILA_MAX; c++) {
       float x = rx + (float)c * (AP_PW + AP_PGAP);
 #ifdef NV_TOUCH_UI
-      x -= toqueX[f];
+      if (layout_modo_mobile()) x -= toqueX[f];
 #endif
       GfxRect r = { x, y, AP_PW, AP_PH };
       float fc = fFoco[f][c];
 #ifdef NV_TOUCH_UI
+      if (layout_modo_mobile()) {
       if (x >= rx + util || x + AP_PW <= rx) continue;
       if (a > 0.99f) {
         float ax = fmaxf(r.x, rx), dir = fminf(r.x + r.w, rx + util);
         ponteiro_alvo(ax, r.y, dir - ax, r.h, ponteiroCartaz, NULL, f, c);
       }
-#else
+      } else
+#endif
+      {
       if (x + AP_PW > NV_TELA_W - 40.0f) break;
       if (a > 0.99f) ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroCartaz, NULL, f, c);
-#endif
+      }
       if (f == AP_MANDOU) {
         const SvEnviada *m = &perf.mandou[c];
         cartaz(r, m->poster, fc, a);
@@ -511,7 +516,7 @@ void amigoperfil_desenhar(Uint32 agora) {
       }
     }
 #ifdef NV_TOUCH_UI
-    gfx_sem_recorte();
+    if (layout_modo_mobile()) gfx_sem_recorte();
 #endif
   }
   { TxtLinha t = txt_linha(TXT_MINI, i18n("OK · abrir o título   ·   Voltar · fechar"), 150, 148, 160, 255);

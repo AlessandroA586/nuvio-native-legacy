@@ -1718,7 +1718,7 @@ static float alfaFileiraHome(int r, float y, float topo, float corte) {
     if (fatia > fade) fade = fatia;
   }
 #ifdef NV_TOUCH_UI
-  if (toqueLivreY || homeRetratoTelefone())
+  if ((telefoneui_ativo() && toqueLivreY) || homeRetratoTelefone())
     fade = anim_clamp((y + NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r) - corte) / 80.0f, 0.0f, 1.0f);
 #endif
   return fade;
@@ -1884,7 +1884,7 @@ static int toqueHeroValido(void) {
 
 static void toqueHeroAtualizar(float dt, Uint32 agora, int oculto, int reduzido) {
   if (!toqueHero.estado) return;
-  if (oculto || !ajustes_hero_ligado() || !toqueHeroValido()) {
+  if (!telefoneui_ativo() || oculto || !ajustes_hero_ligado() || !toqueHeroValido()) {
     toqueHeroCancelar(); return;
   }
   heroUltTecla = agora;
@@ -1909,6 +1909,7 @@ static void toqueHeroAtualizar(float dt, Uint32 agora, int oculto, int reduzido)
 }
 
 static int toqueHeroRolar(const PonteiroRolagem *e) {
+  if (!telefoneui_ativo()) { toqueHeroCancelar(); return 0; }
   if (e->fase == PONT_ROL_INICIO) {
     if (e->eixoY || toqueHero.estado || !ajustes_hero_ligado() ||
         heroVisivelToque() <= .25f || detail_aberto() || player_aberto() ||
@@ -1971,6 +1972,7 @@ static int toqueHeroRolar(const PonteiroRolagem *e) {
 }
 
 static int toqueHomeRolar(const PonteiroRolagem *e) {
+  if (!telefoneui_ativo()) { toqueHomeLimpar(); toqueHeroCancelar(); return 0; }
   if (toqueHero.estado || (e->fase == PONT_ROL_INICIO && !e->eixoY)) {
     int capturado = toqueHeroRolar(e);
     if (capturado || toqueHero.estado) return capturado;
@@ -2017,6 +2019,7 @@ static int toqueHomeRolar(const PonteiroRolagem *e) {
 // O controle retoma da parte visivel, sem devolver a pagina ao foco que ficou
 // fora da tela durante o gesto. Tocar um card continua escolhendo aquele card.
 static void toqueHomeRetomarFoco(void) {
+  if (!telefoneui_ativo()) { toqueHomeLimpar(); return; }
   if (toqueLivreY && nFileiras > 0) {
     float y = topoFileiras() - scrollY, melhor = 1e9f;
     int escolhido = foco.fileira;
@@ -2045,7 +2048,7 @@ static void toqueHomeRetomarFoco(void) {
 
 static float homeScrollYPasso(float alvo, float dt, int reduzido) {
 #ifdef NV_TOUCH_UI
-  if (toqueHeroYPreso) {
+  if (telefoneui_ativo() && toqueHeroYPreso) {
     float minimo = -empurraHero(), maximo = toqueHomeMaxY();
     if (toqueHeroPaginaW != NV_TELA_W || toqueHeroPaginaH != NV_TELA_H ||
         toqueHeroPaginaMin != minimo || toqueHeroPaginaMax != maximo) {
@@ -2055,7 +2058,7 @@ static float homeScrollYPasso(float alvo, float dt, int reduzido) {
     }
     return scrollY;
   }
-  if (toqueLivreY)
+  if (telefoneui_ativo() && toqueLivreY)
     return anim_clamp(scrollY, -empurraHero(), toqueHomeMaxY());
 #endif
   return anim_mola2_reduzida(&velY, scrollY, alvo, dt, NV_MOLA2_SCROLL, reduzido);
@@ -3502,6 +3505,9 @@ static void heroAquecerVizinhos(Uint32 agora) {
 
 void home_atualizar(float dt, Uint32 agora) {
   curadoria_passo();   // a curadoria da fileira Herói, no seu tempo (curadoria.h)
+#ifdef NV_TOUCH_UI
+  if (!telefoneui_ativo()) { toqueHomeLimpar(); toqueHeroCancelar(); }
+#endif
   sincronizarFileiras();
   // A FILEIRA DE AMIGOS tem tantas colunas quantos rostos (+ "Adicionar"), e
   // isso muda sem o catalogo mudar (um amigo novo chega do recomenda.c).
@@ -3993,7 +3999,7 @@ static GfxRect heroArteRect = { 0, 0, NV_TELA_BASE_W, NV_TELA_BASE_H };
 #endif
 #ifdef NV_TOUCH_UI
 static void heroPublicarFoco(const CatItem *ci, float aTexto) {
-  if (!focoHero || !ci || toqueHero.estado || aTexto <= 0.004f) return;
+  if (!telefoneui_ativo() || !focoHero || !ci || toqueHero.estado || aTexto <= 0.004f) return;
   itemFoco.indice = heroAtual;
   itemFoco.rect = heroArteRect;
   itemFoco.arte = arteDoItem(ci, NULL);
@@ -4574,11 +4580,12 @@ static GfxRect heroEditorialRect(int editorial, float aspect) {
 }
 #ifdef NV_TOUCH_UI
 static void heroTrailerAtualizaRect(GfxRect r, float saida) {
-  if (saida <= 0.001f && heroTrailerItem >= 0 && heroTrailerItem == heroAtual &&
+  if (telefoneui_ativo() && saida <= 0.001f && heroTrailerItem >= 0 && heroTrailerItem == heroAtual &&
       trailer_aberto() && !trailer_cheia() && trailer_dono() == TRAILER_DONO_HOME)
     trailer_rect(r);
 }
 static void alvoAcaoHero(GfxRect r, float saida, float cin, float alpha) {
+  if (!telefoneui_ativo()) return;
   float primeira = topoFileiras() - scrollY;
   if (homeRetratoTelefone() && (r.x < homeConteudoX() || r.x + r.w > homeConteudoDireita())) return;
   if (saida <= 0.001f && cin <= 0.005f && alpha > 0.25f &&
@@ -5259,8 +5266,7 @@ static void desenhaHero(Uint32 agora, float saida) {
       // retangulo que o item ocupava. Com o foco no destaque esse retangulo e a
       // arte do proprio destaque, e sem isto o OK abriria o ULTIMO card que
       // recebeu foco — o titulo errado, com a animacao vindo de fora da tela.
-#ifndef NV_TOUCH_UI
-      if (focoHero && ci) {
+      if (!telefoneui_ativo() && focoHero && ci) {
         itemFoco.indice = heroAtual;
         itemFoco.rect   = heroArteRect;
         itemFoco.arte   = arteDoItem(ci, NULL);
@@ -5269,7 +5275,6 @@ static void desenhaHero(Uint32 agora, float saida) {
         itemFoco.meta   = ci->meta;
         publicarItemFoco();
       }
-#endif
     } }
 }
 
@@ -6947,6 +6952,9 @@ void home_desenhar(Uint32 agora) {
   // Nao conservar ponteiros para o catalogo de outro quadro/perfil quando
   // nenhuma tela de titulo publica um item (pasta, social ou estado vazio).
   temItemFoco = 0;
+#ifdef NV_TOUCH_UI
+  if (!telefoneui_ativo()) { toqueHomeLimpar(); toqueHeroCancelar(); }
+#endif
   // O cartaz capaz do trailer No card e reescrito por quem o pintar neste quadro.
   cartaoTrailerItem = -1; cartaoTrailerPode = cartaoTrailerServe = 0;
   amigostitulo_atualizar();   // barato: so remonta quando o feed social mudou

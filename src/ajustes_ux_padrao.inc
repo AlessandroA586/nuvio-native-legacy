@@ -271,7 +271,7 @@
   1, /* owner decision #256: next episode auto-play is off by default */
   1, /* auto-skip credits, only with a real start+end marker: Desligado */
   5, /* owner decision #256: configurable countdown in seconds */
-  0, /* interface mode: TV, including on phones until Mobile is selected */
+  2, /* interface mode: Auto; saved TV=0 and Mobile=1 retain their meaning */
   0, /* Mic button in search (.tpk): Automatico, local */
   0, /* menu position (#461): Na lateral, the rail as always */
   0, /* collection tabs style (#205): Chips, as always */
