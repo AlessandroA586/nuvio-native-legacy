@@ -4329,6 +4329,13 @@ void app_atualizar(float dt, Uint32 agora) {
       // A lembrada e localizada ANTES de abrir, para a folha ja desenhar a
       // marca no primeiro quadro. E so uma varredura da lista em memoria.
       char base[24];
+      int epT, epE;
+      // O pedido pode trazer um episodio travado (toque no card com
+      // "Escolher a fonte ao reproduzir", ou "Fontes deste episodio" no
+      // menu, #513): a folha rouba o foco e detail_ep_foco passa a responder
+      // pelo episodio EM ANDAMENTO. O episodio travado vai por cwTocarT/E —
+      // a escolha na folha le dele em vez do foco (ver stream_folha_escolheu).
+      if (detail_pediu_fontes_ep(&epT, &epE)) { cwTocarT = epT; cwTocarE = epE; }
       idBaseDoTitulo(base, sizeof base);
       stream_preferir(base[0] ? fontepref_escolher_manual(base) : -1);
       nomeParaFolha(); stream_folha_abrir();
@@ -4879,6 +4886,11 @@ void app_atualizar(float dt, Uint32 agora) {
       int titulo=player_aberto()?player_indice():detail_indice(), t=0,e=0;
       if (player_aberto()) { player_episodio_atual(&t,&e); player_encerrar(); }
       else detail_ep_foco(&t,&e);
+      // O EPISODIO TRAVADO NO PEDIDO DA FOLHA ganha do foco (#513): com a
+      // folha aberta o foco da pagina ja nao diz qual card pediu fontes —
+      // sem isto a escolha tocava o episodio em andamento. O trava e consumida
+      // aqui uma unica vez; o titulo continua o da pagina aberta.
+      if (cwTocarT > 0 && cwTocarE > 0) { t = cwTocarT; e = cwTocarE; cwTocarT = cwTocarE = 0; }
       diagnostico_cancelar_vazao();
       player_abrir(titulo,NULL);
       player_definir_episodio(t,e);

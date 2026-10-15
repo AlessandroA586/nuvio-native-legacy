@@ -295,6 +295,13 @@ static int  amigosDoTitulo(AmigosTitulo *t) {
 // "Rafa terminou a série". 0/0 = nao se sabe ainda: a frase nunca e afirmada.
 static void ultimoEpisodio(int *t, int *e);
 static int  pedReproduzir = 0, pedMarcar = 0, pedFontes = 0;
+// O EPISODIO TRAVADO COM O PEDIDO DE FONTES (#513). A folha rouba o foco do
+// teclado: uma seta na folha nao chega a detail_evento, mas o menu do
+// episodio e as animacoes podem mover `foco` — e a escolha na folha lia
+// detail_ep_foco DEPOIS, no episodio em andamento em vez do card escolhido.
+// Trava com o pedido; detail_pediu_fontes entrega os dois e o roteador
+// (app.c) arma o episodio antes de abrir a folha.
+static int  pedFontesT = 0, pedFontesE = 0;
 // Marcar como ASSISTIDO. Separado de pedMarcar, que e "adicionar a lista".
 static int  pedAssistido = 0;
 static int  pedDoInicio = 0;         // botao "Reproduzir desde o inicio"
@@ -2623,7 +2630,12 @@ void detail_evento(const SDL_Event *e) {
     episodios_menu_evento(e);
     // "Fontes deste episodio" e a porta que a pressao longa tomou do card:
     // antes dela, qualquer OK ali abria as fontes.
-    if (episodios_menu_pediu_fontes()) pedFontes = 1;
+    if (episodios_menu_pediu_fontes()) {
+      pedFontes = 1;
+      // O alvo do MENU, nao o do foco: aberto pela pressao longa num card,
+      // o menu lembra o episodio dele (vmT/vmE) e a escolha e dele tambem.
+      episodios_menu_fontes(&pedFontesT, &pedFontesE);
+    }
     return;
   }
 
@@ -2977,7 +2989,12 @@ void detail_evento(const SDL_Event *e) {
         // escolhido a dedo tocava sem perguntar. Aqui a escolha e explicita,
         // entao o ajuste manda a folha; o "Retomar" do Continuar assistindo
         // e o botao primario seguem tocando como antes.
-        if (ajustes_fonte_manual()) pedFontes = 1; else pedReproduzir = 1;
+        if (ajustes_fonte_manual()) {
+          pedFontes = 1;
+          // O card e o alvo, mesmo com o foco ja fora da fileira quando a
+          // folha fechar — a escolha tem de tocar ESTE episodio (#513).
+          pedFontesT = ep->temporada; pedFontesE = ep->episodio;
+        } else pedReproduzir = 1;
     }
     return;
   }
@@ -7604,6 +7621,14 @@ int detail_pediu_amigos(char *imdb, size_t tam) {
   return 1;
 }
 int detail_pediu_fontes(void)     { int v = pedFontes;     pedFontes = 0;     return v; }
+// O episodio travado com o pedido, se havia um card/menu por tras dele.
+// 0/0 = a folha e do titulo (hold no primario, botao "..."): sem trava.
+int detail_pediu_fontes_ep(int *t, int *e) {
+  int tt = pedFontesT, te = pedFontesE;
+  pedFontesT = pedFontesE = 0;
+  if (t) *t = tt; if (e) *e = te;
+  return tt > 0 && te > 0;
+}
 int detail_pediu_explorar(void)   { int v = pedExplorar;   pedExplorar = 0;   return v; }
 // "Reproduzir desde o inicio" ainda cai no mesmo caminho do primario: o
 // roteador so sabe abrir o player no ponto salvo. Consumir o pedido aqui evita

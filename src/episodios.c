@@ -1112,6 +1112,15 @@ static void episodios_menu_desenharCorpo_(void) {
   if (vmSo) menuDesenhar((GfxRect){ 0.0f, 0.0f, (float)NV_TELA_W, (float)NV_TELA_H }, 1.0f);
 }
 int  episodios_menu_pediu_fontes(void) { int v = vmFontesPed; vmFontesPed = 0; return v; }
+// O EPISODIO QUE O MENU ALMOFAVA quando "Fontes deste episodio" foi pedido.
+// A folha abre por cima da pagina e rouba o foco do teclado: quando a pessoa
+// escolhe, detail_ep_foco ja nao ve o card — sem esta entrega o player
+// montava o alvo do episodio em ANDAMENTO, nao do escolhido (#513).
+int  episodios_menu_fontes(int *temporada, int *episodio) {
+  if (temporada) *temporada = vmT;
+  if (episodio)  *episodio = vmE;
+  return vmT > 0 && vmE > 0;
+}
 
 #ifdef NV_SHOT_HOOKS
 // Capturas: o menu de visto do episodio em foco, como a pressao longa abre.
