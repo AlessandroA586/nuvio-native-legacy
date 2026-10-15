@@ -1071,6 +1071,7 @@ int stream_extrair(const char *json, const char *provedor, Stream **saida) {
       textoRaizLinhas(p, fim, "title", titulo, sizeof titulo);
       int cache = cacheDeclarado(p, fim);
       s.emCache = cache > 0 || (cache == 0 && marcaEmCache(p, fim));
+      s.cacheNegado = cache < 0;
       metadadosFaixas(p, fim, &s);
       metadadosFiltro(p, fim, nomeFonte, s.descricao, titulo, &s);
       // behaviorHints.bingeGroup — ANCORADO NO OBJETO, e nao procurado solto.
