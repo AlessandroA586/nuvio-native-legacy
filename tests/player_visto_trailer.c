@@ -43,6 +43,15 @@
 #include "progresso.h"
 #include "intro.h"
 #include "perfis.h"
+#include "rede.h"
+
+// Keep background marker lookups offline too.
+int rede_pedir(const RedePedido *pedido, RedeResposta *resposta) {
+  (void)pedido;
+  memset(resposta, 0, sizeof *resposta);
+  resposta->erro = REDE_INDISPONIVEL;
+  return 0;
+}
 
 // Relogio monotono controlado: seek/retomada nao ganham tempo assistido.
 static double agoraMono;
@@ -458,6 +467,22 @@ int main(void) {
     assert(prog_por_chave("tt90000030", &r) && fabs(r.posSeg - 1374) < 1.0); }
   player_encerrar();
   assert(nVisto == 1 && cat_item(0)->progresso == 100);   // 95%: concluido na saida
+
+  // Credits beyond the reported duration disprove percentage completion.
+  sessao("tt90000032", 0, 536); creditos = 1335;
+  tocar(500, 1); player_encerrar();
+  assert(nVisto == 0 && nTrakt == 0 && cat_item(0)->progresso < 100);
+
+  // A pause during buffering must persist once buffering clears, before exit.
+  sessao("tt90000031", 0, 1449);
+  tocar(232, 1);
+  buffer = 1; quadro();
+  { SDL_Event e = {0}; e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_PAUSE; player_evento(&e); }
+  quadro();
+  buffer = 0; quadro(); quadro();
+  { ProgRegistro r;
+    assert(prog_por_chave("tt90000031", &r) && fabs(r.posSeg - 232) < 1.0); }
+  player_encerrar();
 
   puts("PASS: trailer, pausa, buffer e seek sem reproducao nao marcam; >= 90% pela posicao conclui (oficial)");
   return 0;

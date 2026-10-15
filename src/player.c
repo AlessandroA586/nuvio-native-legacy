@@ -364,9 +364,10 @@ static int assistidoAmostra;
 static unsigned trailerSessao;
 // Ultima posicao gravada DURANTE a sessao (gravarProgressoParcial); -1 = nenhuma.
 static double parcialPos = -1.0;
+static int parcialPausa;
 static void zerarAssistido(void) {
   assistidoSeg = 0; assistidoAmostra = 0; trailerSessao = trailer_geracao();
-  parcialPos = -1.0;
+  parcialPos = -1.0; parcialPausa = 0;
   snprintf(fonteSessao, sizeof fonteSessao, "%s", comVideo ? video_url_atual() : "");
 }
 static int fontePrincipal(void) {
@@ -2058,8 +2059,11 @@ static void fecharSessao(int manter) {
   // antes dos 90% — no marcador de creditos ou no cartao A seguir — mas so com
   // o trecho realmente tocado. A do oficial (WatchProgress.isCompleted) e so a
   // POSICAO >= 90%, inclusive depois de um seek.
-  int fimLegacy = player_regra_visto(base, assistidoSeg, posSeg, concluiuAgora(credEfetivo()), &chegou);
-  int assistiu = scrobble_concluiu(posSeg, duracaoSeg, fimLegacy);
+  double cred = credEfetivo();
+  int duracaoContradita = cred > 1.0 && cred - duracaoSeg > intro_creditos_janela(duracaoSeg);
+  int fimLegacy = player_regra_visto(base, assistidoSeg, posSeg, concluiuAgora(cred), &chegou);
+  // A known later ending disproves completion by the reported percentage.
+  int assistiu = !duracaoContradita && scrobble_concluiu(posSeg, duracaoSeg, fimLegacy);
   // Concluido e concluido: o registro leva o "alcancado tocando" que o selo
   // de visto do catalogo (cat_visto) le, como o markAsCompleted do oficial.
   if (assistiu) chegou = 1;
@@ -2105,7 +2109,8 @@ static void fecharSessao(int manter) {
     if (ci && ci->imdb[0] && !jfid_e(ci->imdb)) {
       char id[64];
       idTrakt(ci, id, sizeof id);
-      trakt_marcar(id, pos, duracaoSeg, assistidoSeg, assistiu);
+      // Trakt also completes by percentage, so an invalid duration cannot be sent.
+      if (!duracaoContradita) trakt_marcar(id, pos, duracaoSeg, assistidoSeg, assistiu);
       // "ASSISTIU" para os amigos, so quando CONCLUIU e so se ela ligou a
       // atividade (ou os "vistos recentemente" do perfil). Largar aos 8% nao
       // assistiu nada — e nao chega a lugar nenhum.
@@ -3842,10 +3847,14 @@ void player_atualizar(float dt, Uint32 agora) {
         if (epT > 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
         else snprintf(id, sizeof id, "%s", cs->imdb);
         trakt_scrobble(SCR_EV_PAUSOU, id, posSeg, duracaoSeg, assistidoSeg, 0);
-        if (!video_bufferando_ms()) gravarProgressoParcial(1, "pausa");
+        parcialPausa = 1;
       }
       tocouS = 0.0f;
       parcialRelogio = 0.0f;
+    }
+    if (parcialPausa && !video_bufferando_ms() && !scrubbing) {
+      gravarProgressoParcial(1, "pausa");
+      parcialPausa = 0;
     }
     // ~0,7 s depois de soltar um seek, grava o ponto novo (oficial:
     // scheduleProgressSyncAfterSeek). Vale pausado ou tocando.
