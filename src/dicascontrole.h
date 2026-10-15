@@ -10,6 +10,7 @@
 enum { DICAS_TV_GTV, DICAS_TV_LG, DICAS_TV_SAM, DICAS_TOQUE };
 
 void dicascontrole_depois_novidades(void);
+void dicascontrole_home_livre(int livre, float dt);
 void dicascontrole_abrir(void);
 int dicascontrole_aberto(void);
 int dicascontrole_visivel(void);

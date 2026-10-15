@@ -52,8 +52,13 @@ static int ehSegurar(int modo, int pagina) {
   return pagina == 2 || pagina == 3;
 }
 
-static int aberto, pagina, modoTeste = -1, secoTeste, compAberto = -1;
-static float entrada, espera, tempo;
+#ifndef NV_VERSAO
+#define NV_VERSAO "dev"
+#endif
+#define OCIOSO_S 1.5f // Home quieta e desenhada antes de abrir sozinho
+
+static int aberto, pagina, modoTeste = -1, secoTeste, compAberto = -1, automatico;
+static float entrada, espera, tempo, ocioso;
 static int compPedido; // ja mandou abrir o componente nesta dica
 
 int dicascontrole_modo(void) {
@@ -131,21 +136,37 @@ static void compFechar(int comp) {
   }
 }
 void dicascontrole_abrir(void) {
-  aberto = 1; pagina = 0; entrada = 0; tempo = 0; espera = 0;
+  aberto = 1; automatico = 0; pagina = 0; entrada = 0; tempo = 0; espera = 0;
   compAberto = -1; compPedido = 0;
 }
-void dicascontrole_depois_novidades(void) {
-  if (dicascontrole_ocupado()) return;
-  char *visto = dados_ler(DICASCONTROLE_ARQUIVO);
-  if (visto) { free(visto); return; }
-  espera = .36f; // Let the outgoing What's New card finish its fade first.
+// Marker holds the app version that last showed the tips (per device).
+static int jaVisto(void) {
+  char *v = dados_ler(DICASCONTROLE_ARQUIVO);
+  char atual[64];
+  snprintf(atual, sizeof atual, "%s\n", NV_VERSAO);
+  int igual = v && !strcmp(v, atual);
+  free(v);
+  return igual;
+}
+void dicascontrole_depois_novidades(void) {}
+// Called every frame with "Home idle, nothing else open"; opens once per
+// install/version after the screen stayed quiet for OCIOSO_S.
+void dicascontrole_home_livre(int livre, float dt) {
+  if (!livre || dicascontrole_ocupado()) { ocioso = 0; return; }
+  if (jaVisto()) return;
+  ocioso += dt;
+  if (ocioso >= OCIOSO_S) { ocioso = 0; dicascontrole_abrir(); automatico = 1; }
 }
 static void concluir(int a, int b) {
   (void)a; (void)b;
   if (!aberto) return;
   if (compAberto >= 0) { compFechar(compAberto); compAberto = -1; }
-  aberto = 0;
-  dados_gravar(DICASCONTROLE_ARQUIVO, "1\n");
+  aberto = 0; automatico = 0;
+  {
+    char v[64];
+    snprintf(v, sizeof v, "%s\n", NV_VERSAO);
+    dados_gravar(DICASCONTROLE_ARQUIVO, v);
+  }
   ponteiro_cancelar_toque();
 }
 static void ir(int p, int b) {
@@ -157,6 +178,7 @@ static void ir(int p, int b) {
 void dicascontrole_evento(const SDL_Event *e) {
   if (!aberto || e->type != SDL_KEYDOWN || e->key.repeat) return;
   SDL_Keycode k = e->key.keysym.sym;
+  if (automatico) { concluir(0, 0); return; } // any key closes, none reaches Home
   if (k == SDLK_LEFT) ir(pagina - 1, 0);
   else if (k == SDLK_RIGHT) ir(pagina + 1, 0);
   else if (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE ||
