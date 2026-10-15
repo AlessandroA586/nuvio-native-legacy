@@ -32,6 +32,10 @@ static void key(Uint32 t, Uint32 type) {
   assert(central_tecla(&e, 1));
 }
 static void frame(Uint32 t) { central_tecla_quadro(t, deliver); }
+// Expected fill after d ms held: dead zone, then linear to the threshold.
+static float fill(Uint32 d) {
+  return d <= CHS_ATRASO_MS ? 0.0f : (d - CHS_ATRASO_MS) / (float)(CHS_SEGURAR_MS - CHS_ATRASO_MS);
+}
 static void near(float actual, float expected) { assert(fabsf(actual - expected) < 0.00001f); }
 
 int main(void) {
@@ -53,21 +57,22 @@ int main(void) {
 
   key(t, SDL_KEYDOWN);
   near(progress(t), 0.0f);
-  frame(t + CHS_SEGURAR_MS / 4);
-  near(progress(t + CHS_SEGURAR_MS / 4), 0.25f);
-  frame(t + CHS_SEGURAR_MS / 2);
-  near(progress(t + CHS_SEGURAR_MS / 2), 0.5f);
+  frame(t + 250);
+  near(progress(t + 250), 0.0f);
+  assert(progress(t + 400) > 0.0f);
+  frame(t + CHS_SEGURAR_MS * 2 / 3);
+  near(progress(t + CHS_SEGURAR_MS * 2 / 3), 1.0f / 3);
   assert(!central_aberta() && delivered == 0);
 
   // Early release reverses immediately; short press still waits for emenda.
-  key(t + CHS_SEGURAR_MS / 2, SDL_KEYUP);
-  near(progress(t + CHS_SEGURAR_MS / 2), 0.5f);
-  frame(t + CHS_SEGURAR_MS / 2 + CHS_EMENDA_MS / 2);
-  assert(progress(t + CHS_SEGURAR_MS / 2 + CHS_EMENDA_MS / 2) > 0.0f);
-  assert(progress(t + CHS_SEGURAR_MS / 2 + CHS_EMENDA_MS / 2) < 0.5f);
+  key(t + CHS_SEGURAR_MS * 2 / 3, SDL_KEYUP);
+  near(progress(t + CHS_SEGURAR_MS * 2 / 3), 1.0f / 3);
+  frame(t + CHS_SEGURAR_MS * 2 / 3 + CHS_EMENDA_MS / 2);
+  assert(progress(t + CHS_SEGURAR_MS * 2 / 3 + CHS_EMENDA_MS / 2) > 0.0f);
+  assert(progress(t + CHS_SEGURAR_MS * 2 / 3 + CHS_EMENDA_MS / 2) < 1.0f / 3);
   assert(delivered == 0 && !central_aberta());
-  frame(t + CHS_SEGURAR_MS / 2 + CHS_EMENDA_MS);
-  near(progress(t + CHS_SEGURAR_MS / 2 + CHS_EMENDA_MS), 0.0f);
+  frame(t + CHS_SEGURAR_MS * 2 / 3 + CHS_EMENDA_MS);
+  near(progress(t + CHS_SEGURAR_MS * 2 / 3 + CHS_EMENDA_MS), 0.0f);
   assert(delivered == 2 && !central_aberta());
   frame(t + CHS_SEGURAR_MS);
   assert(delivered == 2);
@@ -76,7 +81,7 @@ int main(void) {
   t += CHS_ESQUECER_MS;
   key(t, SDL_KEYDOWN);
   frame(t + CHS_SEGURAR_MS - 1);
-  near(progress(t + CHS_SEGURAR_MS - 1), (CHS_SEGURAR_MS - 1.0f) / CHS_SEGURAR_MS);
+  near(progress(t + CHS_SEGURAR_MS - 1), fill(CHS_SEGURAR_MS - 1));
   assert(!central_aberta());
   frame(t + CHS_SEGURAR_MS);
   near(progress(t + CHS_SEGURAR_MS), 1.0f);
@@ -90,8 +95,8 @@ int main(void) {
   // Repeated keydowns use the same deadline and complete feedback as well.
   t += CHS_ESQUECER_MS;
   key(t, SDL_KEYDOWN);
-  key(t + CHS_SEGURAR_MS / 2, SDL_KEYDOWN);
-  near(progress(t + CHS_SEGURAR_MS / 2), 0.5f);
+  key(t + CHS_SEGURAR_MS * 2 / 3, SDL_KEYDOWN);
+  near(progress(t + CHS_SEGURAR_MS * 2 / 3), 1.0f / 3);
   key(t + CHS_SEGURAR_MS, SDL_KEYDOWN);
   near(progress(t + CHS_SEGURAR_MS), 1.0f);
   assert(central_aberta() && delivered == 2);
@@ -103,12 +108,23 @@ int main(void) {
   t += CHS_ESQUECER_MS;
   anim_politica_reduzida = 1;
   key(t, SDL_KEYDOWN);
-  near(progress(t + CHS_SEGURAR_MS / 4), 0.25f);
-  key(t + CHS_SEGURAR_MS / 4, SDL_KEYUP);
-  near(progress(t + CHS_SEGURAR_MS / 4), 0.0f);
-  frame(t + CHS_SEGURAR_MS / 4 + CHS_EMENDA_MS);
+  near(progress(t + CHS_SEGURAR_MS * 2 / 3), 1.0f / 3);
+  key(t + CHS_SEGURAR_MS * 2 / 3, SDL_KEYUP);
+  near(progress(t + CHS_SEGURAR_MS * 2 / 3), 0.0f);
+  frame(t + CHS_SEGURAR_MS * 2 / 3 + CHS_EMENDA_MS);
   assert(delivered == 4 && !central_aberta());
   anim_politica_reduzida = 0;
+  // Click released at 200 ms never drew progress, even through the release fade.
+  t += CHS_ESQUECER_MS;
+  anim_politica_reduzida = 0;
+  key(t, SDL_KEYDOWN);
+  frame(t + 100);
+  key(t + 200, SDL_KEYUP);
+  for (Uint32 d = 0; d <= 200 + CHS_EMENDA_MS + 20; d += 10) {
+    frame(t + d);
+    near(progress(t + d), 0.0f);
+  }
+
   puts("PASS: threshold progress, smooth cancellation, original short press, repeat, reduced motion");
   SDL_Quit();
   return 0;
