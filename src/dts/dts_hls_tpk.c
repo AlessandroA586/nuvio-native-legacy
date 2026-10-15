@@ -913,6 +913,10 @@ static void *fioMemoria(void *u) {
     Sessao *s;
     int linha = 0;
     usleep(500 * 1000);
+    pthread_mutex_lock(&G);   // no session (menus, other videos): nothing to read
+    s = atual;
+    pthread_mutex_unlock(&G);
+    if (!s) continue;
     rss = lerKb("/proc/self/status", "VmRSS");
     livre = lerKb("/proc/meminfo", "MemAvailable");
     pthread_mutex_lock(&G);

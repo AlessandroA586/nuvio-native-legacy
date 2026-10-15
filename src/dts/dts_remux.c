@@ -172,6 +172,7 @@ struct DtsRemuxGen {
   SwrContext *swr;
   AVChannelLayout swrIn, target; int swrRate, swrFmt;
   AVAudioFifo *fifo;
+  uint8_t **cvt; int cvtCap;        /* resampler output, reused (TrueHD: 1200 frames/s) */
   AVFrame *fr, *ef;
   AVPacket *pk, *op;
   int frame;                        /* encoder frame size (1536 AC3, 1024 AAC) */
@@ -651,6 +652,7 @@ void dts_remux_gen_free(DtsRemuxGen *g) {
   av_packet_free(&g->pk); av_packet_free(&g->op); av_frame_free(&g->fr); av_frame_free(&g->ef);
   avcodec_free_context(&g->dec); avcodec_free_context(&g->enc);
   swr_free(&g->swr); av_audio_fifo_free(g->fifo);
+  if (g->cvt) { av_freep(&g->cvt[0]); av_freep(&g->cvt); }
   av_channel_layout_uninit(&g->swrIn); av_channel_layout_uninit(&g->target);
   if (g->eng) {
     dts_engine_cancel(g->eng);
@@ -869,13 +871,16 @@ static int frameIn(DtsRemuxGen *g, AVFrame *f, char *err, size_t errn) {
   g->cum += f->nb_samples;
   int64_t p48 = av_rescale_rnd(psrc, 48000, rate, AV_ROUND_NEAR_INF) - swr_get_delay(g->swr, 48000);
   int cap = (int)av_rescale_rnd(f->nb_samples, 48000, rate, AV_ROUND_UP) + 256;
-  uint8_t **buf = NULL;
-  if ((rr = av_samples_alloc_array_and_samples(&buf, NULL, r->info.out_channels, cap, AV_SAMPLE_FMT_FLTP, 0)) < 0) {
-    fail(err, errn, "Audio buffer", rr); return -1;
+  if (cap > g->cvtCap) {   /* grows to the largest frame once; out_channels is fixed per source */
+    if (g->cvt) { av_freep(&g->cvt[0]); av_freep(&g->cvt); }
+    g->cvtCap = 0;
+    if ((rr = av_samples_alloc_array_and_samples(&g->cvt, NULL, r->info.out_channels, cap, AV_SAMPLE_FMT_FLTP, 0)) < 0) {
+      g->cvt = NULL; fail(err, errn, "Audio buffer", rr); return -1;
+    }
+    g->cvtCap = cap;
   }
-  int n = swr_convert(g->swr, buf, cap, (const uint8_t **)f->extended_data, f->nb_samples);
-  rr = n < 0 ? (fail(err, errn, "Audio resample", n), -1) : place(g, buf, n, p48, err, errn);
-  av_freep(&buf[0]); av_freep(&buf);
+  int n = swr_convert(g->swr, g->cvt, g->cvtCap, (const uint8_t **)f->extended_data, f->nb_samples);
+  rr = n < 0 ? (fail(err, errn, "Audio resample", n), -1) : place(g, g->cvt, n, p48, err, errn);
   if (rr < 0) return -1;
   return encodeReady(g, 0, err, errn);
 }
