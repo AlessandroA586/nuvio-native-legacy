@@ -432,6 +432,19 @@ function lerEstado() {
     assert.equal(context.__nvav.hls.loadSourceCalls[0], 'https://cdn.example.invalid/live/retry.m3u8');
   });
 
+  check('an extensionless HLS URL rejected by <video src> retries once through hls.js', () => {
+    call('parar');
+    assert.equal(call('abrir', 'https://cdn.example.invalid/play?id=7'), 1);
+    const v = context.__nvav.v;
+    v.error = { code: 4, message: 'MEDIA_ERR_SRC_NOT_SUPPORTED' };
+    v.__fire('error');
+    assert.equal(lerEstado().erro, 0, 'must not fail before trying hls.js');
+    assert.equal(context.__nvav.hls.loadSourceCalls[0], 'https://cdn.example.invalid/play?id=7');
+    context.__nvav.hls.__fire(FakeHls.Events.ERROR, { fatal: true, type: 'networkError', details: 'manifestParsingError' });
+    v.__fire('error');
+    assert.equal(lerEstado().erro, 1, 'a second failure is final');
+  });
+
   // no native support, no MediaSource at all: must fail outright with a logged reason.
   call('parar');
   delete context.MediaSource;

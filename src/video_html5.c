@@ -234,6 +234,14 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
     v.addEventListener("error",   function () {
       if (!ehDaSessao()) return;
       var e = v.error;
+      // URL HLS sem ".m3u8" (ou que redireciona para o manifesto) cai no
+      // <video src>; o Chromium sem HLS nativo recusa com code 4. Antes de
+      // falhar, tenta a mesma URL pelo hls.js uma vez.
+      if (e && e.code === 4 && !S.pronto && !S.hls && !tentouHls && hlsPossivel()) {
+        try { v.removeAttribute("src"); v.load(); } catch (e4) {}
+        abrirHls();
+        return;
+      }
       S.erro = 1; S.erroCodigo = e ? e.code : 0;
       S.erroMsg = "MediaError code=" + (e ? e.code : "?") + " " + (e && e.message ? e.message : "");
     });
@@ -252,13 +260,7 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
     // deteccao por causa da query.
     var caminho = s.split("?")[0].split("#")[0];
     var ehM3u8 = /\\.m3u8$/i.test(caminho);
-
-    if (!ehM3u8) {
-      v.src = s;
-      tentarTocar();
-      aplicarLayout();
-      return 1;   // progressivo, sem HLS
-    }
+    var tentouHls = 0;
 
     // HLS NATIVO: Safari/WebKit sabem tocar .m3u8 direto num <video src>. O
     // Chromium da TV (VIDAA) nao sabe — canPlayType devolve "" — mas a
@@ -267,6 +269,15 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
     // nao adivinhar por user agent.
     var nativo = "";
     try { nativo = v.canPlayType("application/vnd.apple.mpegurl"); } catch (e) {}
+    function hlsPossivel() { return !nativo && !!window.MediaSource; }
+
+    if (!ehM3u8) {
+      v.src = s;
+      tentarTocar();
+      aplicarLayout();
+      return 1;   // progressivo, sem HLS
+    }
+
     if (nativo) {
       v.src = s;
       tentarTocar();
@@ -279,52 +290,57 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
       return 0;
     }
 
-    function iniciarHls() {
-      if (!ehDaSessao()) return;
-      try {
-        var hls = new window.Hls({ maxBufferLength: 30, maxMaxBufferLength: 60, enableWorker: true });
-        S.hls = hls;
-        hls.on(window.Hls.Events.ERROR, function (evt, data) {
-          if (!ehDaSessao() || !S.hls || S.hls !== hls) return;
-          if (!data || !data.fatal) return;
-          S.erro = 1;
-          S.erroMsg = "hls.js fatal: " + (data.type || "?") + "/" + (data.details || "?");
-          try { hls.destroy(); } catch (e2) {}
-          if (S.hls === hls) S.hls = null;
-        });
-        hls.on(window.Hls.Events.MANIFEST_PARSED, function () { tentarTocar(); });
-        hls.loadSource(s);
-        hls.attachMedia(v);
-        aplicarLayout();
-      } catch (e3) {
-        S.erro = 1; S.erroMsg = "hls.js init: " + e3;
-      }
-    }
+    return abrirHls();
 
-    // Carrega hls.min.js SOB DEMANDA, do mesmo diretorio da pagina (o
-    // tools/tizen.sh --vidaa ja copia tools/vendor/hls.min.js para la).
-    // "ignore if already loaded": tanto window.Hls quanto uma tag <script>
-    // marcada ja presente pulam o download de novo.
-    if (window.Hls) {
-      iniciarHls();
-    } else {
-      var sc = document.querySelector('script[data-nv-hls]');
-      if (!sc) {
-        sc = document.createElement("script");
-        sc.src = "hls.min.js";
-        sc.setAttribute("data-nv-hls", "1");
-        sc.onload = function () { iniciarHls(); };
-        sc.onerror = function () {
-          if (sc.parentNode) sc.parentNode.removeChild(sc);
-          if (!ehDaSessao()) return;
-          S.erro = 1; S.erroMsg = "hls.min.js falhou ao carregar";
-        };
-        (document.head || document.documentElement).appendChild(sc);
-      } else {
-        sc.addEventListener("load", function () { iniciarHls(); });
+    function abrirHls() {
+      tentouHls = 1;
+      function iniciarHls() {
+        if (!ehDaSessao()) return;
+        try {
+          var hls = new window.Hls({ maxBufferLength: 30, maxMaxBufferLength: 60, enableWorker: true });
+          S.hls = hls;
+          hls.on(window.Hls.Events.ERROR, function (evt, data) {
+            if (!ehDaSessao() || !S.hls || S.hls !== hls) return;
+            if (!data || !data.fatal) return;
+            S.erro = 1;
+            S.erroMsg = "hls.js fatal: " + (data.type || "?") + "/" + (data.details || "?");
+            try { hls.destroy(); } catch (e2) {}
+            if (S.hls === hls) S.hls = null;
+          });
+          hls.on(window.Hls.Events.MANIFEST_PARSED, function () { tentarTocar(); });
+          hls.loadSource(s);
+          hls.attachMedia(v);
+          aplicarLayout();
+        } catch (e3) {
+          S.erro = 1; S.erroMsg = "hls.js init: " + e3;
+        }
       }
+
+      // Carrega hls.min.js SOB DEMANDA, do mesmo diretorio da pagina (o
+      // tools/tizen.sh --vidaa ja copia tools/vendor/hls.min.js para la).
+      // "ignore if already loaded": tanto window.Hls quanto uma tag <script>
+      // marcada ja presente pulam o download de novo.
+      if (window.Hls) {
+        iniciarHls();
+      } else {
+        var sc = document.querySelector('script[data-nv-hls]');
+        if (!sc) {
+          sc = document.createElement("script");
+          sc.src = "hls.min.js";
+          sc.setAttribute("data-nv-hls", "1");
+          sc.onload = function () { iniciarHls(); };
+          sc.onerror = function () {
+            if (sc.parentNode) sc.parentNode.removeChild(sc);
+            if (!ehDaSessao()) return;
+            S.erro = 1; S.erroMsg = "hls.min.js falhou ao carregar";
+          };
+          (document.head || document.documentElement).appendChild(sc);
+        } else {
+          sc.addEventListener("load", function () { iniciarHls(); });
+        }
+      }
+      return 3;   // HLS por hls.js (carregamento pode ainda estar em curso)
     }
-    return 3;   // HLS por hls.js (carregamento pode ainda estar em curso)
   }
 
   if (op === "parar" || op === "encerrar") {
