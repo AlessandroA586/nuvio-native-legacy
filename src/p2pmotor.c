@@ -62,6 +62,7 @@ static char raizInjetada[600];
 static _Atomic int usbPreferido;
 static pthread_mutex_t usbTrava = PTHREAD_MUTEX_INITIALIZER;
 static char usbRaiz[600];        // <usb>/p2p escolhida; "" = nenhuma
+static struct stat usbVolume;    // identity of the allocated mount root
 static int usbResolvido;         // scan ja rodou nesta configuracao
 static _Atomic int usbTem;       // resposta cacheada de usb_presente
 static double usbQuando;         // quando o cache acima foi medido
@@ -154,7 +155,13 @@ static uint64_t percorrerL(const char *p, int apagar, int fundo, LimTrab *lim) {
   }
   return soma;
 }
+static int pastasInternas(char *raiz, unsigned nr, char *mae, unsigned nm);
 static uint64_t percorrer(const char *p, int apagar, int fundo) {
+  if (apagar && !usbENossa(p)) {
+    char interna[600], mae[600];
+    // Internal storage predates markers; external paths always require ownership.
+    if (!pastasInternas(interna, sizeof interna, mae, sizeof mae) || strcmp(p, interna)) return 0;
+  }
   return percorrerL(p, apagar, fundo, NULL);
 }
 
@@ -211,6 +218,7 @@ static int usbServe(const char *candidato, char *raiz, unsigned nr, int criar) {
   if (!gravou || !fechou) { if (nosso) rmdir(p2p); return -1; }
   if (snprintf(raiz, nr, "%s", p2p) >= (int)nr) { if (nosso) rmdir(p2p); return -1; }
   if (nosso) usbMarcarDono(p2p);   // sem a marca, limpar_sobra nao apaga
+  if (criar && !usbENossa(p2p)) { if (nosso) rmdir(p2p); return -1; }
   return 1;
 }
 
@@ -286,6 +294,17 @@ static int pastasInternas(char *raiz, unsigned nr, char *mae, unsigned nm) {
   return 1;
 }
 
+// With usbTrava held: a writable pathname alone does not identify a drive.
+static int usbCacheValido(void) {
+  char volume[640];
+  struct stat st;
+  if (snprintf(volume, sizeof volume, "%s/..", usbRaiz) >= (int)sizeof volume ||
+      stat(volume, &st) != 0 || st.st_dev != usbVolume.st_dev ||
+      st.st_ino != usbVolume.st_ino || lstat(usbRaiz, &st) != 0 ||
+      !S_ISDIR(st.st_mode)) return 0;
+  return usbENossa(usbRaiz) && access(usbRaiz, W_OK) == 0;
+}
+
 // Pasta raiz do motor (<dados>/p2p ou <usb>/p2p) e a mae dela (statvfs). 0 sem pasta.
 // Com USB preferida a raiz escolhida e LEMBRADA em usbRaiz: sem isto cada
 // chamada re-sondava e um pendrive arrancado no meio da sessao trocava a raiz
@@ -295,14 +314,18 @@ static int pastas(char *raiz, unsigned nr, char *mae, unsigned nm) {
   if (!raizInjetada[0] && ajustes_p2p_ligado() && atomic_load(&usbPreferido)) {
     int ok;
     pthread_mutex_lock(&usbTrava);
-    if (usbResolvido && usbRaiz[0] && access(usbRaiz, W_OK) != 0) {
+    if (usbResolvido && usbRaiz[0] && !usbCacheValido()) {
       usbRaiz[0] = 0;
       usbResolvido = 0;
     }
     if (!usbResolvido || (!usbRaiz[0] && agora() - usbQuando >= 2.0)) {
       usbResolvido = 1;
-      if (usbEscanear(raiz, nr, 1)) snprintf(usbRaiz, sizeof usbRaiz, "%s", raiz);
-      else usbRaiz[0] = 0;
+      if (usbEscanear(raiz, nr, 1)) {
+        char volume[640];
+        snprintf(usbRaiz, sizeof usbRaiz, "%s", raiz);
+        snprintf(volume, sizeof volume, "%s/..", usbRaiz);
+        if (stat(volume, &usbVolume) != 0 || !usbCacheValido()) usbRaiz[0] = 0;
+      } else usbRaiz[0] = 0;
       atomic_store(&usbTem, usbRaiz[0] != 0);
       usbQuando = agora();
     }
@@ -343,7 +366,7 @@ void p2pmotor_definir_limite_mb(unsigned mb) { atomic_store(&limiteMb, mb); }
 // (nao uma por pasta): limpar_sobra acha a interna e as de pendrive na mesma
 // passada e um segundo agendar() nao pode ser recusado pela primeira limpeza
 // — era o que deixava a sobra interna viva quando uma USB existia (revisao).
-typedef struct SobraNo { struct SobraNo *prox; char *raiz; } SobraNo;
+typedef struct SobraNo { struct SobraNo *prox; char *raiz; struct stat identidade; } SobraNo;
 static SobraNo *sobraFila;      // so com a trava
 static int sobraUsb;           // USB discovery pending on the cleanup worker
 static void usbVarreSobra(const char *raizAtual);
@@ -362,7 +385,7 @@ void p2pmotor_definir_usb(int usar) {
   // Desligou: esquece a raiz e agenda apagar a pasta que ficou no pendrive —
   // so se o motor nao estiver de pe nela (a parada normal ja apaga pastaRaiz).
   pthread_mutex_lock(&usbTrava);
-  snprintf(velha, sizeof velha, "%s", usbRaiz);
+  snprintf(velha, sizeof velha, "%s", usbResolvido && usbCacheValido() ? usbRaiz : "");
   usbRaiz[0] = 0;
   usbResolvido = 0;
   atomic_store(&usbTem, 0);
@@ -379,7 +402,7 @@ int p2pmotor_usb_presente(void) {
   // A UI pergunta a cada quadro: resposta vale por ~2 s. O scan daqui NAO
   // cria pasta (criar=0): espiar nao pode sujar o pendrive de ninguem.
   if (agora() - usbQuando >= 2.0) {
-    if (usbRaiz[0] && access(usbRaiz, W_OK) != 0) { usbRaiz[0] = 0; usbResolvido = 0; }
+    if (usbResolvido && usbRaiz[0] && !usbCacheValido()) { usbRaiz[0] = 0; usbResolvido = 0; }
     if (!usbResolvido || !usbRaiz[0]) {
       usbResolvido = 0;
       // Presence alone does not authorize allocation of the cached path.
@@ -545,7 +568,9 @@ static void *limparFio(void *x) {
   if (scan && ajustes_p2p_ligado()) usbVarreSobra("");
   for (no = fila; no; no = no->prox) {
     uint64_t b = percorrer(no->raiz, 0, 0);
-    percorrer(no->raiz, 1, 0);
+    struct stat st;
+    if (stat(no->raiz, &st) == 0 && st.st_dev == no->identidade.st_dev &&
+        st.st_ino == no->identidade.st_ino) percorrer(no->raiz, 1, 0);
     printf("[p2p-motor] inicio: sobra de %.0f MB apagada em %s\n", (double)b / 1048576.0, no->raiz);
     fflush(stdout);
     free(no->raiz);
@@ -578,6 +603,7 @@ static void sobraAgendar(const char *raiz) {
   if (!no) return;
   no->raiz = strdup(raiz);
   if (!no->raiz) { free(no); return; }
+  if (stat(raiz, &no->identidade) != 0) { free(no->raiz); free(no); return; }
   pthread_mutex_lock(&trava);
   no->prox = sobraFila;
   sobraFila = no;

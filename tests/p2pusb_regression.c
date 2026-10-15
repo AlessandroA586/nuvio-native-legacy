@@ -87,6 +87,37 @@ int main(int argc, char **argv) {
       assert(usbEscanearDirL(good, cache, sizeof cache, 0, 1, &lim));
       assert(existe(cache));
     }
+  } else if (!strcmp(argv[2], "drive-swap")) {
+    char root[600], parent[600], marker[900], sentinel[900], old[900];
+    assert(mkdir(mounted, 0755) == 0);
+    assert(chmod(base, 0555) == 0);
+    assert(pastas(root, sizeof root, parent, sizeof parent));
+    assert(!strcmp(root, cache));
+    snprintf(old, sizeof old, "%s/old-volume", argv[1]);
+    assert(chmod(base, 0755) == 0);
+    assert(rename(mounted, old) == 0);
+    assert(mkdir(mounted, 0755) == 0);
+    assert(mkdir(cache, 0755) == 0);
+    snprintf(sentinel, sizeof sentinel, "%s/keep", cache);
+    FILE *fp = fopen(sentinel, "w"); assert(fp);
+    assert(fputs("user data\n", fp) >= 0); assert(fclose(fp) == 0);
+    assert(chmod(base, 0555) == 0);
+    // Even a marked replacement must fail cached mount-identity validation.
+    usbMarcarDono(cache);
+    assert(!usbCacheValido());
+    snprintf(marker, sizeof marker, "%s/.nuvio", cache);
+    assert(unlink(marker) == 0);
+    // The same writable pathname now belongs to another, unmarked drive.
+    assert(pastas(root, sizeof root, parent, sizeof parent));
+    assert(strcmp(root, cache));
+    assert(subir(&OPS, atomic_load(&geracao)) == P2P_ERR_MOTOR);
+    assert(internalAttempt);
+    assert(existe(sentinel));
+    snprintf(marker, sizeof marker, "%s/.nuvio", cache);
+    assert(!existe(marker));
+    // A cleanup path saved before the swap must also preserve user files.
+    percorrer(cache, 1, 0);
+    assert(existe(sentinel));
   } else if (!strcmp(argv[2], "bounded-scan")) {
     // A rejected volume's contents must not monopolize synchronous discovery.
     assert(mkdir(mounted, 0755) == 0);
