@@ -2274,8 +2274,6 @@ void ctx_abrir_sessao(void) {
   memset(&menuCaixa, 0, sizeof menuCaixa);
   dicaCx = -1.0f;
 #ifdef NV_TOUCH_UI
-  memset(&toqueEst, 0, sizeof toqueEst);
-  estRolY = 0.0f;
   memset(&inlineRecorte, 0, sizeof inlineRecorte);
   inlineRecorteValido = 0;
 #endif
