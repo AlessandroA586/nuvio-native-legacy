@@ -1,8 +1,7 @@
 # Source selection improvements
 
-Date: 14 October 2026
-Branch: `codex/source-selection-quality`
-Base: `e21346f6` (`codex/network-seeking-complete`: F1–F4, network stages 0–7, Shield benchmarks)
+Date: 15 October 2026
+Base: `origin/master` at `3c28c0d7` (includes #487, addon-declared audio/subtitle languages)
 
 ## 1. Code Geass S1E3: why Legacy picked the 2 Mbps WEB-DL
 
@@ -61,7 +60,7 @@ Two further factors can make the wrong pick sticky or more likely, and are confi
 | File | Change |
 |---|---|
 | `src/fontenota.h`, `src/fontenota.c` (new) | Pure evidence module: release type, credible bitrate, audio, codec and bit depth, language preference, compatibility (Hi10P, 4K upscale), in-band combination, safe log line. |
-| `src/streams.c` | Evidence cached per list index; added inside the resolution band in `qualidade()`; only language and compatibility in "Start fast"; `auto pick evidence` log line; auto memory yields to clearly stronger evidence; First-in-List badge matches what plays. |
+| `src/streams.c` | Addon-declared audio languages (`audioIdiomas`) feed the language preference; evidence cached per list index; added inside the resolution band in `qualidade()`; only language and compatibility in "Start fast"; `auto pick evidence` log line; auto memory yields to clearly stronger evidence; First-in-List badge matches what plays. |
 | `src/ajustes.c`, `ajustes.h`, `ajustes_ux_*.inc` | One new local option, `AJ_FONTE_IDIOMA_AUDIO` ("Prefer audio language", off by default), appended to the end of the enum and the key table. |
 | `src/idioma_tab.h`, `src/idioma_*.h` (28) | Label and help text, translated in every language table. |
 | `tests/fontenota.c`, `tests/fontenota.sh` (new) | Fixture tests and a contract check on `streams.c`. |
@@ -74,7 +73,7 @@ Two further factors can make the wrong pick sticky or more likely, and are confi
 - **Misleading names:** a "REMUX" whose credible bitrate is below a real remux (under 15 Mbps at 1080p, under 30 Mbps at 4K) gets no remux points.
 - **Upscales:** a 4K labelled "upscale", or with a credible bitrate under 5 Mbps, drops one full resolution step and competes as 1080p.
 - **Hi10P** (AVC 10-bit, common in older anime) is penalised on TV and Android, which have no hardware decoder for it.
-- **Language** (only when the option is on): the preferred audio language written in the text or as a flag scores more than "Dual/Multi audio" without named languages. Mentions near "sub" or "legenda" are treated as subtitles. A preference never filters anything.
+- **Language** (only when the option is on): when the addon declares audio languages (`Stream.audioIdiomas`, #487), that list decides: the preferred language in it scores, and the release text is ignored, which is the same rule the language chip in the sheet uses. Without a declared list, the preferred audio language written in the text or as a flag scores more than "Dual/Multi audio" without named languages, and mentions near "sub" or "legenda" are treated as subtitles. A preference never filters anything.
 
 `fontenota_somar()` adds the evidence and the language bonus **inside the current resolution band**, never reaching the next step, so a 1080p REMUX can't beat a 4K. Compatibility adjustments are then applied, and all existing penalties (cache, cap, plugin, StreamFit, P2P) still come after.
 
@@ -108,44 +107,32 @@ From strongest to weakest:
 
 Where scores tie, list order still decides, which is the addon's own order.
 
-**Failover (F1–F4):** `falhaCandidatas` uses the same `pontos()`, so alternatives follow the same preferences. The quality floor (no lower resolution, no lost DV) and manual-source handling are unchanged.
+**Failover:** `falhaCandidatas` uses the same `pontos()`, so alternatives follow the same preferences. Its candidate filtering and manual-source handling are unchanged.
 
 **Auto memory:** in Best source with Balanced or Maximum, a remembered auto group is skipped when the current winner at the same resolution leads by more than 300 evidence points (logged as `auto memory: … skipped`). Manual choices (`fontepref` manual) are never overridden.
 
 **Logging:** each automatic pick now adds `[fonte] auto pick evidence: winner {tier=… kbps=…(declared|size/runtime) audio=… codec=… lang=… evidence=… adjust=… alerts=…} | runner-up {…}`. It contains only derived fields: no URLs, tokens or raw text. A test checks this with a TorBox-style URL containing a token.
 
-## 7. Test results (this PC, WSL Ubuntu gcc)
+## 7. Test results (WSL Ubuntu, gcc, SDL 2 built from source)
 
-- `tests/fontenota.sh`: **pass**, no `-Wall -Wextra` warnings. It covers:
+- `tests/fontenota.sh`: **pass**. It covers:
   - Code Geass (old vs new arithmetic, why the REMUX wins, size/runtime path, Start fast unchanged)
-  - dual-audio vs Japanese-only, dub WEB-DL vs Japanese REMUX, Japanese-only still plays, "English Subs" is not audio
+  - dual-audio vs Japanese-only, dub WEB-DL vs Japanese REMUX, Japanese-only still plays, "English Subs" is not audio, addon-declared audio list overrides the release text
   - 4K DV REMUX vs 1080p, 4K DV with no metadata, 1080p Blu-ray vs 4K upscale (by name and by 3 Mbps), genuine 4K WEB-DL
   - HEVC 10-bit vs AVC (+50 only), Hi10P, AVC REMUX vs HEVC encode
   - missing bitrate, missing size, fake REMUX, a 40 GB file with no metadata, implausible bitrate, bitrate conflict, `MB/s`
   - log safety and selo hints
-  - uncached, unplayable, First in List, Strict, Tie-break, remembered source, failover order with the quality floor
-- Existing pure suites, all **pass**: `fonteauto`, `fonteregra`, `fonteparalela`, `fonteantecipa`, `notasfontes`, `naovideo`, `streamfit`, `streamfit_passiva`, `redeurl`, `redesaude`, `cacheboost`.
-- `assembleRede` (NDK, arm64-v8a and armeabi-v7a): **pass**. The packaged `libmain.so` contains the new code. `-Wall -Wextra` on `fontenota.c` and `streams.c` gives 0 warnings; `ajustes.c` has 18, all pre-existing unused-function or unused-variable warnings.
-- `tools/idiomas.py`: no new problems (60 pre-existing empty translations from the `AJ_REDE_MODO` commit). `tests/ajustes_secoes.py`: identical output before and after (7 pre-existing `AJ_PROF_*` items).
+  - uncached, unplayable, First in List, Strict, Tie-break, remembered source, failover queue order
+- Also **pass**: `fonteregra`, `fonteregra_oficial`, `fonteantecipa`, `notasfontes`, `naovideo`, `streamfit`, `streamfit_passiva`, `stream_parser`, `stream_mp4`, `fonte_qualidade`, `fonte_lg_mp4`, `fonteescolha`, `fontefalha`, `fontepref`, `fontepref_auto`, `fontes_parcial` (expectation updated, see below), `fontecache`, `fontevolta`, `selospacote`.
+- These fail **identically on unchanged `master`** (pre-existing, not caused by this change): `fonteauto` and `fonteparalela` (source-contract greps still look for the body of `stream_primeira_boa`, which now delegates to `stream_primeira_boa_sessao`), `fontepref_manual` (stale contract grep), `fontes_lista` (`conferirFolhaCheia: esc == 4`), `fonte_ordem_addon` and `fontecache_vod` (link errors on Linux), `fontefalha_playback` and `fontepref_file` (need SDL2_image/SDL2_ttf dev packages not present in this environment).
 
-**Not run here:** the SDL-linked suites (`fonte_qualidade`, `fonte_lg_mp4`, `fontefalha*`, `fontepref*`, `fontes_parcial`, …). Their scripts target macOS Homebrew SDL2 and OpenGL, and WSL has no SDL headers or passwordless sudo. I checked every fixture label in those suites: none gains release evidence except "Torrentio WEB" at 0p, which still loses to 480p because of the 60 000 no-resolution penalty. `fonte_lg_mp4` declares release types only through `badges`; with the selo fallback, every case was checked by hand and keeps its winner. **Run them on the Mac before merging.**
+`fontes_parcial` changed expectation: its two 1080p "Rapido" fixtures are a WEB-DL and a BluRay. The test previously relied on the WEB-DL being the sheet's row 0. With release evidence the BluRay is row 0 ("Best for this TV"), which is the intended result, so the test now asserts that the BluRay wins and derives the focused card from the ranking. What it tests (focus stays on the same card when a slower addon arrives) is unchanged.
 
 ## 8. Regressions checked
 
-- Network modes, session reuse and warm seek, range-request reduction, failure detection, host cooldowns: no transport file was touched (`git diff` limited to the files above); `redeurl`, `redesaude` and `cacheboost` pass.
-- Position-preserving and quality-preserving failover: same `falhaCandidatas` code, same quality floor; queue order tested.
+- Position-preserving failover: same `falhaCandidatas` code; queue order tested.
 - Dolby Vision and TrueHD: the HDR level and DV rules are untouched. TrueHD is only a +150 audio hint. The Samsung `.tpk` DTS/TrueHD penalty is unchanged.
 - Manual source selection, the manual memory and the manual failover policy are untouched.
 - LG MP4-first rule: untouched, still applies within the band.
 
-Still needed on the Shield (owner's account, real media): Code Geass S1E3 with "Best source" in both Balanced and Maximum, and once with "First in list". Then check the `auto pick evidence` line in the log.
-
-## 9. Branch and commits
-
-Branch `codex/source-selection-quality`, on top of `e21346f6`. Local only: not pushed or merged. The commit hashes are given in the hand-off message.
-
-## 10. APK
-
-- `android/app/build/outputs/apk/rede/app-rede.apk`, copied to `build/android/app-rede-source-selection.apk`.
-- Package `space.nuvio.nativelegacy.rede`, version `2.0.5-rede`. It installs beside production and nothing was installed on the Shield.
-- The previous network-only build is kept as `build/android/app-rede-e21346f6-network.apk` for comparison.
+Still needed on a device (real account and media): Code Geass S1E3 with "Best source" in both Balanced and Maximum, and once with "First in list", checking the `auto pick evidence` log line.
