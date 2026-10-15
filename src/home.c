@@ -37,6 +37,7 @@ static void heroTempoInicio(int indice) {
 }
 #include "gfx.h"
 #include "text.h"
+#include "sinopse.h"
 #include "tex_cache.h"
 #include "focus.h"
 #include "anim.h"
@@ -4059,13 +4060,18 @@ static HeroCopyLayout heroCopyLayout(float base, float hSin, int hasMeta,
   HeroCopyLayout p;
   float s = slot < 0.0f ? 0.0f : slot > 1.0f ? 1.0f : slot;
   float slotH = btnH + btnGap;
+  float gap = NV_HERO_COPY_LINHA;
+  // A larger final synopsis line borrows decorative gaps in the compact
+  // phone hero, keeping its logo, metadata and action inside the same area.
+  if (heroCompactoTelefone())
+    gap = fmaxf(0, gap - (sinopse_entrelinha(TXT_HERO_SIN, NV_LD_HERO_SIN) - NV_LD_HERO_SIN));
   p.synopsis = base - slotH * s - hSin;
   p.action = p.synopsis + hSin + btnGap;
-  p.secondary = p.synopsis - (hasSec ? (hSin > 0 ? NV_HERO_COPY_LINHA : 0) + NV_LD_HERO_SEC : 0);
-  p.meta = p.secondary - (hasMeta ? ((hasSec || hSin > 0) ? NV_HERO_COPY_LINHA : 0) + NV_LD_HERO_META : 0);
+  p.secondary = p.synopsis - (hasSec ? (hSin > 0 ? gap : 0) + NV_LD_HERO_SEC : 0);
+  p.meta = p.secondary - (hasMeta ? ((hasSec || hSin > 0) ? gap : 0) + NV_LD_HERO_META : 0);
   // A linha de AMIGOS (quem gostou / assistiu) fica logo acima da meta.
-  p.friends = p.meta - (friendsH > 0 ? NV_HERO_COPY_LINHA + friendsH : 0);
-  p.caption = p.friends - (captionH > 0 ? NV_HERO_COPY_LINHA + captionH : 0);
+  p.friends = p.meta - (friendsH > 0 ? gap + friendsH : 0);
+  p.caption = p.friends - (captionH > 0 ? gap + captionH : 0);
   // Logo bottom one gap above the first information line.
   float bottom = p.caption - btnGap;
   float bottomCheio = bottom - slotH * (1.0f - s);   // where it is with the slot open
@@ -4706,7 +4712,7 @@ static void desenhaHero(Uint32 agora, float saida) {
           yS += 38.0f;
         }
         if(p->sinopse[0] && ajustes_hero_sinopse())
-          txt_bloco(TXT_HERO_SIN,p->sinopse,229,231,237,x,yS,homeTextoLargura(700),31,a,2);
+          sinopse_bloco(TXT_HERO_SIN,p->sinopse,229,231,237,x,yS,homeTextoLargura(700),31,a,2);
       }
     } else {
       // Sem a marca do Trakt: a fonte nao aparece na home (amigosfil.h).
@@ -6035,7 +6041,7 @@ static void desenhaFicha(const CatItem *it, float px, float py, float w, float h
   if (it->sinopse[0]) {
     int linhas = (int)((ilha.y + ilha.h - 20.0f - y) / 28.0f);
     if (linhas > 4) linhas = 4;
-    if (linhas > 0) txt_bloco(TXT_ILHA_TEXTO, it->sinopse, 243, 242, 239, tx, y, tw, 28.0f, 0.66f * a, linhas);
+    if (linhas > 0) sinopse_bloco(TXT_ILHA_TEXTO, it->sinopse, 243, 242, 239, tx, y, tw, 28.0f, 0.66f * a, linhas);
   }
 }
 // PÔSTER GRANDE (14/10, dono: "o pôster só que do tamanho do grande, tipo o

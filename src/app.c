@@ -114,6 +114,7 @@
 #include "ilhasalvar.h"
 #include "ilhaacao.h"
 #include "plrilha.h"
+#include "sinopse.h"
 #include "ilhacart.h"
 #include "cwretido.h"
 #include "ilhasinais.h"
@@ -2161,7 +2162,9 @@ static void abrirProximoEpisodio(int t, int e, int apontar) {
   int titulo = player_indice();
   char atual[64], alvo[64];
   alvoPlayer(atual, sizeof atual);
-  cat_id_stream(titulo, t, e, alvo, sizeof alvo);
+  if (!cat_id_stream(titulo, t, e, alvo, sizeof alvo) || !alvo[0]) {
+    player_episodio_pedido_liberar(); return;
+  }
   uint64_t sessaoPerfil = proximoIntento.tem && !strcmp(proximoIntento.alvo, alvo)
       ? proximoIntento.sessaoPerfil : sessaoEntrada;
   ProximoPreparoResultado preparada = {0};
@@ -2169,6 +2172,7 @@ static void abrirProximoEpisodio(int t, int e, int apontar) {
   if (!nv_perfil_sessao_atual(sessaoPerfil) || (pronta && preparada.sessaoPerfil != sessaoPerfil)) {
     proximopreparo_liberar_resultado(&preparada);
     memset(&proximoIntento, 0, sizeof proximoIntento); proximopreparo_cancelar();
+    player_episodio_pedido_liberar();
     return;
   }
   if (!pronta && proximopreparo_em_curso(alvo)) {
@@ -2187,6 +2191,7 @@ static void abrirProximoEpisodio(int t, int e, int apontar) {
   // sob o mesmo ator; nao segurar esta trava ao salvar/fechar o player.
   if (!nv_perfil_sessao_travar(sessaoPerfil)) {
     proximopreparo_liberar_resultado(&preparada); proximopreparo_cancelar();
+    player_episodio_pedido_liberar();
     return;
   }
 #ifdef NV_ANDROID
@@ -2266,6 +2271,12 @@ static void abrirProximoEpisodio(int t, int e, int apontar) {
   }
 }
 static void proximoPreparoPasso(void) {
+  // O gesto novo tem prioridade sobre uma contagem ja entregue. O worker
+  // fica para o roteador consumir se for o mesmo Next, ou cancelar no Anterior.
+  if (player_transporte_pedido_pendente()) {
+    memset(&proximoIntento, 0, sizeof proximoIntento);
+    return;
+  }
   char atual[64] = "";
   if (player_aberto() && !player_quer_sair() && !player_id_canal()[0]) alvoPlayer(atual, sizeof atual);
   proximopreparo_passo(atual);
@@ -2274,6 +2285,7 @@ static void proximoPreparoPasso(void) {
       proximoIntento.geracao != proximopreparo_geracao() ||
       !nv_perfil_sessao_atual(proximoIntento.sessaoPerfil)) {
     memset(&proximoIntento, 0, sizeof proximoIntento); proximopreparo_cancelar();
+    player_episodio_pedido_liberar();
   } else if (!proximopreparo_em_curso(proximoIntento.alvo))
     abrirProximoEpisodio(proximoIntento.t, proximoIntento.e, proximoIntento.apontar);
 }
@@ -2637,6 +2649,20 @@ static void guardarPosicaoFonteFalha(void) {
     double pos = video_pos();
     if (pos >= 0.0 && isfinite(pos)) fonteFalhaPos = pos;
   }
+}
+static void recarregarFonteVOD(void) {
+  uint64_t sessaoPerfil = nv_perfil_sessao_ler();
+  if (!player_aberto() || player_quer_sair() || player_id_canal()[0] ||
+      aguardandoFonte != 0 || !nv_perfil_sessao_atual(sessaoPerfil)) return;
+  // Reabrir o pipeline pode chamar firmware; nao segurar a trava do perfil.
+  int aceita = video_recarregar();
+  if (!nv_perfil_sessao_atual(sessaoPerfil)) return;
+  if (!aceita) { player_toast(i18n("Indisponível agora"), 2000); return; }
+  // A mesma fonte ganha prazo para reabrir, sem recomecar seu orcamento,
+  // refazer a escolha ou marcar o episodio como concluido.
+  Uint32 agora = SDL_GetTicks() | 1u;
+  if (fonteVODAutomatica) fonteVODDesde = agora;
+  else fonteManualDesde = agora;
 }
 static void tentarProximaFonteVOD(void) {
   Uint32 desde;
@@ -5533,12 +5559,13 @@ void app_atualizar(float dt, Uint32 agora) {
       else guia_carregar();
     } }
 
-  // RECARREGAR (botao do OSD do canal): mesma acao do zap com deslocamento 0 —
-  // o proprio canal, fonte buscada de novo.
+  // Canal conserva o zap zero. Filme/serie reabre so o pipeline da fonte
+  // corrente, sem consultar addons ou pedir outro link ao provedor.
   if (player_pediu_recarregar() && player_aberto() && aguardandoFonte != 2) {
     const char *id = player_id_canal();
     CatItem it;
-    if (id[0] && guia_zap(id, 0, &it)) tocarCanal(&it);
+    if (id[0]) { if (guia_zap(id, 0, &it)) tocarCanal(&it); }
+    else recarregarFonteVOD();
   }
 
   // BAIXO/AZUL COM CANAL NO AR: o overlay do guia abre focado no canal que
@@ -6006,6 +6033,7 @@ static void desenharTelas(Uint32 agora) {
     if (telefoneui_ativo()) { CAMADA_SE(central_aberta()); }
 #endif
     central_desenhar(agora); plrilha_desenhar(agora);
+    if (episodios_aberto() && sinopse_aberta()) sinopse_desenhar();
   }
   gfx_osd_mult = 1.0f;
   // A TELA DO DOLBY VISION EM MKV (dvtela.h) por cima de TUDO do player, ilha

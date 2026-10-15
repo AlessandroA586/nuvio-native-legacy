@@ -76,6 +76,7 @@
 #include "simkl.h"
 #include "gfx.h"
 #include "text.h"
+#include "sinopse.h"
 #include "tex_cache.h"
 #include "focus.h"
 #include "anim.h"
@@ -2052,7 +2053,7 @@ static void desenhaLinhaTitulo(const CatItem *ci, float y, float f, float a) {
     t = txt_linha_corta(TXT_HEADLINE, ci->titulo, cor, cor, cor, 255, larg);
     sl = txt_linha_corta(TXT_CAPTION2, sub, sr, sg, sb, 255, larg);
     if (f > 0.5f && ci->sinopse[0])
-      ss = txt_linha_corta(TXT_CAPTION, ci->sinopse, sr, sg, sb, 255, larg);
+      ss = txt_linha_corta(sinopse_estilo(TXT_CAPTION), ci->sinopse, sr, sg, sb, 255, larg);
     { float hBloco = (float)t.h + 7.0f + (float)sl.h;
       if (ss.h) hBloco += 6.0f + (float)ss.h;
       // O bloco fica centrado na linha: a sinopse so aparece quando a linha

@@ -26,6 +26,7 @@
 #include "salvosintro.h"
 #include "text.h"
 #include "central.h"
+#include "sinopse.h"
 #include "plrui.h"
 #include "desempenho.h"
 #include "trailer.h"
@@ -1249,10 +1250,16 @@ static void desenharCartao(const IlhaCartao *c, int qual, GfxRect r, float a) {
 #define AT_W       640.0f   // painel da atividade (Home loading)
 #define AT_H       292.0f
 
+static float modalSinopseExtra(void) {
+  return !modalAviso && !modalAtividade && modalC.sinopse[0]
+       ? fmaxf(0, sinopse_entrelinha(TXT_CAPTION, 30) - 30) : 0;
+}
+
 static GfxRect modalAlvo(GfxRect p, int dir) {
   int compacto = modalAtividade && atvTemCarga;
   float mw = compacto ? AT_W : modalAviso && modalM.cabecalho ? MC_W : MD_W;
   GfxRect m = { dir ? p.x + p.w - mw : p.x, p.y, mw, compacto ? AT_H : modalAviso ? modalAvisoH : MD_H };
+  if (!telefoneui_ativo()) m.h += modalSinopseExtra();
   if (telefoneui_ativo()) {
     m.w = telefoneui_largura(mw, NV_TELA_W, 40);
     m.h = fminf(m.h, NV_TELA_H - 80);
@@ -1262,6 +1269,7 @@ static GfxRect modalAlvo(GfxRect p, int dir) {
   }
   if (m.x + m.w > NV_TELA_W - 40.0f) m.x = NV_TELA_W - 40.0f - m.w;
   if (m.x < 40.0f) m.x = 40.0f;
+  if (modalSinopseExtra() > 0) m.y = fmaxf(40, fminf(m.y, NV_TELA_H - 40 - m.h));
   return m;
 }
 
@@ -1279,7 +1287,7 @@ static float arteLadoW(const char *url);
 #ifdef NV_TOUCH_UI
 /* Media and text share a scrollable body; the real action buttons stay
  * inside its bounded footer. The original TV renderer remains below. */
-static float modalTelefone(GfxRect m, const IlhaModal *c, float a, int desenha) {
+static float modalTelefone(GfxRect m, const IlhaModal *c, float a, int desenha, int ehSinopse) {
   float w = m.w - 64, x = m.x + 32, footer = 92, bx = 0, by = 0;
   GfxRect buttons[ILHA_MODAL_BOTOES];
   int n = nBotoes(), salvos = modalTemSalvos();
@@ -1292,7 +1300,7 @@ static float modalTelefone(GfxRect m, const IlhaModal *c, float a, int desenha) 
   footer += by + (salvos || c->rodape[0] ? 48 : 0);
   float area = fmaxf(60, m.h - footer - 32), y = m.y + 32;
   if (desenha) {
-    float natural = modalTelefone(m, c, a, 0);
+    float natural = modalTelefone(m, c, a, 0, ehSinopse);
     toqueModalY = toquerol_clamp(toqueModalY, 0, fmaxf(0, natural - footer - 32 - area));
   }
   float scroll = desenha ? toqueModalY : 0;
@@ -1326,6 +1334,7 @@ static float modalTelefone(GfxRect m, const IlhaModal *c, float a, int desenha) 
   for (int i = 0; i < 6; i++) if (lines[i][0]) {
     TxtEstilo e = i == 1 ? TXT_TITULO3 : i == 0 ? TXT_MINI : TXT_CAPTION;
     float lead = i == 1 ? 52 : 30;
+    if (ehSinopse && i == 4) { e = sinopse_estilo(e); lead = sinopse_entrelinha(TXT_CAPTION, lead); }
     y += txt_bloco_corta(e, lines[i], 243, 242, 239, x, y, w, lead, ad, 20) + 12;
   }
   for (int i = 0; i < 3 && c->lista[i][0]; i++) {
@@ -1430,7 +1439,7 @@ static float arteLadoW(const char *url) {
 static float layoutModalAviso(GfxRect m, float a, int desenha) {
   const IlhaModal *c = &modalM;
 #ifdef NV_TOUCH_UI
-  if (telefoneui_ativo()) return modalTelefone(m, c, a, desenha);
+  if (telefoneui_ativo()) return modalTelefone(m, c, a, desenha, 0);
 #endif
   if (c->cabecalho) return layoutModalCabecalho(m, a, desenha);
   float ax = m.x + MD_PAD, ay = m.y + MD_PAD;
@@ -1628,7 +1637,7 @@ static void desenharModal(GfxRect m, float a) {
     else if (modalQual == ILHA_AMIGO)
       snprintf(mobile.estado, sizeof mobile.estado, i18n("%s · agora"), c->pessoa);
     else snprintf(mobile.estado, sizeof mobile.estado, "%s", c->quando);
-    modalTelefone(m, &mobile, a, 1);
+    modalTelefone(m, &mobile, a, 1, 1);
     return;
   }
 #endif
@@ -1637,7 +1646,8 @@ static void desenharModal(GfxRect m, float a) {
   // no modal de aviso; antes ia centrado no 16:9 com sobra preta dos lados.
   float ladoW = arteLadoW(c->arte[0] ? c->arte : c->poster);
   float cx = ax + ladoW + 32.0f, cw = m.x + m.w - MD_PAD - cx;
-  float y = ay, by = ay + MD_ARTE_H + 24.0f, sy, cr, cg, cb;
+  float extraSin = modalSinopseExtra();
+  float y = ay, by = ay + MD_ARTE_H + extraSin + 24.0f, sy, cr, cg, cb;
   int i;
   if (a < 0.01f) return;
   ajustes_acento(&cr, &cg, &cb);
@@ -1767,7 +1777,7 @@ static void desenharModal(GfxRect m, float a) {
     else if (c->quando[0]) snprintf(b, sizeof b, "%s · %s", i18n("Episódio novo"), c->quando);
     else snprintf(b, sizeof b, "%s", i18n("Episódio novo"));
     t = txt_linha(TXT_CAPTION, b, 200, 204, 212, 255);
-    sy = ay + MD_ARTE_H - (float)t.h;
+    sy = ay + MD_ARTE_H + extraSin - (float)t.h;
     if (modalQual == ILHA_ESTREIA || modalQual == ILHA_AMIGO) {
       // O ponto: acento no episodio novo, vermelho de "agora" no amigo.
       if (modalQual == ILHA_AMIGO) gfx_cor((GfxRect){ cx, sy + (float)t.h * 0.5f - 5.0f, 10.0f, 10.0f }, 0.5f, 1.0f, 0.353f, 0.322f, a);
@@ -1786,7 +1796,7 @@ static void desenharModal(GfxRect m, float a) {
     int linhas = (int)((sy - 12.0f - y) / 30.0f);
     if (linhas > 3) linhas = 3;
     if (linhas >= 1)
-      txt_bloco_corta(TXT_CAPTION, c->sinopse, 176, 180, 190, cx, y, cw, 30.0f, a, linhas);
+      sinopse_bloco_corta(TXT_CAPTION, c->sinopse, 176, 180, 190, cx, y, cw, 30.0f, a, linhas);
   }
   // Botoes. O ponteiro: o fundo inteiro fecha, o modal absorve, cada botao foca.
   if (a > 0.3f) {

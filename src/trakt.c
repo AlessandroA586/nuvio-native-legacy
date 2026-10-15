@@ -2336,11 +2336,17 @@ int trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg, d
   int acao;
   double pct;
   pthread_t t;
+  (void)assistiu;
   if (!ligado || !imdb || !*imdb || !isfinite(posSeg) || !isfinite(durSeg) ||
-      !isfinite(assistidoSeg) || durSeg < 120.0 || assistidoSeg < 5.0) return recusar(evento);
+      !isfinite(assistidoSeg) || durSeg < 120.0) return recusar(evento);
+  // PARIDADE COM O NUVIOTV OFICIAL: o start exige reproducao continua (o player
+  // so o pede depois de PLR_SCR_TOCOU_S), mas a SAIDA fala pela posicao, como
+  // o flushPlaybackSnapshotForSwitchOrExit de la — inclusive depois de um seek.
+  if (evento != SCR_EV_SAIU && assistidoSeg < 5.0) return recusar(evento);
+  if (evento == SCR_EV_SAIU && (posSeg < 1.0 || assistidoSeg < 1.0)) return recusar(evento);
   pct = 100.0 * posSeg / durSeg;
-  // Valida ANTES da vaga pendente: nem um stop sem reproducao entra na fila.
-  if (evento == SCR_EV_SAIU && pct >= 90.0 && !assistiu) return recusar(evento);
+  // As validacoes acima vem ANTES da vaga pendente: nem um stop sem reproducao
+  // entra na fila.
   HistoricoPedido pedido = historicoPedido();
   if (!pedido.aut[0] || !nv_perfil_sessao_travar(pedido.sessao)) return recusar(evento);
   pthread_mutex_lock(&travaScr);

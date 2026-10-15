@@ -53,6 +53,7 @@ static TituloTempo detalheTempo;
 #include "botoes.h"
 #include "vertudo.h"
 #include "text.h"
+#include "sinopse.h"
 #include "tex_cache.h"
 #include "focus.h"
 #include "anim.h"
@@ -1433,6 +1434,7 @@ static void auditoriaEpisodios(void) {
 }
 
 static void abrirInterno(const HomeItem *it) {
+  sinopse_fechar();
   pediuMenu = 0;
   audIdx = -1;
   marco("detail_abrir");
@@ -1592,6 +1594,7 @@ static void abrirInterno(const HomeItem *it) {
 }
 
 void detail_fechar(void) {
+  sinopse_fechar();
   if (!aberto || saindo) return;
   pessoaAberta = 0;
   nivel = 0;
@@ -1601,6 +1604,7 @@ void detail_fechar(void) {
 // SECO: o proximo detail_atualizar ja a encerra (o mesmo fim da mola de
 // saida, com o logo restaurado), sem a pagina recolher por cima da home.
 void detail_fechar_seco(void) {
+  sinopse_fechar();
   if (!aberto) return;
   pessoaAberta = 0;
   nivel = 0;
@@ -2414,6 +2418,8 @@ static void maisDisponiveis(int d[DMAIS_N]) {
   d[DMAIS_EXPLORAR] = temExplorar();
   d[DMAIS_ARTE] = temArte();
   d[DMAIS_RECOMENDAR] = temRecomendar();
+  { const char *sin = sinopseDe(idx);
+    d[DMAIS_SINOPSE] = sin && sin[0]; }
 }
 static int temMais(void) {
   int d[DMAIS_N], i;
@@ -2573,7 +2579,10 @@ static void abrirCredito(void) {
 // O QUE A ILHA "MAIS OPCOES" ESCOLHEU (detmais.h). Eram os ramos dos quatro
 // circulares que sairam da linha; o comportamento de cada um e o mesmo.
 static void executarMais(int dm) {
-  if (dm == DMAIS_TRAILER) {
+  if (dm == DMAIS_SINOPSE) {
+    const CatItem *ci = cat_item(idx);
+    sinopse_abrir(ci ? ci->titulo : "", sinopseDe(idx));
+  } else if (dm == DMAIS_TRAILER) {
     tocarTrailerCheio(0);
   } else if (dm == DMAIS_EXPLORAR) {
     // O roteador (app.c) fecha a pagina e abre a toca neste titulo.
@@ -2593,6 +2602,7 @@ static void executarMais(int dm) {
 }
 
 void detail_evento(const SDL_Event *e) {
+  if (sinopse_aberta()) { sinopse_evento(e); return; }
   if (corpoSobArte()) {
     if (trocaarte_aberto()) trocaarte_evento(e);
     return;
@@ -2961,8 +2971,8 @@ void detail_evento(const SDL_Event *e) {
         saindo = 1;
       }
     } else if (foco.fileira == SEC_EPISODIOS) {
-      // PRESSAO LONGA ABRE O MENU DE VISTO; o toque curto continua abrindo as
-      // fontes, que e o que este card sempre fez.
+      // PRESSAO LONGA ABRE O MENU DE VISTO; o toque curto respeita a escolha
+      // de fonte em Ajustes.
       //
       // "marcar este / ate aqui / a temporada inteira" existia desde a 1.0.25 e
       // era INALCANCAVEL daqui: o menu so vivia dentro da folha de episodios, e
@@ -4438,7 +4448,7 @@ static void heroWeb(float a, float desloc) {
   // o progresso agora e uma barra dentro do proprio botao de retomar.
   float temRetom = 0.0f;
   float hSin = 0.0f;
-  if (sin) hSin = txt_bloco_corta(TXT_DET_SIN, sin, 255, 255, 255, -1.0f, 0.0f,
+  if (sin) hSin = sinopse_bloco_corta(TXT_DET_SIN, sin, 255, 255, 255, -1.0f, 0.0f,
                             larguraTextoHero(), NV_DETW2_LD_SIN, 0.0f,
                             NV_DETW2_SIN_LINHAS);
   // DADO A CAMINHO: sinopse e meta chegam da rede depois que a pagina abre.
@@ -4855,12 +4865,12 @@ static void heroWeb(float a, float desloc) {
       else f = revela_saida(f);
     }
     if (f < 1.0f) {   // o que saiu esvanece por baixo do que entra
-      if (sinAnt[0]) txt_bloco_corta(TXT_DET_SIN, sinAnt, 255, 255, 255, NV_DETW2_X, ySin,
+      if (sinAnt[0]) sinopse_bloco_corta(TXT_DET_SIN, sinAnt, 255, 255, 255, NV_DETW2_X, ySin,
                                larguraTextoHero(), NV_DETW2_LD_SIN, a * (1.0f - f),
                                NV_DETW2_SIN_LINHAS);
       else esqueletoSinopse(NV_DETW2_X, ySin, a * (1.0f - f));
     }
-    if (sin) txt_bloco_corta(TXT_DET_SIN, sin, 255, 255, 255, NV_DETW2_X, ySin,
+    if (sin) sinopse_bloco_corta(TXT_DET_SIN, sin, 255, 255, 255, NV_DETW2_X, ySin,
                        larguraTextoHero(), NV_DETW2_LD_SIN, a * f,
                        NV_DETW2_SIN_LINHAS);
     else if (esqSin) esqueletoSinopse(NV_DETW2_X, ySin, a * f); }
@@ -5439,7 +5449,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     // O titulo acende com a mola do foco, como nos outros layouts (#205).
     txt_desenhar_alpha(name,textX,textY+30,a*(0.86f+0.14f*ft));
     float y = textY+64;
-    if (epSin) y += txt_bloco_corta(TXT_CAPTION,epSin,171,177,185,
+    if (epSin) y += sinopse_bloco_corta(TXT_CAPTION, epSin,171,177,185,
                                    textX,y,textW,29,a,4);
     if (epData) {
       const char *date = epData;
@@ -5544,7 +5554,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   // Sinopse: o TEXTO SECUNDARIO apaga em repouso e clareia para ler com o
   // foco (#205, dono: "o texto com animacao"), na mesma mola do prato.
   if (epSin)
-    txt_bloco_corta(TXT_CAPTION, epSin, 255, 255, 255, textoX,
+    sinopse_bloco_corta(TXT_CAPTION, epSin, 255, 255, 255, textoX,
                     r.y + (moderna ? epThumbH() + NV_DETP_EPM_SIN_DY : NV_DETP_EP_SIN_Y),
                     epTextoW(), NV_DETP_EP_LD_SIN, a * (0.62f + 0.33f * ft),
                     epSinLinhas());
@@ -6368,7 +6378,7 @@ static void desenhaListaColecao(float a) {
       txt_desenhar_alpha(lm, tx, y, a);
       y += lm.h + 20.0f; }
     if (extras_colecao_sinopse()[0])
-      txt_bloco_corta(TXT_DET_META2, extras_colecao_sinopse(), 190, 195, 205,
+      sinopse_bloco_corta(TXT_DET_META2, extras_colecao_sinopse(), 190, 195, 205,
                       tx, y, tw, 32.0f, a * 0.9f, detalheRetrato() ? 3 : 7);
   }
 
@@ -6442,7 +6452,7 @@ static void desenhaListaColecao(float a) {
       }
       ty += 40.0f; }
     if (extras_colecao_sinopse_parte(i)[0])
-      txt_bloco_corta(TXT_DET_META2, extras_colecao_sinopse_parte(i),
+      sinopse_bloco_corta(TXT_DET_META2, extras_colecao_sinopse_parte(i),
                       foc ? 205 : 170, foc ? 210 : 175, foc ? 220 : 185,
                       tx, ty, tw, 31.0f, a, 3);
   }
@@ -7579,6 +7589,7 @@ void detail_desenhar(Uint32 agora) {
     reacaoPendente(s);
     maisDesenhar();
     if (amtui_aberta()) { ponteiro_camada(); amtui_desenhar(agora); }
+  if (sinopse_aberta()) sinopse_desenhar();
     return;
   }
   desenhaEsqueletoEpisodios(a2 > pg ? a2 : pg);
@@ -7599,6 +7610,7 @@ void detail_desenhar(Uint32 agora) {
   menuDeVisto(agora);
   maisDesenhar();
   if (amtui_aberta()) { ponteiro_camada(); amtui_desenhar(agora); }
+  if (sinopse_aberta()) sinopse_desenhar();
 }
 
 static void ultimoEpisodio(int *t, int *e) {

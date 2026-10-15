@@ -90,6 +90,7 @@ typedef struct {
   int  indice;       // embedded track index, or addon list index (snapshot)
   char idioma[16];
   char rotulo[64];   // embedded: track label; addon: the addon's label
+  char nome[128];    // actual embedded track name; empty when not supplied
   char origem[64];   // provider name, "" for embedded
   char arquivo[96];  // release/file name when the addon sent one
   char codec[24];    // Matroska CodecID when probed

@@ -156,6 +156,10 @@ void video_definir_mp4(int ehMp4);
 // (video_tocar consome). Quem nao pede — trailer, canal ao vivo, que tem o
 // watchdog proprio em app.c — segue caindo em video_falhou na hora.
 void video_definir_reconexao(int sim);
+// Reabre somente a fonte VOD corrente, sem resolver outra URL nem reiniciar
+// o limite de reconexao. Preserva o ponto informado pelo backend, faixas,
+// velocidade e pausa. 1 = pedido aceito; 0 = indisponivel neste estado/alvo.
+int  video_recarregar(void);
 // MODO DO LOAD para o PROXIMO video_tocar (#158, LG C4: dado chega, VDEC
 // concedido, decoder nunca anuncia). 0 = o de sempre; 1 = sem o selectTrack
 // de video logo depois do load; 2 = o 1 e mais o payload enxuto de live
@@ -334,6 +338,9 @@ typedef struct {
   int canais;        // original audio channels, 0 unknown
   int stream_index;  // source demux index for DTS sessions, -1 in native webOS
   int stream_id;     // original container track ID, -1 when unknown
+  // Nome ORIGINAL da legenda, quando o container/player informa. Separado do
+  // rotulo para a folha mostra-lo abaixo do idioma sem mudar a memoria da faixa.
+  char nome[128];
 } VideoFaixa;
 
 int  video_n_audio(void);
