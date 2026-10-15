@@ -189,6 +189,9 @@ static int layEscolha;            // gravada (VT_LAY_AUTO = nunca escolheu)
 static int semVitrineAuto;        // aberta por vertudo_abrir (ver layAuto)
 static int lay = VT_LAY_GRADE;    // a que esta na tela
 static float pillAnim;            // foco no botao "Exibição"
+// O seletor nasce recolhido (so a exibicao aberta); OK abre o trilho inteiro e
+// `exibCursor` anda nele (indice em LAY_CICLO). Escolher, Voltar ou sair recolhe.
+static int exibAberta, exibCursor;
 // ESTILO DAS ABAS (#205). Menu suspenso: lista aberta e o item sob o cursor.
 // Barra central: onde esta o realce que desliza. Paginas: o deslize do carrossel
 // (+1 entrando da direita, -1 da esquerda, 0 em repouso).
@@ -221,6 +224,7 @@ static int vcVistos, vcTotal;
 // os testes de captura conferem o arranjo sem ler pixel.
 static GfxRect cabEb, cabTt, cabSw;
 static int cabPontos;
+static float cabFim, vitHeroTopo;   // Vitrine: pe do cabecalho e topo do bloco do destaque
 static float cabCy = 218.0f;        // centro da linha do anel e do seletor
 static Uint32 vistosEm;             // ajustes_conteudo_x() do quadro (desenho)
 
@@ -559,7 +563,7 @@ void vertudo_colecao(const ColFolder *folder) {
   memset(tabAnim, 0, sizeof tabAnim);
   tabRol = 0.0f;   // a faixa renasce no logo, sem herdar a rolagem da pasta anterior
   collection=folder;source=tabCursor=0;tabFocus=folder->nSources>1;aberta=1;pedAbrir=-1;
-  pillAnim=0;vcTotal=0;abasReiniciar();layEscolha=escolhaGravada(folder);semVitrineAuto=0;
+  pillAnim=0;exibAberta=0;vcTotal=0;abasReiniciar();layEscolha=escolhaGravada(folder);semVitrineAuto=0;
   // COMECAR NA PRIMEIRA FONTE QUE TEM ENDERECO, e nao teimosamente na fonte 0.
   // Numa pasta com varias abas e comum que so parte dos addons esteja instalada
   // aqui; abrir na aba morta faz a pasta inteira parecer vazia.
@@ -586,7 +590,7 @@ void vertudo_abrir(const char *base, const char *tipo, const char *catId,
   snprintf(titulo, sizeof titulo, "%s", tit ? tit : "");
   collection=col_por_catalogo(base,tipo,catId);
   limparFocoCatalogo();
-  source=tabCursor=tabFocus=0;orderN=-1;celLay=-1;pillAnim=0;vcTotal=0;abasReiniciar();
+  source=tabCursor=tabFocus=0;orderN=-1;celLay=-1;pillAnim=0;exibAberta=0;vcTotal=0;abasReiniciar();
   layEscolha=escolhaGravada(collection);semVitrineAuto=1;
   if(layEscolha==VT_LAY_VITRINE)layEscolha=VT_LAY_AUTO;   // "Ver tudo" e uma fileira so
   if(collection) {
@@ -1249,11 +1253,10 @@ static int primeiraFonte(void) {
     if (collection->sources[i].prov[0] || baseDaFonte(&collection->sources[i])[0]) return i;
   return 0;
 }
-// A PROXIMA EXIBICAO, e ela fica gravada para esta pasta (o botao "Exibição").
-static void alternarExibicao(void) {
-  int antes = lay, prox = VT_LAY_GRADE;
-  for (int k = 0; k < (int)sizeof LAY_CICLO; k++)
-    if (LAY_CICLO[k] == lay) prox = LAY_CICLO[(k + 1) % (int)sizeof LAY_CICLO];
+// A EXIBICAO ESCOLHIDA no trilho aberto, e ela fica gravada para esta pasta.
+static void escolherExibicao(int prox) {
+  int antes = lay;
+  exibAberta = 0;
   layEscolha = prox; gravarEscolha(collection, prox);
   resolverLayout(); foco = 0; scrollY = velY = 0; armarOnda();
   if (lay != antes && (lay == VT_LAY_VITRINE || antes == VT_LAY_VITRINE)) {
@@ -1262,6 +1265,12 @@ static void alternarExibicao(void) {
     source = primeiraFonte(); openSource();
   }
   tabCursor = cabN();   // o botao "Exibição", em qualquer estilo de abas
+}
+
+// OK no botao recolhido: abre o trilho com o cursor na exibicao aberta.
+static void abrirSeletor(void) {
+  exibAberta = 1;
+  for (int k = 0; k < (int)sizeof LAY_CICLO; k++) if (LAY_CICLO[k] == lay) exibCursor = k;
 }
 
 static void vitEvento(int k) {
@@ -1273,7 +1282,7 @@ static void vitEvento(int k) {
     if (k == SDLK_LEFT) { if (tabCursor > cabN()) tabCursor--; else pedMenu = 1; }
     else if (k == SDLK_UP && ajustes_menu_topo()) pedMenu = 1;
     else if (k == SDLK_DOWN && vitTemItens()) tabFocus = 0;
-    else if (enter) alternarExibicao();   // sem abas, sem botao de estilo
+    else if (enter) abrirSeletor();   // sem abas, sem botao de estilo
     return;
   }
   if (vitFR >= vitN) return;
@@ -1298,6 +1307,7 @@ static void vitEvento(int k) {
 // Medidas das fileiras: as da Home (home_vitrine_medida). O topo da primeira e
 // o da Home Moderna; a fileira em foco sobe para ele e a seguinte espia embaixo.
 #define VIT_TITULO_H 46.0f
+#define VIT_CAB_FOLGA 24.0f   // entre o pe do cabecalho e o bloco do destaque
 static float vitPasso(void) {
   float w, h, p, rot;
   home_vitrine_medida(&w, &h, &p, &rot);
@@ -1398,9 +1408,17 @@ void vertudo_evento(const SDL_Event *e) {
   if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE ||
       e->key.keysym.scancode == NV_SCANCODE_BACK) {
     if (ddAberto) { ddAberto = 0; return; }   // Voltar fecha a lista, nao a pagina
+    if (exibAberta) { exibAberta = 0; return; }   // e recolhe o seletor
     aberta = 0; return;
   }
   if (n > VT_MAX) n = VT_MAX;
+  exibAberta = exibAberta && tabFocus && tabCursor == cabN();   // o ponteiro tirou o foco
+  if (exibAberta) {   // o trilho aberto fica com as setas ate escolher ou sair
+    if (k == SDLK_RIGHT) { if (exibCursor + 1 < (int)sizeof LAY_CICLO) exibCursor++; return; }
+    if (k == SDLK_LEFT && exibCursor > 0) { exibCursor--; return; }
+    exibAberta = 0;
+    if (k == SDLK_RETURN || k == SDLK_KP_ENTER) { escolherExibicao(LAY_CICLO[exibCursor]); return; }
+  }
   if (lay == VT_LAY_VITRINE) { vitEvento(k); return; }
   // #414: OK on the current catalog retries even while the header has focus.
   // Other tabs, the layout button and the Menu selector (menuOk) keep theirs.
@@ -1418,9 +1436,7 @@ void vertudo_evento(const SDL_Event *e) {
     if(k==SDLK_RETURN||k==SDLK_KP_ENTER) {
       if(tabCursor>na) alternarEstiloAbas();
       else if(tabCursor==na) {
-        // O cursor continua no botao: da para passar por todas as exibicoes
-        // de uma vez so com OK.
-        alternarExibicao();
+        abrirSeletor();
       } else if(est==VT_AB_MENU) menuOk();
       else if(est==VT_AB_PAGINAS) {
         // Um clique numa seta/ponto so move o cursor; o OK que o segue troca.
@@ -2005,6 +2021,7 @@ static void linhaVistos(float x0, float cy, float a) {
               txt_desenhar_tom(txt_linha_corta(TXT_DET_META2, meta, 255, 255, 255, 255, 760.0f),
                                x0 + 84.0f, cy + 3.0f, ar, ag, ab, a); }
   else txt_desenhar_alpha(m, x0 + 84.0f, cy + 3.0f, a);
+  cabFim = fmaxf(cabFim, fmaxf(cy + 30.0f, cy + 3.0f + m.h));   // anel (R + 4) e legenda
 }
 
 static void themeHeader(float a,float x0) {
@@ -2559,29 +2576,29 @@ static void botaoExibicao(float a, float cy) {
   const float H = NV_CTRL_H, S = 52.0f, P = 4.0f;
   float f = pillAnim, xd = NV_TELA_W - (vtTelefone() ? 48.0f : NV_ILHA_MARGEM_D);
   int est = nAbas() > 0, fe = tabFocus && tabCursor == cabN() + 1, nl = (int)sizeof LAY_CICLO;
-  int tinta = gfx_vidro_tinta(f), so = vtTelefone();   // telefone: so a aberta
-  TxtLinha nome = txt_linha_corta(TXT_AJ_SEG, LAY_NOME[lay], tinta, tinta, tinta, 255, 260.0f);
+  // RECOLHIDO (dono, 15/10): so a exibicao aberta, ate o OK abrir o trilho.
+  int aberto = exibAberta && tabFocus && tabCursor == cabN() && !vtTelefone(), so = !aberto;
+  int tinta = gfx_vidro_tinta(f), tn = gfx_vidro_tinta(aberto && LAY_CICLO[exibCursor] != lay ? 0.0f : f);
+  TxtLinha nome = txt_linha_corta(TXT_AJ_SEG, LAY_NOME[lay], tn, tn, tn, 255, 260.0f);
   float selW = 50.0f + nome.w + 20.0f, w = P * 2.0f + S * ((so ? 0 : nl - 1) + est) + selW;
   float x = xd - w, sx = x + P;
   GfxRect trilho = { x, cy - H * 0.5f, w, H };
-  cabSw = trilho;
+  cabSw = trilho; cabFim = fmaxf(cabFim, trilho.y + trilho.h);
   // O material da ilha do relogio (ilha.c): vidro, ou o plano com aro quando o
   // vidro esta desligado (efeitos minimos, TVs antigas).
   if (ajustes_vidro()) gfx_vidro_painel(trilho, NV_RAIO_PILL, 0.62f, a);
   else { gfx_cor(trilho, NV_RAIO_PILL, 0.12f, 0.124f, 0.143f, 0.92f * a);
          gfx_anel(trilho, NV_RAIO_PILL, 1.5f, 1, 1, 1, 0.085f * a); }
   for (int k = 0; k < nl; k++) {
-    int sel = LAY_CICLO[k] == lay;
+    int sel = LAY_CICLO[k] == lay, cur = aberto ? k == exibCursor : sel;
     if (so && !sel) continue;
     GfxRect s = { sx, trilho.y + P, sel ? selW : S, H - P * 2.0f };
-    float ic = sel && f > 0.5f ? tinta / 255.0f : 1.0f;
-    if (sel) {
-      gfx_cor(s, NV_RAIO_PILL, 1, 1, 1, 0.14f * (1.0f - f) * a);
-      gfx_vidro_pilula_cheia(s, NV_RAIO_PILL, f, a);
-      txt_desenhar_alpha(nome, s.x + 50.0f, s.y + (s.h - nome.h) * 0.5f, a);
-    }
+    float ic = cur && f > 0.5f ? tinta / 255.0f : 1.0f;
+    if (sel) gfx_cor(s, NV_RAIO_PILL, 1, 1, 1, 0.14f * (1.0f - (cur ? f : 0.0f)) * a);
+    if (cur) gfx_vidro_pilula_cheia(s, NV_RAIO_PILL, f, a);
+    if (sel) txt_desenhar_alpha(nome, s.x + 50.0f, s.y + (s.h - nome.h) * 0.5f, a);
     gfx_icone((GfxRect){ s.x + 15.0f, s.y + (s.h - 22.0f) * 0.5f, 22, 22 }, LAY_ICONE[LAY_CICLO[k]],
-              ic, ic, ic, (sel ? 1.0f : 0.58f) * a);
+              ic, ic, ic, (sel || cur ? 1.0f : 0.58f) * a);
     sx += s.w;
   }
   if (est) {   // o estilo das abas: o ultimo segmento do mesmo trilho
@@ -2629,7 +2646,10 @@ static void vitDesenhar(float a, float x0) {
   }
   if (!arte) fundoColecao(a);
   degradeMarca(a, home_vitrine_layout() == HOME_LAYOUT_DINAMICA ? NV_TELA_H : NV_SHELF_TOP);
-  if (hero) home_vitrine_texto(hero, topo, a);
+  // O bloco do destaque comeca abaixo do cabecalho (anel e legenda descem ate
+  // ~34 px do centro da linha), com folga: logo largo, alto ou nome em texto.
+  cabCy = NV_ILHA_Y + NV_ILHA_H + 14.0f + NV_CTRL_H * 0.5f;
+  if (hero) vitHeroTopo = home_vitrine_texto(hero, topo, cabCy + 34.0f + VIT_CAB_FOLGA, a);
 
   // As fileiras, recortadas abaixo do texto do destaque.
   gfx_recorte(0.0f, topo - 8.0f, NV_TELA_W, NV_TELA_H - topo + 8.0f);
@@ -2706,7 +2726,7 @@ static void vitDesenhar(float a, float x0) {
       cabEb = (GfxRect){ x0, base - eb.h * 0.8f, eb.w, eb.h }; cabTt = (GfxRect){ ex, ty, tt.w, tt.h };
     } }
   // Anel e seletor na linha de baixo, como nas outras exibicoes.
-  cabCy = NV_ILHA_Y + NV_ILHA_H + 14.0f + NV_CTRL_H * 0.5f;
+  cabFim = 0.0f;
   if (listaDePessoa() && vcTotal > 0 && !vtTelefone()) linhaVistos(x0, cabCy, a);
   botaoExibicao(a, cabCy);
 }

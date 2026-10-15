@@ -139,7 +139,7 @@ int  home_vitrine_arte_pronta(const CatItem *ci);
 int  home_vitrine_arte(const CatItem *ci, float alfa);
 int  home_vitrine_layout(void);
 float home_vitrine_topo(float filH);
-void home_vitrine_texto(const CatItem *ci, float topo, float alfa);
+float home_vitrine_texto(const CatItem *ci, float topo, float teto, float alfa);
 void home_vitrine_cartao(const CatItem *ci, GfxRect base, GfxRect card, float alfa);
 #endif
 const char *home_rastro_foco(void);

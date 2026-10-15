@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
       openSource(); esperar();
       assert(desc_vertudo_erro());
       tabFocus = 1; tabCursor = cabN();
-      tecla(SDLK_RETURN);
+      tecla(SDLK_RETURN); tecla(SDLK_RIGHT); tecla(SDLK_RETURN);   // abre o seletor e escolhe
       assert(lay == VT_LAY_LINHA && tabCursor == cabN() && desc_vertudo_erro());
       falhar = 0;
       if (estilo == VT_AB_MENU && !pasta) {

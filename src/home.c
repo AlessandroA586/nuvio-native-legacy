@@ -4235,6 +4235,8 @@ void hero_meta_linha(const CatItem *ci, char *dst, size_t n) {
     memcpy(dst, t, w + 1); }
 }
 
+// Teto e topo do bloco da Vitrine da colecao (home_vitrine_texto); 0 = Home.
+static float vitTeto, vitTopoBloco;
 static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
                              float base, int lay, int cheio, float logoH,
                              float sinW, int sinLinhas, float aTexto,
@@ -4332,9 +4334,28 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
   AmigosTitulo amigos;
   int temAmigos = ci && ci->imdb[0] && amigostitulo_obter(ci->imdb, &amigos);
   float friendsH = temAmigos ? NV_AMIGOS_HERO_H : 0.0f;
+  if (vitTeto > minTop) minTop = vitTeto;
   HeroCopyLayout copy = heroCopyLayout(base, hSin, metaLinha[0] != 0, temSec,
                                       captionH, logoH, btnH, btnGap, minTop, slot, friendsH);
   TxtLinha tituloTelefone = {0};
+  if (vitTeto > 0.0f && !heroCompactoTelefone()) {
+    // VITRINE DA COLECAO: o bloco nao sobe no cabecalho (anel, seletor). O
+    // logo encolhe ate 88 px (o nome, ate a altura dele); faltando espaco a
+    // sinopse perde linhas, depois a linha de amigos.
+    float minLogo = 88.0f;
+    if (!tlogo && mostraNomeLogo && ci && ci->titulo[0])
+      minLogo = (float)txt_linha_corta(TXT_TITULO1, ci->titulo, 255, 255, 255, 255, maxWLogo).h;
+    while (copy.logo + copy.logoHeight - minTop < minLogo && (hSin > 0.0f || friendsH > 0.0f)) {
+      if (hSin > 0.0f) hSin = fmaxf(0.0f, hSin - heroSinEntrelinha());
+      else friendsH = 0.0f, temAmigos = 0;
+      copy = heroCopyLayout(base, hSin, metaLinha[0] != 0, temSec,
+                            captionH, logoH, btnH, btnGap, minTop, slot, friendsH);
+    }
+    sinLinhas = (int)ceilf(hSin / heroSinEntrelinha());
+    float fundo = copy.logo + copy.logoHeight;
+    copy.logoHeight = fminf(logoH, fmaxf(minLogo, fundo - minTop));
+    copy.logo = vitTopoBloco = fundo - copy.logoHeight;
+  }
   if (heroCompactoTelefone()) {
     float minLogo = 48.0f;
     if (!tlogo && mostraNomeLogo && ci && ci->titulo[0]) {
@@ -6672,16 +6693,21 @@ int home_vitrine_arte(const CatItem *ci, float alfa) {
   return desenhaArteHero(r, GFX_VITRINE, ci, a, alfa, 0.0f);
 }
 // Logo, meta, selos e sinopse do titulo, ancorados acima das fileiras.
-// `topo` = home_vitrine_topo; o bloco usa o logo e a largura do layout.
-void home_vitrine_texto(const CatItem *ci, float topo, float alfa) {
+// `topo` = home_vitrine_topo; o bloco usa o logo e a largura do layout e nunca
+// sobe alem de `teto` (o fim do cabecalho da colecao). Devolve o topo do bloco.
+// Sem botao na Vitrine: o logo nao reserva a vaga dele.
+float home_vitrine_texto(const CatItem *ci, float topo, float teto, float alfa) {
   int lay = home_vitrine_layout();
   float base = topo - NV_HERO_COPY_GAP - 24.0f;
   float logoH = lay == HOME_LAYOUT_PADRAO ? NV_PAD_LOGO_H : lay == HOME_LAYOUT_DINAMICA ? NV_DIN_LOGO_H : 150.0f;
   float sinW = lay == HOME_LAYOUT_PADRAO ? NV_PAD_SIN_W : lay == HOME_LAYOUT_DINAMICA ? 760.0f : NV_HERO_SIN_W;
-  if (!ci || alfa <= 0.004f) return;
+  if (!ci || alfa <= 0.004f) return teto;
+  vitTeto = teto; vitTopoBloco = teto;
   (void)desenhaCopiaHero(ci, 0, ajustes_conteudo_x(), base, lay, lay == HOME_LAYOUT_MODERNA,
                          logoH, homeTextoLargura(sinW), 3, alfa, alfa, 0.0f,
-                         NV_HERO_BOTAO_H, NV_HOME_HERO_BOTAO_GAP, 0.0f);
+                         0.0f, NV_HOME_HERO_BOTAO_GAP, 0.0f);
+  vitTeto = 0.0f;
+  return vitTopoBloco;
 }
 // Um cartaz de fileira normal. `base` e a caixa em repouso (o rotulo fica nela)
 // e `card` a caixa com o foco ja aplicado.

@@ -80,6 +80,8 @@ static void tecla(SDL_Keycode k) {
   e.type = SDL_KEYDOWN; e.key.keysym.sym = k;
   vertudo_evento(&e);
 }
+// O seletor recolhido: OK abre o trilho, a seta anda uma exibicao, OK escolhe.
+static void trocar(void) { tecla(SDLK_RETURN); tecla(SDLK_RIGHT); tecla(SDLK_RETURN); }
 
 static int sobrepoe(int a, int b) {
   return celX[a] < celX[b] + celW[b] - 0.5f && celX[b] < celX[a] + celW[a] - 0.5f &&
@@ -179,10 +181,10 @@ int main(int argc, char **argv) {
   // 6. OK NO BOTAO troca e grava; outro perfil nao herda.
   salvos_perfil(1);
   layEscolha = VT_LAY_AUTO; lay = VT_LAY_GRADE;
-  tecla(SDLK_RETURN);
+  trocar();
   assert(lay == VT_LAY_LINHA && layEscolha == VT_LAY_LINHA);
-  tecla(SDLK_RETURN); assert(lay == VT_LAY_FLUXO);   // a horizontal logo depois
-  tecla(SDLK_RETURN); tecla(SDLK_RETURN);
+  trocar(); assert(lay == VT_LAY_FLUXO);   // a horizontal logo depois
+  trocar(); trocar();
   assert(lay == VT_LAY_SAGA);
   assert(escolhaGravada(&pasta) == VT_LAY_SAGA);
   { ColFolder outra = pasta; snprintf(outra.id, sizeof outra.id, "outra");
@@ -195,8 +197,9 @@ int main(int argc, char **argv) {
   assert(escolhaGravada(&pasta) == VT_LAY_SAGA);
   // Depois do Mural vem a Vitrine, e depois dela volta ao comeco (Grade).
   lay = VT_LAY_MURAL; tabFocus = 1; tabCursor = nAbas();
-  tecla(SDLK_RETURN); assert(lay == VT_LAY_VITRINE && tabFocus == 1);
+  trocar(); assert(lay == VT_LAY_VITRINE && tabFocus == 1);
   assert(nAbas() == 0 && tabCursor == 0);
+  tecla(SDLK_RETURN); for (int i = 0; i < 7; i++) tecla(SDLK_LEFT);   // a Grade e a primeira do trilho
   tecla(SDLK_RETURN); assert(lay == VT_LAY_GRADE);
 
   // 7. VITRINE: fileiras semeadas direto (a fila de abas precisa de rede).
@@ -492,7 +495,7 @@ int main(int argc, char **argv) {
     assert(tabCursor == cursorInicial() && tabCursor == 2);   // antes: 4
     tabFocus = 1; tabCursor = cabN();
     assert(tabCursor == 3);
-    tecla(SDLK_RETURN);   // "Exibição": troca e o cursor segue no botao
+    trocar();   // "Exibição": troca e o cursor segue no botao
     assert(lay != VT_LAY_GRADE);
     assert(tabCursor == cabN() && tabCursor == 3);       // antes: nAbas()==5
     // restaura o estilo e a pasta do resto do teste
