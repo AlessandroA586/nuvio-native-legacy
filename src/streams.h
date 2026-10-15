@@ -102,6 +102,11 @@ typedef struct Stream {
   // poe estas no fim e o automatico as exclui; a escolha manual avisa que esta
   // baixando. Nao exclui nada: escolhida a dedo, toca como na 1.3.5.
   int  foraCache;
+  // Pronta no debrid: declaracao positiva do addon ou resolucao nativa que
+  // ja confirmou a disponibilidade. Zero tambem pode ser DESCONHECIDO; nao
+  // inferir cache de URL direta, nome do provedor ou ausencia de foraCache.
+  // So serve ao indicador da folha; foraCache sempre vence se mudar depois.
+  int  emCache;
   // A SONDA VIU A URL RESPONDER PAGINA (HTML/JSON/texto) e nao video (2.0.2,
   // naovideo.h): linha de aviso do addon. A folha a mostra apagada ("Nao e
   // video") e o automatico a pula. Marcada na verificacao, nunca no parser.

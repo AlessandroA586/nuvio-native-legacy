@@ -1467,6 +1467,7 @@ static int verificarUma(int i, Conferencia *c) {
       pthread_mutex_lock(&verTrava);
       if (nv_perfil_sessao_atual(c->sessao) && listaGeracao == c->geracao && i < n) {
         snprintf(lista[i].url, sizeof lista[i].url, "%s", url);
+        lista[i].emCache = 1; // o resolvedor cache-only ja confirmou, sem nova consulta
         ok = 1;
       } else c->abortou = 1;
       pthread_mutex_unlock(&verTrava);
@@ -1661,6 +1662,7 @@ int stream_resolver_escolhida(int i, unsigned geracao, char *url, unsigned nu,
     else {
       lista[i].urlP2P = viaP2P;
       lista[i].debridServico = viaP2P ? 0 : debrid_servico_por_nome(servico) + 1;
+      if (!viaP2P) lista[i].emCache = 1;
       if (!p2pmotor_e_url(url)) snprintf(lista[i].url, sizeof lista[i].url, "%s", url);
       else lista[i].url[0] = 0;
     }
@@ -2131,6 +2133,7 @@ int stream_preparo_resolver(StreamPreparo *p, int (*cancelado)(void *), void *ct
     if (!ok || !url[0] || !fontefalha_url_registrar(p->politica, url)) continue;
     *fonte = *s; snprintf(fonte->url, sizeof fonte->url, "%s", url);
     fonte->debridServico = r.servico + 1; fonte->urlP2P = 0;
+    if (s->infoHash[0]) fonte->emCache = 1;
     p->fontes[r.indice] = *fonte;
     if (indice) *indice = r.indice;
     if (politica && p->falhaAtiva) { *politica = p->politica; p->politica = NULL; }
@@ -2163,6 +2166,7 @@ int stream_preparo_renovar(StreamPreparo *p, int indice, int (*cancelado)(void *
   debrid_contexto_sair();
   if (!ok || !url[0] || !nv_perfil_sessao_atual(p->sessaoPerfil) || (cancelado && cancelado(ctx))) return 0;
   *fonte = *s; snprintf(fonte->url, sizeof fonte->url, "%s", url);
+  if (s->infoHash[0]) fonte->emCache = 1;
   p->fontes[indice] = *fonte;
   return 1;
 }
@@ -2191,6 +2195,7 @@ int stream_falha_aplicar_sessao(int indice, unsigned geracao, int servico,
     memmove(lista[indice].url, url, strlen(url) + 1);
     lista[indice].debridServico = servico + 1;
     lista[indice].urlP2P = 0;
+    if (lista[indice].infoHash[0]) lista[indice].emCache = 1;
     ok = 1;
   }
   pthread_mutex_unlock(&verTrava);
@@ -3129,6 +3134,14 @@ static void tituloAddon(const Stream *s, char *buf, size_t tam) {
   t[k] = 0;
   nv_limpar_texto(t, lim, sizeof lim, NV_LIMPA_UMA_LINHA);
   snprintf(buf, tam, "%s", lim[0] ? lim : s->provedor);
+}
+
+// O mesmo indicador nas duas apresentacoes, sem depender de emoji na fonte
+// da TV. Negativa posterior, P2P e resposta que nao e video nunca sao prontas.
+static float desenharCache(const Stream *s, float x, float y, float anim) {
+  if (!s->emCache || s->foraCache || s->urlP2P || s->naoVideo) return 0;
+  gfx_icone((GfxRect){x,y+4,22,22},"aj_zap",.88f,.78f,.46f,anim);
+  return 30;
 }
 
 static int temPalavra(const char *s, const char *p) {
@@ -4684,10 +4697,12 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     { char nome[96];
       int c=(s->naoVideo || (!canalFolha && stream_vod_falhou_ha(i) >= 0))?(sel?150:105):(sel?255:205);   // apagada: aviso ou fonte falhada
       char ep[64]="";
+      float cacheW=desenharCache(s,tx,cy,anim*(sel?1.0f:.8f));
+      float nx=tx+cacheW, nw=txtW-cacheW;
       tira=0;
       if(ajustes_fonte_texto_addon()) tituloAddon(s,nome,sizeof nome);
       else tituloConteudo(s,nome,sizeof nome,ep,sizeof ep);
-      { TxtLinha l=txt_linha_corta(TXT_CALLOUT,nome,c,c,c-2,255,txtW);
+      { TxtLinha l=txt_linha_corta(TXT_CALLOUT,nome,c,c,c-2,255,nw);
         // LOGO DO TITULO no lugar do nome (ajuste em teste): a mesma logo do
         // hero/detalhe, encostada a esquerda numa caixa da altura do nome.
         // Sem logo (ausente ou ainda baixando) fica o nome escrito.
@@ -4702,16 +4717,16 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
           // A base da logo fica FOLHA_LOGO_VAO acima dos selos (que comecam em
           // cy + 40), e nao no meio da altura do nome: centrada, a logo de 40 px
           // encostava nos selos.
-          gfx_rect((GfxRect){tx, floorf(cy + 40.0f - FOLHA_LOGO_VAO - lh), lw, lh}, lt,
+          gfx_rect((GfxRect){nx, floorf(cy + 40.0f - FOLHA_LOGO_VAO - lh), lw, lh}, lt,
                    tex_marca_escura(lu) ? GFX_MARCA : GFX_TEXTO, 0, 0, 0, 0.0f, 1, 1, 1,
                    anim * (sel ? 1.0f : .80f));
           l.w = (int)(lw + .5f);
         } else
-        txt_desenhar_alpha(l,tx,cy,anim);
+        txt_desenhar_alpha(l,nx,cy,anim);
         if(ep[0]){ int ce=sel?175:135;
           TxtLinha le=txt_linha(TXT_PG_FIM,ep,ce,ce,ce,255);
           // Na linha de base do nome, nao no meio da altura dele.
-          if(l.w+14+le.w<=txtW) txt_desenhar_alpha(le,tx+l.w+14,cy+l.h-le.h-3,anim); } } }
+          if(l.w+14+le.w<=nw) txt_desenhar_alpha(le,nx+l.w+14,cy+l.h-le.h-3,anim); } } }
     cy+=40;
     if(ajustes_fonte_texto_addon()) {
       cy+=desenharFaixas(s,tx,cy,tr-tx,sel,anim);

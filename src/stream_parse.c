@@ -944,6 +944,33 @@ int stream_texto_fora_de_cache(const char *t) {
       || contem(t, " download]") || contem(t, "uncached") || contem(t, "not cached");
 }
 
+// As marcas positivas que os addons usam (AIOStreams/Torrentio). Nao ler
+// arquivo, URL ou o nome configurado do addon: nao descrevem disponibilidade.
+static int textoEmCache(const char *t) {
+  return t && (strstr(t, "\xe2\x9a\xa1") || contem(t, "[TB+]") || contem(t, "[RD+]") ||
+               contem(t, "[PM+]") || contem(t, "[AD+]"));
+}
+static int marcaEmCache(const char *p, const char *fim) {
+  static const char *const campos[] = {"name", "description", "title"};
+  char texto[2048];
+  for (unsigned i = 0; i < sizeof campos / sizeof *campos; i++)
+    if (js_texto_raiz_em(p, fim, campos[i], texto, sizeof texto) && textoEmCache(texto)) return 1;
+  return 0;
+}
+
+// Booleano da PROPRIA fonte, nao de cabecalhos nem da fonte seguinte.
+// 0 = ausente/invalido; -1 = false; 1 = true. Strings e numeros nao contam.
+static int cacheDeclarado(const char *p, const char *fim) {
+  const char *cr = objetoRaiz(p, fim, "clientResolve");
+  if (!cr) return 0;
+  const char *f = js_fim(cr), *v = valorRaiz(cr, f, "isCached");
+  if (!v) return 0;
+  unsigned n = *v == 't' ? 4 : 5;
+  if (f - v < n || memcmp(v, n == 4 ? "true" : "false", n)) return 0;
+  const char *apos = faixasEspacos(v + n, f);
+  return apos < f && (*apos == ',' || *apos == '}') ? (n == 4 ? 1 : -1) : 0;
+}
+
 // "sources": ["tracker:udp://...", "dht:<hash>"] de um stream de torrent, uma
 // entrada por linha em `dst`. So as que o servidor de streaming do Stremio
 // entende (prefixo tracker: ou dht:); uma URL solta de tracker ganha o prefixo.
@@ -1042,6 +1069,8 @@ int stream_extrair(const char *json, const char *provedor, Stream **saida) {
         fhd = fhdNoNome(nomeFonte);
       textoRaizLinhas(p, fim, "description", s.descricao, sizeof s.descricao);
       textoRaizLinhas(p, fim, "title", titulo, sizeof titulo);
+      int cache = cacheDeclarado(p, fim);
+      s.emCache = cache > 0 || (cache == 0 && marcaEmCache(p, fim));
       metadadosFaixas(p, fim, &s);
       metadadosFiltro(p, fim, nomeFonte, s.descricao, titulo, &s);
       // behaviorHints.bingeGroup — ANCORADO NO OBJETO, e nao procurado solto.
@@ -1092,13 +1121,8 @@ int stream_extrair(const char *json, const char *provedor, Stream **saida) {
       s.mp4 = token(texto, "mp4") || contem(s.url, ".mp4");
       s.foraCache = stream_texto_fora_de_cache(texto);
       // AIOStreams: clientResolve.isCached e explicito; ausente nao e false.
-      if (s.infoHash[0] && !s.url[0]) {
-        const char *cr = valorRaiz(p, fim, "clientResolve");
-        const char *v = cr ? valorRaiz(cr, fim, "isCached") : NULL;
-        if (v && fim - v >= 5 && !memcmp(v, "false", 5) &&
-            (v + 5 == fim || v[5] == ',' || v[5] == '}' || isspace((unsigned char)v[5])))
-          s.foraCache = 1;
-      }
+      if (s.infoHash[0] && !s.url[0] && cache < 0) s.foraCache = 1;
+      if (s.foraCache) s.emCache = 0;
       if (s.infoHash[0]) s.temSemeadores = lerSemeadores(texto, &s.semeadores);
       s.tamanhoBytes = bytesExatos(p, fim);
       double bytes = js_num(p, fim, "videoSize", 0);
