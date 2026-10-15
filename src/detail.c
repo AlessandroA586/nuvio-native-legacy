@@ -2034,6 +2034,19 @@ static float epCardH(void) {
 static float epCardPasso(void) { return epApple() ? 420.0f + NV_DETP_EP_GAP : NV_DETP_EP_PASSO * epEscala(); }
 // A placa de foco estilo Apple TV (#205): alpha da mola `f` vezes o teto
 // NV_DETP_EP_PLACA_A. Sem foco (f=0) nao ha placa; o teste le daqui.
+// A placa cobre so o texto e e MAIS ESTREITA que a miniatura (dono: "o contorno
+// do texto tem que ser um pouco menor que a imagem"): recuo de 16 de cada lado
+// (o respiro de 3% do foco come ~10), centrada sob a imagem. `r` e a caixa do
+// card, `thH` a altura da miniatura, `ft` o foco 0..1.
+static GfxRect epPlacaRect(GfxRect r, float thH, float ft) {
+  GfxRect p = { r.x + NV_DETP_EP_PLACA_INSET, r.y + thH,
+                r.w - NV_DETP_EP_PLACA_INSET * 2.0f,
+                r.h - thH + NV_DETP_EP_PLACA_PAD };
+  float pw = p.w, ph = p.h, s = 1.0f + 0.03f * ft;
+  p.w *= s; p.h *= s;
+  p.x -= (p.w - pw) * 0.5f; p.y -= (p.h - ph) * 0.5f;
+  return p;
+}
 static float epPlacaA(float f) { return NV_DETP_EP_PLACA_A * anim_clamp(f, 0.0f, 1.0f); }
 // Largura do texto abaixo da miniatura (titulo, sinopse e barra): a do card,
 // menos as margens do Padrao (32 de cada lado, o NV_DETP_EP_TEXTO_W medido).
@@ -5307,14 +5320,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   // so ganhava anel/zoom e o texto ficava parado. Nao muda a caixa (`r`), logo
   // nao move nenhum vizinho; some desfocando pelo mesmo caminho.
   if (!epApple() && f > 0.005f) {
-    // So atras do bloco de texto (dono: "so no texto do episodio"): da base da
-    // miniatura ate o fim do card.
-    GfxRect p = { r.x - NV_DETP_EP_PLACA_PAD, r.y + th.h,
-                  r.w + NV_DETP_EP_PLACA_PAD * 2.0f,
-                  r.h - th.h + NV_DETP_EP_PLACA_PAD };
-    float pw = p.w, ph = p.h, s = 1.0f + 0.03f * ft;
-    p.w *= s; p.h *= s;
-    p.x -= (p.w - pw) * 0.5f; p.y -= (p.h - ph) * 0.5f;
+    GfxRect p = epPlacaRect(r, th.h, ft);
     gfx_cor(p, 24.0f / p.h, 1, 1, 1, epPlacaA(f) * a);
   }
   if (!epApple()) { foco_anel(th, raioTh, f, a); th = foco_zoom(th, f); }
@@ -5445,7 +5451,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
 
   float tx = r.x + NV_DETP_EP_PAD;
   const int moderna = epModerna();
-  const float textoX = moderna ? r.x + 6.0f : tx;   // abaixo da miniatura nao ha margem interna
+  const float textoX = moderna ? r.x + 12.0f : tx;   // abaixo da miniatura nao ha margem interna
   const float epSeloY = moderna ? NV_DETP_EPM_SELO_Y : NV_DETP_EP_SELO_Y;
 
   // Ausencia de check nao afirma que o historico ja chegou. Evita um selo

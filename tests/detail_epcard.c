@@ -127,6 +127,18 @@ int main(void) {
   //    TXT_PLR_CORPO (32) do Padrao.
   assert(epTituloEstilo() == TXT_CALLOUT);
 
+  // 5. A PLACA do texto e mais estreita que a miniatura, centrada, e abriga o
+  //    texto (que comeca em r.x+12 e +6 no foco) com folga, em repouso e em foco.
+  { GfxRect r = {100, 50, epCardW(), epCardH()};
+    for (i = 0; i <= 1; i++) {
+      GfxRect pl = epPlacaRect(r, epThumbH(), (float)i);
+      assert(pl.w < r.w);
+      assert(pl.x > r.x && pl.x + pl.w < r.x + r.w);
+      assert(fabsf((pl.x + pl.w * 0.5f) - (r.x + r.w * 0.5f)) < 0.01f);
+      if (i) assert(pl.x + 6.0f <= r.x + 18.0f);   // em repouso nao ha placa
+      if (i) assert(r.x + 18.0f + epTextoW() <= pl.x + pl.w);
+    } }
+
   puts("detail_epcard: bases casadas, tres tamanhos, sinopse de 4 linhas e foco andando");
   return 0;
 }
