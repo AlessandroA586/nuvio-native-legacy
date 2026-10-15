@@ -16,13 +16,13 @@ o que já está dentro do integ.
 
 | Branch | Commits | Classe | Evidência / destino |
 |---|---|---|---|
-| agente/202-biblioteca | 7 | PORTAR L (2.1) | Biblioteca por proveniência, "Listas" por fonte, fila Trakt paginada. Integ tem a ordem antiga Trakt/Simkl/Nuvio/Fixadas/Públicas (`src/biblioteca.c:289`). Arquivos novos ausentes: `biblioteca_hub.inc`, `biblioteca_lista.inc`, `biblioteca_vis.inc`, `listas_rede.c`. |
+| agente/202-biblioteca | 7 | PORTAR L (2.1) | Biblioteca por proveniência, "Listas" por fonte, fila Trakt paginada. Integ tem a ordem antiga Trakt/Simkl/Nuvio/Fixadas/Públicas (`src/biblioteca.c:288`). Arquivos novos ausentes: `biblioteca_hub.inc`, `biblioteca_lista.inc`, `biblioteca_vis.inc`, `listas_rede.c`. |
 | agente/203-318-play | 2 | JA_DENTRO (relator) + PORTAR S (#323) | Relator de queda Android <12 já está: `src/android.c:146` (`drenarNaQueda`), `src/android.c:171`, `src/queda.c:327`. A parte do `streams.c` é a mesma do 203-323. |
 | agente/203-323 | 1 | NÃO PORTAR | `src/streams.c:1824` ainda tem `c.rodada = fa_rodada_atual()` com `c` na pilha no caminho de play único. Mas o caminho paralelo já não usa `c`: aloca `ConfDona` no heap com refcount (`src/streams.c:1866-1873`), `fonteparalela_soltando` + `soltarConf`. O `malloc` do branch não tem `free` correspondente na saída do erro. Como conserto do 2.0.6 regrediria o caminho com refcount: portar só a título de estudo. |
 | agente/203-perfilsel | 1 | JA_DENTRO | Variante D2 ("continuar sob cada avatar") em `src/perfilsel.c:61` e `:585`; strings `T%d · E%d` e `Nada a continuar` nos `idioma_*.h`. |
 | agente/2031-dvp5-hdr10 | 2 | JA_DENTRO (ao contrário) | Perfil 5 em MP4 na LG já vale nível 4 com HDR10 da faixa, de propósito: `src/streams.c:862` (`nivel = 4` quando `ajustes_dolby_vision() && telaDv && stream_e_mp4(s)`); `classeMp4` (`src/streams.c:1014`) já o põe acima do HDR10; `mp4PrimeiroNaFaixa` (`src/streams.c:1024`) não tem exceção HDR10. Ambas as peças existem, na direção inversa. `tests/fonte_lg_mp4.c:121` espera "MP4 DV Profile 5 2160p" para "LG, com MP4 primeiro: MP4 DV perfil 5 x MKV HDR10". Portar reintroduziria regra que o integ apagou e quebraria esse teste. |
 | agente/204-arabe370 | 1 | DOC | Mexe em `docs/issues/MAPA.md` e `mapa.json` (#370, sincronismo). O rascunho `docs/issues/rascunhos/resposta-370.md` não existe no integ. |
-| agente/204-pr381 | 2 | JA_DENTRO | Scratch merge de pr-381. `src/creditosauto.h`, `ajustes_auto_creditos` e `tests/creditosauto.c` já estão no integ. O commit extra só mexe em registro de ícone e asserção. |
+| agente/204-pr381 | 2 | JA_DENTRO | Scratch merge de pr-381. `src/creditosauto.h` e `tests/creditosauto.c` já estão no integ; o ajuste equivalente é `ajustes_pular_creditos` (`src/ajustes.c:2250`). O commit extra só mexe em registro de ícone e asserção. |
 | agente/204-samsung-dts | 1 | DOC | `docs/plans/samsung-dts.md` não existe no integ. Parte do conteúdo está em `docs/features/dts/README.md:75-79` e `docs/funcoes/streams.md:152` (#313). |
 | agente/204-webos-versao | 1 | JA_DENTRO | Ordem nyx > starfish > acb já em `src/webosver.c` (lê `/var/run/nyx/os_info.json`) e `src/video.c:752-764`. |
 | agente/ajustesvisual | 2 | OBSOLETO (parado) | Direções A/B (`ajVisual`, `AJV_A`) não estão no integ. `docs/ROADMAP.md:70` diz "sem direção aprovada". Nada a portar sem aprovação. |
@@ -30,7 +30,7 @@ o que já está dentro do integ.
 | agente/codex-contexto | 1 | DOC | `docs/glass-ui-contexto.md` não existe no integ. Contexto de UI Glass, sem código. |
 | agente/guiaunicode | 1 | JA_DENTRO | Genre decodifica `\uXXXX` via `js_cadeia`: `src/guia.c:659-665`. |
 | agente/icones | 5 | JA_DENTRO | Activity-alias por ícone em `android/app/src/main/AndroidManifest.xml:66-75`; `ajustes_icone_app` em `src/ajustes.c`. |
-| agente/p2p | 6 | JA_DENTRO | Os 7 arquivos novos existem: `src/p2p.c`, `src/p2pmotor.c`, `tests/p2p*`. `NUVIO_P2P_MOTOR` em `arm.sh` (12 ocorrências no integ). |
+| agente/p2p | 6 | JA_DENTRO | Os 7 arquivos novos existem: `src/p2p.c`, `src/p2pmotor.c`, `tests/p2p*`. `NUVIO_P2P_MOTOR` em `tools/arm.sh` (4 ocorrências no integ). |
 | agente/plugins | 14 | JA_DENTRO | Os 28 arquivos novos existem: `src/plugins.c`, `src/pluginjs.c`, `src/pluginsui.c`, `tests/plugin_rodar.c`, `tests/plugins_folha_shot.c`, `tests/pluginsui_shot.c`. O teto "origem extra 6 s" (`1a3dafcd`) está removido: `src/addons.c:2518` só dá `pthread_join` na origem extra, sem corte de 6 s. |
 | agente/pr259-merge | 4 | OBSOLETO | Fallback DTS do PR 259 foi substituído pelo pipeline `src/dts/` (`dts_engine.c`, `dts_playback.c`). `NV_APP_ID` já está em `src/app_id.h`. |
 | agente/rastreio | 6 | PORTAR M (2.1) | Ferramenta de processo (`tools/rastreio/`: grafo, guarda, falhas conhecidas). Não existe no integ; `tools/auditoria-release.sh` não tem o gancho. Não toca o app. |
@@ -59,7 +59,7 @@ o que já está dentro do integ.
 | pr-493 | 1 | PORTAR L (2.1) | Reset de sessões de perfil e isolamento de fios. `src/perfisessao.h` ausente; `src/addons.c` do integ usa outro desenho (`listaTrava`, `progTrava`, `versaoLista`). 123 arquivos. |
 | pr-493-novo | 1 | PORTAR L (2.1) | Mesmo commit de pr-493 (`4cc89807`). Duplicata. |
 | webos3 | 7 | JA_DENTRO (fix de addons) + pendente (arte) | Fix `uses_primary_addons` em `src/perfis.c:268`; `NV_SDLCOMPAT_H` em `src/sdlcompat.h`. Os commits de arte/teto de textura (`312d2202`, `28ac6906`) não foram verificados. |
-| agente/205-dicatoque | 1 | PORTAR S (2.0.6) | Dicas do rodapé clicáveis (`aj2DicaOk`, `aj2DicaVoltar`) não existem no integ (nem `aj2DicaVoltar`; `aj2DicaOk`/`aj2DicaVoltar` não aparecem em `src/ajustes_ux_v2.inc`). Usa `ponteiro_alvo`, que já existe. Visual intacto. |
+| agente/205-dicatoque | 1 | JA_DENTRO | Dicas do rodapé clicáveis (`aj2DicaOk`, `aj2DicaVoltar`) e ligação com `ponteiro_alvo` já em `src/ajustes_ux_v2.inc:513-528`; teste em `tests/ajustes_ux_toque_modo.c`. Nada a portar. |
 | agente/205-bench-mm | 1 | JA_DENTRO | Medidor some com trailer: `src/desempenho.c:33,40`; chamado em `src/main.c:1922` via `trailer_medidor_esconde()`. |
 
 ## Pendências
