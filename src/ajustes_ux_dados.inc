@@ -96,7 +96,7 @@ static void uxValorTexto(int op, int v, char *buf, size_t tam) {
   } else if (o->tipo == OP_NUMERO) {
     snprintf(buf, tam, "%d%s", v, o->sufixo ? o->sufixo : "");
     return;
-  } else if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA) {
+  } else if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2) {
     const char *cod = ling_opcao_codigo(v >= 0 && v < ling_opcao_n() ? v : 0);
     texto = !cod || !cod[0] ? "Da conta" : !strcmp(cod, "*") ? "Todas"
       : !strcmp(cod, "~") ? "Original do título" : ling_nome(cod);
@@ -158,6 +158,7 @@ static const char *uxSinonimos(int op) {
   switch (op) {
     case AJ_IDIOMA: return "idioma interface menus language portugues ingles espanhol";
     case AJ_AUD_LINGUA: return "idioma audio dublado dublagem original voz language";
+    case AJ_AUD_LINGUA2: return "idioma audio segundo secundario dublado dublagem voz language second secondary";
     case AJ_LEG_LINGUA: return "idioma legenda legendado subtitle subtitles cc closed captions";
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
       return "legenda secundaria segunda dupla dual posicao topo junto empilhada tamanho cor fundo borda contorno estilo second subtitle position size color";
@@ -370,7 +371,7 @@ int ajustes_buscar(const char *consulta, AjusteBuscaResultado *resultados, int c
       uxIndiceAcrescentar(indice, sizeof indice, ajudaOpcao(op));
       uxIndiceAcrescentar(indice, sizeof indice, i18n(ajudaOpcao(op)));
       if (OPCOES[op].tipo == OP_ESCOLHA) {
-        int n = op == AJ_AUD_LINGUA || op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 ? ling_opcao_n() : nValores(op);
+        int n = op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2 || op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 ? ling_opcao_n() : nValores(op);
         for (j = 0; j < n; j++) {
           char texto[160];
           uxValorTexto(op, j, texto, sizeof texto);

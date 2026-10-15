@@ -19,12 +19,16 @@
 #include "intro.h"
 #include "rede.h"
 #include "dts/dts_hls_tpk.h"
+#include "audioescolha.h"
 
 const char *i18n(const char *s) { return s; }
 const char *ling_nome(const char *c) { return c; }
 int ling_casa(const char *c, const char *p) { return c && p && !strcmp(c, p); }
 static const char *pref = "";
 const char *ling_audio(void) { return pref; }
+static const char *pref2 = "", *orig = "";
+const char *ling_audio2(void) { return pref2; }
+const char *ling_original(void) { return orig; }
 int ling_tipo_legenda(const char *s, int f, int d) { (void)s; (void)f; (void)d; return 0; }
 const char *ling_tipo_legenda_rotulo(int t) { (void)t; return ""; }
 const char *ling_do_nome(const char *nome) { (void)nome; return NULL; }
@@ -161,9 +165,10 @@ static void hEscolher(int tipo, int idx) { (void)tipo; (void)idx; }
 static int falhas;
 static void ok(int c, const char *o) { printf("%s %s\n", c ? "ok  " : "FAIL", o); if (!c) falhas++; }
 static void bombear(int vezes) { while (vezes--) { video_bombear(); SDL_Delay(5); } }
+static const char *tvLang = "eng";   // the language the TV gives its one playable track
 static void playerPronto(void) {
   nv_tpk_video_evento(1, 0, 0);
-  nv_tpk_video_faixa(0, 0, "eng");
+  nv_tpk_video_faixa(0, 0, tvLang);
   nv_tpk_video_faixas_fim(0, -1);
   nv_tpk_video_evento(2, 0, 0);
 }
@@ -269,14 +274,47 @@ int main(void) {
   video_tocar("http://h/c.mkv");
   ok(abriuConversor == 1 && dts_tpk_e_url(ultUrl), "mixed file, preferred language only on DTS (eng): converts it");
   video_parar();
-  // Header only after the original is playing: same rule, mid-film.
-  cabPronto = 0; abriuConversor = 0;
+  // Header only after the original is playing: same rule, mid-film. The TV
+  // lists the one track it plays (the Japanese AAC).
+  cabPronto = 0; abriuConversor = 0; tvLang = "jpn";
   video_tocar("http://h/e.mkv");
   inicioStream = -1; posMs = 2000;
   playerPronto(); bombear(3);
   cabPronto = 1;
   { Uint32 t0 = SDL_GetTicks(); while (!abriuConversor && SDL_GetTicks() - t0 < 3000) bombear(1); }
   ok(abriuConversor == 1 && dts_tpk_e_url(ultUrl) && video_pronto(), "header read while the original plays: converts, no opening card");
+  video_parar();
+
+  // THE AUDIO ORDER (audioescolha.h): picked by hand > preferred > second > original.
+  // Second language only on DTS: converts it before opening.
+  abriuConversor = 0; pref = "swe"; pref2 = "eng";
+  video_tocar("http://h/o1.mkv");
+  ok(abriuConversor == 1 && dts_tpk_e_url(ultUrl), "order: preferred (Swedish) missing, second (English) only on DTS: converts");
+  video_parar();
+  // No preference, original language only on DTS: converts.
+  abriuConversor = 0; pref = ""; pref2 = ""; orig = "eng";
+  video_tocar("http://h/o2.mkv");
+  ok(abriuConversor == 1 && dts_tpk_e_url(ultUrl), "order: original language (English) only on DTS: converts");
+  video_parar();
+  // Preferred Japanese plays on the TV: the original, even with English as the original language.
+  abriuConversor = 0; pref = "jpn"; orig = "eng";
+  video_tocar("http://h/o3.mkv");
+  ok(!abriuConversor && !dts_tpk_e_url(ultUrl), "order: preferred language playable beats the original language on DTS");
+  video_parar();
+  // Picked the Japanese AAC by hand in this playback: it wins over the preferred English DTS.
+  abriuConversor = 0; pref = "eng"; orig = "";
+  audioesc_titulo("tt9:0:0");
+  audioesc_lembrar("jpn", "A_AAC", "Japanese", 2);
+  video_tocar("http://h/o4.mkv");
+  ok(!abriuConversor && !dts_tpk_e_url(ultUrl), "order: the track picked by hand earlier (Japanese AAC) beats the preferred English DTS");
+  video_parar();
+  // And the other way: English DTS picked by hand, preferred Japanese: converts the English.
+  pref = "jpn";
+  audioesc_lembrar("eng", "A_DTS", "English", 6);
+  video_tocar("http://h/o5.mkv");
+  ok(abriuConversor == 1 && dts_tpk_e_url(ultUrl), "order: English DTS picked by hand earlier beats the preferred Japanese: converts");
+  audioesc_titulo("tt10:0:0");
+  pref = "eng"; tvLang = "eng";
   video_parar();
   pref = ""; abriuConversor = 0;
   video_tocar("http://h/d.mkv");

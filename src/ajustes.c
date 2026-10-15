@@ -545,6 +545,10 @@ typedef enum {
   AJ_PULAR_CREDITOS,
   AJ_PROXIMO_CONTAGEM, // #256: segundos locais; append-only
   AJ_INTERFACE_MODO, // local, append-only; 0 = TV, 1 = Mobile
+  // SEGUNDO IDIOMA DE AUDIO (dono, 15/10/2026): secondary_preferred_audio_language
+  // do app oficial; a mesma lista e a regra da legenda secundaria (audioescolha.h:
+  // a ordem do audio automatico). No fim: posicionais.
+  AJ_AUD_LINGUA2,
   // DTS/TrueHD -> Dolby Digital no .tpk (dts/dts_hls_tpk.h): linhas de TESTE da
   // entrega ao player da Samsung, e o registro do app na rede (sem sdb shell na
   // TV de varejo). So no .tpk, avancadas. LOCAIS. No fim: posicionais.
@@ -1423,6 +1427,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Pular os créditos automaticamente", V_LIGA, 2),   // local: pularCreditosLocal
   NUM("Contagem do próximo episódio", 1, 60, 1, "s"),
   ESC("Modo da interface", V_INTERFACE_MODO, 2),
+  ESC("Segundo idioma do áudio",         V_LINGUA, 2),
   ACAO("Registro do app na rede"),                                     // dts_hls_tpk.c, sem valor
 };
 
@@ -1668,6 +1673,7 @@ static const char *CHAVE[] = {
   "pularCreditosLocal",
   "proximoContagemLocal",
   "interfaceModoLocal",
+  "audioSecundarioIdioma",
   "registroRedeLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
@@ -3570,6 +3576,7 @@ void ajustes_dir(const char *dir) {
   aplicarIdioma(AJ_LEG_LINGUA);
   aplicarIdioma(AJ_LEG_LINGUA2);
   aplicarIdioma(AJ_AUD_LINGUA);
+  aplicarIdioma(AJ_AUD_LINGUA2);
   txt_definir_fonte_interface((TxtFamilia)valor[AJ_FONTE_UI]);
   gfx_escala_ui_definir(ajustes_tamanho_ui());
   interfaceAplicar();
@@ -4149,6 +4156,7 @@ static void idiomasDoBlob(const char *json, const char *fim) {
     { "subtitle_preferred_language",         ling_conta_legenda  },
     { "subtitle_secondary_language",         ling_conta_legenda2 },
     { "preferred_audio_language",            ling_conta_audio    },
+    { "secondary_preferred_audio_language",  ling_conta_audio2   },
   };
   size_t k;
   // #378 (revisao): o blob e o retrato INTEIRO da conta. Chave ausente = a
@@ -4170,10 +4178,10 @@ static void idiomasDoBlob(const char *json, const char *fim) {
   }
   // A CONTA e o que VALE separados (#378): antes so saia o em vigor, que com
   // escolha local nesta TV nao dizia nada sobre a conta.
-  printf("[ajustes] idiomas da conta: legenda=\"%s\" legenda2=\"%s\" audio=\"%s\"; "
-         "em vigor: legenda=\"%s\" audio=\"%s\"\n",
+  printf("[ajustes] idiomas da conta: legenda=\"%s\" legenda2=\"%s\" audio=\"%s\" audio2=\"%s\"; "
+         "em vigor: legenda=\"%s\" audio=\"%s\" audio2=\"%s\"\n",
          ling_conta_legenda_valor(), ling_conta_legenda2_valor(), ling_conta_audio_valor(),
-         ling_legenda(), ling_audio());
+         ling_conta_audio2_valor(), ling_legenda(), ling_audio(), ling_audio2());
   fflush(stdout);
 }
 
@@ -4182,7 +4190,7 @@ static void idiomasDoBlob(const char *json, const char *fim) {
 void ajustes_idiomas_da_conta(const char *json) {
   if (json && *json) { idiomasDoBlob(json, json + strlen(json)); return; }
   // NULL: troca de perfil/conta (sync_reaplicar_ajustes) — esquece os da conta.
-  ling_conta_legenda(""); ling_conta_legenda2(""); ling_conta_audio("");
+  ling_conta_legenda(""); ling_conta_legenda2(""); ling_conta_audio(""); ling_conta_audio2("");
 }
 
 // O NOME NA CONTA. Quase sempre o mesmo do arquivo; o trailer do cartaz em foco
@@ -4535,6 +4543,7 @@ int ajustes_perfil_restaurar(int perfil) {
     aplicarIdioma(AJ_LEG_LINGUA);
     aplicarIdioma(AJ_LEG_LINGUA2);
     aplicarIdioma(AJ_AUD_LINGUA);
+    aplicarIdioma(AJ_AUD_LINGUA2);
   }
   printf("[ajustes] ajustes do perfil %d restaurados desta TV (%d mudaram)\n",
          perfil, mudou);
@@ -5605,7 +5614,8 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
       return "Aparência só da segunda legenda. \"Igual à principal\" segue o estilo da principal, definido no player.";
     case AJ_LEG_LINGUA: return "Idioma ligado sozinho quando o vídeo começa. Legendas dos addons aparecem em inglês e no idioma escolhido aqui. \"Da conta\" segue o que está no seu perfil.";
-    case AJ_AUD_LINGUA: return "Faixa de áudio escolhida quando o arquivo tem mais de uma. Se o idioma não existir no arquivo, o player usa a primeira.";
+    case AJ_AUD_LINGUA: return "Faixa de áudio escolhida quando o arquivo tem mais de uma. Sem esse idioma no arquivo, vale o segundo idioma, depois o idioma original do título.";
+    case AJ_AUD_LINGUA2: return "Usado quando o arquivo não tem o idioma de áudio principal. \"Da conta\" segue o que está no seu perfil.";
     case AJ_PAUSA_OVERLAY: return "Ao pausar, sobe uma ficha com a sinopse e os dados do que você está vendo.";
     case AJ_PULAR_ABERTURA: return "Pula a abertura sozinho quando o episódio tem o trecho marcado, e avisa na tela. Sem marcador, nada é pulado. O botão Pular abertura continua valendo.";
     case AJ_PULAR_RESUMO: return "Pula o resumo do episódio anterior sozinho quando o episódio tem o trecho marcado, e avisa na tela. Sem marcador, nada é pulado.";
@@ -6882,7 +6892,7 @@ static int definirValorDireto(int op, int novo) {
     valor[op] = fil_limite_gravado();
     fil_confirmar_limite();
   }
-  if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA) aplicarIdioma(op);
+  if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2) aplicarIdioma(op);
   if (op == AJ_IDIOMA) { idiomaEscolhido(); desc_repetir(); }
   if (op == AJ_FONTE_UI) txt_definir_fonte_interface((TxtFamilia)novo);
   if (op == AJ_TAMANHO_UI) gfx_escala_ui_definir(ajustes_tamanho_ui());
@@ -7338,8 +7348,8 @@ static void aplicarIdioma(int op) {
   } else {
     // O audio nao precisa de nada equivalente: as faixas de audio vem do
     // arquivo que esta tocando e a preferencia so escolhe entre as que ja
-    // existem (video.c), sem consultar a rede.
-    ling_local_audio(c);
+    // existem (audioescolha.c), sem consultar a rede.
+    if (op == AJ_AUD_LINGUA2) ling_local_audio2(c); else ling_local_audio(c);
   }
 }
 
@@ -7347,7 +7357,7 @@ static void aplicarIdioma(int op) {
 // unicas dinamicas: a lista vem de linguas.c e nao da tabela OPCOES, que e
 // const e foi escrita antes de linguas.c existir.
 static int nValores(int op) {
-  if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA) return nLingua > 0 ? nLingua : 1;
+  if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2) return nLingua > 0 ? nLingua : 1;
   if (op == AJ_SELOS_PACOTE) return 1 + selospacote_n();
 #ifndef __EMSCRIPTEN__
   // "YouTube" (o 4o valor) so toca no .wgt da Samsung (trailerfonte.c, existe).
@@ -7378,7 +7388,7 @@ static const char *textoValor(int op) {
     snprintf(buf, sizeof buf, "%d%s", valor[op], o->sufixo ? o->sufixo : "");
     return buf;
   }
-  if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA) {
+  if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2) {
     int v = valor[op];
     return (v >= 0 && v < nLingua && V_LINGUA[v]) ? V_LINGUA[v] : "Da conta";
   }
@@ -7800,7 +7810,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK: case AJ_BUFFER:
     case AJ_DV_MKV:
     case AJ_LEG_FORCADA:
-    case AJ_AUD_LINGUA: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_FONTE_MANUAL:
+    case AJ_AUD_LINGUA: case AJ_AUD_LINGUA2: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_FONTE_MANUAL:
     case AJ_FONTE_AUTO: case AJ_FONTE_REPOR: case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON: case AJ_SELOS_CORES: case AJ_FONTE_TOCAR_CONFERINDO: case AJ_FONTE_AQUECER: case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR:
     case AJ_FONTE_PRIORIDADE: case AJ_FONTE_HDR:
     case AJ_SELOS_PACOTE:

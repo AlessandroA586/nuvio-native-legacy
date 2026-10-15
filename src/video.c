@@ -10,6 +10,7 @@
 #include "video_dvaudio.h"
 #include "idioma.h"
 #include "linguas.h"
+#include "audioescolha.h"
 #include <SDL2/SDL.h>
 #include "marco.h"
 #include "mkv.h"
@@ -1112,26 +1113,31 @@ static int eventoPayload(const char *p, unsigned minhaSessao) {
       }
     }
 
-    // Escolhe o audio no idioma preferido, se houver um e se o arquivo o
-    // tiver. Sem preferencia, ou sem faixa correspondente, NAO se mexe: a
-    // escolha do pipeline (faixa 0) e melhor que uma trocada por chute — quem
-    // quer outra abre a folha de faixas, que continua listando todas.
-    { const char *pref = ling_audio();
-      if (pref[0] && nAudio > 1) {
-        int i;
-        for (i = 0; i < nAudio; i++) {
-          if (!faixaAudio[i].idioma[0] || !ling_casa(faixaAudio[i].idioma, pref)) continue;
-          printf("[video] audio preferido: %s (faixa %d de %d)\n",
-                 ling_nome(faixaAudio[i].idioma), i + 1, nAudio);
-          fflush(stdout);
-          // Direto, e nao por audioAoCarregar: aquele campo e da RECUPERACAO
-          // (pipeline morto) e sobrescreve-lo aqui apagaria a faixa que a
-          // pessoa tinha escolhido antes da queda. O sourceInfo chega com o
-          // pipeline ja carregado, entao o selectTrack vale agora.
-          if (audioAoCarregar < 0) video_escolher_audio(i);
-          break;
-        }
-      } }
+    // A ORDEM DO AUDIO (audioescolha.h): a escolhida a mao nesta reproducao, o
+    // idioma preferido, o segundo, o original; em cada idioma a que nao e
+    // DTS/TrueHD antes (DTS que a TV recusa converte, ver audioNaoSup). Sem
+    // regra que decida, NAO se mexe: a escolha do pipeline (faixa 0) e melhor
+    // que uma trocada por chute — quem quer outra abre a folha de faixas.
+    if (nAudio > 1) {
+      AudioCand c[NV_FAIXA_MAX];
+      int i, o, k;
+      for (i = 0; i < nAudio; i++) {
+        c[i].idioma = faixaAudio[i].idioma; c[i].codec = faixaAudio[i].codec;
+        c[i].rotulo = faixaAudio[i].rotulo; c[i].canais = faixaAudio[i].canais;
+        c[i].dts = audioesc_dts_truehd(faixaAudio[i].codec, faixaAudio[i].rotulo); c[i].pode = 1;
+      }
+      k = audioesc_escolher(c, nAudio, &o);
+      if (k >= 0 && k != audioAtual) {
+        printf("[video] audio pela ordem (%s): %s (faixa %d de %d)\n", audioesc_origem_nome(o),
+               faixaAudio[k].rotulo, k + 1, nAudio);
+        fflush(stdout);
+        // Direto, e nao por audioAoCarregar: aquele campo e da RECUPERACAO
+        // (pipeline morto) e sobrescreve-lo aqui apagaria a faixa que a
+        // pessoa tinha escolhido antes da queda. O sourceInfo chega com o
+        // pipeline ja carregado, entao o selectTrack vale agora.
+        if (audioAoCarregar < 0) video_escolher_audio(k);
+      }
+    }
 
     // O PIPELINE NAO DA IDIOMA DE LEGENDA. Medido nesta TV, num arquivo com 43
     // legendas: o audioTrackInfo vem com "en"/"es"/"fr"/"it" e TODA entrada do

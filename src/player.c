@@ -34,6 +34,7 @@
 #include "dados.h"
 #include "trailer.h"
 #include "linguas.h"
+#include "audioescolha.h"
 #include "idioma.h"
 #include "posplay.h"
 #include "extras.h"
@@ -541,6 +542,16 @@ static int retomadaAplicada, retomarPct;
 static double basePos, baseDur;
 static int basePct, baseTocou, baseT = -1, baseE = -1;
 static int epT, epE, pedFontes, erroFonte, pedProxT, pedProxE;
+// A faixa de audio escolhida a mao vale para ESTE titulo e episodio
+// (audioescolha.h): troca de fonte e reabertura mantem, outro titulo esquece.
+static void audioTitulo(void) {
+  const CatItem *c = item();
+  char k[96];
+  if (!c) { audioesc_titulo(""); return; }
+  snprintf(k, sizeof k, "%s:%d:%d", c->imdb[0] ? c->imdb : c->titulo,
+           strcmp(c->tipo, "series") ? 0 : epT, strcmp(c->tipo, "series") ? 0 : epE);
+  audioesc_titulo(k);
+}
 static void medirAssistido(void) {
   double m = monoSeg(), p = video_pos();
   int ok = fontePrincipal() && video_ativo() && video_pronto() && video_tocando() &&
@@ -788,6 +799,7 @@ void player_do_inicio(void) {
 void player_definir_episodio(int t, int e) {
   const CatItem *c = item();
   epT = t; epE = e; linhaEp[0] = 0;
+  audioTitulo();
   retomarPct = 0;
   // !canalSessao: canal nao tem retomada, e se o indice ja foi remapeado o
   // "progresso" lido ali seria de outro titulo qualquer.
@@ -1429,6 +1441,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
     // A COPIA e feita AQUI, no unico instante em que o indice e sabidamente o
     // do titulo pedido. Ver item().
     if (ci) { itemFixo = *ci; temFixo = 1; } else temFixo = 0;
+    audioTitulo();
     artehero_logo_sessao_iniciar(temFixo ? &itemFixo : NULL);
     canalSessao = ci && (!strcmp(ci->tipo, "channel") || !strcmp(ci->tipo, "tv"));
     if (canalSessao) itemCanal = *ci;

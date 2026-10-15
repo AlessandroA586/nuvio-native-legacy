@@ -216,8 +216,8 @@ int ling_afinidade(const char *cod, const char *pref) {
 
 // ------------------------------------------------------------ preferencias
 
-static char contaLeg[16], contaLeg2[16], contaAud[16];
-static char localLeg[16], localAud[16], localLeg2[16];
+static char contaLeg[16], contaLeg2[16], contaAud[16], contaAud2[16];
+static char localLeg[16], localAud[16], localLeg2[16], localAud2[16];
 
 // As sentinelas do web viram vazio (= sem filtro) ou "none" (= nenhuma).
 // "DEVICE"/"DEFAULT"/"ORIGINAL" dizem "deixe o arquivo decidir", que deste lado
@@ -237,9 +237,11 @@ static void guardar(char *dest, size_t n, const char *v) {
 void ling_conta_legenda(const char *v)  { guardar(contaLeg,  sizeof contaLeg,  v); }
 void ling_conta_legenda2(const char *v) { guardar(contaLeg2, sizeof contaLeg2, v); }
 void ling_conta_audio(const char *v)    { guardar(contaAud,  sizeof contaAud,  v); }
+void ling_conta_audio2(const char *v)   { guardar(contaAud2, sizeof contaAud2, v); }
 const char *ling_conta_legenda_valor(void)  { return contaLeg; }
 const char *ling_conta_legenda2_valor(void) { return contaLeg2; }
 const char *ling_conta_audio_valor(void)    { return contaAud; }
+const char *ling_conta_audio2_valor(void)   { return contaAud2; }
 // A escolha LOCAL preserva o "*": "Todas" e uma decisao ("nao filtre"), nao a
 // ausencia de decisao. Tratar as duas como vazio fazia escolher "Todas" cair de
 // volta na preferencia da conta — ou seja, o ajuste nao obedecia.
@@ -253,6 +255,7 @@ static void guardarLocal(char *dest, size_t n, const char *v) {
 void ling_local_legenda(const char *v)  { guardarLocal(localLeg, sizeof localLeg, v); }
 void ling_local_audio(const char *v)    { guardarLocal(localAud, sizeof localAud, v); }
 void ling_local_legenda2(const char *v) { guardarLocal(localLeg2, sizeof localLeg2, v); }
+void ling_local_audio2(const char *v)   { guardarLocal(localAud2, sizeof localAud2, v); }
 
 // A escolha desta TV ganha da conta. Quem mexeu no aparelho quis mexer AQUI, e
 // ver a proxima sincronizacao desfazer isso e o tipo de comportamento que faz a
@@ -290,6 +293,12 @@ const char *ling_legenda2(void) {
   return localLeg[0] ? "" : contaLeg2;
 }
 const char *ling_audio(void)    { return emVigor(localAud, contaAud); }
+// O SEGUNDO IDIOMA DE AUDIO (secondary_preferred_audio_language do app
+// oficial): a mesma regra da segunda legenda acima.
+const char *ling_audio2(void) {
+  if (localAud2[0]) return emVigor(localAud2, contaAud2);
+  return localAud[0] ? "" : contaAud2;
+}
 
 // ------------------------------------------------------------ lista da UI
 

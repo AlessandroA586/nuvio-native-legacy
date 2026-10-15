@@ -152,7 +152,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_SEEKR_FITA: return "aj_film";
     case AJ_SEEKR_AJUSTE: return "aj_film";
     case AJ_IDIOMA: return "aj_languages";
-    case AJ_AUD_LINGUA: return "aj_audio-lines";
+    case AJ_AUD_LINGUA: case AJ_AUD_LINGUA2: return "aj_audio-lines";
     case AJ_LEG_MOSTRAR: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_LEG_FORCADA: return "aj_captions";
     case AJ_CACHE_SEEK: return "aj_database";
     case AJ_TAM_MAX: case AJ_TAM_MIN: return "aj_database";
@@ -549,7 +549,7 @@ static float ajVisualCena(int sec, int op, float x, float y, float w) {
       static const int OP3[3] = { AJ_IDIOMA, AJ_AUD_LINGUA, AJ_LEG_LINGUA };
       static const char *const ico[3] = { "aj_languages", "aj_audio-lines", "aj_captions" };
       static const char *const cod[3] = { "PT", "EN", "ES" };
-      int foco = op == AJ_IDIOMA || op == AJ_TMDB_IDIOMA ? 0 : op == AJ_AUD_LINGUA ? 1 : op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 ? 2 : -1;
+      int foco = op == AJ_IDIOMA || op == AJ_TMDB_IDIOMA ? 0 : op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2 ? 1 : op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 ? 2 : -1;
       ajCenaArte(ajArte(AJA_FUNDO, A), q, rr, 0.45f);
       for (i = 0; i < 3; i++) {
         float by = 36 + i * 100;
