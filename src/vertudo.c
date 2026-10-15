@@ -230,23 +230,16 @@ static float tlFoco[VT_MAX], tlProg = -1.0f;
 #define VT_FLX_H (VT_FLX_W * 1.5f)
 static float fluxoPos = -1.0f;
 static float fluxoFim(void) { return vtTelefone() ? vtFim() : NV_TELA_W - 48.0f; }
-// O FOCO MORA NA MARGEM DO CONTEUDO (dono, 14/10: metade esquerda vazia e os
-// cartazes amontoados a direita): o eixo e o mesmo da ficha e do cabecalho, como
-// numa fileira da Home. Os que ja passaram saem pela esquerda apagando; os
-// seguintes se espalham ate a ponta, lado a lado, sem se cobrir.
-static float fluxoCentro(float x0) { return x0 + VT_FLX_W * 0.5f; }
+static float fluxoCentro(float x0) { return (x0 + fluxoFim()) * 0.5f; }
 static float fluxoLinhaY(void) { return VT_TOPO + 40.0f + VT_FLX_H + 64.0f; }
 static float fluxoInfoY(void) { return fluxoLinhaY() + 76.0f; }
-static float fluxoVis(int i) { float d = i - fluxoPos; return d < 0.0f ? fmaxf(0.0f, 1.0f + d) : 1.0f; }
 // Caixa do titulo i e quanto ele escurece (0 no foco). O 6o vizinho cai na ponta.
 static GfxRect fluxoRect(int i, float x0, float *sombra) {
   float W = VT_FLX_W, H = VT_FLX_H, d = i - fluxoPos, ad = fabsf(d), s = fminf(ad, 1.0f);
-  // Passo unico entre os centros e encolhimento leve alem do 1o vizinho: os
-  // vaos ficam iguais e o 6o termina na ponta.
-  float alem = fmaxf(0.0f, ad - 1.0f);
-  float S = fmaxf(W * 0.3f, (fluxoFim() - fluxoCentro(x0) - W * 0.35f) / 6.0f);
-  float off = d * S;
-  float k = fmaxf(0.4f, 1.0f - 0.18f * s - 0.03f * alem), w = W * k, h = H * k;
+  float A = W * 0.78f, alem = fmaxf(0.0f, ad - 1.0f);
+  float S = fmaxf(W * 0.3f, (fluxoFim() - x0) * 0.5f - A) / 5.0f * 0.97f;
+  float off = ad < 1.0f ? d * A : copysignf(A + alem * S, d);
+  float k = fmaxf(0.4f, 1.0f - 0.18f * s - 0.07f * alem), w = W * k, h = H * k;
   if (sombra) *sombra = fminf(0.85f, 0.5f * s + 0.1f * alem);
   return (GfxRect){ fluxoCentro(x0) + off - w * 0.5f, VT_TOPO + 40.0f + (H - h) * 0.5f, w, h };
 }
@@ -2244,9 +2237,8 @@ static void fluxoCartaz(int i, float x0, float a, Uint32 agora) {
   CatItem it;
   float sombra;
   GfxRect r = fluxoRect(i, x0, &sombra), c;
-  a *= fluxoVis(i);
   // Mesmo recorte de fluxoDesenhar: descarte antes de pedir arte ou textura.
-  if (a < 0.005f || r.x + r.w <= x0 - 24.0f || r.x >= fluxoFim() + 24.0f ||
+  if (r.x + r.w <= x0 - 24.0f || r.x >= fluxoFim() + 24.0f ||
       r.y + r.h <= VT_TOPO - 12.0f || r.y >= NV_TELA_H) return;
   if (!viewItem(i, &it)) return;
   ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, VT_TOPO - 12.0f, NV_TELA_H, ponteiroCartaz, NULL, i, 0);
@@ -2279,17 +2271,15 @@ static void fluxoDesenhar(int n, float x0, float a, Uint32 agora) {
     int y;
     if (k < 0 || k >= n || !viewItem(k, &it)) continue;
     q = fluxoRect(k, x0, &sombra); tx = q.x + q.w * 0.5f;
-    if (tx < ax || tx > ax + aw || fluxoVis(k) < 0.005f) continue;
+    if (tx < ax || tx > ax + aw) continue;
     t = 1.0f - fminf(fabsf(k - fluxoPos), 1.0f);
-    float av = a * fluxoVis(k);
-    gfx_cor((GfxRect){ tx - 1.0f, ly - 6.0f, 2, 14 }, 0, .62f, .61f, .60f, av * (1.0f - sombra));
+    gfx_cor((GfxRect){ tx - 1.0f, ly - 6.0f, 2, 14 }, 0, .62f, .61f, .60f, a * (1.0f - sombra));
     y = yearOf(&it);
     if (y == 9999) snprintf(ano, sizeof ano, "—"); else snprintf(ano, sizeof ano, "%d", y);
-    // Ano em foco um degrau acima (21 -> 28, a mesma escala da Linha do tempo).
     if (t < 0.99f) { TxtLinha yp = txt_linha(TXT_HERO_META, ano, 219, 210, 195, 255);
-      txt_desenhar_alpha(yp, tx - yp.w * 0.5f, ly + 18.0f, av * 0.55f * (1.0f - t) * (1.0f - sombra * 0.5f)); }
-    if (t > 0.01f) { TxtLinha yg = txt_linha(TXT_CALLOUT, ano, 245, 240, 230, 255);
-      txt_desenhar_alpha(yg, tx - yg.w * 0.5f, ly + 14.0f + (1.0f - t) * 6.0f, av * t); }
+      txt_desenhar_alpha(yp, tx - yp.w * 0.5f, ly + 18.0f, a * 0.55f * (1.0f - t) * (1.0f - sombra * 0.5f)); }
+    if (t > 0.01f) { TxtLinha yg = txt_linha(TXT_TITULO2, ano, 245, 240, 230, 255);
+      txt_desenhar_alpha(yg, tx - yg.w * 0.5f, ly + 14.0f + (1.0f - t) * 10.0f, a * t); }
   }
   gfx_cor((GfxRect){ cx - 9.0f, ly - 8.0f, 18, 18 }, .5f, .95f, .95f, .97f, a);
   gfx_sem_recorte();
