@@ -3037,15 +3037,16 @@ static void desenharHero(float a, time_t agoraT, time_t tFoco) {
       if (pc != c) {
         TxtLinha t = txt_linha_corta(TXT_PG_ROTULO, pc->nome, 245, 246, 250, 255, pv.w - sw - 80.0f);
         GfxRect r = { pv.x + 20.0f + sw + 8.0f, pv.y + pv.h - 52.0f, (float)t.w + 24.0f, 32.0f };
-        gfx_cor(r, 0.5f, 0.02f, 0.02f, 0.03f, 0.72f * a);
+        if (ajustes_vidro()) gfx_vidro_chip(r, 0.5f, 0.72f, a);
+        else gfx_cor(r, 0.5f, 0.02f, 0.02f, 0.03f, 0.72f * a);
         txt_desenhar_alpha(t, r.x + 12.0f, r.y + (r.h - (float)t.h) * 0.5f, a);
       } }
   } else if (anda) {
     // encolhendo: nada aqui, o furo do degrau vem por cima de tudo
   } else {
-    gfx_cor(pv, raio, 0.078f, 0.080f, 0.088f, a);
+    gfx_vidro_ou_solido(pv, raio, GFX_VIDRO_DENS, a, 0.078f, 0.080f, 0.088f, 1.0f);
     // Uma luz so, bem fraca, na cor de realce: tira a cara de caixa vazia.
-    gfx_luz_canto(pv, raio, pv.w * 0.82f, -pv.h * 0.2f, pv.w * 0.85f,
+    if (!ajustes_vidro()) gfx_luz_canto(pv, raio, pv.w * 0.82f, -pv.h * 0.2f, pv.w * 0.85f,
                   ar, ag, ab, 0.10f * a);
     { float lw = gRetrato() ? fminf(320.0f, pv.w - 40.0f) : 320.0f;
       float lh = gRetrato() ? fminf(170.0f, fmaxf(20.0f, pv.h - 120.0f)) : 170.0f;
@@ -3143,7 +3144,8 @@ static void desenharHero(float a, time_t agoraT, time_t tFoco) {
                 : 0.0f;
       GfxRect tr = { x, y, 440.0f, 4.0f };
       GfxRect an = { tr.x, tr.y, tr.w * f, tr.h };
-      gfx_cor(tr, 0.5f, 1, 1, 1, 0.14f * a);
+      if (ajustes_vidro()) gfx_vidro_chip(tr, 0.5f, 0.55f, a);
+      else gfx_cor(tr, 0.5f, 1, 1, 1, 0.14f * a);
       gfx_cor(an, 0.5f, ar, ag, ab, a);
       y += 4.0f + 22.0f;
     } }
@@ -4455,8 +4457,8 @@ static void buscaDesenhar(Uint32 agora) {
   ajustes_acento(&ar, &ag, &ab);
   gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0.0f, 0, 0, 0, 0.80f * ea);
   { GfxRect p = { x0 - 40.0f, 40.0f, G_BUSCA_W + 80.0f, NV_TELA_H - 80.0f };
-    gfx_cor(p, 28.0f / p.h, 0.070f, 0.072f, 0.080f, ea);
-    gfx_luz_canto(p, 28.0f / p.h, p.w * 0.30f, -p.w * 0.25f, p.w * 1.45f, ar, ag, ab, 0.06f * ea); }
+    gfx_vidro_ou_solido(p, 28.0f / p.h, GFX_VIDRO_DENS_MODAL, ea, 0.070f, 0.072f, 0.080f, 1.0f);
+    if (!ajustes_vidro()) gfx_luz_canto(p, 28.0f / p.h, p.w * 0.30f, -p.w * 0.25f, p.w * 1.45f, ar, ag, ab, 0.06f * ea); }
   snprintf(b, sizeof b, i18n("Busca: “%s”"), buscaTexto);
   txt_desenhar_alpha(txt_linha_corta(TXT_HEADLINE, b, 242, 243, 247, 255, G_BUSCA_W), x0, 72.0f, ea);
   if (!buscaN())

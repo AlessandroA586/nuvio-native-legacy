@@ -21,10 +21,7 @@ void plrui_material(GfxRect r, float raioPx, int modal, float a) {
     // box-shadow 0 14 40 rgba(0,0,0,.36): caida, nunca halo.
     gfx_rect((GfxRect){ r.x - 20.0f, r.y - 6.0f, r.w + 40.0f, r.h + 40.0f }, 0, GFX_SOMBRA,
              1.0f, 0, 0, 0.5f, 0, 0, 0, 0.36f * a);
-    gfx_vidro_material(r, raio, modal ? GFX_VIDRO_DENS_MODAL : GFX_VIDRO_DENS, a);
-    // radial-gradient(120% 80% at 22% -40%, branco 10% -> 0 a 60%)
-    gfx_luz_canto(r, raio, r.w * 0.22f, -r.h * 0.40f,
-                  (r.w > r.h ? r.w : r.h) * 0.62f, 1, 1, 1, 0.10f * a);
+    gfx_vidro_material(r, raio, modal ? GFX_VIDRO_DENS_MODAL : GFX_VIDRO_DENS, a);   // + gfx_vidro_luz
   } else {
     gfx_sombra_sob((GfxRect){ r.x - 16.0f, r.y - 4.0f, r.w + 32.0f, r.h + 30.0f }, 1.0f, 0, 0.5f,
                    0, 0, 0, 0.45f * a, r, raio * r.h, a);
@@ -243,7 +240,8 @@ void plrui_barra(float x, float y, float w, float frac, float buf, int foco,
 
 void plrui_trilho(GfxRect r, float frac, float cr, float cg, float cb, float a) {
   if (cr < 0.0f) ajustes_acento(&cr, &cg, &cb);
-  gfx_cor(r, 0.5f, 1, 1, 1, 0.16f * a);
+  if (ajustes_vidro()) gfx_vidro_chip(r, 0.5f, 0.55f, a);
+  else gfx_cor(r, 0.5f, 1, 1, 1, 0.16f * a);
   if (frac > 1.0f) frac = 1.0f;
   if (frac > 0.0f && r.w * frac > 0.5f)
     gfx_cor((GfxRect){ r.x, r.y, r.w * frac, r.h }, r.w * frac >= r.h ? 0.5f : 0.0f, cr, cg, cb, a);

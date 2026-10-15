@@ -1111,7 +1111,8 @@ static void desenharConteudo(int m, GfxRect r, float a, Uint32 agora) {
       float pr = atvProg > 1.0f ? 1.0f : atvProg;
       GfxRect trilho = { r.x + PAD_E, r.y + r.h - 11.0f, r.w - PAD_E - PAD_D, 3.0f };
       txt_desenhar_alpha(t2, x + (float)t1.w + 14.0f, yc - (float)t2.h * 0.5f, a);
-      gfx_cor(trilho, 0.5f, 1.0f, 1.0f, 1.0f, 0.12f * a);
+      if (ajustes_vidro()) gfx_vidro_chip(trilho, 0.5f, 0.55f, a);
+      else gfx_cor(trilho, 0.5f, 1.0f, 1.0f, 1.0f, 0.12f * a);
       if (trilho.w * pr > 3.0f)
         gfx_cor((GfxRect){ trilho.x, trilho.y, trilho.w * pr, 3.0f }, 0.5f, cr, cg, cb, a);
     } }
@@ -1224,7 +1225,8 @@ static void desenharCartao(const IlhaCartao *c, int qual, GfxRect r, float a) {
     // A BARRA FINA vai sob o texto (nao sob a capa): ela mede o titulo.
     float pr = c->progresso > 1.0f ? 1.0f : c->progresso;
     GfxRect trilho = { xTexto, r.y + r.h - 12.0f, x - xTexto, 3.0f };
-    gfx_cor(trilho, 0.5f, 1.0f, 1.0f, 1.0f, 0.14f * a);
+    if (ajustes_vidro()) gfx_vidro_chip(trilho, 0.5f, 0.55f, a);
+    else gfx_cor(trilho, 0.5f, 1.0f, 1.0f, 1.0f, 0.14f * a);
     if (trilho.w * pr > 3.0f)
       gfx_cor((GfxRect){ trilho.x, trilho.y, trilho.w * pr, 3.0f }, 0.5f, cr, cg, cb, a);
   }
@@ -1661,7 +1663,8 @@ static void desenharModal(GfxRect m, float a) {
     if (!k->ativo) alvoB = 1.0f;
     if (alvoB > 1.0f) alvoB = 1.0f;
     atvBarraA = quieto ? alvoB : atvBarraA + (alvoB - atvBarraA) * 0.14f;
-    gfx_cor(tr, 0.5f, 1.0f, 1.0f, 1.0f, 0.14f * a);
+    if (ajustes_vidro()) gfx_vidro_chip(tr, 0.5f, 0.55f, a);
+    else gfx_cor(tr, 0.5f, 1.0f, 1.0f, 1.0f, 0.14f * a);
     { float fw = tr.w * atvBarraA;
       if (k->ativo && k->total <= 0) fw = tr.w * 0.18f;
       if (fw > 8.0f) gfx_cor((GfxRect){ tr.x, tr.y, fw, tr.h }, 0.5f, cr, cg, cb, a);
@@ -1774,7 +1777,8 @@ static void desenharModal(GfxRect m, float a) {
       // O trilho de 220 primeiro e o tempo depois (mockup do player, 03/10).
       float pr = c->progresso < 0.0f ? 0.0f : c->progresso > 1.0f ? 1.0f : c->progresso;
       GfxRect tr = { cx, sy + (float)t.h * 0.5f - 2.0f, 220.0f, 4.0f };
-      gfx_cor(tr, 0.5f, 1.0f, 1.0f, 1.0f, 0.16f * a);
+      if (ajustes_vidro()) gfx_vidro_chip(tr, 0.5f, 0.55f, a);
+      else gfx_cor(tr, 0.5f, 1.0f, 1.0f, 1.0f, 0.16f * a);
       if (tr.w * pr > 4.0f) gfx_cor((GfxRect){ tr.x, tr.y, tr.w * pr, 4.0f }, 0.5f, cr, cg, cb, a);
       txt_desenhar_alpha(t, cx + 220.0f + 14.0f, sy, a);
     } }
@@ -2249,7 +2253,8 @@ static void ilha_desenharCorpo_(Uint32 agora) {
       if (tipoLuz >= 0)
         luz = ajustes_animacoes_reduzidas() || modalT > 0.3f ? 0.20f
               : 0.14f + 0.10f * (0.5f + 0.5f * sinf((float)agora * (2.0f * 3.14159265f / 1100.0f)));
-      gfx_luz_canto(R, raio, R.w * 0.25f, -R.h * 0.9f, R.w * 0.85f, cr, cg, cb, luz * A); }
+      if (tipoLuz >= 0 || !ajustes_vidro())   // no vidro a luz branca e a gfx_vidro_luz
+        gfx_luz_canto(R, raio, R.w * 0.25f, -R.h * 0.9f, R.w * 0.85f, cr, cg, cb, luz * A); }
     central_segurar_desenhar(R, raio, A, agora);
     gfx_recorte(R.x + 6.0f, R.y, R.w - 12.0f, R.h);
     if (aPil > 0.0f) {

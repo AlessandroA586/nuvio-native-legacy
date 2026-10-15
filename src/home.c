@@ -1517,8 +1517,11 @@ static void desenhaFaixaAberta(const CatItem *ci, int r, float px, float py,
     TxtLinha l = txt_linha(TXT_CAPTION, ci->classificacao, 235, 235, 240, 255);
     float bw = l.w + 22.0f;
     cx -= bw;
-    gfx_cor((GfxRect){ cx, cy, bw, ch }, 0.22f, 0.13f, 0.14f, 0.16f, 0.94f * a);
-    gfx_rect((GfxRect){ cx, cy, bw, ch }, 0, GFX_ANEL, 0, 0.006f, 0, 0.22f, 1, 1, 1, 0.35f * a);
+    if (ajustes_vidro()) gfx_vidro_chip((GfxRect){ cx, cy, bw, ch }, 0.22f, 0.94f, a);
+    else {
+      gfx_cor((GfxRect){ cx, cy, bw, ch }, 0.22f, 0.13f, 0.14f, 0.16f, 0.94f * a);
+      gfx_rect((GfxRect){ cx, cy, bw, ch }, 0, GFX_ANEL, 0, 0.006f, 0, 0.22f, 1, 1, 1, 0.35f * a);
+    }
     txt_desenhar_alpha(l, cx + 11.0f, cy + (ch - l.h) * 0.5f, a);
     cx -= gap;
   }
@@ -7554,7 +7557,8 @@ void home_desenhar(Uint32 agora) {
             float bx = px + NV_HOME_TEXT_GUTTER;
             float bw = w - NV_HOME_TEXT_GUTTER * 2.0f;
             GfxRect trilho = { bx, py + h - 12.0f, bw, 4.0f };
-            gfx_cor(trilho, 0.5f, 0.18f, 0.19f, 0.22f, 0.92f);
+            if (ajustes_vidro()) gfx_vidro_chip(trilho, 0.5f, 0.92f, 1.0f);
+            else gfx_cor(trilho, 0.5f, 0.18f, 0.19f, 0.22f, 0.92f);
             gfx_cor((GfxRect){ bx, trilho.y, bw * okHold, trilho.h },
                     0.5f, 0.92f, 0.93f, 0.96f, 1.0f);
             TxtLinha dica = txt_linha(TXT_MINI,

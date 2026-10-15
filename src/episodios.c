@@ -870,7 +870,7 @@ static void linhaEp(int i, const CatItem *ci, float lx, float lw, float y, float
   // O ASSISTIDO e um disco com o check sobre a still.
   if (visto == 1) {
     GfxRect d = { tr.x + tr.w - 44.0f, tr.y + 10.0f, 34.0f, 34.0f };
-    if (vid) gfx_cor(d, 0.5f, 0.055f, 0.059f, 0.071f, 0.78f * ra); // vidro-ok: 32px chip per row; a glass pass each would blow the budget
+    if (vid) gfx_vidro_chip(d, 0.5f, 0.78f, ra);
     else gfx_cor(d, 0.5f, 0.082f, 0.086f, 0.102f, ra);
     gfx_icone((GfxRect){ d.x + 8.0f, d.y + 8.0f, 18.0f, 18.0f }, "pl_check", 1, 1, 1, ra);
   }

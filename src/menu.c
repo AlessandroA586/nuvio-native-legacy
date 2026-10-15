@@ -1206,7 +1206,6 @@ static void tvDesenhar(void) {
   // the slider like every other glass surface.
   gfx_vidro_material(R, raioPx / R.h, TV_MIOLO_MIN, A);
   gfx_vidro_matiz(R, raioPx / R.h, A);
-  gfx_brilho_topo(R, raioPx / R.h, 0.38f, 0.88f, 0.92f, 1.0f, 0.06f * A);
 
   // Conteudo da pilula fechada: some no comeco da abertura.
   { float ap = A * (1.0f - s * 3.0f);

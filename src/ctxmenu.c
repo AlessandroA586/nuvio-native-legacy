@@ -1298,7 +1298,7 @@ static void ilhaCtx(GfxRect p, float raioPx, float a) {
   // tras; uma base quase solida por baixo (a cor do modo sem vidro) fecha.
   if (vid) { gfx_cor(p, raio, .071f, .075f, .086f, .985f * a); gfx_vidro_folha(p, raio, a); } // vidro-ok: opaque base under the glass sheet
   else gfx_cor(p, raio, .071f, .075f, .086f, .98f * a);
-  gfx_luz_canto(p, raio, p.w * .25f, -p.h * .25f, p.w * .9f, 1, 1, 1, (vid ? .06f : .04f) * a);
+  if (!vid) gfx_luz_canto(p, raio, p.w * .25f, -p.h * .25f, p.w * .9f, 1, 1, 1, .04f * a);
 }
 
 // KICKER das ilhas: 15/700 em caixa alta (a do idioma), espacado .14em,

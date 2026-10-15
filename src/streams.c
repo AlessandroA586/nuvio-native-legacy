@@ -3459,8 +3459,9 @@ static float desenharSelosPacote(const Stream *s, float x, float y, float maxW, 
           if (w > 144.0f) { w = 144.0f; ih = w / asp; }
           if (x + w + pad * 2.0f > x0 + maxW) break;
           { GfxRect p = (GfxRect){x, y - sobra, w + pad * 2.0f, ch};
-            gfx_cor(p, raio, 0.10f, 0.11f, 0.13f, 0.88f * a);
-            gfx_anel(p, raio, 1.5f, 1.0f, 1.0f, 1.0f, 0.20f * a); }
+            if (ajustes_vidro()) gfx_vidro_chip(p, raio, 0.88f, a);
+            else { gfx_cor(p, raio, 0.10f, 0.11f, 0.13f, 0.88f * a);
+                   gfx_anel(p, raio, 1.5f, 1.0f, 1.0f, 1.0f, 0.20f * a); } }
           if (f->arte == SELO_ARTE_COR) {
             gfx_tex_aspect_atual = 0.0f;
             gfx_rect((GfxRect){x + pad, y + (h - ih) * .5f, w, ih}, t, GFX_TEXTO, 0, 0, 0, 0.0f, 1, 1, 1, a);

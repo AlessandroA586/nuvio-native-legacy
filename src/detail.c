@@ -5255,8 +5255,9 @@ static void desenhaAssistidoEpisodio(GfxRect th, float a) {
   // Fixo no canto superior direito da miniatura nos tres tamanhos (#205): a
   // base do selo "EPISODIO n" e que se alinha a base daqui, e nao o contrario.
   GfxRect selo = {th.x + th.w - w - 18, th.y + NV_DETP_EP_VISTO_Y, w, h};
-  gfx_cor(selo, .5f, .055f, .068f, .09f, .96f * a); // vidro-ok: badge over art
-  gfx_anel(selo, .5f, 1, .68f, .75f, .86f, .30f * a);
+  if (ajustes_vidro()) gfx_vidro_chip(selo, .5f, .96f, a);
+  else { gfx_cor(selo, .5f, .055f, .068f, .09f, .96f * a);
+         gfx_anel(selo, .5f, 1, .68f, .75f, .86f, .30f * a); }
   GfxRect disco = {selo.x + pad, selo.y + (h - icone) * .5f, icone, icone};
   gfx_cor(disco, .5f, .451f, .839f, .694f, a);
   gfx_icone((GfxRect){disco.x + 5, disco.y + 5, icone - 10, icone - 10},
@@ -5366,7 +5367,8 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     float textY = r.y + epThumbH() + 18.0f;
     GfxRect info = {r.x,textY-8,r.w,epCardH()-epThumbH()-18};
     if (f > .005f) {
-      gfx_cor(info,20.0f/info.h,.19f,.21f,.23f,.64f*f*a);
+      if (ajustes_vidro()) gfx_vidro_chip(info,20.0f/info.h,.64f,f*a);
+      else gfx_cor(info,20.0f/info.h,.19f,.21f,.23f,.64f*f*a);
       if (ajustes_borda_foco()) gfx_anel(th,20.0f/th.h,1.5f,1,1,1,.18f*f*a);
     }
     float metaY = th.y + th.h - 36.0f;
@@ -5589,7 +5591,8 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
       float mostra = revela_progresso(ci->imdb, ep->temporada, ep->episodio,
                                       (float)prog, SDL_GetTicks());
       GfxRect at = { tr.x, tr.y, tr.w * (mostra / 100.0f), tr.h };
-      gfx_cor(tr, 0.5f, 0, 0, 0, 0.45f * a);
+      if (ajustes_vidro()) gfx_vidro_chip(tr, 0.5f, 0.55f, a);
+      else gfx_cor(tr, 0.5f, 0, 0, 0, 0.45f * a);
       // IMERSIVA (14/10): o preenchimento ganha a LUZ do destaque — o mesmo
       // matiz do vidro tingido (nv_luz_viva), entrando e saindo com a luz
       // ambiente. E o primeiro dos "acentos ao longo da interface" da
@@ -5721,7 +5724,8 @@ static void desenhaElenco(float x, float y, int c, float f, float a) {
   if (epApple() && f > .005f) {
     float top = y + NV_DETP_EL_AVATAR + NV_DETP_EL_NOME_DY - 8;
     GfxRect info = {x-12,top,NV_DETP_EL_W+24,76};
-    gfx_cor(info,18.0f/info.h,.19f,.21f,.23f,.6f*f*a);
+    if (ajustes_vidro()) gfx_vidro_chip(info,18.0f/info.h,.6f,f*a);
+    else gfx_cor(info,18.0f/info.h,.19f,.21f,.23f,.6f*f*a);
   }
   GfxRect av = { x + (NV_DETP_EL_W-NV_DETP_EL_AVATAR)*.5f, y, NV_DETP_EL_AVATAR, NV_DETP_EL_AVATAR };
   // Foco da Home (focoprof.h): anel so com o ajuste ligado, senao o avatar
@@ -6023,7 +6027,8 @@ static void desenhaRelacionados(float x, float y, float a, int primeiro, int lim
     if (aceso && epApple()) {
       float alturaLegenda = 12.0f + 22.0f + (ano[0] ? 6.0f + 18.0f : 0.0f) + 8.0f;
       GfxRect legend = {cx-10,y+REL_CARD_H+4,REL_CARD_W+20,alturaLegenda+8};
-      gfx_cor(legend,16.0f/legend.h,.19f,.21f,.23f,.64f*a);
+      if (ajustes_vidro()) gfx_vidro_chip(legend,16.0f/legend.h,.64f,a);
+      else gfx_cor(legend,16.0f/legend.h,.19f,.21f,.23f,.64f*a);
       if (ajustes_borda_foco()) gfx_anel(r,raio,1.5f,1,1,1,.18f*a);
     }
     // Foco da Home no cartaz (focoprof.h): anel so com o ajuste ligado, senao
