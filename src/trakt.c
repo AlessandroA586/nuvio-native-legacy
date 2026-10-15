@@ -2210,6 +2210,8 @@ int trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg, d
   if (evento != SCR_EV_SAIU && assistidoSeg < 5.0) return recusar(evento);
   if (evento == SCR_EV_SAIU && (posSeg < 1.0 || assistidoSeg < 1.0)) return recusar(evento);
   pct = 100.0 * posSeg / durSeg;
+  // As validacoes acima vem ANTES da vaga pendente: nem um stop sem reproducao
+  // entra na fila.
   HistoricoPedido pedido = historicoPedido();
   if (!pedido.aut[0] || !nv_perfil_sessao_travar(pedido.sessao)) return recusar(evento);
   pthread_mutex_lock(&travaScr);
