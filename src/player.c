@@ -77,6 +77,7 @@ static void avisarCascaAberto(int v) { (void)v; }
 #include "streams.h"
 #include "badges.h"
 #include "legenda.h"
+#include "imgsub.h"
 #include "assrender.h"
 #include "mkvass.h"
 #include "relogio.h"
@@ -1917,6 +1918,7 @@ static void lembrarFonte(void) {
 }
 
 static void fecharSessao(int manter) {
+  imgsub_gl_limpar();
   int jaRetido = retido;
   if (!jaRetido && !quadroCapturado && ajustes_retomada_morna() && comVideo && !ehCanal()) {
     quadroCapturado = 1; cacheboost_backend_quadro(1);
@@ -4298,6 +4300,12 @@ static void desenharLegendaPrincipal(float *topoPilha){
   float bitmapAlpha = (legEstilo.opacidade==3?.25f:legEstilo.opacidade==2?.5f:
                       legEstilo.opacidade==1?.75f:1.f) * entrada;
   if (video_dts_legenda_desenhar(posLegenda(), legEstilo.atrasoMs,
+        bitmapArea.x, bitmapArea.y, bitmapArea.w, bitmapArea.h, bitmapAlpha)) {
+    imgsub_gl_limpar();
+    return;
+  }
+  // PGS decodificado pelo app (mkvass): so ha quadros quando a faixa e de imagem.
+  if (imgsub_desenhar(legsync_posicao(posLegenda()) + legsync_offset_ms(legEstilo.atrasoMs) / 1000.0,
         bitmapArea.x, bitmapArea.y, bitmapArea.w, bitmapArea.h, bitmapAlpha)) return;
   /* ASS completo: libass devolve uma lista de bitmaps por camada, preservando
    * karaoke, movimento, desenho vetorial, fontes e todas as tags do arquivo.

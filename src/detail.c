@@ -2989,10 +2989,11 @@ void detail_evento(const SDL_Event *e) {
         // escolhido a dedo tocava sem perguntar. Aqui a escolha e explicita,
         // entao o ajuste manda a folha; o "Retomar" do Continuar assistindo
         // e o botao primario seguem tocando como antes.
-        if (ajustes_fonte_manual()) {
+        if (ajustes_fonte_manual() && ep) {
           pedFontes = 1;
           // O card e o alvo, mesmo com o foco ja fora da fileira quando a
           // folha fechar — a escolha tem de tocar ESTE episodio (#513).
+          // Sem CatEp (foco alem da lista) nao ha episodio para travar.
           pedFontesT = ep->temporada; pedFontesE = ep->episodio;
         } else pedReproduzir = 1;
     }

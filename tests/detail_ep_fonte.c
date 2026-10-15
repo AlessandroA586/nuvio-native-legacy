@@ -64,7 +64,11 @@ int main(void) {
 
   // Same key alvoPlayer builds for T1E3 of this title, live (< 3h):
   // lembrarFonte (player.c) stores cat_id_stream = "tt:T:E" for an IMDb
-  // series with T/E set — never the bare imdb.
+  // series with T/E set — never the bare imdb. Zero first:
+  // fontevolta_guardar stores nothing when url[0] == 0, and a dirty stack
+  // byte there used to make the probe pass on junk.
+  memset(&g, 0, sizeof g);
+  snprintf(g.url, sizeof g.url, "https://saved.example/tt0000513-t1e3.mp4");
   fontevolta_guardar("tt0000513:1:3", "conta", 1, &g, 0, SDL_GetTicks());
 
   // Player open on the episode that left the saved source: that is the
