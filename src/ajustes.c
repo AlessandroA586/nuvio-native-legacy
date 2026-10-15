@@ -559,7 +559,7 @@ typedef enum {
 #ifdef NV_ANDROID
   AJ_BAIXAR_REGISTRO, // acao local; no fim para preservar os IDs existentes
 #endif
-  AJ_TAMANHO_SINOPSE, // #477: 100/120/130/150%, local, padrao preservado
+  AJ_TAMANHO_SINOPSE, // #477: 100/125/150%, local, padrao preservado
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -634,7 +634,7 @@ static const char *V_FONTE_MODELO[] = { "Personalizado", "Espanhol", "Português
 // "Usar a ordem" dos add-ons (fonteregra.h FR_ORDEM_*): o indice e o gravado.
 static const char *V_FONTE_ORDEM_USO[] = { "Não", "Para desempatar", "Ordem estrita" };
 // Indice gravado em tamanhoUiLocal; o fator sai de ajustes_tamanho_ui.
-static const char *V_TAMANHO_SINOPSE[] = { "100%", "120%", "130%", "150%" };
+static const char *V_TAMANHO_SINOPSE[] = { "100%", "125%", "150%" };
 static const char *V_TAMANHO_UI[] = { "100%", "120%", "130%", "150%" };
 static const char *V_TAMANHO_AJUSTES[] = { "80%", "90%", "100%" };
 static const char *V_INTERFACE_MODO[] = { "TV", "Mobile" };
@@ -1442,7 +1442,7 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Baixar registro"),
 #endif
 
-  ESC("Tamanho da sinopse", V_TAMANHO_SINOPSE, 4),
+  ESC("Tamanho da sinopse", V_TAMANHO_SINOPSE, 3),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1694,7 +1694,7 @@ static const char *CHAVE[] = {
   "-baixarRegistro",
 #endif
 
-  "sinopseEscalaLocal",
+  "sinopsePercentualLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2301,7 +2301,7 @@ int ajustes_tamanho_max_gb(void) { int v = valor[AJ_TAM_MAX]; return v < 0 || v 
 int ajustes_tamanho_min_gb(void) { int v = valor[AJ_TAM_MIN]; return v < 0 || v >= (int)(sizeof TAMANHO_GB / sizeof *TAMANHO_GB) ? 0 : TAMANHO_GB[v]; }
 int ajustes_sinopse_tamanho(void) {
   int v = valor[AJ_TAMANHO_SINOPSE];
-  return v >= 0 && v < 4 ? v : 0;
+  return v >= 0 && v < 3 ? v : 0;
 }
 float ajustes_tamanho_ui(void) {
   static const float F[] = { 1.0f, 1.2f, 1.3f, 1.5f };
@@ -3537,7 +3537,7 @@ void ajustes_dir(const char *dir) {
   { int viuIdioma = 0, viuAuto = 0, idiomaGravado = IDIOMA_EN, autoGravado = 0;
     int medidorAntigo = -1, viuMedidor = 0, resAntiga = -1, viuRes = 0, prazoAntigo = -1, viuEspera = 0;
     int focoAntigo = -1, viuFoco = 0;
-    int sinopseAntiga = -1, viuSinopse = 0;
+    int sinopseAntiga = -1, sinopseQuatro = -1, viuSinopse = 0;
   while (fgets(linha, sizeof linha, f)) {
     char chave[64]; int v, i;
     if (sscanf(linha, "%63s %d", chave, &v) != 2) continue;
@@ -3565,10 +3565,15 @@ void ajustes_dir(const char *dir) {
       if (v >= IDA_TMDB && v <= IDA_PADRAO) idiomaFonteGravada = v;
       continue;
     }
-    // Legacy preview choices map to 100/120/150%. The new percentage
-    // choice wins in either file order; the other interface sizes stay local.
+    // Legacy three-choice previews keep their size. The unreleased four-
+    // choice preview maps its intermediate values to 125% and keeps 150%.
+    // The current key wins regardless of file order.
     if (!strcmp(chave, "sinopseTamanhoLocal")) {
       if (v >= 0 && v < 3) sinopseAntiga = v;
+      continue;
+    }
+    if (!strcmp(chave, "sinopseEscalaLocal")) {
+      if (v >= 0 && v < 4) sinopseQuatro = v;
       continue;
     }
     for (i = 0; i < AJ_N; i++) {
@@ -3585,9 +3590,10 @@ void ajustes_dir(const char *dir) {
       break;
     }
   }
-  if (!viuSinopse && sinopseAntiga >= 0) {
-    static const int DE_PARA[3] = { 0, 1, 3 }; // 100%, 120%, 150%
-    valor[AJ_TAMANHO_SINOPSE] = DE_PARA[sinopseAntiga];
+  if (!viuSinopse) {
+    static const int DE_QUATRO[4] = { 0, 1, 1, 2 }; // 100%, 125%, 125%, 150%
+    if (sinopseQuatro >= 0) valor[AJ_TAMANHO_SINOPSE] = DE_QUATRO[sinopseQuatro];
+    else if (sinopseAntiga >= 0) valor[AJ_TAMANHO_SINOPSE] = sinopseAntiga;
   }
   if (!viuMedidor && medidorAntigo >= 0) valor[AJ_MEDIDOR] = medidorAntigo == 0 ? 3 : 0;
   if (!viuRes && resAntiga >= 0) {
