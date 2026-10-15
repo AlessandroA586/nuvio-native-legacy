@@ -289,3 +289,5 @@
   2, /* opening screen backdrop (#508): Arte borrada, as always, local */
   0, /* hero synopsis size: Normal, the original 22/30 */
   1, /* episode card size (#205): Medio, as always */
+  1, /* video preload and next episode buffer: Desligado, independent source setting */
+  0, /* provider setup: shared legacy accounts; choice itself belongs to this profile */

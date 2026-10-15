@@ -25,6 +25,6 @@ for source in src/*.c src/dts/*.c; do
   sources+=("$source")
 done
 cc "${flags[@]}" ${pure[@]+"${pure[@]}"} "${sources[@]}" \
-  tests/player_aspecto_android.c "$dir/player.o" "$dir/video.o" \
+  tests/player_aspecto_android.c tests/player_android_coto.c "$dir/player.o" "$dir/video.o" \
   -o "$dir/test" -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL
 "$dir/test"

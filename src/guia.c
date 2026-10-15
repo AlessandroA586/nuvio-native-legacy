@@ -6,11 +6,11 @@
 //     precisa dos ~768 para agrupar por `genre`). Paginacao Stremio padrao:
 //     /catalog/<tipo>/<id>.json depois /skip=100,200,...
 //   - o que esta passando: epg.c (XMLTV do epgshare01, cache de 12 h).
-//   - favoritos: guia-fav.txt na pasta de dados, um id por linha. O arquivo
+//   - favoritos: guia-fav-p<N>.txt, um id por linha, privado ao perfil. O arquivo
 //     proprio existe porque SalvoItem.id tem 24 bytes e os ids do FrostView
 //     tem ~45 — eles nao cabem no sistema de "salvos" comum.
 //
-//   - modo de exibicao: guia-modo.txt na pasta de dados ("lista" ou
+//   - modo de exibicao: guia-modo-p<N>.txt na pasta de dados ("lista" ou
 //     "cartoes"). Arquivo proprio pelo mesmo motivo do de favoritos: e uma
 //     preferencia DESTE guia, e o sistema de ajustes nao e meu para editar.
 //   - addons recomendados: <pasta art>/addons-recomendados.txt, mantido a mao
@@ -62,6 +62,7 @@
 #include "xtepg.h"     /* grade curta por canal do Xtream (#158) */
 #include "dados.h"
 #include "perfis.h"   /* perfis_ativo: o cache do guia e por perfil */
+#include "perfisessao.h"
 #include "marco.h"
 #include "js.h"
 #include "gfx.h"
@@ -287,6 +288,7 @@ static char   sCats[G_MAX_CAT][64];  static int sNCats;
 enum { G_PARADO, G_BAIXANDO, G_PRONTO, G_FALHOU };
 static int estado = G_PARADO;
 static int fioVivo;
+static int recarregarPend;
 static GuiaCorte sCorte;       // staging: o que a carga deixou de fora
 static GuiaCorte corte;        // publicado: o que o cabecalho mostra
 static int sOk;                 // staging: a carga achou canal (antes de pendPronto)
@@ -308,13 +310,34 @@ static GFonte sFontes[G_MAX_FONTE]; static int sNFontes;
 static char fav[G_MAX_FAV][80]; static int nFav, favLido;
 static int  favOrd[G_MAX_FAV];  static int nFavOrd;   // indices em canais[]
 
+static void arquivoPerfil(const char *tipo, char *nome, size_t tam) {
+  int p = perfis_ativo();
+  snprintf(nome, tam, "guia-%s-p%d.txt", tipo, p > 0 ? p : 1);
+}
+
+// Os arquivos antigos eram do aparelho inteiro. Somente o perfil primario
+// herda essa escolha; os demais nao recebem favoritos de outra pessoa.
+static char *lerPerfil(const char *tipo) {
+  char nome[48], antigo[48];
+  char *t;
+  arquivoPerfil(tipo, nome, sizeof nome);
+  t = dados_ler(nome);
+  if (!t && perfis_ativo() <= 1) {
+    snprintf(antigo, sizeof antigo, "guia-%s.txt", tipo);
+    t = dados_ler(antigo);
+    if (t) dados_gravar(nome, t);
+  }
+  return t;
+}
+
 static int favIndice(const char *id) {
   for (int i = 0; i < nFav; i++) if (!strcmp(fav[i], id)) return i;
   return -1;
 }
 
 static void favLer(void) {
-  char *t = dados_ler("guia-fav.txt"), *p, *q;
+  char *t = lerPerfil("fav"), *p, *q;
+  nFav = 0;
   if (!t) { favLido = 1; return; }
   p = t;
   while (*p && nFav < G_MAX_FAV) {
@@ -331,11 +354,12 @@ static void favLer(void) {
 static void favGravar(void) {
   // O arquivo e pequeno (um id por linha); montar em memoria e gravar de uma
   // vez com dados_gravar, que ja e atomico.
-  char buf[G_MAX_FAV * 82]; size_t n = 0;
+  char buf[G_MAX_FAV * 82], nome[48]; size_t n = 0;
   for (int i = 0; i < nFav && n + 82 < sizeof buf; i++)
     n += (size_t)snprintf(buf + n, sizeof buf - n, "%s\n", fav[i]);
   buf[n] = 0;
-  dados_gravar("guia-fav.txt", buf);
+  arquivoPerfil("fav", nome, sizeof nome);
+  dados_gravar(nome, buf);
 }
 
 // Marca o espelho `fav` de cada canal. Chamado depois de publicar a lista e a
@@ -357,20 +381,22 @@ static void favAlternar(GCanal *c) {
 }
 
 // --- modo de exibicao ------------------------------------------------------------
-// 1 = lista, 0 = cartoes. Persistido em guia-modo.txt: quem escolheu lista
+// 1 = lista, 0 = cartoes. Persistido por perfil: quem escolheu lista
 // espera reabrir em lista, senao a escolha vira um gesto a repetir por sessao.
 static int modoLista, modoLido;
 
 static void modoLer(void) {
-  char *t = dados_ler("guia-modo.txt");
+  char *t = lerPerfil("modo");
   modoLido = 1;
+  modoLista = 0;
   if (!t) return;
   modoLista = !strncmp(t, "lista", 5);
   free(t);
 }
 
 static void modoGravar(void) {
-  dados_gravar("guia-modo.txt", modoLista ? "lista\n" : "cartoes\n");
+  char nome[48]; arquivoPerfil("modo", nome, sizeof nome);
+  dados_gravar(nome, modoLista ? "lista\n" : "cartoes\n");
 }
 
 // --- preview de video do canal focado ------------------------------------------
@@ -390,14 +416,16 @@ static void modoGravar(void) {
 // atras da faixa, e o pipeline e UNICO (um mediaId so no barramento LS2).
 static int previewLigado, previewLido;
 static void previewLer(void) {
-  char *t = dados_ler("guia-preview.txt");
+  char *t = lerPerfil("preview");
   previewLido = 1;
+  previewLigado = 0;
   if (!t) return;
   previewLigado = (t[0] == '1');
   free(t);
 }
 static void previewGravar(void) {
-  dados_gravar("guia-preview.txt", previewLigado ? "1\n" : "0\n");
+  char nome[48]; arquivoPerfil("preview", nome, sizeof nome);
+  dados_gravar(nome, previewLigado ? "1\n" : "0\n");
 }
 
 // --- o que cada addon da conta declara -----------------------------------------
@@ -410,6 +438,31 @@ typedef struct { char base[NV_ADDON_URL_MAX]; int canal; } GSabe;
 #define G_MAX_SABE 16
 static GSabe sSabe[G_MAX_SABE]; static int sNSabe;   // do fio
 static GSabe sabe[G_MAX_SABE];  static int nSabe;    // publicado
+
+typedef struct {
+  char base[NV_ADDON_URL_MAX], nome[64];
+  int ativo, nCatalogos;
+  AddCatCanal catalogos[ADD_CANAL_MAX];
+} GAddonCarga;
+static GAddonCarga *addonsCarga;
+static int nAddonsCarga;
+static NvPerfilSessao cargaSessao;
+static volatile int cargaCancelada;
+
+static int cargaAtual(void) {
+  return !cargaCancelada && nv_perfil_sessao_atual(cargaSessao);
+}
+static int cargaBaseLigada(const char *base) {
+  for (int i = 0; i < nAddonsCarga; i++)
+    if (!strcmp(addonsCarga[i].base, base)) return addonsCarga[i].ativo;
+  return 1;
+}
+static char *cargaBaixar(const char *url) {
+  RedeControle ctl = {0};
+  if (!cargaAtual()) return NULL;
+  ctl.cancelado = &cargaCancelada;
+  return rede_baixar_medido_controle(url, 15, NULL, &ctl, NULL);
+}
 
 static int sabeCanal(const char *base) {   // 1, 0, ou -1 = desconhecido
   for (int i = 0; i < nSabe; i++)
@@ -694,11 +747,11 @@ static int lerPagina(const GFonte *f, int skip, int teto, int *novos) {
   else
     w = nv_addon_url(url, sizeof url, f->base, "/catalog/%s/%s.json", f->tipo, f->id);
   *novos = 0;
-  if (addons_base_desligada(f->base)) return 0;   // desligado na conta: nenhuma rede
+  if (!cargaAtual() || !cargaBaseLigada(f->base)) return 0;
   // Pedido cortado nao sai (addonurl.h); o log leva o nome do catalogo.
   if (!nv_addon_pedido_coube(f->nome, w, sizeof url)) return 0;
-  corpo = rede_baixar(url, 15);
-  if (!corpo) return 0;
+  corpo = cargaBaixar(url);
+  if (!corpo || !cargaAtual()) { free(corpo); return 0; }
   p = js_array(corpo, NULL, "metas");
   while (p && sNCanais < G_MAX_CANAL && *novos < teto) {
     const char *fim = js_fim(p);
@@ -802,14 +855,15 @@ static void epgPaisesEscolher(void);
 static void sondaManifestos(void) {
   int a;
   sNSabe = 0;
-  for (a = 0; a < addons_n() && sNFontes < G_MAX_FONTE; a++) {
+  for (a = 0; cargaAtual() && a < nAddonsCarga && sNFontes < G_MAX_FONTE; a++) {
     const char *base;
     char url[NV_ADDON_PEDIDO_MAX];
     char *corpo;
     const char *p, *fim;
-    int ativo = addons_ativo(a), temCanal = 0;
+    const GAddonCarga *ad = &addonsCarga[a];
+    int ativo = ad->ativo, temCanal = 0;
     GSabe *sb = sNSabe < G_MAX_SABE ? &sSabe[sNSabe] : NULL;
-    base = addons_base(a);
+    base = ad->base;
     if (!base || !base[0]) continue;
     if (sb) { snprintf(sb->base, sizeof sb->base, "%s", base); sb->canal = -1; sNSabe++; }
     // O MANIFESTO JA FOI LIDO PELA DESCOBERTA, no arranque e em paralelo: o
@@ -817,8 +871,8 @@ static void sondaManifestos(void) {
     // addon, em serie, com 15 s de prazo cada — a maior parte da espera para o
     // guia abrir numa conta com 10-20 addons (a maioria sem canal nenhum).
     // So cai na rede quando aquele manifesto ainda nao chegou.
-    { AddCatCanal cc[ADD_CANAL_MAX];
-      int nc = addons_catalogos_canal(a, cc, ADD_CANAL_MAX), k;
+    { const AddCatCanal *cc = ad->catalogos;
+      int nc = ad->nCatalogos, k;
       if (nc >= 0) {
         if (sb) sb->canal = nc > 0;
         if (!ativo) continue;
@@ -838,9 +892,10 @@ static void sondaManifestos(void) {
     // ADDON DESLIGADO TAMBEM E LIDO, so que nao vira fonte. Custa um GET por
     // addon desligado (medido: 0 a 3 numa conta tipica) e e o que permite ao
     // painel dizer se vale a pena religa-lo para o guia.
-    corpo = nv_addon_pedido_coube(addons_nome(a), nv_addon_url(url, sizeof url, base, "/manifest.json"),
+    corpo = nv_addon_pedido_coube(ad->nome, nv_addon_url(url, sizeof url, base, "/manifest.json"),
                                   sizeof url)
-            ? rede_baixar(url, 15) : NULL;
+            ? cargaBaixar(url) : NULL;
+    if (!cargaAtual()) { free(corpo); return; }
     if (!ativo) {
       if (corpo) {
         fim = corpo + strlen(corpo);
@@ -907,9 +962,6 @@ static void *fioGuia(void *u) {
   // no painel elas ainda listam o catalogo dele — e sem esta guarda a recarga
   // "na hora" do painel trazia de volta exatamente o que a pessoa acabou de
   // tirar.
-  sNFontes = 0;
-  for (int i = 0; i < nFontes && sNFontes < G_MAX_FONTE; i++)
-    if (baseLigada(fontes[i].base)) sFontes[sNFontes++] = fontes[i];
   sondaManifestos();
   // COTA POR CATALOGO. O Pluto TV devolve 1.523 canais numa pagina so;
   // instalado, ele enchia os 900 lugares sozinho e o Meu Futebol (68 canais,
@@ -918,12 +970,12 @@ static void *fioGuia(void *u) {
   // catalogos que ha, com um piso para o catalogo grande nao virar amostra
   // quando sao muitos; catalogo pequeno nao usa a cota e sobra para os outros
   // porque a conta e sobre o que ainda cabe, catalogo a catalogo.
-  for (int i = 0; i < sNFontes; i++) {
+  for (int i = 0; cargaAtual() && i < sNFontes; i++) {
     int restantes = sNFontes - i;
     int cota = (G_MAX_CANAL - sNCanais) / (restantes > 0 ? restantes : 1);
     int lidos = 0;
     if (cota < G_COTA_MIN) cota = G_COTA_MIN;
-    for (int skip = 0; sNCanais < G_MAX_CANAL && lidos < cota; skip += G_PAGINA) {
+    for (int skip = 0; cargaAtual() && sNCanais < G_MAX_CANAL && lidos < cota; skip += G_PAGINA) {
       int novos = 0;
       int n = lerPagina(&sFontes[i], skip, cota - lidos, &novos);
       if (n <= 0) break;
@@ -942,13 +994,13 @@ static void *fioGuia(void *u) {
   // ja se anuncia pela ausencia das categorias dele. Somar aqui faria a
   // mensagem "nenhum catalogo de canais" aparecer para quem tem addons bons e
   // um portal errado.
-  if (stalker_configurado()) {
+  if (cargaAtual() && stalker_configurado()) {
     // MALLOC e nao `static`: sao ~670 KB que so servem durante a carga. Como
     // vetor estatico eles ficariam residentes para sempre, inclusive em quem
     // nunca configurou portal nenhum — e este app ja disputa memoria com o
     // cache de texturas numa TV de 2016.
     StalkerCanal *st = malloc(sizeof *st * G_MAX_CANAL);
-    int n = st ? stalker_canais(st, G_MAX_CANAL) : 0, i;
+    int n = st ? stalker_canais_sessao(st, G_MAX_CANAL, cargaSessao) : 0, i;
     for (i = 0; i < n && sNCanais < G_MAX_CANAL; i++) {
       GCanal c;
       if (sCanalPorId(st[i].id) >= 0) continue;
@@ -965,9 +1017,9 @@ static void *fioGuia(void *u) {
   // XTREAM, pela mesma porta e pelas mesmas razoes (ver xtream.h). O epg_id
   // que o servidor manda casa com o XMLTV do proprio provedor, que o EPG baixa
   // como sexta fonte (#158, ver epg_fonte_extra); sem ele, o nome.
-  if (xtream_configurado()) {
+  if (cargaAtual() && xtream_configurado()) {
     XtreamCanal *xt = malloc(sizeof *xt * G_MAX_CANAL);
-    int n = xt ? xtream_canais(xt, G_MAX_CANAL) : 0, i;
+    int n = xt ? xtream_canais_sessao(xt, G_MAX_CANAL, cargaSessao) : 0, i;
     if (xt) { sXtFalha = xtream_ultima_falha(); sXtHttp = xtream_ultimo_http(); }
     for (i = 0; i < n; i++) {
       GCanal c;
@@ -990,6 +1042,7 @@ static void *fioGuia(void *u) {
   // manifesto tendo vindo 200.
   if (sNFontes > 0 && !ok) sFalhas++;
   sOk = ok;
+  free(addonsCarga); addonsCarga = NULL; nAddonsCarga = 0;
   atomic_store_explicit(&pendPronto, 1, memory_order_release);
   return NULL;
 }
@@ -1097,6 +1150,10 @@ static unsigned long assinaturaDe(const GCanal *c, int n, char cs[][64]) {
     unsigned long h = 2166136261UL;
     const char *p;
     for (p = c[i].id; *p; p++) { h ^= (unsigned char)*p; h *= 16777619UL; }
+    // Mesmo id com outro cadastro/addon nao e a mesma lista. Preservar a
+    // base antiga aqui fazia o cache continuar usando a credencial anterior.
+    for (p = c[i].base; *p; p++) { h ^= (unsigned char)*p; h *= 16777619UL; }
+    for (p = c[i].epgId; *p; p++) { h ^= (unsigned char)*p; h *= 16777619UL; }
     if (c[i].cat >= 0) for (p = cs[c[i].cat]; *p; p++) { h ^= (unsigned char)*p; h *= 16777619UL; }
     soma += h;
   }
@@ -1162,6 +1219,7 @@ static int cacheLer(void) {
   { int i;
     for (i = 0; i < nCanais; i++) { canais[i].id[sizeof canais[i].id - 1] = 0; canais[i].nome[sizeof canais[i].nome - 1] = 0;
       canais[i].logo[sizeof canais[i].logo - 1] = 0; canais[i].base[sizeof canais[i].base - 1] = 0;
+      canais[i].epgId[sizeof canais[i].epgId - 1] = 0;
       canais[i].epg = -1;
       if (canais[i].cat < -1 || canais[i].cat >= nCats) canais[i].cat = -1; }
     for (i = 0; i < nCats; i++) cats[i][sizeof cats[i] - 1] = 0; }
@@ -1245,9 +1303,28 @@ static void iniciarCarga(void) {
   // Sem portaria por nFontes: a sonda de manifestos dentro do fio pode achar
   // catalogo de canal que nenhuma fileira montou.
   if (fioVivo) return;
+  // Copia no desenho: nenhum pedido relera as URLs ou os manifestos do
+  // perfil novo enquanto a resposta do anterior ainda estiver em voo.
+  cargaSessao = nv_perfil_sessao_ler(); cargaCancelada = 0;
+  nAddonsCarga = addons_n();
+  addonsCarga = nAddonsCarga > 0 ? calloc((size_t)nAddonsCarga, sizeof *addonsCarga) : NULL;
+  if (nAddonsCarga > 0 && !addonsCarga) { nAddonsCarga = 0; estado = G_FALHOU; return; }
+  for (int i = 0; i < nAddonsCarga; i++) {
+    GAddonCarga *a = &addonsCarga[i];
+    snprintf(a->base, sizeof a->base, "%s", addons_base(i));
+    snprintf(a->nome, sizeof a->nome, "%s", addons_nome(i));
+    a->ativo = addons_ativo(i);
+    a->nCatalogos = addons_catalogos_canal(i, a->catalogos, ADD_CANAL_MAX);
+  }
+  sNFontes = 0;
+  for (int i = 0; i < nFontes && sNFontes < G_MAX_FONTE; i++)
+    if (cargaBaseLigada(fontes[i].base)) sFontes[sNFontes++] = fontes[i];
   fioVivo = 1;
   estado = G_BAIXANDO;
-  if (pthread_create(&t, NULL, fioGuia, NULL) != 0) { fioVivo = 0; estado = G_FALHOU; }
+  if (pthread_create(&t, NULL, fioGuia, NULL) != 0) {
+    free(addonsCarga); addonsCarga = NULL; nAddonsCarga = 0;
+    fioVivo = 0; estado = G_FALHOU;
+  }
   else pthread_detach(t);
 }
 
@@ -1263,7 +1340,10 @@ void guia_carregar(void) {
   if (!fontesOk) descobrirFontes();
   // A lista de ontem NA HORA; a de hoje vem atras. Ver o bloco do cache.
   if (!cacheLido) { cacheLido = 1; if (estado == G_PARADO && nCanais == 0) cacheLer(); }
-  if (estado == G_PARADO || estado == G_FALHOU) iniciarCarga();
+  if (estado == G_PARADO || estado == G_FALHOU) {
+    if (fioVivo) recarregarPend = 1;
+    else iniciarCarga();
+  }
   // A grade do proprio provedor Xtream (#158), ANTES da primeira carga do EPG
   // para nao carregar duas vezes. Sem cadastro, "" (tira a de um cadastro que
   // saiu). Nao vai a rede: e so o cadastro.
@@ -1398,8 +1478,8 @@ static float tempoDesloc(void) {
 // frase ser a certa: "a conta esta cheia" e "nao foi possivel" sao coisas
 // diferentes para quem esta no sofa.
 static int   paErro = -1, paErroCheio;
-// Ha um recarregamento do guia esperando o fio de carga atual terminar.
-static int   recarregarPend;
+// recarregarPend foi declarada junto do worker: uma abertura nova pode
+// aguardar a carga cancelada devolver seu staging, sem bloquear a tela.
 
 // Quando foi a ultima tentativa de carga com o guia vazio. Ver guia_atualizar.
 #define G_RETENTAR_MS 10000u
@@ -2477,20 +2557,28 @@ int guia_atualizando_lista(void) {
   return recargaDoPainel && !painel && (fioVivo || recarregarPend);
 }
 
+static void drenarCarga(void) {
+  if (atomic_load_explicit(&pendPronto, memory_order_acquire)) {
+    int atual = cargaAtual();
+    if (atual) publicar();
+    // Quem decide e o desenho: falha da carga continua G_FALHOU, e e ela que
+    // faz guia_carregar tentar de novo.
+    estado = atual ? (sOk ? G_PRONTO : G_FALHOU) : G_PARADO;
+    atomic_store_explicit(&pendPronto, 0, memory_order_relaxed);
+    fioVivo = 0;
+    if (atual) {
+      focoValido();
+      if (painel) painelMontar();   // sabe[] mudou: quem nao fornece canal sai
+    }
+  }
+}
+
 void guia_atualizar(float dt, Uint32 agora) {
   if (guia_visivel()) gTopoMedir();
   entrada = anim_mola(entrada, guia_visivel() ? 1.0f : 0.0f, dt, NV_MOLA_TELA);
   int prontoPend = atomic_load_explicit(&pendPronto, memory_order_acquire);
   if (recargaDoPainel && !fioVivo && !recarregarPend && !prontoPend) recargaDoPainel = 0;
-  if (prontoPend) {
-    publicar();
-    // Quem decide e o desenho: falha da carga continua G_FALHOU, e e ela que
-    // faz guia_carregar tentar de novo.
-    estado = sOk ? G_PRONTO : G_FALHOU;
-    atomic_store_explicit(&pendPronto, 0, memory_order_relaxed);
-    fioVivo = 0; focoValido();
-    if (painel) painelMontar();   // sabe[] mudou: quem nao fornece canal sai
-  }
+  drenarCarga();
   // O painel de addons pediu recarga com o fio ainda vivo: agora que ele
   // acabou, vai.
   if (recarregarPend && !fioVivo) {
@@ -5017,4 +5105,41 @@ int guia_canal_campos(int i, const char **id, const char **nome, const char **lo
   if (cat) *cat = canais[i].cat >= 0 ? cats[canais[i].cat] : "";
   if (base) *base = canais[i].base;
   return 1;
+}
+
+void guia_abrir_sessao(void) {
+  // Nunca tocar no staging de um fio vivo. Ele sai no proximo limite de
+  // pedido e o desenho descarta o resultado pela geracao da abertura.
+  cargaCancelada = 1;
+  estado = G_PARADO; recarregarPend = 0; recargaDoPainel = 0;
+  nCanais = nCats = nFontes = nSabe = nFav = nFavOrd = 0;
+  fontesOk = cacheLido = favLido = modoLido = previewLido = 0;
+  modoLista = previewLigado = 0; assinaturaPublicada = 0;
+  falhas = xtFalha = xtHttp = 0;
+  memset(&corte, 0, sizeof corte);
+  memset(&ocultos, 0, sizeof ocultos); ocultosPerfil = -1;
+  focoPend[0] = pedidoBase[0] = previewId[0] = heroId[0] = 0;
+  aberta = overlay = querSair = pediuCanal = 0;
+  focoLin = focoCol = focoTopo = topoCol = 0;
+  rolY = velY = rolL = velL = entrada = 0.0f;
+  memset(rolX, 0, sizeof rolX); memset(animTopo, 0, sizeof animTopo);
+  catAberto = catFoco = dirSeg = okLongo = 0;
+  catUlt = dirDesde = dirTick = ultNavCat = okDesde = 0;
+  catAnim = catRol = catVelRol = 0.0f;
+  previewPreso = pedPreview = pedPararPreview = pedRestaurar = pedGuiaCheio = 0;
+  previewUltLin = previewUltCol = -1; previewFocoMudou = 0;
+  memset(&pedido, 0, sizeof pedido); memset(&pedPreviewItem, 0, sizeof pedPreviewItem);
+  focoAnelOk = focoAnelTem = 0; focoAnelTick = 0;
+  janelaDesl = painel = paFoco = paMexeu = paLigou = paN = paErroCheio = 0;
+  paErro = -1; paRol = paVelRol = 0.0f; paOkTick = 0;
+  ultTentativa = overlayDesde = bandaUlt = dicaDesde = 0;
+  dicaAlfa = dicaDir = dicaA = 0.0f; heroA = 1.0f;
+  pedLivetvDiag = buscaEstado = buscaNC = buscaNP = buscaFoco = 0;
+  buscaTexto[0] = 0; buscaRol = buscaAnim = 0.0f;
+  epgEraPronto = 0; epgRev++;
+#ifdef NV_TOUCH_UI
+  toqueLimpar(); rolVazio = toqueTempoMin = toquePpm = 0.0f;
+#endif
+  epg_abrir_sessao(perfis_ativo()); xtepg_limpar();
+  glem_abrir_sessao();
 }
