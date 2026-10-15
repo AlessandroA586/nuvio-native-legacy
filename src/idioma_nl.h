@@ -2181,6 +2181,8 @@
   T("Idioma definido pela sua conta · mudar em Ajustes", "Taal ingesteld door je account · wijzig dit in Instellingen"),
   T("Idioma definido pelo sistema da TV · mudar em Ajustes", "Taal ingesteld door het tv-systeem · wijzig dit in Instellingen"),
   T("Idioma do app", "Taal van de app"),
+  T("Idioma do filtro de áudio: %s. OK liga o filtro.", "Taal van het audiofilter: %s. OK schakelt het filter in."),
+  T("Idioma do filtro de áudio: %s. OK tira o filtro.", "Taal van het audiofilter: %s. OK verwijdert het filter."),
   T("Idioma do áudio", "Audiotaal"),
   T("Idioma dos dados do título", "Taal van de titelgegevens"),
   T("Idioma dos metadados", "Metadatataal"),

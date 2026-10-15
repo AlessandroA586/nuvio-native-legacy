@@ -2181,6 +2181,8 @@
   T("Idioma definido pela sua conta · mudar em Ajustes", "Ngôn ngữ do tài khoản của bạn đặt · đổi trong Cài đặt"),
   T("Idioma definido pelo sistema da TV · mudar em Ajustes", "Ngôn ngữ do hệ thống TV đặt · đổi trong Cài đặt"),
   T("Idioma do app", "Ngôn ngữ ứng dụng"),
+  T("Idioma do filtro de áudio: %s. OK liga o filtro.", "Ngôn ngữ bộ lọc âm thanh: %s. OK bật bộ lọc."),
+  T("Idioma do filtro de áudio: %s. OK tira o filtro.", "Ngôn ngữ bộ lọc âm thanh: %s. OK bỏ bộ lọc."),
   T("Idioma do áudio", "Ngôn ngữ âm thanh"),
   T("Idioma dos dados do título", "Ngôn ngữ dữ liệu phim"),
   T("Idioma dos metadados", "Ngôn ngữ siêu dữ liệu"),

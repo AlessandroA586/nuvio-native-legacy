@@ -2181,6 +2181,8 @@
   T("Idioma definido pela sua conta · mudar em Ajustes", "語言由你的帳號設定 · 可在設定中變更"),
   T("Idioma definido pelo sistema da TV · mudar em Ajustes", "語言由電視系統設定 · 可在設定中變更"),
   T("Idioma do app", "應用程式語言"),
+  T("Idioma do filtro de áudio: %s. OK liga o filtro.", "音訊篩選語言：%s。按 OK 啟用篩選。"),
+  T("Idioma do filtro de áudio: %s. OK tira o filtro.", "音訊篩選語言：%s。按 OK 取消篩選。"),
   T("Idioma do áudio", "音訊語言"),
   T("Idioma dos dados do título", "標題資料語言"),
   T("Idioma dos metadados", "中繼資料語言"),

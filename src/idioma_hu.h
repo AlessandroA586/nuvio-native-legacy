@@ -2181,6 +2181,8 @@
   T("Idioma definido pela sua conta · mudar em Ajustes", "A nyelvet a fiókod állítja be · módosítás a Beállításokban"),
   T("Idioma definido pelo sistema da TV · mudar em Ajustes", "A nyelvet a tévé rendszere állítja be · módosítás a Beállításokban"),
   T("Idioma do app", "Az alkalmazás nyelve"),
+  T("Idioma do filtro de áudio: %s. OK liga o filtro.", "A hangszűrő nyelve: %s. Az OK bekapcsolja a szűrőt."),
+  T("Idioma do filtro de áudio: %s. OK tira o filtro.", "A hangszűrő nyelve: %s. Az OK kikapcsolja a szűrőt."),
   T("Idioma do áudio", "Hang nyelve"),
   T("Idioma dos dados do título", "A címadatok nyelve"),
   T("Idioma dos metadados", "Metaadatok nyelve"),
