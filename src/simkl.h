@@ -56,6 +56,7 @@
 #include "catalogo.h"
 #include "vistoep.h"
 #include <stddef.h>
+#include <stdint.h>
 
 // 1 quando ha token do Simkl nesta TV (vinculo feito em Ajustes).
 int simkl_ativo(void);
@@ -143,11 +144,18 @@ const char *simkl_rota_historico(int visto);
 
 // SINCRONAS, bloqueiam ate 20 s: so de um fio (visto.c). 1 = 2xx sem
 // not_found; 0 sem vinculo, sem corpo ou recusado.
+typedef struct {
+  uint64_t sessao, geracao; char aut[400], cid[200], nome[120];
+} SimklDestino;
+int simkl_destino_capturar(SimklDestino *);
+int simkl_episodios_marcar_destino(const SimklDestino *, const char *, const VistoPar *, int, int);
+int simkl_titulo_marcar_destino(const SimklDestino *, const char *, const char *, const int *, int, int);
 int simkl_episodios_marcar(const char *imdb, const VistoPar *pares, int qtd, int visto);
 int simkl_titulo_marcar(const char *imdb, const char *tipo, const int *temporadas,
                         int nt, int visto);
 
 // Esquece caches e tabelas (logout, desvincular). O token e de simklauth.c.
 void simkl_esquecer(void);
+void simkl_abrir_sessao(void);
 
 #endif

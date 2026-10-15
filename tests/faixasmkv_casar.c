@@ -96,6 +96,22 @@ int main(void) {
   ok(strstr(a[0].rotulo, "E-AC3") && strstr(a[1].rotulo, "AC3") && !strstr(a[1].rotulo, "E-AC3"),
      "contagem igual: ordinal, inalterado", a[0].rotulo);
 
+  // #421: player 29 / arquivo 37. Arabic unico deve ganhar codec e ordinal;
+  // English com SDH escondida e portugues regional ambiguo nao se adivinham.
+  mkv(&fx[0], 17, "S_TEXT/UTF8", "en", "", 0);
+  mkv(&fx[1], 17, "S_TEXT/UTF8", "en", "SDH", 0);
+  mkv(&fx[2], 17, "S_TEXT/UTF8", "ar", "Arabic", 0);
+  mkv(&fx[3], 17, "S_TEXT/UTF8", "ca", "", 0);
+  tv(&a[0], 0, "en"); tv(&a[1], 1, "ara");
+  faixasmkv_aplicar(NULL, 0, a, 2, fx, 4);
+  ok(a[1].ordinalMkv == 2 && !strcmp(a[1].codec, "S_TEXT/UTF8"),
+     "#421 Arabic unico: ordinal 2 do arquivo, mesmo com lista menor", a[1].codec);
+  ok(a[0].ordinalMkv == -1 && !a[0].codec[0], "English/SDH ambiguo continua na TV", a[0].codec);
+  tv(&a[0], 0, ""); tv(&a[1], 1, "ar"); tv(&a[2], 2, "ara");
+  faixasmkv_aplicar(NULL, 0, a, 3, fx, 4);
+  ok(a[0].ordinalMkv == -1 && a[1].ordinalMkv == -1 && a[2].ordinalMkv == -1,
+     "sem idioma ou duas TV disputando Arabic: nao casa", "");
+
   printf(falhas ? "faixasmkv_casar: %d FALHA(S)\n" : "faixasmkv_casar: tudo ok\n", falhas);
   return falhas != 0;
 }

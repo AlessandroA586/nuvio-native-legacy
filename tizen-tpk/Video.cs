@@ -4,15 +4,16 @@
 // funcoes registradas em nv_tpk_video_registrar e ouve pelo
 // nv_tpk_video_evento (src/video_tpk.c).
 //
-// Toda chamada ao player passa pelo fio principal (Principal), porque o C
-// chama do fio dele. A posicao e lida pelo relogio do host (Tique) e o C so le
-// o numero guardado, sem esperar ninguem.
+// Chamadas nativas ficam no fio da sessao; janela/Display nascem no principal.
+// Tique pede uma amostra sem esperar; o C so le o ultimo numero confirmado.
 using System;
 using System.IO;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Concurrent;
 using Tizen.Multimedia;
 
 namespace NuvioTpk
@@ -32,6 +33,10 @@ namespace NuvioTpk
         [DllImport("libnuvio.so")] static extern void nv_tpk_video_registrar(IntPtr abrir, IntPtr parar, IntPtr pausar,
                                                                               IntPtr buscar, IntPtr volume, IntPtr janela, IntPtr pos);
         [DllImport("libnuvio.so")] static extern void nv_tpk_video_evento(int tipo, int a, int b);
+        [DllImport("libnuvio.so")] static extern void nv_tpk_video_registrar_aspecto(IntPtr janela);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void RegistrarAspectoDel(IntPtr janela);
+        public static RegistrarAspectoDel RegistrarAspecto = nv_tpk_video_registrar_aspecto;
+
         [DllImport("libnuvio.so")] static extern void nv_tpk_video_registrar_faixas(IntPtr escolher);
         [DllImport("libnuvio.so")] static extern void nv_tpk_video_faixa(int tipo, int idx, string lingua);
         [DllImport("libnuvio.so")] static extern void nv_tpk_video_faixas_fim(int selAudio, int selLeg);
@@ -61,6 +66,8 @@ namespace NuvioTpk
         public static void Ligar(Func<string, IntPtr> resolve)
         {
             IntPtr p;
+            p = resolve("nv_tpk_video_registrar_aspecto");
+            RegistrarAspecto = p != IntPtr.Zero ? Marshal.GetDelegateForFunctionPointer<RegistrarAspectoDel>(p) : new RegistrarAspectoDel(_ => { });
             if ((p = resolve("nv_tpk_video_registrar")) != IntPtr.Zero) Registrar = Marshal.GetDelegateForFunctionPointer<RegistrarDel>(p);
             if ((p = resolve("nv_tpk_video_evento")) != IntPtr.Zero) Evento = Marshal.GetDelegateForFunctionPointer<EventoDel>(p);
             if ((p = resolve("nv_tpk_video_registrar_faixas")) != IntPtr.Zero) RegistrarFaixas = Marshal.GetDelegateForFunctionPointer<RegistrarFaixasDel>(p);
@@ -77,6 +84,11 @@ namespace NuvioTpk
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void FnSemArg();
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void FnInt(int v);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void FnRet(int x, int y, int w, int h);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void FnAspecto(int x, int y, int w, int h, int lx, int ly, int lw, int lh);
+        [DllImport("libcapi-media-player.so.0")] static extern int player_set_display_mode(IntPtr p, PlayerDisplayMode mode);
+        [DllImport("libcapi-media-player.so.0")] static extern int player_set_display_roi_area(IntPtr p, int x, int y, int w, int h);
+        FnAspecto fAspecto;
+        bool aspectoRecusado;
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate int FnPos();
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void FnEscolher(int tipo, int idx);
 
@@ -89,10 +101,41 @@ namespace NuvioTpk
         // Referencias vivas: o C guarda os ponteiros, o GC nao pode recolher.
         FnAbrir fAbrir; FnSemArg fParar; FnInt fPausar, fBuscar, fVolume; FnRet fJanela; FnPos fPos; FnEscolher fEscolher;
 
-        readonly VideoWindowMetrics windowMetrics = new VideoWindowMetrics();
+        VideoWindowMetrics windowMetrics = new VideoWindowMetrics();
         Player player;
         int sessao, playerSessao;
         volatile int posMs;
+
+        // Um contexto por sessao mantem comandos e continuacoes async no mesmo
+        // fio. Fechar descarta a fila antiga; nunca espera uma API presa.
+        sealed class FioVideo : SynchronizationContext
+        {
+            readonly BlockingCollection<Action> fila = new BlockingCollection<Action>();
+            readonly object trava = new object();
+            bool fechado;
+            internal int consulta;
+            internal FioVideo(Action<string> log)
+            {
+                new Thread(() => {
+                    SetSynchronizationContext(this);
+                    foreach (var a in fila.GetConsumingEnumerable())
+                        try { a(); } catch (Exception e) { log("fio video: " + e); }
+                    fila.Dispose();
+                }) { IsBackground = true, Name = "Nuvio video" }.Start();
+            }
+            public override void Post(SendOrPostCallback d, object state)
+            {
+                lock (trava) { if (!fechado) fila.Add(() => d(state)); }
+            }
+            internal void Fechar()
+            {
+                lock (trava) { fechado = true; while (fila.TryTake(out _)) { } fila.CompleteAdding(); }
+            }
+        }
+        FioVideo fio;
+        readonly object trocaTrava = new object();
+        Task<bool> liberacao = Task.FromResult(true);
+        internal int PrazoPararMs = 5000;
 
         public Video(Func<Display> fazDisplay, Action<Action> principal, string dados, int telaW, int telaH)
         {
@@ -107,6 +150,10 @@ namespace NuvioTpk
             fBuscar = ms => ComSessao(() => Buscar(ms));
             fVolume = v => ComSessao(() => PedirVolume(v));
             fJanela = (x, y, w, h) => ComSessao(() => Janela(x, y, w, h));
+            fAspecto = (x,y,w,h,lx,ly,lw,lh) => ComSessao(() => Janela(x,y,w,h,lx,ly,lw,lh));
+            // Older staged libnuvio versions only have the original window callback.
+            try { NvVid.RegistrarAspecto(Marshal.GetFunctionPointerForDelegate(fAspecto)); }
+            catch (EntryPointNotFoundException) { }
             fPos = () => posMs;
             NvVid.Registrar(Marshal.GetFunctionPointerForDelegate(fAbrir), Marshal.GetFunctionPointerForDelegate(fParar),
                                    Marshal.GetFunctionPointerForDelegate(fPausar), Marshal.GetFunctionPointerForDelegate(fBuscar),
@@ -212,8 +259,11 @@ namespace NuvioTpk
             try { return f() ?? ""; } catch { return ""; }
         }
 
-        // App foi para segundo plano: o player pausa (e o C fica sabendo).
-        public void PausarPeloSistema() { SoltaPrimer(); Pausar(true); }
+        // App foi para segundo plano (tecla Home): PARAR, nao pausar. Com o
+        // player preso o Pause nunca chega e o som seguia na Home (#412). O
+        // descarte em background solta Muted e o plano sem o fio da sessao; a
+        // volta e a reconexao de sempre no relogio parado (watchdog do C).
+        public void PausarPeloSistema() { Parar(); }
 
         // VOLUME DO TRAILER (#281: S90C, Tizen 9, trailer sem som com o ajuste
         // de som ligado). So o trailer pede volume (trailer.c); o filme nunca
@@ -249,14 +299,28 @@ namespace NuvioTpk
                 " lido=" + lido + " estado=" + estado + " (" + quando + ")");
         }
 
-        // Relogio do host, no fio principal.
+        // Relogio do host: nenhuma API no principal, uma consulta em voo por
+        // sessao. Mantem a amostra real (estimar esconderia o watchdog do C).
         public void Tique()
         {
-            // Uma consulta por tique no principal; fPos so le o cache.
-            long inicio = Stopwatch.GetTimestamp();
-            try { if (player != null && playerSessao == Volatile.Read(ref sessao) && player.State == PlayerState.Playing) posMs = player.GetPlayPosition(); } catch { }
-            long ms = (Stopwatch.GetTimestamp() - inicio) * 1000 / Stopwatch.Frequency;
-            if (ms >= 50) Log("[video] tpk consulta posicao levou " + ms + " ms (fio principal)");
+            var f = Volatile.Read(ref fio);
+            if (f == null || Interlocked.Exchange(ref f.consulta, 1) != 0) return;
+            int minha = Volatile.Read(ref sessao);
+            f.Post(_ => {
+                var p = Volatile.Read(ref player);
+                long inicio = Stopwatch.GetTimestamp();
+                try {
+                    if (p != null && playerSessao == minha && minha == Volatile.Read(ref sessao) && p.State == PlayerState.Playing) {
+                        int ms = p.GetPlayPosition();
+                        lock (trocaTrava) { if (minha == sessao && player == p) posMs = ms; }
+                    }
+                } catch { }
+                finally {
+                    long ms = (Stopwatch.GetTimestamp() - inicio) * 1000 / Stopwatch.Frequency;
+                    if (ms >= 50) Log("[video] tpk consulta posicao levou " + ms + " ms (fio video)");
+                    Volatile.Write(ref f.consulta, 0);
+                }
+            }, null);
         }
 
         public void Log(string s)
@@ -274,61 +338,52 @@ namespace NuvioTpk
         void ComSessao(Action a)
         {
             int minha = Volatile.Read(ref sessao);
-            Principal(() => { if (minha == Volatile.Read(ref sessao) && playerSessao == minha && !paradaFalhou) a(); });
+            var f = Volatile.Read(ref fio);
+            f?.Post(_ => { if (minha == Volatile.Read(ref sessao) && playerSessao == minha) a(); }, null);
         }
 
-        [DllImport("libc.so.6", EntryPoint = "_exit")] static extern void SairImediatamente(int codigo);
-        internal int PrazoPararMs = 5000;
-        internal Action FalhaFatal = () => { try { SairImediatamente(1); } catch { Environment.Exit(1); } };
-        int fatal;
-        bool paradaFalhou;
-        readonly object trocaTrava = new object();
-        System.Threading.Timer prazoParada;
-        Stopwatch tempoParada;
-
-        // O prazo nasce no fio solicitante, ANTES do Post: o principal pode
-        // estar preso em GetPlayPosition/Stop. Pedidos repetidos nao adiam o
-        // limite. A trava so protege o prazo, nunca uma chamada Tizen.
+        // Descarte independente da fila: ate GetPlayPosition/Prepare presos
+        // deixam passar Muted e Display=null. Nao cria outro dono do decoder
+        // sem confirmar Dispose; falha/timeout vira erro recuperavel na UI.
         void Trocar(Action<int> abrir)
         {
             int minha;
+            FioVideo novo;
+            Task<bool> soltar;
             lock (trocaTrava)
             {
-                if (fatal != 0) return;
                 minha = Interlocked.Increment(ref sessao);
-                if (prazoParada == null)
-                {
-                    var tempo = tempoParada = Stopwatch.StartNew();
-                    prazoParada = new System.Threading.Timer(_ =>
-                    {
-                        lock (trocaTrava)
-                        {
-                            if (prazoParada == null || tempoParada != tempo || fatal != 0) return;
-                            prazoParada.Dispose(); prazoParada = null;
-                            // Fila atrasada/flags nao provam recurso retido. As
-                            // referencias so somem quando Dispose retorna.
-                            if (Volatile.Read(ref player) == null && Volatile.Read(ref primer) == null) return;
-                            Volatile.Write(ref fatal, 1);
-                        }
-                        Log("[video] tpk parar NAO confirmou em " + tempo.ElapsedMilliseconds + " ms; encerrando processo");
-                        FalhaFatal();
-                    }, null, PrazoPararMs, Timeout.Infinite);
+                fio?.Fechar();
+                var velho = player; player = null;
+                var prime = primer; primer = null; primerGen++;
+                if (velho != null || prime != null) {
+                    var anterior = liberacao;
+                    liberacao = Task.Run(async () => {
+                        bool ok = await anterior.ConfigureAwait(false);
+                        if (prime != null) ok = Liberar(prime) && ok;
+                        if (velho != null) ok = Liberar(velho) && ok;
+                        return ok;
+                    });
                 }
+                soltar = liberacao;
+                ReportWindowMetrics(); windowMetrics = new VideoWindowMetrics();
+                novo = fio = new FioVideo(Log);
             }
-            Principal(() =>
-            {
-                if (minha != Volatile.Read(ref sessao) || Volatile.Read(ref fatal) != 0) return;
-                if (paradaFalhou || !PararAtual()) { paradaFalhou = true; return; }
-                long ms;
-                lock (trocaTrava)
-                {
-                    if (minha != sessao || fatal != 0) return;
-                    ms = tempoParada.ElapsedMilliseconds;
-                    prazoParada?.Dispose(); prazoParada = null;
+            Principal(() => {
+                if (janelaMovida && GeometriaJanela != null) {
+                    try { RestaurarJanela(); } catch (Exception e) { Log("reset-window: " + e.Message); }
                 }
-                Log("[video] tpk parar confirmado em " + ms + " ms");
-                if (abrir != null && minha == Volatile.Read(ref sessao)) abrir(minha);
             });
+            novo.Post(async _ => {
+                if (await Task.WhenAny(soltar, Task.Delay(PrazoPararMs)) != soltar || !await soltar) {
+                    Log("[video] tpk parar nao confirmou; player indisponivel, processo preservado");
+                    if (minha == Volatile.Read(ref sessao)) NvVid.Evento(EV_ERRO, -3, 0);
+                    return;
+                }
+                if (minha != Volatile.Read(ref sessao)) return;
+                Log("[video] tpk parar confirmado (fio video)");
+                if (abrir != null) abrir(minha);
+            }, null);
         }
 
         async void Abrir(string url, string cabecalhos, int minha)
@@ -337,10 +392,15 @@ namespace NuvioTpk
             // Player novo nasce no volume cheio; so um pedido DESTA sessao
             // (trailer.c, logo depois do video_tocar) o muda.
             volAlvo = 1f; volPedido = false;
+            aspectoRecusado = false;
             try
             {
                 var p = new Player();
-                Volatile.Write(ref player, p); playerSessao = minha;
+                // Publicar e trocar de sessao usam a mesma trava: um Trocar no
+                // meio do "new Player()" ou captura p (e solta) ou o acha aqui.
+                bool viva;
+                lock (trocaTrava) { viva = minha == Volatile.Read(ref sessao); if (viva) { player = p; playerSessao = minha; } }
+                if (!viva) { Liberar(p); return; }
                 p.PlaybackCompleted += (s, e) => { if (minha == Volatile.Read(ref sessao)) NvVid.Evento(EV_FIM, 0, 0); };
                 p.ErrorOccurred += (s, e) => { if (minha == Volatile.Read(ref sessao)) { Log("erro " + e.Error); NvVid.Evento(EV_ERRO, (int)e.Error, 0); } };
                 p.BufferingProgressChanged += (s, e) => { if (minha == Volatile.Read(ref sessao)) NvVid.Evento(EV_BUFFER, e.Percent, 0); };
@@ -403,8 +463,8 @@ namespace NuvioTpk
         // clipe de 2 s preto e mudo (res/silencio.mp4, H.264 Main + AAC-LC) por
         // ~1 s e solta tudo (Stop/Unprepare/Dispose), como ao fim de um filme.
         // Nada fica preso: o filme de verdade e a saida seguem como hoje. So o
-        // host 6+ (Program.cs) chama isto; no 4/5 `primer` e sempre null e os
-        // SoltaPrimer() de Parar/PausarPeloSistema nao fazem nada.
+        // host 6+ (Program.cs) chama isto; no 4/5 `primer` e sempre null e o
+        // Trocar so encontra `player` para soltar.
         Player primer;
         int primerGen;
 
@@ -471,7 +531,9 @@ namespace NuvioTpk
 
         // Dispose confirma a liberacao, independentemente do estado anterior.
         // Preparing nao admite Unprepare; cada passo ainda tenta o Dispose.
-        bool Liberar(ref Player p)
+        // Muted e Display=null vem primeiro: silenciam e soltam o plano mesmo
+        // quando Stop/Unprepare travam (#412, saida para a Home).
+        bool Liberar(Player p)
         {
             try { p.Muted = true; } catch (Exception e) { Log("parar muted: " + e.Message); }
             try { p.Display = null; } catch (Exception e) { Log("parar display: " + e.Message); }
@@ -479,17 +541,11 @@ namespace NuvioTpk
             catch (Exception e) { Log("parar stop: " + e.Message); }
             try { if (p.State == PlayerState.Ready || p.State == PlayerState.Playing || p.State == PlayerState.Paused) p.Unprepare(); }
             catch (Exception e) { Log("parar unprepare: " + e.Message); }
-            try { p.Dispose(); Volatile.Write(ref p, null); return true; }
+            try { p.Dispose(); return true; }
             catch (Exception e) { Log("parar dispose: " + e.Message); return false; }
         }
 
-        bool PararAtual()
-        {
-            ReportWindowMetrics();
-            if (!SoltaPrimer()) return false;
-            if (player == null) return true;
-            return Liberar(ref player); // cache preserva a retomada durante a espera da reconexao
-        }
+        bool Liberar(ref Player p) { if (!Liberar(p)) return false; Volatile.Write(ref p, null); return true; }
 
         void Pausar(bool pausa)
         {
@@ -522,35 +578,115 @@ namespace NuvioTpk
         public Func<int, int, int, int, string> GeometriaJanela;
         bool janelaMovida;
 
+        void RestaurarJanela()
+        {
+            string erro = GeometriaJanela(0,0,telaW,telaH);
+            if (erro != null) throw new InvalidOperationException(erro);
+            janelaMovida = false;
+        }
+
         void Janela(int x, int y, int w, int h)
         {
-            if (player == null) return;
-            bool applied = false, fullscreen = x == 0 && y == 0 && w == telaW && h == telaH;
-            windowMetrics.Begin(player, x, y, w, h, fullscreen);
-            long started = Stopwatch.GetTimestamp(), ended = 0;
+            Janela(x,y,w,h,x,y,w,h,x == 0 && y == 0 && w == telaW && h == telaH);
+        }
+
+        void Janela(int x, int y, int w, int h, int lx, int ly, int lw, int lh)
+        {
+            Janela(x,y,w,h,lx,ly,lw,lh,false);
+        }
+
+        // #426 (Q7FN, Tizen 4.0): a ROI/window with negative origin or bigger
+        // than the panel leaves the 2018 plane anchored top-left with a black
+        // band below. Tizen 5+ took it in the field, so only Program40 on a 4.x
+        // platform clears this; zoom then degrades to contain, centered.
+        public bool PlanoAceitaRoiFora = true;
+
+        // Keeps a destination rectangle inside the panel. Bigger than the panel:
+        // contain-fit, centered (aspect kept). Otherwise: slide inside.
+        internal static void CabeNaTela(ref int x, ref int y, ref int w, ref int h, int telaW, int telaH)
+        {
+            if (w <= 0 || h <= 0 || telaW <= 0 || telaH <= 0) return;
+            if (w > telaW || h > telaH)
+            {
+                double s = Math.Min((double)telaW / w, (double)telaH / h);
+                w = Math.Max(1, Math.Min(telaW, (int)Math.Round(w * s)));
+                h = Math.Max(1, Math.Min(telaH, (int)Math.Round(h * s)));
+                x = (telaW - w) / 2;
+                y = (telaH - h) / 2;
+                return;
+            }
+            x = Math.Max(0, Math.Min(x, telaW - w));
+            y = Math.Max(0, Math.Min(y, telaH - h));
+        }
+
+        void Janela(int x, int y, int w, int h, int lx, int ly, int lw, int lh, bool telaCheiaSimples)
+        {
+            if (player == null || w <= 0 || h <= 0) return;
+            if (!PlanoAceitaRoiFora)
+            {
+                CabeNaTela(ref x, ref y, ref w, ref h, telaW, telaH);
+                CabeNaTela(ref lx, ref ly, ref lw, ref lh, telaW, telaH);
+            }
+            bool applied = false;
+            windowMetrics.Begin(player, x, y, w, h, x == 0 && y == 0 && w == telaW && h == telaH);
+            long started = Stopwatch.GetTimestamp();
+            string motivo = null;
             try
             {
-                // QUADRO CHEIO SEM ZOOM: LetterBox, o mesmo caminho da reproducao
-                // normal nos 4 hosts. A reproducao cheia pede exatamente a tela
-                // (0,0,telaW,telaH), entao esta guarda continua sendo um no-op
-                // para ela — 6+ e o host 4/5 nao mudam.
-                //
-                // ZOOM (#178): o recorte de fonte emulado (src/video_tpk.c
-                // video_janela_fonte) manda um ROI que RECUA a origem para
-                // negativo ou ESTOURA a tela, para que a fatia desejada do quadro
-                // preencha o destino. Antes, `w >= telaW && h >= telaH` engolia um
-                // ROI ampliado ancorado em 0,0 de volta para LetterBox, matando o
-                // zoom. Agora so o quadro EXATO da tela vira LetterBox; qualquer
-                // ROI de zoom (origem negativa OU maior que a tela) passa cru ao
-                // SetRoi.
-                if (GeometriaJanela != null) { applied = JanelaTizen45(x, y, w, h, fullscreen); return; }
-                if (fullscreen) { player.DisplaySettings.Mode = PlayerDisplayMode.LetterBox; applied = true; return; }
-                player.DisplaySettings.Mode = PlayerDisplayMode.Roi;
-                player.DisplaySettings.SetRoi(new Rectangle(x, y, w, h));
-                applied = true;
+                // Before the aspect bridge, the simple fullscreen callback
+                // meant preserve source aspect. Roi stretches 2.39:1 and 4:3.
+                if (telaCheiaSimples)
+                {
+                    if (janelaMovida && GeometriaJanela != null) RestaurarJanela();
+                    player.DisplaySettings.Mode = PlayerDisplayMode.LetterBox;
+                    applied = true;
+                    return;
+                }
+                if (!aspectoRecusado)
+                {
+                    try
+                    {
+                        if (janelaMovida && GeometriaJanela != null) RestaurarJanela();
+                        int rc = player_set_display_mode(player.Handle, PlayerDisplayMode.Roi);
+                        if (rc == 0) rc = player_set_display_roi_area(player.Handle, x, y, w, h);
+                        if (rc == 0) { applied = true; return; }
+                        motivo = "DisplayRoi rc=0x" + rc.ToString("x8");
+                    }
+                    catch (Exception e) { motivo = "DisplayRoi " + e.GetType().Name + ": " + e.Message; }
+                    aspectoRecusado = true; // Only this player generation; a new open retries B.
+                    // A driver may mutate Mode/ROI before returning an error.
+                    // Leave Roi before applying the old path; never cache partial success.
+                    player.DisplaySettings.Mode = PlayerDisplayMode.LetterBox;
+                }
+                bool fullscreen = lx == 0 && ly == 0 && lw == telaW && lh == telaH;
+                if (GeometriaJanela != null) applied = JanelaTizen45(lx, ly, lw, lh, fullscreen);
+                else
+                {
+                    player.DisplaySettings.Mode = fullscreen ? PlayerDisplayMode.LetterBox : PlayerDisplayMode.Roi;
+                    if (!fullscreen) player.DisplaySettings.SetRoi(new Rectangle(lx, ly, lw, lh));
+                    applied = true;
+                }
             }
-            catch (Exception e) { ended = Stopwatch.GetTimestamp(); Log("[video-window] apply failed: " + e.Message); }
-            finally { windowMetrics.Complete(applied, (ended != 0 ? ended : Stopwatch.GetTimestamp()) - started); }
+            catch (Exception e)
+            {
+                motivo = (motivo ?? "legacy") + "; restore: " + e.GetType().Name + ": " + e.Message;
+            }
+            finally
+            {
+                if (!applied)
+                {
+                    // Failed legacy work must not leave a moved ElmSharp window or active partial ROI.
+                    try { player.DisplaySettings.Mode = PlayerDisplayMode.LetterBox; }
+                    catch (Exception e) { motivo += "; reset-mode: " + e.Message; }
+                    if (GeometriaJanela != null && janelaMovida)
+                    {
+                        try { RestaurarJanela(); }
+                        catch (Exception e) { motivo += "; reset-window: " + e.Message; }
+                    }
+                }
+                if (motivo != null) Log("[aspecto] sessao=" + playerSessao + " " + motivo.Replace('\n',' ').Replace('\r',' ') + " fallback=" + (applied ? "ok" : "failed"));
+                windowMetrics.Complete(applied, Stopwatch.GetTimestamp() - started);
+            }
         }
 
         // Tizen 4/5 (#203, botao de aspecto/zoom sem efeito). CAUSA PROVAVEL
@@ -566,11 +702,12 @@ namespace NuvioTpk
             if (fullscreen)
             {
                 string e0 = janelaMovida ? GeometriaJanela(0, 0, telaW, telaH) : null;
-                janelaMovida = false;
+                janelaMovida = e0 != null;
                 player.DisplaySettings.Mode = PlayerDisplayMode.LetterBox;
                 Log("[aspect] tpk40 modo=letterbox " + rotulo + (e0 == null ? " ok" : " falhou: " + e0));
                 return e0 == null;
             }
+            janelaMovida = true; // The void geometry setter may partially mutate then fail.
             string erro = GeometriaJanela(x, y, w, h);
             if (erro == null)
             {
@@ -586,6 +723,7 @@ namespace NuvioTpk
             Log("[aspect] tpk40 modo=janela " + rotulo + " falhou: " + erro);
             try
             {
+                if (janelaMovida) RestaurarJanela();
                 player.DisplaySettings.Mode = PlayerDisplayMode.Roi;
                 player.DisplaySettings.SetRoi(new Rectangle(x, y, w, h));
                 Log("[aspect] tpk40 modo=roi " + rotulo + " ok");

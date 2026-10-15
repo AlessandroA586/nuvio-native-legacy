@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // Biblioteca e vistos DA CONTA — as duas superficies que o sync baixava e
 // jogava fora.
 //
@@ -74,10 +75,10 @@ typedef struct {
   char id[24];        // content_id, "tt0111161"
   char tipo[8];       // "movie" | "series", ja normalizado
   char titulo[160];
-  // poster 1024 como CatItem.poster (#361): cartaz de provedor com nota passa
+  // poster com o teto de CatItem.poster (#433): cartaz de provedor com nota passa
   // de 500 caracteres. O fundo fica em 512, o tamanho do CatItem.backdrop que
   // ele alimenta; mais longo que isso e descartado com linha no registro.
-  char poster[1024];
+  char poster[NV_ARTE_URL_MAX];
   char backdrop[512];
   char meta[96];      // release_info ("1994", "2008–2013")
   char genero[160];   // "Filme · Drama · Crime", ja composto

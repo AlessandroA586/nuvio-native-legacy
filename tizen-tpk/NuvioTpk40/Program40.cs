@@ -202,6 +202,14 @@ namespace NuvioTpk
                     try { janelaVideo.Geometry = new Rect(gx, gy, gw, gh); return null; }
                     catch (Exception e) { return e.GetType().Name + ": " + e.Message; }
                 };
+                // #426: the 2018 (Tizen 4.0) plane mishandles off-screen ROI and
+                // window geometry; unknown version also takes the safe side.
+                try
+                {
+                    Information.TryGetValue<string>("http://tizen.org/feature/platform.version", out string pv);
+                    video.PlanoAceitaRoiFora = pv != null && !pv.StartsWith("4");
+                }
+                catch { video.PlanoAceitaRoiFora = false; }
                 Etapa("ok video-window");
 
                 // OnUpdate SEMPRE devolve true, como o JuvoPlayer.OpenGL: com
@@ -219,6 +227,7 @@ namespace NuvioTpk
                 }
                 try { Apps.Registrar(a => EcoreMainloop.PostAndWakeUp(a)); } catch (Exception e) { Etapa("note apps-init " + e.GetType().Name); }
                 Etapa("ok nv_tpk_iniciar");
+                NvCarga.LimparAntigos(dados);
             }
             catch (Exception e)
             {

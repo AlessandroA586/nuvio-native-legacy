@@ -44,6 +44,7 @@ int main(void) {
   snprintf(it[1].tipo, sizeof it[1].tipo, "movie");
   snprintf(it[1].titulo, sizeof it[1].titulo, "Completo");
   snprintf(it[1].sinopse, sizeof it[1].sinopse, "Ja tinha.");
+  snprintf(it[1].logo, sizeof it[1].logo, "https://p.test/logo.png");
   snprintf(it[2].imdb, sizeof it[2].imdb, "tt38961497");
   snprintf(it[2].tipo, sizeof it[2].tipo, "movie");
   snprintf(it[2].titulo, sizeof it[2].titulo, "Miasma");

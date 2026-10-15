@@ -20,6 +20,40 @@
 #ifndef NV_DEBRID_H
 #define NV_DEBRID_H
 
+#include <stdint.h>
+
+// IDs estaveis para a ordem e o orcamento locais de cada servico. Acrescentar
+// novos servicos no fim: estes numeros podem ficar nos ajustes do aparelho.
+enum { DEBRID_RD = 0, DEBRID_TB = 1, DEBRID_PM = 2, DEBRID_AD = 3, DEBRID_N = 4 };
+const char *debrid_servico_nome(int servico);   // nome para a tela; "" se invalido
+const char *debrid_servico_id(int servico);     // slug da credencial; "" se invalido
+int debrid_servico_por_nome(const char *nome); // nome/slug do servico; -1 se desconhecido
+// Tem chave efetiva e nao foi recusado nesta busca nem esta sem plano.
+int debrid_servico_disponivel(int servico);
+
+// Conta lida pelo sync: uma resposta e um conjunto completo, inclusive os
+// provedores ausentes. O worker preenche a copia; so a sessao que a pediu a
+// publica. Nunca transportar a chave em log, URL de diagnostico ou i18n.
+typedef struct { char chave[4][200]; } DebridConta;
+void debrid_conta_iniciar(DebridConta *conta);
+void debrid_conta_definir(DebridConta *conta, const char *servico, const char *chave);
+int  debrid_aplicar_chaves_conta(const DebridConta *conta, uint64_t sessao);
+void debrid_aplicar_chaves_locais(const DebridConta *conta);
+void debrid_abrir_sessao(uint64_t sessao);
+
+// Capturar ao despachar um trabalho, antes de trocar de perfil. Todas as
+// chamadas HTTP dele leem estas chaves e este episodio, nunca os da pessoa
+// que entrou enquanto o worker estava na rede. Contexto vive ate sair().
+typedef struct {
+  char chave[4][200];
+  int temporada, episodio;
+  uint64_t sessao;
+  unsigned busca;
+} DebridContexto;
+void debrid_contexto_capturar(DebridContexto *contexto);
+void debrid_contexto_entrar(const DebridContexto *contexto);
+void debrid_contexto_sair(void);
+
 // Chave vinda da conta. `servico` e o sufixo de "debrid:<servico>":
 // realdebrid/real-debrid, torbox e premiumize (com ou sem hifen). Uma chave
 // por servico; chamar de novo para outro servico NAO apaga a anterior.
@@ -54,6 +88,13 @@ void debrid_episodio(int *temporada, int *episodio);
 // BLOQUEIA. Devolve 1 e grava em `url` um link direto que toca; 0 se nao deu.
 // So conteudo EM CACHE: e o caminho da escolha AUTOMATICA.
 int  debrid_resolver(const char *infoHash, int fileIdx, char *url, unsigned n);
+// Mesma consulta: *fora recebe a negativa conhecida deste torrent, nunca erro HTTP.
+int  debrid_resolver_cache(const char *infoHash, int fileIdx, char *url, unsigned n, int *fora);
+// Resolve SOMENTE este servico, sem gerar links nos seguintes. A url sai vazia
+// em toda falha; *fora = 1 somente se ESTE servico respondeu fora de cache.
+// Erro de conta, HTTP e falta de chave nao sao uma negativa de cache.
+int  debrid_resolver_servico_cache(int servico, const char *infoHash, int fileIdx,
+                                   char *url, unsigned n, int *fora);
 
 // A PESSOA ESCOLHEU ESTE TORRENT NA FOLHA — e ai a regra "so o que esta em
 // cache" nao vale mais. E o "P2P" do TorBox: o torrent fora de cache que o
@@ -67,7 +108,7 @@ int  debrid_resolver(const char *infoHash, int fileIdx, char *url, unsigned n);
 // chave — cacheado no Premiumize nao manda o TorBox baixar). Nao havendo,
 // pede ao TorBox para BAIXAR (createtorrent SEM add_only_if_cached) e olha o
 // progresso por uns segundos; o Real-Debrid ja comeca a baixar no addMagnet.
-//   1               -> `url` pronta, toca
+//   1               -> `url` pronta, toca; `servico` recebe quem resolveu
 //   DEBRID_BAIXANDO -> o servico esta baixando: `servico` recebe o nome
 //                      ("TorBox") e `*pct` o progresso 0-100 (-1 se nao sabe).
 //                      O torrent fica na conta; escolher de novo depois toca.

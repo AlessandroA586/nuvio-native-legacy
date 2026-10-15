@@ -16,6 +16,7 @@ int ajustes_social(void) { return 1; }
 int ajustes_hist_conta(void) { return 1; }
 int ajustes_busca_cinemeta(void) { return 1; }
 int ajustes_busca_nuvio(void) { return 0; }   // #311: Primeiro (padrao)
+int ajustes_ocultar_filmes_vistos(void) { return 0; }    // #366: descoberta.c le o ajuste
 #include "../src/descoberta.c"
 Uint32 SDL_GetTicks(void) { return 0; }
 #include <assert.h>
@@ -28,6 +29,7 @@ int         ajustes_idioma_ingles(void) { return 0; }
 int ajustes_idioma(void) { return 0; }
 int   ajustes_cw_ordem(void)               { return 0; }   // Padrao (issue #127)
 int   ajustes_cw_concluido(void)           { return 90; }  // Percentual assistido de fabrica
+int   ajustes_cw_minimo(void)             { return 1; }
 int   ajustes_cw_mostrar_nao_exibidos(void) { return 1; }
 int   ajustes_cw_proximo(void) { return 1; }
 const char *i18n(const char *s)         { return s; }
@@ -64,6 +66,7 @@ void  fil_registrar_se_couber_de(const FilPassada *p, const char *c, const char 
 int   fil_podar_catalogos(const char *const *ids, const char *const *bases, int n,
                           int perfilDaLista) {
   (void)ids; (void)bases; (void)n; (void)perfilDaLista; return 0; }
+int fil_marcar_declaradas(const char *const *chaves, int n, int perfilDaLista) { (void)chaves; (void)n; (void)perfilDaLista; return 0; }
 int fil_marcar_sem_addon(const char *const *ids, const char *const *bases, const int *ativos, int n, int perfilDaLista) {
   (void)ids; (void)bases; (void)ativos; (void)n; (void)perfilDaLista; return 0;
 }
@@ -153,6 +156,7 @@ int trakt_continuar(CatItem *s, int m) {
   um(&s[4], "tt700", "movie", 0, 0, 40, 600000);
   return 5;
 }
+int trakt_cw_concluiu(const char *id, long long ms) { (void)id; (void)ms; return 0; }
 int   trakt_continuar_falhou(void)        { return 0; }
 
 static long long agora = 1000000;

@@ -295,10 +295,54 @@ static _Thread_local unsigned redeFinalTam;
 
 void rede_preparar(void) { }   // nao ha biblioteca para carregar
 unsigned rede_pedido_capacidades(void) { return 0; }
+// WGT: somente GET publico sem redirects, em fluxo; nunca usa responseText.
+EM_JS_DEPS(nv_fluxo_deps, "$wasmTable");
+EM_ASYNC_JS(int, nv_http_fluxo, (const char *url, unsigned prazo, unsigned teto,
+                                int callback, void *usuario, int *status, unsigned *total), {
+  if (typeof ReadableStream === 'undefined' || typeof AbortController === 'undefined') return 2;
+  var controle = new AbortController(), expirou = false, bloco = _malloc(16384);
+  if (!bloco) return 3;
+  var timer = setTimeout(function() { expirou = true; controle.abort(); }, prazo);
+  try {
+    var resposta = await fetch(UTF8ToString(url), {
+      redirect: 'error', credentials: 'omit', signal: controle.signal
+    });
+    HEAP32[status >> 2] = resposta.status;
+    if (!resposta.body || !resposta.body.getReader) return 2;
+    var leitor = resposta.body.getReader(), n = 0;
+    while (true) {
+      var parte = await leitor.read();
+      if (parte.done) break;
+      if (parte.value.length > teto - n) return 8;
+      n += parte.value.length; HEAPU32[total >> 2] = n;
+      if (resposta.status >= 200 && resposta.status < 300) {
+        for (var i = 0; i < parte.value.length; i += 16384) {
+          var pedaco = parte.value.subarray(i, i + 16384);
+          HEAPU8.set(pedaco, bloco);
+          if (!wasmTable.get(callback)(bloco, pedaco.length, usuario)) return 4;
+        }
+      }
+    }
+    return 0;
+  } catch (e) { return expirou ? 5 : 4; }
+  finally { clearTimeout(timer); controle.abort(); _free(bloco); }
+});
 int rede_pedir(const RedePedido *p, RedeResposta *r) {
-  (void)p;
   if (!r) return 0;
   memset(r, 0, sizeof *r);
+  // Os demais pedidos continuam indisponiveis: o XHR nao cumpre o contrato.
+  if (p && p->receber_corpo && p->url && !strncmp(p->url,"https://",8) &&
+      (!p->metodo || !strcmp(p->metodo,"GET")) && !p->seguir && !p->cabecalhos &&
+      !p->corpo && !p->n_corpo && !p->job && !p->parar && !p->intervalo &&
+      !p->janela_corpo_ms && !p->ca_arquivo && !p->tls_pessoal &&
+      !p->max_cabecalhos && p->prazo_ms<=300000 && p->max_bytes<=REDE_CORPO_MAXIMO) {
+    unsigned total=0;
+    r->erro=nv_http_fluxo(p->url,p->prazo_ms?p->prazo_ms:15000,
+        p->max_bytes?p->max_bytes:REDE_CORPO_PADRAO,
+        (int)p->receber_corpo,p->corpo_usuario,&r->status,&total);
+    r->n_corpo=total;
+    return r->erro==REDE_OK;
+  }
   r->erro = REDE_INDISPONIVEL;
   return 0; /* nenhum XHR: nao prometer teto, timeout ou cancel inexistentes */
 }
@@ -808,10 +852,39 @@ static int   (*curl_setopt_f)(void *, int, ...);
 // (addonurl.h) voltar a ser a URL inteira. O curl copia a string no setopt,
 // entao a expandida e liberada logo depois. Macro, e nao funcao variadica:
 // cada ramo recebe o valor com o tipo que ja tinha.
+// #416/#419: um alias oficial, ligado para todos os fios so apos responder.
+static int tmdbAlternativo;
+static char *tmdbUrl(const char *url) {
+  const char *h, *fim;
+  char *nova;
+  size_t prefixo;
+  if (!url || strncasecmp(url, "https://", 8)) return NULL;
+  h = url + 8;
+  fim = h + strcspn(h, "/?#");
+  // So o host exato; preserva esquema, porta, caminho e query byte a byte.
+  if (strncasecmp(h, "api.themoviedb.org", 18) ||
+      (h + 18 != fim && (h[18] != ':' || h + 19 == fim ||
+       h + 19 + strspn(h + 19, "0123456789") != fim))) return NULL;
+  prefixo = (size_t)(h - url);
+  nova = malloc(strlen(url) + 1);
+  if (!nova) return NULL;
+  memcpy(nova, url, prefixo);
+  strcpy(nova + prefixo, "api.tmdb.org");
+  strcat(nova, h + 18);
+  return nova;
+}
+static void tmdbLigou(void) {
+  if (!__atomic_exchange_n(&tmdbAlternativo, 1, __ATOMIC_ACQ_REL)) {
+    printf("[rede] api.themoviedb.org bloqueado aqui; usando api.tmdb.org\n");
+    fflush(stdout);
+  }
+}
 static int urlSetopt(void *c, const char *url) {
   char *grande = nv_longa_expandir(url);
-  int r = curl_setopt_f(c, 10002 /* OPT_URL */, grande ? grande : url);
-  free(grande);
+  char *alias = __atomic_load_n(&tmdbAlternativo, __ATOMIC_ACQUIRE) ?
+                tmdbUrl(grande ? grande : url) : NULL;
+  int r = curl_setopt_f(c, 10002 /* OPT_URL */, alias ? alias : grande ? grande : url);
+  free(alias); free(grande);
   return r;
 }
 #define curl_setopt(c, op, v) ((op) == 10002 ? urlSetopt((c), (const char *)(uintptr_t)(v)) \
@@ -824,6 +897,33 @@ static void  (*slist_free)(void *);
 static int   (*curl_getinfo)(void *, int, ...);
 static void  (*curl_reset)(void *);
 static time_t (*curl_getdate_fn)(const char *, const time_t *);
+
+// Chamado depois da repeticao existente do GET, diretamente nos demais caminhos.
+// So falha de TRANSPORTE que falhou RAPIDO: conexao recusada (7), aperto de mao
+// TLS que nao fechou (35), resposta vazia (52) e recepcao que caiu (56). O curl
+// 28 (timeout) NAO entra: ele so acontece quando o prazo do pedido ja foi
+// gasto inteiro, e a tentativa no alias dobraria a espera maxima de quem
+// chamou — o mesmo principio de valeRepetir logo abaixo ("o que ja custou o
+// prazo inteiro nao repete").
+static int tmdbFallback(void *c, int r, const char *pedido) {
+  char *url = NULL, *alias, *origem;
+  long http = 0;
+  if (!(r == 35 || r == 7 || r == 56 || r == 52) ||
+      redeCancelouLocal || !curl_getinfo) return r;
+  // Um redirect de outro host ao TMDB nao autoriza reenviar seus cabecalhos.
+  origem = tmdbUrl(pedido);
+  if (!origem) return r;
+  free(origem);
+  if (curl_getinfo(c, INFO_RESPONSE_CODE, &http) || http ||
+      curl_getinfo(c, INFO_URL_FINAL, &url) || !(alias = tmdbUrl(url))) return r;
+  if (!curl_setopt_f(c, OPT_URL, alias)) {
+    r = curl_perform(c); /* uma unica tentativa, sem recursao */
+    if (!r) tmdbLigou();
+  }
+  free(alias);
+  return r;
+}
+static int performTmdb(void *c, const char *url) { return tmdbFallback(c, curl_perform(c), url); }
 
 static int retrySegundos(const char *s, size_t n) {
   char b[128], *fim;
@@ -1560,6 +1660,7 @@ static char *viaAndroid(const char *verbo, const char *url, int segundos,
   long bytes = 0;
   unsigned long t0 = redeAgoraMs();
   static int logados;
+  redeBytesLocal = 0;
   if (status) *status = 0;
   for (k = 0; cab && cab[k]; k++) {
     n += strlen(cab[k]) + 1;
@@ -1572,9 +1673,15 @@ static char *viaAndroid(const char *verbo, const char *url, int segundos,
   for (k = 0; cab && cab[k]; k++) { strcat(cabs, cab[k]); strcat(cabs, "\n"); }
   // Mesmo padrao do postarNativo: JSON, salvo quem mandou o proprio.
   if (corpo && !temCt) strcat(cabs, "Content-Type: application/json\n");
-  r = android_http(verbo, url, cabs, corpo, (segundos > 0 ? segundos : 20) * 1000,
+  char *alias = __atomic_load_n(&tmdbAlternativo, __ATOMIC_ACQUIRE) ? tmdbUrl(url) : NULL;
+  r = android_http(verbo, alias ? alias : url, cabs, corpo, (segundos > 0 ? segundos : 20) * 1000,
                    &st, &bytes, erro, sizeof erro);
-  free(cabs);
+  if (!r && !st && !alias && !redeCancelouLocal && (alias = tmdbUrl(url))) {
+    r = android_http(verbo, alias, cabs, corpo, (segundos > 0 ? segundos : 20) * 1000,
+                     &st, &bytes, erro, sizeof erro);
+    if (r) tmdbLigou();
+  }
+  free(alias); free(cabs);
   hostDaUrl(url, h, sizeof h);
   if (__atomic_add_fetch(&logados, 1, __ATOMIC_RELAXED) <= 12 || !r) {
     printf("[rede] via Android (%s) %s %s: http=%d em %lu ms%s%s\n", porque, verbo,
@@ -1583,6 +1690,8 @@ static char *viaAndroid(const char *verbo, const char *url, int segundos,
   }
   if (!r) { snprintf(redeErroTxt, sizeof redeErroTxt, "android: %.180s", erro); return NULL; }
   redeErroTxt[0] = 0;
+  // Os wrappers medidos leem este contador mesmo sem pedir `tam`.
+  redeBytesLocal = bytes;
   if (st == 401 && aviso401) aviso401(url);
   if (status) *status = st;
   else if (st < 200 || st > 299) { free(r); return NULL; }  // como rede_baixar sem status
@@ -1824,9 +1933,9 @@ static char *rede_baixar_interno3(const char *url, int segundos, long *tam,
       if (etag && tamEtag) etag[0] = 0;
       continue;
     }
+    r = tmdbFallback(c, r == 42 && vigia.parou ? 28 : r, url);
     break;
   }
-  if (r == 42 && vigia.parou) r = 28;      // para quem chama, e prazo
   redeCurlLocal = r;
   anotarErro(r);
   if (redeFinalDst && redeFinalTam && curl_getinfo) {
@@ -1959,7 +2068,7 @@ int rede_url_final_tipo(const char *url, int segundos, const char *const *cab,
     lista = nova;
   }
   if (lista) curl_setopt(c, OPT_HTTPHEADER, lista);
-  r = curl_perform(c);
+  r = performTmdb(c, url);
   curl_getinfo(c, INFO_RESPONSE_CODE, &http);
   curl_getinfo(c, INFO_URL_FINAL, &fim);
   if (status) *status = (int)http;
@@ -2027,7 +2136,7 @@ int rede_aquecer_lote(const char *const *origens, int n, unsigned *ms) {
     curl_setopt(c, OPT_FOLLOWLOCATION, (long)0);
     opcoesComuns(c, 4000UL);
     t0 = redeAgoraMs();
-    r = curl_perform(c);
+    r = performTmdb(c, u);
     if (ms) { unsigned long dt = redeAgoraMs() - t0; ms[i] = r ? 0 : (unsigned)(dt ? dt : 1); }
     soltarHandleR(c, r, u);
     if (!r) {
@@ -2071,7 +2180,7 @@ char *rede_apagar(const char *url, int segundos, const char *const *cab,
     for (k = 0; cab && cab[k]; k++) lista = slist_append(lista, cab[k]);
     if (lista) curl_setopt(c, OPT_HTTPHEADER, lista);
   }
-  r = curl_perform(c);
+  r = performTmdb(c, url);
   { long h = 0;
     if (!r && curl_getinfo) curl_getinfo(c, INFO_RESPONSE_CODE, &h);
     if (status) *status = (int)h;
@@ -2123,7 +2232,7 @@ static char *postarNativo(const char *url, int segundos, const char *const *cab,
     for (k = 0; cab && cab[k]; k++) lista = slist_append(lista, cab[k]);
     if (lista) curl_setopt(c, OPT_HTTPHEADER, lista);
   }
-  r = curl_perform(c);
+  r = performTmdb(c, url);
   anotarErro(r);
   if (r != 0) { char seg[120];
     printf("[rede] POST falhou em %s: %s\n", rede_url_publica(url, seg, sizeof seg), redeErroTxt);
@@ -2335,7 +2444,7 @@ int rede_medir_vazao(const char *url, const char *const *cab, int segundos,
     for (k = 0; cab[k]; k++) lista = slist_append(lista, cab[k]);
     if (lista) curl_setopt(c, OPT_HTTPHEADER, lista);
   }
-  r = curl_perform(c);
+  r = performTmdb(c, url);
   { long http = 0;
     if (curl_getinfo) curl_getinfo(c, INFO_RESPONSE_CODE, &http);
     if (http > 0) ct.status = (int)http; }
@@ -2427,7 +2536,7 @@ RedeTls *rede_tls_abrir(const char *url, int segundos) {
   curl_setopt(c, OPT_SSL_VERIFYPEER, (long)1);
   curl_setopt(c, OPT_SSL_VERIFYHOST, (long)2);
   if (discordCa[0]) curl_setopt(c, OPT_CAINFO, discordCa);
-  r = curl_perform(c);
+  r = performTmdb(c, url);
   if (r == 0 && curl_getinfo) curl_getinfo(c, INFO_LASTSOCKET, &fd);
   if (r != 0 || fd < 0) {
     printf("[rede] tls: falhou (curl %d)\n", r);
@@ -2658,7 +2767,7 @@ char *rede_baixar_trecho64_final(const char *url, const char *headers,
     curl_setopt(c, OPT_NOPROGRESS, (long)0);
     list = downgraded ? NULL : dtsRangeHeaders(headers, public_only);
     if (list) curl_setopt(c, OPT_HTTPHEADER, list);
-    result = curl_perform(c);
+    result = performTmdb(c, url);
     if (curl_getinfo) {
       curl_getinfo(c, INFO_RESPONSE_CODE, &http);
       /* CURLINFO_REDIRECT_URL resolves relative Location without following it. */

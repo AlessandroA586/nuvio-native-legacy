@@ -1,4 +1,5 @@
 #include "tex_cache.h"
+#include "marco.h"
 #include "gif.h"
 #include <dirent.h>
 #include <sys/stat.h>
@@ -1224,6 +1225,8 @@ static long tetoDisco(void) {
   struct statvfs fs;
   long teto = NV_CACHE_DISCO_MAX;
   if (dirCache[0] && statvfs(dirCache, &fs) == 0) {
+    if ((double)fs.f_bavail * fs.f_frsize < 300.0 * 1048576.0)
+      return NV_CACHE_DISCO_PISO;
     double possivel = (double)fs.f_bavail * (double)fs.f_frsize +
                       (double)cachearte_nativo_indice_bytes();
     double prop = possivel * NV_CACHE_DISCO_FRACAO / 100.0;
@@ -1458,6 +1461,18 @@ void tex_cache_esperar_gravacoes(void) {
 static const char *urlLog(const char *url, char *buf, size_t n) {
   return posterprov_e_provedor(url) ? posterprov_redigir(url, buf, n)
                                     : rede_url_log(url, buf, (unsigned)n);
+}
+
+static void logoOrigem(const char *url, const char *fonte, Uint32 ms) {
+  char msg[320];
+  const char *host = strstr(url, "://");
+  host = host ? host + 3 : "local";
+  size_t nHost = strcspn(host, "/?#");
+  const char *at = memchr(host, '@', nHost);
+  if (at) { nHost -= (size_t)(at + 1 - host); host = at + 1; }
+  snprintf(msg, sizeof msg, "logo: origem hash=%08lx fonte=%s host=%.*s total_ms=%u",
+           hashCaminho(url), fonte, (int)nHost, host, (unsigned)ms);
+  marco(msg);
 }
 
 // ARTE QUE NAO EXISTE NAO VOLTA A RODADA (05/10/2026, B3).
@@ -2052,7 +2067,7 @@ static int threadRede(void *arg) {
 
     if (filaEm) {
       filaWait = SDL_GetTicks() - filaEm;
-      if (filaWait >= NV_TEX_TRACE_MS)
+      if (urgente == 2 || filaWait >= NV_TEX_TRACE_MS)
         printf("[tex-trace] fila-rede hash=%08lx wait=%u urgente=%d\n",
                hashCaminho(caminho), (unsigned)filaWait, urgente);
     }
@@ -2071,7 +2086,8 @@ static int threadRede(void *arg) {
       TexFetchTrace trace = {0, 0, 0, 0, 0};
       int baixou = baixarParaItem(idx, caminho, local, sizeof local, &foiRede, &trace);
       Uint32 redeMs = SDL_GetTicks() - redeEm;
-      if (!baixou || redeMs >= NV_TEX_TRACE_MS)
+      if (urgente == 2) logoOrigem(caminho, foiRede ? "rede" : "disco", redeMs);
+      if (!baixou || urgente == 2 || redeMs >= NV_TEX_TRACE_MS)
         printf("[tex-trace] fetch hash=%08lx phase=%s total_ms=%u net_ms=%u resolve_ms=%u cache_ms=%u persist_ms=%u image_requests=%u ok=%d urgente=%d\n",
                hashCaminho(caminho), foiRede ? "http" : "disk-cache",
                (unsigned)redeMs, (unsigned)trace.netMs, (unsigned)trace.resolveMs,
@@ -2483,6 +2499,7 @@ static int threadDecode(void *arg) {
     // de fileira passaria por aqui as centenas e empurraria do anel de 256 as
     // artes que importam.
     int heroiPedido = ehHero(&itens[idx]);
+    int logoPedido = itens[idx].urgente == 2;
     filaEm = itens[idx].filaDecEm;
     itens[idx].filaDecEm = 0;
     localDireto = itens[idx].localDireto;
@@ -2501,7 +2518,7 @@ static int threadDecode(void *arg) {
     SDL_UnlockMutex(mtx);
     if (filaEm) {
       filaWait = SDL_GetTicks() - filaEm;
-      if (filaWait >= NV_TEX_TRACE_MS)
+      if (logoPedido || filaWait >= NV_TEX_TRACE_MS)
         printf("[tex-trace] fila-decode hash=%08lx wait=%u kind=%s limite=%d\n",
                hashCaminho(urlOrig), (unsigned)filaWait,
                localDireto ? "local" : "remote", limite);
@@ -2667,13 +2684,13 @@ static int threadDecode(void *arg) {
     // separa "a internet esta lenta" de "esta imagem tem pixels demais para
     // este nucleo". Sem ele, a resposta a "por que a arte demora" e opiniao.
     { Uint32 dt = SDL_GetTicks() - t0;
-      if (conv && dt >= 250) {
+      if (conv && (logoPedido || dt >= 250)) {
         // Em duas partes: ler o arquivo (IMG_Load) e reduzir (tex_reduzir +
         // conversao). E o que separa "a libjpeg e lenta" de "a media de area
         // e lenta" — duas respostas com consertos opostos.
         { char lb[160];
-          printf("[tex] decode lento: %u ms (ler %u, reduzir %u) para %dx%d (saiu %dx%d) %s\n",
-                 (unsigned)dt, (unsigned)(tLoad - t0), (unsigned)(SDL_GetTicks() - tLoad),
+          printf("[tex] decode %s: %u ms (ler %u, reduzir %u) para %dx%d (saiu %dx%d) %s\n",
+                 dt >= 250 ? "lento" : "logo", (unsigned)dt, (unsigned)(tLoad - t0), (unsigned)(SDL_GetTicks() - tLoad),
                  srcW, srcH, conv->w, conv->h, urlLog(urlOrig, lb, sizeof lb)); }
         if (limTam > 0) printf("[tex] (variante do tamanho, teto %d)\n", limTam);
         printf("[tex-trace] decode hash=%08lx kind=%s queue=%u total=%u load=%u reduce=%u src=%dx%d out=%dx%d\n",
@@ -2959,6 +2976,10 @@ static int threadDecode(void *arg) {
 // 0,25/0,5/1/2/4/8 GB e que nem todo Chromium expoe — sem ele, 0, e o
 // orcamento fica no padrao de layout.h (96 MB), que e o que sempre foi.
 static long memTotalMB(void) {
+#ifdef AJUSTES_TESTE
+  const char *ram = getenv("NUVIO_SHOT_RAM_MB");
+  if (ram && atol(ram) > 0) return atol(ram);
+#endif
 #ifdef __EMSCRIPTEN__
   double gb = EM_ASM_DOUBLE({
     try {
@@ -3091,6 +3112,7 @@ static int orcamentoMB(void) {
 static int tetoPermitidoMB(void) {
   return ptv_tex_teto_mb(ptv_plataforma(), orcMemTotal);
 }
+int tex_teto_ram_mb(void) { return tetoPermitidoMB(); }
 void tex_definir_orcamento_mb(int mb) {
   int teto = tetoPermitidoMB(), aplicado;
   if (!mtx) return;
@@ -3407,6 +3429,7 @@ static int discoDireto(int idx) {
     itens[idx].limiteTamanho = usar ? lim : 0; }
   if (!enfileirarDecodeSemEspera(idx)) return 0;
   tex_disco_direto++;
+  if (itens[idx].urgente == 2) logoOrigem(itens[idx].caminho, "disco-direto", 0);
   return 1;
 #else
   (void)idx;
@@ -3456,7 +3479,7 @@ static const char *artePacoteOuRemota(const char *caminho, char *buf, size_t tam
 
 static GLuint tex_obter_limite(const char *caminho, int limite, int urgente,
                                int passageiro) {
-  if (!caminho || !*caminho) return 0;
+  if (!caminho || !*caminho || strlen(caminho) >= NV_TEX_URL_MAX) return 0;
 #ifdef NV_TPK
   char arteRemota[NV_TEX_URL_MAX];
   caminho = artePacoteOuRemota(caminho, arteRemota, sizeof arteRemota);
@@ -4056,6 +4079,7 @@ static void publicarEnvio(int alvo, GLuint t, SDL_Surface *sup, Uint32 uploadEm,
     bytesUsados -= bytesTextura(itens[alvo].w, itens[alvo].h);
     if (bytesUsados < 0) bytesUsados = 0;
   }
+  int logoPedido = itens[alvo].urgente == 2;
   itens[alvo].tex = t; itens[alvo].w = sup->w; itens[alvo].h = sup->h;
   itens[alvo].estado = PRONTO;
   itens[alvo].urgente = 0;
@@ -4065,7 +4089,7 @@ static void publicarEnvio(int alvo, GLuint t, SDL_Surface *sup, Uint32 uploadEm,
   { long uploadBytes = (long)sup->w * sup->h * 4;
     Uint32 uploadMs = SDL_GetTicks() - uploadEm;
     liberarSup(sup);
-    if (uploadMs >= NV_TEX_TRACE_UPLOAD_MS || glMs >= NV_TEX_TRACE_UPLOAD_MS)
+    if (logoPedido || uploadMs >= NV_TEX_TRACE_UPLOAD_MS || glMs >= NV_TEX_TRACE_UPLOAD_MS)
       printf("[tex-trace] upload-total hash=%08lx total_ms=%u gl_ms=%u bytes=%ld mip=%d queue=%u\n",
              hashCaminho(uploadPath), (unsigned)uploadMs, (unsigned)glMs,
              uploadBytes, comMip, (unsigned)filaWait); }

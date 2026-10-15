@@ -46,6 +46,20 @@ typedef struct {
   int  emColecao;      // visible collection owns this source; runtime projection
   int  semAddon;       // runtime only: no ENABLED add-on declares this catalog any more (#319)
   int  visPessoal;     // explicit TV add/remove, persisted as an optional line
+  // #360 EDGE-TRIGGER: 1 quando a fileira foi ADICIONADA nesta TV com a conta
+  // ja dizendo "desligada" — escolha local consciente contra o estado conhecido,
+  // vale para sempre. Add com a conta ligada nao congela nada: se a conta
+  // desligar a fileira depois, o sync (mao unica, so puxa) esconde aqui
+  // tambem. Linha opcional "addvence" no arquivo, como "visibilidade".
+  int  addVenceConta;
+  int  semDecl;        // runtime only (#204): no manifest read this session declares this exact catalog
+  // CATALOGO NOVO QUE A PESSOA AINDA NAO TOCOU (#358). Marcado em registrar() ao
+  // criar a linha e gravado como linha opcional "nova <chave>" (arquivo antigo
+  // nao a tem). Vale ate a pessoa agir (alternar/adicionar/remover) ou a folha
+  // normalizar. Se ao normalizar ele cai alem do limite, vai para a FILA e nao
+  // para "Fora": a pessoa nunca pediu para tirar, so nao coube. Linha que ja
+  // estava no arquivo sem a marca segue a regra antiga (alem do limite = Fora).
+  int  nova;
 } Linha;
 
 static Linha linhas[FIL_MAX];
@@ -94,7 +108,8 @@ static pthread_mutex_t trava = PTHREAD_MUTEX_INITIALIZER;
 static const char *TIPO_ROT[FIL_TIPO_N] = {
   "Automático", "Cartaz em pé", "Destaque largo", "Coleção", "Serviço", "Ranking empilhado",
   "Destaque 4:3", "Ranking numerado", "Faixa com título",
-  "Destaque 4:3 médio", "Destaque 4:3 grande"
+  "Destaque 4:3 médio", "Destaque 4:3 grande",
+  "Linha do tempo", "Cartaz com ficha", "Palco"
 };
 static const char *TAM_ROT[FIL_TAM_N] = { "Compacto", "Padrão", "Grande" };
 // 0,85 e 1,2 e nao 0,5 e 2,0: o card do web mede 212x322 e o passo da fileira
@@ -222,6 +237,9 @@ static const FilEstiloLinha LINHAS_CAT[] = {
                        { "Destaque 4:3", "Destaque 4:3 médio", "Destaque 4:3 grande" } },
   { "Ranking numerado",  1, { FIL_TIPO_RANKING }, { "Ranking numerado" } },
   { "Ranking empilhado", 1, { FIL_TIPO_TOP10 }, { "Ranking empilhado" } },
+  { "Linha do tempo",    1, { FIL_TIPO_LINHA_TEMPO }, { "Linha do tempo" } },
+  { "Cartaz com ficha",  1, { FIL_TIPO_FICHA }, { "Cartaz com ficha" } },
+  { "Palco",             1, { FIL_TIPO_PALCO }, { "Palco" } },
 };
 #define N_LINHAS_CAT (int)(sizeof LINHAS_CAT / sizeof *LINHAS_CAT)
 static const int ESTILOS_COL[] = { FIL_TIPO_AUTO, FIL_TIPO_COLECAO,
@@ -291,6 +309,14 @@ static void gravar(void) {
   for (i = 0; i < nLinhas && k < cap; i++)
     if (linhas[i].visPessoal)
       k += (size_t)snprintf(txt + k, cap - k, "visibilidade %s\n", linhas[i].chave);
+  // Linha propria e opcional como "visibilidade": versao anterior nao a conhece
+  // (ignora) e versao futura sem ela volta ao padrao "a conta vence".
+  for (i = 0; i < nLinhas && k < cap; i++)
+    if (linhas[i].visPessoal && linhas[i].addVenceConta)
+      k += (size_t)snprintf(txt + k, cap - k, "addvence %s\n", linhas[i].chave);
+  for (i = 0; i < nLinhas && k < cap; i++)
+    if (linhas[i].nova)
+      k += (size_t)snprintf(txt + k, cap - k, "nova %s\n", linhas[i].chave);
   if (k < cap) dados_gravar(arquivoDoPerfil(), txt);
   free(txt);
   revisao++;
@@ -339,9 +365,15 @@ static void carregar(void) {
       snprintf(heroFonte, sizeof heroFonte, "%s", buf + 5);
     } else if (!strncmp(buf, "conta_auto ", 11)) {
       snprintf(donoAuto, sizeof donoAuto, "%s", buf + 11);
+    } else if (!strncmp(buf, "nova ", 5)) {
+      for (int i = 0; i < nLinhas; i++)
+        if (!strcmp(linhas[i].chave, buf + 5)) linhas[i].nova = 1;
     } else if (!strncmp(buf, "visibilidade ", 13)) {
       for (int i = 0; i < nLinhas; i++)
         if (!strcmp(linhas[i].chave, buf + 13)) linhas[i].visPessoal = 1;
+    } else if (!strncmp(buf, "addvence ", 9)) {
+      for (int i = 0; i < nLinhas; i++)
+        if (!strcmp(linhas[i].chave, buf + 9)) linhas[i].addVenceConta = 1;
     } else if (!strncmp(buf, "linha ", 6) && nLinhas < FIL_MAX) {
       char *p = buf + 6, *campo[4];
       int c;
@@ -406,6 +438,34 @@ int fil_limite_gravado(void) {
   v = limite;
   pthread_mutex_unlock(&trava);
   return v;
+}
+
+int fil_limite_passo(int v, int dir) {
+  int n;
+#ifdef NV_ANDROID
+  if (dir > 0 && v >= FIL_LIMITE_MAX_TV) return FIL_LIMITE_MAX;
+  if (dir < 0 && v > FIL_LIMITE_MAX_TV) return FIL_LIMITE_MAX_TV;
+#endif
+  n = v + (dir > 0 ? 1 : dir < 0 ? -1 : 0);
+  return limita(n, FIL_LIMITE_MIN, FIL_LIMITE_MAX);
+}
+
+int fil_limite_pede_aviso(int de, int para) {
+#ifdef NV_ANDROID
+  (void)de; (void)para;
+  return 0;
+#else
+  return para > FIL_LIMITE_SEGURO && para > de;
+#endif
+}
+
+int fil_limite_ilimitado(int v) {
+#ifdef NV_ANDROID
+  return v >= FIL_LIMITE_ILIMITADO;
+#else
+  (void)v;
+  return 0;
+#endif
 }
 
 void fil_definir_teto_sessao(int teto) {
@@ -575,10 +635,17 @@ int fil_adicionar(int i, int *estado) {
   if (i < 0 || i >= nLinhas) { pthread_mutex_unlock(&trava); if (estado) *estado = FIL_FORA; return i; }
   linhas[i].oculta = 0;
   linhas[i].visPessoal = 1;
+  // Snapshot do momento do add (#360): so e escolha contra a conta se a conta
+  // ja dizia "desligada" quando a pessoa adicionou.
+  linhas[i].addVenceConta = linhas[i].ocultaConta;
   // #327: adicionar e uma escolha que VENCE a colecao. Sem isto o catalogo
   // engolido por uma pasta visivel continuava emColecao, o estado seguia
   // "fora" e a tela dizia "Adicionada" sem nada mudar.
   linhas[i].emColecao = 0;
+  // Adicionar tambem vence o "desligado" vindo da ordem da conta: sem isto a
+  // tela dizia "Added to Home" e a linha ficava em "Not on Home".
+  linhas[i].ocultaConta = 0;
+  linhas[i].nova = 0;
   for (j = nLinhas - 1; j >= 0; j--) if (!linhas[j].oculta && j != i) { ultimo = j; break; }
   // Ja esta depois do ultimo ligado: nao ha para onde ir.
   if (ultimo >= 0 && i < ultimo) {
@@ -610,13 +677,24 @@ void fil_normalizar(void) {
   pthread_mutex_lock(&trava);
   garantir();
   for (i = 0; i < nLinhas; i++) {
-    if (linhas[i].oculta || linhas[i].ocultaConta || linhas[i].emColecao || linhas[i].semAddon) continue;
+    int nova = linhas[i].nova;
+    if (linhas[i].oculta || linhas[i].ocultaConta || linhas[i].emColecao || linhas[i].semAddon) {
+      if (nova && (linhas[i].oculta || linhas[i].ocultaConta)) { linhas[i].nova = 0; mudou = 1; }
+      continue;
+    }
     if (fil_origem_de(linhas[i].chave) != FIL_ORIGEM_CATALOGO) {
       if (linhas[i].fila) { linhas[i].fila = 0; mudou = 1; }
+      if (nova) { linhas[i].nova = 0; mudou = 1; }
       continue;
     }
     if (p < limite) { if (linhas[i].fila) { linhas[i].fila = 0; mudou = 1; } }
-    else if (!linhas[i].fila && !linhas[i].naHome) { linhas[i].oculta = OC_PESSOA; mudou = 1; continue; }
+    else if (!linhas[i].fila && !linhas[i].naHome) {
+      // #358: catalogo novo e intocado que nao coube espera na FILA; so o que
+      // ja estava no arquivo (ou a pessoa tirou) vai para Fora.
+      if (nova) { linhas[i].fila = 1; linhas[i].nova = 0; mudou = 1; p++; continue; }
+      linhas[i].oculta = OC_PESSOA; mudou = 1; continue;
+    }
+    if (nova) { linhas[i].nova = 0; mudou = 1; }
     p++;
   }
   if (mudou) gravar();
@@ -628,7 +706,12 @@ void fil_normalizar(void) {
 void fil_remover(int i) {
   pthread_mutex_lock(&trava);
   garantir();
-  if (i >= 0 && i < nLinhas && linhas[i].oculta != OC_PESSOA) { linhas[i].oculta = OC_PESSOA; linhas[i].visPessoal = 1; linhas[i].fila = 0; gravar(); }
+  if (i >= 0 && i < nLinhas && linhas[i].oculta != OC_PESSOA) {
+    linhas[i].oculta = OC_PESSOA; linhas[i].visPessoal = 1; linhas[i].fila = 0;
+    linhas[i].nova = 0;
+    linhas[i].addVenceConta = 0;   // o add que a protegia acabou de ser desfeito
+    gravar();
+  }
   pthread_mutex_unlock(&trava);
 }
 
@@ -687,6 +770,79 @@ int fil_adicionada_na_tv(const char *chave) {
   if (i >= 0) r = linhas[i].visPessoal && !linhas[i].oculta;
   pthread_mutex_unlock(&trava);
   return r;
+}
+
+// ESCOLHA EXPLICITA DA PESSOA (#204), a unica que protege do despejo uma linha
+// de catalogo que NINGUEM DECLARA MAIS. E mais estreita que temEscolha de
+// proposito: `oculta == OC_PESSOA` sozinha NAO conta, porque fil_normalizar
+// tambem a grava sozinha (catalogo antigo alem do limite vira "Fora" sem a
+// pessoa pedir) — e foram essas linhas, 659 delas, que lotaram a tabela. O que
+// a pessoa fez de verdade deixa marca propria: ligar/desligar/"Fora" na TV
+// (visPessoal), fila pedida (fila), forma ou tamanho (tipo/tam) e a fonte do
+// destaque. Renomear e ordem local nao moram na linha (tabela a parte / flag
+// global). Custo aceito: arquivo anterior a visPessoal nao distingue um "Fora"
+// da pessoa de um automatico; vale como automatico.
+static int escolhaExplicita(const Linha *l) {
+  return l->visPessoal || l->fila || l->tipo != FIL_TIPO_AUTO ||
+         l->tam != FIL_TAM_PADRAO || (heroFonte[0] && !strcmp(heroFonte, l->chave));
+}
+
+// Despejavel por "ninguem declara mais": catalogo de addon, sem escolha
+// explicita, fora da home, nao registrado nesta sessao, nao da conta/colecao.
+static int orfaDespejavel(const Linha *l) {
+  return fil_origem_de(l->chave) == FIL_ORIGEM_CATALOGO &&
+         (l->semDecl || l->semAddon) && !l->vista && !l->naHome &&
+         !l->ocultaConta && !l->emColecao && l->oculta != OC_COLECAO &&
+         !escolhaExplicita(l);
+}
+
+static unsigned orfasLiberadas;   // despejos ainda nao logados
+
+static void logarOrfas(void) {   // com a trava
+  int i, mantidas = 0;
+  if (!orfasLiberadas) return;
+  for (i = 0; i < nLinhas; i++)
+    if (fil_origem_de(linhas[i].chave) == FIL_ORIGEM_CATALOGO &&
+        (linhas[i].semDecl || linhas[i].semAddon) && escolhaExplicita(&linhas[i])) mantidas++;
+  printf("[fileiras] liberadas %u vagas de catalogos que nenhum addon declara "
+         "(mantidas %d escolhas da pessoa)\n", orfasLiberadas, mantidas);
+  fflush(stdout);
+  orfasLiberadas = 0;
+}
+
+// Diz quais catalogos os manifestos declaram AGORA, ANTES do registro do ciclo.
+// `chaves` = chaves de todos os candidatos lidos. Marca semDecl nas demais
+// linhas de catalogo e, se o despejavel passar de 25% da tabela, poda tudo ja,
+// sem esperar encher (barato: uma varredura). Quem chama garante lista completa
+// (mesmas travas da poda). Devolve quantas linhas sairam.
+int fil_marcar_declaradas(const char *const *chaves, int n, int perfilDaLista) {
+  int i, k, lixo = 0, fora = 0, w = 0;
+  if (n <= 0 || !chaves) return 0;
+  pthread_mutex_lock(&trava);
+  garantir();
+  if (perfilDaLista <= 0 || perfilDaLista != perfil) { pthread_mutex_unlock(&trava); return 0; }
+  for (i = 0; i < nLinhas; i++) {
+    int achou = 0;
+    if (fil_origem_de(linhas[i].chave) != FIL_ORIGEM_CATALOGO) { linhas[i].semDecl = 0; continue; }
+    for (k = 0; k < n && !achou; k++)
+      if (chaves[k] && !strcmp(chaves[k], linhas[i].chave)) achou = 1;
+    linhas[i].semDecl = !achou;
+  }
+  for (i = 0; i < nLinhas; i++) if (orfaDespejavel(&linhas[i])) lixo++;
+  if (lixo > FIL_MAX / 4) {
+    for (i = 0; i < nLinhas; i++) {
+      if (orfaDespejavel(&linhas[i])) { fora++; continue; }
+      if (w != i) linhas[w] = linhas[i];
+      w++;
+    }
+    nLinhas = w;
+    orfasLiberadas += (unsigned)fora;
+    gravar();
+  }
+  logarOrfas();
+  revisao++;
+  pthread_mutex_unlock(&trava);
+  return fora;
 }
 
 int fil_podar_catalogos(const char *const *ids, const char *const *bases, int n,
@@ -948,6 +1104,10 @@ static void registrar(const FilPassada *passada, const char *chave,
       // ela volta sozinha na proxima volta se ainda couber.
       for (k = nLinhas - 1; k >= 0 && v < 0; k--)
         if (linhas[k].oculta == OC_SUGESTAO && !linhas[k].naHome) v = k;
+      // #204: catalogo que nenhum addon declara mais e sobre o qual a pessoa
+      // nunca escolheu nada: sai o MAIS ANTIGO (o primeiro da tabela).
+      for (k = 0; k < nLinhas && v < 0; k++)
+        if (orfaDespejavel(&linhas[k])) { v = k; orfasLiberadas++; break; }
       for (passo = 0; passo < 3 && v < 0; passo++)
         for (k = nLinhas - 1; k >= 0 && v < 0; k--)
           if (!linhas[k].naHome && (passo == 2 || !linhas[k].vista) &&
@@ -988,6 +1148,7 @@ static void registrar(const FilPassada *passada, const char *chave,
     snprintf(linhas[i].chave, FIL_CHAVE, "%s", chave);
     linhas[i].tam = FIL_TAM_PADRAO;
     linhas[i].itens = -1;
+    if (podeDespejar) linhas[i].nova = 1;   // #358: ainda nao tocado pela pessoa
     // Fora da cota entra FORA DA HOME (issue #197). Ligado, ele caia na
     // primeira vaga livre do limite e fil_escolhida o dava como escolhido na
     // TV: a volta seguinte o pedia e ele aparecia na home sem ninguem pedir.
@@ -1001,6 +1162,7 @@ static void registrar(const FilPassada *passada, const char *chave,
   }
   linhas[i].vista = 1;
   linhas[i].semAddon = 0;   // an add-on declared it again
+  linhas[i].semDecl = 0;
   // O PRIMEIRO A REGISTRAR MANDA NO NOME, e nao o ultimo. Sao dois
   // registradores: a descoberta com o nome do catalogo (ja com customTitles) e
   // a home com o nome que ela desenha, que para meia dezena de chaves conhecidas
@@ -1103,6 +1265,7 @@ int fil_conta_dono(const char *usuario) {
   if (mudou) for (int i = 0; i < nLinhas; i++) {
     if (linhas[i].oculta == OC_COLECAO) linhas[i].oculta = OC_SUGESTAO;
     linhas[i].ocultaConta = 0; linhas[i].emColecao = 0;
+    linhas[i].addVenceConta = 0;   // a escolha era contra a OUTRA conta
   }
   if (strcmp(donoAuto, usuario)) {
     snprintf(donoAuto, sizeof donoAuto, "%s", usuario);
@@ -1115,6 +1278,7 @@ int fil_conta_dono(const char *usuario) {
 void fil_gravar_registro(void) {
   pthread_mutex_lock(&trava);
   if (registroSujo) { registroSujo = 0; gravar(); }
+  logarOrfas();
   pthread_mutex_unlock(&trava);
 }
 
@@ -1146,7 +1310,8 @@ void fil_colecoes_reconciliar(const char *const *chaves,
     pthread_mutex_lock(&trava);
     int i = achar(chaves[j]);
     if (i >= 0) {
-      int o = ocultas && ocultas[j];
+      int o = ocultas && ocultas[j] && !(linhas[i].visPessoal && !linhas[i].oculta &&
+                                          linhas[i].addVenceConta);
       if (linhas[i].ocultaConta != o) { linhas[i].ocultaConta = o; revisao++; }
       if (titulos && titulos[j] && strcmp(linhas[i].titulo, titulos[j])) {
         snprintf(linhas[i].titulo, sizeof linhas[i].titulo, "%s", titulos[j]);
@@ -1182,7 +1347,9 @@ void fil_conta_reconciliar(const char *const *chaves, const int *ocultas,
     int o = 0, c = 0;
     for (int j = 0; j < n; j++)
       if (chaves[j] && !strcmp(chaves[j], linhas[i].chave)) {
-        o = ocultas && ocultas[j]; c = emColecao && emColecao[j]; break;
+        o = ocultas && ocultas[j] && !(linhas[i].visPessoal && !linhas[i].oculta &&
+                                       linhas[i].addVenceConta);
+        c = emColecao && emColecao[j]; break;
       }
     if (linhas[i].ocultaConta != o) { linhas[i].ocultaConta = o; revisao++; }
     if (linhas[i].emColecao != c) { linhas[i].emColecao = c; revisao++; }
@@ -1253,7 +1420,16 @@ int fil_aceita_tipo(int i)  { return (i >= 0 && i < nLinhas) && !formaFixa(linha
 
 void fil_alternar(int i) {
   pthread_mutex_lock(&trava);
-  if (i >= 0 && i < nLinhas) { linhas[i].oculta = linhas[i].oculta ? 0 : OC_PESSOA; linhas[i].visPessoal = 1; gravar(); }
+  if (i >= 0 && i < nLinhas) {
+    linhas[i].oculta = linhas[i].oculta ? 0 : OC_PESSOA;
+    linhas[i].visPessoal = 1;
+    linhas[i].nova = 0;
+    // Voltar a ficar ligado pela alternancia e um add como outro qualquer:
+    // mesmo snapshot contra a conta (#360).
+    if (linhas[i].oculta) linhas[i].addVenceConta = 0;
+    else linhas[i].addVenceConta = linhas[i].ocultaConta;
+    gravar();
+  }
   pthread_mutex_unlock(&trava);
 }
 
@@ -1334,6 +1510,9 @@ const char *fil_estilo_ajuda(const char *chave, int t) {
     case FIL_TIPO_DESTAQUE_QUADRADO_G:
       return "A maior arte em 4:3: dois cards e um pedaço do próximo por tela.";
     case FIL_TIPO_LARGA:    return "Arte deitada 16:9 com o nome do título dentro do card.";
+    case FIL_TIPO_LINHA_TEMPO: return "Cartazes em ordem de lançamento sobre uma linha com os anos, que se desenha conforme você anda.";
+    case FIL_TIPO_FICHA:    return "Cartaz com a ficha ao lado: ano, gênero, nota e o começo da sinopse.";
+    case FIL_TIPO_PALCO:    return "O título em foco fica grande no centro e os vizinhos diminuem dos dois lados.";
     default:                return "O app escolhe a forma pelo nome do catálogo e pelo layout da Home.";
   }
 }

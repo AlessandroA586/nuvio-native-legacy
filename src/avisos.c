@@ -14,6 +14,7 @@
 #include "text.h"
 #include "anim.h"
 #include "layout.h"
+#include "segurar.h"
 #include "idioma.h"
 #include "ajustes.h"
 #include "recomenda.h"
@@ -24,6 +25,7 @@
 #include "redesaude.h"
 #include <math.h>
 #include "agenda.h"
+#include "perfis.h"
 #include "catalogo.h"
 #include "salvos.h"
 #include "sessao.h"
@@ -33,6 +35,8 @@
 #define NV_ESCALA_TELA   // o arquivo inteiro mede pela tela virtual (escala.h)
 #include "escala.h"
 #include "ponteiro.h"
+#include "rolagemtoque.h"
+#include "telefonecartao.h"
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -103,6 +107,10 @@ static int   aberto, foco;
 static Uint32 okDesde;              // OK afundado numa linha da central (soltarOk)
 static void soltarOk(int longo);
 static float entrada, rol;
+#ifdef NV_TOUCH_UI
+static ToqueRolagem toqueAvisos;
+static int toqueAvisosRolar(const PonteiroRolagem *e);
+#endif
 static int   toastN;
 static long long recAnunciada = -1;   // id da ultima recomendacao dita na ilha
 static int   vistosSujos;
@@ -163,6 +171,9 @@ static pthread_t fioEnvio;
 // por crash (a marca e o id do item, gravada em vistos ao fechar) quando a
 // home esta de pe e nenhum outro cartao esta na frente, como agendaviso.c.
 static int   cartao;            // 1 = aberto
+#ifdef NV_TOUCH_UI
+static void crashPhoneReiniciar(void);
+#endif
 static int   cartaoFoco;        // 0 = Enviar, 1 = Agora nao
 static float cartaoA;
 static int   cartaoPendente;    // ha crash nao perguntado nesta sessao
@@ -192,14 +203,25 @@ static void vistosLer(void) {
   free(t);
 }
 static int foiVisto(const char *id) {
+  char chave[72];
   int i;
+  int privado = !strcmp(id, "rec") || !strncmp(id, "agenda:", 7) ||
+                !strncmp(id, "pedidos:", 8);
+  if (privado) {
+    snprintf(chave, sizeof chave, "p%d:%s", perfis_ativo(), id);
+    for (i = 0; i < nVistos; i++) if (!strcmp(vistos[i], chave)) return 1;
+    // As marcas antigas pertenciam ao perfil principal.
+    if (perfis_ativo() != 1) return 0;
+  }
   for (i = 0; i < nVistos; i++) if (!strcmp(vistos[i], id)) return 1;
   return 0;
 }
 static void marcarVisto(const char *id) {
   if (foiVisto(id)) return;
   if (nVistos >= 120) { memmove(vistos[0], vistos[1], sizeof vistos[0] * 119); nVistos = 119; }
-  snprintf(vistos[nVistos++], sizeof vistos[0], "%s", id);
+  if (!strcmp(id, "rec") || !strncmp(id, "agenda:", 7) || !strncmp(id, "pedidos:", 8))
+    snprintf(vistos[nVistos++], sizeof vistos[0], "p%d:%s", perfis_ativo(), id);
+  else snprintf(vistos[nVistos++], sizeof vistos[0], "%s", id);
   vistosSujos = 1;
 }
 static void vistosGravar(void) {
@@ -835,11 +857,17 @@ void avisos_mostrar_se_houver(void) {
   if (!cartaoPendente || cartao || aberto) return;
   cartaoPendente = 0;
   cartao = 1; cartaoFoco = 0;
+#ifdef NV_TOUCH_UI
+  crashPhoneReiniciar();
+#endif
 }
 int avisos_cartao_aberto(void) { return cartao; }
 
 static void cartaoFechar(void) {
   cartao = 0;
+#ifdef NV_TOUCH_UI
+  crashPhoneReiniciar();
+#endif
   pthread_mutex_lock(&trava);
   marcarVisto(cartaoId);
   { int i; for (i = 0; i < n; i++) if (!strcmp(itens[i].id, cartaoId)) itens[i].visto = 1; }
@@ -894,6 +922,41 @@ static void ponteiroCartao(int i, int b) {
   cartaoFoco = i;
 }
 
+#ifdef NV_TOUCH_UI
+static TelefoneCartao crashPhone;
+static void crashPhoneReiniciar(void) { telefonecartao_limpar(&crashPhone); }
+static int crashPhoneRolar(const PonteiroRolagem *e) {
+  return cartao ? toquerol_evento(&crashPhone.rolagem, e) : 0;
+}
+static void crashPhoneAcao(int i, int b) {
+  (void)b;
+  if (!cartao || cartaoA <= .99f) return;
+  if (envioEstado == 0 && i == 0) { cartaoFoco = 0; enviarAgora(); }
+  else { cartaoFoco = 1; cartaoFechar(); }
+}
+static float crashPhoneCorpo(float x, float y, float w, float a) {
+  float ini = y; char txt[300];
+  y += telefonecartao_titulo("O app fechou sozinho", x, y, w, a);
+  snprintf(txt, sizeof txt, i18n("Em %s o Nuvio parou sem avisar. O registro daquela sessão (os últimos 200 KB do log, sem senhas nem chaves) ajuda a achar a causa. Quer enviar?"), crashQuando);
+  y += txt_bloco_corta(TXT_BODY, txt, 200, 203, 210, x, y, w, 34, a, 0) + 24;
+  if (envioEstado > 0) y += telefonecartao_texto(TXT_BODY, envioEstado == 1 ? "Enviando…"
+                                     : envioEstado == 2 ? "Registro enviado. Obrigado." : "Não foi possível enviar agora.", x, y, w, 34, a);
+  return y - ini;
+}
+static void cartaoPhoneDesenhar(float a) {
+  telefonecartao_medir(&crashPhone, NV_TELA_W, NV_TELA_H, envioEstado == 0 ? 2 : 1);
+  GfxRect r = crashPhone.corpo;
+  float h = crashPhoneCorpo(r.x, r.y, r.w, 0);
+  telefonecartao_comecar(&crashPhone, h, envioEstado, cartao && a > .99f, crashPhoneRolar, a);
+  crashPhoneCorpo(r.x, r.y - crashPhone.offset, r.w, a);
+  gfx_sem_recorte();
+  if (envioEstado == 0) {
+    telefonecartao_botao(&crashPhone, 0, "Enviar registro", cartaoFoco == 0, NULL, crashPhoneAcao, 0, a);
+    telefonecartao_botao(&crashPhone, 1, "Agora não", cartaoFoco == 1, NULL, crashPhoneAcao, 0, a);
+  } else telefonecartao_botao(&crashPhone, 0, "Fechar", 1, NULL, crashPhoneAcao, 1, a);
+}
+#endif
+
 static void cartaoDesenhar(void) {
   const float W = 980.0f, H = 336.0f;
   float a = cartaoA, x = (NV_TELA_W - W) * 0.5f, y = (NV_TELA_H - H) * 0.5f + (1.0f - a) * 30.0f;
@@ -902,6 +965,9 @@ static void cartaoDesenhar(void) {
   char txt[300];
   if (cartao) ponteiro_camada();
   if (a < 0.01f) return;
+#ifdef NV_TOUCH_UI
+  if (telefoneui_ativo()) { cartaoPhoneDesenhar(a); return; }
+#endif
   ajustes_acento(&ar, &ag, &ab);
   gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0.0f, 0, 0, 0, 0.70f * a);
   // Mantem a luz ambiente do cartao para dar profundidade sem tornar o estado
@@ -1027,7 +1093,7 @@ void avisos_atualizar(float dt, Uint32 agora) {
   }
 
   // O limiar do OK longo na central, com o dedo ainda no botao.
-  if (aberto && okDesde && SDL_GetTicks() - okDesde >= NV_HOLD_MS) soltarOk(1);
+  if (aberto && segurar_venceu(SDL_GetTicks(), okDesde, "avisos")) soltarOk(1);
   if (!aberto) okDesde = 0;
   if (vistosSujos && !aberto) vistosGravar();
   avisos_envio_auto_passo(agora);
@@ -1036,7 +1102,12 @@ void avisos_atualizar(float dt, Uint32 agora) {
 int  avisos_aberto(void) { return aberto; }
 // A CENTRAL ABERTA LE TUDO: os avisos dela saem da ilha (os que diziam o
 // assunto e o "N avisos novos" que juntou o resto).
-void avisos_abrir(void)  { aberto = 1; foco = 0; rol = 0.0f; toastN = 0; ilha_retirar_grupo(); }
+void avisos_abrir(void)  {
+#ifdef NV_TOUCH_UI
+  toquerol_limpar(&toqueAvisos);
+#endif
+  aberto = 1; foco = 0; rol = 0.0f; toastN = 0; ilha_retirar_grupo();
+}
 const char *avisos_pediu_abrir(void) {
   static char saida[24];
   if (!pediuAbrir[0]) return NULL;
@@ -1046,6 +1117,22 @@ const char *avisos_pediu_abrir(void) {
 }
 int avisos_pediu(void) { int c = pediuCodigo; pediuCodigo = 0; return c; }
 
+void avisos_abrir_sessao(void) {
+  pthread_mutex_lock(&trava);
+  // As marcas ja possuem o dono no id; gravar nao as transfere para o novo perfil.
+  vistosGravar();
+  for (int i = n - 1; i >= 0; i--)
+    if (itens[i].tipo == AV_REC || itens[i].tipo == AV_AGENDA || itens[i].tipo == AV_PEDIDO)
+      tirar(itens[i].id);
+  aberto = foco = 0; entrada = rol = 0.0f; okDesde = 0;
+  toastN = toastPendente = 0; recAnunciada = -1;
+  pediuAbrir[0] = 0; pediuCodigo = 0;
+#ifdef NV_TOUCH_UI
+  toquerol_limpar(&toqueAvisos);
+#endif
+  pthread_mutex_unlock(&trava);
+}
+
 // PONTEIRO (#99): a linha sob o cursor vira o foco, pela MESMA variavel das
 // setas. Trocar de linha solta um OK afundado, como a seta faz.
 static void ponteiroLinha(int i, int b) {
@@ -1053,6 +1140,15 @@ static void ponteiroLinha(int i, int b) {
   if (!aberto || cartao || i == foco || i < 0 || i >= avisos_lista_linhas()) return;
   foco = i; okDesde = 0;
 }
+#ifdef NV_TOUCH_UI
+static int toqueAvisosRolar(const PonteiroRolagem *e) {
+  int r;
+  if (!aberto || cartao) return 0;
+  r = toquerol_evento(&toqueAvisos, e);
+  if (r) okDesde = 0;
+  return r;
+}
+#endif
 int avisos_teste_foco(void) { return aberto ? foco : -1; }
 
 static void fechar(void) {
@@ -1075,13 +1171,16 @@ static void soltarOk(int longo) {
 }
 
 int avisos_evento(const SDL_Event *e) {
+#ifdef NV_TOUCH_UI
+  if (toquerol_navegacao(e)) toquerol_limpar(&toqueAvisos);
+#endif
   SDL_Keycode k;
   int sc;
   if (cartao) return cartaoEvento(e);
   if (e->type == SDL_KEYUP && aberto && okDesde) {
     k = e->key.keysym.sym;
     if (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE)
-      soltarOk(SDL_GetTicks() - okDesde >= NV_HOLD_MS);
+      soltarOk(ponteiro_ok_longo() || SDL_GetTicks() - okDesde >= NV_HOLD_MS);
     return 1;
   }
   if (e->type != SDL_KEYDOWN) return aberto;
@@ -1115,8 +1214,9 @@ int avisos_evento(const SDL_Event *e) {
 }
 
 // --- desenho -----------------------------------------------------------------------
-#define AVP_W    760.0f
-#define AVP_X    (NV_TELA_W - AVP_W)
+#include "telefoneui.h"
+#define AVP_W    telefoneui_largura(760.0f, NV_TELA_W, 24.0f)
+#define AVP_X    (NV_TELA_W - AVP_W - (telefoneui_ativo() ? 24.0f : 0.0f))
 #define AVP_MARG  48.0f
 #define AVP_TOPO 176.0f
 
@@ -1683,6 +1783,14 @@ static void avisos_desenharCorpo_(Uint32 agora) {
   { float areaH = NV_TELA_H - 80.0f - AVP_TOPO;
     float fim = avisos_lista_y(foco, foco) + avisos_lista_altura_linha(foco, foco);
     float alvo = fim > areaH ? fim - areaH : 0.0f;
+#ifdef NV_TOUCH_UI
+    int nl = avisos_lista_linhas();
+    float total = nl > 0 ? avisos_lista_y(nl - 1, foco) + avisos_lista_altura_linha(nl - 1, foco) : 0;
+    toquerol_vincular(&toqueAvisos, (GfxRect){AVP_X + dx, AVP_TOPO, AVP_W, areaH}, gfx_escala(),
+                     0, total - areaH, 1, &rol);
+    if (aberto && !cartao && a > .99f) ponteiro_rolagem(toqueAvisosRolar);
+    if (!toqueAvisos.livre)
+#endif
     rol += (alvo - rol) * 0.25f; }
   // A linha da ilha tem 22 de recuo proprio: a caixa dela sai 22 para fora,
   // e o texto continua na prumada do titulo do painel.

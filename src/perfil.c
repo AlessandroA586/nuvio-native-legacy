@@ -64,6 +64,7 @@
 #include "trakt.h"
 #include "simkl.h"
 #include "plrui.h"
+#include "rolagemtoque.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -170,6 +171,22 @@ static float entrada, focoCal, focoItem[PERFIL_MAX_DESTAQUES];
 // id (dId), porque o modelo social reordena (quem esta ao vivo vem antes).
 enum { PF_RESUMO = 0, PF_DUELO };
 static int amigo, modo;
+#ifdef NV_TOUCH_UI
+static ToqueRolagem pfToque;
+static float pfScroll;
+#endif
+static float pfDeslocamento(void) {
+#ifdef NV_TOUCH_UI
+  return NV_TELA_H > NV_TELA_W ? pfScroll : 0.0f;
+#else
+  return 0.0f;
+#endif
+}
+static void pfToqueLimpar(void) {
+#ifdef NV_TOUCH_UI
+  memset(&pfToque, 0, sizeof pfToque); pfScroll = 0;
+#endif
+}
 static float focoAmigos;
 static int dLinha, dCol;             // duelo: 0 = seletor de amigo, 1 = cartazes
 static char dId[96];
@@ -281,6 +298,7 @@ int perfil_iniciar(void) {
 }
 void perfil_encerrar(void) { perfil_iniciar(); }
 void perfil_abrir(void) {
+  pfToqueLimpar();
   // Abre SEMPRE na primeira parada. Consultar `dados` aqui nao serve: a tela e
   // aberta antes de o snapshot chegar da worker, entao nDias ainda e 0 e o foco
   // nascia na coluna da direita. Quem corrige o estado impossivel e
@@ -394,6 +412,7 @@ static void duelo(int i, int novo) {
   if (!am || !am->id[0]) return;
   snprintf(dId, sizeof dId, "%s", am->id);
   amigo = i; modo = PF_DUELO;
+  pfToqueLimpar();
   dLinha = 0; dCol = 0;
   memset(dFoco, 0, sizeof dFoco);
   socialvis_abrir_perfil(dId);
@@ -405,9 +424,23 @@ static void duelo(int i, int novo) {
 static void sairDuelo(void) {
   int m = rostosCabem();
   modo = PF_RESUMO; secao = 2; tCena = 0;
+  pfToqueLimpar();
   if (amigo >= m) amigo = m > 0 ? m - 1 : 0;
   if (m <= 0) secao = nCards() ? 1 : 0;
 }
+#ifdef NV_TOUCH_UI
+static void toqueDueloAmigo(int i, int b) {
+  (void)b;
+  if (modo != PF_DUELO || !temDados || i < 0 || i >= socialvis_n_amigos()) return;
+  if (i != amigo) duelo(i, 0);
+  else { dLinha = 0; pedirAmigo = 1; }
+}
+static void toqueDueloCartaz(int i, int b) {
+  (void)b;
+  if (modo == PF_DUELO && temDados && i >= 0 && i < cartazesCabem()) { dLinha = 1; dCol = i; }
+}
+static void toquePerfilRepetir(int a, int b) { (void)a; (void)b; if (!carregando) pedirAtualizar = 1; }
+#endif
 static void eventoDuelo(SDL_Keycode k, int ok) {
   int n = socialvis_n_amigos();
   if (dLinha == 0) {
@@ -449,6 +482,9 @@ int perfil_pediu_amigo(char *id, size_t tam) {
 // fechando (perfil_fechar) e levando para a Home.
 void perfil_evento(const SDL_Event *e) {
   if (!aberto || !e || e->type != SDL_KEYDOWN) return;
+#ifdef NV_TOUCH_UI
+  if (toquerol_navegacao(e)) toquerol_limpar(&pfToque);
+#endif
   SDL_Keycode k = e->key.keysym.sym;
   int ok = k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE;
   if (k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE || k == SDLK_DELETE) {
@@ -556,10 +592,18 @@ static void tituloPagina(float a) {
 
 // AS COLUNAS: numeros em ate cinco, cartoes de baixo em 400 | 1fr | 1fr.
 static int nNumeros(void) { return recomenda_ativo() ? 5 : 4; }
+static int pfRetrato(void) {
+#ifdef NV_TOUCH_UI
+  return NV_TELA_H > NV_TELA_W;
+#else
+  return 0;
+#endif
+}
 static GfxRect rNumero(int i) {
-  int n = nNumeros();
+  int n = pfRetrato() ? 2 : nNumeros();
   float w = (PF_W - PF_NUM_GAP * (float)(n - 1)) / (float)n;
-  return (GfxRect){ PF_X + (w + PF_NUM_GAP) * (float)i, PF_NUM_Y, w, PF_NUM_H };
+  return (GfxRect){ PF_X + (w + PF_NUM_GAP) * (float)(i % n),
+                    PF_NUM_Y + (PF_NUM_H + PF_NUM_GAP) * (float)(i / n) - pfDeslocamento(), w, PF_NUM_H };
 }
 static float alturaCartoes(void) {
   // A coluna dos mais vistos manda: titulo, as QUATRO linhas possiveis e o
@@ -572,6 +616,11 @@ static float alturaCartoes(void) {
 }
 static GfxRect rCartao(int i) {
   float w = (PF_W - PF_CAL_W - PF_CARD_GAP * 2.0f) * 0.5f, h = alturaCartoes();
+  if (pfRetrato()) {
+    GfxRect ultimo = rNumero(nNumeros() - 1);
+    return (GfxRect){ PF_X, ultimo.y + ultimo.h + PF_CARD_GAP
+                            + (h + PF_CARD_GAP) * i, PF_W, h };
+  }
   if (i == 0) return (GfxRect){ PF_X, PF_CARD_Y, PF_CAL_W, h };
   return (GfxRect){ PF_X + PF_CAL_W + PF_CARD_GAP + (w + PF_CARD_GAP) * (float)(i - 1),
                     PF_CARD_Y, w, h };
@@ -588,15 +637,46 @@ static int rostosCabem(void) {
 }
 
 // O DUELO: a linha "Voce ... Fulano", os quatro cartoes e o cartao de cartazes.
-static float yQuem(void)   { return PF_NUM_Y; }
+static float yQuem(void)   { return PF_NUM_Y - pfDeslocamento(); }
 static GfxRect rDuelo(int i) {
-  float w = (PF_W - PF_NUM_GAP * 3.0f) / 4.0f;
-  return (GfxRect){ PF_X + (w + PF_NUM_GAP) * (float)i, yQuem() + PF_QUEM + 14.0f, w, PF_DUELO_H };
+  int n = pfRetrato() ? 2 : 4;
+  float w = (PF_W - PF_NUM_GAP * (n - 1)) / n;
+  return (GfxRect){ PF_X + (w + PF_NUM_GAP) * (float)(i % n),
+                    yQuem() + PF_QUEM + 14.0f + (PF_DUELO_H + PF_NUM_GAP) * (i / n), w, PF_DUELO_H };
 }
 static GfxRect rCartazes(void) {
-  float y = rDuelo(0).y + PF_DUELO_H + PF_CARD_GAP;
+  GfxRect ultimo = rDuelo(3);
+  float y = ultimo.y + ultimo.h + PF_CARD_GAP;
   return (GfxRect){ PF_X, y, PF_W, PF_PAD_Y + 28.0f + 16.0f + PF_PH + 10.0f + 22.0f + PF_PAD_Y };
 }
+static void pfAlvoCorpo(float x, float y, float w, float h, PonteiroFn focar,
+                         PonteiroFn ativar, int a, int b) {
+#ifdef NV_TOUCH_UI
+  if (pfRetrato()) {
+    ponteiro_alvo_faixa(x, y, w, h, PF_NUM_Y - 16.0f, PF_CONTEUDO_H, focar, ativar, a, b);
+    return;
+  }
+#endif
+  ponteiro_alvo(x, y, w, h, focar, ativar, a, b);
+}
+#ifdef NV_TOUCH_UI
+static int pfToqueRolar(const PonteiroRolagem *e) { return toquerol_evento(&pfToque, e); }
+static void pfToquePreparar(void) {
+  if (!pfRetrato() || !temDados) { pfToqueLimpar(); return; }
+  float topo = PF_NUM_Y - 16.0f;
+  GfxRect ultimo = modo == PF_DUELO ? rCartazes() : rCartao(2);
+  float maximo = fmaxf(0, ultimo.y + ultimo.h + pfScroll - PF_CONTEUDO_H);
+  toquerol_vincular(&pfToque, (GfxRect){PF_X, topo, PF_W, PF_CONTEUDO_H - topo},
+                    gfx_escala(), 0, maximo, 1, &pfScroll);
+  if (!pfToque.livre) {
+    GfxRect r = modo == PF_DUELO ? (dLinha ? rCartazes() : rDuelo(0)) : rCartao(secao);
+    if (r.y < topo) pfScroll -= topo - r.y;
+    else if (r.y + r.h > PF_CONTEUDO_H) pfScroll += r.y + r.h - PF_CONTEUDO_H;
+  }
+  pfScroll = toquerol_clamp(pfScroll, 0, maximo);
+  ponteiro_rolagem(pfToqueRolar);
+}
+#endif
 static int cartazesCabem(void) {
   int n = dTem ? dPerf.nGostou : 0, cabe;
   if (n > SV_FILA_MAX) n = SV_FILA_MAX;
@@ -681,6 +761,9 @@ static void desenharVazio(float a) {
     brilhoFoco(btn,1.0f,a);
     gfx_cor(btn,NV_RAIO_PILL,ar,ag,ab,a); }
   texto(TXT_DET_BOTAO,"OK · Tentar novamente",ajustes_tinta_foco(),PF_X+28,472,a);
+#ifdef NV_TOUCH_UI
+  ponteiro_alvo(btn.x, btn.y, btn.w, btn.h, NULL, toquePerfilRepetir, 0, 0);
+#endif
 }
 
 // O AVATAR DO CABECALHO: 120 px com o anel do mockup (5 de vao escuro e 3 no
@@ -732,6 +815,10 @@ static float seletorAmigos(float xDir, float cy, float maxW, float a) {
   const char *rot[8];
   int cont[8], n = socialvis_n_amigos(), m = n < 8 ? n : 8, ini, i;
   float w = 0.0f;
+#ifdef NV_TOUCH_UI
+  const float seta = 48.0f;
+  xDir -= seta + 6.0f; maxW -= 2.0f * (seta + 6.0f);
+#endif
   for (; m >= 1; m--) {
     ini = amigo < m ? 0 : amigo - m + 1;
     for (i = 0; i < m; i++) {
@@ -744,6 +831,22 @@ static float seletorAmigos(float xDir, float cy, float maxW, float a) {
   }
   if (m < 1) return 0.0f;
   plrui_seg(rot, cont, m, amigo - ini, dLinha == 0, xDir - w, cy - 27.0f, a);
+#ifdef NV_TOUCH_UI
+  { float x = xDir - w + 5.0f;
+    for (i = 0; i < m; i++) {
+      float iw = txt_largura(TXT_ILHA_SEG, rot[i]) + 40.0f;
+      ponteiro_alvo(x, cy - 22.0f, iw, 44.0f, NULL, toqueDueloAmigo, ini + i, 0);
+      x += iw + 4.0f;
+    }
+    GfxRect esq = { xDir - w - seta - 6.0f, cy - seta * 0.5f, seta, seta };
+    GfxRect dir = { xDir + 6.0f, cy - seta * 0.5f, seta, seta };
+    gfx_icone((GfxRect){esq.x + 12, esq.y + 12, 24, 24}, "aj_chevron-left", 1, 1, 1, a * (amigo > 0 ? 0.8f : 0.2f));
+    gfx_icone((GfxRect){dir.x + 12, dir.y + 12, 24, 24}, "aj_chevron-right", 1, 1, 1, a * (amigo + 1 < n ? 0.8f : 0.2f));
+    if (amigo > 0) ponteiro_alvo(esq.x, esq.y, esq.w, esq.h, NULL, toqueDueloAmigo, amigo - 1, 0);
+    if (amigo + 1 < n) ponteiro_alvo(dir.x, dir.y, dir.w, dir.h, NULL, toqueDueloAmigo, amigo + 1, 0);
+    w += 2.0f * (seta + 6.0f);
+  }
+#endif
   return w;
 }
 
@@ -861,7 +964,7 @@ static void desenharAtividade(float a) {
                    c.w * esc, c.h * esc };
     float raio = 9.0f / dc.h;
     if (lin >= PF_CAL_LINHAS) break;
-    ponteiro_alvo(c.x, c.y, c.w, c.h, ponteiroDia, NULL, i, 0);
+    pfAlvoCorpo(c.x, c.y, c.w, c.h, ponteiroDia, NULL, i, 0);
     if (f < 0.99f) {
       unsigned v = dados.atividade[i];
       float k = 1.0f - f;
@@ -918,7 +1021,7 @@ static void desenharDestaques(float a) {
     GLuint tex = art[0] ? tex_obter_larg(art, mini.w) : 0;
     char linha[200];
     TxtLinha t;
-    ponteiro_alvo(lr.x, lr.y, lr.w, lr.h, ponteiroDestaque, NULL, i, 0);
+    pfAlvoCorpo(lr.x, lr.y, lr.w, lr.h, ponteiroDestaque, NULL, i, 0);
     linhaFoco(lr, 14.0f / lr.h, f, a);
     if (tex) { gfx_tex_aspect_atual = tex_aspecto(art);
                gfx_rect(mini, tex, GFX_CARD, 0, 0, 0, 8.0f / mini.h, 1, 1, 1, a);
@@ -974,7 +1077,7 @@ static void desenharAmigos(Uint32 agora, float a) {
   { int k, m = rostosCabem();
     // O anel de foco (no acento) so no rosto escolhido, e so com o cartao em foco.
     for (k = 0; k < m; k++) {
-      ponteiro_alvo(x + 4.0f + k * (PF_ROSTO + 16.0f), y + 4.0f, PF_ROSTO, PF_ROSTO, ponteiroAmigo, NULL, k, 0);
+      pfAlvoCorpo(x + 4.0f + k * (PF_ROSTO + 16.0f), y + 4.0f, PF_ROSTO, PF_ROSTO, ponteiroAmigo, NULL, k, 0);
       svd_rosto((GfxRect){ x + 4.0f + k * (PF_ROSTO + 16.0f), y + 4.0f, PF_ROSTO, PF_ROSTO },
                 socialvis_amigo(k), k == amigo ? focoAmigos : 0.0f, a, agora); } }
   y += PF_ROSTO + 8.0f + 16.0f;
@@ -1125,6 +1228,9 @@ static void desenharDuelo(Uint32 agora, float a) {
     avatarEu((GfxRect){ PF_X, y, PF_QUEM, PF_QUEM }, 0, a1);
     txtEsc(voce, PF_X + PF_QUEM + 12.0f, cy - (float)voce.h * PF_ESC_QUEM * 0.5f, PF_ESC_QUEM, a1);
     svd_avatar((GfxRect){ PF_X + PF_W - PF_QUEM, y, PF_QUEM, PF_QUEM }, am->avatar, am->nome, am->id, a1);
+#ifdef NV_TOUCH_UI
+    pfAlvoCorpo(PF_X + PF_W - PF_QUEM, y, PF_QUEM, PF_QUEM, NULL, toqueDueloAmigo, amigo, 0);
+#endif
     txtEsc(ele, PF_X + PF_W - PF_QUEM - 12.0f - we, cy - (float)ele.h * PF_ESC_QUEM * 0.5f,
            PF_ESC_QUEM, a1);
     motivo = motivoDuelo(mb, sizeof mb);
@@ -1163,6 +1269,9 @@ static void desenharDuelo(Uint32 agora, float a) {
     for (c = 0; c < n; c++) {
       const SvEvento *e = &dPerf.gostou[c];
       GfxRect pr = { x + (float)c * (PF_PW + PF_PGAP), yy, PF_PW, PF_PH };
+#ifdef NV_TOUCH_UI
+      pfAlvoCorpo(pr.x, pr.y, pr.w, pr.h, toqueDueloCartaz, NULL, c, 0);
+#endif
       float f = dFoco[c], raio = 14.0f / PF_PH;
       // O foco no cartaz e o aro branco do mockup (3 px a 75%), sem halo.
       if (f > 0.01f) gfx_anel_fora(pr, raio, 0.0f, 3.0f, 1, 1, 1, .75f * f * a5);
@@ -1175,6 +1284,9 @@ static void desenharDuelo(Uint32 agora, float a) {
 
 void perfil_desenhar(Uint32 agora) {
   if (entrada <= .002f) return;
+#ifdef NV_TOUCH_UI
+  pfToquePreparar();
+#endif
   float a=entrada;
   gfx_cor((GfxRect){0,0,NV_TELA_W,NV_TELA_H},0,
           NV_COR_FUNDO_R,NV_COR_FUNDO_G,NV_COR_FUNDO_B,a);
@@ -1185,10 +1297,16 @@ void perfil_desenhar(Uint32 agora) {
   else if(!temDados) desenharVazio(a);
   else if (modo == PF_DUELO) {
     desenharCabecalho(a);
+#ifdef NV_TOUCH_UI
+    if (pfRetrato()) gfx_recorte(PF_X, PF_NUM_Y - 16.0f, PF_W, PF_CONTEUDO_H - PF_NUM_Y + 16.0f);
+#endif
     desenharDuelo(agora, a);
   } else {
     if (temIdentidade) desenharCabecalho(a);
     else { tituloPagina(a); }
+#ifdef NV_TOUCH_UI
+    if (pfRetrato()) gfx_recorte(PF_X, PF_NUM_Y - 16.0f, PF_W, PF_CONTEUDO_H - PF_NUM_Y + 16.0f);
+#endif
     desenharNumeros(a);
     if (surge(5) > 0.002f) desenharAtividade(a * surge(5));
     if (surge(6) > 0.002f) desenharDestaques(a * surge(6));

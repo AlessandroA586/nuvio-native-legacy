@@ -1,11 +1,11 @@
-// VIGIA DE TRAVA DO CANAL AO VIVO (#302), igual nas quatro plataformas.
+// VIGIA DE TRAVA DO CANAL AO VIVO (#302), comum as quatro plataformas.
 //
 // O caso medido (log 45605, .tpk 6.5, provedor Xtream de TS continuo): o canal
-// toca ~25-30 s, o provedor fecha a conexao, o Tizen.Multimedia.Player avisa
+// toca ~25-30 s, possivelmente a conexao fecha, o Tizen.Multimedia.Player avisa
 // PlaybackCompleted (evento 4) e fica parado. Nada disso e erro nem
 // buffering, entao o watchdog de canal do app.c (falhou / bufferando > 12 s /
 // prazo de abertura) nunca disparava: a imagem congelava para sempre e so
-// trocar de canal destravava. Os outros players de IPTV reabrem sozinhos.
+// trocar de canal destravava. No relato, outros players mantem a reproducao.
 //
 // Regra: canal que JA andou e depois (a) terminou, (b) a posicao nao anda por
 // NV_LS_PARADO_MS, ou (c) esta bufferando por NV_LS_PARADO_MS, e reaberto
@@ -14,6 +14,8 @@
 // contador volta a zero (o provedor que corta a cada 30 s reconecta para
 // sempre, como os outros apps). Esgotou: o chamador cai no caminho de sempre
 // (proxima fonte, cartao de erro).
+// No TPK, o primeiro EOF depois de entregar video reabre sem espera. Outro
+// EOF antes de NV_LS_FIRME_MS consome o limite, para clipe curto nao girar.
 //
 // So funcoes puras e sem SDL: o teste compila no Mac (tests/livestall.sh).
 #ifndef NV_LIVESTALL_H
@@ -31,6 +33,7 @@ typedef struct {
   unsigned movDesde;   // quando comecou a andar sem parar (0 = parada)
   int      andou;      // a posicao andou nesta abertura (arma o vigia)
   int      tentativa;  // reaberturas usadas nesta queda
+  int      eofGratis;  // TPK: a reabertura imediata desta queda ja foi usada
   int      pendente;   // esperando o prazo da reabertura
   unsigned quando;     // instante (ms) da reabertura
 } NvLiveStall;
@@ -63,10 +66,22 @@ static inline int nv_ls_passo(NvLiveStall *s, unsigned agora, double pos, int pr
     if ((int)(agora - s->quando) < 0) return NV_LS_ESPERA;
     return NV_LS_REABRIR;
   }
+#ifdef NV_TPK
+  // #302: o primeiro EOF com video e continuidade de live, nao fim de arquivo.
+  // Se a nova abertura morrer antes de ficar firme, passa a gastar o limite.
+  if (pronto && terminou && (s->andou || pos > 0.05)) {
+    if (!s->eofGratis) { s->eofGratis = 1; return NV_LS_REABRIR; }
+    if (s->tentativa >= NV_LS_MAX) return NV_LS_DESISTIR;
+    s->tentativa++;
+    return NV_LS_REABRIR;
+  }
+#endif
   if (pronto && pos > s->pos + 0.05) {
     if (!s->movDesde) s->movDesde = agora;
     s->pos = pos; s->movEm = agora; s->andou = 1;
-    if (s->tentativa && (unsigned)(agora - s->movDesde) >= NV_LS_FIRME_MS) s->tentativa = 0;
+    if ((s->tentativa || s->eofGratis) && (unsigned)(agora - s->movDesde) >= NV_LS_FIRME_MS) {
+      s->tentativa = 0; s->eofGratis = 0;
+    }
     return NV_LS_NADA;
   }
   if (!pronto) return NV_LS_NADA;      // abrindo: quem vigia e o prazo de abertura

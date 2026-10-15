@@ -42,7 +42,7 @@ typedef enum {
 #define PP_TOKEN_MAX    400    // a URL inteira tem de caber em PP_URL_MAX (512)
 #define PP_EXTRA_MAX    120
 #define PP_CHAVE_MAX     64
-#define PP_MODELO_MAX   401    // 400 = TECLADO_LONGO: o modelo colado do celular
+#define PP_MODELO_MAX   401    // 400: o modelo colado do celular (o campo pede PP_MODELO_MAX - 1)
                                // passa de 299 (#361/#390); a URL montada segue em PP_URL_MAX
 #define PP_INSTANCIA_PADRAO "https://spatial-posters.vercel.app"
 
@@ -79,8 +79,9 @@ int posterprov_extrair_token(const char *entrada, char *tok, size_t n,
 // 1 se valido (normalizado em `out`, vazio = apagar).
 int posterprov_extra_normalizar(const char *entrada, char *out, size_t n);
 
-// Modelo livre: http(s)://, so os marcadores {imdb} {tmdb} {type} {tipo_tmdb},
-// pelo menos um deles. 1 se valido.
+// Modelo livre: http(s)://, marcadores {imdb} {tmdb} {type} {tipo_tmdb},
+// aliases {imdb_id} {tmdb_id} e {id} (IMDb se houver, senao TMDB).
+// Pelo menos um deles. 1 se valido.
 int posterprov_modelo_valido(const char *modelo);
 // Para o que a pessoa DIGITA agora: valido e, no pior caso de cada marcador,
 // a URL montada cabe em PP_URL_MAX — senao o modelo seria salvo e nunca

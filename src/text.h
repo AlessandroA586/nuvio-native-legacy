@@ -40,13 +40,14 @@ typedef enum {
   TXT_PAINEL_TITULO, TXT_PAINEL_ITEM,
   TXT_CW_TITULO, TXT_CW_META, TXT_CW_BADGE,
   TXT_RANK,
-  // Legenda externa: 50%..250% (#335), em passos de 10. O firmware da C9 oferece
+  // Legenda externa: 50%..300% (#439), em passos de 10. O firmware da C9 oferece
   // apenas cinco degraus; estas fontes pertencem ao overlay do proprio app.
   TXT_LEG_50, TXT_LEG_60, TXT_LEG_70, TXT_LEG_80,
   TXT_LEG_90, TXT_LEG_100, TXT_LEG_110, TXT_LEG_120,
   TXT_LEG_130, TXT_LEG_140, TXT_LEG_150, TXT_LEG_160,
   TXT_LEG_170, TXT_LEG_180, TXT_LEG_190, TXT_LEG_200,
   TXT_LEG_210, TXT_LEG_220, TXT_LEG_230, TXT_LEG_240, TXT_LEG_250,
+  TXT_LEG_260, TXT_LEG_270, TXT_LEG_280, TXT_LEG_290, TXT_LEG_300,
   // Numeral do Top 10 da home Dinamica (NV_TOP10_NUM_CORPO). No FIM, depois das
   // legendas: TXT_LEG_* e contado por aritmetica a partir de TXT_LEG_50.
   TXT_RANK_GRANDE,
@@ -181,8 +182,19 @@ typedef enum {
   TXT_V3_SELO,     // ESTA TV, ESTE PERFIL, AVANCADO, SO LG (14 / 700, caixa alta)
   TXT_V3_INSP,     // texto do inspetor (22 / 400)
   TXT_V3_INSP_B,   // "O que muda:" (22 / 700)
+  // Linha de meta do detalhe no peso do Nuvio Desktop (dono, 12/10/2026): ano e
+  // duracao em Bold branco, generos no peso do meio (SemiBold na JetBrains Sans,
+  // Medium nas outras). Mesmo corpo da sinopse (NV_FT_DET_SIN).
+  TXT_DET_META_FORTE,   // ano, duracao       26 / 700
+  TXT_DET_META_GEN,     // generos            26 / 600
   TXT_NFONTES
 } TxtEstilo;
+
+// Faixa do tamanho de legenda em % (a mesma que TXT_LEG_50..TXT_LEG_300
+// codifica de 10 em 10). Unica fonte dos limites: quem grava, quem cicla,
+// quem desenha e a segunda legenda clampeiam por aqui.
+#define TXT_LEG_PCT_MIN 50
+#define TXT_LEG_PCT_MAX 300
 
 // w/h em unidades de layout. pw/ph = tamanho da textura em pixels, preenchido
 // so para linhas da camada ampliada (gfx_escala); 0 no caminho normal.
@@ -197,6 +209,7 @@ typedef enum {
   TXT_FAMILIA_MONTSERRAT,
   TXT_FAMILIA_ROBOTO,
   TXT_FAMILIA_ATKINSON,
+  TXT_FAMILIA_JETBRAINS,
   TXT_FAMILIA_N
 } TxtFamilia;
 

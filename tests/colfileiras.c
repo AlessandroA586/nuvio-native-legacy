@@ -20,7 +20,15 @@ int ajustes_hist_conta(void) { return 1; }
 int ajustes_busca_cinemeta(void) { return 1; }
 int ajustes_busca_nuvio(void) { return 0; }   // #311: Primeiro (padrao)
 int ajustes_ocultar_nao_lancados(void) { return 0; }   // #369: descoberta.c le o ajuste
+int ajustes_ocultar_filmes_vistos(void) { return 0; }    // #366: descoberta.c le o ajuste
 #include "../src/descoberta.c"
+int ajustes_cw_concluido(void) { return 90; }
+int ajustes_cw_minimo(void) { return 1; }
+unsigned cat_revisao_itens(void) { return 0; }
+int cat_visto(const CatItem *item) { (void)item; return 0; }
+int cat_copiar_por_id(const char *id, const char *tipo, CatItem *item) {
+  (void)id; (void)tipo; (void)item; return 0;
+}
 #include "jellyfin_stub.inc"
 Uint32 SDL_GetTicks(void) { return 0; }
 unsigned recomenda_geracao(void) { return 1; }
@@ -148,8 +156,11 @@ void  cat_atualizar_item_sem_abas(int i, const CatItem *n) { (void)i; (void)n; }
 // 2.0.3: fios da descoberta copiam e escrevem por partes (2b4234eb, 70acffaf).
 int   cat_copiar_item(int i, CatItem *s) { (void)i; (void)s; return 0; }
 int   cat_completar_sinopse(int i, const char *im, const char *si, const char *ti) { (void)i; (void)im; (void)si; (void)ti; return 0; }
+int cat_completar_basico(int i, const CatItem *c) { (void)i; (void)c; return 0; }
 int   cat_aplicar_localizado(int i, const char *im, const char *ti, const char *si, const char *lo, const char *fu) { (void)i; (void)im; (void)ti; (void)si; (void)lo; (void)fu; return 0; }
 int   ajustes_tmdb_basico(void)            { return 0; }
+int   ajustes_fundo_addon(void)              { return 0; }
+int   ajustes_logo_addon(void)               { return 0; }
 int   ajustes_tmdb_arte(void)              { return 0; }
 void  cat_cache_substituido(void)          { }
 void  cat_definir_episodios(int i, const CatEp *l, int n) { (void)i; (void)l; (void)n; }
@@ -175,6 +186,7 @@ void  fil_registrar_se_couber_de(const FilPassada *p, const char *c, const char 
 int   fil_podar_catalogos(const char *const *ids, const char *const *bases, int n,
                           int perfilDaLista) {
   (void)ids; (void)bases; (void)n; (void)perfilDaLista; return 0; }
+int fil_marcar_declaradas(const char *const *chaves, int n, int perfilDaLista) { (void)chaves; (void)n; (void)perfilDaLista; return 0; }
 int fil_marcar_sem_addon(const char *const *ids, const char *const *bases, const int *ativos, int n, int perfilDaLista) {
   (void)ids; (void)bases; (void)ativos; (void)n; (void)perfilDaLista; return 0;
 }

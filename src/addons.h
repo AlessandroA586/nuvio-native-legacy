@@ -49,17 +49,37 @@ int  addons_perfil_da_lista(void);
 // Lista atual, para o sync poder empurrar de volta o que este aparelho tem.
 int  addons_exportar(AddonRemoto *saida, int max);
 
+// Quantos addons ENTRARAM e quantos SAIRAM entre duas listas, comparados pela
+// URL (e nao pelo nome: dois addons podem se chamar igual), e quantos dos que
+// ficaram MUDARAM (ligado/desligado ou ordem). E o que o botao "Sincronizar
+// addons" (#360) diz depois da volta. Qualquer ponteiro de saida pode ser NULL.
+void addons_diferenca(const AddonRemoto *antes, int na, const AddonRemoto *depois, int nd,
+                      int *entraram, int *sairam, int *mudaram);
+
 // Esquece a lista da conta. Chamado ao SAIR: sem isto, a proxima pessoa a usar
 // esta TV navega com os addons da anterior — e como as chaves de debrid vao
 // embutidas nas URLs, ela tambem consome a assinatura da anterior — ate o
 // primeiro sync terminar. Ficar sem fonte por alguns segundos e o
 // comportamento correto de "ninguem logado".
 void addons_esquecer(void);
+// Abre uma sessao de perfil limpa; nao espera nem refaz pedidos anteriores.
+void addons_abrir_sessao(void);
 int  addons_n(void);
 // Numero que sobe a cada mudanca na lista de addons (conta, liga/desliga,
 // adicao). app.c refaz a busca de fontes do titulo aberto quando ele muda —
 // era o titulo aberto antes de a lista da conta chegar ficando sem fonte.
 unsigned addons_versao(void);
+// Capturar na UI para a consulta independente do proximo episodio. Bases
+// privadas e proveniencia pertencem ao snapshot; nenhum worker le a lista
+// de addons do perfil que entrou depois. NULL = captura indisponivel/incompleta.
+typedef struct AddonsConsulta AddonsConsulta;
+AddonsConsulta *addons_consulta_capturar(void);
+int addons_consulta_atual(const AddonsConsulta *consulta);
+// BLOQUEIA no worker; devolve lista propria completa, sem publicar/cachear.
+// Uma consulta cancelada/incompleta devolve -1 e deixa *saida NULL.
+int addons_consulta_consultar(const AddonsConsulta *consulta, const char *id, const char *tipo,
+                              int fios, int (*cancelado)(void *), void *ctx, void *saida /* Stream ** */);
+void addons_consulta_liberar(AddonsConsulta *consulta);
 const char *addons_base(int i);   // URL base, sem /manifest.json
 const char *addons_id_manifesto(int i);   // "id" do manifesto; "" ate a sonda ler
 const char *addons_nome_por_id(const char *id);   // nome de exibicao; "" se nao ha
@@ -88,6 +108,18 @@ typedef int (*OrigemExtra)(const char *id, const char *tipo, int (*cancelado)(vo
                            void *ctx, OrigemAviso aviso, void *avisoU,
                            void *saida /* Stream ** */);
 void addons_definir_origem_extra(OrigemExtra f, int (*ativa)(void));
+// Capturar na UI; consultar somente o estado proprio no worker. 0 e uma
+// resposta vazia valida; -1 e falha, cancelamento ou resposta incompleta.
+typedef struct Stream Stream;
+typedef struct {
+  void *(*capturar)(void);
+  int (*atual)(const void *);
+  int (*consultar)(const void *, const char *id, const char *tipo,
+                   int (*cancelado)(void *), void *ctx,
+                   OrigemAviso aviso, void *avisoU, Stream **saida);
+  void (*liberar)(void *);
+} OrigemPreparoOps;
+void addons_definir_origem_extra_preparo(OrigemExtra f, const OrigemPreparoOps *ops);
 int  addons_origem_extra_ativa(void);
 void addons_buscar(const char *imdb, const char *tipo);
 // Recarregar explicito: descarta a resposta anterior e vai a rede, inclusive
@@ -155,6 +187,8 @@ typedef struct {
   char url[1024];
   char provedor[64]; // nome do addon que devolveu esta legenda
   char arquivo[96];  // subtitleFileName / movieReleaseName as sent; "" = not sent
+  char id[256];      // identidade enviada pelo addon; "" = nao enviada
+  int addonIndice;   // origem para dedup por id+addon
 } Legenda;
 
 void addons_buscar_legendas(const char *imdb, const char *tipo);
@@ -164,8 +198,8 @@ void addons_buscar_legendas(const char *imdb, const char *tipo);
 // `videoSize` e `videoHash`. `hash` e o behaviorHints.videoHash quando o addon
 // de fonte manda; vazio, ele e medido aqui por dois Range de 64 KiB em
 // `urlVideo` (so link remoto, sem cabecalho exigido e com `tamanho` exato).
-// A lista que ja esta na tela FICA ate a busca nova terminar inteira: trocar a
-// fonte nao pode esvaziar a folha de legendas por segundos. Mesmo id e mesmos
+// Soma a lista nova a atual sem mover indices, ate LEG_MAX; erro/vazio mantem
+// o que ja existe. Duplicatas por URL ou id+addon ficam fora. Mesmo id e mesmos
 // extras de antes: nao faz nada.
 void addons_legendas_fonte(const char *imdb, const char *tipo, const char *arquivo,
                            unsigned long long tamanho, const char *hash,
@@ -214,7 +248,8 @@ int  addons_ativo(int i);
 int  addons_base_desligada(const char *base);   // 1 = addon da lista desligado na conta
 int  addons_alternar(int i);          // devolve o estado NOVO
 // Acrescenta um addon sem refazer a lista (ver a nota em addons.c). 1 = entrou,
-// 0 = lista cheia, ja instalado ou URL que nao cabe (addonurl.h). Quem chama deve chamar sync_sujar_addons().
+// 0 = lista cheia, ja instalado ou URL que nao cabe (addonurl.h). #360 mao
+// unica: o acrescimo vale so nesta TV; o proximo pull traz a conta por cima.
 int  addons_adicionar(const char *nome, const char *urlManifest);
 // O addon fornece este recurso? Ate a sonda responder e uma suposicao
 // otimista; addons_sondado() diz qual dos dois casos e.

@@ -8,6 +8,6 @@ cd "$(dirname "$0")/.."
 NUVIO_DADOS=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-fonteregra.XXXXXX")
 export NUVIO_DADOS
 trap 'rm -rf "$NUVIO_DADOS"' EXIT
-cc -O1 -g -Wall -Wextra -Isrc src/fonteregra.c src/dados.c src/js.c tests/fonteregra.c \
+cc -O1 -g -Wall -Wextra -Isrc src/fonteregra.c src/regexjs.c src/dados.c src/js.c tests/fonteregra.c \
   -o "$NUVIO_DADOS/fonteregra-tests" -lpthread
 "$NUVIO_DADOS/fonteregra-tests"

@@ -117,9 +117,9 @@ static void padroesEValores(void) {
   }
   assert(!uxTemPadrao(-1) && !uxTemPadrao(AJ_N));
   assert(!uxDiferente(-1) && !uxDiferente(AJ_N));
-  valor[AJ_FOCO_TRAILER] = 1 - valorPadrao[AJ_FOCO_TRAILER];
+  valor[AJ_FOCO_TRAILER] = AJ_TRAILER_CARTAZ_CARD;
   assert(uxDiferente(AJ_FOCO_TRAILER));
-  assert(uxValorPadrao(AJ_FOCO_TRAILER) == 1);
+  assert(uxValorPadrao(AJ_FOCO_TRAILER) == AJ_TRAILER_CARTAZ_DESLIGADO);
   valor[AJ_FOCO_TRAILER] = valorPadrao[AJ_FOCO_TRAILER];
   /* Um valor que o modo seguro suspende continua sendo a preferencia salva. */
   valor[AJ_RESOLUCAO] = RES_4K;
@@ -139,7 +139,9 @@ static void padroesEValores(void) {
 
   memcpy(copia, valor, sizeof copia);
   uxValorTexto(AJ_FOCO_TRAILER, 0, texto, sizeof texto);
-  assert(!strcmp(texto, i18n("Ligado")));
+  assert(!strcmp(texto, i18n("Desligado")));
+  uxValorTexto(AJ_FOCO_TRAILER, AJ_TRAILER_CARTAZ_CARD, texto, sizeof texto);
+  assert(!strcmp(texto, i18n("No card")));
   uxValorTexto(AJ_AUD_LINGUA, LING_OPC_ORIGINAL, texto, sizeof texto);
   assert(!strcmp(texto, i18n("Original do título")));
   uxValorTexto(AJ_HERO_TRAILER_ESPERA, 22, texto, sizeof texto);
@@ -149,7 +151,7 @@ static void padroesEValores(void) {
   uxValorTexto(AJ_FIL_LIMITE, 12, texto, sizeof texto);
   assert(!strcmp(texto, "12"));
   uxValorTexto(AJ_FOCO_TRAILER, INT_MAX, texto, sizeof texto);
-  assert(!strcmp(texto, i18n("Ligado")));
+  assert(!strcmp(texto, i18n("Desligado")));   /* fora da lista: o indice 0 */
   uxValorTexto(AJ_N, 0, texto, sizeof texto);
   assert(!texto[0]);
   uxValorTexto(AJ_IDIOMA, 0, NULL, 0);
@@ -302,10 +304,30 @@ static void cacheSeek(void) {
   assert(!strcmp(textoValor(AJ_CACHE_SEEK), "Não disponível nesta TV"));
   assert(strstr(ajudaOpcao(AJ_CACHE_SEEK), "Não disponível nesta TV"));
   for (i = 0; i < 4; i++) { valor[AJ_CACHE_SEEK] = i; assert(ajustes_cache_seek_mb() == 0); }
+  /* #338: o buffer so existe no Android; aqui (host) fica sempre em Automatico. */
+  for (i = 0; i < 4; i++) { valor[AJ_BUFFER] = i; assert(ajustes_buffer_preset() == 0); }
+  assert(AJ_BUFFER == AJ_CW_MINIMO + 1 && !strcmp(CHAVE[AJ_BUFFER], "bufferPlayerLocal") && OPCOES[AJ_BUFFER].n == 4 && valorPadrao[AJ_BUFFER] == 0 && somenteDesteAparelho(AJ_BUFFER));
   valor[AJ_CACHE_SEEK] = antes;
+  valor[AJ_BUFFER] = valorPadrao[AJ_BUFFER];
   n = ajustes_buscar("cache de seek", resultados, AJ_N);
   i = indiceResultado(AJ_CACHE_SEEK, n);
   assert(i >= 0 && resultados[i].bloqueado);
+}
+
+static void creditosAutomaticos(void) {
+  int vezes = 0, idiomaAntes = valor[AJ_IDIOMA];
+  assert(!ajustes_pular_creditos() && uxValorPadrao(AJ_PULAR_CREDITOS) == 1);
+  assert(!strcmp(uxEscopo(AJ_PULAR_CREDITOS), "Só nesta TV"));
+  assert(somenteDesteAparelho(AJ_PULAR_CREDITOS) && !dePerfil(AJ_PULAR_CREDITOS));
+  assert(familiaPreviaOpcao(AJ_PULAR_CREDITOS) == AJPV_REPRO);
+  for (int i = 0; i < AJ_N_TELA; i++)
+    if (TELA[i].tipo == IT_OPC && TELA[i].op == AJ_PULAR_CREDITOS) vezes++;
+  assert(vezes == 1);
+  for (int i = 0; i < AJ_N; i++) assert(strcmp(CHAVE[i], "autoCreditosLocal"));
+  valor[AJ_IDIOMA] = IDIOMA_EN + 1;
+  int n = ajustes_buscar("Skip the credits automatically", resultados, AJ_N);
+  assert(indiceResultado(AJ_PULAR_CREDITOS, n) >= 0);
+  valor[AJ_IDIOMA] = idiomaAntes;
 }
 
 // Cada categoria e cada submenu (ROT) tem a SUA arte: nenhum indice de
@@ -645,9 +667,17 @@ int main(void) {
     valor[AJ_P2P_LIMITE] = 9; assert(ajustes_p2p_limite_mb() == 0); valor[AJ_P2P_LIMITE] = antes; }
   { int vz = 0, k; for (k = 0; k < AJ_N_TELA; k++) if (TELA[k].tipo == IT_OPC && TELA[k].op == AJ_P2P_LIMITE) vz++; assert(vz == 1); }
   assert(indiceResultado(AJ_P2P_LIMITE, ajustes_buscar("limite p2p", resultados, AJ_N)) >= 0);
+  // #326: append-only, local, 1% por padrao; respeita a faixa do Continuar.
+  assert(!strcmp(CHAVE[AJ_CW_MINIMO], "cwMinimoLocal") && valorPadrao[AJ_CW_MINIMO] == 1);
+  assert(somenteDesteAparelho(AJ_CW_MINIMO) && !dePerfil(AJ_CW_MINIMO));
+  { int antes = valor[AJ_CW_MINIMO];
+    valor[AJ_CW_MINIMO] = 10; assert(ajustes_cw_minimo() == 10);
+    valor[AJ_CW_MINIMO] = 0; assert(ajustes_cw_minimo() == 1);
+    valor[AJ_CW_MINIMO] = 99; assert(ajustes_cw_minimo() == 20);
+    valor[AJ_CW_MINIMO] = antes; }
   // #400: acrescentado no fim, sem deslocar os indices antigos.
-  assert(AJ_LEG_SYNC_AUTO == AJ_FONTE_ORDEM_ADDON + 1 && AJ_MIC_BUSCA == AJ_LEG_SYNC_AUTO + 1 &&
-         AJ_N == AJ_MIC_BUSCA + 1);
+  assert(AJ_LEG_SYNC_AUTO == AJ_FONTE_ORDEM_ADDON + 1 && AJ_LEG_MOSTRAR == AJ_LEG_SYNC_AUTO + 1 && AJ_AVISO_LEGAL == AJ_LEG_MOSTRAR + 1 && AJ_HDR_UI == AJ_AVISO_LEGAL + 1 && AJ_TELA_ABERTURA == AJ_HDR_UI + 1 && AJ_CW_MINIMO == AJ_TELA_ABERTURA + 1 && AJ_BUFFER == AJ_CW_MINIMO + 1 && AJ_PULAR_ABERTURA == AJ_BUFFER + 1 && AJ_PULAR_RESUMO == AJ_PULAR_ABERTURA + 1 && AJ_PROXIMO_AUTO == AJ_PULAR_RESUMO + 1 && AJ_PULAR_CREDITOS == AJ_PROXIMO_AUTO + 1 && AJ_PROXIMO_CONTAGEM == AJ_PULAR_CREDITOS + 1 && AJ_INTERFACE_MODO == AJ_PROXIMO_CONTAGEM + 1 && AJ_MIC_BUSCA == AJ_PROVEDORES_ESCOPO + 1);
+  assert(AJ_LEG_SYNC_AUTO == AJ_FONTE_ORDEM_ADDON + 1 && AJ_N == AJ_MIC_BUSCA + 1);
   assert(!strcmp(CHAVE[AJ_MIC_BUSCA], "micBuscaLocal") && valorPadrao[AJ_MIC_BUSCA] == 0);
   assert(!strcmp(OPCOES[AJ_MIC_BUSCA].valores[0], "Automático") && OPCOES[AJ_MIC_BUSCA].n == 3);
   assert(somenteDesteAparelho(AJ_MIC_BUSCA) && !dePerfil(AJ_MIC_BUSCA));
@@ -717,6 +747,7 @@ int main(void) {
   artePorSubmenu();
   reorganizacao202();
   cacheSeek();
+  creditosAutomaticos();
   zoomTpk();
   prazoDosAddonsIntegrado();
   padroesEValores();

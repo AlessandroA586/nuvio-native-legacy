@@ -1,7 +1,14 @@
 #include "intro.h"
+#include "creditosjson.h"
 #include "rede.h"
 #include "js.h"
 #include "credfonte.h"
+#include "dados.h"
+#include <stdint.h>
+#include <math.h>
+#include <ctype.h>
+#include <sys/stat.h>
+#include <utime.h>
 #include <time.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -10,6 +17,7 @@
 
 static pthread_mutex_t trava=PTHREAD_MUTEX_INITIALIZER;
 static IntroTrecho trechos[8];static int nTrechos;static int trechosAni; /* 1 = os trechos vieram do AniSkip */static unsigned geracao;
+static IntroTrecho creditosLimitados[8];static int nCreditosLimitados;
 static int botaoIdx=-1;static double botaoDesde;
 static int botaoVis;static double botaoFim;static int botaoTipo;
 // Trechos que o PROPRIO ARQUIVO declara (capitulos do MKV, 203-capitulos): valem
@@ -19,6 +27,11 @@ static int botaoVis;static double botaoFim;static int botaoTipo;
 static IntroTrecho capTr[4];static int nCapTr;
 static void fundirCapitulos(void);   // chamar COM a trava
 static unsigned verGer;
+// Memoria unica do automatico, inclusive recuo antes de uma resposta tardia.
+static unsigned autoGer;static double autoFim[4],autoDe,autoAte;static int autoRecuou;
+static void autoSincronizar(void){
+  if(autoGer!=geracao){memset(autoFim,0,sizeof autoFim);autoRecuou=0;autoGer=geracao;}
+}
 
 
 // AS QUATRO CHAVES QUE A API DEVOLVE, e o tipo de cada uma (as mesmas do
@@ -72,9 +85,8 @@ static int buscarInterno(const char *url,char **corpo,int *status);
 // types[]=recap&episodeLength=<s>, sem chave. Indexado pelo MyAnimeList: o id
 // do MAL vem do proprio item ("mal:21") ou do Kitsu ("kitsu:12" -> mappings do
 // Kitsu, um GET sem chave, guardado). Numero do episodio = o do item, so na
-// temporada 1 (addon de anime manda episodio sem temporada; temporada > 1 nao
-// e numeracao do MAL e nao se arrisca). Anime vindo do Cinemeta (tt...) fica
-// com o TheIntroDB: mapear IMDb/TVDB -> MAL e trabalho da 2.0.4.
+// temporada 1 para ids kitsu:/mal:. IMDb/TMDB usa a lista Fribb por temporada
+// e offset (abaixo), somente com evidencia local de anime do TMDB.
 //
 // CADA RESULTADO TRAZ `episodeLength`, a duracao do lancamento em que foi
 // marcado. Como o AIOMetadata: fica o mais perto da nossa duracao, e se ele
@@ -151,6 +163,165 @@ static long malDe(const char *id){
   return m;
 }
 
+// Evidencia do MESMO corpo /tv do TMDB que extras.c ja baixa: zero GET novo.
+static struct{char id[24];long tmdb;int anime;}animeCache[16];static int animeProx;
+static int animeDe(const char *id,long tmdb){ // COM trava
+  for(int i=0;i<16;i++)if((id[0]&&!strcmp(animeCache[i].id,id))||
+      (tmdb>0&&animeCache[i].tmdb==tmdb))return animeCache[i].anime;
+  return 0;
+}
+
+// Fribb: indice local semanal, registros de 28 bytes; nunca guarda a lista.
+#define ANIME_LIST_URL "https://raw.githubusercontent.com/Fribb/anime-lists/master/anime-list-full.json"
+#define MAP_SEMANA (7*24*60*60)
+#define MAP_ARQ "anime-fribb.idx"
+typedef struct{uint32_t imdb,tmdb,mal;int32_t t[2],offset[2];}AnimeMapa;
+typedef struct{uint32_t magic,n,hash;}MapaCab;
+static pthread_mutex_t mapTrava=PTHREAD_MUTEX_INITIALIZER;
+static uint32_t mapaHash(uint32_t h,const void *p,size_t n){
+  const unsigned char *s=p;while(n--)h=(h^*s++)*16777619u;return h;
+}
+static int32_t mapaNumero(const char *j,const char *chave,int32_t padrao){
+  double n=js_num(j,NULL,chave,padrao);
+  return n>=INT32_MIN&&n<=INT32_MAX&&(double)(int32_t)n==n?(int32_t)n:padrao;
+}
+static uint32_t imdbNumero(const char *id){
+  char *fim;unsigned long n;
+  if(strncmp(id,"tt",2))return 0;
+  n=strtoul(id+2,&fim,10);return *fim||n>UINT32_MAX?0:(uint32_t)n;
+}
+// ponytail: um objeto de ate 16 KiB; se crescer, falha sem substituir o velho.
+typedef struct{FILE *f;MapaCab cab;char obj[16384];size_t n;int estado,prof,aspas,escape;}MapaFluxo;
+static int mapaObjeto(MapaFluxo *c){
+  const char *j=c->obj;char ids[2048]="",md[64]="",season[64]="",offset[64]="";
+  AnimeMapa v={0};v.mal=(uint32_t)mapaNumero(j,"mal_id",0);
+  if((int32_t)v.mal<=0)return 1;
+  js_bruto(j,NULL,"themoviedb_id",md,sizeof md);
+  v.tmdb=(uint32_t)mapaNumero(md,"tv",0);
+  js_bruto(j,NULL,"season",season,sizeof season);
+  js_bruto(j,NULL,"episode_offset",offset,sizeof offset);
+  v.t[0]=mapaNumero(season,"tvdb",-1);v.t[1]=mapaNumero(season,"tmdb",-1);
+  v.offset[0]=mapaNumero(offset,"tvdb",0);v.offset[1]=mapaNumero(offset,"tmdb",0);
+  if(js_tem(j,NULL,"imdb_id")&&!js_bruto(j,NULL,"imdb_id",ids,sizeof ids))return 0;
+  // Uma linha por IMDb; TMDB sem IMDb tambem vale. Duplicatas sao inofensivas.
+  const char *p=ids;int n=0;
+  while((p=strchr(p,'"'))){char id[24]="";if(p[1]!='"'&&!js_cadeia(p,id,sizeof id))return 0;
+    p=strchr(p+1,'"');if(!p)return 0;p++;
+    v.imdb=imdbNumero(id);if(!v.imdb)continue;
+    if(fwrite(&v,sizeof v,1,c->f)!=1)return 0;
+    c->cab.hash=mapaHash(c->cab.hash,&v,sizeof v);c->cab.n++;n++;
+  }
+  if(!n&&v.tmdb){v.imdb=0;if(fwrite(&v,sizeof v,1,c->f)!=1)return 0;
+    c->cab.hash=mapaHash(c->cab.hash,&v,sizeof v);c->cab.n++;}
+  return 1;
+}
+static int mapaReceber(const void *dados,size_t n,void *u){
+  MapaFluxo *c=u;const unsigned char *p=dados;
+  while(n--){int ch=*p++;
+    if(!c->prof){
+      if(isspace(ch))continue;
+      if(c->estado==0&&ch=='['){c->estado=1;continue;}
+      if((c->estado==1||c->estado==2)&&ch=='{'){c->prof=1;c->n=0;}
+      else if((c->estado==1||c->estado==3)&&ch==']'){c->estado=4;continue;}
+      else if(c->estado==3&&ch==','){c->estado=2;continue;}
+      else return 0;
+    }else if(c->aspas){if(c->escape)c->escape=0;else if(ch=='\\')c->escape=1;else if(ch=='"')c->aspas=0;}
+    else if(ch=='"')c->aspas=1;
+    else if(ch=='{')c->prof++;
+    else if(ch=='}')c->prof--;
+    if(!ch||c->n+1>=sizeof c->obj)return 0;
+    c->obj[c->n++]=(char)ch;
+    if(!c->prof){c->obj[c->n]=0;dados_fs_travar();int ok=mapaObjeto(c);dados_fs_liberar();if(!ok)return 0;c->estado=3;}
+  }
+  return 1;
+}
+// ponytail: consulta sequencial sem cache RAM; ordenar se o indice ficar lento.
+static int mapaLer(const char *arq,uint32_t imdb,long tmdb,int t,int ep,long *mal,int *melhor){
+  FILE *f=fopen(arq,"rb");MapaCab h;AnimeMapa v;uint32_t hash=2166136261u,n=0;
+  *mal=0;*melhor=-1;if(!f)return 0;
+  int ok=fread(&h,sizeof h,1,f)==1&&h.magic==0x31425246u;
+  while(ok&&fread(&v,sizeof v,1,f)==1){
+    hash=mapaHash(hash,&v,sizeof v);n++;
+    int col=tmdb>0?1:0;
+    if((tmdb>0?v.tmdb==(uint32_t)tmdb:imdb&&v.imdb==imdb)&&v.t[col]==t&&v.offset[col]>=0&&v.offset[col]<ep){
+      if(v.offset[col]>*melhor){*melhor=v.offset[col];*mal=v.mal;}
+      else if(v.offset[col]==*melhor&&*mal!=v.mal)*mal=0;
+    }
+  }
+  ok=ok&&!ferror(f)&&n==h.n&&hash==h.hash&&ftell(f)==(long)(sizeof h+(size_t)n*sizeof v);
+  fclose(f);if(!ok)*mal=0;return ok;
+}
+static int mapaBaixar(const char *arq){
+  char tmp[1024];MapaFluxo c={0};RedePedido q={0};RedeResposta r={0};int ok;
+  snprintf(tmp,sizeof tmp,"%s.tmp",arq);
+  dados_fs_travar();c.f=fopen(tmp,"wb");
+  if(!c.f){dados_fs_liberar();return 0;}
+  c.cab.magic=0x31425246u;c.cab.hash=2166136261u;
+  ok=fwrite(&c.cab,sizeof c.cab,1,c.f)==1;
+  dados_fs_liberar();
+  q.url=ANIME_LIST_URL;q.prazo_ms=30000;q.max_bytes=REDE_CORPO_MAXIMO;
+  q.receber_corpo=mapaReceber;q.corpo_usuario=&c;
+  if(ok)ok=rede_pedir(&q,&r)&&r.status==200&&c.estado==4&&c.cab.n>0;
+  rede_resposta_limpar(&r);
+  dados_fs_travar();
+  if(ok)ok=!fseek(c.f,0,SEEK_SET)&&fwrite(&c.cab,sizeof c.cab,1,c.f)==1;
+  if(fclose(c.f))ok=0;
+  if(ok)ok=!rename(tmp,arq);
+  if(!ok)remove(tmp);else dados_marcar_sujo(1);
+  dados_fs_liberar();return ok;
+}
+// QUANTAS DESCARGAS DO INDICE FALHARAM EM SEGUIDA (o arquivo retry guarda o
+// numero; vazio ou ilegivel = pelo menos uma) e onde grava a proxima contagem.
+// Arquivo ausente => 0 (nunca falhou).
+static int retryContar(const char *retry,struct stat *st){
+  FILE *f;char b[8];size_t r;int n;
+  if(stat(retry,st))return 0;
+  f=fopen(retry,"rb");if(!f)return 1;
+  r=fread(b,1,sizeof b-1,f);fclose(f);
+  b[r<sizeof b-1?r:sizeof b-2]=0;
+  n=atoi(b);
+  return n<1?1:n;
+}
+static void retryGravar(const char *retry,int tentativasAteAgora){
+  FILE *f=fopen(retry,"wb");
+  if(f){fprintf(f,"%d",tentativasAteAgora+1);fclose(f);}
+}
+static long malMapeado(const char *id,long tmdb,int t,int *ep){
+  char arq[1024],retry[1024];long mal=0;int melhor=-1;struct stat st;time_t agora=time(NULL);
+  const char *dir=dados_dir();if(!dir||!*dir)return 0;
+  snprintf(arq,sizeof arq,"%s/%s",dir,MAP_ARQ);
+  snprintf(retry,sizeof retry,"%s/anime-fribb.retry",dir);
+  pthread_mutex_lock(&mapTrava);
+  int valido=mapaLer(arq,imdbNumero(id),tmdb,t,*ep,&mal,&melhor);
+  // SEM indice util o retry e CURTO e cresce a cada falha (10 min, 1 h, 6 h):
+  // uma rede fora num dia nao vira uma semana sem intro. A semana inteira so
+  // existe para adiar a RENOVACAO de um indice que ja serve (utime abaixo).
+  if(!valido){
+    int tent=retryContar(retry,&st);
+    time_t prazo=tent>=3?6*60*60:tent==2?60*60:10*60;
+    if(tent>0&&st.st_mtime<=agora&&agora-st.st_mtime<prazo){
+      pthread_mutex_unlock(&mapTrava);return 0;
+    }
+  }
+  if(!valido||stat(arq,&st)||agora-st.st_mtime>=MAP_SEMANA||st.st_mtime>agora){
+    if(mapaBaixar(arq)){
+      dados_fs_travar();remove(retry);dados_fs_liberar();
+      mapaLer(arq,imdbNumero(id),tmdb,t,*ep,&mal,&melhor);
+    }
+    else if(valido){ // Mantem o indice velho e adia outra tentativa por uma semana.
+      dados_fs_travar();utime(arq,NULL);dados_marcar_sujo(1);dados_fs_liberar();
+    }else{
+      dados_fs_travar();
+      // Conta a falha no arquivo: 1 => 10 min, 2 => 1 h, 3+ => 6 h. O retry
+      // antigo era vazio (uma semana inteira sem tentar de novo).
+      retryGravar(retry,retryContar(retry,&st));
+      dados_marcar_sujo(1);dados_fs_liberar();
+    }
+  }
+  if(mal>0)*ep-=melhor;
+  pthread_mutex_unlock(&mapTrava);return mal;
+}
+
 // O PEDIDO, no molde do plugin oficial (tidb.plugin.js, fetchData):
 //   - tmdb_id quando o app sabe o id do TMDB E o par temporada/episodio do
 //     TMDB deste episodio (o TMDB confirmou o par, catalogo.h CatEp.tmdbE): sem
@@ -161,7 +332,7 @@ static long malDe(const char *id){
 //   - 200 = trechos; 204 (sem dados) e 404 (desconhecido) = zero trechos,
 //     guardados como "nao conhece"; qualquer outra resposta (5xx, rede) NAO e
 //     guardada como vazia e tenta de novo mais tarde.
-typedef struct{char id[24];long tmdb;int t,e;double durAnt,durProx,dur;unsigned g;}Pedido;
+typedef struct{char id[24];long tmdb;int t,e,anime;double durAnt,durProx,dur;unsigned g;}Pedido;
 
 void intro_montar_url(char *url,size_t n,const char *imdb,long tmdb,int t,int e,double durSeg){
   size_t k;
@@ -253,41 +424,66 @@ static int falhou,tentativas;static long falhouEm;
 // ANIME PRIMEIRO NO ANISKIP. Sem MAL, sem resposta ou sem trecho: segue para o
 // TheIntroDB quando ha imdb/tmdb para perguntar (item kitsu/mal costuma nao ter).
 static int pedirAniskip(const Pedido *p,IntroTrecho *v,int max,int *falha){
-  long mal;char url[256],*j=NULL;int st=0,n=0;
+  long mal;char url[256],*j=NULL;int st=0,n=0,ep=p->e;
   *falha=0;
-  if(strncmp(p->id,"kitsu:",6)&&strncmp(p->id,"mal:",4))return 0;
-  if(p->t>1||p->e<1)return 0;          // temporada > 1 nao e numeracao do MAL
-  mal=malDe(p->id);
-  if(mal<=0){printf("[intro] %s: sem id do MAL, AniSkip fora\n",p->id);fflush(stdout);return 0;}
-  intro_montar_url_aniskip(url,sizeof url,mal,p->e,p->dur);
+  if(ep<1)return 0;
+  if(!strncmp(p->id,"kitsu:",6)||!strncmp(p->id,"mal:",4)){
+    if(p->t>1)return 0; // id do addon ja e uma temporada MAL
+    mal=malDe(p->id);
+  }else{
+    if(!p->anime)return 0;
+#ifdef __EMSCRIPTEN__
+    // Fribb streams through rede_pedir on this worker. That reaches an
+    // EM_ASYNC_JS outside the deliberately narrow ASYNCIFY_ONLY list.
+    printf("[intro] Fribb mapping disabled on Tizen WGT: worker fetch is outside ASYNCIFY_ONLY\n");
+    fflush(stdout);
+    return 0;
+#else
+    mal=malMapeado(p->id,p->tmdb,p->t,&ep);
+#endif
+  }
+  if(mal<=0)return 0;
+  intro_montar_url_aniskip(url,sizeof url,mal,ep,p->dur);
   buscar(url,&j,&st);
   if(st>=200&&st<=299&&j)n=intro_extrair_aniskip(j,p->dur,v,max);
   else if(st!=404&&st!=204)*falha=1;
   free(j);
-  printf("[intro] aniskip mal %ld ep %d: http %d, %d trechos\n",mal,p->e,st,n);fflush(stdout);
   return n;
 }
 
 static void *baixar(void *u){
-  Pedido*p=u;char*j=NULL;IntroTrecho v[8];
-  int falhaAni=0,n=pedirAniskip(p,v,8,&falhaAni),r=R_VAZIO,temCred=0,vale,deAni=n>0;
+  Pedido*p=u;char*j=NULL;IntroTrecho v[8],limitados[8];
+  int caps=0,total=0,falhaAni=0,n=pedirAniskip(p,v,8,&falhaAni),r=R_VAZIO,temCred=0,vale,deAni=n>0;
+  int nl=0;
   int temIdOutro=p->tmdb>0||!strncmp(p->id,"tt",2);
-  if(n<=0&&temIdOutro){r=pedirEp(p,p->t,p->e,p->dur,&j);n=j?intro_extrair(j,v,8):0;}
+  if(n<=0&&temIdOutro){
+    r=pedirEp(p,p->t,p->e,p->dur,&j);
+    n=j?intro_extrair(j,v,8):0;
+    nl=j?creditosjson_extrair(j,limitados,8):0;
+  }
   else if(n<=0&&falhaAni)r=R_FALHA;
   else if(n>0)r=R_OK;
   if(n<0)n=0;
+  if(deAni)
+    for(int i=0;i<n&&nl<8;i++)
+      if(v[i].tipo==INTRO_CREDITOS&&v[i].fim>v[i].inicio)limitados[nl++]=v[i];
   free(j);
   for(int i=0;i<n;i++)if(v[i].tipo==INTRO_CREDITOS)temCred=1;
   pthread_mutex_lock(&trava);
   vale=p->g==geracao;
   if(vale){
     if(r==R_FALHA){falhou=1;falhouEm=(long)time(NULL);}
-    else{falhou=0;memcpy(trechos,v,(size_t)n*sizeof *v);nTrechos=n;trechosAni=deAni;}
-    fundirCapitulos();
+    else{
+      falhou=0;memcpy(trechos,v,(size_t)n*sizeof *v);nTrechos=n;trechosAni=deAni;
+      memcpy(creditosLimitados,limitados,(size_t)nl*sizeof *limitados);nCreditosLimitados=nl;
+    }
+    fundirCapitulos();caps=nCapTr;total=nTrechos;
   }
   pthread_mutex_unlock(&trava);
   if(vale&&r!=R_FALHA){
-    printf("[intro] %d marcadores (%s, dur %.0fs)\n",n,deAni?"aniskip":p->tmdb>0?"tmdb":"imdb",p->dur);fflush(stdout);
+    printf("[intro] %s S%02dE%02d: fonte=%s%s, %d marcadores, dur %.0fs\n",p->id,p->t,p->e,
+           caps?"capitulos":deAni?"AniSkip":n>0?"TheIntroDB":"nenhuma",
+           caps&&n>0?(deAni?" + AniSkip":" + TheIntroDB"):"",total,p->dur);fflush(stdout);
     if(!temCred&&temIdOutro)tentarVizinhos(p);
   }
   free(p);return NULL;
@@ -299,8 +495,9 @@ static void disparar(const Pedido *base,double dur,int novo){
   p=malloc(sizeof*p);if(!p)return;
   *p=*base;p->dur=dur;
   pthread_mutex_lock(&trava);
-  if(novo){nTrechos=0;trechosAni=0;nCapTr=0;refeitos=0;tentativas=0;}
+  if(novo){nTrechos=0;nCreditosLimitados=0;trechosAni=0;nCapTr=0;refeitos=0;tentativas=0;}
   falhou=0;
+  p->anime=animeDe(p->id,p->tmdb);
   p->g=++geracao;ultimo=*p;temUltimo=1;enviadoDur=dur;
   pthread_mutex_unlock(&trava);
   if(pthread_create(&fio,NULL,baixar,p)==0)pthread_detach(fio);else free(p);
@@ -348,10 +545,11 @@ void intro_definir_capitulos(const IntroTrecho *v,int n){
   nCapTr=0;
   for(int i=0;v&&i<n&&nCapTr<4;i++)capTr[nCapTr++]=v[i];
   fundirCapitulos();
+  if(nCapTr>0&&temUltimo){printf("[intro] %s S%02dE%02d: fonte=capitulos, %d marcadores\n",
+      ultimo.id,ultimo.t,ultimo.e,nTrechos);fflush(stdout);}
   pthread_mutex_unlock(&trava);
-  if(n>0){printf("[intro] %d trecho(s) vindos dos capitulos do arquivo\n",n);fflush(stdout);}
 }
-void intro_desligar(void){pthread_mutex_lock(&trava);geracao++;nTrechos=0;trechosAni=0;nCapTr=0;botaoVis=0;botaoIdx=-1;temUltimo=0;falhou=0;pthread_mutex_unlock(&trava);}
+void intro_desligar(void){pthread_mutex_lock(&trava);geracao++;nTrechos=nCreditosLimitados=0;trechosAni=0;nCapTr=0;botaoVis=0;botaoIdx=-1;temUltimo=0;falhou=0;pthread_mutex_unlock(&trava);}
 
 // DURACAO DA MIDIA E O TIPO (filme/serie), para recusar janelas absurdas.
 static double durMidia;static int ehFilme;
@@ -476,17 +674,42 @@ static double fimEmendado(int i){
   return f;
 }
 
-int intro_ativo(double pos,double*fim,int*tipo){
-  int ok=0;pthread_mutex_lock(&trava);
+// Chamar com a trava: manual e automatico compartilham a escolha/janela.
+static int ativoInterno(double pos,double*fim,int*tipo,int automatico){
+  int ok=0;
   for(int i=0;i<nTrechos;i++){
     // fim ZERO = ate o fim da midia: basta ter passado do inicio.
     int dentro=trechos[i].fim>0.0
                ? (pos>=trechos[i].inicio&&pos<trechos[i].fim)
                : (pos>=trechos[i].inicio);
     if(trechos[i].tipo==INTRO_PREVIA)continue;   // sem botao proprio (CHAVES)
-    if(dentro&&valido(i)){if(fim)*fim=fimEmendado(i);if(tipo)*tipo=trechos[i].tipo;ok=1;break;}
+    if(dentro&&valido(i)){
+      double f=fimEmendado(i);
+      if(automatico&&trechos[i].tipo==INTRO_CREDITOS){
+        int explicito=0;
+        autoSincronizar();
+        if(autoRecuou&&autoDe>=trechos[i].inicio&&autoAte<trechos[i].fim)continue;
+        // Capitulos do proprio arquivo continuam tendo prioridade (#329).
+        // Rede: inicio e fim numericos deste titulo, nunca vizinho/estimativa.
+        for(int k=0;k<nCapTr;k++)
+          if(capTr[k].tipo==INTRO_CREDITOS&&capTr[k].inicio==trechos[i].inicio&&
+             capTr[k].fim==trechos[i].fim&&capTr[k].fim>capTr[k].inicio)explicito=1;
+        for(int k=0;k<nCreditosLimitados;k++)
+          if(creditosLimitados[k].inicio==trechos[i].inicio&&
+             creditosLimitados[k].fim==trechos[i].fim)explicito=1;
+        if(!explicito)continue;
+        f=trechos[i].fim; // nao pula a previa/cena depois dos creditos
+      }
+      if(fim)*fim=f;if(tipo)*tipo=trechos[i].tipo;ok=1;break;
+    }
   }
-  pthread_mutex_unlock(&trava);return ok;
+  return ok;
+}
+int intro_ativo(double pos,double*fim,int*tipo){
+  int ok;pthread_mutex_lock(&trava);ok=ativoInterno(pos,fim,tipo,0);pthread_mutex_unlock(&trava);return ok;
+}
+int intro_auto_ativo(double pos,double*fim,int*tipo){
+  int ok;pthread_mutex_lock(&trava);ok=ativoInterno(pos,fim,tipo,1);pthread_mutex_unlock(&trava);return ok;
 }
 
 // O BOTAO DE PULAR, com tempo: aparece sozinho UMA vez por trecho, some em
@@ -548,10 +771,78 @@ int intro_trechos(IntroTrecho *saida,int max){
   if(n>0)memcpy(saida,trechos,(size_t)n*sizeof *saida);
   pthread_mutex_unlock(&trava);return n;
 }
+// So limites numericos explicitos da resposta DESTE titulo. Marcadores abertos,
+// vizinhos e estimativas continuam disponiveis apenas pelo caminho manual.
+int intro_creditos_limitados(IntroTrecho *saida,int max){
+  int n;if(!saida||max<1)return 0;pthread_mutex_lock(&trava);
+  n=0;
+  for(int i=0;i<nCreditosLimitados&&n<max;i++){
+    IntroTrecho v=creditosLimitados[i];
+    if(intro_janela_ok(v.tipo,v.inicio,v.fim,durMidia,ehFilme,NULL))saida[n++]=v;
+  }
+  pthread_mutex_unlock(&trava);return n;
+}
 #ifdef NV_SHOT_HOOKS
 void intro_shot_definir(const IntroTrecho *v,int n){
   pthread_mutex_lock(&trava);geracao++;
+  nCreditosLimitados=0;
   nTrechos=n<8?n:8;if(nTrechos>0)memcpy(trechos,v,(size_t)nTrechos*sizeof *v);
   pthread_mutex_unlock(&trava);
 }
 #endif
+
+void intro_registrar_tmdb(const char *id,long tmdb,const char *json){
+  char lang[8]="";int animacao=0,jp=0,i,refaz=0;Pedido b;
+  const char *p;
+  if(!id||!json)return;
+  js_texto_raiz(json,"original_language",lang,sizeof lang);jp=!strcmp(lang,"ja");
+  for(p=js_array(json,NULL,"genres");p;p=js_prox(js_fim(p)))
+    if(js_num(p,js_fim(p),"id",0)==16)animacao=1;
+  char paises[256]="";
+  js_bruto(json,NULL,"origin_country",paises,sizeof paises);
+  if(strstr(paises,"\"JP\""))jp=1;
+  for(p=js_array(json,NULL,"production_countries");p;p=js_prox(js_fim(p))){
+    char pais[8]="";js_texto(p,js_fim(p),"iso_3166_1",pais,sizeof pais);
+    if(!strcmp(pais,"JP"))jp=1;
+  }
+  pthread_mutex_lock(&trava);
+  for(i=0;i<16;i++)if(!strcmp(animeCache[i].id,id))break;
+  if(i==16){i=animeProx;animeProx=(animeProx+1)%16;}
+  snprintf(animeCache[i].id,sizeof animeCache[i].id,"%s",id);
+  animeCache[i].tmdb=tmdb;animeCache[i].anime=animacao&&jp;
+  // A ficha pode chegar depois de o player abrir: refaz UMA vez ao saber anime.
+  if(temUltimo&&!ultimo.anime&&animacao&&jp&&
+      (!strcmp(ultimo.id,id)||(tmdb>0&&ultimo.tmdb==tmdb))){b=ultimo;refaz=1;}
+  pthread_mutex_unlock(&trava);
+  if(refaz)disparar(&b,b.dur,0);
+}
+
+// #329/#331: quais trechos ja foram pulados sozinhos NESTA reproducao (a geracao muda a cada
+// pedido de marcadores, ou seja a cada abertura). Voltar de proposito para dentro do trecho,
+// ou para antes dele, nao pula de novo — vale para os tres tipos, e um nao apaga o outro.
+void intro_auto_recuar(double de,double para){
+  if(!isfinite(de)||!isfinite(para)||para>=de)return;
+  pthread_mutex_lock(&trava);autoSincronizar();
+  if(!autoRecuou||de>autoDe)autoDe=de;
+  if(!autoRecuou||para<autoAte)autoAte=para;
+  autoRecuou=1;pthread_mutex_unlock(&trava);
+}
+int intro_auto_ja(int tipo,double fim){
+  int r;if(tipo<1||tipo>3)return 1;
+  pthread_mutex_lock(&trava);autoSincronizar();r=autoFim[tipo]==fim;pthread_mutex_unlock(&trava);return r;
+}
+void intro_auto_marcar(int tipo,double fim){
+  if(tipo<1||tipo>3)return;
+  pthread_mutex_lock(&trava);autoSincronizar();autoFim[tipo]=fim;pthread_mutex_unlock(&trava);
+}
+
+// Abertura/resumo: com o ajuste ligado e fim conhecido. Creditos: so com o ajuste proprio E
+// com INICIO e FIM explicitos do marcador (TheIntroDB; fim 0 = "ate o fim da midia" nunca
+// vale). Estimativa, os 50 s finais, o aprendido e o episodio vizinho nem passam por aqui: so
+// trecho de intro_ativo chega. Creditos que vao ate o fim da midia (fim a menos de 5 s da
+// duracao, ou duracao desconhecida) tambem nao: quem os trata e o proximo episodio.
+int intro_auto_pular(int tipo,double fim,double dur,int pularAbertura,int pularResumo,int pularCreditos){
+  if(!(fim>0.0))return 0;
+  if(tipo==INTRO_CREDITOS)return pularCreditos&&dur>0.0&&fim<=dur-5.0;
+  return (tipo==INTRO_ABERTURA&&pularAbertura)||(tipo==INTRO_RESUMO&&pularResumo);
+}

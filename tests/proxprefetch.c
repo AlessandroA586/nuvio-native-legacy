@@ -34,6 +34,8 @@ void player_episodio_atual(int *t, int *e) { *t = atualT; *e = atualE; }
 int player_velocidade_efetiva(void) { return velocidade; }
 void player_aprender_creditos(void) {}
 int ajustes_fonte_preparar(void) { return preparar; }
+int ajustes_proximo_auto(void) { return 1; }
+int ajustes_proximo_contagem(void) { return 5; }
 double video_creditos(void) { return credito; }
 // A regra temporal real e exercitada tambem em tests/posplay.sh.
 int player_janela_proximo(double antecedencia) {

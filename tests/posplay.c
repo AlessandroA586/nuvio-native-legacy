@@ -10,6 +10,8 @@
 #include "ajustes.h"
 #include "vistoep.h"
 #include "intro.h"
+#include "descoberta.h"
+#include "extras.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -118,6 +120,15 @@ int main(void) {
   assert(!posplay_visivel() && !posplay_pediu_episodio(&t, &e));
   puts("ok  Baixo devolve o player sem pedir episodio");
 
+  // Owner #256: factory default waits for OK, even at the end.
+  assert(!ajustes_proximo_auto() && ajustes_proximo_contagem() == 5);
+  posplay_fechar();
+  aquecer(3600.0, 1);
+  posplay_atualizar(0.016f, 1000, 3597.0, 3600.0, 1, 0, 1);
+  posplay_atualizar(0.016f, 10000, 3600.0, 3600.0, 1, 0, 1);
+  assert(posplay_visivel() && !posplay_pediu_episodio(&t, &e));
+  ajustes_shot_valor("proximoAutoLocal", 0); // Enable for countdown cases below.
+
   // 4b. 2.0.3, SAMSUNG: A LEGENDA SEGUE O CARTAO. Ela subia por ofertaProximo()
   //     (a JANELA, verdadeira ate o fim do episodio) e ficava no meio da tela
   //     depois de o cartao sumir. Agora sobe so com o cartao NA TELA e volta no
@@ -161,6 +172,40 @@ int main(void) {
   assert(!posplay_visivel());
   assert(posplay_pediu_episodio(&t, &e) && t == 5 && e == 4);
   puts("ok  a contagem final toca o proximo sozinha");
+
+  // Recuar durante a contagem cancela sem tirar o cartao manual. Mesmo um
+  // recuo que continua na janela final nao pode rearmar o relogio antigo.
+  posplay_fechar();
+  aquecer(3600.0, 1);
+  posplay_atualizar(0.016f, 1000, 3597.0, 3600.0, 1, 0, 1);
+  posplay_recuar();
+  posplay_atualizar(0.016f, 6000, 3596.0, 3600.0, 1, 0, 1);
+  posplay_atualizar(0.016f, 11000, 3600.0, 3600.0, 1, 0, 1);
+  assert(posplay_visivel() && !posplay_pediu_episodio(&t, &e));
+  puts("ok  recuo cancela a contagem e nao a rearma na mesma janela");
+
+  // Sair da janela libera uma nova passagem pelo fim, e outro titulo tambem.
+  posplay_atualizar(0.016f, 12000, 3000.0, 3600.0, 1, 0, 0);
+  posplay_atualizar(0.016f, 13000, 3597.0, 3600.0, 1, 0, 1);
+  posplay_atualizar(0.016f, 16100, 3600.0, 3600.0, 1, 0, 1);
+  assert(posplay_pediu_episodio(&t, &e) && t == 5 && e == 4);
+  posplay_fechar();
+  aquecer(3600.0, 1);
+  posplay_atualizar(0.016f, 1000, 3597.0, 3600.0, 1, 0, 1);
+  posplay_atualizar(0.016f, 4100, 3600.0, 3600.0, 1, 0, 1);
+  assert(!posplay_visivel());
+
+  // O roteador pode ainda nao ter consumido o pedido automatico. Recuar
+  // cancela esse pedido ja enfileirado e devolve a escolha manual no cartao.
+  posplay_recuar();
+  assert(!posplay_pediu_episodio(&t, &e) && posplay_visivel());
+  posplay_atualizar(0.016f, 10000, 3598.0, 3600.0, 1, 0, 1);
+  assert(!posplay_pediu_episodio(&t, &e));
+  assert(tecla(SDLK_RETURN) == 1);
+  posplay_recuar();                    // pedido explicito nao e automatico
+  assert(posplay_pediu_episodio(&t, &e) && t == 5 && e == 4);
+  assert(!posplay_pediu_episodio(&t, &e));
+  puts("ok  recuo cancela Next automatico pendente e preserva o OK manual");
 
   // 6. FORA DA JANELA nao arma contagem nenhuma.
   posplay_fechar();
@@ -304,6 +349,39 @@ int main(void) {
     } }
   puts("ok  #115: marcador de creditos no comeco do filme e recusado");
 
+  // Filme: a cena mantem o cartao compacto sobre o video, nunca os cartazes
+  // que recuam a imagem. OK continua o filme, sem abrir outro titulo.
+  { CatItem filme = {0};
+    const char *titulos[] = {"Relacionado"}, *anos[] = {"2026"}, *posters[] = {""};
+    snprintf(filme.imdb, sizeof filme.imdb, "tt0000100");
+    snprintf(filme.tipo, sizeof filme.tipo, "movie");
+    filme.posCreditos = 1;
+    cat_definir(&filme, 1);
+    extras_shot_relacionados(titulos, anos, posters, 1);
+    posplay_fechar();
+    aquecer(7200, 0);
+    posplay_atualizar(.016f, 1000, 7100, 7200, 0, 0, 0);
+    assert(posplay_visivel() && posplay_sobre_video());
+    assert(posplay_teste_foco() == 0);
+    assert(tecla(SDLK_RETURN) == 1);
+    assert(!posplay_visivel() && posplay_pediu_titulo() < 0);
+    posplay_atualizar(.016f, 2000, 7150, 7200, 0, 0, 0);
+    assert(!posplay_visivel());
+    posplay_atualizar(.016f, 3000, 7200, 7200, 0, 0, 0);
+    assert(posplay_visivel() && !posplay_sobre_video());
+    assert(tecla(SDLK_RETURN) == 1 && posplay_pediu_titulo() == 0);
+    filme.posCreditos = 0;
+    cat_definir(&filme, 1);
+    posplay_fechar(); aquecer(7200, 0);
+    posplay_atualizar(.016f, 1000, 7100, 7200, 0, 0, 0);
+    assert(posplay_visivel() && !posplay_sobre_video());
+    assert(tecla(SDLK_RETURN) == 1 && posplay_pediu_titulo() == 0);
+    extras_shot_relacionados(titulos, anos, posters, 0);
+    cat_definir(&c, 1); cat_definir_episodios(0, eps, 10);
+    posplay_fechar();
+  }
+  puts("ok  filme com cena pos-creditos oferece continuar; sem sinal abre relacionado");
+
   // E a DURACAO PROVISORIA: se o pipeline informa 30 s no primeiro instante,
   // "video de 30 s aos 16 s" acima e verdade para a regra — quem segura e a
   // exigencia de duracao estavel. Um quadro com duracao nova nao decide nada,
@@ -426,6 +504,81 @@ int main(void) {
   }
   intro_shot_definir(NULL, 0);
   puts("ok  prefetch antecipa a janela real em 10 s, com e sem creditos");
+  // #331: a contagem do proximo episodio so adianta com marcador REAL de creditos.
+  assert(posplay_contagem(1000, 1000, 0, 120.0, 1, 1, 5) == 0);           // cartao acabou de subir
+  assert(posplay_contagem(4999, 1000, 0, 120.0, 1, 1, 5) == 0);           // ainda no atraso
+  assert(posplay_contagem(5000, 1000, 0, 120.0, 1, 1, 5) == 10000);       // marcador real: 5 s a partir de agora
+  assert(posplay_contagem(5000, 1000, 0, 120.0, 1, 0, 5) == 0);           // estimativa: nao adianta
+  assert(posplay_contagem(60000, 1000, 0, 100.0, 1, 0, 5) == 0);          // estimativa, cartao ha muito: ainda nao
+  assert(posplay_contagem(5500, 1000, 10000, 100.0, 1, 1, 5) == 10000);   // armado: nao se move
+  assert(posplay_contagem(5000, 1000, 0, 120.0, 0, 1, 5) == 0);           // autoplay desligado: nunca
+  assert(posplay_contagem(2000, 1000, 0, 3.0, 1, 0, 5) == 5000);          // estimativa, 3 s de episodio: so o fim
+  assert(posplay_contagem(2000, 1000, 0, -1.0, 1, 1, 5) == 2000);         // passou do fim: dispara ja
+  assert(posplay_contagem(5000, 1000, 0, 120, 1, 1, 12) == 17000);
+  assert(posplay_contagem(5000, 1000, 0, 120, 1, 1, 1) == 6000);
+  assert(posplay_contagem(5000, 1000, 17000, 100, 0, 1, 12) == 0);
+  assert(posplay_contagem(5000, 1000, 0, 3, 1, 1, 12) == 8000);
+  puts("ok  contagem do proximo episodio: atraso, 5 s, autoplay desligado");
+
+  // Cena apos os creditos: o cartao oferece continuar, mas nao troca o
+  // episodio enquanto a cena ainda roda. Sem sinal, a contagem antiga vale.
+  { CatItem u = *cat_item(0);
+    u.temporada = 5; u.episodio = 3;
+    u.posCreditos = desc_tmdb_pos_creditos("{\"keywords\":{\"keywords\":[{\"id\":179431,\"name\":\"aftercreditsstinger\"}]}}");
+    assert(u.posCreditos);
+    assert(desc_tmdb_pos_creditos("{\"keywords\":{\"keywords\":[{\"id\":179430,\"name\":\"duringcreditsstinger\"}]}}"));
+    assert(desc_tmdb_pos_creditos("{\"keywords\":{\"results\":[{\"id\":179431,\"name\":\"aftercreditsstinger\"}]}}"));
+    assert(!desc_tmdb_pos_creditos("{\"keywords\":null,\"results\":[{\"id\":179431}]}"));
+    assert(!desc_tmdb_pos_creditos("{\"keywords\":null,\"recommendations\":{\"results\":[{\"id\":179431}]}}"));
+    assert(!desc_tmdb_pos_creditos("{\"keywords\" : null , \"x\":{\"keywords\":[{\"id\":179430}]}}"));
+    assert(!desc_tmdb_pos_creditos("{\"keywords\":{\"keywords\":[{\"id\":1,\"name\":\"credits\"}]}}"));
+    cat_definir(&u, 1);
+    cat_definir_episodios(0, eps, 10);
+    posplay_fechar();
+    aquecer(3600.0, 1);
+    posplay_marcador_real(1);
+    posplay_atualizar(0.016f, 1000, 3450.0, 3600.0, 1, 0, 1);
+    assert(posplay_visivel() && posplay_sobre_video());
+    posplay_atualizar(0.016f, 12000, 3470.0, 3600.0, 1, 0, 1);
+    assert(posplay_visivel() && !posplay_pediu_episodio(&t, &e));
+    assert(tecla(SDLK_RETURN) == 1); // continuar assistindo, nao trocar
+    assert(!posplay_visivel() && !posplay_pediu_episodio(&t, &e));
+    posplay_atualizar(0.016f, 15000, 3480.0, 3600.0, 1, 0, 1);
+    assert(!posplay_visivel());
+    posplay_atualizar(0.016f, 16000, 3598.8, 3600.0, 1, 0, 1);   // pipeline para antes de 3600
+    assert(posplay_visivel() && !posplay_pediu_episodio(&t, &e)); // volta inteiro, conta o que resta
+    posplay_atualizar(0.016f, 17300, 3600.0, 3600.0, 1, 0, 1);
+    assert(!posplay_visivel() && posplay_pediu_episodio(&t, &e) && e == 4);
+    posplay_fechar();   // durante a cena a pessoa ainda pode ir ao proximo na mao
+    aquecer(3600.0, 1);
+    posplay_marcador_real(1);
+    posplay_atualizar(0.016f, 1000, 3450.0, 3600.0, 1, 0, 1);
+    assert(posplay_visivel() && posplay_teste_foco() == 0);
+    assert(tecla(SDLK_RIGHT) == 1 && posplay_teste_foco() == 1);
+    assert(tecla(SDLK_RETURN) == 1);
+    assert(!posplay_visivel() && posplay_pediu_episodio(&t, &e) && e == 4);
+    posplay_fechar();
+    { CatItem dup[2] = { u, u }, velha = u;   // marca chega depois, em todas as fileiras
+      dup[0].posCreditos = dup[1].posCreditos = 0;
+      cat_definir(dup, 2);
+      cat_marcar_pos_creditos(u.imdb, 1);
+      assert(cat_item(0)->posCreditos && cat_item(1)->posCreditos);
+      velha.posCreditos = 0;
+      cat_atualizar_item(1, &velha);
+      cat_atualizar_item_sem_abas(0, &velha);
+      assert(cat_item(0)->posCreditos && cat_item(1)->posCreditos); }
+    u.posCreditos = 0;
+    cat_definir(&u, 1);
+    cat_definir_episodios(0, eps, 10);
+    posplay_marcador_real(1);
+    aquecer(3600.0, 1);
+    posplay_atualizar(0.016f, 1000, 3450.0, 3600.0, 1, 0, 1);
+    posplay_atualizar(0.016f, 12000, 3470.0, 3600.0, 1, 0, 1);
+    posplay_atualizar(0.016f, 18000, 3490.0, 3600.0, 1, 0, 1);
+    assert(!posplay_visivel() && posplay_pediu_episodio(&t, &e) && e == 4);
+    assert(player_regra_concluiu(3450.0, 3600.0, 3450.0)); // visto segue nos creditos
+  }
+  puts("ok  cena pos-creditos espera o fim; sem sinal avanca; visto permanece nos creditos");
 
   puts("posplay: tudo ok");
   return 0;

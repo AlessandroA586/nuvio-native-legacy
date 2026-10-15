@@ -67,6 +67,7 @@ static _Atomic uint64_t livreAtual;
 static _Atomic int livreFalha;
 static _Atomic int criados, destruidos, escreveuSemPasta;
 static _Atomic int vivos;   // motores falsos vivos
+static _Atomic uint64_t janelaRecebida;   // #334: config.janela do ultimo criar
 
 static void agendar(Falso *f, unsigned emMs, const P2pmEvento *ev) {
   pthread_mutex_lock(&f->t);
@@ -107,6 +108,7 @@ static int fCriar(const P2pmConfig *c, void **m) {
   // O teto mole tem de vir do orcamento: nunca mais que 1/4 do livre.
   assert(c->disco <= atomic_load(&livreAtual) / 4);
   assert(c->ram == (uint64_t)P2PM_RAM_MB << 20);
+  atomic_store(&janelaRecebida, c->janela);
   f = calloc(1, sizeof *f);
   pthread_mutex_init(&f->t, NULL);
   snprintf(f->cache, sizeof f->cache, "%s", c->cache);
@@ -497,7 +499,9 @@ int main(void) {
   assert(r == P2P_OK);
   { uint64_t tam = 0, teto = 0, livre = 0;
     p2pmotor_arquivo_atual(&tam, &teto, &livre);
-    assert(tam == 2000000000ull && teto == (uint64_t)P2PM_DURO_MAX_MB << 20 && livre == 8ull << 30); }
+    assert(tam == 2000000000ull && teto == (uint64_t)P2PM_DURO_MAX_MB << 20 && livre == 8ull << 30);
+    // a janela que o motor recebeu e a do teto duro
+    assert(atomic_load(&janelaRecebida) == p2pmotor_janela(teto)); }
   // limpar com o motor de pe: nao mexe na pasta (quem esta ai cuida dela)
   p2pmotor_limpar_sobra();
   assert(existe(RAIZ));

@@ -1,5 +1,6 @@
 // tests/proxyts.sh: o proxy de TS da Live TV contra o servidor falso.
 #include "../src/proxyts.c"
+#include "streams.h"
 #include <assert.h>
 static int falhas;
 #define OK(c, m) do { if (c) printf("ok  %s\n", m); else { printf("FALHOU %s\n", m); falhas++; } } while (0)
@@ -73,7 +74,13 @@ int main(void) {
     f = popen(cmd, "r"); if (f) { fgets(r, sizeof r, f); pclose(f); }
     OK(!strncmp(r, "302", 3) && proxyts_redirecionou(), "sem cabecalho: 302 e redirecionou=1"); }
   // com o Referer do addon: playlist (apos o 302) e segmentos relativos viram TS continuo
-  proxyts_definir_cabecalhos("Referer: https://addon.example/\nUser-Agent: Teste/1");
+  { Stream *s = NULL;
+    assert(stream_extrair("{\"streams\":[{\"url\":\"http://127.0.0.1:8765/addon/r\","
+      "\"behaviorHints\":{\"notWebReady\":true,\"proxyHeaders\":{\"request\":{"
+      "\"Referer\":\"https://addon.example/\",\"Origin\":\"https://addon.example\","
+      "\"User-Agent\":\"Teste/1\"}}}}]}", "Bsweb TV", &s) == 1);
+    proxyts_definir_cabecalhos(s[0].cabecalhos);
+    free(s); }
   assert(proxyts_url("http://127.0.0.1:8765/addon/r", url, sizeof url));
   OK(!proxyts_redirecionou(), "sessao nova zera o redirecionou");
   n = baixar(url, 6, &b, cab, sizeof cab);

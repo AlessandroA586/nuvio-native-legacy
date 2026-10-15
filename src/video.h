@@ -44,6 +44,16 @@ int  video_tocar_posicao(const char *url, double segundos);
 // sobre a duracao do container ANTES do primeiro quadro; mesmo ack/estado.
 int  video_tocar_retomada(const char *url, double segundos, double pct);
 int  video_retomada_inicial_estado(void);
+// Fonte preparada na pagina do titulo: player pausado, sem imagem, audio ou
+// eventos da sessao de reproducao. Token identifica o dono; zero cancela todos.
+int  video_precarregar(const char *url, const char *cabecalhos, double segundos,
+                      double pct, int buffer, int cacheMb, unsigned token, const char *idiomaAudio);
+int  video_precarregar_proximo(const char *url, const char *cabecalhos, double segundos,
+                              double pct, int buffer, int cacheMb, unsigned token, const char *idiomaAudio);
+// 0 ausente, 1 preparando, 2 pronto, -1 falhou. Nao muda video_pronto().
+int  video_precarregar_estado(unsigned token);
+void video_precarregar_cancelar(unsigned token);
+void video_precarregar_adotar(unsigned token);
 #endif
 
 // Chamar UMA VEZ POR QUADRO. Hoje serve ao prazo do recuo de Dolby Vision
@@ -131,6 +141,8 @@ void video_definir_dv(int dv);
 //   gst-launch-1.0 souphttpsrc location=<url> ! fakesink            -> Forbidden
 //   ... extra-headers="headers,Referer=(string)\"<ref>\"" ! fakesink -> baixa
 void video_definir_cabecalhos(const char *cabs);
+// Os cabecalhos em uso (mesmas linhas). "" quando nenhum ou sem suporte.
+const char *video_cabecalhos(void);
 
 // A fonte e MP4? Chamar ANTES de video_tocar, junto com video_definir_dv.
 //
@@ -161,6 +173,7 @@ int    video_pausa_confirmada(void);
 int    video_pronto(void);   // 1 depois do loadCompleted
 #ifdef NV_ANDROID
 int    video_superficie_estavel(void);   // 1 depois da ultima recriacao da Surface (HDR/DV)
+int    video_quadro_visto(void);   // 1 depois do primeiro quadro desenhado (antes do "pronto")
 #endif
 int    video_ativo(void);    // 1 assim que ha mediaId — e o que abre o furo
 int    video_falhou(void);   // 1 depois de um errorText real na fonte atual
@@ -258,6 +271,37 @@ int    video_recorte_fonte_trailer(void);   // so o trailer: o ajuste em execuca
 static inline int video_recorte_fonte_trailer(void) { return video_recorte_fonte(); }
 #endif
 
+// --- ESTATISTICAS AO VIVO (estatvivo.h) ---------------------------------------
+// O que a PLATAFORMA mede da reproducao atual, sem estimativa nenhuma: cada
+// alvo preenche so o que o pipeline dele de fato informa e deixa o resto em -1
+// (ou host vazio). A estimativa, quando ha, e de estatvivo.c, nunca daqui.
+//   webOS    bufferSeg (bufferRange do uMS menos a posicao); nada de bytes,
+//            conexoes nem quadros: o uMS nao conta.
+//   Android  bytes (lidos do socket em ParaleloDataSource.kt), bufferSeg
+//            (bufferedPosition do ExoPlayer), conexoes abertas e o host final,
+//            tempo do 1o byte e quadros perdidos (AnalyticsListener).
+//   Samsung  bufferPct (onbufferingprogress do AVPlay / evento 7 do host .tpk):
+//            so porcentagem, nunca segundos; nada de bytes nem quadros.
+typedef struct {
+  long long bytes;          // corpo lido desde a abertura; -1 = nao conta
+  double bufferSeg;         // segundos de video baixados a frente; < 0 = nao sabe
+  double bufferAlvoSeg;     // o que o player tenta manter; 0 = nao diz
+  int bufferPct;            // 0..100; -1 = nao informa
+  int conexoes;             // abertas agora para o video; -1 = nao sabe
+  int primeiroByteMs;       // do pedido ao 1o byte do ultimo trecho; -1
+  long long quadrosPerdidos, quadros;   // -1 = o decodificador nao conta
+  char host[96];            // host publico (sem caminho) do link FINAL; "" = nao sabe
+} VideoStats;
+static inline void video_stats_vazio(VideoStats *s) {
+  s->bytes = -1; s->bufferSeg = -1.0; s->bufferAlvoSeg = 0.0; s->bufferPct = -1;
+  s->conexoes = -1; s->primeiroByteMs = -1; s->quadrosPerdidos = s->quadros = -1;
+  s->host[0] = 0;
+}
+void video_estatisticas(VideoStats *s);
+#if defined(__APPLE__) || defined(NV_LINUX_DESKTOP)
+void video_simular_estatisticas(const VideoStats *s);   // capturas; NULL zera
+#endif
+
 // --- faixas -----------------------------------------------------------------
 // Tudo isto sai do evento sourceInfo da assinatura do uMS: o addon nao informa
 // nada disso, e so o pipeline sabe o que ha DENTRO do arquivo.
@@ -285,6 +329,9 @@ typedef struct {
   int canais;        // original audio channels, 0 unknown
   int stream_index;  // source demux index for DTS sessions, -1 in native webOS
   int stream_id;     // original container track ID, -1 when unknown
+  // Nome ORIGINAL da legenda, quando o container/player informa. Separado do
+  // rotulo para a folha mostra-lo abaixo do idioma sem mudar a memoria da faixa.
+  char nome[128];
 } VideoFaixa;
 
 int  video_n_audio(void);

@@ -5,6 +5,7 @@
 #include "legsync.h"
 #include "legenda2.h"
 #include "autosync.h"
+#include "legref.h"
 #include "rede.h"
 #include <assert.h>
 #include <math.h>
@@ -272,10 +273,37 @@ static void regressaoTcl(int caso) {
   legsync_destruir(); printf("TCL regressão %d: ok\n", caso);
 }
 
+// Prova-troca: externa correta, mas a margem da janela deixa so 18 falas.
+static LegendaDocumento *janelaLocal(const char *url, uint64_t sessao, const int *excl, int nExcl) {
+  (void)url; (void)excl; (void)nExcl;
+  long n; char *texto = arquivo("emb.srt", &n); assert(texto);
+  LegendaDocumentoInfo info = { .sessao = sessao, .flags = LEGENDA_DOC_COMPLETO | LEGENDA_DOC_JANELA,
+    .janelaInicio = 0, .janelaFim = 120, .identidade = "mkv-track:5" };
+  LegendaDocumento *todo = legenda_documento_bytes(texto, n, &info); free(texto); assert(todo);
+  int total, k = 0; const LegendaCue *v = legenda_documento_dados(todo, &total);
+  LegendaCue rec[120]; assert(total <= 120);
+  for (int i = 0; i < total; i++) if (v[i].fim <= 120) rec[k++] = v[i];
+  assert(k == 20);
+  LegendaDocumento *d = legenda_documento_de_cues(rec, k, &info);
+  legenda_documento_liberar(todo); return d;
+}
+
 int main(int argc, char **argv) {
   LegSyncVisao v; int casos = 0;
   DIR = argc > 1 ? argv[1] : "/tmp/nv-legref-fx";
   legsync_teste_leitor(lerMkv, NULL);
+  if (getenv("AUTOSYNC_PGS")) {
+    const char *pgs = "local:/pgs.mkv";
+    legsync_ui_ligar(); legsync_auto_habilitar(1); legsync_audio_habilitar(0);
+    legsync_iniciar(pgs); legsync_primaria_externa("ext://0/ext_mais2500.srt", "pt", "Teste");
+    v = esperarAuto(pgs, 3);
+    const char *texto = prov.estado(0, prov.u);
+    assert(texto && !strcmp(texto, "Sem legenda de texto neste arquivo para usar como refer\xc3\xaancia"));
+    char manual[200]; legsync_texto(&v, manual, sizeof manual); assert(!strcmp(manual, texto));
+    assert(legsync_offset_ms(320) == 320 && trocas == 0);
+    puts("PASS: so PGS, sem audio, motivo curto na linha de sync e no modo manual");
+    legsync_destruir(); return 0;
+  }
   if (getenv("TCL_CASO")) { regressaoTcl(atoi(getenv("TCL_CASO"))); return 0; }
   legsync_teste_auto(0);   // as secoes 1..11 testam as ACOES manuais; o automatico e a secao 12
 
@@ -504,19 +532,49 @@ int main(int argc, char **argv) {
     v = legsync_visao(0); assert(v.fase == LEGSYNC_DESFEITA && legsync_offset_ms(0) == 0 && trocas == 0);
 
     // 12b. A escolhida (ruim) nao fecha: troca para outra do mesmo idioma que sincroniza.
-    legsync_iniciar(MKV); trocas = 0; cand[0] = "ext_ruim2.srt"; cand[1] = "ext_mais2500.srt"; nCand = 2;
+    legsync_iniciar(MKV); trocas = 0; cand[0] = "ext_mais2500.srt"; nCand = 1;
     legsync_primaria_externa("ext://0/ext_ruim.srt", "pt", "Ruim");
     v = esperarAuto(MKV, 2);
     assert(v.autoTrocou && !strcmp(v.autoNome, "Prov-ext_mais2500.srt") && abs(v.offsetAutoMs - 2500) <= 25);
-    assert(trocas == 2 && strstr(prov.estado(0, prov.u), "Prov-ext_mais2500.srt"));
+    assert(trocas == 1 && strstr(prov.estado(0, prov.u), "Prov-ext_mais2500.srt"));
 
-    // 12c. Nenhuma sincroniza: volta a escolha original, nada alterado, estado honesto.
-    legsync_iniciar(MKV); trocas = 0; voltou = 0; cand[0] = "ext_ruim2.srt"; nCand = 1;
+    // 12c. Regra da legenda piscando (C9, 12/10): UMA troca por episodio e a
+    //      que entrou fica, mesmo sem sincronizar (nada de voltar e piscar).
+    legsync_iniciar(MKV); trocas = 0; voltou = 0; cand[0] = "ext_ruim2.srt"; cand[1] = "ext_mais2500.srt"; nCand = 2;
     legsync_primaria_externa("ext://0/ext_ruim.srt", "pt", "Ruim");
     v = esperarAuto(MKV, 3);
-    assert(voltou == 1 && !v.autoTrocou && legsync_offset_ms(0) == 0);
+    for (int k = 0; k < 200; k++) passo(MKV, 0);
+    v = legsync_visao(0);
+    assert(trocas == 1 && voltou == 0 && v.autoFase == 3 && v.autoTrocou && legsync_offset_ms(0) == 0);
     assert(!strcmp(prov.estado(0, prov.u), "N\xc3\xa3o deu para sincronizar"));
     assert(prov.acoes(0, rot, 8, prov.u) == 0);
+
+    // 12c2. Candidata com menos da metade das falas da original: volta a original.
+    { char c[700]; FILE *f; snprintf(c, sizeof c, "%s/ext_curta.srt", DIR); f = fopen(c, "wb"); assert(f);
+      for (int i = 1; i <= 20; i++) fprintf(f, "%d\n00:00:%02d,000 --> 00:00:%02d,500\nCurta %d\n\n", i, i * 2, i * 2, i);
+      fclose(f); }
+    legsync_iniciar(MKV); trocas = 0; voltou = 0; cand[0] = "ext_curta.srt"; nCand = 1;
+    legsync_primaria_externa("ext://0/ext_ruim.srt", "pt", "Ruim");
+    v = esperarAuto(MKV, 3);
+    assert(trocas == 1 && voltou == 1 && !v.autoTrocou && legsync_offset_ms(0) == 0);
+
+    // 12c3. Legenda que nao abre (incompleta/ilegivel): fica a da tela, sem trocar.
+    { char c[700]; FILE *f; snprintf(c, sizeof c, "%s/ext_lixo.srt", DIR); f = fopen(c, "wb"); assert(f);
+      fputs("isto nao e legenda\n", f); fclose(f); }
+    legsync_iniciar(MKV); trocas = 0; voltou = 0; cand[0] = "ext_mais2500.srt"; nCand = 1;
+    legsync_primaria_externa("ext://0/ext_lixo.srt", "pt", "Lixo");
+    v = esperarAuto(MKV, 3);
+    assert(trocas == 0 && voltou == 0);
+
+    // 12c4. Buffer curto (rede lenta, C9 12/10: 2-12 s a frente) pausa a leitura
+    //       por mais que o teto: pausa nao e "sem progresso", o plano nao desiste.
+    legsync_iniciar(MKV); trocas = 0; nCand = 0;
+    legsync_primaria_externa("ext://0/ext_mais2500.srt", "pt", "Boa");
+    for (int k = 0; k < (int)(LS_AUTO_TETO_TESTE / 50u) + 400; k++) {
+      agora += 50; legsync_passo(MKV, 30.0, 5.0, 0, agora); usleep(100);
+      assert(legsync_visao(0).autoFase != 3);
+    }
+    v = esperarAuto(MKV, 2);
 
     // 12d. Arquivo sem referencia (sem faixa de texto): nao ha como julgar, nao troca nada.
     legsync_iniciar(MKV3); trocas = 0; cand[0] = "ext_mais2500.srt"; nCand = 1;
@@ -599,6 +657,17 @@ int main(int argc, char **argv) {
       legsync_encerrar(); }
     casos++; }
   legsync_teste_auto(0); legsync_definir_trocador(NULL);
+
+  // Janela insuficiente nao julga a externa correta nem autoriza troca.
+  legref_fonte_local(janelaLocal); legsync_teste_auto(1);
+  legsync_audio_habilitar(0); legsync_iniciar(MKV); trocas = 0; voltou = 0;
+  legsync_definir_trocador(trocadorTeste); cand[0] = "ext_menos1200.srt"; nCand = 1;
+  legsync_primaria_externa("ext://0/emb.srt", "pt", "Correta");
+  v = esperarAuto(MKV, 3);
+  printf("janela insuficiente: trocas=%d fase=%d manual=%d\n", trocas, v.autoFase, legsync_offset_ms(320));
+  assert(trocas == 0 && voltou == 0 && !v.autoTrocou && v.fase == LEGSYNC_RECUSADA);
+  assert(v.offsetAutoMs == 0 && legsync_offset_ms(320) == 320);
+  legsync_encerrar(); legref_fonte_local(NULL); legsync_definir_trocador(NULL); legsync_teste_auto(0); casos++;
 
   // 13. SEGUNDA LEGENDA (slot 1, 2.1): a mesma engine contra a mesma faixa
   //     embutida, sozinha, mesmo com a principal embutida. Offset puro vai

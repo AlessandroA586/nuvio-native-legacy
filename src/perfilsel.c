@@ -58,14 +58,18 @@
 #define PS_ILHA_H        68.0f
 #define PS_ILHA_PAD      30.0f
 #define PS_ARTE_H       648.0f   // faixa da arte de fundo do perfil focado
-// CARTAO "CONTINUAR" sob o perfil em foco (2.0, variante B): a peca da ilha
-// (material vidro/solido, mini capa, trilho) com o ultimo item da pessoa.
-#define PS_CONT_W      860.0f
-#define PS_CONT_H      200.0f
-#define PS_CONT_RAIO    36.0f
-#define PS_CONT_CAPA_W 108.0f
-#define PS_CONT_CAPA_H 156.0f
-#define PS_CONT_Y_MAX  800.0f   // topo, com o avatar no teto; abaixo disso sobe com o avatar
+// "CONTINUAR" SOB CADA AVATAR (2.0.3, variante D2 aprovada pelo dono): um bloco
+// pequeno sob o nome — capa 2:3 a esquerda, titulo e "T2 · E5 · 23 min" a
+// direita, um fio de 2 px de progresso — apagado fora do foco. Os avatares
+// continuam sendo o protagonista; nada de cartao/material por baixo.
+#define PS_CONT_CAPA_W  62.0f
+#define PS_CONT_CAPA_H  93.0f
+#define PS_CONT_CAPA_RAIO 6.0f
+#define PS_CONT_GAP     12.0f   // capa -> texto
+#define PS_CONT_NOME_GAP 22.0f  // base do nome -> topo do bloco
+#define PS_CONT_FIO      2.0f
+#define PS_CONT_TEXTO_MAX 300.0f
+#define PS_CONT_APAGADO  0.50f  // opacidade sem foco
 #define PS_HALO_N            3   // poucos aneis suaves, sem efeito de alvo
 #define PS_HALO_ATE      0.66f   // quanto o ultimo anel passa do avatar
 #define PS_HALO_ALFA     0.040f
@@ -112,8 +116,7 @@ static int muralN;
 typedef struct {
   int tem;
   PerfilCont c;
-  char meta[128];      // "T2E4 · nome do episodio", ja traduzido
-  char restante[64];   // "34 min restantes"
+  char meta[96];       // "T2 · E5 · 23 min" / "Filme · 47 min", ja traduzido
   GLuint tex;          // so e consultada no update
 } PSCont;
 static PSCont contCard[CONTA_PERFIL_MAX];
@@ -163,13 +166,30 @@ static int concluido, sair, repetir;
 // a tela fica de pe com o indicador girando no cartao escolhido enquanto app.c
 // monta a home nova por tras. Ver perfilsel_preparar.
 static int preparando;
+static int pinDe = -1;
+#ifdef NV_TOUCH_UI
+static float psToqueX, psToqueMaximo, psToquePasso;
+static int psToqueLivre;
+static GfxRect psToqueRegiao;
+static int psToqueRolar(const PonteiroRolagem *e) {
+  if (e->fase == PONT_ROL_INICIO) {
+    if (e->eixoY || preparando || pinDe >= 0 || psToqueMaximo <= 0.0f || e->x < psToqueRegiao.x || e->x >= psToqueRegiao.x + psToqueRegiao.w || e->y < psToqueRegiao.y || e->y >= psToqueRegiao.y + psToqueRegiao.h) return 0;
+    psToqueLivre = 1; return 1;
+  }
+  if (e->fase == PONT_ROL_MOVER || e->fase == PONT_ROL_INERCIA) {
+    float antes = psToqueX;
+    psToqueX = anim_clamp(psToqueX - e->delta, 0.0f, psToqueMaximo);
+    return fabsf(psToqueX - antes) > 0.001f;
+  }
+  return 1;
+}
+#endif
 static Uint32 preparandoDesde;
 static float animFoco[CONTA_PERFIL_MAX];
 static float animEntrada;        // 0..1: a tela sobe e aparece uma vez so
 static float animPin;            // 0..1: o veu e o teclado do PIN
 
 // Estado do PIN: -1 = nenhum perfil pedindo PIN.
-static int pinDe = -1;
 static char pin[PS_PIN_MAX + 1];
 static int pinFoco;              // indice na grade 3x4; ver PS_PIN_*
 static int pinErrado, pinRede;
@@ -562,21 +582,16 @@ static void montarCena(PSCena *c, int reduzida) {
   c->parado = pinDe >= 0;
 }
 
-// --- CARTAO CONTINUAR (2.0, variante B) --------------------------------------
+// --- CONTINUAR SOB O AVATAR (2.0.3, variante D2) -----------------------------
 static void contMontar(PSCont *k) {
   const PerfilCont *c = &k->c;
-  k->meta[0] = 0;
-  if (c->serie && c->t > 0 && c->e > 0) {
-    snprintf(k->meta, sizeof k->meta, i18n("T%dE%d"), c->t, c->e);
-    if (c->epNome[0]) {
-      size_t n = strlen(k->meta);
-      snprintf(k->meta + n, sizeof k->meta - n, " \xc2\xb7 %s", c->epNome);
-    }
-  }
-  if (c->restanteMin >= 60 && c->restanteMin % 60)
-    snprintf(k->restante, sizeof k->restante, i18n("%dh %dmin Restantes"),
-             c->restanteMin / 60, c->restanteMin % 60);
-  else snprintf(k->restante, sizeof k->restante, i18n("%d min restantes"), c->restanteMin);
+  char tempo[32];
+  int mi = c->restanteMin < 1 ? 1 : c->restanteMin;
+  if (mi >= 60) snprintf(tempo, sizeof tempo, i18n("%d h %02d"), mi / 60, mi % 60);
+  else snprintf(tempo, sizeof tempo, i18n("%d min"), mi);
+  if (c->serie && c->t > 0 && c->e > 0)
+    snprintf(k->meta, sizeof k->meta, i18n("T%d \xc2\xb7 E%d \xc2\xb7 %s"), c->t, c->e, tempo);
+  else snprintf(k->meta, sizeof k->meta, i18n("Filme \xc2\xb7 %s"), tempo);
 }
 
 static void contAtualizar(void) {
@@ -595,58 +610,66 @@ static void contAtualizar(void) {
     contN = m;
     contQuer = quer;
   }
-  // O pedido de textura fica aqui (o desenho so le GLuint), e so para quem esta
-  // aparecendo ou sumindo.
+  // O pedido de textura fica aqui (o desenho so le GLuint). Agora todo perfil
+  // com item mostra a capa (apagada), e o cartaz vem do mesmo tex_cache.
   for (i = 0; i < m && i < CONTA_PERFIL_MAX; i++)
-    contCard[i].tex = contCard[i].tem && contCard[i].c.poster[0] && animFoco[i] > 0.02f
-      ? tex_obter_larg(contCard[i].c.poster, PS_CONT_CAPA_W) : 0;
+    contCard[i].tex = contCard[i].tem && contCard[i].c.poster[0]
+      ? tex_obter_larg(contCard[i].c.poster, 108.0f) : 0;
 }
 
-static void contDesenhar(int i, float cx, float yTopo, float f, float a) {
+// Altura do bloco, para o alvo de toque.
+static float contAltura(void) { return PS_CONT_CAPA_H; }
+
+// Desenha o bloco do perfil i centrado em cx, com o topo em yTopo. `f` e o foco
+// (0..1): apagado a PS_CONT_APAGADO sem foco, cheio com foco. `larg` e a largura
+// da coluna do perfil (diametro + vao), o teto do texto.
+static void contDesenhar(int i, float cx, float yTopo, float f, float a, float larg,
+                         int nada) {
   const PSCont *k = &contCard[i];
-  GfxRect r;
-  float af = (f > 1.0f ? 1.0f : f) * a, x, avail, yc, cr, cg, cb;
-  TxtLinha meta, tit, rest;
-  if (!k->tem || af < 0.01f) return;
-  r.w = PS_CONT_W; r.h = PS_CONT_H;
-  r.x = cx - r.w * 0.5f;
-  if (r.x < 40.0f) r.x = 40.0f;
-  if (r.x + r.w > NV_TELA_W - 40.0f) r.x = NV_TELA_W - 40.0f - r.w;
-  r.y = yTopo + (1.0f - (f > 1.0f ? 1.0f : f)) * 14.0f;   // sobe ao entrar no foco
-  plrui_material(r, PS_CONT_RAIO, 0, af);
-  // CARTAO GRANDE (dono, 05/10: "a informacao do que foi visto maior e mais
-  // bonita"): capa de 108x156, "Continuar assistindo" no destaque, o titulo em
-  // letra de titulo, episodio embaixo e a barra na largura toda com o tempo
-  // que falta. Era uma tira de 96 de altura com capa de 44.
-  yc = r.y + r.h * 0.5f;
-  { GfxRect capa = { r.x + 20.0f, yc - PS_CONT_CAPA_H * 0.5f, PS_CONT_CAPA_W, PS_CONT_CAPA_H };
+  float af = a * (PS_CONT_APAGADO + (1.0f - PS_CONT_APAGADO) * (f > 1.0f ? 1.0f : f));
+  float avail, tw, bw, x, y;
+  TxtLinha tit, meta;
+  if (af < 0.01f) return;
+  if (!k->tem) {
+    if (nada) {
+      TxtLinha l = txt_linha(TXT_CAPTION, "Nada a continuar", 160, 163, 174, 255);
+      txt_desenhar_alpha(l, cx - (float)l.w * 0.5f,
+                         yTopo + (PS_CONT_CAPA_H - (float)l.h) * 0.5f, af);
+    }
+    return;
+  }
+  avail = larg - PS_CONT_CAPA_W - PS_CONT_GAP - 12.0f;
+  if (avail > PS_CONT_TEXTO_MAX) avail = PS_CONT_TEXTO_MAX;
+  if (avail < 110.0f) avail = 110.0f;
+  tit = txt_linha_corta(TXT_ILHA_NOME, k->c.titulo, 244, 245, 248, 255, avail);
+  meta = txt_linha_corta(TXT_CAPTION, k->meta, 190, 193, 202, 255, avail);
+  tw = (float)(tit.w > meta.w ? tit.w : meta.w);
+  if (tw < 96.0f) tw = 96.0f;
+  bw = PS_CONT_CAPA_W + PS_CONT_GAP + tw;
+  x = cx - bw * 0.5f;
+  { GfxRect capa = { x, yTopo, PS_CONT_CAPA_W, PS_CONT_CAPA_H };
+    GfxRect sombra = { x - 14.0f, yTopo - 6.0f, PS_CONT_CAPA_W + 28.0f, PS_CONT_CAPA_H + 28.0f };
+    gfx_rect(sombra, 0, GFX_SOMBRA, 1.0f, 0, 0, 0.5f, 0, 0, 0, 0.55f * af);
     if (k->tex) {
       gfx_tex_aspect_atual = tex_aspecto(k->c.poster);
       gfx_card_forcar_cover_atual = 1.0f;
-      gfx_rect(capa, k->tex, GFX_CARD, 0.0f, 0.0f, 0.0f, 14.0f / PS_CONT_CAPA_H, 0, 0, 0, af);
+      gfx_rect(capa, k->tex, GFX_CARD, 0.0f, 0.0f, 0.0f, PS_CONT_CAPA_RAIO / PS_CONT_CAPA_H,
+               0, 0, 0, af);
       gfx_card_forcar_cover_atual = 0.0f;
       gfx_tex_aspect_atual = 0.0f;
-    } else gfx_cor(capa, 14.0f / PS_CONT_CAPA_H, NV_COR_ESQUELETO_R, NV_COR_ESQUELETO_G,
-                   NV_COR_ESQUELETO_B, af); }
-  x = r.x + 20.0f + PS_CONT_CAPA_W + 28.0f;
-  avail = r.x + r.w - 34.0f - x;
-  ajustes_acento_marca(&cr, &cg, &cb);
-  { TxtLinha kick = txt_linha_corta(TXT_CAPTION2, "Continuar assistindo",
-                                    (int)(cr * 255.0f), (int)(cg * 255.0f), (int)(cb * 255.0f), 255, avail);
-    float y = r.y + 26.0f;
-    txt_desenhar_alpha(kick, x, y, af);
-    y += (float)kick.h + 6.0f;
-    tit = txt_linha_corta(TXT_TITULO3, k->c.titulo, 244, 245, 248, 255, avail);
-    txt_desenhar_alpha(tit, x, y, af);
-    y += (float)tit.h + 2.0f;
-    meta = k->meta[0] ? txt_linha_corta(TXT_CALLOUT, k->meta, 190, 193, 202, 255, avail) : (TxtLinha){ 0 };
-    if (meta.w) txt_desenhar_alpha(meta, x, y, af); }
-  rest = txt_linha_corta(TXT_CAPTION2, k->restante, 200, 203, 212, 255, avail * 0.5f);
-  ajustes_acento(&cr, &cg, &cb);
-  { float pr = k->c.progresso > 1.0f ? 1.0f : k->c.progresso;
-    float ty = r.y + r.h - 30.0f, tw = avail - (rest.w ? (float)rest.w + 18.0f : 0.0f);
-    plrui_trilho((GfxRect){ x, ty - 3.0f, tw, 6.0f }, pr, cr, cg, cb, af);
-    if (rest.w) txt_desenhar_alpha(rest, x + tw + 18.0f, ty - (float)rest.h * 0.5f, af); }
+    } else gfx_cor(capa, PS_CONT_CAPA_RAIO / PS_CONT_CAPA_H, NV_COR_ESQUELETO_R,
+                   NV_COR_ESQUELETO_G, NV_COR_ESQUELETO_B, af); }
+  x += PS_CONT_CAPA_W + PS_CONT_GAP;
+  // Texto centrado na vertical da capa, o fio logo abaixo da meta.
+  y = yTopo + (PS_CONT_CAPA_H - ((float)tit.h + 4.0f + (float)meta.h + 12.0f + PS_CONT_FIO)) * 0.5f;
+  txt_desenhar_alpha(tit, x, y, af);
+  y += (float)tit.h + 4.0f;
+  txt_desenhar_alpha(meta, x, y, af);
+  y += (float)meta.h + 12.0f;
+  { float pr = k->c.progresso > 1.0f ? 1.0f : (k->c.progresso < 0.0f ? 0.0f : k->c.progresso);
+    gfx_cor((GfxRect){ x, y, tw, PS_CONT_FIO }, 0.5f, 1, 1, 1, 0.22f * af);
+    if (pr > 0.0f)
+      gfx_cor((GfxRect){ x, y, tw * pr, PS_CONT_FIO }, 0.5f, 1, 1, 1, 0.95f * af); }
 }
 
 // --- AMBIENTE DO PERFIL (2.0, variante A) ------------------------------------
@@ -770,6 +793,9 @@ static float ambDesenhar(float a) {
 
 void perfilsel_iniciar(void) {
   int i;
+#ifdef NV_TOUCH_UI
+  psToqueX = 0.0f; psToqueLivre = 0;
+#endif
   concluido = sair = repetir = 0;
   preparando = 0;
   pinDe = -1;
@@ -907,7 +933,12 @@ static void eventoPin(SDL_Keycode k) {
 
 static void perfilFocar(int slot, int indice) {
   const ContaPerfil *p = perfis_item(slot);
-  if (!preparando && pinDe < 0 && p && p->indice == indice) foco = slot;
+  if (!preparando && pinDe < 0 && p && p->indice == indice) {
+#ifdef NV_TOUCH_UI
+    psToqueLivre = 0;
+#endif
+    foco = slot;
+  }
 }
 static void perfilAtivar(int slot, int indice) {
   const ContaPerfil *p = perfis_item(slot);
@@ -931,6 +962,13 @@ void perfilsel_evento(const SDL_Event *e) {
   SDL_Keycode k;
   int m = perfis_n();
   if (e->type != SDL_KEYDOWN) return;
+#ifdef NV_TOUCH_UI
+  if (psToqueLivre && psToquePasso > 0.0f && m > 0) {
+    foco = (int)((psToqueX + (NV_TELA_W - 2.0f * NV_MARGEM_X) * 0.35f) / psToquePasso);
+    if (foco >= m) foco = m - 1;
+  }
+  psToqueLivre = 0;
+#endif
   // A escolha ja foi feita: tecla nenhuma muda o cartao enquanto a home do
   // perfil e preparada. O teto de tempo em app.c garante que isto acaba.
   if (preparando) return;
@@ -1230,6 +1268,16 @@ static void desenhaFundo(void) {
   gfx_cor(tela, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 }
 
+static TxtLinha pinTitulo(const char *nome) {
+  char t[128];
+  snprintf(t, sizeof t, i18n("PIN de %s"), nome && nome[0] ? nome : i18n("perfil"));
+#ifdef NV_TOUCH_UI
+  return txt_linha_corta(TXT_TITULO3, t, 255, 255, 255, 255, fmaxf(1.0f, NV_TELA_W - 96.0f));
+#else
+  return txt_linha(TXT_TITULO3, t, 255, 255, 255, 255);
+#endif
+}
+
 static void desenhaPin(void) {
   static const char *ROT[PS_TECLA_COLS * PS_TECLA_LINS] =
     { "1","2","3", "4","5","6", "7","8","9", "","0","←" };
@@ -1254,10 +1302,7 @@ static void desenhaPin(void) {
   { GfxRect av = { (NV_TELA_W - 132.0f) * 0.5f, 176.0f, 132.0f, 132.0f };
     disco(av, p, 1.0f, a, 1); }
 
-  { char t[128];
-    TxtLinha l;
-    snprintf(t, sizeof t, i18n("PIN de %s"), p->nome[0] ? p->nome : i18n("perfil"));
-    l = txt_linha(TXT_TITULO3, t, 255, 255, 255, 255);
+  { TxtLinha l = pinTitulo(p->nome);
     txt_desenhar_alpha(l, (NV_TELA_W - l.w) * 0.5f, 344.0f, a); }
 
   // Pontos, nunca os digitos: alguem passando na sala nao precisa ler o PIN.
@@ -1384,6 +1429,21 @@ void perfilsel_desenhar(Uint32 agora) {
   vao = vaoDe(m, d);
   largura = (float)m * d + (float)(m - 1) * vao;
   x = (NV_TELA_W - largura) * 0.5f;
+#ifdef NV_TOUCH_UI
+  psToqueMaximo = fmaxf(0.0f, largura - (NV_TELA_W - 2.0f * NV_MARGEM_X));
+  psToquePasso = d + vao;
+  psToqueX = anim_clamp(psToqueX, 0.0f, psToqueMaximo);
+  if (psToqueMaximo > 0.0f) {
+    if (!psToqueLivre) {
+      float esq = foco * psToquePasso, dir = esq + d, util = NV_TELA_W - 2.0f * NV_MARGEM_X;
+      if (dir - psToqueX > util) psToqueX = dir - util;
+      if (esq - psToqueX < 0.0f) psToqueX = esq;
+    }
+    x = NV_MARGEM_X - psToqueX;
+    psToqueRegiao = (GfxRect){NV_MARGEM_X, PS_FILA_Y - 40.0f, NV_TELA_W - 2.0f * NV_MARGEM_X, 560.0f};
+    if (!preparando && pinDe < 0) ponteiro_rolagem(psToqueRolar);
+  }
+#endif
 
   for (i = 0; i < m; i++) {
     const ContaPerfil *p = perfis_item(i);
@@ -1418,7 +1478,7 @@ void perfilsel_desenhar(Uint32 agora) {
                            c, c, c + 6 > 255 ? 255 : c + 6, 255, d + vao * 0.9f);
     if (!preparando && pinDe < 0)
       ponteiro_alvo(av.x, av.y, av.w,
-                    av.h + PS_NOME_GAP + (float)nome.h + PS_SELO_GAP + 32.0f,
+                    av.h + PS_NOME_GAP + (float)nome.h + PS_CONT_NOME_GAP + contAltura(),
                     perfilFocar, perfilAtivar, i, p->indice);
     sombra = txt_linha_corta(d >= 230.0f ? TXT_TITULO3 : TXT_HEADLINE, p->nome,
                              0, 0, 0, 220, d + vao * 0.9f);
@@ -1441,11 +1501,13 @@ void perfilsel_desenhar(Uint32 agora) {
       gfx_cor(pilula, NV_RAIO_PILL, 1.0f, 1.0f, 1.0f, (0.10f + 0.10f * f) * a);
       txt_desenhar_alpha(sel, pilula.x + 16.0f, pilula.y + 5.0f, a);
     }
-    // O cartao so existe para perfil sem PIN (perfilcont_de), e some quando o
-    // teclado do PIN ou o "preparando" estao na tela.
-    if (!preparando && pinDe < 0 && f > 0.02f) {
-      float cy = PS_FILA_Y + d + PS_NOME_GAP + 44.0f + 28.0f - NV_FOCO_LIFT * f * 0.5f;
-      contDesenhar(i, px + d * 0.5f, (cy > PS_CONT_Y_MAX ? PS_CONT_Y_MAX : cy) + subida, f, a);
+    // O bloco "continuar" so existe para perfil sem PIN (perfilcont_de: o que
+    // alguem viu e conteudo do perfil). "Nada a continuar" so quando o ajuste
+    // esta ligado e o perfil e aberto.
+    if (!preparando && pinDe < 0 && contQuer) {
+      float cy = y + d + PS_NOME_GAP + (float)nome.h + PS_CONT_NOME_GAP
+                 - NV_FOCO_LIFT * f * 0.5f;
+      contDesenhar(i, px + d * 0.5f, cy, f, a, d + vao, !p->temPin);
     }
   }
 

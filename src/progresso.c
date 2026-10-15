@@ -98,19 +98,21 @@ static int lerLinhaAntiga(const char *linha, ProgRegistro *r) {
   r->lastWatchedMs = 0;
   r->pendente = 1;        // nunca foi empurrado com a chave certa
   r->perfil = perfis_ativo();
+  r->tocou = -1;
   return 1;
 }
 
-// Linha do formato NOVO (10 colunas, tab):
-// perfil chave contentId tipo temp ep posSeg durSeg lastMs pendente
+// Linha do formato NOVO (10 colunas, tab, mais `tocou` desde a #205):
+// perfil chave contentId tipo temp ep posSeg durSeg lastMs pendente [tocou]
 static int lerLinhaNova(const char *linha, ProgRegistro *r) {
   int n;
   memset(r, 0, sizeof *r);
-  n = sscanf(linha, "%d\t%47s\t%23s\t%7s\t%d\t%d\t%lf\t%lf\t%lld\t%d",
+  n = sscanf(linha, "%d\t%47s\t%23s\t%7s\t%d\t%d\t%lf\t%lf\t%lld\t%d\t%d",
              &r->perfil, r->chave, r->contentId, r->tipo,
              &r->temporada, &r->episodio, &r->posSeg, &r->durSeg,
-             &r->lastWatchedMs, &r->pendente);
-  if (n != 10 || !r->chave[0] || !r->contentId[0] ||
+             &r->lastWatchedMs, &r->pendente, &r->tocou);
+  if (n != 11 || r->tocou < -1 || r->tocou > 1) r->tocou = -1;
+  if (n < 10 || !r->chave[0] || !r->contentId[0] ||
       !temposValidos(r->posSeg, r->durSeg)) return 0;
   if (r->posSeg < 0) r->posSeg = 0;
   return 1;
@@ -158,10 +160,10 @@ static int gravar(void) {
   for (i = 0; i < nRegs; i++) {
     const ProgRegistro *r = &regs[i];
     size_t livre = tam - (size_t)(p - buf);
-    escrito = snprintf(p, livre, "%d\t%s\t%s\t%s\t%d\t%d\t%.0f\t%.0f\t%lld\t%d\n",
+    escrito = snprintf(p, livre, "%d\t%s\t%s\t%s\t%d\t%d\t%.0f\t%.0f\t%lld\t%d\t%d\n",
                  r->perfil, r->chave, r->contentId, r->tipo,
                  r->temporada, r->episodio, r->posSeg, r->durSeg,
-                 r->lastWatchedMs, r->pendente ? 1 : 0);
+                 r->lastWatchedMs, r->pendente ? 1 : 0, r->tocou);
     if (escrito < 0 || (size_t)escrito >= livre) { free(buf); return 0; }
     p += escrito;
   }
@@ -226,6 +228,10 @@ int prog_ler(ProgRegistro *saida, int max) {
 static int removidoVenceDe(int perfil, const char *imdb, long long instanteMs);
 
 int prog_continuar_de_perfil(int perfil, int pctConcluido, ProgRegistro *saida) {
+  return prog_continuar_de_perfil_min(perfil, 1, pctConcluido, saida);
+}
+
+int prog_continuar_de_perfil_min(int perfil, int pctMinimo, int pctConcluido, ProgRegistro *saida) {
   int i, melhor = -1;
   if (!saida) return 0;
   TRANCAR();
@@ -235,7 +241,7 @@ int prog_continuar_de_perfil(int perfil, int pctConcluido, ProgRegistro *saida) 
     double p;
     if (r->perfil != perfil || r->durSeg < 60.0) continue;
     p = r->posSeg / r->durSeg;
-    if (p < 0.01 || p * 100.0 >= pctConcluido) continue;
+    if (p * 100.0 < (double)pctMinimo || p * 100.0 >= pctConcluido) continue;
     if (removidoVenceDe(perfil, r->contentId, r->lastWatchedMs)) continue;
     if (melhor < 0 || maisNovoPrimeiro(r, &regs[melhor]) < 0) melhor = i;
   }
@@ -269,7 +275,7 @@ int prog_pendentes(ProgRegistro *saida, int max) {
 // ------------------------------------------------------------ escrita
 
 int prog_gravar_local(const char *imdb, int temporada, int episodio,
-                      double posSeg, double durSeg) {
+                      double posSeg, double durSeg, int tocou) {
   ProgRegistro r;
   int i, ok;
   if (!imdb || !*imdb || !temposValidos(posSeg, durSeg)) return 0;
@@ -288,6 +294,7 @@ int prog_gravar_local(const char *imdb, int temporada, int episodio,
   r.durSeg = durSeg;
   r.lastWatchedMs = prog_agora_ms();
   r.pendente = 1;
+  r.tocou = tocou;
   TRANCAR();
   carregar();
   i = achar(r.perfil, r.chave);
@@ -315,6 +322,10 @@ int prog_aplicar_remoto(const ProgRegistro *rem) {
   TRANCAR();
   carregar();
   i = achar(r.perfil, r.chave);
+  // `tocou` nao viaja: posicao de outro aparelho e desconhecida (-1), salvo o
+  // eco do proprio push (mesma posicao e duracao, updated_at mais novo).
+  r.tocou = i >= 0 && fabs(r.posSeg - regs[i].posSeg) <= 5.0 &&
+            fabs(r.durSeg - regs[i].durSeg) < 1.0 ? regs[i].tocou : -1;
   if (i >= 0) {
     if (regs[i].pendente || r.lastWatchedMs <= regs[i].lastWatchedMs) { DESTRANCAR(); return 0; }
   } else {
@@ -326,6 +337,14 @@ int prog_aplicar_remoto(const ProgRegistro *rem) {
   gravar();
   DESTRANCAR();
   return 1;
+}
+
+int prog_tocou(const char *imdb) {
+  char chave[48];
+  ProgRegistro r;
+  if (!imdb || !*imdb) return -1;
+  prog_chave(chave, sizeof chave, imdb, 0, 0);
+  return prog_por_chave(chave, &r) ? r.tocou : -1;
 }
 
 void prog_confirmar_empurrados(const ProgRegistro *enviados, int n) {

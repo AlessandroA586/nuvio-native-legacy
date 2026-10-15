@@ -4,11 +4,29 @@
 #include "dados.h"
 #include "js.h"
 #include "jsw.h"
+#include "perfisessao.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <pthread.h>
+
+// Isolated session fixtures may omit the profile producer; complete apps
+// always link it. Token boundaries invalidate ownership without UI callbacks.
+#if defined(__APPLE__) && (defined(__GNUC__) || defined(__clang__))
+extern void perfis_invalidar_sessao(void) __attribute__((weak_import));
+#elif defined(__GNUC__) || defined(__clang__)
+extern void perfis_invalidar_sessao(void) __attribute__((weak));
+#else
+#include "perfis.h"
+#endif
+static void invalidarPerfil(void) {
+  if (perfis_invalidar_sessao) perfis_invalidar_sessao();
+}
+static void identidadePerfilTravar(void) {
+  uint64_t geracao;
+  do { geracao = nv_perfil_sessao_ler(); } while (!nv_perfil_sessao_travar(geracao));
+}
 
 #define ARQ_SESSAO "sessao.txt"
 // MEDIDO: a propria resposta do start traz `poll_interval_seconds` (3 no
@@ -30,7 +48,8 @@
 //  - tokTrava NUNCA fica presa durante rede (nuvem_post/nuvem_tabela). Quem vai
 //    falar com o servidor copia o token para um buffer local e solta.
 //  - Ordem de travas: tokTrava -> dadosTrava (gravarSessao/dados_apagar sob
-//    tokTrava). Nenhum outro modulo e chamado com ela presa; e dados.c nunca
+//    tokTrava). A mudanca de identidade tambem toma a trava de publicacao
+//    do perfil; seus consumidores nao chamam sessao_* com ela presa. dados.c nunca
 //    chama de volta aqui. Quem segura trava de outro modulo pode chamar
 //    sessao_* (tokTrava e folha), mas nao o contrario.
 //  - Renovacao e de UM fio so por vez (renovando + tokCond): ver renovarToken.
@@ -111,7 +130,12 @@ static void lerJwt(const char *token) {
     js_texto(payload, fim, "sub", s, sizeof s);
     exp = (long)js_num(payload, fim, "exp", 0);
   }
-  if (strcmp(sub, s)) snprintf(sub, sizeof sub, "%s", s);
+  if (strcmp(sub, s)) {
+    identidadePerfilTravar();
+    invalidarPerfil();
+    snprintf(sub, sizeof sub, "%s", s);
+    nv_perfil_sessao_destravar();
+  }
   expiraEm = exp;
 }
 
@@ -128,13 +152,14 @@ static int jwtValido(const char *t) {
 }
 
 // Folga de 30s, igual a do web: um token que vence durante a requisicao volta
-// como 401 e custa a viagem inteira.
+// como 401 e custa a viagem inteira. O Worker (sessao_token_copiar) usa 60s.
 // tokTrava presa.
-static int vencido(void) {
+static int vencidoEm(long folga) {
   if (!acesso[0]) return 1;
   if (!expiraEm) return 0;   // sem exp legivel, so o servidor pode dizer
-  return expiraEm <= (long)time(NULL) + 30;
+  return expiraEm <= (long)time(NULL) + folga;
 }
+static int vencido(void) { return vencidoEm(30); }
 
 // FALHA DO SERVIDOR, e nao da pessoa (#215): sem resposta, 429 ou 5xx. Nesses
 // casos nada que a TV tem e invalido — o token, o refresh token, o codigo — e
@@ -173,9 +198,12 @@ static void gravarSessao(void) {
 
 // tokTrava presa.
 static void limpar(void) {
+  int mudou = acesso[0] || renovar[0] || sub[0];
+  if (mudou) { identidadePerfilTravar(); invalidarPerfil(); }
   acesso[0] = renovar[0] = sub[0] = 0;
   anonima = 0;
   expiraEm = 0;
+  if (mudou) nv_perfil_sessao_destravar();
 }
 
 // ---------------------------------------------------------------- respostas
@@ -265,10 +293,11 @@ static void apagar(volatile char *p, size_t n) { while (n--) *p++ = 0; }
 //     resultado DELE: dez fios com 401 no mesmo segundo fazem UMA renovacao, e
 //     com o servidor em 504 fazem UM pedido, nao dez.
 //   - So o fio que renova vai a rede, e sem tokTrava presa.
+// Sem `visto`, renova so se o token vence em `folga` segundos ou menos.
 // 1 = renovado (por este fio ou por outro); 0 = recusado de verdade (sessao
 // encerrada); -1 = o servidor nao respondeu: a sessao FICA, e a proxima
 // chamada tenta de novo. *stOut recebe o HTTP da renovacao que decidiu.
-static int renovarToken(const char *visto, int *stOut) {
+static int renovarToken(const char *visto, long folga, int *stOut) {
   Jsw w;
   char *resp;
   char r[TOKMAX], a2[TOKMAX], r2[TOKMAX];
@@ -276,7 +305,7 @@ static int renovarToken(const char *visto, int *stOut) {
   *stOut = 0;
   pthread_mutex_lock(&tokTrava);
   for (;;) {
-    if (visto ? (acesso[0] && strcmp(acesso, visto)) : (acesso[0] && !vencido())) {
+    if (visto ? (acesso[0] && strcmp(acesso, visto)) : (acesso[0] && !vencidoEm(folga))) {
       pthread_mutex_unlock(&tokTrava);
       return 1;
     }
@@ -372,7 +401,7 @@ static char *pedir(int tabela, const char *a1, const char *a2, int *status) {
   pthread_mutex_unlock(&tokTrava);
   if (precisa) {
     int stR;
-    if (renovarToken(NULL, &stR) < 0) { if (status) *status = stR; return NULL; }
+    if (renovarToken(NULL, 30, &stR) < 0) { if (status) *status = stR; return NULL; }
   }
   copiarAcesso(tok, sizeof tok);
   resp = tabela ? nuvem_tabela(a1, a2, tok, &st) : nuvem_post(a1, a2, tok, &st);
@@ -382,7 +411,7 @@ static char *pedir(int tabela, const char *a1, const char *a2, int *status) {
   if (st == 401 && temR) {
     int rr, stR;
     free(resp);
-    rr = renovarToken(tok, &stR);
+    rr = renovarToken(tok, 30, &stR);
     if (rr <= 0) { if (status) *status = rr < 0 ? stR : 401; return NULL; }
     copiarAcesso(tok, sizeof tok);
     resp = tabela ? nuvem_tabela(a1, a2, tok, &st) : nuvem_post(a1, a2, tok, &st);
@@ -737,14 +766,44 @@ const char *sessao_erro(void)     { return erro; }
 // reescreve o texto (ver lerJwt).
 const char *sessao_usuario(void)  { return sub; }
 // "" para sessao anonima de proposito — ver a nota em sessao.h.
+// Quem chama e um fio de trabalho (recomenda, avisos, atividade) e pode estar
+// na rede: a renovacao roda AQUI, no fio de quem pediu, sem tokTrava presa.
+// Nunca chamar com trava de outro modulo presa (ver a regra de ordem la em cima).
 int sessao_token_copiar(char *dst, size_t n) {
-  int tem;
+  int tem, precisa, st = 0;
   if (!dst || !n) return 0;
+  dst[0] = 0;
+  pthread_mutex_lock(&tokTrava);
+  precisa = acesso[0] != 0 && !anonima && vencidoEm(60);
+  pthread_mutex_unlock(&tokTrava);
+  if (precisa && renovarToken(NULL, 60, &st) <= 0) return 0;
   pthread_mutex_lock(&tokTrava);
   tem = acesso[0] != 0 && !anonima;
   snprintf(dst, n, "%s", tem ? acesso : "");
   pthread_mutex_unlock(&tokTrava);
   return tem && dst[0];
+}
+
+int sessao_identidade_local_copiar(char *usuario, size_t nUsuario, char *jwt, size_t nJwt) {
+  if (!usuario || !nUsuario || !jwt || !nJwt) return 0;
+  usuario[0] = jwt[0] = 0;
+  pthread_mutex_lock(&tokTrava);
+  int tem = !anonima && acesso[0] && sub[0] && strlen(sub) < nUsuario && strlen(acesso) < nJwt;
+  if (tem) {
+    snprintf(usuario, nUsuario, "%s", sub);
+    snprintf(jwt, nJwt, "%s", acesso);
+  }
+  pthread_mutex_unlock(&tokTrava);
+  return tem;
+}
+
+void sessao_token_recusado(const char *tok) {
+  int st = 0;
+  if (!tok || !*tok) return;
+  pthread_mutex_lock(&tokTrava);
+  if (!strcmp(tok, acesso)) invalidarPerfil();
+  pthread_mutex_unlock(&tokTrava);
+  renovarToken(tok, 30, &st);
 }
 
 void sessao_login_comecar(void) {

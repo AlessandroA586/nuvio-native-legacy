@@ -87,6 +87,8 @@ static void textoBase(const LegSyncVisao *v, char *dst, unsigned tam) {
     case LEGSYNC_M_PLATAFORMA: snprintf(dst, tam, "%s", i18n("Indispon\xc3\xadvel nesta plataforma")); break;
     case LEGSYNC_M_EXTERNA_INCOMPLETA:
       snprintf(dst, tam, "%s", i18n("Legenda externa incompleta; n\xc3\xa3o d\xc3\xa1 para sincronizar")); break;
+    case LEGSYNC_M_SEM_TEXTO:
+      snprintf(dst, tam, "%s", i18n("Sem legenda de texto neste arquivo para usar como refer\xc3\xaancia")); break;
     case LEGSYNC_M_SEM_REFERENCIA:
       snprintf(dst, tam, "%s", i18n("Indispon\xc3\xadvel: sem legenda de texto indexada no arquivo")); break;
     case LEGSYNC_M_SEM_RANGE:  snprintf(dst, tam, "%s", i18n("Indispon\xc3\xadvel: o servidor n\xc3\xa3o aceita leitura parcial")); break;
@@ -109,6 +111,9 @@ void legsync_texto_simples(const LegSyncVisao *v, char *dst, unsigned tam) {
   dst[0] = 0;
   if (v->fase == LEGSYNC_DESFEITA) {
     snprintf(dst, tam, "%s", i18n("Corre\xc3\xa7\xc3\xa3o desfeita; o atraso manual continua")); return;
+  }
+  if (v->fase == LEGSYNC_INDISPONIVEL && v->motivo == LEGSYNC_M_SEM_TEXTO) {
+    textoBase(v, dst, tam); return;
   }
   if (v->autoFase == 3) { snprintf(dst, tam, "%s", i18n("N\xc3\xa3o deu para sincronizar")); return; }
   if (v->fase == LEGSYNC_ACEITA || v->autoFase == 2) {
@@ -149,26 +154,28 @@ int legsync_pilula_final(const LegSyncVisao *v, const char *provedor, char *dst,
 
 int legsync_pil_passo(LegSyncPil *p, const LegSyncVisao *v, unsigned agora, const char *provedor, char *texto, unsigned tam) {
   int quer, r = 0;
-  if (v->autoDesligado) { p->espera = 0; return LEGSYNC_PIL_ZERAR; }
-  if (v->falhaDownload && v->autoFase != 1) { p->espera = 0; return LEGSYNC_PIL_BAIXAR; }
+  // Sync pedido a mao segue o mesmo ciclo, com o automatico ligado ou nao.
+  int af = v->manualFase ? v->manualFase : v->autoFase;
+  if (v->autoDesligado && !v->manualFase) { p->espera = 0; return LEGSYNC_PIL_ZERAR; }
+  if (v->falhaDownload && af != 1) { p->espera = 0; return LEGSYNC_PIL_BAIXAR; }
   // Fechada, esperando o fim do plano: so o fim reabre. 2/3 = terminou (aceito,
   // desistiu/recusou/sem referencia); 1 segue; 0 = cancelado (sem plano): nada.
   if (p->espera && p->estado == LEGSYNC_PIL_OFF) {
-    if (v->autoFase == 2 || v->autoFase == 3) {
+    if (af == 2 || af == 3) {
       p->espera = 0; p->rastreia = 0;
       p->final = legsync_pilula_final(v, provedor, texto, tam);
       p->estado = LEGSYNC_PIL_APLICADA; p->desde = agora | 1u;
-      r |= LEGSYNC_PIL_FINAL_TARDE | (v->autoFase == 2 ? LEGSYNC_PIL_LEMBRAR : 0);
-    } else if (v->autoFase != 1) p->espera = 0;
+      r |= LEGSYNC_PIL_FINAL_TARDE | (af == 2 ? LEGSYNC_PIL_LEMBRAR : 0);
+    } else if (af != 1) p->espera = 0;
     return r;
   }
   if (p->estado == LEGSYNC_PIL_OFF) return 0;
   if (p->rastreia) {
     if (v->fase == LEGSYNC_AGUARDANDO) quer = LEGSYNC_PIL_PROCURANDO;
-    else if (v->autoFase == 1) quer = LEGSYNC_PIL_SINCRONIZANDO;
+    else if (af == 1) quer = LEGSYNC_PIL_SINCRONIZANDO;
     else quer = LEGSYNC_PIL_APLICADA;
     // Cada troca baixa de novo. Só o callback pode declarar falha de download.
-    if (quer == LEGSYNC_PIL_APLICADA && v->autoFase == 2) r |= LEGSYNC_PIL_LEMBRAR;
+    if (quer == LEGSYNC_PIL_APLICADA && af == 2) r |= LEGSYNC_PIL_LEMBRAR;
     // Leitura longa: a ilha encolhe de volta no relogio e o plano segue; o
     // aviso final reabre quando a sessao terminar.
     if (p->estado == LEGSYNC_PIL_SINCRONIZANDO && quer == LEGSYNC_PIL_SINCRONIZANDO && agora - p->desde >= LEGSYNC_PIL_SINC_MS) {

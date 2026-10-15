@@ -15,6 +15,9 @@
 // Zera o que e da SESSAO e nao do aparelho — hoje, qual legenda externa esta
 // valendo. Chamada pelo player quando uma reproducao nova comeca.
 void faixas_reiniciar(void);
+#ifdef NV_ANDROID
+void faixas_reiniciar_preparada(void);
+#endif
 
 void faixas_abrir(void);
 // Abre com o foco JA na coluna pedida: 0 = audio, 1 = legenda. O player tem um
@@ -40,6 +43,8 @@ void faixas_aba_estilo(int estilo);
 // fechada); `col` 0 = audio, 1 = lista de legendas, 2 = barra de estilo;
 // `vol`/`vel` = foco nas linhas de volume/velocidade da folha de audio.
 int  faixas_teste_foco(int *col, int *vol, int *vel);
+// Testes: o item da aba Estilo cujo controle (slider, paleta, fontes) esta aberto; -1 = a grade.
+int  faixas_estilo_controle(void);
 
 // F04: what the subtitle selector (legendasui.c) needs from the primary.
 // Combined index of the active primary (embedded first, then addons; -1 none).

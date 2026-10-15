@@ -30,6 +30,7 @@
 #include "ponteiro.h"
 #include "tex_cache.h"
 #include "text.h"
+#include "telefonecartao.h"
 #define NV_ESCALA_TELA_ATIVA
 #include "escala.h"
 #include <math.h>
@@ -83,7 +84,7 @@ typedef struct {
 } NovCena;
 
 typedef struct {
-  const char *versao;     // "2.0.4" (o titulo e "Novidades da %s")
+  const char *versao;     // "2.0.5" (o titulo e "Novidades da %s")
   const char *arquivo;    // a marca de "ja visto" (dados_*)
   const char *subtitulo;  // uma frase embaixo do titulo
   const NovItem *itens;
@@ -97,10 +98,14 @@ typedef struct {
 #define NOV_ARTES_MAX 6
 #define NOV_ITENS_MAX 24
 #define NOV_CENAS_MAX 6
-#define NOV_PAGINAS_MAX 4
+#define NOV_PAGINAS_MAX 6
 
 static int   aberto, decidido, pagina, foco = 1;
 static float entrada, pag, relogio;
+#ifdef NV_TOUCH_UI
+static TelefoneCartao novTelefone;
+static GfxMini novTelefoneMini;
+#endif
 static char  dirArte[512] = "deploy/app/art";
 static char  arte[NOV_ARTES_MAX][600];
 static unsigned plataformaTeste;
@@ -171,7 +176,7 @@ __attribute__((unused)) static void novArteDesfocada(int numero, GfxRect r, floa
 
 // ======================================================= O CONTEUDO DA VERSAO
 // Para a proxima versao: um src/novidades/<versao>.inc novo, trocado aqui.
-#include "novidades/204.inc"
+#include "novidades/205.inc"
 #define CT NOV_ATUAL
 
 static const char *artePorNumero(int n) {
@@ -345,6 +350,9 @@ static void comecar(float e) {
   entrada = e;
   relogio = 0.0f;
   folgaLista = 999.0f;
+#ifdef NV_TOUCH_UI
+  telefonecartao_limpar(&novTelefone);
+#endif
   pedirArtes();
 }
 
@@ -617,10 +625,13 @@ static void paginaApoioDesenho(float y0, float a, float dx) {
   y += txt_bloco(TXT_V2_26, i18n("O Nuvio Legacy é gratuito. Se ele te ajuda e você quiser apoiar quem faz o app, aponte a câmera do celular para um dos códigos."),
                  200, 205, 215, x, y, textoW(), 36.0f, 0.9f * a, 4);
   y += 44.0f;
-  { float lado = 300.0f, gap = 44.0f;
+  // Doacoes + Discord dividem a coluna de texto: com Patreon e Ko-fi sao 3
+  // codigos, e 300 px cada nao cabem na coluna do cartao com cenas (~776 px).
+  { float gap = 44.0f, lado = fminf(300.0f, (textoW() - (float)n * gap - 48.0f) / (float)(n + 1));
     float comunidadeX = x + textoW() - lado;
+    float doacoesFim = x + (float)n * lado + (float)(n - 1) * gap;
     ajustes_ui_kicker(i18n("Comunidade"), comunidadeX, y - GRUPO_H, a);
-    gfx_cor((GfxRect){ comunidadeX - 68.0f, y - GRUPO_H, 1, lado + 174.0f },
+    gfx_cor((GfxRect){ (doacoesFim + comunidadeX) * 0.5f, y - GRUPO_H, 1, lado + 174.0f },
             0, 1, 1, 1, 0.08f * a);
     for (i = 0; i <= n; i++) {
       int q = i < n ? apoio_qual(i) : APOIO_DISCORD;
@@ -746,9 +757,102 @@ static void desenharCorpo(void) {
   rodape(y0, altura, a);
 }
 
+#ifdef NV_TOUCH_UI
+static int novTelefoneRolar(const PonteiroRolagem *e) { return aberto && toquerol_evento(&novTelefone.rolagem, e); }
+static void novTelefoneEscolher(int b, int pg) {
+  if (!aberto || pagina != pg || b < 0 || b > 1) return;
+  foco = b; ok();
+}
+static int novTelefoneCena(float *dentro) {
+  float total = 0, inicio = 0;
+  if (!nCen) return -1;
+  for (int i = 0; i < nCen; i++) total += duracaoCena(i);
+  float t = fmodf(relogio, total);
+  for (int i = 0; i < nCen; i++) {
+    if (t < inicio + duracaoCena(i) || i == nCen - 1) { if (dentro) *dentro = t - inicio; return i; }
+    inicio += duracaoCena(i);
+  }
+  return 0;
+}
+static float novTelefoneConteudo(float x, float y, float w, float a) {
+  float inicio = y;
+  if (pagina < paginaApoio()) {
+    char titulo[96];
+    snprintf(titulo, sizeof titulo, i18n("Novidades da %s"), CT.versao);
+    y += telefonecartao_titulo(titulo, x, y, w, a);
+    if (CT.subtitulo) y += telefonecartao_texto(TXT_V2_26, CT.subtitulo, x, y, w, 36, .7f * a) + 24;
+    float dentro = 0;
+    int atual = novTelefoneCena(&dentro);
+    if (atual >= 0) {
+      float ph = fminf(300, novTelefone.corpo.h * .5f), pw = ph * PV_W / (PV_H - 230);
+      if (pw > w) { ph *= w / pw; pw = w; }
+      if (a > 0 && gfx_mini_alvo(&novTelefoneMini, (int)PV_W, (int)(PV_H - 230))) {
+        gfx_mini_comecar(&novTelefoneMini, 0, 0, 1);
+        cena(atual, (GfxRect){0, 0, PV_W, PV_H}, dentro, 1);
+        gfx_mini_terminar();
+        gfx_mini_desenhar(&novTelefoneMini, (GfxRect){x + (w - pw) * .5f, y, pw, ph}, 20, a);
+      }
+      y += ph + 16;
+      float legendaH = 0;
+      for (int i = 0; i < nCen; i++) {
+        float kh = telefonecartao_texto(TXT_AJ_SEG, CT.cenas[cen[i]].kicker, 0, 0, w, 30, 0);
+        float lh = telefonecartao_texto(TXT_V2_LN_B, CT.cenas[cen[i]].linha, 0, 0, w, 34, 0);
+        legendaH = fmaxf(legendaH, kh + 8 + lh);
+      }
+      float kh = telefonecartao_texto(TXT_AJ_SEG, CT.cenas[cen[atual]].kicker, x, y, w, 30, .7f * a);
+      telefonecartao_texto(TXT_V2_LN_B, CT.cenas[cen[atual]].linha, x, y + kh + 8, w, 34, a);
+      y += legendaH + 24;
+    }
+    for (int i = 0; i < nVis; i++) {
+      if (pgVis[i] != pagina) continue;
+      const NovItem *it = &CT.itens[vis[i]];
+      if (kickerVis[i]) y += telefonecartao_texto(TXT_AJ_SEG, kickerVis[i], x, y, w, 30, .7f * a) + 16;
+      y += telefonecartao_item(it->icone, it->nome, it->frase, x, y, w, a);
+      if (it->frase2) y += telefonecartao_texto(TXT_CAPTION, it->frase2, x + 48, y, w - 48, 30, .68f * a) + 24;
+    }
+  } else {
+    y += telefonecartao_titulo("Apoie o projeto", x, y, w, a);
+    y += telefonecartao_texto(TXT_V2_26, "O Nuvio Legacy é gratuito. Se ele te ajuda e você quiser apoiar quem faz o app, aponte a câmera do celular para um dos códigos.", x, y, w, 36, .7f * a) + 28;
+    // Discord acompanha as doacoes sem entrar na lista de apoio_qual().
+    int nDoacoes = apoio_n(), n = nDoacoes + 1, cols = w >= 648 ? 2 : 1;
+    float lado = fminf(300, (w - (cols - 1) * 24) / cols), passo = lado + 22 + 64 + 12 + 30 + 24;
+    float total = cols * lado + (cols - 1) * 24, x0 = x + (w - total) * .5f;
+    for (int i = 0; i < n; i++) {
+      int q = i < nDoacoes ? apoio_qual(i) : APOIO_DISCORD;
+      float qx = x0 + (i % cols) * (lado + 24), qy = y + (i / cols) * passo;
+      if (a > 0) {
+        apoio_qr(q, qx, qy, lado, a);
+        TxtLinha nome = txt_linha_corta(TXT_W20_24B, apoio_nome(q), 20, 21, 26, 255, lado - 32);
+        TxtLinha url = txt_linha_corta(TXT_V2_18, apoio_url_curta(q), 243, 242, 239, 255, lado);
+        gfx_cor((GfxRect){qx, qy + lado + 22, lado, 64}, .11f, .957f, .961f, .980f, a);
+        txt_desenhar_alpha(nome, qx + (lado - nome.w) * .5f, qy + lado + 22 + (64 - nome.h) * .5f, a);
+        txt_desenhar_alpha(url, qx + (lado - url.w) * .5f, qy + lado + 98, .6f * a);
+      }
+    }
+    y += (n + cols - 1) / cols * passo;
+    y += telefonecartao_texto(TXT_CAPTION, "É opcional e nada muda no app. Fica também em Ajustes › Sobre e ajuda.", x, y, w, 30, .7f * a);
+  }
+  return y - inicio + 24;
+}
+static void novDesenharTelefone(void) {
+  if (entrada < .002f) return;
+  float a = anim_suave(entrada);
+  telefonecartao_medir(&novTelefone, NV_TELA_W, NV_TELA_H, 2);
+  float total = novTelefoneConteudo(0, 0, novTelefone.corpo.w, 0);
+  telefonecartao_comecar(&novTelefone, total, pagina, aberto, novTelefoneRolar, a);
+  novTelefoneConteudo(novTelefone.corpo.x, novTelefone.corpo.y - novTelefone.offset, novTelefone.corpo.w, a);
+  gfx_sem_recorte();
+  telefonecartao_botao(&novTelefone, 0, pagina ? "Voltar" : "Agora não", foco == 0, ptFoco, novTelefoneEscolher, pagina, a);
+  telefonecartao_botao(&novTelefone, 1, pagina >= paginaApoio() ? "Concluir" : "Continuar", foco == 1, ptFoco, novTelefoneEscolher, pagina, a);
+}
+#endif
+
 // Cartao de tela quase cheia: ampliado so se ainda couber (escala.h).
 void novcartao_desenhar(Uint32 agora) {
   (void)agora;
+#ifdef NV_TOUCH_UI
+  if (telefoneui_ativo()) { ESCALA_INI(); novDesenharTelefone(); ESCALA_FIM(); return; }
+#endif
   ESCALA_SE_COUBER_INI(N_W, N_H);
   desenharCorpo();
   ESCALA_SE_COUBER_FIM();

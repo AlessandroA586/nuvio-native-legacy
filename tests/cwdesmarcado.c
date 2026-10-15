@@ -24,6 +24,7 @@ int ajustes_social(void) { return 1; }
 int ajustes_hist_conta(void) { return 1; }
 int ajustes_busca_cinemeta(void) { return 1; }
 int ajustes_busca_nuvio(void) { return 0; }   // #311: Primeiro (padrao)
+int ajustes_ocultar_filmes_vistos(void) { return 0; }    // #366: descoberta.c le o ajuste
 #include "../src/descoberta.c"
 Uint32 SDL_GetTicks(void) { return 0; }
 #include "../src/vistonao.h"
@@ -129,6 +130,7 @@ int   arte_reserva_registrar(const char *url, const char *imdb, int poster) {
 static int modoTeste = CWO_PADRAO, naoExibidosTeste = 1;
 int ajustes_cw_ordem(void)                { return modoTeste; }
 static int concluidoTeste = 90;         // Percentual assistido; 90 de fabrica
+int ajustes_cw_minimo(void) { return 1; }
 int   ajustes_cw_concluido(void)           { return concluidoTeste; }
 int ajustes_cw_mostrar_nao_exibidos(void) { return naoExibidosTeste; }
 static int proximoTeste = 1;
@@ -154,6 +156,7 @@ int simkl_ativo(void) { return simklAtivoTeste; }
 int trakt_progresso_ocultar(const char *i, int o) { (void)i; (void)o; return 0; }
 int trakt_e_a_seguir(const char *id) { return !tkProg && regSet(id, tkId); }
 int simkl_e_a_seguir(const char *id) { return regSet(id, skId); }
+int trakt_cw_concluiu(const char *id, long long ms) { (void)id; (void)ms; return 0; }
 int trakt_continuar_falhou(void) { return 0; }
 static void item(CatItem *s, const char *id, int prog, long long ms) {
   memset(s, 0, sizeof *s);

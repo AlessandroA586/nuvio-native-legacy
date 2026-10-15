@@ -41,6 +41,12 @@
 // faixa ao AVPlay como fallback.
 #ifndef NV_MKVASS_H
 #define NV_MKVASS_H
+#include "legenda.h"
+#include <stddef.h>
+// Snapshot local ASS com indice >= 8000 pontos: nunca abre rede nem toca o overlay.
+// So devolve um intervalo cujos pontos indexados foram TODOS colhidos.
+LegendaDocumento *mkvass_referencia(const char *url, uint64_t sessao,
+                                    const int *excluidas, int nExcluidas);
 
 // Estados. Os >= MKVASS_NOGO sao terminais: a folha mostra o motivo e volta a
 // deixar o pipeline desenhar.
@@ -121,7 +127,7 @@ long mkvass_pausas_cdn(void);
 //
 // `escolher` recebe os idiomas das legendas do arquivo NA ORDEM DAS TrackEntry
 // (a mesma do ordinal) e devolve o ordinal a colher, ou -1. Se a escolhida nao
-// for ASS/SSA, ou nada casar, o fio termina depois do cabecalho (um Range).
+// for ASS/SSA ou texto simples aceito, ou nada casar, o fio termina depois do cabecalho (um Range).
 // `fracInicio` (0..1) e onde o player vai retomar, em fracao da duracao: a
 // janela pre-buscada comeca ali (a duracao vem do Info do proprio arquivo).
 //
@@ -135,6 +141,23 @@ long mkvass_pausas_cdn(void);
 #endif
 typedef int (*MkvassEscolher)(const char *const *idiomas, int n);
 int  mkvass_prebuscar(const char *url, MkvassEscolher escolher, double fracInicio);
+// Pre-busca independente do proximo episodio. Colhe pelo mesmo parser, com
+// os mesmos limites/teto de Ranges, sem trocar a faixa/fontes atuais. O
+// contexto da escolha e copiado (ate 4096 bytes); use bytes autocontidos,
+// sem ponteiros emprestados. Criar/fase/adotar/cancelar pertencem ao fio da UI.
+typedef struct MkvassPreparo MkvassPreparo;
+typedef int (*MkvassEscolherCom)(const char *const *idiomas, int n, const void *contexto);
+MkvassPreparo *mkvass_preparo_criar(const char *url, MkvassEscolherCom escolher,
+                                  const void *contexto, size_t tamanhoContexto,
+                                  double fracInicio);
+int mkvass_preparo_fase(MkvassPreparo *preparo);
+// Somente depois de fechar o video anterior. URL e fracao devem ser as que
+// foram capturadas. Sucesso consome o handle (NULL) e conserva o worker,
+// cabecalho, fontes e blocos colhidos; a escolha por ordinal adota como sempre.
+// Falha conserva o handle para cancelamento/fallback. Nunca espera HTTP.
+int mkvass_preparo_adotar(MkvassPreparo **preparo, const char *url, double fracInicio);
+void mkvass_preparo_cancelar(MkvassPreparo **preparo);
+
 // 0 = nenhuma pre-busca; 1 = correndo; 2 = acabou (pronta, desistiu ou nao
 // havia faixa ASS a colher). O player segura o video ate != 1 ou o teto.
 int  mkvass_prebusca_fase(void);
@@ -159,9 +182,9 @@ void mkvass_parar(void);
 int  mkvass_estado(void);
 // #269: aceitar tambem faixa de TEXTO SIMPLES (S_TEXT/UTF8 e S_TEXT/WEBVTT),
 // entregue ao overlay como SubRip (o estilo do app vale, como na externa).
-// Padrao 0: LG e Tizen web seguem so com ASS/SSA (a TV desenha SRT bem). O
-// .tpk liga, porque o player dele nao entrega o texto da legenda embutida. A
-// pre-busca antes do video continua so ASS.
+// Padrao 1 (#421), inclusive na pre-busca: LG e .tpk usam os Ajustes do app.
+// Android conserva padrao 0: Media3 ja entrega o texto ao overlay.
+// Desligavel para testes/consumidores que precisem somente de ASS.
 void mkvass_aceitar_texto(int sim);
 // 1 quando o estado e um dos no-go.
 int  mkvass_nogo(void);

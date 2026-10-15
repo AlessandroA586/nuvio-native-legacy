@@ -21,7 +21,7 @@
 #define NV_PROXYTS_H
 #include <stddef.h>
 
-// 1 nesta plataforma (webOS e Mac; nao no navegador nem no .tpk).
+// 1 nesta plataforma (webOS, .tpk e Mac; nao no navegador nem no Android).
 int  proxyts_disponivel(void);
 // Abre uma sessao para `fonte` e escreve em `saida` a URL local que o player
 // deve tocar. 0 = o proxy nao subiu (use a fonte direto).

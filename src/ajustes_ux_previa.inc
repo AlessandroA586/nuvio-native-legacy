@@ -783,7 +783,7 @@ static float ajPreviaCarta(int op, float x, float y, float w) {
     case AJ_ENVIAR_LOG: case AJ_VER_REGISTRO: case AJ_ENVIO_AUTO:
       registro_pacote(x, y, w, 300, 9, i18n("últimos 200 KB"), 1); return 300;
     case AJ_CW_LIGADO: case AJ_CW_OK: case AJ_CW_ESTILO: case AJ_CW_THUMB: case AJ_CW_BLUR_PROX:
-    case AJ_CW_ORDEM: case AJ_CW_NAO_EXIBIDOS: case AJ_CW_FURTHEST: case AJ_CW_CONCLUIDO: case AJ_CW_RETIDO_TAMBEM:
+    case AJ_CW_ORDEM: case AJ_CW_NAO_EXIBIDOS: case AJ_CW_FURTHEST: case AJ_CW_CONCLUIDO: case AJ_CW_MINIMO: case AJ_CW_RETIDO_TAMBEM:
       return ajPreviaContinuar(x, y, w);
     case AJ_ESPACO: case AJ_TEX_MB: return ajPainelMemoria(x, y, w);
     default: return -1;
@@ -859,7 +859,7 @@ static float ajPreviaCompacta(int op, float x, float y, float w) {
 // Tres cartazes de uma fileira da Home: os do catalogo dela quando ja foi
 // lida, a amostra antes disso. Guardados por revisao do catalogo.
 static const char *ajPosterFileira(int fil, int k) {
-  static char cache[24][3][256];
+  static char cache[24][3][NV_TEX_URL_MAX];
   static unsigned rev = 0xffffffffu;
   static int pronto[24];
   if (cat_revisao() != rev) { rev = cat_revisao(); memset(pronto, 0, sizeof pronto); }
@@ -934,7 +934,7 @@ static float ajPreviaEditor(int op, float x, float y, float w) {
 void ajustes_previa_busca(int op, float x, float y, float w, float h, float a) {
   char v[160];
   TxtLinha l;
-  if (op < 0 || op >= AJ_N) return;
+  if (op < 0 || op >= AJ_N || !ajOpcaoDisponivel(op)) return;
   // 2.0.2: a previa gerada da opcao (sem foto), no meio do quadro pedido.
   { float g = gfx_opacidade_grupo, cw = h * 16.0f / 9.0f;
     if (cw > w) cw = w;

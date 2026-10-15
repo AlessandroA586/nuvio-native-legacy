@@ -1,0 +1,218 @@
+// Mobile targets/editing must not change TV state, even after a mode switch.
+#include "text.h"
+#include "gfx.h"
+static int medirDica(TxtEstilo estilo, const char *s);
+static void recorteTeste(float x, float y, float w, float h) { (void)x; (void)y; (void)w; (void)h; }
+static void semRecorteTeste(void) {}
+#define txt_largura medirDica
+#define gfx_recorte recorteTeste
+#define gfx_sem_recorte semRecorteTeste
+#include "../src/ajustes.c"
+#undef txt_largura
+#undef gfx_recorte
+#undef gfx_sem_recorte
+#include <assert.h>
+
+static int falhas, dicaToque, dicaSetas;
+#define CONFERE(c, msg) do { if (!(c)) { puts("FALHA: " msg); falhas++; } } while (0)
+static int medirDica(TxtEstilo estilo, const char *s) {
+  if (!strcmp(s, "Toque")) dicaToque++;
+  if (!strcmp(s, "↑ ↓")) dicaSetas++;
+  return txt_largura(estilo, s);
+}
+static Uint32 relogio = 1000;
+static Uint32 agora(void) { return relogio; }
+static void entregar(const SDL_Event *e) { (void)e; }
+static void quadroFileiras(void) {
+  ponteiro_quadro(relogio);
+  desenhaFileiras();
+  ponteiro_desenhar();
+  relogio += 400;
+}
+static void clique(float x, float y) {
+  SDL_Event e; SDL_zero(e);
+  e.type = SDL_MOUSEBUTTONDOWN; e.button.button = SDL_BUTTON_LEFT;
+  e.button.x = (int)x; e.button.y = (int)y;
+  ponteiro_evento(&e, entregar);
+  e.type = SDL_MOUSEBUTTONUP; relogio += 60;
+  ponteiro_evento(&e, entregar);
+}
+static void fileiras(int mobile) {
+  const PonteiroAlvo *v;
+  layout_modo_definir(mobile);
+  fil_esquecer();
+  fil_definir_perfil(mobile + 1);
+  fil_registrar("test_a", "A", "Test", "movie", 1);
+  fil_registrar("test_b", "B", "Test", "movie", 1);
+  assert(fil_n() == 2 && fil_estado(0) == FIL_NA_HOME && fil_estado(1) == FIL_NA_HOME);
+  filAberta = 1; filAba = 0; filNaBarra = 0;
+  filFoco = 1; filCampo = 0; filPegou = 0; filTopo = 0;
+  eventoFileiras(SDLK_RETURN);  // remote OK picks A in either mode
+  assert(filPegou == 1);
+  ponteiro_iniciar(); ponteiro_teste_toque(1);
+  dicaToque = dicaSetas = 0;
+  quadroFileiras();
+  AjFilMedidas m = ajFilMedir();
+  float x = m.cx + 10, y = m.ilha.y + 183 + ajFilToqueTopo(2) + AJF_ROW_H * 0.5f;
+  int n = ponteiro_teste_lista(&v);
+  if (mobile) {
+    CONFERE(n > 0, "Mobile: registra alvos de Fileiras");
+    CONFERE(dicaToque && !dicaSetas, "Mobile: conserva dicas de toque");
+  } else {
+    CONFERE(n == 0, "TV: Fileiras nao registra alvos Mobile");
+    CONFERE(!dicaToque && dicaSetas, "TV: conserva dicas do controle");
+  }
+  if (mobile) {
+    int alvo = ponteiro_achar(v, n, x, y);
+    assert(alvo >= 0 && v[alvo].a == 2 && v[alvo].ativar == ajFilToqueSoltar);
+  }
+  clique(x, y);
+  if (mobile) {
+    CONFERE(!strcmp(fil_chave(0), "test_b") && !strcmp(fil_chave(1), "test_a") && filPegou == 0,
+            "Mobile: clicar B move A e solta");
+    eventoFileiras(SDLK_RETURN);
+    ponteiro_iniciar(); ponteiro_teste_toque(1);
+    quadroFileiras();             // targets left over from Mobile
+    layout_modo_definir(0);
+    clique(x, y);
+    CONFERE(!strcmp(fil_chave(0), "test_b") && filPegou == 1,
+            "TV: alvo remanescente de Mobile nao solta nem reordena");
+  } else {
+    CONFERE(!strcmp(fil_chave(0), "test_a") && !strcmp(fil_chave(1), "test_b") && filPegou == 1,
+            "TV: clicar B nao reordena nem solta A");
+    ajFilToqueSoltar(2, 0);
+    CONFERE(!strcmp(fil_chave(0), "test_a") && filPegou == 1, "TV: callback de soltar e inerte");
+  }
+  filPegou = 0; filFoco = 1; filCampo = 0;
+  layout_modo_definir(0);
+  ajFilToqueFocar(2, 3); ajFilToqueAba(1, 0);
+  CONFERE(filFoco == 1 && filCampo == 0 && filAba == 0, "TV: callbacks de foco e aba sao inertes");
+}
+
+// A TV-mode phone still needs real targets to select Mobile: the closed app
+// sidebar registers a target after Settings, so the empty-layer Enter fallback
+// is unavailable. Exercise the production editor and pointer dispatch together.
+static void alvoLateral(int a, int b) { (void)a; (void)b; assert(!"clicou a barra lateral"); }
+static void quadroInterface(void) {
+  ponteiro_teste_janela((int)NV_TELA_W, (int)NV_TELA_H);
+  ponteiro_quadro(relogio);
+  ponteiro_camada(); ajToqueCamada();
+  ajPontEditor = aj2EditorPainel();   // the editor has finished its entrance
+  if (ajPontEditor) {
+    GfxRect m = aj2EditorR();
+    // Match ajustes_ux_interacao.c: keep real choices and footer targets,
+    // without the GPU preview column in this windowless module test.
+    if (m.w > 1100.0f) m.w = 1100.0f;
+    AJ_ESCALA_INI();
+    aj2EditorEscolha(m);
+    AJ_ESCALA_FIM();
+  }
+  ponteiro_alvo(0, 0, 28, NV_TELA_H, NULL, alvoLateral, 0, 0);
+  ponteiro_desenhar(); relogio += 400;
+}
+static int alvoInterface(PonteiroFn focar, PonteiroFn ativar, int a, float *x, float *y) {
+  const PonteiroAlvo *v;
+  int n = ponteiro_teste_lista(&v);
+  for (int i = 0; i < n; i++) {
+    if (v[i].focar != focar || v[i].ativar != ativar || v[i].a != a) continue;
+    *x = v[i].x + v[i].w * 0.5f; *y = v[i].y + v[i].h * 0.5f;
+    assert(*x >= 0 && *x < NV_LAYOUT_REAL_W && *y >= 0 && *y < NV_LAYOUT_REAL_H);
+    assert(ponteiro_achar(v, n, *x, *y) == i);
+    return 1;
+  }
+  return 0;
+}
+static void clicarInterface(float x, float y) {
+  SDL_Event e; SDL_zero(e);
+  e.type = SDL_FINGERDOWN; e.tfinger.touchId = 1; e.tfinger.fingerId = 1;
+  e.tfinger.x = x / NV_TELA_W; e.tfinger.y = y / NV_TELA_H;
+  ponteiro_evento(&e, ajustes_evento);
+  e.type = SDL_FINGERUP; relogio += 60;
+  ponteiro_evento(&e, ajustes_evento);
+  relogio += 400;
+}
+static char *arquivoAjustes(void) {
+  char caminho[700];
+  snprintf(caminho, sizeof caminho, "%s/ajustes.txt", getenv("NUVIO_DADOS"));
+  FILE *f = fopen(caminho, "rb"); assert(f);
+  assert(!fseek(f, 0, SEEK_END)); long n = ftell(f); assert(n >= 0);
+  rewind(f); char *s = malloc((size_t)n + 1); assert(s);
+  assert(fread(s, 1, (size_t)n, f) == (size_t)n); s[n] = 0; fclose(f);
+  return s;
+}
+static int abrirInterface(void) {
+  ajustes_iniciar(); focarOpcao(AJ_INTERFACE_MODO); uxAbrirEditor(AJ_INTERFACE_MODO);
+  CONFERE(uxEditor == 1 && uxOp == AJ_INTERFACE_MODO, "Modo da interface: abre para editar");
+  CONFERE(!ajEmLinha(AJ_INTERFACE_MODO) && aj2EditorPainel(),
+          "Modo da interface: usa o seletor com alvos proprios tambem em TV");
+  if (!aj2EditorPainel()) return 0;
+  quadroInterface();
+  float x, y;
+  CONFERE(alvoInterface(NULL, ajToqueConfirmar, 0, &x, &y), "Modo da interface: registra Confirmar");
+  CONFERE(alvoInterface(NULL, ajToqueCancelar, 0, &x, &y), "Modo da interface: registra Cancelar");
+  return 1;
+}
+static void interfacePorToque(void) {
+  const char *dir = getenv("NUVIO_DADOS");
+  float x, y;
+  ajustes_dir(dir);
+  valor[AJ_INTERFACE_MODO] = 0; interfaceAplicar(); assert(gravar());
+  layout_tela_definir(1080, 2340);   // phone drawable, saved TV canvas
+  ponteiro_iniciar(); ponteiro_teste_toque(1);
+  assert(!layout_modo_mobile());
+  if (!abrirInterface()) return;
+
+  // Cancel after moving the pending choice, with no write to the settings file.
+  char *antes = arquivoAjustes();
+  uxEvento(SDLK_DOWN); assert(uxPendente == 1 && valor[AJ_INTERFACE_MODO] == 0);
+  quadroInterface();
+  assert(alvoInterface(NULL, ajToqueCancelar, 0, &x, &y)); clicarInterface(x, y);
+  char *depois = arquivoAjustes();
+  CONFERE(!uxEditor && !layout_modo_mobile() && valor[AJ_INTERFACE_MODO] == 0,
+          "TV: Cancelar descarta Mobile pendente");
+  CONFERE(!strcmp(antes, depois), "TV: Cancelar nao grava a escolha pendente");
+  free(antes); free(depois);
+
+  if (!abrirInterface()) return;
+  assert(alvoInterface(ajPontEdValor, NULL, 1, &x, &y));
+  clicarInterface(x, y);    // focus Mobile + pointer-generated Enter, real handler
+  CONFERE(!uxEditor && layout_modo_mobile() && valor[AJ_INTERFACE_MODO] == 1,
+          "TV no celular: tocar Mobile aplica a escolha apesar do alvo lateral");
+  depois = arquivoAjustes();
+  CONFERE(strstr(depois, "\ninterfaceModoLocal 1\n") != NULL, "Mobile fica gravado neste aparelho");
+  free(depois);
+  valor[AJ_INTERFACE_MODO] = 0; layout_modo_definir(0); ajustes_dir(dir);
+  CONFERE(valor[AJ_INTERFACE_MODO] == 1 && layout_modo_mobile(), "Mobile sobrevive a nova leitura dos ajustes");
+
+  if (!abrirInterface()) return;
+  uxEvento(SDLK_UP); assert(uxPendente == 0 && valor[AJ_INTERFACE_MODO] == 1);
+  quadroInterface();
+  assert(alvoInterface(NULL, ajToqueConfirmar, 0, &x, &y)); clicarInterface(x, y);
+  CONFERE(!uxEditor && !layout_modo_mobile() && valor[AJ_INTERFACE_MODO] == 0,
+          "Mobile: tocar Confirmar aplica TV pelo mesmo seletor");
+  valor[AJ_INTERFACE_MODO] = 1; layout_modo_definir(1); ajustes_dir(dir);
+  CONFERE(valor[AJ_INTERFACE_MODO] == 0 && !layout_modo_mobile(), "TV tambem fica salva na nova leitura");
+}
+
+int main(void) {
+  Aj2Pose p = {0};
+  p.lA = 1.0f; p.lS = 1.0f;
+  uxIndice = 2; uxEditor = 1; uxOp = AJ_TEMA; uxRestaurar = 0; uxAvisoRisco = 0;
+  assert(ajEditandoLinha(AJ_TEMA));
+  layout_modo_definir(0);
+  assert(!ajInlineAtivo(0, &p));
+  layout_modo_definir(1);
+  assert(ajInlineAtivo(0, &p));
+  assert(!ajInlineAtivo(1, &p));   // a modal still wins in Mobile
+  puts("PASS: inline editor is Mobile only");
+  dados_iniciar(getenv("NUVIO_DADOS"));
+  gfx_opacidade_grupo = 0;  // exercise registration and hint measurement, skip pixels
+  ajustes_iniciar();
+  layout_tela_definir(1920, 1080);
+  ponteiro_teste_relogio(agora); ponteiro_teste_janela(1920, 1080);
+  fileiras(0); fileiras(1);
+  if (!falhas) puts("PASS: Fileiras targets, callbacks and hints are Mobile only");
+  interfacePorToque();
+  if (!falhas) puts("PASS: interface selector confirms and saves TV/Mobile by touch");
+  return falhas ? 1 : 0;
+}

@@ -41,6 +41,22 @@ class ParaleloDataSource(
     private val token: Long = 0L,
 ) : BaseDataSource(true) {
 
+    // ESTATISTICAS AO VIVO (src/estatvivo.h, via NvPlayer.nativeStats): o que
+    // ESTAS transferencias contam, por abertura do player (NvPlayer zera). So
+    // contadores atomicos, nenhuma alocacao no caminho do byte.
+    object Estat {
+        val bytes = java.util.concurrent.atomic.AtomicLong()
+        val conexoes = java.util.concurrent.atomic.AtomicInteger()
+        @Volatile var usado = false
+        @Volatile var primeiroByteMs = -1
+        @Volatile var host = ""
+        fun zerar() { bytes.set(0); conexoes.set(0); usado = false; primeiroByteMs = -1; host = "" }
+        fun hostDe(u: URL) {
+            val porta = if (u.port < 0 || u.port == u.defaultPort) "" else ":${u.port}"
+            host = (u.host ?: "").lowercase() + porta
+        }
+    }
+
     companion object {
         private const val TAG = "nuvio-paralelo"
         const val CONEXOES = 4
@@ -127,8 +143,10 @@ class ParaleloDataSource(
     private fun conectar(u0: URL, ini: Long, ultimo: Long): HttpURLConnection {
         var u = u0
         repeat(10) {
+            val t0 = android.os.SystemClock.elapsedRealtime()
             val c = conectar1(u, ini, ultimo)
             val code = c.responseCode
+            Estat.primeiroByteMs = (android.os.SystemClock.elapsedRealtime() - t0).toInt()
             if (code in 300..399 && code != 304) {
                 val loc = c.getHeaderField("Location")
                 c.disconnect()
@@ -136,6 +154,7 @@ class ParaleloDataSource(
                 u = URL(u, loc)
                 return@repeat
             }
+            Estat.hostDe(c.url)
             return c
         }
         throw IOException("redirecionamentos demais")
@@ -145,7 +164,9 @@ class ParaleloDataSource(
         // Conectar, esperar o primeiro byte e baixar o primeiro pedaco e
         // transferencia ativa (o tempo entra na cobertura do segundo).
         medidor?.inicio(token)
-        try { return abrir(dataSpec) } finally { medidor?.fim(token) }
+        Estat.usado = true
+        Estat.conexoes.incrementAndGet()
+        try { return abrir(dataSpec) } finally { Estat.conexoes.decrementAndGet(); medidor?.fim(token) }
     }
 
     private fun abrir(dataSpec: DataSpec): Long {
@@ -172,6 +193,7 @@ class ParaleloDataSource(
                 if (uc.responseCode !in 200..299) throw HttpDataSource.InvalidResponseCodeException(
                     uc.responseCode, uc.responseMessage, null, uc.headerFields, dataSpec, ByteArray(0))
                 unicaIn = uc.inputStream
+                Estat.conexoes.incrementAndGet()
                 unicaOrigem = PassivoMedidor.origemDe(uc.url)
                 if (code == 200 && pos > 0) unicaIn!!.skip(pos)   // servidor ignorou Range
                 aberto = true
@@ -210,6 +232,7 @@ class ParaleloDataSource(
                 val n = inp.read(tmp); if (n < 0) break
                 out.write(tmp, 0, n)
                 medidor?.bytes(token, origem, n)
+                Estat.bytes.addAndGet(n.toLong())
             }
         }
         return out.toByteArray()
@@ -234,7 +257,8 @@ class ParaleloDataSource(
             // Uma conexao paralela ativa, do connect ao ultimo byte. As outras
             // somam no mesmo segundo do medidor; nada e contado duas vezes.
             medidor?.inicio(token)
-            val c = try { conectar(u, ini, ult) } catch (e: IOException) { medidor?.fim(token); throw e }
+            Estat.conexoes.incrementAndGet()
+            val c = try { conectar(u, ini, ult) } catch (e: IOException) { Estat.conexoes.decrementAndGet(); medidor?.fim(token); throw e }
             try {
                 if (c.responseCode != 206) throw IOException("HTTP ${c.responseCode} no pedaco $ini-$ult")
                 val d = lerTudo(c)
@@ -244,6 +268,7 @@ class ParaleloDataSource(
                 ultimoErro = e
             } finally {
                 c.disconnect()
+                Estat.conexoes.decrementAndGet()
                 medidor?.fim(token)
             }
         }
@@ -258,7 +283,7 @@ class ParaleloDataSource(
             // parado com o buffer cheio, e nao conta.
             medidor?.inicio(token)
             val n = try { inp.read(buffer, offset, length) } finally { medidor?.fim(token) }
-            if (n > 0) medidor?.bytes(token, unicaOrigem, n)
+            if (n > 0) { medidor?.bytes(token, unicaOrigem, n); Estat.bytes.addAndGet(n.toLong()) }
             if (n < 0) return C.RESULT_END_OF_INPUT
             bytesTransferred(n)
             return n
@@ -291,6 +316,7 @@ class ParaleloDataSource(
         for (f in pedidos.values) f.cancel(true)
         pedidos.clear()
         buf = null
+        if (unicaIn != null) Estat.conexoes.decrementAndGet()
         try { unicaIn?.close() } catch (_: IOException) {}
         unicaIn = null
         unicaOrigem = null

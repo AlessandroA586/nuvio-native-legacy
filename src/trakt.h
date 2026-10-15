@@ -15,6 +15,7 @@
 #include "catalogo.h"
 #include "perfil.h"
 #include <stddef.h>
+#include <stdint.h>
 
 int  trakt_carregar(const char *dirArte);   // 1 quando ha credencial
 
@@ -74,6 +75,8 @@ int  trakt_credencial_igual(const char *token, const char *clientId);
 // logout continua ESCREVENDO (trakt_marcar) na conta de quem saiu, com o que a
 // proxima pessoa assistir.
 void trakt_esquecer(void);
+// Reset transient tracker state for every profile opening; saved auth stays.
+void trakt_abrir_sessao(void);
 
 // Completa itens que ja tem imdb, tipo e progresso com arte (metahub, sem
 // rede), sinopse/meta/nota (Cinemeta so se ainda faltarem) e minutos
@@ -81,12 +84,24 @@ void trakt_esquecer(void);
 // invalido — falha do Cinemeta sozinha NAO remove o item. Nao depende de
 // credencial Trakt. BLOQUEIA — chamar do fio de descoberta.
 int  trakt_enfeitar_lote(CatItem *saida, int n);
+int trakt_enfeitar_lote_sessao(CatItem *saida, int n, uint64_t sessao);
 
 // Preenche ate `max` itens do "continue assistindo", ja com arte resolvida.
 // BLOQUEIA — chamar do fio de descoberta. Devolve quantos preencheu.
 // Remove um item da barra de retomada do Trakt (DELETE /sync/playback/<id>).
 // `imdb` e a chave COMPOSTA que trakt_continuar montou. Devolve 0 quando nao ha
 // id conhecido — o item veio do progresso da conta, nao do Trakt.
+typedef struct { uint64_t sessao; unsigned long long mapa, credencial; char aut[200], chave[140]; } TraktDestino;
+int trakt_destino_capturar(TraktDestino *);
+int trakt_episodios_marcar_destino(const TraktDestino *, const char *, const VistoPar *, int, int);
+#define TRAKT_REMOVER_MAX 64
+typedef struct {
+  TraktDestino destino;
+  char imdb[64]; long long ids[TRAKT_REMOVER_MAX]; int n;
+} TraktRemocao;
+int trakt_remocao_capturar(TraktRemocao *, const char *imdb);
+int trakt_remocao_executar(const TraktRemocao *);
+int trakt_progresso_ocultar_destino(const TraktDestino *, const char *imdb, int ocultar);
 int trakt_playback_remover(const char *imdb);
 // Marca (visto=1) ou desmarca (0) um lote de episodios, numa requisicao so.
 // SINCRONO: quem chamar do fio de desenho tem de mandar para um fio proprio.
@@ -99,6 +114,8 @@ int  trakt_continuar_falhou(void);
 // O id ("tt:S:E") e um item "a seguir" da ultima leitura — proximo episodio de
 // serie cujo ultimo visto terminou. Entra na fileira com progresso 0.
 int trakt_e_a_seguir(const char *id);
+// Historico lido confirmou o mesmo episodio depois do progresso informado.
+int trakt_cw_concluiu(const char *id, long long progressoMs);
 // Oculta/reexibe a serie no progresso do Trakt (POST /users/hidden/progress_watched).
 // Sincrono, para fio de trabalho. 0 sem Trakt ou sem IMDb.
 int trakt_progresso_ocultar(const char *imdb, int ocultar);
@@ -116,11 +133,15 @@ int  trakt_perfil(PerfilDados *saida);
 // Informa onde o dono parou. `imdb` pode trazer episodio ("tt123:4:9").
 // Ate agora o app so LIA o Trakt; sem isto, assistir aqui nao mexia no
 // "continue assistindo" dos outros aparelhos dele. Nao bloqueia: sai num fio.
-void trakt_marcar(const char *imdb, double posSeg, double durSeg);
+void trakt_marcar(const char *imdb, double posSeg, double durSeg, double assistidoSeg, int assistiu);
 // Scrobble durante a reproducao (#179): /scrobble/start ("Now Watching") ao
 // tocar, /scrobble/pause ao pausar. `evento` e SCR_EV_* de traktscrobble.h.
 // Nao bloqueia; repeticoes (start ja em pe, pause sem start) sao descartadas.
-int  trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg);
+// `assistidoSeg`: midia realmente tocada nesta fonte principal (seek nao
+// conta); `assistiu`: a decisao do player (player_regra_visto), sem ela nao
+// sai stop. Saida recusada tambem encerra o start em pe.
+int  trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg, double assistidoSeg,
+                    int assistiu);
 
 // Watchlist ("Minha Lista") e colecao ("Comprados") do dono. `qual` e
 // "watchlist" ou "collection". BLOQUEIA — chamar do fio de descoberta.

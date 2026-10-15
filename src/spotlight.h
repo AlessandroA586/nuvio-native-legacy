@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // SPOTLIGHT: a caixa de busca que o botao de MICROFONE do controle abre por
 // cima de qualquer tela (pedido do dono, 01/10/2026), no lugar de levar a
 // pessoa para a tela de Busca inteira.
@@ -127,7 +128,7 @@ typedef struct {
   char tituloTipo[8];
   char id[80];
   char nome[140];
-  char arte[512];
+  char arte[NV_ARTE_URL_MAX];
   char base[600];
 } SpotPedido;
 int  spot_pediu(SpotPedido *p);

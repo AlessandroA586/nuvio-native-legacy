@@ -1,4 +1,5 @@
 #include "vistoep.h"
+#include "perfisessao.h"
 #include "js.h"
 #include <limits.h>
 #include <math.h>
@@ -159,6 +160,16 @@ int vistoep_fonte(const char *imdb, int temporada, int episodio, int visto,
   return ok;
 }
 
+int vistoep_fonte_se_sessao(const char *imdb, int temporada, int episodio,
+                          int visto, long long remotoMs, VistoFonte *c,
+                          uint64_t sessao) {
+  int ok;
+  if (!nv_perfil_sessao_travar(sessao)) return 0;
+  ok = vistoep_fonte(imdb, temporada, episodio, visto, remotoMs, c);
+  nv_perfil_sessao_destravar();
+  return ok;
+}
+
 void vistoep_fonte_log(const char *imdb, const char *fonte, const VistoFonte *c) {
   char quais[VE_FONTE_PARES * 10 + 8];
   size_t u = 0;
@@ -170,6 +181,9 @@ void vistoep_fonte_log(const char *imdb, const char *fonte, const VistoFonte *c)
     u += (size_t)snprintf(quais + u, sizeof quais - u, "%sT%dE%d", i ? " " : ": ",
                           c->par[i].temporada, c->par[i].episodio);
   if (c->bloqueados > k && u + 5 < sizeof quais) snprintf(quais + u, sizeof quais - u, " ...");
+  if (c->vistos)
+    printf("[visto] marcado por %s-importacao pos=0 dur=0 assistido=0s id=%s n=%d (sem reproducao local)\n",
+           fonte, imdb, c->vistos);
   printf("[vistoep] %s: %s +%d (bloqueados %d%s; remoto mais novo %d)\n", imdb, fonte,
          c->vistos, c->bloqueados, quais, c->venceu);
   fflush(stdout);

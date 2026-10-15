@@ -1,0 +1,45 @@
+// Leitura real do guia: tv, ids de IPTV e landscape nao exigem genero.
+#define NV_PERFIL_SESSAO_FORTE
+#include "../src/guia.c"
+#include <assert.h>
+
+static const char *corpo = "{\"metas\":["
+  "{\"id\":\"m3u:canaisabertos:0\",\"type\":\"tv\",\"name\":\"Band SP\","
+  "\"poster\":\"https://logos.example/band.png\",\"posterShape\":\"landscape\"},"
+  "{\"id\":\"ec:aee\",\"type\":\"tv\",\"name\":\"A&E\","
+  "\"poster\":\"https://logos.example/aee.png\",\"posterShape\":\"landscape\"},"
+  "{\"id\":\"tt123\",\"type\":\"movie\",\"name\":\"Filme\"}]}";
+char *rede_baixar(const char *url, int segundos) {
+  (void)segundos;
+  assert(!strcmp(url, "https://addon.example/catalog/tv/canais.json?v=1.4.0&probe=1"));
+  return strdup(corpo);
+}
+char *rede_baixar_medido_controle(const char *url, int segundos,
+                                  const char *const *cabecalhos,
+                                  const RedeControle *controle,
+                                  RedeMedida *medida) {
+  (void)cabecalhos; (void)medida;
+  if (controle && controle->cancelado && *controle->cancelado) return NULL;
+  return rede_baixar(url, segundos);
+}
+uint64_t perfis_sessao_geracao(void) { return 0; }
+int perfis_sessao_atual(uint64_t geracao) { return geracao == 0; }
+int perfis_sessao_travar(uint64_t geracao) { (void)geracao; return 1; }
+void perfis_sessao_destravar(void) {}
+int addons_base_desligada(const char *base) { (void)base; return 0; }
+int main(void) {
+  GFonte f = {0};
+  int novos;
+  strcpy(f.base, "https://addon.example?v=1.4.0&probe=1");
+  strcpy(f.tipo, "tv"); strcpy(f.id, "canais"); strcpy(f.nome, "Canais Abertos");
+  assert(ehCanal(f.tipo));
+  assert(lerPagina(&f, 0, 10, &novos) == 3);
+  assert(novos == 2 && sNCanais == 2);
+  assert(!strcmp(sCanais[0].id, "m3u:canaisabertos:0"));
+  assert(!strcmp(sCanais[1].id, "ec:aee"));
+  for (int k = 0; k < 2; k++) {
+    assert(sCanais[k].cat >= 0 && sCanais[k].logo[0]);
+    assert(!strcmp(sCanais[k].base, f.base));
+  }
+  puts("PASS: guia aceita catalogo tv sem genre, ids m3u:/ec: e poster landscape");
+}

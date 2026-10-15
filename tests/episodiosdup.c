@@ -8,6 +8,7 @@ int ajustes_hist_conta(void) { return 1; }
 int ajustes_busca_cinemeta(void) { return 1; }
 int ajustes_busca_nuvio(void) { return 0; }   // #311: Primeiro (padrao)
 int ajustes_ocultar_nao_lancados(void) { return 0; }   // #369: descoberta.c le o ajuste
+int ajustes_ocultar_filmes_vistos(void) { return 0; }    // #366: descoberta.c le o ajuste
 // FALTA DE MEMORIA NO CRESCIMENTO DO CONJUNTO (EpSet): com `callocFalha` ligado,
 // todo calloc de mais de 1024 itens (so o crescimento do conjunto pede isso
 // neste teste) responde NULL. O primeiro, de 1024, passa.
@@ -32,6 +33,7 @@ Uint32 SDL_GetTicks(void) { return 0; }
 // traz — e mais os que este teste ja tinha)
 int         ajustes_idioma_ingles(void) { return 0; }
 int ajustes_idioma(void) { return 0; }
+int ajustes_cw_minimo(void) { return 1; }
 int   ajustes_cw_concluido(void)         { return 90; }  // factory "watched" threshold
 unsigned recomenda_geracao(void)         { return 0; }   // social generation: no social layer here
 int   ajustes_cw_ordem(void)               { return 0; }   // Padrao (issue #127)
@@ -63,8 +65,8 @@ void homeestado_contexto(HomeContexto *c) { *c = (HomeContexto){0}; c->perfil = 
 int homeestado_mudancas(const HomeContexto *a, const HomeContexto *b) { (void)a; (void)b; return 0; }
 const char *homeestado_mudancas_texto(int m, char *b, unsigned t) { (void)m; if (b && t) b[0] = 0; return b; }
 int prog_ler(ProgRegistro *saida, int max) { (void)saida; (void)max; return 0; }
-int prog_gravar_local(const char *imdb, int t, int e, double p, double d) {
-  (void)imdb; (void)t; (void)e; (void)p; (void)d; return 0;
+int prog_gravar_local(const char *imdb, int t, int e, double p, double d, int tocou) {
+  (void)imdb; (void)t; (void)e; (void)p; (void)d; (void)tocou; return 0;
 }
 
 void  SDL_Delay(Uint32 ms)                 { usleep(ms * 1000); }
@@ -96,6 +98,9 @@ int   fil_podar_catalogos(const char *const *ids, const char *const *bases, int 
   (void)ids; (void)bases; (void)n; (void)perfilDaLista; return 0; }
 int fil_marcar_sem_addon(const char *const *ids, const char *const *bases, const int *ativos, int n, int perfilDaLista) {
   (void)ids; (void)bases; (void)ativos; (void)n; (void)perfilDaLista; return 0;
+}
+int fil_marcar_declaradas(const char *const *chaves, int n, int perfil) {
+  (void)chaves; (void)n; (void)perfil; return 0;
 }
 int   fil_addon_novo(const char *id, const char *base) { (void)id; (void)base; return 0; }
 int   addons_perfil_da_lista(void)         { return 0; }
@@ -239,6 +244,7 @@ char *rede_baixar(const char *u, int t) {
   for (r = 0; r < nRotas; r++)
     if (strstr(u, rotas[r].trecho)) return rotas[r].resp ? strdup(rotas[r].resp) : NULL;
   if (strstr(u, "cinemeta")) {
+    if (strstr(u, "/meta/series/tt0388629.json") && cineSerie) return strdup(cineSerie);
     if (strstr(u, "/meta/movie/tt13293588.json"))  return strdup(META_FILME_ERRADO);
     if (strstr(u, "/meta/series/tt13293588.json")) return strdup(cineSerie ? cineSerie : META_SERIE);
     if (strstr(u, "/meta/movie/tt0111161.json"))   return strdup(META_FILME_OK);
@@ -323,6 +329,63 @@ int main(void) {
                        "{\"id\":\"y\",\"season\":1,\"name\":\"Y\"},"
                        "{\"id\":\"z\",\"season\":1,\"name\":\"Z\"}]}", e, 16);
   assert(n == 3);
+  // Samsung 2.0.4: One Piece renumerado por um addon de fontes.
+  {
+    size_t cap = 2u << 20, k;
+    char *cine = malloc(cap), *arq = malloc(cap);
+    int i, caso, via;
+    assert(cine && arq);
+    for (caso = 0; caso < 5; caso++) {
+      // 18 temporadas/1180 vs 1/1200; depois 89%, 90%, 100% de
+      // cobertura em uma temporada; por fim 98% com perda de temporadas.
+      // Quatro variantes por arquivo.
+      int nc = caso && caso < 4 ? 100 : 1180, na = caso && caso < 4 ? 120 : 1200;
+      k = (size_t)snprintf(cine, cap, "{\"meta\":{\"id\":\"tt0388629\",\"type\":\"series\",\"name\":\"One Piece\",\"videos\":[");
+      for (i = 0; i < nc; i++) {
+        int t = caso ? 1 : i % 18 + 1, ep = caso ? i + 1 : i / 18 + 1;
+        if (caso == 4 && i >= nc - 17) { t = i - (nc - 17) + 2; ep = 1; }
+        k += (size_t)snprintf(cine + k, cap - k,
+          "%s{\"id\":\"tt0388629:%d:%d\",\"season\":%d,\"episode\":%d,\"name\":\"C%d\"}",
+          i ? "," : "", t, ep, t, ep, i);
+      }
+      snprintf(cine + k, cap - k, "]}}");
+      k = (size_t)snprintf(arq, cap, "{\"meta\":{\"id\":\"tt0388629\",\"type\":\"series\",\"name\":\"One Piece\",\"videos\":[");
+      for (i = 0; i < na * 4; i++) {
+        int ep = i % na + 1;
+        if (caso == 1 && ep > 89) ep += 100;
+        if (caso == 2 && ep > 90) ep += 100;
+        k += (size_t)snprintf(arq + k, cap - k,
+          "%s{\"id\":\"file%d\",\"season\":1,\"episode\":%d,\"name\":\"One.Piece.%d.mkv\"}",
+          i ? "," : "", i, ep, ep);
+      }
+      snprintf(arq + k, cap - k, "]}}");
+      assert(k < cap - 8);
+      for (via = 0; via < 2; via++) {
+        nFake = 0; nRotas = 0; addonMeta = 1; addonTipo = "/series/";
+        fakeMetaExterno = 0; fakeSoCinemeta = 0; fakeIdioma = "en-US";
+        cineSerie = cine; addonResp = arq;
+        if (via) {
+          addonMeta = 0; addonResp = NULL; nFake = 1;
+          fake[0] = (FakeAddon){ "Fontes", "https://fx.test/SEGREDO", "org.fx", "tt", 0 };
+          rota("fx.test/SEGREDO/meta/series/tt0388629.json", arq);
+        }
+        limparCacheMeta();
+        if (via) catalogoDe("tt0388629", "series", "One Piece", "org.fx");
+        else catalogoCom("tt0388629", "series", "One Piece");
+        abrir();
+        printf("One Piece caso=%d catalogo-primeiro=%d: %d episodios, %d temporadas\n",
+               caso, via, cat_n_episodios(0), cat_item(0)->nTemporadas);
+        assert(cat_n_episodios(0) == (caso < 2 || caso == 4 ? nc : na));
+        assert(cat_item(0)->nTemporadas == (caso && caso < 4 ? 1 : 18));
+        if (caso < 2 || caso == 4) {
+          assert(!strcmp(cat_episodio(0, 0)->vid, "tt0388629:1:1"));
+          assert(!strstr(cat_episodio(0, nc - 1)->nome, ".mkv"));
+        }
+      }
+    }
+    free(cine); free(arq);
+    puts("ok  temporadas e cobertura de 90% preservam a numeracao do catalogo");
+  }
   // --- LISTA DE ARQUIVOS DE ADDON DE FONTE NO LUGAR DOS EPISODIOS (2.0.3.1) ---
   // Relato de TV LG na 2.0.2 (Breaking Bad): um addon de FONTES respondia o
   // /meta com um video por ARQUIVO de torrent — 18529 entradas, quase todas

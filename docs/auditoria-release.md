@@ -15,8 +15,10 @@ bash tools/auditoria-release.sh --sem-build  # smoke com o binario ja compilado
 bash tools/auditoria-release.sh --completo   # mais salvospainel, cw_pedidos e detail_remonta (~50-70 s cada)
 ```
 
-Sai com 0 so com tudo PASS. "NAO VERIFICADO" conta como falha no resumo: o
-que nao foi provado nao foi provado. Logs e capturas em `$TMPDIR/nv-auditoria*`.
+Sai com 0 so com todos os checks executaveis PASS. "NAO VERIFICADO" conta
+como falha no resumo (por exemplo, outro app aberto ou perfil indisponivel).
+INFO explicita limites fora do escopo do smoke, sem afirmar cobertura real.
+Logs e capturas em `$TMPDIR/nv-auditoria*`.
 
 ## 1. Estatica (`tools/auditoria/estatica.py`)
 
@@ -77,7 +79,10 @@ binario que ele mesmo abriu; com outro app do Mac aberto sai "NAO VERIFICADO"
 (as portas `/tmp/nuvio-key` e `/tmp/nuvio-shot-req` sao do sistema todo).
 
 Limites honestos: o caminho "ilha -> pagina" e "player -> pagina" exige ter
-tocado algo, entao fica NAO VERIFICADO no smoke e coberto pela estatica 1. A
+tocado algo, entao aparece como INFO de cobertura: a abertura real nao e
+exercitada; a estatica 1 confere que essas entradas pedem episodios. Antes
+este limite fixo era NAO VERIFICADO e tornava PASS impossivel mesmo com todos
+os checks passando. Checks executaveis indisponiveis continuam saindo com 2. A
 copia usa a sessao da conta do dono: o app pode renovar o token na copia, e o
 refresh token antigo (o de `~/.nuvio`) pode deixar de valer — se o app do Mac
 pedir login depois de uma auditoria, e isso.

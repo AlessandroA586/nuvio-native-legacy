@@ -48,8 +48,8 @@ int         perfis_ativo(void)  { return perfilAtual; }
 
 const char *desc_genero_pt(const char *g) { return g; }
 int prog_ler(ProgRegistro *saida, int max) { (void)saida; (void)max; return 0; }
-int prog_gravar_local(const char *imdb, int t, int e, double p, double d) {
-  (void)imdb; (void)t; (void)e; (void)p; (void)d; return 0;
+int prog_gravar_local(const char *imdb, int t, int e, double p, double d, int tocou) {
+  (void)imdb; (void)t; (void)e; (void)p; (void)d; (void)tocou; return 0;
 }
 
 // --- APOIO -------------------------------------------------------------------
@@ -221,6 +221,17 @@ int main(void) {
     f = fopen(c, "r+b"); assert(f);
     fseek(f, (long)sizeof(unsigned), SEEK_SET); fwrite(&v5, sizeof v5, 1, f); fclose(f);
     confere("v5 do perfil 1 continua aceito", cat_ler_cache(dirPacote) == 1); }
+
+  // #433: mudanca no CatItem invalida o cache, mesmo com versao igual.
+  { char c[700]; FILE *f; unsigned antigo = (unsigned)sizeof(CatItem) - 1024u;
+    snprintf(c, sizeof c, "%s/catalogo-rede.bin", dirDados);
+    confere("gravou antes da mudanca de tamanho", cat_gravar_cache(dirPacote));
+    f = fopen(c, "r+b"); assert(f);
+    fseek(f, 2L * (long)sizeof(unsigned), SEEK_SET);
+    fwrite(&antigo, sizeof antigo, 1, f); fclose(f);
+    confere("CatItem antigo e recusado", cat_ler_cache(dirPacote) == 0);
+    confere("cache antigo foi apagado", !cacheEmDisco(dirDados, dirPacote));
+    confere("novo formato gravado de novo", cat_gravar_cache(dirPacote)); }
 
 #ifndef NV_CACHE_SEM_APAGAR
   // cat_apagar_cache: a metade do logout que mora aqui. Compile com

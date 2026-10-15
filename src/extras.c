@@ -1,8 +1,11 @@
+#include "intro.h"
+#include "arteurl.h"
 #include "imdbnota.h"
 #include "extras.h"
 #include "streams.h"
 #include "marco.h"
 #include "vistoep.h"
+#include "perfisessao.h"
 #include "contalib.h"
 #include "trakt.h"
 #include "rede.h"
@@ -26,6 +29,7 @@ extern void cat_historico_definir_id(const char *imdb, const char *tipo, int vis
 static int  notaTrakt, votosTrakt;
 static int  notas[EX_NFONTES];
 static char mdbChave[80];
+static char mdbChavePacote[80];
 static char dirArteEx[512];
 
 // Nome do provedor na api do mdbList E nome do arquivo de marca em art/marcas.
@@ -84,6 +88,7 @@ void extras_carregar(const char *dirArte) {
     while (fim > mdbChave && (fim[-1] == '\n' || fim[-1] == '\r')) *--fim = 0;
   }
   fclose(f);
+  snprintf(mdbChavePacote, sizeof mdbChavePacote, "%s", mdbChave);
   printf("[extras] mdblist %s\n", mdbChave[0] ? "ok" : "vazio"); fflush(stdout);
 }
 
@@ -137,8 +142,9 @@ static int  epTempAtual, epNumAtual;    // de que episodio a lista acima e
 static int  epFioVivo;
 static char epShow[24];
 static int  epPedTemp, epPedNum;
+static NvPerfilSessao epComentSessao;
 static int  nComent;
-static struct { char titulo[120], ano[8], imdb[16], poster[200]; } rel[EX_REL_MAX];
+static struct { char titulo[120], ano[8], imdb[16], poster[NV_ARTE_URL_MAX]; } rel[EX_REL_MAX];
 // Vistos: um bit por episodio, ate 40 episodios em 20 temporadas. Vetor fixo
 // porque a consulta acontece no DESENHO de cada card, a cada quadro — uma
 // busca em lista ali custaria mais que a resposta.
@@ -225,6 +231,23 @@ static int  nEstudio;
 static long tmdbEmCurso;
 
 static char idPedido[24], idEmCurso[24];
+static NvPerfilSessao sessaoPedido;
+static pthread_key_t sessaoDoFio;
+static pthread_once_t sessaoDoFioUma = PTHREAD_ONCE_INIT;
+static void criarSessaoDoFio(void) { pthread_key_create(&sessaoDoFio, free); }
+static void definirSessaoDoFio(NvPerfilSessao sessao) {
+  NvPerfilSessao *p;
+  pthread_once(&sessaoDoFioUma, criarSessaoDoFio);
+  p = pthread_getspecific(sessaoDoFio);
+  if (!p) { p = malloc(sizeof *p); if (p) pthread_setspecific(sessaoDoFio, p); }
+  if (p) *p = sessao;
+}
+static int sessaoDoFioAtual(void) {
+  NvPerfilSessao *p;
+  pthread_once(&sessaoDoFioUma, criarSessaoDoFio);
+  p = pthread_getspecific(sessaoDoFio);
+  return nv_perfil_sessao_atual(p ? *p : 0);
+}
 static int  serieEmCurso, seriePedido, fioVivo;
 // DOIS FIOS PERMANENTES, UMA GERACAO POR PEDIDO (19/09).
 //
@@ -250,7 +273,7 @@ static void *buscar(void *arg);
 static int pedidoAindaAtual(const char *id) {
   int atual;
   pthread_mutex_lock(&trava);
-  atual = !strcmp(id, idPedido);
+  atual = !strcmp(id, idPedido) && sessaoDoFioAtual();
   pthread_mutex_unlock(&trava);
   return atual;
 }
@@ -319,6 +342,9 @@ static void urlFicha(char *dst, size_t cap, int serie, long idT,
     snprintf(extra, sizeof extra, "&include_video_language=%s", langs);
   }
   if (mais) snprintf(append + strlen(append), sizeof append - strlen(append), "%srecommendations", append[0] ? "," : "");
+  // keywords junto da ficha: o sinal de cena pos-creditos vem no MESMO corpo
+  // (TMDB 179430/179431), sem viagem nova.
+  if (!serie) snprintf(append + strlen(append), sizeof append - strlen(append), "%skeywords", append[0] ? "," : "");
   snprintf(dst, cap, "%s/%s/%ld?api_key=%s&language=%s%s%s%s",
            "https://api.themoviedb.org/3", serie ? "tv" : "movie", idT,
            chave, idioma, append[0] ? "&append_to_response=" : "", append, extra);
@@ -462,13 +488,17 @@ static void *buscar(void *arg) {
   int parte = (int)(intptr_t)arg;
   unsigned long long historicoGeracao = cat_historico_geracao();
   unsigned long long credencialGeracao = trakt_credencial_geracao();
+  NvPerfilSessao perfilSessao;
 
   pthread_mutex_lock(&trava);
+  perfilSessao = sessaoPedido;
   snprintf(id, sizeof id, "%s", idEmCurso);
   serie = serieEmCurso;
   tmdbId = tmdbEmCurso;
   tipo = serie ? "shows" : "movies";
   pthread_mutex_unlock(&trava);
+  definirSessaoDoFio(perfilSessao);
+  if (!id[0] || !nv_perfil_sessao_atual(perfilSessao)) return NULL;
 
   // O Trakt E OPCIONAL. Os blocos que dependem dele (vistos, nota Trakt,
   // comentarios, notas por episodio, related de sobra) rodam so quando ha
@@ -557,7 +587,7 @@ static void *buscar(void *arg) {
                 if (js_texto(q, qf, "last_watched_at", quando, sizeof quando) && quando[0])
                   quandoMs = js_ms_iso(quando);
               }
-              vistoep_fonte(id, t, en, visto, quandoMs, &fonte);
+              vistoep_fonte_se_sessao(id, t, en, visto, quandoMs, &fonte, perfilSessao);
               { char cru[16] = "ausente";
                 js_bruto(q, qf, "completed", cru, sizeof cru);
                 printf("[vistoep] %s T%dE%d: trakt completed=%s lido=%d last_ms=%lld mapa=%d\n",
@@ -619,7 +649,7 @@ static void *buscar(void *arg) {
       int valido = strstr(corpo, "\"seasons\"") != NULL;
       free(corpo);
       pthread_mutex_lock(&trava);
-      if (!strcmp(id, idPedido) && valido) {
+      if (!strcmp(id, idPedido) && sessaoDoFioAtual() && valido) {
         memcpy(vistos, novo, sizeof vistos);
         proximoT = pt; proximoE = pe; progressoPronto = 1;
         epsExibidos = exib; epsVistos = vist;
@@ -646,7 +676,7 @@ static void *buscar(void *arg) {
     int v = (int)js_num(corpo, NULL, "votes", 0.0);
     free(corpo);
     pthread_mutex_lock(&trava);
-    if (!strcmp(id, idPedido)) {
+    if (!strcmp(id, idPedido) && sessaoDoFioAtual()) {
       notaTrakt = n; votosTrakt = v;
       // Sem chave do mdbList esta e a UNICA nota do Trakt que teremos; com
       // chave, o passo seguinte sobrescreve com a que o mdbList devolver, que
@@ -704,7 +734,7 @@ static void *buscar(void *arg) {
         if (v >= 0.0) {
           int c = emDecimos(v);
           pthread_mutex_lock(&trava);
-          if (!strcmp(id, idPedido)) {
+          if (!strcmp(id, idPedido) && sessaoDoFioAtual()) {
             notas[k] = c;
             if (k == EX_IMDB) { imdbnota_publicar(id,c); imdbnota_alias_tmdb(id,tmdbId,serie); }
           }
@@ -754,7 +784,7 @@ static void *buscar(void *arg) {
     // novo: e so a ordem das oito linhas que ja chegaram.
     coment_ordenar(achado, n, idioma_iso(ajustes_idioma()));
     pthread_mutex_lock(&trava);
-    if (!strcmp(id, idPedido)) {
+    if (!strcmp(id, idPedido) && sessaoDoFioAtual()) {
       int k;
       for (k = 0; k < n; k++) {
         snprintf(coment[k].user, sizeof coment[k].user, "%s", achado[k].u);
@@ -806,7 +836,7 @@ static void *buscar(void *arg) {
       }
       free(corpo);
       pthread_mutex_lock(&trava);
-      if (!strcmp(id, idPedido)) nTemps = nt;
+      if (!strcmp(id, idPedido) && sessaoDoFioAtual()) nTemps = nt;
       pthread_mutex_unlock(&trava);
     }
   }
@@ -871,12 +901,18 @@ static void *buscar(void *arg) {
         // usada por extras_pedir para que uma troca de titulo nao limpe os
         // campos no meio do parse e receba, logo depois, metade da ficha velha.
         pthread_mutex_lock(&trava);
-        if (strcmp(id, idPedido)) {
+        if (strcmp(id, idPedido) || !sessaoDoFioAtual()) {
           pthread_mutex_unlock(&trava);
           free(corpo);
           return NULL;
         }
         const char *fimC = corpo + strlen(corpo);
+        intro_registrar_tmdb(id,idT,corpo);
+        // CENA POS-CREDITOS (TMDB 179430/179431), no mesmo corpo da ficha.
+        // Serie traz keywords em /tv/<id>/keywords (viagem propria em
+        // descoberta.c); aqui e so filme. Grava o bit direto no item: este fio
+        // nao tem o CatItem `edit` do detalhe.
+        if (!serie) cat_marcar_pos_creditos(id, desc_tmdb_pos_creditos(corpo));
         // Uma linha, no corpo que ja esta na mao. Ver a nota em
         // fichaIdiomaOrig.
         js_texto(corpo, fimC, "original_language",
@@ -1118,7 +1154,7 @@ static void *buscar(void *arg) {
             int nv = parsearVideos(js_array(cs, NULL, "results"), 1,
                                       desc_tmdb_idioma(), vt, EX_TRAILER_MAX);
             pthread_mutex_lock(&trava);
-            if (!strcmp(id, idPedido) && !nTrailer) {
+            if (!strcmp(id, idPedido) && sessaoDoFioAtual() && !nTrailer) {
               publicarTrailers(vt, nv);
             }
             pthread_mutex_unlock(&trava);
@@ -1180,7 +1216,7 @@ static void *buscar(void *arg) {
           free(corpo);
           if (!ne) continue;
           pthread_mutex_lock(&trava);
-          if (!strcmp(id, idPedido)) {
+          if (!strcmp(id, idPedido) && sessaoDoFioAtual()) {
             int t3;
             for (t3 = 0; t3 < nTemps; t3++)
               if (temps[t3].numero == sn[t2]) break;
@@ -1262,7 +1298,7 @@ static void *buscar(void *arg) {
             ach[j2] = v;
           } }
         pthread_mutex_lock(&trava);
-        if (!strcmp(id, idPedido)) {
+        if (!strcmp(id, idPedido) && sessaoDoFioAtual()) {
           int k;
           snprintf(colNome, sizeof colNome, "%s", nome);
           snprintf(colCapa, sizeof colCapa, "%s", capa);
@@ -1364,7 +1400,7 @@ static void relacionadosEPublicar(const char *id, int serie, int temTrakt) {
     }
     free(corpo);
     pthread_mutex_lock(&trava);
-    if (!strcmp(id, idPedido)) {
+    if (!strcmp(id, idPedido) && sessaoDoFioAtual()) {
       int k;
       for (k = 0; k < n; k++) {
         snprintf(rel[k].titulo, sizeof rel[k].titulo, "%s", achado[k].t);
@@ -1475,12 +1511,14 @@ void extras_pedir(const char *imdb, int serie, long tmdbId) {
   // Mesmo id com OUTRO tipo e outro pedido: um titulo de tipo incerto
   // ("anime") abre como filme e o /meta o resolve como serie — ai os extras
   // tem de ser refeitos por /tv e /shows (detail.c repede).
-  if (!strcmp(idPedido, imdb) && seriePedido == serie) {
+  if (!strcmp(idPedido, imdb) && seriePedido == serie &&
+      nv_perfil_sessao_atual(sessaoPedido)) {
     printf("[vistoep] %s: extras reutilizados; fio=%d pronto=%d; sem nova consulta\n",
            imdb, fioVivo, progressoPronto);
     fflush(stdout);
     pthread_mutex_unlock(&trava); return; }
   snprintf(idPedido, sizeof idPedido, "%s", imdb);
+  sessaoPedido = nv_perfil_sessao_ler();
   seriePedido = serie;
   tmdbPedido = tmdbId;
   zerarPublicado();
@@ -1527,14 +1565,17 @@ static void *buscarEpComent(void *arg) {
   char aut[200], chave[140], url[260], show[24];
   char *corpo;
   int t, e;
+  NvPerfilSessao sessao;
   (void)arg;
 
   pthread_mutex_lock(&trava);
   snprintf(show, sizeof show, "%s", epShow);
   t = epPedTemp; e = epPedNum;
+  sessao = epComentSessao;
   pthread_mutex_unlock(&trava);
 
-  if (!trakt_cabecalhos(cab, aut, sizeof aut, chave, sizeof chave)) {
+  if (!nv_perfil_sessao_atual(sessao) ||
+      !trakt_cabecalhos(cab, aut, sizeof aut, chave, sizeof chave)) {
     pthread_mutex_lock(&trava); epFioVivo = 0; pthread_mutex_unlock(&trava);
     return NULL;
   }
@@ -1576,7 +1617,8 @@ static void *buscarEpComent(void *arg) {
     pthread_mutex_lock(&trava);
     // So publica se o dono ainda esta no mesmo episodio: trocar de episodio
     // enquanto isto volta faria a lista antiga aparecer sob o rotulo novo.
-    if (t == epPedTemp && e == epPedNum) {
+    if (nv_perfil_sessao_atual(sessao) && !strcmp(show, epShow) &&
+        t == epPedTemp && e == epPedNum) {
       int k;
       for (k = 0; k < n; k++) {
         snprintf(comentEp[k].user, sizeof comentEp[k].user, "%s", achado[k].u);
@@ -1594,7 +1636,8 @@ static void *buscarEpComent(void *arg) {
     // motivo do teste em extras_pedir_comentarios_ep — senao seria um pedido
     // por quadro ate a rede voltar.
     pthread_mutex_lock(&trava);
-    if (t == epPedTemp && e == epPedNum) { epTempAtual = t; epNumAtual = e; }
+    if (nv_perfil_sessao_atual(sessao) && !strcmp(show, epShow) &&
+        t == epPedTemp && e == epPedNum) { epTempAtual = t; epNumAtual = e; }
     pthread_mutex_unlock(&trava);
   }
   pthread_mutex_lock(&trava); epFioVivo = 0; pthread_mutex_unlock(&trava);
@@ -1620,6 +1663,7 @@ void extras_pedir_comentarios_ep(const char *imdbSerie, int temporada, int episo
     dp = strchr(epShow, ':');
     if (dp) *(char *)dp = 0; }
   epPedTemp = temporada; epPedNum = episodio;
+  epComentSessao = nv_perfil_sessao_ler();
   nComentEp = 0;                 // limpa: a lista velha e de outro episodio
   epTempAtual = epNumAtual = 0;
   epFioVivo = 1;
@@ -2051,6 +2095,7 @@ static int exrProx;
 static char exrPedido[24];
 static int exrSerie, exrSinopse, exrFio;
 static unsigned long exrGer, exrFeita;
+static NvPerfilSessao exrSessao;
 static pthread_mutex_t exrTrava = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t exrCv = PTHREAD_COND_INITIALIZER;
 
@@ -2084,12 +2129,15 @@ static void *lacoResumo(void *ignorado) {
     const char *cabPub[3];
     char *corpo;
     int serie, querSinopse, k, cortado = 0;
+    NvPerfilSessao sessao;
     pthread_mutex_lock(&exrTrava);
     while (exrFeita == exrGer) pthread_cond_wait(&exrCv, &exrTrava);
     exrFeita = exrGer;
     snprintf(id, sizeof id, "%s", exrPedido);
     serie = exrSerie; querSinopse = exrSinopse;
+    sessao = exrSessao;
     pthread_mutex_unlock(&exrTrava);
+    if (!id[0] || !nv_perfil_sessao_atual(sessao)) continue;
 
     // 1. Trakt, uma viagem.
     if (trakt_cabecalhos_publicos(cabPub, chaveT, sizeof chaveT)) {
@@ -2107,7 +2155,7 @@ static void *lacoResumo(void *ignorado) {
         numaLinha(t.sinopseEn);
         free(corpo);
         pthread_mutex_lock(&exrTrava);
-        { ExrVaga *v = exrVaga(id, 1);
+        if (nv_perfil_sessao_atual(sessao)) { ExrVaga *v = exrVaga(id, 1);
           if (!v->r.cru[EX_TRAKT]) v->r.cru[EX_TRAKT] = t.cru[EX_TRAKT];
           v->r.duracao = t.duracao;
           snprintf(v->r.cert, sizeof v->r.cert, "%s", t.cert);
@@ -2116,6 +2164,7 @@ static void *lacoResumo(void *ignorado) {
         pthread_mutex_unlock(&exrTrava);
       }
     }
+    if (!nv_perfil_sessao_atual(sessao)) continue;
 
     // 2. TMDB, so pela sinopse no idioma da interface.
     snprintf(chaveTmdb, sizeof chaveTmdb, "%s", desc_chave_tmdb());
@@ -2132,7 +2181,7 @@ static void *lacoResumo(void *ignorado) {
           js_texto(v, js_fim(v), "overview", sin, sizeof sin);
           numaLinha(sin);
           pthread_mutex_lock(&exrTrava);
-          { ExrVaga *g = exrVaga(id, 1);
+          if (nv_perfil_sessao_atual(sessao)) { ExrVaga *g = exrVaga(id, 1);
             if (sin[0]) snprintf(g->r.sinopse, sizeof g->r.sinopse, "%s", sin);
             if (!g->r.cru[EX_TMDB] && nota > 0.0) g->r.cru[EX_TMDB] = emDecimos(nota * 10.0); }
           pthread_mutex_unlock(&exrTrava);
@@ -2140,6 +2189,7 @@ static void *lacoResumo(void *ignorado) {
         free(corpo);
       }
     }
+    if (!nv_perfil_sessao_atual(sessao)) continue;
 
     // 3. MDBList, so o que a linha do titulo mostra.
     if (mdbChave[0] && ajustes_mdblist_ligado()) {
@@ -2153,7 +2203,7 @@ static void *lacoResumo(void *ignorado) {
         pthread_mutex_lock(&exrTrava);
         { ExrVaga *g = exrVaga(id, 0); ja = g && g->r.cru[k] > 0 && k == EX_TRAKT; }
         // Outro titulo pedido no meio: este para aqui e o fio pega o novo.
-        if (exrGer != exrFeita) ja = -1;
+        if (exrGer != exrFeita || !nv_perfil_sessao_atual(sessao)) ja = -1;
         pthread_mutex_unlock(&exrTrava);
         if (ja < 0) { cortado = 1; break; }
         if (ja) continue;
@@ -2166,15 +2216,20 @@ static void *lacoResumo(void *ignorado) {
           if (v >= 0.0) {
             int c = emDecimos(v);
             pthread_mutex_lock(&exrTrava);
-            { ExrVaga *g = exrVaga(id, 1); g->r.cru[k] = c; }
+            if (nv_perfil_sessao_atual(sessao)) { ExrVaga *g = exrVaga(id, 1); g->r.cru[k] = c; }
             pthread_mutex_unlock(&exrTrava);
-            if (k == EX_IMDB) imdbnota_publicar(id, c);
+            if (k == EX_IMDB && nv_perfil_sessao_travar(sessao)) {
+              imdbnota_publicar(id, c);
+              nv_perfil_sessao_destravar();
+            }
           } }
       }
     }
 
     pthread_mutex_lock(&exrTrava);
-    { ExrVaga *g = exrVaga(id, 1); g->r.pronto = !cortado; g->r.carregando = 0; }
+    if (nv_perfil_sessao_atual(sessao)) {
+      ExrVaga *g = exrVaga(id, 1); g->r.pronto = !cortado; g->r.carregando = 0;
+    }
     pthread_mutex_unlock(&exrTrava);
   }
   return NULL;
@@ -2192,6 +2247,7 @@ void extras_resumo_pedir(const char *imdb, int serie, int semSinopse) {
     v->r.carregando = 1; }
   snprintf(exrPedido, sizeof exrPedido, "%s", id);
   exrSerie = serie; exrSinopse = semSinopse;
+  exrSessao = nv_perfil_sessao_ler();
   exrGer++;
   if (!exrFio) {
     pthread_t t;
@@ -2244,4 +2300,32 @@ void extras_teste_progresso(const char *id, int nVistos, int exibidos, int pt, i
   memset(vistos, 0, sizeof vistos);
   { int t, e; for (t = 1; t <= 3; t++) for (e = 1; e < 8 && t < 3; e++) vistos[t][e] = 1; }
   pthread_mutex_unlock(&trava);
+}
+
+void extras_abrir_sessao(void) {
+  snprintf(mdbChave, sizeof mdbChave, "%s", mdbChavePacote);
+  pthread_mutex_lock(&trava);
+  idPedido[0] = idEmCurso[0] = 0;
+  sessaoPedido = nv_perfil_sessao_ler();
+  gerPedida++;
+  gerFeita[0] = gerFeita[1] = gerPedida;
+  fioVivo = 0;
+  zerarPublicado();
+  epShow[0] = 0;
+  nComentEp = epTempAtual = epNumAtual = epPedTemp = epPedNum = 0;
+  pthread_mutex_unlock(&trava);
+  pthread_mutex_lock(&heroTrailerTrava);
+  heroTrailerGer++;
+  heroTrailerPedido[0] = 0;
+  nHeroTrailer = heroTrailerTentativas = 0;
+  heroTrailerTentativaEm = 0;
+  pthread_mutex_unlock(&heroTrailerTrava);
+  pthread_mutex_lock(&exrTrava);
+  memset(exrCache, 0, sizeof exrCache);
+  exrProx = 0;
+  exrPedido[0] = 0;
+  exrSessao = nv_perfil_sessao_ler();
+  exrGer++;
+  exrFeita = exrGer;
+  pthread_mutex_unlock(&exrTrava);
 }

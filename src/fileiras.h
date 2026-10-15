@@ -60,7 +60,24 @@
 // a tela de Ajustes mostra o aviso de memoria e o modo seguro (seguro.h) passa
 // a vigiar a mudanca.
 #define FIL_LIMITE_MIN     3
-#define FIL_LIMITE_MAX    40
+// O teto das TVs (webOS, Tizen, .wgt, .tpk). Tambem e o numero historico que a
+// tela de novidades da 1.6 mostra.
+#define FIL_LIMITE_MAX_TV 40
+// ANDROID: "Ilimitado" (dono, 2.0.4). Nao e infinito: e o maior valor que a
+// estrutura aguenta (CAT_FIL_MAX 224 menos as fixas), e Ajustes o mostra como
+// "Ilimitado". Na pratica nenhuma conta liga 200 catalogos, entao a fila
+// (FIL_NA_FILA) deixa de aparecer; ela so volta acima de 200 ligadas.
+// CONTA DE MEMORIA, por 100 fileiras com 24 itens: 2400 CatItem x 15,6 KB =
+// ~37 MB de catalogo publicado. Na troca do catalogo ha por um quadro o bloco
+// novo e o antigo (aposentar, catalogo.c): ~75 MB de pico. A rodada de pedidos
+// e fatiada em CAT_RODADA_MAX (24) fileiras, entao os baldes dos fios somam no
+// maximo 24 x 375 KB = ~9 MB, qualquer que seja o limite.
+#ifdef NV_ANDROID
+#define FIL_LIMITE_MAX    200
+#define FIL_LIMITE_ILIMITADO FIL_LIMITE_MAX
+#else
+#define FIL_LIMITE_MAX    FIL_LIMITE_MAX_TV
+#endif
 #define FIL_LIMITE_PADRAO  7
 // Ate aqui e o que sempre foi permitido sem aviso.
 #define FIL_LIMITE_SEGURO 16
@@ -94,6 +111,11 @@ typedef enum {
   // motivo dos outros — o 6 gravado continua sendo o 4:3 de sempre.
   FIL_TIPO_DESTAQUE_QUADRADO_M, // 4:3 x1,25 — dois cards e meio por tela
   FIL_TIPO_DESTAQUE_QUADRADO_G, // 4:3 x1,5  — dois cards e um pedaco
+  // As tres fileiras de 06/10 (dono: "3 fileiras novas bonitonas"). No fim
+  // pelo mesmo motivo: o numero gravado dos tipos acima nao muda.
+  FIL_TIPO_LINHA_TEMPO,  // FILEIRA_LINHA_TEMPO — cartazes por ano sobre a linha animada
+  FIL_TIPO_FICHA,        // FILEIRA_FICHA — cartaz com a ficha (ano, nota, sinopse) ao lado
+  FIL_TIPO_PALCO,        // FILEIRA_PALCO — o foco grande no centro, vizinhos menores
   FIL_TIPO_N
 } FilTipo;
 
@@ -162,6 +184,16 @@ int  fil_limite_gravado(void);
 // Teto SO desta sessao (0 = sem teto). O perfil seguro (seguro.h) usa para a
 // home montar menos fileiras sem tocar em fileirasui-p<N>.txt.
 void fil_definir_teto_sessao(int teto);
+// O PASSO DO SELETOR DE AJUSTES. Nas TVs, de 1 em 1 entre 3 e 40. No Android
+// (2.0.4) o passo depois de 40 e "Ilimitado" (FIL_LIMITE_MAX) — ninguem
+// aperta a seta 160 vezes — e voltar de Ilimitado cai em 40.
+int  fil_limite_passo(int v, int dir);
+// 1 quando ir de `de` para `para` pede a folha de memoria (acima de
+// FIL_LIMITE_SEGURO, subindo). No Android nunca: la a folha virou uma dica no
+// texto da linha, e o diario do modo seguro continua vigiando igual.
+int  fil_limite_pede_aviso(int de, int para);
+// 1 quando `v` deve aparecer como "Ilimitado" (so no Android).
+int  fil_limite_ilimitado(int v);
 // Ao BAIXAR o limite, as ligadas que ficaram alem dele viram "fora da home"
 // (ocultas), nao fila. Decisao do dono; ver o comentario na definicao.
 void fil_definir_limite(int n);
@@ -251,6 +283,12 @@ int  fil_podar_catalogos(const char *const *ids, const char *const *bases, int n
 // #319: marca (so em memoria) as linhas de catalogo cujo addon saiu da conta ou
 // foi desligado, para elas nao ocuparem vaga do limite nem aparecerem na home.
 // `ativos[k]` = addon k ligado. Devolve quantas linhas mudaram de estado.
+// #204: `chaves[0..n)` = catalogos que os manifestos lidos declaram AGORA (chamar
+// ANTES do registro do ciclo). Linha de catalogo fora da lista, sem escolha
+// explicita da pessoa, vira despejavel quando a tabela enche; se forem mais de
+// 25% de FIL_MAX, saem ja. Devolve quantas saíram.
+int  fil_marcar_declaradas(const char *const *chaves, int n, int perfilDaLista);
+
 int  fil_marcar_sem_addon(const char *const *ids, const char *const *bases,
                           const int *ativos, int n, int perfilDaLista);
 

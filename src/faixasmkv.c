@@ -97,6 +97,28 @@ static int casarAudioPorAtributo(int nF, const VideoFaixa *f, const MkvFaixa *fx
   return achou;
 }
 
+// #421: listas truncadas so casam pelo idioma quando o par e unico nos
+// DOIS lados. Duas English/SDH, idioma vazio ou alias ambiguo ficam na TV.
+int faixasmkv_legendas_por_idioma(const VideoFaixa *f, int nF,
+                                 const MkvFaixa *fx, int n, int *mapa) {
+  int k, j, outros, achou = 0;
+  for (k = 0; k < nF; k++) {
+    int candidato = -1, quantos = 0;
+    mapa[k] = -1;
+    if (!f[k].idioma[0] || !strcmp(f[k].idioma, "und")) continue;
+    for (j = 0; j < n; j++)
+      if (fx[j].tipo == MKV_LEG && !legendaImagem(&fx[j]) &&
+          fx[j].idioma[0] && strcmp(fx[j].idioma, "und") && ling_casa(f[k].idioma, fx[j].idioma)) {
+        candidato = j; quantos++;
+      }
+    if (quantos != 1) continue;
+    outros = 0;
+    for (j = 0; j < nF; j++) outros += ling_casa(f[j].idioma, fx[candidato].idioma);
+    if (outros == 1) { mapa[k] = candidato; achou++; }
+  }
+  return achou;
+}
+
 // CASAMENTO DE UM TIPO. 1) Contagem igual: ordinal, como sempre. 2) Contagem
 // diferente na legenda: tira as de imagem, que o player do .tpk nao lista, e
 // tenta de novo. 3) Audio com o player listando MENOS (ele esconde DTS/TrueHD):
@@ -120,7 +142,7 @@ static int casarTipo(int nF, const VideoFaixa *f, const MkvFaixa *fx, int n, int
   // Audio com a TV listando MENOS que o arquivo (esconde DTS/TrueHD): casa por
   // atributo; as sem par seguro ficam com o rotulo da TV.
   if (nc > nF && tipo == MKV_AUDIO) return casarAudioPorAtributo(nF, f, fx, cand, nc, mapa) ? 3 : 0;
-  if (nc != nF) return 0;
+  if (nc != nF) return tipo == MKV_LEG && faixasmkv_legendas_por_idioma(f, nF, fx, n, mapa) ? 3 : 0;
   for (k = 0; k < nF; k++) mapa[k] = cand[k];
   return pulouImagem ? 2 : 1;
 }
@@ -163,6 +185,7 @@ static int aplicarUma(VideoFaixa *f, const MkvFaixa *m, int ordinal) {
              (meio[0] || poeCh) ? SEP : "", meio,
              (meio[0] && poeCh) ? " " : "", poeCh ? ch : "");
   } else {
+    if (m->nome[0]) snprintf(f->nome, sizeof f->nome, "%s", m->nome);
     // LETREIROS/FORCADA (FlagForced, "Forced", "Signs & Songs"): a pessoa
     // precisa saber que essa nao traduz o dialogo. O nome do arquivo, quando
     // ele ja diz isso ("Forced"), e o que o .wgt mostra; so a flag vira
@@ -204,7 +227,7 @@ int faixasmkv_aplicar(VideoFaixa *aud, int nAud, VideoFaixa *leg, int nLeg,
     printf("[mkv] contagem: arquivo %d audio / %d legenda, player %d / %d; casamento audio=%s legenda=%s\n",
            nA, nL, nAud, nLeg,
            !nAud ? "-" : comoA == 1 ? "ordinal" : comoA == 3 ? "by language/codec/channels" : "none, labels kept",
-           !nLeg ? "-" : comoL == 1 ? "ordinal" : comoL == 2 ? "without image subs" : "none, labels kept");
+           !nLeg ? "-" : comoL == 1 ? "ordinal" : comoL == 2 ? "without image subs" : comoL == 3 ? "unique language" : "none, labels kept");
     fflush(stdout);
   }
   return mudou;

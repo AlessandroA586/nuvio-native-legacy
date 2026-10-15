@@ -31,7 +31,8 @@ int perfis_ativo(void) { return perfil; }
 int player_carregando(void) { return 0; }
 void debrid_nova_busca(void) { }
 void debrid_definir_episodio(int t, int e) { (void)t; (void)e; }
-int debrid_resolver(const char *hash, int indice, char *url, unsigned tam) {
+int debrid_resolver_cache(const char *hash, int indice, char *url, unsigned tam, int *fora) {
+  *fora = 0;
   (void)hash; (void)indice; (void)url; (void)tam;
   assert(!"cache VOD nao pode resolver debrid"); return 0;
 }

@@ -15,6 +15,7 @@
 #include "mkv.h"
 #include "capmkv.h"
 #include "mkvass.h"
+#include "faixasmkv.h"
 #include "js.h"
 #include "lsregistro.h"
 #include "rede.h"
@@ -27,6 +28,7 @@
 #include "dts/dts_overlay.h"
 #include "legenda.h"
 #include "dados.h"
+#include "vazao.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -297,6 +299,16 @@ double video_duracao(void) { return SIM.duracao; }
 // capitulos. Melhor um stub honesto que um numero inventado.
 double video_creditos(void) { return 0.0; }
 double video_buffer_fim(void) { return SIM.bufferFim; }
+static VideoStats simStats;
+static int simStatsDef;
+void video_simular_estatisticas(const VideoStats *s) {
+  if (s) { simStats = *s; simStatsDef = 1; } else simStatsDef = 0;
+}
+void video_estatisticas(VideoStats *s) {
+  if (simStatsDef) { *s = simStats; return; }
+  video_stats_vazio(s);
+  if (SIM.bufferFim > 0) s->bufferSeg = SIM.bufferFim - SIM.pos;
+}
 void video_definir_dv(int dv) { (void)dv; }
 int  video_tocando(void) { return SIM.tocando; }
 int  video_iniciando(void) { return SIM.iniciando; }
@@ -340,6 +352,7 @@ int  video_reconectando(void) { return SIM.reconectando; }
 // No Mac quem toca e o pipeline do sistema por outro caminho; os cabecalhos do
 // addon so tem efeito no payload do load da webOS. Stub para o alvo linkar.
 void video_definir_cabecalhos(const char *cabs) { (void)cabs; }
+const char *video_cabecalhos(void) { return ""; }
 int  video_tem_atmos(void) { return SIM.atmos; }
 int  video_tem_dolby_vision(void) { return SIM.dv; }
 const char *video_hdr(void) { return SIM.hdr[0] ? SIM.hdr : "none"; }
@@ -2004,6 +2017,8 @@ static void *lerMkv(void *arg) {
     if (nt > NV_FAIXA_MAX) nt = NV_FAIXA_MAX;
     for (i = 0; i < nt; i++) tv[i] = faixaLeg[i].numero;
     modo = mkv_casar_legendas(fx, n, tv, nt, idx);
+    if (modo == MKV_CASA_NADA && faixasmkv_legendas_por_idioma(faixaLeg, nt, fx, n, idx))
+      printf("[mkv] legendas: pares unicos por idioma (lista da TV diferente)\n");
     // DIAGNOSTICO que faltou no #92: sem as duas listas lado a lado no log, o
     // deslocamento parecia "a TV desenha mal" e ninguem via que era o app.
     { int nArq = 0;
@@ -2034,6 +2049,8 @@ static void *lerMkv(void *arg) {
              j >= 0 ? fx[j].codec : "", j >= 0 && fx[j].idioma[0] ? fx[j].idioma : "");
       if (j < 0) continue;
       m = &fx[j];
+      // O nome e dado de exibicao mesmo quando a TV ja informou o idioma.
+      if (m->nome[0]) snprintf(f->nome, sizeof f->nome, "%s", m->nome);
       for (k = 0; k < j; k++) if (fx[k].tipo == 17) ordinal++;
       ordinal++;
       // O codec e o ordinal entram SEMPRE (a folha marca a faixa ASS pelo codec
@@ -2306,6 +2323,7 @@ void video_bombear(void) {
 void video_definir_cabecalhos(const char *cabs) {
   snprintf(cabsHttp, sizeof cabsHttp, "%s", cabs ? cabs : "");
 }
+const char *video_cabecalhos(void) { return cabsHttp; }
 
 // Monta o "httpHeader" do payload do load a partir das linhas "Nome: valor".
 //
@@ -3266,6 +3284,13 @@ void video_janela_fonte(int sx, int sy, int sw, int sh,
 double video_pos(void)      { return posSeg; }
 double video_duracao(void)  { return durSeg; }
 double video_buffer_fim(void) { return bufferSeg; }
+// webOS: so o buffer em SEGUNDOS e real (bufferRange do uMS); bytes, conexoes
+// e quadros o uMS nao conta. O host e o do link pedido (o uMS nao diz o final).
+void video_estatisticas(VideoStats *s) {
+  video_stats_vazio(s);
+  if (bufferSeg > 0 && bufferSeg >= posSeg) s->bufferSeg = bufferSeg - posSeg;
+  vazao_host_publico(urlAtual, s->host, sizeof s->host);
+}
 int    video_tocando(void)  { return tocando; }
 int    video_pronto(void)   { return pronto; }
 // O "COMECA PAUSADO" DO DOLBY VISION EM MKV (#203, C9 do dono, 08/10). No

@@ -64,6 +64,7 @@ void detail_volta_notar(int novo);
 int  detail_pediu_assistido(void);
 int  detail_pediu_amigos(char *imdb, size_t tam); // OK na ilha de amigos: o imdb do titulo, uma vez
 int  detail_pediu_marcar(void);       // botao "+"
+int  detail_pediu_fontes_ep(int *temporada, int *episodio);
 int  detail_pediu_fontes(void);       // OK segurado, ou o botao "..."
 int  detail_pediu_explorar(void);     // circular "Explorar": abrir a toca (explorar.h) neste titulo, uma vez
 // Botao secundario "Reproduzir desde o inicio", que so existe quando ha
@@ -273,7 +274,7 @@ int  detail_pediu_do_inicio(void);
 // ULTIMA linha cai no mesmo y nas duas. Por isso a pilha e montada de baixo
 // para cima, e nao do logo para baixo.
 #define NV_DETW2_LD_SIN       40.0f   // passo entre linhas da sinopse (medido)
-#define NV_DETW2_SIN_LINHAS       5   // o maximo visto na referencia
+#define NV_DETW2_SIN_LINHAS       3   // dono, 12/10/2026: 5 linhas pesavam; o resto vira "..."
 #define NV_DETW2_TEXTO_W    1040.0f   // sinopse e linha de apoio (96..1136)
 // Distancia entre TOPOS DE CAIXA de linhas vizinhas, ja descontada a metrica da
 // fonte: entre a tinta a referencia da 62 do alto do "R" de "Roteirista" ao
