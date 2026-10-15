@@ -261,23 +261,45 @@ static void forma(float cx, float cy, float r, int s, float a) {
   }
 }
 
-// A TECLA: cinza apagada quando nao e a da dica; acesa no acento quando e.
-// `prensa` 0..1 encolhe ela (a prensa do toque e o fim do segurar).
+// A TECLA: apagada some no corpo do controle (sem preenchimento, so o rotulo
+// fraco); acesa vira o acento com halo e aro firme, inconfundivel mesmo em
+// corpo claro. `prensa` 0..1 encolhe ela (a prensa do toque e o fim do segurar).
+static float corpoLum = 0;   // luminancia do corpo do controle sendo desenhado
+static struct { char rot[16]; int on; } tlog[8];
+static int tlogN = -1;       // >=0: teste esta gravando as teclas desenhadas
 static void tecla(GfxRect r, const char *s, int on, float prensa, float a) {
   float ar, ag, ab;
   ajustes_acento(&ar, &ag, &ab);
   float encolhe = on ? prensa * .08f : 0;
   GfxRect k = {r.x + r.w * encolhe, r.y + r.h * encolhe,
                r.w * (1 - 2 * encolhe), r.h * (1 - 2 * encolhe)};
+  int claro = corpoLum > .5f;
   if (on) {
-    GfxRect halo = {k.x - 8, k.y - 8, k.w + 16, k.h + 16};
-    gfx_anel(halo, .45f, 2, ar, ag, ab, .5f * a);
+    gfx_anel((GfxRect){k.x - 8, k.y - 8, k.w + 16, k.h + 16}, .45f, 3, ar, ag, ab, .6f * a);
+    gfx_anel((GfxRect){k.x - 3, k.y - 3, k.w + 6, k.h + 6}, .45f, 3,
+             claro ? .1f : 1, claro ? .1f : 1, claro ? .12f : 1, .9f * a);
+    gfx_cor(k, .45f, ar, ag, ab, a);
   }
-  gfx_cor(k, .45f, on ? ar : .16f, on ? ag : .17f, on ? ab : .20f, a);
+  if (tlogN >= 0 && tlogN < 8) {
+    snprintf(tlog[tlogN].rot, sizeof tlog[0].rot, "%s", s);
+    tlog[tlogN++].on = on;
+  }
   if (r.w < 56) return;   // remoto encolhido no canto: a tecla acesa basta, sem rotulo cortado
-  TxtLinha l = txt_linha_corta(TXT_CAPTION, i18n(s), on ? ajustes_tinta_foco() : 243,
-                             on ? ajustes_tinta_foco() : 242, on ? ajustes_tinta_foco() : 239, 255, r.w - 10);
-  txt_desenhar_alpha(l, r.x + (r.w - l.w) * .5f, r.y + (r.h - l.h) * .5f, on ? a : .55f * a);
+  float t = ajustes_tinta_foco();
+  TxtLinha l = txt_linha_corta(TXT_CAPTION, i18n(s), on ? t : claro ? 40 : 243,
+                             on ? t : claro ? 42 : 242, on ? t : claro ? 48 : 239, 255, r.w - 10);
+  txt_desenhar_alpha(l, r.x + (r.w - l.w) * .5f, r.y + (r.h - l.h) * .5f, on ? a : .6f * a);
+}
+// Teste: grava as teclas desenhadas no proximo quadro (rotulo + acesa).
+void dicascontrole_teste_gravar(int ligar) { tlogN = ligar ? 0 : -1; }
+int dicascontrole_teste_teclas(const char **rot, int *on, int max) {
+  int n = tlogN < max ? tlogN : max;
+  for (int i = 0; i < n; i++) { rot[i] = tlog[i].rot; on[i] = tlog[i].on; }
+  return n;
+}
+// Bandeja do rocker CH: as duas teclas dentro de uma pilula so, como no controle real.
+static void rockerCH(GfxRect a1, GfxRect a2, float r, float g, float b, float a) {
+  gfx_cor((GfxRect){a1.x, a1.y, a1.w, a2.y + a2.h - a1.y}, .22f, r, g, b, a);
 }
 // A ONDA do toque: dois aneis crescendo e sumindo (barato, sem blur).
 static void onda(GfxRect r, float p, float a) {
@@ -341,6 +363,8 @@ static void remotoLG(float x, float y, float s, int tk, float prensa, float a) {
   gfx_cor(vol, .22f, .16f, .17f, .20f, a);
   texto("+", TXT_CAPTION, vol.x, vol.y + 20 * s, vol.w, .5f * a);
   texto("−", TXT_CAPTION, vol.x, vol.y + vol.h - 62 * s, vol.w, .5f * a);
+  corpoLum = .12f;
+  rockerCH((GfxRect){x + 142 * s, y + 372 * s, 86 * s, 88 * s}, (GfxRect){x + 142 * s, y + 470 * s, 86 * s, 88 * s}, .16f, .17f, .20f, a);
   tecla((GfxRect){x + 142 * s, y + 372 * s, 86 * s, 88 * s}, "CH+", tk == TK_CHMAIS, prensa, a);
   tecla((GfxRect){x + 142 * s, y + 470 * s, 86 * s, 88 * s}, "CH-", tk == TK_CHMENOS, prensa, a);
 }
@@ -369,6 +393,8 @@ static void remotoSAM(float x, float y, float s, int tk, float prensa, float a) 
   gfx_cor(vol, .22f, .16f, .17f, .20f, a);
   texto("+", TXT_CAPTION, vol.x, vol.y + 20 * s, vol.w, .5f * a);
   texto("−", TXT_CAPTION, vol.x, vol.y + vol.h - 62 * s, vol.w, .5f * a);
+  corpoLum = .1f;
+  rockerCH((GfxRect){x + 122 * s, y + 352 * s, 84 * s, 94 * s}, (GfxRect){x + 122 * s, y + 454 * s, 84 * s, 94 * s}, .16f, .17f, .20f, a);
   tecla((GfxRect){x + 122 * s, y + 352 * s, 84 * s, 94 * s}, "CH+", tk == TK_CHMAIS, prensa, a);
   tecla((GfxRect){x + 122 * s, y + 454 * s, 84 * s, 94 * s}, "CH-", tk == TK_CHMENOS, prensa, a);
   GfxRect solar = {x + 24 * s, y + 570 * s, 182 * s, 30 * s};
@@ -399,6 +425,8 @@ static void remotoGTV(float x, float y, float s, int tk, float prensa, float a) 
   gfx_cor(vol, .22f, .82f, .83f, .85f, a);
   texto("+", TXT_CAPTION, vol.x, vol.y + 20 * s, vol.w, .5f * a);
   texto("−", TXT_CAPTION, vol.x, vol.y + vol.h - 62 * s, vol.w, .5f * a);
+  corpoLum = .93f;
+  rockerCH((GfxRect){x + 128 * s, y + 330 * s, 84 * s, 90 * s}, (GfxRect){x + 128 * s, y + 430 * s, 84 * s, 90 * s}, .82f, .83f, .85f, a);
   tecla((GfxRect){x + 128 * s, y + 330 * s, 84 * s, 90 * s}, "CH+", tk == TK_CHMAIS, prensa, a);
   tecla((GfxRect){x + 128 * s, y + 430 * s, 84 * s, 90 * s}, "CH-", tk == TK_CHMENOS, prensa, a);
   gfx_cor((GfxRect){x + 74 * s, y + 544 * s, 42 * s, 42 * s}, .5f, .82f, .83f, .85f, a); // power

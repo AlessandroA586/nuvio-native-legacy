@@ -216,6 +216,20 @@ static void shots(const char *out) {
     gfx_tex_esquecer(0);
     glBindFramebuffer(GL_FRAMEBUFFER,fbo); glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,tex,0);
     assert(glCheckFramebufferStatus(GL_FRAMEBUFFER)==GL_FRAMEBUFFER_COMPLETE);
+    if (m!=DICAS_TOQUE) {   // a tecla ACESA e a que a pagina cita, e so ela
+      static const char *const quer[]={"CH+","CH-","CH+","OK"};
+      valor[AJ_IDIOMA]=IDIOMA_PT+1; dicascontrole_abrir();
+      for (int p=0;p<4;p++) {
+        if (p) { key(SDLK_RIGHT,dicascontrole_evento); }
+        for(int i=0;i<30;i++) frame();
+        const char *rot[8]; int on[8]; dicascontrole_teste_gravar(1); frame();
+        int n=dicascontrole_teste_teclas(rot,on,8); dicascontrole_teste_gravar(0);
+        int acesas=0; assert(n>=3 && dicascontrole_pagina()==p);
+        for(int i=0;i<n;i++) if(on[i]) { acesas++; assert(!strcmp(rot[i],quer[p])); }
+        assert(acesas==1);
+      }
+      key(SDLK_ESCAPE,dicascontrole_evento); frame(); settle();
+    }
     for (int idi=0;idi<IDIOMA_N;idi++) {
       valor[AJ_IDIOMA]=idi+1; assert(ajustes_idioma()==idi);
       dicascontrole_abrir();
@@ -242,6 +256,7 @@ static void shots(const char *out) {
       settle();
     }
   }
+  puts("PASS: lit key matches page text in every remote");
   puts("PASS: components open and close cleanly in all modes and languages");
   touch();
   width=1920; height=1080; layout_tela_definir(width,height); gfx_tamanho_alvo(width,height);
