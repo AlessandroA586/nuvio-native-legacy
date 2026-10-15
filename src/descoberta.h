@@ -113,6 +113,13 @@ int desc_catalogos_fora(void);
 // ordem, de colecao ou de limite — ver a nota longa em descoberta.c. Chamar do
 // fio principal.
 void desc_remontar_fileiras(void);
+// #366: observa o ajuste no fio principal. Ligar pede UMA montagem silenciosa
+// para preencher fileiras curtas; desligar so devolve os indices ja recebidos.
+// Mudancas de progresso/historico se refletem nos indices, sem refazer a rede.
+void desc_ocultar_vistos_atualizar(void);
+// Mesmo estado do selo do catalogo para um meta recebido fora dele: historico
+// conhecido ou progresso local. So o tipo movie e excluivel, nunca serie/canal.
+int desc_filme_visto(const CatItem *item);
 
 // Le a chave do TMDB (art/tmdb.txt). Sem ela o elenco fica so com nomes, sem
 // foto nem personagem.
@@ -242,12 +249,23 @@ void desc_vertudo_filtro(const char *base, const char *tipo, const char *catId, 
 // "trakt" vindo do site. Os itens sao pedidos direto a esses servicos —
 // nao passa por catalogo de addon.
 void desc_vertudo_fonte(const ColSource *s);
+// Resume a Vitrine source after its saved bounded batch.
+void desc_vertudo_fonte_desde(const ColSource *s, int pagina);
+void desc_vertudo_filtro_desde(const char *base, const char *tipo, const char *catId, const char *genre, int pagina);
+int desc_vertudo_pagina(void);
 int desc_vertudo_erro(void);
 // Pede a proxima pagina, se houver. Nada acontece se a ultima veio curta — sinal
 // de fim de lista no protocolo.
 void desc_vertudo_mais(void);
 int  desc_vertudo_n(void);
 int  desc_vertudo_item(int i, CatItem *dst);
+// Catalogo recebido, antes do filtro de vistos (#366). Para caches derivados
+// da Vitrine conservarem filmes que devem voltar ao desligar o ajuste.
+int  desc_vertudo_n_bruto(void);
+int  desc_vertudo_item_bruto(int i, CatItem *dst);
+// Muda junto da projecao visivel, inclusive quando so trocam as identidades
+// (mesma quantidade de cards): ordem, caches e foco guardado precisam reajustar.
+unsigned desc_vertudo_revisao(void);
 int  desc_vertudo_carregando(void);
 // 1 quando a ultima pagina veio curta: nao ha mais o que pedir.
 int  desc_vertudo_fim(void);
