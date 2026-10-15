@@ -17,7 +17,7 @@ assert(!strcmp(m,"HEAD")); assert(!c);
 ${probe}
 int main(void) { char dst[128];
 int statuses[]={200,206,403,404,405,500,501,0};
-for (int i=0;i<8;i++) { response=statuses[i]; assert(rede_url_final_vidaa("https://media",1,dst,sizeof dst)==(response==0||response==405||response==501?-1:response<300?1:0)); }
+for (int i=0;i<8;i++) { response=statuses[i]; assert(rede_url_final_vidaa("https://media",1,dst,sizeof dst)==(response==0||response==403||response==405||response==501?-1:response<300?1:0)); }
 }
 `);
 let failures = 0;

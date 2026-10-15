@@ -1029,8 +1029,9 @@ int rede_url_final_vidaa(const char *url, int segundos, char *dst, unsigned tam)
   corpo = nv_http("HEAD", url, NULL, NULL, &n, &http, dst, (int)tam, NULL, 0, NULL);
   if (!corpo) return -1;     // xhr nem completou (open/send lancou): desconhecido
   free(corpo);
-  // HEAD rejection is inconclusive; let the player try GET directly.
-  if (http == 405 || http == 501) return -1;
+  // HEAD rejection is inconclusive (signed GET URLs answer HEAD with 403);
+  // let the player try GET directly.
+  if (http == 403 || http == 405 || http == 501) return -1;
   if (http >= 200 && http < 300 && dst[0]) return 1;
   return http > 0 ? 0 : -1;  // completou sem endereco: so e "morto" se veio status de verdade
 }
