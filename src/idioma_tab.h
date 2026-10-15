@@ -1321,6 +1321,7 @@
   { "Converter DTS para a TV ouvir", "Convert DTS so the TV can play it" },
   { "Cor", "Color" },
   { "Cor da borda", "Outline color" },
+  { "Tamanho, fonte, cores, fundo e posição das legendas.", "Subtitle size, font, colors, background and position." },
   { "Cor da logo", "Logo color" },
   { "Cor da segunda legenda", "Second subtitle color" },
   { "Cor de destaque", "Accent color" },

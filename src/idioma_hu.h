@@ -1322,6 +1322,7 @@
   T("Converter DTS para a TV ouvir", "DTS átalakítása, hogy a TV lejátssza"),
   T("Cor", "Szín"),
   T("Cor da borda", "Körvonal színe"),
+  T("Tamanho, fonte, cores, fundo e posição das legendas.", "Feliratméret, betűtípus, színek, háttér és pozíció."),
   T("Cor da logo", "Logó színe"),
   T("Cor da segunda legenda", "A második felirat színe"),
   T("Cor de destaque", "Kiemelőszín"),

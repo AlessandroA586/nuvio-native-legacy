@@ -1157,6 +1157,15 @@ int player_leg_estilo_definir(const VideoLegendaEstilo *estilo, int tocou) {
   VideoLegendaEstilo antes = legEstilo;
   int tocadoAntes = legTocado;
   legEstilo = *estilo;
+  if (tocou != PLR_LEG_NADA) {
+    if (antes.cor != estilo->cor) legTocado |= PLR_LEG_COR;
+    if (antes.familia != estilo->familia) legTocado |= PLR_LEG_FONTE;
+    if (antes.corBorda != estilo->corBorda) legTocado |= PLR_LEG_COR_BORDA;
+    if (antes.borda != estilo->borda) legTocado |= PLR_LEG_BORDA;
+    if (antes.fundo != estilo->fundo) legTocado |= PLR_LEG_FUNDO;
+    if (antes.posicao != estilo->posicao) legTocado |= PLR_LEG_POSICAO;
+    if (antes.negrito != estilo->negrito) legTocado |= PLR_LEG_NEGRITO;
+  }
   if (tocou >= 0) player_leg_estilo_tocou(tocou);
   if (!prefsGravar()) { legEstilo = antes; legTocado = tocadoAntes; return 0; }
   video_legenda_estilo(&legEstilo);
@@ -4623,13 +4632,8 @@ static void desenharLegendaPrincipal(float *topoPilha){
                       legEstilo.opacidade==1?.75f:1.f) * entrada;
   if (video_dts_legenda_desenhar(posLegenda(), legEstilo.atrasoMs,
         bitmapArea.x, bitmapArea.y, bitmapArea.w, bitmapArea.h, bitmapAlpha)) return;
-  /* ASS completo: libass devolve uma lista de bitmaps por camada, preservando
-   * karaoke, movimento, desenho vetorial, fontes e todas as tags do arquivo.
-   * Da folha, so chegam ao ASS o que nao desmonta o estilo do autor: tamanho
-   * (escala proporcional), opacidade e atraso. Cor, fonte, fundo, posicao e
-   * borda ficam com o arquivo, como no app web desde o 1.2.0 — trocar a cor
-   * apagava o karaoke e as placas coloridas. A folha mostra essas linhas como
-   * preservadas (faixas.c). */
+  /* Authored ASS keeps its styles until the corresponding user setting
+   * changes. Size remains proportional; opacity and delay apply globally. */
   int r, g, b;
   // F05: manual + automatico aceito, UMA vez, so para o documento dono do
   // overlay (sem ele, o manual intacto). Positivo adianta, como sempre.
@@ -4641,7 +4645,7 @@ static void desenharLegendaPrincipal(float *topoPilha){
   assrender_definir_cor(0, 0, 0, 0);
   if (assrender_ativo()) {
     PlrRect area = areaVideoLegenda();
-    if (assrender_texto_simples()) {
+    {
       static const char *const families[] = {
         "Inter Display", "LG Display", "Droid Sans",
         "Montserrat", "Roboto", "Atkinson Hyperlegible Next",
@@ -4659,11 +4663,12 @@ static void desenharLegendaPrincipal(float *topoPilha){
       style.background = legEstilo.fundo >= 0 && legEstilo.fundo <= 4 ? legEstilo.fundo : 0;
       style.border = legEstilo.borda; style.bold = legEstilo.negrito;
       style.outlineRgb = (int)video_legenda_borda_rgb(legEstilo.corBorda);
+      style.overrides = legTocado;
       style.marginV = (int)(1080.f - base);
       assrender_definir_texto_estilo(&style);
       /* Plain captions follow the old screen-space layout; authored ASS
        * still follows the video rectangle and the author's styling. */
-      area = (PlrRect){0, 0, NV_TELA_W, NV_TELA_H};
+      if (assrender_texto_simples()) area = (PlrRect){0, 0, NV_TELA_W, NV_TELA_H};
     }
     float alpha = (legEstilo.opacidade==3?.25f:legEstilo.opacidade==2?.5f:
                    legEstilo.opacidade==1?.75f:1.f) * entrada;

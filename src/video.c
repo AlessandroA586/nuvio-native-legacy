@@ -3655,7 +3655,12 @@ static void aplicarEstilo(void) {
                    : (estilo.borda == 1 ? "uniform" : "none");
     snprintf(b, sizeof b, "{\"mediaId\":\"%s\",\"charEdgeType\":\"%s\"}",
              midia, ed);
-    chamar("setSubtitleCharacterEdge", b, soLog); }
+    chamar("setSubtitleCharacterEdge", b, soLog);
+    static const char *const colors[] = {"black", "white", "yellow", "green", "blue", "red"};
+    int c = estilo.corBorda;
+    if (c < 0 || c >= VIDEO_LEG_NCORES) c = 0;
+    snprintf(b, sizeof b, "{\"mediaId\":\"%s\",\"charEdgeColor\":\"%s\"}", midia, colors[c]);
+    chamar("setSubtitleCharacterEdgeColor", b, soLog); }
   if (estilo.atrasoMs) {
     snprintf(b, sizeof b, "{\"mediaId\":\"%s\",\"sync\":%d}", midia, estilo.atrasoMs);
     chamar("setSubtitleSync", b, soLog);

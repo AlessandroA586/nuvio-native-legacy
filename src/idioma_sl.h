@@ -1322,6 +1322,7 @@
   T("Converter DTS para a TV ouvir", "Pretvori DTS, da ga TV predvaja"),
   T("Cor", "Barva"),
   T("Cor da borda", "Barva obrobe"),
+  T("Tamanho, fonte, cores, fundo e posição das legendas.", "Velikost, pisava, barve, ozadje in položaj podnapisov."),
   T("Cor da logo", "Barva logotipa"),
   T("Cor da segunda legenda", "Barva drugih podnapisov"),
   T("Cor de destaque", "Barva poudarka"),

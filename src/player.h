@@ -300,15 +300,16 @@ const VideoLegendaEstilo *player_leg_estilo_padrao(void);
 //
 // "Restaurar padrao" LIMPA a marca (PLR_LEG_NADA): voltar ao padrao e dizer
 // "quero o comportamento normal do app", e o normal do app e respeitar o
-// arquivo. Tamanho, fonte e borda nao entram nesta conta — eles vencem o ASS
-// SEMPRE, porque tamanho de legenda numa TV e acessibilidade, nao estilo.
-//
-// Tudo isto vale para o parser REDUZIDO (legenda.c). Com o libass desenhando,
-// o arquivo manda em cor, fonte, fundo, posicao e borda (decisao do dono em
-// 25/09/2026, alinhada ao app web 1.2.0): trocar a cor apagava karaoke e
-// placas. O tamanho continua da pessoa, como escala proporcional do libass.
+// arquivo. Authored ASS overrides only the marked fields; size remains a
+// proportional libass scale. These bits match PLAIN_ASS_* in plainass.h.
 #define PLR_LEG_NADA  0
 #define PLR_LEG_COR   1
+#define PLR_LEG_FONTE 2
+#define PLR_LEG_COR_BORDA 4
+#define PLR_LEG_BORDA 8
+#define PLR_LEG_FUNDO 16
+#define PLR_LEG_POSICAO 32
+#define PLR_LEG_NEGRITO 64
 void player_leg_estilo_tocou(int campos);  // PLR_LEG_NADA zera
 int  player_leg_estilo_tocado(int campo);
 // Diretorio de DADOS (nao de arte) onde art/player.txt e gravado. Chamada por

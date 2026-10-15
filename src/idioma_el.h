@@ -1322,6 +1322,7 @@
   T("Converter DTS para a TV ouvir", "Μετατροπή DTS για να το παίζει η τηλεόραση"),
   T("Cor", "Χρώμα"),
   T("Cor da borda", "Χρώμα περιγράμματος"),
+  T("Tamanho, fonte, cores, fundo e posição das legendas.", "Μέγεθος, γραμματοσειρά, χρώματα, φόντο και θέση υποτίτλων."),
   T("Cor da logo", "Χρώμα λογοτύπου"),
   T("Cor da segunda legenda", "Χρώμα δεύτερων υποτίτλων"),
   T("Cor de destaque", "Χρώμα έμφασης"),

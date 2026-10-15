@@ -1322,6 +1322,7 @@
   T("Converter DTS para a TV ouvir", "Konvertuoti DTS, kad televizorius jį grotų"),
   T("Cor", "Spalva"),
   T("Cor da borda", "Kontūro spalva"),
+  T("Tamanho, fonte, cores, fundo e posição das legendas.", "Subtitrų dydis, šriftas, spalvos, fonas ir padėtis."),
   T("Cor da logo", "Logotipo spalva"),
   T("Cor da segunda legenda", "Antrųjų subtitrų spalva"),
   T("Cor de destaque", "Akcento spalva"),

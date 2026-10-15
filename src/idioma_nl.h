@@ -1322,6 +1322,7 @@
   T("Converter DTS para a TV ouvir", "DTS omzetten zodat de tv het afspeelt"),
   T("Cor", "Kleur"),
   T("Cor da borda", "Omtrekkleur"),
+  T("Tamanho, fonte, cores, fundo e posição das legendas.", "Grootte, lettertype, kleuren, achtergrond en positie van ondertitels."),
   T("Cor da logo", "Logokleur"),
   T("Cor da segunda legenda", "Kleur van tweede ondertitel"),
   T("Cor de destaque", "Accentkleur"),

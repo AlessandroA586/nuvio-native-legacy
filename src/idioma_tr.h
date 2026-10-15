@@ -1322,6 +1322,7 @@
   T("Converter DTS para a TV ouvir", "TV’nin çalabilmesi için DTS’yi dönüştür"),
   T("Cor", "Renk"),
   T("Cor da borda", "Anahat rengi"),
+  T("Tamanho, fonte, cores, fundo e posição das legendas.", "Altyazı boyutu, yazı tipi, renkleri, arka planı ve konumu."),
   T("Cor da logo", "Logo rengi"),
   T("Cor da segunda legenda", "İkincil altyazı rengi"),
   T("Cor de destaque", "Vurgu rengi"),

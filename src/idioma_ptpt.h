@@ -1322,6 +1322,7 @@
   T("Converter DTS para a TV ouvir", "Converter DTS para a TV reproduzir"),
   T("Cor", "Cor"),
   T("Cor da borda", "Cor do contorno"),
+  T("Tamanho, fonte, cores, fundo e posição das legendas.", "Tamanho, tipo de letra, cores, fundo e posição das legendas."),
   T("Cor da logo", "Cor do logótipo"),
   T("Cor da segunda legenda", "Cor da segunda legenda"),
   T("Cor de destaque", "Cor de destaque"),

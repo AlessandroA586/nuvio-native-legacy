@@ -1322,6 +1322,7 @@
   T("Converter DTS para a TV ouvir", "Konverter DTS så TV-en kan spille det"),
   T("Cor", "Farge"),
   T("Cor da borda", "Omrissfarge"),
+  T("Tamanho, fonte, cores, fundo e posição das legendas.", "Undertekstenes størrelse, skrifttype, farger, bakgrunn og plassering."),
   T("Cor da logo", "Logoens farge"),
   T("Cor da segunda legenda", "Farge på sekundær undertekst"),
   T("Cor de destaque", "Aksentfarge"),

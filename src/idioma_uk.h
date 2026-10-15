@@ -1321,6 +1321,7 @@
   T("Converter DTS para a TV ouvir", "Перетворювати DTS, щоб телевізор його відтворив"),
   T("Cor", "Колір"),
   T("Cor da borda", "Колір контуру"),
+  T("Tamanho, fonte, cores, fundo e posição das legendas.", "Розмір, шрифт, кольори, фон і положення субтитрів."),
   T("Cor da logo", "Колір логотипа"),
   T("Cor da segunda legenda", "Колір других субтитрів"),
   T("Cor de destaque", "Колір акценту"),

@@ -1322,6 +1322,7 @@
   T("Converter DTS para a TV ouvir", "转换 DTS 以便电视播放"),
   T("Cor", "颜色"),
   T("Cor da borda", "描边颜色"),
+  T("Tamanho, fonte, cores, fundo e posição das legendas.", "字幕大小、字体、颜色、背景和位置。"),
   T("Cor da logo", "Logo 颜色"),
   T("Cor da segunda legenda", "第二字幕颜色"),
   T("Cor de destaque", "强调色"),

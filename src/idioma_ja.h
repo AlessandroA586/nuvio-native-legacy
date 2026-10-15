@@ -1322,6 +1322,7 @@
   T("Converter DTS para a TV ouvir", "テレビで再生できるよう DTS を変換"),
   T("Cor", "色"),
   T("Cor da borda", "縁取りの色"),
+  T("Tamanho, fonte, cores, fundo e posição das legendas.", "字幕のサイズ、フォント、色、背景、位置。"),
   T("Cor da logo", "ロゴの色"),
   T("Cor da segunda legenda", "第2字幕の色"),
   T("Cor de destaque", "アクセントカラー"),

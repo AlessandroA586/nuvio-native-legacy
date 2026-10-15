@@ -1322,6 +1322,7 @@
   T("Converter DTS para a TV ouvir", "Chuyển DTS để TV phát được"),
   T("Cor", "Màu"),
   T("Cor da borda", "Màu viền"),
+  T("Tamanho, fonte, cores, fundo e posição das legendas.", "Kích thước, phông chữ, màu sắc, nền và vị trí phụ đề."),
   T("Cor da logo", "Màu logo"),
   T("Cor da segunda legenda", "Màu phụ đề thứ hai"),
   T("Cor de destaque", "Màu nhấn"),
