@@ -1305,7 +1305,8 @@ static void alternarExibicao(void) {
   int antes = lay, prox = VT_LAY_GRADE;
   for (int k = 0; k < (int)sizeof LAY_CICLO; k++)
     if (LAY_CICLO[k] == lay) prox = LAY_CICLO[(k + 1) % (int)sizeof LAY_CICLO];
-  layEscolha = prox; gravarEscolha(collection, prox);
+  layEscolha = prox;
+  if (!perftv_enabled) gravarEscolha(collection, prox);
   resolverLayout(); foco = 0; scrollY = velY = 0; armarOnda();
   if (lay != antes && (lay == VT_LAY_VITRINE || antes == VT_LAY_VITRINE)) {
     // A Vitrine nao tem aba aberta e as outras exibicoes precisam de uma: a
@@ -1313,6 +1314,26 @@ static void alternarExibicao(void) {
     source = primeiraFonte(); openSource();
   }
   tabCursor = cabN();   // o botao "Exibição", em qualquer estilo de abas
+}
+
+const char *vertudo_perf_tag(void) {
+  static const char *const tags[] = {
+    "collection-auto", "collection-grid", "collection-timeline", "collection-ranking",
+    "collection-saga", "collection-decades", "collection-wall", "collection-showcase",
+    "collection-cover-flow"
+  };
+  return lay >= 0 && lay < VT_LAY_N ? tags[lay] : "collection-unknown";
+}
+void vertudo_perf_cycle(void) {
+  if (!perftv_enabled) return;
+  if (!aberta || !collection) {
+    const ColFolder *f = col_folder(0);
+    if (!f || !f->nSources) return;
+    vertudo_colecao(f);
+    layEscolha = VT_LAY_GRADE; resolverLayout();
+    source = primeiraFonte(); openSource();
+  } else alternarExibicao();
+  tabFocus = 0;
 }
 
 static void vitEvento(int k) {

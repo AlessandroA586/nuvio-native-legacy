@@ -62,6 +62,8 @@ void home_atualizar(float dt, Uint32 agora);
 // Poe a home no topo (destaque, fileira 0, sem rolagem) e esquece a posicao
 // lembrada da sessao. Usado ao entrar num perfil novo.
 void home_ir_topo(void);
+const char *home_perf_tag(void);
+void home_perf_style_menu(void);
 // Nova sessao do perfil confirmado: esquece somente estado transitorio da UI.
 // Catalogo, contas e preferencias sao carregados pelos seus proprios donos.
 void home_abrir_sessao(void);
