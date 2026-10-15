@@ -11,7 +11,9 @@
 //   7. definir_usb(0) a cada quadro nao derruba o cache de ~2 s de
 //      usb_presente (P2: a UI re-escaneava /tmp/usb por quadro);
 //   8. p2p/ da pessoa (Movies/p2p, p2p/ na raiz do volume, sem .nuvio) sobrevive
-//      ao boot mesmo com o ajuste em Interno (usbPreferido segue 0).
+//      ao boot mesmo com o ajuste em Interno (usbPreferido segue 0);
+//   9. p2p/ sem marca que o scan escolhe (sobra de antes da marca) ganha .nuvio
+//      ao ligar o USB, senao subir apagaria a pasta e a proxima limpeza a perderia.
 //
 //   bash tests/p2pusb.sh
 #include "p2pmotor.h"
@@ -164,6 +166,27 @@ int main(int argc, char **argv) {
     assert(lstat(filme, &st) == 0 && S_ISREG(st.st_mode) && st.st_size == 0);
     assert(lstat(movies, &st) == 0 && S_ISDIR(st.st_mode));
     assert(lstat(rootp, &st) == 0 && S_ISDIR(st.st_mode));
+  }
+
+  // 9. sobra antiga, sem .nuvio, unico volume gravavel: ligar USB a marca.
+  // mnt e 0555 e vol ja tem p2p/ da pessoa (caso 8): a sobra fica numa base
+  // sozinha, senao o scan pararia no primeiro gravavel.
+  {
+    char base[780], oldp[800], marca[820];
+    FILE *fp;
+    snprintf(base, sizeof base, "%s-solo", argv[2]);   // fora de dados_dir e do mnt 0555
+    snprintf(oldp, sizeof oldp, "%s/p2p", base);
+    assert(mkdir(base, 0755) == 0);
+    assert(mkdir(oldp, 0755) == 0);
+    snprintf(marca, sizeof marca, "%s/velha.bin", oldp);
+    fp = fopen(marca, "w"); assert(fp); fclose(fp);
+    p2pmotor_teste_usb_base(base);
+    p2pmotor_definir_usb(1);
+    assert(p2pmotor_resumo(marca, sizeof marca) == P2P_OK);   // pastas() cria=1 marca
+    snprintf(marca, sizeof marca, "%s/.nuvio", oldp);
+    assert(existe(marca));
+    p2pmotor_definir_usb(0);
+    assert(someAte(oldp, 5000));
   }
   puts("ok");
   return 0;

@@ -276,7 +276,11 @@ static int pastas(char *raiz, unsigned nr, char *mae, unsigned nm) {
       atomic_store(&usbTem, usbRaiz[0] != 0);
       usbQuando = agora();
     }
-    if (usbRaiz[0]) { snprintf(raiz, nr, "%s", usbRaiz); ok = 1; }
+    if (usbRaiz[0]) {
+      snprintf(raiz, nr, "%s", usbRaiz);
+      usbMarcarDono(usbRaiz);   // sobra de antes da marca: subir apaga a pasta inteira
+      ok = 1;
+    }
     else ok = 0;
     pthread_mutex_unlock(&usbTrava);
     if (!ok) return pastasInternas(raiz, nr, mae, nm);
