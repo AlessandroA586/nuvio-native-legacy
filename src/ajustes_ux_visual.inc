@@ -164,7 +164,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_COR_LOGO: return "aj_palette";
     case AJ_VIDRO: return "aj_layers";
     case AJ_FONTE_UI: return "aj_type";
-    case AJ_TAMANHO_SINOPSE: return "aj_file-text";
+    case AJ_HERO_SINOPSE: return "aj_file-text";
     case AJ_TAMANHO_UI: return "aj_maximize-2";
     case AJ_TAMANHO_AJUSTES: return "aj_sliders-horizontal";
     case AJ_LAYOUT_AJUSTES: return "aj_layout-list";

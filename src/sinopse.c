@@ -25,10 +25,10 @@ static int corpoOriginal(TxtEstilo e) {
   }
 }
 static int corpo(TxtEstilo original) {
-  static const int PERCENTUAL[3] = { 100, 125, 150 };
   int n = corpoOriginal(original), tamanho = ajustes_sinopse_tamanho();
   if (!tamanho || !n) return n;
-  return (n * PERCENTUAL[tamanho] + 50) / 100;
+  if (original == TXT_HERO_SIN) return 24; // Integration: Grande is 24/32.
+  return (n * 125 + 50) / 100;
 }
 TxtEstilo sinopse_estilo(TxtEstilo original) {
   if (!ajustes_sinopse_tamanho()) return original;
@@ -56,10 +56,11 @@ TxtEstilo sinopse_estilo(TxtEstilo original) {
 float sinopse_entrelinha(TxtEstilo original, float leading) {
   int n = corpoOriginal(original);
   if (!ajustes_sinopse_tamanho()) return leading;
+  if (original == TXT_HERO_SIN) return 32.0f;
   return n ? leading * (float)corpo(original) / (float)n : leading;
 }
 int sinopse_linhas(TxtEstilo original, float leading, int maxLinhas) {
-  if (!ajustes_sinopse_tamanho()) return maxLinhas;
+  if (!ajustes_sinopse_tamanho() || original == TXT_HERO_SIN) return maxLinhas;
   float novo = sinopse_entrelinha(original, leading);
   int n = maxLinhas > 0 && novo > 0 ? (int)floorf((float)maxLinhas * leading / novo + .001f) : maxLinhas;
   return maxLinhas > 0 && n < 1 ? 1 : n;

@@ -109,6 +109,7 @@
 #include "ilhasalvar.h"
 #include "ilhaacao.h"
 #include "plrilha.h"
+#include "sinopse.h"
 #include "ilhacart.h"
 #include "cwretido.h"
 #include "ilhasinais.h"
@@ -5857,6 +5858,7 @@ static void desenharTelas(Uint32 agora) {
     if (telefoneui_ativo()) { CAMADA_SE(central_aberta()); }
 #endif
     central_desenhar(agora); plrilha_desenhar(agora);
+    if (episodios_aberto() && sinopse_aberta()) sinopse_desenhar();
   }
   gfx_osd_mult = 1.0f;
   // A TELA DO DOLBY VISION EM MKV (dvtela.h) por cima de TUDO do player, ilha

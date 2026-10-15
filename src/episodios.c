@@ -244,7 +244,7 @@ static void menuAbrir(int idx, int t, int e, const char *nome, int so) {
   vmAcoes[vmN++] = VM_TEMP;
   if (so) vmAcoes[vmN++] = VM_FONTES;
   vmSinopse[0] = 0;
-  if (so && e > 0) {
+  if (e > 0) {
     for (int i = 0; i < cat_n_episodios(idx); i++) {
       const CatEp *ep = cat_episodio(idx, i);
       if (ep && ep->temporada == t && ep->episodio == e) {
@@ -407,7 +407,7 @@ int episodios_aberto(void) { return aberto; }
 float episodios_anim(void) { return anim; }
 int   episodios_foco_linha(void) { return foco; }
 float episodios_rolagem(void) { return scroll; }
-void episodios_fechar(void) { aberto = 0; }
+void episodios_fechar(void) { aberto = 0; sinopse_fechar(); }
 int  episodios_titulo(void) { revalidar(); return titulo; }
 int episodios_escolheu(int *t, int *e) {
   if (!pedidoE) return 0;
@@ -610,6 +610,7 @@ void episodios_evento(const SDL_Event *ev) {
 #endif
   if (!aberto) return;
   revalidar();
+  if (sinopse_aberta()) { sinopse_evento(ev); return; }
   { SDL_Keycode ko = ev->key.keysym.sym;
     int ehOk = (ko == SDLK_RETURN || ko == SDLK_KP_ENTER || ko == SDLK_SPACE);
 
