@@ -51,6 +51,9 @@ typedef struct {
 int  home_iniciar(const char *dirArte);
 int  home_cartao_foco_por_cima(int indice); // repinta o cartao focado (menu do cartaz)
 int  home_item_focado(HomeItem *out);      // 0 se o foco ainda nao foi desenhado
+// Retangulo (tela real) do cartao focado de qualquer fileira, pilha e pasta
+// inclusas. 0 sem cartao focado neste quadro (destaque, fileira vazia).
+int  home_ancora_foco(GfxRect *out);
 int  home_n_artes(void);                   // acervo de backdrops, usado pelo detalhe
 // Ha fileira montada? Serve para o app saber que o catalogo CHEGOU depois do
 // arranque, e nao so que existia na hora de abrir.
@@ -126,14 +129,6 @@ int home_pediu_pessoa_social(CatItem *saida);
 // recebe o id para o guia ja abrir focado nele). `id` pode ser NULL.
 int  home_pediu_guia(char *id, int tam);
 
-// PREVIA DO ESTILO DA FILEIRA, para o modal do cartaz (ctxmenu.c): a fileira
-// `chave` na forma `filTipo` (FilTipo, fileiras.h), com as artes dela e o
-// desenho real dos cartoes, dentro de `area`. 0 quando a fileira nao esta na
-// Home montada. So desenha; nao muda nada da fileira.
-// `refTipo` decide a REDUCAO (a forma que enche o palco); a previa desenha
-// `filTipo` nessa mesma reducao. Igual a `filTipo` = a forma enche sozinha.
-int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect area,
-                        float alfa);
 // VITRINE DAS COLECOES (vertudo.c): destaque e cartaz da Home para um CatItem
 // que nao esta no catalogo global. Ver home.c.
 void home_vitrine_medida(float *w, float *h, float *passo, float *rotH);

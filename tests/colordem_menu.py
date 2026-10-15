@@ -20,7 +20,7 @@ def block(start):
 
 
 handlers = '\n'.join(block('static ' + signature) for signature in (
-    'int estTipo(', 'void aplicarEstilo(', 'void ponteiroEstFoco(',
+    'int estTipo(', 'void estAoVivo(', 'void aplicarEstilo(', 'void ponteiroEstFoco(',
     'void ponteiroEstOk(', 'void ponteiroOrdemToque(',
 ))
 start = source.index('// Pagina de estilos:')
@@ -35,8 +35,8 @@ while depth:
 keyboard = source[page:end]
 # Exercise the callback actually registered for the desktop Order target.
 registration = source[source.index('static void desenhaEstilos(float a)'):]
-registration = registration[registration.index('if (ordemLinha) {'):]
-registration = registration[:registration.index('linhaCtx(r, rot,')]
+registration = registration[registration.index('snprintf(rot'):]
+registration = registration[:registration.index('linhaEstilo(r, rot,')]
 callback = registration.split('ponteiroEstFoco, ')[1].split(',')[0]
 alias = '#define ponteiroOrdemAtivar ponteiroOrdemToque\n' if callback == 'ponteiroOrdemAtivar' else ''
 program = r'''
@@ -46,6 +46,7 @@ program = r'''
 enum { SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_RETURN };
 static int nEstilos = 2, estFoco, estSel, estTam[FIL_TIPO_N];
 static FilEstiloLinha estLin[FIL_TIPO_N];
+static int estVivo;
 static int ordemLinha = 1, ordemSel, aberto = 1, pagina = 1;
 static const char *filChave = "collection_test";
 static int savedStyle, savedOrder;
