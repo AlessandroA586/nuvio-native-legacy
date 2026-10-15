@@ -537,6 +537,11 @@ static void ajConfirmacao(const char *kick, int alerta, const char *pergunta, co
 // Alvo cujo foco ja e o unico possivel: o clique e so o OK.
 static void ajPontNada(int a, int b) { (void)a; (void)b; }
 static void ajPontFecharEditor(int a, int b) { (void)a; (void)b; if (uxEditor == 2) uxCancelar(); }
+#ifdef NV_TOUCH_UI
+static void ajToqueFecharDependencia(int a, int b) {
+  if (layout_modo_mobile()) ajPontFecharEditor(a, b);
+}
+#endif
 // Dependencia: a opcao esta apagada por causa de outra.
 static void ajDependencia(void) {
   int req = uxRequisito(uxOp);
@@ -565,7 +570,13 @@ static void ajDependencia(void) {
       bx += w + 12;
     }
     w = ajBotao("Fechar", NULL, bx, y, req < 0, 1);
-    if (req < 0) ponteiro_alvo(bx, y, w, 60, ajPontNada, NULL, 0, 0);
+    if (req < 0) {
+#ifdef NV_TOUCH_UI
+      if (ajTelaCheia()) ponteiro_alvo(bx, y, w, 60, NULL, ajToqueFecharDependencia, 0, 0);
+      else
+#endif
+        ponteiro_alvo(bx, y, w, 60, ajPontNada, NULL, 0, 0);
+    }
     else ponteiro_alvo(bx, y, w, 60, NULL, ajPontFecharEditor, 0, 0); }
 }
 
