@@ -342,7 +342,8 @@ int central_tecla_ocupada(void) { return chs_ocupado(&chs); }
 
 // Read the same clock that decides the hold: feedback adds no opening delay.
 static float segurarFracao(Uint32 t) {
-  return anim_clamp((float)(t - chs.t0) / (float)CHS_SEGURAR_MS, 0.0f, 1.0f);
+  if (t - chs.t0 < CHS_ATRASO_MS) return 0.0f;  // dead zone: a click draws nothing
+  return anim_clamp((float)(t - chs.t0 - CHS_ATRASO_MS) / (float)(CHS_SEGURAR_MS - CHS_ATRASO_MS), 0.0f, 1.0f);
 }
 static void segurarAbrir(Uint32 t) {
   chAbriuT = t ? t : 1;
