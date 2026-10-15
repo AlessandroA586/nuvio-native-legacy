@@ -12,6 +12,11 @@ typedef struct {
   uint64_t range_blocked_ns; /* Time the demux worker actually waits for ranges. */
 } DtsEngineMetrics;
 void dts_engine_metrics(DtsEngine *, DtsEngineMetrics *out);
+/* Samsung remux readers: rings alive now and the most alive at once since the
+ * last reset (count and bytes), for the per-playback memory line of the .tpk.
+ * reset_peak sets the peak back to what is alive now. */
+typedef struct { int alive, peak; long long bytes, peak_bytes; } DtsEngineRings;
+void dts_engine_rings(DtsEngineRings *out, int reset_peak);
 /* Output for the next open: 1 = AC3 5.1 640 kbps, 0 = stereo AAC (default). */
 void dts_engine_set_ac3(int on);
 /* Samsung remux only: ring of the single-connection reader, in MiB (8..32,

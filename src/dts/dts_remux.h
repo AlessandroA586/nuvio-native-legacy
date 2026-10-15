@@ -90,6 +90,11 @@ void dts_remux_gen_free(DtsRemuxGen *);
  * on it). Any thread; the run ends with -2 and the next run seeks. */
 void dts_remux_gen_interrupt(DtsRemuxGen *);
 
+/* TEMPORARY tuning test (seg0 knob): the NEXT run of this generator ends once
+ * the video read is `seconds` past the segment start, as if the source ended
+ * there (muxer closed, nothing to continue). 0 = whole segment. */
+void dts_remux_gen_limit(DtsRemuxGen *, double seconds);
+
 /* Source time (seconds) a progressive run started at: the keyframe it used. */
 double dts_remux_gen_start_s(const DtsRemuxGen *);
 #endif

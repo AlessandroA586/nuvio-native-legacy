@@ -42,6 +42,7 @@ int dts_tpk_registro_rede(char *u, size_t n) { (void)u; if (n) u[0] = 0; return 
 #else
 
 #include "../registro.h"
+#include "../dados.h"
 #include "dts_engine.h"
 #include <arpa/inet.h>
 #include <dlfcn.h>
@@ -72,13 +73,55 @@ int dts_tpk_registro_rede(char *u, size_t n) { (void)u; if (n) u[0] = 0; return 
 #define LEN_TETO         (160u << 20)  /* a Content-Length segment never grows past this */
 #define ESPERA_SONDA_MS  30000
 #define ESPERA_GERADOR_MS 30000
-#define GERADORES        2
+#define GERADORES        2             /* array size; the tuning test may use 1 */
 
 static const char *const MODO_NOME[DTSTPK_MODOS] = {
   "HLS 127.0.0.1", "progressive TS", "progressive MKV", "progressive MP4", "HLS LAN IP", "off" };
 static const char *const CORPO_NOME[DTSTPK_CORPOS] = { "chunked", "content-length", "close" };
 const char *dts_tpk_modo_nome(int m) { return m >= 0 && m < DTSTPK_MODOS ? MODO_NOME[m] : "?"; }
 const char *dts_tpk_corpo_nome(int c) { return c >= 0 && c < DTSTPK_CORPOS ? CORPO_NOME[c] : "?"; }
+
+// --- TEMPORARY tuning test ----------------------------------------------------
+// Knobs the owner compares on each TV with the memory line below, set from the
+// network log page (/<token>/tune) and kept in dts-ajuste.txt. One setting is
+// picked from the numbers, then this block goes (with the log page).
+//   ring  reader ring per source connection, MiB: 8, 16, 32; 0 = automatic
+//         (32 on Tizen 8/9, 16 below)
+//   gens  generators per session: 1 or 2 (each extra one is one more reader)
+//   seg0  the HLS segment 0 the player fetches before seeking to a resume
+//         position: 0 as now, 1 playlist starts there (EXT-X-START),
+//         2 segment 0 cut to its first second, 3 both
+typedef struct { int ring, gens, seg0; } Ajuste;
+static Ajuste ajuste = { 0, GERADORES, 0 };
+static int ajusteLido;
+static const char *const SEG0_NOME[4] = { "normal", "start tag", "short", "start tag + short" };
+
+static int ajusteValido(const Ajuste *a) {
+  return (a->ring == 0 || a->ring == 8 || a->ring == 16 || a->ring == 32) && a->gens >= 1 &&
+         a->gens <= GERADORES && a->seg0 >= 0 && a->seg0 <= 3;
+}
+static void ajusteLer(const char *t, Ajuste *a) {
+  const char *p;
+  if ((p = strstr(t, "ring=")) != NULL) a->ring = atoi(p + 5);
+  if ((p = strstr(t, "gens=")) != NULL) a->gens = atoi(p + 5);
+  if ((p = strstr(t, "seg0=")) != NULL) a->seg0 = atoi(p + 5);
+}
+static void ajusteTexto(const Ajuste *a, char *b, size_t n) {
+  if (a->ring) snprintf(b, n, "ring %d MiB, %d generator(s), seg0 %s", a->ring, a->gens, SEG0_NOME[a->seg0]);
+  else snprintf(b, n, "ring auto, %d generator(s), seg0 %s", a->gens, SEG0_NOME[a->seg0]);
+}
+// Sob G.
+static void ajusteCarregar(void) {
+  char *t;
+  if (ajusteLido) return;
+  ajusteLido = 1;
+  if ((t = dados_ler("dts-ajuste.txt")) != NULL) {
+    Ajuste a = ajuste;
+    ajusteLer(t, &a);
+    if (ajusteValido(&a)) ajuste = a;
+    free(t);
+  }
+}
 
 static uint64_t agoraMs(void) {
   struct timespec t;
@@ -270,6 +313,11 @@ typedef struct Sessao {
   int64_t bytes;
   uint64_t criadaMs, prontaMs, primeiroPedidoMs;
   char agente[96];
+  // tuning test and memory line
+  Ajuste aj; int nGer, seg0Cortado; double inicio;
+  long rssIni, rssPico, livreIni, livreMin;   // kB; -1 unknown
+  int hwmZerado;
+  uint64_t memLogMs;
 } Sessao;
 
 static pthread_mutex_t G = PTHREAD_MUTEX_INITIALIZER;
@@ -399,16 +447,16 @@ static Gerador *pegarGerador(Sessao *s, int seg, int *continua, char *err, size_
   pthread_mutex_lock(&s->m);
   while (!esc && !s->cancelar) {
     int esperar = 0, vaga = -1;
-    for (i = 0; i < GERADORES && seg >= 0; i++)
+    for (i = 0; i < s->nGer && seg >= 0; i++)
       if (s->ger[i].g && !s->ger[i].ocupado && dts_remux_gen_next(s->ger[i].g) == seg) { esc = &s->ger[i]; *continua = 1; break; }
     if (esc) break;
-    for (i = 0; i < GERADORES && seg > 0; i++)
+    for (i = 0; i < s->nGer && seg > 0; i++)
       if (s->ger[i].ocupado && s->ger[i].seg == seg - 1 && !s->ger[i].parar) esperar = 1;
     if (esperar) {
       if (pthread_cond_timedwait(&s->c, &s->m, &ts) == ETIMEDOUT) { snprintf(err, errn, "timed out waiting for segment %d", seg - 1); break; }
       continue;
     }
-    for (i = 0; i < GERADORES; i++)
+    for (i = 0; i < s->nGer; i++)
       if (s->ger[i].g && !s->ger[i].ocupado && (!esc || s->ger[i].uso < esc->uso)) esc = &s->ger[i];
     if (esc) break;
     // Progressivo: o player le UM fluxo por vez. Pedido novo (seek, ou o player
@@ -417,7 +465,7 @@ static Gerador *pegarGerador(Sessao *s, int seg, int *continua, char *err, size_
     // conexao na fonte e reler o cabecalho; foi isso que o TorBox recusou).
     if (seg < 0) {
       Gerador *prog = NULL;
-      for (i = 0; i < GERADORES; i++) if (s->ger[i].g && s->ger[i].ocupado && s->ger[i].seg == -2) prog = &s->ger[i];
+      for (i = 0; i < s->nGer; i++) if (s->ger[i].g && s->ger[i].ocupado && s->ger[i].seg == -2) prog = &s->ger[i];
       if (prog) {
         if (!prog->parar) {
           prog->parar = 1;
@@ -429,7 +477,7 @@ static Gerador *pegarGerador(Sessao *s, int seg, int *continua, char *err, size_
         continue;
       }
     }
-    for (i = 0; i < GERADORES; i++) if (!s->ger[i].g && !s->ger[i].ocupado) { vaga = i; break; }
+    for (i = 0; i < s->nGer; i++) if (!s->ger[i].g && !s->ger[i].ocupado) { vaga = i; break; }
     if (vaga >= 0) {
       Gerador *nv = &s->ger[vaga];
       DtsRemuxGen *g;
@@ -447,12 +495,12 @@ static Gerador *pegarGerador(Sessao *s, int seg, int *continua, char *err, size_
     }
     // Todos ocupados: o mais antigo larga o que faz (o player desistiu dele).
     { Gerador *velho = NULL;
-      for (i = 0; i < GERADORES; i++)
+      for (i = 0; i < s->nGer; i++)
         if (s->ger[i].ocupado && s->ger[i].g && (!velho || s->ger[i].uso < velho->uso)) velho = &s->ger[i];
       if (velho && !velho->parar) {
         velho->parar = 1;
         dts_remux_gen_interrupt(velho->g);   // preso na rede: solta ja, nao no proximo pacote
-        printf("[dts-tpk] sessao %u: %d geradores ocupados, o mais antigo (seg %d) para\n", s->id, GERADORES, velho->seg);
+        printf("[dts-tpk] sessao %u: %d geradores ocupados, o mais antigo (seg %d) para\n", s->id, s->nGer, velho->seg);
         fflush(stdout);
       } }
     if (pthread_cond_timedwait(&s->c, &s->m, &ts) == ETIMEDOUT) { snprintf(err, errn, "no free generator"); break; }
@@ -600,6 +648,19 @@ static int servirFluxo(int sock, Sessao *s, const Pedido *pd, unsigned nr, int s
     pthread_mutex_lock(&s->m); s->nErros++; pthread_mutex_unlock(&s->m);
     return 0;
   }
+  if (seg == 0 && (s->aj.seg0 & 2)) {
+    // Tuning test, seg0 & 2: the first segment 0 of a session opened at a resume
+    // position is cut to its first second (the player seeks away from it).
+    int cortar = 0;
+    pthread_mutex_lock(&s->m);
+    if (!s->seg0Cortado && s->inicio > dts_remux_segment_duration(s->rx, 0) + 1.0) { s->seg0Cortado = 1; cortar = 1; }
+    pthread_mutex_unlock(&s->m);
+    if (cortar) {
+      dts_remux_gen_limit(ger->g, 1.0);
+      printf("[dts-tpk] #%u: seg0 cut to 1 s (tuning test; the app seeks to %.0f s)\n", nr, s->inicio);
+      fflush(stdout);
+    }
+  }
   if (seg < 0) {   // o player conta a posicao a partir do quadro-chave onde o fluxo comeca
     pthread_mutex_lock(&s->m); s->inicioStream = dts_remux_keyframe_before(s->rx, t); pthread_mutex_unlock(&s->m);
   }
@@ -651,6 +712,14 @@ static int servirFluxo(int sock, Sessao *s, const Pedido *pd, unsigned nr, int s
   return ok && manter;
 }
 
+// Tuning test, seg0 & 1: the playlist says where the app will seek (resume),
+// so the player may start there instead of fetching segment 0 first.
+static size_t marcaInicio(Sessao *s, char *b, size_t n) {
+  long ms = lround(s->inicio * 1000.0);
+  if (!(s->aj.seg0 & 1) || s->inicio <= 1.0) return 0;
+  return (size_t)snprintf(b, n, "#EXT-X-START:TIME-OFFSET=%ld.%03ld\n", ms / 1000, ms % 1000);
+}
+
 static void playlist(Sessao *s, char *b, size_t n) {
   const DtsRemuxInfo *in = dts_remux_info(s->rx);
   int k, alvo = (int)ceil(in->max_segment_s);
@@ -658,6 +727,7 @@ static void playlist(Sessao *s, char *b, size_t n) {
   if (alvo < 1) alvo = 1;
   p += (size_t)snprintf(b + p, n - p, "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:%d\n#EXT-X-MEDIA-SEQUENCE:0\n"
                         "#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-INDEPENDENT-SEGMENTS\n", alvo);
+  p += marcaInicio(s, b + p, n - p);
   for (k = 0; k < in->n_segments && p < n - 64; k++) {
     // Milissegundos inteiros: o LC_NUMERIC da TV nunca vira virgula aqui.
     long ms = lround(dts_remux_segment_duration(s->rx, k) * 1000.0);
@@ -676,7 +746,9 @@ static void playlistMestre(Sessao *s, char *b, size_t n) {
   long fps = lround(in->fps * 1000.0);
   size_t p = 0;
   if (bw < 1000000L) bw = 1000000L;
-  p += (size_t)snprintf(b + p, n - p, "#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-INDEPENDENT-SEGMENTS\n#EXT-X-STREAM-INF:BANDWIDTH=%ld", bw);
+  p += (size_t)snprintf(b + p, n - p, "#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-INDEPENDENT-SEGMENTS\n");
+  p += marcaInicio(s, b + p, n - p);
+  p += (size_t)snprintf(b + p, n - p, "#EXT-X-STREAM-INF:BANDWIDTH=%ld", bw);
   if (in->width > 0 && in->height > 0) p += (size_t)snprintf(b + p, n - p, ",RESOLUTION=%dx%d", in->width, in->height);
   if (fps > 0) p += (size_t)snprintf(b + p, n - p, ",FRAME-RATE=%ld.%03ld", fps / 1000, fps % 1000);
   if (!strncmp(in->hdr, "PQ", 2) || !strcmp(in->hdr, "HLG"))
@@ -840,6 +912,92 @@ int dts_tpk_disponivel(void) {
   return c;
 }
 
+// --- memory line (one per playback) --------------------------------------------
+// Peak resident memory of the app and the lowest MemAvailable of the TV while a
+// session lives, sampled every 500 ms (and VmHWM, reset at the session start
+// when the kernel allows it), with the reader rings alive. Kilobytes; -1 = not
+// readable. The owner compares one 4K file on each TV and each tuning.
+static long lerKb(const char *arq, const char *chave) {
+  char l[160];
+  size_t k = strlen(chave);
+  long v = -1;
+  FILE *f = fopen(arq, "r");
+  if (!f) return -1;
+  while (fgets(l, sizeof l, f))
+    if (!strncmp(l, chave, k) && l[k] == ':') { v = atol(l + k + 1); break; }
+  fclose(f);
+  return v;
+}
+// Package id from where libnuvio.so was loaded (.../<package>/lib/libnuvio.so).
+static const char *pacote(void) {
+  static char p[64];
+  if (!p[0]) {
+    char l[512];
+    FILE *f = fopen("/proc/self/maps", "r");
+    snprintf(p, sizeof p, "?");
+    while (f && fgets(l, sizeof l, f)) {
+      char *a = strstr(l, "/lib/libnuvio"), *b;
+      if (!a) continue;
+      *a = 0;
+      b = strrchr(l, '/');
+      if (b && b[1]) snprintf(p, sizeof p, "%s", b + 1);
+      break;
+    }
+    if (f) fclose(f);
+  }
+  return p;
+}
+static void memAmostra(Sessao *s, long rss, long livre) {   // sob s->m
+  if (rss > s->rssPico) s->rssPico = rss;
+  if (livre >= 0 && (s->livreMin < 0 || livre < s->livreMin)) s->livreMin = livre;
+}
+static void memLinha(Sessao *s, int fim) {
+  DtsEngineRings rg;
+  char aj[96];
+  long hwm = lerKb("/proc/self/status", "VmHWM"), total = lerKb("/proc/meminfo", "MemTotal");
+  dts_engine_rings(&rg, 0);
+  ajusteTexto(&s->aj, aj, sizeof aj);
+  pthread_mutex_lock(&s->m);
+  memAmostra(s, lerKb("/proc/self/status", "VmRSS"), lerKb("/proc/meminfo", "MemAvailable"));
+  printf("[dts-tpk] mem%s: sessao %u, %s, tizen %d, RAM %ld MB; %s; app RSS peak %ld MB (start %ld, VmHWM %ld %s), "
+         "MemAvailable low %ld MB (start %ld); reader rings peak %d = %lld MiB, alive now %d = %lld MiB; %.0f s\n",
+         fim ? "" : " (running)", s->id, pacote(), tizenMaior(), total / 1024, aj, s->rssPico / 1024, s->rssIni / 1024,
+         hwm / 1024, s->hwmZerado ? "since session start" : "since app start", s->livreMin / 1024, s->livreIni / 1024,
+         rg.peak, rg.peak_bytes >> 20, rg.alive, rg.bytes >> 20, (agoraMs() - s->criadaMs) / 1000.0);
+  pthread_mutex_unlock(&s->m);
+  fflush(stdout);
+}
+static void memInicio(Sessao *s) {
+  FILE *f = fopen("/proc/self/clear_refs", "w");   // "5": VmHWM back to the RSS of now
+  s->hwmZerado = f && fputs("5", f) >= 0;
+  if (f && fclose(f)) s->hwmZerado = 0;
+  s->rssIni = s->rssPico = lerKb("/proc/self/status", "VmRSS");
+  s->livreIni = s->livreMin = lerKb("/proc/meminfo", "MemAvailable");
+  s->memLogMs = s->criadaMs;
+  dts_engine_rings(NULL, 1);
+}
+static void *fioMemoria(void *u) {
+  (void)u;
+  for (;;) {
+    long rss, livre;
+    Sessao *s;
+    int linha = 0;
+    usleep(500 * 1000);
+    rss = lerKb("/proc/self/status", "VmRSS");
+    livre = lerKb("/proc/meminfo", "MemAvailable");
+    pthread_mutex_lock(&G);
+    if ((s = atual) != NULL) {
+      pthread_mutex_lock(&s->m);
+      memAmostra(s, rss, livre);
+      if (agoraMs() - s->memLogMs >= 120000) { s->memLogMs = agoraMs(); linha = 1; }
+      pthread_mutex_unlock(&s->m);
+      if (linha) memLinha(s, 0);   // a running line every 2 min: an OOM kill leaves no final one
+    }
+    pthread_mutex_unlock(&G);
+  }
+  return NULL;
+}
+
 static void encerrarAtual(void) {   // sob G
   Sessao *s = atual;
   if (!s) return;
@@ -851,6 +1009,7 @@ static void encerrarAtual(void) {   // sob G
   pthread_mutex_unlock(&s->m);
   if (s->rx) dts_remux_cancel(s->rx);
   sessaoResumo(s);
+  memLinha(s, 1);
   if (--s->refs == 0) {
     pthread_t t;
     if (pthread_create(&t, NULL, fioDestruir, s) == 0) pthread_detach(t);
@@ -895,6 +1054,12 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
     fflush(stdout);
     return 0;
   }
+  ajusteCarregar();
+  { int t = tizenMaior();   // ring of the readers this session opens
+    dts_engine_set_ring_mib(ajuste.ring ? ajuste.ring : t >= 6 && t < 8 ? 16 : 32); }
+  { static int monitor;
+    pthread_t tm;
+    if (!monitor && pthread_create(&tm, NULL, fioMemoria, NULL) == 0) { pthread_detach(tm); monitor = 1; } }
   s = calloc(1, sizeof *s);
   if (!s) { pthread_mutex_unlock(&G); return 0; }
   pthread_mutex_init(&s->m, NULL); pthread_cond_init(&s->c, NULL);
@@ -904,6 +1069,8 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
   s->track = track; s->stereo = stereo; s->modo = modo; s->corpo = corpo;
   s->estado = DTSTPK_SONDANDO; s->cacheSeg = -1; s->inicioStream = -1;
   s->criadaMs = agoraMs();
+  s->aj = ajuste; s->nGer = ajuste.gens; s->inicio = inicio > 0 ? inicio : 0;
+  memInicio(s);
   for (int i = 0; i < GERADORES; i++) s->ger[i].seg = -1;
   if (!s->url || !s->cabs) { pthread_mutex_unlock(&G); sessaoDestruir(s); return 0; }
   s->refs = 2;   // a sessao atual e o fio da sonda
@@ -914,9 +1081,11 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
   pthread_detach(t);
   urlDe(s, inicio, out, n);
   pthread_mutex_unlock(&G);
-  printf("[dts-tpk] sessao %u: modo %s, corpo %s, endereco %s, audio %d do arquivo, saida %s; player abre %s\n", s->id,
-         MODO_NOME[modo], CORPO_NOME[corpo], lan ? ipLanAtual : "127.0.0.1", track, stereo ? "AAC 2.0" : "AC3",
-          strstr(out, ".m3u8") ? "a playlist HLS" : "o fluxo progressivo");
+  { char aj[96];
+    ajusteTexto(&s->aj, aj, sizeof aj);
+    printf("[dts-tpk] sessao %u: modo %s, corpo %s, endereco %s, audio %d do arquivo, saida %s; player abre %s; tuning: %s\n",
+           s->id, MODO_NOME[modo], CORPO_NOME[corpo], lan ? ipLanAtual : "127.0.0.1", track, stereo ? "AAC 2.0" : "AC3",
+           strstr(out, ".m3u8") ? "a playlist HLS" : "o fluxo progressivo", aj); }
   fflush(stdout);
   return 1;
 }
@@ -1009,8 +1178,43 @@ static int linhaDts(const char *l) {
   return 0;
 }
 
+// GET /<token>/tune?ring=16&gens=1&seg0=2 sets the tuning test (next video on).
+static void servirAjuste(int sock, const char *query) {
+  char b[900], txt[96], erro[80] = "";
+  Ajuste a;
+  pthread_mutex_lock(&G);
+  ajusteCarregar();
+  a = ajuste;
+  pthread_mutex_unlock(&G);
+  if (query[0]) {
+    ajusteLer(query, &a);
+    if (!ajusteValido(&a)) snprintf(erro, sizeof erro, "NOT CHANGED: ring 0/8/16/32, gens 1-%d, seg0 0-3\n\n", GERADORES);
+    else {
+      char f[64];
+      pthread_mutex_lock(&G);
+      ajuste = a;
+      pthread_mutex_unlock(&G);
+      snprintf(f, sizeof f, "ring=%d gens=%d seg0=%d\n", a.ring, a.gens, a.seg0);
+      if (!dados_gravar("dts-ajuste.txt", f)) snprintf(erro, sizeof erro, "set for this run only (could not save)\n\n");
+      ajusteTexto(&a, txt, sizeof txt);
+      printf("[dts-tpk] tuning test set: %s (from the next video)\n", txt);
+      fflush(stdout);
+    }
+  }
+  ajusteTexto(&a, txt, sizeof txt);
+  snprintf(b, sizeof b, "%sDTS tuning test (temporary): %s\nApplies from the next video. Each playback logs a\n"
+           "\"[dts-tpk] mem:\" line with these values.\n\n"
+           "  %stune?ring=16        reader ring MiB: 8, 16, 32 (0 = auto: 32 on Tizen 8/9, 16 below)\n"
+           "  %stune?gens=1         generators: 1 or 2\n"
+           "  %stune?seg0=1         0 as now, 1 playlist starts at the resume point,\n"
+           "                        2 segment 0 cut to 1 s on resume, 3 both\n"
+           "  %stune?ring=0&gens=2&seg0=0   back to today's behaviour\n", erro, txt, urlReg, urlReg, urlReg, urlReg);
+  responderSimples(sock, 200, "OK", "text/plain; charset=utf-8", b, 0);
+}
+
 static void servirRegistro(int sock, const char *caminho, const char *query) {
   const char *arq = registro_arquivo();
+  if (!strcmp(caminho, "tune")) { servirAjuste(sock, query); return; }
   int so = !caminho[0] || !strcmp(caminho, "dts"), n = so ? 5000 : 3000;
   const char *q = strstr(query, "n=");
   if (q) n = atoi(q + 2);
@@ -1019,8 +1223,9 @@ static void servirRegistro(int sock, const char *caminho, const char *query) {
   if (strcmp(caminho, "log") && !so) {
     char b[700];
     snprintf(b, sizeof b, "Nuvio log (this TV)\n\n  %s            conversion, player, audio and source lines (= dts)\n"
-             "  %sdts?n=5000  the same, last 5000 of them\n  %slog?n=3000  last lines of the whole app log\n",
-             urlReg, urlReg, urlReg);
+             "  %sdts?n=5000  the same, last 5000 of them\n  %slog?n=3000  last lines of the whole app log\n"
+             "  %stune        DTS tuning test (temporary)\n",
+             urlReg, urlReg, urlReg, urlReg);
     responderSimples(sock, 200, "OK", "text/plain; charset=utf-8", b, 0);
     return;
   }

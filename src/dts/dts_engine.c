@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
+#include <pthread.h>
 struct DtsEngine;
 /* Output mode for the NEXT open: 0 = stereo AAC (default, the proven path),
  * 1 = AC3 5.1 at 640 kbps (falls back to AAC when the encoder is absent). */
@@ -13,6 +14,15 @@ void dts_engine_set_ac3(int on) { g_surround_ac3 = on ? 1 : 0; }
  * 32 by default; the .tpk asks for 16 on Tizen 6/6.5/7 (less RAM). */
 static volatile int g_fx_cap_mib = 32;
 void dts_engine_set_ring_mib(int mib) { g_fx_cap_mib = mib >= 8 && mib <= 32 ? mib : 32; }
+/* Rings alive (read_fluxo allocates, fx_close frees): the .tpk memory line. */
+static pthread_mutex_t g_rings_lock = PTHREAD_MUTEX_INITIALIZER;
+static DtsEngineRings g_rings;
+void dts_engine_rings(DtsEngineRings *out, int reset_peak) {
+  pthread_mutex_lock(&g_rings_lock);
+  if (out) *out = g_rings;
+  if (reset_peak) { g_rings.peak = g_rings.alive; g_rings.peak_bytes = g_rings.bytes; }
+  pthread_mutex_unlock(&g_rings_lock);
+}
 #ifndef NV_DTS_FFMPEG
 struct DtsEngine { DtsMediaInfo info; };
 DtsEngine *dts_engine_create(void) { return calloc(1, sizeof(DtsEngine)); }
@@ -257,6 +267,13 @@ static void queue_ranges(DtsEngine *e) {
   }
   pthread_cond_broadcast(&e->range_wake);
 }
+static void rings_add(long long bytes) {
+  pthread_mutex_lock(&g_rings_lock);
+  g_rings.alive += bytes > 0 ? 1 : -1; g_rings.bytes += bytes;
+  if (g_rings.alive > g_rings.peak) g_rings.peak = g_rings.alive;
+  if (g_rings.bytes > g_rings.peak_bytes) g_rings.peak_bytes = g_rings.bytes;
+  pthread_mutex_unlock(&g_rings_lock);
+}
 #define FX_CAP (e->fx_cap)             /* ring: read-ahead plus history (dts_engine_set_ring_mib) */
 #define FX_HIST (2 * 1024 * 1024)      /* kept behind the reader (small backward seeks) */
 #define FX_SKIP (1024 * 1024)          /* a forward jump this short waits, no new request */
@@ -370,7 +387,7 @@ static int read_fluxo(void *opaque,uint8_t *dst,int n) {
   uint64_t wait_started=0;
   pthread_mutex_lock(&e->range_lock);
   if(!e->fx_thread_ok && !e->fx_stop) {
-    if(!e->fx_buf) { e->fx_cap=(int64_t)g_fx_cap_mib*1024*1024; e->fx_buf=malloc((size_t)e->fx_cap); }
+    if(!e->fx_buf) { e->fx_cap=(int64_t)g_fx_cap_mib*1024*1024; e->fx_buf=malloc((size_t)e->fx_cap); if(e->fx_buf) rings_add(e->fx_cap); }
     if(!e->fx_buf) { pthread_mutex_unlock(&e->range_lock); return AVERROR(ENOMEM); }
     e->fx_req=e->pos;
     if(pthread_create(&e->fx_thread,NULL,fx_worker,e)) { pthread_mutex_unlock(&e->range_lock); return AVERROR(ENOMEM); }
@@ -416,6 +433,7 @@ static void fx_close(DtsEngine *e) {
   pthread_mutex_unlock(&e->range_lock);
   if(e->fx_thread_ok) pthread_join(e->fx_thread,NULL);
   e->fx_thread_ok=0; e->fx_stop=0; e->fx_req=-1; e->fx_eof=e->fx_err=0; e->fx_lo=e->fx_hi=0;
+  if(e->fx_buf) rings_add(-e->fx_cap);
   free(e->fx_buf); e->fx_buf=NULL;
 }
 static int read_range(void *opaque,uint8_t *dst,int n) {
