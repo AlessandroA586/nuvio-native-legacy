@@ -2049,6 +2049,8 @@ static void *lerMkv(void *arg) {
              j >= 0 ? fx[j].codec : "", j >= 0 && fx[j].idioma[0] ? fx[j].idioma : "");
       if (j < 0) continue;
       m = &fx[j];
+      // O nome e dado de exibicao mesmo quando a TV ja informou o idioma.
+      if (m->nome[0]) snprintf(f->nome, sizeof f->nome, "%s", m->nome);
       for (k = 0; k < j; k++) if (fx[k].tipo == 17) ordinal++;
       ordinal++;
       // O codec e o ordinal entram SEMPRE (a folha marca a faixa ASS pelo codec

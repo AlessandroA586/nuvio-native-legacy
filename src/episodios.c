@@ -1102,6 +1102,11 @@ static void episodios_menu_desenharCorpo_(void) {
   if (vmAberto && vmSo) revalidar();
   if (vmSo) menuDesenhar((GfxRect){ 0.0f, 0.0f, (float)NV_TELA_W, (float)NV_TELA_H }, 1.0f);
 }
+int episodios_menu_fontes(int *temporada, int *episodio) {
+  if (temporada) *temporada = vmT;
+  if (episodio) *episodio = vmE;
+  return vmT > 0 && vmE > 0;
+}
 int  episodios_menu_pediu_fontes(void) { int v = vmFontesPed; vmFontesPed = 0; return v; }
 
 #ifdef NV_SHOT_HOOKS
