@@ -136,6 +136,7 @@ static pthread_mutex_t verTrava = PTHREAD_MUTEX_INITIALIZER;
 static unsigned listaGeracao;
 static void cancelarConferenciasSemTrava(void);
 static int atual = -1, recarregar;
+static int canalFolha;
 static char contexto[320];
 // O ALVO DA LISTA — issue #101. Ver a nota longa em streams.h: `alvoPedido` e
 // o carimbo do proximo pedido e `alvoLista` o da lista que esta em memoria.
@@ -351,13 +352,51 @@ static int ehInformativa(const Stream *s) {
   // pega a linha de aviso antes de qualquer pedido.
   return s->naoVideo || naovideo_nome(s->rotulo, s->descricao, s->altura, s->tamanhoMB);
 }
+void stream_filtro_dados(const Stream *s, FonteFiltroDados *dados) {
+  if (!dados) return;
+  if (!s) { memset(dados, 0, sizeof *dados); return; }
+  if (s->filtroLido) { *dados = s->filtro; return; }
+  char texto[sizeof s->rotulo + sizeof s->descricao + 2], resolucao[24] = "";
+  snprintf(texto, sizeof texto, "%s\n%s", s->rotulo, s->descricao);
+  if (s->altura > 0) snprintf(resolucao, sizeof resolucao, "%dp", s->altura);
+  FonteFiltroEntrada entrada = {0};
+  entrada.resolucao = resolucao; entrada.filename = s->arquivo; entrada.texto = texto;
+  entrada.tamanhoBytes = s->tamanhoBytes;
+  if (!entrada.tamanhoBytes && s->tamanhoMB > 0)
+    entrada.tamanhoBytes = (uint64_t)s->tamanhoMB > UINT64_MAX / UINT64_C(1048576)
+                        ? UINT64_MAX : (uint64_t)s->tamanhoMB * UINT64_C(1048576);
+  fontefiltro_classificar(&entrada, dados);
+}
+static void filtroCompletar(Stream *s) {
+  if (!s->filtroLido) { stream_filtro_dados(s, &s->filtro); s->filtroLido = 1; }
+}
+int stream_filtro_permite(const Stream *s) {
+  if (!s) return 0;
+  if (!fontefalha_filtro_ativo()) return 1;
+  FonteFiltroConfig cfg; FonteFiltroDados dados;
+  fontefalha_filtro(&cfg); stream_filtro_dados(s, &dados);
+  return fontefiltro_permite(&cfg, &dados);
+}
+int stream_filtro_bloqueou(void) {
+  if (!fontefalha_filtro_ativo()) return 0;
+  FonteFiltroConfig cfg; fontefalha_filtro(&cfg);
+  pthread_mutex_lock(&verTrava);
+  int bloqueou = n > 0;
+  for (int i = 0; i < n && bloqueou; i++)
+    if (fontefiltro_permite(&cfg, &lista[i].filtro)) bloqueou = 0;
+  pthread_mutex_unlock(&verTrava);
+  return bloqueou;
+}
 // Fora do automatico: ja descartada nesta sessao OU linha de aviso/placeholder do
 // addon ("Meteor - Not configured", "Embed69 - {}", "... error"). Esses so ficam
 // na folha manual (#284: 75% Android / 60% Samsung / 41% LG falham quando o
 // automatico os escolhe, contra 6/14/9% das fontes com resolucao).
-static int foraDoAuto(int i) {
-  return automaticaExcluida(i) || (i >= 0 && i < n && (lista[i].foraCache || ehInformativa(&lista[i]) || excedeDecoder(&lista[i]) || fontesmortas_idade(&lista[i]) >= 0));
+static int foraDoAutoComFiltro(int i, const FonteFiltroConfig *filtro) {
+  return automaticaExcluida(i) || (i >= 0 && i < n &&
+      ((!canalFolha && (filtro ? !fontefiltro_permite(filtro, &lista[i].filtro) : !stream_filtro_permite(&lista[i]))) ||
+       lista[i].foraCache || ehInformativa(&lista[i]) || excedeDecoder(&lista[i]) || fontesmortas_idade(&lista[i]) >= 0));
 }
+static int foraDoAuto(int i) { return foraDoAutoComFiltro(i, NULL); }
 int stream_automatico_disponivel(int indice) { return indice >= 0 && indice < n && !foraDoAuto(indice); }
 long stream_vod_falhou_ha(int indice) { return indice >= 0 && indice < n ? fontesmortas_idade(&lista[indice]) : -1; }
 void stream_vod_falhou(int indice) {
@@ -487,7 +526,7 @@ void stream_definir_lista_idade(const Stream *l, int qtd, Uint32 idade) {
     if (l[i].url[0] || debrid_ativo() || p2p_ativo()) nova[k++] = l[i];
   if (nova && qtd - k) printf("[fonte] %d torrents sem debrid descartados\n", qtd - k);
   descartadosSemDebrid = nova ? qtd - k : 0;
-  for (i = 0; i < k && nova; i++) nova[i].selosPacoteVer = 0;   // os selos saem do fio de fundo (selosAgendar)
+  for (i = 0; i < k && nova; i++) { nova[i].selosPacoteVer = 0; filtroCompletar(&nova[i]); }
   pthread_mutex_lock(&verTrava);
   free(lista); lista = nova; n = nova ? k : 0; atual = -1;
   fitN = 0; // raw identities have been replaced; preserve an open snapshot
@@ -554,7 +593,7 @@ void stream_lista_acrescentar(const Stream *l, int qtd, int ordemAddon) {
   if (qtd - k) printf("[fonte] %d torrents sem debrid descartados\n", qtd - k);
   descartadosSemDebrid += qtd - k;
   if (!k) { free(nova); return; }
-  for (i = 0; i < k; i++) nova[i].selosPacoteVer = 0;
+  for (i = 0; i < k; i++) { nova[i].selosPacoteVer = 0; filtroCompletar(&nova[i]); }
   // O CARTAO EM FOCO E O QUE FICA PARADO. Guardado pelo indice da lista (que
   // nao muda), e nao pela linha (que muda quando entra coisa acima).
   if (aberta && grupo == 1 && n > 0) {
@@ -1346,7 +1385,10 @@ static int playlistVazia(const char *url, const char *cabecalhos) {
 // conferida fora da trava. A geracao diz se o indice ainda e da mesma lista;
 // sem ela, a url resolvida de um episodio ia parar na linha de mesmo numero
 // do episodio seguinte.
-typedef struct { unsigned geracao; _Atomic int abortou; unsigned rodada; int antecipada; uint64_t sessao; } Conferencia;
+typedef struct {
+  unsigned geracao; _Atomic int abortou; unsigned rodada; int antecipada; uint64_t sessao;
+  FonteFiltroConfig filtro;
+} Conferencia;
 // A CONFERENCIA DA CORRIDA PARALELA mora no heap, com contagem: os fios de
 // fonteparalela que ainda conferem quando ela volta continuam lendo e
 // escrevendo nela (c->abortou, c->rodada). Na pilha de stream_primeira_boa, o
@@ -1408,7 +1450,7 @@ static int verificarUma(int i, Conferencia *c) {
     pthread_mutex_unlock(&verTrava);
     return 0;
   }
-  if (lista[i].foraCache || excedeDecoder(&lista[i]) || fontesmortas_idade(&lista[i]) >= 0) {
+  if ((!canalFolha && !fontefiltro_permite(&c->filtro, &lista[i].filtro)) || lista[i].foraCache || excedeDecoder(&lista[i]) || fontesmortas_idade(&lista[i]) >= 0) {
     pthread_mutex_unlock(&verTrava); return 0;
   }
   snprintf(url, sizeof url, "%s", lista[i].url);
@@ -1577,6 +1619,10 @@ int stream_resolver_escolhida(int i, unsigned geracao, char *url, unsigned nu,
   if (listaGeracao != geracao || i < 0 || i >= n) {
     pthread_mutex_unlock(&verTrava);
     return -1;
+  }
+  if (!canalFolha && !stream_filtro_permite(&lista[i])) {
+    pthread_mutex_unlock(&verTrava);
+    return 0;
   }
   // Ja resolvida (pelo automatico, ou por uma escolha anterior desta lista):
   // e a url pronta, sem ir a rede.
@@ -1784,6 +1830,7 @@ static int falhaCandidatas(unsigned geracao, int escolhida, int primeira, FonteF
     }
     stream_falha_identidade(s, id, (unsigned)tam);
     c[q].indice = i; c[q].nativa = s->infoHash[0] != 0;
+    c[q].filtro = s->filtro;
     c[q].ordemAddon = s->addonOrdem;
     snprintf(c[q].addon, sizeof c[q].addon, "%s", s->addonChave);
     c[q].identidade = id;
@@ -1882,6 +1929,7 @@ struct StreamPreparo {
   FonteFalhaCandidata *candidatas;
   int n, nc, teto, falhaAtiva;
   FonteFalhaSessao *politica;
+  FonteFiltroConfig filtro;
   DebridContexto debrid;
   uint64_t configuracao;
   uint64_t sessaoPerfil;
@@ -1983,7 +2031,8 @@ StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int total, int pr
   int resolverNativo = debrid_ativo() || p2p_ativo(), preferidaNormal = -1;
   for (int i = 0; i < total; i++) if (fontes[i].url[0] || resolverNativo) {
     if (i == preferidaNext) preferidaNormal = p->n;
-    p->fontes[p->n] = fontes[i]; p->fontes[p->n++].selosPacoteVer = 0;
+    p->fontes[p->n] = fontes[i]; p->fontes[p->n].selosPacoteVer = 0;
+    filtroCompletar(&p->fontes[p->n++]);
   }
   // Mesma normalizacao do setter da lista em foreground. O indice da
   // vencedora e da politica ja nasce no vetor que sera instalado no Next.
@@ -1991,6 +2040,7 @@ StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int total, int pr
   if (!total) goto erro;
   p->n = total; p->configuracao = stream_preparo_config_atual();
   debrid_contexto_capturar(&p->debrid); fontefalha_config(&cfg);
+  p->filtro = cfg.filtro;
   p->falhaAtiva = cfg.provedores || cfg.addons;
   p->teto = p->falhaAtiva ? 0 : fonteauto_tentativas(ajustes_fonte_primeira() ? FONTEAUTO_PRIMEIRA : FONTEAUTO_MELHOR, 8);
   for (int i = 0; i < DEBRID_N; i++) if (debrid_servico_disponivel(i)) disponiveis |= 1u << i;
@@ -2009,7 +2059,8 @@ StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int total, int pr
   for (int q = 0; q < total; q++) {
     int i = ordem[q]; const Stream *s = &fontes[i];
     pts[q] = pontosDoAlvo(s, alvo ? alvo : ""); acima[q] = !cabeNoTeto(s);
-    excl[q] = s->urlP2P || (s->foraCache && !s->infoHash[0]) || ehInformativa(s) || excedeDecoder(s) ||
+    excl[q] = !fontefiltro_permite(&p->filtro, &s->filtro) ||
+              s->urlP2P || (s->foraCache && !s->infoHash[0]) || ehInformativa(s) || excedeDecoder(s) ||
               (!s->infoHash[0] && fontesmortas_idade(s) >= 0);
     grupo[q] = grupoDaFonte(&escopo, s); rank[q] = fonteregra_ordem_rank(s->provedor);
     if (i == preferidaNext && fonteregra_no_escopo(&escopo, ehPlugin(s))) pref = q;
@@ -2039,6 +2090,7 @@ StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int total, int pr
     c->identidade = strdup(identidade);
     if (!c->identidade) goto erro;
     c->indice = i; c->nativa = s->infoHash[0] != 0; c->ordemAddon = s->addonOrdem;
+    c->filtro = s->filtro;
     snprintf(c->addon, sizeof c->addon, "%s", s->addonChave); p->nc++;
   }
   free(ordem); free(fila); free(rank); free(pts); free(acima); free(excl); free(grupo);
@@ -2094,6 +2146,7 @@ int stream_preparo_renovar(StreamPreparo *p, int indice, int (*cancelado)(void *
   if (!p || !p->fontes || !fonte || indice < 0 || indice >= p->n ||
       !nv_perfil_sessao_atual(p->sessaoPerfil) || (cancelado && cancelado(ctx))) return 0;
   const Stream *s = &p->fontes[indice];
+  if (!fontefiltro_permite(&p->filtro, &s->filtro)) return 0;
   char url[4096] = "", fim[4096], mime[96] = "";
   int ok = 0, fora = 0;
   long corpo = -1;
@@ -2156,7 +2209,8 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
   unsigned char *acima, *excl;
   signed char *grp;
   int *rk, ordemUso = ajustes_fonte_ordem_uso();
-  Conferencia c = { 0, 0, 0, -1, sessao };
+  Conferencia c = { .antecipada = -1, .sessao = sessao };
+  fontefalha_filtro(&c.filtro);
   Uint32 tVerif = 0;
   tentativas = fonteauto_tentativas(modo, tentativas);
   pthread_mutex_lock(&verTrava);
@@ -2197,7 +2251,7 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
       if (i == pref && fonteregra_no_escopo(&cfgEscopo, ehPlugin(&lista[i]))) posPref = q;
       pts[q] = pontos(&lista[i]);
       acima[q] = (unsigned char)!cabeNoTeto(&lista[i]);
-      excl[q] = (unsigned char)foraDoAuto(i);
+      excl[q] = (unsigned char)foraDoAutoComFiltro(i, &c.filtro);
       grp[q] = (signed char)grupoDe(i);
       rk[q] = fonteregra_ordem_rank(lista[i].provedor);
       if (!excl[q]) livres++;
@@ -2256,6 +2310,7 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
     ConfDona *d = malloc(sizeof *d);
     if (d) {
       d->c.sessao = c.sessao; d->c.geracao = c.geracao; d->c.rodada = c.rodada; d->c.antecipada = c.antecipada;
+      d->c.filtro = c.filtro;
       atomic_init(&d->c.abortou, (int)c.abortou);
       atomic_init(&d->refs, 2);
       escolhida = fonteparalela_soltando(fila, nf, kk, verificarOuParar, falhouUma, &d->c, &t1,
@@ -2671,15 +2726,16 @@ int stream_proxima_sem_perda(int atual) {
          lista[melhor].dolbyVision >= lista[atual].dolbyVision;
 }
 // Chamar sob verTrava: tanto lista quanto exib podem ser substituidas pela UI.
-static int proximaVODSemTrava(int atualIdx) {
+static int proximaVODComFiltro(int atualIdx, const FonteFiltroConfig *filtro) {
   // A vencedora inicial pode estar no fim: percorrer TODAS as nao tentadas,
   // na ordem do addon. Falhas anteriores ja estao excluidas nesta lista.
   for (int k = 0; k < n; k++) {
     int i = ORD(k);
-    if (i != atualIdx && !foraDoAuto(i) && grupoDe(i) >= 0) return i;
+    if (i != atualIdx && !foraDoAutoComFiltro(i, filtro) && grupoDe(i) >= 0) return i;
   }
   return -1;
 }
+static int proximaVODSemTrava(int atualIdx) { return proximaVODComFiltro(atualIdx, NULL); }
 int stream_proxima_vod(int atualIdx) {
   int i;
   pthread_mutex_lock(&verTrava);
@@ -2688,7 +2744,8 @@ int stream_proxima_vod(int atualIdx) {
   return i;
 }
 int stream_verificar_proxima_vod_sessao(int atualIdx, int tentativas, int *conferidas, uint64_t sessao) {
-  Conferencia c = { 0, 0, 0, -1, sessao };
+  Conferencia c = { .antecipada = -1, .sessao = sessao };
+  fontefalha_filtro(&c.filtro);
   if (conferidas) *conferidas = 0;
   int i = atualIdx;
   c.geracao = stream_lista_geracao();
@@ -2697,7 +2754,7 @@ int stream_verificar_proxima_vod_sessao(int atualIdx, int tentativas, int *confe
   while (tentativas-- > 0) {
     pthread_mutex_lock(&verTrava);
     if (!nv_perfil_sessao_atual(c.sessao) || listaGeracao != c.geracao) c.abortou = 1;
-    i = c.abortou ? -1 : proximaVODSemTrava(atualIdx);
+    i = c.abortou ? -1 : proximaVODComFiltro(atualIdx, &c.filtro);
     pthread_mutex_unlock(&verTrava);
     if (i < 0) break;
     if (conferidas) (*conferidas)++;
@@ -2834,6 +2891,7 @@ static int temAudioPreferido(const Stream *s);
 // Os chips (MP4, cache, dublado) valem para a lista E para a contagem de cada
 // aba; o addon so para a lista.
 static int passaChips(int i) {
+  if (!canalFolha && !stream_filtro_permite(&lista[i])) return 0;
   if (soMp4 && !lista[i].mp4) return 0;
   if (soCache && lista[i].foraCache) return 0;
   if (soDub && !temAudioPreferido(&lista[i])) return 0;
@@ -2879,7 +2937,7 @@ static int nFiltrados(void) {
 // Uma vez por quadro, nunca por linha: stream_automatico percorre a lista.
 static int automaticaDaFolha(void) {
   return preferida >= 0 && !lista[preferida].foraCache && !automaticaExcluida(preferida) &&
-         (canalFolha || !excedeDecoder(&lista[preferida])) ? preferida : automaticoDaFolhaModo();
+         (canalFolha || (!excedeDecoder(&lista[preferida]) && stream_filtro_permite(&lista[preferida]))) ? preferida : automaticoDaFolhaModo();
 }
 
 // A LISTA AGRUPADA POR RESOLUCAO. A ordem da lista (a pontuacao) vale DENTRO
@@ -4792,6 +4850,8 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     // "os addons nao tem" seria falso), depois o resumo da consulta.
     char causa[160], frase[320];
     const char *s=addons_estado()==ADD_BUSCANDO?"Buscando fontes nos addons…":"Nenhuma fonte direta disponível. Use Recarregar para tentar novamente.";
+    if (!canalFolha && addons_estado()!=ADD_BUSCANDO && stream_filtro_bloqueou())
+      s = "Nenhuma fonte passa pelos filtros";
     if (addons_estado()!=ADD_BUSCANDO && n==0) {
       int tem = 0;
       if (descartadosSemDebrid > 0) {

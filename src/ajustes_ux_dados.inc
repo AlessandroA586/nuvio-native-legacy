@@ -90,6 +90,7 @@ static void uxValorTexto(int op, int v, char *buf, size_t tam) {
   o = &OPCOES[op];
   if (o->tipo == OP_ACAO) texto = i18n("Abrir");
   else if (o->tipo == OP_LEITURA) texto = i18n("Ver detalhes");
+  else if (op == AJ_FILTRO_TAM_MAX && v == 0) texto = i18n("Sem limite de tamanho");
   else if (op == AJ_HERO_TRAILER_ESPERA) {
     snprintf(buf, tam, i18n("%d,%d s"), v / 10, v % 10);
     return;
@@ -209,7 +210,10 @@ static const char *uxSinonimos(int op) {
     case AJ_FONTE_REGEX: case AJ_FONTE_REGEX_PADRAO: case AJ_FONTE_REGEX_MODELO:
       return "regex expressao regular padrao filtro nome idioma espanhol latino castellano multi dual remux auto-play autoplay regex match pattern";
     case AJ_TAM_MAX: case AJ_TAM_MIN: return "tamanho maximo minimo gb gigabyte arquivo franquia dados internet limite cota plano economizar fonte automatica size quota data cap";
+    case AJ_FILTROS_FONTES: case AJ_FILTRO_TAM_MAX: case AJ_FILTRO_GRUPOS:
+      return "filtros excluir exclusao resolucao qualidade tamanho tags visuais hdr dolby vision audio canais encode idiomas linguas grupos lancamento antes limite links filter exclude resolution quality size visual audio channels codec encode language release group";
     case AJ_FALHA_PROVEDORES: case AJ_FALHA_PROVEDOR_ORDEM: case AJ_FALHA_RD_LIMITE: case AJ_FALHA_TB_LIMITE: case AJ_FALHA_PM_LIMITE: case AJ_FALHA_AD_LIMITE:
+      return "falha erro provedor debrid trocar ordem prioridade limite links timeout failover fallback retry real-debrid torbox premiumize alldebrid";
     case AJ_FALHA_ADDONS: case AJ_FALHA_ADDON_ORDEM: case AJ_FALHA_ADDON_LIMITE:
       return "falha erro provedor debrid addon add-on trocar ordem prioridade limite links timeout failover fallback retry";
     case AJ_FONTE_ORDEM_ADDON: return "ordem fontes qualidade addon aiostreams resolucao tamanho instalacao source order quality";

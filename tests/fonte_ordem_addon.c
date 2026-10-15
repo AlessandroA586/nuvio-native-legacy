@@ -16,6 +16,10 @@ char *rede_baixar_st(const char *u, int s, const char *const *c, int *st) {
   (void)u; (void)s; (void)c; (void)st; assert(!"sem rede nesta fixture"); return NULL;
 }
 int ajustes_selos_coloridos(void) { return 0; }
+int ajustes_idioma(void) { return IDIOMA_EN; }
+int fontefalha_filtro_ativo(void) { return 0; }
+void fontefalha_filtro(FonteFiltroConfig *saida) { memset(saida, 0, sizeof *saida); }
+int perfis_sessao_atual(uint64_t geracao) { (void)geracao; return 1; }
 void selospacote_colorido(int ligado) { (void)ligado; }
 int selospacote_embutidos_ok(void) { return 0; }
 const SeloFiltro *selospacote_filtro(unsigned short id) { (void)id; return NULL; }

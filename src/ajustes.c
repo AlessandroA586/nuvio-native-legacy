@@ -68,6 +68,7 @@
 #include "selospacote.h"
 #include "fonteregra.h"
 #include "fontefalha.h"
+#include "fontefiltro.h"
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -565,6 +566,8 @@ typedef enum {
   AJ_BAIXAR_REGISTRO, // acao local; no fim para preservar os IDs existentes
 #endif
   AJ_HERO_SINOPSE, // #477: shared Normal/Grande setting, local
+  // Shared exclusions live in fontefalha.txt; appended device-local views.
+  AJ_FILTROS_FONTES, AJ_FILTRO_TAM_MAX, AJ_FILTRO_GRUPOS,
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -1451,6 +1454,9 @@ static const Opcao OPCOES[AJ_N] = {
 #endif
 
   ESC("Tamanho da sinopse", V_HERO_SINOPSE, 2),
+  ACAO("Filtros das fontes"),
+  NUM("Tamanho máximo da fonte", 0, 1000, 1, " GB"),
+  ACAO("Grupos de lançamento excluídos"),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1705,6 +1711,7 @@ static const char *CHAVE[] = {
 #endif
 
   "heroSynopsisSizeLocal",
+  "-filtrosFontes", "-filtroTamanhoMax", "-filtroGrupos",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -1854,9 +1861,11 @@ static char faAddonTitulo[FR_NOME_MAX + 48];
 static int faRetornarFolha;
 static int ajFalhaBackend(int op) {
   return op == AJ_FALHA_PROVEDORES || op == AJ_FALHA_ADDONS ||
-         (op >= AJ_FALHA_RD_LIMITE && op <= AJ_FALHA_AD_LIMITE) || op == AJ_FALHA_ADDON_LIMITE;
+         (op >= AJ_FALHA_RD_LIMITE && op <= AJ_FALHA_AD_LIMITE) || op == AJ_FALHA_ADDON_LIMITE ||
+         op == AJ_FILTRO_TAM_MAX;
 }
 static int ajFalhaValor(int op) {
+  if (op == AJ_FILTRO_TAM_MAX) { FonteFiltroConfig cfg; fontefalha_filtro(&cfg); return (int)cfg.maxGB; }
   if (op == AJ_FALHA_PROVEDORES) return fontefalha_provedores() ? 0 : 1;
   if (op == AJ_FALHA_ADDONS) return fontefalha_addons() ? 0 : 1;
   if (op >= AJ_FALHA_RD_LIMITE && op <= AJ_FALHA_AD_LIMITE)
@@ -1869,7 +1878,11 @@ static void ajFalhaEspelhar(void) {
 }
 static int ajFalhaDefinir(int op, int novo) {
   int ok;
-  if (op == AJ_FALHA_PROVEDORES) ok = fontefalha_definir_provedores(novo == 0);
+  if (op == AJ_FILTRO_TAM_MAX) {
+    FonteFiltroConfig cfg; fontefalha_filtro(&cfg); cfg.maxGB = (unsigned)novo;
+    ok = fontefalha_filtro_definir(&cfg);
+  }
+  else if (op == AJ_FALHA_PROVEDORES) ok = fontefalha_definir_provedores(novo == 0);
   else if (op == AJ_FALHA_ADDONS) ok = fontefalha_definir_addons(novo == 0);
   else if (op >= AJ_FALHA_RD_LIMITE && op <= AJ_FALHA_AD_LIMITE)
     ok = fontefalha_provedor_definir_limite(op - AJ_FALHA_RD_LIMITE, novo);
@@ -4936,6 +4949,10 @@ static void focarOpcao(int op);
 // D1: "Posicao do relogio" 238 pessoas, "Sincronia por audio" 157, "Zoom do
 // trailer" 86, P2P no .wgt 6), escondendo o aviso que importa.
 static int foraDestaPlataforma(int op) {
+  // Os limites dos provedores sao editados dentro da folha de ordem.
+  if (op >= AJ_FALHA_RD_LIMITE && op <= AJ_FALHA_AD_LIMITE) return 1;
+  // Only the shared parent appears in the category; these editors are its children.
+  if (op == AJ_FILTRO_TAM_MAX || op == AJ_FILTRO_GRUPOS) return 1;
 #ifndef NV_TOUCH_UI
   if (op == AJ_INTERFACE_MODO) return 1;
 #endif
@@ -5316,6 +5333,7 @@ static void pxAtivar(int op) {
 static const char *frResumo(int plugin);
 static const char *frOrdemResumo(void);
 static const char *faResumo(int provedores);
+static const char *ffResumo(void);
 static const char *frRegexTexto(void);
 static const char *textoLeitura(int op) {
   static char buf[64];
@@ -5375,6 +5393,7 @@ static const char *textoLeitura(int op) {
     return pf.apelido[0] ? pf.apelido : i18n("Não configurado");
   }
   if (op == AJ_FALHA_PROVEDOR_ORDEM || op == AJ_FALHA_ADDON_ORDEM) return faResumo(op == AJ_FALHA_PROVEDOR_ORDEM);
+  if (op == AJ_FILTROS_FONTES) return ffResumo();
   if (op == AJ_FONTE_ORDEM) return frOrdemResumo();
   if (op == AJ_FONTE_ADDONS_PERM) return frResumo(0);
   if (op == AJ_FONTE_PLUGINS_PERM) return frResumo(1);
@@ -5857,6 +5876,9 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_FONTE_PRECARREGAR: return "Carrega alguns segundos de vídeo ao abrir um título e prepara o próximo episódio perto dos créditos. O Play reaproveita o buffer. Usa mais dados e pode adicionar arquivos ao debrid mesmo sem assistir. Não marca episódios como vistos.";
     case AJ_FONTE_REPOR: return "Quantas outras fontes o automático tenta quando a escolhida não abre. Cada tentativa pode adicionar um arquivo na sua conta de debrid.";
     case AJ_FALHA_PROVEDORES: return "Se o vídeo não iniciar a tempo ou der erro, tenta os provedores Debrid configurados na ordem escolhida. O limite de cada provedor conta links distintos de todos os add-ons, incluindo o primeiro. Parar ou Voltar cancela as tentativas.";
+    case AJ_FILTROS_FONTES: return "Selecione os valores que deseja filtrar. As alterações são salvas na hora e valem antes dos limites de links.";
+    case AJ_FILTRO_TAM_MAX: return "Acima deste tamanho, a fonte é removida antes de contar as tentativas. Zero significa sem limite.";
+    case AJ_FILTRO_GRUPOS: return "Digite grupos separados por vírgulas. Vazio remove o filtro.";
     case AJ_FALHA_PROVEDOR_ORDEM: return "Suba ou desça os provedores Debrid e ajuste o total de links de cada um. O primeiro provedor tenta seus links antes do próximo. Provedores sem chave são ignorados.";
     case AJ_FALHA_RD_LIMITE: case AJ_FALHA_TB_LIMITE: case AJ_FALHA_PM_LIMITE: case AJ_FALHA_AD_LIMITE:
       return "Total de links distintos deste provedor, incluindo o primeiro, somando todos os add-ons. De 1 a 10. Se a troca de add-on estiver ligada, o limite de cada add-on também vale; não repete o mesmo link.";
@@ -6888,13 +6910,14 @@ static void riscoFolhaEvento(SDL_Keycode k) {
 }
 static void desenhaRiscoFolha(void);
 static void desenhaFolhaFalha(void);
+static void desenhaFolhaFiltros(void);
 
 // --- folha "Add-ons permitidos" / "Plugins permitidos" (#202) ----------------
 // Modal dentro desta tela, como a de fileiras: a lista dos instalados (e dos
 // marcados que ja nao estao instalados, para poder tira-los), com "Todos" no
 // topo. OK marca/desmarca e grava na hora (fonteregra.c); Voltar fecha.
 #define FR_FOLHA_MAX 128
-static int frAberta;            // 0 closed; 1/2 allowed; 3 legacy order; 4/5 failover service/instance order
+static int frAberta;            // 0 closed; 1/2 allowed; 3 legacy order; 4/5 failover order; 6 shared exclusions
 // Failover order uses native IDs / opaque instance keys, never display names.
 typedef struct {
   int servico, instalado;
@@ -7002,6 +7025,110 @@ static const char *faResumo(int provedores) {
   return buf;
 }
 
+// Shared, exclusion-only filters. Category checkboxes save atomically as soon
+// as OK/tap toggles one; size uses the existing explicit-confirmation editor.
+// Every edit reads the saved config first, so another field is never lost.
+static int ffCategoria = -1, ffFoco, ffValorFoco;
+static const int FF_CATEGORIA[9] = {
+  FONTEFILTRO_RESOLUCAO, FONTEFILTRO_QUALIDADE, -1,
+  FONTEFILTRO_VISUAL, FONTEFILTRO_AUDIO, FONTEFILTRO_CANAIS,
+  FONTEFILTRO_ENCODE, FONTEFILTRO_LINGUAS, -1
+};
+static const char *ffNome(int linha) {
+  if (linha < 0 || linha >= 9) return "";
+  if (linha == 2) return "Tamanho máximo da fonte";
+  if (linha == 8) return "Grupos de lançamento excluídos";
+  return fontefiltro_rotulo(FF_CATEGORIA[linha]);
+}
+static int ffBits(uint64_t bits) {
+  int n = 0;
+  while (bits) { bits &= bits - 1; n++; }
+  return n;
+}
+static const char *ffValor(int linha) {
+  static char texto[160]; FonteFiltroConfig cfg;
+  fontefalha_filtro(&cfg);
+  if (linha == 2) {
+    if (!cfg.maxGB) return i18n("Sem limite de tamanho");
+    snprintf(texto, sizeof texto, "%u GB", cfg.maxGB);
+  } else if (linha == 8) {
+    if (!cfg.grupos[0]) return i18n("Nenhuma exclusão");
+    snprintf(texto, sizeof texto, "%s", cfg.grupos);
+  } else {
+    int n = linha >= 0 && linha < 9 ? ffBits(cfg.excluir[FF_CATEGORIA[linha]]) : 0;
+    if (!n) return i18n("Nenhuma exclusão");
+    snprintf(texto, sizeof texto, i18n("%d valores filtrados"), n);
+  }
+  return texto;
+}
+static const char *ffResumo(void) {
+  static char texto[80]; FonteFiltroConfig cfg; int n = 0;
+  fontefalha_filtro(&cfg);
+  for (int c = 0; c < FONTEFILTRO_N; c++) n += ffBits(cfg.excluir[c]);
+  n += cfg.maxGB > 0;
+  if (cfg.grupos[0]) { n++; for (const char *p = cfg.grupos; *p; p++) n += *p == ','; }
+  if (!n) return i18n("Nenhum filtro");
+  snprintf(texto, sizeof texto, i18n("%d filtros ativos"), n);
+  return texto;
+}
+static void ffAbrir(void) {
+  uxCancelar(); faRetornarFolha = 0; frAberta = 6;
+  ffCategoria = -1; ffFoco = ffValorFoco = 0;
+}
+static void ffGruposDefinir(const char *texto) {
+  FonteFiltroConfig cfg; fontefalha_filtro(&cfg);
+  if (!fontefiltro_grupos_normalizar(texto, cfg.grupos, sizeof cfg.grupos)) {
+    uxNotificar("Grupos inválidos: use nomes separados por vírgulas."); return;
+  }
+  if (!fontefalha_filtro_definir(&cfg)) {
+    uxNotificar("Não foi possível salvar. O valor anterior foi mantido."); return;
+  }
+  uxNotificar("Ajuste salvo nesta TV.");
+}
+static void ffEscolher(void) {
+  if (frAberta != 6 || teclado_aberto()) return;
+  if (ffCategoria >= 0) {
+    uint64_t bit = fontefiltro_bit(ffCategoria, ffValorFoco);
+    FonteFiltroConfig cfg; fontefalha_filtro(&cfg);
+    if (!bit) return;
+    cfg.excluir[ffCategoria] ^= bit;
+    if (!fontefalha_filtro_definir(&cfg))
+      uxNotificar("Não foi possível salvar. O valor anterior foi mantido.");
+    else uxNotificar("Ajuste salvo nesta TV.");
+    return;
+  }
+  if (ffFoco == 2) {
+    frAberta = 0; ajFalhaEspelhar(); uxAbrirEditor(AJ_FILTRO_TAM_MAX);
+    faRetornarFolha = 6;
+  } else if (ffFoco == 8) {
+    static const char *const alfabeto =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789, ._-+";
+    FonteFiltroConfig cfg; char contexto[160]; fontefalha_filtro(&cfg);
+    snprintf(contexto, sizeof contexto, "%s · %s", i18n("Fontes e addons"), i18n("Filtros das fontes"));
+    teclado_contexto(contexto); stCampo = AJ_FILTRO_GRUPOS;
+    teclado_abrir_com("Grupos de lançamento excluídos", "Ex.: YTS, EZTV, RARBG. Vazio remove o filtro.",
+                      TECLADO_LONGO, alfabeto, cfg.grupos);
+    teclado_permitir_vazio(1);
+  } else {
+    ffCategoria = FF_CATEGORIA[ffFoco]; ffValorFoco = 0;
+  }
+}
+static void ffVoltar(void) {
+  if (frAberta != 6 || teclado_aberto()) return;
+  if (ffCategoria >= 0) ffCategoria = -1;
+  else frAberta = 0;
+}
+static void ffEvento(SDL_Keycode k) {
+  int *foco = ffCategoria >= 0 ? &ffValorFoco : &ffFoco;
+  int n = ffCategoria >= 0 ? fontefiltro_opcoes_n(ffCategoria) : 9;
+  if (k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE || k == SDLK_DELETE || k == SDLK_LEFT) {
+    ffVoltar(); return;
+  }
+  if (k == SDLK_UP && *foco > 0) (*foco)--;
+  if (k == SDLK_DOWN && *foco + 1 < n) (*foco)++;
+  if (k == SDLK_RETURN || k == SDLK_KP_ENTER) ffEscolher();
+}
+
 static int frFoco;
 static int frCol;               // folha da ordem: 0 = subir, 1 = descer
 static int frN;
@@ -7102,6 +7229,7 @@ static void frEventoOrdem(SDL_Keycode k) {
 }
 static void frEvento(SDL_Keycode k) {
   int plugin = frAberta == 2;
+  if (frAberta == 6) { ffEvento(k); return; }
   if (frAberta >= 4) { faEvento(k); return; }
   if (frAberta == 3) { frEventoOrdem(k); return; }
   frMontar();
@@ -7430,6 +7558,7 @@ static void eventoTela(const SDL_Event *e) {
     if (focoOp == AJ_APOIAR) { apoioAbrir(); return; }
     if (focoOp == AJ_ADDONS) { pediuAddons = 1; return; }
     if (focoOp == AJ_PLUGINS) { pediuPlugins = 1; return; }
+    if (focoOp == AJ_FILTROS_FONTES) { ffAbrir(); return; }
     if (focoOp == AJ_FALHA_PROVEDOR_ORDEM || focoOp == AJ_FALHA_ADDON_ORDEM) { faAbrir(focoOp == AJ_FALHA_PROVEDOR_ORDEM); return; }
     if (focoOp == AJ_FONTE_ORDEM) { frAbrir(3); return; }
     if (focoOp == AJ_FONTE_ADDONS_PERM || focoOp == AJ_FONTE_PLUGINS_PERM) {
@@ -7594,6 +7723,7 @@ void ajustes_atualizar(float dt, Uint32 agora) {
       else if (stCampo == AJ_SEEKR_CHAVE)     { seekrDefinir(teclado_texto()); atomic_store_explicit(&skTeste, 0, memory_order_release); }
       else if (stCampo == AJ_SELOS_PACOTE_ADD) spAdicionar(teclado_texto());
       else if (stCampo == AJ_P2P_URL)         ajustes_definir_p2p_url(teclado_texto());
+      else if (stCampo == AJ_FILTRO_GRUPOS) ffGruposDefinir(teclado_texto());
       else if (stCampo == AJ_FONTE_REGEX_PADRAO) {
         int e = fonteregra_definir_regex(teclado_texto());
         sync_proteger_ajustes_locais();
@@ -7745,6 +7875,10 @@ static const char *textoValor(int op) {
   if (ajFalhaBackend(op)) {
     int v = ajFalhaValor(op);
     if (op == AJ_FALHA_PROVEDORES || op == AJ_FALHA_ADDONS) return i18n(V_LIGA[v]);
+    if (op == AJ_FILTRO_TAM_MAX) {
+      if (!v) return i18n("Sem limite de tamanho");
+      snprintf(buf, sizeof buf, "%d GB", v); return buf;
+    }
     snprintf(buf, sizeof buf, "%d", v); return buf;
   }
   const Opcao *o = &OPCOES[op];
@@ -8324,7 +8458,8 @@ static void ajDesenharTudo(Uint32 agora) {
 #endif
     ESCALA_REAL_INI(); desenhaFileiras(); ESCALA_REAL_FIM(); }
   if (riscoFolha) desenhaRiscoFolha();
-  if (frAberta >= 4) desenhaFolhaFalha();
+  if (frAberta == 6) desenhaFolhaFiltros();
+  else if (frAberta >= 4) desenhaFolhaFalha();
   else if (frAberta == 3) desenhaFolhaOrdem();
   else if (frAberta) desenhaFolhaPermitidos();
 
