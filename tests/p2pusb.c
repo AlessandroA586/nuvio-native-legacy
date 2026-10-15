@@ -9,7 +9,9 @@
 //   6. limpar_sobra com ajuste ainda nao lido (boot) apaga a sobra do
 //      pendrive E a interna na mesma passada (P1: so uma era agendada);
 //   7. definir_usb(0) a cada quadro nao derruba o cache de ~2 s de
-//      usb_presente (P2: a UI re-escaneava /tmp/usb por quadro).
+//      usb_presente (P2: a UI re-escaneava /tmp/usb por quadro);
+//   8. p2p/ da pessoa (Movies/p2p, p2p/ na raiz do volume, sem .nuvio) sobrevive
+//      ao boot mesmo com o ajuste em Interno (usbPreferido segue 0).
 //
 //   bash tests/p2pusb.sh
 #include "p2pmotor.h"
@@ -79,6 +81,7 @@ int main(int argc, char **argv) {
     char p2pdir[780];
     snprintf(p2pdir, sizeof p2pdir, "%s/p2p", vol);
     assert(existe(p2pdir));   // scan criar=1 (pastas do resumo) a deixou
+    assert(existe(strcat(strcpy((char[800]){0}, p2pdir), "/.nuvio")));
     p2pmotor_definir_usb(0);
     assert(someAte(p2pdir, 5000));
     p2pmotor_definir_usb(1);
@@ -105,8 +108,9 @@ int main(int argc, char **argv) {
     snprintf(intp, sizeof intp, "%s/p2p", dados);
     mkdir(usbp, 0755);
     mkdir(intp, 0755);
-    snprintf(f, sizeof f, "%s/peca.bin", usbp); fp = fopen(f, "w"); fputs("x", fp); fclose(fp);
-    snprintf(f, sizeof f, "%s/peca.bin", intp); fp = fopen(f, "w"); fputs("x", fp); fclose(fp);
+    snprintf(f, sizeof f, "%s/.nuvio", usbp); fp = fopen(f, "w"); assert(fp); fputs("nuvio\n", fp); fclose(fp);
+    snprintf(f, sizeof f, "%s/peca.bin", usbp); fp = fopen(f, "w"); assert(fp); fputs("x", fp); fclose(fp);
+    snprintf(f, sizeof f, "%s/peca.bin", intp); fp = fopen(f, "w"); assert(fp); fputs("x", fp); fclose(fp);
     p2pmotor_teste_usb_base(mnt);
     p2pmotor_limpar_sobra();
     assert(someAte(usbp, 5000));
@@ -126,6 +130,40 @@ int main(int argc, char **argv) {
     mkdir(v2, 0755);                           // agora ha volume gravavel
     for (i = 0; i < 200; i++) p2pmotor_definir_usb(0);
     assert(!p2pmotor_usb_presente());          // cache de 2 s segurou
+  }
+
+  // 8. boot, ajuste ainda em Interno: p2p/ da pessoa (zero bytes, sem .nuvio)
+  // nao e sobra. Movies/p2p e um p2p/ na raiz do volume tem de continuar.
+  // A sobra marcada some na mesma passada: e o dreno da fila, sem sleep cego.
+  {
+    char movies[780], rootp[780], nossa[780], filme[800], f[800];
+    FILE *fp;
+    struct stat st;
+    memset(f, 0, sizeof f);
+    snprintf(movies, sizeof movies, "%s/Movies/p2p", vol);
+    snprintf(rootp, sizeof rootp, "%s/p2p", vol);
+    snprintf(nossa, sizeof nossa, "%s/a/p2p", vol);
+    assert(mkdir(strcat(strcpy(f, vol), "/Movies"), 0755) == 0);
+    assert(mkdir(movies, 0755) == 0);
+    assert(mkdir(rootp, 0755) == 0);
+    memset(f, 0, sizeof f);
+    assert(mkdir(strcat(strcpy(f, vol), "/a"), 0755) == 0);
+    assert(mkdir(nossa, 0755) == 0);
+    snprintf(filme, sizeof filme, "%s/filme.mkv", movies);
+    fp = fopen(filme, "w"); assert(fp); fclose(fp);
+    snprintf(filme, sizeof filme, "%s/meu.bin", rootp);
+    fp = fopen(filme, "w"); assert(fp); fclose(fp);
+    snprintf(filme, sizeof filme, "%s/.nuvio", nossa);
+    fp = fopen(filme, "w"); assert(fp); fputs("nuvio\n", fp); fclose(fp);
+    p2pmotor_teste_usb_base(mnt);
+    p2pmotor_limpar_sobra();
+    assert(someAte(nossa, 5000));              // fila drenou
+    snprintf(filme, sizeof filme, "%s/filme.mkv", movies);
+    assert(lstat(filme, &st) == 0 && S_ISREG(st.st_mode) && st.st_size == 0);
+    snprintf(filme, sizeof filme, "%s/meu.bin", rootp);
+    assert(lstat(filme, &st) == 0 && S_ISREG(st.st_mode) && st.st_size == 0);
+    assert(lstat(movies, &st) == 0 && S_ISDIR(st.st_mode));
+    assert(lstat(rootp, &st) == 0 && S_ISDIR(st.st_mode));
   }
   puts("ok");
   return 0;

@@ -66,6 +66,8 @@ static _Atomic int usbTem;       // resposta cacheada de usb_presente
 static double usbQuando;         // quando o cache acima foi medido
 static char usbExtra[600];
 #define USB_MAX_VISTOS 64
+#define USB_DONO ".nuvio"   // marca: so apaga p2p/ que a gente criou
+static void usbMarcarDono(const char *raiz);
 static struct stat usbVistos[USB_MAX_VISTOS];   // (dev,ino) ja olhados no scan
 static unsigned usbNVistos;
 static unsigned vigiaMs = P2PM_VIGIA_MS;
@@ -193,6 +195,7 @@ static int usbServe(const char *candidato, char *raiz, unsigned nr, int criar) {
   if (fclose(f) != 0) { unlink(teste); if (nosso) rmdir(p2p); return 0; }
   remove(teste);
   if (snprintf(raiz, nr, "%s", p2p) >= (int)nr) { if (nosso) rmdir(p2p); return 0; }
+  if (nosso) usbMarcarDono(p2p);   // sem a marca, limpar_sobra nao apaga
   return 1;
 }
 
@@ -538,9 +541,28 @@ static void sobraAgendar(const char *raiz) {
   sobraLancar();
   pthread_mutex_unlock(&trava);
 }
+// .nuvio dentro da pasta: o unico sinal de que p2p/ e nossa. Sem ela,
+// Movies/p2p ou um p2p/ na raiz do volume da pessoa nao e sobra.
+static void usbMarcarDono(const char *raiz) {
+  char m[720];
+  FILE *f;
+  if (!raiz || !raiz[0]) return;
+  if (snprintf(m, sizeof m, "%s/%s", raiz, USB_DONO) >= (int)sizeof m) return;
+  f = fopen(m, "w");
+  if (!f) return;
+  fputs("nuvio\n", f);
+  fclose(f);
+}
+static int usbENossa(const char *p2p) {
+  char m[720];
+  struct stat st;
+  if (snprintf(m, sizeof m, "%s/%s", p2p, USB_DONO) >= (int)sizeof m) return 0;
+  return lstat(m, &st) == 0 && S_ISREG(st.st_mode);
+}
 // #205: pasta p2p/ que sobrou num pendrive de uma sessao anterior (raiz
 // escolhida mudou ou o ajuste foi desligado). So le (stat), nunca cria.
-// Chamar com o motor parado — limpar_sobra so dispara nessa condicao.
+// So agenda se a marca .nuvio estiver la: um p2p/ da pessoa (Movies/p2p,
+// p2p/ na raiz do volume) nao e sobra. Chamar com o motor parado.
 static void usbVarreSobraDir(const char *base, int fundo, const char *raizAtual) {
   DIR *d;
   struct dirent *e;
@@ -548,7 +570,8 @@ static void usbVarreSobraDir(const char *base, int fundo, const char *raizAtual)
   struct stat st;
   if (!base || !base[0] || fundo > 3) return;
   if (snprintf(p2p, sizeof p2p, "%s/p2p", base) < (int)sizeof p2p &&
-      lstat(p2p, &st) == 0 && S_ISDIR(st.st_mode) && strcmp(p2p, raizAtual))
+      lstat(p2p, &st) == 0 && S_ISDIR(st.st_mode) &&
+      strcmp(p2p, raizAtual) && usbENossa(p2p))
     sobraAgendar(p2p);
   if (!(d = opendir(base))) return;
   while ((e = readdir(d))) {
@@ -878,6 +901,7 @@ static int subir(const P2pmOps *o, unsigned g) {
     printf("[p2p-motor] nao criou a pasta do cache\n");
     return P2P_ERR_DISCO;
   }
+  usbMarcarDono(raiz);   // percorrer acima apagou a marca; sem ela a sobra fica
   memset(&c, 0, sizeof c);
   c.dados = dad;
   c.cache = cac;
