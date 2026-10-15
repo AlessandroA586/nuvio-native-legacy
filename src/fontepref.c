@@ -193,6 +193,76 @@ void fontepref_trilha(const Stream *s, char *dst, unsigned tam) {
 
 // --- tabela -----------------------------------------------------------------
 
+// A BYTE THAT IS PART OF A WORD: ASCII alphanumeric, or any byte of a
+// multi-byte character. UTF-8 bytes are all >= 0x80 and isalnum() is false for
+// them in the C locale, so without this a Korean-only name ("멋진 신세계")
+// collapses to dots: the key comes out empty, two different series agree on it,
+// and a name with no episode marker reduces to its spec ("1080p.mkv") — a
+// collision on a wrong row, which is the bug this key exists to prevent.
+static int wordByte(unsigned char c) {
+  return isalnum(c) || c >= 0x80;
+}
+
+// THE KEY OF A RELEASE NAME: lowercased, non-alphanumerics collapsed to one
+// dot, and CUT AT THE EPISODE MARKER ("s01e06", "1x06"). What stays is the
+// name of the work itself, which is the only thing that separates two works
+// whose sources share provider, bingeGroup, label and height (the Scandal bug:
+// "The.Scandal.2026.S01E06..." and "Scandal.2026.S01E06..." both become keys
+// that name their own work, and the same work matches across episodes).
+//
+// NO MARKER, OR MORE THAN ONE: keep the whole name. It then matches at most
+// the same episode, and the caller falls back to the old provider+track rule,
+// which is where it was before this key existed.
+static void fileKey(const char *src, char *dst, size_t tam) {
+  char low[600];
+  size_t i, k, cut = 0, markers = 0;
+  if (!dst || !tam) return;
+  dst[0] = 0;
+  if (!src) return;
+  // A PATH IS NOT A NAME. Some addons send "Show.Name.S01E02/Show.Name.S01E02.mkv"
+  // in `filename`; the directory repeats the name, which turns one marker into
+  // two and declines the cut (measured on a 1656-name corpus: 90 such rows).
+  // Only the basename is the name of the release.
+  { const char *slash = strrchr(src, '/');
+    if (slash) src = slash + 1; }
+  for (i = 0; src[i] && i + 1 < sizeof low; i++)
+    low[i] = (char)tolower((unsigned char)src[i]);
+  low[i] = 0;
+  // "s01e06" / "1x06": 1-2 digits, 'e' or 'x', 1-2 digits, and the whole run
+  // must not touch a word byte on either side. That boundary rule is what keeps
+  // "1280x720" and "x264" out: they are digits touching digits or letters.
+  for (i = 0; low[i]; i++) {
+    size_t j = i, d1, d2;
+    if (j > 0 && wordByte((unsigned char)low[j - 1])) continue;
+    if (low[j] == 's') j++;
+    for (d1 = 0; d1 < 2 && isdigit((unsigned char)low[j]); d1++) j++;
+    if (!d1 || (low[j] != 'e' && low[j] != 'x')) continue;
+    j++;
+    for (d2 = 0; d2 < 2 && isdigit((unsigned char)low[j]); d2++) j++;
+    if (!d2 || wordByte((unsigned char)low[j])) continue;
+    markers++;
+    if (!cut) cut = i;
+  }
+  if (markers != 1) cut = i;   // ambiguous: keep the whole name
+  // A NAME TOO LONG IS DROPPED, NOT CUT. A movie carries its whole spec string
+  // and no marker ("...truehd.7.1.atmos.x264.mgb.mkv", 97 chars measured), so a
+  // truncated key would let two different releases of two different works agree
+  // on the first 255 bytes and score the wrong row. Empty here means no key, and
+  // the caller falls back to the rule it used before this key existed.
+  // Built into a local first, so the fit is decided on the finished key.
+  { char out[sizeof low];
+    for (k = 0, i = 0; i < cut && k + 1 < sizeof out; i++) {
+      unsigned char c = (unsigned char)low[i];
+      if (wordByte(c)) out[k++] = (char)c;
+      else if (k && out[k - 1] != '.') out[k++] = '.';
+    }
+    while (k && out[k - 1] == '.') k--;
+    out[k] = 0;
+    if (k + 1 > tam) return;   // would truncate: no key at all
+    memcpy(dst, out, k + 1);
+  }
+}
+
 void fontepref_id_base(const char *id, char *dst, unsigned tam) {
   if (!dst || !tam) return;
   dst[0] = 0;
@@ -235,17 +305,17 @@ static char *campo(char **p) {
 // 32 por espaco antes de gravar, e o TAB e um deles. O ultimo campo agora e o
 // bingeGroup, que passa pelo mesmo limpar().
 static void gravar(void) {
-  size_t cap = (size_t)FONTEPREF_MAX * 560u + 64u;
+  size_t cap = (size_t)FONTEPREF_MAX * 850u + 64u;
   char *buf = (char *)malloc(cap);
   size_t k = 0;
   int i;
   if (!buf) return;
   k += (size_t)snprintf(buf + k, cap - k, "# nuvio fontes v1\n");
   for (i = 0; i < nTab && k + 1 < cap; i++)
-    k += (size_t)snprintf(buf + k, cap - k, "%s\t%lld\t%d\t%s\t%s\t%s\t%s\n",
+    k += (size_t)snprintf(buf + k, cap - k, "%s\t%lld\t%d\t%s\t%s\t%s\t%s\t%s\n",
                           tabela[i].id, tabela[i].quandoS, tabela[i].altura,
                           tabela[i].trilha, tabela[i].provedor, tabela[i].rotulo,
-                          tabela[i].bingeGroup);
+                          tabela[i].bingeGroup, tabela[i].arquivo);
   dados_gravar(arquivoDoPerfil(), buf);
   free(buf);
 }
@@ -306,7 +376,7 @@ void fontepref_iniciar(void) {
   b = dados_ler(arquivoDoPerfil());
   if (!b) return;
   for (linha = b; linha && *linha && nTab < FONTEPREF_MAX; linha = prox) {
-    char *p, *id, *quando, *altura, *trilha, *provedor, *rotulo, *binge;
+    char *p, *id, *quando, *altura, *trilha, *provedor, *rotulo, *binge, *file;
     char *fim = strchr(linha, '\n');
     prox = fim ? fim + 1 : NULL;
     if (fim) *fim = 0;
@@ -323,7 +393,13 @@ void fontepref_iniciar(void) {
     // e a linha continua valida — que e exatamente o que acontece ao ler o
     // arquivo de seis campos gravado pela 1.0.55, e o certo: aquela versao nao
     // lia bingeGroup nenhum.
-    binge = p ? p : (char *)"";
+    binge = campo(&p);
+    // The file name is the EIGHTH field, appended after the bingeGroup for the
+    // same reason the bingeGroup was appended: an old line does not have it,
+    // and a missing field comes out empty. (The bingeGroup used to be the last
+    // field, read as "the rest of the line"; it now goes through campo() and
+    // the rest of the line is the name.)
+    file  = campo(&p);
     if (strncmp(id, "tt", 2)) continue;
     if (!provedor[0]) continue;      // sem provedor a linha nao casa com nada
     { FontePref *f = &tabela[nTab++];
@@ -333,6 +409,7 @@ void fontepref_iniciar(void) {
       snprintf(f->provedor, sizeof f->provedor, "%s", provedor);
       snprintf(f->rotulo, sizeof f->rotulo, "%s", rotulo);
       snprintf(f->bingeGroup, sizeof f->bingeGroup, "%s", binge);
+      snprintf(f->arquivo, sizeof f->arquivo, "%s", file);
       f->quandoS = atoll(quando);
       f->altura = atoi(altura); }
   }
@@ -427,6 +504,7 @@ int fontepref_guardar(const char *id, const Stream *s) {
   snprintf(novo.provedor, sizeof novo.provedor, "%s", s->provedor);
   snprintf(novo.rotulo, sizeof novo.rotulo, "%s", s->rotulo);
   snprintf(novo.bingeGroup, sizeof novo.bingeGroup, "%s", s->bingeGroup);
+  fileKey(s->arquivo, novo.arquivo, sizeof novo.arquivo);
   fontepref_trilha(s, novo.trilha, sizeof novo.trilha);
   novo.altura = s->altura;
   novo.quandoS = (long long)time(NULL);
@@ -434,6 +512,7 @@ int fontepref_guardar(const char *id, const Stream *s) {
   limpar(novo.rotulo);
   limpar(novo.trilha);
   limpar(novo.bingeGroup);
+  limpar(novo.arquivo);
 
   // A manual SUBSTITUI a automatica do titulo: com a escolha da pessoa gravada
   // a automatica nao tem mais papel (e ressurgiria se a manual sumisse).
@@ -455,11 +534,15 @@ int fontepref_guardar(const char *id, const Stream *s) {
              !strcmp(tabela[k].trilha, novo.trilha) &&
              !strcmp(tabela[k].bingeGroup, novo.bingeGroup) &&
              !strcmp(tabela[k].rotulo, novo.rotulo) &&
+             !strcmp(tabela[k].arquivo, novo.arquivo) &&
              tabela[k].altura == novo.altura &&
              !venceu(&tabela[k])) {
     // Mesma escolha de novo: nao reescrever o arquivo por um carimbo de tempo.
     // MENOS quando ela venceu — ai o carimbo E a novidade, e sem reescrever a
     // pessoa reescolheria a mesma fonte a cada abertura ate o fim dos tempos.
+    // The file name enters the comparison because it was the missing field:
+    // two sources equal in everything but that were "the same choice", and the
+    // person's re-pick was dropped in silence (the Scandal bug).
     return 0;
   }
   tabela[k] = novo;
@@ -480,6 +563,16 @@ static int nota(const Stream *s, const FontePref *p) {
   int n = 0;
   if (s->altura == p->altura) n += 2;
   if (!strcmp(s->rotulo, p->rotulo)) n += 4;
+  // THE FILE NAME, the strongest of the three: it is the only thing that
+  // separates two works whose sources share provider, bingeGroup, label and
+  // height (the Scandal bug). +8 beats rotulo+altura together, so when the
+  // name matches it decides the row; when it matches nothing (no name, or a
+  // name with no episode marker) the score is exactly what it was before.
+  if (p->arquivo[0] && s->arquivo[0]) {
+    char key[FONTEPREF_ARQUIVO];
+    fileKey(s->arquivo, key, sizeof key);
+    if (key[0] && !strcmp(key, p->arquivo)) n += 8;
+  }
   return n;
 }
 
@@ -628,6 +721,43 @@ int fontepref_escolher_manual(const char *id) {
 int fontepref_escolher(const char *id) {
   const FontePref *p = fontepref_do_titulo(id);
   return p ? escolherManual(p) : escolherAuto(id);
+}
+
+int fontepref_escolher_lista(const char *id, const Stream *fontes, int total,
+                             int (*semPerda)(int, void *), void *ctx) {
+  if (!fontes || total < 1) return -1;
+  const FontePref *p = fontepref_do_titulo(id);
+  int melhor = -1, melhorNota = -1;
+  if (p) {
+    if (p->bingeGroup[0]) for (int i = 0; i < total; i++) {
+      const Stream *s = &fontes[i];
+      if (strcmp(s->bingeGroup, p->bingeGroup)) continue;
+      int n = nota(s, p);
+      if (n > melhorNota) { melhorNota = n; melhor = i; }
+    }
+    for (int passo = 0; passo < 2 && melhor < 0; passo++) for (int i = 0; i < total; i++) {
+      const Stream *s = &fontes[i]; char trilha[FONTEPREF_TRILHA];
+      if (!s->provedor[0] || strcasecmp(s->provedor, p->provedor)) continue;
+      fontepref_trilha(s, trilha, sizeof trilha);
+      if (passo == 0 ? strcmp(trilha, p->trilha) : !contemMarcas(trilha, p->trilha)) continue;
+      int n = nota(s, p);
+      if (n > melhorNota) { melhorNota = n; melhor = i; }
+    }
+    return melhor;
+  }
+  char base[24]; fontepref_id_base(id, base, sizeof base);
+  int k = autoAchar(base);
+  if (k < 0) return -1;
+  long long agora = (long long)time(NULL), quando = tabAuto[k].quandoS;
+  if (quando > 0 && agora > quando && agora - quando > FONTEPREF_VALIDADE_S) return -1;
+  for (int i = 0; i < total; i++) {
+    const Stream *s = &fontes[i];
+    if (strcmp(s->bingeGroup, tabAuto[k].bingeGroup) ||
+        (melhor >= 0 && s->altura <= fontes[melhor].altura) ||
+        (semPerda && !semPerda(i, ctx))) continue;
+    melhor = i;
+  }
+  return melhor;
 }
 
 static int escolherManual(const FontePref *p) {
