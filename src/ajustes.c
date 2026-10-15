@@ -605,6 +605,7 @@ typedef enum {
   AJ_EP_TAMANHO,
   AJ_FONTE_PRECARREGAR, // local, append-only; video e proximo episodio, desligado
   AJ_PROVEDORES_ESCOPO, // local, append-only; 0 = shared, 1 = separate for this profile
+  AJ_MURAL_TITULOS, // #521: local, append-only; Mural tile titles, on by default
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -1537,7 +1538,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Pré-carregar vídeo", V_LIGA, 2),
 
   ESC("Configuração dos provedores", V_PROVEDORES_ESCOPO, 2),
-
+  ESC("Títulos no Mural", V_LIGA, 2),  // local: muralTitulosLocal (#521)
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1805,7 +1806,7 @@ static const char *CHAVE[] = {
   "fontePrecarregarLocal",
 
   "-provedoresEscopo",
-
+  "muralTitulosLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2516,6 +2517,7 @@ int ajustes_abertura_detalhada(void) { return valor[AJ_TELA_ABERTURA] == 1; }
 int ajustes_abertura_addon(void) { return lig(AJ_ABERTURA_ADDON); }
 int ajustes_abertura_fundo(void) {   // #508: 0 = off, 1 = sharp, 2 = blurred
   int v = valor[AJ_ABERTURA_FUNDO]; return v >= 0 && v <= 2 ? v : 2; }
+int ajustes_mural_titulos(void) { return lig(AJ_MURAL_TITULOS); }
 int ajustes_ep_tamanho(void) { int v = valor[AJ_EP_TAMANHO]; return v >= 0 && v <= 2 ? v : 1; }
 int ajustes_leg2_junto(void) { return valor[AJ_LEG2_POS] == 1; }
 int ajustes_leg2_tamanho(void) {
@@ -4911,6 +4913,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_ABERTURA_ADDON: /* idem */
     case AJ_ABERTURA_FUNDO: /* #508: idem */
     case AJ_EP_TAMANHO:    /* idem */
+    case AJ_MURAL_TITULOS: /* #521: idem */
     case AJ_MIC_BUSCA:     /* o microfone e o controle sao desta TV */
     case AJ_TECLADO_ANDROID: /* o web nao tem; o teclado e deste aparelho */
     case AJ_LEG_SYNC_AUDIO: /* PCM e passthrough sao desta TV; o web nao tem */
@@ -6417,6 +6420,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_SOCIAL: return "Ligado (padrão): amigos, atividade deles e recomendações. Desligado: tudo isso some, com a fileira de amigos da Home, e o app para de falar com o serviço social. Salvos e Avisos continuam. Vale só para este perfil.";
     case AJ_DV_MKV: return "Arquivos MKV em Dolby Vision perfil 5 ou 8 tocam com o Dolby Vision ligado, em vez de HDR10. O áudio Dolby Digital e Dolby Digital Plus vai direto para a TV. Se a conexão não acompanhar, o vídeo continua em HDR10. Só em TVs LG com webOS 4 ou mais novo.";
     case AJ_CW_RETIDO_TAMBEM: return "Quando o título está na ilha ou em Retomar agora, mostra também na fileira Continuar assistindo.";
+    case AJ_MURAL_TITULOS: return "Ligado (padrão): cada ladrilho do Mural mostra o nome do título. Desligado: o nome fica só no painel da direita. Vale só nesta TV.";
     case AJ_EP_TAMANHO: return "Pequeno, Médio (padrão) ou Grande. Só vale no layout Moderno, na página de séries. Vale só nesta TV.";
     case AJ_ABERTURA_ADDON: return "Desligado (padrão): a tela Cinema mostra só a arte, o logo e a barra. Ligado: o nome do add-on aparece sob a barra. Vale só nesta TV.";
     case AJ_TELA_ABERTURA: return "Cinema (padrão): a arte e o logo do título ficam na tela até o vídeo entrar. Detalhada: a fonte, o add-on e cada passo da abertura. Na Cinema, Para cima ou Para baixo mostra os detalhes. Vale só nesta TV.";
@@ -8709,7 +8713,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_RAIL_BLUR: case AJ_MIC_BUSCA: case AJ_HERO: case AJ_HERO_CATALOGOS: case AJ_HERO_GENERO:
     case AJ_HERO_SINOPSE: case AJ_HERO_NOTAS: case AJ_HERO_ANO: case AJ_HERO_DURACAO:
     case AJ_PS_FUNDO: case AJ_PS_CONTINUAR: case AJ_DESCOBRIR: case AJ_ROTULOS:
-    case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_OCULTAR_NLANC:
+    case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_OCULTAR_NLANC: case AJ_MURAL_TITULOS:
     case AJ_NOTAS_HOME: case AJ_GRAD_CLASSICO: case AJ_SELO_VISTO: case AJ_OCULTAR_FILMES_VISTOS:
       return AJPV_HOME;
     case AJ_CW_LIGADO: case AJ_CW_OK: case AJ_CW_FONTE:
