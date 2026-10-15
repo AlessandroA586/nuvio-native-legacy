@@ -5307,9 +5307,11 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   // so ganhava anel/zoom e o texto ficava parado. Nao muda a caixa (`r`), logo
   // nao move nenhum vizinho; some desfocando pelo mesmo caminho.
   if (!epApple() && f > 0.005f) {
-    GfxRect p = { r.x - NV_DETP_EP_PLACA_PAD, r.y - NV_DETP_EP_PLACA_PAD,
+    // So atras do bloco de texto (dono: "so no texto do episodio"): da base da
+    // miniatura ate o fim do card.
+    GfxRect p = { r.x - NV_DETP_EP_PLACA_PAD, r.y + th.h,
                   r.w + NV_DETP_EP_PLACA_PAD * 2.0f,
-                  r.h + NV_DETP_EP_PLACA_PAD * 2.0f };
+                  r.h - th.h + NV_DETP_EP_PLACA_PAD };
     float pw = p.w, ph = p.h, s = 1.0f + 0.03f * ft;
     p.w *= s; p.h *= s;
     p.x -= (p.w - pw) * 0.5f; p.y -= (p.h - ph) * 0.5f;
