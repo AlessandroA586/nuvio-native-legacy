@@ -323,21 +323,20 @@ static void desenhaMaterial(const MenuGeo *g, float a) {
   // em cada lado, com a queda em PIXELS (GFX_SOMBRA com uPar.x): metade da
   // forca na borda do painel, como a gaussiana do navegador.
   { int vidro = ajustes_vidro();
-    float b = MK(vidro ? 40.0f : 30.0f), dy = MK(vidro ? 14.0f : 10.0f);
+    // The top chrome shares the island shadow: 0 10 30 at 34 %.
+    float b = MK(vidro && !topo() ? 40.0f : 30.0f), dy = MK(vidro && !topo() ? 14.0f : 10.0f);
     GfxRect s = { r.x - b, r.y + dy - b, r.w + 2.0f * b, r.h + 2.0f * b };
     gfx_sombra_sob(s, 1.0f, b * 1.41f * gfx_escala(), (g->raio + b) / s.h,
-                   0, 0, 0, (vidro ? 0.36f : 0.45f) * a, r, g->raio, vidro ? 0.0f : a); }
-  if (ajustes_vidro()) {
+                   0, 0, 0, (topo() ? 0.34f : vidro ? 0.36f : 0.45f) * a, r, g->raio, vidro ? 0.0f : a); }
+  if (topo()) gfx_chrome(r, raio, a);
+  else if (ajustes_vidro()) {
     // Fechada, os .80 do mockup (a rail fica sobre a arte do destaque).
     // Aberto, o painel cobre o TEXTO da home (titulo, sinopse, "Continuar
     // assistindo" em x 152..400), e a 80 % ele atravessava legivel entre os
     // rotulos (captura de tests/homelayouts_shot.sh): sobe a 86 %.
     float al = anim_mistura(.80f, .86f, limita01((g->w - NV_MENU_W_RAIL) / (NV_MENU_W_ABERTO - NV_MENU_W_RAIL)))
              * gfx_vidro_opacidade();
-    // A barra do topo e o perfil de barra deles (scrim proprio, resolvido
-    // pelo que passa atras); a rail, painel com o miolo de sempre.
-    if (topo()) gfx_vidro(r, raio, GFX_VIDRO_BARRA, 14.0f / 255.0f, 0.0f, a);
-    else gfx_vidro(r, raio, GFX_VIDRO_PAINEL, 15.0f / 255.0f, al, a);
+    gfx_vidro(r, raio, GFX_VIDRO_PAINEL, 15.0f / 255.0f, al, a);
   } else {
     gfx_cor(r, raio, 21.0f / 255.0f, 22.0f / 255.0f, 26.0f / 255.0f, a);
   }
@@ -1337,18 +1336,20 @@ static void tvDesenhar(void) {
 // o nosso TXT_BODY 25. TK leva px da tela REAL para a tela da barra.
 #define TK(v)          ((v) / NV_MENU_ESCALA)
 #define TP(v)          TK((v) * 0.9f)
-#define TOPO_X         TK(48.0f)                     // margem segura, como NV_MENU_X
-#define TOPO_CY        TK(NV_ILHA_Y + NV_ILHA_H * 0.5f)   // linha de centro da ilha
-#define TOPO_PILULA_H  TP(60.0f)    // TAB_PILL_H
-#define TOPO_PAD       TP(18.0f)    // TAB_PILL_PAD, de cada lado do rotulo
-#define TOPO_VAO       TP(16.0f)    // TAB_GAP, entre duas pilulas
-#define TOPO_TRILHA    TP(8.0f)     // TAB_TRACK_PAD: trilha -> pilula, igual nos 4 lados
-#define TOPO_ICONE     TP(32.0f)    // TAB_ICON_D; a pilula da Busca e quadrada
+// A27: the track, the avatar chip and the clock island are one 60 px line
+// (NV_CHROME_*), the tab capsules 48 inside a 6 px inset, pad 22, gap 2.
+#define TOPO_X         TK(NV_CHROME_EDGE)
+#define TOPO_CY        TK(NV_CHROME_TOP + NV_CHROME_H * 0.5f)   // linha de centro da ilha
+#define TOPO_PILULA_H  TK(NV_CHROME_H - 2.0f * NV_CHROME_INSET)
+#define TOPO_PAD       TK(22.0f)    // de cada lado do rotulo
+#define TOPO_VAO       TK(2.0f)     // entre duas pilulas
+#define TOPO_TRILHA    TK(NV_CHROME_INSET)   // trilha -> pilula, igual nos 4 lados
+#define TOPO_ICONE     TK(26.0f)    // a pilula da Busca e quadrada
 #define TOPO_H         (TOPO_PILULA_H + 2.0f * TOPO_TRILHA)
 #define TOPO_Y         (TOPO_CY - TOPO_H * 0.5f)
 // Sem espaco ate a ilha do relogio, aperta primeiro o vao, depois o respiro;
 // so abaixo dos dois minimos o rotulo seria cortado.
-#define TOPO_VAO_MIN   TP(4.0f)
+#define TOPO_VAO_MIN   TOPO_VAO
 #define TOPO_PAD_MIN   TP(10.0f)
 #define TOPO_TXT       TXT_BODY     // o corpo dos rotulos da rail
 #define TOPO_RELOGIO   ((NV_ILHA_MARGEM_D * gfx_escala_ui() + ilha_relogio_largura() + 16.0f) / NV_MENU_ESCALA)
@@ -1494,16 +1495,13 @@ void menu_topo_geo(MenuTopoGeo *o) {
   o->foc[0] = (x0 + topoFoc.x) * e; o->foc[1] = topoFoc.w * e; o->foc[2] = limita01(topoFoc.a);
 }
 
-// Uma capsula: a de selecao e um pedaco do MESMO vidro da trilha (branco a 14 %
-// com o fio e o alto mais claro dele); a de foco, o quase-branco opaco deles,
-// que e a excecao ao material.
+// Uma capsula (A27): a de selecao e so um preenchimento #F3F2EF a 18 %, sem
+// aro, blur nem sombra; a de foco, #F3F2EF opaco, a excecao ao material.
 static void topoCapsula(const TopoCapsula *c, float x0, float y, int foco, float a) {
   GfxRect r = { x0 + c->x, y, c->w, TOPO_PILULA_H };
   float ca = limita01(c->a) * a;
   if (ca <= 0.004f || c->w <= 0.5f) return;
-  if (foco) { gfx_cor(r, 0.5f, 0xf7 / 255.0f, 0xfa / 255.0f, 0xfc / 255.0f, ca); return; }
-  gfx_cor(r, 0.5f, 1, 1, 1, .14f * ca);
-  if (ajustes_vidro() && !gfx_efeitos_minimos()) gfx_vidro_borda(r, 0.5f, ca);
+  gfx_cor(r, 0.5f, 0xf3 / 255.0f, 0xf2 / 255.0f, 0xef / 255.0f, (foco ? 1.0f : .18f) * ca);
 }
 
 static void topoDesenhar(void) {
@@ -1548,19 +1546,20 @@ static void topoDesenhar(void) {
   for (k = 0; k < t.n; k++) {
     GfxRect r = { x0 + topoPilulaX(&t, k), y, t.ws[k], TOPO_PILULA_H };
     int i = t.ordem[k];
-    float px = topoPilulaX(&t, k), fm, sm, tr, tg, tb;
-    // A tinta de mixed_ink deles: TEXT_READING -> TEXT_PRIMARY conforme a
-    // selecao chega, e dai ao ACCENT_INK conforme o foco cobre a pilula.
+    float px = topoPilulaX(&t, k), fm, sm, tr, tg, tb, ta;
+    // A27 ink: #F3F2EF at .74 idle (.80 on the opaque fallback) -> 1.0 as the
+    // selection arrives, then #121316 as the focus capsule covers the pill.
     fm = focos ? limita01(topoFoc.a) * topoCobre(px, t.ws[k], &topoFoc) : 0.0f;
     sm = limita01(topoSel.a) * topoCobre(px, t.ws[k], &topoSel);
-    tr = anim_mistura(anim_mistura(0xcd, 0xf7, sm), 0x08, fm) / 255.0f;
-    tg = anim_mistura(anim_mistura(0xd3, 0xfa, sm), 0x08, fm) / 255.0f;
-    tb = anim_mistura(anim_mistura(0xdd, 0xfc, sm), 0x0a, fm) / 255.0f;
+    tr = anim_mistura(0xf3, 0x12, fm) / 255.0f;
+    tg = anim_mistura(0xf2, 0x13, fm) / 255.0f;
+    tb = anim_mistura(0xef, 0x16, fm) / 255.0f;
+    ta = a * anim_mistura(ajustes_vidro() && !gfx_efeitos_minimos() ? .74f : .80f, 1.0f, fmaxf(sm, fm));
     if (ponteiro_ativo() && a > 0.5f) ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroLinha, NULL, i, 0);
-    if (i == MENU_BUSCAR) iconeTraco(i, r.x + r.w * 0.5f, y + TOPO_PILULA_H * 0.5f, TOPO_ICONE, tr, tg, tb, a);
+    if (i == MENU_BUSCAR) iconeTraco(i, r.x + r.w * 0.5f, y + TOPO_PILULA_H * 0.5f, TOPO_ICONE, tr, tg, tb, ta);
     else {
       TxtLinha l = txt_linha_corta(TOPO_TXT, topoRotulo(i), 255, 255, 255, 255, t.rotMax);
-      txt_desenhar_tom(l, r.x + (r.w - l.w) * 0.5f, y + (TOPO_PILULA_H - l.h) * 0.5f, tr, tg, tb, a);
+      txt_desenhar_tom(l, r.x + (r.w - l.w) * 0.5f, y + (TOPO_PILULA_H - l.h) * 0.5f, tr, tg, tb, ta);
     }
   }
   gfx_sem_recorte();

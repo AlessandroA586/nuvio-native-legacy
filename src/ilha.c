@@ -745,7 +745,7 @@ static void atualizarHora(void) {
 }
 
 #define PAD_E   22.0f
-#define PAD_D   24.0f
+#define PAD_D   22.0f   // A27: island pad 22/22
 #define ICONE   28.0f
 #define VAO     12.0f
 #define TECLA   38.0f
@@ -2145,6 +2145,7 @@ static void ilha_desenharCorpo_(Uint32 agora) {
   { float w = W < H ? H : W, h = H < 8.0f ? 8.0f : H;
     GfxRect r = { dir ? x - w : x, y, w, h }, R = r;
     float raio = 0.5f, cr, cg, cb, fundo = 0.80f, solido = 0.86f, aPil = 1.0f, aMod = 0.0f, aHora = 0.0f;
+    int repouso;
     // Crescida pelo medidor (Menor/Grande), o raio para em 32 px: a pilula
     // vira um cartao de cantos redondos, nao uma capsula.
     if (h > NV_ILHA_H_ABERTA) raio = 32.0f / h;
@@ -2205,6 +2206,7 @@ static void ilha_desenharCorpo_(Uint32 agora) {
              R.w *= k; R.h *= k; R.x = cx - R.w * 0.5f; R.y = cy - R.h * 0.5f; }
     }
     ultRect = R; ultRectOk = 1;
+    repouso = modalT <= 0.0f && corpoT <= 0.0f;
     if (coberta) { coberta = 0; return; }
     // O MODAL ESCURECE A TELA DE TRAS (veu do mockup, 40% / solido 42%): a
     // ilha crescida e a coisa na frente, a home fica atras.
@@ -2220,7 +2222,10 @@ static void ilha_desenharCorpo_(Uint32 agora) {
       gfx_rect((GfxRect){ R.x - 16.0f - 24.0f * k, R.y - 6.0f - 10.0f * k,
                           R.w + 32.0f + 48.0f * k, R.h + 34.0f + 50.0f * k }, 0, GFX_SOMBRA,
                1.0f, 0, 0, 0.5f, 0, 0, 0, (0.34f + 0.16f * k) * A); }
-    if (ajustes_vidro()) gfx_vidro_painel(R, raio, fundo, A);
+    // At rest (no modal, no body) the island is the A27 top chrome: the same
+    // material and tint as the bar and the avatar chip (gfx_chrome).
+    if (repouso) gfx_chrome(R, raio, A);
+    else if (ajustes_vidro()) gfx_vidro_painel(R, raio, fundo, A);
     else {
       // MATERIAL SOLIDO: a pilula em repouso tem de LER como pilula em paginas
       // escuras. Com 0,055 de cinza ela ficava igual ao fundo da pagina (0,051)
@@ -2249,7 +2254,9 @@ static void ilha_desenharCorpo_(Uint32 agora) {
       if (tipoLuz >= 0)
         luz = ajustes_animacoes_reduzidas() || modalT > 0.3f ? 0.20f
               : 0.14f + 0.10f * (0.5f + 0.5f * sinf((float)agora * (2.0f * 3.14159265f / 1100.0f)));
-      gfx_luz_canto(R, raio, R.w * 0.25f, -R.h * 0.9f, R.w * 0.85f, cr, cg, cb, luz * A); }
+      // The resting white clock gets no glow: the bar has none either.
+      if (!repouso || tipoLuz >= 0)
+        gfx_luz_canto(R, raio, R.w * 0.25f, -R.h * 0.9f, R.w * 0.85f, cr, cg, cb, luz * A); }
     central_segurar_desenhar(R, raio, A, agora);
     gfx_recorte(R.x + 6.0f, R.y, R.w - 12.0f, R.h);
     if (aPil > 0.0f) {

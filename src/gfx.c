@@ -3389,7 +3389,7 @@ static void vidroAplicar(Programa *P, GfxRect r) {
 
 void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a) {
   GfxRect t = r;
-  float k = gfx_vidro_opacidade(), d = dens, tela[4];
+  float d = dens, tela[4];
   int chapado, i, contorno = ajustes_vidro_contorno();
   if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
   GFX_TR_RECT(t.x, t.y, t.w, t.h);
@@ -3409,11 +3409,23 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   }
   // Scrim CINZA NEUTRO (o verde vinha da fonte, nao daqui; R = G = B): a
   // barra 14/255 como a deles. Sem fonte, o scrim e o vidro inteiro.
+  // A BARRA is the A27 top chrome (bar, avatar chip, clock island): scrim
+  // #121418 at gfx_chrome_tinta(), lighter on top (x.90) than below (x1.06).
+  // Without a backdrop (efeitos minimos, fosco off, old TVs) it is the flat
+  // opaque #1A1C21 of mockup-A27-sem-transparencia.
   if (tipo == GFX_VIDRO_BARRA) {
-    float c = cinza, at = 0.20f * k, ab = 0.36f * k;
-    if (!vidPend.fonte) { at = 0.52f * k; ab = 0.64f * k; }
-    vidPend.scrT[0] = vidPend.scrT[1] = vidPend.scrT[2] = c; vidPend.scrT[3] = at > 1.0f ? 1.0f : at;
-    vidPend.scrB[0] = vidPend.scrB[1] = vidPend.scrB[2] = c; vidPend.scrB[3] = ab > 1.0f ? 1.0f : ab;
+    float al = gfx_chrome_tinta();
+    if (vidPend.fonte) {
+      vidPend.scrT[0] = vidPend.scrB[0] = 0x12 / 255.0f;
+      vidPend.scrT[1] = vidPend.scrB[1] = 0x14 / 255.0f;
+      vidPend.scrT[2] = vidPend.scrB[2] = 0x18 / 255.0f;
+      vidPend.scrT[3] = 0.90f * al; vidPend.scrB[3] = 1.06f * al;
+    } else {
+      vidPend.scrT[0] = vidPend.scrB[0] = 0x1a / 255.0f;
+      vidPend.scrT[1] = vidPend.scrB[1] = 0x1c / 255.0f;
+      vidPend.scrT[2] = vidPend.scrB[2] = 0x21 / 255.0f;
+      vidPend.scrT[3] = vidPend.scrB[3] = 1.0f;
+    }
   } else {
     float c = cinza;
     if (d > 1.0f) d = 1.0f;
@@ -3423,6 +3435,8 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   // A densidade resolvida pelo fundo: o texto #cdd3dd com contraste 4 pede
   // luminancia <= 0,125 atras dele; tetos de 0,72 em cima e 0,82 embaixo.
   vidPend.dens[0] = 0.125f; vidPend.dens[1] = 0.72f; vidPend.dens[2] = 0.82f; vidPend.dens[3] = 1.0f;
+  // A27 chrome: the same solve, scaled by "Opacidade do vidro" (gfx_chrome_dens).
+  if (tipo == GFX_VIDRO_BARRA) gfx_chrome_dens(vidPend.dens);
   vidPend.aro = contorno ? 0.14f : 0.0f;
   vidPend.aroLuz = contorno ? 0.28f : 0.0f;
   gfx_rect(r, vidPend.fonte ? vidH2 : 0, GFX_VIDRO, 0, 0, 0, raio, 1, 1, 1, a);
@@ -3586,6 +3600,30 @@ int gfx_tela_bmp(const char *caminho) {
 }
 // 78% e o vidro de sempre: o fator escala o alfa do miolo (folha e painel).
 float gfx_vidro_opacidade(void) { return ajustes_vidro_opacidade() / 0.78f; }
+// A27 tint: the existing "Opacidade do vidro" (60..92 %) is the clear->tinted
+// parameter t (78 % -> 0.5), scrim alpha 0.16 + 0.62 t, never below the floor
+// that keeps the clock and the tab labels legible over bright art.
+float gfx_chrome_tinta(void) {
+  float t = (ajustes_vidro_opacidade() - 0.52f) / 0.52f, al;
+  t = t < 0.0f ? 0.0f : t > 1.0f ? 1.0f : t;
+  al = 0.16f + 0.62f * t;
+  return al < GFX_CHROME_TINTA_MIN ? GFX_CHROME_TINTA_MIN : al;
+}
+// k = opacidade/0.78. Below 78% the old 0.125/(k*k) raised the luma ceiling
+// (0.211 at 60%) and dropped the caps, so over white the scrim thinned and the
+// clock fell to ~1.9:1. The clear end must not go thinner than the 78% glass:
+// clamp k up to 1. Above 78% the ceiling still falls and the caps still rise,
+// so more opacity keeps adding tint. At 78% the numbers stay 0.125/0.72/0.82.
+void gfx_chrome_dens(float out[3]) {
+  float k = gfx_vidro_opacidade();
+  if (k < 1.0f) k = 1.0f;
+  out[0] = 0.125f / (k * k); out[1] = 0.72f * k; out[2] = 0.82f * k;
+}
+void gfx_chrome(GfxRect r, float raio, float a) {
+  if (ajustes_vidro()) { gfx_vidro(r, raio, GFX_VIDRO_BARRA, 0.0f, 0.0f, a); return; }
+  gfx_cor(r, raio, 0x1a / 255.0f, 0x1c / 255.0f, 0x21 / 255.0f, a);
+  gfx_anel(r, raio, 1.0f, 1.0f, 1.0f, 1.0f, 0.22f * a);
+}
 void gfx_vidro_material(GfxRect r, float raio, float dens, float a) {
   gfx_vidro(r, raio, GFX_VIDRO_PAINEL, 0.06f, dens * gfx_vidro_opacidade(), a);
 }

@@ -585,6 +585,16 @@ void gfx_ambiente_preparar(void);
 // fosco" desligado, efeitos minimos, video por baixo, ou sobre outro vidro.
 enum { GFX_VIDRO_PAINEL = 0, GFX_VIDRO_BARRA = 1 };
 void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a);
+// A27 TOP CHROME (avatar chip, top bar, clock island): one material, one tint.
+// gfx_chrome_tinta = scrim alpha from "Opacidade do vidro", >= the floor;
+// gfx_chrome = the glass (BARRA), or opaque #1A1C21 + 1 px rim .22 without vidro.
+// gfx_chrome_dens = the density solve for that glass (luma ceiling, top cap,
+// bottom cap). Higher opacity lowers the ceiling and raises the caps, so the
+// scrim over bright art thickens. 78% stays 0.125 / 0.72 / 0.82.
+#define GFX_CHROME_TINTA_MIN 0.30f
+float gfx_chrome_tinta(void);
+void gfx_chrome(GfxRect r, float raio, float a);
+void gfx_chrome_dens(float out[3]);
 // O MATERIAL PADRAO de todo popup/dialogo/painel/ilha no vidro: o gfx_vidro do
 // cinza 0,06 na densidade `dens` (GFX_VIDRO_DENS, GFX_VIDRO_DENS_MODAL) vezes a
 // "Opacidade do vidro". Compartilha o backdrop do quadro; nunca um gfx_cor.
