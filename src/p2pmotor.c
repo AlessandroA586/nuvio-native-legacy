@@ -174,6 +174,12 @@ static int usbServe(const char *candidato, char *raiz, unsigned nr, int criar) {
   // .tpk montando o mesmo disco em dois pontos e o usbExtra de teste (um
   // diretorio no mesmo disco de dados_dir) gerariam lojas ou leitura dupla.
   if (stat(candidato, &st) != 0 || !S_ISDIR(st.st_mode)) return 0;
+  if (!usbExtra[0]) {
+    struct stat parent;
+    // Only mount roots qualify; writable containers live on the parent device.
+    if (snprintf(teste, sizeof teste, "%s/..", candidato) >= (int)sizeof teste ||
+        stat(teste, &parent) != 0 || parent.st_dev == st.st_dev) return 0;
+  }
   for (i = 0; i < usbNVistos; i++)
     if (usbVistos[i].st_dev == st.st_dev && usbVistos[i].st_ino == st.st_ino) return 0;
   if (usbNVistos < USB_MAX_VISTOS) usbVistos[usbNVistos++] = st;
@@ -274,7 +280,7 @@ static int pastas(char *raiz, unsigned nr, char *mae, unsigned nm) {
       usbRaiz[0] = 0;
       usbResolvido = 0;
     }
-    if (!usbResolvido) {
+    if (!usbResolvido || (!usbRaiz[0] && agora() - usbQuando >= 2.0)) {
       usbResolvido = 1;
       if (usbEscanear(raiz, nr, 1)) snprintf(usbRaiz, sizeof usbRaiz, "%s", raiz);
       else usbRaiz[0] = 0;
@@ -352,7 +358,8 @@ int p2pmotor_usb_presente(void) {
   // cria pasta (criar=0): espiar nao pode sujar o pendrive de ninguem.
   if (agora() - usbQuando >= 2.0) {
     if (usbRaiz[0] && access(usbRaiz, W_OK) != 0) { usbRaiz[0] = 0; usbResolvido = 0; }
-    if (!usbResolvido) {
+    if (!usbResolvido || !usbRaiz[0]) {
+      usbResolvido = 0;
       // Presence alone does not authorize allocation of the cached path.
       if (usbEscanear(tmp, sizeof tmp, 0)) snprintf(usbRaiz, sizeof usbRaiz, "%s", tmp);
       else usbRaiz[0] = 0;
