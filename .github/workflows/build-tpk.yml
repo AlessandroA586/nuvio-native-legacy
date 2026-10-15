@@ -93,6 +93,31 @@ jobs:
       - name: Use linux/arm instead of linux/arm/v5
         run: sed -i 's#linux/arm/v5#linux/arm#g' tools/tpk.sh
 
+      # The Dockerfile pulls Debian buster from archive.debian.org, which now
+      # lists armel packages (libc6-dev, libglvnd0, libsensors5, ...) it no
+      # longer serves (404). Point apt at snapshot.debian.org instead, which
+      # keeps every historical package. Patched here so merges from upstream
+      # never conflict on tools/tpk/Dockerfile.
+      - name: Fix apt sources in the build Dockerfile
+        run: |
+          python3 - <<'PY'
+          p = "tools/tpk/Dockerfile"
+          s = open(p).read()
+          repl = [
+              ("sed -i 's#deb.debian.org#archive.debian.org#g; /security/d' /etc/apt/sources.list",
+               "echo 'deb http://snapshot.debian.org/archive/debian/20230301T000000Z/ buster main' > /etc/apt/sources.list"),
+              ("apt-get -qq update",
+               "apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Retries=5 update"),
+              ("apt-get -qq install",
+               "apt-get -o Acquire::Retries=5 install"),
+          ]
+          for old, new in repl:
+              assert old in s, "Dockerfile no longer contains: " + old
+              s = s.replace(old, new)
+          open(p, "w").write(s)
+          PY
+          grep -n 'apt-get\|sources.list' tools/tpk/Dockerfile
+
       - name: Build the TPK
         run: |
           export PATH="$DOTNET_ROOT:$PATH"
@@ -130,6 +155,14 @@ jobs:
             tail -n 60 build.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # Also surface the tail as a check annotation so it is readable from the
+      # API / checks view, not only from the step summary.
+      - name: Annotate build error
+        if: failure()
+        run: |
+          msg=$(tail -n 40 build.log | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+          echo "::error title=build.log tail::${msg}"
 
       - name: Upload TPK
         uses: actions/upload-artifact@v4
