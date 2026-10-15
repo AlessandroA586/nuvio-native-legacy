@@ -371,6 +371,42 @@ static void testeEscuta(int origem) {
   sleep(1);
 }
 
+// Review blocker 4: Range on a Content-Length segment (served from memory).
+static void testeFaixa(int origem) {
+  char fonte[200], url[300], pref[64], c[128];
+  int porta;
+  Resp r;
+  size_t total = 0;
+  snprintf(fonte, sizeof fonte, "http://127.0.0.1:%d/fx.mkv", origem);
+  CONFERE(dts_tpk_abrir(fonte, "", -1, 0, DTSTPK_HLS, DTSTPK_CORPO_LENGTH, 0, url, sizeof url) &&
+          partes(url, &porta, pref, sizeof pref), "session with Content-Length bodies");
+  snprintf(c, sizeof c, "%sseg1.ts", pref);
+  CONFERE(!pedir(porta, c, NULL, &r) && r.status == 200 && r.n > 1000, "seg1 whole: 200 (%zu B)", r.n);
+  total = r.n; free(r.corpo);
+  CONFERE(!pedir(porta, c, "Range: bytes=8-0\r\n", &r) && r.status == 416 && r.n == 0, "bytes=8-0 (end before start): 416 (got %d, %zu B)", r.status, r.n);
+  free(r.corpo);
+  CONFERE(!pedir(porta, c, "Range: bytes=100-99\r\n", &r) && r.status == 416, "bytes=100-99: 416 (got %d)", r.status);
+  free(r.corpo);
+  CONFERE(!pedir(porta, c, "Range: bytes=10-19\r\n", &r) && r.status == 206 && r.n == 10 &&
+          strstr(r.cab, "Content-Range: bytes 10-19/"), "bytes=10-19: 206, 10 B (got %d, %zu B)", r.status, r.n);
+  free(r.corpo);
+  CONFERE(!pedir(porta, c, "Range: bytes=10-10\r\n", &r) && r.status == 206 && r.n == 1, "bytes=10-10: 206, 1 B (got %d, %zu B)", r.status, r.n);
+  free(r.corpo);
+  CONFERE(!pedir(porta, c, "Range: bytes=100-\r\n", &r) && r.status == 206 && r.n == total - 100, "bytes=100-: 206, the rest (got %d, %zu B)", r.status, r.n);
+  free(r.corpo);
+  snprintf(url, sizeof url, "Range: bytes=%zu-\r\n", total);
+  CONFERE(!pedir(porta, c, url, &r) && r.status == 416, "bytes=<size>-: 416 (got %d)", r.status);
+  free(r.corpo);
+  CONFERE(!pedir(porta, c, "Range: bytes=-5\r\n", &r) && r.status == 200 && r.n == total, "bytes=-5 (suffix, not served as a range): 200 whole (got %d)", r.status);
+  free(r.corpo);
+  CONFERE(!pedir(porta, c, "Range: bytes=5--3\r\n", &r) && r.status == 200 && r.n == total, "bytes=5--3 (junk): 200 whole (got %d)", r.status);
+  free(r.corpo);
+  CONFERE(!pedir(porta, c, "Range: bytes=0-999999999\r\n", &r) && r.status == 206 && r.n == total, "end past the size: 206, clamped (got %d, %zu B)", r.status, r.n);
+  free(r.corpo);
+  dts_tpk_fechar();
+  sleep(1);
+}
+
 int main(int argc, char **argv) {
   if (argc == 5 && !strcmp(argv[1], "adiantar")) return adiantar(argv[2], argv[3], atof(argv[4])) ? 1 : 0;
   if (argc < 4) { fprintf(stderr, "usage: %s <origin port> <test> <dir>\n", argv[0]); return 2; }
@@ -383,6 +419,7 @@ int main(int argc, char **argv) {
   else if (!strcmp(t, "cancelar")) testeCancelar(origem);
   else if (!strcmp(t, "fila")) testeFila(origem);
   else if (!strcmp(t, "escuta")) testeEscuta(origem);
+  else if (!strcmp(t, "faixa")) testeFaixa(origem);
   else { fprintf(stderr, "unknown test %s\n", t); return 2; }
   printf("%s: %d failure(s)\n", t, falhas);
   return falhas ? 1 : 0;

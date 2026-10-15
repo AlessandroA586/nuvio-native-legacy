@@ -699,23 +699,43 @@ static int saidaEscrever(void *u, const unsigned char *d, int n) {
   return n;
 }
 
+// Range "bytes=a-b" / "bytes=a-" of a body of n bytes (review blocker 4).
+// 0: none or not understood (whole body, 200; a suffix "bytes=-k" or several
+// ranges included); 1: [*ini, *fim] (206); -1: not satisfiable (416), the
+// start past the end or the END BEFORE THE START ("bytes=8-0" used to send
+// fim - ini + 1 wrapped around: memory past the segment).
+static int faixa(const char *range, size_t n, size_t *ini, size_t *fim) {
+  const char *p = range;
+  unsigned long long a = 0, z = 0;
+  int temZ = 0;
+  if (strncmp(p, "bytes=", 6)) return 0;
+  p += 6;
+  if (*p < '0' || *p > '9') return 0;                  // "bytes=-k" (suffix) or junk
+  while (*p >= '0' && *p <= '9') { if (a > (~0ULL - 9) / 10) return -1; a = a * 10 + (unsigned)(*p++ - '0'); }
+  if (*p++ != '-') return 0;
+  while (*p >= '0' && *p <= '9') { if (z > (~0ULL - 9) / 10) z = ~0ULL; else z = z * 10 + (unsigned)(*p - '0'); p++; temZ = 1; }
+  while (*p == ' ' || *p == '\t') p++;
+  if (*p) return 0;                                     // several ranges or junk: whole body
+  if (!temZ) z = n ? n - 1 : 0;
+  if (a >= n || z < a) return -1;
+  *ini = (size_t)a;
+  *fim = z >= n ? n - 1 : (size_t)z;
+  return 1;
+}
+
 // Corpo da memoria (Content-Length), com Range "bytes=a-b" / "bytes=a-".
 static void enviarMemoria(int sock, Sessao *s, const char *tipo, const unsigned char *b, size_t n,
                           const char *range, int manter, int *status, int64_t *enviados) {
   char cab[400];
   size_t ini = 0, fim = n ? n - 1 : 0;
-  int parcial = 0;
-  unsigned long long a, z;
-  if (range[0] && sscanf(range, "bytes=%llu-%llu", &a, &z) >= 1) {
-    if (sscanf(range, "bytes=%llu-%llu", &a, &z) < 2) z = n ? n - 1 : 0;
-    if (a >= n) {
-      snprintf(cab, sizeof cab, "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */%zu\r\n"
-               "Content-Length: 0\r\nConnection: %s\r\n\r\n", n, manter ? "keep-alive" : "close");
-      enviarTudo(sock, cab, strlen(cab), &s->cancelar, NULL);
-      *status = 416; return;
-    }
-    ini = (size_t)a; fim = z >= n ? n - 1 : (size_t)z; parcial = 1;
+  int parcial = faixa(range, n, &ini, &fim);
+  if (parcial < 0) {
+    snprintf(cab, sizeof cab, "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */%zu\r\n"
+             "Content-Length: 0\r\nConnection: %s\r\n\r\n", n, manter ? "keep-alive" : "close");
+    enviarTudo(sock, cab, strlen(cab), &s->cancelar, NULL);
+    *status = 416; return;
   }
+  if (!parcial) { ini = 0; fim = n ? n - 1 : 0; }
   if (parcial)
     snprintf(cab, sizeof cab, "HTTP/1.1 206 Partial Content\r\nContent-Type: %s\r\nContent-Length: %zu\r\n"
              "Content-Range: bytes %zu-%zu/%zu\r\nAccept-Ranges: bytes\r\nCache-Control: no-cache\r\nConnection: %s\r\n\r\n",

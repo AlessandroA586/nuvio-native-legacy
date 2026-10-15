@@ -83,7 +83,11 @@ check "queue: the converter stayed under 100 MB RSS ($(sed -n 's/.*app RSS peak 
 "$work/test" "$port" escuta "$work" > "$work/t5.log" 2>&1 || fail=1
 grep -E '^(ok|FAIL|skip)' "$work/t5.log"
 
-cp "$work/t1.log" "$work/t2.log" "$work/t3.log" "$work/t4.log" "$work/t5.log" "${DTS_TPK_LOGS:-$work}/" 2>/dev/null || true
+# 6. Range on a Content-Length segment: inverted ranges get 416 (blocker 4).
+"$work/test" "$port" faixa "$work" > "$work/t6.log" 2>&1 || fail=1
+grep -E '^(ok|FAIL)' "$work/t6.log"
+
+cp "$work/t1.log" "$work/t2.log" "$work/t3.log" "$work/t4.log" "$work/t5.log" "$work/t6.log" "${DTS_TPK_LOGS:-$work}/" 2>/dev/null || true
 if [ "$fail" != 0 ]; then echo "--- t1.log"; grep '\[dts-tpk\]' "$work/t1.log" | tail -30; echo "--- t2.log"; grep '\[dts-tpk\]' "$work/t2.log" | tail -30; echo "--- t3.log"; tail -20 "$work/t3.log"; echo "--- t4.log"; grep -v '^\[dts-tpk\] #' "$work/t4.log" | tail -20; fi
 [ "$fail" = 0 ] && echo "dts_tpk_servidor: ok"
 exit "$fail"
