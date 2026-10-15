@@ -784,6 +784,19 @@ int sessao_token_copiar(char *dst, size_t n) {
   return tem && dst[0];
 }
 
+int sessao_identidade_local_copiar(char *usuario, size_t nUsuario, char *jwt, size_t nJwt) {
+  if (!usuario || !nUsuario || !jwt || !nJwt) return 0;
+  usuario[0] = jwt[0] = 0;
+  pthread_mutex_lock(&tokTrava);
+  int tem = !anonima && acesso[0] && sub[0] && strlen(sub) < nUsuario && strlen(acesso) < nJwt;
+  if (tem) {
+    snprintf(usuario, nUsuario, "%s", sub);
+    snprintf(jwt, nJwt, "%s", acesso);
+  }
+  pthread_mutex_unlock(&tokTrava);
+  return tem;
+}
+
 void sessao_token_recusado(const char *tok) {
   int st = 0;
   if (!tok || !*tok) return;

@@ -22,6 +22,11 @@ typedef struct {
 // Chamar com o diretorio de dados ao iniciar ajustes. Setters gravam antes
 // de publicar a mudanca e retornam 0 se a gravacao falhar.
 void fontefalha_dir(const char *dir);
+// A escolha de compartilhar pertence ao perfil, definida pelos Ajustes.
+// A primeira copia privada parte de fontefalha.txt; arquivos existentes sao
+// preservados. Selecionar um arquivo recarrega a configuracao sem regrava-lo.
+int fontefalha_preparar_privado(const char *arquivo);
+int fontefalha_arquivo(const char *arquivo);
 void fontefalha_config_ler(void);
 void fontefalha_config(FonteFalhaConfig *saida);
 int fontefalha_ativa(void);

@@ -2246,3 +2246,49 @@ static void ilha_desenharCorpo_(Uint32 agora) {
     if (voo) desenharVoo(vooPf, 1);
     salvarVoo(agora, x, y, dir); }
 }
+
+static int avisoDoAparelho(const Aviso *a) {
+  return !strcmp(a->chave, "atualizacao") || !strcmp(a->chave, "rede") ||
+         !strncmp(a->chave, "av:update:", 10) ||
+         !strncmp(a->chave, "av:crash:", 9) ||
+         !strncmp(a->chave, "av:canal:", 9);
+}
+
+void ilha_abrir_sessao(void) {
+  Aviso aparelho[FILA + 1];
+  int n = 0;
+  if (temCur && avisoDoAparelho(&cur)) aparelho[n++] = cur;
+  for (int i = 0; i < nFila; i++)
+    if (avisoDoAparelho(&fila[i])) aparelho[n++] = fila[i];
+  memset(fila, 0, sizeof fila); nFila = 0;
+  memset(&cur, 0, sizeof cur); temCur = 0; curAte = 0;
+  memset(&mostraA, 0, sizeof mostraA); mostra = -1; mostraChave[0] = 0;
+  memset(mostrados, 0, sizeof mostrados); nMostrados = 0;
+  for (int i = 0; i < n; i++) {
+    if (!temCur) { cur = aparelho[i]; temCur = 1; }
+    else enfileirar(&aparelho[i]);
+  }
+  // Os tres cartoes e suas copias levam titulos/rostos do perfil anterior.
+  memset(cartoes, 0, sizeof cartoes); memset(temCartao, 0, sizeof temCartao);
+  memset(&mostraC, 0, sizeof mostraC); cartaoVez = mostraQual = -1;
+  memset(&modalC, 0, sizeof modalC); memset(&modalM, 0, sizeof modalM);
+  modalAberto = modalAviso = modalAtividade = modalFoco = modalAvisoMedido = 0;
+  modalQual = -1; modalChave[0] = 0; modalDesde = 0; modalT = modalV = 0.0f;
+  memset(modalFocoA, 0, sizeof modalFocoA);
+  pedido = avPedido = 0; pedidoQual = -1; avPedidoChave[0] = 0;
+  memset(&pedidoC, 0, sizeof pedidoC);
+  atvTexto[0] = atvTitulo[0] = atvDetalhes[0] = atvIcone[0] = 0;
+  atvVisto = 0; atvV2 = atvTemCarga = 0; atvProg = -1.0f; atvBarraA = 0.0f;
+  memset(&atvCarga, 0, sizeof atvCarga);
+  corpoPed = 0; corpoFn = NULL; corpoU = NULL;
+  corpoW = corpoH = corpoT = corpoV = corpoWa = corpoHa = corpoVw = corpoVh = 0.0f;
+  voo = vooDissolve = vooAlvoOk = svooQuer = svoo = 0;
+  vooDesde = svooDesde = pousouEm = altBase = 0; vooT = svooT = 0.0f;
+  vooArte[0] = vooCapa[0] = svooPoster[0] = 0; svooIconeA = 1.0f;
+  pontoEnquete = pontoPediu = coberta = ultRectOk = 0;
+  W = vW = H = vH = A = conteudoA = 0.0f; ultQuadro = 0;
+  dsMostra = dsVez = dsCartao = 0;
+#ifdef NV_TOUCH_UI
+  modalToqueReiniciar();
+#endif
+}
