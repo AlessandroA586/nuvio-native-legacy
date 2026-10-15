@@ -1155,5 +1155,7 @@ void video_velocidade(int c) { (void)c; }
 int  video_velocidade_atual(void) { return 100; }
 void video_velocidade_recusada(void) {}
 int  video_velocidade_bloqueada(void) { return 0; }
+int  video_seek_desistiu(void) { return 0; }
+const char *video_cabecalhos(void) { return ""; }
 
 #endif // defined(__EMSCRIPTEN__) && defined(NV_VIDAA)
