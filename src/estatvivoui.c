@@ -427,11 +427,18 @@ static void ladrilho(GfxRect r, const char *icone, const char *rotulo, int orige
 // Numero grande e unidade na mesma linha de base. Devolve a largura. A unidade
 // anda na largura SUAVIZADA do numero (um slot por chamada, ver desenharConteudo):
 // 9,9 -> 10,1 empurrava o "Mbps" de um quadro para o outro.
+// Reserved slot: the same digit count drawn as 8s, so the unit holds its X while
+// the value changes without a wide gap after short numbers.
+static float casa(TxtEstilo e, const char *n) {
+  char r[24];
+  size_t i;
+  for (i = 0; n[i] && i < sizeof r - 1; i++) r[i] = n[i] >= '0' && n[i] <= '9' ? '8' : n[i];
+  r[i] = 0;
+  return (float)txt_linha(e, r, EVU_TX).w;
+}
 static float numero(const char *n, const char *unidade, float x, float y, float a, int apagado) {
   TxtLinha t = apagado ? txt_linha(TXT_ILHA_TITULO, n, 111, 111, 114, 255) : txt_linha(TXT_AJ_NUM58, n, EVU_TX);
-  // Casa reservada (4 digitos e a virgula): a unidade fica no mesmo X enquanto o
-  // valor muda, so passa dela se o numero for maior.
-  float w = fmaxf(suaveLargura((float)t.w), apagado ? 0.0f : (float)txt_linha(TXT_AJ_NUM58, "88,8", EVU_TX).w);
+  float w = fmaxf(suaveLargura((float)t.w), apagado ? 0.0f : casa(TXT_AJ_NUM58, n));
   txt_desenhar_alpha(t, x, y, a);
   if (unidade && unidade[0]) {
     TxtLinha u = txt_linha(TXT_V2_LN, unidade, 180, 180, 182, 255);
@@ -809,7 +816,7 @@ static void conteudoMinimo(float ox, float oy, float fase, float a) {
   else if (vis.bufOrigem == EVO_SO_PCT) snprintf(b, sizeof b, i18n("Mbps · buffer %d%%"), vis.bufPct);
   else snprintf(b, sizeof b, "Mbps");
   tb = txt_linha(TXT_AJ_TEXTO, b, 196, 196, 196, 255);
-  nw = fmaxf(suaveLargura((float)tn.w), (float)txt_linha(TXT_G23B, "≈ 88,8", EVU_TX).w);
+  nw = fmaxf(suaveLargura((float)tn.w), casa(TXT_G23B, n));
   gfx_icone((GfxRect){ ox + EVU_PAD, oy + (EVU_PH - 22) * 0.5f, 22, 22 }, "aj_gauge", 0.953f, 0.949f, 0.937f, a);
   txt_desenhar_alpha(tn, ox + EVU_PAD + 34, oy + (EVU_PH - (float)tn.h) * 0.5f, a);
   txt_desenhar_alpha(tb, ox + EVU_PAD + 34 + nw + 8, oy + (EVU_PH - (float)tb.h) * 0.5f, a);
@@ -838,7 +845,7 @@ void estatvivo_retangulo(int tam, int esquerda, float *g) {
   // Minimal is a single thin line: no hint reserve. Full/compact keep a footer row.
   g[3] = tam == EV_TAM_COMPLETO ? EVU_H : tam == EV_TAM_COMPACTO ? EVU_CH :
     miniPadrao() ? EVU_PH : fmaxf(EVU_PH, nTiles[tam] * 44.0f + 32.0f);
-  if (fixado && tam != EV_TAM_MINIMO) g[3] -= EVU_KEY_H + 10.0f;   // pinned: no hint row, shrink to content
+  if (fixado && tam != EV_TAM_MINIMO) g[3] -= EVU_KEY_H + EVU_PAD + 12.0f;   // pinned: no hint row, shrink to content
   if (editando) { g[2] = EVU_MW; g[0] = esquerda ? EVU_MARG : NV_TELA_W - EVU_MARG - g[2]; g[3] = 480; }
 }
 void estatvivo_retangulo_atual(float *g) { estatvivo_retangulo(tamanho, ajustes_estat_lado(), g); }
