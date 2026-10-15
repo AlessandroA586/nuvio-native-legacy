@@ -136,6 +136,13 @@ class NuvioActivity : SDLActivity() {
         }
     }
 
+    private val registroDownload by lazy { RegistroDownload(this) }
+
+    // Chamado pelo fio SDL, sem ler arquivos nem abrir a tela naquele fio.
+    fun baixarRegistro(arquivo: String, sucesso: String, falha: String) {
+        runOnUiThread { registroDownload.abrir(arquivo, sucesso, falha) }
+    }
+
     // Vigia do arranque (#266, ArranqueVigia.kt) e o que ele le do C (android.c).
     private var vigia: ArranqueVigia? = null
     external fun nativeEtapa(): String
@@ -526,7 +533,8 @@ class NuvioActivity : SDLActivity() {
         } catch (_: Exception) {}
         // Instalador ou tela de voz por cima NAO e sair do app: trocar o icone
         // ali fecharia a tarefa embaixo deles (ver aplicarIconePendente).
-        if (!instalando && !esperandoTela && !isChangingConfigurations) aplicarIconePendente()
+        if (!instalando && !esperandoTela && !isChangingConfigurations &&
+            !registroDownload.escolhendoArquivo) aplicarIconePendente()
         super.onStop()
         Log.i("nuvio", "[android] parada: ${SystemClock.elapsedRealtime() - ini} ms no fio da interface")
     }
@@ -556,6 +564,7 @@ class NuvioActivity : SDLActivity() {
     }
 
     override fun onDestroy() {
+        registroDownload.fechar()
         vigia?.parar()
         fecharRede()
         NvPlayer.encerrar()
@@ -1022,6 +1031,7 @@ class NuvioActivity : SDLActivity() {
 
     @Deprecated("startActivityForResult e o que o SDLActivity (Activity) oferece")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (registroDownload.resultado(requestCode, resultCode, data)) return
         if (requestCode == PEDIDO_DITADO) esperandoTela = false
         if (requestCode == PEDIDO_DITADO) {
             val t = if (resultCode == RESULT_OK)
