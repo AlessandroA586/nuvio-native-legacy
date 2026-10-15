@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-14 22:48",
+ "atualizado_em": "2026-10-15 02:44",
  "base": "5544c3e4c",
- "nota": "Sync 2026-10-14 22:48, tip integracao/2.0.5 c285fbf44 (HEAD). Issues GH 80, todas no mapa. Estados de jobs de escrivao/jobs.txt; merges de git (is-ancestor); vereditos novos. Ver escrivao/estado.md.",
+ "nota": "Sync 2026-10-15 02:44, tip integracao/2.0.5 be42293ae (HEAD). Ver escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,
@@ -8927,8 +8927,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "re-review fix j-205-i429hbs-fixz (done 22:28); antes BLOQUEIA j-revg-i429hbs-z",
-   "notas": "Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito.",
+   "proximo_passo": "review OK j-revg-i429hbs-y (23:11, after fixz 22:28); merge agente/205-i429hbs pendente (2 commits fora)",
+   "notas": "Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/429",
    "criada_em": "2026-10-10",
    "alvo": "ja-lancada"
@@ -9643,7 +9643,7 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "integrada",
+   "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
     "edff609f/c670c37e/20bb2f3a (agente/205-p2p486, integrados em integracao/2.0.5)"
@@ -9654,8 +9654,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "testar em aparelho com addon P2P; sem review j-revg registrado",
-   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub.",
+   "proximo_passo": "review BLOQUEIA j-rev-205-p2p486-2 (10-14 01:17) sem fix; fazer fix + re-review; depois testar em aparelho com addon P2P",
+   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/486",
    "criada_em": "2026-10-13",
    "alvo": "ja-lancada"
@@ -10131,8 +10131,8 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "j-205-i513autoplay-fixy RODANDO; depois review (BLOQUEIA j-revg-i513autoplay-y 22:35)",
-   "notas": "Criada 2026-10-14 (issues.json 14/10 16:49). Escrivao 14/10 19:1x: j-205-i513autoplay 7df981b9 done 18:35 (review j-revg-i513autoplay-q BLOQUEIA 18:43); fix bcf3ec31 18:57. Escrivao 19:2x: merge a82357a4 (j-revg-i513autoplay-q havia BLOQUEADO 18:43; fix bcf3ec31 mergeado sem nova review). | a82357a4 mergeado antes; review y BLOQUEIA, fix em curso",
+   "proximo_passo": "fix j-205-i513autoplay-fixy done 23:07 sem review; rodar review (ultimo BLOQUEIA y 22:35 foi antes do fix); depois merge (4 commits fora)",
+   "notas": "Criada 2026-10-14 (issues.json 14/10 16:49). Escrivao 14/10 19:1x: j-205-i513autoplay 7df981b9 done 18:35 (review j-revg-i513autoplay-q BLOQUEIA 18:43); fix bcf3ec31 18:57. Escrivao 19:2x: merge a82357a4 (j-revg-i513autoplay-q havia BLOQUEADO 18:43; fix bcf3ec31 mergeado sem nova review). | a82357a4 mergeado antes; review y BLOQUEIA, fix em curso | Escrivao 10-15 02:44: fixy sem veredito ainda.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/513",
    "criada_em": "2026-10-14",
    "alvo": "futuro"
