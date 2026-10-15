@@ -440,6 +440,7 @@ int  video_iniciar(void) {
   if (!travaLeg) travaLeg = SDL_CreateMutex();
   // #269: legenda de texto simples do MKV pelo overlay (ver faixas.c).
   mkvass_aceitar_texto(1);
+  mkvass_aceitar_imagem(1);
   return hAbrir != NULL;
 }
 int  video_iniciar_auto(void) { return hAbrir != NULL; }
@@ -459,6 +460,7 @@ static int abrirSessao(void) {
   // e nenhuma linha "e texto simples"). Ligada a cada sessao, antes de o app
   // escolher qualquer faixa.
   mkvass_aceitar_texto(1);
+  mkvass_aceitar_imagem(1);   // PGS: o app decodifica e desenha (imgsub)
   atomic_store(&temErroDetalhe, 0);
   vigiaAtiva = 0; buscaAlvoMs = -1;
   atomic_store(&vigiaReiniciar, 1);
@@ -672,8 +674,9 @@ static void rotuloConvertido(char *rot, size_t n, int canais) {
   strncat(rot, suf, n - strlen(rot) - 1);
 }
 
-// Legenda de imagem (PGS, VobSub, DVB): o player da TV nao lista, e o overlay
-// do app so desenha texto. Fora da lista convertida, como no original.
+// Legenda de imagem (PGS, VobSub, DVB): o player da TV nao lista. PGS o app
+// decodifica e desenha; VobSub e DVB ficam fora da lista convertida, como no
+// original.
 static int legendaImagemMkv(const MkvFaixa *m) {
   return !strncmp(m->codec, "S_HDMV/", 7) || !strcmp(m->codec, "S_VOBSUB") || !strcmp(m->codec, "S_DVBSUB");
 }
@@ -690,7 +693,8 @@ static int listaDoArquivo(VideoFaixa *a, int *na, VideoFaixa *l, int *nl) {
   for (i = 0; i < mkvN; i++) {
     VideoFaixa *f = NULL;
     if (mkvFx[i].tipo == 2 && *na < MAX_FAIXAS) f = &a[(*na)++];
-    else if (mkvFx[i].tipo == 17 && !legendaImagemMkv(&mkvFx[i]) && *nl < MAX_FAIXAS) f = &l[(*nl)++];
+    else if (mkvFx[i].tipo == 17 && (!legendaImagemMkv(&mkvFx[i]) || faixasmkv_imagem_overlay(mkvFx[i].codec)) &&
+             *nl < MAX_FAIXAS) f = &l[(*nl)++];
     if (!f) continue;
     memset(f, 0, sizeof *f);
     f->numero = mkvFx[i].tipo == 17 ? *nl - 1 : -1;
@@ -961,10 +965,12 @@ static void sondaMkv(double pos) {
     if (faixasNovas && mkvN > 0 && faixasLidas) { faixasNovas = 0; montarListaConvertida(); }
     return;
   }
-  if (faixasNovas && mkvN > 0 && (nAudio || nLeg)) {
+  if (faixasNovas && mkvN > 0 && (nAudio || nLeg || faixasmkv_tem_imagem(mkvFx, mkvN))) {
     int m;
     faixasNovas = 0;
     m = faixasmkv_aplicar(faixaAudio, nAudio, faixaLeg, nLeg, mkvFx, mkvN);
+    // PGS: o player nao lista; entra no fim da lista, com o ordinal do arquivo.
+    nLeg = faixasmkv_acrescentar_imagem(faixaLeg, nLeg, MAX_FAIXAS, mkvFx, mkvN);
     printf("[mkv] %d rotulo(s) de faixa vindos do cabecalho\n", m);
     fflush(stdout);
     // Voltando do convertido: a faixa que a pessoa escolheu, pelo rotulo.
@@ -1684,7 +1690,7 @@ int  video_legenda_ordinal_mkv(int i) { return (i >= 0 && i < nLeg) ? faixaLeg[i
 int  video_mkv_sondado(void) {
   if (!urlAtual[0] || fonteMp4 || mkvNaoMkv) return 2;
   if (mkvEstado == 1 || mkvEstado == 2) return 0;
-  if (faixasNovas && mkvN > 0 && (nAudio || nLeg)) return 0;
+  if (faixasNovas && mkvN > 0 && (nAudio || nLeg || faixasmkv_tem_imagem(mkvFx, mkvN))) return 0;
   return 1;
 }
 // Barato: a folha chama a cada quadro enquanto espera. O Range sai no proximo
@@ -1733,6 +1739,8 @@ void video_escolher_legenda(int i) {
   // choices made after the settle window but before the next pump.
   legPend = -1;
   legendaLimpar(1);
+  // Faixa so do app (PGS, numero -1): nada a escrever no player.
+  if (i >= 0 && faixaLeg[i].numero < 0) { legendaMarcarEnvio(-1); return; }
   if (i < 0) legendaMarcarEnvio(-1);
   if (i >= 0 && hEscolher) {
     if (!comecou || SDL_GetTicks() - comecouEm < LEG_ACOMODAR_MS) { legPend = i; return; }
