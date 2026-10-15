@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-15 07:50",
+ "atualizado_em": "2026-10-15 08:50",
  "base": "5544c3e4c",
- "nota": "Sync 2026-10-15 07:50 HEAD 84add4581 (merges 9b4fe6776, 9d5115556 vidrotodo, 84add4581 i513autoplay; instalado 71c00499e). Ver escrivao/estado.md.",
+ "nota": "Sync 2026-10-15 08:50 HEAD 84add4581 (merges 9b4fe6776, 9d5115556 vidrotodo, 84add4581 i513autoplay; instalado 84add4581: Android Success, C9 rc=255). Ver escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,
@@ -8925,7 +8925,7 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "merge agente/205-i429hbs (2 ahead, tip f59554839; review OK j-revg-i429hbs-y); testar no TCL",
+   "proximo_passo": "merge agente/205-i429hbs (review OK j-revg-i429hbs-y 23:11; 2 ahead, nao mergeado); testar no TCL",
    "notas": "Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839. Escrivao 10-15 07:10: review y OK (23:11) apos fixz 22:28; branch ainda 2 ahead, merge pendente. | Escrivao 2026-10-15 07:50: sem merge ainda; review OK y, branch nao mergeado",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/429",
    "criada_em": "2026-10-10",
@@ -9520,8 +9520,8 @@
     "ultimo_comentario_por": "Matis94",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Job agente/205-formatter479 (nv-bug high).",
-   "notas": "LG C5 webOS 26, 2.0.5, log M8C717 (registro 73696): descer na lista de fontes no modo Formatter engasga; modo padrao liso.",
+   "proximo_passo": "review OK (j-rev-205-formatter479); branch agente/205-formatter479 sem commit fora de integracao; confirmar no TCL Formatter",
+   "notas": "LG C5 webOS 26, 2.0.5, log M8C717 (registro 73696): descer na lista de fontes no modo Formatter engasga; modo padrao liso. | Escrivao 10-15 08:50: job formatter479 review OK; ver fora_do_github dono-205-formatter479.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/479",
    "alvo": "2.0.6"
   },
@@ -9586,7 +9586,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "testar troca de perfil no TCL",
-   "notas": "Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix. Escrivao 10-15 07:10: mesmo caso de #488; correcoes portadas na head nova do autor (pr/493-v3), review OK 06:50.",
+   "notas": "Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix. Escrivao 10-15 07:10: mesmo caso de #488; correcoes portadas na head nova do autor (pr/493-v3), review OK 06:50. | Escrivao 10-15 08:50: pr/493-v3 carrega #482 (review OK 06:50, nao mergeado).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/482",
    "criada_em": "2026-10-13",
    "alvo": "2.0.6"
@@ -9653,8 +9653,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "testar addon P2P em aparelho (review OK rev3 01:42 apos fix 01:22)",
-   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead.",
+   "proximo_passo": "review fix agente/205-p2pusb (j-fix-p2pusb-v 07:52, sem review depois; BLOQUEIA v 06:49); depois testar addon P2P em aparelho",
+   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/486",
    "criada_em": "2026-10-13",
    "alvo": "ja-lancada"
@@ -9680,7 +9680,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "testar troca de perfil no TCL",
-   "notas": "pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL. Escrivao 10-15 07:10: pr/493-fix review OK fix2; autor publicou head nova 5694694cc; fixes portados 65613c562 (pr/493-v3) e review OK 06:50 (j-revpr493-v3). Mergear pr/493-v3 para carregar #488 no PR.",
+   "notas": "pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL. Escrivao 10-15 07:10: pr/493-fix review OK fix2; autor publicou head nova 5694694cc; fixes portados 65613c562 (pr/493-v3) e review OK 06:50 (j-revpr493-v3). Mergear pr/493-v3 para carregar #488 no PR. | Escrivao 10-15 08:50: pr/493-v3 (3 ahead, review OK 06:50, nao mergeado) substitui o pr/493 velho; #488 segue nele.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/488",
    "criada_em": "2026-10-13",
    "alvo": "2.0.6"
@@ -9949,8 +9949,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Snapshot 2026-10-14 10:15: 3fc691d4 \"fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)\" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead.",
+   "proximo_passo": "lancar com 2.0.5; review do fix P2P USB agente/205-p2pusb pendente (BLOQUEIA v 06:49, fix 07:52)",
+   "notas": "Snapshot 2026-10-14 10:15: 3fc691d4 \"fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)\" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead. | Escrivao 10-15 08:50: liga ao dono P2P USB (agente/205-p2pusb); fix 07:52 sem review.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/505",
    "criada_em": "2026-10-14",
    "alvo": "2.0.6"
@@ -10123,8 +10123,7 @@
    "status": "integrada",
    "release": "",
    "conserto": [
-    "agente/205-i513autoplay (5 ahead, nao mergeado)",
-    "84add4581 (merge agente/205-i513autoplay em integracao/2.0.5; review OK j-revg-i513autoplay-v 06:49)"
+    "84add4581 (merge agente/205-i513autoplay em integracao/2.0.5; review OK j-revg-i513autoplay-v 06:49 apos fix w 05:50)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10132,8 +10131,8 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "testar autoplay com opcao desligada no TCL; depois fechar",
-   "notas": "review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando Escrivao 10-15 07:10: BLOQUEIA x->fix i513w 05:50 (adbaf0f9f)->review v OK 06:49; branch 6 ahead. | Escrivao 2026-10-15 07:50: merge 84add4581 em integracao/2.0.5",
+   "proximo_passo": "Android 84add4581 instalado (Success); C9 rc=255: testar autoplay com opcao desligada no TV",
+   "notas": "review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando Escrivao 10-15 07:10: BLOQUEIA x->fix i513w 05:50 (adbaf0f9f)->review v OK 06:49; branch 6 ahead. | Escrivao 2026-10-15 07:50: merge 84add4581 em integracao/2.0.5 | Escrivao 10-15 08:50: BLOQUEIA w/x/y antes; v OK 06:49; merged.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/513",
    "criada_em": "2026-10-14",
    "alvo": "futuro"
@@ -10177,6 +10176,27 @@
    "proximo_passo": "triagem; sem job ainda; alvo a definir",
    "notas": "Issue nova 2026-10-15 06:48 (issues.json). Sem descrição de contexto; triar.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/521",
+   "criada_em": "2026-10-15",
+   "alvo": "futuro"
+  },
+  {
+   "numero": 524,
+   "titulo": "Anime series showing up as an altogether different movie",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triagem; sem job ainda (match TMDB série x filme)",
+   "notas": "Issue nova 2026-10-15 11:33 (issues.json, label bug). Sem triagem local.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/524",
    "criada_em": "2026-10-15",
    "alvo": "futuro"
   }
@@ -13568,8 +13588,8 @@
    "conserto": [
     "agente/205-p2pusb: 9 commits fora"
    ],
-   "proximo_passo": "BLOQUEIA v (j-revg-p2pusb-v 06:49): mount container aceito como USB e rescan suprimido; SEM job de fix depois; lancar fix, depois review",
-   "notas": "8 ahead; nao mergeado; sem job rodando Escrivao 10-15 07:10: fix w 05:51; review v 06:49 BLOQUEIA. | Escrivao 2026-10-15 07:50: lost-ish: sem job apos BLOQUEIA v",
+   "proximo_passo": "review do fix v (j-fix-p2pusb-v 07:52, sem review depois); BLOQUEIA v 06:49; merge e TCL",
+   "notas": "8 ahead; nao mergeado; sem job rodando Escrivao 10-15 07:10: fix w 05:51; review v 06:49 BLOQUEIA. | Escrivao 2026-10-15 07:50: lost-ish: sem job apos BLOQUEIA v | Escrivao 10-15 08:50: fix 07:52 sem review; nao perdido (fix depois do bloqueio).",
    "url": null
   },
   {
@@ -13785,13 +13805,13 @@
    "id": "dono-205-pr491resto",
    "titulo": "ci: port PR #491 Tizen 6+ package builds and audit all commits",
    "plataforma": "?",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
     "6dd374db"
    ],
-   "proximo_passo": "branch pr491-limpo: job j-pr491-limpo done 22:34, sem veredito; revisar",
-   "notas": "Escrivão 14/10 14:47: integrada.",
+   "proximo_passo": "build Tizen 6+ e teste em TV (branch agente/205-pr491resto ja em integracao/2.0.5; review OK j-revf-pr491resto 07:29)",
+   "notas": "Escrivão 14/10 14:47: integrada. | Escrivao 10-15 08:50: branch 0 ahead: merged.",
    "url": null
   },
   {
@@ -14349,8 +14369,8 @@
    "conserto": [
     "pr/498-limpo: 12 commits fora (tip 22ed066e2 22:31)"
    ],
-   "proximo_passo": "merge pr/498-limpo (review OK j-revpr498-limpo 23:15); testar IME na TV",
-   "notas": "PR #498; 12 ahead; nao mergeado Escrivao 10-15 07:10: 12 ahead, review OK mantido; falta merge. | Escrivao 2026-10-15 07:50: review OK, falta merge"
+   "proximo_passo": "merge pr/498-limpo (review OK j-revpr498-limpo 23:15, 12 ahead); testar IME na TV",
+   "notas": "PR #498; 12 ahead; nao mergeado Escrivao 10-15 07:10: 12 ahead, review OK mantido; falta merge. | Escrivao 2026-10-15 07:50: review OK, falta merge | Escrivao 10-15 08:50: ainda nao mergeado."
   },
   {
    "id": "pr-491-limpo",
@@ -14361,8 +14381,8 @@
    "conserto": [
     "pr/491-limpo: 52 commits fora (tip f8fe27fad 05:53)"
    ],
-   "proximo_passo": "review de novo apos fix c (f8fe27fad 05:53; sem log de review depois do r3 BLOQUEIA 04:52); depois merge",
-   "notas": "PR #491; 51 ahead; nao mergeado Escrivao 10-15 07:10: fix c 05:53 cancela probes DTS; precisa review depois do r3. | Escrivao 2026-10-15 07:50: precisa review do fix c"
+   "proximo_passo": "review do fix c (f8fe27fad 05:53; sem review depois do r3 BLOQUEIA 04:52)",
+   "notas": "PR #491; 51 ahead; nao mergeado Escrivao 10-15 07:10: fix c 05:53 cancela probes DTS; precisa review depois do r3. | Escrivao 2026-10-15 07:50: precisa review do fix c | Escrivao 10-15 08:50: fix c sem review."
   },
   {
    "id": "pr-489-fix",
@@ -14373,8 +14393,8 @@
    "conserto": [
     "pr/489-fix: 23 commits fora (tip 49f7a53bd e45ff15dd)"
    ],
-   "proximo_passo": "merge pr/489-fix em integracao/2.0.5 (review OK j-revpr489-fix 03:05; nada depois); testar no TCL",
-   "notas": "PR #489; 23 ahead; nao mergeado Escrivao 10-15 07:10: review OK 03:05; 23 ahead; nenhum fix depois. | Escrivao 2026-10-15 07:50: pronto para merge, nao mergeado"
+   "proximo_passo": "merge pr/489-fix em integracao/2.0.5 (review OK j-revpr489-fix 03:05, 23 ahead, nada depois); testar",
+   "notas": "PR #489; 23 ahead; nao mergeado Escrivao 10-15 07:10: review OK 03:05; 23 ahead; nenhum fix depois. | Escrivao 2026-10-15 07:50: pronto para merge, nao mergeado | Escrivao 10-15 08:50: ainda nao mergeado."
   },
   {
    "id": "pr-490-fix",
@@ -14385,8 +14405,8 @@
    "conserto": [
     "pr/490-fix: 8 commits fora (tip 3dae8f5c 06:03)"
    ],
-   "proximo_passo": "BLOQUEIA fix3 (j-revpr490-fix3 06:50: fontesVitrine posteriores passam fome de fila); SEM job de fix depois; lancar fix, review, merge",
-   "notas": "PR #490; 7 ahead; nao mergeado Escrivao 10-15 07:10: fix c 06:03 (3dae8f5c); review fix3 06:50 BLOQUEIA (P2 starvation da fila). | Escrivao 2026-10-15 07:50: lost-ish: BLOQUEIA sem fix depois"
+   "proximo_passo": "review do fix v (j-fix-pr490-v 07:59, sem review depois); BLOQUEIA fix3 06:50 antes do v",
+   "notas": "PR #490; 7 ahead; nao mergeado Escrivao 10-15 07:10: fix c 06:03 (3dae8f5c); review fix3 06:50 BLOQUEIA (P2 starvation da fila). | Escrivao 2026-10-15 07:50: lost-ish: BLOQUEIA sem fix depois | Escrivao 10-15 08:50: fix v 07:59 aguarda review."
   },
   {
    "id": "pr-493-fix",
@@ -14410,8 +14430,8 @@
     "agente/205-vidrotodo: 10 commits fora (tip 9b4fe6776 merge do HEAD)",
     "9d5115556 (merge agente/205-vidrotodo em integracao/2.0.5)"
    ],
-   "proximo_passo": "lancar com 2.0.5; teste na TV (glass/top chrome)",
-   "notas": "criado pelo escrivao 2026-10-15 Escrivao 10-15 07:10: antes estava \"sem review log\"; agora review OK 05:49 e merge da integracao no branch 06:49. Branch ainda 10 ahead. | Escrivao 2026-10-15 07:50: merge 9d5115556 em integracao/2.0.5; review OK 05:49"
+   "proximo_passo": "instalado 84add4581 (Android Success, C9 rc=255); teste TV glass/top chrome",
+   "notas": "criado pelo escrivao 2026-10-15 Escrivao 10-15 07:10: antes estava \"sem review log\"; agora review OK 05:49 e merge da integracao no branch 06:49. Branch ainda 10 ahead. | Escrivao 2026-10-15 07:50: merge 9d5115556 em integracao/2.0.5; review OK 05:49 | Escrivao 10-15 08:50: merged 9d5115556; ainda nao validado na TV."
   },
   {
    "id": "dono-205-aspvolta",
@@ -14446,8 +14466,8 @@
    "conserto": [
     "pr/493-v3: 3 commits fora (5694694cc autor, 65613c562 port dos fixes)"
    ],
-   "proximo_passo": "merge pr/493-v3 no PR #493 (review OK j-revpr493-v3 06:50); build TV e teste de troca de perfil",
-   "notas": "Escrivao 10-15 07:10: job j-pr493-v3 05:49 (10 suites rc 0); review j-revpr493-v3 06:50 VEREDITO OK, sem P0-P2. Pendente: build TV e teste de troca de perfil em aparelho. | Escrivao 2026-10-15 07:50: review OK, falta merge"
+   "proximo_passo": "merge pr/493-v3 no PR #493 (review OK 06:50, 3 ahead, nao mergeado); build TV e teste de troca de perfil",
+   "notas": "Escrivao 10-15 07:10: job j-pr493-v3 05:49 (10 suites rc 0); review j-revpr493-v3 06:50 VEREDITO OK, sem P0-P2. Pendente: build TV e teste de troca de perfil em aparelho. | Escrivao 2026-10-15 07:50: review OK, falta merge | Escrivao 10-15 08:50: ainda nao mergeado no snapshot 08:48."
   }
  ],
  "fechar_203": [],
