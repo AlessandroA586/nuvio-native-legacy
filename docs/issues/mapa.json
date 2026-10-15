@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-15 02:49",
+ "atualizado_em": "2026-10-15 03:49",
  "base": "5544c3e4c",
- "nota": "Sync 2026-10-15 02:49, tip integracao/2.0.5 2c79fbcf8 (HEAD). Instalado: be42293ae (10-14 23:05). Ver escrivao/estado.md.",
+ "nota": "Sync 2026-10-15 03:49, tip integracao/2.0.5 eb469669a. Instalado: be42293ae (10-14 23:05). Ver escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,
@@ -8927,7 +8927,7 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "merge agente/205-i429hbs (review y OK 23:11, 2 commits fora); testar no TCL",
+   "proximo_passo": "review y OK (j-revg-i429hbs-y); merge agente/205-i429hbs; testar no TCL",
    "notas": "Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/429",
    "criada_em": "2026-10-10",
@@ -9553,7 +9553,7 @@
    "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
-   "status": "aberta",
+   "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
     "e4fb8c08/c9932635 (agente/205-pr487v2, nao integrados)"
@@ -9564,7 +9564,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "decidir com o dono se merge de agente/205-pr487v2 entra na 2.0.6",
+   "proximo_passo": "review OK (j-rev-pr487-v2); dono decide entrada na 2.0.6",
    "notas": "Snapshot 2026-10-14 10:15: \"Sources: show declared audio and subtitle languages\" (e4fb8c08) e o merge c9932635 \"Merge PR #487 v2\" existem so em agente/205-pr487v2, nao ancestral de integracao/2.0.5. OPEN no GitHub. | fechada no GH 2026-10-14 (CLOSED); alvo antigo 2.0.6 removido por regra do mapa.py; decidir com dono",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/481",
    "criada_em": "2026-10-13"
@@ -10122,7 +10122,7 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "em_revisao",
+   "status": "em_job",
    "release": "",
    "conserto": [
     "a82357a4 (merge agente/205-i513autoplay em integracao/2.0.5)"
@@ -10133,7 +10133,7 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "review do fixy 23:07 (review x com log vazio = em andamento); depois merge (4 commits fora)",
+   "proximo_passo": "review fixy BLOQUEIA (j-205-i513autoplay-fixy); fix pendente, sem job rodando; relancar fix+review",
    "notas": "Criada 2026-10-14 (issues.json 14/10 16:49). Escrivao 14/10 19:1x: j-205-i513autoplay 7df981b9 done 18:35 (review j-revg-i513autoplay-q BLOQUEIA 18:43); fix bcf3ec31 18:57. Escrivao 19:2x: merge a82357a4 (j-revg-i513autoplay-q havia BLOQUEADO 18:43; fix bcf3ec31 mergeado sem nova review). | a82357a4 mergeado antes; review y BLOQUEIA, fix em curso | Escrivao 10-15 02:44: fixy sem veredito ainda. Escrivao 10-15 02:49: ultimo BLOQUEIA y 22:35 foi antes do fixy 23:07; sem review posterior ao fix; tip 66c6c61ee.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/513",
    "criada_em": "2026-10-14",
@@ -12163,19 +12163,19 @@
    "conserto": [
     "agente/205-perfis21 (tip 7376c250, 1 commits fora)"
    ],
-   "proximo_passo": "review OK j-revg-perfis21; 1 commit nao mergeado: mergear ou adiar p/ 2.1",
+   "proximo_passo": "review OK (j-revg-perfis21); mergear ou adiar p/ 2.1",
    "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). rodando; alvo declarado = 2.1. Escrivão 14/10 14:47: review OK, merge pendente. | Escrivão 2026-10-14 16:11: review j-revg-perfis21 OK (11:16); merge pendente. | Escrivão 14/10 19:48: sem job"
   },
   {
    "id": "dono-205-dicatoque",
    "titulo": "Dicas de controle: tema/chips do rodape",
    "plataforma": "all",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.6",
    "conserto": [
     "agente/205-dicatoque (tip 0ad55379, 1 commits fora)"
    ],
-   "proximo_passo": "review OK r3 (j-revg-dicatoque2-r3); 1 commit nao mergeado: mergear",
+   "proximo_passo": "lancar com 2.0.5 (merge em integracao/2.0.5)",
    "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). BLOQUEIA: agente/205-dicatoque2 nao integrado. Escrivão 14/10 14:47: sem job (perdido). | Escrivão 14/10 19:48: sem job"
   },
   {
@@ -12218,13 +12218,13 @@
    "id": "dono-205-plxpgs",
    "titulo": "PGS/blur do plx",
    "plataforma": "all",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.6",
    "conserto": [
     "agente/205-plx-pgs (tip 13dcc6b0, 7 commits fora)",
     "db9fca6f"
    ],
-   "proximo_passo": "re-review: fixd 20:23 (sem review depois); ultimo BLOQUEIA j-revg-plx-pgs-r2 18:42",
+   "proximo_passo": "lancar com 2.0.5 (merge em integracao/2.0.5)",
    "notas": "13 commits fora. tests/mkvass.sh rc 1 no timing de servidor lento, mesmo base db9fca6fa: nao causado por esta mudanca."
   },
   {
@@ -12291,12 +12291,12 @@
    "id": "dono-205-triage",
    "titulo": "Triagem de branches velhas + decisao do dono feat/* = 2.2",
    "plataforma": "all",
-   "status": "aberta",
+   "status": "em_revisao",
    "release": "2.0.6",
    "conserto": [
     "agente/205-triagem-velhas (tip 3d791e8a, 1 commits fora)"
    ],
-   "proximo_passo": "LOST: BLOQUEIA j-revg-triagem-velhas 19:05 sem fix depois; relancar fix doc",
+   "proximo_passo": "fix doc 23:23 sem re-review; revisar e mergear",
    "notas": "Branch agente/205-triagem-velhas 1 commit fora."
   },
   {
@@ -13285,7 +13285,7 @@
    "conserto": [
     "agente/205-mock21 (tip 9de13e4e, 1 commit fora)"
    ],
-   "proximo_passo": "mergear (mockup docs apenas) (ainda nao mergeado; sem job de merge)",
+   "proximo_passo": "doc-only; review pendente; mergear se OK",
    "notas": "Escrivão 2026-10-14 16:11: 3 mockups anteriores (gamification/cinephile/redesign) ja em integracao/2.0.5; friends row 9de13e4e ainda fora.",
    "url": null
   },
@@ -13361,7 +13361,8 @@
    "status": "em_revisao",
    "release": "2.1",
    "conserto": [
-    "fe5e0e92"
+    "fe5e0e92",
+    "agente/205-p2pusb (7 commits fora, review BLOQUEIA)"
    ],
    "proximo_passo": "BLOQUEIA j-revg-p2pusb-y 22:30; fix j-205-p2pusb-fixy RODANDO; depois review (alvo 2.1)",
    "notas": "Pedido de usuario (cache USB P2P, #505). Alvo 2.1 (nao assumir merge em 2.0.6). Fix2 feito, nao esta lost.",
@@ -14087,12 +14088,12 @@
    "id": "dono-205-barra27",
    "titulo": "Barra 27 (branch agente/205-barra27)",
    "plataforma": "Android/TCL?",
-   "status": "em_revisao",
+   "status": "em_job",
    "release": "2.0.5",
    "conserto": [
     "agente/205-barra27: 2 commits fora"
    ],
-   "proximo_passo": "BLOQUEIA j-revg-barra27-y; fix j-205-barra27-fixy RODANDO",
+   "proximo_passo": "review fixy BLOQUEIA (j-205-barra27-fixy); fix pendente",
    "notas": "criado pelo escrivao 22:4x"
   },
   {
@@ -14111,25 +14112,121 @@
    "id": "dono-205-vidaa",
    "titulo": "VIDAA (agente/205-vidaa)",
    "plataforma": "VIDAA",
-   "status": "em_job",
+   "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
     "agente/205-vidaa: 14 commits fora"
    ],
-   "proximo_passo": "job j-205-vidaa RODANDO 22:36; depois review",
+   "proximo_passo": "14 commits, job sem log de review; revisar",
    "notas": "criado pelo escrivao 22:4x"
   },
   {
    "id": "dono-205-pr493",
    "titulo": "PR #493 (ghbarker, ligado a #488)",
    "plataforma": "Android/TCL?",
-   "status": "em_revisao",
+   "status": "em_job",
    "release": "2.0.5",
    "conserto": [
     "agente/205-pr493: 12 commits fora"
    ],
-   "proximo_passo": "PERDIDO: BLOQUEIA j-revpr493 22:26 e j-revg-pr493; sem fix; fix+re-review ou fechar",
+   "proximo_passo": "review BLOQUEIA (j-revg-pr493); fix pendente",
    "notas": "criado pelo escrivao 22:4x"
+  },
+  {
+   "id": "pr-498-limpo",
+   "titulo": "PR #498 limpo (pr/498-limpo)",
+   "plataforma": "?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [
+    "pr/498-limpo: 12 commits fora"
+   ],
+   "proximo_passo": "review OK (j-revpr498-limpo); merge pr/498-limpo",
+   "notas": "criado pelo escrivao 2026-10-15"
+  },
+  {
+   "id": "pr-491-limpo",
+   "titulo": "PR #491 limpo (pr/491-limpo)",
+   "plataforma": "?",
+   "status": "em_job",
+   "release": "2.0.5",
+   "conserto": [
+    "pr/491-limpo: 50 commits fora"
+   ],
+   "proximo_passo": "review r2 BLOQUEIA (j-revpr491-limpo-r2); fix pendente, sem job rodando",
+   "notas": "criado pelo escrivao 2026-10-15"
+  },
+  {
+   "id": "pr-489-fix",
+   "titulo": "PR #489 fix (pr/489-fix)",
+   "plataforma": "?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [
+    "pr/489-fix: 23 commits fora"
+   ],
+   "proximo_passo": "review OK (j-revpr489-fix); merge pr/489-fix",
+   "notas": "criado pelo escrivao 2026-10-15"
+  },
+  {
+   "id": "pr-490-fix",
+   "titulo": "PR #490 fix (pr/490-fix)",
+   "plataforma": "?",
+   "status": "em_job",
+   "release": "2.0.5",
+   "conserto": [
+    "pr/490-fix: 6 commits fora"
+   ],
+   "proximo_passo": "review BLOQUEIA (j-revpr490-fix); fix pendente",
+   "notas": "criado pelo escrivao 2026-10-15"
+  },
+  {
+   "id": "pr-493-fix",
+   "titulo": "PR #493 fix (pr/493-fix)",
+   "plataforma": "?",
+   "status": "em_job",
+   "release": "2.0.5",
+   "conserto": [
+    "pr/493-fix: 9 commits fora"
+   ],
+   "proximo_passo": "review BLOQUEIA (j-revpr493-fix); fix pendente",
+   "notas": "criado pelo escrivao 2026-10-15"
+  },
+  {
+   "id": "dono-205-vidrotodo",
+   "titulo": "Vidro todo (agente/205-vidrotodo)",
+   "plataforma": "?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [
+    "agente/205-vidrotodo: 7 commits fora"
+   ],
+   "proximo_passo": "job done 03:06 sem review; revisar",
+   "notas": "criado pelo escrivao 2026-10-15"
+  },
+  {
+   "id": "dono-205-aspvolta",
+   "titulo": "Aspecto volta (agente/205-aspvolta)",
+   "plataforma": "?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [
+    "agente/205-aspvolta: 1 commit fora"
+   ],
+   "proximo_passo": "job done 03:05 sem review; revisar",
+   "notas": "criado pelo escrivao 2026-10-15"
+  },
+  {
+   "id": "dono-205-estilo2",
+   "titulo": "Estilo 2 (agente/205-estilo2)",
+   "plataforma": "?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [
+    "agente/205-estilo2: 2 commits fora"
+   ],
+   "proximo_passo": "job estilo3 done sem review; revisar",
+   "notas": "criado pelo escrivao 2026-10-15"
   }
  ],
  "fechar_203": [],
