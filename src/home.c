@@ -3048,7 +3048,13 @@ static void sincronizarFileiras(void) {
   if (ajustes_home_layout() == HOME_LAYOUT_DINAMICA) dinAtribuirTipos(destino);
   for(int i=0;i<destino;i++) {
     Fileira *s=&fileiras[i];s->stackN=0;
-    if(s->tipo==FILEIRA_TOP10 && s->base[0] && s->catId[0]) {
+    if(s->tipo==FILEIRA_TOP10 && s->n > 0 && s->base[0] && s->catId[0]) {
+      int c;
+      // #366: a pilha desenha estes indices, nao idxCat+k. Com o filtro os
+      // visiveis deixam de ser contiguos no catalogo.
+      for (c = 0; c < s->n && c < MAX_CARDS; c++)
+        s->itens[c] = fileiraItemIndice(s, c);
+      s->usaItens = 1;
       s->stackN=s->n;s->n=1;s->verTudo=0;
     }
     // A FILEIRA HEROI (#205): um cartao so. A FONTE do titulo, nesta ordem:
