@@ -164,6 +164,17 @@ int   simkl_continuar(CatItem *s, int m)   { (void)s; (void)m; return 0; }
 int   simkl_e_a_seguir(const char *id)     { (void)id; return 0; }
 int   simkl_plantowatch(CatItem *s, int m) { (void)s; (void)m; return 0; }
 int   ajustes_salvos_no_simkl(void)        { return 0; }
+uint64_t perfis_sessao_geracao(void) { return 1; }
+int perfis_sessao_atual(uint64_t s) { return s == 1; }
+int perfis_sessao_travar(uint64_t s) { return s == 1; }
+void perfis_sessao_destravar(void) {}
+int ajustes_ocultar_filmes_vistos(void) { return 0; }
+int trakt_enfeitar_lote_sessao(CatItem *s, int n, uint64_t sessao) {
+  (void)sessao; (void)s; (void)n; return 0;
+}
+int recomenda_social_mesclar_sessao(CatItem *i, int n, int max, uint64_t sessao) {
+  (void)sessao; (void)i; (void)max; return n;
+}
 int   trakt_enfeitar_lote(CatItem *s, int n) { (void)s; (void)n; return 0; }
 int   trakt_lista(const char *q, CatItem *s, int m) { (void)q; (void)s; (void)m; return 0; }
 int   trakt_lista_cresc(const char *q, CatItem **s, int m) { (void)q; (void)s; (void)m; return 0; }
@@ -360,6 +371,26 @@ static void abrir(void) {
 }
 
 int main(void) {
+  // #524: provider mappings and nested IDs must not replace catalog identity.
+  {
+    const char *json =
+      "{\"_provider\":{\"imdb_id\":\"tt1629757\",\"id\":\"tt1629757\"},"
+      "\"id\":\"kitsu:41402\",\"imdb_id\":\"tt9054364\",\"type\":\"series\","
+      "\"name\":\"That Time I Got Reincarnated as a Slime\",\"poster\":\"https://p/anime.jpg\"}";
+    CatItem d;
+    assert(deMeta(json, json + strlen(json), "series", &d));
+    assert(!strcmp(d.imdb, "kitsu:41402"));
+    assert(!strcmp(d.tipo, "series"));
+    json = "{\"name\":\"Legacy movie\",\"poster\":\"https://p/movie.jpg\","
+           "\"imdb_id\":\"tt1629757\"}";
+    assert(deMeta(json, json + strlen(json), "movie", &d));
+    assert(!strcmp(d.imdb, "tt1629757"));
+    json = "{\"name\":\"Movie\",\"poster\":\"https://p/movie.jpg\","
+           "\"id\":\"tt1629757\"}";
+    assert(deMeta(json, json + strlen(json), "movie", &d));
+    assert(!strcmp(d.imdb, "tt1629757"));
+    puts("ok  catalog identity stays at the root; legacy IMDb fallback preserved");
+  }
   // 1) deMeta: o `type` do item vence o "anime" do catalogo; o "type" de
   //    trailers[] (aninhado, e vem ANTES) nao conta.
   { const char *js =
