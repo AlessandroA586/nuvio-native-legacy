@@ -9,6 +9,7 @@
 #include "extras.h"
 #include "gfx.h"
 #include "text.h"
+#include "sinopse.h"
 #include "tex_cache.h"
 #include "layout.h"
 #include "anim.h"
@@ -193,6 +194,15 @@ void posplay_busca_usuario(void) {
   proximopreparo_cancelar();
   preTentou = preVideoTentou = preVideoRenovou = 0;
   aguardaBusca = 1;
+}
+
+void posplay_troca_manual(void) {
+  cancelarPreparo(0);
+  pedT = pedE = 0;
+  pedAutomatico = automaticoEntregue = 0;
+  visivel = 0; fecharEm = 0; foco = 0; dispensado = 1;
+  // Nao chamar proximopreparo_cancelar: consumir/adotar vem antes de fechar
+  // o player. Um pedido de Anterior cancela o alvo diferente no roteador.
 }
 
 // Recuar e pedir para ficar neste episodio. O cartao continua servindo ao OK,
@@ -742,7 +752,7 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
         { TxtLinha l = txt_linha_corta(TXT_ILHA_SUB, est, 243, 242, 239, 140, tw);
           txt_desenhar_alpha(l, tx, ty, a); ty += (float)l.h + 10.0f; } }
       if (px && px->sinopse[0])
-        txt_bloco_corta(TXT_ILHA_SUB, px->sinopse, 243, 242, 239, tx, ty, tw, 28.5f, a * 0.68f, 2);
+        sinopse_bloco_corta(TXT_ILHA_SUB, px->sinopse, 243, 242, 239, tx, ty, tw, 28.5f, a * 0.68f, 2);
       { float by = ilha.y + ilha.h - 28.0f - 60.0f;
         if (aguardaCena && proxT) {   // continuar | proximo episodio, foco no OK
           float b0 = plrui_botao(tx, by, "Continuar assistindo", "pl_play-f", foco == 0 ? 1.0f : 0.0f, a);

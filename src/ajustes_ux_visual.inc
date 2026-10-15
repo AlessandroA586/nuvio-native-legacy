@@ -35,6 +35,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_MENU_AGENDA: return "aj_panel-left";
     case AJ_MENU_PERFIL: return "aj_panel-left";
     case AJ_RAIL_BLUR: return "aj_panel-left";
+    case AJ_MIC_BUSCA: return "aj_mic";
     case AJ_DESCOBRIR: return "aj_panel-left";
     case AJ_PS_FUNDO: return "aj_users";
     case AJ_PS_CONTINUAR: return "aj_users";
@@ -164,6 +165,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_COR_LOGO: return "aj_palette";
     case AJ_VIDRO: return "aj_layers";
     case AJ_FONTE_UI: return "aj_type";
+    case AJ_HERO_SINOPSE: return "aj_file-text";
     case AJ_TAMANHO_UI: return "aj_maximize-2";
     case AJ_TAMANHO_AJUSTES: return "aj_sliders-horizontal";
     case AJ_LAYOUT_AJUSTES: return "aj_layout-list";

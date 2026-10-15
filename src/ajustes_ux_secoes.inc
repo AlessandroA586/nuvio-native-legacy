@@ -165,7 +165,7 @@ static int ajCenaSecao(int op) {
     case AJ_OCULTAR_FILMES_VISTOS:
       return AJC_HOME_FILEIRAS;
     case AJ_RAIL_MODERNA: case AJ_RAIL: case AJ_MENU_EXPLORAR: case AJ_MENU_GUIA: case AJ_MENU_AGENDA:
-    case AJ_MENU_PERFIL: case AJ_RAIL_BLUR: case AJ_DESCOBRIR:
+    case AJ_MENU_PERFIL: case AJ_RAIL_BLUR: case AJ_DESCOBRIR: case AJ_MIC_BUSCA:
       return AJC_HOME_BARRA;
     case AJ_PS_FUNDO: case AJ_PS_CONTINUAR: return AJC_HOME_PERFIL;
     case AJ_DET_VEU: case AJ_DET_DATA_CHEIA: case AJ_DET_BLUR_NAO_VISTOS: return AJC_TIT_APARECE;
@@ -199,7 +199,7 @@ static int ajCenaSecao(int op) {
     case AJ_FONTE_PRAZO: case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON: case AJ_TAM_MAX: case AJ_TAM_MIN: case AJ_SELOS_CORES: case AJ_SELOS_PACOTE: case AJ_SELOS_PACOTE_ADD:
     case AJ_FONTE_ESCOPO: case AJ_FONTE_ADDONS_PERM: case AJ_FONTE_PLUGINS_PERM: case AJ_FONTE_OUTROS:
     case AJ_FONTE_REGEX: case AJ_FONTE_REGEX_PADRAO: case AJ_FONTE_REGEX_MODELO:
-    case AJ_FONTE_ORDEM: case AJ_FONTE_ORDEM_USO:
+    case AJ_FONTE_ORDEM: case AJ_FONTE_ORDEM_USO: case AJ_FONTE_IDIOMA_AUDIO:
     case AJ_SELOS_PACOTE_REM:
       return AJC_REP_FONTE;
     // 2.0.3: HDR e Dolby Vision mora em Imagem e som.
@@ -426,6 +426,7 @@ static void ajcHomeBarra(int A) {
   ajcFoco(AJ_RAIL, 28, 24, rw, 312, 26);
   ajcFoco(AJ_RAIL_MODERNA, 28, 24, rw, 312, 26);
   ajcFoco(AJ_RAIL_BLUR, 28, 24, rw, 312, 26);
+  ajcFoco(AJ_MIC_BUSCA, 36, 44 + 1 * 40 - 6, rw - 16, 32, 16);   // a linha Buscar
 }
 // Escolha de perfil: o fundo escolhido e os avatares de verdade.
 static void ajcHomePerfil(int A) {

@@ -4,8 +4,8 @@
 
 // O QUE O TRAKT ACEITA NUM PAUSE (respostas 422 dos registros 10162-10172):
 // "Progress should be at least 1.0% to pause" e, a partir de 80%, "Use stop to
-// scrobble". O stop a partir de 80% marcaria como assistido; este cliente so
-// marca a partir de 90% (o player decide), entao entre 80 e 90 nao manda nada.
+// scrobble". A partir de 80% vai o stop de conclusao (SCR_STOP_PCT), como no
+// NuvioTV oficial.
 static int pausaAceita(double pct) { return pct >= 1.0 && pct < 80.0; }
 
 int scrobble_decidir(ScrobbleEstado *s, int evento, const char *id, double pct) {
@@ -26,10 +26,15 @@ int scrobble_decidir(ScrobbleEstado *s, int evento, const char *id, double pct) 
   if (evento == SCR_EV_SAIU) {
     snprintf(s->id, sizeof s->id, "%s", id);
     s->ativo = 0;
-    if (pct >= 90.0) return SCR_STOP;
+    if (pct >= SCR_STOP_PCT) return SCR_STOP;
     return pausaAceita(pct) ? SCR_PAUSE : SCR_NADA;
   }
   return SCR_NADA;
+}
+
+int scrobble_concluiu(double posSeg, double durSeg, int fimDeLegacy) {
+  if (fimDeLegacy) return 1;
+  return durSeg > 1.0 && posSeg >= durSeg * SCR_VISTO_PCT / 100.0;
 }
 
 void scrobble_corpo(char *dst, size_t n, const char *id, double pct) {
