@@ -1,4 +1,5 @@
 #include "fontefiltro.h"
+#include "linguas.h"
 #include <ctype.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -415,6 +416,23 @@ static void grupoNome(const char *s, char dst[80]) {
   memcpy(dst,a,n+1);
 }
 
+static uint64_t linguasDeclaradas(const char *s) {
+  uint64_t v = 0;
+  for (const char *p = s; p && *p;) {
+    const char *fim = p + strcspn(p, ",|;");
+    char item[512], codigo[32];
+    size_t n = (size_t)(fim - p);
+    if (n >= sizeof item) n = sizeof item - 1;
+    memcpy(item, p, n); item[n] = 0;
+    ling_normalizar(item, codigo, sizeof codigo);
+    uint64_t m = fontefiltro_valores(FONTEFILTRO_LINGUAS, item) |
+                 fontefiltro_valores(FONTEFILTRO_LINGUAS, codigo);
+    v |= m ? m : fontefiltro_desconhecido(FONTEFILTRO_LINGUAS);
+    p = *fim ? fim + 1 : fim;
+  }
+  return v;
+}
+
 void fontefiltro_classificar(const FonteFiltroEntrada *e, FonteFiltroDados *d) {
   char nome[4096], texto[8192], busca[12290];
   if (!d) return;
@@ -424,7 +442,8 @@ void fontefiltro_classificar(const FonteFiltroEntrada *e, FonteFiltroDados *d) {
   snprintf(busca,sizeof busca,"%s\n%s",nome,texto);
   const char *campos[FONTEFILTRO_N] = {e->resolucao,e->qualidade,e->visual,e->audio,e->canais,e->encode,e->linguas};
   for (int c = 0; c < FONTEFILTRO_N; c++) {
-    d->valores[c] = fontefiltro_valores(c,campos[c]);
+    d->valores[c] = c == FONTEFILTRO_LINGUAS ? linguasDeclaradas(campos[c]) :
+                    fontefiltro_valores(c,campos[c]);
     if (c == FONTEFILTRO_VISUAL || c == FONTEFILTRO_AUDIO || c == FONTEFILTRO_CANAIS) {
       d->valores[c] |= fontefiltro_valores(c,busca);
       /* Recalcula exclusivos/combinado sobre o conjunto anunciado. */
@@ -463,6 +482,7 @@ int fontefiltro_permite(const FonteFiltroConfig *cfg, const FonteFiltroDados *d)
   if (!cfg || !d) return 1;
   for (int c = 0; c < FONTEFILTRO_N; c++) {
     uint64_t v = d->valores[c] & (fontefiltro_desconhecido(c)-1);
+    if (c == FONTEFILTRO_LINGUAS) v |= d->valores[c] & fontefiltro_desconhecido(c);
     if (!v) v = fontefiltro_desconhecido(c);
     if (c == FONTEFILTRO_LINGUAS) {
       if ((v & cfg->excluir[c]) == v) return 0;

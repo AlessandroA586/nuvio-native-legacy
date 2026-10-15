@@ -2694,14 +2694,18 @@ static const char *iconeBotao(int b) {
 static char provedores[13][96];
 static int nProvedores;
 
-static int temAudioPt(const Stream *s);
+static int temAudioPreferido(const Stream *s);
+static const char *idiomaFiltroAudio(void) {
+  const char *pref = ling_audio();
+  return pref[0] ? pref : idioma_iso(ajustes_idioma());
+}
 // Os chips (MP4, cache, dublado) valem para a lista E para a contagem de cada
 // aba; o addon so para a lista.
 static int passaChips(int i) {
   if (!canalFolha && !stream_filtro_permite(&lista[i])) return 0;
   if (soMp4 && !lista[i].mp4) return 0;
   if (soCache && lista[i].foraCache) return 0;
-  if (soDub && !temAudioPt(&lista[i])) return 0;
+  if (soDub && !temAudioPreferido(&lista[i])) return 0;
   return 1;
 }
 static int passaFiltro(int i) {
@@ -3117,7 +3121,7 @@ static float desenharFaixas(const Stream *s, float x, float y, float w, int sel,
   }
   return altura;
 }
-static int audioDeclaradoPt(const Stream *s) {
+static int audioDeclarado(const Stream *s, const char *pref) {
   const char *p = s->audioIdiomas;
   const char *fim = p + strnlen(p, sizeof s->audioIdiomas);
   // A mesma lista que aparece em "Audio:" governa o chip. Legendas nunca
@@ -3131,7 +3135,7 @@ static int audioDeclaradoPt(const Stream *s) {
     memcpy(raw, p, len); raw[len] = 0;
     const char *cod = faixaIdiomaDoNome(raw);
     if (!cod && faixaIdiomaEtiqueta(raw, codigo, sizeof codigo)) cod = codigo;
-    if (cod && ling_casa(cod, "pt")) return 1;
+    if (cod && ling_casa(cod, pref)) return 1;
     p = f ? f + 1 : fim;
   }
   return 0;
@@ -3140,7 +3144,7 @@ static int audioDeclaradoPt(const Stream *s) {
 // fileira. Os rotulos antigos continuam onde o addon nao informa audio;
 // quando informa, nenhum deles contradiz a lista declarada.
 static const char *idiomaDa(const Stream *s) {
-  int podePt = !s->audioIdiomas[0] || audioDeclaradoPt(s);
+  int podePt = !s->audioIdiomas[0] || audioDeclarado(s, "pt");
   if (podePt && (temNoTexto(s, "dublado") || temNoTexto(s, "dub"))) return "Dublado";
   if (podePt && temNoTexto(s, "dual")) return "Dual áudio";
   // Uma secao de legendas em portugues nao anuncia audio em portugues.
@@ -3150,8 +3154,11 @@ static const char *idiomaDa(const Stream *s) {
   if (temNoTexto(s, "legendado") || temNoTexto(s, "leg")) return "Legendado";
   return NULL;
 }
-static int temAudioPt(const Stream *s) {
-  if (s->audioIdiomas[0]) return audioDeclaradoPt(s);
+static int temAudioPreferido(const Stream *s) {
+  const char *pref = idiomaFiltroAudio();
+  if (s->audioIdiomas[0]) return audioDeclarado(s, pref);
+  // Legacy Portuguese release tags do not identify dubbing in other languages.
+  if (!ling_casa("pt", pref)) return 0;
   const char *id = idiomaDa(s);
   return id && strcmp(id, "Legendado");
 }
@@ -4232,6 +4239,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
   // filtro e so um icone), e uma linha propria empurrava as abas para baixo
   // a cada vez que o foco subia.
   const char *ajuda=NULL;
+  char ajudaAudio[192];
   if (grupo==-1) {
     if(botaoDe(foco)==BT_SEM_HDR)
       ajuda="Imagem preta com o áudio tocando? Recarrega esta fonte sem HDR nem Dolby Vision.";
@@ -4241,10 +4249,11 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       ajuda=soCache
         ? "Mostrando só fontes que o debrid já tem: tocam na hora. OK tira o filtro."
         : "Filtra para fontes que o debrid já tem (tocam na hora, sem baixar antes). OK liga o filtro.";
-    else if(botaoDe(foco)==BT_DUB)
-      ajuda=soDub
-        ? "Mostrando só fontes com áudio em português. OK tira o filtro."
-        : "Filtra para fontes dubladas ou com áudio em português. OK liga o filtro.";
+    else if(botaoDe(foco)==BT_DUB) {
+      snprintf(ajudaAudio, sizeof ajudaAudio, "%s: %s", i18n("Idioma do áudio"),
+               i18n(ling_nome(idiomaFiltroAudio())));
+      ajuda=ajudaAudio;
+    }
     else if(botaoDe(foco)==BT_SO_MP4)
       ajuda=soMp4
         ? "Mostrando só containers MP4 (útil para achar Dolby Vision em MP4). OK tira o filtro."

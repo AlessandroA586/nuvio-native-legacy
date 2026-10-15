@@ -42,7 +42,7 @@ int fontefiltro_config_validar(const FonteFiltroConfig *cfg);
 /* Valida e normaliza CSV, preservando saida original em caso de erro. */
 int fontefiltro_grupos_normalizar(const char *csv, char *saida, unsigned n);
 void fontefiltro_classificar(const FonteFiltroEntrada *entrada, FonteFiltroDados *saida);
-/* Linguas: exclui apenas se TODAS as linguas conhecidas forem excluidas.
+/* Linguas: exclui apenas se TODAS as linguas declaradas forem excluidas.
    Demais tags: uma correspondencia basta. Desconhecido e opcao explicita. */
 int fontefiltro_permite(const FonteFiltroConfig *cfg, const FonteFiltroDados *dados);
 
