@@ -41,6 +41,21 @@ int main(void) {
   assert(t == 0 && e == 0);
   puts("ok: title-level sheet does not inherit a later cwTocar stamp");
 
+  // Cancel an episode sheet, then resume without writing a new latch.
+  app_teste_gravar_folha(1, 3, 1);
+  stream_folha_abrir();
+  SDL_Event back = {0};
+  back.type = SDL_KEYDOWN;
+  back.key.keysym.sym = SDLK_ESCAPE;
+  app_evento(&back);
+  assert(!stream_folha_aberta());
+  atualizarFolha(0, SDL_GetTicks());
+  stream_folha_abrir();
+  t = 1; e = 2;
+  assert(!app_teste_consumir_folha(&t, &e));
+  assert(t == 1 && e == 2);
+  puts("ok: canceled sheet cannot override a later resume target");
+
   puts("detail_ep_fonte_trava: sheet T/E is not the Continue Watching slot");
   return 0;
 }
