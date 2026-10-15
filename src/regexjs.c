@@ -562,7 +562,7 @@ static int primeiros(const Pr *pr, const Classe *cls, int flags, int n, unsigned
       if ((flags & REGEXJS_I) && isalpha(o->a)) { POE(c, tolower(o->a)); POE(c, toupper(o->a)); }
       return 0;
     case N_ANY:
-      for (b = 0; b < 256; b++) if (b != '\n' && b != '\r') POE(c, b);
+      for (b = 0; b < 256; b++) if ((flags & REGEXJS_S) || (b != '\n' && b != '\r')) POE(c, b);
       return 0;
     case N_CLASSE:
       for (b = 0; b < 128; b++) if (noClasse(&cls[o->classe], (unsigned)b, flags & REGEXJS_I)) POE(c, b);
