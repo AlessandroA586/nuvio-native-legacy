@@ -189,7 +189,7 @@ static const Item TELA[] = {
 #endif
       OPC(AJ_LOGO_TRAILER),
     MAIS(),
-    ROT("Cartaz em foco"), OPC(AJ_GRAD_CLASSICO),
+    ROT("Cartaz em foco"), OPC(AJ_GRAD_CLASSICO), OPC(AJ_MURAL_TITULOS),
     ROT("Forma"),
       OPC(AJ_PROF_BRILHO),
     ROT("De onde vem a arte"),
