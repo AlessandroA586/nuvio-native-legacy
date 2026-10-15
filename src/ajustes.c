@@ -556,10 +556,10 @@ typedef enum {
   // #366: discovery rows only, per profile on this device. Append-only.
   AJ_OCULTAR_FILMES_VISTOS,
   AJ_PROVEDORES_ESCOPO, // local, append-only; 0 = shared, 1 = separate for this profile
-  AJ_HERO_SINOPSE, // #477: shared Normal/Grande setting, local
 #ifdef NV_ANDROID
   AJ_BAIXAR_REGISTRO, // acao local; no fim para preservar os IDs existentes
 #endif
+  AJ_HERO_SINOPSE, // #477: shared Normal/Grande setting, local
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -1438,11 +1438,11 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Ocultar filmes assistidos", V_LIGA, 2), // por perfil, local: hideWatchedMoviesLocal
 
   ESC("Configuração dos provedores", V_PROVEDORES_ESCOPO, 2),
-
-  ESC("Tamanho da sinopse", V_HERO_SINOPSE, 2),
 #ifdef NV_ANDROID
   ACAO("Baixar registro"),
 #endif
+
+  ESC("Tamanho da sinopse", V_HERO_SINOPSE, 2),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1690,11 +1690,11 @@ static const char *CHAVE[] = {
   "hideWatchedMoviesLocal",
 
   "-provedoresEscopo",
-
-  "heroSynopsisSizeLocal",
 #ifdef NV_ANDROID
   "-baixarRegistro",
 #endif
+
+  "heroSynopsisSizeLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
