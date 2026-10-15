@@ -211,25 +211,33 @@ static int usbServe(const char *candidato, char *raiz, unsigned nr, int criar) {
 }
 
 // Com usbTrava presa.
-static int usbEscanearDir(const char *base, char *raiz, unsigned nr, int fundo, int criar) {
+static int usbEscanearDirL(const char *base, char *raiz, unsigned nr, int fundo, int criar, LimTrab *lim) {
   DIR *d;
   struct dirent *e;
   char f[700];
   struct stat st;
-  if (!base || !base[0] || fundo > 3) return 0;
+  if (!base || !base[0] || lim->estourou) return 0;
   if (usbServe(base, raiz, nr, criar)) return 1;
+  if (fundo > 3) return 0;
   d = opendir(base);
   if (!d) return 0;
-  while ((e = readdir(d))) {
+  while (!lim->estourou && (e = readdir(d))) {
+    if (++lim->n > lim->max || agora() > lim->ate) { lim->estourou = 1; break; }
     if (!strcmp(e->d_name, "p2p") || e->d_name[0] == '.') continue;
     if (snprintf(f, sizeof f, "%s/%s", base, e->d_name) >= (int)sizeof f) continue;
     // Links nao sao ponto de montagem: um link dentro de /tmp/usb poderia
     // apontar para o disco interno e furar a rejeicao por caminho acima.
     if (lstat(f, &st) != 0 || S_ISLNK(st.st_mode)) continue;
-    if (usbServe(f, raiz, nr, criar) || usbEscanearDir(f, raiz, nr, fundo + 1, criar)) { closedir(d); return 1; }
+    if (S_ISDIR(st.st_mode) && usbEscanearDirL(f, raiz, nr, fundo + 1, criar, lim)) { closedir(d); return 1; }
   }
   closedir(d);
   return 0;
+}
+
+static int usbEscanearDir(const char *base, char *raiz, unsigned nr, int fundo, int criar) {
+  // Bound synchronous discovery per mount container, including rejected volumes.
+  LimTrab lim = { .max = 256, .ate = agora() + 0.05 };
+  return usbEscanearDirL(base, raiz, nr, fundo, criar, &lim);
 }
 
 // Com usbTrava presa. Com usbExtra (teste) o scan olha SO ele: as bases de

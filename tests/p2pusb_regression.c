@@ -12,10 +12,17 @@ static int mountStat(const char *path, struct stat *st) {
       (!resolved[n] || resolved[n] == '/')) st->st_dev++;
   return rc;
 }
+static unsigned scanEntries;
+static int scanLstat(const char *path, struct stat *st) {
+  scanEntries++;
+  return lstat(path, st);
+}
 // Simulate a mount boundary without mounting a disk or requiring privileges.
+#define lstat(path, st) scanLstat(path, st)
 #define stat(path, st) mountStat(path, st)
 #include "../src/p2pmotor.c"
 #undef stat
+#undef lstat
 
 int main(int argc, char **argv) {
   char base[780], cache[820], det[64];
@@ -29,7 +36,22 @@ int main(int argc, char **argv) {
   p2pmotor_teste_injetar(&OPS, NULL, NULL, NULL, 0);
   p2pmotor_teste_usb_base(base);
   p2pmotor_definir_usb(1);
-  if (!strcmp(argv[2], "container")) {
+  if (!strcmp(argv[2], "bounded-scan")) {
+    // A rejected volume's contents must not monopolize synchronous discovery.
+    assert(mkdir(mounted, 0755) == 0);
+    assert(mkdir(cache, 0755) == 0); // Unowned p2p directory rejects allocation.
+    for (unsigned i = 0; i < 400; i++) {
+      char path[900];
+      snprintf(path, sizeof path, "%s/item-%u", mounted, i);
+      FILE *fp = fopen(path, "w");
+      assert(fp);
+      assert(fclose(fp) == 0);
+    }
+    usbExtra[0] = 0;
+    scanEntries = 0;
+    assert(!usbEscanearDir(base, cache, sizeof cache, 0, 1));
+    assert(scanEntries <= 256);
+  } else if (!strcmp(argv[2], "container")) {
     // A writable container is not a volume, even when empty.
     usbExtra[0] = 0;   // Exercise production mount checks, not fixture injection.
     assert(!usbEscanearDir(base, cache, sizeof cache, 0, 0));
