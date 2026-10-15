@@ -9,10 +9,13 @@ cc tests/legenda_dobrada.c -Isrc "${sdl_flags[@]}" \
   -std=gnu11 -O1 -g -ffunction-sections -fdata-sections "$gc" \
   -Wall -Wextra -Wno-unused-function -o "$work/test"
 "$work/test"
-# The ownership check gates only the primary, leaving the secondary independent.
-python3 - <<'PY'
-from pathlib import Path
-s = Path('src/player.c').read_text()
-body = s.split('static void desenharLegendaPrincipal(float *topoPilha){', 1)[1]
-assert body.lstrip().startswith('if (!faixas_legenda_overlay()) return;')
-PY
+sources=()
+for source in src/*.c src/dts/*.c; do
+  case "$source" in src/main.c|src/player.c) continue;; esac
+  sources+=("$source")
+done
+cc "${sources[@]}" tests/legenda_dobrada_render.c -Isrc -o "$work/render" \
+  -O1 -g -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
+  -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL \
+  -Wno-deprecated-declarations -Wno-macro-redefined
+"$work/render"
