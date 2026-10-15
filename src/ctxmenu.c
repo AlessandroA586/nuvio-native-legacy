@@ -1422,11 +1422,12 @@ void ctx_menu_desenhar(GfxRect m, const char *nome, const char *meta, float meta
 // a Home em miniatura de proposito — a pergunta da pessoa e "como fica la".
 #define EST_W       1680.0f
 #define EST_LISTA_W  500.0f
-#define EST_LINHA     60.0f
-#define EST_GAP       10.0f
+#define EST_LINHA     CTX_LINHA
+#define EST_GAP       CTX_GAP
 #define EST_COL_GAP   48.0f
+#define EST_CAB       94.0f   // kicker 18 + 8 + titulo 44 + 24, o da confirmacao
 #define EST_PALCO_H  520.0f   // altura minima do palco da previa
-#define EST_PALCO_Y  140.0f   // do topo da coluna ao palco: nome + frase
+#define EST_PALCO_Y  120.0f   // do topo da coluna ao palco: nome + frase
 
 // O SEGMENTADO DE TAMANHO, na ponta direita da pilula da linha `i`: uma letra
 // por tamanho (a primeira da palavra traduzida — P M G, S M L), o escolhido
@@ -1614,12 +1615,12 @@ static void desenhaEstilosTelefone(float a) {
     int jt = estTam[estFoco] >= 0 && estTam[estFoco] < estLin[estFoco].n ? estTam[estFoco] : 0;
     int salvo = estTipo(estFoco) == atual;
     float bw = salvo ? badge_largura("Atual") + 18.0f : 0;
-    TxtLinha nome = txt_linha_corta(TXT_TITULO3, estLin[estFoco].nomes[jt], 245, 248, 255, 255, g.previa.w - bw);
+    TxtLinha nome = txt_linha_corta(TXT_ILHA_NOME, estLin[estFoco].nomes[jt], 243, 242, 239, 255, g.previa.w - bw);
     txt_desenhar_alpha(nome, g.previa.x, g.previa.y, a);
     if (salvo) badge_desenhar(g.previa.x + g.previa.w - bw + 18,
                               g.previa.y + (nome.h - BADGE_H) * .5f, "Atual", BADGE_REALCE, a);
-    txt_bloco_corta(TXT_CAPTION2, i18n(fil_estilo_ajuda(filChave, estTipo(estFoco))),
-                    170, 174, 184, g.previa.x, g.previa.y + nome.h + 8, g.previa.w, 30, a * .92f, 2);
+    txt_bloco_corta(TXT_ILHA_TEXTO, i18n(fil_estilo_ajuda(filChave, estTipo(estFoco))),
+                    243, 242, 239, g.previa.x, g.previa.y + nome.h + 8, g.previa.w, 30, .62f * a, 2);
   }
   GfxRect palco = {g.previa.x, g.previa.y + EST_PALCO_Y, g.previa.w, g.previa.h - EST_PALCO_Y};
   gfx_cor(palco, 26.0f / palco.h, NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, .96f * a);
@@ -1652,10 +1653,18 @@ static void desenhaEstilos(float a) {
 #ifdef NV_TOUCH_UI
   if (telefoneui_ativo()) { desenhaEstilosTelefone(a); return; }
 #endif
-  float lista = (float)(nEstilos + (ordemLinha ? 1 : 0)) * (EST_LINHA + EST_GAP) - EST_GAP;
-  float corpo = lista > EST_PALCO_H + EST_PALCO_Y ? lista : EST_PALCO_H + EST_PALCO_Y;
-  float alt = CTX_PAD * 2.0f + 116.0f + corpo + CTX_RODAPE;
+  // A ilha cabe na tela (CTX_BORDA de cada lado): 13 formas mais a Ordem
+  // passavam de 1080 e cortavam o cabecalho e o rodape. A lista que nao cabe
+  // ROLA, com a linha em foco no meio, recortada na propria coluna.
+  float passo = EST_LINHA + EST_GAP;
+  float lista = (float)(nEstilos + (ordemLinha ? 1 : 0)) * passo - EST_GAP;
+  float listaMax = NV_TELA_H - 2.0f * (CTX_BORDA + CTX_PAD) - EST_CAB - CTX_RODAPE;
+  // So linhas inteiras: a lista corta entre duas linhas, nunca no meio de um rotulo.
+  float listaVis = lista < listaMax ? lista : floorf((listaMax + EST_GAP) / passo) * passo - EST_GAP;
+  float corpo = listaVis > EST_PALCO_H + EST_PALCO_Y ? listaVis : EST_PALCO_H + EST_PALCO_Y;
+  float alt = CTX_PAD * 2.0f + EST_CAB + corpo + CTX_RODAPE;
   float x = (NV_TELA_W - EST_W) * 0.5f, y = (NV_TELA_H - alt) * 0.5f;
+  float rol = (float)estFoco * passo + EST_LINHA * 0.5f - listaVis * 0.5f;
   float topo, dx, dw;
   int i, atual = fil_tipo(filChave);
   float ar_, ag_, ab_;
@@ -1672,15 +1681,20 @@ static void desenhaEstilos(float a) {
   // CABECALHO DE MODAL DA ILHA (o da confirmacao do mockup "ilha" tela 7):
   // kicker em caixa alta espacada a 45 % e o nome da fileira em negrito.
   kickerCtx("Estilo da fileira", x + CTX_PAD, y + CTX_PAD, a);
-  { TxtLinha t = txt_linha_corta(TXT_ROW_TITULO, filTitulo, 243, 242, 239, 255,
+  { TxtLinha t = txt_linha_corta(TXT_ILHA_PERGUNTA, filTitulo, 243, 242, 239, 255,
                                  EST_W - CTX_PAD * 2.0f);
     txt_desenhar_alpha(t, x + CTX_PAD, y + CTX_PAD + 26.0f, a); }
-  topo = y + CTX_PAD + 116.0f;
+  topo = y + CTX_PAD + EST_CAB;
+  rol = roundf(rol / passo) * passo;
+  if (rol > lista - listaVis) rol = lista - listaVis;
+  if (rol < 0.0f) rol = 0.0f;
 
   // A LISTA. O visto marca a forma que vale agora; o foco e so a previa.
+  gfx_recorte(x + CTX_PAD, topo, EST_LISTA_W, listaVis);
   for (i = 0; i < nEstilos; i++) {
-    GfxRect r = { x + CTX_PAD, topo + (float)i * (EST_LINHA + EST_GAP), EST_LISTA_W, EST_LINHA };
+    GfxRect r = { x + CTX_PAD, topo + (float)i * passo - rol, EST_LISTA_W, EST_LINHA };
     int j, temAtual = 0;
+    if (r.y + r.h < topo || r.y > topo + listaVis) continue;
     for (j = 0; j < estLin[i].n; j++) if (estLin[i].tipos[j] == atual) temAtual = 1;
     if (aberto && a > 0.5f)
       ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroEstFoco, ponteiroEstOk, i, 0);
@@ -1690,16 +1704,16 @@ static void desenhaEstilos(float a) {
   // A LINHA DA ORDEM dos itens da colecao: o mesmo desenho das formas, com o
   // valor que esquerda/direita escolhem. O visto marca a ordem que vale agora.
   if (ordemLinha) {
-    GfxRect r = { x + CTX_PAD, topo + (float)nEstilos * (EST_LINHA + EST_GAP),
-                  EST_LISTA_W, EST_LINHA };
+    GfxRect r = { x + CTX_PAD, topo + (float)nEstilos * passo - rol, EST_LISTA_W, EST_LINHA };
     char rot[96];
     snprintf(rot, sizeof rot, i18n("Ordem: %s"), i18n(fil_ordem_rotulo(ordemSel)));
-    if (aberto && a > 0.5f)
+    if (aberto && a > 0.5f && r.y + r.h <= topo + listaVis + 0.5f)
       // O clique na linha da ordem CICLA (mouse/Magic Remote nao tem
       // esquerda/direita nela); aplicar e o clique numa forma ou Fechar.
       ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroEstFoco, ponteiroOrdemAtivar, nEstilos, 0);
     linhaCtx(r, rot, fil_ordem(filChave) == ordemSel ? "check" : "", ordemAnim, a);
   }
+  gfx_sem_recorte();
 
   // A DIREITA: o nome da forma em foco, a frase dela e o palco.
   dx = x + CTX_PAD + EST_LISTA_W + EST_COL_GAP;
@@ -1707,14 +1721,18 @@ static void desenhaEstilos(float a) {
   if (estFoco >= 0 && estFoco < nEstilos) {
     float ty = topo;
     int jt = estTam[estFoco] >= 0 && estTam[estFoco] < estLin[estFoco].n ? estTam[estFoco] : 0;
-    TxtLinha nome = txt_linha(TXT_TITULO3, estLin[estFoco].nomes[jt], 245, 248, 255, 255);
+    TxtLinha nome = txt_linha(TXT_ILHA_NOME, estLin[estFoco].nomes[jt], 243, 242, 239, 255);
     txt_desenhar_alpha(nome, dx, ty, a);
     if (estTipo(estFoco) == atual)
       badge_desenhar(dx + nome.w + 18.0f, ty + (nome.h - BADGE_H) * 0.5f, "Atual",
                      BADGE_REALCE, a);
     ty += nome.h + 8.0f;
-    txt_bloco_corta(TXT_CAPTION2, i18n(fil_estilo_ajuda(filChave, estTipo(estFoco))),
-                    170, 174, 184, dx, ty, dw, 30.0f, a * 0.92f, 2);
+    txt_bloco_corta(TXT_ILHA_TEXTO, i18n(fil_estilo_ajuda(filChave, estTipo(estFoco))),
+                    243, 242, 239, dx, ty, dw, 30.0f, .62f * a, 2);
+  } else if (ordemLinha && estFoco == nEstilos) {
+    char rot[96];
+    snprintf(rot, sizeof rot, i18n("Ordem: %s"), i18n(fil_ordem_rotulo(ordemSel)));
+    txt_desenhar_alpha(txt_linha(TXT_ILHA_NOME, rot, 243, 242, 239, 255), dx, topo, a);
   }
   // O palco comeca abaixo das duas linhas da frase e vai ate a base da lista.
   { GfxRect palco = { dx, topo + EST_PALCO_Y, dw, corpo - EST_PALCO_Y };

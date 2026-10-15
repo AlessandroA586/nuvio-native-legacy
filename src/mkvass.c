@@ -4,6 +4,8 @@
 #include "legenda.h"
 #include "assrender.h"
 #include "dados.h"
+#include "imgsub.h"
+#include "pgs.h"
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -441,6 +443,16 @@ typedef struct {
   // #421: faixa de TEXTO SIMPLES (S_TEXT/UTF8, S_TEXT/WEBVTT). O corpo e SubRip: o overlay desenha com o estilo do
   // app, igual a legenda externa (que funciona na mesma TV).
   int      texto;
+  // Legenda de IMAGEM (S_HDMV/PGS): `imagem` usa o corpo vazio so para o overlay
+  // reconhecer o dono (`texto` tambem fica ligado e desvia sidecar e despejo).
+  // Os blocos esperam em `pend` (bytes crus, pequenos) ate a adocao e viram
+  // bitmaps no imgsub em entregarImagens. `durCerta`: o bloco trazia
+  // BlockDuration; sem ele o quadro fica na tela ate o proximo.
+  int      imagem, durCerta;
+  Pgs     *pgs;
+  struct PendImg { double ini, fim; unsigned char *b; long n; } *pend;
+  int      nPend, capPend;
+  size_t   bytesPend;
   int      refInvalida; // forced, letreiro, comentario ou faixa codificada
   size_t   corpoTam, corpoCap;
   ClCache  cl[CL_CACHE];
@@ -527,6 +539,9 @@ static volatile int aceitaTexto; // Media3 ja entrega texto ao overlay.
 static volatile int aceitaTexto = 1;
 #endif
 void mkvass_aceitar_texto(int sim) { aceitaTexto = sim ? 1 : 0; }
+// Legenda de imagem (PGS) decodificada aqui e desenhada pelo app: so o .tpk liga.
+static volatile int aceitaImagem;
+void mkvass_aceitar_imagem(int sim) { aceitaImagem = sim ? 1 : 0; }
 
 static int minhaVez(const Fio *f) {
   int ok;
@@ -1121,6 +1136,35 @@ static void tempoAss(double s, char *dst, size_t tam) {
   snprintf(dst, tam, "%d:%02d:%02d.%02ld", h, m, sec, cs);
 }
 
+#define MKVASS_PEND_MAX 512
+#define MKVASS_PEND_BYTES (16u << 20)
+
+// PGS: guarda o bloco cru (RLE, dezenas de KB no maximo) para decodificar na
+// entrega, na ordem de chegada. Sem BlockDuration o fim fica -1.
+static int anexarImagem(Fio *f, const unsigned char *dados, long n, double ini, double fim) {
+  struct PendImg *p;
+  if (n <= 0 || f->nPend >= MKVASS_PEND_MAX || f->bytesPend + (size_t)n > MKVASS_PEND_BYTES) return 0;
+  if (f->nPend == f->capPend) {
+    int c = f->capPend ? f->capPend * 2 : 32;
+    struct PendImg *g = realloc(f->pend, (size_t)c * sizeof *g);
+    if (!g) return 0;
+    f->pend = g; f->capPend = c;
+  }
+  p = &f->pend[f->nPend];
+  p->b = malloc((size_t)n);
+  if (!p->b) return 0;
+  memcpy(p->b, dados, (size_t)n);
+  p->n = n; p->ini = ini; p->fim = f->durCerta ? fim : -1.0;
+  f->nPend++; f->bytesPend += (size_t)n;
+  return 1;
+}
+
+static void soltarPendentes(Fio *f) {
+  int i;
+  for (i = 0; i < f->nPend; i++) free(f->pend[i].b);
+  f->nPend = 0; f->bytesPend = 0;
+}
+
 // Bloco "ReadOrder,Layer,Style,Name,MarginL,MarginR,MarginV,Effect,Text" ->
 // "Dialogue: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text".
 static int anexarEvento(Fio *f, const unsigned char *dados, long n,
@@ -1130,6 +1174,7 @@ static int anexarEvento(Fio *f, const unsigned char *dados, long n,
   const char *p = (const char *)dados;
   long i = 0, layerIni, layerFim, k;
   size_t w, capacidade;
+  if (f->imagem) return anexarImagem(f, dados, n, ini, fim);
   if (f->texto) return anexarTexto(f, dados, n, ini, fim);
   // Pula ReadOrder; guarda Layer.
   while (i < n && p[i] != ',') i++;
@@ -1480,7 +1525,7 @@ static int lerTracks(Fio *f, const unsigned char *p, long n) {
   if (f->faixa == 0 && escolherNoCabecalho(f, p, n) < 0) return -1;
   while (proximo(&it, &id, &d, &t)) {
     Iter j; unsigned long fid; const unsigned char *fd; long ft;
-    int numero = 0, tipo = 0, ehAss = 0, ehTexto = 0, refInvalida = 0; const unsigned char *priv = NULL; long privN = 0;
+    int numero = 0, tipo = 0, ehAss = 0, ehTexto = 0, ehPgs = 0, refInvalida = 0; const unsigned char *priv = NULL; long privN = 0;
     if (id != ID_TRACKENTRY) continue;
     j.p = d; j.n = t; j.o = 0;
     while (proximo(&j, &fid, &fd, &ft)) {
@@ -1491,6 +1536,7 @@ static int lerTracks(Fio *f, const unsigned char *p, long n) {
                              !strncmp((const char *)fd, "S_TEXT/SSA", 10));
         ehTexto = (ft == 11 && !memcmp(fd, "S_TEXT/UTF8", 11)) ||
                   (ft == 13 && !memcmp(fd, "S_TEXT/WEBVTT", 13));
+        ehPgs = ft == 10 && !memcmp(fd, "S_HDMV/PGS", 10);
       }
       else if (fid == ID_CODECPRIV) { priv = fd; privN = ft; }
       else if (fid == 0x55AA && lerUint(fd, ft)) refInvalida = 1;
@@ -1516,6 +1562,17 @@ static int lerTracks(Fio *f, const unsigned char *p, long n) {
       if (!corpoAnexar(f, "", 0)) return -1;
       if (f->prebusca) prebuscaTextoSoltar(f);
       printf("[mkvass] faixa %d e texto simples (SubRip pelo overlay do app)\n", f->faixa);
+      fflush(stdout);
+      return 1;
+    }
+    if (ehPgs && aceitaImagem) {
+      f->pgs = pgs_novo();
+      if (!f->pgs) return -1;
+      f->texto = f->imagem = 1;
+      f->corpoTam = 0;
+      if (!corpoAnexar(f, "", 0)) return -1;
+      if (f->prebusca) prebuscaTextoSoltar(f);
+      printf("[mkvass] faixa %d e PGS (bitmap decodificado pelo app)\n", f->faixa);
       fflush(stdout);
       return 1;
     }
@@ -2148,6 +2205,7 @@ static long lerBloco(Fio *f, const unsigned char *p, long n, const ClCache *cl,
                     : segundosDe(f, cueTempo);
     fim = ini + (temDur ? segundosDe(f, dur) : MKVASS_DUR_PADRAO);
     if (fim <= ini) fim = ini + 0.5;
+    f->durCerta = temDur;
     {
       const unsigned char *frames = bl + vt + 3;
       long framesN = blN - vt - 3, cab, *tams = NULL, off = 0;
@@ -2989,6 +3047,33 @@ static void guardarReferencia(Fio *f) {
 
 static int contarDesistidos(const Fio *f);
 
+// Decodifica os blocos pendentes para o armazem do desenho. O corpo vazio so
+// confere (e toma) o dono do overlay: se a legenda trocou de dono, o lote some.
+static void entregarImagens(Fio *f) {
+  int i, n;
+  PgsQuadro *dec;
+  if (!f->nPend) return;
+  // RLE + paleta de um PGS 1080p passa de um quadro. O passo do player
+  // tambem toma S.trava; a decodificacao fica fora dela. entregarCorpoSeAtual
+  // ja toma a trava so para conferir o dono.
+  n = (f->entregas >= 0 && entregarCorpoSeAtual(f, "")) ? f->nPend : 0;
+  dec = n ? calloc((size_t)n, sizeof *dec) : NULL;
+  if (n && !dec) n = 0;
+  for (i = 0; i < n; i++)
+    if (!pgs_decodificar(f->pgs, f->pend[i].b, (size_t)f->pend[i].n, &dec[i])) dec[i].n = -1;
+  for (i = 0; i < n; i++) {
+    int publica;
+    if (dec[i].n < 0) continue;
+    pthread_mutex_lock(&S.trava);
+    publica = f->g == S.geracao && !S.parar;
+    pthread_mutex_unlock(&S.trava);
+    if (publica) imgsub_por(f->legG, f->pend[i].ini, f->pend[i].fim, &dec[i]);
+    else pgs_quadro_liberar(&dec[i]);
+  }
+  free(dec);
+  soltarPendentes(f);
+}
+
 static void entregar(Fio *f) {
   int n;
   // O snapshot independe da adocao/dono do overlay, inclusive na pre-busca.
@@ -2997,6 +3082,7 @@ static void entregar(Fio *f) {
   }
   // Pre-busca nao adotada: colhe, mas o overlay ainda nao e deste fio.
   if (f->prebusca) { verAdocao(f); if (f->prebusca) return; }
+  if (f->imagem) { entregarImagens(f); f->sujo = 0; return; }
   if (!f->sujo || !f->corpo) return;
   // TV desenhando por enquanto: so religa o overlay com fala NOVA (ver
   // mkvass_retomar_segurando). A faixa completa solta sempre.
@@ -3591,6 +3677,7 @@ fim:
   S.vivos--;
   pthread_cond_broadcast(&S.sinal);
   pthread_mutex_unlock(&S.trava);
+  soltarPendentes(f); free(f->pend); pgs_liberar(f->pgs);
   free(f->pontos); free(f->corpo); liberarFontes(f); free(f);
   return NULL;
 }
@@ -3676,6 +3763,7 @@ static int iniciarFio(const char *url, int numeroFaixa, int herdar, int segurar,
   S.vivos++;
   pthread_cond_broadcast(&S.sinal);   // acorda o fio antigo para ele ver a geracao nova
   pthread_mutex_unlock(&S.trava);
+  imgsub_limpar();   // fora de S.trava (ver mkvass_parar); o dono mais novo ja expulsa quadro velho
   if (pthread_create(&t, NULL, trabalhar, f) == 0) pthread_detach(t);
   else {
     pthread_mutex_lock(&S.trava);
@@ -3817,6 +3905,7 @@ void mkvass_folga(double segundosAFrente) {
 }
 
 void mkvass_parar(void) {
+  imgsub_limpar();   // fora de S.trava: o desenho segura a trava do imgsub entre pegar e soltar
   pthread_mutex_lock(&S.trava);
   if (S.vivos > 0) S.parar = 1;
   S.prebusca = 0; S.adotar = 0;

@@ -98,9 +98,15 @@ char *rede_baixar_st_teste(const char *url, int seg, const char *const *cab,
                            int *status) {
   (void)seg; (void)cab;
   if (status) *status = 0;
-  if (strstr(url, "api.mdblist.com/?i=tt0111161")) {
+  // A api atual: /imdb/movie/{id}. O /?i= antigo so devolve a pagina de
+  // ajuda (http 200, sem ratings) — foi assim que a TCL ficou so com IMDb.
+  if (strstr(url, "api.mdblist.com/imdb/movie/tt0111161?")) {
     if (status) *status = 200;
     return dupstr(fixtureMdblist);
+  }
+  if (strstr(url, "api.mdblist.com/?")) {
+    if (status) *status = 200;
+    return dupstr("{\"website\":\"x\",\"documentation\":\"x\"}");
   }
   return NULL;
 }

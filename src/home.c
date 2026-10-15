@@ -259,7 +259,12 @@ int home_pediu_social(void) { int v=pedidoSocial;pedidoSocial=0;return v; }
 static int pedidoGuia;
 static char guiaId[80];
 static int fileiraEhCanal(const Fileira *f) {
-  return f && (!strcmp(f->catTipo, "channel") || !strcmp(f->catTipo, "tv"));
+  static const char *tipos[] = { "channel", "tv", "channels", "live", "iptv" };
+  int i;
+  if (!f) return 0;
+  for (i = 0; i < (int)(sizeof tipos / sizeof tipos[0]); i++)
+    if (!strcmp(f->catTipo, tipos[i])) return 1;
+  return 0;
 }
 int home_pediu_guia(char *id, int tam) {
   if (!pedidoGuia) return 0;
@@ -1704,6 +1709,10 @@ static float passoFil(int r) {
     TipoFileira e = fileiras[r].estiloCol;
     return larguraFil(r) + gapDe(e) - xOffTipo(e);
   }
+  // PALCO: a vaga e do tamanho de um VIZINHO. O foco (maior) transborda para
+  // os dois lados dela (palcoGeo); as vagas nunca andam com o foco.
+  if (fileiras[r].tipo == FILEIRA_PALCO)
+    return larguraFil(r) * NV_PALCO_VIZ + gapDe(FILEIRA_PALCO);
   return larguraFil(r) + gapDe(fileiras[r].tipo);
 }
 static float homeFileiraX(int r, int c) {
@@ -3428,11 +3437,10 @@ static void heroPreBuscarInfo(int indice) {
   }
   desc_sinopse_hero(lista, n);
   heroPedirLogo(cat_item_exato(indice), ajustes_home_layout(), focoHero);
-  // Vizinhos aquecem o arquivo/miniatura, sem reservar outra textura de hero.
-  for (int k = 1; k < n; k++) {
-    const char *u = artehero_logo_sessao(cat_item_exato(lista[k]));
-    if (u) (void)tex_obter_larg(u, 128);
-  }
+  // Logo dos vizinhos: nivel de logo (fura os fundos) e o MESMO teto do hero,
+  // para a chegada nao promover nem decodificar de novo.
+  for (int k = 1; k < n; k++)
+    heroPedirLogo(cat_item_exato(lista[k]), ajustes_home_layout(), focoHero);
 }
 static void heroAquecerVizinhos(Uint32 agora) {
   int n = heroNLista(), pos, d;
@@ -3448,10 +3456,12 @@ static void heroAquecerVizinhos(Uint32 agora) {
     const char *arte;
     if (heroVizFeito & bit) continue;
     if (viz < 0 || viz == heroAtual || (d > 0 && n == 2)) { heroVizFeito |= bit; continue; }
+    // O logo vai ANTES da arte e sem esperar por ela: pedido como logo (nivel
+    // 2) ele fura a fila dos fundos, que era onde o aquecimento a 128 px
+    // (nivel 0) ficava parado — o logo do vizinho chegava depois da virada.
+    heroPedirLogo(cat_item_exato(viz), ajustes_home_layout(), focoHero);
     arte = arte_por_identidade(viz, 2);
     if (!arte) continue;
-    { const char *logo = artehero_logo_sessao(cat_item_exato(viz));
-      if (logo) (void)tex_obter_larg(logo, 128); }
     heroVizFeito |= bit;
     (void)tex_obter_hero_quente(arte);
     printf("[hero] pre-busca vizinho %s hash=%08lx\n", d < 0 ? "anterior" : "proximo",
@@ -5889,19 +5899,19 @@ static int colunaDaFileira(int r) {
   if (c >= fileiras[r].n) c = fileiras[r].n - 1;
   return c < 0 ? 0 : c;
 }
-// PALCO (#205): o foco cresce na vaga dele e os vizinhos encolhem E se
-// chegam — o passo de cada um segue a largura ESCALADA (o mesmo gap de sempre
-// entre vizinhos; antes a vaga cheia sobrava um vao de ~2x), e o card em foco
-// so empurra o PRIMEIRO vizinho pelo que cresceu. Todo o resto acompanha o
-// foco pela mola de palcoPos, e a rolagem de sempre manda no conjunto.
+// PALCO (#205): cada card mora numa VAGA fixa (passoFil: um vizinho + gap) e o
+// foco cresce POR CIMA dela, empurrando so os dois vizinhos imediatos. Os
+// demais ficam parados na vaga, so deslocados do mesmo tanto para a esquerda
+// ou a direita (clamp de d em -1..1): mover o foco nao arrasta a fileira
+// inteira (dono, 14/10: "as fileiras mexendo junto ao inves de ficar parada").
+// Quem anda, anda pela mola unica de palcoPos, sem misturar com a rolagem.
+static float palcoDesloca(float lw, float d) {
+  return (d < -1.0f ? -1.0f : d > 1.0f ? 1.0f : d) * (lw - lw * NV_PALCO_VIZ) * 0.5f;
+}
 static void palcoGeo(int r, int c, float lw, float *cx, float *s) {
   float d = (float)c - palcoPos[r], ad = fabsf(d);
-  float viz = lw * NV_PALCO_VIZ, gap = gapDe(FILEIRA_PALCO);
-  float perto = (lw + viz) * 0.5f + gap;        // foco -> 1o vizinho
-  float longe = viz + gap;                      // vizinho -> vizinho
-  float off = ad < 1.0f ? d * perto : copysignf(perto + (ad - 1.0f) * longe, d);
   *s = 1.0f - (1.0f - NV_PALCO_VIZ) * (ad < 1.0f ? ad : 1.0f);
-  *cx = homeFileiraX(r, 0) + palcoPos[r] * passoFil(r) + lw * 0.5f + off;
+  *cx = homeFileiraX(r, c) + lw * 0.5f + palcoDesloca(lw, d);
 }
 // A CORTINA do Palco (#205): 0..1 em mola enquanto o foco esta numa fileira
 // Palco. O scrim em si (duas faixas, tudo fora da fileira em foco) e desenhado
@@ -5928,22 +5938,24 @@ static void palcoCortinaPasso(Uint32 agora) {
 // fileira em PASSO DE VAGAS e sobrava um vao morto no fim da rolagem (revisao
 // #205). Purinha, sem janela, para o teste cobrar o math do toque.
 static float palcoExtent(int r, int n) {
-  float lw = larguraFil(r), viz = lw * NV_PALCO_VIZ, gap = gapDe(FILEIRA_PALCO);
-  float perto = (lw + viz) * 0.5f + gap, longe = viz + gap;
+  float lw = larguraFil(r);
   float d = (float)(n - 1) - palcoPos[r], ad = fabsf(d);
-  float off = ad < 1.0f ? d * perto : copysignf(perto + (ad - 1.0f) * longe, d);
-  float s = 1.0f - (1.0f - NV_PALCO_VIZ) * (ad < 1.0f ? ad : 1.0f);
-  return palcoPos[r] * passoFil(r) + lw * 0.5f + off + lw * s * 0.5f;
+  float sc = 1.0f - (1.0f - NV_PALCO_VIZ) * (ad < 1.0f ? ad : 1.0f);
+  return (float)(n - 1) * passoFil(r) + lw * 0.5f + palcoDesloca(lw, d) + lw * sc * 0.5f;
 }
 // A coluna do Palco cujo card cai na posicao `u` da fileira (origem no scroll
 // zero): inverte o palcoGeo. O toque retomava o foco pela CONTA DAS VAGAS e o
 // anel caia num card ao lado do que a pessoa tinha centrado (revisao #205).
+// Os centros crescem com a coluna, entao vale o mais proximo de `u`.
 static int palcoColunaEm(int r, float u) {
-  float lw = larguraFil(r), viz = lw * NV_PALCO_VIZ, gap = gapDe(FILEIRA_PALCO);
-  float perto = (lw + viz) * 0.5f + gap, longe = viz + gap;
-  float t = u - palcoPos[r] * passoFil(r) - lw * 0.5f, ad = fabsf(t);
-  float d = ad < perto ? t / perto : copysignf(1.0f + (ad - perto) / longe, t);
-  return (int)(palcoPos[r] + d + 0.5f);
+  float lw = larguraFil(r), melhor = 1e30f;
+  int col = 0;
+  for (int c = 0; c < fileiras[r].n; c++) {
+    float cx = (float)c * passoFil(r) + lw * 0.5f + palcoDesloca(lw, (float)c - palcoPos[r]);
+    float dist = fabsf(cx - u);
+    if (dist < melhor) { melhor = dist; col = c; }
+  }
+  return col;
 }
 #endif // NV_TOUCH_UI || NV_TESTE_HOME
 // A faixa da cortina so existe DENTRO do viewport das fileiras: o toque pode
@@ -6479,6 +6491,8 @@ static TipoFileira previaMedida(const Fileira *fl, const char *chave, int filTip
   return tipo;
 }
 
+static void desenhaRedonda(const CatItem *ci, GLuint t, const char *caminho,
+                           float px, float py, float d, float f);
 int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect area,
                         float alfa) {
   const Fileira *fl = NULL;
@@ -6571,6 +6585,9 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
         const char *cam = arte_por_identidade(idx, tipo == FILEIRA_CONTINUE ? 3 : deitado);
         if (tipo == FILEIRA_FICHA) { desenhaFicha(ci, px, y0, w, h, 0.0f); card.w = h * 2.0f / 3.0f; }
         GLuint t = cam ? tex_obter_larg(cam, w) : 0;
+        // A Redonda e o disco com o nome, como na Home: pelo card comum ela
+        // saia retangulo e a pessoa nao a reconhecia na lista.
+        if (tipo == FILEIRA_REDONDA) { desenhaRedonda(ci, t, cam, px, y0, w, 0.0f); continue; }
         if (tipo == FILEIRA_TOP10_NUM)
           desenhaNumeral(fileiraRanking(fl, c), px, y0, h, passo - w - NV_TOP10_NUM_FOLGA * s, 1.0f);
         gfx_veu_card_limpar();
@@ -7463,7 +7480,7 @@ void home_desenhar(Uint32 agora) {
           // Pede pela largura REAL do card: e esta fileira que multiplica.
           // Com o teto unico de 640 cada poster custava 2,4 MB e o cache
           // estourava com ~40 texturas, despejando o que ainda estava na tela.
-          GLuint t = caminho ? tex_obter_larg(caminho, w) : 0;
+          GLuint t = caminho ? tex_obter_larg(caminho, tipo == FILEIRA_PALCO ? lw : w) : 0;
           // ARTE CHEGANDO: so esvanece quem foi visto esperando (revela.h).
           float aArte = revela_arte(&revArte[r][c], t != 0, agora);
           // ANEL DE FOCO: 4 px de #FFFFFF, POR FORA da arte.
