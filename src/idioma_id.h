@@ -994,6 +994,7 @@
   T("Busque por nome ou @apelido", "Cari berdasarkan nama atau @nama panggilan"),
   T("Busque por nome ou @apelido, ou use o código", "Cari berdasarkan nama atau @nama panggilan, atau gunakan kode"),
   T("Bélgica", "Belgia"),
+  T("Bósnio", "Bosnia"),
   T("Búlgaro", "Bulgaria"),
   T("C (payload de live)", "C (payload langsung)"),
   T("CANCELADA", "DIBATALKAN"),

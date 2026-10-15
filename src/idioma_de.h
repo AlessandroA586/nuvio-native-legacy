@@ -993,6 +993,7 @@
   T("Busque por nome ou @apelido", "Nach Name oder @Spitzname suchen"),
   T("Busque por nome ou @apelido, ou use o código", "Nach Name oder @Spitzname suchen, oder den Code verwenden"),
   T("Bélgica", "Belgien"),
+  T("Bósnio", "Bosnisch"),
   T("Búlgaro", "Bulgarisch"),
   T("C (payload de live)", "C (Live-Payload)"),
   T("CANCELADA", "ABGESETZT"),

@@ -994,6 +994,7 @@
   T("Busque por nome ou @apelido", "Ada veya @takma ada göre ara"),
   T("Busque por nome ou @apelido, ou use o código", "Ada veya @takma ada göre ara, veya kodu kullan"),
   T("Bélgica", "Belçika"),
+  T("Bósnio", "Boşnakça"),
   T("Búlgaro", "Bulgarca"),
   T("C (payload de live)", "C (canlı payload)"),
   T("CANCELADA", "İPTAL EDİLDİ"),

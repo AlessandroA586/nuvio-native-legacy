@@ -23,6 +23,7 @@ int ajustes_ocultar_nao_lancados(void) { return 0; }   // #369: descoberta.c le 
 int ajustes_ocultar_filmes_vistos(void) { return 0; }
 void addons_lista_travar(void) {}
 void addons_lista_destravar(void) {}
+#include "stub_perfisessao.h"
 #include "../src/descoberta.c"
 Uint32 SDL_GetTicks(void) { return 0; }
 #include "../src/progresso.h"
@@ -150,10 +151,12 @@ int   simkl_e_a_seguir(const char *id)     { (void)id; return 0; }
 int   simkl_plantowatch(CatItem *s, int m) { (void)s; (void)m; return 0; }
 int   ajustes_salvos_no_simkl(void)        { return 0; }
 int   trakt_enfeitar_lote(CatItem *s, int n) { (void)s; (void)n; return 0; }
+int   trakt_enfeitar_lote_sessao(CatItem *s, int n, uint64_t g) { (void)g; return trakt_enfeitar_lote(s, n); }
 int   trakt_lista(const char *q, CatItem *s, int m) { (void)q; (void)s; (void)m; return 0; }
 int   trakt_lista_cresc(const char *q, CatItem **s, int m) { (void)q; (void)s; (void)m; return 0; }
 // O servico social proprio (recomenda.c) fica fora deste teste: a uniao e so o que o Trakt trouxe.
 int   recomenda_social_mesclar(CatItem *i, int nTrakt, int max) { (void)i; (void)max; return nTrakt; }
+int   recomenda_social_mesclar_sessao(CatItem *i, int nTrakt, int max, uint64_t g) { (void)g; return recomenda_social_mesclar(i, nTrakt, max); }
 int   trakt_social(CatItem *s, int m)      { (void)s; (void)m; return 0; }
 const char *nuvem_trakt_cliente(void)      { return ""; }
 // Um addon de metadados, ligado so no caso 7 (o resto do teste roda sem addon).

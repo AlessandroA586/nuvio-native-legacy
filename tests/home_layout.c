@@ -10,6 +10,9 @@
 static int testeGenero = 1, nTxtDesenhado = 0, nBadge = 0, testeImdb = 0;
 static int teste_hero_genero(void) { return testeGenero; }
 #define ajustes_espaco_fileiras teste_espaco_fileiras
+#define ajustes_ocultar_filmes_vistos teste_ocultar_vistos
+static int ocultarVistos;
+static int teste_ocultar_vistos(void) { return ocultarVistos; }
 static float espacoTit = 1.0f, espacoFil = 1.0f;
 static float teste_espaco_titulos(void) { return espacoTit; }
 static float teste_espaco_fileiras(void) { return espacoFil; }
@@ -117,44 +120,16 @@ int main(void) {
         assert(fabsf((vizX - cx) - (lw * (1.0f + NV_PALCO_VIZ) * 0.5f + gap)) < 2.0f); }
       anterior = cx;
     }
-    // A CORTINA (#205): foco na fileira Palco, o resto da tela escurece MAIS
-    // que o fundo comum (alfa da cortina >= 0.40 assentado); o foco saindo
-    // dela, a cortina desce de volta.
-    focoHero = 0; foco.fileira = 1;
-    for (int i = 1; i <= 40; i++) palcoCortinaPasso((Uint32)(i * 16));
-    assert(palcoCortina > 0.99f);
-    assert(NV_PALCO_CORTINA * palcoCortina >= 0.40f);
-    // Both exits retain the outgoing band while the curtain is still visible.
-    for (int hero = 0; hero <= 1; hero++) {
-      palcoCortina = 1.0f;
-      palcoCortinaUlt = 640;
-      palcoFaixaTopo = 300.0f; palcoFaixaBase = 800.0f;
-      focoHero = hero; foco.fileira = 0;
-      float previous = palcoCortina;
-      for (int i = 41; i <= 80; i++) {
-        palcoCortinaPasso((Uint32)(i * 16));
-        assert(palcoCortina <= previous);
-        if (i == 41) assert(palcoCortina > 0.01f && palcoCortina < previous);
-        if (palcoCortina > 0.01f) {
-          assert(palcoFaixaTopo == 300.0f && palcoFaixaBase == 800.0f);
-        } else {
-          assert(palcoFaixaTopo == 0.0f && palcoFaixaBase == 0.0f);
-        }
-        previous = palcoCortina;
-      }
-      assert(palcoCortina < 0.01f);
-    }
     focoHero = 1;
     memset(scrollX, 0, sizeof scrollX);
     // REVISAO #205: o alcance do toque na Palco e a extensao COMPRIMIDA do
     // palcoGeo (o passo de vagas sobrava um vao morto no fim da rolagem); a
     // coluna retomada inverte o palcoGeo (a conta de vagas caia num card ao
-    // lado do que a pessoa tinha centrado); e a faixa da cortina so existe
-    // dentro do viewport das fileiras (foco arrastado para fora, sem scrim).
+    // lado do que a pessoa tinha centrado).
     {
       fileiras[1] = (Fileira){.tipo = FILEIRA_PALCO, .n = 12, .escala = 1.0f};
       float lw = larguraFil(1), passo = passoFil(1);
-      float cx, s, topo, base, corte = corteFileiras();
+      float cx, s;
       scrollX[1] = 0.0f;
       // Foco na primeira coluna: o fim da fileira e a borda do ULTIMO card
       // comprimido, bem atras da vaga dele — e o vao morto some do maxX.
@@ -180,19 +155,6 @@ int main(void) {
         assert(palcoColunaEm(1, cx - homeFileiraX(1, 0)) == k);
       }
       palcoPos[1] = 0.0f;
-      // A faixa da cortina e recortada ao viewport; fora dele, o scrim some
-      // em vez de virar um dimming de tela inteira sem janela.
-      palcoFaixaTopo = 300.0f; palcoFaixaBase = 800.0f;
-      assert(palcoFaixaClamp(&topo, &base));
-      assert(topo == fmaxf(corte, 300.0f) && base == fminf(NV_TELA_H, 800.0f));
-      palcoFaixaTopo = corte - 50.0f; palcoFaixaBase = corte + 50.0f;
-      assert(palcoFaixaClamp(&topo, &base));
-      assert(topo == corte && base == corte + 50.0f);
-      palcoFaixaTopo = NV_TELA_H + 100.0f; palcoFaixaBase = NV_TELA_H + 200.0f;
-      assert(!palcoFaixaClamp(&topo, &base));
-      palcoFaixaTopo = corte - 400.0f; palcoFaixaBase = corte - 10.0f;
-      assert(!palcoFaixaClamp(&topo, &base));
-      palcoFaixaTopo = palcoFaixaBase = 0.0f;
     }
   }
   // A composicao abaixo e a da home SEM o destaque no topo: e nela que a
@@ -360,6 +322,37 @@ int main(void) {
         assert(fileiras[r].stackN==3 && fileiras[r].n==1);
       }
     assert(tops==2); }
+  // #366: o primeiro do Top 10 visto. desenhaPilha andava em ini+k.
+  { int r, k; Fileira *top = NULL;
+    for (int i = 0; i < 48; i++) {
+      snprintf(itensTeste[i].imdb, sizeof itensTeste[i].imdb, "tt%07d", i);
+      snprintf(itensTeste[i].tipo, sizeof itensTeste[i].tipo, "movie");
+    }
+    cat_historico_definir_id(itensTeste[fils[6].ini + 1].imdb, "movie", 1);
+    for (int i = 0; i < fils[8].n; i++)
+      cat_historico_definir_id(itensTeste[fils[8].ini + i].imdb, "movie", 1);
+    ocultarVistos = 1;
+    cat_definir_tudo(itensTeste, 48, fils, 16); filsAplicadas = -1; sincronizarFileiras();
+    for (r = 0; r < nFileiras; r++)
+      if (fileiras[r].tipo == FILEIRA_TOP10 && !strcmp(fileiras[r].chave, fils[6].chave)) top = &fileiras[r];
+    assert(top && top->stackN == 2 && top->usaItens);
+    assert(cat_visto(cat_item(top->ini + 1)));
+    { Fileira numerals = *top;
+      numerals.tipo = FILEIRA_TOP10_NUM; numerals.n = top->stackN;
+      assert(fileiraRank(&numerals, 0) == 1);
+      assert(fileiraRank(&numerals, 1) == 3);
+    }
+    for (k = 0; k < top->stackN && k < 6; k++) assert(!cat_visto(cat_item(pilhaIndice(top, k))));
+    for (r = 0; r < nFileiras; r++)
+      if (!strcmp(fileiras[r].chave, fils[8].chave))
+        assert(!fileiras[r].n && !fileiras[r].verTudo);
+    for (int i = 0; i < fils[6].n; i++)
+      cat_historico_definir_id(itensTeste[fils[6].ini + i].imdb, "movie", 1);
+    filsAplicadas = -1; sincronizarFileiras();
+    top = NULL;
+    for (r = 0; r < nFileiras; r++)
+      if (!strcmp(fileiras[r].chave, fils[6].chave)) top = &fileiras[r];
+    assert(top && !top->n && !top->stackN && !top->verTudo); }
   for (int i=8; i<16; i++) {
     int encontrado=0;
     for (int r=0; r<nFileiras; r++)

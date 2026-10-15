@@ -994,6 +994,7 @@
   T("Busque por nome ou @apelido", "Ieškokite pagal vardą arba @slapyvardį"),
   T("Busque por nome ou @apelido, ou use o código", "Ieškokite pagal vardą arba @slapyvardį, arba naudokite kodą"),
   T("Bélgica", "Belgija"),
+  T("Bósnio", "Bosnių"),
   T("Búlgaro", "Bulgarų"),
   T("C (payload de live)", "C (tiesioginis payload)"),
   T("CANCELADA", "ATŠAUKTA"),

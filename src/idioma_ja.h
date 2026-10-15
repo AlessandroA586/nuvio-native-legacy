@@ -994,6 +994,7 @@
   T("Busque por nome ou @apelido", "名前か@ニックネームで検索"),
   T("Busque por nome ou @apelido, ou use o código", "名前か@ニックネームで検索か、コードを使用"),
   T("Bélgica", "ベルギー"),
+  T("Bósnio", "ボスニア語"),
   T("Búlgaro", "ブルガリア語"),
   T("C (payload de live)", "C (ライブ用ペイロード)"),
   T("CANCELADA", "キャンセル"),

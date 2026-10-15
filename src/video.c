@@ -2171,6 +2171,8 @@ static void *lerMkv(void *arg) {
       }
     }
     fflush(stdout); }
+  // #510: sourceInfo can omit embedded text tracks the app can render itself.
+  nLeg = faixasmkv_acrescentar_texto(faixaLeg, nLeg, NV_FAIXA_MAX, fx, n);
   { char m[64];
     snprintf(m, sizeof m, "mkv: %d faixas lidas, %d legendas com idioma", n, casou);
     marco(m); }
@@ -3612,6 +3614,10 @@ void video_escolher_legenda(int i) {
     return;
   }
   if (!ligado || !midia[0]) return;
+  if (i >= 0) {
+    const VideoFaixa *f = video_legenda(i);
+    if (f && f->numero < 0) i = -1;
+  }
   if (i < 0) {
     snprintf(b, sizeof b, "{\"mediaId\":\"%s\",\"enable\":false}", midia);
     chamar("setSubtitleEnable", b, soLog);

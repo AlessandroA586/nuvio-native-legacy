@@ -2420,6 +2420,10 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
   }
   { int semMistura = (comAmb || opaco) && blendLigado;
     if (semMistura) glDisable(GL_BLEND);
+    if (perftv_enabled) {
+      perftv_blur += modo == GFX_BLUR;
+      perftv_glass += modo == GFX_VIDRO;
+    }
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     if (semMistura) glEnable(GL_BLEND); }
   if (comAmb || veuAmb) {
@@ -3245,6 +3249,7 @@ static void vidPassada(GLuint src, GLuint fbo, int w, int h, const float uv[4], 
   glBindTexture(GL_TEXTURE_2D, src);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   gfx_vidro_passadas++;
+  if (perftv_enabled) perftv_blur++;
 }
 // Captura e desfoca a regiao `reg` (layout de tela) da tela atual em vidH2.
 static int vidCapturar(const float reg[4]) {

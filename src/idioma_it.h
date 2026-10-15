@@ -994,6 +994,7 @@
   T("Busque por nome ou @apelido", "Cerca per nome o @nickname"),
   T("Busque por nome ou @apelido, ou use o código", "Cerca per nome o @nickname, oppure usa il codice"),
   T("Bélgica", "Belgio"),
+  T("Bósnio", "Bosniaco"),
   T("Búlgaro", "Bulgaro"),
   T("C (payload de live)", "C (payload live)"),
   T("CANCELADA", "ANNULLATO"),

@@ -993,6 +993,7 @@
   T("Busque por nome ou @apelido", "Шукайте за ім'ям або @ніком"),
   T("Busque por nome ou @apelido, ou use o código", "Шукайте за ім'ям або @ніком, або скористайтеся кодом"),
   T("Bélgica", "Бельгія"),
+  T("Bósnio", "Боснійська"),
   T("Búlgaro", "Болгарська"),
   T("C (payload de live)", "C (payload прямого ефіру)"),
   T("CANCELADA", "СКАСОВАНО"),

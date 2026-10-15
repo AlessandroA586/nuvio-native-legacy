@@ -1339,8 +1339,10 @@ static int deMeta(const char *ini, const char *fim, const char *tipo, CatItem *d
   if (d->backdropTmdb[0] && strstr(d->backdropTmdb, "image.tmdb.org/t/p/"))
     snprintf(d->backdropTmdb, sizeof d->backdropTmdb, "%s", d->backdrop);
 
-  if (!js_texto(ini, fim, "imdb_id", d->imdb, sizeof d->imdb))
-    js_texto(ini, fim, "id", d->imdb, sizeof d->imdb);
+  // Preserve the catalog identity used for streams and saved progress (#524).
+  // Provider mappings (including nested imdb_id fields) are not that identity.
+  if (!js_texto_raiz_em(ini, fim, "id", d->imdb, sizeof d->imdb) || !d->imdb[0])
+    js_texto_raiz_em(ini, fim, "imdb_id", d->imdb, sizeof d->imdb);
   snprintf(d->tipo, sizeof d->tipo, "%s", tipo);
   // O TIPO DO PROPRIO ITEM VENCE O DO CATALOGO. Catalogo de anime do
   // AIOMetadata declara `type: "anime"` (simkl.trending.anime, mal.*), e o app
@@ -7752,30 +7754,53 @@ static int metaCatalogoResolver(const CatItem *orig, MetaFontes *mf, int indice)
   return 1;
 }
 
-// Elenco/direcao/generos/nota/pais a partir de uma ficha, so nos campos que
-// `d` ainda tem vazios (`soVazios`=1) ou todos os que a ficha traz (0).
-static void fichaDe(CatItem *d, const char *corpo, int soVazios) {
+// Metadata portraits are already usable before optional TMDB enrichment (#528).
+// Complements fill matching people only; their order must not swap portraits.
+static void elencoDaFicha(CatItem *d, const char *corpo, int soVazios) {
   const char *c = js_array(corpo, NULL, "cast");
   if (!soVazios || !d->nElenco) {
     int k = 0;
-    while (c && k < CAT_ELENCO_MAX) {
-      size_t n2 = 0;
-      const char *p2 = c;
-      if (*p2 != '"') break;
-      p2++;
-      while (*p2 && *p2 != '"' && n2 + 1 < sizeof d->elenco[k].nome) d->elenco[k].nome[n2++] = *p2++;
-      d->elenco[k].nome[n2] = 0;
-      d->elenco[k].papel[0] = 0;
-      d->elenco[k].foto[0] = 0;
-      d->elenco[k].tmdb = 0;
-      k++;
-      p2++;
-      while (*p2 == ' ') p2++;
-      c = (*p2 == ',') ? p2 + 1 : NULL;
-      while (c && *c == ' ') c++;
+    while (c && *c == '"' && k < CAT_ELENCO_MAX) {
+      char nome[64] = "";
+      if (js_cadeia(c, nome, sizeof nome) && nome[0]) {
+        memset(&d->elenco[k], 0, sizeof d->elenco[k]);
+        snprintf(d->elenco[k++].nome, sizeof d->elenco[0].nome, "%s", nome);
+      }
+      for (c++; *c && *c != '"'; c++) if (*c == '\\' && c[1]) c++;
+      c = *c ? js_prox(c + 1) : NULL;
     }
     if (k) d->nElenco = k;
   }
+  const char *extras = corpo ? strstr(corpo, "\"app_extras\"") : NULL;
+  if (!extras || !(extras = strchr(extras, ':'))) return;
+  do { extras++; } while (*extras && (unsigned char)*extras <= ' ');
+  if (*extras != '{') return;
+  const char *fim = js_fim(extras);
+  for (c = js_array(extras, fim, "cast"); c && c < fim && *c == '{'; c = js_prox(js_fim(c))) {
+    const char *f = js_fim(c);
+    char nome[64] = "", alvo[64], outro[64], foto[512] = "", papel[64] = "";
+    if (!js_texto_raiz_em(c, f, "name", nome, sizeof nome)) continue;
+    normElenco(nome, alvo, sizeof alvo);
+    if (!alvo[0]) continue;
+    js_texto_raiz_em(c, f, "photo", foto, sizeof foto);
+    js_texto_raiz_em(c, f, "character", papel, sizeof papel);
+    if (strncmp(foto, "https://", 8) && strncmp(foto, "http://", 7)) foto[0] = 0;
+    for (int k = 0; k < d->nElenco; k++) {
+      normElenco(d->elenco[k].nome, outro, sizeof outro);
+      if (strcmp(alvo, outro)) continue;
+      if (!d->elenco[k].foto[0] && foto[0])
+        snprintf(d->elenco[k].foto, sizeof d->elenco[k].foto, "%s", foto);
+      if (!d->elenco[k].papel[0] && papel[0])
+        snprintf(d->elenco[k].papel, sizeof d->elenco[k].papel, "%s", papel);
+      break;
+    }
+  }
+}
+
+// Elenco/direcao/generos/nota/pais a partir de uma ficha, so nos campos que
+// `d` ainda tem vazios (`soVazios`=1) ou todos os que a ficha traz (0).
+static void fichaDe(CatItem *d, const char *corpo, int soVazios) {
+  elencoDaFicha(d, corpo, soVazios);
   if (!soVazios || !d->direcao[0]) {
     const char *dr = js_array(corpo, NULL, "director");
     if (dr && *dr == '"') {
@@ -8037,25 +8062,8 @@ static void *buscarEps(void *u) {
   {
     CatItem edit = *it;
     int manter = 0;
-    const char *c = js_array(corpo, NULL, "cast");
-    int k = 0;
-    while (c && k < CAT_ELENCO_MAX) {
-      size_t n2 = 0;
-      const char *p2 = c;
-      if (*p2 != '"') break;
-      p2++;
-      while (*p2 && *p2 != '"' && n2 + 1 < sizeof edit.elenco[k].nome)
-        edit.elenco[k].nome[n2++] = *p2++;
-      edit.elenco[k].nome[n2] = 0;
-      edit.elenco[k].papel[0] = 0;   // o Cinemeta nao diz o personagem
-      edit.elenco[k].foto[0] = 0;
-      k++;
-      p2++;
-      while (*p2 == ' ') p2++;
-      c = (*p2 == ',') ? p2 + 1 : NULL;
-      while (c && *c == ' ') c++;
-    }
-    edit.nElenco = k;
+    edit.nElenco = 0;
+    elencoDaFicha(&edit, corpo, 0);
     { const char *dr = js_array(corpo, NULL, "director");
       if (dr && *dr == '"') {
         size_t n2 = 0;
@@ -8149,6 +8157,7 @@ static void *buscarEps(void *u) {
           if (metaTextos(c5, tA, sizeof tA, NULL, 0)) {
             generosDe(c5, lista, sizeof lista, tipoA);
             if (lista[0]) snprintf(edit.genero, sizeof edit.genero, "%s", lista);
+            elencoDaFicha(&edit, c5, 1);
             cA = c5;
           } else free(c5);
         }
@@ -8720,6 +8729,9 @@ void desc_vertudo_abrir(const char *base, const char *tipo, const char *catId) {
   desc_vertudo_filtro(base,tipo,catId,"");
 }
 void desc_vertudo_filtro(const char *base, const char *tipo, const char *catId,const char *genre) {
+  desc_vertudo_filtro_desde(base, tipo, catId, genre, 0);
+}
+void desc_vertudo_filtro_desde(const char *base, const char *tipo, const char *catId, const char *genre, int pagina) {
   if (!base || !tipo || !catId) return;
   pthread_mutex_lock(&vtTrava);
   // Mesmo catalogo que ja esta aberto: mantem o que ja foi lido em vez de
@@ -8738,7 +8750,7 @@ void desc_vertudo_filtro(const char *base, const char *tipo, const char *catId,c
   snprintf(vtCat,  sizeof vtCat,  "%s", catId);
   snprintf(vtGenre,sizeof vtGenre,"%s",genre?genre:"");
   vtProvedor=0;
-  vtN = 0; vtPagina = 0; vtFim = 0;vtErro=0;vtGeracao++;
+  vtN = 0; vtPagina = pagina; vtFim = 0;vtErro=0;vtGeracao++;
   pthread_mutex_unlock(&vtTrava);
   vtDisparar();
 }
@@ -8747,6 +8759,9 @@ void desc_vertudo_filtro(const char *base, const char *tipo, const char *catId,c
 // "trakt". Mesmo protocolo do catalogo de addon — geracao nova, memoria
 // guardada entre aberturas da mesma fonte — so muda quem responde.
 void desc_vertudo_fonte(const ColSource *s) {
+  desc_vertudo_fonte_desde(s, 1);
+}
+void desc_vertudo_fonte_desde(const ColSource *s, int pagina) {
   ColSource copia;
   if (!s || !s->prov[0]) return;
   memset(&copia, 0, sizeof copia); copia = *s;
@@ -8760,11 +8775,12 @@ void desc_vertudo_fonte(const ColSource *s) {
   vtFonte = copia;
   vtProvedor = !strcmp(s->prov, "trakt") ? 2 : 1;
   vtBase[0] = 0;
-  vtN = 0; vtPagina = 1; vtFim = 0; vtErro = 0; vtGeracao++;
+  vtN = 0; vtPagina = pagina; vtFim = 0; vtErro = 0; vtGeracao++;
   pthread_mutex_unlock(&vtTrava);
   vtDisparar();
 }
 
+int desc_vertudo_pagina(void) { pthread_mutex_lock(&vtTrava); int p=vtPagina; pthread_mutex_unlock(&vtTrava); return p; }
 void desc_vertudo_mais(void) { vtDisparar(); }
 int  desc_vertudo_n(void) { pthread_mutex_lock(&vtTrava);int n=vtProjetar();pthread_mutex_unlock(&vtTrava);return n; }
 int  desc_vertudo_n_bruto(void) { pthread_mutex_lock(&vtTrava);int n=vtN;pthread_mutex_unlock(&vtTrava);return n; }

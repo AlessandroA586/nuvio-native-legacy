@@ -171,9 +171,8 @@ typedef struct {
   // grupo de atalhos" para o resto da home.
   int forma;
   // A FORMA DE AUTOMATICO, guardada antes de a escolha da pessoa valer
-  // (sincronizarFileiras). E o que a previa do modal de estilo desenha na linha
-  // "Automatico" quando a fileira ja tem outra forma escolhida — sem ela, a
-  // previa so saberia mostrar a forma atual.
+  // (sincronizarFileiras). Guardada para o menu de estilo poder mostrar a
+  // forma que "Automatico" daria, mesmo com outra escolhida.
   TipoFileira tipoAuto;
   int formaAuto;
   // O ESTILO ESCOLHIDO de uma fileira de colecao, ja traduzido (tipoDaEscolha):
@@ -317,6 +316,9 @@ static int editorial(TipoFileira t) {
 static Foco foco;
 static HomeItem itemFoco;      // preenchido durante o desenho, lido pela transicao
 static int  temItemFoco = 0;
+// O cartao focado de QUALQUER fileira (pilha e pasta inclusas, que nao tem
+// itemFoco): onde o menu contextual da fileira (ctxmenu.c) nasce ao lado.
+static GfxRect ancoraFoco; static int temAncoraFoco = 0;
 static uint64_t itemFocoSessao;
 static unsigned itemFocoCatalogo;
 static void publicarItemFoco(void) {
@@ -3048,7 +3050,13 @@ static void sincronizarFileiras(void) {
   if (ajustes_home_layout() == HOME_LAYOUT_DINAMICA) dinAtribuirTipos(destino);
   for(int i=0;i<destino;i++) {
     Fileira *s=&fileiras[i];s->stackN=0;
-    if(s->tipo==FILEIRA_TOP10 && s->base[0] && s->catId[0]) {
+    if(s->tipo==FILEIRA_TOP10 && s->n > 0 && s->base[0] && s->catId[0]) {
+      int c;
+      // #366: a pilha desenha estes indices, nao idxCat+k. Com o filtro os
+      // visiveis deixam de ser contiguos no catalogo.
+      for (c = 0; c < s->n && c < MAX_CARDS; c++)
+        s->itens[c] = fileiraItemIndice(s, c);
+      s->usaItens = 1;
       s->stackN=s->n;s->n=1;s->verTudo=0;
     }
     // A FILEIRA HEROI (#205): um cartao so. A FONTE do titulo, nesta ordem:
@@ -5301,6 +5309,12 @@ static void ponteiroSocial(int coluna, int cartao) {
 // de home_desenhar) o card esta cortado e por baixo mora o destaque.
 static void alvoCard(float x, float y, float w, float h, int r, int c) {
   float topo = corteFileiras();
+  // Todo cartao passa por aqui (pilha, pasta, "Ver tudo"): o focado e a ancora
+  // do menu de estilo, ao lado dele.
+  if (!focoHero && focus_indice(&foco, r, c)) {
+    ancoraFoco = (GfxRect){ x, y, w, h };
+    temAncoraFoco = 1;
+  }
   if (!ponteiro_ativo()) return;
   if (y < topo) { h -= topo - y; y = topo; }
   if (homeRetratoTelefone()) {
@@ -5832,12 +5846,14 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
     }
   }
 trailer_hero_fim:
-  // O CARTAZ ANDA (rolagem da fileira assentando, mola do anel): o plano segue
-  // o retangulo do quadro anterior. So na mudanca de verdade — cada
-  // trailer_rect refaz janela e recorte no plano.
-  if (heroTrailerNoCartao && trailer_aberto() && !trailer_cheia() &&
-      trailer_dono() == TRAILER_DONO_HOME && cartaoTrailerItem == heroTrailerItem) {
-    GfxRect alvoR = cartaoVideoRect(cartaoTrailerRect), atual = trailer_retangulo();
+  // Follow artwork geometry too: focusing the hero can expand last frame's
+  // banner after the trailer opened (#500). Only update on a real move;
+  // trailer_rect rebuilds the native video window and crop.
+  if (heroTrailerItem >= 0 && heroTrailerItem == heroAtual &&
+      trailer_aberto() && !trailer_cheia() && trailer_dono() == TRAILER_DONO_HOME &&
+      (!heroTrailerNoCartao || cartaoTrailerItem == heroTrailerItem)) {
+    GfxRect alvoR = heroTrailerNoCartao ? cartaoVideoRect(cartaoTrailerRect) : heroArteRect;
+    GfxRect atual = trailer_retangulo();
     if (fabsf(alvoR.x - atual.x) > 1.0f || fabsf(alvoR.y - atual.y) > 1.0f ||
         fabsf(alvoR.w - atual.w) > 1.0f || fabsf(alvoR.h - atual.h) > 1.0f)
       trailer_rect(alvoR);
@@ -5895,11 +5911,9 @@ static float numeraisAlfa(int r, Uint32 agora) {
 
 // --- O DESENHO DE UM CARTAO, EM PEDACOS ------------------------------------
 //
-// Saidos do laco de home_desenhar SEM MUDAR UMA LINHA do que desenham, para a
-// previa do modal de estilo (home_previa_fileira) desenhar os cartoes com o
-// MESMO codigo da fileira — a mesma arte, o mesmo shader, a mesma legenda —, e
-// nao uma imitacao que diverge no primeiro ajuste. Quem muda o cartao aqui muda
-// os dois lugares.
+// Saidos do laco de home_desenhar: o cartao, em pedacos, para o laco e as
+// vitrines desenharem com o MESMO codigo — a mesma arte, o mesmo shader, a
+// mesma legenda.
 
 // O numeral grande do ranking, no vao `vao` a esquerda do cartaz.
 static void desenhaNumeral(int pos, float px, float py, float h, float vao, float alfa) {
@@ -5952,23 +5966,6 @@ static void palcoGeo(int r, int c, float lw, float *cx, float *s) {
   *s = 1.0f - (1.0f - NV_PALCO_VIZ) * (ad < 1.0f ? ad : 1.0f);
   *cx = homeFileiraX(r, c) + lw * 0.5f + palcoDesloca(lw, d);
 }
-// A CORTINA do Palco (#205): 0..1 em mola enquanto o foco esta numa fileira
-// Palco. O scrim em si (duas faixas, tudo fora da fileira em foco) e desenhado
-// no fim de home_desenhar; aqui so o estado, para o teste poder assentar a
-// mola sem janela.
-static float  palcoCortina;
-static Uint32 palcoCortinaUlt;
-static float  palcoFaixaTopo, palcoFaixaBase;  // a fileira em foco, por quadro
-static void palcoCortinaPasso(Uint32 agora) {
-  int alvo = !focoHero && foco.fileira >= 0 && foco.fileira < nFileiras &&
-             fileiras[foco.fileira].tipo == FILEIRA_PALCO;
-  palcoCortina = anim_mola(palcoCortina, alvo ? 1.0f : 0.0f,
-                           dtFil(&palcoCortinaUlt, agora), NV_MOLA_FOCO);
-  // A faixa sai daqui e nao do laco de desenho: o Palco em foco repoe a sua
-  // cada quadro, mas a que ficou tem de continuar onde estava ate a cortina
-  // fechar; senao o escurecimento some num frame, ainda com alfa.
-  if (palcoCortina <= 0.01f) palcoFaixaTopo = palcoFaixaBase = 0.0f;
-}
 // O toque da Palco so existe em NV_TOUCH_UI; no resto a dupla abaixo e
 // compilada so para o teste de layout (home_layout.c define NV_TESTE_HOME).
 #if defined(NV_TOUCH_UI) || defined(NV_TESTE_HOME)
@@ -5997,16 +5994,6 @@ static int palcoColunaEm(int r, float u) {
   return col;
 }
 #endif // NV_TOUCH_UI || NV_TESTE_HOME
-// A faixa da cortina so existe DENTRO do viewport das fileiras: o toque pode
-// empurrar a fileira em foco para fora da tela, e ai o scrim virava um
-// dimming de tela inteira sem janela nenhuma (revisao #205). Recorta a faixa
-// ao viewport e devolve 0 quando nada dela sobra na tela.
-static int palcoFaixaClamp(float *topo, float *base) {
-  float t = fmaxf(corteFileiras(), palcoFaixaTopo), b = fminf(NV_TELA_H, palcoFaixaBase);
-  if (b <= t) return 0;
-  *topo = t; *base = b;
-  return 1;
-}
 // PALCO: o nome e a linha de meta do titulo do centro, embaixo dele.
 static void palcoLegenda(int r, float base, float lw) {
   int c = (int)(palcoPos[r] + 0.5f);
@@ -6478,172 +6465,14 @@ static void desenhaEditorialCard(const CatItem *cItem, TipoFileira tipo, float p
   }
 }
 
-// --- PREVIA DO ESTILO DA FILEIRA (modal do cartaz, ctxmenu.c) ---------------
+// --- FORWARDS DO CARTAO HEROI E DA REDONDA ----------------------------------
 
 static void desenhaHeroiCard(const CatItem *ci, const char *selo, const char *texto,
                              const char *caminho, GLuint t, float aArte,
                              float px, float py, float w, float h, float raio,
                              float f, float varre);   // o cartão da fileira Herói (#205)
-//
-// A fileira `chave` desenhada na forma `filTipo` (FilTipo de fileiras.h) dentro
-// de `area`, com as ARTES DOS ITENS DELA e os mesmos pedacos de cartao do laco
-// de home_desenhar (desenhaArteCard, desenhaRotuloCard, desenhaEditorialCard,
-// desenhaNumeral, desenhaPilha). As medidas sao as da fileira de verdade
-// (larguraDe/alturaDe/gapDe, com o fator de tamanho dela), reduzidas por UM
-// fator para caberem: cabe a terceira arte espiando, e a altura nunca passa da
-// area. E desenhada so enquanto o modal pede — nada aqui roda com ele fechado.
-//
-// Sem foco, sem expansao, sem cascata: e a fileira em repouso, que e o que a
-// pessoa vai ver ao voltar para a Home. 0 quando a fileira nao esta na Home
-// montada (nada a mostrar).
-// A forma desenhada para `filTipo` nesta fileira e a medida dela, ja com o
-// fator de tamanho. Separada porque o modal pede DUAS: a da forma em foco e a
-// de referencia, que decide a reducao (ver home_previa_fileira).
-static TipoFileira previaMedida(const Fileira *fl, const char *chave, int filTipo,
-                                int *forma, int *pilha, float *lw, float *lh) {
-  TipoFileira tipo;
-  float e;
-  *forma = fl->forma;
-  if (fl->tipo == FILEIRA_CATALOGOS) {
-    // Colecao: o card do estilo escolhido E o do catalogo, com a pasta no
-    // lugar do cartaz (medidaCol, como na Home). Em Automatico, a forma que a
-    // conta deu a pasta.
-    tipo = filTipo != FIL_TIPO_AUTO ? tipoDaEscolha(filTipo) : FILEIRA_CATALOGOS;
-    *forma = fl->formaAuto;
-  } else if (filTipo == FIL_TIPO_AUTO) {
-    // Em Automatico agora: a forma desenhada E a automatica (com a da
-    // Dinamica). Com outra escolha, a de antes dela.
-    tipo = fil_tipo(chave) == FIL_TIPO_AUTO ? fl->tipo : fl->tipoAuto;
-  } else tipo = tipoDaEscolha(filTipo);
-  // A mesma condicao de sincronizarFileiras para a pilha virar um card so.
-  *pilha = tipo == FILEIRA_TOP10 && fl->base[0] && fl->catId[0];
-  // O fator da forma EM FOCO, e nao o da gravada (fl->escala): o 4:3 grande
-  // ainda nao foi escolhido quando a previa o mostra, e o Automatico de uma
-  // fileira gravada no 4:3 grande nao herda o 1,5 dele.
-  e = fil_escala_tipo(chave, filTipo);
-  if (tipo == FILEIRA_DESTAQUE_QUADRADO) e = limita43(fil_tipo_fator(filTipo), e);
-  if (tipo == FILEIRA_POSTER_GRANDE) e = limitaPosterG(e);
-  if (*pilha) { *lw = 680.0f; *lh = alturaDe(FILEIRA_TOP10); }
-  else if (tipo == FILEIRA_CATALOGOS) medidaColecao(*forma, lw, lh);
-  else { *lw = larguraDe(tipo); *lh = alturaDe(tipo); }
-  *lw *= e; *lh *= e;
-  return tipo;
-}
-
 static void desenhaRedonda(const CatItem *ci, GLuint t, const char *caminho,
                            float px, float py, float d, float f);
-int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect area,
-                        float alfa) {
-  const Fileira *fl = NULL;
-  TipoFileira tipo;
-  int r, c, nItens, forma, pilha, deitado, rotuloFora;
-  float lw, lh, gap, xoff, rotH, s, w, h, passo, raio, x0, y0, og;
-  if (!chave || !chave[0] || alfa < 0.01f) return 0;
-  for (r = 0; r < nFileiras; r++)
-    if (!strcmp(fileiras[r].chave, chave)) { fl = &fileiras[r]; break; }
-  if (!fl) return 0;
-  nItens = fl->stackN ? fl->stackN : fl->n;
-  if (nItens < 1) return 0;
-  tipo = previaMedida(fl, chave, filTipo, &forma, &pilha, &lw, &lh);
-  gap = gapDe(tipo); xoff = xOffTipo(tipo);
-  // Colecao: como na Home (passoFil/homeFileiraX) — a pasta nao desenha o
-  // numeral do Ranking, entao o vao vem SEM a faixa dele e o card sai no
-  // comeco da area, sem o recuo que abre espaco para o numero.
-  if (fl->tipo == FILEIRA_CATALOGOS) { gap -= xOffTipo(tipo); xoff = 0.0f; }
-  deitado = editorial(tipo) || tipo == FILEIRA_LARGA || tipo == FILEIRA_HEROI ||
-            ((tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE) &&
-             ajustes_posteres_deitados());
-  rotuloFora = temRotulo(tipo);
-  // A pasta da colecao nao tem rotulo fora do card, em nenhum estilo.
-  if (fl->tipo == FILEIRA_CATALOGOS) rotuloFora = 0;
-  rotH = rotuloFora ? NV_POSTER_COPY_H : 0.0f;
-  // A REDUCAO SAI DA FORMA DE REFERENCIA. Sozinha, cada forma era reduzida
-  // para caber 2,6 cards — e as tres paisagens, ou os tres 4:3, saiam do MESMO
-  // tamanho na previa, que e justamente a diferenca que a pessoa esta
-  // escolhendo. Com `refTipo` = o maior tamanho da linha, ele enche o palco
-  // como antes e os menores aparecem menores, na proporcao de verdade.
-  { int fR, pR; float lwR = lw, lhR = lh, gapR = gap, xoffR = xoff, rotR = rotH;
-    if (refTipo != filTipo && refTipo >= 0 && refTipo < FIL_TIPO_N) {
-      TipoFileira tR = previaMedida(fl, chave, refTipo, &fR, &pR, &lwR, &lhR);
-      gapR = gapDe(tR); xoffR = xOffTipo(tR);
-      if (fl->tipo == FILEIRA_CATALOGOS) { gapR -= xOffTipo(tR); xoffR = 0.0f; }
-      rotR = temRotulo(tR) ? NV_POSTER_COPY_H : 0.0f;
-      if (fl->tipo == FILEIRA_CATALOGOS) rotR = 0.0f;
-    } else pR = pilha;
-    s = area.w / (xoffR + (pR ? 1.0f : 2.6f) * (lwR + gapR));
-    if (s > 1.0f) s = 1.0f;
-    if ((lhR + rotR) * s > area.h) s = area.h / (lhR + rotR);
-    if ((lh + rotH) * s > area.h) s = area.h / (lh + rotH); }
-  w = lw * s; h = lh * s; passo = (lw + gap) * s; raio = raioDe(w, h);
-  x0 = area.x + xoff * s;
-  // Rente ao topo, como a fileira fica sob o titulo dela na Home.
-  y0 = area.y;
-  og = gfx_opacidade_grupo;
-  gfx_opacidade_grupo = alfa;
-  gfx_recorte(area.x, area.y, area.w, area.h);
-  if (pilha) {
-    desenhaPilha(fl, 0, nItens, x0, y0, h, s);
-  } else if (tipo == FILEIRA_HEROI) {
-    // A PREVIA DO HERÓI É UM CARTÃO, não o começo de uma fileira: a fileira
-    // aplicada é um card só (larguraDe/6239 — o card é a fileira) e o laço de
-    // 8 desenhou oito mini-banner despedaçados — selo e texto têm métrica
-    // fixa (28 px) e não reduzem com o resto. O cartão enche a área, como
-    // a Home: o que a pessoa escolhe é o que ela vê.
-    { int idx = fl->usaItens ? fl->itens[0] : fl->ini;
-      const CatItem *ci = cat_item_exato(idx);
-      const char *cam = arte_por_identidade(idx, 1);
-      GLuint t = cam ? tex_obter_larg(cam, area.w) : 0;
-      float hw = area.w, hh = hw * NV_HEROI_ASPECT;
-      if (hh > area.h) { hh = area.h; hw = hh / NV_HEROI_ASPECT; }
-      desenhaHeroiCard(ci, fl->titulo, ci ? ci->sinopse : NULL, cam, t, 1.0f,
-                       area.x + (area.w - hw) * .5f, y0, hw, hh,
-                       raioDe(hw, hh), 0.0f, 0.0f); }
-  } else {
-    for (c = 0; c < nItens && c < 8; c++) {
-      float px = x0 + (float)c * passo;
-      GfxRect card = { px, y0, w, h };
-      int idx = fl->usaItens ? fl->itens[c] : fl->ini + c;
-      if (px > area.x + area.w) break;
-      // A fileira de COLECAO desenha sempre a pasta, EM QUALQUER ESTILO: o
-      // card e o do estilo, a arte e a da pasta (o cartao parado de
-      // desenhaAtalhos).
-      if (fl->tipo == FILEIRA_CATALOGOS) {
-        // O cartao parado de desenhaAtalhos: esqueleto, capa, profundidade.
-        const ColFolder *folder = col_folder(fl->folders[c]);
-        const char *arte = folder ? col_capa(folder) : NULL;
-        GLuint tex = arte && arte[0] ? tex_obter_larg(arte, w) : 0;
-        gfx_cor(card, raio, NV_COR_ESQUELETO_R, NV_COR_ESQUELETO_G, NV_COR_ESQUELETO_B, 1);
-        if (tex) {
-          gfx_tex_aspect_atual = tex_aspecto(arte);
-          gfx_rect(card, tex, GFX_CARD, 0, 0, 0, raio, 0, 0, 0, 1);
-          gfx_tex_aspect_atual = 0;
-        }
-        continue;
-      }
-      { const CatItem *ci = cat_item_exato(idx);
-        const char *cam = arte_por_identidade(idx, tipo == FILEIRA_CONTINUE ? 3 : deitado);
-        if (tipo == FILEIRA_FICHA) { desenhaFicha(ci, px, y0, w, h, 0.0f); card.w = h * 2.0f / 3.0f; }
-        GLuint t = cam ? tex_obter_larg(cam, w) : 0;
-        // A Redonda e o disco com o nome, como na Home: pelo card comum ela
-        // saia retangulo e a pessoa nao a reconhecia na lista.
-        if (tipo == FILEIRA_REDONDA) { desenhaRedonda(ci, t, cam, px, y0, w, 0.0f); continue; }
-        if (tipo == FILEIRA_TOP10_NUM)
-          desenhaNumeral(fileiraRanking(fl, c), px, y0, h, passo - w - NV_TOP10_NUM_FOLGA * s, 1.0f);
-        gfx_veu_card_limpar();
-        if (t) veusDoCard(ci, tipo, deitado, 0.0f, 0);
-        desenhaArteCard(card, tipo, cam, t, ci, 0.0f, raio, 1.0f, 0.0f);
-        if (t) gfx_veu_na_arte = 1; else gfx_veu_card_limpar();
-        if (tipo == FILEIRA_POSTER_GRANDE && ci)
-          desenhaPosterGrande(ci, cam, px, y0, w, h, raio, 1.0f);
-        desenhaRotuloCard(ci, tipo, deitado, rotuloFora, px, y0, w, h, raio);
-        if (editorial(tipo)) desenhaEditorialCard(ci, tipo, px, y0, w, h, raio);
-        gfx_veu_card_limpar(); }
-    }
-  }
-  gfx_sem_recorte();
-  gfx_opacidade_grupo = og;
-  return 1;
-}
 
 // --- VITRINE DAS COLECOES (vertudo.c) -------------------------------------------
 // A exibicao "Vitrine" de uma colecao e a Home em miniatura: destaque no alto e
@@ -7112,7 +6941,6 @@ void home_desenhar(Uint32 agora) {
   if (!fileirasOcultas) ponteiro_rolagem(toqueHomeRolar);
 #endif
   descida += cinema * NV_CINEMA_DESCE;   // detalhe assentado: nada da home aparece
-  palcoCortinaPasso(agora);              // a cortina do Palco sobe/desce pela mola
 
   // VIEWPORT DAS FILEIRAS. `.home-modern-rows-viewport` (components.css:6929) e
   // um bloco absoluto com bottom:0, height 52% e overflow-y:auto — ou seja as
@@ -7152,17 +6980,12 @@ void home_desenhar(Uint32 agora) {
   int ordemFil = 0;
   fileirasVistasEm = agora ? agora : 1u;
   temCartaoFoco = 0;
+  temAncoraFoco = 0;
   // A LUZ DO FOCO: uma varredura por foco novo, nenhuma com a tecla presa.
   float varreFoco = revela_varre(&revVarre,
                                  focoHero ? -1 : foco.fileira * 64 + foco.coluna, agora);
   for (int r = 0; r < (fileirasOcultas || vazioQr ? 0 : nFileiras); r++) {
     TipoFileira tipo = fileiras[r].tipo;
-    // A fileira Palco em foco e a unica fora da cortina: titulo, cartazes e
-    // legenda inteiros (a faixa cobre o bloco todo dela, ate o +70 da legenda).
-    if (tipo == FILEIRA_PALCO && r == foco.fileira && !focoHero) {
-      palcoFaixaTopo = y;
-      palcoFaixaBase = y + NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r);
-    }
     // No retrato a visibilidade acompanha o recorte real, inclusive antes
     // do primeiro gesto; a memoria do foco nao esconde fileiras acessiveis.
     float fade=alfaFileiraHome(r, y, topoFil, corte);
@@ -7686,20 +7509,6 @@ void home_desenhar(Uint32 agora) {
   gfx_borda_foco_atual = 1.0f;
   gfx_sem_recorte();
 
-  // A CORTINA DO PALCO (#205, pedido do dono: "o resto da tela mais dimming
-  // ainda"): fileira Palco em foco, duas faixas escuras cobrem tudo fora dela —
-  // as outras fileiras e o topo. A faixa da fileira em foco (titulo, cartazes
-  // e legenda) fica fora do scrim, inteira e legivel; sobe e desce pela mola.
-  if (palcoCortina > 0.01f && palcoFaixaBase > palcoFaixaTopo) {
-    float alfa = NV_PALCO_CORTINA * palcoCortina * (1.0f - pd) * (1.0f - cinema);
-    float topo, base;
-    if (alfa > 0.01f && palcoFaixaClamp(&topo, &base)) {
-      if (topo > 0.5f) gfx_cor((GfxRect){ 0.0f, 0.0f, NV_TELA_W, topo }, 0, 0, 0, 0, alfa);
-      if (base < NV_TELA_H - 0.5f)
-        gfx_cor((GfxRect){ 0.0f, base, NV_TELA_W, NV_TELA_H - base }, 0, 0, 0, 0, alfa);
-    }
-  }
-
   static TexLookahead adiante;
   int parado = tex_lookahead_parado(&adiante, scrollY);
   for (int r = 0; r < nFileiras; r++)
@@ -7743,6 +7552,18 @@ void home_desenhar(Uint32 agora) {
 // caso em que a pessoa moveu o foco e saiu antes de completar o repouso.
 // Nada a gravar (#95): a posicao na home vive so enquanto o app esta aberto.
 void home_encerrar(void) { }
+const char *home_perf_tag(void) {
+  if (!focoHero && foco.fileira >= 0 && foco.fileira < nFileiras) {
+    if (fileiras[foco.fileira].tipo == FILEIRA_PALCO) return "home-stage";
+    if (fileiras[foco.fileira].tipo == FILEIRA_REDONDA) return "home-round";
+  }
+  return "home";
+}
+void home_perf_style_menu(void) {
+  if (!perftv_enabled || focoHero || foco.fileira < 0 || foco.fileira >= nFileiras) return;
+  const Fileira *f = &fileiras[foco.fileira];
+  ctx_abrir_fileira(f->chave, f->titulo);
+}
 // Rastro de desempenho (main.c, [qd]): onde o foco esta neste quadro.
 const char *home_rastro_foco(void) {
   static char b[160];
@@ -7791,6 +7612,12 @@ void home_retomar_esquecer(void) {
   cw_retido_definir("");
 }
 int home_quer_sair(void) { return sair; }
+
+int home_ancora_foco(GfxRect *out) {
+  if (!temAncoraFoco || !out) return 0;
+  *out = ancoraFoco;
+  return 1;
+}
 
 int home_item_focado(HomeItem *out) {
   if (!out || !temItemFoco || !perfis_sessao_atual(itemFocoSessao) ||

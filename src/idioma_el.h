@@ -994,6 +994,7 @@
   T("Busque por nome ou @apelido", "Αναζητήστε με όνομα ή @ψευδώνυμο"),
   T("Busque por nome ou @apelido, ou use o código", "Αναζητήστε με όνομα ή @ψευδώνυμο, ή χρησιμοποιήστε τον κωδικό"),
   T("Bélgica", "Βέλγιο"),
+  T("Bósnio", "Βοσνιακά"),
   T("Búlgaro", "Βουλγαρικά"),
   T("C (payload de live)", "C (payload ζωντανής μετάδοσης)"),
   T("CANCELADA", "ΑΚΥΡΩΘΗΚΕ"),

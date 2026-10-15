@@ -994,6 +994,7 @@
   T("Busque por nome ou @apelido", "Търсете по име или @псевдоним"),
   T("Busque por nome ou @apelido, ou use o código", "Търсете по име или @псевдоним, или използвайте кода"),
   T("Bélgica", "Белгия"),
+  T("Bósnio", "Босненски"),
   T("Búlgaro", "Български"),
   T("C (payload de live)", "C (payload на живо)"),
   T("CANCELADA", "ОТМЕНЕНО"),

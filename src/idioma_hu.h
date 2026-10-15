@@ -994,6 +994,7 @@
   T("Busque por nome ou @apelido", "Keress név vagy @becenév alapján"),
   T("Busque por nome ou @apelido, ou use o código", "Keress név vagy @becenév alapján, vagy használd a kódot"),
   T("Bélgica", "Belgium"),
+  T("Bósnio", "Bosnyák"),
   T("Búlgaro", "Bolgár"),
   T("C (payload de live)", "C (élő payload)"),
   T("CANCELADA", "MEGSZAKÍTVA"),

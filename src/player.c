@@ -4464,16 +4464,18 @@ static void desenharLegendaExternaCorpo(void) {
 }
 
 static void desenharLegendaPrincipal(float *topoPilha){
+  // Gate collector output, preserving native callback rendering below.
+  int overlay = faixas_legenda_overlay();
   PlrRect bitmapArea = areaVideoLegenda();
   float bitmapAlpha = (legEstilo.opacidade==3?.25f:legEstilo.opacidade==2?.5f:
                       legEstilo.opacidade==1?.75f:1.f) * entrada;
-  if (video_dts_legenda_desenhar(posLegenda(), legEstilo.atrasoMs,
+  if (overlay && video_dts_legenda_desenhar(posLegenda(), legEstilo.atrasoMs,
         bitmapArea.x, bitmapArea.y, bitmapArea.w, bitmapArea.h, bitmapAlpha)) {
     imgsub_gl_limpar();
     return;
   }
   // PGS decodificado pelo app (mkvass): so ha quadros quando a faixa e de imagem.
-  if (imgsub_desenhar(legsync_posicao(posLegenda()) + legsync_offset_ms(legEstilo.atrasoMs) / 1000.0,
+  if (overlay && imgsub_desenhar(legsync_posicao(posLegenda()) + legsync_offset_ms(legEstilo.atrasoMs) / 1000.0,
         bitmapArea.x, bitmapArea.y, bitmapArea.w, bitmapArea.h, bitmapAlpha)) return;
   /* ASS completo: libass devolve uma lista de bitmaps por camada, preservando
    * karaoke, movimento, desenho vetorial, fontes e todas as tags do arquivo.
@@ -4491,7 +4493,7 @@ static void desenharLegendaPrincipal(float *topoPilha){
   double posLeg = legsync_posicao(posLegenda());
   assrender_aplicar_invalidacao();
   assrender_definir_cor(0, 0, 0, 0);
-  if (assrender_ativo()) {
+  if (overlay && assrender_ativo()) {
     PlrRect area = areaVideoLegenda();
     if (assrender_texto_simples()) {
       static const char *const families[] = {
@@ -4532,7 +4534,7 @@ static void desenharLegendaPrincipal(float *topoPilha){
     return;
   }
   LegendaCue cues[LEGENDA_SIMULTANEAS];
-  int n = legenda_cues(posLeg, atraso, cues, LEGENDA_SIMULTANEAS), i;
+  int n = overlay ? legenda_cues(posLeg, atraso, cues, LEGENDA_SIMULTANEAS) : 0, i;
   // Sem legenda externa, a EMBUTIDA que o player nativo nao desenha (#122):
   // o mesmo overlay, com a mesma folha de estilo da pessoa.
   if (n <= 0 && comVideo && player_texto_legenda_nativa(cues[0].texto, sizeof cues[0].texto)) {

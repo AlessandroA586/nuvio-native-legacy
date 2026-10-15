@@ -994,6 +994,7 @@
   T("Busque por nome ou @apelido", "按名稱或 @暱稱搜尋"),
   T("Busque por nome ou @apelido, ou use o código", "按名稱或 @暱稱搜尋，或使用代碼"),
   T("Bélgica", "比利時"),
+  T("Bósnio", "波士尼亞語"),
   T("Búlgaro", "保加利亞語"),
   T("C (payload de live)", "C (直播載荷)"),
   T("CANCELADA", "已取消"),

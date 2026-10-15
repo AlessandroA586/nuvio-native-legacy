@@ -135,6 +135,11 @@ static Uint32 legAutoDesde;
 // e a faixa ficava na TV — que corta metade das falas — ate o fim do episodio.
 static int legOverlayFalhas, legOverlayRecusas, legOverlayNoGoEstado;
 static int legOverlayTV, legOverlayColhidos;
+
+int faixas_legenda_overlay(void) {
+  return !legOverlayTV;
+}
+
 static Uint32 legOverlayRetomar;       // 0 = nada agendado
 
 static int ehAss(const VideoFaixa *f) {
@@ -168,7 +173,7 @@ static int vaiOverlay(const VideoFaixa *f) {
 // outro bug (a resposta do uMS sai logo abaixo como "[video] {...}").
 static void overlayAssumir(int i, int ord) {
   const VideoFaixa *f = video_legenda(i);
-  int texto = f && !ehAss(f) && !ehPgs(f);
+  int texto = f && f->numero >= 0 && !ehAss(f) && !ehPgs(f);
   // Texto: a TV segura a legenda enquanto a rede ainda nao entregou cues.
   video_escolher_legenda(texto ? i : -1);
   mkvass_iniciar_ordinal(video_url_atual(), ord);
@@ -422,7 +427,14 @@ void faixas_reiniciar_preparada(void) { reiniciarFaixas(1); }
 
 // Indice da legenda que a folha deve marcar como ATIVA.
 static int legendaAtiva(void) {
-  if (legExterna >= 0) return legExterna;
+  if (legExternaId[0]) {
+    char id[24];
+    for (int j = 0; j < addons_n_legendas(); j++) {
+      legendasui_id_addon(addons_legenda(j), id);
+      if (!strcmp(id, legExternaId)) return legExterna = video_n_legenda() + j;
+    }
+    return legExterna = -1;
+  }
   if (legOverlay >= 0) return legOverlay;
   return video_legenda_atual();
 }

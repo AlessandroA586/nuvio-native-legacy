@@ -994,6 +994,7 @@
   T("Busque por nome ou @apelido", "Hledejte podle jména nebo @přezdívky"),
   T("Busque por nome ou @apelido, ou use o código", "Hledejte podle jména nebo @přezdívky, nebo použijte kód"),
   T("Bélgica", "Belgie"),
+  T("Bósnio", "Bosenský"),
   T("Búlgaro", "Bulharština"),
   T("C (payload de live)", "C (živý payload)"),
   T("CANCELADA", "ZRUŠENO"),
