@@ -98,10 +98,11 @@ void ctx_fileira(const char *chave, const char *titulo);
 // passa 0 nos outros cartoes.
 void ctx_dispensar_retomar(int on);
 // Menu SO da fileira, para o cartao que nao e titulo (pasta de colecao, pilha
-// fechada do ranking): abre direto no modal de estilo — formas a esquerda,
-// previa da fileira a direita (home_previa_fileira). Nao abre nada se a chave
-// nao aceita forma.
+// fechada do ranking): abre direto no menu de estilo, ao lado da fileira (a
+// propria fileira e a previa). Nao abre nada se a chave nao aceita forma.
 void ctx_abrir_fileira(const char *chave, const char *titulo);
+// O retangulo (tela virtual) do menu de estilo aberto; 0 com ele fechado.
+int ctx_estilo_rect(GfxRect *out);
 // O MESMO MENU, aberto pela BIBLIOTECA (biblioteca.c) segurando OK num cartaz.
 // `r` e a caixa do cartaz na tela virtual (1920x1080) e `arte` o poster dele: o
 // menu nasce ao lado e o poster volta por cima do veu, como na home. Sem arte

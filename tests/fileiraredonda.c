@@ -1,9 +1,8 @@
-// A FORMA REDONDA NA PREVIA DO MODAL DE ESTILO (dono, 14/10: "sumiu o estilo
-// de fileira que é redondo?"). A Home desenhava o disco (desenhaRedonda), mas
-// a previa do modal — onde a pessoa escolhe a forma — caia no card comum:
-// retangulo arredondado, sem o nome embaixo. Quem olhava a lista via a
-// Redonda como um 4:3 qualquer. Aqui a previa de uma fileira de catalogo na
-// forma Redonda tem de pedir o DISCO (GFX_DISCO) e escrever os nomes.
+// A FORMA REDONDA NA FILEIRA (dono, 14/10: "sumiu o estilo de fileira que é
+// redondo?"). O menu de estilo nao tem previa propria: a fileira da Home e que
+// muda a cada passo, entao a escolha Redonda tem de virar a forma da fileira
+// de catalogo e o Pôster desfaz. O desenho do disco e conferido em
+// tests/estilo3_shot.c.
 // Base: tests/colestilos.c (Home sem renderizador, src/home.c incluido).
 #define main cwordem_home_fixture_main
 #include "cwordem_home.c"
@@ -78,10 +77,16 @@ int tex_marca_escura(const char *c) { (void)c; return 0; }
 GLuint tex_obter_logo_larg(const char *c, float w) { (void)c; (void)w; return 0; }
 void tex_publicar_paleta(const char *c) { (void)c; }
 
+static int tipoDaChave(const char *chave) {
+  int r;
+  for (r = 0; r < nFileiras; r++)
+    if (!strcmp(fileiras[r].chave, chave)) return (int)fileiras[r].tipo;
+  return -1;
+}
+
 int main(void) {
   static CatItem items[6];
   static CatFileira rows[2];
-  GfxRect area = { 0, 0, 1000, 400 };
   int k;
   fil_definir_limite(10);
   ajustes_aplicar_blob("{\"continueWatchingEnabled\":true,\"homeLayout\":\"classic\"}");
@@ -100,14 +105,13 @@ int main(void) {
   rows[1].ini = 2; rows[1].n = 4;
   cat_definir_tudo(items, 6, rows, 2);
   sincronizarFileiras();
-  // Cada pessoa da previa e um disco (o miolo; o anel so com foco) com o nome.
-  assert(home_previa_fileira("addon_people", FIL_TIPO_REDONDA, FIL_TIPO_REDONDA, area, 1.0f));
-  printf("discos=%d nomes=%d\n", discos, nomes);
-  assert(discos >= 2 && nomes >= 2);
-  // A mesma fileira em Pôster continua no card comum: nenhum disco.
-  discos = nomes = 0;
-  assert(home_previa_fileira("addon_people", FIL_TIPO_CARTAZ, FIL_TIPO_CARTAZ, area, 1.0f));
-  assert(discos == 0);
+  // A escolha Redonda vira a forma da fileira (e Poster a desfaz).
+  fil_definir_tipo("addon_people", FIL_TIPO_REDONDA);
+  sincronizarFileiras();
+  assert(tipoDaChave("addon_people") == FILEIRA_REDONDA);
+  fil_definir_tipo("addon_people", FIL_TIPO_CARTAZ);
+  sincronizarFileiras();
+  assert(tipoDaChave("addon_people") != FILEIRA_REDONDA);
   printf("fileiraredonda: ok\n");
   return 0;
 }
