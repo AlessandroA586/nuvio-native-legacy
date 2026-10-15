@@ -328,6 +328,15 @@ int main(void) {
   CONFERE(!estatvivo_aberto() && estatvivo_fixado(), "DOWN returns focus, preserves pin");
   key(SDLK_UP); key(SDLK_UP);
   CONFERE(estatvivo_aberto() && !estatvivo_fixado(), "UP in panel unpins");
+  key(SDLK_ESCAPE); key(SDLK_ESCAPE);
+  estatvivo_abrir(); SDL_Delay(650); key(SDLK_DOWN); frame(120); key(SDLK_UP); frame(120);
+  CONFERE(estatvivo_aberto() && estatvivo_fixado(), "refocus pinned panel");
+  estatvivo_abrir(); frame(120);
+  shotGeom("central-unpinned");
+  { EvGeometriaTeste ug; estatvivo_teste_geometria(&ug);
+    CONFERE(estatvivo_aberto() && !estatvivo_fixado() && ug.nKeys >= 3, "Central on focused pinned panel unpins, hints visible"); }
+  estatvivo_fechar(); estatvivo_abrir(); SDL_Delay(650);
+  key(SDLK_DOWN); frame(2); key(SDLK_UP); key(SDLK_UP); frame(2);
   key(SDLK_UP); frame(2);   // UP unpinned = Edit (no Menu key needed)
   shotGeom("editor-up");
   key(SDLK_ESCAPE); key(SDLK_ESCAPE);
