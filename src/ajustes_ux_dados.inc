@@ -99,7 +99,7 @@ static void uxValorTexto(int op, int v, char *buf, size_t tam) {
   } else if (o->tipo == OP_NUMERO) {
     snprintf(buf, tam, "%d%s", v, o->sufixo ? o->sufixo : "");
     return;
-  } else if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA) {
+  } else if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2) {
     const char *cod = ling_opcao_codigo(v >= 0 && v < ling_opcao_n() ? v : 0);
     texto = !cod || !cod[0] ? "Da conta" : !strcmp(cod, "*") ? "Todas"
       : !strcmp(cod, "~") ? "Original do título" : ling_nome(cod);
@@ -161,6 +161,7 @@ static const char *uxSinonimos(int op) {
   switch (op) {
     case AJ_IDIOMA: return "idioma interface menus language portugues ingles espanhol";
     case AJ_AUD_LINGUA: return "idioma audio dublado dublagem original voz language";
+    case AJ_AUD_LINGUA2: return "idioma audio segundo secundario dublado dublagem voz language second secondary";
     case AJ_LEG_LINGUA: return "idioma legenda legendado subtitle subtitles cc closed captions";
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
       return "legenda secundaria segunda dupla dual posicao topo junto empilhada tamanho cor fundo borda contorno estilo second subtitle position size color";
@@ -176,7 +177,7 @@ static const char *uxSinonimos(int op) {
     case AJ_HDR_UI: return "brilho interface hdr dolby vision dv branco esbranquicado leitoso vidro cor player legenda";
     case AJ_BRILHO_PLAYER: return "brilho interface player controles barra escurecer forte claro oled hdr osd luz";
     case AJ_NOVIDADES20: return "novidades novo versao 2.0 tour guia o que mudou mudancas whats new";
-    case AJ_DTS_AC3: return "dts convertido ac3 aac dolby digital 5.1 surround estereo audio som barra de som receiver arc earc conversao lg converted stereo";
+    case AJ_DTS_AC3: return "dts truehd convertido ac3 aac dolby digital 5.1 surround estereo audio som barra de som receiver arc earc conversao lg samsung desligado converted stereo off";
     case AJ_PS_CONTINUAR: return "continuar escolha perfil cartao card tela abertura inicial assistindo retomar remover esconder desligar quem esta assistindo continue watching profile picker";
     case AJ_DV_MKV: return "dolby vision dv dovi mkv matroska perfil 8 5 hdr hdr10 experimental imagem cores";
     case AJ_CW_RETIDO_TAMBEM: return "continuar assistindo tambem ilha retomar agora fileira duplicar repetir aparecer dois lugares titulo continue watching also island resume";
@@ -381,7 +382,7 @@ int ajustes_buscar(const char *consulta, AjusteBuscaResultado *resultados, int c
       uxIndiceAcrescentar(indice, sizeof indice, ajudaOpcao(op));
       uxIndiceAcrescentar(indice, sizeof indice, i18n(ajudaOpcao(op)));
       if (OPCOES[op].tipo == OP_ESCOLHA) {
-        int n = op == AJ_AUD_LINGUA || op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 ? ling_opcao_n() : nValores(op);
+        int n = op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2 || op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 ? ling_opcao_n() : nValores(op);
         for (j = 0; j < n; j++) {
           char texto[160];
           uxValorTexto(op, j, texto, sizeof texto);

@@ -16,6 +16,7 @@
 #include "ajustes.h"
 #include "catalogo.h"
 #include "linguas.h"
+#include "audioescolha.h"
 #include "plrui.h"
 #include "plrilha.h"
 #include "legendasui.h"
@@ -883,6 +884,9 @@ static void aplicar(void) {
   if (coluna == 0) {
     // F06: outra faixa de audio = outras falas; a escuta em curso nao vale mais.
     if (video_audio_atual() != foco[0]) legsync_audio_trocou();
+    // A ordem automatica (audioescolha.h) volta a esta faixa nesta reproducao.
+    { const VideoFaixa *f = video_audio(foco[0]);
+      if (f && !player_id_canal()[0]) audioesc_lembrar(f->idioma, f->codec, f->rotulo, f->canais); }
     video_escolher_audio(foco[0]);
   } else {
     // A pessoa escolheu: a automatica nao mexe mais nesta sessao, nem se a

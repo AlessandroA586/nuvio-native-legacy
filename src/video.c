@@ -10,6 +10,7 @@
 #include "video_dvaudio.h"
 #include "idioma.h"
 #include "linguas.h"
+#include "audioescolha.h"
 #include <SDL2/SDL.h>
 #include "marco.h"
 #include "mkv.h"
@@ -90,7 +91,14 @@ int video_dv_ativo(void) { return dtsSessao && dtsModoDv; }
 // (Dolby Vision/DTS path handing back to the TV player, audio switch) is not
 // a source that failed to open. Other targets keep 0.
 static int fonteTocou;
+#ifdef NV_TPK
+// .tpk: so o fluxo DTS/TrueHD convertido responde aqui (video_tpk.c); o resto
+// segue 0, como antes.
+int video_tpk_fonte_tocou(void);
+int video_fonte_tocou(void) { return fonteTocou || video_tpk_fonte_tocou(); }
+#else
 int video_fonte_tocou(void) { return fonteTocou; }
+#endif
 static int dvLiberadoNestaTv(void);
 static int dvPronto(void);
 const char *video_dts_saida(void) { return dtsSaida; }
@@ -110,8 +118,14 @@ int video_faixa_dts(const VideoFaixa *f) {
 // So o ramo webOS escreve aqui (PREPARANDO, CONVERTIDO, FALHOU): o resto sai
 // da faixa e do pipeline, igual em todos os alvos. No Mac, video_simular.
 static int dtsEstado;
+#ifdef NV_TPK
+int video_tpk_dts_estado(void);   // video_tpk.c: enquanto o .tpk converte o DTS
+#endif
 int video_dts_estado(void) {
   if (dtsEstado) return dtsEstado;
+#ifdef NV_TPK
+  { int e = video_tpk_dts_estado(); if (e) return e; }
+#endif
   if (!video_pronto() || !video_faixa_dts(video_audio(video_audio_atual()))) return VIDEO_DTS_NENHUM;
   return video_audio_nao_suportado() ? VIDEO_DTS_SEM_SOM : VIDEO_DTS_NATIVO;
 }
@@ -1103,26 +1117,31 @@ static int eventoPayload(const char *p, unsigned minhaSessao) {
       }
     }
 
-    // Escolhe o audio no idioma preferido, se houver um e se o arquivo o
-    // tiver. Sem preferencia, ou sem faixa correspondente, NAO se mexe: a
-    // escolha do pipeline (faixa 0) e melhor que uma trocada por chute — quem
-    // quer outra abre a folha de faixas, que continua listando todas.
-    { const char *pref = ling_audio();
-      if (pref[0] && nAudio > 1) {
-        int i;
-        for (i = 0; i < nAudio; i++) {
-          if (!faixaAudio[i].idioma[0] || !ling_casa(faixaAudio[i].idioma, pref)) continue;
-          printf("[video] audio preferido: %s (faixa %d de %d)\n",
-                 ling_nome(faixaAudio[i].idioma), i + 1, nAudio);
-          fflush(stdout);
-          // Direto, e nao por audioAoCarregar: aquele campo e da RECUPERACAO
-          // (pipeline morto) e sobrescreve-lo aqui apagaria a faixa que a
-          // pessoa tinha escolhido antes da queda. O sourceInfo chega com o
-          // pipeline ja carregado, entao o selectTrack vale agora.
-          if (audioAoCarregar < 0) video_escolher_audio(i);
-          break;
-        }
-      } }
+    // A ORDEM DO AUDIO (audioescolha.h): a escolhida a mao nesta reproducao, o
+    // idioma preferido, o segundo, o original; em cada idioma a que nao e
+    // DTS/TrueHD antes (DTS que a TV recusa converte, ver audioNaoSup). Sem
+    // regra que decida, NAO se mexe: a escolha do pipeline (faixa 0) e melhor
+    // que uma trocada por chute — quem quer outra abre a folha de faixas.
+    if (nAudio > 1) {
+      AudioCand c[NV_FAIXA_MAX];
+      int i, o, k;
+      for (i = 0; i < nAudio; i++) {
+        c[i].idioma = faixaAudio[i].idioma; c[i].codec = faixaAudio[i].codec;
+        c[i].rotulo = faixaAudio[i].rotulo; c[i].canais = faixaAudio[i].canais;
+        c[i].dts = audioesc_dts_truehd(faixaAudio[i].codec, faixaAudio[i].rotulo); c[i].pode = 1;
+      }
+      k = audioesc_escolher(c, nAudio, &o);
+      if (k >= 0 && k != audioAtual) {
+        printf("[video] audio pela ordem (%s): %s (faixa %d de %d)\n", audioesc_origem_nome(o),
+               faixaAudio[k].rotulo, k + 1, nAudio);
+        fflush(stdout);
+        // Direto, e nao por audioAoCarregar: aquele campo e da RECUPERACAO
+        // (pipeline morto) e sobrescreve-lo aqui apagaria a faixa que a
+        // pessoa tinha escolhido antes da queda. O sourceInfo chega com o
+        // pipeline ja carregado, entao o selectTrack vale agora.
+        if (audioAoCarregar < 0) video_escolher_audio(k);
+      }
+    }
 
     // O PIPELINE NAO DA IDIOMA DE LEGENDA. Medido nesta TV, num arquivo com 43
     // legendas: o audioTrackInfo vem com "en"/"es"/"fr"/"it" e TODA entrada do

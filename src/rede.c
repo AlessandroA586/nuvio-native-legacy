@@ -2821,9 +2821,144 @@ char *rede_baixar_trecho64_cab(const char *url, const char *headers,
   return rede_baixar_trecho64_final(url, headers, start, end, size, total, status, cancelled, NULL, NULL);
 }
 
+/* ONE LONG READ, LIKE THE TV'S OWN PLAYER (Samsung DTS/TrueHD converter).
+ *
+ * The ranged reader above asks 4 MiB at a time from up to 4 lanes. A 4K remux
+ * at 60-67 Mbit/s is then ~2 requests a second on 4 connections, and TorBox's
+ * CDN throttled it after about a minute and refused every connection after
+ * (S95C, 13/10/2026), while the TV's player streaming the same file over one
+ * connection never dropped. This asks "bytes=start-" once and hands the body
+ * to `sink` as it arrives. The sink may block (backpressure: the converter is
+ * paced by the TV); time spent inside it does not count as a stall. */
+typedef struct {
+  DtsRange r;
+  int (*sink)(void *, const char *, size_t);
+  void *opaque;
+  int stopped, accepted;
+  int64_t got;
+  uint64_t lastByteMs;
+  long stallMs;
+} DtsFluxo;
+static uint64_t fluxoAgoraMs(void) {
+  struct timespec t;
+  clock_gettime(CLOCK_MONOTONIC, &t);
+  return (uint64_t)t.tv_sec * 1000u + (uint64_t)t.tv_nsec / 1000000u;
+}
+static size_t dtsFluxoBody(void *data, size_t size, size_t count, void *user) {
+  DtsFluxo *f = user;
+  size_t n;
+  if (size && count > SIZE_MAX / size) return 0;
+  n = size * count;
+  if (f->r.cancel && __atomic_load_n(f->r.cancel, __ATOMIC_RELAXED)) return 0;
+  if (f->r.status >= 300 && f->r.status < 400) return n;
+  if (!f->accepted) {
+    /* 206 starting exactly where asked; a 200 is the whole file, usable only
+     * when the request was for byte 0 (some origins ignore Range). */
+    if (f->r.status == 206 && f->r.valid && f->r.start == f->r.requested) f->accepted = 1;
+    else if (f->r.status == 200 && f->r.requested == 0) f->accepted = 1;
+    else { f->r.overflow = 1; return 0; }
+  }
+  if (!f->sink(f->opaque, data, n)) { f->stopped = 1; return 0; }
+  f->got += (int64_t)n;
+  f->lastByteMs = fluxoAgoraMs();
+  return n;
+}
+static int dtsFluxoProgress(void *user, long long dt, long long dn, long long ut, long long un) {
+  DtsFluxo *f = user;
+  (void)dt; (void)dn; (void)ut; (void)un;
+  if (f->r.cancel && __atomic_load_n(f->r.cancel, __ATOMIC_RELAXED)) return 1;
+  return f->stallMs > 0 && fluxoAgoraMs() - f->lastByteMs > (uint64_t)f->stallMs;
+}
+int rede_fluxo64(const char *url, const char *headers, int64_t start,
+                 int (*sink)(void *opaque, const char *data, size_t n), void *opaque,
+                 int64_t *total, int *status, volatile int *cancelled,
+                 char *final, int *cross, long stall_ms, int64_t *bytes) {
+  char current[8192], range[48], origin[128];
+  int hop, public_only = 0, downgraded = 0;
+  if (total) *total = -1;
+  if (status) *status = 0;
+  if (final) final[0] = 0;
+  if (cross) *cross = 0;
+  if (bytes) *bytes = 0;
+  if (!url || !sink || strlen(url) >= sizeof current || start < 0 || !abrir()) return -1;
+  if (strncmp(url, "http://", 7) && strncmp(url, "https://", 8)) return -1;
+  snprintf(current, sizeof current, "%s", url);
+  if (!dtsRangeOrigin(url, origin, sizeof origin)) return -1;
+  snprintf(range, sizeof range, "%lld-", (long long)start);
+  for (hop = 0; hop < 6; hop++) {
+    DtsFluxo f;
+    void *c, *list;
+    int result;
+    long http = 0;
+    char redirected[8192] = "", *next = NULL;
+    if (cancelled && __atomic_load_n(cancelled, __ATOMIC_RELAXED)) return -1;
+    memset(&f, 0, sizeof f);
+    f.r.requested = start; f.r.total = -1; f.r.cancel = cancelled;
+    f.sink = sink; f.opaque = opaque; f.stallMs = stall_ms; f.lastByteMs = fluxoAgoraMs();
+    c = pegarHandle(current);
+    if (!c) return -1;
+    opcoesComuns(c, 15000);                 /* connect deadline from here...      */
+    curl_setopt(c, OPT_TIMEOUT_MS, (long)0); /* ...but no limit on the whole body */
+    curl_setopt(c, OPT_SSL_VERIFYPEER, (long)1);
+    curl_setopt(c, OPT_SSL_VERIFYHOST, (long)2);
+    if (discordCa[0]) curl_setopt(c, OPT_CAINFO, discordCa);
+    curl_setopt(c, OPT_URL, current);
+    curl_setopt(c, OPT_RANGE, range);
+    curl_setopt(c, OPT_FOLLOWLOCATION, (long)0);
+    curl_setopt(c, OPT_WRITEFUNCTION, dtsFluxoBody);
+    curl_setopt(c, OPT_WRITEDATA, &f);
+    curl_setopt(c, OPT_HEADERFUNCTION, dtsRangeHeader);
+    curl_setopt(c, OPT_HEADERDATA, &f.r);
+    curl_setopt(c, OPT_XFERINFOFUNCTION, dtsFluxoProgress);
+    curl_setopt(c, OPT_XFERINFODATA, &f);
+    curl_setopt(c, OPT_NOPROGRESS, (long)0);
+    list = downgraded ? NULL : dtsRangeHeaders(headers, public_only);
+    if (list) curl_setopt(c, OPT_HTTPHEADER, list);
+    result = performTmdb(c, url);
+    if (curl_getinfo) {
+      curl_getinfo(c, INFO_RESPONSE_CODE, &http);
+      curl_getinfo(c, 1048607, &next);
+      if (next && strlen(next) < sizeof redirected)
+        snprintf(redirected, sizeof redirected, "%s", next);
+    }
+    if (status) *status = (int)http;
+    if (list && slist_free) slist_free(list);
+    soltarHandleR(c, result, current);
+    if (bytes) *bytes = f.got;
+    if (f.r.total >= 0 && total) *total = f.r.total;
+    if (!result && http >= 300 && http < 400 && redirected[0]) {
+      char host[128];
+      if (strncmp(redirected, "http://", 7) && strncmp(redirected, "https://", 8)) return -1;
+      if (!dtsRangeOrigin(redirected, host, sizeof host)) return -1;
+      if (strcmp(host, origin)) public_only = 1;
+      if (!strncmp(current, "https://", 8) && !strncmp(redirected, "http://", 7)) downgraded = public_only = 1;
+      snprintf(current, sizeof current, "%s", redirected);
+      continue;
+    }
+    if (f.accepted) {
+      if (final && hop > 0) snprintf(final, 8192, "%s", current);
+      if (cross) *cross = public_only;
+    }
+    if (f.stopped) return 1;                 /* the sink asked to stop */
+    if (!result && f.accepted) return 0;     /* body ended (EOF or a capped range) */
+    return -1;                               /* error: status/curl, bytes so far in *bytes */
+  }
+  return -1;
+}
+
 #endif  /* __EMSCRIPTEN__ */
 
 #ifdef __EMSCRIPTEN__
+int rede_fluxo64(const char *u, const char *h, int64_t s, int (*sk)(void *, const char *, size_t), void *o,
+                 int64_t *t, int *st, volatile int *c, char *f, int *x, long ms, int64_t *b) {
+  (void)u; (void)h; (void)s; (void)sk; (void)o; (void)c; (void)ms;
+  if (t) *t = -1;
+  if (st) *st = 0;
+  if (f) f[0] = 0;
+  if (x) *x = 0;
+  if (b) *b = 0;
+  return -1;
+}
 char *rede_baixar_trecho64_cab(const char *u, const char *h, int64_t s, int64_t e, long *n, int64_t *t, int *st, volatile int *c) {
   (void)u; (void)h; (void)s; (void)e; (void)c;
   if (n) *n = 0;

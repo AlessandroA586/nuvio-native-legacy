@@ -82,6 +82,7 @@
 #include "abertura.h"
 #include "apoio.h"
 #include "telefoneui.h"
+#include "dts/dts_hls_tpk.h"
 #ifdef NV_ANDROID
 #include "android.h"
 #endif
@@ -562,6 +563,10 @@ typedef enum {
   // .tpk. No fim: valor[]/CHAVE[] posicionais.
   AJ_MIC_BUSCA,
   AJ_FONTE_IDIOMA_AUDIO, // V_LIGA: 0 preferir o idioma do audio na escolha automatica; local, append-only
+  // SEGUNDO IDIOMA DE AUDIO (dono, 15/10/2026): secondary_preferred_audio_language
+  // do app oficial; a mesma lista e a regra da legenda secundaria (audioescolha.h:
+  // a ordem do audio automatico). No fim: posicionais.
+  AJ_AUD_LINGUA2,
 #ifdef NV_ANDROID
   AJ_BAIXAR_REGISTRO, // acao local; no fim para preservar os IDs existentes
 #endif
@@ -619,7 +624,17 @@ static const char *V_LAYOUT_AJUSTES[] = { "Painel", "Lista" };   // #339
 static const char *V_DESCANSO_FONTE[]  = { "Catálogo", "Minha lista e Continuar" };
 static const char *V_BRILHO_PLAYER[] = { "100%", "80%", "65%", "50%" };
 // #202: 0 = o ultimo modo usado (comportamento de sempre); 1..8 = PlrAspecto + 1.
+// LG: como o DTS convertido sai. .tpk: a mesma linha liga a conversao de
+// DTS/TrueHD e escolhe a saida (gravada em dtsTpkLocal; 1 = 5.1 nos dois, que
+// e o que ajustes_dts_ac3 le). O dtsSaidaLocal e o dtsTpkModoLocal de antes
+// migram na leitura (ver dtsTpkMigrar).
+#ifdef NV_TPK
+static const char *V_DTS_SAIDA[] = { "Desligado", "5.1 (Dolby Digital)", "Estéreo (AAC)" };
+#define N_DTS_SAIDA 3
+#else
 static const char *V_DTS_SAIDA[] = { "Estéreo (AAC)", "5.1 (Dolby Digital)" };
+#define N_DTS_SAIDA 2
+#endif
 static const char *V_PROPORCAO[] = { "Último usado", "Original", "Recortar", "Esticar", "Zoom leve", "Zoom cinema", "Zoom ultra", "Ajustar altura", "Ajustar largura" };
 static const char *V_LOGO_APP[] = { "Novo", "Clássico" };
 static const char *V_BUSCA_NUVIO[] = { "Primeiro", "Por último", "Desligado" };
@@ -656,9 +671,12 @@ static const unsigned P2P_LIMITE_MB[] = { 0, 2048, 4096, 8192, 16384 };
 // Only the Android player has an app-controlled disk cache (cacheboost.h);
 // LG/Samsung show the row with "Não disponível nesta TV". Compile-time, so the
 // many tests that compile ajustes.c alone need no extra source.
-// DTS -> AC3/AAC conversion lives only in the webOS player (src/dts).
+// DTS -> AC3/AAC conversion: the webOS player (src/dts) and, on the Samsung
+// .tpk, the loopback converter (dts/dts_hls_tpk.c) when FFmpeg is in the .so.
 static int dtsConversaoExiste(void) {
-#if defined(__APPLE__) || defined(NV_LINUX_DESKTOP) || defined(NV_TPK) || defined(NV_ANDROID) || defined(__EMSCRIPTEN__)
+#if defined(NV_TPK)
+  return dts_tpk_disponivel();
+#elif defined(__APPLE__) || defined(NV_LINUX_DESKTOP) || defined(NV_ANDROID) || defined(__EMSCRIPTEN__)
   return 0;
 #else
   return 1;
@@ -1405,7 +1423,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Proporção padrão",                V_PROPORCAO, 9),        // local: proporcaoPadraoLocal
   ESC("Também em Continuar assistindo",  V_LIGA, 2),             // local: cwRetidoTambemLocal
   ESC("Continuar na escolha de perfil",  V_LIGA, 2),             // local: psContinuarLocal
-  ESC("DTS convertido em",               V_DTS_SAIDA, 2),        // local: dtsSaidaLocal
+  ESC("DTS convertido em",               V_DTS_SAIDA, N_DTS_SAIDA), // local: dtsSaidaLocal (.tpk: dtsTpkLocal)
   ESC("Dolby Vision em MKV (experimental)", V_LIGA, 2),          // local: dvMkvLocal
   ESC("Enviar histórico para a conta Nuvio", V_LIGA, 2),          // por perfil: histContaLocal
   ESC("Recursos sociais",                V_LIGA, 2),             // por perfil: socialLocal
@@ -1449,6 +1467,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Configuração dos provedores", V_PROVEDORES_ESCOPO, 2),
   ESC("Botão de microfone na busca", V_MIC_BUSCA, 3),   // local: micBuscaLocal (.tpk)
   ESC("Preferir o idioma do áudio",    V_LIGA, 2),   // local: fonteIdiomaAudioLocal (fontenota.h)
+  ESC("Segundo idioma do áudio",         V_LINGUA, 2),
 #ifdef NV_ANDROID
   ACAO("Baixar registro"),
 #endif
@@ -1670,7 +1689,11 @@ static const char *CHAVE[] = {
   "proporcaoPadraoLocal",
   "cwRetidoTambemLocal",
   "psContinuarLocal",
+#ifdef NV_TPK
+  "dtsTpkLocal",   // Desligado / 5.1 / Estereo: outro significado que o dtsSaidaLocal da LG
+#else
   "dtsSaidaLocal",
+#endif
   "dvMkvLocal",
   "histContaLocal",
   "socialLocal",
@@ -1706,6 +1729,7 @@ static const char *CHAVE[] = {
   "-provedoresEscopo",
   "micBuscaLocal",
   "fonteIdiomaAudioLocal",
+  "audioSecundarioIdioma",
 #ifdef NV_ANDROID
   "-baixarRegistro",
 #endif
@@ -2663,6 +2687,19 @@ int  ajustes_trailer_cartaz(void) {
 // do destaque). Ligado com a dependencia de entao desligada (cartaz em pe sem
 // Expandir) nao tocava nada: continua sem tocar. Chamar com o arquivo inteiro
 // lido (expandir e cartaz deitado podem vir depois da chave velha).
+#ifdef NV_TPK
+// A conversao de DTS/TrueHD do .tpk virou UMA linha (Desligado / 5.1 /
+// Estereo, dtsTpkLocal). Antes eram duas: "DTS convertido em" (dtsSaidaLocal:
+// 0 = Estereo, 1 = 5.1) e o teste de entrega (dtsTpkModoLocal: 5 = Desligado,
+// os outros = algum modo ligado). Desligado continua desligado; senao a saida
+// de antes; sem nada, o padrao (5.1).
+static int dtsTpkMigrar(int modoAntigo, int saidaAntiga) {
+  if (modoAntigo == 5) return 0;
+  if (saidaAntiga == 0) return 2;
+  return 1;
+}
+#endif
+
 static int focoTrailerMigrar(int antigo) {
   if (antigo != 0) return AJ_TRAILER_CARTAZ_DESLIGADO;
   return (lig(AJ_EXPANDIR) || valor[AJ_LANDSCAPE] == 0) ? AJ_TRAILER_CARTAZ_CHEIA
@@ -2695,6 +2732,14 @@ int ajustes_cw_ordem(void)            { return valor[AJ_CW_ORDEM]; }
 int ajustes_cw_retido_tambem(void)    { return lig(AJ_CW_RETIDO_TAMBEM); }
 int ajustes_ps_continuar(void)        { return lig(AJ_PS_CONTINUAR); }
 int ajustes_dts_ac3(void)             { return valor[AJ_DTS_AC3] == 1; }
+// .tpk: HLS (o TS continuo e so a troca automatica de video_tpk.c) ou desligado.
+int ajustes_dts_tpk_modo(void) {
+#ifdef NV_TPK
+  return valor[AJ_DTS_AC3] == 0 ? DTSTPK_DESLIGADO : DTSTPK_HLS;
+#else
+  return DTSTPK_DESLIGADO;
+#endif
+}
 int ajustes_dv_mkv(void)              { return lig(AJ_DV_MKV); }
 int ajustes_hist_conta(void)          { return lig(AJ_HIST_CONTA); }
 int ajustes_social(void)              { return lig(AJ_SOCIAL); }
@@ -3564,6 +3609,7 @@ void ajustes_dir(const char *dir) {
     int medidorAntigo = -1, viuMedidor = 0, resAntiga = -1, viuRes = 0, prazoAntigo = -1, viuEspera = 0;
     int focoAntigo = -1, viuFoco = 0;
     int sinopseAntiga = -1, sinopseQuatro = -1, viuSinopse = 0;
+    int dtsSaidaAntiga = -1, dtsModoAntigo = -1, viuDtsTpk = 0;
   while (fgets(linha, sizeof linha, f)) {
     char chave[64]; int v, i;
     if (sscanf(linha, "%63s %d", chave, &v) != 2) continue;
@@ -3587,6 +3633,11 @@ void ajustes_dir(const char *dir) {
     if (!strcmp(chave, "fontePrazoLocal")) { prazoAntigo = v; continue; }
     // Trailer do cartaz em foco: era V_LIGA (ver focoTrailerMigrar).
     if (!strcmp(chave, "focusedPosterBackdropTrailerEnabled")) { focoAntigo = v; continue; }
+#ifdef NV_TPK
+    // As duas linhas de DTS de antes (ver dtsTpkMigrar).
+    if (!strcmp(chave, "dtsSaidaLocal")) { dtsSaidaAntiga = v; continue; }
+    if (!strcmp(chave, "dtsTpkModoLocal")) { dtsModoAntigo = v; continue; }
+#endif
     if (!strcmp(chave, "idiomaFonteLocal")) {
       if (v >= IDA_TMDB && v <= IDA_PADRAO) idiomaFonteGravada = v;
       continue;
@@ -3612,6 +3663,7 @@ void ajustes_dir(const char *dir) {
       if (i == AJ_FONTE_PRAZO) viuEspera = 1;
       if (i == AJ_FOCO_TRAILER) viuFoco = 1;
       if (i == AJ_HERO_SINOPSE) viuSinopse = 1;
+      if (i == AJ_DTS_AC3) viuDtsTpk = 1;
       break;
     }
   }
@@ -3628,6 +3680,15 @@ void ajustes_dir(const char *dir) {
     static const int DE_PARA[4] = { 1, 2, 3, 6 };   // 3 s, 5 s, 8 s, Todos
     valor[AJ_FONTE_PRAZO] = prazoAntigo < 4 ? DE_PARA[prazoAntigo] : valorPadrao[AJ_FONTE_PRAZO];
   }
+#ifdef NV_TPK
+  if (!viuDtsTpk && (dtsSaidaAntiga >= 0 || dtsModoAntigo >= 0)) {
+    valor[AJ_DTS_AC3] = dtsTpkMigrar(dtsModoAntigo, dtsSaidaAntiga);
+    printf("[ajustes] DTS/TrueHD: dtsSaidaLocal %d + dtsTpkModoLocal %d -> dtsTpkLocal %d\n", dtsSaidaAntiga, dtsModoAntigo,
+           valor[AJ_DTS_AC3]);
+  }
+#else
+  (void)viuDtsTpk; (void)dtsSaidaAntiga; (void)dtsModoAntigo;
+#endif
   if (!viuFoco && focoAntigo >= 0) {
     valor[AJ_FOCO_TRAILER] = focoTrailerMigrar(focoAntigo);
     printf("[ajustes] trailer do cartaz em foco: focusedPosterBackdropTrailerEnabled %d -> trailerCartazModo %d\n",
@@ -3776,6 +3837,7 @@ void ajustes_dir(const char *dir) {
   aplicarIdioma(AJ_LEG_LINGUA);
   aplicarIdioma(AJ_LEG_LINGUA2);
   aplicarIdioma(AJ_AUD_LINGUA);
+  aplicarIdioma(AJ_AUD_LINGUA2);
   txt_definir_fonte_interface((TxtFamilia)valor[AJ_FONTE_UI]);
   gfx_escala_ui_definir(ajustes_tamanho_ui());
   interfaceAplicar();
@@ -4355,6 +4417,7 @@ static void idiomasDoBlob(const char *json, const char *fim) {
     { "subtitle_preferred_language",         ling_conta_legenda  },
     { "subtitle_secondary_language",         ling_conta_legenda2 },
     { "preferred_audio_language",            ling_conta_audio    },
+    { "secondary_preferred_audio_language",  ling_conta_audio2   },
   };
   size_t k;
   // #378 (revisao): o blob e o retrato INTEIRO da conta. Chave ausente = a
@@ -4376,10 +4439,10 @@ static void idiomasDoBlob(const char *json, const char *fim) {
   }
   // A CONTA e o que VALE separados (#378): antes so saia o em vigor, que com
   // escolha local nesta TV nao dizia nada sobre a conta.
-  printf("[ajustes] idiomas da conta: legenda=\"%s\" legenda2=\"%s\" audio=\"%s\"; "
-         "em vigor: legenda=\"%s\" audio=\"%s\"\n",
+  printf("[ajustes] idiomas da conta: legenda=\"%s\" legenda2=\"%s\" audio=\"%s\" audio2=\"%s\"; "
+         "em vigor: legenda=\"%s\" audio=\"%s\" audio2=\"%s\"\n",
          ling_conta_legenda_valor(), ling_conta_legenda2_valor(), ling_conta_audio_valor(),
-         ling_legenda(), ling_audio());
+         ling_conta_audio2_valor(), ling_legenda(), ling_audio(), ling_audio2());
   fflush(stdout);
 }
 
@@ -4388,7 +4451,7 @@ static void idiomasDoBlob(const char *json, const char *fim) {
 void ajustes_idiomas_da_conta(const char *json) {
   if (json && *json) { idiomasDoBlob(json, json + strlen(json)); return; }
   // NULL: troca de perfil/conta (sync_reaplicar_ajustes) — esquece os da conta.
-  ling_conta_legenda(""); ling_conta_legenda2(""); ling_conta_audio("");
+  ling_conta_legenda(""); ling_conta_legenda2(""); ling_conta_audio(""); ling_conta_audio2("");
 }
 
 // O NOME NA CONTA. Quase sempre o mesmo do arquivo; o trailer do cartaz em foco
@@ -4753,6 +4816,7 @@ int ajustes_perfil_restaurar(int perfil) {
     aplicarIdioma(AJ_LEG_LINGUA);
     aplicarIdioma(AJ_LEG_LINGUA2);
     aplicarIdioma(AJ_AUD_LINGUA);
+    aplicarIdioma(AJ_AUD_LINGUA2);
   }
   printf("[ajustes] ajustes do perfil %d restaurados desta TV (%d mudaram)\n",
          perfil, mudou);
@@ -5830,7 +5894,8 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
       return "Aparência só da segunda legenda. \"Igual à principal\" segue o estilo da principal, definido no player.";
     case AJ_LEG_LINGUA: return "Idioma ligado sozinho quando o vídeo começa. Legendas dos addons aparecem em inglês e no idioma escolhido aqui. \"Da conta\" segue o que está no seu perfil.";
-    case AJ_AUD_LINGUA: return "Faixa de áudio escolhida quando o arquivo tem mais de uma. Se o idioma não existir no arquivo, o player usa a primeira.";
+    case AJ_AUD_LINGUA: return "Faixa de áudio escolhida quando o arquivo tem mais de uma. Sem esse idioma no arquivo, vale o segundo idioma, depois o idioma original do título.";
+    case AJ_AUD_LINGUA2: return "Usado quando o arquivo não tem o idioma de áudio principal. \"Da conta\" segue o que está no seu perfil.";
     case AJ_PAUSA_OVERLAY: return "Ao pausar, sobe uma ficha com a sinopse e os dados do que você está vendo.";
     case AJ_PULAR_ABERTURA: return "Pula a abertura sozinho quando o episódio tem o trecho marcado, e avisa na tela. Sem marcador, nada é pulado. O botão Pular abertura continua valendo.";
     case AJ_PULAR_RESUMO: return "Pula o resumo do episódio anterior sozinho quando o episódio tem o trecho marcado, e avisa na tela. Sem marcador, nada é pulado.";
@@ -6088,7 +6153,11 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_ESPACO_FILEIRAS: return "O espaço vertical entre uma fileira da Home e a seguinte. Com menos cabem mais fileiras na tela, com mais a Home fica mais arejada.";
     case AJ_ESPACO_TITULOS: return "O espaço horizontal entre os cartazes de uma fileira da Home.";
     case AJ_TAM_MIN: return "Na escolha automática, fontes menores que este tamanho ficam para o fim da fila. Se for maior que o tamanho máximo, o mínimo é ignorado. Só vale para arquivos com tamanho conhecido; se só houver fontes fora da faixa, a melhor delas ainda toca.";
+#ifdef NV_TPK
+    case AJ_DTS_AC3: return "Esta TV não toca DTS nem TrueHD: o app converte o som na hora. 5.1 (Dolby Digital) mantém o surround para barra de som e receiver; 7.1, Atmos e DTS:X viram 5.1, sem os objetos. Estéreo (AAC) serve qualquer TV. Desligado: esses vídeos tocam sem som, como antes. Vale a partir do próximo vídeo.";
+#else
     case AJ_DTS_AC3: return "Como o áudio DTS é entregue à TV quando o app o converte (só na LG). Estéreo (AAC) é o modo provado e serve qualquer TV. 5.1 (Dolby Digital) mantém o som surround para barra de som e receiver por ARC/eARC; vale a partir do próximo vídeo.";
+#endif
     case AJ_PS_CONTINUAR: return "Ligado, cada perfil mostra na escolha de perfil o cartão com o que ele estava assistindo. Desligado, a tela mostra só os perfis.";
     case AJ_HIST_CONTA: return "Ligado (padrão): o que você assiste neste perfil sobe para a conta Nuvio, com o progresso e os vistos. Desligado: nada disso é enviado à conta; o Trakt e o Simkl vinculados a este perfil continuam recebendo. Vale só para este perfil.";
     case AJ_SOCIAL: return "Ligado (padrão): amigos, atividade deles e recomendações. Desligado: tudo isso some, com a fileira de amigos da Home, e o app para de falar com o serviço social. Salvos e Avisos continuam. Vale só para este perfil.";
@@ -7390,7 +7459,7 @@ static int definirValorDireto(int op, int novo) {
     valor[op] = fil_limite_gravado();
     fil_confirmar_limite();
   }
-  if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA) aplicarIdioma(op);
+  if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2) aplicarIdioma(op);
   if (op == AJ_IDIOMA) { idiomaEscolhido(); desc_repetir(); }
   if (op == AJ_FONTE_UI) txt_definir_fonte_interface((TxtFamilia)novo);
   if (op == AJ_TAMANHO_UI) gfx_escala_ui_definir(ajustes_tamanho_ui());
@@ -7846,8 +7915,8 @@ static void aplicarIdioma(int op) {
   } else {
     // O audio nao precisa de nada equivalente: as faixas de audio vem do
     // arquivo que esta tocando e a preferencia so escolhe entre as que ja
-    // existem (video.c), sem consultar a rede.
-    ling_local_audio(c);
+    // existem (audioescolha.c), sem consultar a rede.
+    if (op == AJ_AUD_LINGUA2) ling_local_audio2(c); else ling_local_audio(c);
   }
 }
 
@@ -7855,7 +7924,7 @@ static void aplicarIdioma(int op) {
 // unicas dinamicas: a lista vem de linguas.c e nao da tabela OPCOES, que e
 // const e foi escrita antes de linguas.c existir.
 static int nValores(int op) {
-  if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA) return nLingua > 0 ? nLingua : 1;
+  if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2) return nLingua > 0 ? nLingua : 1;
   if (op == AJ_SELOS_PACOTE) return 1 + selospacote_n();
 #ifndef __EMSCRIPTEN__
   // "YouTube" (o 4o valor) so toca no .wgt da Samsung (trailerfonte.c, existe).
@@ -7895,7 +7964,7 @@ static const char *textoValor(int op) {
     snprintf(buf, sizeof buf, "%d%s", valor[op], o->sufixo ? o->sufixo : "");
     return buf;
   }
-  if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA) {
+  if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2) {
     int v = valor[op];
     return (v >= 0 && v < nLingua && V_LINGUA[v]) ? V_LINGUA[v] : "Da conta";
   }
@@ -8317,7 +8386,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK: case AJ_BUFFER:
     case AJ_DV_MKV:
     case AJ_LEG_FORCADA:
-    case AJ_AUD_LINGUA: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_FONTE_MANUAL:
+    case AJ_AUD_LINGUA: case AJ_AUD_LINGUA2: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_FONTE_MANUAL:
     case AJ_FONTE_AUTO: case AJ_FONTE_REPOR: case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON: case AJ_SELOS_CORES: case AJ_FONTE_TOCAR_CONFERINDO: case AJ_FONTE_AQUECER: case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR: case AJ_FONTE_PRECARREGAR:
     case AJ_FONTE_PRIORIDADE: case AJ_FONTE_HDR: case AJ_FONTE_IDIOMA_AUDIO:
     case AJ_SELOS_PACOTE:
