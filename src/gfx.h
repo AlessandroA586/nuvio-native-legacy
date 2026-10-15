@@ -217,6 +217,8 @@ typedef enum {
   // uma cor (a do titulo em foco). Sem textura e sem arte desfocada.
   //   uCor.rgb = cor do topo; uCor.a = alfa
   //   uFoco    = quanto da cor sobra na base (0..1)
+  //   uPar.x   = 0 = alfa cheio ate a base; > 0 = onde o ALFA comeca a
+  //              esvair (fracao da altura, 1-smoothstep ate a base)
   GFX_FUNDO_DIN = 35,
   // GFX_HERO_CAM / GFX_HERO_CHEIO_CAM — as camadas do destaque numa passada
   // (o crossfade). So por gfx_hero_camadas.
