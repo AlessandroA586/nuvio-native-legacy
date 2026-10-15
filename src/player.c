@@ -542,15 +542,13 @@ static int retomadaAplicada, retomarPct;
 static double basePos, baseDur;
 static int basePct, baseTocou, baseT = -1, baseE = -1;
 static int epT, epE, pedFontes, erroFonte, pedProxT, pedProxE;
-// A faixa de audio escolhida a mao vale para ESTE titulo e episodio
-// (audioescolha.h): troca de fonte e reabertura mantem, outro titulo esquece.
+// A faixa de audio escolhida a mao vale para ESTE titulo (o filme, ou a serie
+// inteira: os outros episodios tambem) (audioescolha.h): troca de fonte,
+// reabertura e proximo episodio mantem, outro titulo esquece.
 static void audioTitulo(void) {
   const CatItem *c = item();
-  char k[96];
   if (!c) { audioesc_titulo(""); return; }
-  snprintf(k, sizeof k, "%s:%d:%d", c->imdb[0] ? c->imdb : c->titulo,
-           strcmp(c->tipo, "series") ? 0 : epT, strcmp(c->tipo, "series") ? 0 : epE);
-  audioesc_titulo(k);
+  audioesc_titulo(c->imdb[0] ? c->imdb : c->titulo);
 }
 static void medirAssistido(void) {
   double m = monoSeg(), p = video_pos();

@@ -61,14 +61,14 @@ int main(void) {
      audioesc_dts_truehd("audio/vnd.dts.hd", "") && !audioesc_dts_truehd("A_EAC3", "English · E-AC-3 5.1"),
      "DTS/TrueHD detector");
 
-  // Memory follows the title.
-  audioesc_titulo("tt1:1:1");
+  // Memory follows the title: a show is one title, so every episode keeps it.
+  audioesc_titulo("tt1");
   audioesc_lembrar("en", "A_AC3", "English", 6);
   ok(audioesc_tem_lembrada(), "remembered on this title");
-  audioesc_titulo("tt1:1:1");
-  ok(audioesc_tem_lembrada(), "same title again (source switch, reopen): still remembered");
-  audioesc_titulo("tt1:1:2");
-  ok(!audioesc_tem_lembrada(), "next episode: forgotten");
+  audioesc_titulo("tt1");
+  ok(audioesc_tem_lembrada(), "same title again (source switch, reopen, next episode): still remembered");
+  audioesc_titulo("tt2");
+  ok(!audioesc_tem_lembrada(), "another title: forgotten");
 
   // Second language from the account and Settings, same rule as the second subtitle.
   ling_conta_audio("en"); ling_conta_audio2("sv");

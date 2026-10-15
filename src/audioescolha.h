@@ -1,8 +1,9 @@
 // A ORDEM EM QUE O AUDIO E ESCOLHIDO SOZINHO (dono, 15/10/2026), em todos os
 // alvos:
-//   1. a faixa que a pessoa escolheu a mao NESTA reproducao (o mesmo titulo e
-//      episodio: troca de fonte, reconexao, retomada, ida e volta do
-//      convertido). Fica so na memoria, nunca em disco;
+//   1. a faixa que a pessoa escolheu a mao neste titulo (o filme, ou a serie
+//      inteira: os outros episodios tambem; troca de fonte, reconexao,
+//      retomada, ida e volta do convertido). Fica so na memoria, nunca em
+//      disco: fechar o app esquece;
 //   2. o idioma de audio preferido (ling_audio);
 //   3. o segundo idioma de audio (ling_audio2);
 //   4. o idioma original do titulo (ling_original, do TMDB);
@@ -30,7 +31,7 @@ const char *audioesc_origem_nome(int origem);
 // 1 quando o codec/rotulo e DTS (qualquer variante) ou TrueHD/MLP.
 int audioesc_dts_truehd(const char *codec, const char *rotulo);
 
-// O titulo aberto agora (imdb[:temporada:episodio], ou o nome). Outro titulo
+// O titulo aberto agora (imdb da serie ou do filme, ou o nome). Outro titulo
 // esquece a escolha lembrada; o mesmo a mantem.
 void audioesc_titulo(const char *chave);
 // A pessoa escolheu esta faixa a mao (folha de audio): vale ate outro titulo.
