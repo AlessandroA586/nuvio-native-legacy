@@ -118,7 +118,9 @@ jobs:
           DOTNET_DIR="$(dirname "$(which dotnet)")"
           echo "Installing Samsung Tizen Workload into $DOTNET_DIR"
           curl -sSL https://raw.githubusercontent.com/Samsung/Tizen.NET/main/workload/scripts/workload-install.sh -o /tmp/workload-install.sh
-          sudo env "PATH=$PATH" bash /tmp/workload-install.sh -d "$DOTNET_DIR" -u || true
+          sudo env "PATH=$PATH" "XDG_RUNTIME_DIR=/tmp" bash /tmp/workload-install.sh -d "$DOTNET_DIR" -u || true
+          sudo rm -rf /run/user/$(id -u)/.dotnet 2>/dev/null || true
+          sudo chown -R $(id -u):$(id -g) /run/user/$(id -u) "$HOME" "$DOTNET_DIR" 2>/dev/null || true
           dotnet workload list || true
 
       - name: Setup local.properties
@@ -137,6 +139,8 @@ jobs:
 
       - name: Build Tizen Packages
         run: |
+          sudo rm -rf /run/user/$(id -u)/.dotnet 2>/dev/null || true
+          sudo chown -R $(id -u):$(id -g) /run/user/$(id -u) "$HOME" 2>/dev/null || true
           if dotnet workload list 2>/dev/null | grep -q tizen; then
             bash tools/tpk.sh
           else
