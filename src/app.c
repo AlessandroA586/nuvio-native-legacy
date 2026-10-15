@@ -5744,12 +5744,7 @@ void app_atualizar(float dt, Uint32 agora) {
   novidades201_atualizar(dt, agora);
   novidades202_atualizar(dt, agora);
   novcartao_atualizar(dt, agora);
-  dicascontrole_home_livre(app_na_home() && !registro_aberto() && !sintro_aberto() && !pipintro_aberto() &&
-    !diagnostico_intro_aberto() && !atualizacao_aberta() && !agendaviso_aberto() && !novidades_aberto() &&
-    !novidades202_aberto() && !novidades201_aberto() && !novidades142_aberto() && !spainel_aberto() &&
-    !menu_aberto() && !ctx_aberto() && !spot_aberto() && !central_aberta() && !teclado_aberto() &&
-    !stream_folha_aberta() && !vertudo_aberta() && !guia_overlay_aberta() && !recomenda_aberta() &&
-    !telemetria_aberto() && !celb_aberto() && !avisos_aberto(), dt);
+  dicascontrole_home_livre(app_home_recebe_teclas(), dt);
   dicascontrole_atualizar(dt, agora);
   telemetria_atualizar(dt, agora);
   recintro_atualizar(dt, agora);

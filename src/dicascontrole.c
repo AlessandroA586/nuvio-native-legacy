@@ -150,10 +150,13 @@ static int jaVisto(void) {
 }
 void dicascontrole_depois_novidades(void) {}
 // Called every frame with "Home idle, nothing else open"; opens once per
-// install/version after the screen stayed quiet for OCIOSO_S.
+// install/version after the screen stayed quiet for OCIOSO_S. The marker is
+// read once per idle entry (-1 = ainda nao conferido), nao a cada quadro.
 void dicascontrole_home_livre(int livre, float dt) {
-  if (!livre || dicascontrole_ocupado()) { ocioso = 0; return; }
-  if (jaVisto()) return;
+  static int visto = -1;
+  if (!livre || dicascontrole_ocupado()) { ocioso = 0; visto = -1; return; }
+  if (visto < 0) visto = jaVisto();
+  if (visto) return;
   ocioso += dt;
   if (ocioso >= OCIOSO_S) { ocioso = 0; dicascontrole_abrir(); automatico = 1; }
 }

@@ -64,6 +64,7 @@ static void state(int first) {
     for (int i = 0; i < 300; i++) dicascontrole_home_livre(1, .05f);
     assert(!dicascontrole_ocupado());                    // same version, 2nd launch: no
     dados_gravar(DICASCONTROLE_ARQUIVO, "0.0.0\n");      // version bump: again
+    dicascontrole_home_livre(0, .05f);                   // marker re-read on re-entry
     for (int i = 0; i < 40; i++) dicascontrole_home_livre(1, .05f);
     assert(dicascontrole_aberto());
     key(SDLK_ESCAPE, app_evento); settle(); assert(!dicascontrole_ocupado());
