@@ -29,7 +29,8 @@
 
 static char dados[700];
 
-int ajustes_p2p_ligado(void) { return 1; }
+static int p2pEnabled = 1;
+int ajustes_p2p_ligado(void) { return p2pEnabled; }
 const char *ajustes_p2p_url(void) { return ""; }
 void debrid_episodio(int *t, int *e) { *t = 0; *e = 0; }
 const char *dados_dir(void) { return dados; }
@@ -175,12 +176,14 @@ int main(int argc, char **argv) {
     memset(f, 0, sizeof f);
     snprintf(movies, sizeof movies, "%s/Movies/p2p", vol);
     snprintf(rootp, sizeof rootp, "%s/p2p", vol);
-    snprintf(nossa, sizeof nossa, "%s/a/p2p", vol);
+    snprintf(nossa, sizeof nossa, "%s/owned/p2p", mnt);
     assert(mkdir(strcat(strcpy(f, vol), "/Movies"), 0755) == 0);
     assert(mkdir(movies, 0755) == 0);
     assert(mkdir(rootp, 0755) == 0);
     memset(f, 0, sizeof f);
-    assert(mkdir(strcat(strcpy(f, vol), "/a"), 0755) == 0);
+    assert(chmod(mnt, 0755) == 0);
+    assert(mkdir(strcat(strcpy(f, mnt), "/owned"), 0755) == 0);
+    assert(chmod(mnt, 0555) == 0);
     assert(mkdir(nossa, 0755) == 0);
     snprintf(filme, sizeof filme, "%s/filme.mkv", movies);
     fp = fopen(filme, "w"); assert(fp); fclose(fp);

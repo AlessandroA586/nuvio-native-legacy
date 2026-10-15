@@ -9,6 +9,7 @@
 #include "p2pmotor.h"
 #include "p2p.h"
 #include "dados.h"
+#include "ajustes.h"
 #include "rede.h"
 #include <ctype.h>
 #include <dirent.h>
@@ -157,6 +158,7 @@ static uint64_t percorrer(const char *p, int apagar, int fundo) {
   return percorrerL(p, apagar, fundo, NULL);
 }
 
+// Returns 1 for a usable volume, -1 for a rejected volume, 0 for a container.
 // Sonda de um candidato a raiz USB. criar=1 cria <cand>/p2p e prova escrita
 // nela (raiz de verdade do motor); criar=0 so prova escrita no volume, sem
 // deixar pasta nenhuma — e o modo da UI perguntando "tem pendrive?". Na
@@ -181,7 +183,7 @@ static int usbServe(const char *candidato, char *raiz, unsigned nr, int criar) {
         stat(teste, &parent) != 0 || parent.st_dev == st.st_dev) return 0;
   }
   for (i = 0; i < usbNVistos; i++)
-    if (usbVistos[i].st_dev == st.st_dev && usbVistos[i].st_ino == st.st_ino) return 0;
+    if (usbVistos[i].st_dev == st.st_dev && usbVistos[i].st_ino == st.st_ino) return -1;
   if (usbNVistos < USB_MAX_VISTOS) usbVistos[usbNVistos++] = st;
   // dados_dir e os subdiretorios dele nao sao pendrive. Comparacao por
   // prefixo de caminho, nao st_dev: o pendrive e o disco interno tem dev
@@ -190,22 +192,24 @@ static int usbServe(const char *candidato, char *raiz, unsigned nr, int criar) {
   if (dados && dados[0]) {
     size_t nc = strlen(candidato), nd = strlen(dados);
     if ((!strncmp(candidato, dados, nd) && (candidato[nd] == 0 || candidato[nd] == '/')) ||
-        (!strncmp(dados, candidato, nc) && (dados[nc] == 0 || dados[nc] == '/'))) return 0;
+        (!strncmp(dados, candidato, nc) && (dados[nc] == 0 || dados[nc] == '/'))) return -1;
   }
-  if (snprintf(p2p, sizeof p2p, "%s/p2p", candidato) >= (int)sizeof p2p) return 0;
+  // Injected read-only roots model mount containers on the same device.
+  if (usbExtra[0] && access(candidato, W_OK) != 0) return 0;
+  if (snprintf(p2p, sizeof p2p, "%s/p2p", candidato) >= (int)sizeof p2p) return -1;
   if (criar) {
     nosso = mkdir(p2p, 0700) == 0;
-    if (!nosso && (lstat(p2p, &st) != 0 || !S_ISDIR(st.st_mode) || !usbENossa(p2p))) return 0;
+    if (!nosso && (lstat(p2p, &st) != 0 || !S_ISDIR(st.st_mode) || !usbENossa(p2p))) return -1;
   }
   if (snprintf(teste, sizeof teste, "%s/.escrita-XXXXXX", criar ? p2p : candidato) >= (int)sizeof teste)
-    { if (nosso) rmdir(p2p); return 0; }
+    { if (nosso) rmdir(p2p); return -1; }
   fd = mkstemp(teste);
-  if (fd < 0) { if (nosso) rmdir(p2p); return 0; }
+  if (fd < 0) { if (nosso) rmdir(p2p); return -1; }
   gravou = write(fd, "ok\n", 3) == 3;
   fechou = close(fd) == 0;
   unlink(teste);
-  if (!gravou || !fechou) { if (nosso) rmdir(p2p); return 0; }
-  if (snprintf(raiz, nr, "%s", p2p) >= (int)nr) { if (nosso) rmdir(p2p); return 0; }
+  if (!gravou || !fechou) { if (nosso) rmdir(p2p); return -1; }
+  if (snprintf(raiz, nr, "%s", p2p) >= (int)nr) { if (nosso) rmdir(p2p); return -1; }
   if (nosso) usbMarcarDono(p2p);   // sem a marca, limpar_sobra nao apaga
   return 1;
 }
@@ -216,9 +220,10 @@ static int usbEscanearDirL(const char *base, char *raiz, unsigned nr, int fundo,
   struct dirent *e;
   char f[700];
   struct stat st;
-  if (!base || !base[0] || lim->estourou) return 0;
-  if (usbServe(base, raiz, nr, criar)) return 1;
-  if (fundo > 3) return 0;
+  if (!base || !base[0]) return 0;
+  int volume = usbServe(base, raiz, nr, criar);
+  if (volume) return volume > 0; // Rejected volumes are leaves, never containers.
+  if (fundo > 3 || lim->estourou) return 0;
   d = opendir(base);
   if (!d) return 0;
   while (!lim->estourou && (e = readdir(d))) {
@@ -228,14 +233,20 @@ static int usbEscanearDirL(const char *base, char *raiz, unsigned nr, int fundo,
     // Links nao sao ponto de montagem: um link dentro de /tmp/usb poderia
     // apontar para o disco interno e furar a rejeicao por caminho acima.
     if (lstat(f, &st) != 0 || S_ISLNK(st.st_mode)) continue;
-    if (S_ISDIR(st.st_mode) && usbEscanearDirL(f, raiz, nr, fundo + 1, criar, lim)) { closedir(d); return 1; }
+    if (S_ISDIR(st.st_mode)) {
+      double start = agora();
+      LimTrab child = { .max = 256, .ate = start + 0.05 };
+      int found = usbEscanearDirL(f, raiz, nr, fundo + 1, criar, &child);
+      lim->ate += agora() - start; // A slow volume cannot spend its siblings' time.
+      if (found) { closedir(d); return 1; }
+    }
   }
   closedir(d);
   return 0;
 }
 
 static int usbEscanearDir(const char *base, char *raiz, unsigned nr, int fundo, int criar) {
-  // Bound synchronous discovery per mount container, including rejected volumes.
+  // Only containers consume traversal budget; volumes get one independent probe.
   LimTrab lim = { .max = 256, .ate = agora() + 0.05 };
   return usbEscanearDirL(base, raiz, nr, fundo, criar, &lim);
 }
@@ -281,7 +292,7 @@ static int pastasInternas(char *raiz, unsigned nr, char *mae, unsigned nm) {
 // em silencio. Raiz lembrada que sumiu (access falha): re-sonda uma vez e,
 // nao achando, cai para o interno — a promessa do ajuste.
 static int pastas(char *raiz, unsigned nr, char *mae, unsigned nm) {
-  if (!raizInjetada[0] && atomic_load(&usbPreferido)) {
+  if (!raizInjetada[0] && ajustes_p2p_ligado() && atomic_load(&usbPreferido)) {
     int ok;
     pthread_mutex_lock(&usbTrava);
     if (usbResolvido && usbRaiz[0] && access(usbRaiz, W_OK) != 0) {
@@ -334,6 +345,8 @@ void p2pmotor_definir_limite_mb(unsigned mb) { atomic_store(&limiteMb, mb); }
 // — era o que deixava a sobra interna viva quando uma USB existia (revisao).
 typedef struct SobraNo { struct SobraNo *prox; char *raiz; } SobraNo;
 static SobraNo *sobraFila;      // so com a trava
+static int sobraUsb;           // USB discovery pending on the cleanup worker
+static void usbVarreSobra(const char *raizAtual);
 static void sobraAgendar(const char *raiz);
 static void sobraLancar(void);
 
@@ -361,6 +374,7 @@ void p2pmotor_definir_usb(int usar) {
 int p2pmotor_usb_presente(void) {
   char tmp[600];
   int r;
+  if (!ajustes_p2p_ligado()) return 0;
   pthread_mutex_lock(&usbTrava);
   // A UI pergunta a cada quadro: resposta vale por ~2 s. O scan daqui NAO
   // cria pasta (criar=0): espiar nao pode sujar o pendrive de ninguem.
@@ -523,6 +537,12 @@ void p2pmotor_arquivo_atual(uint64_t *tam, uint64_t *teto, uint64_t *livre) {
 // abrir outro torrent. Agora o inicio do app tambem apaga.
 static void *limparFio(void *x) {
   SobraNo *no, *fila = x;
+  int scan;
+  pthread_mutex_lock(&trava);
+  scan = sobraUsb;
+  sobraUsb = 0;
+  pthread_mutex_unlock(&trava);
+  if (scan && ajustes_p2p_ligado()) usbVarreSobra("");
   for (no = fila; no; no = no->prox) {
     uint64_t b = percorrer(no->raiz, 0, 0);
     percorrer(no->raiz, 1, 0);
@@ -542,7 +562,7 @@ static void sobraLancar(void) {
   pthread_t t;
   pthread_attr_t a;
   SobraNo *fila;
-  if (!sobraFila || motor || resolvendo || parando || limpando) return;
+  if ((!sobraFila && !sobraUsb) || motor || resolvendo || parando || limpando) return;
   fila = sobraFila;
   sobraFila = NULL;
   limpando = 1;
@@ -590,18 +610,26 @@ static void usbVarreSobraDir(const char *base, int fundo, const char *raizAtual)
   DIR *d;
   struct dirent *e;
   char f[700], p2p[720];
-  struct stat st;
-  if (!base || !base[0] || fundo > 3) return;
-  if (snprintf(p2p, sizeof p2p, "%s/p2p", base) < (int)sizeof p2p &&
+  struct stat st, parent;
+  LimTrab lim = { .max = 256, .ate = agora() + 0.05 };
+  int volume;
+  if (!base || !base[0] || fundo > 3 || stat(base, &st) != 0 || !S_ISDIR(st.st_mode)) return;
+  if (snprintf(f, sizeof f, "%s/..", base) >= (int)sizeof f || stat(f, &parent) != 0) return;
+  volume = st.st_dev != parent.st_dev || (usbExtra[0] && access(base, W_OK) == 0);
+  if (volume && snprintf(p2p, sizeof p2p, "%s/p2p", base) < (int)sizeof p2p &&
       lstat(p2p, &st) == 0 && S_ISDIR(st.st_mode) &&
       strcmp(p2p, raizAtual) && usbENossa(p2p))
     sobraAgendar(p2p);
+  if (volume) return; // Never descend into an accepted or rejected mounted volume.
   if (!(d = opendir(base))) return;
   while ((e = readdir(d))) {
+    if (++lim.n > lim.max || agora() > lim.ate) break;
     if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, "..") || e->d_name[0] == '.') continue;
     if (snprintf(f, sizeof f, "%s/%s", base, e->d_name) >= (int)sizeof f) continue;
     if (lstat(f, &st) != 0 || S_ISLNK(st.st_mode)) continue;   // links: ver o scan
+    double start = agora();
     usbVarreSobraDir(f, fundo + 1, raizAtual);
+    lim.ate += agora() - start;
   }
   closedir(d);
 }
@@ -612,7 +640,6 @@ static void usbVarreSobra(const char *raizAtual) {
   extra[0] = 0;
   pthread_mutex_lock(&usbTrava);
   snprintf(extra, sizeof extra, "%s", usbExtra);
-  pthread_mutex_unlock(&usbTrava);
   if (extra[0]) bases[n++] = extra;   // mesma regra do scan: extra substitui
   else {
     bases[n++] = "/tmp/usb";
@@ -622,15 +649,18 @@ static void usbVarreSobra(const char *raizAtual) {
 #endif
   }
   for (i = 0; i < n; i++) usbVarreSobraDir(bases[i], 0, raizAtual);
+  pthread_mutex_unlock(&usbTrava);
 }
 void p2pmotor_limpar_sobra(void) {
   char raiz[600], mae[600];
   struct stat st;
   if (p2pmotor_ativo()) return;          // motor de pe cuida da pasta dele
   if (!pastasInternas(raiz, sizeof raiz, mae, sizeof mae)) return;
-  usbVarreSobra(raiz);                   // sobras de pendrive, com motor parado
-  if (lstat(raiz, &st) != 0) return;     // nada sobrou: nem fio
-  sobraAgendar(raiz);
+  pthread_mutex_lock(&trava);
+  if (ajustes_p2p_ligado()) sobraUsb = 1;
+  sobraLancar();
+  pthread_mutex_unlock(&trava);
+  if (lstat(raiz, &st) == 0) sobraAgendar(raiz);
 }
 
 void p2pmotor_cancelar(void) {

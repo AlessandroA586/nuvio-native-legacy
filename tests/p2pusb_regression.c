@@ -3,9 +3,20 @@
 #include "p2pusb.c"
 #undef main
 
+#include <dirent.h>
+#include <pthread.h>
+
+static unsigned usbOpens, callerOpens;
+static pthread_t caller;
+static int scanOpenEnabled;
 static char mounted[800];
 static int mountStat(const char *path, struct stat *st) {
   char resolved[1024];
+  if (scanOpenEnabled && strstr(path, "/regression")) {
+    __atomic_add_fetch(&usbOpens, 1, __ATOMIC_SEQ_CST);
+    if (pthread_equal(pthread_self(), caller))
+      __atomic_add_fetch(&callerOpens, 1, __ATOMIC_SEQ_CST);
+  }
   int rc = stat(path, st);
   size_t n = strlen(mounted);
   if (!rc && realpath(path, resolved) && n && !strncmp(resolved, mounted, n) &&
@@ -36,7 +47,47 @@ int main(int argc, char **argv) {
   p2pmotor_teste_injetar(&OPS, NULL, NULL, NULL, 0);
   p2pmotor_teste_usb_base(base);
   p2pmotor_definir_usb(1);
-  if (!strcmp(argv[2], "bounded-scan")) {
+  if (!strcmp(argv[2], "disabled") || !strcmp(argv[2], "boot-worker")) {
+    caller = pthread_self();
+    scanOpenEnabled = 1;
+    p2pEnabled = strcmp(argv[2], "disabled") != 0;
+    p2pmotor_limpar_sobra();
+    pthread_mutex_lock(&trava);
+    while (limpando || sobraFila) pthread_cond_wait(&sinal, &trava);
+    pthread_mutex_unlock(&trava);
+    if (!p2pEnabled) {
+      assert(!p2pmotor_usb_presente());
+      assert(p2pmotor_resumo(det, sizeof det) == P2P_OK);
+      assert(usbOpens == 0);
+    } else {
+      assert(usbOpens > 0);
+      assert(callerOpens == 0);
+    }
+  } else if (!strcmp(argv[2], "rejected-volume") || !strcmp(argv[2], "volume-budget")) {
+    char good[900];
+    assert(mkdir(mounted, 0755) == 0);
+    assert(mkdir(cache, 0755) == 0);
+    for (unsigned i = 0; i < 400; i++) {
+      char path[900];
+      snprintf(path, sizeof path, "%s/item-%u", mounted, i);
+      assert(mkdir(path, 0755) == 0);
+    }
+    usbExtra[0] = 0;
+    if (!strcmp(argv[2], "rejected-volume")) {
+      scanEntries = 0;
+      assert(!usbEscanearDir(mounted, cache, sizeof cache, 0, 1));
+      assert(scanEntries == 2); // p2p/ and ownership marker only; no descent.
+    } else {
+      // Force a rejected mount before a usable sibling, independent of readdir order.
+      snprintf(good, sizeof good, "%s/good", base);
+      assert(mkdir(good, 0755) == 0);
+      LimTrab lim = { .max = 256, .ate = agora() + 5 };
+      assert(!usbEscanearDirL(mounted, cache, sizeof cache, 0, 1, &lim));
+      strcpy(mounted, good);
+      assert(usbEscanearDirL(good, cache, sizeof cache, 0, 1, &lim));
+      assert(existe(cache));
+    }
+  } else if (!strcmp(argv[2], "bounded-scan")) {
     // A rejected volume's contents must not monopolize synchronous discovery.
     assert(mkdir(mounted, 0755) == 0);
     assert(mkdir(cache, 0755) == 0); // Unowned p2p directory rejects allocation.

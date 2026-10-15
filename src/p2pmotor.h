@@ -94,8 +94,9 @@ int p2pmotor_cabe(uint64_t tam, uint64_t duro);
 // subiu (0 = desconhecido). Para a tela explicar a parada por espaco.
 void p2pmotor_arquivo_atual(uint64_t *tam, uint64_t *teto, uint64_t *livre);
 // Inicio do app: apaga a pasta do motor que sobrou de uma sessao que caiu (TV
-// desligada com o filme tocando), em fio solto, sem abrir o motor. Sem pasta
-// nao cria fio. Um pedido que chegue durante a limpeza espera por ela.
+// desligada com o filme tocando), em fio solto, sem abrir o motor. Call after
+// settings load: USB discovery runs on that worker only when P2P is enabled.
+// Um pedido que chegue durante a limpeza espera por ela.
 void p2pmotor_limpar_sobra(void);
 
 // BLOQUEIA (fio proprio). Sobe o motor se preciso, registra o magnet (com os
