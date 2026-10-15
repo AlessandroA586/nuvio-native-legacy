@@ -17,7 +17,7 @@
 // DESTINOS:
 //   Trakt  POST /sync/history[/remove]           (trakt.c, se ligado)
 //   Simkl  POST /sync/history[/remove]           (simkl.c, se vinculado)
-//   Conta  sync_push|delete_watched_items          (syncprog.c, se logada)
+//   Conta  sync_push|delete_watched_items          (jornal contapend.c, se logada)
 // Com mais de um vinculado vai a todos. O Trakt do TITULO inteiro continua em
 // trakt_assistido_tipo (ctxmenu.c depende do estado dele); aqui o Trakt so
 // entra no lote de episodios, com a mesma funcao e o mesmo corpo de antes.
@@ -25,7 +25,10 @@
 #define NV_VISTO_H
 #include "vistoep.h"
 
-enum { VISTO_TRAKT = 1, VISTO_SIMKL = 2, VISTO_CONTA = 4 };
+enum { VISTO_TRAKT = 1, VISTO_SIMKL = 2, VISTO_CONTA = 4,
+       // Interno: o gesto ja entrou no jornal da conta (contapend.h); o fio so
+       // envia. Quem chama nunca passa este bit.
+       VISTO_CONTA_JORNAL = 8 };
 
 // Bits do que esta vinculado AGORA.
 int visto_destinos(void);

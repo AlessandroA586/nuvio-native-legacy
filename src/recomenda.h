@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // RECOMENDAR UM TITULO A UM AMIGO — o lado cliente.
 //
 // POR QUE EXISTE E POR QUE CONTRA UM SERVIDOR PROPRIO: o Supabase do Nuvio nao
@@ -62,7 +63,7 @@ typedef struct {
   char imdb[24];
   char tipo[8];        // "movie" | "series"
   char titulo[160];
-  char poster[512];
+  char poster[NV_ARTE_URL_MAX];
   char ano[16];
   int  modelo;         // indice do template; -1 = texto livre
   char texto[72];      // so quando modelo == -1
@@ -82,6 +83,11 @@ typedef struct {
   char nome[64];
   char avatar[256];    // vazio = desenhar a inicial; ver RecItem.deAvatar
   char origem[8];      // "trakt" | "nuvio"
+  // O APELIDO que o amigo escolheu ("" = nunca escolheu, ou servidor antigo) e
+  // o SELO que o servidor deu a ele ("criador" | ""). O selo nunca e deduzido
+  // aqui: qualquer um pode escolher o apelido de quem fez o app.
+  char apelido[32];
+  char selo[12];
   // IDENTIDADES LIGADAS (F08, servidor com migracao 008): "trakt:<slug>" que
   // este amigo provou ser dele e deixou os amigos verem. E por elas que o feed
   // do Trakt dele se junta ao nosso. Servidor antigo: nIds = 0.
@@ -108,6 +114,7 @@ typedef struct {
   char avatar[256];
   char origem[8];      // "trakt" | "amigo"
   char viaNome[64];    // nome do contato em comum; so em "amigo"
+  char selo[12];       // ver RecContato.selo
 } RecSugestao;
 
 // 0 quando o pacote saiu SEM NUVIO_REC_URL. Nesse caso nada mais aqui faz
@@ -276,6 +283,22 @@ void rec_avatar(GfxRect a, const char *url, const char *nome, const char *id,
 void rec_avatar_estilo(GfxRect a, const char *url, const char *nome, const char *id,
                        float alfa, int estilo);
 
+// "Amigo #12" e a RESERVA de quem nao tem nome (o servidor e rec_nome_exibicao
+// a criam), nao um nome nem um apelido: quem desenha a pessoa pela identidade
+// trata como vazio. 1 quando `s` e essa reserva (em qualquer idioma: so olha o
+// "#<numero>" no fim).
+int  rec_nome_reserva(const char *s);
+// AS DUAS LINHAS DE QUEM E A PESSOA: o nome em cima e "@apelido" embaixo. Sem
+// um dos dois sobe o outro sozinho (sem buraco); sem nenhum, "Sem nome". `l2`
+// sai "" quando nao ha segunda linha.
+void rec_identidade(const char *nome, const char *apelido, char *l1, size_t n1,
+                    char *l2, size_t n2);
+// O SELO DE QUEM FEZ O APP ("Criador"), ao lado do nome: pilula de BADGE_H no
+// acento a 18 %, o icone de verificado e o texto no tom do acento. Desenha so
+// com `selo` == "criador" (o servidor decide); devolve a largura, 0 sem selo.
+float rec_selo_pessoa_largura(const char *selo);
+float rec_selo_pessoa(float x, float y, const char *selo, float alfa);
+
 // Altura unica dos dois selos, e o vao entre eles. Ficam aqui porque quem
 // desenha a linha precisa deles para centrar o texto ao lado.
 // DESDE 21/09/2026 SAO OS DA TABELA UNICA (badges.h): 28 px, e nao 30 — o
@@ -348,6 +371,8 @@ void recomenda_apagar_dados_sociais(void);
 // 1 quando o perfil esta publicado neste aparelho.
 int  recomenda_pesquisavel(void);
 
+enum { REC_MOTIVO_NENHUM = 0, REC_MOTIVO_TITULOS, REC_MOTIVO_GENEROS, REC_MOTIVO_ATIVOS };
+
 // UMA PESSOA VISTA POR ESTRANHO: so o que ela escolheu mostrar.
 typedef struct {
   char pub[16];               // handle opaco; NUNCA o id da conta
@@ -357,10 +382,20 @@ typedef struct {
   unsigned generos;
   char relacao[12];           // "" | "amigo" | "enviado" | "recebido"
   int  emComum;               // titulos em comum (so nas sugestoes de gosto)
+  // POR QUE o servidor sugeriu esta pessoa (so em "Gosto parecido"). 0 = servidor
+  // antigo, sem o campo: a linha nao diz nada. `motivoGeneros` = generos que as
+  // duas pessoas escolheram (mascara, como `generos`); `emComum` = n de titulos.
+  int  motivo;                // REC_MOTIVO_*
+  unsigned motivoGeneros;
   // Ultimo dos "vistos recentemente" PUBLICOS (so na lista da comunidade, e so
   // de quem ligou "Mostrar o que assisti recentemente"). Nunca "assistindo
   // agora": isso e so para amigo.
   char vendo[80];
+  // O NOME so vem de quem ja e AMIGO (servidor: amigos.js, cartao); para
+  // estranho ele chega vazio e a linha mostra so o apelido. Servidor antigo:
+  // vazio sempre. `selo` = "criador" ou "" (ver RecContato.selo).
+  char nome[64];
+  char selo[12];
 } RecPessoa;
 
 #define REC_BUSCA_MAX    10
@@ -449,6 +484,8 @@ unsigned recomenda_geracao(void);
 // recomendacao, so com a home de pe, e NUNCA por cima de quem esta assistindo.
 void recomenda_mostrar_se_houver(void);
 int  recomenda_aberta(void);
+void recomenda_abrir_cartao(void);   // abre agora, de proposito (sem a marca de "uma vez")
+int  recomenda_tecla(const SDL_Event *e);   // 1 = o cartao pegou a tecla
 void recomenda_evento(const SDL_Event *e);
 void recomenda_atualizar(float dt, Uint32 agora);
 void recomenda_desenhar(Uint32 agora);
@@ -528,7 +565,7 @@ typedef struct {
   char imdb[24];      // "tt..." (obrigatorio)
   char midia[8];      // "movie" | "series"
   char titulo[160];
-  char poster[512];   // so sai no feed se for de host conhecido (servidor)
+  char poster[NV_ARTE_URL_MAX];   // so sai no feed se for de host conhecido (servidor)
   int  temporada, episodio;
   int  pct;           // 0-100
   int  seg;           // segundos assistidos NESTE trecho (desde o evento anterior)
@@ -556,12 +593,14 @@ typedef struct {
   char imdb[24];
   char midia[8];        // "movie" | "series"
   char titulo[160];
-  char poster[512];
+  char poster[NV_ARTE_URL_MAX];
   int  temporada, episodio, pct;
   long long quando;     // epoch s; 0 = desconhecido (vai para o fim)
   int  reacao;          // so REC_ACAO_REACAO
   int  nota;            // so REC_ACAO_NOTA
   long long id;         // id do evento no nosso servidor (0 nas outras fontes)
+  int  eps;             // REC_ACAO_FIM de serie agrupado no servidor: episodios distintos
+  int  temReacFim, reacFim;   // REC_ACAO_FIM: a reacao que veio junto (1/0/-1), se veio
 } RecEvento;
 #define REC_FEED_MAX 50
 
@@ -608,7 +647,7 @@ typedef struct {
   int  nGostou; RecEvento gostou[REC_AMIGO_GOSTOU];
   // recs que EU mandei para ela, mais nova primeiro (so grau 1)
   int  nRecs;
-  struct { long long id, criado; char imdb[24], tipo[8], titulo[160], poster[512];
+  struct { long long id, criado; char imdb[24], tipo[8], titulo[160], poster[NV_ARTE_URL_MAX];
            int estado, temReacao, reacao, terminou;
            // resposta DIRETA de quem recebeu (POST /v1/rec/resposta): a mensagem
            // curta ("" = nenhuma) e o epoch em que respondeu (0 = nao respondeu).

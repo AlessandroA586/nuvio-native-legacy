@@ -101,7 +101,9 @@ static void montarProxima(void) {
   for (i = 0; i < n; i++) {
     const AgItem *a = agenda_lista(i);
     int d = a && a->dataProx[0] ? agenda_dias(a->dataProx) : AG_SEM_DATA;
-    if (d >= 0 && d <= 7 && d < melhor) { melhor = d; achou = i; }
+    // Sem titulo a linha saia " · T2 E3 · amanha": estreia sem nome nao diz
+    // nada a ninguem. A agenda preenche o titulo depois; ate la, fica a proxima.
+    if (d >= 0 && d <= 7 && d < melhor && a->titulo[0]) { melhor = d; achou = i; }
   }
   if (achou >= 0) {
     const AgItem *a = agenda_lista(achou);

@@ -153,6 +153,9 @@ enum { T_L, T_R, T_EN, T_AN, T_N };
 static int tipo_base(unsigned c) {
   if ((c >= '0' && c <= '9') || (c >= 0x06F0 && c <= 0x06F9)) return T_EN;
   if (c >= 0x0660 && c <= 0x0669) return T_AN;
+  // Marcas de direcao: RLM e ALM sao fortes R, LRM forte L (abaixo, pelo
+  // "c != 0x200E"). Quem chama as tira da saida depois (text.c, visualDe).
+  if (c == 0x200F || c == 0x061C) return T_R;
   if (c == 0x060C || c == 0x061B || c == 0x061F || c == 0x066A || c == 0x066B || c == 0x066C || c == 0x06D4) return T_N;
   if ((c >= 0x0590 && c <= 0x08FF) || (c >= 0xFB1D && c <= 0xFDFF) || (c >= 0xFE70 && c <= 0xFEFF)) return T_R;
   if (c < 0x41) return T_N;
@@ -228,6 +231,38 @@ int bidi_visual_utf8_ex(const char *in, char *out, size_t tam, TemGlifo tem, voi
     for (i = 0; i < ncl; i++) {
       if (tp[i] == T_L || tp[i] == T_R) ult = tp[i];
       else if (tp[i] == T_EN && ult == T_L) tp[i] = T_L;
+    } }
+  // N0, simplified (BD16 pairs of () [] {}): a pair with a strong type of the
+  // paragraph direction inside takes that direction; with only the opposite
+  // inside, it takes the opposite when the context before it is also
+  // opposite. "Name (2014)" in an RTL line keeps both brackets with the Latin
+  // run instead of splitting them across the line.
+  { int pilha[64], np = 0;
+    for (i = 0; i < ncl; i++) {
+      unsigned c = sh[ini[i]];
+      if (tp[i] != T_N) continue;
+      if (c == '(' || c == '[' || c == '{') { if (np < 64) pilha[np++] = i; continue; }
+      if (c == ')' || c == ']' || c == '}') {
+        unsigned abre = c == ')' ? '(' : c == ']' ? '[' : '{';
+        int k = np - 1, j, e = p ? T_R : T_L, o = p ? T_L : T_R, temE = 0, temO = 0, dir;
+        while (k >= 0 && sh[ini[pilha[k]]] != abre) k--;
+        if (k < 0) continue;
+        for (j = pilha[k] + 1; j < i; j++) {
+          int t = tp[j] == T_EN || tp[j] == T_AN ? T_R : tp[j];
+          if (t == e) temE = 1; else if (t == o) temO = 1;
+        }
+        if (temE) dir = e;
+        else if (temO) {
+          int antes = e;
+          for (j = pilha[k] - 1; j >= 0; j--) {
+            int t = tp[j] == T_EN || tp[j] == T_AN ? T_R : tp[j];
+            if (t == T_L || t == T_R) { antes = t; break; }
+          }
+          dir = antes == o ? o : e;
+        } else { np = k; continue; }
+        tp[pilha[k]] = tp[i] = dir;
+        np = k;
+      }
     } }
   // N1/N2: neutrals between equal directions follow them, else the paragraph's.
   for (i = 0; i < ncl;) {

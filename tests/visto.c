@@ -28,6 +28,8 @@
 #define OK(s) fprintf(stderr, "ok  %s\n", s)
 
 // ---------------------------------------------------------------- stubs
+unsigned int SDL_GetTicks(void) { return 0; }
+void marco(const char *m) { (void)m; }
 static const char *tokenSimkl = "";
 static int logada = 1;
 const char *simklauth_token(void) { return tokenSimkl; }
@@ -38,6 +40,8 @@ void nuvem_url_escapar(const char *v, char *dst, unsigned tam) { snprintf(dst, t
 const char *i18n(const char *s) { return s; }
 const char *idioma_mes_data(int mes, const char *nomePt) { (void)mes; return nomePt; }
 int sessao_logada(void) { return logada; }
+const char *sessao_usuario(void) { return "usuario-teste"; }
+char *contacache_ler(const char *s, int p, const char *u, long *q) { (void)s; (void)p; (void)u; (void)q; return NULL; }
 int perfis_ativo(void) { return 2; }
 const char *dados_cliente_id(void) { return "cliente-teste"; }
 char *dados_ler(const char *n) { (void)n; return NULL; }
@@ -53,6 +57,8 @@ int cat_historico_definir_se_geracao(const char *i, const char *t, int v,
   cat_historico_definir_id(i, t, v); return 1;
 }
 const char *cat_tipo_por_imdb(const char *imdb) { (void)imdb; return "series"; }
+int ajustes_social(void) { return 1; }
+int ajustes_hist_conta(void) { return 1; }
 int ajustes_tmdb_cw(void) { return 0; }
 const char *ajustes_tmdb_idioma(void) { return "en-US"; }
 const char *desc_chave_tmdb(void) { return ""; }

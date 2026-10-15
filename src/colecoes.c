@@ -9,10 +9,100 @@
 #include <unistd.h>
 #include <pthread.h>
 static pthread_mutex_t colTrava = PTHREAD_MUTEX_INITIALIZER;
-static ColFolder folders[COL_MAX];
+// PASTAS EM BLOCOS (#255). Um bloco de 64 so e alocado quando a montagem chega
+// nele, e nunca e devolvido: col_folder entrega o ENDERECO da pasta, e quem o
+// guarda (vertudo) continua lendo o mesmo lugar depois de um sync, como fazia
+// com o vetor estatico. A conta de 296 pastas usa 5 blocos (1,3 MB); o vetor
+// fixo de antes custava 13,4 MB para qualquer conta.
+#define COL_BLOCO 64
+static ColFolder *blocos[COL_MAX / COL_BLOCO];
+#define PASTA(i) (blocos[(i) / COL_BLOCO][(i) % COL_BLOCO])
 static int count;
+// Maior indice ja escrito: as pastas de [count, altaMarca) sobraram de um
+// conjunto maior e sao apontadas para `vazias` (ver fecharSobras).
+static int altaMarca;
 static ColFolder extras[COL_EXTRA_MAX];
 static int nExtras;
+// FONTES. `fontesConta` e o bloco do conjunto na tela (pacote ou conta); `novas` e
+// o que a montagem em curso enche, e vira `fontesConta` em fecharMontagem. Os dois
+// terminam com COL_SOURCE_MAX posicoes zeradas de folga: quem guarda o
+// endereco de uma pasta e le sources[k] com um k da pasta ANTERIOR que morava
+// ali le zeros, e nao memoria alheia — a mesma garantia do vetor embutido.
+static ColSource *fontesConta, *novas, *extrasFontes;
+static int nFontes, nNovas, capNovas;
+// Destino das pastas que sobraram de um conjunto maior. So zeros.
+static ColSource vazias[COL_SOURCE_MAX];
+
+static int vagaPasta(int i) {
+  int b = i / COL_BLOCO;
+  if (i < 0 || i >= COL_MAX) return 0;
+  if (!blocos[b] && !(blocos[b] = calloc(COL_BLOCO, sizeof(ColFolder)))) {
+    printf("[colecoes] sem memoria para mais %d pastas (bloco %d)\n", COL_BLOCO, b);
+    return 0;
+  }
+  if (i >= altaMarca) altaMarca = i + 1;
+  return 1;
+}
+// As pastas que nao sao mais do conjunto nao podem apontar para um bloco de
+// fontes ja liberado.
+static void fecharSobras(void) {
+  for (int i = count; i < altaMarca; i++) {
+    PASTA(i).sources = vazias;
+    PASTA(i).nSources = 0;
+  }
+}
+// Espaco para mais uma pasta inteira no fim de `novas`, com a folga zerada do
+// fim ja garantida. NULL so sem memoria.
+static ColSource *vagaFontes(void) {
+  if (nNovas + 2 * COL_SOURCE_MAX > capNovas) {
+    int cap = capNovas ? capNovas * 2 : 8 * COL_SOURCE_MAX;
+    while (cap < nNovas + 2 * COL_SOURCE_MAX) cap *= 2;
+    ColSource *n = realloc(novas, sizeof(ColSource) * (size_t)cap);
+    if (!n) { printf("[colecoes] sem memoria para %d fontes\n", cap); return NULL; }
+    novas = n; capNovas = cap;
+  }
+  return novas + nNovas;
+}
+static void comecarMontagem(void) {
+  free(novas); novas = NULL; nNovas = capNovas = 0;
+}
+// A montagem terminou com as pastas [0,count), na ordem em que as fontes
+// entraram em `novas` (realloc pode ter mudado o endereco no caminho: o
+// ponteiro de cada pasta e refeito aqui, pela posicao). `novas` vira o bloco
+// do conjunto e o anterior e liberado — depois de nenhuma pasta apontar mais
+// para ele.
+static void fecharMontagem(void) {
+  int off = 0;
+  if (!vagaFontes()) { count = 0; fecharSobras(); return; }
+  memset(novas + nNovas, 0, sizeof(ColSource) * (size_t)(capNovas - nNovas));
+  for (int i = 0; i < count; i++) {
+    PASTA(i).sources = novas + off;
+    off += PASTA(i).nSources;
+  }
+  fecharSobras();
+  free(fontesConta);
+  fontesConta = novas;
+  nFontes = nNovas;
+  novas = NULL; nNovas = capNovas = 0;
+}
+// Uma impressao digital do conjunto, para decidir se a Home remonta. Era um
+// memcmp das pastas com as fontes embutidas; agora as fontes estao fora, e o
+// ponteiro muda a cada montagem mesmo com o mesmo conteudo.
+static unsigned long long assinatura(void) {
+  unsigned long long h = 1469598103934665603ULL;
+  for (int i = 0; i < count; i++) {
+    ColFolder f = PASTA(i);
+    const unsigned char *b;
+    size_t k;
+    f.sources = NULL;
+    b = (const unsigned char *)&f;
+    for (k = 0; k < sizeof f; k++) h = (h ^ b[k]) * 1099511628211ULL;
+    b = (const unsigned char *)PASTA(i).sources;
+    for (k = 0; b && k < sizeof(ColSource) * (size_t)PASTA(i).nSources; k++)
+      h = (h ^ b[k]) * 1099511628211ULL;
+  }
+  return h;
+}
 // TROCA DE PERFIL (col_esquecer_perfil). A pasta do pacote fica guardada para a
 // arte curada voltar quando a conta mandar as colecoes do perfil novo; semConta
 // diz que folders[] foi esvaziado e que, se a conta nao mandar nada, deve
@@ -41,24 +131,42 @@ int col_tem_conta(void) { int n; pthread_mutex_lock(&colTrava); n = contaAplicad
 // depois de TODA reconstrucao (pacote ou conta) e a cada troca do conjunto.
 static void aplicarExtras(void) {
   int i, k = 0;
-  for (i = 0; i < count; i++) if (!folders[i].extra) folders[k++] = folders[i];
+  for (i = 0; i < count; i++) if (!PASTA(i).extra) { if (k != i) PASTA(k) = PASTA(i); k++; }
   count = k;
-  for (i = 0; i < nExtras && count < COL_MAX; i++) folders[count++] = extras[i];
+  for (i = 0; i < nExtras && vagaPasta(count); i++) { PASTA(count) = extras[i]; count++; }
+  fecharSobras();
+}
+
+static int fontesValidas(const ColFolder *v) {
+  return v->nSources < 0 ? 0 : (v->nSources > COL_SOURCE_MAX ? COL_SOURCE_MAX : v->nSources);
 }
 
 int col_extra_definir(const ColFolder *v, int n) {
-  int i;
-  pthread_mutex_lock(&colTrava);
+  int i, total = 0;
+  ColSource *bloco, *velho;
   if (n < 0) n = 0;
   if (n > COL_EXTRA_MAX) n = COL_EXTRA_MAX;
+  for (i = 0; i < n && v; i++) total += fontesValidas(&v[i]);
+  // As fontes da pasta extra sao COPIADAS: quem chama monta a pasta na pilha.
+  bloco = calloc((size_t)(total + COL_SOURCE_MAX), sizeof(ColSource));
+  if (!bloco) { printf("[colecoes] pastas extras: sem memoria, ficam as de antes\n"); return nExtras; }
+  pthread_mutex_lock(&colTrava);
+  velho = extrasFontes;
+  extrasFontes = bloco;
   nExtras = 0;
-  for (i = 0; i < n && v; i++) {
+  for (i = 0, total = 0; i < n && v; i++) {
+    int ns = fontesValidas(&v[i]);
     extras[nExtras] = v[i];
+    extras[nExtras].sources = bloco + total;
+    extras[nExtras].nSources = ns;
+    if (ns && v[i].sources) memcpy(bloco + total, v[i].sources, sizeof(ColSource) * (size_t)ns);
+    total += ns;
     extras[nExtras].extra = 1;
     extras[nExtras].local = 0;   // nao e do pacote: nao disputa a arte curada
     nExtras++;
   }
   aplicarExtras();
+  free(velho);
   // A home so remonta quando ESTE numero muda. Sem o bump, fixar uma lista na
   // Home so apareceria no proximo ciclo de rede.
   revisao++;
@@ -69,17 +177,78 @@ int col_extra_definir(const ColFolder *v, int n) {
 // Fonte da conta vem com addonId e sem URL; a URL so existe depois que a sonda
 // leu o manifesto daquele addon. Resolver no acesso deixa a pasta pronta assim
 // que a sonda passar, sem ninguem precisar avisar.
+//
+// ColSource.base FICA EM 600 (#201), e nao em NV_ADDON_URL_MAX: sao
+// COL_MAX x COL_SOURCE_MAX = 8192 fontes, e 2048 em cada uma custaria ~12 MB.
+// Ela e so um atalho: a base inteira mora na tabela de addons e toda leitura
+// cai em addons_base_por_id(addonId) quando o atalho esta vazio. Entao a regra
+// e NUNCA guardar aqui uma base cortada — o que nao cabe fica vazio.
+static int baseCabe(ColSource *a, const char *base) {
+  if (!base || strlen(base) >= sizeof a->base) { a->base[0] = 0; return 0; }
+  snprintf(a->base, sizeof a->base, "%s", base);
+  return 1;
+}
+// Le a base de uma fonte do JSON para `a->base`, sem nunca deixa-la cortada.
+// 0 quando a chave nao existe. A base que nao cabe fica VAZIA e a linha do log
+// diz a pasta e o tamanho (nunca a URL: ela carrega a chave do addon).
+static int lerBase(const char *s, const char *se, const char *chave, ColSource *a, const char *pasta) {
+  char lida[NV_ADDON_URL_MAX];
+  a->base[0] = 0;
+  if (!js_texto(s, se, chave, lida, sizeof lida)) return 0;
+  if (!baseCabe(a, lida))
+    printf("[col] %s: base de addon com %lu caracteres ou mais nao cabe na fonte (maximo %lu): resolvida pelo id do addon\n",
+           pasta && *pasta ? pasta : "pasta", (unsigned long)strlen(lida),
+           (unsigned long)sizeof a->base - 1);
+  return 1;
+}
 static void resolverBases(ColFolder *v) {
   for (int s = 0; s < v->nSources; s++)
     if (!v->sources[s].prov[0] && !v->sources[s].base[0] && v->sources[s].addonId[0])
-      snprintf(v->sources[s].base, sizeof v->sources[s].base, "%s", addons_base_por_id(v->sources[s].addonId));
+      baseCabe(&v->sources[s], addons_base_por_id(v->sources[s].addonId));
 }
 const ColFolder *col_folder(int i) {
   pthread_mutex_lock(&colTrava);
   if (i < 0 || i >= count) { pthread_mutex_unlock(&colTrava); return NULL; }
-  resolverBases(&folders[i]);
+  resolverBases(&PASTA(i));
   pthread_mutex_unlock(&colTrava);
-  return &folders[i];
+  return &PASTA(i);
+}
+// FNV-1a de 32 bits, igual ao de homeestado.c: o valor tem de bater com o do
+// hashColecoes que morava la, ou todo snapshot da Home ja gravado seria
+// descartado uma vez sem motivo.
+static unsigned colHashBytes(unsigned h, const void *data, size_t n) {
+  const unsigned char *p = (const unsigned char *)data;
+  while (n--) h = (h ^ *p++) * 16777619u;
+  return h;
+}
+static unsigned colHashTexto(unsigned h, const char *s) {
+  if (s) h = colHashBytes(h, s, strlen(s));
+  return (h ^ 0xffu) * 16777619u;
+}
+unsigned col_hash_estrutura(void) {
+  unsigned h = 2166136261u;
+  pthread_mutex_lock(&colTrava);
+  h = colHashBytes(h, &count, sizeof count);
+  for (int i = 0; i < count; i++) {
+    ColFolder *f = &PASTA(i);
+    // Igual a col_folder(): a base de uma fonte de addon e resolvida antes de
+    // entrar no hash.
+    resolverBases(f);
+    h = colHashTexto(h, f->group);
+    h = colHashTexto(h, f->id);
+    h = colHashBytes(h, &f->nSources, sizeof f->nSources);
+    for (int s = 0; s < f->nSources; s++) {
+      const ColSource *src = &f->sources[s];
+      h = colHashTexto(h, src->prov); h = colHashTexto(h, src->addonId);
+      h = colHashTexto(h, src->base); h = colHashTexto(h, src->type);
+      h = colHashTexto(h, src->catId); h = colHashTexto(h, src->tmdbTipo);
+      h = colHashBytes(h, &src->tmdbId, sizeof src->tmdbId);
+      h = colHashTexto(h, src->midia); h = colHashTexto(h, src->ordenar);
+      h = colHashTexto(h, src->ordem); h = colHashBytes(h, &src->traktLista, sizeof src->traktLista);
+    }
+  }
+  pthread_mutex_unlock(&colTrava);
+  return h;
 }
 // O ADDON DE UM GRUPO DE COLECOES, quando ha um so. Um grupo e um conjunto de
 // pastas, cada pasta com fontes de varios addons (ou TMDB/Trakt), entao o
@@ -93,9 +262,9 @@ int col_grupo_addon(const char *name, char *dst, unsigned n) {
   char dono[96] = "";
   if (n) dst[0] = 0;
   for (i = 0; i < count; i++) {
-    if (strcasecmp(name, folders[i].group)) continue;
-    for (k = 0; k < folders[i].nSources; k++) {
-      const ColSource *sc = &folders[i].sources[k];
+    if (strcasecmp(name, PASTA(i).group)) continue;
+    for (k = 0; k < PASTA(i).nSources; k++) {
+      const ColSource *sc = &PASTA(i).sources[k];
       if (sc->prov[0] || !sc->addonId[0]) continue;   // TMDB/Trakt nao e addon
       if (!dono[0]) snprintf(dono, sizeof dono, "%s", sc->addonId);
       else if (strcmp(dono, sc->addonId)) return 0;   // misto
@@ -115,8 +284,8 @@ int col_forma_texto(const char *s) {
 int col_grupo_forma(const char *name) {
   int conta[COL_FORMA_N] = {0}, primeira = -1, melhor, i;
   for (i = 0; i < count; i++) {
-    int f = folders[i].forma;
-    if (strcasecmp(name, folders[i].group) || f < 0 || f >= COL_FORMA_N) continue;
+    int f = PASTA(i).forma;
+    if (strcasecmp(name, PASTA(i).group) || f < 0 || f >= COL_FORMA_N) continue;
     if (primeira < 0) primeira = f;
     conta[f]++;
   }
@@ -127,7 +296,7 @@ int col_grupo_forma(const char *name) {
 }
 
 int col_grupo(const char *name,int *indices,int max) {
-  int n=0;for(int i=0;i<count&&n<max;i++) if(!strcasecmp(name,folders[i].group)) indices[n++]=i;return n;
+  int n=0;for(int i=0;i<count&&n<max;i++) if(!strcasecmp(name,PASTA(i).group)) indices[n++]=i;return n;
 }
 // RESOLVE A BASE ANTES DE COMPARAR, e isso e o conserto de verdade do #18.
 //
@@ -170,9 +339,9 @@ int col_fontes_sem_base(void) {
   int i, s, n = 0;
   pthread_mutex_lock(&colTrava);
   for (i = 0; i < count; i++) {
-    for (s = 0; s < folders[i].nSources; s++)
-      if (!folders[i].sources[s].prov[0] && !folders[i].sources[s].base[0] &&
-          !addons_base_por_id(folders[i].sources[s].addonId)[0]) n++;
+    for (s = 0; s < PASTA(i).nSources; s++)
+      if (!PASTA(i).sources[s].prov[0] && !PASTA(i).sources[s].base[0] &&
+          !addons_base_por_id(PASTA(i).sources[s].addonId)[0]) n++;
   }
   pthread_mutex_unlock(&colTrava);
   return n;
@@ -185,9 +354,9 @@ void col_despejar_fontes(int max) {
   int i, s2, n = 0;
   pthread_mutex_lock(&colTrava);
   for (i = 0; i < count && n < max; i++) {
-    resolverBases(&folders[i]);
-    for (s2 = 0; s2 < folders[i].nSources && n < max; s2++, n++) {
-      const ColSource *v = &folders[i].sources[s2];
+    resolverBases(&PASTA(i));
+    for (s2 = 0; s2 < PASTA(i).nSources && n < max; s2++, n++) {
+      const ColSource *v = &PASTA(i).sources[s2];
       // O addonId ENTRA no despejo, e ele e o campo que decide.
       //
       // Uma fonte sem base nao esta "meio pronta": ela quer um addon que o app
@@ -198,11 +367,11 @@ void col_despejar_fontes(int max) {
       // QUAIS 360.
       if (v->prov[0])
         printf("[col]   fonte[%s/%s]: prov=%s tmdbTipo=%s tmdbId=%ld lista=%ld midia=%s\n",
-               folders[i].group, folders[i].title, v->prov, v->tmdbTipo,
+               PASTA(i).group, PASTA(i).title, v->prov, v->tmdbTipo,
                v->tmdbId, v->traktLista, v->midia);
       else
         printf("[col]   fonte[%s/%s]: addon=%s base=%s tipo=%s id=%s\n",
-               folders[i].group, folders[i].title,
+               PASTA(i).group, PASTA(i).title,
                v->addonId[0] ? v->addonId : "(sem id)",
                v->base[0] ? rede_url_publica(v->base, seg, sizeof seg)
                           : "(NAO RESOLVIDA)",
@@ -240,8 +409,8 @@ int col_diagnostico(const char *base, const char *type, const char *id,
   if (!base || !base[0] || !type || !id) return 0;
   pthread_mutex_lock(&colTrava);
   for (i = 0; i < count; i++) {
-    for (s = 0; s < folders[i].nSources; s++) {
-      const ColSource *v = &folders[i].sources[s];
+    for (s = 0; s < PASTA(i).nSources; s++) {
+      const ColSource *v = &PASTA(i).sources[s];
       int nivel;
       if (v->prov[0]) continue;   // fonte tmdb/trakt nao casa com catalogo de addon
       const char *b = v->base[0] ? v->base : addons_base_por_id(v->addonId);
@@ -253,7 +422,7 @@ int col_diagnostico(const char *base, const char *type, const char *id,
       }
       if (nivel > melhor) {
         melhor = nivel;
-        if (grupo && n) snprintf(grupo, n, "%s", folders[i].group);
+        if (grupo && n) snprintf(grupo, n, "%s", PASTA(i).group);
         if (melhor == 3) goto pronto;
       }
     }
@@ -263,24 +432,26 @@ pronto:
   return melhor;
 }
 
-#ifdef NV_TPK40
-// Tizen 4/5's manual ELF loader cannot initialize compiler TLS (tpk.sh rejects
-// PT_TLS). Same per-thread snapshot lifetime with a pthread key, as discord.c.
+// A copia entregue a descoberta leva as fontes JUNTO: a pasta so aponta para o
+// bloco do conjunto, e o proximo sync o libera.
+typedef struct { ColFolder f; ColSource s[COL_SOURCE_MAX]; } ColCopia;
+// Per-thread snapshot on the heap (pthread key, freed on thread exit). A
+// `static __thread ColCopia` (~52 KB) inflated PT_TLS for every thread, and
+// Tizen 4/5's manual ELF loader cannot initialize compiler TLS at all (#317).
 static pthread_key_t colCopiaKey;
 static pthread_once_t colCopiaOnce = PTHREAD_ONCE_INIT;
 static int colCopiaKeyOk;
 static void colCopiaCriar(void) { colCopiaKeyOk = pthread_key_create(&colCopiaKey, free) == 0; }
-static ColFolder *colCopiaDoFio(void) {
+static ColCopia *colCopiaDoFio(void) {
   pthread_once(&colCopiaOnce, colCopiaCriar);
   if (!colCopiaKeyOk) return NULL;
-  ColFolder *p = pthread_getspecific(colCopiaKey);
+  ColCopia *p = pthread_getspecific(colCopiaKey);
   if (!p) {
     p = calloc(1, sizeof *p);
     if (p && pthread_setspecific(colCopiaKey, p)) { free(p); p = NULL; }
   }
   return p;
 }
-#endif
 const ColFolder *col_por_catalogo(const char *base,const char *type,const char *id) {
   // Base vazia nao pergunta nada: sem esta guarda uma consulta sem URL casava
   // com QUALQUER fonte cuja base ainda estivesse vazia — um falso positivo que
@@ -289,29 +460,27 @@ const ColFolder *col_por_catalogo(const char *base,const char *type,const char *
   // Discovery runs concurrently with main-thread account sync. Never let it
   // observe the cleared/partially parsed builder or keep a pointer that sync
   // can replace after the lock is released.
-#ifdef NV_TPK40
-  ColFolder *copiaP = colCopiaDoFio();
+  ColCopia *copiaP = colCopiaDoFio();
   if (!copiaP) return NULL;
 #define copia (*copiaP)
-#else
-  static __thread ColFolder copia;
-#endif
   const ColFolder *resultado = NULL;
   pthread_mutex_lock(&colTrava);
   for(int i=0;i<count;i++) {
-    for(int s=0;s<folders[i].nSources;s++) {
-      const ColSource *v=&folders[i].sources[s];
+    for(int s=0;s<PASTA(i).nSources;s++) {
+      const ColSource *v=&PASTA(i).sources[s];
       const char *b = v->base[0] ? v->base : addons_base_por_id(v->addonId);
       if(!strcmp(b,base)&&!strcmp(v->type,type)&&!strcmp(v->catId,id)) {
-        copia = folders[i]; resolverBases(&copia); resultado = &copia; goto pronto;
+        int ns = fontesValidas(&PASTA(i));
+        copia.f = PASTA(i);
+        memcpy(copia.s, PASTA(i).sources, sizeof(ColSource) * (size_t)ns);
+        copia.f.sources = copia.s; copia.f.nSources = ns;
+        resolverBases(&copia.f); resultado = &copia.f; goto pronto;
       }
     } }
 pronto:
   pthread_mutex_unlock(&colTrava);
   return resultado;
-#ifdef NV_TPK40
 #undef copia
-#endif
 }
 /* Arte editorial: JPEG primeiro, PNG depois.
  *
@@ -340,11 +509,13 @@ static int carregarPacote(const char *dir) {
   fseek(f,0,SEEK_END);long size=ftell(f);rewind(f);
   if(size<2||size>4000000){fclose(f);return 0;}
   char *body=malloc((size_t)size+1);if(!body){fclose(f);return 0;}
-  size_t got=fread(body,1,(size_t)size,f);body[got]=0;fclose(f);count=0;
+  size_t got=fread(body,1,(size_t)size,f);body[got]=0;fclose(f);count=0;comecarMontagem();
   for(const char *g=js_array(body,NULL,"groups");g;g=js_prox(js_fim(g))) {
     const char *end=js_fim(g);char group[64],groupId[64]="";js_texto(g,end,"title",group,sizeof group);js_texto(g,end,"id",groupId,sizeof groupId);
-    for(const char *p=js_array(g,end,"folders");p&&count<COL_MAX;p=js_prox(js_fim(p))) {
-      const char *pe=js_fim(p);ColFolder *v=&folders[count];memset(v,0,sizeof *v);
+    for(const char *p=js_array(g,end,"folders");p&&vagaPasta(count);p=js_prox(js_fim(p))) {
+      const char *pe=js_fim(p);ColFolder *v=&PASTA(count);memset(v,0,sizeof *v);
+      if(!(v->sources=vagaFontes()))break;
+      memset(v->sources,0,sizeof(ColSource)*COL_SOURCE_MAX);
       snprintf(v->group,sizeof v->group,"%s",group);snprintf(v->groupId,sizeof v->groupId,"%s",groupId);
       js_texto(p,pe,"id",v->id,sizeof v->id);js_texto(p,pe,"title",v->title,sizeof v->title);
       js_texto(p,pe,"cover",v->cover,sizeof v->cover);js_texto(p,pe,"hero",v->hero,sizeof v->hero);js_texto(p,pe,"logo",v->logo,sizeof v->logo);
@@ -370,14 +541,14 @@ static int carregarPacote(const char *dir) {
       }
       for(const char *s=js_array(p,pe,"sources");s&&v->nSources<COL_SOURCE_MAX;s=js_prox(js_fim(s))) {
         const char *se=js_fim(s);ColSource *a=&v->sources[v->nSources];
-        js_texto(s,se,"title",a->title,sizeof a->title);js_texto(s,se,"base",a->base,sizeof a->base);
+        js_texto(s,se,"title",a->title,sizeof a->title);lerBase(s,se,"base",a,v->title);
         js_texto(s,se,"type",a->type,sizeof a->type);js_texto(s,se,"catId",a->catId,sizeof a->catId);js_texto(s,se,"genre",a->genre,sizeof a->genre);
         if(a->base[0]&&a->type[0]&&a->catId[0])v->nSources++;
       }
       v->local=1;
-      if(v->nSources&&v->title[0])count++;
+      if(v->nSources&&v->title[0]){nNovas+=v->nSources;count++;}
     }
-  }free(body);aplicarExtras();return count;
+  }free(body);fecharMontagem();aplicarExtras();return count;
 }
 int col_carregar(const char *dir) {
   pthread_mutex_lock(&colTrava);
@@ -408,10 +579,13 @@ void col_cor(const ColFolder *f,float *r,float *g,float *b) {
 
 // ---------------------------------------------------------------- conta
 
+// A base da fonte na MESMA forma de addons_base (nv_addon_base, addonurl.h):
+// sem /manifest.json nem barra final, com a query — e o que faz a comparacao
+// com a lista de addons e o pedido de catalogo (nv_addon_url) baterem.
 static void tirarManifest(char *base) {
-  size_t k = strlen(base);
-  if (k > 14 && !strcmp(base + k - 14, "/manifest.json")) base[k - 14] = 0;
-  else while (k && base[k - 1] == '/') base[--k] = 0;
+  char t[NV_ADDON_URL_MAX];
+  nv_addon_base(base, t, sizeof t);
+  memcpy(base, t, strlen(t) + 1);   // nunca cresce: so tira
 }
 
 // Uma colecao do web -> N pastas em `folders`. Mesma traducao de
@@ -426,14 +600,19 @@ static void tirarManifest(char *base) {
 static int fPulProvedor, fPulSemFonte, fPulSemTitulo, fPulCheio, fGifCortado;
 static char fPrimeiraPulada[128];
 
-static void lerColecaoWeb(const char *c, const char *ce) {
+// Devolve 0 quando a colecao NAO COUBE (teto de pastas, de fontes ou falta de
+// memoria). Quem chama desfaz a colecao inteira: cortar no meio deixava a
+// colecao com parte das pastas e o resto das fontes solto na Home (#255).
+static int lerColecaoWeb(const char *c, const char *ce) {
   char group[64] = "", groupId[64] = "", fundo[512] = "";   // js_texto nao zera o que nao acha
   js_texto_raiz_em(c, ce, "title", group, sizeof group);
   js_texto_raiz_em(c, ce, "id", groupId, sizeof groupId);
   js_texto_raiz_em(c, ce, "backdropImageUrl", fundo, sizeof fundo);
-  if (!group[0]) return;
-  for (const char *p = js_array(c, ce, "folders"), *pe = NULL; p && count < COL_MAX; p = js_prox(pe)) {
-    pe = js_fim(p); ColFolder *v = &folders[count]; memset(v, 0, sizeof *v);
+  if (!group[0]) return 1;
+  for (const char *p = js_array(c, ce, "folders"), *pe = NULL; p; p = js_prox(pe)) {
+    if (!vagaPasta(count)) return 0;
+    pe = js_fim(p); ColFolder *v = &PASTA(count); memset(v, 0, sizeof *v);
+    if (!(v->sources = vagaFontes())) return 0;
     snprintf(v->group, sizeof v->group, "%s", group);
     snprintf(v->groupId, sizeof v->groupId, "%s", groupId);
     js_texto_raiz_em(p, pe, "id", v->id, sizeof v->id); js_texto_raiz_em(p, pe, "title", v->title, sizeof v->title);
@@ -500,10 +679,10 @@ static void lerColecaoWeb(const char *c, const char *ce) {
         snprintf(a->prov, sizeof a->prov, "trakt"); v->nSources++; continue;
       }
       if (prov[0] && strcasecmp(prov, "addon")) { fPulProvedor++; continue; }
-      if (!js_texto(s, se, "addonBaseUrl", a->base, sizeof a->base)) js_texto(s, se, "addon_base_url", a->base, sizeof a->base);
+      if (!lerBase(s, se, "addonBaseUrl", a, v->title)) lerBase(s, se, "addon_base_url", a, v->title);
       tirarManifest(a->base);
       js_texto(s, se, "addonId", a->addonId, sizeof a->addonId);
-      if (!a->base[0]) snprintf(a->base, sizeof a->base, "%s", addons_base_por_id(a->addonId));
+      if (!a->base[0]) baseCabe(a, addons_base_por_id(a->addonId));
       js_texto(s, se, "type", a->type, sizeof a->type);
       if (!js_texto(s, se, "catalogId", a->catId, sizeof a->catId)) js_texto(s, se, "catalog_id", a->catId, sizeof a->catId);
       if (!js_texto(s, se, "title", a->title, sizeof a->title) && !js_texto(s, se, "catalogName", a->title, sizeof a->title))
@@ -513,13 +692,16 @@ static void lerColecaoWeb(const char *c, const char *ce) {
       // Sem base MAS com addonId entra: a base chega quando a sonda ler o manifesto.
       if ((a->base[0] || a->addonId[0]) && a->type[0] && a->catId[0]) v->nSources++;
     }
-    if (v->nSources && v->title[0]) count++;
-    else {
+    if (v->nSources && v->title[0]) {
+      if (nNovas + v->nSources > COL_FONTES_MAX) return 0;
+      nNovas += v->nSources; count++;
+    } else {
       if (!v->nSources) fPulSemFonte++; else fPulSemTitulo++;
       if (!fPrimeiraPulada[0] && v->title[0])
         snprintf(fPrimeiraPulada, sizeof fPrimeiraPulada, "%s", v->title);
     }
   }
+  return 1;
 }
 
 // URL de fundo do Xperience com estilo escolhido: covers/<estilo>/ que nao e
@@ -791,24 +973,25 @@ static int definirJson(const char *json) {
   char *solto = NULL;
   int fundosXp = 0, arteDaConta = 0;
   const char *arr = NULL;
-  int antes, novas;
+  int antes, nConta;
   const char *original = json;
   if (!prepararResposta(json, &solto, &arr)) {
     printf("[collections] missing or incomplete account snapshot retained\n");
     free(solto); return 0;
   }
   int antesTela = count;
-  ColFolder *telaAntes = NULL;
+  int recarregou = 0;
+  // O QUE ESTA NA TELA, antes de mexer: decide no fim se a Home remonta.
+  for (int i = 0; i < count; i++) resolverBases(&PASTA(i));
+  unsigned long long assinaturaAntes = assinatura();
   // Depois de uma troca de perfil folders[] esta vazio: recarrega o pacote para
   // o casamento de arte abaixo ter com quem casar. A revisao volta ao que era —
   // quem decide se a home remonta e o resultado, nao esta recarga.
   if (semConta && arr && dirPacote[0]) {
-    telaAntes = malloc(sizeof(ColFolder) * (size_t)(count ? count : 1));
-    if (!telaAntes) { free(solto); return 0; }
-    memcpy(telaAntes, folders, sizeof(ColFolder) * (size_t)count);
     unsigned rev = revisao;
     carregarPacote(dirPacote);
     revisao = rev;
+    recarregou = 1;
   }
   antes = count;
   // A conta manda o CONJUNTO e a ordem. Mas o pacote traz as mesmas pastas
@@ -816,49 +999,64 @@ static int definirJson(const char *json) {
   // quadros de animacao e ajustes curados que a conta nao tem — a versao local
   // da pasta e a que fica, com grupo e titulo da conta. Sem isto cada pull
   // trocava a arte curada pela capa crua do CDN.
+  //
+  // So os CABECALHOS (~4 KB cada): as fontes delas nao sao lidas no casamento,
+  // a pasta casada leva as fontes da conta. Antes eram 52 KB por pasta, 13 MB
+  // alocados e copiados a cada pull com 256 pastas.
   ColFolder *antigas = malloc(sizeof(ColFolder) * (size_t)(antes > 0 ? antes : 1));
   if (!antigas) {
-    if (telaAntes) {
-      count = antesTela;
-      memcpy(folders, telaAntes, sizeof(ColFolder) * (size_t)count);
-      semConta = 1;
-    }
-    free(telaAntes); free(solto); return 0;
+    // semConta: a tela so tinha as extras. Volta a isso.
+    if (recarregou) { count = 0; aplicarExtras(); semConta = 1; }
+    free(solto); return 0;
   }
-  memcpy(antigas, folders, sizeof(ColFolder) * (size_t)antes);
+  for (int i = 0; i < antes; i++) antigas[i] = PASTA(i);
   count = 0;
+  comecarMontagem();
   fPulProvedor = fPulSemFonte = fPulSemTitulo = fPulCheio = fGifCortado = 0;
   fPrimeiraPulada[0] = 0;
   { const char *c = arr, *cFim;
     for (; c && *c == '{'; c = js_prox(cFim)) {
+      int c0 = count, f0 = nNovas;
       cFim = js_fim(c);
-      if (count >= COL_MAX) { fPulCheio++; continue; }
-      lerColecaoWeb(c, cFim);
+      if (lerColecaoWeb(c, cFim)) continue;
+      // NAO COUBE: sai a colecao inteira, e o log diz qual. As seguintes ainda
+      // tentam — uma colecao menor pode caber no que sobrou.
+      { char titulo[128] = "";
+        int nPastas = 0;
+        const char *p;
+        count = c0; nNovas = f0;
+        js_texto_raiz_em(c, cFim, "title", titulo, sizeof titulo);
+        for (p = js_array(c, cFim, "folders"); p; p = js_prox(js_fim(p))) nPastas++;
+        fPulCheio++;
+        printf("[colecoes] colecao \"%s\" fora: %d pasta(s) nao cabem (teto de %d pastas e "
+               "%d fontes; %d pastas e %d fontes ja dentro)\n",
+               titulo, nPastas, COL_MAX, COL_FONTES_MAX, count, nNovas); }
     } }
-  novas = count;
+  fecharMontagem();
+  nConta = count;
   // UMA LINHA QUE RESPONDE "cade a colecao que eu instalei". Cada contagem e um
   // conserto diferente: provedor sem equivalente e falta de recurso, pasta sem
   // fonte e dado incompleto do lado da conta, e teto cheio e limite nosso.
   if (fPulProvedor || fPulSemFonte || fPulSemTitulo || fPulCheio)
     printf("[colecoes] descartadas: %d fonte(s) de provedor nao-addon, "
-           "%d pasta(s) sem fonte utilizavel, %d sem titulo, %d alem do teto de "
-           "%d%s%s\n",
-           fPulProvedor, fPulSemFonte, fPulSemTitulo, fPulCheio, COL_MAX,
+           "%d pasta(s) sem fonte utilizavel, %d sem titulo, %d colecao(oes) inteira(s) alem do teto "
+           "(%d pastas / %d fontes)%s%s\n",
+           fPulProvedor, fPulSemFonte, fPulSemTitulo, fPulCheio, COL_MAX, COL_FONTES_MAX,
            fPrimeiraPulada[0] ? " | primeira: " : "", fPrimeiraPulada);
-  if (novas && antigas) {
+  if (nConta && antigas) {
     int casadas = 0;
     for (int i = 0; i < count; i++) for (int j = 0; j < antes; j++) {
-      if (!antigas[j].local || strcmp(antigas[j].id, folders[i].id)) continue;
+      if (!antigas[j].local || strcmp(antigas[j].id, PASTA(i).id)) continue;
       ColFolder v = antigas[j];
-      snprintf(v.group, sizeof v.group, "%s", folders[i].group);
-      snprintf(v.groupId, sizeof v.groupId, "%s", folders[i].groupId);
-      snprintf(v.title, sizeof v.title, "%s", folders[i].title);
+      snprintf(v.group, sizeof v.group, "%s", PASTA(i).group);
+      snprintf(v.groupId, sizeof v.groupId, "%s", PASTA(i).groupId);
+      snprintf(v.title, sizeof v.title, "%s", PASTA(i).title);
       // A FORMA E DA CONTA: e escolha feita no editor do web, e o pacote nem
       // tem o campo.
-      v.forma = folders[i].forma;
+      v.forma = PASTA(i).forma;
       // Preserve artwork, never stale account membership or source ordering.
-      v.nSources = folders[i].nSources;
-      memcpy(v.sources, folders[i].sources, sizeof v.sources);
+      v.nSources = PASTA(i).nSources;
+      v.sources = PASTA(i).sources;
       // O GIF DA CONTA SO ENTRA ONDE NAO HA SEQUENCIA LOCAL, e isso nao abre
       // excecao na regra acima: a versao local nao tem GIF nenhum para perder.
       // col_carregar nunca preenche focusGif — no pacote o GIF ja virou
@@ -871,7 +1069,7 @@ static int definirJson(const char *json) {
       //                 falta de focusGifUrl no perfil na hora da importacao).
       //                 Descartar a URL da conta aqui seria jogar fora a unica
       //                 animacao que existe, sem nada no lugar.
-      if (!v.frames) snprintf(v.focusGif, sizeof v.focusGif, "%s", folders[i].focusGif);
+      if (!v.frames) snprintf(v.focusGif, sizeof v.focusGif, "%s", PASTA(i).focusGif);
       // FUNDO ESCOLHIDO NO XPERIENCE (19/09/2026). O CDN passou a ter 17
       // estilos de fundo por marca, em covers/<estilo>/<pasta>.backdrop.webp
       // (3840x2160), e quem escolhe e o dono, no Xperience, por pasta ou por
@@ -882,8 +1080,8 @@ static int definirJson(const char *json) {
       // para o heroi desenhar full-bleed com a logo da marca por cima, que e
       // como esses fundos foram feitos para aparecer. "default" nao e escolha:
       // fica o pacote, que nao precisa baixar nada.
-      if (xperienceEstilo(folders[i].hero)) {
-        snprintf(v.hero, sizeof v.hero, "%s", folders[i].hero);
+      if (xperienceEstilo(PASTA(i).hero)) {
+        snprintf(v.hero, sizeof v.hero, "%s", PASTA(i).hero);
         v.editorial = 0;
         v.detailHero[0] = 0;
         fundosXp++;
@@ -893,30 +1091,30 @@ static int definirJson(const char *json) {
       // pacote); o fundo da conta desliga o modo editorial, como o Xperience.
       if (arteConta) {
         int trocou = 0;
-        if (folders[i].cover[0]) {
-          snprintf(v.cover, sizeof v.cover, "%s", folders[i].cover);
-          snprintf(v.focusGif, sizeof v.focusGif, "%s", folders[i].focusGif);
+        if (PASTA(i).cover[0]) {
+          snprintf(v.cover, sizeof v.cover, "%s", PASTA(i).cover);
+          snprintf(v.focusGif, sizeof v.focusGif, "%s", PASTA(i).focusGif);
           v.frames = 0;
           trocou = 1;
         }
-        if (folders[i].hero[0]) {
-          snprintf(v.hero, sizeof v.hero, "%s", folders[i].hero);
+        if (PASTA(i).hero[0]) {
+          snprintf(v.hero, sizeof v.hero, "%s", PASTA(i).hero);
           v.editorial = 0;
           v.detailHero[0] = 0;
           trocou = 1;
         }
-        if (folders[i].logo[0]) {
-          snprintf(v.logo, sizeof v.logo, "%s", folders[i].logo);
+        if (PASTA(i).logo[0]) {
+          snprintf(v.logo, sizeof v.logo, "%s", PASTA(i).logo);
           trocou = 1;
         }
         arteDaConta += trocou;
       }
-      folders[i] = v; casadas++; break;
+      PASTA(i) = v; casadas++; break;
     }
     printf("[colecoes] %d pastas da conta casaram com a arte do pacote, %d com fundo escolhido no Xperience, %d com a arte da conta\n",
            casadas, fundosXp, arteDaConta);
   }
-  if (novas) {
+  if (nConta) {
     // SO AQUI, e nao na entrada da funcao. Bumpar de saida faria a assinatura
     // da home mudar a CADA ciclo de sync, inclusive quando a conta veio vazia e
     // as pastas locais foram mantidas — uma remontagem por ciclo, de graca, que
@@ -927,31 +1125,35 @@ static int definirJson(const char *json) {
     // gifcolecao.h); conta aqui para o log ja responder o caso comum.
     { int comGif = 0, capaGif = 0;
       for (int i = 0; i < count; i++) {
-        if (folders[i].focusGif[0]) comGif++;
-        else if (strstr(folders[i].cover, ".gif") || strstr(folders[i].cover, "giphy.com/") ||
-                 strstr(folders[i].cover, "tenor.com/")) capaGif++;
+        if (PASTA(i).focusGif[0]) comGif++;
+        else if (strstr(PASTA(i).cover, ".gif") || strstr(PASTA(i).cover, "giphy.com/") ||
+                 strstr(PASTA(i).cover, "tenor.com/")) capaGif++;
       }
       printf("[colecoes] %d pastas vindas da conta: %d com focusGifUrl, %d sem ele com capa que parece GIF\n",
-             novas, comGif, capaGif);
+             nConta, comGif, capaGif);
       if (fGifCortado)
         printf("[colecoes] %d URL(s) de capa/GIF passavam de 511 bytes e foram descartadas\n", fGifCortado); }
   }
   aplicarExtras();
-  for (int i = 0; i < count; i++) resolverBases(&folders[i]);
-  int mudou = count != antesTela || memcmp(telaAntes ? telaAntes : antigas, folders,
-                                           sizeof(ColFolder) * (size_t)count);
+  for (int i = 0; i < count; i++) resolverBases(&PASTA(i));
+  int mudou = count != antesTela || assinatura() != assinaturaAntes;
   if (mudou) revisao++;
   free(antigas);
-  free(telaAntes);
-  semConta = novas == 0;
+  semConta = nConta == 0;
   contaAplicada = 1;
   { char *copia = strdup(original);
     if (copia) { free(ultimoJson); ultimoJson = copia; } }
-  ultimoComConta = novas > 0;
+  ultimoComConta = nConta > 0;
   printf("[collections] account snapshot: %d folders, revision=%u, changed=%d\n",
-         novas, revisao, mudou);
+         nConta, revisao, mudou);
+  // MEMORIA DO CONJUNTO (#255): blocos de pastas alocados + bloco de fontes.
+  { int nb = 0;
+    for (int b = 0; b < COL_MAX / COL_BLOCO; b++) nb += blocos[b] != NULL;
+    printf("[colecoes] memoria: %d pasta(s) em %d bloco(s) = %lu KB, %d fonte(s) = %lu KB\n",
+           count, nb, (unsigned long)(sizeof(ColFolder) * COL_BLOCO * (size_t)nb / 1024),
+           nFontes, (unsigned long)(sizeof(ColSource) * (size_t)(nFontes + COL_SOURCE_MAX) / 1024)); }
   free(solto);
-  return novas;
+  return nConta;
 }
 int col_definir_json(const char *json) {
   pthread_mutex_lock(&colTrava);
@@ -986,6 +1188,8 @@ void col_esquecer_perfil(void) {
   count = 0;
   semConta = 1;
   aplicarExtras();
+  // Nenhuma pasta aponta mais para o bloco da conta (so as extras ficaram).
+  free(fontesConta); fontesConta = NULL; nFontes = 0;
   revisao++;
   pthread_mutex_unlock(&colTrava);
   printf("[colecoes] troca de perfil: colecoes do perfil anterior fora da tela\n");
@@ -993,8 +1197,8 @@ void col_esquecer_perfil(void) {
 
 void col_chave_grupo(const char *group, char *dst, unsigned n) {
   for (int i = 0; i < count; i++)
-    if (!strcasecmp(folders[i].group, group) && folders[i].groupId[0]) {
-      snprintf(dst, n, "collection_%s", folders[i].groupId); return; }
+    if (!strcasecmp(PASTA(i).group, group) && PASTA(i).groupId[0]) {
+      snprintf(dst, n, "collection_%s", PASTA(i).groupId); return; }
   snprintf(dst, n, "collection_%s", group);
 }
 
@@ -1006,7 +1210,7 @@ void col_chave_pasta(const ColFolder *f, char *dst, unsigned n) {
 int col_grupo_chave(const char *chave, int *indices, int max) {
   int n = 0;
   for (int i = 0; i < count && n < max; i++) {
-    char k[192]; col_chave_pasta(&folders[i], k, sizeof k);
+    char k[192]; col_chave_pasta(&PASTA(i), k, sizeof k);
     if (!strcmp(k, chave)) indices[n++] = i;
   }
   return n;
@@ -1015,8 +1219,8 @@ int col_grupo_chave(const char *chave, int *indices, int max) {
 int col_grupo_forma_chave(const char *chave) {
   int conta[COL_FORMA_N] = {0}, primeiro = -1, melhor;
   for (int i = 0; i < count; i++) {
-    char k[192]; col_chave_pasta(&folders[i], k, sizeof k);
-    int f = folders[i].forma;
+    char k[192]; col_chave_pasta(&PASTA(i), k, sizeof k);
+    int f = PASTA(i).forma;
     if (strcmp(k, chave) || f < 0 || f >= COL_FORMA_N) continue;
     if (primeiro < 0) primeiro = f;
     conta[f]++;

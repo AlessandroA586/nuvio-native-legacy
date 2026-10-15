@@ -363,7 +363,8 @@ int main(void) {
   }
   contalib_esquecer();
   { ContaSemente s[1];
-    confere("sem conta, sem sementes", contalib_sementes_a_seguir(s, 1, 1), 0); }
+    // -1, nao 0: vistos nao puxados != conta sem semente (o a seguir nao confia)
+    confere("sem conta: vistos nao puxados", contalib_sementes_a_seguir(s, 1, 1), -1); }
 
   printf("\n%s\n", falhas ? "FALHOU" : "PASSOU");
   return falhas ? 1 : 0;

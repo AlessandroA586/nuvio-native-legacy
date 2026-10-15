@@ -18,7 +18,7 @@ trap 'rm -rf "$NUVIO_DADOS"' EXIT
 echo "dados da captura em $NUVIO_DADOS"
 
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c) continue;; esac
   sources+=("$source")
 done

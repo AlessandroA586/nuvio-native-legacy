@@ -17,6 +17,7 @@
 //
 // O irmao e novidades.c: mesmo cartao central, mesma regra de fechamento.
 #include "horafmt.h"
+#include "app_id.h"
 #include "atualizacao.h"
 #include "ilha.h"
 #include "dados.h"
@@ -27,6 +28,8 @@
 #include "layout.h"
 #include "idioma.h"
 #include "ajustes.h"
+#include "ponteiro.h"
+#include "rolagemtoque.h"
 #include "idiomacod.h"
 #include "plrui.h"
 #include "qr.h"
@@ -129,7 +132,7 @@ static void at_sha256_hex(const unsigned char *buf, size_t n, char *hex65) {
 #define AT_URL   "https://api.github.com/repos/iqui27/nuvio-native-legacy/releases/latest"
 #define AT_ARQ   "atualizacao-vista.txt"
 #define AT_PAGINA "https://github.com/iqui27/nuvio-native-legacy/releases"
-#define AT_APPID  "space.nuvio.native.legacy"
+#define AT_APPID  NV_APP_ID
 #define AT_LUNA_PUB "/usr/bin/luna-send-pub"
 #define AT_LOG_INST "/tmp/nuvio-instalar.log"
 #define AT_HB_DIR   "/media/developer/apps/usr/palm/applications/org.webosbrew.hbchannel"
@@ -243,7 +246,7 @@ static int  apkPerm;
 // tools/env.sh e tools/arm.sh), so por tests/atualizacao_shot.sh.
 #if defined(NV_AT_INSTALA)
 #define AT_INSTALA NV_AT_INSTALA
-#elif !defined(__EMSCRIPTEN__) && !defined(__APPLE__) && !defined(NV_TPK) && !defined(NV_ANDROID)
+#elif !defined(__EMSCRIPTEN__) && !defined(__APPLE__) && !defined(NV_LINUX_DESKTOP) && !defined(NV_TPK) && !defined(NV_ANDROID)
 #define AT_INSTALA 1
 #else
 #define AT_INSTALA 0
@@ -275,6 +278,14 @@ static int foco;                  // 0 = "Atualizar agora", 1 = "Depois"
 // `rolar` e onde o desenho esta (anda ate o alvo); `notasH` e a altura do texto
 // inteiro medida no quadro anterior e `vistaH` a da janela visivel.
 static float rolar, rolarAlvo, notasH, vistaH;
+#ifdef NV_TOUCH_UI
+static ToqueRolagem toqueNotas;
+static int toqueNotasRolar(const PonteiroRolagem *e) {
+  int r = toquerol_evento(&toqueNotas, e);
+  if (toqueNotas.livre) rolarAlvo = rolar;
+  return r;
+}
+#endif
 static SDL_Thread *fioInst;
 
 const char *atualizacao_nova(void) { return tagNova; }
@@ -349,13 +360,14 @@ static int textoJson(const char *corpo, const char *chave, char *dst, size_t tam
 // 1.3.3 volta ao nome de contrato, e este codigo passa a aceitar os dois para
 // o proximo nome bonito nao quebrar de novo. A regra que nao muda: a normal
 // NUNCA casa com um nome que tenha "highcache".
-#ifdef NV_TEX_MB_FIXO
-#  define AT_SUFIXO "-highcache.ipk"
-#  define AT_SUFIXO2 "-highcache.ipk"
-#else
-#  define AT_SUFIXO "_arm.ipk"
-#  define AT_SUFIXO2 "-webos.ipk"
-#endif
+//
+// APOSENTADA NA 2.0.5. A build de cache grande (NV_TEX_MB_FIXO) tambem pega o
+// .ipk NORMAL: a 2.0.5 e a ultima highcache, e quem a instalou sai dela no
+// proximo "Atualizar agora". O teto de 300 MB vem da Ajustes > Memória para
+// imagens (migracao unica em ajustes.c). A highcache continua sendo empacotada
+// na 2.0.5 so para essa migracao chegar a quem a usa.
+#define AT_SUFIXO "_arm.ipk"
+#define AT_SUFIXO2 "-webos.ipk"
 
 static int terminaEm(const char *s, size_t n, const char *sufixo) {
   size_t k = strlen(sufixo);
@@ -619,6 +631,11 @@ static int fioConsulta(void *arg) {
 // Sem o Homebrew Channel instalado nao ha caminho nenhum, e o cartao volta a
 // ser so aviso (ver podeInstalar).
 static int fioInstalar(void *arg) {
+#ifdef NV_DTS_DEBUG
+  /* Production release IPKs carry the production ID; never install them from
+   * an isolated diagnostic app, including through a stale update card. */
+  (void)arg; return 0;
+#endif
   char cmd[900];
   (void)arg;
 #ifdef NV_VIDAA
@@ -710,6 +727,9 @@ static int temInstalador(void) {
 }
 
 static int podeInstalar(void) {
+#ifdef NV_DTS_DEBUG
+  return 0;
+#endif
   return AT_INSTALA && ipkUrl[0] && estado == AT_PARADO && temInstalador();
 }
 
@@ -909,6 +929,9 @@ static float rolarMax(void) {
 
 // Cada abertura comeca do topo das notas e com o foco no botao de atualizar.
 static void reiniciarVista(void) {
+#ifdef NV_TOUCH_UI
+  toquerol_limpar(&toqueNotas);
+#endif
   foco = 0;
   rolar = rolarAlvo = 0.0f;
 }
@@ -955,6 +978,9 @@ static int podeReconsultar(void) {
 }
 
 void atualizacao_verificar(void) {
+#ifdef NV_DTS_DEBUG
+  return; /* Debug IPKs are installed explicitly, outside production updates. */
+#endif
   static long ultChamada;
   long rel = (long)time(NULL);
   int vence;
@@ -976,6 +1002,9 @@ void atualizacao_verificar(void) {
 }
 
 void atualizacao_procurar_agora(void) {
+#ifdef NV_DTS_DEBUG
+  return;
+#endif
   if (!mtx) mtx = SDL_CreateMutex();
   if (!mtx || !podeReconsultar()) return;
   SDL_LockMutex(mtx);
@@ -1074,6 +1103,12 @@ void atualizacao_abrir(void) {
 }
 
 void atualizacao_evento(const SDL_Event *e) {
+#ifdef NV_TOUCH_UI
+  if (toquerol_navegacao(e)) {
+    if (toqueNotas.livre) rolarAlvo = rolar;
+    toquerol_limpar(&toqueNotas);
+  }
+#endif
   SDL_Keycode k;
   if (!aberto || e->type != SDL_KEYDOWN) return;
   k = e->key.keysym.sym;
@@ -1233,6 +1268,9 @@ void atualizacao_atualizar(float dt, Uint32 agora) {
   if (!aberto && cartaoT < 0.0f) { cartaoT = 0.0f; cartaoV = 0.0f; }
   // Rolagem suave, mas curta (~120 ms para chegar): quem segura a seta quer
   // ver o texto andar, nao esperar.
+#ifdef NV_TOUCH_UI
+  if (!toqueNotas.livre)
+#endif
   { float d = rolarAlvo - rolar, f = dt * 1000.0f / 120.0f;
     if (f > 1.0f) f = 1.0f;
     rolar = (d > -0.5f && d < 0.5f) ? rolarAlvo : rolar + d * f; }
@@ -1277,6 +1315,15 @@ static void dicas(float xDir, float yc, const char *const *t, const char *const 
   x = xDir - tot;
   for (i = 0; i < n; i++) x += kbd(x, yc, t[i], r[i], a) + 24.0f;
 }
+
+// PONTEIRO (#99): foco pela mesma variavel das setas (so com os dois botoes
+// na tela, como as setas); o OK do clique segue por atualizacao_evento.
+static void ponteiroBotao(int i, int b) {
+  (void)b;
+  if (!aberto || estado == AT_INSTALANDO || !podeAgir() || (i != 0 && i != 1)) return;
+  foco = i;
+}
+int atualizacao_teste_foco(void) { return foco; }
 
 // Botao do cartao: primario 72 (26/600, recuo 34, icone 26) ou secundario 64
 // (24/600, recuo 28). Focado = pilula cheia no acento; senao branco 8%.
@@ -1571,6 +1618,11 @@ void atualizacao_desenhar(Uint32 agora) {
     rodY = C.y + C.h - rodH;
     vista = rodY - notTopo;
     vistaH = vista;
+#ifdef NV_TOUCH_UI
+    toquerol_vincular(&toqueNotas, (GfxRect){R.x, notTopo, R.w, vista}, gfx_escala(),
+                     0.0f, rolarMax(), 1, &rolar);
+    ponteiro_rolagem(toqueNotasRolar);
+#endif
 
     // NOTAS, recortadas na janela entre o cabecalho e o rodape, roláveis.
     // \x01 marca secao (28/700); "• " e item (24, entrelinha 1,45, a bolinha a
@@ -1704,6 +1756,13 @@ void atualizacao_desenhar(Uint32 agora) {
         txt_desenhar_alpha(l, x, rodY - 12.0f - (float)l.h, ca * 0.80f);
       }
 #endif
+      // So assentado: forma no lugar (a mola passa de 1) e texto inteiro.
+      if (aberto && ca > 0.99f && cartaoT > 0.99f && cartaoT < 1.01f) {
+        float w0 = botaoAt(-10000.0f, yc, 1, i18n("Atualizar agora"), "aj_download", 26.0f, foco == 0 ? 1.0f : 0.0f, ca);
+        float w1 = botaoAt(-10000.0f, yc, 0, i18n("Depois"), NULL, 0.0f, foco == 1 ? 1.0f : 0.0f, ca);
+        ponteiro_alvo(bx, yc - 36.0f, w0, 72.0f, ponteiroBotao, NULL, 0, 0);
+        ponteiro_alvo(bx + w0 + 14.0f, yc - 32.0f, w1, 64.0f, ponteiroBotao, NULL, 1, 0);
+      }
       bx += botaoAt(bx, yc, 1, i18n("Atualizar agora"), "aj_download", 26.0f, foco == 0 ? 1.0f : 0.0f, ca) + 14.0f;
       botaoAt(bx, yc, 0, i18n("Depois"), NULL, 0.0f, foco == 1 ? 1.0f : 0.0f, ca);
       k2[0] = "\xe2\x86\x91 \xe2\x86\x93"; r2[0] = i18n("Mais notas");
@@ -1732,3 +1791,4 @@ void atualizacao_desenhar(Uint32 agora) {
   }
   gfx_sem_recorte();
 }
+

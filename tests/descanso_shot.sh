@@ -5,7 +5,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 fontes=()
-for f in src/*.c; do [ "$f" != src/main.c ] && fontes+=("$f"); done
+for f in src/*.c src/dts/*.c; do [ "$f" != src/main.c ] && fontes+=("$f"); done
 cc "${fontes[@]}" tests/descanso_shot.c -Isrc -o /tmp/nuvio-descanso-shot \
   -O1 -g -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL \

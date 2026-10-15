@@ -31,7 +31,7 @@ static unsigned char *lerArquivo(void *u, const char *url, long long ini, long n
   snprintf(caminho, sizeof caminho, "%s/%s", DIR, nome ? nome + 1 : url);
   pthread_mutex_lock(&l->m); l->pedidos++; if (n > l->maiorPedido) l->maiorPedido = n;
   int k = l->pedidos; pthread_mutex_unlock(&l->m);
-  if (l->travarApos && k > l->travarApos) while (!l->liberar && !parar(pu)) usleep(1000);
+  if (l->travarApos && k > l->travarApos) while (l->travarApos && !l->liberar && !parar(pu)) usleep(1000);
   if (l->atrasoUs) usleep((useconds_t)l->atrasoUs);
   if (parar(pu)) { *status = 0; return NULL; }
   f = fopen(caminho, "rb"); if (!f) { *status = 404; return NULL; }
@@ -68,14 +68,16 @@ static LegendaDocumento *srt(const char *nome, uint64_t sessao) {
   d = legenda_documento_bytes(b, n, &i); free(b); return d;
 }
 
-// O documento colhido tem os MESMOS tempos e textos da legenda que entrou no MKV.
-static void conferirIgual(LegendaDocumento *got, LegendaDocumento *esperado, int ass) {
+// O documento colhido tem os MESMOS tempos (e textos, quando lidos) da
+// legenda que entrou no arquivo. ass: centesimos. tempos: so o indice foi
+// lido (SRT com CueDuration, MP4), o texto e um rotulo.
+static void conferirIgual(LegendaDocumento *got, LegendaDocumento *esperado, int ass, int tempos) {
   int na, nb; const LegendaCue *a = legenda_documento_dados(got, &na), *b = legenda_documento_dados(esperado, &nb);
   assert(na == nb && na == 113);
   for (int i = 0; i < na; i++) {
     assert(fabs(a[i].inicio - b[i].inicio) < (ass ? 0.011 : 0.0011));
     assert(fabs(a[i].fim - b[i].fim) < (ass ? 0.011 : 0.0011));
-    assert(!strcmp(a[i].texto, b[i].texto));
+    if (!tempos) assert(!strcmp(a[i].texto, b[i].texto));
   }
 }
 
@@ -105,13 +107,14 @@ int main(int argc, char **argv) {
     assert(i->flags & LEGENDA_DOC_COMPLETO); assert(!(i->flags & LEGENDA_DOC_FORCED));
     assert(i->sessao == 7); assert(!strcmp(i->identidade, "mkv-track:2"));
     assert(!strstr(i->identidade, "http") && !strstr(i->origem, "http")); }
-  conferirIgual(d, emb, 0); legenda_documento_liberar(d); casos++;
+  conferirIgual(d, emb, 0, 1); legenda_documento_liberar(d); casos++;
   printf("ffmpeg srt: %d pedidos, %lld bytes (arquivo de ~22 MB)\n", s.pedidos, s.bytes);
-  assert(s.feitos == 113 && s.total == 113);
+  // SRT com CueDuration: so cabeca + Cues, nenhum bloco (antes: 116 Ranges).
+  assert(s.feitos == 113 && s.total == 113 && s.pedidos <= 4);
 
   // 2. mkvmerge: o letreiro (forced, "Signs") e pulado; ingles ASS vem antes do portugues.
   d = colher(r, "mm.mkv", "en", NULL, 0, LEGREF_OK, &s); assert(d && s.faixa == 3 && !strcmp(s.codec, "S_TEXT/ASS"));
-  conferirIgual(d, emb, 1);
+  conferirIgual(d, emb, 1, 0);
   legenda_documento_liberar(d); casos++;
   // Pedindo portugues, vem a faixa 4 (a mesma lingua primeiro).
   d = colher(r, "mm.mkv", "pt", NULL, 0, LEGREF_OK, &s); assert(d && s.faixa == 4); legenda_documento_liberar(d); casos++;
@@ -122,20 +125,46 @@ int main(int argc, char **argv) {
   // 3. Recusas honestas.
   assert(!colher(r, "semcues.mkv", "en", NULL, 0, LEGREF_SEM_INDICE, NULL)); casos++;
   assert(!colher(r, "soforced.mkv", "en", NULL, 0, LEGREF_SEM_FAIXA, NULL)); casos++;
-  assert(!colher(r, "video.mp4", "en", NULL, 0, LEGREF_NAO_MKV, NULL)); casos++;
+  assert(!colher(r, "video.mp4", "en", NULL, 0, LEGREF_SEM_FAIXA, NULL)); casos++;   // MP4 sem faixa de texto
+
+  // 3b. MP4 (tx3g): so o moov, com o mdat de ~22 MB pulado pelo tamanho.
+  //     moov no fim e no comeco; idioma ISO 639-2 ("por") casa com "pt".
+  for (int fs = 0; fs < 2; fs++) {
+    const char *arq = fs ? "txt_fs.mp4" : "txt.mp4";
+    d = colher(r, arq, "en", NULL, 0, LEGREF_OK, &s); assert(d && !strcmp(s.codec, "tx3g") && !strcmp(s.idioma, "eng"));
+    assert(!strncmp(legenda_documento_info(d)->identidade, "mp4-track:", 10));
+    conferirIgual(d, emb, 0, 1); legenda_documento_liberar(d);
+    printf("mp4 %s: %d pedidos, %lld bytes\n", arq, s.pedidos, s.bytes);
+    assert(s.pedidos <= 6 && s.bytes < 2 * 1024 * 1024);
+    d = colher(r, arq, "pt", NULL, 0, LEGREF_OK, &s); assert(d && !strcmp(s.idioma, "por"));
+    { int n; const LegendaCue *v = legenda_documento_dados(d, &n);
+      LegendaDocumento *e = srt("ext_mais2500.srt", 7); int ne; const LegendaCue *w = legenda_documento_dados(e, &ne);
+      assert(n == ne && fabs(v[0].inicio - w[0].inicio) < 0.0011); legenda_documento_liberar(e); }
+    legenda_documento_liberar(d);
+    { int ex[2] = { 2, 3 }; assert(!colher(r, arq, "en", ex, 2, LEGREF_SEM_FAIXA, NULL)); }
+    casos += 3;
+  }
+  assert(!colher(r, "frag.mp4", "en", NULL, 0, LEGREF_SEM_INDICE, NULL)); casos++;   // fragmentado: fora
+
+  // 3c. Validacao cruzada (zero Range a mais: os tempos de todas estao no Cues).
+  //     A preferida +1,5 s fora cai quando duas outras concordam entre si; com
+  //     uma so outra nao ha como saber qual esta fora e fica a preferida.
+  d = colher(r, "cruz.mkv", "en", NULL, 0, LEGREF_OK, &s); assert(d && s.faixa == 3);
+  conferirIgual(d, emb, 0, 1); legenda_documento_liberar(d); casos++;
+  d = colher(r, "cruz2.mkv", "en", NULL, 0, LEGREF_OK, &s); assert(d && s.faixa == 2); legenda_documento_liberar(d); casos++;
   assert(!colher(r, "video.mkv", "en", NULL, 0, LEGREF_SEM_FAIXA, NULL)); casos++;
   l.semRange = 1; assert(!colher(r, "ff.mkv", "en", NULL, 0, LEGREF_SEM_RANGE, NULL)); l.semRange = 0; casos++;
 
-  // 4. Orcamento: bytes e pedidos.
-  { LegRefOrcamento o = { 200 * 1024, 6000, 0 }; uint64_t id = legref_pedir(r, "h://x/ff.mkv", 7, "en", NULL, 0, &o);
+  // 4. Orcamento: bytes e pedidos (ASS: le os blocos, um Range por fala).
+  { LegRefOrcamento o = { 200 * 1024, 6000, 0 }; uint64_t id = legref_pedir(r, "h://x/mm.mkv", 7, "en", NULL, 0, &o);
     s = esperar(r, id); assert(s.motivo == LEGREF_ORCAMENTO && !legref_tomar(r, id)); casos++; }
-  { LegRefOrcamento o = { 12 << 20, 20, 0 }; uint64_t id = legref_pedir(r, "h://x/ff.mkv", 7, "en", NULL, 0, &o);
+  { LegRefOrcamento o = { 12 << 20, 20, 0 }; uint64_t id = legref_pedir(r, "h://x/mm.mkv", 7, "en", NULL, 0, &o);
     s = esperar(r, id); assert(s.motivo == LEGREF_ORCAMENTO && s.pedidos <= 20 && !legref_tomar(r, id)); casos++; }
 
   // 5. Pausa (seek): nenhum pedido novo enquanto pausado.
   { LegRefOrcamento o = orcamento(); uint64_t id; int p0;
     l.atrasoUs = 2000;
-    id = legref_pedir(r, "h://x/ff.mkv", 7, "en", NULL, 0, &o);
+    id = legref_pedir(r, "h://x/mm.mkv", 7, "en", NULL, 0, &o);
     usleep(30000); legref_pausar(r, 1); usleep(20000);
     pthread_mutex_lock(&l.m); p0 = l.pedidos; pthread_mutex_unlock(&l.m);
     usleep(150000);
@@ -147,8 +176,8 @@ int main(int argc, char **argv) {
 
   // 6. Cancelamento e geracao: o pedido A preso, B substitui; A nunca entrega.
   { LegRefOrcamento o = orcamento(); uint64_t a, b;
-    l.travarApos = l.pedidos + 3;
-    a = legref_pedir(r, "h://x/ff.mkv", 7, "en", NULL, 0, &o); usleep(20000);
+    l.travarApos = l.pedidos + 3;   // ASS: le os blocos, fica preso no 4o Range
+    a = legref_pedir(r, "h://x/mm.mkv", 7, "en", NULL, 0, &o); usleep(20000);
     b = legref_pedir(r, "h://x/mm.mkv", 8, "en", NULL, 0, &o);
     l.travarApos = 0;
     s = esperar(r, b); assert(s.motivo == LEGREF_OK && s.faixa == 3);

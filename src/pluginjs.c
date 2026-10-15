@@ -422,7 +422,15 @@ static void bombear(Ex *e) {
       // runtime nao tem nada em voo para devolver.
       size_t livre = __atomic_load_n(&redeTeto, __ATOMIC_RELAXED) - pj_orcamento_rede_uso();
       if (livre >= PJ_REDE_MIN_RESERVA && livre < want && REDE_RESERVAR(livre)) want = livre;
-      else if (e->voo > 0) return;
+      // OUTRO PLUGIN segurando o orcamento tambem e "espera", e nao recusa
+      // (2.0.0: "orcamento de rede dos plugins esgotado" ~2400 vezes em 4
+      // pessoas, em fetch de poucos KB ao TMDB). Cada fetch reserva o teto do
+      // corpo (5 MB) e o orcamento da TV e 16-24 MB: com varios plugins em
+      // paralelo, quem chegava sem nada em voo era recusado na hora mesmo com
+      // a rede quase vazia. Quem segura devolve ao terminar ou no prazo dele,
+      // e este laco tenta de novo a cada 50 ms (esperar); o prazo do plugin
+      // continua valendo.
+      else if (e->voo > 0 || pj_orcamento_rede_uso() > 0) return;
       else {
         j->recusa = 2;
         e->fx[k].voando = 1; e->voo++; e->esperando--;

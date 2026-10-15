@@ -5,6 +5,7 @@
 #include "nuvem.h"
 #include "descoberta.h"
 #include "colecoes.h"
+#include "addons.h"
 #include "fileiras.h"
 #include "dados.h"
 #include "perfis.h"
@@ -209,13 +210,18 @@ int lst_aceita_home(const LstLista *l, const char **porque) {
 #define LST_GRUPO_HOME "Minhas listas"
 
 static void aplicarHome(void) {
-  ColFolder pastas[LST_FIX_MAX];
+  // static: eram LST_FIX_MAX pastas de 52 KB NA PILHA (1,2 MB). Com as fontes
+  // fora da pasta (#255) cada uma tem ~4 KB, e col_extra_definir copia a fonte.
+  static ColFolder pastas[LST_FIX_MAX];
+  static ColSource fontes[LST_FIX_MAX];
   int n = 0, i;
   for (i = 0; i < nFixas && n < LST_FIX_MAX; i++) {
     ColFolder *v;
     if (!fixas[i].naHome || fixas[i].fonte != LST_TRAKT) continue;
     v = &pastas[n];
     memset(v, 0, sizeof *v);
+    memset(&fontes[n], 0, sizeof fontes[n]);
+    v->sources = &fontes[n];
     snprintf(v->group, sizeof v->group, "%s", LST_GRUPO_HOME);
     snprintf(v->groupId, sizeof v->groupId, "%s", "listas_fixadas");
     snprintf(v->id, sizeof v->id, "lista_trakt_%s", fixas[i].id);
@@ -671,7 +677,7 @@ static void *fioSimkl(void *u) {
   char url[500], cid[200], nome[120], aut[400];
   const char *cab[3];
   char *corpo;
-  CatItem lote[LST_ITENS_MAX];
+  CatItem *lote = malloc(sizeof *lote * LST_ITENS_MAX);
   int n = 0, serie;
   unsigned minha;
   char estado[16], midia[8];
@@ -691,7 +697,7 @@ static void *fioSimkl(void *u) {
            serie ? "shows" : "movies", estado, cid, nome);
   snprintf(aut, sizeof aut, "Authorization: Bearer %s", simklauth_token());
   cab[0] = aut; cab[1] = "Accept: application/json"; cab[2] = NULL;
-  corpo = rede_baixar_com(url, 20, cab);
+  corpo = lote ? rede_baixar_com(url, 20, cab) : NULL;
   if (corpo) {
     n = lst_ler_simkl_itens(corpo, serie, lote, LST_ITENS_MAX);
     free(corpo);
@@ -701,13 +707,14 @@ static void *fioSimkl(void *u) {
   if (n) n = trakt_enfeitar_lote(lote, n);
   pthread_mutex_lock(&itTrava);
   if (minha == itGeracao) {
-    memcpy(itens, lote, sizeof(CatItem) * (size_t)n);
+    if (n) memcpy(itens, lote, sizeof(CatItem) * (size_t)n);
     nItens = n;
   }
   itFioVivo = 0;
   pthread_mutex_unlock(&itTrava);
   printf("[listas] simkl %s/%s: %d\n", serie ? "shows" : "movies", estado, n);
   fflush(stdout);
+  free(lote);
   return NULL;
 }
 
@@ -750,7 +757,10 @@ void lst_abrir(const LstLista *l, const char *midia) {
       const ColFolder *f = col_folder(i);
       if (!f || strcmp(f->id, l->colId) || !f->nSources) continue;
       if (f->sources[0].prov[0]) desc_vertudo_fonte(&f->sources[0]);
-      else desc_vertudo_filtro(f->sources[0].base, f->sources[0].type,
+      // Base vazia = nao coube no atalho da fonte (colecoes.c): a inteira esta
+      // na tabela de addons.
+      else desc_vertudo_filtro(f->sources[0].base[0] ? f->sources[0].base
+                               : addons_base_por_id(f->sources[0].addonId), f->sources[0].type,
                                f->sources[0].catId, f->sources[0].genre);
       return;
     } }

@@ -169,8 +169,9 @@ int main(int argc, char **argv) {
   faixas_abrir_em(0); estado(); quadros(40);
   r100 = vermelhos(1100, 60, 1900, 600);
   salvar("audio-volume-100");
-  // 2. Up to the volume row, five steps right: 150%, red value and bar.
-  tecla(SDLK_UP);
+  // 2. Up to the volume row (past the #202 speed row), five steps right:
+  // 150%, red value and bar.
+  tecla(SDLK_UP); tecla(SDLK_UP);
   for (i = 0; i < 5; i++) tecla(SDLK_RIGHT);
   assert(cacheboost_volume() == 150);
   estado(); quadros(30);
@@ -194,6 +195,18 @@ int main(int argc, char **argv) {
   faixas_abrir_em(0); estado(); quadros(40);
   tecla(SDLK_UP);
   salvar("audio-volume-indisponivel");
-  puts("cacheboost_shot: 5 captures ok");
+  // 6. #202: the speed row below the volume; two steps right = 1,5x, live,
+  // the value in the accent; the island's header pill carries "1,5x" too.
+  tecla(SDLK_RIGHT); tecla(SDLK_RIGHT);
+  assert(video_velocidade_atual() == 150);
+  estado(); quadros(30); salvar("audio-velocidade-150");
+  // 7. Audio goes out as passthrough while at 1,5x: back to 1x, the row is
+  // dimmed with the reason and the focus cannot land on it.
+  cacheboost_ganho_relato(CB_GANHO_PASSTHROUGH);
+  estado(); quadros(30);
+  assert(video_velocidade_atual() == 100);
+  salvar("audio-velocidade-receptor");
+  cacheboost_ganho_relato(CB_GANHO_PCM);
+  puts("cacheboost_shot: 7 captures ok");
   return 0;
 }

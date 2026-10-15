@@ -33,12 +33,13 @@ if [ -n "${NUVIO_TAB:-}" ]; then
   dirSrc=$(mktemp -d /tmp/nuvio-n11-src.XXXXXX)
   trap 'rm -rf "$NUVIO_DADOS" "$dirSrc"' EXIT
   cp src/*.c src/*.h "$dirSrc"/
+  cp -R src/dts "$dirSrc/dts"
   cp "$NUVIO_TAB" "$dirSrc/idioma_tab.h"
   echo "tabela de traducao de rascunho: $NUVIO_TAB (arvore em $dirSrc)"
 fi
 
 sources=()
-for source in "$dirSrc"/*.c; do
+for source in "$dirSrc"/*.c "$dirSrc"/dts/*.c; do
   case "$source" in */main.c) continue;; esac
   sources+=("$source")
 done

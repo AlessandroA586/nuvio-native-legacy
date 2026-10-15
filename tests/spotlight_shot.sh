@@ -14,7 +14,7 @@ dados="$(mktemp -d "${TMPDIR:-/tmp}/nuvio-spot-dados-XXXXXX")"
 python3 tests/spotlight_canais_servidor.py 8767 2>/dev/null & SRV=$!
 trap 'kill $SRV 2>/dev/null || true; rm -rf "$tmp" "$dados"' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   [ "$source" = "src/main.c" ] && continue
   sources+=("$source")
 done

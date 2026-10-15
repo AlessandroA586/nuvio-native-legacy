@@ -64,7 +64,7 @@ static double ms(Uint64 a, Uint64 b) { return (double)(b - a) * 1000.0 / perFreq
 static const char *dirDados;
 
 typedef struct {
-  double upd, des, gpu, fill, fillVis;
+  double upd, des, gpu, fill, fillVis, fillGpu, fillGpuMist;
   int rects, progs, binds, cheios, cheiosMist, txtRast, upl;
   double txtMs;
   double modo[GFX_NMODOS];
@@ -154,6 +154,7 @@ static void quadro(SDL_Window *w, Quadro *q, Uint32 agora) {
   if (q) {
     q->upd = ms(t0, t1); q->des = ms(t1, t2); q->gpu = ms(t2, t3);
     q->fill = gfx_fill; q->fillVis = gfx_fill_vis;
+    q->fillGpu = gfx_fill_gpu; q->fillGpuMist = gfx_fill_gpu_mist;
     q->rects = gfx_n_rect; q->progs = gfx_n_prog; q->binds = gfx_n_bind;
     q->cheios = gfx_n_cheio; q->cheiosMist = gfx_n_cheio_mistura;
     q->txtRast = txt_rasterizadas; q->txtMs = txt_ms; q->upl = tex_upl_n;
@@ -263,12 +264,13 @@ static double p95(double *v, int n) { qsort(v, (size_t)n, sizeof *v, cmpd); retu
 
 static void relatar(const char *cen, const char *rotulo, Quadro *qs, int n) {
   double *v = malloc(sizeof(double) * (size_t)n);
-  double su = 0, sd = 0, sg = 0, sf = 0, sfv = 0, sm[GFX_NMODOS];
+  double su = 0, sd = 0, sg = 0, sf = 0, sfv = 0, sfg = 0, sfm = 0, sm[GFX_NMODOS];
   long sr = 0, sp = 0, sb = 0, sc = 0, scm = 0, st = 0;
   int i, k;
   memset(sm, 0, sizeof sm);
   for (i = 0; i < n; i++) {
     su += qs[i].upd; sd += qs[i].des; sg += qs[i].gpu; sf += qs[i].fill; sfv += qs[i].fillVis;
+    sfg += qs[i].fillGpu; sfm += qs[i].fillGpuMist;
     sr += qs[i].rects; sp += qs[i].progs; sb += qs[i].binds; sc += qs[i].cheios; scm += qs[i].cheiosMist;
     st += qs[i].txtRast;
     for (k = 0; k < GFX_NMODOS; k++) sm[k] += qs[i].modo[k];
@@ -291,6 +293,8 @@ static void relatar(const char *cen, const char *rotulo, Quadro *qs, int n) {
          " | rects=%ld progs=%ld binds=%ld txt=%ld\n",
          cen, rotulo, su / n, sd / n, p95(v, n), sg / n, sf / n, sfv / n,
          (double)sc / n, (double)scm / n, sr / n, sp / n, sb / n, st);
+  // O que a GPU pinta de fato (gfx.h, gfx_fill_gpu) e a parte com mistura.
+  printf("[%s] %-10s gpu-fill=%.2fx mist=%.2fx\n", cen, rotulo, sfg / n, sfm / n);
   printf("[%s] %-10s fill por modo:", cen, rotulo);
   for (k = 0; k < GFX_NMODOS; k++) if (sm[k] / n >= 0.005) printf(" %d=%.2f", k, sm[k] / n);
   printf("\n");
@@ -305,6 +309,12 @@ static void cenario(SDL_Window *w, const char *cen) {
   home_ir_topo();
   // Assenta: artes sobem, molas param.
   for (i = 0; i < 240; i++) { quadro(w, NULL, t); t += 16; }
+  // O DESTAQUE NO TOPO, parado: no layout Dinamica e o fundo + a arte de tela
+  // cheia (GFX_VITRINE / GFX_VITRINE_DIN), a tela que a TCL mede ao abrir.
+  for (i = 0; i < 120; i++) { quadro(w, &qs[i], t); t += 16; }
+  relatar(cen, "topo", qs, 120);
+  if (getenv("NV_RASTRO")) { gfx_rastro_grandes = 1; quadro(w, NULL, t); t += 16; gfx_rastro_grandes = 0; }
+  if (getenv("PERF_BMP")) { char b[800]; snprintf(b, sizeof b, "%s-%s-topo.bmp", getenv("PERF_BMP"), cen); guardar(b); }
   // Primeira fileira em foco (o destaque sai do foco), depois parado.
   tecla(SDLK_DOWN);
   for (i = 0; i < 120; i++) { quadro(w, NULL, t); t += 16; }

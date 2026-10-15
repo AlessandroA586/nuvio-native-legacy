@@ -8,7 +8,7 @@ set -e
 cd "$(dirname "$0")"
 export NUVIO_DADOS=/tmp/nuvio-crash-$$
 mkdir -p "$NUVIO_DADOS"
-cc src/*.c -o /tmp/nuvio-crash -O0 -g \
+cc src/*.c src/dts/*.c -o /tmp/nuvio-crash -O0 -g \
   -DNV_SUPABASE_URL='""' -DNV_SUPABASE_ANON_KEY='""' -DNV_TV_LOGIN_BASE='""' \
   -DNV_TRAKT_CLIENT_ID='""' -DNV_TRAKT_CLIENT_SECRET='""' \
   -DNV_SIMKL_CLIENT_ID='""' -DNV_SIMKL_APP='""' -DNV_TMDB_API_KEY='""' \

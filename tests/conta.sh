@@ -10,7 +10,7 @@
 set -e
 cd "$(dirname "$0")/.."
 ENV_D=$(tools/env.sh)
-FONTES=$(ls src/*.c | grep -v 'src/main.c' | tr '\n' ' ')
+FONTES=$(ls src/*.c src/dts/*.c | grep -v 'src/main.c' | tr '\n' ' ')
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 
 echo "==> logout apaga o usuario anterior"

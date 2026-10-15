@@ -37,6 +37,25 @@ TV_IP="${NUVIO_TV_IP:-192.168.1.32}"
 TV_PASS="${NUVIO_TV_PASS:-alpine}"
 APP_ID="space.nuvio.native.legacy"
 ARES="${NUVIO_ARES_PACKAGE:-../NuvioWeb-0.3.38-beta/node_modules/.bin/ares-package}"
+CONTAINER_RUNTIME="${NUVIO_CONTAINER_RUNTIME:-docker}"
+BUILD_PLATFORM="${NUVIO_BUILD_PLATFORM:-linux/arm64}"
+SDK_IMAGE="${NUVIO_SDK_IMAGE:-nuvio-webos-sdk}"
+# DTS (PR #259): o FFmpeg mora na IMAGEM. Por padrao a build exige a
+# conversao e falha se o FFmpeg estiver ausente; reconstrua a imagem nesse caso.
+# NUVIO_DTS_FFMPEG=0 compila sem conversao; auto consulta a imagem e permite
+# compilar sem ela quando o FFmpeg nao estiver disponivel.
+DTS_ENABLED="${NUVIO_DTS_FFMPEG:-1}"
+case "$DTS_ENABLED" in 0|1|auto) ;; *) echo 'NUVIO_DTS_FFMPEG deve ser 0, 1 ou auto' >&2; exit 2;; esac
+if [ "$DTS_ENABLED" = auto ]; then
+  if "$CONTAINER_RUNTIME" run --rm --platform "$BUILD_PLATFORM" "$SDK_IMAGE" \
+       sh -c 'test -f "${NUVIO_DTS_ROOT:-/opt/nuvio-dts}/include/libavcodec/avcodec.h"' 2>/dev/null; then
+    DTS_ENABLED=1
+  else
+    DTS_ENABLED=0
+    echo "==> ATENCAO: a imagem $SDK_IMAGE nao tem o FFmpeg do DTS; build SEM a conversao de DTS"
+    echo "    (docker build --platform linux/arm64 -t $SDK_IMAGE tools/  para incluir)"
+  fi
+fi
 
 # --high-cache pode vir antes ou depois de --build/--ipk. So muda uma -D e os
 # nomes; o codigo e o mesmo — e por isso a variante nao precisa de branch.
@@ -80,11 +99,19 @@ tools/env.sh --env-file "$ENVF"
 nv_p2p_resolver arm
 P2P_VOL=""
 [ -n "$NV_P2P_DIR" ] && P2P_VOL="-v $NV_P2P_DIR:/p2p"
-docker run --rm --platform linux/arm64 --env-file "$ENVF" $P2P_VOL \
-  -e NUVIO_P2P_MOTOR="${NV_P2P_DIR:+1}" \
+DTS_ENV=()
+if [ -n "${NUVIO_DTS_ROOT:-}" ]; then DTS_ENV=(-e "NUVIO_DTS_ROOT=$NUVIO_DTS_ROOT"); fi
+"$CONTAINER_RUNTIME" run --rm --platform "$BUILD_PLATFORM" --env-file "$ENVF" \
+  -e NUVIO_P2P_MOTOR="${NV_P2P_DIR:+1}" $P2P_VOL \
+  -e NUVIO_BUILD_JOBS="${NUVIO_BUILD_JOBS:-3}" \
+  -e NUVIO_SDK_ID="$("$CONTAINER_RUNTIME" image inspect --format '{{.Id}}' "$SDK_IMAGE"):$NV_P2P_DIR" \
+  -e CCACHE_DIR=/work/build/ccache-arm \
   -e NUVIO_EXTRA_CFLAGS="${NUVIO_EXTRA_CFLAGS:-}" \
   -e NUVIO_ASS_LIBASS="${NUVIO_ASS_LIBASS:-1}" \
-  -v "$PWD":/work nuvio-webos-sdk sh -c '
+  -e NUVIO_DTS_FFMPEG="$DTS_ENABLED" \
+  "${DTS_ENV[@]}" \
+  -v "$PWD":/work:z "$SDK_IMAGE" bash -c '
+  set -e
   SR=$NUVIO_SYSROOT
   ASS=$NUVIO_ASS_ROOT
   ASS_CFLAGS=""
@@ -93,6 +120,14 @@ docker run --rm --platform linux/arm64 --env-file "$ENVF" $P2P_VOL \
     [ -f "$ASS/include/ass/ass.h" ] || { echo "libass ARM ausente na imagem; reconstrua tools/Dockerfile ou use NUVIO_ASS_LIBASS=0" >&2; exit 2; }
     ASS_CFLAGS="-DNV_ASS_LIBASS -I$ASS/include"
     ASS_LIBS="-L$ASS/lib -Wl,--start-group -lass -lharfbuzz -lfribidi -lfreetype -Wl,--end-group"
+  fi
+  DTS_CFLAGS=""
+  DTS_LIBS=""
+  if [ "${NUVIO_DTS_FFMPEG:-1}" = "1" ]; then
+    DTS=${NUVIO_DTS_ROOT:-/opt/nuvio-dts}
+    [ -f "$DTS/include/libavcodec/avcodec.h" ] || { echo "FFmpeg DTS ausente; reconstrua tools/Dockerfile ou use NUVIO_DTS_FFMPEG=0" >&2; exit 2; }
+    DTS_CFLAGS="-DNV_DTS_FFMPEG -I$DTS/include"
+    DTS_LIBS="-L$DTS/lib -Wl,--start-group -lavformat -lavcodec -lswresample -lavutil -Wl,--end-group -lpthread -lm"
   fi
   # -DNV_WEBOS: a identidade do alvo tem que vir daqui, porque o compilador
   # webos define __linux__ igual a qualquer Linux e a toolchain nao tem macro
@@ -106,7 +141,35 @@ docker run --rm --platform linux/arm64 --env-file "$ENVF" $P2P_VOL \
     # versao (ou nenhuma), e libatomic.so.1 nao e garantida.
     P2P_LIBS="/p2p/build-arm/libnuvio_engine.a /p2p/build-arm/_deps/nuvio_libtorrent-build/libtorrent-rasterbar.a $SR/usr/lib/libssl.a $SR/usr/lib/libcrypto.a -static-libgcc -Wl,-Bstatic -lstdc++ -latomic -Wl,-Bdynamic -lrt -Wl,--gc-sections"
   fi
-  arm-webos-linux-gnueabi-gcc src/*.c -o nuvio-proto.arm -O2 -DNV_WEBOS $NUVIO_EXTRA_CFLAGS $ASS_CFLAGS $P2P_CFLAGS \
+  # #297: p2pmotor.c vai num objeto proprio com -D_FILE_OFFSET_BITS=64. O webOS
+  # e ARM de 32 bits: sem a flag o lstat/readdir falham (EOVERFLOW) num arquivo
+  # de torrent acima de 2 GB e o cache nunca era contado nem apagado. So este
+  # arquivo: o header dele so expoe tipos de largura fixa (uint64_t), entao o
+  # resto do binario segue sem a flag. O _Static_assert do .c barra o esquecimento.
+  CC="arm-webos-linux-gnueabi-gcc"
+  if command -v ccache >/dev/null 2>&1; then CC="ccache $CC"; fi
+  $CC -c src/p2pmotor.c -o /tmp/p2pmotor.o -O2 -DNV_WEBOS -D_FILE_OFFSET_BITS=64 $NUVIO_EXTRA_CFLAGS $P2P_CFLAGS \
+    -I$SR/usr/include -I$SR/usr/include/SDL2
+  printf "%s\n" -O2 -DNV_WEBOS $NUVIO_EXTRA_CFLAGS $ASS_CFLAGS $P2P_CFLAGS $DTS_CFLAGS \
+    -I$SR/usr/include -I$SR/usr/include/SDL2 > /tmp/arm-flags
+  for k in NV_SUPABASE_URL NV_SUPABASE_ANON_KEY NV_TV_LOGIN_BASE NV_TRAKT_CLIENT_ID \
+           NV_TRAKT_CLIENT_SECRET NV_SIMKL_CLIENT_ID NV_SIMKL_APP NV_TMDB_API_KEY NV_SEEKR_API_KEY \
+           NV_REC_URL NV_DISCORD_CLIENT_ID NV_VERSAO; do
+    v=${!k}
+    v=$(printf "%s" "$v" | sed "s/[\\\\\"]/\\\\&/g")
+    printf "%s\n" "\"-D$k=\\\"$v\\\"\""
+  done >> /tmp/arm-flags
+  KEY=$( { cat /tmp/arm-flags; sha256sum tools/arm.sh tools/native-objects.mk; printf "%s" "$NUVIO_SDK_ID"; } | sha256sum | cut -d" " -f1)
+  OBJDIR="build/arm-objects/$KEY"
+  SOURCES=$(ls src/*.c src/dts/*.c | grep -v "^src/p2pmotor\.c$")
+  make -s -f tools/native-objects.mk -j "$NUVIO_BUILD_JOBS" CC="$CC" \
+    OBJDIR="$OBJDIR" SOURCES="$SOURCES" NATIVE_FLAGS=@/tmp/arm-flags
+  if command -v ccache >/dev/null 2>&1; then ccache -s; fi
+  OBJECTS=()
+  for f in $(ls src/*.c | grep -v "^src/p2pmotor\.c$") src/dts/*.c; do
+    OBJECTS+=("$OBJDIR/${f%.c}.o")
+  done
+  arm-webos-linux-gnueabi-gcc "${OBJECTS[@]}" /tmp/p2pmotor.o -o nuvio-proto.arm -O2 -DNV_WEBOS $NUVIO_EXTRA_CFLAGS $ASS_CFLAGS $P2P_CFLAGS $DTS_CFLAGS \
     -DNV_SUPABASE_URL="\"$NV_SUPABASE_URL\"" \
     -DNV_SUPABASE_ANON_KEY="\"$NV_SUPABASE_ANON_KEY\"" \
     -DNV_TV_LOGIN_BASE="\"$NV_TV_LOGIN_BASE\"" \
@@ -120,7 +183,31 @@ docker run --rm --platform linux/arm64 --env-file "$ENVF" $P2P_VOL \
     -DNV_DISCORD_CLIENT_ID="\"${NV_DISCORD_CLIENT_ID:-}\"" \
     -DNV_VERSAO="\"$NV_VERSAO\"" \
     -I$SR/usr/include -I$SR/usr/include/SDL2 \
-    -lSDL2 -lSDL2_image -lSDL2_ttf -lGLESv2 -lEGL $P2P_LIBS -ldl -lpthread -lz -lm $ASS_LIBS'
+    -lSDL2 -lSDL2_image -lSDL2_ttf -lGLESv2 -lEGL $P2P_LIBS -ldl -lpthread -lz -lm $ASS_LIBS $DTS_LIBS \
+    -Wl,--export-dynamic-symbol=pthread_create -Wl,--exclude-libs,ALL
+  # #317: --exclude-libs,ALL tira da tabela dinamica tudo o que vem de arquivo
+  # .a (FreeType/harfbuzz do libass, libstdc++ do P2P, FFmpeg). Sem ele o ld
+  # exportava 178 FT_* (+ TT_RunIns/TT_New_Context) do nosso FreeType 2.13,
+  # porque a libfreetype.so do sistema define os mesmos nomes. No webOS 4.0 o
+  # SDL_ttf da LG carrega a FreeType 2.6.5 do sistema por dlsym, e as chamadas
+  # internas dela (FT_Add_Default_Modules, FT_New_Library...) caiam nas NOSSAS:
+  # face com FT_Face_Internal de 2.6.5 (refcount=1 em +0x34) lida pelo nosso
+  # tt_glyph_load como incremental_interface -> SIGSEGV addr=0x1 na partida.
+  # O pthread_create acima vem de objeto nosso, nao de .a, e segue exportado.
+  # src/dts/rt_shim.c: the LG audio sink (KADP_OSA_CreateThread) must bind to
+  # our pthread_create, which retries its real-time thread with default
+  # attributes instead of letting the firmware crash on EINVAL (LG C9 core).
+  mkdir -p deploy/app/lib
+  find deploy/app/lib -maxdepth 1 -type f -name "dts-starfish-webos*.so" -delete
+  if [ -d deploy/app/licenses/dts ]; then
+    find deploy/app/licenses/dts -maxdepth 1 -type f \
+      \( -name "COPYING.LGPLv2.1" -o -name "SOURCE.txt" \) -delete
+  fi
+  if [ "${NUVIO_DTS_FFMPEG:-1}" = "1" ]; then
+    bash tools/build-dts-pipeline.sh --in-container --output deploy/app/lib
+    mkdir -p deploy/app/licenses/dts
+    cp "$DTS/COPYING.LGPLv2.1" "$DTS/SOURCE.txt" deploy/app/licenses/dts/
+  fi'
 
 # CONFERE que a configuracao entrou MESMO no binario. Sem isto o unico sintoma
 # e a tela de login dizendo que o pacote saiu sem servidor, ja na TV.
@@ -146,7 +233,6 @@ while IFS='=' read -r NOME VALOR; do
 done < "$ENVF"
 
 cp nuvio-proto.arm deploy/app/nuvio-proto
-rm -f ./*.ipk
 
 # O .ipk so interessa para DISTRIBUIR (instalar em outra TV, publicar). O ciclo
 # de desenvolvimento nao passa por ele — ver a nota abaixo.
@@ -169,7 +255,7 @@ rm -f ./*.ipk
 # estavam na lista.
 ARQ_DE_PESSOA="trakt.txt addons.txt tmdb.txt mdblist.txt ajustes.txt
                progresso.txt nuvem.txt sessao.txt perfil.txt cliente.txt
-               listas.txt guia-fav.txt debrid.txt fanart.txt p2p.txt"
+               listas.txt guia-fav.txt debrid.txt fanart.txt p2p.txt seekr.txt seekr.txt.tmp"
 
 # UM POR PERFIL, entao o nome nao e fixo: stalker-p1.txt, stalker-p2.txt...
 # Estes guardam o MAC do portal IPTV, que autentica a assinatura de quem
@@ -241,14 +327,19 @@ if [ "$1" = "--ipk" ]; then
   # trocado com chmod 755 a mao.
   chmod 755 "$PALCO/app/nuvio-proto"
 
-  "$ARES" "$PALCO/app" -o .
-  IPK=$(ls -t ./*.ipk | head -1)
+  IPK_OUT="${NUVIO_RELEASE_OUT:-$PWD}"
+  mkdir -p "$IPK_OUT"
+  # ares sempre gera o nome normal: palco isolado evita sobrescrever outra variante.
+  "$ARES" "$PALCO/app" -o "$PALCO"
+  IPK=$(ls "$PALCO"/*.ipk)
   # A variante ganha o nome no ARQUIVO: dois .ipk com o mesmo nome e md5
   # diferente e exatamente o que ja publicou build errada uma vez.
   if [ -n "$VARIANTE" ]; then
     NOVO="${IPK%.ipk}-$VARIANTE.ipk"
     mv -f "$IPK" "$NOVO"; IPK="$NOVO"
   fi
+
+  IPK_DEST="$IPK_OUT/$(basename "$IPK")"
 
   # CONFERE o pacote PRONTO, e nao a pasta de onde ele saiu. A lista de
   # exclusao acima e uma intencao; o teste abaixo e o fato.
@@ -258,7 +349,7 @@ if [ "$1" = "--ipk" ]; then
   # sem erro nenhum, apenas esses tres nomes — nunca os arquivos do app. Uma
   # conferencia escrita assim passa sempre, inclusive quando o segredo esta
   # dentro. Tem de desempacotar o `ar` e listar o data.tar.gz.
-  LISTA=$(cd "$PALCO" && ar x "$OLDPWD/$IPK" 2>/dev/null && tar tzf data.tar.gz 2>/dev/null)
+  LISTA=$(cd "$PALCO" && ar x "$IPK" 2>/dev/null && tar tzf data.tar.gz 2>/dev/null)
   if [ -z "$LISTA" ]; then
     echo "    ABORTADO: nao consegui LER o pacote para conferir; nao vou dizer que esta limpo"
     rm -f "$IPK"
@@ -295,6 +386,16 @@ if [ "$1" = "--ipk" ]; then
     rm -f "$IPK"
     exit 1
   fi
+  # DTS: com a conversao, os dois adaptadores e o aviso LGPL do FFmpeg TEM de
+  # estar no pacote; sem ela, nenhum (um adaptador sem o FFmpeg no binario e
+  # lixo, e o aviso sem o FFmpeg e mentira).
+  for f in lib/dts-starfish-webos3.so lib/dts-starfish-webos4.so licenses/dts/COPYING.LGPLv2.1 licenses/dts/SOURCE.txt; do
+    if printf '%s\n' "$LISTA" | grep -qE "(^|/)$f$"; then tem=1; else tem=0; fi
+    if [ "$tem" != "$DTS_ENABLED" ]; then
+      echo "    ABORTADO: DTS=$DTS_ENABLED e o pacote $([ $tem = 1 ] && echo leva || echo nao leva) $f"; rm -f "$IPK"; exit 1
+    fi
+  done
+  echo "    DTS: $([ "$DTS_ENABLED" = 1 ] && echo 'conversao incluida (adaptadores + aviso LGPL)' || echo 'sem conversao')"
   # AVISOS DE LICENCA do motor (libtorrent, Boost, OpenSSL, nuvio-engine).
   printf '%s\n' "$LISTA" | grep -qE 'licencas/p2p-avisos\.txt$' || {
     echo "    ABORTADO: o pacote nao leva licencas/p2p-avisos.txt"; rm -f "$IPK"; exit 1; }
@@ -310,6 +411,7 @@ if [ "$1" = "--ipk" ]; then
   else
     echo "    ATENCAO: pacote SEM motor P2P (NUVIO_P2P_MOTOR=none ou sem pasta)"
   fi
+  mv -f "$IPK" "$IPK_DEST"; IPK="$IPK_DEST"
   echo "    $IPK ($(du -h "$IPK" | cut -f1)) — sem art/{$(echo $ARQ_DE_PESSOA $GLOB_DE_PESSOA $ACERVO_DE_PESSOA $DIR_DE_PESSOA | tr ' ' ',')}"
 fi
 
@@ -340,6 +442,19 @@ SCP="sshpass -p $TV_PASS scp -o StrictHostKeyChecking=no -q ${NUVIO_SSH_OPTS:-}"
 # o que aconteceu. Criar antes torna o deploy capaz de REINSTALAR, nao so
 # atualizar.
 $SSH "root@$TV_IP" "mkdir -p $APPDIR"
+
+DTS_PAYLOAD=()
+if [ "$DTS_ENABLED" = 1 ]; then
+  DTS_PAYLOAD=(lib/dts-starfish-webos3.so lib/dts-starfish-webos4.so
+               licenses/dts/COPYING.LGPLv2.1 licenses/dts/SOURCE.txt)
+  echo "==> enviando adaptadores DTS e avisos de licenca"
+  $SSH "root@$TV_IP" "mkdir -p $APPDIR/lib $APPDIR/licenses/dts"
+  for arquivo in "${DTS_PAYLOAD[@]}"; do
+    $SCP "deploy/app/$arquivo" "root@$TV_IP:$APPDIR/$arquivo.novo"
+    # Existing processes retain their mapped adapter until the app restarts.
+    $SSH "root@$TV_IP" "mv -f $APPDIR/$arquivo.novo $APPDIR/$arquivo && chmod 644 $APPDIR/$arquivo"
+  done
+fi
 
 echo "==> enviando binario para $TV_IP"
 $SCP nuvio-proto.arm "root@$TV_IP:$APPDIR/nuvio-proto.novo"
@@ -394,7 +509,7 @@ echo "==> sincronizando arte"
 if ! ( set -o pipefail
        tar czf - -C deploy/app --exclude 'art/cache' \
            --exclude 'appinfo.json.stamped' \
-           art fonts icon.png icon-large.png splash.png \
+           art fonts icon.png icon-large.png icon-20.png icon-large-20.png splash.png \
          | $SSH "root@$TV_IP" "tar xzf - -C $APPDIR" ) 2>&1 \
      | grep -v 'unknown extended header keyword'; then
   :
@@ -425,6 +540,14 @@ if [ "$LOCAL" != "$REMOTO" ]; then
   exit 1
 fi
 echo "    ok ($LOCAL)"
+for arquivo in "${DTS_PAYLOAD[@]}"; do
+  LOCAL=$(md5 -q "deploy/app/$arquivo" 2>/dev/null || md5sum "deploy/app/$arquivo" | cut -d' ' -f1)
+  REMOTO=$($SSH "root@$TV_IP" "md5sum $APPDIR/$arquivo | cut -d' ' -f1" | tr -d '\r')
+  if [ "$LOCAL" != "$REMOTO" ]; then
+    echo "    FALHOU: $arquivo local $LOCAL != TV $REMOTO"; exit 1
+  fi
+  echo "    ok ($arquivo)"
+done
 
 # launch NAO reinicia um app que ja esta rodando: so o traz para frente (ver
 # FERRAMENTAS.md). Dois deploys desta tarde foram lidos no log de um processo

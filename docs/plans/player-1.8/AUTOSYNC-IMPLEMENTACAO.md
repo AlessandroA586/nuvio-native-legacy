@@ -2,6 +2,17 @@
 
 03/10/2026. Implementação C em `src/autosync.c/h` e adaptação de `src/legenda.c/h`, posterior ao merge Glass `b98bd2f5`. Este documento descreve capacidades de código e testes no host. Não comprova disponibilidade de referência embutida nem desempenho em LG, Android ou Samsung.
 
+## 2.1 (06/10/2026): paridade com o AutoSync do Nuvio Reshaped
+
+A engine foi reescrita (ideias do PR NuvioMedia/NuvioTV#3703, GPL-3.0 como este projeto; código próprio). Onde este documento fala de "offset constante só", "regra de bordas ±250 ms nos dois sentidos" ou "MP4 indisponível", vale o que segue:
+
+- Escala (quadros por segundo): razões exatas 25/23,976, 24/23,976, 25/24 e inversas + razão dos spans, refinadas por mínimos quadrados. Offset até ±180 s; a referência inteira quando a externa cobre < 75% dela (CD1/CD2).
+- Programação dinâmica em banda (±28 falas) com grupos 1:1, 1:2, 2:1, 1:3, 3:1, 2:2; trechos com offset próprio para corte/cena a mais (Viterbi); âncoras de linha só onde os 7 vizinhos concordam. Escala/trechos são aplicados por `AutoSyncMapa` (instante do vídeo → instante da legenda: `legsync_posicao`, libass e desenho do app), sem recarregar o stream.
+- Portões: atividade ≥ 0,55, score final ≥ 0,78 sobre a legenda já corrigida, margem ≥ 0,02 (por trecho no corte), cobertura ≥ 0,84 (0,90 com escala/trechos), ≥ 20 falas casadas, coerência por segmento (mediana do erro absoluto ≤ tolerância). Recusa deixa tudo como estava; correção menor que `manterMs` (100 ms) mantém o original.
+- Referência: MP4/MOV pelo `moov` (tx3g/wvtt/text); SRT do MKV com CueDuration sai do próprio Cues (3 Ranges num longa, antes ~1300); faixas ordenadas e validadas cruzado (a preferida cai se estiver deslocada contra duas que concordam).
+- Segundo idioma (slot 1) com a mesma engine e a mesma referência.
+- Medida: `ANTES=1 bash tests/autosync_corpus.sh` (corpus sintético, tabela antes × depois).
+
 ## O que funciona neste módulo
 
 - Documentos imutáveis independentes do overlay, com idioma, origem, identidade opaca da faixa/arquivo, geração de sessão, flags e cues ordenadas. Contagem de referências permite compartilhar uma referência validada entre dois slots sem copiar o documento novamente.

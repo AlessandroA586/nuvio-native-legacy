@@ -4,12 +4,12 @@
 #
 #   bash tests/fundo_assado.sh        # GL 2.1 do Mac
 #   bash tests/fundo_assado.sh gles   # GLES2 do ANGLE (precisa do emulador do Android SDK e do NDK)
-set -eu
+set -euo pipefail
 cd "$(dirname "$0")/.."
 work=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-fundo-assado.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   [ "$source" != src/main.c ] && sources+=("$source")
 done
 gl=(-framework OpenGL)

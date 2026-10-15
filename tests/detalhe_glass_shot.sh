@@ -18,7 +18,7 @@ trap 'rm -rf "$NUVIO_DADOS"' EXIT
 FL="-O1 -g -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -Wall -Wextra -Wno-deprecated-declarations -Wno-macro-redefined"
 objs=()
 pids=()
-for s in src/*.c; do
+for s in src/*.c src/dts/*.c; do
   case "$s" in src/main.c|src/detail.c) continue;; esac
   o="$OBJ/$(basename "$s" .c).o"
   objs+=("$o")

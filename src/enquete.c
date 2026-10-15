@@ -2,6 +2,7 @@
 #include "enquete.h"
 #include "ajustes.h"
 #include "dados.h"
+#include "avisodisp.h"
 #include "ilha.h"
 #include "ilhaacao.h"
 #include "idioma.h"
@@ -280,7 +281,14 @@ static void posto(const char *chave) {
   snprintf(abrindoChave, sizeof abrindoChave, "%s", chave);
 }
 
-static void mostrarConvite(void) {
+// DISPENSAR A ENQUETE (06/10, "muito alerta sem dispensar"): a bolinha do
+// relogio ficava ate a pessoa votar ou a enquete vencer. A AZUL nela agora
+// reabre o CONVITE com "Dispensar" no lugar de "Agora nao": dispensada, a
+// bolinha apaga e aquela enquete nao volta (avisodisp.h, por perfil); a
+// proxima enquete convida de novo. Na primeira vez continua "Agora nao".
+static int conviteDoPonto;
+static void chaveDisp(char *dst, size_t tam) { snprintf(dst, tam, "enquete:%s", cur.id); }
+static void mostrarConvite(int doPonto) {
   static IlhaModal m;
   IlhaAvisoEx e;
   memset(&m, 0, sizeof m);
@@ -291,7 +299,8 @@ static void mostrarConvite(void) {
   m.cabecalho = 1; m.tipo = ILHA_ACENTO; m.nBotoes = 3;
   snprintf(m.botao[0], sizeof m.botao[0], "%s", i18n("Responder"));
   snprintf(m.botaoIcone[0], sizeof m.botaoIcone[0], "check");
-  snprintf(m.botao[1], sizeof m.botao[1], "%s", i18n("Agora não"));
+  snprintf(m.botao[1], sizeof m.botao[1], "%s", doPonto ? i18n("Dispensar") : i18n("Agora não"));
+  conviteDoPonto = doPonto;
   snprintf(m.botao[2], sizeof m.botao[2], "%s", i18n("Não receber mais enquetes"));
   snprintf(m.botaoIcone[2], sizeof m.botaoIcone[2], "aj_x");
   memset(&e, 0, sizeof e);
@@ -355,7 +364,10 @@ static void mostrarResultado(void) {
 }
 
 static void atualizarPonto(void) {
-  int p = cur.tem && !cur.voto && !vencida(&cur) && foiVisto(cur.id) && ajustes_enquetes();
+  char ch[64];
+  int p;
+  chaveDisp(ch, sizeof ch);
+  p = cur.tem && !cur.voto && !vencida(&cur) && foiVisto(cur.id) && ajustes_enquetes() && !avisodisp_tem(ch);
   if (p != ponto) { ponto = p; ilha_ponto_enquete(p); }
 }
 
@@ -436,7 +448,7 @@ static void aplicar(const Resp *r) {
   if (cur.tem && !cur.voto && !vencida(&cur) && !foiVisto(cur.id) && !abrindo &&
       !player_aberto() && agoraAtual - iniciouEm > ESPERA_MS) {
     marcarVisto(cur.id);        // "uma vez": dito agora, mesmo que o app feche antes da resposta
-    mostrarConvite();
+    mostrarConvite(0);
     atualizarPonto();
   }
 }
@@ -447,7 +459,13 @@ void enquete_acao(const char *chave, int botao) {
   if (!strcmp(chave, CH_CONVITE)) {
     if (botao == 1 && cur.tem) mostrarOpcoes();
     else if (botao == 3) optoutFeito();
-    // 2 (Agora nao): a bolinha ja esta ligada (convite marcado como dito)
+    else if (botao == 2 && conviteDoPonto && cur.tem) {
+      char ch[64];
+      chaveDisp(ch, sizeof ch);
+      avisodisp_por(ch);
+      printf("[enquete] dispensada: %s\n", cur.id);
+    }
+    // 2 (Agora nao, na primeira vez): a bolinha ja esta ligada (convite marcado como dito)
     atualizarPonto();
   } else if (!strcmp(chave, CH_OPCOES)) {
     if (botao >= 1 && botao <= cur.n && !pediuVoto && cur.tem && !cur.voto) {
@@ -481,8 +499,8 @@ void enquete_passo(Uint32 agora) {
     abrindo = 0;
     atualizarPonto();
   }
-  // A AZUL no relogio com a bolinha: reabre a enquete.
+  // A AZUL no relogio com a bolinha: reabre o convite, agora com "Dispensar".
   if (ilha_ponto_pediu() && cur.tem && !cur.voto && !vencida(&cur) && !abrindo && !pediuVoto)
-    mostrarOpcoes();
+    mostrarConvite(1);
   if (ponto && (vencida(&cur) || !ajustes_enquetes())) { memset(&cur, 0, sizeof cur); atualizarPonto(); }
 }

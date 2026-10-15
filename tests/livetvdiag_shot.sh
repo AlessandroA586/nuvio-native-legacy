@@ -20,7 +20,7 @@ python3 "$M/servidor.py" 8765 & SRV=$!
 trap 'kill $SRV 2>/dev/null; rm -rf "$M" "$NUVIO_DADOS"' EXIT
 sleep 0.5
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/livetvdiag.c) continue;; esac
   sources+=("$source")
 done

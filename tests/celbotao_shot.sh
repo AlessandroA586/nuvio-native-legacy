@@ -10,7 +10,7 @@ tmp="$(mktemp -d "${TMPDIR:-/tmp}/nuvio-celbotao-XXXXXX")"
 dados="$(mktemp -d "${TMPDIR:-/tmp}/nuvio-celbotao-dados-XXXXXX")"
 trap 'rm -rf "$tmp" "$dados"' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   [ "$source" = "src/main.c" ] && continue
   sources+=("$source")
 done

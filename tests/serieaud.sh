@@ -20,7 +20,7 @@ trap 'rm -rf "$NUVIO_DADOS"' EXIT
 echo "dados do teste em $NUVIO_DADOS"
 
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/serieaud.c) continue;; esac
   sources+=("$source")
 done

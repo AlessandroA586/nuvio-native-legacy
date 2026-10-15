@@ -20,9 +20,12 @@
 #ifndef NV_CATORDEM_H
 #define NV_CATORDEM_H
 
-// Match the local row registry capacity, including hidden account catalogues.
-// The number of visible Home rows must not truncate account configuration.
-#define CATORD_MAX   768
+// Itens da ordem da conta, ligados e desligados. A ordem do web tem UM item
+// por catalogo de TODO addon instalado mais as colecoes: o Xperience sozinho
+// declara 606, e a conta do #255 passou de 768 — o teto antigo. O que ficava
+// alem dele perdia a posicao E o "desligado": catalogo de pasta desligado no
+// web voltava como fileira solta na TV. Passar do teto agora e dito no log.
+#define CATORD_MAX   2048
 #define CATORD_CHAVE 192
 
 // Le a resposta crua da RPC. Aceita `[{"settings_json":{...}}]`, o objeto

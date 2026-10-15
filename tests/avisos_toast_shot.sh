@@ -6,7 +6,7 @@ NUVIO_DADOS=$(mktemp -d /tmp/nuvio-avisos-toast-dados.XXXXXX)
 export NUVIO_DADOS
 trap 'rm -rf "$NUVIO_DADOS"' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   if [ "$source" != src/main.c ] && [ "$source" != src/avisos.c ]; then
     sources+=("$source")
   fi

@@ -17,6 +17,11 @@
 #define rede_baixar_st         teste_get
 #define rede_postar_st         teste_post
 #define recomenda_cabecalhos   teste_cabecalhos
+// A AZUL no relogio com a bolinha (ilha.c so a entrega com a pilula na tela).
+static int pontoTeste;
+static int teste_ponto_pediu(void) { int p = pontoTeste; pontoTeste = 0; return p; }
+static void pontoPedirTeste(void) { pontoTeste = 1; }
+#define ilha_ponto_pediu       teste_ponto_pediu
 #include "../src/enquete.c"
 
 #include "enquete_servidor.inc"
@@ -144,6 +149,27 @@ int main(void) {
     e.fim = (long long)time(NULL) + 3 * 86400 - 60; prazoTexto(&e, b, sizeof b); assert(strstr(b, "3"));
     e.fim = (long long)time(NULL) + 3600; prazoTexto(&e, b, sizeof b); assert(b[0]);
     e.fim = (long long)time(NULL) - 5; prazoTexto(&e, b, sizeof b); assert(!b[0]); }
-  puts("enquete: sem bloqueio, convite uma vez, bolinha, voto unico, resultado, opt-out com desfazer, perfil e prazo ok");
+  // 14. DISPENSAR (06/10): "Agora nao" deixa a bolinha; a AZUL nela reabre o
+  // convite com "Dispensar"; dispensada, a bolinha apaga e nao volta no
+  // arranque seguinte. A proxima enquete convida de novo.
+  serv("logo-6", 86400);
+  novaSessao(); T0 += ESPERA_MS + 100; espera(&S.nGet, 1); gira(40);
+  assert(ilha_tem(CH_CONVITE) && cur.tem && !strcmp(cur.id, "logo-6"));
+  enquete_acao(CH_CONVITE, 2);              // Agora nao
+  gira(2);
+  assert(ponto == 1 && !conviteDoPonto);
+  ilha_retirar(CH_CONVITE);
+  pontoPedirTeste();                        // a AZUL no relogio com a bolinha
+  gira(2);
+  assert(ilha_tem(CH_CONVITE) && conviteDoPonto && ponto == 1);
+  enquete_acao(CH_CONVITE, 2);              // Dispensar
+  assert(ponto == 0 && avisodisp_tem("enquete:logo-6"));
+  S.nGet = 0;
+  novaSessao(); T0 += ESPERA_MS + 100; espera(&S.nGet, 1); gira(40);
+  assert(cur.tem && !strcmp(cur.id, "logo-6") && !ilha_tem(CH_CONVITE) && ponto == 0);
+  serv("logo-7", 86400);
+  novaSessao(); T0 += ESPERA_MS + 100; espera(&S.nGet, 1); gira(40);
+  assert(ilha_tem(CH_CONVITE) && !strcmp(cur.id, "logo-7"));
+  puts("enquete: sem bloqueio, convite uma vez, bolinha, voto unico, resultado, opt-out com desfazer, perfil, prazo e dispensar ok");
   return 0;
 }

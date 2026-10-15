@@ -13,6 +13,8 @@
 #include "text.h"
 #include "relogiofim.h"
 #include "desempenho.h"
+#include "velocidade.h"
+#include "ponteiro.h"
 #define NV_ESCALA_TELA   // o arquivo inteiro mede pela tela virtual (escala.h)
 #include "escala.h"
 #include <math.h>
@@ -23,8 +25,10 @@
 // A mola da ilha (ilha.c, ILHA_MOLA_W/Z; o Spotlight usa a mesma, SP_MOLA).
 #define MOLA_W 10.0f
 #define MOLA_Z 0.72f
-#define X_ESQ   96.0f      // PLR_MARGEM: a coluna do OSD
-#define Y_TOPO  48.0f      // PLR_PAD_Y
+// Mesma margem e mesmo topo da ilha da Home (dono, 12/10: simetrica com os
+// selos do lado oposto em player.c, que seguem a mesma margem).
+#define X_ESQ   NV_ILHA_MARGEM_D
+#define Y_TOPO  NV_ILHA_Y
 #define CAB_H   64.0f      // cabecalho do corpo = a pilula aberta
 #define PIL_H   56.0f
 #define RAIO_CORPO 36.0f
@@ -38,6 +42,9 @@ static char pedTexto[200], pedDir[80], pedIcone[32];
 static char ultTexto[200], ultDir[80], ultIcone[32];
 static float relA;                  // opacidade do OSD neste quadro
 static double falta = -1.0;
+// #202: a velocidade da reproducao (centesimos); fora de 1x vai na pilula,
+// depois do "termina as", no acento.
+static int velCent = VEL_NORMAL;
 static float W, vW, H, vH, A, corpoA, textoA = 1.0f;
 static GfxRect ultRect;
 static int ultOk;
@@ -110,6 +117,11 @@ void plrilha_relogio(float a, double f) {
   falta = f;
 }
 
+void plrilha_velocidade(int cent) { velCent = cent > 0 ? cent : VEL_NORMAL; }
+
+static char titulo[256];
+void plrilha_titulo(const char *t) { snprintf(titulo, sizeof titulo, "%s", t ? t : ""); }
+
 void plrilha_esconder(void) { escondida = 1; }
 
 int plrilha_direita(void) {
@@ -121,10 +133,10 @@ float plrilha_corpo_alfa(void) { return temUlt ? corpoA : 0.0f; }
 
 // --- a linha da pilula ------------------------------------------------------------
 typedef struct {
-  TxtLinha txt, hora, fim, dir;
+  TxtLinha txt, hora, fim, dir, vel;
   float w;                 // largura do conteudo (sem o recuo)
   float ds;                // o trecho do medidor no fim da linha (0 = nada)
-  int temIcone, temTxt, temFim;
+  int temIcone, temTxt, temFim, temVel;
 } Linha;
 
 static void horaAgora(char *h, size_t n, char *fim, size_t nf) {
@@ -160,6 +172,16 @@ static float montar(const PlrIlhaPedido *p, Linha *L) {
   if (L->temFim) {
     L->fim = txt_linha(TXT_G19M, fim, 243, 242, 239, 153);
     w += 12.0f + 1.0f + 12.0f + (float)L->fim.w;
+  }
+  if (velCent != VEL_NORMAL) {
+    char v[16];
+    float ar, ag, ab;
+    vel_rotulo(v, sizeof v, velCent);
+    plrui_decimal(v);
+    ajustes_acento(&ar, &ag, &ab);
+    L->vel = txt_linha(TXT_G19M, v, (int)(ar * 255.0f), (int)(ag * 255.0f), (int)(ab * 255.0f), 255);
+    L->temVel = 1;
+    w += 12.0f + 1.0f + 12.0f + (float)L->vel.w;
   }
   if (p && p->direita) L->dir = txt_linha(TXT_G19M, p->direita, 243, 242, 239, 140);
   L->ds = dsP ? desempenho_linha_w(dsP) : 0.0f;
@@ -207,6 +229,13 @@ static void desenharLinha(const PlrIlhaPedido *p, const Linha *L, float x, float
     x += 1.0f + 12.0f;
     txt_desenhar_alpha(L->fim, x, yc - (float)L->fim.h * 0.5f + 1.0f, a);
     x += (float)L->fim.w;
+  }
+  if (L->temVel) {
+    x += 12.0f;
+    plrui_sep(x, yc, a);
+    x += 1.0f + 12.0f;
+    txt_desenhar_alpha(L->vel, x, yc - (float)L->vel.h * 0.5f + 1.0f, a);
+    x += (float)L->vel.w;
   }
   if (L->ds > 0.0f) desempenho_linha(dsP, x, yc, a);
 }
@@ -323,19 +352,36 @@ static void plrilha_desenharCorpo_(Uint32 agora) {
     if (raioPx > RAIO_CORPO * cresce + h * 0.5f * (1.0f - cresce)) raioPx = RAIO_CORPO * cresce + h * 0.5f * (1.0f - cresce);
     if (raioPx > h * 0.5f) raioPx = h * 0.5f;
     ultRect = R; ultOk = 1;
+    // PONTEIRO (#99): a pilula que pediu clique (ponteiroOk), so assentada —
+    // sem corpo, opaca e no tamanho final. Sem camada propria: o alvo cai na
+    // camada de quem estiver por cima no player, como a pilula cai na tela.
+    // O corpo de uma folha (faixas, fontes, episodios) registra os seus alvos
+    // ele mesmo, na camada da folha, quando a ilha o chama abaixo.
+    if (p->ponteiroOk && !corpo && A > 0.99f && fabsf(W - alvoW) < 1.0f && fabsf(H - alvoH) < 1.0f)
+      ponteiro_alvo(R.x, R.y, R.w, R.h, p->ponteiroOk, NULL, 0, 0);
     plrui_material(R, raioPx, (temUlt ? ult.modal : 0), A);
     gfx_recorte(R.x, R.y, R.w, R.h);
     { float cabH = h < CAB_H ? h : CAB_H;
       float yc = R.y + cabH * 0.5f;
-      // A linha: centrada na pilula; com corpo, encostada a esquerda do
-      // cabecalho (o recuo de 28).
+      // A linha: centrada na pilula; com corpo, encostada a DIREITA do
+      // cabecalho (o recuo de 28) — dono, 11/10: o relogio do lado direito
+      // nos paineis que nascem da ilha. O texto `direita` troca de lado.
       float lx = R.x + (R.w - L.w) * 0.5f;
-      float ex = R.x + 28.0f;
+      float ex = R.x + R.w - 28.0f - L.w;
       float k = anim_clamp((R.w - (L.w + pad * 2.0f)) / 40.0f, 0.0f, 1.0f);
       lx = lx + (ex - lx) * k;
       desenharLinha(p, &L, lx, yc, A * textoA);
       if (p->direita && k > 0.0f)
-        txt_desenhar_alpha(L.dir, R.x + R.w - 28.0f - (float)L.dir.w, yc - (float)L.dir.h * 0.5f + 1.0f, A * k);
+        txt_desenhar_alpha(L.dir, R.x + 28.0f, yc - (float)L.dir.h * 0.5f + 1.0f, A * k);
+      // Sem `direita`, o lado esquerdo leva o titulo, cortado na largura
+      // final do painel (a da mola mudaria a textura a cada quadro).
+      else if (titulo[0] && k > 0.0f) {
+        float max = alvoW - L.w - 28.0f * 2.0f - 24.0f;
+        if (max > 40.0f) {
+          TxtLinha t = txt_linha_corta(TXT_G19M, titulo, 243, 242, 239, 200, max);
+          txt_desenhar_alpha(t, R.x + 28.0f, yc - (float)t.h * 0.5f + 1.0f, A * k);
+        }
+      }
       // Fio de 1 px sob o cabecalho, so com o corpo de pe.
       if (h > CAB_H + 4.0f && dsP == DS_DESLIGADO)
         gfx_cor((GfxRect){ R.x, R.y + CAB_H, R.w, 1.0f }, 0.0f, 1, 1, 1, 0.07f * A * cresce); }

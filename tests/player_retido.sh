@@ -15,7 +15,7 @@ done
 cc "${flags[@]}" "${renomes[@]}" -c src/video.c -o "$dir/video.o"
 cc "${flags[@]}" -Dsessao_usuario=nv_test_usuario -c src/player.c -o "$dir/player.o"
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/player.c|src/video.c) continue;; esac
   sources+=("$source")
 done

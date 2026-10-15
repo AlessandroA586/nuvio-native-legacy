@@ -4,7 +4,13 @@
 #include <unistd.h>
 static int modo;                 // 0 = tempos, 1 = cancelar no meio
 static _Atomic int vistoParcial;
+// #201: sem extras neste teste; o hash nunca e medido aqui.
+char *rede_baixar_trecho_st(const char *u, int s, long long a, long long b, long *t, int *st, int *e, char *f, unsigned tf) {
+  (void)u; (void)s; (void)a; (void)b; (void)t; (void)st; (void)e; (void)f; (void)tf;
+  assert(!"Range inesperado"); return NULL;
+}
 static unsigned long agoraMs(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return (unsigned long)(t.tv_sec * 1000 + t.tv_nsec / 1000000); }
+const char *rede_ultimo_erro(void) { return ""; }
 char *rede_baixar_medido_controle(const char *url, int seconds, const char *const *h, const RedeControle *c, RedeMedida *m) {
   int idx = url[strlen("https://fixture.invalid/provider")] - '0';
   (void)h; (void)c;

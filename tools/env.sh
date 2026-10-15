@@ -7,7 +7,7 @@
 # o app web ja a publica no bundle. Quem NAO pode entrar no pacote e o que hoje
 # esta em art/trakt.txt e art/addons.txt: aquilo e credencial de PESSOA.
 #
-#   eval "cc src/*.c $(tools/env.sh) ..."
+#   eval "cc src/*.c src/dts/*.c $(tools/env.sh) ..."
 set -e
 
 REQUIRE_CORE=0
@@ -23,7 +23,12 @@ case "${1:-}" in
     ;;
 esac
 
-PROP="${NUVIO_PROPERTIES:-$(cd "$(dirname "$0")/../.." && pwd)/NuvioWeb-0.3.38-beta/local.properties}"
+LOCAL_PROP="$(cd "$(dirname "$0")/.." && pwd)/local.properties"
+if [ -f "$LOCAL_PROP" ]; then
+  PROP="${NUVIO_PROPERTIES:-$LOCAL_PROP}"
+else
+  PROP="${NUVIO_PROPERTIES:-$(cd "$(dirname "$0")/../.." && pwd)/NuvioWeb-0.3.38-beta/local.properties}"
+fi
 
 valor() {
   [ -f "$PROP" ] || return 0
@@ -38,9 +43,8 @@ TRS=$(valor TRAKT_CLIENT_SECRET)
 SMK=$(valor SIMKL_CLIENT_ID)
 SMA=$(valor SIMKL_APP_NAME)
 TMD=$(valor TMDB_API_KEY)
-# Chave do Seekr (miniaturas da barra de tempo) DO DONO, embutida no pacote
-# como a do TMDB. Vazia = o app pede a chave de cada pessoa nos Ajustes.
-SKR=$(valor SEEKR_API_KEY)
+# Seekr exige a chave de cada pessoa nos Ajustes; nunca embutir a do pacote.
+SKR=""
 # Servico de recomendacoes entre amigos (servidor/recomendacoes). VAZIO E UM
 # ESTADO VALIDO E E O PADRAO: sem ele o app nao mostra a aba Social, nao mostra
 # o item "Recomendar a um amigo" e nao abre conexao nenhuma. O dono publica
@@ -64,6 +68,18 @@ if [ -z "$VER" ]; then
 fi
 if [ "$VER" != "$VERT" ]; then
   echo "env.sh: appinfo.json diz $VER e tizen-config.xml diz $VERT -- alinhe antes de compilar" >&2; exit 2
+fi
+
+# Release unificada: conta, Trakt, Simkl e TMDB obrigatorios; demais opcionais.
+if [ "${NUVIO_REQUIRE_ALL:-0}" = 1 ]; then
+  MISSING_ALL=()
+  for k in URL KEY TVB TRK TRS SMK SMA TMD; do
+    v="${!k}"
+    [ -n "${v//[[:space:]]/}" ] || MISSING_ALL+=("$k")
+  done
+  [ "${#MISSING_ALL[@]}" = 0 ] || {
+    echo "env.sh: configuracao de release vazia: ${MISSING_ALL[*]}" >&2; exit 3;
+  }
 fi
 
 MISSING_CORE=()

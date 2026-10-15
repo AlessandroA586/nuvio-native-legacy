@@ -7,7 +7,7 @@
 #   bash tests/salvospainel_perf.sh /outra/arvore   # ex.: worktree da v1.4.5
 #
 # PERF_SEM_HOME=1 mede so o painel.
-set -eu
+set -euo pipefail
 aqui="$(cd "$(dirname "$0")/.." && pwd)"
 raiz="${1:-$aqui}"
 cd "$raiz"
@@ -16,7 +16,7 @@ trap 'rm -rf "$tmp"' EXIT
 flags=()
 if grep -q spainel_n_reconstrucoes src/salvospainel.c; then flags+=(-DSP_CONTADOR); fi
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   if [ "$source" != src/main.c ]; then sources+=("$source"); fi
 done
 cc "${sources[@]}" "$aqui/tests/salvospainel_perf.c" -Isrc -o "$tmp/perf" \

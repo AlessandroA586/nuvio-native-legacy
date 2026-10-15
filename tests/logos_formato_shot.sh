@@ -13,7 +13,7 @@ cc -c $FLAGS -Dvideo_largura=video_largura_mac -Dvideo_hdr=video_hdr_mac \
   -Dvideo_tocar=video_tocar_mac -Dvideo_ativo=video_ativo_mac -Dvideo_pronto=video_pronto_mac -Dvideo_tocando=video_tocando_mac -Dvideo_tem_atmos=video_tem_atmos_mac -Dvideo_tem_dolby_vision=video_tem_dv_mac \
   src/video.c -o "$OBJ/video.o"
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/video.c) continue;; esac
   sources+=("$source")
 done

@@ -11,7 +11,7 @@ NUVIO_DADOS="$tmp/dados"; mkdir -p "$NUVIO_DADOS"; export NUVIO_DADOS
 python3 tests/spotlight_canais_servidor.py $PORTA 2>"$tmp/servidor.log" & SRV=$!
 trap 'kill $SRV 2>/dev/null || true; rm -rf "$tmp"' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   [ "$source" = "src/main.c" ] && continue
   sources+=("$source")
 done

@@ -13,7 +13,20 @@
 static const char *ids[]={"r-4k","r-1080","r-720","r-sd","q-remux","q-bluray","q-webdl","q-webrip","q-seadex","v-dv","v-hdr10plus","v-hdr10","v-hdr","v-hlg","v-imax-enhanced","v-imax","v-sdr","a-atmos-dv","a-atmos","a-truehd-dv","a-truehd","a-dtsx","a-dtshdma","a-dtshd","a-dts","a-dd-dv","a-ddp","a-dd","c-71","c-51","co-x265","co-x264","co-av1","p-netflix","p-prime","p-appletv","p-disney","p-max","p-hulu","p-peacock","p-paramount","p-crave","p-crunchyroll"};
 #define NB (sizeof ids/sizeof ids[0])
 static struct {char image[700],name[64];} art[NB];
-static uint64_t bit(const char *id){for(size_t i=0;i<NB;i++)if(!strcmp(id,ids[i]))return UINT64_C(1)<<i;return 0;}
+// BUSCA DO BIT LEMBRADA PELO ENDERECO DO TEXTO. Quem chama passa literal
+// ("r-4k", "v-dv"...), e a folha de Fontes chama isto milhares de vezes por
+// quadro (grupoRes/ehHdr/nivelHdr por fonte, 2-3 montagens por quadro):
+// MEDIDO no Mac (06/10/2026) com 201 fontes, 37% do fio principal em strcmp
+// aqui dentro. A casa guarda so o INDICE (um byte), e o acerto e conferido
+// pelo conteudo: endereco reaproveitado com outro texto, ou duas threads
+// escrevendo a mesma casa, so caem na varredura de sempre — nunca bit errado.
+#define NB_MEMO 128
+static unsigned char bitMemo[NB_MEMO];
+static uint64_t bit(const char *id){
+  unsigned c=(unsigned)(((uintptr_t)id>>2)%NB_MEMO), k=bitMemo[c];
+  if(k<NB&&!strcmp(id,ids[k]))return UINT64_C(1)<<k;
+  for(size_t i=0;i<NB;i++)if(!strcmp(id,ids[i])){bitMemo[c]=(unsigned char)i;return UINT64_C(1)<<i;}
+  return 0;}
 static int token(const char *s,const char *t){size_t n=strlen(t);for(const char *p=s;(p=strstr(p,t));p++)if((p==s||!isalnum((unsigned char)p[-1]))&&!isalnum((unsigned char)p[n]))return 1;return 0;}
 uint64_t badges_detectar(const char *metadata) {
   char s[4096];size_t n=0;for(;metadata&&metadata[n]&&n<sizeof s-1;n++)s[n]=(char)tolower((unsigned char)metadata[n]);s[n]=0;
@@ -432,4 +445,32 @@ float badge_imdb(float x, float y, int nota, int escuro, float a) {
   txt_desenhar_alpha(lm, m.x + (m.w - (float)lm.w) * 0.5f, m.y + (m.h - (float)lm.h) * 0.5f, a);
   txt_desenhar_alpha(l, x + BADGE_IMDB_W + BADGE_IMDB_GAP, y + (BADGE_H - (float)l.h) * 0.5f, a);
   return BADGE_IMDB_W + BADGE_IMDB_GAP + (float)l.w;
+}
+
+// SELO DE ASSISTIDO: pilula escura translucida (material da ilha) com um check
+// no acento e a palavra "Assistido". Altura e recuo acompanham a largura do
+// cartao (26..32); abaixo de 150 de largura so o check, num disco da mesma
+// altura. Sombra rasa separa o selo de um poster claro. Moravam em home.c; a
+// Biblioteca usa o MESMO desenho (#352), entao mora aqui. `a` e o alfa do
+// cartao (1.0 = o da Home). Devolve a borda esquerda do selo.
+float badges_selo_visto(float px, float py, float w, float a) {
+  float h = w * 0.13f, m = w * 0.06f, ic, pw;
+  float ar, ag, ab;
+  int compacto = w < 150.0f;
+  TxtLinha t = { 0 };
+  if (h < 26.0f) h = 26.0f;
+  if (h > 32.0f) h = 32.0f;
+  if (m < 8.0f) m = 8.0f;
+  if (m > 14.0f) m = 14.0f;
+  ic = h * 0.58f;
+  if (!compacto) t = txt_linha(TXT_CAPTION, i18n("Assistido"), 240, 240, 245, 255);
+  pw = compacto ? h : h * 0.36f + ic + 6.0f + (float)t.w + h * 0.46f;
+  { float mx = px + w - pw - m, my = py + m;
+    ajustes_acento(&ar, &ag, &ab);
+    gfx_cor((GfxRect){ mx, my + 3.0f, pw, h }, 0.5f, 0, 0, 0, 0.28f * a);
+    gfx_cor((GfxRect){ mx, my, pw, h }, 0.5f, 0.05f, 0.055f, 0.067f, 0.80f * a);
+    { float ix = compacto ? mx + (h - ic) * 0.5f : mx + h * 0.36f;
+      gfx_icone((GfxRect){ ix, my + (h - ic) * 0.5f, ic, ic }, "check", ar, ag, ab, a);
+      if (!compacto) txt_desenhar_alpha(t, ix + ic + 6.0f, my + (h - t.h) * 0.5f, a); }
+    return mx; }
 }

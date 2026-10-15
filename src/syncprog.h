@@ -37,14 +37,6 @@ int  syncprog_puxadas(void);
 // Apaga uma entrada de progresso NA CONTA (sync_delete_watch_progress), pela
 // chave de prog_chave. Ver a nota longa em syncprog.c.
 int  syncprog_remover(const char *chave);
-// Marca (visto=1) ou desmarca (0) um lote de episodios NA CONTA, numa RPC so.
-// Push leva itens completos, delete leva chaves — formas diferentes, ver a nota
-// em syncprog.c. SINCRONO, como o resto deste modulo.
-int  syncep_empurrar(const char *imdb, const char *tipo,
-                     const VistoPar *pares, int qtd, int visto);
-// O titulo inteiro (filme, ou serie sem episodio) na conta: linha com
-// season/episode nulos. SINCRONO. Ver a nota em syncprog.c.
-int  syncvisto_titulo(const char *imdb, const char *tipo, int visto);
 void syncprog_esquecer(void);
 
 #endif

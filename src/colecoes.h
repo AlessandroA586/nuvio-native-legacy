@@ -1,7 +1,20 @@
 #ifndef NV_COLECOES_H
 #define NV_COLECOES_H
-#define COL_MAX 256
+/* TETOS (#255). Uma conta do Xperience chega a ~300 pastas e ~600 fontes em
+   7 colecoes; o teto antigo de 256 pastas cortava a sexta colecao no meio e
+   jogava a setima fora, e as fontes delas viravam fileiras soltas na Home.
+
+   A memoria agora acompanha a conta: as pastas moram em blocos de 64 alocados
+   quando a montagem chega neles (e nunca devolvidos, para o ponteiro de
+   col_folder continuar valendo), e as fontes num bloco so do tamanho do que a
+   conta mandou. Antes eram 256 pastas x 32 fontes embutidas = 13,4 MB fixos,
+   fosse a conta de 3 pastas ou de 256.
+
+   O teto que sobra e de seguranca, nao de conta real. Quando ele e atingido a
+   colecao INTEIRA fica de fora (nunca cortada no meio) e o log diz qual. */
+#define COL_MAX 2048
 #define COL_SOURCE_MAX 32
+#define COL_FONTES_MAX 4096
 typedef struct {
   char title[128], base[600], type[8], catId[96], genre[96]; char addonId[96];
   // PROVEDOR NAO-ADDON (issue #44). Vazio = catalogo de addon, identificado por
@@ -43,7 +56,13 @@ typedef struct {
   /* FORMA DO CARTAO da pasta (COL_FORMA_*): o `tileShape` que o editor de
      colecoes do app web grava por pasta. Ver col_forma_texto. */
   int forma;
-  ColSource sources[COL_SOURCE_MAX];
+  /* AS FONTES NAO MORAM MAIS NA PASTA (#255): eram 32 x 1512 bytes embutidos
+     em cada uma, para uma media de 2 fontes por pasta. `sources` aponta para o
+     bloco de fontes do conjunto (colecoes.c) e e valido para ler ate
+     COL_SOURCE_MAX posicoes — o bloco termina com essa folga zerada. Quem
+     monta uma pasta fora de colecoes.c (extras, a pasta sintetica do detalhe)
+     aponta para um vetor seu; col_extra_definir copia as fontes. */
+  ColSource *sources;
 } ColFolder;
 /* As tres formas do app web (collectionsStore.js, normalizePosterShape:
    POSTER, LANDSCAPE/WIDE, SQUARE). PAISAGEM e o zero de proposito: e como o
@@ -102,6 +121,14 @@ unsigned col_revisao(void);
 // A complete account snapshot was accepted for this profile, even when empty.
 int col_tem_conta(void);
 const ColFolder *col_folder(int i);
+// IMPRESSAO DA ESTRUTURA das colecoes para o snapshot da Home (homeestado.c):
+// grupo, id e fontes de cada pasta, SEM arte (URL de arte muda sem criar
+// fileira nova). Calculada inteira sob a trava das colecoes (#203): pode ser
+// chamada de qualquer fio. Antes homeestado lia col_folder(i)->sources[s] no
+// fio da montagem, sem trava, enquanto o sync no laco principal liberava o
+// bloco de fontes (fecharMontagem / col_esquecer_perfil) — leitura de memoria
+// ja liberada. Mesmo valor que o hashColecoes antigo de homeestado.c.
+unsigned col_hash_estrutura(void);
 // Identity-based grouping: two collections can have the same display title.
 void col_chave_pasta(const ColFolder *pasta, char *dst, unsigned n);
 int col_grupo_chave(const char *chave, int *indices, int max);

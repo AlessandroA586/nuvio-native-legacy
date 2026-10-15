@@ -364,4 +364,15 @@ check('hero e detalhe pedem o IMDb na Samsung quando ha servico',
 check('detalhe: OK no cartao sem fonte toca o YouTube do cartao dentro do app na Samsung',
   /trailer_abrir\(extras_trailer_yt\(foco\.coluna\), tela, 0, 1\);/.test(detail));
 
+{
+  // #228: a restored one-profile session never opened the chooser, so
+  // perfilsel_concluido stayed 0 and the hero gate sat on top-overlay forever.
+  const app = fs.readFileSync('src/app.c', 'utf8');
+  check('arranque sem escolha de perfil conclui a escolha (#228)',
+    /if \(perfis_precisa_escolher\(\)\) \{\s*tela = TELA_ESCOLHA_PERFIL;[\s\S]{0,120}perfilsel_iniciar\(\);\s*\} else \{[\s\S]{0,900}perfilsel_continuar_ativo\(\);/.test(app));
+  check('gate do hero diz qual camada bloqueia (#228)',
+    /return "profile-choice";/.test(app) &&
+    /home_trailer_passo\(porque == NULL, dt, agora\)/.test(app) &&
+    /autoplay gate=%s \(%s\)/.test(home));
+}
 console.log('trailer-hero-contract: tudo ok');

@@ -12,7 +12,7 @@ trap 'rm -rf "$tmp"' EXIT
 saida="${1:-$tmp/capturas}"
 mkdir -p "$saida"
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   if [ "$source" != src/main.c ]; then sources+=("$source"); fi
 done
 cc "${sources[@]}" tests/salvos_segurar.c -Isrc -o "$tmp/teste" \

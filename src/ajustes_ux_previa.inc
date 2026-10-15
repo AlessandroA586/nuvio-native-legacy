@@ -783,7 +783,7 @@ static float ajPreviaCarta(int op, float x, float y, float w) {
     case AJ_ENVIAR_LOG: case AJ_VER_REGISTRO: case AJ_ENVIO_AUTO:
       registro_pacote(x, y, w, 300, 9, i18n("últimos 200 KB"), 1); return 300;
     case AJ_CW_LIGADO: case AJ_CW_OK: case AJ_CW_ESTILO: case AJ_CW_THUMB: case AJ_CW_BLUR_PROX:
-    case AJ_CW_ORDEM: case AJ_CW_NAO_EXIBIDOS: case AJ_CW_FURTHEST: case AJ_CW_CONCLUIDO:
+    case AJ_CW_ORDEM: case AJ_CW_NAO_EXIBIDOS: case AJ_CW_FURTHEST: case AJ_CW_CONCLUIDO: case AJ_CW_MINIMO: case AJ_CW_RETIDO_TAMBEM:
       return ajPreviaContinuar(x, y, w);
     case AJ_ESPACO: case AJ_TEX_MB: return ajPainelMemoria(x, y, w);
     default: return -1;
@@ -809,10 +809,33 @@ static float ajPreviaEmQuadro(int op, float x, float y, float w) {
   return box;
 }
 
+// APOIAR O PROJETO: os QRs de verdade (apoio.h), grandes o bastante para a
+// camera do celular a 3 m, sobre a arte da categoria escurecida. Um so quando
+// o outro endereco esta vazio.
+static float ajPreviaApoio(int op, float x, float y, float w) {
+  float k = w / 806.0f, box = w * 9.0f / 16.0f;
+  float lado = floorf(226.0f * k), gap = 80.0f * k;
+  int n = apoio_n(), i;
+  float total = (float)n * lado + (float)(n - 1) * gap, x0 = x + (w - total) * 0.5f;
+  float y0 = y + (box - (lado + 16.0f * k + 52.0f * k + 30.0f)) * 0.5f;
+  ajCenaArte(ajArte(AJA_FUNDO, ajCenaArteOp(op)), (GfxRect){ x, y, w, box }, 22, 0.70f);
+  for (i = 0; i < n; i++) {
+    int q = apoio_qual(i);
+    float qx = x0 + (float)i * (lado + gap);
+    apoio_qr(q, qx, y0, lado, 1.0f);
+    { float rh = floorf(52.0f * k);
+      TxtLinha u = txt_linha_corta(TXT_V2_18, apoio_url_curta(q), 243, 242, 239, 255, lado + gap * 0.8f);
+      apoio_rotulo(q, qx + lado * 0.5f, y0 + lado + 16.0f * k, rh, 1, 1.0f);
+      txt_desenhar_alpha(u, qx + (lado - (float)u.w) * 0.5f, y0 + lado + 16.0f * k + rh + 6.0f, 0.62f); }
+  }
+  return box;
+}
+
 // A previa da opcao em foco: a do efeito dela quando existe; senao a imagem
 // da categoria (nunca o icone da opcao nem uma cena de outra categoria).
 static float ajPrevia(int op, float x, float y, float w) {
   float h = -1;
+  if (op >= 0) return ajCenaGerada(uxSecaoDe(op), op, x, y, w);   // 2.0.2: sempre o desenho gerado
   switch (op) {
     case AJ_HOME_LAYOUT: h = ajPreviaLayout(x, y, w); break;
     case AJ_LARGURA_DP: case AJ_RAIO_DP: h = ajPreviaCartaz(op, x, y, w); break;
@@ -823,6 +846,7 @@ static float ajPrevia(int op, float x, float y, float w) {
     case AJ_FONTE_UI: h = ajPreviaFonte(op, x, y, w); break;
     case AJ_LOGO_APP: h = ajPreviaLogoApp(x, y, w); break;
     case AJ_ABERTURA: h = ajPreviaAbertura(x, y, w); break;
+    case AJ_APOIAR: h = ajPreviaApoio(op, x, y, w); break;
     default: h = ajPreviaEmQuadro(op, x, y, w); break;
   }
   return h >= 0 ? h : ajVisualCena(uxSecaoDe(op), op, x, y, w);
@@ -835,7 +859,7 @@ static float ajPreviaCompacta(int op, float x, float y, float w) {
 // Tres cartazes de uma fileira da Home: os do catalogo dela quando ja foi
 // lida, a amostra antes disso. Guardados por revisao do catalogo.
 static const char *ajPosterFileira(int fil, int k) {
-  static char cache[24][3][256];
+  static char cache[24][3][NV_TEX_URL_MAX];
   static unsigned rev = 0xffffffffu;
   static int pronto[24];
   if (cat_revisao() != rev) { rev = cat_revisao(); memset(pronto, 0, sizeof pronto); }
@@ -886,7 +910,9 @@ static float ajOrdemHome(float x, float y, float w) {
     l = ajTxtC(TXT_ILHA_GENERO, fil_titulo(f)[0] ? fil_titulo(f) : fil_chave(f), w - 40 - 62 - 80);
     txt_desenhar_alpha(l, x + 20 + 62, y + (36 - l.h) * 0.5f, sai ? 0.35f : novo ? 1.0f : 0.62f);
     for (k = 0; k < 3; k++)
-      ajImg(ajPosterFileira(f, k), (GfxRect){ x + w - 20 - 3 * 20 - 2 * 6 + k * 26, y + 3, 20, 30 }, 4, (novo ? 1.0f : 0.7f) * (sai ? 0.4f : 1.0f));
+      { float mr, mg, mb;   // 2.0.2: cartaz abstrato (bloco de cor), sem foto
+        ajc_matiz(f * 3 + k, &mr, &mg, &mb);
+        gfx_cor((GfxRect){ x + w - 20 - 3 * 20 - 2 * 6 + k * 26, y + 3, 20, 30 }, 4.0f / 30.0f, mr, mg, mb, (novo ? 1.0f : 0.7f) * (sai ? 0.4f : 1.0f)); }
     y += 36;
   }
   return 30 + h;
@@ -908,8 +934,13 @@ static float ajPreviaEditor(int op, float x, float y, float w) {
 void ajustes_previa_busca(int op, float x, float y, float w, float h, float a) {
   char v[160];
   TxtLinha l;
-  if (op < 0 || op >= AJ_N) return;
-  ajImg(ajArte(AJA_FUNDO, 21), (GfxRect){ x, y, w, h }, 14, a);
+  if (op < 0 || op >= AJ_N || !ajOpcaoDisponivel(op)) return;
+  // 2.0.2: a previa gerada da opcao (sem foto), no meio do quadro pedido.
+  { float g = gfx_opacidade_grupo, cw = h * 16.0f / 9.0f;
+    if (cw > w) cw = w;
+    gfx_opacidade_grupo = g * a;
+    ajCenaGerada(uxSecaoDe(op), op, x + (w - cw) * 0.5f, y + (h - cw * 9.0f / 16.0f) * 0.5f, cw);
+    gfx_opacidade_grupo = g; }
   uxValorTexto(op, uxValorAtual(op), v, sizeof v);
   if (!v[0]) return;
   l = txt_linha_corta(TXT_MINI, v, 255, 255, 255, 255, w - 40);

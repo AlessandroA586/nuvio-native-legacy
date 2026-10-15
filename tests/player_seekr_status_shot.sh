@@ -6,7 +6,7 @@ mkdir -p "$saida"
 taskDados=$(mktemp -d /tmp/nuvio-player-seekr-status-shot.XXXXXX)
 trap 'rm -rf "$taskDados"' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/player.c) continue;; esac
   sources+=("$source")
 done

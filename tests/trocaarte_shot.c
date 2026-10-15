@@ -124,12 +124,21 @@ static void abrirPagina(void) {
   quadros(120);
 }
 
-// O OK no ULTIMO circular da linha, pelo caminho de verdade (detail_evento).
+// O "Trocar arte" mora na ilha "Mais opcoes" (detmais.h): OK no "..." (o
+// ULTIMO circular da linha), desce ate a linha dele e OK — o caminho de
+// verdade, por detail_evento.
 static void abrirTroca(void) {
+  int i, l = -1;
   nivel = 0;
+  maisAcoes = 1;   // layouts agrupados: o grupo aberto
   botao = nBotoes() - 1;
-  assert(acaoEm(botao) == ACAO_ARTE);
+  assert(acaoEm(botao) == ACAO_MAIS);
   quadros(10);
+  tecla(SDLK_RETURN);
+  assert(detmais_aberto());
+  for (i = 0; i < detmais_n(); i++) if (detmais_acao(i) == DMAIS_ARTE) l = i;
+  assert(l >= 0);
+  for (i = 0; i < l; i++) tecla(SDLK_DOWN);
   tecla(SDLK_RETURN);
   assert(trocaarte_aberto());
 }
@@ -251,6 +260,60 @@ int main(int argc, char **argv) {
   assert(arteesc_fundo("ensaio:1") == NULL);
   quadros(60);
   assert(!strcmp(arteDe(idx), "deploy/app/art/07.jpg"));
+
+  // IDIOMA (relato arabe): a ordem do /images poe o idioma dos metadados
+  // primeiro, e o chip filtra. Sem desenhar entre publicar e conferir: as urls
+  // do TMDB nao podem sair para a rede no teste.
+  abrirTroca();
+  trocaarte_teste_tmdb("{\"backdrops\":["
+    "{\"file_path\":\"/ko.jpg\",\"iso_639_1\":\"ko\",\"vote_average\":9},"
+    "{\"file_path\":\"/en.jpg\",\"iso_639_1\":\"en\",\"vote_average\":8},"
+    "{\"file_path\":\"/n.jpg\",\"iso_639_1\":null,\"vote_average\":7},"
+    "{\"file_path\":\"/ar.jpg\",\"iso_639_1\":\"ar\",\"vote_average\":3}],"
+    "\"logos\":[{\"file_path\":\"/lko.png\",\"iso_639_1\":\"ko\",\"vote_average\":9},"
+    "{\"file_path\":\"/ln.png\",\"iso_639_1\":null,\"vote_average\":8},"
+    "{\"file_path\":\"/len.png\",\"iso_639_1\":\"en\",\"vote_average\":7},"
+    "{\"file_path\":\"/lar.png\",\"iso_639_1\":\"ar\",\"vote_average\":2}]}", "ar");
+  { int n0 = trocaarte_teste_visiveis(0), k, primeiro = -1;
+    for (k = 0; k < n0; k++) if (trocaarte_teste_iso(0, k)[0]) { primeiro = k; break; }
+    assert(primeiro > 0 && !strcmp(trocaarte_teste_iso(0, primeiro), "ar"));
+    assert(!strcmp(trocaarte_teste_iso(0, primeiro + 1), "-"));
+    assert(!strcmp(trocaarte_teste_iso(0, primeiro + 2), "en"));
+    assert(!strcmp(trocaarte_teste_iso(0, primeiro + 3), "ko"));
+    for (k = 0; k < trocaarte_teste_visiveis(1); k++) if (trocaarte_teste_iso(1, k)[0]) break;
+    assert(!strcmp(trocaarte_teste_iso(1, k), "ar") && !strcmp(trocaarte_teste_iso(1, k + 1), "en") &&
+           !strcmp(trocaarte_teste_iso(1, k + 2), "-"));
+    // Filtro: ar -> so o Automatico e o arabe, nas duas abas.
+    assert(!strcmp(trocaarte_teste_filtro(0), "ar"));
+    assert(trocaarte_teste_visiveis(0) == 2 && !strcmp(trocaarte_teste_iso(0, 1), "ar"));
+    assert(trocaarte_teste_visiveis(1) == 2 && !strcmp(trocaarte_teste_iso(1, 1), "ar"));
+    assert(!strcmp(trocaarte_teste_filtro(0), "-"));
+    assert(!strcmp(trocaarte_teste_filtro(0), "en"));
+    assert(!strcmp(trocaarte_teste_filtro(0), "ko"));
+    assert(!strcmp(trocaarte_teste_filtro(0), "") && trocaarte_teste_visiveis(0) == n0); }
+  trocaarte_teste_limpar();
+  tecla(SDLK_ESCAPE);
+  assert(!trocaarte_aberto());
+  // A tela com o chip, com miniaturas locais etiquetadas por idioma.
+  abrirTroca();
+  trocaarte_teste_candidato_iso(0, "deploy/app/art/03.jpg", "TMDB · AR", "ar");
+  trocaarte_teste_candidato_iso(0, "deploy/app/art/12.jpg", "TMDB", "-");
+  trocaarte_teste_candidato_iso(0, "deploy/app/art/21.jpg", "TMDB · EN", "en");
+  trocaarte_teste_candidato_iso(0, "deploy/app/art/30.jpg", "TMDB · KO", "ko");
+  tecla(SDLK_UP); tecla(SDLK_RIGHT); tecla(SDLK_RIGHT);
+  quadros(60);
+  snprintf(nome, sizeof nome, "%s-7-chip-idioma.png", saida);
+  gravar(nome);
+  tecla(SDLK_RETURN);
+  quadros(60);
+  snprintf(nome, sizeof nome, "%s-8-filtro-ar.png", saida);
+  gravar(nome);
+  tecla(SDLK_LEFT); tecla(SDLK_LEFT);
+  quadros(60);
+  snprintf(nome, sizeof nome, "%s-9-fundos-ar.png", saida);
+  gravar(nome);
+  tecla(SDLK_ESCAPE);
+  assert(!trocaarte_aberto());
 
   // VOLTAR NAO GRAVA NADA.
   abrirTroca();

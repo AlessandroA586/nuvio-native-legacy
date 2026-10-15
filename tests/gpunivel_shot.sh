@@ -14,7 +14,7 @@ trap 'rm -rf "$NUVIO_DADOS"' EXIT
 
 ENV_D=$(tools/env.sh --allow-unconfigured 2>/dev/null || true)
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c) continue;; esac
   sources+=("$source")
 done

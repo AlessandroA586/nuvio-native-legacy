@@ -459,7 +459,7 @@ static void lerListaTab(char *l) {
 }
 #endif
 
-#if !defined(__EMSCRIPTEN__) && !defined(NV_TPK) && !defined(__APPLE__) && !defined(__ANDROID__)
+#if !defined(__EMSCRIPTEN__) && !defined(NV_TPK) && !defined(__APPLE__) && !defined(NV_LINUX_DESKTOP) && !defined(__ANDROID__)
 #define ONDE_WEBOS 1
 #include "video.h"
 // webOS: pelo barramento LS2 do player (video_luna), e nao por luna-send — o
@@ -620,7 +620,7 @@ int ondever_estado(const char *nome) {
   pthread_mutex_unlock(&appsTrava);
   if (!pronto) return ONDE_INFO;
 #endif
-#if defined(__APPLE__) && !defined(NV_TPK) && !defined(__ANDROID__)
+#if (defined(__APPLE__) || defined(NV_LINUX_DESKTOP)) && !defined(NV_TPK) && !defined(__ANDROID__)
   (void)id; (void)nome;
   return ONDE_INFO;         // desktop preview has no TV application launcher
 #else
@@ -653,7 +653,7 @@ int ondever_abrir(const char *nome) {
   pthread_mutex_unlock(&appsTrava);
   if (!pronto) return ONDE_INFO;
 #endif
-#if defined(__APPLE__) && !defined(NV_TPK) && !defined(__ANDROID__)
+#if (defined(__APPLE__) || defined(NV_LINUX_DESKTOP)) && !defined(NV_TPK) && !defined(__ANDROID__)
   return ONDE_INFO;
 #elif defined(__EMSCRIPTEN__)
   if (e == ONDE_ABRIR) {

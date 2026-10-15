@@ -13,7 +13,7 @@
 
 // Tamanho da chave da memoria do resolvedor (arfMem, mais abaixo): o still de
 // episodio tambem guarda nela.
-#define ARF_CHAVE 32u
+#define ARF_CHAVE 64u
 
 // images.metahub.space/<tipo>/<tamanho>/<ttNNN>/img  ->  tipo e id.
 // So poster e background: logo nao tem par no /find.
@@ -719,6 +719,7 @@ static int lerPedido(const char *url, ArfPedido *p) {
   memcpy(p->fonte, s, n); s = b + 1;
   b = strchr(s, '/'); if (!b || (n = (size_t)(b - s)) == 0 || n >= sizeof p->tamanho) return -1;
   memcpy(p->tamanho, s, n); s = b + 1;
+  if (!strcmp(p->fonte, "apple") && !strncmp(s, "v2/", 3)) s += 3;
   b = strchr(s, '/'); n = b ? (size_t)(b - s) : strlen(s);
   if (!n || n >= sizeof p->id) return -1;
   memcpy(p->id, s, n);
@@ -775,7 +776,10 @@ static int consultarTmdb(ArfPedido *p, int alt, char *valor, size_t n) {
   char *resp;
   char tipo = p->tipoTmdb;
   long id = p->tmdbId;
+  char base[3] = "";
   if (!chave[0]) return -2;
+  // So o idioma que nao e o ingles entra na lista (o ingles ja esta nela).
+  if (strncmp(desc_tmdb_idioma(), "en", 2)) snprintf(base, sizeof base, "%.2s", desc_tmdb_idioma());
   snprintf(chaveMem, sizeof chaveMem, "tmdbid/%s", p->id);
   if (id <= 0 && arfLer(chaveMem, tid, sizeof tid) > 0 && (tid[0] == 'm' || tid[0] == 't')) {
     tipo = tid[0]; id = atol(tid + 1);
@@ -815,20 +819,30 @@ static int consultarTmdb(ArfPedido *p, int alt, char *valor, size_t n) {
       return -1;
     }
     snprintf(api, sizeof api,
-             "https://api.themoviedb.org/3/%s/%ld/images?include_image_language=null,en&api_key=%s",
-             tipo == 't' ? "tv" : "movie", id, chave);
+             "https://api.themoviedb.org/3/%s/%ld/images?include_image_language=%s%snull,en&api_key=%s",
+             tipo == 't' ? "tv" : "movie", id, base, base[0] ? "," : "", chave);
   } else {
     snprintf(api, sizeof api,
-             "https://api.themoviedb.org/3/%s/%ld?append_to_response=images&include_image_language=null,en&api_key=%s",
-             tipo == 't' ? "tv" : "movie", id, chave);
+             "https://api.themoviedb.org/3/%s/%ld?append_to_response=images&include_image_language=%s%snull,en&api_key=%s",
+             tipo == 't' ? "tv" : "movie", id, base, base[0] ? "," : "", chave);
   }
   resp = rede_baixar(api, 8);
   if (!resp) return -2;
   // O outro exclui o padrao que o /find deu, mesmo quando so veio o /images
   // (sem backdrop_path na raiz).
-  { char padraoResp[160];
+  { char padraoResp[160], valido[160];
     af_tmdb_fundos(resp, padrao, padraoResp, sizeof padraoResp, outro, sizeof outro);
-    if (padraoResp[0] == '/') snprintf(padrao, sizeof padrao, "%s", padraoResp); }
+    if (padraoResp[0] == '/') snprintf(padrao, sizeof padrao, "%s", padraoResp);
+    // O PADRAO NO IDIOMA (af_tmdb_fundo_padrao): o backdrop_path que o TMDB
+    // elege pode ter letreiro em qualquer lingua. Trocado, o "outro" e
+    // recalculado para nao repetir a mesma foto.
+    if (af_tmdb_fundo_padrao(resp, base, padrao, valido, sizeof valido)) {
+      if (strcmp(valido, padrao)) {
+        char raiz[160];
+        snprintf(padrao, sizeof padrao, "%s", valido);
+        af_tmdb_fundos(resp, padrao, raiz, sizeof raiz, outro, sizeof outro);
+      }
+    } else padrao[0] = 0; }
   free(resp);
   if (padrao[0] == '/') {
     snprintf(chaveMem, sizeof chaveMem, "tmdb/%s", p->id);
@@ -999,13 +1013,20 @@ static int montarFinal(const ArfPedido *p, const char *valor, char *saida, size_
   return 1;
 }
 
+// Apple casa por nome/ano/tipo: o cache nao pode pular essa verificacao.
+static void chavePedido(const ArfPedido *p, char *chave, size_t n) {
+  if (!strcmp(p->fonte, "apple"))
+    snprintf(chave, n, "%s/%s/%c/%d", p->fonte, p->id, p->serie ? 's' : 'm', p->ano);
+  else snprintf(chave, n, "%s/%s", p->fonte, p->id);
+}
+
 int arte_fonte_resolver(const char *url, char *saida, size_t tam) {
   ArfPedido p;
   char chave[ARF_CHAVE], valor[400];
   int r = lerPedido(url, &p);
   if (r == 0) return 0;
   if (r < 0 || !saida || tam < 80) return -1;
-  snprintf(chave, sizeof chave, "%s/%s", p.fonte, p.id);
+  chavePedido(&p, chave, sizeof chave);
   r = arfLer(chave, valor, sizeof valor);
   if (r < 0) return -1;
   if (r == 0) {
@@ -1024,7 +1045,7 @@ int arte_fonte_resolvida(const char *url, char *saida, size_t tam) {
   ArfPedido p;
   char chave[ARF_CHAVE], valor[400];
   if (lerPedido(url, &p) != 1 || !saida || tam < 80) return 0;
-  snprintf(chave, sizeof chave, "%s/%s", p.fonte, p.id);
+  chavePedido(&p, chave, sizeof chave);
   if (arfLer(chave, valor, sizeof valor) <= 0) return 0;
   return montarFinal(&p, valor, saida, tam);
 }

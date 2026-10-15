@@ -18,7 +18,7 @@ export NUVIO_DADOS
 trap 'rm -rf "$NUVIO_DADOS"' EXIT
 
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/recomenda.c) continue;; esac
   sources+=("$source")
 done

@@ -41,6 +41,11 @@
 // faixa ao AVPlay como fallback.
 #ifndef NV_MKVASS_H
 #define NV_MKVASS_H
+#include "legenda.h"
+// Snapshot local ASS com indice >= 8000 pontos: nunca abre rede nem toca o overlay.
+// So devolve um intervalo cujos pontos indexados foram TODOS colhidos.
+LegendaDocumento *mkvass_referencia(const char *url, uint64_t sessao,
+                                    const int *excluidas, int nExcluidas);
 
 // Estados. Os >= MKVASS_NOGO sao terminais: a folha mostra o motivo e volta a
 // deixar o pipeline desenhar.
@@ -106,6 +111,8 @@ void mkvass_retomar_segurando(void);
 // volta a entregar, a faixa volta ao overlay.
 #define MKVASS_TENTATIVAS_OVERLAY 2
 long mkvass_recuo_ms(int estado, int falhas, int recusasRange);
+// Quantas pausas de "CDN pediu calma" (429/5xx/timeout) o modulo ja fez. Testes.
+long mkvass_pausas_cdn(void);
 
 // PRE-BUSCA ANTES DO VIDEO (#92, v1.4.7, webOS 25 + Real-Debrid). No registro
 // do relato, todo Range do mkvass feito COM O VIDEO TOCANDO era cortado (77465
@@ -119,7 +126,7 @@ long mkvass_recuo_ms(int estado, int falhas, int recusasRange);
 //
 // `escolher` recebe os idiomas das legendas do arquivo NA ORDEM DAS TrackEntry
 // (a mesma do ordinal) e devolve o ordinal a colher, ou -1. Se a escolhida nao
-// for ASS/SSA, ou nada casar, o fio termina depois do cabecalho (um Range).
+// for ASS/SSA ou texto simples aceito, ou nada casar, o fio termina depois do cabecalho (um Range).
 // `fracInicio` (0..1) e onde o player vai retomar, em fracao da duracao: a
 // janela pre-buscada comeca ali (a duracao vem do Info do proprio arquivo).
 //
@@ -155,6 +162,12 @@ void mkvass_ultima_falha(int *http, int *curl);
 void mkvass_parar(void);
 
 int  mkvass_estado(void);
+// #269: aceitar tambem faixa de TEXTO SIMPLES (S_TEXT/UTF8 e S_TEXT/WEBVTT),
+// entregue ao overlay como SubRip (o estilo do app vale, como na externa).
+// Padrao 1 (#421), inclusive na pre-busca: LG e .tpk usam os Ajustes do app.
+// Android conserva padrao 0: Media3 ja entrega o texto ao overlay.
+// Desligavel para testes/consumidores que precisem somente de ASS.
+void mkvass_aceitar_texto(int sim);
 // 1 quando o estado e um dos no-go.
 int  mkvass_nogo(void);
 // 1 quando a colheita e por VARREDURA dos Clusters (o indice nao apontava os
@@ -165,7 +178,10 @@ int  mkvass_varredura(void);
 int  mkvass_ocupado(void);
 
 // Telemetria: Ranges feitos, bytes baixados, blocos colhidos e total de
-// blocos indexados. Qualquer ponteiro pode ser NULL.
+// blocos indexados. Qualquer ponteiro pode ser NULL. `colhidos` conta o que ja
+// foi colhido ATE AGORA: com o corpo em janela (#384, faixa que nao cabe
+// inteira) os blocos que sairam do corpo continuam na conta, entao o numero
+// so cresce — e pode passar de `total` depois de varios seeks.
 void mkvass_estatisticas(long *pedidos, long *bytes, int *colhidos, int *total);
 
 #endif

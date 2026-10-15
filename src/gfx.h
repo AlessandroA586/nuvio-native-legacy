@@ -253,7 +253,13 @@ typedef enum {
   // COORDENADA DE TELA (vAmb) e recortada pelos cantos do painel: o vidro
   // fosco. uTex = o assado; uCor.a = alfa. Use gfx_vidro_fosco.
   GFX_FOSCO = 43,
-  GFX_NMODOS = 44
+  // GFX_VITRINE_DIN — o GFX_VITRINE OPACO sobre o fundo da Dinamica
+  // (GFX_FUNDO_DIN) calculado no proprio fragmento: o destaque e o fundo numa
+  // passada so. Nao se pede direto: gfx_rect troca o GFX_VITRINE por ele
+  // quando o fundo da Dinamica esta pendente e o destaque cobre o topo da tela
+  // (ver gfx_fundo_din_desenhar). uDin = cor do topo e queda.
+  GFX_VITRINE_DIN = 44,
+  GFX_NMODOS = 45
 } GfxModo;
 
 typedef struct {
@@ -289,6 +295,12 @@ extern float gfx_desliza_atual;
 // 1 = o GFX_CARD deve sempre preencher a moldura com cover. Usado pela forma
 // editorial 4:3, que nao pode cair no contain quando recebe arte 16:9.
 extern float gfx_card_forcar_cover_atual;
+// 1 = o GFX_CARD escurece a arte pelos dois veus de borda da tela de perfis
+// (os mesmos GFX_VEU_TOPO 330 px / 0,92 e GFX_VEU_BAIXO 300 px / 0,95, em
+// coordenada de tela). Sobre fundo preto e o mesmo pixel que os dois veus
+// desenhados por cima, sem as duas passadas de largura inteira. So a parede
+// de capas (psestilos.c) liga; quem liga desliga.
+extern float gfx_card_veu_tela_atual;
 // 1 = o cartaz em foco ganha o rebordo claro no GFX_CARD; 0 = nao ganha. E um
 // ajuste da pessoa (Ajustes > Foco no cartaz), lido uma vez por quadro pela
 // tela que desenha; o brilho e o especular do foco nao dependem dele.
@@ -394,11 +406,17 @@ GLuint gfx_desfocado(GLuint src, const char *chave);
 int gfx_desfocado_px(GLuint tex, float u, float v, unsigned char rgb[3]);
 int  gfx_snap_ok(void);        // 1 quando o FBO do snapshot existe
 void gfx_snap_comecar(void);   // redireciona o desenho para o snapshot
-void gfx_snap_terminar(void);  // volta para a tela
+void gfx_snap_terminar(void);   // volta para a tela
+int  gfx_snap_vazio(int *maxCanal);   // 1 = o snapshot (alvo ligado) saiu preto
 void gfx_snap_desenhar(void);  // pinta o snapshot ocupando a tela toda
 void gfx_snap_encerrar(void);
+int  gfx_snap_ativo(void);     // 1 enquanto o desenho vai para o snapshot
+// Cresce a cada gfx_snap_comecar: quem guardou algo no FBO sabe se outro
+// desenho passou por cima desde entao (explorar.c, o ceu assado).
+unsigned gfx_snap_geracao(void);
 
 void gfx_tamanho_alvo(int w, int h);
+float gfx_px_por_unidade(void);   // pixels do alvo da tela por unidade de layout (assrender.c, #335)
 
 // MINIATURA: uma tela DE VERDADE desenhada num alvo proprio e mostrada
 // reduzida (previa das Novidades da 1.8.0, inspetor do Guia de uso). Entre
@@ -465,6 +483,14 @@ extern double gfx_fill;      // area submetida no quadro, em telas cheias
 // sangra, o destaque rolado) so conta o que aparece. E o mais proximo do
 // preenchimento real que da para tirar sem GPU; nao enxerga a tesoura.
 extern double gfx_fill_vis;
+// O PREENCHIMENTO QUE A GPU PAGA: o quad em pixels do alvo, cortado pelo alvo e
+// pela tesoura, em telas do alvo da tela. Os alvos pequenos (luz assada 320x180,
+// snapshot) contam pelo tamanho deles, e o clear de cor chapada (gfx_rect de
+// tela cheia opaca, gfx_furo) nao conta: e um glClear. `_mist` e a parte
+// desenhada COM mistura (le a tela; a Mali nao descarta o que fica por baixo).
+// `_ult` = o do quadro anterior (o log le estes).
+extern double gfx_fill_gpu, gfx_fill_gpu_mist;
+extern double gfx_fill_gpu_ult, gfx_fill_gpu_mist_ult;
 extern int    gfx_n_cheio;   // desenhos cobrindo >= 50% da tela
 extern int    gfx_n_cheio_mistura;   // desses, com mistura (so -DNV_FLUIDEZ_PERF)
 // O mesmo gfx_fill repartido por modo (programa): diz QUAL shader cobre a
@@ -520,6 +546,9 @@ void gfx_cor(GfxRect r, float raio, float cr, float cg, float cb, float ca);
 // Multiplicador de COR (nao de alfa) aplicado a GFX_COR/TEXTO/ANEL/MARCA: o brilho
 // da interface do player (esmaecer.h). 1 = sem efeito; quem muda restaura.
 extern float gfx_osd_mult;
+// UI em HDR (esmaecer.h): HDR_UI_BRILHO enquanto o video do player esta em
+// HDR/DV, 1 fora. Vale para texto, cor e logos; quem muda restaura.
+extern float gfx_hdr_ui;
 // A mancha GFX_SOMBRA em `s` sem o miolo `furo`, que um painel OPACO pintado em
 // seguida cobre inteiro (mesmo pixel, menos preenchimento). Ver gfx.c.
 void gfx_sombra_vazada(GfxRect s, float foco, float parx, float raio, float cr, float cg, float cb, float ca,
@@ -553,6 +582,14 @@ void gfx_vidro_fosco_fonte(GLuint tex);
 // imersiva, so quando `chave` (n <= 24 floats) muda. Devolve a textura (0 =
 // sem FBO: desenhe direto).
 GLuint gfx_luz_canal(int canal, const float *chave, int n, void (*pintar)(void *), void *ctx);
+// O MESMO fundo de tela cheia (alfa 1, sem veu), ADIADO como a luz imersiva
+// pendente: o primeiro desenho decide. A arte com rampa de tela cheia
+// (GFX_DETALHE, GFX_HERO*) le o fundo pelo uAmb e sai opaca numa passada so;
+// um veu de cor de tela cheia vai junto na passada do fundo; qualquer outro
+// desenho pinta o fundo antes, como gfx_luz_canal_desenhar faria. Devolve 0
+// (e nao adia) dentro de snapshot/miniatura, com tesoura ou opacidade de grupo.
+// Quem precisa LER a tela logo depois do fundo (conferencia) nao adia.
+int gfx_luz_canal_adiar(GLuint tex, int pontilhar);
 // A passada de tela da luz imersiva (GFX_SNAP de tela cheia, opaca e sem
 // mistura com alfa 1). `veu` = { r, g, b, forca } aplicado na mesma passada, ou
 // NULL; `pontilhar` = a cor pelo nv_dither.
@@ -577,7 +614,15 @@ void gfx_ambiente_descarregar(void);
 // Um quad de tela cheia, OPACO e sem mistura, com um degrade vertical de uma
 // cor: `topo` no alto e topo*`queda` na base. E o unico custo do fundo — nada
 // e assado nem decodificado por troca de titulo. Substitui o clear.
+// ADIADO ate o primeiro desenho do quadro: se ele e o destaque (GFX_VITRINE)
+// de largura inteira, a partir do topo e com alfa 1, os dois saem numa passada
+// opaca (GFX_VITRINE_DIN) e o fundo so e pintado onde o destaque nao chega;
+// senao o fundo e pintado antes dele, como sempre. Mesmo pixel.
 void          gfx_fundo_din_desenhar(const float topo[3], float queda);
+// Um cartaz OPACO desenhado sobre o fundo da Dinamica adiado (Android): marca
+// o retangulo (sem os cantos de `raioPx`) na profundidade para o fundo nao ser
+// sombreado embaixo dele. No-op fora desse regime. Ver dinAdiado em gfx.c.
+void          gfx_mascara_opaca(GfxRect r, float raioPx);
 // Contorno de `esp` PIXELS por dentro de r: a borda de fora do anel e a borda
 // de r, entao anel e miolo no mesmo rect dao uma borda so. `raio` e o de r,
 // normalizado pela altura, como em gfx_cor.

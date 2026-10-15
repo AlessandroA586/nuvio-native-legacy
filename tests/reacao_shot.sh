@@ -10,7 +10,7 @@ NUVIO_DADOS=$(mktemp -d /tmp/nuvio-reacao-shot-dados.XXXXXX)
 export NUVIO_DADOS
 trap 'rm -rf "$NUVIO_DADOS" /tmp/nuvio-reacao-shot-bin /tmp/nuvio-reacao-shot-bin.dSYM' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   [ "$source" = src/main.c ] && continue
   sources+=("$source")
 done

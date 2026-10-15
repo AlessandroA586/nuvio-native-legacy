@@ -1,4 +1,7 @@
+#include "arranque.h"
 #include "avisos.h"
+#include "queda.h"
+#include "saidaandroid.h"
 #include "ilha.h"
 #include "ilhasalvar.h"
 #define AV_ILHA_CHAVE "avisos"   // o "N avisos novos" da central na ilha (ilha.c junta)
@@ -11,6 +14,7 @@
 #include "text.h"
 #include "anim.h"
 #include "layout.h"
+#include "segurar.h"
 #include "idioma.h"
 #include "ajustes.h"
 #include "recomenda.h"
@@ -26,8 +30,12 @@
 #include "sessao.h"
 #include "trakt.h"
 #include "marco.h"
+#include "avisodisp.h"
 #define NV_ESCALA_TELA   // o arquivo inteiro mede pela tela virtual (escala.h)
 #include "escala.h"
+#include "ponteiro.h"
+#include "rolagemtoque.h"
+#include "telefonecartao.h"
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,11 +74,13 @@
 #define AV_LOG_ANTERIOR "/tmp/nuvio-anterior.log"
 #endif
 #define AV_REGISTRO_MAX (200 * 1024)
+// Envio AUTOMATICO (sessao anterior): no maximo 64 KB, cabeca + cauda (#203).
+#define AV_REGISTRO_AUTO_MAX (64 * 1024)
 // 20 s, nao 6 (dono, 20/09/2026: "teria que ficar mais tempo"). Quem esta
 // olhando um card do outro lado da tela leva um tempo para notar o canto.
 #define AV_TOAST_MS   20000.0f
 
-enum { AV_REC, AV_AGENDA, AV_UPDATE, AV_CANAL, AV_CRASH };
+enum { AV_REC, AV_AGENDA, AV_UPDATE, AV_CANAL, AV_CRASH, AV_PEDIDO };
 typedef struct {
   char id[72];
   int  tipo;
@@ -93,7 +103,13 @@ static int  nVistos, vistosLidos;
 
 // Painel e toast.
 static int   aberto, foco;
+static Uint32 okDesde;              // OK afundado numa linha da central (soltarOk)
+static void soltarOk(int longo);
 static float entrada, rol;
+#ifdef NV_TOUCH_UI
+static ToqueRolagem toqueAvisos;
+static int toqueAvisosRolar(const PonteiroRolagem *e);
+#endif
 static int   toastN;
 static long long recAnunciada = -1;   // id da ultima recomendacao dita na ilha
 static int   vistosSujos;
@@ -154,6 +170,9 @@ static pthread_t fioEnvio;
 // por crash (a marca e o id do item, gravada em vistos ao fechar) quando a
 // home esta de pe e nenhum outro cartao esta na frente, como agendaviso.c.
 static int   cartao;            // 1 = aberto
+#ifdef NV_TOUCH_UI
+static void crashPhoneReiniciar(void);
+#endif
 static int   cartaoFoco;        // 0 = Enviar, 1 = Agora nao
 static float cartaoA;
 static int   cartaoPendente;    // ha crash nao perguntado nesta sessao
@@ -210,6 +229,9 @@ static void vistosGravar(void) {
 // se e NOVO (para o toast).
 static int por(const char *id, int tipo, const char *titulo, const char *texto, const char *alvo) {
   int i;
+  // DISPENSADO NAO VOLTA (avisodisp.h): nem na lista, nem na ilha, nem depois
+  // de reiniciar. A chave e o evento; um evento novo tem outra chave.
+  if (avisodisp_tem(id)) return 0;
   for (i = 0; i < n; i++) if (!strcmp(itens[i].id, id)) {
     snprintf(itens[i].titulo, sizeof itens[i].titulo, "%s", titulo);
     snprintf(itens[i].texto, sizeof itens[i].texto, "%s", texto);
@@ -317,10 +339,13 @@ void avisos_sinal(const char *evento, float rssMb) {
 
 static int idHead(const char **cab, char *aut, size_t nAut, char *via, size_t nVia, char *chave, size_t nChave) {
   const char *tcab[4];
+  char tok[3000];
   if (trakt_ativo() && trakt_cabecalhos(tcab, aut, nAut, chave, nChave)) {
     snprintf(via, nVia, "X-Nuvio-Auth: trakt");
-  } else if (sessao_token()[0]) {
-    snprintf(aut, nAut, "Authorization: Bearer %s", sessao_token());
+  } else if (sessao_token_copiar(tok, sizeof tok)) {
+    // Pela COPIA (#203): a renovacao reescreve o token em outro fio.
+    snprintf(aut, nAut, "Authorization: Bearer %s", tok);
+    memset(tok, 0, sizeof tok);
     snprintf(via, nVia, "X-Nuvio-Auth: nuvio");
   } else return 0;
   cab[0] = aut; cab[1] = via; cab[2] = "Content-Type: application/json"; cab[3] = NULL;
@@ -395,6 +420,8 @@ int avisos_enviar_diagnostico(const char *execucao_id, const char *relatorio,
            "tizen-tpk",
 #elif defined(NV_ANDROID)
            "android",
+#elif defined(NV_LINUX_DESKTOP)
+           "linux-desktop",
 #elif defined(__APPLE__)
            "mac",
 #else
@@ -450,7 +477,10 @@ static const char *agoraTextoAuto(const char *marca) {
 #ifdef __EMSCRIPTEN__
 static char *logAtual;
 #endif
+#include "avisos_corte.inc"
+static unsigned ultimoHashAuto;   // so muda depois de um envio que o servidor aceitou
 static void *enviarRegistro(void *u) {
+  unsigned hAuto = 0;
   static char aut[2200], via[40], chave[160];
   const char *cab[5];
   char *texto = NULL, *corpo, *resp;
@@ -473,6 +503,17 @@ static void *enviarRegistro(void *u) {
       fclose(f);
     } }
 #endif
+  if (automatico && texto) nTexto = cortarCabecaCauda(texto, nTexto, AV_REGISTRO_AUTO_MAX);
+  // ENVIO AUTOMATICO SEM NOVIDADE NAO SOBE (#203). Parado no menu o log nao
+  // cresce, e a TV reenviava os mesmos 200 KB a cada 5 min: o D1 recebia
+  // ~2 GB/dia e as escritas atrasavam as outras rotas. Mesmo texto da ultima
+  // vez que subiu com sucesso = nada a fazer.
+  if (automatico && texto) {
+    size_t k;
+    hAuto = 2166136261u;
+    for (k = 0; k < nTexto; k++) hAuto = (hAuto ^ (unsigned char)texto[k]) * 16777619u;
+    if (hAuto == ultimoHashAuto) { free(texto); envioEstado = 0; return NULL; }
+  }
   if (!idHead(cab, aut, sizeof aut, via, sizeof via, chave, sizeof chave)) {
     if (!automatico) { pthread_mutex_lock(&trava); envMotivo = AVISOS_ENVIO_CONTA; envHttp = 0; pthread_mutex_unlock(&trava); }
     free(texto); envioEstado = automatico ? 0 : 3; return NULL;
@@ -495,6 +536,8 @@ static void *enviarRegistro(void *u) {
              "tizen-tpk",
 #elif defined(NV_ANDROID)
              "android",
+#elif defined(NV_LINUX_DESKTOP)
+           "linux-desktop",
 #elif defined(__APPLE__)
              "mac",
 #else
@@ -512,6 +555,7 @@ static void *enviarRegistro(void *u) {
     Uint32 t0 = SDL_GetTicks();
     snprintf(url, sizeof url, "%s/v1/registro", NV_REC_URL);
     resp = rede_postar_st(url, 30, cab, corpo, &status);
+    if (automatico && status >= 200 && status < 300) ultimoHashAuto = hAuto;
     if (!automatico) {
       char id[32], cod[8] = "";
       int ok = status >= 200 && status < 300;
@@ -639,8 +683,95 @@ static void *fioCanalFn(void *u) {
 }
 
 // --- ciclo ---------------------------------------------------------------------------
+#ifdef NV_WEBOS
+// "chave":"valor" de um JSON raso do nyx, sem depender de js.c: 1 se achou.
+static int nyxCampo(const char *txt, const char *chave, char *out, size_t cap) {
+  char alvo[64];
+  const char *p, *f;
+  snprintf(alvo, sizeof alvo, "\"%s\"", chave);
+  out[0] = 0;
+  if (!txt || !(p = strstr(txt, alvo))) return 0;
+  p = strchr(p + strlen(alvo), '"');
+  if (!p || !(f = strchr(++p, '"')) || (size_t)(f - p) >= cap) return 0;
+  memcpy(out, p, (size_t)(f - p)); out[f - p] = 0;
+  return 1;
+}
+// A LINHA [tv] DO webOS. Android e .tpk ja mandam modelo e sistema; a LG nao
+// mandava nada, e a issue #265 (50NANO80ASA, travas e quedas na 2.0.0) nao
+// tinha como ser casada com log nenhum. Os dois arquivos sao do nyx; se a
+// jaula do app nao deixar ler, a linha diz isso em vez de sumir.
+static int tvWebosLinha(char *linha, size_t cap, char *modeloOut, size_t capModelo) {
+  static const char *const arqs[] = { "/var/run/nyx/device_info.json", "/var/run/nyx/os_info.json" };
+  char buf[2][4096] = { "", "" }, modelo[64], placa[64], versao[48], build[64];
+  for (int i = 0; i < 2; i++) {
+    FILE *f = fopen(arqs[i], "rb");
+    if (!f) continue;
+    buf[i][fread(buf[i], 1, sizeof buf[i] - 1, f)] = 0;
+    fclose(f);
+  }
+  if (!buf[0][0] && !buf[1][0]) { snprintf(linha, cap, "[tv] webos: /var/run/nyx ilegivel"); if (modeloOut) snprintf(modeloOut, capModelo, "webos"); return 0; }
+  if (!nyxCampo(buf[0], "product_id", modelo, sizeof modelo)) nyxCampo(buf[0], "device_name", modelo, sizeof modelo);
+  nyxCampo(buf[0], "hardware_id", placa, sizeof placa);
+  nyxCampo(buf[1], "webos_release", versao, sizeof versao);
+  nyxCampo(buf[1], "webos_manufacturing_version", build, sizeof build);
+  snprintf(linha, cap, "[tv] modelo=%s host=webos-%s placa=%s fw=%s app=%s", modelo[0] ? modelo : "?",
+           versao[0] ? versao : "?", placa[0] ? placa : "?", build[0] ? build : "?", NV_VERSAO);
+  if (modeloOut) snprintf(modeloOut, capModelo, "%s", modelo[0] ? modelo : "webos");
+  return 1;
+}
+static void tvWebos(void) {
+  char linha[256];
+  tvWebosLinha(linha, sizeof linha, NULL, 0);
+  printf("%s\n", linha);
+}
+// Para o relato de arranque (arranque.c), que roda antes de avisos_iniciar.
+void avisos_tv_linha(char *linha, size_t cap, char *modelo, size_t capModelo) {
+  tvWebosLinha(linha, cap, modelo, capModelo);
+}
+// RELATO DE FALHA DE ARRANQUE (#317). Uma TV que cai antes de a home existir
+// nao vive o bastante para o envio automatico (e talvez nem tenha conta): na
+// abertura seguinte o arranque manda UMA vez o rastro e o relato de queda, por
+// /v1/registro/arranque (sem conta, com tetos no servidor; o mesmo que o vigia
+// do Android usa). SINCRONO e curto: `segundos` de teto, sem laco. Quem decide
+// SE manda (ajuste "Enviar registros sozinho") e arranque.c. Devolve 1 se o
+// servidor confirmou.
+int avisos_enviar_arranque(const char *relato, const char *tv, int segundos) {
+  char url[300], *esc, *corpo, *resp;
+  const char *cab[2] = { "Content-Type: application/json", NULL };
+  int status = 0, ok = 0;
+  size_t n;
+  if (!relato || !*relato || !NV_REC_URL[0]) return 0;
+  n = strlen(relato);
+  esc = malloc(n * 2 + 8);
+  corpo = malloc(n * 2 + 512);
+  if (!esc || !corpo) { free(esc); free(corpo); return 0; }
+  jsonEsc(esc, n * 2 + 8, relato);
+  snprintf(corpo, n * 2 + 512,
+           "{\"versao\":\"%s\",\"plataforma\":\"webos\",\"quando\":\"arranque queda\",\"tv\":\"%s\",\"texto\":\"%s\"}",
+           NV_VERSAO, tv ? tv : "webos", esc);
+  snprintf(url, sizeof url, "%s/v1/registro/arranque", NV_REC_URL);
+  resp = rede_postar_st(url, segundos, cab, corpo, &status);
+  ok = status >= 200 && status < 300;
+  printf("[arranque] relato de falha de arranque: HTTP %d\n", status);
+  fflush(stdout);
+  free(resp); free(corpo); free(esc);
+  return ok;
+}
+#endif
+
 void avisos_iniciar(void) {
   char *m;
+#ifdef NV_WEBOS
+  tvWebos();
+  // Antes de tudo: o relato da queda anterior entra no log desta sessao (e
+  // o que o envio automatico leva) e o registrador volta a ficar armado.
+  { char qd[700];
+    if (dados_caminho(qd, sizeof qd, "queda.txt")) { queda_relatar(qd); queda_armar(qd);
+#ifdef NV_WEBOS
+      arranque_espelhar_queda();   // o relato continua tambem em /tmp (#317)
+#endif
+    } }
+#endif
   vistosLer();
   m = dados_ler(AV_MARCA_ARQ);
   // MARCA PRESENTE NAO E CRASH quando a sessao anterior se despediu por fora
@@ -654,6 +785,17 @@ void avisos_iniciar(void) {
       fflush(stdout);
       free(m); m = NULL;
     } }
+#ifdef NV_ANDROID
+  // MARCA PRESENTE NAO E CRASH quando o proprio Android diz que matou o
+  // processo por atualizacao, parada forcada ou o app arrastado para fora dos
+  // recentes (saidaandroid.h). Sem isto essas saidas acendiam o aviso de queda
+  // e, abaixo de 60 s, empurravam o modo seguro.
+  if (m && saida_android_nao_foi_queda(getenv("NUVIO_SAIDA_ANTERIOR"))) {
+    printf("[avisos] marca da sessao anterior presente, mas o Android a encerrou sem queda: nao e crash\n");
+    fflush(stdout);
+    free(m); m = NULL;
+  }
+#endif
   if (m) {
     char v[24] = "", sinal[96] = "";
     const char *nl;
@@ -715,11 +857,17 @@ void avisos_mostrar_se_houver(void) {
   if (!cartaoPendente || cartao || aberto) return;
   cartaoPendente = 0;
   cartao = 1; cartaoFoco = 0;
+#ifdef NV_TOUCH_UI
+  crashPhoneReiniciar();
+#endif
 }
 int avisos_cartao_aberto(void) { return cartao; }
 
 static void cartaoFechar(void) {
   cartao = 0;
+#ifdef NV_TOUCH_UI
+  crashPhoneReiniciar();
+#endif
   pthread_mutex_lock(&trava);
   marcarVisto(cartaoId);
   { int i; for (i = 0; i < n; i++) if (!strcmp(itens[i].id, cartaoId)) itens[i].visto = 1; }
@@ -765,12 +913,61 @@ static float botao(float x, float y, const char *rot, int foco, float a, float a
   return r.w;
 }
 
+// PONTEIRO (#99). O cartao e uma camada; os botoes poem o foco pela MESMA
+// variavel das setas (cartaoFoco) e o OK do clique faz o resto. Depois do
+// envio so ha "Fechar", que qualquer OK aciona: o focar nao tem o que mexer.
+static void ponteiroCartao(int i, int b) {
+  (void)b;
+  if (!cartao || envioEstado != 0 || i < 0 || i > 1 || cartaoFoco == i) return;
+  cartaoFoco = i;
+}
+
+#ifdef NV_TOUCH_UI
+static TelefoneCartao crashPhone;
+static void crashPhoneReiniciar(void) { telefonecartao_limpar(&crashPhone); }
+static int crashPhoneRolar(const PonteiroRolagem *e) {
+  return cartao ? toquerol_evento(&crashPhone.rolagem, e) : 0;
+}
+static void crashPhoneAcao(int i, int b) {
+  (void)b;
+  if (!cartao || cartaoA <= .99f) return;
+  if (envioEstado == 0 && i == 0) { cartaoFoco = 0; enviarAgora(); }
+  else { cartaoFoco = 1; cartaoFechar(); }
+}
+static float crashPhoneCorpo(float x, float y, float w, float a) {
+  float ini = y; char txt[300];
+  y += telefonecartao_titulo("O app fechou sozinho", x, y, w, a);
+  snprintf(txt, sizeof txt, i18n("Em %s o Nuvio parou sem avisar. O registro daquela sessão (os últimos 200 KB do log, sem senhas nem chaves) ajuda a achar a causa. Quer enviar?"), crashQuando);
+  y += txt_bloco_corta(TXT_BODY, txt, 200, 203, 210, x, y, w, 34, a, 0) + 24;
+  if (envioEstado > 0) y += telefonecartao_texto(TXT_BODY, envioEstado == 1 ? "Enviando…"
+                                     : envioEstado == 2 ? "Registro enviado. Obrigado." : "Não foi possível enviar agora.", x, y, w, 34, a);
+  return y - ini;
+}
+static void cartaoPhoneDesenhar(float a) {
+  telefonecartao_medir(&crashPhone, NV_TELA_W, NV_TELA_H, envioEstado == 0 ? 2 : 1);
+  GfxRect r = crashPhone.corpo;
+  float h = crashPhoneCorpo(r.x, r.y, r.w, 0);
+  telefonecartao_comecar(&crashPhone, h, envioEstado, cartao && a > .99f, crashPhoneRolar, a);
+  crashPhoneCorpo(r.x, r.y - crashPhone.offset, r.w, a);
+  gfx_sem_recorte();
+  if (envioEstado == 0) {
+    telefonecartao_botao(&crashPhone, 0, "Enviar registro", cartaoFoco == 0, NULL, crashPhoneAcao, 0, a);
+    telefonecartao_botao(&crashPhone, 1, "Agora não", cartaoFoco == 1, NULL, crashPhoneAcao, 0, a);
+  } else telefonecartao_botao(&crashPhone, 0, "Fechar", 1, NULL, crashPhoneAcao, 1, a);
+}
+#endif
+
 static void cartaoDesenhar(void) {
   const float W = 980.0f, H = 336.0f;
   float a = cartaoA, x = (NV_TELA_W - W) * 0.5f, y = (NV_TELA_H - H) * 0.5f + (1.0f - a) * 30.0f;
   float ar, ag, ab, bx;
+  int alvos = cartao && a > 0.99f;
   char txt[300];
+  if (cartao) ponteiro_camada();
   if (a < 0.01f) return;
+#ifdef NV_TOUCH_UI
+  if (telefoneui_ativo()) { cartaoPhoneDesenhar(a); return; }
+#endif
   ajustes_acento(&ar, &ag, &ab);
   gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0.0f, 0, 0, 0, 0.70f * a);
   // Mantem a luz ambiente do cartao para dar profundidade sem tornar o estado
@@ -791,10 +988,19 @@ static void cartaoDesenhar(void) {
     TxtLinha t = txt_linha(TXT_BODY, envioEstado == 2 ? i18n("Registro enviado. Obrigado.") : i18n("Não foi possível enviar agora."),
                            envioEstado == 2 ? 120 : 237, envioEstado == 2 ? 200 : 77, envioEstado == 2 ? 140 : 77, 255);
     txt_desenhar_alpha(t, bx, y + H - 56.0f - BOTAO_H_PRIMARIO + 22.0f, a);
-    botao(x + W - 56.0f - botao_largura(i18n("Fechar"), NULL, 1), y + H - 56.0f - BOTAO_H_PRIMARIO, i18n("Fechar"), 1, a, ar, ag, ab, 1);
+    { float bw = botao_largura(i18n("Fechar"), NULL, 1), by = y + H - 56.0f - BOTAO_H_PRIMARIO;
+      if (alvos) ponteiro_alvo(x + W - 56.0f - bw, by, bw, BOTAO_H_PRIMARIO, ponteiroCartao, NULL, 0, 0);
+      botao(x + W - 56.0f - bw, by, i18n("Fechar"), 1, a, ar, ag, ab, 1); }
   } else {
-    bx += botao(bx, y + H - 56.0f - BOTAO_H_PRIMARIO, i18n("Enviar registro"), cartaoFoco == 0, a, ar, ag, ab, 1) + BOTAO_GAP;
-    botao(bx, y + H - 56.0f - BOTAO_H_PRIMARIO, i18n("Agora não"), cartaoFoco == 1, a, ar, ag, ab, 0);
+    float by = y + H - 56.0f - BOTAO_H_PRIMARIO, bw;
+    if (alvos) ponteiro_alvo(bx, by, botao_largura(i18n("Enviar registro"), NULL, 1), BOTAO_H_PRIMARIO,
+                             ponteiroCartao, NULL, 0, 0);
+    bx += botao(bx, by, i18n("Enviar registro"), cartaoFoco == 0, a, ar, ag, ab, 1) + BOTAO_GAP;
+    bw = botao_largura(i18n("Agora não"), NULL, 0);
+    // O secundario e mais baixo e alinha pela base (ver botao).
+    if (alvos) ponteiro_alvo(bx, by + BOTAO_H_PRIMARIO - BOTAO_H_SECUNDARIO, bw, BOTAO_H_SECUNDARIO,
+                             ponteiroCartao, NULL, 1, 0);
+    botao(bx, by, i18n("Agora não"), cartaoFoco == 1, a, ar, ag, ab, 0);
   }
 }
 
@@ -829,6 +1035,23 @@ static void colherLocais(void) {
         }
       }
     } else tirar("rec"); }
+  // PEDIDOS DE AMIZADE: uma linha so, com a contagem, que leva a aba Amigos.
+  // A chave e o pedido mais novo: um pedido novo acende o ponto de "novo" de
+  // novo; o mesmo pedido relido nao. A ilha ja disse o assunto
+  // (ilhasinais.c), entao a linha nao vai para a ilha (anunciar = 0).
+  { int k = recomenda_ativo() ? recomenda_n_pedidos() : 0, i;
+    char id[40] = "";
+    RecPessoa p;
+    if (k > 0 && recomenda_pedido(0, &p) && p.pub[0]) snprintf(id, sizeof id, "pedidos:%s", p.pub);
+    for (i = n - 1; i >= 0; i--)
+      if (!strncmp(itens[i].id, "pedidos:", 8) && strcmp(itens[i].id, id)) tirar(itens[i].id);
+    if (id[0]) {
+      char txt[200];
+      snprintf(txt, sizeof txt, k == 1 ? i18n("%d pessoa quer ser sua amiga.")
+                                       : i18n("%d pessoas querem ser suas amigas."), k);
+      (void)por(id, AV_PEDIDO, i18n("Pedidos de amizade"), txt, NULL);
+      for (i = 0; i < n; i++) if (!strcmp(itens[i].id, id)) itens[i].anunciar = 0;
+    } }
   // Atualizacao
   { const char *v = atualizacao_nova();
     if (v && v[0]) {
@@ -869,6 +1092,9 @@ void avisos_atualizar(float dt, Uint32 agora) {
     else canalVivo = 0;
   }
 
+  // O limiar do OK longo na central, com o dedo ainda no botao.
+  if (aberto && segurar_venceu(SDL_GetTicks(), okDesde, "avisos")) soltarOk(1);
+  if (!aberto) okDesde = 0;
   if (vistosSujos && !aberto) vistosGravar();
   avisos_envio_auto_passo(agora);
 }
@@ -876,7 +1102,12 @@ void avisos_atualizar(float dt, Uint32 agora) {
 int  avisos_aberto(void) { return aberto; }
 // A CENTRAL ABERTA LE TUDO: os avisos dela saem da ilha (os que diziam o
 // assunto e o "N avisos novos" que juntou o resto).
-void avisos_abrir(void)  { aberto = 1; foco = 0; rol = 0.0f; toastN = 0; ilha_retirar_grupo(); }
+void avisos_abrir(void)  {
+#ifdef NV_TOUCH_UI
+  toquerol_limpar(&toqueAvisos);
+#endif
+  aberto = 1; foco = 0; rol = 0.0f; toastN = 0; ilha_retirar_grupo();
+}
 const char *avisos_pediu_abrir(void) {
   static char saida[24];
   if (!pediuAbrir[0]) return NULL;
@@ -886,15 +1117,56 @@ const char *avisos_pediu_abrir(void) {
 }
 int avisos_pediu(void) { int c = pediuCodigo; pediuCodigo = 0; return c; }
 
+// PONTEIRO (#99): a linha sob o cursor vira o foco, pela MESMA variavel das
+// setas. Trocar de linha solta um OK afundado, como a seta faz.
+static void ponteiroLinha(int i, int b) {
+  (void)b;
+  if (!aberto || cartao || i == foco || i < 0 || i >= avisos_lista_linhas()) return;
+  foco = i; okDesde = 0;
+}
+#ifdef NV_TOUCH_UI
+static int toqueAvisosRolar(const PonteiroRolagem *e) {
+  int r;
+  if (!aberto || cartao) return 0;
+  r = toquerol_evento(&toqueAvisos, e);
+  if (r) okDesde = 0;
+  return r;
+}
+#endif
+int avisos_teste_foco(void) { return aberto ? foco : -1; }
+
 static void fechar(void) {
   avisos_marcar_lidos();
   aberto = 0;
 }
 
+// SEGURAR OK NUMA LINHA DA CENTRAL DISPENSA (06/10). O painel proprio fica por
+// cima de tudo e nao hospeda o menu do cartaz (ctxmenu.c so se desenha sobre o
+// painel de Salvos): aqui o gesto longo e a acao direta, e a dica na linha em
+// foco diz isso. O toque curto continua sendo o OK de sempre, decidido na
+// soltura. NV_HOLD_MS e a mesma medida da home e de Salvos.
+static void soltarOk(int longo) {
+  okDesde = 0;
+  if (longo) {
+    avisos_lista_dispensar(foco);
+    if (foco >= avisos_lista_linhas()) foco = avisos_lista_linhas() > 0 ? avisos_lista_linhas() - 1 : 0;
+  } else if (avisos_lista_ok(foco)) fechar();
+  else if (foco >= avisos_lista_linhas()) foco = 0;
+}
+
 int avisos_evento(const SDL_Event *e) {
+#ifdef NV_TOUCH_UI
+  if (toquerol_navegacao(e)) toquerol_limpar(&toqueAvisos);
+#endif
   SDL_Keycode k;
   int sc;
   if (cartao) return cartaoEvento(e);
+  if (e->type == SDL_KEYUP && aberto && okDesde) {
+    k = e->key.keysym.sym;
+    if (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE)
+      soltarOk(ponteiro_ok_longo() || SDL_GetTicks() - okDesde >= NV_HOLD_MS);
+    return 1;
+  }
   if (e->type != SDL_KEYDOWN) return aberto;
   k = e->key.keysym.sym; sc = e->key.keysym.scancode;
   if (!aberto) {
@@ -910,20 +1182,25 @@ int avisos_evento(const SDL_Event *e) {
     return 0;
   }
   if (e->key.repeat && k != SDLK_UP && k != SDLK_DOWN) return 1;
+  if (k != SDLK_RETURN && k != SDLK_KP_ENTER && k != SDLK_SPACE) okDesde = 0;
   if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE || sc == NV_SCANCODE_BACK ||
       k == SDLK_s || sc == NV_SCANCODE_BLUE) { fechar(); return 1; }
   if (k == SDLK_UP)   { if (foco > 0) foco--; return 1; }
-  if (k == SDLK_DOWN) { if (foco + 1 < n) foco++; return 1; }
+  if (k == SDLK_DOWN) { if (foco + 1 < avisos_lista_linhas()) foco++; return 1; }
   if (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE) {
-    if (avisos_lista_ok(foco)) fechar();
+    // Linha de aviso: decide na soltura (curto abre, longo dispensa). A
+    // ultima, "Dispensar todos", nao tem o que segurar.
+    if (foco < avisos_lista_n()) { okDesde = SDL_GetTicks(); if (!okDesde) okDesde = 1; }
+    else soltarOk(0);
     return 1;
   }
   return 1;
 }
 
 // --- desenho -----------------------------------------------------------------------
-#define AVP_W    760.0f
-#define AVP_X    (NV_TELA_W - AVP_W)
+#include "telefoneui.h"
+#define AVP_W    telefoneui_largura(760.0f, NV_TELA_W, 24.0f)
+#define AVP_X    (NV_TELA_W - AVP_W - (telefoneui_ativo() ? 24.0f : 0.0f))
 #define AVP_MARG  48.0f
 #define AVP_TOPO 176.0f
 
@@ -933,6 +1210,7 @@ static const char *icone(int tipo) {
     case AV_AGENDA: return "lembrete";
     case AV_UPDATE: return "avancar";
     case AV_CRASH:  return "fluxo";
+    case AV_PEDIDO: return "aj_users";
     default:        return "menu_settings";
   }
 }
@@ -948,7 +1226,9 @@ static const char *icone(int tipo) {
 //
 // Os que tem para onde ir levam o MODAL da ilha (a pilula cresce, AZUL/CH+):
 // recomendacao (Ver / Salvar / Dispensar), versao nova (Atualizar / Depois),
-// queda (Enviar registro / Agora não) e o aviso do dono (o texto inteiro). O
+// queda (Enviar registro / Agora não / Dispensar) e o aviso do dono (o texto
+// inteiro; Fechar / Dispensar). Voltar recolhe sem mudar nada; "Dispensar"
+// tira o item da lista de vez (avisos_dispensar, avisodisp.h). O
 // episodio novo abre o modal do cartao de estreia (ilhacart.c), quando ele
 // esta na pilula. Quem executa o botao e avisos_ilha_acao.
 static RecItem recDaIlha;              // a recomendacao que o modal mostra
@@ -1039,6 +1319,9 @@ static void anunciarItem(const Aviso *it) {
       snprintf(m.kicker, sizeof m.kicker, "%s", i18n("Aviso"));
       m.cabecalho = 1;
       snprintf(m.botao[1], sizeof m.botao[1], "%s", i18n("Agora não"));
+      m.nBotoes = 3;
+      snprintf(m.botao[2], sizeof m.botao[2], "%s", i18n("Dispensar"));
+      snprintf(m.botaoIcone[2], sizeof m.botaoIcone[2], "aj_x");
       e.modal = &m;
       break;
     default:
@@ -1051,8 +1334,11 @@ static void anunciarItem(const Aviso *it) {
         snprintf(m.titulo, sizeof m.titulo, "%s", it->titulo);
         snprintf(m.texto, sizeof m.texto, "%s", it->texto);
         snprintf(m.icone, sizeof m.icone, "aj_megaphone");
-        m.nBotoes = 1;
+        // Fechar = lido (a linha fica); Dispensar = some e nao volta (avisodisp.h).
+        m.nBotoes = 2;
         snprintf(m.botao[0], sizeof m.botao[0], "%s", i18n("Fechar"));
+        snprintf(m.botao[1], sizeof m.botao[1], "%s", i18n("Dispensar"));
+        snprintf(m.botaoIcone[1], sizeof m.botaoIcone[1], "aj_x");
         e.modal = &m;
       }
       break;
@@ -1062,11 +1348,25 @@ static void anunciarItem(const Aviso *it) {
 
 // Os itens com `anunciar` vao para a ilha, cada um uma vez. Sem nenhum
 // marcado e com contagem (o toast(N) dos testes), o "N avisos novos" de antes.
+//
+// LIMITE DE RUIDO (06/10): UMA VEZ POR SESSAO POR CHAVE. Um item que sai e
+// volta a lista (o "rec" quando a contagem zera e sobe, a versao nova depois de
+// uma lista cheia) entrava de novo com `anunciar` e passava outra vez pela
+// pilula. Ja dito nesta sessao (avisodisp_sessao_*) nao passa de novo; um
+// evento novo e outra chave e passa. A recomendacao nova e a excecao: o item e
+// um so ("rec") e cada recomendacao e um assunto novo (recAnunciada).
 static void anunciarNaIlha(void) {
   static Aviso copia[AV_MAX];
   int i, k = 0;
   pthread_mutex_lock(&trava);
-  for (i = 0; i < n; i++) if (itens[i].anunciar) { itens[i].anunciar = 0; copia[k++] = itens[i]; }
+  for (i = 0; i < n; i++) if (itens[i].anunciar) {
+    char ch[96];
+    itens[i].anunciar = 0;
+    snprintf(ch, sizeof ch, "av:%s", itens[i].id);
+    if (strcmp(itens[i].id, "rec") && avisodisp_sessao_tem(ch)) continue;
+    avisodisp_sessao_por(ch);
+    copia[k++] = itens[i];
+  }
   pthread_mutex_unlock(&trava);
   for (i = 0; i < k; i++) anunciarItem(&copia[i]);
   if (!k && toastN > 0) {
@@ -1111,10 +1411,16 @@ void avisos_ilha_acao(const char *chave, int botao) {
     }
     // As tres respondem a recomendacao: o selo apaga (o mesmo que abrir Salvos).
     recomenda_marcar_vistas();
+    if (botao == 3) { avisos_dispensar(id); return; }
   } else if (!strncmp(id, "update:", 7)) {
     if (botao == 1) pediuCodigo = AVISOS_ABRIR_ATUALIZACAO;
   } else if (!strncmp(id, "crash:", 6)) {
     if (botao == 1) enviarAgora();
+    else if (botao == 3) { avisos_dispensar(id); return; }
+  } else if (botao == 2) {
+    // O aviso do dono (e idioma, modo seguro): Fechar | Dispensar.
+    avisos_dispensar(id);
+    return;
   }
   avisos_marcar_visto(id);
 }
@@ -1147,21 +1453,29 @@ static int ehCanalExpansivel(int i) { return i >= 0 && i < n && itens[i].tipo ==
 // primeiro, a da aba Avisos do painel Social.
 static float larguraTextoAviso = 610.0f;
 static int temAcaoAviso(const Aviso *av) {
-  return av->tipo == AV_REC || av->tipo == AV_AGENDA || av->tipo == AV_UPDATE || av->tipo == AV_CRASH;
+  return av->tipo == AV_REC || av->tipo == AV_AGENDA || av->tipo == AV_UPDATE || av->tipo == AV_CRASH ||
+         av->tipo == AV_PEDIDO;
 }
-static float alturaAviso(int i) {
+// A LINHA EM FOCO SEMPRE TEM A LINHA DE ACAO (06/10): e onde mora "Segure OK
+// para dispensar". Fora do foco so quem tem acao a desenha.
+static float alturaAvisoF(int i, int focado) {
   const Aviso *av = &itens[i];
   float h = 18.0f + 29.0f + 18.0f;
   if (av->texto[0])
     h += 4.0f + ((float)txt_largura(TXT_ILHA_SUB, av->texto) > larguraTextoAviso ? 50.0f : 25.0f);
-  if (temAcaoAviso(av)) h += 4.0f + 18.0f;
+  if (temAcaoAviso(av) || focado) h += 4.0f + 18.0f;
   return h < 92.0f ? 92.0f : h;
 }
+static float alturaAviso(int i) { return alturaAvisoF(i, 0); }
+// "DISPENSAR TODOS": a ultima linha da lista, so quando ha o que dispensar.
+#define AVL_TODOS_H 84.0f
+int avisos_lista_linhas(void) { int k; pthread_mutex_lock(&trava); k = n ? n + 1 : 0; pthread_mutex_unlock(&trava); return k; }
 float avisos_lista_altura_linha(int linha, int focoLinha) {
   float h = AVL_ROW;
   pthread_mutex_lock(&trava);
   if (linha == focoLinha && ehCanalExpansivel(linha)) h = alturaCanalFoco;
-  else if (linha >= 0 && linha < n) h = alturaAviso(linha);
+  else if (linha >= 0 && linha < n) h = alturaAvisoF(linha, linha == focoLinha);
+  else if (linha == n && n > 0) h = AVL_TODOS_H;
   pthread_mutex_unlock(&trava);
   return h;
 }
@@ -1177,11 +1491,19 @@ float avisos_lista_altura(void) {
     int i;
     for (i = 0; i < n; i++) h += alturaAviso(i);
     if (n == 0) h = 60.0f;
+    else h += AVL_TODOS_H;
     pthread_mutex_unlock(&trava); return h; }
 }
 int avisos_lista_n(void) { int k; pthread_mutex_lock(&trava); k = n; pthread_mutex_unlock(&trava); return k; }
 
 void avisos_lista_desenhar(float x, float y0, float w, float a, int focoLinha) {
+  avisos_lista_desenhar_ptr(x, y0, w, a, focoLinha, NULL, 0.0f, 0.0f);
+}
+// PONTEIRO (#99): com `focar`, cada linha (e "Dispensar todos", indice n)
+// vira alvo recortado a [clipY0, clipY1). O focar e de QUEM HOSPEDA a lista:
+// o foco e dele (a central ou a aba Avisos de Salvos).
+void avisos_lista_desenhar_ptr(float x, float y0, float w, float a, int focoLinha,
+                               void (*focar)(int, int), float clipY0, float clipY1) {
   float ar, ag, ab;
   int i;
   const float fr = 243.0f / 255.0f, fg = 242.0f / 255.0f, fb = 239.0f / 255.0f;
@@ -1199,9 +1521,10 @@ void avisos_lista_desenhar(float x, float y0, float w, float a, int focoLinha) {
     float tx = x + AVL_PADX + 52.0f + 18.0f, tw = w - (tx - x) - AVL_PADX;
     float rowH;
     larguraTextoAviso = tw;
-    rowH = expande ? alturaCanalFoco : alturaAviso(i);
+    rowH = expande ? alturaCanalFoco : alturaAvisoF(i, f);
     GfxRect row = { x, y, w, rowH };
     const char *acao = NULL;
+    if (focar) ponteiro_alvo_faixa(x, y, w, rowH, clipY0, clipY1, focar, NULL, i, 0);
     if (f) {
       if (ajustes_vidro()) gfx_cor(row, 22.0f / row.h, 1, 1, 1, .12f * a);
       else {
@@ -1226,24 +1549,48 @@ void avisos_lista_desenhar(float x, float y0, float w, float a, int focoLinha) {
     if (expande) {
       float h = txt_bloco(TXT_ILHA_SUB, av->texto, 243, 242, 239, tx, y + 51.0f, tw, 25.0f, a * 0.62f,
                           AVL_LINHAS_CANAL);
-      float nova = 51.0f + h + (temAcaoAviso(av) ? 4.0f + 18.0f : 0.0f) + 18.0f;
+      float nova = 51.0f + h + 4.0f + 18.0f + 18.0f;   // em foco: sempre a linha de acao
       if (nova < alturaAviso(i)) nova = alturaAviso(i);
       alturaCanalFoco = nova;
     }
     else txt_bloco(TXT_ILHA_SUB, av->texto, 243, 242, 239, tx, y + 51.0f, tw, 25.0f, a * 0.62f, 2);
     switch (av->tipo) {
       case AV_REC:    acao = i18n("OK abre Salvos"); break;
+      case AV_PEDIDO: acao = i18n("OK abre Amigos para aceitar"); break;
       case AV_AGENDA: acao = i18n("OK abre o título"); break;
       case AV_UPDATE: acao = i18n("OK abre a atualização"); break;
       case AV_CRASH:  acao = envioEstado == 1 ? i18n("Enviando…") : envioEstado == 2 ? i18n("Registro enviado. Obrigado.")
                            : envioEstado == 3 ? i18n("Não foi possível enviar. OK tenta de novo.") : i18n("OK envia o registro"); break;
       default: break;
     }
-    if (acao) {
-      TxtLinha t = txt_linha_corta(TXT_ILHA_HORA, acao, 243, 242, 239, 255, tw);
-      txt_desenhar_alpha(t, tx, y + rowH - 18.0f - 18.0f, a * (f ? 0.62f : 0.38f));
-    }
+    // Em foco, a acao ganha o segundo gesto: segurar OK dispensa (o menu na
+    // aba Avisos de Salvos, direto no painel proprio da central).
+    { char linhaAcao[200];
+      if (f) snprintf(linhaAcao, sizeof linhaAcao, acao ? "%s  ·  %s" : "%s%s",
+                      acao ? acao : "", i18n("Segure OK para dispensar"));
+      else snprintf(linhaAcao, sizeof linhaAcao, "%s", acao ? acao : "");
+      if (linhaAcao[0]) {
+        TxtLinha t = txt_linha_corta(TXT_ILHA_HORA, linhaAcao, 243, 242, 239, 255, tw);
+        txt_desenhar_alpha(t, tx, y + rowH - 18.0f - 18.0f, a * (f ? 0.62f : 0.38f));
+      } }
     y += rowH;
+  }
+  // DISPENSAR TODOS: a mesma linha da ilha, mais baixa, com o X no disco.
+  if (n > 0) {
+    int f = focoLinha == n;
+    GfxRect row = { x, y, w, AVL_TODOS_H };
+    if (focar) ponteiro_alvo_faixa(x, y, w, AVL_TODOS_H, clipY0, clipY1, focar, NULL, n, 0);
+    if (f) {
+      if (ajustes_vidro()) gfx_cor(row, 22.0f / row.h, 1, 1, 1, .12f * a);
+      else gfx_cor(row, 22.0f / row.h, .169f, .176f, .204f, a);
+    }
+    if (ajustes_vidro()) gfx_cor((GfxRect){ x + AVL_PADX, y + 16.0f, 52.0f, 52.0f }, 0.5f, 1, 1, 1, .08f * a);
+    else gfx_cor((GfxRect){ x + AVL_PADX, y + 16.0f, 52.0f, 52.0f }, 0.5f, .141f, .149f, .173f, a);
+    gfx_icone((GfxRect){ x + AVL_PADX + 13.0f, y + 29.0f, 26.0f, 26.0f }, "aj_x",
+              fr * .85f, fg * .85f, fb * .85f, a);
+    { TxtLinha t = txt_linha_corta(TXT_ILHA_NOME, i18n("Dispensar todos"), 243, 242, 239, 255,
+                                   w - 2.0f * AVL_PADX - 70.0f);
+      txt_desenhar_alpha(t, x + AVL_PADX + 70.0f, y + (AVL_TODOS_H - (float)t.h) * 0.5f, a * (f ? 1.0f : 0.72f)); }
   } }
   pthread_mutex_unlock(&trava);
 }
@@ -1257,9 +1604,15 @@ int avisos_lista_ok(int linha) {
   pthread_mutex_lock(&trava);
   if (linha >= 0 && linha < n) { a = itens[linha]; ha = 1; }
   pthread_mutex_unlock(&trava);
-  if (!ha) return 0;
+  if (!ha) {
+    // A ultima linha: "Dispensar todos". A lista fica (vazia) no hospedeiro.
+    if (linha == avisos_lista_n() && linha > 0) avisos_dispensar_todos();
+    return 0;
+  }
   switch (a.tipo) {
     case AV_REC:    pediuCodigo = AVISOS_ABRIR_SALVOS; return 1;
+    // 2 = o painel fica aberto (so troca de aba); a central fecha como sempre.
+    case AV_PEDIDO: pediuCodigo = AVISOS_ABRIR_AMIGOS; return 2;
     case AV_UPDATE: pediuCodigo = AVISOS_ABRIR_ATUALIZACAO; return 1;
     case AV_AGENDA: snprintf(pediuAbrir, sizeof pediuAbrir, "%s", a.alvo); return 1;
     case AV_CRASH:
@@ -1280,7 +1633,8 @@ int avisos_estreia_pendente(char *id, size_t tamId, char *imdb, size_t tamImdb) 
   int i, achou = 0;
   pthread_mutex_lock(&trava);
   for (i = n - 1; i >= 0; i--)
-    if (itens[i].tipo == AV_AGENDA && !itens[i].visto && itens[i].alvo[0]) {
+    if (itens[i].tipo == AV_AGENDA && !itens[i].visto && itens[i].alvo[0] &&
+        !avisodisp_sessao_tem(itens[i].id)) {   // "Depois" no modal: so na proxima sessao
       snprintf(id, tamId, "%s", itens[i].id);
       snprintf(imdb, tamImdb, "%s", itens[i].alvo);
       achou = 1;
@@ -1307,6 +1661,78 @@ void avisos_marcar_lidos(void) {
   pthread_mutex_unlock(&trava);
 }
 
+// --- dispensar (06/10) ---------------------------------------------------------------
+// Ver avisodisp.h. A recomendacao e a excecao: o item "rec" e a CONTAGEM das
+// novas, e gravar "rec" calaria toda recomendacao futura. Dispensar responde a
+// recomendacao (o mesmo que o "Dispensar" do modal sempre fez): a contagem zera
+// e o item sai sozinho na proxima colheita; uma recomendacao nova o traz de
+// volta. A estreia tambem marca o lembrete daquele episodio como avisado
+// (agenda.c), para o cartao "Estreou hoje" nao abrir por ela — o lembrete
+// continua ligado e o proximo episodio avisa.
+void avisos_dispensar(const char *id) {
+  char ch[96], imdb[24] = "";
+  int i, tipo = -1;
+  if (!id || !id[0]) return;
+  snprintf(ch, sizeof ch, "%s", id);   // id pode apontar para dentro de itens[]
+  pthread_mutex_lock(&trava);
+  for (i = 0; i < n; i++) if (!strcmp(itens[i].id, ch)) {
+    tipo = itens[i].tipo;
+    snprintf(imdb, sizeof imdb, "%s", itens[i].alvo);
+    break;
+  }
+  pthread_mutex_unlock(&trava);
+  if (!strcmp(ch, "rec")) recomenda_marcar_vistas();
+  else avisodisp_por(ch);
+  if ((tipo == AV_AGENDA || (tipo < 0 && !strncmp(ch, "agenda:", 7))) && imdb[0]) agenda_marcar_avisado(imdb);
+  pthread_mutex_lock(&trava);
+  marcarVisto(ch);
+  tirar(ch);
+  pthread_mutex_unlock(&trava);
+  { char chIlha[100];
+    snprintf(chIlha, sizeof chIlha, "av:%s", ch);
+    ilha_retirar(chIlha); }
+  printf("[avisos] dispensado: %s\n", ch);
+}
+
+void avisos_dispensar_todos(void) {
+  char ids[AV_MAX][72];
+  int i, k;
+  pthread_mutex_lock(&trava);
+  for (k = 0; k < n; k++) snprintf(ids[k], sizeof ids[k], "%s", itens[k].id);
+  pthread_mutex_unlock(&trava);
+  for (i = 0; i < k; i++) avisos_dispensar(ids[i]);
+  ilha_retirar(AV_ILHA_CHAVE);
+}
+
+int avisos_lista_dispensar(int linha) {
+  char id[72] = "";
+  pthread_mutex_lock(&trava);
+  if (linha >= 0 && linha < n) snprintf(id, sizeof id, "%s", itens[linha].id);
+  pthread_mutex_unlock(&trava);
+  if (!id[0]) return 0;
+  avisos_dispensar(id);
+  return 1;
+}
+
+int avisos_lista_item(int linha, char *id, size_t tamId, char *titulo, size_t tamTit,
+                      char *imdbLembrete, size_t tamImdb) {
+  int ok = 0;
+  if (imdbLembrete && tamImdb) imdbLembrete[0] = 0;
+  pthread_mutex_lock(&trava);
+  if (linha >= 0 && linha < n) {
+    const Aviso *a = &itens[linha];
+    if (id && tamId) snprintf(id, tamId, "%s", a->id);
+    if (titulo && tamTit) snprintf(titulo, tamTit, "%s", a->tipo == AV_AGENDA && a->texto[0] ? a->texto : a->titulo);
+    if (imdbLembrete && tamImdb && a->tipo == AV_AGENDA && a->alvo[0])
+      snprintf(imdbLembrete, tamImdb, "%s", a->alvo);
+    ok = 1;
+  }
+  pthread_mutex_unlock(&trava);
+  // So oferece "Remover lembrete" quando ele ainda esta ligado.
+  if (ok && imdbLembrete && imdbLembrete[0] && agenda_lembrete(imdbLembrete) != 1) imdbLembrete[0] = 0;
+  return ok;
+}
+
 static void avisos_desenharCorpo_(Uint32 agora);
 // Camada ampliada (escala.h): o corpo desenha na tela virtual.
 void avisos_desenhar(Uint32 agora) {
@@ -1321,6 +1747,9 @@ static void avisos_desenharCorpo_(Uint32 agora) {
     toastPendente = 0;
     anunciarNaIlha();
   }
+  // A CENTRAL ABERTA E UMA CAMADA (app.c nao chama camada para ela): o que
+  // esta atras nao recebe o ponteiro, nem durante a entrada.
+  if (aberto) ponteiro_camada();
   if (a < 0.01f) { cartaoDesenhar(); return; }
   dx = (1.0f - a) * 80.0f;
   gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0.0f, 0, 0, 0, 0.45f * a);
@@ -1338,10 +1767,22 @@ static void avisos_desenharCorpo_(Uint32 agora) {
   { float areaH = NV_TELA_H - 80.0f - AVP_TOPO;
     float fim = avisos_lista_y(foco, foco) + avisos_lista_altura_linha(foco, foco);
     float alvo = fim > areaH ? fim - areaH : 0.0f;
+#ifdef NV_TOUCH_UI
+    int nl = avisos_lista_linhas();
+    float total = nl > 0 ? avisos_lista_y(nl - 1, foco) + avisos_lista_altura_linha(nl - 1, foco) : 0;
+    toquerol_vincular(&toqueAvisos, (GfxRect){AVP_X + dx, AVP_TOPO, AVP_W, areaH}, gfx_escala(),
+                     0, total - areaH, 1, &rol);
+    if (aberto && !cartao && a > .99f) ponteiro_rolagem(toqueAvisosRolar);
+    if (!toqueAvisos.livre)
+#endif
     rol += (alvo - rol) * 0.25f; }
   // A linha da ilha tem 22 de recuo proprio: a caixa dela sai 22 para fora,
   // e o texto continua na prumada do titulo do painel.
-  avisos_lista_desenhar(AVP_X + dx + AVP_MARG - 22.0f, AVP_TOPO - rol, AVP_W - 2 * AVP_MARG + 44.0f, a, foco);
+  // PONTEIRO (#99): as linhas so com o painel assentado, recortadas a janela
+  // da lista, com o focar DA CENTRAL.
+  avisos_lista_desenhar_ptr(AVP_X + dx + AVP_MARG - 22.0f, AVP_TOPO - rol, AVP_W - 2 * AVP_MARG + 44.0f, a, foco,
+                            aberto && !cartao && a > 0.99f ? ponteiroLinha : NULL,
+                            AVP_TOPO - 8.0f, NV_TELA_H - 80.0f);
   gfx_sem_recorte();
   { TxtLinha t = txt_linha_corta(TXT_CAPTION2, i18n("↑ ↓ escolher · OK agir · Voltar fecha e marca tudo como lido"),
                                  140, 144, 154, 255, AVP_W - 2 * AVP_MARG);
@@ -1351,32 +1792,12 @@ static void avisos_desenharCorpo_(Uint32 agora) {
 
 // --- envio manual (Ajustes) ---------------------------------------------------
 int avisos_envio_estado(void) { return envioEstado; }
-// Le o nv-log do localStorage para logAtual (fio principal; so no Tizen).
-static void lerLogAtual(void) {
-#ifdef __EMSCRIPTEN__
-  free(logAtual);
-  logAtual = (char *)EM_ASM_PTR({
-    try {
-      var t = localStorage.getItem('nv-log') || '';
-      if (t.length > $0) t = t.slice(t.length - $0);
-      var b = new TextEncoder().encode(t);
-      var p = _malloc(b.length + 1);
-      if (!p) return 0;
-      HEAPU8.set(b, p);
-      HEAPU8[p + b.length] = 0;
-      return p;
-    } catch (e) { return 0; }
-  }, AV_REGISTRO_MAX);
-#endif
-}
-
-// PASSO DO ENVIO AUTOMATICO, do laco principal. Com o ajuste ligado: uma vez,
-// o registro da sessao ANTERIOR (e o da sessao que travou, quando travou);
-// depois o desta sessao a cada minuto. Nunca dois envios ao mesmo tempo, e
-// nunca por cima de um envio manual em curso.
+// PASSO DO ENVIO AUTOMATICO, do laco principal. Com o ajuste ligado: uma vez
+// por sessao, o registro da sessao ANTERIOR (a que acabou, inclusive a que caiu),
+// com no maximo 64 KB. Nunca dois envios ao mesmo tempo, e nunca por cima de um
+// envio manual em curso.
 void avisos_envio_auto_passo(Uint32 agora) {
   static int anteriorFeito;
-  static Uint32 proximo;
   // "O registro fica guardado e sai assim que a rede voltar" (painel de envio,
   // TV sem internet): o envio manual que caiu por falta de rede sai sozinho
   // no primeiro quadro com a rede de volta, com ou sem o envio automatico.
@@ -1388,7 +1809,7 @@ void avisos_envio_auto_passo(Uint32 agora) {
   if (!ajustes_envio_auto() || !NV_REC_URL[0] || envioEstado == 1) return;
   if (!anteriorFeito) {
     anteriorFeito = 1;
-    proximo = agora + 60000;
+    (void)agora;
     { int tem;
 #ifdef __EMSCRIPTEN__
       if (!logAnterior) lerLogAnterior();
@@ -1396,7 +1817,6 @@ void avisos_envio_auto_passo(Uint32 agora) {
 #else
       { FILE *f = fopen(AV_LOG_ANTERIOR, "rb"); tem = f != NULL; if (f) fclose(f); }
 #endif
-    envAutoProximo = proximo;
     if (tem) {
       envioEstado = 1;
       if (pthread_create(&fioEnvio, NULL, enviarRegistro, (void *)&AUTO_ANTERIOR) == 0) pthread_detach(fioEnvio);
@@ -1404,24 +1824,10 @@ void avisos_envio_auto_passo(Uint32 agora) {
     } }
     return;
   }
-  if (agora < proximo) return;
-  // 1 min no Tizen (e la que falta dado); 5 min no LG — o registro do LG com
-  // o player aberto enche os 200 KB em menos de um minuto (haylereader,
-  // 20/09: 200 KB por minuto de eventos [video]).
-#ifdef __EMSCRIPTEN__
-  // Depois dos 5 primeiros minutos, 5 em 5 tambem no Tizen: a cada minuto o
-  // registro inteiro (ate 200 KB) subia de novo — 18 envios em 16 minutos de
-  // uma TV so nos logs de 24/09, quase todos repetindo o que ja tinha ido.
-  proximo = agora + (agora < 300000 ? 60000 : 300000);
-#else
-  proximo = agora + 300000;
-#endif
-  envAutoProximo = proximo;
-  lerLogAtual();
-  fflush(stdout);
-  envioEstado = 1;
-  if (pthread_create(&fioEnvio, NULL, enviarRegistro, (void *)&AUTO_ATUAL) == 0) pthread_detach(fioEnvio);
-  else envioEstado = 0;
+  // UMA VEZ POR SESSAO (#203, dono). O registro desta sessao NAO sobe mais a
+  // cada poucos minutos: o log da sessao que acabou e o que sobe, uma vez, no
+  // proximo arranque (acima) — fim limpo, queda e TV desligada caem todos nesse
+  // caminho. "Enviar registro" (Ajustes) e o recibo de queda continuam.
 }
 
 void avisos_enviar_registro_atual(void) {

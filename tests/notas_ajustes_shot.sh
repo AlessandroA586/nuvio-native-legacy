@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 export NUVIO_DADOS=$(mktemp -d /tmp/nuvio-notasaj-dados.XXXXXX)
 trap 'rm -rf "$NUVIO_DADOS"' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   if [ "$source" != src/main.c ]; then sources+=("$source"); fi
 done
 cc -DAJUSTES_TESTE "${sources[@]}" tests/notas_ajustes_shot.c -Isrc -o /tmp/nuvio-notasaj-shot \

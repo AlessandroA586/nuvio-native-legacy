@@ -15,7 +15,7 @@ NUVIO_DADOS="$(mktemp -d "${TMPDIR:-/tmp}/nuvio-explorar-dados-XXXXXX")"
 export NUVIO_DADOS
 trap 'rm -rf "$tmp" "$NUVIO_DADOS"' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   [ "$source" != src/main.c ] && sources+=("$source")
 done
 cc "${sources[@]}" tests/explorar_shot.c -Isrc -o "$tmp/shot" \

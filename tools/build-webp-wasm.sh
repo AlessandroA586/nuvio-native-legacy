@@ -24,7 +24,11 @@ LIBWEBP_SHA256=${LIBWEBP_SHA256:-61f873ec69e3be1b99535634340d5bde750b2e4447caa1d
 mkdir -p "$BUILD" "$PREFIX/lib" "$PREFIX/include/webp"
 TAR="$BUILD/libwebp-${LIBWEBP_VERSION}.tar.gz"
 [ -f "$TAR" ] || curl -fsSL "https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-${LIBWEBP_VERSION}.tar.gz" -o "$TAR"
-SUM=$(shasum -a 256 "$TAR" | cut -d' ' -f1)
+if command -v shasum >/dev/null 2>&1; then
+  SUM=$(shasum -a 256 "$TAR" | cut -d' ' -f1)
+else
+  SUM=$(sha256sum "$TAR" | cut -d' ' -f1)
+fi
 [ "$SUM" = "$LIBWEBP_SHA256" ] || { echo "build-webp-wasm: sha256 inesperado ($SUM)" >&2; exit 2; }
 rm -rf "$BUILD/libwebp-${LIBWEBP_VERSION}"
 tar -xzf "$TAR" -C "$BUILD"

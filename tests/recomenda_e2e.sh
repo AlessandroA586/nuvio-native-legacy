@@ -64,7 +64,7 @@ curl -s -X POST "${B[@]}" -d '{"apelido":"Amigo E2E","recentes":1}' "$BASE/v1/pe
 curl -s -X POST "${B[@]}" -d '{"imdb":"tt0111161","titulo":"Um Sonho de Liberdade","agora":0}' "$BASE/v1/atividade" > /dev/null
 
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/recomenda.c) continue;; esac
   sources+=("$source")
 done

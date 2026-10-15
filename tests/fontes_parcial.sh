@@ -39,7 +39,7 @@ trap 'kill $srv 2>/dev/null; rm -rf "$dir"' EXIT
 for _ in $(seq 50); do [ -s "$dir/porta" ] && break; sleep 0.1; done
 NV_PORTA=$(cat "$dir/porta"); export NV_PORTA
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   [ "$source" != src/main.c ] && sources+=("$source")
 done
 cc "${sources[@]}" tests/fontes_parcial.c -Isrc -o "$dir/teste" \

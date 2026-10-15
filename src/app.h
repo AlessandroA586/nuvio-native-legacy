@@ -37,6 +37,9 @@ const char *app_tela_nome(void);
 // cheia ou no canto). Fora disso, no Android, CH+ e CH- fazem o papel das
 // teclas AZUL e VERMELHA, que o controle nao tem (main.c).
 int  app_zap_ativo(void);
+// A Central de controle (central.h) pode abrir agora? Nao no login, na escolha
+// de perfil, com o registro, o Spotlight ou um teclado na frente.
+int  app_central_pode(void);
 void app_encerrar(void);
 
 // 1 = a home e o que esta na frente (sem detalhe, player, login ou escolha de

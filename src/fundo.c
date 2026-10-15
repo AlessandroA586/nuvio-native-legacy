@@ -427,6 +427,13 @@ static void frostTela(GfxRect r, float raioPx, float a) {
   frostLuzes(k);
   k[12] = NV_COR_FUNDO_R; k[13] = NV_COR_FUNDO_G; k[14] = NV_COR_FUNDO_B;
   if (conferido[K_FROST] != 0) t = gfx_luz_canal(CANAL_FROST, k, 15, pintarFrost, NULL);
+  // ADIADO (gfx_luz_canal_adiar): a arte de tela cheia que vier por cima (o
+  // topo da pagina do titulo) le o Frost pelo uAmb e sai opaca, ou o veu de
+  // rolagem vai na mesma passada dele. Nao adia quando a conferencia ou o
+  // despejo de uma vez vao ler a tela logo depois do quad.
+  if (t && a >= 0.999f && !podeConferir(K_FROST, t, a) && !despejoDevido(K_FROST, a) &&
+      gfx_luz_canal_adiar(t, 1))
+    return;
   if (t) gfx_luz_canal_desenhar(t, a, NULL, 1);
   else frost(r, raioPx, a);
   depoisDoFrost(t, k, a);

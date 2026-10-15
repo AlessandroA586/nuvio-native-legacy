@@ -36,6 +36,18 @@ const char *af_decodificar(const char *s, char *dst, size_t n);
 int af_tmdb_fundos(const char *corpo, const char *evitar,
                    char *padrao, size_t np, char *outro, size_t no);
 
+// O fundo AUTOMATICO do TMDB num idioma: `raiz` (o backdrop_path, ou o do
+// /find) fica se esta em images.backdrops com iso_639_1 = `base` ("ar", os dois
+// primeiros) ou sem idioma; senao o de `base` de maior nota, senao o sem idioma.
+// Lingua nenhuma alem dessas (um letreiro em coreano nunca e o automatico).
+// Sem lista de backdrops no corpo, fica `raiz`. 1 se `out` saiu.
+int af_tmdb_fundo_padrao(const char *corpo, const char *base, const char *raiz,
+                         char *out, size_t n);
+// O logo automatico: o primeiro de `base`, senao o ingles, senao o sem idioma
+// (SVG fora). `iso` recebe base/"en"/"und". 1 se achou.
+int af_tmdb_logo(const char *corpo, const char *base, char *fp, size_t n,
+                 char *iso, size_t ni);
+
 // fanart.tv v3 (/movies/{id} ou /tv/{tvdb}). Fundo sem idioma ("" ou "00")
 // antes do com idioma; entre iguais, mais likes. 1 se achou.
 int af_fanart_fundo(const char *corpo, int serie, char *url, size_t n);

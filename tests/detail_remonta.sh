@@ -6,7 +6,7 @@ NUVIO_DADOS=$(mktemp -d /tmp/nuvio-detail-remonta.XXXXXX)
 export NUVIO_DADOS
 trap 'rm -rf "$NUVIO_DADOS"' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   if [ "$source" != src/main.c ]; then sources+=("$source"); fi
 done
 cc "${sources[@]}" tests/detail_remonta.c -Isrc -o /tmp/nuvio-detail-remonta-tests \

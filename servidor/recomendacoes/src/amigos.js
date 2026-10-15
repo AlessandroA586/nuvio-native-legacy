@@ -34,7 +34,6 @@ const RETENCAO_PEDIDO = 30 * 86400;
 const RETENCAO_RECUSA = 90 * 86400;
 const PEDIDOS_RECEBIDOS_MAX = 100;
 const PEDIDOS_ENVIADOS_MAX = 50;
-const SUG_TASTE_MIN = 3;      // titulos em comum para sugerir alguem
 
 // A lista fechada de generos: o servidor NUNCA guarda texto livre nessa coluna,
 // so ids desta tabela. O cliente traduz o rotulo.
@@ -52,6 +51,63 @@ const AVATAR_OK = /^https:\/\/(walter\.trakt\.tv|media\.trakt\.tv|trakt\.tv)\//;
 const avatarPublico = (url) => (typeof url === "string" && AVATAR_OK.test(url) ? url : "");
 
 const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+
+// --- conta, selo e nome ---------------------------------------------------------
+//
+// A CONTA de um id: `nuvio:<sub>:<n>` (perfil da casa) e `nuvio:<sub>` sao a
+// MESMA conta. E por ela que a busca, a comunidade e as sugestoes deixam de fora
+// os OUTROS PERFIS de quem pergunta: o dono viu o proprio segundo perfil listado
+// como "uma pessoa". Adicionar um perfil da casa continua possivel pelo codigo
+// de 6 letras (POST /v1/contatos), que e um gesto explicito.
+const contaDe = (id) => String(id || "").replace(/^(nuvio:[^:]+):\d{1,2}$/, "$1");
+const mesmaConta = (a, b) => contaDe(a) === contaDe(b);
+// O mesmo corte em SQL: `p` e o parametro com contaDe(quem.id).
+const foraDaConta = (col, p = "?") =>
+  `AND ${col} <> ${p} AND substr(${col}, 1, length(${p}) + 1) <> ${p} || ':' `;
+
+// A MESMA PESSOA PUBLICADA DUAS VEZES (#202, "nomes repetidos" na busca). Ate
+// a 2.0.1 a TV guardava "Meu perfil" num arquivo do APARELHO e, ao ligar com
+// outra identidade (outro perfil da casa, ou Trakt no lugar da conta Nuvio),
+// republicava o mesmo apelido/bio/generos nela. No banco de 06/10/2026: 6 dos
+// 22 apelidos publicados apareciam duas vezes, 5 deles com bio e generos
+// identicos. O cliente parou de fazer isso; este corte esconde as copias que
+// ja estao no banco, sem apagar nada.
+//
+// DUAS LINHAS SAO A MESMA PESSOA quando tem o mesmo apelido E:
+//  - sao da MESMA CONTA Nuvio e publicaram exatamente o mesmo conteudo (bio e
+//    generos). Perfis da casa com apelidos ou textos diferentes continuam
+//    pessoas diferentes ("perfil = pessoa"); ou
+//  - uma e `trakt:<slug>` com identidade Trakt VERIFICADA ligada a outra
+//    (migracao 008). Identidade so declarada nunca funde.
+// Fica a copia com quem eu ja sou amigo; empate, o menor id (o perfil
+// principal `nuvio:<sub>` antes de `nuvio:<sub>:<n>`, e nuvio antes de trakt).
+// Bloqueio numa das copias esconde as duas: e a mesma pessoa.
+// `f` e o alias de `perfil` na consulta, `eu` o parametro com quem.id.
+const contaSql = (c) =>
+  `(CASE WHEN ${c} GLOB 'nuvio:*:*' THEN substr(${c}, 1, 5 + instr(substr(${c}, 7), ':')) ELSE ${c} END)`;
+const traktLigado = (c) =>
+  `(SELECT i.pessoa FROM identidade i WHERE i.provedor = 'trakt' AND i.verificado = 1 AND ${c} = 'trakt:' || i.sujeito)`;
+function semCopia(f, eu) {
+  const amigo = (c) => `EXISTS (SELECT 1 FROM contato k WHERE k.a = ${eu} AND k.b = ${c})`;
+  const fp = `${f}.pessoa`;
+  return "AND NOT EXISTS (SELECT 1 FROM perfil g JOIN pessoa gp ON gp.id = g.pessoa AND gp.descobrivel = 1 " +
+    `WHERE g.apelido_norm = ${f}.apelido_norm AND g.apelido <> '' AND g.pessoa <> ${fp} ` +
+    `AND ((${contaSql("g.pessoa")} = ${contaSql(fp)} AND g.bio = ${f}.bio AND g.generos = ${f}.generos) ` +
+    `OR ${traktLigado(fp)} = g.pessoa OR ${traktLigado("g.pessoa")} = ${fp}) ` +
+    `AND (${amigo("g.pessoa")} > ${amigo(fp)} OR (${amigo("g.pessoa")} = ${amigo(fp)} AND g.pessoa < ${fp}))) `;
+}
+
+// SELO DE CRIADOR: quem decide e o SERVIDOR, pela conta (lista em `CRIADORES`,
+// wrangler.toml, ids canonicos separados por virgula), nunca o cliente por
+// apelido ou nome — qualquer um pode escolher o apelido "iqui". Todos os perfis
+// da conta levam o selo. O id nao e segredo e nao sai daqui: so sai o selo.
+function seloDe(env, id) {
+  const lista = String(env?.CRIADORES || "").split(",").map((s) => s.trim()).filter(Boolean);
+  return id && lista.includes(contaDe(id)) ? "criador" : "";
+}
+
+// "Amigo #<rowid>" e a reserva de quem nao tem nome (resolverNome): nao e nome.
+const nomeDeVerdade = (s) => (typeof s === "string" && !/^Amigo #\d+$/.test(s) ? s : "");
 
 // --- limite de uso -------------------------------------------------------------
 //
@@ -130,15 +186,24 @@ async function relacaoCom(env, quemId, outroId) {
 // O cartao que um ESTRANHO pode ver. Cada campo abaixo foi escolhido pela
 // pessoa; o que ela nao preencheu sai vazio, nunca com um valor de reserva
 // tirado da conta (o `nome` da conta pode ser o nome real).
-function cartao(x, relacao) {
+//
+// `nome` SO SAI PARA AMIGO. Quem ja e amigo recebe esse mesmo nome em
+// /v1/contatos; para todo o resto (busca, comunidade, gosto, pedido) ele sai
+// vazio e a TV mostra so o apelido. "Estranhos veem so o apelido" e o que a
+// tela de Meu perfil promete, e teste-amigos.sh confere.
+// `selo` so existe na resposta de quem tem um (ver seloDe).
+function cartao(x, relacao, env) {
   const pub = publicado(x);
+  const selo = seloDe(env, x.id);
   return {
     pub: x.pub,
     apelido: pub ? x.apelido : (x.apelido || x.nome || ""),
+    nome: relacao === "amigo" ? nomeDeVerdade(x.nome) : "",
     avatar: x.comAvatar && pub ? avatarPublico(x.avatar) : "",
     bio: pub ? x.bio : "",
     generos: pub ? listaGeneros(x.generos) : [],
     relacao,
+    ...(selo ? { selo } : {}),
   };
 }
 
@@ -248,9 +313,10 @@ async function rotaBuscar(env, quem, corpo, h) {
   const vistos = new Set();
   const empurra = async (x) => {
     if (!x || x.id === quem.id || vistos.has(x.id)) return;
+    if (mesmaConta(x.id, quem.id)) return;       // outro perfil da MINHA conta
     if (await bloqueado(env.DB, quem.id, x.id)) return;
     vistos.add(x.id);
-    achados.push(cartao(x, await relacaoCom(env, quem.id, x.id)));
+    achados.push(cartao(x, await relacaoCom(env, quem.id, x.id), env));
   };
   const SEL =
     "SELECT f.pessoa AS id, f.pub AS pub, f.apelido AS apelido, f.bio AS bio, f.generos AS generos, " +
@@ -270,9 +336,10 @@ async function rotaBuscar(env, quem, corpo, h) {
   // vez de LIKE para usar o indice.
   const hi = q.slice(0, -1) + String.fromCharCode(q.charCodeAt(q.length - 1) + 1);
   const r = await env.DB.prepare(
-    SEL + "WHERE f.apelido_norm >= ? AND f.apelido_norm < ? AND p.descobrivel = 1 AND f.apelido <> '' " +
-    "ORDER BY f.apelido_norm LIMIT ?"
-  ).bind(q, hi, BUSCA_MAX + 2).all();
+    SEL + "WHERE f.apelido_norm >= ?1 AND f.apelido_norm < ?2 AND p.descobrivel = 1 AND f.apelido <> '' " +
+    semCopia("f", "?3") +
+    "ORDER BY f.apelido_norm LIMIT ?4"
+  ).bind(q, hi, quem.id, BUSCA_MAX + 2).all();
   for (const x of r.results || []) {
     if (achados.length >= BUSCA_MAX) break;
     await empurra(x);
@@ -288,7 +355,7 @@ async function rotaVer(env, quem, corpo, h) {
   // Perfil NAO publicado so e visto por quem tem relacao com a pessoa (amigo ou
   // pedido) — um handle solto nao abre nada.
   if (!publicado(x) && !rel) return h.erro("perfil nao encontrado", 404);
-  const c = cartao(x, rel);
+  const c = cartao(x, rel, env);
   c.recentes = [];
   if (publicado(x) && x.recentes) {
     const r = await env.DB.prepare(
@@ -300,33 +367,83 @@ async function rotaVer(env, quem, corpo, h) {
   return h.json(c);
 }
 
-// Gosto parecido: titulos que EU mandei na consulta (nao ficam guardados)
-// cruzados com os "vistos recentemente" de quem os PUBLICOU. So voltam pessoas
-// pesquisaveis, sem relacao comigo e nunca bloqueadas, com pelo menos
-// SUG_TASTE_MIN titulos em comum. Exige que EU tambem seja pesquisavel: quem
-// nao se mostra nao ganha uma janela para ver os outros.
+// Gosto parecido. Antes so voltava gente com 3+ titulos em comum nos "vistos
+// recentemente" PUBLICADOS — em 06/10/2026 isso eram 15 linhas de 2 pessoas em
+// todo o banco, entao ninguem recebia nada. Agora tres sinais, cada resultado
+// com o MOTIVO honesto:
+//   titulos : n titulos que EU mandei na consulta (nao ficam guardados) tambem
+//             estao na atividade publica (so de quem ligou "recentes") ou no
+//             agregado de titulos da pessoa. SO O NUMERO sai, nunca quais.
+//   generos : generos do "Meu perfil" em comum (ja sao publicos no cartao).
+//   ativos  : perfil publicado mexido ha pouco — o que sobra quando faltam dados.
+// So voltam pessoas pesquisaveis, sem relacao comigo e nunca bloqueadas. Exige
+// que EU tambem seja pesquisavel: quem nao se mostra nao ganha uma janela para
+// ver os outros. Limiar de titulos adaptativo: 1 se mandei poucos, 2 se muitos.
+const SUG_MAX = 10;
+const SUG_RECENTE_S = 45 * 86400;
 async function rotaSugeridos(env, quem, corpo, h) {
   const t = h.agora();
   if (!(await limitar(env, `sug:${quem.id}`, 20, 3600, t))) return h.erro("limite", 429);
-  const eu = await env.DB.prepare("SELECT descobrivel FROM pessoa WHERE id = ?").bind(quem.id).first();
-  if (!eu?.descobrivel) return h.json({ sugeridos: [] });
+  const eu = await env.DB.prepare(
+    "SELECT p.descobrivel AS d, f.generos AS generos FROM pessoa p LEFT JOIN perfil f ON f.pessoa = p.id WHERE p.id = ?"
+  ).bind(quem.id).first();
+  if (!eu?.d) return h.json({ sugeridos: [] });
   const imdbs = [...new Set((Array.isArray(corpo?.imdbs) ? corpo.imdbs : [])
-    .map((s) => String(s)).filter((s) => /^tt\d{1,10}$/.test(s)))].slice(0, 40);
-  if (imdbs.length < SUG_TASTE_MIN) return h.json({ sugeridos: [] });
-  const marcas = imdbs.map(() => "?").join(",");
+    .map((s) => String(s)).filter((s) => /^tt\d{1,10}$/.test(s)))].slice(0, 60);
+  const meus = new Set(listaGeneros(eu.generos));
   const r = await env.DB.prepare(
-    "SELECT f.pub AS pub, f.apelido AS apelido, f.bio AS bio, f.generos AS generos, " +
-    "f.com_avatar AS comAvatar, p.avatar AS avatar, p.descobrivel AS descobrivel, COUNT(*) AS emComum " +
-    "FROM atividade a JOIN perfil f ON f.pessoa = a.pessoa AND f.recentes = 1 AND f.apelido <> '' " +
-    "JOIN pessoa p ON p.id = a.pessoa AND p.descobrivel = 1 " +
-    `WHERE a.imdb IN (${marcas}) AND a.acao = 0 AND a.pessoa <> ? ` +
-    "AND NOT EXISTS (SELECT 1 FROM contato c WHERE c.a = ? AND c.b = a.pessoa) " +
-    "AND NOT EXISTS (SELECT 1 FROM bloqueio b WHERE (b.quem = ? AND b.alvo = a.pessoa) OR (b.quem = a.pessoa AND b.alvo = ?)) " +
-    "GROUP BY a.pessoa HAVING COUNT(*) >= ? ORDER BY emComum DESC LIMIT 10"
-  ).bind(...imdbs, quem.id, quem.id, quem.id, quem.id, SUG_TASTE_MIN).all();
+    "SELECT f.pessoa AS id, f.pub AS pub, f.apelido AS apelido, f.bio AS bio, f.generos AS generos, " +
+    "f.com_avatar AS comAvatar, f.recentes AS recentes, f.atualizado AS atualizado, " +
+    "p.avatar AS avatar, p.descobrivel AS descobrivel " +
+    "FROM perfil f JOIN pessoa p ON p.id = f.pessoa AND p.descobrivel = 1 " +
+    "WHERE f.apelido <> '' " +
+    foraDaConta("f.pessoa") +
+    semCopia("f", "?") +
+    "AND NOT EXISTS (SELECT 1 FROM contato c WHERE c.a = ? AND c.b = f.pessoa) " +
+    "AND NOT EXISTS (SELECT 1 FROM bloqueio b WHERE (b.quem = ? AND b.alvo = f.pessoa) OR (b.quem = f.pessoa AND b.alvo = ?)) " +
+    "ORDER BY f.atualizado DESC LIMIT 200"
+  ).bind(contaDe(quem.id), contaDe(quem.id), contaDe(quem.id),
+         quem.id, quem.id, quem.id, quem.id,   // semCopia: os 4 `?` de "sou amigo"
+         quem.id, quem.id, quem.id).all();
+  const cands = new Map((r.results || []).map((x) => [x.id, x]));
+  // titulos em comum: duas consultas pelo imdb (nunca por lista de pessoas — o D1
+  // aceita 100 parametros) e o corte por candidato e feito aqui.
+  const comuns = new Map();
+  if (imdbs.length && cands.size) {
+    const marcas = imdbs.map(() => "?").join(",");
+    const soma = (rows, soRecentes) => {
+      for (const x of rows || []) {
+        const c = cands.get(x.pessoa);
+        if (!c || (soRecentes && !c.recentes)) continue;
+        if (!comuns.has(c.id)) comuns.set(c.id, new Set());
+        comuns.get(c.id).add(x.imdb);
+      }
+    };
+    soma((await env.DB.prepare(
+      `SELECT pessoa, imdb FROM atividade WHERE acao = 0 AND imdb IN (${marcas})`).bind(...imdbs).all()).results, true);
+    soma((await env.DB.prepare(
+      `SELECT pessoa, imdb FROM agregado_titulo WHERE imdb IN (${marcas})`).bind(...imdbs).all()).results, false);
+  }
+  const minTit = imdbs.length >= 10 ? 2 : 1;
+  const minGen = Math.min(2, meus.size);
+  const lista = [];
+  for (const c of cands.values()) {
+    const n = comuns.get(c.id)?.size || 0;
+    const gens = listaGeneros(c.generos).filter((g) => meus.has(g));
+    const recente = t - c.atualizado <= SUG_RECENTE_S;
+    let motivo;
+    if (n >= minTit) motivo = { tipo: "titulos", n, ...(gens.length ? { generos: gens } : {}) };
+    else if (minGen > 0 && gens.length >= minGen) motivo = { tipo: "generos", generos: gens };
+    else if (recente) motivo = { tipo: "ativos" };
+    else continue;
+    const peso = motivo.tipo === "titulos" ? 1000 + n * 10 + gens.length
+      : motivo.tipo === "generos" ? 100 + gens.length : 0;
+    lista.push({ c, motivo, n, peso });
+  }
+  lista.sort((a, b) => b.peso - a.peso || b.c.atualizado - a.c.atualizado);
   return h.json({
-    sugeridos: (r.results || []).map((x) => ({
-      ...cartao({ ...x, nome: "" }, ""), emComum: x.emComum,
+    sugeridos: lista.slice(0, SUG_MAX).map(({ c, motivo, n }) => ({
+      ...cartao({ ...c, nome: "" }, "", env), emComum: motivo.tipo === "titulos" ? n : 0, motivo,
     })),
   });
 }
@@ -362,7 +479,7 @@ async function rotaComunidade(env, quem, corpo, h) {
   const pag = Number.isInteger(corpo?.pagina) ? Math.max(0, Math.min(COMUNIDADE_PAGS - 1, corpo.pagina)) : 0;
   const PUBLICO = "a.pessoa = f.pessoa AND a.acao = 0 AND f.recentes = 1";
   const r = await env.DB.prepare(
-    "SELECT f.pub AS pub, f.apelido AS apelido, f.bio AS bio, f.generos AS generos, " +
+    "SELECT f.pessoa AS id, p.nome AS nome, f.pub AS pub, f.apelido AS apelido, f.bio AS bio, f.generos AS generos, " +
     "f.com_avatar AS comAvatar, p.avatar AS avatar, p.descobrivel AS descobrivel, " +
     `(SELECT a.titulo FROM atividade a WHERE ${PUBLICO} ORDER BY a.criado DESC LIMIT 1) AS vendo, ` +
     `MAX(f.atualizado, COALESCE((SELECT MAX(a.criado) FROM atividade a WHERE ${PUBLICO}), 0)) AS ativo, ` +
@@ -372,13 +489,15 @@ async function rotaComunidade(env, quem, corpo, h) {
     "     ELSE '' END AS relacao " +
     "FROM perfil f JOIN pessoa p ON p.id = f.pessoa " +
     "WHERE p.descobrivel = 1 AND f.apelido <> '' AND f.pessoa <> ?1 " +
+    foraDaConta("f.pessoa", "?4") +
+    semCopia("f", "?1") +
     "AND NOT EXISTS (SELECT 1 FROM bloqueio b WHERE (b.quem = ?1 AND b.alvo = f.pessoa) OR (b.quem = f.pessoa AND b.alvo = ?1)) " +
     "ORDER BY ativo DESC, f.pub LIMIT ?2 OFFSET ?3"
-  ).bind(quem.id, COMUNIDADE_PAG + 1, pag * COMUNIDADE_PAG).all();
+  ).bind(quem.id, COMUNIDADE_PAG + 1, pag * COMUNIDADE_PAG, contaDe(quem.id)).all();
   const linhas = r.results || [];
   return h.json({
     pessoas: linhas.slice(0, COMUNIDADE_PAG).map((x) => ({
-      ...cartao({ ...x, nome: "" }, x.relacao || ""), vendo: x.vendo || "",
+      ...cartao(x, x.relacao || "", env), vendo: x.vendo || "",
     })),
     pagina: pag,
     mais: linhas.length > COMUNIDADE_PAG && pag + 1 < COMUNIDADE_PAGS ? 1 : 0,
@@ -434,16 +553,20 @@ async function rotaPedidoEnviar(env, quem, corpo, h) {
 
 async function rotaPedidosLer(env, quem, h) {
   const r = await env.DB.prepare(
-    "SELECT f.pub AS pub, f.apelido AS apelido, f.bio AS bio, f.generos AS generos, f.com_avatar AS comAvatar, " +
+    "SELECT pe.de AS id, f.pub AS pub, f.apelido AS apelido, f.bio AS bio, f.generos AS generos, f.com_avatar AS comAvatar, " +
     "p.nome AS nome, p.avatar AS avatar, p.descobrivel AS descobrivel, pe.criado AS criado " +
     "FROM pedido pe JOIN perfil f ON f.pessoa = pe.de JOIN pessoa p ON p.id = pe.de " +
     "WHERE pe.para = ? AND pe.estado = 0 " +
+    // Ja amigos (o vinculo veio por outro caminho: codigo, Trakt, fusao de
+    // identidades) nao sao pedido: aceitar seria um botao sem efeito. Em
+    // 06/10 eram 2 dos 21 pendentes. A linha nao e apagada aqui (GET).
+    "AND NOT EXISTS (SELECT 1 FROM contato c WHERE c.a = pe.para AND c.b = pe.de) " +
     "AND NOT EXISTS (SELECT 1 FROM bloqueio b WHERE (b.quem = pe.para AND b.alvo = pe.de) OR (b.quem = pe.de AND b.alvo = pe.para)) " +
     "ORDER BY pe.criado DESC LIMIT 30"
   ).bind(quem.id).all();
   const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM pedido WHERE de = ? AND estado = 0").bind(quem.id).first();
   return h.json({
-    recebidos: (r.results || []).map((x) => ({ ...cartao(x, "recebido"), criado: x.criado })),
+    recebidos: (r.results || []).map((x) => ({ ...cartao(x, "recebido", env), criado: x.criado })),
     enviados: n?.n || 0,
   });
 }
@@ -607,7 +730,7 @@ export async function rotaAmigos(rota, metodo, env, quem, corpo, h) {
 
 // Usado por index.js: garante que quem ja e "descobrivel" tem handle, e devolve
 // o handle publico de um id de conta (nunca o id).
-export { garantirPerfil, bloqueado, avatarPublico, norm, limitar };
+export { garantirPerfil, bloqueado, avatarPublico, norm, limitar, seloDe, mesmaConta };
 
 export function limpezaAmigos(env, t) {
   return [

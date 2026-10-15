@@ -36,6 +36,11 @@ typedef enum {
   SMK_ERRO
 } SmkEstado;
 
+// Veredito de uma resposta do poll (ver simklauth_classificar em simklauth.c).
+typedef enum { SMK_POLL_ESPERA = 0, SMK_POLL_OK, SMK_POLL_LENTO, SMK_POLL_NEGADO, SMK_POLL_FALHA } SmkPoll;
+SmkPoll simklauth_classificar(int st, const char *corpo, char *tk, unsigned tam);
+int simklauth_restante_s(void);   // segundos ate expirar; -1 sem codigo
+
 void simklauth_comecar(void);
 void simklauth_passo(unsigned agoraMs);
 

@@ -3,7 +3,7 @@
 #   bash tests/legref_fixtures.sh DIR
 set -eu
 D=${1:-${TMPDIR:-/tmp}/nv-legref-fx}; mkdir -p "$D"
-[ -f "$D/.ok" ] && [ -f "$D/ext_traduzida_mais2000.srt" ] && [ -f "$D/filme.mkv" ] && exit 0
+[ -f "$D/.ok" ] && [ -f "$D/ext_traduzida_mais2000.srt" ] && [ -f "$D/filme.mkv" ] && [ -f "$D/cruz2.mkv" ] && exit 0
 command -v ffmpeg >/dev/null && command -v mkvmerge >/dev/null || { echo "precisa de ffmpeg e mkvmerge"; exit 2; }
 python3 - "$D" <<'PY'
 import random, sys
@@ -79,9 +79,21 @@ mkvmerge -q -o mm.mkv video.mkv --language 0:eng --forced-display-flag 0:1 --tra
   --language 0:eng emb.ass --language 0:por ext_mais2500.srt
 # Sem Cues para a legenda: o indice so aponta o video.
 mkvmerge -q -o semcues.mkv video.mkv --cues 0:none --language 0:eng emb.srt
+# Validacao cruzada: a primeira faixa em ingles esta +1,5 s fora; outra em
+# ingles e uma em portugues concordam no tempo certo. Em cruz2 so as duas
+# primeiras (sem como desempatar).
+mkvmerge -q -o cruz.mkv video.mkv --language 0:eng --sync 0:1500 emb.srt --language 0:eng --track-name 0:English2 emb.srt \
+  --language 0:por emb.srt
+mkvmerge -q -o cruz2.mkv video.mkv --language 0:eng --sync 0:1500 emb.srt --language 0:eng --track-name 0:English2 emb.srt
 # So letreiro.
 mkvmerge -q -o soforced.mkv video.mkv --language 0:eng --forced-display-flag 0:1 emb.srt
 ffmpeg -loglevel error -y -i video.mkv -c copy video.mp4
+# MP4 com tx3g (mov_text): moov no FIM (padrao do ffmpeg, um mdat de ~22 MB
+# antes), ingles + portugues; o mesmo com moov no comeco; e fragmentado.
+ffmpeg -loglevel error -y -i video.mp4 -i emb.srt -i ext_mais2500.srt -map 0 -map 1 -map 2 -c copy -c:s mov_text \
+  -metadata:s:s:0 language=eng -metadata:s:s:1 language=por txt.mp4
+ffmpeg -loglevel error -y -i txt.mp4 -map 0 -c copy -movflags +faststart txt_fs.mp4
+ffmpeg -loglevel error -y -i video.mp4 -i emb.srt -map 0 -map 1 -c copy -c:s mov_text -movflags frag_keyframe+empty_moov frag.mp4
 # ~40 MB, 2 h: video minusculo, mas um Cluster a cada 5 s como num filme.
 ffmpeg -loglevel error -y -f lavfi -t 7200 -i "testsrc2=s=160x90:r=2" -c:v libx264 -preset ultrafast -b:v 40k -g 10 video_filme.mkv
 mkvmerge -q -o filme.mkv video_filme.mkv --language 0:eng filme_emb.srt

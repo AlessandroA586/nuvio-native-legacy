@@ -112,7 +112,7 @@ for i in $(seq 50); do [ -s "$DIR/porta" ] && break; sleep 0.1; done
 "$DIR/t" "$(cat "$DIR/porta")"
 
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/diagnostico.c) continue;; esac
   sources+=("$source")
 done

@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // SALVOS: a lista de "quero ver" que sobrevive ao proximo arranque.
 //
 // O DEFEITO QUE ISTO CONSERTA, e ele e grande. O "+" do detalhe (app.c,
@@ -48,13 +49,27 @@ typedef struct {
   char id[24];        // IMDb ("tt0111161"). Vazio nunca entra na lista.
   char tipo[8];       // "movie" | "series"
   char titulo[160];
-  char poster[512];
+  // Mesmo teto de CatItem.poster (#433): o cartaz de provedor com nota passa
+  // de 500 caracteres e o corte calado era um 404. O arquivo e texto com TAB,
+  // entao lista gravada antes le igual; so a memoria cresce, e so por item.
+  char poster[NV_ARTE_URL_MAX];
   char meta[96];      // "2002" ou "2022 · 3 temporadas", como vem do catalogo
   int  nota;          // imdb_rating em porcentagem; 0 = desconhecida
   long long quandoS;  // time(NULL) do salvamento, para "Salvo há 2 horas"
 } SalvoItem;
 
-// Le salvos.txt. Chamar UMA vez no arranque, depois de dados_iniciar — sem
+// Qual perfil a lista em memoria representa (padrao 1). Trocar de perfil
+// larga a lista e le salvos-p<N>.txt do novo. Chamar com perfis_ativo() antes
+// de salvos_iniciar e a cada troca de perfil.
+void salvos_perfil(int perfil);
+int  salvos_perfil_atual(void);
+// A lista antiga (salvos.txt) foi adotada por um perfil nesta TV e AINDA NAO
+// subiu para a conta: 1 e o perfil em *perfil. Depois de entregar ao jornal da
+// conta, salvos_migracao_conta_feita() — e nunca mais se repete.
+int  salvos_migracao_conta(int *perfil);
+void salvos_migracao_conta_feita(void);
+
+// Le a lista do perfil. Chamar UMA vez no arranque, depois de dados_iniciar — sem
 // pasta de dados isto e no-op silencioso e a lista comeca vazia (o log de
 // dados.c ja explicou por que nao ha pasta).
 void salvos_iniciar(void);
@@ -77,6 +92,9 @@ int  salvos_tem(const char *imdb);
 // no arranque seguinte o painel abre antes de existir catalogo nenhum, e uma
 // lista de ids nus desenharia oito retangulos cinza sem nome.
 int  salvos_definir(const CatItem *ci, int salvo);
+// Quem quer saber de CADA gesto de salvar/tirar (app.c liga o jornal da conta,
+// contapend.h). Chamado antes da lista local mudar, mesmo quando ela nao muda.
+void salvos_ao_definir(void (*f)(const CatItem *ci, int salvo));
 
 // Marca no catalogo (naLista) tudo que esta na lista local. Devolve quantos
 // ficaram marcados. FIO PRINCIPAL apenas.

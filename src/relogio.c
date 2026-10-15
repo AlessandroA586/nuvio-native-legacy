@@ -14,6 +14,15 @@
 
 void relogio_zerar(Relogio *r) { memset(r, 0, sizeof *r); }
 
+static double taxaDe(const Relogio *r) { return r->taxa > 0.0 ? r->taxa : 1.0; }
+
+void relogio_taxa(Relogio *r, double taxa) {
+  if (taxa <= 0.0) taxa = 1.0;
+  if (taxa == taxaDe(r)) return;
+  r->taxa = taxa;
+  r->n = r->prox = 0;
+}
+
 static double maxOff(const Relogio *r) {
   int i; double m = r->off[0];
   for (i = 1; i < r->n; i++) if (r->off[i] > m) m = r->off[i];
@@ -32,7 +41,7 @@ void relogio_amostra(Relogio *r, double posSeg, double agora, int tocando) {
   }
   if (!r->tocando) { r->tocando = 1; r->n = r->prox = 0; nova = 1; }
   if (!nova) return;
-  { double off = posSeg - agora;
+  { double off = posSeg - agora * taxaDe(r);
     if (r->n && (off - maxOff(r) > REL_SALTO || maxOff(r) - off > REL_SALTO)) {
       r->n = r->prox = 0;
       r->saida = posSeg;
@@ -50,8 +59,9 @@ double relogio_ler(Relogio *r, double agora) {
   double v;
   if (!r->temAmostra) return 0.0;
   if (!r->tocando || !r->n) { r->saida = r->ultPos; return r->ultPos; }
-  v = agora + maxOff(r);
-  if (v > r->ultPos + REL_TETO) v = r->ultPos + REL_TETO;
+  v = agora * taxaDe(r) + maxOff(r);
+  // O teto e em tempo de RELOGIO: a 2x, 350 ms de relogio sao 700 ms de video.
+  if (v > r->ultPos + REL_TETO * taxaDe(r)) v = r->ultPos + REL_TETO * taxaDe(r);
   if (v < r->ultPos - REL_RECUO) v = r->ultPos;
   // Monotonico entre saltos: um recuo pequeno (amostra que chegou adiantada
   // saiu da janela) segura o valor em vez de voltar.

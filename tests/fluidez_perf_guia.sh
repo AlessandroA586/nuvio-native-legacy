@@ -5,7 +5,7 @@
 #
 #   bash tests/fluidez_perf_guia.sh                 # esta arvore
 #   bash tests/fluidez_perf_guia.sh /outra/arvore   # ex.: worktree da v1.7.4
-set -eu
+set -euo pipefail
 aqui="$(cd "$(dirname "$0")/.." && pwd)"
 raiz="${1:-$aqui}"
 cd "$raiz"
@@ -14,7 +14,7 @@ trap 'rm -rf "$tmp"' EXIT
 flags=()
 if ! grep -q gfx_n_cheio_mistura src/gfx.h; then flags+=(-DNV_PERF_BASE); fi
 sources=()
-for s in src/*.c; do case "$s" in src/main.c|src/guia.c) continue;; esac; sources+=("$s"); done
+for s in src/*.c src/dts/*.c; do case "$s" in src/main.c|src/guia.c) continue;; esac; sources+=("$s"); done
 # O guia_shot.c e o wrapper vem desta arvore ($aqui); o codigo, de $raiz. Na
 # arvore antiga o guia_shot.c dela e o que vale.
 guia_shot="$raiz/tests/guia_shot.c"

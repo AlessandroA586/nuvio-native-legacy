@@ -45,6 +45,37 @@ int main(int argc, char **argv) {
   OK(af_tmdb_fundos("{\"backdrop_path\":\"/so.jpg\",\"images\":{\"backdrops\":[{\"file_path\":\"/so.jpg\",\"iso_639_1\":null}]}}",
                     NULL, padrao, sizeof padrao, outro, sizeof outro) == 0 && !outro[0], "tmdb: so o padrao = nao ha outro");
 
+  // Idioma da arte automatica: o da pessoa, o sem texto (fundo) / ingles
+  // (logo), e nenhum outro.
+  { const char *c = "{\"backdrop_path\":\"/ko.jpg\",\"images\":{\"backdrops\":["
+                    "{\"file_path\":\"/ko.jpg\",\"iso_639_1\":\"ko\",\"vote_average\":9},"
+                    "{\"file_path\":\"/n1.jpg\",\"iso_639_1\":null,\"vote_average\":5},"
+                    "{\"file_path\":\"/n2.jpg\",\"iso_639_1\":null,\"vote_average\":8},"
+                    "{\"file_path\":\"/ar.jpg\",\"iso_639_1\":\"ar\",\"vote_average\":4}],"
+                    "\"logos\":[{\"file_path\":\"/lko.png\",\"iso_639_1\":\"ko\"},"
+                    "{\"file_path\":\"/lsvg.svg\",\"iso_639_1\":\"ar\"},"
+                    "{\"file_path\":\"/lnull.png\",\"iso_639_1\":null},"
+                    "{\"file_path\":\"/len.png\",\"iso_639_1\":\"en\"},"
+                    "{\"file_path\":\"/lar.png\",\"iso_639_1\":\"ar\"},"
+                    "{\"file_path\":\"/lar2.png\",\"iso_639_1\":\"ar\"}]}}";
+    char o[160], iso[8];
+    OK(af_tmdb_fundo_padrao(c, "ar", "/ko.jpg", o, sizeof o) && !strcmp(o, "/ar.jpg"), "idioma: fundo ar vence a raiz ko");
+    OK(af_tmdb_fundo_padrao(c, "fr", "/ko.jpg", o, sizeof o) && !strcmp(o, "/n2.jpg"), "idioma: sem fr, o sem texto de maior nota");
+    OK(af_tmdb_fundo_padrao(c, "ar", "/n1.jpg", o, sizeof o) && !strcmp(o, "/n1.jpg"), "idioma: raiz sem texto fica");
+    OK(!af_tmdb_fundo_padrao("{\"backdrops\":[{\"file_path\":\"/ko.jpg\",\"iso_639_1\":\"ko\"}]}", "ar", "/ko.jpg", o, sizeof o),
+       "idioma: so ko = nada");
+    OK(af_tmdb_fundo_padrao("{\"backdrop_path\":\"/x.jpg\"}", "ar", "/x.jpg", o, sizeof o) && !strcmp(o, "/x.jpg"),
+       "idioma: sem lista, fica a raiz");
+    OK(af_tmdb_logo(c, "ar", o, sizeof o, iso, sizeof iso) && !strcmp(o, "/lar.png") && !strcmp(iso, "ar"),
+       "idioma: logo ar, o primeiro (svg fora)");
+    OK(af_tmdb_logo(c, "de", o, sizeof o, iso, sizeof iso) && !strcmp(o, "/len.png") && !strcmp(iso, "en"),
+       "idioma: sem de, o ingles (nunca ko)");
+    OK(af_tmdb_logo("{\"logos\":[{\"file_path\":\"/lko.png\",\"iso_639_1\":\"ko\"},{\"file_path\":\"/n.png\",\"iso_639_1\":null}]}",
+                    "ar", o, sizeof o, iso, sizeof iso) && !strcmp(o, "/n.png") && !strcmp(iso, "und"),
+       "idioma: sem ar nem en, o sem idioma");
+    OK(!af_tmdb_logo("{\"logos\":[{\"file_path\":\"/lko.png\",\"iso_639_1\":\"ko\"}]}", "ar", o, sizeof o, iso, sizeof iso),
+       "idioma: so ko = nenhum logo"); }
+
   // fanart.tv: sem idioma ("" ou "00") antes do com texto; mais likes.
   j = ler(dir, "fanart_movie_278.json");
   OK(af_fanart_fundo(j, 0, u, sizeof u) && strstr(u, "limpo-muitos.jpg"), "fanart filme: sem texto, mais likes");

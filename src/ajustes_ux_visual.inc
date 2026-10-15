@@ -10,6 +10,8 @@ static const char *ajVisualIcone(int op) {
     case AJ_FIL_ORDEM: return "aj_rows-3";
     case AJ_FIL_LIMITE: return "aj_rows-3";
     case AJ_ITENS_FILEIRA: return "aj_rows-3";
+    case AJ_ESPACO_FILEIRAS: return "aj_rows-3";
+    case AJ_ESPACO_TITULOS: return "aj_rows-3";
     case AJ_OCULTAR_NLANC: return "aj_rows-3";
     case AJ_NOTAS_HOME: return "aj_rows-3";
     case AJ_ROTULOS: return "aj_rows-3";
@@ -24,6 +26,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_CW_ORDEM: return "aj_rotate-ccw-clock";
     case AJ_CW_NAO_EXIBIDOS: return "aj_rotate-ccw-clock";
     case AJ_CW_FURTHEST: return "aj_rotate-ccw-clock";
+    case AJ_CW_RETIDO_TAMBEM: return "aj_rotate-ccw-clock";
     case AJ_RAIL_MODERNA: return "aj_panel-left";
     case AJ_RAIL: return "aj_panel-left";
     case AJ_MENU_EXPLORAR: return "aj_panel-left";
@@ -33,6 +36,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_RAIL_BLUR: return "aj_panel-left";
     case AJ_DESCOBRIR: return "aj_panel-left";
     case AJ_PS_FUNDO: return "aj_users";
+    case AJ_PS_CONTINUAR: return "aj_users";
     case AJ_EXPANDIR: return "aj_maximize-2";
     case AJ_EXPANDIR_ATRASO: return "aj_clock";
     case AJ_BORDA_FOCO: return "aj_maximize-2";
@@ -113,19 +117,34 @@ static const char *ajVisualIcone(int op) {
     case AJ_FONTE_MANUAL: return "aj_list-video";
     case AJ_FONTE_AUTO: return "aj_list-video";
     case AJ_FONTE_REPOR: return "aj_list-video";
+    case AJ_FONTE_PREPARAR: return "aj_download";
+    case AJ_FONTE_CONFERIR_VARIAS: return "aj_layers";
+    case AJ_FONTE_AQUECER: return "aj_wifi";
+    case AJ_FONTE_TOCAR_CONFERINDO: return "aj_zap";
     case AJ_FONTE_PRAZO: return "aj_list-video";
     case AJ_FONTE_PRIORIDADE: case AJ_FONTE_HDR: return "aj_list-video";
-    case AJ_FONTE_TEXTO: return "aj_list-video";
+    case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON: return "aj_list-video";
+    case AJ_FONTE_ESCOPO: case AJ_FONTE_OUTROS: return "aj_list-video";
+    case AJ_FONTE_ADDONS_PERM: return "aj_puzzle";
+    case AJ_FONTE_PLUGINS_PERM: return "aj_plug";
+    case AJ_FONTE_ORDEM: return "aj_arrow-up-down";
+    case AJ_FONTE_ORDEM_USO: return "aj_list-video";
+    case AJ_FONTE_REGEX: case AJ_FONTE_REGEX_PADRAO: case AJ_FONTE_REGEX_MODELO: return "aj_search";
     case AJ_SELOS_CORES: return "aj_list-video";
     case AJ_SELOS_PACOTE: return "aj_list-video";
     case AJ_SELOS_PACOTE_ADD: return "aj_list-video";
     case AJ_SELOS_PACOTE_REM: return "aj_list-video";
     case AJ_QUALIDADE: return "aj_monitor-play";
     case AJ_DV: return "aj_monitor-play";
+    case AJ_DV_MKV: return "aj_monitor-play";
     case AJ_ATMOS: return "aj_monitor-play";
     case AJ_PAUSA_OVERLAY: return "aj_circle-play";
+    case AJ_PLR_CLASSIF: return "aj_shield";
+    case AJ_TELA_ABERTURA: return "aj_clapperboard";
     case AJ_REACAO_CREDITOS: return "aj_circle-play";
     case AJ_CW_CONCLUIDO: return "aj_circle-play";
+    case AJ_CW_MINIMO: return "aj_circle-play";
+    case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_AUTO: case AJ_PROXIMO_CONTAGEM: return "aj_circle-play";
     case AJ_SAIDA_PLAYER: return "aj_circle-play";
     case AJ_SEEKR_LIGADO: return "aj_film";
     case AJ_SEEKR_CHAVE: return "aj_film";
@@ -134,8 +153,9 @@ static const char *ajVisualIcone(int op) {
     case AJ_SEEKR_AJUSTE: return "aj_film";
     case AJ_IDIOMA: return "aj_languages";
     case AJ_AUD_LINGUA: return "aj_audio-lines";
-    case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: return "aj_captions";
+    case AJ_LEG_MOSTRAR: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_LEG_FORCADA: return "aj_captions";
     case AJ_CACHE_SEEK: return "aj_database";
+    case AJ_TAM_MAX: case AJ_TAM_MIN: return "aj_database";
     case AJ_TMDB_IDIOMA: return "aj_file-text";
     case AJ_TEMA: return "aj_palette";
     case AJ_FUNDO: return "aj_images";
@@ -144,9 +164,11 @@ static const char *ajVisualIcone(int op) {
     case AJ_FONTE_UI: return "aj_type";
     case AJ_TAMANHO_UI: return "aj_maximize-2";
     case AJ_TAMANHO_AJUSTES: return "aj_sliders-horizontal";
+    case AJ_LAYOUT_AJUSTES: return "aj_layout-list";
+    case AJ_INTERFACE_MODO: return "aj_smartphone";
     case AJ_AVANCADAS: return "aj_eye";
     case AJ_LOGO_TRAILER: return "aj_eye-off";
-    case AJ_LEG_SYNC_AUDIO: return "aj_audio-lines";
+    case AJ_LEG_SYNC_AUTO: case AJ_LEG_SYNC_AUDIO: return "aj_audio-lines";
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA: return "aj_captions";
     case AJ_ICONE_APP: return "aj_image-plus";
     case AJ_LOGO_APP: return "aj_image";
@@ -155,10 +177,14 @@ static const char *ajVisualIcone(int op) {
     case AJ_ANIM: return "aj_activity";
     case AJ_ENQUETES: return "aj_bell";
     case AJ_BUSCA_CINEMETA: return "aj_list-x";
+    case AJ_BUSCA_NUVIO: return "aj_arrow-down";
+    case AJ_BUSCA_ORIGEM: return "aj_tag";
     case AJ_ESMAECER: return "aj_moon";
     case AJ_DESCANSO_ESTILO: return "aj_image";
     case AJ_DESCANSO_FONTE: return "aj_film";
-    case AJ_BRILHO_PLAYER: return "aj_sun-dim";
+    case AJ_PROPORCAO_PADRAO: return "aj_maximize-2";
+    case AJ_DTS_AC3: return "aj_audio-lines";
+    case AJ_BRILHO_PLAYER: case AJ_HDR_UI: return "aj_sun-dim";
     case AJ_MANTER_VIDEO: return "aj_memory-stick";
     case AJ_RELOGIO: case AJ_RELOGIO_12H: return "aj_clock";
     case AJ_VIDRO_CONTORNO: return "aj_layers";
@@ -191,6 +217,9 @@ static const char *ajVisualIcone(int op) {
     case AJ_SIMKL: return "aj_plug";
     case AJ_SALVOS_DEST: return "aj_plug";
     case AJ_CW_FONTE: return "aj_plug";
+    case AJ_CW_PROXIMO: return "aj_plug";
+    case AJ_HIST_CONTA: return "aj_cloud";
+    case AJ_SOCIAL: return "aj_user-round";
     case AJ_DEBRID_RD: return "aj_key-round";
     case AJ_DEBRID_TB: return "aj_key-round";
     case AJ_DEBRID_PM: return "aj_key-round";
@@ -201,6 +230,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_P2P_LIGADO: return "aj_user-round";
     case AJ_P2P_URL: return "aj_user-round";
     case AJ_P2P_TESTAR: return "aj_user-round";
+    case AJ_P2P_LIMITE: return "aj_database";
     case AJ_JF_LIGADO: return "aj_server";
     case AJ_JF_SERVIDOR: return "aj_server";
     case AJ_JF_ENTRAR: return "aj_log-in";
@@ -218,8 +248,10 @@ static const char *ajVisualIcone(int op) {
     case AJ_TEX_MB: return "aj_memory-stick";
     case AJ_GUIA: return "aj_book-open";
     case AJ_NOVIDADES20: return "aj_sparkles";
+    case AJ_APOIAR: return "aj_heart";
     case AJ_VERSAO_I: return "aj_info";
     case AJ_ATUALIZAR: return "aj_download";
+    case AJ_AVISO_LEGAL: return "aj_file-text";
     case AJ_VER_REGISTRO: return "aj_scroll-text";
     case AJ_ENVIAR_LOG: return "aj_send";
     case AJ_ENVIO_AUTO: return "aj_scroll-text";
@@ -238,8 +270,12 @@ static const char *ajVisualIcone(int op) {
 // anterior tinha Cartazes/Trailers/Titulo/Reproducao/Idiomas/Aparencia
 // trocados, e Reproducao mostrava os chips de idioma.
 #include "perfis.h"
-enum { AJS_HOME = 0, AJS_TITULO, AJS_CARTAZES, AJS_TRAILERS, AJS_APARENCIA, AJS_REPRODUCAO,
-       AJS_IDIOMAS, AJS_TVAOVIVO, AJS_CONTAS, AJS_DESEMPENHO, AJS_SOBRE };
+// 2.0.3: a ordem da tarefa (Assistir, Telas, Conta e sistema). AJS_TRAILERS nao
+// e mais categoria (Cartazes e trailers e uma so): fica depois de AJS_N como a
+// CENA das opcoes de trailer dentro de Cartazes e trailers.
+enum { AJS_REPRODUCAO = 0, AJS_IDIOMAS, AJS_FONTES, AJS_TVAOVIVO,
+       AJS_HOME, AJS_APARENCIA, AJS_TITULO, AJS_CARTAZES,
+       AJS_CONTAS, AJS_DESEMPENHO, AJS_SOBRE, AJS_N, AJS_TRAILERS = AJS_N };
 static float ajPreviaHome(float x, float y, float w);
 static float ajPreviaHomeArte(float x, float y, float w, int arte);
 static const char *ajTituloN(int n);
@@ -251,24 +287,27 @@ static TxtEstilo ajEstiloPxS(float px, int forte) { return ajEstiloPx(px < 6.0f 
 // ajArte). Linha = categoria (AJS_*), coluna = o bloco (ROT) na ordem de
 // ajustes_ux_tela.inc; a coluna 0 e a imagem da categoria, e vale tambem para
 // o primeiro bloco (entrar na categoria nao troca a imagem). Nenhum indice se
-// repete: sao 35 das 40 amostras de deploy/app/art (sobram 24, 28, 29, 34 e
-// 36). -1 = a categoria nao tem esse bloco.
-#define AJ_ARTE_BLOCOS 6
-static const signed char AJ_ARTE_SEC[11][AJ_ARTE_BLOCOS] = {
-  { 12,  0, 20,  1, 31, -1 },   // Tela inicial: Estilo, Fileiras, Continuar, Barra lateral, Escolha de perfil
-  {  3,  4, 17,  5, -1, -1 },   // Pagina do titulo: O que aparece, Notas, Dados do titulo, Busca
-  { 13, 35, 27, -1, -1, -1 },   // Cartazes e arte: Cartaz em foco, Forma, De onde vem a arte
-  { 15, 16, -1, -1, -1, -1 },   // Trailers: Onde toca, Som e imagem
-  {  9, 39, 38,  6, 11, -1 },   // Aparencia: Cores e vidro, Logo e abertura, Texto e tamanho, Movimento e relogio, Tela de descanso
-  {  7, 18, 22, 32, -1, -1 },   // Reproducao: Escolha da fonte, Imagem e som, Durante e depois, Seekr
-  { 21, -1, -1, -1, -1, -1 },   // Idiomas e legendas
-  {  2, 14, -1, -1, -1, -1 },   // TV ao vivo: Provedor, Se o canal nao abre
-  { 23,  8, 33, 37, 19, 10 },   // Contas: Conta e perfis, Notificacoes, Trakt e Simkl, Chaves, P2P, Servidores
-  { 26, -1, -1, -1, -1, -1 },   // Desempenho desta TV
-  { 30, 25, -1, -1, -1, -1 },   // Sobre e ajuda: (guia e) App, Registro
+// repete: sao 36 das 40 amostras de deploy/app/art (sobram 28, 29, 34 e 36).
+// -1 = a categoria nao tem esse bloco.
+#define AJ_ARTE_BLOCOS 9
+// Os blocos de "Mais opcoes" (depois do MAIS() da categoria) repetem a arte do
+// bloco basico de mesmo nome: e a mesma parte do app, so que tecnica.
+static const signed char AJ_ARTE_SEC[AJS_N + 1][AJ_ARTE_BLOCOS] = {
+  { 18,  7, 22, 32,  7, 18, 19, -1, -1 },   // Reproducao: Imagem e som, Escolha da fonte, Durante e depois, Miniatura; Mais: fonte, som e video, P2P
+  { 21, 24, 21, -1, -1, -1, -1, -1, -1 },   // Idiomas e legendas: Idiomas, Segunda legenda; Mais: idiomas
+  {  5, 37, 10, -1, -1, -1, -1, -1, -1 },   // Fontes e addons: Addons, Debrid, Servidores
+  {  2, 14, 14, -1, -1, -1, -1, -1, -1 },   // TV ao vivo: Provedor, Se o canal nao abre; Mais
+  { 12,  0, 20,  1, 31, 12,  0, 20,  1 },   // Tela inicial: Estilo, Fileiras, Continuar, Barra lateral, Escolha de perfil; Mais
+  {  9, 39, 38,  6, 11,  9, -1, -1, -1 },   // Aparencia: Cores e vidro, Logo e abertura, Texto e tamanho, Movimento e relogio, Tela de descanso; Mais
+  {  3,  4, 17,  4, 17, -1, -1, -1, -1 },   // Pagina do titulo: O que aparece, Notas, Dados do titulo; Mais: notas, dados
+  { 13, 35, 27, 15, 16, 13, 35, 27, 15 },   // Cartazes e trailers: Cartaz em foco, Forma, Arte, Trailers, Som e imagem; Mais
+  { 23, 33,  8, -1, -1, -1, -1, -1, -1 },   // Conta e servicos: Perfil, Trakt e Simkl, Notificacoes
+  { 26, -1, -1, -1, -1, -1, -1, -1, -1 },   // Esta TV (Mais: Memoria)
+  { 30, 25, -1, -1, -1, -1, -1, -1, -1 },   // Sobre e ajuda: (guia e) App, Registro
+  { 15, 16, -1, -1, -1, -1, -1, -1, -1 },   // (cena) Trailers: Onde toca, Som e imagem
 };
 static int ajCenaArteN(int sec) {
-  return sec >= 0 && sec < 11 ? AJ_ARTE_SEC[sec][0] : 12;
+  return sec >= 0 && sec <= AJS_N ? AJ_ARTE_SEC[sec][0] : 12;
 }
 // A arte do submenu (bloco) da opcao. As opcoes antes do primeiro bloco e as
 // do primeiro bloco ficam com a imagem da categoria.
@@ -283,7 +322,7 @@ static int ajCenaArteOp(int op) {
   for (j = secIni[sec] + 1; j < i; j++) if (TELA[j].tipo == IT_ROT) g++;
   if (g < 0) g = 0;
   if (g >= AJ_ARTE_BLOCOS) g = AJ_ARTE_BLOCOS - 1;
-  n = sec >= 0 && sec < 11 ? AJ_ARTE_SEC[sec][g] : 12;
+  n = sec >= 0 && sec < AJS_N ? AJ_ARTE_SEC[sec][g] : 12;
   if (n < 0) n = ajCenaArteN(sec);
   cOp = op; cN = n;
   return n;
@@ -354,13 +393,22 @@ static void ajCenaHora(char *hora, size_t n) {
 // imagem da categoria.
 static int ajCenaSecao(int op);
 static float ajSecaoDesenhar(int cena, int op, float x, float y, float w);
+static int ajcSecA = -1;   // a arte da categoria para uma cena de bloco sem opcao
+static float ajFontesResumo(int A, float x, float y, float w);   // ajustes_ux_secoes.inc
+static float ajCenaGerada(int sec, int op, float x, float y, float w);   // ajustes_ux_cenas.inc
 static float ajVisualCena(int sec, int op, float x, float y, float w) {
+  // 2.0.2 (dono: "essas fotos reais dos settings atrapalham mais do que
+  // ajudam"): toda cena dos Ajustes e o desenho gerado. O desenho com as
+  // artes de amostra abaixo ficou so como referencia do que cada cena mostra.
+  if (sec >= 0 || op >= 0) return ajCenaGerada(sec, op, x, y, w);
   float s = w / 640.0f, h = w * 9.0f / 16.0f, rr = 22.0f, ar, ag, ab;
   GfxRect q = { x, y, w, h };
   int i, j;
   // A arte do quadro: a do submenu da opcao em foco, ou a da categoria.
   int A = op >= 0 ? ajCenaArteOp(op) : ajCenaArteN(sec);
   if (op >= 0) { int c = ajCenaSecao(op); if (c >= 0) return ajSecaoDesenhar(c, op, x, y, w); }
+  // Fontes e addons: o resumo da categoria e a cena dos addons, na arte dela.
+  if (sec == AJS_FONTES) return ajFontesResumo(A, x, y, w);
 #define PX(a) (x + (a) * s)
 #define PY(b) (y + (b) * s)
 #define RR(a,b,c,d) (GfxRect){ PX(a), PY(b), (c) * s, (d) * s }
@@ -567,7 +615,7 @@ static float ajVisualCena(int sec, int op, float x, float y, float w) {
           txt_desenhar_alpha(nm, PX(cx) - nm.w * 0.5f, PY(142), f ? 1.0f : 0.6f); }
       }
       for (i = 0; i < 3; i++) {
-        static const char *const sv[3] = { NULL, "aj_cloud", "aj_key-round" };
+        static const char *const sv[3] = { NULL, "aj_cloud", "aj_bell" };   // Trakt, sincronizacao, avisos
         float bx = 36 + i * 196;
         VID(bx, 210, 176, 108, 22);
         if (!sv[i]) { char marca[1200]; snprintf(marca, sizeof marca, "%s/marcas/trakt_wordmark.png", uxDirArte);

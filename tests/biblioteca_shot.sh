@@ -6,13 +6,13 @@
 #
 # NUVIO_DADOS e uma pasta temporaria e o programa recusa rodar se dados_dir()
 # nao for ela: fixar uma lista GRAVA.
-set -eu
+set -euo pipefail
 cd "$(dirname "$0")/.."
 saida="${1:-/tmp/nuvio-biblioteca}"
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/nuvio-bibshot-XXXXXX")"
 trap 'rm -rf "$tmp"' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   if [ "$source" != src/main.c ]; then sources+=("$source"); fi
 done
 cc "${sources[@]}" tests/biblioteca_shot.c -Isrc -o "$tmp/shot" \
@@ -20,7 +20,7 @@ cc "${sources[@]}" tests/biblioteca_shot.c -Isrc -o "$tmp/shot" \
   -O1 -g -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL \
   -Wno-deprecated-declarations -Wno-macro-redefined
-NUVIO_DADOS="$tmp/dados" "$tmp/shot" "$saida"
+NUVIO_DADOS="$tmp/dados" "$tmp/shot" "$saida" "${NV_MODO:-}"
 # SEGUNDA VOLTA so para a MEDIDA: comeca em lista, com o cache de textura frio.
 # Ver a nota em tests/biblioteca_shot.c sobre por que uma volta so nao mede.
 echo "--- segunda volta: lista com o cache frio ---"

@@ -744,17 +744,17 @@
     if (!vermelha && !verde && !canal) return;
     ev.preventDefault();
     ev.stopPropagation();
-    // CANAL+ ABRE "SALVOS". O keyCode 427 nao existe na tabela do SDL e morreria
-    // no navegador, igual as coloridas: vira um "s" sintetico, que e a tecla que
-    // app.c ja escuta ao lado do NV_SCANCODE_BLUE da LG.
+    // CANAL+ ABRE "SALVOS" (toque) E A CENTRAL DE CONTROLE (segurado). O
+    // keyCode 427 nao existe na tabela do SDL e morreria no navegador, igual as
+    // coloridas: vira um F7 sintetico SO NA DESCIDA; a subida sai no ouvinte de
+    // keyup abaixo. main.c (central.h) mede o tempo entre os dois e, no toque
+    // curto, entrega o "s" de sempre.
     if (canal) {
       var alvoS = document.getElementById("canvas") || window;
-      ["keydown", "keyup"].forEach(function (t) {
-        alvoS.dispatchEvent(new KeyboardEvent(t, {
-          key: "s", code: "KeyS", keyCode: 83, which: 83,
-          bubbles: true, cancelable: true
-        }));
-      });
+      alvoS.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "F7", code: "F7", keyCode: 118, which: 118,
+        bubbles: true, cancelable: true
+      }));
       return;
     }
     if (verde || !window.__nvPrimeiroQuadro) { mostrarPainelDOM(); return; }
@@ -767,6 +767,19 @@
         bubbles: true, cancelable: true
       }));
     });
+  }, true);
+
+  // A SUBIDA DO CANAL+ (ver o ouvinte acima): F7 keyup, para o C saber que a
+  // tecla foi solta. Sem ela o toque curto sai pelo silencio (chsegura.h).
+  window.addEventListener("keyup", function (ev) {
+    if (ev.keyCode !== 427 && ev.key !== "F3") return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    var alvoS = document.getElementById("canvas") || window;
+    alvoS.dispatchEvent(new KeyboardEvent("keyup", {
+      key: "F7", code: "F7", keyCode: 118, which: 118,
+      bubbles: true, cancelable: true
+    }));
   }, true);
 
   // SPOTLIGHT (src/spotlight.h). A tecla "Search" (10225, controles Samsung de

@@ -10,7 +10,7 @@ export NUVIO_DADOS
 binary="$(mktemp /tmp/nuvio-enquete.XXXXXX)"
 trap 'rm -rf "$NUVIO_DADOS" "$binary"' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/enquete.c) continue;; esac
   sources+=("$source")
 done

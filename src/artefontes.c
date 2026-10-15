@@ -83,6 +83,83 @@ int af_tmdb_fundos(const char *corpo, const char *evitar,
   return 1;
 }
 
+// IDIOMA DA ARTE AUTOMATICA (relato do .tpk 4/5: "as vezes arabe, as vezes
+// coreano"). O backdrop_path da raiz e o fundo que o TMDB elege, e ele pode ter
+// letreiro em qualquer lingua; o logo tambem vinha por ordem de lista. A regra:
+// o idioma da pessoa, depois o sem texto (fundo) / o ingles (logo), e NADA
+// alem disso — melhor manter a arte atual que mostrar uma lingua que ninguem
+// pediu.
+static int linguaDe(const char *el, const char *fim, char *iso, size_t n) {
+  iso[0] = 0;
+  js_texto(el, fim, "iso_639_1", iso, n);
+  return iso[0] != 0;
+}
+
+int af_tmdb_fundo_padrao(const char *corpo, const char *base, const char *raiz,
+                         char *out, size_t n) {
+  const char *el;
+  char melhor[2][160] = { "", "" };
+  double nota[2] = { -1.0, -1.0 }, votos[2] = { -1.0, -1.0 };
+  int temLista = 0;
+  if (!out || !n) return 0;
+  out[0] = 0;
+  if (!corpo) return 0;
+  for (el = js_array(corpo, NULL, "backdrops"); el; el = js_prox(js_fim(el))) {
+    const char *fim = js_fim(el);
+    char caminho[160], iso[16];
+    int k;
+    double nt, vt;
+    temLista = 1;
+    if (!js_texto(el, fim, "file_path", caminho, sizeof caminho) || caminho[0] != '/') continue;
+    if (!linguaDe(el, fim, iso, sizeof iso)) k = 1;
+    else if (base && base[0] && !strncmp(iso, base, 2) && !iso[2]) k = 0;
+    else continue;
+    if (raiz && !strcmp(caminho, raiz)) { snprintf(out, n, "%s", raiz); return 1; }
+    nt = js_num(el, fim, "vote_average", 0.0);
+    vt = js_num(el, fim, "vote_count", 0.0);
+    if (nt > nota[k] || (nt == nota[k] && vt > votos[k])) {
+      snprintf(melhor[k], sizeof melhor[k], "%s", caminho);
+      nota[k] = nt; votos[k] = vt;
+    }
+  }
+  // Sem a lista nao ha como julgar: fica o da raiz.
+  if (!temLista) { if (raiz && raiz[0] == '/') { snprintf(out, n, "%s", raiz); return 1; } return 0; }
+  if (melhor[0][0]) { snprintf(out, n, "%s", melhor[0]); return 1; }
+  if (melhor[1][0]) { snprintf(out, n, "%s", melhor[1]); return 1; }
+  return 0;
+}
+
+int af_tmdb_logo(const char *corpo, const char *base, char *fp, size_t n,
+                 char *iso, size_t ni) {
+  const char *el;
+  char achado[3][160] = { "", "", "" };
+  int k;
+  if (fp && n) fp[0] = 0;
+  if (iso && ni) iso[0] = 0;
+  if (!corpo || !fp || !n) return 0;
+  for (el = js_array(corpo, NULL, "logos"); el; el = js_prox(js_fim(el))) {
+    const char *fim = js_fim(el);
+    char caminho[160], l[16];
+    size_t L;
+    if (!js_texto(el, fim, "file_path", caminho, sizeof caminho) || caminho[0] != '/') continue;
+    L = strlen(caminho);
+    if (L > 4 && !strcmp(caminho + L - 4, ".svg")) continue;   // nao decodifica
+    if (!linguaDe(el, fim, l, sizeof l)) k = 2;
+    else if (base && base[0] && !strncmp(l, base, 2) && !l[2]) k = 0;
+    else if (!strcmp(l, "en")) k = 1;
+    else continue;
+    // A lista vem da mais votada para a menos: a primeira de cada classe fica.
+    if (!achado[k][0]) snprintf(achado[k], sizeof achado[k], "%s", caminho);
+  }
+  for (k = 0; k < 3; k++)
+    if (achado[k][0]) {
+      snprintf(fp, n, "%s", achado[k]);
+      if (iso && ni) snprintf(iso, ni, "%s", k == 0 ? base : k == 1 ? "en" : "und");
+      return 1;
+    }
+  return 0;
+}
+
 // ---------------------------------------------------------------- fanart.tv
 int af_fanart_fundo(const char *corpo, int serie, char *url, size_t n) {
   const char *el;

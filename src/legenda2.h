@@ -12,7 +12,8 @@
 //     SELECTION (every choose/turn-off). A late download is published only if
 //     both still match, so a file for the previous episode/choice never shows;
 //   - its own offset (manual + optional automatic from AutoSync), applied
-//     exactly once in legenda2_cues;
+//     exactly once in legenda2_cues, and AutoSync's time map for framerate /
+//     cut corrections (legenda2_definir_tempo);
 //   - explicit states: loading, active, failed, unsupported. A selection is
 //     never reported ACTIVE before a usable document was published.
 //
@@ -73,6 +74,10 @@ int  legenda2_offset_total(void);
 // Cues of the second document at `posSeg`, with the total offset applied
 // once. 0 when nothing is active.
 int legenda2_cues(double posSeg, LegendaCue *dst, int max);
+// AutoSync (2.1): video time -> subtitle time for an accepted scale/pieces
+// result (legsync.c). Called by legenda2_cues OUTSIDE this module's lock, so
+// it may take its own. NULL = identity.
+void legenda2_definir_tempo(double (*tempo)(double posSeg));
 // Retained reference to the published document (NULL = none). Caller must
 // legenda_documento_liberar. For AutoSync (F05).
 LegendaDocumento *legenda2_documento(void);

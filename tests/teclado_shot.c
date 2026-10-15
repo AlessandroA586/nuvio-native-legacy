@@ -481,7 +481,7 @@ int main(int argc, char **argv) {
   // que e onde o dono olhou; "lg-" = so o celular.
   // ===========================================================================
   st_teste_ligar(1);
-  teclado_contexto("Contas e serviços · Chaves");
+  teclado_contexto("Fontes e addons · Debrid");
   teclado_abrir_com("Chave do Real-Debrid", "Sua chave em real-debrid.com/apitoken. Vazio apaga.", 96, DEB, "AbC123xyz");
   captura(saida, "chave-letras");
   teclas(SDLK_DOWN, 4); tecla(SDLK_RETURN);
@@ -519,7 +519,7 @@ int main(int argc, char **argv) {
   teclado_abrir_com("MAC do portal", "Formato 00:1a:79:xx:xx:xx", 17, MAC, NULL);
   captura(saida, "lg-mac");
   fechar();
-  teclado_contexto("Contas e serviços · Chaves");
+  teclado_contexto("Fontes e addons · Debrid");
   teclado_abrir_com("Chave do Real-Debrid", "Sua chave em real-debrid.com/apitoken. Vazio apaga.", 96, DEB, "AbC123xyz");
   tecla(SDLK_LEFT); tecla(SDLK_RETURN);
   captura(saida, "lg-chave-qr");

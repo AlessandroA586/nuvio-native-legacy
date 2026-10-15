@@ -51,27 +51,9 @@ static void ajCenaTrocaAtualizar(float dt) {
 // Acompanha o despacho de ajPrevia/ajPreviaCarta: previa nova com cena propria
 // entra aqui, senao ela troca em corte com as vizinhas de submenu.
 static int ajCenaChave(int sec, int op) {
-  if (op < 0) return 2000 + sec * 64 + ajCenaArteN(sec);
-  switch (op) {
-    case AJ_HOME_LAYOUT: case AJ_TEMA: case AJ_COR_LOGO: case AJ_FUNDO:
-    case AJ_TAMANHO_UI: case AJ_TAMANHO_AJUSTES: case AJ_FONTE_UI:
-    case AJ_LOGO_APP: case AJ_ABERTURA: case AJ_ICONE_APP:
-    case AJ_TRAKT: case AJ_SIMKL:
-      return op;
-    case AJ_LARGURA_DP: case AJ_RAIO_DP: return AJ_LARGURA_DP;
-    case AJ_ENVIAR_LOG: case AJ_VER_REGISTRO: case AJ_ENVIO_AUTO: return AJ_ENVIAR_LOG;
-    case AJ_CW_LIGADO: case AJ_CW_OK: case AJ_CW_ESTILO: case AJ_CW_THUMB: case AJ_CW_BLUR_PROX:
-    case AJ_CW_ORDEM: case AJ_CW_NAO_EXIBIDOS: case AJ_CW_FURTHEST:
-      return AJ_CW_LIGADO;
-    case AJ_CW_CONCLUIDO: return op;   // a mesma previa, noutra categoria (outra arte)
-    case AJ_ESPACO: case AJ_TEX_MB: return AJ_ESPACO;
-    default: {
-      // Submenu com cena propria: a chave e a cena (todas as opcoes do bloco
-      // dividem a imagem, so a marca da opcao anda). Senao a da categoria.
-      int c = ajCenaSecao(op);
-      return c >= 0 ? 3000 + c : 2000 + uxSecaoDe(op) * 64 + ajCenaArteOp(op);
-    }
-  }
+  // 2.0.2: cada opcao tem o seu desenho gerado; trocar de opcao e uma troca
+  // de cena (cruzamento de 0,22 s, sem espera: nao ha imagem para ler).
+  return op < 0 ? 2000 + sec : op;
 }
 static float ajCenaTrocaDesenhar(int quadro, AjCenaRef c, float x, float y, float w, float corte) {
   if (quadro == AJ_TROCA_RESUMO) return aj2PreviaCategoria(c.sec, x, y, w, corte);
@@ -171,30 +153,32 @@ enum {
   AJC_CON_PERFIS, AJC_CON_AVISOS, AJC_CON_SOCIAL, AJC_CON_CHAVES, AJC_CON_P2P, AJC_CON_SERVIDORES,
   AJC_DES_TELA, AJC_DES_DIAG,
   AJC_SOB_GUIA, AJC_SOB_APP,
+  AJC_FON_ADDONS,
   AJC_N
 };
 static int ajCenaSecao(int op) {
   switch (op) {
     case AJ_LANDSCAPE: case AJ_HERO: case AJ_HERO_CHEIO: case AJ_HERO_CATALOGOS: case AJ_HERO_TRANSICAO:
       return AJC_HOME_ESTILO;
-    case AJ_FIL_ORDEM: case AJ_FIL_LIMITE: case AJ_ITENS_FILEIRA: case AJ_OCULTAR_NLANC: case AJ_NOTAS_HOME:
+    case AJ_FIL_ORDEM: case AJ_FIL_LIMITE: case AJ_ITENS_FILEIRA: case AJ_ESPACO_FILEIRAS: case AJ_ESPACO_TITULOS: case AJ_OCULTAR_NLANC: case AJ_NOTAS_HOME:
     case AJ_ROTULOS: case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_SELO_VISTO:
       return AJC_HOME_FILEIRAS;
     case AJ_RAIL_MODERNA: case AJ_RAIL: case AJ_MENU_EXPLORAR: case AJ_MENU_GUIA: case AJ_MENU_AGENDA:
     case AJ_MENU_PERFIL: case AJ_RAIL_BLUR: case AJ_DESCOBRIR:
       return AJC_HOME_BARRA;
-    case AJ_PS_FUNDO: return AJC_HOME_PERFIL;
+    case AJ_PS_FUNDO: case AJ_PS_CONTINUAR: return AJC_HOME_PERFIL;
     case AJ_DET_VEU: case AJ_DET_DATA_CHEIA: case AJ_DET_BLUR_NAO_VISTOS: return AJC_TIT_APARECE;
     case AJ_NT_IMDB: case AJ_NT_TOMATES: case AJ_NT_AUDIENCIA: case AJ_NT_META: case AJ_NT_METAUSER:
     case AJ_NT_TRAKT: case AJ_NT_TMDB: case AJ_NT_LETTER: case AJ_NT_MAL: case AJ_NT_EBERT: case AJ_NT_SCORE:
     case AJ_MDB_LIGADO: case AJ_MDB_TRAKT: case AJ_MDB_IMDB: case AJ_MDB_TMDB: case AJ_MDB_LETTER:
     case AJ_MDB_TOMATES: case AJ_MDB_AUDIENCIA: case AJ_MDB_META: case AJ_MDB_MAL:
+    case AJ_MDB_CHAVE:   // a chave abre o bloco Notas: e ela que libera as notas do MDBList
       return AJC_TIT_NOTAS;
     case AJ_TMDB_LIGADO: case AJ_TMDB_ARTE: case AJ_TMDB_BASICO: case AJ_TMDB_FICHA: case AJ_TMDB_DATAS:
     case AJ_TMDB_ELENCO: case AJ_TMDB_PROD: case AJ_TMDB_REDES: case AJ_TMDB_EPS: case AJ_TMDB_TRAILERS:
     case AJ_TMDB_MAIS: case AJ_TMDB_COL: case AJ_TMDB_CW: case AJ_DET_META_EXT: case AJ_DET_SO_CINEMETA:
       return AJC_TIT_DADOS;
-    case AJ_BUSCA_CINEMETA: return AJC_TIT_BUSCA;
+    case AJ_BUSCA_CINEMETA: case AJ_BUSCA_NUVIO: case AJ_BUSCA_ORIGEM: return AJC_TIT_BUSCA;
     case AJ_EXPANDIR: case AJ_EXPANDIR_ATRASO: case AJ_BORDA_FOCO: case AJ_GRAD_CLASSICO: return AJC_CAR_FOCO;
     case AJ_PROF: case AJ_PROF_BORDA: case AJ_PROF_BRILHO: case AJ_PROF_COBERTURA: case AJ_PROF_POSTERS:
     case AJ_PROF_CW: case AJ_PROF_EPS: case AJ_PROF_ELENCO: case AJ_PROF_TRAILERS:
@@ -202,6 +186,7 @@ static int ajCenaSecao(int op) {
     case AJ_HERO_FUNDO: case AJ_HERO_ARTE_DIF: case AJ_POSTER_PROV: case AJ_ADDON_POSTER: case AJ_ADDON_FUNDO:
     case AJ_ADDON_LOGO: case AJ_COL_ARTE_CONTA: case AJ_POSTER_INST: case AJ_POSTER_TOKEN: case AJ_POSTER_EXTRA:
     case AJ_POSTER_CHAVE: case AJ_POSTER_MODELO: case AJ_POSTER_TESTAR:
+    case AJ_FANART_CHAVE:
       return AJC_CAR_ORIGEM;
     case AJ_HERO_TRAILER: case AJ_FOCO_TRAILER: case AJ_DET_TRAILER_AUTO: case AJ_DET_TRAILER: return AJC_TRL_ONDE;
     case AJ_HERO_TRAILER_SOM: case AJ_DET_TRAILER_SOM: case AJ_TRAILER_FONTE: case AJ_HERO_TRAILER_ESPERA:
@@ -209,17 +194,22 @@ static int ajCenaSecao(int op) {
       return AJC_TRL_SOM;
     case AJ_VIDRO: case AJ_VIDRO_CONTORNO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: return AJC_APA_VIDRO;
     case AJ_ANIM: case AJ_RELOGIO: case AJ_RELOGIO_12H: return AJC_APA_MOVIMENTO;
-    case AJ_FONTE_MANUAL: case AJ_FONTE_AUTO: case AJ_FONTE_REPOR: case AJ_FONTE_PRIORIDADE: case AJ_FONTE_HDR:
-    case AJ_FONTE_PRAZO: case AJ_FONTE_TEXTO: case AJ_SELOS_CORES: case AJ_SELOS_PACOTE: case AJ_SELOS_PACOTE_ADD:
+    case AJ_FONTE_MANUAL: case AJ_FONTE_AUTO: case AJ_FONTE_REPOR: case AJ_FONTE_PRIORIDADE: case AJ_FONTE_TOCAR_CONFERINDO: case AJ_FONTE_AQUECER: case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR:
+    case AJ_FONTE_PRAZO: case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON: case AJ_TAM_MAX: case AJ_TAM_MIN: case AJ_SELOS_CORES: case AJ_SELOS_PACOTE: case AJ_SELOS_PACOTE_ADD:
+    case AJ_FONTE_ESCOPO: case AJ_FONTE_ADDONS_PERM: case AJ_FONTE_PLUGINS_PERM: case AJ_FONTE_OUTROS:
+    case AJ_FONTE_REGEX: case AJ_FONTE_REGEX_PADRAO: case AJ_FONTE_REGEX_MODELO:
+    case AJ_FONTE_ORDEM: case AJ_FONTE_ORDEM_USO:
     case AJ_SELOS_PACOTE_REM:
       return AJC_REP_FONTE;
-    case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_CACHE_SEEK: return AJC_REP_IMAGEM;
-    case AJ_PAUSA_OVERLAY: case AJ_REACAO_CREDITOS: case AJ_SAIDA_PLAYER: case AJ_MANTER_VIDEO: return AJC_REP_DURANTE;
+    // 2.0.3: HDR e Dolby Vision mora em Imagem e som.
+    case AJ_FONTE_HDR:
+    case AJ_QUALIDADE: case AJ_DV: case AJ_DV_MKV: case AJ_ATMOS: case AJ_DTS_AC3: case AJ_CACHE_SEEK: case AJ_BUFFER: return AJC_REP_IMAGEM;
+    case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_AUTO: case AJ_PROXIMO_CONTAGEM: case AJ_REACAO_CREDITOS: case AJ_SAIDA_PLAYER: case AJ_MANTER_VIDEO: case AJ_PROPORCAO_PADRAO: return AJC_REP_DURANTE;
     case AJ_SEEKR_LIGADO: case AJ_SEEKR_CHAVE: case AJ_SEEKR_TESTAR: case AJ_SEEKR_FITA: case AJ_SEEKR_AJUSTE:
       return AJC_REP_SEEKR;
     case AJ_IDIOMA: case AJ_TMDB_IDIOMA: return AJC_IDI_INTERFACE;
-    case AJ_AUD_LINGUA: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_LEG_SYNC_AUDIO: return AJC_IDI_FAIXAS;
-    case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
+    case AJ_LEG_MOSTRAR: case AJ_AUD_LINGUA: case AJ_LEG_LINGUA: case AJ_LEG_SYNC_AUTO: case AJ_LEG_SYNC_AUDIO: case AJ_LEG_FORCADA: return AJC_IDI_FAIXAS;
+    case AJ_LEG_LINGUA2: case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
       return AJC_IDI_LEGENDA2;
     case AJ_XTREAM_SERVIDOR: case AJ_XTREAM_USUARIO: case AJ_XTREAM_SENHA: case AJ_XTREAM_CONTA:
     case AJ_XTREAM_LIMPAR: case AJ_STALKER_PORTAL: case AJ_STALKER_MAC: case AJ_STALKER_LIMPAR: case AJ_EPG_PAIS:
@@ -227,15 +217,15 @@ static int ajCenaSecao(int op) {
     case AJ_LIVETV_DIAG: case AJ_LIVETV_RES: case AJ_LIVETV_ESPERA: case AJ_LIVETV_FORMATO: case AJ_LIVETV_MODO:
     case AJ_LIVETV_PROXY:
       return AJC_TV_PROBLEMAS;
-    case AJ_PERFIL_ATIVO: case AJ_SYNC: case AJ_ADDONS: case AJ_PLUGINS: case AJ_ADDONS_PRINCIPAL:
+    case AJ_PERFIL_ATIVO: case AJ_SYNC:
     case AJ_PERFIL_PESQ: case AJ_PERFIL_EDITAR: case AJ_SAIR:
       return AJC_CON_PERFIS;
+    case AJ_ADDONS: case AJ_PLUGINS: case AJ_ADDONS_PRINCIPAL: return AJC_FON_ADDONS;
     case AJ_ENQUETES: return AJC_CON_AVISOS;
-    case AJ_DISCORD: case AJ_SALVOS_DEST: case AJ_CW_FONTE: return AJC_CON_SOCIAL;
+    case AJ_DISCORD: case AJ_SALVOS_DEST: case AJ_CW_FONTE: case AJ_CW_PROXIMO: case AJ_HIST_CONTA: case AJ_SOCIAL: return AJC_CON_SOCIAL;
     case AJ_DEBRID_RD: case AJ_DEBRID_TB: case AJ_DEBRID_PM: case AJ_DEBRID_AD: case AJ_DEBRID_AD_TESTAR:
-    case AJ_MDB_CHAVE: case AJ_FANART_CHAVE:
       return AJC_CON_CHAVES;
-    case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: return AJC_CON_P2P;
+    case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: case AJ_P2P_LIMITE: return AJC_CON_P2P;
     case AJ_JF_LIGADO: case AJ_JF_SERVIDOR: case AJ_JF_ENTRAR: case AJ_JF_SAIR: case AJ_EM_SERVIDOR:
     case AJ_EM_ENTRAR: case AJ_EM_SAIR: case AJ_PX_ENTRAR: case AJ_PX_SERVIDOR: case AJ_PX_SAIR:
       return AJC_CON_SERVIDORES;
@@ -372,7 +362,7 @@ static void ajcHomeFileiras(int A) {
   ajCenaArte(ajArte(AJA_FUNDO, A), (GfxRect){ ajc.x, ajc.y, 640 * ajc.s, ajc.h }, 22, 0.72f);
   for (i = 0; i < fil_n() && n < 3; i++) if (fil_estado(i) != FIL_FORA) ordem[n++] = i;
   for (i = 0; i < 3; i++) {
-    float by = 22 + i * 112, lx = 70, al = i == 2 && lim <= 2 ? 0.3f : 1.0f;
+    float by = 22 + i * (102 + 10 * ajustes_espaco_fileiras()), lx = 70, al = i == 2 && lim <= 2 ? 0.3f : 1.0f;
     const char *t = i < n ? (fil_titulo(ordem[i])[0] ? fil_titulo(ordem[i]) : fil_chave(ordem[i])) : ajTituloN(i);
     char num[4];
     snprintf(num, sizeof num, "%d", i + 1);
@@ -386,7 +376,8 @@ static void ajcHomeFileiras(int A) {
       CVIDA(lx, by + 2, w2, 18, 9, al); ajcTxt("Filmes", 10, 0, lx + 8, by + 5, 0, 0.7f * al);
       if (i == 0) ajcFoco(AJ_SUFIXO_TIPO, lx, by + 2, w2, 18, 9); }
     for (k = 0; k < 7; k++) {
-      float px = 36 + k * 82, py = by + 30;
+      float px = 36 + k * (70 + 12 * ajustes_espaco_titulos()), py = by + 30;
+      if (px + 70 > 604) break;
       const char *c = i < n && k < 3 ? ajPosterFileira(ordem[i], k) : ajArte(AJA_POSTER, AJ_POS[(i * 5 + k) % 14]);
       int naoLanc = i == 0 && k == 4;
       if (naoLanc && lig(AJ_OCULTAR_NLANC)) { gfx_anel(CR(px, py, 70, 72), 8.0f / 72, 1.5f * ajc.s, 1, 1, 1, 0.25f * al); }
@@ -607,27 +598,24 @@ static void ajcCarFoco(int A) {
     ajcTxt(textoValor(AJ_EXPANDIR_ATRASO), 12, 1, 194, 60, 0, exp ? 1.0f : 0.4f);
     ajcFoco(AJ_EXPANDIR_ATRASO, 156, 52, w2, 32, 16); }
 }
-// Forma: a profundidade em cada tipo de cartao (cartaz, continuar, episodio,
-// elenco, trailer), com brilho, reflexo e cobertura da borda.
+// Forma: a profundidade (o reflexo do foco) vale em todo tipo de cartao
+// (cartaz, continuar, episodio, elenco, trailer), com a intensidade do reflexo.
 static void ajcCarForma(int A) {
   static const int OP[5] = { AJ_PROF_POSTERS, AJ_PROF_CW, AJ_PROF_EPS, AJ_PROF_ELENCO, AJ_PROF_TRAILERS };
   int prof = ajustes_profundidade(), i;
-  float borda = valor[AJ_PROF_BORDA] / 100.0f, brilho = valor[AJ_PROF_BRILHO] / 100.0f, cob = valor[AJ_PROF_COBERTURA] / 100.0f;
+  float brilho = valor[AJ_PROF_BRILHO] / 100.0f;
   GfxRect g;
   char c[1200];
   ajCenaArte(ajArte(AJA_FUNDO, A), (GfxRect){ ajc.x, ajc.y, 640 * ajc.s, ajc.h }, 22, 0.7f);
   g = CR(48, 36, 180, 270);
   gfx_rect((GfxRect){ g.x - 18 * ajc.s, g.y + 8 * ajc.s, g.w + 36 * ajc.s, g.h + 40 * ajc.s }, 0, GFX_SOMBRA, 1, 0, 0, 0.5f, 0, 0, 0, prof ? 0.7f : 0.3f);
   ajImg(ajArte(AJA_POSTER, A), g, 16 * ajc.s, 1);
-  if (prof) { gfx_brilho_topo(g, 16 * ajc.s / g.h, 0.25f + 0.5f * cob, 1, 1, 1, 0.35f * brilho + 0.05f);
-              gfx_anel(g, 16 * ajc.s / g.h, 2 * ajc.s, 1, 1, 1, 0.45f * borda); }
+  if (prof) gfx_brilho_topo(g, 16 * ajc.s / g.h, 0.34f, 1, 1, 1, 0.35f * brilho + 0.05f);
   ajcFoco(AJ_PROF, 48, 36, 180, 270, 16);
-  ajcFoco(AJ_PROF_BORDA, 48, 36, 180, 270, 16);
   ajcFoco(AJ_PROF_BRILHO, 48, 36, 180, 120, 16);
-  ajcFoco(AJ_PROF_COBERTURA, 48, 36, 180, 270, 16);
   for (i = 0; i < 5; i++) {
     float bx = 268 + (i % 2) * 174, by = 36 + (i / 2) * 98, cw = i == 0 ? 56 : i == 3 ? 72 : 150, ch = i == 0 ? 84 : 72;
-    float al = prof && lig(OP[i]) ? 1.0f : 0.45f;
+    float al = prof ? 1.0f : 0.45f;
     GfxRect r;
     if (i == 3) { snprintf(c, sizeof c, "%s", ajcElenco(A, 0)); r = CR(bx + 39, by + 6, 72, 72); ajImg(c, r, 36 * ajc.s, 1); }
     else if (i == 2) { snprintf(c, sizeof c, "%s", ajcEp(A, 1)); r = CR(bx, by + 6, cw, ch); ajImg(c, r, 10 * ajc.s, 1); }
@@ -865,6 +853,10 @@ static void ajcRepDurante(int A) {
     CVID(36, 280, w2, 28, 14); CICON("aj_corner-up-left", 46, 285, 16, 0.85f);
     ajcTxt(textoValor(AJ_SAIDA_PLAYER), 11, 1, 70, 287, 220, 0.9f);
     ajcFoco(AJ_SAIDA_PLAYER, 36, 280, w2, 28, 14); }
+  { float w3 = ajcTxt(textoValor(AJ_PROPORCAO_PADRAO), 11, 1, 0, 0, 160, 0) + 44;
+    CVID(372, 150, w3, 28, 14); CICON("aj_maximize-2", 382, 155, 16, 0.85f);
+    ajcTxt(textoValor(AJ_PROPORCAO_PADRAO), 11, 1, 406, 157, 160, 0.9f);
+    ajcFoco(AJ_PROPORCAO_PADRAO, 372, 150, w3, 28, 14); }
   (void)i;
 }
 // Seekr: a barra de tempo com a miniatura do ponto e a fita (anterior e
@@ -921,20 +913,20 @@ static void ajcIdiInterface(int A) {
 }
 // Audio e legendas: o player com a legenda e o painel de faixas.
 static void ajcIdiFaixas(int A) {
-  static const int OP[4] = { AJ_AUD_LINGUA, AJ_LEG_LINGUA, AJ_LEG_LINGUA2, AJ_LEG_SYNC_AUDIO };
-  static const char *const IC[4] = { "aj_audio-lines", "aj_captions", "aj_captions", "aj_activity" };
-  int i, n = 3;
+  static const int OP[5] = { AJ_AUD_LINGUA, AJ_LEG_LINGUA, AJ_LEG_LINGUA2, AJ_LEG_SYNC_AUTO, AJ_LEG_SYNC_AUDIO };
+  static const char *const IC[5] = { "aj_audio-lines", "aj_captions", "aj_captions", "aj_activity", "aj_activity" };
+  int i, n = 4;
 #ifdef NV_ANDROID
-  n = 4;
+  n = 5;
 #endif
-  if (ajc.op == AJ_LEG_SYNC_AUDIO) n = 4;
+  if (ajc.op == AJ_LEG_SYNC_AUDIO) n = 5;
   CIMG(ajArte(AJA_FUNDO, A), 0, 0, 640, 360, 22, 1);
   gfx_veu_css(CR(0, 220, 640, 140), 0, 0, 1.0f, 0.6f);
   gfx_cor(CR(70, 296, 260, 20), 0.25f, 0, 0, 0, 0.55f); CBAR(80, 302, 240, 0.95f);
   gfx_cor(CR(100, 22, 200, 20), 0.25f, 0, 0, 0, 0.55f); CBAR(110, 28, 180, 0.85f);
   CVID(372, 30, 240, 300, 22);
   for (i = 0; i < n; i++) {
-    float by = 50 + i * 66;
+    float by = 50 + i * (n == 5 ? 54 : 66);
     if (OP[i] == ajc.op) gfx_cor(CR(382, by - 6, 220, 56), 0.3f, 1, 1, 1, 0.12f);
     CICON(IC[i], 394, by + 4, 18, 0.85f);
     ajcTxt(rotuloOpcao(OP[i]), 11, 0, 420, by + 4, 176, 0.6f);
@@ -949,9 +941,11 @@ static void ajcIdiLegenda2(int A) {
   static const float COR[6][3] = { { 1, 1, 1 }, { 1, 0.86f, 0.2f }, { 0.4f, 0.9f, 0.4f }, { 0.4f, 0.65f, 1 },
                                    { 1, 0.35f, 0.3f }, { 0.08f, 0.08f, 0.08f } };
   static const float FU[5] = { 0, 0.25f, 0.5f, 0.75f, 1.0f };
-  static const float TAM[7] = { 1.0f, 0.6f, 0.8f, 1.0f, 1.2f, 1.4f, 1.6f };
   int c = ajustes_leg2_cor(), f = ajustes_leg2_fundo(), b = ajustes_leg2_borda(), junto = ajustes_leg2_junto();
-  float k = TAM[valor[AJ_LEG2_TAMANHO] >= 0 && valor[AJ_LEG2_TAMANHO] < 7 ? valor[AJ_LEG2_TAMANHO] : 0];
+  // O MESMO numero que o player usa (legendasui estiloSecundario): 0 = auto,
+  // 90% da principal; senao o proprio percentual da opcao (ate 300%).
+  int pct2 = ajustes_leg2_tamanho();
+  float k = pct2 > 0 ? pct2 / 100.0f : 0.9f;
   float bw = 220 * k, bh = 9 * k, by = junto ? 262 - bh - 18 : 26, bx = 320 - bw * 0.5f;
   const float *cc = c >= 0 && c < 6 ? COR[c] : COR[0];
   CIMG(ajArte(AJA_FUNDO, A), 0, 0, 640, 360, 22, 1);
@@ -1017,7 +1011,6 @@ static void ajcTvProblemas(int A) {
 // Conta e perfis: o cartao do perfil ativo e a lista de addons de verdade.
 static void ajcConPerfis(int A) {
   const ContaPerfil *p = perfis_item_ativo();
-  int i, n = addons_n();
   ajCenaArte(ajArte(AJA_FUNDO, A), (GfxRect){ ajc.x, ajc.y, 640 * ajc.s, ajc.h }, 22, 0.62f);
   CVID(28, 24, 270, 312, 24);
   gfx_cor(CR(48, 44, 72, 72), 0.5f, 0.24f, 0.25f, 0.29f, 1);
@@ -1029,18 +1022,66 @@ static void ajcConPerfis(int A) {
   ajcFoco(AJ_PERFIL_EDITAR, 48, 44, 72, 72, 36);
   ajcLinha(AJ_SYNC, "aj_cloud", 38, 140, 250, 40, 1);
   ajcLinha(AJ_PERFIL_PESQ, "aj_globe", 38, 186, 250, 40, 1);
-  ajcLinha(AJ_ADDONS_PRINCIPAL, "aj_link", 38, 232, 250, 40, 1);
+  ajcLinha(AJ_PERFIL_EDITAR, "aj_user-round", 38, 232, 250, 40, 1);
   ajcLinha(AJ_SAIR, "aj_log-out", 38, 278, 250, 40, 0.8f);
+  // A direita, os perfis da conta como na tela "Quem esta assistindo?" (os
+  // addons sairam daqui para Fontes e addons). Sem perfis carregados: o ativo
+  // e o lugar de um novo.
   CVID(314, 24, 298, 312, 24);
-  ajcLinha(AJ_ADDONS, "aj_puzzle", 324, 34, 278, 40, 1);
-  for (i = 0; i < 4; i++) {
-    float by = 86 + i * 44;
-    const char *nm = i < n ? addons_nome(i) : ajTituloN(i + 4);
-    gfx_cor(CR(336, by, 30, 30), 0.3f, 1, 1, 1, 0.1f);
-    ajcTxt(nm, 12, 0, 378, by + 7, 210, i < n ? 0.85f : 0.4f);
+  ajcTxt("Quem está assistindo?", 13, 1, 336, 44, 260, 0.9f);
+  { int np = perfis_n(), k;
+    if (np > 4) np = 4;
+    for (k = 0; k < (np > 0 ? np : 1) + (np < 4 ? 1 : 0); k++) {
+      const ContaPerfil *q = np > 0 && k < np ? perfis_item(k) : (k == 0 ? p : NULL);
+      int novo = np > 0 ? k >= np : k >= 1;
+      float cx = 340 + (k % 2) * 136, cy = 86 + (k / 2) * 118;
+      int ativo = q && q->indice == perfis_ativo();
+      gfx_cor(CR(cx + 24, cy, 72, 72), 0.5f, 0.24f, 0.25f, 0.29f, novo ? 0.5f : 1.0f);
+      if (novo) CICON("aj_plus", cx + 46, cy + 22, 28, 0.6f);
+      else if (q && q->avatarUrl[0]) CIMG(q->avatarUrl, cx + 24, cy, 72, 72, 36, 1);
+      else { char av[1200]; snprintf(av, sizeof av, "%s/icones/mt_perfil.png", uxDirArte); ajLogo(av, CX(cx + 40), CY(cy + 16), 40 * ajc.s, 40 * ajc.s, ativo || np == 0 ? 0.9f : 0.6f); }
+      if (ativo || (np == 0 && k == 0)) gfx_anel_fora(CR(cx + 24, cy, 72, 72), 0.5f, 2.0f * ajc.s, 2.0f * ajc.s, 0.953f, 0.949f, 0.937f, 0.9f);
+      { const char *nm = novo ? "Novo perfil" : q && q->nome[0] ? q->nome : "Perfil";
+        TxtLinha l = txt_linha_corta(ajEstiloPxS(11 * ajc.s, ativo), nm, AJ_TX, 120 * ajc.s);
+        txt_desenhar_alpha(l, CX(cx + 60) - l.w * 0.5f, CY(cy + 82), novo ? 0.5f : 0.85f); }
+    } }
+}
+// Fontes e addons > Addons: a lista dos addons da conta (ligado = interruptor
+// no acento) e, ao lado, plugins e os addons do perfil principal.
+static void ajcFonAddons(int A) {
+  static const char *const AMOSTRA[5] = { "Cinemeta", "Torrentio", "OpenSubtitles v3", "TMDB", "AIOStreams" };
+  int i, n = addons_n();
+  ajCenaArte(ajArte(AJA_FUNDO, A), (GfxRect){ ajc.x, ajc.y, 640 * ajc.s, ajc.h }, 22, 0.62f);
+  CVID(28, 24, 340, 312, 24);
+  ajcLinha(AJ_ADDONS, "aj_puzzle", 38, 34, 320, 40, 1);
+  for (i = 0; i < 5; i++) {
+    float by = 88 + i * 46;
+    int liga = i < n ? addons_ativo(i) : i != 3;
+    const char *nm = i < n ? addons_nome(i) : AMOSTRA[i];
+    gfx_cor(CR(50, by + 4, 28, 28), 0.5f, 1, 1, 1, 0.1f);
+    CICON("aj_puzzle", 56, by + 10, 16, liga ? 0.85f : 0.4f);
+    ajcTxt(nm, 12, 0, 92, by + 9, 190, liga ? 0.9f : 0.45f);
+    gfx_cor(CR(300, by + 7, 40, 22), 0.5f, 1, 1, 1, 0.12f);
+    if (liga) gfx_cor(CR(300, by + 7, 40, 22), 0.5f, ajc.ar, ajc.ag, ajc.ab, 0.85f);
+    gfx_cor(CR(liga ? 321 : 303, by + 10, 16, 16), 0.5f, 1, 1, 1, liga ? 1.0f : 0.55f);
   }
-  ajcLinha(AJ_PLUGINS, "aj_puzzle", 324, 270, 278, 40, 1);
-  if (ajc.op == AJ_ADDONS) ajcFoco(AJ_ADDONS, 330, 82, 266, 176, 12);
+  ajcFoco(AJ_ADDONS, 40, 82, 316, 236, 14);
+  CVID(384, 24, 228, 312, 24);
+  ajcLinha(AJ_PLUGINS, "aj_puzzle", 394, 34, 208, 40, 1);
+  // "Usar os addons do perfil principal" e longo: rotulo inteiro em cima, valor embaixo.
+  { int f = ajc.op == AJ_ADDONS_PRINCIPAL;
+    float al = lig(AJ_ADDONS_PRINCIPAL) ? 1.0f : 0.6f;
+    if (f) gfx_cor(CR(394, 80, 208, 52), 0.25f, 1, 1, 1, 0.12f);
+    CICON("aj_link", 406, 88, 18, 0.8f * al);
+    ajcTxt(rotuloOpcao(AJ_ADDONS_PRINCIPAL), 11, f, 432, 86, 166, (f ? 1.0f : 0.8f) * al);
+    ajcTxt(textoValor(AJ_ADDONS_PRINCIPAL), 10, 0, 432, 106, 166, 0.55f * al);
+    if (f) CACC(384, 103, 6, 6, 1); }
+  for (i = 0; i < 3; i++) {
+    float by = 152 + i * 60;
+    CIMG(ajArte(AJA_POSTER, AJ_POS[(A + i) % 14]), 404, by, 34, 50, 6, 0.9f);
+    ajcTxt(ajTituloN(AJ_POS[(A + i) % 14]), 12, 1, 450, by + 8, 150, 0.85f);
+    ajcTxt(AMOSTRA[1 + i * 2 > 4 ? 4 : 1 + i * 2], 10, 0, 450, by + 28, 150, 0.5f);
+  }
 }
 // Notificacoes: a enquete aberta na ilha do relogio.
 static void ajcConAvisos(int A) {
@@ -1087,13 +1128,14 @@ static void ajcConSocial(int A) {
   ajcTxt(textoValor(AJ_CW_FONTE), 15, 1, 348, 250, 236, 1);
   ajcFoco(AJ_CW_FONTE, 328, 168, 276, 164, 22);
 }
-// Chaves: o cofre, uma linha por servico com o estado da chave.
+// Debrid: o cofre, uma linha por servico com o estado da chave. As chaves do
+// MDBList e do Fanart moram junto do que elas liberam (Notas, De onde vem a arte).
 static void ajcConChaves(int A) {
-  static const int OP[7] = { AJ_DEBRID_RD, AJ_DEBRID_TB, AJ_DEBRID_PM, AJ_DEBRID_AD, AJ_DEBRID_AD_TESTAR, AJ_MDB_CHAVE, AJ_FANART_CHAVE };
+  static const int OP[5] = { AJ_DEBRID_RD, AJ_DEBRID_TB, AJ_DEBRID_PM, AJ_DEBRID_AD, AJ_DEBRID_AD_TESTAR };
   int i;
   ajCenaArte(ajArte(AJA_FUNDO, A), (GfxRect){ ajc.x, ajc.y, 640 * ajc.s, ajc.h }, 22, 0.66f);
-  CVID(36, 22, 568, 316, 24);
-  for (i = 0; i < 7; i++) ajcLinha(OP[i], i == 4 ? "aj_shield-check" : "aj_key-round", 50, 32 + i * 43, 540, 38, 1);
+  CVID(36, 30, 568, 300, 24);
+  for (i = 0; i < 5; i++) ajcLinha(OP[i], i == 4 ? "aj_shield-check" : "aj_key-round", 50, 44 + i * 56, 540, 46, 1);
 }
 // P2P: a TV, o servidor de streaming na rede e os pares.
 static void ajcConP2p(int A) {
@@ -1241,7 +1283,8 @@ static void ajcSobApp(int A) {
 }
 
 static float ajSecaoDesenhar(int cena, int op, float x, float y, float w) {
-  int A = ajCenaArteOp(op);
+  // Sem opcao (a cena no resumo da categoria): a arte da categoria (ajcSecA).
+  int A = op >= 0 || ajcSecA < 0 ? ajCenaArteOp(op) : ajcSecA;
   ajc.x = x; ajc.y = y; ajc.s = w / 640.0f; ajc.h = w * 9.0f / 16.0f; ajc.op = op;
   ajustes_acento(&ajc.ar, &ajc.ag, &ajc.ab);
   gfx_recorte(x, y, w, ajc.h);
@@ -1280,10 +1323,16 @@ static float ajSecaoDesenhar(int cena, int op, float x, float y, float w) {
     case AJC_DES_DIAG: ajcDesDiag(A); break;
     case AJC_SOB_GUIA: ajcSobGuia(A); break;
     case AJC_SOB_APP: ajcSobApp(A); break;
+    case AJC_FON_ADDONS: ajcFonAddons(A); break;
     default: break;
   }
   gfx_sem_recorte();
   return ajc.h;
+}
+static float ajFontesResumo(int A, float x, float y, float w) {
+  float h;
+  ajcSecA = A; h = ajSecaoDesenhar(AJC_FON_ADDONS, -1, x, y, w); ajcSecA = -1;
+  return h;
 }
 #undef CX
 #undef CY

@@ -33,7 +33,7 @@ if nome != esperado:
     sys.exit(f"hb-repo.sh: esperava {esperado}, recebi {nome}")
 h = hashlib.sha256(open(ipk, "rb").read()).hexdigest()
 base = f"https://github.com/{repo}/releases/download/v{versao}"
-icone = f"https://raw.githubusercontent.com/{repo}/v{versao}/deploy/app/icon-large.png"
+icone = f"https://raw.githubusercontent.com/{repo}/v{versao}/deploy/app/icon-large-20.png"
 manifesto = {
     "id": app["id"],
     "version": versao,

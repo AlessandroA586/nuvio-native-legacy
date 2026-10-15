@@ -11,6 +11,7 @@
 // stream_definir_lista, e a tela so precisa olhar addons_estado().
 #ifndef NV_ADDONS_H
 #define NV_ADDONS_H
+#include "addonurl.h"
 
 typedef enum { ADD_PARADO = 0, ADD_BUSCANDO, ADD_PRONTO, ADD_VAZIO } AddEstado;
 
@@ -25,7 +26,9 @@ int  addons_carregar(const char *dirArte);
 // perfil errado, 401 mal tratado ou queda — e nenhum desses e "o usuario
 // removeu todos os addons". Trocar por vazio deixaria a pessoa sem fonte
 // nenhuma e sem entender por que.
-typedef struct { char nome[64]; char url[600]; int ativo; } AddonRemoto;
+// `url` com NV_ADDON_URL_MAX (addonurl.h), e nao 600: a URL do Comet tem 870
+// e era cortada aqui, antes de qualquer outro modulo ve-la (#201).
+typedef struct { char nome[64]; char url[NV_ADDON_URL_MAX]; int ativo; } AddonRemoto;
 // Devolve 1 quando a lista MUDOU e foi aplicada; 0 quando nada mudou, quando
 // veio vazia, ou quando nada nela era utilizavel. Quem chama usa isso para
 // decidir se vale remontar o catalogo — e nao para saber quantos addons ha.
@@ -45,6 +48,13 @@ int  addons_perfil_da_lista(void);
 
 // Lista atual, para o sync poder empurrar de volta o que este aparelho tem.
 int  addons_exportar(AddonRemoto *saida, int max);
+
+// Quantos addons ENTRARAM e quantos SAIRAM entre duas listas, comparados pela
+// URL (e nao pelo nome: dois addons podem se chamar igual), e quantos dos que
+// ficaram MUDARAM (ligado/desligado ou ordem). E o que o botao "Sincronizar
+// addons" (#360) diz depois da volta. Qualquer ponteiro de saida pode ser NULL.
+void addons_diferenca(const AddonRemoto *antes, int na, const AddonRemoto *depois, int nd,
+                      int *entraram, int *sairam, int *mudaram);
 
 // Esquece a lista da conta. Chamado ao SAIR: sem isto, a proxima pessoa a usar
 // esta TV navega com os addons da anterior — e como as chaves de debrid vao
@@ -106,10 +116,25 @@ unsigned addons_busca_ms(void);
 int  addons_faltam(char *nomes, unsigned tam);
 // O mesmo contando tambem os scrapers de plugin; *plugins = quantos deles.
 int  addons_faltam_tipo(char *nomes, unsigned tam, int *plugins);
+// Quantos ainda seguram a decisao AUTOMATICA: addons_faltam sem quem e mudo
+// seguido ou mais lento que a espera de Ajustes nesta TV (addonstats.h, #202).
+// Quem sai daqui continua sendo consultado e entra na lista quando responde.
+int  addons_faltam_decisivos(void);
+// A espera de Ajustes em ms, que e o limite do "lento"; <= 0 = ninguem sai.
+void addons_definir_espera_decisao(int ms);
+// Para a ilha explicar a espera (inicio.h).
+typedef struct {
+  int pendentes, pendenteMudo, semResposta;
+  char pendente[64], semRespostaNome[64];
+} AddonsInicioInfo;
+void addons_inicio_info(AddonsInicioInfo *o);
 // Algum addon de indice menor que `idx` (ordem de instalacao) ainda falta?
 int  addons_pendente_antes(int idx);
 // O addon com este nome (Stream.provedor) ainda falta?
 int  addons_pendente_nome(const char *nome);
+// O menor grupo de auto-play (fonteregra.h, #202) que um pendente pode trazer;
+// `f` recebe o nome e se e plugin e devolve o grupo (-1 = nunca). 99 = nenhum.
+int  addons_pendente_grupo_min(int (*f)(const char *nome, int plugin, void *u), void *u);
 
 // A mesma consulta, SINCRONA E REENTRANTE, e addons_consultar — declarada em
 // fontecache.h, e nao aqui, porque a assinatura precisa de Stream (streams.h,
@@ -121,17 +146,39 @@ int  addons_pendente_nome(const char *nome);
 // {"subtitles":[{lang,url,subtitleFileName,...}]}. Sao dezenas por titulo, a
 // maioria em idiomas que nao interessam — por isso a lista e FILTRADA por
 // idioma antes de chegar na tela: 70 linhas para rolar seria pior que nenhuma.
-#define LEG_MAX 12
+// 36 = 12 por idioma com tres grupos (principal, secundario, ingles); com um
+// grupo so ("Todas"/sem preferencia) sao 36 de uma vez (#268). Cada Legenda tem
+// ~1,3 KB: copias de LEG_MAX NAO vao para a pilha (fio de 128 KB na LG/Tizen),
+// usam malloc (faixas.c, legendasui.c, addons.c).
+#define LEG_MAX 36
 
 typedef struct {
   char rotulo[64];   // "Portugues (BR)  ·  Silo.S01E05.WEB"
   char idioma[8];
-  char url[600];
+  // 1024 e nao 600 (#201): addon que embute a configuracao no link de
+  // download (o Community Subtitles poe um base64 do contexto, que cresce com
+  // o nome do arquivo) passava de 600 e o link saia CORTADO, sem erro nenhum,
+  // ate a hora de baixar. Link que nem assim cabe e descartado (addons.c).
+  char url[1024];
   char provedor[64]; // nome do addon que devolveu esta legenda
   char arquivo[96];  // subtitleFileName / movieReleaseName as sent; "" = not sent
+  char id[256];      // identidade enviada pelo addon; "" = nao enviada
+  int addonIndice;   // origem para dedup por id+addon
 } Legenda;
 
 void addons_buscar_legendas(const char *imdb, const char *tipo);
+
+// O ARQUIVO QUE TOCA, para os extras do Stremio (legextras.h, #201): com a
+// fonte confirmada, a busca do titulo e refeita mandando `filename`,
+// `videoSize` e `videoHash`. `hash` e o behaviorHints.videoHash quando o addon
+// de fonte manda; vazio, ele e medido aqui por dois Range de 64 KiB em
+// `urlVideo` (so link remoto, sem cabecalho exigido e com `tamanho` exato).
+// Soma a lista nova a atual sem mover indices, ate LEG_MAX; erro/vazio mantem
+// o que ja existe. Duplicatas por URL ou id+addon ficam fora. Mesmo id e mesmos
+// extras de antes: nao faz nada.
+void addons_legendas_fonte(const char *imdb, const char *tipo, const char *arquivo,
+                           unsigned long long tamanho, const char *hash,
+                           const char *urlVideo, int exigeCabecalhos);
 
 // REFAZ a busca do titulo que esta carregado agora, descartando a lista atual.
 //
@@ -173,9 +220,11 @@ enum { ADD_CATALOGO = 0, ADD_STREAM, ADD_LEGENDA, ADD_META };
 
 const char *addons_nome(int i);
 int  addons_ativo(int i);
+int  addons_base_desligada(const char *base);   // 1 = addon da lista desligado na conta
 int  addons_alternar(int i);          // devolve o estado NOVO
 // Acrescenta um addon sem refazer a lista (ver a nota em addons.c). 1 = entrou,
-// 0 = lista cheia ou ja instalado. Quem chama deve chamar sync_sujar_addons().
+// 0 = lista cheia, ja instalado ou URL que nao cabe (addonurl.h). #360 mao
+// unica: o acrescimo vale so nesta TV; o proximo pull traz a conta por cima.
 int  addons_adicionar(const char *nome, const char *urlManifest);
 // O addon fornece este recurso? Ate a sonda responder e uma suposicao
 // otimista; addons_sondado() diz qual dos dois casos e.

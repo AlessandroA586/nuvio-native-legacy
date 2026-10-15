@@ -123,7 +123,15 @@ int main(void) {
     CONFERE(f[1].acao == REC_ACAO_INICIO && f[1].temporada == 2 && f[1].episodio == 5, "inicio com episodio");
     CONFERE(!strcmp(f[1].titulo, "Serie \"X\"") && !strcmp(f[1].midia, "series"), "titulo com aspas e midia");
     CONFERE(f[2].grau == 2 && !strcmp(f[2].via, "Gustavo"), "amigo de amigo com via");
-    CONFERE(SEM_NOME(f[2].pessoaNome), "amigo de amigo sem nome nao mostra o handle (\"%s\")", f[2].pessoaNome); }
+    CONFERE(SEM_NOME(f[2].pessoaNome), "amigo de amigo sem nome nao mostra o handle (\"%s\")", f[2].pessoaNome);
+    CONFERE(f[0].eps == 0 && !f[1].temReacFim, "servidor antigo: sem eps, sem reacao junto do fim"); }
+  // O servidor agrupado (06/10/2026): "eps" e a reacao junto do "terminou".
+  { RecEvento f[2];
+    const char *j = "{\"itens\":[{\"id\":9,\"de\":\"nuvio:a\",\"deNome\":\"Ana\",\"ev\":\"fim\","
+                    "\"imdb\":\"tt1\",\"midia\":\"series\",\"temporada\":1,\"episodio\":3,\"eps\":3,"
+                    "\"reac\":-1,\"reacao\":-1,\"criado\":10}]}";
+    CONFERE(feedParse(j, f, 2) == 1 && f[0].eps == 3 && f[0].temReacFim && f[0].reacFim == -1,
+            "feed agrupado: eps e reac lidos"); }
 
   // --- perfil do amigo (JSON real) ----------------------------------------------
   { static RecAmigo a;
@@ -446,6 +454,36 @@ int main(void) {
     memset(&d, 0, sizeof d); d.carregando = 1; d.compartilha = -1; socialvis_comparar(&d, c);
     CONFERE(c[SV_CMP_MATCH].estado == SV_CMPE_CARREGANDO, "loading without cache");
   }
+
+  // --- #202: "Meu perfil" de outra identidade nao e republicado ---------------------
+  // A TV liga ja em outro perfil da casa (ou com Trakt no lugar da conta): o
+  // disco ainda tem o id e o perfil da pessoa anterior. Antes, conciliarPerfil
+  // republicava esse apelido na identidade nova e a busca mostrava dois.
+  { RecPerfil pf;
+    respStatus = 200;
+    SDL_LockMutex(mtx);
+    snprintf(meuId, sizeof meuId, "%s", "nuvio:aaa");
+    memset(&perfil, 0, sizeof perfil);
+    perfil.publicado = 1; snprintf(perfil.apelido, sizeof perfil.apelido, "%s", "marina");
+    perfilTocado = 1; perfilPendente = 0;
+    gravarEu(); gravarPerfil();
+    SDL_UnlockMutex(mtx);
+    respCorpo = "{\"id\":\"nuvio:aaa\",\"codigo\":\"abc123\",\"descobrivel\":1}";
+    CONFERE(registrar(cab) == 1, "mesma identidade registra direto");
+    recomenda_perfil(&pf);
+    CONFERE(pf.publicado && !strcmp(pf.apelido, "marina"), "mesma identidade guarda o perfil");
+    SDL_LockMutex(mtx); registrado = 0; SDL_UnlockMutex(mtx);
+    respCorpo = "{\"id\":\"nuvio:aaa:1\",\"codigo\":\"def456\",\"descobrivel\":0}";
+    CONFERE(registrar(cab) == 0, "outra identidade: nao registra com o estado velho");
+    recomenda_perfil(&pf);
+    CONFERE(!pf.publicado && !pf.apelido[0], "outra identidade: perfil local esquecido");
+    { char *b = dados_ler(REC_ARQ_PERFIL); CONFERE(!b, "e apagado do disco"); free(b); }
+    CONFERE(registrar(cab) == 1 && !strcmp(meuId, "nuvio:aaa:1"), "o ciclo seguinte registra limpo");
+    respCorpo = "{\"publicado\":0,\"apelido\":\"\",\"ativ\":0}";
+    conciliarPerfil(cab);
+    SDL_LockMutex(mtx);
+    CONFERE(perfilPendente == 0, "e nada e republicado na identidade nova (pendente %d)", perfilPendente);
+    SDL_UnlockMutex(mtx); }
 
   printf(falhas ? "recomenda_social: %d falhas\n" : "recomenda_social: ok\n", falhas);
   return falhas ? 1 : 0;

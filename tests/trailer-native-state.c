@@ -21,7 +21,8 @@ int video_iniciar_auto(void){return 1;}
 int video_conflito_recurso(void){return conflito;}
 int video_tocar(const char *u){(void)u;ativo=1;pronto=tocando=falhou=terminou=0;pos=0;return 1;}
 void video_parar(void){ativo=pronto=tocando=0;}
-void video_volume(int p){(void)p;}
+static int volN,volUlt=-1;
+void video_volume(int p){volN++;volUlt=p;}
 void video_pausar(int p){tocando=!p;}
 int video_ativo(void){return ativo;}
 int video_pronto(void){return pronto;}
@@ -73,6 +74,20 @@ int main(void) {
   assert(!trailer_mostra_video());ticks+=299;assert(!trailer_mostra_video());
   ticks+=2;assert(trailer_mostra_video());
   puts("ok native ROI wait never wraps through a future/even tick");
+  trailer_fechar();
+  /* #281: the volume goes at opening (Player still preparing on the host) and
+   * once more at the source's first Playing; never every frame. */
+  volN=0;volUlt=-1;tocando=0;pronto=0;
+  trailer_abrir("https://fixture.invalid/d.mp4",r,1,0);
+  assert(volN==1&&volUlt==100);
+  trailer_atualizar(++ticks);assert(volN==1);
+  pronto=tocando=1;trailer_atualizar(++ticks);assert(volN==2&&volUlt==100);
+  trailer_atualizar(++ticks);trailer_atualizar(++ticks);assert(volN==2);
+  trailer_continuar(r,0);assert(volN==3&&volUlt==0);
+  trailer_fechar();
+  tocando=0;trailer_abrir("https://fixture.invalid/e.mp4",r,1,0);
+  tocando=1;trailer_atualizar(++ticks);assert(volN==5&&volUlt==100);
+  puts("ok native trailer volume re-sent once at first Playing, per source");
   trailer_fechar();
   return 0;
 }

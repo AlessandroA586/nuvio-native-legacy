@@ -13,7 +13,7 @@ export NUVIO_DADOS
 BIN="${TMPDIR:-/tmp}/nuvio-n20-shot"
 trap 'rm -rf "$NUVIO_DADOS" "$BIN"' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   case "$source" in */main.c) continue;; esac
   sources+=("$source")
 done

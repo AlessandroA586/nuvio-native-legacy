@@ -15,6 +15,8 @@ static char ultimaUrl[400];
 static int pedidos;
 const char *desc_chave_tmdb(void) { return chave; }
 const char *desc_chave_tmdb_reserva(void) { return chave; }
+static const char *idiomaTmdb = "pt-BR";
+const char *desc_tmdb_idioma(void) { return idiomaTmdb; }
 // ONE PIECE (tt0388629 / TMDB 37854): respostas reais de 23/09/2026,
 // reduzidas aos campos que a reserva le (tests/fixtures/onepiece). O TMDB
 // divide as temporadas de outro jeito e numera pelo absoluto; /episode/ de
@@ -344,7 +346,7 @@ int main(void) {
   pedidos = 0;
   OK(arte_fonte_resolver("https://nuvio.invalid/arte/tmdb/w1280/tt0111161/m278", s, sizeof s) == 1 &&
      !strcmp(s, "https://image.tmdb.org/t/p/w1280/pad.jpg") && pedidos == 1, "tmdb com id: um pedido");
-  OK(strstr(ultimaUrl, "/3/movie/278?append_to_response=images&include_image_language=null,en&api_key=CHAVE") != NULL &&
+  OK(strstr(ultimaUrl, "/3/movie/278?append_to_response=images&include_image_language=pt,null,en&api_key=CHAVE") != NULL &&
      !strstr(ultimaUrl, "/find/"), "tmdb com id: /movie/{id}, sem /find");
   resposta = NULL;
   OK(arte_fonte_resolver("https://nuvio.invalid/arte/tmdbalt/w780/tt0111161/m278", s, sizeof s) == 1 &&
@@ -358,7 +360,7 @@ int main(void) {
   pedidos = 0;
   OK(arte_fonte_resolver("https://nuvio.invalid/arte/tmdbalt/w1280/tt0903747", s, sizeof s) == 1 &&
      !strcmp(s, "https://image.tmdb.org/t/p/w1280/bb2.jpg") && pedidos == 2, "tmdb outro sem id: /find + /images");
-  OK(strstr(ultimaUrl, "/3/tv/1396/images?include_image_language=null,en&api_key=CHAVE") != NULL, "tmdb outro: /tv/{id}/images");
+  OK(strstr(ultimaUrl, "/3/tv/1396/images?include_image_language=pt,null,en&api_key=CHAVE") != NULL, "tmdb outro: /tv/{id}/images");
   resposta = NULL;
   OK(arte_fonte_resolver("https://nuvio.invalid/arte/tmdb/w1280/tt0903747", s, sizeof s) == 1 &&
      !strcmp(s, "https://image.tmdb.org/t/p/w1280/bb.jpg") && pedidos == 2, "o /find ja guardou o padrao");
@@ -368,16 +370,25 @@ int main(void) {
   OK(arte_fonte_resolver("https://nuvio.invalid/arte/tmdbalt/w1280/tt0000404", s, sizeof s) == -1 && pedidos == 1, "outro desconhecido: um /find");
   OK(arte_fonte_resolver("https://nuvio.invalid/arte/tmdbalt/w1280/tt0000404", s, sizeof s) == -1 && pedidos == 1, "outro desconhecido: negativa guardada");
   // Apple: pelo registro do main (trailerapple_arte), com titulo e ano.
-  OK(arte_fonte_resolver("https://nuvio.invalid/arte/apple/1920/tt15239678/m/2024/Dune%3A%20Part%20Two", s, sizeof s) == -1,
+  OK(arte_fonte_resolver("https://nuvio.invalid/arte/apple/1920/v2/tt15239678/m/2024/Dune%3A%20Part%20Two", s, sizeof s) == -1,
      "apple sem registro: nao existe");
   arte_fonte_definir_apple(appleDuble);
-  OK(arte_fonte_resolver("https://nuvio.invalid/arte/apple/1920/tt15239678/m/2024/Dune%3A%20Part%20Two", s, sizeof s) == 1 &&
+  OK(arte_fonte_resolver("https://nuvio.invalid/arte/apple/1920/v2/tt15239678/m/2024/Dune%3A%20Part%20Two", s, sizeof s) == 1 &&
      !strcmp(s, "https://is1-ssl.mzstatic.com/image/thumb/X/1920x1080.jpg"), "apple -> mzstatic 1920x1080");
   OK(!strcmp(appleTitulo, "Dune: Part Two") && appleAno == 2024 && !appleSerie, "apple recebe titulo decodificado, ano e tipo");
   appleChamadas = 0;
-  OK(arte_fonte_resolver("https://nuvio.invalid/arte/apple/1280/tt15239678/m/2024/Dune%3A%20Part%20Two", s, sizeof s) == 1 &&
+  OK(arte_fonte_resolver("https://nuvio.invalid/arte/apple/1280/v2/tt15239678/m/2024/Dune%3A%20Part%20Two", s, sizeof s) == 1 &&
      strstr(s, "/1280x720.jpg") && appleChamadas == 0, "apple 1280 sai da memoria");
-  OK(arte_fonte_resolver("https://nuvio.invalid/arte/apple/1920/tt1/m/0/X", s, sizeof s) == -1, "apple sem ano: malformada");
+  OK(arte_fonte_resolver("https://nuvio.invalid/arte/apple/1920/v2/tt1/m/0/X", s, sizeof s) == -1, "apple sem ano: malformada");
+  OK(arte_fonte_resolvida("https://nuvio.invalid/arte/apple/1920/v2/tt15239678/s/2024/Dune%3A%20Part%20Two", s, sizeof s) == 0,
+     "apple cache externo nao confunde tipo");
+  OK(arte_fonte_resolvida("https://nuvio.invalid/arte/apple/1920/v2/tt15239678/m/2019/Dune%3A%20Part%20Two", s, sizeof s) == 0,
+     "apple cache externo nao confunde ano");
+  appleChamadas = 0;
+  OK(arte_fonte_resolver("https://nuvio.invalid/arte/apple/1920/v2/tt15239678/s/2024/Dune%3A%20Part%20Two", s, sizeof s) == 1 &&
+     appleChamadas == 1 && appleSerie == 1, "apple revalida tipo antes de reutilizar arte");
+  OK(arte_fonte_resolver("https://nuvio.invalid/arte/apple/1920/v2/tt15239678/m/2019/Dune%3A%20Part%20Two", s, sizeof s) == 1 &&
+     appleChamadas == 2 && appleAno == 2019, "apple revalida ano antes de reutilizar arte");
   // fanart.tv: sem chave nao pergunta; com chave, filme pelo tt.
   pedidos = 0;
   OK(arte_fonte_resolver("https://nuvio.invalid/arte/fanart/full/tt0111161/m/278", s, sizeof s) == -1 && pedidos == 0,
@@ -467,6 +478,35 @@ int main(void) {
     arte_fonte_cache_limpar();
   }
   arte_fonte_cache_relogio(NULL);
+  chave = "CHAVE";
+  // IDIOMA DO PADRAO (relato arabe: "as vezes coreano"). O backdrop_path com
+  // letreiro coreano nao e o automatico: vale o arabe, ou o sem texto.
+  arte_fonte_cache_limpar();
+  idiomaTmdb = "ar-SA";
+  resposta = "{\"backdrop_path\":\"/ko.jpg\",\"id\":500,\"images\":{\"backdrops\":["
+             "{\"file_path\":\"/ko.jpg\",\"iso_639_1\":\"ko\",\"vote_average\":9},"
+             "{\"file_path\":\"/sem.jpg\",\"iso_639_1\":null,\"vote_average\":7},"
+             "{\"file_path\":\"/ar.jpg\",\"iso_639_1\":\"ar\",\"vote_average\":5},"
+             "{\"file_path\":\"/sem2.jpg\",\"iso_639_1\":null,\"vote_average\":6}]}}";
+  OK(arte_fonte_resolver("https://nuvio.invalid/arte/tmdb/w1280/tt0000500/m500", s, sizeof s) == 1 &&
+     !strcmp(s, "https://image.tmdb.org/t/p/w1280/ar.jpg"), "tmdb idioma: ar vence o coreano da raiz");
+  OK(strstr(ultimaUrl, "include_image_language=ar,null,en&") != NULL, "tmdb idioma: pede ar");
+  resposta = NULL;
+  OK(arte_fonte_resolver("https://nuvio.invalid/arte/tmdbalt/w1280/tt0000500/m500", s, sizeof s) == 1 &&
+     !strcmp(s, "https://image.tmdb.org/t/p/w1280/sem.jpg"), "tmdb idioma: outro = sem texto, nao repete o padrao");
+  arte_fonte_cache_limpar();
+  resposta = "{\"backdrop_path\":\"/ko.jpg\",\"id\":501,\"images\":{\"backdrops\":["
+             "{\"file_path\":\"/ko.jpg\",\"iso_639_1\":\"ko\",\"vote_average\":9},"
+             "{\"file_path\":\"/sem.jpg\",\"iso_639_1\":null,\"vote_average\":7}]}}";
+  OK(arte_fonte_resolver("https://nuvio.invalid/arte/tmdb/w1280/tt0000501/m501", s, sizeof s) == 1 &&
+     !strcmp(s, "https://image.tmdb.org/t/p/w1280/sem.jpg"), "tmdb idioma: sem ar, o sem texto (nunca ko)");
+  arte_fonte_cache_limpar();
+  resposta = "{\"backdrop_path\":\"/ko.jpg\",\"id\":502,\"images\":{\"backdrops\":["
+             "{\"file_path\":\"/ko.jpg\",\"iso_639_1\":\"ko\",\"vote_average\":9}]}}";
+  OK(arte_fonte_resolver("https://nuvio.invalid/arte/tmdb/w1280/tt0000502/m502", s, sizeof s) != 1,
+     "tmdb idioma: so coreano = nenhum fundo do TMDB (fica a arte atual)");
+  idiomaTmdb = "pt-BR";
+  resposta = NULL;
   printf("%s\n", falhas ? "artereserva: FALHOU" : "artereserva: ok");
   return falhas ? 1 : 0;
 }

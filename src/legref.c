@@ -169,9 +169,10 @@ int legref_cues(const unsigned char *p, long n, int faixa, double escala,
 // --- O MODULO -----------------------------------------------------------------
 typedef struct {
   uint64_t id, sessao;
-  char url[4096], idioma[24];
+  char url[4096], idioma[24], cabs[2048];
   int excl[16], nExcl;
   LegRefOrcamento orc;
+  LegendaDocumento *(*local)(const char *, uint64_t, const int *, int);
 } Pedido;
 
 struct LegRef {
@@ -409,11 +410,23 @@ static int letreiro(const Faixa *f) {
   for (i = 0; i < sizeof p / sizeof *p; i++) if (contemSemCaixa(f->nome, p[i])) return 1;
   return 0;
 }
+// ISO 639-2 (o que MP4 e muito MKV gravam) para as duas letras do 639-1 que
+// a pessoa escolhe. Fora da tabela, as duas primeiras letras.
+static void idioma2(const char *x, char o[3]) {
+  static const char *const t[] = { "eng","en","por","pt","spa","es","fra","fr","fre","fr","deu","de","ger","de",
+    "ita","it","jpn","ja","kor","ko","zho","zh","chi","zh","rus","ru","nld","nl","dut","nl","pol","pl","tur","tr",
+    "ara","ar","swe","sv","nor","no","nob","no","dan","da","fin","fi","ces","cs","cze","cs","hun","hu","ron","ro",
+    "rum","ro","ell","el","gre","el","heb","he","hin","hi","tha","th","vie","vi","ind","id","ukr","uk","cat","ca",
+    "hrv","hr","srp","sr","slk","sk","slo","sk","bul","bg","msa","ms","may","ms", NULL };
+  o[0] = o[1] = o[2] = 0;
+  if (strlen(x) == 3)
+    for (int i = 0; t[i]; i += 2) if (!strncasecmp(x, t[i], 3)) { o[0] = t[i + 1][0]; o[1] = t[i + 1][1]; return; }
+  if (x[0] && x[1]) { o[0] = (char)(x[0] | 32); o[1] = (char)(x[1] | 32); }
+}
 static int mesmoIdioma(const char *a, const char *b) {
-  size_t i;
-  if (!a[0] || !b[0]) return 0;
-  for (i = 0; i < 2; i++) if ((a[i] | 32) != (b[i] | 32)) return 0;
-  return 1;
+  char x[3], y[3];
+  idioma2(a, x); idioma2(b, y);
+  return x[0] && y[0] && x[0] == y[0] && x[1] == y[1];
 }
 static int cmpPonto(const void *a, const void *b) {
   const LegRefPonto *x = a, *y = b;
@@ -421,12 +434,322 @@ static int cmpPonto(const void *a, const void *b) {
   return x->rel - y->rel;
 }
 
+// So TEMPOS (Cues do MKV com CueDuration, tabela de amostras do MP4): o
+// texto e um rotulo distinto por fala, sem pretensao de texto (o AutoSync so
+// usa o tempo; o rotulo passa nos filtros de "fala de verdade").
+typedef struct { double inicio, fim; } Tempo;
+static LegendaDocumento *montarTempos(const Tempo *v, int n, const char *idioma, const char *ident,
+                                      int forced, uint64_t sessao) {
+  LegendaCue *c = calloc((size_t)(n ? n : 1), sizeof *c); LegendaDocumento *d;
+  LegendaDocumentoInfo info;
+  if (!c) return NULL;
+  for (int i = 0; i < n; i++) {
+    c[i].inicio = v[i].inicio; c[i].fim = v[i].fim; c[i].cor = -1; c[i].posX = c[i].posY = -1; c[i].ordem = i;
+    snprintf(c[i].texto, sizeof c[i].texto, "fala %04d", i + 1);
+  }
+  memset(&info, 0, sizeof info);
+  info.sessao = sessao; info.flags = LEGENDA_DOC_COMPLETO | (forced ? LEGENDA_DOC_FORCED : 0);
+  snprintf(info.idioma, sizeof info.idioma, "%s", idioma);
+  snprintf(info.origem, sizeof info.origem, "Embedded");
+  snprintf(info.identidade, sizeof info.identidade, "%s", ident);
+  d = n > 0 ? legenda_documento_de_cues(c, n, &info) : NULL;
+  free(c);
+  return d;
+}
+static int cmpTempo(const void *a, const void *b) {
+  const Tempo *x = a, *y = b; return x->inicio < y->inicio ? -1 : x->inicio > y->inicio;
+}
+static void anunciar(Job *j, LegRefStatus *st, int numero, const char *idioma, const char *codec) {
+  st->faixa = numero;
+  snprintf(st->idioma, sizeof st->idioma, "%s", idioma);
+  snprintf(st->codec, sizeof st->codec, "%s", codec);
+  pthread_mutex_lock(&j->r->m);
+  if (j->r->st.pedido == j->id) {
+    j->r->st.faixa = numero;
+    snprintf(j->r->st.idioma, sizeof j->r->st.idioma, "%s", idioma);
+    snprintf(j->r->st.codec, sizeof j->r->st.codec, "%s", codec);
+  }
+  pthread_mutex_unlock(&j->r->m);
+}
+
+// --- ESCOLHA E VALIDACAO CRUZADA DAS FAIXAS --------------------------------------
+// Ordem de preferencia: o idioma pedido antes; dentro dele, a faixa comum
+// antes da SDH/CC (que traz [porta batendo] a mais). Comentario fica de fora:
+// nao e o dialogo do filme.
+static int comentario(const char *nome) {
+  return contemSemCaixa(nome, "comment") || contemSemCaixa(nome, "coment");
+}
+static int sdh(const char *nome) {
+  return contemSemCaixa(nome, "sdh") || contemSemCaixa(nome, "hearing") || contemSemCaixa(nome, "cc") ||
+         contemSemCaixa(nome, "surdo");
+}
+static int ordenar(const char *const *idiomas, const char *const *nomes, const int *ok, int n,
+                   const char *quer, int *ordem) {
+  int k = 0;
+  for (int passo = 0; passo < 4; passo++)
+    for (int i = 0; i < n; i++) {
+      if (!ok[i]) continue;
+      int mesmo = mesmoIdioma(idiomas[i], quer), s = sdh(nomes[i]);
+      if ((passo == 0 && mesmo && !s) || (passo == 1 && mesmo && s) || (passo == 2 && !mesmo && !s) ||
+          (passo == 3 && !mesmo && s)) ordem[k++] = i;
+    }
+  return k;
+}
+// Fracao dos inicios de a com um inicio de b a ate 250 ms, com b deslocado.
+static double concordancia(const Tempo *a, int na, const Tempo *b, int nb, double off) {
+  int j = 0, c = 0;
+  if (na <= 0 || nb <= 0) return 0;
+  for (int i = 0; i < na; i++) {
+    while (j < nb && b[j].inicio + off < a[i].inicio - .25) j++;
+    if (j < nb && b[j].inicio + off <= a[i].inicio + .25) c++;
+  }
+  return (double)c / na;
+}
+// 1 concordam no tempo; -1 a mesma estrutura DESLOCADA (uma das duas esta
+// fora); 0 sem como dizer (traducao com outro corte, faixa curta).
+static int comparar(const Tempo *a, int na, const Tempo *b, int nb) {
+  double z = concordancia(a, na, b, nb, 0), melhor = 0, mo = 0;
+  if (na < 20 || nb < 20) return 0;
+  if (z >= .5) return 1;
+  for (int k = -100; k <= 100; k++) {
+    double c = concordancia(a, na, b, nb, k * .1);
+    if (c > melhor) { melhor = c; mo = k * .1; }
+  }
+  return melhor >= .5 && (mo >= .5 || mo <= -.5) && z < .25 ? -1 : 0;
+}
+// A preferida cai so se discorda (deslocada) de DUAS outras que concordam
+// entre si: com uma so, nao ha como saber qual das duas esta fora. Devolve a
+// posicao em v[] da faixa a usar (0 = a preferida).
+static int validar(Tempo *const *v, const int *n, int nv, int *descartou) {
+  *descartou = 0;
+  for (int x = 1; x < nv; x++) {
+    if (!v[x] || comparar(v[0], n[0], v[x], n[x]) != -1) continue;
+    for (int y = x + 1; y < nv; y++)
+      if (v[y] && comparar(v[0], n[0], v[y], n[y]) == -1 && comparar(v[x], n[x], v[y], n[y]) == 1) {
+        *descartou = 1; return x;
+      }
+  }
+  return 0;
+}
+
+// --- MP4 / MOV -----------------------------------------------------------------
+// Le so o `moov`: as caixas de topo sao puladas pelo tamanho declarado (um
+// `mdat` de 20 GB custa os 16 bytes do cabecalho). Da faixa de texto (tx3g,
+// wvtt, QuickTime text) bastam stts (duracoes), ctts (deslocamento, raro em
+// texto), stsz (tamanho: amostra vazia = intervalo sem fala) e a lista de
+// edicao. O texto em si nao e lido (nem stco/stsc): o AutoSync so usa tempo.
+// MP4 fragmentado (mvex/moof) fica de fora: o indice nao esta no moov.
+#define LR_MOOV_MAX (16L * 1024L * 1024L)
+#define LR_CAIXAS   24
+static unsigned long be32(const unsigned char *p) {
+  return ((unsigned long)p[0] << 24) | ((unsigned long)p[1] << 16) | ((unsigned long)p[2] << 8) | p[3];
+}
+static unsigned long long be64(const unsigned char *p) { return ((unsigned long long)be32(p) << 32) | be32(p + 4); }
+typedef struct { const unsigned char *p; long o, fim; } Cx;
+static int caixa(Cx *c, char tipo[5], const unsigned char **d, long *n) {
+  unsigned long long t; long h = 8;
+  if (c->fim - c->o < 8) return 0;
+  t = be32(c->p + c->o); memcpy(tipo, c->p + c->o + 4, 4); tipo[4] = 0;
+  if (t == 1) { if (c->fim - c->o < 16) return 0; t = be64(c->p + c->o + 8); h = 16; }
+  else if (t == 0) t = (unsigned long long)(c->fim - c->o);
+  if (t < (unsigned long long)h || t > (unsigned long long)(c->fim - c->o)) return 0;
+  *d = c->p + c->o + h; *n = (long)(t - (unsigned long long)h); c->o += (long)t;
+  return 1;
+}
+static const unsigned char *filho(const unsigned char *p, long n, const char *quer, long *tam) {
+  Cx c = { p, 0, n }; char t[5]; const unsigned char *d; long m;
+  while (caixa(&c, t, &d, &m)) if (!memcmp(t, quer, 4)) { *tam = m; return d; }
+  return NULL;
+}
+typedef struct {
+  int numero, forced, vazio;
+  char codec[8], idioma[8], nome[96];
+  unsigned long escala;
+  const unsigned char *stts, *stsz, *ctts; long nStts, nStsz, nCtts; int vCtts;
+  double desloc;
+} Mp4Faixa;
+static int mp4Faixa(const unsigned char *p, long n, unsigned long escalaFilme, Mp4Faixa *f) {
+  long m, k, ne; const unsigned char *x, *mdia, *stbl, *e;
+  memset(f, 0, sizeof *f);
+  if ((x = filho(p, n, "tkhd", &m)) && m >= 24) f->numero = (int)be32(x + (x[0] == 1 ? 20 : 12));
+  if (!(mdia = filho(p, n, "mdia", &k))) return 0;
+  if ((x = filho(mdia, k, "hdlr", &m)) && m >= 24) {
+    if (memcmp(x + 8, "text", 4) && memcmp(x + 8, "sbtl", 4) && memcmp(x + 8, "subt", 4)) return 0;
+    copiaStr(f->nome, sizeof f->nome, x + 24, m - 24);
+  } else return 0;
+  if (!(x = filho(mdia, k, "mdhd", &m)) || m < 24) return 0;
+  {
+    int v1 = x[0] == 1; unsigned lang;
+    if (v1 && m < 36) return 0;
+    f->escala = be32(x + (v1 ? 20 : 12));
+    lang = (unsigned)((x[v1 ? 32 : 20] << 8) | x[v1 ? 33 : 21]);
+    if (lang && lang != 0x7FFF) {   // tres letras de 5 bits; 0x7FFF / 0 = sem idioma
+      f->idioma[0] = (char)(((lang >> 10) & 31) + 0x60); f->idioma[1] = (char)(((lang >> 5) & 31) + 0x60);
+      f->idioma[2] = (char)((lang & 31) + 0x60); f->idioma[3] = 0;
+      if (!strcmp(f->idioma, "und")) f->idioma[0] = 0;
+    }
+  }
+  if (!f->escala) return 0;
+  {
+    long mi; const unsigned char *minf = filho(mdia, k, "minf", &mi);
+    if (!minf || !(stbl = filho(minf, mi, "stbl", &k))) return 0;
+  }
+  if (!(x = filho(stbl, k, "stsd", &m)) || m < 16) return 0;
+  e = x + 8; ne = (long)be32(e);
+  if (ne < 16 || ne > m - 8) return 0;
+  memcpy(f->codec, e + 4, 4); f->codec[4] = 0;
+  if (!strcmp(f->codec, "tx3g") || !strcmp(f->codec, "text")) {
+    f->vazio = 2;   // so o comprimento do texto, zero
+    if (!strcmp(f->codec, "tx3g") && ne >= 20 && (be32(e + 16) & 0xC0000000UL)) f->forced = 1;
+  } else if (!strcmp(f->codec, "wvtt")) f->vazio = 8;   // so a caixa vtte
+  else return 0;   // stpp (TTML), c608...: nao lemos
+  if (!(f->stts = filho(stbl, k, "stts", &f->nStts)) || f->nStts < 8) return 0;
+  if (!(f->stsz = filho(stbl, k, "stsz", &f->nStsz)) || f->nStsz < 12) return 0;
+  if ((f->ctts = filho(stbl, k, "ctts", &f->nCtts)) && f->nCtts >= 8) f->vCtts = f->ctts[0];
+  else f->ctts = NULL;
+  // Lista de edicao: edicao vazia empurra; a primeira de midia diz de onde comeca.
+  if ((x = filho(p, n, "edts", &m)) && (x = filho(x, m, "elst", &m)) && m >= 8) {
+    int v1 = x[0] == 1; long cont = (long)be32(x + 4), tam = v1 ? 20 : 12, i;
+    for (i = 0; i < cont && 8 + (i + 1) * tam <= m; i++) {
+      const unsigned char *q = x + 8 + i * tam;
+      double seg = (double)(v1 ? be64(q) : be32(q));
+      long long mt = v1 ? (long long)be64(q + 8) : (long long)(int)be32(q + 4);
+      if (mt == -1) { if (escalaFilme) f->desloc += seg / escalaFilme; continue; }
+      f->desloc -= (double)mt / f->escala; break;
+    }
+  }
+  return 1;
+}
+static int letreiroMp4(const Mp4Faixa *f) {
+  static const char *const p[] = { "forced", "sign", "song", "letreiro", "forzad", "forc\xc3\xa9" };
+  if (f->forced) return 1;
+  for (size_t i = 0; i < sizeof p / sizeof *p; i++) if (contemSemCaixa(f->nome, p[i])) return 1;
+  return 0;
+}
+// Falas da faixa (ordenadas). -1 = tabela inconsistente; -2 = falas demais.
+static int mp4Tempos(const Mp4Faixa *f, Tempo **saida) {
+  unsigned long tamFixo = be32(f->stsz + 4), n = be32(f->stsz + 8), i, e = 0, resta, ce = 0, cresta = 0;
+  unsigned long nStts = be32(f->stts + 4), nCtts = f->ctts ? be32(f->ctts + 4) : 0;
+  unsigned long long dts = 0; long long co = 0; int k = 0, cap = 0; Tempo *v = NULL;
+  *saida = NULL;
+  if (!tamFixo && (long)(12 + 4 * (unsigned long long)n) > f->nStsz) return -1;
+  if ((long)(8 + 8 * (unsigned long long)nStts) > f->nStts) return -1;
+  if (f->ctts && (long)(8 + 8 * (unsigned long long)nCtts) > f->nCtts) return -1;
+  resta = nStts ? be32(f->stts + 8) : 0;
+  if (nCtts) { cresta = be32(f->ctts + 8); co = f->vCtts ? (long long)(int)be32(f->ctts + 12) : (long long)be32(f->ctts + 12); }
+  for (i = 0; i < n; i++) {
+    unsigned long delta, tam = tamFixo ? tamFixo : be32(f->stsz + 12 + 4 * i);
+    while (!resta && ++e < nStts) resta = be32(f->stts + 8 + 8 * e);
+    if (e >= nStts) { free(v); return -1; }
+    delta = be32(f->stts + 12 + 8 * e); resta--;
+    if (nCtts) {
+      while (!cresta && ++ce < nCtts) {
+        cresta = be32(f->ctts + 8 + 8 * ce);
+        co = f->vCtts ? (long long)(int)be32(f->ctts + 12 + 8 * ce) : (long long)be32(f->ctts + 12 + 8 * ce);
+      }
+      if (cresta) cresta--;
+    }
+    if (tam > (unsigned long)f->vazio && delta > 0) {
+      if (k == cap) {
+        Tempo *nv;
+        if (cap >= LR_EVENTOS_MAX + 1) { free(v); return -2; }
+        cap = cap ? cap * 2 : 256; nv = realloc(v, (size_t)cap * sizeof *v);
+        if (!nv) { free(v); return -2; }
+        v = nv;
+      }
+      v[k].inicio = ((double)dts + (double)co) / f->escala + f->desloc;
+      v[k].fim = v[k].inicio + (double)delta / f->escala;
+      k++;
+    }
+    dts += delta;
+  }
+  if (k) qsort(v, (size_t)k, sizeof *v, cmpTempo);
+  *saida = v;
+  return k;
+}
+static LegendaDocumento *coletarMp4(Job *j, LegRefStatus *st, const unsigned char *cab, long tam) {
+  long long pos = 0; unsigned char *moov = NULL; long nMoov = 0; int i, nF = 0, escolhida = -1, k;
+  Mp4Faixa fx[LR_FAIXAS]; LegendaDocumento *doc = NULL; Tempo *tv = NULL; unsigned long escalaFilme = 0;
+  for (i = 0; i < LR_CAIXAS && !moov; i++) {
+    unsigned char h[16], *lido = NULL; long n = 0; unsigned long long t; long hdr = 8;
+    if (pos + 16 <= tam) memcpy(h, cab + pos, 16);
+    else {
+      lido = ler(j, pos, 16, &n);
+      if (!lido) { if (j->erro == LEGREF_REDE && i > 0) j->erro = LEGREF_SEM_INDICE; return NULL; }   // fim do arquivo sem moov
+      if (n < 8) { free(lido); j->erro = LEGREF_SEM_INDICE; return NULL; }
+      memset(h, 0, sizeof h); memcpy(h, lido, (size_t)(n < 16 ? n : 16)); free(lido);
+    }
+    t = be32(h);
+    if (t == 1) { t = be64(h + 8); hdr = 16; }
+    if (t < (unsigned long long)hdr) { j->erro = LEGREF_SEM_INDICE; return NULL; }   // 0 = ate o fim: sem moov depois
+    if (!memcmp(h + 4, "moof", 4)) { j->erro = LEGREF_SEM_INDICE; return NULL; }
+    if (!memcmp(h + 4, "moov", 4)) {
+      if (t - (unsigned long long)hdr > (unsigned long long)LR_MOOV_MAX) { j->erro = LEGREF_ORCAMENTO; return NULL; }
+      nMoov = (long)(t - (unsigned long long)hdr);
+      if (pos + (long long)t <= tam) {
+        moov = malloc((size_t)nMoov + 1);
+        if (!moov) { j->erro = LEGREF_MEMORIA; return NULL; }
+        memcpy(moov, cab + pos + hdr, (size_t)nMoov);
+      } else {
+        long n2 = 0; moov = ler(j, pos + hdr, nMoov, &n2);
+        if (!moov) return NULL;
+        if (n2 < nMoov) { free(moov); j->erro = LEGREF_INCOMPLETO; return NULL; }
+      }
+      break;
+    }
+    pos += (long long)t;
+  }
+  if (!moov) { j->erro = LEGREF_SEM_INDICE; return NULL; }
+  {
+    Cx c = { moov, 0, nMoov }; char t[5]; const unsigned char *d; long m;
+    while (caixa(&c, t, &d, &m)) {
+      if (!memcmp(t, "mvex", 4)) { free(moov); j->erro = LEGREF_SEM_INDICE; return NULL; }   // fragmentado
+      if (!memcmp(t, "mvhd", 4) && m >= 24) escalaFilme = be32(d + (d[0] == 1 ? 20 : 12));
+    }
+    c.o = 0;
+    while (caixa(&c, t, &d, &m) && nF < LR_FAIXAS)
+      if (!memcmp(t, "trak", 4) && mp4Faixa(d, m, escalaFilme, &fx[nF])) nF++;
+  }
+  {
+    const char *ids[LR_FAIXAS], *nms[LR_FAIXAS]; int ok[LR_FAIXAS], cand[LR_FAIXAS], nCand, e;
+    Tempo *v[8] = { 0 }; int nv, nt[8] = { 0 }, desc = 0, x;
+    for (i = 0; i < nF; i++) {
+      ids[i] = fx[i].idioma; nms[i] = fx[i].nome;
+      ok[i] = !letreiroMp4(&fx[i]) && !comentario(fx[i].nome);
+      for (e = 0; e < j->p.nExcl; e++) if (j->p.excl[e] == fx[i].numero) ok[i] = 0;
+    }
+    nCand = ordenar(ids, nms, ok, nF, j->p.idioma, cand);
+    if (!nCand) { free(moov); j->erro = LEGREF_SEM_FAIXA; return NULL; }
+    // Todas as tabelas ja estao no moov: validacao cruzada sem Range a mais.
+    nv = nCand < 8 ? nCand : 8;
+    for (x = 0; x < nv; x++) { nt[x] = mp4Tempos(&fx[cand[x]], &v[x]); if (nt[x] < 0) { free(v[x]); v[x] = NULL; nt[x] = 0; } }
+    x = v[0] ? validar(v, nt, nv, &desc) : 0;
+    if (desc) fprintf(stderr, "[legref] cross_check dropped track=%d (shifted against two agreeing tracks) using=%d\n",
+                      fx[cand[0]].numero, fx[cand[x]].numero);
+    escolhida = cand[x];
+    for (i = 0; i < nv; i++) if (i != x) free(v[i]);
+    tv = v[x]; k = v[x] ? nt[x] : mp4Tempos(&fx[escolhida], &tv);
+  }
+  anunciar(j, st, fx[escolhida].numero, fx[escolhida].idioma, fx[escolhida].codec);
+  if (k == -2) j->erro = LEGREF_ORCAMENTO;
+  else if (k < 0) j->erro = LEGREF_SEM_INDICE;
+  else if (k == 0) j->erro = LEGREF_SEM_FAIXA;
+  else {
+    char ident[32]; snprintf(ident, sizeof ident, "mp4-track:%d", fx[escolhida].numero);
+    progresso(j, k, k);
+    doc = montarTempos(tv, k, fx[escolhida].idioma, ident, 0, j->p.sessao);
+    if (!doc) j->erro = LEGREF_MEMORIA;
+  }
+  free(tv); free(moov);
+  return doc;
+}
+
 static LegendaDocumento *coletar(Job *j, LegRefStatus *st) {
   long tam = 0, nTr = 0, oTr = 0, nCu = 0, oCu = 0;
   unsigned char *cab = NULL, *tracks = NULL, *cues = NULL, *bufTr;
   long long segData = -1, posTracks = -1, posCues = -1, posInfo = -1;
   double escala = 1e-6;   // TimestampScale padrao (1 ms) em segundos
-  Faixa fx[LR_FAIXAS]; int nF = 0, escolhida = -1, i, k, semRel = 0, nP;
+  Faixa fx[LR_FAIXAS]; int nF = 0, escolhida = -1, i, semRel = 0, nP, cand[LR_FAIXAS], nCand = 0;
   LegRefPonto *pts = NULL; Evento *ev = NULL; int nEv = 0;
   LegendaDocumento *doc = NULL; int ass;
   // 1. Cabeca do arquivo. O primeiro pedido segue redirects (debrid) e guarda
@@ -435,6 +758,10 @@ static LegendaDocumento *coletar(Job *j, LegRefStatus *st) {
   cab = ler(j, 0, LR_CABECA, &tam);
   if (!cab && j->erro == LEGREF_SEM_RANGE && strcmp(j->urlFinal, j->p.url)) cab = ler(j, 0, LR_CABECA, &tam);
   if (!cab) goto fim;
+  if (tam >= 8 && (!memcmp(cab + 4, "ftyp", 4) || !memcmp(cab + 4, "moov", 4) || !memcmp(cab + 4, "mdat", 4) ||
+                   !memcmp(cab + 4, "free", 4) || !memcmp(cab + 4, "wide", 4) || !memcmp(cab + 4, "skip", 4))) {
+    doc = coletarMp4(j, st, cab, tam); goto fim;
+  }
   if (tam < 4 || cab[0] != 0x1A || cab[1] != 0x45 || cab[2] != 0xDF || cab[3] != 0xA3) { j->erro = LEGREF_NAO_MKV; goto fim; }
   {
     unsigned long id; long long t; long o = 0; int a, b;
@@ -487,39 +814,75 @@ static LegendaDocumento *coletar(Job *j, LegRefStatus *st) {
     nF = lerTracks(tracks + oTr, nTr, fx, LR_FAIXAS);
   }
   (void)posInfo;
-  // 2. A faixa: texto, nao letreiro, nao excluida; o idioma pedido primeiro.
-  for (k = 0; k < 2 && escolhida < 0; k++)
-    for (i = 0; i < nF; i++) {
-      int e, fora = 0;
-      if (!textoFaixa(&fx[i]) || letreiro(&fx[i])) continue;
-      for (e = 0; e < j->p.nExcl; e++) if (j->p.excl[e] == fx[i].numero) fora = 1;
-      if (fora || (k == 0 && !mesmoIdioma(fx[i].idioma, j->p.idioma))) continue;
-      escolhida = i; break;
-    }
-  if (escolhida < 0) { j->erro = LEGREF_SEM_FAIXA; goto fim; }
+  // 2. As faixas candidatas: texto, nao letreiro, nao comentario, nao
+  // excluidas; em ordem de preferencia (ordenar).
   {
-    const Faixa *f = &fx[escolhida];
-    st->faixa = f->numero;
-    snprintf(st->idioma, sizeof st->idioma, "%s", f->idioma);
-    snprintf(st->codec, sizeof st->codec, "%s", f->codec);
-    pthread_mutex_lock(&j->r->m);
-    if (j->r->st.pedido == j->id) {
-      j->r->st.faixa = f->numero;
-      snprintf(j->r->st.idioma, sizeof j->r->st.idioma, "%s", f->idioma);
-      snprintf(j->r->st.codec, sizeof j->r->st.codec, "%s", f->codec);
+    const char *ids[LR_FAIXAS], *nms[LR_FAIXAS]; int ok[LR_FAIXAS];
+    for (i = 0; i < nF; i++) {
+      int e;
+      ids[i] = fx[i].idioma; nms[i] = fx[i].nome;
+      ok[i] = textoFaixa(&fx[i]) && !letreiro(&fx[i]) && !comentario(fx[i].nome);
+      for (e = 0; e < j->p.nExcl; e++) if (j->p.excl[e] == fx[i].numero) ok[i] = 0;
     }
-    pthread_mutex_unlock(&j->r->m);
+    nCand = ordenar(ids, nms, ok, nF, j->p.idioma, cand);
   }
-  ass = strcmp(fx[escolhida].codec, "S_TEXT/UTF8") != 0;
+  if (!nCand) { j->erro = LEGREF_SEM_FAIXA; goto fim; }
+  escolhida = cand[0];
+  anunciar(j, st, fx[escolhida].numero, fx[escolhida].idioma, fx[escolhida].codec);
   // 3. O indice.
   if (posCues < 0) { j->erro = LEGREF_SEM_INDICE; goto fim; }
   cues = lerElemento(j, segData + posCues, 0x1C53BB6B, LR_CUES_MAX, &oCu, &nCu);
   if (!cues) goto fim;
+  // 3b. Validacao cruzada: o mesmo Cues traz os tempos das outras faixas de
+  // texto (com CueDuration). Custa zero Range a mais.
+  if (nCand > 1) {
+    Tempo *tv[8] = { 0 }; int nt[8] = { 0 }, nv = nCand < 8 ? nCand : 8, desc = 0, x;
+    for (x = 0; x < nv; x++) {
+      LegRefPonto *pp = NULL; int sr = 0, np = legref_cues(cues + oCu, nCu, fx[cand[x]].numero, escala, &pp, &sr), todos = np > 0 && !sr;
+      for (i = 0; i < np && todos; i++) if (!(pp[i].dur > 0)) todos = 0;
+      if (todos && (tv[x] = malloc((size_t)np * sizeof **tv))) {
+        for (i = 0; i < np; i++) { tv[x][i].inicio = pp[i].inicio; tv[x][i].fim = pp[i].inicio + pp[i].dur; }
+        qsort(tv[x], (size_t)np, sizeof **tv, cmpTempo); nt[x] = np;
+      }
+      free(pp);
+    }
+    if (tv[0]) {
+      x = validar(tv, nt, nv, &desc);
+      if (desc) {
+        fprintf(stderr, "[legref] cross_check dropped track=%d (shifted against two agreeing tracks) using=%d\n",
+                fx[cand[0]].numero, fx[cand[x]].numero);
+        escolhida = cand[x];
+        anunciar(j, st, fx[escolhida].numero, fx[escolhida].idioma, fx[escolhida].codec);
+      }
+    }
+    for (x = 0; x < nv; x++) free(tv[x]);
+  }
+  ass = strcmp(fx[escolhida].codec, "S_TEXT/UTF8") != 0;
   nP = legref_cues(cues + oCu, nCu, fx[escolhida].numero, escala, &pts, &semRel);
   if (nP < 0) { j->erro = LEGREF_ORCAMENTO; goto fim; }
   // Um CuePoint sem posicao relativa e um bloco que nao sabemos buscar: a
   // faixa nao sai inteira, entao nao serve.
   if (semRel || nP < 1) { j->erro = LEGREF_SEM_INDICE; goto fim; }
+  // SRT com CueDuration em todo ponto (ffmpeg e mkvmerge gravam): o indice
+  // JA TEM os tempos. Um Range em vez de um por fala (um longa: ~1300
+  // Ranges, minutos no ritmo da TV). ASS continua lendo os blocos: la o
+  // texto separa letreiro posicionado de dialogo.
+  if (!ass) {
+    int todos = 1;
+    for (i = 0; i < nP; i++) if (!(pts[i].dur > 0)) todos = 0;
+    if (todos) {
+      Tempo *tv = malloc((size_t)nP * sizeof *tv); char ident[32];
+      if (!tv) { j->erro = LEGREF_MEMORIA; goto fim; }
+      for (i = 0; i < nP; i++) { tv[i].inicio = pts[i].inicio; tv[i].fim = pts[i].inicio + pts[i].dur; }
+      qsort(tv, (size_t)nP, sizeof *tv, cmpTempo);
+      snprintf(ident, sizeof ident, "mkv-track:%d", fx[escolhida].numero);
+      progresso(j, nP, nP);
+      doc = montarTempos(tv, nP, fx[escolhida].idioma, ident, fx[escolhida].forced, j->p.sessao);
+      free(tv);
+      if (!doc) j->erro = LEGREF_MEMORIA;
+      goto fim;
+    }
+  }
   qsort(pts, (size_t)nP, sizeof *pts, cmpPonto);
   ev = calloc((size_t)nP, sizeof *ev);
   if (!ev) { j->erro = LEGREF_MEMORIA; goto fim; }
@@ -603,7 +966,14 @@ static void *trabalhar(void *u) {
     snprintf(j.urlFinal, sizeof j.urlFinal, "%s", j.p.url);
     pthread_mutex_unlock(&r->m);
     memset(&st, 0, sizeof st);
-    doc = coletar(&j, &st);
+    doc = j.p.local ? j.p.local(j.p.url, j.p.sessao, j.p.excl, j.p.nExcl) : NULL;
+    if (doc) {
+      const LegendaDocumentoInfo *info = legenda_documento_info(doc);
+      int n = 0, faixa = 0; legenda_documento_dados(doc, &n);
+      sscanf(info->identidade, "mkv-track:%d", &faixa);
+      anunciar(&j, &st, faixa, info->idioma, "S_TEXT/ASS");
+      progresso(&j, n, n);
+    } else doc = coletar(&j, &st);
     pthread_mutex_lock(&r->m);
     if (r->st.pedido == j.id && r->ped.id == j.id && !r->sair) {
       r->st.bytes = j.bytes; r->st.pedidos = j.pedidos;
@@ -613,7 +983,9 @@ static void *trabalhar(void *u) {
         r->st.motivo = j.erro;
       }
       fprintf(stderr, "[legref] reference %s reason=%s track=%d events=%d/%d requests=%d bytes=%lld\n",
-              r->st.fase == LEGREF_PRONTO ? "complete" : "unavailable", legref_motivo(r->st.motivo),
+              r->st.fase == LEGREF_PRONTO ?
+                (legenda_documento_info(r->doc)->flags & LEGENDA_DOC_JANELA ? "window" : "complete") : "unavailable",
+              legref_motivo(r->st.motivo),
               r->st.faixa, r->st.feitos, r->st.total, j.pedidos, j.bytes);
     }
     pthread_mutex_unlock(&r->m);
@@ -625,12 +997,21 @@ static void *trabalhar(void *u) {
 typedef struct { int (*parar)(void *); void *u; } PararHttp;
 static unsigned char *lerHttp(void *u, const char *url, long long ini, long n, long *tam,
                               int *status, int (*parar)(void *), void *pu) {
-  char range[80]; const char *cab[2]; RedePedido p; RedeResposta r; unsigned char *b = NULL;
+  char range[80], linhas[2048]; const char *cab[18]; RedePedido p; RedeResposta r; unsigned char *b = NULL;
+  int k = 0; char *s, *nl;
   (void)u;
   snprintf(range, sizeof range, "Range: bytes=%lld-%lld", ini, ini + n - 1);
-  cab[0] = range; cab[1] = NULL;
+  cab[k++] = range;
+  // Os mesmos cabecalhos com que o player abre a fonte (proxyHeaders do addon).
+  snprintf(linhas, sizeof linhas, "%s", pu ? ((Job *)pu)->p.cabs : "");
+  for (s = linhas; *s && k < 17; s = nl) {
+    nl = strchr(s, '\n');
+    if (nl) *nl++ = 0; else nl = s + strlen(s);
+    if (*s && strchr(s, ':') && strncasecmp(s, "Range:", 6)) cab[k++] = s;
+  }
+  cab[k] = NULL;
   memset(&p, 0, sizeof p);
-  p.url = url; p.cabecalhos = cab; p.seguir = 1;
+  p.url = url; p.cabecalhos = cab; p.seguir = 1; p.rebaixar_midia = 1;
   p.prazo_ms = 20000u + (unsigned)(n / 64);
   p.max_bytes = (size_t)n;
   p.parar = parar; p.parar_usuario = pu;
@@ -641,7 +1022,9 @@ static unsigned char *lerHttp(void *u, const char *url, long long ini, long n, l
     b = (unsigned char *)r.corpo; r.corpo = NULL; *tam = (long)r.n_corpo;
     // Endereco final para os proximos Ranges (o Job guarda; nunca vai a log).
     if (r.final[0] && pu) { Job *j = pu; snprintf(j->urlFinal, sizeof j->urlFinal, "%s", r.final); }
-  } else if (r.status == 200 && r.final[0] && pu) {
+  } else if (r.status != 200)
+    fprintf(stderr, "[legref] range falhou http=%d erro=%d cabecalhos=%d\n", r.status, (int)r.erro, k - 1);
+  if (!b && r.status == 200 && r.final[0] && pu) {
     Job *j = pu; snprintf(j->urlFinal, sizeof j->urlFinal, "%s", r.final);
   }
   rede_resposta_limpar(&r);
@@ -649,7 +1032,9 @@ static unsigned char *lerHttp(void *u, const char *url, long long ini, long n, l
 }
 
 int legref_disponivel(void) {
-#if defined(__EMSCRIPTEN__) || defined(NV_TPK) || defined(NV_TPK40)
+  // Samsung: desligado ate provar em TV. -DNV_LEGREF_TPK liga no .tpk 6+
+  // (canario; o 4/5 fica fora: rede sem TLS por fio, outro carregador).
+#if defined(__EMSCRIPTEN__) || defined(NV_TPK40) || (defined(NV_TPK) && !defined(NV_LEGREF_TPK))
   return 0;
 #else
   return (rede_pedido_capacidades() & REDE_CAP_JOB) != 0;
@@ -677,6 +1062,11 @@ void legref_destruir(LegRef *r) {
   pthread_cond_destroy(&r->c); pthread_mutex_destroy(&r->m); free(r);
 }
 
+static const char *(*fonteCabs)(void);
+static LegendaDocumento *(*fonteLocal)(const char *, uint64_t, const int *, int);
+void legref_fonte_local(LegendaDocumento *(*f)(const char *, uint64_t, const int *, int)) { fonteLocal = f; }
+void legref_fonte_cabecalhos(const char *(*f)(void)) { fonteCabs = f; }
+
 uint64_t legref_pedir(LegRef *r, const char *url, uint64_t sessao, const char *idioma,
                       const int *excluidas, int nExcluidas, const LegRefOrcamento *orc) {
   LegendaDocumento *velho; uint64_t id; int i;
@@ -686,9 +1076,10 @@ uint64_t legref_pedir(LegRef *r, const char *url, uint64_t sessao, const char *i
   velho = r->doc; r->doc = NULL;
   id = ++r->gerador;
   memset(&r->ped, 0, sizeof r->ped);
-  r->ped.id = id; r->ped.sessao = sessao; r->ped.orc = *orc;
+  r->ped.id = id; r->ped.sessao = sessao; r->ped.orc = *orc; r->ped.local = fonteLocal;
   snprintf(r->ped.url, sizeof r->ped.url, "%s", url);
   snprintf(r->ped.idioma, sizeof r->ped.idioma, "%s", idioma ? idioma : "");
+  snprintf(r->ped.cabs, sizeof r->ped.cabs, "%s", fonteCabs && fonteCabs() ? fonteCabs() : "");
   for (i = 0; i < nExcluidas && i < 16; i++) r->ped.excl[i] = excluidas[i];
   r->ped.nExcl = i;
   r->temPedido = 1;

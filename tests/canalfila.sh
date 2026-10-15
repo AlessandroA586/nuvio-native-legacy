@@ -6,7 +6,7 @@ PORTA=18771
 python3 tests/canalfila.py $PORTA & SRV=$!
 trap 'kill $SRV 2>/dev/null' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   [ "$source" != src/main.c ] && sources+=("$source")
 done
 cc "${sources[@]}" tests/canalfila.c -Isrc -o /tmp/nuvio-canalfila \

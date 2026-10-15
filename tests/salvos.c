@@ -21,13 +21,31 @@ static void confere(const char *o_que, int obtido, int esperado) {
 }
 
 // ---------------------------------------------------------------- dubles
-// O disco e uma string: o que dados_gravar escreve, dados_ler devolve.
-static char *disco;
-int dados_gravar(const char *nome, const char *conteudo) {
-  (void)nome; free(disco); disco = strdup(conteudo); return 1;
+// O disco e um mapa nome -> conteudo: a lista e POR PERFIL (salvos-p<N>.txt),
+// mais o legado salvos.txt e a marca de migracao.
+#define NARQ 64
+static struct { char nome[48]; char *c; } arqs[NARQ];
+static int achaArq(const char *nome) {
+  int i;
+  for (i = 0; i < NARQ; i++) if (arqs[i].c && !strcmp(arqs[i].nome, nome)) return i;
+  return -1;
 }
-char *dados_ler(const char *nome) { (void)nome; return disco ? strdup(disco) : NULL; }
-int dados_apagar(const char *nome) { (void)nome; free(disco); disco = NULL; return 1; }
+static const char *arq(const char *nome) { int i = achaArq(nome); return i < 0 ? NULL : arqs[i].c; }
+int dados_gravar(const char *nome, const char *conteudo) {
+  int i = achaArq(nome);
+  if (i < 0) for (i = 0; i < NARQ && arqs[i].c; i++) {}
+  if (i >= NARQ) return 0;
+  free(arqs[i].c);
+  snprintf(arqs[i].nome, sizeof arqs[i].nome, "%s", nome);
+  arqs[i].c = strdup(conteudo);
+  return 1;
+}
+char *dados_ler(const char *nome) { const char *c = arq(nome); return c ? strdup(c) : NULL; }
+int dados_apagar(const char *nome) {
+  int i = achaArq(nome);
+  if (i >= 0) { free(arqs[i].c); arqs[i].c = NULL; }
+  return 1;
+}
 
 // Catalogo de mentira. Vazio na primeira parte (o que se prova e a lista
 // local); na parte da uniao ele recebe as copias que a TV tinha.
@@ -131,7 +149,7 @@ int main(void) {
   confere("os 450 entraram", entraram, 450);
   confere("e estao na lista", salvos_n(), 450);
   confere("o ultimo salvo esta la", salvos_tem("tt2000449"), 1);
-  for (p = disco; p && (p = strchr(p, '\n')); p++) linhas++;
+  for (p = (char *)arq("salvos-p1.txt"); p && (p = strchr(p, '\n')); p++) linhas++;
   confere("o arquivo tem cabecalho + 450 linhas", linhas, 451);
 
   printf("\ncheia, sai o MAIS ANTIGO e o novo entra:\n");
@@ -153,7 +171,7 @@ int main(void) {
 
   salvos_esquecer();
   confere("esquecer zera a lista", salvos_n(), 0);
-  confere("e apaga o arquivo", disco == NULL, 1);
+  confere("e apaga o arquivo", arq("salvos-p1.txt") == NULL, 1);
 
   // O RELATO DA C9: o painel de Salvos mostrou Widows Bay duas vezes, as duas
   // no mesmo episodio. Lista local com "tt123", conta com "tt123" e o catalogo
@@ -298,6 +316,35 @@ int main(void) {
     r0 = salvos_revisao();
     salvos_esquecer();
     confere("esquecer sobe", salvos_revisao() != r0, 1); }
+  printf("\nlista por perfil e a migracao da lista antiga:\n");
+  { int p = 0;
+    salvos_esquecer();
+    // Uma TV da versao anterior: salvos.txt com dois titulos, perfil 2 ativo.
+    dados_gravar("salvos.txt", "# nuvio salvos v1\ntt0000001\tmovie\t1\t0\t\t\tUm\n"
+                               "tt0000002\tseries\t2\t0\t\t\tDois\n");
+    salvos_perfil(2);
+    confere("legado vai para o perfil ATIVO", salvos_n(), 2);
+    confere("e vira salvos-p2.txt", arq("salvos-p2.txt") != NULL, 1);
+    confere("o legado sai", arq("salvos.txt") == NULL, 1);
+    confere("migracao para a conta pendente, no perfil 2",
+            salvos_migracao_conta(&p) && p == 2, 1);
+    salvos_perfil(1);
+    confere("perfil 1 nao herda a lista do 2", salvos_n(), 0);
+    salvos_definir(comId("tt0000003", "Tres"), 1);
+    confere("salvar no 1 grava o arquivo do 1", arq("salvos-p1.txt") != NULL, 1);
+    salvos_perfil(2);
+    confere("voltar ao 2 traz so a dele", salvos_n() == 2 && !salvos_tem("tt0000003"), 1);
+    // Um legado que aparecesse de novo nao e adotado outra vez.
+    dados_gravar("salvos.txt", "tt0000009\tmovie\t1\t0\t\t\tNove\n");
+    salvos_perfil(3);
+    confere("perfil novo nao adota legado depois da migracao", salvos_n(), 0);
+    salvos_migracao_conta_feita();
+    confere("migracao para a conta feita nao se repete", salvos_migracao_conta(&p), 0);
+    salvos_esquecer();
+    confere("sair apaga todos os perfis e a marca",
+            !arq("salvos-p1.txt") && !arq("salvos-p2.txt") && !arq("salvos-migracao.txt"), 1);
+    salvos_perfil(1); }
+
   printf("\n%s\n", falhas ? "FALHOU" : "PASSOU");
   return falhas ? 1 : 0;
 }

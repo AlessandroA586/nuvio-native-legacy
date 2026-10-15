@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/nuvio-amigoperfil-estados-XXXXXX")"
 trap 'rm -rf "$tmp"' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/recomenda.c|src/amigoperfil.c) continue;; esac
   sources+=("$source")
 done

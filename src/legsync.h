@@ -18,7 +18,8 @@
 //   4. legsync_offset_ms(manual) devolve manual + automatico ACEITO, para ser
 //      aplicado UMA vez no overlay principal (positivo adianta, o mesmo sinal
 //      de legenda_cues/assrender_desenhar). Sem documento dono do overlay,
-//      devolve o manual intacto.
+//      devolve o manual intacto. Escala (fps) e trechos (corte) vem por
+//      legsync_posicao, que troca o instante do video pelo da legenda.
 //   5. Seek/buffer: cancela a analise e pausa a leitura; retoma sozinha 2 s
 //      depois de calmo. legsync_encerrar no fim da sessao (sem join);
 //      legsync_destruir no encerramento do app (join).
@@ -51,7 +52,8 @@ typedef enum {
   LEGSYNC_M_REDE, LEGSYNC_M_ORCAMENTO, LEGSYNC_M_SEM_OUTRA, LEGSYNC_M_CONFIANCA,
   // F06 (Por audio): why the audio reference is not offered / was refused.
   LEGSYNC_M_AUD_PLATAFORMA, LEGSYNC_M_AUD_PASSTHROUGH, LEGSYNC_M_AUD_SEM_AUDIO,
-  LEGSYNC_M_AUD_SEM_FALA
+  LEGSYNC_M_AUD_SEM_FALA,
+  LEGSYNC_M_SEM_TEXTO
 } LegSyncMotivo;
 
 typedef struct {
@@ -67,8 +69,14 @@ typedef struct {
                               // oferecido agora (plataforma/passthrough/sem audio)
   // R4 (automatico): 0 sem plano, 1 trabalhando, 2 sincronizou, 3 nao deu.
   int autoFase;
+  int autoDesligado;          // ajuste local: sem plano nem pílula automáticos
+  int falhaDownload;          // callback terminou sem corpo; não é um timeout da UI
   int autoTrocou;             // 1 = a escolhida nao sincronizou e outra legenda entrou no lugar
   char autoNome[64];          // nome da legenda que entrou (autoTrocou)
+  // Sync pedido a mao (Rapida/Completa/Audio/Outra): mesmo ciclo da pilula do
+  // automatico, com ou sem o automatico ligado. 0 nenhum, 1 trabalhando,
+  // 2 aceita, 3 nao deu (inclusive recusado na hora).
+  int manualFase;
 } LegSyncVisao;
 
 void legsync_iniciar(const char *urlMidia);
@@ -77,12 +85,19 @@ void legsync_destruir(void);
 void legsync_passo(const char *urlMidia, double posSeg, double folgaSeg, int sensivel,
                    unsigned agoraMs);
 int  legsync_offset_ms(int manualMs);
+// Posicao na LEGENDA para o instante `posSeg` do video quando o aceito e
+// escala/trechos (offset puro: posSeg). O overlay desenha em
+// legsync_posicao(pos) + legsync_offset_ms(manual). AUTOSYNC_SEM_LEGENDA
+// (muito negativo) = nada desta legenda neste trecho do video.
+double legsync_posicao(double posSeg);
 
 // Escolha da legenda PRINCIPAL (faixas.c). externa: no lugar de
 // legenda_carregar. outra: embutida (1) ou nenhuma (0).
 void legsync_primaria_externa(const char *url, const char *idioma, const char *origem);
 void legsync_primaria_outra(int embutida);
 
+// Ajuste local, ligado por padrão. Desligar cancela o plano, preserva o manual.
+void legsync_auto_habilitar(int ligado);
 // F06: Ajustes > Sincronia por audio (local, padrao desligado). Barato; o
 // player chama a cada quadro. Desligar no meio cancela a escuta.
 void legsync_audio_habilitar(int ligado);
@@ -104,6 +119,7 @@ void legsync_definir_trocador(LegSyncTrocador t);
 uint64_t legsync_hash_url(const char *url);   // identidade opaca usada em `tentadas`
 
 int  legsync_acao(int acao);            // 1 = aceita no estado atual
+unsigned legsync_manual_seq(void);      // muda a cada sync pedido a mao (barato: por quadro)
 LegSyncVisao legsync_visao(int slot);   // slot 1: LEGSYNC_DEPOIS
 
 // --- API DE APRESENTACAO (legsyncui.c) -------------------------------------
@@ -126,7 +142,6 @@ enum { LEGSYNC_PIL_OFF = 0, LEGSYNC_PIL_PROCURANDO, LEGSYNC_PIL_SINCRONIZANDO, L
 #define LEGSYNC_PIL_SINC_MS     3000u   // "Sincronizando…" na ilha antes de ela voltar ao relogio
 #define LEGSYNC_PIL_APLICADA_MS 3600u
 #define LEGSYNC_PIL_SEMSYNC_MS  6000u   // "nao sincronizada" fica mais: e um aviso, nao um sucesso
-#define LEGSYNC_PIL_BAIXAR_TETO 20000u  // a legenda escolhida nao baixou: desiste da narracao
 enum { LEGSYNC_PIL_ESCONDEU = 1, LEGSYNC_PIL_FINAL_TARDE = 2, LEGSYNC_PIL_LEMBRAR = 4,
        LEGSYNC_PIL_BAIXAR = 8, LEGSYNC_PIL_ZERAR = 16 };
 typedef struct {

@@ -57,8 +57,20 @@ static float alturaCartao(void) {
 void agendaviso_mostrar_se_houver(void) {
   const AgItem *devidos[AV_MAX];
   int q, i;
+  static Uint32 ultimaMontagem;
+  Uint32 agora;
   if (aberto) return;
   agenda_iniciar();
+  // CHAMADA A CADA QUADRO DA HOME (app.c). agenda_montar percorre o catalogo
+  // inteiro, o progresso e os lembretes, com busca linear por imdb e dezenas
+  // de snprintf por serie: MEDIDO no Mac (06/10/2026), 94% do `upd` da home.
+  // So pode haver aviso com lembrete ainda nao avisado, e a data so vira de
+  // dia em dia: sem lembrete pendente nao monta nada, e com ele monta no
+  // maximo a cada 5 s.
+  if (agenda_lembretes_pendentes() <= 0) return;
+  agora = SDL_GetTicks();
+  if (ultimaMontagem && agora - ultimaMontagem < 5000u) return;
+  ultimaMontagem = agora;
   agenda_montar();
   q = agenda_devidos(devidos, AV_MAX);
   if (q <= 0) return;

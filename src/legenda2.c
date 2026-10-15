@@ -213,6 +213,9 @@ Leg2Estado legenda2_estado(void) {
 // touches `ident`, so no copy is needed for the caller.
 const char *legenda2_identidade(void) { return ident; }
 
+static int limitarManual(int ms) {
+  return ms > LEG_ATRASO_MANUAL_MAX ? LEG_ATRASO_MANUAL_MAX : ms < -LEG_ATRASO_MANUAL_MAX ? -LEG_ATRASO_MANUAL_MAX : ms;
+}
 static int limitar(int ms) { return ms > 30000 ? 30000 : ms < -30000 ? -30000 : ms; }
 int legenda2_offset_manual(void) {
   int v;
@@ -220,14 +223,14 @@ int legenda2_offset_manual(void) {
   return v;
 }
 void legenda2_definir_offset_manual(int ms) {
-  pthread_mutex_lock(&trava); offManual = limitar(ms); pthread_mutex_unlock(&trava);
+  pthread_mutex_lock(&trava); offManual = limitarManual(ms); pthread_mutex_unlock(&trava);
 }
 void legenda2_definir_offset_auto(int ms) {
   pthread_mutex_lock(&trava); offAuto = limitar(ms); pthread_mutex_unlock(&trava);
 }
 int legenda2_offset_total(void) {
   int v;
-  pthread_mutex_lock(&trava); v = limitar(offManual + offAuto); pthread_mutex_unlock(&trava);
+  pthread_mutex_lock(&trava); v = limitarManual(offManual + offAuto); pthread_mutex_unlock(&trava);
   return v;
 }
 
@@ -239,9 +242,13 @@ LegendaDocumento *legenda2_documento(void) {
   return d;
 }
 
+static double (*volatile tempoMapa)(double);
+void legenda2_definir_tempo(double (*tempo)(double)) { tempoMapa = tempo; }
 int legenda2_cues(double posSeg, LegendaCue *dst, int max) {
   LegendaDocumento *d = NULL;
   int off = 0, n;
+  double (*f)(double) = tempoMapa;
+  if (f) posSeg = f(posSeg);   // fora da trava: legsync tem a sua
   pthread_mutex_lock(&trava);
   if (doc && estado == LEG2_ATIVA) { d = legenda_documento_reter(doc); off = limitar(offManual + offAuto); }
   pthread_mutex_unlock(&trava);

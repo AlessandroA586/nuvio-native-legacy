@@ -5,7 +5,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 sources=()
-for source in src/*.c; do [ "$source" != src/main.c ] && sources+=("$source"); done
+for source in src/*.c src/dts/*.c; do [ "$source" != src/main.c ] && sources+=("$source"); done
 cc -DNV_SHOT_HOOKS "${sources[@]}" tests/player_glass_shot.c -Isrc -o "${TMPDIR:-/tmp}/nuvio-player-glass-shot" \
   -O1 -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL \

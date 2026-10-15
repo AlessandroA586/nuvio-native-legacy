@@ -20,7 +20,7 @@ sed "s|\"../src/tex_cache.c\"|\"${NV_TEXGIF_TEX:-$PWD/src/tex_cache.c}\"|" tests
 REABRIR=-DNV_TESTE_REABRIR
 [ -n "${NV_TEXGIF_TEX:-}" ] && REABRIR=""
 sources=()
-for s in src/*.c; do
+for s in src/*.c src/dts/*.c; do
   case "$s" in src/main.c|src/tex_cache.c) continue;; esac
   sources+=("$s")
 done

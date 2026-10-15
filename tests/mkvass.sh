@@ -13,7 +13,7 @@ cc -I/opt/homebrew/include tests/video_url.c src/video.c -o /tmp/nuvio-video-url
 FFMPEG=${FFMPEG:-/opt/homebrew/bin/ffmpeg}
 [ -x "$FFMPEG" ] || { echo "mkvass.sh: ffmpeg nao encontrado em $FFMPEG"; exit 1; }
 
-DIR=$(mktemp -d /tmp/nuvio-mkvass.XXXXXX)
+DIR=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-mkvass.XXXXXX")
 trap 'kill $SRV 2>/dev/null || true; if [ "${NUVIO_MKVASS_KEEP:-0}" = "1" ]; then echo "mkvass.sh: arquivos de teste mantidos em $DIR"; else rm -rf "$DIR"; fi' EXIT
 
 # O .ass de referencia: 40 eventos, um a cada 2,9 s, dois estilos (o "Topo"
@@ -99,9 +99,19 @@ for _ in $(seq 1 50); do grep -q porta "$DIR/porta.txt" 2>/dev/null && break; sl
 PORTA=$(awk '/porta/{print $2}' "$DIR/porta.txt")
 [ -n "$PORTA" ] || { echo "mkvass.sh: servidor nao subiu"; exit 1; }
 
+# Velocidade: o teto de producao e 3 Ranges/s (#308) e a suite inteira, com
+# casos em tempo real, passava de 7 min e escondia falhas. Compilar com
+# RPS maior acelera so o teste; o teto conferido e o compilado. O padrao de
+# producao e guardado aqui para ninguem mudar o default sem ver.
+grep -q '^#define MKVASS_RANGES_POR_SEG 3$' src/mkvass.c || { echo "mkvass.sh: default de MKVASS_RANGES_POR_SEG mudou; reveja o teto"; exit 1; }
+RPS=${MKVASS_TESTE_RPS:-12}
+# Pausas e recuos do CDN encurtados (-D): na TV sao 10-60 s e 0,5-8 s; aqui a
+# pausa e o retorno da leitura ainda acontecem, so que em milissegundos.
 # Janela da VARREDURA em 30 s (padrao 120) para a fixture de 120 s poder
 # provar que os bytes lidos sao proporcionais a janela, nao ao arquivo.
-cc -Isrc -DMKVASS_VARRE_JANELA_SEG=30.0 tests/mkvass.c src/mkvass.c src/assrender.c src/legenda.c src/rede.c src/redeurl.c src/dados.c src/mkv.c \
+cc -Isrc -DMKVASS_VARRE_JANELA_SEG=30.0 -DMKVASS_RANGES_POR_SEG=$RPS -DMKVASS_TESTE_ESCALA=${MKVASS_TESTE_ESCALA:-3}.0 \
+  -DMKVASS_PAUSA_CDN_INI_MS=150L -DMKVASS_PAUSA_CDN_MAX_MS=600L \
+  -DMKVASS_RECUO_INI_MS=20L -DMKVASS_RECUO_MAX_MS=160L tests/mkvass.c src/mkvass.c src/assrender.c src/legenda.c src/rede.c src/redeurl.c src/dados.c src/mkv.c \
   -o /tmp/nuvio-mkvass-tests -O1 -g -Wall -I/opt/homebrew/include \
   -Wno-deprecated-declarations
 mkdir -p "$DIR/dados"

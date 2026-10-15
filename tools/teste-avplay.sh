@@ -12,7 +12,7 @@ ENV_D=$(tools/env.sh)
 
 # tools/teste-avplay.c entra AQUI e so aqui. O duble vai por --pre-js, que roda
 # antes do main e portanto antes de video_iniciar procurar webapis.avplay.
-eval emcc src/*.c tools/teste-avplay.c -o "$SAIDA/index.html" -O1 -g2 "$ENV_D" \
+eval emcc src/*.c src/dts/*.c tools/teste-avplay.c -o "$SAIDA/index.html" -O1 -g2 "$ENV_D" \
   -sUSE_SDL=2 -sUSE_SDL_IMAGE=2 -sUSE_SDL_TTF=2 -sSDL2_IMAGE_FORMATS='["png","jpg"]' \
   -sMAX_WEBGL_VERSION=1 -sINITIAL_MEMORY=402653184 \
   -sSTACK_SIZE=8388608 -sDEFAULT_PTHREAD_STACK_SIZE=8388608 \

@@ -12,7 +12,7 @@ ARTE="$(mktemp -d)"
 trap 'rm -rf "$DADOS" "$ARTE"' EXIT
 
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   if [ "$source" != src/main.c ]; then sources+=("$source"); fi
 done
 cc "${sources[@]}" tests/player_prefs.c -Isrc -o /tmp/nuvio-player-prefs-tests \

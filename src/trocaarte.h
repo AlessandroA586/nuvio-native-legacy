@@ -54,5 +54,16 @@ void trocaarte_teste_candidato(int aba, const char *url, const char *rotulo);
 // Aba e foco (indice na lista visivel) direto, como se o D-pad tivesse andado.
 void trocaarte_teste_foco(int aba, int pos);
 int  trocaarte_n(int aba);
+// Publica uma resposta do /images como o fio faria (ordem por idioma).
+void trocaarte_teste_tmdb(const char *json, const char *lingua);
+// Idioma do candidato visivel `pos` ("" fora do TMDB, "-" sem texto), quantos
+// estao visiveis com o filtro atual, e avanca o filtro de idioma da aba.
+const char *trocaarte_teste_iso(int aba, int pos);
+int  trocaarte_teste_visiveis(int aba);
+const char *trocaarte_teste_filtro(int aba);
+// Tira todo candidato menos o Automatico (e o filtro).
+void trocaarte_teste_limpar(void);
+// Como trocaarte_teste_candidato, com o idioma do TMDB ("-" = sem texto).
+void trocaarte_teste_candidato_iso(int aba, const char *url, const char *rotulo, const char *iso);
 
 #endif

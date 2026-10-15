@@ -6,7 +6,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   if [ "$source" != src/main.c ]; then sources+=("$source"); fi
 done
 bin="${TMPDIR:-/tmp}/nuvio-selos-shot"

@@ -1,16 +1,34 @@
+#include "app_id.h"
 #include "video.h"
+#include "webosver.h"
+#include "audioinfo.h"
 #include "esmaecer.h"
 #include "video_escala.h"
 #include "video_reconexao.h"
+#include "video_seekretry.h"
+#include "video_dvretry.h"
+#include "video_dvaudio.h"
 #include "idioma.h"
 #include "linguas.h"
 #include <SDL2/SDL.h>
 #include "marco.h"
 #include "mkv.h"
+#include "capmkv.h"
 #include "mkvass.h"
+#include "faixasmkv.h"
 #include "js.h"
 #include "lsregistro.h"
 #include "rede.h"
+#include "velocidade.h"
+#include "cacheboost.h"
+#include "dts/dts_playback.h"
+#include "dts_tv.h"
+#include "dts/dts_engine.h"
+#include "ajustes.h"
+#include "dts/dts_overlay.h"
+#include "legenda.h"
+#include "dados.h"
+#include "vazao.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -19,6 +37,87 @@
 #include <ctype.h>
 #include <stdint.h>
 #include <unistd.h>
+
+static DtsPlayback *dtsSessao;
+static char dtsSaida[64];
+// DOLBY VISION IN MKV (Settings > Playback, experimental). The TV's own URI
+// player turns a Dolby Vision MKV into HDR10 (measured on an LG C9). The same
+// Starfish BUFFERSTREAM path used for DTS conversion, fed by our demux with the
+// file's DolbyHdrInfo, engages Dolby Vision there (DV badge, picture and E-AC-3
+// 5.1 sound confirmed by the owner on the C9, webOS 4.10). The trigger is the
+// file's own dvcC (MKV header probe), never the add-on's label.
+// dvMkv*: what the header says, written by the probe thread and read here;
+// plain ints, the same tolerance faixaLeg already has.
+static volatile int dvSondado, dvMkvPerfil, dvMkvEl, dvMkvBl, dvMkvRpu;
+// A sonda leu o comeco do arquivo e ele nao e Matroska (mkv_contentor_definitivo).
+static volatile int mkvNaoMkv;
+static char dvAudioCodec[16][16];   // Matroska CodecID of each audio track, file order
+static char dvAudioIdioma[16][8];   // idioma/nome de cada faixa DO MKV (a lista da TV pode trazer so uma)
+static char dvAudioNome[16][48];
+static int  dvAudioCanais[16];       // Audio > Channels de cada faixa DO MKV (0 = nao informado)
+static volatile int dvAudios;
+// Faixa do MKV (ordinal entre as de audio) escolhida pelo dvPronto no lugar de uma
+// que o caminho nao alimenta; -1 = nenhuma. O iniciarDts a entrega ao motor.
+static int dvAudioMkvOrd = -1;
+static int dvHabilitado, dtsModoDv, dvRecuoAviso;
+// O player ainda nao pediu o ponto salvo ao player da TV (video_dv_segurar):
+// a troca para o caminho espera, para nascer na posicao certa.
+static int dvSegurar;
+// A TELA DO DV (dvtela.h, video_dv_fase): por que o DV desta fonte nao vai
+// acontecer (VIDEO_DV_NAO_*), a fonte nova, o demux ja abriu o arquivo, a faixa
+// da TV que foi trocada, e o mudo do player da TV enquanto a tela cobre.
+static int dvNao, dvSessaoN, dvFonteAberta, dvSilencio, dvSilenciado;
+// O PONTO DE PARTIDA: onde a pessoa apertou Play (0, ou a retomada pedida com a
+// tela do DV de pe). A tela so silencia o HDR10 da TV, que segue andando por
+// baixo dela durante as novas tentativas da sonda (3/8/20 s): esse trecho
+// ninguem viu. O caminho do DV parte daqui, e o HDR10 que fica volta para ca.
+static double dvEntradaSeg;
+// Menos que isto andado nao paga o seek (e o re-buffer) de volta.
+#define DV_ENTRADA_FOLGA_S 2.0
+static char dvAudioDe[16];
+// The audio track a Dolby Vision session of this URL last played (file
+// ordinal + language). Leaving the film and resuming the same source reopens
+// it natively with the TV's default track; the path starts on this one.
+static char dvMemUrl[1024], dvMemIdioma[8];
+static int dvMemOrd = -1;
+// Island notice for app.c: 1 = the source could not keep up, 2 = the path did
+// not start. Consumed once.
+int video_dv_recuo_consumir(void) { int v = dvRecuoAviso; dvRecuoAviso = 0; return v; }
+int video_dv_ativo(void) { return dtsSessao && dtsModoDv; }
+// This source already played (webOS): a later reload of the SAME source
+// (Dolby Vision/DTS path handing back to the TV player, audio switch) is not
+// a source that failed to open. Other targets keep 0.
+static int fonteTocou;
+int video_fonte_tocou(void) { return fonteTocou; }
+static int dvLiberadoNestaTv(void);
+static int dvPronto(void);
+const char *video_dts_saida(void) { return dtsSaida; }
+
+int video_faixa_dts(const VideoFaixa *f) {
+  char s[96];
+  size_t i;
+  if (!f) return 0;
+  snprintf(s, sizeof s, " %s %s ", f->codec, f->rotulo);
+  for (i = 0; s[i]; i++) s[i] = (char)tolower((unsigned char)s[i]);
+  if (!strstr(s, "dts") && !strstr(s, " dca")) return 0;
+  if (strstr(s, "dts:x") || strstr(s, "dts-x") || strstr(s, "dtsx")) return 3;
+  if (strstr(s, "dts-hd") || strstr(s, "dts hd") || strstr(s, "a_dts/") ||
+      strstr(s, "dts-ma") || strstr(s, "dts ma")) return 2;
+  return 1;
+}
+// So o ramo webOS escreve aqui (PREPARANDO, CONVERTIDO, FALHOU): o resto sai
+// da faixa e do pipeline, igual em todos os alvos. No Mac, video_simular.
+static int dtsEstado;
+int video_dts_estado(void) {
+  if (dtsEstado) return dtsEstado;
+  if (!video_pronto() || !video_faixa_dts(video_audio(video_audio_atual()))) return VIDEO_DTS_NENHUM;
+  return video_audio_nao_suportado() ? VIDEO_DTS_SEM_SOM : VIDEO_DTS_NATIVO;
+}
+int video_dts_legenda_desenhar(double seconds, int delay, float x, float y,
+                              float w, float h, float alpha) {
+  return dts_overlay_draw(dtsSessao, seconds - delay / 1000.0, x, y, w, h,
+                          video_largura(), video_altura(), alpha);
+}
 
 // Nomes que o uMS aceita em charColor, e os rotulos que a folha mostra.
 //
@@ -136,6 +235,15 @@ static Uint32 seekEm;
 // Seek diagnostics (#246): when the last "seek" went out, whether seekDone has
 // come back, and the seekable/trickable flags the uMS reported. Log only.
 static Uint32 seekEnvEm;
+static NvSeekRetry seekRetry;
+// Sonda do MKV que falhou: nova tentativa agendada (relogio) para a MESMA
+// fonte. mkvRetrySessao/mkvRetryUrl amarram o agendamento a quem o pediu.
+static NvDvSonda mkvRetry;
+static Uint32 mkvRetryEm;
+static unsigned mkvFioSessao;   // sessao em que o fio lerMkv atual nasceu
+static unsigned mkvRetrySessao;
+static char   mkvRetryUrl[4096];   // do tamanho de urlAtual: o strcmp nao pode falhar por corte
+static Uint32 seekRetryEm;   // != 0: reenviar seekAlvo quando o relogio passar disto
 static int    seekEnvAlvo, seekEnvAviso;
 static int    srcSeekable = -1, srcTrickable = -1;
 // Declarada aqui porque video_bombear a chama antes da definicao. O clang do
@@ -150,19 +258,22 @@ static int       fioMkvVivo;
 // abertura e fazer o load correto ser ignorado.
 static unsigned  sessao;
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(NV_LINUX_DESKTOP)
 // No Mac nao existe barramento nem plano de video. Os cotos deixam o resto do
 // app compilar e rodar igual, so sem imagem em movimento. As capturas podem
 // simular um video (video_simular, video.h); zerado e o coto mudo.
 static VideoSimulacao SIM;
-void video_simular(const VideoSimulacao *s) { if (s) SIM = *s; else memset(&SIM, 0, sizeof SIM); }
+void video_simular(const VideoSimulacao *s) {
+  if (s) SIM = *s; else memset(&SIM, 0, sizeof SIM);
+  dtsEstado = SIM.dts;
+}
 int  video_iniciar(void) { return 0; }
 int  video_iniciar_auto(void) { return 0; }
 int  video_registro_negado(void) { return 0; }
 int video_luna(const char *uri, const char *carga, void (*cb)(const char *, void *), void *ctx) {
   (void)uri; (void)carga; (void)cb; (void)ctx; return 0;
 }
-int  video_tocar(const char *u) { snprintf(urlAtual, sizeof urlAtual, "%s", u ? u : ""); return 0; }
+int  video_tocar(const char *u) { snprintf(urlAtual, sizeof urlAtual, "%s", u ? u : ""); return SIM.aceita; }
 void video_bombear(void) {}
 void video_parar(void) {}
 void video_pausar(int p) { (void)p; }
@@ -188,14 +299,36 @@ double video_duracao(void) { return SIM.duracao; }
 // capitulos. Melhor um stub honesto que um numero inventado.
 double video_creditos(void) { return 0.0; }
 double video_buffer_fim(void) { return SIM.bufferFim; }
+static VideoStats simStats;
+static int simStatsDef;
+void video_simular_estatisticas(const VideoStats *s) {
+  if (s) { simStats = *s; simStatsDef = 1; } else simStatsDef = 0;
+}
+void video_estatisticas(VideoStats *s) {
+  if (simStatsDef) { *s = simStats; return; }
+  video_stats_vazio(s);
+  if (SIM.bufferFim > 0) s->bufferSeg = SIM.bufferFim - SIM.pos;
+}
 void video_definir_dv(int dv) { (void)dv; }
-int  video_tocando(void) { return 0; }
+int  video_tocando(void) { return SIM.tocando; }
+int  video_iniciando(void) { return SIM.iniciando; }
 int  video_pronto(void) { return SIM.pronto; }
-int  video_ativo(void) { return 0; }
+// A tela do DV no Mac: o que a simulacao disser, e o registro das chamadas para
+// os testes provarem o mudo (dv_tela) e a escolha do HDR10 (recusar).
+static int simDvTela = -1, simDvRecusas;
+void video_dv_fase(VideoDvFase *f) { if (f) *f = SIM.dvFase; }
+int  video_dv_candidato(const char *url) { (void)url; return SIM.dvCandidato; }
+void video_dv_tela(int cobrindo) { simDvTela = cobrindo ? 1 : 0; }
+void video_dv_recusar(void) { simDvRecusas++; SIM.dvFase.recusa = VIDEO_DV_NAO_PESSOA; }
+void video_dv_segurar(int segurar) { (void)segurar; }
+int  video_simulado_dv_tela(void) { return simDvTela; }
+int  video_simulado_dv_recusas(void) { return simDvRecusas; }
+int  video_ativo(void) { return SIM.aceita; }
 int  video_falhou(void) { return 0; }
 const char *video_erro_texto(void) { return ""; }
 int  video_decoder_anunciou(void) { return 1; }
 int  video_audio_nao_suportado(void) { return 0; }
+int  video_seek_desistiu(void) { return 0; }
 int  video_terminou(void) { return 0; }
 int  video_conflito_recurso(void) { return 0; }
 unsigned video_bufferando_ms(void) { return SIM.bufferandoMs; }
@@ -219,17 +352,34 @@ int  video_reconectando(void) { return SIM.reconectando; }
 // No Mac quem toca e o pipeline do sistema por outro caminho; os cabecalhos do
 // addon so tem efeito no payload do load da webOS. Stub para o alvo linkar.
 void video_definir_cabecalhos(const char *cabs) { (void)cabs; }
+const char *video_cabecalhos(void) { return ""; }
 int  video_tem_atmos(void) { return SIM.atmos; }
 int  video_tem_dolby_vision(void) { return SIM.dv; }
 const char *video_hdr(void) { return SIM.hdr[0] ? SIM.hdr : "none"; }
 int  video_largura(void) { return SIM.largura; }
 int  video_altura(void) { return SIM.altura; }
+#ifdef NV_SHOT_HOOKS
+// Capturas: a folha de Fontes com o "Sem HDR" da LG (6 botoes no cabecalho).
+static int shotSdr;
+void video_shot_pode_forcar_sdr(int sim) { shotSdr = sim; }
+int  video_pode_forcar_sdr(void) { return shotSdr; }
+#else
 int  video_pode_forcar_sdr(void) { return 0; }
+#endif
 // No Mac nao ha plano de video: 1 para que a tela de aspecto ofereca todos os
 // modos ao desenvolver, que e o mesmo que a LG faz.
 int  video_recorte_fonte(void) { return 1; }
 void video_forcar_sdr(void) {}
 void video_encerrar(void) {}
+// Sem pipeline no Mac: a linha da velocidade aparece (para as capturas e para
+// desenvolver a folha) e o pedido so fica guardado.
+static int velMac = VEL_NORMAL;
+int  video_velocidade_suportada(void) { return 1; }
+void video_velocidade(int c) { velMac = c > 0 ? c : VEL_NORMAL; }
+int  video_velocidade_atual(void) { return velMac; }
+void video_velocidade_recusada(void) { velMac = VEL_NORMAL; }
+// Capturas: o passthrough simulado (cacheboost_ganho_relato) esmaece a linha.
+int  video_velocidade_bloqueada(void) { return cacheboost_ganho_estado() == CB_GANHO_PASSTHROUGH; }
 // .tpk da Samsung: o player e o do host .NET, em video_tpk.c.
 #elif !defined(NV_TPK) && !defined(NV_ANDROID)   // ramo luna (webOS): Android usa video_android.c
 #include <dlfcn.h>
@@ -290,7 +440,7 @@ static void logContextoLs(void) {
   exe[n > 0 ? n : 0] = 0;
   printf("[video] contexto do registro: uid=%d exe=%s HOME=%s APPID=%s papel=%s\n",
          (int)getuid(), exe[0] ? exe : "?", home ? home : "-", app ? app : "-",
-         access("/var/palm/ls2-dev/roles/pub/space.nuvio.native.legacy.json", F_OK) == 0
+         access("/var/palm/ls2-dev/roles/pub/" NV_APP_ID ".json", F_OK) == 0
            ? "visivel" : "nao visivel daqui");
   fflush(stdout);
 }
@@ -328,6 +478,7 @@ static int  (*acbJanela)(long, long, long, long, long, int, long *);
 static int  (*acbJanelaCustom)(long, long, long, long, long,
                                long, long, long, long, int, long *);
 static void (*acbDestruir)(long);
+static int  (*acbFinalizar)(long);
 // O navegador da TV chama isto e nos nao chamavamos: sem o connect o plano de
 // video existe, decodifica e toca o audio, mas nao e ligado a saida — tela
 // preta com som, exatamente o sintoma observado.
@@ -431,12 +582,29 @@ static int dvPedido;
 static char      midia[64];
 static double    posSeg, durSeg;
 static int       tocando, pronto, ligado, falhou, terminou;
+// VELOCIDADE (#202, video.h). velPedida e o que a pessoa quer; velEnviada o
+// que este pipeline ja recebeu (nasce 100 a cada load). O setPlayRate do uMS e
+// o mesmo que o app web do Nuvio manda ({mediaId, playRate, audioOutput:true});
+// a resposta diz se a TV aceitou. Recusou uma vez, a linha some do app inteiro
+// (a mesma TV nao passa a aceitar no titulo seguinte).
+static volatile int velPedida = 100, velEnviada = 100, velRecusada;
 // Ver video_erro_texto. Escrito no fio do LS2, lido pelo de desenho: e so
 // texto curto e o pior caso de corrida e ler meia mensagem num quadro.
 static char      erroTexto[96];
 // errorCode 200 "Audio Codec Not Supported": o VIDEO segue tocando e so o
 // audio morre. Ver o tratamento em lerEvento.
 static int       audioNaoSup;
+static int dtsHabilitado, dtsTentou, dtsRevisao, dtsFalhaLogada;
+static int dtsLegAntes = -1, dtsLegCount;
+static VideoFaixa dtsLegFaixa;
+static int dtsNativePending;
+static VideoFaixa dtsNativeTarget;
+static char dtsLegUrlAntes[1024];
+static char cabsHttp[512];
+static int iniciarDts(int stream);
+static void bombearDts(void);
+static int dtsLiberadoNestaTv(void);
+static void dtsMarcarAbertas(int n);
 // RECONEXAO (video_reconexao.h). O erro chega no fio do LS2 e so ANOTA
 // (reconErroPend); a decisao e o recarregar sao do video_bombear, no fio
 // principal, como o `recuperando`.
@@ -457,6 +625,8 @@ static char reconLegUrl[1024];
 // ficam ajustaveis por /tmp/nuvio-acb justamente para conferir contra o que o
 // ls-monitor mostra que o ACB resolveu, em vez de adivinhar de novo.
 static int tipoJogador = 0, tipoSink = 0, estCarregado = 1, estTocando = 2;
+static int tipoJogadorManual, acbTipoAtual = -1, acbTipoFalhou = -1;
+#define NV_ACB_PLAYER_MSE 10
 // hdrType do setMediaVideoData. O padrao e "none"; para testar Dolby Vision,
 // escreva na SEGUNDA linha de /tmp/nuvio-acb: "dolby_vision" ou "hdr10".
 // Afirmar DV sem o pipeline pedir e mentira — por isso NAO existe deteccao
@@ -466,9 +636,11 @@ static char hdrTipo[24] = "none";
 static void lerAjustesAcb(void) {
   FILE *f = fopen("/tmp/nuvio-acb", "r");
   if (!f) return;
-  if (fscanf(f, "%d %d %d %d", &tipoJogador, &tipoSink, &estCarregado, &estTocando) > 0)
+  if (fscanf(f, "%d %d %d %d", &tipoJogador, &tipoSink, &estCarregado, &estTocando) > 0) {
+    tipoJogadorManual = 1;
     printf("[video] acb ajustes: jogador=%d sink=%d carregado=%d tocando=%d\n",
            tipoJogador, tipoSink, estCarregado, estTocando);
+  }
   { // resto da primeira linha descartado; a SEGUNDA linha, se existir, e o hdrType.
     char linha[64];
     if (fgets(linha, sizeof linha, f) && fgets(linha, sizeof linha, f)) {
@@ -505,6 +677,13 @@ static double numeroDe(const char *p, const char *chave) {
 
 static pthread_t fioBind;
 static volatile int bindVivo = 0;   // existe um bind em andamento?
+static int bindJoinable;
+typedef struct { unsigned sessao; long acb; int tipo; char midia[64]; } AcbBind;
+static int bindAtivo(void) { return __atomic_load_n(&bindVivo, __ATOMIC_ACQUIRE); }
+static int acbConfigurarTipo(int bufferstream);
+static void acbBindRecolher(void) {
+  if (bindJoinable && !bindAtivo()) { pthread_join(fioBind, NULL); bindJoinable = 0; }
+}
 // Se o load novo termina durante o bind lento da sessao anterior, guarda o
 // trabalho. video_bombear inicia o bind assim que o fio anterior liberar.
 static volatile int bindPendente;
@@ -547,27 +726,20 @@ static void esperar(int ms) { struct timespec t; t.tv_sec = ms / 1000;
 // registro 6311 (LG C4 atualizada para webOS 11.2) era o chute "sem ACB => 5"
 // e nao a versao: a TV do relato e as que tocam saiam iguais no log, e a
 // unica diferenca conhecida — o firmware — nao aparecia em lugar nenhum.
-static char releaseLinha[128];
+// Quem decide a versao e o webosver.c (webos_release do nyx, depois o
+// starfish-release): a TV de 2017 (webOS 3.9) so tem o nyx e antes caia no 4
+// daqui. Desconhecida continua valendo o chute de sempre (5 com a libAcbAPI
+// ausente, senao 4), guardado no primeiro uso.
 static int webosMaior(void) {
   static int v, lido;
   if (v) return v;
-  { FILE *f = fopen("/etc/starfish-release", "r");
-    if (f) {
-      char linha[256];
-      while (fgets(linha, sizeof linha, f)) {
-        const char *r = strstr(linha, "release ");
-        if (!releaseLinha[0]) {
-          size_t n = strcspn(linha, "\r\n");
-          snprintf(releaseLinha, sizeof releaseLinha, "%.*s", (int)n, linha);
-        }
-        if (r && sscanf(r + 8, "%d", &v) == 1 && v > 0) break;
-        v = 0;
-      }
-      fclose(f);
-    } }
+  v = nv_webos_major();
   if (!lido) {
     lido = 1;
-    printf("[video] starfish-release: %s\n", releaseLinha[0] ? releaseLinha : "(sem arquivo)");
+    char sf[128];
+    nv_webos_starfish_linha(sf, sizeof sf);
+    printf("[video] starfish-release: %s\n", sf[0] ? sf : "(sem arquivo)");
+    printf("[video] webos major=%d fonte=%s\n", v, nv_webos_fonte());
     fflush(stdout);
   }
   if (!v) v = expWin[0] ? 5 : 4;
@@ -625,22 +797,31 @@ static void montarVideoData(char *vd, size_t n, const char *ctx,
     "}}", ctx, vidBits, vidTaxa, htipo, vidH, vidW, cor, varr);
 }
 
+static int acbBindValido(const AcbBind *bind) {
+  return bind->sessao == __atomic_load_n(&sessao, __ATOMIC_ACQUIRE) &&
+    bind->acb == acb && !strcmp(bind->midia, midia);
+}
+
 static void *prenderPlano(void *u) {
-  (void)u;
+  AcbBind *bind = u;
+  const char *minha = bind->midia;
+  const long meuAcb = bind->acb;
   // O bind e POR SESSAO: cada loadCompleted tem de religar o plano. Foi o bug
   // da "segunda reproducao preta com som" — o ACB continuava apontando para o
   // mediaId da sessao anterior, que o unload matou. A guarda de midia cobre a
   // troca de titulo no MEIO do bind (unload+load em menos de ~1,5s de pausas):
   // continuar descreveria ao tv.display um mediaId que ja morreu.
-  char minha[64];
-  snprintf(minha, sizeof minha, "%s", midia);
+  printf("[video] bind inicio sessao=%u tipo=%d acb=%ld mediaId=%.63s\n",
+         bind->sessao, bind->tipo, bind->acb, bind->midia);
+  fflush(stdout);
+  if (!acbBindValido(bind)) goto fora;
   long tarefa = 0;
-  acbMidia(acb, minha);            esperar(200);
-  if (strcmp(midia, minha)) goto fora;
-  acbEstado(acb, NV_ACB_FOREGROUND, estCarregado, &tarefa); esperar(200);
-  if (strcmp(midia, minha)) goto fora;
-  printf("[video] connect=%d\n", acbConectar(acb, tipoSink, &tarefa)); esperar(200);
-  if (strcmp(midia, minha)) goto fora;
+  printf("[video] bind mediaId=%d\n", acbMidia(meuAcb, minha)); esperar(200);
+  if (!acbBindValido(bind)) goto fora;
+  printf("[video] bind loaded=%d\n", acbEstado(meuAcb, NV_ACB_FOREGROUND, estCarregado, &tarefa)); esperar(200);
+  if (!acbBindValido(bind)) goto fora;
+  printf("[video] connect=%d\n", acbConectar(meuAcb, tipoSink, &tarefa)); esperar(200);
+  if (!acbBindValido(bind)) goto fora;
   {
     // Strings e formato copiados de controles positivos na MESMA TV:
     // Apple TV e Nuvio web usam "DolbyVision" sem SEI/VUI; HDR10 usa o SEI/VUI
@@ -663,58 +844,74 @@ static void *prenderPlano(void *u) {
     { char ad[160];
       snprintf(ad, sizeof ad,
                "{\"context\":\"%s\",\"audio\":{\"immersive\":\"none\"}}", minha);
-      int rvd = acbVideoData(acb, vd, &tarefa);
-      printf("[video] videoData=%d (hdrType=%s)\n", rvd, htipo);
-      if (!strcmp(htipo, "DolbyVision") && !strcasecmp(vidHdr, "HDR10")) {
+      if (!acbBindValido(bind)) goto fora;
+      int rvd = acbVideoData(meuAcb, vd, &tarefa);
+      // DOLBY VISION IN MKV: the file's own dvcC proved the layer and our
+      // demux feeds it with DolbyHdrInfo, so the "decoder did not see DV"
+      // guesses below do not apply. They read vidHdr, which this path resets
+      // and the TV re-reports only after the bind; on the C9 the 700 ms
+      // re-send as SDR/HDR10 won that race and the TV never entered its
+      // Dolby Vision mode (no DV popup) although the pipeline said DolbyVision.
+      const int dvNosso = dtsSessao && dtsModoDv && !strcmp(htipo, "DolbyVision");
+      printf("[video] videoData=%d (hdrType=%s%s)\n", rvd, htipo, dvNosso ? ", Dolby Vision from the file" : "");
+      if (dvNosso) { /* keep DolbyVision */ }
+      else if (!strcmp(htipo, "DolbyVision") && !strcasecmp(vidHdr, "HDR10")) {
         // O ACB aceita DolbyVision e a TV acende o badge mesmo quando o
         // demuxer do MKV so entregou a camada HDR10 — nesse caso o plano fica
         // sem imagem. O retorno sincrono nao detecta isso. Depois de negociar
         // DV, voltar para o formato REAL do decoder recupera imagem + HDR10.
         esperar(700);
+        if (!acbBindValido(bind)) goto fora;
         montarVideoData(vd, sizeof vd, minha, "HDR10", vuiPrim, vuiTrans, vuiMatriz);
         printf("[video] MKV DV entregue como HDR10; fallback real: %d\n",
-               acbVideoData(acb, vd, &tarefa));
+               acbVideoData(meuAcb, vd, &tarefa));
       } else if (!strcmp(htipo, "DolbyVision") && !strcasecmp(vidHdr, "none")) {
         // Profile DV que o demuxer desta TV nao reconheceu nem como camada
         // HDR10. O badge liga, mas nao ha quadro DV; voltar a SDR garante
         // imagem. MP4 reconhecido vem como DolbyVision e nao entra aqui.
         esperar(700);
+        if (!acbBindValido(bind)) goto fora;
         montarVideoData(vd, sizeof vd, minha, "none", 2, 2, 2);
         printf("[video] DV nao reconhecido pelo decoder; fallback SDR: %d\n",
-               acbVideoData(acb, vd, &tarefa));
+               acbVideoData(meuAcb, vd, &tarefa));
       } else if (rvd != 1 && strcmp(htipo, "none")) {
         montarVideoData(vd, sizeof vd, minha, "none", 2, 2, 2);
         printf("[video] videoData recusou hdrType=%s, repetindo sem HDR: %d\n",
-               htipo, acbVideoData(acb, vd, &tarefa));
+               htipo, acbVideoData(meuAcb, vd, &tarefa));
       }
       if (acbAudioData) {
-        printf("[video] audioData=%d\n", acbAudioData(acb, ad, &tarefa));
+        if (!acbBindValido(bind)) goto fora;
+        printf("[video] audioData=%d\n", acbAudioData(meuAcb, ad, &tarefa));
       }
       fflush(stdout);
     }
     esperar(300);
-    if (strcmp(midia, minha)) goto fora;
+    if (!acbBindValido(bind)) goto fora;
   }
   // COM RECORTE DE FONTE JA PEDIDO, prende o plano com o recorte — a janela
   // lisa aqui era o que desfazia o zoom do trailer (trailer.c pede o recorte
   // assim que o videoInfo chega, e este bind termina depois disso).
+  if (!acbBindValido(bind)) goto fora;
   { SDL_Rect d = escDst(fonX >= 0 ? dstX : janX, fonX >= 0 ? dstY : janY,
                         fonX >= 0 ? dstW : janW, fonX >= 0 ? dstH : janH);
     if (fonX >= 0 && acbJanelaCustom)
-      acbJanelaCustom(acb, fonX, fonY, fonW, fonH, d.x, d.y, d.w, d.h,
-                      (dstX == 0 && dstY == 0 && dstW == 1920 && dstH == 1080), &tarefa);
+      printf("[video] bind customWindow=%d\n", acbJanelaCustom(meuAcb, fonX, fonY, fonW, fonH, d.x, d.y, d.w, d.h,
+                      (dstX == 0 && dstY == 0 && dstW == 1920 && dstH == 1080), &tarefa));
     else {
       d = escDst(janX, janY, janW, janH);
-      acbJanela(acb, d.x, d.y, d.w, d.h,
-                (janX == 0 && janY == 0 && janW == 1920 && janH == 1080), &tarefa);
+      printf("[video] bind window=%d\n", acbJanela(meuAcb, d.x, d.y, d.w, d.h,
+                (janX == 0 && janY == 0 && janW == 1920 && janH == 1080), &tarefa));
     } }
-  acbEstado(acb, NV_ACB_FOREGROUND, estTocando, &tarefa);
+  if (!acbBindValido(bind)) goto fora;
+  printf("[video] bind playing=%d\n", acbEstado(meuAcb, NV_ACB_FOREGROUND, pausaPedida ? 3 : estTocando, &tarefa));
   printf("[video] plano preso em %d,%d %dx%d%s\n", janX, janY, janW, janH,
          fonX >= 0 ? " (com recorte)" : "");
   fflush(stdout);
 fora:
-  if (strcmp(midia, minha)) printf("[video] bind abortado: a midia trocou no meio\n");
-  bindVivo = 0;
+  if (!acbBindValido(bind)) printf("[video] bind abortado: sessao ou midia mudou\n");
+  fflush(stdout);
+  free(bind);
+  __atomic_store_n(&bindVivo, 0, __ATOMIC_RELEASE);
   return NULL;
 }
 
@@ -737,10 +934,9 @@ static void recorteNoPrimeiroQuadro(void) {
   }
 }
 
-static int aoEvento(LSHandle *h, LSMessage *m, void *u) {
-  const char *p = lsPayload(m);
-  unsigned minhaSessao = (unsigned)(uintptr_t)u;
-  (void)h;
+// Definida junto da tela do DV (video_dv_tela), chamada no load e no playing.
+static void dvSilenciarTv(void);
+static int eventoPayload(const char *p, unsigned minhaSessao) {
   if (minhaSessao != sessao) return 1;
   if (!p) return 1;
   // O payload do uMS pode vir com '\n' no fim (medido na C9 em 23/09: 4370
@@ -771,6 +967,7 @@ static int aoEvento(LSHandle *h, LSMessage *m, void *u) {
     printf("[video] seek to %ds done in %ums\n", seekEnvAlvo, (unsigned)(SDL_GetTicks() - seekEnvEm));
     fflush(stdout);
     seekEnvEm = 0;
+    nv_seek_ok(&seekRetry);
   }
   if (strstr(p, "sourceInfo")) {
     { const char *q = strstr(p, "\"seekable\":");
@@ -780,18 +977,19 @@ static int aoEvento(LSHandle *h, LSMessage *m, void *u) {
     const char *q;
     nAudio = nLeg = 0;
     vidAtmos = 0;
-    // Percorre audioTrackInfo item a item. O sourceInfo e um objeto so, entao
-    // andar pelos "{" depois da chave do vetor e o suficiente aqui.
-    q = strstr(p, "\"audioTrackInfo\"");
+    // Empty strings/arrays mean no tracks. Stay inside each track array so
+    // the following videoTrackInfo cannot be mistaken for audio.
+    q = js_array(p, NULL, "audioTrackInfo");
     if (q) {
-      const char *fimVet = strchr(q, ']');
-      const char *o = strchr(q, '{');
-      while (o && nAudio < NV_FAIXA_MAX && (!fimVet || o < fimVet)) {
-        const char *fo = strchr(o, '}');
+      const char *o = q;
+      while (o && *o == '{' && nAudio < NV_FAIXA_MAX) {
+        const char *fo = js_fim(o);
+        if (!fo) break;
         VideoFaixa *f = &faixaAudio[nAudio];
         char cod[16] = "", ch[8] = "", imm[16] = "";
         memset(f, 0, sizeof *f);
         f->numero = nAudio;
+        f->stream_index = -1; f->stream_id = -1;
         { const char *l = strstr(o, "\"language\":\"");
           if (l && (!fo || l < fo)) {
             size_t k = 0; l += 12;
@@ -805,6 +1003,8 @@ static int aoEvento(LSHandle *h, LSMessage *m, void *u) {
             while (*c2 && *c2 != '"' && k + 1 < sizeof cod) cod[k++] = *c2++;
             cod[k] = 0;
           } }
+        snprintf(f->codec, sizeof f->codec, "%s", cod);
+        f->canais = (int)js_num(o, fo, "channels", 0);
         { const char *m = strstr(o, "\"immersive\":\"");
           if (m && (!fo || m < fo)) {
             size_t k = 0; m += 13;
@@ -821,13 +1021,20 @@ static int aoEvento(LSHandle *h, LSMessage *m, void *u) {
         // rotulo ficava em portugues mesmo com o app em ingles sempre que
         // havia canal ou Atmos ao lado do idioma. i18n() aqui, snprintf
         // depois — como as telas ja consertadas fazem.
-        snprintf(f->rotulo, sizeof f->rotulo, "%s%s%s%s%s",
-                 f->idioma[0] ? i18n(ling_nome(f->idioma)) : i18n("Faixa"),
-                 imm[0] ? "  \xc2\xb7  " : (ch[0] ? "  \xc2\xb7  " : ""),
-                 imm[0] ? "Atmos" : "",
-                 (imm[0] && ch[0]) ? " " : "", ch);
+        // #293: com o codec conhecido a linha de baixo e "E-AC-3 5.1 Atmos";
+        // sem ele, o que sempre foi ("Atmos 5.1" / "5.1").
+        { char ai[40];
+          if (audioinfo_texto(cod, f->canais, !strcasecmp(imm, "ATMOS"), ai, sizeof ai))
+            snprintf(f->rotulo, sizeof f->rotulo, "%s  \xc2\xb7  %s",
+                     f->idioma[0] ? i18n(ling_nome(f->idioma)) : i18n("Faixa"), ai);
+          else
+            snprintf(f->rotulo, sizeof f->rotulo, "%s%s%s%s%s",
+                     f->idioma[0] ? i18n(ling_nome(f->idioma)) : i18n("Faixa"),
+                     imm[0] ? "  \xc2\xb7  " : (ch[0] ? "  \xc2\xb7  " : ""),
+                     imm[0] ? "Atmos" : "",
+                     (imm[0] && ch[0]) ? " " : "", ch); }
         nAudio++;
-        o = fo ? strchr(fo, '{') : NULL;
+        o = js_prox(fo);
       }
     }
     // DIAGNOSTICO: despeja o sourceInfo CRU uma vez por titulo. A TV nao
@@ -841,12 +1048,12 @@ static int aoEvento(LSHandle *h, LSMessage *m, void *u) {
         if (fd) { fputs(p, fd); fclose(fd); despejou = 1; }
       } }
 
-    q = strstr(p, "\"subtitleTrackInfo\"");
+    q = js_array(p, NULL, "subtitleTrackInfo");
     if (q) {
-      const char *fimVet = strchr(q, ']');
-      const char *o = strchr(q, '{');
-      while (o && nLeg < NV_FAIXA_MAX && (!fimVet || o < fimVet)) {
-        const char *fo = strchr(o, '}');
+      const char *o = q;
+      while (o && *o == '{' && nLeg < NV_FAIXA_MAX) {
+        const char *fo = js_fim(o);
+        if (!fo) break;
         VideoFaixa *f = &faixaLeg[nLeg];
         memset(f, 0, sizeof *f);
         f->numero = (int)numeroDe(o, "\"trackNum\":");
@@ -867,11 +1074,30 @@ static int aoEvento(LSHandle *h, LSMessage *m, void *u) {
         else
           snprintf(f->rotulo, sizeof f->rotulo, i18n("Legenda %d"), f->numero + 1);
         nLeg++;
-        o = fo ? strchr(fo, '{') : NULL;
+        o = js_prox(fo);
       }
     }
     printf("[video] faixas: audio=%d legenda=%d atmos=%d\n", nAudio, nLeg, vidAtmos);
     fflush(stdout);
+
+    if (dtsNativePending) {
+      int match = -1, matches = 0;
+      for (int i = 0; i < nAudio; i++) {
+        const VideoFaixa *f = &faixaAudio[i];
+        if (!strcasecmp(f->codec, dtsNativeTarget.codec) &&
+            (!dtsNativeTarget.idioma[0] || ling_casa(f->idioma, dtsNativeTarget.idioma)) &&
+            (!dtsNativeTarget.canais || f->canais == dtsNativeTarget.canais)) {
+          match = i; matches++;
+        }
+      }
+      dtsNativePending = 0;
+      if (matches == 1) { audioAoCarregar = match; video_escolher_audio(match); }
+      else {
+        falhou = 1;
+        snprintf(erroTexto, sizeof erroTexto, "Cannot safely identify the selected native audio track");
+        return 1;
+      }
+    }
 
     // Escolhe o audio no idioma preferido, se houver um e se o arquivo o
     // tiver. Sem preferencia, ou sem faixa correspondente, NAO se mexe: a
@@ -924,7 +1150,7 @@ static int aoEvento(LSHandle *h, LSMessage *m, void *u) {
       // regra dos 2 min finais e sobe antes dos creditos — o #34, de volta como
       // #73. O Tizen sempre sondou todo MKV (video_tizen.c: mkvPendente =
       // !fonteMp4), e e por isso que la o cartao acerta.
-      if (!fonteMp4) mkvPendente = 1;
+      if (!fonteMp4 && !nv_url_e_mp4(urlAtual)) mkvPendente = 1;
       else if (faltando) marco("mkv: fonte e MP4, sonda dispensada"); }
   }
 
@@ -999,14 +1225,16 @@ static int aoEvento(LSHandle *h, LSMessage *m, void *u) {
       video_escolher_legenda(l2);
     }
     if (posAoCarregar > 1.0) {
-      double alvo = posAoCarregar;
+      double alvo = posAoCarregar, entrada = dvEntradaSeg;
       posAoCarregar = 0.0;
       video_buscar(alvo);
+      dvEntradaSeg = entrada;   // recarga interna: o ponto de partida nao muda
       marco("retomado apos queda do pipeline");
     }
     // O pipeline e novo: o estilo da legenda nao sobrevive ao load anterior.
     aplicarEstilo();
     pronto = 1;
+    dvSilenciarTv();   // a tela do DV cobre este HDR10: sem som (dvtela.h)
     if (cronPediu && !cronLoad) {
       cronLoad = 1;
       printf("[video] load->loadCompleted %lums\n", msDesdePedido());
@@ -1052,6 +1280,7 @@ static int aoEvento(LSHandle *h, LSMessage *m, void *u) {
   if (strstr(p, "playing")) {
     pausaConfirmada = 0;
     tocando = 1;
+    dvSilenciarTv();
     if (acb && midia[0]) {
       long tarefa = 0;
       // COM RECORTE DE FONTE, reaplicar o recorte — e nao a janela lisa. A
@@ -1124,7 +1353,7 @@ static int aoEvento(LSHandle *h, LSMessage *m, void *u) {
     // pular a fonte e o trailer se dar por morto com a imagem tocando; e a
     // pessoa, sem som, nao recebia nenhuma explicacao. Agora e um aviso: o
     // player mostra que o audio desta fonte nao toca nesta TV.
-    if (strstr(p, "\"errorCode\":200")) {
+    if (js_num(p, NULL, "errorCode", -1) == 200) {
       audioNaoSup = 1;
       marco("audio nao suportado pela TV (errorCode 200): video segue");
     } else
@@ -1137,6 +1366,20 @@ static int aoEvento(LSHandle *h, LSMessage *m, void *u) {
       legAoCarregar   = legAtual;
       snprintf(legUrlAoCarregar, sizeof legUrlAoCarregar, "%s", legUrlAtual);
       marco("pipeline morreu: recarregando");
+    } else if (nv_seek_e_recusa(js_num(p, NULL, "errorCode", -1), strstr(p, "seek Failure") != NULL)) {
+      // SEEK RECUSADO NAO E FONTE MORTA (#246, registro 54650): tenta de novo
+      // com espera e, esgotado, segue tocando de onde esta.
+      unsigned w = nv_seek_recusado(&seekRetry);
+      if (w) {
+        char m2[64];
+        seekRetryEm = (SDL_GetTicks() + w) | 1;
+        snprintf(m2, sizeof m2, "seek recusado: nova tentativa %d/%d em %u ms",
+                 seekRetry.falhas, NV_SEEK_MAX, w);
+        marco(m2);
+      } else {
+        seekRetryEm = 0; seekEnvEm = 0;
+        marco("seek recusado: desistiu, segue tocando de onde esta");
+      }
     } else if (!recuperando) {
       // Qualquer outro erro: pode ser a rede caindo com o episodio andando.
       // Quem decide entre reconectar e `falhou` e o video_bombear.
@@ -1165,6 +1408,11 @@ static int aoEvento(LSHandle *h, LSMessage *m, void *u) {
   { double v = numeroDe(p, "\"duration\":");
     if (v >= 0) durSeg = v / 1000.0; }
   return 1;
+}
+
+static int aoEvento(LSHandle *h, LSMessage *m, void *u) {
+  (void)h;
+  return eventoPayload(lsPayload(m), (unsigned)(uintptr_t)u);
 }
 
 static int soLog(LSHandle *h, LSMessage *m, void *u) {
@@ -1339,7 +1587,7 @@ static int aoPedidoScreensaver(LSHandle *h, LSMessage *m, void *u) {
   // A tela de descanso do Nuvio (vitrine/relogio) e quem cuida da TV parada:
   // o screensaver da LG entraria por cima dela no mesmo minuto.
   if (!segurar && esmaecer_segura_protetor_tv()) segurar = 2;
-  snprintf(b, sizeof b, "{\"clientName\":\"space.nuvio.native.legacy\",\"ack\":%s,\"timestamp\":%s}",
+  snprintf(b, sizeof b, "{\"clientName\":\"" NV_APP_ID "\",\"ack\":%s,\"timestamp\":%s}",
            segurar ? "false" : "true", ts);
   printf("[video] screensaver pedido: %s\n", segurar == 2 ? "seguro (tela de descanso do Nuvio)"
                                            : segurar ? "seguro (filme tocando)" : "liberado");
@@ -1351,7 +1599,7 @@ static int aoPedidoScreensaver(LSHandle *h, LSMessage *m, void *u) {
 static void protegerScreensaver(void) {
   if (protetorLigado || !ligado || !bus) return;
   protetorLigado = lsChamar("luna://com.webos.service.tvpower/power/registerScreenSaverRequest",
-           "{\"subscribe\":true,\"clientName\":\"space.nuvio.native.legacy\"}",
+           "{\"subscribe\":true,\"clientName\":\"" NV_APP_ID "\"}",
            aoPedidoScreensaver, NULL, "registerScreenSaverRequest");
 }
 
@@ -1364,6 +1612,33 @@ static void acbNotificou(long h, long tarefa, long evento,
   printf("[video] acb evento=%ld app=%ld toca=%ld resp=%d\n",
          evento, estApp, estToca, resposta);
   fflush(stdout);
+}
+
+/* URI sources use VIDEO (0); BUFFERSTREAM uses MSE (10), per the inspected
+ * SDK and both native reference players. An explicit acb override wins.
+ * Rebuild only on the main thread after the old bind has stopped, so no bind
+ * can call a freed handle. Failed initialization is not retried every frame. */
+static int acbConfigurarTipo(int bufferstream) {
+  int alvo = tipoJogadorManual ? tipoJogador : (bufferstream ? NV_ACB_PLAYER_MSE : tipoJogador);
+  if (!acbCriar || !acbIniciar) return 0;
+  if (acb && acbTipoAtual == alvo) return 1;
+  if (bindAtivo() || acbTipoFalhou == alvo) return 0;
+  acbBindRecolher();
+  if (acb) {
+    if (acbFinalizar) printf("[video] acb finalize=%d\n", acbFinalizar(acb));
+    acbDestruir(acb); acb = 0;
+  }
+  long novo = acbCriar();
+  int ok = novo && acbIniciar(novo, alvo, NV_APP_ID, (void *)acbNotificou);
+  printf("[video] acb tipo=%d init=%d\n", alvo, ok); fflush(stdout);
+  if (!ok) {
+    if (novo) { if (acbFinalizar) acbFinalizar(novo); acbDestruir(novo); }
+    acbTipoAtual = -1; acbTipoFalhou = alvo; return 0;
+  }
+  acb = novo; acbTipoAtual = alvo; acbTipoFalhou = -1;
+  printf("[video] acb sink=%d\n", acbSink(acb, tipoSink)); fflush(stdout);
+  if (pronto && midia[0]) bindPendente = 1;
+  return 1;
 }
 
 #define SIM(h, v, n) do { \
@@ -1446,6 +1721,7 @@ static int iniciar(int automatico) {
   *(void **)(&acbJanelaCustom) = dlsym(A, "AcbAPI_setCustomDisplayWindow");
   if (!acbJanelaCustom) printf("[video] sem AcbAPI_setCustomDisplayWindow; zoom fica indisponivel\n");
   SIM(A, acbDestruir, "AcbAPI_destroy");
+  *(void **)(&acbFinalizar) = dlsym(A, "AcbAPI_finalize");
   SIM(A, acbConectar, "AcbAPI_connectDass");
   SIM(A, acbVideoData, "AcbAPI_setMediaVideoData");
   // NAO usa SIM, pela mesma razao de AcbAPI_setCustomDisplayWindow logo acima.
@@ -1472,10 +1748,10 @@ static int iniciar(int automatico) {
   // log nao lia o codigo direito. Quem limita o custo e a politica acima.
   bus = NULL;
   erroLimpar();
-  if (!lsRegister("com.webos.media.client.nuvio", &bus, ERRO)) {
-    char alt[64];
+  if (!lsRegister(NV_LS_MEDIA_CLIENT, &bus, ERRO)) {
+    char alt[160];
     logErroLs("LSRegister nome fixo recusado");
-    snprintf(alt, sizeof alt, "%s.%d", "com.webos.media.client.nuvio", (int)getpid());
+    snprintf(alt, sizeof alt, "%s.%d", NV_LS_MEDIA_CLIENT, (int)getpid());
     printf("[video] tentando %s\n", alt);
     bus = NULL;
     erroLimpar();
@@ -1513,9 +1789,7 @@ static int iniciar(int automatico) {
 
   if (A) {
     lerAjustesAcb();
-    acb = acbCriar();
-    acbIniciar(acb, tipoJogador, "space.nuvio.native.legacy", (void *)acbNotificou);
-    acbSink(acb, tipoSink);
+    acbConfigurarTipo(0);
   }
   ligado = 1;
   printf("[video] pronto (webOS %d, acb=%ld, janela=%s)\n",
@@ -1571,6 +1845,33 @@ double video_creditos(void) {
   return 0.0;
 }
 
+/* LG can omit an unsupported audio track entirely from sourceInfo. Recover
+ * its identity only when the file has a single audio track; a filtered list
+ * with several tracks does not tell us which one native playback selected. */
+static void completarAudioMkv(const MkvFaixa *fx, int n) {
+  const MkvFaixa *audio = NULL;
+  int count = 0;
+  for (int i = 0; i < n; i++) {
+    if (fx[i].tipo == 2) { audio = &fx[i]; count++; }
+  }
+  if (count != 1 || nAudio > 1 || (nAudio && faixaAudio[0].codec[0])) return;
+  VideoFaixa *f = &faixaAudio[0];
+  if (!nAudio) {
+    memset(f, 0, sizeof *f);
+    f->stream_index = f->stream_id = -1;
+    f->ordinalMkv = 0;
+    audioAtual = 0;
+  }
+  snprintf(f->codec, sizeof f->codec, "%s", !strncmp(audio->codec, "A_DTS", 5) ? "dts" : audio->codec);
+  if (!f->idioma[0] && strcmp(audio->idioma, "und"))
+    snprintf(f->idioma, sizeof f->idioma, "%s", audio->idioma);
+  if (!f->canais) f->canais = audio->canais;
+  snprintf(f->rotulo, sizeof f->rotulo, "%s", audio->nome[0] ? audio->nome : audio->codec);
+  nAudio = 1;
+  printf("[dts] MKV recovered single audio track: codec=%s channels=%d\n", f->codec, f->canais);
+  fflush(stdout);
+}
+
 static void *lerMkv(void *arg) {
   MkvFaixa fx[MKV_MAX_FAIXAS];
   MkvCap   caps[MKV_MAX_CAPS];
@@ -1590,15 +1891,18 @@ static void *lerMkv(void *arg) {
       printf("[mkv] sonda pelo trecho da pre-busca (%ld bytes, sem rede): %d faixa(s)%s\n", cabN, n,
              n > 0 ? "" : " — Tracks nao coube, vai a rede");
       fflush(stdout);
+      // Faixas na janela mas Chapters fora dela: UM Range pelo SeekHead.
+      if (n > 0 && nCaps == 0) nCaps = mkv_capitulos_alem(url, cab, cabN, caps, MKV_MAX_CAPS, NULL);
       free(cab);
     } }
   if (n < 1) n = mkv_faixas_e_caps(url, fx, MKV_MAX_FAIXAS, caps, MKV_MAX_CAPS, &nCaps);
   if (nCaps > 0) {
     creditosNomeado = mkv_creditos_nomeados(caps, nCaps);
-    creditosUltimo  = nCaps > 1 ? caps[nCaps - 1].inicio : 0.0;
+    creditosUltimo  = mkv_creditos_ultimo(caps, nCaps);
     printf("[mkv] %d capitulos; creditos nomeados em %.0fs, ultimo \"%s\" em %.0fs\n",
            nCaps, creditosNomeado, caps[nCaps - 1].nome, creditosUltimo);
     fflush(stdout);
+    capmkv_aplicar(caps, nCaps);   // abertura/creditos/previa do arquivo -> modulo de intro
   }
   if (n < 1) {
     // Sem isto o unico sinal era uma linha de stdout, que na TV nao chega a
@@ -1606,7 +1910,92 @@ static void *lerMkv(void *arg) {
     // saber se o arquivo nao e MKV, se o Range falhou ou se o cabecalho passa
     // dos 2 MB que baixamos.
     marco("mkv: nenhuma faixa lida (nao e MKV, ou Range falhou)");
+    // CHEGARAM BYTES E NAO SAO MATROSKA (MP4 "ftyp", MPEG-TS 0x47...): resposta
+    // definitiva, nao falha de rede. C9, 2.0.3: um MP4 com URL sem extensao
+    // levou as 3 novas tentativas (3/8/20 s) com a tela do DV de pe ~50 s.
+    // Sem DV para esta fonte; dvPronto() devolve o HDR10 ao ponto de partida e
+    // a tela sai no proximo quadro.
+    { int cont = mkv_ultimo_contentor();
+      if (mkv_contentor_definitivo(cont) && mkvFioSessao == __atomic_load_n(&sessao, __ATOMIC_ACQUIRE) &&
+          !strcmp(url, urlAtual)) {
+        char m[96];
+        printf("[mkv] nao e Matroska (%s no comeco do arquivo): sem nova tentativa\n",
+               mkv_contentor_nome(cont));
+        fflush(stdout);
+        snprintf(m, sizeof m, "mkv: nao e Matroska (%s), sem nova tentativa", mkv_contentor_nome(cont));
+        marco(m);
+        mkvNaoMkv = 1; dvSondado = 1;
+        fioMkvVivo = 0; return NULL;
+      } }
+    // Falha de sonda nao e "nao e MKV" (C9: a rede da TV ficou ~10 s fora logo
+    // apos o disparo). Se o DV ainda pode valer para ESTA fonte, agenda nova
+    // tentativa em vez de dar dvSondado=1 e perder o DV pelo resto da sessao.
+    if (dvHabilitado && !fonteMp4 && !nv_url_e_mp4(url) && !dtsSessao && !dtsTentou && !dvSondado &&
+        mkvFioSessao == __atomic_load_n(&sessao, __ATOMIC_ACQUIRE) && !strcmp(url, urlAtual)) {
+      int tent = 0;
+      unsigned espera = nv_dvsonda_falhou(&mkvRetry, &tent);
+      if (espera) {
+        char m[96];
+        snprintf(m, sizeof m, "mkv: sonda falhou: nova tentativa %d/%d em %u ms", tent, NV_DVSONDA_MAX, espera);
+        printf("[mkv] sonda falhou: nova tentativa %d/%d em %u ms\n", tent, NV_DVSONDA_MAX, espera);
+        fflush(stdout);
+        marco(m);
+        snprintf(mkvRetryUrl, sizeof mkvRetryUrl, "%s", url);
+        mkvRetrySessao = mkvFioSessao;
+        mkvRetryEm = SDL_GetTicks() + espera;
+        if (!mkvRetryEm) mkvRetryEm = 1;
+        fioMkvVivo = 0; return NULL;
+      }
+      printf("[mkv] sonda desistiu\n"); fflush(stdout);
+      marco("mkv: sonda desistiu");
+    }
+    dvSondado = 1;
     fioMkvVivo = 0; return NULL;
+  }
+
+  completarAudioMkv(fx, n);
+  { int na = 0, achouVideo = 0;
+    for (j = 0; j < n; j++) {
+      if (fx[j].tipo == 1 && !achouVideo) {
+        achouVideo = 1;
+        dvMkvEl = fx[j].dvEl; dvMkvBl = fx[j].dvBl; dvMkvRpu = fx[j].dvRpu;
+        dvMkvPerfil = fx[j].dvPerfil;
+        if (fx[j].dvPerfil)
+          printf("[dv] file: profile=%d level=%d rpu=%d el=%d bl=%d compat=%d\n", fx[j].dvPerfil,
+                 fx[j].dvNivel, fx[j].dvRpu, fx[j].dvEl, fx[j].dvBl, fx[j].dvCompat);
+      } else if (fx[j].tipo == 2 && na < 16) {
+        snprintf(dvAudioIdioma[na], sizeof dvAudioIdioma[0], "%s", fx[j].idioma);
+        snprintf(dvAudioNome[na], sizeof dvAudioNome[0], "%s", fx[j].nome);
+        dvAudioCanais[na] = fx[j].canais;
+        snprintf(dvAudioCodec[na++], sizeof dvAudioCodec[0], "%s", fx[j].codec);
+      }
+    }
+    dvAudios = na; dvSondado = 1; }
+
+  // DIAGNOSTICO DO DV (203-dvrpu). "Sem [dv] file:" tinha tres causas possiveis
+  // e o log nao separava: o arquivo nao tem dvcC; o Tracks nao coube; ou o DV
+  // esta so EM BANDA (NAL 62 nos quadros, sem dvcC). Esta linha decide na TV.
+  for (j = 0; j < n; j++) if (fx[j].tipo == 1) {
+    const MkvDiag *d = mkv_diag();
+    char bt[5] = "-";
+    if (fx[j].bamN) { int k; for (k = 0; k < 4; k++) { char c = (char)(fx[j].bamTipo >> (24 - 8 * k)); bt[k] = c >= 32 && c < 127 ? c : '?'; } bt[4] = 0; }
+    printf("[dv] sonda: trecho=%ld tracks=%s(%ld B) hvcC=%s(%ld B, nal62=%d) bam=%d(%s) dvcC=%d entrada=%s rpu_banda=%s quadros=%d rpu_tipo=%d vdr_rpu_profile=%d\n",
+           d->lidos, !d->tracksAchado ? "ausente" : d->tracksInteiro ? "inteiro" : "cortado", d->tracksTam,
+           fx[j].nalTam ? "sim" : "nao", fx[j].cpN, fx[j].hvccNal62, fx[j].bamN, bt, fx[j].dvPerfil != 0,
+           fx[j].entradaInteira ? "inteira" : "parcial",
+           d->rpu == 1 ? "sim" : d->rpu == 0 ? "nao" : d->blocoIni >= 0 ? "indeciso(quadro-cortado)" : "indeciso(sem-quadro)",
+           d->quadros, d->rpuTipo, d->rpuPerfil);
+    // A fonte AFIRMOU DV, o cabecalho nao tem dvcC e o 1o quadro passou do
+    // trecho: UM Range com esse quadro (teto 4 MB), so neste caso raro — a nota
+    // do topo de mkv.c mede o custo de ler mais com o video tocando.
+    if (dvPedido && !fx[j].dvPerfil && fx[j].nalTam && d->rpu == -1 && d->blocoIni >= 0) {
+      long long q = d->blocoFim - d->blocoIni;
+      int r = mkv_rpu_alem(url, fx[j].nalTam, 4L * 1024 * 1024);
+      printf("[dv] sonda: rpu_banda pelo 1o quadro (%lld bytes em %lld): %s rpu_tipo=%d vdr_rpu_profile=%d\n",
+             q, d->blocoIni, r == 1 ? "sim" : r == 0 ? "nao" : "indeciso", d->rpuTipo, d->rpuPerfil);
+    }
+    fflush(stdout);
+    break;
   }
 
   // SEM MUTEX, e de proposito: este arquivo nao tem um. faixaLeg ja e escrito
@@ -1628,6 +2017,8 @@ static void *lerMkv(void *arg) {
     if (nt > NV_FAIXA_MAX) nt = NV_FAIXA_MAX;
     for (i = 0; i < nt; i++) tv[i] = faixaLeg[i].numero;
     modo = mkv_casar_legendas(fx, n, tv, nt, idx);
+    if (modo == MKV_CASA_NADA && faixasmkv_legendas_por_idioma(faixaLeg, nt, fx, n, idx))
+      printf("[mkv] legendas: pares unicos por idioma (lista da TV diferente)\n");
     // DIAGNOSTICO que faltou no #92: sem as duas listas lado a lado no log, o
     // deslocamento parecia "a TV desenha mal" e ninguem via que era o app.
     { int nArq = 0;
@@ -1681,6 +2072,7 @@ static void *lerMkv(void *arg) {
           corrigiu = 1;
         }
         f->letreiro = letreiro;
+        f->tipoLeg = ling_tipo_legenda(m->nome, m->forcado, m->sdh);
         if (jaTemIdioma && !corrigiu && !letreiro) continue;
         if (!jaTemIdioma && id[0]) casou++;
         snprintf(f->idioma, sizeof f->idioma, "%s", id);
@@ -1690,7 +2082,7 @@ static void *lerMkv(void *arg) {
         if (letreiro)
           snprintf(f->rotulo, sizeof f->rotulo, "%s%s%s",
                    f->idioma[0] ? i18n(ling_nome(f->idioma)) : "",
-                   f->idioma[0] ? "  \xc2\xb7  " : "", i18n("Letreiros"));
+                   f->idioma[0] ? "  \xc2\xb7  " : "", i18n(ling_tipo_legenda_rotulo(f->tipoLeg)));
         // O NOME da faixa ("SDH", "Full") e o que separa duas legendas do
         // MESMO idioma. Sem ele o dono ve "Portugues" tres vezes e escolhe no
         // escuro — e essa e justamente a lista que ele reclamou. Nome que e so
@@ -1752,11 +2144,20 @@ int  video_reconectando(void) {
 
 int video_tocar(const char *url) {
   dvRecuado = 0;
+  dtsTentou = 0; dtsRevisao = 0; dtsSaida[0] = 0; dtsNativePending = 0; dtsEstado = 0;
+  dtsHabilitado = dts_playback_enabled() && dtsLiberadoNestaTv();
+  printf("[dts] fallback %s\n", dtsHabilitado ? "available" : "unavailable");
+  dvSondado = dvMkvPerfil = dvAudios = 0; dtsModoDv = 0; dvAudioMkvOrd = -1; dvSegurar = 0;
+  mkvNaoMkv = 0;
+  dvNao = 0; dvSessaoN++; dvFonteAberta = 0; dvAudioDe[0] = 0;
+  nv_dvsonda_zerar(&mkvRetry); mkvRetryEm = 0; dvEntradaSeg = 0.0;
+  dvHabilitado = dvLiberadoNestaTv();
+  fflush(stdout);
   // O modo vale para esta fonte e para os recarregar dela (tocarInterno).
   modoLoad = video_modo_live_consumir();
   nv_recon_zerar(&recon);
   reconPermitida = reconProxima; reconProxima = 0;
-  reconIniciou = 0; reconErroPend = 0;
+  reconIniciou = 0; reconErroPend = 0; fonteTocou = 0;
   reconAudio = reconLeg = -1; reconLegUrl[0] = 0;
   falhou = 0; terminou = 0; audioNaoSup = 0;
   // FONTE NOVA, decisao nova: o "sem HDR" era sobre o arquivo anterior.
@@ -1771,18 +2172,70 @@ int video_tocar(const char *url) {
 
 // Chamado uma vez por quadro. So existe para o prazo acima: sem ele o recuo
 // dependeria de o usuario perceber que nao ha imagem e sair da tela.
+static void velBombear(void);
+// Nova tentativa da sonda do MKV (ver mkvRetry). Roda no fio de desenho; so
+// dispara com o prazo vencido, FORA de buffering, e se a fonte e a sessao ainda
+// sao as de quem agendou — trocar de fonte ou sair cancela em silencio.
+static void mkvRetryBombear(void) {
+  if (!mkvRetryEm) return;
+  if (mkvRetrySessao != __atomic_load_n(&sessao, __ATOMIC_ACQUIRE) || strcmp(mkvRetryUrl, urlAtual) ||
+      dtsSessao || fonteMp4 || nv_url_e_mp4(urlAtual) || !dvHabilitado || dtsTentou) {
+    mkvRetryEm = 0; return;
+  }
+  if (fioMkvVivo || !nv_dvsonda_pronta((int)(SDL_GetTicks() - mkvRetryEm) >= 0, bufferandoDesde != 0)) return;
+  mkvRetryEm = 0;
+  mkvPendente = 1;
+  video_sondar_mkv_agora();
+}
 void video_bombear(void) {
+  velBombear();
+  mkvRetryBombear();
+  acbBindRecolher();
+  if (ligado) acbConfigurarTipo(dtsSessao != NULL);
+  if (dtsSessao) bombearDts();
+  else if (dvHabilitado && !dtsNativePending && !dtsTentou && !modoLoad && urlAtual[0] && !dvSegurar && dvPronto()) {
+    dtsModoDv = 1;
+    iniciarDts(-1);
+  }
+  else if (dtsHabilitado && !dtsNativePending && !dtsTentou && !modoLoad && urlAtual[0]) {
+    // SO COM FAIXA DTS CONHECIDA (teste na C9, 06/10): o erro 200 tambem vem
+    // de TrueHD e de faixa ainda sem codec; o fallback derrubava a reproducao
+    // nativa, que na 2.0.0 seguia. Sem a lista de faixas, espera ela chegar.
+    int knownDts = video_faixa_dts(video_audio(audioAtual)) > 0;
+    int forcar = 0;
+#ifdef NV_DTS_DEBUG
+    // A C9 decodifica DTS sozinha: sem isto o caminho de conversao nunca roda
+    // nela. `touch /tmp/nuvio-dts-forcar` converte toda faixa DTS escolhida.
+    forcar = knownDts && access("/tmp/nuvio-dts-forcar", F_OK) == 0;
+#endif
+    // Toda LG de 2020 em diante (release >= 5, dts_tv.h) converte o DTS antes
+    // de tocar, inclusive os modelos 2023/24 que tem DTS: nao da para detectar
+    // o suporte com seguranca (o webOS 26 toca MUDO sem errorCode 200, #285).
+    // So a C9 e anteriores (webOS < 5) usam o caminho nativo + errorCode 200.
+    if ((audioNaoSup && knownDts) || forcar ||
+        nv_dts_converter_ja(webosMaior(), knownDts, 1, dtsTentou)) {
+      dtsEstado = VIDEO_DTS_PREPARANDO;
+      iniciarDts(-1);
+    }
+  }
+  // Sem conversao nesta TV (adapter ausente, app morreu com ela aberta, webOS
+  // 3/4): se a TV nao tem DTS, o silencio e certo — avisa na ilha em vez de
+  // deixar parecer que toca.
+  else if (!dtsHabilitado && pronto && (!dtsEstado || dtsEstado == VIDEO_DTS_SEM_SOM))
+    dtsEstado = nv_dts_sem_som(webosMaior(), video_faixa_dts(video_audio(audioAtual)) > 0, 0)
+                ? VIDEO_DTS_SEM_SOM : 0;
   // O ACB demora cerca de 1,5 s para ligar uma sessao. Se o usuario sair e
   // reabrir nesse intervalo, o loadCompleted novo encontra bindVivo=1. Antes
   // ele simplesmente desistia para sempre; agora o pedido fica pendente.
-  if (bindPendente && !bindVivo && acb && midia[0]) {
-    bindPendente = 0;
-    bindVivo = 1;
-    if (pthread_create(&fioBind, NULL, prenderPlano, NULL) == 0)
-      pthread_detach(fioBind);
-    else {
-      bindVivo = 0;
-      bindPendente = 1;
+  if (bindPendente && !bindAtivo() && acb && midia[0] && pronto && acbConfigurarTipo(dtsSessao != NULL)) {
+    AcbBind *bind = malloc(sizeof *bind);
+    if (bind) {
+      bind->sessao = __atomic_load_n(&sessao, __ATOMIC_ACQUIRE);
+      bind->acb = acb; bind->tipo = acbTipoAtual; snprintf(bind->midia, sizeof bind->midia, "%s", midia);
+      bindPendente = 0;
+      __atomic_store_n(&bindVivo, 1, __ATOMIC_RELEASE);
+      if (pthread_create(&fioBind, NULL, prenderPlano, bind) == 0) bindJoinable = 1;
+      else { free(bind); __atomic_store_n(&bindVivo, 0, __ATOMIC_RELEASE); bindPendente = 1; }
     }
   }
   // SONDA DE MKV so com folga de buffer. 20 s a frente e o sinal de que a
@@ -1793,12 +2246,16 @@ void video_bombear(void) {
   // sonda nao custa rede: dispara logo, e a legenda automatica decide no
   // sourceInfo em vez de esperar os 20 s de buffer.
   if (mkvPendente && !fioMkvVivo && urlAtual[0] &&
-      (bufferSeg - posSeg >= 20.0 || mkvass_cabecalho(urlAtual, NULL, NULL)))
+      ((audioNaoSup && !nAudio) || bufferSeg - posSeg >= 20.0 || mkvass_cabecalho(urlAtual, NULL, NULL)))
     video_sondar_mkv_agora();
   // Avanco pendente que ja repousou.
   if (seekEm && SDL_GetTicks() >= seekEm) {
     Uint32 q = seekEm; seekEm = 0; (void)q;
     seekAgora(seekAlvo);
+  }
+  if (seekRetryEm && (int)(SDL_GetTicks() - seekRetryEm) >= 0) {
+    seekRetryEm = 0;
+    if (!seekEm && pronto) seekAgora(seekAlvo);   // novo seek do dono tem prioridade
   }
   if (seekEnvEm && !seekEnvAviso && SDL_GetTicks() - seekEnvEm >= 3000) {
     seekEnvAviso = 1;
@@ -1814,7 +2271,7 @@ void video_bombear(void) {
     recarregarMesmaFonte(alvo, audioAoCarregar, legAoCarregar, legUrlAoCarregar);
   }
   // RECONEXAO: ver video_reconexao.h.
-  if (pronto && posSeg > 0.5) reconIniciou = 1;
+  if (pronto && posSeg > 0.5) reconIniciou = fonteTocou = 1;
   if (pronto) nv_recon_progresso(&recon, posSeg);
   if (reconErroPend) {
     int antes = recon.tentativa;
@@ -1861,10 +2318,10 @@ void video_bombear(void) {
 }
 
 // CABECALHOS EXIGIDOS PELO ADDON, ver video.h.
-static char cabsHttp[512];
 void video_definir_cabecalhos(const char *cabs) {
   snprintf(cabsHttp, sizeof cabsHttp, "%s", cabs ? cabs : "");
 }
+const char *video_cabecalhos(void) { return cabsHttp; }
 
 // Monta o "httpHeader" do payload do load a partir das linhas "Nome: valor".
 //
@@ -1956,7 +2413,7 @@ static int tocarInterno(const char *url, int comDV) {
   unsigned minhaSessao;
   if (!ligado && !video_iniciar()) return 0;
   pararSessao();
-  minhaSessao = ++sessao;
+  minhaSessao = __atomic_add_fetch(&sessao, 1, __ATOMIC_ACQ_REL);
   viuVideo = 0;
   // O retangulo aplicado e da SESSAO: sem zerar, uma sessao nova que calcule o
   // mesmo rect cairia no "ja e esse" e nunca chegaria a mandar nada ao plano.
@@ -1964,6 +2421,7 @@ static int tocarInterno(const char *url, int comDV) {
   // entender no titulo seguinte, e insistir so arrisca a imagem de novo.)
   fonX = -1; dstX = dstY = dstW = dstH = -1;
   posSeg = durSeg = bufferSeg = 0; tocando = pronto = 0; midia[0] = 0;
+  velEnviada = 100;   // pipeline novo nasce em 1x; video_bombear reaplica
   bufferandoDesde = 0;
   nAudio = nLeg = 0; audioAtual = 0; legAtual = -1; vidAtmos = 0;
   legUrlAtual[0] = 0; mkvPendente = 0;
@@ -2053,7 +2511,7 @@ static int tocarInterno(const char *url, int comDV) {
     int hls = strstr(url, ".m3u8") != NULL;
     snprintf(carga, sizeof carga,
         "{\"payload\":{\"option\":{"
-        "\"appId\":\"space.nuvio.native.legacy\","
+        "\"appId\":\"" NV_APP_ID "\","
         "%s%s"
         "\"mediaTransportType\":\"%s\","
         "\"windowId\":\"%s\"}},"
@@ -2063,7 +2521,7 @@ static int tocarInterno(const char *url, int comDV) {
   } else
   snprintf(carga, sizeof carga,
       "{\"payload\":{\"option\":{\"useSeekableRanges\":true,"
-      "\"appId\":\"space.nuvio.native.legacy\","
+      "\"appId\":\"" NV_APP_ID "\","
       "%s%s"
       "\"bufferControl\":{\"userBufferCtrl\":false},"
       "\"windowId\":\"%s\"}},"
@@ -2137,26 +2595,434 @@ void video_parar(void) {
 
 static void pararSessao(void) {
   char b[128];
+  int tinhaDts = dtsSessao != NULL;
+  DtsPlayback *antigoDts = dtsSessao;
+  dtsSessao = NULL;
+  if (antigoDts) dts_playback_close(antigoDts);
+  dtsSaida[0] = 0;
+
   // Invalida tambem a sessao que ainda esta esperando o retorno de load. Esse
   // era o caso abrir -> sair -> abrir que travava: nao havia mediaId para
   // descarregar, mas o callback antigo continuava vivo e contaminava o novo.
-  sessao++;
+  __atomic_add_fetch(&sessao, 1, __ATOMIC_ACQ_REL);
   bindPendente = 0;
   recuperando = 0; retomarEm = posAoCarregar = 0.0;
   audioAoCarregar = legAoCarregar = -1;
   legUrlAoCarregar[0] = 0;
   pausaPedida = 0; seekEm = 0; mkvPendente = 0;
+  nv_seek_zerar(&seekRetry); seekRetryEm = 0;
+  seekEnvEm = 0;   // seek sem seekDone morre com a sessao (iniciarDts le os tres)
+  dvSilenciado = 0;   // o mudo e por mediaId: o pipeline novo nasce com som
+  mkvRetryEm = 0;   // sonda reagendada morre com a sessao (o contador zera em video_tocar)
   pausaConfirmada = 0;
-  if (ligado && midia[0]) {
+  if (ligado && midia[0] && !tinhaDts) {
     snprintf(b, sizeof b, "{\"mediaId\":\"%s\"}", midia);
     chamar("unload", b, soLog);
+  }
+  if (tinhaDts) {
+    dts_overlay_draw(NULL, 0, 0, 0, 0, 0, 0, 0, 0);
+    dtsMarcarAbertas(0);   // fechou sem o app morrer
+    if (dtsEstado != VIDEO_DTS_FALHOU) dtsEstado = 0;
   }
   midia[0] = 0; tocando = pronto = 0; falhou = 0; audioNaoSup = 0;
   erroTexto[0] = 0;
 }
 
+
+// CONVERSAO DE DTS SO NO webOS 5+ (PR #259). Na LG C9 (webOS 4.10.2), com a
+// conversao forcada, o app morreu as duas vezes no mesmo ponto, logo depois de
+// "native-play-accepted": SIGSEGV em pthread_setname_np com pthread_t nulo,
+// chamado por KADP_OSA_CreateThread <- KADP_AUDIO_OpenMaster <- lxao_open_renderer
+// <- gst_lx_audio_render_event, numa thread do GStreamer que o pipeline
+// BUFFERSTREAM da Starfish roda DENTRO do nosso processo (o caminho normal do
+// uMS roda o audio no processo da LG). Ou seja, o pthread_create da LG falhou
+// e ela nao conferiu. Nosso codigo nao esta na pilha e a causa do pthread_create
+// falhar NAO esta provada (palpite: thread de tempo real negada ao app na
+// jaula). Ate haver prova numa TV webOS 3/4 a conversao fica desligada nelas,
+// e a TV faz o que a 2.0.0 fazia: video sem o audio que ela recusa.
+// `touch /tmp/nuvio-dts-liberar` religa para teste.
+//
+// E EM QUALQUER VERSAO: dts-conversao.txt conta as conversoes abertas que nao
+// fecharam. Duas seguidas = o app morreu duas vezes com a conversao aberta, e
+// ela se desliga nesta TV. Uma so pode ser a TV desligada no meio do filme.
+#define DTS_MARCA_ARQ "dts-conversao.txt"
+static int dtsAbertasSemFechar(void) {
+  char *t = dados_ler(DTS_MARCA_ARQ);
+  int n = t ? atoi(t) : 0;
+  free(t);
+  return n;
+}
+static void dtsMarcarAbertas(int n) {
+  char b[16];
+  if (!n && !dtsAbertasSemFechar()) return;
+  snprintf(b, sizeof b, "%d\n", n);
+  dados_gravar(DTS_MARCA_ARQ, b);
+}
+static int dtsLiberadoNestaTv(void) {
+  static int v = -1;
+  int maior, abertas;
+  if (v >= 0) return v;
+  if (access("/tmp/nuvio-dts-liberar", F_OK) == 0) {
+    printf("[dts] conversao liberada por /tmp/nuvio-dts-liberar\n"); fflush(stdout);
+    return v = 1;
+  }
+  maior = webosMaior();
+  abertas = dtsAbertasSemFechar();
+  if (maior < 5) {
+    printf("[dts] conversao desligada no webOS %d (crash no audio da LG na C9 4.10)\n", maior);
+    v = 0;
+  } else if (abertas >= 2) {
+    printf("[dts] conversao desligada: o app morreu %d vezes com ela aberta\n", abertas);
+    v = 0;
+  } else v = 1;
+  fflush(stdout);
+  return v;
+}
+// Dolby Vision in MKV: the Settings option, then what this TV can do. webOS 3
+// is out (no proof of the BUFFERSTREAM audio path there); two app deaths with
+// the path open turn it off on this TV, the same counter as DTS conversion.
+// webOS 3 fica fora; desconhecida chega aqui ja como o chute do webosMaior().
+static int dvVersaoLiberada(int maior) { return maior >= 4; }
+static int dvLiberadoNestaTv(void) {
+  int forcado = 0;
+#ifdef NV_DTS_DEBUG
+  forcado = access("/tmp/nuvio-dv-forcar", F_OK) == 0;
+#endif
+  if (!dts_playback_enabled() || (!ajustes_dv_mkv() && !forcado)) return 0;
+  if (!dvVersaoLiberada(webosMaior())) {
+    printf("[dv] Dolby Vision in MKV unavailable on webOS %d\n", webosMaior()); fflush(stdout);
+    return 0;
+  }
+  if (dtsAbertasSemFechar() >= 2) {
+    printf("[dv] Dolby Vision in MKV off: the app died twice with it open\n"); fflush(stdout);
+    return 0;
+  }
+  return 1;
+}
+// O HDR10 fica (recusa com a tela de pe): volta ao ponto de partida antes de a
+// tela sair. Sem a tela a pessoa viu o HDR10 andar, e ele segue de onde esta.
+static void dvVoltarEntrada(void) {
+  char m[80];
+  if (!dvSilencio || dtsSessao || !ligado || !midia[0] || posSeg - dvEntradaSeg <= DV_ENTRADA_FOLGA_S) return;
+  printf("[dv] HDR10 andou %.1f s coberto pela tela: volta ao ponto de partida %.1fs\n",
+         posSeg - dvEntradaSeg, dvEntradaSeg);
+  fflush(stdout);
+  snprintf(m, sizeof m, "dv: HDR10 volta ao ponto de partida %ds", (int)dvEntradaSeg);
+  marco(m);
+  video_buscar(dvEntradaSeg);
+}
+// The file decides: single-layer profile 5 or 8 (base layer + RPU, no
+// enhancement layer) and a selected audio track the path can feed (E-AC-3 and
+// AC-3 pass through, DTS is converted). Anything else stays with the TV player.
+static int dvPronto(void) {
+  if (fonteMp4) { dvHabilitado = 0; dvNao = VIDEO_DV_NAO_SEM_DV; return 0; }
+  if (!dvSondado) {
+    if (mkvPendente && !fioMkvVivo) video_sondar_mkv_agora();
+    return 0;
+  }
+  if (!(dvMkvPerfil == 5 || dvMkvPerfil == 8) || dvMkvEl || !dvMkvBl || !dvMkvRpu) {
+    if (dvMkvPerfil) {
+      printf("[dv] profile %d (el=%d): stays on the TV player\n", dvMkvPerfil, dvMkvEl);
+      fflush(stdout);
+    }
+    // Sem perfil: o arquivo nao tem dvcC, ou a sonda desistiu de ler o
+    // cabecalho (tres falhas) — sao notas diferentes para a pessoa.
+    dvNao = dvMkvPerfil ? VIDEO_DV_NAO_PERFIL : mkvNaoMkv ? VIDEO_DV_NAO_CONTENTOR
+          : mkvRetry.desistiu ? VIDEO_DV_NAO_SONDA : VIDEO_DV_NAO_SEM_DV;
+    dvHabilitado = 0; dvVoltarEntrada(); return 0;
+  }
+  if (dvMemOrd >= 0 && dvMemOrd < nAudio && dvMemOrd != audioAtual && !strcmp(urlAtual, dvMemUrl) &&
+      (!dvMemIdioma[0] || !faixaAudio[dvMemOrd].idioma[0] || ling_casa(faixaAudio[dvMemOrd].idioma, dvMemIdioma))) {
+    printf("[dv] audio track %d restored for this source\n", dvMemOrd + 1); fflush(stdout);
+    video_escolher_audio(dvMemOrd);
+  }
+  if (dvAudioMkvOrd >= 0) return 1;   // ja decidido; iniciarDts pode ter adiado (bind ativo)
+  // audioAtual e o indice da lista da TV; dvAudio* sao as faixas do MKV. A TV
+  // pode filtrar a lista: localiza a faixa dela no MKV antes de olhar o codec.
+  const VideoFaixa *tv = audioAtual >= 0 && audioAtual < nAudio ? &faixaAudio[audioAtual] : NULL;
+  int m = nv_dvaudio_localizar(nAudio, dvAudios, audioAtual, tv ? tv->idioma : "", tv ? tv->codec : "",
+                               tv ? tv->canais : 0, (const char (*)[16])dvAudioCodec,
+                               (const char (*)[8])dvAudioIdioma, dvAudioCanais, ling_casa, audioinfo_codec);
+  if (m < 0 && audioAtual >= 0 && dvAudios > 0) {
+    // Sem par seguro: nao troca. O motor confere idioma e codec por conta
+    // propria (dts_playback.c) e, sem faixa que alimente, volta ao HDR10.
+    printf("[dv] audio da TV %d (%s %s) sem par seguro nas %d faixas do MKV: nao troca\n", audioAtual + 1,
+           tv ? tv->idioma : "-", tv ? tv->codec : "-", dvAudios);
+    fflush(stdout);
+  }
+  if (m >= 0) {
+    const char *c = dvAudioCodec[m];
+    if (!nv_dvaudio_alimentavel(c)) {
+      // TrueHD (e afins) nao entra no caminho, mas o remux costuma trazer um
+      // E-AC-3 do mesmo idioma. A escolha sai da lista do PROPRIO MKV (a da TV
+      // tem uma faixa so) e vai direto ao motor: iniciarDts a passa como ordinal
+      // do arquivo. NAO ha selectTrack no player da TV, que nem conhece a faixa.
+      // O dvMem acima ja foi aplicado, entao uma escolha lembrada nao e
+      // sobrescrita; a escolha da pessoa DEPOIS (video_escolher_audio com a
+      // sessao DV ativa) continua entregando o resto ao player da TV.
+      int k = nv_dvaudio_decidir(nAudio, dvAudios, m, (const char (*)[16])dvAudioCodec,
+                                 (const char (*)[8])dvAudioIdioma, (const char (*)[48])dvAudioNome,
+                                 ling_casa);
+      if (k >= 0) {
+        printf("[dv] audio %s -> faixa %d (%s %s) para manter Dolby Vision\n", c, k + 1,
+               dvAudioCodec[k], dvAudioNome[k]);
+        fflush(stdout);
+        dvAudioMkvOrd = k;
+        snprintf(dvAudioDe, sizeof dvAudioDe, "%s", c);
+        return 1;
+      }
+      printf("[dv] audio %s cannot be fed: stays on the TV player\n", c); fflush(stdout);
+      dvNao = VIDEO_DV_NAO_AUDIO;
+      dvHabilitado = 0; dvVoltarEntrada(); return 0;
+    }
+  }
+  return 1;
+}
+// A CONVERSAO FALHOU: volta ao player nativo na mesma posicao, como se o DTS
+// nunca tivesse sido tentado (video sem o audio recusado, o comportamento da
+// 2.0.0). dtsTentou continua 1, entao nao ha segunda tentativa nesta fonte.
+// Antes o player fechava (log da C9: "playback failed" e logo "saida").
+static void dtsVoltarNativo(const char *motivo) {
+  char lu[sizeof legUrlAtual];
+  dtsEstado = VIDEO_DTS_FALHOU;
+  printf("[dts] conversao falhou (%s): volta ao player nativo em %.1fs\n", motivo, posSeg);
+  fflush(stdout);
+  snprintf(lu, sizeof lu, "%s", legUrlAtual);
+  if (!recarregarMesmaFonte(posSeg, -1, -1, lu)) falhou = 1;
+}
+// O caminho do DV nem chegou a abrir (plano MSE, conversor ausente): a mesma
+// nota do caminho que nao abriu, e a tela sai em vez de esperar para sempre.
+static void dvCaminhoNaoAbriu(void) {
+  if (!dtsModoDv) return;
+  dvRecuoAviso = 2; dvNao = VIDEO_DV_NAO_FALHOU;
+  dtsModoDv = 0; dvHabilitado = 0;
+}
+static int iniciarDts(int stream) {
+  /* Retry from the next pump before unloading or spawning a native worker.
+   * The old bind must finish before its ACB handle can become MSE. */
+  if (bindAtivo()) return 0;
+  DtsTrack selected;
+  const VideoFaixa *a = video_audio(audioAtual);
+  // A POSICAO DE PARTIDA. Um seek pedido ao player da TV e ainda nao feito (o
+  // ponto salvo da retomada, mandado 350 ms depois do pedido, ou ja enviado sem
+  // seekDone) e a posicao certa; posSeg nao, porque o currentTime da TV volta a
+  // escreve-lo com a posicao antiga ate o seek acontecer. O pararSessao abaixo
+  // zera o seekEm, e o caminho nascia no inicio do arquivo em vez do ponto salvo.
+  // Com a tela do DV de pe, o HDR10 andou sem ninguem ver (novas tentativas da
+  // sonda): o caminho parte do ponto de partida, nao de onde a TV chegou.
+  double alvo = dtsModoDv && dvSilencio ? dvEntradaSeg
+              : (seekEm || seekEnvEm || seekRetryEm) ? seekAlvo : posSeg;
+  int paused = pausaPedida, ordinal = audioAtual, count = nAudio, trocada = 0;
+  memset(&selected, 0, sizeof selected);
+  if (a) {
+    snprintf(selected.language, sizeof selected.language, "%s", a->idioma);
+    snprintf(selected.codec, sizeof selected.codec, "%s", a->codec);
+    selected.channels = a->canais;
+  }
+  // DV com a faixa trocada pelo dvPronto: ordinal, contagem e idioma sao os do
+  // MKV (dts_playback.c prepare(): o k-esimo audio do arquivo, conferido por
+  // idioma e por codec que o caminho alimenta). Canais ficam 0 = nao conferir.
+  if (dtsModoDv && dvAudioMkvOrd >= 0 && dvAudioMkvOrd < dvAudios) {
+    memset(&selected, 0, sizeof selected);
+    snprintf(selected.language, sizeof selected.language, "%s", dvAudioIdioma[dvAudioMkvOrd]);
+    snprintf(selected.codec, sizeof selected.codec, "%s",
+             !strcmp(dvAudioCodec[dvAudioMkvOrd], "A_EAC3") ? "eac3" : "ac3");
+    ordinal = dvAudioMkvOrd; count = dvAudios; trocada = 1;
+  }
+  dtsLegAntes = legAtual; dtsLegCount = nLeg;
+  memset(&dtsLegFaixa, 0, sizeof dtsLegFaixa);
+  if (video_legenda(legAtual)) dtsLegFaixa = *video_legenda(legAtual);
+  snprintf(dtsLegUrlAntes, sizeof dtsLegUrlAntes, "%s", legUrlAtual);
+  dtsTentou = 1;
+  dvFonteAberta = 0;
+  pararSessao();
+  posSeg = alvo; pausaPedida = paused;
+  dtsRevisao = 0; dtsFalhaLogada = 0;
+  if (acbCriar && !acbConfigurarTipo(1)) {
+    marco("DTS startup failed: MSE video plane initialization");
+    dvCaminhoNaoAbriu();
+    dtsVoltarNativo("video plane");
+    return 0;
+  }
+  dtsMarcarAbertas(dtsAbertasSemFechar() + 1);
+  dts_engine_set_ac3(ajustes_dts_ac3());
+  dts_playback_next_dv(dtsModoDv);
+  dtsSessao = dts_playback_start(urlAtual, cabsHttp, stream, alvo,
+                               paused, expWin, 0, (a || trocada) ? &selected : NULL, ordinal, count);
+  if (!dtsSessao) {
+    dtsMarcarAbertas(0);
+    marco("DTS startup failed: software playback unavailable");
+    dvCaminhoNaoAbriu();
+    dtsVoltarNativo("converter unavailable");
+    return 0;
+  }
+  if (dtsModoDv) {
+    marco("Dolby Vision: MKV path requested");
+    return 1;
+  }
+  dtsEstado = VIDEO_DTS_PREPARANDO;
+  snprintf(dtsSaida, sizeof dtsSaida, "DTS: preparing audio");
+  marco("DTS: local software conversion requested");
+  return 1;
+}
+/* Adapter diagnostics contain only stage names and bounded technical details;
+ * they must not carry the source URL, authentication headers or packet addresses. */
+static int logDtsStage(const char *event) {
+  char name[48] = "", detail[160] = "";
+  if (!js_tem(event, NULL, "dtsStage")) return 0;
+  js_texto(event, NULL, "name", name, sizeof name);
+  js_texto(event, NULL, "detail", detail, sizeof detail);
+  for (char *p = name; *p; p++) if ((unsigned char)*p < 32) *p = ' ';
+  for (char *p = detail; *p; p++) if ((unsigned char)*p < 32) *p = ' ';
+  printf("[dts] stage=%s %s\n", name, detail);
+  fflush(stdout);
+  if (!strcmp(name, "source-opened")) dvFonteAberta = 1;
+  return 1;
+}
+/* Native load callbacks can precede publication of the prepared metadata.
+ * Restore readiness from the worker snapshot after each metadata reset: an
+ * already consumed loadCompleted event will not be emitted a second time. */
+static void sincronizarPlanoDts(const DtsPlaybackStatus *st) {
+  int novaMidia = st->media_id[0] && strcmp(midia, st->media_id);
+  int estavaPronto = pronto;
+  pronto = st->prepared && st->native_loaded;
+  if (!pronto) bindPendente = 0;
+  if (st->prepared && novaMidia) {
+    snprintf(midia, sizeof midia, "%s", st->media_id);
+    printf("[dts] native media ID ready\n"); fflush(stdout);
+    if (expWin[0]) expJanelaAplicar();
+  }
+  if (pronto && acb && midia[0] && (novaMidia || !estavaPronto)) {
+    bindPendente = 1;
+    printf("[dts] native video plane bind pending\n"); fflush(stdout);
+  }
+}
+static void bombearDts(void) {
+  DtsPlaybackStatus st;
+  char event[2048];
+  int i;
+  memset(&st, 0, sizeof st);
+  dts_playback_status(dtsSessao, &st);
+  if (st.failed) {
+    /* A fast startup failure can happen before the main thread sees its stages. */
+    while (dts_playback_event(dtsSessao, event, sizeof event)) logDtsStage(event);
+    if (!dtsFalhaLogada) {
+      printf("[dts] playback failed: %.159s\n", st.error); fflush(stdout);
+      dtsFalhaLogada = 1;
+    }
+    dtsSaida[0] = 0;
+    if (dtsModoDv) {
+      dvRecuoAviso = !strcmp(st.error, DTS_PLAYBACK_STARVED) ? 1 : 2;
+      dvNao = dvRecuoAviso == 1 ? VIDEO_DV_NAO_LENTO : VIDEO_DV_NAO_FALHOU;
+      dtsModoDv = 0; dvHabilitado = 0;
+      dtsVoltarNativo("dolby vision");
+      dtsEstado = 0;
+      return;
+    }
+    dtsVoltarNativo("converter");
+    return;
+  }
+  /* Load may synchronously queue videoInfo/playing before the worker publishes
+   * its source metadata. Process metadata first so it cannot erase those
+   * native observations on the following pump. Startup failures drain above. */
+  if (!st.prepared) return;
+  if (st.prepared && st.revision != dtsRevisao) {
+    int initial = !dtsRevisao;
+    int selectedSub = initial ? -1 : (video_legenda(legAtual) ? video_legenda(legAtual)->stream_index : -1);
+    dtsRevisao = st.revision;
+    pronto = 0; tocando = 0; bindPendente = 0;
+    if (!st.media_id[0]) midia[0] = 0;
+    printf("[dts] prepared revision=%d video=%s %dx%d audio=%s channels=%d stream=%d\n",
+           st.revision, st.info.video_codec, st.info.width, st.info.height,
+           st.info.audio_codec, st.info.channels, st.info.audio_stream);
+    fflush(stdout);
+    durSeg = st.info.duration_ns / 1e9;
+    vidW = st.info.width; vidH = st.info.height;
+    vidTaxa = st.info.fps_den ? st.info.fps_num / st.info.fps_den : 30;
+    vuiPrim = st.info.color_primaries; vuiTrans = st.info.color_transfer;
+    vuiMatriz = st.info.color_matrix; vidDV = st.info.dovi_profile != 0;
+    /* Source metadata configures playback; only native videoInfo proves HDR.
+     * A reload of the same session (seek, track switch) keeps what the TV
+     * already reported: paused after a seek, videoInfo only comes back on
+     * play, and the Dolby Vision badge used to vanish until then. */
+    if (initial) { snprintf(vidHdr, sizeof vidHdr, "%s", "none"); vidAtmos = 0; }
+    viuVideo = 0;
+    nAudio = nLeg = 0;
+    for (i = 0; i < st.info.n_tracks; i++) {
+      const DtsTrack *t = &st.info.tracks[i];
+      VideoFaixa *f;
+      if (t->kind == DTS_AUDIO && nAudio < NV_FAIXA_MAX) {
+        f = &faixaAudio[nAudio];
+        if (t->stream_index == st.info.audio_stream) audioAtual = nAudio;
+        memset(f, 0, sizeof *f); f->numero = nAudio++;
+      } else if (t->kind == DTS_SUBTITLE && nLeg < NV_FAIXA_MAX) {
+        f = &faixaLeg[nLeg];
+        memset(f, 0, sizeof *f); f->numero = nLeg; f->ordinalMkv = nLeg++;
+      } else continue;
+      f->stream_index = t->stream_index; f->stream_id = t->stream_id;
+      f->canais = t->channels; f->letreiro = t->forced;
+      f->tipoLeg = t->forced ? LING_LEG_FORCADA : LING_LEG_COMUM;
+      snprintf(f->codec, sizeof f->codec, "%s", t->codec);
+      /* ASS consumers expect the Matroska CodecID, not an FFmpeg name. */
+      if (!strcmp(t->codec, "ass") || !strcmp(t->codec, "ssa"))
+        snprintf(f->codec, sizeof f->codec, "S_TEXT/ASS");
+      snprintf(f->idioma, sizeof f->idioma, "%.7s", t->language);
+      snprintf(f->rotulo, sizeof f->rotulo, "%.26s · %.12s", t->language[0] ?
+               i18n(ling_nome(t->language)) : i18n("Faixa"), t->codec);
+    }
+    legAtual = -1;
+    if (initial) {
+      int matches = 0, match = -1;
+      /* Native subtitle trackNum is a file ordinal. When a list is filtered,
+       * restore only a uniquely identifiable language/codec combination. */
+      if (dtsLegAntes >= 0 && dtsLegCount == nLeg) {
+        int ordinal = dtsLegFaixa.ordinalMkv >= 0 ? dtsLegFaixa.ordinalMkv : dtsLegFaixa.numero;
+        if (ordinal >= 0 && ordinal < nLeg) match = ordinal;
+        if (match >= 0 && dtsLegFaixa.idioma[0] &&
+            !ling_casa(dtsLegFaixa.idioma, faixaLeg[match].idioma)) match = -1;
+      }
+      if (match < 0 && dtsLegAntes >= 0 && dtsLegFaixa.idioma[0]) {
+        for (i = 0; i < nLeg; i++)
+          if (ling_casa(dtsLegFaixa.idioma, faixaLeg[i].idioma) &&
+              (!dtsLegFaixa.codec[0] || !strcmp(dtsLegFaixa.codec, faixaLeg[i].codec))) {
+            match = i; matches++;
+          }
+        if (matches != 1) match = -1;
+      }
+      legAtual = match;
+      snprintf(legUrlAtual, sizeof legUrlAtual, "%s", dtsLegUrlAntes);
+      if (match >= 0 && !legUrlAtual[0])
+        dts_playback_subtitle(dtsSessao, faixaLeg[match].stream_index);
+    } else {
+      for (i = 0; i < nLeg; i++) if (faixaLeg[i].stream_index == selectedSub) legAtual = i;
+    }
+    if (dtsModoDv && audioAtual >= 0 && audioAtual < nAudio) {
+      snprintf(dvMemUrl, sizeof dvMemUrl, "%s", urlAtual);
+      snprintf(dvMemIdioma, sizeof dvMemIdioma, "%s", faixaAudio[audioAtual].idioma);
+      dvMemOrd = audioAtual;
+    }
+    /* Converted only when the source track is DTS; on the Dolby Vision path
+     * AC-3/E-AC-3 pass through untouched and there is nothing to label. */
+    if (!dtsModoDv || (audioAtual >= 0 && audioAtual < nAudio && !strcmp(faixaAudio[audioAtual].codec, "dts"))) {
+      snprintf(dtsSaida, sizeof dtsSaida, "%s", !strcmp(st.info.audio_codec, "ac3") ? "DTS → AC3 5.1" : "DTS → AAC Stereo");
+      dtsEstado = VIDEO_DTS_CONVERTIDO;
+    } else { dtsSaida[0] = 0; dtsEstado = 0; }
+    if (expWin[0]) expJanelaAplicar();
+    protegerScreensaver();
+  }
+  /* Also handles media IDs assigned only after native preroll. */
+  sincronizarPlanoDts(&st);
+  while (dts_playback_event(dtsSessao, event, sizeof event))
+    if (!logDtsStage(event)) eventoPayload(event, sessao);
+}
+
 void video_pausar(int pausado) {
   char b[128];
+  if (dtsSessao) {
+    pausaConfirmada = 0; pausaPedida = !!pausado;
+    dts_playback_pause(dtsSessao, pausado); return;
+  }
+
   if (!ligado || !midia[0]) return;
   snprintf(b, sizeof b, "{\"mediaId\":\"%s\"}", midia);
   pausaConfirmada = 0;
@@ -2172,6 +3038,7 @@ int video_pausa_confirmada(void) {
 
 void video_volume(int pct) {
   char b[128];
+  if (dtsSessao) { dts_playback_volume(dtsSessao, pct); return; }
   if (!ligado || !midia[0]) return;
   if (pct < 0) pct = 0; else if (pct > 100) pct = 100;
   snprintf(b, sizeof b, "{\"mediaId\":\"%s\",\"volume\":%d}", midia, pct);
@@ -2191,8 +3058,17 @@ void video_volume(int pct) {
 #define SEEK_REPOUSO_MS 350
 
 void video_buscar(double segundos) {
+  if (dtsSessao) {
+    if (segundos < 0) segundos = 0;
+    if (dvSilencio) dvEntradaSeg = segundos;
+    posSeg = segundos; seekAlvo = segundos;
+    seekEm = SDL_GetTicks() + SEEK_REPOUSO_MS; return;
+  }
   if (!ligado || !midia[0]) return;
   if (segundos < 0) segundos = 0;
+  // Com a tela do DV de pe ninguem busca com o controle (ela come as teclas):
+  // o seek e a retomada, o ponto onde o filme deve comecar.
+  if (dvSilencio) dvEntradaSeg = segundos;
   posSeg = segundos;
   seekAlvo = segundos;
   seekEm = SDL_GetTicks() + SEEK_REPOUSO_MS;
@@ -2201,6 +3077,8 @@ void video_buscar(double segundos) {
 // Manda de fato. Chamado pelo video_bombear quando o repouso vence.
 static void seekAgora(double segundos) {
   char b[192];
+  if (dtsSessao) { dts_playback_seek(dtsSessao, segundos); return; }
+
   if (!ligado || !midia[0]) return;
   snprintf(b, sizeof b, "{\"mediaId\":\"%s\",\"position\":%d}",
            midia, (int)(segundos * 1000.0));
@@ -2404,8 +3282,93 @@ void video_janela_fonte(int sx, int sy, int sw, int sh,
 double video_pos(void)      { return posSeg; }
 double video_duracao(void)  { return durSeg; }
 double video_buffer_fim(void) { return bufferSeg; }
+// webOS: so o buffer em SEGUNDOS e real (bufferRange do uMS); bytes, conexoes
+// e quadros o uMS nao conta. O host e o do link pedido (o uMS nao diz o final).
+void video_estatisticas(VideoStats *s) {
+  video_stats_vazio(s);
+  if (bufferSeg > 0 && bufferSeg >= posSeg) s->bufferSeg = bufferSeg - posSeg;
+  vazao_host_publico(urlAtual, s->host, sizeof s->host);
+}
 int    video_tocando(void)  { return tocando; }
 int    video_pronto(void)   { return pronto; }
+// O "COMECA PAUSADO" DO DOLBY VISION EM MKV (#203, C9 do dono, 08/10). No
+// caminho proprio o `pronto` sobe no loadCompleted (sincronizarPlanoDts:
+// prepared && native_loaded), mas o primeiro quadro so vem depois de o worker
+// encher o pipeline: 3,4 s na C9 em 07/10 (loadCompleted 204769, `playing`
+// 208141) e 10 s na fonte lenta de 08/10 (516911 -> 526691). O worker NAO pausa
+// nada ali (worker-rate pause=0, native-play-accepted count=1 logo depois do
+// loadCompleted). Quem lia "pronto e nao tocando" como pausa era o player:
+// player_carregando() = !video_pronto() ja era 0, e o painel de pausa subia aos
+// 5 s (PAUSAO_ESPERA_MS) com a ficha do titulo — e a retomada "de quem abre
+// pausado" (2,5 s depois de pronto) mandava um seek que recarrega o caminho.
+// Isto separa o preroll da pausa: carregado, sem `playing`, sem pausa nossa.
+int    video_iniciando(void) {
+  return dtsSessao && pronto && !tocando && !pausaPedida && !falhou && !terminou;
+}
+void   video_dv_segurar(int segurar) { dvSegurar = segurar ? 1 : 0; }
+
+// --- A TELA DO DV (dvtela.h) -------------------------------------------------
+void video_dv_fase(VideoDvFase *f) {
+  int nosso = dtsSessao && dtsModoDv;
+  if (!f) return;
+  memset(f, 0, sizeof *f);
+  f->sessao = dvSessaoN;
+  f->sondado = dvSondado; f->perfil = dvMkvPerfil; f->el = dvMkvEl;
+  if (dvAudioMkvOrd >= 0 && dvAudioMkvOrd < dvAudios && dvAudioDe[0]) {
+    f->audioTrocado = 1;
+    snprintf(f->audioDe, sizeof f->audioDe, "%s", dvAudioDe);
+    snprintf(f->audioPara, sizeof f->audioPara, "%s", dvAudioCodec[dvAudioMkvOrd]);
+  }
+  f->caminho = dtsModoDv && dtsTentou;
+  f->fonteAberta = nosso && (dvFonteAberta || dtsRevisao > 0);
+  f->carregado = nosso && pronto;
+  f->dvConfirmado = nosso && !strcmp(vidHdr, "DolbyVision");
+  f->tocando = nosso && tocando;
+  f->recusa = dvNao;
+  f->falhou = falhou;
+}
+int video_dv_candidato(const char *url) {
+  return dvPedido && !fonteMp4 && url && !nv_url_e_mp4(url) && dvLiberadoNestaTv();
+}
+// O HDR10 do player da TV, coberto pela tela, fica MUDO. setVolume e o mesmo
+// do trailer mudo (uMS, por mediaId); a reproducao normal nunca mexe no volume,
+// entao devolver e voltar a 100. O caminho do DV e outro mediaId, com o volume
+// dele (dts_playback: 100 a cada load).
+static void dvSilenciarTv(void) {
+  char b[128];
+  if (!dvSilencio || dvSilenciado || dtsSessao || !ligado || !midia[0]) return;
+  snprintf(b, sizeof b, "{\"mediaId\":\"%s\",\"volume\":0}", midia);
+  chamar("setVolume", b, soLog);
+  dvSilenciado = 1;
+  printf("[dv] tela cobrindo: player da TV mudo\n"); fflush(stdout);
+}
+void video_dv_tela(int cobrindo) {
+  char b[128];
+  cobrindo = cobrindo ? 1 : 0;
+  dvSilencio = cobrindo;
+  if (cobrindo) { dvSilenciarTv(); return; }
+  if (dvSilenciado && !dtsSessao && ligado && midia[0]) {
+    snprintf(b, sizeof b, "{\"mediaId\":\"%s\",\"volume\":100}", midia);
+    chamar("setVolume", b, soLog);
+    printf("[dv] tela saiu: volume do player da TV de volta\n"); fflush(stdout);
+  }
+  dvSilenciado = 0;
+}
+// "Assistir agora em HDR10": esta fonte nao tenta mais DV. Com o caminho ja
+// aberto, volta ao player da TV na posicao de partida dele (o preroll ainda nao
+// andou); antes disso, so desliga e o player da TV segue.
+void video_dv_recusar(void) {
+  dvNao = VIDEO_DV_NAO_PESSOA;
+  dvHabilitado = 0; mkvRetryEm = 0;
+  if (dtsSessao && dtsModoDv) {
+    char lu[sizeof legUrlAtual];
+    double alvo = posSeg;
+    dtsModoDv = 0;
+    printf("[dv] a pessoa escolheu HDR10: volta ao player da TV em %.1fs\n", alvo); fflush(stdout);
+    snprintf(lu, sizeof lu, "%s", legUrlAtual);
+    if (!recarregarMesmaFonte(alvo, -1, -1, lu)) falhou = 1;
+  } else { printf("[dv] a pessoa escolheu HDR10\n"); fflush(stdout); dvVoltarEntrada(); }
+}
 // Ha midia carregada. O furo na superficie usa ISTO e nao o loadCompleted:
 // abrir o buraco cedo nao custa nada (atras dele so existe o plano de video) e
 // esperar o evento deixaria a tela desenhada por cima do video se o evento
@@ -2419,6 +3382,7 @@ int    video_falhou(void)   { return falhou; }
 const char *video_erro_texto(void) { return erroTexto; }
 int    video_decoder_anunciou(void) { return viuVideo; }
 int    video_audio_nao_suportado(void) { return audioNaoSup; }
+int    video_seek_desistiu(void) { return seekRetry.desistiu; }
 int    video_terminou(void) { return terminou; }
 int    video_conflito_recurso(void) { return 0; }
 unsigned video_bufferando_ms(void) {
@@ -2443,6 +3407,7 @@ int video_legenda_ordinal_mkv(int i) { return (i >= 0 && i < nLeg) ? faixaLeg[i]
 // dois sao 0 e isto diria "voltou" — mas ai nLeg tambem e 0 e nao ha faixa
 // para escolher, entao ninguem pergunta.
 int video_mkv_sondado(void) {
+  if (dtsSessao) return dtsRevisao ? 1 : 0;
   if (!urlAtual[0] || fonteMp4) return 2;
   return (mkvPendente || fioMkvVivo) ? 0 : 1;
 }
@@ -2454,11 +3419,13 @@ int video_mkv_sondado(void) {
 // de log que dissesse por que. Os 320 KB competem com o buffer (medido), mas
 // a colheita do mkvass que vem a seguir pede mais que isso.
 void video_sondar_mkv_agora(void) {
-  if (!mkvPendente || fioMkvVivo || !urlAtual[0]) return;
+  if (dtsSessao || !mkvPendente || fioMkvVivo || !urlAtual[0]) return;
   mkvPendente = 0;
+  if (nv_url_e_mp4(urlAtual)) return;   // .mp4 nunca tem Tracks de Matroska
   fioMkvVivo = 1;
   printf("[mkv] sonda do cabecalho disparada (buffer %.0f s a frente)\n", bufferSeg - posSeg);
   fflush(stdout);
+  mkvFioSessao = __atomic_load_n(&sessao, __ATOMIC_ACQUIRE);
   if (pthread_create(&fioMkv, NULL, lerMkv, NULL) != 0) fioMkvVivo = 0;
   else pthread_detach(fioMkv);
 }
@@ -2513,7 +3480,33 @@ void video_definir_dv(int dv) { dvPedido = dv ? 1 : 0; }
 void video_escolher_audio(int i) {
   char b[192];
   const VideoFaixa *f = video_audio(i);
+  if (dtsSessao && f) {
+    if (f->stream_index < 0) return;
+    if (!strcmp(f->codec, "dts") ||
+        (dtsModoDv && (!strcmp(f->codec, "eac3") || !strcmp(f->codec, "ac3")))) {
+      dts_playback_seek(dtsSessao, posSeg);
+      dts_playback_audio(dtsSessao, f->stream_index);
+      audioAtual = i;
+    } else {
+      VideoFaixa target = *f;
+      double alvo = posSeg;
+      char lu[sizeof legUrlAtual];
+      snprintf(lu, sizeof lu, "%s", legUrlAtual);
+      /* Match the native list after it arrives; demux ordinals need not match. */
+      dtsNativeTarget = target; dtsNativePending = 1;
+      /* A track the Dolby Vision path cannot feed: the TV player takes the
+       * rest of this source (HDR10), and the path does not come back. */
+      if (dtsModoDv) { dtsModoDv = 0; dvHabilitado = 0; }
+      if (recarregarMesmaFonte(alvo, -1, -1, lu)) dtsTentou = 0;
+      else dtsNativePending = 0;
+    }
+    return;
+  }
+
   if (!ligado || !midia[0] || !f) return;
+  /* Unsupported audio belongs to the previous selection. Give the new native
+   * track a chance before allowing its own codec error to trigger conversion. */
+  if (i != audioAtual) audioNaoSup = 0;
   snprintf(b, sizeof b, "{\"mediaId\":\"%s\",\"type\":\"audio\",\"index\":%d}",
            midia, f->numero);
   chamar("selectTrack", b, soLog);
@@ -2522,6 +3515,14 @@ void video_escolher_audio(int i) {
 
 void video_escolher_legenda(int i) {
   char b[192];
+  if (dtsSessao) {
+    const VideoFaixa *f = video_legenda(i);
+    if (i >= 0 && (!f || f->stream_index < 0)) return;
+    legAtual = i < 0 ? -1 : i; legUrlAtual[0] = 0;
+    dts_playback_subtitle(dtsSessao, f ? f->stream_index : -1);
+    if (f) dts_playback_seek(dtsSessao, posSeg);
+    return;
+  }
   if (!ligado || !midia[0]) return;
   if (i < 0) {
     snprintf(b, sizeof b, "{\"mediaId\":\"%s\",\"enable\":false}", midia);
@@ -2549,6 +3550,7 @@ static int temEstilo;
 
 static void aplicarEstilo(void) {
   char b[256];
+  if (dtsSessao) return;
   if (!ligado || !midia[0] || !temEstilo) return;
   /* Embutida ainda pertence ao uMS: reduz o percentual aos cinco degraus. */
   { int p=estilo.tamanho, t=p<=70?0:p<=100?1:p<=130?2:p<=165?3:4;
@@ -2603,6 +3605,11 @@ void video_definir_mp4(int ehMp4) { fonteMp4 = ehMp4; }
 
 void video_legenda_externa(const char *url) {
   char b[1400], reconhecivel[1024];
+  if (dtsSessao && url && *url) {
+    dts_playback_subtitle(dtsSessao, -1); legAtual = -1;
+    snprintf(legUrlAtual, sizeof legUrlAtual, "%s", url);
+    legenda_carregar(url); return;
+  }
   if (!ligado || !midia[0] || !url || !*url) return;
   // O uMS baixa e sincroniza sozinho — o app so aponta. E o que permite usar
   // legenda do OpenSubtitles em arquivo que nao traz nenhuma embutida. Nesta
@@ -2621,10 +3628,59 @@ void video_legenda_externa(const char *url) {
   fflush(stdout);
 }
 
+// Resposta do setPlayRate. O contexto leva a sessao e o valor pedido, para
+// uma resposta atrasada de um pipeline que ja saiu nao desligar a linha.
+static int aoVelocidade(LSHandle *h, LSMessage *m, void *u) {
+  const char *p = lsPayload(m);
+  unsigned ctx = (unsigned)(uintptr_t)u, minhaSessao = ctx >> 10;
+  int cent = (int)(ctx & 0x3ffu), ok = p && strstr(p, "\"returnValue\":true") != NULL;
+  (void)h;
+  if (!ok) printf("[video] setPlayRate: %.200s\n", p ? p : "(nulo)");
+  if (minhaSessao != (sessao & 0x3fffffu)) return 1;
+  vel_log(cent, ok ? "plataforma ok" : "plataforma recusou");
+  if (!ok) { velRecusada = 1; velPedida = 100; }
+  return 1;
+}
+
+// Manda so com o pipeline pronto E tocando: nao ha prova de que o setPlayRate
+// numa midia pausada nao a retome, e a pausa e da pessoa. Pausado, o pedido
+// espera o play.
+static void velBombear(void) {
+  char b[160];
+  int v = velPedida;
+  if (velRecusada || !ligado || !midia[0] || !pronto || !tocando || v == velEnviada) return;
+  velEnviada = v;
+  snprintf(b, sizeof b, "{\"mediaId\":\"%s\",\"playRate\":%d.%02d,\"audioOutput\":true}",
+           midia, v / 100, v % 100);
+  chamarCtx("setPlayRate", b, aoVelocidade,
+            (void *)(uintptr_t)(((sessao & 0x3fffffu) << 10) | ((unsigned)v & 0x3ffu)));
+}
+
+int  video_velocidade_suportada(void) { return !velRecusada; }
+void video_velocidade(int c) {
+  if (c <= 0 || c > 400) c = 100;
+  if (velRecusada) return;
+  velPedida = c;
+}
+int  video_velocidade_atual(void) { return velRecusada ? 100 : velPedida; }
+void video_velocidade_recusada(void) {
+  velRecusada = 1; velPedida = 100;
+  // Desfaz no pipeline tambem (o setPlayRate pode ter valido pela metade).
+  if (ligado && midia[0]) {
+    char b[160];
+    snprintf(b, sizeof b, "{\"mediaId\":\"%s\",\"playRate\":1.00,\"audioOutput\":true}", midia);
+    chamar("setPlayRate", b, soLog);
+  }
+  velEnviada = 100;
+}
+int  video_velocidade_bloqueada(void) { return 0; }
+
 void video_encerrar(void) {
   if (!ligado) return;
   video_parar();
-  if (acb) { acbDestruir(acb); acb = 0; }
+  if (bindJoinable) { pthread_join(fioBind, NULL); bindJoinable = 0; }
+  if (acb) { if (acbFinalizar) acbFinalizar(acb); acbDestruir(acb); acb = 0; }
+  acbTipoAtual = acbTipoFalhou = -1;
   if (expWin[0] && sdlExpDestruir) { sdlExpDestruir(expWin); expWin[0] = 0; }
   if (laco) loopParar(laco);
   if (bus && lsUnregister) {
@@ -2636,8 +3692,13 @@ void video_encerrar(void) {
   protetorLigado = 0;
   ligado = 0;
 }
-// O uMS desenha a legenda embutida sozinho: nada para o app pintar.
-int video_legenda_nativa(char *d, int t) { (void)t; if (d) d[0] = 0; return 0; }
+// Converted playback uses the same GL text overlay as external subtitles.
+int video_legenda_nativa(char *d, int t) {
+  if (dtsSessao && t > 0)
+    return dts_playback_subtitle_text(dtsSessao, posSeg - estilo.atrasoMs / 1000.0, d, (size_t)t);
+  if (d && t > 0) d[0] = 0;
+  return 0;
+}
 
 #endif
 

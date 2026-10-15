@@ -14,6 +14,8 @@ void ondever_pedir(const char *id, int series, long tmdb) {
   (void)id; (void)series; (void)tmdb;
 }
 
+int dados_gravar_leve(const char *nome, const char *conteudo) { (void)nome; (void)conteudo; return 1; }
+
 static _Atomic Uint32 relogio = 100000;
 static _Atomic int pedidos;
 static const char *conta = "conta-a";
@@ -29,7 +31,8 @@ int perfis_ativo(void) { return perfil; }
 int player_carregando(void) { return 0; }
 void debrid_nova_busca(void) { }
 void debrid_definir_episodio(int t, int e) { (void)t; (void)e; }
-int debrid_resolver(const char *hash, int indice, char *url, unsigned tam) {
+int debrid_resolver_cache(const char *hash, int indice, char *url, unsigned tam, int *fora) {
+  *fora = 0;
   (void)hash; (void)indice; (void)url; (void)tam;
   assert(!"cache VOD nao pode resolver debrid"); return 0;
 }
@@ -38,6 +41,7 @@ void marco(const char *s) { (void)s; }
 const char *rede_url_publica(const char *url, char *d, unsigned tam) {
   snprintf(d, tam, "%s", url); return d;
 }
+const char *rede_ultimo_erro(void) { return ""; }
 char *rede_baixar(const char *url, int timeout) {
   (void)timeout;
   assert(strstr(url, "/stream/") && strstr(url, ".json"));

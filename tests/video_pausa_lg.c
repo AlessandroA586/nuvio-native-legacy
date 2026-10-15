@@ -21,6 +21,9 @@
 #include <unistd.h>
 #include <dlfcn.h>
 #include <assert.h>
+// Antes do #undef __APPLE__: gl_compat.h (via ajustes.h) escolhe o GL do Mac.
+#include "ajustes.h"
+#include "webosver.h"
 #undef __APPLE__
 #include "../src/video.c"
 
@@ -49,6 +52,17 @@ static int fakeWindow(long handle, long x, long y, long w, long h, int full, lon
 }
 
 int main(void) {
+  // webosMaior(): a TV de 2017 (webOS 3.9) so tem o nyx e NAO e webOS 4.
+  {
+    FILE *f = fopen("/tmp/nv-webos-test.json", "w");
+    assert(f); fputs("{\"webos_release\":\"3.9\"}", f); fclose(f);
+    nv_webos_testar("/tmp/nv-webos-test.json", "/nonexistent/starfish-release");
+    assert(webosMaior() == 3);
+    assert(!dvVersaoLiberada(webosMaior()));   // a porta do Dolby Vision em MKV
+    assert(dvVersaoLiberada(4));
+    remove("/tmp/nv-webos-test.json");
+    puts("webosMaior: nyx 3.9 sem starfish-release -> 3, Dolby Vision MKV fechado");
+  }
   // Exercise the production LG path: settled geometry must not call ACB
   // every frame; PiP/fullscreen transitions must still reach the backend.
   acbJanela = fakeWindow; acb = 1; ligado = 1;
@@ -94,6 +108,8 @@ int main(void) {
   screensaverCallback(NULL, (LSMessage *)active, NULL);
   assert(respostas == 1 && strstr(resposta, "\"ack\":false") &&
          strstr(resposta, "\"timestamp\":1700000000123456}"));
+  // Sem a tela de descanso do Nuvio (esmaecer real, linkado): ela segura o protetor da TV.
+  esmaecer_estilo(ESM_ESTILO_ESCURECER);
   pausaPedida = 1;
   screensaverCallback(NULL, (LSMessage *)active, NULL);
   assert(strstr(resposta, "\"ack\":true"));

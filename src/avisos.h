@@ -70,11 +70,15 @@ int  avisos_n_novos(void);
 // Enquanto aberto, avisos_evento come todo o teclado.
 void avisos_mostrar_se_houver(void);
 int  avisos_cartao_aberto(void);
+// TESTE (#99): a linha em foco da central aberta; -1 com ela fechada.
+int  avisos_teste_foco(void);
 
 // ACOES PEDIDAS PELO PAINEL, entregues a app.c uma vez cada (o mesmo contrato
 // de spainel_pediu_abrir): o IMDb de um titulo a abrir, ou um dos codigos.
 const char *avisos_pediu_abrir(void);
-enum { AVISOS_NADA = 0, AVISOS_ABRIR_SALVOS, AVISOS_ABRIR_ATUALIZACAO };
+// AVISOS_ABRIR_AMIGOS: a linha dos pedidos de amizade (o painel vai para a
+// aba Amigos, onde cada pedido tem Aceitar e Recusar).
+enum { AVISOS_NADA = 0, AVISOS_ABRIR_SALVOS, AVISOS_ABRIR_ATUALIZACAO, AVISOS_ABRIR_AMIGOS };
 int  avisos_pediu(void);
 
 // ENVIO MANUAL DO REGISTRO DESTA SESSAO, pela linha "Enviar registro" dos
@@ -123,18 +127,42 @@ void avisos_teste_queda(const char *texto);
 // ao fechar. Uma linha mede AVISOS_LINHA_H, EXCETO a linha em foco de um aviso
 // do canal, que cresce para o texto inteiro: o hospedeiro posiciona por
 // avisos_lista_y / avisos_lista_altura_linha, que sabem disso.
+#include <stddef.h>
 #define AVISOS_LINHA_H 164.0f
 int   avisos_lista_n(void);
 float avisos_lista_altura(void);
 float avisos_lista_altura_linha(int linha, int focoLinha);
 float avisos_lista_y(int linha, int focoLinha);
 void  avisos_lista_desenhar(float x, float y, float w, float a, int focoLinha);
+// A mesma lista registrando cada linha no ponteiro (#99): `focar(linha, 0)`
+// e de quem hospeda (indices de focoLinha; n = "Dispensar todos"), recortado
+// a faixa [clipY0, clipY1). focar NULL = nao registra (= avisos_lista_desenhar).
+void  avisos_lista_desenhar_ptr(float x, float y, float w, float a, int focoLinha,
+                                void (*focar)(int, int), float clipY0, float clipY1);
+// 1 = fez algo e o hospedeiro fecha; 2 = so trocou de lugar (pedidos de
+// amizade: o painel vai para a aba Amigos e fica aberto).
 int   avisos_lista_ok(int linha);
 void  avisos_marcar_lidos(void);
 
+// DISPENSAR (06/10, avisodisp.h). Tira o item da lista e grava a chave por
+// perfil: a mesma chave nao volta, nem depois de reiniciar; um evento novo
+// (outro episodio, outra versao) volta. "rec" e excecao: responde a
+// recomendacao em vez de gravar. A ULTIMA LINHA da lista, quando ha itens, e
+// "Dispensar todos": avisos_lista_linhas() = n + 1 (o hospedeiro navega por
+// ela; avisos_lista_n() continua sendo a contagem de avisos), e
+// avisos_lista_ok(n) dispensa todos e devolve 0 (a lista fica, vazia).
+// avisos_lista_item: o id, o titulo para o menu e, numa estreia com o lembrete
+// ainda ligado, o imdb para "Remover lembrete" ("" sem). 0 = linha invalida.
+void  avisos_dispensar(const char *id);
+void  avisos_dispensar_todos(void);
+int   avisos_lista_dispensar(int linha);
+int   avisos_lista_linhas(void);
+int   avisos_lista_item(int linha, char *id, size_t tamId, char *titulo, size_t tamTit,
+                        char *imdbLembrete, size_t tamImdb);
+
 // A ilha (ilhacart.c): o episodio novo (AV_AGENDA) ainda nao lido mais
-// recente — o id do item e o imdb da serie — e marcar UM item como lido.
-#include <stddef.h>
+// recente — o id do item e o imdb da serie — e marcar UM item como lido. Uma
+// estreia ADIADA nesta sessao ("Depois", avisodisp_sessao_*) nao conta.
 int  avisos_estreia_pendente(char *id, size_t tamId, char *imdb, size_t tamImdb);
 void avisos_marcar_visto(const char *id);
 
@@ -144,4 +172,10 @@ void avisos_marcar_visto(const char *id);
 // marca o item como lido.
 void avisos_ilha_acao(const char *chave, int botao);
 
+#ifdef NV_WEBOS
+// Linha [tv] e modelo (para o relato de falha de arranque; arranque.c).
+void avisos_tv_linha(char *linha, size_t cap, char *modelo, size_t capModelo);
+// POST sincrono, `segundos` de teto, em /v1/registro/arranque. 1 = confirmado.
+int  avisos_enviar_arranque(const char *relato, const char *tv, int segundos);
+#endif
 #endif

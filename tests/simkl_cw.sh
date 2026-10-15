@@ -26,7 +26,7 @@ def qtd(nome):
     return int(m.group(1))
 cw = vetor("V_CW_FONTE")
 sv = vetor("V_SALVOS")
-esperado_cw = ["Ambas", "Conta Nuvio", "Trakt", "Simkl"]
+esperado_cw = ["Todas as fontes", "Conta Nuvio", "Trakt", "Simkl"]
 esperado_sv = ["Lista do Nuvio", "Watchlist do Trakt", "Plan to Watch do Simkl"]
 assert cw == esperado_cw, cw
 assert sv == esperado_sv, sv

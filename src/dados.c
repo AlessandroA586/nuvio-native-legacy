@@ -1,3 +1,8 @@
+// A medicao inclui torrents esparsos >2 GB nos ARM de 32 bits (#297).
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 64
+#endif
+#include "app_id.h"
 #include "dados.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,6 +11,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <pthread.h>
+
+#ifndef __EMSCRIPTEN__
+static void espacoGravado(const char *nome);
+#endif
 
 #if defined(__EMSCRIPTEN__) || defined(NV_DADOS_TEST)
 static volatile int sujo, sujoLeve;
@@ -352,7 +361,8 @@ static int serve(const char *candidato) {
 }
 
 void dados_iniciar(const char *dirArte) {
-  char lar[512];
+  char lar[512], envLar[512], arteLar[512];
+  int isolado = strcmp(NV_APP_ID, NV_APP_ID_PRODUCTION) != 0;
   const char *env = getenv("NUVIO_DADOS");
   const char *home = getenv("HOME");
   const char *candidatos[5];
@@ -385,16 +395,26 @@ void dados_iniciar(const char *dirArte) {
            "        morrem ao fechar. Origem file:// bloqueia IndexedDB.\n");
   }
 #endif
-  if (env && *env) candidatos[n++] = env;
-  if (home && *home) {
-    snprintf(lar, sizeof lar, "%s/.nuvio", home);
-    candidatos[n++] = lar;
+  if (env && *env) {
+    if (!isolado) candidatos[n++] = env;
+    else {
+      int size = snprintf(envLar, sizeof envLar, "%s/%s", env, NV_APP_ID);
+      if (size > 0 && size < (int)sizeof envLar) candidatos[n++] = envLar;
+    }
   }
-  // Pasta de trabalho do modo desenvolvedor do webOS. Existe e e gravavel nos
-  // aparelhos onde este app roda hoje; num aparelho de loja pode nao existir, e
-  // por isso ela e candidata e nao resposta.
-  candidatos[n++] = "/media/developer/temp/nuvio";
-  if (dirArte && *dirArte) candidatos[n++] = dirArte;
+  if (home && *home) {
+    int size = snprintf(lar, sizeof lar, isolado ? "%s/.%s" : "%s/.nuvio", home, NV_APP_ID);
+    if (size > 0 && size < (int)sizeof lar) candidatos[n++] = lar;
+  }
+  // The debug package never probes or reads the production developer folder.
+  candidatos[n++] = isolado ? "/media/developer/temp/" NV_APP_ID : "/media/developer/temp/nuvio";
+  if (dirArte && *dirArte) {
+    if (!isolado) candidatos[n++] = dirArte;
+    else {
+      int size = snprintf(arteLar, sizeof arteLar, "%s/.%s", dirArte, NV_APP_ID);
+      if (size > 0 && size < (int)sizeof arteLar) candidatos[n++] = arteLar;
+    }
+  }
 
   for (i = 0; i < n; i++) {
     if (serve(candidatos[i])) {
@@ -523,7 +543,11 @@ int dados_gravar(const char *nome, const char *conteudo) {
 }
 
 int dados_gravar_leve(const char *nome, const char *conteudo) {
-  return gravarInterno(nome, conteudo, 1);
+  int ok = gravarInterno(nome, conteudo, 1);
+#ifndef __EMSCRIPTEN__
+  if (ok) espacoGravado(nome);
+#endif
+  return ok;
 }
 
 char *dados_ler(const char *nome) {
@@ -657,3 +681,5 @@ int dados_persistente(void) {
   return dir[0] != 0;
 #endif
 }
+
+#include "espaco.inc"

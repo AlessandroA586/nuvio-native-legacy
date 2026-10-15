@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 work=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-player-fundo.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   [ "$source" != src/main.c ] && sources+=("$source")
 done
 cc "${sources[@]}" tests/player_fundo.c -Isrc -o "$work/test" \

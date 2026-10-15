@@ -1,5 +1,6 @@
 // Salvar na ilha — ver ilhasalvar.h.
 #include "ilhasalvar.h"
+#include "sessao.h"
 #include "ilha.h"
 #include "ilhaacao.h"
 #include "ajustes.h"
@@ -106,6 +107,12 @@ int ilhasalvar_perguntar(const CatItem *ci, int entrar) {
   memset(&m, 0, sizeof m);
   snprintf(m.kicker, sizeof m.kicker, "%s", i18n("Primeira vez na lista"));
   snprintf(m.titulo, sizeof m.titulo, "%s", i18n("Onde o + salva?"));
+  // Com conta, a Lista do Nuvio tambem vai para o perfil (contapend.c).
+  if (sessao_logada())
+    snprintf(m.texto, sizeof m.texto, "%s", nOpcao > 1
+             ? i18n("A Lista do Nuvio fica nesta TV e no seu perfil da conta. O Trakt e o Simkl guardam também nas contas deles. Dá para mudar em Ajustes.")
+             : i18n("O título fica na Lista do Nuvio, nesta TV e no seu perfil da conta."));
+  else
   snprintf(m.texto, sizeof m.texto, "%s", nOpcao > 1
            ? i18n("A Lista do Nuvio fica só nesta TV. O Trakt e o Simkl guardam na sua conta, e a lista desta TV também é gravada. Dá para mudar em Ajustes.")
            : i18n("O título fica na Lista do Nuvio, nesta TV. Conecte o Trakt ou o Simkl em Ajustes para guardar também na sua conta."));

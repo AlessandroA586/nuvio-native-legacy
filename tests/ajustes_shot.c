@@ -65,6 +65,8 @@ static const char *const AJ_IDS[] = {
 };
 
 extern int ajustes_teste_focar_opcao(int op);
+extern int ajustes_teste_cena_item(int i, int *op, int *sec, const char **chave, const char **rot);
+extern void ajustes_teste_cena_desenhar(int op, float t, float x, float y, float w);
 extern void ajustes_teste_ux_captura(int cenario);
 extern void atualizacao_teste_estado(int busca, const char *tag);
 extern int ajustes_teste_op_atualizar(void);
@@ -73,6 +75,7 @@ extern int ajustes_teste_familia_previa(int op);
 extern void ajustes_teste_fonte_interface(int familia);
 extern void ajustes_teste_tema(int tema, int vidro);
 extern void ajustes_teste_vidro_env(void);
+extern void ajustes_teste_layout(int lista);
 extern int ajustes_teste_quadro(const char *id);
 static int quadrosCaptura = 60;
 
@@ -224,11 +227,52 @@ int main(int argc, char **argv) {
   if (getenv("NUVIO_SHOT_AJUSTES_ESCALA"))
     ajustes_teste_escala(atoi(getenv("NUVIO_SHOT_AJUSTES_ESCALA")));
   ajustes_teste_vidro_env();   // NUVIO_SHOT_VIDRO_OPAC / _FOSCO
+  // NUVIO_SHOT_LAYOUT=1: Settings as one stacked list (#339).
+  if (getenv("NUVIO_SHOT_LAYOUT")) ajustes_teste_layout(atoi(getenv("NUVIO_SHOT_LAYOUT")));
   // NUVIO_SHOT_TEMA=<indice> (0 branco, 12 Dinamica) e NUVIO_SHOT_VIDRO=1: o
   // foco no acento claro com e sem vidro (#202).
   if (getenv("NUVIO_SHOT_TEMA") || getenv("NUVIO_SHOT_VIDRO"))
     ajustes_teste_tema(getenv("NUVIO_SHOT_TEMA") ? atoi(getenv("NUVIO_SHOT_TEMA")) : -1,
                        getenv("NUVIO_SHOT_VIDRO") && atoi(getenv("NUVIO_SHOT_VIDRO")));
+
+  // NUVIO_SHOT_CENAS=<pasta>: the generated preview of EVERY visible option,
+  // drawn alone at a fixed instant (960x540 PNG each) plus indice.tsv, to find
+  // options that share the same scene.
+  if (getenv("NUVIO_SHOT_CENAS")) {
+    const char *dir = getenv("NUVIO_SHOT_CENAS");
+    float t = getenv("NUVIO_SHOT_CENAS_T") ? (float)atof(getenv("NUVIO_SHOT_CENAS_T")) : 1.7f;
+    int op, sec, n;
+    const char *chave, *rot;
+    FILE *ix;
+    snprintf(nome, sizeof nome, "%s/indice.tsv", dir);
+    ix = fopen(nome, "w");
+    assert(ix);
+    for (n = 0; ajustes_teste_cena_item(n, &op, &sec, &chave, &rot); n++) {
+      unsigned char *pix = malloc(960 * 540 * 4);
+      SDL_Surface *s;
+      int q, y;
+      assert(pix);
+      for (q = 0; q < 8; q++) {   // text lines rasterize over a few frames
+        SDL_PumpEvents();
+        txt_novo_quadro(); tex_novo_quadro(); tex_bombear(6);
+        glClearColor(0, 0, 0, 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ajustes_teste_cena_desenhar(op, t, 0, 0, 960);
+        if (q == 7) glReadPixels(0, 1080 - 540, 960, 540, GL_RGBA, GL_UNSIGNED_BYTE, pix);
+        SDL_GL_SwapWindow(w);
+      }
+      s = SDL_CreateRGBSurfaceWithFormat(0, 960, 540, 32, SDL_PIXELFORMAT_RGBA32);
+      assert(s);
+      for (y = 0; y < 540; y++) memcpy((char *)s->pixels + y * s->pitch, pix + (539 - y) * 960 * 4, 960 * 4);
+      snprintf(nome, sizeof nome, "%s/%03d-%s.png", dir, n, chave && chave[0] ? chave : "sem");
+      assert(IMG_SavePNG(s, nome) == 0);
+      fprintf(ix, "%d\t%d\t%d\t%s\t%s\n", n, sec, op, chave ? chave : "", rot ? rot : "");
+      SDL_FreeSurface(s); free(pix);
+    }
+    fclose(ix);
+    printf("cenas: %d em %s\n", n, dir);
+    return 0;
+  }
 
   // Reuse the compiled harness to compare Settings at 80% and 90%.
   // NUVIO_AJUSTES_ESCALA_COMPARAR=1 /tmp/nuvio-ajustes-shot /tmp/settings
@@ -262,7 +306,26 @@ int main(int argc, char **argv) {
       { char *arroba = strchr(id, '@');
         quadrosCaptura = 60;
         if (arroba) { *arroba = 0; quadrosCaptura = atoi(arroba + 1) > 0 ? atoi(arroba + 1) : 60; } }
+      // "busca:<texto>": a busca de Ajustes (Spotlight no modo Ajustes) com o
+      // texto digitado, por cima do indice. '_' vira espaco.
+      if (!strncmp(id, "busca:", 6)) {
+        char q[128]; int k;
+        SDL_Event e = { 0 };
+        snprintf(q, sizeof q, "%s", id + 6);
+        for (k = 0; q[k]; k++) if (q[k] == '_') q[k] = ' ';
+        ajustes_teste_quadro("v2-menu");
+        spot_abrir_ajustes(0);
+        spot_texto_externo(q);
+        e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_DOWN;
+        for (k = 0; k < 4 && spot_linha_focada() < 0; k++) spot_evento(&e);
+        for (k = 0; id[k]; k++) if (id[k] == ':') id[k] = '-';
+        snprintf(nome, sizeof nome, "%s-%s.png", saida, id);
+        captura(nome, w);
+        if (spot_aberto()) spot_fechar();
+        continue;
+      }
       if (!ajustes_teste_quadro(id)) { printf("quadro desconhecido: %s\n", id); continue; }
+      if (getenv("NUVIO_SHOT_LAYOUT")) ajustes_teste_layout(atoi(getenv("NUVIO_SHOT_LAYOUT")));
       // NUVIO_SHOT_FONTE=3 (TXT_FAMILIA_*): the interface font the TV uses
       // (Montserrat on the owner's Android TV), so truncation shows like there.
       if (getenv("NUVIO_SHOT_FONTE")) ajustes_teste_fonte_interface(atoi(getenv("NUVIO_SHOT_FONTE")));

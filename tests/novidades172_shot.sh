@@ -11,7 +11,7 @@ NUVIO_DADOS=$(mktemp -d /tmp/nuvio-n172-shot.XXXXXX)
 export NUVIO_DADOS
 trap 'rm -rf "$NUVIO_DADOS"' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   case "$source" in */main.c) continue;; esac
   sources+=("$source")
 done

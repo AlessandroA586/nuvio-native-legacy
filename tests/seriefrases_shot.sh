@@ -10,7 +10,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/seriefrases.c) continue;; esac
   sources+=("$source")
 done

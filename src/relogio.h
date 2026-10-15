@@ -19,6 +19,7 @@ typedef struct {
   double ultPos, ultAgora;   // ultima amostra
   double saida;              // ultimo valor devolvido (para nao andar para tras)
   int    tocando, temAmostra;
+  double taxa;               // #202: velocidade (1,5 = 1,5x); 0 = 1x
 } Relogio;
 
 void   relogio_zerar(Relogio *r);
@@ -26,5 +27,11 @@ void   relogio_zerar(Relogio *r);
  * em segundos monotonicos. Amostra nova e detectada pela mudanca de posSeg. */
 void   relogio_amostra(Relogio *r, double posSeg, double agora, int tocando);
 double relogio_ler(Relogio *r, double agora);
+/* VELOCIDADE (#202). A 1,5x o video anda 1,5 s por segundo do relogio: com o
+ * deslocamento contado a 1x, entre duas amostras a previsao andava devagar
+ * demais (a 2x, ate 200 ms atrasada) e a 0,75x o maximo das amostras velhas
+ * a punha ate o teto adiantada. Com a taxa, off = pos - agora*taxa. Mudar a
+ * taxa zera o historico (as amostras velhas foram tiradas a outra taxa). */
+void   relogio_taxa(Relogio *r, double taxa);
 
 #endif

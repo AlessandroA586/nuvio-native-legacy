@@ -1,3 +1,4 @@
+#include "arteurl.h"
 // AGENDA: quando sai o proximo episodio das series que o dono acompanha, e o
 // lembrete para o dia em que sair.
 //
@@ -72,7 +73,7 @@ typedef enum {
 typedef struct {
   char imdb[24];
   char titulo[160];
-  char poster[512];
+  char poster[NV_ARTE_URL_MAX];
   int  situacao;          // AgSituacao
   int  temporada, episodio;
   char nomeEp[120];
@@ -216,6 +217,9 @@ void agenda_apoio(const AgItem *it, char *dst, size_t tam);
 int agenda_devidos(const AgItem **saida, int max);
 // Marca como avisado e GRAVA: o mesmo episodio nao avisa duas vezes.
 void agenda_marcar_avisado(const char *imdb);
+// Quantos lembretes ainda nao foram avisados. Barato (so a tabela de
+// lembretes): o aviso da home pergunta isto antes de montar a agenda inteira.
+int agenda_lembretes_pendentes(void);
 
 // --- atualizacao das seguidas ----------------------------------------------
 // Sobe um fio que busca as series seguidas cujo registro esta faltando ou

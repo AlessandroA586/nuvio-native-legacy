@@ -8,7 +8,9 @@
 // FLUXO. O servico (servidor/recomendacoes/src/enquete.js) entrega UMA enquete
 // ativa por conta/perfil. O convite aparece UMA vez por enquete e perfil
 // (enquete.txt guarda que ja foi dito); "Agora nao" — ou o Voltar — deixa uma
-// bolinha de acento no relogio ate a pessoa responder, e a AZUL nele reabre.
+// bolinha de acento no relogio ate a pessoa responder, e a AZUL nele reabre o
+// convite, agora com "Dispensar" (06/10): dispensada, a bolinha apaga e aquela
+// enquete nao volta para o perfil (avisodisp.h).
 // Votou: o modal passa a mostrar o resultado (texto, porcentagem e trilho).
 // "Nao receber mais enquetes" vai para a conta e para Ajustes (espelho local), com
 // Desfazer pela ilha.

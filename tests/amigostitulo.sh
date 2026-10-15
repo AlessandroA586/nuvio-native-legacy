@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/nuvio-amigostitulo-XXXXXX")"
 trap 'rm -rf "$tmp"' EXIT
 sources=()
-for source in src/*.c; do
+for source in src/*.c src/dts/*.c; do
   if [ "$source" != src/main.c ]; then sources+=("$source"); fi
 done
 cc "${sources[@]}" tests/amigostitulo.c -Isrc -o "$tmp/teste" -O1 -g \
