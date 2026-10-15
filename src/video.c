@@ -1235,6 +1235,7 @@ static int eventoPayload(const char *p, unsigned minhaSessao) {
       // veio da TV, sem confundir um seek ainda pendente com a posicao vista.
       double alvo = posAoCarregar;
       posAoCarregar = 0.0;
+      seekAlvo = alvo;
       seekAgora(alvo);
     } else if (posAoCarregar > 1.0) {
       double alvo = posAoCarregar, entrada = dvEntradaSeg;
