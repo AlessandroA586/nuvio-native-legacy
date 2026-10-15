@@ -5811,12 +5811,14 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
     }
   }
 trailer_hero_fim:
-  // O CARTAZ ANDA (rolagem da fileira assentando, mola do anel): o plano segue
-  // o retangulo do quadro anterior. So na mudanca de verdade — cada
-  // trailer_rect refaz janela e recorte no plano.
-  if (heroTrailerNoCartao && trailer_aberto() && !trailer_cheia() &&
-      trailer_dono() == TRAILER_DONO_HOME && cartaoTrailerItem == heroTrailerItem) {
-    GfxRect alvoR = cartaoVideoRect(cartaoTrailerRect), atual = trailer_retangulo();
+  // Follow artwork geometry too: focusing the hero can expand last frame's
+  // banner after the trailer opened (#500). Only update on a real move;
+  // trailer_rect rebuilds the native video window and crop.
+  if (heroTrailerItem >= 0 && heroTrailerItem == heroAtual &&
+      trailer_aberto() && !trailer_cheia() && trailer_dono() == TRAILER_DONO_HOME &&
+      (!heroTrailerNoCartao || cartaoTrailerItem == heroTrailerItem)) {
+    GfxRect alvoR = heroTrailerNoCartao ? cartaoVideoRect(cartaoTrailerRect) : heroArteRect;
+    GfxRect atual = trailer_retangulo();
     if (fabsf(alvoR.x - atual.x) > 1.0f || fabsf(alvoR.y - atual.y) > 1.0f ||
         fabsf(alvoR.w - atual.w) > 1.0f || fabsf(alvoR.h - atual.h) > 1.0f)
       trailer_rect(alvoR);

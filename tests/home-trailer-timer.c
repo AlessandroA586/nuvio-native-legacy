@@ -417,6 +417,24 @@ int main(void) {
   rc |= check("destaque: cinema mode still follows the hero trailer", heroCinema.oculta && heroCinema.v > 0.5f);
   playing = 0; trailercinema_zerar(&heroCinema);
 
+  // #500: opening uses last frame's artwork geometry. The next draw can
+  // expand the hero from a corner banner to fullscreen without a new title.
+  resetState("tt500rect");
+  appleReady = 1;
+  heroArteRect = (GfxRect){555, 0, 1365, 670};
+  home_trailer_passo(1, 0.016f, start);
+  home_trailer_passo(1, 0.016f, start + NV_TRAILER_HERO_ESPERA_MS);
+  rc |= check("hero opens in the current artwork rectangle", opened && lastRect.x == 555);
+  heroArteRect = (GfxRect){0, 0, 1920, 1080};
+  playing = 1;
+  int movesBefore = rectCalls;
+  home_trailer_passo(1, 0.016f, start + NV_TRAILER_HERO_ESPERA_MS + 1);
+  rc |= check("hero video follows expanded artwork without reopening",
+              lastRect.x == 0 && lastRect.w == 1920 && lastRect.h == 1080 && openedCount == 1);
+  home_trailer_passo(1, 0.016f, start + NV_TRAILER_HERO_ESPERA_MS + 2);
+  rc |= check("unchanged hero geometry does not reset the video plane", rectCalls == movesBefore + 1);
+  home_trailer_passo(0, 0.016f, start + 4000);
+
   for (int social=0; social<2; social++) {
     resetState(social ? "tt228social" : "tt228catalog");
     nFileiras=1;foco.fileira=0;fileiras[0].tipo=social ? FILEIRA_SOCIAL : FILEIRA_CATALOGOS;
