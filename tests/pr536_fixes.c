@@ -7,6 +7,8 @@ static int touched, saved;
 VideoLegendaEstilo *player_leg_estilo(void) { return &style; }
 void player_leg_estilo_tocou(int fields) { touched |= fields; }
 void player_leg_estilo_mudou(void) { saved++; }
+int assrender_ativo(void) { return 0; }
+int assrender_texto_simples(void) { return 1; }
 int main(void) {
   ctl = EST_COR_BORDA;
   estEscolher(2);
@@ -14,7 +16,19 @@ int main(void) {
   assert(touched & PLR_LEG_COR_BORDA);
   estEscolher(2);
   assert(saved == 1);
-  puts("PASS sheet outline override tracking");
+  ctl = EST_FONTE;
+  estEscolher(1);
+  assert(touched & PLR_LEG_FONTE);
+  ciclarEstilo(4);
+  ciclarEstilo(6);
+  ciclarEstilo(8);
+  assert(touched & PLR_LEG_FUNDO && touched & PLR_LEG_BORDA && touched & PLR_LEG_NEGRITO);
+  touched = 0;
+  estGravar(5, style.posicao);
+  assert(!(touched & PLR_LEG_POSICAO));
+  estGravar(5, style.posicao + 1);
+  assert(touched & PLR_LEG_POSICAO);
+  puts("PASS sheet authored-ASS override tracking");
 }
 #else
 #include "../src/assrender.c"

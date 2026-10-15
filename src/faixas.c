@@ -620,9 +620,9 @@ static void ciclarEstilo(int linha) {
   VideoLegendaEstilo *e = player_leg_estilo();
   if (estiloPreservadoAss(linha)) return;
   switch (linha) {
-    case 4: e->fundo   = (e->fundo + 1) % 5; break;
-    case 6: e->borda   = (e->borda + 1) % 3; break;
-    case 8: e->negrito = !e->negrito; break;
+    case 4: e->fundo   = (e->fundo + 1) % 5; player_leg_estilo_tocou(PLR_LEG_FUNDO); break;
+    case 6: e->borda   = (e->borda + 1) % 3; player_leg_estilo_tocou(PLR_LEG_BORDA); break;
+    case 8: e->negrito = !e->negrito; player_leg_estilo_tocou(PLR_LEG_NEGRITO); break;
     case EST_RESTAURAR:
       *e = (VideoLegendaEstilo){ 120, 0, 0, 3, 1, 0, 0, TXT_FAMILIA_INTER };
       // Restaurar e voltar ao normal do app, e o normal e respeitar o arquivo.
@@ -675,7 +675,7 @@ static void estGravar(int i, int v) {
   switch (i) {
     case 0: e->tamanho = v; break;
     case 3: e->opacidade = 3 - v; break;
-    case 5: e->posicao = v; break;
+    case 5: if (e->posicao != v) player_leg_estilo_tocou(PLR_LEG_POSICAO); e->posicao = v; break;
     default: e->atrasoMs = v; break;
   }
   player_leg_estilo_mudou();
@@ -715,6 +715,7 @@ static void estEscolher(int i) {   // amostra / fonte `i`: aplica ao vivo
   } else {
     if (e->familia == i) return;
     e->familia = i;
+    player_leg_estilo_tocou(PLR_LEG_FONTE);
   }
   player_leg_estilo_mudou();
 }
