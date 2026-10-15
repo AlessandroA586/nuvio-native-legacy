@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `5544c3e4c` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-15 07:10. 457 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `5544c3e4c` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-15 07:50. 457 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -181,14 +181,14 @@ Por status:
 |---|---|
 | lancada | 308 |
 | aberta | 49 |
-| integrada | 38 |
+| integrada | 39 |
 | respondida | 22 |
 | por-desenho | 15 |
 | precisa-log | 10 |
 | fechada-sem-resposta | 6 |
 | fora-do-escopo | 4 |
-| em_revisao | 3 |
 | duplicada | 2 |
+| em_revisao | 2 |
 
 Por release (grupo de planejamento):
 
@@ -259,7 +259,7 @@ Notas:
 | [#415](https://github.com/iqui27/nuvio-native-legacy/issues/415) | constant crashing, no matter if I play or not | LG | bug | precisa-log | 2.0.5 | 2.0.6 | 5c266499 | nós 10-10 | triar |
 | [#419](https://github.com/iqui27/nuvio-native-legacy/issues/419) | [Samsung Tizen 6 / v2.0.4] Clicking a Recommendations card d | Samsung .tpk | bug | integrada | 2.0.5 | ja-lancada | 7f338254, 8b5ed6c0, d6b41e1 | nós 10-11 | lancar com 2.0.5; testar no TCL |
 | [#428](https://github.com/iqui27/nuvio-native-legacy/issues/428) | Constant freezes | LG | bug | precisa-log | 2.0.5 | - | - | nós 10-11 | triar |
-| [#429](https://github.com/iqui27/nuvio-native-legacy/issues/429) | Subtitles auto select | Android | bug | em_revisao | 2.0.5 | ja-lancada | agente/205-i429hbs | nós 10-11 | merge agente/205-i429hbs (tip f59554839, 2 ahead; review OK j-revg-i429hbs-y); testar no T |
+| [#429](https://github.com/iqui27/nuvio-native-legacy/issues/429) | Subtitles auto select | Android | bug | em_revisao | 2.0.5 | ja-lancada | agente/205-i429hbs | nós 10-11 | merge agente/205-i429hbs (2 ahead, tip f59554839; review OK j-revg-i429hbs-y); testar no T |
 | [#469](https://github.com/iqui27/nuvio-native-legacy/issues/469) | all movies shows not correct aspect ratio , original, stretc | Samsung .tpk | bug | precisa-log | 2.0.5 | 2.0.6 | - | sem comentários | Pedir log (codigo) com troca de modo de aspecto; ver qual pacote .tpk e qual caminho (Disp |
 | [#470](https://github.com/iqui27/nuvio-native-legacy/issues/470) | Next Episode Countdown Only Starts After Credits Finish | Samsung .tpk | bug | integrada | 2.0.5 | - | 7839b119 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#471](https://github.com/iqui27/nuvio-native-legacy/issues/471) | Trailer Playback Does Not Fill the Cards Properly | Samsung .tpk | bug | integrada | 2.0.5 | 2.0.6 | 38369f89 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
@@ -284,7 +284,7 @@ Notas:
 - **#415**: Diagnóstico via memlog; sem conserto confirmado. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#419**: Job i419recs done 20:05: commit d6b41e1 so teste posplay. Sem device Tizen. Ja corrigido em 2.0.5 pelos commits v2.0.5.
 - **#428**: Aguarda código/log para diagnóstico. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13).
-- **#429**: Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839. Escrivao 10-15 07:10: review y OK (23:11) apos fixz 22:28; branch ainda 2 ahead, merge pendente.
+- **#429**: Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839. Escrivao 10-15 07:10: review y OK (23:11) apos fixz 22:28; branch ainda 2 ahead, merge pendente. | Escrivao 2026-10-15 07:50: sem merge ainda; review OK y, branch nao mergeado
 - **#469**: Q800T (GQ65Q800TGT, 2020, Tizen 5.5), 2.0.5. Nenhum modo de aspecto muda a imagem. 2.0.5 ja tem c4f344e8 (DisplayRoi + fallback 2.0.4, #426/#341) e 81d2152b (tpk 6+). Suspeita: Tizen 5.5 cai no caminho sem DisplayRoi. Pedir codigo do log e foto.
 - **#470**: rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log B9RJZ8 (registro 73397): [posplay] creditos aceito (sobram 265s, janela 300s); cartao aparece nos creditos mas contagem so comeca no fim. Escrivão 14/10 14:47: integrada via i18nordem, i470. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13).
 - **#471**: rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log QNHOK2 (registro 73399): "[trailer] tpk: plano visivel (sem recorte)" — trailer no cartao sem crop/fill no tpk. Relacionado a #469 (DisplayRoi/aspecto no tpk). Escrivão 14/10 14:47: integrada via i471.
@@ -434,7 +434,7 @@ Notas:
 | [#511](https://github.com/iqui27/nuvio-native-legacy/issues/511) | Show subtitle track name instead of only showing language | ? | enhancement | integrada |  | futuro | f0ab7c91 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#510](https://github.com/iqui27/nuvio-native-legacy/issues/510) | Subtitles list not the same as nuvio in phone applications l | ? | bug | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
 | [#509](https://github.com/iqui27/nuvio-native-legacy/issues/509) | Expanded poster trailer | ? | enhancement | integrada | - | futuro | 13e13b92 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
-| [#513](https://github.com/iqui27/nuvio-native-legacy/issues/513) | Any series episode autoplay even option is disabled | ? | bug | em_revisao |  | futuro | agente/205-i513autoplay | sem comentários | merge: review v OK (j-revg-i513autoplay-v, 06:49) apos fix w (j-fix-i513w 05:50); testar n |
+| [#513](https://github.com/iqui27/nuvio-native-legacy/issues/513) | Any series episode autoplay even option is disabled | ? | bug | integrada |  | futuro | agente/205-i513autoplay, 84add4581 | sem comentários | testar autoplay com opcao desligada no TCL; depois fechar |
 | [#514](https://github.com/iqui27/nuvio-native-legacy/issues/514) | Ability to rate a movie or an episode | ? | ? | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
 | [#521](https://github.com/iqui27/nuvio-native-legacy/issues/521) | Layout | ? | bug | aberta |  | futuro | - | sem comentários | triagem; sem job ainda; alvo a definir |
 
@@ -473,7 +473,7 @@ Notas:
 - **#511**: Criada 2026-10-14 (snapshot 14:46). Escrivao 14/10 19:1x: Fix 2e05dd94; j-revg-i511legnome-q OK 18:44; merge f0ab7c91 18:45.
 - **#510**: Criada 2026-10-14 (snapshot 14:46).
 - **#509**: Criada 2026-10-14 (snapshot 14:46). Escrivão 14/10 14:47: integrada via i509trailer. | Escrivão 2026-10-14 16:11: conserto 13e13b92 ja em integracao/2.0.5; sem release ainda.
-- **#513**: review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando Escrivao 10-15 07:10: BLOQUEIA x->fix i513w 05:50 (adbaf0f9f)->review v OK 06:49; branch 6 ahead.
+- **#513**: review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando Escrivao 10-15 07:10: BLOQUEIA x->fix i513w 05:50 (adbaf0f9f)->review v OK 06:49; branch 6 ahead. | Escrivao 2026-10-15 07:50: merge 84add4581 em integracao/2.0.5
 - **#514**: Issue nova 14/10 20:52 (rating de filme/episodio). Feature, nao 2.0.5.
 - **#521**: Issue nova 2026-10-15 06:48 (issues.json). Sem descrição de contexto; triar.
 
@@ -1215,6 +1215,9 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 | Data | Quem | O que | Issues | Ref | Resultado | Evidência |
 |---|---|---|---|---|---|---|
+| 2026-10-15 07:50 | escrivao (mapa keeper) | review #513 autoplay (magpie nv-revisao) apos fix w | #513 | adbaf0f9f / merge 84add4581 | passou | /Volumes/ExternalSSD/tmp/rev/j-revg-i513autoplay-v.log VEREDITO OK |
+| 2026-10-15 07:50 | escrivao (mapa keeper) | review vidrotodo (magpie nv-revisao) | - | 9d5115556 / 9b4fe6776 | passou | /Volumes/ExternalSSD/tmp/rev/j-revg-vidrotodo.log VEREDITO OK |
+| 2026-10-15 07:50 | escrivao (mapa keeper) | review pr/493-v3 (magpie nv-revisao) | #488, #482 | pr/493-v3 (65613c562) | passou | /Volumes/ExternalSSD/tmp/rev/j-revpr493-v3.log VEREDITO OK |
 | 2026-10-15 07:10 | escrivao (mapa keeper) | sync do tracking: HEAD 799d025bd, branches/jobs/verdicts do snapshot 06:50 | - | 799d025bd | passou | escrivao/estado.md + docs/issues/mapa.json (atualizado_em 2026-10-15 07:10) |
 | 2026-10-15 06:50 | job-pi group/nv-revisao (revisao) | Revisao pr490 fix3: VEREDITO BLOQUEIA (fome de fila nas fontes Vitrine) | #490 | pr/490-fix (fix c 3dae8f5c 06:03 antes) | falhou | /Volumes/ExternalSSD/tmp/rev/j-revpr490-fix3.log |
 | 2026-10-15 06:50 | job-pi group/nv-revisao (revisao) | Revisao pr493 v3 (head do autor + fixes portados): VEREDITO OK | #488, #482 | pr/493-v3 (tip 65613c562) | passou | /Volumes/ExternalSSD/tmp/rev/j-revpr493-v3.log |
@@ -2563,8 +2566,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_revisao
 - Release: 2.1
 - Conserto: agente/205-p2pusb: 9 commits fora
-- Próximo passo: BLOQUEIA v (j-revg-p2pusb-v 06:49): mount container aceito como USB e rescan suprimido; fix, depois review
-- Notas: 8 ahead; nao mergeado; sem job rodando Escrivao 10-15 07:10: fix w 05:51; review v 06:49 BLOQUEIA.
+- Próximo passo: BLOQUEIA v (j-revg-p2pusb-v 06:49): mount container aceito como USB e rescan suprimido; SEM job de fix depois; lancar fix, depois review
+- Notas: 8 ahead; nao mergeado; sem job rodando Escrivao 10-15 07:10: fix w 05:51; review v 06:49 BLOQUEIA. | Escrivao 2026-10-15 07:50: lost-ish: sem job apos BLOQUEIA v
 
 ### Merge agente/205-legsyncprox
 
@@ -3112,8 +3115,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_revisao
 - Release: 2.0.5
 - Conserto: pr/498-limpo: 12 commits fora (tip 22ed066e2 22:31)
-- Próximo passo: review OK (j-revpr498-limpo 23:15); merge pr/498-limpo; testar IME na TV
-- Notas: PR #498; 12 ahead; nao mergeado Escrivao 10-15 07:10: 12 ahead, review OK mantido; falta merge.
+- Próximo passo: merge pr/498-limpo (review OK j-revpr498-limpo 23:15); testar IME na TV
+- Notas: PR #498; 12 ahead; nao mergeado Escrivao 10-15 07:10: 12 ahead, review OK mantido; falta merge. | Escrivao 2026-10-15 07:50: review OK, falta merge
 
 ### PR #491 limpo (pr/491-limpo)
 
@@ -3121,8 +3124,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_revisao
 - Release: 2.0.5
 - Conserto: pr/491-limpo: 52 commits fora (tip f8fe27fad 05:53)
-- Próximo passo: BLOQUEIA r3 (j-revpr491-limpo-r3 04:52); fix c done 05:53 (f8fe27fad); review de novo, depois merge
-- Notas: PR #491; 51 ahead; nao mergeado Escrivao 10-15 07:10: fix c 05:53 cancela probes DTS; precisa review depois do r3.
+- Próximo passo: review de novo apos fix c (f8fe27fad 05:53; sem log de review depois do r3 BLOQUEIA 04:52); depois merge
+- Notas: PR #491; 51 ahead; nao mergeado Escrivao 10-15 07:10: fix c 05:53 cancela probes DTS; precisa review depois do r3. | Escrivao 2026-10-15 07:50: precisa review do fix c
 
 ### PR #489 fix (pr/489-fix)
 
@@ -3130,8 +3133,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_revisao
 - Release: 2.0.5
 - Conserto: pr/489-fix: 23 commits fora (tip 49f7a53bd e45ff15dd)
-- Próximo passo: review OK (j-revpr489-fix 03:05); merge pr/489-fix em integracao/2.0.5 e testar
-- Notas: PR #489; 23 ahead; nao mergeado Escrivao 10-15 07:10: review OK 03:05; 23 ahead; nenhum fix depois.
+- Próximo passo: merge pr/489-fix em integracao/2.0.5 (review OK j-revpr489-fix 03:05; nada depois); testar no TCL
+- Notas: PR #489; 23 ahead; nao mergeado Escrivao 10-15 07:10: review OK 03:05; 23 ahead; nenhum fix depois. | Escrivao 2026-10-15 07:50: pronto para merge, nao mergeado
 
 ### PR #490 fix (pr/490-fix)
 
@@ -3139,8 +3142,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_revisao
 - Release: 2.0.5
 - Conserto: pr/490-fix: 8 commits fora (tip 3dae8f5c 06:03)
-- Próximo passo: BLOQUEIA fix3 (j-revpr490-fix3 06:50: fontesVitrine posteriores passam fome de fila); fix, depois review, depois merge
-- Notas: PR #490; 7 ahead; nao mergeado Escrivao 10-15 07:10: fix c 06:03 (3dae8f5c); review fix3 06:50 BLOQUEIA (P2 starvation da fila).
+- Próximo passo: BLOQUEIA fix3 (j-revpr490-fix3 06:50: fontesVitrine posteriores passam fome de fila); SEM job de fix depois; lancar fix, review, merge
+- Notas: PR #490; 7 ahead; nao mergeado Escrivao 10-15 07:10: fix c 06:03 (3dae8f5c); review fix3 06:50 BLOQUEIA (P2 starvation da fila). | Escrivao 2026-10-15 07:50: lost-ish: BLOQUEIA sem fix depois
 
 ### PR #493 fix (pr/493-fix)
 
@@ -3154,11 +3157,11 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Vidro todo (agente/205-vidrotodo)
 
 - Plataforma: ?
-- Status: aberta
+- Status: integrada
 - Release: 2.0.5
-- Conserto: agente/205-vidrotodo: 10 commits fora (tip 9b4fe6776 merge do HEAD)
-- Próximo passo: review OK (j-revg-vidrotodo 05:49); MERGE da integracao no branch feito 06:49 (j-merge-205-vidrotodo, merge commit 9b4fe6776 no worktree); falta merge em integracao/2.0.5 + teste na TV
-- Notas: criado pelo escrivao 2026-10-15 Escrivao 10-15 07:10: antes estava "sem review log"; agora review OK 05:49 e merge da integracao no branch 06:49. Branch ainda 10 ahead.
+- Conserto: agente/205-vidrotodo: 10 commits fora (tip 9b4fe6776 merge do HEAD); 9d5115556 (merge agente/205-vidrotodo em integracao/2.0.5)
+- Próximo passo: lancar com 2.0.5; teste na TV (glass/top chrome)
+- Notas: criado pelo escrivao 2026-10-15 Escrivao 10-15 07:10: antes estava "sem review log"; agora review OK 05:49 e merge da integracao no branch 06:49. Branch ainda 10 ahead. | Escrivao 2026-10-15 07:50: merge 9d5115556 em integracao/2.0.5; review OK 05:49
 
 ### Aspecto volta (agente/205-aspvolta)
 
@@ -3184,5 +3187,5 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_revisao
 - Release: 2.0.5
 - Conserto: pr/493-v3: 3 commits fora (5694694cc autor, 65613c562 port dos fixes)
-- Próximo passo: merge pr/493-v3 no PR #493 (carrega #488/#482)
-- Notas: Escrivao 10-15 07:10: job j-pr493-v3 05:49 (10 suites rc 0); review j-revpr493-v3 06:50 VEREDITO OK, sem P0-P2. Pendente: build TV e teste de troca de perfil em aparelho.
+- Próximo passo: merge pr/493-v3 no PR #493 (review OK j-revpr493-v3 06:50); build TV e teste de troca de perfil
+- Notas: Escrivao 10-15 07:10: job j-pr493-v3 05:49 (10 suites rc 0); review j-revpr493-v3 06:50 VEREDITO OK, sem P0-P2. Pendente: build TV e teste de troca de perfil em aparelho. | Escrivao 2026-10-15 07:50: review OK, falta merge
