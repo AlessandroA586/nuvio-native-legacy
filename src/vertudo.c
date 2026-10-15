@@ -30,6 +30,8 @@
 #include "salvos.h"
 #include "dados.h"
 #include "home.h"
+#include "perfisessao.h"
+#include <pthread.h>
 #ifdef NV_TOUCH_UI
 #include "perfis.h"
 #include <limits.h>
@@ -85,6 +87,8 @@ static int toqueNasAbas;
 #endif
 static char  titulo[96];
 static const ColFolder *collection;
+static void vitCancelar(void);
+static void vitManualLiberarSlot(void);
 static int source, tabFocus, tabCursor, timeline, ranked;
 static float tabRol;
 static int vtTelefone(void) {
@@ -396,7 +400,10 @@ static int layAuto(void) {
 }
 static void resolverLayout(void) {
   int novo = layEscolha > VT_LAY_AUTO && layEscolha < VT_LAY_N ? layEscolha : layAuto();
-  if (novo != lay) { lay = novo; celLay = -1; orderN = -1; }
+  if (novo != lay) {
+    if (lay == VT_LAY_VITRINE) vitCancelar();
+    lay = novo; celLay = -1; orderN = -1;
+  }
   timeline = lay == VT_LAY_LINHA;
 }
 // O ENDERECO DA FONTE, que pode nao existir ainda.
@@ -435,8 +442,7 @@ static void openSource(void) {
   foco=0;scrollY=velY=0;orderN=-1;celLay=-1;armarOnda();
   limparFocoCatalogo();
   resolverLayout();
-  // VITRINE: nao ha "a fonte aberta"; cada aba vira uma fileira e vitIniciar
-  // as carrega uma a uma.
+  // VITRINE: cada aba vira uma fileira, com pedidos independentes e limitados.
   if (lay == VT_LAY_VITRINE) { vitIniciar(); return; }
   carregarFonte();
 }
@@ -488,6 +494,7 @@ static void carregarFonte(void) {
 void vertudo_colecao(const ColFolder *folder) {
   int i;
   if(!folder||!folder->nSources)return;
+  vitCancelar();
   memset(tabAnim, 0, sizeof tabAnim);
 #ifdef NV_TOUCH_UI
   tabRol = 0.0f;
@@ -506,6 +513,7 @@ void vertudo_colecao(const ColFolder *folder) {
 
 void vertudo_abrir(const char *base, const char *tipo, const char *catId,
                    const char *tit) {
+  vitCancelar();
   aberta = 1; foco = 0; scrollY = 0.0f; velY = 0.0f; pedAbrir = -1;
 #ifdef NV_TOUCH_UI
   toqueLivre = 0;
@@ -534,7 +542,7 @@ void vertudo_abrir(const char *base, const char *tipo, const char *catId,
 
 int vertudo_aberta(void) { return aberta; }
 int vertudo_foco(void) { return foco; }
-void vertudo_fechar_seco(void) { aberta = 0; anim = 0.0f; }
+void vertudo_fechar_seco(void) { vitCancelar(); aberta = 0; anim = 0.0f; }
 int vertudo_pediu_abrir(void) { int v = pedAbrir; pedAbrir = -1; return v; }
 // ESQUERDA na coluna 0 da grade (ou na primeira aba da colecao): a barra
 // lateral abre POR CIMA da lista (dono, 03/10). Antes a coluna 0 voltava para
@@ -806,10 +814,9 @@ static int nAbas(void) {
 // os cartazes das fileiras da Home. Sem abas, as fileiras saem do proprio
 // catalogo: por tipo (filmes e series misturados) ou por decada.
 //
-// DADOS. O carregador da descoberta guarda UM catalogo por vez, entao as abas
-// sao lidas em fila: abre a aba 0, espera a primeira pagina, guarda os
-// primeiros VIT_ITENS titulos na fileira dela e passa a proxima. Nada de rede
-// nova: e o mesmo caminho da grade, repetido. O que sobra e uma copia de ate
+// DADOS. Ate tres fontes leem suas primeiras paginas em paralelo; cada uma
+// publica na propria fileira assim que responde. A grade conserva seu leitor
+// e sua paginacao separados. O que sobra e uma copia de ate
 // VIT_LIN_MAX x VIT_ITENS CatItems (alocada so quando a Vitrine abre pela
 // primeira vez), de modo que mudar de fileira nao refaz pedido nenhum.
 //
@@ -836,12 +843,114 @@ static int vitOcultar = -1, vitProjetoSujo;
 static VtChave vitFocoChave;
 static int vitN, vitMulti, vitCarga, vitFR, vitFC, vitMexeu, vitUnicoN = -1;
 static int vitColLemb[VIT_LIN_MAX];
-static Uint32 vitT0, vitNomeEm, vitReleEm;
+static Uint32 vitNomeEm, vitReleEm;
 static float vitScroll, vitScrollV, vitSx[VIT_LIN_MAX], vitSv[VIT_LIN_MAX];
 // O destaque: o que esta na tela, o que saiu, e o que o foco pede.
 static int vitHeroAtual = -1, vitHeroAnt = -1, vitHeroDes = -1;
 static Uint32 vitHeroDesde;
 static float vitHeroEntra = 1.0f;
+
+// Cada fileira tem seu pedido; o catalogo unico de Ver tudo continua separado.
+// A tela e o fio possuem uma referencia cada. Fechar/trocar nao espera rede,
+// e os pedidos abandonados continuam contando no teto global de tres pedidos.
+#define VIT_PEDIDOS_MAX 3
+typedef struct {
+  int refs, pronto, atual, limite;
+  unsigned geracao;
+  NvPerfilSessao sessao;
+  ColSource fonte;
+  char base[NV_ADDON_URL_MAX];
+  DescColecaoResultado resultado;
+  CatItem itens[];
+} VitPedido;
+static VitPedido *vitPedidos[VIT_LIN_MAX];
+static ColSource vitFontes[VIT_LIN_MAX];
+static char vitBases[VIT_LIN_MAX][NV_ADDON_URL_MAX], vitColecaoChave[160];
+static unsigned vitGeracao, vitColecoesRev;
+static Uint32 vitRetentarEm[VIT_LIN_MAX];
+static unsigned char vitDesligada[VIT_LIN_MAX];
+static NvPerfilSessao vitSessao;
+static pthread_mutex_t vitPedidosTrava = PTHREAD_MUTEX_INITIALIZER;
+static int vitEmVoo;
+// A continuacao explicita conserva o leitor de paginas existente. Sua vaga
+// so volta quando aquele fio termina, mesmo se a tela ja foi fechada.
+static int vitManualFonte = -1, vitManualVivo;
+static unsigned char vitManualPendente[VIT_LIN_MAX];
+static unsigned vitManualGeracao;
+static NvPerfilSessao vitManualSessao;
+static ColSource vitManualCopia;
+static char vitManualBase[NV_ADDON_URL_MAX];
+static Uint32 vitManualDesde;
+
+static void vitManualLiberarSlot(void) {
+  if (vitManualVivo && !desc_vertudo_carregando()) {
+    pthread_mutex_lock(&vitPedidosTrava); vitEmVoo--; pthread_mutex_unlock(&vitPedidosTrava);
+    vitManualVivo = 0;
+  }
+}
+
+static void vitPedidoSoltar(VitPedido *p) {
+  if (p && __atomic_sub_fetch(&p->refs, 1, __ATOMIC_ACQ_REL) == 0) free(p);
+}
+static void vitCancelar(void) {
+  vitGeracao++;
+  vitManualFonte = -1;
+  memset(vitManualPendente, 0, sizeof vitManualPendente);
+  vitManualLiberarSlot();
+  for (int r = 0; r < VIT_LIN_MAX; r++) {
+    VitPedido *p = vitPedidos[r]; vitPedidos[r] = NULL;
+    vitPedidoSoltar(p);
+  }
+}
+static void *vitPedidoLer(void *u) {
+  VitPedido *p = u;
+  p->atual = desc_colecao_inicial(&p->fonte, p->base, p->sessao,
+                                 p->itens, p->limite, &p->resultado);
+  __atomic_store_n(&p->pronto, 1, __ATOMIC_RELEASE);
+  pthread_mutex_lock(&vitPedidosTrava);
+  vitEmVoo--;
+  pthread_mutex_unlock(&vitPedidosTrava);
+  vitPedidoSoltar(p);
+  return NULL;
+}
+static int vitPedidoLargar(int r) {
+  pthread_t fio;
+  VitPedido *p;
+  pthread_mutex_lock(&vitPedidosTrava);
+  if (vitEmVoo >= VIT_PEDIDOS_MAX) { pthread_mutex_unlock(&vitPedidosTrava); return 0; }
+  vitEmVoo++;
+  pthread_mutex_unlock(&vitPedidosTrava);
+  p = calloc(1, sizeof *p + sizeof(CatItem) * (size_t)(2 * vitCap));
+  if (p) {
+    p->refs = 2; p->limite = vitCap; p->geracao = vitGeracao;
+    p->sessao = vitSessao; p->fonte = vitFontes[r];
+    snprintf(p->base, sizeof p->base, "%s", vitBases[r]);
+    if (pthread_create(&fio, NULL, vitPedidoLer, p) == 0) {
+      vitPedidos[r] = p; vitLin[r].estado = VIT_CARREGANDO;
+      pthread_detach(fio);
+      printf("[vertudo] vitrine: fonte %d iniciada\n", r + 1);
+      return 1;
+    }
+    free(p);
+  }
+  pthread_mutex_lock(&vitPedidosTrava); vitEmVoo--; pthread_mutex_unlock(&vitPedidosTrava);
+  return -1;
+}
+static int vitManualLargar(int r, Uint32 agora) {
+  vitManualLiberarSlot();
+  if (vitManualFonte >= 0 || vitManualVivo || desc_vertudo_carregando()) return 0;
+  pthread_mutex_lock(&vitPedidosTrava);
+  if (vitEmVoo >= VIT_PEDIDOS_MAX) { pthread_mutex_unlock(&vitPedidosTrava); return 0; }
+  vitEmVoo++;
+  pthread_mutex_unlock(&vitPedidosTrava);
+  vitManualVivo = 1; vitManualFonte = r; vitManualPendente[r] = 0;
+  vitManualGeracao = vitGeracao; vitManualSessao = vitSessao;
+  vitManualCopia = vitFontes[r];
+  snprintf(vitManualBase, sizeof vitManualBase, "%s", vitBases[r]);
+  vitManualDesde = agora ? agora : 1u;
+  source = r; carregarFonte(); vitLin[r].estado = VIT_CARREGANDO;
+  return 1;
+}
 #ifdef NV_TOUCH_UI
 // A target belongs to the rendered title and projection, never just a row index.
 static VtChave vitPonteiroChave[VIT_LIN_MAX][VIT_ITENS];
@@ -886,6 +995,11 @@ static int vitTemMaisVistos(void) {
 static void vitPedirMais(void) {
   if (vitFR >= vitN || !vitLin[vitFR].mais) return;
   vitLin[vitFR].mais = 0;
+  if (vitMulti) {
+    vitManualPendente[vitFR] = 1;
+    vitLin[vitFR].estado = VIT_PEND;
+    return;
+  }
   if ((!vitMulti || source == vitFR) && !desc_vertudo_carregando()) {
     vitCarga = vitFR; vitLin[vitFR].estado = VIT_CARREGANDO;
     desc_vertudo_mais();
@@ -987,6 +1101,11 @@ static void vitNomes(void) {
 }
 
 static void vitIniciar(void) {
+  vitCancelar();
+  vitSessao = nv_perfil_sessao_ler();
+  vitColecoesRev = col_revisao();
+  vitColecaoChave[0] = 0;
+  if (collection) col_chave_pasta(collection, vitColecaoChave, sizeof vitColecaoChave);
 #ifdef NV_TOUCH_UI
   vitPonteiroInvalidar(1);
   vitPonteiroSessao = perfis_sessao_geracao();
@@ -999,6 +1118,8 @@ static void vitIniciar(void) {
     vitBuf = calloc((size_t)VIT_LIN_MAX * vitCap, sizeof(CatItem));
   }
   memset(vitLin, 0, sizeof vitLin);
+  memset(vitRetentarEm, 0, sizeof vitRetentarEm);
+  memset(vitDesligada, 0, sizeof vitDesligada);
   for (int r = 0; r < VIT_LIN_MAX; r++) { free(vitExtra[r]); vitExtra[r] = NULL; }
   memset(vitVis, 0, sizeof vitVis);
   memset(&vitFocoChave, 0, sizeof vitFocoChave);
@@ -1008,18 +1129,22 @@ static void vitIniciar(void) {
   vitN = 0; vitCarga = 0; vitFR = vitFC = 0; vitMexeu = 0; vitUnicoN = -1;
   vitScroll = vitScrollV = 0.0f;
   vitHeroAtual = vitHeroAnt = vitHeroDes = -1; vitHeroEntra = 1.0f;
-  vitNomeEm = 0; vitT0 = 0;
+  vitNomeEm = vitReleEm = 0;
   if (!vitBuf || !collection) { lay = VT_LAY_GRADE; celLay = -1; carregarFonte(); return; }
   vitMulti = collection->nSources > 1;
   if (vitMulti) {
     vitN = collection->nSources < VIT_LIN_MAX ? collection->nSources : VIT_LIN_MAX;
+    for (int r = 0; r < vitN; r++) {
+      vitFontes[r] = collection->sources[r];
+      snprintf(vitBases[r], sizeof vitBases[r], "%s", baseDaFonte(&vitFontes[r]));
+    }
     vitNomes();
     for (int r = 0; r < vitN; r++) vitLin[r].pagina = collection->sources[r].prov[0] ? 1 : 0;
   } else carregarFonte();
 }
 
 // Guarda a primeira pagina do catalogo aberto na fileira `r`.
-static void vitGuardar(int r) {
+static void vitGuardarPagina(int r) {
   int n = semFonte ? 0 : desc_vertudo_n_bruto(), k = 0, vistos = 0, skip = 0;
   vitLin[r].extraN = 0;
   k = vitLin[r].brutoN;
@@ -1049,6 +1174,29 @@ static void vitGuardar(int r) {
 #ifdef NV_TOUCH_UI
   vitPonteiroInvalidar(0);
 #endif
+}
+
+// Somente o principal publica: os baldes dos fios nunca sao a memoria desenhada.
+static void vitGuardarInicial(int r, const VitPedido *p) {
+  int n = p->resultado.n, extra = p->resultado.extraN;
+  if (n < 0) n = 0;
+  if (n > vitCap) n = vitCap;
+  if (extra < 0) extra = 0;
+  if (extra > vitCap) extra = vitCap;
+  memcpy(vitBuf + r * vitCap, p->itens, sizeof(CatItem) * (size_t)n);
+  vitLin[r].brutoN = n; vitLin[r].extraN = 0;
+  if (extra && !vitExtra[r]) vitExtra[r] = calloc((size_t)vitCap, sizeof(CatItem));
+  if (extra && vitExtra[r]) {
+    memcpy(vitExtra[r], p->itens + vitCap, sizeof(CatItem) * (size_t)extra);
+    vitLin[r].extraN = extra;
+  }
+  vitLin[r].estado = n || vitLin[r].extraN ? VIT_PRONTA : VIT_VAZIA;
+  vitLin[r].semFonte = 0;
+  vitLin[r].pagina = p->resultado.pagina;
+  vitLin[r].mais = !p->resultado.erro && p->resultado.mais;
+  vitProjetoSujo = 1;
+  printf("[vertudo] vitrine: fonte %d recebida: %d titulos, %d reservas%s\n",
+         r + 1, n, vitLin[r].extraN, p->resultado.erro ? " (falha)" : "");
 }
 
 // SEM ABAS: as fileiras saem dos titulos lidos. Tipos misturados = uma fileira
@@ -1156,7 +1304,7 @@ static void vitAgrupar(int n) {
 #endif
 }
 
-// Um passo da carga, por quadro: a fila de abas, as ultimas paginas do catalogo
+// Um passo da carga, por quadro: as fontes paralelas, as paginas do catalogo
 // unico e a releitura das fontes cujo addon ainda nao tinha endereco.
 static void vitCarregar(Uint32 agora) {
   if (!vitBuf) return;
@@ -1172,31 +1320,119 @@ static void vitCarregar(Uint32 agora) {
     if (semFonte && baseDaFonte(&collection->sources[source])[0]) vitIniciar();
     return;
   }
-  if (vitCarga >= vitN || vitLin[vitCarga].estado == VIT_PRONTA || vitLin[vitCarga].estado == VIT_VAZIA) {
-    for (vitCarga = 0; vitCarga < vitN; vitCarga++)
-      if (vitLin[vitCarga].estado == VIT_PEND || vitLin[vitCarga].estado == VIT_CARREGANDO) break;
+  if (!nv_perfil_sessao_atual(vitSessao)) {
+    vitCancelar(); aberta = 0; return;
   }
-  if (vitCarga < vitN) {
-    VitLin *l = &vitLin[vitCarga];
-    if (l->estado == VIT_PEND) {
-      source = vitCarga; carregarFonte();
-      l->estado = VIT_CARREGANDO; vitT0 = agora ? agora : 1u;
-    } else if (l->estado == VIT_CARREGANDO && !desc_vertudo_carregando() &&
-               (desc_vertudo_n_bruto() > 0 || desc_vertudo_fim() || desc_vertudo_erro() || semFonte ||
-                (Sint32)(agora - vitT0) > 2500)) {
-      vitGuardar(vitCarga);
-      vitProjetar();
-      vitCarga++;
+  // A conta pode substituir o bloco de fontes enquanto a pasta esta aberta.
+  // Reencontrar pela chave antes de ler fontes; os pedidos guardam copias.
+  unsigned revisao = col_revisao();
+  int nomesNovos = revisao != vitColecoesRev;
+  if (revisao != vitColecoesRev) {
+    const ColFolder *atual = NULL;
+    for (int i = 0; i < col_n(); i++) {
+      const ColFolder *f = col_folder(i);
+      char chave[160];
+      if (!f) continue;
+      col_chave_pasta(f, chave, sizeof chave);
+      if (!strcmp(chave, vitColecaoChave)) { atual = f; break; }
     }
+    if (!atual) { vitCancelar(); aberta = 0; return; }
+    collection = atual; vitColecoesRev = revisao;
   }
-  // Fonte sem endereco que ganhou um (a sonda do manifesto respondeu): reabre.
-  if ((Sint32)(agora - vitReleEm) > 1500) {
-    vitReleEm = agora;
-    vitNomes();
-    for (int r = 0; r < vitN && vitCarga >= vitN; r++)
-      if (vitLin[r].estado == VIT_VAZIA && vitLin[r].semFonte &&
-          baseDaFonte(&collection->sources[r])[0]) { vitLin[r].estado = VIT_PEND; vitCarga = r; break; }
+  int novas = collection->nSources < VIT_LIN_MAX ? collection->nSources : VIT_LIN_MAX;
+  for (int r = novas; r < vitN; r++) {
+    if (vitManualFonte == r) vitManualFonte = -1;
+    vitManualPendente[r] = 0;
+    vitPedidoSoltar(vitPedidos[r]); vitPedidos[r] = NULL;
+    free(vitExtra[r]); vitExtra[r] = NULL;
+    memset(&vitLin[r], 0, sizeof vitLin[r]);
   }
+  int antigas = vitN;
+  vitN = novas;
+  if (antigas != vitN) vitProjetoSujo = 1;
+  int rever = (Sint32)(agora - vitReleEm) > 1500;
+  if (rever) vitReleEm = agora;
+  if (rever || nomesNovos || antigas != vitN) vitNomes();
+  for (int r = 0; r < vitN; r++) {
+    const ColSource *s = &collection->sources[r];
+    char base[NV_ADDON_URL_MAX];
+    snprintf(base, sizeof base, "%s", baseDaFonte(s));
+    if (r >= antigas || memcmp(&vitFontes[r], s, sizeof *s) || strcmp(vitBases[r], base)) {
+      if (vitManualFonte == r) vitManualFonte = -1;
+      vitManualPendente[r] = 0;
+      vitPedidoSoltar(vitPedidos[r]); vitPedidos[r] = NULL;
+      free(vitExtra[r]); vitExtra[r] = NULL;
+      vitLin[r].n = vitLin[r].brutoN = vitLin[r].extraN = 0;
+      vitLin[r].mais = 0; vitLin[r].pagina = s->prov[0] ? 1 : 0;
+      vitLin[r].estado = VIT_PEND; vitLin[r].semFonte = 0;
+      vitRetentarEm[r] = 0;
+      vitDesligada[r] = 2;   // a nova fonte ainda nao foi conferida
+      vitFontes[r] = *s;
+      snprintf(vitBases[r], sizeof vitBases[r], "%s", base);
+      vitProjetoSujo = 1;
+    }
+    int desligada = !s->prov[0] && base[0] && addons_base_desligada(base);
+    if (vitDesligada[r] != desligada) {
+      if (vitManualFonte == r) vitManualFonte = -1;
+      vitManualPendente[r] = 0;
+      vitDesligada[r] = (unsigned char)desligada;
+      vitPedidoSoltar(vitPedidos[r]); vitPedidos[r] = NULL;
+      free(vitExtra[r]); vitExtra[r] = NULL;
+      vitLin[r].n = vitLin[r].brutoN = vitLin[r].extraN = 0;
+      vitLin[r].mais = 0; vitLin[r].pagina = s->prov[0] ? 1 : 0;
+      vitLin[r].estado = desligada ? VIT_VAZIA : VIT_PEND;
+      vitLin[r].semFonte = 0; vitRetentarEm[r] = 0;
+      vitProjetoSujo = 1;
+    }
+    // Desligada na conta: vazia, sem rede nem tentativa repetida. Religar
+    // muda apenas esta fileira para pendente, inclusive com a pasta aberta.
+    if (desligada) continue;
+    VitPedido *p = vitPedidos[r];
+    if (p && __atomic_load_n(&p->pronto, __ATOMIC_ACQUIRE)) {
+      vitPedidos[r] = NULL;
+      if (p->geracao == vitGeracao && p->sessao == vitSessao && p->atual &&
+          (p->fonte.prov[0] || !addons_base_desligada(p->base)))
+        vitGuardarInicial(r, p);
+      else {
+        vitLin[r].estado = VIT_PEND;
+        vitRetentarEm[r] = agora + 1500u;
+      }
+      vitPedidoSoltar(p);
+    }
+    VitLin *l = &vitLin[r];
+    if (l->semFonte && !rever) continue;
+    if (l->semFonte) l->estado = VIT_PEND;
+    if (l->estado != VIT_PEND) continue;
+    if (vitRetentarEm[r] && (Sint32)(agora - vitRetentarEm[r]) < 0) continue;
+    vitRetentarEm[r] = 0;
+    int disponivel = s->prov[0]
+        ? (!strcmp(s->prov, "tmdb") ? desc_chave_tmdb()[0] != 0 : nuvem_trakt_cliente()[0] != 0)
+        : base[0] != 0;
+    if (!disponivel) {
+      l->estado = VIT_VAZIA; l->semFonte = 1; continue;
+    }
+    l->semFonte = 0;
+    if (vitManualPendente[r]) { vitManualLargar(r, agora); continue; }
+    if (vitPedidoLargar(r) < 0) vitRetentarEm[r] = agora + 1500u;
+  }
+  // As paginas pedidas pelo botao preservam o prefixo canonico da fileira;
+  // os outros pedidos iniciais continuam publicando independentemente.
+  if (vitManualFonte >= 0 && !desc_vertudo_carregando() &&
+      (desc_vertudo_n_bruto() > 0 || desc_vertudo_fim() || desc_vertudo_erro() || semFonte ||
+       (Sint32)(agora - vitManualDesde) > 2500)) {
+    int r = vitManualFonte;
+    if (r < vitN && vitManualGeracao == vitGeracao &&
+        nv_perfil_sessao_atual(vitManualSessao) &&
+        !memcmp(&vitManualCopia, &vitFontes[r], sizeof vitManualCopia) &&
+        !strcmp(vitManualBase, vitBases[r]) && !vitDesligada[r])
+      vitGuardarPagina(r);
+    vitManualFonte = -1;
+  }
+  vitManualLiberarSlot();
+  // Mantem o indicador da primeira fileira pendente, sem serializar a fila.
+  for (vitCarga = 0; vitCarga < vitN; vitCarga++)
+    if (vitLin[vitCarga].estado == VIT_PEND || vitLin[vitCarga].estado == VIT_CARREGANDO) break;
+
 }
 
 // ABRIR UM TITULO (a grade e a Vitrine). O item NAO esta no catalogo global —
@@ -1463,7 +1699,7 @@ void vertudo_evento(const SDL_Event *e) {
   if (e->type != SDL_KEYDOWN) return;
   k = e->key.keysym.sym;
   if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE ||
-      e->key.keysym.scancode == NV_SCANCODE_BACK) { aberta = 0; return; }
+      e->key.keysym.scancode == NV_SCANCODE_BACK) { vitCancelar(); aberta = 0; return; }
   if (n > VT_MAX) n = VT_MAX;
   if (lay == VT_LAY_VITRINE) { vitEvento(k); return; }
   if(collection&&tabFocus) {
@@ -1503,6 +1739,7 @@ void vertudo_evento(const SDL_Event *e) {
 }
 
 void vertudo_atualizar(float dt, Uint32 agora) {
+  vitManualLiberarSlot();
   float alvo, maxY;
   int n = nItens();
   anim = anim_mola(anim, aberta ? 1.0f : 0.0f, dt, NV_MOLA_TELA);
