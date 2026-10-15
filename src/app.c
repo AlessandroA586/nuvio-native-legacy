@@ -6121,6 +6121,7 @@ static int playerToquePermitido(void) {
 }
 static int miniToquePermitido(void) {
   if (player_aberto() || !playerToquePermitido()) return 0;
+  if (telefoneui_ativo() && tela == TELA_AJUSTES && ajustes_edicao_ativa()) return 0;
   // In the Guide its own preview and modal controls own the video rectangle.
   return tela != TELA_GUIA;
 }
