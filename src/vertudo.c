@@ -1275,7 +1275,7 @@ const char *vertudo_perf_tag(void) {
 }
 void vertudo_perf_cycle(void) {
   if (!perftv_enabled) return;
-  if (!aberta) {
+  if (!aberta || !collection) {
     const ColFolder *f = col_folder(0);
     if (!f || !f->nSources) return;
     vertudo_colecao(f);
