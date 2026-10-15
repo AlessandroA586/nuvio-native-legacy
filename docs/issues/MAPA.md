@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `5544c3e4c` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-15 05:50. 457 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `5544c3e4c` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-15 07:10. 457 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -259,7 +259,7 @@ Notas:
 | [#415](https://github.com/iqui27/nuvio-native-legacy/issues/415) | constant crashing, no matter if I play or not | LG | bug | precisa-log | 2.0.5 | 2.0.6 | 5c266499 | nós 10-10 | triar |
 | [#419](https://github.com/iqui27/nuvio-native-legacy/issues/419) | [Samsung Tizen 6 / v2.0.4] Clicking a Recommendations card d | Samsung .tpk | bug | integrada | 2.0.5 | ja-lancada | 7f338254, 8b5ed6c0, d6b41e1 | nós 10-11 | lancar com 2.0.5; testar no TCL |
 | [#428](https://github.com/iqui27/nuvio-native-legacy/issues/428) | Constant freezes | LG | bug | precisa-log | 2.0.5 | - | - | nós 10-11 | triar |
-| [#429](https://github.com/iqui27/nuvio-native-legacy/issues/429) | Subtitles auto select | Android | bug | em_revisao | 2.0.5 | ja-lancada | agente/205-i429hbs | nós 10-11 | merge agente/205-i429hbs (review OK j-revg-i429hbs-y); testar no TCL |
+| [#429](https://github.com/iqui27/nuvio-native-legacy/issues/429) | Subtitles auto select | Android | bug | em_revisao | 2.0.5 | ja-lancada | agente/205-i429hbs | nós 10-11 | merge agente/205-i429hbs (tip f59554839, 2 ahead; review OK j-revg-i429hbs-y); testar no T |
 | [#469](https://github.com/iqui27/nuvio-native-legacy/issues/469) | all movies shows not correct aspect ratio , original, stretc | Samsung .tpk | bug | precisa-log | 2.0.5 | 2.0.6 | - | sem comentários | Pedir log (codigo) com troca de modo de aspecto; ver qual pacote .tpk e qual caminho (Disp |
 | [#470](https://github.com/iqui27/nuvio-native-legacy/issues/470) | Next Episode Countdown Only Starts After Credits Finish | Samsung .tpk | bug | integrada | 2.0.5 | - | 7839b119 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#471](https://github.com/iqui27/nuvio-native-legacy/issues/471) | Trailer Playback Does Not Fill the Cards Properly | Samsung .tpk | bug | integrada | 2.0.5 | 2.0.6 | 38369f89 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
@@ -284,7 +284,7 @@ Notas:
 - **#415**: Diagnóstico via memlog; sem conserto confirmado. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#419**: Job i419recs done 20:05: commit d6b41e1 so teste posplay. Sem device Tizen. Ja corrigido em 2.0.5 pelos commits v2.0.5.
 - **#428**: Aguarda código/log para diagnóstico. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13).
-- **#429**: Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839.
+- **#429**: Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839. Escrivao 10-15 07:10: review y OK (23:11) apos fixz 22:28; branch ainda 2 ahead, merge pendente.
 - **#469**: Q800T (GQ65Q800TGT, 2020, Tizen 5.5), 2.0.5. Nenhum modo de aspecto muda a imagem. 2.0.5 ja tem c4f344e8 (DisplayRoi + fallback 2.0.4, #426/#341) e 81d2152b (tpk 6+). Suspeita: Tizen 5.5 cai no caminho sem DisplayRoi. Pedir codigo do log e foto.
 - **#470**: rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log B9RJZ8 (registro 73397): [posplay] creditos aceito (sobram 265s, janela 300s); cartao aparece nos creditos mas contagem so comeca no fim. Escrivão 14/10 14:47: integrada via i18nordem, i470. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13).
 - **#471**: rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log QNHOK2 (registro 73399): "[trailer] tpk: plano visivel (sem recorte)" — trailer no cartao sem crop/fill no tpk. Relacionado a #469 (DisplayRoi/aspecto no tpk). Escrivão 14/10 14:47: integrada via i471.
@@ -293,8 +293,8 @@ Notas:
 - **#479**: LG C5 webOS 26, 2.0.5, log M8C717 (registro 73696): descer na lista de fontes no modo Formatter engasga; modo padrao liso.
 - **#481**: Snapshot 2026-10-14 10:15: "Sources: show declared audio and subtitle languages" (e4fb8c08) e o merge c9932635 "Merge PR #487 v2" existem so em agente/205-pr487v2, nao ancestral de integracao/2.0.5. OPEN no GitHub. | fechada no GH 2026-10-14 (CLOSED); alvo antigo 2.0.6 removido por regra do mapa.py; decidir com dono
 - **#484**: LG OLED C1 webOS, 2.0.5: legenda de addon (OpenSubtitlesV3/AIOMetadata) some apos minutos sem tecla; embutida ok. Sem log. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-14). | Escrivão 2026-10-14 16:11: conserto integrado via agente/205-leg484 (merge 027fd3c7); fechada no GitHub.
-- **#486**: Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42.
-- **#488**: pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL.
+- **#486**: Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead.
+- **#488**: pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL. Escrivao 10-15 07:10: pr/493-fix review OK fix2; autor publicou head nova 5694694cc; fixes portados 65613c562 (pr/493-v3) e review OK 06:50 (j-revpr493-v3). Mergear pr/493-v3 para carregar #488 no PR.
 - **#492**: Review j-revg-retomamorna OK 17:06. Merge agente/205-retomamorna em integracao/2.0.5 (c624b273, 18:48); j-merge-205-retomamorna done 18:45. Sem acao remota. Escrivao 14/10 19:1x: merge 18:48.
 - **#499**: Snapshot 2026-10-14 10:15: aab8e18d "Mark debrid-cached sources with a lightning icon in the source list (#499)" e ancestral de integracao/2.0.5 (merge 57aee24f agente/205-499cache). Nenhum job j-revg-499cache: conserto integrado sem review registrado. OPEN no GitHub.
 - **#502**: Snapshot 2026-10-14 10:15: d3fc8e5e "fix(detail): stop seeding list poster into backdrop for recommendations" cobre #502 e #503, so em agente/205-i502arte. Job RUNNING, sem validacao. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i502arte.
@@ -383,14 +383,14 @@ Notas:
 - **#461**: Pede opção de toolbar no topo; mantenedor responde que hoje há menu lateral e relaciona #407. src/menu.c:desenhaBarra/geoEm implementam rail/painel lateral; src/detail.c roteia CIMA para área social e ESQUERDA para menu. Não há opção top toolbar comprovada; barra social no topo não é substituto da navegação principal. Sem bug ou causa a diagnosticar. Escrivão 14/10 14:47: integrada via menutopo.
 - **#462**: Job i462sync done 20:07: 84095af auto sync rejection translated tracks; tests autosync.sh/legsync.sh rc 0.
 - **#468**: C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato.
-- **#482**: Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix.
+- **#482**: Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix. Escrivao 10-15 07:10: mesmo caso de #488; correcoes portadas na head nova do autor (pr/493-v3), review OK 06:50.
 - **#483**: Impl fd6d795d; j-revg-i483remux OK 16:52. Merge 251632be (18:01). fetch via SeekHead quando a sonda erra o layout REMUX. Escrivao 14/10 19:1x: merge 18:01.
 - **#494**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels sem label. Sem triagem local.
 - **#496**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels sem label. Sem triagem local.
 - **#497**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local.
 - **#500**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels bug. Sem triagem local.
 - **#501**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local.
-- **#505**: Snapshot 2026-10-14 10:15: 3fc691d4 "fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao.
+- **#505**: Snapshot 2026-10-14 10:15: 3fc691d4 "fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead.
 - **#506**: Snapshot 2026-10-14 10:15: job j-205-i506 RUNNING (branch agente/205-i506, 0 commits fora de integracao/2.0.5). Suspeita de causa comum com #505. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i506. | Escrivão 2026-10-14 16:11: merge 0e567d1a (ancestral) consta em log.txt da integracao.
 - **#507**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local.
 - **#508**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. Escrivão 14/10 14:47: branch agente/205-i508fundo: review OK, merge pendente. | Escrivão 2026-10-14 16:11: i508fundo mergeada (d57b79e9); review j-revg-i508fundo OK.
@@ -434,7 +434,7 @@ Notas:
 | [#511](https://github.com/iqui27/nuvio-native-legacy/issues/511) | Show subtitle track name instead of only showing language | ? | enhancement | integrada |  | futuro | f0ab7c91 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#510](https://github.com/iqui27/nuvio-native-legacy/issues/510) | Subtitles list not the same as nuvio in phone applications l | ? | bug | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
 | [#509](https://github.com/iqui27/nuvio-native-legacy/issues/509) | Expanded poster trailer | ? | enhancement | integrada | - | futuro | 13e13b92 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
-| [#513](https://github.com/iqui27/nuvio-native-legacy/issues/513) | Any series episode autoplay even option is disabled | ? | bug | em_revisao |  | futuro | agente/205-i513autoplay | sem comentários | fix do BLOQUEIA (j-revg-i513autoplay-w); depois review |
+| [#513](https://github.com/iqui27/nuvio-native-legacy/issues/513) | Any series episode autoplay even option is disabled | ? | bug | em_revisao |  | futuro | agente/205-i513autoplay | sem comentários | merge: review v OK (j-revg-i513autoplay-v, 06:49) apos fix w (j-fix-i513w 05:50); testar n |
 | [#514](https://github.com/iqui27/nuvio-native-legacy/issues/514) | Ability to rate a movie or an episode | ? | ? | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
 | [#521](https://github.com/iqui27/nuvio-native-legacy/issues/521) | Layout | ? | bug | aberta |  | futuro | - | sem comentários | triagem; sem job ainda; alvo a definir |
 
@@ -473,7 +473,7 @@ Notas:
 - **#511**: Criada 2026-10-14 (snapshot 14:46). Escrivao 14/10 19:1x: Fix 2e05dd94; j-revg-i511legnome-q OK 18:44; merge f0ab7c91 18:45.
 - **#510**: Criada 2026-10-14 (snapshot 14:46).
 - **#509**: Criada 2026-10-14 (snapshot 14:46). Escrivão 14/10 14:47: integrada via i509trailer. | Escrivão 2026-10-14 16:11: conserto 13e13b92 ja em integracao/2.0.5; sem release ainda.
-- **#513**: review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando
+- **#513**: review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando Escrivao 10-15 07:10: BLOQUEIA x->fix i513w 05:50 (adbaf0f9f)->review v OK 06:49; branch 6 ahead.
 - **#514**: Issue nova 14/10 20:52 (rating de filme/episodio). Feature, nao 2.0.5.
 - **#521**: Issue nova 2026-10-15 06:48 (issues.json). Sem descrição de contexto; triar.
 
@@ -1215,6 +1215,13 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 | Data | Quem | O que | Issues | Ref | Resultado | Evidência |
 |---|---|---|---|---|---|---|
+| 2026-10-15 07:10 | escrivao (mapa keeper) | sync do tracking: HEAD 799d025bd, branches/jobs/verdicts do snapshot 06:50 | - | 799d025bd | passou | escrivao/estado.md + docs/issues/mapa.json (atualizado_em 2026-10-15 07:10) |
+| 2026-10-15 06:50 | job-pi group/nv-revisao (revisao) | Revisao pr490 fix3: VEREDITO BLOQUEIA (fome de fila nas fontes Vitrine) | #490 | pr/490-fix (fix c 3dae8f5c 06:03 antes) | falhou | /Volumes/ExternalSSD/tmp/rev/j-revpr490-fix3.log |
+| 2026-10-15 06:50 | job-pi group/nv-revisao (revisao) | Revisao pr493 v3 (head do autor + fixes portados): VEREDITO OK | #488, #482 | pr/493-v3 (tip 65613c562) | passou | /Volumes/ExternalSSD/tmp/rev/j-revpr493-v3.log |
+| 2026-10-15 06:49 | job-claude (merge) | Merge da integracao/2.0.5 em agente/205-vidrotodo preservando vidro e chrome | - | merge commit 9b4fe6776 (worktree agente/205-vidrotodo) | passou | /Volumes/ExternalSSD/tmp/rev/j-merge-205-vidrotodo.log |
+| 2026-10-15 06:49 | job-pi group/nv-revisao (revisao) | Revisao i513 autoplay v: VEREDITO OK | #513 | agente/205-i513autoplay (fix i513w 05:50 antes) | passou | /Volumes/ExternalSSD/tmp/rev/j-revg-i513autoplay-v.log |
+| 2026-10-15 06:49 | job-pi group/nv-revisao (revisao) | Revisao p2pusb v: VEREDITO BLOQUEIA | #486, #505 | agente/205-p2pusb (fix p2pusbw 05:51 antes) | falhou | /Volumes/ExternalSSD/tmp/rev/j-revg-p2pusb-v.log |
+| 2026-10-15 05:49 | job-pi group/nv-revisao (revisao) | Revisao vidrotodo: VEREDITO OK | - | agente/205-vidrotodo | passou | /Volumes/ExternalSSD/tmp/rev/j-revg-vidrotodo.log |
 | 2026-10-15 04:50 | escrivao (mapa keeper) | instalacao Android do HEAD 71c00499e | - | 71c00499e | passou | instalado.txt: android rc=0 Success (apk Nuvio-2.0.5-android.apk) |
 | 2026-10-15 04:50 | escrivao (mapa keeper) | instalacao C9 do HEAD 71c00499e | - | 71c00499e | inconclusivo | instalado.txt: c9 rc=255 (sem saida util); confirmar na TV |
 | 2026-10-15 03:53 | job-pi magpie/group/nv-revisao (revisao) | Revisao aspvolta: VEREDITO OK | - | agente/205-aspvolta (merged 04:47 em HEAD 71c00499e) | passou | /Volumes/ExternalSSD/tmp/rev/j-revg-aspvolta.log |
@@ -1228,38 +1235,38 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 | 2026-10-14 22:35 | job-pi magpie/group/nv-revisao (revisao independente) | Revisao final agente/205-i513autoplay antes do fixy: VEREDITO BLOQUEIA | #513 | agente/205-i513autoplay antes do fixy 23:07 | falhou | /Volumes/ExternalSSD/tmp/rev/j-revg-i513autoplay-y.log |
 | 2026-10-14 21:46 | job-pi magpie/group/nv-revisao (revisao final) | Revisao final agente/205-i488perfil apos fix 20:03: VEREDITO OK | #488 | d16de03ad (agente/205-i488perfil) | passou | /Volumes/ExternalSSD/tmp/rev/j-revg-i488perfil-z.log |
 | 2026-10-14 01:42 | job-pi magpie/group/nv-revisao (revisao rev3) | Revisao agente/205-p2p486 apos fix-205-p2p486-3 (01:22): VEREDITO OK | #486 | 3f961a5ad (agente/205-p2p486) | passou | /Volumes/ExternalSSD/tmp/rev/j-rev3-205-p2p486.log |
-| 2026-10-12 | codex gpt-6.1-sol | triagem | #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #13, #14, #15, #16, #17, #18, #19, #20, #21, #22, #23, #24, #25, #26, #27, #28, #29, #30, #31, #32, #33, #34, #35, #36, #37, #38, #39, #40, #41, #42, #43, #44, #45, #46, #47, #48, #49, #50, #51, #52, #53, #54, #55, #56, #57, #58, #59, #60, #61, #62, #63, #64, #65, #66, #67, #68, #69, #70, #71, #72, #73, #74, #75, #76, #77, #78, #79, #80, #81, #82, #83, #84, #85, #86, #87, #88, #89, #90, #91, #92, #93, #94, #95, #96, #97, #98, #99, #100, #101, #102, #103, #104, #105, #106, #107, #108, #109, #110, #111, #112, #113, #114, #115, #116, #117, #118, #119, #120, #121, #122, #123, #124, #125, #126, #127, #128, #129, #130, #131, #132, #133, #134, #135, #136, #137, #138, #140, #141, #142, #144, #145, #146, #147, #148, #149, #150, #151, #153, #154, #155, #156, #158, #159, #160, #161, #162, #163, #164, #165, #167, #168, #169, #170, #171, #172, #173, #174, #175, #176, #177, #178, #179, #180, #181, #182, #183, #184, #185, #186, #187, #188, #189, #190, #191, #192, #193, #194, #195, #196, #197, #198, #199, #200, #201, #202, #203, #204, #205, #206, #208, #209, #210, #211, #212, #213, #214, #215, #216, #217, #221, #222, #223, #224, #225, #226, #227, #228, #229, #231, #232, #233, #234, #235, #237, #238, #239, #240, #241, #242, #243, #244, #245, #246, #247, #248, #249, #250, #252, #253, #254, #255, #256, #257, #258, #260, #261, #262, #263, #265, #266, #267, #269, #270, #271, #272, #274, #275, #276, #277, #278, #279, #280, #281, #282, #283, #284, #286, #287, #288, #289, #290, #292, #293, #294, #295, #296, #297, #298, #300, #302, #303, #304, #305, #306, #307, #308, #309, #310, #311, #312, #313, #315, #316, #317, #318, #319, #320, #321, #322, #323, #324, #325, #326, #327, #328, #329, #330, #331, #332, #333, #334, #335, #336, #337, #338, #339, #340, #341, #342, #343, #344, #345, #346, #347, #348, #349, #350, #352, #353, #354, #355, #356, #357, #358, #359, #360, #361, #362, #363, #364, #365, #366, #367, #368, #369, #370, #371, #372, #373, #374, #378, #379, #382, #383, #384, #385, #386, #387, #388, #389, #390, #391, #392, #393, #394, #396, #397, #398, #399, #400, #401, #402, #403, #404, #405, #406, #407, #409, #410, #411, #412, #413, #414, #415, #416, #417, #418, #419, #420, #421, #422, #423, #424, #425, #426, #427, #428, #429, #430, #433, #434, #436, #437, #438, #439, #440, #450, #451, #457, #458, #459, #460, #461, #462, #466, #467, #468 | agente/205-issues-triagem / v2.0.5 b7c2c1f9 | inconclusivo | TRIAGEM-2.0.5.md |
+| 2026-10-12 | Claude Sonnet 5.5 | Simkl scrobble do player (start/pause/stop com porcentagem, filme e episódio, só com Simkl vinculado): 401 desfaz o vínculo do perfil, 429/5xx/400 RATE_LIMIT abrem janela de espera sem retry, stop que falha cai no histórico. Rede falsa; sem TV nem conta Simkl real. | #459 | agente/205-simkl-scrobble | passou | tests/simkl_scrobble.sh rc 0 (FAIL antes: simkl_scrobble indefinido); regressão simkl_cw, visto, vistonao, simklauth, trakt_scrobble, player_visto_trailer rc 0; tools/build-local.sh build ok |
 | 2026-10-12 | Codex | Triagem detalhada offline das 17 novas issues: corpo, últimos comentários e caminhos de código; 61 rascunhos para revisão do dono. Sem reprodução física ou leitura remota de logs. | #391, #396, #398, #399, #439, #440, #450, #451, #457, #458, #459, #460, #461, #462, #466, #467, #468 | agente/205-issues-novas | inconclusivo | docs/issues/TRIAGEM-2.0.5.md; docs/issues/rascunhos/respostas-triagem-2.0.5.md; snapshot .triagem/github-issues.json |
 | 2026-10-12 | Codex | Validação dos artefatos da triagem detalhada: mapa.py/--check e publico.sh rc 0; 17 sem plataforma ?/nota placeholder, demais 402 preservadas; 61 textos de rascunho em 60 seções únicas sem URLs. | #391, #396, #398, #399, #439, #440, #450, #451, #457, #458, #459, #460, #461, #462, #466, #467, #468 | agente/205-issues-novas | passou | docs/issues/TRIAGEM-2.0.5.md (Provas da triagem detalhada); docs/issues/rascunhos/respostas-triagem-2.0.5.md; /private/tmp/triagem-publico-final.log |
-| 2026-10-12 | Claude Sonnet 5.5 | Simkl scrobble do player (start/pause/stop com porcentagem, filme e episódio, só com Simkl vinculado): 401 desfaz o vínculo do perfil, 429/5xx/400 RATE_LIMIT abrem janela de espera sem retry, stop que falha cai no histórico. Rede falsa; sem TV nem conta Simkl real. | #459 | agente/205-simkl-scrobble | passou | tests/simkl_scrobble.sh rc 0 (FAIL antes: simkl_scrobble indefinido); regressão simkl_cw, visto, vistonao, simklauth, trakt_scrobble, player_visto_trailer rc 0; tools/build-local.sh build ok |
+| 2026-10-12 | codex gpt-6.1-sol | triagem | #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #13, #14, #15, #16, #17, #18, #19, #20, #21, #22, #23, #24, #25, #26, #27, #28, #29, #30, #31, #32, #33, #34, #35, #36, #37, #38, #39, #40, #41, #42, #43, #44, #45, #46, #47, #48, #49, #50, #51, #52, #53, #54, #55, #56, #57, #58, #59, #60, #61, #62, #63, #64, #65, #66, #67, #68, #69, #70, #71, #72, #73, #74, #75, #76, #77, #78, #79, #80, #81, #82, #83, #84, #85, #86, #87, #88, #89, #90, #91, #92, #93, #94, #95, #96, #97, #98, #99, #100, #101, #102, #103, #104, #105, #106, #107, #108, #109, #110, #111, #112, #113, #114, #115, #116, #117, #118, #119, #120, #121, #122, #123, #124, #125, #126, #127, #128, #129, #130, #131, #132, #133, #134, #135, #136, #137, #138, #140, #141, #142, #144, #145, #146, #147, #148, #149, #150, #151, #153, #154, #155, #156, #158, #159, #160, #161, #162, #163, #164, #165, #167, #168, #169, #170, #171, #172, #173, #174, #175, #176, #177, #178, #179, #180, #181, #182, #183, #184, #185, #186, #187, #188, #189, #190, #191, #192, #193, #194, #195, #196, #197, #198, #199, #200, #201, #202, #203, #204, #205, #206, #208, #209, #210, #211, #212, #213, #214, #215, #216, #217, #221, #222, #223, #224, #225, #226, #227, #228, #229, #231, #232, #233, #234, #235, #237, #238, #239, #240, #241, #242, #243, #244, #245, #246, #247, #248, #249, #250, #252, #253, #254, #255, #256, #257, #258, #260, #261, #262, #263, #265, #266, #267, #269, #270, #271, #272, #274, #275, #276, #277, #278, #279, #280, #281, #282, #283, #284, #286, #287, #288, #289, #290, #292, #293, #294, #295, #296, #297, #298, #300, #302, #303, #304, #305, #306, #307, #308, #309, #310, #311, #312, #313, #315, #316, #317, #318, #319, #320, #321, #322, #323, #324, #325, #326, #327, #328, #329, #330, #331, #332, #333, #334, #335, #336, #337, #338, #339, #340, #341, #342, #343, #344, #345, #346, #347, #348, #349, #350, #352, #353, #354, #355, #356, #357, #358, #359, #360, #361, #362, #363, #364, #365, #366, #367, #368, #369, #370, #371, #372, #373, #374, #378, #379, #382, #383, #384, #385, #386, #387, #388, #389, #390, #391, #392, #393, #394, #396, #397, #398, #399, #400, #401, #402, #403, #404, #405, #406, #407, #409, #410, #411, #412, #413, #414, #415, #416, #417, #418, #419, #420, #421, #422, #423, #424, #425, #426, #427, #428, #429, #430, #433, #434, #436, #437, #438, #439, #440, #450, #451, #457, #458, #459, #460, #461, #462, #466, #467, #468 | agente/205-issues-triagem / v2.0.5 b7c2c1f9 | inconclusivo | TRIAGEM-2.0.5.md |
 | 2026-10-11 | Feanor | Build de diagnóstico v2.0.5-aspect.1, método B em Tizen 5 | #341, #426 | v2.0.5-aspect.1 | passou | relato de teste: método B OK |
 | 2026-10-11 | mackojanko | Build de diagnóstico v2.0.5-aspect.1, métodos B e D na Q80A Tizen 6 | #341, #426 | v2.0.5-aspect.1 | passou | relato de teste: métodos B e D OK |
-| 2026-10-09 23:50 | Codex gpt-6-astra (revisão) | Revisão de confirmação da rodada 4 do nível de GPU | #410 | agente/204-gpunivel410 52dbde71 | passou | /Volumes/ExternalSSD/nv-203-tmp/rev/410b-r4-codex.txt: P2 residual resolvido, sem achados novos |
-| 2026-10-09 23:50 | Claude Opus 5.5 (sessão de coordenação), TCL via adb | QR do Discord colorido com logo: leitura | - | agente/204-novidades cecbe108 | passou | zxing-cpp leu os 3 códigos (Discord, Ko-fi, Patreon) na captura do cartão, inclusive borrado/escurecido e em metade do tamanho; capturas em /Volumes/ExternalSSD/tmp/nov204-shots4 |
-| 2026-10-09 23:50 | Claude Opus 5.5 (sessão de coordenação), TCL via adb | IntroDB na TCL | - | APK fd86a673 | passou | log 23:01: '[intro] 2 marcadores (tmdb)' e '[credits] source=introdb'; os 0 marcadores eram de tt6048596, que a API responde 'media not found' |
-| 2026-10-09 23:50 | Claude Opus 5.5 (sessão de coordenação), TCL via adb | Spotlight: busca 'silo' na TCL | - | APK b8d07d3d | passou | Silo 2023 (série do dono) virou melhor resultado; antes era o documentário de 2015; revisão Codex em 3 rodadas, última sem achados (/Volumes/ExternalSSD/nv-203-tmp/rev/spotlight-r3-codex.txt) |
-| 2026-10-09 23:50 | Claude Opus 5.5 (sessão de coordenação), TCL via adb | Vistos do Silo depois de reinstalar por cima | - | APK b8d07d3d | passou | '[vistoep] tt14688458: grafico ... vistos=22/30 T1=10/10 T2=5/10 T3=7/10': igual a antes da reinstalação, nada voltou |
-| 2026-10-09 23:50 | Claude Opus 5.5 (sessão de coordenação), TCL via adb | Gráfico 'Seu progresso' remontando a cada chamada | - | APK b8d07d3d -> ce4426f9 | passou | antes: ~1900 linhas/s de '[vistoep] grafico' na página do Silo (cache nunca batia para id com :T:E); depois do conserto 6c6d1668: 3 linhas na abertura, FPS 60.0; teste FAIL->PASS do Codex |
-| 2026-10-09 23:50 | Claude Opus 5.5 (sessão de coordenação), TCL via adb | Biblioteca 129 salvos x 8 na grade | - | APK 710541ab -> 25e9c3aa | passou | antes: '[biblioteca] ocultar=1 excl_meta=121 grade=8'; depois do conserto 251d5e0f: 'excl_meta=0 grade=129', tela mostra '129 titles'; Codex sem achados (/Volumes/ExternalSSD/nv-203-tmp/rev/bib129-fix-codex.txt). Não era regressão: biblioteca.c idêntico ao da v2.0.3 |
-| 2026-10-09 23:50 | Claude Opus 5.5 (sessão de coordenação), TCL via adb | Reprodução Dolby Vision na TCL (Silo T2E6) | #409 | APK ce4426f9 | passou | abre em 11,5 s, hdr=DolbyVision, 3 recriações da superfície registradas pelo [dvtrace], sem erro; saída limpa. Brilho não dá para medir por captura: o relato 'abre escuro' segue sem prova |
 | 2026-10-09 23:50 | Claude Opus 5.5 (sessão de coordenação), TCL via adb | Ajuste 'Source order' presente | #400 | APK ce4426f9 | passou | Ajustes > Playback > More options: 'Source order: By quality / From the addon' com cena; captura t14 |
+| 2026-10-09 23:50 | Claude Opus 5.5 (sessão de coordenação), TCL via adb | Biblioteca 129 salvos x 8 na grade | - | APK 710541ab -> 25e9c3aa | passou | antes: '[biblioteca] ocultar=1 excl_meta=121 grade=8'; depois do conserto 251d5e0f: 'excl_meta=0 grade=129', tela mostra '129 titles'; Codex sem achados (/Volumes/ExternalSSD/nv-203-tmp/rev/bib129-fix-codex.txt). Não era regressão: biblioteca.c idêntico ao da v2.0.3 |
+| 2026-10-09 23:50 | Claude Opus 5.5 (sessão de coordenação), TCL via adb | Gráfico 'Seu progresso' remontando a cada chamada | - | APK b8d07d3d -> ce4426f9 | passou | antes: ~1900 linhas/s de '[vistoep] grafico' na página do Silo (cache nunca batia para id com :T:E); depois do conserto 6c6d1668: 3 linhas na abertura, FPS 60.0; teste FAIL->PASS do Codex |
+| 2026-10-09 23:50 | Claude Opus 5.5 (sessão de coordenação), TCL via adb | IntroDB na TCL | - | APK fd86a673 | passou | log 23:01: '[intro] 2 marcadores (tmdb)' e '[credits] source=introdb'; os 0 marcadores eram de tt6048596, que a API responde 'media not found' |
+| 2026-10-09 23:50 | Claude Opus 5.5 (sessão de coordenação), TCL via adb | QR do Discord colorido com logo: leitura | - | agente/204-novidades cecbe108 | passou | zxing-cpp leu os 3 códigos (Discord, Ko-fi, Patreon) na captura do cartão, inclusive borrado/escurecido e em metade do tamanho; capturas em /Volumes/ExternalSSD/tmp/nov204-shots4 |
+| 2026-10-09 23:50 | Claude Opus 5.5 (sessão de coordenação), TCL via adb | Reprodução Dolby Vision na TCL (Silo T2E6) | #409 | APK ce4426f9 | passou | abre em 11,5 s, hdr=DolbyVision, 3 recriações da superfície registradas pelo [dvtrace], sem erro; saída limpa. Brilho não dá para medir por captura: o relato 'abre escuro' segue sem prova |
+| 2026-10-09 23:50 | Codex gpt-6-astra (revisão) | Revisão de confirmação da rodada 4 do nível de GPU | #410 | agente/204-gpunivel410 52dbde71 | passou | /Volumes/ExternalSSD/nv-203-tmp/rev/410b-r4-codex.txt: P2 residual resolvido, sem achados novos |
+| 2026-10-09 23:50 | Claude Opus 5.5 (sessão de coordenação), TCL via adb | Spotlight: busca 'silo' na TCL | - | APK b8d07d3d | passou | Silo 2023 (série do dono) virou melhor resultado; antes era o documentário de 2015; revisão Codex em 3 rodadas, última sem achados (/Volumes/ExternalSSD/nv-203-tmp/rev/spotlight-r3-codex.txt) |
 | 2026-10-09 23:50 | Claude Opus 5.5 (sessão de coordenação), TCL via adb | Suíte completa (em andamento, árvore mudou no meio) | - | integracao/2.0.3.1 710541ab..25e9c3aa | inconclusivo | /Volumes/ExternalSSD/tmp/suite-204-7105.log; falhas até agora: cachearte-wasm (módulo node ausente), central_rotulos e colecoes_teto (não linkam src/dts; video.c já chamava dts_overlay_draw na v2.0.3, não é regressão) |
-| 2026-10-09 22:50 | Codex gpt-6-astra (revisão) | Revisão de confirmação da rodada 3 do #409 | #409 | agente/204-decoder409 c51dc9ec | passou | /Volumes/ExternalSSD/nv-203-tmp/rev/409-r3-codex.txt: sem achados P1/P2 |
+| 2026-10-09 23:50 | Claude Opus 5.5 (sessão de coordenação), TCL via adb | Vistos do Silo depois de reinstalar por cima | - | APK b8d07d3d | passou | '[vistoep] tt14688458: grafico ... vistos=22/30 T1=10/10 T2=5/10 T3=7/10': igual a antes da reinstalação, nada voltou |
+| 2026-10-09 22:50 | Claude Opus 5.5 (sessão de coordenação) | Onboarding do Discord ativado | - | guild 1558285501067296922 | passou | 9 canais padrão, aviso de boas-vindas, 3 tarefas (rules, bugs-and-issues, announcements); 'Onboarding is Enabled'. Ícone: dono sobe à mão. |
 | 2026-10-09 22:50 | Codex gpt-6-astra (revisão) | Revisão de confirmação da rodada 2 do #412 | #412 | agente/204-tpkpreso412 6ec34f52 | passou | /Volumes/ExternalSSD/nv-203-tmp/rev/412-r2-codex.txt: sem achados P1/P2; sem TV física |
+| 2026-10-09 22:50 | Codex gpt-6-astra (revisão) | Revisão de confirmação da rodada 3 do #409 | #409 | agente/204-decoder409 c51dc9ec | passou | /Volumes/ExternalSSD/nv-203-tmp/rev/409-r3-codex.txt: sem achados P1/P2 |
+| 2026-10-09 22:50 | Codex gpt-6-astra (revisão) | Revisão de confirmação da rodada 3 do nível de GPU | #410 | agente/204-gpunivel410 db3c1242 | falhou | /Volumes/ExternalSSD/nv-203-tmp/rev/410b-r3-codex.txt: P2 residual (quadros alternando 1200/900 ms nunca terminam a referência). Rodada 4 pedida. |
 | 2026-10-09 22:50 | Codex gpt-6-astra (revisão) | Revisão de confirmação da rodada 3 do prefetch do próximo episódio | - | agente/204-proxprefetch 61b7db4d | passou | /Volumes/ExternalSSD/nv-203-tmp/rev/prox-r3-codex.txt: sem achados P1/P2 |
 | 2026-10-09 22:50 | Codex gpt-6-astra (revisão) | Revisão do cartão de novidades com Discord + QR | - | agente/204-novidades c0c2d1a8 | passou | /Volumes/ExternalSSD/nv-203-tmp/rev/nov-r3-codex.txt: sem achados P1/P2; capturas em /Volumes/ExternalSSD/tmp/nov204-shots3 conferidas pela coordenação |
-| 2026-10-09 22:50 | Codex gpt-6-astra (revisão) | Revisão de confirmação da rodada 3 do nível de GPU | #410 | agente/204-gpunivel410 db3c1242 | falhou | /Volumes/ExternalSSD/nv-203-tmp/rev/410b-r3-codex.txt: P2 residual (quadros alternando 1200/900 ms nunca terminam a referência). Rodada 4 pedida. |
 | 2026-10-09 22:50 | Claude Opus 5.5 (sessão de coordenação) | Testes-alvo na integração depois dos 4 merges | #409, #412 | integracao/2.0.3.1 fd86a673 | passou | decoder409, proxprefetch, addonslista, tpk-preso, stream_parser, android_decoder409.py, novidades_cartao: rc=0 |
-| 2026-10-09 22:50 | Claude Opus 5.5 (sessão de coordenação) | Onboarding do Discord ativado | - | guild 1558285501067296922 | passou | 9 canais padrão, aviso de boas-vindas, 3 tarefas (rules, bugs-and-issues, announcements); 'Onboarding is Enabled'. Ícone: dono sobe à mão. |
-| 2026-10-09 22:35 | Codex gpt-6-astra (revisão) | Revisão da rodada 2 do nível de GPU adaptativo | #410 | agente/204-gpunivel410 020fb8f8 | falhou | /Volumes/ExternalSSD/nv-203-tmp/rev/410b-r2-codex.txt: 2 P2 (Mali-400 sem saída segura; interrupção perde reavaliação do legado). Rodada 3 pedida. |
-| 2026-10-09 22:35 | Codex gpt-6-astra (revisão) | Revisão da rodada 2 do decoder 4K / espera do release | #409 | agente/204-decoder409 6d46e336 | falhou | /Volumes/ExternalSSD/nv-203-tmp/rev/409-r2-codex.txt: 1 P2 (volume volta a 100% após a espera) + 1 P3 de teste. Rodada 3 pedida. |
-| 2026-10-09 22:35 | Codex gpt-6-astra (revisão) | Revisão do conserto do player preso no .tpk | #412 | agente/204-tpkpreso412 71c7d615 | falhou | /Volumes/ExternalSSD/nv-203-tmp/rev/412-codex.txt: P1 (Voltar durante PrepareAsync encerra o processo em TV sã). Rodada 2 pedida. |
 | 2026-10-09 22:35 | Claude Opus 5.5 (sessão de coordenação) | Conferência mecânica da documentação de funções (identificadores citados existem no código) | - | agente/doc-funcoes 29a340b3 | passou | 490 de 493 identificadores existem; os 3 errados corrigidos à mão (player.md, trakt.md, video.md) |
+| 2026-10-09 22:35 | Codex gpt-6-astra (revisão) | Revisão da rodada 2 do decoder 4K / espera do release | #409 | agente/204-decoder409 6d46e336 | falhou | /Volumes/ExternalSSD/nv-203-tmp/rev/409-r2-codex.txt: 1 P2 (volume volta a 100% após a espera) + 1 P3 de teste. Rodada 3 pedida. |
+| 2026-10-09 22:35 | Codex gpt-6-astra (revisão) | Revisão da rodada 2 do nível de GPU adaptativo | #410 | agente/204-gpunivel410 020fb8f8 | falhou | /Volumes/ExternalSSD/nv-203-tmp/rev/410b-r2-codex.txt: 2 P2 (Mali-400 sem saída segura; interrupção perde reavaliação do legado). Rodada 3 pedida. |
+| 2026-10-09 22:35 | Codex gpt-6-astra (revisão) | Revisão do conserto do player preso no .tpk | #412 | agente/204-tpkpreso412 71c7d615 | falhou | /Volumes/ExternalSSD/nv-203-tmp/rev/412-codex.txt: P1 (Voltar durante PrepareAsync encerra o processo em TV sã). Rodada 2 pedida. |
 | 2026-10-09 22:35 | Claude Opus 5.5 (sessão de coordenação) | Servidor Discord reestruturado e convite permanente gerado | - | guild 1558285501067296922 | passou | 5 categorias e 10 canais novos conferidos pela lista de canais; convite https://discord.gg/9NWr6SHyzJ com 'nunca irá expirar'. Pendente: dono apagar os 10 canais antigos (Canais de Texto/Voz). |
 | 2026-10-09 22:00 | Claude Opus 5.5 (sessão de coordenação) | Implantação da API de respostas do painel no ZimaOS | - | f9fa03b2 + painel v3 | passou | /api/saude {"ok": true}; containers versionados no ar, nuvio-painel antigo só parado; publicar.sh rc=0 |
 | 2026-10-09 21:51 | Codex gpt-6-astra (revisão estática) | #409 rodada 1 (decoder 4K, bloqueio por codec, Voltar) | #409 | agente/204-decoder409 | falhou | /Volumes/ExternalSSD/nv-203-tmp/rev/409-codex.txt (3 P2: erro de áudio bloqueia vídeo; codec desconhecido = HEVC; falha <2160p não bloqueia) — rodada 2 em andamento |
-| 2026-10-09 21:51 | Codex gpt-6-astra (revisão estática) | Pré-carregamento do próximo episódio rodada 1 | - | agente/204-proxprefetch | falhou | /Volumes/ExternalSSD/nv-203-tmp/rev/prox-codex.txt (3 P2: TTL expira antes da contagem; cancelado conta como mudo; cacheia sem plugins) — rodada 2 em andamento |
 | 2026-10-09 21:51 | Codex gpt-6-astra (revisão estática) | #410 parte 2 rodada 1 (nível de GPU volta se não ganhar fps) | #410 | agente/204-gpunivel410 | falhou | /Volumes/ExternalSSD/nv-203-tmp/rev/410b-codex.txt (3 P2: GPU fraca grava nível 1 sem medir 0; LG zera nível salvo e nunca reavalia; interrupção compara cenas diferentes) — rodada 2 em andamento |
+| 2026-10-09 21:51 | Codex gpt-6-astra (revisão estática) | Pré-carregamento do próximo episódio rodada 1 | - | agente/204-proxprefetch | falhou | /Volumes/ExternalSSD/nv-203-tmp/rev/prox-codex.txt (3 P2: TTL expira antes da contagem; cancelado conta como mudo; cacheia sem plugins) — rodada 2 em andamento |
 | 2026-10-09 21:30 | Codex gpt-6-astra (revisão estática) | #410 parte 1 e #411 | #410, #411 | cc8bbdcd, a066e6c8 | passou | /Volumes/ExternalSSD/nv-203-tmp/rev/410-codex.txt e 411-codex.txt (no findings) |
 | 2026-10-09 21:00 | Claude Opus 5.5 (sessão de coordenação) | Leitura do código: o perfil depende só do Trakt (relato de usuário com Simkl) | - | integracao/2.0.3.1 | passou | src/app.c carregarPerfil -> trakt_perfil; sem trakt_ativo() o estado é "Trakt desconectado" |
 | 2026-10-09 20:40 | Codex gpt-6-astra (revisão estática) | OpenSubtitles "sem resposta": versão só-leitura, rodadas 2 e 3 | - | agente/204-sostream | passou | /Volumes/ExternalSSD/nv-203-tmp/rev/sostream2-codex.txt e sostream3-codex.txt (P2 de leitura sem sincronização e 200 vazio corrigidos; último P2 = republicação pela descoberta, corrigido com atômico em fonte; limite documentado: sonda terminando depois do resumo) |
@@ -1271,11 +1278,11 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 | 2026-10-09 19:25 | Claude Opus 5.5 (sessão de coordenação) | Instalação da 2.0.4 (com KM7, consertos do #408) na TCL e na C9: abre, linha [tv] app=2.0.4, sem queda | - | APK de 06419b6b; ipk de bed3534c | passou | TCL logcat: "[player] recriar superficie no HDR: sim" (TCL segue recriando); C9 /tmp/nuvio.log: OLED65C9PSA webos-4.10.2 app=2.0.4, 0 SIGSEGV |
 | 2026-10-09 19:20 | Codex gpt-6-astra (revisão estática) | Consertos das revisões do #408 (gancho webOS, nyx x starfish, aviso do modelo de pôster) | #390 | fc61b3aa (agente/204-ultranit) | passou | /Volumes/ExternalSSD/nv-203-tmp/rev/ultranit-codex.txt (no findings); testes FAIL->PASS: webosver, poster_modelo_longo |
 | 2026-10-09 19:10 | Claude Opus 5.5 (sessão de coordenação) | #387: testes do segurar e testes que compilam as telas tocadas | #387 | 0f98379f (agente/205-segurar) | passou | tests/segurar.sh (caso "mesmo quadro" falha na r1); ilha_shot, ctxmenu_contract, busca_debounce, avisos_toast_shot, salvospainel_perf rc=0; ctxlista falha igual na base |
-| 2026-10-09 19:05 | Claude Opus 5.5 (sessão de coordenação) | Vídeo do #387 (menu do cartaz abre em vez da página do título) e 30 logs .tpk recentes procurando OK sem mapa | #387 | v2.0.2/v2.0.3 (.tpk) | inconclusivo | vídeo do autor: menu em 3 de 4 OKs, <0,5 s, capas já carregadas; logs D1 .tpk: só volume/power/exit sem mapa, o OK está mapeado; NV_HOLD_MS=700 (layout.h:119); a Biblioteca não loga o segurar |
 | 2026-10-09 19:05 | Codex gpt-6-astra (revisão estática) | Conserto KM7: Amlogic não recria a superfície de vídeo | - | 98929593 (agente/204-km7) | passou | /Volumes/ExternalSSD/nv-203-tmp/rev/km7-codex.txt (no findings; nota: log de "recria" enganoso, corrigido em ccd37565; chama de mitigação candidata, sem prova em aparelho) |
 | 2026-10-09 19:05 | OpenCode glm-5.3 (revisão estática) | Conserto KM7: Amlogic não recria a superfície de vídeo | - | 98929593 | inconclusivo | /Volumes/ExternalSSD/nv-203-tmp/rev/km7-opencode.txt (parou sem veredito) |
-| 2026-10-09 19:00 | GitHub Copilot (revisão do PR) | Revisão do PR #408 | #390 | 68e89c70 | falhou | PR #408: card de novidades ainda 2.0.3; webosver.c:197 nyx descartado por erro no starfish (corrigido e6da2772); ajustes.c:3414 aviso errado do modelo longo (corrigido fc61b3aa) |
+| 2026-10-09 19:05 | Claude Opus 5.5 (sessão de coordenação) | Vídeo do #387 (menu do cartaz abre em vez da página do título) e 30 logs .tpk recentes procurando OK sem mapa | #387 | v2.0.2/v2.0.3 (.tpk) | inconclusivo | vídeo do autor: menu em 3 de 4 OKs, <0,5 s, capas já carregadas; logs D1 .tpk: só volume/power/exit sem mapa, o OK está mapeado; NV_HOLD_MS=700 (layout.h:119); a Biblioteca não loga o segurar |
 | 2026-10-09 19:00 | Codex gpt-6-astra (revisão estática) | #387 r1: segurar OK com espera após pausa longa | #387 | 03213598 (agente/205-segurar) | falhou | /Volumes/ExternalSSD/nv-203-tmp/rev/387-codex.txt (P2 relógio compartilhado entre telas; P2 menu/guia/spotlight de fora; P3 log a cada quadro) — corrigidos em 0f98379f |
+| 2026-10-09 19:00 | GitHub Copilot (revisão do PR) | Revisão do PR #408 | #390 | 68e89c70 | falhou | PR #408: card de novidades ainda 2.0.3; webosver.c:197 nyx descartado por erro no starfish (corrigido e6da2772); ajustes.c:3414 aviso errado do modelo longo (corrigido fc61b3aa) |
 | 2026-10-09 18:58 | Claude Opus 5.5 (sessão de coordenação) | Teste do conserto KM7 (RecriaHdr): Amlogic e MStar dispensados, TCL c2.mtk recria | - | f354b7f6 (FAIL) -> 98929593 (PASS) | passou | tests/android_recria_hdr.py; tests/android_window_layout.py segue passando |
 | 2026-10-09 18:50 | Claude Opus 5.5 (sessão de coordenação) | Log ABB125 do #405 (busca rápida sem Silo) lido | #405 | v2.0.3 (.tpk) | inconclusivo | D1 registro 66134: nenhuma linha da busca rápida |
 | 2026-10-09 18:43 | Claude Opus 5.5 (sessão de coordenação) | Build do .ipk da LG 2.0.4 com as chaves do local.properties (o primeiro saiu sem chaves e foi descartado) | - | 68e89c70 | passou | /Volumes/ExternalSSD/tmp/b204-lg.log sem "aviso: vazio"; space.nuvio.native.legacy_2.0.4_arm.ipk em nv-2031-int |
@@ -1720,7 +1727,7 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Release: 2.0.6
 - Conserto: agente/205-perfis21 (tip 7376c250, 1 commits fora)
 - Próximo passo: backlog 2.1 (review OK, 1 ahead)
-- Notas: Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). rodando; alvo declarado = 2.1. Escrivão 14/10 14:47: review OK, merge pendente. | Escrivão 2026-10-14 16:11: review j-revg-perfis21 OK (11:16); merge pendente. | Escrivão 14/10 19:48: sem job
+- Notas: Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). rodando; alvo declarado = 2.1. Escrivão 14/10 14:47: review OK, merge pendente. | Escrivão 2026-10-14 16:11: review j-revg-perfis21 OK (11:16); merge pendente. | Escrivão 14/10 19:48: sem job Escrivao 10-15 07:10: review OK mantido.
 
 ### Dicas de controle: tema/chips do rodape
 
@@ -2259,8 +2266,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: integrada
 - Release: 2.0.5
 - Conserto: 60c6db739 (merge agente/205-estatpainel2 em integracao/2.0.5)
-- Próximo passo: lancar com 2.0.5 (merge 60c6db739)
-- Notas: Review OK j-revg-estatpainel2-c 19:20. Merge concluido (60c6db739); branch sem commits fora.
+- Próximo passo: merged; build+install para o novo HEAD
+- Notas: Review OK j-revg-estatpainel2-c 19:20. Merge concluido (60c6db739); branch sem commits fora. Escrivao 10-15 07:10: merge job sem review log (so merge/fix).
 
 ### fix(player): keep live statistics open and add animated overlay sizes
 
@@ -2409,11 +2416,11 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### issues: post-2.0.5 triage (419 items, 2.0.6 target, evidence-based status)
 
 - Plataforma: ?
-- Status: aberta
+- Status: integrada
 - Release: 2.0.5
-- Conserto: 45be541a
-- Próximo passo: PERDIDO: BLOQUEIA j-revg-triagem-velhas, sem fix; relancar fix ou fechar
-- Notas: Escrivão 14/10 14:47: integrada.
+- Conserto: 7656a6598 (merge agente/205-triagem-velhas em integracao/2.0.5)
+- Próximo passo: merged em integracao/2.0.5 (7656a6598); build+install para 799d025bd; docs-only
+- Notas: Escrivão 14/10 14:47: integrada. Escrivao 10-15 07:10: w OK (04:49) apos fix z (03:49); merge 7656a6598.
 
 ### test(subtitles): make external-subtitle guards fast and portable
 
@@ -2502,8 +2509,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: aberta
 - Release: 2.0.5
 - Conserto: agente/205-mock21 (tip 9de13e4e, 1 commit fora)
-- Próximo passo: triagem (1 ahead, sem job, sem log)
-- Notas: Escrivão 2026-10-14 16:11: 3 mockups anteriores (gamification/cinephile/redesign) ja em integracao/2.0.5; friends row 9de13e4e ainda fora.
+- Próximo passo: backlog 2.1 (mock 21, 1 ahead, sem job, sem log)
+- Notas: Escrivão 2026-10-14 16:11: 3 mockups anteriores (gamification/cinephile/redesign) ja em integracao/2.0.5; friends row 9de13e4e ainda fora. Escrivao 10-15 07:10: sem job.
 
 ### fix(network): preserve offline detection across retries and allow DNS retransmission
 
@@ -2555,9 +2562,9 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Plataforma: ?
 - Status: em_revisao
 - Release: 2.1
-- Conserto: fe5e0e92; agente/205-p2pusb (7 commits fora, review BLOQUEIA)
-- Próximo passo: fix do BLOQUEIA (j-revg-p2pusb-w); depois review
-- Notas: 8 ahead; nao mergeado; sem job rodando
+- Conserto: agente/205-p2pusb: 9 commits fora
+- Próximo passo: BLOQUEIA v (j-revg-p2pusb-v 06:49): mount container aceito como USB e rescan suprimido; fix, depois review
+- Notas: 8 ahead; nao mergeado; sem job rodando Escrivao 10-15 07:10: fix w 05:51; review v 06:49 BLOQUEIA.
 
 ### Merge agente/205-legsyncprox
 
@@ -2727,8 +2734,8 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: aberta
 - Release: 2.0.5
 - Conserto: e81c1f40
-- Próximo passo: triagem (1 ahead, sem job, sem log)
-- Notas: Escrivão 14/10 14:47: sem job (perdido).
+- Próximo passo: triagem (1 ahead, sem job, sem log); conferir respostas-dono.json (novo, nao commitado)
+- Notas: Escrivão 14/10 14:47: sem job (perdido). Escrivao 10-15 07:10: docs/issues/respostas-dono.json aparece untracked no worktree.
 
 ### test(player): wait for catalog refresh before opening fixture
 
@@ -3032,9 +3039,9 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Plataforma: ?
 - Status: integrada
 - Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: lancar com 2.0.5 (merged em agente/205-vidropadrao)
-- Notas: Branch agente/205-vidropadrao 10 commits fora, 2 atras. Job sonnet high.
+- Conserto: be42293ae (merge agente/205-vidropadrao em integracao/2.0.5)
+- Próximo passo: merged; build+install para o novo HEAD
+- Notas: Branch agente/205-vidropadrao 10 commits fora, 2 atras. Job sonnet high. Escrivao 10-15 07:10: merge job sem review log (so merge/fix).
 
 ### M3U misto: canal/catalogo pelo tipo declarado (bug)
 
@@ -3059,9 +3066,9 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Plataforma: ?
 - Status: aberta
 - Release: 2.1
-- Conserto: nenhum encontrado
-- Próximo passo: review ou drop (2 ahead, sem review)
-- Notas: Branch agente/205-glassmock ja integrada. Estudo/mockups, nao lancar.
+- Conserto: 030bf69df (docs/design glass chrome study), 2 commits fora de integracao/2.0.5
+- Próximo passo: aguardando escolha do dono A/B/C; 2 ahead, estudo/mock, sem review
+- Notas: Estudo/mockups (build/gen.py + PNGs), sem src. NOTA 10-15 07:10: notas antigas diziam "ja integrada": git mostra 2 ahead nao mergeado. Escrivao 10-15 07:10: sem review; depende de decisao do dono.
 
 ### Barra 27 (branch agente/205-barra27)
 
@@ -3078,17 +3085,17 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: aberta
 - Release: 2.0.5
 - Conserto: agente/205-colhdr: 1 commit fora
-- Próximo passo: verificar se colhdrlinha (merged) substitui; senao review ou drop
-- Notas: 1 ahead; fix 21:18, sem review depois
+- Próximo passo: colhdrlinha (merged eb469669a? nao: c44f8afbe) implementou o header da colecao; branch colhdr so mock -> descartar ou confirmar
+- Notas: 1 ahead; fix 21:18, sem review depois Escrivao 10-15 07:10: colhdrlinha merged c44f8afbe; colhdr fica como mock 1 ahead.
 
 ### VIDAA (agente/205-vidaa)
 
 - Plataforma: VIDAA
 - Status: aberta
 - Release: 2.0.5
-- Conserto: agente/205-vidaa: 14 commits fora
-- Próximo passo: review (14 ahead; fix 22:46 sem review)
-- Notas: criado pelo escrivao 22:4x
+- Conserto: agente/205-vidaa: 14 commits fora (tip 1419c9cef 22:46)
+- Próximo passo: review (nenhum log de review apos o fix 22:46) ou descartar; pendente publicar com chaves
+- Notas: criado pelo escrivao 22:4x Escrivao 10-15 07:10: sem review depois do fix 22:46.
 
 ### PR #493 (ghbarker, ligado a #488)
 
@@ -3104,63 +3111,63 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Plataforma: ?
 - Status: em_revisao
 - Release: 2.0.5
-- Conserto: pr/498-limpo: 12 commits fora
-- Próximo passo: review OK (j-revpr498-limpo); merge pr/498-limpo
-- Notas: PR #498; 12 ahead; nao mergeado
+- Conserto: pr/498-limpo: 12 commits fora (tip 22ed066e2 22:31)
+- Próximo passo: review OK (j-revpr498-limpo 23:15); merge pr/498-limpo; testar IME na TV
+- Notas: PR #498; 12 ahead; nao mergeado Escrivao 10-15 07:10: 12 ahead, review OK mantido; falta merge.
 
 ### PR #491 limpo (pr/491-limpo)
 
 - Plataforma: ?
 - Status: em_revisao
 - Release: 2.0.5
-- Conserto: pr/491-limpo: 50 commits fora
-- Próximo passo: fix do BLOQUEIA r3 (j-revpr491-limpo-r3); depois review
-- Notas: PR #491; 51 ahead; nao mergeado
+- Conserto: pr/491-limpo: 52 commits fora (tip f8fe27fad 05:53)
+- Próximo passo: BLOQUEIA r3 (j-revpr491-limpo-r3 04:52); fix c done 05:53 (f8fe27fad); review de novo, depois merge
+- Notas: PR #491; 51 ahead; nao mergeado Escrivao 10-15 07:10: fix c 05:53 cancela probes DTS; precisa review depois do r3.
 
 ### PR #489 fix (pr/489-fix)
 
 - Plataforma: ?
 - Status: em_revisao
 - Release: 2.0.5
-- Conserto: pr/489-fix: 23 commits fora
-- Próximo passo: review OK (j-revpr489-fix); merge pr/489-fix
-- Notas: PR #489; 23 ahead; nao mergeado
+- Conserto: pr/489-fix: 23 commits fora (tip 49f7a53bd e45ff15dd)
+- Próximo passo: review OK (j-revpr489-fix 03:05); merge pr/489-fix em integracao/2.0.5 e testar
+- Notas: PR #489; 23 ahead; nao mergeado Escrivao 10-15 07:10: review OK 03:05; 23 ahead; nenhum fix depois.
 
 ### PR #490 fix (pr/490-fix)
 
 - Plataforma: ?
 - Status: em_revisao
 - Release: 2.0.5
-- Conserto: pr/490-fix: 6 commits fora
-- Próximo passo: fix do BLOQUEIA (j-revpr490-fix2); depois review; merge pr/490-fix
-- Notas: PR #490; 7 ahead; nao mergeado
+- Conserto: pr/490-fix: 8 commits fora (tip 3dae8f5c 06:03)
+- Próximo passo: BLOQUEIA fix3 (j-revpr490-fix3 06:50: fontesVitrine posteriores passam fome de fila); fix, depois review, depois merge
+- Notas: PR #490; 7 ahead; nao mergeado Escrivao 10-15 07:10: fix c 06:03 (3dae8f5c); review fix3 06:50 BLOQUEIA (P2 starvation da fila).
 
 ### PR #493 fix (pr/493-fix)
 
 - Plataforma: ?
 - Status: em_revisao
 - Release: 2.0.5
-- Conserto: pr/493-fix: 9 commits fora
-- Próximo passo: review OK (j-revpr493-fix2); merge pr/493-fix
-- Notas: PR #493 (carrega #488); 10 ahead; nao mergeado
+- Conserto: pr/493-fix: 10 commits fora (tip a0bc2d982 03:52)
+- Próximo passo: superseded by pr/493-v3 (author new head 5694694cc + ported fixes 65613c562); merge pr/493-v3
+- Notas: PR #493 (carrega #488); 10 ahead; nao mergeado Escrivao 10-15 07:10: autor publicou head nova; pr/493-v3 porta os fixes e passa review OK 06:50 (j-revpr493-v3). Continuar com pr/493-v3.
 
 ### Vidro todo (agente/205-vidrotodo)
 
 - Plataforma: ?
 - Status: aberta
 - Release: 2.0.5
-- Conserto: agente/205-vidrotodo: 7 commits fora
-- Próximo passo: review (9 ahead; build job done 04:11, sem log de review)
-- Notas: criado pelo escrivao 2026-10-15
+- Conserto: agente/205-vidrotodo: 10 commits fora (tip 9b4fe6776 merge do HEAD)
+- Próximo passo: review OK (j-revg-vidrotodo 05:49); MERGE da integracao no branch feito 06:49 (j-merge-205-vidrotodo, merge commit 9b4fe6776 no worktree); falta merge em integracao/2.0.5 + teste na TV
+- Notas: criado pelo escrivao 2026-10-15 Escrivao 10-15 07:10: antes estava "sem review log"; agora review OK 05:49 e merge da integracao no branch 06:49. Branch ainda 10 ahead.
 
 ### Aspecto volta (agente/205-aspvolta)
 
 - Plataforma: ?
 - Status: integrada
 - Release: 2.0.5
-- Conserto: agente/205-aspvolta: 1 commit fora
-- Próximo passo: lancar com 2.0.5 (merged em agente/205-aspvolta)
-- Notas: criado pelo escrivao 2026-10-15
+- Conserto: 71c00499e (merge agente/205-aspvolta em integracao/2.0.5; afb08475f)
+- Próximo passo: merged (71c00499e); este HEAD ja tem install Android (instalado.txt 04:50)
+- Notas: criado pelo escrivao 2026-10-15 Escrivao 10-15 07:10: review OK j-revg-aspvolta 03:53; merge 71c00499e; instalado android rc=0.
 
 ### Estilo 2 (agente/205-estilo2)
 
@@ -3168,5 +3175,14 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: aberta
 - Release: 2.0.5
 - Conserto: agente/205-estilo2: 2 commits fora
-- Próximo passo: review ou drop (2 ahead, sem review)
-- Notas: criado pelo escrivao 2026-10-15
+- Próximo passo: aguardando escolha do dono A/B/C (recomendado C); 2 ahead, mock only, sem review
+- Notas: criado pelo escrivao 2026-10-15 Escrivao 10-15 07:10: sem review; depende de decisao do dono.
+
+### PR #493 v3 (pr/493-v3) — head do autor + fixes portados
+
+- Plataforma: ?
+- Status: em_revisao
+- Release: 2.0.5
+- Conserto: pr/493-v3: 3 commits fora (5694694cc autor, 65613c562 port dos fixes)
+- Próximo passo: merge pr/493-v3 no PR #493 (carrega #488/#482)
+- Notas: Escrivao 10-15 07:10: job j-pr493-v3 05:49 (10 suites rc 0); review j-revpr493-v3 06:50 VEREDITO OK, sem P0-P2. Pendente: build TV e teste de troca de perfil em aparelho.

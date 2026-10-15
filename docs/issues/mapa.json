@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-15 05:50",
+ "atualizado_em": "2026-10-15 07:10",
  "base": "5544c3e4c",
- "nota": "Sync 2026-10-15 HEAD 7656a6598 (merge triagem-velhas). Installed Android 71c00499e; C9 unconfirmed. Ver escrivao/estado.md.",
+ "nota": "Sync 2026-10-15 07:10 HEAD 799d025bd (docs only; 7656a6598 merge triagem-velhas). Installed Android 71c00499e; C9 unconfirmed. Ver escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,
@@ -8925,8 +8925,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "merge agente/205-i429hbs (review OK j-revg-i429hbs-y); testar no TCL",
-   "notas": "Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839.",
+   "proximo_passo": "merge agente/205-i429hbs (tip f59554839, 2 ahead; review OK j-revg-i429hbs-y); testar no TCL",
+   "notas": "Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839. Escrivao 10-15 07:10: review y OK (23:11) apos fixz 22:28; branch ainda 2 ahead, merge pendente.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/429",
    "criada_em": "2026-10-10",
    "alvo": "ja-lancada"
@@ -9586,7 +9586,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "testar troca de perfil no TCL",
-   "notas": "Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix.",
+   "notas": "Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix. Escrivao 10-15 07:10: mesmo caso de #488; correcoes portadas na head nova do autor (pr/493-v3), review OK 06:50.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/482",
    "criada_em": "2026-10-13",
    "alvo": "2.0.6"
@@ -9654,7 +9654,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "testar addon P2P em aparelho (review OK rev3 01:42 apos fix 01:22)",
-   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42.",
+   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/486",
    "criada_em": "2026-10-13",
    "alvo": "ja-lancada"
@@ -9680,7 +9680,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "testar troca de perfil no TCL",
-   "notas": "pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL.",
+   "notas": "pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL. Escrivao 10-15 07:10: pr/493-fix review OK fix2; autor publicou head nova 5694694cc; fixes portados 65613c562 (pr/493-v3) e review OK 06:50 (j-revpr493-v3). Mergear pr/493-v3 para carregar #488 no PR.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/488",
    "criada_em": "2026-10-13",
    "alvo": "2.0.6"
@@ -9950,7 +9950,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Snapshot 2026-10-14 10:15: 3fc691d4 \"fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)\" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao.",
+   "notas": "Snapshot 2026-10-14 10:15: 3fc691d4 \"fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)\" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/505",
    "criada_em": "2026-10-14",
    "alvo": "2.0.6"
@@ -10131,8 +10131,8 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "fix do BLOQUEIA (j-revg-i513autoplay-w); depois review",
-   "notas": "review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando",
+   "proximo_passo": "merge: review v OK (j-revg-i513autoplay-v, 06:49) apos fix w (j-fix-i513w 05:50); testar no TCL",
+   "notas": "review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando Escrivao 10-15 07:10: BLOQUEIA x->fix i513w 05:50 (adbaf0f9f)->review v OK 06:49; branch 6 ahead.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/513",
    "criada_em": "2026-10-14",
    "alvo": "futuro"
@@ -10182,6 +10182,17 @@
  ],
  "validacoes": [
   {
+   "data": "2026-10-09 17:42",
+   "quem": "Codex gpt-6-astra (revisão estática)",
+   "o_que": "Revisão r4 do #402: prefixo só de símbolo antes de FHD",
+   "issues": [
+    402
+   ],
+   "ref": "824e9e9d (agente/204-fhd402)",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/402r4-codex.txt (P2: letras georgianas U+2D0B/U+2D04 aceitas como símbolo); conserto em b781dae1"
+  },
+  {
    "data": "2026-10-09 18:15",
    "quem": "Claude Opus 5.5 (sessão de coordenação)",
    "o_que": "Teste do APK 2.0.4 na TCL do dono: Home, página do título, The Mentalist S1E2 tocando 3+ min, avanço no vídeo, relógio da legenda e RSS estáveis",
@@ -10198,17 +10209,6 @@
    "ref": "v2.0.3",
    "resultado": "nao-reproduziu",
    "evidencia": "D1 registro 66138..66221; quadros de 10-75 s (66213, 66219) são app em segundo plano (ev=); 66144 pausou e perdeu a superfície; erros 2001/2004 em 66220 são canais ao vivo; o autor não estava nessa amostra: é a KM7 (ver entrada de 19:40)"
-  },
-  {
-   "data": "2026-10-09 17:42",
-   "quem": "Codex gpt-6-astra (revisão estática)",
-   "o_que": "Revisão r4 do #402: prefixo só de símbolo antes de FHD",
-   "issues": [
-    402
-   ],
-   "ref": "824e9e9d (agente/204-fhd402)",
-   "resultado": "falhou",
-   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/402r4-codex.txt (P2: letras georgianas U+2D0B/U+2D04 aceitas como símbolo); conserto em b781dae1"
   },
   {
    "data": "2026-10-09 18:30",
@@ -10291,66 +10291,6 @@
    "evidencia": "D1 registro 66134: nenhuma linha da busca rápida"
   },
   {
-   "data": "2026-10-09 19:05",
-   "quem": "Claude Opus 5.5 (sessão de coordenação)",
-   "o_que": "Vídeo do #387 (menu do cartaz abre em vez da página do título) e 30 logs .tpk recentes procurando OK sem mapa",
-   "issues": [
-    387
-   ],
-   "ref": "v2.0.2/v2.0.3 (.tpk)",
-   "resultado": "inconclusivo",
-   "evidencia": "vídeo do autor: menu em 3 de 4 OKs, <0,5 s, capas já carregadas; logs D1 .tpk: só volume/power/exit sem mapa, o OK está mapeado; NV_HOLD_MS=700 (layout.h:119); a Biblioteca não loga o segurar"
-  },
-  {
-   "data": "2026-10-09 19:40",
-   "quem": "Claude Opus 5.5 (sessão de coordenação)",
-   "o_que": "Logs da KM7 SE do relato do Reddit (15 sessões) e contagem de quedas nativas no Android por versão (D1 ids 62000..66300)",
-   "issues": [],
-   "ref": "v2.0.2 e v2.0.3 (Android)",
-   "resultado": "inconclusivo",
-   "evidencia": "D1 66008/66017 (ExoPlayer AudioTrack.getTimestamp), 65736 (GC da ART); Android geral: 2.0.2 70/391 e 219/1192 com queda, 2.0.3 25/400; KM7: 2.0.2 4/49, 2.0.3 5/13; arquivos em /Volumes/ExternalSSD/tmp/km7"
-  },
-  {
-   "data": "2026-10-09 19:00",
-   "quem": "GitHub Copilot (revisão do PR)",
-   "o_que": "Revisão do PR #408",
-   "issues": [
-    390
-   ],
-   "ref": "68e89c70",
-   "resultado": "falhou",
-   "evidencia": "PR #408: card de novidades ainda 2.0.3; webosver.c:197 nyx descartado por erro no starfish (corrigido e6da2772); ajustes.c:3414 aviso errado do modelo longo (corrigido fc61b3aa)"
-  },
-  {
-   "data": "2026-10-09 19:20",
-   "quem": "Codex gpt-6-astra (revisão estática)",
-   "o_que": "Consertos das revisões do #408 (gancho webOS, nyx x starfish, aviso do modelo de pôster)",
-   "issues": [
-    390
-   ],
-   "ref": "fc61b3aa (agente/204-ultranit)",
-   "resultado": "passou",
-   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/ultranit-codex.txt (no findings); testes FAIL->PASS: webosver, poster_modelo_longo"
-  },
-  {
-   "data": "2026-10-09 19:05",
-   "quem": "Codex gpt-6-astra (revisão estática)",
-   "o_que": "Conserto KM7: Amlogic não recria a superfície de vídeo",
-   "issues": [],
-   "ref": "98929593 (agente/204-km7)",
-   "resultado": "passou",
-   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/km7-codex.txt (no findings; nota: log de \"recria\" enganoso, corrigido em ccd37565; chama de mitigação candidata, sem prova em aparelho)"
-  },
-  {
-   "data": "2026-10-09 19:05",
-   "quem": "OpenCode glm-5.3 (revisão estática)",
-   "o_que": "Conserto KM7: Amlogic não recria a superfície de vídeo",
-   "issues": [],
-   "ref": "98929593",
-   "resultado": "inconclusivo",
-   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/km7-opencode.txt (parou sem veredito)"
-  },
-  {
    "data": "2026-10-09 18:58",
    "quem": "Claude Opus 5.5 (sessão de coordenação)",
    "o_que": "Teste do conserto KM7 (RecriaHdr): Amlogic e MStar dispensados, TCL c2.mtk recria",
@@ -10371,6 +10311,46 @@
    "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/387-codex.txt (P2 relógio compartilhado entre telas; P2 menu/guia/spotlight de fora; P3 log a cada quadro) — corrigidos em 0f98379f"
   },
   {
+   "data": "2026-10-09 19:00",
+   "quem": "GitHub Copilot (revisão do PR)",
+   "o_que": "Revisão do PR #408",
+   "issues": [
+    390
+   ],
+   "ref": "68e89c70",
+   "resultado": "falhou",
+   "evidencia": "PR #408: card de novidades ainda 2.0.3; webosver.c:197 nyx descartado por erro no starfish (corrigido e6da2772); ajustes.c:3414 aviso errado do modelo longo (corrigido fc61b3aa)"
+  },
+  {
+   "data": "2026-10-09 19:05",
+   "quem": "Codex gpt-6-astra (revisão estática)",
+   "o_que": "Conserto KM7: Amlogic não recria a superfície de vídeo",
+   "issues": [],
+   "ref": "98929593 (agente/204-km7)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/km7-codex.txt (no findings; nota: log de \"recria\" enganoso, corrigido em ccd37565; chama de mitigação candidata, sem prova em aparelho)"
+  },
+  {
+   "data": "2026-10-09 19:05",
+   "quem": "OpenCode glm-5.3 (revisão estática)",
+   "o_que": "Conserto KM7: Amlogic não recria a superfície de vídeo",
+   "issues": [],
+   "ref": "98929593",
+   "resultado": "inconclusivo",
+   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/km7-opencode.txt (parou sem veredito)"
+  },
+  {
+   "data": "2026-10-09 19:05",
+   "quem": "Claude Opus 5.5 (sessão de coordenação)",
+   "o_que": "Vídeo do #387 (menu do cartaz abre em vez da página do título) e 30 logs .tpk recentes procurando OK sem mapa",
+   "issues": [
+    387
+   ],
+   "ref": "v2.0.2/v2.0.3 (.tpk)",
+   "resultado": "inconclusivo",
+   "evidencia": "vídeo do autor: menu em 3 de 4 OKs, <0,5 s, capas já carregadas; logs D1 .tpk: só volume/power/exit sem mapa, o OK está mapeado; NV_HOLD_MS=700 (layout.h:119); a Biblioteca não loga o segurar"
+  },
+  {
    "data": "2026-10-09 19:10",
    "quem": "Claude Opus 5.5 (sessão de coordenação)",
    "o_que": "#387: testes do segurar e testes que compilam as telas tocadas",
@@ -10382,13 +10362,15 @@
    "evidencia": "tests/segurar.sh (caso \"mesmo quadro\" falha na r1); ilha_shot, ctxmenu_contract, busca_debounce, avisos_toast_shot, salvospainel_perf rc=0; ctxlista falha igual na base"
   },
   {
-   "data": "2026-10-09 19:30",
-   "quem": "Claude Opus 5.5 (sessão de coordenação)",
-   "o_que": "Busca da sessão da LG 32LJ600B (webOS 3) do relato do Reddit no D1",
-   "issues": [],
-   "ref": "v2.0.3 (webOS)",
-   "resultado": "inconclusivo",
-   "evidencia": "D1 id>64500: nenhuma linha com LJ600; webOS 3.9.3 na 2.0.3: 65SJ800V (65304, 65363, 65374 arranque queda), OLED55B7P (65317), 49UJ6300 (66016)"
+   "data": "2026-10-09 19:20",
+   "quem": "Codex gpt-6-astra (revisão estática)",
+   "o_que": "Consertos das revisões do #408 (gancho webOS, nyx x starfish, aviso do modelo de pôster)",
+   "issues": [
+    390
+   ],
+   "ref": "fc61b3aa (agente/204-ultranit)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/ultranit-codex.txt (no findings); testes FAIL->PASS: webosver, poster_modelo_longo"
   },
   {
    "data": "2026-10-09 19:25",
@@ -10400,6 +10382,24 @@
    "evidencia": "TCL logcat: \"[player] recriar superficie no HDR: sim\" (TCL segue recriando); C9 /tmp/nuvio.log: OLED65C9PSA webos-4.10.2 app=2.0.4, 0 SIGSEGV"
   },
   {
+   "data": "2026-10-09 19:30",
+   "quem": "Claude Opus 5.5 (sessão de coordenação)",
+   "o_que": "Busca da sessão da LG 32LJ600B (webOS 3) do relato do Reddit no D1",
+   "issues": [],
+   "ref": "v2.0.3 (webOS)",
+   "resultado": "inconclusivo",
+   "evidencia": "D1 id>64500: nenhuma linha com LJ600; webOS 3.9.3 na 2.0.3: 65SJ800V (65304, 65363, 65374 arranque queda), OLED55B7P (65317), 49UJ6300 (66016)"
+  },
+  {
+   "data": "2026-10-09 19:40",
+   "quem": "Claude Opus 5.5 (sessão de coordenação)",
+   "o_que": "Logs da KM7 SE do relato do Reddit (15 sessões) e contagem de quedas nativas no Android por versão (D1 ids 62000..66300)",
+   "issues": [],
+   "ref": "v2.0.2 e v2.0.3 (Android)",
+   "resultado": "inconclusivo",
+   "evidencia": "D1 66008/66017 (ExoPlayer AudioTrack.getTimestamp), 65736 (GC da ART); Android geral: 2.0.2 70/391 e 219/1192 com queda, 2.0.3 25/400; KM7: 2.0.2 4/49, 2.0.3 5/13; arquivos em /Volumes/ExternalSSD/tmp/km7"
+  },
+  {
    "data": "2026-10-09 20:20",
    "quem": "Codex gpt-6-astra (revisão estática)",
    "o_que": "OpenSubtitles \"sem resposta\": 1a versão (manifesto lido no fio da busca)",
@@ -10407,24 +10407,6 @@
    "ref": "4f5780ba (agente/204-sostream, descartado)",
    "resultado": "falhou",
    "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/sostream-codex.txt (P1 corrida no parser do manifesto; P2 tentativa em andamento; P2 cancelamento)"
-  },
-  {
-   "data": "2026-10-09 20:40",
-   "quem": "Codex gpt-6-astra (revisão estática)",
-   "o_que": "OpenSubtitles \"sem resposta\": versão só-leitura, rodadas 2 e 3",
-   "issues": [],
-   "ref": "agente/204-sostream",
-   "resultado": "passou",
-   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/sostream2-codex.txt e sostream3-codex.txt (P2 de leitura sem sincronização e 200 vazio corrigidos; último P2 = republicação pela descoberta, corrigido com atômico em fonte; limite documentado: sonda terminando depois do resumo)"
-  },
-  {
-   "data": "2026-10-09 20:35",
-   "quem": "Claude Opus 5.5 (sessão de coordenação)",
-   "o_que": "Teste do add-on só de legenda com a sonda terminando no meio da busca (reproduz \"OpenSubtitles v3 não respondeu\" da TCL)",
-   "issues": [],
-   "ref": "ee2c64eb (FAIL) -> agente/204-sostream (PASS)",
-   "resultado": "passou",
-   "evidencia": "tests/addonslista.sh: 2 pedidos de stream e motivo \"OpenSubtitles v3 não respondeu\" antes; 1 pedido e motivo vazio depois; autoplay_alvo e addonurl rc=0"
   },
   {
    "data": "2026-10-09 20:30",
@@ -10438,6 +10420,24 @@
    "evidencia": "/Volumes/ExternalSSD/tmp/nuvio-oficial/relatorio.md (oficial preserva a ordem interna do add-on; não recria a superfície no HDR; buffer padrão 50 s; plugins até 10 scrapers)"
   },
   {
+   "data": "2026-10-09 20:35",
+   "quem": "Claude Opus 5.5 (sessão de coordenação)",
+   "o_que": "Teste do add-on só de legenda com a sonda terminando no meio da busca (reproduz \"OpenSubtitles v3 não respondeu\" da TCL)",
+   "issues": [],
+   "ref": "ee2c64eb (FAIL) -> agente/204-sostream (PASS)",
+   "resultado": "passou",
+   "evidencia": "tests/addonslista.sh: 2 pedidos de stream e motivo \"OpenSubtitles v3 não respondeu\" antes; 1 pedido e motivo vazio depois; autoplay_alvo e addonurl rc=0"
+  },
+  {
+   "data": "2026-10-09 20:40",
+   "quem": "Codex gpt-6-astra (revisão estática)",
+   "o_que": "OpenSubtitles \"sem resposta\": versão só-leitura, rodadas 2 e 3",
+   "issues": [],
+   "ref": "agente/204-sostream",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/sostream2-codex.txt e sostream3-codex.txt (P2 de leitura sem sincronização e 200 vazio corrigidos; último P2 = republicação pela descoberta, corrigido com atômico em fonte; limite documentado: sonda terminando depois do resumo)"
+  },
+  {
    "data": "2026-10-09 21:00",
    "quem": "Claude Opus 5.5 (sessão de coordenação)",
    "o_que": "Leitura do código: o perfil depende só do Trakt (relato de usuário com Simkl)",
@@ -10445,6 +10445,18 @@
    "ref": "integracao/2.0.3.1",
    "resultado": "passou",
    "evidencia": "src/app.c carregarPerfil -> trakt_perfil; sem trakt_ativo() o estado é \"Trakt desconectado\""
+  },
+  {
+   "data": "2026-10-09 21:30",
+   "quem": "Codex gpt-6-astra (revisão estática)",
+   "o_que": "#410 parte 1 e #411",
+   "issues": [
+    410,
+    411
+   ],
+   "ref": "cc8bbdcd, a066e6c8",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/410-codex.txt e 411-codex.txt (no findings)"
   },
   {
    "data": "2026-10-09 21:51",
@@ -10460,15 +10472,6 @@
   {
    "data": "2026-10-09 21:51",
    "quem": "Codex gpt-6-astra (revisão estática)",
-   "o_que": "Pré-carregamento do próximo episódio rodada 1",
-   "issues": [],
-   "ref": "agente/204-proxprefetch",
-   "resultado": "falhou",
-   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/prox-codex.txt (3 P2: TTL expira antes da contagem; cancelado conta como mudo; cacheia sem plugins) — rodada 2 em andamento"
-  },
-  {
-   "data": "2026-10-09 21:51",
-   "quem": "Codex gpt-6-astra (revisão estática)",
    "o_que": "#410 parte 2 rodada 1 (nível de GPU volta se não ganhar fps)",
    "issues": [
     410
@@ -10478,16 +10481,13 @@
    "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/410b-codex.txt (3 P2: GPU fraca grava nível 1 sem medir 0; LG zera nível salvo e nunca reavalia; interrupção compara cenas diferentes) — rodada 2 em andamento"
   },
   {
-   "data": "2026-10-09 21:30",
+   "data": "2026-10-09 21:51",
    "quem": "Codex gpt-6-astra (revisão estática)",
-   "o_que": "#410 parte 1 e #411",
-   "issues": [
-    410,
-    411
-   ],
-   "ref": "cc8bbdcd, a066e6c8",
-   "resultado": "passou",
-   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/410-codex.txt e 411-codex.txt (no findings)"
+   "o_que": "Pré-carregamento do próximo episódio rodada 1",
+   "issues": [],
+   "ref": "agente/204-proxprefetch",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/prox-codex.txt (3 P2: TTL expira antes da contagem; cancelado conta como mudo; cacheia sem plugins) — rodada 2 em andamento"
   },
   {
    "data": "2026-10-09 22:00",
@@ -10500,14 +10500,12 @@
   },
   {
    "data": "2026-10-09 22:35",
-   "quem": "Codex gpt-6-astra (revisão)",
-   "o_que": "Revisão da rodada 2 do nível de GPU adaptativo",
-   "issues": [
-    410
-   ],
-   "ref": "agente/204-gpunivel410 020fb8f8",
-   "resultado": "falhou",
-   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/410b-r2-codex.txt: 2 P2 (Mali-400 sem saída segura; interrupção perde reavaliação do legado). Rodada 3 pedida."
+   "quem": "Claude Opus 5.5 (sessão de coordenação)",
+   "o_que": "Conferência mecânica da documentação de funções (identificadores citados existem no código)",
+   "issues": [],
+   "ref": "agente/doc-funcoes 29a340b3",
+   "resultado": "passou",
+   "evidencia": "490 de 493 identificadores existem; os 3 errados corrigidos à mão (player.md, trakt.md, video.md)"
   },
   {
    "data": "2026-10-09 22:35",
@@ -10523,6 +10521,17 @@
   {
    "data": "2026-10-09 22:35",
    "quem": "Codex gpt-6-astra (revisão)",
+   "o_que": "Revisão da rodada 2 do nível de GPU adaptativo",
+   "issues": [
+    410
+   ],
+   "ref": "agente/204-gpunivel410 020fb8f8",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/410b-r2-codex.txt: 2 P2 (Mali-400 sem saída segura; interrupção perde reavaliação do legado). Rodada 3 pedida."
+  },
+  {
+   "data": "2026-10-09 22:35",
+   "quem": "Codex gpt-6-astra (revisão)",
    "o_que": "Revisão do conserto do player preso no .tpk",
    "issues": [
     412
@@ -10534,20 +10543,31 @@
   {
    "data": "2026-10-09 22:35",
    "quem": "Claude Opus 5.5 (sessão de coordenação)",
-   "o_que": "Conferência mecânica da documentação de funções (identificadores citados existem no código)",
-   "issues": [],
-   "ref": "agente/doc-funcoes 29a340b3",
-   "resultado": "passou",
-   "evidencia": "490 de 493 identificadores existem; os 3 errados corrigidos à mão (player.md, trakt.md, video.md)"
-  },
-  {
-   "data": "2026-10-09 22:35",
-   "quem": "Claude Opus 5.5 (sessão de coordenação)",
    "o_que": "Servidor Discord reestruturado e convite permanente gerado",
    "issues": [],
    "ref": "guild 1558285501067296922",
    "resultado": "passou",
    "evidencia": "5 categorias e 10 canais novos conferidos pela lista de canais; convite https://discord.gg/9NWr6SHyzJ com 'nunca irá expirar'. Pendente: dono apagar os 10 canais antigos (Canais de Texto/Voz)."
+  },
+  {
+   "data": "2026-10-09 22:50",
+   "quem": "Claude Opus 5.5 (sessão de coordenação)",
+   "o_que": "Onboarding do Discord ativado",
+   "issues": [],
+   "ref": "guild 1558285501067296922",
+   "resultado": "passou",
+   "evidencia": "9 canais padrão, aviso de boas-vindas, 3 tarefas (rules, bugs-and-issues, announcements); 'Onboarding is Enabled'. Ícone: dono sobe à mão."
+  },
+  {
+   "data": "2026-10-09 22:50",
+   "quem": "Codex gpt-6-astra (revisão)",
+   "o_que": "Revisão de confirmação da rodada 2 do #412",
+   "issues": [
+    412
+   ],
+   "ref": "agente/204-tpkpreso412 6ec34f52",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/412-r2-codex.txt: sem achados P1/P2; sem TV física"
   },
   {
    "data": "2026-10-09 22:50",
@@ -10563,13 +10583,13 @@
   {
    "data": "2026-10-09 22:50",
    "quem": "Codex gpt-6-astra (revisão)",
-   "o_que": "Revisão de confirmação da rodada 2 do #412",
+   "o_que": "Revisão de confirmação da rodada 3 do nível de GPU",
    "issues": [
-    412
+    410
    ],
-   "ref": "agente/204-tpkpreso412 6ec34f52",
-   "resultado": "passou",
-   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/412-r2-codex.txt: sem achados P1/P2; sem TV física"
+   "ref": "agente/204-gpunivel410 db3c1242",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/410b-r3-codex.txt: P2 residual (quadros alternando 1200/900 ms nunca terminam a referência). Rodada 4 pedida."
   },
   {
    "data": "2026-10-09 22:50",
@@ -10591,17 +10611,6 @@
   },
   {
    "data": "2026-10-09 22:50",
-   "quem": "Codex gpt-6-astra (revisão)",
-   "o_que": "Revisão de confirmação da rodada 3 do nível de GPU",
-   "issues": [
-    410
-   ],
-   "ref": "agente/204-gpunivel410 db3c1242",
-   "resultado": "falhou",
-   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/410b-r3-codex.txt: P2 residual (quadros alternando 1200/900 ms nunca terminam a referência). Rodada 4 pedida."
-  },
-  {
-   "data": "2026-10-09 22:50",
    "quem": "Claude Opus 5.5 (sessão de coordenação)",
    "o_que": "Testes-alvo na integração depois dos 4 merges",
    "issues": [
@@ -10611,91 +10620,6 @@
    "ref": "integracao/2.0.3.1 fd86a673",
    "resultado": "passou",
    "evidencia": "decoder409, proxprefetch, addonslista, tpk-preso, stream_parser, android_decoder409.py, novidades_cartao: rc=0"
-  },
-  {
-   "data": "2026-10-09 22:50",
-   "quem": "Claude Opus 5.5 (sessão de coordenação)",
-   "o_que": "Onboarding do Discord ativado",
-   "issues": [],
-   "ref": "guild 1558285501067296922",
-   "resultado": "passou",
-   "evidencia": "9 canais padrão, aviso de boas-vindas, 3 tarefas (rules, bugs-and-issues, announcements); 'Onboarding is Enabled'. Ícone: dono sobe à mão."
-  },
-  {
-   "data": "2026-10-09 23:50",
-   "quem": "Codex gpt-6-astra (revisão)",
-   "o_que": "Revisão de confirmação da rodada 4 do nível de GPU",
-   "issues": [
-    410
-   ],
-   "ref": "agente/204-gpunivel410 52dbde71",
-   "resultado": "passou",
-   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/410b-r4-codex.txt: P2 residual resolvido, sem achados novos"
-  },
-  {
-   "data": "2026-10-09 23:50",
-   "quem": "Claude Opus 5.5 (sessão de coordenação), TCL via adb",
-   "o_que": "QR do Discord colorido com logo: leitura",
-   "issues": [],
-   "ref": "agente/204-novidades cecbe108",
-   "resultado": "passou",
-   "evidencia": "zxing-cpp leu os 3 códigos (Discord, Ko-fi, Patreon) na captura do cartão, inclusive borrado/escurecido e em metade do tamanho; capturas em /Volumes/ExternalSSD/tmp/nov204-shots4"
-  },
-  {
-   "data": "2026-10-09 23:50",
-   "quem": "Claude Opus 5.5 (sessão de coordenação), TCL via adb",
-   "o_que": "IntroDB na TCL",
-   "issues": [],
-   "ref": "APK fd86a673",
-   "resultado": "passou",
-   "evidencia": "log 23:01: '[intro] 2 marcadores (tmdb)' e '[credits] source=introdb'; os 0 marcadores eram de tt6048596, que a API responde 'media not found'"
-  },
-  {
-   "data": "2026-10-09 23:50",
-   "quem": "Claude Opus 5.5 (sessão de coordenação), TCL via adb",
-   "o_que": "Spotlight: busca 'silo' na TCL",
-   "issues": [],
-   "ref": "APK b8d07d3d",
-   "resultado": "passou",
-   "evidencia": "Silo 2023 (série do dono) virou melhor resultado; antes era o documentário de 2015; revisão Codex em 3 rodadas, última sem achados (/Volumes/ExternalSSD/nv-203-tmp/rev/spotlight-r3-codex.txt)"
-  },
-  {
-   "data": "2026-10-09 23:50",
-   "quem": "Claude Opus 5.5 (sessão de coordenação), TCL via adb",
-   "o_que": "Vistos do Silo depois de reinstalar por cima",
-   "issues": [],
-   "ref": "APK b8d07d3d",
-   "resultado": "passou",
-   "evidencia": "'[vistoep] tt14688458: grafico ... vistos=22/30 T1=10/10 T2=5/10 T3=7/10': igual a antes da reinstalação, nada voltou"
-  },
-  {
-   "data": "2026-10-09 23:50",
-   "quem": "Claude Opus 5.5 (sessão de coordenação), TCL via adb",
-   "o_que": "Gráfico 'Seu progresso' remontando a cada chamada",
-   "issues": [],
-   "ref": "APK b8d07d3d -> ce4426f9",
-   "resultado": "passou",
-   "evidencia": "antes: ~1900 linhas/s de '[vistoep] grafico' na página do Silo (cache nunca batia para id com :T:E); depois do conserto 6c6d1668: 3 linhas na abertura, FPS 60.0; teste FAIL->PASS do Codex"
-  },
-  {
-   "data": "2026-10-09 23:50",
-   "quem": "Claude Opus 5.5 (sessão de coordenação), TCL via adb",
-   "o_que": "Biblioteca 129 salvos x 8 na grade",
-   "issues": [],
-   "ref": "APK 710541ab -> 25e9c3aa",
-   "resultado": "passou",
-   "evidencia": "antes: '[biblioteca] ocultar=1 excl_meta=121 grade=8'; depois do conserto 251d5e0f: 'excl_meta=0 grade=129', tela mostra '129 titles'; Codex sem achados (/Volumes/ExternalSSD/nv-203-tmp/rev/bib129-fix-codex.txt). Não era regressão: biblioteca.c idêntico ao da v2.0.3"
-  },
-  {
-   "data": "2026-10-09 23:50",
-   "quem": "Claude Opus 5.5 (sessão de coordenação), TCL via adb",
-   "o_que": "Reprodução Dolby Vision na TCL (Silo T2E6)",
-   "issues": [
-    409
-   ],
-   "ref": "APK ce4426f9",
-   "resultado": "passou",
-   "evidencia": "abre em 11,5 s, hdr=DolbyVision, 3 recriações da superfície registradas pelo [dvtrace], sem erro; saída limpa. Brilho não dá para medir por captura: o relato 'abre escuro' segue sem prova"
   },
   {
    "data": "2026-10-09 23:50",
@@ -10711,11 +10635,87 @@
   {
    "data": "2026-10-09 23:50",
    "quem": "Claude Opus 5.5 (sessão de coordenação), TCL via adb",
+   "o_que": "Biblioteca 129 salvos x 8 na grade",
+   "issues": [],
+   "ref": "APK 710541ab -> 25e9c3aa",
+   "resultado": "passou",
+   "evidencia": "antes: '[biblioteca] ocultar=1 excl_meta=121 grade=8'; depois do conserto 251d5e0f: 'excl_meta=0 grade=129', tela mostra '129 titles'; Codex sem achados (/Volumes/ExternalSSD/nv-203-tmp/rev/bib129-fix-codex.txt). Não era regressão: biblioteca.c idêntico ao da v2.0.3"
+  },
+  {
+   "data": "2026-10-09 23:50",
+   "quem": "Claude Opus 5.5 (sessão de coordenação), TCL via adb",
+   "o_que": "Gráfico 'Seu progresso' remontando a cada chamada",
+   "issues": [],
+   "ref": "APK b8d07d3d -> ce4426f9",
+   "resultado": "passou",
+   "evidencia": "antes: ~1900 linhas/s de '[vistoep] grafico' na página do Silo (cache nunca batia para id com :T:E); depois do conserto 6c6d1668: 3 linhas na abertura, FPS 60.0; teste FAIL->PASS do Codex"
+  },
+  {
+   "data": "2026-10-09 23:50",
+   "quem": "Claude Opus 5.5 (sessão de coordenação), TCL via adb",
+   "o_que": "IntroDB na TCL",
+   "issues": [],
+   "ref": "APK fd86a673",
+   "resultado": "passou",
+   "evidencia": "log 23:01: '[intro] 2 marcadores (tmdb)' e '[credits] source=introdb'; os 0 marcadores eram de tt6048596, que a API responde 'media not found'"
+  },
+  {
+   "data": "2026-10-09 23:50",
+   "quem": "Claude Opus 5.5 (sessão de coordenação), TCL via adb",
+   "o_que": "QR do Discord colorido com logo: leitura",
+   "issues": [],
+   "ref": "agente/204-novidades cecbe108",
+   "resultado": "passou",
+   "evidencia": "zxing-cpp leu os 3 códigos (Discord, Ko-fi, Patreon) na captura do cartão, inclusive borrado/escurecido e em metade do tamanho; capturas em /Volumes/ExternalSSD/tmp/nov204-shots4"
+  },
+  {
+   "data": "2026-10-09 23:50",
+   "quem": "Claude Opus 5.5 (sessão de coordenação), TCL via adb",
+   "o_que": "Reprodução Dolby Vision na TCL (Silo T2E6)",
+   "issues": [
+    409
+   ],
+   "ref": "APK ce4426f9",
+   "resultado": "passou",
+   "evidencia": "abre em 11,5 s, hdr=DolbyVision, 3 recriações da superfície registradas pelo [dvtrace], sem erro; saída limpa. Brilho não dá para medir por captura: o relato 'abre escuro' segue sem prova"
+  },
+  {
+   "data": "2026-10-09 23:50",
+   "quem": "Codex gpt-6-astra (revisão)",
+   "o_que": "Revisão de confirmação da rodada 4 do nível de GPU",
+   "issues": [
+    410
+   ],
+   "ref": "agente/204-gpunivel410 52dbde71",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/nv-203-tmp/rev/410b-r4-codex.txt: P2 residual resolvido, sem achados novos"
+  },
+  {
+   "data": "2026-10-09 23:50",
+   "quem": "Claude Opus 5.5 (sessão de coordenação), TCL via adb",
+   "o_que": "Spotlight: busca 'silo' na TCL",
+   "issues": [],
+   "ref": "APK b8d07d3d",
+   "resultado": "passou",
+   "evidencia": "Silo 2023 (série do dono) virou melhor resultado; antes era o documentário de 2015; revisão Codex em 3 rodadas, última sem achados (/Volumes/ExternalSSD/nv-203-tmp/rev/spotlight-r3-codex.txt)"
+  },
+  {
+   "data": "2026-10-09 23:50",
+   "quem": "Claude Opus 5.5 (sessão de coordenação), TCL via adb",
    "o_que": "Suíte completa (em andamento, árvore mudou no meio)",
    "issues": [],
    "ref": "integracao/2.0.3.1 710541ab..25e9c3aa",
    "resultado": "inconclusivo",
    "evidencia": "/Volumes/ExternalSSD/tmp/suite-204-7105.log; falhas até agora: cachearte-wasm (módulo node ausente), central_rotulos e colecoes_teto (não linkam src/dts; video.c já chamava dts_overlay_draw na v2.0.3, não é regressão)"
+  },
+  {
+   "data": "2026-10-09 23:50",
+   "quem": "Claude Opus 5.5 (sessão de coordenação), TCL via adb",
+   "o_que": "Vistos do Silo depois de reinstalar por cima",
+   "issues": [],
+   "ref": "APK b8d07d3d",
+   "resultado": "passou",
+   "evidencia": "'[vistoep] tt14688458: grafico ... vistos=22/30 T1=10/10 T2=5/10 T3=7/10': igual a antes da reinstalação, nada voltou"
   },
   {
    "data": "2026-10-11",
@@ -10740,6 +10740,71 @@
    "ref": "v2.0.5-aspect.1",
    "resultado": "passou",
    "evidencia": "relato de teste: métodos B e D OK"
+  },
+  {
+   "data": "2026-10-12",
+   "quem": "Claude Sonnet 5.5",
+   "o_que": "Simkl scrobble do player (start/pause/stop com porcentagem, filme e episódio, só com Simkl vinculado): 401 desfaz o vínculo do perfil, 429/5xx/400 RATE_LIMIT abrem janela de espera sem retry, stop que falha cai no histórico. Rede falsa; sem TV nem conta Simkl real.",
+   "issues": [
+    459
+   ],
+   "ref": "agente/205-simkl-scrobble",
+   "resultado": "passou",
+   "evidencia": "tests/simkl_scrobble.sh rc 0 (FAIL antes: simkl_scrobble indefinido); regressão simkl_cw, visto, vistonao, simklauth, trakt_scrobble, player_visto_trailer rc 0; tools/build-local.sh build ok"
+  },
+  {
+   "data": "2026-10-12",
+   "quem": "Codex",
+   "o_que": "Triagem detalhada offline das 17 novas issues: corpo, últimos comentários e caminhos de código; 61 rascunhos para revisão do dono. Sem reprodução física ou leitura remota de logs.",
+   "issues": [
+    391,
+    396,
+    398,
+    399,
+    439,
+    440,
+    450,
+    451,
+    457,
+    458,
+    459,
+    460,
+    461,
+    462,
+    466,
+    467,
+    468
+   ],
+   "ref": "agente/205-issues-novas",
+   "resultado": "inconclusivo",
+   "evidencia": "docs/issues/TRIAGEM-2.0.5.md; docs/issues/rascunhos/respostas-triagem-2.0.5.md; snapshot .triagem/github-issues.json"
+  },
+  {
+   "data": "2026-10-12",
+   "quem": "Codex",
+   "o_que": "Validação dos artefatos da triagem detalhada: mapa.py/--check e publico.sh rc 0; 17 sem plataforma ?/nota placeholder, demais 402 preservadas; 61 textos de rascunho em 60 seções únicas sem URLs.",
+   "issues": [
+    391,
+    396,
+    398,
+    399,
+    439,
+    440,
+    450,
+    451,
+    457,
+    458,
+    459,
+    460,
+    461,
+    462,
+    466,
+    467,
+    468
+   ],
+   "ref": "agente/205-issues-novas",
+   "resultado": "passou",
+   "evidencia": "docs/issues/TRIAGEM-2.0.5.md (Provas da triagem detalhada); docs/issues/rascunhos/respostas-triagem-2.0.5.md; /private/tmp/triagem-publico-final.log"
   },
   {
    "data": "2026-10-12",
@@ -11172,93 +11237,6 @@
    "resultado_texto": "Checks locais passaram; status curados restaurados, 17 lançadas sem commit citando a issue aguardam confirmação do dono; 5 precisa-log restauradas e 3 mantidas lançadas com alcance explícito. Sem validação física."
   },
   {
-   "data": "2026-10-12",
-   "quem": "Codex",
-   "o_que": "Triagem detalhada offline das 17 novas issues: corpo, últimos comentários e caminhos de código; 61 rascunhos para revisão do dono. Sem reprodução física ou leitura remota de logs.",
-   "issues": [
-    391,
-    396,
-    398,
-    399,
-    439,
-    440,
-    450,
-    451,
-    457,
-    458,
-    459,
-    460,
-    461,
-    462,
-    466,
-    467,
-    468
-   ],
-   "ref": "agente/205-issues-novas",
-   "resultado": "inconclusivo",
-   "evidencia": "docs/issues/TRIAGEM-2.0.5.md; docs/issues/rascunhos/respostas-triagem-2.0.5.md; snapshot .triagem/github-issues.json"
-  },
-  {
-   "data": "2026-10-12",
-   "quem": "Codex",
-   "o_que": "Validação dos artefatos da triagem detalhada: mapa.py/--check e publico.sh rc 0; 17 sem plataforma ?/nota placeholder, demais 402 preservadas; 61 textos de rascunho em 60 seções únicas sem URLs.",
-   "issues": [
-    391,
-    396,
-    398,
-    399,
-    439,
-    440,
-    450,
-    451,
-    457,
-    458,
-    459,
-    460,
-    461,
-    462,
-    466,
-    467,
-    468
-   ],
-   "ref": "agente/205-issues-novas",
-   "resultado": "passou",
-   "evidencia": "docs/issues/TRIAGEM-2.0.5.md (Provas da triagem detalhada); docs/issues/rascunhos/respostas-triagem-2.0.5.md; /private/tmp/triagem-publico-final.log"
-  },
-  {
-   "data": "2026-10-12",
-   "quem": "Claude Sonnet 5.5",
-   "o_que": "Simkl scrobble do player (start/pause/stop com porcentagem, filme e episódio, só com Simkl vinculado): 401 desfaz o vínculo do perfil, 429/5xx/400 RATE_LIMIT abrem janela de espera sem retry, stop que falha cai no histórico. Rede falsa; sem TV nem conta Simkl real.",
-   "issues": [
-    459
-   ],
-   "ref": "agente/205-simkl-scrobble",
-   "resultado": "passou",
-   "evidencia": "tests/simkl_scrobble.sh rc 0 (FAIL antes: simkl_scrobble indefinido); regressão simkl_cw, visto, vistonao, simklauth, trakt_scrobble, player_visto_trailer rc 0; tools/build-local.sh build ok"
-  },
-  {
-   "data": "2026-10-14 23:11",
-   "quem": "job-pi magpie/group/nv-revisao (revisao independente)",
-   "o_que": "Revisao final agente/205-i429hbs apos fixz 22:28: VEREDITO OK; linguas.sh e ajustes_idioma_disco.sh rc 0",
-   "issues": [
-    429
-   ],
-   "ref": "f59554839 (agente/205-i429hbs)",
-   "resultado": "passou",
-   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-i429hbs-y.log"
-  },
-  {
-   "data": "2026-10-14 22:35",
-   "quem": "job-pi magpie/group/nv-revisao (revisao independente)",
-   "o_que": "Revisao final agente/205-i513autoplay antes do fixy: VEREDITO BLOQUEIA",
-   "issues": [
-    513
-   ],
-   "ref": "agente/205-i513autoplay antes do fixy 23:07",
-   "resultado": "falhou",
-   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-i513autoplay-y.log"
-  },
-  {
    "data": "2026-10-14 01:42",
    "quem": "job-pi magpie/group/nv-revisao (revisao rev3)",
    "o_que": "Revisao agente/205-p2p486 apos fix-205-p2p486-3 (01:22): VEREDITO OK",
@@ -11281,6 +11259,28 @@
    "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-i488perfil-z.log"
   },
   {
+   "data": "2026-10-14 22:35",
+   "quem": "job-pi magpie/group/nv-revisao (revisao independente)",
+   "o_que": "Revisao final agente/205-i513autoplay antes do fixy: VEREDITO BLOQUEIA",
+   "issues": [
+    513
+   ],
+   "ref": "agente/205-i513autoplay antes do fixy 23:07",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-i513autoplay-y.log"
+  },
+  {
+   "data": "2026-10-14 23:11",
+   "quem": "job-pi magpie/group/nv-revisao (revisao independente)",
+   "o_que": "Revisao final agente/205-i429hbs apos fixz 22:28: VEREDITO OK; linguas.sh e ajustes_idioma_disco.sh rc 0",
+   "issues": [
+    429
+   ],
+   "ref": "f59554839 (agente/205-i429hbs)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-i429hbs-y.log"
+  },
+  {
    "data": "2026-10-15 02:47",
    "quem": "job-pi magpie/group/nv-revisao (revisao)",
    "o_que": "Revisao do fix pr/493-fix (PR #493, traz #488): VEREDITO BLOQUEIA",
@@ -11292,13 +11292,15 @@
    "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revpr493-fix.log"
   },
   {
-   "data": "2026-10-15 03:53",
+   "data": "2026-10-15 02:52",
    "quem": "job-pi magpie/group/nv-revisao (revisao)",
-   "o_que": "Revisao aspvolta: VEREDITO OK",
-   "issues": [],
-   "ref": "agente/205-aspvolta (merged 04:47 em HEAD 71c00499e)",
-   "resultado": "passou",
-   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-aspvolta.log"
+   "o_que": "Revisao i513 autoplay x: VEREDITO BLOQUEIA",
+   "issues": [
+    513
+   ],
+   "ref": "agente/205-i513autoplay (fix-i513x DONE 03:59 depois)",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-i513autoplay-x.log"
   },
   {
    "data": "2026-10-15 03:04",
@@ -11343,15 +11345,13 @@
    "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revpr491-limpo-r2.log"
   },
   {
-   "data": "2026-10-15 02:52",
+   "data": "2026-10-15 03:53",
    "quem": "job-pi magpie/group/nv-revisao (revisao)",
-   "o_que": "Revisao i513 autoplay x: VEREDITO BLOQUEIA",
-   "issues": [
-    513
-   ],
-   "ref": "agente/205-i513autoplay (fix-i513x DONE 03:59 depois)",
-   "resultado": "falhou",
-   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-i513autoplay-x.log"
+   "o_que": "Revisao aspvolta: VEREDITO OK",
+   "issues": [],
+   "ref": "agente/205-aspvolta (merged 04:47 em HEAD 71c00499e)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-aspvolta.log"
   },
   {
    "data": "2026-10-15 04:50",
@@ -11370,6 +11370,79 @@
    "resultado": "inconclusivo",
    "evidencia": "instalado.txt: c9 rc=255 (sem saida util); confirmar na TV",
    "issues": []
+  },
+  {
+   "data": "2026-10-15 05:49",
+   "quem": "job-pi group/nv-revisao (revisao)",
+   "o_que": "Revisao vidrotodo: VEREDITO OK",
+   "issues": [],
+   "ref": "agente/205-vidrotodo",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-vidrotodo.log"
+  },
+  {
+   "data": "2026-10-15 06:49",
+   "quem": "job-claude (merge)",
+   "o_que": "Merge da integracao/2.0.5 em agente/205-vidrotodo preservando vidro e chrome",
+   "issues": [],
+   "ref": "merge commit 9b4fe6776 (worktree agente/205-vidrotodo)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-merge-205-vidrotodo.log"
+  },
+  {
+   "data": "2026-10-15 06:49",
+   "quem": "job-pi group/nv-revisao (revisao)",
+   "o_que": "Revisao i513 autoplay v: VEREDITO OK",
+   "issues": [
+    513
+   ],
+   "ref": "agente/205-i513autoplay (fix i513w 05:50 antes)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-i513autoplay-v.log"
+  },
+  {
+   "data": "2026-10-15 06:49",
+   "quem": "job-pi group/nv-revisao (revisao)",
+   "o_que": "Revisao p2pusb v: VEREDITO BLOQUEIA",
+   "issues": [
+    486,
+    505
+   ],
+   "ref": "agente/205-p2pusb (fix p2pusbw 05:51 antes)",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-p2pusb-v.log"
+  },
+  {
+   "data": "2026-10-15 06:50",
+   "quem": "job-pi group/nv-revisao (revisao)",
+   "o_que": "Revisao pr490 fix3: VEREDITO BLOQUEIA (fome de fila nas fontes Vitrine)",
+   "issues": [
+    490
+   ],
+   "ref": "pr/490-fix (fix c 3dae8f5c 06:03 antes)",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revpr490-fix3.log"
+  },
+  {
+   "data": "2026-10-15 06:50",
+   "quem": "job-pi group/nv-revisao (revisao)",
+   "o_que": "Revisao pr493 v3 (head do autor + fixes portados): VEREDITO OK",
+   "issues": [
+    488,
+    482
+   ],
+   "ref": "pr/493-v3 (tip 65613c562)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revpr493-v3.log"
+  },
+  {
+   "data": "2026-10-15 07:10",
+   "quem": "escrivao (mapa keeper)",
+   "o_que": "sync do tracking: HEAD 799d025bd, branches/jobs/verdicts do snapshot 06:50",
+   "issues": [],
+   "ref": "799d025bd",
+   "resultado": "passou",
+   "evidencia": "escrivao/estado.md + docs/issues/mapa.json (atualizado_em 2026-10-15 07:10)"
   }
  ],
  "decisoes": [
@@ -12263,7 +12336,7 @@
     "agente/205-perfis21 (tip 7376c250, 1 commits fora)"
    ],
    "proximo_passo": "backlog 2.1 (review OK, 1 ahead)",
-   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). rodando; alvo declarado = 2.1. Escrivão 14/10 14:47: review OK, merge pendente. | Escrivão 2026-10-14 16:11: review j-revg-perfis21 OK (11:16); merge pendente. | Escrivão 14/10 19:48: sem job"
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). rodando; alvo declarado = 2.1. Escrivão 14/10 14:47: review OK, merge pendente. | Escrivão 2026-10-14 16:11: review j-revg-perfis21 OK (11:16); merge pendente. | Escrivão 14/10 19:48: sem job Escrivao 10-15 07:10: review OK mantido."
   },
   {
    "id": "dono-205-dicatoque",
@@ -13033,8 +13106,8 @@
    "conserto": [
     "60c6db739 (merge agente/205-estatpainel2 em integracao/2.0.5)"
    ],
-   "proximo_passo": "lancar com 2.0.5 (merge 60c6db739)",
-   "notas": "Review OK j-revg-estatpainel2-c 19:20. Merge concluido (60c6db739); branch sem commits fora.",
+   "proximo_passo": "merged; build+install para o novo HEAD",
+   "notas": "Review OK j-revg-estatpainel2-c 19:20. Merge concluido (60c6db739); branch sem commits fora. Escrivao 10-15 07:10: merge job sem review log (so merge/fix).",
    "url": null
   },
   {
@@ -13249,13 +13322,13 @@
    "id": "dono-205-issues-triagem",
    "titulo": "issues: post-2.0.5 triage (419 items, 2.0.6 target, evidence-based status)",
    "plataforma": "?",
-   "status": "aberta",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
-    "45be541a"
+    "7656a6598 (merge agente/205-triagem-velhas em integracao/2.0.5)"
    ],
-   "proximo_passo": "PERDIDO: BLOQUEIA j-revg-triagem-velhas, sem fix; relancar fix ou fechar",
-   "notas": "Escrivão 14/10 14:47: integrada.",
+   "proximo_passo": "merged em integracao/2.0.5 (7656a6598); build+install para 799d025bd; docs-only",
+   "notas": "Escrivão 14/10 14:47: integrada. Escrivao 10-15 07:10: w OK (04:49) apos fix z (03:49); merge 7656a6598.",
    "url": null
   },
   {
@@ -13384,8 +13457,8 @@
    "conserto": [
     "agente/205-mock21 (tip 9de13e4e, 1 commit fora)"
    ],
-   "proximo_passo": "triagem (1 ahead, sem job, sem log)",
-   "notas": "Escrivão 2026-10-14 16:11: 3 mockups anteriores (gamification/cinephile/redesign) ja em integracao/2.0.5; friends row 9de13e4e ainda fora.",
+   "proximo_passo": "backlog 2.1 (mock 21, 1 ahead, sem job, sem log)",
+   "notas": "Escrivão 2026-10-14 16:11: 3 mockups anteriores (gamification/cinephile/redesign) ja em integracao/2.0.5; friends row 9de13e4e ainda fora. Escrivao 10-15 07:10: sem job.",
    "url": null
   },
   {
@@ -13460,11 +13533,10 @@
    "status": "em_revisao",
    "release": "2.1",
    "conserto": [
-    "fe5e0e92",
-    "agente/205-p2pusb (7 commits fora, review BLOQUEIA)"
+    "agente/205-p2pusb: 9 commits fora"
    ],
-   "proximo_passo": "fix do BLOQUEIA (j-revg-p2pusb-w); depois review",
-   "notas": "8 ahead; nao mergeado; sem job rodando",
+   "proximo_passo": "BLOQUEIA v (j-revg-p2pusb-v 06:49): mount container aceito como USB e rescan suprimido; fix, depois review",
+   "notas": "8 ahead; nao mergeado; sem job rodando Escrivao 10-15 07:10: fix w 05:51; review v 06:49 BLOQUEIA.",
    "url": null
   },
   {
@@ -13711,8 +13783,8 @@
    "conserto": [
     "e81c1f40"
    ],
-   "proximo_passo": "triagem (1 ahead, sem job, sem log)",
-   "notas": "Escrivão 14/10 14:47: sem job (perdido).",
+   "proximo_passo": "triagem (1 ahead, sem job, sem log); conferir respostas-dono.json (novo, nao commitado)",
+   "notas": "Escrivão 14/10 14:47: sem job (perdido). Escrivao 10-15 07:10: docs/issues/respostas-dono.json aparece untracked no worktree.",
    "url": null
   },
   {
@@ -14149,9 +14221,11 @@
    "plataforma": "?",
    "status": "integrada",
    "release": "2.0.5",
-   "conserto": [],
-   "proximo_passo": "lancar com 2.0.5 (merged em agente/205-vidropadrao)",
-   "notas": "Branch agente/205-vidropadrao 10 commits fora, 2 atras. Job sonnet high."
+   "conserto": [
+    "be42293ae (merge agente/205-vidropadrao em integracao/2.0.5)"
+   ],
+   "proximo_passo": "merged; build+install para o novo HEAD",
+   "notas": "Branch agente/205-vidropadrao 10 commits fora, 2 atras. Job sonnet high. Escrivao 10-15 07:10: merge job sem review log (so merge/fix)."
   },
   {
    "id": "dono-205-m3umisto",
@@ -14179,9 +14253,11 @@
    "plataforma": "?",
    "status": "aberta",
    "release": "2.1",
-   "conserto": [],
-   "proximo_passo": "review ou drop (2 ahead, sem review)",
-   "notas": "Branch agente/205-glassmock ja integrada. Estudo/mockups, nao lancar."
+   "conserto": [
+    "030bf69df (docs/design glass chrome study), 2 commits fora de integracao/2.0.5"
+   ],
+   "proximo_passo": "aguardando escolha do dono A/B/C; 2 ahead, estudo/mock, sem review",
+   "notas": "Estudo/mockups (build/gen.py + PNGs), sem src. NOTA 10-15 07:10: notas antigas diziam \"ja integrada\": git mostra 2 ahead nao mergeado. Escrivao 10-15 07:10: sem review; depende de decisao do dono."
   },
   {
    "id": "dono-205-barra27",
@@ -14204,8 +14280,8 @@
    "conserto": [
     "agente/205-colhdr: 1 commit fora"
    ],
-   "proximo_passo": "verificar se colhdrlinha (merged) substitui; senao review ou drop",
-   "notas": "1 ahead; fix 21:18, sem review depois"
+   "proximo_passo": "colhdrlinha (merged eb469669a? nao: c44f8afbe) implementou o header da colecao; branch colhdr so mock -> descartar ou confirmar",
+   "notas": "1 ahead; fix 21:18, sem review depois Escrivao 10-15 07:10: colhdrlinha merged c44f8afbe; colhdr fica como mock 1 ahead."
   },
   {
    "id": "dono-205-vidaa",
@@ -14214,10 +14290,10 @@
    "status": "aberta",
    "release": "2.0.5",
    "conserto": [
-    "agente/205-vidaa: 14 commits fora"
+    "agente/205-vidaa: 14 commits fora (tip 1419c9cef 22:46)"
    ],
-   "proximo_passo": "review (14 ahead; fix 22:46 sem review)",
-   "notas": "criado pelo escrivao 22:4x"
+   "proximo_passo": "review (nenhum log de review apos o fix 22:46) ou descartar; pendente publicar com chaves",
+   "notas": "criado pelo escrivao 22:4x Escrivao 10-15 07:10: sem review depois do fix 22:46."
   },
   {
    "id": "dono-205-pr493",
@@ -14238,10 +14314,10 @@
    "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
-    "pr/498-limpo: 12 commits fora"
+    "pr/498-limpo: 12 commits fora (tip 22ed066e2 22:31)"
    ],
-   "proximo_passo": "review OK (j-revpr498-limpo); merge pr/498-limpo",
-   "notas": "PR #498; 12 ahead; nao mergeado"
+   "proximo_passo": "review OK (j-revpr498-limpo 23:15); merge pr/498-limpo; testar IME na TV",
+   "notas": "PR #498; 12 ahead; nao mergeado Escrivao 10-15 07:10: 12 ahead, review OK mantido; falta merge."
   },
   {
    "id": "pr-491-limpo",
@@ -14250,10 +14326,10 @@
    "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
-    "pr/491-limpo: 50 commits fora"
+    "pr/491-limpo: 52 commits fora (tip f8fe27fad 05:53)"
    ],
-   "proximo_passo": "fix do BLOQUEIA r3 (j-revpr491-limpo-r3); depois review",
-   "notas": "PR #491; 51 ahead; nao mergeado"
+   "proximo_passo": "BLOQUEIA r3 (j-revpr491-limpo-r3 04:52); fix c done 05:53 (f8fe27fad); review de novo, depois merge",
+   "notas": "PR #491; 51 ahead; nao mergeado Escrivao 10-15 07:10: fix c 05:53 cancela probes DTS; precisa review depois do r3."
   },
   {
    "id": "pr-489-fix",
@@ -14262,10 +14338,10 @@
    "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
-    "pr/489-fix: 23 commits fora"
+    "pr/489-fix: 23 commits fora (tip 49f7a53bd e45ff15dd)"
    ],
-   "proximo_passo": "review OK (j-revpr489-fix); merge pr/489-fix",
-   "notas": "PR #489; 23 ahead; nao mergeado"
+   "proximo_passo": "review OK (j-revpr489-fix 03:05); merge pr/489-fix em integracao/2.0.5 e testar",
+   "notas": "PR #489; 23 ahead; nao mergeado Escrivao 10-15 07:10: review OK 03:05; 23 ahead; nenhum fix depois."
   },
   {
    "id": "pr-490-fix",
@@ -14274,10 +14350,10 @@
    "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
-    "pr/490-fix: 6 commits fora"
+    "pr/490-fix: 8 commits fora (tip 3dae8f5c 06:03)"
    ],
-   "proximo_passo": "fix do BLOQUEIA (j-revpr490-fix2); depois review; merge pr/490-fix",
-   "notas": "PR #490; 7 ahead; nao mergeado"
+   "proximo_passo": "BLOQUEIA fix3 (j-revpr490-fix3 06:50: fontesVitrine posteriores passam fome de fila); fix, depois review, depois merge",
+   "notas": "PR #490; 7 ahead; nao mergeado Escrivao 10-15 07:10: fix c 06:03 (3dae8f5c); review fix3 06:50 BLOQUEIA (P2 starvation da fila)."
   },
   {
    "id": "pr-493-fix",
@@ -14286,10 +14362,10 @@
    "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
-    "pr/493-fix: 9 commits fora"
+    "pr/493-fix: 10 commits fora (tip a0bc2d982 03:52)"
    ],
-   "proximo_passo": "review OK (j-revpr493-fix2); merge pr/493-fix",
-   "notas": "PR #493 (carrega #488); 10 ahead; nao mergeado"
+   "proximo_passo": "superseded by pr/493-v3 (author new head 5694694cc + ported fixes 65613c562); merge pr/493-v3",
+   "notas": "PR #493 (carrega #488); 10 ahead; nao mergeado Escrivao 10-15 07:10: autor publicou head nova; pr/493-v3 porta os fixes e passa review OK 06:50 (j-revpr493-v3). Continuar com pr/493-v3."
   },
   {
    "id": "dono-205-vidrotodo",
@@ -14298,10 +14374,10 @@
    "status": "aberta",
    "release": "2.0.5",
    "conserto": [
-    "agente/205-vidrotodo: 7 commits fora"
+    "agente/205-vidrotodo: 10 commits fora (tip 9b4fe6776 merge do HEAD)"
    ],
-   "proximo_passo": "review (9 ahead; build job done 04:11, sem log de review)",
-   "notas": "criado pelo escrivao 2026-10-15"
+   "proximo_passo": "review OK (j-revg-vidrotodo 05:49); MERGE da integracao no branch feito 06:49 (j-merge-205-vidrotodo, merge commit 9b4fe6776 no worktree); falta merge em integracao/2.0.5 + teste na TV",
+   "notas": "criado pelo escrivao 2026-10-15 Escrivao 10-15 07:10: antes estava \"sem review log\"; agora review OK 05:49 e merge da integracao no branch 06:49. Branch ainda 10 ahead."
   },
   {
    "id": "dono-205-aspvolta",
@@ -14310,10 +14386,10 @@
    "status": "integrada",
    "release": "2.0.5",
    "conserto": [
-    "agente/205-aspvolta: 1 commit fora"
+    "71c00499e (merge agente/205-aspvolta em integracao/2.0.5; afb08475f)"
    ],
-   "proximo_passo": "lancar com 2.0.5 (merged em agente/205-aspvolta)",
-   "notas": "criado pelo escrivao 2026-10-15"
+   "proximo_passo": "merged (71c00499e); este HEAD ja tem install Android (instalado.txt 04:50)",
+   "notas": "criado pelo escrivao 2026-10-15 Escrivao 10-15 07:10: review OK j-revg-aspvolta 03:53; merge 71c00499e; instalado android rc=0."
   },
   {
    "id": "dono-205-estilo2",
@@ -14324,8 +14400,20 @@
    "conserto": [
     "agente/205-estilo2: 2 commits fora"
    ],
-   "proximo_passo": "review ou drop (2 ahead, sem review)",
-   "notas": "criado pelo escrivao 2026-10-15"
+   "proximo_passo": "aguardando escolha do dono A/B/C (recomendado C); 2 ahead, mock only, sem review",
+   "notas": "criado pelo escrivao 2026-10-15 Escrivao 10-15 07:10: sem review; depende de decisao do dono."
+  },
+  {
+   "id": "pr-493-v3",
+   "titulo": "PR #493 v3 (pr/493-v3) — head do autor + fixes portados",
+   "plataforma": "?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [
+    "pr/493-v3: 3 commits fora (5694694cc autor, 65613c562 port dos fixes)"
+   ],
+   "proximo_passo": "merge pr/493-v3 no PR #493 (carrega #488/#482)",
+   "notas": "Escrivao 10-15 07:10: job j-pr493-v3 05:49 (10 suites rc 0); review j-revpr493-v3 06:50 VEREDITO OK, sem P0-P2. Pendente: build TV e teste de troca de perfil em aparelho."
   }
  ],
  "fechar_203": [],
