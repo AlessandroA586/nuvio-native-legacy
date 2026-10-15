@@ -5,12 +5,24 @@
   <img src="docs/assets/nuvio-readme-banner.png" alt="Nuvio Native Legacy. A native TV client for LG webOS, Samsung Tizen and Android TV (experimental). Independent, unofficial fork." width="1600">
 </picture>
 
+# Nuvio Native Legacy (Bifurcación Personal)
+
+> ### Aviso de Proyecto Personal y Reconocimiento de Derechos
+>
+> Este repositorio constituye una bifurcación (fork) de carácter estrictamente personal, independiente y no oficial, mantenida por **Juansher** (`AlessandroA586`) con fines de experimentación, optimización y uso privado en dispositivos propios (Samsung Tizen y Android TV).
+>
+> **Créditos y Atribución:**
+> - **iqui27**: Desarrollador y creador del proyecto upstream `nuvio-native-legacy`, responsable de la reimplementación técnica del cliente en C, SDL2 y su arquitectura nativa para plataformas de televisión.
+> - **NuvioMedia**: Creadores y autores originales de la plataforma, diseño y ecosistema oficial de Nuvio.
+>
+> Todos los derechos de autor, marcas comerciales, nombres de productos y logotipos pertenecen a sus respectivos creadores originales. Este proyecto respeta íntegramente la Licencia Pública General de GNU v3.0 (GPLv3) bajo la cual fue publicado.
+
 <p align="center">
   <a href="https://github.com/iqui27/nuvio-native-legacy/releases/latest"><strong>Download latest release</strong></a>
   &nbsp;·&nbsp; <a href="INSTALL.md">Install guide</a>
   &nbsp;·&nbsp; <a href="#reporting-a-problem">Report a problem</a>
   &nbsp;·&nbsp; <a href="https://discord.gg/9NWr6SHyzJ">Discord</a>
-  &nbsp;·&nbsp; <a href="https://www.patreon.com/cw/CraaazyDevs"><strong>Support on Patreon ♥</strong></a>
+  &nbsp;·&nbsp; <a href="https://www.patreon.com/cw/CraaazyDevs"><strong>Support on Patreon</strong></a>
 </p>
 
 I wanted Nuvio on my 2019 LG OLED (C9, webOS 4) and the web app was too heavy
