@@ -27,6 +27,13 @@ static int    engolirOkUp;
 static char   aCanal[80], aNome[120], aTitulo[120], aBase[600], aTexto[300];
 static int    pedAssistir;
 
+void glem_abrir_sessao(void) {
+  modo = ultimoModo = foco = engolirOkUp = pedAssistir = 0;
+  desde = ultConferido = 0; anim = 0.0f;
+  aCanal[0] = aNome[0] = aTitulo[0] = aBase[0] = aTexto[0] = 0;
+  lembrete_carregar(perfis_ativo());
+}
+
 static int vendoCanal(const char *id) {
   return id[0] && !strcmp(player_id_canal(), id) &&
          (player_aberto() || player_mini_ativo());

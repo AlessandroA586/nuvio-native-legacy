@@ -38,6 +38,9 @@ void guia_focar_id(const char *id);
 // Dispara a carga de canais sem abrir nada — o CH+/- do controle funciona
 // mesmo com o guia nunca aberto, e precisa da lista para saber quem vem depois.
 void guia_carregar(void);
+// Nova abertura de perfil: fecha a tela e invalida a carga anterior sem
+// esperar rede. O cache persistido do perfil novo continua disponivel.
+void guia_abrir_sessao(void);
 
 // ZAP: o canal `dir` posicoes depois (1) ou antes (-1) de `idAtual` na ordem do
 // guia, ja como CatItem pronto para tocar. 0 = lista ainda nao carregada —

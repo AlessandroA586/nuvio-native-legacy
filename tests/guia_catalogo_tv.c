@@ -2,6 +2,7 @@
 // A segunda parte e o manifesto MISTO (movie+series+canal, o formato do
 // M3U Mux e dos addons de IPTV caseiros): cada canal lembra o tipo
 // declarado do catalogo dele — e o tipo do item, quando o meta traz um.
+#define NV_PERFIL_SESSAO_FORTE
 #include "../src/guia.c"
 #include <assert.h>
 
@@ -31,6 +32,18 @@ char *rede_baixar(const char *url, int segundos) {
   }
   return strdup(corpo);
 }
+char *rede_baixar_medido_controle(const char *url, int segundos,
+                                  const char *const *cabecalhos,
+                                  const RedeControle *controle,
+                                  RedeMedida *medida) {
+  (void)cabecalhos; (void)medida;
+  if (controle && controle->cancelado && *controle->cancelado) return NULL;
+  return rede_baixar(url, segundos);
+}
+uint64_t perfis_sessao_geracao(void) { return 0; }
+int perfis_sessao_atual(uint64_t geracao) { return geracao == 0; }
+int perfis_sessao_travar(uint64_t geracao) { (void)geracao; return 1; }
+void perfis_sessao_destravar(void) {}
 int addons_base_desligada(const char *base) { (void)base; return 0; }
 const char *i18n(const char *s) { return s; }
 int main(void) {

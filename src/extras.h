@@ -8,6 +8,8 @@
 // resolve "tt1234567" direto, e o TMDB nao.
 #ifndef NV_EXTRAS_H
 #define NV_EXTRAS_H
+// Clear published detail/trailer data and invalidate its in-flight requests.
+void extras_abrir_sessao(void);
 
 #define EX_COMENT_MAX 8
 #define EX_REL_MAX   12

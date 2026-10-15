@@ -37,6 +37,10 @@ enum { ILHA_INFO = 0, ILHA_OK, ILHA_ERRO, ILHA_ACENTO };
 // "abre" na ponta direita.
 void ilha_avisar(const char *chave, int tipo, const char *icone,
                  const char *texto, unsigned ms, int tecla);
+// Fecha a abertura anterior: tira avisos, cartoes, atividade e pedidos
+// privados. Mantem avisos identificados do aparelho (atualizacao/queda/rede)
+// e a configuracao de posicao do relogio. Nao cancela a atualizacao em curso.
+void ilha_abrir_sessao(void);
 // Tira o aviso desta chave da tela e da fila (ex.: a central foi aberta).
 void ilha_retirar(const char *chave);
 // 1 enquanto o aviso desta chave esta na tela ou na fila.

@@ -109,6 +109,13 @@ static int pinsPedidos;
 static int redeCaida;
 
 const char *sessao_usuario(void) { return "usuario-de-teste"; }
+int sessao_identidade_local_copiar(char *usuario, size_t nUsuario, char *jwt, size_t nJwt) {
+  snprintf(usuario, nUsuario, "%s", sessao_usuario());
+  snprintf(jwt, nJwt, "test-token");
+  return 1;
+}
+void sessao_token_recusado(const char *tok) { (void)tok; assert(0); }
+char *sessao_rpc(const char *funcao, const char *corpoJson, int *status);
 
 // O catalogo de avatares oficiais e uma RPC ANONIMA (get_avatar_catalog). Aqui
 // ele devolve vazio de proposito: a regra que este teste guarda e QUANDO a tela
@@ -118,7 +125,10 @@ const char *sessao_usuario(void) { return "usuario-de-teste"; }
 const char *nuvem_url(void) { return "https://exemplo.invalido"; }
 char *nuvem_rpc_com(const char *funcao, const char *corpoJson,
                     const char *bearer, int *status) {
-  (void)funcao; (void)corpoJson; (void)bearer;
+  if (bearer) {
+    assert(!strcmp(bearer, "test-token"));
+    return sessao_rpc(funcao, corpoJson, status);
+  }
   if (status) *status = 0;
   return NULL;
 }
