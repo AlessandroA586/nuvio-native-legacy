@@ -2038,10 +2038,15 @@ static float epCardPasso(void) { return epApple() ? 420.0f + NV_DETP_EP_GAP : NV
 // do texto tem que ser um pouco menor que a imagem"): recuo de 16 de cada lado
 // (o respiro de 3% do foco come ~10), centrada sob a imagem. `r` e a caixa do
 // card, `thH` a altura da miniatura, `ft` o foco 0..1.
+// Standard keeps the full-card plate because its text overlays the thumbnail.
 static GfxRect epPlacaRect(GfxRect r, float thH, float ft) {
   GfxRect p = { r.x + NV_DETP_EP_PLACA_INSET, r.y + thH,
                 r.w - NV_DETP_EP_PLACA_INSET * 2.0f,
                 r.h - thH + NV_DETP_EP_PLACA_PAD };
+  if (!epModerna())
+    p = (GfxRect){ r.x - NV_DETP_EP_PLACA_PAD, r.y - NV_DETP_EP_PLACA_PAD,
+                   r.w + NV_DETP_EP_PLACA_PAD * 2.0f,
+                   r.h + NV_DETP_EP_PLACA_PAD * 2.0f };
   float pw = p.w, ph = p.h, s = 1.0f + 0.03f * ft;
   p.w *= s; p.h *= s;
   p.x -= (p.w - pw) * 0.5f; p.y -= (p.h - ph) * 0.5f;

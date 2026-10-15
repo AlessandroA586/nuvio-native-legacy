@@ -139,6 +139,20 @@ int main(void) {
       if (i) assert(r.x + 18.0f + epTextoW() <= pl.x + pl.w);
     } }
 
+  // Standard keeps its full-card focus plate: text overlays the thumbnail.
+  gravar("homeLayoutLocal 1\n");
+  assert(ajustes_home_layout() == HOME_LAYOUT_PADRAO);
+  assert(epCardH() == epThumbH());
+  { GfxRect r = {100, 50, epCardW(), epCardH()};
+    for (i = 0; i <= 1; i++) {
+      GfxRect pl = epPlacaRect(r, epThumbH(), (float)i);
+      float scale = 1.0f + 0.03f * i;
+      assert(fabsf(pl.w - (r.w + 2 * NV_DETP_EP_PLACA_PAD) * scale) < 0.01f);
+      assert(fabsf(pl.h - (r.h + 2 * NV_DETP_EP_PLACA_PAD) * scale) < 0.01f);
+      assert(fabsf(pl.x + pl.w * 0.5f - (r.x + r.w * 0.5f)) < 0.01f);
+      assert(fabsf(pl.y + pl.h * 0.5f - (r.y + r.h * 0.5f)) < 0.01f);
+    } }
+
   puts("detail_epcard: bases casadas, tres tamanhos, sinopse de 4 linhas e foco andando");
   return 0;
 }
