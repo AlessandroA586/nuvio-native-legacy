@@ -972,6 +972,8 @@ static void notaDe(const Stream *s, FonteNota *nt) {
 }
 // Evidencia + idioma de uma fonte, para comparar duas da mesma resolucao
 // (memoria do automatico, stream_grupo_sem_perda).
+// Evidence gap allowed before automatic memory yields to the current winner.
+#define STREAM_MEMORIA_MARGEM 300
 static long notaComparavel(const Stream *s) {
   FonteNota nt;
   notaDe(s, &nt);
@@ -1892,7 +1894,8 @@ uint64_t stream_preparo_config_atual(void) {
     ajustes_fonte_usar_outros(), ajustes_fonte_ordem_uso(), ajustes_fonte_prioridade(),
     ajustes_fonte_hdr(), ajustes_dolby_vision(), ajustes_dv_mkv(), ajustes_dolby_atmos(),
     ajustes_tamanho_min_gb(), ajustes_tamanho_max_gb(), ajustes_buffer_preset(),
-    ajustes_cache_seek_mb(), ajustes_fonte_conferir_varias(), ajustes_fonte_tocar_conferindo() };
+    ajustes_cache_seek_mb(), ajustes_fonte_conferir_varias(), ajustes_fonte_tocar_conferindo(),
+    ajustes_fonte_idioma_audio() };
   unsigned versao = fonteregra_versao();
   uint64_t sessaoPerfil = nv_perfil_sessao_ler();
   uint64_t h = preparoMarca(UINT64_C(14695981039346656037), &cfg, sizeof cfg);
@@ -1906,6 +1909,8 @@ uint64_t stream_preparo_config_atual(void) {
     h = preparoMarca(h, contexto.chave[i], strlen(contexto.chave[i]) + 1);
   const char *qualidade = ajustes_qualidade();
   h = preparoMarca(h, qualidade, strlen(qualidade));
+  const char *idioma = idiomaPreferidoFonte();
+  h = preparoMarca(h, idioma, strlen(idioma));
   // Capacidade de hardware participa dos filtros. Erros aprendidos da lista
   // atual nao invalidam o proximo episodio nem sao instalados por ele.
   h = preparoMarca(h, decoder4k, sizeof decoder4k);
@@ -1947,6 +1952,8 @@ static int preparoGrupoSemPerda(int i, void *u) {
   if (p->melhor < 0 || p->melhor == i) return 1;
   for (int j = 0; j < p->n; j++) if (p->ordem[j] == p->melhor) { ga = p->grupo[j]; break; }
   const Stream *s = &p->fontes[i], *melhor = &p->fontes[p->melhor];
+  if (!ajustes_fonte_primeira() && ajustes_fonte_prioridade() != 2 && s->altura == melhor->altura &&
+      notaComparavel(s) + STREAM_MEMORIA_MARGEM < notaComparavel(melhor)) return 0;
   return p->grupo[q] <= ga && s->altura >= melhor->altura && s->dolbyVision >= melhor->dolbyVision &&
          !(p->lg && s->altura == melhor->altura && stream_e_mp4(melhor) && !stream_e_mp4(s));
 }
@@ -2728,9 +2735,6 @@ int stream_verificar_proxima_vod(int atualIdx, int tentativas, int *conferidas) 
   return -1;
 }
 
-// Diferenca de evidencia (fontenota) a partir da qual a memoria do automatico
-// cede: maior que o desempate de audio/10-bit, menor que um tipo de lancamento.
-#define STREAM_MEMORIA_MARGEM 300
 int stream_grupo_sem_perda(int i) {
   int a, gi, ga;
   if (i < 0 || i >= n || automaticaExcluida(i) || ehInformativa(&lista[i])) return 0;
