@@ -3246,6 +3246,32 @@ static void abrirExplorarNoTitulo(void) {
 }
 
 void app_evento(const SDL_Event *e) {
+  // Measurement anchors: only with perf enabled and an authenticated profile.
+  // D-pad scrolling still follows the real screen handlers.
+  if (perftv_enabled && e->type == SDL_KEYDOWN && !e->key.repeat &&
+      login_concluido() && perfilsel_concluido()) {
+    SDL_Keycode k = e->key.keysym.sym;
+    if (k == SDLK_F1 && !player_aberto()) {
+      menu_fechar(); ctx_abrir_sessao(); estatvivo_fechar();
+      detail_fechar_seco(); vertudo_fechar_seco();
+      trocarTela(TELA_HOME); home_ir_topo(); return;
+    }
+    if (k == SDLK_F2 && !player_aberto()) {
+      detail_fechar_seco(); vertudo_perf_cycle(); return;
+    }
+    if (k == SDLK_F3 && !player_aberto() && detail_aberto()) {
+      // Waiting overlay only: never selects a source or starts playback.
+      int i = detail_indice();
+      if (i >= 0) { player_abrir(i, NULL); trocarTela(TELA_PLAYER); }
+      return;
+    }
+    if (k == SDLK_F4 && app_na_home()) { home_perf_style_menu(); return; }
+    if (k == SDLK_F11 && !player_aberto()) {
+      menu_fechar(); detail_fechar_seco(); vertudo_fechar_seco();
+      trocarTela(TELA_AJUSTES); return;
+    }
+    if (k == SDLK_F12 && player_aberto()) { estatvivo_abrir(); return; }
+  }
   if (e->type == SDL_QUIT) { retomamorna_cancelar(); sair = 1; return; }
   if (dicascontrole_ocupado()) { dicascontrole_evento(e); return; }
   ilhacart_validar_identidade();

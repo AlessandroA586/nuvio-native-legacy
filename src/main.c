@@ -46,6 +46,10 @@
 #include "fundo.h"
 #include "gpunivel.h"
 #include "fpscena.h"
+#include "perftv.h"
+#include "vertudo.h"
+#include "ctxmenu.h"
+#include "estatvivoui.h"
 #include "gputempo.h"
 #include "text.h"
 #include "marco.h"
@@ -110,6 +114,46 @@
 // e a pessoa fica sabendo por que a tela trocou sozinha — uma vez por idioma
 // (o aviso tem um id por codigo e avisos-vistos.txt lembra). O texto ja sai no
 // idioma novo: i18n le ajustes_idioma().
+static PerfTv perfTv;
+static char perfScreen[64];
+static void perfTvFrame(Uint32 now, double ms) {
+  static Uint32 checked;
+  static int ready;
+  char line[320];
+  if (!perftv_enabled && now - checked < 1000u) return;
+  if (perftv_enabled && ready && perfScreen[0] &&
+      perftv_frame(&perfTv, perfScreen, ms, perftv_uploads, txt_rasterizadas,
+                   perftv_blur, perftv_glass, line, sizeof line)) {
+    puts(line); fflush(stdout);
+  }
+  if (now - checked >= 1000u) {
+    char path[1024];
+    int enabled = dados_caminho(path, sizeof path, "perf-tv") && access(path, F_OK) == 0;
+#ifdef NV_ANDROID
+    char value[PROP_VALUE_MAX];
+    enabled |= __system_property_get("debug.nuvio.perf", value) > 0 && !strcmp(value, "1");
+#endif
+    if (!enabled && perftv_enabled && perftv_flush(&perfTv, line, sizeof line)) {
+      puts(line); fflush(stdout);
+    }
+    perftv_enabled = enabled;
+    checked = now;
+  }
+  perftv_uploads = perftv_blur = perftv_glass = 0;
+  ready = perftv_enabled;
+}
+static const char *perfTvScreen(void) {
+  const char *screen = app_tela_nome();
+  if (ctx_aberto()) return "context-menu";
+  if (player_aberto() && (estatvivo_aberto() || estatvivo_fixado())) return "stats-panel";
+  if (!strcmp(screen, "menu")) return "menu";
+  if (!strcmp(screen, "ajustes")) return "settings";
+  if (player_aberto()) return player_controles_visiveis() ? "player-overlay" : "player";
+  if (detail_aberto()) return "detail";
+  if (vertudo_aberta()) return vertudo_perf_tag();
+  if (!strcmp(screen, "home")) return home_perf_tag();
+  return screen;
+}
 // Guard for the FPS scenes (fpscena.h): screen the measurement must be on.
 static int fpsEstado(const char *c) {
   return !strcmp(c, "title-page") ? detail_aberto()
@@ -1876,6 +1920,7 @@ int main(int argc, char **argv) {
     double dtms = (double)(cQuadro - ultQuadro) * 1000.0 / perFreq;
     ultQuadro = cQuadro;
     if (dtms < 0.0) dtms = 0.0;
+    perfTvFrame(agora, dtms);
     // FPS REGRESSION SCENES (fpscena.h), opt-in: a `fps-cena` file in the data
     // dir runs the scripted scenes once the home has settled and logs
     // [fps-cena]/[fps-gate]. tex_upl_n still holds the previous frame's uploads.
@@ -2063,6 +2108,7 @@ int main(int argc, char **argv) {
     txt_novo_quadro();
     ponteiro_quadro(agora);
     app_desenhar(agora);
+    if (perftv_enabled) snprintf(perfScreen, sizeof perfScreen, "%s", perfTvScreen());
     // A abertura (#213) cobre os primeiros quadros, com a home montando por baixo.
     if (abertura_ativa()) {
       int pend = 0;
@@ -2423,6 +2469,10 @@ int main(int argc, char **argv) {
 #ifdef NV_SINAL_TERMINAR
   if (sinalTerminou) alarm(NV_SAIDA_FOLGA_S);   // saida normal em curso: mais folga que os 4 s do laco
 #endif
+  if (perftv_enabled) {
+    char line[320];
+    if (perftv_flush(&perfTv, line, sizeof line)) { puts(line); fflush(stdout); }
+  }
   gfx_borrao_encerrar();
   gfx_snap_encerrar();
   app_encerrar();

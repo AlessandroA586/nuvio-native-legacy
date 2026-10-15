@@ -7717,6 +7717,18 @@ void home_desenhar(Uint32 agora) {
 // caso em que a pessoa moveu o foco e saiu antes de completar o repouso.
 // Nada a gravar (#95): a posicao na home vive so enquanto o app esta aberto.
 void home_encerrar(void) { }
+const char *home_perf_tag(void) {
+  if (!focoHero && foco.fileira >= 0 && foco.fileira < nFileiras) {
+    if (fileiras[foco.fileira].tipo == FILEIRA_PALCO) return "home-stage";
+    if (fileiras[foco.fileira].tipo == FILEIRA_REDONDA) return "home-round";
+  }
+  return "home";
+}
+void home_perf_style_menu(void) {
+  if (!perftv_enabled || focoHero || foco.fileira < 0 || foco.fileira >= nFileiras) return;
+  const Fileira *f = &fileiras[foco.fileira];
+  ctx_abrir_fileira(f->chave, f->titulo);
+}
 // Rastro de desempenho (main.c, [qd]): onde o foco esta neste quadro.
 const char *home_rastro_foco(void) {
   static char b[160];
