@@ -270,7 +270,8 @@ void fontenota_avaliar(const FonteNotaEntrada *e, FonteNota *n) {
     n->alertas |= FN_A_UPSCALE;
   }
 
-  n->idioma = fontenota_idioma(t, e->idiomaPref);
+  n->idioma = !e->idiomaPref || !e->idiomaPref[0] ? FN_IDIOMA_NADA
+            : e->temIdiomaDeclarado ? e->idiomaDeclarado : fontenota_idioma(t, e->idiomaPref);
   n->ptsIdioma = n->idioma == FN_IDIOMA_EXPLICITO ? FN_PTS_IDIOMA : n->idioma == FN_IDIOMA_DUAL ? FN_PTS_IDIOMA_DUAL : 0;
 }
 

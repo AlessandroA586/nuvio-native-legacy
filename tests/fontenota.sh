@@ -14,4 +14,5 @@ grep -q 'fontenota_somar(q, &nt, 1)' src/streams.c || { echo "fontenota: qualida
 grep -q 'fontenota_somar(p, &nt, 0)' src/streams.c || { echo "fontenota: Comecar rapido perdeu idioma/compatibilidade"; exit 1; }
 grep -q 'auto pick evidence' src/streams.c || { echo "fontenota: log da escolha sem a explicacao"; exit 1; }
 grep -q 'automaticoDaFolhaModo' src/streams.c || { echo "fontenota: selo da folha ignora Primeira da lista"; exit 1; }
+grep -q 'idiomaDeclaradoNota(s, idioma' src/streams.c || { echo "fontenota: idioma ignora o audio declarado pelo addon"; exit 1; }
 echo "fontenota: contrato de streams.c ok"

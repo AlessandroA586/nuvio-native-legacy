@@ -150,6 +150,20 @@ static void anime(void) {
   assert(fontenota_idioma("Japanese", "ja") == FN_IDIOMA_EXPLICITO);
   assert(fontenota_idioma("Dublado PT-BR", "pt-BR") == FN_IDIOMA_EXPLICITO);
   assert(fontenota_idioma("English", "none") == FN_IDIOMA_NADA && fontenota_idioma("English", "*") == FN_IDIOMA_NADA);
+  // AUDIO DECLARADO PELO ADDON (audioIdiomas) prevalece sobre o texto: "Dual
+  // Audio" no nome com a lista so em japones nao ganha o bonus; a lista com
+  // ingles ganha mesmo sem o texto dizer nada; sem preferencia, nada.
+  { FonteNotaEntrada e; FonteNota m;
+    memset(&e, 0, sizeof e);
+    e.rotulo = dual.nome; e.descricao = dual.descricao; e.arquivo = dual.arquivo; e.altura = 1080;
+    e.idiomaPref = "en"; e.semHi10p = 1;
+    e.temIdiomaDeclarado = 1; e.idiomaDeclarado = FN_IDIOMA_NADA;
+    fontenota_avaliar(&e, &m); assert(m.idioma == FN_IDIOMA_NADA && m.ptsIdioma == 0);
+    e.rotulo = jp720.nome; e.descricao = jp720.descricao; e.arquivo = jp720.arquivo; e.altura = 720;
+    e.idiomaDeclarado = FN_IDIOMA_EXPLICITO;
+    fontenota_avaliar(&e, &m); assert(m.idioma == FN_IDIOMA_EXPLICITO && m.ptsIdioma == FN_PTS_IDIOMA);
+    e.idiomaPref = "";
+    fontenota_avaliar(&e, &m); assert(m.idioma == FN_IDIOMA_NADA && m.ptsIdioma == 0); }
   idioma = NULL;
 }
 
@@ -269,11 +283,11 @@ static void filas(void) {
   // LEMBRADA (escolha manual neste titulo): na frente nos dois modos.
   assert(fila(l, 4, FONTEAUTO_MELHOR, 3, FR_ORDEM_NAO, 1, NULL, 1) == 3);
   assert(fila(l, 4, FONTEAUTO_PRIMEIRA, 3, FR_ORDEM_NAO, 1, NULL, 1) == 3);
-  // FAILOVER (falhaCandidatas): a mesma pontuacao ordena as alternativas, e
-  // o piso de qualidade (resolucao/DV da que falhou) tira as de baixo.
+  // FAILOVER (falhaCandidatas): a mesma pontuacao ordena as alternativas; uma
+  // candidata que o chamador exclui (excl) fica de fora da fila.
   { Fixture m[4] = { REMUX_CG, WEBDL_CG, REMUX_CG, REMUX_CG };
     m[2].descricao = "BluRay | AVC | FLAC 📊 12 Mbps"; m[2].arquivo = "Code.Geass.S01E03.1080p.BluRay.x264.FLAC-Enc.mkv";
-    m[3].altura = 720; m[3].excluida = 1;   // abaixo do piso: excluida como em falhaCandidatas
+    m[3].altura = 720; m[3].excluida = 1;   // excluida pelo chamador
     fila(m, 4, FONTEAUTO_MELHOR, 0, FR_ORDEM_NAO, 1, f, 4);
     nf = ultimaFila;
     assert(nf == 3 && f[0] == 0 && f[1] == 2 && f[2] == 1);   // falhou o REMUX: Blu-ray, depois WEB-DL

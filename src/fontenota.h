@@ -84,6 +84,11 @@ typedef struct {
   // parser classifica os selos sobre nome + descricao + `title` + arquivo, e
   // o `title` nao fica guardado quando o addon manda tambem a descricao.
   int tierDica, audioDica, codecDica;   // FN_TIER_* / FN_AUD_* / FN_CODEC_*; 0 = nenhuma
+  // AUDIO DECLARADO PELO ADDON (Stream.audioIdiomas): quando ha lista, ela
+  // decide o idioma e o texto da release nao conta — a mesma regra do chip de
+  // idioma da folha. idiomaDeclarado e FN_IDIOMA_EXPLICITO (a preferencia esta
+  // na lista) ou FN_IDIOMA_NADA (a lista nao a tem).
+  int temIdiomaDeclarado, idiomaDeclarado;
 } FonteNotaEntrada;
 
 typedef struct {

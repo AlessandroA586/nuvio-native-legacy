@@ -895,12 +895,42 @@ static const char *idiomaPreferidoFonte(void) {
   const char *c = ajustes_fonte_idioma_audio() ? ling_audio() : "";
   return c ? c : "";
 }
+static int faixaIdiomaInformado(const char *raw, size_t n);
+static const char *faixaIdiomaDoNome(const char *raw);
+static size_t faixaIdiomaEtiqueta(const char *raw, char *codigo, size_t tam);
+// O audio que o addon DECLAROU (audioIdiomas) contra a preferencia: 1 se ha
+// lista, com *nivel = FN_IDIOMA_EXPLICITO quando a preferencia esta nela.
+static int idiomaDeclaradoNota(const Stream *s, const char *pref, int *nivel) {
+  const char *p = s->audioIdiomas;
+  const char *fim = p + strnlen(p, sizeof s->audioIdiomas);
+  int lista = 0;
+  *nivel = FN_IDIOMA_NADA;
+  while (p < fim) {
+    const char *f = memchr(p, ',', (size_t)(fim - p)), *ate = f ? f : fim;
+    char raw[sizeof s->audioIdiomas + 1], codigo[32];
+    const char *cod;
+    size_t len;
+    while (p < ate && isspace((unsigned char)*p)) p++;
+    while (ate > p && isspace((unsigned char)ate[-1])) ate--;
+    len = (size_t)(ate - p);
+    memcpy(raw, p, len); raw[len] = 0;
+    if (faixaIdiomaInformado(raw, len)) {
+      lista = 1;
+      cod = faixaIdiomaDoNome(raw);
+      if (!cod && faixaIdiomaEtiqueta(raw, codigo, sizeof codigo)) cod = codigo;
+      if (cod && ling_casa(cod, pref)) *nivel = FN_IDIOMA_EXPLICITO;
+    }
+    p = f ? f + 1 : fim;
+  }
+  return lista;
+}
 static void notaAvaliar(const Stream *s, double dur, const char *idioma, FonteNota *nt) {
   FonteNotaEntrada e;
   memset(&e, 0, sizeof e);
   e.rotulo = s->rotulo; e.descricao = s->descricao; e.arquivo = s->arquivo;
   e.altura = s->altura; e.bytes = s->tamanhoBytes; e.tamanhoMB = s->tamanhoMB;
   e.duracaoSeg = dur; e.idiomaPref = idioma;
+  if (idioma[0]) e.temIdiomaDeclarado = idiomaDeclaradoNota(s, idioma, &e.idiomaDeclarado);
   // Dicas dos selos: cobrem o `title` do addon, que o parser so guarda quando
   // falta a descricao (fontenota.h).
   { uint64_t b = s->badges;
