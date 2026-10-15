@@ -25,7 +25,7 @@ static int corpoOriginal(TxtEstilo e) {
   }
 }
 static int corpo(TxtEstilo original) {
-  static const int PERCENTUAL[4] = { 100, 120, 130, 150 };
+  static const int PERCENTUAL[3] = { 100, 125, 150 };
   int n = corpoOriginal(original), tamanho = ajustes_sinopse_tamanho();
   if (!tamanho || !n) return n;
   return (n * PERCENTUAL[tamanho] + 50) / 100;
@@ -34,6 +34,7 @@ TxtEstilo sinopse_estilo(TxtEstilo original) {
   if (!ajustes_sinopse_tamanho()) return original;
   switch (corpo(original)) {
     case 19: return TXT_SINOPSE_19;
+    case 20: return TXT_SINOPSE_20;
     case 21: return TXT_SINOPSE_21;
     case 22: return TXT_SINOPSE_22;
     case 23: return TXT_SINOPSE_23;

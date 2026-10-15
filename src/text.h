@@ -187,11 +187,12 @@ typedef enum {
   // Medium nas outras). Mesmo corpo da sinopse (NV_FT_DET_SIN).
   TXT_DET_META_FORTE,   // ano, duracao       26 / 700
   TXT_DET_META_GEN,     // generos            26 / 600
-  // #477: corpos exclusivos das sinopses em 120/130/150%; 100% usa o original.
+  // #477: corpos exclusivos das sinopses; 100% usa o original.
   TXT_SINOPSE_19, TXT_SINOPSE_21, TXT_SINOPSE_22, TXT_SINOPSE_23,
   TXT_SINOPSE_24, TXT_SINOPSE_25, TXT_SINOPSE_26, TXT_SINOPSE_27,
   TXT_SINOPSE_28, TXT_SINOPSE_29, TXT_SINOPSE_30, TXT_SINOPSE_31,
   TXT_SINOPSE_33, TXT_SINOPSE_34, TXT_SINOPSE_35, TXT_SINOPSE_39,
+  TXT_SINOPSE_20, // 125% de 16px; append-only, preserva os estilos anteriores
   TXT_NFONTES
 } TxtEstilo;
 
