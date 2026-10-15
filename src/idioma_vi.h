@@ -994,6 +994,7 @@
   T("Busque por nome ou @apelido", "Tìm theo tên hoặc @biệt danh"),
   T("Busque por nome ou @apelido, ou use o código", "Tìm theo tên hoặc @biệt danh, hoặc dùng mã"),
   T("Bélgica", "Bỉ"),
+  T("Bósnio", "Bosna"),
   T("Búlgaro", "Tiếng Bulgaria"),
   T("C (payload de live)", "C (payload trực tiếp)"),
   T("CANCELADA", "ĐÃ HỦY"),

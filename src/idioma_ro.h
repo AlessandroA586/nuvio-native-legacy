@@ -993,6 +993,7 @@
   T("Busque por nome ou @apelido", "Caută după nume sau @nume"),
   T("Busque por nome ou @apelido, ou use o código", "Caută după nume sau @nume, sau folosește codul"),
   T("Bélgica", "Belgia"),
+  T("Bósnio", "Bosniac"),
   T("Búlgaro", "Bulgară"),
   T("C (payload de live)", "C (payload live)"),
   T("CANCELADA", "ANULATĂ"),

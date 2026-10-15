@@ -993,6 +993,7 @@
   { "Busque por nome ou @apelido", "Search by name or @handle" },
   { "Busque por nome ou @apelido, ou use o código", "Search by name or @handle, or use the code" },
   { "Bélgica", "Belgium" },
+  { "Bósnio", "Bosnian" },
   { "Búlgaro", "Bulgarian" },
   { "C (payload de live)", "C (live payload)" },
   { "CANCELADA", "CANCELED" },
