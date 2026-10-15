@@ -53,7 +53,7 @@ void plrui_pilula_foco(GfxRect r, float a) {
 }
 
 void plrui_botao_repouso(GfxRect r, float a) {
-  if (ajustes_vidro()) gfx_cor(r, 0.5f, 1, 1, 1, 0.08f * a);
+  if (ajustes_vidro()) gfx_vidro_painel(r, 0.5f, 0.55f, a);
   else gfx_cor(r, 0.5f, 0.141f, 0.149f, 0.173f, a);
 }
 
