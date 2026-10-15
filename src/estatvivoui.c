@@ -196,7 +196,7 @@ static void aplicarTamanho(int t) {
 // no tamanho escolhido antes de fixar.
 void estatvivo_abrir(void) {
   int t = ajustes_estat_tamanho();
-  if (aberto) return;
+  if (aberto) { fixado = 0; return; }   // focused pinned panel: Central/F12 unpins, hints return
   carregarTiles();
   abriuEm = SDL_GetTicks();
   if (!fixado) tamanho = t >= 0 && t < EV_TAM_N ? t : ultimoTamanho();
