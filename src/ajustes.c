@@ -81,7 +81,7 @@
 #include "abertura.h"
 #include "apoio.h"
 #include "telefoneui.h"
-#if defined(NV_ANDROID) && defined(NV_TOUCH_UI)
+#ifdef NV_ANDROID
 #include "android.h"
 #endif
 
@@ -560,6 +560,9 @@ typedef enum {
   // nao ter microfone fica sem ele) / Ligado / Desligado. LOCAL, so na tela do
   // .tpk. No fim: valor[]/CHAVE[] posicionais.
   AJ_MIC_BUSCA,
+#ifdef NV_ANDROID
+  AJ_BAIXAR_REGISTRO, // acao local; no fim para preservar os IDs existentes
+#endif
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -1439,6 +1442,9 @@ static const Opcao OPCOES[AJ_N] = {
 
   ESC("Configuração dos provedores", V_PROVEDORES_ESCOPO, 2),
   ESC("Botão de microfone na busca", V_MIC_BUSCA, 3),   // local: micBuscaLocal (.tpk)
+#ifdef NV_ANDROID
+  ACAO("Baixar registro"),
+#endif
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1687,6 +1693,9 @@ static const char *CHAVE[] = {
 
   "-provedoresEscopo",
   "micBuscaLocal",
+#ifdef NV_ANDROID
+  "-baixarRegistro",
+#endif
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -6056,6 +6065,9 @@ static const char *ajudaOpcaoBase(int op) {
         ? "Abre o cartão da versão nova, com o que mudou e o botão de instalar."
         : "Procura agora uma versão nova do Nuvio. Se houver, abre o cartão com o que mudou e o botão de instalar. O app também confere sozinho a cada 6 horas.";
     case AJ_VER_REGISTRO: return "Abre o registro do app por cima desta tela, ao vivo: o mesmo painel do botão vermelho do controle, para quem não tem esse botão.";
+#ifdef NV_ANDROID
+    case AJ_BAIXAR_REGISTRO: return "Salva o registro desta sessão em um arquivo de texto, sem senhas nem chaves.";
+#endif
     case AJ_MEDIDOR: return "Mostra quadros por segundo, o pior quadro e a memória dentro da ilha do relógio, atualizados a cada 3 s. Mínimo fica na linha da hora, Menor ganha uma segunda linha e Grande abre o painel completo. Quando a ilha mostra um aviso, o medidor se recolhe e volta depois.";
     case AJ_AVISO_LEGAL: return "Aviso legal";
     case AJ_GUIA: return "O que o Nuvio faz, em 12 capítulos. Cada recurso diz onde fica e tem um atalho para ele.";
@@ -7371,6 +7383,13 @@ static void eventoTela(const SDL_Event *e) {
     if (focoOp == AJ_ENVIAR_LOG) { registro_envio_abrir(); return; }
     if (focoOp == AJ_AVISO_LEGAL) { registro_legal_abrir(); return; }
     if (focoOp == AJ_VER_REGISTRO) { registro_abrir(); return; }
+#ifdef NV_ANDROID
+    if (focoOp == AJ_BAIXAR_REGISTRO) {
+      android_baixar_registro(registro_arquivo(), i18n("Registro salvo."),
+                             i18n("Não foi possível salvar o registro. Tente outro local."));
+      return;
+    }
+#endif
     if (focoOp == AJ_GUIA) { guiaAbrir(0); return; }
     if (focoOp == AJ_NOVIDADES20) { pediuNovidades20 = 1; return; }
     if (focoOp == AJ_APOIAR) { apoioAbrir(); return; }
@@ -8185,6 +8204,9 @@ static AjPreview familiaPreviaOpcao(int op) {
       return AJPV_RASTREIO;
     case AJ_VERSAO_I: case AJ_ATUALIZAR: case AJ_ENVIAR_LOG: case AJ_GUIA: case AJ_NOVIDADES20: case AJ_APOIAR:
     case AJ_ENVIO_AUTO: case AJ_VER_REGISTRO:
+#ifdef NV_ANDROID
+    case AJ_BAIXAR_REGISTRO:
+#endif
       return AJPV_ABOUT;
     case AJ_TMDB_LIGADO: case AJ_TMDB_IDIOMA: case AJ_TMDB_ARTE:
     case AJ_TMDB_BASICO: case AJ_TMDB_FICHA: case AJ_TMDB_DATAS:

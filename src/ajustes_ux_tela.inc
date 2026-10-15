@@ -213,6 +213,9 @@ static const Item TELA[] = {
     ROTS("App", ""), OPC(AJ_VERSAO_I), OPC(AJ_ATUALIZAR),
     ROTS("Registro", "para quem faz o app"),
       OPC(AJ_VER_REGISTRO), OPC(AJ_ENVIAR_LOG), OPC(AJ_ENVIO_AUTO),
+#ifdef NV_ANDROID
+      OPC(AJ_BAIXAR_REGISTRO),
+#endif
 };
 #define AJ_N_TELA (int)(sizeof TELA / sizeof *TELA)
 #define AJ_MAX_SECOES 16
