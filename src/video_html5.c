@@ -1136,8 +1136,6 @@ void video_encerrar(void) {
   ligado = 0;
 }
 
-#endif // defined(__EMSCRIPTEN__) && defined(NV_VIDAA)
-
 // API de video que entrou depois deste backend (1.5 a 2.0). O <video> do
 // navegador reconecta sozinho, nao disputa recurso com outro app e nao da
 // texto de erro alem do MediaError que ja vai para o log: respostas neutras.
@@ -1148,3 +1146,14 @@ int  video_conflito_recurso(void) { return 0; }
 int  video_decoder_anunciou(void) { return 1; }
 const char *video_erro_texto(void) { return ""; }
 int  video_pausa_confirmada(void) { return video_pronto() && !video_tocando(); }
+
+// 2.0.5: estatisticas e velocidade. <video> nao expoe contadores do
+// decoder aqui e a velocidade fica em 1x neste backend.
+void video_estatisticas(VideoStats *s) { video_stats_vazio(s); }
+int  video_velocidade_suportada(void) { return 0; }
+void video_velocidade(int c) { (void)c; }
+int  video_velocidade_atual(void) { return 100; }
+void video_velocidade_recusada(void) {}
+int  video_velocidade_bloqueada(void) { return 0; }
+
+#endif // defined(__EMSCRIPTEN__) && defined(NV_VIDAA)
