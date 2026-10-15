@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include "streamfit.h"
 #include "fontefalha.h"
+#include "fontefiltro.h"
 
 // A lista cresce conforme a resposta dos addons; a UI virtualiza as linhas.
 
@@ -48,6 +49,10 @@ typedef struct Stream {
   // Legendas anexadas pelo addon tambem contam, sem afirmar que sao embutidas.
   char audioIdiomas[512];
   char legendaIdiomas[512];
+  // Metadados canonicos para as exclusoes compartilhadas. Independentes dos
+  // badges importados e do tamanho exato exigido pelo StreamFit.
+  FonteFiltroDados filtro;
+  int filtroLido;       // 1 = classificado pelo parser; 0 = origem sintetica
   char descricao[2048];
   char arquivo[512];
   // O QUE O ADDON DECLARA COMO "a mesma fonte" entre episodios:
@@ -114,6 +119,9 @@ typedef struct Stream {
 int stream_extrair(const char *json, const char *provedor, Stream **saida);
 // Idiomas declarados para exibicao, sem rotulo. 0 = nenhum informado.
 int stream_faixas_texto(const Stream *fonte, int legendas, char *saida, unsigned tam);
+void stream_filtro_dados(const Stream *fonte, FonteFiltroDados *saida);
+int stream_filtro_permite(const Stream *fonte);
+int stream_filtro_bloqueou(void);
 void stream_definir_atual(int indice);
 int stream_atual(void);
 void stream_folha_contexto(const char *texto);

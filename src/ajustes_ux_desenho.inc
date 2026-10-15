@@ -22,14 +22,21 @@ static const char *uxResumo(int op) {
   if (op == AJ_HOME_LAYOUT && uxIndice == 1) return i18n("Escolha como o destaque e as fileiras se organizam na Tela inicial.");
   return ajudaOpcao(op);
 }
+static int uxOpcaoNaTela(int op) {
+  if (op == AJ_FILTRO_TAM_MAX || op == AJ_FILTRO_GRUPOS) return AJ_FILTROS_FONTES;
+  return op >= AJ_FALHA_RD_LIMITE && op <= AJ_FALHA_AD_LIMITE
+    ? AJ_FALHA_PROVEDOR_ORDEM : op;
+}
 static const char *uxCaminho(int op) {
   int i;
+  op = uxOpcaoNaTela(op);
   for (i = 0; i < AJ_N_TELA; i++)
     if (TELA[i].tipo == IT_OPC && TELA[i].op == op) return TELA[secIni[secDoItem[i]]].titulo;
   return "Ajustes";
 }
 static int uxSecaoDe(int op) {
   int i;
+  op = uxOpcaoNaTela(op);
   for (i = 0; i < AJ_N_TELA; i++)
     if (TELA[i].tipo == IT_OPC && TELA[i].op == op) return secDoItem[i];
   return 0;
@@ -37,6 +44,7 @@ static int uxSecaoDe(int op) {
 // O bloco (ROT) da opcao, "" sem bloco.
 static const char *uxBloco(int op) {
   int i, j;
+  op = uxOpcaoNaTela(op);
   for (i = 0; i < AJ_N_TELA; i++)
     if (TELA[i].tipo == IT_OPC && TELA[i].op == op) {
       for (j = i; j > secIni[secDoItem[i]]; j--)

@@ -274,3 +274,4 @@
 #ifdef NV_ANDROID
   0, /* Baixar registro: acao local, sem preferencia gravada */
 #endif
+  0, 0, 0, /* shared exclusions parent, max-size view, release-group editor */
