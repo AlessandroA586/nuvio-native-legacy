@@ -48,6 +48,8 @@ typedef struct {
 typedef int (*DtsRemuxWrite)(void *opaque, const unsigned char *data, int n);
 
 int dts_remux_available(void);
+/* Shared packet budget across generators: 192 MiB, 128 MiB on older TVs. */
+void dts_remux_set_queue_budget_mib(int mib);
 
 /* Opens the source and reads its keyframe index (one seek: Matroska parses
  * Cues lazily). audio_ordinal: which audio track to convert, counted among the

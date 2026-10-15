@@ -197,6 +197,7 @@ static void responderSimples(int s, int cod, const char *msg, const char *tipo, 
 // dropped when full, PORT_PRAZO_MS each to send the request head), reads the
 // head without blocking, and only a head with the live token gets a thread,
 // up to maxVivos at once. Anything else is answered (404/503) and closed here.
+#define PORT_VIVOS 8
 #define PORT_PEND 16
 #define PORT_PRAZO_MS 5000
 #define CAB_MAX 8192
@@ -207,11 +208,20 @@ struct Porteiro {
   int (*valido)(const char *cab);   // the head carries a live token
   void *(*fio)(void *);             // takes the Conexao, frees it, calls conexaoFim
   atomic_int vivos;
+  pthread_mutex_t m;
+  Conexao *conexoes[PORT_VIVOS];
   unsigned recusados;
 };
 static void conexaoFim(Conexao *c) {
+  Porteiro *pt = c->pt;
+  pthread_mutex_lock(&pt->m);
+  for (int i = 0; i < pt->maxVivos; i++) if (pt->conexoes[i] == c) {
+    pt->conexoes[i] = NULL;
+    atomic_fetch_sub(&pt->vivos, 1);
+    break;
+  }
   close(c->sock);
-  atomic_fetch_sub(&c->pt->vivos, 1);
+  pthread_mutex_unlock(&pt->m);
   free(c);
 }
 static int tokenNoCaminho(const char *cab, const char *tok) {   // "GET /<tok>/..." or "/<tok>"
@@ -225,12 +235,15 @@ static int tokenNoCaminho(const char *cab, const char *tok) {   // "GET /<tok>/.
 static void entregar(Porteiro *pt, int s, char *b, size_t n) {
   pthread_t t;
   Conexao *c;
+  pthread_mutex_lock(&pt->m);
   if (!pt->valido(b)) {
+    pthread_mutex_unlock(&pt->m);
     if (!(pt->recusados++ % 64)) { printf("[dts-tpk] pedido sem token valido: 404, sem fio (%u)\n", pt->recusados); fflush(stdout); }
     responderSimples(s, 404, "Not Found", NULL, "", 0);
     close(s); return;
   }
   if (atomic_load(&pt->vivos) >= pt->maxVivos || !(c = malloc(sizeof *c))) {
+    pthread_mutex_unlock(&pt->m);
     printf("[dts-tpk] %d conexoes abertas: 503\n", pt->maxVivos);
     fflush(stdout);
     responderSimples(s, 503, "Service Unavailable", NULL, "busy\n", 0);
@@ -238,7 +251,9 @@ static void entregar(Porteiro *pt, int s, char *b, size_t n) {
   }
   c->pt = pt; c->sock = s; c->n = n;
   memcpy(c->cab, b, n + 1);
+  for (int i = 0; i < pt->maxVivos; i++) if (!pt->conexoes[i]) { pt->conexoes[i] = c; break; }
   atomic_fetch_add(&pt->vivos, 1);
+  pthread_mutex_unlock(&pt->m);
   if (pthread_create(&t, NULL, pt->fio, c) == 0) pthread_detach(t);
   else conexaoFim(c);
 }
@@ -291,6 +306,7 @@ static void *porteiro(void *u) {
 static int porteiroSubir(Porteiro *pt, int ls, int maxVivos, int (*valido)(const char *), void *(*fio)(void *)) {
   pthread_t t;
   pt->ls = ls; pt->maxVivos = maxVivos; pt->valido = valido; pt->fio = fio;
+  pthread_mutex_init(&pt->m, NULL);
   atomic_store(&pt->vivos, 0);
   if (pthread_create(&t, NULL, porteiro, pt) != 0) return 0;
   pthread_detach(t);
@@ -787,12 +803,8 @@ static void *atender(void *u) {
 }
 
 // A head for the live session's token (old sessions' and unknown ones: 404).
-static int tokenAtual(const char *cab) {
-  int ok;
-  pthread_mutex_lock(&G);
-  ok = atual && tokenNoCaminho(cab, atual->token);
-  pthread_mutex_unlock(&G);
-  return ok;
+static int tokenAtual(const char *cab) {   // under porteiroHls.m
+  return atual && tokenNoCaminho(cab, atual->token);
 }
 static Porteiro porteiroHls;
 
@@ -803,7 +815,7 @@ static int subir(void) {
   sockLo = ouvir(INADDR_LOOPBACK, &portaLo);
   if (sockLo < 0) return 0;
   // 8 connections at once: the player uses 1-3; the rest wait in the porteiro.
-  if (!porteiroSubir(&porteiroHls, sockLo, 8, tokenAtual, atender)) { close(sockLo); sockLo = -1; return 0; }
+  if (!porteiroSubir(&porteiroHls, sockLo, PORT_VIVOS, tokenAtual, atender)) { close(sockLo); sockLo = -1; return 0; }
   printf("[dts-tpk] servidor ouvindo em 127.0.0.1:%d\n", portaLo);
   fflush(stdout);
   return 1;
@@ -933,7 +945,14 @@ static void *fioMemoria(void *u) {
 static void encerrarAtual(void) {   // sob G
   Sessao *s = atual;
   if (!s) return;
+  pthread_mutex_lock(&porteiroHls.m);
   atual = NULL;
+  for (int i = 0; i < porteiroHls.maxVivos; i++) if (porteiroHls.conexoes[i]) {
+    shutdown(porteiroHls.conexoes[i]->sock, SHUT_RDWR);
+    porteiroHls.conexoes[i] = NULL;
+  }
+  atomic_store(&porteiroHls.vivos, 0);
+  pthread_mutex_unlock(&porteiroHls.m);
   pthread_mutex_lock(&s->m);
   s->cancelar = 1;
   for (int i = 0; i < GERADORES; i++) s->ger[i].parar = 1;
@@ -979,6 +998,7 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
     fflush(stdout);
     return 0;
   }
+  dts_remux_set_queue_budget_mib(anelMib() == 16 ? 128 : 192);
   dts_engine_set_ring_mib(anelMib());   // ring of the readers this session opens
   { static int monitor;
     pthread_t tm;
@@ -996,9 +1016,11 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
   for (int i = 0; i < GERADORES; i++) s->ger[i].seg = -1;
   if (!s->url || !s->cabs) { pthread_mutex_unlock(&G); sessaoDestruir(s); return 0; }
   s->refs = 2;   // a sessao atual e o fio da sonda
+  pthread_mutex_lock(&porteiroHls.m);
   atual = s;
+  pthread_mutex_unlock(&porteiroHls.m);
   if (pthread_create(&t, NULL, fioSonda, s) != 0) {
-    atual = NULL; s->refs = 0; pthread_mutex_unlock(&G); sessaoDestruir(s); return 0;
+    pthread_mutex_lock(&porteiroHls.m); atual = NULL; pthread_mutex_unlock(&porteiroHls.m); s->refs = 0; pthread_mutex_unlock(&G); sessaoDestruir(s); return 0;
   }
   pthread_detach(t);
   urlDe(s, inicio, out, n);
