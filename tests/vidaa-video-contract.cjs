@@ -19,7 +19,9 @@ assert(body, 'production bridge not found');
 // ============================================================================
 
 function makeGenericEl(tag) {
+  const listeners = {};
   const el = {
+    addEventListener(type, fn) { (listeners[type] = listeners[type] || []).push(fn); },
     tagName: tag,
     style: {},
     attrs: {},
@@ -122,7 +124,7 @@ const document = {
   getElementById(id) { return id === 'canvas' ? canvasEl : null; },
   querySelector(sel) {
     if (sel === 'script[data-nv-hls]') {
-      return scripts.find(s => s.attrs['data-nv-hls'] !== undefined) || null;
+      return scripts.find(s => s.parentNode && s.attrs['data-nv-hls'] !== undefined) || null;
     }
     return null;
   },
@@ -353,6 +355,18 @@ function lerEstado() {
     assert.equal(context.__nvav.hls.loadSourceCalls[0], 'https://cdn.example.invalid/live/master.m3u8');
     assert.equal(context.__nvav.hls.attachMediaCalls[0], context.__nvav.v);
   });
+  check('hls.js audio tracks populate the menu and accept language selection', () => {
+    const hls = context.__nvav.hls;
+    hls.audioTracks = [{ lang: 'ENG', name: 'English' }, { lang: 'por', name: 'Portuguese' }];
+    // Even when DOM tracks exist, hls.js owns HLS audio selection.
+    context.__nvav.v.audioTracks = [makeAudioTrack('eng', 'DOM')];
+    assert.equal(call('faixas', '', 0, 0, 0, 0, 301, 1024), 2);
+    assert.equal(outputs.get(301), 'A\t0\teng\tEnglish\t-1\nA\t1\tpor\tPortuguese\t-1\n');
+    assert.equal(call('faixa', 'AUDIO', 1), 1);
+    assert.equal(hls.audioTrack, 1);
+    context.__nvav.v.audioTracks = undefined;
+    assert.equal(call('faixas', '', 0, 0, 0, 0, 301, 1024), 2);
+  });
   context.__nvav.hls.__fire(FakeHls.Events.MANIFEST_PARSED);
   check('MANIFEST_PARSED triggers play()', () => {
     assert.ok(context.__nvav.v.playCalls >= 1);
@@ -398,6 +412,24 @@ function lerEstado() {
   check('a second .m3u8 open reuses the existing <script> tag instead of injecting another', () => {
     assert.equal(rLazy2, 3);
     assert.equal(scripts.length, scriptsAntesReuso, 'no new <script> should have been created');
+  });
+
+  check('a failed hls.js download can be retried after its session closes', () => {
+    call('parar');
+    delete context.Hls;
+    // Remove the previously loaded tag to simulate the first download.
+    scLazy.parentNode.removeChild(scLazy);
+    call('abrir', 'https://cdn.example.invalid/live/failure.m3u8');
+    const failed = scripts[scripts.length - 1];
+    call('parar');
+    failed.onerror();
+    assert.equal(lerEstado().erro, 0, 'stale download must not poison the closed session');
+    call('abrir', 'https://cdn.example.invalid/live/retry.m3u8');
+    const retry = scripts[scripts.length - 1];
+    assert.notEqual(retry, failed, 'retry must inject a fresh script');
+    context.Hls = FakeHls;
+    retry.onload();
+    assert.equal(context.__nvav.hls.loadSourceCalls[0], 'https://cdn.example.invalid/live/retry.m3u8');
   });
 
   // no native support, no MediaSource at all: must fail outright with a logged reason.

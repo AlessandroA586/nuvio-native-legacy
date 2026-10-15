@@ -315,6 +315,7 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
         sc.setAttribute("data-nv-hls", "1");
         sc.onload = function () { iniciarHls(); };
         sc.onerror = function () {
+          if (sc.parentNode) sc.parentNode.removeChild(sc);
           if (!ehDaSessao()) return;
           S.erro = 1; S.erroMsg = "hls.min.js falhou ao carregar";
         };
@@ -419,13 +420,13 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
     if (!S.v || !dst || dstTam < 4) return 0;
     var out = "", n = 0;
     try {
-      var ats = S.v.audioTracks;
+      var ats = S.hls ? S.hls.audioTracks : S.v.audioTracks;
       if (ats) {
         for (var i = 0; i < ats.length; i++) {
           var at = ats[i];
-          var lang = ("" + (at.language || "")).toLowerCase();
+          var lang = ("" + (S.hls ? at.lang || "" : at.language || "")).toLowerCase();
           if (lang === "und") lang = "";
-          var rot = "" + (at.label || "");
+          var rot = "" + (S.hls ? at.name || "" : at.label || "");
           out += "A\\t" + i + "\\t" + lang + "\\t" + rot.replace(/[\\t\\n]/g, " ") + "\\t-1\\n";
           n++;
         }
@@ -451,6 +452,10 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
   if (op === "faixa") {
     if (!S.v) return 0;
     if (s === "AUDIO") {
+      if (S.hls) {
+        S.hls.audioTrack = a | 0;
+        return 1;
+      }
       var ats2 = S.v.audioTracks;
       if (!ats2) return 0;
       for (var k = 0; k < ats2.length; k++) ats2[k].enabled = (k === (a | 0));
