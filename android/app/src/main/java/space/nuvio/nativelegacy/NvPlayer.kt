@@ -965,8 +965,10 @@ object NvPlayer {
         // estavel a recriacao fica so nas TRANSICOES DE MODO (hdrNaSuperficie);
         // DEPOIS dela, uma recriacao por mudanca com a espera longa, senao o
         // plano da TCL fica preso na geometria de abertura e a troca Crop ->
-        // Ajuste nao aparece (revisao 14/10). DV nativo nunca recria: o veto e
-        // do recriarSuperficie e o `recriar` reconfirma na hora de rodar.
+        // Ajuste nao aparece (revisao 14/10). DV nativo dispensa a recriacao
+        // da ABERTURA (ver recriarSuperficie); depois de estavel, a troca de
+        // modo e um pedido do dono e o veto nao se aplica — o plano da TCL so
+        // acompanha a geometria nova com a camada nascendo de novo.
         if (ultHdr.isEmpty() || ultHdr == "none") recriarSuperficie(RECRIA_ESPERA_MS)
         else if (estavelEmitido) recriarSuperficie(RECRIA_ESPERA_HDR_MS)
     }
@@ -1017,7 +1019,9 @@ object NvPlayer {
         // virou DV nativo enquanto a recriacao esperava, desistir agora e mais
         // barato que desligar a saida do decoder e religar o DispLink da TCL
         // (15 s no log do dono). O evento de superficie estavel segue normal.
-        if (decoderDv) { avaliarEstavel(); return@Runnable }
+        // Depois de estavel o pedido e do dono trocando o aspecto — recria
+        // mesmo em DV, que e o unico gesto que muda a geometria do plano.
+        if (decoderDv && !estavelEmitido) { avaliarEstavel(); return@Runnable }
         val p = player
         val sv = superficie
         Log.i(TAG, "[dvtrace] recriar player=${System.identityHashCode(p)} holder=${System.identityHashCode(sv?.holder)} soltando=${soltando === p} vis=${sv?.visibility} valida=${sv?.holder?.surface?.isValid}")
@@ -1061,7 +1065,12 @@ object NvPlayer {
     }
     private fun recriarSuperficie(atrasoMs: Long) {
         Log.i(TAG, "[dvtrace] pedido sessao=$sessao holder=${System.identityHashCode(superficie?.holder)} atrasoMs=$atrasoMs hdr=$ultHdr quadro=$quadroVisto semRecriar=$semRecriar soltando=${soltando != null}")
-        if (semRecriar || decoderDv) return
+        // DV nativo so dispensa a recriacao da ABERTURA (a que nasce antes de
+        // a superficie estabilizar): depois de estavel, a troca de aspecto e o
+        // gesto que o dono fazia na mao para o Dolby ligar — vetar aqui deixava
+        // o plano preso na geometria de abertura e nenhum modo mudava (TCL,
+        // 14/10). O veto do HDR sozinho ja cobre a transicao (hdrNaSuperficie).
+        if (semRecriar || (decoderDv && !estavelEmitido)) return
         principal.removeCallbacks(estavelRun)
         principal.removeCallbacks(recriar)
         recriaAgendada = true

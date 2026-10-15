@@ -1318,7 +1318,14 @@ static void aplicarAspecto(void) {
   // A FONTE sai do `d` inteiro e o DESTINO e o recuado: e o mesmo conteudo,
   // menor. Calcular a fonte a partir do retangulo ja recuado espremeria a
   // imagem, porque o recuo mudaria a regra de tres sem mudar o quadro.
+  // O LOG UMA LINHA por aplicacao e o que o aparelho devolve na duvida:
+  // sem URL nem ficha, so modo + destino + recorte — a troca que nao chega
+  // ao plano fica visivel no registro da TV.
   { PlrRect o = destinoComRecuo(d);
+    printf("[aspecto] modo=%d rect=%d,%d %dx%d crop=%d,%d %dx%d\n",
+           aspecto, (int)(o.x + 0.5f), (int)(o.y + 0.5f),
+           (int)(o.w + 0.5f), (int)(o.h + 0.5f), sx, sy, sw, sh);
+    fflush(stdout);
     video_janela_fonte(sx, sy, sw, sh,
                        (int)(o.x + 0.5f), (int)(o.y + 0.5f),
                        (int)(o.w + 0.5f), (int)(o.h + 0.5f)); }
