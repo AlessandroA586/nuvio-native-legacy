@@ -244,7 +244,9 @@ static char *pedidoDoCiclo(const char *nome, const char *corpo, int tabela, int 
   char usuario[80], token[3000];
   int status = 0;
   if (st) *st = 0;
-  if (!perfilDoCicloAtual() || !tokenDoCiclo[0]) return NULL;
+  // Empty token still reaches the transport: offline fixtures inject HTTP
+  // status there, and a real server answers 401 instead of looking offline.
+  if (!perfilDoCicloAtual()) return NULL;
   r = tabela ? nuvem_tabela(nome, corpo, tokenDoCiclo, &status)
              : nuvem_rpc_com(nome, corpo, tokenDoCiclo, &status);
   // One renewal remains possible, but only for this unchanged session. The
@@ -1498,8 +1500,10 @@ void sync_passo(unsigned agoraMs) {
                       else printf("[sync] trakt: vinculo local mantido, credencial da conta ignorada\n");
                       temTraktRem = 0; }
   if (temDebridRem) {
-    debrid_aplicar_chaves_conta(&debridDoCiclo, sessaoDoCiclo);
-    temDebridRem = 0;
+    // A refused publish keeps the batch. The next cycle of this profile
+    // pulls it again; clearing here dropped keys that arrived mid-switch.
+    if (debrid_aplicar_chaves_conta(&debridDoCiclo, sessaoDoCiclo))
+      temDebridRem = 0;
   }
   if (temTmdb)      { desc_tmdb_definir(tmdbKey);   temTmdb = 0; }
   if (temMdb)       { extras_definir_chave(mdbKey); temMdb = 0; }

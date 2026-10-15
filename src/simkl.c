@@ -684,13 +684,21 @@ static int postarHistorico(SmkPedido pedido, const char *corpo, int visto, const
   return ok;
 }
 
+// One history POST at a time. Watched-state workers and a scrobble fallback
+// share this; the frozen SimklDestino still names the account.
+static pthread_mutex_t travaCorpo = PTHREAD_MUTEX_INITIALIZER;
 int simkl_episodios_marcar_destino(const SimklDestino *destino, const char *imdb, const VistoPar *pares, int qtd, int visto) {
   char corpo[SMK_LOTE_MAX * 20 + 200];
   int ok;
   if (!destino || !destino->aut[0] || !imdb) return 0;
   SmkPedido pedido = *destino;
-  if (!simkl_corpo_historico_eps(corpo, sizeof corpo, imdb, pares, qtd)) return 0;
+  pthread_mutex_lock(&travaCorpo);
+  if (!simkl_corpo_historico_eps(corpo, sizeof corpo, imdb, pares, qtd)) {
+    pthread_mutex_unlock(&travaCorpo);
+    return 0;
+  }
   ok = postarHistorico(pedido, corpo, visto, imdb, qtd > SMK_LOTE_MAX ? SMK_LOTE_MAX : qtd, 1);
+  pthread_mutex_unlock(&travaCorpo);
   return ok;
 }
 
