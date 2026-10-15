@@ -79,7 +79,11 @@ check "queue: the error names the audio queue cap" "grep -q 'Audio queue over 60
 check "queue: the converter stayed under 100 MB RSS ($(sed -n 's/.*app RSS peak \([0-9]*\) MB.*/\1/p' "$work/t4.log") MB)" \
   "[ \"\$(sed -n 's/.*app RSS peak \([0-9]*\) MB.*/\1/p' '$work/t4.log')\" -lt 100 ]"
 
-cp "$work/t1.log" "$work/t2.log" "$work/t3.log" "$work/t4.log" "${DTS_TPK_LOGS:-$work}/" 2>/dev/null || true
+# 5. Listeners: HLS on 127.0.0.1 only; no thread before the token (blocker 3).
+"$work/test" "$port" escuta "$work" > "$work/t5.log" 2>&1 || fail=1
+grep -E '^(ok|FAIL|skip)' "$work/t5.log"
+
+cp "$work/t1.log" "$work/t2.log" "$work/t3.log" "$work/t4.log" "$work/t5.log" "${DTS_TPK_LOGS:-$work}/" 2>/dev/null || true
 if [ "$fail" != 0 ]; then echo "--- t1.log"; grep '\[dts-tpk\]' "$work/t1.log" | tail -30; echo "--- t2.log"; grep '\[dts-tpk\]' "$work/t2.log" | tail -30; echo "--- t3.log"; tail -20 "$work/t3.log"; echo "--- t4.log"; grep -v '^\[dts-tpk\] #' "$work/t4.log" | tail -20; fi
 [ "$fail" = 0 ] && echo "dts_tpk_servidor: ok"
 exit "$fail"

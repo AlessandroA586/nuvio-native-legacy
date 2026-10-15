@@ -9,6 +9,9 @@
 #include "../src/dts/dts_hls_tpk.h"
 #include <libavformat/avformat.h>
 #include <arpa/inet.h>
+#include <dirent.h>
+#include <ifaddrs.h>
+#include <net/if.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -271,6 +274,103 @@ static void testeFila(int origem) {
   sleep(1);
 }
 
+static int fios(void) {   // threads of this process
+  int n = 0;
+  DIR *d = opendir("/proc/self/task");
+  struct dirent *e;
+  while (d && (e = readdir(d))) if (e->d_name[0] != '.') n++;
+  if (d) closedir(d);
+  return n;
+}
+static int conectarEm(const char *ip, int porta) {
+  struct sockaddr_in a;
+  int s = socket(AF_INET, SOCK_STREAM, 0);
+  memset(&a, 0, sizeof a);
+  a.sin_family = AF_INET; a.sin_port = htons((unsigned short)porta);
+  inet_pton(AF_INET, ip, &a.sin_addr);
+  if (s < 0 || connect(s, (struct sockaddr *)&a, sizeof a) < 0) { if (s >= 0) close(s); return -1; }
+  return s;
+}
+static int ipNaoLoopback(char *ip, size_t n) {
+  struct ifaddrs *l = NULL, *i;
+  int ok = 0;
+  if (getifaddrs(&l)) return 0;
+  for (i = l; i && !ok; i = i->ifa_next)
+    if (i->ifa_addr && i->ifa_addr->sa_family == AF_INET && (i->ifa_flags & IFF_UP) && !(i->ifa_flags & IFF_LOOPBACK))
+      ok = inet_ntop(AF_INET, &((struct sockaddr_in *)i->ifa_addr)->sin_addr, ip, (socklen_t)n) != NULL;
+  freeifaddrs(l);
+  return ok;
+}
+// Connections that never send a request, and requests with a wrong token: no
+// thread for either (the porteiro holds or answers them); the live token still
+// gets its answer meanwhile.
+static void semFios(const char *nome, const char *ip, int porta, const char *bom, const char *ruim) {
+  int ociosas[12], f0, f1, f2, i;
+  char req[256];
+  Resp r;
+  f0 = fios();
+  for (i = 0; i < 12; i++) ociosas[i] = conectarEm(ip, porta);
+  usleep(400 * 1000);
+  f1 = fios();
+  CONFERE(f1 <= f0, "%s: 12 idle connections start no thread (%d -> %d)", nome, f0, f1);
+  for (i = 0; i < 12; i++) {
+    int s = conectarEm(ip, porta), st = 0;
+    char b[256] = "";
+    snprintf(req, sizeof req, "GET %s HTTP/1.1\r\nHost: x\r\n\r\n", ruim);
+    if (s >= 0 && send(s, req, strlen(req), 0) > 0 && recv(s, b, sizeof b - 1, 0) > 0) sscanf(b, "HTTP/1.%*d %d", &st);
+    if (s >= 0) close(s);
+    if (st != 404) { CONFERE(0, "%s: wrong token answered %d", nome, st); break; }
+  }
+  f2 = fios();
+  CONFERE(f2 <= f0, "%s: 12 wrong-token requests get 404 and start no thread (%d -> %d)", nome, f0, f2);
+  { int s = conectarEm(ip, porta), st = 0;
+    char b[512] = "";
+    snprintf(req, sizeof req, "GET %s HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n", bom);
+    if (s >= 0 && send(s, req, strlen(req), 0) > 0 && recv(s, b, sizeof b - 1, 0) > 0) sscanf(b, "HTTP/1.%*d %d", &st);
+    if (s >= 0) close(s);
+    CONFERE(st == 200, "%s: the live token is served meanwhile (%d)", nome, st); }
+  for (i = 0; i < 12; i++) if (ociosas[i] >= 0) close(ociosas[i]);
+  (void)r;
+}
+
+// Review blocker 3: the HLS server listens on 127.0.0.1 only and checks the
+// token before starting a thread; the network log page (LAN, temporary)
+// checks its token before a thread too.
+static void testeEscuta(int origem) {
+  int porta, s;
+  char pref[64], ip[64], c[128], bom[128];
+  Resp r;
+  CONFERE(abrirHls(origem, "fx.mkv", 0, &porta, pref, sizeof pref), "session opens");
+  snprintf(c, sizeof c, "%sv.m3u8", pref);
+  CONFERE(!pedir(porta, c, NULL, &r) && r.status == 200, "playlist on 127.0.0.1");
+  free(r.corpo);
+  if (ipNaoLoopback(ip, sizeof ip)) {
+    s = conectarEm(ip, porta);
+    CONFERE(s < 0, "the HLS port is closed on this machine's network address %s", ip);
+    if (s >= 0) close(s);
+  } else printf("skip no network address here\n");
+  { char url[300], fonte[200];   // the old LAN mode opens on 127.0.0.1 now
+    snprintf(fonte, sizeof fonte, "http://127.0.0.1:%d/fx.mkv", origem);
+    CONFERE(dts_tpk_abrir(fonte, "", -1, 0, DTSTPK_HLS_LAN, DTSTPK_CORPO_CHUNKED, 0, url, sizeof url) &&
+            !strncmp(url, "http://127.0.0.1:", 17), "the LAN-address mode is served on 127.0.0.1");
+    partes(url, &porta, pref, sizeof pref); }
+  snprintf(bom, sizeof bom, "%sv.m3u8", pref);
+  semFios("hls", "127.0.0.1", porta, bom, "/abcdefgh/v.m3u8");
+  { char url[128];
+    if (dts_tpk_registro_rede(url, sizeof url)) {
+      char ipr[64]; int pr = 0;
+      const char *a = strstr(url, "://") + 3, *b = strchr(a, ':');
+      snprintf(ipr, sizeof ipr, "%.*s", (int)(b - a), a);
+      pr = atoi(b + 1);
+      snprintf(bom, sizeof bom, "/%s", strchr(b, '/') + 1);
+      strcat(bom, "help");
+      semFios("log page", ipr, pr, bom, "/zzzzzz/log");
+    } else printf("skip log page: no LAN address here\n");
+  }
+  dts_tpk_fechar();
+  sleep(1);
+}
+
 int main(int argc, char **argv) {
   if (argc == 5 && !strcmp(argv[1], "adiantar")) return adiantar(argv[2], argv[3], atof(argv[4])) ? 1 : 0;
   if (argc < 4) { fprintf(stderr, "usage: %s <origin port> <test> <dir>\n", argv[0]); return 2; }
@@ -282,6 +382,7 @@ int main(int argc, char **argv) {
   else if (!strcmp(t, "padrao")) testeHls(origem, argv[3], 0);
   else if (!strcmp(t, "cancelar")) testeCancelar(origem);
   else if (!strcmp(t, "fila")) testeFila(origem);
+  else if (!strcmp(t, "escuta")) testeEscuta(origem);
   else { fprintf(stderr, "unknown test %s\n", t); return 2; }
   printf("%s: %d failure(s)\n", t, falhas);
   return falhas ? 1 : 0;
