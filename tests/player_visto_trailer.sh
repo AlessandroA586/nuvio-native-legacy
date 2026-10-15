@@ -22,11 +22,12 @@ cc "${flags[@]}" -Dajustes_cw_concluido=nv_base_ajustes_cw_concluido -Dajustes_m
 cc "${flags[@]}" -Dvisto_titulo=nv_base_visto_titulo -Dvisto_episodios=nv_base_visto_episodios -c src/visto.c -o "$dir/visto.o"
 # Relogio controlado so no player: nao intercepta libc/SDL/sanitizadores.
 cc "${flags[@]}" -DNV_SHOT_HOOKS -Dclock_gettime=nv_test_clock_gettime -c src/player.c -o "$dir/player.o"
+cc "${flags[@]}" -Drede_pedir=nv_base_rede_pedir -c src/rede.c -o "$dir/rede.o"
 sources=()
 for source in src/*.c src/dts/*.c; do
-  case "$source" in src/main.c|src/video.c|src/trakt.c|src/visto.c|src/ajustes.c|src/trailer.c|src/player.c) continue;; esac
+  case "$source" in src/main.c|src/video.c|src/trakt.c|src/visto.c|src/ajustes.c|src/trailer.c|src/player.c|src/rede.c) continue;; esac
   sources+=("$source")
 done
-cc "${flags[@]}" -DNV_SHOT_HOOKS "${sources[@]}" tests/player_visto_trailer.c "$dir/video.o" "$dir/trakt.o" "$dir/visto.o" "$dir/ajustes.o" "$dir/player.o" \
+cc "${flags[@]}" -DNV_SHOT_HOOKS "${sources[@]}" tests/player_visto_trailer.c "$dir/video.o" "$dir/trakt.o" "$dir/visto.o" "$dir/ajustes.o" "$dir/player.o" "$dir/rede.o" \
   -o "$dir/test" -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL
 "$dir/test"

@@ -2793,7 +2793,8 @@ static int grupo, filtro, soMp4, soCache, soDub;
 // "EM CACHE" E "DUBLADO" (dono, 02/10, escolheu entre tres): filtros como o
 // MP4, e nao grupos — resolucao x HDR/SDR ja da ate 8 grupos, e mais um eixo
 // picotaria a lista em grupos de 1 ou 2 fontes. Em cache = o debrid ja tem o
-// arquivo (Stream.foraCache e 0), toca agora; Dublado = audio em portugues.
+// arquivo (Stream.foraCache e 0), toca agora; Audio = idioma escolhido, ou o
+// idioma da interface (que em Automatico acompanha conta/aparelho).
 enum { BT_RECARREGAR, BT_SEM_HDR, BT_SO_MP4, BT_CACHE, BT_DUB, BT_FECHAR };
 static int botaoDe(int i) {
   if (!video_pode_forcar_sdr()) i++;
@@ -2805,11 +2806,19 @@ static int botaoDe(int i) {
   return BT_FECHAR;
 }
 static int nBotoes(void) { return video_pode_forcar_sdr() ? 6 : 5; }
+static const char *idiomaFiltroAudio(void) {
+  return ling_audio_fonte(idioma_iso(ajustes_idioma()));
+}
 static const char *rotuloBotao(int b) {
   if (b == BT_SEM_HDR) return "Sem HDR";
   if (b == BT_SO_MP4)  return "Só MP4";
   if (b == BT_CACHE)   return "Em cache";
-  if (b == BT_DUB)     return "Dublado";
+  if (b == BT_DUB) {
+    static char rotulo[96];
+    const char *pref = idiomaFiltroAudio();
+    snprintf(rotulo, sizeof rotulo, i18n("Áudio: %s"), pref[0] ? ling_selo(pref) : i18n("Todos"));
+    return rotulo;
+  }
   return NULL;
 }
 static int botaoLigado(int b) {
@@ -2821,13 +2830,13 @@ static const char *iconeBotao(int b) {
 static char provedores[13][96];
 static int nProvedores;
 
-static int temAudioPt(const Stream *s);
+static int temAudioPreferido(const Stream *s);
 // Os chips (MP4, cache, dublado) valem para a lista E para a contagem de cada
 // aba; o addon so para a lista.
 static int passaChips(int i) {
   if (soMp4 && !lista[i].mp4) return 0;
   if (soCache && lista[i].foraCache) return 0;
-  if (soDub && !temAudioPt(&lista[i])) return 0;
+  if (soDub && !temAudioPreferido(&lista[i])) return 0;
   return 1;
 }
 static int passaFiltro(int i) {
@@ -3243,7 +3252,7 @@ static float desenharFaixas(const Stream *s, float x, float y, float w, int sel,
   }
   return altura;
 }
-static int audioDeclaradoPt(const Stream *s) {
+static int audioDeclaradoEm(const Stream *s, const char *pref) {
   const char *p = s->audioIdiomas;
   const char *fim = p + strnlen(p, sizeof s->audioIdiomas);
   // A mesma lista que aparece em "Audio:" governa o chip. Legendas nunca
@@ -3257,7 +3266,7 @@ static int audioDeclaradoPt(const Stream *s) {
     memcpy(raw, p, len); raw[len] = 0;
     const char *cod = faixaIdiomaDoNome(raw);
     if (!cod && faixaIdiomaEtiqueta(raw, codigo, sizeof codigo)) cod = codigo;
-    if (cod && ling_casa(cod, "pt")) return 1;
+    if (cod && ling_casa(cod, pref)) return 1;
     p = f ? f + 1 : fim;
   }
   return 0;
@@ -3266,7 +3275,7 @@ static int audioDeclaradoPt(const Stream *s) {
 // fileira. Os rotulos antigos continuam onde o addon nao informa audio;
 // quando informa, nenhum deles contradiz a lista declarada.
 static const char *idiomaDa(const Stream *s) {
-  int podePt = !s->audioIdiomas[0] || audioDeclaradoPt(s);
+  int podePt = !s->audioIdiomas[0] || audioDeclaradoEm(s, "pt");
   if (podePt && (temNoTexto(s, "dublado") || temNoTexto(s, "dub"))) return "Dublado";
   if (podePt && temNoTexto(s, "dual")) return "Dual áudio";
   // Uma secao de legendas em portugues nao anuncia audio em portugues.
@@ -3276,10 +3285,21 @@ static const char *idiomaDa(const Stream *s) {
   if (temNoTexto(s, "legendado") || temNoTexto(s, "leg")) return "Legendado";
   return NULL;
 }
-static int temAudioPt(const Stream *s) {
-  if (s->audioIdiomas[0]) return audioDeclaradoPt(s);
-  const char *id = idiomaDa(s);
-  return id && strcmp(id, "Legendado");
+static int temAudioPreferido(const Stream *s) {
+  const char *pref = idiomaFiltroAudio();
+  // An explicit "All" (or an unresolved "Original") is not a guessed
+  // language. Otherwise require declared audio metadata, never subtitles,
+  // filenames or generic "dub/dual" labels whose language is unknown.
+  return !pref[0] || audioDeclaradoEm(s, pref);
+}
+static const char *ajudaFiltroAudio(void) {
+  static char ajuda[512];
+  const char *pref = idiomaFiltroAudio();
+  snprintf(ajuda, sizeof ajuda, i18n(soDub
+    ? "Idioma do filtro de áudio: %s. OK tira o filtro."
+    : "Idioma do filtro de áudio: %s. OK liga o filtro."),
+    pref[0] ? i18n(ling_nome(pref)) : i18n("Todos"));
+  return ajuda;
 }
 
 // O TITULO DA LINHA, modo "Do Nuvio": o NOME DO CONTEUDO (dono, 02/10: "deixar
@@ -4368,9 +4388,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
         ? "Mostrando só fontes que o debrid já tem: tocam na hora. OK tira o filtro."
         : "Filtra para fontes que o debrid já tem (tocam na hora, sem baixar antes). OK liga o filtro.";
     else if(botaoDe(foco)==BT_DUB)
-      ajuda=soDub
-        ? "Mostrando só fontes com áudio em português. OK tira o filtro."
-        : "Filtra para fontes dubladas ou com áudio em português. OK liga o filtro.";
+      ajuda=ajudaFiltroAudio();
     else if(botaoDe(foco)==BT_SO_MP4)
       ajuda=soMp4
         ? "Mostrando só containers MP4 (útil para achar Dolby Vision em MP4). OK tira o filtro."

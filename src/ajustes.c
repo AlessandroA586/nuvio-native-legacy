@@ -556,6 +556,10 @@ typedef enum {
   // #366: discovery rows only, per profile on this device. Append-only.
   AJ_OCULTAR_FILMES_VISTOS,
   AJ_PROVEDORES_ESCOPO, // local, append-only; 0 = shared, 1 = separate for this profile
+  // Botao de microfone das buscas no .tpk (Voz.cs): Automatico (a TV que diz
+  // nao ter microfone fica sem ele) / Ligado / Desligado. LOCAL, so na tela do
+  // .tpk. No fim: valor[]/CHAVE[] posicionais.
+  AJ_MIC_BUSCA,
   AJ_FONTE_IDIOMA_AUDIO, // V_LIGA: 0 preferir o idioma do audio na escolha automatica; local, append-only
 #ifdef NV_ANDROID
   AJ_BAIXAR_REGISTRO, // acao local; no fim para preservar os IDs existentes
@@ -804,6 +808,7 @@ static const char *V_CW_ORDEM[]  = { "Padrão", "Estilo streaming", "Separar fut
 // cada um esta em ajustes_itens_fileira. 24 e o teto de DESC_ITENS_POR_FILEIRA.
 static const char *V_ITENS_FIL[] = { "12", "18", "24" };
 static const char *V_GPU_EF[]    = { "Automático", "Completos", "Leves" };
+static const char *V_MIC_BUSCA[] = { "Automático", "Ligado", "Desligado" };
 // O que o toque curto de OK faz num card da retomada (issue #93): abre o
 // episodio direto no player, ou abre a pagina do titulo como sempre fez.
 // Local, como cwFonteLocal — o app oficial nao tem esta escolha.
@@ -1437,6 +1442,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Ocultar filmes assistidos", V_LIGA, 2), // por perfil, local: hideWatchedMoviesLocal
 
   ESC("Configuração dos provedores", V_PROVEDORES_ESCOPO, 2),
+  ESC("Botão de microfone na busca", V_MIC_BUSCA, 3),   // local: micBuscaLocal (.tpk)
   ESC("Preferir o idioma do áudio",    V_LIGA, 2),   // local: fonteIdiomaAudioLocal (fontenota.h)
 #ifdef NV_ANDROID
   ACAO("Baixar registro"),
@@ -1688,6 +1694,7 @@ static const char *CHAVE[] = {
   "hideWatchedMoviesLocal",
 
   "-provedoresEscopo",
+  "micBuscaLocal",
   "fonteIdiomaAudioLocal",
 #ifdef NV_ANDROID
   "-baixarRegistro",
@@ -2335,6 +2342,7 @@ static int ajOpcaoDisponivel(int op) {
 int ajustes_layout_lista(void) { return !ajLayoutSelecionavel() || valor[AJ_LAYOUT_AJUSTES] == 1; }
 int ajustes_esconder_logo_trailer(void) { return lig(AJ_LOGO_TRAILER); }
 int ajustes_legenda_sync_auto(void) { return lig(AJ_LEG_SYNC_AUTO); }
+int ajustes_mic_busca(void) { return valor[AJ_MIC_BUSCA]; }   // 0 auto, 1 ligado, 2 desligado
 int ajustes_trailer_zoom_tpk(void) { return lig(AJ_TRAILER_ZOOM_TPK); }   // 1 = Ligado
 #ifdef NV_ANDROID
 int ajustes_legenda_sync_audio(void) { return lig(AJ_LEG_SYNC_AUDIO); }
@@ -4588,6 +4596,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_HDR_UI:         /* o painel e desta TV */
     case AJ_LEG_SYNC_AUTO: /* escolha local desta TV */
     case AJ_TELA_ABERTURA: /* #205: o web nao tem; escolha desta TV */
+    case AJ_MIC_BUSCA:     /* o microfone e o controle sao desta TV */
     case AJ_LEG_SYNC_AUDIO: /* PCM e passthrough sao desta TV; o web nao tem */
     case AJ_LEG_FORCADA:    /* #287: o web nao tem esta escolha */
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA: /* estilo da legenda e desta TV */
@@ -4909,6 +4918,11 @@ static int foraDestaPlataforma(int op) {
   if (op >= AJ_MDB_TRAKT && op <= AJ_MDB_MAL) return 1;
 #ifndef NV_TPK
   if (op == AJ_TRAILER_ZOOM_TPK) return 1;
+#endif
+  // Botao de microfone das buscas: so onde ha o teclado da Samsung por tras
+  // (.tpk de release e .wgt; o NuvioTpk40 do Tizen 4/5 nao tem o host dele).
+#if !(defined(NV_TPK) || defined(__EMSCRIPTEN__)) || defined(NV_TPK40)
+  if (op == AJ_MIC_BUSCA) return 1;
 #endif
 #if defined(NV_TPK) || defined(NV_ANDROID)
   if (op == AJ_DV_MKV) return 1;
@@ -5858,6 +5872,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_RAIL: return "A barra de navegação da esquerda fica sempre aberta, ou recolhida até você ir até ela.";
     case AJ_RAIL_MODERNA: return "Troca a barra lateral pela versão nova, com ícones maiores. Ela ignora a escolha entre recolhida e fixa.";
     case AJ_RAIL_BLUR: return "Desfoca a arte atrás da barra lateral moderna em vez de usar um fundo sólido.";
+    case AJ_MIC_BUSCA: return "Mostra nas buscas um microfone ao lado de Digitar pelo celular: ele abre o teclado da Samsung para você falar pelo microfone do controle. Automático esconde o botão se a TV disser que não tem microfone; Ligado mostra sempre; Desligado esconde.";
     case AJ_HERO: return "O bloco grande no topo da Home, com a arte e o nome de um título em destaque.";
     case AJ_HERO_CATALOGOS: return "De onde vêm os títulos do destaque: os primeiros do catálogo, um sorteio, ou uma fileira da Home. OK troca.";
     case AJ_PS_FUNDO: return "Fundo da tela de escolha de perfil. Filmes: os cartazes do que cada perfil assistiu, numa parede inclinada. Luz: preto com uma luz na cor do perfil. Projetor: sala de cinema antes da sessão. Arte do perfil: o fundo escolhido ao editar o perfil no app Nuvio; sem ele, o avatar desfocado. Ou as listras do login.";
@@ -6206,6 +6221,8 @@ static const char *efeitoOpcao(int op) {
       return "Esta nota vem do MDBList: ligar aqui liga também a consulta ao MDBList.";
     case AJ_HERO_TRAILER:
       return "O som do trailer no destaque é uma opção à parte, em Som e imagem.";
+    case AJ_MIC_BUSCA:
+      return "Para digitar, continua o teclado do Nuvio: o da Samsung só abre por este botão.";
     default: return NULL;
   }
 }
@@ -6245,6 +6262,7 @@ static const char *beneficioProprio(int op) {
     case AJ_FONTE_REGEX: return "Sobe ou exige fontes cujo nome casa com um padrão.";
     case AJ_DTS_AC3: return "Para TVs que não tocam DTS: o som é convertido na hora.";
     case AJ_CACHE_SEEK: return "Guarda o que já baixou para voltar no filme sem esperar.";
+    case AJ_MIC_BUSCA: return "Busque falando, pelo microfone do controle.";
     default: return NULL;
   }
 }
@@ -8153,7 +8171,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_HERO_TRAILER_SOM: case AJ_HERO_TRAILER_ESPERA: case AJ_HERO_TRANSICAO: case AJ_LOGO_TRAILER:
     case AJ_ADDON_FUNDO: case AJ_ADDON_LOGO:
     case AJ_FIL_ORDEM: case AJ_RAIL: case AJ_RAIL_MODERNA:
-    case AJ_RAIL_BLUR: case AJ_HERO: case AJ_HERO_CATALOGOS:
+    case AJ_RAIL_BLUR: case AJ_MIC_BUSCA: case AJ_HERO: case AJ_HERO_CATALOGOS:
     case AJ_PS_FUNDO: case AJ_PS_CONTINUAR: case AJ_DESCOBRIR: case AJ_ROTULOS:
     case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_OCULTAR_NLANC:
     case AJ_NOTAS_HOME: case AJ_GRAD_CLASSICO: case AJ_SELO_VISTO: case AJ_OCULTAR_FILMES_VISTOS:
