@@ -28,6 +28,7 @@ void wsenvio_podar_addon(const char *base) { (void)base; }
 #include <unistd.h>
 #include "addons.h"
 #include "fontecache.h"
+#include "stub_perfisessao.h"
 
 // ---------------------------------------------------------------- duble
 static char pedido[16384];      // a ultima URL que chegou a rede
@@ -82,8 +83,8 @@ const char *rede_url_publica(const char *url, char *dst, unsigned tam) {
 void marco(const char *s) { (void)s; }
 int  fontecache_pegar(const char *id, const char *tipo, Stream **l, int *n) {
   (void)id; (void)tipo; *l = NULL; *n = 0; return FC_NADA; }
-void fontecache_guardar(const char *id, const char *tipo, const Stream *l, int n) {
-  (void)id; (void)tipo; (void)l; (void)n; }
+void fontecache_guardar_sessao(const char *id, const char *tipo, const Stream *l, int n, uint64_t sessao) {
+  (void)id; (void)tipo; (void)l; (void)n; (void)sessao; }
 void fontecache_ceder(void) {}
 void fontecache_avancar(void) {}
 unsigned fontecache_vod_geracao(void) { return 0; }

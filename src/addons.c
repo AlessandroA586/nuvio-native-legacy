@@ -2254,6 +2254,18 @@ typedef struct {
 static int consultaCancelada(const Consulta *c) {
   return !nv_perfil_sessao_atual(c->sessao) || (c->cancelado && c->cancelado(c->ctx));
 }
+static int semStreamSondado(const Consulta *c, int i) {
+  const AddonPedido *p = &c->origens[i];
+  int semStream = p->sondado && !p->fonte;
+  if (semStream || !nv_perfil_sessao_travar(c->sessao)) return semStream;
+  pthread_mutex_lock(&addonTrava);
+  // Accept a late manifest only for the same session and addon instance.
+  if (c->versao == versaoLista && i < nAddon && !strcmp(addon[i].base, p->base))
+    semStream = addon[i].sondado && !addon[i].fonte;
+  pthread_mutex_unlock(&addonTrava);
+  nv_perfil_sessao_destravar();
+  return semStream;
+}
 
 // O NOME DE TIPO DE CANAL QUE O MANIFESTO DO ADDON USA: a literal do
 // catalogo declarado ("channel", "tv", "channels", "live", "iptv") ou
@@ -2314,7 +2326,7 @@ static void *fioFontes(void *u) {
     if (consultaCancelada(c)) continue;
     i = c->baldes[meu].idx; origem = &c->origens[i];
     if (!origem->ativo) continue;   // desligado na conta: nunca consultado
-    if ((origem->sondado && !origem->fonte)) continue;   // a sonda terminou depois dos baldes
+    if (semStreamSondado(c, i)) continue;   // a sonda terminou depois dos baldes
     // Id codificado como o Nuvio web (nv_addon_id): "tt123:1:2" sai igual.
     if (!nv_addon_id(idUrl, sizeof idUrl, c->id)) idUrl[0] = 0;
     // O NOME QUE O MANIFESTO DECLARA VAI PRIMEIRO (issue #112). Ver
@@ -2489,7 +2501,7 @@ static void segundaChance(Consulta *c, int fios) {
   if (!orig || !c2.baldes) { free(orig); free(c2.baldes); return; }
   for (q = 0; q < c->nBaldes; q++) {
     int i = c->baldes[q].idx;
-    if (c->baldes[q].respondeu || (c->origens[i].sondado && !c->origens[i].fonte)) continue;
+    if (c->baldes[q].respondeu || semStreamSondado(c, i)) continue;
     if (semSegunda(&c->origens[i])) { pulados++; continue; }
     c2.baldes[m].idx = i; orig[m++] = q;
   }
@@ -2801,7 +2813,7 @@ static int consultar(const char *id, const char *tipo, const char *base, int fio
       int k = c.baldes[q].n;
       // Tambem quem respondeu 200 vazio: sem recurso stream, "veio vazio" nao
       // diz nada. Limite que fica: a sonda terminando DEPOIS deste resumo.
-      if (k <= 0 && (c.origens[c.baldes[q].idx].sondado && !c.origens[c.baldes[q].idx].fonte)) {
+      if (k <= 0 && semStreamSondado(&c, c.baldes[q].idx)) {
         printf("[addons] %s: o manifesto nao declara stream; fora do resumo da busca\n",
                c.origens[c.baldes[q].idx].nome);
         if (c.progresso && c.baldes[q].idx < ADD_MAX) progMarcarSessao(c.sessao, c.baldes[q].idx, NULL, 0, 0);
