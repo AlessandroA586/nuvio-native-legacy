@@ -198,7 +198,8 @@ enum { PLR_PLAY, PLR_CC, PLR_AUDIO, PLR_ASPECTO,
        PLR_FONTES, PLR_EPISODIOS, PLR_NBTNS };
 
 // Avanco em curso: enquanto vale, posSeg e do DONO e nao do pipeline.
-static int    scrubbing, scrubPassos, scrubTocava, scrubDir;
+static int    scrubbing, scrubPassos, scrubTocava, scrubDir, scrubToque;
+static double scrubInicio;
 static Uint32 scrubUltimo;
 static SaltoEst scrubSalto;   // rajada do teclado (salto.h)
 // BUSCA SUAVE: o que a BARRA mostra durante o avanco. posSeg anda em degraus
@@ -1407,7 +1408,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   aberto = 1; saindo = 0; pediuSair = 0; barraFoco = 0;
   // Titulo novo: um avanco em curso do anterior mandaria a posicao velha ao
   // pipeline novo assim que o silencio vencesse.
-  scrubbing = 0; scrubPassos = 0; scrubTocava = 0; scrubDir = 0;
+  scrubbing = 0; scrubPassos = 0; scrubTocava = 0; scrubDir = 0; scrubToque = 0; scrubInicio = 0.0;
   posVis = 0.0f; posVisV = 0.0f; posVisSolto = 0;
   encolhe = 1.0f; encolheAlvo = 0.0f; encolheT = 0.0f; encolheEm = 0;
   posplay_fechar();   // titulo novo, painel do anterior nao vale mais
@@ -2023,6 +2024,7 @@ static void fecharSessao(int manter) {
   retido = manter; if (!manter) retidoVoo = 0;
   prepararRetencao = 0; saidaIlhaDesde = 0;
   esperandoFonte = 0; aberto = 0; saindo = 0; pediuSair = 0;
+  scrubbing = scrubToque = 0; scrubInicio = 0.0;
   mini = 0; querMini = 0; miniGuia = 0; janAtiva = 0;
   avisarCascaAberto(0);
   // Os DOIS relogios, e nao so o do primeiro quadro. `pgDesde` sobrevivendo ao
@@ -2126,7 +2128,7 @@ int player_retomar_retido(const char *imdb, int t, int e) {
   retido = 0; retidoVoo = 0; aberto = 1; saindo = pediuSair = 0;
   desc_episodios_garantir(idxAtual());
   entrada = 1.0f; visivel = 0; anim = 0.0f; soBarra = 0;
-  scrubbing = barraFoco = 0; encolhe = 1.0f; encolheT = encolheAlvo = 0.0f;
+  scrubbing = barraFoco = scrubToque = 0; scrubInicio = 0.0; encolhe = 1.0f; encolheT = encolheAlvo = 0.0f;
   ultimoInput = agora; retomadaAplicada = 1; tocando = 1;
   medirAbertura = 0;   // a medida desta volta e a "retomada pronta" abaixo
   relogio_zerar(&relLeg);
@@ -2937,19 +2939,27 @@ static void buscarUsuario(double alvo) {
   video_buscar(alvo);
 }
 
+static void iniciarSalto(int toque) {
+  scrubInicio = comVideo ? video_pos() : posSeg;
+  scrubToque = toque;
+  scrubbing = 1;
+  scrubPassos = 0;
+  scrubTocava = tocando || retomandoSalto;
+  pausao_fechar();
+  if (tocando && comVideo) { video_pausar(1); tocando = 0; }
+  posplay_busca_usuario();
+}
+
 static void saltar(int dir, int repeticao) {
   int novo = 0;
   if (!scrubbing) {
-    scrubbing = 1;
-    scrubPassos = 0;
-    scrubTocava = tocando || retomandoSalto;
-    pausao_fechar();
-    if (tocando && comVideo) { video_pausar(1); tocando = 0; }
+    iniciarSalto(0);
     novo = 1;
   }
   // Trocar de direcao no meio da rajada recomeca a rampa: quem passou do ponto
   // e volta quer o passo pequeno de novo, nao o de 2 minutos.
   if (dir != scrubDir) novo = 1;
+  scrubToque = 0;
   scrubDir = dir;
   Uint32 agora = SDL_GetTicks();
   // Repeticao de tecla segurada entre dois passos: so mantem o avanco vivo (scrubUltimo), nao anda.
@@ -2968,13 +2978,18 @@ static void saltar(int dir, int repeticao) {
 static void terminarSalto(void) {
   if (!scrubbing) return;
   scrubbing = 0;
+  // No toque, o gesto inteiro decide a direcao. Ajustar um destino adiantado
+  // alguns segundos para tras nao e pedir para rever o episodio.
+  if (scrubToque) recuarAutomatico(scrubInicio, posSeg);
   retomandoSalto = scrubTocava;
   pausao_fechar();
   seekr_ocioso();   // solta a folha decodificada (~22 MB), fica o JPEG
   if (comVideo) {
+    if (posSeg >= scrubInicio) creditosauto_buscar(&creditosAuto, posSeg);
     buscarUsuario(posSeg);
     if (scrubTocava) { video_pausar(0); tocando = 1; }
   }
+  scrubToque = 0; scrubInicio = 0.0;
 }
 
 void player_evento(const SDL_Event *e) {
@@ -3425,7 +3440,10 @@ void player_atualizar(float dt, Uint32 agora) {
   // Fim do avanco por inatividade: o controle nao manda KEYUP confiavel, entao
   // quem decide que a pessoa soltou e o silencio.
 #ifdef NV_SHOT_HOOKS
-  if (shotBusca) { scrubbing = 1; posVisSolto = 1; scrubUltimo = agora; }
+  if (shotBusca) {
+    if (!scrubbing) scrubInicio = posSeg;
+    scrubbing = 1; posVisSolto = 1; scrubUltimo = agora;
+  }
 #endif
   if (scrubbing && agora - scrubUltimo > salto_fim_ms(ajustes_seekr_ligado())) terminarSalto();
 
@@ -3572,7 +3590,7 @@ void player_atualizar(float dt, Uint32 agora) {
     double de = posSeg;
     posSeg = anim_clamp(posSeg + salto_quadro(&scrubSalto, scrubDir, agora, dt, duracaoSeg),
                         0.0f, duracaoSeg);
-    recuarAutomatico(de, posSeg);
+    if (!scrubToque) recuarAutomatico(de, posSeg);
   }
   if (posVisSolto) {
     posVis = anim_mola2(&posVisV, posVis, posSeg, dt, PLR_BUSCA_MOLA);
@@ -3680,7 +3698,7 @@ void player_atualizar(float dt, Uint32 agora) {
     int aguardaBusca = creditosauto_aguardar(&creditosAuto, video_pos(),
       comVideo && video_pronto() && tocando && !scrubbing && !video_bufferando_ms(),
       comVideo && video_terminou(), SDL_GetTicks());
-    posplay_aguardar_busca(aguardaBusca);
+    posplay_aguardar_busca(scrubbing || aguardaBusca);
     // Canal ao vivo nao tem "fim": sem a guarda, o relogio reserva cruzaria os
     // 90% em ~1h42 de exibicao e abriria o painel de relacionados no meio da
     // programacao.
@@ -4338,22 +4356,20 @@ static void ponteiroBuscar(int a, int b) {
     // ARRASTAR NA BARRA (#216): o mesmo avanco das setas (saltar) — video
     // pausado, posSeg na mao do dedo, UMA busca no fim (terminarSalto, depois
     // de PLR_SCRUB_FIM_MS sem movimento).
-    if (!scrubbing) {
-      scrubbing = 1; scrubPassos = 0; scrubTocava = tocando || retomandoSalto;
-    pausao_fechar();
-      if (tocando && comVideo) { video_pausar(1); tocando = 0; }
-    }
+    if (!scrubbing) iniciarSalto(1);
     barraFoco = 1; skipFoco = 0;
-    double de = posSeg;
     posSeg = f * duracaoSeg;
-    recuarAutomatico(de, posSeg);
     scrubUltimo = SDL_GetTicks();
     return;
   }
   double de = comVideo ? video_pos() : posSeg;
+  posplay_busca_usuario();
   posSeg = f * duracaoSeg;
   recuarAutomatico(de, posSeg);
-  if (comVideo) buscarUsuario(posSeg);
+  if (comVideo) {
+    if (posSeg >= de) creditosauto_buscar(&creditosAuto, posSeg);
+    buscarUsuario(posSeg);
+  }
 }
 static void ponteiroSkip(int a, int b) { (void)a; (void)b; skipFoco = 1; barraFoco = 1; acordar(); }
 
@@ -5638,7 +5654,12 @@ void player_shot_esconder(void) { visivel = 0; anim = 0.0f; }
 // O aviso da ilha que esta no ar ("" sem aviso): a nota do HDR10 (dvtela.h).
 const char *player_shot_toast_texto(Uint32 agora) { return toastAte > agora ? toastTexto : ""; }
 void player_shot_carregando(int sim) { esperandoFonte = sim; erroFonte = 0; }
-void player_shot_buscando(int sim) { shotBusca = sim; scrubbing = sim; posVisSolto = sim; }
+void player_shot_buscando(int sim) {
+  if (sim && !scrubbing) scrubInicio = posSeg;
+  if (!sim) scrubInicio = 0.0;
+  scrubToque = 0;
+  shotBusca = sim; scrubbing = sim; posVisSolto = sim;
+}
 #endif
 
 // BRILHO DA INTERFACE DO PLAYER (esmaecer.h): o fator de cor que app.c aplica
