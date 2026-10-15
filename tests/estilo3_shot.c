@@ -104,6 +104,7 @@ static void ajusta(void) {
   artehero_fundo_addon(ajustes_fundo_addon());
   posterprov_preferir_addon(ajustes_poster_addon());
   col_arte_conta(ajustes_col_arte_conta());
+  ajustes_teste_vidro_env();   // NUVIO_SHOT_VIDRO_OPAC=60|92: low/high glass opacity
 }
 
 static const char *JS =

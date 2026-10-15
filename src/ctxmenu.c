@@ -1565,7 +1565,13 @@ static void desenhaEstilos(float a) {
     ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ponteiroEstFora, 0, 0);
     ponteiro_alvo(m.x, m.y, m.w, m.h, NULL, NULL, 0, 0);
   }
-  ilhaCtx(m, 30.0f, a);
+  // O MESMO VIDRO DO CHROME (dono, 15/10): a folha compartilhada, sem a base
+  // quase solida de ilhaCtx, para seguir "Opacidade do vidro".
+  if (ajustes_vidro()) {
+    gfx_sombra_sob((GfxRect){ m.x - 18.0f, m.y - 8.0f, m.w + 36.0f, m.h + 40.0f }, 1.0f, 0, 0.5f,
+                   0, 0, 0, .42f * a, m, 30.0f, 0.0f);
+    gfx_vidro_folha(m, 30.0f / m.h, a);
+  } else ilhaCtx(m, 30.0f, a);
   for (i = 0; i < n; i++) {
     GfxRect r = { m.x + EST_PAD, m.y + EST_PAD + (float)i * (lin + EST_GAP),
                   m.w - 2.0f * EST_PAD, lin };
@@ -2259,8 +2265,6 @@ void ctx_abrir_sessao(void) {
   memset(estLin, 0, sizeof estLin);
   memset(estTam, 0, sizeof estTam);
   memset(estAnim, 0, sizeof estAnim);
-  prevAtual = prevAnt = prevRefAtual = prevRefAnt = -1;
-  prevT = 1.0f;
   temCartaz = 0;
   cartazArte[0] = 0;
   memset(&cartazRect, 0, sizeof cartazRect);
