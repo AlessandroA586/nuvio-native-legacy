@@ -531,8 +531,11 @@ static void ass_plain_style_locked(const PlainAssStyle *p) {
   }
   s->FontSize = p->size;
   s->PrimaryColour = s->SecondaryColour = ((uint32_t)p->rgb << 8);
-  s->OutlineColour = 0x00000000u;
-  s->BackColour = p->background ? (unsigned)(255 - (p->background * 255 * 16 / 100)) : 46u;
+  s->OutlineColour = (uint32_t)p->outlineRgb << 8;
+  // BorderStyle=4 uses BackColour for the existing black background box.
+  // Without that box, BackColour is the shadow, at its original opacity.
+  s->BackColour = p->background ? (unsigned)(255 - (p->background * 255 * 16 / 100))
+                   : (p->border == 2 ? (uint32_t)p->outlineRgb << 8 : 0u) | 46u;
   s->Bold = (p->bold && !assArabe) ? 1 : 0;
   s->BorderStyle = p->background ? 4 : 1;
   s->Outline = p->border == 1 ? 2 : 0;

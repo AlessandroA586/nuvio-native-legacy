@@ -7,6 +7,7 @@
 typedef struct {
   char font[96];
   int size, rgb, background, border, bold, marginV;
+  int outlineRgb;   // 0xRRGGBB; zero preserves the existing black edge
 } PlainAssStyle;
 
 int plainass_has_arabic(const char *text);

@@ -3,6 +3,9 @@
 // cancela. A lista mostra valor e chevron, a ficha explica alcance e padrao.
 // IDs, chaves persistidas e indices de valores continuam os legados.
 #include "ajustes.h"
+#include "player.h"
+#include "legenda.h"
+#include "legenda2.h"
 #include "ajlog.h"
 #include "horafmt.h"
 #include "ajustes_ux.h"
@@ -573,6 +576,13 @@ typedef enum {
   AJ_HERO_SINOPSE, // #477: shared Normal/Grande setting, local
   // Shared exclusions live in fontefalha.txt; appended device-local views.
   AJ_FILTROS_FONTES, AJ_FILTRO_TAM_MAX, AJ_FILTRO_GRUPOS,
+  // Player-backed primary style views: no second copy in ajustes.txt.
+  AJ_LEG1_TAMANHO, AJ_LEG1_FONTE, AJ_LEG1_COR, AJ_LEG1_OPACIDADE,
+  AJ_LEG1_FUNDO, AJ_LEG1_POSICAO, AJ_LEG1_BORDA, AJ_LEG1_ATRASO,
+  AJ_LEG1_NEGRITO, AJ_LEG1_COR_BORDA, AJ_LEG1_RESTAURAR,
+  // Secondary additions inherit the main appearance unless explicitly chosen.
+  AJ_LEG2_FONTE, AJ_LEG2_OPACIDADE, AJ_LEG2_POSICAO, AJ_LEG2_ATRASO,
+  AJ_LEG2_NEGRITO, AJ_LEG2_COR_BORDA, AJ_LEG2_RESTAURAR,
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -696,9 +706,7 @@ static const char *V_VIDRO_FOSCO[] = { "Desligado", "Ligado" };
 // R4: segunda legenda. 0 = No topo (como sempre); 1 = empilhada logo acima da
 // principal, no pe da tela.
 static const char *V_LEG2_POS[] = { "No topo", "Junto da principal" };
-static const char *V_LEG2_TAMANHO[] = { "Automático", "60%", "80%", "100%", "120%", "140%", "160%",
-  "170%", "180%", "190%", "200%", "210%", "220%", "230%", "240%",
-  "250%", "260%", "270%", "280%", "290%", "300%" };
+static const char *V_LEG2_TAMANHO[] = { "Automático", "50%", "60%", "70%", "80%", "90%", "100%", "110%", "120%", "130%", "140%", "150%", "160%", "170%", "180%", "190%", "200%", "210%", "220%", "230%", "240%", "250%", "260%", "270%", "280%", "290%", "300%" };
 static const char *V_LEG2_COR[] = { "Igual à principal", "Branco", "Amarelo", "Verde", "Azul", "Vermelho", "Preto" };
 static const char *V_LEG2_FUNDO[] = { "Igual à principal", "Nenhum", "Escuro 25%", "Escuro 50%", "Escuro 75%", "Escuro 100%" };
 static const char *V_LEG2_BORDA[] = { "Igual à principal", "Nenhuma", "Contorno", "Sombra" };
@@ -807,6 +815,21 @@ static const char *V_FONTE_UI[]  = { "Inter", "LG Display", "Droid Sans",
 // para a janela (o nivel 3 de gpunivel.h), em qualquer plataforma.
 // Order = RES_* (resolucao.h). The old order lives only in res_migrar.
 static const char *V_RESOLUCAO[] = { "Automática", "1080p", "4K (experimental)", "720p (leve)" };
+
+static const char *V_LEG_COR[] = { "Branco", "Amarelo", "Verde", "Azul", "Vermelho", "Preto" };
+static const char *V_LEG_COR_BORDA[] = { "Preto", "Branco", "Amarelo", "Verde", "Azul", "Vermelho" };
+static const char *V_LEG_FUNDO[] = { "Nenhum", "Escuro 25%", "Escuro 50%", "Escuro 75%", "Escuro 100%" };
+static const char *V_LEG_BORDA[] = { "Nenhuma", "Contorno", "Sombra" };
+static const char *V_LEG_OPAC[] = { "100%", "75%", "50%", "25%" };
+static const char *V_LEG_POS[] = { "1", "2", "3", "4", "5", "6", "7", "8" };
+static const char *V_LEG2_FONTE[] = { "Igual à principal", "Inter", "LG Display", "Droid Sans", "Montserrat", "Roboto", "Atkinson Hyperlegible Next", "JetBrains Sans" };
+static const char *V_LEG2_OPAC[] = { "Igual à principal", "100%", "75%", "50%", "25%" };
+static const char *V_LEG2_COR_BORDA[] = { "Igual à principal", "Preto", "Branco", "Amarelo", "Verde", "Azul", "Vermelho" };
+static const char *V_LEG2_NEGRITO[] = { "Igual à principal", "Ligado", "Desligado" };
+static const char *V_LEG2_POSICAO[] = { "Automático", "1", "2", "3", "4", "5", "6", "7", "8" };
+_Static_assert(sizeof V_FONTE_UI / sizeof *V_FONTE_UI == TXT_FAMILIA_N,
+               "Subtitle and interface font views share stable family IDs");
+
 // `collapseSidebar`: recolhida = a rail some e o conteudo comeca em 104.
 static const char *V_RAIL[]      = { "Recolhida", "Fixa" };
 // `continueWatchingCardStyle`, validado em layoutPreferences.js contra
@@ -1383,10 +1406,10 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Sair do Jellyfin"),
   ESC("Mostrar opções avançadas",       V_LIGA, 2),   // local: avancadasLocal
   ESC("Posição da segunda legenda",      V_LEG2_POS, 2),      // local: legenda2PosLocal
-  ESC("Tamanho da segunda legenda",      V_LEG2_TAMANHO, 21),  // local: legenda2TamanhoLocal
-  ESC("Cor da segunda legenda",          V_LEG2_COR, 7),      // local: legenda2CorLocal
-  ESC("Fundo da segunda legenda",        V_LEG2_FUNDO, 6),    // local: legenda2FundoLocal
-  ESC("Borda da segunda legenda",        V_LEG2_BORDA, 4),    // local: legenda2BordaLocal
+  ESC("Tamanho", V_LEG2_TAMANHO, 27),  // local: legenda2TamanhoLocal
+  ESC("Cor",          V_LEG2_COR, 7),      // local: legenda2CorLocal
+  ESC("Fundo",        V_LEG2_FUNDO, 6),    // local: legenda2FundoLocal
+  ESC("Borda",        V_LEG2_BORDA, 4),    // local: legenda2BordaLocal
   ACAO("Endereço do Emby"),
   ACAO("Entrar no Emby"),
   ACAO("Sair do Emby"),
@@ -1476,6 +1499,24 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Filtros das fontes"),
   NUM("Tamanho máximo da fonte", 0, 1000, 1, " GB"),
   ACAO("Grupos de lançamento excluídos"),
+  NUM("Tamanho", TXT_LEG_PCT_MIN, TXT_LEG_PCT_MAX, 10, "%"),
+  ESC("Fonte da legenda", V_FONTE_UI, TXT_FAMILIA_N),
+  ESC("Cor", V_LEG_COR, VIDEO_LEG_NCORES),
+  ESC("Opacidade", V_LEG_OPAC, 4),
+  ESC("Fundo", V_LEG_FUNDO, 5),
+  ESC("Posição", V_LEG_POS, 8),
+  ESC("Borda", V_LEG_BORDA, 3),
+  NUM("Atraso", -LEG_ATRASO_MANUAL_MAX, LEG_ATRASO_MANUAL_MAX, 100, " ms"),
+  ESC("Negrito", V_LIGA, 2),
+  ESC("Cor da borda", V_LEG_COR_BORDA, VIDEO_LEG_NCORES),
+  ACAO("Restaurar padrão"),
+  ESC("Fonte da legenda", V_LEG2_FONTE, TXT_FAMILIA_N + 1),
+  ESC("Opacidade", V_LEG2_OPAC, 5),
+  ESC("Posição", V_LEG2_POSICAO, 9),
+  NUM("Atraso", -LEG_ATRASO_MANUAL_MAX, LEG_ATRASO_MANUAL_MAX, 100, " ms"),
+  ESC("Negrito", V_LEG2_NEGRITO, 3),
+  ESC("Cor da borda", V_LEG2_COR_BORDA, VIDEO_LEG_NCORES + 1),
+  ACAO("Restaurar padrão"),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1664,7 +1705,7 @@ static const char *CHAVE[] = {
   // LOCAL e SEM o "-" (sobrevive ao fechamento); o resto e acao/estado.
   "jellyfinLocal", "-jellyfinServidor", "-jellyfinEntrar", "-jellyfinSair",
   "avancadasLocal",
-  "legenda2PosLocal", "legenda2TamanhoLocal", "legenda2CorLocal", "legenda2FundoLocal", "legenda2BordaLocal",
+  "legenda2PosLocal", "legenda2EscalaLocal", "legenda2CorLocal", "legenda2FundoLocal", "legenda2BordaLocal",
   "-embyServidor", "-embyEntrar", "-embySair", "-plexEntrar", "-plexServidor", "-plexSair",
   "fontePrioridadeLocal", "fonteHdrLocal",
   "logoAppLocal", "aberturaAppLocal",
@@ -1736,6 +1777,11 @@ static const char *CHAVE[] = {
 
   "heroSynopsisSizeLocal",
   "-filtrosFontes", "-filtroTamanhoMax", "-filtroGrupos",
+  "-legenda1Tamanho", "-legenda1Fonte", "-legenda1Cor", "-legenda1Opacidade",
+  "-legenda1Fundo", "-legenda1Posicao", "-legenda1Borda", "-legenda1Atraso",
+  "-legenda1Negrito", "-legenda1CorBorda", "-legenda1Restaurar",
+  "legenda2FonteLocal", "legenda2OpacidadeLocal", "legenda2PosicaoLocal", "legenda2AtrasoLocal",
+  "legenda2NegritoLocal", "legenda2CorBordaLocal", "-legenda2Restaurar",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -1914,6 +1960,52 @@ static int ajFalhaDefinir(int op, int novo) {
   if (ok) ajFalhaEspelhar();
   return ok;
 }
+// These rows are views of player.txt, not independent Settings values.
+static int ajLegendaPrincipal(int op) { return op >= AJ_LEG1_TAMANHO && op <= AJ_LEG1_COR_BORDA; }
+static int ajLegendaSecundaria(int op) {
+  return (op >= AJ_LEG2_POS && op <= AJ_LEG2_BORDA) || (op >= AJ_LEG2_FONTE && op <= AJ_LEG2_RESTAURAR);
+}
+static int ajLegendaValor(int op) {
+  player_leg_estilo_carregar();
+  const VideoLegendaEstilo *e = player_leg_estilo();
+  switch (op) {
+    case AJ_LEG1_TAMANHO: return e->tamanho;
+    case AJ_LEG1_FONTE: return e->familia;
+    case AJ_LEG1_COR: return e->cor;
+    case AJ_LEG1_OPACIDADE: return e->opacidade;
+    case AJ_LEG1_FUNDO: return e->fundo;
+    case AJ_LEG1_POSICAO: return e->posicao;
+    case AJ_LEG1_BORDA: return e->borda;
+    case AJ_LEG1_ATRASO: return e->atrasoMs;
+    case AJ_LEG1_NEGRITO: return !e->negrito;
+    default: return e->corBorda;
+  }
+}
+static void ajLegendaEspelhar(void) {
+  for (int op = AJ_LEG1_TAMANHO; op <= AJ_LEG1_COR_BORDA; op++) valor[op] = ajLegendaValor(op);
+}
+static int ajLegendaDefinir(int op, int v) {
+  player_leg_estilo_carregar();
+  VideoLegendaEstilo e = *player_leg_estilo();
+  int tocou = -1;
+  switch (op) {
+    case AJ_LEG1_TAMANHO: e.tamanho = v; break;
+    case AJ_LEG1_FONTE: e.familia = v; break;
+    case AJ_LEG1_COR: if (e.cor != v) tocou = PLR_LEG_COR; e.cor = v; break;
+    case AJ_LEG1_OPACIDADE: e.opacidade = v; break;
+    case AJ_LEG1_FUNDO: e.fundo = v; break;
+    case AJ_LEG1_POSICAO: e.posicao = v; break;
+    case AJ_LEG1_BORDA: e.borda = v; break;
+    case AJ_LEG1_ATRASO: e.atrasoMs = v; break;
+    case AJ_LEG1_NEGRITO: e.negrito = !v; break;
+    case AJ_LEG1_COR_BORDA: e.corBorda = v; break;
+    default: return 0;
+  }
+  int ok = player_leg_estilo_definir(&e, tocou);
+  if (ok) ajLegendaEspelhar();
+  return ok;
+}
+
 _Static_assert(sizeof valor / sizeof *valor == AJ_N,
                "valor[]: um padrao por opcao do enum AJ_*, na ordem dele");
 // LOG DE MUDANCA (ajlog.h): gravar() e o unico lugar por onde todo valor muda de
@@ -2418,16 +2510,43 @@ int ajustes_abertura(void) { int v = valor[AJ_ABERTURA]; return v < 0 || v > 2 ?
 // R4: estilo proprio da segunda legenda. -1 / 0 = segue a principal.
 int ajustes_legendas_todas(void) { return valor[AJ_LEG_MOSTRAR] == 1; }
 int ajustes_abertura_detalhada(void) { return valor[AJ_TELA_ABERTURA] == 1; }
-int ajustes_leg2_junto(void) { return valor[AJ_LEG2_POS] == 1; }
+int ajustes_leg2_junto(void) { return valor[AJ_LEG2_POSICAO] == 0 && valor[AJ_LEG2_POS] == 1; }
 int ajustes_leg2_tamanho(void) {
-  static const int P[] = { 0, 60, 80, 100, 120, 140, 160, 170, 180, 190, 200,
-                           210, 220, 230, 240, 250, 260, 270, 280, 290, 300 };
   int v = valor[AJ_LEG2_TAMANHO];
-  return v >= 0 && v < (int)(sizeof P / sizeof *P) ? P[v] : 0;
+  return v >= 1 && v <= 26 ? TXT_LEG_PCT_MIN + (v - 1) * 10 : 0;
 }
 int ajustes_leg2_cor(void) { int v = valor[AJ_LEG2_COR]; return v >= 1 && v <= 6 ? v - 1 : -1; }
 int ajustes_leg2_fundo(void) { int v = valor[AJ_LEG2_FUNDO]; return v >= 1 && v <= 5 ? v - 1 : -1; }
 int ajustes_leg2_borda(void) { int v = valor[AJ_LEG2_BORDA]; return v >= 1 && v <= 3 ? v - 1 : -1; }
+int ajustes_leg2_posicao(void) { int v = valor[AJ_LEG2_POSICAO]; return v >= 1 && v <= 8 ? v - 1 : -1; }
+int ajustes_leg2_atraso(void) { return valor[AJ_LEG2_ATRASO]; }
+int ajustes_leg2_definir_atraso(int ms) {
+  int antes = valor[AJ_LEG2_ATRASO];
+  ms = ms < -LEG_ATRASO_MANUAL_MAX ? -LEG_ATRASO_MANUAL_MAX : ms > LEG_ATRASO_MANUAL_MAX ? LEG_ATRASO_MANUAL_MAX : ms;
+  if (antes == ms) return 1;
+  valor[AJ_LEG2_ATRASO] = ms;
+  if (!gravar()) { valor[AJ_LEG2_ATRASO] = antes; return 0; }
+  return 1;
+}
+void ajustes_leg2_estilo(const VideoLegendaEstilo *principal, VideoLegendaEstilo *out) {
+  if (!principal || !out) return;
+  *out = *principal;
+  int pct = ajustes_leg2_tamanho(), c = ajustes_leg2_cor(), f = ajustes_leg2_fundo(), b = ajustes_leg2_borda();
+  out->tamanho = pct > 0 ? pct : principal->tamanho * 9 / 10;
+  if (out->tamanho < TXT_LEG_PCT_MIN) out->tamanho = TXT_LEG_PCT_MIN;
+  if (out->tamanho > TXT_LEG_PCT_MAX) out->tamanho = TXT_LEG_PCT_MAX;
+  out->tamanho = out->tamanho / 10 * 10;
+  if (c >= 0) out->cor = c;
+  if (f >= 0) out->fundo = f;
+  if (b >= 0) out->borda = b;
+  if (valor[AJ_LEG2_FONTE] > 0) out->familia = valor[AJ_LEG2_FONTE] - 1;
+  if (valor[AJ_LEG2_OPACIDADE] > 0) out->opacidade = valor[AJ_LEG2_OPACIDADE] - 1;
+  if (valor[AJ_LEG2_NEGRITO] > 0) out->negrito = valor[AJ_LEG2_NEGRITO] == 1;
+  if (valor[AJ_LEG2_COR_BORDA] > 0) out->corBorda = valor[AJ_LEG2_COR_BORDA] - 1;
+  if (ajustes_leg2_posicao() >= 0) out->posicao = ajustes_leg2_posicao();
+  out->atrasoMs = ajustes_leg2_atraso();
+}
+
 int ajustes_saida_player_home(void) { return lig(AJ_RELOGIO) && valor[AJ_SAIDA_PLAYER] == 0; }
 int ajustes_manter_video(void) { return ajustes_saida_player_home() && lig(AJ_MANTER_VIDEO) && !SEGURO; }
 int ajustes_selo_visto(void) { return lig(AJ_SELO_VISTO); }
@@ -3602,6 +3721,7 @@ void ajustes_dir(const char *dir) {
     if (valor[AJ_TEX_MB] > 0) tex_definir_orcamento_mb(ajustes_tex_mb());
 #endif
     interfaceAplicar();
+    legenda2_atualizar_offset_manual(ajustes_leg2_atraso());
     ajSombraSync();
     return;
   }
@@ -3610,6 +3730,7 @@ void ajustes_dir(const char *dir) {
     int focoAntigo = -1, viuFoco = 0;
     int sinopseAntiga = -1, sinopseQuatro = -1, viuSinopse = 0;
     int dtsSaidaAntiga = -1, dtsModoAntigo = -1, viuDtsTpk = 0;
+    int leg2TamanhoAntigo = -1, viuLeg2Escala = 0;
   while (fgets(linha, sizeof linha, f)) {
     char chave[64]; int v, i;
     if (sscanf(linha, "%63s %d", chave, &v) != 2) continue;
@@ -3652,6 +3773,10 @@ void ajustes_dir(const char *dir) {
       if (v >= 0 && v < 4) sinopseQuatro = v;
       continue;
     }
+    if (!strcmp(chave, "legenda2TamanhoLocal")) {
+      if (v >= 0 && v <= 20) leg2TamanhoAntigo = v;
+      continue;
+    }
     for (i = 0; i < AJ_N; i++) {
       if (!CHAVE[i] || strcmp(CHAVE[i], chave)) continue;
       if (OPCOES[i].tipo == OP_LEITURA || OPCOES[i].tipo == OP_ACAO) continue;
@@ -3664,12 +3789,18 @@ void ajustes_dir(const char *dir) {
       if (i == AJ_FOCO_TRAILER) viuFoco = 1;
       if (i == AJ_HERO_SINOPSE) viuSinopse = 1;
       if (i == AJ_DTS_AC3) viuDtsTpk = 1;
+      if (i == AJ_LEG2_TAMANHO && v >= 0 && v < 27) viuLeg2Escala = 1;
       break;
     }
   }
   if (!viuSinopse) {
     if (sinopseQuatro >= 0) valor[AJ_HERO_SINOPSE] = sinopseQuatro > 0;
     else if (sinopseAntiga >= 0) valor[AJ_HERO_SINOPSE] = sinopseAntiga > 0;
+  }
+  if (!viuLeg2Escala && leg2TamanhoAntigo >= 0) {
+    static const int pct[] = {0,60,80,100,120,140,160,170,180,190,200,210,220,230,240,250,260,270,280,290,300};
+    int p = pct[leg2TamanhoAntigo];
+    valor[AJ_LEG2_TAMANHO] = p ? 1 + (p - TXT_LEG_PCT_MIN) / 10 : 0;
   }
   if (!viuMedidor && medidorAntigo >= 0) valor[AJ_MEDIDOR] = medidorAntigo == 0 ? 3 : 0;
   if (!viuRes && resAntiga >= 0) {
@@ -3845,6 +3976,7 @@ void ajustes_dir(const char *dir) {
   // de Ajustes e aberta. tex_iniciar ja rodou (main.c); isto so o corrige.
   if (valor[AJ_TEX_MB] > 0) tex_definir_orcamento_mb(ajustes_tex_mb());
   pstAplicar();
+  legenda2_atualizar_offset_manual(ajustes_leg2_atraso());
   ajSombraSync();   // o que veio do disco nao e mudanca de ninguem
 }
 
@@ -3885,6 +4017,7 @@ static int gravar(void) {
   // onde voltava ao padrao. Na LG o disco e real e nada disto acontecia.
   dados_marcar_sujo(0);
   ajLogDiff();
+  legenda2_atualizar_offset_manual(ajustes_leg2_atraso());
   // Provedor de poster ou idioma da interface mudaram? So reconfigura se a
   // configuracao final for outra (reconfigurar zera a memoria de falhas).
   pstAplicar();
@@ -4604,6 +4737,7 @@ int ajustes_aplicar_blob(const char *json) {
 // exigiria adivinhar a feature e o `type`, e um blob com forma errada e pior
 // que uma chave a menos.
 static int somenteDesteAparelho(int op) {
+  if (ajLegendaPrincipal(op) || ajLegendaSecundaria(op)) return 1;
   if (op >= AJ_FALHA_PROVEDORES && op < AJ_N) return 1;
   if (op == AJ_ICONE_APP || op == AJ_LOGO_APP || op == AJ_ABERTURA) return 1;
   switch (op) {
@@ -5097,7 +5231,7 @@ static void conferirPadroes(void) {
 static void ajMovReiniciar(void);
 int ajustes_iniciar(void) {
   ajMovReiniciar();
-  faRetornarFolha = 0; faAddonEditar[0] = 0; ajFalhaEspelhar();
+  faRetornarFolha = 0; faAddonEditar[0] = 0; ajFalhaEspelhar(); ajLegendaEspelhar();
   uxVeioBusca = uxAbrirOp >= 0;
   montarTela();
   conferirTela();
@@ -5826,6 +5960,10 @@ static void focarOpcao(int op) {
 // separado de proposito: as duas perguntas sao diferentes e juntas viram um
 // paragrafo que ninguem le do sofa.
 static const char *ajudaOpcaoBase(int op) {
+  if (ajLegendaPrincipal(op) || op == AJ_LEG1_RESTAURAR)
+    return "Tamanho, fonte, cores, fundo e posição das legendas.";
+  if (op >= AJ_LEG2_FONTE && op <= AJ_LEG2_RESTAURAR)
+    return "Aparência só da segunda legenda. \"Igual à principal\" segue o estilo da principal, definido no player.";
   if (op == AJ_ICONE_APP) return "Escolha uma marca alternativa para o Nuvio nesta TV. Um agradecimento a quem apoia o projeto.";
   if (inativa(op)) {
     if (op == AJ_VIDRO_CONTORNO) return "Ative a interface de vidro para ajustar o contorno.";
@@ -7432,6 +7570,7 @@ static int definirValorDireto(int op, int novo) {
   if (op < 0 || op >= AJ_N || !ajOpcaoDisponivel(op) ||
       (OPCOES[op].tipo != OP_ESCOLHA && OPCOES[op].tipo != OP_NUMERO)) return 0;
   novo = limita(op, novo);
+  if (ajLegendaPrincipal(op)) return ajLegendaDefinir(op, novo);
   if (ajFalhaBackend(op)) return ajFalhaDefinir(op, novo);
   if (op == AJ_SEEKR_LIGADO && novo == 0 && !seekrChave[0]) {
     uxNotificar(seekrPedirChave());
@@ -7446,14 +7585,16 @@ static int definirValorDireto(int op, int novo) {
     pessoas_definir_pesquisavel(novo == 0);
     return 1;
   }
+  int posicaoAntes = valor[AJ_LEG2_POSICAO];
+  if (op == AJ_LEG2_POS) valor[AJ_LEG2_POSICAO] = 0;
   antes = valor[op];
-  if (novo == antes && (op != AJ_TEX_MB || memoriaEscolhida)) return 1;
+  if (novo == antes && !(op == AJ_LEG2_POS && posicaoAntes != 0) && (op != AJ_TEX_MB || memoriaEscolhida)) return 1;
   if (op == AJ_TEX_MB && texAcima(novo)) return 0;
   if (op == AJ_TEX_MB) memoriaEscolhida = 1;
   valor[op] = novo;
   if (novo == 0) notaLigarPar(op);
   { int ok; ajOrigem = ajOrigemDireto; ok = gravar(); ajOrigem = 0;
-    if (!ok) { valor[op] = antes; memoriaEscolhida = memoriaAntes; return 0; } }
+    if (!ok) { valor[op] = antes; valor[AJ_LEG2_POSICAO] = posicaoAntes; memoriaEscolhida = memoriaAntes; return 0; } }
   if (op == AJ_FIL_LIMITE) {
     fil_ajustar_limite(novo);
     valor[op] = fil_limite_gravado();
@@ -7635,6 +7776,20 @@ static void eventoTela(const SDL_Event *e) {
     }
     if (focoOp == AJ_FONTE_REGEX_PADRAO) { frRegexAbrir(); return; }
     if (focoOp == AJ_DIAGNOSTICO) { pediuDiagnostico = 1; return; }
+    if (focoOp == AJ_LEG1_RESTAURAR || focoOp == AJ_LEG2_RESTAURAR) {
+      int ok;
+      if (focoOp == AJ_LEG1_RESTAURAR) {
+        ok = player_leg_estilo_definir(player_leg_estilo_padrao(), PLR_LEG_NADA);
+        if (ok) ajLegendaEspelhar();
+      } else {
+        int salvo[AJ_N]; memcpy(salvo, valor, sizeof salvo);
+        for (int op = 0; op < AJ_N; op++) if (ajLegendaSecundaria(op)) valor[op] = valorPadrao[op];
+        ok = gravar();
+        if (!ok) memcpy(valor, salvo, sizeof salvo);
+      }
+      uxNotificar(ok ? "Ajuste salvo nesta TV." : "Não foi possível salvar. O valor anterior foi mantido.");
+      return;
+    }
     if (focoOp == AJ_HERO_CATALOGOS) { if (!inativa(focoOp)) heroFonteCiclar(+1); return; }
     if (focoOp == AJ_VELOCIDADE) { pediuVelocidade = 1; return; }
     if (focoOp == AJ_LIVETV_DIAG) { pediuLivetvDiag = 1; return; }
@@ -7763,6 +7918,7 @@ static void eventoTela(const SDL_Event *e) {
 
 static void aj2Atualizar(float dt);
 void ajustes_atualizar(float dt, Uint32 agora) {
+  ajLegendaEspelhar();
   AJ_ESCALA_INI();
   guiaAtualizar(dt);
   if (uxAviso[0] && SDL_TICKS_PASSED(agora, uxAvisoAte)) uxAviso[0] = 0;
@@ -8381,6 +8537,7 @@ typedef enum {
 } AjPreview;
 
 static AjPreview familiaPreviaOpcao(int op) {
+  if (ajLegendaPrincipal(op) || op == AJ_LEG1_RESTAURAR || ajLegendaSecundaria(op)) return AJPV_REPRO;
   switch (op) {
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
     case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK: case AJ_BUFFER:

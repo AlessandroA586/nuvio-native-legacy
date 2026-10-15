@@ -1025,6 +1025,7 @@ static char   toastIcone[32];
 static int    toastCor;
 static int    avisouAudio;
 static char   dirPrefs[512];
+static int    prefsLidas;
 
 // Rotulos em portugues. Os do web sao "Fit (Original)", "Crop", "Stretch",
 // "Slight/Cinema/Ultra Zoom", "Fit Height", "Fit Width" — o resto do app fala
@@ -1056,6 +1057,7 @@ int player_aspecto(void) { return aspecto; }
 void player_dir(const char *dir) {
   if (!dir || !*dir) return;
   snprintf(dirPrefs, sizeof dirPrefs, "%s", dir);
+  prefsLidas = 0;
 }
 static const char *prefsArquivo(void) {
   static char caminho[600];
@@ -1078,6 +1080,7 @@ static VideoLegendaEstilo legEstilo = { 120, 0, 0, 3, 1, 0, 0, TXT_FAMILIA_INTER
 static int legTocado = PLR_LEG_NADA;
 
 static void prefsLer(void) {
+  prefsLidas = 1;
   FILE *f = fopen(prefsArquivo(), "r");
   char chave[64]; int v;
   if (!f) return;
@@ -1095,6 +1098,7 @@ static void prefsLer(void) {
     else if (!strcmp(chave, "leg_fundo")   && v >= 0 && v <= 4)  legEstilo.fundo = v;
     else if (!strcmp(chave, "leg_pos")     && v >= 0 && v <= 7)  legEstilo.posicao = v;
     else if (!strcmp(chave, "leg_borda")   && v >= 0 && v <= 2)  legEstilo.borda = v;
+    else if (!strcmp(chave, "leg_cor_borda") && v >= 0 && v < VIDEO_LEG_NCORES) legEstilo.corBorda = v;
     else if (!strcmp(chave, "leg_atraso")  && v >= -LEG_ATRASO_MANUAL_MAX && v <= LEG_ATRASO_MANUAL_MAX) legEstilo.atrasoMs = v;
     else if (!strcmp(chave, "leg_opacidade") && v >= 0 && v <= 3) legEstilo.opacidade = v;
     else if (!strcmp(chave, "leg_familia") && v >= 0 && v < TXT_FAMILIA_N) legEstilo.familia = v;
@@ -1104,9 +1108,12 @@ static void prefsLer(void) {
   fclose(f);
 }
 
-static void prefsGravar(void) {
-  FILE *f = fopen(prefsArquivo(), "w");
-  if (!f) return;
+static int prefsGravar(void) {
+  char destino[600], temporario[608];
+  snprintf(destino, sizeof destino, "%s", prefsArquivo());
+  snprintf(temporario, sizeof temporario, "%s.tmp", destino);
+  FILE *f = fopen(temporario, "w");
+  if (!f) return 0;
   fprintf(f, "aspecto %d\n", aspecto);
   fprintf(f, "leg_tamanho %d\n", legEstilo.tamanho);
   fprintf(f, "leg_cor %d\n",     legEstilo.cor);
@@ -1118,15 +1125,42 @@ static void prefsGravar(void) {
   fprintf(f, "leg_familia %d\n", legEstilo.familia);
   fprintf(f, "leg_negrito %d\n", legEstilo.negrito);
   fprintf(f, "leg_tocado %d\n", legTocado);
-  fclose(f);
+  fprintf(f, "leg_cor_borda %d\n", legEstilo.corBorda);
+  int erro = ferror(f);
+  if (fclose(f)) erro = 1;
+  if (erro || rename(temporario, destino)) { remove(temporario); return 0; }
   dados_marcar_sujo(0);   // IDBFS (Samsung): ver o gravador de ajustes.c
+  return 1;
 }
 
 // Lidos pela folha de faixas, que e quem desenha os controles.
 VideoLegendaEstilo *player_leg_estilo(void) { return &legEstilo; }
+void player_leg_estilo_carregar(void) { if (!prefsLidas) prefsLer(); }
 void player_leg_estilo_mudou(void) {
   video_legenda_estilo(&legEstilo);
   prefsGravar();
+}
+const VideoLegendaEstilo *player_leg_estilo_padrao(void) {
+  static const VideoLegendaEstilo padrao = {120, 0, 0, 3, 1, 0, 0, TXT_FAMILIA_INTER, 0, 0};
+  return &padrao;
+}
+int player_leg_estilo_definir(const VideoLegendaEstilo *estilo, int tocou) {
+  if (!estilo || estilo->tamanho < TXT_LEG_PCT_MIN || estilo->tamanho > TXT_LEG_PCT_MAX ||
+      estilo->tamanho % 10 || estilo->cor < 0 || estilo->cor >= VIDEO_LEG_NCORES ||
+      estilo->corBorda < 0 || estilo->corBorda >= VIDEO_LEG_NCORES ||
+      estilo->familia < 0 || estilo->familia >= TXT_FAMILIA_N ||
+      estilo->fundo < 0 || estilo->fundo > 4 || estilo->posicao < 0 || estilo->posicao > 7 ||
+      estilo->borda < 0 || estilo->borda > 2 || estilo->opacidade < 0 || estilo->opacidade > 3 ||
+      estilo->negrito < 0 || estilo->negrito > 1 ||
+      estilo->atrasoMs < -LEG_ATRASO_MANUAL_MAX || estilo->atrasoMs > LEG_ATRASO_MANUAL_MAX) return 0;
+  player_leg_estilo_carregar();
+  VideoLegendaEstilo antes = legEstilo;
+  int tocadoAntes = legTocado;
+  legEstilo = *estilo;
+  if (tocou >= 0) player_leg_estilo_tocou(tocou);
+  if (!prefsGravar()) { legEstilo = antes; legTocado = tocadoAntes; return 0; }
+  video_legenda_estilo(&legEstilo);
+  return 1;
 }
 void player_leg_estilo_tocou(int campos) {
   if (campos == PLR_LEG_NADA) legTocado = PLR_LEG_NADA;
@@ -4391,7 +4425,8 @@ static void blocoLinha(LegBloco *bl, TxtEstilo est, const char *linha, int r, in
   // Latin text comes back byte-identical.
   if (txt_bidi_legenda(fam, est, linha, visual, sizeof visual) > 0) linha = visual;
   bl->cor[bl->n]   = txt_linha_corta_enfase(est, linha, r, g, b, 255, PLR_LEG_LARG, fam, enf);
-  bl->borda[bl->n] = legEstilo.borda ? txt_linha_corta_enfase(est, linha, 0, 0, 0, 255, PLR_LEG_LARG, fam, enf) : (TxtLinha){0};
+  { unsigned cor = video_legenda_borda_rgb(legEstilo.corBorda);
+    bl->borda[bl->n] = legEstilo.borda ? txt_linha_corta_enfase(est, linha, (cor >> 16) & 255, (cor >> 8) & 255, cor & 255, 255, PLR_LEG_LARG, fam, enf) : (TxtLinha){0}; }
   if (bl->cor[bl->n].w > bl->w) bl->w = bl->cor[bl->n].w;
   bl->h += bl->cor[bl->n].h + (bl->n ? 5 : 0);
   bl->n++;
@@ -4566,6 +4601,7 @@ static void desenharLegendaExternaCorpo(void) {
   // terminava. Com ASS (libass) a principal nao se move — ali a secundaria
   // continua em cima, estimada como sempre.
   leg2Reserva = 0.0f;
+  g2.baseY = baseLegendaPrincipal();   // safe anchor for an explicit secondary position
   if (junto) legendasui_banda_zerar(); else legendasui_desenhar_secundaria(&g2);
   if (junto && (!assrender_ativo() || assrender_texto_simples())) {
     float h2 = legendasui_altura_secundaria(&g2);
@@ -4622,6 +4658,7 @@ static void desenharLegendaPrincipal(float *topoPilha){
       style.rgb = (r << 16) | (g << 8) | b;
       style.background = legEstilo.fundo >= 0 && legEstilo.fundo <= 4 ? legEstilo.fundo : 0;
       style.border = legEstilo.borda; style.bold = legEstilo.negrito;
+      style.outlineRgb = (int)video_legenda_borda_rgb(legEstilo.corBorda);
       style.marginV = (int)(1080.f - base);
       assrender_definir_texto_estilo(&style);
       /* Plain captions follow the old screen-space layout; authored ASS
