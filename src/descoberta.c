@@ -3657,6 +3657,7 @@ static int montarContinuar(CatItem *saida, int max) {
 // do player no meio de uma refazagem — ganha UMA rodada a mais no fim, nao
 // uma fila: so o estado final interessa.
 static volatile int cwVivo, cwDeNovo;
+static pthread_mutex_t cwFilaTrava = PTHREAD_MUTEX_INITIALIZER;
 void desc_refazer_continuar(void);
 
 static void *fioContinuar(void *u) {
@@ -3682,21 +3683,27 @@ static void *fioContinuar(void *u) {
     localizarContinuarPublicado();
   }
 fim:
-  cwVivo = 0;
-  if (cwDeNovo) { cwDeNovo = 0; desc_refazer_continuar(); }
+  pthread_mutex_lock(&cwFilaTrava);
+  int repetir = cwDeNovo;
+  cwVivo = cwDeNovo = 0;
+  pthread_mutex_unlock(&cwFilaTrava);
+  if (repetir) desc_refazer_continuar();
   return NULL;
 }
 
 void desc_refazer_continuar(void) {
   pthread_t t;
   NvPerfilSessao *sessao;
-  if (cwVivo) { cwDeNovo = 1; return; }
+  pthread_mutex_lock(&cwFilaTrava);
+  if (cwVivo) { cwDeNovo = 1; pthread_mutex_unlock(&cwFilaTrava); return; }
   sessao = malloc(sizeof *sessao);
-  if (!sessao) return;
+  if (!sessao) { pthread_mutex_unlock(&cwFilaTrava); return; }
   *sessao = nv_perfil_sessao_ler();
   cwVivo = 1;
-  if (pthread_create(&t, NULL, fioContinuar, sessao) != 0) { cwVivo = 0; free(sessao); }
-  else pthread_detach(t);
+  int erro = pthread_create(&t, NULL, fioContinuar, sessao);
+  if (erro) { cwVivo = 0; free(sessao); }
+  pthread_mutex_unlock(&cwFilaTrava);
+  if (!erro) pthread_detach(t);
 }
 
 // A SAIDA DO PLAYER, LOCAL E NO MESMO QUADRO (cwfrente.h). Substitui o
@@ -3793,7 +3800,10 @@ int desc_montando(void) {
   pendente = buscando || repetirAoFim || descDeb.adiado ||
              (aberturaPendente && nv_perfil_sessao_atual(aberturaSessao));
   pthread_mutex_unlock(&listaTrava);
-  return pendente || cwVivo || cwDeNovo;
+  pthread_mutex_lock(&cwFilaTrava);
+  pendente = pendente || cwVivo || cwDeNovo;
+  pthread_mutex_unlock(&cwFilaTrava);
+  return pendente;
 }
 // A CARGA DA HOME (o aviso "Carregando fileiras…" da ilha) e o ciclo de
 // descoberta, nao a refacao so do Continuar assistindo: essa nao consulta add-on
@@ -4273,19 +4283,36 @@ static void publicarParcial(CatItem **lote, int *cap, int n,
   parcialNaTela = 1;
 }
 
-typedef struct { pthread_t fio; int viva, n; CatItem itens[8]; NvPerfilSessao sessao; } SocialFio;
-static void *fioSocial(void *u) {
-  SocialFio *f = (SocialFio *)u;
-  if (!descSessaoVincular(f->sessao)) return NULL;
+typedef struct { int refs, pronto, semFio, n; CatItem itens[8]; NvPerfilSessao sessao; } SocialFio;
+static void socialSoltar(SocialFio *f) {
+  if (f && __atomic_sub_fetch(&f->refs, 1, __ATOMIC_ACQ_REL) == 0) free(f);
+}
+static void socialLer(SocialFio *f) {
+  if (!descSessaoVincular(f->sessao)) return;
   // "Recursos sociais" desligado: sem feed do Trakt, sem amigos do Nuvio.
-  if (!ajustes_social()) { f->n = 0; return NULL; }
+  if (!ajustes_social()) { f->n = 0; return; }
   f->n = trakt_social(f->itens, 8);
   if (descSessaoAtual()) {
     f->n = recomenda_social_mesclar_sessao
          ? recomenda_social_mesclar_sessao(f->itens, f->n, 8, f->sessao)
          : recomenda_social_mesclar(f->itens, f->n, 8);
   } else f->n = 0;
+}
+static void *fioSocial(void *u) {
+  SocialFio *f = u;
+  socialLer(f);
+  __atomic_store_n(&f->pronto, 1, __ATOMIC_RELEASE);
+  socialSoltar(f);
   return NULL;
+}
+static SocialFio *socialLargar(void) {
+  SocialFio *f = calloc(1, sizeof *f);
+  pthread_t fio;
+  if (!f) return NULL;
+  f->refs = 2; f->sessao = descSessao();
+  if (pthread_create(&fio, NULL, fioSocial, f) == 0) pthread_detach(fio);
+  else { f->refs = 1; f->semFio = 1; }
+  return f;
 }
 
 // Uma espera por execucao, MAIS uma por troca de perfil (desc_esperar_conta):
@@ -4361,6 +4388,7 @@ static void *montar(void *u) {
   // Onde a volta estava quando foi condenada, para a linha do log.
   const char *ondeParou = "";
   ListasTrakt *listas = NULL;
+  SocialFio *social = NULL;
   // Versao da lista de addons que maniLargar viu. Ver o relargar na leitura.
   unsigned versaoLargada;
   (void)u;
@@ -4391,6 +4419,23 @@ static void *montar(void *u) {
         free(lig);
       }
     } }
+  // A janela local continua visivel enquanto a conta confirma o progresso.
+  // Capturar a geracao PUBLICADA junto da copia: uma refacao em voo ainda nao
+  // faz parte deste lote e precisa sobreviver a cada publicacao dos catalogos.
+  if (nv_perfil_sessao_travar(descSessao())) {
+    pthread_mutex_lock(&cwPubTrava);
+    nContinuar = cat_copiar_fileira("continue_watching", lote, CONT_MAX, NULL);
+    __atomic_store_n(&cwGerMontar, cwGerNaTela, __ATOMIC_RELAXED);
+    pthread_mutex_unlock(&cwPubTrava);
+    nv_perfil_sessao_destravar();
+  }
+  n = nContinuar;
+  // Prioridade e largar o Continuar primeiro, nao fazer o resto esperar por
+  // ele. O fio existente publica a fileira assim que fica pronta, na frente
+  // das fileiras de catalogo que ja chegaram.
+  desc_refazer_continuar();
+  socialGeracao = recomenda_geracao();
+  social = socialLargar();
   // OS MANIFESTOS COMECAM A CHEGAR AGORA, nao daqui a seis segundos. Ver o
   // cabecalho de maniLargar: eles nao dependem do Trakt, e eram o bloco de 7 s
   // logo depois dele.
@@ -4426,72 +4471,18 @@ static void *montar(void *u) {
                         listas, &listasNaTela); \
       } \
     } } while (0)
-  // AS DUAS FONTES, UNIDAS. Ver o cabecalho de montarContinuar: com Trakt
-  // vinculado esta fileira ignorava o progresso da conta Nuvio, que e o que
-  // chega do celular do dono.
-  // A ATIVIDADE DOS AMIGOS SAI JUNTO COM O CONTINUAR (B2, arranque). Eram em
-  // fila: o social so comecava depois do Continuar inteiro (medido na LG: 7 s,
-  // Android 2,7 s, em cima de 9-18 s do Continuar) e os catalogos esperam os
-  // dois. Nao dependem um do outro: o social vai para um buffer proprio num fio
-  // e entra no lote logo depois do Continuar, na mesma ordem de antes.
-  socialGeracao = recomenda_geracao();
-  SocialFio socFio;
-  memset(&socFio, 0, sizeof socFio);
-  socFio.sessao = descSessao();
-  socFio.viva = pthread_create(&socFio.fio, NULL, fioSocial, &socFio) == 0;
-  pthread_mutex_lock(&contTrava);
-  nContinuar = montarContinuar(lote, CONT_MAX);
-  __atomic_store_n(&cwGerMontar, __atomic_load_n(&cwGer, __ATOMIC_RELAXED), __ATOMIC_RELAXED);
-  n += nContinuar;
-  marco("trakt continuar assistindo");
-  if (CONDENADA("depois do continuar assistindo")) {
-    pthread_mutex_unlock(&contTrava);
-    if (socFio.viva) pthread_join(socFio.fio, NULL);
-    goto condenada;
-  }
-  // O feed social oficial e uma fileira propria, logo depois do retorno ao
-  // que estava sendo visto. Ele vem cedo para nao depender dos manifestos dos
-  // addons e usa a mesma credencial Trakt ja carregada.
-  // Sob a MESMA trava: trakt_social e montarContinuar compartilham os buffers
-  // de trakt_enfeitar_lote com o fio de desc_refazer_continuar.
-  // ... E OS AMIGOS DO NUVIO. 251 das 310 contas do servico social nao tem
-  // Trakt (docs/ANALISE-ADDONS-AMIGOS.md): para elas a fileira so existia vazia.
-  // A uniao (Trakt + amigos mutuos do nosso servico) ja vem pronta do fio.
-  pthread_mutex_unlock(&contTrava);
-  if (socFio.viva) pthread_join(socFio.fio, NULL);
-  else fioSocial(&socFio);
-  nSocial = socFio.n;
-  if (nSocial > 0) memcpy(lote + n, socFio.itens, sizeof(CatItem) * (size_t)nSocial);
-  n += nSocial;
-  marco("trakt atividade dos amigos");
-  if (CONDENADA("depois da atividade dos amigos")) goto condenada;
-  // O historico do Trakt e a PRIMEIRA fileira da home e chega ~1,6 s antes dos
-  // manifestos. Publicar aqui poe conteudo na tela nesse instante em vez de
-  // segurar tudo ate o fim.
-  // Monta direto em filsMontadas: o vetor local `fil` so existe mais abaixo, e
-  // criar um aqui so para copiar seria trabalho a toa.
-  if (n > 0 && progressivo) {
-    int nf = 0;
-    if (nContinuar > 0) {
-      CatFileira *f0 = &filsMontadas[nf++];
-      memset(f0, 0, sizeof *f0);
-      snprintf(f0->chave,  sizeof f0->chave,  "continue_watching");
-      snprintf(f0->titulo, sizeof f0->titulo, "Continuar assistindo");
-      snprintf(f0->tipo,   sizeof f0->tipo,   "movie");
-      f0->ini = 0; f0->n = nContinuar;
-    }
-    if (nSocial > 0) {
-      CatFileira *fs = &filsMontadas[nf++];
-      memset(fs, 0, sizeof *fs);
-      snprintf(fs->chave, sizeof fs->chave, "social_activity");
-      snprintf(fs->titulo, sizeof fs->titulo, "Amigos assistindo");
-      snprintf(fs->tipo, sizeof fs->tipo, "social");
-      fs->ini = nContinuar; fs->n = nSocial;
-      fs->socialGeracao = socialGeracao;
-    }
-    nFileirasMontadas = nf;
+  // Publicar o cache local nao espera nenhuma das fontes remotas.
+  if (nContinuar > 0 && progressivo && minhaGeracao == montagemGeracao &&
+      fonteIntacta(&ctxIni)) {
+    CatFileira *f0 = &filsMontadas[0];
+    memset(f0, 0, sizeof *f0);
+    snprintf(f0->chave, sizeof f0->chave, "continue_watching");
+    snprintf(f0->titulo, sizeof f0->titulo, "Continuar assistindo");
+    snprintf(f0->tipo, sizeof f0->tipo, "movie");
+    f0->ini = 0; f0->n = nContinuar;
+    nFileirasMontadas = 1;
     nPublicado = n;
-    publicarParcial(&lote, &cap, n, filsMontadas, nf, listas, &listasNaTela);
+    publicarParcial(&lote, &cap, n, filsMontadas, 1, listas, &listasNaTela);
     marco("continuar assistindo na tela");
   }
   LISTAS_SE_PRONTAS();
@@ -4528,15 +4519,7 @@ static void *montar(void *u) {
       snprintf(f0->tipo,   sizeof f0->tipo,   "movie");
       f0->ini = 0; f0->n = nContinuar;
     }
-    if (nSocial > 0) {
-      CatFileira *fs = &fil[nFil++];
-      memset(fs, 0, sizeof *fs);
-      snprintf(fs->chave, sizeof fs->chave, "social_activity");
-      snprintf(fs->titulo, sizeof fs->titulo, "Amigos assistindo");
-      snprintf(fs->tipo, sizeof fs->tipo, "social");
-      fs->ini = nContinuar; fs->n = nSocial;
-      fs->socialGeracao = socialGeracao;
-    }
+
 
     lerPrefs();
     // Zera ANTES de ler os manifestos: cada catalogo com busca se registra
@@ -4781,6 +4764,10 @@ static void *montar(void *u) {
         ctxIni.ajustes = c.ajustes; ctxIni.fileiras = c.fileiras;
         ctxIni.ordemConta = c.ordemConta; ctxIni.colecoes = c.colecoes; }
       nOrdem = ordenarCandidatos(decls, nDecl, ordem, nFil, 1, &teto);
+      // O Continuar remoto e Amigos ainda podem chegar. Reservar suas vagas
+      // no teto fisico sem cobrar nenhuma delas do limite de catalogos.
+      { int reserva = (nContinuar ? 0 : 1) + 1;
+        if (teto > CAT_FIL_MAX - reserva) teto = CAT_FIL_MAX - reserva; }
       // OS QUE A COTA NAO LEU TAMBEM PODEM SER ESCOLHIDOS (#126). Entram na
       // lista de Fileiras da Home DEPOIS dos candidatos e sem despejar
       // ninguem; escolher um la (ligar/mover para a home) e o que faz a cota da
@@ -5052,7 +5039,7 @@ static void *montar(void *u) {
       // fora da Home (ela esta engolida/oculta/na fila), entao a home nao a
       // desenha — so o destaque usa os titulos.
       heroAlimChave[0] = 0;
-      if (nFil < CAT_FIL_MAX) {
+      if (nFil < CAT_FIL_MAX - (nContinuar ? 0 : 1) - 1) {
         const char *hf = fil_hero_fonte();
         const Decl *dh = NULL;
         int temCat = 0, q, ja = 0;
@@ -5110,6 +5097,39 @@ static void *montar(void *u) {
       fflush(stdout);
       if (CONDENADA("depois dos catalogos")) goto condenada;
     }
+  }
+
+  // As fileiras e seus posters ja puderam chegar enquanto o feed social
+  // trabalhava. Seu resultado entra na mesma posicao de antes, sem segurar
+  // a primeira publicacao de catalogos. O buffer e do pedido: uma troca de
+  // perfil abandona-o sem esperar a rede do perfil que saiu.
+  if (social) {
+    if (social->semFio) socialLer(social);
+    else while (!__atomic_load_n(&social->pronto, __ATOMIC_ACQUIRE)) {
+      if (CONDENADA("esperando a atividade dos amigos")) goto condenada;
+      LISTAS_SE_PRONTAS();
+      SDL_Delay(10);
+    }
+    if (CONDENADA("depois da atividade dos amigos")) goto condenada;
+    nSocial = social->n;
+    if (nSocial > 0 && nFilsLote < CAT_FIL_MAX - (nContinuar ? 0 : 1)) {
+      GARANTE(nSocial);
+      if (nSocial <= cap - n) {
+        CatFileira *fs;
+        memcpy(lote + n, social->itens, sizeof(CatItem) * (size_t)nSocial);
+        int pos = nContinuar > 0 ? 1 : 0;
+        memmove(filsLote + pos + 1, filsLote + pos,
+                sizeof(CatFileira) * (size_t)(nFilsLote - pos));
+        fs = &filsLote[pos]; memset(fs, 0, sizeof *fs);
+        snprintf(fs->chave, sizeof fs->chave, "social_activity");
+        snprintf(fs->titulo, sizeof fs->titulo, "Amigos assistindo");
+        snprintf(fs->tipo, sizeof fs->tipo, "social");
+        fs->ini = n; fs->n = nSocial; fs->socialGeracao = socialGeracao;
+        n += nSocial; nFilsLote++;
+      }
+    }
+    socialSoltar(social); social = NULL;
+    marco("trakt atividade dos amigos");
   }
 
   // Watchlist e colecao entram DEPOIS das recomendacoes, e nao antes.
@@ -5175,6 +5195,8 @@ static void *montar(void *u) {
     if (np) printf("[desc] plantowatch do Simkl: %d, %d novo(s) no catalogo\n", np, novos);
   }
   preservarFileirasAusentes(&lote, &n, &cap, filsLote, &nFilsLote);
+  // Preservar uma linha antiga tambem respeita a vaga do Continuar em voo.
+  if (!nContinuar && nFilsLote == CAT_FIL_MAX) nFilsLote--;
   // Reanexar linhas sem resposta acontece depois das chamadas de rede; aplicar
   // a ordem salva ao conjunto inteiro impede que uma resposta parcial desloque
   // essas linhas para o fim da Home.
@@ -5190,7 +5212,7 @@ static void *montar(void *u) {
     jnf = jfItens ? servidores_fileiras_copiar(jfItens, cabe, jfFils, SRV_FIL_MAX, &jn) : 0;
     for (k = 0; k < nFilsLote; k++)
       if (servidores_chave_fileira(filsLote[k].chave)) { jnf = 0; break; }
-    if (jnf > 0 && nFilsLote + jnf <= CAT_FIL_MAX) {
+    if (jnf > 0 && nFilsLote + jnf <= CAT_FIL_MAX - (nContinuar ? 0 : 1)) {
       GARANTE(jn);
       if (jn <= cap - n) {
         memcpy(lote + n, jfItens, sizeof(CatItem) * (size_t)jn);
@@ -5387,6 +5409,7 @@ condenada:
   printf("[desc] montagem interrompida (%s): remontagem pedida "
          "(credencial/addons/idioma); recomecando ja\n", ondeParou);
   fflush(stdout);
+  socialSoltar(social);
   listasAbandonar(listas);
   free(lote);
   repetirAoFim = 0;
@@ -9327,7 +9350,9 @@ void desc_abrir_sessao(void) {
   if (!buscando) nFileirasMontadas = 0;
   pthread_mutex_unlock(&listaTrava);
   desc_alvos_busca_zerar();
+  pthread_mutex_lock(&cwFilaTrava);
   cwDeNovo = cwVivo ? 1 : 0;
+  pthread_mutex_unlock(&cwFilaTrava);
   pthread_mutex_lock(&cwPubTrava);
   cwGerNaTela = 0;
   pthread_mutex_unlock(&cwPubTrava);
