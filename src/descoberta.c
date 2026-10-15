@@ -1769,6 +1769,7 @@ static void formatarTitulo(const char *nome, const char *tipo, char *dst, size_t
 #define MANI_FIOS  4
 static struct {
   char  url[NV_ADDON_PEDIDO_MAX];   // <base>/manifest.json inteiro (addonurl.h)
+  char  base[NV_ADDON_URL_MAX];
   char *corpo;
   int   ativo, erro;
   int   pronto;      // 1 = tentativa terminada (corpo pode ser NULL)
@@ -1831,6 +1832,8 @@ static int  maniProx;
 // addon. Ele descobre que ficou para tras aqui, joga o proprio download fora e
 // sai.
 static unsigned maniGeracao;
+static unsigned maniVersao;
+static NvPerfilSessao maniSessao;
 
 static pthread_mutex_t cargaTrava = PTHREAD_MUTEX_INITIALIZER;
 // 1 = a volta em curso foi pedida em segundo plano (desc_repetir_silencioso).
@@ -1945,6 +1948,9 @@ static void *fioManifesto(void *u) {
     int meu;
     char *corpo;
     char url[NV_ADDON_PEDIDO_MAX];
+    char base[NV_ADDON_URL_MAX];
+    unsigned versao;
+    NvPerfilSessao sessao;
     pthread_mutex_lock(&maniTrava);
     if (minha == maniGeracao)
       while (maniProx < maniN && mani[maniProx].pronto) maniProx++;
@@ -1953,10 +1959,25 @@ static void *fioManifesto(void *u) {
     }
     meu = maniProx++;
     snprintf(url, sizeof url, "%s", mani[meu].url);
+    snprintf(base, sizeof base, "%s", mani[meu].base);
+    versao = maniVersao; sessao = maniSessao;
     pthread_mutex_unlock(&maniTrava);
     corpo = rede_baixar(url, 20);
+    // Colecoes precisam somente da identidade. Nao esperar o CW ou o leitor
+    // de catalogos da Home para resolver o addon que ja respondeu. A chamada
+    // fica fora de maniTrava (a sonda usa a ordem addonTrava -> maniTrava).
+    int aplicada = addons_identidade_recebida(base, versao, sessao, corpo);
     pthread_mutex_lock(&maniTrava);
     if (minha != maniGeracao) {
+      pthread_mutex_unlock(&maniTrava); free(corpo); return NULL;
+    }
+    if (!aplicada) {
+      // This generation belongs to a replaced list/session. Wake every
+      // waiter, including slots that no worker has started, without publishing.
+      for (int i = 0; i < maniN; i++) if (!mani[i].pronto) {
+        mani[i].erro = 1; mani[i].pronto = 1;
+      }
+      pthread_cond_broadcast(&maniCond);
       pthread_mutex_unlock(&maniTrava); free(corpo); return NULL;
     }
     // ARMAZENA NA CACHE uma copia propria, se o corpo couber no teto de
@@ -1966,7 +1987,7 @@ static void *fioManifesto(void *u) {
       size_t n = strlen(corpo);
       if (n < MANI_CACHE_BYTES) {
         char *copia = malloc(n + 1);
-        if (copia) { memcpy(copia, corpo, n + 1); maniCacheColocar(url, addons_versao(), copia); }
+        if (copia) { memcpy(copia, corpo, n + 1); maniCacheColocar(url, versao, copia); }
       }
     }
     if (mani[meu].largado && corpo) {
@@ -1995,6 +2016,7 @@ static void *fioManifesto(void *u) {
 static void maniLargar(void) {
   int nAd = addons_n(), i, criados = 0;
   unsigned versao = addons_versao();
+  NvPerfilSessao sessao = descSessao();
   pthread_t fios[MANI_FIOS];
   pthread_mutex_lock(&maniTrava);
   // Sobra da volta anterior (ninguem pediu, addon trocado no meio): nao pode
@@ -2006,8 +2028,9 @@ static void maniLargar(void) {
     if (!!addons_ativo(ad) != (pass == 0)) continue;
     i = maniN++;
     mani[i].ativo = addons_ativo(ad);
+    snprintf(mani[i].base, sizeof mani[i].base, "%s", addons_base(ad));
     int cache;
-    nv_addon_url(mani[i].url, sizeof mani[i].url, addons_base(ad), "/manifest.json");
+    nv_addon_url(mani[i].url, sizeof mani[i].url, mani[i].base, "/manifest.json");
     mani[i].pronto = 0; mani[i].erro = 0;
     // CACHE HIT: o manifesto deste addon ja foi baixado numa volta com a
     // MESMA versao da lista (lista inalterada). Reaproveita sem rede. A
@@ -2027,6 +2050,7 @@ static void maniLargar(void) {
   }
   maniProx = 0;
   maniGeracao++;
+  maniVersao = versao; maniSessao = sessao;
   maniLargadaMs = descAgoraMs();
   for (i = 0; i < maniN; i++) mani[i].largado = 0;
   // Ninguem mais espera por um `pronto` que a volta passada deixou pendente.
@@ -2035,6 +2059,21 @@ static void maniLargar(void) {
   for (i = 0; i < maniN; i++) if (!mani[i].pronto) pendentes++;
   { unsigned g = maniGeracao;
     pthread_mutex_unlock(&maniTrava);
+  // Cache hits have no download worker. Publish their identities from an
+  // owned copy too, without lending a body that maniPegar can consume/free.
+  for (i = 0; i < MANI_MAX; i++) {
+    char base[NV_ADDON_URL_MAX], *copia = NULL;
+    pthread_mutex_lock(&maniTrava);
+    if (g == maniGeracao && i < maniN && mani[i].corpo) {
+      snprintf(base, sizeof base, "%s", mani[i].base);
+      copia = strdup(mani[i].corpo);
+    }
+    pthread_mutex_unlock(&maniTrava);
+    if (copia) {
+      addons_identidade_recebida(base, versao, sessao, copia);
+      free(copia);
+    }
+  }
   if (maniN < 1) return;
   // So dispara fios para os slots que NAO vieram da cache. Os outros ja
   // estao prontos e maniPegar os entrega na hora.
@@ -2063,6 +2102,12 @@ static char *maniPegar(const char *url, int esperar, int *tentado) {
   *tentado = 0;
   char *corpo = NULL;
   pthread_mutex_lock(&maniTrava);
+  // A body is owned by the request context captured at launch, even when a
+  // new list happens to keep the same URL. Never relabel it with a new version.
+  if (maniVersao != addons_versao() || maniSessao != descSessao()) {
+    pthread_mutex_unlock(&maniTrava);
+    return NULL;
+  }
   for (i = 0; i < maniN; i++) if (!strcmp(mani[i].url, url)) break;
   if (i < maniN) {
     unsigned g = maniGeracao;
@@ -2102,6 +2147,18 @@ static char *maniObter(const char *url, int ativo) {
   char *corpo = maniPegar(url, ativo, &tentado);
   if (!corpo && ativo && !tentado) corpo = rede_baixar(url, 20);
   return corpo;
+}
+
+static int maniIdentidadePendente(const char *url, unsigned versao, NvPerfilSessao sessao) {
+  int pendente = 0;
+  pthread_mutex_lock(&maniTrava);
+  if (maniVersao == versao && maniSessao == sessao)
+    for (int i = 0; i < maniN; i++) if (!strcmp(mani[i].url, url)) {
+      pendente = !mani[i].pronto;
+      break;
+    }
+  pthread_mutex_unlock(&maniTrava);
+  return pendente;
 }
 
 // CATALOGO DE BUSCA NAO PODE VIRAR FILEIRA.
@@ -2375,17 +2432,26 @@ static int nManiFalhouVolta;
 // home da C9 (24/09), e a fonte deles continuava fora das consultas. Desligado
 // e desligado nos dois lugares.
 static int lerManifesto(int iAddon, const char *base, Decl *saida, int max,
-                         int ativo, int *totalReal, int *promovidos) {
+                         int ativo, int *totalReal, int *promovidos, unsigned versao) {
   char url[NV_ADDON_PEDIDO_MAX], addonId[96] = "", nome[96], tipo[8], id[96];
+  char origem[NV_ADDON_URL_MAX];
   char *corpo, *escolhido;
   const char *p, *fim;
   int n = 0, total = 0, e = 0, nEleg = 0;
   if (totalReal) *totalReal = 0;
   if (promovidos) *promovidos = 0;
+  snprintf(origem, sizeof origem, "%s", base);
+  base = origem;
   // Ja largado em paralelo no comeco de montar(); so cai na rede aqui quando
   // este addon nao estava na lista daquele instante.
   corpo = descPedidoCoube(base, nv_addon_url(url, sizeof url, base, "/manifest.json"), sizeof url)
           ? maniObter(url, ativo) : NULL;
+  // Covers the synchronous fallback too. A round that stopped waiting has
+  // not failed the still-running download; its worker publishes the outcome.
+  if ((corpo || !maniIdentidadePendente(url, versao, descSessao())) &&
+      !addons_identidade_recebida(base, versao, descSessao(), corpo)) {
+    free(corpo); return 0;
+  }
   if (!corpo) {
     // Sem esta linha o log dizia "0 catalogo(s) declarado(s)", igual a um
     // addon que so tem stream.
@@ -2400,7 +2466,9 @@ static int lerManifesto(int iAddon, const char *base, Decl *saida, int max,
   // linha o id e as capacidades do addon so eram aprendidos por quem abrisse a
   // tela de addons nos Ajustes, e sem o id nenhuma colecao da conta encontrava
   // a URL do proprio addon (issue #10).
-  addons_manifesto_lido(iAddon, corpo);
+  if (!addons_manifesto_recebido(base, versao, descSessao(), corpo)) {
+    free(corpo); return 0;
+  }
   // Chave da RAIZ: um manifesto tem "id" tambem dentro de catalogs[] e de
   // behaviorHints, e ha addon que escreve "catalogs" antes de "id" — a leitura
   // crua trazia o id de um CATALOGO como se fosse o do addon. Ver js_texto_raiz.
@@ -4548,7 +4616,7 @@ static void *montar(void *u) {
         if (CONDENADA("lendo os manifestos")) goto condenada;
         if (teto > DECL_MAX - nDecl) teto = DECL_MAX - nDecl;
         lidos = lerManifesto(i, addons_base(i), decls + nDecl, teto,
-                             addons_ativo(i), &real, &promovidos);
+                             addons_ativo(i), &real, &promovidos, versaoManifestos);
         nDecl += lidos;
         folga = lidos < cota + folga ? cota + folga - lidos : 0;
         // ISSUE #42(a): a linha de sempre ("N catalogo(s) declarado(s)") nao

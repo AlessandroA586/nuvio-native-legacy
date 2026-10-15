@@ -406,8 +406,20 @@ static void resolverLayout(void) {
 // depois que a sonda leu o manifesto daquele addon. Uma pasta que veio do
 // PACOTE ja traz a base escrita.
 static const char *baseDaFonte(const ColSource *s) {
+  static _Thread_local char base[NV_ADDON_URL_MAX];
   if (s->base[0]) return s->base;
-  return s->addonId[0] ? addons_base_por_id(s->addonId) : "";
+  addons_base_por_id_copiar(s->addonId, base, sizeof base);
+  return base;
+}
+static const char *mensagemSemFonte(const ColSource *s) {
+  if (s && !strcmp(s->prov, "tmdb")) return i18n("O TMDB não está configurado nesta TV.");
+  if (s && !strcmp(s->prov, "trakt")) return i18n("O Trakt não está configurado nesta TV.");
+  AddonIdentidadeEstado estado = addons_identidade_estado(s ? s->addonId : "");
+  if (estado == ADD_IDENTIDADE_PENDENTE || estado == ADD_IDENTIDADE_PRONTA)
+    return i18n("Carregando…");
+  if (estado == ADD_IDENTIDADE_FALHOU)
+    return i18n("Não deu para carregar");
+  return i18n("O addon desta coleção não está instalado nesta TV.");
 }
 
 static void vitIniciar(void);
@@ -1742,11 +1754,8 @@ static void themeHeader(float a,float x0) {
   } else {TxtLinha title=txt_linha_corta(TXT_TITULO1,titulo,242,243,247,255,vtCabecalhoLargura(x0,940));txt_desenhar_alpha(title,x0,80,a);}
   char caption[180];int n=nItens();
   if(semFonte) {
-    const char *pv=collection&&source<collection->nSources?collection->sources[source].prov:"";
     snprintf(caption,sizeof caption,"%s",
-      !strcmp(pv,"tmdb")?i18n("O TMDB não está configurado nesta TV."):
-      !strcmp(pv,"trakt")?i18n("O Trakt não está configurado nesta TV."):
-      i18n("O addon desta coleção não está instalado nesta TV."));
+      mensagemSemFonte(collection&&source<collection->nSources?&collection->sources[source]:NULL));
   }
   else if(desc_vertudo_erro())snprintf(caption,sizeof caption,"Não foi possível carregar. OK para tentar novamente.");
   else if(!n)snprintf(caption,sizeof caption,"%s",desc_vertudo_carregando()?"Carregando títulos…":"Nenhum título nesta lista.");
@@ -2198,7 +2207,9 @@ static void vitDesenhar(float a, float x0) {
       }
     } else if (l->estado == VIT_VAZIA || l->estado == VIT_PRONTA ||
                (vitLin[r].mais && !vitLin[r].n)) {
-      const char *msg = l->semFonte ? i18n("O addon desta coleção não está instalado nesta TV.")
+      const ColSource *s = vitMulti && collection && r < collection->nSources
+                            ? &collection->sources[r] : NULL;
+      const char *msg = l->semFonte ? mensagemSemFonte(s)
                                     : i18n("Nenhum título nesta lista.");
       TxtLinha m = txt_linha_corta(TXT_DET_META2, msg, 196, 202, 213, 255, 1200);
       txt_desenhar_alpha(m, x0, cy + 12.0f, ac * 0.9f);
@@ -2214,11 +2225,8 @@ static void vitDesenhar(float a, float x0) {
     }
   }
   if (!vitN) {   // nada para repartir em fileiras ainda: diz por que
-    const char *pv = collection && source < collection->nSources ? collection->sources[source].prov : "";
     const char *msg = semFonte
-      ? (!strcmp(pv, "tmdb") ? i18n("O TMDB não está configurado nesta TV.")
-         : !strcmp(pv, "trakt") ? i18n("O Trakt não está configurado nesta TV.")
-         : i18n("O addon desta coleção não está instalado nesta TV."))
+      ? mensagemSemFonte(collection && source < collection->nSources ? &collection->sources[source] : NULL)
       : desc_vertudo_erro() ? "Não foi possível carregar. OK para tentar novamente."
       : desc_vertudo_carregando() ? "Carregando títulos…" : "Nenhum título nesta lista.";
     txt_desenhar_alpha(txt_linha_corta(TXT_DET_META2, msg, 196, 202, 213, 255, 1200),
