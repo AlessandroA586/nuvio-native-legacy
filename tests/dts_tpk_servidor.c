@@ -3,10 +3,8 @@
 // origin of tests/dts_tpk_servidor_origem.py. Run by tests/dts_tpk_servidor.sh,
 // which also checks the log lines this prints to stdout.
 //
-//   dts_tpk_servidor <port> tuning <dir>   tuning test from dts-ajuste.txt: start
-//                                          tag, short seg0, one generator, ring
-//   dts_tpk_servidor <port> padrao <dir>   no tuning file: today's behaviour
-//   dts_tpk_servidor <port> curto <dir>    seg=2 pre=1500 from the file
+//   dts_tpk_servidor <port> padrao <dir>   HLS: 2 s segments, 1 s prebuffer
+//   dts_tpk_servidor <port> cancelar|fila|escuta|faixa <dir>   review blockers
 #include "../src/dts/dts_hls_tpk.h"
 #include <libavformat/avformat.h>
 #include <arpa/inet.h>
@@ -20,31 +18,6 @@
 #include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
-
-// --- stubs for what the server takes from the app ------------------------------
-static char dirDados[512];
-const char *registro_arquivo(void) { return NULL; }
-char *dados_ler(const char *nome) {
-  char c[700];
-  FILE *f;
-  long n;
-  char *b;
-  snprintf(c, sizeof c, "%s/%s", dirDados, nome);
-  if (!(f = fopen(c, "rb"))) return NULL;
-  fseek(f, 0, SEEK_END); n = ftell(f); fseek(f, 0, SEEK_SET);
-  b = malloc((size_t)n + 1);
-  if (b) { b[fread(b, 1, (size_t)n, f)] = 0; }
-  fclose(f);
-  return b;
-}
-int dados_gravar(const char *nome, const char *conteudo) {
-  char c[700];
-  FILE *f;
-  snprintf(c, sizeof c, "%s/%s", dirDados, nome);
-  if (!(f = fopen(c, "wb"))) return 0;
-  fputs(conteudo, f);
-  return fclose(f) == 0;
-}
 
 // --- a small HTTP client -------------------------------------------------------
 static int falhas;
@@ -144,21 +117,22 @@ static int abrirHls(int origem, const char *arq, double inicio, int *porta, char
   return partes(url, porta, pref, n);
 }
 
-static void testeHls(int origem, const char *dir, int afinado) {
+// The fixed delivery (picked on the S95C): 2 s segments in the playlist and on
+// the wire, no start tag, and the 1 s prebuffer the player gets with the URL.
+static void testeHls(int origem, const char *dir) {
   int porta;
   char pref[64], c[128];
   Resp r;
   CONFERE(abrirHls(origem, "fx.mkv", 12.0, &porta, pref, sizeof pref), "session opens at 12 s");
+  CONFERE(dts_tpk_prebuffer_ms() == 1000, "prebuffer for the player: %d ms", dts_tpk_prebuffer_ms());
   snprintf(c, sizeof c, "%sm.m3u8", pref);
-  CONFERE(!pedir(porta, c, NULL, &r) && r.status == 200, "master playlist 200");
-  CONFERE(afinado ? strstr((char *)r.corpo, "#EXT-X-START:TIME-OFFSET=12.000") != NULL
-                  : strstr((char *)r.corpo, "EXT-X-START") == NULL,
-          "master playlist: start tag %s", afinado ? "present" : "absent");
+  CONFERE(!pedir(porta, c, NULL, &r) && r.status == 200 && strstr((char *)r.corpo, "v.m3u8") &&
+          !strstr((char *)r.corpo, "EXT-X-START"), "master playlist 200, no start tag");
   free(r.corpo);
   snprintf(c, sizeof c, "%sv.m3u8", pref);
-  CONFERE(!pedir(porta, c, NULL, &r) && r.status == 200 && strstr((char *)r.corpo, "seg1.ts"), "media playlist 200");
-  CONFERE(afinado == (strstr((char *)r.corpo, "#EXT-X-START:TIME-OFFSET=12.000") != NULL),
-          "media playlist: start tag %s", afinado ? "present" : "absent");
+  CONFERE(!pedir(porta, c, NULL, &r) && r.status == 200 && strstr((char *)r.corpo, "#EXT-X-TARGETDURATION:2\n") &&
+          strstr((char *)r.corpo, "seg14.ts") && !strstr((char *)r.corpo, "seg15.ts") && !strstr((char *)r.corpo, "EXT-X-START"),
+          "media playlist: target 2 s, 15 segments for 30 s, no start tag");
   free(r.corpo);
   snprintf(c, sizeof c, "%sseg0.ts", pref);
   CONFERE(!pedir(porta, c, NULL, &r) && r.status == 200 && r.n > 1000 && salvar(dir, "seg0.ts", &r), "seg0 200 (%zu B)", r.n);
@@ -166,32 +140,8 @@ static void testeHls(int origem, const char *dir, int afinado) {
   snprintf(c, sizeof c, "%sseg1.ts", pref);
   CONFERE(!pedir(porta, c, NULL, &r) && r.status == 200 && r.n > 1000 && salvar(dir, "seg1.ts", &r), "seg1 200 (%zu B)", r.n);
   free(r.corpo);
-  // seg0 again (a seek back to the start): never cut, only the first one is.
-  snprintf(c, sizeof c, "%sseg0.ts", pref);
-  CONFERE(!pedir(porta, c, NULL, &r) && r.status == 200 && salvar(dir, "seg0b.ts", &r), "seg0 again 200 (%zu B)", r.n);
-  free(r.corpo);
   dts_tpk_fechar();
   sleep(1);   // the session is destroyed on its own thread
-}
-
-// Tuning test, seg=2 pre=1500 (from the file): 2 s segments in the playlist
-// and on the wire, and the prebuffer the player gets with the converted URL.
-static void testeCurto(int origem, const char *dir) {
-  int porta;
-  char pref[64], c[128];
-  Resp r;
-  CONFERE(abrirHls(origem, "fx.mkv", 0, &porta, pref, sizeof pref), "session opens");
-  CONFERE(dts_tpk_prebuffer_ms() == 1500, "prebuffer for the player: %d ms", dts_tpk_prebuffer_ms());
-  snprintf(c, sizeof c, "%sv.m3u8", pref);
-  CONFERE(!pedir(porta, c, NULL, &r) && r.status == 200 && strstr((char *)r.corpo, "#EXT-X-TARGETDURATION:2\n") &&
-          strstr((char *)r.corpo, "seg14.ts") && !strstr((char *)r.corpo, "seg15.ts"),
-          "media playlist: target 2 s, 15 segments for 30 s");
-  free(r.corpo);
-  snprintf(c, sizeof c, "%sseg1.ts", pref);
-  CONFERE(!pedir(porta, c, NULL, &r) && r.status == 200 && r.n > 1000 && salvar(dir, "seg1.ts", &r), "seg1 200 (%zu B)", r.n);
-  free(r.corpo);
-  dts_tpk_fechar();
-  sleep(1);
 }
 
 static double agora(void) {
@@ -355,8 +305,7 @@ static void semFios(const char *nome, const char *ip, int porta, const char *bom
 }
 
 // Review blocker 3: the HLS server listens on 127.0.0.1 only and checks the
-// token before starting a thread; the network log page (LAN, temporary)
-// checks its token before a thread too.
+// token before starting a thread.
 static void testeEscuta(int origem) {
   int porta, s;
   char pref[64], ip[64], c[128], bom[128];
@@ -372,17 +321,6 @@ static void testeEscuta(int origem) {
   } else printf("skip no network address here\n");
   snprintf(bom, sizeof bom, "%sv.m3u8", pref);
   semFios("hls", "127.0.0.1", porta, bom, "/abcdefgh/v.m3u8");
-  { char url[128];
-    if (dts_tpk_registro_rede(url, sizeof url)) {
-      char ipr[64]; int pr = 0;
-      const char *a = strstr(url, "://") + 3, *b = strchr(a, ':');
-      snprintf(ipr, sizeof ipr, "%.*s", (int)(b - a), a);
-      pr = atoi(b + 1);
-      snprintf(bom, sizeof bom, "/%s", strchr(b, '/') + 1);
-      strcat(bom, "help");
-      semFios("log page", ipr, pr, bom, "/zzzzzz/log");
-    } else printf("skip log page: no LAN address here\n");
-  }
   dts_tpk_fechar();
   sleep(1);
 }
@@ -412,11 +350,8 @@ int main(int argc, char **argv) {
   if (argc < 4) { fprintf(stderr, "usage: %s <origin port> <test> <dir>\n", argv[0]); return 2; }
   int origem = atoi(argv[1]);
   const char *t = argv[2];
-  snprintf(dirDados, sizeof dirDados, "%s", argv[3]);
   CONFERE(dts_tpk_disponivel(), "converter available in this build");
-  if (!strcmp(t, "tuning")) testeHls(origem, argv[3], 1);
-  else if (!strcmp(t, "padrao")) testeHls(origem, argv[3], 0);
-  else if (!strcmp(t, "curto")) testeCurto(origem, argv[3]);
+  if (!strcmp(t, "padrao")) testeHls(origem, argv[3]);
   else if (!strcmp(t, "cancelar")) testeCancelar(origem);
   else if (!strcmp(t, "fila")) testeFila(origem);
   else if (!strcmp(t, "escuta")) testeEscuta(origem);

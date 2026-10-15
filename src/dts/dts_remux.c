@@ -1,7 +1,7 @@
 /* DTS / TrueHD -> Dolby Digital remux for the Samsung .tpk. See dts_remux.h and
- * docs/plans/dts-truehd-ac3-tizen-DESIGN.md (sections 2.2 and 4).
+ * docs/features/dts/README.md.
  *
- * What the PC prototype (tools/dts-tizen-lab/tvconv.c) proved, kept here:
+ * What the PC prototype proved on the host, kept here:
  *  - VIDEO is never decoded: packets go to the muxer byte for byte. Matroska
  *    stores PTS only and there is no software video decoder to learn the
  *    reorder depth, so DTS = min(pts[n..n+LOOK]) - LOOK*frame, from an 8-packet
@@ -67,7 +67,6 @@ int dts_remux_gen_run(DtsRemuxGen *g, int s, double t, const char *f, DtsRemuxWr
 void dts_remux_gen_free(DtsRemuxGen *g) { (void)g; }
 void dts_remux_gen_interrupt(DtsRemuxGen *g) { (void)g; }
 double dts_remux_gen_start_s(const DtsRemuxGen *g) { (void)g; return 0; }
-void dts_remux_gen_limit(DtsRemuxGen *g, double s) { (void)g; (void)s; }
 #else
 
 #include <math.h>
@@ -207,7 +206,6 @@ struct DtsRemuxGen {
    * threads, so thread CPU is summed per run, never compared across threads. */
   double audioCpu, cpuAcc, runCpu0;
   int inRun;
-  double limitS;                    /* tuning test: next run stops this far into the segment */
 };
 
 static void fail(char *err, size_t n, const char *what, int code) {
@@ -695,7 +693,6 @@ void dts_remux_gen_interrupt(DtsRemuxGen *g) {
   dts_engine_interrupt(g->eng, 1);
 }
 double dts_remux_gen_start_s(const DtsRemuxGen *g) { return g ? g->progStartS : 0.0; }
-void dts_remux_gen_limit(DtsRemuxGen *g, double s) { if (g) g->limitS = s > 0 ? s : 0; }
 
 static int sinkWrite(void *o, const uint8_t *b, int n) {
   DtsRemuxGen *g = o;
@@ -1164,8 +1161,6 @@ int dts_remux_gen_run(DtsRemuxGen *g, int seg, double startS, const char *fmt,
   dts_engine_metrics(g->eng, &m0);
   if (g->logWall <= 0) rollingLog(g, 0);   /* starts the 30 s window */
   g->w = w; g->wop = opaque; g->wfail = 0; g->bytes = 0;
-  double limitEnd = g->limitS > 0 && seg >= 0 && seg < r->nseg ? r->segS[seg] + g->limitS : 0;
-  g->limitS = 0;
   /* A previous interrupt is over: this run reads again. Cleared BEFORE *stop
    * is read, so an interrupt racing with the start is never lost (the caller
    * sets *stop first, then interrupts). */
@@ -1223,8 +1218,6 @@ int dts_remux_gen_run(DtsRemuxGen *g, int seg, double startS, const char *fmt,
     else if (g->pk->stream_index == r->as) rr = audioPacket(g, g->pk, err, errn);
     av_packet_unref(g->pk);
     if (rr < 0) break;
-    /* Tuning test (short seg0): end here as if the source did; nothing continues. */
-    if (limitEnd > 0 && g->lastDemuxV > limitEnd) g->demuxEof = 1;
   }
   if (rr >= 0) {
     /* End of segment: interleaving queue and the TS muxer's PES buffers out. */

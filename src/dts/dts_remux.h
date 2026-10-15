@@ -1,5 +1,5 @@
-/* DTS / TrueHD -> Dolby Digital remux for the Samsung .tpk (docs/plans/
- * dts-truehd-ac3-tizen-DESIGN.md). Video packets are copied untouched; ONE
+/* DTS / TrueHD -> Dolby Digital remux for the Samsung .tpk
+ * (docs/features/dts/README.md). Video packets are copied untouched; ONE
  * DTS/TrueHD/MLP track is decoded and re-encoded as AC3 (5.1 640 kb/s, or 2.0
  * 192 kb/s for stereo sources) or, with the "Stereo" setting, AAC 2.0. Output
  * goes to a writer callback: MPEG-TS segments for HLS, or one progressive
@@ -93,11 +93,6 @@ void dts_remux_gen_free(DtsRemuxGen *);
 /* Breaks the run of this generator out of a network wait (the player gave up
  * on it). Any thread; the run ends with -2 and the next run seeks. */
 void dts_remux_gen_interrupt(DtsRemuxGen *);
-
-/* TEMPORARY tuning test (seg0 knob): the NEXT run of this generator ends once
- * the video read is `seconds` past the segment start, as if the source ended
- * there (muxer closed, nothing to continue). 0 = whole segment. */
-void dts_remux_gen_limit(DtsRemuxGen *, double seconds);
 
 /* Source time (seconds) a progressive run started at: the keyframe it used. */
 double dts_remux_gen_start_s(const DtsRemuxGen *);

@@ -270,4 +270,3 @@
   5, /* owner decision #256: configurable countdown in seconds */
   0, /* interface mode: TV, including on phones until Mobile is selected */
   0, /* second audio language: Da conta */
-  0, /* app log on the LAN (.tpk): action */

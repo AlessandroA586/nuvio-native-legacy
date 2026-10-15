@@ -549,10 +549,6 @@ typedef enum {
   // do app oficial; a mesma lista e a regra da legenda secundaria (audioescolha.h:
   // a ordem do audio automatico). No fim: posicionais.
   AJ_AUD_LINGUA2,
-  // DTS/TrueHD -> Dolby Digital no .tpk (dts/dts_hls_tpk.h): linhas de TESTE da
-  // entrega ao player da Samsung, e o registro do app na rede (sem sdb shell na
-  // TV de varejo). So no .tpk, avancadas. LOCAIS. No fim: posicionais.
-  AJ_DTS_TPK_REDE,
   AJ_N
 } OpcaoId;
 
@@ -1428,7 +1424,6 @@ static const Opcao OPCOES[AJ_N] = {
   NUM("Contagem do próximo episódio", 1, 60, 1, "s"),
   ESC("Modo da interface", V_INTERFACE_MODO, 2),
   ESC("Segundo idioma do áudio",         V_LINGUA, 2),
-  ACAO("Registro do app na rede"),                                     // dts_hls_tpk.c, sem valor
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1674,7 +1669,6 @@ static const char *CHAVE[] = {
   "proximoContagemLocal",
   "interfaceModoLocal",
   "audioSecundarioIdioma",
-  "registroRedeLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -4403,7 +4397,6 @@ static int somenteDesteAparelho(int op) {
     case AJ_P2P_LIGADO:     /* o servidor P2P e um aparelho da rede desta casa */
     case AJ_P2P_LIMITE:     /* #334: o disco e desta TV */
     case AJ_JF_LIGADO:
-    case AJ_DTS_TPK_REDE:   /* registro desta TV na rede */
     case AJ_AVANCADAS:      /* so a vista desta TV */
     case AJ_POSTER_PROV:    /* servico e rede desta casa: nao segue a conta */
     case AJ_DET_SO_CINEMETA: /* o web nao tem esta escolha */
@@ -4750,7 +4743,6 @@ static int foraDestaPlataforma(int op) {
   if (op >= AJ_MDB_TRAKT && op <= AJ_MDB_MAL) return 1;
 #ifndef NV_TPK
   if (op == AJ_TRAILER_ZOOM_TPK) return 1;
-  if (op == AJ_DTS_TPK_REDE) return 1;
 #endif
 #if defined(NV_TPK) || defined(NV_ANDROID)
   if (op == AJ_DV_MKV) return 1;
@@ -5114,16 +5106,8 @@ static void pxAtivar(int op) {
 static const char *frResumo(int plugin);
 static const char *frOrdemResumo(void);
 static const char *frRegexTexto(void);
-// AJ_DTS_TPK_REDE: o OK sobe o servidor do registro (dts_tpk_registro_rede);
-// antes disso a linha so diz Desligado, sem abrir porta nenhuma.
-static int registroRedeLigado;
 static const char *textoLeitura(int op) {
   static char buf[64];
-  if (op == AJ_DTS_TPK_REDE) {
-    static char url[96];
-    if (registroRedeLigado && dts_tpk_registro_rede(url, sizeof url)) return url;
-    return i18n("Desligado");
-  }
   // MASCARADO, sempre. Esta tela e fotografada e colada em issue — foi assim
   // que chegou o relato do painel de Tracking. O portal sai sem esquema e o MAC
   // so com os dois ultimos octetos: o bastante para a pessoa reconhecer QUAL
@@ -5860,7 +5844,6 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_TAM_MIN: return "Na escolha automática, fontes menores que este tamanho ficam para o fim da fila. Se for maior que o tamanho máximo, o mínimo é ignorado. Só vale para arquivos com tamanho conhecido; se só houver fontes fora da faixa, a melhor delas ainda toca.";
 #ifdef NV_TPK
     case AJ_DTS_AC3: return "Esta TV não toca DTS nem TrueHD: o app converte o som na hora. 5.1 (Dolby Digital) mantém o surround para barra de som e receiver; 7.1, Atmos e DTS:X viram 5.1, sem os objetos. Estéreo (AAC) serve qualquer TV. Desligado: esses vídeos tocam sem som, como antes. Vale a partir do próximo vídeo.";
-    case AJ_DTS_TPK_REDE: return "Mostra o registro do app num computador da mesma rede: aperte OK e abra no navegador o endereço que aparece. Fica ligado até fechar o app.";
 #else
     case AJ_DTS_AC3: return "Como o áudio DTS é entregue à TV quando o app o converte (só na LG). Estéreo (AAC) é o modo provado e serve qualquer TV. 5.1 (Dolby Digital) mantém o som surround para barra de som e receiver por ARC/eARC; vale a partir do próximo vídeo.";
 #endif
@@ -7068,7 +7051,6 @@ static void eventoTela(const SDL_Event *e) {
       return;
     }
     if (focoOp == AJ_DIAGNOSTICO) { pediuDiagnostico = 1; return; }
-    if (focoOp == AJ_DTS_TPK_REDE) { char u[96]; registroRedeLigado = 1; dts_tpk_registro_rede(u, sizeof u); return; }
     if (focoOp == AJ_HERO_CATALOGOS) { if (!inativa(focoOp)) heroFonteCiclar(+1); return; }
     if (focoOp == AJ_VELOCIDADE) { pediuVelocidade = 1; return; }
     if (focoOp == AJ_LIVETV_DIAG) { pediuLivetvDiag = 1; return; }
@@ -7816,7 +7798,6 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_SELOS_PACOTE:
     case AJ_REACAO_CREDITOS: case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PROXIMO_AUTO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_CONTAGEM:
     case AJ_FONTE_PRAZO: case AJ_TAM_MAX: case AJ_TAM_MIN: case AJ_PROPORCAO_PADRAO: case AJ_DTS_AC3:
-    case AJ_DTS_TPK_REDE:
     case AJ_FONTE_ESCOPO: case AJ_FONTE_ADDONS_PERM: case AJ_FONTE_PLUGINS_PERM: case AJ_FONTE_OUTROS:
     case AJ_FONTE_REGEX: case AJ_FONTE_REGEX_PADRAO: case AJ_FONTE_REGEX_MODELO:
     case AJ_FONTE_ORDEM: case AJ_FONTE_ORDEM_USO:

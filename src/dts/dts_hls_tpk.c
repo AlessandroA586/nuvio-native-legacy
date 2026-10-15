@@ -1,8 +1,8 @@
 // DTS / TrueHD -> Dolby Digital no .tpk da Samsung: o servidor HTTP local de
 // onde o player da TV le o fluxo convertido. Ver dts_hls_tpk.h e
-// docs/plans/dts-truehd-ac3-tizen-DESIGN.md (secao 4.1). O andaime e o do
-// src/proxyts.c (127.0.0.1, porta livre, um fio por conexao, sessao por
-// geracao); o conversor e o dts_remux.c.
+// docs/features/dts/README.md. O andaime e o do src/proxyts.c (127.0.0.1,
+// porta livre, um fio por conexao, sessao por geracao); o conversor e o
+// dts_remux.c.
 //
 // ENTREGA: HLS sob demanda (playlist VOD montada do indice de quadros-chave;
 // cada segmento sai do conversor quando o player pede; seek, posicao e duracao
@@ -34,19 +34,14 @@ double dts_tpk_inicio_stream(void) { return -1; }
 const char *dts_tpk_caminho(void) { return ""; }
 int dts_tpk_sem_indice(void) { return 0; }
 int dts_tpk_e_url(const char *u) { (void)u; return 0; }
-int dts_tpk_registro_rede(char *u, size_t n) { (void)u; if (n) u[0] = 0; return 0; }
 #else
 
-#include "../registro.h"
-#include "../dados.h"
 #include "dts_engine.h"
 #include <arpa/inet.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <ifaddrs.h>
 #include <math.h>
-#include <net/if.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <pthread.h>
@@ -64,66 +59,16 @@ int dts_tpk_registro_rede(char *u, size_t n) { (void)u; if (n) u[0] = 0; return 
 #define MSG_NOSIGNAL 0
 #endif
 
-#define SEG_ALVO_S       2.0           /* HLS: keyframes grouped to >= 2 s (TV test, Oct 2026) */
-#define PREBUFFER_MS     1000          /* player prebuffer before it starts (same test) */
+// Picked on the S95C (Tizen 9, Oct 2026): 2 s segments with a 1 s player
+// prebuffer seek in about 2 s on a fast source; 6 s segments took 10-21 s.
+#define SEG_ALVO_S       2.0           /* HLS: keyframes grouped to >= 2 s */
+#define PREBUFFER_MS     1000          /* player prebuffer before it starts */
 #define ESPERA_SONDA_MS  30000
 #define ESPERA_GERADOR_MS 30000
-#define GERADORES        2             /* array size; the tuning test may use 1 */
+#define GERADORES        2             /* each one is one more connection to the source */
 
 static const char *const MODO_NOME[DTSTPK_MODOS] = { "HLS", "continuous TS", "off" };
 const char *dts_tpk_modo_nome(int m) { return m >= 0 && m < DTSTPK_MODOS ? MODO_NOME[m] : "?"; }
-
-// --- TEMPORARY tuning test ----------------------------------------------------
-// Knobs the owner compares on each TV with the memory line below, set from the
-// network log page (/<token>/tune) and kept in dts-ajuste.txt. One setting is
-// picked from the numbers, then this block goes (with the log page).
-//   ring  reader ring per source connection, MiB: 8, 16, 32; 0 = automatic
-//         (32 on Tizen 8/9, 16 below)
-//   gens  generators per session: 1 or 2 (each extra one is one more reader)
-//   seg0  the HLS segment 0 the player fetches before seeking to a resume
-//         position: 0 as now, 1 playlist starts there (EXT-X-START),
-//         2 segment 0 cut to its first second, 3 both
-//   seg   HLS segment length, s: 2 (default), 3, 4 or 6 (keyframes grouped
-//         to >= seg)
-//   pre   player prebuffer before it starts, ms: 1000 (default), 500..6000,
-//         or 0 = the TV decides (player_set_streaming_buffering_time in the host)
-typedef struct { int ring, gens, seg0, seg, pre; } Ajuste;
-static Ajuste ajuste = { 0, GERADORES, 0, (int)SEG_ALVO_S, PREBUFFER_MS };
-static int ajusteLido;
-static const char *const SEG0_NOME[4] = { "normal", "start tag", "short", "start tag + short" };
-
-static int ajusteValido(const Ajuste *a) {
-  return (a->ring == 0 || a->ring == 8 || a->ring == 16 || a->ring == 32) && a->gens >= 1 &&
-         a->gens <= GERADORES && a->seg0 >= 0 && a->seg0 <= 3 &&
-         (a->seg == 2 || a->seg == 3 || a->seg == 4 || a->seg == 6) && (a->pre == 0 || (a->pre >= 500 && a->pre <= 6000));
-}
-static void ajusteLer(const char *t, Ajuste *a) {
-  const char *p;
-  if ((p = strstr(t, "ring=")) != NULL) a->ring = atoi(p + 5);
-  if ((p = strstr(t, "gens=")) != NULL) a->gens = atoi(p + 5);
-  if ((p = strstr(t, "seg0=")) != NULL) a->seg0 = atoi(p + 5);
-  for (p = t; (p = strstr(p, "seg=")) != NULL; p += 4)   /* not the "seg=" inside "seg0=" */
-    if (p == t || p[-1] != '0') { a->seg = atoi(p + 4); break; }
-  if ((p = strstr(t, "pre=")) != NULL) a->pre = atoi(p + 4);
-}
-static void ajusteTexto(const Ajuste *a, char *b, size_t n) {
-  char r[16], pre[24];
-  if (a->ring) snprintf(r, sizeof r, "%d MiB", a->ring); else snprintf(r, sizeof r, "auto");
-  if (a->pre) snprintf(pre, sizeof pre, "%d ms", a->pre); else snprintf(pre, sizeof pre, "TV");
-  snprintf(b, n, "ring %s, %d generator(s), seg0 %s, segments %d s, prebuffer %s", r, a->gens, SEG0_NOME[a->seg0], a->seg, pre);
-}
-// Sob G.
-static void ajusteCarregar(void) {
-  char *t;
-  if (ajusteLido) return;
-  ajusteLido = 1;
-  if ((t = dados_ler("dts-ajuste.txt")) != NULL) {
-    Ajuste a = ajuste;
-    ajusteLer(t, &a);
-    if (ajusteValido(&a)) ajuste = a;
-    free(t);
-  }
-}
 
 static uint64_t agoraMs(void) {
   struct timespec t;
@@ -151,41 +96,6 @@ static void gerarToken(char *t, int n) {
   t[k] = 0;
 }
 
-static int privado(in_addr_t a) {
-  unsigned long h = ntohl(a);
-  return (h >> 24) == 10 || (h >> 20) == 0xAC1 || (h >> 16) == 0xC0A8;
-}
-// Mesma regra do celular.c: a interface da rota padrao, senao a primeira privada.
-static int ipLan(char *dst, size_t n) {
-  struct sockaddr_in alvo, eu;
-  socklen_t tam = sizeof eu;
-  struct ifaddrs *lista = NULL, *i;
-  int s = socket(AF_INET, SOCK_DGRAM, 0);
-  in_addr_t achou = 0;
-  if (s >= 0) {
-    memset(&alvo, 0, sizeof alvo);
-    alvo.sin_family = AF_INET; alvo.sin_port = htons(9);
-    inet_pton(AF_INET, "192.0.2.1", &alvo.sin_addr);
-    if (!connect(s, (struct sockaddr *)&alvo, sizeof alvo) &&
-        !getsockname(s, (struct sockaddr *)&eu, &tam) && privado(eu.sin_addr.s_addr))
-      achou = eu.sin_addr.s_addr;
-    close(s);
-  }
-  if (!achou && !getifaddrs(&lista)) {
-    for (i = lista; i; i = i->ifa_next) {
-      if (!i->ifa_addr || i->ifa_addr->sa_family != AF_INET) continue;
-      if (!(i->ifa_flags & IFF_UP) || (i->ifa_flags & IFF_LOOPBACK)) continue;
-      if (privado(((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr)) {
-        achou = ((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr; break;
-      }
-    }
-    freeifaddrs(lista);
-  }
-  if (!achou) return 0;
-  struct in_addr a; a.s_addr = achou;
-  return inet_ntop(AF_INET, &a, dst, (socklen_t)n) != NULL;
-}
-
 // --- sockets ------------------------------------------------------------------
 static int enviarTudo(int s, const void *b, size_t n, volatile int *parar1, volatile int *parar2) {
   const char *p = b;
@@ -203,7 +113,7 @@ static int enviarTudo(int s, const void *b, size_t n, volatile int *parar1, vola
   return 1;
 }
 
-static int ouvir(in_addr_t onde, int portaPreferida, int *porta) {
+static int ouvir(in_addr_t onde, int *porta) {
   struct sockaddr_in a;
   socklen_t al = sizeof a;
   int um = 1, s = socket(AF_INET, SOCK_STREAM, 0);
@@ -211,12 +121,7 @@ static int ouvir(in_addr_t onde, int portaPreferida, int *porta) {
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &um, sizeof um);
   memset(&a, 0, sizeof a);
   a.sin_family = AF_INET; a.sin_addr.s_addr = htonl(onde);
-  a.sin_port = htons((unsigned short)portaPreferida);
-  if (bind(s, (struct sockaddr *)&a, sizeof a) < 0) {
-    if (!portaPreferida) { close(s); return -1; }
-    a.sin_port = 0;
-    if (bind(s, (struct sockaddr *)&a, sizeof a) < 0) { close(s); return -1; }
-  }
+  if (bind(s, (struct sockaddr *)&a, sizeof a) < 0) { close(s); return -1; }   // porta 0: livre
   if (listen(s, 16) < 0 || getsockname(s, (struct sockaddr *)&a, &al) < 0) { close(s); return -1; }
   *porta = ntohs(a.sin_port);
   return s;
@@ -432,8 +337,7 @@ typedef struct Sessao {
   int64_t bytes;
   uint64_t criadaMs, prontaMs, primeiroPedidoMs;
   char agente[96];
-  // tuning test and memory line
-  Ajuste aj; int nGer, seg0Cortado; double inicio;
+  // memory line
   long rssIni, rssPico, livreIni, livreMin;   // kB; -1 unknown
   int hwmZerado;
   uint64_t memLogMs;
@@ -490,7 +394,7 @@ static void *fioSonda(void *u) {
   s->rxSonda = rx;
   if (rx && s->cancelar) dts_remux_cancel(rx);
   pthread_mutex_unlock(&s->m);
-  if (rx && dts_remux_probe(rx, s->url, s->cabs, s->track, s->stereo, s->aj.seg, err, sizeof err) < 0) {
+  if (rx && dts_remux_probe(rx, s->url, s->cabs, s->track, s->stereo, SEG_ALVO_S, err, sizeof err) < 0) {
     pthread_mutex_lock(&s->m); s->rxSonda = NULL; pthread_mutex_unlock(&s->m);
     dts_remux_close(rx);
     rx = NULL;
@@ -571,16 +475,16 @@ static Gerador *pegarGerador(Sessao *s, int seg, int *continua, char *err, size_
   pthread_mutex_lock(&s->m);
   while (!esc && !s->cancelar) {
     int esperar = 0, vaga = -1;
-    for (i = 0; i < s->nGer && seg >= 0; i++)
+    for (i = 0; i < GERADORES && seg >= 0; i++)
       if (s->ger[i].g && !s->ger[i].ocupado && dts_remux_gen_next(s->ger[i].g) == seg) { esc = &s->ger[i]; *continua = 1; break; }
     if (esc) break;
-    for (i = 0; i < s->nGer && seg > 0; i++)
+    for (i = 0; i < GERADORES && seg > 0; i++)
       if (s->ger[i].ocupado && s->ger[i].seg == seg - 1 && !s->ger[i].parar) esperar = 1;
     if (esperar) {
       if (pthread_cond_timedwait(&s->c, &s->m, &ts) == ETIMEDOUT) { snprintf(err, errn, "timed out waiting for segment %d", seg - 1); break; }
       continue;
     }
-    for (i = 0; i < s->nGer; i++)
+    for (i = 0; i < GERADORES; i++)
       if (s->ger[i].g && !s->ger[i].ocupado && (!esc || s->ger[i].uso < esc->uso)) esc = &s->ger[i];
     if (esc) break;
     // Progressivo: o player le UM fluxo por vez. Pedido novo (seek, ou o player
@@ -589,7 +493,7 @@ static Gerador *pegarGerador(Sessao *s, int seg, int *continua, char *err, size_
     // conexao na fonte e reler o cabecalho; foi isso que o TorBox recusou).
     if (seg < 0) {
       Gerador *prog = NULL;
-      for (i = 0; i < s->nGer; i++) if (s->ger[i].g && s->ger[i].ocupado && s->ger[i].seg == -2) prog = &s->ger[i];
+      for (i = 0; i < GERADORES; i++) if (s->ger[i].g && s->ger[i].ocupado && s->ger[i].seg == -2) prog = &s->ger[i];
       if (prog) {
         if (!prog->parar) {
           prog->parar = 1;
@@ -601,7 +505,7 @@ static Gerador *pegarGerador(Sessao *s, int seg, int *continua, char *err, size_
         continue;
       }
     }
-    for (i = 0; i < s->nGer; i++) if (!s->ger[i].g && !s->ger[i].ocupado) { vaga = i; break; }
+    for (i = 0; i < GERADORES; i++) if (!s->ger[i].g && !s->ger[i].ocupado) { vaga = i; break; }
     if (vaga >= 0) {
       Gerador *nv = &s->ger[vaga];
       DtsRemuxGen *g;
@@ -619,12 +523,12 @@ static Gerador *pegarGerador(Sessao *s, int seg, int *continua, char *err, size_
     }
     // Todos ocupados: o mais antigo larga o que faz (o player desistiu dele).
     { Gerador *velho = NULL;
-      for (i = 0; i < s->nGer; i++)
+      for (i = 0; i < GERADORES; i++)
         if (s->ger[i].ocupado && s->ger[i].g && (!velho || s->ger[i].uso < velho->uso)) velho = &s->ger[i];
       if (velho && !velho->parar) {
         velho->parar = 1;
         dts_remux_gen_interrupt(velho->g);   // preso na rede: solta ja, nao no proximo pacote
-        printf("[dts-tpk] sessao %u: %d geradores ocupados, o mais antigo (seg %d) para\n", s->id, s->nGer, velho->seg);
+        printf("[dts-tpk] sessao %u: %d geradores ocupados, o mais antigo (seg %d) para\n", s->id, GERADORES, velho->seg);
         fflush(stdout);
       } }
     if (pthread_cond_timedwait(&s->c, &s->m, &ts) == ETIMEDOUT) { snprintf(err, errn, "no free generator"); break; }
@@ -704,19 +608,6 @@ static int servirFluxo(int sock, Sessao *s, const Pedido *pd, unsigned nr, int s
     pthread_mutex_lock(&s->m); s->nErros++; pthread_mutex_unlock(&s->m);
     return 0;
   }
-  if (seg == 0 && (s->aj.seg0 & 2)) {
-    // Tuning test, seg0 & 2: the first segment 0 of a session opened at a resume
-    // position is cut to its first second (the player seeks away from it).
-    int cortar = 0;
-    pthread_mutex_lock(&s->m);
-    if (!s->seg0Cortado && s->inicio > dts_remux_segment_duration(s->rx, 0) + 1.0) { s->seg0Cortado = 1; cortar = 1; }
-    pthread_mutex_unlock(&s->m);
-    if (cortar) {
-      dts_remux_gen_limit(ger->g, 1.0);
-      printf("[dts-tpk] #%u: seg0 cut to 1 s (tuning test; the app seeks to %.0f s)\n", nr, s->inicio);
-      fflush(stdout);
-    }
-  }
   if (seg < 0) {   // o player conta a posicao a partir do quadro-chave onde o fluxo comeca
     pthread_mutex_lock(&s->m); s->inicioStream = dts_remux_keyframe_before(s->rx, t); pthread_mutex_unlock(&s->m);
   }
@@ -760,14 +651,6 @@ static int servirFluxo(int sock, Sessao *s, const Pedido *pd, unsigned nr, int s
   return ok && manter;
 }
 
-// Tuning test, seg0 & 1: the playlist says where the app will seek (resume),
-// so the player may start there instead of fetching segment 0 first.
-static size_t marcaInicio(Sessao *s, char *b, size_t n) {
-  long ms = lround(s->inicio * 1000.0);
-  if (!(s->aj.seg0 & 1) || s->inicio <= 1.0) return 0;
-  return (size_t)snprintf(b, n, "#EXT-X-START:TIME-OFFSET=%ld.%03ld\n", ms / 1000, ms % 1000);
-}
-
 static void playlist(Sessao *s, char *b, size_t n) {
   const DtsRemuxInfo *in = dts_remux_info(s->rx);
   int k, alvo = (int)ceil(in->max_segment_s);
@@ -775,7 +658,6 @@ static void playlist(Sessao *s, char *b, size_t n) {
   if (alvo < 1) alvo = 1;
   p += (size_t)snprintf(b + p, n - p, "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:%d\n#EXT-X-MEDIA-SEQUENCE:0\n"
                         "#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-INDEPENDENT-SEGMENTS\n", alvo);
-  p += marcaInicio(s, b + p, n - p);
   for (k = 0; k < in->n_segments && p < n - 64; k++) {
     // Milissegundos inteiros: o LC_NUMERIC da TV nunca vira virgula aqui.
     long ms = lround(dts_remux_segment_duration(s->rx, k) * 1000.0);
@@ -795,7 +677,6 @@ static void playlistMestre(Sessao *s, char *b, size_t n) {
   size_t p = 0;
   if (bw < 1000000L) bw = 1000000L;
   p += (size_t)snprintf(b + p, n - p, "#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-INDEPENDENT-SEGMENTS\n");
-  p += marcaInicio(s, b + p, n - p);
   p += (size_t)snprintf(b + p, n - p, "#EXT-X-STREAM-INF:BANDWIDTH=%ld", bw);
   if (in->width > 0 && in->height > 0) p += (size_t)snprintf(b + p, n - p, ",RESOLUTION=%dx%d", in->width, in->height);
   if (fps > 0) p += (size_t)snprintf(b + p, n - p, ",FRAME-RATE=%ld.%03ld", fps / 1000, fps % 1000);
@@ -919,7 +800,7 @@ static Porteiro porteiroHls;
 static int subir(void) {
   if (sockLo >= 0) return 1;
   signal(SIGPIPE, SIG_IGN);
-  sockLo = ouvir(INADDR_LOOPBACK, 0, &portaLo);
+  sockLo = ouvir(INADDR_LOOPBACK, &portaLo);
   if (sockLo < 0) return 0;
   // 8 connections at once: the player uses 1-3; the rest wait in the porteiro.
   if (!porteiroSubir(&porteiroHls, sockLo, 8, tokenAtual, atender)) { close(sockLo); sockLo = -1; return 0; }
@@ -944,18 +825,22 @@ static int tizenMaior(void) {
   return v;
 }
 
+// Anel do leitor da fonte, MiB: abaixo do 8 (menos RAM) cai de 32 para 16.
+static int anelMib(void) {
+  int t = tizenMaior();
+  return t >= 6 && t < 8 ? 16 : 32;
+}
+
 // Tizen 6 em diante: os tres pacotes 6+ (NuvioTpk60/65/NuvioTpk) carregam a
 // mesma .so, e as TVs de 2021/2022 (6.0/6.5) tambem nao tocam DTS (especificacao
-// de video da Samsung de cada ano). Abaixo do 8 (menos RAM) o anel do leitor da
-// fonte cai de 32 para 16 MiB; no 8/9 nada muda.
+// de video da Samsung de cada ano).
 int dts_tpk_disponivel(void) {
   static int c = -1;   // os Ajustes perguntam a cada quadro: decide uma vez
   if (c < 0) {
     int t = tizenMaior();
     c = (t < 0 || t >= 6) && dts_remux_available();
-    if (c && t >= 6 && t < 8) dts_engine_set_ring_mib(16);
-    printf("[dts-tpk] conversao DTS/TrueHD %s (tizen %d, FFmpeg %s%s)\n", c ? "disponivel" : "indisponivel", t,
-           dts_remux_available() ? "ligado" : "ausente", c && t >= 6 && t < 8 ? ", anel 16 MiB" : "");
+    printf("[dts-tpk] conversao DTS/TrueHD %s (tizen %d, FFmpeg %s, anel %d MiB)\n", c ? "disponivel" : "indisponivel", t,
+           dts_remux_available() ? "ligado" : "ausente", anelMib());
     fflush(stdout);
   }
   return c;
@@ -965,7 +850,7 @@ int dts_tpk_disponivel(void) {
 // Peak resident memory of the app and the lowest MemAvailable of the TV while a
 // session lives, sampled every 500 ms (and VmHWM, reset at the session start
 // when the kernel allows it), with the reader rings alive. Kilobytes; -1 = not
-// readable. The owner compares one 4K file on each TV and each tuning.
+// readable. Stdout only (the app log).
 static long lerKb(const char *arq, const char *chave) {
   char l[160];
   size_t k = strlen(chave);
@@ -1002,15 +887,13 @@ static void memAmostra(Sessao *s, long rss, long livre) {   // sob s->m
 }
 static void memLinha(Sessao *s, int fim) {
   DtsEngineRings rg;
-  char aj[128];
   long hwm = lerKb("/proc/self/status", "VmHWM"), total = lerKb("/proc/meminfo", "MemTotal");
   dts_engine_rings(&rg, 0);
-  ajusteTexto(&s->aj, aj, sizeof aj);
   pthread_mutex_lock(&s->m);
   memAmostra(s, lerKb("/proc/self/status", "VmRSS"), lerKb("/proc/meminfo", "MemAvailable"));
-  printf("[dts-tpk] mem%s: sessao %u, %s, tizen %d, RAM %ld MB; %s; app RSS peak %ld MB (start %ld, VmHWM %ld %s), "
+  printf("[dts-tpk] mem%s: sessao %u, %s, tizen %d, RAM %ld MB; app RSS peak %ld MB (start %ld, VmHWM %ld %s), "
          "MemAvailable low %ld MB (start %ld); reader rings peak %d = %lld MiB, alive now %d = %lld MiB; %.0f s\n",
-         fim ? "" : " (running)", s->id, pacote(), tizenMaior(), total / 1024, aj, s->rssPico / 1024, s->rssIni / 1024,
+         fim ? "" : " (running)", s->id, pacote(), tizenMaior(), total / 1024, s->rssPico / 1024, s->rssIni / 1024,
          hwm / 1024, s->hwmZerado ? "since session start" : "since app start", s->livreMin / 1024, s->livreIni / 1024,
          rg.peak, rg.peak_bytes >> 20, rg.alive, rg.bytes >> 20, (agoraMs() - s->criadaMs) / 1000.0);
   pthread_mutex_unlock(&s->m);
@@ -1085,6 +968,7 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
                   double inicio, char *out, size_t n) {
   Sessao *s;
   pthread_t t;
+  unsigned id;
   if (out && n) out[0] = 0;
   if (!url || !*url || !out || n < 64 || modo < 0 || modo >= DTSTPK_DESLIGADO || !dts_remux_available()) return 0;
   pthread_mutex_lock(&G);
@@ -1095,9 +979,7 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
     fflush(stdout);
     return 0;
   }
-  ajusteCarregar();
-  { int t = tizenMaior();   // ring of the readers this session opens
-    dts_engine_set_ring_mib(ajuste.ring ? ajuste.ring : t >= 6 && t < 8 ? 16 : 32); }
+  dts_engine_set_ring_mib(anelMib());   // ring of the readers this session opens
   { static int monitor;
     pthread_t tm;
     if (!monitor && pthread_create(&tm, NULL, fioMemoria, NULL) == 0) { pthread_detach(tm); monitor = 1; } }
@@ -1110,7 +992,6 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
   s->track = track; s->stereo = stereo; s->modo = modo;
   s->estado = DTSTPK_SONDANDO; s->inicioStream = -1;
   s->criadaMs = agoraMs();
-  s->aj = ajuste; s->nGer = ajuste.gens; s->inicio = inicio > 0 ? inicio : 0;
   memInicio(s);
   for (int i = 0; i < GERADORES; i++) s->ger[i].seg = -1;
   if (!s->url || !s->cabs) { pthread_mutex_unlock(&G); sessaoDestruir(s); return 0; }
@@ -1121,24 +1002,16 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
   }
   pthread_detach(t);
   urlDe(s, inicio, out, n);
+  id = s->id;   // s may go once G is released (a close from another thread)
   pthread_mutex_unlock(&G);
-  { char aj[128];
-    ajusteTexto(&s->aj, aj, sizeof aj);
-    printf("[dts-tpk] sessao %u: %s em 127.0.0.1, audio %d do arquivo, saida %s; player abre %s; tuning: %s\n",
-           s->id, MODO_NOME[modo], track, stereo ? "AAC 2.0" : "AC3",
-           strstr(out, ".m3u8") ? "a playlist HLS" : "o fluxo progressivo", aj); }
+  printf("[dts-tpk] sessao %u: %s em 127.0.0.1, audio %d do arquivo, saida %s; player abre %s; segmentos de %.0f s\n",
+         id, MODO_NOME[modo], track, stereo ? "AAC 2.0" : "AC3",
+         strstr(out, ".m3u8") ? "a playlist HLS" : "o fluxo progressivo", SEG_ALVO_S);
   fflush(stdout);
   return 1;
 }
 
-// Tuning test: the player prebuffer for the session now open (0 = the TV decides).
-int dts_tpk_prebuffer_ms(void) {
-  int ms;
-  pthread_mutex_lock(&G);
-  ms = atual ? atual->aj.pre : 0;
-  pthread_mutex_unlock(&G);
-  return ms;
-}
+int dts_tpk_prebuffer_ms(void) { return PREBUFFER_MS; }
 
 int dts_tpk_url_em(double t, char *out, size_t n) {
   int ok = 0;
@@ -1192,168 +1065,4 @@ int dts_tpk_e_url(const char *u) {
   return a[0] && !strncmp(u, a, strlen(a));
 }
 
-// --- registro na rede ---------------------------------------------------------
-// Sem `sdb shell` na TV de varejo: o log do app sai por HTTP na LAN, com token.
-// GET /<token>/         = dts (o que o teste pede quase sempre)
-// GET /<token>/log?n=N   ultimas N linhas (padrao 3000)
-// GET /<token>/dts?n=N   so as linhas da conversao, do player, do audio e da
-//                        escolha de fonte (padrao 5000): as do menu nao empurram
-//                        a reproducao para fora
-// GET /<token>/help      os enderecos
-// URLs saem cortadas no host, como no painel de log da TV (registro.c).
-static int sockReg = -1, portaReg;
-static char tokenReg[12], urlReg[96];
-
-static void mascarar(char *s) {
-  char *p = s;
-  while ((p = strstr(p, "://")) != NULL) {
-    char *h = p + 3, *fim;
-    while (*h && *h != '/' && *h != '?' && *h != ' ') h++;
-    if (*h != '/' && *h != '?') { p = h; continue; }
-    fim = h;
-    while (*fim && *fim != ' ' && *fim != '\n') fim++;
-    if (fim - h < 4) { p = fim; continue; }
-    memmove(h + 4, fim, strlen(fim) + 1);
-    memcpy(h, "/...", 4);
-    p = h + 4;
-  }
-}
-
-static int linhaDts(const char *l) {
-  static const char *const M[] = { "[dts-tpk]", "[dts-range]", "[video] tpk", "[audio]", "[mkv]", "[dts]",
-                                   "[video] faixas", "[video] reconex", "[video] reconect", "[video] conexao",
-                                   "[fonte]", "[player] saida", "[tv] ", "[etapa-anterior]", NULL };
-  for (int i = 0; M[i]; i++) if (strstr(l, M[i])) return 1;
-  return 0;
-}
-
-// GET /<token>/tune?ring=16&gens=1&seg0=2 sets the tuning test (next video on).
-static void servirAjuste(int sock, const char *query) {
-  char b[2000], txt[128], erro[120] = "";
-  Ajuste a;
-  pthread_mutex_lock(&G);
-  ajusteCarregar();
-  a = ajuste;
-  pthread_mutex_unlock(&G);
-  if (query[0]) {
-    ajusteLer(query, &a);
-    if (!ajusteValido(&a)) snprintf(erro, sizeof erro, "NOT CHANGED: ring 0/8/16/32, gens 1-%d, seg0 0-3, seg 2/3/4/6, pre 0 or 500-6000\n\n", GERADORES);
-    else {
-      char f[96];
-      pthread_mutex_lock(&G);
-      ajuste = a;
-      pthread_mutex_unlock(&G);
-      snprintf(f, sizeof f, "ring=%d gens=%d seg0=%d seg=%d pre=%d\n", a.ring, a.gens, a.seg0, a.seg, a.pre);
-      if (!dados_gravar("dts-ajuste.txt", f)) snprintf(erro, sizeof erro, "set for this run only (could not save)\n\n");
-      ajusteTexto(&a, txt, sizeof txt);
-      printf("[dts-tpk] tuning test set: %s (from the next video)\n", txt);
-      fflush(stdout);
-    }
-  }
-  ajusteTexto(&a, txt, sizeof txt);
-  snprintf(b, sizeof b, "%sDTS tuning test (temporary): %s\nApplies from the next video. Each playback logs a\n"
-           "\"[dts-tpk] mem:\" line with these values.\n\n"
-           "  %stune?ring=16        reader ring MiB: 8, 16, 32 (0 = auto: 32 on Tizen 8/9, 16 below)\n"
-           "  %stune?gens=1         generators: 1 or 2\n"
-           "  %stune?seg0=1         0 as now, 1 playlist starts at the resume point,\n"
-           "                        2 segment 0 cut to 1 s on resume, 3 both\n"
-           "  %stune?seg=2          HLS segment length, s: 2, 3, 4 or 6\n"
-           "  %stune?pre=2000       player prebuffer, ms: 500-6000 (0 = the TV decides)\n"
-           "  %stune?ring=0&gens=2&seg0=0&seg=2&pre=1000   back to the default\n",
-           erro, txt, urlReg, urlReg, urlReg, urlReg, urlReg, urlReg);
-  responderSimples(sock, 200, "OK", "text/plain; charset=utf-8", b, 0);
-}
-
-static void servirRegistro(int sock, const char *caminho, const char *query) {
-  const char *arq = registro_arquivo();
-  if (!strcmp(caminho, "tune")) { servirAjuste(sock, query); return; }
-  int so = !caminho[0] || !strcmp(caminho, "dts"), n = so ? 5000 : 3000;
-  const char *q = strstr(query, "n=");
-  if (q) n = atoi(q + 2);
-  if (n < 1) n = 1;
-  if (n > 20000) n = 20000;
-  if (strcmp(caminho, "log") && !so) {
-    char b[700];
-    snprintf(b, sizeof b, "Nuvio log (this TV)\n\n  %s            conversion, player, audio and source lines (= dts)\n"
-             "  %sdts?n=5000  the same, last 5000 of them\n  %slog?n=3000  last lines of the whole app log\n"
-             "  %stune        DTS tuning test (temporary)\n",
-             urlReg, urlReg, urlReg, urlReg);
-    responderSimples(sock, 200, "OK", "text/plain; charset=utf-8", b, 0);
-    return;
-  }
-  FILE *f = arq ? fopen(arq, "rb") : NULL;
-  if (!f) { responderSimples(sock, 404, "Not Found", NULL, "no log file\n", 0); return; }
-  long tam, ini;
-  fseek(f, 0, SEEK_END); tam = ftell(f);
-  ini = tam > (8L << 20) ? tam - (8L << 20) : 0;
-  char *b = malloc((size_t)(tam - ini) + 1);
-  if (!b) { fclose(f); responderSimples(sock, 500, "Internal Server Error", NULL, "", 0); return; }
-  fseek(f, ini, SEEK_SET);
-  size_t lidos = fread(b, 1, (size_t)(tam - ini), f);
-  fclose(f);
-  b[lidos] = 0;
-  // De tras para a frente ate juntar n linhas (filtradas, no modo dts).
-  char **lin = malloc((size_t)n * sizeof *lin);
-  int k = 0;
-  char *p = b + lidos;
-  while (lin && p > b && k < n) {
-    char *fim = p;
-    if (fim > b && fim[-1] == '\n') fim--;
-    char *c = fim;
-    while (c > b && c[-1] != '\n') c--;
-    *fim = 0;
-    if (!so || linhaDts(c)) lin[k++] = c;
-    p = c;
-  }
-  size_t cap = 256;
-  for (int i = 0; i < k; i++) cap += strlen(lin[i]) + 1;
-  char *saida = malloc(cap);
-  if (saida && lin) {
-    size_t o = 0;
-    for (int i = k - 1; i >= 0; i--) { size_t l = strlen(lin[i]); memcpy(saida + o, lin[i], l); o += l; saida[o++] = '\n'; }
-    saida[o] = 0;
-    mascarar(saida);
-    responderSimples(sock, 200, "OK", "text/plain; charset=utf-8", saida, 0);
-  } else responderSimples(sock, 500, "Internal Server Error", NULL, "", 0);
-  free(saida); free(lin); free(b);
-}
-
-// Token already checked by the porteiro; one request per connection.
-static void *atenderRegistro(void *u) {
-  Conexao *c = u;
-  Pedido pd;
-  { struct timeval tv = { 10, 0 }; setsockopt(c->sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof tv); }
-  c->cab[fimCabecalho(c->cab)] = 0;
-  if (lerLinha(c->cab, &pd)) {
-    const char *p = pd.caminho[0] == '/' ? pd.caminho + 1 : pd.caminho;
-    size_t k = strlen(tokenReg);
-    servirRegistro(c->sock, p[k] ? p + k + 1 : "", pd.query);
-  }
-  conexaoFim(c);
-  return NULL;
-}
-static int tokenRegistro(const char *cab) { return tokenNoCaminho(cab, tokenReg); }
-static Porteiro porteiroReg;
-
-int dts_tpk_registro_rede(char *url, size_t n) {
-  char ip[48];
-  int ok = 0;
-  if (url && n) url[0] = 0;
-  pthread_mutex_lock(&G);
-  if (sockReg < 0 && ipLan(ip, sizeof ip)) {
-    signal(SIGPIPE, SIG_IGN);
-    // On the LAN on purpose (a PC reads it): temporary, it goes with the
-    // tuning test. Token checked before any thread, 2 connections at once.
-    sockReg = ouvir(INADDR_ANY, 8099, &portaReg);   // porta fixa quando livre: facil de lembrar
-    gerarToken(tokenReg, 6);
-    if (sockReg >= 0 && porteiroSubir(&porteiroReg, sockReg, 2, tokenRegistro, atenderRegistro)) {
-      snprintf(urlReg, sizeof urlReg, "http://%s:%d/%s/", ip, portaReg, tokenReg);
-      printf("[dts-tpk] registro na rede: %s\n", urlReg);
-      fflush(stdout);
-    } else if (sockReg >= 0) { close(sockReg); sockReg = -1; }
-  }
-  if (sockReg >= 0 && url && n) { snprintf(url, n, "%s", urlReg); ok = 1; }
-  pthread_mutex_unlock(&G);
-  return ok;
-}
 #endif

@@ -126,8 +126,7 @@ double dts_tpk_duracao(void) { return 7200; }
 int dts_tpk_modo(void) { return modoFake; }
 double dts_tpk_inicio_stream(void) { return inicioStream; }
 const char *dts_tpk_caminho(void) { return "DTS core only"; }
-static int preMs;
-int dts_tpk_prebuffer_ms(void) { return preMs; }
+int dts_tpk_prebuffer_ms(void) { return 1000; }
 int dts_tpk_sem_indice(void) { return 0; }
 int dts_tpk_e_url(const char *u) { return u && strstr(u, "127.0.0.1") != NULL; }
 int video_faixa_dts(const VideoFaixa *f) { return f && !strncmp(f->codec, "A_DTS", 5); }
@@ -244,13 +243,10 @@ int main(void) {
   playerPronto(); bombear(3);
   ok(pausas == 0, "no start buffer on HLS");
   video_parar();
-  // Tuning test: the prebuffer reaches the host as a pseudo header, only when set.
-  ok(!ultCab[0], "prebuffer: none by default");
-  preMs = 2000;
+  // The prebuffer reaches the host as a pseudo header with the converted URL.
   video_tocar("http://h/f4.mkv");
-  ok(!strcmp(ultCab, "X-Nuvio-Prebuffer: 2000"), "prebuffer: 2000 ms goes to the host with the converted URL");
+  ok(dts_tpk_e_url(ultUrl) && !strcmp(ultCab, "X-Nuvio-Prebuffer: 1000"), "prebuffer: 1000 ms goes to the host with the converted URL");
   video_parar();
-  preMs = 0;
   // STOP IS FINAL: after Back (or the error card) nothing reopens the file.
   // The player's track list of the stopped file used to restart the
   // conversion on the next tick, playing on behind the menus (TV, Oct 2026).

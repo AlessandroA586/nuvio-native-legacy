@@ -1,6 +1,6 @@
 /* DTS / TrueHD -> Dolby Digital on the Samsung .tpk: the local HTTP server the
- * TV's own player reads the converted stream from (docs/plans/
- * dts-truehd-ac3-tizen-DESIGN.md, "Option B"). The converter is dts_remux.c.
+ * TV's own player reads the converted stream from (docs/features/dts/README.md).
+ * The converter is dts_remux.c.
  *
  * Delivery: HLS on 127.0.0.1, segments made when the player asks. A source
  * without a keyframe index to its end (MKV without Cues) gets one continuous
@@ -44,15 +44,12 @@ int  dts_tpk_modo(void);                 /* mode of the session, -1 none */
  * player counts from there). -1 until the stream's request has started. */
 double dts_tpk_inicio_stream(void);
 const char *dts_tpk_caminho(void);       /* decoder path, e.g. "DTS core only" */
-/* TEMPORARY tuning test: player prebuffer (ms) for the open session; 0 = the TV decides. */
+/* Player prebuffer (ms) for the converted stream: video_tpk.c hands it to the
+ * host as the pseudo header X-Nuvio-Prebuffer (player_set_streaming_buffering_time). */
 int dts_tpk_prebuffer_ms(void);
 /* 1 when the session FAILED because HLS needs a keyframe index the source
  * lacks (MKV without Cues): the continuous TS can still play it. */
 int  dts_tpk_sem_indice(void);
 int  dts_tpk_e_url(const char *url);     /* is this a URL of this server */
 
-/* LAN log endpoint (no `sdb shell` on retail TVs), TEMPORARY: it goes with
- * the tuning test (/<token>/tune). Started on first call; writes
- * http://<TV-IP>:<port>/<token>/ into url. 0 without a LAN address. */
-int dts_tpk_registro_rede(char *url, size_t n);
 #endif

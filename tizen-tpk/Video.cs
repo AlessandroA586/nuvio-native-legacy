@@ -87,7 +87,7 @@ namespace NuvioTpk
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void FnAspecto(int x, int y, int w, int h, int lx, int ly, int lw, int lh);
         [DllImport("libcapi-media-player.so.0")] static extern int player_set_display_mode(IntPtr p, PlayerDisplayMode mode);
         [DllImport("libcapi-media-player.so.0")] static extern int player_set_display_roi_area(IntPtr p, int x, int y, int w, int h);
-        // TEMPORARY DTS tuning test (X-Nuvio-Prebuffer from src/video_tpk.c): only in IDLE, before Prepare.
+        // DTS conversion (X-Nuvio-Prebuffer from src/video_tpk.c): only in IDLE, before Prepare.
         [DllImport("libcapi-media-player.so.0")] static extern int player_set_streaming_buffering_time(IntPtr p, int preMs, int reMs);
         [DllImport("libcapi-media-player.so.0")] static extern int player_get_streaming_buffering_time(IntPtr p, out int preMs, out int reMs);
         FnAspecto fAspecto;

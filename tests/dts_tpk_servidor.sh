@@ -15,7 +15,7 @@ work=$(mktemp -d /tmp/nuvio-dts-tpk-servidor.XXXXXX)
 pid=''
 trap 'if [ -n "$pid" ]; then kill "$pid" 2>/dev/null || true; fi; rm -rf "$work"' EXIT
 mkdir -p "$work/src"
-# 30 s, keyframe every 2 s (segments of 6 s), DTS 5.1, Matroska with Cues.
+# 30 s, keyframe every 2 s (15 segments of 2 s), DTS 5.1, Matroska with Cues.
 ffmpeg -v error -f lavfi -i testsrc2=s=640x360:r=24 -f lavfi -i "sine=f=440:r=48000" -t 30 \
   -filter_complex "[1:a]pan=5.1|FL=c0|FR=c0|FC=c0|LFE=c0|BL=c0|BR=c0[a]" -map 0:v -map "[a]" \
   -c:v libx264 -preset ultrafast -g 48 -keyint_min 48 -sc_threshold 0 -pix_fmt yuv420p \
@@ -40,38 +40,19 @@ fail=0
 dur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1"; }
 check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 
-# 1. Tuning test from the file: ring 8 MiB, one generator, start tag + short seg0.
+# 1. HLS as shipped: 2 s segments, whole segments, one memory line at the end.
 mkdir -p "$work/t1"
-printf 'ring=8 gens=1 seg0=3 seg=6 pre=0\n' > "$work/t1/dts-ajuste.txt"
-"$work/test" "$port" tuning "$work/t1" > "$work/t1.log" 2>&1 || fail=1
+"$work/test" "$port" padrao "$work/t1" > "$work/t1.log" 2>&1 || fail=1
 grep -E '^(ok|FAIL)' "$work/t1.log"
-check "tuning: seg0 cut to about 1 s ($(dur "$work/t1/seg0.ts") s)" "awk 'BEGIN{exit !($(dur "$work/t1/seg0.ts") < 2.0)}'"
-check "tuning: seg1 whole ($(dur "$work/t1/seg1.ts") s)" "awk 'BEGIN{exit !($(dur "$work/t1/seg1.ts") > 5.5)}'"
-check "tuning: seg0 asked again is whole ($(dur "$work/t1/seg0b.ts") s)" "awk 'BEGIN{exit !($(dur "$work/t1/seg0b.ts") > 5.5)}'"
-check "tuning: the session line names the tuning" "grep -q 'tuning: ring 8 MiB, 1 generator(s), seg0 start tag + short' '$work/t1.log'"
-check "tuning: one memory line at the end" "[ \$(grep -c '^\[dts-tpk\] mem: ' '$work/t1.log') = 1 ]"
-check "tuning: memory line has the tuning, RSS, MemAvailable and the rings" \
-  "grep -E '^\[dts-tpk\] mem: sessao [0-9]+, .*ring 8 MiB, 1 generator\(s\), seg0 start tag \+ short, segments 6 s, prebuffer TV; app RSS peak [1-9][0-9]* MB .*MemAvailable low [0-9]+ MB .*reader rings peak 1 = 8 MiB' '$work/t1.log' >/dev/null"
-check "tuning: only one reader ever opened (one generator)" "! grep -q 'own reader opened' '$work/t1.log'"
+check "seg0 is about 2 s ($(dur "$work/t1/seg0.ts") s)" "awk 'BEGIN{d=$(dur "$work/t1/seg0.ts"); exit !(d > 1.8 && d < 2.3)}'"
+check "seg1 is about 2 s ($(dur "$work/t1/seg1.ts") s)" "awk 'BEGIN{d=$(dur "$work/t1/seg1.ts"); exit !(d > 1.8 && d < 2.3)}'"
+check "the session line names the segment length" "grep -q 'segmentos de 2 s' '$work/t1.log'"
+check "one memory line at the end" "[ \$(grep -c '^\[dts-tpk\] mem: ' '$work/t1.log') = 1 ]"
+check "memory line has RSS, MemAvailable and the rings (auto: 32 MiB here)" \
+  "grep -qE '^\[dts-tpk\] mem: sessao [0-9]+, .*RAM [0-9]+ MB; app RSS peak [1-9][0-9]* MB .*MemAvailable low [0-9]+ MB .*reader rings peak [12] = (32|64) MiB' '$work/t1.log'"
+check "nothing left of the tuning test" "! grep -qiE 'tuning|seg0 cut|dts-ajuste' '$work/t1.log'"
 
-# 2. No file: the defaults (no start tag, whole 2 s seg0, 1 s prebuffer, ring 32 MiB here).
-mkdir -p "$work/t2"
-"$work/test" "$port" padrao "$work/t2" > "$work/t2.log" 2>&1 || fail=1
-grep -E '^(ok|FAIL)' "$work/t2.log"
-check "default: seg0 whole, 2 s ($(dur "$work/t2/seg0.ts") s)" "awk 'BEGIN{d=$(dur "$work/t2/seg0.ts"); exit !(d > 1.8 && d < 2.3)}'"
-check "default: memory line with ring auto and 2 generators" \
-  "grep -qE '^\[dts-tpk\] mem: .*ring auto, 2 generator\(s\), seg0 normal, segments 2 s, prebuffer 1000 ms; .*reader rings peak [12] = (32|64) MiB' '$work/t2.log'"
-check "default: no seg0 cut" "! grep -q 'seg0 cut' '$work/t2.log'"
-
-# 2b. Tuning seg=2 pre=1500: 2 s segments, prebuffer handed to the player.
-mkdir -p "$work/t7"
-printf 'ring=0 gens=2 seg0=0 seg=2 pre=1500\n' > "$work/t7/dts-ajuste.txt"
-"$work/test" "$port" curto "$work/t7" > "$work/t7.log" 2>&1 || fail=1
-grep -E '^(ok|FAIL)' "$work/t7.log"
-check "short segments: seg1 is about 2 s ($(dur "$work/t7/seg1.ts") s)" "awk 'BEGIN{d=$(dur "$work/t7/seg1.ts"); exit !(d > 1.8 && d < 2.3)}'"
-check "short segments: the session line names them" "grep -q 'segments 2 s, prebuffer 1500 ms' '$work/t7.log'"
-
-# 3. Stop/back during the probe hangs up on the source at once (blocker 1).
+# 2. Stop/back during the probe hangs up on the source at once (blocker 1).
 "$work/test" "$port" cancelar "$work" > "$work/t3.log" 2>&1 || fail=1
 grep -E '^(ok|FAIL)' "$work/t3.log"
 fechou=$(sed -n 's/^closed-at //p' "$work/t3.log")
@@ -80,22 +61,22 @@ check "cancel: the probe's request to the source ended within 2 s of the close (
   "[ -n '$solto' ] && [ -n '$fechou' ] && awk 'BEGIN{exit !($solto - $fechou < 2.0)}'"
 check "cancel: no 'did not open' line for a cancelled probe" "! grep -q 'a fonte nao abriu no conversor' '$work/t3.log'"
 
-# 4. Audio far ahead of its video: the AC3 queue stops at its cap (blocker 2).
+# 3. Audio far ahead of its video: the AC3 queue stops at its cap (blocker 2).
 "$work/test" "$port" fila "$work" > "$work/t4.log" 2>&1 || fail=1
 grep -E '^(ok|FAIL)' "$work/t4.log"
 check "queue: the error names the audio queue cap" "grep -q 'Audio queue over 60 s' '$work/t4.log'"
 check "queue: the converter stayed under 100 MB RSS ($(sed -n 's/.*app RSS peak \([0-9]*\) MB.*/\1/p' "$work/t4.log") MB)" \
   "[ \"\$(sed -n 's/.*app RSS peak \([0-9]*\) MB.*/\1/p' '$work/t4.log')\" -lt 100 ]"
 
-# 5. Listeners: HLS on 127.0.0.1 only; no thread before the token (blocker 3).
+# 4. Listeners: HLS on 127.0.0.1 only; no thread before the token (blocker 3).
 "$work/test" "$port" escuta "$work" > "$work/t5.log" 2>&1 || fail=1
 grep -E '^(ok|FAIL|skip)' "$work/t5.log"
 
-# 6. Range is ignored: chunked bodies only (blocker 4: inverted ranges).
+# 5. Range is ignored: chunked bodies only (blocker 4: inverted ranges).
 "$work/test" "$port" faixa "$work" > "$work/t6.log" 2>&1 || fail=1
 grep -E '^(ok|FAIL)' "$work/t6.log"
 
-cp "$work/t1.log" "$work/t2.log" "$work/t3.log" "$work/t4.log" "$work/t5.log" "$work/t6.log" "${DTS_TPK_LOGS:-$work}/" 2>/dev/null || true
-if [ "$fail" != 0 ]; then echo "--- t1.log"; grep '\[dts-tpk\]' "$work/t1.log" | tail -30; echo "--- t2.log"; grep '\[dts-tpk\]' "$work/t2.log" | tail -30; echo "--- t3.log"; tail -20 "$work/t3.log"; echo "--- t4.log"; grep -v '^\[dts-tpk\] #' "$work/t4.log" | tail -20; fi
+cp "$work/t1.log" "$work/t3.log" "$work/t4.log" "$work/t5.log" "$work/t6.log" "${DTS_TPK_LOGS:-$work}/" 2>/dev/null || true
+if [ "$fail" != 0 ]; then echo "--- t1.log"; grep '\[dts-tpk\]' "$work/t1.log" | tail -30; echo "--- t3.log"; tail -20 "$work/t3.log"; echo "--- t4.log"; grep -v '^\[dts-tpk\] #' "$work/t4.log" | tail -20; fi
 [ "$fail" = 0 ] && echo "dts_tpk_servidor: ok"
 exit "$fail"
