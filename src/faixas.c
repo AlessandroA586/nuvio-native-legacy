@@ -711,6 +711,7 @@ static void estEscolher(int i) {   // amostra / fonte `i`: aplica ao vivo
   } else if (ctl == EST_COR_BORDA) {
     if (e->corBorda == i) return;
     e->corBorda = i;
+    player_leg_estilo_tocou(PLR_LEG_COR_BORDA);
   } else {
     if (e->familia == i) return;
     e->familia = i;

@@ -558,6 +558,9 @@ static void ass_plain_style_locked(const PlainAssStyle *p) {
         s->BorderStyle = p->background ? 4 : 1;
         s->BackColour = p->background ? (unsigned)(255 - p->background * 255 * 16 / 100) : 46u;
       }
+      // BackColour carries shadow RGB unless it is a background box.
+      if ((p->overrides & PLAIN_ASS_OUTLINE) && s->BorderStyle == 1)
+        s->BackColour = ((uint32_t)p->outlineRgb << 8) | (s->BackColour & 255u);
       if (p->overrides & PLAIN_ASS_POS) s->MarginV = p->marginV * assTrack->PlayResY / 1080;
       if (p->overrides & PLAIN_ASS_BOLD) s->Bold = p->bold && !assArabe;
     }
