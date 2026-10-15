@@ -51,7 +51,7 @@ check "tuning: seg0 asked again is whole ($(dur "$work/t1/seg0b.ts") s)" "awk 'B
 check "tuning: the session line names the tuning" "grep -q 'tuning: ring 8 MiB, 1 generator(s), seg0 start tag + short' '$work/t1.log'"
 check "tuning: one memory line at the end" "[ \$(grep -c '^\[dts-tpk\] mem: ' '$work/t1.log') = 1 ]"
 check "tuning: memory line has the tuning, RSS, MemAvailable and the rings" \
-  "grep -E '^\[dts-tpk\] mem: sessao [0-9]+, .*ring 8 MiB, 1 generator\(s\), seg0 start tag \+ short; app RSS peak [1-9][0-9]* MB .*MemAvailable low [0-9]+ MB .*reader rings peak 1 = 8 MiB' '$work/t1.log' >/dev/null"
+  "grep -E '^\[dts-tpk\] mem: sessao [0-9]+, .*ring 8 MiB, 1 generator\(s\), seg0 start tag \+ short, segments 6 s, prebuffer TV; app RSS peak [1-9][0-9]* MB .*MemAvailable low [0-9]+ MB .*reader rings peak 1 = 8 MiB' '$work/t1.log' >/dev/null"
 check "tuning: only one reader ever opened (one generator)" "! grep -q 'own reader opened' '$work/t1.log'"
 
 # 2. No file: today's behaviour (no start tag, whole seg0, ring 32 MiB here).
@@ -60,8 +60,16 @@ mkdir -p "$work/t2"
 grep -E '^(ok|FAIL)' "$work/t2.log"
 check "default: seg0 whole ($(dur "$work/t2/seg0.ts") s)" "awk 'BEGIN{exit !($(dur "$work/t2/seg0.ts") > 5.5)}'"
 check "default: memory line with ring auto and 2 generators" \
-  "grep -qE '^\[dts-tpk\] mem: .*ring auto, 2 generator\(s\), seg0 normal; .*reader rings peak [12] = (32|64) MiB' '$work/t2.log'"
+  "grep -qE '^\[dts-tpk\] mem: .*ring auto, 2 generator\(s\), seg0 normal, segments 6 s, prebuffer TV; .*reader rings peak [12] = (32|64) MiB' '$work/t2.log'"
 check "default: no seg0 cut" "! grep -q 'seg0 cut' '$work/t2.log'"
+
+# 2b. Tuning seg=2 pre=1500: 2 s segments, prebuffer handed to the player.
+mkdir -p "$work/t7"
+printf 'ring=0 gens=2 seg0=0 seg=2 pre=1500\n' > "$work/t7/dts-ajuste.txt"
+"$work/test" "$port" curto "$work/t7" > "$work/t7.log" 2>&1 || fail=1
+grep -E '^(ok|FAIL)' "$work/t7.log"
+check "short segments: seg1 is about 2 s ($(dur "$work/t7/seg1.ts") s)" "awk 'BEGIN{d=$(dur "$work/t7/seg1.ts"); exit !(d > 1.8 && d < 2.3)}'"
+check "short segments: the session line names them" "grep -q 'segments 2 s, prebuffer 1500 ms' '$work/t7.log'"
 
 # 3. Stop/back during the probe hangs up on the source at once (blocker 1).
 "$work/test" "$port" cancelar "$work" > "$work/t3.log" 2>&1 || fail=1

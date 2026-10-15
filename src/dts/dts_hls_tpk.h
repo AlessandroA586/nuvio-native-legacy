@@ -44,6 +44,8 @@ int  dts_tpk_modo(void);                 /* mode of the session, -1 none */
  * player counts from there). -1 until the stream's request has started. */
 double dts_tpk_inicio_stream(void);
 const char *dts_tpk_caminho(void);       /* decoder path, e.g. "DTS core only" */
+/* TEMPORARY tuning test: player prebuffer (ms) for the open session; 0 = the TV decides. */
+int dts_tpk_prebuffer_ms(void);
 /* 1 when the session FAILED because HLS needs a keyframe index the source
  * lacks (MKV without Cues): the continuous TS can still play it. */
 int  dts_tpk_sem_indice(void);

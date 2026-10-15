@@ -462,7 +462,11 @@ static int abrirSessao(void) {
     // O player le do servidor local; os cabecalhos do addon sao da fonte (o
     // servidor ja os usa), nao do 127.0.0.1.
     cv.abriuEm = SDL_GetTicks(); cv.tocou = 0;
-    hAbrir(cv.url, "");
+    // TEMPORARY tuning test: the prebuffer goes as a pseudo header that the
+    // host turns into player_set_streaming_buffering_time (never sent).
+    { char pre[48] = ""; int ms = dts_tpk_prebuffer_ms();
+      if (ms > 0) snprintf(pre, sizeof pre, "X-Nuvio-Prebuffer: %d", ms);
+      hAbrir(cv.url, pre); }
     return 1;
   }
   hAbrir(urlAtual, cabecalhos);

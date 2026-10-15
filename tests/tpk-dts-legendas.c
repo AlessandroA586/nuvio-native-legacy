@@ -110,6 +110,7 @@ double dts_tpk_duracao(void) { return 7200; }
 int dts_tpk_modo(void) { return DTSTPK_HLS; }
 double dts_tpk_inicio_stream(void) { return -1; }
 const char *dts_tpk_caminho(void) { return "DTS core only"; }
+int dts_tpk_prebuffer_ms(void) { return 0; }
 int dts_tpk_sem_indice(void) { return 0; }
 int dts_tpk_e_url(const char *u) { return u && strstr(u, "127.0.0.1") != NULL; }
 int video_faixa_dts(const VideoFaixa *f) { return f && !strncmp(f->codec, "A_DTS", 5); }

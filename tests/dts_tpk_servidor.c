@@ -6,6 +6,7 @@
 //   dts_tpk_servidor <port> tuning <dir>   tuning test from dts-ajuste.txt: start
 //                                          tag, short seg0, one generator, ring
 //   dts_tpk_servidor <port> padrao <dir>   no tuning file: today's behaviour
+//   dts_tpk_servidor <port> curto <dir>    seg=2 pre=1500 from the file
 #include "../src/dts/dts_hls_tpk.h"
 #include <libavformat/avformat.h>
 #include <arpa/inet.h>
@@ -171,6 +172,26 @@ static void testeHls(int origem, const char *dir, int afinado) {
   free(r.corpo);
   dts_tpk_fechar();
   sleep(1);   // the session is destroyed on its own thread
+}
+
+// Tuning test, seg=2 pre=1500 (from the file): 2 s segments in the playlist
+// and on the wire, and the prebuffer the player gets with the converted URL.
+static void testeCurto(int origem, const char *dir) {
+  int porta;
+  char pref[64], c[128];
+  Resp r;
+  CONFERE(abrirHls(origem, "fx.mkv", 0, &porta, pref, sizeof pref), "session opens");
+  CONFERE(dts_tpk_prebuffer_ms() == 1500, "prebuffer for the player: %d ms", dts_tpk_prebuffer_ms());
+  snprintf(c, sizeof c, "%sv.m3u8", pref);
+  CONFERE(!pedir(porta, c, NULL, &r) && r.status == 200 && strstr((char *)r.corpo, "#EXT-X-TARGETDURATION:2\n") &&
+          strstr((char *)r.corpo, "seg14.ts") && !strstr((char *)r.corpo, "seg15.ts"),
+          "media playlist: target 2 s, 15 segments for 30 s");
+  free(r.corpo);
+  snprintf(c, sizeof c, "%sseg1.ts", pref);
+  CONFERE(!pedir(porta, c, NULL, &r) && r.status == 200 && r.n > 1000 && salvar(dir, "seg1.ts", &r), "seg1 200 (%zu B)", r.n);
+  free(r.corpo);
+  dts_tpk_fechar();
+  sleep(1);
 }
 
 static double agora(void) {
@@ -395,6 +416,7 @@ int main(int argc, char **argv) {
   CONFERE(dts_tpk_disponivel(), "converter available in this build");
   if (!strcmp(t, "tuning")) testeHls(origem, argv[3], 1);
   else if (!strcmp(t, "padrao")) testeHls(origem, argv[3], 0);
+  else if (!strcmp(t, "curto")) testeCurto(origem, argv[3]);
   else if (!strcmp(t, "cancelar")) testeCancelar(origem);
   else if (!strcmp(t, "fila")) testeFila(origem);
   else if (!strcmp(t, "escuta")) testeEscuta(origem);

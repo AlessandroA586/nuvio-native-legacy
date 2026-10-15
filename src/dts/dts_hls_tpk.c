@@ -82,24 +82,33 @@ const char *dts_tpk_modo_nome(int m) { return m >= 0 && m < DTSTPK_MODOS ? MODO_
 //   seg0  the HLS segment 0 the player fetches before seeking to a resume
 //         position: 0 as now, 1 playlist starts there (EXT-X-START),
 //         2 segment 0 cut to its first second, 3 both
-typedef struct { int ring, gens, seg0; } Ajuste;
-static Ajuste ajuste = { 0, GERADORES, 0 };
+//   seg   HLS segment length, s: 2, 3, 4 or 6 (keyframes grouped to >= seg)
+//   pre   player prebuffer before it starts, ms: 0 = the TV decides, else
+//         500..6000 (player_set_streaming_buffering_time in the host)
+typedef struct { int ring, gens, seg0, seg, pre; } Ajuste;
+static Ajuste ajuste = { 0, GERADORES, 0, (int)SEG_ALVO_S, 0 };
 static int ajusteLido;
 static const char *const SEG0_NOME[4] = { "normal", "start tag", "short", "start tag + short" };
 
 static int ajusteValido(const Ajuste *a) {
   return (a->ring == 0 || a->ring == 8 || a->ring == 16 || a->ring == 32) && a->gens >= 1 &&
-         a->gens <= GERADORES && a->seg0 >= 0 && a->seg0 <= 3;
+         a->gens <= GERADORES && a->seg0 >= 0 && a->seg0 <= 3 &&
+         (a->seg == 2 || a->seg == 3 || a->seg == 4 || a->seg == 6) && (a->pre == 0 || (a->pre >= 500 && a->pre <= 6000));
 }
 static void ajusteLer(const char *t, Ajuste *a) {
   const char *p;
   if ((p = strstr(t, "ring=")) != NULL) a->ring = atoi(p + 5);
   if ((p = strstr(t, "gens=")) != NULL) a->gens = atoi(p + 5);
   if ((p = strstr(t, "seg0=")) != NULL) a->seg0 = atoi(p + 5);
+  for (p = t; (p = strstr(p, "seg=")) != NULL; p += 4)   /* not the "seg=" inside "seg0=" */
+    if (p == t || p[-1] != '0') { a->seg = atoi(p + 4); break; }
+  if ((p = strstr(t, "pre=")) != NULL) a->pre = atoi(p + 4);
 }
 static void ajusteTexto(const Ajuste *a, char *b, size_t n) {
-  if (a->ring) snprintf(b, n, "ring %d MiB, %d generator(s), seg0 %s", a->ring, a->gens, SEG0_NOME[a->seg0]);
-  else snprintf(b, n, "ring auto, %d generator(s), seg0 %s", a->gens, SEG0_NOME[a->seg0]);
+  char r[16], pre[24];
+  if (a->ring) snprintf(r, sizeof r, "%d MiB", a->ring); else snprintf(r, sizeof r, "auto");
+  if (a->pre) snprintf(pre, sizeof pre, "%d ms", a->pre); else snprintf(pre, sizeof pre, "TV");
+  snprintf(b, n, "ring %s, %d generator(s), seg0 %s, segments %d s, prebuffer %s", r, a->gens, SEG0_NOME[a->seg0], a->seg, pre);
 }
 // Sob G.
 static void ajusteCarregar(void) {
@@ -479,7 +488,7 @@ static void *fioSonda(void *u) {
   s->rxSonda = rx;
   if (rx && s->cancelar) dts_remux_cancel(rx);
   pthread_mutex_unlock(&s->m);
-  if (rx && dts_remux_probe(rx, s->url, s->cabs, s->track, s->stereo, SEG_ALVO_S, err, sizeof err) < 0) {
+  if (rx && dts_remux_probe(rx, s->url, s->cabs, s->track, s->stereo, s->aj.seg, err, sizeof err) < 0) {
     pthread_mutex_lock(&s->m); s->rxSonda = NULL; pthread_mutex_unlock(&s->m);
     dts_remux_close(rx);
     rx = NULL;
@@ -991,7 +1000,7 @@ static void memAmostra(Sessao *s, long rss, long livre) {   // sob s->m
 }
 static void memLinha(Sessao *s, int fim) {
   DtsEngineRings rg;
-  char aj[96];
+  char aj[128];
   long hwm = lerKb("/proc/self/status", "VmHWM"), total = lerKb("/proc/meminfo", "MemTotal");
   dts_engine_rings(&rg, 0);
   ajusteTexto(&s->aj, aj, sizeof aj);
@@ -1111,13 +1120,22 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
   pthread_detach(t);
   urlDe(s, inicio, out, n);
   pthread_mutex_unlock(&G);
-  { char aj[96];
+  { char aj[128];
     ajusteTexto(&s->aj, aj, sizeof aj);
     printf("[dts-tpk] sessao %u: %s em 127.0.0.1, audio %d do arquivo, saida %s; player abre %s; tuning: %s\n",
            s->id, MODO_NOME[modo], track, stereo ? "AAC 2.0" : "AC3",
            strstr(out, ".m3u8") ? "a playlist HLS" : "o fluxo progressivo", aj); }
   fflush(stdout);
   return 1;
+}
+
+// Tuning test: the player prebuffer for the session now open (0 = the TV decides).
+int dts_tpk_prebuffer_ms(void) {
+  int ms;
+  pthread_mutex_lock(&G);
+  ms = atual ? atual->aj.pre : 0;
+  pthread_mutex_unlock(&G);
+  return ms;
 }
 
 int dts_tpk_url_em(double t, char *out, size_t n) {
@@ -1209,7 +1227,7 @@ static int linhaDts(const char *l) {
 
 // GET /<token>/tune?ring=16&gens=1&seg0=2 sets the tuning test (next video on).
 static void servirAjuste(int sock, const char *query) {
-  char b[1400], txt[96], erro[80] = "";
+  char b[2000], txt[128], erro[120] = "";
   Ajuste a;
   pthread_mutex_lock(&G);
   ajusteCarregar();
@@ -1217,13 +1235,13 @@ static void servirAjuste(int sock, const char *query) {
   pthread_mutex_unlock(&G);
   if (query[0]) {
     ajusteLer(query, &a);
-    if (!ajusteValido(&a)) snprintf(erro, sizeof erro, "NOT CHANGED: ring 0/8/16/32, gens 1-%d, seg0 0-3\n\n", GERADORES);
+    if (!ajusteValido(&a)) snprintf(erro, sizeof erro, "NOT CHANGED: ring 0/8/16/32, gens 1-%d, seg0 0-3, seg 2/3/4/6, pre 0 or 500-6000\n\n", GERADORES);
     else {
-      char f[64];
+      char f[96];
       pthread_mutex_lock(&G);
       ajuste = a;
       pthread_mutex_unlock(&G);
-      snprintf(f, sizeof f, "ring=%d gens=%d seg0=%d\n", a.ring, a.gens, a.seg0);
+      snprintf(f, sizeof f, "ring=%d gens=%d seg0=%d seg=%d pre=%d\n", a.ring, a.gens, a.seg0, a.seg, a.pre);
       if (!dados_gravar("dts-ajuste.txt", f)) snprintf(erro, sizeof erro, "set for this run only (could not save)\n\n");
       ajusteTexto(&a, txt, sizeof txt);
       printf("[dts-tpk] tuning test set: %s (from the next video)\n", txt);
@@ -1237,7 +1255,10 @@ static void servirAjuste(int sock, const char *query) {
            "  %stune?gens=1         generators: 1 or 2\n"
            "  %stune?seg0=1         0 as now, 1 playlist starts at the resume point,\n"
            "                        2 segment 0 cut to 1 s on resume, 3 both\n"
-           "  %stune?ring=0&gens=2&seg0=0   back to today's behaviour\n", erro, txt, urlReg, urlReg, urlReg, urlReg);
+           "  %stune?seg=2          HLS segment length, s: 2, 3, 4 or 6\n"
+           "  %stune?pre=2000       player prebuffer, ms: 500-6000 (0 = the TV decides)\n"
+           "  %stune?ring=0&gens=2&seg0=0&seg=6&pre=0   back to today's behaviour\n",
+           erro, txt, urlReg, urlReg, urlReg, urlReg, urlReg, urlReg);
   responderSimples(sock, 200, "OK", "text/plain; charset=utf-8", b, 0);
 }
 
