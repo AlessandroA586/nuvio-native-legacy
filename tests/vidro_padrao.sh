@@ -28,7 +28,7 @@ src/teclado.c|gfx_vidro_material
 src/celbotao.c|gfx_vidro_material
 src/novidades170.c|gfx_vidro_ou_solido
 src/ajustes_ux_desenho.inc|gfx_vidro_material
-src/ilha.c|gfx_vidro_painel
+src/ilha.c|gfx_vidro_material
 src/menu.c|gfx_vidro\(
 src/guia.c|gfx_vidro_folha
 src/guia.c|gfx_vidro_ou_solido

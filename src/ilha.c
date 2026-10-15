@@ -2220,7 +2220,7 @@ static void ilha_desenharCorpo_(Uint32 agora) {
       gfx_rect((GfxRect){ R.x - 16.0f - 24.0f * k, R.y - 6.0f - 10.0f * k,
                           R.w + 32.0f + 48.0f * k, R.h + 34.0f + 50.0f * k }, 0, GFX_SOMBRA,
                1.0f, 0, 0, 0.5f, 0, 0, 0, (0.34f + 0.16f * k) * A); }
-    if (ajustes_vidro()) gfx_vidro_painel(R, raio, fundo, A);
+    if (ajustes_vidro()) gfx_vidro_material(R, raio, fundo, A);
     else {
       // MATERIAL SOLIDO: a pilula em repouso tem de LER como pilula em paginas
       // escuras. Com 0,055 de cinza ela ficava igual ao fundo da pagina (0,051)

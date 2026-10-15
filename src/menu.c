@@ -332,12 +332,11 @@ static void desenhaMaterial(const MenuGeo *g, float a) {
     // Aberto, o painel cobre o TEXTO da home (titulo, sinopse, "Continuar
     // assistindo" em x 152..400), e a 80 % ele atravessava legivel entre os
     // rotulos (captura de tests/homelayouts_shot.sh): sobe a 86 %.
-    float al = anim_mistura(.80f, .86f, limita01((g->w - NV_MENU_W_RAIL) / (NV_MENU_W_ABERTO - NV_MENU_W_RAIL)))
-             * gfx_vidro_opacidade();
+    float al = anim_mistura(.80f, .86f, limita01((g->w - NV_MENU_W_RAIL) / (NV_MENU_W_ABERTO - NV_MENU_W_RAIL)));
     // A barra do topo e o perfil de barra deles (scrim proprio, resolvido
     // pelo que passa atras); a rail, painel com o miolo de sempre.
     if (topo()) gfx_vidro(r, raio, GFX_VIDRO_BARRA, 14.0f / 255.0f, 0.0f, a);
-    else gfx_vidro(r, raio, GFX_VIDRO_PAINEL, 15.0f / 255.0f, al, a);
+    else gfx_vidro_material(r, raio, al, a);
   } else {
     gfx_cor(r, raio, 21.0f / 255.0f, 22.0f / 255.0f, 26.0f / 255.0f, a);
   }
@@ -1202,13 +1201,12 @@ static void tvDesenhar(void) {
   // sidebar, and the reference panel is translucent tinted glass regardless
   // of the global "Interface de vidro" switch; gfx_vidro_folha still honors
   // the Opacity/Frost/effect settings internally.
-  // The SAME folha, but with the miolo floored at TV_MIOLO_MIN: the 78 % of
-  // "Opacity" let the Home row titles read through the panel (TCL print).
-  { float al = ajustes_vidro_opacidade();
-    if (al < TV_MIOLO_MIN) al = TV_MIOLO_MIN;
-    gfx_vidro(R, raioPx / R.h, GFX_VIDRO_PAINEL, 0.09f, ajustes_vidro_opacidade(), A);
-    gfx_vidro_miolo(R, raioPx / R.h, 0.085f, 0.088f, 0.10f, al * A, A);
-    gfx_brilho_topo(R, raioPx / R.h, 0.38f, 0.88f, 0.92f, 1.0f, 0.06f * A); }
+  // The shared material at TV_MIOLO_MIN (88 % at the default "Opacity"): at
+  // 78 % the Home row titles read through the panel (TCL print). It follows
+  // the slider like every other glass surface.
+  gfx_vidro_material(R, raioPx / R.h, TV_MIOLO_MIN, A);
+  gfx_vidro_matiz(R, raioPx / R.h, A);
+  gfx_brilho_topo(R, raioPx / R.h, 0.38f, 0.88f, 0.92f, 1.0f, 0.06f * A);
 
   // Conteudo da pilula fechada: some no comeco da abertura.
   { float ap = A * (1.0f - s * 3.0f);
