@@ -10,14 +10,14 @@ fs.writeFileSync('build/tests-vidaa-review/probe.c', `
 #include <string.h>
 #include <assert.h>
 static int response;
-static char *juntarCabs(const char **c, void *p) { return NULL; }
 static char *nv_http(const char *m,const char *u,const char *c,void *b,int *n,int *s,char *d,int t,void *e,int et,void *r) {
+assert(!strcmp(m,"HEAD")); assert(!c);
 *s=response; if (!response) return NULL; strcpy(d,"https://media/final"); return malloc(1);
 }
 ${probe}
 int main(void) { char dst[128];
-int statuses[]={200,206,403,404,500,0};
-for (int i=0;i<6;i++) { response=statuses[i]; assert(rede_url_final_vidaa("https://media",1,dst,sizeof dst)==(response==0?-1:response<300?1:0)); }
+int statuses[]={200,206,403,404,405,500,501,0};
+for (int i=0;i<8;i++) { response=statuses[i]; assert(rede_url_final_vidaa("https://media",1,dst,sizeof dst)==(response==0||response==405||response==501?-1:response<300?1:0)); }
 }
 `);
 let failures = 0;

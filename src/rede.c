@@ -1019,19 +1019,18 @@ int rede_url_final(const char *url, int segundos, char *dst, unsigned tam) {
 // vidaaPareceVideo — url de video sempre volta 415 do worker), entao esta
 // chamada e SEMPRE direta: um bloqueio de conteudo misto ou de CORS aqui e
 // ROTINEIRO, nao a excecao, e e exatamente o que -1 comunica ao chamador.
+// HEAD never downloads a media body, including when Range would be ignored.
 int rede_url_final_vidaa(const char *url, int segundos, char *dst, unsigned tam) {
-  const char *cab[2];
-  char *corpo, *cabs;
+  char *corpo;
   int n = 0, http = 0;
   (void)segundos;
   if (!url || !*url || !dst || tam == 0) return -1;
   dst[0] = 0;
-  cab[0] = "Range: bytes=0-64"; cab[1] = NULL;
-  cabs = juntarCabs(cab, NULL);
-  corpo = nv_http("GET", url, cabs, NULL, &n, &http, dst, (int)tam, NULL, 0, NULL);
-  free(cabs);
+  corpo = nv_http("HEAD", url, NULL, NULL, &n, &http, dst, (int)tam, NULL, 0, NULL);
   if (!corpo) return -1;     // xhr nem completou (open/send lancou): desconhecido
   free(corpo);
+  // HEAD rejection is inconclusive; let the player try GET directly.
+  if (http == 405 || http == 501) return -1;
   if (http >= 200 && http < 300 && dst[0]) return 1;
   return http > 0 ? 0 : -1;  // completou sem endereco: so e "morto" se veio status de verdade
 }
