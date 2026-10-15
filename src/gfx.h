@@ -585,6 +585,12 @@ void gfx_ambiente_preparar(void);
 // fosco" desligado, efeitos minimos, video por baixo, ou sobre outro vidro.
 enum { GFX_VIDRO_PAINEL = 0, GFX_VIDRO_BARRA = 1 };
 void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a);
+// A27 TOP CHROME (avatar chip, top bar, clock island): one material, one tint.
+// gfx_chrome_tinta = scrim alpha from "Opacidade do vidro", >= the floor;
+// gfx_chrome = the glass (BARRA), or opaque #1A1C21 + 1 px rim .22 without vidro.
+#define GFX_CHROME_TINTA_MIN 0.30f
+float gfx_chrome_tinta(void);
+void gfx_chrome(GfxRect r, float raio, float a);
 // Conteudo mudou sem passar por gfx_rect (textura reenviada no lugar): o
 // proximo quadro recaptura.
 void gfx_vidro_sujar(void);

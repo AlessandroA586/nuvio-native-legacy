@@ -1,7 +1,9 @@
 // Barra no topo = a tira de abas do PlxNative (widgets.rs: draw_tab_row,
-// TabStrip, Capsule) a 0,9: pilula 54, trilha 7,2 em volta (68,4 de altura),
-// vao 14,4, Busca quadrada; avatar do tamanho da trilha a esquerda; tudo na
-// linha de centro da ilha do relogio; nenhum rotulo cortado em pt/en/de/ru/fr.
+// TabStrip, Capsule) nos tokens A27 (glassdesign/brief.md 3a): pilula 48,
+// trilha 6 em volta (60 de altura), vao 2, Busca quadrada; avatar chip 60 a
+// 64 da borda; a ilha do relogio com a MESMA altura, topo e margem; uma tinta
+// so (gfx_chrome_tinta) que segue a "Opacidade do vidro" e nunca cai abaixo
+// do piso; nenhum rotulo cortado em pt/en/de/ru/fr.
 // A capsula de foco VIAJA (mola critica, x e largura) e nao salta; a tinta e
 // a cobertura dela; apagada ela pousa; Animacoes reduzidas salta.
 #include "ajustes.h"
@@ -11,6 +13,7 @@
 #include "text.h"
 #include "dados.h"
 #include "escala.h"
+#include "gfx.h"
 #include "nvtmp.h"
 #include <SDL2/SDL.h>
 #include <assert.h>
@@ -64,16 +67,20 @@ int main(void) {
     printf("idioma %d: %d pilulas, trilha x %.1f w %.1f, vao %.1f, cortado %d\n", idiomas[j], g.n,
            g.trilha[0], g.trilha[2], g.n > 1 ? g.x[1] - g.x[0] - g.w[0] : 0.0f, g.cortado);
     assert(g.n >= 5 && !g.cortado);
-    assert(PERTO(g.h, 54.0f, 0.01f));                                  // TAB_PILL_H 60 x 0,9
-    assert(PERTO(g.trilha[3], 54.0f + 2.0f * 7.2f, 0.01f));            // + TAB_TRACK_PAD 8 x 0,9
+    assert(PERTO(g.h, 48.0f, 0.01f));                                  // capsula 48
+    assert(PERTO(g.trilha[3], 60.0f, 0.01f));                          // + inset 6
+    // A27: avatar chip, trilha e ilha do relogio sao uma familia: mesmo topo,
+    // mesma altura (capsulas de raio h/2), margens 64/64.
+    assert(PERTO(g.trilha[1], NV_ILHA_Y, 0.01f) && PERTO(g.trilha[3], NV_ILHA_H, 0.01f));
+    assert(PERTO(g.trilha[1], 32.0f, 0.01f) && PERTO(NV_ILHA_MARGEM_D, g.avatar[0], 0.01f));
     cy = NV_ILHA_Y + NV_ILHA_H * 0.5f;                                 // a linha da ilha
     assert(PERTO(g.trilha[1] + g.trilha[3] * 0.5f, cy, 0.01f));
     assert(PERTO(g.y + g.h * 0.5f, cy, 0.01f));
     assert(PERTO(g.avatar[1], g.trilha[1], 0.01f) && PERTO(g.avatar[3], g.trilha[3], 0.01f));
-    assert(PERTO(g.avatar[2], g.avatar[3], 0.01f) && PERTO(g.avatar[0], 48.0f, 0.01f));
+    assert(PERTO(g.avatar[2], g.avatar[3], 0.01f) && PERTO(g.avatar[0], 64.0f, 0.01f));
     // Pilulas concentricas na trilha: o mesmo recuo nas pontas e em cima.
-    assert(PERTO(g.x[0] - g.trilha[0], 7.2f, 0.01f));
-    assert(PERTO(g.trilha[0] + g.trilha[2] - (g.x[g.n - 1] + g.w[g.n - 1]), 7.2f, 0.01f));
+    assert(PERTO(g.x[0] - g.trilha[0], 6.0f, 0.01f));
+    assert(PERTO(g.trilha[0] + g.trilha[2] - (g.x[g.n - 1] + g.w[g.n - 1]), 6.0f, 0.01f));
     // Centrada, entre o avatar e a ilha do relogio, e acima de onde as fileiras comecam.
     assert(PERTO(g.trilha[0] + g.trilha[2] * 0.5f, NV_LAYOUT_REAL_W * 0.5f, 1.0f));
     assert(g.trilha[0] > g.avatar[0] + g.avatar[2]);
@@ -85,11 +92,26 @@ int main(void) {
     for (k = 0; k + 1 < g.n; k++) {
       float vao = g.x[k + 1] - g.x[k] - g.w[k];
       assert(!g.busca[k] && g.w[k] > 2.0f * 10.0f * 0.9f);
-      // Vao cheio (TAB_GAP 16 x 0,9) quando cabe; senao aperta, nunca abaixo do minimo.
-      assert(vao <= 14.4f + 0.01f && vao >= 4.0f * 0.9f - 0.01f);
-      if (idiomas[j] == 0 || idiomas[j] == 1) assert(PERTO(vao, 14.4f, 0.01f));
+      // Vao A27 de 2 px em todo idioma (quem aperta e o respiro).
+      assert(PERTO(vao, 2.0f, 0.01f));
     }
   }
+
+  // TINTA A27: a "Opacidade do vidro" existente e o parametro claro->tinto
+  // (78 % -> ~0,47), crescente, e nunca abaixo do piso de legibilidade.
+  { static const char *op[] = { "60", "70", "78", "86", "92" };
+    float ant = 0.0f, t;
+    for (k = 0; k < 5; k++) {
+      setenv("NUVIO_SHOT_VIDRO_OPAC", op[k], 1);
+      ajustes_teste_vidro_env();
+      t = gfx_chrome_tinta();
+      printf("opacidade %s: tinta %.3f\n", op[k], t);
+      assert(t >= GFX_CHROME_TINTA_MIN && t >= ant && t <= 0.80f);
+      if (k == 2) assert(PERTO(t, 0.47f, 0.01f));
+      ant = t;
+    }
+    assert(ant > GFX_CHROME_TINTA_MIN + 0.2f);   // a faixa e real, nao um valor so
+    unsetenv("NUVIO_SHOT_VIDRO_OPAC"); }
 
   // MOVIMENTO.
   gravar(CFG "idioma 0\nanimacoes 0\n");
