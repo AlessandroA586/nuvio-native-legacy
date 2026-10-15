@@ -93,6 +93,7 @@ int ajustes_fonte_usar_outros(void) { return 0; }
 int ajustes_fonte_prioridade(void) { return 1; }
 int ajustes_fonte_hdr(void) { return 1; }
 int ajustes_fonte_manual(void) { return 0; }
+int ajustes_fonte_idioma_audio(void) { return 0; }
 int ajustes_fonte_primeira(void) { return 0; }
 int ajustes_fonte_ordem_uso(void) { return 0; }
 int ajustes_dolby_vision(void) { return 0; }
