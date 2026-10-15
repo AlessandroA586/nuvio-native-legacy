@@ -40,10 +40,13 @@ static void bput(Buf *b, const char *s) {
 }
 static void bputc(Buf *b, char c) { char s[2] = { c, 0 }; bput(b, s); }
 
-// O oficial so liga o filtro com uma letra ou digito ASCII (isRegexSelectionConfigured:
-// /[a-z0-9]/i): "🇪🇸|🇲🇽" ou "[ñÑ]" sozinhos la nao filtram nada, e aqui tambem nao.
+// "Configurado" = tem uma letra, um digito ou texto nao ASCII (byte >= 0x80):
+// "|||" e "^$" nao filtram nada, mas "日本語", "[ñÑ]" e "🇪🇸|🇲🇽" sim. O oficial
+// (isRegexSelectionConfigured, /[a-z0-9]/i) exige letra ou digito ASCII, e la um
+// padrao so em japones deixa o auto-play desligado; aqui o filtro ficaria mudo e,
+// com Exigir, qualquer fonte tocaria. Fica como sempre foi: filtra.
 static int temLetraOuDigito(const char *s) {
-  for (; *s; s++) if (isalnum((unsigned char)*s) && (unsigned char)*s < 0x80) return 1;
+  for (; *s; s++) if (isalnum((unsigned char)*s) || (unsigned char)*s >= 0x80) return 1;
   return 0;
 }
 
@@ -148,10 +151,11 @@ static int faltasLembrandoSemTrava(const char *texto) {
 }
 
 // "^(?=A)(?!B)(?=C)" -> as partes "(?=A)", "(?!B)", "(?=C)". Flags em linha
-// no inicio ("(?i)") sao puladas. Colchete como no JS: o primeiro "]" fecha.
+// no inicio ("(?i)", "(?s)", "(?m)") sao puladas, e o tamanho delas vai em *pref. Colchete como no JS: o primeiro "]" fecha.
 // Devolve quantas (2 ou mais), ou 0 se o padrao nao e so isso (um lookaround
 // quantificado, texto solto, "|" no topo...): ai ele vale como uma condicao so.
-static int partes(const char *p, const char **ini, size_t *tam, int max) {
+static int partes(const char *p, size_t *pref, const char **ini, size_t *tam, int max) {
+  const char *orig = p;
   int n = 0;
   while (p[0] == '(' && p[1] == '?') {
     const char *q = p + 2;
@@ -160,6 +164,7 @@ static int partes(const char *p, const char **ini, size_t *tam, int max) {
     p = q + 1;
   }
   if (*p != '^') return 0;
+  *pref = (size_t)(p - orig);   // os "(?ims)" do inicio, que cada parte tambem leva
   p++;
   while (*p) {
     const char *a = p;
@@ -180,14 +185,17 @@ static int partes(const char *p, const char **ini, size_t *tam, int max) {
 static void condicoesSemTrava(void) {
   const char *ini[FR_COND_MAX];
   size_t tam[FR_COND_MAX];
+  size_t pref = 0;
   int k, n;
   for (k = 0; k < nCond; k++) regexjs_liberar(reCond[k]);
   nCond = 0;
   if (reEstado != 1) return;
-  n = partes(padrao, ini, tam, FR_COND_MAX);
+  n = partes(padrao, &pref, ini, tam, FR_COND_MAX);
   for (k = 0; k < n; k++) {
     char p[FR_REGEX_MAX + 16];
-    snprintf(p, sizeof p, "(?i)^%.*s", (int)tam[k], ini[k]);
+    // As flags do padrao ("(?s)", "(?m)", ...) valem para cada condicao tambem:
+    // sem elas "(?s)^(?=.*A)" perdia o A que vem depois de uma quebra de linha.
+    snprintf(p, sizeof p, "(?i)%.*s^%.*s", (int)pref, padrao, (int)tam[k], ini[k]);
     if (!(reCond[k] = regexjs_compilar_web(p, NULL, 0))) break;
   }
   if (k < n) { while (k-- > 0) regexjs_liberar(reCond[k]); return; }
