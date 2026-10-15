@@ -17,6 +17,7 @@
 #include <strings.h>
 #include <pthread.h>
 
+#ifndef LST_SO_ITENS
 // A TABELA E COMPARTILHADA COM UM FIO DE REDE, entao tudo que a tela le passa
 // por esta trava. E a mesma disciplina de vtTrava em descoberta.c: o fio
 // escreve o lote inteiro de uma vez e a tela nunca ve meia lista.
@@ -664,6 +665,7 @@ const char *lst_aviso(void) {
   return copia;
 }
 
+#endif
 // ------------------------------------------------------------ itens da lista
 
 static pthread_mutex_t itTrava = PTHREAD_MUTEX_INITIALIZER;
@@ -673,6 +675,7 @@ static unsigned itGeracao;
 static int      itInjetado;   // so os testes (lst_teste_itens)
 static char     itEstado[16], itMidia[8];
 
+#ifndef LST_SO_ITENS
 static void *fioSimkl(void *u) {
   char url[500], cid[200], nome[120], aut[400];
   const char *cab[3];
@@ -717,6 +720,7 @@ static void *fioSimkl(void *u) {
   free(lote);
   return NULL;
 }
+#endif
 
 void lst_abrir(const LstLista *l, const char *midia) {
   ColSource s;
@@ -729,6 +733,7 @@ void lst_abrir(const LstLista *l, const char *midia) {
   pthread_mutex_unlock(&itTrava);
 
   if (l->fonte == LST_SIMKL) {
+#ifndef LST_SO_ITENS
     pthread_t t;
     pthread_mutex_lock(&itTrava);
     if (itFioVivo) { pthread_mutex_unlock(&itTrava); return; }
@@ -736,6 +741,7 @@ void lst_abrir(const LstLista *l, const char *midia) {
     if (pthread_create(&t, NULL, fioSimkl, NULL) != 0) itFioVivo = 0;
     else pthread_detach(t);
     pthread_mutex_unlock(&itTrava);
+#endif
     return;
   }
 
@@ -782,7 +788,8 @@ int lst_itens_n(void) {
   pthread_mutex_lock(&itTrava);
   v = itSimkl ? nItens : -1;
   pthread_mutex_unlock(&itTrava);
-  return v >= 0 ? v : desc_vertudo_n();
+  // #366: a Biblioteca mostra a lista recebida, nao a projecao da descoberta.
+  return v >= 0 ? v : desc_vertudo_n_bruto();
 }
 
 int lst_item(int i, CatItem *dst) {
@@ -792,7 +799,7 @@ int lst_item(int i, CatItem *dst) {
   if (simkl && dst && i >= 0 && i < nItens) { *dst = itens[i]; ok = 1; }
   pthread_mutex_unlock(&itTrava);
   if (simkl) return ok;
-  return desc_vertudo_item(i, dst);
+  return desc_vertudo_item_bruto(i, dst);
 }
 
 int lst_itens_carregando(void) {
