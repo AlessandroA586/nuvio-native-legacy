@@ -1786,8 +1786,9 @@ static void pedirTorrentEscolhido(int indice) {
 // destroy rodam em fios proprios.
 static void vigiarMotorP2p(void) {
   int m;
-  // #334: o limite de Ajustes vale na proxima subida do motor (um atomico).
+  // #334/#205: limite e destino do cache valem na proxima subida do motor.
   p2pmotor_definir_limite_mb(ajustes_p2p_limite_mb());
+  p2pmotor_definir_usb(ajustes_p2p_usb());
   // Sem p2pmotor_disponivel() aqui: no .tpk ele abre a libnuvio_engine.so
   // (dlopen), e isso so deve acontecer quando alguem pede P2P. ativo() e
   // motivo_parada() so leem estado.

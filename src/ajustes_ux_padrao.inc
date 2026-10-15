@@ -256,6 +256,7 @@
   0, 0, /* search (#311): Nuvio results First; show the source on result groups: Ligado */
   0, /* Settings layout (#339): Painel = the card grid and the art beside the list */
   0, /* P2P space limit (#334): Automatico */
+  0, /* P2P cache location (#205): Interno */
   0, /* Source display order (#400): Por qualidade, local */
   0, /* Sincronia automática da legenda: Ligado, local */
   0, /* Mostrar no player (#425): Só meus idiomas; sem preferencia, todas */

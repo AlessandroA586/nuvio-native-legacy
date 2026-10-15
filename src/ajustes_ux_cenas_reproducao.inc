@@ -740,6 +740,12 @@ static void rP2p(int op) {
       if (ajc_onda(0.8f) > 0.5f) ajc_acento_ret(210 + ajcLargura(b, 22, 1), 123, 3, 32, 1.5f, 1);
       ajc_ret(150, 200, 300, 8, 4, 1, 1, 1, 0.1f);
       return; }
+    case AJ_P2P_DESTINO: {   // #205: interno ou pendrive USB
+      float k = rInt(op, 1) ? 1.0f : 0.0f;
+      ajc_icone("aj_database", 180, 150, 36, 0.9f);
+      ajc_ret(250, 140, 220, 56, 12, 1, 1, 1, 0.12f + 0.18f * k);
+      ajcTexto(textoValor(op), 22, 1, 250, 158, 1);
+      return; }
     case AJ_P2P_LIMITE: {   // #334: a barra do disco e o teto que o P2P nao passa (0 = Automatico)
       static const float TETO[] = { 0.18f, 0.28f, 0.42f, 0.62f, 0.86f };
       float t = TETO[rInt(op, 4)], f = ajc_fase(4.0f), enc = t * (f < 0.8f ? f / 0.8f : 1.0f);
@@ -822,7 +828,7 @@ static int ajcNovaReproducao(int sec, int op) {
     case AJ_SEEKR_LIGADO: case AJ_SEEKR_FITA: case AJ_SEEKR_CHAVE: case AJ_SEEKR_TESTAR: case AJ_SEEKR_AJUSTE:
       rSeekr(op); return 1;
 #ifndef __EMSCRIPTEN__
-    case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: case AJ_P2P_LIMITE: rP2p(op); return 1;
+    case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: case AJ_P2P_LIMITE: case AJ_P2P_DESTINO: rP2p(op); return 1;
 #endif
     default: return 0;
   }

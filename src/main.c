@@ -1074,9 +1074,6 @@ int main(int argc, char **argv) {
   printf("[leve] build de diagnostico: pool de fios 12, sem canal de avisos, sem recomendacoes, sem sync periodico, sem GIF de foco\n");
 #endif
   avisos_iniciar();   // le a marca da sessao anterior e grava a desta
-  // #334: pasta do motor P2P que sobrou de uma sessao que caiu (TV desligada
-  // com o filme tocando). So stat aqui; apagar e em fio solto, sem abrir o motor.
-  p2pmotor_limpar_sobra();
   // E OS AJUSTES LOGO ATRAS, pelo mesmo motivo: ajustes_4k() le `valor[]`, que
   // so sai do padrao depois desta chamada. Sem ela a opcao existia na tela,
   // gravava no arquivo e nao fazia efeito nenhum — o pior tipo de ajuste.
@@ -1085,6 +1082,8 @@ int main(int argc, char **argv) {
   // e e a que estabelece o idioma e o espelho do limite de fileiras. Reler o
   // mesmo arquivo duas vezes e barato e deixa aquele bloco intacto.
   ajustes_dir(dados_dir()[0] ? dados_dir() : dirArte);
+  // Settings gate USB discovery; traversal and deletion run on the cleanup worker.
+  p2pmotor_limpar_sobra();
   // MODO SEGURO, LOGO DEPOIS DE LER OS AJUSTES e antes de qualquer coisa que os
   // use para decidir peso: a superficie 4K (logo abaixo) e o teto de fileiras
   // sao lidos daqui. Se a sessao anterior caiu logo depois de uma mudanca

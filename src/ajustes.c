@@ -529,6 +529,8 @@ typedef enum {
   // Automatico (o de sempre) ou 2/4/8/16 GB, sempre deixando 512 MB livres.
   // LOCAL (o disco e desta TV). No fim: valor[]/CHAVE[] posicionais.
   AJ_P2P_LIMITE,
+  // #205: cache do motor embutido em pendrive USB (cai para interno). LOCAL.
+  AJ_P2P_DESTINO,
   // #400: LOCAL, deste aparelho. No fim: valor[]/CHAVE[] posicionais.
   AJ_FONTE_ORDEM_ADDON,
   AJ_LEG_SYNC_AUTO, // local, ligada de fábrica; append-only
@@ -698,6 +700,7 @@ static const char *V_CACHE_SEEK[] = { "Desligado", "256 MB", "512 MB", "1 GB" };
 // #334: indice gravado em p2pLimiteLocal; ajustes_p2p_limite_mb devolve os MB.
 static const char *V_P2P_LIMITE[] = { "Automático", "2 GB", "4 GB", "8 GB", "16 GB" };
 static const unsigned P2P_LIMITE_MB[] = { 0, 2048, 4096, 8192, 16384 };
+static const char *V_P2P_DESTINO[] = { "Interno", "Pendrive USB" };
 // Only the Android player has an app-controlled disk cache (cacheboost.h);
 // LG/Samsung show the row with "Não disponível nesta TV". Compile-time, so the
 // many tests that compile ajustes.c alone need no extra source.
@@ -1484,6 +1487,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Mostrar a fonte nos resultados da busca", V_LIGA, 2),   // local: buscaOrigemLocal
   ESC("Layout dos Ajustes",              V_LAYOUT_AJUSTES, 2),   // local: ajustesLayoutLocal (#339)
   ESC("Limite de espaço do P2P",         V_P2P_LIMITE, 5),   // local: p2pLimiteLocal (#334)
+  ESC("Cache do P2P",                    V_P2P_DESTINO, 2),   // local: p2pDestinoLocal (#205)
   ESC("Ordem das fontes", V_FONTE_ORDEM_ADDON, 2), // local (#400)
   ESC("Sincronia automática da legenda", V_LIGA, 2),
   ESC("Mostrar no player", V_LEG_MOSTRAR, 2),
@@ -1761,6 +1765,7 @@ static const char *CHAVE[] = {
   "buscaNuvioLocal", "buscaOrigemLocal",
   "ajustesLayoutLocal",
   "p2pLimiteLocal",
+  "p2pDestinoLocal",
   "fonteOrdemLocal",
   "legendaSyncAutoLocal",
   "legendaMostrarLocal",
@@ -2553,12 +2558,14 @@ void ajustes_definir_vidro(int ligado) { int a = valor[AJ_VIDRO]; valor[AJ_VIDRO
 // (decisao do dono, a8e7685d). Nem um "p2p" ligado de ajustes.txt antigo vale.
 int ajustes_p2p_ligado(void) { return 0; }
 unsigned ajustes_p2p_limite_mb(void) { return 0; }
+int ajustes_p2p_usb(void) { return 0; }
 #else
 int ajustes_p2p_ligado(void) { return lig(AJ_P2P_LIGADO) && !SEGURO; }
 unsigned ajustes_p2p_limite_mb(void) {
   int v = valor[AJ_P2P_LIMITE];
   return v >= 0 && v < (int)(sizeof P2P_LIMITE_MB / sizeof *P2P_LIMITE_MB) ? P2P_LIMITE_MB[v] : 0;
 }
+int ajustes_p2p_usb(void) { return valor[AJ_P2P_DESTINO] == 1; }
 #endif
 // Servidores pessoais: ligado E com HTTP estrito neste backend (o WGT nao tem:
 // jellyfin_disponivel() e 0 la). Fica FORA do #ifdef acima: dentro do #else ela
@@ -4831,6 +4838,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_PERFIL_EDITAR:
     case AJ_P2P_LIGADO:     /* o servidor P2P e um aparelho da rede desta casa */
     case AJ_P2P_LIMITE:     /* #334: o disco e desta TV */
+    case AJ_P2P_DESTINO:    /* #205: pendrive USB desta TV */
     case AJ_JF_LIGADO:
     case AJ_AVANCADAS:      /* so a vista desta TV */
     case AJ_POSTER_PROV:    /* servico e rede desta casa: nao segue a conta */
@@ -5218,11 +5226,16 @@ static int foraDestaPlataforma(int op) {
 #else
   if (op == AJ_GPU_EFEITOS) return 1;
 #endif
+#ifdef NV_ANDROID
+  // #205: o Android nao tem os pontos de montagem do scan do p2pmotor
+  // (/tmp/usb, /media/usb) — a opcao seria sempre um beco sem saida.
+  if (op == AJ_P2P_DESTINO) return 1;
+#endif
 #ifndef NV_ANDROID
   if (op == AJ_LEG_SYNC_AUDIO) return 1;
 #endif
 #ifdef __EMSCRIPTEN__
-  if (op == AJ_P2P_LIGADO || op == AJ_P2P_URL || op == AJ_P2P_TESTAR || op == AJ_P2P_LIMITE) return 1;
+  if (op == AJ_P2P_LIGADO || op == AJ_P2P_URL || op == AJ_P2P_TESTAR || op == AJ_P2P_LIMITE || op == AJ_P2P_DESTINO) return 1;
 #endif
   return 0;
 }
@@ -5850,6 +5863,9 @@ static int inativa(int op) {
     case AJ_CACHE_SEEK:  return !cacheSeekExiste();
     // #334: so o motor embutido usa o limite; com servidor na rede quem guarda e ele.
     case AJ_P2P_LIMITE:  return !p2pmotor_disponivel() || p2pEndereco[0];
+    // #205: sem pendrive gravavel a linha fica cinza (a sonda e cacheada ~2 s
+    // e nao cria nem apaga pasta no volume).
+    case AJ_P2P_DESTINO: return !p2pmotor_disponivel() || p2pEndereco[0] || !p2pmotor_usb_presente();
     case AJ_DTS_AC3:     return !dtsConversaoExiste();
     // Som: na Samsung (.wgt) o trailer e sempre mudo (trailerfonte_com_som).
     // #509: UM ajuste para todo trailer; ativo sempre que algum trailer
@@ -6315,6 +6331,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_PERFIL_PESQ: return "Desligado por padrão. Ligado, outras pessoas do Nuvio podem te achar pelo apelido e ver o que você escolher mostrar: bio, gêneros favoritos, foto e o que assistiu recentemente. Nunca aparecem e-mail, conta, addons nem aparelho. Desligar apaga o perfil do servidor na hora.";
     case AJ_PERFIL_EDITAR: return "Apelido, bio, gêneros e o que mostrar no perfil; a atividade compartilhada só com amigos (desligada por padrão); pedidos de amizade recebidos e a lista de bloqueados.";
     case AJ_P2P_LIMITE: return "Quanto do armazenamento da TV o P2P pode usar enquanto toca; Automático usa até metade do espaço livre. Se o vídeo for maior, ele continua tocando e a TV guarda só o trecho perto de onde você está (em pendrive FAT ou exFAT, ele para no limite).";
+    case AJ_P2P_DESTINO: return "Onde o motor P2P guarda o cache temporário enquanto toca. Interno usa o armazenamento da TV; Pendrive USB tenta um pendrive conectado e, se não houver ou falhar, volta para o interno. Não é download offline.";
     case AJ_P2P_TESTAR: return "Pergunta ao servidor se ele responde e qual a versão. Funciona mesmo com o P2P desligado, para conferir o endereço antes de ligar.";
     case AJ_CURADORIA_URL: return "A fileira Herói mostra um único cartão do tamanho da fileira. Com este endereço, o título vem da curadoria do Nuvio Legacy (um JSON com imdb e texto); sem resposta, o primeiro título da fileira. Vazio desliga.";
     case AJ_POSTER_PROV: return "Troca os cartazes retrato por um pronto de um serviço externo, com notas, selos 4K/HDR e faixa Top 10 no próprio cartaz. SpatialPosters (instância pública ou a sua), RPDB (com chave) ou um modelo de URL seu. Só cartazes de card: o destaque e os fundos não mudam. Se o serviço não responde, volta ao cartaz normal.";
