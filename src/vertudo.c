@@ -64,7 +64,7 @@ static float vtCardAltura(void);
 #define VT_TOPO    (collection ? 332.0f : 244.0f)
 // LARGURA UTIL DA GRADE: as 5 colunas de sempre (5 x 248 + 4 x 16). Toda
 // exibicao cabe nela, e o painel de detalhe a direita nunca e invadido.
-#define VT_CW      (5.0f * VT_CARD_W + 4.0f * VT_GAP_X)
+#define VT_CW      vtLarguraUtil()
 // A linha da filmografia (exibicao "Linha do tempo"): cartao deitado de 236.
 #define VT_LINHA_H 236.0f
 #define VT_TL_GAP  28.0f   // vao entre os cartoes da linha = o do seletor ao 1o (253+52 -> 332)
@@ -127,6 +127,12 @@ static GfxRect vtTimelineArte(GfxRect card) {
 // Colunas que cabem entre o inicio do conteudo (a rail fixa entra por
 // ajustes_conteudo_x, a fonte unica do recuo) e o painel, com VT_PAN_VAO de
 // folga. Tira colunas, nao encolhe o cartaz (regra de ajustes_area_conteudo).
+static float vtLarguraUtil(void) {
+  float w = 5.0f * VT_CARD_W + 4.0f * VT_GAP_X;
+  // #521: with the fixed rail only four columns fit left of the panel; the wide
+  // layouts must shrink to what is left instead of running under it.
+  return vtTelefone() ? w : fminf(w, vtFim() - vtInicio());
+}
 static int vtColunas(void) {
   if (timeline) return 1;
   if (vtTelefone()) {
@@ -784,7 +790,9 @@ static void montar(int n) {
       // alto; linha de baixo: os outros dois.
       // Pequenos 16:9 e o grande com a altura exata de dois pequenos e o vao,
       // cabendo em VT_CW com o vao mais largo da TV (13/10).
-      const float g = VT_GAP_X, sh = vtTelefone() ? 172.0f : 174.0f, sw = sh * 16.0f / 9.0f,
+      const float g = VT_GAP_X,
+                  sh = fminf(vtTelefone() ? 172.0f : 174.0f, (VT_CW - 2.0f * g - 16.0f / 9.0f * g) / (64.0f / 9.0f)),
+                  sw = sh * 16.0f / 9.0f,
                   bh = 2.0f * sh + g, bw = bh * 16.0f / 9.0f;
       for (i = 0; i < n; i++) {
         int b = i / 5, k = i % 5;
@@ -2511,11 +2519,12 @@ static void muralTile(int i, const CatItem *it, float cx, float cy, float w, flo
   int grande = w > 400.0f;
   float pad = grande ? 28.0f : 18.0f, yb = r.y + r.h - pad;
   gfx_veu_base(r, raioCard(r.w, r.h), grande ? 0.55f : 0.62f, 0.85f * ac);
+  int nome = ajustes_mural_titulos();   // #521
   if (grande && it->meta[0]) {
     TxtLinha m = txt_linha_corta(TXT_HERO_META, it->meta, 222, 226, 234, 255, r.w - 2 * pad);
     yb -= m.h; txt_desenhar_alpha(m, r.x + pad, yb, ac * 0.92f); yb -= 8.0f;
   }
-  { GLuint tl = grande && it->logo[0] ? tex_obter_logo_larg(it->logo, 320.0f) : 0;
+  if (nome) { GLuint tl = grande && it->logo[0] ? tex_obter_logo_larg(it->logo, 320.0f) : 0;
     float ap = tl ? tex_aspecto(it->logo) : 0.0f;
     if (tl && ap > 0.0f) {
       float wl = 320.0f, hl = wl / ap;

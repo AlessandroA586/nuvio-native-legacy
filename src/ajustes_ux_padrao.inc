@@ -292,3 +292,4 @@
   1, /* episode card size (#205): Medio, as always */
   1, /* video preload and next episode buffer: Desligado, independent source setting */
   0, /* provider setup: shared legacy accounts; choice itself belongs to this profile */
+  0, /* Mural tile titles (#521): Ligado, as always, local */
