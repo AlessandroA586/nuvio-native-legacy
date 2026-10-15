@@ -105,7 +105,8 @@ void rede_resposta_limpar(RedeResposta *r) {
 #error "NV_TPK40 e so da libnuvio.so do Tizen 4/5; nunca junto com Emscripten"
 #endif
 
-#ifdef NV_TPK40
+#if defined(NV_TPK40) || defined(NV_UM_FIO)
+// ST fibers also use pthread keys: compiler TLS belongs to the browser thread.
 // ESTADO POR FIO SEM _Thread_local (Tizen 4/5, #137/#180).
 //
 // A libnuvio.so dessas TVs pode entrar pelo carregador de ELF proprio do host
@@ -415,10 +416,12 @@ EM_JS(char *, nv_http, (const char *metodo, const char *url, const char *cabs,
 
 #endif /* NV_UM_FIO */
 
+#ifndef NV_UM_FIO
 _Thread_local long rede_teto = 0;
 // Destino do endereco final do proximo pedido (so rede_baixar_trecho_st liga).
 static _Thread_local char *redeFinalDst;
 static _Thread_local unsigned redeFinalTam;
+#endif
 
 void rede_preparar(void) { }   // nao ha biblioteca para carregar
 unsigned rede_pedido_capacidades(void) { return 0; }
@@ -1029,7 +1032,7 @@ int rede_url_final_vidaa(const char *url, int segundos, char *dst, unsigned tam)
   free(cabs);
   if (!corpo) return -1;     // xhr nem completou (open/send lancou): desconhecido
   free(corpo);
-  if (dst[0]) return 1;      // achou endereco final: resolveu
+  if (http >= 200 && http < 300 && dst[0]) return 1;
   return http > 0 ? 0 : -1;  // completou sem endereco: so e "morto" se veio status de verdade
 }
 #endif
@@ -3262,7 +3265,7 @@ static unsigned long redeAgoraMs(void) {
 // pedido do resto volta com ZERO bytes em ~140 ms, toda vez, e as tentativas
 // de 2 s e 5 s so repetem a recusa. Quem chama le isto logo depois de
 // rede_baixar_trecho_st, NO MESMO FIO, para recuar de verdade.
-#ifndef NV_TPK40   // no NV_TPK40 e campo da struct por fio (topo)
+#if !defined(NV_TPK40) && !defined(NV_UM_FIO) // otherwise stored in RedeFio
 static _Thread_local int redeRestoRecusado;
 #endif
 int rede_resto_recusado(void) { return redeRestoRecusado; }

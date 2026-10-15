@@ -19,6 +19,7 @@
 #include <time.h>
 
 #include "fio1.h"
+#include "rede-state.h"
 
 static int falhas = 0;
 #define CHECA(cond, msg) do { \
@@ -130,8 +131,66 @@ static void *fibraAsync(void *arg) {
   return NULL;
 }
 
+static pthread_key_t localKey;
+static int destroyed;
+static void destroyLocal(void *p) { destroyed++; free(p); }
+static void *localWorker(void *arg) {
+  int *value = malloc(sizeof *value);
+  *value = (int)(intptr_t)arg;
+  pthread_setspecific(localKey, value);
+  char final[64];
+  rede_teto_ptr()[0] = *value * 100;
+  redeFinalDst = final;
+  redeFinalTam = sizeof final;
+  redeCancelLocal = value;
+  fio1_ceder();
+  CHECA(rede_teto_ptr()[0] == *value * 100 && redeFinalDst == final &&
+        redeFinalTam == sizeof final && redeCancelLocal == value,
+        "network limits, redirect buffers and cancellation remain fiber-local");
+  CHECA(pthread_getspecific(localKey) == value,
+        "pthread keys retain each fiber's snapshot across yield");
+  return NULL;
+}
+static pthread_mutex_t recursive;
+static int recursiveBusy;
+static void *recursiveContender(void *arg) {
+  (void)arg;
+  int rc = pthread_mutex_trylock(&recursive);
+  recursiveBusy = rc == EBUSY;
+  if (!rc) pthread_mutex_unlock(&recursive);
+  return NULL;
+}
+
 int main(void) {
   printf("=== tests/fio1.c: escalonador de fibras (--um-fio) ===\n");
+
+  pthread_t localA, localB;
+  pthread_key_create(&localKey, destroyLocal);
+  pthread_setspecific(localKey, &destroyed);
+  pthread_create(&localA, NULL, localWorker, (void *)1);
+  pthread_create(&localB, NULL, localWorker, (void *)2);
+  pthread_join(localA, NULL);
+  pthread_join(localB, NULL);
+  CHECA(pthread_getspecific(localKey) == &destroyed && destroyed == 2,
+        "pthread keys isolate root and run destructors on fiber exit");
+  pthread_key_delete(localKey);
+
+  pthread_mutexattr_t recursiveAttr;
+  pthread_mutexattr_init(&recursiveAttr);
+  pthread_mutexattr_settype(&recursiveAttr, PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init(&recursive, &recursiveAttr);
+  pthread_mutexattr_destroy(&recursiveAttr);
+  pthread_mutex_lock(&recursive);
+  pthread_mutex_lock(&recursive);
+  pthread_mutex_unlock(&recursive);
+  pthread_t contender;
+  pthread_create(&contender, NULL, recursiveContender, NULL);
+  pthread_join(contender, NULL);
+  CHECA(recursiveBusy, "recursive mutex remains owned after inner unlock");
+  pthread_mutex_unlock(&recursive);
+  CHECA(pthread_mutex_trylock(&recursive) == 0, "recursive mutex releases at depth zero");
+  pthread_mutex_unlock(&recursive);
+  pthread_mutex_destroy(&recursive);
 
   // --- produtor/consumidor: 2 produtores + 2 consumidores, fila de 4 ---
   pthread_t p0, p1, c0, c1;

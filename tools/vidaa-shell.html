@@ -69,13 +69,11 @@
     // run(). Paramos ele de graca.
     var Module = { noInitialRun: true };
     // Se tivemos localStorage, loga a queda para poder acompanhar.
-    try {
-      var pastaAtual = location.pathname;
-      var novaPasta = pastaAtual.replace(/\/mt\//, '/st/');
-      localStorage.setItem('nv-modo-st', novaPasta + location.search);
-      console.log('[vidaa] MT impossivel, redirecionando para ST');
-      location.replace(novaPasta + location.search);
-    } catch (e) {}
+    var pastaAtual = location.pathname;
+    var novaPasta = pastaAtual.replace(/\/mt\//, '/st/');
+    try { localStorage.setItem('nv-modo-st', novaPasta + location.search); } catch (e) {}
+    console.log('[vidaa] MT impossivel, redirecionando para ST');
+    location.replace(novaPasta + location.search);
   }
 
   // DIAGNOSTICO DE ARRANQUE

@@ -24,17 +24,28 @@ source "$EMSDK_DIR/emsdk_env.sh" >/dev/null 2>&1
 SAIDA="${NUVIO_FIO1_TEST_SAIDA:-build/tests-fio1}"
 mkdir -p "$SAIDA"
 
+# Exercise the actual network state block without linking the entire app.
+python3 - "$SAIDA/rede-state.h" <<'PY'
+import pathlib, sys
+source = pathlib.Path('src/rede.c').read_text()
+start = source.index('#if defined(NV_TPK40) || defined(NV_UM_FIO)')
+end = source.index('\n#else', start)
+pathlib.Path(sys.argv[1]).write_text(source[start:end] + '\n#endif\n')
+PY
+
 # ESPELHA O BLOCO UM_FIO=1 DE tools/tizen.sh (--wrap e ASYNCIFY_STACK_SIZE).
 # Nao inclui -DNV_VIDAA nem as flags de grafico/arte: este teste nao usa nada
 # do resto do app, so pthread.h/SDL.h e src/fio1.c.
 emcc tests/fio1.c src/fio1.c -o "$SAIDA/fio1.js" \
-  -I src \
+  -I src -I "$SAIDA" \
   -DNV_UM_FIO=1 \
   -sUSE_SDL=2 \
   -sASYNCIFY -sASYNCIFY_STACK_SIZE=131072 \
   -sEXIT_RUNTIME=1 -sASSERTIONS="${NUVIO_ASSERTS:-1}" \
   -Wl,--wrap=pthread_create -Wl,--wrap=pthread_join -Wl,--wrap=pthread_detach \
   -Wl,--wrap=pthread_self -Wl,--wrap=pthread_equal \
+  -Wl,--wrap=pthread_key_create -Wl,--wrap=pthread_key_delete \
+  -Wl,--wrap=pthread_getspecific -Wl,--wrap=pthread_setspecific \
   -Wl,--wrap=pthread_mutex_init -Wl,--wrap=pthread_mutex_destroy \
   -Wl,--wrap=pthread_mutex_lock -Wl,--wrap=pthread_mutex_trylock -Wl,--wrap=pthread_mutex_unlock \
   -Wl,--wrap=pthread_cond_init -Wl,--wrap=pthread_cond_destroy \

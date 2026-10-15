@@ -228,7 +228,7 @@ void rede_lateral(int sim);
 // (Program40.cs), que nao monta TLS de compilador — o primeiro acesso a uma
 // variavel _Thread_local seria o fim do processo. O estado por fio vive numa
 // struct por pthread_key (rede.c); o nome continua um lvalue por macro.
-#if defined(NV_TPK40)
+#if defined(NV_TPK40) || defined(NV_UM_FIO)
 long *rede_teto_ptr(void);
 #define rede_teto (*rede_teto_ptr())
 #elif defined(__GNUC__)

@@ -263,18 +263,13 @@ if [ "$UM_FIO" = "1" ]; then
   # CONFERIDO: emcc 6.0.9 aceita --wrap normalmente — e recurso do wasm-ld
   # por baixo, nao do runtime do emscripten, entao nao depende de -pthread.
   #
-  # LISTA MONTADA POR GREP em src/*.c, nao por adivinhacao. Ficaram de fora
-  # pthread_key_create/pthread_once/pthread_getspecific/pthread_setspecific
-  # e a familia SDL_CreateSemaphore*: os dois unicos pontos que usam
-  # pthread_once/key (rede.c, no ramo dlopen-libcurl que so compila SEM
-  # __EMSCRIPTEN__, e video_tizen.c, cujo corpo inteiro se anula com
-  # `#if defined(__EMSCRIPTEN__) && !defined(NV_VIDAA)`) nunca entram nesta
-  # build — nao ha chamada real para envolver. SDL_CreateSemaphore e
-  # familia, SDL_AtomicGet e spin loop "while(...);" tambem: zero ocorrencias
-  # em src/*.c (conferido).
+  # pthread keys belong to fibers (network state, collection snapshots, caches).
+  # pthread_once remains native: key initialization never yields.
   FIO_FLAGS="${NUVIO_FIO_FLAGS:--sASYNCIFY_STACK_SIZE=131072 \
 -Wl,--wrap=pthread_create -Wl,--wrap=pthread_join -Wl,--wrap=pthread_detach \
 -Wl,--wrap=pthread_self -Wl,--wrap=pthread_equal \
+  -Wl,--wrap=pthread_key_create -Wl,--wrap=pthread_key_delete \
+  -Wl,--wrap=pthread_getspecific -Wl,--wrap=pthread_setspecific \
 -Wl,--wrap=pthread_mutex_init -Wl,--wrap=pthread_mutex_destroy \
 -Wl,--wrap=pthread_mutex_lock -Wl,--wrap=pthread_mutex_trylock -Wl,--wrap=pthread_mutex_unlock \
 -Wl,--wrap=pthread_cond_init -Wl,--wrap=pthread_cond_destroy \

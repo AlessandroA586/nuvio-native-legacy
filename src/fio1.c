@@ -95,8 +95,14 @@ typedef enum {
   FIO1_ZUMBI          // start_routine terminou; falta juntar (ou ja foi liberada)
 } NvEstadoFibra;
 
+#define FIO1_KEYS 128
+typedef struct { void *value; unsigned generation; } NvLocal;
+static struct { int used; unsigned generation; void (*destroy)(void *); } localKeys[FIO1_KEYS];
+static NvLocal rootLocals[FIO1_KEYS];
+
 typedef struct NvFibra {
   emscripten_fiber_t ctx;
+  NvLocal locals[FIO1_KEYS];
   unsigned char *pilhaC;
   unsigned char *pilhaAsy;
   void *(*fn)(void *);
@@ -170,6 +176,45 @@ static void liberarFibra(NvFibra *f) {
   free(f);
 }
 
+static NvLocal *localValues(void) { return atual ? atual->locals : rootLocals; }
+
+int __wrap_pthread_key_create(pthread_key_t *key, void (*destroy)(void *)) {
+  for (unsigned i = 0; i < FIO1_KEYS; i++) {
+    if (localKeys[i].used) continue;
+    localKeys[i].used = 1;
+    localKeys[i].generation++;
+    localKeys[i].destroy = destroy;
+    *key = i;
+    return 0;
+  }
+  return EAGAIN;
+}
+int __wrap_pthread_key_delete(pthread_key_t key) {
+  if (key >= FIO1_KEYS || !localKeys[key].used) return EINVAL;
+  localKeys[key].used = 0;
+  return 0;
+}
+void *__wrap_pthread_getspecific(pthread_key_t key) {
+  if (key >= FIO1_KEYS || !localKeys[key].used) return NULL;
+  NvLocal *v = &localValues()[key];
+  return v->generation == localKeys[key].generation ? v->value : NULL;
+}
+int __wrap_pthread_setspecific(pthread_key_t key, const void *value) {
+  if (key >= FIO1_KEYS || !localKeys[key].used) return EINVAL;
+  localValues()[key] = (NvLocal){(void *)value, localKeys[key].generation};
+  return 0;
+}
+static void destroyLocals(void) {
+  for (int pass = 0; pass < 4; pass++) {
+    for (unsigned i = 0; i < FIO1_KEYS; i++) {
+      void *value = __wrap_pthread_getspecific(i);
+      if (!value || !localKeys[i].destroy) continue;
+      __wrap_pthread_setspecific(i, NULL);
+      localKeys[i].destroy(value);
+    }
+  }
+}
+
 // Ponto de entrada de TODA fibra nova (chamado por emscripten_fiber_init na
 // primeira vez que o escalonador troca para ela). Ao terminar, a funcao
 // original nao pode simplesmente "retornar" — o fiber da Emscripten nao tem
@@ -180,6 +225,7 @@ static void liberarFibra(NvFibra *f) {
 static void fio1_trampolim(void *arg) {
   NvFibra *f = (NvFibra *)arg;
   f->retorno = f->fn(f->arg);
+  destroyLocals();
   f->estado = FIO1_ZUMBI;
   for (;;) emscripten_fiber_swap(&f->ctx, &raiz);
 }
@@ -383,7 +429,7 @@ int __wrap_pthread_equal(pthread_t a, pthread_t b) { return a == b; }
 // "geracao 0" — por isso nenhum mutex/cond deste app (a maioria e
 // PTHREAD_MUTEX_INITIALIZER estatico, nunca passa por pthread_mutex_init)
 // precisa de init explicito para comecar valido.
-typedef struct { NvFibra *dono; } NvMutexInterna;
+typedef struct { NvFibra *dono; unsigned depth; } NvMutexInterna;
 typedef struct { unsigned geracao; } NvCondInterna;
 
 _Static_assert(sizeof(NvMutexInterna) <= sizeof(pthread_mutex_t), "pthread_mutex_t pequena demais para o shim fio1");
@@ -396,19 +442,23 @@ static void nv_mutex_lock(NvMutexInterna *im) {
   NvFibra *eu = fio1_quem_sou_eu();
   while (im->dono != NULL && im->dono != eu) fio1_ceder();
   im->dono = eu;
+  im->depth++;
 }
 static int nv_mutex_trylock(NvMutexInterna *im) {
   NvFibra *eu = fio1_quem_sou_eu();
   if (im->dono != NULL && im->dono != eu) return EBUSY;
   im->dono = eu;
+  im->depth++;
   return 0;
 }
-static void nv_mutex_unlock(NvMutexInterna *im) { im->dono = NULL; }
+static void nv_mutex_unlock(NvMutexInterna *im) {
+  if (im->depth && --im->depth == 0) im->dono = NULL;
+}
 
 int __wrap_pthread_mutex_init(pthread_mutex_t *m, const pthread_mutexattr_t *attr) {
-  (void)attr; // PTHREAD_MUTEX_RECURSIVE nao e usado em lugar nenhum deste
-              // codigo (conferido por grep) — nao ha o que ler aqui.
-  mutexInterno(m)->dono = NULL;
+  // SDL mutexes are recursive too; retain ownership until the final unlock.
+  (void)attr;
+  *mutexInterno(m) = (NvMutexInterna){0};
   return 0;
 }
 int __wrap_pthread_mutex_destroy(pthread_mutex_t *m) { (void)m; return 0; }
