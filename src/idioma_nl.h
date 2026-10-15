@@ -1696,6 +1696,7 @@
   T("Episódio", "Aflevering"),
   T("Episódio %d", "Aflevering %d"),
   T("Episódio 3", "Aflevering 3"),
+  T("Episódio anterior", "Vorige aflevering"),
   T("Episódio certo", "De juiste aflevering"),
   T("Episódio certo, sem plays repetidos no Trakt.", "Juiste aflevering, geen dubbele in Trakt."),
   T("Episódio novo", "Nieuwe aflevering"),

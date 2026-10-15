@@ -1696,6 +1696,7 @@
   T("Episódio", "Afsnit"),
   T("Episódio %d", "Afsnit %d"),
   T("Episódio 3", "Afsnit 3"),
+  T("Episódio anterior", "Forrige afsnit"),
   T("Episódio certo", "Det rette afsnit"),
   T("Episódio certo, sem plays repetidos no Trakt.", "Rigtigt afsnit, ingen dubletter i Trakt."),
   T("Episódio novo", "Nyt afsnit"),

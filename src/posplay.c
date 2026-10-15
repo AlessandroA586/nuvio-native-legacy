@@ -195,6 +195,15 @@ void posplay_busca_usuario(void) {
   aguardaBusca = 1;
 }
 
+void posplay_troca_manual(void) {
+  cancelarPreparo(0);
+  pedT = pedE = 0;
+  pedAutomatico = automaticoEntregue = 0;
+  visivel = 0; fecharEm = 0; foco = 0; dispensado = 1;
+  // Nao chamar proximopreparo_cancelar: consumir/adotar vem antes de fechar
+  // o player. Um pedido de Anterior cancela o alvo diferente no roteador.
+}
+
 // Recuar e pedir para ficar neste episodio. O cartao continua servindo ao OK,
 // mas a contagem nao volta enquanto a pessoa ainda esta na mesma janela.
 void posplay_recuar(void) {

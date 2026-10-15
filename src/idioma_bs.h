@@ -1696,6 +1696,7 @@
   T("Episódio", "Epizoda"),
   T("Episódio %d", "Epizoda %d"),
   T("Episódio 3", "Epizoda 3"),
+  T("Episódio anterior", "Prethodna epizoda"),
   T("Episódio certo", "Ispravna epizoda"),
   T("Episódio certo, sem plays repetidos no Trakt.", "Ispravna epizoda, bez duplih na Traktu."),
   T("Episódio novo", "Nova epizoda"),
