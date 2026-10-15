@@ -543,6 +543,7 @@ static float aj2DicasLinha(const AjDica *d, int n, float x, float yc, TxtEstilo 
       ajNeutro((GfxRect){ x, yc - kh * 0.5f, kw, kh }, kh * 0.5f, 0.09f, AJ_CHIP_SOL, a);
       txt_desenhar_alpha(k, x + (kw - k.w) * 0.5f, yc - k.h * 0.5f, 0.82f * a);
       txt_desenhar_alpha(l, x + kw + g1, yc - l.h * 0.5f, 0.55f * a);
+      aj2DicasAlvo(d[i].k, x, yc, kw, kh);
     }
     if (desenha) aj2DicasAlvo(d[i].k, x, yc, kw, kh);
     x += kw + g1 + l.w + g2;
