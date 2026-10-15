@@ -32,6 +32,7 @@ const char *ling_tipo_legenda_rotulo(int t) { (void)t; return ""; }
 const char *ling_do_nome(const char *nome) { (void)nome; return NULL; }
 int ling_letreiro(const char *nome, int forcado) { (void)nome; (void)forcado; return 0; }
 void mkvass_aceitar_texto(int sim) { (void)sim; }
+void mkvass_aceitar_imagem(int sim) { (void)sim; }
 
 void nv_tpk_video_registrar(void (*)(const char *, const char *), void (*)(void), void (*)(int),
                             void (*)(int), void (*)(int), void (*)(int, int, int, int), int (*)(void));

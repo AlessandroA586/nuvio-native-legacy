@@ -1226,10 +1226,14 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   // GFX_FUNDO_DIN — ver gfx.h. SO COR: um degrade vertical de uma cor so. O
   // topo e uCor.rgb, a base e essa cor vezes uFoco (a "queda"), com curva suave,
   // e o dither de sempre para a rampa escura nao virar degrau na C9. Sem
-  // textura, sem laco, sem SDF: uma multiplicacao por pixel.
+  // textura, sem laco, sem SDF: uma multiplicacao por pixel. uPar.x > 0 e o
+  // esvanecer de ALFA da base da faixa (o degrad da marca na pagina de
+  // colecao): sem ele a borda inferior do rect e um degrau duro.
   "void main(){\n"
   "  vec3 c = uCor.rgb * mix(1.0, uFoco, smoothstep(0.0, 1.0, vUv.y));\n"
-  "  gl_FragColor = nv_dither(c, uCor.a);\n"
+  "  float a = uCor.a;\n"
+  "  if (uPar.x > 0.0) a *= 1.0 - smoothstep(uPar.x, 1.0, vUv.y);\n"
+  "  gl_FragColor = nv_dither(c, a);\n"
   "}\n",
 
   // GFX_COPIA — ampliacao do alvo interno (gpunivel.c). RGB E ALPHA da
@@ -1881,6 +1885,7 @@ static float dinPend[4];
 static void dinDescarregar(void);
 static void dinPintar(float y0);
 static int foscoBloq; // este quadro tem video vivo por baixo (gfx_vidro_fosco_bloquear)
+unsigned gfx_quadro_n;
 // O BACKDROP DO VIDRO (gfx_vidro): um snapshot desfocado em meia resolucao,
 // dividido pelas superficies do quadro e reaproveitado entre quadros enquanto
 // o que foi pintado antes de cada vidro nao muda. vidroHash resume TODO
@@ -1972,6 +1977,7 @@ static void vidroFuro(GfxRect r) {
 }
 static void vidroAplicar(Programa *P, GfxRect r);
 void gfx_novo_quadro(void) {
+  gfx_quadro_n++;
   gfx_n_rect = gfx_n_prog = gfx_n_bind = gfx_n_outros = 0;
   gfx_ms_rect = gfx_ms_outros = 0.0;
   gfx_fill = 0.0; gfx_fill_vis = 0.0; gfx_n_cheio = 0; gfx_n_cheio_mistura = 0;

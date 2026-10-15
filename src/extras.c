@@ -2136,12 +2136,21 @@ int extras_proximo_episodio(int *t, int *e) {
 // Capturas: relacionados fixos (titulo, ano, imdb e poster por item).
 void extras_shot_relacionados(const char *const *titulo, const char *const *ano,
                               const char *const *poster, int n) {
+  extras_shot_relacionados_ids(titulo, ano, poster, NULL, n);
+}
+
+void extras_shot_relacionados_ids(const char *const *titulo, const char *const *ano,
+                                  const char *const *poster, const char *const *imdb,
+                                  int n) {
   int i;
   nRel = n < EX_REL_MAX ? n : EX_REL_MAX;
   for (i = 0; i < nRel; i++) {
     snprintf(rel[i].titulo, sizeof rel[i].titulo, "%s", titulo[i]);
     snprintf(rel[i].ano, sizeof rel[i].ano, "%s", ano[i]);
-    snprintf(rel[i].imdb, sizeof rel[i].imdb, "tt%07d", 100 + i);
+    if (imdb && imdb[i] && imdb[i][0])
+      snprintf(rel[i].imdb, sizeof rel[i].imdb, "%s", imdb[i]);
+    else
+      snprintf(rel[i].imdb, sizeof rel[i].imdb, "tt%07d", 100 + i);
     snprintf(rel[i].poster, sizeof rel[i].poster, "%s", poster[i]);
   }
 }
