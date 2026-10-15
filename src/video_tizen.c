@@ -1012,6 +1012,8 @@ static void aplicarIdiomasDoMkv(const MkvFaixa *fx, int n) {
     else if (fx[j].tipo == TIPO_LEG && nL == nLeg && kL < nLeg)
       f = &faixaLeg[kL++];
     if (!f) continue;
+    if (fx[j].tipo == TIPO_LEG && fx[j].nome[0])
+      snprintf(f->nome, sizeof f->nome, "%s", fx[j].nome);
     if (f->idioma[0]) continue;                 // o player ja sabia: nao mexer
     if (!fx[j].idioma[0] || !strcmp(fx[j].idioma, "und")) continue;
     snprintf(f->idioma, sizeof f->idioma, "%s", fx[j].idioma);
@@ -1077,7 +1079,7 @@ static void lerFaixas(void) {
   for (linha = buf; *linha; linha = fim) {
     char tipo;
     int idx = 0, ordinalMkv = -1;
-    char idioma[8] = "", rot[48] = "";
+    char idioma[8] = "", rot[48] = "", nome[128] = "";
     VideoFaixa *f;
     fim = strchr(linha, '\n');
     if (fim) *fim++ = 0; else fim = linha + strlen(linha);
@@ -1093,6 +1095,14 @@ static void lerFaixas(void) {
       idx = atoi(p1 + 1);
       snprintf(idioma, sizeof idioma, "%s", p2 + 1);
       snprintf(rot, sizeof rot, "%s", p3 + 1);
+      if (tipo == 'T') {
+        size_t k = strlen(p3 + 1);
+        if (k >= sizeof nome) {
+          k = sizeof nome - 1;
+          while (k && ((unsigned char)p3[1 + k] & 0xc0) == 0x80) k--;
+        }
+        memcpy(nome, p3 + 1, k); nome[k] = 0;
+      }
       ordinalMkv = atoi(p4 + 1);
     }
     if (tipo == 'A') {
@@ -1106,6 +1116,7 @@ static void lerFaixas(void) {
     f->numero = idx;
     f->ordinalMkv = tipo == 'T' ? ordinalMkv : -1;
     snprintf(f->idioma, sizeof f->idioma, "%s", idioma);
+    snprintf(f->nome, sizeof f->nome, "%s", nome);
     // O rotulo e escrito por ULTIMO, depois do idioma, e de uma vez so: e o
     // campo que a tela desenha, e este arquivo — como o da LG — nao tem mutex
     // nenhum. O dano possivel e um rotulo lido pela metade em UM quadro.
