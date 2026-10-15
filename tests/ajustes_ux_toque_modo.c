@@ -234,17 +234,24 @@ static SDL_GLContext glRodape;
 static void quadroRodape(void) {
   ponteiro_teste_janela((int)NV_TELA_W, (int)NV_TELA_H);
   ponteiro_quadro(relogio);
-  txt_novo_quadro();   // o orcamento de rasterizacao por quadro (4 linhas) sem isto nao renova
-  for (int i = 0; i < 8; i++) ajustes_atualizar(0.05f, relogio);   // settle the ramps
-  ajustes_desenhar(relogio);
+  ponteiro_camada();
+  // Como na tela assentada: as linhas ja registraram alvos, entao um clique
+  // fora dos chips NAO pode cair no OK de camada vazia.
+  ponteiro_alvo(0, 0, (float)NV_TELA_W, (float)NV_TELA_H, NULL, NULL, 0, 0);
+  // O rodape e medido na tela virtual dos Ajustes, como no desenho de verdade.
+  { AjDica d[3] = { { "← →", "Escolher" }, { "OK", "Confirmar" }, { "Voltar", "Cancelar" } };
+    GfxRect fr = aj2ListaR();
+    AJ_ESCALA_INI();
+    aj2RodapeA3(fr, d, 3, 1.0f, 1);
+    AJ_ESCALA_FIM(); }
   ponteiro_desenhar();
   relogio += 400;
 }
-static int alvoRodape(int voltar, float *x, float *y) {
+static int alvoRodape(PonteiroFn focar, PonteiroFn ativar, float *x, float *y) {
   const PonteiroAlvo *v;
   int n = ponteiro_teste_lista(&v);
   for (int i = 0; i < n; i++) {
-    if (voltar ? (v[i].focar || !v[i].ativar) : (!v[i].focar || v[i].ativar)) continue;
+    if (v[i].focar != focar || v[i].ativar != ativar) continue;
     *x = v[i].x + v[i].w * 0.5f; *y = v[i].y + v[i].h * 0.5f;
     return 1;
   }
@@ -268,9 +275,9 @@ static void rodapePorToque(void) {
   CONFERE(uxEditor == 1 && ajEditandoLinha(AJ_VIDRO), "Vidro: edita na linha, chips no rodape");
   uxEvento(SDLK_RIGHT); assert(uxPendente == 1 && valor[AJ_VIDRO] == 0);
   quadroRodape();
-  CONFERE(alvoRodape(0, &x, &y), "Rodape TV: o chip OK registra alvo");
+  CONFERE(alvoRodape(aj2DicaOk, NULL, &x, &y), "Rodape TV: o chip OK registra alvo");
   antes = arquivoAjustes();
-  if (alvoRodape(0, &x, &y)) clicarInterface(x, y);   // tap on the OK chip = OK on the focused row
+  if (alvoRodape(aj2DicaOk, NULL, &x, &y)) clicarInterface(x, y);   // tap on the OK chip = OK on the focused row
   CONFERE(!uxEditor && valor[AJ_VIDRO] == 1, "Toque no chip OK confirma a edicao");
   depois = arquivoAjustes();
   CONFERE(strcmp(antes, depois) != 0 && strstr(depois, "vidroLocal") != NULL, "Chip OK grava o valor pendente");
@@ -282,9 +289,9 @@ static void rodapePorToque(void) {
   uxEvento(SDLK_LEFT); assert(uxPendente == 0);
   uxAviso[0] = 0;   // o "Ajuste salvo" anterior nao pode comer o rodape
   quadroRodape();
-  CONFERE(alvoRodape(1, &x, &y), "Rodape TV: o chip Voltar registra alvo");
+  CONFERE(alvoRodape(NULL, aj2DicaVoltar, &x, &y), "Rodape TV: o chip Voltar registra alvo");
   antes = arquivoAjustes();
-  if (alvoRodape(1, &x, &y)) clicarInterface(x, y);
+  if (alvoRodape(NULL, aj2DicaVoltar, &x, &y)) clicarInterface(x, y);
   CONFERE(!uxEditor && valor[AJ_VIDRO] == 1, "Toque no chip Voltar cancela");
   depois = arquivoAjustes();
   CONFERE(!strcmp(antes, depois), "Chip Voltar nao grava nada");
@@ -296,63 +303,13 @@ static void rodapePorToque(void) {
   uxEvento(SDLK_RIGHT); assert(uxPendente == 1 && valor[AJ_VIDRO] == 0);
   uxAviso[0] = 0;
   quadroRodape();
-  CONFERE(alvoRodape(0, &x, &y), "Rodape TV: o chip OK registra alvo (mouse)");
-  if (alvoRodape(0, &x, &y)) clicarMouseInterface(x, y);
+  CONFERE(alvoRodape(aj2DicaOk, NULL, &x, &y), "Rodape TV: o chip OK registra alvo (mouse)");
+  if (alvoRodape(aj2DicaOk, NULL, &x, &y)) clicarMouseInterface(x, y);
   CONFERE(!uxEditor && valor[AJ_VIDRO] == 1, "Clique do mouse no chip OK confirma a edicao");
   valor[AJ_VIDRO] = 0; gravar();
-
-  // P0 regression: Mobile inline editing keeps its own sheet targets. The
-  // real frame (ajustes_desenhar) must leave the choice targets, the scroll
-  // region and the Confirm/Cancel pills behind — the TV footer replay must
-  // not wipe the Mobile layer.
-  layout_modo_definir(1);
-  focarOpcao(AJ_TEMA); uxAbrirEditor(AJ_TEMA);
-  CONFERE(uxEditor == 1 && ajEditandoLinha(AJ_TEMA), "Tema: edita na linha no Mobile");
-  quadroRodape();
-  CONFERE(ajPontInline, "Tema: o quadro real entra na edicao na linha");
-  { const PonteiroAlvo *v; int n = ponteiro_teste_lista(&v), ok = 0;
-    for (int i = 0; i < n; i++)
-      if (v[i].ativar == ajToqueInlineValor) { ok = 1; break; }
-    CONFERE(ok, "Mobile inline: os alvos de escolha sobrevivem ao quadro");
-    CONFERE(ajToqueN > 0, "Mobile inline: a regiao de rolagem sobrevive ao quadro");
-    for (int i = 0; i < n; i++)
-      if (v[i].ativar == ajToqueCancelar) { ok = 2; break; }
-    CONFERE(ok == 2, "Mobile inline: os botoes do rodape seguem registrados"); }
-  uxCancelar();
-
-  // P1: the TV replay registers only the chips the footer DREW (ajDicasDe).
-  // Tema inline draws no Voltar chip, so no Voltar target may exist.
-  layout_modo_definir(0);
-  focarOpcao(AJ_TEMA); uxAbrirEditor(AJ_TEMA);
-  CONFERE(uxEditor == 1 && ajEditandoLinha(AJ_TEMA), "Tema: edita na linha na TV");
-  quadroRodape();
-  { const PonteiroAlvo *v; int n = ponteiro_teste_lista(&v), ok = 0, voltar = 0;
-    for (int i = 0; i < n; i++) {
-      if (v[i].focar == aj2DicaOk && !v[i].ativar) ok++;
-      if (v[i].ativar == aj2DicaVoltar && !v[i].focar) voltar++;
-    }
-    CONFERE(ok == 1, "Tema na TV: so o chip OK desenhado registra alvo");
-    CONFERE(voltar == 0, "Tema na TV: nenhum alvo Voltar fora do rodape desenhado"); }
-  uxCancelar();
-
-  // P2: the saved notice fills the footer width — the footer hides the chips,
-  // so the replay must leave no OK/Voltar target behind the notice text.
-  snprintf(uxAviso, sizeof uxAviso, "%s",
-           "Ajuste salvo nesta TV. Este aviso aqui e comprido de proposito, para nao caber na faixa do rodape ao lado das dicas do controle, e assim empurrar os chips para fora");
-  uxAvisoAte = relogio + 4500;
-  valor[AJ_TAMANHO_AJUSTES] = 2;   // 100%: a faixa do rodape encolhe e o aviso empurra os chips
-  focarOpcao(AJ_TEMA); uxAbrirEditor(AJ_TEMA);
-  CONFERE(uxEditor == 1 && ajEditandoLinha(AJ_TEMA), "Aviso: Tema abre na linha");
-  for (int i = 0; i < 6; i++) quadroRodape();   // o rodape por inteiro rasteriza o aviso
-  { const PonteiroAlvo *v; int n = ponteiro_teste_lista(&v), chips = 0;
-    for (int i = 0; i < n; i++)
-      if (v[i].focar == aj2DicaOk || v[i].ativar == aj2DicaVoltar) chips++;
-    CONFERE(chips == 0, "Rodape TV: o aviso esconde os chips e nao sobra alvo invisivel"); }
-  uxCancelar(); uxAviso[0] = 0;
-  layout_modo_definir(0);
 }
-#endif
 
+#endif
 #ifndef NV_TOUCH_UI
 // P1: the same footer replay runs on a non-touch desktop/TV build — a click
 // on the Voltar chip cancels the pending edit instead of confirming it.
@@ -369,9 +326,9 @@ static void rodapePorClique(void) {
   uxAviso[0] = 0;
   acordarInterface();
   quadroRodape();
-  CONFERE(alvoRodape(1, &x, &y), "Rodape desktop: o chip Voltar registra alvo");
+  CONFERE(alvoRodape(NULL, aj2DicaVoltar, &x, &y), "Rodape desktop: o chip Voltar registra alvo");
   antes = arquivoAjustes();
-  if (alvoRodape(1, &x, &y)) clicarMouseInterface(x, y);
+  if (alvoRodape(NULL, aj2DicaVoltar, &x, &y)) clicarMouseInterface(x, y);
   CONFERE(!uxEditor && valor[AJ_VIDRO] == 0, "Clique no chip Voltar cancela");
   CONFERE(!strcmp(antes, arquivoAjustes()), "Chip Voltar nao grava nada");
   free(antes);

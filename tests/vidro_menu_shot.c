@@ -40,6 +40,7 @@ static void captura(const char *nome, SDL_Window *win) {
   for (i = 0; i < nq; i++) {
     SDL_PumpEvents();
     if (!qual) SDL_Delay(16);
+    gfx_novo_quadro();   // per-frame glass bookkeeping, as in app.c
     txt_novo_quadro();
     tex_novo_quadro();
     tex_bombear(6);
@@ -135,6 +136,7 @@ int main(int argc, char **argv) {
       dados_iniciar("deploy/app/art");
       perfis_carregar_ativo();
       ajustes_dir(dir);
+      ajustes_teste_vidro_env();   // NUVIO_SHOT_VIDRO_OPAC / _FOSCO
     } }
 
   assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
@@ -156,6 +158,8 @@ int main(int argc, char **argv) {
   gfx_icones_dir("deploy/app/art");
 
   menu_iniciar();
+  // NUVIO_SHOT_PILULA=1: the top bar at rest, as on the home (A27 top chrome).
+  if (getenv("NUVIO_SHOT_PILULA")) menu_pilula_mostrar(1.0f);
   snprintf(nome, sizeof nome, "%s-rail.bmp", saida);
   captura(nome, w);
   menu_abrir();

@@ -13,7 +13,9 @@ fail=0
 
 # 1) Every inventoried surface draws through the shared material (file|regex).
 need='
-src/ilha.c|gfx_vidro_material\(R, raio, fundo, A\)
+src/ilha.c|if \(repouso\) gfx_chrome\(R, raio, A\)
+src/ilha.c|else if \(ajustes_vidro\(\)\) gfx_vidro_material\(R, raio, fundo, A\)
+src/menu.c|if \(topo\(\)\) gfx_chrome\(r, raio, a\)
 src/menu.c|gfx_vidro_material\(r, raio, al, a\)
 src/menu.c|gfx_vidro_material\(R, raioPx / R.h, TV_MIOLO_MIN, A\)
 src/recenviar.c|^  plrui_material\(p, RE_RAIO, 1, a\);
@@ -35,7 +37,7 @@ for f in plrui atualizacao ctxmenu agendaui salvospainel celbotao avisos agendav
   grep -n "gfx_luz_canto(" "$raiz/src/$f.c" | grep -vE "if \(!(vid|ajustes_vidro\(\))\) gfx_luz_canto" |
     grep -E "$(case $f in guia) echo 'pv, raio, pv.w|p, 28.0f';; *) echo .;; esac)" && { echo "FAIL $f: own edge light on glass"; fail=1; }
 done
-grep -qE 'if \(tipoLuz >= 0 \|\| !ajustes_vidro\(\)\)' "$raiz/src/ilha.c" || { echo "FAIL ilha.c: own white light on glass"; fail=1; }
+grep -qF 'if (tipoLuz >= 0 || (!repouso && !ajustes_vidro()))' "$raiz/src/ilha.c" || { echo "FAIL ilha.c: own white light on glass"; fail=1; }
 grep -nE 'gfx_brilho_topo\(R, raioPx' "$raiz/src/menu.c" && { echo "FAIL menu.c: sidebar own top light"; fail=1; }
 # Chips, badges, focus backings and progress tracks: glass through gfx_vidro_chip.
 for f in plrui badges streams home guia episodios posplay detail biblioteca salvospainel ilha agendaui; do
