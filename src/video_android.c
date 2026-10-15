@@ -414,6 +414,9 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeFaixa(JNIEnv
                 tipo ? nNovasL : nNovasA);
   if (tipo) {
     const char *r;
+    // O nome de exibicao nao passa pelo buffer curto usado pela classificacao.
+    // deJString preserva UTF-8 completo, inclusive emoji, ate o limite do campo.
+    deJString(env, nome, f->nome, sizeof f->nome);
     f->tipoLeg = ling_tipo_legenda(nm, flags & 1, (flags & 2) != 0);
     f->letreiro = f->tipoLeg == LING_LEG_FORCADA || f->tipoLeg == LING_LEG_LETREIROS;
     r = ling_tipo_legenda_rotulo(f->tipoLeg);

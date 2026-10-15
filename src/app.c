@@ -107,6 +107,7 @@
 #include "avisos.h"
 #include "ilha.h"
 #include "ilhasalvar.h"
+#include "ilhaacao.h"
 #include "plrilha.h"
 #include "ilhacart.h"
 #include "cwretido.h"
@@ -249,6 +250,18 @@ static int autoParcialPronto(void) {
 // instante ainda nao tem a lista de episodios nem o "proximo" que
 // continuar_desenhar calculou para desenhar o card.
 static int cwTocarT, cwTocarE;
+// Integration #513: the sheet owns its episode independently of Continue Watching.
+static int folhaTocarT, folhaTocarE;
+static void gravarFolhaTocar(int t, int e, int tem) {
+  if (tem && t > 0 && e > 0) { folhaTocarT = t; folhaTocarE = e; }
+  else folhaTocarT = folhaTocarE = 0;
+}
+static int consumirFolhaTocar(int *t, int *e) {
+  if (folhaTocarT <= 0 || folhaTocarE <= 0) return 0;
+  if (t) *t = folhaTocarT; if (e) *e = folhaTocarE;
+  folhaTocarT = folhaTocarE = 0;
+  return 1;
+}
 // O MESMO OK num card cujo episodio TERMINOU e cuja lista de episodios ainda
 // nao chegou: a pagina abre e o toque fica esperando a lista para achar o
 // proximo, em vez de recomecar o terminado. `cwEsperaItem` e uma copia: a
@@ -526,7 +539,8 @@ static Uint32 canalFontePrazo;
 static void *escolherProximaVOD(void *u) {
   FonteJob *job = u;
   debrid_contexto_entrar(&job->debrid);
-  job->resultado = stream_verificar_proxima_vod(job->depoisDe, job->tentativas, &job->conferidas);
+  job->resultado = perfis_sessao_atual(job->sessaoPerfil)
+      ? stream_verificar_proxima_vod_sessao(job->depoisDe, job->tentativas, &job->conferidas, job->sessaoPerfil) : -1;
   debrid_contexto_sair();
   atomic_store_explicit(&job->estado, FJOB_DONE, memory_order_release);
   return NULL;
@@ -566,13 +580,13 @@ static void *escolherFonteFalha(void *u) {
 static void *escolherFonteCanal(void *u) {
   FonteJob *job = u;
   int e;
-  e = stream_canal_primeira_viva(8);
+  e = perfis_sessao_atual(job->sessaoPerfil) ? stream_canal_primeira_viva_sessao(8, job->sessaoPerfil) : -1;
   job->prazo = (e >= 0 && !stream_canal_prazo_longo(e))
                   ? CANAL_FONTE_PRAZO_MUDA_MS : CANAL_FONTE_PRAZO_MS;
   // -1 so acontece quando TODAS responderam dizendo que nao tem segmento.
   // Ai nao ha o que tentar, mas a primeira da lista com o watchdog ainda e
   // melhor que uma tela de erro sem nenhuma tentativa.
-  if (e < 0) e = stream_automatico_canal();
+  if (e < 0 && perfis_sessao_atual(job->sessaoPerfil)) e = stream_automatico_canal();
   job->resultado = e;
   atomic_store_explicit(&job->estado, FJOB_DONE, memory_order_release);
   return NULL;
@@ -580,7 +594,7 @@ static void *escolherFonteCanal(void *u) {
 static void *escolherFonteStalker(void *u) {
   FonteJob *job = u;
   char url[4096];
-  int ok = stalker_resolver(job->id, url, sizeof url);
+  int ok = perfis_sessao_atual(job->sessaoPerfil) && stalker_resolver_sessao(job->id, url, sizeof url, job->sessaoPerfil);
   // O worker publica somente no seu job. O consumidor confere a geracao e o
   // id depois do acquire; nenhuma resposta velha toca o mailbox da sessao
   // corrente.
@@ -842,6 +856,8 @@ static void sidebarToqueRegistrar(int contexto) {
 // requisicoes) num perfil que nao mudou seria pagar o preco da troca em toda
 // abertura do app.
 static int perfilAntes = 1;
+static uint64_t perfilSessaoAplicada;
+static char perfilDirArte[512];
 // Quando a troca de perfil comecou a preparar a home nova. Ver o teto abaixo.
 static Uint32 trocaPerfilDesde;
 // Teto da espera pela home do perfil novo. A rede lenta nunca prende a pessoa
@@ -1673,6 +1689,7 @@ typedef struct {
   _Atomic int estado;           // 0 livre, 1 rodando, 2 pronto
   int indice, resultado, pct;
   unsigned geracaoLista, sessao;
+  uint64_t sessaoPerfil;
   DebridContexto debrid;
   char url[4096], servico[32];
 } TorrentJob;
@@ -1686,9 +1703,9 @@ static unsigned torrentPendenteGeracao;
 static void *resolverTorrentEscolhido(void *u) {
   TorrentJob *j = u;
   debrid_contexto_entrar(&j->debrid);
-  j->resultado = stream_resolver_escolhida(j->indice, j->geracaoLista, j->url,
+  j->resultado = perfis_sessao_atual(j->sessaoPerfil) ? stream_resolver_escolhida(j->indice, j->geracaoLista, j->url,
                                            sizeof j->url, j->servico,
-                                           sizeof j->servico, &j->pct);
+                                           sizeof j->servico, &j->pct) : 0;
   debrid_contexto_sair();
   atomic_store_explicit(&j->estado, 2, memory_order_release);
   return NULL;
@@ -1701,6 +1718,7 @@ static int iniciarTorrentJob(int indice, unsigned geracaoLista) {
     return 1;
   }
   j->indice = indice; j->geracaoLista = geracaoLista; j->sessao = torrentSessao;
+  j->sessaoPerfil = perfis_sessao_geracao();
   j->resultado = 0; j->pct = -1; j->url[0] = 0; j->servico[0] = 0;
   memset(&j->debrid, 0, sizeof j->debrid);
   debrid_contexto_capturar(&j->debrid);
@@ -1786,7 +1804,7 @@ static void processarTorrentJob(void) {
   // A resposta so vale para a MESMA escolha, na mesma lista, com o player
   // ainda esperando por ela: um episodio novo, outra fonte escolhida ou o
   // player fechado no meio fazem a resposta velha nao tocar nada.
-  valido = j->sessao == torrentSessao && player_aberto() && !player_quer_sair() &&
+  valido = perfis_sessao_atual(j->sessaoPerfil) && j->sessao == torrentSessao && player_aberto() && !player_quer_sair() &&
            stream_atual() == j->indice && stream_lista_geracao() == j->geracaoLista;
   if (valido) {
     if (j->resultado == 1 && j->url[0]) {
@@ -2759,9 +2777,15 @@ static void salvoParaConta(const CatItem *ci, int salvo) {
     contapend_chutar();
 }
 
-// O perfil ainda e o de saida: salvar/fechar aqui nao grava sob o proximo.
-// A nova visita invalida somente os trabalhos de fonte e seus buffers.
-static void preparoEncerrarPerfil(void) {
+// Finish under the outgoing identity. Selection advances the session epoch
+// immediately afterwards; old jobs may finish but cannot update the new UI.
+static void perfilEncerrarSessao(void) {
+  // End input capture before resetting the Home it belongs to. Hit targets
+  // from the outgoing frame cannot activate under the destination profile.
+  ponteiro_abrir_sessao();
+  ctx_abrir_sessao();
+  estatvivo_fechar();
+  celb_fechar();
   preparoInvalidar();
   proximopreparo_cancelar();
   memset(&proximoIntento, 0, sizeof proximoIntento);
@@ -2769,16 +2793,73 @@ static void preparoEncerrarPerfil(void) {
   if (player_aberto() || player_retido()) player_encerrar();
   player_descartar_retido();
   fontevolta_esquecer("nova sessao de perfil");
+  trailer_fechar();
+  p2pmotor_cancelar();
+  novaGeracaoFonte();
+  fa_nova_rodada();
+  limparFontePendente();
+  limparFonteVOD();
+  aguardandoFonte = autoEsperaN = 0;
+  fonteEscolhida = -1;
+  torrentSessao++;
+  torrentPendente = -1;
+  canalFonteIdx = -1;
+  canalFonteDesde = 0;
+  canalViaProxy = stalkerTentativas = stalkerRenovando = 0;
+  memset(&liveStall, 0, sizeof liveStall);
+  abrirTeste[0] = 0;
+  cwTocarT = cwTocarE = cwEspera = 0;
+  cwEsperaDesde = 0;
+  memset(&cwEsperaItem, 0, sizeof cwEsperaItem);
+  prefFolhaN = -1;
   if (detail_aberto()) detail_fechar_seco();
-  novaGeracaoFonte(); fa_nova_rodada();
-  limparFontePendente(); limparFonteVOD();
-  aguardandoFonte = autoEsperaN = 0; fonteEscolhida = -1;
-  torrentSessao++; torrentPendente = -1;
   stream_definir_lista(NULL, 0);
+  if (vertudo_aberta()) vertudo_fechar_seco();
+  spot_fechar();
+  spainel_fechar();
+  central_fechar();
+  ilha_modal_fechar(1);
+  invalidarPerfil();
+  ilhasalvar_abrir_sessao();
+  ilhaacao_abrir_sessao();
+  agendaviso_abrir_sessao();
+  ilha_abrir_sessao();
+}
+
+static void perfilAbrirSessao(int antes) {
+  // All hooks reset live state or reload profile-owned files. They neither
+  // reload artwork nor wait for the old profile's network requests.
+  addons_abrir_sessao();
+  trakt_abrir_sessao();
+  simkl_abrir_sessao();
+  traktauth_trocar_perfil(perfis_ativo());
+  simklauth_trocar_perfil(perfis_ativo());
+  col_esquecer_perfil();
+  sync_abrir_sessao(antes);
+  cat_cache_substituido();
+  cat_ler_cache(perfilDirArte);
+  debrid_abrir_sessao(perfis_sessao_geracao());
+  ajustes_provedores_abrir_sessao();
+  trocarSalvosDePerfil();
+  lst_abrir_sessao();
+  agenda_iniciar();
+  atividade_iniciar();
+  recomenda_abrir_sessao();
+  biblioteca_abrir_sessao();
+  guia_abrir_sessao();
+  avisos_abrir_sessao();
+  home_abrir_sessao();
+  menu_definir_destino(MENU_INICIO);
+  saiuPorEsquerda = 0;
+  ilhasinais_perfil_trocado();
+  enquete_perfil_trocado();
+  perfilSessaoAplicada = perfis_sessao_geracao();
 }
 
 int app_iniciar(const char *dirArte) {
-  perfis_ao_abrir_sessao(preparoEncerrarPerfil);
+  perfis_ao_abrir_sessao(perfilEncerrarSessao);
+  cat_cache_perfis(1);
+  snprintf(perfilDirArte, sizeof perfilDirArte, "%s", dirArte ? dirArte : "");
 #ifdef NV_LINUX_DESKTOP
   const char *preview = getenv("NUVIO_UI_PREVIEW");
   uiPreview = preview && !strcmp(preview, "1");
@@ -2874,7 +2955,8 @@ int app_iniciar(const char *dirArte) {
     tela = TELA_HOME;
     // Com sessao gravada o ciclo comeca no arranque: e ele que traz os addons
     // e o Trakt da pessoa, sem os quais a home mostra so o que veio no pacote.
-    arranque_etapa("app_iniciar/sync_iniciar");
+    perfilAntes = perfis_ativo();
+    perfilAbrirSessao(perfilAntes);
     arranque_etapa("app_iniciar/sync_iniciar");
     sync_iniciar();
     // A ESCOLHA DE PERFIL ABRE AQUI, e nao daqui a alguns segundos.
@@ -3616,6 +3698,12 @@ static const char *homeTrailerBloqueio(void) {
   return NULL;
 }
 
+static void atualizarFolha(float dt, Uint32 agora) {
+  stream_folha_atualizar(dt, agora);
+  // Picks consume the latch before this step; every other close discards it.
+  if (!stream_folha_aberta()) gravarFolhaTocar(0, 0, 0);
+}
+
 void app_atualizar(float dt, Uint32 agora) {
   if (player_aberto() || player_mini_ativo()) diagnostico_cancelar_vazao();
   // Login e escolha de perfil retornam cedo; a atividade da conta anterior
@@ -3686,6 +3774,9 @@ void app_atualizar(float dt, Uint32 agora) {
       // Logo apos entrar, o primeiro ciclo de sync: e ele que descobre quantos
       // perfis a conta tem, e sem isso a tela de escolha nao teria o que
       // mostrar.
+      perfis_invalidar_sessao();
+      perfilAntes = perfis_ativo();
+      perfilAbrirSessao(perfilAntes);
       sync_reaplicar_ajustes();
       sync_iniciar();
       tela = TELA_ESCOLHA_PERFIL;
@@ -3704,9 +3795,24 @@ void app_atualizar(float dt, Uint32 agora) {
       && !uiPreview
 #endif
      ) {
-    invalidarPerfil();
+    perfilEncerrarSessao();
+    perfis_invalidar_sessao();
+    perfilSessaoAplicada = 0;
     tela = TELA_LOGIN;
     login_iniciar();
+    return;
+  }
+
+  // A confirmed choice changes identity during input. Reset its modules
+  // before polling them, so an outgoing OAuth completion cannot push into
+  // the new profile during the first frame after selection.
+  if (tela == TELA_ESCOLHA_PERFIL && perfilsel_concluido() &&
+      perfis_sessao_geracao() != perfilSessaoAplicada) {
+    perfilAbrirSessao(perfilAntes);
+    perfilAntes = perfis_ativo();
+    sync_iniciar();
+    trocaPerfilDesde = agora;
+    perfilsel_preparar(1, agora);
     return;
   }
 
@@ -3763,7 +3869,8 @@ void app_atualizar(float dt, Uint32 agora) {
       // Continuar). O teto existe para uma rede lenta nunca prender a pessoa
       // na tela de escolha: passado ele, a home abre como estiver e termina de
       // se montar ali, como antes.
-      if ((sync_perfil_pronto() && !desc_montando()) ||
+      if ((cat_do_cache() && home_tem_fileiras()) ||
+          (sync_perfil_pronto() && !desc_montando()) ||
           agora - trocaPerfilDesde >= TROCA_PERFIL_TETO_MS) {
         printf("[perfis] home do perfil %d %s em %u ms\n", perfis_ativo(),
                (sync_perfil_pronto() && !desc_montando()) ? "pronta" : "aberta pelo teto",
@@ -3776,88 +3883,7 @@ void app_atualizar(float dt, Uint32 agora) {
       return;
     }
     if (perfilsel_concluido()) {
-      int trocou = perfis_ativo() != perfilAntes;
-      // O perfil mudou o destino do sync: rodar de novo traz os addons e o
-      // progresso DESTE perfil, e nao os do perfil anterior que o primeiro
-      // ciclo pegou. So quando MUDOU: confirmar o mesmo perfil e o caso comum
-      // agora que a tela abre a cada arranque, e recarregar tudo ali seria
-      // cobrar o preco de uma troca em toda abertura do app.
-      // O CICLO PRECISA CONTINUAR MESMO QUANDO O PERFIL NAO MUDOU, e foi isso
-      // que eu errei ao economizar aqui.
-      //
-      // rodar() PARA depois de perfis_puxar() quando ha escolha pendente — o
-      // sync fica interrompido justamente esperando esta tela. Se confirmar o
-      // mesmo perfil nao reinicia nada, o ciclo nunca termina e a conta NAO
-      // SINCRONIZA a sessao inteira: os addons, o Trakt e o progresso ficam nos
-      // do cache da abertura anterior. Medido na TV do dono: ele acrescentou um
-      // addon na conta, confirmou o mesmo perfil, e o app seguiu listando os 4
-      // addons antigos, com "[sync] ciclo interrompido" como ultima linha.
-      // Confirmar o mesmo perfil e o caso COMUM, entao o defeito valia para
-      // quase toda abertura de quem tem mais de um perfil.
-      //
-      // O que continua condicionado a troca e so o CARO: invalidarPerfil()
-      // joga fora o que ja foi carregado, e reaplicar ajustes so faz sentido
-      // quando o destino mudou.
-      if (trocou) {
-        invalidarPerfil();
-        // Os ajustes DESTE perfil nesta TV (ou os do principal, na primeira
-        // visita), e o blob da conta dele por cima. Ver sync_trocar_perfil.
-        sync_trocar_perfil(perfilAntes);
-        ilhasinais_perfil_trocado();   // "Agora no perfil Lia" na ilha (02/10)
-        enquete_perfil_trocado();      // a enquete do perfil anterior sai (N3)
-        // AS COLECOES DO PERFIL ANTERIOR SAEM JA. col_definir_json so roda
-        // quando a conta manda linhas, entao um perfil sem colecoes ficava
-        // com as do anterior para sempre.
-        col_esquecer_perfil();
-        desc_esquecer_catalogo_perfil();   // #294: fileiras do outro perfil saem da Home
-        // OS SALVOS SAO DO PERFIL: a lista do anterior sai da tela (so os
-        // titulos que o novo nao tem) e entra a deste.
-        trocarSalvosDePerfil();
-        // E A FILEIRA DE CONTINUAR, que invalidarPerfil() nao alcanca.
-        //
-        // invalidarPerfil() so zera a tela de Perfil/Stats. Quem refaz o
-        // "Continuar assistindo" e desc_refazer_continuar(), chamada em apenas
-        // dois lugares: o fim de uma reproducao (player.c) e sync.c, sob
-        // `if (syncprog_aplicar(NULL) > 0)`. E ai esta o defeito: progresso.txt
-        // guarda TODOS os perfis num arquivo so, e prog_aplicar_remoto devolve
-        // 0 quando o registro que veio nao e mais novo que o que ja esta em
-        // disco. Voltar para um perfil JA SINCRONIZADO nao traz novidade
-        // nenhuma -> 0 -> a fileira nunca era refeita e continuava mostrando a
-        // do perfil anterior. Relatado por um testador na exp.4: abriu no
-        // perfil 2, trocou para o 1, e o "Continuar assistindo" seguiu sendo o
-        // do 2.
-        //
-        // Aqui NAO se pergunta se o sync trouxe algo: o perfil mudou, e isso
-        // por si so ja torna a fileira na tela a fileira errada. A leitura em
-        // si sempre esteve certa (prog_ler filtra por perfis_ativo()); o que
-        // faltava era o pedido de refazer.
-        desc_refazer_continuar();
-      }
-      // O TRAKT E O SIMKL TAMBEM SAO DO PERFIL. O vinculo local era um so por
-      // aparelho e o perfil 2 seguia com o Trakt do 1 — watchlist, historico,
-      // "continuar" e as fileiras do Trakt (relato do dono na C9). Aqui a
-      // credencial do perfil anterior sai da memoria e entra a deste, ou
-      // nenhuma; a da conta, se o perfil tiver, chega pelo sync_iniciar abaixo.
-      // Quando algum dos dois estava ou ficou ligado, as fileiras na tela sao do
-      // perfil errado e a home inteira e remontada — desc_refazer_continuar so
-      // refaz o "Continuar", e a watchlist e as listas do Trakt ficariam.
-      //
-      // FORA do `if` acima de proposito: as duas comparam com o perfil DELAS, nao
-      // com perfilAntes, e devolvem 0 sem mexer em nada quando ja estao certas.
-      { int tk = traktauth_trocar_perfil(perfis_ativo());
-        int sk = simklauth_trocar_perfil(perfis_ativo());
-        if (sk) simkl_esquecer();
-        if (tk || sk) desc_repetir(); }
       sync_iniciar();
-      if (trocou) {
-        // Fica nesta tela, com o indicador no cartao, ate a home estar pronta
-        // (bloco acima). Confirmar o mesmo perfil nao espera nada: a home ja e
-        // a dele.
-        perfilAntes = perfis_ativo();
-        trocaPerfilDesde = agora;
-        perfilsel_preparar(1, agora);
-        return;
-      }
       tela = TELA_HOME;
     }
     return;
@@ -4704,6 +4730,9 @@ void app_atualizar(float dt, Uint32 agora) {
       // A lembrada e localizada ANTES de abrir, para a folha ja desenhar a
       // marca no primeiro quadro. E so uma varredura da lista em memoria.
       char base[24];
+      int epT, epE;
+      int temEp = detail_pediu_fontes_ep(&epT, &epE);
+      gravarFolhaTocar(epT, epE, temEp);
       idBaseDoTitulo(base, sizeof base);
       stream_preferir(base[0] ? fontepref_escolher_manual(base) : -1);
       nomeParaFolha(); stream_folha_abrir();
@@ -5255,6 +5284,7 @@ void app_atualizar(float dt, Uint32 agora) {
       int titulo=player_aberto()?player_indice():detail_indice(), t=0,e=0;
       if (player_aberto()) { player_episodio_atual(&t,&e); player_encerrar(); }
       else detail_ep_foco(&t,&e);
+      consumirFolhaTocar(&t, &e);
       diagnostico_cancelar_vazao();
       player_abrir(titulo,NULL);
       player_definir_episodio(t,e);
@@ -5400,7 +5430,7 @@ void app_atualizar(float dt, Uint32 agora) {
   { int q = player_pediu_faixas();
     if (q) faixas_abrir_em(q == 2 ? 1 : 0); }
   if (!player_retido()) faixas_atualizar(dt, agora);
-  stream_folha_atualizar(dt, agora);
+  atualizarFolha(dt, agora);
   // FOLHA FECHADA SEM ESCOLHER, com o player esperando por ela. Voltar na
   // folha e "desisti", nao "tente sozinho": abrir a fonte que a pessoa acabou
   // de recusar seria contradizer o gesto. O player mostra o erro de fonte, que

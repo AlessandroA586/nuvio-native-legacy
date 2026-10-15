@@ -20,7 +20,15 @@ int ajustes_hist_conta(void) { return 1; }
 int ajustes_busca_cinemeta(void) { return 1; }
 int ajustes_busca_nuvio(void) { return 0; }   // #311: Primeiro (padrao)
 int ajustes_ocultar_nao_lancados(void) { return 0; }   // #369: descoberta.c le o ajuste
+int ajustes_ocultar_filmes_vistos(void) { return 0; }    // #366: descoberta.c le o ajuste
 #include "../src/descoberta.c"
+int ajustes_cw_concluido(void) { return 90; }
+int ajustes_cw_minimo(void) { return 1; }
+unsigned cat_revisao_itens(void) { return 0; }
+int cat_visto(const CatItem *item) { (void)item; return 0; }
+int cat_copiar_por_id(const char *id, const char *tipo, CatItem *item) {
+  (void)id; (void)tipo; (void)item; return 0;
+}
 #include "jellyfin_stub.inc"
 Uint32 SDL_GetTicks(void) { return 0; }
 unsigned recomenda_geracao(void) { return 1; }

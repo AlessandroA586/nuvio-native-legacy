@@ -73,6 +73,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
 #include "iconeapp.h"
 #include "logoapp.h"
 #include "abertura.h"
@@ -550,6 +553,9 @@ typedef enum {
   AJ_FALHA_RD_LIMITE, AJ_FALHA_TB_LIMITE, AJ_FALHA_PM_LIMITE, AJ_FALHA_AD_LIMITE,
   AJ_FALHA_ADDONS, AJ_FALHA_ADDON_ORDEM, AJ_FALHA_ADDON_LIMITE,
   AJ_FONTE_PRECARREGAR, // local, append-only; video e proximo episodio, desligado
+  // #366: discovery rows only, per profile on this device. Append-only.
+  AJ_OCULTAR_FILMES_VISTOS,
+  AJ_PROVEDORES_ESCOPO, // local, append-only; 0 = shared, 1 = separate for this profile
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -557,6 +563,7 @@ _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD =
 
 // "Pacote de selos": so o TAMANHO importa aqui (3 pacotes + "Do Nuvio"); o texto
 // de cada valor vem de selospacote_nome (textoValor / uxValorTexto).
+static const char *V_PROVEDORES_ESCOPO[] = { "Compartilhada neste aparelho", "Separada para este perfil" };
 static const char *V_HDR_UI[] = { "Automático", "Desligado" };
 static const char *V_LEG_MOSTRAR[] = { "Só meus idiomas", "Todas" };
 static const char *V_SELOS_PACOTE[] = { "Do Nuvio", "Pacote 1", "Pacote 2", "Pacote 3" };
@@ -1423,6 +1430,9 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Ordem e limites dos add-ons"),
   NUM("Links neste add-on", 1, FONTEFALHA_MAX_LINKS, 1, ""),
   ESC("Pré-carregar vídeo", V_LIGA, 2),
+  ESC("Ocultar filmes assistidos", V_LIGA, 2), // por perfil, local: hideWatchedMoviesLocal
+
+  ESC("Configuração dos provedores", V_PROVEDORES_ESCOPO, 2),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1667,6 +1677,9 @@ static const char *CHAVE[] = {
   "-falhaRDLinks", "-falhaTBLinks", "-falhaPMLinks", "-falhaADLinks",
   "-falhaAddons", "-falhaAddonOrdem", "-falhaAddonLinks",
   "fontePrecarregarLocal",
+  "hideWatchedMoviesLocal",
+
+  "-provedoresEscopo",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2349,6 +2362,11 @@ int ajustes_leg2_borda(void) { int v = valor[AJ_LEG2_BORDA]; return v >= 1 && v 
 int ajustes_saida_player_home(void) { return lig(AJ_RELOGIO) && valor[AJ_SAIDA_PLAYER] == 0; }
 int ajustes_manter_video(void) { return ajustes_saida_player_home() && lig(AJ_MANTER_VIDEO) && !SEGURO; }
 int ajustes_selo_visto(void) { return lig(AJ_SELO_VISTO); }
+int ajustes_ocultar_filmes_vistos(void) { return lig(AJ_OCULTAR_FILMES_VISTOS); }
+void ajustes_definir_ocultar_filmes_vistos(int ligado) {
+  valor[AJ_OCULTAR_FILMES_VISTOS] = ligado ? 0 : 1;
+  AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar());
+}
 static void riscoNotar(int op, int antes);
 void ajustes_definir_vidro(int ligado) { int a = valor[AJ_VIDRO]; valor[AJ_VIDRO] = ligado ? 0 : 1; AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar()); riscoNotar(AJ_VIDRO, a); }
 #ifdef __EMSCRIPTEN__
@@ -3075,12 +3093,11 @@ static const char *p2pTesteTexto(void) {
   }
 }
 
-// CHAVES DE DEBRID DIGITADAS NESTA TV (debrid.h). Moram em debrid.txt na pasta
-// de dados, uma linha "servico=chave" por servico, por aparelho — credencial do
-// mesmo grau do fanart.txt. tools/arm.sh a tira do .ipk (ARQ_DE_PESSOA) e a tela
-// so a mostra mascarada. O valor NUNCA volta para o campo da modal.
+// As contas antigas permanecem em debrid.txt (compartilhadas). Optar por
+// separadas guarda uma copia propria da conta+perfil; voltar a compartilhar
+// nunca apaga essa copia nem altera o arquivo compartilhado.
 static const char *DEB_SERV[5] = { "alldebrid", "alldebrid", "realdebrid", "torbox", "premiumize" };
-static char debLocal[5][100];
+static char debLocal[5][200];
 static int debIdx(int op) {
   switch (op) {
     case AJ_DEBRID_AD: return 0;
@@ -3098,22 +3115,70 @@ static void debLimpar(char *dst, size_t n, const char *t) {
     if (strchr(DEB_ALFA, t[i]) && t[i]) dst[k++] = t[i];
   dst[k] = 0;
 }
-static void debGravar(void) {
-  char out[5 * 128];
-  int i, u = 0, algum = 0;
-  out[0] = 0;
-  for (i = 0; i < 5; i++) {
-    if (i == 1 || !debLocal[i][0]) continue;
-    u += snprintf(out + u, sizeof out - (size_t)u, "%s=%s\n", DEB_SERV[i], debLocal[i]);
-    algum = 1;
+static int debNomePerfil(char *dst, unsigned n, const char *base) {
+  const char *u = sessao_usuario();
+  size_t i, l = u ? strlen(u) : 0;
+  int k;
+  if (!dst || !n || !base || !*base || !l || l > 80) return 0;
+  for (i = 0; i < l; i++)
+    if (!strchr("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-", u[i])) return 0;
+  k = snprintf(dst, n, "%s-%s-p%d.txt", base, u, perfis_ativo());
+  return k >= 0 && (unsigned)k < n;
+}
+int ajustes_provedores_compartilhados(void) { return valor[AJ_PROVEDORES_ESCOPO] == 0; }
+int ajustes_provedores_arquivo(char *dst, unsigned n, const char *base) {
+  int k;
+  if (!dst || !n || !base || !*base) return 0;
+  if (!ajustes_provedores_compartilhados()) return debNomePerfil(dst, n, base);
+  k = snprintf(dst, n, "%s.txt", base);
+  return k >= 0 && (unsigned)k < n;
+}
+// Mesmo contrato de dados_gravar, com 0600 desde a criacao: as credenciais
+// nunca passam por um arquivo temporario legivel por outros usuarios.
+static int debGravarArquivo(const char *nome, const char *texto) {
+  char caminho[640], tmp[660];
+  int fd, ok = 0;
+  size_t n = strlen(texto);
+  if (!dados_caminho(caminho, sizeof caminho, nome)) return 0;
+  snprintf(tmp, sizeof tmp, "%s.tmp.XXXXXX", caminho);
+  dados_fs_travar();
+  fd = mkstemp(tmp);
+  if (fd >= 0) {
+    ok = fchmod(fd, 0600) == 0 && write(fd, texto, n) == (ssize_t)n;
+    if (close(fd) != 0) ok = 0;
+    if (ok && rename(tmp, caminho) != 0) ok = 0;
+    if (!ok) unlink(tmp);
   }
-  if (algum) dados_gravar("debrid.txt", out);
-  else dados_apagar("debrid.txt");
+  dados_fs_liberar();
+  if (ok) dados_marcar_sujo(0);
+  return ok;
+}
+static int debGravarEm(const char *nome, const DebridConta *conta) {
+  char out[4 * 256];
+  size_t u = 0;
+  int i, ok;
+  out[0] = 0;
+  for (i = 0; i < 4; i++) {
+    static const char *const serv[] = { "realdebrid", "torbox", "premiumize", "alldebrid" };
+    int k;
+    if (!conta->chave[i][0]) continue;
+    k = snprintf(out + u, sizeof out - u, "%s=%s\n", serv[i], conta->chave[i]);
+    if (k < 0 || (size_t)k >= sizeof out - u) { memset(out, 0, sizeof out); return 0; }
+    u += (size_t)k;
+  }
+  // Um arquivo vazio e uma escolha valida: este perfil nao quer chaves
+  // locais. Nao remover, pois isso repetiria a copia do compartilhado.
+  ok = debGravarArquivo(nome, out);
+  memset(out, 0, sizeof out);
+  return ok;
 }
 static void debCarregar(void) {
-  char *t = dados_ler("debrid.txt"), *l, *fim;
+  DebridConta conta;
+  char nome[128], *t = NULL, *l, *fim;
   int i;
+  debrid_conta_iniciar(&conta);
   memset(debLocal, 0, sizeof debLocal);
+  if (ajustes_provedores_arquivo(nome, sizeof nome, "debrid")) t = dados_ler(nome);
   for (l = t; l && *l; l = fim ? fim + 1 : NULL) {
     char *eq;
     fim = strchr(l, '\n');
@@ -3127,14 +3192,66 @@ static void debCarregar(void) {
     if (!fim) break;
   }
   free(t);
-  for (i = 0; i < 5; i++) if (i != 1 && debLocal[i][0]) debrid_definir_chave_local(DEB_SERV[i], debLocal[i]);
+  for (i = 0; i < 5; i++) if (i != 1) debrid_conta_definir(&conta, DEB_SERV[i], debLocal[i]);
+  debrid_aplicar_chaves_locais(&conta);
+  memset(&conta, 0, sizeof conta);
+}
+void ajustes_provedores_abrir_sessao(void) {
+  char nome[128], *t;
+  valor[AJ_PROVEDORES_ESCOPO] = 0; // legado: compartilha, nenhuma conta se perde
+  if (debNomePerfil(nome, sizeof nome, "provider-scope")) {
+    t = dados_ler(nome);
+    if (t) { if (!strcmp(t, "1\n")) valor[AJ_PROVEDORES_ESCOPO] = 1; free(t); }
+  }
+  debCarregar();
+  if (ajustes_provedores_arquivo(nome, sizeof nome, "fontefalha")) fontefalha_arquivo(nome);
+  ajFalhaEspelhar();
+  ajSombra[AJ_PROVEDORES_ESCOPO] = valor[AJ_PROVEDORES_ESCOPO];
+}
+int ajustes_definir_provedores_compartilhados(int compartilhados) {
+  char escopo[128], privado[128], *t;
+  DebridContexto contexto;
+  DebridConta conta;
+  int novo = compartilhados ? 0 : 1;
+  if (novo == valor[AJ_PROVEDORES_ESCOPO]) return 1;
+  if (!debNomePerfil(escopo, sizeof escopo, "provider-scope")) return 0;
+  if (novo == 1) {
+    if (!debNomePerfil(privado, sizeof privado, "debrid")) return 0;
+    t = dados_ler(privado);
+    if (t) free(t);
+    else {
+      // Copia so na primeira escolha. Inclui a chave efetiva da conta,
+      // evitando pedir o login outra vez quando ela veio do sync.
+      debrid_contexto_capturar(&contexto);
+      memcpy(conta.chave, contexto.chave, sizeof conta.chave);
+      int ok = debGravarEm(privado, &conta);
+      memset(&conta, 0, sizeof conta); memset(&contexto, 0, sizeof contexto);
+      if (!ok) return 0;
+    }
+    if (!debNomePerfil(privado, sizeof privado, "fontefalha") ||
+        !fontefalha_preparar_privado(privado)) return 0;
+  }
+  if (!dados_gravar(escopo, novo ? "1\n" : "0\n")) return 0;
+  valor[AJ_PROVEDORES_ESCOPO] = novo;
+  debCarregar();
+  if (ajustes_provedores_arquivo(privado, sizeof privado, "fontefalha")) fontefalha_arquivo(privado);
+  ajFalhaEspelhar();
+  ajSombra[AJ_PROVEDORES_ESCOPO] = novo;
+  return 1;
 }
 static void debDefinir(int op, const char *txt) {
-  int i = debIdx(op);
-  if (i < 0) return;
-  debLimpar(debLocal[i], sizeof debLocal[i], txt);
-  debrid_definir_chave_local(DEB_SERV[i], debLocal[i]);   // vazio apaga
-  debGravar();
+  DebridConta conta;
+  char nome[128], nova[200];
+  int i = debIdx(op), k;
+  if (i < 0 || !ajustes_provedores_arquivo(nome, sizeof nome, "debrid")) return;
+  debLimpar(nova, sizeof nova, txt);
+  debrid_conta_iniciar(&conta);
+  for (k = 0; k < 5; k++) if (k != 1) debrid_conta_definir(&conta, DEB_SERV[k], k == i ? nova : debLocal[k]);
+  if (debGravarEm(nome, &conta)) {
+    snprintf(debLocal[i], sizeof debLocal[i], "%s", nova);
+    debrid_aplicar_chaves_locais(&conta);
+  } else uxNotificar("Não foi possível agora. Tente novamente.");
+  memset(&conta, 0, sizeof conta); memset(nova, 0, sizeof nova);
 }
 static const char *debValor(int op) {
   static char buf[64], m[24];
@@ -3157,10 +3274,15 @@ static int adFioVivo;
 static _Atomic int adTeste;             // 0 nunca/livre, 1 testando, 2 pronto, 3 fio terminou
 static int adTesteOk;
 static char adTesteMsg[64], adTesteData[16];
+static DebridContexto adTesteContexto;
+static uint64_t adTesteSessao;
+static unsigned adTesteBusca;
 static void *adTesteFio(void *u) {
   char m[64], d[16];
   (void)u;
+  debrid_contexto_entrar(&adTesteContexto);
   adTesteOk = debrid_testar_alldebrid(m, sizeof m, d, sizeof d);
+  debrid_contexto_sair();
   snprintf(adTesteData, sizeof adTesteData, "%s", d);
   snprintf(adTesteMsg, sizeof adTesteMsg, "%s", m);
   atomic_store_explicit(&adTeste, 3, memory_order_release);
@@ -3168,6 +3290,9 @@ static void *adTesteFio(void *u) {
 }
 static void adTesteIniciar(void) {
   if (adFioVivo) return;
+  debrid_contexto_capturar(&adTesteContexto);
+  adTesteSessao = adTesteContexto.sessao;
+  adTesteBusca = adTesteContexto.busca;
   atomic_store_explicit(&adTeste, 1, memory_order_release);
   if (pthread_create(&adFio, NULL, adTesteFio, NULL) != 0) {
     snprintf(adTesteMsg, sizeof adTesteMsg, "sem resposta do servidor");
@@ -3179,9 +3304,14 @@ static void adTesteIniciar(void) {
 }
 static void adTesteRecolher(void) {
   if (adFioVivo && atomic_load_explicit(&adTeste, memory_order_acquire) == 3) {
+    DebridContexto atual;
     pthread_join(adFio, NULL);
     adFioVivo = 0;
-    atomic_store_explicit(&adTeste, 2, memory_order_release);
+    debrid_contexto_capturar(&atual);
+    int pertence = atual.sessao == adTesteContexto.sessao && atual.busca == adTesteContexto.busca;
+    memset(&atual, 0, sizeof atual); memset(&adTesteContexto, 0, sizeof adTesteContexto);
+    if (!pertence) { adTesteOk = 0; adTesteMsg[0] = adTesteData[0] = 0; }
+    atomic_store_explicit(&adTeste, pertence ? 2 : 0, memory_order_release);
   }
 }
 // O texto vem de debrid_testar_alldebrid como CHAVE de i18n (frases fixas,
@@ -3189,6 +3319,17 @@ static void adTesteRecolher(void) {
 static const char *adTesteTexto(void) {
   static char buf[64];
   int e = atomic_load_explicit(&adTeste, memory_order_acquire);
+  if (e == 2) {
+    DebridContexto atual;
+    debrid_contexto_capturar(&atual);
+    int pertence = atual.sessao == adTesteSessao && atual.busca == adTesteBusca;
+    memset(&atual, 0, sizeof atual);
+    if (!pertence) {
+      adTesteOk = 0; adTesteMsg[0] = adTesteData[0] = 0;
+      atomic_store_explicit(&adTeste, 0, memory_order_release);
+      e = 0;
+    }
+  }
   if (e == 0) return debrid_origem("alldebrid") ? i18n("OK testa") : i18n("informe a chave primeiro");
   if (e == 1 || e == 3) return i18n("testando…");
   if (adTesteOk && adTesteData[0]) {
@@ -3352,8 +3493,8 @@ void ajustes_dir(const char *dir) {
   seekrCarregar();
   p2pCarregar();
   pstCarregar();
-  debCarregar();
-  fontefalha_dir(dirAjustes); ajFalhaEspelhar();
+  fontefalha_dir(dirAjustes);
+  ajustes_provedores_abrir_sessao();
   // ANTES DO LACO, e nao so no fim (#129): limita() confere as duas linhas de
   // idioma contra nValores() -> nLingua, e quem preenche nLingua e esta
   // chamada. No arranque ela ainda nao tinha rodado: a lista tinha "1 valor",
@@ -4443,6 +4584,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_FUNDO:          /* o desfoque custa GPU desta TV; o web nao tem */
     case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: /* teste do vidro: visual desta TV */
     case AJ_SELO_VISTO:     /* o web nao tem a escolha */
+    case AJ_OCULTAR_FILMES_VISTOS: /* por perfil desta TV; fora do blob da conta */
     case AJ_REACAO_CREDITOS: /* o web nao tem a pergunta */
     case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PROXIMO_AUTO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_CONTAGEM: /* idem: local desta TV */
     case AJ_SEEKR_LIGADO: case AJ_SEEKR_FITA: case AJ_SEEKR_AJUSTE: /* o web nao tem o Seekr */
@@ -4470,7 +4612,7 @@ static int somenteDesteAparelho(int op) {
 // onde o historico vai e se o social existe. Entram na copia por perfil
 // (ajustes-p<N>.txt) e continuam FORA do blob (somenteDesteAparelho).
 static int perfilLocal(int i) {
-  return i == AJ_CW_FONTE || i == AJ_CW_PROXIMO || i == AJ_SALVOS_DEST || i == AJ_HIST_CONTA || i == AJ_SOCIAL;
+  return i == AJ_CW_FONTE || i == AJ_CW_PROXIMO || i == AJ_SALVOS_DEST || i == AJ_HIST_CONTA || i == AJ_SOCIAL || i == AJ_OCULTAR_FILMES_VISTOS;
 }
 
 static int dePerfil(int i) {
@@ -4483,6 +4625,13 @@ static int dePerfil(int i) {
 
 static void nomePerfil(char *dst, size_t tam, int perfil) {
   snprintf(dst, tam, "ajustes-p%d.txt", perfil);
+}
+
+void ajustes_perfil_padrao(void) {
+  int i;
+  for (i = 0; i < AJ_N; i++) if (dePerfil(i)) valor[i] = valorPadrao[i];
+  aplicarIdioma(AJ_LEG_LINGUA); aplicarIdioma(AJ_LEG_LINGUA2); aplicarIdioma(AJ_AUD_LINGUA);
+  ajSombraSync();
 }
 
 void ajustes_perfil_guardar(int perfil) {
@@ -5700,6 +5849,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_PS_FUNDO: return "Fundo da tela de escolha de perfil. Filmes: os cartazes do que cada perfil assistiu, numa parede inclinada. Luz: preto com uma luz na cor do perfil. Projetor: sala de cinema antes da sessão. Arte do perfil: o fundo escolhido ao editar o perfil no app Nuvio; sem ele, o avatar desfocado. Ou as listras do login.";
     case AJ_DESCOBRIR: return "Onde fica a tela Descobrir: junto da Busca, como item próprio na barra lateral, ou em lugar nenhum.";
     case AJ_SELO_VISTO: return "Um check pequeno no canto de cima do pôster dos títulos que você já assistiu, pelo Trakt, pela conta ou marcados nesta TV.";
+    case AJ_OCULTAR_FILMES_VISTOS: return "Oculta filmes já assistidos nas fileiras de descoberta. Busca e Biblioteca continuam mostrando todos. Vale para este perfil neste aparelho.";
     case AJ_ROTULOS: return "Escreve o nome do título abaixo do cartaz. A maior parte da arte já traz o nome impresso.";
     case AJ_NOME_ADDON: return "Acrescenta o nome do addon ao título da fileira, para separar dois catálogos com o mesmo nome.";
     case AJ_SUFIXO_TIPO: return "Acrescenta \"Filme\" ou \"Série\" ao título da fileira, para separar as duas versões do mesmo catálogo.";
@@ -5828,6 +5978,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_POSTER_TESTAR: return "Baixa o cartaz de um filme conhecido com a configuração atual e mostra se deu certo. O primeiro cartaz de cada título é montado no servidor e pode levar alguns segundos.";
     case AJ_HOME_LAYOUT: return "Moderna: destaque atrás das fileiras. Padrão: destaque num banner no topo. Dinâmica: estilo Apple TV, com destaques grandes e Top 10.";
     case AJ_VIDRO: return "Painéis, botões e menus viram ilhas translúcidas que deixam a arte aparecer. Desligado, as mesmas ilhas ficam opacas. Só muda o visual; nada muda de lugar.";
+    case AJ_PROVEDORES_ESCOPO: return "Compartilhada usa as mesmas contas de provedores neste aparelho. Separada guarda uma cópia para este perfil. Trocar de opção mantém as duas configurações.";
     case AJ_ADDONS_PRINCIPAL: return "Os outros perfis desta conta usam os addons do perfil principal. Desligado, cada perfil usa os seus — a não ser que a conta já diga para usar os do principal.";
     case AJ_VIDRO_CONTORNO: return "O contorno das linhas e dos cartões, inclusive o do foco. Desligado, o item em foco é marcado só por um fundo mais claro na cor de destaque.";
     case AJ_COR_LOGO: return "Com um tema dinâmico, a cor sai do logo do título em vez da arte de fundo. Logo branco ou preto usa a arte.";
@@ -6933,13 +7084,58 @@ static const char *frRegexTexto(void) {
   fonteregra_regex(p, sizeof p);
   if (e < 0) return i18n("Regex inválida: ignorada");
   if (!p[0]) return i18n("Nenhum");
-  snprintf(b, sizeof b, "%.60s%s", p, strlen(p) > 60 ? "…" : "");
+  // 60 bytes, recuando para nao cortar um caractere UTF-8 (ñ, emoji) no meio.
+  { size_t k = strlen(p);
+    if (k > 60) { k = 60; while (k > 0 && ((unsigned char)p[k] & 0xC0) == 0x80) k--; }
+    snprintf(b, sizeof b, "%.*s%s", (int)k, p, strlen(p) > k ? "…" : ""); }
   return b;
 }
 // Sinais de regex que o teclado da TV oferece (o celular digita o que quiser,
-// dentro do mesmo alfabeto).
+// dentro do mesmo alfabeto). "=" e "<" ">" sao dos lookaheads/lookbehinds
+// (?= ?! ?<= ?<!): sem o "=" o "(?=" chegava como "(?" e a regex era recusada.
 static const char *FR_ALFA_REGEX =
-  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789|()[]{}.*+?^$\\-_ :!/,";
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789|()[]{}.*+?^$\\-_ :!/,=<>'\"&;%#@~";
+
+// O campo "Padrão do filtro". O padrao volta para o campo: corrigir um sinal nao
+// pode obrigar a redigitar tudo. Vazio apaga. Ate FR_REGEX_MAX (o teto do
+// oficial e do que fica guardado), e o texto do celular entra com ñ, acento e
+// emoji inteiros (ver teclado_aceitar_utf8).
+static void frRegexAbrir(void) {
+  char atual[FR_REGEX_MAX + 1];
+  fonteregra_regex(atual, sizeof atual);
+  stCampo = AJ_FONTE_REGEX_PADRAO;
+  teclado_abrir_com("Padrão da regex", "Ex.: ESP|Latino|Castellano. Vazio apaga.",
+                    FR_REGEX_MAX, FR_ALFA_REGEX, atual[0] ? atual : NULL);
+  teclado_aceitar_utf8(1);
+}
+#ifdef AJUSTES_TESTE
+// O caminho de verdade do campo: abre com o padrao guardado, recebe `colado`
+// como texto do celular (NULL = so abrir e dar OK; `apagar` toques em "apagar"
+// antes), confirma em "pronto", grava, e devolve o que ficou em fonteregra.txt
+// (relido do disco) e o estado da regex.
+int ajustes_teste_regex_campo(const char *colado, int apagar, char *lido, size_t n) {
+  SDL_Event e;
+  int i;
+  frRegexAbrir();
+  if (!teclado_aberto()) return -9;
+  if (colado) teclado_teste_sistema(colado);
+  memset(&e, 0, sizeof e);
+  e.type = SDL_KEYDOWN;
+  teclado_teste_foco(0, 0);
+  e.key.keysym.sym = SDLK_DOWN;
+  for (i = 0; i < 20; i++) teclado_evento(&e);          // a fileira apagar/limpar/pronto
+  e.key.keysym.sym = SDLK_RETURN;
+  for (i = 0; i < apagar; i++) teclado_evento(&e);      // coluna 0 = apagar
+  e.key.keysym.sym = SDLK_RIGHT; teclado_evento(&e); teclado_evento(&e);
+  e.key.keysym.sym = SDLK_RETURN; teclado_evento(&e);
+  if (teclado_aberto()) return -8;
+  ajustes_atualizar(0.016f, SDL_GetTicks());
+  teclado_esquecer();
+  fonteregra_carregar();
+  fonteregra_regex(lido, n);
+  return fonteregra_regex_estado();
+}
+#endif
 
 // UM PASSO NO VALOR DA OPCAO `op` (dir = +1 ou -1), com tudo o que a mudanca
 // tem de disparar, e a gravacao. Um lugar so para as setas do modo edicao e
@@ -6978,6 +7174,11 @@ static int definirValorDireto(int op, int novo) {
   if (op == AJ_SEEKR_LIGADO && novo == 0 && !seekrChave[0]) {
     uxNotificar(seekrPedirChave());
     return 0;
+  }
+  if (op == AJ_PROVEDORES_ESCOPO) {
+    int ok = ajustes_definir_provedores_compartilhados(novo == 0);
+    if (!ok) uxNotificar("Não foi possível agora. Tente novamente.");
+    return ok;
   }
   if (op == AJ_PERFIL_PESQ) {
     pessoas_definir_pesquisavel(novo == 0);
@@ -7162,16 +7363,7 @@ static void eventoTela(const SDL_Event *e) {
     if (focoOp == AJ_FONTE_ADDONS_PERM || focoOp == AJ_FONTE_PLUGINS_PERM) {
       frAbrir(focoOp == AJ_FONTE_PLUGINS_PERM); return;
     }
-    if (focoOp == AJ_FONTE_REGEX_PADRAO) {
-      char atual[FR_REGEX_MAX + 1];
-      fonteregra_regex(atual, sizeof atual);
-      stCampo = focoOp;
-      // O padrao volta para o campo: corrigir um sinal nao pode obrigar a
-      // redigitar tudo. Vazio apaga.
-      teclado_abrir_com("Padrão da regex", "Ex.: ESP|Latino|Castellano. Vazio apaga.",
-                        TECLADO_LONGO, FR_ALFA_REGEX, atual[0] ? atual : NULL);
-      return;
-    }
+    if (focoOp == AJ_FONTE_REGEX_PADRAO) { frRegexAbrir(); return; }
     if (focoOp == AJ_DIAGNOSTICO) { pediuDiagnostico = 1; return; }
     if (focoOp == AJ_HERO_CATALOGOS) { if (!inativa(focoOp)) heroFonteCiclar(+1); return; }
     if (focoOp == AJ_VELOCIDADE) { pediuVelocidade = 1; return; }
@@ -7939,7 +8131,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_RAIL_BLUR: case AJ_HERO: case AJ_HERO_CATALOGOS:
     case AJ_PS_FUNDO: case AJ_PS_CONTINUAR: case AJ_DESCOBRIR: case AJ_ROTULOS:
     case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_OCULTAR_NLANC:
-    case AJ_NOTAS_HOME: case AJ_GRAD_CLASSICO: case AJ_SELO_VISTO:
+    case AJ_NOTAS_HOME: case AJ_GRAD_CLASSICO: case AJ_SELO_VISTO: case AJ_OCULTAR_FILMES_VISTOS:
       return AJPV_HOME;
     case AJ_CW_LIGADO: case AJ_CW_OK: case AJ_CW_FONTE:
     case AJ_CW_ESTILO: case AJ_CW_THUMB: case AJ_CW_BLUR_PROX:
@@ -7969,7 +8161,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_DESCANSO_ESTILO: case AJ_DESCANSO_FONTE:
       return AJPV_INTERFACE;
     case AJ_PERFIL_ATIVO: case AJ_SYNC: case AJ_SAIR:
-    case AJ_PERFIL_PESQ: case AJ_PERFIL_EDITAR: case AJ_ADDONS_PRINCIPAL: case AJ_ENQUETES:
+    case AJ_PERFIL_PESQ: case AJ_PERFIL_EDITAR: case AJ_ADDONS_PRINCIPAL: case AJ_PROVEDORES_ESCOPO: case AJ_ENQUETES:
       return AJPV_CONTA;
     case AJ_SALVOS_DEST: case AJ_TRAKT: case AJ_SIMKL: case AJ_DISCORD: case AJ_HIST_CONTA: case AJ_SOCIAL:
       return AJPV_RASTREIO;

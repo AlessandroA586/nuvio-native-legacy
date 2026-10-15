@@ -1,4 +1,5 @@
 // Leitura real do guia: tv, ids de IPTV e landscape nao exigem genero.
+#define NV_PERFIL_SESSAO_FORTE
 #include "../src/guia.c"
 #include <assert.h>
 
@@ -13,6 +14,18 @@ char *rede_baixar(const char *url, int segundos) {
   assert(!strcmp(url, "https://addon.example/catalog/tv/canais.json?v=1.4.0&probe=1"));
   return strdup(corpo);
 }
+char *rede_baixar_medido_controle(const char *url, int segundos,
+                                  const char *const *cabecalhos,
+                                  const RedeControle *controle,
+                                  RedeMedida *medida) {
+  (void)cabecalhos; (void)medida;
+  if (controle && controle->cancelado && *controle->cancelado) return NULL;
+  return rede_baixar(url, segundos);
+}
+uint64_t perfis_sessao_geracao(void) { return 0; }
+int perfis_sessao_atual(uint64_t geracao) { return geracao == 0; }
+int perfis_sessao_travar(uint64_t geracao) { (void)geracao; return 1; }
+void perfis_sessao_destravar(void) {}
 int addons_base_desligada(const char *base) { (void)base; return 0; }
 int main(void) {
   GFonte f = {0};
