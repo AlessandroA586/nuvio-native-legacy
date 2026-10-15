@@ -3624,6 +3624,14 @@ void gfx_chrome(GfxRect r, float raio, float a) {
   gfx_cor(r, raio, 0x1a / 255.0f, 0x1c / 255.0f, 0x21 / 255.0f, a);
   gfx_anel(r, raio, 1.0f, 1.0f, 1.0f, 1.0f, 0.22f * a);
 }
+void gfx_vidro_material(GfxRect r, float raio, float dens, float a) {
+  gfx_vidro(r, raio, GFX_VIDRO_PAINEL, 0.06f, dens * gfx_vidro_opacidade(), a);
+}
+void gfx_vidro_ou_solido(GfxRect r, float raio, float dens, float a,
+                         float sr, float sg, float sb, float sa) {
+  if (ajustes_vidro()) gfx_vidro_material(r, raio, dens, a);
+  else gfx_cor(r, raio, sr, sg, sb, sa * a);
+}
 void gfx_vidro_painel(GfxRect r, float raio, float fundo, float a) {
   gfx_vidro(r, raio, GFX_VIDRO_PAINEL, VIDRO_MIOLO, fundo * gfx_vidro_opacidade(), a);
 }

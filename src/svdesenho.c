@@ -25,7 +25,7 @@ void svd_superficie(GfxRect r, float raio, float f, float a) {
     return;
   }
   ajustes_acento(&cr, &cg, &cb);
-  gfx_cor(r, raio, .062f, .066f, .079f, .92f * a);
+  gfx_cor(r, raio, .062f, .066f, .079f, .92f * a); // vidro-ok: button fill
   if (v > .001f) {
     botao_luz(r, v * .5f, a);
     gfx_cor(r, raio, cr, cg, cb, v * a);
@@ -187,7 +187,7 @@ float svd_amigos_chip(float x, float y, float h, float maxW, const AmigosTitulo 
   }
   if (rostos < 0 || larg > maxW) return 0.0f;
   gfx_cor((GfxRect){ x, y + 2.0f, larg, h }, 0.5f, 0, 0, 0, 0.25f * a);
-  gfx_cor((GfxRect){ x, y, larg, h }, 0.5f, 0.03f, 0.035f, 0.045f, 0.70f * a);
+  gfx_vidro_ou_solido((GfxRect){ x, y, larg, h }, 0.5f, GFX_VIDRO_DENS, a, 0.03f, 0.035f, 0.045f, 0.70f);
   { float cx = x + pad * 0.8f;
     if (rostos) cx += svd_amigos_pilha(cx, y + pad, d, t, rostos, 0, ANEL, a);
     else cx = x + pad;

@@ -7626,7 +7626,7 @@ void home_desenhar(Uint32 agora) {
                            232, 234, 240, 255);
     GfxRect caixa = { (NV_TELA_W - t.w - 56.0f) * 0.5f, NV_TELA_H - 118.0f,
                       t.w + 56.0f, t.h + 28.0f };
-    gfx_cor(caixa, 14.0f / caixa.h, 0.10f, 0.10f, 0.12f, 0.96f);
+    gfx_vidro_ou_solido(caixa, 14.0f / caixa.h, GFX_VIDRO_DENS, 1.0f, 0.10f, 0.10f, 0.12f, 0.96f);
     txt_desenhar_alpha(t, caixa.x + 28.0f, caixa.y + 14.0f, 0.98f);
   }
 

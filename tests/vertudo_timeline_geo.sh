@@ -30,6 +30,31 @@ if re.search(r'gfx_cor\(\(GfxRect\)\{x-4,cy-4', src):
     print('FALHA contorno branco aposentado no cartao da linha'); ok = False
 if 'botaoEstiloAbas' in src:
     print('FALHA botao de estilo solto, fora da pilula de exibicao'); ok = False
+# Cover Flow (dono, 14/10: "antes tava lindo"): os vizinhos ficam ATRAS do foco,
+# encostando nele (pilha com profundidade), nao numa fileira com vaos.
+import subprocess, tempfile, os
+m = re.search(r'(#define VT_FLX_W.*?\nstatic GfxRect fluxoRect\(.*?\n\})', src, re.S)
+c = '''#include <math.h>
+#include <stdio.h>
+typedef struct { float x, y, w, h; } GfxRect;
+#define NV_TELA_W 1920.0f
+#define VT_TOPO 244.0f
+static int vtTelefone(void) { return 0; }
+static float vtFim(void) { return NV_TELA_W - 48.0f; }
+''' + m.group(1) + '''
+int main(void) {
+  fluxoPos = 2.0f;
+  GfxRect f = fluxoRect(2, 120.0f, NULL), d = fluxoRect(3, 120.0f, NULL), e = fluxoRect(1, 120.0f, NULL);
+  printf("%d %d\\n", d.x < f.x + f.w && d.w < f.w, e.x + e.w > f.x && e.w < f.w);
+  return 0;
+}
+'''
+with tempfile.TemporaryDirectory() as t:
+    open(os.path.join(t, 'f.c'), 'w').write(c)
+    subprocess.run(['cc', '-w', os.path.join(t, 'f.c'), '-o', os.path.join(t, 'f'), '-lm'], check=True)
+    dir_, esq = subprocess.run([os.path.join(t, 'f')], capture_output=True, text=True, check=True).stdout.split()
+if dir_ != '1' or esq != '1':
+    print('FALHA Cover Flow: vizinho nao fica atras do foco, encostando nele'); ok = False
 print('ok' if ok else 'FALHOU')
 raise SystemExit(0 if ok else 1)
 PY

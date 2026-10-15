@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-14 20:50",
+ "atualizado_em": "2026-10-15 02:49",
  "base": "5544c3e4c",
- "nota": "Sync 14/10 20:50, tip integracao/2.0.5 5544c3e4c (ja inclui androidsdl, i495ilha, i512temporada, estatpainel2, bench/mm). Issues GH: 80 (69 abertas), todas ja no mapa. Jobs e merges lidos de escrivao/log.txt + vereditos.txt + fila-lancados.txt. Sem acao remota. Ver escrivao/estado.md.",
+ "nota": "Sync 2026-10-15 02:49, tip integracao/2.0.5 2c79fbcf8 (HEAD). Instalado: be42293ae (10-14 23:05). Ver escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,
@@ -8686,12 +8686,12 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
     "7f338254 (v2.0.5)",
     "8b5ed6c0 (v2.0.5)",
-    "d6b41e1 (agente/205-i419recs, nao integrado)"
+    "d6b41e1 (merge agente/205-i419recs; review OK j-revg-i419recs-z)"
    ],
    "ultima_resposta": {
     "nos": true,
@@ -8699,7 +8699,7 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "review d6b41e1 (so teste; job i419recs done 20:05)",
+   "proximo_passo": "lancar com 2.0.5; testar no TCL",
    "notas": "Job i419recs done 20:05: commit d6b41e1 so teste posplay. Sem device Tizen. Ja corrigido em 2.0.5 pelos commits v2.0.5.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/419",
    "criada_em": "2026-10-10",
@@ -8919,7 +8919,7 @@
    "conserto": [
     "2d42c8e0 (v2.0.5)",
     "b1da4311 (v2.0.5)",
-    "b144dbfd (agente/205-i429hbs, nao integrado)"
+    "b144dbfd (branch agente/205-i429hbs, 2 commits fora)"
    ],
    "ultima_resposta": {
     "nos": true,
@@ -8927,8 +8927,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "review b144dbfd (hr auto-select); job i429hbs done 20:00",
-   "notas": "Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito.",
+   "proximo_passo": "merge agente/205-i429hbs (review y OK 23:11, 2 commits fora); testar no TCL",
+   "notas": "Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/429",
    "criada_em": "2026-10-10",
    "alvo": "ja-lancada"
@@ -9261,10 +9261,10 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "meta",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "-",
    "conserto": [
-    "84095af (agente/205-i462sync, nao integrado)"
+    "84095af (commit em integracao/2.0.5; review OK j-revg-i462sync-z)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -9272,7 +9272,7 @@
     "ultimo_comentario_por": "Copil48",
     "ultima_nossa": ""
    },
-   "proximo_passo": "review 84095af; sem device Samsung ainda",
+   "proximo_passo": "lancar com 2.0.5; teste .tpk de legenda no TCL",
    "notas": "Job i462sync done 20:07: 84095af auto sync rejection translated tracks; tests autosync.sh/legsync.sh rc 0.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/462",
    "alvo": "2.0.6"
@@ -9550,7 +9550,7 @@
   {
    "numero": 481,
    "titulo": "Show audio and subtitle metadata in the stream source list",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "aberta",
@@ -9565,10 +9565,9 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "decidir com o dono se merge de agente/205-pr487v2 entra na 2.0.6",
-   "notas": "Snapshot 2026-10-14 10:15: \"Sources: show declared audio and subtitle languages\" (e4fb8c08) e o merge c9932635 \"Merge PR #487 v2\" existem so em agente/205-pr487v2, nao ancestral de integracao/2.0.5. OPEN no GitHub.",
+   "notas": "Snapshot 2026-10-14 10:15: \"Sources: show declared audio and subtitle languages\" (e4fb8c08) e o merge c9932635 \"Merge PR #487 v2\" existem so em agente/205-pr487v2, nao ancestral de integracao/2.0.5. OPEN no GitHub. | fechada no GH 2026-10-14 (CLOSED); alvo antigo 2.0.6 removido por regra do mapa.py; decidir com dono",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/481",
-   "criada_em": "2026-10-13",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-13"
   },
   {
    "numero": 482,
@@ -9576,10 +9575,11 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "-",
    "conserto": [
-    "067c0c35"
+    "067c0c35",
+    "f51aa3d76 (merge agente/205-i488perfil, junto de #488)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -9587,7 +9587,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "re-review junto com #488 (fix 20:03); parcial: tile leak nao reproduzido",
+   "proximo_passo": "testar troca de perfil no TCL",
    "notas": "Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/482",
    "criada_em": "2026-10-13",
@@ -9646,7 +9646,8 @@
    "status": "integrada",
    "release": "2.0.5",
    "conserto": [
-    "edff609f/c670c37e/20bb2f3a (agente/205-p2p486, integrados em integracao/2.0.5)"
+    "edff609f/c670c37e/20bb2f3a (agente/205-p2p486, integrados em integracao/2.0.5)",
+    "16351755c (merge agente/205-p2p486 em integracao/2.0.5)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -9654,8 +9655,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "testar em aparelho com addon P2P; sem review j-revg registrado",
-   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub.",
+   "proximo_passo": "testar addon P2P em aparelho (review OK rev3 01:42 apos fix 01:22)",
+   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/486",
    "criada_em": "2026-10-13",
    "alvo": "ja-lancada"
@@ -9666,11 +9667,13 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
     "067c0c35",
-    "agente/205-i488perfil ahead 2 (fix 20:03, nao integrado)"
+    "agente/205-i488perfil ahead 2 (fix 20:03, nao integrado)",
+    "f51aa3d76 (merge agente/205-i488perfil; review OK j-revg-i488perfil-z 21:46)",
+    "f51aa3d76 (merge agente/205-i488perfil em integracao/2.0.5)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -9678,8 +9681,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "re-review fix i488perfil-fix (20:03): ultimo BLOQUEIA j-revg-i488perfil 19:56 antes do fix",
-   "notas": "pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch.",
+   "proximo_passo": "testar troca de perfil no TCL",
+   "notas": "pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/488",
    "criada_em": "2026-10-13",
    "alvo": "2.0.6"
@@ -10119,7 +10122,7 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "integrada",
+   "status": "em_revisao",
    "release": "",
    "conserto": [
     "a82357a4 (merge agente/205-i513autoplay em integracao/2.0.5)"
@@ -10130,8 +10133,8 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Criada 2026-10-14 (issues.json 14/10 16:49). Escrivao 14/10 19:1x: j-205-i513autoplay 7df981b9 done 18:35 (review j-revg-i513autoplay-q BLOQUEIA 18:43); fix bcf3ec31 18:57. Escrivao 19:2x: merge a82357a4 (j-revg-i513autoplay-q havia BLOQUEADO 18:43; fix bcf3ec31 mergeado sem nova review).",
+   "proximo_passo": "review do fixy 23:07 (review x com log vazio = em andamento); depois merge (4 commits fora)",
+   "notas": "Criada 2026-10-14 (issues.json 14/10 16:49). Escrivao 14/10 19:1x: j-205-i513autoplay 7df981b9 done 18:35 (review j-revg-i513autoplay-q BLOQUEIA 18:43); fix bcf3ec31 18:57. Escrivao 19:2x: merge a82357a4 (j-revg-i513autoplay-q havia BLOQUEADO 18:43; fix bcf3ec31 mergeado sem nova review). | a82357a4 mergeado antes; review y BLOQUEIA, fix em curso | Escrivao 10-15 02:44: fixy sem veredito ainda. Escrivao 10-15 02:49: ultimo BLOQUEIA y 22:35 foi antes do fixy 23:07; sem review posterior ao fix; tip 66c6c61ee.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/513",
    "criada_em": "2026-10-14",
    "alvo": "futuro"
@@ -11213,6 +11216,61 @@
    "ref": "agente/205-simkl-scrobble",
    "resultado": "passou",
    "evidencia": "tests/simkl_scrobble.sh rc 0 (FAIL antes: simkl_scrobble indefinido); regressão simkl_cw, visto, vistonao, simklauth, trakt_scrobble, player_visto_trailer rc 0; tools/build-local.sh build ok"
+  },
+  {
+   "data": "2026-10-14 23:11",
+   "quem": "job-pi magpie/group/nv-revisao (revisao independente)",
+   "o_que": "Revisao final agente/205-i429hbs apos fixz 22:28: VEREDITO OK; linguas.sh e ajustes_idioma_disco.sh rc 0",
+   "issues": [
+    429
+   ],
+   "ref": "f59554839 (agente/205-i429hbs)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-i429hbs-y.log"
+  },
+  {
+   "data": "2026-10-14 22:35",
+   "quem": "job-pi magpie/group/nv-revisao (revisao independente)",
+   "o_que": "Revisao final agente/205-i513autoplay antes do fixy: VEREDITO BLOQUEIA",
+   "issues": [
+    513
+   ],
+   "ref": "agente/205-i513autoplay antes do fixy 23:07",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-i513autoplay-y.log"
+  },
+  {
+   "data": "2026-10-14 01:42",
+   "quem": "job-pi magpie/group/nv-revisao (revisao rev3)",
+   "o_que": "Revisao agente/205-p2p486 apos fix-205-p2p486-3 (01:22): VEREDITO OK",
+   "issues": [
+    486
+   ],
+   "ref": "3f961a5ad (agente/205-p2p486)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-rev3-205-p2p486.log"
+  },
+  {
+   "data": "2026-10-14 21:46",
+   "quem": "job-pi magpie/group/nv-revisao (revisao final)",
+   "o_que": "Revisao final agente/205-i488perfil apos fix 20:03: VEREDITO OK",
+   "issues": [
+    488
+   ],
+   "ref": "d16de03ad (agente/205-i488perfil)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-i488perfil-z.log"
+  },
+  {
+   "data": "2026-10-15 02:47",
+   "quem": "job-pi magpie/group/nv-revisao (revisao)",
+   "o_que": "Revisao do fix pr/493-fix (PR #493, traz #488): VEREDITO BLOQUEIA",
+   "issues": [
+    488
+   ],
+   "ref": "4851f752d (pr/493-fix)",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revpr493-fix.log"
   }
  ],
  "decisoes": [
@@ -12105,19 +12163,19 @@
    "conserto": [
     "agente/205-perfis21 (tip 7376c250, 1 commits fora)"
    ],
-   "proximo_passo": "LOST: agente/205-perfis21 1 commit fora, sem job nem review; relancar review",
+   "proximo_passo": "review OK j-revg-perfis21; 1 commit nao mergeado: mergear ou adiar p/ 2.1",
    "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). rodando; alvo declarado = 2.1. Escrivão 14/10 14:47: review OK, merge pendente. | Escrivão 2026-10-14 16:11: review j-revg-perfis21 OK (11:16); merge pendente. | Escrivão 14/10 19:48: sem job"
   },
   {
    "id": "dono-205-dicatoque",
    "titulo": "Dicas de controle: tema/chips do rodape",
    "plataforma": "all",
-   "status": "aberta",
+   "status": "em_revisao",
    "release": "2.0.6",
    "conserto": [
     "agente/205-dicatoque (tip 0ad55379, 1 commits fora)"
    ],
-   "proximo_passo": "LOST: branch agente/205-dicatoque 1 commit fora, sem job nem review; relancar ou fechar",
+   "proximo_passo": "review OK r3 (j-revg-dicatoque2-r3); 1 commit nao mergeado: mergear",
    "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). BLOQUEIA: agente/205-dicatoque2 nao integrado. Escrivão 14/10 14:47: sem job (perdido). | Escrivão 14/10 19:48: sem job"
   },
   {
@@ -12185,24 +12243,24 @@
    "id": "dono-205-tizenbrew",
    "titulo": "Pesquisa: distribuir pela TizenBrew (Samsung)",
    "plataforma": "all",
-   "status": "aberta",
+   "status": "adiado",
    "release": "2.0.6",
    "conserto": [
     "agente/205-tizenbrew (tip 25693f33, 1 commits fora)"
    ],
-   "proximo_passo": "decidir",
+   "proximo_passo": "adiado para depois do 2.0.5 (memoria homebrew/tizenbrew)",
    "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). docs em docs/tizenbrew; sem job recente. Escrivão 14/10 14:47: adiado (pesquisa; sem merge)."
   },
   {
    "id": "dono-205-homebrew",
    "titulo": "Homebrew Channel webOS / mercado",
    "plataforma": "all",
-   "status": "aberta",
+   "status": "adiado",
    "release": "2.0.6",
    "conserto": [
     "agente/205-homebrew (tip bcb1cdea, 1 commits fora)"
    ],
-   "proximo_passo": "decidir",
+   "proximo_passo": "adiado para depois do 2.0.5 (memoria homebrew/tizenbrew)",
    "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). branch com 1 commit, sem job recente. Escrivão 14/10 14:47: adiado (pesquisa; sem merge)."
   },
   {
@@ -12283,13 +12341,13 @@
    "id": "dono-205-abastream",
    "titulo": "Fix streaming collection tab strip: catalog order alignment, sliding focus, smooth brand ba",
    "plataforma": "?",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
     "7242b442",
     "28da074c"
    ],
-   "proximo_passo": "merge: review OK j-revg-abastream-c3 20:11 (apos fixc3 19:51)",
+   "proximo_passo": "lancar com 2.0.5 (merge a7d0b2ee5)",
    "notas": "5-6 commits fora. Nao mergeado.",
    "url": null
   },
@@ -12349,13 +12407,13 @@
    "id": "dono-205-animacoes",
    "titulo": "aovivo: drive the OSD focus springs from the row draw + shot frame sequence",
    "plataforma": "?",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
     "ac6d84aa",
     "059af14f"
    ],
-   "proximo_passo": "merge bloqueado: j-merge-205-animacoes rc 1 em tests/central.sh (V_TAMANHO_UI 9 > cap 6); decidir e mergear",
+   "proximo_passo": "lancar com 2.0.5 (merge 7198e353e)",
    "notas": "Review OK j-revg-animacoes-d 19:53 (apos fixc3 19:41). 15 commits fora. Merge job 20:04 nao mergeou.",
    "url": null
   },
@@ -12876,7 +12934,7 @@
    "conserto": [
     "60c6db739 (merge agente/205-estatpainel2 em integracao/2.0.5)"
    ],
-   "proximo_passo": "lancar com 2.0.5",
+   "proximo_passo": "lancar com 2.0.5 (merge 60c6db739)",
    "notas": "Review OK j-revg-estatpainel2-c 19:20. Merge concluido (60c6db739); branch sem commits fora.",
    "url": null
   },
@@ -13092,12 +13150,12 @@
    "id": "dono-205-issues-triagem",
    "titulo": "issues: post-2.0.5 triage (419 items, 2.0.6 target, evidence-based status)",
    "plataforma": "?",
-   "status": "integrada",
+   "status": "aberta",
    "release": "2.0.5",
    "conserto": [
     "45be541a"
    ],
-   "proximo_passo": "lancar com 2.0.5",
+   "proximo_passo": "PERDIDO: BLOQUEIA j-revg-triagem-velhas, sem fix; relancar fix ou fechar",
    "notas": "Escrivão 14/10 14:47: integrada.",
    "url": null
   },
@@ -13305,7 +13363,7 @@
    "conserto": [
     "fe5e0e92"
    ],
-   "proximo_passo": "re-review: fix2 20:11 (sem review depois); ultimo BLOQUEIA j-revg-p2pusb-r2 19:58",
+   "proximo_passo": "BLOQUEIA j-revg-p2pusb-y 22:30; fix j-205-p2pusb-fixy RODANDO; depois review (alvo 2.1)",
    "notas": "Pedido de usuario (cache USB P2P, #505). Alvo 2.1 (nao assumir merge em 2.0.6). Fix2 feito, nao esta lost.",
    "url": null
   },
@@ -13365,13 +13423,13 @@
    "id": "dono-205-paraleloloop",
    "titulo": "android: fix paralelo unit tests after zero-delay open retry",
    "plataforma": "?",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
     "agente/205-paraleloloop (tip 1788e8fa, 6 commits fora)",
     "07455c12"
    ],
-   "proximo_passo": "merge: review OK j-revg-paraleloloop-c3 20:12 (apos fixc3 19:50)",
+   "proximo_passo": "lancar com 2.0.5 (merge c95f9b1cb)",
    "notas": "9 commits fora. Nao mergeado.",
    "url": null
   },
@@ -13496,12 +13554,12 @@
    "id": "dono-205-pr489",
    "titulo": "Merge integracao/2.0.5 into agente/205-pr489",
    "plataforma": "?",
-   "status": "integrada",
+   "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
     "22a34af1"
    ],
-   "proximo_passo": "lancar com 2.0.5",
+   "proximo_passo": "BLOQUEIA j-revpr489 22:28; sem fix finalizado; fix na fila",
    "notas": "Escrivão 14/10 14:47: integrada.",
    "url": null
   },
@@ -13509,12 +13567,12 @@
    "id": "dono-205-pr490",
    "titulo": "Merge branch 'integracao/2.0.5' into agente/205-pr490",
    "plataforma": "?",
-   "status": "integrada",
+   "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
     "75059d26"
    ],
-   "proximo_passo": "lancar com 2.0.5",
+   "proximo_passo": "BLOQUEIA j-revpr490 22:30; fix j-pr490-fix RODANDO; depois review",
    "notas": "Escrivão 14/10 14:47: integrada.",
    "url": null
   },
@@ -13522,12 +13580,12 @@
    "id": "dono-205-pr491resto",
    "titulo": "ci: port PR #491 Tizen 6+ package builds and audit all commits",
    "plataforma": "?",
-   "status": "integrada",
+   "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
     "6dd374db"
    ],
-   "proximo_passo": "lancar com 2.0.5",
+   "proximo_passo": "branch pr491-limpo: job j-pr491-limpo done 22:34, sem veredito; revisar",
    "notas": "Escrivão 14/10 14:47: integrada.",
    "url": null
   },
@@ -13989,10 +14047,10 @@
    "id": "dono-205-vidropadrao",
    "titulo": "Vidro padrao: auditoria de superficies glass (PLX glass port)",
    "plataforma": "?",
-   "status": "em_job",
+   "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [],
-   "proximo_passo": "aguardar job j-205-vidropadrao (RUNNING 20:27); depois review",
+   "proximo_passo": "review OK j-revg-vidropadrao-z 22:37 (antes do sync); sync 3dfa5d9 no branch sem re-review: revisar sync e mergear",
    "notas": "Branch agente/205-vidropadrao 10 commits fora, 2 atras. Job sonnet high."
   },
   {
@@ -14009,10 +14067,10 @@
    "id": "dono-205-chdelay",
    "titulo": "Chdelay (delay de canal/troca de canal)",
    "plataforma": "?",
-   "status": "em_job",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [],
-   "proximo_passo": "aguardar job j-205-chdelay (RUNNING 20:42)",
+   "proximo_passo": "lancar com 2.0.5 (merge 8e203bc61)",
    "notas": "Branch agente/205-chdelay ja integrada (merged)."
   },
   {
@@ -14024,6 +14082,54 @@
    "conserto": [],
    "proximo_passo": "aguardar job j-205-glassmock (RUNNING 20:41); sem merge de codigo",
    "notas": "Branch agente/205-glassmock ja integrada. Estudo/mockups, nao lancar."
+  },
+  {
+   "id": "dono-205-barra27",
+   "titulo": "Barra 27 (branch agente/205-barra27)",
+   "plataforma": "Android/TCL?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [
+    "agente/205-barra27: 2 commits fora"
+   ],
+   "proximo_passo": "BLOQUEIA j-revg-barra27-y; fix j-205-barra27-fixy RODANDO",
+   "notas": "criado pelo escrivao 22:4x"
+  },
+  {
+   "id": "dono-205-colhdr",
+   "titulo": "Cabecalho colunas (agente/205-colhdr)",
+   "plataforma": "?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [
+    "agente/205-colhdr: 1 commit fora"
+   ],
+   "proximo_passo": "job j-205-colhdr done 21:18 sem review: revisar",
+   "notas": "criado pelo escrivao 22:4x"
+  },
+  {
+   "id": "dono-205-vidaa",
+   "titulo": "VIDAA (agente/205-vidaa)",
+   "plataforma": "VIDAA",
+   "status": "em_job",
+   "release": "2.0.5",
+   "conserto": [
+    "agente/205-vidaa: 14 commits fora"
+   ],
+   "proximo_passo": "job j-205-vidaa RODANDO 22:36; depois review",
+   "notas": "criado pelo escrivao 22:4x"
+  },
+  {
+   "id": "dono-205-pr493",
+   "titulo": "PR #493 (ghbarker, ligado a #488)",
+   "plataforma": "Android/TCL?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [
+    "agente/205-pr493: 12 commits fora"
+   ],
+   "proximo_passo": "PERDIDO: BLOQUEIA j-revpr493 22:26 e j-revg-pr493; sem fix; fix+re-review ou fechar",
+   "notas": "criado pelo escrivao 22:4x"
   }
  ],
  "fechar_203": [],

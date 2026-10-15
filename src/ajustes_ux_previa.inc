@@ -132,7 +132,7 @@ static void ajMiniHome(AjMini o, float ox, float oy, float W) {
     gfx_rect(MR(0, 300, 1920, 302), 0, GFX_VEU_BAIXO, 0, 0, 0, 0, 0.071f, 0.075f, 0.09f, a);
     gfx_rect(MR(0, 0, 1100, 600), 0, GFX_VEU, 0, 0, 0, 0, 0, 0, 0, 0.9f * a);
     if (o.rail) {
-      gfx_cor(MR(48, 150, 96, 520), 24.0f / 520.0f, 0.071f, 0.075f, 0.09f, 0.95f * a);
+      gfx_cor(MR(48, 150, 96, 520), 24.0f / 520.0f, 0.071f, 0.075f, 0.09f, 0.95f * a); // vidro-ok: Ajustes preview mock
       for (i = 0; i < 5; i++) gfx_rect(MR(48 + 33, 190 + i * 60, 30, 30), 0, GFX_ANEL, 0, 4.0f / 30.0f, 0, 9.0f / 30.0f, 0.953f, 0.949f, 0.937f, 0.55f * a);
     }
     ajLogo(ajArte(AJA_LOGO, o.art), MX(210), MY(170), 560 * s, 190 * s, a);
@@ -154,7 +154,7 @@ static void ajMiniHome(AjMini o, float ox, float oy, float W) {
       gfx_rect(MR(-192, -108, 2304, 1296), t, GFX_ARTE, 0, 0, 0, 0, 1, 1, 1, a);
       gfx_tex_aspect_atual = 0;
     }
-    gfx_cor(quad, 0, 0.04f, 0.04f, 0.055f, 0.62f * a);
+    gfx_cor(quad, 0, 0.04f, 0.04f, 0.055f, 0.62f * a); // vidro-ok: Ajustes preview mock
     gfx_rect(MR(180, 180, 940, 546), 0, GFX_SOMBRA, 1, 0, 0, 0.5f, 0, 0, 0, 0.5f * a);
     ajImg(c, MR(200, 170, 900, 506), 22 * s, a);
     ajImg(ajArte(AJA_FUNDO, 15), MR(1130, 170, 900, 506), 22 * s, a);
@@ -170,8 +170,8 @@ static void ajMiniHome(AjMini o, float ox, float oy, float W) {
     ajImg(ajArte(AJA_FUNDO, o.art), quad, rr, a);
     gfx_rect(quad, 0, GFX_VEU, 0, 0, 0, rr / H, 0, 0, 0, a);
     if (o.rail) {
-      if (ajVid()) gfx_cor(MR(48, 150, 88, 560), 0.5f * 88.0f / 560.0f, 0.055f, 0.059f, 0.071f, 0.82f * a);
-      else gfx_cor(MR(48, 150, 88, 560), 0.5f * 88.0f / 560.0f, 0.082f, 0.086f, 0.102f, a);
+      if (ajVid()) gfx_cor(MR(48, 150, 88, 560), 0.5f * 88.0f / 560.0f, 0.055f, 0.059f, 0.071f, 0.82f * a); // vidro-ok: Ajustes preview mock
+      else gfx_cor(MR(48, 150, 88, 560), 0.5f * 88.0f / 560.0f, 0.082f, 0.086f, 0.102f, a); // vidro-ok: Ajustes preview mock
       for (i = 0; i < 6; i++) gfx_rect(MR(48 + 29, 190 + i * 60, 30, 30), 0, GFX_ANEL, 0, 4.0f / 30.0f, 0, 9.0f / 30.0f, 0.953f, 0.949f, 0.937f, 0.55f * a);
     }
     if (!o.semHero) {
@@ -211,8 +211,8 @@ static void ajMiniHome(AjMini o, float ox, float oy, float W) {
     if ((int)e >= 0) { l = txt_linha(e, hora, 243, 242, 239, 255); tw = l.w; } else tw = 110 * s;
     pw = 40 * s + tw + 22 * s + 52 * s + 40 * s;
     px = dir ? ox + W - 48 * s - pw : MX(48);
-    if (ajVid()) gfx_cor((GfxRect){ px, MY(36), pw, 96 * s }, 0.5f, 0.055f, 0.059f, 0.071f, 0.86f * a);
-    else gfx_cor((GfxRect){ px, MY(36), pw, 96 * s }, 0.5f, 0.082f, 0.086f, 0.102f, a);
+    if (ajVid()) gfx_cor((GfxRect){ px, MY(36), pw, 96 * s }, 0.5f, 0.055f, 0.059f, 0.071f, 0.86f * a); // vidro-ok: Ajustes preview mock
+    else gfx_cor((GfxRect){ px, MY(36), pw, 96 * s }, 0.5f, 0.082f, 0.086f, 0.102f, a); // vidro-ok: Ajustes preview mock
     if (l.w) txt_desenhar_alpha(l, px + 40 * s, MY(36) + (96 * s - l.h) * 0.5f, a);
     gfx_cor((GfxRect){ px + 40 * s + tw + 22 * s, MY(36 + 22), 52 * s, 52 * s }, 0.5f, 0.486f, 0.361f, 1.0f, a);
   }
@@ -483,8 +483,8 @@ static float ajPreviaCor(float x, float y, float w) {
     txt_desenhar(l, x + 53, y + 236 + (36 - l.h) * 0.5f); }
   { GfxRect mb = { x + w - 20 - 150, y + 20, 150, 8 + 3 * 34 + 8 };
     static const char *const M[3] = { "Início", "Explorar", "Ajustes" };
-    if (ajVid()) gfx_cor(mb, 20.0f / mb.h, 0.055f, 0.059f, 0.071f, 0.82f);
-    else gfx_cor(mb, 20.0f / mb.h, 0.082f, 0.086f, 0.102f, 1);
+    if (ajVid()) gfx_cor(mb, 20.0f / mb.h, 0.055f, 0.059f, 0.071f, 0.82f); // vidro-ok: Ajustes preview mock
+    else gfx_cor(mb, 20.0f / mb.h, 0.082f, 0.086f, 0.102f, 1); // vidro-ok: Ajustes preview mock
     for (i = 0; i < 3; i++) {
       TxtLinha l = ajTxt(TXT_AJ_MINI14, M[i]);
       float iy = mb.y + 8 + i * 34;
@@ -729,7 +729,7 @@ static float ajPreviaTamanhoUi(int op, float x, float y, float w) {
   for (k = 0; k < n; k++) {
     GfxRect r = { x0 + (k % 3) * (tw + gx), y0 + (k / 3) * (th + gy), tw, th };
     ajMiniPlayerUi(r, ui_size_choice(k, tamanhoUiAutomatico()), 1);
-    if (k != sel) gfx_cor(r, 12.0f * r.w / 280.0f / r.h, 0.031f, 0.031f, 0.039f, 0.5f);
+    if (k != sel) gfx_cor(r, 12.0f * r.w / 280.0f / r.h, 0.031f, 0.031f, 0.039f, 0.5f); // vidro-ok: dims unselected preview tile
     ajRotuloValor(op, k, r.x + 10 * s, r.y + 10 * s, s, k == sel ? 1.0f : 0.7f);
     if (k == sel) gfx_anel_fora(r, 12.0f * r.w / 280.0f / r.h, 3 * s, 3 * s, ar, ag, ab, 1);
   }
@@ -748,7 +748,7 @@ static float ajPreviaTamanhoAjustes(int op, float x, float y, float w) {
   for (k = 0; k < n; k++) {
     GfxRect r = { x0 + k * (cw + g), y0, cw, ch };
     ajMiniAjustesUi(r, F[k], 1);
-    if (k != sel) gfx_cor(r, 14 * s / r.h, 0.031f, 0.031f, 0.039f, 0.5f);
+    if (k != sel) gfx_cor(r, 14 * s / r.h, 0.031f, 0.031f, 0.039f, 0.5f); // vidro-ok: dims unselected preview tile
     // Sem rotulo no cartao: o segmentado logo abaixo diz 80/90/100 na mesma ordem.
     if (k == sel) gfx_anel_fora(r, 14 * s / r.h, 3 * s, 3 * s, ar, ag, ab, 1);
   }
