@@ -4,14 +4,11 @@
 // src/proxyts.c (127.0.0.1, porta livre, um fio por conexao, sessao por
 // geracao); o conversor e o dts_remux.c.
 //
-// MODOS (ajuste de teste, um so fica depois da S95C):
-//  1 HLS sob demanda: playlist VOD montada do indice de quadros-chave; cada
-//    segmento sai do conversor quando o player pede. Seek, posicao e duracao
-//    ficam com o player.
-//  2/3 progressivo (TS, MKV, MP4): um fluxo so, reaberto a cada seek (?t=).
-//  4 o HLS do modo 1 no IP da rede da TV, em vez de 127.0.0.1.
-// CORPO (pergunta 3 do teste): chunked, Content-Length (o segmento inteiro e
-// gerado antes; Range respondido da memoria) ou fechar a conexao no fim.
+// ENTREGA: HLS sob demanda (playlist VOD montada do indice de quadros-chave;
+// cada segmento sai do conversor quando o player pede; seek, posicao e duracao
+// ficam com o player). Sem indice ate o fim (MKV sem Cues) o app troca sozinho
+// para um TS continuo, reaberto a cada seek (?t=). Corpo sempre chunked: o
+// tamanho de um segmento so existe depois de gera-lo (Range e ignorado).
 //
 // REGISTRO: toda requisicao do player sai no log com o Range e o
 // Connection dela, e a resposta com bytes, primeiro byte, tempo total e o
@@ -24,9 +21,8 @@
 #ifndef NV_TPK
 int dts_tpk_disponivel(void) { return 0; }
 const char *dts_tpk_modo_nome(int m) { (void)m; return ""; }
-const char *dts_tpk_corpo_nome(int c) { (void)c; return ""; }
-int dts_tpk_abrir(const char *u, const char *h, int t, int s, int m, int c, double i, char *o, size_t n) {
-  (void)u; (void)h; (void)t; (void)s; (void)m; (void)c; (void)i; if (o && n) o[0] = 0; return 0;
+int dts_tpk_abrir(const char *u, const char *h, int t, int s, int m, double i, char *o, size_t n) {
+  (void)u; (void)h; (void)t; (void)s; (void)m; (void)i; if (o && n) o[0] = 0; return 0;
 }
 int dts_tpk_url_em(double s, char *o, size_t n) { (void)s; if (o && n) o[0] = 0; return 0; }
 void dts_tpk_fechar(void) {}
@@ -69,17 +65,12 @@ int dts_tpk_registro_rede(char *u, size_t n) { (void)u; if (n) u[0] = 0; return 
 #endif
 
 #define SEG_ALVO_S       6.0           /* HLS: keyframes grouped to >= 6 s */
-#define LEN_ALVO_BYTES   (32.0 * 1048576.0)  /* Content-Length: segment kept in RAM */
-#define LEN_TETO         (160u << 20)  /* a Content-Length segment never grows past this */
 #define ESPERA_SONDA_MS  30000
 #define ESPERA_GERADOR_MS 30000
 #define GERADORES        2             /* array size; the tuning test may use 1 */
 
-static const char *const MODO_NOME[DTSTPK_MODOS] = {
-  "HLS 127.0.0.1", "progressive TS", "progressive MKV", "progressive MP4", "HLS LAN IP", "off" };
-static const char *const CORPO_NOME[DTSTPK_CORPOS] = { "chunked", "content-length", "close" };
+static const char *const MODO_NOME[DTSTPK_MODOS] = { "HLS", "continuous TS", "off" };
 const char *dts_tpk_modo_nome(int m) { return m >= 0 && m < DTSTPK_MODOS ? MODO_NOME[m] : "?"; }
-const char *dts_tpk_corpo_nome(int c) { return c >= 0 && c < DTSTPK_CORPOS ? CORPO_NOME[c] : "?"; }
 
 // --- TEMPORARY tuning test ----------------------------------------------------
 // Knobs the owner compares on each TV with the memory line below, set from the
@@ -412,7 +403,7 @@ typedef struct Sessao {
   unsigned id;
   char token[12];
   char *url, *cabs;
-  int track, stereo, modo, corpo;
+  int track, stereo, modo;
   volatile int cancelar;
   pthread_mutex_t m;
   pthread_cond_t c;
@@ -425,8 +416,6 @@ typedef struct Sessao {
   Gerador ger[GERADORES];
   unsigned uso;
   double inicioStream;            // progressivo: keyframe do fluxo em curso
-  // Content-Length: o ultimo segmento fica na memoria para o Range
-  int cacheSeg; unsigned char *cache; size_t cacheN;
   // resumo
   unsigned nPedidos, nSegs, nContinuou, nBuscou, nErros;
   int64_t bytes;
@@ -447,7 +436,7 @@ static int sockLo = -1, portaLo;
 static void sessaoDestruir(Sessao *s) {
   for (int i = 0; i < GERADORES; i++) dts_remux_gen_free(s->ger[i].g);
   dts_remux_close(s->rx);
-  free(s->cache); free(s->url); free(s->cabs);
+  free(s->url); free(s->cabs);
   pthread_cond_destroy(&s->c); pthread_mutex_destroy(&s->m);
   free(s);
 }
@@ -497,18 +486,11 @@ static void *fioSonda(void *u) {
   }
   if (!rx && !err[0]) snprintf(err, sizeof err, "Out of memory");
   const DtsRemuxInfo *in = rx ? dts_remux_info(rx) : NULL;
-  if (rx && s->corpo == DTSTPK_CORPO_LENGTH && in->size_bytes > 0 && in->duration_s > 1.0) {
-    // O segmento inteiro fica na memoria antes de sair: alvo de ~32 MB.
-    double bps = in->size_bytes / in->duration_s, alvo = LEN_ALVO_BYTES / bps;
-    if (alvo < 2.0) alvo = 2.0;
-    if (alvo > SEG_ALVO_S) alvo = SEG_ALVO_S;
-    dts_remux_resegment(rx, alvo);
-  }
   pthread_mutex_lock(&s->m);
   s->rxSonda = NULL;
   if (s->cancelar) { if (rx) dts_remux_close(rx); rx = NULL; s->estado = DTSTPK_FALHOU; snprintf(s->erro, sizeof s->erro, "cancelled"); }
   else if (!rx) { s->estado = DTSTPK_FALHOU; snprintf(s->erro, sizeof s->erro, "%s", err[0] ? err : "probe failed"); }
-  else if ((s->modo == DTSTPK_HLS || s->modo == DTSTPK_HLS_LAN) && (in->n_segments < 1 || !in->index_complete)) {
+  else if (s->modo == DTSTPK_HLS && (in->n_segments < 1 || !in->index_complete)) {
     // HLS precisa do indice inteiro (a playlist sai dele): sem Cues nao ha HLS.
     // video_tpk.c refaz no TS continuo, que busca por tempo.
     s->estado = DTSTPK_FALHOU; s->semIndice = 1;
@@ -652,101 +634,36 @@ static void soltarGerador(Sessao *s, Gerador *g) {
 
 // --- saida de um run ------------------------------------------------------------
 typedef struct {
-  int sock, corpo, manter, cabEnviado, status;
+  int sock, manter, cabEnviado, status;
   const char *tipo;
   Sessao *s;
   Gerador *ger;
   int64_t bytes;
   uint64_t t0, primeiroByte;
-  unsigned char *mem; size_t memN, memCap; int estourou;
 } Saida;
 
 static int enviarCab(Saida *o) {
   char cab[400];
-  if (o->corpo == DTSTPK_CORPO_CHUNKED)
-    snprintf(cab, sizeof cab, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nTransfer-Encoding: chunked\r\n"
-             "Cache-Control: no-cache\r\nConnection: %s\r\n\r\n", o->tipo, o->manter ? "keep-alive" : "close");
-  else
-    snprintf(cab, sizeof cab, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nCache-Control: no-cache\r\nConnection: close\r\n\r\n", o->tipo);
+  snprintf(cab, sizeof cab, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nTransfer-Encoding: chunked\r\n"
+           "Cache-Control: no-cache\r\nConnection: %s\r\n\r\n", o->tipo, o->manter ? "keep-alive" : "close");
   o->cabEnviado = 1; o->status = 200;
   return enviarTudo(o->sock, cab, strlen(cab), &o->s->cancelar, &o->ger->parar);
 }
 
 static int saidaEscrever(void *u, const unsigned char *d, int n) {
   Saida *o = u;
+  char tam[16];
+  int k;
   if (!o->primeiroByte) o->primeiroByte = agoraMs();
-  if (o->corpo == DTSTPK_CORPO_LENGTH) {
-    if (o->memN + (size_t)n > o->memCap) {
-      size_t cap = o->memCap ? o->memCap * 2 : (8u << 20);
-      while (cap < o->memN + (size_t)n) cap *= 2;
-      if (cap > LEN_TETO) { o->estourou = 1; return -1; }
-      unsigned char *m = realloc(o->mem, cap);
-      if (!m) { o->estourou = 1; return -1; }
-      o->mem = m; o->memCap = cap;
-    }
-    memcpy(o->mem + o->memN, d, (size_t)n); o->memN += (size_t)n;
-    return n;
-  }
   if (!o->cabEnviado && !enviarCab(o)) return -1;
-  if (o->corpo == DTSTPK_CORPO_CHUNKED) {
-    char tam[16];
-    int k = snprintf(tam, sizeof tam, "%x\r\n", (unsigned)n);
-    if (!enviarTudo(o->sock, tam, (size_t)k, &o->s->cancelar, &o->ger->parar) ||
-        !enviarTudo(o->sock, d, (size_t)n, &o->s->cancelar, &o->ger->parar) ||
-        !enviarTudo(o->sock, "\r\n", 2, &o->s->cancelar, &o->ger->parar)) return -1;
-  } else if (!enviarTudo(o->sock, d, (size_t)n, &o->s->cancelar, &o->ger->parar)) return -1;
+  k = snprintf(tam, sizeof tam, "%x\r\n", (unsigned)n);
+  if (!enviarTudo(o->sock, tam, (size_t)k, &o->s->cancelar, &o->ger->parar) ||
+      !enviarTudo(o->sock, d, (size_t)n, &o->s->cancelar, &o->ger->parar) ||
+      !enviarTudo(o->sock, "\r\n", 2, &o->s->cancelar, &o->ger->parar)) return -1;
   o->bytes += n;
   return n;
 }
 
-// Range "bytes=a-b" / "bytes=a-" of a body of n bytes (review blocker 4).
-// 0: none or not understood (whole body, 200; a suffix "bytes=-k" or several
-// ranges included); 1: [*ini, *fim] (206); -1: not satisfiable (416), the
-// start past the end or the END BEFORE THE START ("bytes=8-0" used to send
-// fim - ini + 1 wrapped around: memory past the segment).
-static int faixa(const char *range, size_t n, size_t *ini, size_t *fim) {
-  const char *p = range;
-  unsigned long long a = 0, z = 0;
-  int temZ = 0;
-  if (strncmp(p, "bytes=", 6)) return 0;
-  p += 6;
-  if (*p < '0' || *p > '9') return 0;                  // "bytes=-k" (suffix) or junk
-  while (*p >= '0' && *p <= '9') { if (a > (~0ULL - 9) / 10) return -1; a = a * 10 + (unsigned)(*p++ - '0'); }
-  if (*p++ != '-') return 0;
-  while (*p >= '0' && *p <= '9') { if (z > (~0ULL - 9) / 10) z = ~0ULL; else z = z * 10 + (unsigned)(*p - '0'); p++; temZ = 1; }
-  while (*p == ' ' || *p == '\t') p++;
-  if (*p) return 0;                                     // several ranges or junk: whole body
-  if (!temZ) z = n ? n - 1 : 0;
-  if (a >= n || z < a) return -1;
-  *ini = (size_t)a;
-  *fim = z >= n ? n - 1 : (size_t)z;
-  return 1;
-}
-
-// Corpo da memoria (Content-Length), com Range "bytes=a-b" / "bytes=a-".
-static void enviarMemoria(int sock, Sessao *s, const char *tipo, const unsigned char *b, size_t n,
-                          const char *range, int manter, int *status, int64_t *enviados) {
-  char cab[400];
-  size_t ini = 0, fim = n ? n - 1 : 0;
-  int parcial = faixa(range, n, &ini, &fim);
-  if (parcial < 0) {
-    snprintf(cab, sizeof cab, "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */%zu\r\n"
-             "Content-Length: 0\r\nConnection: %s\r\n\r\n", n, manter ? "keep-alive" : "close");
-    enviarTudo(sock, cab, strlen(cab), &s->cancelar, NULL);
-    *status = 416; return;
-  }
-  if (!parcial) { ini = 0; fim = n ? n - 1 : 0; }
-  if (parcial)
-    snprintf(cab, sizeof cab, "HTTP/1.1 206 Partial Content\r\nContent-Type: %s\r\nContent-Length: %zu\r\n"
-             "Content-Range: bytes %zu-%zu/%zu\r\nAccept-Ranges: bytes\r\nCache-Control: no-cache\r\nConnection: %s\r\n\r\n",
-             tipo, fim - ini + 1, ini, fim, n, manter ? "keep-alive" : "close");
-  else
-    snprintf(cab, sizeof cab, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %zu\r\nAccept-Ranges: bytes\r\n"
-             "Cache-Control: no-cache\r\nConnection: %s\r\n\r\n", tipo, n, manter ? "keep-alive" : "close");
-  *status = parcial ? 206 : 200;
-  if (enviarTudo(sock, cab, strlen(cab), &s->cancelar, NULL) && n && enviarTudo(sock, b + ini, fim - ini + 1, &s->cancelar, NULL))
-    *enviados = (int64_t)(fim - ini + 1);
-}
 
 // Um segmento (seg >= 0) ou o fluxo progressivo (seg < 0, a partir de `t`).
 // Devolve se a conexao pode seguir aberta.
@@ -757,30 +674,7 @@ static int servirFluxo(int sock, Sessao *s, const Pedido *pd, unsigned nr, int s
   uint64_t t0 = agoraMs();
   DtsRemuxStats st;
   Saida o;
-  int corpo = s->corpo;
-  if (seg < 0 && corpo == DTSTPK_CORPO_LENGTH) corpo = DTSTPK_CORPO_CLOSE;   // fluxo sem fim nao tem tamanho
-  if (corpo == DTSTPK_CORPO_CLOSE) manter = 0;
   memset(&st, 0, sizeof st);
-  // Content-Length: o mesmo segmento de novo (Range de retomada) sai da memoria.
-  if (seg >= 0 && corpo == DTSTPK_CORPO_LENGTH) {
-    pthread_mutex_lock(&s->m);
-    if (s->cache && s->cacheSeg == seg) {
-      unsigned char *b = s->cache; size_t n = s->cacheN;
-      s->cache = NULL;                     // emprestado: volta depois de enviar
-      pthread_mutex_unlock(&s->m);
-      int status = 0; int64_t env = 0;
-      if (!pd->head) enviarMemoria(sock, s, tipo, b, n, pd->range, manter, &status, &env);
-      pthread_mutex_lock(&s->m);
-      if (!s->cache) { s->cache = b; s->cacheN = n; s->cacheSeg = seg; } else free(b);
-      s->bytes += env;
-      pthread_mutex_unlock(&s->m);
-      printf("[dts-tpk] #%u <- %d seg%d da memoria: %lld B em %u ms\n", nr, status, seg, (long long)env,
-             (unsigned)(agoraMs() - t0));
-      fflush(stdout);
-      return manter;
-    }
-    pthread_mutex_unlock(&s->m);
-  }
   if (pd->head) {
     // HEAD: so o cabecalho; o tamanho de um segmento nao existe antes de gera-lo.
     char cab[300];
@@ -816,31 +710,23 @@ static int servirFluxo(int sock, Sessao *s, const Pedido *pd, unsigned nr, int s
     pthread_mutex_lock(&s->m); s->inicioStream = dts_remux_keyframe_before(s->rx, t); pthread_mutex_unlock(&s->m);
   }
   memset(&o, 0, sizeof o);
-  o.sock = sock; o.corpo = corpo; o.manter = manter; o.tipo = tipo; o.s = s; o.ger = ger; o.t0 = t0;
-  if (pd->range[0] && strncmp(pd->range, "bytes=0-", 8) && corpo != DTSTPK_CORPO_LENGTH)
-    printf("[dts-tpk] #%u: Range %s ignorado (corpo %s gera do inicio)\n", nr, pd->range, CORPO_NOME[corpo]);
+  o.sock = sock; o.manter = manter; o.tipo = tipo; o.s = s; o.ger = ger; o.t0 = t0;
+  if (pd->range[0] && strncmp(pd->range, "bytes=0-", 8))
+    printf("[dts-tpk] #%u: Range ignorado (gera do inicio, 200 inteiro)\n", nr);
   rr = dts_remux_gen_run(ger->g, seg, t, fmt, saidaEscrever, &o, &ger->parar, &st, err, sizeof err);
   soltarGerador(s, ger);
-  int status = o.status, ok = rr == 0 && !o.estourou;
+  int status = o.status, ok = rr == 0;
   int64_t enviados = o.bytes;
-  if (ok && corpo == DTSTPK_CORPO_LENGTH) {
-    enviarMemoria(sock, s, tipo, o.mem, o.memN, pd->range, manter, &status, &enviados);
-    pthread_mutex_lock(&s->m);
-    free(s->cache); s->cache = o.mem; s->cacheN = o.memN; s->cacheSeg = seg; o.mem = NULL;
-    pthread_mutex_unlock(&s->m);
-  } else if (ok && corpo == DTSTPK_CORPO_CHUNKED) {
+  if (ok) {
     if (!o.cabEnviado) enviarCab(&o);
     if (!enviarTudo(sock, "0\r\n\r\n", 5, &s->cancelar, NULL)) manter = 0;
-  } else if (ok && !o.cabEnviado) enviarCab(&o);
-  if (!ok) {
+  } else {
     if (!o.cabEnviado && rr != -2) {
-      responderSimples(sock, o.estourou ? 507 : 500, o.estourou ? "Insufficient Storage" : "Internal Server Error",
-                       NULL, "conversion failed\n", 0);
-      status = o.estourou ? 507 : 500;
+      responderSimples(sock, 500, "Internal Server Error", NULL, "conversion failed\n", 0);
+      status = 500;
     }
     manter = 0;
   }
-  free(o.mem);
   pthread_mutex_lock(&s->m);
   s->bytes += enviados;
   if (seg >= 0 && ok) { s->nSegs++; if (!st.fresh) s->nContinuou++; else s->nBuscou++; }
@@ -970,12 +856,10 @@ static int atenderPedido(int sock, const Pedido *pd, int manter) {
       fflush(stdout);
       r = manter;
     } else r = servirFluxo(sock, s, pd, nr, k, 0, "mpegts", "video/mp2t", manter);
-  } else if (!strncmp(resto, "prog.", 5)) {
-    const char *e = resto + 5, *fmt = !strcmp(e, "mkv") ? "matroska" : !strcmp(e, "mp4") ? "mp4" : "mpegts";
-    const char *tipo = !strcmp(e, "mkv") ? "video/x-matroska" : !strcmp(e, "mp4") ? "video/mp4" : "video/mp2t";
+  } else if (!strcmp(resto, "prog.ts")) {
     const char *q = strstr(pd->query, "t=");
     double t = q ? atof(q + 2) : 0.0;
-    r = servirFluxo(sock, s, pd, nr, -1, t, fmt, tipo, manter);
+    r = servirFluxo(sock, s, pd, nr, -1, t, "mpegts", "video/mp2t", manter);
   } else {
     responderSimples(sock, 404, "Not Found", NULL, "", manter);
     r = manter;
@@ -1176,26 +1060,22 @@ static int urlDe(Sessao *s, double t, char *out, size_t n) {
   const char *host = "127.0.0.1";
   int porta = portaLo;
   switch (s->modo) {
-    case DTSTPK_HLS: case DTSTPK_HLS_LAN:
+    case DTSTPK_HLS:
       snprintf(out, n, "http://%s:%d/%s/m.m3u8", host, porta, s->token); break;
     default: {
       long ms = lround((t > 0 ? t : 0) * 1000.0);
-      snprintf(out, n, "http://%s:%d/%s/prog.%s?t=%ld.%03ld", host, porta, s->token,
-               s->modo == DTSTPK_PROG_MKV ? "mkv" : s->modo == DTSTPK_PROG_MP4 ? "mp4" : "ts", ms / 1000, ms % 1000);
+      snprintf(out, n, "http://%s:%d/%s/prog.ts?t=%ld.%03ld", host, porta, s->token, ms / 1000, ms % 1000);
     }
   }
   return 1;
 }
 
-int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, int modo, int corpo,
+int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, int modo,
                   double inicio, char *out, size_t n) {
   Sessao *s;
   pthread_t t;
   if (out && n) out[0] = 0;
-  // The LAN-address test mode is gone (review blocker 3): HLS on 127.0.0.1.
-  if (modo == DTSTPK_HLS_LAN) modo = DTSTPK_HLS;
   if (!url || !*url || !out || n < 64 || modo < 0 || modo >= DTSTPK_DESLIGADO || !dts_remux_available()) return 0;
-  if (corpo < 0 || corpo >= DTSTPK_CORPOS) corpo = DTSTPK_CORPO_CHUNKED;
   pthread_mutex_lock(&G);
   encerrarAtual();
   if (!subir()) {
@@ -1216,8 +1096,8 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
   s->id = ++contador;
   gerarToken(s->token, 8);
   s->url = strdup(url); s->cabs = strdup(headers ? headers : "");
-  s->track = track; s->stereo = stereo; s->modo = modo; s->corpo = corpo;
-  s->estado = DTSTPK_SONDANDO; s->cacheSeg = -1; s->inicioStream = -1;
+  s->track = track; s->stereo = stereo; s->modo = modo;
+  s->estado = DTSTPK_SONDANDO; s->inicioStream = -1;
   s->criadaMs = agoraMs();
   s->aj = ajuste; s->nGer = ajuste.gens; s->inicio = inicio > 0 ? inicio : 0;
   memInicio(s);
@@ -1233,8 +1113,8 @@ int dts_tpk_abrir(const char *url, const char *headers, int track, int stereo, i
   pthread_mutex_unlock(&G);
   { char aj[96];
     ajusteTexto(&s->aj, aj, sizeof aj);
-    printf("[dts-tpk] sessao %u: modo %s, corpo %s, endereco %s, audio %d do arquivo, saida %s; player abre %s; tuning: %s\n",
-           s->id, MODO_NOME[modo], CORPO_NOME[corpo], "127.0.0.1", track, stereo ? "AAC 2.0" : "AC3",
+    printf("[dts-tpk] sessao %u: %s em 127.0.0.1, audio %d do arquivo, saida %s; player abre %s; tuning: %s\n",
+           s->id, MODO_NOME[modo], track, stereo ? "AAC 2.0" : "AC3",
            strstr(out, ".m3u8") ? "a playlist HLS" : "o fluxo progressivo", aj); }
   fflush(stdout);
   return 1;

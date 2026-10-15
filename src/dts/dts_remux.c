@@ -52,7 +52,6 @@ double dts_remux_segment_start(const DtsRemux *r, int s) { (void)r; (void)s; ret
 double dts_remux_segment_duration(const DtsRemux *r, int s) { (void)r; (void)s; return 0; }
 int dts_remux_segment_at(const DtsRemux *r, double t) { (void)r; (void)t; return -1; }
 double dts_remux_keyframe_before(const DtsRemux *r, double t) { (void)r; return t; }
-void dts_remux_resegment(DtsRemux *r, double t) { (void)r; (void)t; }
 void dts_remux_cancel(DtsRemux *r) { (void)r; }
 void dts_remux_close(DtsRemux *r) { (void)r; }
 DtsRemuxGen *dts_remux_gen_new(DtsRemux *r, char *err, size_t n) {
@@ -569,14 +568,6 @@ double dts_remux_keyframe_before(const DtsRemux *r, double t) {
   int k = floorIdx(r->kf, r->nkf, want);
   double s = (k >= 0 ? r->kf[k] : r->kf[0]) * av_q2d(r->vtb);
   return s < 0 ? 0 : s;
-}
-
-void dts_remux_resegment(DtsRemux *r, double target) {
-  if (!r || r->nkf < 1) return;
-  free(r->segTs); free(r->segB48); free(r->segS);
-  r->segTs = r->segB48 = NULL; r->segS = NULL;
-  buildSegments(r, target > 0.5 ? target : 6.0);
-  r->info.n_segments = r->nseg;
 }
 
 void dts_remux_cancel(DtsRemux *r) {

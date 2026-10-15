@@ -240,7 +240,7 @@
   1, /* also in Continue watching (2.0.2): Desligado (V_LIGA: 1 = Desligado) = one title, one place */
   0, /* continue on the profile picker (#303): Ligado (V_LIGA: 0 = Ligado) = as before */
 #ifdef NV_TPK
-  1, /* DTS converted to: 5.1 (Dolby Digital) on the Samsung .tpk (design rule 3) */
+  1, /* DTS/TrueHD on the Samsung .tpk: 5.1 (Dolby Digital) (0 = off, 2 = stereo AAC) */
 #else
   0, /* DTS converted to: Estereo (AAC) = the proven path */
 #endif
@@ -269,6 +269,4 @@
   1, /* auto-skip credits, only with a real start+end marker: Desligado */
   5, /* owner decision #256: configurable countdown in seconds */
   0, /* interface mode: TV, including on phones until Mobile is selected */
-  0, /* DTS delivery (.tpk): HLS; an MKV without Cues switches to the continuous TS by itself */
-  0, /* DTS test HTTP body (.tpk): chunked */
   0, /* app log on the LAN (.tpk): action */

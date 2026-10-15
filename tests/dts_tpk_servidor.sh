@@ -83,7 +83,7 @@ check "queue: the converter stayed under 100 MB RSS ($(sed -n 's/.*app RSS peak 
 "$work/test" "$port" escuta "$work" > "$work/t5.log" 2>&1 || fail=1
 grep -E '^(ok|FAIL|skip)' "$work/t5.log"
 
-# 6. Range on a Content-Length segment: inverted ranges get 416 (blocker 4).
+# 6. Range is ignored: chunked bodies only (blocker 4: inverted ranges).
 "$work/test" "$port" faixa "$work" > "$work/t6.log" 2>&1 || fail=1
 grep -E '^(ok|FAIL)' "$work/t6.log"
 

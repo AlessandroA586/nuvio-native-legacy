@@ -139,7 +139,7 @@ static int partes(const char *url, int *porta, char *pref, size_t n) {
 static int abrirHls(int origem, const char *arq, double inicio, int *porta, char *pref, size_t n) {
   char fonte[200], url[300];
   snprintf(fonte, sizeof fonte, "http://127.0.0.1:%d/%s", origem, arq);
-  if (!dts_tpk_abrir(fonte, "", -1, 0, DTSTPK_HLS, DTSTPK_CORPO_CHUNKED, inicio, url, sizeof url)) return 0;
+  if (!dts_tpk_abrir(fonte, "", -1, 0, DTSTPK_HLS, inicio, url, sizeof url)) return 0;
   return partes(url, porta, pref, n);
 }
 
@@ -349,11 +349,6 @@ static void testeEscuta(int origem) {
     CONFERE(s < 0, "the HLS port is closed on this machine's network address %s", ip);
     if (s >= 0) close(s);
   } else printf("skip no network address here\n");
-  { char url[300], fonte[200];   // the old LAN mode opens on 127.0.0.1 now
-    snprintf(fonte, sizeof fonte, "http://127.0.0.1:%d/fx.mkv", origem);
-    CONFERE(dts_tpk_abrir(fonte, "", -1, 0, DTSTPK_HLS_LAN, DTSTPK_CORPO_CHUNKED, 0, url, sizeof url) &&
-            !strncmp(url, "http://127.0.0.1:", 17), "the LAN-address mode is served on 127.0.0.1");
-    partes(url, &porta, pref, sizeof pref); }
   snprintf(bom, sizeof bom, "%sv.m3u8", pref);
   semFios("hls", "127.0.0.1", porta, bom, "/abcdefgh/v.m3u8");
   { char url[128];
@@ -371,37 +366,21 @@ static void testeEscuta(int origem) {
   sleep(1);
 }
 
-// Review blocker 4: Range on a Content-Length segment (served from memory).
+// Review blocker 4 (an inverted Range used to read past a segment in memory):
+// the body is always chunked now and a Range is ignored: the whole segment.
 static void testeFaixa(int origem) {
-  char fonte[200], url[300], pref[64], c[128];
+  char pref[64], c[128];
   int porta;
   Resp r;
-  size_t total = 0;
-  snprintf(fonte, sizeof fonte, "http://127.0.0.1:%d/fx.mkv", origem);
-  CONFERE(dts_tpk_abrir(fonte, "", -1, 0, DTSTPK_HLS, DTSTPK_CORPO_LENGTH, 0, url, sizeof url) &&
-          partes(url, &porta, pref, sizeof pref), "session with Content-Length bodies");
+  size_t total;
+  CONFERE(abrirHls(origem, "fx.mkv", 0, &porta, pref, sizeof pref), "session opens");
   snprintf(c, sizeof c, "%sseg1.ts", pref);
   CONFERE(!pedir(porta, c, NULL, &r) && r.status == 200 && r.n > 1000, "seg1 whole: 200 (%zu B)", r.n);
   total = r.n; free(r.corpo);
-  CONFERE(!pedir(porta, c, "Range: bytes=8-0\r\n", &r) && r.status == 416 && r.n == 0, "bytes=8-0 (end before start): 416 (got %d, %zu B)", r.status, r.n);
+  CONFERE(!pedir(porta, c, "Range: bytes=8-0\r\n", &r) && r.status == 200 && r.n == total &&
+          strstr(r.cab, "Transfer-Encoding: chunked"), "bytes=8-0: 200, the whole segment, chunked (got %d, %zu B)", r.status, r.n);
   free(r.corpo);
-  CONFERE(!pedir(porta, c, "Range: bytes=100-99\r\n", &r) && r.status == 416, "bytes=100-99: 416 (got %d)", r.status);
-  free(r.corpo);
-  CONFERE(!pedir(porta, c, "Range: bytes=10-19\r\n", &r) && r.status == 206 && r.n == 10 &&
-          strstr(r.cab, "Content-Range: bytes 10-19/"), "bytes=10-19: 206, 10 B (got %d, %zu B)", r.status, r.n);
-  free(r.corpo);
-  CONFERE(!pedir(porta, c, "Range: bytes=10-10\r\n", &r) && r.status == 206 && r.n == 1, "bytes=10-10: 206, 1 B (got %d, %zu B)", r.status, r.n);
-  free(r.corpo);
-  CONFERE(!pedir(porta, c, "Range: bytes=100-\r\n", &r) && r.status == 206 && r.n == total - 100, "bytes=100-: 206, the rest (got %d, %zu B)", r.status, r.n);
-  free(r.corpo);
-  snprintf(url, sizeof url, "Range: bytes=%zu-\r\n", total);
-  CONFERE(!pedir(porta, c, url, &r) && r.status == 416, "bytes=<size>-: 416 (got %d)", r.status);
-  free(r.corpo);
-  CONFERE(!pedir(porta, c, "Range: bytes=-5\r\n", &r) && r.status == 200 && r.n == total, "bytes=-5 (suffix, not served as a range): 200 whole (got %d)", r.status);
-  free(r.corpo);
-  CONFERE(!pedir(porta, c, "Range: bytes=5--3\r\n", &r) && r.status == 200 && r.n == total, "bytes=5--3 (junk): 200 whole (got %d)", r.status);
-  free(r.corpo);
-  CONFERE(!pedir(porta, c, "Range: bytes=0-999999999\r\n", &r) && r.status == 206 && r.n == total, "end past the size: 206, clamped (got %d, %zu B)", r.status, r.n);
+  CONFERE(!pedir(porta, c, "Range: bytes=10-19\r\n", &r) && r.status == 200 && r.n == total, "bytes=10-19: 200 whole (got %d, %zu B)", r.status, r.n);
   free(r.corpo);
   dts_tpk_fechar();
   sleep(1);

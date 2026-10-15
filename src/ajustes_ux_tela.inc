@@ -37,8 +37,8 @@ static const Item TELA[] = {
     ROT("Som e vídeo desta TV"),
       OPC(AJ_DTS_AC3),
 #ifdef NV_TPK
-      // Teste da conversao DTS/TrueHD (dts/dts_hls_tpk.h): sai depois da S95C.
-      OPC(AJ_DTS_TPK_MODO), OPC(AJ_DTS_TPK_CORPO), OPC(AJ_DTS_TPK_REDE),
+      // Registro na rede (dts/dts_hls_tpk.h): temporario, sai com o teste de ajuste.
+      OPC(AJ_DTS_TPK_REDE),
 #endif
 #if !defined(NV_TPK) && !defined(NV_ANDROID)
       OPC(AJ_DV_MKV),

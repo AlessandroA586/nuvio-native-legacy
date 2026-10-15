@@ -729,7 +729,7 @@ static int ordinalAudio(int numero) {
 
 // Abre a sessao do conversor (a sonda roda num fio). 0: servidor/FFmpeg indisponivel.
 static int convAbrirSessao(int ordinal, int modo, double pos, char *url, size_t n) {
-  if (dts_tpk_abrir(urlAtual, cabecalhos, ordinal, !ajustes_dts_ac3(), modo, ajustes_dts_tpk_corpo(), pos, url, n))
+  if (dts_tpk_abrir(urlAtual, cabecalhos, ordinal, !ajustes_dts_ac3(), modo, pos, url, n))
     return 1;
   printf("[dts-tpk] conversao nao comecou (servidor/FFmpeg indisponivel); fica o original\n");
   fflush(stdout);
@@ -737,7 +737,7 @@ static int convAbrirSessao(int ordinal, int modo, double pos, char *url, size_t 
   return 0;
 }
 
-static int modoProg(int modo) { return modo == DTSTPK_PROG_TS || modo == DTSTPK_PROG_MKV || modo == DTSTPK_PROG_MP4; }
+static int modoProg(int modo) { return modo == DTSTPK_PROG_TS; }
 
 // Outro player no meio de uma fonte que ja tocou: o app ve um seek ate o
 // convertido mostrar quadro de novo (convBombear solta).
@@ -771,9 +771,9 @@ static int convIniciar(int track, double pos, const char *motivo) {
   int modo = ajustes_dts_tpk_modo();
   const MkvFaixa *m = mkvTrack(track);
   if (!convAbrirSessao(ordinalAudio(track), modo, pos, url, sizeof url)) return 0;
-  printf("[dts-tpk] convertendo a faixa %d do MKV (audio %d; %s %d canais%s%s) a partir de %.1f s, modo %s, corpo %s, saida %s; motivo: %s\n",
+  printf("[dts-tpk] convertendo a faixa %d do MKV (audio %d; %s %d canais%s%s) a partir de %.1f s, modo %s, saida %s; motivo: %s\n",
          track, ordinalAudio(track), m ? m->codec : "?", m ? m->canais : 0, m && m->idioma[0] ? ", " : "", m ? m->idioma : "", pos,
-         nomeModo(modo), dts_tpk_corpo_nome(ajustes_dts_tpk_corpo()), saidaRotulo(m ? m->canais : 6), motivo);
+         nomeModo(modo), saidaRotulo(m ? m->canais : 6), motivo);
   fflush(stdout);
   convTrocar(track, modo, pos, url);
   return 1;
@@ -1074,8 +1074,8 @@ static void convBombear(void) {
       double pos = video_pos();
       snprintf(url, sizeof url, "%s", cv.url);
       if (modoProg(cv.modo)) dts_tpk_url_em(pos, url, sizeof url);
-      printf("[dts-tpk] convertendo o audio da fonte sem cabecalho MKV (%s) a partir de %.1f s, modo %s, corpo %s, saida %s; motivo: %s\n",
-             dts_tpk_caminho(), pos, nomeModo(cv.modo), dts_tpk_corpo_nome(ajustes_dts_tpk_corpo()), saidaRotulo(6),
+      printf("[dts-tpk] convertendo o audio da fonte sem cabecalho MKV (%s) a partir de %.1f s, modo %s, saida %s; motivo: %s\n",
+             dts_tpk_caminho(), pos, nomeModo(cv.modo), saidaRotulo(6),
              cv.naoSup ? "a TV acusou NotSupportedAudioCodec" : "a TV nao listou audio");
       fflush(stdout);
       convTrocar(0, cv.modo, pos, url);

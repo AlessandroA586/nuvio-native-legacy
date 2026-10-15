@@ -548,7 +548,7 @@ typedef enum {
   // DTS/TrueHD -> Dolby Digital no .tpk (dts/dts_hls_tpk.h): linhas de TESTE da
   // entrega ao player da Samsung, e o registro do app na rede (sem sdb shell na
   // TV de varejo). So no .tpk, avancadas. LOCAIS. No fim: posicionais.
-  AJ_DTS_TPK_MODO, AJ_DTS_TPK_CORPO, AJ_DTS_TPK_REDE,
+  AJ_DTS_TPK_REDE,
   AJ_N
 } OpcaoId;
 
@@ -597,11 +597,17 @@ static const char *V_LAYOUT_AJUSTES[] = { "Painel", "Lista" };   // #339
 static const char *V_DESCANSO_FONTE[]  = { "Catálogo", "Minha lista e Continuar" };
 static const char *V_BRILHO_PLAYER[] = { "100%", "80%", "65%", "50%" };
 // #202: 0 = o ultimo modo usado (comportamento de sempre); 1..8 = PlrAspecto + 1.
+// LG: como o DTS convertido sai. .tpk: a mesma linha liga a conversao de
+// DTS/TrueHD e escolhe a saida (gravada em dtsTpkLocal; 1 = 5.1 nos dois, que
+// e o que ajustes_dts_ac3 le). O dtsSaidaLocal e o dtsTpkModoLocal de antes
+// migram na leitura (ver dtsTpkMigrar).
+#ifdef NV_TPK
+static const char *V_DTS_SAIDA[] = { "Desligado", "5.1 (Dolby Digital)", "Estéreo (AAC)" };
+#define N_DTS_SAIDA 3
+#else
 static const char *V_DTS_SAIDA[] = { "Estéreo (AAC)", "5.1 (Dolby Digital)" };
-// Indices = DTSTPK_* e DTSTPK_CORPO_* (dts/dts_hls_tpk.h): o gravado e o indice.
-static const char *V_DTS_TPK_MODO[] = { "HLS em 127.0.0.1", "TS contínuo", "MKV contínuo", "MP4 contínuo",
-                                        "HLS no IP da rede", "Desligado" };
-static const char *V_DTS_TPK_CORPO[] = { "Em pedaços (chunked)", "Com tamanho (Content-Length)", "Fechar ao terminar" };
+#define N_DTS_SAIDA 2
+#endif
 static const char *V_PROPORCAO[] = { "Último usado", "Original", "Recortar", "Esticar", "Zoom leve", "Zoom cinema", "Zoom ultra", "Ajustar altura", "Ajustar largura" };
 static const char *V_LOGO_APP[] = { "Novo", "Clássico" };
 static const char *V_BUSCA_NUVIO[] = { "Primeiro", "Por último", "Desligado" };
@@ -1388,7 +1394,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Proporção padrão",                V_PROPORCAO, 9),        // local: proporcaoPadraoLocal
   ESC("Também em Continuar assistindo",  V_LIGA, 2),             // local: cwRetidoTambemLocal
   ESC("Continuar na escolha de perfil",  V_LIGA, 2),             // local: psContinuarLocal
-  ESC("DTS convertido em",               V_DTS_SAIDA, 2),        // local: dtsSaidaLocal
+  ESC("DTS convertido em",               V_DTS_SAIDA, N_DTS_SAIDA), // local: dtsSaidaLocal (.tpk: dtsTpkLocal)
   ESC("Dolby Vision em MKV (experimental)", V_LIGA, 2),          // local: dvMkvLocal
   ESC("Enviar histórico para a conta Nuvio", V_LIGA, 2),          // por perfil: histContaLocal
   ESC("Recursos sociais",                V_LIGA, 2),             // por perfil: socialLocal
@@ -1417,8 +1423,6 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Pular os créditos automaticamente", V_LIGA, 2),   // local: pularCreditosLocal
   NUM("Contagem do próximo episódio", 1, 60, 1, "s"),
   ESC("Modo da interface", V_INTERFACE_MODO, 2),
-  ESC("Teste de entrega do DTS (Samsung)", V_DTS_TPK_MODO, 6),          // local: dtsTpkModoLocal
-  ESC("Teste do envio HTTP do DTS", V_DTS_TPK_CORPO, 3),               // local: dtsTpkCorpoLocal
   ACAO("Registro do app na rede"),                                     // dts_hls_tpk.c, sem valor
 };
 
@@ -1633,7 +1637,11 @@ static const char *CHAVE[] = {
   "proporcaoPadraoLocal",
   "cwRetidoTambemLocal",
   "psContinuarLocal",
+#ifdef NV_TPK
+  "dtsTpkLocal",   // Desligado / 5.1 / Estereo: outro significado que o dtsSaidaLocal da LG
+#else
   "dtsSaidaLocal",
+#endif
   "dvMkvLocal",
   "histContaLocal",
   "socialLocal",
@@ -1660,8 +1668,6 @@ static const char *CHAVE[] = {
   "pularCreditosLocal",
   "proximoContagemLocal",
   "interfaceModoLocal",
-  "dtsTpkModoLocal",
-  "dtsTpkCorpoLocal",
   "registroRedeLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
@@ -2554,6 +2560,19 @@ int  ajustes_trailer_cartaz(void) {
 // do destaque). Ligado com a dependencia de entao desligada (cartaz em pe sem
 // Expandir) nao tocava nada: continua sem tocar. Chamar com o arquivo inteiro
 // lido (expandir e cartaz deitado podem vir depois da chave velha).
+#ifdef NV_TPK
+// A conversao de DTS/TrueHD do .tpk virou UMA linha (Desligado / 5.1 /
+// Estereo, dtsTpkLocal). Antes eram duas: "DTS convertido em" (dtsSaidaLocal:
+// 0 = Estereo, 1 = 5.1) e o teste de entrega (dtsTpkModoLocal: 5 = Desligado,
+// os outros = algum modo ligado). Desligado continua desligado; senao a saida
+// de antes; sem nada, o padrao (5.1).
+static int dtsTpkMigrar(int modoAntigo, int saidaAntiga) {
+  if (modoAntigo == 5) return 0;
+  if (saidaAntiga == 0) return 2;
+  return 1;
+}
+#endif
+
 static int focoTrailerMigrar(int antigo) {
   if (antigo != 0) return AJ_TRAILER_CARTAZ_DESLIGADO;
   return (lig(AJ_EXPANDIR) || valor[AJ_LANDSCAPE] == 0) ? AJ_TRAILER_CARTAZ_CHEIA
@@ -2586,13 +2605,13 @@ int ajustes_cw_ordem(void)            { return valor[AJ_CW_ORDEM]; }
 int ajustes_cw_retido_tambem(void)    { return lig(AJ_CW_RETIDO_TAMBEM); }
 int ajustes_ps_continuar(void)        { return lig(AJ_PS_CONTINUAR); }
 int ajustes_dts_ac3(void)             { return valor[AJ_DTS_AC3] == 1; }
+// .tpk: HLS (o TS continuo e so a troca automatica de video_tpk.c) ou desligado.
 int ajustes_dts_tpk_modo(void) {
-  int v = valor[AJ_DTS_TPK_MODO];
-  return v >= 0 && v < DTSTPK_MODOS ? v : DTSTPK_HLS;
-}
-int ajustes_dts_tpk_corpo(void) {
-  int v = valor[AJ_DTS_TPK_CORPO];
-  return v >= 0 && v < DTSTPK_CORPOS ? v : DTSTPK_CORPO_CHUNKED;
+#ifdef NV_TPK
+  return valor[AJ_DTS_AC3] == 0 ? DTSTPK_DESLIGADO : DTSTPK_HLS;
+#else
+  return DTSTPK_DESLIGADO;
+#endif
 }
 int ajustes_dv_mkv(void)              { return lig(AJ_DV_MKV); }
 int ajustes_hist_conta(void)          { return lig(AJ_HIST_CONTA); }
@@ -3338,6 +3357,7 @@ void ajustes_dir(const char *dir) {
   { int viuIdioma = 0, viuAuto = 0, idiomaGravado = IDIOMA_EN, autoGravado = 0;
     int medidorAntigo = -1, viuMedidor = 0, resAntiga = -1, viuRes = 0, prazoAntigo = -1, viuEspera = 0;
     int focoAntigo = -1, viuFoco = 0;
+    int dtsSaidaAntiga = -1, dtsModoAntigo = -1, viuDtsTpk = 0;
   while (fgets(linha, sizeof linha, f)) {
     char chave[64]; int v, i;
     if (sscanf(linha, "%63s %d", chave, &v) != 2) continue;
@@ -3361,6 +3381,11 @@ void ajustes_dir(const char *dir) {
     if (!strcmp(chave, "fontePrazoLocal")) { prazoAntigo = v; continue; }
     // Trailer do cartaz em foco: era V_LIGA (ver focoTrailerMigrar).
     if (!strcmp(chave, "focusedPosterBackdropTrailerEnabled")) { focoAntigo = v; continue; }
+#ifdef NV_TPK
+    // As duas linhas de DTS de antes (ver dtsTpkMigrar).
+    if (!strcmp(chave, "dtsSaidaLocal")) { dtsSaidaAntiga = v; continue; }
+    if (!strcmp(chave, "dtsTpkModoLocal")) { dtsModoAntigo = v; continue; }
+#endif
     if (!strcmp(chave, "idiomaFonteLocal")) {
       if (v >= IDA_TMDB && v <= IDA_PADRAO) idiomaFonteGravada = v;
       continue;
@@ -3375,6 +3400,7 @@ void ajustes_dir(const char *dir) {
       if (i == AJ_RESOLUCAO) viuRes = 1;
       if (i == AJ_FONTE_PRAZO) viuEspera = 1;
       if (i == AJ_FOCO_TRAILER) viuFoco = 1;
+      if (i == AJ_DTS_AC3) viuDtsTpk = 1;
       break;
     }
   }
@@ -3387,6 +3413,15 @@ void ajustes_dir(const char *dir) {
     static const int DE_PARA[4] = { 1, 2, 3, 6 };   // 3 s, 5 s, 8 s, Todos
     valor[AJ_FONTE_PRAZO] = prazoAntigo < 4 ? DE_PARA[prazoAntigo] : valorPadrao[AJ_FONTE_PRAZO];
   }
+#ifdef NV_TPK
+  if (!viuDtsTpk && (dtsSaidaAntiga >= 0 || dtsModoAntigo >= 0)) {
+    valor[AJ_DTS_AC3] = dtsTpkMigrar(dtsModoAntigo, dtsSaidaAntiga);
+    printf("[ajustes] DTS/TrueHD: dtsSaidaLocal %d + dtsTpkModoLocal %d -> dtsTpkLocal %d\n", dtsSaidaAntiga, dtsModoAntigo,
+           valor[AJ_DTS_AC3]);
+  }
+#else
+  (void)viuDtsTpk; (void)dtsSaidaAntiga; (void)dtsModoAntigo;
+#endif
   if (!viuFoco && focoAntigo >= 0) {
     valor[AJ_FOCO_TRAILER] = focoTrailerMigrar(focoAntigo);
     printf("[ajustes] trailer do cartaz em foco: focusedPosterBackdropTrailerEnabled %d -> trailerCartazModo %d\n",
@@ -4360,7 +4395,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_P2P_LIGADO:     /* o servidor P2P e um aparelho da rede desta casa */
     case AJ_P2P_LIMITE:     /* #334: o disco e desta TV */
     case AJ_JF_LIGADO:
-    case AJ_DTS_TPK_MODO: case AJ_DTS_TPK_CORPO: case AJ_DTS_TPK_REDE: /* teste do player desta TV */
+    case AJ_DTS_TPK_REDE:   /* registro desta TV na rede */
     case AJ_AVANCADAS:      /* so a vista desta TV */
     case AJ_POSTER_PROV:    /* servico e rede desta casa: nao segue a conta */
     case AJ_DET_SO_CINEMETA: /* o web nao tem esta escolha */
@@ -4706,7 +4741,7 @@ static int foraDestaPlataforma(int op) {
   if (op >= AJ_MDB_TRAKT && op <= AJ_MDB_MAL) return 1;
 #ifndef NV_TPK
   if (op == AJ_TRAILER_ZOOM_TPK) return 1;
-  if (op == AJ_DTS_TPK_MODO || op == AJ_DTS_TPK_CORPO || op == AJ_DTS_TPK_REDE) return 1;
+  if (op == AJ_DTS_TPK_REDE) return 1;
 #endif
 #if defined(NV_TPK) || defined(NV_ANDROID)
   if (op == AJ_DV_MKV) return 1;
@@ -5341,8 +5376,6 @@ static int inativa(int op) {
     // #334: so o motor embutido usa o limite; com servidor na rede quem guarda e ele.
     case AJ_P2P_LIMITE:  return !p2pmotor_disponivel() || p2pEndereco[0];
     case AJ_DTS_AC3:     return !dtsConversaoExiste();
-    case AJ_DTS_TPK_MODO: return !dtsConversaoExiste();
-    case AJ_DTS_TPK_CORPO: return !dtsConversaoExiste() || ajustes_dts_tpk_modo() == DTSTPK_DESLIGADO;
     // Som: na Samsung (.wgt) o trailer e sempre mudo (trailerfonte_com_som).
     case AJ_HERO_TRAILER_SOM:
       return !lig(AJ_HERO_TRAILER) || !trailerfonte_com_som(trailerfonte_tizen());
@@ -5816,9 +5849,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_ESPACO_TITULOS: return "O espaço horizontal entre os cartazes de uma fileira da Home.";
     case AJ_TAM_MIN: return "Na escolha automática, fontes menores que este tamanho ficam para o fim da fila. Se for maior que o tamanho máximo, o mínimo é ignorado. Só vale para arquivos com tamanho conhecido; se só houver fontes fora da faixa, a melhor delas ainda toca.";
 #ifdef NV_TPK
-    case AJ_DTS_AC3: return "Esta TV não toca DTS nem TrueHD: o app converte o som na hora. 5.1 (Dolby Digital) mantém o surround para barra de som e receiver; 7.1, Atmos e DTS:X viram 5.1, sem os objetos. Estéreo (AAC) serve qualquer TV. Vale a partir do próximo vídeo.";
-    case AJ_DTS_TPK_MODO: return "Teste da conversão de DTS e TrueHD: como o vídeo convertido chega ao player da TV. Desligado deixa o app como antes. Vale a partir do próximo vídeo.";
-    case AJ_DTS_TPK_CORPO: return "Teste: como o servidor do app envia cada parte do vídeo convertido ao player da TV. Vale a partir do próximo vídeo.";
+    case AJ_DTS_AC3: return "Esta TV não toca DTS nem TrueHD: o app converte o som na hora. 5.1 (Dolby Digital) mantém o surround para barra de som e receiver; 7.1, Atmos e DTS:X viram 5.1, sem os objetos. Estéreo (AAC) serve qualquer TV. Desligado: esses vídeos tocam sem som, como antes. Vale a partir do próximo vídeo.";
     case AJ_DTS_TPK_REDE: return "Mostra o registro do app num computador da mesma rede: aperte OK e abra no navegador o endereço que aparece. Fica ligado até fechar o app.";
 #else
     case AJ_DTS_AC3: return "Como o áudio DTS é entregue à TV quando o app o converte (só na LG). Estéreo (AAC) é o modo provado e serve qualquer TV. 5.1 (Dolby Digital) mantém o som surround para barra de som e receiver por ARC/eARC; vale a partir do próximo vídeo.";
@@ -7775,7 +7806,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_SELOS_PACOTE:
     case AJ_REACAO_CREDITOS: case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PROXIMO_AUTO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_CONTAGEM:
     case AJ_FONTE_PRAZO: case AJ_TAM_MAX: case AJ_TAM_MIN: case AJ_PROPORCAO_PADRAO: case AJ_DTS_AC3:
-    case AJ_DTS_TPK_MODO: case AJ_DTS_TPK_CORPO: case AJ_DTS_TPK_REDE:
+    case AJ_DTS_TPK_REDE:
     case AJ_FONTE_ESCOPO: case AJ_FONTE_ADDONS_PERM: case AJ_FONTE_PLUGINS_PERM: case AJ_FONTE_OUTROS:
     case AJ_FONTE_REGEX: case AJ_FONTE_REGEX_PADRAO: case AJ_FONTE_REGEX_MODELO:
     case AJ_FONTE_ORDEM: case AJ_FONTE_ORDEM_USO:
