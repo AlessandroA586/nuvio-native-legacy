@@ -5770,6 +5770,7 @@ void app_atualizar(float dt, Uint32 agora) {
   novidades201_atualizar(dt, agora);
   novidades202_atualizar(dt, agora);
   novcartao_atualizar(dt, agora);
+  dicascontrole_home_livre(app_home_recebe_teclas(), dt);
   dicascontrole_atualizar(dt, agora);
   telemetria_atualizar(dt, agora);
   recintro_atualizar(dt, agora);
