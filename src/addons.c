@@ -1962,10 +1962,9 @@ static void capacidadesDoManifesto(int i, const char *corpo) {
 // (mesma url + mesma addons_versao()).
 //
 // FIO: continua sendo o fio proprio da sonda (fioSonda). A cache em si e
-// protegida por uma trava dentro de descoberta.c (maniTrava) — as duas
-// funcoes publicas tomam e soltam essa trava sozinhas, entao chamar daqui, de
-// um fio diferente do da descoberta, e seguro por construcao. Nenhuma rede
-// nasce dentro da trava: so memcpy de um buffer pequeno.
+// protegida por uma trava dentro de descoberta.c (maniTrava).
+// Cache calls must stay outside addon locks: discovery takes maniTrava
+// before the addon-list lock. No network runs under the cache lock.
 typedef struct {
   AddonPedido *origens;
   int n;
@@ -1983,14 +1982,16 @@ static void *sondar(void *u) {
     corpo = desc_manifesto_cache_obter(url, pedido->versao);
     if (!corpo) corpo = rede_baixar(url, 12);
     if (corpo && nv_perfil_sessao_travar(pedido->sessao)) {
+      int publicar = 0;
       pthread_mutex_lock(&addonTrava);
       addons_lista_travar();
       if (pedido->versao == versaoLista && i < nAddon && !strcmp(a->base, addon[i].base)) {
         capacidadesDoManifesto(i, corpo);
-        desc_manifesto_cache_guardar(url, pedido->versao, corpo);
+        publicar = 1;
       }
       addons_lista_destravar();
       pthread_mutex_unlock(&addonTrava);
+      if (publicar) desc_manifesto_cache_guardar(url, pedido->versao, corpo);
       nv_perfil_sessao_destravar();
     }
     free(corpo);
