@@ -64,7 +64,8 @@ int dts_tpk_registro_rede(char *u, size_t n) { (void)u; if (n) u[0] = 0; return 
 #define MSG_NOSIGNAL 0
 #endif
 
-#define SEG_ALVO_S       6.0           /* HLS: keyframes grouped to >= 6 s */
+#define SEG_ALVO_S       2.0           /* HLS: keyframes grouped to >= 2 s (TV test, Oct 2026) */
+#define PREBUFFER_MS     1000          /* player prebuffer before it starts (same test) */
 #define ESPERA_SONDA_MS  30000
 #define ESPERA_GERADOR_MS 30000
 #define GERADORES        2             /* array size; the tuning test may use 1 */
@@ -82,11 +83,12 @@ const char *dts_tpk_modo_nome(int m) { return m >= 0 && m < DTSTPK_MODOS ? MODO_
 //   seg0  the HLS segment 0 the player fetches before seeking to a resume
 //         position: 0 as now, 1 playlist starts there (EXT-X-START),
 //         2 segment 0 cut to its first second, 3 both
-//   seg   HLS segment length, s: 2, 3, 4 or 6 (keyframes grouped to >= seg)
-//   pre   player prebuffer before it starts, ms: 0 = the TV decides, else
-//         500..6000 (player_set_streaming_buffering_time in the host)
+//   seg   HLS segment length, s: 2 (default), 3, 4 or 6 (keyframes grouped
+//         to >= seg)
+//   pre   player prebuffer before it starts, ms: 1000 (default), 500..6000,
+//         or 0 = the TV decides (player_set_streaming_buffering_time in the host)
 typedef struct { int ring, gens, seg0, seg, pre; } Ajuste;
-static Ajuste ajuste = { 0, GERADORES, 0, (int)SEG_ALVO_S, 0 };
+static Ajuste ajuste = { 0, GERADORES, 0, (int)SEG_ALVO_S, PREBUFFER_MS };
 static int ajusteLido;
 static const char *const SEG0_NOME[4] = { "normal", "start tag", "short", "start tag + short" };
 
@@ -1257,7 +1259,7 @@ static void servirAjuste(int sock, const char *query) {
            "                        2 segment 0 cut to 1 s on resume, 3 both\n"
            "  %stune?seg=2          HLS segment length, s: 2, 3, 4 or 6\n"
            "  %stune?pre=2000       player prebuffer, ms: 500-6000 (0 = the TV decides)\n"
-           "  %stune?ring=0&gens=2&seg0=0&seg=6&pre=0   back to today's behaviour\n",
+           "  %stune?ring=0&gens=2&seg0=0&seg=2&pre=1000   back to the default\n",
            erro, txt, urlReg, urlReg, urlReg, urlReg, urlReg, urlReg);
   responderSimples(sock, 200, "OK", "text/plain; charset=utf-8", b, 0);
 }

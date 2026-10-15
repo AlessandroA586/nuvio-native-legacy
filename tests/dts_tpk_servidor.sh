@@ -42,7 +42,7 @@ check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 
 # 1. Tuning test from the file: ring 8 MiB, one generator, start tag + short seg0.
 mkdir -p "$work/t1"
-printf 'ring=8 gens=1 seg0=3\n' > "$work/t1/dts-ajuste.txt"
+printf 'ring=8 gens=1 seg0=3 seg=6 pre=0\n' > "$work/t1/dts-ajuste.txt"
 "$work/test" "$port" tuning "$work/t1" > "$work/t1.log" 2>&1 || fail=1
 grep -E '^(ok|FAIL)' "$work/t1.log"
 check "tuning: seg0 cut to about 1 s ($(dur "$work/t1/seg0.ts") s)" "awk 'BEGIN{exit !($(dur "$work/t1/seg0.ts") < 2.0)}'"
@@ -54,13 +54,13 @@ check "tuning: memory line has the tuning, RSS, MemAvailable and the rings" \
   "grep -E '^\[dts-tpk\] mem: sessao [0-9]+, .*ring 8 MiB, 1 generator\(s\), seg0 start tag \+ short, segments 6 s, prebuffer TV; app RSS peak [1-9][0-9]* MB .*MemAvailable low [0-9]+ MB .*reader rings peak 1 = 8 MiB' '$work/t1.log' >/dev/null"
 check "tuning: only one reader ever opened (one generator)" "! grep -q 'own reader opened' '$work/t1.log'"
 
-# 2. No file: today's behaviour (no start tag, whole seg0, ring 32 MiB here).
+# 2. No file: the defaults (no start tag, whole 2 s seg0, 1 s prebuffer, ring 32 MiB here).
 mkdir -p "$work/t2"
 "$work/test" "$port" padrao "$work/t2" > "$work/t2.log" 2>&1 || fail=1
 grep -E '^(ok|FAIL)' "$work/t2.log"
-check "default: seg0 whole ($(dur "$work/t2/seg0.ts") s)" "awk 'BEGIN{exit !($(dur "$work/t2/seg0.ts") > 5.5)}'"
+check "default: seg0 whole, 2 s ($(dur "$work/t2/seg0.ts") s)" "awk 'BEGIN{d=$(dur "$work/t2/seg0.ts"); exit !(d > 1.8 && d < 2.3)}'"
 check "default: memory line with ring auto and 2 generators" \
-  "grep -qE '^\[dts-tpk\] mem: .*ring auto, 2 generator\(s\), seg0 normal, segments 6 s, prebuffer TV; .*reader rings peak [12] = (32|64) MiB' '$work/t2.log'"
+  "grep -qE '^\[dts-tpk\] mem: .*ring auto, 2 generator\(s\), seg0 normal, segments 2 s, prebuffer 1000 ms; .*reader rings peak [12] = (32|64) MiB' '$work/t2.log'"
 check "default: no seg0 cut" "! grep -q 'seg0 cut' '$work/t2.log'"
 
 # 2b. Tuning seg=2 pre=1500: 2 s segments, prebuffer handed to the player.
