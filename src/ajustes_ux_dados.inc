@@ -272,7 +272,7 @@ static const char *uxCaminhoAntigo(int op) {
     case AJ_SELOS_CORES: case AJ_SELOS_PACOTE: case AJ_SELOS_PACOTE_ADD: case AJ_SELOS_PACOTE_REM:
       return "Fontes e addons";   // 2.0.2; desde a 2.0.3 a escolha da fonte mora em Reproducao
     case AJ_BUSCA_CINEMETA: case AJ_BUSCA_NUVIO: case AJ_BUSCA_ORIGEM: return "Busca";
-    case AJ_AVANCADAS: return "Aparência";
+    case AJ_HERO_SINOPSE: case AJ_AVANCADAS: return "Aparência";
     case AJ_IDIOMA: return "Idioma";
     // 2.0.3: Cartazes e arte + Trailers viraram Cartazes e trailers; Desempenho
     // desta TV virou Esta TV; Conta e perfis virou Conta e servicos.

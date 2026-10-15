@@ -442,6 +442,9 @@ int   ajustes_relogio_ligado(void);
 int   ajustes_relogio_pos(void);
 int   ajustes_relogio_12h(void);   // 1 = 12 h com AM/PM (relogio.h)
 // Tamanho da interface: 1, 1.2, 1.3 ou 1.5 (gfx_escala_ui). LOCAL.
+// #477: shared local Normal/Grande setting. Only synopsis typography.
+int ajustes_sinopse_tamanho(void);
+int ajustes_hero_sinopse_grande(void); // Normal (22/30) or Grande (24/32)
 float ajustes_tamanho_ui(void);
 // Settings only: 0.8/0.9/1.0, default 0.9; independent of global UI zoom.
 float ajustes_tamanho_ajustes(void);
