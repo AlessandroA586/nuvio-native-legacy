@@ -135,6 +135,11 @@ static Uint32 legAutoDesde;
 // e a faixa ficava na TV — que corta metade das falas — ate o fim do episodio.
 static int legOverlayFalhas, legOverlayRecusas, legOverlayNoGoEstado;
 static int legOverlayTV, legOverlayColhidos;
+
+int faixas_legenda_overlay(void) {
+  return !legOverlayTV;
+}
+
 static Uint32 legOverlayRetomar;       // 0 = nada agendado
 
 static int ehAss(const VideoFaixa *f) {
