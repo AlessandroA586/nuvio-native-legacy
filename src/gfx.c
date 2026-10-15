@@ -1885,6 +1885,7 @@ static float dinPend[4];
 static void dinDescarregar(void);
 static void dinPintar(float y0);
 static int foscoBloq; // este quadro tem video vivo por baixo (gfx_vidro_fosco_bloquear)
+unsigned gfx_quadro_n;
 // O BACKDROP DO VIDRO (gfx_vidro): um snapshot desfocado em meia resolucao,
 // dividido pelas superficies do quadro e reaproveitado entre quadros enquanto
 // o que foi pintado antes de cada vidro nao muda. vidroHash resume TODO
@@ -1976,6 +1977,7 @@ static void vidroFuro(GfxRect r) {
 }
 static void vidroAplicar(Programa *P, GfxRect r);
 void gfx_novo_quadro(void) {
+  gfx_quadro_n++;
   gfx_n_rect = gfx_n_prog = gfx_n_bind = gfx_n_outros = 0;
   gfx_ms_rect = gfx_ms_outros = 0.0;
   gfx_fill = 0.0; gfx_fill_vis = 0.0; gfx_n_cheio = 0; gfx_n_cheio_mistura = 0;

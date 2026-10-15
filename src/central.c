@@ -62,6 +62,10 @@ static int aberta, editando;
 static int escolhendoCor, focoCor;   // o seletor da cor de destaque (so os 18 fixos)
 static int foco;                // botao em foco; == nBotoes e "Editar atalhos"
 static int focoEd;              // item do catalogo em foco na edicao
+// FOCO E INTERRUPTOR EM MOLA por botao (0..1): o anel nao salta de botao em
+// botao e o realce do atalho liga/desliga em ~120 ms em vez de num quadro.
+static float animFoco[CENTRAL_MAX + 1], animLig[CENTRAL_MAX + 1];
+static void centralPassoFoco(float dt);
 static float rolaEd;            // rolagem da lista de edicao (px)
 static float rolaBotoes, quadroDt;
 #ifdef NV_TOUCH_UI
@@ -137,6 +141,22 @@ static int botoes(int *op, int *item) {
   }
   return n;
 }
+// (ver o comentario nas variaveis, no topo do arquivo)
+static void centralPassoFoco(float dt) {
+  int op[CENTRAL_MAX + 1], item[CENTRAL_MAX + 1], n = botoes(op, item), i;
+  int red = ajustes_animacoes_reduzidas();
+  for (i = 0; i <= n; i++) {
+    float aF = i == foco ? 1.0f : 0.0f, aL = 0.0f;
+    if (i < n) {
+      int lig = ajustes_rapido_ligado(op[i]);
+      if (previa && i == previaInverte && lig >= 0) lig = !lig;
+      aL = lig == 1 ? 1.0f : 0.0f;
+    }
+    // dt<=0 (a previa) pousa no alvo: a cena ja traz o quadro final.
+    animFoco[i] = (red || dt <= 0.0f) ? aF : anim_mola(animFoco[i], aF, dt, NV_MOLA_FOCO);
+    animLig[i] = (red || dt <= 0.0f) ? aL : anim_mola(animLig[i], aL, dt, NV_MOLA_FOCO);
+  }
+}
 // O catalogo oferecido na edicao: so o que este build tem.
 static int ofertas(int *item) {
   int i, n = 0;
@@ -152,6 +172,8 @@ void central_abrir(void) {
   editando = 0;
   escolhendoCor = 0;
   foco = 0;
+  memset(animFoco, 0, sizeof animFoco);   // o foco acende com a abertura da ilha
+  memset(animLig, 0, sizeof animLig);
   rolaBotoes = 0;
 #ifdef NV_TOUCH_UI
   toquerol_limpar(&toqueCentral);
@@ -290,6 +312,7 @@ void central_atualizar(float dt, Uint32 agora) {
   quadroDt = anim_clamp(dt, 0, 0.05f);
   if (!aberta) return;
   carregar();
+  centralPassoFoco(dt);
   if (!player_aberto()) ilha_corpo(CC_W, altura(1), corpo, NULL);
 }
 // No player o pedido vai logo antes de plrilha_desenhar: o ultimo pedido com
@@ -535,17 +558,24 @@ static void cartaoTocando(GfxRect r, const char *tit, const char *meta, float a)
 
 // UM BOTAO: icone em cima, nome curto e, quando nao e interruptor, o valor.
 // Interruptor ligado = botao cheio no acento; foco = superficie clara e anel.
-static void botao(GfxRect r, const char *icone, const char *rot, const char *val, int ligado, int f, float a) {
+// `ligF` (0..1) e `f` (0..1) sao MOLAS: o realce liga/desliga e o anel entra
+// em ~120 ms (NV_MOLA_FOCO), em vez de trocar num quadro. A tinta do TEXTO
+// troca no ponto medio (rasterizado nao recolor por quadro); icone, superficies
+// e anel crossfadezam de verdade.
+static void botao(GfxRect r, const char *icone, const char *rot, const char *val,
+                  int ligado, float ligF, float f, float a) {
   float ar, ag, ab, w = r.w - 24.0f, y;   // 14 a esquerda, 10 a direita
-  int aceso = ligado == 1;
-  int tinta = aceso ? ajustes_tinta_foco() : 243;
-  float ti = (float)tinta / 255.0f;
+  int acesoV = ligado >= 0 ? ligF > 0.5f : 0;
+  int tinta = acesoV ? ajustes_tinta_foco() : 243;
+  float ti = ligado >= 0 ? anim_mistura(243.0f, (float)ajustes_tinta_foco(), ligF) / 255.0f
+                        : (float)tinta / 255.0f;
   TxtLinha l, v;
   ajustes_acento(&ar, &ag, &ab);
-  if (aceso) gfx_cor(r, CC_BOTAO_R / r.h, ar, ag, ab, a);
-  else superficie(r, CC_BOTAO_R, f ? 1.0f : 0.0f, a);
-  if (f) gfx_anel_fora(r, CC_BOTAO_R / r.h, 3.0f, 2.5f, 1, 1, 1, 0.95f * a);
-  gfx_icone((GfxRect){ r.x + 14.0f, r.y + 14.0f, CC_ICONE, CC_ICONE }, icone, ti, ti, ti, (aceso ? 1.0f : 0.88f) * a);
+  if (ligado >= 0 && ligF > 0.005f) gfx_cor(r, CC_BOTAO_R / r.h, ar, ag, ab, a * ligF);
+  if (ligado < 0 || ligF < 0.995f) superficie(r, CC_BOTAO_R, f, a * (1.0f - ligF));
+  if (f > 0.01f) gfx_anel_fora(r, CC_BOTAO_R / r.h, 3.0f, 2.5f, 1, 1, 1, 0.95f * f * a);
+  gfx_icone((GfxRect){ r.x + 14.0f, r.y + 14.0f, CC_ICONE, CC_ICONE }, icone, ti, ti, ti,
+            anim_mistura(0.88f, 1.0f, ligado >= 0 ? ligF : 0.0f) * a);
   // Nome em 16/600; se nao couber (alemao, russo), um degrau menor; sem
   // valor embaixo (interruptor) e com mais de uma palavra, duas linhas em
   // 16/600 ("Choisir la / source"); o corte e o ultimo recurso.
@@ -602,18 +632,18 @@ static void desenhaBotoes(float x, float y, float w, float h, float a) {
     GfxRect r = { x + (float)(i % CC_COLS) * (bw + CC_GAP), y + (float)(i / CC_COLS) * (CC_BOTAO_H + CC_GAP) - scroll,
                   bw, CC_BOTAO_H };
     if (r.y + r.h < y || r.y > y + h) continue;
-    if (i < n && op[i] == CC_OP_ESTAT) botao(r, "aj_gauge", "Estatísticas", "", -1, i == foco, a);
+    if (i < n && op[i] == CC_OP_ESTAT) botao(r, "aj_gauge", "Estatísticas", "", -1, 0.0f, animFoco[i], a);
     else if (i < n) {
       const CentralItem *c = central_catalogo(item[i]);
       int lig = ajustes_rapido_ligado(op[i]);
       if (previa && i == previaInverte && lig >= 0) lig = !lig;
-      botao(r, c->icone, c->curto, ajustes_rapido_valor(op[i]), lig, i == foco, a);
+      botao(r, c->icone, c->curto, ajustes_rapido_valor(op[i]), lig, animLig[i], animFoco[i], a);
       if (op[i] == AJ_RAPIDO_COR) {   // a cor de agora, num ponto no canto
         float cr, cg, cb;
         ajustes_acento_marca(&cr, &cg, &cb);
         gfx_cor((GfxRect){ r.x + r.w - 14.0f - 14.0f, r.y + 16.0f, 14.0f, 14.0f }, 0.5f, cr, cg, cb, a);
       }
-    } else botao(r, "aj_sliders-horizontal", "Editar", "", 0, i == foco, a);
+    } else botao(r, "aj_sliders-horizontal", "Editar", "", 0, 0.0f, animFoco[i], a);
     if (aberta && a > 0.5f && ponteiro_ativo())
       ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, y, y + h, ptFoco, ptOk, i, 0);
   }
@@ -794,6 +824,9 @@ void central_previa_desenhar(float x, float y, float a, int f, int inverte) {
   previaEntrar(&s, e);
   foco = f;
   previaInverte = inverte;
+  // A previa nao passa por central_atualizar, entao as molas ficariam onde
+  // a ultima sessao real as deixou. O demo pede o quadro final (dt=0).
+  centralPassoFoco(0.0f);
   corpo((GfxRect){ x, y, CC_W, altura(1) }, a, NULL);
   previaSair(&s, e);
 }
