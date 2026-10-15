@@ -55,6 +55,7 @@
 #include "proxyts.h"
 #include "livetv_regras.h"
 #include "livestall.h"
+#include "bufavanco.h"
 #include "guialembrete.h"   /* aviso do lembrete de programa do guia */
 #include "epg.h"
 #include "posplay.h"
@@ -2174,7 +2175,11 @@ static void lembrarAutomatica(void) {
     if (base[0]) fontepref_auto_guardar(base, stream_item(at)); }
 }
 static void guardarPosicaoFonteFalha(void) {
-  if (fonteFalha && player_aberto() && !player_quer_sair() &&
+  // GATE e o AUTOMATICO (nao a sessao fonteFalha): o watchdog arma tambem sem
+  // sessao (fonte aberta "enquanto confere", arming que falhou) e a troca
+  // precisa da posicao mesmo nesse caso. limparFonteVOD/iniciarPoliticaFonte
+  // zeram fonteVODAutomatica e fonteFalhaPos juntos a cada reproducao.
+  if (fonteVODAutomatica && player_aberto() && !player_quer_sair() &&
       aguardandoFonte == 0 && video_pronto() && !video_falhou() && !player_fonte_falhou()) {
     double pos = video_pos();
     if (pos >= 0.0 && isfinite(pos)) fonteFalhaPos = pos;
@@ -2195,7 +2200,18 @@ static void tentarProximaFonteVOD(void) {
   // the C9 the 30 s deadline, counted from the first open, swapped a playing
   // film to another source and lost the position.
   else if (aberturaVencida(desde)) motivo = 2;
-  else if (!fonteFalha && video_bufferando_ms() > VOD_FONTE_BUFFER_MS) motivo = 3;
+  else if (!fonteFalha && video_bufferando_ms() > VOD_FONTE_BUFFER_MS) {
+#ifdef NV_ANDROID
+    // Segura a troca so enquanto o fim do buffer ANDA (bufavanco.h), por fonte.
+    // No Android video_buffer_fim() e 0: a borda vem de VideoStats.bufferSeg.
+    { static BufAvanco av; VideoStats vs;
+      video_estatisticas(&vs);
+      if (bufavanco_segura(&av, fonteVODDesde, video_bufferando_ms(), SDL_GetTicks(),
+                           bufavanco_borda(video_pos(), vs.bufferSeg))) return;
+    }
+#endif
+    motivo = 3;
+  }
   if (!motivo) return;
 
   atual = stream_atual();
@@ -2234,6 +2250,8 @@ static void tentarProximaFonteVOD(void) {
       return;
     }
   }
+  guardarPosicaoFonteFalha();
+  if (fonteFalhaPos >= 0.0) player_definir_retomada_fonte(fonteFalhaPos);
   if (atual >= 0) {
     if (abriu) stream_automatico_excluir(atual);
     else marcarFonteMorta(atual);
