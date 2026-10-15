@@ -29,6 +29,7 @@
 #include "vistoep.h"
 #include <SDL2/SDL.h>
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -436,6 +437,27 @@ int main(void) {
   tocar(1080, 1); player_encerrar(); pularAbertura = 0;
   intro_definir_capitulos(NULL, 0);
   assert(nVisto == 1 && tkAssistiu);
+
+  // CONTINUAR ASSISTINDO DURANTE A SESSAO (o relato: ~16% assistidos, seek
+  // ate ~94%). Antes o ponto so ia para o registro na SAIDA; agora vai ~0,7 s
+  // depois de soltar o seek (scheduleProgressSyncAfterSeek do oficial) e ao
+  // pausar — sem esperar o Voltar.
+  sessao("tt90000030", 0, 1449);
+  tocar(232, 1);
+  { ProgRegistro r;
+    player_shot_buscando(1); quadro();
+    pos = 1364; player_shot_buscando(0);
+    for (int i = 0; i < 20; i++) quadro();   // 0,32 s: debounce ainda armado
+    assert(!prog_por_chave("tt90000030", &r) || r.posSeg < 1300);
+    for (int i = 0; i < 40; i++) quadro();   // passou dos 0,7 s
+    assert(prog_por_chave("tt90000030", &r) && fabs(r.posSeg - 1364) < 1.0);
+    // Pausa grava o ponto (>= 5 s depois do ultimo).
+    tocar(10, 1);
+    { SDL_Event e = {0}; e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_PAUSE; player_evento(&e); }
+    quadro(); quadro();
+    assert(prog_por_chave("tt90000030", &r) && fabs(r.posSeg - 1374) < 1.0); }
+  player_encerrar();
+  assert(nVisto == 1 && cat_item(0)->progresso == 100);   // 95%: concluido na saida
 
   puts("PASS: trailer, pausa, buffer e seek sem reproducao nao marcam; >= 90% pela posicao conclui (oficial)");
   return 0;
