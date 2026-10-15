@@ -2818,8 +2818,8 @@ void detail_evento(const SDL_Event *e) {
         saindo = 1;
       }
     } else if (foco.fileira == SEC_EPISODIOS) {
-      // PRESSAO LONGA ABRE O MENU DE VISTO; o toque curto continua abrindo as
-      // fontes, que e o que este card sempre fez.
+      // PRESSAO LONGA ABRE O MENU DE VISTO; o toque curto respeita a escolha
+      // de fonte em Ajustes.
       //
       // "marcar este / ate aqui / a temporada inteira" existia desde a 1.0.25 e
       // era INALCANCAVEL daqui: o menu so vivia dentro da folha de episodios, e
@@ -2829,32 +2829,13 @@ void detail_evento(const SDL_Event *e) {
       if (comPicando) comentariosVoltar();
       else if (dur >= NV_HOLD_MS && ep)
         episodios_menu_visto(idx, ep->temporada, ep->episodio, ep->nome);
-      else
-        // ISSUE #57, SEGUNDA VOLTA. O toque curto no card do episodio abria a
-        // folha de fontes SEMPRE — e este e o card em que uma pessoa aperta OK
-        // para retomar uma serie. "Retomar" acabava em "escolha um link de
-        // novo", que e a descricao do relator palavra por palavra.
-        //
-        // A PRIMEIRA CORRECAO SO VALEU PARA METADE DAS PESSOAS, e o relator
-        // voltou dizendo que o defeito continuava. Ela tocava direto apenas
-        // quando havia fonte LEMBRADA (fontepref_tem), e fontepref_guardar() e
-        // chamado num unico lugar: quando a pessoa escolhe a fonte NA MAO, na
-        // folha (app.c, em stream_folha_escolheu). O que o automatico escolhe
-        // nao vira preferencia, de proposito. Ou seja: quem nunca abriu a folha
-        // nunca tinha preferencia, caia no `else` e via a folha de novo — a
-        // condicao da correcao excluia exatamente quem mais reclamava.
-        //
-        // Agora toca sempre, que e o que "Retomar" quer dizer. Se o app sabe
-        // escolher fonte sozinho na PRIMEIRA reproducao, sabe escolher na
-        // retomada; nao ha nada a perguntar aqui. A lembrada, quando existe,
-        // continua indo para a frente da fila de verificacao em app.c.
-        //
-        // A FOLHA NAO FICOU INALCANCAVEL, que era a razao de ela estar neste
-        // toque: o hold neste mesmo card abre o menu do episodio, que tem
-        // "Fontes deste episodio" (episodios.c), e o hold no botao primario
-        // abre a folha do titulo (ver o ramo de NV_HOLD_MS acima). Quem quer
-        // trocar de fonte tem dois caminhos; quem quer continuar vendo tem o
-        // toque curto, que e o caso comum.
+      else if (ajustes_fonte_manual()) {
+        // O card escolhe ESTE episodio, nao o Retomar do titulo (#513).
+        // Uma fonte lembrada da serie nao pode dispensar a escolha pedida
+        // em Ajustes. O caminho de Fontes ja conserva o episodio em foco.
+        // Retomar no primario e o proximo episodio seguem como antes (#57/#62).
+        pedFontes = 1;
+      } else
         pedReproduzir = 1;
     }
     return;

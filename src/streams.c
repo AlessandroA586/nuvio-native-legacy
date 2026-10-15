@@ -404,6 +404,7 @@ void stream_folha_contexto(const char *s) { snprintf(contexto, sizeof contexto, 
 int stream_folha_recarregar(void) { int r = recarregar; recarregar = 0; return r; }
 
 static int aberta = 0, foco = 0, escolha = -1;
+static unsigned escolhaGeracao;
 static float anim = 0.0f, rolagem = 0.0f;
 // Velocidade da mola de 2a ordem da rolagem (anim_mola2): partida macia e
 // cauda exponencial, a MESMA curva que a home mede. A de 1a ordem que estava
@@ -3500,6 +3501,10 @@ static void desenharAudioBars(float x, float y, float alt, float alfa, Uint32 ag
 }
 
 void stream_folha_abrir(void) {
+  // A busca nova pode estar na fila enquanto a lista ainda e do episodio
+  // anterior. A folha fica vazia ate chegarem fontes do alvo pedido (#513).
+  if (alvoPedido[0] && n > 0 && !stream_lista_do_alvo(alvoPedido))
+    stream_invalidar("source sheet target changed");
 #ifdef NV_TOUCH_UI
   toquerol_limpar(&toqueFontes); toquerol_limpar(&toqueFontesAbas); toqueFontesAbasOffset = 0;
 #endif
@@ -3706,7 +3711,7 @@ void stream_folha_evento(const SDL_Event *e) {
     else if(grupo==0) {grupo=1;foco=0;}
     else {
       int i = filtrado(foco);
-      if (i >= 0) { escolha=i; aberta=0; }
+      if (i >= 0) { escolha=i; escolhaGeracao=listaGeracao; aberta=0; }
       else if (i <= -2) {
         OndeVer o;
         if (ondever_item(alvoPedido,-i-2,&o) && ondever_abrir(o.nome)!=ONDE_INFO) aberta=0;
@@ -3775,6 +3780,13 @@ void stream_folha_atualizar(float dt, Uint32 agora) {
 }
 int stream_folha_escolheu(int *out) {
   if(escolha<0) return 0;
+  // A resposta da busca pode substituir a lista entre o OK e este quadro.
+  // O indice escolhido so vale na mesma lista e para o alvo pedido.
+  if (escolha >= n || escolhaGeracao != listaGeracao ||
+      (alvoPedido[0] && !stream_lista_do_alvo(alvoPedido))) {
+    stream_folha_abrir();
+    return 0;
+  }
   if(out) *out=escolha;
   escolha=-1;return 1;
 }
