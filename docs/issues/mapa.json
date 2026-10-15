@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-15 03:49",
+ "atualizado_em": "2026-10-15 04:48",
  "base": "5544c3e4c",
- "nota": "Sync 2026-10-15 03:49, tip integracao/2.0.5 eb469669a. Instalado: be42293ae (10-14 23:05). Ver escrivao/estado.md.",
+ "nota": "Sync 2026-10-15 04:48, HEAD 71c00499e (merges aspvolta, barra27). Instalado: be42293ae (10-14 23:05). Ver escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,
@@ -10122,7 +10122,7 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "em_job",
+   "status": "em_revisao",
    "release": "",
    "conserto": [
     "a82357a4 (merge agente/205-i513autoplay em integracao/2.0.5)"
@@ -10133,8 +10133,8 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "review fixy BLOQUEIA (j-205-i513autoplay-fixy); fix pendente, sem job rodando; relancar fix+review",
-   "notas": "Criada 2026-10-14 (issues.json 14/10 16:49). Escrivao 14/10 19:1x: j-205-i513autoplay 7df981b9 done 18:35 (review j-revg-i513autoplay-q BLOQUEIA 18:43); fix bcf3ec31 18:57. Escrivao 19:2x: merge a82357a4 (j-revg-i513autoplay-q havia BLOQUEADO 18:43; fix bcf3ec31 mergeado sem nova review). | a82357a4 mergeado antes; review y BLOQUEIA, fix em curso | Escrivao 10-15 02:44: fixy sem veredito ainda. Escrivao 10-15 02:49: ultimo BLOQUEIA y 22:35 foi antes do fixy 23:07; sem review posterior ao fix; tip 66c6c61ee.",
+   "proximo_passo": "review w rodando (j-revg-i513autoplay-w, sem veredito 04:48); se OK merge agente/205-i513autoplay (5 commits à frente)",
+   "notas": "Criada 2026-10-14 (issues.json 14/10 16:49). Escrivao 14/10 19:1x: j-205-i513autoplay 7df981b9 done 18:35 (review j-revg-i513autoplay-q BLOQUEIA 18:43); fix bcf3ec31 18:57. Escrivao 19:2x: merge a82357a4 (j-revg-i513autoplay-q havia BLOQUEADO 18:43; fix bcf3ec31 mergeado sem nova review). | a82357a4 mergeado antes; review y BLOQUEIA, fix em curso | Escrivao 10-15 02:44: fixy sem veredito ainda. Escrivao 10-15 02:49: ultimo BLOQUEIA y 22:35 foi antes do fixy 23:07; sem review posterior ao fix; tip 66c6c61ee. | Escrivao 10-15 04:48: fix-i513x DONE 03:59; x BLOQUEIA 02:52; w em curso.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/513",
    "criada_em": "2026-10-14",
    "alvo": "futuro"
@@ -10158,6 +10158,27 @@
    "notas": "Issue nova 14/10 20:52 (rating de filme/episodio). Feature, nao 2.0.5.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/514",
    "criada_em": "2026-10-14",
+   "alvo": "futuro"
+  },
+  {
+   "numero": 521,
+   "titulo": "Layout",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triagem; sem job ainda; alvo a definir",
+   "notas": "Issue nova 2026-10-15 06:48 (issues.json). Sem descrição de contexto; triar.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/521",
+   "criada_em": "2026-10-15",
    "alvo": "futuro"
   }
  ],
@@ -11271,6 +11292,68 @@
    "ref": "4851f752d (pr/493-fix)",
    "resultado": "falhou",
    "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revpr493-fix.log"
+  },
+  {
+   "data": "2026-10-15 03:53",
+   "quem": "job-pi magpie/group/nv-revisao (revisao)",
+   "o_que": "Revisao aspvolta: VEREDITO OK",
+   "issues": [],
+   "ref": "agente/205-aspvolta (merged 04:47 em HEAD 71c00499e)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-aspvolta.log"
+  },
+  {
+   "data": "2026-10-15 03:04",
+   "quem": "job-pi magpie/group/nv-revisao (revisao)",
+   "o_que": "Revisao barra27 x: VEREDITO OK",
+   "issues": [],
+   "ref": "agente/205-barra27 (merged 04:47 em HEAD cb0b1a070)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-barra27-x.log"
+  },
+  {
+   "data": "2026-10-15 03:05",
+   "quem": "job-pi magpie/group/nv-revisao (revisao)",
+   "o_que": "Revisao pr489 fix: VEREDITO OK",
+   "issues": [
+    489
+   ],
+   "ref": "pr/489-fix (ahead 23, não mergeado)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revpr489-fix.log"
+  },
+  {
+   "data": "2026-10-15 03:14",
+   "quem": "job-pi magpie/group/nv-revisao (revisao)",
+   "o_que": "Revisao pr490 fix: VEREDITO BLOQUEIA",
+   "issues": [
+    490
+   ],
+   "ref": "pr/490-fix",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revpr490-fix.log"
+  },
+  {
+   "data": "2026-10-15 03:16",
+   "quem": "job-pi magpie/group/nv-revisao (revisao)",
+   "o_que": "Revisao pr491 limpo r2: VEREDITO BLOQUEIA",
+   "issues": [
+    491
+   ],
+   "ref": "pr/491-limpo",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revpr491-limpo-r2.log"
+  },
+  {
+   "data": "2026-10-15 02:52",
+   "quem": "job-pi magpie/group/nv-revisao (revisao)",
+   "o_que": "Revisao i513 autoplay x: VEREDITO BLOQUEIA",
+   "issues": [
+    513
+   ],
+   "ref": "agente/205-i513autoplay (fix-i513x DONE 03:59 depois)",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-i513autoplay-x.log"
   }
  ],
  "decisoes": [
@@ -14141,19 +14224,19 @@
    "conserto": [
     "pr/498-limpo: 12 commits fora"
    ],
-   "proximo_passo": "review OK (j-revpr498-limpo); merge pr/498-limpo",
+   "proximo_passo": "merge pr/498-limpo (review OK 23:15, 12 commits à frente)",
    "notas": "criado pelo escrivao 2026-10-15"
   },
   {
    "id": "pr-491-limpo",
    "titulo": "PR #491 limpo (pr/491-limpo)",
    "plataforma": "?",
-   "status": "em_job",
+   "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
     "pr/491-limpo: 50 commits fora"
    ],
-   "proximo_passo": "review r2 BLOQUEIA (j-revpr491-limpo-r2); fix pendente, sem job rodando",
+   "proximo_passo": "review pr/491-limpo (fix 03:55 após BLOQUEIA r2 03:16); sem review nova",
    "notas": "criado pelo escrivao 2026-10-15"
   },
   {
@@ -14172,24 +14255,24 @@
    "id": "pr-490-fix",
    "titulo": "PR #490 fix (pr/490-fix)",
    "plataforma": "?",
-   "status": "em_job",
+   "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
     "pr/490-fix: 6 commits fora"
    ],
-   "proximo_passo": "review BLOQUEIA (j-revpr490-fix); fix pendente",
+   "proximo_passo": "review pr/490-fix (fix 03:55 após BLOQUEIA 03:14); sem review nova",
    "notas": "criado pelo escrivao 2026-10-15"
   },
   {
    "id": "pr-493-fix",
    "titulo": "PR #493 fix (pr/493-fix)",
    "plataforma": "?",
-   "status": "em_job",
+   "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
     "pr/493-fix: 9 commits fora"
    ],
-   "proximo_passo": "review BLOQUEIA (j-revpr493-fix); fix pendente",
+   "proximo_passo": "review pr/493-fix (fix 03:52 após BLOQUEIA 02:47); sem review nova",
    "notas": "criado pelo escrivao 2026-10-15"
   },
   {

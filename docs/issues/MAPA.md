@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `5544c3e4c` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-15 03:49. 456 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `5544c3e4c` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-15 04:48. 457 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -123,7 +123,7 @@ Plano de refatoração: `docs/plans/refatoracao-geral.md` (branch `agente/refato
 | 2.0.6 | 58 | #246, #280, #288, #302, #315, #316, #345, #346, #353, #357, #365, #367, #379, #382, #386, #388, #391, #394, #398, #399, #401, #402, #404, #405, #407, #412, #413, #414, #415, #418, #423, #424, #451, #459, #461, #462, #468, #469, #471, #475, #477, #479, #482, #483, #488, #492, #494, #496, #497, #500, #501, #502, #503, #504, #505, #506, #507, #508 |
 | 2.1 | 16 | #250, #306, #313, #337, #349, #366, #374, #393, #397, #403, #420, #434, #436, #457, #458, #460 |
 | 2.2 | 0 |  |
-| futuro | 18 | #135, #260, #304, #342, #347, #348, #389, #396, #437, #438, #450, #466, #467, #509, #510, #511, #513, #514 |
+| futuro | 19 | #135, #260, #304, #342, #347, #348, #389, #396, #437, #438, #450, #466, #467, #509, #510, #511, #513, #514, #521 |
 | nao vamos fazer | 4 | #292, #307, #324, #354 |
 | ja-lancada | 40 | #266, #283, #286, #293, #310, #326, #328, #329, #331, #334, #338, #341, #350, #352, #355, #356, #358, #362, #364, #369, #383, #385, #387, #390, #392, #410, #416, #417, #419, #421, #422, #425, #426, #429, #430, #433, #439, #440, #486, #499 |
 
@@ -180,31 +180,30 @@ Por status:
 | Status | Qtd |
 |---|---|
 | lancada | 308 |
-| aberta | 48 |
+| aberta | 49 |
 | integrada | 38 |
 | respondida | 22 |
 | por-desenho | 15 |
 | precisa-log | 10 |
 | fechada-sem-resposta | 6 |
 | fora-do-escopo | 4 |
+| em_revisao | 3 |
 | duplicada | 2 |
-| em_revisao | 2 |
-| em_job | 1 |
 
 Por release (grupo de planejamento):
 
 | Grupo | Qtd |
 |---|---|
 | lançadas em tag v* (qualquer versão) | 308 |
-| sem release | 119 |
+| sem release | 120 |
 | 2.0.5 (integração, sem release do conserto) | 22 |
 | futuro (2.1/2.2) | 5 |
 | 2.0.3 lançada, com pendência | 2 |
 
 Lançadas por versão: -: 4, 1.0.7: 10, 1.0.8: 1, 1.0.10: 3, 1.0.11: 3, 1.0.15: 1, 1.0.22: 1, 1.0.24: 1, 1.0.29: 1, 1.0.30: 2, 1.0.31: 2, 1.0.32: 2, 1.0.34: 1, 1.0.35: 1, 1.0.37: 1, 1.0.38: 2, 1.0.39: 1, 1.0.42: 1, 1.0.43: 4, 1.0.44: 4, 1.0.45: 1, 1.0.51: 3, 1.0.52: 1, 1.0.53: 1, 1.0.55: 3, 1.2.1: 4, 1.3.0: 1, 1.3.2: 5, 1.3.4: 5, 1.3.5: 2, 1.3.8: 1, 1.3.9: 1, 1.3.10: 1, 1.3.11: 1, 1.3.12: 5, 1.4: 7, 1.4.1: 2, 1.4.2: 9, 1.4.3: 9, 1.4.4: 3, 1.4.5: 1, 1.4.6: 7, 1.4.7: 1, 1.5.0: 2, 1.5.1: 4, 1.5.2: 9, 1.5.3: 2, 1.5.4: 9, 1.6.0: 8, 1.6.1: 4, 1.6.2: 3, 1.6.3: 2, 1.6.4: 2, 1.6.5: 4, 1.7.0: 10, 1.7.1: 4, 1.7.2: 5, 1.7.4: 5, 2.0.0: 22, 2.0.1: 12, 2.0.2: 20, 2.0.3: 29, 2.0.4: 9, 2.0.5: 23.
 
-Abertas no GitHub: 138. Fechadas: 318.
-Abertas sem nenhum comentário nosso: 81.
+Abertas no GitHub: 139. Fechadas: 318.
+Abertas sem nenhum comentário nosso: 82.
 
 ## 2.0.3 lançada com pendência (precisa-log, respondida ou conserto parcial)
 
@@ -398,7 +397,7 @@ Notas:
 
 ## Futuro (2.1, 2.2, depois)
 
-35 issues.
+36 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -435,8 +434,9 @@ Notas:
 | [#511](https://github.com/iqui27/nuvio-native-legacy/issues/511) | Show subtitle track name instead of only showing language | ? | enhancement | integrada |  | futuro | f0ab7c91 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#510](https://github.com/iqui27/nuvio-native-legacy/issues/510) | Subtitles list not the same as nuvio in phone applications l | ? | bug | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
 | [#509](https://github.com/iqui27/nuvio-native-legacy/issues/509) | Expanded poster trailer | ? | enhancement | integrada | - | futuro | 13e13b92 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
-| [#513](https://github.com/iqui27/nuvio-native-legacy/issues/513) | Any series episode autoplay even option is disabled | ? | bug | em_job |  | futuro | a82357a4 | sem comentários | review fixy BLOQUEIA (j-205-i513autoplay-fixy); fix pendente, sem job rodando; relancar fi |
+| [#513](https://github.com/iqui27/nuvio-native-legacy/issues/513) | Any series episode autoplay even option is disabled | ? | bug | em_revisao |  | futuro | a82357a4 | sem comentários | review w rodando (j-revg-i513autoplay-w, sem veredito 04:48); se OK merge agente/205-i513a |
 | [#514](https://github.com/iqui27/nuvio-native-legacy/issues/514) | Ability to rate a movie or an episode | ? | ? | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
+| [#521](https://github.com/iqui27/nuvio-native-legacy/issues/521) | Layout | ? | bug | aberta |  | futuro | - | sem comentários | triagem; sem job ainda; alvo a definir |
 
 Notas:
 
@@ -473,8 +473,9 @@ Notas:
 - **#511**: Criada 2026-10-14 (snapshot 14:46). Escrivao 14/10 19:1x: Fix 2e05dd94; j-revg-i511legnome-q OK 18:44; merge f0ab7c91 18:45.
 - **#510**: Criada 2026-10-14 (snapshot 14:46).
 - **#509**: Criada 2026-10-14 (snapshot 14:46). Escrivão 14/10 14:47: integrada via i509trailer. | Escrivão 2026-10-14 16:11: conserto 13e13b92 ja em integracao/2.0.5; sem release ainda.
-- **#513**: Criada 2026-10-14 (issues.json 14/10 16:49). Escrivao 14/10 19:1x: j-205-i513autoplay 7df981b9 done 18:35 (review j-revg-i513autoplay-q BLOQUEIA 18:43); fix bcf3ec31 18:57. Escrivao 19:2x: merge a82357a4 (j-revg-i513autoplay-q havia BLOQUEADO 18:43; fix bcf3ec31 mergeado sem nova review). | a82357a4 mergeado antes; review y BLOQUEIA, fix em curso | Escrivao 10-15 02:44: fixy sem veredito ainda. Escrivao 10-15 02:49: ultimo BLOQUEIA y 22:35 foi antes do fixy 23:07; sem review posterior ao fix; tip 66c6c61ee.
+- **#513**: Criada 2026-10-14 (issues.json 14/10 16:49). Escrivao 14/10 19:1x: j-205-i513autoplay 7df981b9 done 18:35 (review j-revg-i513autoplay-q BLOQUEIA 18:43); fix bcf3ec31 18:57. Escrivao 19:2x: merge a82357a4 (j-revg-i513autoplay-q havia BLOQUEADO 18:43; fix bcf3ec31 mergeado sem nova review). | a82357a4 mergeado antes; review y BLOQUEIA, fix em curso | Escrivao 10-15 02:44: fixy sem veredito ainda. Escrivao 10-15 02:49: ultimo BLOQUEIA y 22:35 foi antes do fixy 23:07; sem review posterior ao fix; tip 66c6c61ee. | Escrivao 10-15 04:48: fix-i513x DONE 03:59; x BLOQUEIA 02:52; w em curso.
 - **#514**: Issue nova 14/10 20:52 (rating de filme/episodio). Feature, nao 2.0.5.
+- **#521**: Issue nova 2026-10-15 06:48 (issues.json). Sem descrição de contexto; triar.
 
 ## Outras pendências
 
@@ -1214,6 +1215,12 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 | Data | Quem | O que | Issues | Ref | Resultado | Evidência |
 |---|---|---|---|---|---|---|
+| 2026-10-15 03:53 | job-pi magpie/group/nv-revisao (revisao) | Revisao aspvolta: VEREDITO OK | - | agente/205-aspvolta (merged 04:47 em HEAD 71c00499e) | passou | /Volumes/ExternalSSD/tmp/rev/j-revg-aspvolta.log |
+| 2026-10-15 03:16 | job-pi magpie/group/nv-revisao (revisao) | Revisao pr491 limpo r2: VEREDITO BLOQUEIA | #491 | pr/491-limpo | falhou | /Volumes/ExternalSSD/tmp/rev/j-revpr491-limpo-r2.log |
+| 2026-10-15 03:14 | job-pi magpie/group/nv-revisao (revisao) | Revisao pr490 fix: VEREDITO BLOQUEIA | #490 | pr/490-fix | falhou | /Volumes/ExternalSSD/tmp/rev/j-revpr490-fix.log |
+| 2026-10-15 03:05 | job-pi magpie/group/nv-revisao (revisao) | Revisao pr489 fix: VEREDITO OK | #489 | pr/489-fix (ahead 23, não mergeado) | passou | /Volumes/ExternalSSD/tmp/rev/j-revpr489-fix.log |
+| 2026-10-15 03:04 | job-pi magpie/group/nv-revisao (revisao) | Revisao barra27 x: VEREDITO OK | - | agente/205-barra27 (merged 04:47 em HEAD cb0b1a070) | passou | /Volumes/ExternalSSD/tmp/rev/j-revg-barra27-x.log |
+| 2026-10-15 02:52 | job-pi magpie/group/nv-revisao (revisao) | Revisao i513 autoplay x: VEREDITO BLOQUEIA | #513 | agente/205-i513autoplay (fix-i513x DONE 03:59 depois) | falhou | /Volumes/ExternalSSD/tmp/rev/j-revg-i513autoplay-x.log |
 | 2026-10-15 02:47 | job-pi magpie/group/nv-revisao (revisao) | Revisao do fix pr/493-fix (PR #493, traz #488): VEREDITO BLOQUEIA | #488 | 4851f752d (pr/493-fix) | falhou | /Volumes/ExternalSSD/tmp/rev/j-revpr493-fix.log |
 | 2026-10-14 23:11 | job-pi magpie/group/nv-revisao (revisao independente) | Revisao final agente/205-i429hbs apos fixz 22:28: VEREDITO OK; linguas.sh e ajustes_idioma_disco.sh rc 0 | #429 | f59554839 (agente/205-i429hbs) | passou | /Volumes/ExternalSSD/tmp/rev/j-revg-i429hbs-y.log |
 | 2026-10-14 22:35 | job-pi magpie/group/nv-revisao (revisao independente) | Revisao final agente/205-i513autoplay antes do fixy: VEREDITO BLOQUEIA | #513 | agente/205-i513autoplay antes do fixy 23:07 | falhou | /Volumes/ExternalSSD/tmp/rev/j-revg-i513autoplay-y.log |
@@ -3096,16 +3103,16 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Status: em_revisao
 - Release: 2.0.5
 - Conserto: pr/498-limpo: 12 commits fora
-- Próximo passo: review OK (j-revpr498-limpo); merge pr/498-limpo
+- Próximo passo: merge pr/498-limpo (review OK 23:15, 12 commits à frente)
 - Notas: criado pelo escrivao 2026-10-15
 
 ### PR #491 limpo (pr/491-limpo)
 
 - Plataforma: ?
-- Status: em_job
+- Status: em_revisao
 - Release: 2.0.5
 - Conserto: pr/491-limpo: 50 commits fora
-- Próximo passo: review r2 BLOQUEIA (j-revpr491-limpo-r2); fix pendente, sem job rodando
+- Próximo passo: review pr/491-limpo (fix 03:55 após BLOQUEIA r2 03:16); sem review nova
 - Notas: criado pelo escrivao 2026-10-15
 
 ### PR #489 fix (pr/489-fix)
@@ -3120,19 +3127,19 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### PR #490 fix (pr/490-fix)
 
 - Plataforma: ?
-- Status: em_job
+- Status: em_revisao
 - Release: 2.0.5
 - Conserto: pr/490-fix: 6 commits fora
-- Próximo passo: review BLOQUEIA (j-revpr490-fix); fix pendente
+- Próximo passo: review pr/490-fix (fix 03:55 após BLOQUEIA 03:14); sem review nova
 - Notas: criado pelo escrivao 2026-10-15
 
 ### PR #493 fix (pr/493-fix)
 
 - Plataforma: ?
-- Status: em_job
+- Status: em_revisao
 - Release: 2.0.5
 - Conserto: pr/493-fix: 9 commits fora
-- Próximo passo: review BLOQUEIA (j-revpr493-fix); fix pendente
+- Próximo passo: review pr/493-fix (fix 03:52 após BLOQUEIA 02:47); sem review nova
 - Notas: criado pelo escrivao 2026-10-15
 
 ### Vidro todo (agente/205-vidrotodo)
