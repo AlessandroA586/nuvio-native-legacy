@@ -67,15 +67,18 @@ static float vtCardAltura(void);
 #define VT_CW      (5.0f * VT_CARD_W + 4.0f * VT_GAP_X)
 // A linha da filmografia (exibicao "Linha do tempo"): cartao deitado de 236.
 #define VT_LINHA_H 236.0f
+#define VT_TL_GAP  28.0f   // vao entre os cartoes da linha = o do seletor ao 1o (253+52 -> 332)
 
 // PAINEL DE DETALHE, a direita. Medidas do web (.seeall-detail), que as ancora
-// explicitamente na tela real de 1920x1080: top 170, right 104, largura 336.
+// explicitamente na tela real de 1920x1080: top 170, largura 336. A margem
+// direita e a da ilha do relogio (14/10, "margem componente solto"): o painel
+// termina na mesma vertical que ela, nao 40 px antes.
 //
 // FIXO e nao rolando junto: o proprio CSS registra que `position: sticky` nao
 // existe no Chromium 53 da TV e que sem `fixed` o painel sumia assim que o dono
 // descia. Aqui nao ha fluxo nenhum — ele so nao recebe scrollY.
 #define VT_PAN_W   336.0f
-#define VT_PAN_X   (NV_TELA_W - 104.0f - VT_PAN_W)
+#define VT_PAN_X   (NV_TELA_W - NV_ILHA_MARGEM_D - VT_PAN_W)
 #define VT_PAN_VAO  24.0f   // vao minimo entre a ultima coluna e o painel
 #define VT_PAN_Y   VT_TOPO
 #define VT_PAN_ART_H 330.0f
@@ -114,8 +117,7 @@ static float vtCabecalhoLargura(float x, float original) {
 }
 static GfxRect vtTimelineCard(float cy) {
   float x = vtInicio() + (vtTimelineRetrato() ? 96.0f : 158.0f);
-  float w = 1000.0f;
-  if (vtTelefone()) w = fminf(w, vtFim() - x);
+  float w = vtTelefone() ? fminf(1000.0f, vtFim() - x) : vtFim() - x;
   return (GfxRect){x, cy, w, VT_CARD_H};
 }
 static GfxRect vtTimelineArte(GfxRect card) {
@@ -140,7 +142,7 @@ static float vtCardLargura(void) {
   if (!vtTelefone() || timeline) return VT_CARD_BASE_W;
   return fmaxf(1.0f, (vtFim() - vtInicio() - (VT_COLS - 1) * VT_GAP_X) / VT_COLS);
 }
-static float vtCardAltura(void) { return timeline ? 236.0f : VT_CARD_W * 1.5f; }
+static float vtCardAltura(void) { return timeline ? VT_LINHA_H : VT_CARD_W * 1.5f; }
 static float tabAnim[COL_SOURCE_MAX];
 static int order[VT_MAX], orderN=-1;
 static char catalogId[96];
@@ -213,7 +215,7 @@ static Uint32 vistosEm;             // ajustes_conteudo_x() do quadro (desenho)
 // preenchimento da linha (coordenada da grade; < 0 = posicionar sem animar).
 // Floats por quadro, nenhuma textura; a mola ja respeita a animacao reduzida.
 static float tlFoco[VT_MAX], tlProg = -1.0f;
-#define VT_TL_PONTO 32.0f         // centro do ponto do ano, do topo do cartao
+#define VT_TL_PONTO (VT_LINHA_H * 0.5f)   // centro do ponto do ano: o centro do cartao
 
 // LINHA DO TEMPO HORIZONTAL (Cover Flow, 13/10; 14/10 sem inclinacao): o cartaz
 // em foco no centro, grande; os vizinhos RETOS atras dele, menores, escuros e
@@ -224,16 +226,23 @@ static float tlFoco[VT_MAX], tlProg = -1.0f;
 #define VT_FLX_H (VT_FLX_W * 1.5f)
 static float fluxoPos = -1.0f;
 static float fluxoFim(void) { return vtTelefone() ? vtFim() : NV_TELA_W - 48.0f; }
-static float fluxoCentro(float x0) { return (x0 + fluxoFim()) * 0.5f; }
+// O FOCO MORA NA MARGEM DO CONTEUDO (dono, 14/10: metade esquerda vazia e os
+// cartazes amontoados a direita): o eixo e o mesmo da ficha e do cabecalho, como
+// numa fileira da Home. Os que ja passaram saem pela esquerda apagando; os
+// seguintes se espalham ate a ponta, lado a lado, sem se cobrir.
+static float fluxoCentro(float x0) { return x0 + VT_FLX_W * 0.5f; }
 static float fluxoLinhaY(void) { return VT_TOPO + 40.0f + VT_FLX_H + 64.0f; }
 static float fluxoInfoY(void) { return fluxoLinhaY() + 76.0f; }
+static float fluxoVis(int i) { float d = i - fluxoPos; return d < 0.0f ? fmaxf(0.0f, 1.0f + d) : 1.0f; }
 // Caixa do titulo i e quanto ele escurece (0 no foco). O 6o vizinho cai na ponta.
 static GfxRect fluxoRect(int i, float x0, float *sombra) {
   float W = VT_FLX_W, H = VT_FLX_H, d = i - fluxoPos, ad = fabsf(d), s = fminf(ad, 1.0f);
-  float A = W * 0.78f, alem = fmaxf(0.0f, ad - 1.0f);
-  float S = fmaxf(W * 0.3f, (fluxoFim() - x0) * 0.5f - A) / 5.0f * 0.97f;
-  float off = ad < 1.0f ? d * A : copysignf(A + alem * S, d);
-  float k = fmaxf(0.4f, 1.0f - 0.18f * s - 0.07f * alem), w = W * k, h = H * k;
+  // Passo unico entre os centros e encolhimento leve alem do 1o vizinho: os
+  // vaos ficam iguais e o 6o termina na ponta.
+  float alem = fmaxf(0.0f, ad - 1.0f);
+  float S = fmaxf(W * 0.3f, (fluxoFim() - fluxoCentro(x0) - W * 0.35f) / 6.0f);
+  float off = d * S;
+  float k = fmaxf(0.4f, 1.0f - 0.18f * s - 0.03f * alem), w = W * k, h = H * k;
   if (sombra) *sombra = fminf(0.85f, 0.5f * s + 0.1f * alem);
   return (GfxRect){ fluxoCentro(x0) + off - w * 0.5f, VT_TOPO + 40.0f + (H - h) * 0.5f, w, h };
 }
@@ -727,7 +736,7 @@ static void montar(int n) {
       break;
     case VT_LAY_LINHA:
       tlProg = -1.0f;
-      for (i = 0; i < n; i++) cel(i, 0, i * (VT_LINHA_H + VT_GAP_Y), 1158.0f, VT_LINHA_H, i, 0);
+      for (i = 0; i < n; i++) cel(i, 0, i * (VT_LINHA_H + VT_TL_GAP), 1158.0f, VT_LINHA_H, i, 0);
       break;
     case VT_LAY_RANKING: {
       // Quatro por linha: o numeral mora no vao a ESQUERDA do cartaz, como o
@@ -1241,9 +1250,8 @@ static void vitEvento(int k) {
   if (tabFocus) {   // o botao "Exibição", acima do destaque
     if (k == SDLK_LEFT) { if (tabCursor > cabN()) tabCursor--; else pedMenu = 1; }
     else if (k == SDLK_UP && ajustes_menu_topo()) pedMenu = 1;
-    else if (k == SDLK_RIGHT) tabCursor = cabN() + 1;
     else if (k == SDLK_DOWN && vitTemItens()) tabFocus = 0;
-    else if (enter) { if (tabCursor > cabN()) alternarEstiloAbas(); else alternarExibicao(); }
+    else if (enter) alternarExibicao();   // sem abas, sem botao de estilo
     return;
   }
   if (vitFR >= vitN) return;
@@ -1382,7 +1390,7 @@ void vertudo_evento(const SDL_Event *e) {
     int na = cabN(), est = estiloAbas();
     if(ddAberto) { ddEvento(k); return; }
     if(k==SDLK_LEFT||(k==SDLK_UP&&ajustes_menu_topo())){ if(k==SDLK_LEFT&&tabCursor>0)tabCursor--; else pedMenu=1; }
-    if(k==SDLK_RIGHT&&tabCursor<na+1)tabCursor++;
+    if(k==SDLK_RIGHT&&tabCursor<na+(nAbas()>0))tabCursor++;   // o estilo so com abas
     // Paginas: a seta ja troca de pagina (o deslize e o feedback).
     if((k==SDLK_LEFT||k==SDLK_RIGHT)&&est==VT_AB_PAGINAS&&tabCursor<na&&tabCursor!=source)irPagina(tabCursor);
     if(k==SDLK_RETURN||k==SDLK_KP_ENTER) {
@@ -1539,7 +1547,8 @@ static float painelCredito(const char *rot, const char *val, float y, float a) {
 }
 static void painel(float a) {
   CatItem it;
-  float y = VT_PAN_Y, base = NV_TELA_H - 48.0f;
+  // A base fica a mesma distancia da borda que a direita (a da ilha).
+  float y = VT_PAN_Y, base = NV_TELA_H - NV_ILHA_MARGEM_D;
   int cartaz = painelComCartaz();
   char elenco[200] = "";
   if (!viewItem(foco, &it)) return;
@@ -1548,7 +1557,7 @@ static void painel(float a) {
     // Mantém a geometria 2:3 mesmo sem arte para não deslocar os metadados.
     GfxRect r = { VT_PAN_X, y, VT_PAN_ART_W, VT_PAN_ART_H };
     const char *arte = it.poster[0] ? it.poster : it.backdrop;
-    float raio = 12.0f / VT_PAN_ART_W;
+    float raio = ajustes_raio_poster_px() / VT_PAN_ART_H;   // o raio de cartaz do app
     GLuint t = arte[0] ? tex_obter_larg(arte, VT_PAN_ART_W) : 0;
     gfx_cor(r, raio, 1, 1, 1, 0.05f * a);
     if (t) {
@@ -1577,8 +1586,14 @@ static void painel(float a) {
         gfx_rect(rl, tl, m, 0, 0, 0, 0.0f, 1, 1, 1, a); }
       y += hL + 16.0f;
     } else {
-      y += txt_bloco_corta(cartaz ? TXT_HEADLINE : TXT_TITULO2, it.titulo, 245, 245, 245,
-                           VT_PAN_X, y, VT_PAN_W, cartaz ? 38.0f : 58.0f, a, 2) + 18.0f;
+      // Titulo longo nao corta na 2a linha ("The Beat of the..."): desce um
+      // degrau da escala e ganha a 3a.
+      TxtEstilo es = cartaz ? TXT_HEADLINE : TXT_TITULO2;
+      float ld = cartaz ? 38.0f : 58.0f;
+      int nl = 2;
+      if (txt_bloco(es, it.titulo, 0, 0, 0, 0, 0, VT_PAN_W, ld, 0.0f, 0) > 2.0f * ld + 1.0f) {
+        es = cartaz ? TXT_CALLOUT : TXT_HEADLINE; ld = cartaz ? 34.0f : 44.0f; nl = 3; }
+      y += txt_bloco_corta(es, it.titulo, 245, 245, 245, VT_PAN_X, y, VT_PAN_W, ld, a, nl) + 18.0f;
     } }
 
   // Ano · duracao (ou temporadas) e o selo da classificacao na mesma linha.
@@ -1611,8 +1626,7 @@ static void painel(float a) {
       if (linhas < 3) linhas = cabe < 3 ? cabe : 3;
       if (linhas > (cartaz ? 6 : 9)) linhas = cartaz ? 6 : 9;
       if (linhas > 0) {
-        gfx_cor((GfxRect){ VT_PAN_X, y - 6.0f, 48.0f, 2.0f }, 0, 1, 1, 1, 0.22f * a);
-        y += 12.0f;
+        y += 6.0f;
         y += txt_bloco_corta(TXT_DET_META2, it.sinopse, 226, 229, 236,
                              VT_PAN_X, y, VT_PAN_W, 32.0f, a * 0.9f, linhas) + 18.0f;
       }
@@ -1916,13 +1930,15 @@ static void themeHeader(float a,float x0) {
   if(listaDePessoa()&&vcTotal>0&&!semFonte&&!desc_vertudo_erro()&&!vtTelefone()) {
     // "Voce viu N de M": barra fina na cor da colecao + contagem, sob o nome.
     char vis[64];snprintf(vis,sizeof vis,i18n("Você viu %d de %d"),vcVistos,vcTotal);
+    // Nada visto: so a contagem. Um trilho vazio lia como barra quebrada.
     TxtLinha vt=txt_linha(TXT_DET_META2,vis,242,243,247,255);
-    float bw=220,bh=8,by=192+(vt.h-bh)*.5f;
-    gfx_cor((GfxRect){x0,by,bw,bh},.5f,1,1,1,.14f*a);
+    float bw=vcVistos>0?220:0,bh=8,by=192+(vt.h-bh)*.5f;
     float pct=vistocont_pct(vcVistos,vcTotal)/100.0f;
-    if(pct>0){float fr,fg,fb;corFocoFonte(&fr,&fg,&fb);
-      gfx_cor((GfxRect){x0,by,fmaxf(bh,bw*pct),bh},.5f,fr,fg,fb,a);}
-    txt_desenhar_alpha(vt,x0+bw+16,192,a);
+    if(bw>0){float fr,fg,fb;corFocoFonte(&fr,&fg,&fb);
+      gfx_cor((GfxRect){x0,by,bw,bh},.5f,1,1,1,.14f*a);
+      gfx_cor((GfxRect){x0,by,fmaxf(bh,bw*pct),bh},.5f,fr,fg,fb,a);
+      bw+=16;}
+    txt_desenhar_alpha(vt,x0+bw,192,a);
     caption[0]=0;
   }
   if(!legendaOculta()){TxtLinha sub=txt_linha_corta(TXT_DET_META2,caption,196,202,213,255,vtTelefone()?fminf(960.0f,NV_TELA_W-x0-48.0f):960.0f);txt_desenhar_alpha(sub,x0,192,a);}
@@ -2004,11 +2020,12 @@ static void themeHeader(float a,float x0) {
       if(ah<.005f)continue;
       ponteiro_alvo(fmaxf(pill.x,x0-margem),pill.y,fminf(pill.x+pill.w,x0+W+margem)-fmaxf(pill.x,x0-margem),pill.h,ponteiroAba,NULL,i,0);
       if(est==VT_AB_TOPO) {
-        int cor=selecionada?255:160;
+        // Foco de botao = pilula cheia no acento, sem anel (layout.h).
+        int cor=f?ajustes_tinta_foco():selecionada?255:160;
+        if(f)focoAbaFonte(pill,1,ah);
         TxtLinha t=txt_linha_corta(selecionada?TXT_ILHA_SECAO:TXT_HERO_META,rot[i],cor,cor,cor,255,textoW);
         txt_desenhar_alpha(t,x+PAD,pill.y+(H-t.h)*.5f,ah);
-        if(selecionada)gfx_cor((GfxRect){x+PAD,pill.y+H-4,fminf(t.w,32.0f),3},.5f,1,1,1,ah);
-        if(f)foco_anel(pill,NV_RAIO_PILL,1,ah);
+        if(selecionada&&!f)gfx_cor((GfxRect){x+PAD,pill.y+H-4,fminf(t.w,32.0f),3},.5f,1,1,1,ah);
         continue;
       }
       if (selecionada) {
@@ -2061,11 +2078,12 @@ static void timelineCard(int i,float cy,float a,float x0) {
   // trecho ate o ano em foco fica preenchido (o tempo que ja passou), com
   // tiques entre um ano e o seguinte.
   float rail = vtTimelineRetrato() ? 64.0f : 109.0f, rx = x0 + rail;
-  float t = i < VT_MAX ? tlFoco[i] : 0.0f, segY = cy - 30.0f, segH = VT_CARD_H + VT_GAP_Y;
+  // O trecho de cada cartao vai de meio vao acima a meio vao abaixo: os
+  // trechos emendam e o ponto cai no meio. Sem tiques soltos entre os anos.
+  float t = i < VT_MAX ? tlFoco[i] : 0.0f, segY = cy - VT_TL_GAP * 0.5f, segH = VT_CARD_H + VT_TL_GAP;
   float fim = tlProg < 0.0f ? segY : tlProg + cy - celY[i];   // o mesmo deslocamento do cartao
   gfx_cor((GfxRect){rx,segY,2,segH},0,.48f,.47f,.46f,a*.45f);
   if(fim>segY)gfx_cor((GfxRect){rx-1,segY,4,fminf(segH,fim-segY)},0,r,g,b,a*.95f);
-  for(int k=1;k<4;k++)gfx_cor((GfxRect){rx-3,segY+segH*k/4.0f,8,1},0,.48f,.47f,.46f,a*.35f);
   int visto=vistoItem(&it);
   float ar,ag,ab;ajustes_acento(&ar,&ag,&ab);
   // Visto: disco no acento com o check; nao visto: ponto da cronologia.
@@ -2075,35 +2093,44 @@ static void timelineCard(int i,float cy,float a,float x0) {
       if(t>.01f)gfx_cor((GfxRect){rx+1-(d+14)*.5f,pc-(d+14)*.5f,d+14,d+14},.5f,r,g,b,a*.28f*t);
       gfx_cor((GfxRect){rx+1-d*.5f,pc-d*.5f,d,d},.5f,sel?.95f:passou?r:.30f,sel?.95f:passou?g:.30f,
               sel?.97f:passou?b:.32f,a); } }
-  // O ano em foco cresce (troca suave entre o pequeno e o grande), os outros
-  // ficam menores e apagados; ancorado a direita, rente a linha.
+  // O ano em foco sobe UM degrau da escala (21 -> 28) e acende; os outros
+  // ficam apagados. Centrado no ponto, ancorado a direita, rente a linha.
   char year[16];int y=yearOf(&it);if(y==9999)snprintf(year,sizeof year,"—");else snprintf(year,sizeof year,"%d",y);
   if(vtTimelineRetrato()){TxtLinha yr=txt_linha(TXT_DET_META2,year,219,210,195,255);txt_desenhar_alpha(yr,x0,cy+14,a);}
   else{
     TxtLinha yp=txt_linha(TXT_HERO_META,year,219,210,195,255);
     if(t<.99f)txt_desenhar_alpha(yp,rx-22-yp.w,cy+VT_TL_PONTO-yp.h*.5f,a*.55f*(1-t));
-    if(t>.01f){TxtLinha yg=txt_linha(TXT_TITULO2,year,245,240,230,255);
-      txt_desenhar_alpha(yg,rx-22-yg.w,cy+VT_TL_PONTO-yg.h*.5f+(1-t)*10.0f,a*t);
-      // Onde este ano fica na cronologia inteira (o comeco ja rolou para cima).
-      if(celN>1){float bw=yg.w,bx=rx-22-bw,by=cy+VT_TL_PONTO+yg.h*.5f+8.0f;
-        gfx_cor((GfxRect){bx,by,bw,4},.5f,1,1,1,a*t*.18f);
-        gfx_cor((GfxRect){bx,by,fmaxf(4.0f,bw*i/(float)(celN-1)),4},.5f,r,g,b,a*t);}}
+    if(t>.01f){TxtLinha yg=txt_linha(TXT_CALLOUT,year,245,240,230,255);
+      txt_desenhar_alpha(yg,rx-22-yg.w,cy+VT_TL_PONTO-yg.h*.5f,a*t);}
   }
   // Os cartoes fora do foco recuam um pouco (sem foco na grade, todos iguais).
   if(!tabFocus)a*=.70f+.30f*t;
   GfxRect card=vtTimelineCard(cy), artRect=vtTimelineArte(card);
-  float x=card.x,tx=vtTelefone()?artRect.x+artRect.w+24.0f:x+418.0f;
-  float tw=vtTelefone()?card.x+card.w-tx-24.0f:550.0f;
-  if(sel&&ajustes_borda_foco())foco_anel(card,.04f,1.0f,a);
-  else if(sel)gfx_cor((GfxRect){x-4,cy-4,card.w+8,VT_CARD_H+8},.045f,.94f,.95f,.97f,a);
-  gfx_cor(card,.04f,.09f,.095f,.105f,a);
-  if(visto){gfx_cor(card,.04f,ar,ag,ab,.07f*a);
+  float tx=vtTelefone()?artRect.x+artRect.w+24.0f:card.x+418.0f;
+  float tw=card.x+card.w-tx-(vtTelefone()?24.0f:32.0f);
+  // FOCO DE LINHA (layout.h, NV_COR_FOCO e material da ilha): o cartao e uma
+  // linha que da para preencher, entao a superficie sobe um degrau e NENHUM
+  // contorno (dono, 14/10: "o contorno no componente que ja nao usamos mais").
+  // Raios concentricos: o do cartaz do app na arte, + o recuo no cartao.
+  float rp=ajustes_raio_poster_px(),rc=(rp+12.0f)/card.h,ra=rp/artRect.h,k=tabFocus?0.0f:t;
+  if(ajustes_vidro()){gfx_vidro_painel(card,rc,.55f,a);gfx_cor(card,rc,1,1,1,.13f*k*a);}
+  else gfx_cor(card,rc,.09f+.08f*k,.095f+.081f*k,.105f+.099f*k,a);
+  if(visto){gfx_cor(card,rc,ar,ag,ab,.07f*a);
     gfx_cor((GfxRect){card.x,card.y+12,3,card.h-24},.5f,ar,ag,ab,a);}
+  // ARTE PREENCHE O QUADRO 16:9 (cover). Sem backdrop: o cartaz desfocado
+  // preenche e o cartaz nitido fica no meio — nunca uma moldura cinza.
   const char *art=it.backdrop[0]?it.backdrop:it.poster;GLuint tex=art[0]?tex_obter_larg(art,390):0;
-  if(tex){gfx_tex_aspect_atual=tex_aspecto(art);gfx_rect(artRect,tex,GFX_CARD,0,0,0,.04f,0,0,0,a);gfx_tex_aspect_atual=0;}
-  else { gfx_cor(artRect,.04f,.16f,.16f,.18f,a);
-         txt_desenhar_alpha(txt_linha(TXT_MINI,"Sem arte",184,188,198,255),
-                            vtTelefone()?artRect.x+artRect.w*.5f-32.0f:x+158,vtTelefone()?artRect.y+artRect.h*.5f-10.0f:y+104,a*.9f); }
+  GLuint fundo=tex&&!it.backdrop[0]?gfx_desfocado(tex,art):tex;
+  if(fundo){gfx_card_forcar_cover_atual=1;gfx_tex_aspect_atual=tex_aspecto(art);
+    gfx_rect(artRect,fundo,GFX_CARD,0,0,0,ra,0,0,0,a);gfx_card_forcar_cover_atual=0;gfx_tex_aspect_atual=0;}
+  else gfx_cor(artRect,ra,NV_COR_ESQUELETO_R,NV_COR_ESQUELETO_G,NV_COR_ESQUELETO_B,a);
+  if(tex&&!it.backdrop[0]){float pw=artRect.h*fminf(1.0f,tex_aspecto(art));
+    gfx_cor(artRect,ra,0,0,0,.25f*a);
+    gfx_tex_aspect_atual=tex_aspecto(art);
+    gfx_rect((GfxRect){artRect.x+(artRect.w-pw)*.5f,artRect.y,pw,artRect.h},tex,GFX_CARD,0,0,0,ra,0,0,0,a);
+    gfx_tex_aspect_atual=0;}
+  else if(!tex){TxtLinha sa=txt_linha(TXT_MINI,"Sem arte",184,188,198,255);
+    txt_desenhar_alpha(sa,artRect.x+(artRect.w-sa.w)*.5f,artRect.y+(artRect.h-sa.h)*.5f,a*.9f);}
   marcaEstado(artRect,&it,a);
   TxtLinha name=txt_linha_corta(TXT_CW_TITULO,it.titulo,242,243,247,255,tw);txt_desenhar_alpha(name,tx,cy+22,a);
   TxtLinha genre=txt_linha_corta(TXT_HERO_META,it.genero,187,194,207,255,tw);txt_desenhar_alpha(genre,tx,cy+64,a);
@@ -2114,7 +2141,7 @@ static void timelineCard(int i,float cy,float a,float x0) {
     TxtLinha el=txt_linha_corta(TXT_HERO_META,est,visto?ar*255:226,visto?ag*255:230,visto?ab*255:238,255,tw-(ix-tx));
     txt_desenhar_alpha(el,ix,cy+102+(22-el.h)*.5f,a);
   }
-  txt_bloco_corta(TXT_DET_META2,it.sinopse,209,214,225,tx,cy+(est[0]?138:106),vtTelefone()?tw:545.0f,30,a,est[0]?2:3);
+  txt_bloco_corta(TXT_DET_META2,it.sinopse,209,214,225,tx,cy+(est[0]?138:106),tw,30,a,est[0]?2:3);
 }
 
 // --- PECAS COMUNS DAS EXIBICOES ----------------------------------------------
@@ -2155,8 +2182,9 @@ static void fluxoCartaz(int i, float x0, float a, Uint32 agora) {
   CatItem it;
   float sombra;
   GfxRect r = fluxoRect(i, x0, &sombra), c;
+  a *= fluxoVis(i);
   // Mesmo recorte de fluxoDesenhar: descarte antes de pedir arte ou textura.
-  if (r.x + r.w <= x0 - 24.0f || r.x >= fluxoFim() + 24.0f ||
+  if (a < 0.005f || r.x + r.w <= x0 - 24.0f || r.x >= fluxoFim() + 24.0f ||
       r.y + r.h <= VT_TOPO - 12.0f || r.y >= NV_TELA_H) return;
   if (!viewItem(i, &it)) return;
   ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, VT_TOPO - 12.0f, NV_TELA_H, ponteiroCartaz, NULL, i, 0);
@@ -2189,15 +2217,17 @@ static void fluxoDesenhar(int n, float x0, float a, Uint32 agora) {
     int y;
     if (k < 0 || k >= n || !viewItem(k, &it)) continue;
     q = fluxoRect(k, x0, &sombra); tx = q.x + q.w * 0.5f;
-    if (tx < ax || tx > ax + aw) continue;
+    if (tx < ax || tx > ax + aw || fluxoVis(k) < 0.005f) continue;
     t = 1.0f - fminf(fabsf(k - fluxoPos), 1.0f);
-    gfx_cor((GfxRect){ tx - 1.0f, ly - 6.0f, 2, 14 }, 0, .62f, .61f, .60f, a * (1.0f - sombra));
+    float av = a * fluxoVis(k);
+    gfx_cor((GfxRect){ tx - 1.0f, ly - 6.0f, 2, 14 }, 0, .62f, .61f, .60f, av * (1.0f - sombra));
     y = yearOf(&it);
     if (y == 9999) snprintf(ano, sizeof ano, "—"); else snprintf(ano, sizeof ano, "%d", y);
+    // Ano em foco um degrau acima (21 -> 28, a mesma escala da Linha do tempo).
     if (t < 0.99f) { TxtLinha yp = txt_linha(TXT_HERO_META, ano, 219, 210, 195, 255);
-      txt_desenhar_alpha(yp, tx - yp.w * 0.5f, ly + 18.0f, a * 0.55f * (1.0f - t) * (1.0f - sombra * 0.5f)); }
-    if (t > 0.01f) { TxtLinha yg = txt_linha(TXT_TITULO2, ano, 245, 240, 230, 255);
-      txt_desenhar_alpha(yg, tx - yg.w * 0.5f, ly + 14.0f + (1.0f - t) * 10.0f, a * t); }
+      txt_desenhar_alpha(yp, tx - yp.w * 0.5f, ly + 18.0f, av * 0.55f * (1.0f - t) * (1.0f - sombra * 0.5f)); }
+    if (t > 0.01f) { TxtLinha yg = txt_linha(TXT_CALLOUT, ano, 245, 240, 230, 255);
+      txt_desenhar_alpha(yg, tx - yg.w * 0.5f, ly + 14.0f + (1.0f - t) * 6.0f, av * t); }
   }
   gfx_cor((GfxRect){ cx - 9.0f, ly - 8.0f, 18, 18 }, .5f, .95f, .95f, .97f, a);
   gfx_sem_recorte();
@@ -2403,41 +2433,38 @@ static void cabecalhoDecada(int k, float x0, float y, float a) {
 // preenchimento no acento das abas e a dica de que OK troca.
 // SEM ABAS (uma fonte so) ele vai para o inicio da faixa, onde as abas
 // estariam: a coluna do painel e do retrato do diretor fica livre.
+// UM CONTROLE SO (dono, 14/10: "esse botao de style tab ta solto"): o botao
+// do estilo das abas so existe quando ha abas, e entao e o segmento da direita
+// da MESMA pilula, nao um icone solto do outro lado da tela. Sem dica pendurada
+// embaixo: a pilula com o simbolo de grade ja se le como botao.
+// VITRINE: compoe com a ilha do relogio — mesma linha, altura e material.
 static void botaoExibicao(float a, float x0) {
-  float x = nAbas() ? VT_PAN_X : x0, y = 253.0f, H = 52.0f;
+  float x = nAbas() ? VT_PAN_X : x0, y = VT_AB_Y, H = VT_AB_H;
   float maxW = nAbas() && grupo("Directors") ? 172.0f : VT_PAN_W;
-  float f = pillAnim, sr, sg, sb;
-  int cor = f > 0.5f ? ajustes_tinta_foco() : 214;
+  float f = pillAnim;
+  int cor = f > 0.5f ? ajustes_tinta_foco() : 214, est = nAbas() > 0;
+  int fe = tabFocus && tabCursor == cabN() + 1;
   TxtLinha t = txt_linha_corta(TXT_HERO_META, LAY_NOME[lay], cor, cor, cor, 255, maxW - 70.0f);
-  // VITRINE: no canto de cima, a direita do nome da colecao.
-  if (lay == VT_LAY_VITRINE) { x = NV_TELA_W - NV_ILHA_MARGEM_D - NV_ILHA_REP_W - (t.w + 70.0f); y = NV_ILHA_Y; }
-  GfxRect pill = { x, y, t.w + 70.0f, H };
-  corFocoFonte(&sr, &sg, &sb);
-  // Sobre a arte do destaque a pilula precisa de fundo proprio para ler.
-  if (lay == VT_LAY_VITRINE) gfx_cor(pill, NV_RAIO_PILL, 0, 0, 0, 0.42f * a * (1.0f - f));
-  gfx_cor(pill, NV_RAIO_PILL, 1, 1, 1, 0.07f * a * (1.0f - f));
+  if (lay == VT_LAY_VITRINE) { x = NV_TELA_W - NV_ILHA_MARGEM_D - NV_ILHA_REP_W - (t.w + 70.0f); y = NV_ILHA_Y; H = NV_ILHA_H; }
+  GfxRect pill = { x, y, t.w + 70.0f, H }, seg = { x + pill.w, y, est ? H + 4.0f : 0.0f, H };
+  GfxRect trilho = { x, y, pill.w + seg.w, H };
+  if (lay == VT_LAY_VITRINE) {   // o material da ilha (ilha.c), em repouso
+    if (ajustes_vidro()) gfx_vidro_painel(trilho, NV_RAIO_PILL, 0.80f, a);
+    else { gfx_cor(trilho, NV_RAIO_PILL, 0.12f, 0.124f, 0.143f, 0.92f * a);
+           gfx_anel(trilho, NV_RAIO_PILL, 1.5f, 1, 1, 1, 0.085f * a); }
+  } else gfx_cor(trilho, NV_RAIO_PILL, 1, 1, 1, 0.07f * a);
   if (f > 0.001f) focoAbaFonte(pill, f, a);
   { float gx = x + 22.0f, gy = y + (H - 18.0f) * 0.5f, c = cor / 255.0f;
     for (int q = 0; q < 4; q++)
       gfx_cor((GfxRect){ gx + (q & 1) * 10.0f, gy + (q >> 1) * 10.0f, 8.0f, 8.0f }, 0.25f, c, c, c, a); }
   txt_desenhar_alpha(t, x + 50.0f, y + (H - t.h) * 0.5f, a);
-  if (f > 0.05f) {
-    // Pastilha escura propria: sobre arte clara a dica solta nao se le.
-    TxtLinha d = txt_linha(TXT_MINI, "OK troca a exibição", 236, 239, 245, 255);
-    GfxRect dp = { x, y + H + 8.0f, d.w + 24.0f, d.h + 12.0f };
-    gfx_cor(dp, NV_RAIO_PILL, 0.05f, 0.055f, 0.07f, 0.82f * a * f);
-    txt_desenhar_alpha(d, dp.x + 12.0f, dp.y + 6.0f, a * f);
+  if (est) {
+    float c = fe ? ajustes_tinta_foco() / 255.0f : 214.0f / 255.0f;
+    if (fe) focoAbaFonte(seg, 1, a);
+    else gfx_cor((GfxRect){ seg.x, y + 14.0f, 1.0f, H - 28.0f }, 0, 1, 1, 1, 0.14f * a);
+    gfx_icone((GfxRect){ seg.x + (seg.w - 26.0f) * 0.5f, y + (H - 26.0f) * 0.5f, 26, 26 }, "aj_layout-list", c, c, c, a);
+    ponteiro_alvo(seg.x, seg.y, seg.w, seg.h, ponteiroCab, NULL, cabN() + 1, 0);
   }
-}
-
-static void botaoEstiloAbas(float a) {
-  GfxRect r = {vtFim()-52.0f, VT_AB_Y, 52, VT_AB_H};
-  int f = tabFocus && tabCursor == cabN()+1;
-  if (lay == VT_LAY_VITRINE) r.y = NV_ILHA_Y + 64.0f;
-  float c = f ? ajustes_tinta_foco()/255.0f : 1.0f;
-  if(f) focoAbaFonte(r,1,a);
-  gfx_icone((GfxRect){r.x+13,r.y+13,26,26},"aj_layout-list",c,c,c,a*(f?1:.65f));
-  ponteiro_alvo(r.x,r.y,r.w,r.h,ponteiroCab,NULL,cabN()+1,0);
 }
 
 static void botaoMaisVistos(float a, float x0) {
@@ -2541,7 +2568,6 @@ static void vitDesenhar(float a, float x0) {
       txt_desenhar_alpha(tt, x0, grupo("Streaming") ? 44.0f : 62.0f, a);
     } }
   botaoExibicao(a, x0);
-  botaoEstiloAbas(a);
 }
 
 void vertudo_desenhar(Uint32 agora) {
@@ -2636,11 +2662,16 @@ void vertudo_desenhar(Uint32 agora) {
     float h=vtTelefone()&&!timeline?VT_CARD_H:372.0f;
     gfx_cor((GfxRect){x0+i*(w+VT_GAP_X),VT_TOPO,w,h},.06f,.12f,.13f,.15f,a);
   }
+  // O que passa da base apaga no fundo, nao e cortado seco na borda da tela.
+  // O painel vem depois e fica por cima.
+  if (n > 0 && lay != VT_LAY_FLUXO)
+    gfx_rect((GfxRect){ 0, NV_TELA_H - 120.0f, NV_TELA_W, 120.0f }, 0, GFX_VEU_BAIXO,
+             0, 0, 0, 0, NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 0.92f * a);
   gfx_sem_recorte();
 
   // CABECALHO por cima do recorte, entao ele nunca compete com a arte.
   themeHeader(a,x0);
-  if (collection) { botaoExibicao(a, x0); botaoEstiloAbas(a); }
+  if (collection) botaoExibicao(a, x0);
 
   if (n > 0 && !vtTelefone()) { if (lay == VT_LAY_FLUXO) fluxoInfo(a, x0); else painel(a); }
   if (vtTelefone()) gfx_escala_sair(escalaAnterior);
