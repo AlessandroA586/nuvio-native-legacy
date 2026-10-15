@@ -3433,11 +3433,10 @@ static void heroPreBuscarInfo(int indice) {
   }
   desc_sinopse_hero(lista, n);
   heroPedirLogo(cat_item_exato(indice), ajustes_home_layout(), focoHero);
-  // Vizinhos aquecem o arquivo/miniatura, sem reservar outra textura de hero.
-  for (int k = 1; k < n; k++) {
-    const char *u = artehero_logo_sessao(cat_item_exato(lista[k]));
-    if (u) (void)tex_obter_larg(u, 128);
-  }
+  // Logo dos vizinhos: nivel de logo (fura os fundos) e o MESMO teto do hero,
+  // para a chegada nao promover nem decodificar de novo.
+  for (int k = 1; k < n; k++)
+    heroPedirLogo(cat_item_exato(lista[k]), ajustes_home_layout(), focoHero);
 }
 static void heroAquecerVizinhos(Uint32 agora) {
   int n = heroNLista(), pos, d;
@@ -3453,10 +3452,12 @@ static void heroAquecerVizinhos(Uint32 agora) {
     const char *arte;
     if (heroVizFeito & bit) continue;
     if (viz < 0 || viz == heroAtual || (d > 0 && n == 2)) { heroVizFeito |= bit; continue; }
+    // O logo vai ANTES da arte e sem esperar por ela: pedido como logo (nivel
+    // 2) ele fura a fila dos fundos, que era onde o aquecimento a 128 px
+    // (nivel 0) ficava parado — o logo do vizinho chegava depois da virada.
+    heroPedirLogo(cat_item_exato(viz), ajustes_home_layout(), focoHero);
     arte = arte_por_identidade(viz, 2);
     if (!arte) continue;
-    { const char *logo = artehero_logo_sessao(cat_item_exato(viz));
-      if (logo) (void)tex_obter_larg(logo, 128); }
     heroVizFeito |= bit;
     (void)tex_obter_hero_quente(arte);
     printf("[hero] pre-busca vizinho %s hash=%08lx\n", d < 0 ? "anterior" : "proximo",
