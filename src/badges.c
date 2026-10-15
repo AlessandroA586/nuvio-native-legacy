@@ -326,7 +326,8 @@ float badges_desenhar_selos(uint64_t mask, float x, float y, float maxW, float h
       }
     }
     p = (GfxRect){ x, y - sobra, w + padX * 2.0f, ch };
-    gfx_cor(p, raio, 0.10f, 0.11f, 0.13f, 0.88f * a);
+    if (ajustes_vidro()) gfx_vidro_chip(p, raio, 0.88f, a);
+    else gfx_cor(p, raio, 0.10f, 0.11f, 0.13f, 0.88f * a);
     gfx_cor(p, raio, r, g, b, 0.16f * a);
     gfx_anel(p, raio, 1.5f, br, bg, bb, 0.60f * a);
     if (temArte) {

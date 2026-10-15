@@ -55,9 +55,7 @@ A dark translucent body (rgb .03-.09, alpha >= .5) drawn with `gfx_cor` fails un
 | Site | Why |
 |---|---|
 | agendaui.c:1953, ctxmenu.c:1299 | near-opaque base under the glass sheet (baked text bled through) |
-| detail.c:5258, 5448 | small badges over art |
 | detail.c:7293, 7426 | full-screen scrims |
-| episodios.c:847, posplay.c:670 | 32-34 px chip per row/still; a glass pass each would blow the budget |
 | novidades174.c:148, novidades201.c:710, 202.c:565 | backing/fade veil over preview art |
 | svdesenho.c:28 | button fill |
 | registro_ilha.inc:1368, 1518 | legibility backing over wallpaper, knob ring |
@@ -65,7 +63,6 @@ A dark translucent body (rgb .03-.09, alpha >= .5) drawn with `gfx_cor` fails un
 | ajustes_ux_desenho.inc:553, 632 | slider knob / disc |
 | ajustes_ux_previa.inc, ajustes_ux_secoes.inc | Ajustes preview mocks |
 | dicascontrole.c celular | illustration of a phone, not UI chrome |
-| badges.c:329, streams.c:3462, home.c:1515, explorar.c:1070 | rating / source chips |
 
 ## Not done
 

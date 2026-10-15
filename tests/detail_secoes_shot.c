@@ -540,6 +540,7 @@ int main(int argc, char **argv) {
       if (semAnel) fprintf(f, "bordaFocoCartaz 1\n");   // R3: foco sem anel (V_LIGA: 1 = Desligado)
       fclose(f);
       ajustes_dir(dd); } }
+  ajustes_teste_vidro_env();   // NUVIO_SHOT_VIDRO_OPAC / _FOSCO
 
   montarCatalogo();
 

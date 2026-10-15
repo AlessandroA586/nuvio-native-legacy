@@ -642,6 +642,12 @@ int gfx_luz_canal_bmp(GLuint tex, const char *caminho);
 int gfx_tela_bmp(const char *caminho);
 // Fator da opacidade do vidro: 1,0 = os 78% de sempre (ajustes_vidro_opacidade / 0,78).
 float gfx_vidro_opacidade(void);
+// A luz de borda unica de todo vidro (gfx_vidro painel e gfx_vidro_chip ja a
+// desenham; ver gfx.c).
+void gfx_vidro_luz(GfxRect r, float raio, float a);
+// Vidro chapado de chip/selo/trilho/fundo de foco: tom e alfa (`fundo` x
+// opacidade) do gfx_vidro_painel, aro e luz de borda, sem passada de fundo.
+void gfx_vidro_chip(GfxRect r, float raio, float fundo, float a);
 void gfx_ambiente(float alfa);
 // Pinta a luz que gfx_ambiente deixou pendente, se ainda houver (ver a nota
 // em gfx.c). main.c chama no fim do desenho do quadro; e inofensivo repetir.

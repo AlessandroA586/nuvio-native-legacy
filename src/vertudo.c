@@ -1847,7 +1847,7 @@ static void abasMenu(float x0, float W, char rot[][180], float a) {
   int vis, base = ddJanela(n, ddCursor, py, &vis);   // limitada, segue o foco
   float ph = vis * RH + 12.0f, aa = a * ddAnim;
   if (px + pw > x0 + W) px = fmaxf(x0, x0 + W - pw);
-  gfx_vidro_painel((GfxRect){px, py, pw, ph}, 22.0f, .78f, aa);
+  gfx_vidro_material((GfxRect){px, py, pw, ph}, 22.0f, GFX_VIDRO_DENS, aa);
   for (int k = base; k < base + vis; k++) {
     GfxRect row = {px + 6.0f, py + 6.0f + (k - base) * RH, pw - 12.0f, RH};
     int f = ddAberto && ddCursor == k, atual = idx[k] == source;

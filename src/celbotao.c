@@ -257,7 +257,7 @@ static void celb_desenharCorpo_(void) {
              1.0f, 0, 0, 0.5f, 0, 0, 0, 0.42f * a);
     if (vid) gfx_vidro_material(cartao, raio, GFX_VIDRO_DENS, a);
     else gfx_cor(cartao, raio, .098f, .102f, .118f, .99f * a);
-    gfx_luz_canto(cartao, raio, w * .25f, -h * .25f, w * .9f, ar, ag, ab, (vid ? .10f : .08f) * a); }
+    if (!vid) gfx_luz_canto(cartao, raio, w * .25f, -h * .25f, w * .9f, ar, ag, ab, .08f * a); }
 
   { TxtLinha t = txt_linha_corta(TXT_CALLOUT, i18n("Digitar pelo celular"), 245, 248, 255, 255,
                                  w - 2 * CB_PAD - 40.0f);

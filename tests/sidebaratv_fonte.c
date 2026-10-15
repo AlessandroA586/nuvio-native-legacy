@@ -75,6 +75,11 @@ void gfx_vidro_miolo(GfxRect r, float raio, float cr, float cg, float cb, float 
   capMiolo = ca; capMioloA = a;
 }
 void gfx_vidro_fosco(GfxRect r, float raio, float a) { (void)r; (void)raio; (void)a; }
+void gfx_vidro_material(GfxRect r, float raio, float dens, float a) {
+  (void)r; (void)raio;
+  capMiolo = dens * gfx_vidro_opacidade(); capMioloA = a;
+}
+void gfx_vidro_matiz(GfxRect r, float raio, float a) { (void)r; (void)raio; (void)a; }
 void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a) {
   (void)r; (void)raio; (void)tipo; (void)cinza; (void)dens; (void)a;
 }
@@ -144,7 +149,7 @@ int main(void) {
   assert(TV_SECAO_TRK > 0.0f);
 
   // 3) MIOLO DO PAINEL: com o "Opacidade do vidro" no padrao (0,78), o alfa
-  //    e puxado ao piso TV_MIOLO_MIN — nada de titulo da Home atravessando.
+  //    e o material a TV_MIOLO_MIN — nada de titulo da Home atravessando.
   assert(TV_MIOLO_MIN >= 0.86f);
   menu_iniciar();
   menu_pilula_mostrar(1.0f);

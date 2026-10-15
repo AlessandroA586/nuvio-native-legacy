@@ -2334,7 +2334,8 @@ static void barraHold(GfxRect r, float a) {
   { float g = r.w > 400.0f ? 28.0f : 16.0f;
     float bx = r.x + g, bw = r.w - g * 2.0f;
     GfxRect trilho = { bx, r.y + r.h - 16.0f, bw, 4.0f };
-    gfx_cor(trilho, 0.5f, 0.18f, 0.19f, 0.22f, 0.92f * a);
+    if (ajustes_vidro()) gfx_vidro_chip(trilho, 0.5f, 0.92f, a);
+    else gfx_cor(trilho, 0.5f, 0.18f, 0.19f, 0.22f, 0.92f * a);
     gfx_cor((GfxRect){ bx, trilho.y, bw * h, trilho.h }, 0.5f, 0.92f, 0.93f, 0.96f, a);
     { TxtLinha dica = txt_linha(TXT_MINI, h >= 1.0f ? "Solte para abrir opções"
                                                      : "Segure para opções",

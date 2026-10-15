@@ -416,7 +416,8 @@ static const char *iconeOrigem(int o) {
 // Card header: wrap labels, keep icons small enough to leave text room.
 static void ladrilho(GfxRect r, const char *icone, const char *rotulo, int origem, float a) {
   float x = r.x + EVU_TILE_PAD, y = r.y + EVU_TILE_PAD;
-  gfx_cor(r, 18.0f / r.h, 0.118f, 0.118f, 0.125f, a);
+  if (ajustes_vidro()) gfx_vidro_painel(r, 18.0f / r.h, 0.72f, a);
+  else gfx_cor(r, 18.0f / r.h, 0.118f, 0.118f, 0.125f, a);
   gfx_icone((GfxRect){ x, y + 2, 24, 24 }, icone, 0.953f, 0.949f, 0.937f, a);
   gfx_icone((GfxRect){ r.x + r.w - EVU_TILE_PAD - 18, y + 4, 18, 18 },
             iconeOrigem(origem), 0.85f, 0.85f, 0.85f, a);
