@@ -52,6 +52,15 @@ int main(void) {
   FILE *f;
   int en = -1, es = -1, i;
   assert(mkdtemp(dir));
+  // Pasta de dados de verdade: as migracoes de marca (resolucao, aparencia,
+  // profundidade...) gravam a marca na primeira passagem e param de rodar —
+  // e o gravar() delas roda DEPOIS do idioma restaurado. Sem pasta, elas
+  // regravavam o arquivo em toda leitura e esconderiam a escrita errada de
+  // uma migracao anterior (a do som do trailer, #509).
+  { char dirDados[NVT_MAX]; nvt_set(dirDados, sizeof dirDados, "/nuvio-aj-dados-XXXXXX");
+    assert(mkdtemp(dirDados));
+    setenv("NUVIO_DADOS", dirDados, 1);
+    dados_iniciar(dirDados); }
   for (i = 0; i < ling_opcao_n(); i++) {
     if (!strcmp(ling_opcao_codigo(i), "en")) en = i;
     if (!strcmp(ling_opcao_codigo(i), "es")) es = i;
@@ -129,6 +138,26 @@ int main(void) {
   reiniciarIdioma();
   ajustes_dir(dir);
   assert(valor[AJ_IDIOMA] == 8 && ajustes_idioma() == IDIOMA_ES);   // marca 0 = manual
+
+  // #509: migrating trailer sound must preserve language on disk and reload.
+  for (i = 0; i < 3; i++) {
+    escrever(caminho, i == 0 ?
+      "idioma 0\nidiomaAutoLocal 0\ntrailerDetalheSomLocal 0\n" : i == 1 ?
+      "idioma 0\ntrailerDetalheSomLocal 0\n" :
+      "idioma 0\nidiomaAutoLocal 1\ntrailerDetalheSomLocal 0\n");
+    reiniciarIdioma();
+    ajustes_dir(dir);
+    assert(ajustes_idioma() == IDIOMA_PT);
+    assert(linhaDoArquivo(caminho, "idioma") == IDIOMA_PT);
+    assert(linhaDoArquivo(caminho, "idiomaAutoLocal") == (i == 2));
+    assert(linhaDoArquivo(caminho, "trailerDetalheSomLocal") == 1);
+    assert(ajustes_trailer_som());
+    reiniciarIdioma();
+    ajustes_dir(dir);
+    assert(ajustes_idioma() == IDIOMA_PT);
+    assert((valor[AJ_IDIOMA] == 0) == (i == 2));
+    assert(ajustes_trailer_som());
+  }
 
   // (3) AUTOMATICO: o gravado e o ultimo resolvido (a TV abre nele), e a
   // conta corrige quando chega. Ordem: tmdb_language, depois legenda.

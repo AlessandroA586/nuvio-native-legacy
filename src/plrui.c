@@ -1,6 +1,7 @@
 // Pecas do player no Glass UI — ver plrui.h.
 #include "plrui.h"
 #include "ajustes.h"
+#include "anim.h"
 #include "idioma.h"
 #include "idiomacod.h"
 #include "layout.h"
@@ -80,9 +81,14 @@ float plrui_botao(float x, float y, const char *rotulo, const char *icone, float
   float w = plrui_botao_largura(rotulo, icone);
   GfxRect r = { x, y, w, BT_H };
   int c = 225;
-  float tx = x + BT_PAD;
-  if (foco > 0.5f) { plrui_pilula_foco(r, a); c = plrui_tinta(); }
-  else plrui_botao_repouso(r, a);
+  float f = anim_clamp(foco, 0.0f, 1.0f), tx = x + BT_PAD;
+  // O FOCO E UMA MOLA, nao um limiar: quem chama ja anima o 0..1 (ilha.c,
+  // reacao.c) e os que ainda passam 0/1 cravado simplesmente param nos extremos.
+  // Repouso esvai enquanto a pilula do acento cresce; o TEXTO rasterizado nao
+  // pode trocar de cor a cada passo (cache), entao a tinta troca no ponto medio.
+  if (f > 0.005f) plrui_pilula_foco(r, a * f);
+  if (f < 0.995f) plrui_botao_repouso(r, a * (1.0f - f));
+  if (f > 0.5f) c = plrui_tinta();
   if (icone) {
     float k = c / 255.0f;
     gfx_icone((GfxRect){ tx, y + (BT_H - BT_ICONE) * 0.5f, BT_ICONE, BT_ICONE }, icone, k, k, k, a);
@@ -129,14 +135,36 @@ float plrui_dicas(const char *const *teclas, const char *const *rotulos, int n,
 #define SEG_PAD  5.0f
 #define SEG_VAO  4.0f
 #define SEG_IH  44.0f
-float plrui_seg(const char *const *rotulos, const int *contagem, int n, int sel, int ed,
+// A PILULA DE FOCO ENTRE OS CHIPS, na posicao fracionaria `sel`: desliza de
+// chip em chip em vez de acender no lugar. Pura (sem desenho), com teste em
+// tests/animacoes205.c; `sel` < 0 = nada selecionado/focado.
+static GfxRect segPilulaRect(const float *w, int n, float sel, float x, float y) {
+  float xs[8], xx = x + SEG_PAD;
+  int i, lo, hi;
+  float t;
+  if (n <= 0 || sel < 0.0f) return (GfxRect){ 0, 0, 0, 0 };
+  if (sel > (float)(n - 1)) sel = (float)(n - 1);
+  lo = (int)floorf(sel); hi = lo + 1;
+  t = sel - (float)lo;
+  if (hi > n - 1) { hi = n - 1; lo = n - 1; t = 0.0f; }
+  for (i = 0; i < n; i++) { xs[i] = xx; xx += w[i] + SEG_VAO; }
+  { GfxRect r = { anim_mistura(xs[lo], xs[hi], t), y + SEG_PAD,
+                  anim_mistura(w[lo], w[hi], t), SEG_IH };
+    return r; }
+}
+float plrui_seg(const char *const *rotulos, const int *contagem, int n, float sel, float ed,
                 float x, float y, float a) {
   float w[8], tot = SEG_PAD * 2.0f, xx;
   TxtLinha t[8], c[8];
   int i, vid = ajustes_vidro(), tinta = plrui_tinta();
+  // `sel` e `ed` podem ser FRACIONARIOS: quem chama anima (mola) e a pilula
+  // desliza/esmaece entre os chips em vez de saltar. Inteiros cravados
+  // continuam desenhando exatamente como antes.
+  float pos = sel, fEd = anim_clamp(ed, 0.0f, 1.0f);
+  int selI = pos < 0.0f ? -1 : (int)(pos + 0.5f);
   if (n > 8) n = 8;
   for (i = 0; i < n; i++) {
-    int s = i == sel, f = s && ed;
+    int s = i == selI, f = s && fEd > 0.5f;
     int cor = f ? tinta : 243;
     t[i] = txt_linha(TXT_ILHA_SEG, rotulos[i], cor, cor, cor, f || s ? 255 : 140);
     memset(&c[i], 0, sizeof c[i]);
@@ -157,12 +185,25 @@ float plrui_seg(const char *const *rotulos, const int *contagem, int n, int sel,
   xx = x + SEG_PAD;
   for (i = 0; i < n; i++) {
     GfxRect ir = { xx, y + SEG_PAD, w[i], SEG_IH };
-    float yb = ir.y + (SEG_IH - (float)t[i].h) * 0.5f;
-    if (i == sel && ed) plrui_pilula_foco(ir, a);
-    else if (i == sel) {
-      if (vid) gfx_cor(ir, 0.5f, 1, 1, 1, 0.14f * a);
-      else gfx_cor(ir, 0.5f, 0.204f, 0.212f, 0.243f, a);
+    // A pilula de foco desliza entre os chips (posicao fracionaria) e esmaece
+    // ao entrar/sair do segmentado; o realce de SELECAO fica no chip inteiro.
+    if (i == selI) {
+      if (fEd < 0.5f) {
+        if (vid) gfx_cor(ir, 0.5f, 1, 1, 1, 0.14f * a);
+        else gfx_cor(ir, 0.5f, 0.204f, 0.212f, 0.243f, a);
+      } else if (fEd < 0.995f) {
+        if (vid) gfx_cor(ir, 0.5f, 1, 1, 1, 0.14f * (1.0f - fEd) * a);
+        else gfx_cor(ir, 0.5f, 0.204f, 0.212f, 0.243f, (1.0f - fEd) * a);
+      }
     }
+    xx += w[i] + SEG_VAO;
+  }
+  // Pilula antes do texto: o acento nao pode cobrir os rotulos durante a mola.
+  if (fEd > 0.005f && selI >= 0)
+    plrui_pilula_foco(segPilulaRect(w, n, pos, x, y), a * fEd);
+  xx = x + SEG_PAD;
+  for (i = 0; i < n; i++) {
+    float yb = y + SEG_PAD + (SEG_IH - (float)t[i].h) * 0.5f;
     txt_desenhar_alpha(t[i], xx + 20.0f, yb, a);
     if (c[i].w) txt_desenhar_alpha(c[i], xx + 20.0f + (float)t[i].w + 9.0f,
                                    yb + (float)t[i].h - (float)c[i].h - 1.0f, a);

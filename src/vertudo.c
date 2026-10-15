@@ -188,6 +188,10 @@ static float pillAnim;            // foco no botao "Exibição"
 // (+1 entrando da direita, -1 da esquerda, 0 em repouso).
 static int   ddAberto, ddCursor;
 static float ddAnim, barraX, barraW = -1.0f, barraAlvoX, barraAlvoW, pgSlide;
+// CAPSULA DO FOCO QUE DESLIZA entre as abas de sempre (chips/topo): o mesmo
+// modelo da barra central. capA e o alfa (foco na fileira de abas ou nao),
+// capX/capW a posicao animada, capAlvoX/capAlvoW a aba com o cursor.
+static float capX, capW = -1.0f, capAlvoX, capAlvoW, capA;
 static void abasReiniciar(void);
 static float celX[VT_MAX], celY[VT_MAX], celW[VT_MAX], celH[VT_MAX];
 static short celLin[VT_MAX], celCol[VT_MAX];
@@ -295,8 +299,13 @@ static void degradeMarca(float a, float h) {
     if (!grupo("Streaming") || !*(w = wordmarkServico()) || !corviva_paleta(w, &p) || !p.ok) return;
     c[0] = p.grad[2][0] * 0.55f; c[1] = p.grad[2][1] * 0.55f; c[2] = p.grad[2][2] * 0.55f;
   }
-  gfx_rect((GfxRect){ 0.0f, 0.0f, NV_TELA_W, h }, 0, GFX_FUNDO_DIN, 0.15f, 0, 0, 0,
-           c[0], c[1], c[2], 0.78f * a);
+  // A BASE DA FAIXA ESVANECE EM ALFA (uPar.x = onde o esvanecer comeca, em
+  // fracao da altura): o degradê e a cor da marca sobre o Frost, e sem isso a
+  // borda inferior era um degrau duro no meio da tela (Netflix na TCL: vermelho
+  // em cima, teal embaixo, corte seco a ~48% da altura).
+  { float faixas = fminf(240.0f, h * 0.5f);
+    gfx_rect((GfxRect){ 0.0f, 0.0f, NV_TELA_W, h }, 0, GFX_FUNDO_DIN, 0.15f,
+             1.0f - faixas / h, 0, 0, c[0], c[1], c[2], 0.78f * a); }
 }
 
 // As abas de fonte pertencem ao mesmo fluxo de selecao da folha de fontes.
@@ -537,9 +546,7 @@ void vertudo_colecao(const ColFolder *folder) {
   int i;
   if(!folder||!folder->nSources)return;
   memset(tabAnim, 0, sizeof tabAnim);
-#ifdef NV_TOUCH_UI
-  tabRol = 0.0f;
-#endif
+  tabRol = 0.0f;   // a faixa renasce no logo, sem herdar a rolagem da pasta anterior
   collection=folder;source=tabCursor=0;tabFocus=folder->nSources>1;aberta=1;pedAbrir=-1;
   pillAnim=0;abasReiniciar();layEscolha=escolhaGravada(folder);semVitrineAuto=0;
   // COMECAR NA PRIMEIRA FONTE QUE TEM ENDERECO, e nao teimosamente na fonte 0.
@@ -562,8 +569,8 @@ void vertudo_abrir(const char *base, const char *tipo, const char *catId,
 #ifdef NV_TOUCH_UI
   toqueLivre = 0;
   toquerol_limpar(&toqueAbas);
-  tabRol = 0.0f;
 #endif
+  tabRol = 0.0f;
   memset(tabAnim, 0, sizeof tabAnim);
   snprintf(titulo, sizeof titulo, "%s", tit ? tit : "");
   collection=col_por_catalogo(base,tipo,catId);
@@ -871,6 +878,19 @@ static int cursorInicial(void) {
 }
 static void abasReiniciar(void) {
   ddAberto = ddCursor = 0; ddAnim = pgSlide = 0.0f; barraW = -1.0f;
+  capW = -1.0f; capA = 0.0f;
+}
+// A capsula do foco nas abas de sempre: persegue a aba com o cursor com a
+// mola do resto do foco (NV_MOLA_FOCO), em vez de acender e apagar no lugar
+// (o "tudo meio duro" da Netflix na TCL). Nos outros estilos ela fica fora.
+static void abasCapsulaAtualizar(float dt) {
+  int est = estiloAbas();
+  float alvoA = collection && tabFocus && tabCursor < cabN() &&
+                (est == VT_AB_CHIPS || est == VT_AB_TOPO) ? 1.0f : 0.0f;
+  capA = anim_mola(capA, alvoA, dt, alvoA > capA ? NV_MOLA_FOCO : NV_MOLA_DESFOCO);
+  if (capW < 0.0f) { capX = capAlvoX; capW = capAlvoW; }
+  else { capX = anim_mola(capX, capAlvoX, dt, NV_MOLA_FOCO * 0.6f);
+         capW = anim_mola(capW, capAlvoW, dt, NV_MOLA_FOCO * 0.6f); }
 }
 static void alternarEstiloAbas(void) {
   ajustes_definir_abas_estilo((ajustes_abas_estilo() + 1) % (VT_AB_TOPO + 1));
@@ -1462,6 +1482,7 @@ void vertudo_atualizar(float dt, Uint32 agora) {
   }
   { float alvoP = collection && tabFocus && tabCursor == cabN() ? 1.0f : 0.0f;
     pillAnim = anim_mola(pillAnim, alvoP, dt, alvoP > pillAnim ? NV_MOLA_FOCO : NV_MOLA_DESFOCO); }
+  abasCapsulaAtualizar(dt);
   if (!tabFocus) ddAberto = 0;
   ddAnim = anim_mola(ddAnim, ddAberto ? 1.0f : 0.0f, dt, NV_MOLA_FOCO);
   pgSlide = anim_mola(pgSlide, 0.0f, dt, NV_MOLA_TELA);
@@ -1517,15 +1538,19 @@ void vertudo_atualizar(float dt, Uint32 agora) {
 //
 // FICHA DIAGRAMADA (dono, 13/10: "na lateral nao colocar o poster de novo,
 // vamos colocar mais informacoes sobre o titulo"). So a Grade (a exibicao de
-// cartazes), o Cover Flow e o Ranking dispensam o cartaz lateral, porque la o
-// cartaz ja esta na celula grande; nas outras o cartaz fica. Com o cartaz na
-// ficha, a LOGO tambem nao entra: so o nome escrito (dono, 14/10: "quando tem
-// poster nas infos nao colocar a logo"). Ordem: logo/titulo, ano e
+// cartazes), o Cover Flow, o Ranking e as Decadas dispensam o cartaz lateral,
+// porque la o cartaz ja esta na celula grande — Decadas vale para o streaming
+// tambem, a mesma tela (dono, 14/10: "no modo ranking dos streaming ainda ta
+// mostrando o poster, tem que tirar, decades tb"); nas outras o cartaz fica.
+// Com o cartaz na ficha, a LOGO tambem nao entra: so o nome escrito (dono,
+// 14/10: "quando tem poster nas infos nao colocar a logo"). Ordem:
+// logo/titulo, ano e
 // duracao com a classificacao, generos, notas, sinopse e, quando o catalogo ja
 // os trouxe,
 // direcao e elenco. Nada aqui pede rede: e so o que o CatItem tem.
 static int painelComCartaz(void) {
-  return lay != VT_LAY_GRADE && lay != VT_LAY_FLUXO && lay != VT_LAY_RANKING;
+  return lay != VT_LAY_GRADE && lay != VT_LAY_FLUXO && lay != VT_LAY_RANKING &&
+         lay != VT_LAY_DECADAS;
 }
 static float painelCredito(const char *rot, const char *val, float y, float a) {
   TxtLinha r = txt_linha(TXT_MINI, rot, 160, 168, 182, 255);
@@ -1689,13 +1714,51 @@ static void ponteiroCartaz(int i, int b) {
 static int legendaOculta(void) {
   return grupo("Streaming")&&nItens()>0&&!semFonte&&!desc_vertudo_erro();
 }
+#define VT_ABA_FADE 72.0f
+// ROTULOS DAS ABAS, NA ORDEM DO CATALOGO (sources[0..n]). NOME DA ABA (01/10,
+// pasta Netflix mostrava "streaming_netflix_movies · Movies"): o nome legivel
+// da fonte (titulo da conta, senao o do manifesto — #76) e NUNCA o id cru.
+// Sem nome, ou com o mesmo nome da pasta ("Netflix" na pasta Netflix), so o
+// tipo: "Filmes" / "Séries". O tipo so acompanha quando duas abas teriam o
+// mesmo texto.
+static void abaRotulos(char rot[][180], int nAbas) {
+  static char nomeAba[COL_SOURCE_MAX][128];
+  if(nAbas>COL_SOURCE_MAX)nAbas=COL_SOURCE_MAX;
+  for(int i=0;i<nAbas;i++) {
+    const ColSource *s=&collection->sources[i];
+    col_nome_fonte(s,desc_nome_catalogo(baseDaFonte(s),s->type,s->catId),nomeAba[i],sizeof nomeAba[i]);
+    if(!strcasecmp(nomeAba[i],collection->title))nomeAba[i][0]=0;
+  }
+  for(int i=0;i<nAbas;i++) {
+    const ColSource *s=&collection->sources[i];
+    const char *tipo=i18n(!strcmp(s->type,"series")?"Séries":"Filmes");
+    int repete=0;
+    for(int j=0;j<nAbas&&nomeAba[i][0];j++) if(j!=i&&!strcmp(nomeAba[i],nomeAba[j]))repete=1;
+    if(!nomeAba[i][0])snprintf(rot[i],180,"%s",tipo);
+    else if(repete)snprintf(rot[i],180,"%s · %s",nomeAba[i],tipo);
+    else snprintf(rot[i],180,"%s",nomeAba[i]);
+  }
+}
+// A faixa rola o minimo para a aba alvo entrar inteira, fora da zona de
+// esmaecimento. Voltando para as primeiras abas, se a alvo cabe inteira sem
+// rolar, a fileira ENCONSTA NO LOGO (rol 0): o respiro fixo de antes escondia
+// a primeira aba atras do esmaecimento e a fileira parecia comecar na segunda,
+// desalinhada do cabecalho.
+static float abaRolRecentrar(float rol,float ini,float fim,float fimMax,float W) {
+  if(fim-rol>W-VT_ABA_FADE)rol=fim-(W-VT_ABA_FADE);
+  if(ini-rol<VT_ABA_FADE)rol=fim<=W-VT_ABA_FADE?0.0f:fmaxf(0.0f,ini-VT_ABA_FADE);
+  if(rol>fimMax)rol=fimMax;
+  return rol<0?0:rol;
+}
 // Opacidade de uma aba perto das bordas da faixa: some antes de chegar no
 // botao "Exibicao" (ou na borda esquerda rolada) em vez de ser cortada seco.
-#define VT_ABA_FADE 72.0f
+// O esmaecimento segue a borda que ENTRA/SAI: pela borda de dentro, uma aba
+// pela metade na borda sumia INTEIRA — a primeira aba da Netflix rolava para
+// tras do esmaecimento e a fileira parecia comecar na segunda.
 static float abaFade(float x,float larg,float x0,float W,int maisEsq,int maisDir) {
   float f=1.0f;
-  if(maisDir)f=fminf(f,(x0+W-(x+larg))/VT_ABA_FADE);
-  if(maisEsq)f=fminf(f,(x-x0)/VT_ABA_FADE);
+  if(maisDir)f=fminf(f,(x0+W-x)/VT_ABA_FADE);
+  if(maisEsq)f=fminf(f,(x+larg-x0)/VT_ABA_FADE);
   return f<0?0:f;
 }
 
@@ -1939,25 +2002,9 @@ static void themeHeader(float a,float x0) {
     float larg[COL_SOURCE_MAX],pos[COL_SOURCE_MAX],px=0;
     static char rot[COL_SOURCE_MAX][180];
     int nAbas=collection->nSources;
-    // NOME DA ABA (01/10, pasta Netflix mostrava "streaming_netflix_movies ·
-    // Movies"): o nome legivel da fonte (titulo da conta, senao o do
-    // manifesto — #76) e NUNCA o id cru. Sem nome, ou com o mesmo nome da
-    // pasta ("Netflix" na pasta Netflix), so o tipo: "Filmes" / "Séries". O
-    // tipo so acompanha o nome quando duas abas teriam o mesmo texto.
-    static char nomeAba[COL_SOURCE_MAX][128];
+    if(nAbas>COL_SOURCE_MAX)nAbas=COL_SOURCE_MAX;
+    abaRotulos(rot,nAbas);
     for(int i=0;i<nAbas;i++) {
-      const ColSource *s=&collection->sources[i];
-      col_nome_fonte(s,desc_nome_catalogo(baseDaFonte(s),s->type,s->catId),nomeAba[i],sizeof nomeAba[i]);
-      if(!strcasecmp(nomeAba[i],collection->title))nomeAba[i][0]=0;
-    }
-    for(int i=0;i<nAbas;i++) {
-      const ColSource *s=&collection->sources[i];
-      const char *tipo=i18n(!strcmp(s->type,"series")?"Séries":"Filmes");
-      int repete=0;
-      for(int j=0;j<nAbas&&nomeAba[i][0];j++) if(j!=i&&!strcmp(nomeAba[i],nomeAba[j]))repete=1;
-      if(!nomeAba[i][0])snprintf(rot[i],sizeof rot[i],"%s",tipo);
-      else if(repete)snprintf(rot[i],sizeof rot[i],"%s · %s",nomeAba[i],tipo);
-      else snprintf(rot[i],sizeof rot[i],"%s",nomeAba[i]);
       // Medida com a cor de repouso; a cor certa e reaplicada no desenho (o
       // cache de linhas guarda as duas).
       larg[i]=txt_linha_corta(TXT_HERO_META,rot[i],176,176,176,255,textoW).w+PAD*2;pos[i]=px;px+=larg[i]+GAP;
@@ -1965,6 +2012,11 @@ static void themeHeader(float a,float x0) {
     // Estilos novos (#205): desenham o proprio arranjo; a barra que nao cabe na
     // largura cai nas pilulas rolaveis (as de sempre), sem mudar o D-pad.
     int est=estiloAbas();
+    // Onde a capsula do foco vai: a aba com o cursor, nos estilos que a usam.
+    if(est==VT_AB_CHIPS||est==VT_AB_TOPO) {
+      int focoAba=tabFocus&&tabCursor<nAbas?tabCursor:-1;
+      if(focoAba>=0){capAlvoX=pos[focoAba];capAlvoW=larg[focoAba];}
+    }
     {
       if(est==VT_AB_MENU){abasMenu(x0,W,rot,a);return;}
       if(est==VT_AB_PAGINAS){abasPaginas(x0,W,rot,nAbas,a);return;}
@@ -1978,18 +2030,30 @@ static void themeHeader(float a,float x0) {
 #ifdef NV_TOUCH_UI
     if (!toqueAbas.livre)
 #endif
-    { float fimMax=fmaxf(0.0f,px-GAP-W);
-      // A aba com o cursor entra inteira e fora das zonas de esmaecimento.
-      if(fim-tabRol>W-VT_ABA_FADE)tabRol=fim-(W-VT_ABA_FADE);
-      if(ini-tabRol<VT_ABA_FADE)tabRol=ini-VT_ABA_FADE;
-      if(tabRol>fimMax)tabRol=fimMax; }
-    if(tabRol<0)tabRol=0;
+      tabRol=abaRolRecentrar(tabRol,ini,fim,fmaxf(0.0f,px-GAP-W),W);
 #ifdef NV_TOUCH_UI
     tabRol = anim_clamp(tabRol, 0.0f, fmaxf(0.0f, px-GAP-W));
     toquerol_vincular(&toqueAbas, (GfxRect){x0-margem,244,W+2*margem,H+12}, gfx_escala(),
                      0.0f, fmaxf(0.0f, px-GAP-W), 0, &tabRol);
 #endif
     gfx_recorte(x0-margem,244,W+2*margem,H+12);
+    // A CAPSULA DO FOCO DESLIZA da aba antiga para a nova (mola, como a barra
+    // central): no Topo e um sublinhado na cor do acento; nas pílulas e o
+    // preenchimento com a luz de sempre. Sem foco nas abas ela desvanece.
+    // VEM ANTES das abas: os rotulos ficam por cima dela — desenhada por
+    // ultimo, a capsula tampava o texto da aba focada (Chips, Netflix na TCL).
+    if(capA>.01f) {
+      // capX e relativo a faixa (pos[]); as abas desenham em x0+pos-tabRol.
+      // Sem o +x0 a capsula nasce x0 px a esquerda da aba (sob o logo).
+      float cx=x0+capX-tabRol;
+      float ca=a*abaFade(cx,capW,x0,W,tabRol>0.5f,px-GAP-tabRol>W+0.5f)*capA;
+      if(ca>.005f) {
+        if(est==VT_AB_TOPO) {
+          float sr,sg,sb;corFocoFonte(&sr,&sg,&sb);
+          gfx_cor((GfxRect){cx+PAD,253.0f+H-4.0f,fmaxf(4.0f,capW-PAD*2),3.0f},.5f,sr,sg,sb,ca);
+        } else focoAbaFonte((GfxRect){cx,253.0f,capW,H},1.0f,ca);
+      }
+    }
     for(int i=0;i<nAbas;i++) {
       float x=x0+pos[i]-tabRol;
       if(x+larg[i]<=x0-margem||x>=x0+W+margem)continue;
@@ -2000,23 +2064,22 @@ static void themeHeader(float a,float x0) {
       if(ah<.005f)continue;
       ponteiro_alvo(fmaxf(pill.x,x0-margem),pill.y,fminf(pill.x+pill.w,x0+W+margem)-fmaxf(pill.x,x0-margem),pill.h,ponteiroAba,NULL,i,0);
       if(est==VT_AB_TOPO) {
-        int cor=selecionada?255:160;
+        int cor=selecionada||f?255:160;
         TxtLinha t=txt_linha_corta(selecionada?TXT_ILHA_SECAO:TXT_HERO_META,rot[i],cor,cor,cor,255,textoW);
         txt_desenhar_alpha(t,x+PAD,pill.y+(H-t.h)*.5f,ah);
-        if(selecionada)gfx_cor((GfxRect){x+PAD,pill.y+H-4,fminf(t.w,32.0f),3},.5f,1,1,1,ah);
-        if(f)foco_anel(pill,NV_RAIO_PILL,1,ah);
+        if(selecionada)gfx_cor((GfxRect){x+PAD,pill.y+H-4,fminf(t.w,32.0f),3},.5f,1,1,1,ah*(1.0f-fa));
         continue;
       }
-      if (selecionada) {
-        float sr, sg, sb; corFocoFonte(&sr, &sg, &sb);
-        gfx_cor(pill, NV_RAIO_PILL, sr, sg, sb,
-                ah * (0.62f + 0.38f * fa));
-      } else gfx_cor(pill,NV_RAIO_PILL,1,1,1,.04f*ah*(1-fa));
-      if(fa>.001f) focoAbaFonte(pill, fa, ah);
-      int cor=f?ajustes_tinta_foco():selecionada?ajustes_tinta_foco2():176;
+      gfx_cor(pill,NV_RAIO_PILL,1,1,1,.04f*ah*(1-fa));
+      int cor=f?ajustes_tinta_foco():selecionada?255:176;
       TxtLinha t=txt_linha_corta(TXT_HERO_META,rot[i],cor,cor,cor,255,textoW);
       txt_desenhar_alpha(t,x+PAD,pill.y+(H-t.h)*.5f,ah);
-    }gfx_sem_recorte();
+      // A aba aberta, sem o foco em cima: a mesma marca curta do estilo Topo,
+      // branca — sobre o degradê da marca a pílula da cor do tema sozinha nao
+      // marcava nada (Netflix na TCL, "sem indicador de aba aberta").
+      if(selecionada)gfx_cor((GfxRect){x+PAD,pill.y+H-4,fminf(t.w,32.0f),3},.5f,1,1,1,.85f*ah*(1.0f-fa));
+    }
+    gfx_sem_recorte();
   }
 }
 
@@ -2399,16 +2462,17 @@ static void cabecalhoDecada(int k, float x0, float y, float a) {
 // preenchimento no acento das abas e a dica de que OK troca.
 // SEM ABAS (uma fonte so) ele vai para o inicio da faixa, onde as abas
 // estariam: a coluna do painel e do retrato do diretor fica livre.
+static GfxRect exibPill;   // o ultimo rect do botao "Exibicao": o icone do estilo de abas mora a direita dele
 static void botaoExibicao(float a, float x0) {
   float x = nAbas() ? VT_PAN_X : x0, y = 253.0f, H = 52.0f;
   float maxW = nAbas() && grupo("Directors") ? 172.0f : VT_PAN_W;
-  float f = pillAnim, sr, sg, sb;
+  float f = pillAnim;
   int cor = f > 0.5f ? ajustes_tinta_foco() : 214;
   TxtLinha t = txt_linha_corta(TXT_HERO_META, LAY_NOME[lay], cor, cor, cor, 255, maxW - 70.0f);
   // VITRINE: no canto de cima, a direita do nome da colecao.
   if (lay == VT_LAY_VITRINE) { x = NV_TELA_W - NV_ILHA_MARGEM_D - NV_ILHA_REP_W - (t.w + 70.0f); y = NV_ILHA_Y; }
   GfxRect pill = { x, y, t.w + 70.0f, H };
-  corFocoFonte(&sr, &sg, &sb);
+  exibPill = pill;
   // Sobre a arte do destaque a pilula precisa de fundo proprio para ler.
   if (lay == VT_LAY_VITRINE) gfx_cor(pill, NV_RAIO_PILL, 0, 0, 0, 0.42f * a * (1.0f - f));
   gfx_cor(pill, NV_RAIO_PILL, 1, 1, 1, 0.07f * a * (1.0f - f));
@@ -2426,10 +2490,24 @@ static void botaoExibicao(float a, float x0) {
   }
 }
 
+// O ICONE DO ESTILO DE ABAS mora A DIREITA do botao "Exibicao": a faixa do
+// cabecalho e lida da esquerda para a direita (abas, "Exibicao", estilo) e o
+// D-pad anda nessa ordem — antes o icone ficava a ESQUERDA do botao e DIREITA
+// dava um passo para tras no visual (Netflix na TCL, tabs "fora da ordem").
 static void botaoEstiloAbas(float a) {
-  GfxRect r = {vtFim()-52.0f, VT_AB_Y, 52, VT_AB_H};
+  // A DIREITA do "Exibicao", mas nunca por cima dele nem fora da tela: um
+  // nome de exibicao largo ("Linha do tempo") termina alem da margem e o
+  // clamp antigo pousava o icone em cima da cauda da pilula. Sem exibPill
+  // ainda (1o quadro na Vitrine) ele fica encostado na margem.
+  float rx = exibPill.w > 0.0f ? exibPill.x + exibPill.w + 12.0f : NV_TELA_W - 104.0f - 52.0f;
+  rx = fminf(rx, NV_TELA_W - 104.0f - 52.0f);
+  if (exibPill.w > 0.0f && rx < exibPill.x + exibPill.w + 12.0f)
+    rx = lay == VT_LAY_VITRINE ? exibPill.x + exibPill.w - 52.0f   // Vitrine: icone vai ABAIXO da pilula
+                               : exibPill.x - 12.0f - 52.0f;
+  rx = fmaxf(rx, 8.0f);
+  GfxRect r = {rx, exibPill.y > 0.0f ? exibPill.y : 253.0f, 52, VT_AB_H};
   int f = tabFocus && tabCursor == cabN()+1;
-  if (lay == VT_LAY_VITRINE) r.y = NV_ILHA_Y + 64.0f;
+  if (lay == VT_LAY_VITRINE) r.y = (exibPill.w > 0.0f ? exibPill.y + exibPill.h : NV_ILHA_Y + 52.0f) + 12.0f;
   float c = f ? ajustes_tinta_foco()/255.0f : 1.0f;
   if(f) focoAbaFonte(r,1,a);
   gfx_icone((GfxRect){r.x+13,r.y+13,26,26},"aj_layout-list",c,c,c,a*(f?1:.65f));

@@ -171,7 +171,7 @@ int main(int argc, char **argv) {
   memset(&ok, 0, sizeof ok);
   ok.type = SDL_KEYDOWN;
   ok.key.keysym.sym = SDLK_RETURN;
-  assert(estatvivo_evento(&ok) == 1);
+  assert(estatvivo_evento(&ok, 0) == 1);
   assert(estatvivo_aberto() && estatvivo_tamanho() == EV_TAM_COMPACTO);
   snprintf(nome, sizeof nome, "%s-5-transicao.png", saida);
   captura(nome, 6);
@@ -179,13 +179,13 @@ int main(int argc, char **argv) {
   captura(nome, 90);
 
   // 5. MINIMO: a linha fina do canto, que nao rouba tecla.
-  assert(estatvivo_evento(&ok) == 1);
+  assert(estatvivo_evento(&ok, 0) == 1);
   assert(estatvivo_aberto() && estatvivo_tamanho() == EV_TAM_MINIMO);
   snprintf(nome, sizeof nome, "%s-6-minimo.png", saida);
   captura(nome, 90);
 
   ok.key.keysym.sym = SDLK_DOWN;
-  assert(estatvivo_evento(&ok) == 1 && estatvivo_fixado());
+  assert(estatvivo_evento(&ok, 0) == 1 && estatvivo_fixado());
   snprintf(nome, sizeof nome, "%s-7-fixado.png", saida);
   captura(nome, 90);
   estatvivo_abrir();
@@ -207,7 +207,7 @@ int main(int argc, char **argv) {
     for (lado = 0; lado < 2; lado++) {
       ajustes_definir_estat_lado(lado);
       for (i = 0; i < EV_TAM_N; i++) {
-        while (estatvivo_tamanho() != i) estatvivo_evento(&ok);
+        while (estatvivo_tamanho() != i) estatvivo_evento(&ok, 0);
         snprintf(nome, sizeof nome, "%s-lado-%s-%s.png", saida, lado ? "esq" : "dir", N[i]);
         captura(nome, 90);
       }

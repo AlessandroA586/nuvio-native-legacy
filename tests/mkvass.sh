@@ -142,3 +142,6 @@ PYHASH
   [ -n "$SC" ] || { echo "mkvass.sh: nenhum sidecar completo para conferir no libass"; exit 1; }
   ${TMPDIR:-/tmp}/nuvio-ass-tempos-test "$DIR/ref.ass" "$SC"
 fi
+
+# #483: Tracks alem da janela da sonda (remux remontado).
+bash tests/mkv_tracks_relayout.sh

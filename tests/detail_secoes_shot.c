@@ -464,12 +464,13 @@ static void abrir(int i, int secao, int col) {
   // A T2 E A QUE TEM CACHE, e escolher a temporada aqui NAO e cravar
   // `temporada`: detail_atualizar reescreve essa variavel a partir da COLUNA da
   // fileira de temporadas a cada quadro (o seletor troca no movimento do foco).
-  // Cravar e deixar o foco em SEC_TEMPORADAS coluna 0 punha a pagina de volta
+  // Cravar e deixar o foco em SEC_TEMPORADAS coluna 1 (o botao de episodio
+  // aleatorio agora abre a fileira, #205) punha a pagina de volta
   // na T1 no primeiro quadro — e a captura saia com a temporada errada, que e
   // justamente o defeito que este arquivo existe para pegar.
   if (!strcmp(itens[i].imdb, IMDB_SERIE)) {
     foco.fileira = SEC_TEMPORADAS;
-    foco.coluna = 1;
+    foco.coluna = 2;
     quadros(3);
   } else {
     quadros(1);
@@ -665,10 +666,10 @@ int main(int argc, char **argv) {
   //        temporada que ja tem em memoria — repetir a MESMA nao refaz nada, e
   //        e assim que ele deve se comportar.
   cacheAudiencia(IMDB_SERIE, 2, 3);
-  abrir(0, SEC_TEMPORADAS, 0);          // T1: sem cache, fica vazia
+  abrir(0, SEC_TEMPORADAS, 1);          // T1: sem cache, fica vazia
   foco.fileira = SEC_AUD_ARCO; foco.coluna = 0;
   quadros(30);
-  foco.fileira = SEC_TEMPORADAS; foco.coluna = 1;   // volta para a T2
+  foco.fileira = SEC_TEMPORADAS; foco.coluna = 2;   // volta para a T2
   quadros(30);
   foco.fileira = SEC_AUD_ARCO; foco.coluna = 0;
   quadros(120);
@@ -681,7 +682,7 @@ int main(int argc, char **argv) {
   //         tambem o que prova o PISO DE ALTURA: o cabecalho do radar tem de
   //         ficar abaixo do arco mesmo com o arco vazio. Sem o piso, a captura
   //         anterior mostrava "Drop-off radar" escrito por cima da curva.
-  foco.fileira = SEC_TEMPORADAS; foco.coluna = 0;   // T1: sem cache
+  foco.fileira = SEC_TEMPORADAS; foco.coluna = 1;   // T1: sem cache
   quadros(3);
   foco.fileira = SEC_AUD_ARCO; foco.coluna = 0;
   quadros(120);

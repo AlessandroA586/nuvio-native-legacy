@@ -7,6 +7,10 @@ static const char *ajVisualIcone(int op) {
     case AJ_HERO_CHEIO: return "aj_layout-dashboard";
     case AJ_HERO_CATALOGOS: return "aj_layout-dashboard";
     case AJ_HERO_GENERO: return "aj_layout-dashboard";
+    case AJ_HERO_SINOPSE: return "aj_layout-dashboard";
+    case AJ_HERO_NOTAS: return "aj_layout-dashboard";
+    case AJ_HERO_ANO: return "aj_layout-dashboard";
+    case AJ_HERO_DURACAO: return "aj_layout-dashboard";
     case AJ_HERO_TRANSICAO: return "aj_layout-dashboard";
     case AJ_FIL_ORDEM: return "aj_rows-3";
     case AJ_FIL_LIMITE: return "aj_rows-3";
@@ -20,6 +24,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_SUFIXO_TIPO: return "aj_rows-3";
     case AJ_SELO_VISTO: return "aj_rows-3";
     case AJ_OCULTAR_FILMES_VISTOS: return "aj_rows-3";
+    case AJ_CURADORIA_URL: return "aj_rows-3";
     case AJ_CW_LIGADO: return "aj_rotate-ccw-clock";
     case AJ_CW_OK: return "aj_rotate-ccw-clock";
     case AJ_CW_ESTILO: return "aj_rotate-ccw-clock";
@@ -151,6 +156,9 @@ static const char *ajVisualIcone(int op) {
     case AJ_PLR_CLASSIF: return "aj_shield";
     case AJ_TELA_ABERTURA: return "aj_clapperboard";
     case AJ_ABERTURA_ADDON: return "aj_clapperboard";
+    case AJ_ABERTURA_FUNDO: return "aj_clapperboard";
+    case AJ_EP_TAMANHO: return "aj_layout-dashboard";
+    case AJ_HERO_SINOPSE_TAM: return "aj_layout-dashboard";
     case AJ_ESTAT_TAMANHO: return "aj_gauge";
     case AJ_ESTAT_LADO: return "aj_gauge";
     case AJ_REACAO_CREDITOS: return "aj_circle-play";

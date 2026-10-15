@@ -36,6 +36,10 @@ RETIRADAS = {
     # no enum para o valor[] salvo manter os indices (migracao profundidade-205).
     "AJ_PROF_BORDA", "AJ_PROF_COBERTURA", "AJ_PROF_POSTERS", "AJ_PROF_CW",
     "AJ_PROF_EPS", "AJ_PROF_ELENCO", "AJ_PROF_TRAILERS",
+    # 2.0.5 (#509): o som do trailer virou UM ajuste ("Som do trailer");
+    # o slot de "Som do trailer na pagina do titulo" fica no enum pelo valor[]
+    # salvo, e a migracao do carregar adota a escolha antiga.
+    "AJ_DET_TRAILER_SOM",
 }
 opcoes = [op for op in opcoes if op not in RETIRADAS]
 
