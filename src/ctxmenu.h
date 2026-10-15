@@ -22,6 +22,9 @@
 // tecla nem abre no KEYDOWN; assim o toque curto continua abrindo o detalhe e
 // o modal recebe apenas o foco D-pad depois de estar visivel.
 void ctx_abrir(int indice);
+// Fecha a UI e descarta copias/pedidos do perfil anterior. Escritas ja
+// despachadas continuam nos seus proprios workers, com o dono original.
+void ctx_abrir_sessao(void);
 int  ctx_aberto(void);
 void ctx_evento(const SDL_Event *e);
 void ctx_atualizar(float dt, Uint32 agora);

@@ -547,7 +547,8 @@ int main(int argc, char **argv) {
     for (int k = 0; k < 200; k++) passo(MKV, 0);
     v = legsync_visao(0);
     assert(trocas == 1 && voltou == 0 && v.autoFase == 3 && v.autoTrocou && legsync_offset_ms(0) == 0);
-    assert(!strcmp(prov.estado(0, prov.u), "N\xc3\xa3o deu para sincronizar"));
+    assert(v.motivo == LEGSYNC_M_REGION_DISAGREEMENT);
+    assert(strstr(prov.estado(0, prov.u), "N\xc3\xa3o deu para sincronizar"));
     assert(prov.acoes(0, rot, 8, prov.u) == 0);
 
     // 12c2. Candidata com menos da metade das falas da original: volta a original.

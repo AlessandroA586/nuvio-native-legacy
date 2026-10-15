@@ -403,6 +403,33 @@ int main(void) {
   }
   puts("ok  OK em relacionado fora do catalogo abre o titulo");
 
+  // #419: recomendacao TMDB ("tmdb:<id>") no pos-play abre com a semente que
+  // ja temos, mesmo sem IMDb no catalogo e sem depender do /meta imediato.
+  { CatItem filme = {0};
+    const char *titulos[] = {"Recomendado"}, *anos[] = {"2026"},
+               *posters[] = {"https://image.tmdb.org/t/p/w342/rec.jpg"},
+               *ids[] = {"tmdb:778"};
+    snprintf(filme.imdb, sizeof filme.imdb, "tt0000100");
+    snprintf(filme.tipo, sizeof filme.tipo, "movie");
+    cat_definir(&filme, 1);
+    extras_shot_relacionados_ids(titulos, anos, posters, ids, 1);
+    posplay_fechar(); aquecer(7200, 0);
+    posplay_atualizar(.016f, 1000, 7100, 7200, 0, 0, 0);
+    assert(posplay_visivel());
+    assert(tecla(SDLK_RETURN) == 1);
+    { int w = 0, k;
+      while (desc_titulo_buscando() && w++ < 500) usleep(10 * 1000);
+      k = desc_titulo_pronto();
+      assert(k >= 0);
+      assert(!strcmp(cat_item(k)->imdb, "tmdb:778"));
+      assert(cat_item(k)->tmdb == 778);
+      assert(!strcmp(cat_item(k)->titulo, "Recomendado")); }
+    extras_shot_relacionados(titulos, anos, posters, 0);
+    cat_definir(&c, 1); cat_definir_episodios(0, eps, 10);
+    posplay_fechar();
+  }
+  puts("ok  #419: OK em recomendacao tmdb abre com semente");
+
   // E a DURACAO PROVISORIA: se o pipeline informa 30 s no primeiro instante,
   // "video de 30 s aos 16 s" acima e verdade para a regra — quem segura e a
   // exigencia de duracao estavel. Um quadro com duracao nova nao decide nada,

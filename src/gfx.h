@@ -217,6 +217,8 @@ typedef enum {
   // uma cor (a do titulo em foco). Sem textura e sem arte desfocada.
   //   uCor.rgb = cor do topo; uCor.a = alfa
   //   uFoco    = quanto da cor sobra na base (0..1)
+  //   uPar.x   = 0 = alfa cheio ate a base; > 0 = onde o ALFA comeca a
+  //              esvair (fracao da altura, 1-smoothstep ate a base)
   GFX_FUNDO_DIN = 35,
   // GFX_HERO_CAM / GFX_HERO_CHEIO_CAM — as camadas do destaque numa passada
   // (o crossfade). So por gfx_hero_camadas.
@@ -508,6 +510,9 @@ extern int gfx_rastro_grandes;   // rastro: imprime todo desenho >= 12% da tela
 // para medir na TV quanto fps cada tipo de desenho custa, sem recompilar.
 extern unsigned long long gfx_modos_desligados;
 extern double gfx_fill_modo_ult[GFX_NMODOS];
+// Quadros iniciados: quem anima por reaparicao compara com o ultimo quadro em
+// que desenhou (um relogio de parede confunde engasgo com reaparicao).
+extern unsigned gfx_quadro_n;
 void gfx_novo_quadro(void);
 
 // EFEITOS LEVES (nivel 1 de gpunivel.h). 1 = sem o dither dos degrades (o
@@ -580,6 +585,25 @@ void gfx_ambiente_preparar(void);
 // fosco" desligado, efeitos minimos, video por baixo, ou sobre outro vidro.
 enum { GFX_VIDRO_PAINEL = 0, GFX_VIDRO_BARRA = 1 };
 void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a);
+// A27 TOP CHROME (avatar chip, top bar, clock island): one material, one tint.
+// gfx_chrome_tinta = scrim alpha from "Opacidade do vidro", >= the floor;
+// gfx_chrome = the glass (BARRA), or opaque #1A1C21 + 1 px rim .22 without vidro.
+// gfx_chrome_dens = the density solve for that glass (luma ceiling, top cap,
+// bottom cap). Higher opacity lowers the ceiling and raises the caps, so the
+// scrim over bright art thickens. 78% stays 0.125 / 0.72 / 0.82.
+#define GFX_CHROME_TINTA_MIN 0.30f
+float gfx_chrome_tinta(void);
+void gfx_chrome(GfxRect r, float raio, float a);
+void gfx_chrome_dens(float out[3]);
+// O MATERIAL PADRAO de todo popup/dialogo/painel/ilha no vidro: o gfx_vidro do
+// cinza 0,06 na densidade `dens` (GFX_VIDRO_DENS, GFX_VIDRO_DENS_MODAL) vezes a
+// "Opacidade do vidro". Compartilha o backdrop do quadro; nunca um gfx_cor.
+#define GFX_VIDRO_DENS       0.80f
+#define GFX_VIDRO_DENS_MODAL 0.86f
+void gfx_vidro_material(GfxRect r, float raio, float dens, float a);
+// O mesmo com "Interface de vidro" desligada: a cor lisa (sr,sg,sb) a `sa`.
+void gfx_vidro_ou_solido(GfxRect r, float raio, float dens, float a,
+                         float sr, float sg, float sb, float sa);
 // Conteudo mudou sem passar por gfx_rect (textura reenviada no lugar): o
 // proximo quadro recaptura.
 void gfx_vidro_sujar(void);
@@ -618,6 +642,12 @@ int gfx_luz_canal_bmp(GLuint tex, const char *caminho);
 int gfx_tela_bmp(const char *caminho);
 // Fator da opacidade do vidro: 1,0 = os 78% de sempre (ajustes_vidro_opacidade / 0,78).
 float gfx_vidro_opacidade(void);
+// A luz de borda unica de todo vidro (gfx_vidro painel e gfx_vidro_chip ja a
+// desenham; ver gfx.c).
+void gfx_vidro_luz(GfxRect r, float raio, float a);
+// Vidro chapado de chip/selo/trilho/fundo de foco: tom e alfa (`fundo` x
+// opacidade) do gfx_vidro_painel, aro e luz de borda, sem passada de fundo.
+void gfx_vidro_chip(GfxRect r, float raio, float fundo, float a);
 void gfx_ambiente(float alfa);
 // Pinta a luz que gfx_ambiente deixou pendente, se ainda houver (ver a nota
 // em gfx.c). main.c chama no fim do desenho do quadro; e inofensivo repetir.

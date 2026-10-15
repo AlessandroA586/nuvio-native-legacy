@@ -70,26 +70,28 @@ static void shotGeom(const char *name) {
 
 static void checkGeometry(int t, const float *panel, const float *hints) {
   EvGeometriaTeste geo;
-  int i, cols, rows;
+  int i;
   float left = panel[0] + GEO_PAD, right = panel[0] + panel[2] - GEO_PAD;
-  CONFERE(hints[2] > 0,
-          "size %d: footer visible (focusable panel always draws its hints)", t);
   estatvivo_teste_geometria(&geo);
-  CONFERE(fabsf(hints[0] - left) < 0.5f && fabsf(hints[0] + hints[2] - right) < 0.5f,
-          "mode %d: footer follows the content margins", t);
-  CONFERE(fabsf(geo.separator.x - left) < 0.5f && fabsf(geo.separator.x + geo.separator.w - right) < 0.5f,
-          "mode %d: separator aligned to content", t);
-  cols = panel[2] >= 640 ? geo.nKeys : 3;
-  rows = (geo.nKeys + cols - 1) / cols;
-  CONFERE(fabsf(hints[3] - (rows * GEO_KEY_H + (rows - 1) * GEO_GAP)) < 0.5f,
-          "mode %d: footer height is compact", t);
-  CONFERE(fabsf(panel[1] + panel[3] - hints[1] - hints[3] - GEO_PAD) < 0.5f,
-          "mode %d: footer bottom padding", t);
-  for (i = 0; i < geo.nKeys; i++) {
-    GfxRect k = geo.keys[i];
-    CONFERE(k.h == GEO_KEY_H, "mode %d key %d: equal keycap height", t, i);
-    CONFERE(k.x >= left && k.x + k.w <= right && k.y >= hints[1] && k.y + k.h <= hints[1] + hints[3],
-            "mode %d key %d: inside footer", t, i);
+  if (t == EV_TAM_MINIMO) {
+    CONFERE(fabsf(panel[3] - 56.0f) < 0.5f, "minimal: one-line height, got %.1f", panel[3]);
+    CONFERE(geo.nKeys == 0 && hints[2] == 0, "minimal: no hints");
+  } else {
+    CONFERE(hints[2] > 0 && geo.nKeys >= 3, "size %d: hint row visible", t);
+    CONFERE(fabsf(hints[0] - left) < 0.5f && fabsf(hints[0] + hints[2] - right) < 0.5f,
+            "mode %d: footer follows the content margins", t);
+    CONFERE(fabsf(geo.separator.x - left) < 0.5f && fabsf(geo.separator.x + geo.separator.w - right) < 0.5f,
+            "mode %d: separator aligned to content", t);
+    CONFERE(fabsf(hints[3] - GEO_KEY_H) < 0.5f, "mode %d: hints are one row", t);
+    CONFERE(!strstr(geo.dicas, "Menu"), "mode %d: hints never name a Menu key (%s)", t, geo.dicas);
+    CONFERE(fabsf(panel[1] + panel[3] - hints[1] - hints[3] - GEO_PAD) < 0.5f,
+            "mode %d: footer bottom padding", t);
+    for (i = 0; i < geo.nKeys; i++) {
+      GfxRect k = geo.keys[i];
+      CONFERE(k.y == hints[1] && k.x >= left && k.x + k.w <= right,
+              "mode %d hint %d: on the single row, no overflow", t, i);
+      CONFERE(i == 0 || k.x > geo.keys[i - 1].x + geo.keys[i - 1].w, "mode %d hint %d: no overlap", t, i);
+    }
   }
   if (t == EV_TAM_COMPLETO) {
     CONFERE(geo.nTiles == 6, "full mode: six default tiles");
@@ -218,8 +220,6 @@ int main(void) {
     estatvivo_teste_layout(panel, hints);
     CONFERE(fabsf(panel[1] - clock.y) < 0.5f, "size %d: panel aligned to clock top", t);
     CONFERE(fabsf(panel[0] + panel[2] - clock.x - clock.w) < 0.5f, "size %d: clock side margin", t);
-    CONFERE(panel[1] + panel[3] - hints[1] - hints[3] >= GEO_PAD - 0.5f,
-            "size %d: hints inside glass", t);
     shotGeom(t == EV_TAM_COMPLETO ? "mode-completo" : t == EV_TAM_COMPACTO ? "mode-compacto" : "mode-minimo");
     checkGeometry(t, panel, hints);
     key(SDLK_RETURN);
@@ -313,6 +313,8 @@ int main(void) {
   frame(120);
   estatvivo_teste_layout(panel, hints);
   CONFERE(fabsf(panel[0] - NV_ILHA_MARGEM_D) < 0.5f, "pinned panel settles left");
+  { EvGeometriaTeste pg; estatvivo_teste_geometria(&pg);
+    CONFERE(pg.nKeys == 0 && hints[2] == 0, "pinned: no hints"); }
   shotGeom("pinned-left");
   key(SDLK_RIGHT);
   CONFERE(!ajustes_estat_lado() && estatvivo_fixado(), "RIGHT moves pinned panel");
@@ -326,7 +328,9 @@ int main(void) {
   CONFERE(!estatvivo_aberto() && estatvivo_fixado(), "DOWN returns focus, preserves pin");
   key(SDLK_UP); key(SDLK_UP);
   CONFERE(estatvivo_aberto() && !estatvivo_fixado(), "UP in panel unpins");
-  key(SDLK_ESCAPE);
+  key(SDLK_UP); frame(2);   // UP unpinned = Edit (no Menu key needed)
+  shotGeom("editor-up");
+  key(SDLK_ESCAPE); key(SDLK_ESCAPE);
   CONFERE(!estatvivo_aberto() && !estatvivo_fixado(), "Back closes unpinned panel");
 
   // P0: player aberto, estatistica FECHADA, lado padrao (direita). O relogio

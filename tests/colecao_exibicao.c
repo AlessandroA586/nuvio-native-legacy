@@ -250,10 +250,15 @@ int main(int argc, char **argv) {
   snprintf(pasta.group, sizeof pasta.group, "Streaming");
   semFonte = 1; assert(!legendaOculta()); semFonte = 0;
   assert(abaFade(700, 100, 100, 800, 0, 1) == 1.0f);      // longe da borda
-  assert(abaFade(870, 100, 100, 800, 0, 1) == 0.0f);      // passaria da borda
-  assert(abaFade(750, 100, 100, 800, 0, 1) < 1.0f);       // dentro da zona
+  assert(abaFade(870, 100, 100, 800, 0, 1) > 0.0f);      // fresta entrando: visivel, esmaecida
+  assert(abaFade(870, 100, 100, 800, 0, 1) < 1.0f);      // dentro da zona
+  assert(abaFade(950, 100, 100, 800, 0, 1) == 0.0f);      // borda esquerda alem do fim: fora
+  assert(abaFade(750, 100, 100, 800, 0, 1) == 1.0f);      // inteira dentro da faixa: opaca
+  assert(abaFade(830, 100, 100, 800, 0, 1) < 1.0f);       // borda esquerda na zona: esmaece
   assert(abaFade(870, 100, 100, 800, 0, 0) == 1.0f);      // sem mais abas: normal
-  assert(abaFade(136, 100, 100, 800, 1, 0) < 1.0f);       // rolada: some a esquerda
+  assert(abaFade(136, 100, 100, 800, 1, 0) == 1.0f);      // inteira dentro: opaca
+  assert(abaFade(-50, 100, 100, 800, 1, 0) < 1.0f);       // saindo: a fresta esmaece
+  assert(abaFade(30, 100, 100, 800, 1, 0) > 0.0f);       // fresta saindo: visivel, esmaecida
 
   // 9. GRADE E MURAL COM MAIS AR (13/10): vao de 28 entre cartazes, a Grade
   // sem o nome embaixo (vao vertical menor que o antigo 60 com titulo), o

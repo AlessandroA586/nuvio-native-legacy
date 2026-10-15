@@ -679,11 +679,18 @@ int layout_modo_mobile(void);
 //
 // ILHA DO RELOGIO (ilha.h). Topo a 36 px: dentro da area segura de acao das
 // TVs (5 % de 1080 = 54 px para o TEXTO; a pilula comeca antes, o texto dela
-// fica em ~50). Fechada ela mede 52 de altura; aberta para um aviso, 64.
-#define NV_ILHA_Y          36.0f
-#define NV_ILHA_H          52.0f
+// fica em ~50). Fechada ela mede 60 de altura; aberta para um aviso, 64.
+// TOP CHROME A27 (tvOS 27, glassdesign/brief.md 3a): avatar chip, top bar and
+// clock island share one line: top 32, height 60, capsule radius 30, edges 64;
+// the bar track wraps its 48 px tab capsules with a 6 px inset.
+#define NV_CHROME_TOP      32.0f
+#define NV_CHROME_H        60.0f
+#define NV_CHROME_EDGE     64.0f
+#define NV_CHROME_INSET     6.0f
+#define NV_ILHA_Y          NV_CHROME_TOP
+#define NV_ILHA_H          NV_CHROME_H
 #define NV_ILHA_H_ABERTA   64.0f
-#define NV_ILHA_MARGEM_D   64.0f   // da borda direita, quando ancorada a direita
+#define NV_ILHA_MARGEM_D   NV_CHROME_EDGE   // da borda direita, quando ancorada a direita
 #define NV_ILHA_REP_W     190.0f   // pilula em repouso (12 h AM/PM e a mais larga) + respiro
 #define NV_ILHA_TEXTO_MAX 760.0f   // frase do aviso: mais que isto, reticencias
 

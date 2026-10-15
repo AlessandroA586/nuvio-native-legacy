@@ -9,6 +9,7 @@
 
 // This geometry fixture has no media bytes or network metadata provider.
 void mkvass_aceitar_texto(int sim) { (void)sim; }
+void mkvass_aceitar_imagem(int sim) { (void)sim; }
 
 const char *i18n(const char *s) { return s; }
 const char *ling_nome(const char *c) { return c; }

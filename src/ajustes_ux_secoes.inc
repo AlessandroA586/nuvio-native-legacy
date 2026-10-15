@@ -212,7 +212,7 @@ static int ajCenaSecao(int op) {
       return AJC_TRL_SOM;
     case AJ_VIDRO: case AJ_VIDRO_CONTORNO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: return AJC_APA_VIDRO;
     case AJ_ANIM: case AJ_RELOGIO: case AJ_RELOGIO_12H: return AJC_APA_MOVIMENTO;
-    case AJ_FONTE_MANUAL: case AJ_FONTE_AUTO: case AJ_FONTE_REPOR: case AJ_FONTE_PRIORIDADE: case AJ_FONTE_TOCAR_CONFERINDO: case AJ_FONTE_AQUECER: case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR:
+    case AJ_FONTE_MANUAL: case AJ_FONTE_AUTO: case AJ_FONTE_REPOR: case AJ_FONTE_PRIORIDADE: case AJ_FONTE_TOCAR_CONFERINDO: case AJ_FONTE_AQUECER: case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR: case AJ_FONTE_PRECARREGAR:
     case AJ_FONTE_PRAZO: case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON: case AJ_TAM_MAX: case AJ_TAM_MIN: case AJ_SELOS_CORES: case AJ_SELOS_PACOTE: case AJ_SELOS_PACOTE_ADD:
     case AJ_FONTE_ESCOPO: case AJ_FONTE_ADDONS_PERM: case AJ_FONTE_PLUGINS_PERM: case AJ_FONTE_OUTROS:
     case AJ_FONTE_REGEX: case AJ_FONTE_REGEX_PADRAO: case AJ_FONTE_REGEX_MODELO:
@@ -242,10 +242,10 @@ static int ajCenaSecao(int op) {
     case AJ_ADDONS: case AJ_PLUGINS: case AJ_ADDONS_PRINCIPAL: return AJC_FON_ADDONS;
     case AJ_ENQUETES: return AJC_CON_AVISOS;
     case AJ_DISCORD: case AJ_SALVOS_DEST: case AJ_CW_FONTE: case AJ_CW_PROXIMO: case AJ_HIST_CONTA: case AJ_SOCIAL: return AJC_CON_SOCIAL;
-    case AJ_DEBRID_RD: case AJ_DEBRID_TB: case AJ_DEBRID_PM: case AJ_DEBRID_AD: case AJ_DEBRID_AD_TESTAR:
+    case AJ_PROVEDORES_ESCOPO: case AJ_DEBRID_RD: case AJ_DEBRID_TB: case AJ_DEBRID_PM: case AJ_DEBRID_AD: case AJ_DEBRID_AD_TESTAR:
     case AJ_DEBRID_RD_TESTAR: case AJ_DEBRID_TB_TESTAR: case AJ_DEBRID_PM_TESTAR:
       return AJC_CON_CHAVES;
-    case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: case AJ_P2P_LIMITE: return AJC_CON_P2P;
+    case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: case AJ_P2P_LIMITE: case AJ_P2P_DESTINO: return AJC_CON_P2P;
     case AJ_JF_LIGADO: case AJ_JF_SERVIDOR: case AJ_JF_ENTRAR: case AJ_JF_SAIR: case AJ_EM_SERVIDOR:
     case AJ_EM_ENTRAR: case AJ_EM_SAIR: case AJ_PX_ENTRAR: case AJ_PX_SERVIDOR: case AJ_PX_SAIR:
       return AJC_CON_SERVIDORES;
@@ -1019,7 +1019,7 @@ static void ajcTvProblemas(int A) {
   static const int OP[6] = { AJ_LIVETV_DIAG, AJ_LIVETV_RES, AJ_LIVETV_ESPERA, AJ_LIVETV_FORMATO, AJ_LIVETV_MODO, AJ_LIVETV_PROXY };
   int i;
   CIMG(ajArte(AJA_FUNDO, A), 0, 0, 640, 360, 22, 1);
-  gfx_cor(CR(0, 0, 640, 360), 22.0f / 360, 0.031f, 0.031f, 0.039f, 0.5f);
+  gfx_cor(CR(0, 0, 640, 360), 22.0f / 360, 0.031f, 0.031f, 0.039f, 0.5f); // vidro-ok: Ajustes preview mock
   CVID(28, 26, 92, 32, 16); CACC(42, 37, 10, 10, 1); CBAR(60, 38, 44, 0.85f);
   ajLogo(ajcLogoAmostra(A), CX(36), CY(76), 80 * ajc.s, 40 * ajc.s, 0.95f);
   for (i = 0; i < 12; i++) {
@@ -1228,7 +1228,7 @@ static void ajcDesTela(int A) {
     ajcTxt(textoValor(AJ_RESOLUCAO), 12, 1, 72, 37, 200, 1); ajcFoco(AJ_RESOLUCAO, 36, 30, w2, 30, 15); }
   CVID(300, 30, 304, 130, 22);
   ajcBorrada(ajArte(AJA_FUNDO, A), CR(316, 46, 120, 98), 14 * ajc.s, 1);
-  gfx_cor(CR(316, 46, 120, 98), 14.0f / 98, 0.055f, 0.059f, 0.071f, 0.5f);
+  gfx_cor(CR(316, 46, 120, 98), 14.0f / 98, 0.055f, 0.059f, 0.071f, 0.5f); // vidro-ok: Ajustes preview mock
   CICON("aj_layers", 362, 82, 26, 0.9f);
   ajcTxt(rotuloOpcao(AJ_GPU_EFEITOS), 12, 1, 450, 66, 140, 0.9f);
   ajcTxt(textoValor(AJ_GPU_EFEITOS), 11, 0, 450, 88, 140, 0.6f);
@@ -1244,7 +1244,7 @@ static void ajcDesTela(int A) {
 static void ajcDesDiag(int A) {
   int i;
   ajPreviaHomeArte(ajc.x, ajc.y, 640 * ajc.s, A);
-  gfx_cor(CR(0, 0, 640, 360), 22.0f / 360, 0.031f, 0.031f, 0.039f, 0.45f);
+  gfx_cor(CR(0, 0, 640, 360), 22.0f / 360, 0.031f, 0.031f, 0.039f, 0.45f); // vidro-ok: Ajustes preview mock
   if (valor[AJ_MEDIDOR] != 0) {
     CVID(20, 20, 150, 52, 16);
     ajcTxt("60 fps", 14, 1, 34, 28, 0, 1);

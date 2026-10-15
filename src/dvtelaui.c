@@ -79,8 +79,8 @@ static const char *nomeCodec(const char *c) {
 
 // O vidro escuro das ilhas: miolo quase opaco e um fio claro na borda.
 static void vidro(GfxRect r, float raioPx, float a) {
-  gfx_cor(r, raioPx / r.h, 0.070f, 0.073f, 0.082f, 0.92f * a);
-  gfx_anel(r, raioPx / r.h, 1.0f, 1, 1, 1, 0.09f * a);
+  gfx_vidro_ou_solido(r, raioPx / r.h, GFX_VIDRO_DENS, a, 0.070f, 0.073f, 0.082f, 0.92f);
+  if (!ajustes_vidro()) gfx_anel(r, raioPx / r.h, 1.0f, 1, 1, 1, 0.09f * a);
 }
 
 // O FUNDO NUMA PASSADA SO, COM RUIDO (dono, C9 OLED, 08/10: "o gradiente do
@@ -291,7 +291,7 @@ static void cartao(const DvtelaEstado *e, const Molas *m, Uint32 agora, float a,
   gfx_sombra_sob((GfxRect){ c.x - 60, c.y - 20, c.w + 120, c.h + 110 }, 1.0f, 0, 0.10f, 0, 0, 0,
                  0.55f * a, c, C_RAIO, 0.92f * a);
   vidro(c, C_RAIO, a);
-  gfx_luz_canto(c, C_RAIO / c.h, c.w * 0.82f, -c.h * 0.10f, c.h * 1.1f, ar, ag, ab, 0.10f * a);
+  if (!ajustes_vidro()) gfx_luz_canto(c, C_RAIO / c.h, c.w * 0.82f, -c.h * 0.10f, c.h * 1.1f, ar, ag, ab, 0.10f * a);
 
   ajustes_ui_kicker(i18n("Dolby Vision em MKV"), tx, ty, a);
   { TxtLinha l = txt_linha_corta(TXT_NOV_TITULO, i18n("Ligando o Dolby Vision"), 243, 242, 239, 255, COL_W);

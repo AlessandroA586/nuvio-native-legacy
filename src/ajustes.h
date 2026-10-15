@@ -178,6 +178,7 @@ int ajustes_fonte_tocar_conferindo(void);
 int ajustes_fonte_aquecer(void);
 int ajustes_fonte_conferir_varias(void);
 int ajustes_fonte_preparar(void);
+int ajustes_fonte_precarregar(void);
 int ajustes_fonte_escopo(void);
 int ajustes_fonte_regex_modo(void);
 // "Usar a ordem" dos add-ons (FR_ORDEM_*); 0 tambem quando nao ha ordem.
@@ -496,6 +497,7 @@ int   ajustes_teclado_na_tela(void);         // times the Teclado option is on t
 int   ajustes_teclado_android(void);          // Android keyboard: 0 automatic, 1 app grid, 2 system IME (local)
 int   ajustes_mic_busca(void);               // Samsung (.tpk/.wgt) search mic button: 0 automatic, 1 on, 2 off (local)
 unsigned ajustes_p2p_limite_mb(void);           // #334: P2P space limit in MB (0 = Automatic)
+int   ajustes_p2p_usb(void);                    // #205: 1 = cache P2P em pendrive USB
 int   ajustes_buffer_preset(void);           // #338: 0 Automatico, 1 Baixo, 2 Medio, 3 Alto (0 fora do Android)
 int   ajustes_cache_seek_mb(void);           // F07: seek cache limit in MB for the next video (0 = off / not on this TV)
 #ifdef AJUSTES_TESTE
@@ -712,6 +714,13 @@ float       ajustes_rapido_cor(int i, float *r, float *g, float *b);
 int         ajustes_rapido_cor_atual(void);
 const char *ajustes_rapido_cor_atual_nome(void);
 int         ajustes_rapido_cor_definir(int i);
+
+// Contas nativas compartilhadas (legado) ou uma copia separada por conta+perfil.
+int  ajustes_provedores_compartilhados(void);
+int  ajustes_definir_provedores_compartilhados(int compartilhados);
+void ajustes_provedores_abrir_sessao(void);
+int  ajustes_provedores_arquivo(char *dst, unsigned tam, const char *base);
+void ajustes_perfil_padrao(void);
 
 #ifdef NV_SHOT_HOOKS
 int ajustes_shot_valor(const char *chave, int v);   // capturas: opcao pela chave

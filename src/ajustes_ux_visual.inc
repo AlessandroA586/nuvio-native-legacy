@@ -132,6 +132,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_FONTE_AUTO: return "aj_list-video";
     case AJ_FONTE_REPOR: return "aj_list-video";
     case AJ_FONTE_PREPARAR: return "aj_download";
+    case AJ_FONTE_PRECARREGAR: return "aj_download";
     case AJ_FONTE_CONFERIR_VARIAS: return "aj_layers";
     case AJ_FONTE_AQUECER: return "aj_wifi";
     case AJ_FONTE_TOCAR_CONFERINDO: return "aj_zap";
@@ -252,6 +253,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_P2P_URL: return "aj_user-round";
     case AJ_P2P_TESTAR: return "aj_user-round";
     case AJ_P2P_LIMITE: return "aj_database";
+    case AJ_P2P_DESTINO: return "aj_database";
     case AJ_JF_LIGADO: return "aj_server";
     case AJ_JF_SERVIDOR: return "aj_server";
     case AJ_JF_ENTRAR: return "aj_log-in";
@@ -357,7 +359,7 @@ static void ajCenaArte(const char *arte, GfxRect q, float rr, float escuro) {
 }
 // Peca de ilha sobre a foto: o miolo escuro do vidro (ou o solido #15161A).
 static void ajCenaVidro(GfxRect r, float raioPx, float a) {
-  if (ajVid()) gfx_cor(r, raioPx / r.h, 0.055f, 0.059f, 0.071f, 0.74f * a);
+  if (ajVid()) gfx_vidro_material(r, raioPx / r.h, GFX_VIDRO_DENS, a);
   else gfx_cor(r, raioPx / r.h, 0.082f, 0.086f, 0.102f, 0.97f * a);
 }
 // O logo da marca de uma fonte de nota (deploy/app/art/marcas) e a nota de

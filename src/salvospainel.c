@@ -3027,7 +3027,8 @@ static void barraSobreArte(GfxRect arte, int progresso, float a) {
   if (progresso <= 0) return;
   ajustes_acento(&pr, &pg, &pb);
   c.w = t.w * p;
-  gfx_cor(t, 0.5f, 0.0f, 0.0f, 0.0f, 0.55f * a);
+  if (ajustes_vidro()) gfx_vidro_chip(t, 0.5f, 0.55f, a);
+  else gfx_cor(t, 0.5f, 0.0f, 0.0f, 0.0f, 0.55f * a);
   if (c.w > t.h) gfx_cor(c, 0.5f, pr, pg, pb, a);
 }
 
@@ -3755,7 +3756,7 @@ static void desenhaPop(float a) {
              1.0f, 0, 0, 0.5f, 0, 0, 0, .42f * e);
     if (vid) gfx_vidro_folha(r, 28.0f / h, e);
     else gfx_cor(r, 28.0f / h, .098f, .102f, .118f, .99f * e);
-    gfx_luz_canto(r, 28.0f / h, w * .25f, -h * .25f, w * .9f, 1, 1, 1, (vid ? .06f : .04f) * e); }
+    if (!vid) gfx_luz_canto(r, 28.0f / h, w * .25f, -h * .25f, w * .9f, 1, 1, 1, .04f * e); }
   // O TEXTO NA ESCALA DA ILHA: titulo 24 semibold, apoio 19 a 62 %, opcoes
   // 24 regular a 88 % (branco cheio na focada).
   { TxtLinha t = txtIlha(TXT_ILHA_NOME, popTitulo, w - 64.0f);
@@ -4974,7 +4975,7 @@ static void desenharPainel(Uint32 agora) {
                    0, 0, 0, .38f * as, p, raioForma * p.h, vid ? 0.0f : .98f * as);
     if (vid) gfx_vidro_folha(p, raioForma, as);
     else gfx_cor(p, raioForma, .071f, .075f, .086f, .98f * as);
-    gfx_luz_canto(p, raioForma, p.w * .25f, -p.h * .25f, p.w * .9f, 1, 1, 1, (vid ? .06f : .04f) * as);
+    if (!vid) gfx_luz_canto(p, raioForma, p.w * .25f, -p.h * .25f, p.w * .9f, 1, 1, 1, .04f * as);
   }
 
   // Tudo daqui para baixo fica preso ao painel: sem o recorte, a lista rolada

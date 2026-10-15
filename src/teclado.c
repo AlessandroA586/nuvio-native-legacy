@@ -1274,7 +1274,7 @@ static void tePhoneDesenhar(Uint32 agora) {
   if (tePhoneNativo()) return;
   TePhoneLayout l = tePhoneMedir();
   if (ajustes_vidro()) {
-    gfx_cor(l.painel, 28 / l.painel.h, .055f, .059f, .071f, .86f * a);
+    gfx_vidro_material(l.painel, 28 / l.painel.h, GFX_VIDRO_DENS_MODAL, a);
     gfx_luz_canto(l.painel, 28 / l.painel.h, l.painel.w * .22f, -l.painel.h * .4f,
                   l.painel.h * .62f, 1, 1, 1, .1f * a);
   } else gfx_cor(l.painel, 28 / l.painel.h, .082f, .086f, .102f, a);
@@ -1357,7 +1357,7 @@ static void teDesenhar(Uint32 agora) {
     float raio = 36.0f / p.h;
     gfx_rect((GfxRect){ p.x - 20, p.y - 6, p.w + 40, p.h + 46 }, 0, GFX_SOMBRA, 1.0f, 0, 0, 0.5f, 0, 0, 0, 0.40f * a);
     if (ajustes_vidro()) {
-      gfx_cor(p, raio, 0.055f, 0.059f, 0.071f, 0.86f * a);
+      gfx_vidro_material(p, raio, GFX_VIDRO_DENS_MODAL, a);
       gfx_luz_canto(p, raio, p.w * 0.22f, -p.h * 0.40f, p.h * 0.62f, 1, 1, 1, 0.10f * a);
     } else gfx_cor(p, raio, 0.082f, 0.086f, 0.102f, a); }
 

@@ -1,4 +1,5 @@
 #include "ctxmenu.h"
+#include "perfisessao.h"
 #include "catalogo.h"
 #include "logotitulo.h"
 #include "descoberta.h"
@@ -42,6 +43,10 @@
 #include "telefoneui.h"
 #define NV_ESCALA_TELA   // o arquivo inteiro mede pela tela virtual (escala.h)
 #include "escala.h"
+
+// Optional imports belong to consumers: public declarations keep producers strong.
+extern int tirarremoto_capturar(TirarRemotoPedido *, const char *) NV_PERFIL_OPCIONAL;
+extern void tirarremoto_executar_pedido(const TirarRemotoPedido *, const char *, int) NV_PERFIL_OPCIONAL;
 
 // Mantem o header publico de Trakt estavel: estas leituras sao o contrato
 // interno entre a modal e as escritas assincronas do proprio port.
@@ -308,10 +313,12 @@ static int     temAncora;
 // Os DELETE remotos de "Tirar de Continuar assistindo", fora do fio de
 // desenho. Nenhum dos dois e obrigatorio: sem Trakt nao ha id de playback, sem
 // conta nao ha RPC. Os dois dizem no log o que fizeram.
-typedef struct { char imdb[64]; char chave[192]; int ocultar; } TirarRemoto;
+typedef struct { char imdb[64]; char chave[192]; int ocultar; TirarRemotoPedido pedido; } TirarRemoto;
 static void *fioTirarRemoto(void *u) {
   TirarRemoto *tr = (TirarRemoto *)u;
-  tirarremoto_executar(tr->imdb, tr->chave, tr->ocultar);
+  if (tirarremoto_executar_pedido) tirarremoto_executar_pedido(&tr->pedido, tr->chave, tr->ocultar);
+  else tirarremoto_executar(tr->imdb, tr->chave, tr->ocultar);
+  memset(tr, 0, sizeof *tr);
   free(tr);
   return NULL;
 }
@@ -324,6 +331,7 @@ static void *fioTirarRemoto(void *u) {
 static void tirarRemotoEmFio(TirarRemoto *tr) {
   pthread_t t;
   if (!tr) return;
+  if (tirarremoto_capturar && !tirarremoto_capturar(&tr->pedido, tr->imdb)) { free(tr); return; }
   if (pthread_create(&t, NULL, fioTirarRemoto, tr) == 0) { pthread_detach(t); return; }
   printf("[ctx] sem fio para tirar %s do Trakt/conta: so o efeito local vale\n", tr->imdb);
   fflush(stdout);
@@ -1318,9 +1326,9 @@ static void ilhaCtx(GfxRect p, float raioPx, float a) {
                  0, 0, 0, .42f * a, p, raioPx, vid ? 0.0f : .98f * a);
   // O vidro le a textura assada e deixava o texto da fileira aparecer por
   // tras; uma base quase solida por baixo (a cor do modo sem vidro) fecha.
-  if (vid) { gfx_cor(p, raio, .071f, .075f, .086f, .985f * a); gfx_vidro_folha(p, raio, a); }
+  if (vid) { gfx_cor(p, raio, .071f, .075f, .086f, .985f * a); gfx_vidro_folha(p, raio, a); } // vidro-ok: opaque base under the glass sheet
   else gfx_cor(p, raio, .071f, .075f, .086f, .98f * a);
-  gfx_luz_canto(p, raio, p.w * .25f, -p.h * .25f, p.w * .9f, 1, 1, 1, (vid ? .06f : .04f) * a);
+  if (!vid) gfx_luz_canto(p, raio, p.w * .25f, -p.h * .25f, p.w * .9f, 1, 1, 1, .04f * a);
 }
 
 // KICKER das ilhas: 15/700 em caixa alta (a do idioma), espacado .14em,
@@ -2213,4 +2221,58 @@ static void ctx_desenharCorpo_(Uint32 agora) {
     }
     linhaCtx(r, ops[i].rot, icone, f, a);
   }
+}
+
+void ctx_abrir_sessao(void) {
+  // Sem animacao de saida: uma linha inline pode perder o painel que a
+  // desenhava e continuar aberta como uma camada invisivel sobre a Home.
+  aberto = 0;
+  idx = -1; foco = 0;
+  anim = animV = 0.0f;
+  doPainel = doSocial = doLista = soFileira = cartazFixo = 0;
+  inlineOn = inlinePend = 0;
+  pagina = confFoco = 0;
+  holdAtivo = holdCancelado = holdPronto = esperandoSoltura = 0;
+  holdDesde = 0;
+  // O observador SDL continua instalado uma vez; so o gesto era do perfil.
+  operacao = CTX_OP_NENHUMA;
+  intencao = estadoOperacao = opSimkl = espelhoAplicado = 0;
+  operacaoImdb[0] = 0;
+  avisoOp = NULL;
+  opTinhaRetomada = fecharAoConfirmar = 0;
+  memset(&opItem, 0, sizeof opItem);
+  memset(&copiaPainel, 0, sizeof copiaPainel);
+  memset(&lista, 0, sizeof lista);
+  listaPedida = listaAlterou = 0;
+  memset(extras, 0, sizeof extras);
+  nExtras = 0;
+  extraPedido = confExtra = pendExtra = -1;
+  pedCategoriaImdb[0] = 0;
+  detalhesOk = detalhesPend = deOutraTela = 0;
+  dispensarPend = dispensarOp = 0;
+  filChave[0] = filTitulo[0] = 0;
+  nOps = 0;
+  memset(ops, 0, sizeof ops);
+  memset(focoAnim, 0, sizeof focoAnim);
+  memset(confAnim, 0, sizeof confAnim);
+  nEstilos = 0; estFoco = -1;
+  memset(estLin, 0, sizeof estLin);
+  memset(estTam, 0, sizeof estTam);
+  memset(estAnim, 0, sizeof estAnim);
+  prevAtual = prevAnt = prevRefAtual = prevRefAnt = -1;
+  prevT = 1.0f;
+  temCartaz = 0;
+  cartazArte[0] = 0;
+  memset(&cartazRect, 0, sizeof cartazRect);
+  infoT = infoH = 0.0f;
+  infoDesenhada = infoLadoUlt = 0;
+  memset(&infoCaixa, 0, sizeof infoCaixa);
+  memset(&menuCaixa, 0, sizeof menuCaixa);
+  dicaCx = -1.0f;
+#ifdef NV_TOUCH_UI
+  memset(&toqueEst, 0, sizeof toqueEst);
+  estRolY = 0.0f;
+  memset(&inlineRecorte, 0, sizeof inlineRecorte);
+  inlineRecorteValido = 0;
+#endif
 }

@@ -295,6 +295,13 @@ static int  amigosDoTitulo(AmigosTitulo *t) {
 // "Rafa terminou a série". 0/0 = nao se sabe ainda: a frase nunca e afirmada.
 static void ultimoEpisodio(int *t, int *e);
 static int  pedReproduzir = 0, pedMarcar = 0, pedFontes = 0;
+// O EPISODIO TRAVADO COM O PEDIDO DE FONTES (#513). A folha rouba o foco do
+// teclado: uma seta na folha nao chega a detail_evento, mas o menu do
+// episodio e as animacoes podem mover `foco` — e a escolha na folha lia
+// detail_ep_foco DEPOIS, no episodio em andamento em vez do card escolhido.
+// Trava com o pedido; detail_pediu_fontes entrega os dois e o roteador
+// (app.c) arma o episodio antes de abrir a folha.
+static int  pedFontesT = 0, pedFontesE = 0;
 // Marcar como ASSISTIDO. Separado de pedMarcar, que e "adicionar a lista".
 static int  pedAssistido = 0;
 static int  pedDoInicio = 0;         // botao "Reproduzir desde o inicio"
@@ -2623,7 +2630,12 @@ void detail_evento(const SDL_Event *e) {
     episodios_menu_evento(e);
     // "Fontes deste episodio" e a porta que a pressao longa tomou do card:
     // antes dela, qualquer OK ali abria as fontes.
-    if (episodios_menu_pediu_fontes()) pedFontes = 1;
+    if (episodios_menu_pediu_fontes()) {
+      pedFontes = 1;
+      // O alvo do MENU, nao o do foco: aberto pela pressao longa num card,
+      // o menu lembra o episodio dele (vmT/vmE) e a escolha e dele tambem.
+      episodios_menu_fontes(&pedFontesT, &pedFontesE);
+    }
     return;
   }
 
@@ -2977,7 +2989,13 @@ void detail_evento(const SDL_Event *e) {
         // escolhido a dedo tocava sem perguntar. Aqui a escolha e explicita,
         // entao o ajuste manda a folha; o "Retomar" do Continuar assistindo
         // e o botao primario seguem tocando como antes.
-        if (ajustes_fonte_manual()) pedFontes = 1; else pedReproduzir = 1;
+        if (ajustes_fonte_manual() && ep) {
+          pedFontes = 1;
+          // O card e o alvo, mesmo com o foco ja fora da fileira quando a
+          // folha fechar — a escolha tem de tocar ESTE episodio (#513).
+          // Sem CatEp (foco alem da lista) nao ha episodio para travar.
+          pedFontesT = ep->temporada; pedFontesE = ep->episodio;
+        } else pedReproduzir = 1;
     }
     return;
   }
@@ -5255,8 +5273,9 @@ static void desenhaAssistidoEpisodio(GfxRect th, float a) {
   // Fixo no canto superior direito da miniatura nos tres tamanhos (#205): a
   // base do selo "EPISODIO n" e que se alinha a base daqui, e nao o contrario.
   GfxRect selo = {th.x + th.w - w - 18, th.y + NV_DETP_EP_VISTO_Y, w, h};
-  gfx_cor(selo, .5f, .055f, .068f, .09f, .96f * a);
-  gfx_anel(selo, .5f, 1, .68f, .75f, .86f, .30f * a);
+  if (ajustes_vidro()) gfx_vidro_chip(selo, .5f, .96f, a);
+  else { gfx_cor(selo, .5f, .055f, .068f, .09f, .96f * a);
+         gfx_anel(selo, .5f, 1, .68f, .75f, .86f, .30f * a); }
   GfxRect disco = {selo.x + pad, selo.y + (h - icone) * .5f, icone, icone};
   gfx_cor(disco, .5f, .451f, .839f, .694f, a);
   gfx_icone((GfxRect){disco.x + 5, disco.y + 5, icone - 10, icone - 10},
@@ -5366,7 +5385,8 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     float textY = r.y + epThumbH() + 18.0f;
     GfxRect info = {r.x,textY-8,r.w,epCardH()-epThumbH()-18};
     if (f > .005f) {
-      gfx_cor(info,20.0f/info.h,.19f,.21f,.23f,.64f*f*a);
+      if (ajustes_vidro()) gfx_vidro_chip(info,20.0f/info.h,.64f,f*a);
+      else gfx_cor(info,20.0f/info.h,.19f,.21f,.23f,.64f*f*a);
       if (ajustes_borda_foco()) gfx_anel(th,20.0f/th.h,1.5f,1,1,1,.18f*f*a);
     }
     float metaY = th.y + th.h - 36.0f;
@@ -5445,7 +5465,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
       GfxRect s = { xs, r.y + epSeloY, w, NV_DETP_EP_SELO_H };
       if (ajustes_vidro()) gfx_vidro_painel(s, 12.0f / NV_DETP_EP_SELO_H, 0.6f, a);
       else
-      gfx_cor(s, 12.0f / NV_DETP_EP_SELO_H, 0.05f, 0.05f, 0.06f, 0.78f * a);
+      gfx_cor(s, 12.0f / NV_DETP_EP_SELO_H, 0.05f, 0.05f, 0.06f, 0.78f * a); // vidro-ok: badge over art
       txt_peso(l, s.x + NV_DETP_EP_SELO_PADX,
                s.y + (NV_DETP_EP_SELO_H - l.h) * 0.5f, a, 1.0f);
       xs += w + NV_DETP_EP_SELO_GAP; }
@@ -5589,7 +5609,8 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
       float mostra = revela_progresso(ci->imdb, ep->temporada, ep->episodio,
                                       (float)prog, SDL_GetTicks());
       GfxRect at = { tr.x, tr.y, tr.w * (mostra / 100.0f), tr.h };
-      gfx_cor(tr, 0.5f, 0, 0, 0, 0.45f * a);
+      if (ajustes_vidro()) gfx_vidro_chip(tr, 0.5f, 0.55f, a);
+      else gfx_cor(tr, 0.5f, 0, 0, 0, 0.45f * a);
       // IMERSIVA (14/10): o preenchimento ganha a LUZ do destaque — o mesmo
       // matiz do vidro tingido (nv_luz_viva), entrando e saindo com a luz
       // ambiente. E o primeiro dos "acentos ao longo da interface" da
@@ -5721,7 +5742,8 @@ static void desenhaElenco(float x, float y, int c, float f, float a) {
   if (epApple() && f > .005f) {
     float top = y + NV_DETP_EL_AVATAR + NV_DETP_EL_NOME_DY - 8;
     GfxRect info = {x-12,top,NV_DETP_EL_W+24,76};
-    gfx_cor(info,18.0f/info.h,.19f,.21f,.23f,.6f*f*a);
+    if (ajustes_vidro()) gfx_vidro_chip(info,18.0f/info.h,.6f,f*a);
+    else gfx_cor(info,18.0f/info.h,.19f,.21f,.23f,.6f*f*a);
   }
   GfxRect av = { x + (NV_DETP_EL_W-NV_DETP_EL_AVATAR)*.5f, y, NV_DETP_EL_AVATAR, NV_DETP_EL_AVATAR };
   // Foco da Home (focoprof.h): anel so com o ajuste ligado, senao o avatar
@@ -6023,7 +6045,8 @@ static void desenhaRelacionados(float x, float y, float a, int primeiro, int lim
     if (aceso && epApple()) {
       float alturaLegenda = 12.0f + 22.0f + (ano[0] ? 6.0f + 18.0f : 0.0f) + 8.0f;
       GfxRect legend = {cx-10,y+REL_CARD_H+4,REL_CARD_W+20,alturaLegenda+8};
-      gfx_cor(legend,16.0f/legend.h,.19f,.21f,.23f,.64f*a);
+      if (ajustes_vidro()) gfx_vidro_chip(legend,16.0f/legend.h,.64f,a);
+      else gfx_cor(legend,16.0f/legend.h,.19f,.21f,.23f,.64f*a);
       if (ajustes_borda_foco()) gfx_anel(r,raio,1.5f,1,1,1,.18f*a);
     }
     // Foco da Home no cartaz (focoprof.h): anel so com o ajuste ligado, senao
@@ -7290,7 +7313,7 @@ static void carFundo(void) {
       fundo_borrada_veu(DET_VEU_BORRADA);
       fundo_desenhar_modo(modo, tela, 0.0f, arteAtual, expandida * a);
       fundo_borrada_veu(-1.0f);
-      if (pg > 0.005f) gfx_cor(tela, 0.0f, 0.043f, 0.047f, 0.055f, 0.55f * pg * expandida * a);
+      if (pg > 0.005f) gfx_cor(tela, 0.0f, 0.043f, 0.047f, 0.055f, 0.55f * pg * expandida * a); // vidro-ok: full-screen scrim
       nv_ambiente_forca = 1.0f;
     } else gfx_ambiente(expandida * a);
   }
@@ -7423,7 +7446,7 @@ static void detalheFundo(float s) {
     fundo_desenhar_modo(modo, tela, 0.0f, arte, aEntrada);
     fundo_borrada_veu(-1.0f);
     // Ao rolar: o veu do .dt-cobre do imersivo (50-60%) por cima das cores.
-    if (pg > 0.005f) gfx_cor(tela, 0.0f, 0.043f, 0.047f, 0.055f, 0.55f * pg * aEntrada); }
+    if (pg > 0.005f) gfx_cor(tela, 0.0f, 0.043f, 0.047f, 0.055f, 0.55f * pg * aEntrada); } // vidro-ok: full-screen scrim
   // A arte nitida do topo, vazando nas bordas (o GFX_DETALHE com o caminho
   // "vazar": alfa = 1 - vinheta, em vez de misturar no #0d0d0d).
   if (tex && (1.0f - pg) * aEntrada > 0.005f) {
@@ -7604,6 +7627,14 @@ int detail_pediu_amigos(char *imdb, size_t tam) {
   return 1;
 }
 int detail_pediu_fontes(void)     { int v = pedFontes;     pedFontes = 0;     return v; }
+// O episodio travado com o pedido, se havia um card/menu por tras dele.
+// 0/0 = a folha e do titulo (hold no primario, botao "..."): sem trava.
+int detail_pediu_fontes_ep(int *t, int *e) {
+  int tt = pedFontesT, te = pedFontesE;
+  pedFontesT = pedFontesE = 0;
+  if (t) *t = tt; if (e) *e = te;
+  return tt > 0 && te > 0;
+}
 int detail_pediu_explorar(void)   { int v = pedExplorar;   pedExplorar = 0;   return v; }
 // "Reproduzir desde o inicio" ainda cai no mesmo caminho do primario: o
 // roteador so sabe abrir o player no ponto salvo. Consumir o pedido aqui evita

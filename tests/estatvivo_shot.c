@@ -212,7 +212,12 @@ int main(int argc, char **argv) {
         captura(nome, 90);
       }
     }
-    ajustes_definir_estat_lado(0); }
+    ajustes_definir_estat_lado(0);
+    while (estatvivo_tamanho() != EV_TAM_COMPLETO) estatvivo_evento(&ok, 0);
+    ok.key.keysym.sym = SDLK_DOWN;
+    assert(estatvivo_evento(&ok, 0) == 1 && estatvivo_fixado());
+    snprintf(nome, sizeof nome, "%s-completo-fixado.png", saida);
+    captura(nome, 90); }
 
   tex_encerrar(); txt_encerrar(); gfx_encerrar();
   SDL_GL_DeleteContext(gl); SDL_DestroyWindow(w); SDL_Quit();

@@ -1226,10 +1226,14 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   // GFX_FUNDO_DIN — ver gfx.h. SO COR: um degrade vertical de uma cor so. O
   // topo e uCor.rgb, a base e essa cor vezes uFoco (a "queda"), com curva suave,
   // e o dither de sempre para a rampa escura nao virar degrau na C9. Sem
-  // textura, sem laco, sem SDF: uma multiplicacao por pixel.
+  // textura, sem laco, sem SDF: uma multiplicacao por pixel. uPar.x > 0 e o
+  // esvanecer de ALFA da base da faixa (o degrad da marca na pagina de
+  // colecao): sem ele a borda inferior do rect e um degrau duro.
   "void main(){\n"
   "  vec3 c = uCor.rgb * mix(1.0, uFoco, smoothstep(0.0, 1.0, vUv.y));\n"
-  "  gl_FragColor = nv_dither(c, uCor.a);\n"
+  "  float a = uCor.a;\n"
+  "  if (uPar.x > 0.0) a *= 1.0 - smoothstep(uPar.x, 1.0, vUv.y);\n"
+  "  gl_FragColor = nv_dither(c, a);\n"
   "}\n",
 
   // GFX_COPIA — ampliacao do alvo interno (gpunivel.c). RGB E ALPHA da
@@ -1881,6 +1885,7 @@ static float dinPend[4];
 static void dinDescarregar(void);
 static void dinPintar(float y0);
 static int foscoBloq; // este quadro tem video vivo por baixo (gfx_vidro_fosco_bloquear)
+unsigned gfx_quadro_n;
 // O BACKDROP DO VIDRO (gfx_vidro): um snapshot desfocado em meia resolucao,
 // dividido pelas superficies do quadro e reaproveitado entre quadros enquanto
 // o que foi pintado antes de cada vidro nao muda. vidroHash resume TODO
@@ -1972,6 +1977,7 @@ static void vidroFuro(GfxRect r) {
 }
 static void vidroAplicar(Programa *P, GfxRect r);
 void gfx_novo_quadro(void) {
+  gfx_quadro_n++;
   gfx_n_rect = gfx_n_prog = gfx_n_bind = gfx_n_outros = 0;
   gfx_ms_rect = gfx_ms_outros = 0.0;
   gfx_fill = 0.0; gfx_fill_vis = 0.0; gfx_n_cheio = 0; gfx_n_cheio_mistura = 0;
@@ -3079,6 +3085,7 @@ void gfx_cartao_foco_vidro(GfxRect r, float raio, float foco, float alfa,
 // Cor do miolo do vidro: 0,16 e um degrau ACIMA do fundo escuro da pagina, e
 // nao um preto — sobre #0D0D0D um miolo preto some e so o aro sobra.
 #define VIDRO_MIOLO 0.16f
+static float vidroTom(float cinza);
 // VIDRO SEM CONTORNO (dono, 29-30/09: "tirar o contorno", "bem glass mesmo").
 // O fio de 1,5 px fazia cada componente ler como caixa desenhada; a separacao
 // vem do miolo translucido e, no foco, do aro na cor do realce.
@@ -3383,7 +3390,7 @@ static void vidroAplicar(Programa *P, GfxRect r) {
 
 void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a) {
   GfxRect t = r;
-  float k = gfx_vidro_opacidade(), d = dens, tela[4];
+  float d = dens, tela[4];
   int chapado, i, contorno = ajustes_vidro_contorno();
   if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
   GFX_TR_RECT(t.x, t.y, t.w, t.h);
@@ -3403,13 +3410,25 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   }
   // Scrim CINZA NEUTRO (o verde vinha da fonte, nao daqui; R = G = B): a
   // barra 14/255 como a deles. Sem fonte, o scrim e o vidro inteiro.
+  // A BARRA is the A27 top chrome (bar, avatar chip, clock island): scrim
+  // #121418 at gfx_chrome_tinta(), lighter on top (x.90) than below (x1.06).
+  // Without a backdrop (efeitos minimos, fosco off, old TVs) it is the flat
+  // opaque #1A1C21 of mockup-A27-sem-transparencia.
   if (tipo == GFX_VIDRO_BARRA) {
-    float c = cinza, at = 0.20f * k, ab = 0.36f * k;
-    if (!vidPend.fonte) { at = 0.52f * k; ab = 0.64f * k; }
-    vidPend.scrT[0] = vidPend.scrT[1] = vidPend.scrT[2] = c; vidPend.scrT[3] = at > 1.0f ? 1.0f : at;
-    vidPend.scrB[0] = vidPend.scrB[1] = vidPend.scrB[2] = c; vidPend.scrB[3] = ab > 1.0f ? 1.0f : ab;
+    float al = gfx_chrome_tinta();
+    if (vidPend.fonte) {
+      vidPend.scrT[0] = vidPend.scrB[0] = 0x12 / 255.0f;
+      vidPend.scrT[1] = vidPend.scrB[1] = 0x14 / 255.0f;
+      vidPend.scrT[2] = vidPend.scrB[2] = 0x18 / 255.0f;
+      vidPend.scrT[3] = 0.90f * al; vidPend.scrB[3] = 1.06f * al;
+    } else {
+      vidPend.scrT[0] = vidPend.scrB[0] = 0x1a / 255.0f;
+      vidPend.scrT[1] = vidPend.scrB[1] = 0x1c / 255.0f;
+      vidPend.scrT[2] = vidPend.scrB[2] = 0x21 / 255.0f;
+      vidPend.scrT[3] = vidPend.scrB[3] = 1.0f;
+    }
   } else {
-    float c = cinza;
+    float c = vidroTom(cinza);
     if (d > 1.0f) d = 1.0f;
     vidPend.scrT[0] = vidPend.scrT[1] = vidPend.scrT[2] = c; vidPend.scrT[3] = vidPend.fonte ? d * 0.85f : d;
     vidPend.scrB[0] = vidPend.scrB[1] = vidPend.scrB[2] = c; vidPend.scrB[3] = d;
@@ -3417,10 +3436,13 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   // A densidade resolvida pelo fundo: o texto #cdd3dd com contraste 4 pede
   // luminancia <= 0,125 atras dele; tetos de 0,72 em cima e 0,82 embaixo.
   vidPend.dens[0] = 0.125f; vidPend.dens[1] = 0.72f; vidPend.dens[2] = 0.82f; vidPend.dens[3] = 1.0f;
+  // A27 chrome: the same solve, scaled by "Opacidade do vidro" (gfx_chrome_dens).
+  if (tipo == GFX_VIDRO_BARRA) gfx_chrome_dens(vidPend.dens);
   vidPend.aro = contorno ? 0.14f : 0.0f;
   vidPend.aroLuz = contorno ? 0.28f : 0.0f;
   gfx_rect(r, vidPend.fonte ? vidH2 : 0, GFX_VIDRO, 0, 0, 0, raio, 1, 1, 1, a);
   gfx_vidro_matiz(r, raio, a);
+  if (tipo == GFX_VIDRO_PAINEL) gfx_vidro_luz(r, raio, a);
 }
 
 // OS CANAIS DE FUNDO DA LUZ ASSADA (fundo.c: "Arte borrada" e "Frost" de tela
@@ -3580,6 +3602,62 @@ int gfx_tela_bmp(const char *caminho) {
 }
 // 78% e o vidro de sempre: o fator escala o alfa do miolo (folha e painel).
 float gfx_vidro_opacidade(void) { return ajustes_vidro_opacidade() / 0.78f; }
+// O tom do miolo tambem segue a opacidade: abaixo de 78% clareia (fosco), acima
+// escurece. So o alfa nao aparecia no vidro escuro sobre pagina escura (dono,
+// 15/10: "todos acompanhando a opacidade, visivelmente"). 78% = o tom de sempre.
+static float vidroTom(float cinza) {
+  float c = cinza + (0.78f - ajustes_vidro_opacidade()) * 0.5f;
+  return c < 0.0f ? 0.0f : c > 1.0f ? 1.0f : c;
+}
+// A LUZ DE BORDA DE TODO VIDRO (a do player: radial-gradient(120% 80% at 22%
+// -40%, branco 10% -> 0 a 60%)). gfx_vidro (painel) e gfx_vidro_chip a
+// desenham; ninguem desenha outra por cima.
+void gfx_vidro_luz(GfxRect r, float raio, float a) {
+  gfx_luz_canto(r, raio, r.w * 0.22f, -r.h * 0.40f, (r.w > r.h ? r.w : r.h) * 0.62f,
+                1, 1, 1, 0.10f * a);
+}
+// O vidro sem passada de fundo (chip, selo, trilho, fundo de foco): o miolo
+// chapado do gfx_vidro_painel, no mesmo tom e alfa pela opacidade, com o aro e
+// a luz de borda. Barato: cabe um por fileira.
+void gfx_vidro_chip(GfxRect r, float raio, float fundo, float a) {
+  float c = vidroTom(VIDRO_MIOLO), d = fundo * gfx_vidro_opacidade();
+  if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
+  gfx_cor(r, raio, c, c, c, (d > 1.0f ? 1.0f : d) * a);
+  gfx_vidro_aro(r, raio, 1.0f, 1, 1, 1, 0.14f * a);
+  gfx_vidro_luz(r, raio, a);
+}
+// A27 tint: the existing "Opacidade do vidro" (60..92 %) is the clear->tinted
+// parameter t (78 % -> 0.5), scrim alpha 0.16 + 0.62 t, never below the floor
+// that keeps the clock and the tab labels legible over bright art.
+float gfx_chrome_tinta(void) {
+  float t = (ajustes_vidro_opacidade() - 0.52f) / 0.52f, al;
+  t = t < 0.0f ? 0.0f : t > 1.0f ? 1.0f : t;
+  al = 0.16f + 0.62f * t;
+  return al < GFX_CHROME_TINTA_MIN ? GFX_CHROME_TINTA_MIN : al;
+}
+// k = opacidade/0.78. Below 78% the old 0.125/(k*k) raised the luma ceiling
+// (0.211 at 60%) and dropped the caps, so over white the scrim thinned and the
+// clock fell to ~1.9:1. The clear end must not go thinner than the 78% glass:
+// clamp k up to 1. Above 78% the ceiling still falls and the caps still rise,
+// so more opacity keeps adding tint. At 78% the numbers stay 0.125/0.72/0.82.
+void gfx_chrome_dens(float out[3]) {
+  float k = gfx_vidro_opacidade();
+  if (k < 1.0f) k = 1.0f;
+  out[0] = 0.125f / (k * k); out[1] = 0.72f * k; out[2] = 0.82f * k;
+}
+void gfx_chrome(GfxRect r, float raio, float a) {
+  if (ajustes_vidro()) { gfx_vidro(r, raio, GFX_VIDRO_BARRA, 0.0f, 0.0f, a); return; }
+  gfx_cor(r, raio, 0x1a / 255.0f, 0x1c / 255.0f, 0x21 / 255.0f, a);
+  gfx_anel(r, raio, 1.0f, 1.0f, 1.0f, 1.0f, 0.22f * a);
+}
+void gfx_vidro_material(GfxRect r, float raio, float dens, float a) {
+  gfx_vidro(r, raio, GFX_VIDRO_PAINEL, 0.06f, dens * gfx_vidro_opacidade(), a);
+}
+void gfx_vidro_ou_solido(GfxRect r, float raio, float dens, float a,
+                         float sr, float sg, float sb, float sa) {
+  if (ajustes_vidro()) gfx_vidro_material(r, raio, dens, a);
+  else gfx_cor(r, raio, sr, sg, sb, sa * a);
+}
 void gfx_vidro_painel(GfxRect r, float raio, float fundo, float a) {
   gfx_vidro(r, raio, GFX_VIDRO_PAINEL, VIDRO_MIOLO, fundo * gfx_vidro_opacidade(), a);
 }
@@ -3624,10 +3702,9 @@ void gfx_vidro_miolo(GfxRect r, float raio, float cr, float cg, float cb, float 
           (nv_luz_viva[2] * aB + cb * aA * (1.0f - aB)) / al,
           al / g);
 }
-// Painel lateral/flutuante (menu, Fontes, Salvos): o mesmo vidro, na
-// opacidade dos Ajustes.
+// Painel lateral/flutuante (menu, Fontes, Salvos): o material padrao.
 void gfx_vidro_folha(GfxRect r, float raio, float a) {
-  gfx_vidro(r, raio, GFX_VIDRO_PAINEL, 0.09f, ajustes_vidro_opacidade(), a);
+  gfx_vidro_material(r, raio, GFX_VIDRO_DENS, a);
 }
 void gfx_vidro_borda(GfxRect r, float raio, float a) {
   if (efeitosMinimos || r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
@@ -3641,7 +3718,7 @@ void gfx_vidro_aro(GfxRect r, float raio, float esp, float cr, float cg, float c
 // Cartao/linha em repouso dentro de uma folha de vidro: um veu claro, sem aro.
 void gfx_vidro_superficie(GfxRect r, float raio, float a) {
   if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
-  gfx_cor(r, raio, 1, 1, 1, 0.05f * a);
+  gfx_cor(r, raio, 1, 1, 1, 0.05f * gfx_vidro_opacidade() * a);
 }
 // A COR DO FOCO NO VIDRO E O REALCE ESCOLHIDO. O vidro muda a SUPERFICIE (fina,
 // translucida, sem brilho nem sombra), nao a cor de quem esta selecionado: com
@@ -3698,7 +3775,7 @@ void gfx_vidro_painel_acento(GfxRect r, float raio, float fundo, float a) {
   float cr, cg, cb;
   if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
   ajustes_acento(&cr, &cg, &cb);
-  gfx_cor(r, raio, VIDRO_MIOLO, VIDRO_MIOLO, VIDRO_MIOLO * 1.04f, fundo * a);
+  gfx_vidro_painel(r, raio, fundo, a);
   gfx_cor(r, raio, cr, cg, cb, 0.20f * a);
   gfx_vidro_aro(r, raio, 1.5f, cr, cg, cb, 0.55f * a);
 }

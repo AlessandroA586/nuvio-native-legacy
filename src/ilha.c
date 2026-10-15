@@ -745,7 +745,7 @@ static void atualizarHora(void) {
 }
 
 #define PAD_E   22.0f
-#define PAD_D   24.0f
+#define PAD_D   22.0f   // A27: island pad 22/22
 #define ICONE   28.0f
 #define VAO     12.0f
 #define TECLA   38.0f
@@ -1111,7 +1111,8 @@ static void desenharConteudo(int m, GfxRect r, float a, Uint32 agora) {
       float pr = atvProg > 1.0f ? 1.0f : atvProg;
       GfxRect trilho = { r.x + PAD_E, r.y + r.h - 11.0f, r.w - PAD_E - PAD_D, 3.0f };
       txt_desenhar_alpha(t2, x + (float)t1.w + 14.0f, yc - (float)t2.h * 0.5f, a);
-      gfx_cor(trilho, 0.5f, 1.0f, 1.0f, 1.0f, 0.12f * a);
+      if (ajustes_vidro()) gfx_vidro_chip(trilho, 0.5f, 0.55f, a);
+      else gfx_cor(trilho, 0.5f, 1.0f, 1.0f, 1.0f, 0.12f * a);
       if (trilho.w * pr > 3.0f)
         gfx_cor((GfxRect){ trilho.x, trilho.y, trilho.w * pr, 3.0f }, 0.5f, cr, cg, cb, a);
     } }
@@ -1224,7 +1225,8 @@ static void desenharCartao(const IlhaCartao *c, int qual, GfxRect r, float a) {
     // A BARRA FINA vai sob o texto (nao sob a capa): ela mede o titulo.
     float pr = c->progresso > 1.0f ? 1.0f : c->progresso;
     GfxRect trilho = { xTexto, r.y + r.h - 12.0f, x - xTexto, 3.0f };
-    gfx_cor(trilho, 0.5f, 1.0f, 1.0f, 1.0f, 0.14f * a);
+    if (ajustes_vidro()) gfx_vidro_chip(trilho, 0.5f, 0.55f, a);
+    else gfx_cor(trilho, 0.5f, 1.0f, 1.0f, 1.0f, 0.14f * a);
     if (trilho.w * pr > 3.0f)
       gfx_cor((GfxRect){ trilho.x, trilho.y, trilho.w * pr, 3.0f }, 0.5f, cr, cg, cb, a);
   }
@@ -1661,7 +1663,8 @@ static void desenharModal(GfxRect m, float a) {
     if (!k->ativo) alvoB = 1.0f;
     if (alvoB > 1.0f) alvoB = 1.0f;
     atvBarraA = quieto ? alvoB : atvBarraA + (alvoB - atvBarraA) * 0.14f;
-    gfx_cor(tr, 0.5f, 1.0f, 1.0f, 1.0f, 0.14f * a);
+    if (ajustes_vidro()) gfx_vidro_chip(tr, 0.5f, 0.55f, a);
+    else gfx_cor(tr, 0.5f, 1.0f, 1.0f, 1.0f, 0.14f * a);
     { float fw = tr.w * atvBarraA;
       if (k->ativo && k->total <= 0) fw = tr.w * 0.18f;
       if (fw > 8.0f) gfx_cor((GfxRect){ tr.x, tr.y, fw, tr.h }, 0.5f, cr, cg, cb, a);
@@ -1774,7 +1777,8 @@ static void desenharModal(GfxRect m, float a) {
       // O trilho de 220 primeiro e o tempo depois (mockup do player, 03/10).
       float pr = c->progresso < 0.0f ? 0.0f : c->progresso > 1.0f ? 1.0f : c->progresso;
       GfxRect tr = { cx, sy + (float)t.h * 0.5f - 2.0f, 220.0f, 4.0f };
-      gfx_cor(tr, 0.5f, 1.0f, 1.0f, 1.0f, 0.16f * a);
+      if (ajustes_vidro()) gfx_vidro_chip(tr, 0.5f, 0.55f, a);
+      else gfx_cor(tr, 0.5f, 1.0f, 1.0f, 1.0f, 0.16f * a);
       if (tr.w * pr > 4.0f) gfx_cor((GfxRect){ tr.x, tr.y, tr.w * pr, 4.0f }, 0.5f, cr, cg, cb, a);
       txt_desenhar_alpha(t, cx + 220.0f + 14.0f, sy, a);
     } }
@@ -2145,6 +2149,7 @@ static void ilha_desenharCorpo_(Uint32 agora) {
   { float w = W < H ? H : W, h = H < 8.0f ? 8.0f : H;
     GfxRect r = { dir ? x - w : x, y, w, h }, R = r;
     float raio = 0.5f, cr, cg, cb, fundo = 0.80f, solido = 0.86f, aPil = 1.0f, aMod = 0.0f, aHora = 0.0f;
+    int repouso;
     // Crescida pelo medidor (Menor/Grande), o raio para em 32 px: a pilula
     // vira um cartao de cantos redondos, nao uma capsula.
     if (h > NV_ILHA_H_ABERTA) raio = 32.0f / h;
@@ -2205,6 +2210,7 @@ static void ilha_desenharCorpo_(Uint32 agora) {
              R.w *= k; R.h *= k; R.x = cx - R.w * 0.5f; R.y = cy - R.h * 0.5f; }
     }
     ultRect = R; ultRectOk = 1;
+    repouso = modalT <= 0.0f && corpoT <= 0.0f;
     if (coberta) { coberta = 0; return; }
     // O MODAL ESCURECE A TELA DE TRAS (veu do mockup, 40% / solido 42%): a
     // ilha crescida e a coisa na frente, a home fica atras.
@@ -2220,7 +2226,10 @@ static void ilha_desenharCorpo_(Uint32 agora) {
       gfx_rect((GfxRect){ R.x - 16.0f - 24.0f * k, R.y - 6.0f - 10.0f * k,
                           R.w + 32.0f + 48.0f * k, R.h + 34.0f + 50.0f * k }, 0, GFX_SOMBRA,
                1.0f, 0, 0, 0.5f, 0, 0, 0, (0.34f + 0.16f * k) * A); }
-    if (ajustes_vidro()) gfx_vidro_painel(R, raio, fundo, A);
+    // At rest (no modal, no body) the island is the A27 top chrome: the same
+    // material and tint as the bar and the avatar chip (gfx_chrome).
+    if (repouso) gfx_chrome(R, raio, A);
+    else if (ajustes_vidro()) gfx_vidro_material(R, raio, fundo, A);
     else {
       // MATERIAL SOLIDO: a pilula em repouso tem de LER como pilula em paginas
       // escuras. Com 0,055 de cinza ela ficava igual ao fundo da pagina (0,051)
@@ -2249,7 +2258,9 @@ static void ilha_desenharCorpo_(Uint32 agora) {
       if (tipoLuz >= 0)
         luz = ajustes_animacoes_reduzidas() || modalT > 0.3f ? 0.20f
               : 0.14f + 0.10f * (0.5f + 0.5f * sinf((float)agora * (2.0f * 3.14159265f / 1100.0f)));
-      gfx_luz_canto(R, raio, R.w * 0.25f, -R.h * 0.9f, R.w * 0.85f, cr, cg, cb, luz * A); }
+      // Resting chrome has no white glow; expanded glass has the shared edge light.
+      if (tipoLuz >= 0 || (!repouso && !ajustes_vidro()))
+        gfx_luz_canto(R, raio, R.w * 0.25f, -R.h * 0.9f, R.w * 0.85f, cr, cg, cb, luz * A); }
     central_segurar_desenhar(R, raio, A, agora);
     gfx_recorte(R.x + 6.0f, R.y, R.w - 12.0f, R.h);
     if (aPil > 0.0f) {
@@ -2270,4 +2281,50 @@ static void ilha_desenharCorpo_(Uint32 agora) {
       ponteiro_alvo(r.x, r.y, r.w, r.h, NULL, pontAviso, 0, 0);
     if (voo) desenharVoo(vooPf, 1);
     salvarVoo(agora, x, y, dir); }
+}
+
+static int avisoDoAparelho(const Aviso *a) {
+  return !strcmp(a->chave, "atualizacao") || !strcmp(a->chave, "rede") ||
+         !strncmp(a->chave, "av:update:", 10) ||
+         !strncmp(a->chave, "av:crash:", 9) ||
+         !strncmp(a->chave, "av:canal:", 9);
+}
+
+void ilha_abrir_sessao(void) {
+  Aviso aparelho[FILA + 1];
+  int n = 0;
+  if (temCur && avisoDoAparelho(&cur)) aparelho[n++] = cur;
+  for (int i = 0; i < nFila; i++)
+    if (avisoDoAparelho(&fila[i])) aparelho[n++] = fila[i];
+  memset(fila, 0, sizeof fila); nFila = 0;
+  memset(&cur, 0, sizeof cur); temCur = 0; curAte = 0;
+  memset(&mostraA, 0, sizeof mostraA); mostra = -1; mostraChave[0] = 0;
+  memset(mostrados, 0, sizeof mostrados); nMostrados = 0;
+  for (int i = 0; i < n; i++) {
+    if (!temCur) { cur = aparelho[i]; temCur = 1; }
+    else enfileirar(&aparelho[i]);
+  }
+  // Os tres cartoes e suas copias levam titulos/rostos do perfil anterior.
+  memset(cartoes, 0, sizeof cartoes); memset(temCartao, 0, sizeof temCartao);
+  memset(&mostraC, 0, sizeof mostraC); cartaoVez = mostraQual = -1;
+  memset(&modalC, 0, sizeof modalC); memset(&modalM, 0, sizeof modalM);
+  modalAberto = modalAviso = modalAtividade = modalFoco = modalAvisoMedido = 0;
+  modalQual = -1; modalChave[0] = 0; modalDesde = 0; modalT = modalV = 0.0f;
+  memset(modalFocoA, 0, sizeof modalFocoA);
+  pedido = avPedido = 0; pedidoQual = -1; avPedidoChave[0] = 0;
+  memset(&pedidoC, 0, sizeof pedidoC);
+  atvTexto[0] = atvTitulo[0] = atvDetalhes[0] = atvIcone[0] = 0;
+  atvVisto = 0; atvV2 = atvTemCarga = 0; atvProg = -1.0f; atvBarraA = 0.0f;
+  memset(&atvCarga, 0, sizeof atvCarga);
+  corpoPed = 0; corpoFn = NULL; corpoU = NULL;
+  corpoW = corpoH = corpoT = corpoV = corpoWa = corpoHa = corpoVw = corpoVh = 0.0f;
+  voo = vooDissolve = vooAlvoOk = svooQuer = svoo = 0;
+  vooDesde = svooDesde = pousouEm = altBase = 0; vooT = svooT = 0.0f;
+  vooArte[0] = vooCapa[0] = svooPoster[0] = 0; svooIconeA = 1.0f;
+  pontoEnquete = pontoPediu = coberta = ultRectOk = 0;
+  W = vW = H = vH = A = conteudoA = 0.0f; ultQuadro = 0;
+  dsMostra = dsVez = dsCartao = 0;
+#ifdef NV_TOUCH_UI
+  modalToqueReiniciar();
+#endif
 }
