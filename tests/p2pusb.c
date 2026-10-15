@@ -42,7 +42,20 @@ void rede_resposta_limpar(RedeResposta *r) { (void)r; }
 
 // Motor falso minimo: p2pmotor_resumo so precisa de versao().
 static const char *vFake(void) { return "teste"; }
-static const P2pmOps OPS = { .versao = vFake };
+static int internalAttempt;
+static int createInternal(const P2pmConfig *c, void **m) {
+  char expected[800];
+  (void)m;
+  snprintf(expected, sizeof expected, "%s/p2p/cache", dados);
+  assert(!strcmp(c->cache, expected));
+  internalAttempt = 1;
+  return -1;   // Stop after verifying allocation; no running engine needed.
+}
+static int usbLowSpace(const char *path, uint64_t *freeBytes) {
+  *freeBytes = !strcmp(path, dados) ? 8ull << 30 : 1;
+  return 0;
+}
+static const P2pmOps OPS = { .versao = vFake, .criar = createInternal };
 
 static int existe(const char *p) { struct stat st; return lstat(p, &st) == 0; }
 
@@ -227,6 +240,60 @@ int main(int argc, char **argv) {
     assert(utime(base, &times) == 0);
     p2pmotor_limpar_sobra();
     assert(stat(base, &st) == 0 && st.st_mtime == times.modtime);
+    p2pmotor_definir_usb(0);
+    assert(rmdir(base) == 0);
+  }
+  // Disabling USB after presence alone must preserve an unmarked directory.
+  {
+    char base[780], user[800];
+    snprintf(base, sizeof base, "%s-disable", argv[2]);
+    snprintf(user, sizeof user, "%s/p2p", base);
+    assert(mkdir(base, 0755) == 0);
+    assert(mkdir(user, 0755) == 0);
+    p2pmotor_teste_usb_base(base);
+    p2pmotor_definir_usb(1);
+    assert(p2pmotor_usb_presente());
+    p2pmotor_definir_usb(0);
+    assert(!someAte(user, 500));
+    assert(rmdir(user) == 0);
+    assert(rmdir(base) == 0);
+  }
+  // Presence probes preserve both existing files and symlink targets.
+  {
+    char base[780], probe[800], target[800], contents[32];
+    FILE *fp;
+    struct stat st;
+    snprintf(base, sizeof base, "%s-probe", argv[2]);
+    snprintf(probe, sizeof probe, "%s/.escrita", base);
+    snprintf(target, sizeof target, "%s/user", base);
+    assert(mkdir(base, 0755) == 0);
+    for (int link = 0; link < 2; link++) {
+      fp = fopen(link ? target : probe, "w"); assert(fp);
+      fputs("preserve\n", fp); fclose(fp);
+      if (link) assert(symlink(target, probe) == 0);
+      p2pmotor_teste_usb_base(base);
+      assert(p2pmotor_usb_presente());
+      fp = fopen(probe, "r"); assert(fp);
+      assert(fgets(contents, sizeof contents, fp)); fclose(fp);
+      assert(!strcmp(contents, "preserve\n"));
+      assert(lstat(probe, &st) == 0);
+      assert(link ? S_ISLNK(st.st_mode) : S_ISREG(st.st_mode));
+      assert(unlink(probe) == 0);
+    }
+    assert(unlink(target) == 0);
+    assert(rmdir(base) == 0);
+  }
+  // A full USB must retry internal storage instead of selecting itself again.
+  {
+    char base[780], url[800];
+    snprintf(base, sizeof base, "%s-full", argv[2]);
+    assert(mkdir(base, 0755) == 0);
+    p2pmotor_teste_injetar(&OPS, usbLowSpace, NULL, NULL, 0);
+    p2pmotor_teste_usb_base(base);
+    p2pmotor_definir_usb(1);
+    assert(p2pmotor_resolver("0123456789012345678901234567890123456789",
+                            -1, NULL, 0, 0, url, sizeof url) == P2P_ERR_MOTOR);
+    assert(internalAttempt);
     p2pmotor_definir_usb(0);
     assert(rmdir(base) == 0);
   }

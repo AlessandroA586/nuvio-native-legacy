@@ -164,7 +164,7 @@ static uint64_t percorrer(const char *p, int apagar, int fundo) {
 // deixar lixo na midia da pessoa.
 static int usbServe(const char *candidato, char *raiz, unsigned nr, int criar) {
   char teste[700], p2p[700];
-  FILE *f;
+  int fd, gravou, fechou;
   int nosso = 0;
   unsigned i;
   struct stat st;
@@ -191,13 +191,14 @@ static int usbServe(const char *candidato, char *raiz, unsigned nr, int criar) {
     nosso = mkdir(p2p, 0700) == 0;
     if (!nosso && (lstat(p2p, &st) != 0 || !S_ISDIR(st.st_mode) || !usbENossa(p2p))) return 0;
   }
-  if (snprintf(teste, sizeof teste, "%s/.escrita", criar ? p2p : candidato) >= (int)sizeof teste)
+  if (snprintf(teste, sizeof teste, "%s/.escrita-XXXXXX", criar ? p2p : candidato) >= (int)sizeof teste)
     { if (nosso) rmdir(p2p); return 0; }
-  f = fopen(teste, "w");
-  if (!f) { if (nosso) rmdir(p2p); return 0; }
-  if (fputs("ok\n", f) < 0) { fclose(f); if (nosso) rmdir(p2p); return 0; }
-  if (fclose(f) != 0) { unlink(teste); if (nosso) rmdir(p2p); return 0; }
-  remove(teste);
+  fd = mkstemp(teste);
+  if (fd < 0) { if (nosso) rmdir(p2p); return 0; }
+  gravou = write(fd, "ok\n", 3) == 3;
+  fechou = close(fd) == 0;
+  unlink(teste);
+  if (!gravou || !fechou) { if (nosso) rmdir(p2p); return 0; }
   if (snprintf(raiz, nr, "%s", p2p) >= (int)nr) { if (nosso) rmdir(p2p); return 0; }
   if (nosso) usbMarcarDono(p2p);   // sem a marca, limpar_sobra nao apaga
   return 1;
@@ -340,7 +341,7 @@ void p2pmotor_definir_usb(int usar) {
   atomic_store(&usbTem, 0);
   usbQuando = 0;
   pthread_mutex_unlock(&usbTrava);
-  if (velha[0]) sobraAgendar(velha);
+  if (velha[0] && usbENossa(velha)) sobraAgendar(velha);
 }
 
 int p2pmotor_usb_presente(void) {
@@ -882,14 +883,13 @@ static int subir(const P2pmOps *o, unsigned g) {
   if (e != P2P_OK && atomic_load(&usbPreferido) && !raizInjetada[0]) {
     int eraUsb;
     // A raiz USB escolhida nao serviu (pendrive arrancado, sem espaco):
-    // esquece ela e tenta pastas() de novo — re-sonda outro volume e,
-    // nao achando, cai para o interno. A promessa do ajuste.
+    // Retry internal storage directly so the same full USB cannot win again.
     pthread_mutex_lock(&usbTrava);
     eraUsb = usbRaiz[0] && !strcmp(raiz, usbRaiz);
     if (eraUsb) { usbRaiz[0] = 0; usbResolvido = 0; usbQuando = 0; atomic_store(&usbTem, 0); }
     pthread_mutex_unlock(&usbTrava);
     if (eraUsb) {
-      if (!pastas(raiz, sizeof raiz, mae, sizeof mae)) return P2P_ERR_DISCO;
+      if (!pastasInternas(raiz, sizeof raiz, mae, sizeof mae)) return P2P_ERR_DISCO;
       percorrer(raiz, 1, 0);
       e = orcamento(mae, &mole, &duro, &livre);
       printf("[p2p-motor] USB indisponivel; caiu para interno\n");
