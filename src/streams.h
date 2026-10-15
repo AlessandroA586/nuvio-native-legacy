@@ -105,12 +105,15 @@ typedef struct Stream {
   // Pronta no debrid: declaracao positiva do addon ou resolucao nativa que
   // ja confirmou a disponibilidade. Zero tambem pode ser DESCONHECIDO; nao
   // inferir cache de URL direta, nome do provedor ou ausencia de foraCache.
-  // So serve ao indicador/filtro da folha; foraCache sempre vence se mudar depois.
+  // So serve ao indicador/filtro da folha, nao a politica de reproducao.
   int  emCache;
   // isCached:false tambem pode vir com URL direta ainda tocavel. A negativa
   // e visual: nao muda a elegibilidade operacional de foraCache. Uma consulta
   // nativa que confirme a disponibilidade limpa esta declaracao anterior.
   int  cacheNegado;
+  // Uma resposta nativa pronta e mais recente que a negativa antiga do addon.
+  // So atualiza a exibicao; nao limpa foraCache nem muda as tentativas.
+  int  cacheNativo;
   // A SONDA VIU A URL RESPONDER PAGINA (HTML/JSON/texto) e nao video (2.0.2,
   // naovideo.h): linha de aviso do addon. A folha a mostra apagada ("Nao e
   // video") e o automatico a pula. Marcada na verificacao, nunca no parser.
