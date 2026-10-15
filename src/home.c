@@ -35,6 +35,7 @@ static void heroTempoInicio(int indice) {
 }
 #include "gfx.h"
 #include "text.h"
+#include "sinopse.h"
 #include "tex_cache.h"
 #include "focus.h"
 #include "anim.h"
@@ -3847,13 +3848,18 @@ static HeroCopyLayout heroCopyLayout(float base, float hSin, int hasMeta,
   HeroCopyLayout p;
   float s = slot < 0.0f ? 0.0f : slot > 1.0f ? 1.0f : slot;
   float slotH = btnH + btnGap;
+  float gap = NV_HERO_COPY_LINHA;
+  // A larger final synopsis line borrows decorative gaps in the compact
+  // phone hero, keeping its logo, metadata and action inside the same area.
+  if (heroCompactoTelefone())
+    gap = fmaxf(0, gap - (sinopse_entrelinha(TXT_HERO_SIN, NV_LD_HERO_SIN) - NV_LD_HERO_SIN));
   p.synopsis = base - slotH * s - hSin;
   p.action = p.synopsis + hSin + btnGap;
-  p.secondary = p.synopsis - (hasSec ? (hSin > 0 ? NV_HERO_COPY_LINHA : 0) + NV_LD_HERO_SEC : 0);
-  p.meta = p.secondary - (hasMeta ? ((hasSec || hSin > 0) ? NV_HERO_COPY_LINHA : 0) + NV_LD_HERO_META : 0);
+  p.secondary = p.synopsis - (hasSec ? (hSin > 0 ? gap : 0) + NV_LD_HERO_SEC : 0);
+  p.meta = p.secondary - (hasMeta ? ((hasSec || hSin > 0) ? gap : 0) + NV_LD_HERO_META : 0);
   // A linha de AMIGOS (quem gostou / assistiu) fica logo acima da meta.
-  p.friends = p.meta - (friendsH > 0 ? NV_HERO_COPY_LINHA + friendsH : 0);
-  p.caption = p.friends - (captionH > 0 ? NV_HERO_COPY_LINHA + captionH : 0);
+  p.friends = p.meta - (friendsH > 0 ? gap + friendsH : 0);
+  p.caption = p.friends - (captionH > 0 ? gap + captionH : 0);
   // Logo bottom one gap above the first information line.
   float bottom = p.caption - btnGap;
   float bottomCheio = bottom - slotH * (1.0f - s);   // where it is with the slot open
@@ -3871,7 +3877,9 @@ static HeroCopyLayout heroCopyTelefone(float base, float *hSin, int hasMeta,
                                        float btnH, float btnGap, float minTop,
                                        float slot, float *friendsH, float minLogo) {
   HeroCopyLayout p;
-  *hSin = fminf(*hSin, 2.0f * NV_LD_HERO_SIN);
+  float sinLead = sinopse_entrelinha(TXT_HERO_SIN, NV_LD_HERO_SIN);
+  float sinMax = (float)sinopse_linhas(TXT_HERO_SIN, NV_LD_HERO_SIN, 2) * sinLead;
+  *hSin = fminf(*hSin, sinMax);
   for (;;) {
     p = heroCopyLayout(base, *hSin, hasMeta, hasSec, *captionH, logoH,
                        btnH, btnGap, minTop, slot, *friendsH);
@@ -3882,7 +3890,7 @@ static HeroCopyLayout heroCopyTelefone(float base, float *hSin, int hasMeta,
       p.logo = bottom - p.logoHeight;
       return p;
     }
-    if (*hSin > NV_LD_HERO_SIN) *hSin -= NV_LD_HERO_SIN;
+    if (*hSin > sinLead + .01f) *hSin -= sinLead;
     else if (*friendsH > 0.0f) *friendsH = 0.0f;
     else if (*hSin > 0.0f) *hSin = 0.0f;
     else if (*captionH > 0.0f) *captionH = 0.0f;
@@ -4043,7 +4051,7 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
 
   const char *sinopse = (ci && ci->sinopse[0]) ? ci->sinopse : "";
 
-  float hSin = sinopse[0] ? txt_bloco_corta(TXT_HERO_SIN, sinopse, 255, 255, 255, -1, 0,
+  float hSin = sinopse[0] ? sinopse_bloco_corta(TXT_HERO_SIN, sinopse, 255, 255, 255, -1, 0,
                                             sinW, NV_LD_HERO_SIN, 0.0f, sinLinhas)
                           : 0.0f;
 
@@ -4228,7 +4236,7 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
   }
 
   if (sinopse[0] && (!heroCompactoTelefone() || hSin > 0.0f) && aCopy > 0.004f)
-    txt_bloco_corta(TXT_HERO_SIN, sinopse, 255, 255, 255, x, ySin, sinW,
+    sinopse_bloco_corta(TXT_HERO_SIN, sinopse, 255, 255, 255, x, ySin, sinW,
                     NV_LD_HERO_SIN, aCopy, sinLinhas);
   return copy.action;
 }
@@ -4421,7 +4429,7 @@ static void desenhaHero(Uint32 agora, float saida) {
       if(p->meta[0])
         txt_desenhar_alpha(txt_linha_corta(TXT_HERO_META,p->meta,190,194,205,255,homeTextoLargura(680)),x,364,a);
       if(p->sinopse[0])
-        txt_bloco(TXT_HERO_SIN,p->sinopse,229,231,237,x,402,homeTextoLargura(700),31,a,2);
+        sinopse_bloco(TXT_HERO_SIN, p->sinopse,229,231,237,x,402,homeTextoLargura(700),31,a,2);
     } else {
       // Sem a marca do Trakt: a fonte nao aparece na home (amigosfil.h).
       txt_desenhar_alpha(txt_linha(TXT_HERO_META,"SUA COMUNIDADE",210,191,199,255),x,154,a);
@@ -5710,9 +5718,10 @@ static void desenhaFicha(const CatItem *it, float px, float py, float w, float h
   { int nota = imdbnota_obter(it->imdb, it->nota, !strcmp(it->tipo, "series"));
     if (nota > 0) { badge_imdb(tx, y, nota, 0, 1.0f); y += BADGE_H + 12.0f; } }
   if (it->sinopse[0]) {
+    // Larger one-line prose may use part of the20px decorative bottom pad.
     int linhas = (int)((py + h - 20.0f - y) / 28.0f);
     if (linhas > 4) linhas = 4;
-    if (linhas > 0) txt_bloco(TXT_CAPTION, it->sinopse, 196, 201, 212, tx, y, tw, 28.0f, 0.92f, linhas);
+    if (linhas > 0) sinopse_bloco(TXT_CAPTION, it->sinopse, 196, 201, 212, tx, y, tw, 28.0f, 0.92f, linhas);
   }
 }
 // LINHA DO TEMPO: a faixa dos anos sob os cartazes.

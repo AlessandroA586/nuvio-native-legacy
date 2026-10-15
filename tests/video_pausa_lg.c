@@ -29,11 +29,18 @@
 
 static int pedidos, aceita = 1, assinaturas, respostas;
 static char resposta[256];
+static int seekRequests;
+static double seekPosition;
+
 static Filtro screensaverCallback;
 static int fakeCall(LSHandle *h, const char *uri, const char *carga, Filtro cb,
                     void *ctx, unsigned long *tok, void *erro) {
   (void)h; (void)uri; (void)carga; (void)cb; (void)ctx; (void)tok; (void)erro;
   pedidos++;
+  if (strstr(uri, "/seek")) {
+    seekRequests++;
+    seekPosition = js_num(carga, NULL, "position", -1);
+  }
   if (strstr(uri, "registerScreenSaverRequest")) {
     assinaturas++; screensaverCallback = cb;
   } else if (strstr(uri, "responseScreenSaverRequest")) {
@@ -141,4 +148,29 @@ int main(void) {
   antes = respostas;
   screensaverCallback(NULL, (LSMessage *)active, NULL); assert(respostas == antes);
   puts("video_screensaver_lg: load, assinatura, timestamp, pausas, fim, erro e ciclo ok");
+
+  // A reload seek refused by firmware must retry the reload position, even
+  // when the previous manual seek differs or the reload starts at zero.
+  const double reloadPositions[] = {1800.0, 0.0, 0.5};
+  for (unsigned i = 0; i < sizeof reloadPositions / sizeof reloadPositions[0]; ++i) {
+    video_parar();
+    ligado = 1; pronto = 0; acb = 0;
+    snprintf(midia, sizeof midia, "fixture-reload");
+    seekAlvo = 420.0;
+    posAoCarregar = reloadPositions[i];
+    recarregarPausa = 0;
+    int before = seekRequests;
+    evento("{\"loadCompleted\":true}", sessao);
+    assert(seekRequests == before + 1);
+    assert(seekPosition == reloadPositions[i] * 1000.0);
+    evento("{\"errorCode\":700,\"errorText\":\"seek Failure\"}", sessao);
+    assert(seekRetryEm && !falhou);
+    seekRetryEm = SDL_GetTicks() | 1;
+    SDL_Delay(2);
+    video_bombear();
+    assert(seekRequests == before + 2);
+    assert(seekPosition == reloadPositions[i] * 1000.0);
+    assert(!falhou);
+  }
+  puts("video_reload_lg: refused seeks retry the reload position, including zero");
 }

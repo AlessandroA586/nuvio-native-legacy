@@ -561,6 +561,7 @@ typedef enum {
   // nao ter microfone fica sem ele) / Ligado / Desligado. LOCAL, so na tela do
   // .tpk. No fim: valor[]/CHAVE[] posicionais.
   AJ_MIC_BUSCA,
+  AJ_FONTE_IDIOMA_AUDIO, // V_LIGA: 0 preferir o idioma do audio na escolha automatica; local, append-only
   // SEGUNDO IDIOMA DE AUDIO (dono, 15/10/2026): secondary_preferred_audio_language
   // do app oficial; a mesma lista e a regra da legenda secundaria (audioescolha.h:
   // a ordem do audio automatico). No fim: posicionais.
@@ -568,6 +569,7 @@ typedef enum {
 #ifdef NV_ANDROID
   AJ_BAIXAR_REGISTRO, // acao local; no fim para preservar os IDs existentes
 #endif
+  AJ_HERO_SINOPSE, // #477: shared Normal/Grande setting, local
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -652,6 +654,7 @@ static const char *V_FONTE_MODELO[] = { "Personalizado", "Espanhol", "Português
 // "Usar a ordem" dos add-ons (fonteregra.h FR_ORDEM_*): o indice e o gravado.
 static const char *V_FONTE_ORDEM_USO[] = { "Não", "Para desempatar", "Ordem estrita" };
 // Indice gravado em tamanhoUiLocal; o fator sai de ajustes_tamanho_ui.
+static const char *V_HERO_SINOPSE[] = { "Normal", "Grande" };
 static const char *V_TAMANHO_UI[] = { "100%", "120%", "130%", "150%" };
 static const char *V_TAMANHO_AJUSTES[] = { "80%", "90%", "100%" };
 static const char *V_INTERFACE_MODO[] = { "TV", "Mobile" };
@@ -1460,10 +1463,13 @@ static const Opcao OPCOES[AJ_N] = {
 
   ESC("Configuração dos provedores", V_PROVEDORES_ESCOPO, 2),
   ESC("Botão de microfone na busca", V_MIC_BUSCA, 3),   // local: micBuscaLocal (.tpk)
+  ESC("Preferir o idioma do áudio",    V_LIGA, 2),   // local: fonteIdiomaAudioLocal (fontenota.h)
   ESC("Segundo idioma do áudio",         V_LINGUA, 2),
 #ifdef NV_ANDROID
   ACAO("Baixar registro"),
 #endif
+
+  ESC("Tamanho da sinopse", V_HERO_SINOPSE, 2),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1716,10 +1722,13 @@ static const char *CHAVE[] = {
 
   "-provedoresEscopo",
   "micBuscaLocal",
+  "fonteIdiomaAudioLocal",
   "audioSecundarioIdioma",
 #ifdef NV_ANDROID
   "-baixarRegistro",
 #endif
+
+  "heroSynopsisSizeLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2324,6 +2333,11 @@ int ajustes_relogio_12h(void) { return valor[AJ_RELOGIO_12H] == 1; }
 // GB da faixa de tamanho da escolha automatica; 0 = "Sem limite".
 int ajustes_tamanho_max_gb(void) { int v = valor[AJ_TAM_MAX]; return v < 0 || v >= (int)(sizeof TAMANHO_GB / sizeof *TAMANHO_GB) ? 0 : TAMANHO_GB[v]; }
 int ajustes_tamanho_min_gb(void) { int v = valor[AJ_TAM_MIN]; return v < 0 || v >= (int)(sizeof TAMANHO_GB / sizeof *TAMANHO_GB) ? 0 : TAMANHO_GB[v]; }
+int ajustes_sinopse_tamanho(void) {
+  int v = valor[AJ_HERO_SINOPSE];
+  return v == 1;
+}
+int ajustes_hero_sinopse_grande(void) { return ajustes_sinopse_tamanho(); }
 float ajustes_tamanho_ui(void) {
   static const float F[] = { 1.0f, 1.2f, 1.3f, 1.5f };
   int v = valor[AJ_TAMANHO_UI];
@@ -2379,6 +2393,7 @@ int ajustes_buffer_preset(void) {
   return 0;   // so o ExoPlayer deixa o app escolher o buffer
 #endif
 }
+int ajustes_fonte_idioma_audio(void) { return valor[AJ_FONTE_IDIOMA_AUDIO] == 0; }
 int ajustes_cache_seek_mb(void) {
   static const int MB[] = { 0, 256, 512, 1024 };
   int v = valor[AJ_CACHE_SEEK];
@@ -3580,6 +3595,7 @@ void ajustes_dir(const char *dir) {
   { int viuIdioma = 0, viuAuto = 0, idiomaGravado = IDIOMA_EN, autoGravado = 0;
     int medidorAntigo = -1, viuMedidor = 0, resAntiga = -1, viuRes = 0, prazoAntigo = -1, viuEspera = 0;
     int focoAntigo = -1, viuFoco = 0;
+    int sinopseAntiga = -1, sinopseQuatro = -1, viuSinopse = 0;
     int dtsSaidaAntiga = -1, dtsModoAntigo = -1, viuDtsTpk = 0;
   while (fgets(linha, sizeof linha, f)) {
     char chave[64]; int v, i;
@@ -3613,6 +3629,16 @@ void ajustes_dir(const char *dir) {
       if (v >= IDA_TMDB && v <= IDA_PADRAO) idiomaFonteGravada = v;
       continue;
     }
+    // Consolidate preview scales into integration's Normal/Grande setting.
+    // Its saved preference wins regardless of file order.
+    if (!strcmp(chave, "sinopsePercentualLocal") || !strcmp(chave, "sinopseTamanhoLocal")) {
+      if (v >= 0 && v < 3) sinopseAntiga = v;
+      continue;
+    }
+    if (!strcmp(chave, "sinopseEscalaLocal")) {
+      if (v >= 0 && v < 4) sinopseQuatro = v;
+      continue;
+    }
     for (i = 0; i < AJ_N; i++) {
       if (!CHAVE[i] || strcmp(CHAVE[i], chave)) continue;
       if (OPCOES[i].tipo == OP_LEITURA || OPCOES[i].tipo == OP_ACAO) continue;
@@ -3623,9 +3649,14 @@ void ajustes_dir(const char *dir) {
       if (i == AJ_RESOLUCAO) viuRes = 1;
       if (i == AJ_FONTE_PRAZO) viuEspera = 1;
       if (i == AJ_FOCO_TRAILER) viuFoco = 1;
+      if (i == AJ_HERO_SINOPSE) viuSinopse = 1;
       if (i == AJ_DTS_AC3) viuDtsTpk = 1;
       break;
     }
+  }
+  if (!viuSinopse) {
+    if (sinopseQuatro >= 0) valor[AJ_HERO_SINOPSE] = sinopseQuatro > 0;
+    else if (sinopseAntiga >= 0) valor[AJ_HERO_SINOPSE] = sinopseAntiga > 0;
   }
   if (!viuMedidor && medidorAntigo >= 0) valor[AJ_MEDIDOR] = medidorAntigo == 0 ? 3 : 0;
   if (!viuRes && resAntiga >= 0) {
@@ -4646,6 +4677,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_ESPACO_FILEIRAS: case AJ_ESPACO_TITULOS: /* o web nao tem espacamento */
     case AJ_FONTE_PRAZO:    /* o web nao tem: a rede e os addons sao desta casa */
     case AJ_MEDIDOR:        /* o medidor e da GPU desta TV; o web nao tem */
+    case AJ_HERO_SINOPSE: /* acessibilidade desta tela; sem par na conta */
     case AJ_TAMANHO_UI:     /* o tamanho e desta tela, e o web nao tem */
     case AJ_TAMANHO_AJUSTES:
     case AJ_LAYOUT_AJUSTES: /* #339: o arranjo dos Ajustes e desta TV */
@@ -4661,6 +4693,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA: /* estilo da legenda e desta TV */
     case AJ_CACHE_SEEK:     /* F07: o disco e o player sao desta TV */
     case AJ_BUFFER:         /* #338: o buffer e do player desta TV */
+    case AJ_FONTE_IDIOMA_AUDIO: /* como a prioridade da fonte: escolha desta TV */
     case AJ_TRAILER_ZOOM_TPK: /* #241: o firmware de cada Samsung reage de um jeito */
     case AJ_FUNDO:          /* o desfoque custa GPU desta TV; o web nao tem */
     case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: /* teste do vidro: visual desta TV */
@@ -6021,6 +6054,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_IDIOMA: return "Idioma de toda a interface. Automático segue a sua conta e, sem ela, o idioma da TV. Não muda o idioma das legendas nem do áudio.";
     case AJ_GPU_EFEITOS: return "Automático mede a TV nos primeiros segundos e, se ela não der conta, tira os efeitos mais pesados. Completos mantém tudo; Leves tira desfoque e brilho para deixar a navegação mais lisa.";
     case AJ_FONTE_UI: return "Altera a tipografia dos menus. A fonte das legendas é escolhida separadamente no player.";
+    case AJ_HERO_SINOPSE: return "Aumenta apenas as sinopses. Na página do título, abra Mais opções › Ler sinopse para ler o texto completo.";
     case AJ_TAMANHO_UI: return "Aumenta os controles do player, os painéis e os avisos. Os Ajustes têm um tamanho próprio.";
     case AJ_INTERFACE_MODO: return "TV para controle remoto. Mobile para toque, em retrato ou paisagem. A troca é imediata e fica salva só neste aparelho.";
     case AJ_TAMANHO_AJUSTES: return i18n("Muda só o tamanho dos Ajustes nesta TV. O padrão é 80%.");
@@ -6115,6 +6149,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_LOGO_TRAILER: return "Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.";
     case AJ_TRAILER_ZOOM_TPK: return "Amplia a imagem do trailer e libera os modos de recorte e zoom da proporção no player; em algumas TVs Samsung pode deixar a tela preta ou mostrar a tela inicial da TV.";
     case AJ_BUFFER: return "Quanto vídeo o player baixa à frente. Pequeno poupa memória e rede; Grande aguenta melhor internet instável e arquivos pesados, até o limite de memória da TV. Não muda a qualidade da imagem. Vale a partir do próximo vídeo.";
+    case AJ_FONTE_IDIOMA_AUDIO: return "Na escolha automática, fontes com o seu Idioma do áudio ou áudio duplo passam na frente na mesma resolução. Não é filtro: sem elas, a melhor das outras toca.";
     case AJ_CACHE_SEEK: return "Guarda no disco o trecho já baixado do vídeo, para voltar sem baixar de novo. Apagado ao fechar o player.";
     case AJ_ANIM: return "Use Reduzidas para movimentos mais discretos ao navegar pela interface.";
     case AJ_RESOLUCAO: return "Automática começa em 1080p e testa o 4K sozinha: só usa 4K se a tela for 4K e a TV aguentar com folga; se travar depois, volta para 1080p. Nunca baixa para 720p. Escolher 4K força 4K (se a TV não aguentar, o app volta para 1080p e avisa). 720p desenha em 1280x720 e amplia: mais leve, com texto mais suave. Reinicie o app depois de mudar. O vídeo não muda.";
@@ -8219,7 +8254,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_LEG_FORCADA:
     case AJ_AUD_LINGUA: case AJ_AUD_LINGUA2: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_FONTE_MANUAL:
     case AJ_FONTE_AUTO: case AJ_FONTE_REPOR: case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON: case AJ_SELOS_CORES: case AJ_FONTE_TOCAR_CONFERINDO: case AJ_FONTE_AQUECER: case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR: case AJ_FONTE_PRECARREGAR:
-    case AJ_FONTE_PRIORIDADE: case AJ_FONTE_HDR:
+    case AJ_FONTE_PRIORIDADE: case AJ_FONTE_HDR: case AJ_FONTE_IDIOMA_AUDIO:
     case AJ_SELOS_PACOTE:
     case AJ_REACAO_CREDITOS: case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PROXIMO_AUTO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_CONTAGEM:
     case AJ_FONTE_PRAZO: case AJ_TAM_MAX: case AJ_TAM_MIN: case AJ_PROPORCAO_PADRAO: case AJ_DTS_AC3:
@@ -8261,7 +8296,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_IDIOMA: case AJ_ANIM: case AJ_TEMA:
     case AJ_COR_LOGO: case AJ_FONTE_UI: case AJ_VIDRO: case AJ_VIDRO_CONTORNO:
     case AJ_RELOGIO: case AJ_RELOGIO_POS: case AJ_SAIDA_PLAYER: case AJ_RELOGIO_12H:
-    case AJ_TAMANHO_UI: case AJ_TAMANHO_AJUSTES: case AJ_LAYOUT_AJUSTES: case AJ_INTERFACE_MODO: case AJ_FUNDO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO:
+    case AJ_HERO_SINOPSE: case AJ_TAMANHO_UI: case AJ_TAMANHO_AJUSTES: case AJ_LAYOUT_AJUSTES: case AJ_INTERFACE_MODO: case AJ_FUNDO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO:
     case AJ_AVANCADAS: case AJ_LOGO_APP: case AJ_ABERTURA:
     case AJ_ESMAECER: case AJ_BRILHO_PLAYER: case AJ_HDR_UI: case AJ_MANTER_VIDEO:
     case AJ_DESCANSO_ESTILO: case AJ_DESCANSO_FONTE:

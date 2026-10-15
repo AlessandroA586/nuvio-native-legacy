@@ -156,6 +156,10 @@ void video_definir_mp4(int ehMp4);
 // (video_tocar consome). Quem nao pede — trailer, canal ao vivo, que tem o
 // watchdog proprio em app.c — segue caindo em video_falhou na hora.
 void video_definir_reconexao(int sim);
+// Reabre somente a fonte VOD corrente, sem resolver outra URL nem reiniciar
+// o limite de reconexao. Preserva o ponto informado pelo backend, faixas,
+// velocidade e pausa. 1 = pedido aceito; 0 = indisponivel neste estado/alvo.
+int  video_recarregar(void);
 // MODO DO LOAD para o PROXIMO video_tocar (#158, LG C4: dado chega, VDEC
 // concedido, decoder nunca anuncia). 0 = o de sempre; 1 = sem o selectTrack
 // de video logo depois do load; 2 = o 1 e mais o payload enxuto de live

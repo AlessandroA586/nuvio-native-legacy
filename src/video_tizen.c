@@ -99,6 +99,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <math.h>
+#include <limits.h>
 
 // ============================================================================
 // A PORTA UNICA PARA O JS
@@ -819,6 +821,7 @@ static NvReconexao recon;
 static int    reconProxima, reconPermitida, reconIniciou;
 static int    reconAudio = -1, reconLeg = -1, reconFaixasPend;
 static double reconBuscar = -1.0;
+static int recarregarPausa = -1, pausaPedida;
 // As listas como estavam na queda. O AVPlay nao da idioma: o rotulo veio da
 // sonda do MKV (aplicarIdiomasDoMkv), e o recarregar releria "Audio 1".
 static VideoFaixa reconFxA[NV_FAIXA_MAX], reconFxL[NV_FAIXA_MAX];
@@ -898,6 +901,7 @@ int video_tocar(const char *url) {
   nv_recon_zerar(&recon);
   reconPermitida = reconProxima; reconProxima = 0; reconIniciou = 0;
   reconAudio = reconLeg = -1; reconFaixasPend = 0; reconBuscar = -1.0;
+  recarregarPausa = -1; pausaPedida = 0;
   nAudio = nLeg = 0; audioAtual = 0; legAtual = -1; faixasLidas = 0;
   posSeg = durSeg = 0; vidW = vidH = 0; houveErro = 0; erroTexto[0] = 0;
   terminou = 0;
@@ -1149,8 +1153,8 @@ static void lerFaixas(void) {
     reconFaixasPend = 0;
     if (nAudio == reconNA) memcpy(faixaAudio, reconFxA, sizeof faixaAudio);
     if (nLeg == reconNL)   memcpy(faixaLeg, reconFxL, sizeof faixaLeg);
-    if (reconAudio > 0 && reconAudio < nAudio) video_escolher_audio(reconAudio);
-    if (reconLeg >= 0 && reconLeg < nLeg) video_escolher_legenda(reconLeg);
+    if (reconAudio >= 0 && reconAudio < nAudio) video_escolher_audio(reconAudio);
+    if (reconLeg >= -1 && reconLeg < nLeg) video_escolher_legenda(reconLeg);
     printf("[video] reconexao: faixas devolvidas (audio %d, legenda %d)\n", reconAudio, reconLeg);
     fflush(stdout);
     return;
@@ -1183,6 +1187,40 @@ static void *lerMkv(void *arg) {
   return NULL;
 }
 
+// O mesmo open da reconexao, sem consumir configuracao de fonte nova nem
+// apagar as faixas guardadas antes da recarga.
+static int reabrirMesmaFonte(double alvo) {
+  pronto = tocando = 0; faixasLidas = 0;
+  nAudio = nLeg = 0; audioAtual = 0; legAtual = -1; posSeg = 0; seekEm = 0;
+  reconFaixasPend = 1; reconBuscar = alvo;
+  if (AVS("abrir", urlAtual) < 1) {
+    logarErro("reabrir"); return 0;
+  }
+  ativo = 1;
+  houveErro = terminou = 0; erroTexto[0] = 0;
+  aberturaEm = SDL_GetTicks();
+  avChamar("rect", NULL, janX, janY, janW, janH, NULL, 0);
+  return 1;
+}
+
+int video_recarregar(void) {
+  double est[EST_N];
+  int pausado = pausaPedida;
+  if (!temAvplay || !ativo || !pronto || !urlAtual[0] || houveErro || terminou ||
+      video_reconectando() || recarregarPausa >= 0) return 0;
+  memset(est, 0, sizeof est);
+  if (avChamar("estado", NULL, 0, 0, 0, 0, (char *)est, sizeof est) < 1 ||
+      !est[EST_PRONTO] || !est[EST_ABERTO] || est[EST_ERRO] || est[EST_FIM] ||
+      !isfinite(est[EST_POS]) || est[EST_POS] < 0 ||
+      est[EST_POS] > INT_MAX / 1000.0) return 0;
+  reconAudio = audioAtual; reconLeg = legAtual;
+  memcpy(reconFxA, faixaAudio, sizeof reconFxA); reconNA = nAudio;
+  memcpy(reconFxL, faixaLeg, sizeof reconFxL); reconNL = nLeg;
+  if (!reabrirMesmaFonte(est[EST_POS])) { houveErro = 1; return 0; }
+  recarregarPausa = pausado;
+  return 1;
+}
+
 void video_bombear(void) {
   double est[EST_N];
   int estavaPronto = pronto;
@@ -1203,13 +1241,9 @@ void video_bombear(void) {
     char m[64];
     snprintf(m, sizeof m, "reconectando: alvo %.0fs, tentativa %d", recon.alvo, recon.tentativa);
     marco(m);
-    pronto = tocando = 0; estavaPronto = 0; faixasLidas = 0;
-    nAudio = nLeg = 0; audioAtual = 0; legAtual = -1; posSeg = 0; seekEm = 0;
-    reconFaixasPend = 1;
-    reconBuscar = recon.alvo;
-    AVS("abrir", urlAtual);
-    ativo = 1;
-    avChamar("rect", NULL, janX, janY, janW, janH, NULL, 0);
+    estavaPronto = 0;
+    if (!reabrirMesmaFonte(recon.alvo) &&
+        !nv_recon_erro(&recon, 1, SDL_GetTicks(), recon.alvo)) houveErro = 1;
   }
 
   if (!temAvplay || !ativo) return;
@@ -1232,9 +1266,10 @@ void video_bombear(void) {
     int antes = recon.tentativa;
     logarErro("onerror");
     if (reconPermitida && urlAtual[0] && (reconIniciou || recon.tentativa) &&
-        nv_recon_erro(&recon, nv_recon_rede_avplay(erroTexto), SDL_GetTicks(), posSeg)) {
+        nv_recon_erro(&recon, nv_recon_rede_avplay(erroTexto), SDL_GetTicks(),
+                      recarregarPausa >= 0 ? reconBuscar : posSeg)) {
       char m[96];
-      if (!antes) {
+      if (!antes && recarregarPausa < 0) {
         reconAudio = audioAtual; reconLeg = legAtual;
         memcpy(reconFxA, faixaAudio, sizeof reconFxA); reconNA = nAudio;
         memcpy(reconFxL, faixaLeg, sizeof reconFxL);   reconNL = nLeg;
@@ -1262,8 +1297,19 @@ void video_bombear(void) {
   if (pronto && !faixasLidas) lerFaixas();
   // A posicao da queda, depois das faixas (trocar faixa pode reiniciar o decode).
   if (reconBuscar >= 0.0 && pronto) {
-    if (reconBuscar > 1.0) video_buscar(reconBuscar);
+    if (recarregarPausa >= 0) {
+      if (AVN("buscar", reconBuscar * 1000.0) < 1) houveErro = 1;
+      else posSeg = reconBuscar;
+    } else if (reconBuscar > 1.0) video_buscar(reconBuscar);
     reconBuscar = -1.0;
+  }
+  if (recarregarPausa >= 0 && (pronto || houveErro || terminou)) {
+    int pausado = recarregarPausa;
+    recarregarPausa = -1;
+    if (pronto && !houveErro && pausado) {
+      if (AVN("pausar", 1) < 1) houveErro = 1;
+      else tocando = 0;
+    }
   }
 
   // SONDA DE MKV. Gatilho diferente do da LG e explicado no bloco de
@@ -1290,6 +1336,7 @@ void video_sondar_mkv_agora(void) {
 void video_parar(void) {
   nv_recon_zerar(&recon);
   reconFaixasPend = 0; reconBuscar = -1.0;
+  recarregarPausa = -1; pausaPedida = 0;
   seekEm = 0; mkvPendente = 0;
   if (temAvplay) AV0("parar");
   ativo = tocando = pronto = terminou = 0;
@@ -1308,7 +1355,10 @@ void video_escala_definir(int sw, int sh) { (void)sw; (void)sh; }
 
 void video_pausar(int pausado) {
   if (!temAvplay || !ativo) return;
-  if (AVN("pausar", pausado ? 1 : 0) >= 1) tocando = !pausado;
+  if (AVN("pausar", pausado ? 1 : 0) >= 1) {
+    tocando = !pausado; pausaPedida = !!pausado;
+    if (recarregarPausa >= 0) recarregarPausa = pausaPedida;
+  }
 }
 
 int video_pausa_confirmada(void) {
