@@ -218,6 +218,7 @@ int ling_afinidade(const char *cod, const char *pref) {
 
 static char contaLeg[16], contaLeg2[16], contaAud[16], contaAud2[16];
 static char localLeg[16], localAud[16], localLeg2[16], localAud2[16];
+static int contaAudLivre;
 
 // As sentinelas do web viram vazio (= sem filtro) ou "none" (= nenhuma).
 // "DEVICE"/"DEFAULT"/"ORIGINAL" dizem "deixe o arquivo decidir", que deste lado
@@ -236,7 +237,12 @@ static void guardar(char *dest, size_t n, const char *v) {
 
 void ling_conta_legenda(const char *v)  { guardar(contaLeg,  sizeof contaLeg,  v); }
 void ling_conta_legenda2(const char *v) { guardar(contaLeg2, sizeof contaLeg2, v); }
-void ling_conta_audio(const char *v)    { guardar(contaAud,  sizeof contaAud,  v); }
+void ling_conta_audio(const char *v) {
+  // Preserve the account's explicit unfiltered/original choice for the
+  // optional source chip, without changing playback's existing preferences.
+  contaAudLivre = v && (!strcmp(v, "*") || !strcasecmp(v, "original") || !strcasecmp(v, "off"));
+  guardar(contaAud, sizeof contaAud, v);
+}
 void ling_conta_audio2(const char *v)   { guardar(contaAud2, sizeof contaAud2, v); }
 const char *ling_conta_legenda_valor(void)  { return contaLeg; }
 const char *ling_conta_legenda2_valor(void) { return contaLeg2; }
@@ -298,6 +304,12 @@ const char *ling_audio(void)    { return emVigor(localAud, contaAud); }
 const char *ling_audio2(void) {
   if (localAud2[0]) return emVigor(localAud2, contaAud2);
   return localAud[0] ? "" : contaAud2;
+}
+
+const char *ling_audio_fonte(const char *padrao) {
+  const char *pref = ling_audio();
+  if (localAud[0] == '*' || localAud[0] == '~' || (!localAud[0] && contaAudLivre)) return pref;
+  return pref[0] ? pref : padrao ? padrao : "";
 }
 
 // ------------------------------------------------------------ lista da UI

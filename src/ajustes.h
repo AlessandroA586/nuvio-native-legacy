@@ -171,6 +171,7 @@ int ajustes_fonte_tocar_conferindo(void);
 int ajustes_fonte_aquecer(void);
 int ajustes_fonte_conferir_varias(void);
 int ajustes_fonte_preparar(void);
+int ajustes_fonte_precarregar(void);
 int ajustes_fonte_escopo(void);
 int ajustes_fonte_regex_modo(void);
 // "Usar a ordem" dos add-ons (FR_ORDEM_*); 0 tambem quando nao ha ordem.
@@ -459,6 +460,7 @@ int   ajustes_legenda_forcada_auto(void);    // #287: 1 = audio in the subtitle 
 int   ajustes_legenda_sync_auto(void);       // local, ligada por padrão
 int   ajustes_legenda_sync_audio(void);      // 1 = offer "Por audio" in subtitle AutoSync (F06; local, default off)
 int   ajustes_trailer_zoom_tpk(void);        // #241: 1 = experimental trailer zoom on the native .tpk (local, default off)
+int   ajustes_mic_busca(void);               // Samsung (.tpk/.wgt) search mic button: 0 automatic, 1 on, 2 off (local)
 unsigned ajustes_p2p_limite_mb(void);           // #334: P2P space limit in MB (0 = Automatic)
 int   ajustes_buffer_preset(void);           // #338: 0 Automatico, 1 Baixo, 2 Medio, 3 Alto (0 fora do Android)
 int   ajustes_cache_seek_mb(void);           // F07: seek cache limit in MB for the next video (0 = off / not on this TV)
@@ -484,6 +486,10 @@ int   ajustes_saida_player_home(void);
 int   ajustes_manter_video(void);
 // Selo de visto no cartaz da home (#212). 1 = ligado (o de fabrica).
 int   ajustes_selo_visto(void);
+// #366: oculta filmes vistos so na descoberta, por perfil neste aparelho.
+// Desligado de fabrica; busca, biblioteca e historico nao sao filtrados.
+int   ajustes_ocultar_filmes_vistos(void);
+void  ajustes_definir_ocultar_filmes_vistos(int ligado);
 // MODO SEGURO (seguro.h). Chamar no arranque, DEPOIS de ajustes_dir e de
 // avisos_iniciar: `caiu` = a sessao anterior nao se despediu. Desfaz o ajuste
 // arriscado que estava em prova, liga o perfil seguro se as quedas se repetem e
@@ -670,6 +676,13 @@ float       ajustes_rapido_cor(int i, float *r, float *g, float *b);
 int         ajustes_rapido_cor_atual(void);
 const char *ajustes_rapido_cor_atual_nome(void);
 int         ajustes_rapido_cor_definir(int i);
+
+// Contas nativas compartilhadas (legado) ou uma copia separada por conta+perfil.
+int  ajustes_provedores_compartilhados(void);
+int  ajustes_definir_provedores_compartilhados(int compartilhados);
+void ajustes_provedores_abrir_sessao(void);
+int  ajustes_provedores_arquivo(char *dst, unsigned tam, const char *base);
+void ajustes_perfil_padrao(void);
 
 #ifdef NV_SHOT_HOOKS
 int ajustes_shot_valor(const char *chave, int v);   // capturas: opcao pela chave

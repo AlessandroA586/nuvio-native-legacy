@@ -73,6 +73,12 @@ const char *ling_audio(void);
 // Segundo idioma de audio (audioescolha.h): ling_legenda2, a mesma regra.
 const char *ling_audio2(void);
 
+// Optional source-sheet audio filter. Explicit audio language wins; otherwise
+// use the resolved interface/device language supplied by the caller. "All"
+// stays unfiltered and local "Original" still resolves only from this title.
+// This does not change playback's automatic track-selection preferences.
+const char *ling_audio_fonte(const char *padrao);
+
 // So a parte da CONTA, sem a escolha local por cima (para o log, #378).
 const char *ling_conta_legenda_valor(void);
 const char *ling_conta_legenda2_valor(void);

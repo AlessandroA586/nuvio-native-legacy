@@ -162,7 +162,8 @@ int main(void) {
   CONFERE(k == 1, "fora da LG o grupo X em MKV vale (%d)", k);
 #endif
 
-  // ---- arquivo da manual: o formato nao mudou (parser antigo le igual)
+  // ---- manual preferences file: has one more field, and old parsers degrade cleanly.
+  // 7-field lines from 2.0.3 remain readable.
   fontepref_definir_perfil(6);
   n = lista(v, 1);
   stream_definir_lista(v, n);
@@ -176,7 +177,7 @@ int main(void) {
       CONFERE(!strcmp(linha, "# nuvio fontes v1\n"), "cabecalho v1 intacto");
       fgets(linha, sizeof linha, f);
       for (p = linha; *p; p++) if (*p == '\t') campos++;
-      CONFERE(campos == 6, "sete campos, como na 2.0.3 (%d tabs)", campos);
+      CONFERE(campos == 7, "eight fields, release file name last (%d tabs)", campos);
       fclose(f); } }
 
   // ---- sair da conta apaga tambem a automatica

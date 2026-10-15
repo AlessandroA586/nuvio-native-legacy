@@ -109,6 +109,12 @@
 // dois lados — como a trilha.
 #define FONTEPREF_BINGE 128
 
+// Size of the release-name key (fileKey in fontepref.c): the release name
+// without the episode marker. What is kept is short (the name of the work,
+// at most with the year); anything longer is cut, and cutting both sides the
+// same way still matches, which is the discipline of the other two keys.
+#define FONTEPREF_ARQUIVO 256
+
 // VALIDADE DA PREFERENCIA — 180 dias.
 //
 // O app web tambem expira a dele, e a comparacao importa porque os dois
@@ -145,6 +151,7 @@ typedef struct {
   char trilha[FONTEPREF_TRILHA];
   char bingeGroup[FONTEPREF_BINGE]; // o que o addon declarou; vazio e comum
   char rotulo[192];                 // desempate e log
+  char arquivo[FONTEPREF_ARQUIVO];  // fileKey(): release name, no episode marker
   int  altura;
   long long quandoS;                // time(NULL) da escolha
 } FontePref;
@@ -218,5 +225,9 @@ int fontepref_tem(const char *id);
 // deste titulo. -1 quando nao ha preferencia ou quando nenhuma fonte de hoje
 // casa — e -1 quer dizer "siga o automatico", nunca "nao toque".
 int fontepref_escolher(const char *id);
+// A mesma memoria para uma lista propria do proximo episodio. O callback
+// compara a qualidade nessa lista, sem ler/instalar a lista em reproducao.
+int fontepref_escolher_lista(const char *id, const Stream *fontes, int n,
+                             int (*semPerda)(int indice, void *ctx), void *ctx);
 
 #endif

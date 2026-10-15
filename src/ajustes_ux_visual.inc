@@ -18,6 +18,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_NOME_ADDON: return "aj_rows-3";
     case AJ_SUFIXO_TIPO: return "aj_rows-3";
     case AJ_SELO_VISTO: return "aj_rows-3";
+    case AJ_OCULTAR_FILMES_VISTOS: return "aj_rows-3";
     case AJ_CW_LIGADO: return "aj_rotate-ccw-clock";
     case AJ_CW_OK: return "aj_rotate-ccw-clock";
     case AJ_CW_ESTILO: return "aj_rotate-ccw-clock";
@@ -34,6 +35,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_MENU_AGENDA: return "aj_panel-left";
     case AJ_MENU_PERFIL: return "aj_panel-left";
     case AJ_RAIL_BLUR: return "aj_panel-left";
+    case AJ_MIC_BUSCA: return "aj_mic";
     case AJ_DESCOBRIR: return "aj_panel-left";
     case AJ_PS_FUNDO: return "aj_users";
     case AJ_PS_CONTINUAR: return "aj_users";
@@ -118,6 +120,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_FONTE_AUTO: return "aj_list-video";
     case AJ_FONTE_REPOR: return "aj_list-video";
     case AJ_FONTE_PREPARAR: return "aj_download";
+    case AJ_FONTE_PRECARREGAR: return "aj_download";
     case AJ_FONTE_CONFERIR_VARIAS: return "aj_layers";
     case AJ_FONTE_AQUECER: return "aj_wifi";
     case AJ_FONTE_TOCAR_CONFERINDO: return "aj_zap";

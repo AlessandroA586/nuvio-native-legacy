@@ -12,7 +12,7 @@ flags=(-O1 -g -Isrc -ffunction-sections -fdata-sections -Wl,-dead_strip \
 if [ "${SANITIZE:-0}" = 1 ]; then flags+=(-fsanitize=address,undefined -fno-omit-frame-pointer); fi
 # SO addons.c e js.c, com a mesma receita de tests/addonslista.sh: -dead_strip
 # descarta o resto do modulo e os vizinhos sao dublados no proprio teste.
-cc "${flags[@]}" src/addons.c src/addonstats.c src/js.c tests/addonurl.c -o /tmp/nuvio-addonurl-tests
+cc "${flags[@]}" src/addons.c src/fontefalha.c src/addonstats.c src/js.c tests/addonurl.c -o /tmp/nuvio-addonurl-tests
 saida=$(/tmp/nuvio-addonurl-tests)
 echo "$saida" | grep -v '^\[addons\]' || true
 echo "$saida" | grep -q 'addonurl: ok'

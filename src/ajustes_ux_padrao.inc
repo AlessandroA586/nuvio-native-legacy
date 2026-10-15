@@ -269,4 +269,14 @@
   1, /* auto-skip credits, only with a real start+end marker: Desligado */
   5, /* owner decision #256: configurable countdown in seconds */
   0, /* interface mode: TV, including on phones until Mobile is selected */
+  1, 0, /* provider failover off; order action */
+  3, 3, 3, 3, /* total links per native provider */
+  1, 0, 3, /* addon failover off; instance order action; total links */
+  1, /* video preload and next episode buffer: Desligado, independent source setting */
+  1, /* hide watched movies (#366): Desligado, per profile on this device */
+  0, /* provider setup: shared legacy accounts; choice itself belongs to this profile */
+  0, /* Mic button in search (.tpk): Automatico, local */
   0, /* second audio language: Da conta */
+#ifdef NV_ANDROID
+  0, /* Baixar registro: acao local, sem preferencia gravada */
+#endif

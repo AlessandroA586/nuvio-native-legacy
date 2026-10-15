@@ -42,6 +42,16 @@ static int   aberto;
 static float entrada;
 static AgItem itens[AV_MAX];
 static int    n;
+static Uint32 ultimaMontagem;
+
+void agendaviso_abrir_sessao(void) {
+  /* Abrir outro perfil nao confirma os lembretes copiados do anterior. */
+  aberto = 0;
+  entrada = 0.0f;
+  n = 0;
+  ultimaMontagem = 0;
+  memset(itens, 0, sizeof itens);
+}
 
 static float alturaItem(int i) {
   return AV_LINHA + (itens[i].sinopse[0] ? AV_SIN_H : 0.0f);
@@ -57,7 +67,6 @@ static float alturaCartao(void) {
 void agendaviso_mostrar_se_houver(void) {
   const AgItem *devidos[AV_MAX];
   int q, i;
-  static Uint32 ultimaMontagem;
   Uint32 agora;
   if (aberto) return;
   agenda_iniciar();

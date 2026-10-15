@@ -13,6 +13,7 @@
 #include "../src/simkl.h"
 #include "../src/ajustes.h"
 #include "../src/rede.h"
+#include <stdint.h>
 #include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -47,6 +48,14 @@ const char *i18n(const char *s) { return s; }
 const char *idioma_mes_data(int mes, const char *nomePt) { (void)mes; return nomePt; }
 // O enfeite real vai ao Cinemeta; aqui devolve o lote como veio.
 int trakt_enfeitar_lote(CatItem *saida, int n) { (void)saida; return n; }
+uint64_t perfis_sessao_geracao(void) { return 1; }
+int perfis_sessao_atual(uint64_t g) { return g == 1; }
+int perfis_sessao_travar(uint64_t g) { return g == 1; }
+void perfis_sessao_destravar(void) {}
+int trakt_enfeitar_lote_sessao(CatItem *saida, int n, uint64_t g) {
+  assert(perfis_sessao_atual(g));
+  return trakt_enfeitar_lote(saida, n);
+}
 
 // ---------------------------------------------------------------- rede falsa
 

@@ -438,6 +438,7 @@ static float aj2SegLargura(int op, int n);
 static int ajSegmentada(int op) {
   int n;
   if (op < 0 || ajTipo(op) != AJL_ESC || op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2 || op == AJ_FUNDO ||
+      op == AJ_INTERFACE_MODO /* o seletor com alvos proprios permite sair de TV usando so o toque */ ||
       op == AJ_LOGO_APP /* abre o seletor com miniaturas de 64 px, como o icone do app */) return 0;
   n = nValores(op);
   if (n < 2 || n > 3 || !OPCOES[op].valores) return 0;
@@ -748,7 +749,7 @@ static int ajCusto(int op) {
       return 1;
     case AJ_MANTER_VIDEO: case AJ_HERO_TRAILER: case AJ_FIL_LIMITE: return 1 | 2;
     case AJ_QUALIDADE: case AJ_TMDB_LIGADO: case AJ_MDB_LIGADO: case AJ_FONTE_AQUECER:
-    case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR: case AJ_TRAILER_QUAL: case AJ_DET_TRAILER_AUTO:
+    case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR: case AJ_FONTE_PRECARREGAR: case AJ_TRAILER_QUAL: case AJ_DET_TRAILER_AUTO:
       return 2;
     case AJ_SEEKR_LIGADO: return 2 | 4;
     case AJ_P2P_LIGADO: case AJ_FANART_CHAVE: case AJ_SEEKR_CHAVE: case AJ_MDB_CHAVE: case AJ_POSTER_CHAVE:

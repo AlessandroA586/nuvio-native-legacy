@@ -162,9 +162,10 @@ static int ajCenaSecao(int op) {
       return AJC_HOME_ESTILO;
     case AJ_FIL_ORDEM: case AJ_FIL_LIMITE: case AJ_ITENS_FILEIRA: case AJ_ESPACO_FILEIRAS: case AJ_ESPACO_TITULOS: case AJ_OCULTAR_NLANC: case AJ_NOTAS_HOME:
     case AJ_ROTULOS: case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_SELO_VISTO:
+    case AJ_OCULTAR_FILMES_VISTOS:
       return AJC_HOME_FILEIRAS;
     case AJ_RAIL_MODERNA: case AJ_RAIL: case AJ_MENU_EXPLORAR: case AJ_MENU_GUIA: case AJ_MENU_AGENDA:
-    case AJ_MENU_PERFIL: case AJ_RAIL_BLUR: case AJ_DESCOBRIR:
+    case AJ_MENU_PERFIL: case AJ_RAIL_BLUR: case AJ_DESCOBRIR: case AJ_MIC_BUSCA:
       return AJC_HOME_BARRA;
     case AJ_PS_FUNDO: case AJ_PS_CONTINUAR: return AJC_HOME_PERFIL;
     case AJ_DET_VEU: case AJ_DET_DATA_CHEIA: case AJ_DET_BLUR_NAO_VISTOS: return AJC_TIT_APARECE;
@@ -194,7 +195,7 @@ static int ajCenaSecao(int op) {
       return AJC_TRL_SOM;
     case AJ_VIDRO: case AJ_VIDRO_CONTORNO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: return AJC_APA_VIDRO;
     case AJ_ANIM: case AJ_RELOGIO: case AJ_RELOGIO_12H: return AJC_APA_MOVIMENTO;
-    case AJ_FONTE_MANUAL: case AJ_FONTE_AUTO: case AJ_FONTE_REPOR: case AJ_FONTE_PRIORIDADE: case AJ_FONTE_TOCAR_CONFERINDO: case AJ_FONTE_AQUECER: case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR:
+    case AJ_FONTE_MANUAL: case AJ_FONTE_AUTO: case AJ_FONTE_REPOR: case AJ_FONTE_PRIORIDADE: case AJ_FONTE_TOCAR_CONFERINDO: case AJ_FONTE_AQUECER: case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR: case AJ_FONTE_PRECARREGAR:
     case AJ_FONTE_PRAZO: case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON: case AJ_TAM_MAX: case AJ_TAM_MIN: case AJ_SELOS_CORES: case AJ_SELOS_PACOTE: case AJ_SELOS_PACOTE_ADD:
     case AJ_FONTE_ESCOPO: case AJ_FONTE_ADDONS_PERM: case AJ_FONTE_PLUGINS_PERM: case AJ_FONTE_OUTROS:
     case AJ_FONTE_REGEX: case AJ_FONTE_REGEX_PADRAO: case AJ_FONTE_REGEX_MODELO:
@@ -223,7 +224,7 @@ static int ajCenaSecao(int op) {
     case AJ_ADDONS: case AJ_PLUGINS: case AJ_ADDONS_PRINCIPAL: return AJC_FON_ADDONS;
     case AJ_ENQUETES: return AJC_CON_AVISOS;
     case AJ_DISCORD: case AJ_SALVOS_DEST: case AJ_CW_FONTE: case AJ_CW_PROXIMO: case AJ_HIST_CONTA: case AJ_SOCIAL: return AJC_CON_SOCIAL;
-    case AJ_DEBRID_RD: case AJ_DEBRID_TB: case AJ_DEBRID_PM: case AJ_DEBRID_AD: case AJ_DEBRID_AD_TESTAR:
+    case AJ_PROVEDORES_ESCOPO: case AJ_DEBRID_RD: case AJ_DEBRID_TB: case AJ_DEBRID_PM: case AJ_DEBRID_AD: case AJ_DEBRID_AD_TESTAR:
       return AJC_CON_CHAVES;
     case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: case AJ_P2P_LIMITE: return AJC_CON_P2P;
     case AJ_JF_LIGADO: case AJ_JF_SERVIDOR: case AJ_JF_ENTRAR: case AJ_JF_SAIR: case AJ_EM_SERVIDOR:
@@ -425,6 +426,7 @@ static void ajcHomeBarra(int A) {
   ajcFoco(AJ_RAIL, 28, 24, rw, 312, 26);
   ajcFoco(AJ_RAIL_MODERNA, 28, 24, rw, 312, 26);
   ajcFoco(AJ_RAIL_BLUR, 28, 24, rw, 312, 26);
+  ajcFoco(AJ_MIC_BUSCA, 36, 44 + 1 * 40 - 6, rw - 16, 32, 16);   // a linha Buscar
 }
 // Escolha de perfil: o fundo escolhido e os avatares de verdade.
 static void ajcHomePerfil(int A) {
