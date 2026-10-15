@@ -56,7 +56,16 @@ check "default: memory line with ring auto and 2 generators" \
   "grep -qE '^\[dts-tpk\] mem: .*ring auto, 2 generator\(s\), seg0 normal; .*reader rings peak [12] = (32|64) MiB' '$work/t2.log'"
 check "default: no seg0 cut" "! grep -q 'seg0 cut' '$work/t2.log'"
 
-cp "$work/t1.log" "$work/t2.log" "${DTS_TPK_LOGS:-$work}/" 2>/dev/null || true
-if [ "$fail" != 0 ]; then echo "--- t1.log"; grep '\[dts-tpk\]' "$work/t1.log" | tail -30; echo "--- t2.log"; grep '\[dts-tpk\]' "$work/t2.log" | tail -30; fi
+# 3. Stop/back during the probe hangs up on the source at once (blocker 1).
+"$work/test" "$port" cancelar "$work" > "$work/t3.log" 2>&1 || fail=1
+grep -E '^(ok|FAIL)' "$work/t3.log"
+fechou=$(sed -n 's/^closed-at //p' "$work/t3.log")
+solto=$(sed -n 's/^hold-closed //p' "$work/origem.log" | head -1)
+check "cancel: the probe's request to the source ended within 2 s of the close (closed ${fechou:-?}, source saw ${solto:-nothing})" \
+  "[ -n '$solto' ] && [ -n '$fechou' ] && awk 'BEGIN{exit !($solto - $fechou < 2.0)}'"
+check "cancel: no 'did not open' line for a cancelled probe" "! grep -q 'a fonte nao abriu no conversor' '$work/t3.log'"
+
+cp "$work/t1.log" "$work/t2.log" "$work/t3.log" "${DTS_TPK_LOGS:-$work}/" 2>/dev/null || true
+if [ "$fail" != 0 ]; then echo "--- t1.log"; grep '\[dts-tpk\]' "$work/t1.log" | tail -30; echo "--- t2.log"; grep '\[dts-tpk\]' "$work/t2.log" | tail -30; echo "--- t3.log"; tail -20 "$work/t3.log"; fi
 [ "$fail" = 0 ] && echo "dts_tpk_servidor: ok"
 exit "$fail"

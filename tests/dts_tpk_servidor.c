@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <time.h>
 #include <unistd.h>
 
 // --- stubs for what the server takes from the app ------------------------------
@@ -168,6 +169,27 @@ static void testeHls(int origem, const char *dir, int afinado) {
   sleep(1);   // the session is destroyed on its own thread
 }
 
+static double agora(void) {
+  struct timespec t;
+  clock_gettime(CLOCK_MONOTONIC, &t);
+  return t.tv_sec + t.tv_nsec / 1e9;
+}
+
+// Stop/back while the source is still being probed (review blocker 1): the
+// origin holds the request without answering; closing the session must hang
+// up on it right away. The shell compares "closed-at" with the origin's log.
+static void testeCancelar(int origem) {
+  int porta;
+  char pref[64];
+  CONFERE(abrirHls(origem, "hold/fx.mkv", 0, &porta, pref, sizeof pref), "session opens on a source that never answers");
+  sleep(2);
+  CONFERE(dts_tpk_estado() == DTSTPK_SONDANDO, "still probing after 2 s");
+  printf("closed-at %.3f\n", agora());
+  fflush(stdout);
+  dts_tpk_fechar();
+  sleep(4);
+}
+
 int main(int argc, char **argv) {
   if (argc < 4) { fprintf(stderr, "usage: %s <origin port> <test> <dir>\n", argv[0]); return 2; }
   int origem = atoi(argv[1]);
@@ -176,6 +198,7 @@ int main(int argc, char **argv) {
   CONFERE(dts_tpk_disponivel(), "converter available in this build");
   if (!strcmp(t, "tuning")) testeHls(origem, argv[3], 1);
   else if (!strcmp(t, "padrao")) testeHls(origem, argv[3], 0);
+  else if (!strcmp(t, "cancelar")) testeCancelar(origem);
   else { fprintf(stderr, "unknown test %s\n", t); return 2; }
   printf("%s: %d failure(s)\n", t, falhas);
   return falhas ? 1 : 0;

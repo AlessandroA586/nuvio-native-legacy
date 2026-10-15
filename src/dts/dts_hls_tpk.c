@@ -303,6 +303,7 @@ typedef struct Sessao {
   char erro[160], caminho[40];
   double duracao;
   DtsRemux *rx;
+  DtsRemux *rxSonda;              // while the probe runs: what a close cancels
   Gerador ger[GERADORES];
   unsigned uso;
   double inicioStream;            // progressivo: keyframe do fluxo em curso
@@ -365,7 +366,19 @@ static void sessaoResumo(Sessao *s) {
 static void *fioSonda(void *u) {
   Sessao *s = u;
   char err[160] = "";
-  DtsRemux *rx = dts_remux_open(s->url, s->cabs, s->track, s->stereo, SEG_ALVO_S, &s->cancelar, err, sizeof err);
+  // Two steps so a close during the probe (stop/back while the source is still
+  // answering) reaches its reader: encerrarAtual cancels rxSonda.
+  DtsRemux *rx = dts_remux_new(&s->cancelar);
+  pthread_mutex_lock(&s->m);
+  s->rxSonda = rx;
+  if (rx && s->cancelar) dts_remux_cancel(rx);
+  pthread_mutex_unlock(&s->m);
+  if (rx && dts_remux_probe(rx, s->url, s->cabs, s->track, s->stereo, SEG_ALVO_S, err, sizeof err) < 0) {
+    pthread_mutex_lock(&s->m); s->rxSonda = NULL; pthread_mutex_unlock(&s->m);
+    dts_remux_close(rx);
+    rx = NULL;
+  }
+  if (!rx && !err[0]) snprintf(err, sizeof err, "Out of memory");
   const DtsRemuxInfo *in = rx ? dts_remux_info(rx) : NULL;
   if (rx && s->corpo == DTSTPK_CORPO_LENGTH && in->size_bytes > 0 && in->duration_s > 1.0) {
     // O segmento inteiro fica na memoria antes de sair: alvo de ~32 MB.
@@ -375,6 +388,7 @@ static void *fioSonda(void *u) {
     dts_remux_resegment(rx, alvo);
   }
   pthread_mutex_lock(&s->m);
+  s->rxSonda = NULL;
   if (s->cancelar) { if (rx) dts_remux_close(rx); rx = NULL; s->estado = DTSTPK_FALHOU; snprintf(s->erro, sizeof s->erro, "cancelled"); }
   else if (!rx) { s->estado = DTSTPK_FALHOU; snprintf(s->erro, sizeof s->erro, "%s", err[0] ? err : "probe failed"); }
   else if ((s->modo == DTSTPK_HLS || s->modo == DTSTPK_HLS_LAN) && (in->n_segments < 1 || !in->index_complete)) {
@@ -1005,6 +1019,7 @@ static void encerrarAtual(void) {   // sob G
   pthread_mutex_lock(&s->m);
   s->cancelar = 1;
   for (int i = 0; i < GERADORES; i++) s->ger[i].parar = 1;
+  if (s->rxSonda) dts_remux_cancel(s->rxSonda);   // the probe hangs up on the source now
   pthread_cond_broadcast(&s->c);
   pthread_mutex_unlock(&s->m);
   if (s->rx) dts_remux_cancel(s->rx);

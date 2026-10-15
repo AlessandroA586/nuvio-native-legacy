@@ -59,6 +59,13 @@ int dts_remux_available(void);
  * failure with the reason in err (no URL in it). */
 DtsRemux *dts_remux_open(const char *url, const char *headers, int audio_ordinal, int stereo_aac,
                          double seg_target_s, volatile int *cancel, char *err, size_t errn);
+/* The same in two steps, so another thread can stop a probe that waits on the
+ * network: dts_remux_new() returns an empty source that dts_remux_cancel()
+ * already accepts (*cancel, may be NULL, is also read as in dts_remux_open); dts_remux_probe() fills it (0) or fails (-1, reason in err,
+ * "Cancelled" after a cancel). Either way the caller closes it. */
+DtsRemux *dts_remux_new(volatile int *cancel);
+int dts_remux_probe(DtsRemux *, const char *url, const char *headers, int audio_ordinal, int stereo_aac,
+                    double seg_target_s, char *err, size_t errn);
 const DtsRemuxInfo *dts_remux_info(const DtsRemux *);
 double dts_remux_segment_start(const DtsRemux *, int seg);    /* seconds; segment 0 = 0 */
 double dts_remux_segment_duration(const DtsRemux *, int seg);

@@ -41,6 +41,12 @@ DtsRemux *dts_remux_open(const char *u, const char *h, int t, int s, double g, v
   if (err && n) snprintf(err, n, "converter not built");
   return NULL;
 }
+DtsRemux *dts_remux_new(volatile int *c) { (void)c; return NULL; }
+int dts_remux_probe(DtsRemux *r, const char *u, const char *h, int t, int s, double g, char *err, size_t n) {
+  (void)r; (void)u; (void)h; (void)t; (void)s; (void)g;
+  if (err && n) snprintf(err, n, "converter not built");
+  return -1;
+}
 const DtsRemuxInfo *dts_remux_info(const DtsRemux *r) { (void)r; return NULL; }
 double dts_remux_segment_start(const DtsRemux *r, int s) { (void)r; (void)s; return 0; }
 double dts_remux_segment_duration(const DtsRemux *r, int s) { (void)r; (void)s; return 0; }
@@ -377,28 +383,50 @@ static void buildSegments(DtsRemux *r, double target) {
   }
 }
 
+DtsRemux *dts_remux_new(volatile int *cancel) {
+  DtsRemux *r = calloc(1, sizeof *r);
+  if (!r) return NULL;
+  pthread_mutex_init(&r->lock, NULL);
+  r->vs = r->as = -1;
+  r->extCancel = cancel;
+  return r;
+}
+
+static int isCancelled(DtsRemux *r) {
+  int c;
+  pthread_mutex_lock(&r->lock);
+  c = r->cancelled || (r->extCancel && *r->extCancel);
+  pthread_mutex_unlock(&r->lock);
+  return c;
+}
+
 DtsRemux *dts_remux_open(const char *url, const char *headers, int ordinal, int stereoAac,
                          double segTarget, volatile int *cancel, char *err, size_t errn) {
-  DtsRemux *r;
+  DtsRemux *r = dts_remux_new(cancel);
+  if (!r) { fail(err, errn, "Out of memory", 0); return NULL; }
+  if (dts_remux_probe(r, url, headers, ordinal, stereoAac, segTarget, err, errn) < 0) { dts_remux_close(r); return NULL; }
+  return r;
+}
+
+int dts_remux_probe(DtsRemux *r, const char *url, const char *headers, int ordinal, int stereoAac,
+                    double segTarget, char *err, size_t errn) {
   AVFormatContext *ic;
   int rr, nAudio = 0, ordAs = -1, ordPedido = -1, primeiro = -1, primeiroOrd = -1;
   pthread_once(&logOnce, logInit);
   atomic_store(&logBudget, 40);
   if (err && errn) err[0] = 0;
-  if (!url || !*url) { fail(err, errn, "No source", 0); return NULL; }
-  r = calloc(1, sizeof *r);
-  if (!r) { fail(err, errn, "Out of memory", 0); return NULL; }
-  pthread_mutex_init(&r->lock, NULL);
-  r->extCancel = cancel;
+  if (!r) { fail(err, errn, "No converter", 0); return -1; }
+  if (!url || !*url) { fail(err, errn, "No source", 0); return -1; }
   r->stereo_aac = stereoAac;
-  r->vs = r->as = -1;
   r->url = strdup(url); r->headers = strdup(headers ? headers : "");
   r->probe = dts_engine_create();
   if (!r->url || !r->headers || !r->probe) { fail(err, errn, "Out of memory", 0); goto bad; }
-  registerEngine(r, r->probe);
-  if (cancel && *cancel) { fail(err, errn, "Cancelled", 0); goto bad; }
+  registerEngine(r, r->probe);   /* cancelled already: cancels it at once */
+  if (isCancelled(r)) { fail(err, errn, "Cancelled", 0); goto bad; }
   if (dts_engine_open_demux(r->probe, r->url, r->headers) < 0) {
-    fail(err, errn, dts_engine_error(r->probe), 0); goto bad;
+    if (isCancelled(r)) fail(err, errn, "Cancelled", 0);
+    else fail(err, errn, dts_engine_error(r->probe), 0);
+    goto bad;
   }
   ic = dts_engine_avformat(r->probe);
   r->mov = ic->iformat && strstr(ic->iformat->name, "mov") != NULL;
@@ -480,7 +508,7 @@ DtsRemux *dts_remux_open(const char *url, const char *headers, int ordinal, int 
     /* Matroska parses Cues only on the first seek (design 2.2-6). */
     int64_t t0 = V->start_time != AV_NOPTS_VALUE ? V->start_time : 0;
     rr = avformat_seek_file(ic, r->vs, INT64_MIN, t0, t0, AVSEEK_FLAG_BACKWARD);
-    if (rr < 0 && cancel && *cancel) { fail(err, errn, "Cancelled", 0); goto bad; }
+    if (isCancelled(r)) { fail(err, errn, "Cancelled", 0); goto bad; }
     int n = avformat_index_get_entries_count(V);
     r->kf = n > 0 ? malloc((size_t)n * sizeof *r->kf) : NULL;
     for (int i = 0; i < n && r->kf; i++) {
@@ -502,10 +530,15 @@ DtsRemux *dts_remux_open(const char *url, const char *headers, int ordinal, int 
     in->n_segments = r->nseg;
     in->size_bytes = dts_engine_size(r->probe);
   }
-  return r;
+  return 0;
 bad:
-  dts_remux_close(r);
-  return NULL;
+  /* The reader goes now (its connection with it); the caller closes r. */
+  if (r->probe) {
+    DtsEngine *e = r->probe;
+    r->probe = NULL;
+    dts_engine_cancel(e); unregisterEngine(r, e); dts_engine_destroy(e);
+  }
+  return -1;
 }
 
 const DtsRemuxInfo *dts_remux_info(const DtsRemux *r) { return r ? &r->info : NULL; }
