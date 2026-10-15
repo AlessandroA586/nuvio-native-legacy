@@ -2,6 +2,7 @@ package space.nuvio.nativelegacy
 
 import android.app.Activity
 import android.content.Intent
+import android.os.Bundle
 import android.widget.Toast
 import java.io.File
 import java.io.RandomAccessFile
@@ -17,6 +18,25 @@ class RegistroDownload(private val activity: Activity) {
     private var fechado = false
     var escolhendoArquivo = false
         private set
+
+    fun salvar(estado: Bundle) {
+        val atual = pedido ?: return
+        if (!escolhendoArquivo) return
+        estado.putBundle("registroDownload", Bundle().apply {
+            putString("arquivo", atual.arquivo.path)
+            putString("sucesso", atual.sucesso)
+            putString("falha", atual.falha)
+        })
+    }
+
+    fun restaurar(estado: Bundle?) {
+        val salvo = estado?.getBundle("registroDownload") ?: return
+        val arquivo = salvo.getString("arquivo") ?: return
+        val sucesso = salvo.getString("sucesso") ?: return
+        val falha = salvo.getString("falha") ?: return
+        pedido = Pedido(File(arquivo), sucesso, falha)
+        escolhendoArquivo = true
+    }
 
     fun fechar() {
         fechado = true

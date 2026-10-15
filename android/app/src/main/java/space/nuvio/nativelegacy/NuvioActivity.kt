@@ -151,7 +151,13 @@ class NuvioActivity : SDLActivity() {
     fun estadoSdl() = "thread=${if (mSDLThread != null) "sim" else "nao"} foco=$mHasFocus " +
         "retomada=$mIsResumedCalled superficie=${mSurface?.mIsSurfaceReady == true}"
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        registroDownload.salvar(outState)
+        super.onSaveInstanceState(outState)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        registroDownload.restaurar(savedInstanceState)
         // SEGUNDO onCreate NO MESMO PROCESSO = SEGUNDO main() DO C (o
         // SDLActivity.initialize() zera mSDLThread e o SDL sobe outro fio de
         // main). O nucleo C guarda estado global (mutex, fios, caches) que nao
