@@ -271,3 +271,6 @@
   1, /* video preload and next episode buffer: Desligado, independent source setting */
   1, /* hide watched movies (#366): Desligado, per profile on this device */
   0, /* provider setup: shared legacy accounts; choice itself belongs to this profile */
+#ifdef NV_ANDROID
+  0, /* Baixar registro: acao local, sem preferencia gravada */
+#endif
