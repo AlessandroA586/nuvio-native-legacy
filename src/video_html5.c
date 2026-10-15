@@ -393,9 +393,9 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
   }
 
   if (op === "estado") {
-    // Doze doubles, nesta ordem — tem de casar com o enum EST_* no C. dstTam
+    // Treze doubles, nesta ordem — tem de casar com o enum EST_* no C. dstTam
     // em BYTES, mesmo contrato do Tizen.
-    if (!dst || dstTam < 96) return 0;
+    if (!dst || dstTam < 104) return 0;
     var o = dst >> 3;
     var pos = 0, dur = 0;
     if (S.v) {
@@ -403,6 +403,16 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
       try { dur = +S.v.duration; if (!isFinite(dur) || dur < 0) dur = 0; } catch (e) {}
       if (S.larg <= 0 && S.v.videoWidth)  S.larg = S.v.videoWidth;
       if (S.alt  <= 0 && S.v.videoHeight) S.alt  = S.v.videoHeight;
+    }
+    // Total de faixas, contado como "faixas" conta: legenda de HLS pode chegar
+    // depois do loadedmetadata, e o C rele a lista quando este numero muda.
+    var nFaixas = 0;
+    if (S.v) {
+      try {
+        var ats0 = S.hls ? S.hls.audioTracks : S.v.audioTracks;
+        if (ats0) nFaixas += ats0.length;
+        if (S.v.textTracks) nFaixas += S.v.textTracks.length;
+      } catch (e) {}
     }
     var bufFim = S.v ? bufferFimAgora() : 0;
     var bufMs  = S.bufDesde ? Math.max(0, avAgora() - S.bufDesde) : 0;
@@ -418,6 +428,7 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
     HEAPF64[o + 9]  = bufFim;
     HEAPF64[o + 10] = bufMs;
     HEAPF64[o + 11] = S.erroCodigo || 0;
+    HEAPF64[o + 12] = nFaixas;
     return 1;
   }
 
@@ -528,7 +539,7 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
 // Indices do vetor de "estado". Tem de casar com a ordem escrita no JS acima.
 enum { EST_POS, EST_DUR, EST_TOCANDO, EST_PRONTO, EST_ABERTO,
        EST_LARG, EST_ALT, EST_ERRO, EST_FIM, EST_BUFFIM, EST_BUFMS,
-       EST_ERRCODE, EST_N };
+       EST_ERRCODE, EST_NFAIXAS, EST_N };
 
 #if defined(__EMSCRIPTEN_PTHREADS__)
 // Mesma travessia de fio que video_tizen.c usa para webapis.avplay: o pedido
@@ -756,7 +767,7 @@ void video_bombear(void) {
     marco("html5 video pronto");
     lerFaixas();
   }
-  if (pronto && !faixasLidas) lerFaixas();
+  if (pronto && (int)est[EST_NFAIXAS] != faixasLidas) lerFaixas();
 
 #if defined(__EMSCRIPTEN_PTHREADS__)
   if (mkvPendente && !fioMkvVivo && urlAtual[0] && posSeg >= 5.0)
@@ -1008,8 +1019,8 @@ static void lerFaixas(void) {
   int n;
   buf[0] = 0;
   n = (int)avChamar("faixas", NULL, 0, 0, 0, 0, buf, (int)sizeof buf);
+  faixasLidas = n > 0 ? n : 0;
   if (n < 1) return;
-  faixasLidas = 1;
   nAudio = nLeg = 0;
   for (linha = buf; *linha; linha = fim2) {
     char tipo;

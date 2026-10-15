@@ -158,10 +158,10 @@ const call = (op, text = '', a = 0, b = 0, c = 0, d = 0, dst = 0, size = 0) =>
 
 // EST_* offsets, must match the enum in src/video_html5.c.
 const EST = { POS: 0, DUR: 1, TOCANDO: 2, PRONTO: 3, ABERTO: 4, LARG: 5, ALT: 6,
-              ERRO: 7, FIM: 8, BUFFIM: 9, BUFMS: 10, ERRCODE: 11 };
+              ERRO: 7, FIM: 8, BUFFIM: 9, BUFMS: 10, ERRCODE: 11, NFAIXAS: 12 };
 function lerEstado() {
   outputs.delete(8);
-  call('estado', '', 0, 0, 0, 0, 8, 96);
+  call('estado', '', 0, 0, 0, 0, 8, 104);
   const o = 1; // dst=8 bytes -> offset 1 double
   const h = context.HEAPF64;
   return {
@@ -169,6 +169,7 @@ function lerEstado() {
     pronto: h[o + EST.PRONTO], aberto: h[o + EST.ABERTO], larg: h[o + EST.LARG],
     alt: h[o + EST.ALT], erro: h[o + EST.ERRO], fim: h[o + EST.FIM],
     bufFim: h[o + EST.BUFFIM], bufMs: h[o + EST.BUFMS], erroCodigo: h[o + EST.ERRCODE],
+    nFaixas: h[o + EST.NFAIXAS],
   };
 }
 
@@ -271,6 +272,13 @@ function lerEstado() {
     assert.match(out, /A\t1\tpor\tPortugues\t-1/);
     assert.match(out, /T\t0\t\t\t-1/);
     assert.match(out, /T\t1\tpor\tForced\t-1/);
+  });
+
+  check('estado counts tracks so late subtitle tracks trigger a re-read', () => {
+    v3.textTracks = [];
+    assert.equal(lerEstado().nFaixas, 2);
+    v3.textTracks = [makeTextTrack('por', 'Forced')];
+    assert.equal(lerEstado().nFaixas, 3);
   });
 
   check('when the browser exposes no audioTracks/textTracks, faixas degrades to zero rows', () => {
