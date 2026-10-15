@@ -84,6 +84,8 @@ static Uint32 legSemCueMs, legBombeouEm;
 static char urlAtual[4096];
 static char cabecalhos[2048];
 static volatile int ativo, pronto, falhou, terminou, tocando, largura, altura;
+// video_parar ate o proximo video_tocar: nada abre o conversor (convIniciar).
+static int parado;
 static volatile int conflito;   // ver video_tpk_log_host
 static volatile int durMs, bufferando;
 // VELOCIDADE (#202, video.h). O host aplica por escolher(3, centesimos) —
@@ -473,6 +475,7 @@ static int trilhaPreferida(void);
 static int videoConvertivel(void);
 
 int video_tocar(const char *u) {
+  parado = 0;
   if (cv.ativo || cv.sondando) dts_tpk_fechar();
   memset(&cv, 0, sizeof cv); cv.buscarMs = -1; naoSupPend = 0;
   // As listas do titulo anterior nao passam para o convertido (que as mantem
@@ -770,6 +773,9 @@ static int convIniciar(int track, double pos, const char *motivo) {
   char url[256];
   int modo = ajustes_dts_tpk_modo();
   const MkvFaixa *m = mkvTrack(track);
+  // Parado (Voltar, cartao de erro): a lista de faixas do arquivo que parou
+  // nao reabre nada; so video_tocar comeca outra fonte.
+  if (parado) return 0;
   if (!convAbrirSessao(ordinalAudio(track), modo, pos, url, sizeof url)) return 0;
   printf("[dts-tpk] convertendo a faixa %d do MKV (audio %d; %s %d canais%s%s) a partir de %.1f s, modo %s, saida %s; motivo: %s\n",
          track, ordinalAudio(track), m ? m->codec : "?", m ? m->canais : 0, m && m->idioma[0] ? ", " : "", m ? m->idioma : "", pos,
@@ -814,7 +820,7 @@ static int faixasDaTv(void) {
   return n;
 }
 static void convSondar(int modo, const char *motivo) {
-  if (cv.ativo || cv.sondando || !convPossivel() || strstr(urlAtual, ".m3u8")) return;
+  if (parado || cv.ativo || cv.sondando || !convPossivel() || strstr(urlAtual, ".m3u8")) return;
   if (!convAbrirSessao(-1, modo, video_pos(), cv.url, sizeof cv.url)) return;
   cv.sondando = 1; cv.modo = modo;
   printf("[dts-tpk] MP4, %s: o conversor procura DTS/TrueHD na fonte (modo %s); o original segue tocando\n",
@@ -1239,6 +1245,7 @@ void video_bombear(void) {
   }
 }
 void video_parar(void) {
+  parado = 1;
   if (cv.ativo || cv.sondando) dts_tpk_fechar();
   memset(&cv, 0, sizeof cv); cv.buscarMs = -1; naoSupPend = 0;
   emTrailer = 0;

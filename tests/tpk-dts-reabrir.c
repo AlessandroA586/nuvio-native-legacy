@@ -236,6 +236,17 @@ int main(void) {
   playerPronto(); bombear(3);
   ok(pausas == 0, "no start buffer on HLS");
   video_parar();
+  // STOP IS FINAL: after Back (or the error card) nothing reopens the file.
+  // The player's track list of the stopped file used to restart the
+  // conversion on the next tick, playing on behind the menus (TV, Oct 2026).
+  video_tocar("http://h/f3.mkv");
+  posMs = 30000;
+  playerPronto(); bombear(3);
+  ok(video_tpk_convertendo(), "stop: converting before the stop");
+  video_parar();
+  nAbriu = 0; abriuConversor = 0;
+  bombear(20);
+  ok(nAbriu == 0 && abriuConversor == 0 && !video_tpk_convertendo(), "stop: nothing reopens after the stop");
   modoFake = DTSTPK_PROG_TS;
 
   // PREFERRED LANGUAGE ONLY ON DTS: English DTS + Japanese AAC, English wanted.
