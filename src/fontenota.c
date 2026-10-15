@@ -1,4 +1,5 @@
 #include "fontenota.h"
+#include "linguas.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
@@ -148,7 +149,7 @@ static int audioDe(const char *t) {
 
 typedef struct { const char *cod; const char *palavras[9]; const char *bandeiras[4]; } Lingua;
 static const Lingua LINGUAS[] = {
-  { "en", { "english", "eng", "ingles", "inglês", "dub", "dubbed", "dubs", NULL }, { "GB", "US", NULL } },
+  { "en", { "english", "eng", "ingles", "inglês", NULL }, { "GB", "US", NULL } },
   { "ja", { "japanese", "jpn", "japones", "japonês", NULL }, { "JP", NULL } },
   { "pt", { "portuguese", "português", "portugues", "pt-br", "ptbr", "brazilian", "nacional", "dublado", NULL },
           { "BR", "PT", NULL } },
@@ -160,6 +161,23 @@ static const Lingua LINGUAS[] = {
   { "zh", { "chinese", "mandarin", "cantonese", NULL }, { "CN", "TW", "HK", NULL } },
   { "ru", { "russian", "rus", NULL }, { "RU", NULL } },
   { "hi", { "hindi", "hin", NULL }, { "IN", NULL } },
+  { "ar", { "arabic", "ara", NULL }, { "SA", "AE", "EG", NULL } },
+  { "da", { "danish", "dansk", "dan", NULL }, { "DK", NULL } },
+  { "el", { "greek", "ell", "gre", NULL }, { "GR", NULL } },
+  { "he", { "hebrew", "heb", NULL }, { "IL", NULL } },
+  { "nl", { "dutch", "nederlands", "nld", "dut", NULL }, { "NL", NULL } },
+  { "hu", { "hungarian", "magyar", "hun", NULL }, { "HU", NULL } },
+  { "id", { "indonesian", "ind", NULL }, { "ID", NULL } },
+  { "no", { "norwegian", "norsk", "nor", "nob", "nno", NULL }, { "NO", NULL } },
+  { "pl", { "polish", "polski", "pol", NULL }, { "PL", NULL } },
+  { "ro", { "romanian", "română", "romana", "ron", "rum", NULL }, { "RO", NULL } },
+  { "sv", { "swedish", "svenska", "swe", NULL }, { "SE", NULL } },
+  { "th", { "thai", "tha", NULL }, { "TH", NULL } },
+  { "cs", { "czech", "čeština", "cestina", "ces", "cze", NULL }, { "CZ", NULL } },
+  { "tr", { "turkish", "türkçe", "turkce", "tur", NULL }, { "TR", NULL } },
+  { "uk", { "ukrainian", "ukr", NULL }, { "UA", NULL } },
+  { "vi", { "vietnamese", "vie", NULL }, { "VN", NULL } },
+  { "fi", { "finnish", "suomi", "fin", NULL }, { "FI", NULL } },
 };
 
 // A MENCAO E DE LEGENDA? "English Subs", "Subs: English", "ENG-SUB": a palavra
@@ -192,15 +210,10 @@ static int bandeiraDeAudio(const char *t, const char *pais) {
 }
 
 int fontenota_idioma(const char *t, const char *pref) {
-  char cod[3];
   const Lingua *l = NULL;
-  if (!t || !pref || !isalpha((unsigned char)pref[0]) || !isalpha((unsigned char)pref[1])) return FN_IDIOMA_NADA;
-  if (pref[2] && isalpha((unsigned char)pref[2]) && strncasecmp(pref, "eng", 3) && strncasecmp(pref, "jpn", 3))
-    return FN_IDIOMA_NADA;   // "none", "orig...": nao e codigo de idioma
-  cod[0] = (char)tolower((unsigned char)pref[0]); cod[1] = (char)tolower((unsigned char)pref[1]); cod[2] = 0;
-  if (!strcmp(cod, "jp")) strcpy(cod, "ja");
+  if (!t || !pref || !pref[0]) return FN_IDIOMA_NADA;
   for (size_t k = 0; k < sizeof LINGUAS / sizeof LINGUAS[0]; k++)
-    if (!strcmp(LINGUAS[k].cod, cod)) { l = &LINGUAS[k]; break; }
+    if (ling_casa(LINGUAS[k].cod, pref)) { l = &LINGUAS[k]; break; }
   if (!l) return FN_IDIOMA_NADA;
   for (int i = 0; l->palavras[i]; i++) if (palavraDeAudio(t, l->palavras[i])) return FN_IDIOMA_EXPLICITO;
   for (int i = 0; l->bandeiras[i]; i++) if (bandeiraDeAudio(t, l->bandeiras[i])) return FN_IDIOMA_EXPLICITO;

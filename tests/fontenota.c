@@ -167,6 +167,63 @@ static void anime(void) {
   idioma = NULL;
 }
 
+static void genericDubIsNotEnglish(void) {
+  Fixture l[2] = {
+    { "1080p", "BluRay REMUX Hindi Dub", "", 1080, 0, 0, 0, 0, 0, 0 },
+    { "1080p", "WEB-DL English Dub", "", 1080, 0, 0, 0, 0, 0, 0 }
+  };
+  idioma = "en";
+  assert(melhor(l, 2) == 1);
+  assert(fontenota_idioma("Hindi Dub", "en") == FN_IDIOMA_NADA);
+  assert(fontenota_idioma("Tamil Dubbed", "en") == FN_IDIOMA_NADA);
+  assert(fontenota_idioma("Dubs", "en") == FN_IDIOMA_NADA);
+  assert(fontenota_idioma("English Dub", "en") == FN_IDIOMA_EXPLICITO);
+  idioma = NULL;
+}
+
+static void supportedAudioLanguages(void) {
+  static const struct { const char *code, *alias, *name, *flag; } cases[] = {
+    { "pt", "pob", "Portuguese", "🇵🇹" }, { "en", "eng", "English", "🇬🇧" },
+    { "es", "spa", "Spanish", "🇪🇸" }, { "de", "deu", "German", "🇩🇪" },
+    { "ar", "ara", "Arabic", "🇸🇦" }, { "zh", "zho", "Chinese", "🇨🇳" },
+    { "da", "dan", "Danish", "🇩🇰" }, { "ko", "kor", "Korean", "🇰🇷" },
+    { "fr", "fra", "French", "🇫🇷" }, { "el", "ell", "Greek", "🇬🇷" },
+    { "he", "heb", "Hebrew", "🇮🇱" }, { "nl", "nld", "Dutch", "🇳🇱" },
+    { "hi", "hin", "Hindi", "🇮🇳" }, { "hu", "hun", "Hungarian", "🇭🇺" },
+    { "id", "ind", "Indonesian", "🇮🇩" }, { "it", "ita", "Italian", "🇮🇹" },
+    { "ja", "jpn", "Japanese", "🇯🇵" }, { "no", "nor", "Norwegian", "🇳🇴" },
+    { "pl", "pol", "Polish", "🇵🇱" }, { "ro", "ron", "Romanian", "🇷🇴" },
+    { "ru", "rus", "Russian", "🇷🇺" }, { "sv", "swe", "Swedish", "🇸🇪" },
+    { "th", "tha", "Thai", "🇹🇭" }, { "cs", "ces", "Czech", "🇨🇿" },
+    { "tr", "tur", "Turkish", "🇹🇷" }, { "uk", "ukr", "Ukrainian", "🇺🇦" },
+    { "vi", "vie", "Vietnamese", "🇻🇳" }, { "fi", "fin", "Finnish", "🇫🇮" }
+  };
+  Fixture l[2] = {
+    { "1080p", "WEB-DL Japanese", "", 1080, 0, 0, 0, 0, 0, 0 },
+    { "1080p", "WEB-DL Swedish", "", 1080, 0, 0, 0, 0, 0, 0 }
+  };
+  idioma = "sv";
+  assert(melhor(l, 2) == 1);
+  idioma = NULL;
+  for (size_t i = 0; i < sizeof cases / sizeof cases[0]; i++) {
+    char subs[80], regional[16];
+    assert(fontenota_idioma(cases[i].name, cases[i].code) == FN_IDIOMA_EXPLICITO);
+    assert(fontenota_idioma(cases[i].flag, cases[i].code) == FN_IDIOMA_EXPLICITO);
+    assert(fontenota_idioma("Dual Audio", cases[i].code) == FN_IDIOMA_DUAL);
+    assert(fontenota_idioma(cases[i].name, cases[i].alias) == FN_IDIOMA_EXPLICITO);
+    snprintf(regional, sizeof regional, "%s-XX", cases[i].code);
+    assert(fontenota_idioma(cases[i].name, regional) == FN_IDIOMA_EXPLICITO);
+    snprintf(subs, sizeof subs, "Subs: %s", cases[i].name);
+    assert(fontenota_idioma(subs, cases[i].code) == FN_IDIOMA_NADA);
+  }
+  assert(fontenota_idioma("Dutch", "dut") == FN_IDIOMA_EXPLICITO);
+  assert(fontenota_idioma("Czech", "cze") == FN_IDIOMA_EXPLICITO);
+  assert(fontenota_idioma("Chinese", "chi") == FN_IDIOMA_EXPLICITO);
+  assert(fontenota_idioma("Dual Audio", "none") == FN_IDIOMA_NADA);
+  assert(fontenota_idioma("Dual Audio", "original") == FN_IDIOMA_NADA);
+  assert(fontenota_idioma("Dual Audio", "") == FN_IDIOMA_NADA);
+}
+
 static void quatroK(void) {
   Fixture dv = { "AIOStreams 2160p", "BluRay REMUX | HEVC | DV | TrueHD Atmos 7.1", "Movie.2160p.UHD.BluRay.REMUX.DV.HDR.HEVC.TrueHD.Atmos.7.1-Grp.mkv",
                  2160, 4, 0, 1, GB(62), 0, 0 };
@@ -297,6 +354,8 @@ static void filas(void) {
 int main(void) {
   codeGeass();
   anime();
+  genericDubIsNotEnglish();
+  supportedAudioLanguages();
   quatroK();
   codecs();
   metadados();

@@ -4,7 +4,7 @@
 #   bash tests/fontenota.sh
 set -eu
 cd "$(dirname "$0")/.."
-cc -O1 -g -Wall -Wextra -Isrc src/fontenota.c src/fonteauto.c tests/fontenota.c \
+cc -O1 -g -Wall -Wextra -Isrc src/fontenota.c src/fonteauto.c src/linguas.c tests/fontenota.c \
    -o "${TMPDIR:-/tmp}/nuvio-fontenota-tests"
 "${TMPDIR:-/tmp}/nuvio-fontenota-tests"
 
