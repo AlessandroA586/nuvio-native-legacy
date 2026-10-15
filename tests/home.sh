@@ -3,15 +3,6 @@ export TMPDIR="${TMPDIR:-/tmp}"
 TMPDIR="${TMPDIR%/}"
 set -eu
 cd "$(dirname "$0")/.."
-# Band resets must share the fade step so drawing cannot erase an outgoing band.
-python3 - <<'PY'
-from pathlib import Path
-source = Path('src/home.c').read_text()
-start = source.index('static void palcoCortinaPasso(')
-end = source.index('\n}', start) + 2
-reset = 'palcoFaixaTopo = palcoFaixaBase = 0.0f;'
-assert reset not in source[:start] + source[end:], 'draw loop clears the curtain band before fade-out completes'
-PY
 flags=()
 if [ "${SANITIZE:-0}" = 1 ]; then flags+=(-fsanitize=address,undefined -fno-omit-frame-pointer); fi
 # Linka somente a lógica exercitada, sem inicializar SDL/AppKit nem vídeo.

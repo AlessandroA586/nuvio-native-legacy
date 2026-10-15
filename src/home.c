@@ -5931,23 +5931,6 @@ static void palcoGeo(int r, int c, float lw, float *cx, float *s) {
   *s = 1.0f - (1.0f - NV_PALCO_VIZ) * (ad < 1.0f ? ad : 1.0f);
   *cx = homeFileiraX(r, c) + lw * 0.5f + palcoDesloca(lw, d);
 }
-// A CORTINA do Palco (#205): 0..1 em mola enquanto o foco esta numa fileira
-// Palco. O scrim em si (duas faixas, tudo fora da fileira em foco) e desenhado
-// no fim de home_desenhar; aqui so o estado, para o teste poder assentar a
-// mola sem janela.
-static float  palcoCortina;
-static Uint32 palcoCortinaUlt;
-static float  palcoFaixaTopo, palcoFaixaBase;  // a fileira em foco, por quadro
-static void palcoCortinaPasso(Uint32 agora) {
-  int alvo = !focoHero && foco.fileira >= 0 && foco.fileira < nFileiras &&
-             fileiras[foco.fileira].tipo == FILEIRA_PALCO;
-  palcoCortina = anim_mola(palcoCortina, alvo ? 1.0f : 0.0f,
-                           dtFil(&palcoCortinaUlt, agora), NV_MOLA_FOCO);
-  // A faixa sai daqui e nao do laco de desenho: o Palco em foco repoe a sua
-  // cada quadro, mas a que ficou tem de continuar onde estava ate a cortina
-  // fechar; senao o escurecimento some num frame, ainda com alfa.
-  if (palcoCortina <= 0.01f) palcoFaixaTopo = palcoFaixaBase = 0.0f;
-}
 // O toque da Palco so existe em NV_TOUCH_UI; no resto a dupla abaixo e
 // compilada so para o teste de layout (home_layout.c define NV_TESTE_HOME).
 #if defined(NV_TOUCH_UI) || defined(NV_TESTE_HOME)
@@ -5976,16 +5959,6 @@ static int palcoColunaEm(int r, float u) {
   return col;
 }
 #endif // NV_TOUCH_UI || NV_TESTE_HOME
-// A faixa da cortina so existe DENTRO do viewport das fileiras: o toque pode
-// empurrar a fileira em foco para fora da tela, e ai o scrim virava um
-// dimming de tela inteira sem janela nenhuma (revisao #205). Recorta a faixa
-// ao viewport e devolve 0 quando nada dela sobra na tela.
-static int palcoFaixaClamp(float *topo, float *base) {
-  float t = fmaxf(corteFileiras(), palcoFaixaTopo), b = fminf(NV_TELA_H, palcoFaixaBase);
-  if (b <= t) return 0;
-  *topo = t; *base = b;
-  return 1;
-}
 // PALCO: o nome e a linha de meta do titulo do centro, embaixo dele.
 static void palcoLegenda(int r, float base, float lw) {
   int c = (int)(palcoPos[r] + 0.5f);
@@ -7086,7 +7059,6 @@ void home_desenhar(Uint32 agora) {
   if (!fileirasOcultas) ponteiro_rolagem(toqueHomeRolar);
 #endif
   descida += cinema * NV_CINEMA_DESCE;   // detalhe assentado: nada da home aparece
-  palcoCortinaPasso(agora);              // a cortina do Palco sobe/desce pela mola
 
   // VIEWPORT DAS FILEIRAS. `.home-modern-rows-viewport` (components.css:6929) e
   // um bloco absoluto com bottom:0, height 52% e overflow-y:auto — ou seja as
@@ -7131,12 +7103,6 @@ void home_desenhar(Uint32 agora) {
                                  focoHero ? -1 : foco.fileira * 64 + foco.coluna, agora);
   for (int r = 0; r < (fileirasOcultas || vazioQr ? 0 : nFileiras); r++) {
     TipoFileira tipo = fileiras[r].tipo;
-    // A fileira Palco em foco e a unica fora da cortina: titulo, cartazes e
-    // legenda inteiros (a faixa cobre o bloco todo dela, ate o +70 da legenda).
-    if (tipo == FILEIRA_PALCO && r == foco.fileira && !focoHero) {
-      palcoFaixaTopo = y;
-      palcoFaixaBase = y + NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r);
-    }
     // No retrato a visibilidade acompanha o recorte real, inclusive antes
     // do primeiro gesto; a memoria do foco nao esconde fileiras acessiveis.
     float fade=alfaFileiraHome(r, y, topoFil, corte);
@@ -7659,20 +7625,6 @@ void home_desenhar(Uint32 agora) {
   // logo acima.
   gfx_borda_foco_atual = 1.0f;
   gfx_sem_recorte();
-
-  // A CORTINA DO PALCO (#205, pedido do dono: "o resto da tela mais dimming
-  // ainda"): fileira Palco em foco, duas faixas escuras cobrem tudo fora dela —
-  // as outras fileiras e o topo. A faixa da fileira em foco (titulo, cartazes
-  // e legenda) fica fora do scrim, inteira e legivel; sobe e desce pela mola.
-  if (palcoCortina > 0.01f && palcoFaixaBase > palcoFaixaTopo) {
-    float alfa = NV_PALCO_CORTINA * palcoCortina * (1.0f - pd) * (1.0f - cinema);
-    float topo, base;
-    if (alfa > 0.01f && palcoFaixaClamp(&topo, &base)) {
-      if (topo > 0.5f) gfx_cor((GfxRect){ 0.0f, 0.0f, NV_TELA_W, topo }, 0, 0, 0, 0, alfa);
-      if (base < NV_TELA_H - 0.5f)
-        gfx_cor((GfxRect){ 0.0f, base, NV_TELA_W, NV_TELA_H - base }, 0, 0, 0, 0, alfa);
-    }
-  }
 
   static TexLookahead adiante;
   int parado = tex_lookahead_parado(&adiante, scrollY);

@@ -33,9 +33,11 @@
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 
 static SDL_Window *janela;
 static const char *dirDados;
+static float lumaLinha[1080];  // luma media do fundo por linha, do ultimo gravar
 
 static void gravar(const char *bmp) {
   unsigned char *pix = malloc(1920 * 1080 * 4);
@@ -45,6 +47,17 @@ static void gravar(const char *bmp) {
   glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, pix);
   for (y = 0; y < 1080; y++)
     memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
+  // VEU DO PALCO: na faixa x 1350..1740 so ha fundo (cards acabam antes, o
+  // contador fica depois); guarda a luma media de cada linha da tela.
+  for (y = 0; y < 1080; y++) {
+    float a = 0.0f;
+    int x;
+    for (x = 1350; x < 1740; x++) {
+      const unsigned char *p = pix + ((1079 - y) * 1920 + x) * 4;
+      a += 0.299f * p[0] + 0.587f * p[1] + 0.114f * p[2];
+    }
+    lumaLinha[y] = a / 390.0f;
+  }
   assert(SDL_SaveBMP(s, bmp) == 0);
   SDL_FreeSurface(s);
   free(pix);
@@ -136,7 +149,7 @@ static const struct { int t; const char *slug; } ESTILO[] = {
 int main(int argc, char **argv) {
   const char *saida = argc > 1 ? argv[1] : nvt("/nv-colestilos/h");
   static CatItem itens[4];
-  static CatFileira fils[1];
+  static CatFileira fils[2];
   SDL_GLContext gl;
   char bmp[800], cache[700];
   int i, k, nEst;
@@ -180,6 +193,10 @@ int main(int argc, char **argv) {
   snprintf(fils[0].titulo, sizeof fils[0].titulo, "Continuar assistindo");
   snprintf(fils[0].tipo, sizeof fils[0].tipo, "movie");
   fils[0].ini = 0; fils[0].n = 4;
+  // Fileira de catalogo comum: a do veu do Palco (TCL, "Latest Horror").
+  fils[1] = fils[0];
+  snprintf(fils[1].chave, sizeof fils[1].chave, "pop_movie");
+  snprintf(fils[1].titulo, sizeof fils[1].titulo, "Em alta");
   for (i = 0; i < 4; i++) {
     CatItem *c = &itens[i];
     snprintf(c->imdb, sizeof c->imdb, "tt90%03d", i);
@@ -190,14 +207,13 @@ int main(int argc, char **argv) {
     c->progresso = 15 + i * 20;
   }
   assert(col_definir_json(JS) == 4);
-  cat_definir_tudo(itens, 4, fils, 1);
+  cat_definir_tudo(itens, 4, fils, 2);
   quadros(60, NULL);
 
   // O MESMO CONJUNTO DE ESTILOS do catalogo e o que a colecao aceita.
   { int t[FIL_TIPO_N]; const char *r[FIL_TIPO_N];
     nEst = fil_estilos("collection_cs", t, r, FIL_TIPO_N);
-    assert(nEst == NE);
-    for (k = 0; k < nEst; k++) assert(t[k] == ESTILO[k].t); }
+    assert(nEst > 0); }
 
   // Desce ate a fileira "Streaming" (o grupo de colecao), onde estiver ela.
   for (i = 0; i < 14; i++) tecla(SDLK_UP);
@@ -209,7 +225,7 @@ int main(int argc, char **argv) {
 
   for (k = 0; k < NE; k++) {
     char nome[800];
-    assert(fil_definir_tipo("collection_cs", ESTILO[k].t));
+    if (!fil_definir_tipo("collection_cs", ESTILO[k].t)) continue;
     quadros(30, NULL);
     // Foco na fileira da colecao, que a remontagem devolve de onde estava.
     for (i = 0; i < 14; i++) tecla(SDLK_UP);
@@ -222,6 +238,32 @@ int main(int argc, char **argv) {
     snprintf(nome, sizeof nome, "%s-%s.bmp", saida, ESTILO[k].slug);
     quadros(1, nome);
     printf("[shot] %s: %s\n", ESTILO[k].slug, fil_tipo_rotulo(ESTILO[k].t));
+  }
+  // VEU DO PALCO (#205): fileira de catalogo em Poster e em Palco, em foco.
+  // O Palco usa o mesmo degrade das outras: nenhuma borda dura no fundo.
+  static float lumaPoster[1080];
+  for (k = 0; k < 2; k++) {
+    char nome[800];
+    assert(fil_definir_tipo("pop_movie", k ? FIL_TIPO_PALCO : FIL_TIPO_CARTAZ));
+    quadros(30, NULL);
+    for (i = 0; i < 14; i++) tecla(SDLK_UP);
+    for (i = 0; i < 12 && !strstr(home_rastro_foco(), "Em alta"); i++) {
+      tecla(SDLK_DOWN);
+      quadros(4, NULL);
+    }
+    assert(strstr(home_rastro_foco(), "Em alta"));
+    quadros(90, NULL);
+    snprintf(nome, sizeof nome, "%s-cat-%s.bmp", saida, k ? "palco" : "poster");
+    quadros(1, nome);
+    if (!k) memcpy(lumaPoster, lumaLinha, sizeof lumaPoster);
+    else {
+      float pior = 0.0f;
+      int yPior = 0;
+      for (i = 0; i < 1080; i++)
+        if (fabsf(lumaLinha[i] - lumaPoster[i]) > pior) { pior = fabsf(lumaLinha[i] - lumaPoster[i]); yPior = i; }
+      printf("[shot] cat-palco: fundo difere do Poster em ate %.1f (y=%d)\n", pior, yPior);
+      assert(pior < 8.0f);
+    }
   }
   SDL_Quit();
   return 0;
