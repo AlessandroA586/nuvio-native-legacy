@@ -801,6 +801,12 @@ static void pedirFonte(void) {
 }
 
 static int iniciado;
+void biblioteca_abrir_sessao(void) {
+  fonte = FONTE_TRAKT;
+  pedido = -1; sair = 0; temAberta = 0; buscaAberta = 0;
+  okDesde = 0;
+  prefPerfil = -1;
+}
 int biblioteca_iniciar(void) {
   // Zerado UMA vez por processo, e nao a cada entrada.
   if (!iniciado) {

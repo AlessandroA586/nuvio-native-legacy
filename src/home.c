@@ -3,6 +3,7 @@
 // hero no topo, rail fixa à esquerda e fileiras horizontais de posters. A
 // infraestrutura nativa cuida de cache assíncrono, foco e transições.
 #include "home.h"
+#include "perfis.h"
 #include "botoes.h"
 #include "cwretido.h"
 #include "focoprof.h"
@@ -181,6 +182,29 @@ static int fileiraItemIndice(const Fileira *f, int coluna) {
   return f->usaItens ? f->itens[coluna] : f->ini + coluna;
 }
 
+static int fileiraRank(const Fileira *f, int coluna) {
+  return fileiraItemIndice(f, coluna) - f->ini + 1;
+}
+
+// #366: somente a descoberta muda. O catalogo, as listas e o historico
+// continuam inteiros; os indices visiveis conservam a ordem do provedor.
+static int filmeVistoOculto(const CatItem *item) {
+  return ajustes_ocultar_filmes_vistos() && item &&
+         !strcmp(item->tipo, "movie") && cat_visto(item);
+}
+static void filtrarFilmesVistos(Fileira *f, const CatFileira *cf) {
+  if (!f || !cf || !ajustes_ocultar_filmes_vistos() ||
+      !cf->base[0] || !cf->catId[0]) return;
+  int teto = f->n, visiveis = 0;
+  for (int c = 0; c < cf->n && visiveis < teto && visiveis < MAX_CARDS; c++) {
+    int indice = cf->ini + c;
+    const CatItem *item = cat_item(indice);
+    if (item && !filmeVistoOculto(item)) f->itens[visiveis++] = indice;
+  }
+  f->usaItens = 1;
+  f->n = visiveis;
+}
+
 static char bd[MAX_ARTE][512];    int nBd = 0;    // backdrops 16:9
 static char pst[MAX_ARTE][512];   int nPst = 0;   // posters 2:3
 
@@ -275,6 +299,13 @@ static int editorial(TipoFileira t) {
 static Foco foco;
 static HomeItem itemFoco;      // preenchido durante o desenho, lido pela transicao
 static int  temItemFoco = 0;
+static uint64_t itemFocoSessao;
+static unsigned itemFocoCatalogo;
+static void publicarItemFoco(void) {
+  itemFocoSessao = perfis_sessao_geracao();
+  itemFocoCatalogo = cat_revisao();
+  temItemFoco = 1;
+}
 static float animFoco[MAX_FIL][MAX_CARDS];
 // MICRO-ANIMACOES DE CARD (revela.h). Um registro por lugar da grade para a
 // arte chegando; um so para a luz do foco, porque so ha um card em foco; e o
@@ -881,7 +912,8 @@ static int heroSetN;
 // Assinatura do que a lista depende. Refazer a lista a cada quadro custaria o
 // strcmp da preferencia e uma varredura das fileiras; refazer so quando algo
 // mudou custa tres comparacoes de inteiro.
-static unsigned heroSetRev, heroSetFilRev;
+static unsigned heroSetRev, heroSetFilRev, heroSetItensRev;
+static int heroSetOcultaVistos;
 static int heroSetCat, heroSetNFil;
 
 // Sorteio ESTAVEL dentro da sessao: o embaralhamento usa uma semente propria
@@ -903,7 +935,11 @@ static void heroMontarSet(void) {
     int m = total < (int)(sizeof baralho / sizeof *baralho)
           ? total : (int)(sizeof baralho / sizeof *baralho);
     unsigned x = heroSemente ? heroSemente : (heroSemente = (unsigned)SDL_GetTicks() | 1u);
-    for (i = 0; i < m; i++) baralho[i] = i;
+    int candidatos = 0;
+    for (i = 0; i < m; i++)
+      if (!filmeVistoOculto(cat_item(i))) baralho[candidatos++] = i;
+    m = candidatos;
+    if (n > m) n = m;
     for (i = 0; i < n && i < m; i++) {
       int j;
       x = x * 1103515245u + 12345u;
@@ -935,20 +971,26 @@ static void heroMontarSet(void) {
         int k;
         if (!cf || strcmp(cf->chave, fonte)) continue;
         for (k = 0; k < cf->n && heroSetN < HOME_HERO_LISTA; k++)
-          if (cf->ini + k >= 0 && cf->ini + k < cat_n()) heroSet[heroSetN++] = cf->ini + k;
+          if (cf->ini + k >= 0 && cf->ini + k < cat_n() &&
+              !filmeVistoOculto(cat_item(cf->ini + k))) heroSet[heroSetN++] = cf->ini + k;
         break;
       }
     }
     if (heroSetN) return;
   }
-  for (i = 0; i < total && heroSetN < HOME_HERO_LISTA; i++) heroSet[heroSetN++] = i;
+  for (i = 0; i < total && heroSetN < HOME_HERO_LISTA; i++)
+    if (!filmeVistoOculto(cat_item(i))) heroSet[heroSetN++] = i;
 }
 
 static void heroSetGarantir(void) {
   unsigned fr = fil_revisao();
+  int ocultar = ajustes_ocultar_filmes_vistos();
+  unsigned ir = ocultar ? cat_revisao_itens() : 0;
   int cn = cat_n(), nf = nFileiras;
-  if (heroSetRev && fr == heroSetFilRev && cn == heroSetCat && nf == heroSetNFil)
+  if (heroSetRev && fr == heroSetFilRev && cn == heroSetCat && nf == heroSetNFil &&
+      ocultar == heroSetOcultaVistos && ir == heroSetItensRev)
     return;
+  heroSetOcultaVistos = ocultar; heroSetItensRev = ir;
   heroSetFilRev = fr; heroSetCat = cn; heroSetNFil = nf; heroSetRev = 1;
   heroMontarSet();
   // Os candidatos ja sao conhecidos: completa em segundo plano a sinopse dos
@@ -2466,7 +2508,8 @@ static int assinaturaPrefs(void) {
        | (ajustes_home_layout() << 8)
        // Ligar/desligar o destaque decide se a primeira fileira vira vitrine
        // (vitrineNaPrimeira).
-       | (ajustes_hero_ligado() ? 1 << 12 : 0);
+       | (ajustes_hero_ligado() ? 1 << 12 : 0)
+       | (ajustes_ocultar_filmes_vistos() ? 1 << 13 : 0);
 }
 
 // A PRIMEIRA FILEIRA DE CATALOGO VIRA VITRINE (cartoes 16:9 grandes) so quando
@@ -2568,6 +2611,7 @@ static void dinAtribuirTipos(int total) {
 // nova vai para o fim) e deixaria a pessoa separa-la da outra metade.
 static int proxHome[MAX_CARDS], nProxHome;
 static void sincronizarFileiras(void) {
+  desc_ocultar_vistos_atualizar();
   int nCat = cat_n_fileiras(), r, destino = 0;
   int assin = assinaturaPrefs();
   // #392: reservas expiram em 30 s, mesmo sem nova resposta da rede.
@@ -2595,8 +2639,9 @@ static void sincronizarFileiras(void) {
   // direto (cat_revisao); cat_revisao e bumpado em cat_definir_tudo,
   // cat_trocar_continuar E cat_republicar_fileiras, cobrindo todo caminho
   // que troca fils[].
-  static unsigned ultCatRev, ultFilRev, ultColRev, ultFilLim, ultCwoRev, ultOrdemRev, ultRetRev;
+  static unsigned ultCatRev, ultFilRev, ultColRev, ultFilLim, ultCwoRev, ultOrdemRev, ultRetRev, ultItensRev;
   unsigned catRev = cat_revisao(), filRev = fil_revisao();
+  unsigned itensRev = ajustes_ocultar_filmes_vistos() ? cat_revisao_itens() : 0;
   int filLim = fil_limite();
   unsigned colRev = col_revisao();
   unsigned ordemRev = catordem_revisao();
@@ -2604,7 +2649,7 @@ static void sincronizarFileiras(void) {
   // (a mesma lista publicada, so a divisao outra), e o hash abaixo ja o pesa.
   unsigned cwoRev = cwo_revisao();
   if (nCat == filsAplicadas && assin == prefsAplicadas &&
-      catRev == ultCatRev && filRev == ultFilRev &&
+      catRev == ultCatRev && filRev == ultFilRev && itensRev == ultItensRev &&
       colRev == ultColRev && ordemRev == ultOrdemRev &&
       filLim == ultFilLim && cwoRev == ultCwoRev &&
       retomarAplicada == retomarRev && cw_retido_rev() == ultRetRev &&
@@ -2618,10 +2663,12 @@ static void sincronizarFileiras(void) {
     colfileiras_sincronizar();
   filRev = fil_revisao(); colRev = col_revisao();
   ultCatRev = catRev; ultFilRev = filRev; ultColRev = colRev; ultFilLim = (unsigned)filLim;
+  ultItensRev = itensRev;
   ultCwoRev = cwoRev;
   ultOrdemRev = ordemRev;
   ultRetRev = cw_retido_rev();
   unsigned revisao = 2166136261u;
+  revisao = (revisao ^ itensRev) * 16777619u;
   revisao = (revisao ^ (unsigned)reservaEstado) * 16777619u;
   // A escolha LOCAL de fileiras entra na mesma assinatura do catalogo: ordem,
   // liga/desliga, forma, tamanho e limite mudam a lista tanto quanto uma
@@ -2737,6 +2784,8 @@ static void sincronizarFileiras(void) {
     snprintf(fileiras[destino].catId, sizeof fileiras[destino].catId, "%s", cf->catId);
     snprintf(fileiras[destino].catTipo, sizeof fileiras[destino].catTipo, "%s", cf->tipo);
     fileiras[destino].ini = cf->ini;
+    filtrarFilmesVistos(&fileiras[destino], cf);
+    if (!fileiras[destino].n) fileiras[destino].verTudo = 0;
     if(!strcmp(cf->chave,"social_activity"))fileiras[destino].tipo=FILEIRA_SOCIAL;
     // UM TITULO, UM LUGAR (cwretido.h): o que o cartao da ilha ou a faixa
     // "Retomar agora" segura nao entra aqui. So a lista desenhada muda; o
@@ -2772,14 +2821,14 @@ static void sincronizarFileiras(void) {
     Fileira *d = &fileiras[destaqueIndice];
     int baseN = d->n;
     int c, r;
-    for (c = 0; c < baseN && c < MAX_CARDS; c++) d->itens[c] = d->ini + c;
+    for (c = 0; c < baseN && c < MAX_CARDS; c++) d->itens[c] = fileiraItemIndice(d, c);
     d->usaItens = 1;
     for (r = destaqueIndice + 1;
          r < destino && d->n < DESTAQUE_OPCOES; r++) {
       Fileira *fonte = &fileiras[r];
       if (!fonte->base[0] || !fonte->catId[0]) continue;
       for (c = 0; c < fonte->n && d->n < DESTAQUE_OPCOES; c++) {
-        int idx = fonte->ini + c;
+        int idx = fileiraItemIndice(fonte, c);
         int repetido = 0, k;
         if (idx < 0 || idx >= cat_n()) continue;
         for (k = 0; k < d->n; k++)
@@ -2838,7 +2887,13 @@ static void sincronizarFileiras(void) {
   if (ajustes_home_layout() == HOME_LAYOUT_DINAMICA) dinAtribuirTipos(destino);
   for(int i=0;i<destino;i++) {
     Fileira *s=&fileiras[i];s->stackN=0;
-    if(s->tipo==FILEIRA_TOP10 && s->base[0] && s->catId[0]) {
+    if(s->tipo==FILEIRA_TOP10 && s->n > 0 && s->base[0] && s->catId[0]) {
+      int c;
+      // #366: a pilha desenha estes indices, nao idxCat+k. Com o filtro os
+      // visiveis deixam de ser contiguos no catalogo.
+      for (c = 0; c < s->n && c < MAX_CARDS; c++)
+        s->itens[c] = fileiraItemIndice(s, c);
+      s->usaItens = 1;
       s->stackN=s->n;s->n=1;s->verTudo=0;
     }
     // LINHA DO TEMPO: os titulos em ordem de lancamento (sem ano no fim).
@@ -3191,7 +3246,7 @@ void home_ir_topo(void) {
 // na C9 (08/10, 2.0.3): 38 min na escolha de perfil, 0 linhas `[hero] espera` e
 // 327 de `pre-busca nao saiu: desejado=322`. Escondida, vale o mesmo que o
 // detalhe/player na frente: o hero nao muda e o relogio e rearmado na volta.
-static int homeOculta;
+static int homeOculta, heroOcultoAntes;
 void home_oculta(int oculta) { homeOculta = oculta ? 1 : 0; }
 
 // Pede (uma vez por posicao) a arte do hero de heroAtual+-1, em prioridade
@@ -3283,7 +3338,6 @@ void home_atualizar(float dt, Uint32 agora) {
   // observada e a seleção de logo poderia divergir do detalhe que acabou de
   // sair. O relógio é rearmado na volta, preservando a escolha visível.
   const int heroOculto = detail_aberto() || player_aberto() || homeOculta;
-  static int heroOcultoAntes;
   if (heroOculto) {
     if (!heroOcultoAntes) {
       // Um desejo armado antes da abertura nao pode ser efetivado pelo
@@ -3731,7 +3785,7 @@ static void heroPublicarFoco(const CatItem *ci, float aTexto) {
   itemFoco.titulo = ci->titulo;
   itemFoco.genero = ci->genero;
   itemFoco.meta = ci->meta;
-  temItemFoco = 1;
+  publicarItemFoco();
 }
 #endif
 int home_streaming_barra(const int **pastas) {
@@ -4315,7 +4369,7 @@ static void desenhaHero(Uint32 agora, float saida) {
   }
 
   sinW = homeTextoLargura(sinW);
-  if(lay==HOME_LAYOUT_MODERNA && foco.fileira>=0 && foco.fileira<nFileiras && fileiras[foco.fileira].tipo==FILEIRA_SOCIAL) {
+  if(!focoHero && lay==HOME_LAYOUT_MODERNA && foco.fileira>=0 && foco.fileira<nFileiras && fileiras[foco.fileira].tipo==FILEIRA_SOCIAL) {
     float x=homeConteudoX(),a=(1-saida)*heroVisivelToque();
     const Fileira *s=&fileiras[foco.fileira];
     const CatItem *p=(fileiraItemIndice(s, foco.coluna) >= 0)
@@ -4383,7 +4437,7 @@ static void desenhaHero(Uint32 agora, float saida) {
   // COLECAO EM FOCO: o destaque vira o banner da pasta. Moderna e Padrao; a
   // Dinamica nao tem destaque parado no topo e mostra o mesmo banner por tras
   // do cabecalho da fileira (dinArteColecao).
-  if(lay!=HOME_LAYOUT_DINAMICA&&foco.fileira>=0&&foco.fileira<nFileiras&&fileiras[foco.fileira].tipo==FILEIRA_CATALOGOS) {
+  if(!focoHero&&lay!=HOME_LAYOUT_DINAMICA&&foco.fileira>=0&&foco.fileira<nFileiras&&fileiras[foco.fileira].tipo==FILEIRA_CATALOGOS) {
     const ColFolder *folder=col_folder(fileiras[foco.fileira].folders[foco.coluna]);
     if(folder) {
       if(folder->editorial) {
@@ -4921,7 +4975,7 @@ static void desenhaHero(Uint32 agora, float saida) {
         itemFoco.titulo = ci->titulo;
         itemFoco.genero = ci->genero;
         itemFoco.meta   = ci->meta;
-        temItemFoco = 1;
+        publicarItemFoco();
       }
 #endif
     } }
@@ -4996,10 +5050,17 @@ static void desenhaAtalhos(int r, float y) {
   // o GIF passou a poder sair da CAPA, e a troca de fonte no mesmo cartaz
   // tambem zera a pergunta ao arquivo. Ver gifcolecao.h.
   static GcFoco gcFoco; static int gcIniciado;
-  if (!gcIniciado) { gifcol_foco_iniciar(&gcFoco); gcIniciado = 1; }
   // Quadro da sequencia de JPEG que ja esta resolvido, para nao reconsultar
   // o cache nos ~4 quadros de tela que cabem entre dois passos de 67 ms.
   static int seqIndice=-1;static GLuint seqTex;
+  static uint64_t sessaoColecao;
+  uint64_t sessao = perfis_sessao_geracao();
+  if (!gcIniciado || sessaoColecao != sessao) {
+    gifcol_foco_iniciar(&gcFoco); gcIniciado = 1;
+    sessaoColecao = sessao; ultimo = -1; desde = 0;
+    seqIndice = -1; seqTex = 0;
+    gif_parar();
+  }
   for (int c = 0; c < fileiras[r].n; c++) {
     float x0 = homeFileiraX(r, c);
     if (x0 + w < 0 || x0 > NV_TELA_W) continue;
@@ -5721,14 +5782,17 @@ static void desenhaLinhaTempo(int r, float topoFil, float top, float passo, floa
 
 // A pilha do ranking empilhado: ate seis cartazes num card so. `s` e a escala
 // da previa (1 na fileira).
-static void desenhaPilha(int idxCat, int stackN, float px, float py, float h, float s) {
+static int pilhaIndice(const Fileira *f, int k) {
+  return f && f->usaItens && k >= 0 && k < MAX_CARDS ? f->itens[k] : f ? f->ini + k : -1;
+}
+static void desenhaPilha(const Fileira *f, int stackN, float px, float py, float h, float s) {
   // Compact phone rows reduce the artwork offsets along with the target.
   // The preview already supplies its scale; default/large rows retain it.
   if (telefoneui_ativo()) s = fminf(s, h / alturaDe(FILEIRA_TOP10));
   // Sem placa de fundo: os cartazes empilhados ja formam o card.
   int count=stackN<6?stackN:6;
   for(int k=0;k<count;k++) {
-    const CatItem *it=cat_item_exato(idxCat+k);if(!it)continue;
+    const CatItem *it=cat_item_exato(pilhaIndice(f, k));if(!it)continue;
     GfxRect pr={px+(20+k*78)*s,py+18*s,178*s,h-72*s};
     const char *pa=arte_por_formato(it,0);
     GLuint tx=pa?tex_obter_larg(pa,178*s):0;
@@ -6082,7 +6146,7 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
   gfx_opacidade_grupo = alfa;
   gfx_recorte(area.x, area.y, area.w, area.h);
   if (pilha) {
-    desenhaPilha(fl->usaItens ? fl->itens[0] : fl->ini, nItens, x0, y0, h, s);
+    desenhaPilha(fl, nItens, x0, y0, h, s);
   } else {
     for (c = 0; c < nItens && c < 8; c++) {
       float px = x0 + (float)c * passo;
@@ -6391,6 +6455,9 @@ int home_cartao_foco_por_cima(int indice) {
 }
 
 void home_desenhar(Uint32 agora) {
+  // Nao conservar ponteiros para o catalogo de outro quadro/perfil quando
+  // nenhuma tela de titulo publica um item (pasta, social ou estado vazio).
+  temItemFoco = 0;
   // O cartaz capaz do trailer No card e reescrito por quem o pintar neste quadro.
   cartaoTrailerItem = -1; cartaoTrailerPode = cartaoTrailerServe = 0;
   amigostitulo_atualizar();   // barato: so remonta quando o feed social mudou
@@ -6686,9 +6753,9 @@ void home_desenhar(Uint32 agora) {
           // invadir o cartaz anterior. So aparece quando os dez ja existem
           // como textura (numeraisAlfa): entram juntos, nunca um a um.
           if (tipo == FILEIRA_TOP10_NUM && numA > 0.003f)
-            desenhaNumeral(c + 1, px, py, h, passo - lw - NV_TOP10_NUM_FOLGA, numA);
+            desenhaNumeral(fileiraRank(&fileiras[r], c), px, py, h, passo - lw - NV_TOP10_NUM_FOLGA, numA);
           if(tipo==FILEIRA_TOP10 && fileiras[r].stackN) {
-            desenhaPilha(idxCat, fileiras[r].stackN, px, py, h, 1.0f);
+            desenhaPilha(&fileiras[r], fileiras[r].stackN, px, py, h, 1.0f);
             if(foco.fileira==r)temItemFoco=0;
             continue;
           }
@@ -6806,7 +6873,7 @@ void home_desenhar(Uint32 agora) {
             itemFoco.titulo = cItem ? cItem->titulo : NULL;
             itemFoco.genero = cItem ? cItem->genero : NULL;
             itemFoco.meta   = cItem ? cItem->meta : NULL;
-            temItemFoco = 1;
+            publicarItemFoco();
           }
           // Pede pela largura REAL do card: e esta fileira que multiplica.
           // Com o teto unico de 640 cada poster custava 2,4 MB e o cache
@@ -7006,7 +7073,8 @@ void home_retomar_esquecer(void) {
 int home_quer_sair(void) { return sair; }
 
 int home_item_focado(HomeItem *out) {
-  if (!temItemFoco) return 0;
+  if (!out || !temItemFoco || !perfis_sessao_atual(itemFocoSessao) ||
+      itemFocoCatalogo != cat_revisao()) return 0;
   *out = itemFoco;
   return 1;
 }
@@ -7093,5 +7161,59 @@ void home_focar_titulo(int indice) {
       velX[foco.fileira] = 0.0f;
       return;
     }
+}
+
+void home_abrir_sessao(void) {
+  Uint32 agora = SDL_GetTicks();
+  home_ir_topo();
+  // So estado derivado/transitorio. A arte cacheada pode ser reutilizada;
+  // escolhas e dados persistidos continuam sendo do perfil que os carregou.
+  temItemFoco = temCartaoFoco = 0;
+  memset(&itemFoco, 0, sizeof itemFoco);
+  memset(&cartaoFoco, 0, sizeof cartaoFoco);
+  itemFocoSessao = 0; itemFocoCatalogo = 0;
+  sair = pedidoAbrir = pedidoTocar = pedidoMenu = 0;
+  pedidoSocial = pedidoPessoaSocial = pedidoGuia = 0;
+  memset(&pessoaSocial, 0, sizeof pessoaSocial); guiaId[0] = 0;
+  okDesde = 0; okPressionando = okLongDisparado = okConsumirSoltura = 0;
+  okHold = 0.0f;
+  home_retomar_esquecer();
+  nFileiras = nStreamBarra = nProxHome = 0;
+  memset(fileiras, 0, sizeof fileiras);
+  filsAplicadas = prefsAplicadas = -1;
+  memset(animFoco, 0, sizeof animFoco);
+  memset(revArte, 0, sizeof revArte); revVarre = (RevelaVarre){ -1, 0, 0 };
+  memset(filEntraEm, 0, sizeof filEntraEm); memset(filNAntes, 0, sizeof filNAntes);
+  memset(bordaFil, 0, sizeof bordaFil); memset(&bordaPag, 0, sizeof bordaPag);
+  memset(numPedidoEm, 0, sizeof numPedidoEm); memset(numProntoEm, 0, sizeof numProntoEm);
+  memset(palcoPos, 0, sizeof palcoPos); memset(palcoUlt, 0, sizeof palcoUlt);
+  memset(tempoCol, 0, sizeof tempoCol); memset(tempoAno, 0, sizeof tempoAno);
+  memset(tempoEntraEm, 0, sizeof tempoEntraEm); memset(tempoUlt, 0, sizeof tempoUlt);
+  fileirasVistasEm = 0;
+  expFileira = expColuna = -1; expDesde = 0; expAbre = 0.0f;
+  heroAtual = heroAnterior = heroPendente = 0;
+  heroDesejado = heroTardeItem = heroPreItem = heroPreLogado = heroInfoItem = -1;
+  heroPendenteEm = heroUltTecla = agora;
+  heroDesejadoEm = heroTardeEm = heroPreDiagEm = 0;
+  heroSai = 0.0f; heroEntra = heroDesliza = 1.0f;
+  heroDeslizaDir = heroDirDesejado = heroAutoDesligado = heroOcultoAntes = 0;
+  heroTrocaEm = agora + NV_HERO_INTERVALO_MS;
+  heroSetN = heroSetCat = heroSetNFil = 0;
+  heroSetRev = heroSetFilRev = heroSemente = 0;
+  heroVizBase = -1; heroVizFeito = 0; heroVizTentaEm = 0;
+  heroPontosPos = -1.0f; heroPontosT = 0;
+  memset(&heroTempo, 0, sizeof heroTempo);
+  if (trailer_aberto() && trailer_dono() == TRAILER_DONO_HOME) trailer_fechar();
+  heroTrailerItem = cartaoTrailerItem = -1;
+  heroTrailerImdb[0] = heroTrailerYoutubeId[0] = 0;
+  heroTrailerDesde = heroTrailerPreparandoAte = 0;
+  heroTrailerTentado = heroTrailerFonte = heroTrailerAppleFalhou = heroTrailerQual = 0;
+  heroTrailerFalhas = 0; heroTrailerFade = 0.0f;
+  heroTrailerNoCartao = cartaoTrailerPode = cartaoTrailerServe = 0;
+  free(heroTrailerTocou); heroTrailerTocou = NULL;
+  heroTrailerTocouN = heroTrailerTocouCap = 0; heroTrailerMemoriaFalhou = 0;
+  trailercinema_zerar(&heroCinema);
+  dinColArte[0] = 0; dinColAlfa = 0.0f; dinUlt = 0;
+  for (int i = 0; i < 3; i++) dinCor[i] = dinAlvo[i] = 0.051f;
 }
 

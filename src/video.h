@@ -329,6 +329,9 @@ typedef struct {
   int canais;        // original audio channels, 0 unknown
   int stream_index;  // source demux index for DTS sessions, -1 in native webOS
   int stream_id;     // original container track ID, -1 when unknown
+  // Nome ORIGINAL da legenda, quando o container/player informa. Separado do
+  // rotulo para a folha mostra-lo abaixo do idioma sem mudar a memoria da faixa.
+  char nome[128];
 } VideoFaixa;
 
 int  video_n_audio(void);

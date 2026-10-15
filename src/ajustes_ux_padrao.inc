@@ -269,4 +269,6 @@
   3, 3, 3, 3, /* total links per native provider */
   1, 0, 3, /* addon failover off; instance order action; total links */
   1, /* video preload and next episode buffer: Desligado, independent source setting */
+  1, /* hide watched movies (#366): Desligado, per profile on this device */
+  0, /* provider setup: shared legacy accounts; choice itself belongs to this profile */
   1, /* audio language in the automatic choice: off (V_LIGA 1), behaviour unchanged */

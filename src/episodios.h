@@ -34,6 +34,7 @@ void episodios_menu_desenhar(void);
 // 1 uma vez, quando a pessoa escolheu "Fontes deste episodio" no menu. Quem
 // chamou decide o que abrir — o menu nao conhece a folha de fontes.
 int  episodios_menu_pediu_fontes(void);
+int  episodios_menu_fontes(int *temporada, int *episodio);
 // O MENU DA TEMPORADA (issue #108), sozinho sobre a tela de quem chamar — a
 // pagina de detalhe abre com a pressao longa na aba. Duas linhas: "Marcar
 // temporada como assistida" e "Desmarcar temporada". `temporada` e o NUMERO.
