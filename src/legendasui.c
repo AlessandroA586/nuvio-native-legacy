@@ -729,10 +729,60 @@ static float pilulaSlot(int slot, float xDir, float yc, int sel, float a) {
   return w;
 }
 
+#define LU_SEP "  \xc2\xb7  "
 static void juntar(char *dst, size_t n, const char *parte) {
   size_t l = strlen(dst);
   if (!parte || !parte[0] || l + 1 >= n) return;
-  snprintf(dst + l, n - l, "%s%s", l ? "  \xc2\xb7  " : "", parte);
+  snprintf(dst + l, n - l, "%s%s", l ? LU_SEP : "", parte);
+}
+
+// ROW TITLE (#511). The track name ("Full", "Signs & Songs", an add-on's
+// file label) is what tells two tracks of one language apart; the language
+// alone made them identical. Names that say nothing fall back to the language:
+// empty, the language itself, a codec id, the kind already shown below.
+static int nomeInutil(const LegUiCand *c, const char *nome) {
+  static const char *const lixo[] = { "srt", "ass", "ssa", "vtt", "pgs", "subrip", "webvtt", "utf-8",
+    "utf8", "vobsub", "hdmv_pgs_subtitle", "dvd_subtitle", "mov_text", "subtitle", "subtitles", "sub", NULL };
+  const char *t = legendasui_tipo_rotulo(c);
+  int i;
+  if (!nome[0] || !strcasecmp(nome, c->idioma) || !strcasecmp(nome, nomeIdioma(c->idioma))) return 1;
+  if (ling_do_nome(nome) && !strchr(nome, ' ')) return 1;          // a lone language word
+  if (!strncmp(nome, "S_", 2) || !strcasecmp(nome, c->formato) || (t && !strcasecmp(nome, t))) return 1;
+  for (i = 0; lixo[i]; i++) if (!strcasecmp(nome, lixo[i])) return 1;
+  if (!strncasecmp(nome, "track ", 6) && !nome[6 + strspn(nome + 6, "0123456789")]) return 1;
+  return 0;
+}
+// Copies `src` into `out` (<= 40 bytes + index), cutting on a UTF-8 boundary with "…".
+static void corteLimpo(char *out, size_t sz, const char *src) {
+  size_t n = strlen(src), max = 40;
+  if (max >= sz) max = sz - 1;
+  if (n > max) {
+    n = max - 3;
+    while (n && ((unsigned char)src[n] & 0xC0) == 0x80) n--;
+    snprintf(out, sz, "%.*s\xe2\x80\xa6", (int)n, src);
+  } else snprintf(out, sz, "%s", src);
+}
+// Title of candidate `i` among `cs[0..n)`: its name, else its language; equal
+// titles of one language get " (k)". Returns 1 when the title is a name.
+int legendasui_titulo(const LegUiCand *cs, int n, int i, char *out, size_t sz) {
+  const LegUiCand *c = &cs[i];
+  const char *nome = c->embutida ? (c->nome[0] ? c->nome : strstr(c->rotulo, LU_SEP)) : c->arquivo;
+  int j, dup = 0, pos = 0, nomeado;
+  char outro[96];
+  if (c->embutida && !c->nome[0] && nome) nome += strlen(LU_SEP);
+  nomeado = nome && !nomeInutil(c, nome);
+  corteLimpo(out, sz, nomeado ? nome : c->idioma[0] ? nomeIdioma(c->idioma) : c->rotulo);
+  for (j = 0; j < n; j++) {
+    const char *on = cs[j].embutida ? (cs[j].nome[0] ? cs[j].nome : strstr(cs[j].rotulo, LU_SEP)) : cs[j].arquivo;
+    if (j == i || cs[j].embutida != c->embutida || cs[j].tipo != c->tipo || !ling_casa(cs[j].idioma, c->idioma) || !ling_casa(c->idioma, cs[j].idioma)) continue;
+    if (cs[j].embutida && !cs[j].nome[0] && on) on += strlen(LU_SEP);
+    corteLimpo(outro, sizeof outro, on && !nomeInutil(&cs[j], on) ? on : nomeIdioma(cs[j].idioma));
+    if (strcmp(outro, out)) continue;
+    dup = 1;
+    if (j < i) pos++;
+  }
+  if (dup) { size_t l = strlen(out); snprintf(out + l, sz - l, " (%d)", pos + 1); }
+  return nomeado;
 }
 
 // State of the second subtitle for the row that holds the active selection.
@@ -795,29 +845,25 @@ static void textoLinha(const LuiLinha *l, char *nome, size_t tn, char *sub, size
       if (!c) break;
       *idioma = c->idioma;
       *ativo = ativoNoSlot(l->slot, c) && (l->slot == 0 || legenda2_estado() == LEG2_ATIVA);
-      if (c->idioma[0] || !c->embutida)
-        snprintf(nome, tn, "%s", nomeIdioma(c->idioma));
-      else
-        snprintf(nome, tn, i18n("Legenda %d"), c->indice + 1);
-      if (c->embutida) juntar(sub, ts, c->nome);
-      if (!mais && !ver) {
+      { int nomeado = legendasui_titulo(cand, nCand, l->cand, nome, tn);
+        if (nomeado) juntar(sub, ts, nomeIdioma(c->idioma));
+        if (!mais && !ver) {
         juntar(sub, ts, c->embutida ? i18n("Embutida") : c->origem);
-        { const char *t = legendasui_tipo_rotulo(c);
-          if (t && !strstr(sub, t)) juntar(sub, ts, t); }
-      } else {
+        juntar(sub, ts, legendasui_tipo_rotulo(c));
+        } else {
         const char *marca = c->embutida ? faixas_legenda_marca(c->indice) : NULL;
         juntar(sub, ts, c->embutida ? i18n("Embutida") : c->origem);
         juntar(sub, ts, c->formato);
         { const char *t = legendasui_tipo_rotulo(c);
-          if (t && !strstr(sub, t)) juntar(sub, ts, t); }
+          if (t && !strstr(nome, t)) juntar(sub, ts, t); }
         juntar(sub, ts, c->arquivo);
         if (l->slot == 0 && marca) juntar(sub, ts, marca);
+        }
       }
       if (l->slot == 1 && !legendasui_cand_secundaria_ok(c)) {
         sub[0] = 0;
         juntar(sub, ts, c->embutida ? i18n("Embutida como secundária: indisponível")
                                     : i18n("ASS como secundária: indisponível"));
-        if (c->embutida) juntar(sub, ts, c->nome);
         *apagada = 1;
       } else if (l->slot == 1 && ativoNoSlot(1, c) && estadoSecundaria()) {
         char b[160];
