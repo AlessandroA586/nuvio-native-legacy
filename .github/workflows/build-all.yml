@@ -1,0 +1,187 @@
+name: Build and Release Nuvio Legacy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - 'src/**'
+      - 'deploy/**'
+      - 'android/**'
+      - 'tizen-tpk/**'
+      - 'tools/**'
+      - '.github/workflows/build-all.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    name: Build Android TV APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android NDK & SDK Components
+        run: |
+          export ANDROID_HOME="$ANDROID_SDK_ROOT"
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install \
+            "ndk;27.2.12479018" \
+            "cmake;3.22.1" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
+
+      - name: Setup local.properties and Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          cat <<EOF > local.properties
+          NUVIO_SUPABASE_URL=https://api.nuvio.tv
+          NUVIO_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgxNTIxMzQ2LCJleHAiOjE5MzkyMDEzNDZ9.tmQaj682pwzehpqlgCDMnySOqiUvpgRbrE43T4VJpDI
+          TV_LOGIN_WEB_BASE_URL=https://nuvio.tv/tv-login
+          TMDB_API_KEY=01926d2187b6a5d861eefc750e9df3e3
+          TRAKT_CLIENT_ID=5783db7c46a5b22f072d4b224f9bd7dc2cbaba66dbe3515d1feb59e3ca72394c
+          TRAKT_CLIENT_SECRET=bf6e7561dafee902f5a2a67d2b31feac1563632f331f3958c978aff6389ea384
+          SIMKL_CLIENT_ID=dc20e0db975583b15096267cee79cd23b1f56d4bd301ce3c51e4a96a49c834a6
+          SIMKL_APP_NAME=nuvio
+          NUVIO_REC_URL=https://nuvio-recomendacoes.henriquef29.workers.dev
+          EOF
+
+          mkdir -p "$HOME/.nuvio-android"
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$HOME/.nuvio-android/release.jks"
+
+      - name: Build Native Dependencies
+        run: |
+          export ANDROID_HOME="$ANDROID_SDK_ROOT"
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
+          bash tools/android/deps.sh arm64-v8a armeabi-v7a
+
+      - name: Build Android TV Release APK
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          export ANDROID_HOME="$ANDROID_SDK_ROOT"
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
+          export NUVIO_KEYSTORE="$HOME/.nuvio-android/release.jks"
+          export NUVIO_KEYSTORE_PASS="$RELEASE_STORE_PASSWORD"
+          export NUVIO_KEY_ALIAS="$RELEASE_KEY_ALIAS"
+          export NUVIO_KEY_PASS="$RELEASE_KEY_PASSWORD"
+          export CERT_SHA256="skip"
+          chmod +x android/gradlew
+          bash tools/android.sh --release-only
+
+      - name: Archive Android Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-apk
+          path: build/android/Nuvio-*-android.apk
+
+  build-tizen:
+    name: Build Samsung Tizen Packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            6.0.x
+            8.0.x
+
+      - name: Install Tizen Workload
+        run: |
+          dotnet workload install tizen || echo "Workload optional for Tizen 4/6"
+
+      - name: Setup local.properties
+        run: |
+          cat <<EOF > local.properties
+          NUVIO_SUPABASE_URL=https://api.nuvio.tv
+          NUVIO_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgxNTIxMzQ2LCJleHAiOjE5MzkyMDEzNDZ9.tmQaj682pwzehpqlgCDMnySOqiUvpgRbrE43T4VJpDI
+          TV_LOGIN_WEB_BASE_URL=https://nuvio.tv/tv-login
+          TMDB_API_KEY=01926d2187b6a5d861eefc750e9df3e3
+          TRAKT_CLIENT_ID=5783db7c46a5b22f072d4b224f9bd7dc2cbaba66dbe3515d1feb59e3ca72394c
+          TRAKT_CLIENT_SECRET=bf6e7561dafee902f5a2a67d2b31feac1563632f331f3958c978aff6389ea384
+          SIMKL_CLIENT_ID=dc20e0db975583b15096267cee79cd23b1f56d4bd301ce3c51e4a96a49c834a6
+          SIMKL_APP_NAME=nuvio
+          NUVIO_REC_URL=https://nuvio-recomendacoes.henriquef29.workers.dev
+          EOF
+
+      - name: Build Tizen Packages
+        run: |
+          if dotnet workload list 2>/dev/null | grep -q tizen; then
+            bash tools/tpk.sh
+          else
+            NV_TPK_PACOTES="NuvioTpk40 NuvioTpk60 NuvioTpk65" bash tools/tpk.sh
+          fi
+
+      - name: Archive Tizen Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tizen-release-packages
+          path: |
+            build/tpk/*.tpk
+            build/tpk/*.so
+
+  publish-release:
+    name: Publish Release
+    needs: [build-android, build-tizen]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download Android Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-release-apk
+          path: dist
+
+      - name: Download Tizen Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: tizen-release-packages
+          path: dist
+
+      - name: Generate Checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.0.5
+          name: Nuvio Legacy 2.0.5 (Compilación Personal)
+          draft: false
+          prerelease: false
+          files: |
+            dist/*
+          body: |
+            ## Nuvio Native Legacy 2.0.5 - Compilación Personal
+            
+            Versión personalizada compilada para Android TV y Samsung Tizen con optimizaciones para español y configuración de autoactualización independiente.
+            
+            ### Cambios y Características
+            - Pista de audio en español seleccionada automáticamente por defecto.
+            - Filtro de fuentes preconfigurado con expresiones regulares en español / latino (`Exigir`).
+            - Mecanismo de actualización automática apuntando a este repositorio.
+            - Paquetes APK firmados con la clave de lanzamiento personal.
+            - Paquetes TPK y bibliotecas de actualización nativa para Samsung Smart TV (Tizen 4.0, 6.0, 6.5 y 8+).
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

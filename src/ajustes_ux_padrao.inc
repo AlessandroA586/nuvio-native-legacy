@@ -233,8 +233,8 @@
   0, /* auto-play scope (#202): Todas as fontes (ALL_SOURCES, the official default) */
   0, 0, /* allowed add-ons / plugins: actions (lists live in fonteregra.c; empty = all) */
   0, /* use the others when the allowed have none: Ligado (V_LIGA: 0 = Ligado) */
-  0, /* regex match: Desligada */
-  0, 0, /* regex pattern (action) and preset mirror (Personalizado) */
+  1, /* regex match: Exigir (FR_REGEX_EXIGIR) */
+  0, 1, /* regex pattern (action) and preset mirror (1 = MODELOS[1] Spanish/Latino) */
   100, 100, /* Home spacing: between rows and between titles, 100% = as measured */
   0, /* default aspect ratio: Ultimo usado */
   1, /* also in Continue watching (2.0.2): Desligado (V_LIGA: 1 = Desligado) = one title, one place */

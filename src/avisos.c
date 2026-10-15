@@ -62,7 +62,7 @@
 #ifdef AV_CANAL_HOST
 #define AV_CANAL_URL "http://" NV_STR(AV_CANAL_HOST) "/avisos.json"
 #else
-#define AV_CANAL_URL "https://raw.githubusercontent.com/iqui27/nuvio-native-legacy/master/avisos.json"
+#define AV_CANAL_URL "https://raw.githubusercontent.com/AlessandroA586/nuvio-native-legacy/master/avisos.json"
 #endif
 #define AV_CANAL_INTERVALO_MS (30u * 60u * 1000u)
 #define AV_MAX        40

@@ -5367,12 +5367,12 @@ static const char *textoLeitura(int op) {
     }
   }
   if (op == AJ_VERSAO_I) {
-    // Com release mais nova no GitHub, a linha diz as duas.
     if (atualizacao_nova()[0]) {
-      snprintf(buf, sizeof buf, i18n("%s · nova: %s"), AJ_VERSAO, atualizacao_nova());
+      snprintf(buf, sizeof buf, i18n("Juansher | v%s · nueva: %s"), AJ_VERSAO, atualizacao_nova());
       return buf;
     }
-    return AJ_VERSAO;
+    snprintf(buf, sizeof buf, i18n("Juansher | v%s"), AJ_VERSAO);
+    return buf;
   }
   if (op == AJ_PERFIL_ATIVO) {
     static char bufp[80];

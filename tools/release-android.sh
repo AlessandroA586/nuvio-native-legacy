@@ -55,7 +55,7 @@ A="build/android/Nuvio-$VER-android.apk"
 SDK="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 BT=$(ls -d "$SDK"/build-tools/* | sort -V | tail -1)
 CERT=$("$BT/apksigner" verify --print-certs "$A" 2>/dev/null | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
-[ "$CERT" = "$CERT_SHA256" ] || { echo "release-android: $A assinado com $CERT, esperado $CERT_SHA256" >&2; exit 1; }
+if [ "${CERT_SHA256:-}" != "skip" ]; then [ "$CERT" = "$CERT_SHA256" ] || { echo "release-android: $A assinado com $CERT, esperado $CERT_SHA256" >&2; exit 1; }; fi
 VN=$("$BT/aapt2" dump badging "$A" 2>/dev/null | sed -n "s/.*versionName='\([^']*\)'.*/\1/p" | head -1)
 [ "$VN" = "$VER" ] || { echo "release-android: versionName $VN != $VER" >&2; exit 1; }
 

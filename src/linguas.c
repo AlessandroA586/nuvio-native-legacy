@@ -289,7 +289,11 @@ const char *ling_legenda2(void) {
   if (localLeg2[0]) return emVigor(localLeg2, contaLeg2);
   return localLeg[0] ? "" : contaLeg2;
 }
-const char *ling_audio(void)    { return emVigor(localAud, contaAud); }
+const char *ling_audio(void) {
+  const char *a = emVigor(localAud, contaAud);
+  if (!a || !*a) return "es";
+  return a;
+}
 
 // ------------------------------------------------------------ lista da UI
 

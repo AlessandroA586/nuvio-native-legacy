@@ -272,6 +272,9 @@ static void lerSemTrava(const char *t) {
     else if (!strncmp(linha, "ordem ", 6)) poeOrdemSemTrava(linha + 6);
     l = f ? f + 1 : NULL;
   }
+  if (!padrao[0]) {
+    snprintf(padrao, sizeof padrao, "%s", MODELOS[1]);
+  }
   recompilarSemTrava();
   versao++;
 }
