@@ -3,6 +3,7 @@
 // outra referencia, seek, troca de fonte, troca de dono e teardown.
 //   bash tests/legsync.sh     SANITIZE=1 / SANITIZE=thread
 #include "legsync.h"
+#include "nvtmp.h"
 #include "legenda2.h"
 #include "autosync.h"
 #include "legref.h"
@@ -290,7 +291,7 @@ static LegendaDocumento *janelaLocal(const char *url, uint64_t sessao, const int
 
 int main(int argc, char **argv) {
   LegSyncVisao v; int casos = 0;
-  DIR = argc > 1 ? argv[1] : "/tmp/nv-legref-fx";
+  DIR = argc > 1 ? argv[1] : nvt("/nv-legref-fx");
   legsync_teste_leitor(lerMkv, NULL);
   if (getenv("AUTOSYNC_PGS")) {
     const char *pgs = "local:/pgs.mkv";
@@ -546,7 +547,8 @@ int main(int argc, char **argv) {
     for (int k = 0; k < 200; k++) passo(MKV, 0);
     v = legsync_visao(0);
     assert(trocas == 1 && voltou == 0 && v.autoFase == 3 && v.autoTrocou && legsync_offset_ms(0) == 0);
-    assert(!strcmp(prov.estado(0, prov.u), "N\xc3\xa3o deu para sincronizar"));
+    assert(v.motivo == LEGSYNC_M_REGION_DISAGREEMENT);
+    assert(strstr(prov.estado(0, prov.u), "N\xc3\xa3o deu para sincronizar"));
     assert(prov.acoes(0, rot, 8, prov.u) == 0);
 
     // 12c2. Candidata com menos da metade das falas da original: volta a original.
@@ -668,6 +670,30 @@ int main(int argc, char **argv) {
   assert(trocas == 0 && voltou == 0 && !v.autoTrocou && v.fase == LEGSYNC_RECUSADA);
   assert(v.offsetAutoMs == 0 && legsync_offset_ms(320) == 320);
   legsync_encerrar(); legref_fonte_local(NULL); legsync_definir_trocador(NULL); legsync_teste_auto(0); casos++;
+
+  // 12h. PROXIMO EPISODIO (Discord 13/10): player_encerrar + player_abrir sem URL
+  //      (legsync_iniciar("")), a legenda do ep2 escolhida antes OU depois da
+  //      URL real chegar. O sync do ep2 comeca do zero e vale como o de uma
+  //      abertura pela pagina do titulo.
+  legsync_teste_auto(1); legsync_auto_habilitar(1); legsync_audio_habilitar(0);
+  legsync_iniciar(MKV2);                               // controle: abrir o ep2 direto
+  legsync_primaria_externa("ext://0/ext_menos1200.srt", "pt", "P");
+  v = esperarAuto(MKV2, 2); esperarFase(MKV2, LEGSYNC_ACEITA);
+  { int ref = legsync_visao(0).offsetAutoMs; legsync_encerrar();
+    for (int antes = 0; antes < 2; antes++) {
+      legsync_iniciar(MKV);                            // ep1 sincronizado
+      legsync_primaria_externa("ext://0/ext_mais2500.srt", "pt", "P");
+      esperarAuto(MKV, 2);
+      legsync_encerrar(); legsync_iniciar("");         // app.c: proximo episodio
+      if (antes) legsync_primaria_externa("ext://200/ext_menos1200.srt", "pt", "P");   // baixa depois da URL chegar
+      for (int k = 0; k < 5; k++) passo(MKV2, 0);      // URL do ep2 chega
+      if (!antes) legsync_primaria_externa("ext://0/ext_menos1200.srt", "pt", "P");
+      v = esperarAuto(MKV2, 2); v = esperarFase(MKV2, LEGSYNC_ACEITA);
+      printf("[12h] proximo episodio (legenda %s da URL): offset %d (controle %d)\n", antes ? "antes" : "depois", v.offsetAutoMs, ref);
+      assert(abs(v.offsetAutoMs - ref) <= 25 && legsync_offset_ms(0) == v.offsetAutoMs);
+      legsync_encerrar();
+    } }
+  legsync_teste_auto(0); casos++;
 
   // 13. SEGUNDA LEGENDA (slot 1, 2.1): a mesma engine contra a mesma faixa
   //     embutida, sozinha, mesmo com a principal embutida. Offset puro vai

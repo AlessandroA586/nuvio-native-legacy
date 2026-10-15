@@ -206,6 +206,7 @@ static void fonteExtraCarimbar(Stream *l, int n, int k) {
 static void progMarcar(int i, const Stream *a, int n, int estadoNovo) {
   Stream *copia = NULL;
   if (i < 0 || i >= ADD_MAX) return;
+  stream_preparar_dica_p2p(a, n);
   if (a && n > 0) {
     copia = malloc(sizeof(Stream) * (size_t)n);
     if (copia) memcpy(copia, a, sizeof(Stream) * (size_t)n);
@@ -225,6 +226,7 @@ static void progMarcar(int i, const Stream *a, int n, int estadoNovo) {
 static void progMarcarEx(int k, const char *nome, const Stream *a, int n, int estadoNovo) {
   Stream *copia = NULL;
   if (k < 0 || k >= ADD_EXTRA_MAX) return;
+  stream_preparar_dica_p2p(a, n);
   if (a && n > 0) {
     copia = malloc(sizeof(Stream) * (size_t)n);
     if (copia) {
@@ -314,6 +316,20 @@ static void baseNormalizada(const char *url, char *dst, size_t tam) {
   nv_addon_base(url, dst, tam);
 }
 
+// O MESMO ADDON JA ESTA entre addon[0..ate)? (B4) A conta, a copia salva e o
+// addons.txt podiam trazer o addon repetido em variantes de URL, e cada copia
+// virava uma linha da lista, um manifesto, uma consulta. Fica a primeira.
+static int jaNaLista(const char *url, int ate) {
+  char c[NV_ADDON_URL_MAX], ci[NV_ADDON_URL_MAX];
+  int i;
+  nv_addon_chave(url, c, sizeof c);
+  for (i = 0; i < ate; i++) {
+    nv_addon_chave(addon[i].base, ci, sizeof ci);
+    if (!strcmp(c, ci)) return 1;
+  }
+  return 0;
+}
+
 // O pedido ao addon `i` coube no buffer? Ver nv_addon_pedido_coube (addonurl.h).
 static int pedidoCoube(int i, int w, size_t tam) {
   return nv_addon_pedido_coube(addon[i].nome, w, tam);
@@ -392,6 +408,7 @@ int addons_carregar(const char *dirArte) {
     addon[nAddon].ativo = 1;
     snprintf(addon[nAddon].nome, sizeof addon[nAddon].nome, "%s", linha);
     baseNormalizada(tab + 1, addon[nAddon].base, sizeof addon[nAddon].base);
+    if (jaNaLista(addon[nAddon].base, nAddon)) continue;
     nAddon++;
   }
   fclose(f);
@@ -416,6 +433,7 @@ static int listaIgual(const AddonRemoto *nova, int n) {
     char base[NV_ADDON_URL_MAX];
     if (!nova[i].url[0]) continue;
     baseNormalizada(nova[i].url, base, sizeof base);
+    if (jaNaLista(base, k)) continue;   // a duplicata que addons_definir_lista pula
     if (k >= nAddon) return 0;
     if (strcmp(addon[k].base, base)) return 0;
     if (addon[k].ativo != (nova[i].ativo ? 1 : 0)) return 0;
@@ -425,7 +443,7 @@ static int listaIgual(const AddonRemoto *nova, int n) {
 }
 
 int addons_definir_lista(const AddonRemoto *nova, int n) {
-  int i, aceitos = 0;
+  int i, aceitos = 0, dup = 0;
   if (!nova || n <= 0) {
     // Vazio nao substitui. Ver o comentario no cabecalho: uma resposta vazia
     // nao se distingue de uma delecao, e a diferenca entre as duas e a pessoa
@@ -455,6 +473,7 @@ int addons_definir_lista(const AddonRemoto *nova, int n) {
     snprintf(addon[aceitos].nome, sizeof addon[aceitos].nome, "%s",
              nova[i].nome[0] ? nova[i].nome : "Addon");
     baseNormalizada(nova[i].url, addon[aceitos].base, sizeof addon[aceitos].base);
+    if (jaNaLista(addon[aceitos].base, aceitos)) { dup++; continue; }
     // A conta nao diz o que cada addon fornece; o manifesto e que diria, e
     // consultar todos no arranque custaria uma viagem por addon. Assumir que
     // fornece tudo faz no maximo uma consulta vazia a mais por titulo — o
@@ -489,9 +508,10 @@ int addons_definir_lista(const AddonRemoto *nova, int n) {
   // de um addon que a conta nao tem.
   { int uteis = 0, q;
     for (q = 0; q < n; q++) if (nova[q].url[0]) uteis++;
-    if (uteis > aceitos)
+    if (dup) printf("[addons] %d repetidos na conta: ficou um de cada\n", dup);
+    if (uteis > aceitos + dup)
       printf("[addons] %d da conta ficaram de fora: o app guarda no maximo %d\n",
-             uteis - aceitos, ADD_MAX); }
+             uteis - aceitos - dup, ADD_MAX); }
   listaMudou();
   // A lista da conta E a lista certa do usuario: o diario pode ser podado
   // contra ela — e so agora, com a trava da lista ja solta (a poda toma
@@ -1128,6 +1148,8 @@ static int distribuirLegendas(const LegLote *lotes, int nLotes, int nGrupos,
 typedef struct {
   LegLote *lotes;          // um por addon
   int nLotes, nGrupos;
+  int proximo;            // fila dos trabalhadores: proximo addon a consultar
+  int consultados;        // para o log do "concluida"
   int manter;              // extras: mescla so no fim, preservando indices
   char extras[1200];       // segmento legextras_segmento; "" = sem extras
   const char *grupos[3];
@@ -1277,6 +1299,31 @@ static void *buscarUmAddon(void *u) {
   return NULL;
 }
 
+// UM TRABALHADOR da busca de legendas (B4): puxa o proximo addon da fila ate
+// ela acabar. A fila substitui a LEVA (esperar o lote inteiro antes de criar o
+// proximo fio): a leva prendia o addon rapido ao MAIS LENTO do lote — 12
+// lentos de 30 s seguravam o 13. por 60 s, e a escolha automatica desiste em
+// FX_AUTO_FIM_MS (faixas.c). O teto cobre a lista inteira aceita pelo app,
+// para nenhum addon esperar um pedido lento liberar um trabalhador.
+static void *legFioPuxa(void *u) {
+  LegBusca *B = ((LegFio *)u)->B;
+  LegFio F;
+  for (;;) {
+    int i;
+    pthread_mutex_lock(&B->m);
+    i = B->proximo < B->nLotes ? B->proximo++ : -1;
+    pthread_mutex_unlock(&B->m);
+    if (i < 0) return NULL;
+    // Addon que nao declara legenda nao e consultado.
+    if (!addon[i].ativo || !addon[i].legenda) continue;
+    pthread_mutex_lock(&B->m);
+    B->consultados++;
+    pthread_mutex_unlock(&B->m);
+    F.B = B; F.i = i;
+    buscarUmAddon(&F);
+  }
+}
+
 static unsigned relogioMs(void) {
   struct timespec t;
   clock_gettime(CLOCK_MONOTONIC, &t);
@@ -1369,18 +1416,19 @@ static void prepararExtras(LegBusca *B) {
   fflush(stdout);
 }
 
+// Todos os addons aceitos precisam iniciar antes do prazo da selecao
+// automatica: 32 pedidos lentos nao podem esconder o 33o por 30 s.
+#define LEG_FIOS ADD_MAX
 static void *buscarLegendas(void *u) {
   (void)u;
   for (;;) {
     LegBusca B;
-    static LegFio fio[ADD_MAX]; // uma busca de legendas por vez
-    static pthread_t th[ADD_MAX];
-    static int criado[ADD_MAX];
+    LegFio fio[LEG_FIOS]; // uma busca de legendas por vez
+    pthread_t th[LEG_FIOS];
     unsigned t0 = relogioMs();
-    int i, nAtivos = 0;
+    int i, nFios = 0;
 
     memset(&B, 0, sizeof B);
-    memset(criado, 0, sizeof criado);
     pthread_mutex_init(&B.m, NULL);
     pthread_mutex_lock(&legTrava);
     if (legParar) { fioLegVivo = 0; pthread_mutex_unlock(&legTrava); pthread_mutex_destroy(&B.m); return NULL; }
@@ -1400,14 +1448,14 @@ static void *buscarLegendas(void *u) {
     B.lotes = calloc((size_t)(B.nLotes > 0 ? B.nLotes : 1), sizeof *B.lotes);
     if (!B.lotes) printf("[legendas] candidatos: memoria indisponivel\n");
 
-    for (i = 0; B.lotes && i < B.nLotes; i++) {
-      // Addon que nao declara legenda nao e consultado.
-      if (!addon[i].ativo || !addon[i].legenda) continue;
-      fio[i].B = &B; fio[i].i = i;
-      if (pthread_create(&th[i], NULL, buscarUmAddon, &fio[i]) == 0) { criado[i] = 1; nAtivos++; }
-      else buscarUmAddon(&fio[i]);      // sem fio novo: faz aqui mesmo
+    // A lista ja elimina duplicatas. Cobrir todos os addons permite que o
+    // ultimo responda mesmo quando os anteriores ocupam todo o teto de rede.
+    for (i = 0; B.lotes && i < B.nLotes && i < LEG_FIOS; i++) {
+      fio[i].B = &B;
+      if (pthread_create(&th[i], NULL, legFioPuxa, &fio[i]) == 0) nFios++;
+      else { legFioPuxa(&fio[i]); break; }   // sem fio novo: drena a fila aqui mesmo
     }
-    for (i = 0; i < B.nLotes; i++) if (criado[i]) pthread_join(th[i], NULL);
+    for (i = 0; i < nFios; i++) pthread_join(th[i], NULL);
 
     // Refazer com extras: soma a lista nova de uma vez, agora que todos
     // responderam (publicarLegendas descarta se a geracao ja mudou).
@@ -1421,7 +1469,7 @@ static void *buscarLegendas(void *u) {
     legManter = 0;
     i = nLegs;
     pthread_mutex_unlock(&legTrava);
-    printf("[legendas] concluida: %d (%d addon(s) em paralelo, %u ms)\n", i, nAtivos,
+    printf("[legendas] concluida: %d (%d addon(s) em paralelo, %u ms)\n", i, B.consultados,
            relogioMs() - t0);
     fflush(stdout);
     return NULL;
@@ -1504,7 +1552,6 @@ int addons_alternar(int i) {
 // "<base>/manifest.json" sao o mesmo addon.
 int addons_adicionar(const char *nome, const char *urlManifest) {
   char nova[NV_ADDON_URL_MAX];
-  int i;
   if (!urlManifest || !*urlManifest) return 0;
   // Antes de normalizar: o que nao cabe nao entra, nem cortado (addonurl.h).
   // #203: URL grande vira apelido (addonurl.h) em vez de ser recusada.
@@ -1520,15 +1567,11 @@ int addons_adicionar(const char *nome, const char *urlManifest) {
     fflush(stdout);
     return 0;
   }
-  for (i = 0; i < nAddon; i++) {
-    char base[NV_ADDON_URL_MAX];
-    baseNormalizada(addon[i].base, base, sizeof base);
-    if (!strcmp(base, nova)) {
-      printf("[addons] ja instalado: %s\n", addon[i].nome);
-      fflush(stdout);
-      addons_lista_destravar();
-      return 0;
-    }
+  if (jaNaLista(nova, nAddon)) {
+    printf("[addons] ja instalado\n");
+    fflush(stdout);
+    addons_lista_destravar();
+    return 0;
   }
   memset(&addon[nAddon], 0, sizeof addon[nAddon]);
   snprintf(addon[nAddon].nome, sizeof addon[nAddon].nome, "%s",
@@ -2110,17 +2153,24 @@ typedef struct {
   pthread_mutex_t trava;
 } Consulta;
 
-// O NOME DE TIPO DE CANAL QUE O MANIFESTO DO ADDON USA: "tv", "channel" ou
+// O NOME DE TIPO DE CANAL QUE O MANIFESTO DO ADDON USA: a literal do
+// catalogo declarado ("channel", "tv", "channels", "live", "iptv") ou
 // NULL (manifesto nao lido, ou nenhum catalogo de canal). Sai de catalogs[],
 // que capacidadesDoManifesto ja guarda para o guia: FrostView declara
-// "channel", IPTV Bridge e Meu Futebol "tv". Devolve a literal, nunca o campo
-// do addon, porque o fio que le nao segura trava nenhuma.
+// "channel", IPTV Bridge e Meu Futebol "tv", e addon de lista traz
+// "live"/"iptv" — num manifesto MISTO (filme+serie+canal, como o do M3U
+// Mux) so o tipo declarado responde ao /stream/ dele. Devolve a literal,
+// nunca o campo do addon, porque o fio que le nao segura trava nenhuma.
 static const char *tipoCanalDeclarado(int i) {
   int k;
   if (i < 0 || i >= nAddon || !addon[i].canalLido) return NULL;
   for (k = 0; k < addon[i].nCanal; k++) {
-    if (!strcasecmp(addon[i].canal[k].tipo, "channel")) return "channel";
-    if (!strcasecmp(addon[i].canal[k].tipo, "tv")) return "tv";
+    const char *t = addon[i].canal[k].tipo;
+    if (!strcasecmp(t, "channel"))  return "channel";
+    if (!strcasecmp(t, "tv"))       return "tv";
+    if (!strcasecmp(t, "channels")) return "channels";
+    if (!strcasecmp(t, "live"))     return "live";
+    if (!strcasecmp(t, "iptv"))     return "iptv";
   }
   return NULL;
 }
@@ -2168,9 +2218,22 @@ static void *fioFontes(void *u) {
     // tipoCanalDeclarado: o FrostView declara "channel" e o app perguntava
     // "tv" antes, gastando uma viagem inteira por canal aberto so para
     // receber a lista vazia que agora dispara o segundo nome logo abaixo.
-    { const char *dec = c->tipoAlt && c->tipoAlt[0] ? tipoCanalDeclarado(i) : NULL;
+    { // So consulta o manifesto para pedido DE CANAL (tv/channel tem par em
+      // tipoAlt; "live"/"channels"/"iptv" sao canal tambem — a lista e a
+      // mesma do guia e do manifesto, ver tipoCanalDeclarado).
+      int canalReq = !strcmp(c->tipo, "tv") || !strcmp(c->tipo, "channel") ||
+                     !strcmp(c->tipo, "channels") || !strcmp(c->tipo, "live") ||
+                     !strcmp(c->tipo, "iptv");
+      const char *dec = canalReq ? tipoCanalDeclarado(i) : NULL;
       t1 = c->tipo; t2 = c->tipoAlt;
-      if (dec && !strcmp(dec, c->tipoAlt)) { t1 = c->tipoAlt; t2 = c->tipo; } }
+      if (dec && t2[0] && !strcmp(dec, t2)) { t1 = t2; t2 = c->tipo; }
+      // Canal FORA do par tv/channel ("live", "channels", "iptv"): tipoAlt
+      // nao tem par para ele, entao a segunda tentativa usa o nome declarado
+      // no manifesto — o mesmo do catalogo de onde o canal saiu. E quando o
+      // pedido veio por um dos dois nomes comuns mas o manifesto declara
+      // outro (addon misto que serve canais so por "live", por exemplo), o
+      // declarado e a segunda tentativa, e nao o par que ele nao tem.
+      if (dec && strcmp(dec, t1) && (!t2[0] || strcmp(dec, t2))) t2 = dec; }
     // Prazo da consulta (c->timeout): 30 s para filme/serie, 12 s para canal e
     // prefetch. Ver ADD_PRAZO_VOD_S em consultar().
     prazoS = prazoDoAddon(c, i);
@@ -2287,9 +2350,14 @@ unsigned addons_fora_do_ar(char *nome, unsigned tam) {
 }
 
 // O segundo nome de tipo de canal ao vivo; "" para os demais. Ver fioFontes.
+// Os raros "channels"/"live"/"iptv" alternam com "channel", o nome que a
+// maioria dos addons de lista usa para o /stream/ — quando o manifesto foi
+// lido o tipo declarado dele e que manda na segunda tentativa (fioFontes).
 static const char *tipoAlternativo(const char *tipo) {
   if (!strcmp(tipo, "tv"))      return "channel";
   if (!strcmp(tipo, "channel")) return "tv";
+  if (!strcmp(tipo, "channels") || !strcmp(tipo, "live") || !strcmp(tipo, "iptv"))
+    return "channel";
   return "";
 }
 
@@ -2662,6 +2730,7 @@ static int consultar(const char *id, const char *tipo, const char *base, int fio
   free(extra.l);
   // Cancelada, a lista pode estar pela metade: nao e resposta, e lixo.
   if (cancelado && cancelado(ctx)) { free(achados); return -1; }
+  if (!progresso) stream_preparar_dica_p2p(achados, n);
   *saida = achados;
   return n;
 }
@@ -2700,7 +2769,9 @@ static void resumoDaLista(Resumo *rs) {
 // AGORA nao ha link para ele — os mesmos canais voltam a ter fonte depois.
 int addons_motivo_vazio(char *dst, unsigned n) {
   const Resumo *r = &resumo;
-  int canal = !strcmp(alvoTipo, "tv") || !strcmp(alvoTipo, "channel");
+  int canal = !strcmp(alvoTipo, "tv") || !strcmp(alvoTipo, "channel") ||
+              !strcmp(alvoTipo, "channels") || !strcmp(alvoTipo, "live") ||
+              !strcmp(alvoTipo, "iptv");
   if (!dst || !n || !r->valido) return 0;
   if (!r->instalados || !r->comFonte)
     snprintf(dst, n, "%s", i18n("Nenhum add-on de fontes instalado"));

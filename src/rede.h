@@ -122,6 +122,17 @@ char *rede_baixar_trecho64_final(const char *url, const char *headers,
                               int64_t start, int64_t end, long *size,
                               int64_t *total, int *status,
                               volatile int *cancelled, char *final, int *cross);
+/* One streaming read "bytes=start-" for the Samsung converter: the body goes to
+ * sink(opaque, data, n) as it arrives (return 0 to stop; it may block). Same
+ * redirect and header rules as rede_baixar_trecho64_final. No limit on the
+ * whole transfer; it aborts after stall_ms without a byte (time inside the sink
+ * does not count). Either cancel flag (each may be NULL) aborts it, also before
+ * the first byte. Returns 0 when the body ended, 1 when the sink stopped it,
+ * -1 on error (*status = HTTP code or 0, *bytes = body bytes delivered). */
+int rede_fluxo64(const char *url, const char *headers, int64_t start,
+                 int (*sink)(void *opaque, const char *data, size_t n), void *opaque,
+                 int64_t *total, int *status, volatile int *cancelled, volatile int *cancelled2,
+                 char *final, int *cross, long stall_ms, int64_t *bytes);
 char *rede_baixar_trecho64_cab(const char *url, const char *headers,
                               int64_t start, int64_t end, long *size,
                               int64_t *total, int *status,
@@ -281,6 +292,9 @@ char *rede_apagar(const char *url, int segundos, const char *const *cabecalhos,
                   int *status);
 char *rede_postar_st(const char *url, int segundos, const char *const *cabecalhos,
                      const char *corpo, int *status);
+// POST que repete (espera 1 s, 2 s, ...) so quando nao houve resposta (status 0).
+char *rede_postar_repetindo(const char *url, int segundos, const char *const *cabecalhos,
+                            const char *corpo, int *status, int tentativas);
 
 // GET com cabecalhos E codigo HTTP. Pelo mesmo motivo do POST acima: a leitura
 // de tabela do Supabase precisa distinguir "tabela nao existe" (404 com
@@ -406,7 +420,7 @@ void rede_preparar(void);
 //
 // Escreve em `dst` e devolve `dst`, para poder ir direto num printf. Texto sem
 // "://" e copiado como esta (nao e URL, nao ha caminho a esconder).
-// Texto da falha de transporte do ULTIMO pedido deste fio ("curl 35: ..."), ou
+// Codigo da falha de transporte do ULTIMO pedido deste fio ("curl 35"), ou
 // "" quando ele passou. Sem URL, corpo ou segredo; serve a tela e ao log (#223).
 const char *rede_ultimo_erro(void);
 
@@ -416,6 +430,7 @@ const char *rede_ultimo_erro(void);
 // hosts. ms[i] recebe o tempo de cada origem (0 = falhou). Devolve quantas
 // abriram. Chamar de um fio descartavel; no .wgt nao faz nada (devolve 0).
 int rede_aquecer_lote(const char *const *origens, int n, unsigned *ms);
+int rede_aquecer_job(const char *const *origens, int n, unsigned *ms, RedeJob *job);
 const char *rede_url_publica(const char *url, char *dst, unsigned tam);
 
 // URL DE IMAGEM/META PARA LOG, mais util que rede_url_publica mas igualmente

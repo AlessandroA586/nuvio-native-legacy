@@ -467,6 +467,30 @@ static float checkDiametro(float w) {
   return d < 26.0f ? 26.0f : d > 40.0f ? 40.0f : d;
 }
 
+// SELO ESCRITO (opcao "Escrito"): a pilula de antes do check unico (a8c59a84),
+// intacta: escura translucida, check no acento e a palavra "Assistido". Altura
+// e recuo acompanham a largura do cartao (26..32); abaixo de 150 so o check.
+// (mx,my) e o canto superior esquerdo; devolve a borda esquerda.
+static float seloEscritoEm(float mx, float my, float w, float a, int ancora_dir, float *largura) {
+  float h = w * 0.13f, ic, pw, ar, ag, ab;
+  int compacto = w < 150.0f;
+  TxtLinha t = { 0 };
+  if (h < 26.0f) h = 26.0f;
+  if (h > 32.0f) h = 32.0f;
+  ic = h * 0.58f;
+  if (!compacto) t = txt_linha(TXT_CAPTION, i18n("Assistido"), 240, 240, 245, 255);
+  pw = compacto ? h : h * 0.36f + ic + 6.0f + (float)t.w + h * 0.46f;
+  if (largura) *largura = pw;
+  if (ancora_dir) mx -= pw;
+  ajustes_acento(&ar, &ag, &ab);
+  gfx_cor((GfxRect){ mx, my + 3.0f, pw, h }, 0.5f, 0, 0, 0, 0.28f * a);
+  gfx_vidro_ou_solido((GfxRect){ mx, my, pw, h }, 0.5f, GFX_VIDRO_DENS, a, 0.05f, 0.055f, 0.067f, 0.80f);
+  { float ix = compacto ? mx + (h - ic) * 0.5f : mx + h * 0.36f;
+    gfx_icone((GfxRect){ ix, my + (h - ic) * 0.5f, ic, ic }, "check", ar, ag, ab, a);
+    if (!compacto) txt_desenhar_alpha(t, ix + ic + 6.0f, my + (h - t.h) * 0.5f, a); }
+  return mx;
+}
+
 // Check no cartao `card` (retangulo do cartaz/disco). redondo: a 45 graus no
 // canto inferior direito da circunferencia; senao: canto superior direito, no
 // raio seguro. Devolve a borda esquerda do selo.
@@ -475,6 +499,14 @@ float badges_check_cartao(GfxRect card, int redondo, float a) {
   float cx, cy;
   if (m < 8.0f) m = 8.0f;
   if (m > 14.0f) m = 14.0f;
+  if (ajustes_selo_visto_modo() == 2) {
+    if (redondo) {   // pilula ancorada a direita no mesmo ponto a 45 graus
+      float r = card.w * 0.5f, pw;
+      cy = card.y + r + r * 0.7071f - d * 0.1f;
+      return seloEscritoEm(card.x + r + r * 0.7071f + d * 0.4f, cy - d * 0.5f, card.w, a, 1, &pw);
+    }
+    return seloEscritoEm(card.x + card.w - m, card.y + m, card.w, a, 1, NULL);
+  }
   if (redondo) {
     float r = card.w * 0.5f;
     cx = card.x + r + r * 0.7071f - d * 0.1f;

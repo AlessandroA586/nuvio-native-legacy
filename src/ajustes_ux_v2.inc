@@ -528,7 +528,10 @@ static void aj2DicasAlvo(const char *k, float x, float yc, float kw, float kh) {
                 ok ? aj2DicaOk : NULL, ok ? NULL : aj2DicaVoltar, 0, 0);
 }
 // kbd com o corpo `ek` e altura `kh`, rotulo `el`; vao tecla-rotulo `g1`,
-// entre dicas `g2`. Devolve a largura.
+// entre dicas `g2`. Devolve a largura. `desenha`: 0 so mede (as chamadas de
+// medida usam coordenadas de mentira — nada pode registrar), 1 desenha e
+// registra os alvos, 2 so registra (o replay do rodape da TV: os chips ja
+// foram desenhados pelo rodape de verdade).
 static float aj2DicasLinha(const AjDica *d, int n, float x, float yc, TxtEstilo ek, float kh, float kmin,
                            float kpad, TxtEstilo el, float g1, float g2, int desenha, float a) {
   int i;
@@ -536,12 +539,13 @@ static float aj2DicasLinha(const AjDica *d, int n, float x, float yc, TxtEstilo 
   for (i = 0; i < n; i++) {
     TxtLinha k = ajTxt(ek, d[i].k), l = ajTxt(el, d[i].l);
     float kw = k.w + 2 * kpad < kmin ? kmin : k.w + 2 * kpad;
-    if (desenha) {
+    if (desenha == 1) {
       ajNeutro((GfxRect){ x, yc - kh * 0.5f, kw, kh }, kh * 0.5f, 0.09f, AJ_CHIP_SOL, a);
       txt_desenhar_alpha(k, x + (kw - k.w) * 0.5f, yc - k.h * 0.5f, 0.82f * a);
       txt_desenhar_alpha(l, x + kw + g1, yc - l.h * 0.5f, 0.55f * a);
       aj2DicasAlvo(d[i].k, x, yc, kw, kh);
     }
+    if (desenha) aj2DicasAlvo(d[i].k, x, yc, kw, kh);
     x += kw + g1 + l.w + g2;
   }
   return x - x0 - g2;

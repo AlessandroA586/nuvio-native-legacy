@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-12",
- "base": "b7c2c1f9",
- "nota": "419 issues reconciliadas com snapshot local; primeira tag estável por conserto verificado; propostas pós-2.0.5 em TRIAGEM-2.0.5.md. Sem ação remota.",
+ "atualizado_em": "2026-10-14 22:48",
+ "base": "5544c3e4c",
+ "nota": "Sync 2026-10-14 22:48, tip integracao/2.0.5 c285fbf44 (HEAD). Issues GH 80, todas no mapa. Estados de jobs de escrivao/jobs.txt; merges de git (is-ancestor); vereditos novos. Ver escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,
@@ -6517,17 +6517,19 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "aberta",
+   "status": "integrada",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "7f3177ef (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": null,
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via livetv.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/316",
    "criada_em": "2026-10-07",
    "alvo": "2.0.6"
@@ -7616,17 +7618,19 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "aberta",
+   "status": "integrada",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "3c58d0ce (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": null,
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. suspeita: catálogos removidos persistem; #51 também relata isso, exigir reprodução atual; acompanhar #254.",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. suspeita: catálogos removidos persistem; #51 também relata isso, exigir reprodução atual; acompanhar #254. Escrivão 14/10 14:47: integrada via i504, tpkui.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/365",
    "criada_em": "2026-10-08",
    "alvo": "2.0.6"
@@ -7861,17 +7865,19 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "aberta",
+   "status": "integrada",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "d8cc7fa2 (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": null,
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkfim.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/379",
    "criada_em": "2026-10-08",
    "alvo": "2.0.6"
@@ -7882,17 +7888,19 @@
    "estado_github": "aberta",
    "plataforma": "LG",
    "tipo": "bug",
-   "status": "precisa-log",
+   "status": "integrada",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "c0368dd4 (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": true,
     "data": "2026-10-11",
     "ultimo_comentario_por": "Mizikashi1",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "pedir log (o formulário veio sem código); perguntar se a TV está em Wi-Fi ou cabo e se o aviso some sozinho em quanto tempo",
-   "notas": "LG 50UT8050PSB, Nuvio 2.0.2 (.ipk). Relato: depois de ligar a TV a frio aparece \"sem internet\" mesmo com internet, some, volta várias vezes até parar de vez. O campo de log ficou sem código. SUSPEITA, sem prova: o aviso nasce do teste de rede do app (redesaude) logo após o boot, quando a rede da TV ainda sobe; não lido no código nem em log. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | 13/10 Mizikashi1: voltou ao abrir serie, log RSM044 (registro 73601). Job agente/205-net382.",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "LG 50UT8050PSB, Nuvio 2.0.2 (.ipk). Relato: depois de ligar a TV a frio aparece \"sem internet\" mesmo com internet, some, volta várias vezes até parar de vez. O campo de log ficou sem código. SUSPEITA, sem prova: o aviso nasce do teste de rede do app (redesaude) logo após o boot, quando a rede da TV ainda sobe; não lido no código nem em log. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | 13/10 Mizikashi1: voltou ao abrir serie, log RSM044 (registro 73601). Job agente/205-net382. Escrivão 14/10 14:47: integrada via 382dns.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/382",
    "criada_em": "2026-10-09",
    "alvo": "2.0.6"
@@ -7974,17 +7982,19 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "aberta",
+   "status": "integrada",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "d8cc7fa2 (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": true,
     "data": "2026-10-11",
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkfim.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/386",
    "criada_em": "2026-10-09",
    "alvo": "2.0.6"
@@ -8021,17 +8031,19 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "aberta",
+   "status": "integrada",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "219d3bf4 (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": "2026-10-12",
     "ultimo_comentario_por": "Latvia1234",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkui.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/388",
    "criada_em": "2026-10-09",
    "alvo": "2.0.6"
@@ -8089,17 +8101,19 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "aberta",
+   "status": "integrada",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "219d3bf4 (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": "",
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Comparar em 2.0.5 a mesma série/add-on com a lista esperada, inspecionar Z4HDY2 quando autorizado e perguntar se coincide com #372; testar cobertura das temporadas e episódios.",
-   "notas": "QN55Q60RAG, 2.0.3: só primeira temporada e episódios incompletos; log Z4HDY2 já fornecido. src/descoberta.c:parsearEpisodios, episodiosDoCatalogo e temporadasDosEps leem videos[], deduplicam (temporada, episódio), escolhem a lista de metadados e derivam as abas da lista publicada. A seleção descarta temporadas <= 0 e pode preferir outra lista quando a base parece lista de arquivos. SUSPEITA: cobertura/numeração ou escolha da lista de metadados; não prova duplicata de #372 nem resolução de #391. Há tratamento implementado, mas nenhum conserto estável especificamente comprovado para este relato.",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "QN55Q60RAG, 2.0.3: só primeira temporada e episódios incompletos; log Z4HDY2 já fornecido. src/descoberta.c:parsearEpisodios, episodiosDoCatalogo e temporadasDosEps leem videos[], deduplicam (temporada, episódio), escolhem a lista de metadados e derivam as abas da lista publicada. A seleção descarta temporadas <= 0 e pode preferir outra lista quando a base parece lista de arquivos. SUSPEITA: cobertura/numeração ou escolha da lista de metadados; não prova duplicata de #372 nem resolução de #391. Há tratamento implementado, mas nenhum conserto estável especificamente comprovado para este relato. Escrivão 14/10 14:47: integrada via tpkui.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/391",
    "alvo": "2.0.6"
   },
@@ -8304,10 +8318,11 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "precisa-log",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
-    "ca8f29b4 (merge em integracao/2.0.3.1; teste tests/fhd402.sh)"
+    "ca8f29b4 (merge em integracao/2.0.3.1; teste tests/fhd402.sh)",
+    "219d3bf4 (merge em integracao/2.0.5)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -8315,8 +8330,8 @@
     "ultimo_comentario_por": "Namer03",
     "ultima_nossa": "2026-10-10"
    },
-   "proximo_passo": "triar",
-   "notas": "Namer03, S95C, .tpk 2.0.3. A imagem mostra, na aba NMR, o cabecalho do grupo \"Other SDR\" com fileiras cujo nome (formatter do addon) diz \"FHD | REMUX | SDR\" e \"FHD | SDR\"; so a ultima diz \"N/A | SDR\" (essa realmente nao declara resolucao). CAUSA (lida no codigo, sem teste ainda): o grupo vem de grupoRes (src/streams.c:2105) que usa s->altura ou os selos r-4k/r-1080/r-720; a altura sai de stream_parse.c:281-283, que so procura os numeros 2160/1440/1080/720/480 e 4k/uhd, e badges_detectar (badges.c:40-42) so tem 1080p/1080i/1080. A palavra FHD sozinha (comum em formatter de AIOStreams) nao casa, entao altura=0 e o grupo e Outras (GRUPO_NOME, streams.c:2072). O app ja conhece FHD para canal ao vivo (nv_res_do_texto, livetv_regras.h:38) mas nao usa no filme/serie. NAO e ordenacao (nivelHdr, MP4 primeiro da LG e perfil 5 nao entram: e a Samsung .tpk e o problema e o grupo, nao a ordem dentro dele). Nao e configuracao (fonteregra.h trata auto-play, nao grupos). Cuidado no conserto: nv_res_do_texto aceita \"hd\" solto como 720, o que casaria DTS-HD; copiar so fhd/fullhd/full hd. Candidato a 2.0.4 (muda so o parser, 2 linhas + teste), decisao do dono. SUSPEITA: o JSON bruto do autor pode ter a resolucao em outro campo; sem o log/JSON da fonte nao foi provado. Diagnóstico atualizado: torrents sem cache; sem conserto identificado. Revisão 2026-10-12: FHD corrigido parcialmente; autor reabriu com ordenação ainda errada em 2.0.4.",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Namer03, S95C, .tpk 2.0.3. A imagem mostra, na aba NMR, o cabecalho do grupo \"Other SDR\" com fileiras cujo nome (formatter do addon) diz \"FHD | REMUX | SDR\" e \"FHD | SDR\"; so a ultima diz \"N/A | SDR\" (essa realmente nao declara resolucao). CAUSA (lida no codigo, sem teste ainda): o grupo vem de grupoRes (src/streams.c:2105) que usa s->altura ou os selos r-4k/r-1080/r-720; a altura sai de stream_parse.c:281-283, que so procura os numeros 2160/1440/1080/720/480 e 4k/uhd, e badges_detectar (badges.c:40-42) so tem 1080p/1080i/1080. A palavra FHD sozinha (comum em formatter de AIOStreams) nao casa, entao altura=0 e o grupo e Outras (GRUPO_NOME, streams.c:2072). O app ja conhece FHD para canal ao vivo (nv_res_do_texto, livetv_regras.h:38) mas nao usa no filme/serie. NAO e ordenacao (nivelHdr, MP4 primeiro da LG e perfil 5 nao entram: e a Samsung .tpk e o problema e o grupo, nao a ordem dentro dele). Nao e configuracao (fonteregra.h trata auto-play, nao grupos). Cuidado no conserto: nv_res_do_texto aceita \"hd\" solto como 720, o que casaria DTS-HD; copiar so fhd/fullhd/full hd. Candidato a 2.0.4 (muda so o parser, 2 linhas + teste), decisao do dono. SUSPEITA: o JSON bruto do autor pode ter a resolucao em outro campo; sem o log/JSON da fonte nao foi provado. Diagnóstico atualizado: torrents sem cache; sem conserto identificado. Revisão 2026-10-12: FHD corrigido parcialmente; autor reabriu com ordenação ainda errada em 2.0.4. Escrivão 14/10 14:47: integrada via tpkui.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/402",
    "criada_em": "2026-10-09",
    "alvo": "2.0.6"
@@ -8366,7 +8381,9 @@
   {
    "estado_github": "aberta",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "219d3bf4 (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": null,
@@ -8379,13 +8396,13 @@
    "titulo": "Quick search doesn't list all results",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "aberta",
-   "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "status": "integrada",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkui.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/405"
   },
   {
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "release": "-",
    "conserto": [],
    "ultima_resposta": {
@@ -8395,20 +8412,21 @@
     "ultima_nossa": null
    },
    "criada_em": "2026-10-09",
-   "alvo": "2.1",
    "numero": 406,
    "titulo": "Passing through ratings on title page",
    "plataforma": "Samsung .tpk",
    "tipo": "feature",
    "status": "aberta",
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/406"
   },
   {
    "estado_github": "aberta",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "219d3bf4 (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": null,
@@ -8421,9 +8439,9 @@
    "titulo": "Top menu open when scrolling up on the title page",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "aberta",
-   "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "status": "integrada",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkui.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/407"
   },
   {
@@ -8508,17 +8526,19 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "precisa-log",
+   "status": "integrada",
    "release": "2.0.5",
-   "conserto": [],
+   "conserto": [
+    "224063f2 (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": true,
     "data": "2026-10-11",
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "triar",
-   "notas": "Log QHQRVE (S95C, .tpk): relógio do player congelado, UI com upd=120 ms por quadro, parar retorna 0 ms mas o player nativo segue tocando. Conserto em agente/204-tpkpreso412 (71c7d615): ASS deixa de segurar o quadro, recupera relógio congelado, parada confirmada antes de abrir outro player. Revisão Codex achou P1 (Voltar durante PrepareAsync encerraria o processo numa TV sã): rodada 2 em andamento. Aguarda log; sem conserto confirmado para este relato. Revisão 2026-10-12: Correção 2.0.4 não cobre a persistência após reinstalação; comentário de 11/10 descreve novo fix em progresso.",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Log QHQRVE (S95C, .tpk): relógio do player congelado, UI com upd=120 ms por quadro, parar retorna 0 ms mas o player nativo segue tocando. Conserto em agente/204-tpkpreso412 (71c7d615): ASS deixa de segurar o quadro, recupera relógio congelado, parada confirmada antes de abrir outro player. Revisão Codex achou P1 (Voltar durante PrepareAsync encerraria o processo numa TV sã): rodada 2 em andamento. Aguarda log; sem conserto confirmado para este relato. Revisão 2026-10-12: Correção 2.0.4 não cobre a persistência após reinstalação; comentário de 11/10 descreve novo fix em progresso. Escrivão 14/10 14:47: integrada via tpk412b.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/412",
    "criada_em": "2026-10-10",
    "alvo": "2.0.6"
@@ -8529,17 +8549,19 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "aberta",
+   "status": "integrada",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "d8cc7fa2 (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": "2026-10-10",
     "ultimo_comentario_por": "Berque-35",
     "ultima_nossa": ""
    },
-   "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkfim.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/413",
    "criada_em": "2026-10-10",
    "alvo": "2.0.6"
@@ -8664,11 +8686,12 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "lancada",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
     "7f338254 (v2.0.5)",
-    "8b5ed6c0 (v2.0.5)"
+    "8b5ed6c0 (v2.0.5)",
+    "d6b41e1 (merge agente/205-i419recs; review OK j-revg-i419recs-z)"
    ],
    "ultima_resposta": {
     "nos": true,
@@ -8676,8 +8699,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "dono: avaliar fechamento com v2.0.5",
-   "notas": "Triagem 2026-10-12: 7f338254 em v2.0.5; 8b5ed6c0 em v2.0.5; release-notes.md v2.0.5: - Metadata loads again when the main TMDB address is blocked or times out (#416, #419), and posters with very long addresses load again (#433).. suspeita: próprio corpo de #419 aponta TMDB indisponível; sintomas diferentes; acompanhar #416.",
+   "proximo_passo": "lancar com 2.0.5; testar no TCL",
+   "notas": "Job i419recs done 20:05: commit d6b41e1 so teste posplay. Sem device Tizen. Ja corrigido em 2.0.5 pelos commits v2.0.5.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/419",
    "criada_em": "2026-10-10",
    "alvo": "ja-lancada"
@@ -8846,7 +8869,7 @@
   {
    "numero": 427,
    "titulo": "Memory for images capped at 160 MB",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "LG",
    "tipo": "bug",
    "status": "lancada",
@@ -8861,15 +8884,14 @@
     "ultima_nossa": "2026-10-12"
    },
    "proximo_passo": "dono: avaliar fechamento com v2.0.5",
-   "notas": "Triagem 2026-10-12: 92ee6141 em v2.0.5.",
+   "notas": "Triagem 2026-10-12: 92ee6141 em v2.0.5. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/427",
-   "criada_em": "2026-10-10",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-10"
   },
   {
    "numero": 428,
    "titulo": "Constant freezes",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "LG",
    "tipo": "bug",
    "status": "precisa-log",
@@ -8882,10 +8904,9 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "triar",
-   "notas": "Aguarda código/log para diagnóstico. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.",
+   "notas": "Aguarda código/log para diagnóstico. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/428",
-   "criada_em": "2026-10-10",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-10"
   },
   {
    "numero": 429,
@@ -8893,11 +8914,12 @@
    "estado_github": "aberta",
    "plataforma": "Android",
    "tipo": "bug",
-   "status": "lancada",
+   "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
     "2d42c8e0 (v2.0.5)",
-    "b1da4311 (v2.0.5)"
+    "b1da4311 (v2.0.5)",
+    "b144dbfd (branch agente/205-i429hbs, 2 commits fora)"
    ],
    "ultima_resposta": {
     "nos": true,
@@ -8905,8 +8927,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "dono: avaliar fechamento com v2.0.5",
-   "notas": "Triagem 2026-10-12: 2d42c8e0 em v2.0.5; b1da4311 em v2.0.5; release-notes.md v2.0.5: - The Serbo-Croatian code matches Croatian, Serbian and Bosnian (#429), and the exact language wins when a language is picked automatically..",
+   "proximo_passo": "re-review fix j-205-i429hbs-fixz (done 22:28); antes BLOQUEIA j-revg-i429hbs-z",
+   "notas": "Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/429",
    "criada_em": "2026-10-10",
    "alvo": "ja-lancada"
@@ -9175,17 +9197,19 @@
    "estado_github": "aberta",
    "plataforma": "LG",
    "tipo": "feature",
-   "status": "aberta",
+   "status": "integrada",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "fe1366e5 (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": "",
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Revisar o diff de agente/205-simkl-scrobble e testar na TV com Simkl vinculado (start/pause/stop aparecem no Simkl).",
-   "notas": "LG 2.0.4, Simkl conectado diretamente: pede enviar progresso parcial ao pausar/sair para retomar em outros apps. src/simkl.c:simkl_ler_playback e simkl_continuar leem pausados; simkl_episodios_marcar/simkl_titulo_marcar enviam histórico de visto. src/player.c chama trakt_scrobble ao tocar/pausar; não há envio Simkl equivalente neste caminho. Leitura de playback e histórico existem, envio incremental Simkl não comprovado. Limite demonstrado do cliente, sem afirmar capacidade atual da API Simkl offline.",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "LG 2.0.4, Simkl conectado diretamente: pede enviar progresso parcial ao pausar/sair para retomar em outros apps. src/simkl.c:simkl_ler_playback e simkl_continuar leem pausados; simkl_episodios_marcar/simkl_titulo_marcar enviam histórico de visto. src/player.c chama trakt_scrobble ao tocar/pausar; não há envio Simkl equivalente neste caminho. Leitura de playback e histórico existem, envio incremental Simkl não comprovado. Limite demonstrado do cliente, sem afirmar capacidade atual da API Simkl offline. Escrivão 14/10 14:47: integrada via simkl-scrobble.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/459",
    "alvo": "2.0.6"
   },
@@ -9215,17 +9239,19 @@
    "estado_github": "aberta",
    "plataforma": "Android",
    "tipo": "feature",
-   "status": "em-andamento",
+   "status": "integrada",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "f3de11e7 (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": true,
     "data": "2026-10-12",
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-12"
    },
-   "proximo_passo": "Ajuste rail ou barra no topo (dono 12/10); job agente/205-menutopo.",
-   "notas": "Pede opção de toolbar no topo; mantenedor responde que hoje há menu lateral e relaciona #407. src/menu.c:desenhaBarra/geoEm implementam rail/painel lateral; src/detail.c roteia CIMA para área social e ESQUERDA para menu. Não há opção top toolbar comprovada; barra social no topo não é substituto da navegação principal. Sem bug ou causa a diagnosticar.",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Pede opção de toolbar no topo; mantenedor responde que hoje há menu lateral e relaciona #407. src/menu.c:desenhaBarra/geoEm implementam rail/painel lateral; src/detail.c roteia CIMA para área social e ESQUERDA para menu. Não há opção top toolbar comprovada; barra social no topo não é substituto da navegação principal. Sem bug ou causa a diagnosticar. Escrivão 14/10 14:47: integrada via menutopo.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/461",
    "alvo": "2.0.6"
   },
@@ -9235,17 +9261,19 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "meta",
-   "status": "aberta",
+   "status": "integrada",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "84095af (commit em integracao/2.0.5; review OK j-revg-i462sync-z)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": "2026-10-12",
     "ultimo_comentario_por": "Copil48",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Analisar DND12K e comparar 60F3SE/6OF3SE, ZQSHBN e PFQ7Y3 quando logs estiverem disponíveis; reproduzir add-on vs embutida na mesma mídia. Estabilidade do canário em 2.0.6, dono decide habilitação estável; não fechar como fix lançado.",
-   "notas": "Chamada de teste v2.0.5-legref.1 para AutoSync Tizen 6+, não release estável; Q80A Tizen 6 relata sync, S95C Tizen 9 relata sucesso e crash DND12K com legenda add-on; PFQ7Y3 também informado. src/legref.c:legref_disponivel desliga Samsung salvo NV_LEGREF_TPK e sempre exclui NV_TPK40/web; src/legsync.c coordena coleta de referência/AutoSync. Manual delay existe; habilitação Samsung é canário. SUSPEITA: coleta/concorrência/render de legenda externa no crash; logs não consultados.",
+   "proximo_passo": "lancar com 2.0.5; teste .tpk de legenda no TCL",
+   "notas": "Job i462sync done 20:07: 84095af auto sync rejection translated tracks; tests autosync.sh/legsync.sh rc 0.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/462",
    "alvo": "2.0.6"
   },
@@ -9255,17 +9283,19 @@
    "estado_github": "aberta",
    "plataforma": "all",
    "tipo": "feature",
-   "status": "aberta",
+   "status": "integrada",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "90e43bd1 (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": "",
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Obter contrato documentado em snapshot local; definir adesão por manifesto, dados mínimos, fila/retry e isolamento por perfil sem compartilhar credenciais. Planejar integração ampla em futuro.",
-   "notas": "Pede resource watch_state para addons receberem eventos incrementais e delegarem tracking a vários provedores. src/addons.c interpreta resources de metadados/fontes/legendas; src/player.c emite eventos Trakt e progresso local/Nuvio via src/syncprog.c, sem despachante watch_state. Referências externas não consultadas (offline). Infraestrutura de tracking existe, contrato/autorização/entrega de eventos ao addon não estão implementados nesse caminho.",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Pede resource watch_state para addons receberem eventos incrementais e delegarem tracking a vários provedores. src/addons.c interpreta resources de metadados/fontes/legendas; src/player.c emite eventos Trakt e progresso local/Nuvio via src/syncprog.c, sem despachante watch_state. Referências externas não consultadas (offline). Infraestrutura de tracking existe, contrato/autorização/entrega de eventos ao addon não estão implementados nesse caminho. Escrivão 14/10 14:47: integrada via ws1.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/466",
    "alvo": "futuro"
   },
@@ -9332,22 +9362,23 @@
   {
    "numero": 470,
    "titulo": "Next Episode Countdown Only Starts After Credits Finish",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "aberta",
+   "status": "integrada",
    "release": "2.0.5",
-   "conserto": [],
+   "conserto": [
+    "7839b119 (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": "",
     "ultimo_comentario_por": "rawldon",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Job diagnostico/conserto: contagem comeca quando o cartao aparece.",
-   "notas": "rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log B9RJZ8 (registro 73397): [posplay] creditos aceito (sobram 265s, janela 300s); cartao aparece nos creditos mas contagem so comeca no fim.",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/470",
-   "alvo": "2.0.6"
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log B9RJZ8 (registro 73397): [posplay] creditos aceito (sobram 265s, janela 300s); cartao aparece nos creditos mas contagem so comeca no fim. Escrivão 14/10 14:47: integrada via i18nordem, i470. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13).",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/470"
   },
   {
    "numero": 471,
@@ -9355,38 +9386,125 @@
    "estado_github": "aberta",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "aberta",
+   "status": "integrada",
    "release": "2.0.5",
-   "conserto": [],
+   "conserto": [
+    "38369f89 (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": "",
     "ultimo_comentario_por": "rawldon",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Job: preencher o cartao (cover/crop) no player nativo tpk.",
-   "notas": "rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log QNHOK2 (registro 73399): \"[trailer] tpk: plano visivel (sem recorte)\" — trailer no cartao sem crop/fill no tpk. Relacionado a #469 (DisplayRoi/aspecto no tpk).",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log QNHOK2 (registro 73399): \"[trailer] tpk: plano visivel (sem recorte)\" — trailer no cartao sem crop/fill no tpk. Relacionado a #469 (DisplayRoi/aspecto no tpk). Escrivão 14/10 14:47: integrada via i471.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/471",
    "alvo": "2.0.6"
   },
   {
-   "numero": 484,
-   "titulo": "External subtitles disappear after a few minutes without input",
-   "estado_github": "aberta",
-   "plataforma": "Samsung .tpk",
+   "numero": 473,
+   "titulo": "Sound does not start",
+   "estado_github": "fechada",
+   "plataforma": "?",
    "tipo": "bug",
-   "status": "aberta",
-   "release": "2.0.5",
+   "status": "lancada",
+   "release": "-",
    "conserto": [],
    "ultima_resposta": {
     "nos": false,
-    "data": "2026-10-13",
-    "ultimo_comentario_por": "isyrafkhairi10-sudo",
+    "data": null,
+    "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Job agente/205-leg484 (nv-bug high).",
-   "notas": "LG OLED C1 webOS, 2.0.5: legenda de addon (OpenSubtitlesV3/AIOMetadata) some apos minutos sem tecla; embutida ok. Sem log.",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/484",
+   "proximo_passo": "sem acao; issue fechada no GitHub em 13/10",
+   "notas": "Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub sem conserto local identificado. Sem commit citando a issue.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/473",
+   "criada_em": "2026-10-13"
+  },
+  {
+   "numero": 474,
+   "titulo": "Top right bar is unreachable",
+   "estado_github": "fechada",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "lancada",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "sem acao; issue fechada no GitHub em 13/10",
+   "notas": "Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub; barra do topo, ver tambem #461 (agente/205-menutopo integrado). Sem commit citando a issue.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/474",
+   "criada_em": "2026-10-13"
+  },
+  {
+   "numero": 475,
+   "titulo": "Subtitle outline color setting",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "melhoria",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "6a260e9b (merge em integracao/2.0.5)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "2026-10-13",
+    "ultimo_comentario_por": "Matis94",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Pedido: cor do contorno da legenda. Escrivão 14/10 14:47: integrada via sinopse477.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/475",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 476,
+   "titulo": "No internet",
+   "estado_github": "fechada",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "lancada",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "sem acao; issue fechada no GitHub em 13/10",
+   "notas": "Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub; #382 tratada por b212cec1 ja em integracao/2.0.5. Sem commit citando a issue.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/476",
+   "criada_em": "2026-10-13"
+  },
+  {
+   "numero": 477,
+   "titulo": "Bigger synopsis font",
+   "estado_github": "aberta",
+   "plataforma": "Samsung .tpk",
+   "tipo": "melhoria",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "1366561a (agente/205-sinopse)",
+    "6a260e9b (merge em integracao/2.0.5)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "2026-10-13",
+    "ultimo_comentario_por": "Soufianelz",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Snapshot 2026-10-14 10:15: 1366561a \"Restore the original hero synopsis size and add a Synopsis size setting\" em agente/205-sinopse; j-205-sinopse done e j-revg-sinopse veredito OK. Escrivao 14/10 19:2x: 1366561a ancestral de integracao/2.0.5 (6a260e9b).",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/477",
    "alvo": "2.0.6"
   },
   {
@@ -9410,44 +9528,635 @@
    "alvo": "2.0.6"
   },
   {
-   "numero": 477,
-   "titulo": "Bigger synopsis font",
-   "estado_github": "aberta",
-   "plataforma": "Samsung .tpk",
-   "tipo": "melhoria",
-   "status": "aberta",
-   "release": "2.0.5",
+   "numero": 480,
+   "titulo": "Remember Preferred Audio Language Across Sources",
+   "estado_github": "fechada",
+   "plataforma": "?",
+   "tipo": "feature",
+   "status": "lancada",
+   "release": "-",
    "conserto": [],
    "ultima_resposta": {
     "nos": false,
-    "data": "2026-10-13",
-    "ultimo_comentario_por": "Soufianelz",
+    "data": null,
+    "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Job agente/205-sinopse477 (sonnet).",
-   "notas": "Pedido: sinopse maior.",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/477",
+   "proximo_passo": "sem acao; issue fechada no GitHub em 13/10",
+   "notas": "Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub sem conserto local identificado. Sem commit citando a issue.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/480",
+   "criada_em": "2026-10-13"
+  },
+  {
+   "numero": 481,
+   "titulo": "Show audio and subtitle metadata in the stream source list",
+   "estado_github": "fechada",
+   "plataforma": "?",
+   "tipo": "feature",
+   "status": "aberta",
+   "release": "2.0.5",
+   "conserto": [
+    "e4fb8c08/c9932635 (agente/205-pr487v2, nao integrados)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "decidir com o dono se merge de agente/205-pr487v2 entra na 2.0.6",
+   "notas": "Snapshot 2026-10-14 10:15: \"Sources: show declared audio and subtitle languages\" (e4fb8c08) e o merge c9932635 \"Merge PR #487 v2\" existem so em agente/205-pr487v2, nao ancestral de integracao/2.0.5. OPEN no GitHub. | fechada no GH 2026-10-14 (CLOSED); alvo antigo 2.0.6 removido por regra do mapa.py; decidir com dono",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/481",
+   "criada_em": "2026-10-13"
+  },
+  {
+   "numero": 482,
+   "titulo": "Continue Watching content leaks between profiles",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "integrada",
+   "release": "-",
+   "conserto": [
+    "067c0c35",
+    "f51aa3d76 (merge agente/205-i488perfil, junto de #488)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "testar troca de perfil no TCL",
+   "notas": "Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/482",
+   "criada_em": "2026-10-13",
    "alvo": "2.0.6"
   },
   {
-   "numero": 475,
-   "titulo": "Subtitle outline color setting",
+   "numero": 483,
+   "titulo": "Anime subtitles not rendering",
    "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "integrada",
+   "release": "-",
+   "conserto": [
+    "251632be (merge agente/205-i483remux em integracao/2.0.5)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Impl fd6d795d; j-revg-i483remux OK 16:52. Merge 251632be (18:01). fetch via SeekHead quando a sonda erra o layout REMUX. Escrivao 14/10 19:1x: merge 18:01.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/483",
+   "criada_em": "2026-10-13",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 484,
+   "titulo": "External subtitles disappear after a few minutes without input",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
-   "tipo": "melhoria",
-   "status": "aberta",
+   "tipo": "bug",
+   "status": "integrada",
    "release": "2.0.5",
-   "conserto": [],
+   "conserto": [
+    "027fd3c7 (merge em integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": "2026-10-13",
-    "ultimo_comentario_por": "Matis94",
+    "ultimo_comentario_por": "isyrafkhairi10-sudo",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Job agente/205-sinopse477 (sonnet), commit separado.",
-   "notas": "Pedido: cor do contorno da legenda.",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/475",
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "LG OLED C1 webOS, 2.0.5: legenda de addon (OpenSubtitlesV3/AIOMetadata) some apos minutos sem tecla; embutida ok. Sem log. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-14). | Escrivão 2026-10-14 16:11: conserto integrado via agente/205-leg484 (merge 027fd3c7); fechada no GitHub.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/484"
+  },
+  {
+   "numero": 486,
+   "titulo": "Sometimes wont load P2P addons",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "edff609f/c670c37e/20bb2f3a (agente/205-p2p486, integrados em integracao/2.0.5)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "testar em aparelho com addon P2P; sem review j-revg registrado",
+   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/486",
+   "criada_em": "2026-10-13",
+   "alvo": "ja-lancada"
+  },
+  {
+   "numero": 488,
+   "titulo": "Profiles switching",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "067c0c35",
+    "agente/205-i488perfil ahead 2 (fix 20:03, nao integrado)",
+    "f51aa3d76 (merge agente/205-i488perfil; review OK j-revg-i488perfil-z 21:46)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "testar troca de perfil no TCL",
+   "notas": "pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/488",
+   "criada_em": "2026-10-13",
    "alvo": "2.0.6"
+  },
+  {
+   "numero": 492,
+   "titulo": "Some Features suggestions",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "feature",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "c624b273 (merge agente/205-retomamorna em integracao/2.0.5)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Review j-revg-retomamorna OK 17:06. Merge agente/205-retomamorna em integracao/2.0.5 (c624b273, 18:48); j-merge-205-retomamorna done 18:45. Sem acao remota. Escrivao 14/10 19:1x: merge 18:48.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/492",
+   "criada_em": "2026-10-14",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 494,
+   "titulo": "Add contribution path for Aniskip and TheIntroDB skip markers",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "feature",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "sem job nem branch: triar e criar job",
+   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels sem label. Sem triagem local.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/494",
+   "criada_em": "2026-10-14",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 495,
+   "titulo": "How to return to the island card (movie resume) from the homepage",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "feature",
+   "status": "integrada",
+   "release": "-",
+   "conserto": [
+    "9734ecc2b (merge agente/205-i495ilha em integracao/2.0.5)",
+    "d590e0f9"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Review OK j-revg-i495ilha 19:55. Merged 9734ecc2b. Escrivao antigo dizia sem review: errado.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/495",
+   "criada_em": "2026-10-14",
+   "alvo": "2.0.5"
+  },
+  {
+   "numero": 496,
+   "titulo": "No next-episode suggestion / no quick next episode shortcut for series (esp. anime without skip intro)",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "feature",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "sem job nem branch: triar e criar job",
+   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels sem label. Sem triagem local.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/496",
+   "criada_em": "2026-10-14",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 497,
+   "titulo": "Prioritize continue watch sync on startup",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "feature",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "sem job nem branch: triar e criar job",
+   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/497",
+   "criada_em": "2026-10-14",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 499,
+   "titulo": "Cached / not cached indicator on Debrid sources (torbox, real-debrid, premiumize, alldebrid)",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "feature",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "aab8e18d (agente/205-499cache, integrado em integracao/2.0.5)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "review j-revg-499cache ausente; conserto ja em integracao/2.0.5",
+   "notas": "Snapshot 2026-10-14 10:15: aab8e18d \"Mark debrid-cached sources with a lightning icon in the source list (#499)\" e ancestral de integracao/2.0.5 (merge 57aee24f agente/205-499cache). Nenhum job j-revg-499cache: conserto integrado sem review registrado. OPEN no GitHub.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/499",
+   "criada_em": "2026-10-14",
+   "alvo": "ja-lancada"
+  },
+  {
+   "numero": 500,
+   "titulo": "[Samsung Tizen 9 / V2.0.5] Trailers not playing on Hero",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "sem job nem branch: triar e criar job",
+   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels bug. Sem triagem local.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/500",
+   "criada_em": "2026-10-14",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 501,
+   "titulo": "[Android TV] Add External Player Selection and Custom Subtitle Font Support  ",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "feature",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "sem job nem branch: triar e criar job",
+   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/501",
+   "criada_em": "2026-10-14",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 502,
+   "titulo": "Detail page keeps the low-res thumbnail instead of loading full artwork when opened from Recommendations or Filmography",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "d3fc8e5e (agente/205-i502arte, nao integrado)",
+    "20f1104f (merge em integracao/2.0.5)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Snapshot 2026-10-14 10:15: d3fc8e5e \"fix(detail): stop seeding list poster into backdrop for recommendations\" cobre #502 e #503, so em agente/205-i502arte. Job RUNNING, sem validacao. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i502arte.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/502",
+   "criada_em": "2026-10-14",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 503,
+   "titulo": "Low-resolution backdrop when opening a recommended title's detail page",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "d3fc8e5e (agente/205-i502arte, nao integrado)",
+    "20f1104f (merge em integracao/2.0.5)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Snapshot 2026-10-14 10:15: mesmo conserto d3fc8e5e de #502 (agente/205-i502arte, RUNNING). OPEN no GitHub. Escrivão 14/10 14:47: integrada via i502arte. | Escrivão 2026-10-14 16:11: merge 20f1104f consta em log.txt da integracao.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/503",
+   "criada_em": "2026-10-14",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 504,
+   "titulo": "Catalog rows from removed add-ons remain in the “Not on home” section",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "be7c0dee (agente/205-i504, nao integrado)",
+    "3c58d0ce (merge em integracao/2.0.5)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Snapshot 2026-10-14 10:15: conserto be7c0dee \"fix(fileiras): drop untouched rows of removed add-ons when the sheet opens (#504)\" so em agente/205-i504 (nao e ancestral de integracao/2.0.5). Job j-205-i504 RUNNING, sem log de validacao ainda. Issue ainda OPEN no GitHub. Escrivão 14/10 14:47: integrada via i504.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/504",
+   "criada_em": "2026-10-14",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 505,
+   "titulo": "My P2p add on sources don’t load with version2.05",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "integrada",
+   "release": "-",
+   "conserto": [
+    "b576c7a9 (merge em integracao/2.0.5)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Snapshot 2026-10-14 10:15: 3fc691d4 \"fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)\" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/505",
+   "criada_em": "2026-10-14",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 506,
+   "titulo": "App fails to connect: \"The Nuvio account server didn't respond\" and QR code does not generate",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "integrada",
+   "release": "-",
+   "conserto": [
+    "0e567d1a (agente/205-i506, ancestral de integracao/2.0.5)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Snapshot 2026-10-14 10:15: job j-205-i506 RUNNING (branch agente/205-i506, 0 commits fora de integracao/2.0.5). Suspeita de causa comum com #505. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i506. | Escrivão 2026-10-14 16:11: merge 0e567d1a (ancestral) consta em log.txt da integracao.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/506",
+   "criada_em": "2026-10-14",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 507,
+   "titulo": "Library on home",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "feature",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "sem job nem branch: triar e criar job",
+   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/507",
+   "criada_em": "2026-10-14",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 508,
+   "titulo": "Stream loading backdrop",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "feature",
+   "status": "integrada",
+   "release": "-",
+   "conserto": [
+    "d57b79e9 (merge em integracao/2.0.5)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. Escrivão 14/10 14:47: branch agente/205-i508fundo: review OK, merge pendente. | Escrivão 2026-10-14 16:11: i508fundo mergeada (d57b79e9); review j-revg-i508fundo OK.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/508",
+   "criada_em": "2026-10-14",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 512,
+   "titulo": "Tracking and next episode issues with Kaiju no 8 season 2",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "integrada",
+   "release": "",
+   "conserto": [
+    "1b47d82f8 (merge agente/205-i512temporada em integracao/2.0.5)",
+    "8c7adb07",
+    "a0e14d7c"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL: Kaiju no 8 S2 tracking/proximo episodio)",
+   "notas": "Review OK j-revg-i512temporada-r2 19:57. Merged 1b47d82f8. P2 aberto: episodio sem releaseDate nao marca CWO_SEM_DATA (trakt.c:616).",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/512",
+   "criada_em": "2026-10-14",
+   "alvo": "2.0.5"
+  },
+  {
+   "numero": 511,
+   "titulo": "Show subtitle track name instead of only showing language",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "enhancement",
+   "status": "integrada",
+   "release": "",
+   "conserto": [
+    "f0ab7c91 (merge agente/205-i511legnome em integracao/2.0.5)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Criada 2026-10-14 (snapshot 14:46). Escrivao 14/10 19:1x: Fix 2e05dd94; j-revg-i511legnome-q OK 18:44; merge f0ab7c91 18:45.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/511",
+   "criada_em": "2026-10-14",
+   "alvo": "futuro"
+  },
+  {
+   "numero": 510,
+   "titulo": "Subtitles list not the same as nuvio in phone applications like ios/android",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triagem; sem job ainda",
+   "notas": "Criada 2026-10-14 (snapshot 14:46).",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/510",
+   "criada_em": "2026-10-14",
+   "alvo": "futuro"
+  },
+  {
+   "numero": 509,
+   "titulo": "Expanded poster trailer",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "enhancement",
+   "status": "integrada",
+   "release": "-",
+   "conserto": [
+    "13e13b92 (merge em integracao/2.0.5)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Criada 2026-10-14 (snapshot 14:46). Escrivão 14/10 14:47: integrada via i509trailer. | Escrivão 2026-10-14 16:11: conserto 13e13b92 ja em integracao/2.0.5; sem release ainda.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/509",
+   "criada_em": "2026-10-14",
+   "alvo": "futuro"
+  },
+  {
+   "numero": 513,
+   "titulo": "Any series episode autoplay even option is disabled",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "em_revisao",
+   "release": "",
+   "conserto": [
+    "a82357a4 (merge agente/205-i513autoplay em integracao/2.0.5)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "j-205-i513autoplay-fixy RODANDO; depois review (BLOQUEIA j-revg-i513autoplay-y 22:35)",
+   "notas": "Criada 2026-10-14 (issues.json 14/10 16:49). Escrivao 14/10 19:1x: j-205-i513autoplay 7df981b9 done 18:35 (review j-revg-i513autoplay-q BLOQUEIA 18:43); fix bcf3ec31 18:57. Escrivao 19:2x: merge a82357a4 (j-revg-i513autoplay-q havia BLOQUEADO 18:43; fix bcf3ec31 mergeado sem nova review). | a82357a4 mergeado antes; review y BLOQUEIA, fix em curso",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/513",
+   "criada_em": "2026-10-14",
+   "alvo": "futuro"
+  },
+  {
+   "numero": 514,
+   "titulo": "Ability to rate a movie or an episode",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "?",
+   "status": "aberta",
+   "conserto": [],
+   "release": "",
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triagem; sem job ainda",
+   "notas": "Issue nova 14/10 20:52 (rating de filme/episodio). Feature, nao 2.0.5.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/514",
+   "criada_em": "2026-10-14",
+   "alvo": "futuro"
   }
  ],
  "validacoes": [
@@ -11231,6 +11940,2139 @@
    ],
    "proximo_passo": "triar",
    "notas": "Relato do Discord; correção integrada para Add to Home prevalecer sobre a lista desativada."
+  },
+  {
+   "id": "dono-205-abastopo",
+   "titulo": "Abas das paginas no topo (pedido do dono)",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "2ebf3cb2"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). sem review j-revg-abastopo OK? ver jobs. Escrivão 14/10 14:47: integrada."
+  },
+  {
+   "id": "dono-205-cardexp",
+   "titulo": "Cartao de foco expandido menor + espacamento de fileiras (Apple TV)",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "8cdf8cc9"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). branch merged, sem review. Escrivão 14/10 14:47: integrada."
+  },
+  {
+   "id": "dono-205-herocard",
+   "titulo": "Nova fileira com um card largo so (Apple TV style)",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "fd1766cb (merge em integracao/2.0.5)"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix3 commitado 960cf84f; review anterior BLOQUEIA (j-revg-herocard-r2). | j-revg-herocard-r3 OK 16:02 (fix3 960cf84f). Escrivão 16:49: branch ainda não integrada. Escrivao 19:0x: merge em integracao/2.0.5."
+  },
+  {
+   "id": "dono-205-descecol",
+   "titulo": "Descer de fileira mantem a coluna horizontal",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "8794a7c2"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). rodando. Escrivão 14/10 14:47: integrada."
+  },
+  {
+   "id": "dono-205-dither",
+   "titulo": "Banding do gradiente (dither)",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "7542cd0e"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). rodando. Escrivão 14/10 14:47: integrada."
+  },
+  {
+   "id": "dono-205-poster34",
+   "titulo": "Novo estilo de fileira: poster 3:4 grande com overlay da cor dominante",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "8cd1834c"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). rodando. Escrivão 14/10 14:47: integrada."
+  },
+  {
+   "id": "dono-205-botoes",
+   "titulo": "Cor dos botoes do hero + repensar imersivo/textura",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "d9d8ad6f (merge agente/205-botoes em integracao/2.0.5)"
+   ],
+   "proximo_passo": "sem ação; lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix3 commitado d2aa0f4e; review anterior BLOQUEIA. | Merge d9d8ad6f em integracao/2.0.5 (escrivao 14/10 16:49)."
+  },
+  {
+   "id": "dono-205-colrank",
+   "titulo": "Layout do Ranking de colecao + foco cortado no topo",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "77cbb10c"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). rodando. Escrivão 14/10 14:47: integrada."
+  },
+  {
+   "id": "dono-205-shuffle",
+   "titulo": "Botao shuffle minimalista na pagina da serie",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "20213e22"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). sem review; branch nao integrada. Escrivão 14/10 14:47: integrada."
+  },
+  {
+   "id": "dono-205-sidebarat",
+   "titulo": "Polir a sidebar no modo Apple TV",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "5d7d5577"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). sem review; branch nao integrada. Escrivão 14/10 14:47: integrada."
+  },
+  {
+   "id": "dono-205-fingerpct",
+   "titulo": "Porcentagem em cada quadrado do fingerprint",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "08410c0a"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). sem review; branch nao integrada. Escrivão 14/10 14:47: integrada."
+  },
+  {
+   "id": "dono-205-perfilbarra",
+   "titulo": "Seletor de perfil: tirar a barra de luz no estilo Luz",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "cb9724ff"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). sem review; branch nao integrada. Escrivão 14/10 14:47: integrada."
+  },
+  {
+   "id": "dono-205-topotam",
+   "titulo": "Top bar compacta e premium (vidro e tab strip portados do plx)",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "53e14513 (merge em integracao/2.0.5)"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). review OK; branch NAO integrada. Escrivão 14/10 14:47: impl/merge feito, sem review. | Escrivão 2026-10-14 16:11: mergeada 53e14513; review j-revg-topotam OK."
+  },
+  {
+   "id": "dono-205-perfis21",
+   "titulo": "Gerenciar/adicionar perfil no quick switch + 3 tamanhos (alvo 2.1)",
+   "plataforma": "all",
+   "status": "em_revisao",
+   "release": "2.0.6",
+   "conserto": [
+    "agente/205-perfis21 (tip 7376c250, 1 commits fora)"
+   ],
+   "proximo_passo": "review OK j-revg-perfis21; 1 commit nao mergeado: mergear ou adiar p/ 2.1",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). rodando; alvo declarado = 2.1. Escrivão 14/10 14:47: review OK, merge pendente. | Escrivão 2026-10-14 16:11: review j-revg-perfis21 OK (11:16); merge pendente. | Escrivão 14/10 19:48: sem job"
+  },
+  {
+   "id": "dono-205-dicatoque",
+   "titulo": "Dicas de controle: tema/chips do rodape",
+   "plataforma": "all",
+   "status": "em_revisao",
+   "release": "2.0.6",
+   "conserto": [
+    "agente/205-dicatoque (tip 0ad55379, 1 commits fora)"
+   ],
+   "proximo_passo": "review OK r3 (j-revg-dicatoque2-r3); 1 commit nao mergeado: mergear",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). BLOQUEIA: agente/205-dicatoque2 nao integrado. Escrivão 14/10 14:47: sem job (perdido). | Escrivão 14/10 19:48: sem job"
+  },
+  {
+   "id": "dono-205-estatpainel",
+   "titulo": "Painel de estatisticas ao vivo (esquerda/direita)",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "d67a235f"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). review OK; branch NAO integrada (merge so de integracao dentro dela). Escrivão 14/10 14:47: integrada."
+  },
+  {
+   "id": "dono-205-ajustesperf",
+   "titulo": "Desempenho dos Ajustes (harness de caminhada + rasterizacao)",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "b65a4a9c"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). review sem veredito; branch NAO integrada. Escrivão 14/10 14:47: integrada."
+  },
+  {
+   "id": "dono-205-cineabre",
+   "titulo": "Abertura cinematica da fonte: barra com a cor da logo + soft start",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "146f73e1"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). branch NAO integrada; 1 assert pre-existente em corviva.sh. Escrivão 14/10 14:47: integrada."
+  },
+  {
+   "id": "dono-205-plxpgs",
+   "titulo": "PGS/blur do plx",
+   "plataforma": "all",
+   "status": "em_revisao",
+   "release": "2.0.6",
+   "conserto": [
+    "agente/205-plx-pgs (tip 13dcc6b0, 7 commits fora)",
+    "db9fca6f"
+   ],
+   "proximo_passo": "re-review: fixd 20:23 (sem review depois); ultimo BLOQUEIA j-revg-plx-pgs-r2 18:42",
+   "notas": "13 commits fora. tests/mkvass.sh rc 1 no timing de servidor lento, mesmo base db9fca6fa: nao causado por esta mudanca."
+  },
+  {
+   "id": "dono-205-tecladolg",
+   "titulo": "Opcao \"Teclado\" (do app/do sistema) tambem na webOS/Tizen",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "4b333231 (merge agente/205-tecladolg em integracao/2.0.5)"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix 2a0ef328 commitado; review j-revf-tecladolg (07:13) BLOQUEIA antes do fix. | Escrivão 16:49: review lançado; sem veredito ainda. Escrivao 19:0x: merge 4b333231 (18:45); j-revg-tecladolg-r2 OK 18:20."
+  },
+  {
+   "id": "dono-205-tizenbrew",
+   "titulo": "Pesquisa: distribuir pela TizenBrew (Samsung)",
+   "plataforma": "all",
+   "status": "adiado",
+   "release": "2.0.6",
+   "conserto": [
+    "agente/205-tizenbrew (tip 25693f33, 1 commits fora)"
+   ],
+   "proximo_passo": "adiado para depois do 2.0.5 (memoria homebrew/tizenbrew)",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). docs em docs/tizenbrew; sem job recente. Escrivão 14/10 14:47: adiado (pesquisa; sem merge)."
+  },
+  {
+   "id": "dono-205-homebrew",
+   "titulo": "Homebrew Channel webOS / mercado",
+   "plataforma": "all",
+   "status": "adiado",
+   "release": "2.0.6",
+   "conserto": [
+    "agente/205-homebrew (tip bcb1cdea, 1 commits fora)"
+   ],
+   "proximo_passo": "adiado para depois do 2.0.5 (memoria homebrew/tizenbrew)",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). branch com 1 commit, sem job recente. Escrivão 14/10 14:47: adiado (pesquisa; sem merge)."
+  },
+  {
+   "id": "dono-205-relacionados",
+   "titulo": "OK nos relacionados do player de filme nao fazia nada",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "6b650a74"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). sem review; branch NAO integrada. Escrivão 14/10 14:47: integrada."
+  },
+  {
+   "id": "dono-205-sinopse",
+   "titulo": "Salles? ver #477: sinopse menor + opcao de aumentar nos Ajustes",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "c504588a"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). review OK; branch NAO integrada (issue #477). Escrivão 14/10 14:47: integrada."
+  },
+  {
+   "id": "dono-205-triage",
+   "titulo": "Triagem de branches velhas + decisao do dono feat/* = 2.2",
+   "plataforma": "all",
+   "status": "aberta",
+   "release": "2.0.6",
+   "conserto": [
+    "agente/205-triagem-velhas (tip 3d791e8a, 1 commits fora)"
+   ],
+   "proximo_passo": "LOST: BLOQUEIA j-revg-triagem-velhas 19:05 sem fix depois; relancar fix doc",
+   "notas": "Branch agente/205-triagem-velhas 1 commit fora."
+  },
+  {
+   "id": "dono-205-vidroplx",
+   "titulo": "Glass/top bar portados do plx (tambem em dono-205-topotam)",
+   "plataforma": "all",
+   "status": "5 commits nao integrados",
+   "release": "2.0.6",
+   "conserto": [
+    "agente/205-topotam (356c63b8 2026-10-14 Document the PlxNative glass and tab strip port)"
+   ],
+   "proximo_passo": "j-205-vidroplx done (ainda nao mergeado; sem job de merge)",
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). mesmo branch de dono-205-topotam."
+  },
+  {
+   "id": "dono-205-205-teclado",
+   "titulo": "Merge integracao/2.0.5 into agente/205-205-teclado",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "49a90e54"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-abas",
+   "titulo": "Merge integracao/2.0.5 into agente/205-abas",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "3fc35494"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-abastream",
+   "titulo": "Fix streaming collection tab strip: catalog order alignment, sliding focus, smooth brand ba",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "7242b442",
+    "28da074c"
+   ],
+   "proximo_passo": "lancar com 2.0.5 (merge a7d0b2ee5)",
+   "notas": "5-6 commits fora. Nao mergeado.",
+   "url": null
+  },
+  {
+   "id": "dono-205-ajperf",
+   "titulo": "fix(gfx): require pixel-aligned opaque panel cores for clear",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "31323882"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-ajsecoes",
+   "titulo": "test(ajustes): retire the seven AJ_PROF_* depth options from the sections check",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "c28804c1"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-amigos",
+   "titulo": "feat(amigos): Friends tab shows friends first, live on top, capped suggestions",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "9eb8cc2f"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-andbugs",
+   "titulo": "Merge agente/205-cwinicio (fix cwinicio test signature)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "d6335ba9"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-animacoes",
+   "titulo": "aovivo: drive the OSD focus springs from the row draw + shot frame sequence",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "ac6d84aa",
+    "059af14f"
+   ],
+   "proximo_passo": "lancar com 2.0.5 (merge 7198e353e)",
+   "notas": "Review OK j-revg-animacoes-d 19:53 (apos fixc3 19:41). 15 commits fora. Merge job 20:04 nao mergeou.",
+   "url": null
+  },
+  {
+   "id": "dono-205-artevazia",
+   "titulo": "fix(tex): count bytes from the Android reserve path and back off 0-byte art responses",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "48162e4d"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-aspecto40",
+   "titulo": "tpk40: keep ROI and window geometry on the panel on Tizen 4 (#426)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "48c315d6"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-aspecto426",
+   "titulo": "test(video): cover paused aspect on webOS and native Tizen",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "0f15688c"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-audio345",
+   "titulo": "fix(android): preserve safe numeric fields in fatal diagnostics",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "c03201c0"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-b4addons",
+   "titulo": "addons: preserve credential case in dedupe key; cover all addons in subtitle workers",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "c14c1e01"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-b6simkl",
+   "titulo": "test(player): prove both live scrobble trailer guards independently",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "f1ee6afe"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-bench-mm",
+   "titulo": "Hide performance meter while a trailer plays",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "de5a9bc6",
+    "560b7752"
+   ],
+   "proximo_passo": "merged em integracao/2.0.5; testar no TCL",
+   "notas": "Escrivão 14/10 14:47: sem job (perdido). | j-revg-bench-mm: VEREDITO OK. Escrivão 16:49: 1 commit fora, não integrada. | Escrivão 14/10 19:48: agente/205-bench-mm merged (560b7752).",
+   "url": null
+  },
+  {
+   "id": "dono-205-botaoinicio",
+   "titulo": "detail: expanding \"Play from beginning\" pill reveals the label by fade, not clip (#205)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "667eb29f"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-c9poster",
+   "titulo": "Release the cache mutex when refusing an off-screen request",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "6cd1b3b9"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-ccmax",
+   "titulo": "Central: allow every available shortcut tile",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "93abe26b"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-cctitulo",
+   "titulo": "Island header: inset moves only the title; clock (and 'termina as') stay right",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "b38a6a5b"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-cctitulo2",
+   "titulo": "Make the Control Center title lighter: 20 Medium, polished grey #A8ADB5",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "9a51392c"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-cineaddon",
+   "titulo": "player (#205): Cinema opening shows the add-on name only when toggled, drops the status tex",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "9846de59"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-cineblur",
+   "titulo": "gfx: reduce the blurred backdrop in two passes before blurring",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "f284eaeb"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-col414",
+   "titulo": "fix(collections): keep Menu catalog selector open on failure",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "168be34d"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-colestilos",
+   "titulo": "Merge integracao/2.0.5 into agente/205-colestilos",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "300a4798 (merge em integracao/2.0.5)"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: impl/merge feito, sem review. | Escrivão 2026-10-14 16:11: mergeada 300a4798; review j-revg-colestilos OK.",
+   "url": null
+  },
+  {
+   "id": "dono-205-colfps",
+   "titulo": "Merge agente/205-dicascontrole",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "0e567d1a"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-colordem",
+   "titulo": "ctxmenu: keep pending row style past the Order row; pointer click on Order cycles it",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "6d8058da"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-colstreaming",
+   "titulo": "Merge integracao/2.0.5 into agente/205-colstreaming",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "f34bfe41"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-coverflow",
+   "titulo": "Polish collection Cover Flow: Home focus ring, flat depth stack, info below timeline",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "5bc7fc20"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-coverflow2",
+   "titulo": "home: keep palco curtain band through fade-out (#205)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "02f53b6e (merge agente/205-coverflow2 em integracao/2.0.5)"
+   ],
+   "proximo_passo": "sem ação; lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Escrivão 2026-10-14 16:11: fix3 commitado 3d9cf03d; review anterior BLOQUEIA (j-revg-coverflow2-r2). | Merge 02f53b6e em integracao/2.0.5 (escrivao 14/10 16:49).",
+   "url": null
+  },
+  {
+   "id": "dono-205-coverflow3",
+   "titulo": "Merge agente/205-ajustesperf",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "b65a4a9c"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-cwinicio",
+   "titulo": "test(cwinicio): pass tocou=-1 seed record for local CW baseline (#205)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "d6335ba9"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-cwperfil",
+   "titulo": "continue watching: \"Trakt only\" without Trakt link falls back to all sources",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "61c2b385"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-debridprem",
+   "titulo": "Check debrid account premium status before playback",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "fe49d40a"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-descansocrash",
+   "titulo": "Fix webOS loop shutdown and keep screensaver acknowledgements current",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "e38b41a0"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-destaquegenero",
+   "titulo": "Merge integracao/2.0.5 into agente/205-destaquegenero",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "68e56581"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-detnotas",
+   "titulo": "Comments picker reopens on the confirmed episode's season after browsing others",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "de8fcc91"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-dicascontrole",
+   "titulo": "Merge integracao/2.0.5 into agente/205-dicascontrole",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "0e567d1a"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-dicatoque-large",
+   "titulo": "Merge agente/205-i18nordem",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "7839b119"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-dicatoque2",
+   "titulo": "Settings: the register-only footer replay must not paint",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "96c87dc7 (merge agente/205-dicatoque2 em integracao/2.0.5)"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 2026-10-14 16:11: fix2-r commitado 44b4295a; review j-revg-dicatoque2 BLOQUEIA antes. | j-revg-dicatoque2-r3 OK 15:56 (fix2-r 44b4295a). Escrivão 16:49: branch ainda não integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-diretores",
+   "titulo": "fix(directors): correct watched state, identity merging and portrait tint",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "599f80aa"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-dvabre",
+   "titulo": "Guard queued surface recreation and restore HDR aspect refresh",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "2f87e063"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-dvcinema",
+   "titulo": "Fix hidden OK on the Cinema Dolby Vision screen",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "59ed8523"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-dvp5",
+   "titulo": "Merge agente/205-legsyncprox",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "e0add27f"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-epcard",
+   "titulo": "Merge integracao/2.0.5 into agente/205-epcard",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "364f28d2"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-episodiotexto",
+   "titulo": "feat(detail): modern episode cards put title and synopsis below the thumbnail",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "ba3b911b"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-epslista",
+   "titulo": "Merge agente/205-notas0",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "a3b07d6d (merge agente/205-epslista em integracao/2.0.5)"
+   ],
+   "proximo_passo": "sem ação; lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: impl em agente/205-epslista; review j-revg-epslista-r3 OK; branch ainda NAO integrada. | Merge a3b07d6d em integracao/2.0.5 (escrivao 14/10 16:49).",
+   "url": null
+  },
+  {
+   "id": "dono-205-epsrapido",
+   "titulo": "Merge integracao/2.0.5 into agente/205-epsrapido",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "6fb82684"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-estatpainel2",
+   "titulo": "fix(player): polish statistics margins, keycaps and meta line",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "60c6db739 (merge agente/205-estatpainel2 em integracao/2.0.5)"
+   ],
+   "proximo_passo": "lancar com 2.0.5 (merge 60c6db739)",
+   "notas": "Review OK j-revg-estatpainel2-c 19:20. Merge concluido (60c6db739); branch sem commits fora.",
+   "url": null
+  },
+  {
+   "id": "dono-205-estatvivo",
+   "titulo": "fix(player): keep live statistics open and add animated overlay sizes",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "73d12afd"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-farah",
+   "titulo": "fix(detail): request the known media type for TMDB titles",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "4fb1e0a8"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-filnav",
+   "titulo": "fix(i18n): translate row navigation hints in all 28 languages",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "1d452999"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-fimhighcache",
+   "titulo": "Merge integracao/2.0.5 and preserve memory migration and RAM limits",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "8d6fefc8"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-formatter479",
+   "titulo": "fix: tint cached text RGB at draw time to restore unfocused contrast",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "b3c38e71"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-guia-celular",
+   "titulo": "docs(guia): add phone-setup guide and Discord post",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "45fe4599"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-herocat",
+   "titulo": "test(settings): screenshot test for hero catalog picker, sync language tables",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "daed07ec"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-heroinfo",
+   "titulo": "Merge agente/205-cardexp",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "3b66b044 (merge em integracao/2.0.5)"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: impl em agente/205-heroinfo; review j-revg-heroinfo-r3 OK; branch ainda NAO integrada. | j-revg-heroinfo-r3 OK 15:56. Escrivão 16:49: branch ainda não integrada. Escrivao 19:0x: merge em integracao/2.0.5.",
+   "url": null
+  },
+  {
+   "id": "dono-205-homeqr",
+   "titulo": "Merge integracao/2.0.5 into agente/205-homeqr",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "4f022aa3"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-i18n491",
+   "titulo": "Merge integracao/2.0.5 into agente/205-i18n491: keep translated i18n entries",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "ce5b60d1"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-i18nfix",
+   "titulo": "Add missing i18n keys for drawn subtitle/source labels",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "43570696"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-i18nordem",
+   "titulo": "Merge integracao/2.0.5 into agente/205-i18nordem",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "7839b119"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-i470",
+   "titulo": "fix: start next episode countdown when the card appears",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "d1087e75"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-i471",
+   "titulo": "fix(tpk): confine card trailer holes to the poster (#471)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "38369f89"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-iconeauto",
+   "titulo": "feat: re-apply app icon at start when bundled art fingerprint changed",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "888ef95e"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-issues-novas",
+   "titulo": "mapa: triagem das 17 issues novas e rascunhos de resposta da 2.0.5",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "4bd7e9c8"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-issues-triagem",
+   "titulo": "issues: post-2.0.5 triage (419 items, 2.0.6 target, evidence-based status)",
+   "plataforma": "?",
+   "status": "aberta",
+   "release": "2.0.5",
+   "conserto": [
+    "45be541a"
+   ],
+   "proximo_passo": "PERDIDO: BLOQUEIA j-revg-triagem-velhas, sem fix; relancar fix ou fechar",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-leg484",
+   "titulo": "test(subtitles): make external-subtitle guards fast and portable",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "027fd3c7"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-legmemtpk",
+   "titulo": "fix: preserve unknown subtitle type in remembered selections",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "eb29eddc"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-legpre",
+   "titulo": "fix: keep remembered subtitle when the first stream arrives",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "9de916a9"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-legsyncprox",
+   "titulo": "Test next-episode legsync: ep2 sync starts fresh in both orderings",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "e0add27f"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-livetv",
+   "titulo": "fix(epg): stop loading indicators after schedules finish (#316)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "7f3177ef"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-login418",
+   "titulo": "Classify account login failures and retry transient requests",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "deb68c4b"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-menuglass",
+   "titulo": "Merge branch 'integracao/2.0.5' into agente/205-menuglass",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "2e4d2434"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-menutopo",
+   "titulo": "Merge integracao/2.0.5 into agente/205-menutopo",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "f3de11e7"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-mercado",
+   "titulo": "docs: PLANO-MERCADO plan",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "84c19b1d"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-mock21",
+   "titulo": "design(2.1): friends row mockup with 5 modern styles (#205)",
+   "plataforma": "?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [
+    "agente/205-mock21 (tip 9de13e4e, 1 commit fora)"
+   ],
+   "proximo_passo": "mergear (mockup docs apenas) (ainda nao mergeado; sem job de merge)",
+   "notas": "Escrivão 2026-10-14 16:11: 3 mockups anteriores (gamification/cinephile/redesign) ja em integracao/2.0.5; friends row 9de13e4e ainda fora.",
+   "url": null
+  },
+  {
+   "id": "dono-205-net382",
+   "titulo": "fix(network): preserve offline detection across retries and allow DNS retransmission",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "6e29915c"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-notas0",
+   "titulo": "ratings: log why sources come back empty; compact card for 1 source; cast OK without person",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "0a8267de"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-notas1",
+   "titulo": "Merge agente/205-notas0",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "1602f90c (merge agente/205-notas1 em integracao/2.0.5)"
+   ],
+   "proximo_passo": "sem ação; lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: impl em agente/205-notas1; review j-revg-notas1-r3 OK; branch ainda NAO integrada. | Merge 1602f90c em integracao/2.0.5 (escrivao 14/10 16:49).",
+   "url": null
+  },
+  {
+   "id": "dono-205-notwebready",
+   "titulo": "fix(tests): debrid parser expects externalUrl-only stream to be dropped",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "a468d007"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-novidades",
+   "titulo": "novidades 2.0.5: card compacto com 12 itens por grupo e plataforma, Discord na ultima pagin",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "64e27f02"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-p2pusb",
+   "titulo": "fix(p2p): USB cache — persist scanned root, race/litter/orphan fixes (#205)",
+   "plataforma": "?",
+   "status": "em_revisao",
+   "release": "2.1",
+   "conserto": [
+    "fe5e0e92"
+   ],
+   "proximo_passo": "BLOQUEIA j-revg-p2pusb-y 22:30; fix j-205-p2pusb-fixy RODANDO; depois review (alvo 2.1)",
+   "notas": "Pedido de usuario (cache USB P2P, #505). Alvo 2.1 (nao assumir merge em 2.0.6). Fix2 feito, nao esta lost.",
+   "url": null
+  },
+  {
+   "id": "dono-205-p323",
+   "titulo": "Merge agente/205-legsyncprox",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "e0add27f"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-painel",
+   "titulo": "painel: English public build, single future group, clean platform names",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "f8b39d5b"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-painel-ui",
+   "titulo": "painel: component polish (toolbar, table, badges, dialogs, mobile cards)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "c480642e"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-palco",
+   "titulo": "test(home): capture the stage row with the focus walking right",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "dfdbe238"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-paraleloloop",
+   "titulo": "android: fix paralelo unit tests after zero-delay open retry",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "agente/205-paraleloloop (tip 1788e8fa, 6 commits fora)",
+    "07455c12"
+   ],
+   "proximo_passo": "lancar com 2.0.5 (merge c95f9b1cb)",
+   "notas": "9 commits fora. Nao mergeado.",
+   "url": null
+  },
+  {
+   "id": "dono-205-pluginsresto",
+   "titulo": "tests: plugin runner and Plugins screen / sources sheet captures",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "76467f10"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-plx",
+   "titulo": "docs(pesquisa): research report on plx-native player and UI fluidity",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "7ca41222"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-plx-arte",
+   "titulo": "Smooth poster preparation with idle lookahead and solo uploads",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "d4b7ac38"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-plx-fps",
+   "titulo": "fix(fpscena): require Home to own the D-pad before measuring",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "adc3fe41"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-plx-hls",
+   "titulo": "fix: preserve stalled decoder recovery when live buffer grows",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "d2b29c87"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-plx-input",
+   "titulo": "Home: apply press-dip after palcoGeo so Palco posters dip too",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "733ae868"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-plx-legenda",
+   "titulo": "fix: keep lateral pacing when adoption races a slow pre-busca header",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "ed57cd73"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-plx-recusa",
+   "titulo": "Split the request refusal into edge and fully-off-screen levels",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "b31194ef"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-posterfluido",
+   "titulo": "smooth posters while scrolling: never refuse cards entering the screen, prefetch next row/c",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "352befd1 (merge em integracao/2.0.5)"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: impl/merge feito, sem review. | Escrivão 2026-10-14 16:11: mergeada 352befd1; review j-revg-posterfluido-f OK.",
+   "url": null
+  },
+  {
+   "id": "dono-205-pr489",
+   "titulo": "Merge integracao/2.0.5 into agente/205-pr489",
+   "plataforma": "?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [
+    "22a34af1"
+   ],
+   "proximo_passo": "BLOQUEIA j-revpr489 22:28; sem fix finalizado; fix na fila",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-pr490",
+   "titulo": "Merge branch 'integracao/2.0.5' into agente/205-pr490",
+   "plataforma": "?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [
+    "75059d26"
+   ],
+   "proximo_passo": "BLOQUEIA j-revpr490 22:30; fix j-pr490-fix RODANDO; depois review",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-pr491resto",
+   "titulo": "ci: port PR #491 Tizen 6+ package builds and audit all commits",
+   "plataforma": "?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [
+    "6dd374db"
+   ],
+   "proximo_passo": "branch pr491-limpo: job j-pr491-limpo done 22:34, sem veredito; revisar",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-rankdecadas",
+   "titulo": "Streaming: ranking and decades info side without duplicate poster",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "c782a787"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-respostas",
+   "titulo": "docs(issues): draft replies for open issues in release 2.0.5",
+   "plataforma": "?",
+   "status": "aberta",
+   "release": "2.0.5",
+   "conserto": [
+    "e81c1f40"
+   ],
+   "proximo_passo": "decidir",
+   "notas": "Escrivão 14/10 14:47: sem job (perdido).",
+   "url": null
+  },
+  {
+   "id": "dono-205-retido",
+   "titulo": "test(player): wait for catalog refresh before opening fixture",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "b256ae60"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-rust-mkvcore",
+   "titulo": "docs(plans): mkvcore pilot report (size, tests, risks)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "ff866add"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-rustbp",
+   "titulo": "Record successful Mac Rust and ARM product build checks",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "1e87d5bd"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-rustliga",
+   "titulo": "docs: rust-mapa records mkvcore flag ON in product builds (2026-10-14)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "2b721b01"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-rustmapa",
+   "titulo": "docs: map where Rust pays off in Nuvio (2.0.6)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "8ff33132"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-s18medidor",
+   "titulo": "Bring the performance meter back when a native trailer pauses",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "f6369df4"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-s5loading",
+   "titulo": "test: capture startup stages and compare the baseline renderer",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "053607be"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-sanitizers",
+   "titulo": "fix: restore test runner repository working directory",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "723c05b6"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-segurarcc",
+   "titulo": "Animate Control Center hold progress in both clock islands",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "a24968b2"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-selovisto",
+   "titulo": "feat(badges): watched badge option with Icon and Written modes",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "ea891ca9"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-shufflepos",
+   "titulo": "Series detail: move shuffle button to the start of the season row",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "9eba8c16 (merge agente/205-shufflepos em integracao/2.0.5)"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: impl/merge feito, sem review. | Escrivão 16:49: impl feita; review sem veredito ainda.",
+   "url": null
+  },
+  {
+   "id": "dono-205-sidebarfonte",
+   "titulo": "Merge branch 'integracao/2.0.5' into agente/205-sidebarfonte",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "5c8266ad (merge agente/205-sidebarfonte em integracao/2.0.5)"
+   ],
+   "proximo_passo": "sem ação; lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Escrivão 14/10 14:47: impl/merge feito, sem review. | Merge 5c8266ad em integracao/2.0.5 (escrivao 14/10 16:49).",
+   "url": null
+  },
+  {
+   "id": "dono-205-simkl-scrobble",
+   "titulo": "fix(simkl): keep history fallback on original profile",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "fe1366e5"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-sinopse477",
+   "titulo": "feat: subtitle outline colour setting (#475)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "6a260e9b"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-skip",
+   "titulo": "docs: PLANO-SKIP plan",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "d1243a46"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-skip1",
+   "titulo": "fix(intro): preserve partial retries and selected credit limits",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "58c1ef33"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-teclasch",
+   "titulo": "test(ponteiro): click the lowest addon row, not the Sync addons row below it",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "737ffff1"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-testbase",
+   "titulo": "test(ctxlista): assert the post-morph menu-beside-card geometry",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "517a5d1d"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-testbase2",
+   "titulo": "test(home): link DTS sources in loading panel capture",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "05c350c4"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-testbase3",
+   "titulo": "test(sources): align final selection with per-quality cache ordering",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "3d7b4dee"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-testbase4",
+   "titulo": "test(cw): restore addon list lock stubs in removal fixture",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "bddd5ca5"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-testestmp",
+   "titulo": "Merge branch 'integracao/2.0.5' into agente/205-testestmp",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "e53eb342"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-texteto",
+   "titulo": "fix(settings): absorb clicks on unavailable texture limits",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "bdbe9043"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-tokvencido",
+   "titulo": "Fix activity consent and identity races during token renewal",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "e2c1299a"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-tpk412b",
+   "titulo": "Keep TPK recovery seek targets until host confirmation",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "224063f2"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-tpkfim",
+   "titulo": "fix(player): bound EOF metadata wait and respect rewinds",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "d8cc7fa2"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-tpkui",
+   "titulo": "fix(spotlight): rank all search targets before the 64-candidate cap (#405)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "219d3bf4"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-traktcw",
+   "titulo": "Sync all Trakt show progress independently of Continue Watching source",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "cb8b976c"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-uidinamica",
+   "titulo": "feat: size layered UI dynamically for physical TV panels",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "6c6c0296"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-vidro410",
+   "titulo": "vidro (#410): Contorno do vidro reaches card focus in Home, Library and Friends",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "2dfefe46"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-ws1",
+   "titulo": "fix(watchstate): freeze manifest identity and persist expired queue cleanup",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "90e43bd1"
+   ],
+   "proximo_passo": "lancar com 2.0.5",
+   "notas": "Escrivão 14/10 14:47: integrada.",
+   "url": null
+  },
+  {
+   "id": "dono-205-retomamorna",
+   "titulo": "Retomada morna (warm resume)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "c624b273 (merge agente/205-retomamorna em integracao/2.0.5)"
+   ],
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
+   "notas": "Issue #492. Review j-revg-retomamorna OK 17:06."
+  },
+  {
+   "id": "dono-205-androidsdl",
+   "titulo": "fix(android): SDLActivity.nativeLowMemory (urgente)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "22924c90e",
+    "5544c3e4c (merge agente/205-androidsdl)"
+   ],
+   "proximo_passo": "instalado no Android (build 5544c3e4c, rc 0, Success)",
+   "notas": "Job androidsdl done 20:02."
+  },
+  {
+   "id": "dono-205-vidropadrao",
+   "titulo": "Vidro padrao: auditoria de superficies glass (PLX glass port)",
+   "plataforma": "?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [],
+   "proximo_passo": "review OK j-revg-vidropadrao-z 22:37 (antes do sync); sync 3dfa5d9 no branch sem re-review: revisar sync e mergear",
+   "notas": "Branch agente/205-vidropadrao 10 commits fora, 2 atras. Job sonnet high."
+  },
+  {
+   "id": "dono-205-m3umisto",
+   "titulo": "M3U misto: canal/catalogo pelo tipo declarado (bug)",
+   "plataforma": "?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [],
+   "proximo_passo": "review: job j-205-m3umisto done 20:25 (nv-bug high), sem review",
+   "notas": "Pendente: sem validacao no aparelho. Testes guia_catalogo_tv.sh e addonslista.sh rc 0."
+  },
+  {
+   "id": "dono-205-chdelay",
+   "titulo": "Chdelay (delay de canal/troca de canal)",
+   "plataforma": "?",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [],
+   "proximo_passo": "lancar com 2.0.5 (merge 8e203bc61)",
+   "notas": "Branch agente/205-chdelay ja integrada (merged)."
+  },
+  {
+   "id": "dono-205-glassmock",
+   "titulo": "Glass mockup: estudo de design (somente mockups)",
+   "plataforma": "?",
+   "status": "em_job",
+   "release": "2.1",
+   "conserto": [],
+   "proximo_passo": "aguardar job j-205-glassmock (RUNNING 20:41); sem merge de codigo",
+   "notas": "Branch agente/205-glassmock ja integrada. Estudo/mockups, nao lancar."
+  },
+  {
+   "id": "dono-205-barra27",
+   "titulo": "Barra 27 (branch agente/205-barra27)",
+   "plataforma": "Android/TCL?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [
+    "agente/205-barra27: 2 commits fora"
+   ],
+   "proximo_passo": "BLOQUEIA j-revg-barra27-y; fix j-205-barra27-fixy RODANDO",
+   "notas": "criado pelo escrivao 22:4x"
+  },
+  {
+   "id": "dono-205-colhdr",
+   "titulo": "Cabecalho colunas (agente/205-colhdr)",
+   "plataforma": "?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [
+    "agente/205-colhdr: 1 commit fora"
+   ],
+   "proximo_passo": "job j-205-colhdr done 21:18 sem review: revisar",
+   "notas": "criado pelo escrivao 22:4x"
+  },
+  {
+   "id": "dono-205-vidaa",
+   "titulo": "VIDAA (agente/205-vidaa)",
+   "plataforma": "VIDAA",
+   "status": "em_job",
+   "release": "2.0.5",
+   "conserto": [
+    "agente/205-vidaa: 14 commits fora"
+   ],
+   "proximo_passo": "job j-205-vidaa RODANDO 22:36; depois review",
+   "notas": "criado pelo escrivao 22:4x"
+  },
+  {
+   "id": "dono-205-pr493",
+   "titulo": "PR #493 (ghbarker, ligado a #488)",
+   "plataforma": "Android/TCL?",
+   "status": "em_revisao",
+   "release": "2.0.5",
+   "conserto": [
+    "agente/205-pr493: 12 commits fora"
+   ],
+   "proximo_passo": "PERDIDO: BLOQUEIA j-revpr493 22:26 e j-revg-pr493; sem fix; fix+re-review ou fechar",
+   "notas": "criado pelo escrivao 22:4x"
   }
  ],
  "fechar_203": [],

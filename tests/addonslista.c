@@ -10,6 +10,7 @@
 //
 // So o leitor: nada aqui vai a rede.
 #include <stdio.h>
+#include "nvtmp.h"
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -41,6 +42,10 @@ static int nDebridNovaBusca;
 // guarda o tipo de cada pedido, na ordem, para conferir quem foi primeiro.
 static const char *respCanalTv, *respCanalChannel;
 static char pedidosCanal[200];
+// live.test: o addon de IPTV caseiro do relato — manifesto MISTO (movie +
+// series + catalogo "live") e /stream/ so responde por "live".
+static const char *respCanalLive;
+static char pedidosLive[64];
 // lento.test (#182): as primeiras `falhasLento` requisicoes NAO respondem (o
 // timeout do AIOStreams frio); as seguintes respondem com uma fonte.
 static int pedidosDesligado, pedidosLigado;
@@ -75,6 +80,12 @@ char *rede_baixar(const char *url, int s) {
     if (++chamadasLento <= falhasLento) return NULL;
     return strdup("{\"streams\":[{\"url\":\"https://x/l.mp4\"}]}");
   }
+  if (strstr(url, "live.test")) {
+    int live = strstr(url, "/stream/live/") != NULL;
+    strncat(pedidosLive, live ? "live," : strstr(url, "/stream/tv/") ? "tv," : "channel,",
+            sizeof pedidosLive - strlen(pedidosLive) - 1);
+    return live && respCanalLive ? strdup(respCanalLive) : NULL;
+  }
   if (strstr(url, "canal.test")) {
     prazoCanal = s;
     int tv = strstr(url, "/stream/tv/") != NULL;
@@ -102,6 +113,7 @@ int servidores_fontes_colher(const char *alvo, Stream **l, int *n) {
   (void)alvo; if (l) *l = NULL; if (n) *n = 0; return JF_FONTES_FALHOU; }
 uint64_t badges_detectar(const char *m) { (void)m; return 0; }
 void stream_definir_lista(const Stream *l, int n) { (void)l; (void)n; }
+void stream_preparar_dica_p2p(const Stream *l, int n) { (void)l; (void)n; }
 void stream_definir_lista_idade(const Stream *l, int n, Uint32 idade) {
   (void)idade; stream_definir_lista(l, n); }
 void stream_lista_acrescentar(const Stream *l, int n, int o) { (void)l; (void)n; (void)o; }
@@ -173,7 +185,7 @@ static void conferirTexto(const char *o_que, const char *obtido, const char *esp
 static int sempreCancelado(void *u) { (void)u; return 1; }
 
 int main(void) {
-  char dir[] = "/tmp/nuvio-addonslista-XXXXXX";
+  char dir[NVT_MAX]; nvt_set(dir, sizeof dir, "/nuvio-addonslista-XXXXXX");
   char caminho[600];
   FILE *f;
   int n;
@@ -283,6 +295,37 @@ int main(void) {
     while (addons_estado() == ADD_BUSCANDO) usleep(1000);
     if (!addons_motivo_vazio(m, sizeof m)) snprintf(m, sizeof m, "(sem causa)");
     conferirTexto("channel mudo, tv vazio", m, "Canal TV não tem fonte para este canal agora"); }
+
+  // ---- manifesto MISTO (o do relato: movie+series+canal num addon so, estilo
+  // M3U Mux/custom IPTV). O catalogo declara "live" e o /stream/ so responde
+  // por esse nome — "tv"/"channel" voltam 404. Antes o app pedia so tv e
+  // channel e o canal nunca abria.
+  conferir("addon misto entrou", addons_adicionar("IPTV Caseiro", "https://live.test/manifest.json"), 1);
+  addons_manifesto_lido(addons_n() - 1,
+    "{\"id\":\"org.livecaseiro\",\"name\":\"IPTV Caseiro\","
+    "\"resources\":[\"stream\",\"meta\",\"catalog\"],\"types\":[\"movie\",\"series\",\"live\"],"
+    "\"catalogs\":[{\"id\":\"m3u-movies\",\"type\":\"movie\",\"name\":\"Filmes\"},"
+    "{\"id\":\"m3u-series\",\"type\":\"series\",\"name\":\"Series\"},"
+    "{\"id\":\"m3u-live\",\"type\":\"live\",\"name\":\"Canais\"}]}");
+  respCanalLive = "{\"streams\":[{\"url\":\"https://x/c1.m3u8\"}]}";
+  pedidosLive[0] = 0;
+  // O pedido chega pelo tipo declarado (guia_canal_tipo, app.c tocarCanal):
+  // "live" primeiro e sozinho.
+  addons_definir_origem("https://live.test");
+  addons_buscar("m3u-live-1", "live");
+  addons_definir_origem(NULL);
+  while (addons_estado() == ADD_BUSCANDO) usleep(1000);
+  conferir("canal live declarado traz a fonte", addons_estado(), ADD_PRONTO);
+  conferirTexto("ordem com tipo live", pedidosLive, "live,");
+  // E pedido por nome generico ("tv", como uma renovacao) ainda acha: o
+  // declarado vira a segunda tentativa.
+  pedidosLive[0] = 0;
+  addons_definir_origem("https://live.test");
+  addons_buscar("m3u-live-1", "tv");
+  addons_definir_origem(NULL);
+  while (addons_estado() == ADD_BUSCANDO) usleep(1000);
+  conferir("tv sem fonte -> declarado live traz", addons_estado(), ADD_PRONTO);
+  conferirTexto("ordem tv->live", pedidosLive, "tv,live,");
 
   // ---- #182: addon lento aparece sozinho, sem recarregar a mao
   conferir("addon lento entrou", addons_adicionar("Lento", "https://lento.test/manifest.json"), 1);

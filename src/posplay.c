@@ -520,11 +520,17 @@ int posplay_evento(const SDL_Event *e) {
       int alvo = id[0] ? cat_indice_por_imdb(id) : -1;
       if (alvo >= 0) { pedTitulo = alvo; esconder(); }
       // NAO ESTA NO CATALOGO LOCAL, que e o caso NORMAL: o relacionado vem do
-      // Trakt e o catalogo tem os titulos das fileiras da home. Antes o OK
-      // simplesmente nao fazia nada — o "nao da pra clicar" do relatorio.
-      // desc_pedir_titulo e o mesmo caminho que a pagina de titulo ja usa
-      // (detail.c:938) para abrir um relacionado que ainda nao temos.
-      else if (id[0]) { desc_pedir_titulo(id); esconder(); }
+      // Trakt/TMDB. Mesmo caminho do detalhe (detail.c, desc_pedir_titulo_semente):
+      // "tmdb:<n>" (recomendacao do TMDB, sem imdb) abre pelo id do TMDB —
+      // desc_pedir_titulo cortava no ':' e buscava o id "tmdb", o OK morria mudo.
+      else if (!strncmp(id, "tmdb:", 5))
+        { desc_pedir_titulo_semente("", atol(id + 5), "movie", extras_relacionado_titulo(foco),
+                                    extras_relacionado_ano(foco), extras_relacionado_poster(foco));
+          esconder(); }
+      else if (id[0])
+        { desc_pedir_titulo_semente(id, 0, "movie", extras_relacionado_titulo(foco),
+                                    extras_relacionado_ano(foco), extras_relacionado_poster(foco));
+          esconder(); }
       return 1;
     } }
   return 0;
@@ -661,7 +667,7 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
     if (dur[0]) { size_t k = strlen(num); snprintf(num + k, sizeof num - k, " \xc2\xb7 %s", dur); }
     { TxtLinha l = txt_linha(TXT_MINI, num, 243, 242, 239, 255);
       GfxRect chip = { tr.x + 14.0f, tr.y + tr.h - 14.0f - 32.0f, (float)l.w + 24.0f, 32.0f };
-      if (ajustes_vidro()) gfx_cor(chip, 0.5f, 0.055f, 0.059f, 0.071f, 0.80f * a);
+      if (ajustes_vidro()) gfx_cor(chip, 0.5f, 0.055f, 0.059f, 0.071f, 0.80f * a); // vidro-ok: 32px chip over a still; budget
       else gfx_cor(chip, 0.5f, 0.082f, 0.086f, 0.102f, a);
       txt_desenhar_alpha(l, chip.x + 12.0f, chip.y + (32.0f - (float)l.h) * 0.5f, a); }
     { float tx = tr.x + tr.w + 30.0f, tw = ilha.x + ilha.w - 28.0f - tx, ty = ilha.y + 28.0f;

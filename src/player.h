@@ -109,6 +109,9 @@ int  player_carregando(void);
 int  player_controles_visiveis(void);
 // Idem, para #121: foco na barra de tempo e a posicao que ela mostra.
 int   player_foco_na_barra(void);
+// 1 quando o CIMA e do player (controles na tela, "Pular abertura", cartao de
+// abertura, painel de pausa): as estatisticas fixadas cedem a tecla.
+int   player_cima_dele(void);
 // #128: 1 na busca que comecou com os controles escondidos, quando so a barra
 // e o tempo estao na tela.
 int   player_so_barra(void);
@@ -177,6 +180,7 @@ int  player_retido_so_voo(void);
 int  player_retomar_retido(const char *imdb, int temporada, int episodio);
 void player_validar_retido(Uint32 agora);
 void player_descartar_retido(void);
+void player_ciclo_evento(Uint32 tipo);
 
 // --- MINI-PLAYER (PiP) DE CANAL ---------------------------------------------
 // Sair de um canal para a home nao mata a transmissao: o destino do plano de

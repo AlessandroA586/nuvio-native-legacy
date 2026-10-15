@@ -11,8 +11,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include "nvtmp.h"
 
-static char dir[] = "/tmp/nuvio-teclado-ime-XXXXXX", caminho[700];
+static char dir[NVT_MAX], caminho[700];
 static void modo(int v) {
   FILE *f = fopen(caminho, "w"); assert(f);
   fprintf(f, "tecladoAndroidLocal %d\n", v); fclose(f);
@@ -31,7 +32,7 @@ static void abrir(int tipo) {
 
 int main(void) {
   assert(SDL_Init(SDL_INIT_EVENTS | SDL_INIT_TIMER) == 0);
-  assert(mkdtemp(dir));
+  nvt_set(dir, sizeof dir, "/nuvio-teclado-ime-XXXXXX"); assert(mkdtemp(dir));
   assert(setenv("NUVIO_DADOS", dir, 1) == 0);
   dados_iniciar(dir);
   snprintf(caminho, sizeof caminho, "%s/ajustes.txt", dir);

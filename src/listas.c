@@ -782,7 +782,7 @@ int lst_itens_n(void) {
   pthread_mutex_lock(&itTrava);
   v = itSimkl ? nItens : -1;
   pthread_mutex_unlock(&itTrava);
-  return v >= 0 ? v : desc_vertudo_n();
+  return v >= 0 ? v : desc_vertudo_n_bruto();
 }
 
 int lst_item(int i, CatItem *dst) {
@@ -792,7 +792,7 @@ int lst_item(int i, CatItem *dst) {
   if (simkl && dst && i >= 0 && i < nItens) { *dst = itens[i]; ok = 1; }
   pthread_mutex_unlock(&itTrava);
   if (simkl) return ok;
-  return desc_vertudo_item(i, dst);
+  return desc_vertudo_item_bruto(i, dst);
 }
 
 int lst_itens_carregando(void) {

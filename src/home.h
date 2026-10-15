@@ -24,7 +24,13 @@ typedef enum {
   FILEIRA_LINHA_TEMPO, // cartazes por ano sobre a linha animada dos anos
   FILEIRA_FICHA,       // cartaz com a ficha do titulo ao lado
   FILEIRA_PALCO,       // o foco grande no centro, vizinhos diminuindo
-  FILEIRA_REDONDA      // avatar circular com o nome embaixo (pessoas)
+  FILEIRA_REDONDA,     // avatar circular com o nome embaixo (pessoas)
+  // "Herói" (#205): UM cartão do tamanho da fileira, com fundo, selo,
+  // título e duas linhas — o banner entre fileiras do Apple TV.
+  FILEIRA_HEROI,
+  // 14/10: o pôster 3:4 grande da Apple TV, com logo, gênero, classificação
+  // e sinopse na base, sobre o véu da COR PREDOMINANTE do cartaz.
+  FILEIRA_POSTER_GRANDE
 } TipoFileira;
 
 // O item sob o foco, com o retangulo que ele ocupa na tela NESTE quadro. A
@@ -68,11 +74,17 @@ void home_shot_trailer(int sim);
 // "[home-trailer] autoplay gate=top-overlay (...)" line; call before the step.
 void home_trailer_topo_motivo(const char *motivo);
 void home_desenhar(Uint32 agora);
+// Fileiras ainda visiveis atras da copia parada do painel (salvospainel.c).
+void home_fileiras_vistas(Uint32 agora);
 
 // Onde a ARTE do hero foi desenhada no ultimo quadro. A tela de detalhe usa
 // isto para nascer com o backdrop no mesmo lugar — o fundo do detalhe E a arte
 // do titulo em foco, e ela nao deve reaparecer, deve continuar.
 void home_hero_rect(float *x, float *y, float *w, float *h);
+// A LINHA DE META do destaque do topo: episodio em andamento, genero, ano e
+// duracao — cada um no seu ajuste, sem buraco (o que some fecha o espaco).
+// Separada do desenho para o teste da combinacao dos ajustes (tests/herometa.c).
+void hero_meta_linha(const CatItem *ci, char *dst, size_t n);
 // 1 com a pagina no topo (layout Dinamica), caindo a 0 ao rolar; 1 nos outros.
 float home_topo_fracao(void);
 // Layout Dinamica: as pastas (indices de col_folder) da fileira de colecao
@@ -82,6 +94,7 @@ int home_streaming_barra(const int **pastas);
 // A home continua se montando mas NAO esta na tela (escolha de perfil): o
 // destaque nao gira nem pre-busca enquanto estiver escondida.
 void home_oculta(int oculta);
+void home_painel_aberto(int aberto);   // painel de Salvos/Social na frente: o carrossel nao gira
 void home_encerrar(void);
 // Registra o titulo interrompido para a faixa contextual "Retomar agora".
 // A faixa so existe enquanto o progresso fizer sentido (nem inicio nem fim).
@@ -101,6 +114,7 @@ void home_pedir_abrir(void);   // pede a pagina do titulo focado (menu do cartao
 int  home_foco_retomada(void); // card focado e de retomada (OK nele toca)
 int  home_pediu_tocar(void);   // OK num card de retomada com "OK no card" = Retomar
 int  home_pediu_menu(void);    // ESQUERDA na primeira coluna: chama o menu
+int  home_pediu_ilha(void);   // CIMA no alto da home: foco na ilha (#495), como o CH+
 int home_pediu_social(void);
 int home_pediu_pessoa_social(CatItem *saida);
 // OK numa fileira de canal ("Ver tudo" dela, ou num cartao de canal — que ai
@@ -120,7 +134,9 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
 void home_vitrine_medida(float *w, float *h, float *passo, float *rotH);
 int  home_vitrine_arte_pronta(const CatItem *ci);
 int  home_vitrine_arte(const CatItem *ci, float alfa);
-void home_vitrine_texto(const CatItem *ci, float alfa);
+int  home_vitrine_layout(void);
+float home_vitrine_topo(float filH);
+void home_vitrine_texto(const CatItem *ci, float topo, float alfa);
 void home_vitrine_cartao(const CatItem *ci, GfxRect base, GfxRect card, float alfa);
 #endif
 const char *home_rastro_foco(void);

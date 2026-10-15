@@ -9,12 +9,13 @@
 //      do principal);
 //   4. o logout apaga as copias.
 #include "../src/ajustes.c"
+#include "nvtmp.h"
 #include <assert.h>
 #include <string.h>
 #include <unistd.h>
 
 int main(void) {
-  char dir[] = "/tmp/nuvio-aj-perfil-XXXXXX";
+  char dir[NVT_MAX]; nvt_set(dir, sizeof dir, "/nuvio-aj-perfil-XXXXXX");
   assert(mkdtemp(dir));
   setenv("NUVIO_DADOS", dir, 1);
   dados_iniciar(dir);

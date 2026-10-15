@@ -264,6 +264,12 @@ typedef struct {
   // mundo que recebe a base de um canal (lembrete, fontecache, spotlight,
   // diagnostico da Live TV) herda este teto, e por isso continua em 600.
   char base[600];
+  // TIPO DECLARADO do catalogo de onde o canal saiu ("tv", "channel",
+  // "channels", "live", "iptv"). E o nome de tipo que vai no pedido de
+  // stream: um manifesto MISTO (filme+serie+canal, como o do M3U Mux e de
+  // qualquer addon de IPTV caseiro) declara cada catalogo com o tipo dele e o
+  // /stream/<tipo>/ so responde pelo declarado. Vazio = nao se sabe.
+  char tipo[16];
   int  cat;      // indice em cats[]
   int  epg;      // -1 = ainda nao resolvido; -2 = sem grade real
   char epgId[64];  // id do canal no XMLTV do provedor (Xtream), quando ha
@@ -709,6 +715,10 @@ static int lerPagina(const GFonte *f, int skip, int teto, int *novos) {
       // nao entra — protege o guia de catalogo mal declarado.
       if (js_texto(p, fim, "type", mtipo, sizeof mtipo) &&
           mtipo[0] && !ehCanal(mtipo)) { p = js_prox(fim); continue; }
+      // O tipo DO ITEM quando ele declara um de canal ("tv" dentro de um
+      // catalogo "channel", por exemplo); sem declaracao vale o do catalogo.
+      // E este nome que vai ao /stream/, e nao um adivinhado pelo app.
+      snprintf(c.tipo, sizeof c.tipo, "%s", mtipo[0] ? mtipo : f->tipo);
       if (!js_texto(p, fim, "poster", c.logo, sizeof c.logo))
         js_texto(p, fim, "logo", c.logo, sizeof c.logo);
       js_texto(p, fim, "description", c.desc, sizeof c.desc);
@@ -1489,11 +1499,12 @@ int guia_canais_para_teste(GuiaVariante *out, char bases[][600], int max, char *
 static int pedLivetvDiag;
 int guia_pediu_livetv_diag(void) { int v = pedLivetvDiag; pedLivetvDiag = 0; return v; }
 
-static char pedidoBase[600];
+static char pedidoBase[600], pedidoTipo[16];
 static void previewPedir(GCanal *c) {
   if (!c || !c->id[0]) return;
   canalParaItem(c, &pedPreviewItem);
   snprintf(pedidoBase, sizeof pedidoBase, "%s", c->base);
+  snprintf(pedidoTipo, sizeof pedidoTipo, "%s", c->tipo);
   snprintf(previewId, sizeof previewId, "%s", c->id);
   pedPreview = 1;
 }
@@ -1533,7 +1544,7 @@ static void desenharDica(void) {
                  (gRetrato() ? gTopoFim : G_TOPO_Y + G_TOPO_H) + 16.0f,
                  (float)t.w + 40.0f, 44.0f };
   if (gRetrato() && p.x < G_AREA_X) p.x = G_AREA_X;
-  gfx_cor(p, 0.5f, 0.13f, 0.14f, 0.18f, 0.97f * da);
+  gfx_vidro_ou_solido(p, 0.5f, GFX_VIDRO_DENS, da, 0.13f, 0.14f, 0.18f, 0.97f);
   gfx_anel_fora(p, 0.5f, 0.0f, 2.0f, ar, ag, ab, 0.85f * da);
   txt_desenhar_alpha(t, p.x + 20.0f, p.y + (p.h - (float)t.h) * 0.5f, da);
 }
@@ -1645,7 +1656,12 @@ int guia_pediu_canal(CatItem *saida) {
 static void canalParaItem(const GCanal *c, CatItem *dst) {
   memset(dst, 0, sizeof *dst);
   snprintf(dst->imdb,    sizeof dst->imdb,    "%s", c->id);
-  snprintf(dst->tipo,    sizeof dst->tipo,    "%s", "channel");
+  // O CatItem tipo so conhece dois nomes de canal (ver player.c, home.c e os
+  // "channel"/"tv" espalhados pelo app): o declarado fica quando e um dos
+  // dois, e os demais ("live", "channels", "iptv") viram "channel". O nome
+  // cru para a consulta de stream esta em GCanal.tipo / guia_canal_tipo().
+  snprintf(dst->tipo,    sizeof dst->tipo,    "%s",
+           !strcasecmp(c->tipo, "tv") ? "tv" : "channel");
   snprintf(dst->titulo,  sizeof dst->titulo,  "%s", c->nome);
   snprintf(dst->poster,  sizeof dst->poster,  "%s", c->logo);
   snprintf(dst->backdrop,sizeof dst->backdrop,"%s", c->logo);
@@ -1658,6 +1674,10 @@ static void canalParaItem(const GCanal *c, CatItem *dst) {
 // fora do CatItem de proposito: ele e gravado em disco (catalogo-rede.bin) e
 // um campo novo invalidaria o cache de todo mundo por um dado de sessao.
 const char *guia_canal_origem(void) { return pedidoBase; }
+// O tipo DECLARADO do catalogo do mesmo canal, para o /stream/<tipo>/ ir
+// pelo nome que o addon usa. "channel" sem declaracao: e o que este caminho
+// sempre pediu antes de conhecer o tipo.
+const char *guia_canal_tipo(void) { return pedidoTipo[0] ? pedidoTipo : "channel"; }
 
 static time_t janelaIni(time_t agoraT);
 static time_t instanteFoco(time_t agoraT);
@@ -1709,13 +1729,15 @@ static void acaoOk(void) {
 // quando a lista ja esta carregada; senao so a identidade guardada.
 int guia_item_do_canal(const char *id, const char *nome, const char *base, CatItem *it) {
   GCanal *c = canalPorId(id);
-  if (c) { canalParaItem(c, it); snprintf(pedidoBase, sizeof pedidoBase, "%s", c->base); return 1; }
+  if (c) { canalParaItem(c, it); snprintf(pedidoBase, sizeof pedidoBase, "%s", c->base);
+           snprintf(pedidoTipo, sizeof pedidoTipo, "%s", c->tipo); return 1; }
   if (!id || !id[0]) return 0;
   memset(it, 0, sizeof *it);
   snprintf(it->imdb, sizeof it->imdb, "%s", id);
   snprintf(it->tipo, sizeof it->tipo, "%s", "channel");
   snprintf(it->titulo, sizeof it->titulo, "%s", nome ? nome : "");
   snprintf(pedidoBase, sizeof pedidoBase, "%s", base ? base : "");
+  pedidoTipo[0] = 0;   // so a identidade: tipo desconhecido, vale o padrao
   return 1;
 }
 
@@ -1733,6 +1755,7 @@ static void pedirCanal(GCanal *c) {
   pedPreview = 0; previewId[0] = 0; previewPreso = 0;
   canalParaItem(c, &pedido);
   snprintf(pedidoBase, sizeof pedidoBase, "%s", c->base);
+  snprintf(pedidoTipo, sizeof pedidoTipo, "%s", c->tipo);
   pediuCanal = 1;
   // No overlay o OK TROCA o canal e volta ao video: ficar aberto por cima da
   // troca deixaria a pessoa assistindo atras de uma grade que ela ja usou.
@@ -1753,7 +1776,10 @@ static int zapAlvo(const char *idAtual, int dir, CatItem *saida, int aplicar) {
   alvo = aovivo_ordem(nCanais, alvo, dir);
   canalParaItem(&canais[alvo], saida);
   // A origem so muda quando o zap VAI tocar; o banner do zapping so espia.
-  if (aplicar) snprintf(pedidoBase, sizeof pedidoBase, "%s", canais[alvo].base);
+  if (aplicar) {
+    snprintf(pedidoBase, sizeof pedidoBase, "%s", canais[alvo].base);
+    snprintf(pedidoTipo, sizeof pedidoTipo, "%s", canais[alvo].tipo);
+  }
   return 1;
 }
 int guia_zap(const char *idAtual, int dir, CatItem *saida) {
@@ -2159,8 +2185,8 @@ void guia_evento(const SDL_Event *e) {
 
   // CH+/- do controle da LG (scancodes 480/481 do SDL_webOS.h): dentro do
   // guia eles pulam CATEGORIA, nao canal — e a mesma leitura do "segurar"
-  // sem exigir o gesto. No Tizen o CH+ chega como "s" (tizen-shell.html), e o
-  // CH- nao chega — a casca nao o registra.
+  // sem exigir o gesto. No .wgt o CH+ chega como "s" (tizen-shell.html),
+  // azul de mentira, e o CH- como CH_DOWN cru.
   if (e->key.keysym.scancode == NV_SCANCODE_CH_UP ||
       e->key.keysym.scancode == NV_SCANCODE_CH_DOWN ||
       (!overlay && k == SDLK_s)) {

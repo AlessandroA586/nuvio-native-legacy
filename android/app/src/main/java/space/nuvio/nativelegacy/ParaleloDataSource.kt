@@ -171,9 +171,12 @@ class ParaleloDataSource(
         c.disconnect()
     }
 
-    private fun esperarTentativa(indice: Int) {
+    private fun esperarTentativa(indice: Int, atrasoMs: Long = -1L) {
         conferirCancelamento()
-        try { dormir(ESPERA_TENTATIVA_MS[indice.coerceAtMost(ESPERA_TENTATIVA_MS.lastIndex)]) }
+        val ms = if (atrasoMs >= 0) atrasoMs
+                   else ESPERA_TENTATIVA_MS[indice.coerceAtMost(ESPERA_TENTATIVA_MS.lastIndex)]
+        if (ms <= 0) return
+        try { dormir(ms) }
         catch (e: InterruptedException) { Thread.currentThread().interrupt(); throw cancelado(e) }
         conferirCancelamento()
     }
@@ -224,7 +227,7 @@ class ParaleloDataSource(
     // ConnectException escapava daqui e encerrava a fonte, embora os pedacos
     // posteriores aparentassem ter TENTATIVAS. Mantem o retry no Loader (nao no
     // fio do player) e curto o bastante para nao esconder uma rota morta.
-    internal fun conectarComRetry(u: URL, ini: Long, ultimo: Long): HttpURLConnection {
+    internal fun conectarComRetry(u: URL, ini: Long, ultimo: Long, atrasoPrimeiraMs: Long = -1L): HttpURLConnection {
         var erro: IOException? = null
         repeat(TENTATIVAS) { tentativa ->
             try { return conectar(u, ini, ultimo) }
@@ -235,7 +238,7 @@ class ParaleloDataSource(
                 if (foiCancelado(e)) throw cancelado(e)
                 if (tentativa + 1 < TENTATIVAS) {
                     Log.w(TAG, "conexao ${tentativa + 1}/$TENTATIVAS falhou em ${u.host}; tentando de novo")
-                    esperarTentativa(tentativa)
+                    esperarTentativa(tentativa, if (tentativa == 0) atrasoPrimeiraMs else -1L)
                 }
             }
         }
@@ -259,21 +262,48 @@ class ParaleloDataSource(
         transferInitializing(dataSpec)
         Log.i(TAG, "abrindo ${dataSpec.uri.host} a partir de ${dataSpec.position}")
         pos = dataSpec.position
+        val pedido = dataSpec.length
+        if (pedido == 0L) {
+            // Janela vazia (DataSpec de 0 byte): abre vazio, sem pedir um Range
+            // invalido (ultimo < primeiro) e sem gastar conexao.
+            aberto = true
+            transferStarted(dataSpec)
+            return 0L
+        }
+        // A sonda cabe no que foi pedido, mas nunca passa de PRIMEIRO: um
+        // buraco do cache maior que a janela (seek para tras sobre regiao
+        // sem cache) entraria inteiro num ByteArray so, na thread de quem
+        // chamou, antes do pool existir.
+        val primeiroUltimo = pos + (if (pedido != C.LENGTH_UNSET.toLong()) minOf(pedido, PRIMEIRO.toLong()) else PRIMEIRO.toLong()) - 1
         // Primeiro pedaco pela URL original: segue os redirecionamentos do debrid
         // uma vez so; os pedacos seguintes vao direto ao endereco final.
-        val c = conectarComRetry(URL(dataSpec.uri.toString()), pos, pos + PRIMEIRO - 1)
+        val c = conectarComRetry(URL(dataSpec.uri.toString()), pos, primeiroUltimo, 0L)
         val code = c.responseCode
         if (code == 206) {
             val cr = c.getHeaderField("Content-Range") ?: ""
             total = cr.substringAfter('/', "").trim().toLongOrNull() ?: C.LENGTH_UNSET.toLong()
         }
-        if (code != 206 || total <= 0 || total - pos <= pedaco.toLong() * 2) {
+        // Janela que ESTA abertura pode servir: o tamanho que o ExoPlayer
+        // pediu ou, na abertura progressiva comum (length UNSET), o resto do
+        // arquivo — nunca o pedaco de sonda, senao nenhuma abertura comum
+        // caberia no paralelo e tudo viraria conexao unica.
+        val janela = when {
+            pedido != C.LENGTH_UNSET.toLong() -> pedido
+            total > 0 -> total - pos
+            else -> C.LENGTH_UNSET.toLong()
+        }
+        val paralelo = code == 206 && total > 0 && janela > pedaco.toLong() * 2
+        if (!paralelo) {
             Log.i(TAG, "conexao unica: HTTP $code, total=$total, pos=$pos (${dataSpec.uri.host})")
             // Sem Range (ou pequeno demais para valer a pena): conexao unica.
             if (code == 206 || code == 200) {
-                // 206 de um pedaco so: reabre sem teto para o arquivo inteiro.
-                if (code == 206) { desconectar(c); unicaCon = conectarComRetry(URL(dataSpec.uri.toString()), pos, -1) }
-                else unicaCon = c
+                // 206 so da sonda: reabre ate o fim da janela pedida (sem teto
+                // se ela e o arquivo inteiro). Janela que cabe na sonda segue.
+                if (code == 206 && (pedido == C.LENGTH_UNSET.toLong() || pedido > PRIMEIRO)) {
+                    desconectar(c)
+                    unicaCon = conectarComRetry(URL(dataSpec.uri.toString()), pos,
+                        if (pedido == C.LENGTH_UNSET.toLong()) -1 else pos + pedido - 1)
+                } else unicaCon = c
                 val uc = unicaCon!!
                 if (uc.responseCode !in 200..299) {
                     val erro = HttpDataSource.InvalidResponseCodeException(
@@ -298,7 +328,7 @@ class ParaleloDataSource(
             throw HttpDataSource.InvalidResponseCodeException(code, msg, null, hdr, dataSpec, ByteArray(0))
         }
         urlFinal = c.url
-        fim = if (dataSpec.length != C.LENGTH_UNSET.toLong()) minOf(total, pos + dataSpec.length) else total
+        fim = if (pedido != C.LENGTH_UNSET.toLong()) minOf(total, pos + pedido) else total
         val primeiro = try { lerTudo(c) } finally { desconectar(c) }
         bufIni = pos
         buf = primeiro

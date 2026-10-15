@@ -149,8 +149,8 @@ static int vozOk(void) {
 }
 static int celOk(void) { return (forcaCel >= 0 ? forcaCel : celb_disponivel()) && !semCel; }
 // Ajuste "Teclado" (Android): 0 automatico, 1 so a grade do app, 2 o teclado do
-// sistema direto. Fora do Android st_abre_sozinho() e 0 e nada muda.
-static int modoTeclado(void) { return st_abre_sozinho() ? ajustes_teclado_android() : 0; }
+// sistema direto. Onde o ajuste nao existe (Mac) st_teclado_modo() e 0.
+static int modoTeclado(void) { return st_teclado_modo(); }
 static int teTelefoneIme(void) { return telefoneui_ativo() && imeOk() && modoTeclado() != 1; }
 #ifdef NV_TOUCH_UI
 enum { TE_P_CAMPO=0, TE_P_FALAR, TE_P_CEL, TE_P_APAGAR, TE_P_LIMPAR,
@@ -263,7 +263,7 @@ static char  tituloAtual[96], dicaAtual[160];
 static int   celRecebido;
 // SENHA (#216): o campo mostra pontos, nunca o texto. A modal fica na tela e
 // a tela vira foto.
-static int   mascarar, tipoIme, ehSenha;
+static int   mascarar, tipoIme, ehSenha, aceitaUtf8, abriuComValor;
 // O que foi digitado aparece em CAIXAS (codigo curto) ou num campo de texto.
 // So o campo de texto e alvo de foco: as caixas nao tem estado de foco
 // desenhado, e um foco que nao se ve e um foco perdido.
@@ -513,6 +513,26 @@ int teclado_teste_camada(int cam, int cx) {
 }
 #endif
 
+void teclado_aceitar_utf8(int liga) { aceitaUtf8 = liga != 0; }
+
+// Tamanho da sequencia UTF-8 VALIDA que comeca em s (2 a 4), ou 0.
+static int utf8Tam(const unsigned char *s) {
+  int l = s[0] >= 0xF0 && s[0] < 0xF5 ? 4 : s[0] >= 0xE0 ? 3 : s[0] >= 0xC2 && s[0] < 0xE0 ? 2 : 0, i;
+  if (s[0] >= 0xF5) l = 0;
+  for (i = 1; i < l; i++) if ((s[i] & 0xC0) != 0x80) return 0;
+  return l;
+}
+// Maior prefixo de s[0..n) que nao termina no meio de um caractere UTF-8.
+static int utf8Inteiro(const char *s, int n) {
+  int k = n;
+  while (k > 0 && ((unsigned char)s[k - 1] & 0xC0) == 0x80 && n - k < 3) k--;
+  if (k > 0 && (unsigned char)s[k - 1] >= 0xC0) {
+    int l = utf8Tam((const unsigned char *)s + k - 1);
+    if (!l || k - 1 + l > n) return k - 1;   // sequencia cortada: fica de fora
+  }
+  return n;
+}
+
 void teclado_abrir(const char *titulo, const char *dica, int max) {
   teclado_abrir_com(titulo, dica, max, NULL, NULL);
 }
@@ -529,7 +549,7 @@ void teclado_abrir_com(const char *titulo, const char *dica, int max,
 #endif
   alfabetoAtual = (alfabeto && *alfabeto) ? alfabeto : NULL;
   celb_fechar_dono(CELB_TECLADO);   // reabrir por cima nao herda o QR da anterior
-  mascarar = 0; tipoIme = ST_IME_TEXTO; ehSenha = 0; semCel = 0; pendIme = 0;
+  mascarar = 0; tipoIme = ST_IME_TEXTO; ehSenha = 0; semCel = 0; pendIme = 0; aceitaUtf8 = 0;
   teMontar(0);
   aberto = 1;
   fileira = 0; coluna = 0; colunaAntes = 0;
@@ -539,10 +559,14 @@ void teclado_abrir_com(const char *titulo, const char *dica, int max,
   maxN = max > 0 && max <= TECLADO_LONGO ? max : TECLADO_MAX;
   // TEXTO INICIAL: editar um portal ja cadastrado nao pode obrigar a redigitar
   // o endereco inteiro. Cortado em maxN, nunca truncado no meio de nada porque
-  // o alfabeto e de um byte por caractere.
+  // o alfabeto e de um byte por caractere — e o texto inicial em UTF-8 (a regex
+  // guardada) e cortado antes do caractere que nao cabe, nunca no meio dele.
   snprintf(texto, sizeof texto, "%s", inicial ? inicial : "");
   texto[maxN] = 0;
   n = (int)strlen(texto);
+  n = utf8Inteiro(texto, n);
+  texto[n] = 0;
+  abriuComValor = n > 0;
   snprintf(tituloAtual, sizeof tituloAtual, "%s", titulo ? titulo : "");
   snprintf(dicaAtual,   sizeof dicaAtual,   "%s", dica   ? dica   : "");
   snprintf(kickerAtual, sizeof kickerAtual, "%s", SDL_GetTicks() - kickerQuando < 1000u ? kickerPend : "");
@@ -567,13 +591,20 @@ void teclado_abrir_com(const char *titulo, const char *dica, int max,
 
 // O texto do sistema passa pelo ALFABETO da modal: o codigo de pareamento e
 // a-z0-9, o MAC e 0-9a-f — caixa alta vira baixa quando so a baixa existe, e
-// o que nao existe nele (acento, emoji) fica de fora.
+// o que nao existe nele (acento, emoji) fica de fora. Com teclado_aceitar_utf8
+// o caractere fora do ASCII entra INTEIRO (sequencia UTF-8 valida) se couber.
 static void definirDoSistema(const char *t) {
   const char *a = alfa();
   int w = 0;
   for (; *t && w < maxN; t++) {
     unsigned char c = (unsigned char)*t;
-    if (c >= 0x80 || !c) continue;
+    if (c >= 0x80) {
+      int l = aceitaUtf8 ? utf8Tam((const unsigned char *)t) : 0;
+      if (l && w + l > maxN) break;          // nao cabe inteiro: para aqui
+      if (l) { memcpy(texto + w, t, (size_t)l); w += l; t += l - 1; }
+      continue;
+    }
+    if (!c) continue;
     if (strchr(a, c)) texto[w++] = (char)c;
     else if (isupper(c) && strchr(a, tolower(c))) texto[w++] = (char)tolower(c);
     else if (islower(c) && strchr(a, toupper(c))) texto[w++] = (char)toupper(c);
@@ -733,13 +764,19 @@ static void aplicar(void) {
     if (n + (int)strlen(a) <= maxN) { memcpy(texto + n, a, strlen(a) + 1); n += (int)strlen(a); }
     return;
   }
-  if (coluna == 0) { if (n > 0) texto[--n] = 0; return; }
+  // Apagar tira UM caractere, nao um byte (o texto pode ter UTF-8).
+  if (coluna == 0) {
+    if (n > 0) { do n--; while (n > 0 && ((unsigned char)texto[n] & 0xC0) == 0x80); texto[n] = 0; }
+    return;
+  }
   if (coluna == 1) { n = 0; texto[0] = 0; return; }
   if (ehSenha && coluna == 2) { mascarar = !mascarar; return; }
   // "pronto" com o campo vazio nao e uma confirmacao de nada: quem chega ali
   // sem digitar quis olhar o teclado, e fechar a modal com resultado PRONTO
-  // mandaria a tela de amigos tentar vincular uma string vazia.
-  if (n < 1) return;
+  // mandaria a tela de amigos tentar vincular uma string vazia. A excecao e o
+  // campo que ABRIU COM UM VALOR (regex, chaves, enderecos: "Vazio apaga"):
+  // ali esvaziar e dar pronto e o jeito de apagar, e antes nao fazia nada.
+  if (n < 1 && !abriuComValor) return;
   fechar(TECLADO_PRONTO);
 }
 
@@ -1237,7 +1274,7 @@ static void tePhoneDesenhar(Uint32 agora) {
   if (tePhoneNativo()) return;
   TePhoneLayout l = tePhoneMedir();
   if (ajustes_vidro()) {
-    gfx_cor(l.painel, 28 / l.painel.h, .055f, .059f, .071f, .86f * a);
+    gfx_vidro_material(l.painel, 28 / l.painel.h, GFX_VIDRO_DENS_MODAL, a);
     gfx_luz_canto(l.painel, 28 / l.painel.h, l.painel.w * .22f, -l.painel.h * .4f,
                   l.painel.h * .62f, 1, 1, 1, .1f * a);
   } else gfx_cor(l.painel, 28 / l.painel.h, .082f, .086f, .102f, a);
@@ -1320,7 +1357,7 @@ static void teDesenhar(Uint32 agora) {
     float raio = 36.0f / p.h;
     gfx_rect((GfxRect){ p.x - 20, p.y - 6, p.w + 40, p.h + 46 }, 0, GFX_SOMBRA, 1.0f, 0, 0, 0.5f, 0, 0, 0, 0.40f * a);
     if (ajustes_vidro()) {
-      gfx_cor(p, raio, 0.055f, 0.059f, 0.071f, 0.86f * a);
+      gfx_vidro_material(p, raio, GFX_VIDRO_DENS_MODAL, a);
       gfx_luz_canto(p, raio, p.w * 0.22f, -p.h * 0.40f, p.h * 0.62f, 1, 1, 1, 0.10f * a);
     } else gfx_cor(p, raio, 0.082f, 0.086f, 0.102f, a); }
 
