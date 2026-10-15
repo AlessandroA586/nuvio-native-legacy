@@ -18,9 +18,9 @@ o que já está dentro do integ.
 |---|---|---|---|
 | agente/202-biblioteca | 7 | PORTAR L (2.1) | Biblioteca por proveniência, "Listas" por fonte, fila Trakt paginada. Integ tem a ordem antiga Trakt/Simkl/Nuvio/Fixadas/Públicas (`src/biblioteca.c:289`). Arquivos novos ausentes: `biblioteca_hub.inc`, `biblioteca_lista.inc`, `biblioteca_vis.inc`, `listas_rede.c`. |
 | agente/203-318-play | 2 | JA_DENTRO (relator) + PORTAR S (#323) | Relator de queda Android <12 já está: `src/android.c:146` (`drenarNaQueda`), `src/android.c:171`, `src/queda.c:327`. A parte do `streams.c` é a mesma do 203-323. |
-| agente/203-323 | 1 | PORTAR S (2.0.6) | `src/streams.c:1824` ainda tem `c.rodada = fa_rodada_atual()` com `c` na pilha, passado a `fonteparalela` e aos fios que sobram. Fix: alocar `Conferencia` no heap (SIGSEGV em `verificarOuParar`, #323). |
+| agente/203-323 | 1 | NÃO PORTAR | `src/streams.c:1824` ainda tem `c.rodada = fa_rodada_atual()` com `c` na pilha no caminho de play único. Mas o caminho paralelo já não usa `c`: aloca `ConfDona` no heap com refcount (`src/streams.c:1866-1873`), `fonteparalela_soltando` + `soltarConf`. O `malloc` do branch não tem `free` correspondente na saída do erro. Como conserto do 2.0.6 regrediria o caminho com refcount: portar só a título de estudo. |
 | agente/203-perfilsel | 1 | JA_DENTRO | Variante D2 ("continuar sob cada avatar") em `src/perfilsel.c:61` e `:585`; strings `T%d · E%d` e `Nada a continuar` nos `idioma_*.h`. |
-| agente/2031-dvp5-hdr10 | 2 | PORTAR S (2.0.6) | `src/streams.c:856-860`: perfil 5 em MP4 na LG vira nível 4 sem checar HDR10 da mesma faixa. Falta a regra `hdrNaoMp4` e o teste "LG: MP4 DV perfil 5 x MKV HDR10" em `tests/fonte_lg_mp4.c`. |
+| agente/2031-dvp5-hdr10 | 2 | JA_DENTRO (ao contrário) | Perfil 5 em MP4 na LG já vale nível 4 com HDR10 da faixa, de propósito: `src/streams.c:862` (`nivel = 4` quando `ajustes_dolby_vision() && telaDv && stream_e_mp4(s)`); `classeMp4` (`src/streams.c:1014`) já o põe acima do HDR10; `mp4PrimeiroNaFaixa` (`src/streams.c:1024`) não tem exceção HDR10. Ambas as peças existem, na direção inversa. `tests/fonte_lg_mp4.c:121` espera "MP4 DV Profile 5 2160p" para "LG, com MP4 primeiro: MP4 DV perfil 5 x MKV HDR10". Portar reintroduziria regra que o integ apagou e quebraria esse teste. |
 | agente/204-arabe370 | 1 | DOC | Mexe em `docs/issues/MAPA.md` e `mapa.json` (#370, sincronismo). O rascunho `docs/issues/rascunhos/resposta-370.md` não existe no integ. |
 | agente/204-pr381 | 2 | JA_DENTRO | Scratch merge de pr-381. `src/creditosauto.h`, `ajustes_auto_creditos` e `tests/creditosauto.c` já estão no integ. O commit extra só mexe em registro de ícone e asserção. |
 | agente/204-samsung-dts | 1 | DOC | `docs/plans/samsung-dts.md` não existe no integ. Parte do conteúdo está em `docs/features/dts/README.md:75-79` e `docs/funcoes/streams.md:152` (#313). |
@@ -31,15 +31,15 @@ o que já está dentro do integ.
 | agente/guiaunicode | 1 | JA_DENTRO | Genre decodifica `\uXXXX` via `js_cadeia`: `src/guia.c:659-665`. |
 | agente/icones | 5 | JA_DENTRO | Activity-alias por ícone em `android/app/src/main/AndroidManifest.xml:66-75`; `ajustes_icone_app` em `src/ajustes.c`. |
 | agente/p2p | 6 | JA_DENTRO | Os 7 arquivos novos existem: `src/p2p.c`, `src/p2pmotor.c`, `tests/p2p*`. `NUVIO_P2P_MOTOR` em `arm.sh` (12 ocorrências no integ). |
-| agente/plugins | 14 | JA_DENTRO (código) + PORTAR S pendente | 23 de 28 arquivos novos existem (`src/plugins.c`, `src/pluginjs.c`, `src/pluginsui.c`). Faltam `plugin_rodar.c` e as capturas `plugins_folha_shot`/`pluginsui_shot`. O limite "origem extra 6 s" (`1a3dafcd`) não foi confirmado: `src/pluginjs.c:333` tem outro teto. |
+| agente/plugins | 14 | JA_DENTRO | Os 28 arquivos novos existem: `src/plugins.c`, `src/pluginjs.c`, `src/pluginsui.c`, `tests/plugin_rodar.c`, `tests/plugins_folha_shot.c`, `tests/pluginsui_shot.c`. O teto "origem extra 6 s" (`1a3dafcd`) está removido: `src/addons.c:2518` só dá `pthread_join` na origem extra, sem corte de 6 s. |
 | agente/pr259-merge | 4 | OBSOLETO | Fallback DTS do PR 259 foi substituído pelo pipeline `src/dts/` (`dts_engine.c`, `dts_playback.c`). `NV_APP_ID` já está em `src/app_id.h`. |
 | agente/rastreio | 6 | PORTAR M (2.1) | Ferramenta de processo (`tools/rastreio/`: grafo, guarda, falhas conhecidas). Não existe no integ; `tools/auditoria-release.sh` não tem o gancho. Não toca o app. |
 | agente/refatoracao-plano | 1 | DOC | `docs/plans/refatoracao-geral.md` não existe no integ. |
 | especial/amigo-tpk60 | 2 | OBSOLETO | Especial para uma pessoa (`NV_ESPECIAL_AMIGO`, `fil_especial_amigo`). Não existe no integ e não está em release. |
-| experimento/dv-webos | 4 | OBSOLETO | Flags `/tmp/nuvio-dv-*` não existem no integ. O caminho de áudio/DTS foi substituído por `src/dts/dts_engine.c`. |
+| experimento/dv-webos | 4 | NÃO OBSOLETO (vivo) | As flags `/tmp/nuvio-dv.conf` e `/tmp/nuvio-dv-forcar` continuam no integ (`src/video.c:2543`, `:2770`). Os 4 commits únicos mechem em `src/dts/dts_engine.c` e `src/dts/dts_playback.c` (171 inserções, 27 remoções) — trabalho de DV ainda em cima do pipeline `src/dts/`, não substituído por ele. Mantém o experimento; descartar como obsoleto perde trabalho vivo. |
 | experimento/universo-2026 | 36 | OBSOLETO (experimento) | 0 de 32 arquivos novos existem. `docs/ROADMAP.md:108` diz "sem versão antes de separar"; revisão por patch fica para depois. |
 | feat/ajustes-perfil | 5 | 2.2 (guardada) | Dentro: 0 de 8 arquivos novos (`perfilinfantil.c`, `admin.c`, `ajustes_escopo.c` ausentes). Só anota: nada dentro. |
-| feat/colecoes-fileiras | 5 | 2.2 (guardada) | Dentro: os 5 arquivos novos já existem no integ (`colfileiras.c`, `collections_data.c`). Layouts/vitrine não verificados linha a linha. |
+| feat/colecoes-fileiras | 5 | 2.2 (guardada) | Dentro: 1 dos 5 arquivos novos (`src/colfileiras.c`; `collections_data.c` só existe em `tests/`). Os 3 commits de conteúdo seguem únicos e fora do integ: `c397f16d` (layouts), `0032f548` (i18n), `bbf286b7` (Vitrine). Nada a anotar como dentro além do `colfileiras.c`. |
 | feat/guia-tv | 12 | 2.2 (guardada) | Dentro: nada (0 de 6 novos; `ltv.c`, `xmltv.c` ausentes). |
 | feat/servidores-locais | 11 | 2.2 (guardada) | Dentro: nada (0 de 6; `srvidx.c`, `servidoresaddons.c` ausentes). |
 | feat/sp-conquistas | 6 | 2.2 (guardada) | Dentro: só o servidor (`servidor/recomendacoes/src/conquista.js`, `migracao-013-conquista.sql`, `trilhas-dados.js`, `tools/trilhas-wikidata.py`). Cliente `caca*.c`/`conquista.c` ausente. |
@@ -64,6 +64,8 @@ o que já está dentro do integ.
 
 ## Pendências
 
-- Verificar linha a linha: pr-491 (DTS Tizen 6+), webos3 (arte), plugins (`1a3dafcd`), feat/colecoes-fileiras.
+- Verificar linha a linha: pr-491 (DTS Tizen 6+), webos3 (arte).
+- `agente/2031-dvp5-hdr10` e `agente/203-323` ficam fora do 2.0.6: o integ já resolve os dois de outro jeito.
+- `experimento/dv-webos` não está morto (flags `/tmp/nuvio-dv-*` vivas em `src/video.c`, 4 commits com código em `src/dts/`).
 - Commits WIP "rescue uncommitted agent work (not reviewed)" (fix/player-retido-flaky, fix/frost-ambiente-lg) precisam de revisão antes de qualquer porte.
 - Nada foi portado nem apagado. feat/* seguem para 2.2.
