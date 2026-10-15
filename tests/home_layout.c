@@ -78,19 +78,31 @@ int main(void) {
     int cols[] = {12, 12};
     fileiras[0] = (Fileira){.tipo = FILEIRA_NORMAL, .n = 12, .escala = 1.0f};
     fileiras[1] = (Fileira){.tipo = FILEIRA_PALCO, .n = 12, .escala = 1.0f};
-    fileiras[0].escala = larguraFil(1) / larguraFil(0);
-    float lw = larguraFil(1), anterior = 0.0f;
+    float lw = larguraFil(1), anterior = 0.0f, altura = alturaTotalFil(1), passo = passoFil(1);
     focus_iniciar(&foco, 2, cols);
     for (int c = 0; c < 12; c++) {
       if (c) assert(focus_mover(&foco, 1, 0));
       palcoPos[1] = (float)foco.coluna; // animacao em repouso
-      scrollX[0] = alvoScrollFil(0, c, scrollX[0], 0.0f);
       scrollX[1] = alvoScrollFil(1, c, scrollX[1], 0.0f);
       float cx, s, vizX, vizS;
       palcoGeo(1, c, lw, &cx, &s);
-      assert(fabsf(cx - (homeFileiraX(0, c) + lw * 0.5f)) < 0.01f);
+      assert(fabsf(cx - (homeFileiraX(1, c) + lw * 0.5f)) < 0.01f);
       assert(s == 1.0f);
-      assert(fabsf(scrollX[1] - scrollX[0]) < 0.01f);
+      // A altura reservada nao muda com o foco: as outras fileiras nao andam.
+      assert(alturaTotalFil(1) == altura);
+      // As vagas ficam paradas: so o foco e os dois vizinhos se movem quando
+      // o foco anda uma coluna; o resto da fileira nao se mexe (dono, 14/10).
+      if (c) {
+        float antes[12];
+        palcoPos[1] = (float)(c - 1);
+        for (int k = 0; k < 12; k++) { float sk; palcoGeo(1, k, lw, &antes[k], &sk); }
+        palcoPos[1] = (float)c;
+        for (int k = 0; k < 12; k++) {
+          float xk, sk;
+          palcoGeo(1, k, lw, &xk, &sk);
+          if (k < c - 1 || k > c) assert(fabsf(xk - antes[k]) < 0.01f);
+        }
+      }
       if (c == 1) assert(cx > anterior && scrollX[1] == 0.0f);
       if (c == 11) assert(scrollX[1] > 0.0f);
       palcoGeo(1, c + 1, lw, &vizX, &vizS);
@@ -149,7 +161,7 @@ int main(void) {
       palcoPos[1] = 0.0f;
       palcoGeo(1, 11, lw, &cx, &s);
       assert(fabsf(palcoExtent(1, 12) - (cx + lw * s * 0.5f - homeFileiraX(1, 0))) < 0.01f);
-      assert(palcoExtent(1, 12) < (12 - 1) * passo + lw - 100.0f);
+      assert(palcoExtent(1, 12) < (12 - 1) * (lw + gapDe(FILEIRA_PALCO)) + lw - 100.0f);
       // Foco na ultima: o card cresce NA vaga, a extensao volta a ser a de
       // vagas — igual a fileira comum no fim da rolagem.
       palcoPos[1] = 11.0f;

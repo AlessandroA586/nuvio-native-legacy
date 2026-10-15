@@ -70,6 +70,9 @@ int  guia_pediu_canal(CatItem *saida);
 // Base do addon que publicou o canal recem-pedido ("" para portal Stalker).
 // app.c passa a addons_definir_origem antes de buscar a fonte.
 const char *guia_canal_origem(void);
+// O tipo de catalogo declarado do canal do ultimo pedido ("tv", "channel",
+// "live"...), para /stream/<tipo>/ — ver guia_canal_tipo em guia.c.
+const char *guia_canal_tipo(void);
 
 // O id do canal em foco, ou "" — o player usa para saber se o overlay esta
 // apontando para o canal que esta no ar.

@@ -118,61 +118,15 @@ int main(void) {
   printf("streamtabs: order, logo-aligned strip, spring capsule ok\\n");
 }
 '''
-# Style icon geometry: runs the real botaoEstiloAbas with the draw calls stubbed.
-icon = '''
-#include <assert.h>
-#include <math.h>
-#include <stdio.h>
-typedef struct { float x, y, w, h; } GfxRect;
-#define NV_TELA_W 1920.0f
-#define VT_AB_H 52
-#define NV_ILHA_Y 40.0f
-enum { VT_LAY_LISTA, VT_LAY_VITRINE };
-static int lay, tabFocus, tabCursor;
-static GfxRect exibPill, got;
-static int cabN(void) { return 4; }
-static float ajustes_tinta_foco(void) { return 0; }
-static void focoAbaFonte(GfxRect r, float f, float a) { (void)r; (void)f; (void)a; }
-static void gfx_icone(GfxRect r, const char *n, float a, float b, float c, float d)
-  { (void)r; (void)n; (void)a; (void)b; (void)c; (void)d; }
-static void ponteiro_alvo(float x, float y, float w, float h, void *f, void *g, int i, int j)
-  { (void)f; (void)g; (void)i; (void)j; got = (GfxRect){x, y, w, h}; }
-#define ponteiroCab 0
-''' + function('botaoEstiloAbas') + '''
-int main(void) {
-  // The display pill starts at 1480 and grows with its label: for EVERY width
-  // the style icon stays on screen and never overlaps the pill.
-  for (float w = 100.0f; w <= 440.0f; w += 1.0f) {
-    exibPill = (GfxRect){1480.0f, 253.0f, w, 52.0f};
-    botaoEstiloAbas(1.0f);
-    assert(got.x >= 8.0f && got.x + got.w <= NV_TELA_W - 104.0f + 0.01f);
-    assert(got.x >= exibPill.x + exibPill.w || got.x + got.w <= exibPill.x);
-  }
-  // Vitrine: the icon never lands on the pill, whatever its y/width.
-  lay = VT_LAY_VITRINE;
-  for (float w = 100.0f; w <= 440.0f; w += 1.0f) {
-    exibPill = (GfxRect){1480.0f, 100.0f, w, 52.0f};
-    botaoEstiloAbas(1.0f);
-    assert(got.x + got.w <= exibPill.x || got.x >= exibPill.x + exibPill.w ||
-           got.y >= exibPill.y + exibPill.h || got.y + got.h <= exibPill.y);
-  }
-  lay = VT_LAY_LISTA;
-  printf("streamtabs: style icon never overlaps the display pill\\n");
-}
-'''
 with tempfile.TemporaryDirectory() as d:
     p = Path(d) / 'test.c'; p.write_text(code)
     subprocess.run(['cc', '-fsanitize=address', str(p), '-I.', '-o', d + '/test'], check=True)
     subprocess.run([d + '/test'], check=True)
-    q = Path(d) / 'icon.c'; q.write_text(icon)
-    subprocess.run(['cc', str(q), '-o', d + '/icon'], check=True)
-    subprocess.run([d + '/icon'], check=True)
 
 # Anchors of the fixes that the helpers alone cannot see.
-assert 'exibPill' in function('botaoEstiloAbas')          # style icon AFTER the display pill
-assert 'exibPill = pill;' in function('botaoExibicao')
-assert 'fminf(rx, NV_TELA_W' in function('botaoEstiloAbas')  # icon clamped: never off the right edge
-assert 'exibPill.x - 12.0f - 52.0f' in function('botaoEstiloAbas')  # wide pill: icon jumps LEFT of it, never overlaps
+assert 'botaoEstiloAbas' not in s                          # style toggle is inside the layout pill
+assert 'ponteiro_alvo(seg.x' in function('botaoExibicao')  # the segment is the D-pad target
+assert 'aj_layout-list' in function('botaoExibicao')
 assert 'float cx=x0+capX-tabRol;' in function('themeHeader')  # capsule is absolute: strip offset + the logo inset
 abaBloco = function('themeHeader')
 caps = abaBloco.index('if(capA>.01f)')
@@ -180,6 +134,7 @@ texto = abaBloco.index('txt_desenhar_alpha(t,x+PAD')      # capsule drawn BEFORE
 assert caps < texto, 'focus capsule must draw before the tab labels'
 assert 'capW,H},1.0f,ca)' in abaBloco                  # capsule alpha applied once (ca), not capA*capA
 assert 'foco_anel(pill,NV_RAIO_PILL,1,ah)' not in abaBloco   # stiff ring gone
+assert 'selecionada&&!f' in abaBloco                      # open tab marker hides when the capsule is on it
 assert 'faixas' in function('degradeMarca')               # brand band fades out in alpha
 assert 'tabRol = 0.0f;   // a faixa renasce' in s      # reset on open, not only on touch builds
 assert 'capAlvoX=pos[focoAba]' in s                       # capsule follows the cursor tab
