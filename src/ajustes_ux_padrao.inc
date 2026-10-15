@@ -1,8 +1,10 @@
   0, 0, 0,          /* qualidade, DV, Atmos */
   0,                /* idioma de legenda: 0 = seguir a conta */
-  // AUDIO NO ORIGINAL POR PADRAO (LING_OPC_ORIGINAL, o ULTIMO item de
-  // OPCOES_COD em linguas.c — ele fica no fim porque este arquivo grava o
-  // INDICE da opcao, e inserir no meio reinterpreta ajustes.txt ja salvo).
+  // AUDIO NO ORIGINAL POR PADRAO (LING_OPC_ORIGINAL, o indice do "~" em
+  // OPCOES_COD em linguas.c). Ele NAO e mais o ultimo item: os idiomas novos
+  // entram depois dele justamente para este indice nao mudar, porque este
+  // arquivo grava o INDICE da opcao e mover o "~" reinterpreta ajustes.txt ja
+  // salvo. Ver o comentario em linguas.c.
   // Pedido do dono: "o que eu quero que seja padrao e tocar o audio na
   // linguagem original". Antes era 0 = "Da conta", e uma conta com "Portugues"
   // salvo fazia o app pular para a dublagem sem ninguem ter pedido naquele

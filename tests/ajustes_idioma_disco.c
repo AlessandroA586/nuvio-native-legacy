@@ -289,6 +289,38 @@ int main(void) {
   valor[AJ_TMDB_IDIOMA] = 31; assert(!strcmp(ajustes_tmdb_idioma(), "zh-TW"));
   valor[AJ_TMDB_IDIOMA] = 0;
 
+  // ---- MIGRACAO idiomas-206 (#429) --------------------------------------
+  // A build que pos hr/sr/bs NO MEIO da lista (16-18) podia gravar indices
+  // ate 33; so esses tres numeros a identificam sem ambiguidade. 33 volta a
+  // ser "~" (-3) e o arquivo e regravado. Indices 17-30 existiam antes com
+  // outro idioma: mexer neles trocaria a lingua de quem nunca viu a janela,
+  // entao ficam como estao.
+  { char marca[700];
+    snprintf(marca, sizeof marca, "%s/idiomas-206.txt", getenv("NUVIO_DADOS"));
+    unlink(marca);
+    escrever(caminho, "legendaIdioma 33\naudioIdioma 31\nlegendaSecundariaIdioma 16\n");
+    reiniciarIdioma();
+    ajustes_dir(dir);
+    assert(valor[AJ_LEG_LINGUA] == LING_OPC_ORIGINAL);            // 33 -> "~"
+    assert(valor[AJ_AUD_LINGUA] == LING_OPC_ORIGINAL - 2);        // 31 -> 28 ("vi")
+    assert(valor[AJ_LEG_LINGUA2] == 16);                          // ambiguo: fica
+    assert(linhaDoArquivo(caminho, "legendaIdioma") == LING_OPC_ORIGINAL);
+    assert(linhaDoArquivo(caminho, "audioIdioma") == LING_OPC_ORIGINAL - 2);
+    // A marca impede segunda passagem: reescrever 33 e ler de novo nao mexe.
+    escrever(caminho, "legendaIdioma 33\n");
+    reiniciarIdioma();
+    ajustes_dir(dir);
+    assert(valor[AJ_LEG_LINGUA] == 33);
+    // Arquivo antigo (ate o indice 30) passa intacto, mesmo sem a marca:
+    // remover a marca e ler um indice de idioma real nao desloca nada.
+    unlink(marca);
+    escrever(caminho, "legendaIdioma 16\naudioIdioma 30\n");
+    reiniciarIdioma();
+    ajustes_dir(dir);
+    assert(valor[AJ_LEG_LINGUA] == 16 && !strcmp(ling_legenda(), "id"));
+    assert(valor[AJ_AUD_LINGUA] == LING_OPC_ORIGINAL);       // "~" intacto
+  }
+
   unlink(caminho);
   { char tmp[700]; snprintf(tmp, sizeof tmp, "%s/ajustes.tmp", dir); unlink(tmp); }
   rmdir(dir);

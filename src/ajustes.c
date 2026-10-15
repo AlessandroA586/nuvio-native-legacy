@@ -3609,6 +3609,10 @@ static void memoriaMigrar(void) {
 void ajustes_dir(const char *dir) {
   FILE *f;
   char caminho[600], linha[96];
+  int viuLingua[3] = { 0, 0, 0 };
+  /* viuLingua: [AJ_LEG_LINGUA, AJ_LEG_LINGUA2, AJ_AUD_LINGUA] vistos no
+     ajustes.txt — a migracao idiomas-206 so pode tocar o que o arquivo
+     trouxe, nunca o padrao de valor[] */
   if (!dir || !*dir) return;
   snprintf(dirAjustes, sizeof dirAjustes, "%s", dir);
   memoriaEscolhida = 0;
@@ -3681,6 +3685,9 @@ void ajustes_dir(const char *dir) {
       if (i == AJ_RESOLUCAO) viuRes = 1;
       if (i == AJ_FONTE_PRAZO) viuEspera = 1;
       if (i == AJ_FOCO_TRAILER) viuFoco = 1;
+      if (i == AJ_LEG_LINGUA) viuLingua[0] = 1;
+      if (i == AJ_LEG_LINGUA2) viuLingua[1] = 1;
+      if (i == AJ_AUD_LINGUA) viuLingua[2] = 1;
       break;
     }
   }
@@ -3846,6 +3853,31 @@ void ajustes_dir(const char *dir) {
 #ifdef NV_TEX_MB_FIXO
   memoriaMigrar();
 #endif
+  // MIGRACAO UNICA (2.0.6, #429): "hr", "sr" e "bs" entraram no FIM de
+  // OPCOES_COD (depois do "~"), nunca no meio — a regra de linguas.c. Este
+  // arquivo grava o INDICE da opcao, entao todo indice ate 30 continua
+  // apontando para o mesmo idioma de sempre, sem tocar em nada. O conserto
+  // possivel e para a janela de desenvolvimento em que os tres estavam NO
+  // MEIO (indices 16-18): la o maximo era 33, entao um arquivo com 31, 32
+  // ou 33 so podia vir daquela build — e recua 3 ("~" volta a ser "~").
+  // Indices 17 a 30 nao da para distinguir: o mesmo numero existia antes
+  // com outro idioma, e mexer neles trocaria a lingua de quem nunca viu a
+  // janela — esses ficam como estao. "idiomas-206.txt" marca quem ja passou.
+  { char *m = dados_ler("idiomas-206.txt");
+    if (m) free(m);
+    else {
+      // So desloca o que veio do ARQUIVO (viuLingua): o padrao de audio
+      // (LING_OPC_ORIGINAL) nao pode entrar aqui — sem ajustes.txt nao ha
+      // o que reinterpretar.
+      static const int L[3] = { AJ_LEG_LINGUA, AJ_LEG_LINGUA2, AJ_AUD_LINGUA };
+      int k, mexeu = 0;
+      for (k = 0; k < 3; k++)
+        if (viuLingua[k] && valor[L[k]] > LING_OPC_ORIGINAL) { valor[L[k]] -= 3; mexeu = 1; }
+      if (mexeu)
+        printf("[ajustes] idiomas 31+ -> -3 (migracao unica da 2.0.6, #429)\n");
+      dados_gravar("idiomas-206.txt", "1\n");
+      if (mexeu) gravar();
+    } }
   // O limite mora em fileiras.c; esta linha e so o espelho dele. Ler daqui em
   // vez de gravar evita a divergencia: o arquivo de ajustes nao guarda o
   // numero, entao nao ha como os dois discordarem.

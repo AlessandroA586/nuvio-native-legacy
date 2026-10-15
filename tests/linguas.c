@@ -75,10 +75,15 @@ int main(void) {
   ok("nome de zh-Hans", !strcmp(ling_nome("zh-Hans"), "Chinês"));
   ok("nome de hrv", !strcmp(ling_nome("hrv"), "Croata"));
   ok("nome de bs", !strcmp(ling_nome("bs"), "Bósnio"));
-  ok("opcao hr na lista", !strcmp(ling_opcao_codigo(16), "hr"));
-  ok("opcao sr na lista", !strcmp(ling_opcao_codigo(17), "sr"));
-  ok("opcao bs na lista", !strcmp(ling_opcao_codigo(18), "bs"));
-  ok("original no fim", !strcmp(ling_opcao_codigo(LING_OPC_ORIGINAL), "~"));
+  // #429: hr/sr/bs entraram NO FIM (regra de compatibilidade do ajustes.txt,
+  // que grava o indice): 31, 32, 33 — nunca no meio da lista.
+  ok("opcao hr no fim", !strcmp(ling_opcao_codigo(ling_opcao_n() - 3), "hr"));
+  ok("opcao sr no fim", !strcmp(ling_opcao_codigo(ling_opcao_n() - 2), "sr"));
+  ok("opcao bs no fim", !strcmp(ling_opcao_codigo(ling_opcao_n() - 1), "bs"));
+  // Indices JA GRAVADOS em ajustes.txt nao podem mudar: 16 e "id" (nao "hr")
+  // e o "~" fica no indice LING_OPC_ORIGINAL, antes dos idiomas novos.
+  ok("indice 16 continua id", !strcmp(ling_opcao_codigo(16), "id"));
+  ok("original no indice fixo", !strcmp(ling_opcao_codigo(LING_OPC_ORIGINAL), "~"));
   ok("selo de pb", !strcmp(ling_selo("pb"), "PT-BR"));
   // O "lang" com nome por extenso (Auto-Subs: "Hebrew (Auto-Subs)").
   { char c[16];

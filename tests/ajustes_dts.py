@@ -50,7 +50,7 @@ harness = r'''
 '''
 harness += block(r'typedef enum \{.*?\n\} OpcaoId;')
 harness += block(r'static const char \*CHAVE\[\] = \{.*?\n\};')
-harness += '\n#define LING_OPC_ORIGINAL 33\n#define FIL_LIMITE_PADRAO 7\n#define TXT_FAMILIA_INTER 0\n'
+harness += '\n#define LING_OPC_ORIGINAL 30\n#define FIL_LIMITE_PADRAO 7\n#define TXT_FAMILIA_INTER 0\n'
 harness += block(r'#define AJ_N_TEMAS 12.*?#define AJ_N_TEMAS_OPC      24') + '\n'
 harness += '\nstatic int valor[] = {\n#include "ajustes_ux_padrao.inc"\n};\n'
 harness += r'''
