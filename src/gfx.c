@@ -3638,10 +3638,9 @@ void gfx_vidro_miolo(GfxRect r, float raio, float cr, float cg, float cb, float 
           (nv_luz_viva[2] * aB + cb * aA * (1.0f - aB)) / al,
           al / g);
 }
-// Painel lateral/flutuante (menu, Fontes, Salvos): o mesmo vidro, na
-// opacidade dos Ajustes.
+// Painel lateral/flutuante (menu, Fontes, Salvos): o material padrao.
 void gfx_vidro_folha(GfxRect r, float raio, float a) {
-  gfx_vidro(r, raio, GFX_VIDRO_PAINEL, 0.09f, ajustes_vidro_opacidade(), a);
+  gfx_vidro_material(r, raio, GFX_VIDRO_DENS, a);
 }
 void gfx_vidro_borda(GfxRect r, float raio, float a) {
   if (efeitosMinimos || r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
@@ -3712,7 +3711,7 @@ void gfx_vidro_painel_acento(GfxRect r, float raio, float fundo, float a) {
   float cr, cg, cb;
   if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
   ajustes_acento(&cr, &cg, &cb);
-  gfx_cor(r, raio, VIDRO_MIOLO, VIDRO_MIOLO, VIDRO_MIOLO * 1.04f, fundo * a);
+  gfx_vidro_painel(r, raio, fundo, a);
   gfx_cor(r, raio, cr, cg, cb, 0.20f * a);
   gfx_vidro_aro(r, raio, 1.5f, cr, cg, cb, 0.55f * a);
 }
