@@ -259,7 +259,12 @@ int home_pediu_social(void) { int v=pedidoSocial;pedidoSocial=0;return v; }
 static int pedidoGuia;
 static char guiaId[80];
 static int fileiraEhCanal(const Fileira *f) {
-  return f && (!strcmp(f->catTipo, "channel") || !strcmp(f->catTipo, "tv"));
+  static const char *tipos[] = { "channel", "tv", "channels", "live", "iptv" };
+  int i;
+  if (!f) return 0;
+  for (i = 0; i < (int)(sizeof tipos / sizeof tipos[0]); i++)
+    if (!strcmp(f->catTipo, tipos[i])) return 1;
+  return 0;
 }
 int home_pediu_guia(char *id, int tam) {
   if (!pedidoGuia) return 0;
@@ -3428,11 +3433,10 @@ static void heroPreBuscarInfo(int indice) {
   }
   desc_sinopse_hero(lista, n);
   heroPedirLogo(cat_item_exato(indice), ajustes_home_layout(), focoHero);
-  // Vizinhos aquecem o arquivo/miniatura, sem reservar outra textura de hero.
-  for (int k = 1; k < n; k++) {
-    const char *u = artehero_logo_sessao(cat_item_exato(lista[k]));
-    if (u) (void)tex_obter_larg(u, 128);
-  }
+  // Logo dos vizinhos: nivel de logo (fura os fundos) e o MESMO teto do hero,
+  // para a chegada nao promover nem decodificar de novo.
+  for (int k = 1; k < n; k++)
+    heroPedirLogo(cat_item_exato(lista[k]), ajustes_home_layout(), focoHero);
 }
 static void heroAquecerVizinhos(Uint32 agora) {
   int n = heroNLista(), pos, d;
@@ -3448,10 +3452,12 @@ static void heroAquecerVizinhos(Uint32 agora) {
     const char *arte;
     if (heroVizFeito & bit) continue;
     if (viz < 0 || viz == heroAtual || (d > 0 && n == 2)) { heroVizFeito |= bit; continue; }
+    // O logo vai ANTES da arte e sem esperar por ela: pedido como logo (nivel
+    // 2) ele fura a fila dos fundos, que era onde o aquecimento a 128 px
+    // (nivel 0) ficava parado — o logo do vizinho chegava depois da virada.
+    heroPedirLogo(cat_item_exato(viz), ajustes_home_layout(), focoHero);
     arte = arte_por_identidade(viz, 2);
     if (!arte) continue;
-    { const char *logo = artehero_logo_sessao(cat_item_exato(viz));
-      if (logo) (void)tex_obter_larg(logo, 128); }
     heroVizFeito |= bit;
     (void)tex_obter_hero_quente(arte);
     printf("[hero] pre-busca vizinho %s hash=%08lx\n", d < 0 ? "anterior" : "proximo",
@@ -6479,6 +6485,8 @@ static TipoFileira previaMedida(const Fileira *fl, const char *chave, int filTip
   return tipo;
 }
 
+static void desenhaRedonda(const CatItem *ci, GLuint t, const char *caminho,
+                           float px, float py, float d, float f);
 int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect area,
                         float alfa) {
   const Fileira *fl = NULL;
@@ -6571,6 +6579,9 @@ int home_previa_fileira(const char *chave, int filTipo, int refTipo, GfxRect are
         const char *cam = arte_por_identidade(idx, tipo == FILEIRA_CONTINUE ? 3 : deitado);
         if (tipo == FILEIRA_FICHA) { desenhaFicha(ci, px, y0, w, h, 0.0f); card.w = h * 2.0f / 3.0f; }
         GLuint t = cam ? tex_obter_larg(cam, w) : 0;
+        // A Redonda e o disco com o nome, como na Home: pelo card comum ela
+        // saia retangulo e a pessoa nao a reconhecia na lista.
+        if (tipo == FILEIRA_REDONDA) { desenhaRedonda(ci, t, cam, px, y0, w, 0.0f); continue; }
         if (tipo == FILEIRA_TOP10_NUM)
           desenhaNumeral(fileiraRanking(fl, c), px, y0, h, passo - w - NV_TOP10_NUM_FOLGA * s, 1.0f);
         gfx_veu_card_limpar();

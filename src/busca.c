@@ -384,7 +384,8 @@ static void montarSugestoes(void) {
   for (r = 0; r < nCat && nFil < 2; r++) {
     const CatFileira *cf = cat_fileira(r);
     int achou = 0, i;
-    if (!cf || !cf->titulo[0] || !strcmp(cf->tipo, "channel") || !strcmp(cf->tipo, "tv")) continue;
+    if (!cf || !cf->titulo[0] || !strcmp(cf->tipo, "channel") || !strcmp(cf->tipo, "tv") ||
+        !strcmp(cf->tipo, "channels") || !strcmp(cf->tipo, "live") || !strcmp(cf->tipo, "iptv")) continue;
     for (i = 0; i < cf->n && achou < BU_MAX_POR_FIL; i++) {
       const CatItem *ci = cat_item(cf->ini + i);
       if (!ci || !ci->titulo[0] || (!ci->poster[0] && !ci->backdrop[0])) continue;
