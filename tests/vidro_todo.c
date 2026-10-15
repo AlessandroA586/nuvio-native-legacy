@@ -3,7 +3,11 @@
 // Cada material de superficie compartilhado e desenhado sozinho sobre cinza
 // 0,5, com e sem "Vidro fosco", na "Opacidade do vidro" de 60 % e de 92 %:
 //  - todos mudam com a opacidade (media do miolo difere >= 3 niveis);
-//  - os paineis (material, folha, ou_solido) saem no MESMO tom (<= 2 niveis).
+//  - os paineis (material, folha, ou_solido) saem no MESMO tom (<= 2 niveis);
+//  - sobre pagina ESCURA (0,05) 60 % e 92 % tambem diferem (>= 8 niveis): o tom
+//    segue a opacidade, nao so o alfa;
+//  - todos levam a MESMA luz de borda (gfx_vidro_luz): a faixa de cima clareia
+//    sobre a de baixo (>= 2 niveis, vidro chapado sobre escuro, 78 %).
 // Os pontos de chamada ficam em tests/vidro_todo.sh (grep).
 //   bash tests/vidro_todo.sh
 #include "gfx.h"
@@ -26,8 +30,8 @@ static void confere(int ok, const char *nome) {
   printf("%s: %s\n", ok ? "PASSA" : "FALHA", nome);
   falhas += !ok;
 }
-static double media(void) {
-  int x = (int)R.x + 60, y = (int)(R.y + R.h * 0.5f), w = (int)R.w - 120, h = (int)(R.h * 0.5f) - 40, i;
+static double mediaEm(int x, int y, int w, int h) {
+  int i;
   unsigned char *p = malloc((size_t)w * h * 4);
   double m = 0;
   assert(p);
@@ -37,18 +41,27 @@ static double media(void) {
   free(p);
   return m / (w * h);
 }
+static double media(void) {
+  return mediaEm((int)R.x + 60, (int)(R.y + R.h * 0.5f), (int)R.w - 120, (int)(R.h * 0.5f) - 40);
+}
+// Faixa de cima menos a de baixo, na mesma coluna (onde a luz de borda entra).
+static double luzBorda(void) {
+  int x = (int)(R.x + R.w * 0.3f), w = (int)(R.w * 0.2f);
+  return mediaEm(x, (int)R.y + 12, w, 28) - mediaEm(x, (int)(R.y + R.h) - 40, w, 28);
+}
 static void opacidade(const char *o, const char *fosco) {
   setenv("NUVIO_SHOT_VIDRO_OPAC", o, 1); setenv("NUVIO_SHOT_VIDRO_FOSCO", fosco, 1);
   ajustes_teste_vidro_env();
 }
-enum { MATERIAL, FOLHA, OU_SOLIDO, PLRUI_MATERIAL, PAINEL, PAINEL_ACENTO, BOTAO_REPOUSO, DISCO_OSD, N };
+enum { MATERIAL, FOLHA, OU_SOLIDO, PLRUI_MATERIAL, PAINEL, PAINEL_ACENTO, BOTAO_REPOUSO, DISCO_OSD, CHIP, N };
 static const char *NOME[N] = { "gfx_vidro_material", "gfx_vidro_folha", "gfx_vidro_ou_solido",
-  "plrui_material", "gfx_vidro_painel", "gfx_vidro_painel_acento", "plrui_botao_repouso", "plrui_disco_osd" };
+  "plrui_material", "gfx_vidro_painel", "gfx_vidro_painel_acento", "plrui_botao_repouso", "plrui_disco_osd", "gfx_vidro_chip" };
+static float pag = 0.5f;   // cinza da pagina atras
 static double desenhar(int s) {
   glBindFramebuffer(GL_FRAMEBUFFER, fbo); glViewport(0, 0, LW, LH);
   gfx_novo_quadro();
-  glClearColor(0.5f, 0.5f, 0.5f, 1); glClear(GL_COLOR_BUFFER_BIT);
-  gfx_cor((GfxRect){ 0, 0, 1920, 1080 }, 0, 0.5f, 0.5f, 0.5f, 1.0f);
+  glClearColor(pag, pag, pag, 1); glClear(GL_COLOR_BUFFER_BIT);
+  gfx_cor((GfxRect){ 0, 0, 1920, 1080 }, 0, pag, pag, pag, 1.0f);
   switch (s) {
     case MATERIAL:       gfx_vidro_material(R, 28.0f / R.h, GFX_VIDRO_DENS, 1); break;
     case FOLHA:          gfx_vidro_folha(R, 28.0f / R.h, 1); break;
@@ -58,12 +71,13 @@ static double desenhar(int s) {
     case PAINEL_ACENTO:  gfx_vidro_painel_acento(R, 0.5f, 0.55f, 1); break;
     case BOTAO_REPOUSO:  plrui_botao_repouso(R, 1); break;
     case DISCO_OSD:      plrui_disco_osd(R, 1); break;
+    case CHIP:           gfx_vidro_chip(R, 0.5f, 0.55f, 1); break;
   }
   return media();
 }
 
 int main(void) {
-  double v[2][3][N];
+  double v[2][3][N], e[2][N], luz[N];
   int s, f, o;
   char t[200];
   SDL_SetHint("SDL_MAC_BACKGROUND_APP", "1");
@@ -85,6 +99,20 @@ int main(void) {
       assert(ajustes_vidro());
       for (s = 0; s < N; s++) { desenhar(s); v[f][o][s] = desenhar(s); }   // 2o quadro: backdrop reusado
     }
+  pag = 0.05f;
+  for (o = 0; o < 2; o++) {
+    opacidade(o ? "92" : "60", "1");
+    for (s = 0; s < N; s++) { desenhar(s); e[o][s] = desenhar(s); }
+  }
+  opacidade("78", "0");
+  for (s = 0; s < N; s++) { desenhar(s); luz[s] = luzBorda(); }
+  for (s = 0; s < N; s++) {
+    snprintf(t, sizeof t, "%s segue a opacidade sobre pagina escura: 60%% %.1f / 92%% %.1f", NOME[s],
+             e[0][s], e[1][s]);
+    confere(fabs(e[0][s] - e[1][s]) >= 8.0, t);
+    snprintf(t, sizeof t, "%s com a luz de borda: cima - baixo %.1f", NOME[s], luz[s]);
+    confere(luz[s] >= 2.0, t);
+  }
   for (f = 0; f < 2; f++) {
     for (s = 0; s < N; s++) {
       snprintf(t, sizeof t, "%s segue a opacidade (fosco %d): 60%% %.1f / 92%% %.1f", NOME[s], f,

@@ -9,6 +9,10 @@ Standard after this branch:
 - Glass off: per-caller solid colour (`gfx_vidro_ou_solido`, explicit else).
 - Focus: unchanged (`gfx_vidro_pilula_cheia` / `gfx_vidro_foco` / `gfx_vidro_cartao`).
 
+- Opacity mapping (gfx.c `vidroTom`, every panel/control/chip): alpha = density x opacity AND tint = gray + (0.78 - opacity) x 0.5 (lighter frost at 60 %, near black at 92 %, unchanged at 78 %). Alpha alone did not show on dark pages.
+- Edge light: one recipe, `gfx_vidro_luz` (the player's corner light), drawn by `gfx_vidro` (panel) and `gfx_vidro_chip`. Surfaces keep their own corner light only with glass off; the clock island keeps its coloured alert light.
+- Chips, badges, focus backings (non-white) and progress tracks: `gfx_vidro_chip` (flat control tone + rim + edge light, no backdrop pass, one per row is fine).
+
 Proof: `bash tests/vidro_todo.sh` (FAIL before: accent pill and player buttons ignored opacity, sheet tone 46 vs 37.8; PASS after).
 
 ## Changed in this branch
@@ -37,9 +41,4 @@ Proof: `bash tests/vidro_todo.sh` (FAIL before: accent pill and player buttons i
 | estatvivoui.c internals other than tile | - | - | - | agente/205-estatdicas |
 | gfx_vidro_superficie (2) | inner veil on a sheet | white .05 | n (sits on glass that does) | inner row, not a surface |
 | plrui_linha_foco, focus helpers | focus | white | n | focus stays as is |
-| detail.c:5369, 5724, 6026 | Apple-style focus info backing | gray .19 .6 x focus | n | focus backing, not rest surface |
-| home.c:1520, badges.c:329, streams.c:3462, explorar.c:1070, guia.c:3040 | rating / source / channel chips | gfx_cor | n | small chips over art (vidro-padrao exceptions) |
-| episodios.c:847, posplay.c:670 | per-row chip | gfx_cor vidro-ok | n | glass pass per row blows budget |
-| biblioteca.c:2337, home.c:7557, salvospainel.c:3030 | progress tracks | gfx_cor | n | progress bar, not surface |
-| edge light | plrui_material/recenviar: corner light; ajIlhaMaterial: none; island: own top glow | - | - | pending: not unified (layout/look risk) |
 | docs/issues/vidro-padrao.md list | rest of vidro_padrao exceptions | - | - | unchanged |

@@ -27,6 +27,20 @@ while IFS='|' read -r f re re2; do
   [ -z "$f" ] && continue
   grep -qE "$re${re2:+|$re2}" "$raiz/$f" || { echo "FAIL $f: missing $re"; fail=1; }
 done <<< "$need"
+# One edge light: gfx_vidro (panel) and gfx_vidro_chip draw gfx_vidro_luz; the
+# surfaces below only draw their own corner light with glass off.
+grep -qE '^  if \(tipo == GFX_VIDRO_PAINEL\) gfx_vidro_luz\(r, raio, a\);' "$raiz/src/gfx.c" &&
+  grep -qE '^  gfx_vidro_luz\(r, raio, a\);' "$raiz/src/gfx.c" || { echo "FAIL gfx.c: shared edge light"; fail=1; }
+for f in plrui atualizacao ctxmenu agendaui salvospainel celbotao avisos agendaviso dvtelaui guia; do
+  grep -n "gfx_luz_canto(" "$raiz/src/$f.c" | grep -vE "if \(!(vid|ajustes_vidro\(\))\) gfx_luz_canto" |
+    grep -E "$(case $f in guia) echo 'pv, raio, pv.w|p, 28.0f';; *) echo .;; esac)" && { echo "FAIL $f: own edge light on glass"; fail=1; }
+done
+grep -qE 'if \(tipoLuz >= 0 \|\| !ajustes_vidro\(\)\)' "$raiz/src/ilha.c" || { echo "FAIL ilha.c: own white light on glass"; fail=1; }
+grep -nE 'gfx_brilho_topo\(R, raioPx' "$raiz/src/menu.c" && { echo "FAIL menu.c: sidebar own top light"; fail=1; }
+# Chips, badges, focus backings and progress tracks: glass through gfx_vidro_chip.
+for f in plrui badges streams home guia episodios posplay detail biblioteca salvospainel ilha agendaui; do
+  grep -q "gfx_vidro_chip(" "$raiz/src/$f.c" || { echo "FAIL $f: no gfx_vidro_chip"; fail=1; }
+done
 # The two private panel tones are gone.
 grep -nE "GFX_VIDRO_PAINEL, (0\.09f|15\.0f / 255\.0f)" "$raiz"/src/*.c && { echo "FAIL private glass tone"; fail=1; }
 
