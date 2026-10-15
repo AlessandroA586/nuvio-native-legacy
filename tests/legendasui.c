@@ -312,6 +312,41 @@ int main(void) {
   legendasui_abrir(); assert(recP == 1);
   legauto_fonte(NULL); montarLinhas(); assert(recP == 0);
 
-  puts("legendasui: identities, formats, kinds, full list, late arrivals, second-slot refusals, offsets, AutoSync, settings, active-outside-recommendations OK");
+  // #518 / #511: preserve integration titles in recommended, full and version rows.
+  { char title[96], detail[256]; const char *language, *icon; int active, dim;
+    char unnamed[2][96];
+    snprintf(unnamed[0], sizeof unnamed[0], "%s (1)", nomeIdioma("en"));
+    snprintf(unnamed[1], sizeof unnamed[1], "%s (2)", nomeIdioma("en"));
+    const char *expected[] = { "Full (1)", "Full (2)", unnamed[0], unnamed[1],
+      "Legacy name", "Full w/ honorifics", nomeIdioma("es") };
+    nEmb = 7; nAdd = 0;
+    for (int k = 0; k < nEmb; k++) faixa(k, k + 1, "en", "English", "S_TEXT/UTF8", 0);
+    snprintf(emb[0].nome, sizeof emb[0].nome, "Full");
+    snprintf(emb[1].nome, sizeof emb[1].nome, "Full");
+    snprintf(emb[4].rotulo, sizeof emb[4].rotulo, "English  ·  Legacy name");
+    snprintf(emb[5].nome, sizeof emb[5].nome, "Full w/ honorifics");
+    snprintf(emb[5].rotulo, sizeof emb[5].rotulo, "English  ·  Discarded label");
+    faixa(6, 7, "es", "Español", "S_TEXT/ASS", 0);
+    snprintf(emb[6].nome, sizeof emb[6].nome, "S_TEXT/ASS");
+    montarLinhas();
+    for (int mode = 0; mode < 3; mode++) {
+      mais = mode == 1; ver = mode == 2;
+      for (int k = 0; k < nEmb; k++) {
+        LuiLinha row = {0}; row.tipo = LR_CAND; row.cand = k;
+        textoLinha(&row, title, sizeof title, detail, sizeof detail, &language, &icon, &active, &dim);
+        assert(!strcmp(title, expected[k]));
+        if (k == 0 || k == 1 || k == 4 || k == 5) assert(strstr(detail, nomeIdioma("en")));
+      }
+      // A multibyte codepoint crosses the title's 37-byte truncation boundary.
+      snprintf(cand[5].nome, sizeof cand[5].nome, "123456789012345678901234567890123456éééé");
+      { LuiLinha row = {0}; row.tipo = LR_CAND; row.cand = 5;
+        textoLinha(&row, title, sizeof title, detail, sizeof detail, &language, &icon, &active, &dim);
+        assert(!strcmp(title, "123456789012345678901234567890123456…")); }
+      snprintf(cand[5].nome, sizeof cand[5].nome, "Full w/ honorifics");
+    }
+    mais = ver = 0;
+  }
+
+  puts("legendasui: identities, formats, kinds, full list, late arrivals, second-slot refusals, offsets, AutoSync, settings, active-outside-recommendations, track titles OK");
   return 0;
 }
