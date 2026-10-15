@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `5544c3e4c` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-15 10:50. 458 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `5544c3e4c` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-15 11:48. 459 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -119,13 +119,13 @@ Plano de refatoração: `docs/plans/refatoracao-geral.md` (branch `agente/refato
 |---|---|---|
 | 2.0.3 | 0 |  |
 | 2.0.4 | 0 |  |
-| 2.0.5 | 6 | #470, #482, #484, #488, #495, #512 |
-| 2.0.6 | 38 | #407, #412, #413, #414, #415, #418, #423, #424, #428, #451, #459, #461, #462, #468, #469, #471, #473, #474, #475, #476, #477, #479, #480, #481, #483, #492, #494, #496, #497, #500, #501, #502, #503, #504, #505, #506, #507, #508 |
+| 2.0.5 | 2 | #495, #512 |
+| 2.0.6 | 33 | #407, #412, #413, #414, #415, #418, #423, #424, #451, #459, #461, #462, #468, #469, #471, #475, #477, #479, #483, #492, #494, #496, #497, #500, #501, #502, #503, #504, #505, #506, #507, #508, #528 |
 | 2.1 | 6 | #420, #434, #436, #457, #458, #460 |
 | 2.2 | 0 |  |
 | futuro | 12 | #437, #438, #450, #466, #467, #509, #510, #511, #513, #514, #521, #524 |
 | nao vamos fazer | 0 |  |
-| ja-lancada | 18 | #409, #410, #411, #416, #417, #419, #421, #422, #425, #426, #427, #429, #430, #433, #439, #440, #486, #499 |
+| ja-lancada | 15 | #410, #416, #417, #419, #421, #422, #425, #426, #429, #430, #433, #439, #440, #486, #499 |
 
 ## Fechar com a 2.0.3
 
@@ -181,10 +181,10 @@ Por status:
 |---|---|
 | lancada | 304 |
 | aberta | 54 |
-| integrada | 39 |
+| integrada | 43 |
 | respondida | 22 |
 | por-desenho | 15 |
-| precisa-log | 10 |
+| precisa-log | 7 |
 | fechada-sem-resposta | 6 |
 | fora-do-escopo | 4 |
 | duplicada | 2 |
@@ -195,15 +195,15 @@ Por release (grupo de planejamento):
 | Grupo | Qtd |
 |---|---|
 | lançadas em tag v* (qualquer versão) | 304 |
-| sem release | 125 |
+| sem release | 126 |
 | 2.0.5 (integração, sem release do conserto) | 22 |
 | futuro (2.1/2.2) | 5 |
 | 2.0.3 lançada, com pendência | 2 |
 
 Lançadas por versão: 1.0.7: 10, 1.0.8: 1, 1.0.10: 3, 1.0.11: 3, 1.0.15: 1, 1.0.22: 1, 1.0.24: 1, 1.0.29: 1, 1.0.30: 2, 1.0.31: 2, 1.0.32: 2, 1.0.34: 1, 1.0.35: 1, 1.0.37: 1, 1.0.38: 2, 1.0.39: 1, 1.0.42: 1, 1.0.43: 4, 1.0.44: 4, 1.0.45: 1, 1.0.51: 3, 1.0.52: 1, 1.0.53: 1, 1.0.55: 3, 1.2.1: 4, 1.3.0: 1, 1.3.2: 5, 1.3.4: 5, 1.3.5: 2, 1.3.8: 1, 1.3.9: 1, 1.3.10: 1, 1.3.11: 1, 1.3.12: 5, 1.4: 7, 1.4.1: 2, 1.4.2: 9, 1.4.3: 9, 1.4.4: 3, 1.4.5: 1, 1.4.6: 7, 1.4.7: 1, 1.5.0: 2, 1.5.1: 4, 1.5.2: 9, 1.5.3: 2, 1.5.4: 9, 1.6.0: 8, 1.6.1: 4, 1.6.2: 3, 1.6.3: 2, 1.6.4: 2, 1.6.5: 4, 1.7.0: 10, 1.7.1: 4, 1.7.2: 5, 1.7.4: 5, 2.0.0: 22, 2.0.1: 12, 2.0.2: 20, 2.0.3: 29, 2.0.4: 9, 2.0.5: 23.
 
-Abertas no GitHub: 80. Fechadas: 378.
-Abertas sem nenhum comentário nosso: 58.
+Abertas no GitHub: 68. Fechadas: 391.
+Abertas sem nenhum comentário nosso: 50.
 
 ## 2.0.3 lançada com pendência (precisa-log, respondida ou conserto parcial)
 
@@ -211,12 +211,12 @@ Abertas sem nenhum comentário nosso: 58.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
-| [#246](https://github.com/iqui27/nuvio-native-legacy/issues/246) | HEVC anime videos can’t be “seeked in player” | ? | bug | precisa-log | 2.0.3 | - | a7f23592, a8048e0d, 023497dd | nós 10-06 | pedir log (pedido em 06/10, sem retorno) |
+| [#246](https://github.com/iqui27/nuvio-native-legacy/issues/246) | HEVC anime videos can’t be “seeked in player” | ? | bug | integrada | 2.0.3 | - | a8048e0de, a7f23592, a8048e0d | nós 10-06 | lancar com 2.0.5 se TV ok (testar no TCL/C9) |
 | [#280](https://github.com/iqui27/nuvio-native-legacy/issues/280) | Home Row does not update properly (Bingecat Addon) and Some  | LG | bug | precisa-log | 2.0.3 | - | 3c51d5b7 | nós 10-11 | pedir log (autor mandou só captura "See logs", sem código) |
 
 Notas:
 
-- **#246**: NOTAS 2.0.3: "LG: resume no longer drops the source on a failed seek (#246)". Não confirmado que cobre o relato HEVC/anime; plataforma do relato desconhecida. ALVO 2.0.3 = SUSPEITA: o conserto está nas NOTAS mas não está confirmado que cobre o relato; falta log do autor. COMMITS vs v2.0.3 (09/10): a7f23592, a8048e0d, 023497dd estão na tag; status mantido porque o conserto é suspeita/parcial e sem confirmação do autor. Revisão 2026-10-12: Seek manual/HEVC não é corrigido pela proteção de retomada contra troca de fonte. [alvo antes: 2.0.6; fechada no GH 10-15]
+- **#246**: NOTAS 2.0.3: "LG: resume no longer drops the source on a failed seek (#246)". Não confirmado que cobre o relato HEVC/anime; plataforma do relato desconhecida. ALVO 2.0.3 = SUSPEITA: o conserto está nas NOTAS mas não está confirmado que cobre o relato; falta log do autor. COMMITS vs v2.0.3 (09/10): a7f23592, a8048e0d, 023497dd estão na tag; status mantido porque o conserto é suspeita/parcial e sem confirmação do autor. Revisão 2026-10-12: Seek manual/HEVC não é corrigido pela proteção de retomada contra troca de fonte. [alvo antes: 2.0.6; fechada no GH 10-15] | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (a8048e0de); status -> integrada
 - **#280**: SUSPEITA: único commit que cita #280 é 3c51d5b7 (remontagens da descoberta, 2.0.3); a correção é genérica de fileiras. ALVO 2.0.3 = SUSPEITA: o conserto está nas NOTAS mas não está confirmado que cobre o relato; falta log do autor. COMMITS vs v2.0.3 (09/10): 3c51d5b7 estão na tag; status mantido porque o conserto é suspeita/parcial e sem confirmação do autor. Revisão 2026-10-12: Remontagem espaçada não comprova correção da contagem/configuração; mantenedor ainda pede log em 11/10. [alvo antes: 2.0.6; fechada no GH 10-15]
 
 ## 2.0.4 (hotfix publicado)
@@ -231,9 +231,9 @@ Notas:
 | [#390](https://github.com/iqui27/nuvio-native-legacy/issues/390) | Custom poster source not setting | Samsung .tpk | bug | lancada | 2.0.4 | - | a7bb794c, a8fcd146, adfba576 | nós 10-12 | dono: avaliar fechamento com v2.0.4 |
 | [#392](https://github.com/iqui27/nuvio-native-legacy/issues/392) | Profile switching still rearrange my home screen | Samsung .tpk | bug | lancada | 2.0.4 | - | 1d4b5e97, 2d3e472e, 9023ebdb | nós 10-11 | dono: avaliar fechamento com v2.0.4 |
 | [#400](https://github.com/iqui27/nuvio-native-legacy/issues/400) | feature-request: allow using default addon sources sort orde | all | feature | lancada | 2.0.4 | - | 3d9db2d8, a46e1a4c, f60a4ba5 | nós 10-10 | sem ação; conserto publicado |
-| [#409](https://github.com/iqui27/nuvio-native-legacy/issues/409) | The source didn't answer in time error even though the serve | Android | bug | lancada | 2.0.4 | ja-lancada | 2051869e, 5cd60adf, 6d46e336 | nós 10-10 | sem ação; conserto publicado |
+| [#409](https://github.com/iqui27/nuvio-native-legacy/issues/409) | The source didn't answer in time error even though the serve | Android | bug | lancada | 2.0.4 | - | 2051869e, 5cd60adf, 6d46e336 | nós 10-10 | sem ação; conserto publicado |
 | [#410](https://github.com/iqui27/nuvio-native-legacy/issues/410) | UI appearence issues | Samsung .tpk | bug | lancada | 2.0.4 | ja-lancada | 52dbde71, b32c9410, b8935ecf | autor 10-12 | dono: avaliar fechamento com v2.0.4 |
-| [#411](https://github.com/iqui27/nuvio-native-legacy/issues/411) | [Tizen 4.0 / v2.0.3] Play/Pause works but shows Samsung "Not | Samsung .tpk | bug | lancada | 2.0.4 | ja-lancada | release | nós 10-10 | sem ação; conserto publicado |
+| [#411](https://github.com/iqui27/nuvio-native-legacy/issues/411) | [Tizen 4.0 / v2.0.3] Play/Pause works but shows Samsung "Not | Samsung .tpk | bug | lancada | 2.0.4 | - | release | nós 10-10 | sem ação; conserto publicado |
 
 Notas:
 
@@ -253,23 +253,23 @@ Notas:
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
-| [#302](https://github.com/iqui27/nuvio-native-legacy/issues/302) | Live TV issue persists with 2.1 tpk65 | Samsung .tpk | bug | precisa-log | 2.0.5 | - | 6c4d3863, 8fea5018, 0021b573 | autor 10-10 | triar |
+| [#302](https://github.com/iqui27/nuvio-native-legacy/issues/302) | Live TV issue persists with 2.1 tpk65 | Samsung .tpk | bug | integrada | 2.0.5 | - | 5cfc61f10, 6c4d3863, 8fea5018 | autor 10-10 | lancar com 2.0.5 se TV ok (testar no TCL/C9) |
 | [#402](https://github.com/iqui27/nuvio-native-legacy/issues/402) | Wrong sorting in sources | Samsung .tpk | bug | integrada | 2.0.5 | - | ca8f29b4, 219d3bf4 | autor 10-10 | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#412](https://github.com/iqui27/nuvio-native-legacy/issues/412) | Playback makes UI extremely laggy | Samsung .tpk | bug | integrada | 2.0.5 | 2.0.6 | 224063f2 | nós 10-11 | lancar com 2.0.5 (testar no TCL antes do release) |
-| [#415](https://github.com/iqui27/nuvio-native-legacy/issues/415) | constant crashing, no matter if I play or not | LG | bug | precisa-log | 2.0.5 | 2.0.6 | 5c266499 | nós 10-10 | triar |
+| [#415](https://github.com/iqui27/nuvio-native-legacy/issues/415) | constant crashing, no matter if I play or not | LG | bug | integrada | 2.0.5 | 2.0.6 | 5c6b8093d, 5c266499 | nós 10-10 | lancar com 2.0.5 se TV ok (testar no TCL/C9) |
 | [#419](https://github.com/iqui27/nuvio-native-legacy/issues/419) | [Samsung Tizen 6 / v2.0.4] Clicking a Recommendations card d | Samsung .tpk | bug | integrada | 2.0.5 | ja-lancada | 7f338254, 8b5ed6c0, d6b41e1 | nós 10-11 | lancar com 2.0.5; testar no TCL |
-| [#428](https://github.com/iqui27/nuvio-native-legacy/issues/428) | Constant freezes | LG | bug | precisa-log | 2.0.5 | 2.0.6 | - | nós 10-11 | triar |
+| [#428](https://github.com/iqui27/nuvio-native-legacy/issues/428) | Constant freezes | LG | bug | precisa-log | 2.0.5 | - | - | nós 10-11 | triar |
 | [#429](https://github.com/iqui27/nuvio-native-legacy/issues/429) | Subtitles auto select | Android | bug | em_revisao | 2.0.5 | ja-lancada | agente/205-i429hbs | nós 10-11 | merge agente/205-i429hbs (review OK y 23:11; commits f59554839, b144dbfd1 nao mergeados);  |
 | [#469](https://github.com/iqui27/nuvio-native-legacy/issues/469) | all movies shows not correct aspect ratio , original, stretc | Samsung .tpk | bug | precisa-log | 2.0.5 | 2.0.6 | - | sem comentários | Pedir log (codigo) com troca de modo de aspecto; ver qual pacote .tpk e qual caminho (Disp |
-| [#470](https://github.com/iqui27/nuvio-native-legacy/issues/470) | Next Episode Countdown Only Starts After Credits Finish | Samsung .tpk | bug | integrada | 2.0.5 | 2.0.5 | 7839b119 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
+| [#470](https://github.com/iqui27/nuvio-native-legacy/issues/470) | Next Episode Countdown Only Starts After Credits Finish | Samsung .tpk | bug | integrada | 2.0.5 | - | 7839b119 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#471](https://github.com/iqui27/nuvio-native-legacy/issues/471) | Trailer Playback Does Not Fill the Cards Properly | Samsung .tpk | bug | integrada | 2.0.5 | 2.0.6 | 38369f89 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#475](https://github.com/iqui27/nuvio-native-legacy/issues/475) | Subtitle outline color setting | Samsung .tpk | melhoria | integrada | 2.0.5 | 2.0.6 | 6a260e9b | autor 10-13 | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#477](https://github.com/iqui27/nuvio-native-legacy/issues/477) | Bigger synopsis font | Samsung .tpk | melhoria | integrada | 2.0.5 | 2.0.6 | 1366561a, 6a260e9b | autor 10-13 | lancar com 2.0.5 |
 | [#479](https://github.com/iqui27/nuvio-native-legacy/issues/479) | Formatter mode source list stutters on webOS | Samsung .tpk | bug | aberta | 2.0.5 | 2.0.6 | - | autor 10-13 | review OK (j-rev-205-formatter479); branch agente/205-formatter479 sem commit fora de inte |
-| [#481](https://github.com/iqui27/nuvio-native-legacy/issues/481) | Show audio and subtitle metadata in the stream source list | ? | feature | em_revisao | 2.0.5 | 2.0.6 | e4fb8c08/c9932635 | sem comentários | review OK (j-rev-pr487-v2); dono decide entrada na 2.0.6 |
-| [#484](https://github.com/iqui27/nuvio-native-legacy/issues/484) | External subtitles disappear after a few minutes without inp | Samsung .tpk | bug | integrada | 2.0.5 | 2.0.5 | 027fd3c7 | autor 10-13 | lancar com 2.0.5 (testar no TCL antes do release) |
+| [#481](https://github.com/iqui27/nuvio-native-legacy/issues/481) | Show audio and subtitle metadata in the stream source list | ? | feature | em_revisao | 2.0.5 | - | e4fb8c08/c9932635 | sem comentários | merge agente/205-pr487v2 (review OK j-rev-pr487-v2) ou drop por decisao do dono |
+| [#484](https://github.com/iqui27/nuvio-native-legacy/issues/484) | External subtitles disappear after a few minutes without inp | Samsung .tpk | bug | integrada | 2.0.5 | - | 027fd3c7 | autor 10-13 | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#486](https://github.com/iqui27/nuvio-native-legacy/issues/486) | Sometimes wont load P2P addons | ? | bug | integrada | 2.0.5 | ja-lancada | edff609f/c670c37e/20bb2f3a, 16351755c | sem comentários | review fix 90fb9cff7 (j-fix-p2pusb-w 09:50, sem review; BLOQUEIA 08:49 antes); merge agent |
-| [#488](https://github.com/iqui27/nuvio-native-legacy/issues/488) | Profiles switching | ? | bug | integrada | 2.0.5 | 2.0.5 | 067c0c35, agente/205-i488perfil, f51aa3d76 | sem comentários | merge pr/493-v3 (65613c562, review OK 06:50); testar troca de perfil no TCL |
+| [#488](https://github.com/iqui27/nuvio-native-legacy/issues/488) | Profiles switching | ? | bug | integrada | 2.0.5 | - | 067c0c35, agente/205-i488perfil, f51aa3d76 | sem comentários | merge pr/493-v3 (65613c562, review OK 06:50); testar troca de perfil no TCL |
 | [#492](https://github.com/iqui27/nuvio-native-legacy/issues/492) | Some Features suggestions | ? | feature | integrada | 2.0.5 | 2.0.6 | c624b273 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#499](https://github.com/iqui27/nuvio-native-legacy/issues/499) | Cached / not cached indicator on Debrid sources (torbox, rea | ? | feature | integrada | 2.0.5 | ja-lancada | aab8e18d | sem comentários | review j-revg-499cache ausente; conserto ja em integracao/2.0.5 |
 | [#502](https://github.com/iqui27/nuvio-native-legacy/issues/502) | Detail page keeps the low-res thumbnail instead of loading f | ? | bug | integrada | 2.0.5 | 2.0.6 | d3fc8e5e, 20f1104f | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
@@ -278,10 +278,10 @@ Notas:
 
 Notas:
 
-- **#302**: Rascunho de correção: o conserto do live TV NÃO está na 2.0.2 (resposta anterior dizia que sim). 0021b573 (2.0.2) é parcial. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag. Log BKPH09 ainda não foi lido; sem conserto confirmado para este relato. Revisão 2026-10-12: Reconexão publicada, mas autor relata persistência em 2.0.4 em 10/10. [alvo antes: 2.0.6; fechada no GH 10-15]
+- **#302**: Rascunho de correção: o conserto do live TV NÃO está na 2.0.2 (resposta anterior dizia que sim). 0021b573 (2.0.2) é parcial. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag. Log BKPH09 ainda não foi lido; sem conserto confirmado para este relato. Revisão 2026-10-12: Reconexão publicada, mas autor relata persistência em 2.0.4 em 10/10. [alvo antes: 2.0.6; fechada no GH 10-15] | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (5cfc61f10); status -> integrada
 - **#402**: Namer03, S95C, .tpk 2.0.3. A imagem mostra, na aba NMR, o cabecalho do grupo "Other SDR" com fileiras cujo nome (formatter do addon) diz "FHD | REMUX | SDR" e "FHD | SDR"; so a ultima diz "N/A | SDR" (essa realmente nao declara resolucao). CAUSA (lida no codigo, sem teste ainda): o grupo vem de grupoRes (src/streams.c:2105) que usa s->altura ou os selos r-4k/r-1080/r-720; a altura sai de stream_parse.c:281-283, que so procura os numeros 2160/1440/1080/720/480 e 4k/uhd, e badges_detectar (badges.c:40-42) so tem 1080p/1080i/1080. A palavra FHD sozinha (comum em formatter de AIOStreams) nao casa, entao altura=0 e o grupo e Outras (GRUPO_NOME, streams.c:2072). O app ja conhece FHD para canal ao vivo (nv_res_do_texto, livetv_regras.h:38) mas nao usa no filme/serie. NAO e ordenacao (nivelHdr, MP4 primeiro da LG e perfil 5 nao entram: e a Samsung .tpk e o problema e o grupo, nao a ordem dentro dele). Nao e configuracao (fonteregra.h trata auto-play, nao grupos). Cuidado no conserto: nv_res_do_texto aceita "hd" solto como 720, o que casaria DTS-HD; copiar so fhd/fullhd/full hd. Candidato a 2.0.4 (muda so o parser, 2 linhas + teste), decisao do dono. SUSPEITA: o JSON bruto do autor pode ter a resolucao em outro campo; sem o log/JSON da fonte nao foi provado. Diagnóstico atualizado: torrents sem cache; sem conserto identificado. Revisão 2026-10-12: FHD corrigido parcialmente; autor reabriu com ordenação ainda errada em 2.0.4. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15]
 - **#412**: Log QHQRVE (S95C, .tpk): relógio do player congelado, UI com upd=120 ms por quadro, parar retorna 0 ms mas o player nativo segue tocando. Conserto em agente/204-tpkpreso412 (71c7d615): ASS deixa de segurar o quadro, recupera relógio congelado, parada confirmada antes de abrir outro player. Revisão Codex achou P1 (Voltar durante PrepareAsync encerraria o processo numa TV sã): rodada 2 em andamento. Aguarda log; sem conserto confirmado para este relato. Revisão 2026-10-12: Correção 2.0.4 não cobre a persistência após reinstalação; comentário de 11/10 descreve novo fix em progresso. Escrivão 14/10 14:47: integrada via tpk412b.
-- **#415**: Diagnóstico via memlog; sem conserto confirmado. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#415**: Diagnóstico via memlog; sem conserto confirmado. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (5c6b8093d); status -> integrada
 - **#419**: Job i419recs done 20:05: commit d6b41e1 so teste posplay. Sem device Tizen. Ja corrigido em 2.0.5 pelos commits v2.0.5.
 - **#428**: Aguarda código/log para diagnóstico. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).
 - **#429**: Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839. Escrivao 10-15 07:10: review y OK (23:11) apos fixz 22:28; branch ainda 2 ahead, merge pendente. | Escrivao 2026-10-15 07:50: sem merge ainda; review OK y, branch nao mergeado | Escrivao 15/10 09:48: review OK ainda sem merge.
@@ -291,19 +291,19 @@ Notas:
 - **#475**: Pedido: cor do contorno da legenda. Escrivão 14/10 14:47: integrada via sinopse477.
 - **#477**: Snapshot 2026-10-14 10:15: 1366561a "Restore the original hero synopsis size and add a Synopsis size setting" em agente/205-sinopse; j-205-sinopse done e j-revg-sinopse veredito OK. Escrivao 14/10 19:2x: 1366561a ancestral de integracao/2.0.5 (6a260e9b).
 - **#479**: LG C5 webOS 26, 2.0.5, log M8C717 (registro 73696): descer na lista de fontes no modo Formatter engasga; modo padrao liso. | Escrivao 10-15 08:50: job formatter479 review OK; ver fora_do_github dono-205-formatter479.
-- **#481**: Snapshot 2026-10-14 10:15: "Sources: show declared audio and subtitle languages" (e4fb8c08) e o merge c9932635 "Merge PR #487 v2" existem so em agente/205-pr487v2, nao ancestral de integracao/2.0.5. OPEN no GitHub. | fechada no GH 2026-10-14 (CLOSED); alvo antigo 2.0.6 removido por regra do mapa.py; decidir com dono Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15: agente/205-pr487v2 (ac1ba9725) review OK j-rev-pr487-v2; nao mergeado; dono decide 2.0.6.
+- **#481**: Snapshot 2026-10-14 10:15: "Sources: show declared audio and subtitle languages" (e4fb8c08) e o merge c9932635 "Merge PR #487 v2" existem so em agente/205-pr487v2, nao ancestral de integracao/2.0.5. OPEN no GitHub. | fechada no GH 2026-10-14 (CLOSED); alvo antigo 2.0.6 removido por regra do mapa.py; decidir com dono Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15: agente/205-pr487v2 (ac1ba9725) review OK j-rev-pr487-v2; nao mergeado; dono decide 2.0.6. | Escrivao 2026-10-15 11:48: GH fechada; branch 3 ahead, review OK, nao mergeado
 - **#484**: LG OLED C1 webOS, 2.0.5: legenda de addon (OpenSubtitlesV3/AIOMetadata) some apos minutos sem tecla; embutida ok. Sem log. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-14). | Escrivão 2026-10-14 16:11: conserto integrado via agente/205-leg484 (merge 027fd3c7); fechada no GitHub. Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).
-- **#486**: Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo. | Escrivao 15/10 09:48: fix j-fix-p2pusb-w em curso.
-- **#488**: pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL. Escrivao 10-15 07:10: pr/493-fix review OK fix2; autor publicou head nova 5694694cc; fixes portados 65613c562 (pr/493-v3) e review OK 06:50 (j-revpr493-v3). Mergear pr/493-v3 para carregar #488 no PR. | Escrivao 10-15 08:50: pr/493-v3 (3 ahead, review OK 06:50, nao mergeado) substitui o pr/493 velho; #488 segue nele. | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15 10:50: reaberta no GH; pr/493-v3 review OK sem merge.
+- **#486**: Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo. | Escrivao 15/10 09:48: fix j-fix-p2pusb-w em curso. | Escrivao 2026-10-15 11:48: prompt p-205-p2p486 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo
+- **#488**: pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL. Escrivao 10-15 07:10: pr/493-fix review OK fix2; autor publicou head nova 5694694cc; fixes portados 65613c562 (pr/493-v3) e review OK 06:50 (j-revpr493-v3). Mergear pr/493-v3 para carregar #488 no PR. | Escrivao 10-15 08:50: pr/493-v3 (3 ahead, review OK 06:50, nao mergeado) substitui o pr/493 velho; #488 segue nele. | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15 10:50: reaberta no GH; pr/493-v3 review OK sem merge. | Escrivao 2026-10-15 11:48: prompt p-205-perfil488 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo
 - **#492**: Review j-revg-retomamorna OK 17:06. Merge agente/205-retomamorna em integracao/2.0.5 (c624b273, 18:48); j-merge-205-retomamorna done 18:45. Sem acao remota. Escrivao 14/10 19:1x: merge 18:48.
 - **#499**: Snapshot 2026-10-14 10:15: aab8e18d "Mark debrid-cached sources with a lightning icon in the source list (#499)" e ancestral de integracao/2.0.5 (merge 57aee24f agente/205-499cache). Nenhum job j-revg-499cache: conserto integrado sem review registrado. OPEN no GitHub.
 - **#502**: Snapshot 2026-10-14 10:15: d3fc8e5e "fix(detail): stop seeding list poster into backdrop for recommendations" cobre #502 e #503, so em agente/205-i502arte. Job RUNNING, sem validacao. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i502arte.
 - **#503**: Snapshot 2026-10-14 10:15: mesmo conserto d3fc8e5e de #502 (agente/205-i502arte, RUNNING). OPEN no GitHub. Escrivão 14/10 14:47: integrada via i502arte. | Escrivão 2026-10-14 16:11: merge 20f1104f consta em log.txt da integracao.
-- **#504**: Snapshot 2026-10-14 10:15: conserto be7c0dee "fix(fileiras): drop untouched rows of removed add-ons when the sheet opens (#504)" so em agente/205-i504 (nao e ancestral de integracao/2.0.5). Job j-205-i504 RUNNING, sem log de validacao ainda. Issue ainda OPEN no GitHub. Escrivão 14/10 14:47: integrada via i504.
+- **#504**: Snapshot 2026-10-14 10:15: conserto be7c0dee "fix(fileiras): drop untouched rows of removed add-ons when the sheet opens (#504)" so em agente/205-i504 (nao e ancestral de integracao/2.0.5). Job j-205-i504 RUNNING, sem log de validacao ainda. Issue ainda OPEN no GitHub. Escrivão 14/10 14:47: integrada via i504. | Escrivao 2026-10-15 11:48: prompt p-205-i504 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo
 
 ## Próximo patch proposto (2.0.6)
 
-25 issues.
+22 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -318,10 +318,6 @@ Notas:
 | [#461](https://github.com/iqui27/nuvio-native-legacy/issues/461) | Top toolbar | Android | feature | integrada | - | 2.0.6 | f3de11e7 | nós 10-12 | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#462](https://github.com/iqui27/nuvio-native-legacy/issues/462) | Samsung .tpk: test build for automatic subtitle sync (Tizen  | Samsung .tpk | meta | integrada | - | 2.0.6 | 84095af | autor 10-12 | lancar com 2.0.5; teste .tpk de legenda no TCL |
 | [#468](https://github.com/iqui27/nuvio-native-legacy/issues/468) | All Jellyfin catalogs do not show in catalogs list | LG | bug | aberta | - | 2.0.6 | - | sem comentários | Pedir log e nomes/quantidade dos catálogos esperados sem endereço/credenciais; obter fixtu |
-| [#473](https://github.com/iqui27/nuvio-native-legacy/issues/473) | Sound does not start | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: reaberta no GH 10-15; sem commit de conserto identificado |
-| [#474](https://github.com/iqui27/nuvio-native-legacy/issues/474) | Top right bar is unreachable | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: reaberta no GH 10-15; sem commit de conserto identificado |
-| [#476](https://github.com/iqui27/nuvio-native-legacy/issues/476) | No internet | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: reaberta no GH 10-15; sem commit de conserto identificado |
-| [#480](https://github.com/iqui27/nuvio-native-legacy/issues/480) | Remember Preferred Audio Language Across Sources | ? | feature | aberta | - | 2.0.6 | - | sem comentários | triar: reaberta no GH 10-15; sem commit de conserto identificado |
 | [#483](https://github.com/iqui27/nuvio-native-legacy/issues/483) | Anime subtitles not rendering | ? | bug | integrada | - | 2.0.6 | 251632be | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#494](https://github.com/iqui27/nuvio-native-legacy/issues/494) | Add contribution path for Aniskip and TheIntroDB skip marker | ? | feature | aberta | - | 2.0.6 | - | sem comentários | sem job nem branch: triar e criar job |
 | [#496](https://github.com/iqui27/nuvio-native-legacy/issues/496) | No next-episode suggestion / no quick next episode shortcut  | ? | feature | aberta | - | 2.0.6 | - | sem comentários | sem job nem branch: triar e criar job |
@@ -332,6 +328,7 @@ Notas:
 | [#506](https://github.com/iqui27/nuvio-native-legacy/issues/506) | App fails to connect: "The Nuvio account server didn't respo | ? | bug | integrada | - | 2.0.6 | 0e567d1a | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#507](https://github.com/iqui27/nuvio-native-legacy/issues/507) | Library on home | ? | feature | aberta | - | 2.0.6 | - | sem comentários | sem job nem branch: triar e criar job |
 | [#508](https://github.com/iqui27/nuvio-native-legacy/issues/508) | Stream loading backdrop | ? | feature | integrada | - | 2.0.6 | d57b79e9 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
+| [#528](https://github.com/iqui27/nuvio-native-legacy/issues/528) | [Bug/FR] Cast Images Fail to Load — Request for Metadata Add | ? | ? | aberta |  | 2.0.6 | - | sem comentários | triagem: sem job; decidir alvo |
 
 Notas:
 
@@ -346,20 +343,17 @@ Notas:
 - **#461**: Pede opção de toolbar no topo; mantenedor responde que hoje há menu lateral e relaciona #407. src/menu.c:desenhaBarra/geoEm implementam rail/painel lateral; src/detail.c roteia CIMA para área social e ESQUERDA para menu. Não há opção top toolbar comprovada; barra social no topo não é substituto da navegação principal. Sem bug ou causa a diagnosticar. Escrivão 14/10 14:47: integrada via menutopo.
 - **#462**: Job i462sync done 20:07: 84095af auto sync rejection translated tracks; tests autosync.sh/legsync.sh rc 0.
 - **#468**: C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato.
-- **#473**: Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub sem conserto local identificado. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.
-- **#474**: Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub; barra do topo, ver tambem #461 (agente/205-menutopo integrado). Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.
-- **#476**: Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub; #382 tratada por b212cec1 ja em integracao/2.0.5. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.
-- **#480**: Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub sem conserto local identificado. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.
-- **#483**: Impl fd6d795d; j-revg-i483remux OK 16:52. Merge 251632be (18:01). fetch via SeekHead quando a sonda erra o layout REMUX. Escrivao 14/10 19:1x: merge 18:01.
+- **#483**: Impl fd6d795d; j-revg-i483remux OK 16:52. Merge 251632be (18:01). fetch via SeekHead quando a sonda erra o layout REMUX. Escrivao 14/10 19:1x: merge 18:01. | Escrivao 2026-10-15 11:48: prompt p-205-i483remux em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo
 - **#494**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels sem label. Sem triagem local.
 - **#496**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels sem label. Sem triagem local.
 - **#497**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local.
 - **#500**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels bug. Sem triagem local.
 - **#501**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local.
-- **#505**: Snapshot 2026-10-14 10:15: 3fc691d4 "fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead. | Escrivao 10-15 08:50: liga ao dono P2P USB (agente/205-p2pusb); fix 07:52 sem review.
-- **#506**: Snapshot 2026-10-14 10:15: job j-205-i506 RUNNING (branch agente/205-i506, 0 commits fora de integracao/2.0.5). Suspeita de causa comum com #505. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i506. | Escrivão 2026-10-14 16:11: merge 0e567d1a (ancestral) consta em log.txt da integracao.
+- **#505**: Snapshot 2026-10-14 10:15: 3fc691d4 "fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead. | Escrivao 10-15 08:50: liga ao dono P2P USB (agente/205-p2pusb); fix 07:52 sem review. | Escrivao 2026-10-15 11:48: prompt p-205-i505* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo
+- **#506**: Snapshot 2026-10-14 10:15: job j-205-i506 RUNNING (branch agente/205-i506, 0 commits fora de integracao/2.0.5). Suspeita de causa comum com #505. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i506. | Escrivão 2026-10-14 16:11: merge 0e567d1a (ancestral) consta em log.txt da integracao. | Escrivao 2026-10-15 11:48: prompt p-205-i506 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo
 - **#507**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local.
-- **#508**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. Escrivão 14/10 14:47: branch agente/205-i508fundo: review OK, merge pendente. | Escrivão 2026-10-14 16:11: i508fundo mergeada (d57b79e9); review j-revg-i508fundo OK.
+- **#508**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. Escrivão 14/10 14:47: branch agente/205-i508fundo: review OK, merge pendente. | Escrivão 2026-10-14 16:11: i508fundo mergeada (d57b79e9); review j-revg-i508fundo OK. | Escrivao 2026-10-15 11:48: prompt p-205-i508fundo em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo
+- **#528**: Escrivao 2026-10-15 11:48: item novo (issues.json), alvo 2.0.6 provisório
 
 ## Futuro (2.1, 2.2, depois)
 
@@ -381,9 +375,9 @@ Notas:
 | [#460](https://github.com/iqui27/nuvio-native-legacy/issues/460) | Playback buttons for reloading stream and next episode | Android | feature | aberta | - | 2.1 | - | sem comentários | Conferir #403 e definir botões VOD com episódio disponível; reusar encaminhamento de próxi |
 | [#466](https://github.com/iqui27/nuvio-native-legacy/issues/466) | Incremental watch tracking with watch_state resource | all | feature | integrada | - | futuro | 90e43bd1 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#467](https://github.com/iqui27/nuvio-native-legacy/issues/467) | Watch tracking with Anilist | all | feature | aberta | - | futuro | - | sem comentários | Definir autenticação e mapeamento de anime/episódios AniList; comparar implementação diret |
-| [#511](https://github.com/iqui27/nuvio-native-legacy/issues/511) | Show subtitle track name instead of only showing language | ? | enhancement | integrada |  | futuro | f0ab7c91 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
-| [#510](https://github.com/iqui27/nuvio-native-legacy/issues/510) | Subtitles list not the same as nuvio in phone applications l | ? | bug | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
 | [#509](https://github.com/iqui27/nuvio-native-legacy/issues/509) | Expanded poster trailer | ? | enhancement | integrada | - | futuro | 13e13b92 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
+| [#510](https://github.com/iqui27/nuvio-native-legacy/issues/510) | Subtitles list not the same as nuvio in phone applications l | ? | bug | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
+| [#511](https://github.com/iqui27/nuvio-native-legacy/issues/511) | Show subtitle track name instead of only showing language | ? | enhancement | integrada |  | futuro | f0ab7c91 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#513](https://github.com/iqui27/nuvio-native-legacy/issues/513) | Any series episode autoplay even option is disabled | ? | bug | integrada |  | futuro | 84add4581 | sem comentários | Android 84add4581 instalado (Success); C9 rc=255: testar autoplay com opcao desligada no T |
 | [#514](https://github.com/iqui27/nuvio-native-legacy/issues/514) | Ability to rate a movie or an episode | ? | ? | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
 | [#521](https://github.com/iqui27/nuvio-native-legacy/issues/521) | Layout | ? | bug | aberta |  | futuro | - | sem comentários | triagem; sem job ainda; alvo a definir |
@@ -405,35 +399,33 @@ Notas:
 - **#460**: Pede botões recarregar fonte e próximo episódio. src/player.c:player_proximo_episodio e player_janela_proximo já suportam próxima mídia e oferta no fim; player_pediu_recarregar/avAtivar (AV_B_RECARREGAR) atendem Live TV, não provam botão VOD recarregar. Episódios/posplay existem; botões VOD sempre acessíveis são ampliação de UI, relacionada a #403.
 - **#466**: Pede resource watch_state para addons receberem eventos incrementais e delegarem tracking a vários provedores. src/addons.c interpreta resources de metadados/fontes/legendas; src/player.c emite eventos Trakt e progresso local/Nuvio via src/syncprog.c, sem despachante watch_state. Referências externas não consultadas (offline). Infraestrutura de tracking existe, contrato/autorização/entrega de eventos ao addon não estão implementados nesse caminho. Escrivão 14/10 14:47: integrada via ws1.
 - **#467**: Pede tracking AniList, sem plataforma. src/artereserva.c:anilist consulta arte GraphQL e src/descoberta.c reconhece IDs anilist; isso é metadado/arte, não autenticação ou envio de histórico. src/visto.c:visto_titulo/visto_episodios distribuem visto para provedores existentes, sem destino AniList. Tracking não implementado no caminho lido; sem bug a reproduzir.
-- **#511**: Criada 2026-10-14 (snapshot 14:46). Escrivao 14/10 19:1x: Fix 2e05dd94; j-revg-i511legnome-q OK 18:44; merge f0ab7c91 18:45.
+- **#509**: Criada 2026-10-14 (snapshot 14:46). Escrivão 14/10 14:47: integrada via i509trailer. | Escrivão 2026-10-14 16:11: conserto 13e13b92 ja em integracao/2.0.5; sem release ainda. | Escrivao 2026-10-15 11:48: prompt p-205-i509trailer* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo
 - **#510**: Criada 2026-10-14 (snapshot 14:46).
-- **#509**: Criada 2026-10-14 (snapshot 14:46). Escrivão 14/10 14:47: integrada via i509trailer. | Escrivão 2026-10-14 16:11: conserto 13e13b92 ja em integracao/2.0.5; sem release ainda.
-- **#513**: review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando Escrivao 10-15 07:10: BLOQUEIA x->fix i513w 05:50 (adbaf0f9f)->review v OK 06:49; branch 6 ahead. | Escrivao 2026-10-15 07:50: merge 84add4581 em integracao/2.0.5 | Escrivao 10-15 08:50: BLOQUEIA w/x/y antes; v OK 06:49; merged. | Escrivao 15/10 09:48: Android 84add4581 Success; C9 rc=255 (TV nao confirmado).
+- **#511**: Criada 2026-10-14 (snapshot 14:46). Escrivao 14/10 19:1x: Fix 2e05dd94; j-revg-i511legnome-q OK 18:44; merge f0ab7c91 18:45. | Escrivao 2026-10-15 11:48: prompt p-205-i511legnome em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo
+- **#513**: review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando Escrivao 10-15 07:10: BLOQUEIA x->fix i513w 05:50 (adbaf0f9f)->review v OK 06:49; branch 6 ahead. | Escrivao 2026-10-15 07:50: merge 84add4581 em integracao/2.0.5 | Escrivao 10-15 08:50: BLOQUEIA w/x/y antes; v OK 06:49; merged. | Escrivao 15/10 09:48: Android 84add4581 Success; C9 rc=255 (TV nao confirmado). | Escrivao 2026-10-15 11:48: prompt p-205-i513autoplay* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo
 - **#514**: Issue nova 14/10 20:52 (rating de filme/episodio). Feature, nao 2.0.5.
 - **#521**: Issue nova 2026-10-15 06:48 (issues.json). Sem descrição de contexto; triar.
 - **#524**: Issue nova 2026-10-15 11:33 (issues.json, label bug). Sem triagem local.
 
 ## Outras pendências
 
-3 issues.
+2 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
-| [#482](https://github.com/iqui27/nuvio-native-legacy/issues/482) | Continue Watching content leaks between profiles | ? | bug | integrada | - | 2.0.5 | 067c0c35, f51aa3d76 | sem comentários | testar troca de perfil no TCL |
 | [#495](https://github.com/iqui27/nuvio-native-legacy/issues/495) | How to return to the island card (movie resume) from the hom | ? | feature | integrada | - | 2.0.5 | 9734ecc2b, d590e0f9 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#512](https://github.com/iqui27/nuvio-native-legacy/issues/512) | Tracking and next episode issues with Kaiju no 8 season 2 | ? | bug | integrada |  | 2.0.5 | 1b47d82f8, 8c7adb07, a0e14d7c | sem comentários | lancar com 2.0.5 (testar no TCL: Kaiju no 8 S2 tracking/proximo episodio) |
 
 Notas:
 
-- **#482**: Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix. Escrivao 10-15 07:10: mesmo caso de #488; correcoes portadas na head nova do autor (pr/493-v3), review OK 06:50. | Escrivao 10-15 08:50: pr/493-v3 carrega #482 (review OK 06:50, nao mergeado). | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).
 - **#495**: Review OK j-revg-i495ilha 19:55. Merged 9734ecc2b. Escrivao antigo dizia sem review: errado.
-- **#512**: Review OK j-revg-i512temporada-r2 19:57. Merged 1b47d82f8. P2 aberto: episodio sem releaseDate nao marca CWO_SEM_DATA (trakt.c:616).
+- **#512**: Review OK j-revg-i512temporada-r2 19:57. Merged 1b47d82f8. P2 aberto: episodio sem releaseDate nao marca CWO_SEM_DATA (trakt.c:616). | Escrivao 2026-10-15 11:48: prompt p-205-i512temporada* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo
 
 ## Já lançado
 
 295 issues.
 
-### Lançadas e ainda abertas no GitHub (11)
+### Lançadas e ainda abertas no GitHub (10)
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -443,7 +435,6 @@ Notas:
 | [#422](https://github.com/iqui27/nuvio-native-legacy/issues/422) | In-app screensaver comes on during an autoplaying trailer if | Android | bug | lancada | 2.0.5 | ja-lancada | 65bb6e2c, a408e51a | nós 10-11 | dono: avaliar fechamento com v2.0.5 |
 | [#425](https://github.com/iqui27/nuvio-native-legacy/issues/425) | Unnable to remove subtitle languages | all | feature | lancada | 2.0.5 | ja-lancada | 2b4119d5, 2c571ab6, 8b7468b0 | sem comentários | dono: avaliar fechamento com v2.0.5 |
 | [#426](https://github.com/iqui27/nuvio-native-legacy/issues/426) | Aspect ratio bug | Samsung .tpk | bug | lancada | 2.0.5 | ja-lancada | 3ba2987a, c4f344e8 | autor 10-12 | dono: avaliar fechamento com v2.0.5 |
-| [#427](https://github.com/iqui27/nuvio-native-legacy/issues/427) | Memory for images capped at 160 MB | LG | bug | lancada | 2.0.5 | ja-lancada | 92ee6141 | nós 10-12 | dono: avaliar fechamento com v2.0.5 |
 | [#430](https://github.com/iqui27/nuvio-native-legacy/issues/430) | Multiple intro skip sources and priority order | all | feature | lancada | 2.0.5 | ja-lancada | 551edb43, a9c97b26 | nós 10-11 | dono: avaliar fechamento com v2.0.5 |
 | [#433](https://github.com/iqui27/nuvio-native-legacy/issues/433) | All posters are displayed horizontally, not coming from my a | LG | bug | lancada | 2.0.5 | ja-lancada | 7777e129, ea0c322a | autor 10-12 | dono: avaliar fechamento com v2.0.5 |
 | [#439](https://github.com/iqui27/nuvio-native-legacy/issues/439) | Increase maximum subtitle size from 250 to 300 | all | feature | lancada | 2.0.5 | ja-lancada | 2f1e2de1, 6ad103f3 | nós 10-11 | Dono revisar rascunho de fechamento citando 2.0.5; pedir reabertura se 300% não estiver di |
@@ -457,13 +448,12 @@ Notas:
 - **#422**: Triagem 2026-10-12: 65bb6e2c em v2.0.5; a408e51a em v2.0.5; release-notes.md v2.0.5: - The title page shows one trailer card again (#417), and the screensaver waits while a trailer plays (#422)..
 - **#425**: Triagem 2026-10-12: 2b4119d5 em v2.0.5; 2c571ab6 em v2.0.5; 8b7468b0 em v2.0.5.
 - **#426**: Triagem 2026-10-12: 3ba2987a em v2.0.5; c4f344e8 em v2.0.5; release-notes.md v2.0.5: - Samsung aspect ratio: the picture stays where it belongs on Tizen 4 (#426, #341), an off-screen crop is refused instead of pushing the image away, and a refused or queued change gives the sound back and stays in its own video.. | 13/10 KeijoMika: zoom ok no Q80R Tizen 5 em 2.0.5, mas pausado so aplica ao retomar. Job agente/205-aspecto426.
-- **#427**: Triagem 2026-10-12: 92ee6141 em v2.0.5. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).
 - **#430**: Triagem 2026-10-12: 551edb43 em v2.0.5; a9c97b26 em v2.0.5; release-notes.md v2.0.5: - Auto-skip of credits only fires with a real start and end marker (#329, #331) and rewinding never skips them again; intro markers also cover anime opened from IMDb/TMDB, in any season (#430)..
 - **#433**: Triagem 2026-10-12: 7777e129 em v2.0.5; ea0c322a em v2.0.5; release-notes.md v2.0.5: - Metadata loads again when the main TMDB address is blocked or times out (#416, #419), and posters with very long addresses load again (#433).. Parcial: URL longa tem conserto; conferir formato do poster e Continue Watching.
 - **#439**: Pede limite de legenda de 250% para 300%, sem plataforma indicada. Já lançado: src/ajustes.c:ajustes_leg2_tamanho chega a 300; src/player.c:desenharLegendaPrincipal limita pelo TXT_LEG_PCT_MAX (src/text.h), compartilhado com legenda secundária/preview. 6ad103f3 e merge 2f1e2de1 contidos em v2.0.5; .triagem/release-notes.md explicita #439/#440. Não depende só do comentário de intenção.
 - **#440**: Relata texto menor ao ligar Bold; mantenedor identifica face árabe Noto Naskh Bold. src/text.c:corpoNegrito compara altura do glifo/ascensão, arabeBoldFace ajusta a face Bold à regular e fonteNegritoReal faz ajuste das famílias. Causa e compensação explícitas no código, não mera SUSPEITA. 6ad103f3 e 2f1e2de1 em v2.0.5 e nota de release #440 comprovam lançamento; não há prova física nesta triagem.
 
-### Lançadas e fechadas (284)
+### Lançadas e fechadas (285)
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -751,6 +741,7 @@ Notas:
 | [#384](https://github.com/iqui27/nuvio-native-legacy/issues/384) | Embedded ASS subtitles stopped rendering after anime intro | LG | bug | lancada | 2.0.3 | - | 3e7bbb62, 4151683c, 9ee093ac | autor 10-09 | sem ação; conserto publicado |
 | [#385](https://github.com/iqui27/nuvio-native-legacy/issues/385) | Internet Connection Drop and Reconnecting Bug to no end | Samsung .wgt | bug | lancada | 2.0.3 | - | 4151683c, 9ee093ac | autor 10-09 | dono: avaliar fechamento com v2.0.3 |
 | [#387](https://github.com/iqui27/nuvio-native-legacy/issues/387) | [bug] instant long press in library | Samsung .wgt | bug | lancada | 2.0.5 | - | 03213598, 0f98379f, c82fa422 | autor 10-12 | dono: avaliar fechamento com v2.0.5 |
+| [#427](https://github.com/iqui27/nuvio-native-legacy/issues/427) | Memory for images capped at 160 MB | LG | bug | lancada | 2.0.5 | - | 92ee6141 | nós 10-12 | dono: avaliar fechamento com v2.0.5 |
 
 Notas:
 
@@ -1038,10 +1029,11 @@ Notas:
 - **#384**: Triagem 2026-10-12: 3e7bbb62 em v2.0.3; 4151683c em v2.0.3; 9ee093ac em v2.0.3.
 - **#385**: Triagem 2026-10-12: 4151683c em v2.0.3; 9ee093ac em v2.0.3; release-notes.md v2.0.3: - **Video server refusing connections** (#385). When the server of the video refuses a connection (seen on Samsung .tpk with TorBox links), the embedded subtitle reader, the track probe and the chapter reader stop and wait 10 to 60 s before trying that server again, with one connection at a time, instead of retrying several times while the video opens. It does not make a refused source play: if the server also refuses the TV player, the source still fails.. [alvo antes: ja-lancada; fechada no GH 10-15]
 - **#387**: Triagem 2026-10-12: 03213598 em v2.0.5; 0f98379f em v2.0.5; c82fa422 em v2.0.5. [alvo antes: ja-lancada; fechada no GH 10-15]
+- **#427**: Triagem 2026-10-12: 92ee6141 em v2.0.5. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).
 
 ## Fechado sem conserto (por-desenho, fora-do-escopo, duplicada, respondida, sem resposta)
 
-81 issues.
+86 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -1087,7 +1079,7 @@ Notas:
 | [#306](https://github.com/iqui27/nuvio-native-legacy/issues/306) | Refresh Live TV | LG | feature | aberta | - | - | - | sem comentários | triar/reproduzir; falta conserto comprovado |
 | [#307](https://github.com/iqui27/nuvio-native-legacy/issues/307) | Request | iOS | feature | fora-do-escopo | - | - | - | autor 10-07 | responder (sem resposta; pedido de .ipa) |
 | [#309](https://github.com/iqui27/nuvio-native-legacy/issues/309) | [suggestion] sources formatter | ? | feature | por-desenho | - | - | - | autor 10-07 | nada (fechada) |
-| [#313](https://github.com/iqui27/nuvio-native-legacy/issues/313) | [suggestion] downmix DTS to AC3 5.1 | Samsung | feature | aberta | - | - | - | autor 10-07 | triar/reproduzir; falta conserto comprovado |
+| [#313](https://github.com/iqui27/nuvio-native-legacy/issues/313) | [suggestion] downmix DTS to AC3 5.1 | Samsung | feature | integrada | - | - | bf3e71e4a | autor 10-07 | lancar com 2.0.5 se TV ok (testar no TCL/C9) |
 | [#315](https://github.com/iqui27/nuvio-native-legacy/issues/315) | .avi media files fail to play ("Could not open the source") | Samsung .tpk | bug | aberta | - | - | - | sem comentários | triar/reproduzir; falta conserto comprovado |
 | [#316](https://github.com/iqui27/nuvio-native-legacy/issues/316) | Live tv schedule | Samsung .tpk | bug | integrada | - | - | 7f3177ef | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#324](https://github.com/iqui27/nuvio-native-legacy/issues/324) | Relatório de logs | all | meta | por-desenho | - | - | 83c2cedd | nós 10-11 | nada |
@@ -1126,6 +1118,11 @@ Notas:
 | [#404](https://github.com/iqui27/nuvio-native-legacy/issues/404) | Continue watching mixes up | Samsung .tpk | bug | aberta | - | - | - | sem comentários | triar/reproduzir; falta conserto comprovado |
 | [#405](https://github.com/iqui27/nuvio-native-legacy/issues/405) | Quick search doesn't list all results | Samsung .tpk | bug | integrada | - | - | 219d3bf4 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#406](https://github.com/iqui27/nuvio-native-legacy/issues/406) | Passing through ratings on title page | Samsung .tpk | feature | aberta | - | - | - | sem comentários | triar/reproduzir; falta conserto comprovado |
+| [#473](https://github.com/iqui27/nuvio-native-legacy/issues/473) | Sound does not start | ? | bug | aberta | - | - | - | sem comentários | triar: reaberta no GH 10-15; sem commit de conserto identificado |
+| [#474](https://github.com/iqui27/nuvio-native-legacy/issues/474) | Top right bar is unreachable | ? | bug | aberta | - | - | - | sem comentários | triar: reaberta no GH 10-15; sem commit de conserto identificado |
+| [#476](https://github.com/iqui27/nuvio-native-legacy/issues/476) | No internet | ? | bug | aberta | - | - | - | sem comentários | triar: reaberta no GH 10-15; sem commit de conserto identificado |
+| [#480](https://github.com/iqui27/nuvio-native-legacy/issues/480) | Remember Preferred Audio Language Across Sources | ? | feature | aberta | - | - | - | sem comentários | triar: reaberta no GH 10-15; sem commit de conserto identificado |
+| [#482](https://github.com/iqui27/nuvio-native-legacy/issues/482) | Continue Watching content leaks between profiles | ? | bug | integrada | - | - | 067c0c35, f51aa3d76 | sem comentários | testar troca de perfil no TCL |
 
 Notas:
 
@@ -1171,7 +1168,7 @@ Notas:
 - **#306**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#307**: SUSPEITA de fora-do-escopo: pedido de .ipa, app é C/SDL para TVs. O dono decide. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: nao vamos fazer; fechada no GH 10-15]
 - **#309**: Já existe: Fontes e add-ons > Texto da fonte. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#313**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. bf3e71e4 implementa AC3 no webOS; f45ddc14 só avisa na Samsung. Nenhum atende ao downmix Samsung pedido. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
+- **#313**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. bf3e71e4 implementa AC3 no webOS; f45ddc14 só avisa na Samsung. Nenhum atende ao downmix Samsung pedido. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar. | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (bf3e71e4a); status -> integrada
 - **#315**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#316**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via livetv. [alvo antes: 2.0.6; fechada no GH 10-15]
 - **#324**: Relatório automático de triagem de logs (comentários nossos); não é bug. Alvo nao vamos fazer: não é bug nem pedido. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: nao vamos fazer; fechada no GH 10-15]
@@ -1194,7 +1191,7 @@ Notas:
 - **#373**: Revisão 2026-10-12: autor confirma UI resolvida em 2.0.4; mantenedor explica em 11/10 que Opening source é esperado por renovação dos links. Fechada no snapshot; sem commit de fix comprovado.
 - **#374**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Pedido é sync pela linha clicada e limite maior de atraso; AutoSync existente não atende ao recurso solicitado. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#379**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkfim. [alvo antes: 2.0.6; fechada no GH 10-15]
-- **#382**: LG 50UT8050PSB, Nuvio 2.0.2 (.ipk). Relato: depois de ligar a TV a frio aparece "sem internet" mesmo com internet, some, volta várias vezes até parar de vez. O campo de log ficou sem código. SUSPEITA, sem prova: o aviso nasce do teste de rede do app (redesaude) logo após o boot, quando a rede da TV ainda sobe; não lido no código nem em log. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | 13/10 Mizikashi1: voltou ao abrir serie, log RSM044 (registro 73601). Job agente/205-net382. Escrivão 14/10 14:47: integrada via 382dns. [alvo antes: 2.0.6; fechada no GH 10-15]
+- **#382**: LG 50UT8050PSB, Nuvio 2.0.2 (.ipk). Relato: depois de ligar a TV a frio aparece "sem internet" mesmo com internet, some, volta várias vezes até parar de vez. O campo de log ficou sem código. SUSPEITA, sem prova: o aviso nasce do teste de rede do app (redesaude) logo após o boot, quando a rede da TV ainda sobe; não lido no código nem em log. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | 13/10 Mizikashi1: voltou ao abrir serie, log RSM044 (registro 73601). Job agente/205-net382. Escrivão 14/10 14:47: integrada via 382dns. [alvo antes: 2.0.6; fechada no GH 10-15] | Escrivao 2026-10-15 11:48: prompt p-205-382dns em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo
 - **#386**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkfim. [alvo antes: 2.0.6; fechada no GH 10-15]
 - **#388**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15]
 - **#389**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: futuro; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
@@ -1210,6 +1207,11 @@ Notas:
 - **#404**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#405**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15]
 - **#406**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13).
+- **#473**: Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub sem conserto local identificado. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.
+- **#474**: Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub; barra do topo, ver tambem #461 (agente/205-menutopo integrado). Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.
+- **#476**: Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub; #382 tratada por b212cec1 ja em integracao/2.0.5. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.
+- **#480**: Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub sem conserto local identificado. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.
+- **#482**: Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix. Escrivao 10-15 07:10: mesmo caso de #488; correcoes portadas na head nova do autor (pr/493-v3), review OK 06:50. | Escrivao 10-15 08:50: pr/493-v3 carrega #482 (review OK 06:50, nao mergeado). | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).
 
 ## Auditoria de validações
 
@@ -1217,6 +1219,9 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 | Data | Quem | O que | Issues | Ref | Resultado | Evidência |
 |---|---|---|---|---|---|---|
+| 2026-10-15 10:55 | job-pi (master1015 teste) | Build mac.sh + git diff --check em agente/205-master1015; suites linkadas nao rodadas | - | agente/205-master1015 | inconclusivo | /Volumes/ExternalSSD/tmp/rev/j-205-master1015-teste.log |
+| 2026-10-15 10:49 | job-pi magpie/group/nv-revisao | Revisao pr490 fix5 (Vitrine resume/pagination): BLOQUEIA | - | agente/205-pr490-fix (tip 1f8309961 + fix5) | falhou | /Volumes/ExternalSSD/tmp/rev/j-revpr490-fix5.log |
+| 2026-10-15 10:48 | job-pi magpie/group/nv-revisao | Revisao p2pusb v3 (agente/205-p2pusb): BLOQUEIA | #486, #505 | agente/205-p2pusb (tip 90fb9cff7 + fixes) | falhou | /Volumes/ExternalSSD/tmp/rev/j-revg-p2pusb-v3.log |
 | 2026-10-15 08:50 | job-pi group/nv-revisao | Revisao pr490 fix4: BLOQUEIA | - | pr/490-fix (rev antes de 1f8309961) | falhou | /Volumes/ExternalSSD/tmp/rev/j-revpr490-fix4.log |
 | 2026-10-15 08:49 | job-pi group/nv-revisao | Revisao p2pusb v2 (fix USB P2P): BLOQUEIA | #486, #505 | agente/205-p2pusb (rev antes de 90fb9cff7) | falhou | /Volumes/ExternalSSD/tmp/rev/j-revg-p2pusb-v2.log |
 | 2026-10-15 08:48 | job-pi group/nv-revisao | Revisao master1015 (merge 28 commits): BLOQUEIA | - | agente/205-master1015 (rev antes de 12f000886) | falhou | /Volumes/ExternalSSD/tmp/rev/j-revg-master1015.log |

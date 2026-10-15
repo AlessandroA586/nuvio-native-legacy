@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-15 10:50",
+ "atualizado_em": "2026-10-15 11:48",
  "base": "5544c3e4c",
- "nota": "Sync 2026-10-15 10:50, HEAD integracao/2.0.5 bf617f00a (instalado Android 84add4581 Success; C9 rc=255). Ver escrivao/estado.md.",
+ "nota": "Sync 2026-10-15 11:48, HEAD integracao/2.0.5 08c5eddf2 (code = 84add4581 instalado Android Success; C9 rc=255). Ver escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,
@@ -5190,9 +5190,10 @@
    "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "precisa-log",
+   "status": "integrada",
    "release": "2.0.3",
    "conserto": [
+    "a8048e0de webOS: seek Failure na retomada nao derruba mais a fonte (#246)",
     "a7f23592 (2.0.3)",
     "a8048e0d (2.0.3)",
     "023497dd (v2.0.0)"
@@ -5203,8 +5204,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-06"
    },
-   "proximo_passo": "pedir log (pedido em 06/10, sem retorno)",
-   "notas": "NOTAS 2.0.3: \"LG: resume no longer drops the source on a failed seek (#246)\". Não confirmado que cobre o relato HEVC/anime; plataforma do relato desconhecida. ALVO 2.0.3 = SUSPEITA: o conserto está nas NOTAS mas não está confirmado que cobre o relato; falta log do autor. COMMITS vs v2.0.3 (09/10): a7f23592, a8048e0d, 023497dd estão na tag; status mantido porque o conserto é suspeita/parcial e sem confirmação do autor. Revisão 2026-10-12: Seek manual/HEVC não é corrigido pela proteção de retomada contra troca de fonte. [alvo antes: 2.0.6; fechada no GH 10-15]",
+   "proximo_passo": "lancar com 2.0.5 se TV ok (testar no TCL/C9)",
+   "notas": "NOTAS 2.0.3: \"LG: resume no longer drops the source on a failed seek (#246)\". Não confirmado que cobre o relato HEVC/anime; plataforma do relato desconhecida. ALVO 2.0.3 = SUSPEITA: o conserto está nas NOTAS mas não está confirmado que cobre o relato; falta log do autor. COMMITS vs v2.0.3 (09/10): a7f23592, a8048e0d, 023497dd estão na tag; status mantido porque o conserto é suspeita/parcial e sem confirmação do autor. Revisão 2026-10-12: Seek manual/HEVC não é corrigido pela proteção de retomada contra troca de fonte. [alvo antes: 2.0.6; fechada no GH 10-15] | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (a8048e0de); status -> integrada",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/246",
    "criada_em": "2026-10-04"
   },
@@ -6218,9 +6219,10 @@
    "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
-   "status": "precisa-log",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
+    "5cfc61f10 Merge agente/205-livetv302: live TV on the .tpk reopens at once on end of stream (#302)",
     "6c4d3863 (v2.0.3)",
     "8fea5018 (v2.0.3)",
     "0021b573 (v2.0.2)"
@@ -6231,8 +6233,8 @@
     "ultimo_comentario_por": "praveencudz",
     "ultima_nossa": "2026-10-08"
    },
-   "proximo_passo": "triar",
-   "notas": "Rascunho de correção: o conserto do live TV NÃO está na 2.0.2 (resposta anterior dizia que sim). 0021b573 (2.0.2) é parcial. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag. Log BKPH09 ainda não foi lido; sem conserto confirmado para este relato. Revisão 2026-10-12: Reconexão publicada, mas autor relata persistência em 2.0.4 em 10/10. [alvo antes: 2.0.6; fechada no GH 10-15]",
+   "proximo_passo": "lancar com 2.0.5 se TV ok (testar no TCL/C9)",
+   "notas": "Rascunho de correção: o conserto do live TV NÃO está na 2.0.2 (resposta anterior dizia que sim). 0021b573 (2.0.2) é parcial. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag. Log BKPH09 ainda não foi lido; sem conserto confirmado para este relato. Revisão 2026-10-12: Reconexão publicada, mas autor relata persistência em 2.0.4 em 10/10. [alvo antes: 2.0.6; fechada no GH 10-15] | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (5cfc61f10); status -> integrada",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/302",
    "criada_em": "2026-10-07"
   },
@@ -6459,17 +6461,19 @@
    "estado_github": "fechada",
    "plataforma": "Samsung",
    "tipo": "feature",
-   "status": "aberta",
+   "status": "integrada",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "bf3e71e4a feat(webos): option to convert DTS to AC3 5.1 instead of stereo AAC (#313)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": "2026-10-07",
     "ultimo_comentario_por": "Namer03",
     "ultima_nossa": "2026-10-07"
    },
-   "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. bf3e71e4 implementa AC3 no webOS; f45ddc14 só avisa na Samsung. Nenhum atende ao downmix Samsung pedido. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.",
+   "proximo_passo": "lancar com 2.0.5 se TV ok (testar no TCL/C9)",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. bf3e71e4 implementa AC3 no webOS; f45ddc14 só avisa na Samsung. Nenhum atende ao downmix Samsung pedido. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar. | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (bf3e71e4a); status -> integrada",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/313",
    "criada_em": "2026-10-07"
   },
@@ -7850,7 +7854,7 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "LG 50UT8050PSB, Nuvio 2.0.2 (.ipk). Relato: depois de ligar a TV a frio aparece \"sem internet\" mesmo com internet, some, volta várias vezes até parar de vez. O campo de log ficou sem código. SUSPEITA, sem prova: o aviso nasce do teste de rede do app (redesaude) logo após o boot, quando a rede da TV ainda sobe; não lido no código nem em log. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | 13/10 Mizikashi1: voltou ao abrir serie, log RSM044 (registro 73601). Job agente/205-net382. Escrivão 14/10 14:47: integrada via 382dns. [alvo antes: 2.0.6; fechada no GH 10-15]",
+   "notas": "LG 50UT8050PSB, Nuvio 2.0.2 (.ipk). Relato: depois de ligar a TV a frio aparece \"sem internet\" mesmo com internet, some, volta várias vezes até parar de vez. O campo de log ficou sem código. SUSPEITA, sem prova: o aviso nasce do teste de rede do app (redesaude) logo após o boot, quando a rede da TV ainda sobe; não lido no código nem em log. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | 13/10 Mizikashi1: voltou ao abrir serie, log RSM044 (registro 73601). Job agente/205-net382. Escrivão 14/10 14:47: integrada via 382dns. [alvo antes: 2.0.6; fechada no GH 10-15] | Escrivao 2026-10-15 11:48: prompt p-205-382dns em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/382",
    "criada_em": "2026-10-09"
   },
@@ -8376,7 +8380,7 @@
   {
    "numero": 409,
    "titulo": "The source didn't answer in time error even though the server is working",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "bug",
    "status": "lancada",
@@ -8396,8 +8400,7 @@
    "proximo_passo": "sem ação; conserto publicado",
    "notas": "Triagem 2026-10-12: 2051869e em v2.0.4; 5cd60adf em v2.0.4; 6d46e336 em v2.0.4. Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/409",
-   "criada_em": "2026-10-09",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 410,
@@ -8431,7 +8434,7 @@
   {
    "numero": 411,
    "titulo": "[Tizen 4.0 / v2.0.3] Play/Pause works but shows Samsung \"Not Available\" toast (#196 follow-up)",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "lancada",
@@ -8448,8 +8451,7 @@
    "proximo_passo": "sem ação; conserto publicado",
    "notas": "Triagem 2026-10-12: release-notes.md v2.0.4: - **Samsung Tizen 4 / 5: no more \"Not Available\" toast** on Play/Pause and other media keys (#411).. Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/411",
-   "criada_em": "2026-10-09",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-09"
   },
   {
    "numero": 412,
@@ -8524,9 +8526,10 @@
    "estado_github": "aberta",
    "plataforma": "LG",
    "tipo": "bug",
-   "status": "precisa-log",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
+    "5c6b8093d Log: process and TV memory in the FPS line and around video loads (#415)",
     "5c266499 (integracao/2.0.5; memlog)"
    ],
    "ultima_resposta": {
@@ -8535,8 +8538,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-10"
    },
-   "proximo_passo": "triar",
-   "notas": "Diagnóstico via memlog; sem conserto confirmado. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.",
+   "proximo_passo": "lancar com 2.0.5 se TV ok (testar no TCL/C9)",
+   "notas": "Diagnóstico via memlog; sem conserto confirmado. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (5c6b8093d); status -> integrada",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/415",
    "criada_em": "2026-10-10",
    "alvo": "2.0.6"
@@ -8800,7 +8803,7 @@
   {
    "numero": 427,
    "titulo": "Memory for images capped at 160 MB",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "LG",
    "tipo": "bug",
    "status": "lancada",
@@ -8817,13 +8820,12 @@
    "proximo_passo": "dono: avaliar fechamento com v2.0.5",
    "notas": "Triagem 2026-10-12: 92ee6141 em v2.0.5. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/427",
-   "criada_em": "2026-10-10",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-10"
   },
   {
    "numero": 428,
    "titulo": "Constant freezes",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "LG",
    "tipo": "bug",
    "status": "precisa-log",
@@ -8838,8 +8840,7 @@
    "proximo_passo": "triar",
    "notas": "Aguarda código/log para diagnóstico. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/428",
-   "criada_em": "2026-10-10",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-10"
   },
   {
    "numero": 429,
@@ -9293,7 +9294,7 @@
   {
    "numero": 470,
    "titulo": "Next Episode Countdown Only Starts After Credits Finish",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "integrada",
@@ -9309,8 +9310,7 @@
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
    "notas": "rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log B9RJZ8 (registro 73397): [posplay] creditos aceito (sobram 265s, janela 300s); cartao aparece nos creditos mas contagem so comeca no fim. Escrivão 14/10 14:47: integrada via i18nordem, i470. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/470",
-   "alvo": "2.0.5"
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/470"
   },
   {
    "numero": 471,
@@ -9337,7 +9337,7 @@
   {
    "numero": 473,
    "titulo": "Sound does not start",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "bug",
    "status": "aberta",
@@ -9352,13 +9352,12 @@
    "proximo_passo": "triar: reaberta no GH 10-15; sem commit de conserto identificado",
    "notas": "Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub sem conserto local identificado. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/473",
-   "criada_em": "2026-10-13",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-13"
   },
   {
    "numero": 474,
    "titulo": "Top right bar is unreachable",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "bug",
    "status": "aberta",
@@ -9373,8 +9372,7 @@
    "proximo_passo": "triar: reaberta no GH 10-15; sem commit de conserto identificado",
    "notas": "Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub; barra do topo, ver tambem #461 (agente/205-menutopo integrado). Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/474",
-   "criada_em": "2026-10-13",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-13"
   },
   {
    "numero": 475,
@@ -9401,7 +9399,7 @@
   {
    "numero": 476,
    "titulo": "No internet",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "bug",
    "status": "aberta",
@@ -9416,8 +9414,7 @@
    "proximo_passo": "triar: reaberta no GH 10-15; sem commit de conserto identificado",
    "notas": "Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub; #382 tratada por b212cec1 ja em integracao/2.0.5. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/476",
-   "criada_em": "2026-10-13",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-13"
   },
   {
    "numero": 477,
@@ -9465,7 +9462,7 @@
   {
    "numero": 480,
    "titulo": "Remember Preferred Audio Language Across Sources",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "aberta",
@@ -9480,13 +9477,12 @@
    "proximo_passo": "triar: reaberta no GH 10-15; sem commit de conserto identificado",
    "notas": "Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub sem conserto local identificado. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/480",
-   "criada_em": "2026-10-13",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-13"
   },
   {
    "numero": 481,
    "titulo": "Show audio and subtitle metadata in the stream source list",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "em_revisao",
@@ -9500,16 +9496,15 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "review OK (j-rev-pr487-v2); dono decide entrada na 2.0.6",
-   "notas": "Snapshot 2026-10-14 10:15: \"Sources: show declared audio and subtitle languages\" (e4fb8c08) e o merge c9932635 \"Merge PR #487 v2\" existem so em agente/205-pr487v2, nao ancestral de integracao/2.0.5. OPEN no GitHub. | fechada no GH 2026-10-14 (CLOSED); alvo antigo 2.0.6 removido por regra do mapa.py; decidir com dono Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15: agente/205-pr487v2 (ac1ba9725) review OK j-rev-pr487-v2; nao mergeado; dono decide 2.0.6.",
+   "proximo_passo": "merge agente/205-pr487v2 (review OK j-rev-pr487-v2) ou drop por decisao do dono",
+   "notas": "Snapshot 2026-10-14 10:15: \"Sources: show declared audio and subtitle languages\" (e4fb8c08) e o merge c9932635 \"Merge PR #487 v2\" existem so em agente/205-pr487v2, nao ancestral de integracao/2.0.5. OPEN no GitHub. | fechada no GH 2026-10-14 (CLOSED); alvo antigo 2.0.6 removido por regra do mapa.py; decidir com dono Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15: agente/205-pr487v2 (ac1ba9725) review OK j-rev-pr487-v2; nao mergeado; dono decide 2.0.6. | Escrivao 2026-10-15 11:48: GH fechada; branch 3 ahead, review OK, nao mergeado",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/481",
-   "criada_em": "2026-10-13",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-13"
   },
   {
    "numero": 482,
    "titulo": "Continue Watching content leaks between profiles",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "bug",
    "status": "integrada",
@@ -9527,8 +9522,7 @@
    "proximo_passo": "testar troca de perfil no TCL",
    "notas": "Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix. Escrivao 10-15 07:10: mesmo caso de #488; correcoes portadas na head nova do autor (pr/493-v3), review OK 06:50. | Escrivao 10-15 08:50: pr/493-v3 carrega #482 (review OK 06:50, nao mergeado). | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/482",
-   "criada_em": "2026-10-13",
-   "alvo": "2.0.5"
+   "criada_em": "2026-10-13"
   },
   {
    "numero": 483,
@@ -9548,7 +9542,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Impl fd6d795d; j-revg-i483remux OK 16:52. Merge 251632be (18:01). fetch via SeekHead quando a sonda erra o layout REMUX. Escrivao 14/10 19:1x: merge 18:01.",
+   "notas": "Impl fd6d795d; j-revg-i483remux OK 16:52. Merge 251632be (18:01). fetch via SeekHead quando a sonda erra o layout REMUX. Escrivao 14/10 19:1x: merge 18:01. | Escrivao 2026-10-15 11:48: prompt p-205-i483remux em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/483",
    "criada_em": "2026-10-13",
    "alvo": "2.0.6"
@@ -9556,7 +9550,7 @@
   {
    "numero": 484,
    "titulo": "External subtitles disappear after a few minutes without input",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "integrada",
@@ -9572,8 +9566,7 @@
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
    "notas": "LG OLED C1 webOS, 2.0.5: legenda de addon (OpenSubtitlesV3/AIOMetadata) some apos minutos sem tecla; embutida ok. Sem log. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-14). | Escrivão 2026-10-14 16:11: conserto integrado via agente/205-leg484 (merge 027fd3c7); fechada no GitHub. Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/484",
-   "alvo": "2.0.5"
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/484"
   },
   {
    "numero": 486,
@@ -9594,7 +9587,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "review fix 90fb9cff7 (j-fix-p2pusb-w 09:50, sem review; BLOQUEIA 08:49 antes); merge agente/205-p2pusb; testar addon P2P USB na TV",
-   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo. | Escrivao 15/10 09:48: fix j-fix-p2pusb-w em curso.",
+   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo. | Escrivao 15/10 09:48: fix j-fix-p2pusb-w em curso. | Escrivao 2026-10-15 11:48: prompt p-205-p2p486 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/486",
    "criada_em": "2026-10-13",
    "alvo": "ja-lancada"
@@ -9602,7 +9595,7 @@
   {
    "numero": 488,
    "titulo": "Profiles switching",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "bug",
    "status": "integrada",
@@ -9620,10 +9613,9 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "merge pr/493-v3 (65613c562, review OK 06:50); testar troca de perfil no TCL",
-   "notas": "pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL. Escrivao 10-15 07:10: pr/493-fix review OK fix2; autor publicou head nova 5694694cc; fixes portados 65613c562 (pr/493-v3) e review OK 06:50 (j-revpr493-v3). Mergear pr/493-v3 para carregar #488 no PR. | Escrivao 10-15 08:50: pr/493-v3 (3 ahead, review OK 06:50, nao mergeado) substitui o pr/493 velho; #488 segue nele. | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15 10:50: reaberta no GH; pr/493-v3 review OK sem merge.",
+   "notas": "pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL. Escrivao 10-15 07:10: pr/493-fix review OK fix2; autor publicou head nova 5694694cc; fixes portados 65613c562 (pr/493-v3) e review OK 06:50 (j-revpr493-v3). Mergear pr/493-v3 para carregar #488 no PR. | Escrivao 10-15 08:50: pr/493-v3 (3 ahead, review OK 06:50, nao mergeado) substitui o pr/493 velho; #488 segue nele. | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15 10:50: reaberta no GH; pr/493-v3 review OK sem merge. | Escrivao 2026-10-15 11:48: prompt p-205-perfil488 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/488",
-   "criada_em": "2026-10-13",
-   "alvo": "2.0.5"
+   "criada_em": "2026-10-13"
   },
   {
    "numero": 492,
@@ -9867,7 +9859,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Snapshot 2026-10-14 10:15: conserto be7c0dee \"fix(fileiras): drop untouched rows of removed add-ons when the sheet opens (#504)\" so em agente/205-i504 (nao e ancestral de integracao/2.0.5). Job j-205-i504 RUNNING, sem log de validacao ainda. Issue ainda OPEN no GitHub. Escrivão 14/10 14:47: integrada via i504.",
+   "notas": "Snapshot 2026-10-14 10:15: conserto be7c0dee \"fix(fileiras): drop untouched rows of removed add-ons when the sheet opens (#504)\" so em agente/205-i504 (nao e ancestral de integracao/2.0.5). Job j-205-i504 RUNNING, sem log de validacao ainda. Issue ainda OPEN no GitHub. Escrivão 14/10 14:47: integrada via i504. | Escrivao 2026-10-15 11:48: prompt p-205-i504 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/504",
    "criada_em": "2026-10-14",
    "alvo": "2.0.6"
@@ -9890,7 +9882,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "review fix 90fb9cff7 (j-fix-p2pusb-w 09:50); merge agente/205-p2pusb; lancar com 2.0.5",
-   "notas": "Snapshot 2026-10-14 10:15: 3fc691d4 \"fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)\" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead. | Escrivao 10-15 08:50: liga ao dono P2P USB (agente/205-p2pusb); fix 07:52 sem review.",
+   "notas": "Snapshot 2026-10-14 10:15: 3fc691d4 \"fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)\" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead. | Escrivao 10-15 08:50: liga ao dono P2P USB (agente/205-p2pusb); fix 07:52 sem review. | Escrivao 2026-10-15 11:48: prompt p-205-i505* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/505",
    "criada_em": "2026-10-14",
    "alvo": "2.0.6"
@@ -9913,7 +9905,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Snapshot 2026-10-14 10:15: job j-205-i506 RUNNING (branch agente/205-i506, 0 commits fora de integracao/2.0.5). Suspeita de causa comum com #505. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i506. | Escrivão 2026-10-14 16:11: merge 0e567d1a (ancestral) consta em log.txt da integracao.",
+   "notas": "Snapshot 2026-10-14 10:15: job j-205-i506 RUNNING (branch agente/205-i506, 0 commits fora de integracao/2.0.5). Suspeita de causa comum com #505. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i506. | Escrivão 2026-10-14 16:11: merge 0e567d1a (ancestral) consta em log.txt da integracao. | Escrivao 2026-10-15 11:48: prompt p-205-i506 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/506",
    "criada_em": "2026-10-14",
    "alvo": "2.0.6"
@@ -9957,46 +9949,21 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. Escrivão 14/10 14:47: branch agente/205-i508fundo: review OK, merge pendente. | Escrivão 2026-10-14 16:11: i508fundo mergeada (d57b79e9); review j-revg-i508fundo OK.",
+   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. Escrivão 14/10 14:47: branch agente/205-i508fundo: review OK, merge pendente. | Escrivão 2026-10-14 16:11: i508fundo mergeada (d57b79e9); review j-revg-i508fundo OK. | Escrivao 2026-10-15 11:48: prompt p-205-i508fundo em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/508",
    "criada_em": "2026-10-14",
    "alvo": "2.0.6"
   },
   {
-   "numero": 512,
-   "titulo": "Tracking and next episode issues with Kaiju no 8 season 2",
-   "estado_github": "aberta",
-   "plataforma": "?",
-   "tipo": "bug",
-   "status": "integrada",
-   "release": "",
-   "conserto": [
-    "1b47d82f8 (merge agente/205-i512temporada em integracao/2.0.5)",
-    "8c7adb07",
-    "a0e14d7c"
-   ],
-   "ultima_resposta": {
-    "nos": false,
-    "data": null,
-    "ultimo_comentario_por": null,
-    "ultima_nossa": null
-   },
-   "proximo_passo": "lancar com 2.0.5 (testar no TCL: Kaiju no 8 S2 tracking/proximo episodio)",
-   "notas": "Review OK j-revg-i512temporada-r2 19:57. Merged 1b47d82f8. P2 aberto: episodio sem releaseDate nao marca CWO_SEM_DATA (trakt.c:616).",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/512",
-   "criada_em": "2026-10-14",
-   "alvo": "2.0.5"
-  },
-  {
-   "numero": 511,
-   "titulo": "Show subtitle track name instead of only showing language",
+   "numero": 509,
+   "titulo": "Expanded poster trailer",
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "enhancement",
    "status": "integrada",
-   "release": "",
+   "release": "-",
    "conserto": [
-    "f0ab7c91 (merge agente/205-i511legnome em integracao/2.0.5)"
+    "13e13b92 (merge em integracao/2.0.5)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10005,8 +9972,8 @@
     "ultima_nossa": null
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Criada 2026-10-14 (snapshot 14:46). Escrivao 14/10 19:1x: Fix 2e05dd94; j-revg-i511legnome-q OK 18:44; merge f0ab7c91 18:45.",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/511",
+   "notas": "Criada 2026-10-14 (snapshot 14:46). Escrivão 14/10 14:47: integrada via i509trailer. | Escrivão 2026-10-14 16:11: conserto 13e13b92 ja em integracao/2.0.5; sem release ainda. | Escrivao 2026-10-15 11:48: prompt p-205-i509trailer* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/509",
    "criada_em": "2026-10-14",
    "alvo": "futuro"
   },
@@ -10032,15 +9999,15 @@
    "alvo": "futuro"
   },
   {
-   "numero": 509,
-   "titulo": "Expanded poster trailer",
+   "numero": 511,
+   "titulo": "Show subtitle track name instead of only showing language",
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "enhancement",
    "status": "integrada",
-   "release": "-",
+   "release": "",
    "conserto": [
-    "13e13b92 (merge em integracao/2.0.5)"
+    "f0ab7c91 (merge agente/205-i511legnome em integracao/2.0.5)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10049,10 +10016,35 @@
     "ultima_nossa": null
    },
    "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "Criada 2026-10-14 (snapshot 14:46). Escrivão 14/10 14:47: integrada via i509trailer. | Escrivão 2026-10-14 16:11: conserto 13e13b92 ja em integracao/2.0.5; sem release ainda.",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/509",
+   "notas": "Criada 2026-10-14 (snapshot 14:46). Escrivao 14/10 19:1x: Fix 2e05dd94; j-revg-i511legnome-q OK 18:44; merge f0ab7c91 18:45. | Escrivao 2026-10-15 11:48: prompt p-205-i511legnome em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/511",
    "criada_em": "2026-10-14",
    "alvo": "futuro"
+  },
+  {
+   "numero": 512,
+   "titulo": "Tracking and next episode issues with Kaiju no 8 season 2",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "integrada",
+   "release": "",
+   "conserto": [
+    "1b47d82f8 (merge agente/205-i512temporada em integracao/2.0.5)",
+    "8c7adb07",
+    "a0e14d7c"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "lancar com 2.0.5 (testar no TCL: Kaiju no 8 S2 tracking/proximo episodio)",
+   "notas": "Review OK j-revg-i512temporada-r2 19:57. Merged 1b47d82f8. P2 aberto: episodio sem releaseDate nao marca CWO_SEM_DATA (trakt.c:616). | Escrivao 2026-10-15 11:48: prompt p-205-i512temporada* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/512",
+   "criada_em": "2026-10-14",
+   "alvo": "2.0.5"
   },
   {
    "numero": 513,
@@ -10072,7 +10064,7 @@
     "ultima_nossa": null
    },
    "proximo_passo": "Android 84add4581 instalado (Success); C9 rc=255: testar autoplay com opcao desligada no TV",
-   "notas": "review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando Escrivao 10-15 07:10: BLOQUEIA x->fix i513w 05:50 (adbaf0f9f)->review v OK 06:49; branch 6 ahead. | Escrivao 2026-10-15 07:50: merge 84add4581 em integracao/2.0.5 | Escrivao 10-15 08:50: BLOQUEIA w/x/y antes; v OK 06:49; merged. | Escrivao 15/10 09:48: Android 84add4581 Success; C9 rc=255 (TV nao confirmado).",
+   "notas": "review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando Escrivao 10-15 07:10: BLOQUEIA x->fix i513w 05:50 (adbaf0f9f)->review v OK 06:49; branch 6 ahead. | Escrivao 2026-10-15 07:50: merge 84add4581 em integracao/2.0.5 | Escrivao 10-15 08:50: BLOQUEIA w/x/y antes; v OK 06:49; merged. | Escrivao 15/10 09:48: Android 84add4581 Success; C9 rc=255 (TV nao confirmado). | Escrivao 2026-10-15 11:48: prompt p-205-i513autoplay* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/513",
    "criada_em": "2026-10-14",
    "alvo": "futuro"
@@ -10139,6 +10131,27 @@
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/524",
    "criada_em": "2026-10-15",
    "alvo": "futuro"
+  },
+  {
+   "numero": 528,
+   "titulo": "[Bug/FR] Cast Images Fail to Load — Request for Metadata Add-on Fallback or Custom TMDB Proxy",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "?",
+   "status": "aberta",
+   "release": "",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triagem: sem job; decidir alvo",
+   "notas": "Escrivao 2026-10-15 11:48: item novo (issues.json), alvo 2.0.6 provisório",
+   "criada_em": "2026-10-15",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/528",
+   "alvo": "2.0.6"
   }
  ],
  "validacoes": [
@@ -11495,6 +11508,36 @@
    "ref": "agente/205-pr487v2 (tip ac1ba9725)",
    "resultado": "passou",
    "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-rev-pr487-v2.log"
+  },
+  {
+   "data": "2026-10-15 10:48",
+   "quem": "job-pi magpie/group/nv-revisao",
+   "o_que": "Revisao p2pusb v3 (agente/205-p2pusb): BLOQUEIA",
+   "issues": [
+    486,
+    505
+   ],
+   "ref": "agente/205-p2pusb (tip 90fb9cff7 + fixes)",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-p2pusb-v3.log"
+  },
+  {
+   "data": "2026-10-15 10:49",
+   "quem": "job-pi magpie/group/nv-revisao",
+   "o_que": "Revisao pr490 fix5 (Vitrine resume/pagination): BLOQUEIA",
+   "issues": [],
+   "ref": "agente/205-pr490-fix (tip 1f8309961 + fix5)",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revpr490-fix5.log"
+  },
+  {
+   "data": "2026-10-15 10:55",
+   "quem": "job-pi (master1015 teste)",
+   "o_que": "Build mac.sh + git diff --check em agente/205-master1015; suites linkadas nao rodadas",
+   "issues": [],
+   "ref": "agente/205-master1015",
+   "resultado": "inconclusivo",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-205-master1015-teste.log"
   }
  ],
  "decisoes": [
