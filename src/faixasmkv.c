@@ -255,16 +255,17 @@ int faixasmkv_tem_imagem(const MkvFaixa *fx, int n) {
   return 0;
 }
 
-int faixasmkv_acrescentar_imagem(VideoFaixa *leg, int nLeg, int max, const MkvFaixa *fx, int n) {
+static int acrescentarOverlay(VideoFaixa *leg, int nLeg, int max, const MkvFaixa *fx, int n, int texto) {
   int j, k, ord = 0;
   for (j = 0; fx && j < n && nLeg < max; j++) {
     if (fx[j].tipo != MKV_LEG) continue;
     ord++;
-    if (!faixasmkv_imagem_overlay(fx[j].codec)) continue;
+    if (!(texto ? faixasmkv_overlay(fx[j].codec, 1) : faixasmkv_imagem_overlay(fx[j].codec))) continue;
     for (k = 0; k < nLeg; k++) if (leg[k].ordinalMkv == ord - 1 && !strcmp(leg[k].codec, fx[j].codec)) break;
     if (k < nLeg) continue;
     memset(&leg[nLeg], 0, sizeof leg[nLeg]);
-    leg[nLeg].numero = -1;   // sem faixa no player: so o overlay do app a desenha
+    // Unique negative identities keep recovered text tracks distinct in the selector.
+    leg[nLeg].numero = texto ? -2 - (ord - 1) : -1;
     leg[nLeg].stream_index = -1;
     snprintf(leg[nLeg].codec, sizeof leg[nLeg].codec, "%s", fx[j].codec);
     leg[nLeg].ordinalMkv = ord - 1;
@@ -272,4 +273,12 @@ int faixasmkv_acrescentar_imagem(VideoFaixa *leg, int nLeg, int max, const MkvFa
     nLeg++;
   }
   return nLeg;
+}
+
+int faixasmkv_acrescentar_imagem(VideoFaixa *leg, int nLeg, int max, const MkvFaixa *fx, int n) {
+  return acrescentarOverlay(leg, nLeg, max, fx, n, 0);
+}
+
+int faixasmkv_acrescentar_texto(VideoFaixa *leg, int nLeg, int max, const MkvFaixa *fx, int n) {
+  return acrescentarOverlay(leg, nLeg, max, fx, n, 1);
 }
