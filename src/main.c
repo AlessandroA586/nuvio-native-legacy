@@ -759,7 +759,7 @@ static int window_primeiro_quadro_feito(void) { return nvPrimeiroQuadroFeito; }
 static int esperaAddonsDaConta(void) {
   if (!sessao_logada() || sync_estado() == SYNC_FALHOU) return 0;
   if (perfis_precisa_escolher()) return 1;
-  return sync_perfil_pronto() ? 0 : 2;   // ciclo terminado E aplicado para o perfil ativo
+  return sync_home_fontes_prontas() ? 0 : 2;   // fontes aplicadas; progresso/pushes seguem em paralelo
 }
 
 
