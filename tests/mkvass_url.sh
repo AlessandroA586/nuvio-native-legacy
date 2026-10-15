@@ -1,7 +1,9 @@
 #!/bin/bash
+export TMPDIR="${TMPDIR:-/tmp}"
+TMPDIR="${TMPDIR%/}"
 set -eu
 cd "$(dirname "$0")/.."
-DIR=$(mktemp -d /tmp/nuvio-mkvass-url.XXXXXX)
+DIR=$(mktemp -d ${TMPDIR:-/tmp}/nuvio-mkvass-url.XXXXXX)
 trap 'rm -rf "$DIR"' EXIT
 cc -I/opt/homebrew/include tests/video_url.c src/video.c -o "$DIR/video-url"
 "$DIR/video-url"

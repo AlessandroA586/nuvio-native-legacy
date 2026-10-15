@@ -1,7 +1,9 @@
 #!/bin/bash
+export TMPDIR="${TMPDIR:-/tmp}"
+TMPDIR="${TMPDIR%/}"
 set -eu
 cd "$(dirname "$0")/.."
-DIR=$(mktemp -d /tmp/nuvio-mkvass-texto.XXXXXX)
+DIR=$(mktemp -d ${TMPDIR:-/tmp}/nuvio-mkvass-texto.XXXXXX)
 trap 'rm -rf "$DIR"' EXIT
 # MKV minimo: Tracks, Cluster com dois BlockGroup e Cues (sem video real).
 python3 - "$DIR" <<'PY'

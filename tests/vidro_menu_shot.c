@@ -6,6 +6,7 @@
 // tecla injetada — ela abre pelo botao de episodios DO PLAYER, e chegar la
 // exige reproduzir algo. Uma captura headless e repetivel e nao gasta fonte.
 #include "menu.h"
+#include "nvtmp.h"
 #include "faixas.h"
 #include "gfx.h"
 #include "text.h"
@@ -48,7 +49,27 @@ static void captura(const char *nome, SDL_Window *win) {
     // Glass UI: a arte atras (shot_arte.h) e a ilha do relogio por cima, nas
     // mesmas guardas de app.c (ilha_posicionar decide o canto com o menu).
     if (!qual) shot_arte_desenhar(.30f);
-    if (qual) faixas_desenhar(SDL_GetTicks()); else menu_desenhar(SDL_GetTicks());
+    // NUVIO_SHOT_POSTERS=1: uma fileira de cartazes por baixo da barra do topo,
+    // o caso em que o vidro precisa mostrar o que passa atras.
+    if (!qual && getenv("NUVIO_SHOT_POSTERS")) {
+      int p;
+      for (p = 0; p < 9; p++) {
+        float h = (float)p / 9.0f;
+        gfx_cor((GfxRect){ 60.0f + p * 200.0f, 0, 180.0f, 330.0f }, 0.04f,
+                .25f + .6f * h, .75f - .5f * h, .35f + .4f * (p & 1), 1);
+        gfx_cor((GfxRect){ 60.0f + p * 200.0f, 140.0f, 180.0f, 60.0f }, 0, 1, 1, 1, .85f);
+      }
+    }
+    { int n0 = gfx_n_rect; double f0 = gfx_fill_gpu, f1 = gfx_fill_gpu_mist;
+      Uint64 t0;
+      glFinish(); t0 = SDL_GetPerformanceCounter();
+      if (qual) faixas_desenhar(SDL_GetTicks()); else menu_desenhar(SDL_GetTicks());
+      glFinish();
+      // Custo do quadro so do menu: quads, preenchimento da GPU (telas) e ms.
+      if (i == nq - 1)
+        printf("custo: quads=%d fill=%.3f fill_mist=%.3f ms=%.3f\n", gfx_n_rect - n0,
+               gfx_fill_gpu - f0, gfx_fill_gpu_mist - f1,
+               (double)(SDL_GetPerformanceCounter() - t0) * 1000.0 / (double)SDL_GetPerformanceFrequency()); }
     if (!qual) {
       ilha_relogio_visivel(1);
       ilha_posicionar(0);
@@ -74,7 +95,7 @@ static void captura(const char *nome, SDL_Window *win) {
 }
 
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nuvio-vidro-menu";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nuvio-vidro-menu");
   char nome[600];
   SDL_Window *w;
   SDL_GLContext gl;
@@ -92,12 +113,15 @@ int main(int argc, char **argv) {
       // NUVIO_SHOT_RAIL=recolhida: sem a rail de icones (collapseSidebar 0 =
       // "Recolhida" na ordem de V_RAIL); o padrao da captura e a rail fixa.
       { const char *rail = getenv("NUVIO_SHOT_RAIL");
-        fprintf(f, "idioma 0\nselected_theme %d\ncollapseSidebar %d\n", tema,
-                rail && !strcmp(rail, "recolhida") ? 0 : 1); }
+        { const char *idi = getenv("NUVIO_SHOT_IDIOMA");   // 0 pt, 1 en, 4 ru, 5 fr, 6 de
+          fprintf(f, "idioma %d\nselected_theme %d\ncollapseSidebar %d\n", idi && *idi ? atoi(idi) : 0, tema,
+                rail && !strcmp(rail, "recolhida") ? 0 : 1); } }
       // NUVIO_SHOT_LAYOUT=0|1|2: Moderna, Padrao ou Dinamica (homeLayoutLocal);
       // o menu muda de forma com o layout da home.
       { const char *lay = getenv("NUVIO_SHOT_LAYOUT");
         if (lay && *lay) fprintf(f, "homeLayoutLocal %d\n", atoi(lay)); }
+      // NUVIO_SHOT_TOPO=1: a barra no topo (menuTopoLocal, #461).
+      if (getenv("NUVIO_SHOT_TOPO")) fputs("menuTopoLocal 1\n", f);
       shot_arte_material(f);
       fclose(f);
       // O perfil do mockup (avatar roxo com a inicial e o nome), pelo mesmo
@@ -135,7 +159,12 @@ int main(int argc, char **argv) {
   snprintf(nome, sizeof nome, "%s-rail.bmp", saida);
   captura(nome, w);
   menu_abrir();
-  tecla(SDLK_DOWN); tecla(SDLK_DOWN);
+  if (getenv("NUVIO_SHOT_TOPO")) {   // NUVIO_SHOT_FOCO=n: quantos passos para a direita (padrao 2)
+    const char *fo = getenv("NUVIO_SHOT_FOCO");
+    int p, np = fo && *fo ? atoi(fo) : 2;
+    for (p = 0; p < np; p++) tecla(SDLK_RIGHT);
+  }
+  else { tecla(SDLK_DOWN); tecla(SDLK_DOWN); }
   // A ilha do menu no meio da abertura: a largura cresce, o rotulo entra.
   nq = 8;
   snprintf(nome, sizeof nome, "%s-abrindo.bmp", saida);

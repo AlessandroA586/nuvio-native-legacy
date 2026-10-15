@@ -112,7 +112,7 @@ static void ajcHEspaco(int op) {
     ajc_icone("aj_move-horizontal", 86 + w + g * 0.5f, 52 + 14 + 42, g > 20 ? 18 : 12, 1);
   }
   snprintf(b, sizeof b, "%d%%", (int)(f * 100.0f + 0.5f));
-  ajcHNum(b, 22, 270, 322, 1);
+  ajcTextoVivo(b, 22, 1, 270, 322, 1);
 }
 // Barra lateral moderna: icones pequenos (antiga) contra ladrilhos grandes.
 static void ajcHRailModerna(int op) {
@@ -748,13 +748,11 @@ static void ajcHVidroOpac(void) {
   }
   ajc_progresso(40, 308, 560, (float)at / 4.0f, 1);
 }
-// Tamanho da interface: o player e seus avisos crescem de 100 a 150 por cento.
+// Preview every size, using the same factors as the actual interface.
 static void ajcHTamanhoUi(void) {
-  static const float E[4] = { 1.0f, 1.2f, 1.3f, 1.5f };
-  static const char *const T[4] = { "100%", "120%", "130%", "150%" };
-  float v = ajcHK(ajcValor(AJ_TAMANHO_UI) / 3.0f) * 3.0f, e, by;
-  int m0 = (int)v, m1 = m0 < 3 ? m0 + 1 : 3;
-  e = ajcHMix(E[m0], E[m1], v - m0);
+  float v = ajcHK(ajcValor(AJ_TAMANHO_UI) / 8.0f) * 8.0f, e, by;
+  int m0 = (int)v, m1 = m0 < 8 ? m0 + 1 : 8;
+  e = ajcHMix(ui_size_choice(m0, tamanhoUiAutomatico()), ui_size_choice(m1, tamanhoUiAutomatico()), v - m0);
   by = 334 - 12 * e - 34 * e;
   ajc_video(0, 0, 640, 360, 0, 1);
   ajc_veu(0, 200, 640, 160, 0, 0.8f);
@@ -769,7 +767,7 @@ static void ajcHTamanhoUi(void) {
   ajc_icone("aj_rotate-ccw-clock", 320 - 80 * e, by, 28 * e, 0.9f);
   ajc_icone("aj_volume-2", 320 + 80 * e, by, 28 * e, 0.9f);
   ajc_icone("aj_captions", 320 + 124 * e, by, 28 * e, 0.9f);
-  ajcSelo(T[(int)(v + 0.5f)], 28, 62, 16, 1.0f, 1);
+  ajcSelo(i18n(V_TAMANHO_UI[(int)(v + 0.5f)]), 28, 62, 16, 1.0f, 1);
 }
 // Tamanho dos ajustes: a lista e o painel dos proprios Ajustes, menores ou maiores.
 static void ajcHTamanhoAj(void) {

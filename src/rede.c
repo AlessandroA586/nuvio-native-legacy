@@ -739,6 +739,10 @@ int rede_aquecer_lote(const char *const *origens, int n, unsigned *ms) {
   return 0;
 }
 
+int rede_aquecer_job(const char *const *origens, int n, unsigned *ms, RedeJob *job) {
+  (void)job; return rede_aquecer_lote(origens, n, ms);
+}
+
 // Navegador nao abre socket. O websocket do Tizen web usa o WebSocket do
 // proprio navegador (discordws.c); estes existem para o modulo linkar.
 RedeTls *rede_tls_abrir(const char *url, int segundos) { (void)url; (void)segundos; return NULL; }
@@ -1155,7 +1159,10 @@ static void soltarHandleDesde(void *c, int r, const char *url, unsigned primeira
   if (avisoSaude) {
     long http = 0;
     if (curl_getinfo) curl_getinfo(c, INFO_RESPONSE_CODE, &http);
-    avisoSaude(http > 0 && r != 42 && r != 23 ? 0 : r, url, primeiraMs);
+    // #382: "Resolving timed out" (28 sem resolver) vai como codigo proprio:
+    // o resolvedor da TV demora minutos depois do boot sem a casa estar fora.
+    avisoSaude(http > 0 && r != 42 && r != 23 ? 0
+               : r == 28 && strstr(redeErroBuf, "Resolving timed out") ? 1028 : r, url, primeiraMs);
   }
   if (avisoHost) {
     long http = 0;
@@ -2152,7 +2159,11 @@ int rede_url_final(const char *url, int segundos, char *dst, unsigned tam) {
 // sai da chave para ficar no estacionamento. ms[i] = tempo da origem i (0 =
 // falhou). Devolve quantas abriram.
 static size_t descartarCorpo(void *d, size_t t, size_t q, void *u) { (void)d; (void)u; return t * q; }
-int rede_aquecer_lote(const char *const *origens, int n, unsigned *ms) {
+static int vigiarMorno(void *u, long long a, long long b, long long c, long long d) {
+  (void)a; (void)b; (void)c; (void)d;
+  return rede_job_estado((RedeJob *)u) != REDE_OK;
+}
+int rede_aquecer_job(const char *const *origens, int n, unsigned *ms, RedeJob *job) {
   char ok[REDE_ESTAC_HOSTS][96];
   int i, abriu = 0, nok = 0;
   void *c;
@@ -2172,8 +2183,18 @@ int rede_aquecer_lote(const char *const *origens, int n, unsigned *ms) {
     curl_setopt(c, OPT_WRITEFUNCTION, descartarCorpo);
     curl_setopt(c, OPT_FOLLOWLOCATION, (long)0);
     opcoesComuns(c, 4000UL);
+    if (rede_job_estado(job) != REDE_OK) { soltarHandleR(c, 42, u); break; }
+    if (job) {
+      curl_setopt(c, OPT_XFERINFOFUNCTION, vigiarMorno);
+      curl_setopt(c, OPT_XFERINFODATA, job);
+      curl_setopt(c, OPT_NOPROGRESS, 0L);
+    }
     t0 = redeAgoraMs();
     r = performTmdb(c, u);
+    curl_setopt(c, OPT_XFERINFOFUNCTION, (void *)0);
+    curl_setopt(c, OPT_XFERINFODATA, (void *)0);
+    curl_setopt(c, OPT_NOPROGRESS, 1L);
+    if (rede_job_estado(job) != REDE_OK) r = 42;
     if (ms) { unsigned long dt = redeAgoraMs() - t0; ms[i] = r ? 0 : (unsigned)(dt ? dt : 1); }
     soltarHandleR(c, r, u);
     if (!r) {
@@ -2189,6 +2210,9 @@ int rede_aquecer_lote(const char *const *origens, int n, unsigned *ms) {
     estacionar(c, ok, nok);
   }
   return abriu;
+}
+int rede_aquecer_lote(const char *const *origens, int n, unsigned *ms) {
+  return rede_aquecer_job(origens, n, ms, NULL);
 }
 
 char *rede_postar(const char *url, int segundos, const char *const *cab,
@@ -2991,6 +3015,29 @@ int rede_fluxo64(const char *url, const char *headers, int64_t start,
 }
 
 #endif  /* __EMSCRIPTEN__ */
+
+// #382: o resolvedor da TV falha por minutos depois do boot ("Resolving timed out").
+// Falha de transporte (status 0) tenta de novo com espera crescente; resposta
+// HTTP, ou tentativa que gastou o prazo inteiro, encerra.
+#ifndef REDE_POST_ESPERA_MS
+#define REDE_POST_ESPERA_MS 1000
+#endif
+char *rede_postar_repetindo(const char *url, int segundos, const char *const *cab,
+                            const char *corpo, int *status, int tentativas) {
+  char *r = NULL;
+  int k;
+  for (k = 0; k < tentativas || k == 0; k++) {
+    unsigned long t0 = redeAgoraMs();
+    r = rede_postar_st(url, segundos, cab, corpo, status);
+    if (r || !status || *status != 0 || k + 1 >= tentativas) break;
+    if (redeAgoraMs() - t0 >= (unsigned long)segundos * 1000UL * 3 / 4) break;
+    { struct timespec d;
+      unsigned long ms = (unsigned long)REDE_POST_ESPERA_MS << k;
+      d.tv_sec = (time_t)(ms / 1000); d.tv_nsec = (long)(ms % 1000) * 1000000L;
+      nanosleep(&d, NULL); }
+  }
+  return r;
+}
 
 #ifdef __EMSCRIPTEN__
 int rede_fluxo64(const char *u, const char *h, int64_t s, int (*sk)(void *, const char *, size_t), void *o,

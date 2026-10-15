@@ -10,6 +10,7 @@
 // Compilado com -DSMK_SCR_ESPACO_MS=0 -DSMK_SCR_ESPERA_MS=150 para a janela de
 // espera caber em milissegundos. STDOUT e capturado e o token nao pode aparecer.
 #include "../src/simkl.h"
+#include "nvtmp.h"
 #include "../src/traktscrobble.h"
 #include "../src/ajustes.h"
 #include "../src/rede.h"
@@ -502,7 +503,7 @@ static void fallbackNaoTrocaDePerfil(void) {
 }
 
 int main(int argc, char **argv) {
-  char caminho[] = "/tmp/nuvio-simkl-scr-XXXXXX";
+  char caminho[NVT_MAX]; nvt_set(caminho, sizeof caminho, "/nuvio-simkl-scr-XXXXXX");
   int fd = mkstemp(caminho), salvo = dup(1);
   FILE *f;
   char linha[512];

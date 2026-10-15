@@ -217,6 +217,8 @@ typedef enum {
   // uma cor (a do titulo em foco). Sem textura e sem arte desfocada.
   //   uCor.rgb = cor do topo; uCor.a = alfa
   //   uFoco    = quanto da cor sobra na base (0..1)
+  //   uPar.x   = 0 = alfa cheio ate a base; > 0 = onde o ALFA comeca a
+  //              esvair (fracao da altura, 1-smoothstep ate a base)
   GFX_FUNDO_DIN = 35,
   // GFX_HERO_CAM / GFX_HERO_CHEIO_CAM — as camadas do destaque numa passada
   // (o crossfade). So por gfx_hero_camadas.
@@ -249,10 +251,10 @@ typedef enum {
   // "Textura"). Nao se pede direto: gfx_rect troca para ele todo GFX_COR
   // cheio na cor exata do destaque enquanto gfx_textura_definir tem textura.
   GFX_TEXTURA = 42,
-  // GFX_FOSCO — a luz assada (320x180, a arte borrada do fundo) lida em
-  // COORDENADA DE TELA (vAmb) e recortada pelos cantos do painel: o vidro
-  // fosco. uTex = o assado; uCor.a = alfa. Use gfx_vidro_fosco.
-  GFX_FOSCO = 43,
+  // GFX_VIDRO — o vidro do PlxNative (fs_glass): o backdrop desfocado da
+  // propria tela (uTex, meia resolucao, coordenada de tela) com lente, luz de
+  // borda, aro e scrim; sem uTex sai chapado. Nao se pede direto: gfx_vidro.
+  GFX_VIDRO = 43,
   // GFX_VITRINE_DIN — o GFX_VITRINE OPACO sobre o fundo da Dinamica
   // (GFX_FUNDO_DIN) calculado no proprio fragmento: o destaque e o fundo numa
   // passada so. Nao se pede direto: gfx_rect troca o GFX_VITRINE por ele
@@ -326,6 +328,10 @@ extern float gfx_opacidade_grupo;
 // Nao aninha. Miniaturas e passadas internas ficam de fora.
 void gfx_transformar(float ox, float oy, float s, float dx, float dy);
 void gfx_sem_transformar(void);
+// Ha um gfx_transformar ativo? Durante uma transicao o desenho sai escalado
+// e os retangulos das funcoes nao sao os da tela: quem registra alvos de
+// ponteiro/toque espera ele voltar 0.
+int  gfx_transformado(void);
 // GIRO DE GRUPO: todo retangulo desenhado ate gfx_sem_girar sai girado `rad`
 // radianos em torno de (cx, cy), em coordenadas de layout. Existe para a parede
 // inclinada da escolha de perfil e o feixe do projetor (perfilsel.c). O recorte
@@ -504,6 +510,9 @@ extern int gfx_rastro_grandes;   // rastro: imprime todo desenho >= 12% da tela
 // para medir na TV quanto fps cada tipo de desenho custa, sem recompilar.
 extern unsigned long long gfx_modos_desligados;
 extern double gfx_fill_modo_ult[GFX_NMODOS];
+// Quadros iniciados: quem anima por reaparicao compara com o ultimo quadro em
+// que desenhou (um relogio de parede confunde engasgo com reaparicao).
+extern unsigned gfx_quadro_n;
 void gfx_novo_quadro(void);
 
 // EFEITOS LEVES (nivel 1 de gpunivel.h). 1 = sem o dither dos degrades (o
@@ -567,16 +576,23 @@ int gfx_hero_camadas(GfxRect r, GfxModo modo, GLuint texA, float aspA, float alf
 // e zero nos outros temas. main.c chama logo depois do glClear.
 // Assa a luz imersiva no quadro pequeno. Chamar ANTES do clear da tela (ver gfx.c).
 void gfx_ambiente_preparar(void);
-// Vidro fosco (Ajustes > Vidro fosco): desenha, dentro do painel, a arte borrada
-// do fundo (o assado de gfx_ambiente_preparar) alinhada a tela. Nada se este
-// quadro nao assou fundo nenhum. Chamado por gfx_vidro_folha/painel, ANTES da tinta.
-void gfx_vidro_fosco(GfxRect r, float raio, float a);
-// O quadro tem video vivo (furo) por baixo: o fosco nao desenha ate o proximo
-// gfx_novo_quadro (o assado e a luz da arte, nao o que passa no video).
+// O VIDRO (port do PlxNative, ver gfx.c): o que JA esta pintado atras de `r` e
+// capturado, desfocado em meia resolucao e lido pela superficie, com o scrim
+// por cima. Um backdrop por quadro, dividido entre as superficies e reusado
+// entre quadros enquanto nada pintado antes delas muda. `cinza` = o tom do
+// scrim (R = G = B); `dens` = alfa dele no painel (a barra usa o perfil
+// proprio, escalado pela "Opacidade do vidro"). Chapado (so o scrim) com "Vidro
+// fosco" desligado, efeitos minimos, video por baixo, ou sobre outro vidro.
+enum { GFX_VIDRO_PAINEL = 0, GFX_VIDRO_BARRA = 1 };
+void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a);
+// Conteudo mudou sem passar por gfx_rect (textura reenviada no lugar): o
+// proximo quadro recaptura.
+void gfx_vidro_sujar(void);
+// Capturas e passadas de desfoque do quadro corrente (zeradas em gfx_novo_quadro).
+extern int gfx_vidro_capturas, gfx_vidro_passadas;
+// O quadro tem video vivo (furo) por baixo: o vidro sai chapado ate o proximo
+// gfx_novo_quadro (a tela ali e o furo, nao o que passa no video).
 void gfx_vidro_fosco_bloquear(void);
-// Fonte do fosco ate o proximo gfx_novo_quadro: o fundo assado deste quadro
-// (fundo.c, "Arte borrada"), no lugar do assado da luz imersiva.
-void gfx_vidro_fosco_fonte(GLuint tex);
 // CANAIS DE FUNDO DA LUZ ASSADA (fundo.c, "Arte borrada" e "Frost" de tela
 // cheia): o quadro pequeno (320x180, GL_RGB) do `canal` (0..1), pintado por
 // `pintar(ctx)` em coordenadas de layout de tela cheia pelo MESMO assado da luz
@@ -665,6 +681,9 @@ void gfx_cartao_foco_vidro(GfxRect r, float raio, float foco, float alfa,
 // contraste). Em repouso 0,16 x 0,55 sobre o fundo #0D0D0D da 0,11 — o cinza
 // das pilulas do video de referencia.
 void gfx_vidro_folha(GfxRect r, float raio, float a);
+// Borda de vidro (Liquid Glass): fio claro de 1 px e a luz que escorre do alto,
+// por cima do miolo. Nada em efeitos minimos (TVs fracas: so translucido liso).
+void gfx_vidro_borda(GfxRect r, float raio, float a);
 void gfx_vidro_superficie(GfxRect r, float raio, float a);
 // Fio de REPOUSO de um cartao/painel de vidro. Obedece a "Contorno do vidro";
 // o anel de FOCO (gfx_vidro_foco) nunca passa por aqui.

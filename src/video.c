@@ -1963,9 +1963,14 @@ static void *lerMkv(void *arg) {
       fflush(stdout);
       // Faixas na janela mas Chapters fora dela: UM Range pelo SeekHead.
       if (n > 0 && nCaps == 0) nCaps = mkv_capitulos_alem(url, cab, cabN, caps, MKV_MAX_CAPS, NULL);
+      // #483: Tracks alem da janela e SeekHead que diz onde — UM Range em vez
+      // de rebaixar 320 KB com o video tocando.
+      if (n < 1) n = mkv_tracks_alem(url, fx, MKV_MAX_FAIXAS, NULL);
       free(cab);
     } }
   if (n < 1) n = mkv_faixas_e_caps(url, fx, MKV_MAX_FAIXAS, caps, MKV_MAX_CAPS, &nCaps);
+  // O proprio trecho de 320 KB pode ter lido o SeekHead sem chegar no Tracks.
+  if (n < 1) n = mkv_tracks_alem(url, fx, MKV_MAX_FAIXAS, NULL);
   if (nCaps > 0) {
     creditosNomeado = mkv_creditos_nomeados(caps, nCaps);
     creditosUltimo  = mkv_creditos_ultimo(caps, nCaps);

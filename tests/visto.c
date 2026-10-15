@@ -13,6 +13,7 @@
 // nuvem, catalogo. STDOUT E CAPTURADO e conferido no fim: nenhum token pode
 // aparecer no que os modulos imprimem. O progresso do teste sai por stderr.
 #include "../src/visto.h"
+#include "nvtmp.h"
 #include "../src/vistoep.h"
 #include "../src/simkl.h"
 #include "../src/trakt.h"
@@ -116,7 +117,7 @@ static int conta(const char *s, const char *sub) {
 
 int main(void) {
   static char saida[1 << 16];
-  char tmpl[] = "/tmp/nuvio-visto-XXXXXX";
+  char tmpl[NVT_MAX]; nvt_set(tmpl, sizeof tmpl, "/nuvio-visto-XXXXXX");
   int fd = mkstemp(tmpl), salvo = dup(1);
   VistoPar tres[3] = { {1, 1}, {1, 2}, {1, 3} };
   assert(fd >= 0);

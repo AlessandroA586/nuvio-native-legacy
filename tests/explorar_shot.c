@@ -16,6 +16,7 @@
 // que cada OK desceu de fato, que Voltar subiu e que Voltar no primeiro degrau
 // da entrada pelo Detalhe pede a pagina do titulo de volta.
 #include "explorar.h"
+#include "nvtmp.h"
 #include "mapa.h"
 #include "catalogo.h"
 #include "gfx.h"
@@ -32,7 +33,7 @@
 #include <string.h>
 
 static GLuint fbo, fboTex;
-static const char *saida = "/tmp/nuvio-explorar";
+static const char *saida;
 
 static void tecla(SDL_Keycode k) {
   SDL_Event e;
@@ -147,7 +148,7 @@ int main(int argc, char **argv) {
   SDL_GLContext gl;
   char raiz[128], passo1[128], passo2[128], volta[128];
   int grupos;
-  if (argc > 1) saida = argv[1];
+  saida = argc > 1 ? argv[1] : nvt("/nuvio-explorar");
   // Idioma, acento e animacoes pelo caminho de verdade (ajustes.txt na pasta
   // de dados temporaria): NUVIO_SHOT_EN=1 para ingles, NUVIO_SHOT_THEME=<n>
   // para o acento, NUVIO_SHOT_REDUZ=1 para animacoes reduzidas.

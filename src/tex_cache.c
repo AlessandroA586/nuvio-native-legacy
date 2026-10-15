@@ -353,6 +353,37 @@ __attribute__((unused)) static void publicarCacheDisco(void) {
 #endif
 static unsigned long quadroAtual = 1;
 
+// ITEM 4 DA PESQUISA PLX: recusa no ponto do pedido.
+//
+// O pedido e o ULTIMO ponto onde ainda da para recusar de graca: rate-limit
+// depois do decode e "um em voo" foram medidos por eles e ficaram PIORES que
+// nada ("pacing nao torna o trabalho acessivel"). A grade declara aqui, uma vez
+// por quadro, se esta em movimento, e cada desenho de cartao marca se aquela
+// arte esta FORA da janela visivel. O cache entao recusa, antes de enfileirar
+// rede ou decode, o pedido NOVO de uma arte fora da janela.
+//
+// DOIS NIVEIS, porque o risco de tile escuro nao e o mesmo nos dois casos:
+//   1 = cartao NA BORDA (fileira cortada, ainda desenhada no fade): so recusa
+//       em MOVIMENTO. Parado, o vizinho da borda e atendido — se recusasse,
+//       ele ficaria escuro para sempre, porque parado nao volta a rolar.
+//   2 = cartao TOTALMENTE fora da tela: recusa SEMPRE (em movimento ou parado),
+//       porque nao ha tile nenhum na tela para ficar escuro — e pedi-lo parado
+//       e justamente o trabalho especulativo que o lookahead do item 1 limita.
+// Arte ja conhecida (pronta, em voo ou aquecida) NUNCA e recusada: e o que
+// evita o tile escuro que eles mediram com a recusa fixa.
+static int gradeMovendo;
+static float gradeRolDir;
+static int pedidoFora;
+int tex_n_recusa = 0;
+
+void tex_grade_movendo(int movendo) { gradeMovendo = movendo ? 1 : 0; }
+// RolDir em PESSOAS POR QUADRO (card ou fileira), com sinal: qual lado da
+// janela recebe a arte nova. O chamador decide quem entra; o cache so usa o
+// sinal para marcar a arte que entra como passageira quando ela e despejada.
+void tex_grade_velocidade(float passos) { gradeRolDir = passos; }
+float tex_grade_direcao(void) { return gradeRolDir; }
+void tex_pedido_fora(int nivel) { pedidoFora = nivel < 0 ? 0 : nivel; }
+
 // O driver tambem aloca a piramide de mipmaps. Contar apenas o nivel base
 // deixava o cache ultrapassar o teto real em cerca de 33% nas artes de card.
 // COBRAR A PIRAMIDE SO QUANDO ELA EXISTE.
@@ -3517,6 +3548,23 @@ static GLuint tex_obter_limite(const char *caminho, int limite, int urgente,
   GLuint saida = 0;
   unsigned long h = hashCaminho(caminho);
   int i; BUSCA_MEDIDA(i, caminho, h);
+  // ITEM 4: recusa ANTES do fetch. So vale para pedido NOVO (slot ainda nao
+  // existe): arte que ja esta no cache, em voo ou aquecida passa, e e ela que
+  // serve a janela visivel. Nivel 2 (fora da tela) recusa sempre; nivel 1 (na
+  // borda) so em movimento; o lookahead (item 1) aquece a vizinhanca em repouso.
+  // BUSCA_MEDIDA tomou o mutex: sair sem solta-lo congelava rede e decode
+  // (cartazes e icones sumiam na C9/TCL, tests/plx_recusa_trava.sh).
+  //
+  // NIVEL 3: FORA DA TELA NO LADO EM QUE A ROLAGEM ENTRA. A faixa de corte do
+  // desenho sobra ~1,5 card alem da borda, e a arte desse lado e demanda com
+  // alguns quadros de antecedencia — recusa-la e o defeito "o poster carrega
+  // na frente". Ela passa como PASSAGEIRA: se a rolagem inverter antes, sai
+  // primeiro e nunca despeja cartaz visivel.
+  if (i < 0 && pedidoFora && pedidoFora != 3 &&
+      (pedidoFora >= 2 || gradeMovendo)) {
+    tex_n_recusa++; SDL_UnlockMutex(mtx); return 0;
+  }
+  if (i >= 0 && pedidoFora == 3) itens[i].passageiro = 1;
   if (i >= 0 && itens[i].estado == FALHOU) {
     itens[i].ultimoQuadro = quadroAtual;
     itens[i].ultimoPedido = SDL_GetTicks();
@@ -3681,7 +3729,7 @@ static GLuint tex_obter_limite(const char *caminho, int limite, int urgente,
       itens[novo].ultimoQuadro = quadroAtual;
       itens[novo].ultimoPedido = SDL_GetTicks();
       itens[novo].urgente = urgente;
-      itens[novo].passageiro = passageiro ? 1 : 0;
+      itens[novo].passageiro = passageiro || pedidoFora == 3 ? 1 : 0;
       itens[novo].localDireto = caminhoLocal(caminho);
       if (itens[novo].localDireto) {
         // Fila cheia nao transforma caminho local em espera de rede nem trava
@@ -3766,9 +3814,27 @@ int tex_lookahead_parado(TexLookahead *s, float scroll) {
   return s->parados >= 2;
 }
 
+// VERSAO EM MOVIMENTO do lookahead. Parado, a janela nao muda e a vizinhanca
+// e coberta pelo caminho acima; rolando, porem, o parado nunca dispara (a
+// posicao muda todo quadro) e a borda que ENTRA e quem precisa de arte — se
+// ela so pede ao aparecer, a pessoa ve o esqueleto (o relato do poster que
+// "carrega na frente"). Devolve o sinal da rolagem (+1/-1) uma vez por
+// quadro por chamador; 0 = sem direcao ou ja usado neste quadro. O chamador
+// traduz o sinal no proximo cartao da borda e pede (tex_lookahead_pedir,
+// que em movimento nao espera fila vazia).
+int tex_lookahead_mover(TexLookahead *s) {
+  if (s->quadro == quadroAtual) return 0;
+  s->quadro = quadroAtual;
+  return gradeRolDir > 0.0f ? 1 : gradeRolDir < 0.0f ? -1 : 0;
+}
+
 int tex_lookahead_pedir(const char *caminho, float largura) {
   static unsigned long pedidoQuadro;
-  if (!mtx || !caminho || !*caminho || pedidoQuadro == quadroAtual) return 0;
+  // Em movimento vale um pedido a cada DOIS quadros: quem entra na janela e
+  // demanda, nao especulacao, e esperar o repouso e o defeito que se corrige.
+  if (!mtx || !caminho || !*caminho ||
+      (pedidoQuadro &&
+       quadroAtual - pedidoQuadro < (gradeMovendo ? 2u : 1u))) return 0;
   SDL_LockMutex(mtx);
   int i = acharIndice(caminho, hashCaminho(caminho));
   // Nao promove nem despeja arte para especular. Em voo inclui trabalho que
@@ -3778,12 +3844,22 @@ int tex_lookahead_pedir(const char *caminho, float largura) {
     if (itens[j].estado == VAZIO) livre++;
     if (itens[j].lookahead) adiante++;
   }
-  int pode = i < 0 && !emVoo() && filaIni == filaFim && decIni == decFim &&
-             livre > 0 && adiante < 30 && !pressaoAtiva() && bytesUsados < orcamento * 3 / 4;
+  // Parado: so especula com o cache ocioso (nunca atrasa demanda). ROLANDO:
+  // a demanda existe sempre — as filas nunca esvaziam — entao o criterio e
+  // so nao saturar os slots nem a memoria; a arte pedida sera demanda a
+  // seguir, e ja entra com a largura certa.
+  int pode = i < 0 && livre > 0 && adiante < 30 &&
+             !pressaoAtiva() && bytesUsados < orcamento * 3 / 4 &&
+             (gradeMovendo ? emVoo() < nMax / 3 - 2
+                           : (!emVoo() && filaIni == filaFim && decIni == decFim));
   SDL_UnlockMutex(mtx);
   if (!pode) return 0;
   pedidoQuadro = quadroAtual;
+  // O pedido e ESPECULATIVO por definicao: nao vale a marca `pedidoFora` que o
+  // desenho deixou no ultimo cartao — senao a propria pre-busca seria recusada.
+  int foraAntes = pedidoFora; pedidoFora = 0;
   (void)tex_obter_larg(caminho, largura);
+  pedidoFora = foraAntes;
   SDL_LockMutex(mtx);
   i = acharIndice(caminho, hashCaminho(caminho));
   if (i >= 0) {
@@ -4211,6 +4287,7 @@ int tex_bombear(int max_por_quadro) {
         Uint32 em = SDL_GetTicks();
         if (linhas < 16) linhas = 16;
         glBindTexture(GL_TEXTURE_2D, uplTex);
+        gfx_vidro_sujar();   // a textura muda no lugar: o hash do vidro nao ve
         if (uplY < sup->h) {
           if (uplY + linhas > sup->h) linhas = sup->h - uplY;
           glTexSubImage2D(GL_TEXTURE_2D, 0, 0, uplY, sup->w, linhas, GL_RGBA, GL_UNSIGNED_BYTE,

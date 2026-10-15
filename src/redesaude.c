@@ -22,6 +22,11 @@ static int avaliar(RedeSaude *s, unsigned agora) {
 static int passoDesde(RedeSaude *s, int ok, unsigned host, unsigned primeira, unsigned agora) {
   int i;
   if (!host) return 0;
+  if (!s->temInicio) { s->inicio = agora; s->temInicio = 1; }
+  if (ok < 0) {   // timeout de DNS: no arranque, antes de qualquer sucesso, nao diz nada
+    if (!s->temOk && agora - s->inicio < REDE_SAUDE_ARRANQUE) return 0;
+    ok = 0;
+  }
   if (ok) {
     s->falhas = 0; s->nHosts = 0;
     s->ultimoOk = agora; s->temOk = 1;
@@ -43,6 +48,10 @@ static int passoDesde(RedeSaude *s, int ok, unsigned host, unsigned primeira, un
 
 int rede_saude_passo(RedeSaude *s, int ok, unsigned host, unsigned agora) {
   return passoDesde(s, ok, host, agora, agora);
+}
+
+int rede_saude_passo_dns(RedeSaude *s, unsigned host, unsigned agora) {
+  return passoDesde(s, -1, host, agora, agora);
 }
 
 // Chamado com trava; stdout faz parte do registro enviado.
@@ -86,6 +95,7 @@ void rede_saude_nota_desde(int codigo, const char *url, unsigned primeiraMs) {
   unsigned h, agora;
   switch (codigo) {
     case 0: ok = 1; break;
+    case REDE_CURL_DNS_LENTO: ok = -1; break;
     case 6: case 7: case 28: case 35: case 52: case 55: case 56: ok = 0; break;
     default: return;   // cancelado (42), teto (23), uso errado: nao diz nada da rede
   }

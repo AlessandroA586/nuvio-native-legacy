@@ -15,14 +15,17 @@
 // Inclui src/vertudo.c (o estado e estatico) e troca a lista que a descoberta
 // leu por uma semeada aqui.
 #include "gfx.h"
+#include "nvtmp.h"
 #include "tex_cache.h"
 static int pedidosArte, sombrasFluxo, pedidosPagina;
+static GfxRect anelRect; static int anelN; static float anelC[3];   // no acento: o anel da Home
 static void fluxo_mais(void) { pedidosPagina++; }
 #define desc_vertudo_mais fluxo_mais
 static GLuint fluxo_tex(const char *p, float w) { (void)p; (void)w; pedidosArte++; return 0; }
 static void fluxo_cor(GfxRect r, float raio, float cr, float cg, float cb, float ca) {
   (void)raio; (void)ca;
   if (r.h > 100 && cr == 0 && cg == 0 && cb == 0) sombrasFluxo++;
+  if (cr == anelC[0] && cg == anelC[1] && cb == anelC[2]) { anelRect = r; anelN++; }
 }
 static void fluxo_rect(GfxRect r, GLuint t, GfxModo m, float f, float x, float y,
                        float raio, float cr, float cg, float cb, float ca) {
@@ -38,6 +41,8 @@ static void fluxo_sem_recorte(void) {}
 #define gfx_sem_recorte fluxo_sem_recorte
 #define desc_vertudo_n shot_vt_n
 #define desc_vertudo_item shot_vt_item
+#define desc_vertudo_n_bruto shot_vt_n
+#define desc_vertudo_item_bruto shot_vt_item
 #include "../src/vertudo.c"
 #undef desc_vertudo_n
 #undef desc_vertudo_item
@@ -87,7 +92,7 @@ static ColSource fontes[2];
 int main(int argc, char **argv) {
   int L, i, j;
   char dir[600];
-  snprintf(dir, sizeof dir, "%s/nv-colexib.XXXXXX", getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp");
+  snprintf(dir, sizeof dir, "%s/nv-colexib.XXXXXX", nvt_dir());
   assert(mkdtemp(dir));
   setenv("NUVIO_DADOS", dir, 1);
   dados_iniciar("deploy/app/art");
@@ -199,9 +204,9 @@ int main(int argc, char **argv) {
   lay = VT_LAY_VITRINE; layEscolha = VT_LAY_VITRINE; tabFocus = 0;
   vitIniciar();
   assert(vitBuf && vitMulti && vitN == 2);
-  vitLin[0].n = 5; vitLin[0].estado = VIT_PRONTA;
+  vitLin[0].n = 5; vitLin[0].brutoN = 5; vitLin[0].estado = VIT_PRONTA;
   vitLin[1].n = 0; vitLin[1].estado = VIT_VAZIA;
-  for (i = 0; i < 5; i++) vitBuf[i] = semente[i];
+  for (i = 0; i < 5; i++) { vitBuf[i] = semente[i]; vitVis[0][i] = (short)i; }
   vitCarga = vitN;
   // A fileira vazia e pulada; cima na primeira vai ao botao; esquerda na
   // primeira coluna pede a barra; direita anda e para na ultima.
@@ -214,8 +219,8 @@ int main(int argc, char **argv) {
   tecla(SDLK_UP); assert(tabFocus == 1 && tabCursor == nAbas());
   tecla(SDLK_DOWN); assert(tabFocus == 0);
   // Segunda fileira com itens: baixo desce lembrando a coluna de cada uma.
-  vitLin[1].n = 3; vitLin[1].estado = VIT_PRONTA;
-  for (i = 0; i < 3; i++) vitBuf[vitCap + i] = semente[7 + i];
+  vitLin[1].n = 3; vitLin[1].brutoN = 3; vitLin[1].estado = VIT_PRONTA;
+  for (i = 0; i < 3; i++) { vitBuf[vitCap + i] = semente[7 + i]; vitVis[1][i] = (short)i; }
   vitFR = 0; vitFC = 4;
   tecla(SDLK_DOWN); assert(vitFR == 1 && vitFC == 0);   // cada fileira lembra a sua coluna
   tecla(SDLK_RIGHT);
@@ -228,7 +233,7 @@ int main(int argc, char **argv) {
   // viram Filmes e Series; so filmes, decadas da mais nova a mais velha.
   pasta.nSources = 1; vitIniciar();
   assert(!vitMulti);
-  vitAgrupar(nSemente);
+  vitAgrupar(nSemente); vitProjetar();   // a Vitrine projeta no desenho; aqui, na mao
   assert(vitN == 6 && vitLin[0].n >= 1 && strstr(vitLin[0].nome, "2010"));
   assert(!strcmp(vitLin[vitN - 1].nome, i18n("Sem data")));
   snprintf(semente[1].tipo, sizeof semente[1].tipo, "series");
@@ -245,10 +250,15 @@ int main(int argc, char **argv) {
   snprintf(pasta.group, sizeof pasta.group, "Streaming");
   semFonte = 1; assert(!legendaOculta()); semFonte = 0;
   assert(abaFade(700, 100, 100, 800, 0, 1) == 1.0f);      // longe da borda
-  assert(abaFade(870, 100, 100, 800, 0, 1) == 0.0f);      // passaria da borda
-  assert(abaFade(750, 100, 100, 800, 0, 1) < 1.0f);       // dentro da zona
+  assert(abaFade(870, 100, 100, 800, 0, 1) > 0.0f);      // fresta entrando: visivel, esmaecida
+  assert(abaFade(870, 100, 100, 800, 0, 1) < 1.0f);      // dentro da zona
+  assert(abaFade(950, 100, 100, 800, 0, 1) == 0.0f);      // borda esquerda alem do fim: fora
+  assert(abaFade(750, 100, 100, 800, 0, 1) == 1.0f);      // inteira dentro da faixa: opaca
+  assert(abaFade(830, 100, 100, 800, 0, 1) < 1.0f);       // borda esquerda na zona: esmaece
   assert(abaFade(870, 100, 100, 800, 0, 0) == 1.0f);      // sem mais abas: normal
-  assert(abaFade(136, 100, 100, 800, 1, 0) < 1.0f);       // rolada: some a esquerda
+  assert(abaFade(136, 100, 100, 800, 1, 0) == 1.0f);      // inteira dentro: opaca
+  assert(abaFade(-50, 100, 100, 800, 1, 0) < 1.0f);       // saindo: a fresta esmaece
+  assert(abaFade(30, 100, 100, 800, 1, 0) > 0.0f);       // fresta saindo: visivel, esmaecida
 
   // 9. GRADE E MURAL COM MAIS AR (13/10): vao de 28 entre cartazes, a Grade
   // sem o nome embaixo (vao vertical menor que o antigo 60 com titulo), o
@@ -320,8 +330,31 @@ int main(int argc, char **argv) {
     GfxRect e = fluxoRect(4, vtInicio(), NULL);
     assert(fabsf(c.w - VT_FLX_W) < 0.5f && s0 < 0.01f);
     assert(fabsf(c.x + c.w * 0.5f - fluxoCentro(vtInicio())) < 0.5f);
-    assert(v.w < c.w * 0.6f && v.h < c.h && s1 > 0.3f);
-    assert(v.x >= c.x + c.w && e.x + e.w <= c.x); }
+    // Reto (mesma proporcao, sem espremer), menor, escuro e ATRAS do foco (sobreposto).
+    assert(v.w < c.w && v.h < c.h && s1 > 0.3f);
+    assert(fabsf(v.w / v.h - c.w / c.h) < 0.01f);
+    assert(v.x > c.x && v.x < c.x + c.w && e.x + e.w > c.x && e.x < c.x);
+    // Ponta a ponta: o 6o vizinho cai na borda da faixa; a faixa = tela menos a margem.
+    assert(fabsf(fluxoFim() - vtInicio() - (NV_TELA_W - 48.0f - vtInicio())) < 0.5f);
+    { GfxRect p = fluxoRect(11, vtInicio(), NULL); float cx = p.x + p.w * 0.5f;
+      assert(cx > fluxoFim() - 40.0f && cx <= fluxoFim()); }
+    // A ficha do titulo fica ABAIXO da linha do tempo.
+    assert(fluxoInfoY() > fluxoLinhaY());
+    // O ANEL DO FOCO E O DA HOME (focoprof.h): o cartao e NV_ANEL_FOCO em volta,
+    // na cor do acento — nada de contorno proprio do Cover Flow.
+    { char cam[700]; FILE *f;
+      snprintf(cam, sizeof cam, "%s/ajustes.txt", dados_dir());
+      f = fopen(cam, "w"); assert(f);
+      fprintf(f, "bordaFocoCartaz 0\n"); fclose(f);   // V_LIGA: 0 = Ligado
+      ajustes_dir(dados_dir()); }
+    assert(ajustes_borda_foco());
+    ajustes_acento(&anelC[0], &anelC[1], &anelC[2]);
+    anelN = 0; fluxoCartaz(5, vtInicio(), 1, 6000);
+    assert(anelN == 1);
+    assert(fabsf(anelRect.x - (c.x - NV_ANEL_FOCO)) < 0.01f &&
+           fabsf(anelRect.y - (c.y - NV_ANEL_FOCO)) < 0.01f &&
+           fabsf(anelRect.w - (c.w + 2 * NV_ANEL_FOCO)) < 0.01f &&
+           fabsf(anelRect.h - (c.h + 2 * NV_ANEL_FOCO)) < 0.01f); }
   foco = 6; vertudo_atualizar(1.0f / 60.0f, 9000);
   assert(fluxoPos > 5.0f && fluxoPos < 6.0f);   // desliza, nao salta
 
@@ -330,17 +363,17 @@ int main(int argc, char **argv) {
     for (i = 0; i < nSemente; i++) snprintf(semente[i].poster, sizeof semente[i].poster, "poster-%d", i);
     fluxoPos = 6; foco = 6;
     ptv_definir_gpu_fraca(0);
-    pedidosArte = 0; fluxoDesenhar(nSemente, x0, 1);
+    pedidosArte = 0; fluxoDesenhar(nSemente, x0, 1, 0);
     int fortes = pedidosArte;
     assert(fortes == 13);
     ptv_definir_gpu_fraca(1);
-    pedidosArte = sombrasFluxo = 0; fluxoDesenhar(nSemente, x0, 1);
+    pedidosArte = sombrasFluxo = 0; fluxoDesenhar(nSemente, x0, 1, 0);
     assert(pedidosArte == 5 && pedidosArte < fortes && sombrasFluxo <= 4);
     pedidosArte = sombrasFluxo = 0;
-    fluxoPos = 0; fluxoCartaz(nSemente - 1, x0, 1);  // totalmente fora do recorte: nem textura nem veu
+    fluxoPos = 0; fluxoCartaz(nSemente - 1, x0, 1, 0);  // totalmente fora do recorte: nem textura nem veu
     assert(pedidosArte == 0 && sombrasFluxo == 0);
     fluxoPos = 6.5f; pedidosArte = 0;
-    fluxoDesenhar(nSemente, x0, 1); assert(pedidosArte <= 5);
+    fluxoDesenhar(nSemente, x0, 1, 0); assert(pedidosArte <= 5);
     ptv_definir_gpu_fraca(0);
     puts("fluxo cost: ok"); return 0;
   }

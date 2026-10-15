@@ -25,8 +25,10 @@
 #include "recomenda.h"
 #include "salvosintro.h"
 #include "text.h"
+#include "central.h"
 #include "plrui.h"
 #include "desempenho.h"
+#include "trailer.h"
 #include "idioma.h"
 #include "idiomacod.h"
 #define NV_ESCALA_TELA   // o arquivo inteiro mede pela tela virtual (escala.h)
@@ -474,6 +476,11 @@ int ilha_rect(float *x, float *y, float *w, float *h) {
 // serie so sai se eu entrar na serie"). Agora "Depois" tira o cartao ate o app
 // fechar e "Dispensar" tira de vez aquele episodio (ver ILHA_PEDIU_* em ilha.h).
 // AMIGO: Ver tambem · Detalhes · Fechar, o A5 de oportunidades.md.
+int ilha_retomar_focado(IlhaCartao *c) {
+  if (!modalAberto || modalAviso || modalAtividade || modalQual != ILHA_VIVO || modalFoco != 0) return 0;
+  if (c) *c = modalC;
+  return 1;
+}
 static int nBotoes(void) {
   if (modalAtividade) return 1;
   if (modalAviso) return modalM.nBotoes < 1 ? 1 : modalM.nBotoes > ILHA_MODAL_BOTOES ? ILHA_MODAL_BOTOES : modalM.nBotoes;
@@ -747,6 +754,21 @@ static void atualizarHora(void) {
 #define MINI_H  44.0f
 #define DUO_SOBRE 8.0f          // a capa entra 8 px por cima do rosto
 #define PONTO_VIVO 10.0f
+
+// Largura da pilula em repouso, para o menu do topo reservar (TOPO_RELOGIO):
+// a hora + o ponto de enquete + o MEDIDOR DE DESEMPENHO quando ligado — sem
+// ele a barra do topo cobre a ilha que cresceu ~200 px a esquerda. Em Menor/
+// Grande o corpo por baixo pode ser mais largo que a linha (Grande: GR_W).
+float ilha_relogio_largura(void) {
+  int ds = desempenho_forma();
+  float w, bw, bh;
+  atualizarHora();
+  w = PAD_E + PAD_D + (float)txt_largura(TXT_PG_RELOGIO, hora) +
+      (pontoEnquete ? 12.0f + PONTO_ENQ : 0.0f) + desempenho_linha_w(ds);
+  desempenho_corpo_tam(ds, &bw, &bh);
+  if (bw > w) w = bw;
+  return w * gfx_escala_ui();
+}
 
 // --- a frase com enfase --------------------------------------------------------
 // "Ana recomendou Fallout": o nome e o titulo em negrito (TXT_ILHA_FORTE, o
@@ -2030,10 +2052,12 @@ static void ilha_desenharCorpo_(Uint32 agora) {
       corpoWa = molaIlha(&corpoVw, corpoWa, corpoW, dt);
       corpoHa = molaIlha(&corpoVh, corpoHa, corpoH, dt);
     } }
-  vis = alvo != M_RELOGIO || relogioQuer || (modalAviso && (modalAberto || modalT > 0.01f)) || corpoT > 0.0f;
-  // O MEDIDOR so ocupa a ilha LIVRE: com aviso, atividade, modal ou voo ele
-  // sai (o pouso e os avisos nunca esperam por ele) e volta depois.
-  { int ds = desempenho_forma(), livre = !modalAberto && modalT <= 0.0f && !voo;
+  vis = alvo != M_RELOGIO || relogioQuer || central_segurar_progresso(agora) > 0.0f ||
+        (modalAviso && (modalAberto || modalT > 0.01f)) || corpoT > 0.0f;
+  // O MEDIDOR so ocupa a ilha LIVRE: com aviso, atividade, modal, voo ou o
+  // TRAILER tocando (destaque da home, pagina do titulo — dono no S18, 2.0.6)
+  // ele sai (o pouso e os avisos nunca esperam por ele) e volta depois.
+  { int ds = desempenho_forma(), livre = !modalAberto && modalT <= 0.0f && !voo && !trailer_tocando();
     dsVez = alvo == M_RELOGIO && livre ? ds : DS_DESLIGADO;
     dsCartao = alvo == M_CARTAO && livre && ds != DS_DESLIGADO; }
   // O que esta desenhado so troca quando o conteudo velho ja apagou: a pilula
@@ -2226,6 +2250,7 @@ static void ilha_desenharCorpo_(Uint32 agora) {
         luz = ajustes_animacoes_reduzidas() || modalT > 0.3f ? 0.20f
               : 0.14f + 0.10f * (0.5f + 0.5f * sinf((float)agora * (2.0f * 3.14159265f / 1100.0f)));
       gfx_luz_canto(R, raio, R.w * 0.25f, -R.h * 0.9f, R.w * 0.85f, cr, cg, cb, luz * A); }
+    central_segurar_desenhar(R, raio, A, agora);
     gfx_recorte(R.x + 6.0f, R.y, R.w - 12.0f, R.h);
     if (aPil > 0.0f) {
       if (mostra == M_CARTAO) desenharCartao(&mostraC, mostraQual, r, A * conteudoA * aPil);

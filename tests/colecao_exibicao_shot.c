@@ -8,6 +8,7 @@
 #define desc_vertudo_n shot_vt_n
 #define desc_vertudo_item shot_vt_item
 #include "../src/vertudo.c"
+#include "nvtmp.h"
 #undef desc_vertudo_n
 #undef desc_vertudo_item
 #include "corviva.h"
@@ -77,7 +78,7 @@ static ColFolder pasta;
 static ColSource fontes[3];
 
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nv-colecao-exibicao";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nv-colecao-exibicao");
   char nome[700], cam[700];
   SDL_GLContext gl;
   FILE *a;

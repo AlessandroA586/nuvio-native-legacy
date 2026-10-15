@@ -17,6 +17,7 @@
 #include <SDL2/SDL.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include "nvtmp.h"
 
 const char *i18n(const char *s) { return s; }
 const char *ling_nome(const char *c) { return c; }
@@ -67,7 +68,7 @@ static int saidaFd = -1;
 static char saidaCam[512];
 static void capturar(void) {
   const char *d = getenv("TMPDIR");
-  snprintf(saidaCam, sizeof saidaCam, "%s/nuvio-tpk-escolha-log.txt", d && *d ? d : "/tmp");
+  snprintf(saidaCam, sizeof saidaCam, "%s/nuvio-tpk-escolha-log.txt", d && *d ? d : nvt_dir());
   fflush(stdout); saidaFd = dup(1);
   if (!freopen(saidaCam, "w", stdout)) saidaFd = -1;
 }

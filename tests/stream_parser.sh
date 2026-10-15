@@ -1,4 +1,6 @@
 #!/bin/bash
+export TMPDIR="${TMPDIR:-/tmp}"
+TMPDIR="${TMPDIR%/}"
 # Parser sem inicializar SDL; os desenhos de badges sao descartados no link.
 set -eu
 cd "$(dirname "$0")/.."

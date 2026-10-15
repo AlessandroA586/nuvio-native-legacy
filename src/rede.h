@@ -292,6 +292,9 @@ char *rede_apagar(const char *url, int segundos, const char *const *cabecalhos,
                   int *status);
 char *rede_postar_st(const char *url, int segundos, const char *const *cabecalhos,
                      const char *corpo, int *status);
+// POST que repete (espera 1 s, 2 s, ...) so quando nao houve resposta (status 0).
+char *rede_postar_repetindo(const char *url, int segundos, const char *const *cabecalhos,
+                            const char *corpo, int *status, int tentativas);
 
 // GET com cabecalhos E codigo HTTP. Pelo mesmo motivo do POST acima: a leitura
 // de tabela do Supabase precisa distinguir "tabela nao existe" (404 com
@@ -427,6 +430,7 @@ const char *rede_ultimo_erro(void);
 // hosts. ms[i] recebe o tempo de cada origem (0 = falhou). Devolve quantas
 // abriram. Chamar de um fio descartavel; no .wgt nao faz nada (devolve 0).
 int rede_aquecer_lote(const char *const *origens, int n, unsigned *ms);
+int rede_aquecer_job(const char *const *origens, int n, unsigned *ms, RedeJob *job);
 const char *rede_url_publica(const char *url, char *dst, unsigned tam);
 
 // URL DE IMAGEM/META PARA LOG, mais util que rede_url_publica mas igualmente

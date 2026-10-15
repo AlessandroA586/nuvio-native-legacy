@@ -6,18 +6,18 @@
 //! Rules this file keeps:
 //!  * no panic crosses FFI: `panic = "abort"` plus a panic handler that calls C
 //!    `abort()`, and no indexing/slicing/unwrap (checked access only — the
-//!    `deny` below makes clippy fail on a violation);
+//!    Cargo.toml lints make clippy fail on a violation);
 //!  * offsets are `i64` (the C code uses `long`, 32 bits on the ARM TVs);
 //!  * recursion is depth-limited (the C code was not);
 //!  * the output structs mirror `MkvFaixa`/`MkvCap` and are written with
 //!    `ptr::write`, never through a reference to caller memory.
 #![no_std]
-#![deny(clippy::indexing_slicing, clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use core::ffi::{c_char, c_int, c_long, c_ulong};
 use core::ptr;
 use core::slice;
 
+#[cfg(not(test))]
 extern "C" {
     fn abort() -> !;
 }
@@ -29,9 +29,9 @@ fn on_panic(_: &core::panic::PanicInfo) -> ! {
     unsafe { abort() }
 }
 
-// ARM32 EHABI: compiler_builtins' unwind tables reference this symbol and the C
-// link has no Rust std to provide it. panic = abort, so it is never called.
-#[cfg(all(not(test), target_arch = "arm"))]
+/// Link-only personality symbol for compiler_builtins' ARM32 EHABI and
+/// aarch64 Android unwind tables. With panic=abort it is never called.
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn rust_eh_personality() {}
 
@@ -75,11 +75,12 @@ pub struct NvMkvScan {
     tracks_cortado: c_int,
     tk_achado: c_int,
     n_caps: c_int,
-    reservado: c_int,
+    tracks_nao_visto: c_int,
     tk_tam: i64,
     tk_disp: i64,
     seg_ini: i64,
     pos_chapters: i64,
+    pos_tracks: i64,
 }
 
 /// The fields of `MkvDiag` that come from scanning the first Cluster.
@@ -98,7 +99,7 @@ pub struct NvDiagOut {
 const LONG8: bool = core::mem::size_of::<c_long>() == 8;
 const _: () = assert!(core::mem::size_of::<MkvFaixa>() == if LONG8 { 160 } else { 148 });
 const _: () = assert!(core::mem::size_of::<MkvCap>() == 72);
-const _: () = assert!(core::mem::size_of::<NvMkvScan>() == 48);
+const _: () = assert!(core::mem::size_of::<NvMkvScan>() == 56);
 const _: () = assert!(core::mem::size_of::<NvDiagOut>() == 32);
 
 impl MkvFaixa {
@@ -159,13 +160,19 @@ fn tail(p: &[u8], off: i64) -> &[u8] {
 /// The caller's `(ptr, n)` as a slice; empty for NULL or a negative length.
 ///
 /// # Safety
-/// `p` must be valid for `n` bytes when non-null.
+/// For positive `n`, `p` must denote one readable allocation of `n` bytes,
+/// remain valid and immutable for `'a`, and its address plus `n` must not wrap.
 unsafe fn buf<'a>(p: *const u8, n: c_long) -> &'a [u8] {
     if p.is_null() || n <= 0 {
         return &[];
     }
-    // SAFETY: the C caller owns `n` readable bytes at `p` for the call.
-    unsafe { slice::from_raw_parts(p, n as usize) }
+    let n = n as usize;
+    if n > isize::MAX as usize || (p as usize).checked_add(n).is_none() {
+        return &[];
+    }
+    // SAFETY: length and address arithmetic checked; the caller owns one
+    // readable allocation at `p`, immutable for the borrow.
+    unsafe { slice::from_raw_parts(p, n) }
 }
 
 // --- EBML ------------------------------------------------------------------------
@@ -364,7 +371,7 @@ fn ler_entrada(e: &[u8]) -> MkvFaixa {
         ID_TRACKTYPE => f.tipo = ler_uint(v) as u32 as c_int,
         ID_LANGUAGE | ID_LANG_BCP47 => {
             // BCP47 beats ISO 639-2 when both exist.
-            if fid == ID_LANG_BCP47 || f.idioma[0] == 0 {
+            if fid == ID_LANG_BCP47 || f.idioma.first() == Some(&0) {
                 ler_texto(v, &mut f.idioma);
             }
         }
@@ -487,7 +494,7 @@ fn ler_capitulos(p: &[u8], saida: *mut MkvCap, max: c_int, prof: u32) -> c_int {
 
 // --- SeekHead / walk to Tracks ----------------------------------------------------
 
-fn ler_seek_head(p: &[u8], seg_ini: i64, pos_chapters: &mut i64) {
+fn ler_seek_head(p: &[u8], seg_ini: i64, pos_chapters: &mut i64, pos_tracks: &mut i64) {
     filhos(p, |id, v| {
         if id != ID_SEEK {
             return;
@@ -501,9 +508,14 @@ fn ler_seek_head(p: &[u8], seg_ini: i64, pos_chapters: &mut i64) {
                 pos = ler_uint(fv) as i64;
             }
         });
-        if alvo == u64::from(ID_CHAPTERS) && pos >= 0 {
-            // Absolute position; an overflowing one is "not said".
+        if pos < 0 {
+            return;
+        }
+        // Absolute position; an overflowing one is "not said".
+        if alvo == u64::from(ID_CHAPTERS) {
             *pos_chapters = seg_ini.checked_add(pos).unwrap_or(-1);
+        } else if alvo == u64::from(ID_TRACKS) {
+            *pos_tracks = seg_ini.checked_add(pos).unwrap_or(-1);
         }
     });
 }
@@ -520,9 +532,9 @@ fn achar_tracks(
     let mut o: i64 = 0;
     let mut n_faixas: c_int = 0;
     while o < n {
-        let Some((id, d, tam, hdr)) = cabeca_bruta(p, o) else { return 0 };
+        let Some((id, d, tam, hdr)) = cabeca_bruta(p, o) else { break };
         if tam == TAM_INVALIDO {
-            return 0;
+            break;
         }
         o = d;
         if id == ID_SEGMENT || tam == TAM_DESCONHECIDO {
@@ -531,10 +543,10 @@ fn achar_tracks(
                 sc.seg_ini = o;
                 continue;
             }
-            return 0;
+            break;
         }
         if id == ID_SEEKHEAD && o.saturating_add(tam) <= n {
-            ler_seek_head(sub(p, o, tam), sc.seg_ini, &mut sc.pos_chapters);
+            ler_seek_head(sub(p, o, tam), sc.seg_ini, &mut sc.pos_chapters, &mut sc.pos_tracks);
         }
         if id == ID_TRACKS {
             let disp = n - o;
@@ -548,7 +560,7 @@ fn achar_tracks(
             }
             // Chapters come AFTER Tracks: do not return on the first hit.
             if caps.is_null() || tam > disp {
-                return n_faixas;
+                break;
             }
             o += tam;
             continue;
@@ -559,17 +571,24 @@ fn achar_tracks(
             // the SeekHead read.
             if tam > disp {
                 sc.pos_chapters = o - hdr;
-                return n_faixas;
+                break;
             }
             sc.n_caps = ler_capitulos(sub(p, o, tam), caps, max_caps, 0);
             sc.pos_chapters = -1;
-            return n_faixas;
+            break;
         }
         if o.saturating_add(tam) > n {
-            return n_faixas;
+            break;
         }
         o += tam;
     }
+    // #483: Tracks past the window (remux edited by mkvpropedit): the walk
+    // stopped at a big element (Attachments, first Cluster) with n_faixas == 0,
+    // or Tracks came truncated — and every faixa stayed "codec=?", which left
+    // the embedded ASS to the TV (plain text, lines dropped). The SeekHead
+    // knows where Tracks is; the C side fetches it in one Range.
+    sc.tracks_nao_visto =
+        c_int::from(sc.pos_tracks >= 0 && (n_faixas == 0 || sc.tracks_cortado != 0));
     n_faixas
 }
 
@@ -578,6 +597,10 @@ fn achar_tracks(
 /// `mkv_quadro_tem_rpu`: 1 = NAL 62, 0 = none, -1 = malformed. The pair is the
 /// `(rpu_type, vdr_rpu_profile)` written when a NAL 62 was met.
 fn quadro_rpu(p: &[u8], nal_tam: i64) -> (c_int, Option<(c_int, c_int)>) {
+    // diag_trecho also reaches this helper; match the C frame parser's guard.
+    if !(1..=4).contains(&nal_tam) {
+        return (-1, None);
+    }
     let n = p.len() as i64;
     let mut o: i64 = 0;
     while o + nal_tam + 2 <= n {
@@ -741,7 +764,7 @@ fn diag_trecho(p: &[u8], faixa: i64, nal_tam: i64) -> NvDiagOut {
 
 fn caixa_iso(t: &[u8]) -> bool {
     const TIPOS: [&[u8; 4]; 8] = [b"ftyp", b"styp", b"moov", b"mdat", b"free", b"skip", b"wide", b"pdin"];
-    TIPOS.iter().any(|x| t.get(..4) == Some(&x[..]))
+    TIPOS.iter().any(|x| t.get(..4) == Some(x.as_slice()))
 }
 
 /// Same numbers as MKV_CONT_* in src/mkv.h.
@@ -756,7 +779,7 @@ fn contentor(p: &[u8]) -> c_int {
     if n < 4 {
         return NADA;
     }
-    if p.get(..4) == Some(&[0x1A, 0x45, 0xDF, 0xA3][..]) {
+    if p.get(..4) == Some([0x1A, 0x45, 0xDF, 0xA3].as_slice()) {
         return MKV;
     }
     if n >= 8 && caixa_iso(tail(p, 4)) {
@@ -786,7 +809,8 @@ fn contentor(p: &[u8]) -> c_int {
 /// `mkv_contentor`.
 ///
 /// # Safety
-/// `p` valid for `n` bytes (or NULL).
+/// For positive `n`, non-NULL `p` must denote one readable allocation of `n`
+/// bytes, immutable for the call; its address plus `n` must not wrap.
 #[no_mangle]
 pub unsafe extern "C" fn nv_mkvcore_contentor(p: *const u8, n: c_long) -> c_int {
     if p.is_null() {
@@ -799,7 +823,9 @@ pub unsafe extern "C" fn nv_mkvcore_contentor(p: *const u8, n: c_long) -> c_int 
 /// `mkv_quadro_tem_rpu`.
 ///
 /// # Safety
-/// `p` valid for `n` bytes; `tipo`/`perfil` NULL or writable.
+/// For positive `n`, non-NULL `p` must denote one readable allocation of `n`
+/// bytes, immutable for the call; its address plus `n` must not wrap.
+/// `tipo`/`perfil` must be NULL or aligned writable ints, disjoint from `p`.
 #[no_mangle]
 pub unsafe extern "C" fn nv_mkvcore_quadro_tem_rpu(
     p: *const u8,
@@ -831,7 +857,11 @@ pub unsafe extern "C" fn nv_mkvcore_quadro_tem_rpu(
 /// `max`), chapters to `caps` (up to `max_caps`, `caps` may be NULL).
 ///
 /// # Safety
-/// Buffers valid for their stated sizes; `sc` writable.
+/// For positive `n`, non-NULL `p` must denote one readable allocation of `n`
+/// bytes, immutable for the call; its address plus `n` must not wrap.
+/// Non-NULL outputs must be aligned and writable for their stated positive
+/// capacities (`sc`: one struct), fit within one allocation and `isize::MAX`
+/// bytes, and be disjoint from the input and each other.
 #[no_mangle]
 pub unsafe extern "C" fn nv_mkvcore_achar_tracks(
     p: *const u8,
@@ -849,11 +879,12 @@ pub unsafe extern "C" fn nv_mkvcore_achar_tracks(
         tracks_cortado: 0,
         tk_achado: 0,
         n_caps: 0,
-        reservado: 0,
+        tracks_nao_visto: 0,
         tk_tam: 0,
         tk_disp: 0,
         seg_ini: 0,
         pos_chapters: -1,
+        pos_tracks: -1,
     };
     let r = if p.is_null() || saida.is_null() {
         0
@@ -870,7 +901,9 @@ pub unsafe extern "C" fn nv_mkvcore_achar_tracks(
 /// hvcC NAL length size. `out` receives the whole result.
 ///
 /// # Safety
-/// `p` valid for `n` bytes; `out` writable.
+/// For positive `n`, non-NULL `p` must denote one readable allocation of `n`
+/// bytes, immutable for the call; its address plus `n` must not wrap.
+/// Non-NULL `out` must be aligned, writable for one struct and disjoint from `p`.
 #[no_mangle]
 pub unsafe extern "C" fn nv_mkvcore_diag_trecho(
     p: *const u8,
@@ -893,7 +926,9 @@ pub unsafe extern "C" fn nv_mkvcore_diag_trecho(
 /// `hdr` receives the header length.
 ///
 /// # Safety
-/// `p` valid for `n` bytes; `hdr` NULL or writable.
+/// For positive `n`, non-NULL `p` must denote one readable allocation of `n`
+/// bytes, immutable for the call; its address plus `n` must not wrap.
+/// `hdr` must be NULL or an aligned writable int, disjoint from `p`.
 #[no_mangle]
 pub unsafe extern "C" fn nv_mkvcore_cap_cabecalho(p: *const u8, n: c_long, hdr: *mut c_int) -> i64 {
     // SAFETY: forwarded contract.
@@ -909,10 +944,58 @@ pub unsafe extern "C" fn nv_mkvcore_cap_cabecalho(p: *const u8, n: c_long, hdr: 
     tam
 }
 
+/// Data size of the element at `p` when it is `quer` (-1: not it / unknown
+/// size); `hdr` receives the header length. Generic `nv_mkvcore_cap_cabecalho`.
+///
+/// # Safety
+/// For positive `n`, non-NULL `p` must denote one readable allocation of `n`
+/// bytes, immutable for the call; its address plus `n` must not wrap.
+/// `hdr` must be NULL or an aligned writable int, disjoint from `p`.
+#[no_mangle]
+pub unsafe extern "C" fn nv_mkvcore_elem_cabecalho(
+    p: *const u8,
+    n: c_long,
+    quer: c_ulong,
+    hdr: *mut c_int,
+) -> i64 {
+    // SAFETY: forwarded contract.
+    let b = unsafe { buf(p, n) };
+    let Some((id, d, tam)) = cabeca(b, 0) else { return -1 };
+    if u64::from(id) != quer as u64 {
+        return -1;
+    }
+    if !hdr.is_null() {
+        // SAFETY: NULL checked.
+        unsafe { ptr::write(hdr, d as c_int) };
+    }
+    tam
+}
+
+/// `lerTracks` on the data of a Tracks element.
+///
+/// # Safety
+/// For positive `n`, non-NULL `p` must denote one readable allocation of `n`
+/// bytes, immutable for the call; its address plus `n` must not wrap.
+/// Non-NULL `saida` must be aligned, writable for `max` `MkvFaixa` when
+/// positive, and disjoint from `p`.
+#[no_mangle]
+pub unsafe extern "C" fn nv_mkvcore_ler_tracks(
+    p: *const u8,
+    n: c_long,
+    saida: *mut MkvFaixa,
+    max: c_int,
+) -> c_int {
+    // SAFETY: forwarded contract.
+    ler_tracks(unsafe { buf(p, n) }, saida, max)
+}
+
 /// `lerCapitulos` on the data of a Chapters element.
 ///
 /// # Safety
-/// `p` valid for `n` bytes; `caps` valid for `max`.
+/// For positive `n`, non-NULL `p` must denote one readable allocation of `n`
+/// bytes, immutable for the call; its address plus `n` must not wrap.
+/// Non-NULL `caps` must be aligned, writable for `max` structs when positive,
+/// fit within one allocation and `isize::MAX` bytes, and be disjoint from `p`.
 #[no_mangle]
 pub unsafe extern "C" fn nv_mkvcore_capitulos(
     p: *const u8,
@@ -922,4 +1005,48 @@ pub unsafe extern "C" fn nv_mkvcore_capitulos(
 ) -> c_int {
     // SAFETY: forwarded contract.
     ler_capitulos(unsafe { buf(p, n) }, caps, max, 0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn diag_should_return_error_when_nal_length_invalid() {
+        // Cluster / SimpleBlock / track 1 / timestamp / flags / 5-byte NAL size / NAL.
+        let p = [0x1f, 0x43, 0xb6, 0x75, 0x8d, 0xa3, 0x8b, 0x81, 0, 0, 0,
+                 0, 0, 0, 0, 2, 2, 1];
+        assert_eq!(diag_trecho(&p, 1, 5).rpu, -1);
+    }
+
+    #[test]
+    fn quadro_should_return_error_when_nal_length_invalid() {
+        for n in [i64::MAX, i64::MIN, -1, 0, 5] {
+            assert_eq!(quadro_rpu(&[], n), (-1, None));
+        }
+    }
+
+    #[test]
+    fn buf_should_return_empty_when_address_wraps() {
+        // SAFETY: the impossible address range must be rejected before access.
+        assert!(unsafe { buf(usize::MAX as *const u8, 1) }.is_empty());
+    }
+
+    #[test]
+    fn parse_should_return_error_when_input_truncated() {
+        let header = [0x10, 0x43, 0xa7, 0x70, 0x40, 0x01];
+        for n in 0..header.len() {
+            let p = header.get(..n).unwrap_or(&[]);
+            assert_eq!(cabeca(p, 0), None);
+        }
+    }
+
+    #[test]
+    fn quadro_should_return_error_when_input_truncated() {
+        let frame = [0, 0, 0, 2, 2, 1];
+        for n in 1..frame.len() {
+            let p = frame.get(..n).unwrap_or(&[]);
+            assert_eq!(quadro_rpu(p, 4), (-1, None));
+        }
+    }
 }

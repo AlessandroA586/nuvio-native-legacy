@@ -10,6 +10,7 @@
 // de quem nunca abriu o app) e a captura nao mexe no fileirasui.txt de quem
 // roda o teste.
 #include "ajustes.h"
+#include "nvtmp.h"
 #include "ajustes_ux.h"
 #include "atualizacao.h"
 #include "badges.h"
@@ -155,8 +156,13 @@ static void captura(const char *nome, SDL_Window *win) {
   printf("captura: %s\n", nome);
 }
 
+#ifdef AJUSTES_PERF
+extern int perf_uploads;
+#include "ajustes_perf.h"
+#endif
+
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nuvio-ajustes";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nuvio-ajustes");
   char nome[600];
   SDL_Window *w;
   SDL_GLContext gl;
@@ -244,6 +250,10 @@ int main(int argc, char **argv) {
   if (getenv("NUVIO_SHOT_TEMA") || getenv("NUVIO_SHOT_VIDRO"))
     ajustes_teste_tema(getenv("NUVIO_SHOT_TEMA") ? atoi(getenv("NUVIO_SHOT_TEMA")) : -1,
                        getenv("NUVIO_SHOT_VIDRO") && atoi(getenv("NUVIO_SHOT_VIDRO")));
+
+#ifdef AJUSTES_PERF
+  if (getenv("NUVIO_AJUSTES_PERF")) { perf_walk(w); return 0; }
+#endif
 
   // NUVIO_SHOT_CENAS=<pasta>: the generated preview of EVERY visible option,
   // drawn alone at a fixed instant (960x540 PNG each) plus indice.tsv, to find
