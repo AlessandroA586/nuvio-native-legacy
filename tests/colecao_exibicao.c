@@ -17,10 +17,10 @@
 #include "gfx.h"
 #include "nvtmp.h"
 #include "tex_cache.h"
+#include "text.h"
+TxtLinha shot_text(TxtEstilo style, const char *s, int r, int g, int b, int a, float width);
 static int pedidosArte, sombrasFluxo, pedidosPagina;
 static GfxRect anelRect; static int anelN; static float anelC[3];   // no acento: o anel da Home
-static void fluxo_mais(void) { pedidosPagina++; }
-#define desc_vertudo_mais fluxo_mais
 static GLuint fluxo_tex(const char *p, float w) { (void)p; (void)w; pedidosArte++; return 0; }
 static void fluxo_cor(GfxRect r, float raio, float cr, float cg, float cb, float ca) {
   (void)raio; (void)ca;
@@ -34,11 +34,25 @@ static void fluxo_rect(GfxRect r, GLuint t, GfxModo m, float f, float x, float y
 }
 static void fluxo_recorte(float x, float y, float w, float h) { (void)x; (void)y; (void)w; (void)h; }
 static void fluxo_sem_recorte(void) {}
+static void fluxo_anel(GfxRect r, float raio, float esp, float cr, float cg, float cb, float ca) {
+  (void)r; (void)raio; (void)esp; (void)cr; (void)cg; (void)cb; (void)ca;
+}
 #define tex_obter_larg fluxo_tex
 #define gfx_cor fluxo_cor
 #define gfx_rect fluxo_rect
 #define gfx_recorte fluxo_recorte
 #define gfx_sem_recorte fluxo_sem_recorte
+#define gfx_anel fluxo_anel
+#define ajustes_ocultar_filmes_vistos shot_hide_watched
+#define desc_filme_visto shot_watched
+#define desc_vertudo_carregando shot_loading
+#define desc_vertudo_fim shot_end
+#define desc_vertudo_erro shot_error
+#define desc_vertudo_mais shot_more
+#define desc_vertudo_filtro_desde shot_filter_from
+#define desc_vertudo_pagina shot_page
+#define fundo_desenhar_modo shot_background
+#define txt_linha_corta shot_text
 #define desc_vertudo_n shot_vt_n
 #define desc_vertudo_item shot_vt_item
 #define desc_vertudo_n_bruto shot_vt_n
@@ -46,9 +60,36 @@ static void fluxo_sem_recorte(void) {}
 #include "../src/vertudo.c"
 #undef desc_vertudo_n
 #undef desc_vertudo_item
+#undef desc_vertudo_n_bruto
+#undef desc_vertudo_item_bruto
 #include <assert.h>
 
-static CatItem semente[24];
+void shot_background(int mode, GfxRect area, float radius, const char *url, float a) {
+  (void)mode; (void)area; (void)radius; (void)url; (void)a;
+}
+static int hideWatched, allWatched, moreCalls, emptyTexts, exhausted = 1, loading, watchedOlder;
+int shot_hide_watched(void) { return hideWatched; }
+int shot_watched(const CatItem *it) {
+  return !strcmp(it->tipo, "movie") && (allWatched || (watchedOlder && nv_ano_meta(it->meta) < 2020));
+}
+int shot_loading(void) { return loading; }
+int shot_end(void) { return exhausted; }
+int shot_error(void) { return 0; }
+void shot_more(void) { moreCalls++; pedidosPagina++; loading = 1; }
+static int openedSources, resumedPage;
+int shot_page(void) { return 300; }
+void shot_filter_from(const char *base, const char *type, const char *id,
+                      const char *genre, int page) {
+  (void)base; (void)type; (void)id; (void)genre;
+  openedSources++; resumedPage = page; loading = 1;
+}
+#undef txt_linha_corta
+TxtLinha shot_text(TxtEstilo style, const char *s, int r, int g, int b, int a, float width) {
+  if (!strcmp(s, i18n("Nenhum título nesta lista."))) emptyTexts++;
+  return txt_linha_corta(style, s, r, g, b, a, width);
+}
+
+static CatItem semente[301];
 static int nSemente;
 int shot_vt_n(void) { return nSemente; }
 int shot_vt_item(int i, CatItem *dst) {
@@ -219,8 +260,10 @@ int main(int argc, char **argv) {
   tecla(SDLK_UP); assert(tabFocus == 1 && tabCursor == nAbas());
   tecla(SDLK_DOWN); assert(tabFocus == 0);
   // Segunda fileira com itens: baixo desce lembrando a coluna de cada uma.
-  vitLin[1].n = 3; vitLin[1].brutoN = 3; vitLin[1].estado = VIT_PRONTA;
-  for (i = 0; i < 3; i++) { vitBuf[vitCap + i] = semente[7 + i]; vitVis[1][i] = (short)i; }
+  vitLin[1].brutoN = 3; vitLin[1].estado = VIT_PRONTA;
+  vitProjetoSujo = 1;
+  for (i = 0; i < 3; i++) vitBuf[vitCap + i] = semente[7 + i];
+  vitProjetar();
   vitFR = 0; vitFC = 4;
   tecla(SDLK_DOWN); assert(vitFR == 1 && vitFC == 0);   // cada fileira lembra a sua coluna
   tecla(SDLK_RIGHT);
@@ -237,8 +280,135 @@ int main(int argc, char **argv) {
   assert(vitN == 6 && vitLin[0].n >= 1 && strstr(vitLin[0].nome, "2010"));
   assert(!strcmp(vitLin[vitN - 1].nome, i18n("Sem data")));
   snprintf(semente[1].tipo, sizeof semente[1].tipo, "series");
-  vitAgrupar(nSemente);
+  vitAgrupar(nSemente); vitProjetar();
   assert(vitN == 2 && !strcmp(vitLin[0].nome, i18n("Filmes")) && !strcmp(vitLin[1].nome, i18n("Séries")));
+
+  // Completed rows filtered to zero must draw the empty message.
+  pasta.nSources = 2; vitIniciar();
+  semear();
+  hideWatched = allWatched = exhausted = 1; semFonte = loading = 0;
+  vitGuardar(0); vitProjetar();
+  assert(vitLin[0].brutoN > 0 && vitLin[0].n == 0);
+  exhausted = 1;
+  vitDesenhar(1.0f, 100.0f);
+  assert(emptyTexts == 1);
+
+  // Drive the real source queue: an all-watched row must not starve row two.
+  snprintf(fontes[0].base, sizeof fontes[0].base, "https://unused.invalid/first");
+  snprintf(fontes[1].base, sizeof fontes[1].base, "https://unused.invalid/second");
+  exhausted = moreCalls = 0;
+  vitIniciar();
+  vitCarregar(900); assert(openedSources == 1 && loading);
+  loading = 0;
+  vitCarregar(1000);
+  vitCarregar(1010);
+  assert(openedSources == 2 && source == 1);
+  snprintf(semente[0].tipo, sizeof semente[0].tipo, "series");
+  loading = 0;
+  vitCarregar(1020); vitProjetar();
+  assert(vitLin[1].n == 1 && vitCarga == vitN);
+  vitFR = 0; vitFC = 0; tabFocus = 0;
+  tecla(SDLK_DOWN); assert(vitFR == 1);
+  tecla(SDLK_UP); assert(vitFR == 0);
+  tecla(SDLK_RETURN);
+  vitCarregar(1025);
+  assert(source == 0 && openedSources == 3 && resumedPage == 300);
+  loading = 0;
+  snprintf(semente[0].imdb, sizeof semente[0].imdb, "tt-resumed");
+  vitCarregar(1030); vitProjetar();
+  assert(vitLin[0].n == 1 && vitLin[1].n == 1);
+  assert(!strcmp(vitItem(0, 0)->imdb, "tt-resumed"));
+  hideWatched = 0; vitProjetar();
+  assert(vitLin[0].n == NANOS && !strcmp(vitItem(0, 0)->imdb, "tt7000000"));
+  hideWatched = 1;
+
+  // A bounded all-watched page must stay available for explicit pagination.
+  semear(); vitIniciar();
+  semFonte = loading = 0;
+  vitCarga = source = 0; vitLin[0].estado = VIT_CARREGANDO;
+  vitCarregar(1000);
+  assert(vitCarga == 1 && temMaisVistos() && moreCalls == 0);
+  tabFocus = 1;
+  tecla(SDLK_DOWN); assert(!tabFocus && vitFR == 0);
+  tecla(SDLK_RETURN); assert(moreCalls == 1);
+  vitCarregar(1070); assert(vitCarga == 0 && moreCalls == 1);
+  allWatched = loading = 0;
+  vitCarregar(1100); vitProjetar();
+  assert(vitCarga == 1 && vitLin[0].n > 0);
+
+  // Single-source grouped rows must expose explicit continuation after 300 watched titles.
+  pasta.nSources = 1; vitIniciar();
+  semear();
+  for (i = 1; i < 301; i++) {
+    semente[i] = semente[0];
+    snprintf(semente[i].imdb, sizeof semente[i].imdb, "tt-single-%d", i);
+  }
+  nSemente = 300;
+  hideWatched = allWatched = 1; exhausted = loading = moreCalls = 0;
+  vitCarregar(1200); vitProjetar();
+  assert(vitLin[0].n == 0 && temMaisVistos() && moreCalls == 0);
+  tabFocus = 1;
+  tecla(SDLK_DOWN); assert(!tabFocus && vitFR == 0);
+  tecla(SDLK_RETURN); assert(moreCalls == 1 && loading);
+  vitCarregar(1210); assert(moreCalls == 1 && !temMaisVistos());
+  snprintf(semente[300].tipo, sizeof semente[300].tipo, "series");
+  nSemente = 301; loading = 0; exhausted = 1;
+  vitCarregar(1220); vitProjetar();
+  assert(vitLin[1].n == 1 && !temMaisVistos());
+
+  // A populated newest decade must not block an empty older decade's button.
+  semear();
+  for (i = nSemente; i < 301; i++) semente[i] = semente[0];
+  snprintf(semente[0].meta, sizeof semente[0].meta, "2025");
+  nSemente = 300; allWatched = exhausted = loading = moreCalls = 0; watchedOlder = 1;
+  vitIniciar(); loading = 0;
+  vitCarregar(1300); vitProjetar();
+  assert(vitLin[0].n == 1 && vitLin[1].n == 0 && vitLin[1].mais);
+  vitFR = 0; vitFC = tabFocus = 0;
+  tecla(SDLK_DOWN); assert(vitFR == 1);
+  tecla(SDLK_RETURN); assert(moreCalls == 1 && loading);
+  vitCarregar(1310); assert(!temMaisVistos() && moreCalls == 1);
+  snprintf(semente[300].meta, sizeof semente[300].meta, "2015");
+  watchedOlder = loading = 0; exhausted = 1; nSemente = 301;
+  vitCarregar(1320); vitProjetar();
+  assert(vitLin[1].n > 0 && !temMaisVistos());
+
+  // An empty non-first source can resume even with watched filtering disabled.
+  pasta.nSources = 2; hideWatched = allWatched = exhausted = loading = moreCalls = 0;
+  vitIniciar(); vitCarga = source = 1; vitLin[0].estado = VIT_PRONTA;
+  vitLin[1].estado = VIT_CARREGANDO; nSemente = 0;
+  vitCarregar(4000); vitProjetar();
+  assert(vitLin[1].estado == VIT_VAZIA && vitLin[1].mais && temMaisVistos());
+  vitFR = 1; vitFC = tabFocus = 0;
+  tecla(SDLK_RETURN); assert(moreCalls == 1 && loading);
+  semear(); loading = 0;
+  vitCarregar(4010); vitProjetar();
+  assert(vitLin[1].n == NANOS);
+
+  // Resuming a filtered non-first source preserves its original titles.
+  hideWatched = allWatched = 1; moreCalls = 0;
+  vitIniciar(); vitCarga = source = 1; vitLin[0].estado = VIT_PRONTA;
+  vitLin[1].estado = VIT_CARREGANDO;
+  vitCarregar(5000); vitProjetar();
+  assert(!vitLin[1].n && vitLin[1].mais);
+  source = 0; vitFR = 1; vitFC = tabFocus = 0;
+  tecla(SDLK_RETURN); vitCarregar(5010);
+  assert(source == 1 && resumedPage == 300 && loading);
+  snprintf(semente[0].imdb, sizeof semente[0].imdb, "tt-later-source");
+  snprintf(semente[0].tipo, sizeof semente[0].tipo, "series");
+  loading = 0; vitCarregar(5020); vitProjetar();
+  assert(vitLin[1].n == 1 && !strcmp(vitItem(1, 0)->imdb, "tt-later-source"));
+  hideWatched = 0; vitProjetar();
+  assert(vitLin[1].n == NANOS && !strcmp(vitItem(1, 0)->imdb, "tt7000000"));
+  hideWatched = 1; allWatched = 0; vitProjetoSujo = 1; vitProjetar();
+  assert(vitLin[1].n > 0 && !strcmp(vitItem(1, 0)->imdb, "tt7000000"));
+  // Restore the state the sections below expect (one source, semente[1] a series).
+  semear(); snprintf(semente[1].tipo, sizeof semente[1].tipo, "series");
+  hideWatched = allWatched = watchedOlder = loading = moreCalls = 0; exhausted = 1;
+  fontes[0].base[0] = fontes[1].base[0] = 0;
+  pasta.nSources = 1; source = 0; vitIniciar();
+  vitAgrupar(nSemente); vitProjetar();
+  assert(vitN == 2);
 
   // 8. STREAMING: sem a legenda de depuracao quando a lista esta pronta, e as
   // abas esmaecem antes da borda em vez de serem cortadas.

@@ -10,6 +10,9 @@
 static int testeGenero = 1, nTxtDesenhado = 0, nBadge = 0, testeImdb = 0;
 static int teste_hero_genero(void) { return testeGenero; }
 #define ajustes_espaco_fileiras teste_espaco_fileiras
+#define ajustes_ocultar_filmes_vistos teste_ocultar_vistos
+static int ocultarVistos;
+static int teste_ocultar_vistos(void) { return ocultarVistos; }
 static float espacoTit = 1.0f, espacoFil = 1.0f;
 static float teste_espaco_titulos(void) { return espacoTit; }
 static float teste_espaco_fileiras(void) { return espacoFil; }
@@ -319,6 +322,37 @@ int main(void) {
         assert(fileiras[r].stackN==3 && fileiras[r].n==1);
       }
     assert(tops==2); }
+  // #366: o primeiro do Top 10 visto. desenhaPilha andava em ini+k.
+  { int r, k; Fileira *top = NULL;
+    for (int i = 0; i < 48; i++) {
+      snprintf(itensTeste[i].imdb, sizeof itensTeste[i].imdb, "tt%07d", i);
+      snprintf(itensTeste[i].tipo, sizeof itensTeste[i].tipo, "movie");
+    }
+    cat_historico_definir_id(itensTeste[fils[6].ini + 1].imdb, "movie", 1);
+    for (int i = 0; i < fils[8].n; i++)
+      cat_historico_definir_id(itensTeste[fils[8].ini + i].imdb, "movie", 1);
+    ocultarVistos = 1;
+    cat_definir_tudo(itensTeste, 48, fils, 16); filsAplicadas = -1; sincronizarFileiras();
+    for (r = 0; r < nFileiras; r++)
+      if (fileiras[r].tipo == FILEIRA_TOP10 && !strcmp(fileiras[r].chave, fils[6].chave)) top = &fileiras[r];
+    assert(top && top->stackN == 2 && top->usaItens);
+    assert(cat_visto(cat_item(top->ini + 1)));
+    { Fileira numerals = *top;
+      numerals.tipo = FILEIRA_TOP10_NUM; numerals.n = top->stackN;
+      assert(fileiraRank(&numerals, 0) == 1);
+      assert(fileiraRank(&numerals, 1) == 3);
+    }
+    for (k = 0; k < top->stackN && k < 6; k++) assert(!cat_visto(cat_item(pilhaIndice(top, k))));
+    for (r = 0; r < nFileiras; r++)
+      if (!strcmp(fileiras[r].chave, fils[8].chave))
+        assert(!fileiras[r].n && !fileiras[r].verTudo);
+    for (int i = 0; i < fils[6].n; i++)
+      cat_historico_definir_id(itensTeste[fils[6].ini + i].imdb, "movie", 1);
+    filsAplicadas = -1; sincronizarFileiras();
+    top = NULL;
+    for (r = 0; r < nFileiras; r++)
+      if (!strcmp(fileiras[r].chave, fils[6].chave)) top = &fileiras[r];
+    assert(top && !top->n && !top->stackN && !top->verTudo); }
   for (int i=8; i<16; i++) {
     int encontrado=0;
     for (int r=0; r<nFileiras; r++)
