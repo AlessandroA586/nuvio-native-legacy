@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-15 12:48",
+ "atualizado_em": "2026-10-15 13:48",
  "base": "5544c3e4c",
- "nota": "Sync 2026-10-15 12:48, HEAD integracao/2.0.5 45161fb82; instalado 84add4581 (Android Success, C9 rc=255). Ver escrivao/estado.md.",
+ "nota": "Sync 2026-10-15 13:48, HEAD integracao/2.0.5 72d972deb; instalado 45161fb82 (Android Success, C9 rc=255). Ver escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,
@@ -8860,7 +8860,7 @@
     "ultima_nossa": "2026-10-11"
    },
    "proximo_passo": "merge agente/205-i429hbs (2 commits, review OK y); TCL test",
-   "notas": "Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839. Escrivao 10-15 07:10: review y OK (23:11) apos fixz 22:28; branch ainda 2 ahead, merge pendente. | Escrivao 2026-10-15 07:50: sem merge ainda; review OK y, branch nao mergeado | Escrivao 15/10 09:48: review OK ainda sem merge. | Escrivão 10/15 12:48: branch i429hbs ainda nao integrada (2 commits fora)",
+   "notas": "Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839. Escrivao 10-15 07:10: review y OK (23:11) apos fixz 22:28; branch ainda 2 ahead, merge pendente. | Escrivao 2026-10-15 07:50: sem merge ainda; review OK y, branch nao mergeado | Escrivao 15/10 09:48: review OK ainda sem merge. | Escrivão 10/15 12:48: branch i429hbs ainda nao integrada (2 commits fora) | Escrivao 10-15 13:48: review y OK (j-revg-i429hbs-y 23:11), branch f59554839 ainda NAO mergeado.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/429",
    "criada_em": "2026-10-10",
    "alvo": "ja-lancada"
@@ -9586,8 +9586,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "review fix agente/205-p2pusb (12 commits fora, fix x 11:54, sem review depois; v3 BLOQUEIA); testar P2P USB na TV",
-   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo. | Escrivao 15/10 09:48: fix j-fix-p2pusb-w em curso. | Escrivao 2026-10-15 11:48: prompt p-205-p2p486 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: p2p486 merged, mas p2pusb (#486/#505) segue aberto",
+   "proximo_passo": "review fix y (j-fix-p2pusb-y 13:47, rodando) e tip a1e7f4cfd; v4 BLOQUEIA 12:48; testar P2P USB na TV",
+   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo. | Escrivao 15/10 09:48: fix j-fix-p2pusb-w em curso. | Escrivao 2026-10-15 11:48: prompt p-205-p2p486 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: p2p486 merged, mas p2pusb (#486/#505) segue aberto | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/486",
    "criada_em": "2026-10-13",
    "alvo": "ja-lancada"
@@ -9881,8 +9881,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "review fix agente/205-p2pusb (fix x 11:54); TV P2P USB",
-   "notas": "Snapshot 2026-10-14 10:15: 3fc691d4 \"fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)\" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead. | Escrivao 10-15 08:50: liga ao dono P2P USB (agente/205-p2pusb); fix 07:52 sem review. | Escrivao 2026-10-15 11:48: prompt p-205-i505* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: escopo em agente/205-p2pusb",
+   "proximo_passo": "review fix y (j-fix-p2pusb-y 13:47, rodando) e tip a1e7f4cfd; v4 BLOQUEIA 12:48; testar P2P USB na TV",
+   "notas": "Snapshot 2026-10-14 10:15: 3fc691d4 \"fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)\" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead. | Escrivao 10-15 08:50: liga ao dono P2P USB (agente/205-p2pusb); fix 07:52 sem review. | Escrivao 2026-10-15 11:48: prompt p-205-i505* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: escopo em agente/205-p2pusb | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/505",
    "criada_em": "2026-10-14",
    "alvo": "2.0.6"
@@ -10171,6 +10171,27 @@
    "proximo_passo": "triagem; sem job; alvo provisorio 2.0.6",
    "notas": "Escrivão 10/15 12:48: novo no GitHub 2026-10-15 (dubbing filter), sem prompt de job.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/529",
+   "criada_em": "2026-10-15",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 530,
+   "titulo": "Subtitle issues",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "?",
+   "status": "aberta",
+   "release": "",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triagem; sem job; alvo provisorio 2.0.6",
+   "notas": "Escrivao 10/15 13:48: novo no GitHub 2026-10-15 (Subtitle issues), sem prompt de job.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/530",
    "criada_em": "2026-10-15",
    "alvo": "2.0.6"
   }
@@ -11559,6 +11580,36 @@
    "ref": "agente/205-master1015",
    "resultado": "inconclusivo",
    "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-205-master1015-teste.log"
+  },
+  {
+   "data": "2026-10-15 11:48",
+   "quem": "Magpie nv-revisao (revg master1015-2)",
+   "o_que": "Review merge agente/205-master1015 (fixes 12f000886, 7693608bf)",
+   "issues": [],
+   "ref": "7693608bf (agente/205-master1015)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-master1015-2.log (VEREDITO OK); merged 45161fb82"
+  },
+  {
+   "data": "2026-10-15 12:48",
+   "quem": "Magpie nv-revisao (revg p2pusb-v4)",
+   "o_que": "Review fix agente/205-p2pusb (P2P USB) v4",
+   "issues": [
+    486,
+    505
+   ],
+   "ref": "agente/205-p2pusb tip a1e7f4cfd",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-p2pusb-v4.log (VEREDITO BLOQUEIA); fix y 13:47 sem review"
+  },
+  {
+   "data": "2026-10-15 12:51",
+   "quem": "Magpie nv-revisao (revpr490-fix6)",
+   "o_que": "Review fix6 PR #490 (Vitrine) em pr/490-fix",
+   "issues": [],
+   "ref": "pr/490-fix 46e4df866 (+fixes)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revpr490-fix6.log (VEREDITO OK)"
   }
  ],
  "decisoes": [
@@ -13856,27 +13907,27 @@
    "id": "dono-205-pr490",
    "titulo": "Merge branch 'integracao/2.0.5' into agente/205-pr490",
    "plataforma": "?",
-   "status": "em_revisao",
+   "status": "em_job",
    "release": "2.0.5",
    "conserto": [
     "75059d26",
     "1f8309961 Fix Vitrine resume preservation (fix, sem review)"
    ],
-   "proximo_passo": "review fix 1f8309961 (j-fix-pr490-w 09:53; fix4 BLOQUEIA 08:50 antes)",
-   "notas": "Escrivão 14/10 14:47: integrada.",
+   "proximo_passo": "review j-pr490-v3 (13:47, rodando) do tip de pr/490-fix; fix6 OK 12:51 antes",
+   "notas": "Escrivão 14/10 14:47: integrada. | Escrivao 10-15 13:48: fix6 OK (j-revpr490-fix6 12:51).",
    "url": null
   },
   {
    "id": "dono-205-pr491resto",
    "titulo": "ci: port PR #491 Tizen 6+ package builds and audit all commits",
    "plataforma": "?",
-   "status": "integrada",
+   "status": "em_revisao",
    "release": "2.0.5",
    "conserto": [
     "6dd374db"
    ],
-   "proximo_passo": "review fix c f8fe27fad (job 05:53, sem review depois de BLOQUEIA r3 04:52)",
-   "notas": "Escrivão 14/10 14:47: integrada. | Escrivao 10-15 08:50: branch 0 ahead: merged.",
+   "proximo_passo": "review fix c (f8fe27fad) de pr/491-limpo",
+   "notas": "Escrivão 14/10 14:47: integrada. | Escrivao 10-15 08:50: branch 0 ahead: merged. | Escrivao 10-15 13:48: mesmo item de pr/491-limpo.",
    "url": null
   },
   {
@@ -14434,8 +14485,8 @@
    "conserto": [
     "pr/498-limpo: 12 commits fora (tip 22ed066e2 22:31)"
    ],
-   "proximo_passo": "merge pr/498-limpo (review OK 23:15); Samsung IME na TV",
-   "notas": "PR #498; 12 ahead; nao mergeado Escrivao 10-15 07:10: 12 ahead, review OK mantido; falta merge. | Escrivao 2026-10-15 07:50: review OK, falta merge | Escrivao 10-15 08:50: ainda nao mergeado."
+   "proximo_passo": "merge pr/498-limpo (12 ahead) ou dono; review OK (j-revpr498-limpo)",
+   "notas": "PR #498; 12 ahead; nao mergeado Escrivao 10-15 07:10: 12 ahead, review OK mantido; falta merge. | Escrivao 2026-10-15 07:50: review OK, falta merge | Escrivao 10-15 08:50: ainda nao mergeado. | Escrivao 10-15 13:48: review OK, branch 22ed066e2 nao mergeado."
   },
   {
    "id": "pr-491-limpo",
@@ -14446,8 +14497,8 @@
    "conserto": [
     "pr/491-limpo: 52 commits fora (tip f8fe27fad 05:53)"
    ],
-   "proximo_passo": "review do fix c f8fe27fad (05:53); sem review depois do r3 BLOQUEIA 04:52",
-   "notas": "PR #491; 51 ahead; nao mergeado Escrivao 10-15 07:10: fix c 05:53 cancela probes DTS; precisa review depois do r3. | Escrivao 2026-10-15 07:50: precisa review do fix c | Escrivao 10-15 08:50: fix c sem review."
+   "proximo_passo": "review fix c (f8fe27fad, 05:53); BLOQUEIA r3 04:52 antes; sem job rodando",
+   "notas": "PR #491; 51 ahead; nao mergeado Escrivao 10-15 07:10: fix c 05:53 cancela probes DTS; precisa review depois do r3. | Escrivao 2026-10-15 07:50: precisa review do fix c | Escrivao 10-15 08:50: fix c sem review. | Escrivao 10-15 13:48: sem review depois do fix c. LOST se nao revisado."
   },
   {
    "id": "pr-489-fix",
@@ -14470,20 +14521,20 @@
    "conserto": [
     "pr/490-fix: 8 commits fora (tip 3dae8f5c 06:03)"
    ],
-   "proximo_passo": "fix j-fix-pr490-w rodando desde 09:46 (BLOQUEIA fix4 08:50); depois review do fix",
-   "notas": "PR #490; 7 ahead; nao mergeado Escrivao 10-15 07:10: fix c 06:03 (3dae8f5c); review fix3 06:50 BLOQUEIA (P2 starvation da fila). | Escrivao 2026-10-15 07:50: lost-ish: BLOQUEIA sem fix depois | Escrivao 10-15 08:50: fix v 07:59 aguarda review."
+   "proximo_passo": "review j-pr490-v3 (13:47, rodando) do tip de pr/490-fix (46e4df866 ou posterior)",
+   "notas": "PR #490; 7 ahead; nao mergeado Escrivao 10-15 07:10: fix c 06:03 (3dae8f5c); review fix3 06:50 BLOQUEIA (P2 starvation da fila). | Escrivao 2026-10-15 07:50: lost-ish: BLOQUEIA sem fix depois | Escrivao 10-15 08:50: fix v 07:59 aguarda review. | Escrivao 10-15 13:48: fix6 OK 12:51; v3 job rodando."
   },
   {
    "id": "pr-493-fix",
    "titulo": "PR #493 fix (pr/493-fix)",
    "plataforma": "?",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
     "pr/493-fix: 10 commits fora (tip a0bc2d982 03:52)"
    ],
-   "proximo_passo": "superseded by pr/493-v3 (author new head 5694694cc + ported fixes 65613c562); merge pr/493-v3",
-   "notas": "PR #493 (carrega #488); 10 ahead; nao mergeado Escrivao 10-15 07:10: autor publicou head nova; pr/493-v3 porta os fixes e passa review OK 06:50 (j-revpr493-v3). Continuar com pr/493-v3."
+   "proximo_passo": "nada: PR #493 ja mergeado (e3e21a590); pr/493-fix (9 ahead) antigo, nao mergear",
+   "notas": "PR #493 (carrega #488); 10 ahead; nao mergeado Escrivao 10-15 07:10: autor publicou head nova; pr/493-v3 porta os fixes e passa review OK 06:50 (j-revpr493-v3). Continuar com pr/493-v3. | Escrivao 10-15 13:48: PR #493 merged e3e21a590; review v3 OK (06:50)."
   },
   {
    "id": "dono-205-vidrotodo",
