@@ -4364,7 +4364,8 @@ void app_atualizar(float dt, Uint32 agora) {
       // cima (card, ilha, agenda) o reescrevem no quadro seguinte, com a
       // folha ainda aberta (#513). Sem trava (folha do titulo) zera, senao
       // um "Assistir T2E5" da agenda colaria no pedido.
-      gravarFolhaTocar(epT, epE, detail_pediu_fontes_ep(&epT, &epE));
+      int temEp = detail_pediu_fontes_ep(&epT, &epE);
+      gravarFolhaTocar(epT, epE, temEp);
       idBaseDoTitulo(base, sizeof base);
       stream_preferir(base[0] ? fontepref_escolher_manual(base) : -1);
       nomeParaFolha(); stream_folha_abrir();

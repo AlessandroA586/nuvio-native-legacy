@@ -8,6 +8,10 @@ TMPDIR="${TMPDIR%/}"
 #   bash tests/detail_ep_fonte_trava.sh
 set -eu
 cd "$(dirname "$0")/.."
+# Catch reads of the episode outputs before the request getter initializes them.
+cc -fsyntax-only -O1 -Werror=uninitialized -Isrc \
+  -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
+  -Wno-deprecated-declarations -Wno-macro-redefined src/app.c
 sources=()
 for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/app.c) continue;; esac  # app.c comes in via the test
