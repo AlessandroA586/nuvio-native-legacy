@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `5544c3e4c` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-15 16:49. 461 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `5544c3e4c` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-15 19:50. 461 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -180,7 +180,7 @@ Por status:
 | Status | Qtd |
 |---|---|
 | lancada | 304 |
-| integrada | 53 |
+| integrada | 55 |
 | aberta | 45 |
 | respondida | 22 |
 | por-desenho | 15 |
@@ -188,8 +188,7 @@ Por status:
 | fechada-sem-resposta | 6 |
 | fora-do-escopo | 4 |
 | duplicada | 2 |
-| em_revisao | 2 |
-| em_job | 1 |
+| em_revisao | 1 |
 
 Por release (grupo de planejamento):
 
@@ -330,7 +329,7 @@ Notas:
 | [#507](https://github.com/iqui27/nuvio-native-legacy/issues/507) | Library on home | ? | feature | aberta | - | 2.0.6 | - | sem comentários | sem job nem branch: triar e criar job |
 | [#508](https://github.com/iqui27/nuvio-native-legacy/issues/508) | Stream loading backdrop | ? | feature | integrada | - | 2.0.6 | d57b79e9, d57b79e9b | sem comentários | testar na TV; sai com 2.0.5 |
 | [#528](https://github.com/iqui27/nuvio-native-legacy/issues/528) | [Bug/FR] Cast Images Fail to Load — Request for Metadata Add | ? | ? | integrada |  | 2.0.6 | f5c785d4f | sem comentários | testar na TV; sai com 2.0.5 |
-| [#529](https://github.com/iqui27/nuvio-native-legacy/issues/529) | Dubbing filter bug | ? | ? | em_revisao |  | 2.0.6 | - | sem comentários | merge agente/205-i529q (review OK) |
+| [#529](https://github.com/iqui27/nuvio-native-legacy/issues/529) | Dubbing filter bug | ? | ? | integrada |  | 2.0.6 | f8fbd3bd3 | sem comentários | testar na TV; sai com 2.0.5 |
 | [#530](https://github.com/iqui27/nuvio-native-legacy/issues/530) | Subtitle issues | ? | ? | integrada |  | 2.0.6 | cbd542148 | sem comentários | testar na TV; sai com 2.0.5 |
 
 Notas:
@@ -357,7 +356,7 @@ Notas:
 - **#507**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local.
 - **#508**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. Escrivão 14/10 14:47: branch agente/205-i508fundo: review OK, merge pendente. | Escrivão 2026-10-14 16:11: i508fundo mergeada (d57b79e9); review j-revg-i508fundo OK. | Escrivao 2026-10-15 11:48: prompt p-205-i508fundo em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i508fundo integrada]
 - **#528**: Escrivao 2026-10-15 11:48: item novo (issues.json), alvo 2.0.6 provisório [sync 2026-10-15: agente/205-i528q integrada]
-- **#529**: Escrivão 10/15 12:48: novo no GitHub 2026-10-15 (dubbing filter), sem prompt de job. [sync 2026-10-15: agente/205-i529q em_revisao]
+- **#529**: Escrivão 10/15 12:48: novo no GitHub 2026-10-15 (dubbing filter), sem prompt de job. [sync 2026-10-15: agente/205-i529q em_revisao] [sync 2026-10-15 19:50: agente/205-i529q merged em integracao/2.0.5 (f8fbd3bd3)]
 - **#530**: Escrivao 10/15 13:48: novo no GitHub 2026-10-15 (Subtitle issues), sem prompt de job. [sync 2026-10-15: agente/205-i530q integrada]
 
 ## Futuro (2.1, 2.2, depois)
@@ -383,7 +382,7 @@ Notas:
 | [#509](https://github.com/iqui27/nuvio-native-legacy/issues/509) | Expanded poster trailer | ? | enhancement | integrada | - | futuro | 13e13b92, 13e13b92a | sem comentários | testar na TV; sai com 2.0.5 |
 | [#510](https://github.com/iqui27/nuvio-native-legacy/issues/510) | Subtitles list not the same as nuvio in phone applications l | ? | bug | integrada |  | futuro | abff3d67b | sem comentários | testar na TV; sai com 2.0.5 |
 | [#514](https://github.com/iqui27/nuvio-native-legacy/issues/514) | Ability to rate a movie or an episode | ? | ? | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
-| [#521](https://github.com/iqui27/nuvio-native-legacy/issues/521) | Layout | ? | bug | em_job |  | futuro | - | sem comentários | fix do BLOQUEIA (j-revg-i521q-2.log) |
+| [#521](https://github.com/iqui27/nuvio-native-legacy/issues/521) | Layout | ? | bug | integrada |  | futuro | 5184d0a1b | sem comentários | testar na TV; sai com 2.0.5 |
 | [#524](https://github.com/iqui27/nuvio-native-legacy/issues/524) | Anime series showing up as an altogether different movie | ? | bug | integrada | - | futuro | e2fe84954 | sem comentários | testar na TV; sai com 2.0.5 |
 
 Notas:
@@ -405,7 +404,7 @@ Notas:
 - **#509**: Criada 2026-10-14 (snapshot 14:46). Escrivão 14/10 14:47: integrada via i509trailer. | Escrivão 2026-10-14 16:11: conserto 13e13b92 ja em integracao/2.0.5; sem release ainda. | Escrivao 2026-10-15 11:48: prompt p-205-i509trailer* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i509trailer integrada]
 - **#510**: Criada 2026-10-14 (snapshot 14:46). [sync 2026-10-15: agente/205-i510q integrada]
 - **#514**: Issue nova 14/10 20:52 (rating de filme/episodio). Feature, nao 2.0.5.
-- **#521**: Issue nova 2026-10-15 06:48 (issues.json). Sem descrição de contexto; triar. [sync 2026-10-15: agente/205-i521q em_job]
+- **#521**: Issue nova 2026-10-15 06:48 (issues.json). Sem descrição de contexto; triar. [sync 2026-10-15: agente/205-i521q em_job] [sync 2026-10-15 19:50: agente/205-i521q merged em integracao/2.0.5 (5184d0a1b); fix do BLOQUEIA incluso]
 - **#524**: Issue nova 2026-10-15 11:33 (issues.json, label bug). Sem triagem local. [sync 2026-10-15: agente/205-i524q integrada]
 
 ## Outras pendências

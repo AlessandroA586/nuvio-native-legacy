@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-15 16:49",
+ "atualizado_em": "2026-10-15 19:50",
  "base": "5544c3e4c",
- "nota": "Sync 2026-10-15 16:49, HEAD integracao/2.0.5 e8d9086a4; instalado cdb45cb92 (Android Success, C9 rc=255). Ver escrivao/estado.md.",
+ "nota": "Sync 2026-10-15 19:50, HEAD integracao/2.0.5 e82dc47ac; instalado 72a5b9852 (Android Success, C9 rc=255). Ver escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,
@@ -10127,17 +10127,19 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "em_job",
+   "status": "integrada",
    "release": "",
-   "conserto": [],
+   "conserto": [
+    "5184d0a1b (Merge agente/205-i521q, integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": null,
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "fix do BLOQUEIA (j-revg-i521q-2.log)",
-   "notas": "Issue nova 2026-10-15 06:48 (issues.json). Sem descrição de contexto; triar. [sync 2026-10-15: agente/205-i521q em_job]",
+   "proximo_passo": "testar na TV; sai com 2.0.5",
+   "notas": "Issue nova 2026-10-15 06:48 (issues.json). Sem descrição de contexto; triar. [sync 2026-10-15: agente/205-i521q em_job] [sync 2026-10-15 19:50: agente/205-i521q merged em integracao/2.0.5 (5184d0a1b); fix do BLOQUEIA incluso]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/521",
    "criada_em": "2026-10-15",
    "alvo": "futuro"
@@ -10194,17 +10196,19 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "?",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "",
-   "conserto": [],
+   "conserto": [
+    "f8fbd3bd3 (Merge agente/205-i529q, integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": null,
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "merge agente/205-i529q (review OK)",
-   "notas": "Escrivão 10/15 12:48: novo no GitHub 2026-10-15 (dubbing filter), sem prompt de job. [sync 2026-10-15: agente/205-i529q em_revisao]",
+   "proximo_passo": "testar na TV; sai com 2.0.5",
+   "notas": "Escrivão 10/15 12:48: novo no GitHub 2026-10-15 (dubbing filter), sem prompt de job. [sync 2026-10-15: agente/205-i529q em_revisao] [sync 2026-10-15 19:50: agente/205-i529q merged em integracao/2.0.5 (f8fbd3bd3)]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/529",
    "criada_em": "2026-10-15",
    "alvo": "2.0.6"
