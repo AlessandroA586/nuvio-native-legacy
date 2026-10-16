@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
     if (gfx_vidro_capturas > maximum) maximum = gfx_vidro_capturas;
   }
   printf("tier=%s drawable=%dx%d animated/focus: captures/frame=%.2f passes/frame=%.2f blur-fill/frame=%.6f copy/frame=%.6f blur-pixels/frame=%.0f max-captures=%d\n",
-         webos ? "webos" : "native", width, height, captures / 20.0, passes / 20.0, fill / 20, copy / 20, fill / 20 * width * height, maximum);
+         strrchr(argv[2], '/') ? strrchr(argv[2], '/') + 1 : argv[2], width, height, captures / 20.0, passes / 20.0, fill / 20, copy / 20, fill / 20 * width * height, maximum);
   check(captures > 0 && maximum <= 2, "capture budget across all chrome regions");
   check(captures <= 40, "animated capture budget");
   check(passes == captures * 5, "unchanged five-pass blur kernel");
