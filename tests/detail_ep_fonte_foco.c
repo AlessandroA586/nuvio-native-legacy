@@ -79,6 +79,8 @@ int main(void) {
   okCurto();
   assert(pedFontes && !pedReproduzir);
   assert(detail_pediu_fontes());
+  foco.fileira = SEC_TEMPORADAS;
+  assert(detail_ep_foco(&t, &e) && t == 1 && e == 2);
   assert(detail_pediu_fontes_ep(&t, &e));
   assert(t == 1 && e == 3);
 
@@ -94,6 +96,7 @@ int main(void) {
   //    nao trava episodio nenhum.
   gravar("escolherFonteManual 1\n");
   assert(!ajustes_fonte_manual());
+  foco.fileira = SEC_EPISODIOS; foco.coluna = 2;
   okCurto();
   assert(!pedFontes && pedReproduzir);
   assert(detail_pediu_reproduzir());

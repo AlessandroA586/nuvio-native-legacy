@@ -9,6 +9,7 @@
 #include "catalogo.h"
 #include "gfx.h"
 #include "text.h"
+#include "sinopse.h"
 #include "tex_cache.h"
 #include "perfiltv.h"
 #include "layout.h"
@@ -1751,19 +1752,19 @@ static void painel(float a) {
   { float creditos = (it.direcao[0] ? 92.0f : 0.0f) + (elenco[0] ? 92.0f : 0.0f);
     if (it.sinopse[0]) {
       // Sem espaco para tudo, os creditos saem antes das tres linhas da sinopse.
-      int linhas = (int)((base - creditos - y) / 32.0f), cabe = (int)((base - y - 12.0f) / 32.0f);
+      float ld = sinopse_entrelinha(TXT_DET_META2, 32.0f);
+      int linhas = (int)((base - creditos - y) / ld), cabe = (int)((base - y - 12.0f) / ld);
       if (linhas < 3) linhas = cabe < 3 ? cabe : 3;
       if (linhas > (cartaz ? 6 : 9)) linhas = cartaz ? 6 : 9;
       if (linhas > 0) {
         y += 6.0f;
-        y += txt_bloco_corta(TXT_DET_META2, it.sinopse, 226, 229, 236,
-                             VT_PAN_X, y, VT_PAN_W, 32.0f, a * 0.9f, linhas) + 18.0f;
+        y += txt_bloco_corta(sinopse_estilo(TXT_DET_META2), it.sinopse, 226, 229, 236,
+                             VT_PAN_X, y, VT_PAN_W, ld, a * 0.9f, linhas) + 18.0f;
       }
     }
     if (it.direcao[0] && y + 70.0f <= base) y = painelCredito(i18n("Direção"), it.direcao, y, a);
     if (elenco[0] && y + 70.0f <= base) painelCredito(i18n("Elenco"), elenco, y, a); }
 }
-
 // FUNDO DA COLECAO: sempre Frost ou a arte borrada da pasta, nunca a arte crua
 // ("em colecoes deixa o fundo sempre frost ou blur", 04/10/2026). Ajustes >
 // Fundo = Frost fica Frost; senao a arte borrada (fundo.c), e sem a arte
@@ -2372,7 +2373,7 @@ static void timelineCard(int i,float cy,float a,float x0) {
     TxtLinha el=txt_linha_corta(TXT_HERO_META,est,visto?ar*255:226,visto?ag*255:230,visto?ab*255:238,255,tw-(ix-tx));
     txt_desenhar_alpha(el,ix,cy+102+(22-el.h)*.5f,a);
   }
-  txt_bloco_corta(TXT_DET_META2,it.sinopse,209,214,225,tx,cy+(est[0]?138:106),tw,30,a,est[0]?2:3);
+  sinopse_bloco_corta(TXT_DET_META2,it.sinopse,209,214,225,tx,cy+(est[0]?138:106),tw,30,a,est[0]?2:3);
 }
 
 // --- PECAS COMUNS DAS EXIBICOES ----------------------------------------------

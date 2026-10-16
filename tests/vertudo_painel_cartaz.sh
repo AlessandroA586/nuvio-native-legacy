@@ -68,6 +68,8 @@ int imdbnota_obter(const char *i, int n, int s) { (void)i;(void)n;(void)s; retur
 void idioma_decimal_texto(char *n, int l) { (void)n;(void)l; }
 int ajustes_idioma(void) { return 0; }
 float txt_bloco_corta(int f, const char *t, int r, int g, int b, float x, float y, float w, float lh, float a, int n) { (void)f;(void)t;(void)r;(void)g;(void)b;(void)x;(void)y;(void)w;(void)lh;(void)a;(void)n; return 10.0f; }
+TxtEstilo sinopse_estilo(TxtEstilo f) { return f; }
+float sinopse_entrelinha(TxtEstilo f, float lh) { (void)f; return lh; }
 float badge_imdb(float x, float y, int n, int k, float a) { (void)x;(void)y;(void)n;(void)k;(void)a; return 0; }
 void badge_desenhar(float x, float y, const char *t, int c, float a) { (void)x;(void)y;(void)t;(void)c;(void)a; }
 const char *i18n(const char *s) { return s; }

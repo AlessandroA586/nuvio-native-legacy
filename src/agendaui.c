@@ -155,6 +155,7 @@
 #include "agenda.h"
 #include "gfx.h"
 #include "text.h"
+#include "sinopse.h"
 #include "tex_cache.h"
 #include "anim.h"
 #include "layout.h"
@@ -1595,8 +1596,11 @@ static void desenhaEsquerda(const AgC1 *L, float a) {
     maxSin = temNot ? 2 : 3;
     if (aviso) maxSin--;
     if (it->sinopse[0]) {
-      int k = blocoC1(TXT_AJ_ESTADO, 18, it->sinopse, L->x0, y, 21.0f, w, 30.0f, maxSin, AG_INK2, a);
-      y += P(30) * (float)k + P(6);
+      float lead = sinopse_entrelinha(TXT_AJ_ESTADO, 30);
+      float px = sinopse_entrelinha(TXT_AJ_ESTADO, 21);
+      int max = sinopse_linhas(TXT_AJ_ESTADO, 30, maxSin);
+      int k = blocoC1(TXT_AJ_ESTADO, 18, it->sinopse, L->x0, y, px, w, lead, max, AG_INK2, a);
+      y += P(lead) * (float)k + P(6);
     }
     if (temNot) {
       const char *dica = i18n("OK para ler mais");
