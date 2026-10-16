@@ -95,6 +95,29 @@ int main(void) {
   assert(!arte_tamanho_url(orig, 704, saida, 20));
   puts("ok  host desconhecido, local, teto 0 e saida curta ficam como vieram");
 
+  // 7. Qualidade Alta: o cartaz w342 e o fundo w780 guardados sobem quando o
+  // teto do pedido e maior; Baixa e Padrao ficam como estavam.
+  {
+    const char *p342 = "https://image.tmdb.org/t/p/w342/a.jpg";
+    const char *b780 = "https://image.tmdb.org/t/p/w780/a.jpg";
+    assert(arte_tamanho_poster_w() == 342);
+    fica(p342, 460); fica(b780, 1100);
+    arte_tamanho_qualidade(1);
+    fica(p342, 460); fica(b780, 1100);
+    arte_tamanho_qualidade(2);
+    assert(arte_tamanho_poster_w() == 780);
+    vira(p342, 460, "https://image.tmdb.org/t/p/w500/a.jpg");
+    vira(p342, 600, "https://image.tmdb.org/t/p/w780/a.jpg");
+    vira(p342, 1000, "https://image.tmdb.org/t/p/w780/a.jpg");
+    fica(p342, 342); fica(p342, 288);
+    vira(b780, 1100, "https://image.tmdb.org/t/p/w1280/a.jpg");
+    fica(b780, 780);
+    arte_tamanho_qualidade(0);
+    fica(p342, 460);
+    assert(arte_tamanho_poster_w() == 342);
+    puts("ok  Alta sobe cartaz w342 e fundo w780; Baixa e Padrao nao");
+  }
+
   puts("artetamanho: tudo ok");
   return 0;
 }

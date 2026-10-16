@@ -1006,7 +1006,7 @@ static void podar(void) {
 // que ja esta decodificado nao fica errado — so nao melhora ate ser despejado.
 static int qualidadeImg = 1;
 void tex_qualidade(int nivel) {
-  if (nivel >= 0 && nivel <= 2) qualidadeImg = nivel;
+  if (nivel >= 0 && nivel <= 2) { qualidadeImg = nivel; arte_tamanho_qualidade(nivel); }
 }
 static float folgaDaQualidade(void) {
   return qualidadeImg == 0 ? 1.00f : qualidadeImg == 2 ? 1.60f : NV_TEX_FOLGA;
