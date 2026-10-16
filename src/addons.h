@@ -12,6 +12,7 @@
 #ifndef NV_ADDONS_H
 #define NV_ADDONS_H
 #include "addonurl.h"
+#include <stdint.h>
 
 typedef enum { ADD_PARADO = 0, ADD_BUSCANDO, ADD_PRONTO, ADD_VAZIO } AddEstado;
 
@@ -84,6 +85,22 @@ const char *addons_base(int i);   // URL base, sem /manifest.json
 const char *addons_id_manifesto(int i);   // "id" do manifesto; "" ate a sonda ler
 const char *addons_nome_por_id(const char *id);   // nome de exibicao; "" se nao ha
 const char *addons_base_por_id(const char *idManifesto);   // "" ate a sonda conhecer o id
+int addons_base_por_id_copiar(const char *idManifesto, char *base, unsigned tam);
+typedef enum {
+  ADD_IDENTIDADE_AUSENTE = 0, ADD_IDENTIDADE_PENDENTE,
+  ADD_IDENTIDADE_FALHOU, ADD_IDENTIDADE_PRONTA
+} AddonIdentidadeEstado;
+// Ausencia so e confirmada depois de identificar toda a lista instalada.
+// Uma tentativa sem resposta/id e falha de identificacao, nao addon removido.
+AddonIdentidadeEstado addons_identidade_estado(const char *idManifesto);
+// Publica SOMENTE o id, sem esperar a montagem da Home/CW. O pedido pertence
+// a esta base, versao de lista e sessao; resposta velha nao altera a lista.
+// NULL/manifesto sem id encerra a tentativa com falha, preservando id conhecido.
+int addons_identidade_recebida(const char *base, unsigned versao, uint64_t sessao,
+                               const char *corpo);
+// Final capability publication keeps the same request ownership as identity.
+int addons_manifesto_recebido(const char *base, unsigned versao, uint64_t sessao,
+                              const char *corpo);
 int  addons_tem_catalogo(int i);  // 1 quando o addon fornece catalogo
 
 // Dispara a busca das fontes de `imdb` ("tt1234567", ou "tt1234567:1:2" para
