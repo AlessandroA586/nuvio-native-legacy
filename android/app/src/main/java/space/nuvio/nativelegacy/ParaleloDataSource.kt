@@ -52,17 +52,23 @@ class DestinosAddon(private val agora: () -> Long = { android.os.SystemClock.ela
     }
     private var original: String? = null
     private var destino: URL? = null
+    private var tamanho = -1L
     private var desde = 0L
 
     @Synchronized fun buscar(orig: String): URL? =
         if (orig == original && agora() - desde < VALIDADE_MS) destino else null
 
+    // Tamanho do arquivo que o destino guardado serviu (-1 = desconhecido).
+    // Uma resposta "OK" do destino com OUTRO tamanho nao e este arquivo: um
+    // CDN vencido pode responder 200 com um clipe de erro em vez de 403.
+    @Synchronized fun tamanhoDe(orig: String): Long = if (orig == original) tamanho else -1L
+
     // So guarda um redirecionamento de verdade (host diferente).
-    @Synchronized fun lembrar(orig: String, fim: URL) {
+    @Synchronized fun lembrar(orig: String, fim: URL, total: Long = -1L) {
         val o = try { URL(orig) } catch (_: java.net.MalformedURLException) { return }
         if (fim.host.isNullOrEmpty() || fim.host.equals(o.host, true)) return
-        if (orig == original && fim == destino) return
-        original = orig; destino = fim; desde = agora()
+        if (orig == original && fim == destino && (total <= 0 || total == tamanho)) return
+        original = orig; destino = fim; tamanho = if (total > 0) total else -1L; desde = agora()
     }
 
     @Synchronized fun esquecer(orig: String) {
@@ -295,11 +301,15 @@ class ParaleloDataSource(
         if (guardado != null) {
             try {
                 val c = conectar(guardado, ini, ultimo)
-                if (c.responseCode in 200..299) {
+                val esperado = destinos?.tamanhoDe(chave) ?: -1L
+                val visto = totalDe(c)
+                if (c.responseCode in 200..299 && (esperado <= 0 || visto == esperado)) {
                     Log.i(TAG, "destino guardado: ${guardado.host} direto, sem passar por ${original.host}")
                     return c
                 }
-                Log.i(TAG, "destino guardado recusou (HTTP ${c.responseCode}); de volta a ${original.host}")
+                if (c.responseCode in 200..299)
+                    Log.i(TAG, "destino guardado serviu outro arquivo ($visto bytes, esperado $esperado); de volta a ${original.host}")
+                else Log.i(TAG, "destino guardado recusou (HTTP ${c.responseCode}); de volta a ${original.host}")
                 desconectar(c)
             } catch (e: IOException) {
                 if (foiCancelado(e)) throw cancelado(e)
@@ -308,8 +318,16 @@ class ParaleloDataSource(
             destinos?.esquecer(chave)
         }
         val c = conectarComRetry(original, ini, ultimo, 0L)
-        if (c.responseCode in 200..299) destinos?.lembrar(chave, c.url)
+        if (c.responseCode in 200..299) destinos?.lembrar(chave, c.url, totalDe(c))
         return c
+    }
+
+    // Tamanho do arquivo inteiro segundo a resposta: o total do Content-Range
+    // num 206, o corpo num 200 (o servidor ignorou o Range). -1 se nao se sabe.
+    private fun totalDe(c: HttpURLConnection): Long = when (c.responseCode) {
+        206 -> (c.getHeaderField("Content-Range") ?: "").substringAfter('/', "").trim().toLongOrNull() ?: -1L
+        200 -> c.contentLengthLong.takeIf { it > 0 } ?: -1L
+        else -> -1L
     }
 
     override fun open(dataSpec: DataSpec): Long {

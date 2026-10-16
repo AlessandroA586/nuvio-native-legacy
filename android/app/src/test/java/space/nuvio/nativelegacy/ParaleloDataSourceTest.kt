@@ -376,6 +376,8 @@ class ParaleloDataSourceTest {
         val noCdn = AtomicInteger()
         @Volatile var cdn = "https://cdn1.invalid/f?token=a"
         @Volatile var vencido = ""
+        // Host que responde 200 com um "clipe de erro" de 5000 bytes.
+        @Volatile var clipe = ""
         fun conexao(url: URL): HttpURLConnection =
             if (url.host == "addon.invalid") {
                 noAddon.incrementAndGet()
@@ -388,7 +390,12 @@ class ParaleloDataSourceTest {
             } else {
                 noCdn.incrementAndGet()
                 val recusa = url.host == vencido
-                object : ConexaoFaixa(url, total) {
+                if (url.host == clipe) object : ConexaoFalsa(url) {
+                    override fun getResponseCode(): Int = HTTP_OK
+                    override fun getContentLengthLong(): Long = 5000
+                    override fun getInputStream(): InputStream = ByteArrayInputStream(ByteArray(5000))
+                    override fun getHeaderField(name: String?): String? = null
+                } else object : ConexaoFaixa(url, total) {
                     override fun getResponseCode(): Int = if (recusa) HTTP_FORBIDDEN else super.getResponseCode()
                 }
             }
@@ -433,6 +440,28 @@ class ParaleloDataSourceTest {
         // E a abertura seguinte ja vai direto ao cdn2.
         abrirDois(nova(), 9000L)
         assertEquals(2, rede.noAddon.get())
+    }
+
+    @Test fun destinoQueServeOutroArquivoVoltaAoAddon() {
+        // O CDN vencido responde 200 com um clipe de erro de 5000 bytes em vez
+        // de 403: o tamanho nao bate com o do arquivo, entao nao e ele.
+        val rede = Rede(24891962527L)
+        val destinos = DestinosAddon(agora = { 1000L })
+        val nova = { ParaleloDataSource(null, emptyMap(), destinos = destinos, novaConexao = rede::conexao,
+            dormir = { throw AssertionError("nao deve esperar retry") }) }
+        abrirDois(nova(), 0L)
+        assertEquals(24891962527L, destinos.tamanhoDe("https://addon.invalid/play/abc"))
+        rede.clipe = "cdn1.invalid"
+        rede.cdn = "https://cdn2.invalid/f?token=b"
+        val fonte = nova()
+        val len = try {
+            fonte.open(DataSpec.Builder()
+                .setUri(android.net.Uri.parse("https://addon.invalid/play/abc"))
+                .setPosition(7000L).setLength(2L).build())
+        } finally { fonte.close() }
+        assertEquals(2L, len)
+        assertEquals(2, rede.noAddon.get())
+        assertEquals("cdn2.invalid", destinos.buscar("https://addon.invalid/play/abc")?.host)
     }
 
     @Test fun destinoVencidoNaoEReusado() {
