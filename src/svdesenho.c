@@ -237,15 +237,9 @@ void svd_poster(GfxRect r, const char *url, float raio, float a) {
   }
 }
 
-void svd_cartao(GfxRect r, const SvEvento *ev, float foco, float a, Uint32 t) {
-  float raio = NV_RAIO_CARD, pad = r.h * 0.075f;
-  float f = svd_foco_visual(foco);
-  const char *arte;
-  char status[160];
-  if (!ev) return;
-  arte = ev->arte[0] ? ev->arte : ev->poster;
-  // O ARO DE FOCO DA HOME: a cor de realce por fora do cartao, com o raio de
-  // fora = raio do cartao + espessura (a conta de home.c, "pontas feias").
+// O ARO DE FOCO DA HOME: a cor de realce por fora do cartao, com o raio de
+// fora = raio do cartao + espessura (a conta de home.c, "pontas feias").
+void svd_aro_foco(GfxRect r, float raio, float f, float a) {
   if (f > 0.01f) {
     float ar, ag, ab, menor = r.w < r.h ? r.w : r.h;
     GfxRect b = { r.x - NV_ANEL_FOCO, r.y - NV_ANEL_FOCO,
@@ -254,6 +248,16 @@ void svd_cartao(GfxRect r, const SvEvento *ev, float foco, float a, Uint32 t) {
     if (ajustes_vidro()) gfx_vidro_cartao(r, raio, f, a);
     else gfx_cor(b, (raio * menor + NV_ANEL_FOCO) / (menor + 2 * NV_ANEL_FOCO), ar, ag, ab, f * a);
   }
+}
+
+void svd_cartao(GfxRect r, const SvEvento *ev, float foco, float a, Uint32 t) {
+  float raio = NV_RAIO_CARD, pad = r.h * 0.075f;
+  float f = svd_foco_visual(foco);
+  const char *arte;
+  char status[160];
+  if (!ev) return;
+  arte = ev->arte[0] ? ev->arte : ev->poster;
+  svd_aro_foco(r, raio, f, a);
   svd_poster(r, arte, raio, a);
   // O VEU DA LEGENDA, de baixo ate ~70 % da altura (o mesmo gfx_veu_base dos
   // cartoes deitados da home). Sem ele o titulo branco some na arte clara.

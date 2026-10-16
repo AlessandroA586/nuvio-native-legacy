@@ -110,6 +110,30 @@ static void gravarBmp(const char *bmp) {
     assert(caption > 100);
   }
 #endif
+  // The art of every title card must cover the WHOLE card: the strips at its left
+  // and right edges (clear of avatar and caption) cannot be one flat bar colour.
+#ifndef NV_ANTES
+  if (strstr(bmp, "-feed")) {
+    int checked = 0;
+    for (int c = 0; c < 8; c++) {
+      GfxRect r;
+      if (amigosfil_teste_cartao(c, &r) != 1 || r.x < 0 || r.x + r.w > 1920) continue;
+      for (int side = 0; side < 2; side++) {
+        // Rows above the veil, columns past the avatar: where the old contain-fit left
+        // its flat side bars (~131 px each side of a 157 px wide poster).
+        int lo = 255, hi = 0, x0 = (int)(side ? r.x + r.w - 90 : r.x + 70);
+        for (int yy = (int)(r.y + r.h * 0.12f); yy < (int)(r.y + r.h * 0.28f); yy++)
+          for (int xx = x0; xx < x0 + 20; xx++) {
+            unsigned char *p = (unsigned char *)s->pixels + yy * s->pitch + xx * 4;
+            for (int ch = 0; ch < 3; ch++) { if (p[ch] < lo) lo = p[ch]; if (p[ch] > hi) hi = p[ch]; }
+          }
+        if (hi - lo <= 6) { fprintf(stderr, "card %d %s edge is a flat bar (%d..%d)\n", c, side ? "right" : "left", lo, hi); abort(); }
+      }
+      checked++;
+    }
+    assert(checked > 0);
+  }
+#endif
   SDL_FreeSurface(s);
   free(pix);
   printf("captura: %s\n", bmp);
@@ -360,6 +384,21 @@ int main(int argc, char **argv) {
   irFileira(); quadros(90, NULL);
   amigosfil_teste_conferir(1920, 1080);
   snprintf(bmp, sizeof bmp, "%s-missing.bmp", saida); quadros(1, bmp);
+  // Owner's case: titles with no landscape art, only a poster, plus friends with no
+  // title at all (people cards). Every card shell must fill its frame.
+  for (int k = 0; k < 2; k++) {
+    snprintf(missing[k].imdb, sizeof missing[k].imdb, "ttposter%d", k);
+    missing[k].arte[0] = 0;
+    missing[k].acao = SV_FIM;
+    snprintf(missing[k].pessoaId, sizeof missing[k].pessoaId, "nuvio:pedro");
+    snprintf(missing[k].pessoaNome, sizeof missing[k].pessoaNome, "Pedro");
+    snprintf(missing[k].poster, sizeof missing[k].poster, "deploy/app/art/poster/%02d.jpg", 3 + k);
+  }
+  socialvis_definir_feed(missing, 2);
+  irFileira(); quadros(90, NULL);
+  snprintf(bmp, sizeof bmp, "%s-feed.bmp", saida); quadros(1, bmp);
+  tecla(SDLK_RIGHT); tecla(SDLK_RIGHT); quadros(40, NULL);
+  snprintf(bmp, sizeof bmp, "%s-pessoas.bmp", saida); quadros(1, bmp);
   const int languages[] = { IDIOMA_DE, IDIOMA_PT, IDIOMA_RU };
   for (int k = 0; k < 3; k++) {
     char cam[800]; snprintf(cam, sizeof cam, "%s/ajustes.txt", dirDados);
