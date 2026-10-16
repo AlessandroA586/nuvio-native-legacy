@@ -187,6 +187,7 @@ class NuvioActivity : SDLActivity() {
         // do fio da interface livre.
         if (!mBrokenLibraries) vigia = ArranqueVigia(this).also { it.iniciar() }
         observarRede()
+        entregarDeepLink(intent)
 
         // SDLActivity.mLayout e um RelativeLayout com a SDLSurface dentro.
         // O video fica no indice 0 (atras); a SDLSurface fica por cima, em
@@ -257,6 +258,21 @@ class NuvioActivity : SDLActivity() {
     }
 
     private external fun nativeToqueCancelou()
+
+    // LINK EXTERNO (docs/deeplink.md): o C valida; aqui so se limita o tamanho.
+    private external fun nativeDeepLink(url: String)
+
+    private fun entregarDeepLink(i: Intent?) {
+        if (mBrokenLibraries || i?.action != Intent.ACTION_VIEW) return
+        val url = i.dataString ?: return
+        if (url.length <= 512) nativeDeepLink(url)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        entregarDeepLink(intent)
+    }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         // SDL turns CANCEL into finger UP. Queue the cancellation first so
