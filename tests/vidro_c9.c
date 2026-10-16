@@ -29,10 +29,10 @@ static void frame(int n, int motion, int trailer) {
   glClearColor(.05f, .05f, .05f, 1); glClear(GL_COLOR_BUFFER_BIT);
   home_atualizar(1.0f / 60, now);
   home_shot_trailer(trailer);
-  home_desenhar(now);
-  // A deterministic changing hero wash, before all chrome. A native video
-  // plane cannot be captured; trailer holes are checked separately below.
+  // Change the backdrop hash before the first glass, including hero buttons.
+  // Native trailer holes are checked separately below.
   if (motion) gfx_cor((GfxRect){0, 0, 1920, 1080}, 0, .12f, .18f, .3f, .02f + .001f * (n % 20));
+  home_desenhar(now);
   menu_pilula_mostrar(1);
   menu_atualizar(1.0f / 60, now); menu_desenhar(now);
   ilha_desenhar(now);
@@ -118,7 +118,16 @@ int main(int argc, char **argv) {
   // renewed by reuse, or animation would freeze indefinitely.
   gfx_vidro_sujar(); frame(172, 1, 0);
   check(gfx_vidro_capturas >= 1, "texture upload invalidates capture immediately");
-  for (int i = 0; i < 5; i++) frame(180 + i, 0, 1);
+  menu_fechar();
+  for (int i = 0; i < 150; i++) frame(220, 0, 0);
+  captures = passes = 0;
+  for (int i = 0; i < 5; i++) {
+    frame(220, 0, 0); captures += gfx_vidro_capturas; passes += gfx_vidro_passadas;
+  }
+  printf("static: captures=%d passes=%d over five frames\n", captures, passes);
+  check(webos ? captures == 0 && passes == 0 : captures <= 5,
+        "static backdrop reuse budget");
+  for (int i = 0; i < 5; i++) frame(380 + i, 0, 1);
   shot(argv[2], "trailer");
   check(glGetError() == GL_NO_ERROR, "GL state after trailer and chrome");
   tex_encerrar(); SDL_Quit();

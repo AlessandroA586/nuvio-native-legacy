@@ -16,11 +16,17 @@ for source in src/*.c src/dts/*.c tests/vidro_c9.c; do
   cc "${flags[@]}" -c "$source" -o "$object"
   objects+=("$object")
 done
+gfx_source=src/gfx.c
+# Re-run the identical harness against the pre-fix renderer without checkout.
+if [ -n "${NUVIO_VIDRO_BASELINE:-}" ]; then
+  git show "$NUVIO_VIDRO_BASELINE:src/gfx.c" > "$work/gfx.c"
+  gfx_source="$work/gfx.c"
+fi
 status=0
 for tier in native webos; do
   extra=(); expected=0
   if [ "$tier" = webos ]; then extra=(-DNV_WEBOS); expected=1; fi
-  cc "${flags[@]}" "${extra[@]}" -c src/gfx.c -o "$work/gfx.o"
+  cc "${flags[@]}" "${extra[@]}" -c "$gfx_source" -o "$work/gfx.o"
   cc "${objects[@]}" "$work/gfx.o" "${libs[@]}" -o "$work/test"
   mkdir -p "$out/$tier"
   for width in 1920 3840; do

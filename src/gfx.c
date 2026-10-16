@@ -1898,6 +1898,10 @@ typedef struct { unsigned hash; float cap[4]; int valida; } VidroEntrada;
 static VidroEntrada vidroAnt[VID_N], vidroCur[VID_N];
 static int vidroNAnt, vidroNCur, vidroNVidros, vidroNFuros, vidroSujo = 1, vidroCapNoQuadro;
 static unsigned vidroHash;
+#ifdef NV_WEBOS
+static unsigned vidroCapturaQuadro, vidroCapturaHash;
+static int vidroCapturaValida;
+#endif
 static float vidroDesde[4];   // caixa do que foi pintado na tela desde a ultima captura
 static float vidroCapQ[4];    // a ultima captura deste quadro
 static float vidroVidros[VID_N][4], vidroFuros[VID_NFUROS][4];
@@ -1928,7 +1932,12 @@ static int vidroDentro(GfxRect r) {
 }
 // Conteudo que muda sem passar pelo hash (textura reenviada no lugar, nome
 // de textura reaproveitado): nenhum vidro reaproveita a captura antiga.
-void gfx_vidro_sujar(void) { vidroSujo = 1; }
+void gfx_vidro_sujar(void) {
+  vidroSujo = 1;
+#ifdef NV_WEBOS
+  vidroCapturaValida = 0;
+#endif
+}
 static void vidroAplicarSujo(void) {
   int k;
   if (!vidroSujo) return;
@@ -3148,6 +3157,9 @@ static void vidLiberar(void) {
   vidGrab = vidH2 = vidQa = vidQb = vidRuido = vidH2Fbo = vidQaFbo = vidQbFbo = 0;
   if (vidProg) glDeleteProgram(vidProg);
   vidProg = 0; vidW = vidH = 0;
+#ifdef NV_WEBOS
+  vidroCapturaValida = 0;
+#endif
   memset(vidroAnt, 0, sizeof vidroAnt); memset(vidroCur, 0, sizeof vidroCur);
   gfx_tex_esquecer(0);
 }
@@ -3309,6 +3321,28 @@ static int vidCapturar(const float reg[4]) {
 
 // O backdrop desfocado para o vidro `r` (layout de tela), ou 0 = chapado.
 static GLuint vidroFonte(GfxRect r) {
+#ifdef NV_WEBOS
+  // The home chrome can draw between glass regions: its bounding box defeats
+  // region sharing and causes four copies + twenty blur draws per frame.
+  // Freeze the clean backdrop before the first glass, shared by all regions.
+  // ponytail: at most one frame of backdrop lag on webOS; retain the full
+  // five-pass kernel and drawable resolution. Android keeps its original path.
+  if (vidH2 && vidW == telaW && vidH == telaH &&
+      (vidroCapNoQuadro || (vidroCapturaValida &&
+       (vidroCapturaHash == vidroHash || gfx_quadro_n - vidroCapturaQuadro < 2u)))) {
+    vidroCapNoQuadro = 1;
+    return vidH2;
+  }
+  {
+    float full[4] = { 0, 0, NV_TELA_W, NV_TELA_H };
+    if (!vidCapturar(full)) return 0;
+    vidroCapNoQuadro = 1;
+    vidroCapturaQuadro = gfx_quadro_n;
+    vidroCapturaHash = vidroHash;
+    vidroCapturaValida = 1;
+    return vidH2;
+  }
+#endif
   float need[4], cap[4];
   int i = vidroNCur, k, fonte = 0;
   need[0] = r.x - VID_ALCANCE; need[1] = r.y - VID_ALCANCE;
