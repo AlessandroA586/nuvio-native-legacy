@@ -11,6 +11,7 @@
 // chaves pode aparecer no que o app imprime. As mensagens de progresso do
 // proprio teste saem por stderr, que nao e capturado.
 #include "../src/debrid.h"
+#include "../src/idbase.h"
 #include "../src/streams.h"
 #include "../src/rede.h"
 #include <assert.h>
@@ -84,7 +85,7 @@ static int   pmSemPlano;
 // (1 = "true") e se o mylist diz que o torrent ainda esta baixando.
 static int   tbSoCache = -1, tbBaixando;
 
-static int arquivosEspeciais;
+static int arquivosEspeciais, arquivoAnime;
 static char *dup2s(const char *s) {
   char *c = strdup(s);
   if (arquivosEspeciais) {
@@ -260,6 +261,7 @@ char *rede_baixar_st(const char *url, int s, const char *const *cab, int *st) {
   if (strstr(url, "api.alldebrid.com")) return adResp(url, cab, NULL, st);
   if (strstr(url, "real-debrid.com")) {
     assert(strstr(url, "torrents/info/ABC123"));
+    if (arquivoAnime) return strdup("{\"files\":[{\"id\":1,\"path\":\"[SubsPlease] Mushoku Tensei - 05 (1080p).mkv\",\"bytes\":1900000000}],\"status\":\"downloaded\",\"links\":[\"https://real-debrid.com/d/LINK1\"]}");
     return dup2s("{\"id\":\"ABC123\",\"status\":\"downloaded\",\"files\":["
       "{\"id\":1,\"path\":\"/Show.S02E04.1080p.mkv\",\"bytes\":2000000000,\"selected\":0},"
       "{\"id\":2,\"path\":\"/Show.S02E05.1080p.mkv\",\"bytes\":1900000000,\"selected\":0},"
@@ -338,6 +340,17 @@ static void realDebrid(void) {
   assert(debrid_resolver("DEADBEEF", -1, url, sizeof url));
   assert(!strcmp(corpoSelectRD, "files=1"));   // filme: maior video, sample.txt fora
   OK("Real-Debrid: filme escolhe o maior video");
+
+  {
+    int t, e;
+    idbase_episodio("kitsu:41370:5", &t, &e);
+    debrid_definir_episodio(t, e);
+    arquivoAnime = 1;
+    assert(debrid_resolver("DEADBEEF", -1, url, sizeof url));
+    assert(!strcmp(corpoSelectRD, "files=1"));
+    arquivoAnime = 0;
+    OK("Kitsu absent season selects ordinary anime filename in debrid");
+  }
 
   // A URL RESOLVIDA E CREDENCIAL: quem tem o "/d/QQ/" baixa na conta de quem
   // pediu. Este teste linka o rede_url_publica DE VERDADE (src/redeurl.c) em
