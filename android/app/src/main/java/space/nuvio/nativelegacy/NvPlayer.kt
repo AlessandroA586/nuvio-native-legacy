@@ -1147,14 +1147,17 @@ object NvPlayer {
     private fun criarPlayer(act: Activity, url: String, cabecalhos: String, preset: Int,
                             pedidoCache: Int, preparando: Boolean, geracao: Int, construir: Boolean = true,
                             idiomaAudio: String = "", titulo: String = ""): RecursosPlayer {
-        // Em aparelho de pouca RAM (ActivityManager: isLowRamDevice ou
-        // memoryClass <= 128 MB, ex.: TCL 2,4 GB com memoryClass 192 passa)
+        // Em aparelho de pouca RAM (ActivityManager: isLowRamDevice,
+        // memoryClass <= 128 MB ou totalMem <= 3 GiB; a TCL de 2,4 GB tem
+        // memoryClass 192 e so cai pelo totalMem)
         // o teto do buffer cai para a metade: gpu-cache + buffer + pedacos
         // paralelos + preparo do proximo titulo estouraram uma TV de 2,4 GB
         // (PSS ~575 MB, lmkd matou o app). Aparelho com RAM sobrando nao muda.
         val heap = Runtime.getRuntime().maxMemory()
         val am = act.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
-        val poucaRam = (am != null && (am.isLowRamDevice || am.memoryClass <= 128)).also { poucaRamAparelho = it }
+        val totalMem = am?.let { a -> android.app.ActivityManager.MemoryInfo().also { a.getMemoryInfo(it) }.totalMem } ?: 0L
+        val poucaRam = (am != null && (am.isLowRamDevice || am.memoryClass <= 128 ||
+                        (totalMem in 1L..(3L shl 30)))).also { poucaRamAparelho = it }
         val tetoBuffer = if (poucaRam) (heap / 8).coerceIn(24L shl 20, 48L shl 20).toInt()
                          else (heap / 4).coerceIn(32L shl 20, 96L shl 20).toInt()
         val (minMs, maxMs, bytes) = when (preset) {
