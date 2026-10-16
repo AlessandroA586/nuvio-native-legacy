@@ -97,9 +97,26 @@ int dados_apagar(const char *nome) {
 // ------------------------------------------------------------------ o addon
 // A lista "nova" do caso 1 troca a URL do addon (outro token no caminho, como
 // a conta faz): e isso que torna inutil o manifesto largado com a velha.
-static volatile unsigned versaoAddons = 1;
+static unsigned versaoAddons = 1;
+// Current addons.h snapshots borrow the same lock as fixture list writers.
+// This is a real ownership boundary, not an unlocked success stub.
+static pthread_mutex_t fixtureAddonListLock = PTHREAD_MUTEX_INITIALIZER;
+static _Thread_local unsigned fixtureAddonListDepth;
+static unsigned fixtureAddonListSnapshots;
+void addons_lista_travar(void) {
+  assert(!fixtureAddonListDepth);
+  assert(!pthread_mutex_lock(&fixtureAddonListLock));
+  fixtureAddonListDepth = 1;
+  __atomic_add_fetch(&fixtureAddonListSnapshots, 1, __ATOMIC_RELAXED);
+}
+void addons_lista_destravar(void) {
+  assert(fixtureAddonListDepth == 1);
+  fixtureAddonListDepth = 0;
+  assert(!pthread_mutex_unlock(&fixtureAddonListLock));
+}
 #define BASE_NOVA BASE "-v2"
-static const char *baseAtual(void)     { return versaoAddons > 1 ? BASE_NOVA : BASE; }
+static unsigned versaoAtual(void) { return __atomic_load_n(&versaoAddons, __ATOMIC_ACQUIRE); }
+static const char *baseAtual(void)     { return versaoAtual() > 1 ? BASE_NOVA : BASE; }
 int   addons_n(void)                   { return 1; }
 const char *addons_base(int i)         { (void)i; return baseAtual(); }
 int   addons_ativo(int i)              { (void)i; return 1; }
@@ -107,21 +124,19 @@ int   addons_fornece(int i, int oque)     { (void)i; (void)oque; return 0; }
 int   addons_sondado(int i)              { (void)i; return 0; }
 const char *addons_id_manifesto(int i) { (void)i; return AID; }
 const char *addons_nome(int i)         { (void)i; return "Addon"; }
-unsigned addons_versao(void)           { return versaoAddons; }
+unsigned addons_versao(void)           { return versaoAtual(); }
 // Este teste dubla a conta/fileiras; falta de retrato completo adia exclusao.
 int addons_copiar_identidades(AddonIdentidade *saida, int max, unsigned versao, int perfil) {
   (void)saida; (void)max; (void)versao; (void)perfil; return -1;
 }
 int addons_travar_lista(unsigned versao, int perfil) { (void)versao; (void)perfil; return 0; }
 void addons_destravar_lista(void) {}
-void addons_lista_travar(void) {}
-void addons_lista_destravar(void) {}
 const char *addons_base_por_id(const char *id) { return id && !strcmp(id, AID) ? baseAtual() : ""; }
 void  addons_manifesto_lido(int i, const char *c) { (void)i; (void)c; }
 int addons_identidade_recebida(const char *base, unsigned versao, NvPerfilSessao sessao,
                               const char *corpo) {
   (void)corpo;
-  return nv_perfil_sessao_atual(sessao) && versao == versaoAddons && !strcmp(base, baseAtual());
+  return nv_perfil_sessao_atual(sessao) && versao == versaoAtual() && !strcmp(base, baseAtual());
 }
 int addons_manifesto_recebido(const char *base, unsigned versao, NvPerfilSessao sessao,
                              const char *corpo) {
@@ -163,6 +178,7 @@ static int imdbNaTela(const char *imdb, int (*campo)(const CatItem *)) {
 static int ehNaLista(const CatItem *c) { return c->naLista; }
 
 char *rede_baixar(const char *url, int t) {
+  assert(!fixtureAddonListDepth); // snapshots must release before transport
   char buf[600];
   const char *p;
   char id[16] = "";
@@ -250,7 +266,12 @@ int trakt_social(CatItem *s, int m) {
   armadoSocial = S_NADA;
   // (fioDaMontagem e marcado em trakt_continuar: o social corre em fio proprio.)
   // Lista nova = versao nova: o manifesto largado no comeco nao serve mais.
-  if (a == S_ADDONS) { versaoAddons++; desc_repetir_addons(); }
+  if (a == S_ADDONS) {
+    addons_lista_travar();
+    __atomic_add_fetch(&versaoAddons, 1, __ATOMIC_RELEASE);
+    addons_lista_destravar();
+    desc_repetir_addons();
+  }
   else if (a == S_CREDENCIAL) desc_repetir();
   if (fixtureSocial && m > 0) {
     memset(s, 0, sizeof *s);
@@ -522,6 +543,8 @@ int main(void) {
     armadoCatalogo = NADA; }
   puts("ok  catalogo lento largado: a home segue, o fio termina sozinho");
 
+  assert(__atomic_load_n(&fixtureAddonListSnapshots, __ATOMIC_RELAXED) > 0);
+  assert(!fixtureAddonListDepth);
   puts("montagem_cedo: tudo ok");
   return 0;
 }
