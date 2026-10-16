@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-15T23:48:13-03:00",
+ "atualizado_em": "2026-10-16T00:55:44-03:00",
  "base": "5544c3e4c",
- "nota": "Sync 2026-10-15 21:48, HEAD integracao/2.0.5 d626daf5c (84dc18246 ajustestestes merged); instalado cb7ece972 (Android Success, C9 rc=1). Running: estatresp, vidroc9, amigosestilo-b. Ver escrivao/estado.md.",
+ "nota": "Sync 2026-10-16T00:55, HEAD integracao/2.0.5 b07ef570a; instalado cb7ece972 (Android rc=0, C9 rc=1). Merged nesta janela: legatraso, tclmem, vidrotelas, herotrailer. Running: j-revg-overdraw, j-205-amigoscapa. Ver escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,
@@ -9784,6 +9784,7 @@
    "release": "-",
    "conserto": [
     "bf9edb493 (Merge agente/205-i500q, integracao/2.0.5)",
+    "b07ef570a (Merge agente/205-herotrailer, integracao/2.0.5)",
     "agente/205-herotrailer"
    ],
    "ultima_resposta": {
@@ -9792,8 +9793,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "merged em integracao/2.0.5 (4cb12ba55 fix(home): keep hero trailer aligned with changing)",
-   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels bug. Sem triagem local. [sync 2026-10-15: agente/205-i500q integrada] Escrivao 10-15 22:49: merged via agente/205-i500q (bf9edb493).",
+   "proximo_passo": "merged em integracao/2.0.5 (b07ef570a); revisao OK (j-revg-herotrailer); build+install no HEAD novo",
+   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels bug. Sem triagem local. [sync 2026-10-15: agente/205-i500q integrada] Escrivao 10-15 22:49: merged via agente/205-i500q (bf9edb493). Escrivao 10-16 00:28: merge agente/205-herotrailer (85221cec4 ajustes/hero trailer veto row); review j-revg-herotrailer OK.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/500",
    "criada_em": "2026-10-14",
    "alvo": "2.0.6"
@@ -10226,6 +10227,7 @@
    "release": "",
    "conserto": [
     "cbd542148 (Merge agente/205-i530q, integracao/2.0.5)",
+    "23cb26843 (Merge agente/205-legatraso, integracao/2.0.5)",
     "agente/205-legatraso"
    ],
    "ultima_resposta": {
@@ -10234,8 +10236,8 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "merged em integracao/2.0.5 (0027fb059 fix: preserve native subtitle callbacks during col)",
-   "notas": "Escrivao 10/15 13:48: novo no GitHub 2026-10-15 (Subtitle issues), sem prompt de job. [sync 2026-10-15: agente/205-i530q integrada] Escrivao 10-15 22:49: merged via agente/205-i530q (cbd542148).",
+   "proximo_passo": "merged em integracao/2.0.5 (23cb26843, sinal do atraso manual invertido); revisao BLOQUEIA->OK apos j-fix-legatraso (j-revg2-legatraso OK); falta TV para conferir o sinal",
+   "notas": "Escrivao 10/15 13:48: novo no GitHub 2026-10-15 (Subtitle issues), sem prompt de job. [sync 2026-10-15: agente/205-i530q integrada] Escrivao 10-15 22:49: merged via agente/205-i530q (cbd542148). Escrivao 10-16 00:06: merge agente/205-legatraso (05c24b89c/ad03fedc5/8d14dd55e, migracao do valor salvo). BLOQUEIA (j-revg-legatraso: audsync) -> OK (j-revg2-legatraso).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/530",
    "criada_em": "2026-10-15",
    "alvo": "2.0.6"
@@ -10281,6 +10283,27 @@
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/542",
    "criada_em": "2026-10-16",
    "alvo": "futuro"
+  },
+  {
+   "numero": 545,
+   "titulo": "Catalog Now Showing",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
+   "alvo": "2.0.6",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "sem job; triar (sem prompt de job no snapshot)",
+   "notas": "Nova em 2026-10-16 (issues.json, labels ['bug']). Sem job no snapshot.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/545",
+   "criada_em": "2026-10-16"
   }
  ],
  "validacoes": [
@@ -12735,7 +12758,7 @@
     "agente/205-topotam (356c63b8 2026-10-14 Document the PlxNative glass and tab strip port)"
    ],
    "proximo_passo": "j-205-vidroplx done (ainda nao mergeado; sem job de merge)",
-   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). mesmo branch de dono-205-topotam."
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). mesmo branch de dono-205-topotam. Escrivao 10-16: ainda nao mergeado (backlog 2.1)."
   },
   {
    "id": "dono-205-205-teclado",
@@ -14513,7 +14536,7 @@
     "030bf69df (docs/design glass chrome study), 2 commits fora de integracao/2.0.5"
    ],
    "proximo_passo": "aguardando escolha do dono A/B/C; 2 ahead, estudo/mock, sem review",
-   "notas": "Estudo/mockups (build/gen.py + PNGs), sem src. NOTA 10-15 07:10: notas antigas diziam \"ja integrada\": git mostra 2 ahead nao mergeado. Escrivao 10-15 07:10: sem review; depende de decisao do dono."
+   "notas": "Estudo/mockups (build/gen.py + PNGs), sem src. NOTA 10-15 07:10: notas antigas diziam \"ja integrada\": git mostra 2 ahead nao mergeado. Escrivao 10-15 07:10: sem review; depende de decisao do dono. Escrivao 10-16: espera decisao do dono (2.1)."
   },
   {
    "id": "dono-205-barra27",
@@ -14543,13 +14566,14 @@
    "id": "dono-205-vidaa",
    "titulo": "VIDAA (agente/205-vidaa)",
    "plataforma": "VIDAA",
-   "status": "aberta",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
-    "agente/205-vidaa: 14 commits fora (tip 1419c9cef 22:46)"
+    "81b418469 (Merge agente/205-vidaa, integracao/2.0.5)",
+    "agente/205-vidaa"
    ],
-   "proximo_passo": "review (nenhum log de review apos o fix 22:46) ou descartar; pendente publicar com chaves",
-   "notas": "criado pelo escrivao 22:4x Escrivao 10-15 07:10: sem review depois do fix 22:46."
+   "proximo_passo": "review OK (j-revg-vidaa-6); pendente build/publicar com chaves",
+   "notas": "criado pelo escrivao 22:4x Escrivao 10-15 07:10: sem review depois do fix 22:46. Escrivao 10-16: merged (81b418469). Reviews anteriores BLOQUEIA (probe, sync, tracks) -> fixes -> j-revg-vidaa-6 OK. Pendente emcc/tpk com chaves e TV VIDAA fisica."
   },
   {
    "id": "dono-205-pr493",
@@ -14676,12 +14700,13 @@
    "id": "dono-205-master1015",
    "titulo": "Merge master 1015 em integracao/2.0.5 (28 commits)",
    "plataforma": "todas",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.5",
    "conserto": [
-    "12f000886 fix: publish probe manifests outside addon locks (fix, sem review)"
+    "249a5f8eb (Merge agente/205-master1015, integracao/2.0.5)",
+    "agente/205-master1015"
    ],
-   "proximo_passo": "review fix 12f000886 (j-fix-master1015-w 09:49; suite addonslista rc=1 por fixture ausente, pre-existente); depois merge",
+   "proximo_passo": "sair com 2.0.5",
    "notas": "Escrivao 15/10 09:48: branch agente/205-master1015 (28 ahead) sem item de issue; criado pelo escrivao. Escrivao 10-15 10:50: BLOQUEIA 08:48; fix pronto 09:49."
   },
   {
@@ -15593,6 +15618,108 @@
    "conserto": [],
    "proximo_passo": "sem review: revisar ou descartar",
    "notas": "Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub."
+  },
+  {
+   "id": "dono-205-tclmem",
+   "titulo": "TCL Android TV: crash ao tocar filme (memoria/buffer)",
+   "plataforma": "Android (TCL 2.4 GB)",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "844b78f68 (Merge agente/205-tclmem, integracao/2.0.5)",
+    "agente/205-tclmem"
+   ],
+   "proximo_passo": "build+install no HEAD novo; conferir na TCL (sem adb)",
+   "notas": "Pedido do dono (TCL, 2.4 GB): \"tocou o filme, travou tudo e fechou o app\". Job j-205-tclmem + 2 fixes; review BLOQUEIA (j-revg-tclmem: P2-1/P2-2) -> OK apos fixes (j-revg2-tclmem OK)."
+  },
+  {
+   "id": "dono-205-vidrotelas",
+   "titulo": "webOS vidro lento em detalhes/busca/explorar/ajustes (C9)",
+   "plataforma": "LG C9 (webOS)",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "20a522eaf (Merge agente/205-vidrotelas, integracao/2.0.5)",
+    "agente/205-vidrotelas"
+   ],
+   "proximo_passo": "review OK (j-revg-vidrotelas); medir FPS no C9 real",
+   "notas": "Owner: home rapida, mas sidebar de fontes/busca/explorar/ajustes ruins na C9. Fix: hash do backdrop ignora drift sub-1/256, off-screen e sky clock. Review j-revg-vidrotelas OK."
+  },
+  {
+   "id": "dono-205-overdraw",
+   "titulo": "Overdraw por tela (fill por frame) no webOS C9",
+   "plataforma": "LG C9 (webOS)",
+   "status": "em_job",
+   "release": "2.0.5",
+   "conserto": [
+    "agente/205-overdraw (1131422c0 00:38, 1 commit; nao mergeado)"
+   ],
+   "proximo_passo": "job j-205-overdraw done 00:40 (mede fill), review j-revg-overdraw RUNNING 00:43; esperar veredito",
+   "notas": "Job de medicao/harness por tela (detalhe, busca, explorar, ajustes). Itens pendentes: cards de comentario desenhados 3x por coluna (precisa OK do dono), veil/shadow dao ~1.6 telas, ilha de Ajustes 2290x1160; nao testado na C9."
+  },
+  {
+   "id": "dono-205-amigoscapa",
+   "titulo": "Cartaz do card de amigos em paisagem + shell dos cards de pessoas",
+   "plataforma": "all",
+   "status": "em_job",
+   "release": "2.0.5",
+   "conserto": [
+    "agente/205-amigoscapa (tip 20a522eaf, 0 commit proprio; nao mergeado)"
+   ],
+   "proximo_passo": "job j-205-amigoscapa RUNNING 00:20 (log vazio = rodando, nao perdido)",
+   "notas": "Owner: \"so muda o formato do poster\" no card paisagem de Amigos assistindo + contorno dos cards de pessoas (+ Adicionar). Criado pelo escrivao 00:20."
+  },
+  {
+   "id": "dono-205-estatresp",
+   "titulo": "Cartoes ao vivo do painel de estatisticas e dicas de tecla na TV",
+   "plataforma": "TV (saida 3840)",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "3e267063d (Merge agente/205-estatresp, integracao/2.0.5)",
+    "agente/205-estatresp"
+   ],
+   "proximo_passo": "review OK (j-revg-estatresp); falta TV fisica",
+   "notas": "Cards ao vivo cortados + dicas de tecla iluminadas na saida de TV. Review j-revg-estatresp OK (suite GL completa nao rodada, so syntax-only)."
+  },
+  {
+   "id": "dono-205-vidroc9",
+   "titulo": "vidro/reuso de backdrop no webOS (vidroc9)",
+   "plataforma": "LG C9 (webOS)",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "0b5c0135b (Merge agente/205-vidroc9, integracao/2.0.5)",
+    "agente/205-vidroc9"
+   ],
+   "proximo_passo": "review OK (j-revg-vidroc9-b) apos o fix do BLOQUEIA (j-revg-vidroc9); testar no C9",
+   "notas": "Fix: vidroHash diferente nunca reusa o backdrop do frame anterior; contadores so no webOS. j-revg-vidroc9 BLOQUEIA -> j-fix-vidroc9 -> j-revg-vidroc9-b OK."
+  },
+  {
+   "id": "dono-205-mestre1015",
+   "titulo": "Merge do master 1015 + cards ao vivo (agente/205-mestre1015)",
+   "plataforma": "todas",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "249a5f8eb (Merge agente/205-mestre1015, integracao/2.0.5)",
+    "agente/205-mestre1015"
+   ],
+   "proximo_passo": "review OK (j-revg-mestre1015-d) apos BLOQUEIA (j-revg-mestre1015-c); sair com 2.0.5",
+   "notas": "28 commits do master + recapture de vidro no webOS + retomada Android. BLOQUEIA (recapture/reload) -> fix 4b6340226 -> OK."
+  },
+  {
+   "id": "dono-205-ajustestestes",
+   "titulo": "Ajustes: suites de teste depois do merge do master",
+   "plataforma": "todas",
+   "status": "integrada",
+   "release": "2.0.5",
+   "conserto": [
+    "84dc18246 (Merge agente/205-ajustestestes, integracao/2.0.5)",
+    "agente/205-ajustestestes"
+   ],
+   "proximo_passo": "review OK (j-revg-ajustestestes); sair com 2.0.5",
+   "notas": "Conserta parsing/assercoes das suites de Ajustes depois do merge do master. Review OK."
   }
  ],
  "fechar_203": [],
