@@ -34,7 +34,7 @@ static unsigned revPerf = ~0u;
 static int fila, col;
 static float fFoco[AP_NFILAS][SV_FILA_MAX];
 static float entrada;
-static int sair, temPedido;
+static int sair, temPedido, pediuRelogio;
 static char pedido[24];
 static int nFila(int f);
 #ifdef NV_TOUCH_UI
@@ -80,7 +80,7 @@ static void recarregar(void) {
 void amigoperfil_abrir(const char *id) {
   snprintf(pessoa, sizeof pessoa, "%s", id ? id : "");
   fila = -1; col = 0;
-  sair = 0; temPedido = 0;
+  sair = 0; temPedido = 0; pediuRelogio = 0;
   entrada = 0.0f;
 #ifdef NV_TOUCH_UI
   memset(toque, 0, sizeof toque); memset(toqueX, 0, sizeof toqueX); toqueFila = -1;
@@ -93,6 +93,7 @@ void amigoperfil_abrir(const char *id) {
 }
 
 int amigoperfil_quer_sair(void) { int v = sair; sair = 0; return v; }
+int amigoperfil_pediu_relogio(void) { int v = pediuRelogio; pediuRelogio = 0; return v; }
 int amigoperfil_pediu_titulo(char *imdb, size_t tam) {
   if (!temPedido) return 0;
   temPedido = 0;
@@ -121,6 +122,7 @@ int amigoperfil_teste_foco(int *coluna) { if (coluna) *coluna = col; return fila
 
 void amigoperfil_evento(const SDL_Event *e) {
   SDL_Keycode k;
+  pediuRelogio = 0;
   if (!e || e->type != SDL_KEYDOWN) return;
 #ifdef NV_TOUCH_UI
   if (toquerol_navegacao(e)) toqueRetomar();
@@ -128,7 +130,7 @@ void amigoperfil_evento(const SDL_Event *e) {
   k = e->key.keysym.sym;
   if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE ||
       e->key.keysym.scancode == NV_SCANCODE_BACK) { sair = 1; return; }
-  if (fila < 0) return;
+  if (fila < 0) { if (k == SDLK_UP) pediuRelogio = 1; return; }
   if (k == SDLK_LEFT && col > 0) col--;
   else if (k == SDLK_LEFT) { sair = 1; return; }   // comeco da fileira: o app abre a barra
   else if (k == SDLK_RIGHT && col + 1 < nFila(fila)) col++;
@@ -136,6 +138,7 @@ void amigoperfil_evento(const SDL_Event *e) {
     int d = k == SDLK_UP ? -1 : 1, f;
     for (f = fila + d; f >= 0 && f < AP_NFILAS; f += d)
       if (nFila(f) > 0) { fila = f; if (col >= nFila(f)) col = nFila(f) - 1; break; }
+    if (k == SDLK_UP && f < 0) pediuRelogio = 1;
   } else if (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE) {
     const char *id = imdbDe(fila, col);
     if (id[0]) { snprintf(pedido, sizeof pedido, "%s", id); temPedido = 1; }

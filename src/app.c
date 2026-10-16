@@ -3298,6 +3298,153 @@ static void abrirExplorarNoTitulo(void) {
   explorar_abrir_titulo(&o);
 }
 
+// Foco por controle na ilha: cada pagina pede somente ao ultrapassar seu
+// proprio topo. A geometria do ultimo desenho nao decide quem possui a tecla.
+static int relogioCabe(void);
+static int relogioCamadaAberta(void);
+static struct {
+  int ativo, okArmado, detalhe, colecao, mobile;
+  SDL_Keycode devolverTecla;
+  Tela tela;
+  NvPerfilSessao sessao;
+  char imdb[160], tipo[32];
+} relogioFoco;
+
+static int relogioFocoMobile(void) {
+#ifdef NV_TOUCH_UI
+  return layout_modo_mobile();
+#else
+  return 0;
+#endif
+}
+static int relogioFocoPermitido(void) {
+  if (!ajustes_relogio_ligado() || !relogioCabe() ||
+      !login_concluido() || !perfilsel_concluido() ||
+      tela == TELA_LOGIN || tela == TELA_ESCOLHA_PERFIL ||
+      player_aberto() || player_mini_ativo() || menu_aberto() ||
+      spainel_aberto() || central_aberta() || ilha_modal_aberto() ||
+      registro_aberto() || registro_envio_aberto() || estatvivo_aberto() ||
+      spot_aberto() || teclado_aberto() || celb_aberto() || avisos_aberto() ||
+      ctx_aberto() || faixas_aberta() || episodios_aberto() ||
+      stream_folha_aberta() || guia_overlay_aberta() || relogioCamadaAberta()) return 0;
+  if (detail_aberto()) return detail_relogio_navegavel();
+  if (tela == TELA_AJUSTES) return ajustes_relogio_navegavel();
+  if (tela == TELA_BUSCA) return busca_relogio_navegavel();
+  if (tela == TELA_AGENDA && agendaui_menu_aberto()) return 0;
+  return 1;
+}
+static void relogioFocoLimpar(void) {
+  relogioFoco.ativo = 0;
+  ilha_relogio_focar(0);
+  // Um OK ja pressionado continua nosso ate soltar, mesmo se outra camada
+  // aparecer: a soltura nao pode confirmar uma escolha nessa nova camada.
+}
+static int relogioFocoMesmoContexto(void) {
+  const CatItem *c = detail_aberto() ? cat_item(detail_indice()) : NULL;
+  return relogioFoco.tela == tela &&
+      relogioFoco.sessao == nv_perfil_sessao_ler() &&
+      relogioFoco.detalhe == detail_aberto() &&
+      relogioFoco.colecao == vertudo_aberta() &&
+      relogioFoco.mobile == relogioFocoMobile() &&
+      !strcmp(relogioFoco.imdb, c ? c->imdb : "") &&
+      !strcmp(relogioFoco.tipo, c ? c->tipo : "");
+}
+static void relogioFocoValidar(void) {
+  if (relogioFoco.ativo && (!relogioFocoMesmoContexto() || !relogioFocoPermitido()))
+    relogioFocoLimpar();
+}
+static int relogioFocoPedir(int pedido) {
+  const CatItem *c;
+  if (!pedido || !relogioFocoPermitido()) return 0;
+  c = detail_aberto() ? cat_item(detail_indice()) : NULL;
+  relogioFoco.ativo = 1;
+  relogioFoco.tela = tela;
+  relogioFoco.sessao = nv_perfil_sessao_ler();
+  relogioFoco.detalhe = detail_aberto();
+  relogioFoco.colecao = vertudo_aberta();
+  relogioFoco.mobile = relogioFocoMobile();
+  snprintf(relogioFoco.imdb, sizeof relogioFoco.imdb, "%s", c ? c->imdb : "");
+  snprintf(relogioFoco.tipo, sizeof relogioFoco.tipo, "%s", c ? c->tipo : "");
+  ilha_relogio_focar(1);
+  return 1;
+}
+static void relogioFocoAcionar(void) {
+  SDL_Event atalho;
+  SDL_zero(atalho);
+  atalho.type = SDL_KEYDOWN;
+  atalho.key.keysym.sym = SDLK_s;
+  atalho.key.keysym.scancode = NV_SCANCODE_BLUE;
+  // O mesmo toque curto de CH+/AZUL: aviso/enquete tem prioridade sobre o
+  // cartao de atividade, que por sua vez tem prioridade sobre Salvos.
+  if (!ilha_evento(&atalho) && !avisos_evento(&atalho)) alternarSalvos(1);
+}
+static int relogioFocoEvento(const SDL_Event *e) {
+  SDL_Keycode k;
+  int ok;
+  relogioFocoValidar();
+  if ((e->type == SDL_WINDOWEVENT &&
+       (e->window.event == SDL_WINDOWEVENT_FOCUS_LOST || e->window.event == SDL_WINDOWEVENT_HIDDEN)) ||
+      e->type == SDL_APP_WILLENTERBACKGROUND) {
+    relogioFoco.devolverTecla = 0;
+    relogioFocoLimpar();
+    return 1;
+  }
+  if (e->type == SDL_MOUSEBUTTONDOWN || e->type == SDL_MOUSEWHEEL ||
+      e->type == SDL_FINGERDOWN) {
+    relogioFocoLimpar();
+    return 0;
+  }
+  if (e->type != SDL_KEYDOWN && e->type != SDL_KEYUP) return 0;
+  k = e->key.keysym.sym;
+  if (e->key.keysym.scancode == NV_SCANCODE_BACK || k == SDLK_DELETE ||
+      k == SDLK_AC_BACK || k == SDLK_BACKSPACE) k = SDLK_ESCAPE;
+  ok = k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE;
+  if (ok && relogioFoco.okArmado) {
+    if (e->type == SDL_KEYUP && k == relogioFoco.okArmado) {
+      int acionar = relogioFoco.ativo && relogioFocoPermitido();
+      relogioFoco.okArmado = 0;
+      relogioFocoLimpar();
+      if (acionar) relogioFocoAcionar();
+    }
+    return 1;
+  }
+  if (k == relogioFoco.devolverTecla && relogioFoco.devolverTecla) {
+    if (e->type == SDL_KEYUP) relogioFoco.devolverTecla = 0;
+    return 1;
+  }
+  if (!relogioFoco.ativo) return 0;
+  if (ok) {
+    if (e->type == SDL_KEYDOWN && !e->key.repeat) relogioFoco.okArmado = k;
+    return 1;
+  }
+  if (k == SDLK_UP) return 1;
+  if (k == SDLK_DOWN || k == SDLK_LEFT || k == SDLK_RIGHT ||
+      k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE) {
+    if (e->type == SDL_KEYDOWN) {
+      relogioFoco.devolverTecla = k;
+      relogioFocoLimpar();
+    }
+    return 1;
+  }
+  relogioFocoLimpar();
+  return 0; // Os atalhos existentes continuam com seus donos.
+}
+static int relogioPedidoPagina(void) {
+  switch (tela) {
+    case TELA_EXPLORAR: return explorar_pediu_relogio();
+    case TELA_BUSCA: return busca_pediu_relogio();
+    case TELA_BIBLIOTECA: return biblioteca_pediu_relogio();
+    case TELA_AGENDA: return agendaui_pediu_relogio();
+    case TELA_PERFIL: return perfil_pediu_relogio();
+    case TELA_SOCIAL: return amigoperfil_pediu_relogio();
+    case TELA_ADDONS: return addonsui_pediu_relogio();
+    case TELA_PLUGINS: return pluginsui_pediu_relogio();
+    case TELA_AJUSTES: return ajustes_pediu_relogio();
+    case TELA_HOME: return home_pediu_relogio();
+    default: return 0;
+  }
+}
+
 void app_evento(const SDL_Event *e) {
   // Measurement anchors: only with perf enabled and an authenticated profile.
   // D-pad scrolling still follows the real screen handlers.
@@ -3331,6 +3478,7 @@ void app_evento(const SDL_Event *e) {
   // Qualquer gesto da pessoa: a atividade ao vivo da ilha conta 30 min daqui.
   if (e->type == SDL_KEYDOWN || e->type == SDL_MOUSEBUTTONDOWN || e->type == SDL_MOUSEWHEEL)
     ilhacart_tecla(SDL_GetTicks());
+  if (relogioFocoEvento(e)) return;
 
   // A explicacao de primeira abertura bloqueia o restante da interface ate
   // ser reconhecida ou fechada. Ela aparece na Home, mas pertence ao fluxo de
@@ -3654,7 +3802,11 @@ void app_evento(const SDL_Event *e) {
   if (detail_aberto()) {
     detail_evento(e);
     // CIMA no alto da pagina (controle sem tecla colorida): o mesmo painel.
-    if (detail_aberto() && detail_pediu_social() && azulPodeAbrirSalvos(e)) alternarSalvos(0);
+    { int pedido = detail_pediu_relogio();
+      int social = detail_pediu_social();
+      if (!relogioFocoPedir(pedido) && social && detail_aberto() && azulPodeAbrirSalvos(e))
+        alternarSalvos(0);
+    }
     // No MESMO evento, como a home: diferido um quadro, as teclas seguintes
     // do controle ainda cairiam na pagina.
     if (detail_aberto() && detail_pediu_menu() && sidebar_permitida()) {
@@ -3679,6 +3831,7 @@ void app_evento(const SDL_Event *e) {
   if (ctx_aberto())     { ctx_evento(e);     return; }
   if (vertudo_aberta()) {
     vertudo_evento(e);
+    relogioFocoPedir(vertudo_pediu_relogio());
     // ESQUERDA na coluna 0 de "Ver tudo"/colecao: a barra por cima dela.
     // Por cima: DIREITA/Voltar voltam para a lista, um destino a fecha.
     if (vertudo_aberta() && vertudo_pediu_menu() && sidebar_permitida()) {
@@ -3704,6 +3857,10 @@ void app_evento(const SDL_Event *e) {
     default:              home_evento(e);       break;
   }
 
+  // Consome inclusive um pedido negado por teclado/modal: nunca o reproduz
+  // depois que a camada fechar. A selecao da pagina permanece intacta.
+  relogioFocoPedir(relogioPedidoPagina());
+
   // O menu abre AQUI, no mesmo evento que o pediu, e nao no proximo
   // app_atualizar. Diferido por um quadro, as teclas que vierem logo depois do
   // ESQUERDA — e num controle elas vem — sao entregues a tela de tras, que
@@ -3712,8 +3869,6 @@ void app_evento(const SDL_Event *e) {
     menu_abrir();
     saiuPorEsquerda = saiuPorCima = 0;
   }
-  // CIMA no alto da home (#495): o mesmo caminho do CH+.
-  if (tela == TELA_HOME && home_pediu_ilha() && azulPodeAbrirSalvos(e)) alternarSalvos(1);
 }
 
 // A tela de detalhe pode pedir para abrir OUTRO titulo (um credito da
@@ -3866,6 +4021,7 @@ static void atualizarFolha(float dt, Uint32 agora) {
 }
 
 void app_atualizar(float dt, Uint32 agora) {
+  relogioFocoValidar();
   { static int morno = -1; int ligado = ajustes_retomada_morna();
     if (morno != ligado) { morno = ligado; cacheboost_backend_morno(ligado); }
   }
@@ -6153,6 +6309,7 @@ static int miniToquePermitido(void) {
 #endif
 
 void app_desenhar(Uint32 agora) {
+  relogioFocoValidar();
   // O GUIA DA 2.0 e tela inteira e opaco: nada do app por baixo (uma camada
   // de tela cheia a menos; o fundo dele e o assado do Borrada).
   if (novidades20_aberto() && !registro_aberto() && !player_aberto()) {

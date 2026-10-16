@@ -75,6 +75,7 @@ static char atvIcone[32];       // "" = o ponto que respira
 static Uint32 atvVisto;         // SDL_GetTicks da ultima renovacao
 
 static int relogioQuer;
+static int relogioFocado;
 // Bolinha de acento no relogio em repouso: "ha enquete aberta" (enquete.c).
 static int pontoEnquete;
 static int pontoPediu;
@@ -414,7 +415,16 @@ void ilha_atividade_carga(const IlhaAtvCarga *c) {
 }
 int ilha_atividade_expansivel(void) { return atvDetalhes[0] && atvVisto && SDL_GetTicks() - atvVisto < 400u; }
 
-void ilha_relogio_visivel(int visivel) { relogioQuer = visivel; }
+void ilha_relogio_visivel(int visivel) {
+  relogioQuer = visivel;
+  if (!visivel) relogioFocado = 0;
+}
+static void desenharFocoRelogio(GfxRect r, float raio, float alpha) {
+  if (relogioFocado && relogioQuer && modalT <= 0.0f && corpoT <= 0.0f)
+    gfx_anel_fora(r, raio, 4.0f, 3.0f, 1.0f, 1.0f, 1.0f, alpha);
+}
+void ilha_relogio_focar(int foco) { relogioFocado = foco ? 1 : 0; }
+int ilha_relogio_focado(void) { return relogioFocado; }
 void ilha_ponto_enquete(int aberto) { pontoEnquete = aberto ? 1 : 0; if (!pontoEnquete) pontoPediu = 0; }
 int  ilha_ponto_pediu(void) { int p = pontoPediu; pontoPediu = 0; return p; }
 
@@ -2252,6 +2262,7 @@ static void ilha_desenharCorpo_(Uint32 agora) {
       gfx_cor(R, raio, c0, c1, c2, (solido + 0.06f * em) * A);
       if (em > 0.01f) gfx_anel(R, raio, 1.5f, 1.0f, 1.0f, 1.0f, 0.085f * em * A);
     }
+    desenharFocoRelogio(R, raio, A);
     // O "vidro": um brilho largo e fraco por cima, branco no relogio e na cor
     // do aviso quando ele abre.
     // INFO fica com a luz BRANCA do relogio, parada: e estado, nao novidade
@@ -2331,7 +2342,7 @@ void ilha_abrir_sessao(void) {
   voo = vooDissolve = vooAlvoOk = svooQuer = svoo = 0;
   vooDesde = svooDesde = pousouEm = altBase = 0; vooT = svooT = 0.0f;
   vooArte[0] = vooCapa[0] = svooPoster[0] = 0; svooIconeA = 1.0f;
-  pontoEnquete = pontoPediu = coberta = ultRectOk = 0;
+  pontoEnquete = pontoPediu = coberta = ultRectOk = relogioFocado = 0;
   W = vW = H = vH = A = conteudoA = 0.0f; ultQuadro = 0;
   dsMostra = dsVez = dsCartao = 0;
 #ifdef NV_TOUCH_UI

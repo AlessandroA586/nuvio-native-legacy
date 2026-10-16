@@ -20,6 +20,8 @@ void busca_desenhar(Uint32 agora);
 // o teclado); fechar direto do meio dos resultados perde o texto digitado sem
 // que o usuario tenha pedido isso.
 int  busca_quer_sair(void);
+int  busca_pediu_relogio(void);
+int  busca_relogio_navegavel(void);
 void busca_encerrar(void);
 
 // OK pressionado sobre um poster: devolve 1 UMA vez e escreve em

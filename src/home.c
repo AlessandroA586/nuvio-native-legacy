@@ -379,7 +379,8 @@ static float velY = 0.0f;
 static AnimBorda bordaFil[MAX_FIL];
 static AnimBorda bordaPag;
 static float bordaX(int r) { return (r >= 0 && r < MAX_FIL) ? bordaFil[r].x : 0.0f; }
-static int sair = 0, pedidoAbrir = 0, pedidoTocar = 0, pedidoMenu = 0, pedidoIlha = 0;
+static int sair = 0, pedidoAbrir = 0, pedidoTocar = 0, pedidoMenu = 0;
+static int pedidoRelogio;
 // VOLTAR NA HOME PEDE CONFIRMACAO. Ver home_evento; o aviso e desenhado em
 // home_desenhar enquanto a janela esta aberta.
 #define HOME_SAIR_MS 3000
@@ -2389,13 +2390,15 @@ static int focoVertical(int dy) {
 }
 
 void home_evento(const SDL_Event *e) {
+  pedidoRelogio = 0;
   if (e->type == SDL_QUIT) { sair = 1; return; }
   if (homevazio_ativo(nFileiras)) {
     if (homevazio_evento(e)) return;
     if (e->type == SDL_KEYDOWN) {
       SDL_Keycode k = e->key.keysym.sym;
       if (k == SDLK_LEFT || (k == SDLK_UP && ajustes_menu_topo())) { pedidoMenu = 1; return; }
-      if (k == SDLK_UP || k == SDLK_DOWN || k == SDLK_RIGHT) return;
+      if (k == SDLK_UP) { pedidoRelogio = 1; return; }
+      if (k == SDLK_DOWN || k == SDLK_RIGHT) return;
     }
   }
 #ifdef NV_TOUCH_UI
@@ -2596,11 +2599,10 @@ void home_evento(const SDL_Event *e) {
       }
       focoHero = 0; return;
     }
-    // Cima no destaque: com a barra no topo (#461) sobe para ela; sem, vai
-    // para a ilha do topo, como o CH+ (#495).
+    // Up reaches the top menu or focuses the clock until OK is pressed.
     if (k == SDLK_UP) {
       if (ajustes_menu_topo()) pedidoMenu = 1;
-      else { pedidoIlha = 1; anim_borda_bater(&bordaPag, -NV_BORDA_AMP); }
+      else { pedidoRelogio = 1; anim_borda_bater(&bordaPag, -NV_BORDA_AMP); }
       return;
     }
   }
@@ -2637,7 +2639,11 @@ void home_evento(const SDL_Event *e) {
       anim_borda_bater(&bordaFil[foco.fileira], -NV_BORDA_AMP);
   }
   else if (k == SDLK_DOWN)  focoVertical(1);
-  else if (k == SDLK_UP && !focoVertical(-1)) focoHero = 1;
+  else if (k == SDLK_UP && !focoVertical(-1)) {
+    if (ajustes_hero_ligado() && cat_n() > 0) focoHero = 1;
+    else if (ajustes_menu_topo()) pedidoMenu = 1;
+    else pedidoRelogio = 1;
+  }
 }
 
 // Reconstroi a lista a partir do catalogo. Chamada a cada quadro porque a
@@ -7814,7 +7820,8 @@ int home_pediu_tocar(void) { int v = pedidoTocar; pedidoTocar = 0; return v; }
 
 // Consome o pedido de abrir o menu lateral: quem le, zera.
 int home_pediu_menu(void) { int v = pedidoMenu; pedidoMenu = 0; return v; }
-int home_pediu_ilha(void) { int v = pedidoIlha; pedidoIlha = 0; return v; }
+int home_pediu_relogio(void) { int v = pedidoRelogio; pedidoRelogio = 0; return v; }
+int home_pediu_ilha(void) { return home_pediu_relogio(); }
 
 // CARROSSEL DA DINAMICA (detail.c): os titulos da fileira em foco, na ordem
 // da fileira, e a posicao do card focado entre eles. So nas fileiras de
@@ -7879,7 +7886,7 @@ void home_abrir_sessao(void) {
   memset(&itemFoco, 0, sizeof itemFoco);
   memset(&cartaoFoco, 0, sizeof cartaoFoco);
   itemFocoSessao = 0; itemFocoCatalogo = 0;
-  sair = pedidoAbrir = pedidoTocar = pedidoMenu = 0;
+  sair = pedidoAbrir = pedidoTocar = pedidoMenu = pedidoRelogio = 0;
   pedidoSocial = pedidoPessoaSocial = pedidoGuia = 0;
   memset(&pessoaSocial, 0, sizeof pessoaSocial); guiaId[0] = 0;
   okDesde = 0; okPressionando = okLongDisparado = okConsumirSoltura = 0;
