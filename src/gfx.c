@@ -3065,6 +3065,22 @@ void gfx_cor_painel(GfxRect r, float raio, float cr, float cg, float cb, float c
 void gfx_anel(GfxRect r, float raio, float esp,
               float cr, float cg, float cb, float ca) {
   if (r.h <= 0.0f || esp <= 0.0f) return;
+  // A ring has no fill: past max(corner, stroke) + 2 px inside the rect the
+  // shader writes alpha 0. Large rings draw only the four border strips (same
+  // rect, other uSub, so each fragment is identical to the whole draw).
+  { float m = (raio * r.h > esp ? raio * r.h : esp) + 2.0f;
+    if (r.w * r.h >= 40000.0f && r.w > 4.0f * m && r.h > 4.0f * m && progs[GFX_ANEL].sub >= 0) {
+      float x0 = m / r.w, x1 = 1.0f - x0, y0 = m / r.h, y1 = 1.0f - y0;
+      const float f[4][4] = { { 0, 0, 1, y0 }, { 0, y1, 1, 1 }, { 0, y0, x0, y1 }, { x1, y0, 1, y1 } };
+      int k;
+      if (ambPendente) gfx_ambiente_descarregar();   // keeps a deferred Dynamic background deferred
+      for (k = 0; k < 4; k++) {
+        memcpy(subAtual, f[k], sizeof subAtual);
+        gfx_rect(r, 0, GFX_ANEL, 0, esp / r.h, 0, raio, cr, cg, cb, ca);
+      }
+      subAtual[0] = subAtual[1] = 0.0f; subAtual[2] = subAtual[3] = 1.0f;
+      return;
+    } }
   gfx_rect(r, 0, GFX_ANEL, 0, esp / r.h, 0, raio, cr, cg, cb, ca);
 }
 // CONCENTRICO: o rect cresce g = folga + esp de cada lado e o raio em pixels
@@ -3843,8 +3859,30 @@ void gfx_vidro_painel_acento(GfxRect r, float raio, float fundo, float a) {
 }
 void gfx_luz_canto(GfxRect r, float raio, float cx, float cy, float alcance,
                    float cr, float cg, float cb, float ca) {
+  float x0, y0, x1, y1, dy, dx;
   if (r.w <= 0.0f || r.h <= 0.0f || ca <= 0.001f) return;
+  // Outside the circle of radius `alcance` the shader writes alpha 0: draw
+  // only the piece of the rect the circle can reach (uSub keeps vUv, so every
+  // drawn fragment is the same). 2 px of slack; the glass light reaches about
+  // a fifth of a side sheet, so most of its fill was alpha-0 fragments.
+  x0 = (cx - alcance - 2.0f) / r.w; x1 = (cx + alcance + 2.0f) / r.w;
+  y0 = (cy - alcance - 2.0f) / r.h; y1 = (cy + alcance + 2.0f) / r.h;
+  dy = cy < 0.0f ? -cy : cy > r.h ? cy - r.h : 0.0f;   // nearest row inside the rect
+  if (dy >= alcance) return;
+  dx = sqrtf(alcance * alcance - dy * dy) + 2.0f;
+  if ((cx - dx) / r.w > x0) x0 = (cx - dx) / r.w;
+  if ((cx + dx) / r.w < x1) x1 = (cx + dx) / r.w;
+  x0 = x0 < 0.0f ? 0.0f : x0; y0 = y0 < 0.0f ? 0.0f : y0;
+  x1 = x1 > 1.0f ? 1.0f : x1; y1 = y1 > 1.0f ? 1.0f : y1;
+  if (x1 <= x0 || y1 <= y0) return;
+  if (progs[GFX_LUZ].sub < 0 || (x0 <= 0.0f && y0 <= 0.0f && x1 >= 1.0f && y1 >= 1.0f)) {
+    gfx_rect(r, 0, GFX_LUZ, alcance / r.h, cx / r.w, cy / r.h, raio, cr, cg, cb, ca);
+    return;
+  }
+  if (ambPendente) gfx_ambiente_descarregar();   // pending light first; deferred background stays deferred
+  subAtual[0] = x0; subAtual[1] = y0; subAtual[2] = x1; subAtual[3] = y1;
   gfx_rect(r, 0, GFX_LUZ, alcance / r.h, cx / r.w, cy / r.h, raio, cr, cg, cb, ca);
+  subAtual[0] = subAtual[1] = 0.0f; subAtual[2] = subAtual[3] = 1.0f;
 }
 // Buraco transparente por onde o plano de video do aparelho aparece.
 //
