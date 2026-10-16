@@ -7,8 +7,10 @@ static int touched, saved;
 VideoLegendaEstilo *player_leg_estilo(void) { return &style; }
 void player_leg_estilo_tocou(int fields) { touched |= fields; }
 void player_leg_estilo_mudou(void) { saved++; }
-int assrender_ativo(void) { return 0; }
-int assrender_texto_simples(void) { return 1; }
+static int assActive;
+int player_leg_estilo_tocado(int field) { return (touched & field) != 0; }
+int assrender_ativo(void) { return assActive; }
+int assrender_texto_simples(void) { return !assActive; }
 int main(void) {
   ctl = EST_COR_BORDA;
   estEscolher(2);
@@ -28,6 +30,19 @@ int main(void) {
   assert(!(touched & PLR_LEG_POSICAO));
   estGravar(5, style.posicao + 1);
   assert(touched & PLR_LEG_POSICAO);
+  /* Authored ASS: only untouched fields read "preserved", and every field
+   * stays editable so the sheet can create the override Settings would. */
+  assActive = 1;
+  touched = PLR_LEG_COR_BORDA;
+  assert(!estiloPreservadoAss(EST_COR_BORDA));
+  assert(estiloPreservadoAss(4) && estiloPreservadoAss(EST_COR));
+  assert(!estiloPreservadoAss(0) && !estiloPreservadoAss(3) && !estiloPreservadoAss(7));
+  int fundo = style.fundo;
+  ciclarEstilo(4);
+  assert(style.fundo != fundo && (touched & PLR_LEG_FUNDO) && !estiloPreservadoAss(4));
+  ctl = EST_COR;
+  estEscolher(style.cor);
+  assert(touched & PLR_LEG_COR);
   puts("PASS sheet authored-ASS override tracking");
 }
 #else

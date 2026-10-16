@@ -566,14 +566,26 @@ static const char *const EST_FUNDO[5] = { "Nenhum", "Escuro 25%", "Escuro 50%",
 static const char *const EST_BORDA[3] = { "Nenhuma", "Contorno", "Sombra" };
 static const char *const EST_OPAC[4]  = { "100%", "75%", "50%", "25%" };
 
-/* Com o ASS desenhado pelo libass, fonte, cor, fundo, posicao e borda sao do
- * arquivo: mexer nelas desmontava karaoke e placas (ou nao fazia nada). A
- * linha continua na folha, esmaecida, dizendo por que nao muda — como o app
- * web faz desde o 1.2.0. Tamanho vira escala proporcional; opacidade e atraso
- * valem igual. */
+/* Com o ASS desenhado pelo libass, fonte, cor, fundo, posicao, borda, negrito
+ * e cor da borda sao do arquivo ate a pessoa mexer no campo (aqui ou nos
+ * Ajustes): so entao ela vence (ver player_leg_estilo_tocou em player.h). A
+ * linha intocada diz "Preservado pelo ASS", esmaecida, mas continua editavel.
+ * Tamanho vira escala proporcional; opacidade e atraso valem igual. */
+static int estCampoAss(int linha) {
+  switch (linha) {
+    case EST_FONTE: return PLR_LEG_FONTE;
+    case EST_COR: return PLR_LEG_COR;
+    case 4: return PLR_LEG_FUNDO;
+    case 5: return PLR_LEG_POSICAO;
+    case 6: return PLR_LEG_BORDA;
+    case 8: return PLR_LEG_NEGRITO;
+    case EST_COR_BORDA: return PLR_LEG_COR_BORDA;
+    default: return 0;
+  }
+}
 static int estiloPreservadoAss(int linha) {
-  return assrender_ativo() && !assrender_texto_simples() && (linha == 1 || linha == 2 || linha == 4 ||
-                               linha == 5 || linha == 6 || linha == 8 || linha == EST_COR_BORDA);
+  int campo = estCampoAss(linha);
+  return campo && assrender_ativo() && !assrender_texto_simples() && !player_leg_estilo_tocado(campo);
 }
 
 static void valorEstilo(int linha, char *dst, size_t tam) {
@@ -618,7 +630,6 @@ static void valorEstilo(int linha, char *dst, size_t tam) {
 // Atraso) abrem um controle dentro do painel (ver estiloTecla).
 static void ciclarEstilo(int linha) {
   VideoLegendaEstilo *e = player_leg_estilo();
-  if (estiloPreservadoAss(linha)) return;
   switch (linha) {
     case 4: e->fundo   = (e->fundo + 1) % 5; player_leg_estilo_tocou(PLR_LEG_FUNDO); break;
     case 6: e->borda   = (e->borda + 1) % 3; player_leg_estilo_tocou(PLR_LEG_BORDA); break;
@@ -701,19 +712,20 @@ static void estAbrir(int i) {
 }
 static void estEscolher(int i) {   // amostra / fonte `i`: aplica ao vivo
   VideoLegendaEstilo *e = player_leg_estilo();
+  int pres = estiloPreservadoAss(ctl);   // OK no valor atual tambem vence o ASS
   ctlSub = i;
   if (ctl == EST_COR) {
-    if (e->cor == i) return;
+    if (e->cor == i && !pres) return;
     e->cor = i;
     // COR: marca que a pessoa mexeu — dai em diante ela vence a cor que o
     // arquivo ASS pede (ver player_leg_estilo_tocou em player.h).
     player_leg_estilo_tocou(PLR_LEG_COR);
   } else if (ctl == EST_COR_BORDA) {
-    if (e->corBorda == i) return;
+    if (e->corBorda == i && !pres) return;
     e->corBorda = i;
     player_leg_estilo_tocou(PLR_LEG_COR_BORDA);
   } else {
-    if (e->familia == i) return;
+    if (e->familia == i && !pres) return;
     e->familia = i;
     player_leg_estilo_tocou(PLR_LEG_FONTE);
   }
@@ -1111,7 +1123,6 @@ static int estiloTecla(SDL_Keycode k, int rep) {
   else if (dy < 0) { if (*f >= FX_BARRA_COLS) *f -= FX_BARRA_COLS; }
   else if (dy > 0) { if (*f + FX_BARRA_COLS < FX_N_ESTILO) *f += FX_BARRA_COLS; }
   else if (ok) {
-    if (estiloPreservadoAss(*f)) return 1;
     if (estTipo(*f)) estAbrir(*f); else ciclarEstilo(*f);
   }
   return 1;
