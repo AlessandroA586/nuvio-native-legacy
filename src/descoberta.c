@@ -41,6 +41,7 @@
 #include <time.h>
 
 // Optional imports belong to consumers: public declarations keep producers strong.
+extern int contapend_reenviar(void) NV_PERFIL_OPCIONAL;
 extern int trakt_enfeitar_lote_sessao(CatItem *, int, uint64_t) NV_PERFIL_OPCIONAL;
 extern int recomenda_social_mesclar_sessao(CatItem *, int, int, uint64_t) NV_PERFIL_OPCIONAL;
 

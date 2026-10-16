@@ -307,7 +307,7 @@ int perfis_sessao_atual(uint64_t g) { return !g; }
 int perfis_sessao_travar(uint64_t g) { return !g; }
 void perfis_sessao_destravar(void) {}
 void perfis_invalidar_sessao(void) {}
-int perfis_puxar_sessao(uint64_t s, const char *u, const char *t) { (void)s;(void)u;(void)t; return 0; }
+int perfis_puxar_sessao(uint64_t s, const char *u, const char *t) { (void)s;(void)u;(void)t; return perfis_puxar(); }
 int sessao_identidade_local_copiar(char *u, size_t nu, char *j, size_t nj) {
   snprintf(u, nu, "%s", sessao_usuario()); return sessao_token_copiar(j, nj);
 }
