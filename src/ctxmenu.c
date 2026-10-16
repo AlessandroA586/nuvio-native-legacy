@@ -105,6 +105,8 @@ static int   aberto, idx = -1, foco;
 static int       doLista, cartazFixo, listaPedida, listaAlterou;
 static LstLista  lista;
 static float anim, animV;
+// Abertura da pagina de estilos: exponencial de saida, sem repique (~200 ms).
+static float estPag;
 static int   operacao, intencao, estadoOperacao;
 static int   espelhoAplicado;
 // A ESCRITA EM ANDAMENTO E DO SIMKL, e nao do Trakt (issue #110): diz a
@@ -679,6 +681,7 @@ static void abrirComum(int indice) {
   detalhesOk = detalhesPend; detalhesPend = 0;
   temCartaz = 0; cartazFixo = 0;
   pagina = soFileira ? 1 : 0;
+  estPag = 0.0f;
   estFoco = -1;               // montar() poe o foco na forma atual
   ordemLinha = fil_origem_de(filChave) == FIL_ORIGEM_COLECAO;
   ordemSel = fil_ordem(filChave);
@@ -922,7 +925,7 @@ static void aplicar(void) {
     return;
   }
   if (acao == OP_ESTILO) {
-    pagina = 1; estFoco = -1;
+    pagina = 1; estFoco = -1; estPag = 0.0f;
     memset(estAnim, 0, sizeof estAnim);
     montar();
     estAncorar(0.0f);
@@ -1219,6 +1222,8 @@ void ctx_atualizar(float dt, Uint32 agora) {
   // Pagina de estilos: so aqui, e so com a pagina aberta, o foco da lista anda.
   // Menu fechado (ou saido da pagina) por qualquer porta: desfaz o que nao foi
   // confirmado com OK.
+  estPag = (ajustes_animacoes_reduzidas() || !aberto || pagina != 1) ? (pagina == 1 ? 1.0f : 0.0f)
+         : anim_mola(estPag, 1.0f, dt, 14.0f);
   if (aberto && pagina == 1) {
     estAncorar(dt);
     for (i = 0; i < FIL_TIPO_N; i++)
@@ -1553,6 +1558,7 @@ int ctx_estilo_rect(GfxRect *out) {
 }
 
 static void desenhaEstilos(float a) {
+  a *= estPag;
   int i, n = nEstilos + (ordemLinha ? 1 : 0);
   float disp = NV_TELA_H - 2.0f * CTX_BORDA - 2.0f * EST_PAD;
   float lin = EST_LINHA;
@@ -1834,6 +1840,7 @@ int ctx_inline_painel_ativo(void) { return aberto && modoInline() && pagina == 0
 #endif
 void ctx_inline_pedir(int on) { inlinePend = on; }
 static int modoInline(void) { return inlineOn && doPainel && !doSocial && !doLista && !soFileira; }
+float ctx_estilo_t(void) { return estPag; }
 float ctx_inline_t(void) { return modoInline() ? (anim < 0.0f ? 0.0f : anim > 1.0f ? 1.0f : anim) : 0.0f; }
 static CtxInfoEstado estInline(const CatItem *ci) {
   CtxInfoEstado e; e.salvo = tituloSalvo(ci); e.visto = historicoDe(ci); return e;
