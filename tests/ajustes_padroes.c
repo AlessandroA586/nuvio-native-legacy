@@ -171,7 +171,8 @@ int main(void) {
 #endif
   AJ_PLAYER_EXTERNO == AJ_COLECAO_EXIBICAO + 1 &&   // #501: player externo depois
   AJ_TRAILER_AUDIO == AJ_PLAYER_EXTERNO + 1 &&      // idioma do audio do trailer
-  AJ_N == AJ_TRAILER_AUDIO + 1);   // 2.0.6: master's #535 views appended after
+  AJ_PLAYER_ANIME == AJ_TRAILER_AUDIO + 1 &&        // #205: player so para anime
+  AJ_N == AJ_PLAYER_ANIME + 1);   // 2.0.6: master's #535 views appended after
   // #492: retomada morna e o prazo do video pronto
   assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
   assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));

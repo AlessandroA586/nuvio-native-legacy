@@ -29,6 +29,17 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+        <!-- #501: players de video instalados (lista do ajuste Player) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="video/*" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="video/*" />
+            <data android:scheme="http" />
+        </intent>
     </queries>
 
     <uses-feature android:name="android.software.leanback" android:required="false" />
