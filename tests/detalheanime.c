@@ -25,6 +25,7 @@ int ajustes_busca_cinemeta(void) { return 1; }
 int ajustes_busca_nuvio(void) { return 0; }   // #311: Primeiro (padrao)
 int ajustes_ocultar_nao_lancados(void) { return 0; }   // #369: descoberta.c le o ajuste
 int ajustes_ocultar_filmes_vistos(void) { return 0; }    // #366: descoberta.c le o ajuste
+#define NV_PERFIL_SESSAO_FORTE
 #include "../src/descoberta.c"
 #include "nvtmp.h"
 Uint32 SDL_GetTicks(void) { return 0; }
@@ -166,7 +167,11 @@ int   prog_por_chave(const char *c, ProgRegistro *s) { (void)c; (void)s; return 
 void  prog_remover(const char *c)          { (void)c; }
 void  prog_marcar_removido(const char *i)  { (void)i; }
 int   prog_removido_vence(const char *i, long long ms) { (void)i; (void)ms; return 0; }
+int   prog_oculto_soltar(const char *i, long long ms) { (void)i; (void)ms; return 0; }
+int   prog_oculto_vence(const char *i, long long ms) { (void)i; (void)ms; return 0; }
 int   trakt_continuar(CatItem *s, int m)   { (void)s; (void)m; return 0; }
+int   trakt_e_a_seguir(const char *i)      { (void)i; return 0; }
+int   trakt_cw_concluiu(const char *i, long long ms) { (void)i; (void)ms; return 0; }
 int   trakt_continuar_falhou(void)        { return 0; }
 // Simkl (issue #110): sem vinculo nos testes de fileira, como o Trakt acima.
 int   simkl_ativo(void)                    { return 0; }
@@ -179,9 +184,12 @@ int   simkl_continuar(CatItem *s, int m)   { (void)s; (void)m; return 0; }
 int   simkl_e_a_seguir(const char *id)     { (void)id; return 0; }
 int   simkl_plantowatch(CatItem *s, int m) { (void)s; (void)m; return 0; }
 int   ajustes_salvos_no_simkl(void)        { return 0; }
-uint64_t perfis_sessao_geracao(void) { return 1; }
-int perfis_sessao_atual(uint64_t s) { return s == 1; }
-int perfis_sessao_travar(uint64_t s) { return s == 1; }
+// An isolated profile visit starts at generation 1. The title-identity
+// suite advances it to exercise stale synchronous lookup ownership.
+static uint64_t fakePerfilSessao = 1;
+uint64_t perfis_sessao_geracao(void) { return fakePerfilSessao; }
+int perfis_sessao_atual(uint64_t s) { return s == fakePerfilSessao; }
+int perfis_sessao_travar(uint64_t s) { return perfis_sessao_atual(s); }
 void perfis_sessao_destravar(void) {}
 int trakt_enfeitar_lote_sessao(CatItem *s, int n, uint64_t sessao) {
   (void)sessao; (void)s; (void)n; return 0;
