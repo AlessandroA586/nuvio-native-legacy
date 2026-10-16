@@ -87,7 +87,7 @@ void cacheboost_backend_buffer(int mb);
 // Settings "Tamanho do buffer" index (0 Auto, 1 = 64, 2 = 128, 3 = 256 MiB)
 // -> MiB for the next open. Steps down the 256/128/64 ladder until free RAM
 // (`livreMb`, MemAvailable; < 0 = unknown) keeps CB_BUFFER_PISO_MB after the
-// buffer; nothing fits or unknown -> 0 (Auto). Logs any cut.
+// buffer plus the DTS active range (4 MiB); nothing fits or unknown -> 0 (Auto). Logs any cut.
 #define CB_BUFFER_PISO_MB 192
 int cacheboost_buffer_mb(int opcao, long livreMb);
 // Off Android: the last cacheboost_backend_buffer value (webOS DTS/DV read-ahead).

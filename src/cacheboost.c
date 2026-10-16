@@ -145,7 +145,8 @@ double cacheboost_volume_db(int pct) {
 
 int cacheboost_buffer_mb(int opcao, long livreMb) {
   int pedido = opcao >= 1 && opcao <= 3 ? 32 << opcao : 0, mb = pedido;
-  while (mb && (livreMb < 0 || livreMb - mb < CB_BUFFER_PISO_MB)) mb = mb > 64 ? mb / 2 : 0;
+  // DTS keeps one active 4 MiB range in addition to the queued buffer.
+  while (mb && (livreMb < 0 || livreMb - mb - 4 < CB_BUFFER_PISO_MB)) mb = mb > 64 ? mb / 2 : 0;
   if (mb != pedido)
     printf("[buffer] %d MiB pedido, %d MiB usado (livre %ld MiB, piso %d)\n", pedido, mb, livreMb, CB_BUFFER_PISO_MB);
   return mb;
