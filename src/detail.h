@@ -6,6 +6,7 @@
 // apenas o titulo: e esse rect que da continuidade ao movimento.
 #ifndef NV_DETAIL_H
 #define NV_DETAIL_H
+#include <stddef.h>
 #include <SDL2/SDL.h>
 #include "home.h"
 
@@ -46,6 +47,10 @@ int  detail_assentado(void);
 // sozinha: reproduzir e marcar na lista. O detalhe nao chama o player nem a
 // biblioteca direto — quem conhece as outras telas e o roteador.
 int  detail_indice(void);
+// Copia a arte selecionada desta pagina somente para o mesmo titulo/tipo.
+// Nao entrega ponteiro do catalogo nem textura; 0 se a pagina saiu, mudou de
+// dono ou a URL nao cabe. `poster` opcional indica a reserva em retrato.
+int  detail_arte_titulo(const CatItem *titulo, char *saida, size_t tam, int *poster);
 // Temporada e episodio em foco (1 = ha episodio; 0 = titulo sem episodios).
 int  detail_ep_foco(int *temporada, int *episodio);
 int  detail_pediu_reproduzir(void);   // consome o pedido
