@@ -27,7 +27,7 @@ typedef struct {
   int canais;           // 0 = nao se sabe
   int dts;              // DTS ou TrueHD/MLP (audioesc_dts_truehd)
   int pode;             // o alvo toca (ou converte) esta faixa
-  int numero;           // VideoFaixa.numero; -1 = nao se sabe (sem faixa exata)
+  int numero;           // audio memory identity; -1 = unknown (no exact track)
 } AudioCand;
 
 // De onde veio a escolha (para o log).
@@ -39,7 +39,7 @@ int audioesc_dts_truehd(const char *codec, const char *rotulo);
 
 // A escolha lembrada. `binge` e o bingeGroup da fonte em que a pessoa a fez
 // ("" = a fonte nao declarou: nunca ha faixa exata) e `numero` o
-// VideoFaixa.numero dela la.
+// audio memory identity at that source (video_audio_numero_memoria).
 typedef struct {
   char idioma[16], codec[24], rotulo[48];
   int canais;
@@ -53,7 +53,7 @@ typedef struct {
 void audioesc_titulo(const char *chave);
 // A pessoa escolheu esta faixa a mao (folha de audio): vale ate outro titulo.
 void audioesc_lembrar(const char *idioma, const char *codec, const char *rotulo, int canais);
-// O mesmo com a faixa exata: `numero` (VideoFaixa.numero) na fonte de agora,
+// The same with the exact track: `numero` (audio memory identity) at this source,
 // cujo bingeGroup vem de audioesc_fonte_binge. Grava no perfil.
 void audioesc_lembrar_faixa(const char *idioma, const char *codec, const char *rotulo, int canais,
                             int numero);

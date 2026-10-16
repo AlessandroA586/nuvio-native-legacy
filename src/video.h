@@ -338,6 +338,15 @@ typedef struct {
   char nome[128];
 } VideoFaixa;
 
+// Identity used by candidates and manual audio memory, separate from selectTrack.
+static inline int video_audio_numero_memoria(const VideoFaixa *f) {
+#ifdef NV_TPK
+  // MKV TrackNumber occupies a separate namespace from native player indices.
+  if (f->numero < 0 && f->stream_id > 0) return 0x40000000 | f->stream_id;
+#endif
+  return f->numero;
+}
+
 int  video_n_audio(void);
 int  video_n_legenda(void);
 const VideoFaixa *video_audio(int i);

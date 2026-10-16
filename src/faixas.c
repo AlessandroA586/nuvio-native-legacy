@@ -911,7 +911,8 @@ static void aplicar(void) {
     // dela para a mesma release (bingeGroup).
     { const VideoFaixa *f = video_audio(foco[0]);
       if (f && !player_id_canal()[0])
-        audioesc_lembrar_faixa(f->idioma, f->codec, f->rotulo, f->canais, f->numero); }
+        audioesc_lembrar_faixa(f->idioma, f->codec, f->rotulo, f->canais,
+                              video_audio_numero_memoria(f)); }
     video_escolher_audio(foco[0]);
   } else {
     // A pessoa escolheu: a automatica nao mexe mais nesta sessao, nem se a
