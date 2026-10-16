@@ -18,10 +18,14 @@ start = source.index('static void deeplinkAbrir(')
 end = source.index('\nstatic void spotAbrir(', start)
 with tempfile.TemporaryDirectory(prefix='deeplink-app-') as tmp:
     Path(tmp, 'deeplink_abrir.inc').write_text(source[start:end])
+    dispatch = source.index('  { DeepLink dl;')
+    dispatch_end = source.index('\n  //', dispatch)
+    Path(tmp, 'deeplink_dispatch.inc').write_text(source[dispatch:dispatch_end])
     binary = str(Path(tmp, 'test'))
     flags = ['-fsanitize=address,undefined'] if os.environ.get('SANITIZE') else []
     subprocess.run(['cc', *flags, 'src/deeplink.c', 'tests/deeplink_app.c',
                     '-Isrc', '-I' + tmp, '-O1', '-g', '-Wall', '-o', binary], check=True)
     subprocess.run([binary], check=True)
+    subprocess.run([binary, 'pending'], check=True)
     print('deeplink app: ok')
 PY

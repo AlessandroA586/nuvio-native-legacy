@@ -4599,7 +4599,8 @@ void app_atualizar(float dt, Uint32 agora) {
     } else if (o == ILHA_PEDIU_DEPOIS) ilhacart_adiar(qual);
   }
   { DeepLink dl;
-    if (tela != TELA_LOGIN && tela != TELA_ESCOLHA_PERFIL && deeplink_pegar(&dl)) deeplinkAbrir(&dl); }
+    if (tela != TELA_LOGIN && tela != TELA_ESCOLHA_PERFIL &&
+        !desc_titulo_buscando() && deeplink_pegar(&dl)) deeplinkAbrir(&dl); }
   // Da pagina do titulo, um titulo escolhido no painel de Salvos/avisos TROCA a
   // pagina (a de baixo fecha seca). So esse pedido: os demais seguem de fora.
   if (detail_aberto() && !player_aberto()) {

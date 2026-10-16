@@ -139,7 +139,7 @@ int deeplink_parse(const char *url, DeepLink *o) {
     if (n != 3 && n != 5) goto lixo;
     o->tipo = DL_TOCAR;
     if (n == 5) {
-      if (!numero(seg[3], len[3], 9999, &t) || !numero(seg[4], len[4], 99999, &e) || e < 1) goto lixo;
+      if (!numero(seg[3], len[3], 9999, &t) || t < 1 || !numero(seg[4], len[4], 99999, &e) || e < 1) goto lixo;
       o->temporada = (int)t; o->episodio = (int)e;
     }
   } else goto lixo;

@@ -32,8 +32,10 @@ int main(void) {
   CHECK(d.tipo == DL_TOCAR && d.episodio == 0);
   d = ok("nuvio-legacy://play/series/tt0944947/2/5");
   CHECK(d.tipo == DL_TOCAR && d.temporada == 2 && d.episodio == 5);
-  d = ok("nuvio-legacy://play/series/tt0944947/0/1");
-  CHECK(d.temporada == 0 && d.episodio == 1);
+  // Explicit season zero must not silently play the default/resume episode.
+  ruim("nuvio-legacy://play/series/tt0944947/0/1");
+  ruim("nuvio-legacy://play/series/tt0944947/00/1");
+  ruim("nuvio-legacy://play/movie/tt0111161/0/1");
   d = ok("nuvio-legacy://search?q=the+matrix%20reloaded");
   CHECK(d.tipo == DL_BUSCA && !strcmp(d.consulta, "the matrix reloaded"));
   d = ok("nuvio-legacy://search?a=1&q=caf%C3%A9%0A%09x");
