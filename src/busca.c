@@ -188,6 +188,7 @@ static int   pedidoPessoa = 0;
 static SpotPedido pedidoP;
 static int nFil = 0;
 static int sair = 0;
+static int pediuRelogio;
 static int pedido = -1;             // indice de catalogo escolhido, -1 = nenhum
 static float animTecla[BU_KB_MAX_FIL + 1][BU_KB_COLS];
 static float animRes[BU_MAX_FILEIRAS][BU_MAX_POR_FIL];
@@ -750,7 +751,7 @@ static void recentesVertical(int dy) {
     painel = 1; focoRes.fileira = 0; focoRes.coluna = c;
   } else if (dy < 0 && buTecladoNativo()) {
     painel = 0; campoFoco = 1;
-  }
+  } else if (dy < 0) pediuRelogio = 1;
 }
 
 // OK curto: refaz a busca com o termo (e ele sobe para o topo), ou, no
@@ -896,7 +897,7 @@ int busca_iniciar(void) {
   layoutCir = 0;
   kbMontar();
   focus_iniciar(&focoKb, kbFil + 1, KB_COLUNAS);
-  painel = 0; sair = 0; pedido = -1; pedidoPessoa = 0;
+  painel = 0; sair = 0; pediuRelogio = 0; pedido = -1; pedidoPessoa = 0;
   sugestao = 0; nPess = 0; sugDesloc = 0.0f;
   nConsulta = 0; consulta[0] = 0;
   consultaFiltrada[0] = 0;
@@ -914,10 +915,12 @@ int busca_iniciar(void) {
   return 1;
 }
 
-void busca_encerrar(void) { temItemFoco = 0; st_fechar(ST_BUSCA); celb_fechar_dono(CELB_BUSCA); }
+void busca_encerrar(void) { temItemFoco = 0; pediuRelogio = 0; st_fechar(ST_BUSCA); celb_fechar_dono(CELB_BUSCA); }
 const char *busca_consulta(void) { return consulta; }
 int busca_foco_campo(void) { return painel == 0 ? campoFoco : 0; }
 int  busca_quer_sair(void) { return sair; }
+int busca_pediu_relogio(void) { int v = pediuRelogio; pediuRelogio = 0; return v; }
+int busca_relogio_navegavel(void) { return !teclado_aberto() && st_estado() == ST_PARADO; }
 
 int busca_pediu_abrir(int *indiceCatalogo) {
   if (pedido < 0) return 0;
@@ -978,6 +981,7 @@ static int menuNoResultado(void) {
 }
 
 void busca_evento(const SDL_Event *e) {
+  pediuRelogio = 0;
   if (e->type == SDL_QUIT) { sair = 1; return; }
 #ifdef NV_TOUCH_UI
   if (e->type == SDL_KEYDOWN) toqueBuscaRetomarFoco();
@@ -1070,6 +1074,7 @@ void busca_evento(const SDL_Event *e) {
 
   if (painel == 0 && campoFoco) {
     switch (k) {
+      case SDLK_UP: pediuRelogio = 1; return;
       case SDLK_DOWN:
         if (buTecladoNativo()) {
           if (nFil > 0 && !sugestao) { registrarConsulta(); painel = 1; }
@@ -1130,6 +1135,7 @@ void busca_evento(const SDL_Event *e) {
         if (!focus_mover_grade(&focoKb, 0, -1)) {
           if (st_ime_disponivel()) campoFoco = 1;
           else if (celb_disponivel()) campoFoco = 3;
+          else pediuRelogio = 1;
         }
         break;
       case SDLK_DOWN:   focus_mover_grade(&focoKb, 0,  1); break;
@@ -1172,6 +1178,7 @@ void busca_evento(const SDL_Event *e) {
         }
         recentesAjustarFoco();
       } else if (!moveu && buTecladoNativo()) { painel = 0; campoFoco = 1; }
+      else if (!moveu) pediuRelogio = 1;
       break;
     }
     case SDLK_DOWN: focus_mover(&focoRes, 0,  1); break;

@@ -103,6 +103,7 @@ void home_pedir_abrir(void);   // pede a pagina do titulo focado (menu do cartao
 int  home_foco_retomada(void); // card focado e de retomada (OK nele toca)
 int  home_pediu_tocar(void);   // OK num card de retomada com "OK no card" = Retomar
 int  home_pediu_menu(void);    // ESQUERDA na primeira coluna: chama o menu
+int  home_pediu_relogio(void); // CIMA alem do topo; consumido pelo roteador
 int home_pediu_social(void);
 int home_pediu_pessoa_social(CatItem *saida);
 // OK numa fileira de canal ("Ver tudo" dela, ou num cartao de canal — que ai

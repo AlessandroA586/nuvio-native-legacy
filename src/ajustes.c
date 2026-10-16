@@ -2198,6 +2198,7 @@ static float ajToqueRegistrar(int id, GfxRect r, float *offset, float maximo, fl
 #endif
 static float paginaA = 1.0f;   // entrada da pagina da categoria (0..1)
 static int sair = 0;
+static int pediuRelogio;
 
 // Rascunho e navegação separados dos valores persistentes.
 static int uxIndice = 2;
@@ -5265,6 +5266,7 @@ static void conferirPadroes(void) {
 
 static void ajMovReiniciar(void);
 int ajustes_iniciar(void) {
+  pediuRelogio = 0;
   ajMovReiniciar();
   faRetornarFolha = 0; faAddonEditar[0] = 0; ajFalhaEspelhar(); ajLegendaEspelhar();
   uxVeioBusca = uxAbrirOp >= 0;
@@ -5329,8 +5331,9 @@ int ajustes_iniciar(void) {
   rotulosDeIdioma();
   return 1;
 }
-void ajustes_encerrar(void) { faRetornarFolha = 0; uxCancelar(); uxRetornarOp = -1; guiaFechar(); ajlog_vazar_tudo(); }
+void ajustes_encerrar(void) { pediuRelogio = 0; faRetornarFolha = 0; uxCancelar(); uxRetornarOp = -1; guiaFechar(); ajlog_vazar_tudo(); }
 int ajustes_quer_sair(void) { return sair; }
+int ajustes_pediu_relogio(void) { int v = pediuRelogio; pediuRelogio = 0; return v; }
 
 // Valor das linhas so de leitura. O espaco em disco NAO e um numero inventado:
 // vem do cache de texturas, que e exatamente o que "imagens" consome no
@@ -7704,6 +7707,7 @@ static const char *uxCaminho(int op);
 static const char *uxBloco(int op);
 static void eventoTela(const SDL_Event *e);
 void ajustes_evento(const SDL_Event *e) {
+  pediuRelogio = 0;
 #ifdef NV_TOUCH_UI
   if (e->type == SDL_KEYDOWN) ajToqueLimpar();
 #endif
@@ -8758,6 +8762,13 @@ int ajustes_relogio_cabe(void) {
   if (ta == TRA_PEDINDO || ta == TRA_AGUARDANDO || ta == TRA_ERRO) return 0;
   if (sa == SMK_PEDINDO || sa == SMK_AGUARDANDO || sa == SMK_ERRO) return 0;
   return 1;
+}
+
+int ajustes_relogio_navegavel(void) {
+  DisEstado da = discord_estado();
+  return ajustes_relogio_cabe() && !filAberta && !frAberta && !uxEditor &&
+         !guiaAberto && !apoioAberto && !riscoFolha &&
+         da != DIS_PEDINDO && da != DIS_AGUARDANDO && da != DIS_ERRO;
 }
 
 #ifdef AJUSTES_TESTE

@@ -1667,6 +1667,10 @@ int main(int argc, char **argv) {
       // Teclado do sistema (entrada_texto.h): ve o texto ANTES de qualquer tela.
       texto_sistema_observar(&e);
       if (e.type == SDL_WINDOWEVENT) {
+        // A perda de foco cancela a selecao do relogio e qualquer OK armado;
+        // app_evento consome estes avisos antes de entregar teclas as paginas.
+        if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST || e.window.event == SDL_WINDOWEVENT_HIDDEN)
+          app_evento(&e);
         if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
           ponteiro_evento(&e, app_evento);
 #ifdef NV_TOUCH_UI

@@ -79,6 +79,7 @@ static float vtCardAltura(void);
 #define VT_PAN_ART_H 330.0f
 #define VT_PAN_ART_W 220.0f
 static int   aberta, foco, pedAbrir = -1;
+static int pedRelogio;
 static float anim, scrollY, velY;
 #ifdef NV_TOUCH_UI
 static int toqueLivre;
@@ -499,6 +500,7 @@ static void carregarFonte(void) {
 
 void vertudo_colecao(const ColFolder *folder) {
   int i;
+  pedRelogio = 0;
   if(!folder||!folder->nSources)return;
   vitCancelar();
   memset(tabAnim, 0, sizeof tabAnim);
@@ -520,6 +522,7 @@ void vertudo_colecao(const ColFolder *folder) {
 void vertudo_abrir(const char *base, const char *tipo, const char *catId,
                    const char *tit) {
   vitCancelar();
+  pedRelogio = 0;
   aberta = 1; foco = 0; scrollY = 0.0f; velY = 0.0f; pedAbrir = -1;
 #ifdef NV_TOUCH_UI
   toqueLivre = 0;
@@ -548,13 +551,14 @@ void vertudo_abrir(const char *base, const char *tipo, const char *catId,
 
 int vertudo_aberta(void) { return aberta; }
 int vertudo_foco(void) { return foco; }
-void vertudo_fechar_seco(void) { vitCancelar(); aberta = 0; anim = 0.0f; }
+void vertudo_fechar_seco(void) { vitCancelar(); aberta = 0; anim = 0.0f; pedRelogio = 0; }
 int vertudo_pediu_abrir(void) { int v = pedAbrir; pedAbrir = -1; return v; }
 // ESQUERDA na coluna 0 da grade (ou na primeira aba da colecao): a barra
 // lateral abre POR CIMA da lista (dono, 03/10). Antes a coluna 0 voltava para
 // o ultimo da linha de cima. app.c le no mesmo evento.
 static int pedMenu;
 int vertudo_pediu_menu(void) { int v = pedMenu; pedMenu = 0; return v; }
+int vertudo_pediu_relogio(void) { int v = pedRelogio; pedRelogio = 0; return v; }
 
 static int nItens(void) { return desc_vertudo_n(); }
 
@@ -1486,7 +1490,8 @@ static void vitEvento(int k) {
   vitProjetar();
   vitMexeu = 1;
   if (tabFocus) {   // o botao "Exibição", acima do destaque
-    if (k == SDLK_LEFT) pedMenu = 1;
+    if (k == SDLK_UP) pedRelogio = 1;
+    else if (k == SDLK_LEFT) pedMenu = 1;
     else if (k == SDLK_DOWN && (vitTemItens() || temMaisVistos())) {
       tabFocus = 0;
       if (!vitTemItens()) vitFocarMais();
@@ -1494,7 +1499,7 @@ static void vitEvento(int k) {
     else if (enter) alternarExibicao();
     return;
   }
-  if (vitFR >= vitN) return;
+  if (vitFR >= vitN) { if (k == SDLK_UP) tabFocus = 1, tabCursor = nAbas(); return; }
   l = &vitLin[vitFR];
   if (k == SDLK_LEFT) { if (vitFC > 0) vitFC--; else pedMenu = 1; }
   else if (k == SDLK_RIGHT) { if (vitFC + 1 < l->n) vitFC++; }
@@ -1689,6 +1694,7 @@ static void toqueVertudoRetomarFoco(void) {
 
 void vertudo_evento(const SDL_Event *e) {
   int n = nItens(), k;
+  pedRelogio = 0;
   if (!aberta) return;
   if (lay != VT_LAY_VITRINE) n = atualizarGrade();
 #ifdef NV_TOUCH_UI
@@ -1713,6 +1719,7 @@ void vertudo_evento(const SDL_Event *e) {
   if (lay == VT_LAY_VITRINE) { vitEvento(k); return; }
   if(collection&&tabFocus) {
     int na = nAbas();
+    if(k==SDLK_UP)pedRelogio=1;
     if(k==SDLK_LEFT){ if(tabCursor>0)tabCursor--; else pedMenu=1; }
     if(k==SDLK_RIGHT&&tabCursor<na)tabCursor++;
     if(k==SDLK_RETURN||k==SDLK_KP_ENTER) {
@@ -1733,13 +1740,13 @@ void vertudo_evento(const SDL_Event *e) {
   }
   // ESQUERDA no primeiro item de uma linha: a barra lateral (ver pedMenu).
   if (k == SDLK_LEFT && (n < 1 || foco == 0 || celLin[foco - 1] != celLin[foco])) { pedMenu = 1; return; }
-  if (n < 1) return;
+  if (n < 1) { if (k == SDLK_UP) pedRelogio = 1; return; }
   if (k == SDLK_RIGHT && foco + 1 < n) foco++;
   else if (k == SDLK_LEFT) foco--;
   else if (k == SDLK_DOWN) { int v = vizinhoNaLinha(n, celLin[foco] + 1);
                              foco = v >= 0 ? v : n - 1; }
   else if (k == SDLK_UP) { int v = vizinhoNaLinha(n, celLin[foco] - 1);
-                           if (v >= 0) foco = v; }
+                           if (v >= 0) foco = v; else pedRelogio = 1; }
   else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) abrirFocado();
   lembrarFoco();
   // Chegando perto do fim, pede a proxima pagina. Antes de o dono ver o vazio,

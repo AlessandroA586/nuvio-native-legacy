@@ -260,6 +260,7 @@ static int uxEvento(SDL_Keycode k) {
   // para a linha de onde veio, que segue a mesma.
   if (uxCabLayout && !focoIndice) {
     int lista = valor[AJ_LAYOUT_AJUSTES] == 1;
+    if (k == SDLK_UP) { pediuRelogio = 1; return 1; }
     if (uxOk(k) || (k == SDLK_RIGHT && !lista) || (k == SDLK_LEFT && lista)) return uxAlternarLayout();
     if (uxVoltar(k) || k == SDLK_LEFT) { uxCabLayout = 0; focoIndice = 1; sairArmado = 0; return 1; }
     if (k == SDLK_DOWN) uxCabLayout = 0;
@@ -312,6 +313,7 @@ static int uxEvento(SDL_Keycode k) {
       } else if (k == SDLK_UP) {
         if (t == AJ2_T_TOUR) uxTopo = AJ2_T_BUSCA;
         else if (t == AJ2_T_RESOLVER) uxTopo = AJ2_T_PERFIL;
+        else pediuRelogio = 1;
       }
       return 1;
     }
@@ -349,7 +351,7 @@ static int uxEvento(SDL_Keycode k) {
   }
   if (uxIndice == 1) {
     if (uxVoltar(k) || k == SDLK_LEFT) { focoIndice = 1; return 1; }
-    if (k == SDLK_UP && uxDifFoco > 0) uxDifFoco--;
+    if (k == SDLK_UP) { if (uxDifFoco > 0) uxDifFoco--; else pediuRelogio = 1; }
     if (k == SDLK_DOWN && uxDifFoco + 1 < uxNDifs) uxDifFoco++;
     if (uxOk(k) && uxNDifs && !uxAlternarDireto(uxDifs[uxDifFoco])) uxAbrirEditor(uxDifs[uxDifFoco]);
     return 1;
@@ -368,6 +370,7 @@ static int uxEvento(SDL_Keycode k) {
       if (focavel(i)) { focar(i); return 1; }
     // #339: Cima na primeira linha sobe para o "Painel | Lista" do cabecalho.
     if (dir < 0 && uxIndice >= 2 && !uxVeioBusca && ajLayoutSelecionavel()) uxCabLayout = 1;
+    else if (dir < 0) pediuRelogio = 1;
     return 1;
   }
   if (k == SDLK_RIGHT) return 1;
