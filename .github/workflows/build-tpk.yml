@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -128,3 +128,13 @@ jobs:
             build/tpk/*.tpk
             build/tpk/*.so
           if-no-files-found: error
+
+      - name: Attach TPK and Auto-Update Binaries to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.0.6.2
+          files: |
+            build/tpk/*.tpk
+            build/tpk/*.so
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
