@@ -6378,6 +6378,15 @@ static const char *ajudaOpcaoBase(int op) {
     if (op == AJ_RAIL_BLUR) return "Ative a barra lateral moderna para usar o desfoque.";
     if (op == AJ_HERO_CATALOGOS) return "Ative Mostrar destaque para exibir os catálogos no topo da Home.";
     if (op == AJ_HERO_CHEIO) return "Só vale no layout Moderna. No Padrão o destaque é um banner, e na Dinâmica ele ocupa a largura toda e sobe junto com a rolagem.";
+    // #205: uma frase por causa, na mesma ordem de inativa().
+    if (op == AJ_P2P_LIMITE || op == AJ_P2P_DESTINO) {
+      if (!p2pmotor_disponivel()) return "O motor P2P embutido não está disponível nesta TV.";
+      if (p2pEndereco[0])
+        return op == AJ_P2P_LIMITE
+          ? "O limite vale só para o motor desta TV. Com um servidor P2P configurado, quem guarda o cache é o servidor."
+          : "O cache fica no servidor P2P configurado em Endereço do servidor P2P. Escolha Nesta TV para usar o motor desta TV.";
+      return "Conecte um pendrive USB com espaço livre na TV para guardar o cache nele. Sem pendrive o cache fica no armazenamento interno.";
+    }
     if (op == AJ_DTS_AC3) return "Não disponível nesta TV. Só a LG converte o DTS dentro do app.";
     if (op == AJ_CACHE_SEEK) return "Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.";
     if (op == AJ_DESCOBRIR) return "A tela Descobrir do app web ainda não existe nesta TV. A escolha fica guardada na conta.";
