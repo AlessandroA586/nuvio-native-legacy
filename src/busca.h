@@ -40,6 +40,9 @@ int  busca_pediu_pessoa(SpotPedido *p);
 // foco nos resultados.
 int  busca_item_focado(HomeItem *out);
 
+// Preenche o campo e busca (deeplink nuvio-legacy://search?q=).
+void busca_definir_consulta(const char *t);
+
 // O texto do campo (UTF-8), como a pessoa o digitou. Para testes.
 const char *busca_consulta(void);
 // Foco na barra: 0 teclado, 1 campo, 2 Falar, 3 celular. Para testes.

@@ -18,6 +18,7 @@
 #include "teclado.h"
 #include "ponteiro.h"
 #include "app.h"
+#include "deeplink.h"
 #include "telefoneui.h"
 #include "descanso.h"
 #include "iconeapp.h"
@@ -3139,6 +3140,34 @@ static int spotPode(void) {
   return tela != TELA_LOGIN && tela != TELA_ESCOLHA_PERFIL && !player_aberto() &&
          !spainel_aberto() && !guia_overlay_aberta();
 }
+// LINK EXTERNO (deeplink.h, docs/deeplink.md): o titulo/busca/reproducao que
+// outro app, o launcher ou o adb pediu. Fora do player e do detalhe de antes,
+// como um clique do Spotlight. Titulo fora do catalogo so abre (a descoberta o
+// busca num fio); o episodio pedido so toca se ele ja esta no catalogo.
+static void deeplinkAbrir(const DeepLink *d) {
+  int k = -1, i;
+  if (player_aberto() || player_retido()) player_encerrar();
+  if (detail_aberto()) detail_fechar_seco();
+  if (spainel_aberto()) spainel_fechar();
+  if (d->tipo == DL_BUSCA) {
+    trocarTela(TELA_BUSCA); menu_definir_destino(MENU_BUSCAR);
+    busca_definir_consulta(d->consulta);
+    return;
+  }
+  if (d->imdb[0]) k = cat_indice_por_imdb(d->imdb);
+  else for (i = 0; i < cat_n() && k < 0; i++) {
+    const CatItem *ci = cat_item(i);
+    if (ci && ci->tmdb == d->tmdb && strcmp(ci->tipo, "channel")) k = i;
+  }
+  cwTocarT = cwTocarE = 0; cwEspera = 0;
+  if (k >= 0) {
+    if (d->tipo == DL_TOCAR && d->episodio > 0) { cwTocarT = d->temporada; cwTocarE = d->episodio; }
+    abrirPorIndice(k);
+    if (d->tipo == DL_TOCAR && detail_aberto()) detail_pedir_reproduzir();
+  } else if (d->imdb[0]) desc_pedir_titulo(d->imdb);
+  else desc_pedir_titulo_tmdb(d->tmdb, d->serie ? "tv" : "movie");
+}
+
 static void spotAbrir(int voz) {
   static Uint32 ultimo;
   Uint32 t = SDL_GetTicks();
@@ -4569,6 +4598,8 @@ void app_atualizar(float dt, Uint32 agora) {
       ilhacart_dispensar(qual);
     } else if (o == ILHA_PEDIU_DEPOIS) ilhacart_adiar(qual);
   }
+  { DeepLink dl;
+    if (tela != TELA_LOGIN && tela != TELA_ESCOLHA_PERFIL && deeplink_pegar(&dl)) deeplinkAbrir(&dl); }
   // Da pagina do titulo, um titulo escolhido no painel de Salvos/avisos TROCA a
   // pagina (a de baixo fecha seca). So esse pedido: os demais seguem de fora.
   if (detail_aberto() && !player_aberto()) {
