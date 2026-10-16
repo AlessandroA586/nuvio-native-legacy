@@ -34,6 +34,7 @@
 #include "video_reconexao.h"
 #include "idioma.h"
 #include "linguas.h"
+#include "audioescolha.h"
 #include "streamfitpassiva.h"
 #include "audsync.h"
 #include "cacheboost.h"
@@ -386,20 +387,24 @@ static int erroDeRede(int cod) { return cod >= 2000 && cod <= 2002; }
 
 void video_escolher_audio(int i);
 
-// Mesma regra do video_tpk.c: sem preferencia ou sem faixa que case, fica a do
-// arquivo.
+// A ORDEM DO AUDIO (audioescolha.h), como no video_tpk.c; sem regra que
+// decida, fica a do arquivo.
 static void escolherAudioPreferido(void) {
-  const char *pref = ling_audio();
-  int i;
-  if (!pref[0] || nAudio < 2) return;
-  if (audioAtual >= 0 && audioAtual < nAudio && faixaAudio[audioAtual].idioma[0] &&
-      ling_casa(faixaAudio[audioAtual].idioma, pref)) return;
+  AudioCand c[MAX_FAIXAS];
+  int i, o, k;
+  if (nAudio < 2) return;
   for (i = 0; i < nAudio; i++) {
-    if (!faixaAudio[i].idioma[0] || !ling_casa(faixaAudio[i].idioma, pref)) continue;
-    printf("[video] audio preferido: %s (faixa %d de %d)\n", ling_nome(faixaAudio[i].idioma), i + 1, nAudio);
-    video_escolher_audio(i);
-    return;
+    c[i].idioma = faixaAudio[i].idioma; c[i].codec = faixaAudio[i].codec; c[i].rotulo = faixaAudio[i].rotulo;
+    c[i].canais = faixaAudio[i].canais;
+    // O FFmpeg do player decodifica DTS/TrueHD: aqui nao ha o limite da LG e
+    // da Samsung, entao DTS/TrueHD concorre igual (dts = 0): no idioma vale a
+    // primeira faixa do arquivo, seja qual for o codec (dono, 15/10).
+    c[i].dts = 0; c[i].pode = 1;
   }
+  k = audioesc_escolher(c, nAudio, &o);
+  if (k < 0 || k == audioAtual) return;
+  printf("[video] audio pela ordem (%s): %s (faixa %d de %d)\n", audioesc_origem_nome(o), faixaAudio[k].rotulo, k + 1, nAudio);
+  video_escolher_audio(k);
 }
 
 // --- natives (Kotlin -> C) ----------------------------------------------------

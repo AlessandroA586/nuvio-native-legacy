@@ -29,7 +29,7 @@
 #include "../src/video.c"
 
 static int pedidos, aceita = 1, assinaturas, respostas;
-static char resposta[256];
+static char resposta[256], edgeColor[256];
 static int seekRequests;
 static double seekPosition;
 
@@ -37,6 +37,8 @@ static Filtro screensaverCallback;
 static int fakeCall(LSHandle *h, const char *uri, const char *carga, Filtro cb,
                     void *ctx, unsigned long *tok, void *erro) {
   (void)h; (void)uri; (void)carga; (void)cb; (void)ctx; (void)tok; (void)erro;
+  if (strstr(uri, "setSubtitleCharacterEdgeColor"))
+    snprintf(edgeColor, sizeof edgeColor, "%s", carga);
   pedidos++;
   if (strstr(uri, "/seek")) {
     seekRequests++;
@@ -121,6 +123,15 @@ int main(void) {
   evento("{\"paused\":true}", 7); assert(!video_pausa_confirmada());
   aceita = 0; video_pausar(1); assert(!video_pausa_confirmada());
   puts("video_pausa_lg: intencao, ack, geracao, play, erro e unload ok");
+  {
+    VideoLegendaEstilo style = {120, 0, 0, 3, 1};
+    aceita = 1; ligado = 1; style.corBorda = 2;
+    video_legenda_estilo(&style);
+    assert(strstr(edgeColor, "\"charEdgeColor\":\"yellow\""));
+    style.corBorda = -1; video_legenda_estilo(&style);
+    assert(strstr(edgeColor, "\"charEdgeColor\":\"black\""));
+    puts("PASS native LG outline color and default fallback");
+  }
 
   // Registro no caminho real de um load valido, nunca no caminho de erro LS2.
   aceita = 1; sessao = 17; bus = (LSHandle *)(uintptr_t)1;

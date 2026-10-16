@@ -1558,8 +1558,9 @@ static int lerCatalogoHome(const char *base, const char *tipo, const char *id,
 // SOZINHO tomando tudo; o que ela nao resolve e o TOTAL — com muitos addons
 // modestos (nenhum sozinho estoura a cota) a SOMA dos catalogos legitimos
 // passava de 256 e os ultimos, por addon, eram cortados mesmo cabendo de
-// sobra na memoria (Decl tem ~950 bytes; 512 custam ~475 KB, uma unica vez,
-// por ciclo). 512 nao e "o numero certo" — nao ha um; e so mais folga antes de
+// sobra na memoria. Cada declaracao guarda tambem a propria URL: o vetor
+// persistente ocupa cerca de 1,4 MiB, sem depender da pilha de lerManifesto.
+// 512 nao e "o numero certo" — nao ha um; e so mais folga antes de
 // o mesmo corte voltar a acontecer com addons de sobra.
 #define DECL_MAX 512
 // Quantos itens cada fileira mostra. A home desenha no maximo MAX_CARDS (12) e
@@ -1587,7 +1588,7 @@ typedef struct {
   char titulo[96];
   char tipo[8];
   char id[96];
-  char base[NV_ADDON_URL_MAX];
+  char base[NV_ADDON_URL_MAX]; // copia propria; a declaracao sobrevive ao leitor
   // 1 quando o catalogo aceita BUSCA. O manifesto declara isso em
   // `extra: [{name:"search"}]` (formato novo) ou `extraSupported: ["search"]`
   // (antigo) — os addons do dono usam os dois.
@@ -1779,8 +1780,7 @@ static void formatarTitulo(const char *nome, const char *tipo, char *dst, size_t
 #define MANI_FIOS  4
 static struct {
   char  url[NV_ADDON_PEDIDO_MAX];   // <base>/manifest.json inteiro (addonurl.h)
-  char destino[20];
-  unsigned versao;
+  char  base[NV_ADDON_URL_MAX];
   char *corpo;
   int   ativo, erro;
   int   pronto;      // 1 = tentativa terminada (corpo pode ser NULL)
@@ -1843,6 +1843,8 @@ static int  maniProx;
 // addon. Ele descobre que ficou para tras aqui, joga o proprio download fora e
 // sai.
 static unsigned maniGeracao;
+static unsigned maniVersao;
+static NvPerfilSessao maniSessao;
 
 static pthread_mutex_t cargaTrava = PTHREAD_MUTEX_INITIALIZER;
 // 1 = a volta em curso foi pedida em segundo plano (desc_repetir_silencioso).
@@ -1957,6 +1959,9 @@ static void *fioManifesto(void *u) {
     int meu;
     char *corpo;
     char url[NV_ADDON_PEDIDO_MAX];
+    char base[NV_ADDON_URL_MAX];
+    unsigned versao;
+    NvPerfilSessao sessao;
     pthread_mutex_lock(&maniTrava);
     if (minha == maniGeracao)
       while (maniProx < maniN && mani[maniProx].pronto) maniProx++;
@@ -1965,10 +1970,25 @@ static void *fioManifesto(void *u) {
     }
     meu = maniProx++;
     snprintf(url, sizeof url, "%s", mani[meu].url);
+    snprintf(base, sizeof base, "%s", mani[meu].base);
+    versao = maniVersao; sessao = maniSessao;
     pthread_mutex_unlock(&maniTrava);
     corpo = rede_baixar(url, 20);
+    // Colecoes precisam somente da identidade. Nao esperar o CW ou o leitor
+    // de catalogos da Home para resolver o addon que ja respondeu. A chamada
+    // fica fora de maniTrava (a sonda usa a ordem addonTrava -> maniTrava).
+    int aplicada = addons_identidade_recebida(base, versao, sessao, corpo);
     pthread_mutex_lock(&maniTrava);
     if (minha != maniGeracao) {
+      pthread_mutex_unlock(&maniTrava); free(corpo); return NULL;
+    }
+    if (!aplicada) {
+      // This generation belongs to a replaced list/session. Wake every
+      // waiter, including slots that no worker has started, without publishing.
+      for (int i = 0; i < maniN; i++) if (!mani[i].pronto) {
+        mani[i].erro = 1; mani[i].pronto = 1;
+      }
+      pthread_cond_broadcast(&maniCond);
       pthread_mutex_unlock(&maniTrava); free(corpo); return NULL;
     }
     // ARMAZENA NA CACHE uma copia propria, se o corpo couber no teto de
@@ -1978,7 +1998,7 @@ static void *fioManifesto(void *u) {
       size_t n = strlen(corpo);
       if (n < MANI_CACHE_BYTES) {
         char *copia = malloc(n + 1);
-        if (copia) { memcpy(copia, corpo, n + 1); maniCacheColocar(url, mani[meu].versao, copia); }
+        if (copia) { memcpy(copia, corpo, n + 1); maniCacheColocar(url, versao, copia); }
       }
     }
     if (mani[meu].largado && corpo) {
@@ -2005,8 +2025,9 @@ static void *fioManifesto(void *u) {
 
 // Larga o download de todos os manifestos. Volta na hora.
 static void maniLargar(void) {
-  int nAd, i, criados = 0;
-  unsigned versao;
+  int nAd = addons_n(), i, criados = 0;
+  unsigned versao = addons_versao();
+  NvPerfilSessao sessao = descSessao();
   pthread_t fios[MANI_FIOS];
   pthread_mutex_lock(&maniTrava);
   addons_lista_travar();
@@ -2021,10 +2042,9 @@ static void maniLargar(void) {
     if (!!addons_ativo(ad) != (pass == 0)) continue;
     i = maniN++;
     mani[i].ativo = addons_ativo(ad);
+    snprintf(mani[i].base, sizeof mani[i].base, "%s", addons_base(ad));
     int cache;
-    nv_addon_url(mani[i].url, sizeof mani[i].url, addons_base(ad), "/manifest.json");
-    ws_destino(addons_base(ad), sessao_usuario(), perfis_ativo(), mani[i].destino);
-    mani[i].versao = versao;
+    nv_addon_url(mani[i].url, sizeof mani[i].url, mani[i].base, "/manifest.json");
     mani[i].pronto = 0; mani[i].erro = 0;
     // CACHE HIT: o manifesto deste addon ja foi baixado numa volta com a
     // MESMA versao da lista (lista inalterada). Reaproveita sem rede. A
@@ -2045,6 +2065,7 @@ static void maniLargar(void) {
   addons_lista_destravar();
   maniProx = 0;
   maniGeracao++;
+  maniVersao = versao; maniSessao = sessao;
   maniLargadaMs = descAgoraMs();
   for (i = 0; i < maniN; i++) mani[i].largado = 0;
   // Ninguem mais espera por um `pronto` que a volta passada deixou pendente.
@@ -2053,6 +2074,21 @@ static void maniLargar(void) {
   for (i = 0; i < maniN; i++) if (!mani[i].pronto) pendentes++;
   { unsigned g = maniGeracao;
     pthread_mutex_unlock(&maniTrava);
+  // Cache hits have no download worker. Publish their identities from an
+  // owned copy too, without lending a body that maniPegar can consume/free.
+  for (i = 0; i < MANI_MAX; i++) {
+    char base[NV_ADDON_URL_MAX], *copia = NULL;
+    pthread_mutex_lock(&maniTrava);
+    if (g == maniGeracao && i < maniN && mani[i].corpo) {
+      snprintf(base, sizeof base, "%s", mani[i].base);
+      copia = strdup(mani[i].corpo);
+    }
+    pthread_mutex_unlock(&maniTrava);
+    if (copia) {
+      addons_identidade_recebida(base, versao, sessao, copia);
+      free(copia);
+    }
+  }
   if (maniN < 1) return;
   // So dispara fios para os slots que NAO vieram da cache. Os outros ja
   // estao prontos e maniPegar os entrega na hora.
@@ -2081,6 +2117,12 @@ static char *maniPegar(const char *url, int esperar, int *tentado) {
   *tentado = 0;
   char *corpo = NULL;
   pthread_mutex_lock(&maniTrava);
+  // A body is owned by the request context captured at launch, even when a
+  // new list happens to keep the same URL. Never relabel it with a new version.
+  if (maniVersao != addons_versao() || maniSessao != descSessao()) {
+    pthread_mutex_unlock(&maniTrava);
+    return NULL;
+  }
   for (i = 0; i < maniN; i++) if (!strcmp(mani[i].url, url)) break;
   if (i < maniN) {
     unsigned g = maniGeracao;
@@ -2120,6 +2162,18 @@ static char *maniObter(const char *url, int ativo) {
   char *corpo = maniPegar(url, ativo, &tentado);
   if (!corpo && ativo && !tentado) corpo = rede_baixar(url, 20);
   return corpo;
+}
+
+static int maniIdentidadePendente(const char *url, unsigned versao, NvPerfilSessao sessao) {
+  int pendente = 0;
+  pthread_mutex_lock(&maniTrava);
+  if (maniVersao == versao && maniSessao == sessao)
+    for (int i = 0; i < maniN; i++) if (!strcmp(mani[i].url, url)) {
+      pendente = !mani[i].pronto;
+      break;
+    }
+  pthread_mutex_unlock(&maniTrava);
+  return pendente;
 }
 
 // CATALOGO DE BUSCA NAO PODE VIRAR FILEIRA.
@@ -2392,39 +2446,26 @@ static int nManiFalhouVolta;
 // TV — desligados na conta do dono — ganhavam fileira e ate vaga garantida na
 // home da C9 (24/09), e a fonte deles continuava fora das consultas. Desligado
 // e desligado nos dois lugares.
-static int lerManifesto(int iAddon, Decl *saida, int max,
-                         int *totalReal, int *promovidos) {
-  char base[NV_ADDON_URL_MAX], destino[20];
-  unsigned versao;
-  int ativo;
+static int lerManifesto(int iAddon, const char *base, Decl *saida, int max,
+                         int ativo, int *totalReal, int *promovidos, unsigned versao) {
   char url[NV_ADDON_PEDIDO_MAX], addonId[96] = "", nome[96], tipo[8], id[96];
+  char origem[NV_ADDON_URL_MAX];
   char *corpo, *escolhido;
   const char *p, *fim;
   int n = 0, total = 0, e = 0, nEleg = 0;
   if (totalReal) *totalReal = 0;
   if (promovidos) *promovidos = 0;
-  // A URL inclui a configuracao; conta/perfil e versao tambem ficam congelados.
-  // Nenhum ponteiro do slot atravessa o download.
-  addons_lista_travar();
-  snprintf(base, sizeof base, "%s", addons_base(iAddon));
-  ws_destino(base, sessao_usuario(), perfis_ativo(), destino);
-  versao = addons_versao();
-  ativo = addons_ativo(iAddon);
-  addons_lista_destravar();
-  if (!base[0]) return 0;
+  snprintf(origem, sizeof origem, "%s", base);
+  base = origem;
   // Ja largado em paralelo no comeco de montar(); so cai na rede aqui quando
   // este addon nao estava na lista daquele instante.
-  corpo = NULL;
-  if (descPedidoCoube(base, nv_addon_url(url, sizeof url, base, "/manifest.json"), sizeof url)) {
-    // Se ja largado em paralelo, vale a identidade copiada antes daquela rede.
-    pthread_mutex_lock(&maniTrava);
-    for (int m = 0; m < maniN; m++) if (!strcmp(mani[m].url, url)) {
-      snprintf(destino, sizeof destino, "%s", mani[m].destino);
-      versao = mani[m].versao;
-      break;
-    }
-    pthread_mutex_unlock(&maniTrava);
-    corpo = maniObter(url, ativo);
+  corpo = descPedidoCoube(base, nv_addon_url(url, sizeof url, base, "/manifest.json"), sizeof url)
+          ? maniObter(url, ativo) : NULL;
+  // Covers the synchronous fallback too. A round that stopped waiting has
+  // not failed the still-running download; its worker publishes the outcome.
+  if ((corpo || !maniIdentidadePendente(url, versao, descSessao())) &&
+      !addons_identidade_recebida(base, versao, descSessao(), corpo)) {
+    free(corpo); return 0;
   }
   if (!corpo) {
     // Sem esta linha o log dizia "0 catalogo(s) declarado(s)", igual a um
@@ -2439,10 +2480,10 @@ static int lerManifesto(int iAddon, Decl *saida, int max,
   // O MESMO CORPO SERVE AOS DOIS LEITORES. Ver addons_manifesto_lido: sem esta
   // linha o id e as capacidades do addon so eram aprendidos por quem abrisse a
   // tela de addons nos Ajustes, e sem o id nenhuma colecao da conta encontrava
-  // a URL do proprio addon (issue #10). O _base reconfere que o slot ainda e o
-  // addon de `base`: a lista pode ter trocado durante o download (ate 20 s) e o
-  // manifesto atrasado de A nao pode gravar nada no slot de B.
-  addons_manifesto_lido_base(iAddon, base, destino, versao, corpo);
+  // a URL do proprio addon (issue #10).
+  if (!addons_manifesto_recebido(base, versao, descSessao(), corpo)) {
+    free(corpo); return 0;
+  }
   // Chave da RAIZ: um manifesto tem "id" tambem dentro de catalogs[] e de
   // behaviorHints, e ha addon que escreve "catalogs" antes de "id" — a leitura
   // crua trazia o id de um CATALOGO como se fosse o do addon. Ver js_texto_raiz.
@@ -3814,7 +3855,7 @@ static int ordenarCandidatos(Decl *decls, int nDecl, int *ordem, int nFixas,
         const char *b = addons_base(i2);
         if (!b || !b[0]) continue;
         for (j = 0; j < nDecl; j++)
-          if (!vistos[j] && !strcmp(decls[j].base, b)) {
+          if (!vistos[j] && decls[j].base[0] && !strcmp(decls[j].base, b)) {
             ordem[nOrdem++] = j; vistos[j] = 1; pegou = 1; break;
           }
       }
@@ -3934,7 +3975,7 @@ static int ordenarCandidatos(Decl *decls, int nDecl, int *ordem, int nFixas,
       deslig[c] = (char)desligada(&decls[c]);
       for (q = 0; q < nAd3; q++) {
         const char *b = addons_base(q);
-        if (b && b[0] && !strcmp(decls[c].base, b)) { addonDe[c] = q; break; }
+        if (b && b[0] && decls[c].base[0] && !strcmp(decls[c].base, b)) { addonDe[c] = q; break; }
       }
     }
     for (q = 0; q < nAd3; q++) {
@@ -4599,7 +4640,8 @@ static void *montar(void *u) {
         LISTAS_SE_PRONTAS();
         if (CONDENADA("lendo os manifestos")) goto condenada;
         if (teto > DECL_MAX - nDecl) teto = DECL_MAX - nDecl;
-        lidos = lerManifesto(i, decls + nDecl, teto, &real, &promovidos);
+        lidos = lerManifesto(i, addons_base(i), decls + nDecl, teto,
+                             addons_ativo(i), &real, &promovidos, versaoManifestos);
         nDecl += lidos;
         folga = lidos < cota + folga ? cota + folga - lidos : 0;
         // ISSUE #42(a): a linha de sempre ("N catalogo(s) declarado(s)") nao
@@ -8544,6 +8586,204 @@ static const char *tmdbMontarUrl(const ColSource *f, int pagina,
              TMDB, mt, chave, desc_tmdb_idioma(), pagina, q);
     return "results";
   }
+}
+
+// A Vitrine tem varias fontes ao mesmo tempo; o carregador de abas abaixo
+// continua com a sua unica lista. Somente ids da pagina sao guardados aqui:
+// 72 KiB no teto, em vez de outro vetor de mil CatItems por fio.
+typedef struct {
+  char imdb[sizeof(((CatItem *)0)->imdb)];
+  char tipo[sizeof(((CatItem *)0)->tipo)];
+} ColecaoId;
+
+static const char *colecaoTextoFim(const char *p, const char *fim) {
+  for (p++; p < fim; p++) {
+    if (*p == '"') return p + 1;
+    if (*p == '\\') { if (p + 1 >= fim) return NULL; p++; }
+  }
+  return NULL;
+}
+
+static int colecaoArray(const char *corpo, const char *chave, const char **primeiro) {
+  const char *p = corpo, *fim, *fimArray;
+  if (!corpo) return 0;
+  while (*p && (unsigned char)*p <= ' ') p++;
+  fim = js_fim(p);
+  if (!fim || fim <= p) return 0;
+  if (chave) {
+    if (*p != '{' || fim[-1] != '}') return 0;
+    // Somente o campo da raiz; nao confundir arrays aninhados ou texto com
+    // a pagina. Pular valores sem copia aceita [] com qualquer whitespace.
+    p++;
+    for (;;) {
+      const char *nome, *depois;
+      while (p < fim && ((unsigned char)*p <= ' ' || *p == ',')) p++;
+      if (p >= fim || *p != '"') return 0;
+      nome = p + 1; depois = colecaoTextoFim(p, fim);
+      if (!depois) return 0;
+      p = depois;
+      while (p < fim && (unsigned char)*p <= ' ') p++;
+      if (p >= fim || *p++ != ':') return 0;
+      while (p < fim && (unsigned char)*p <= ' ') p++;
+      if ((size_t)(depois - nome - 1) == strlen(chave) &&
+          !memcmp(nome, chave, (size_t)(depois - nome - 1))) break;
+      if (p >= fim) return 0;
+      if (*p == '"') p = colecaoTextoFim(p, fim);
+      else if (*p == '[' || *p == '{') p = js_fim(p);
+      else while (p < fim && *p != ',' && *p != '}') p++;
+      if (!p || p >= fim) return 0;
+    }
+  }
+  if (p >= fim || *p != '[') return 0;
+  fimArray = js_fim(p);
+  if (!fimArray || fimArray > fim || fimArray <= p || fimArray[-1] != ']') return 0;
+  p++;
+  while (p < fimArray && (unsigned char)*p <= ' ') p++;
+  if (*p == ']') { *primeiro = NULL; return 1; }
+  if (*p != '{' && *p != '"') return 0;
+  *primeiro = p;
+  return 1;
+}
+
+int desc_colecao_inicial(const ColSource *fonte, const char *base,
+                         NvPerfilSessao sessao, CatItem *itens, int limite,
+                         DescColecaoResultado *resultado) {
+  DescColecaoResultado r = {0};
+  ColSource f;
+  ColecaoId *ids;
+  CatItem item;
+  char origem[NV_ADDON_URL_MAX], url[NV_ADDON_PEDIDO_MAX];
+  int prov, nIds = 0, total = 0, prefixoVistos = 0, visiveis = 0;
+  int ocultar, pagina, skip = 0, teto;
+  if (resultado) *resultado = r;
+  if (!fonte || !itens || !resultado || limite < 1 || limite > 20 ||
+      !descSessaoVincular(sessao)) return 0;
+  f = *fonte;
+  prov = !f.prov[0] ? 0 : !strcmp(f.prov, "tmdb") ? 1 :
+         !strcmp(f.prov, "trakt") ? 2 : -1;
+  r.pagina = prov ? 1 : 0;
+  snprintf(origem, sizeof origem, "%s", base ? base : f.base);
+  if (prov < 0 || (!prov && (!origem[0] || !f.type[0] || !f.catId[0] ||
+                            strlen(base ? base : f.base) >= sizeof origem))) {
+    r.erro = 1; *resultado = r; return nv_perfil_sessao_atual(sessao);
+  }
+  ids = calloc(VT_MAX, sizeof *ids);
+  if (!ids) { r.erro = 1; *resultado = r; return nv_perfil_sessao_atual(sessao); }
+  teto = !prov && strstr(f.catId, "top100") ? 100 :
+         !prov && strstr(f.catId, "top250") ? 250 : VT_MAX;
+  if (!nv_perfil_sessao_travar(sessao)) { free(ids); return 0; }
+  ocultar = ajustes_ocultar_filmes_vistos();
+  nv_perfil_sessao_destravar();
+
+  for (pagina = 1; pagina <= VT_VISTOS_PAGINAS_MAX; pagina++) {
+    char *corpo = NULL, cabChave[160];
+    const char *vetor = "metas", *p = NULL;
+    const char *cab[] = { "trakt-api-version: 2", NULL, NULL };
+    int raw = 0, aceitos = 0, novos = 0, fim = 0, pronta = 1;
+    // Congelar URL/chave/idioma enquanto o perfil ainda e o dono. A trava
+    // termina antes de qualquer HTTP, inclusive a consulta do Trakt.
+    if (!nv_perfil_sessao_travar(sessao)) { free(ids); return 0; }
+    if (prov == 1) {
+      vetor = tmdbMontarUrl(&f, pagina, url, sizeof url);
+      pronta = vetor && strlen(url) < sizeof url - 1;
+    } else if (prov == 2) {
+      const char *cli = nuvem_trakt_cliente();
+      int w = snprintf(cabChave, sizeof cabChave, "trakt-api-key: %s", cli);
+      cab[1] = cabChave;
+      vetor = NULL;
+      pronta = cli[0] && w >= 0 && (size_t)w < sizeof cabChave;
+      w = snprintf(url, sizeof url,
+        "https://api.trakt.tv/lists/%ld/items/%s?page=%d&limit=40&sort_by=%s&sort_how=%s",
+        f.traktLista, !strcasecmp(f.midia, "TV") ? "show" : "movie", pagina,
+        f.ordenar[0] ? f.ordenar : "rank", f.ordem[0] ? f.ordem : "asc");
+      pronta = pronta && w >= 0 && (size_t)w < sizeof url;
+    } else {
+      char encoded[sizeof f.genre * 3 + 1];
+      int z = 0, w;
+      for (const unsigned char *c = (const unsigned char *)f.genre; *c; c++) {
+        if ((*c >= 'a' && *c <= 'z') || (*c >= 'A' && *c <= 'Z') ||
+            (*c >= '0' && *c <= '9') || *c == '-' || *c == '_') encoded[z++] = *c;
+        else { snprintf(encoded + z, 4, "%%%02X", *c); z += 3; }
+      }
+      encoded[z] = 0;
+      if (encoded[0]) w = nv_addon_url(url, sizeof url, origem,
+        "/catalog/%s/%s/genre=%s&skip=%d.json", f.type, f.catId, encoded, skip);
+      else if (skip) w = nv_addon_url(url, sizeof url, origem,
+        "/catalog/%s/%s/skip=%d.json", f.type, f.catId, skip);
+      else w = nv_addon_url(url, sizeof url, origem,
+        "/catalog/%s/%s.json", f.type, f.catId);
+      pronta = !addons_base_desligada(origem) && descPedidoCoube(origem, w, sizeof url);
+    }
+    nv_perfil_sessao_destravar();
+    if (!pronta) { r.erro = 1; break; }
+    if (!descSessaoAtual()) { free(ids); return 0; }
+    corpo = prov == 2 ? rede_baixar_com(url, 12, cab) : rede_baixar(url, prov ? 12 : 10);
+    if (!descSessaoAtual()) { free(corpo); free(ids); return 0; }
+    if (!colecaoArray(corpo, vetor, &p)) { free(corpo); r.erro = 1; break; }
+    if (prov == 1) {
+      fim = !strcasecmp(f.tmdbTipo, "COLLECTION") || !strcasecmp(f.tmdbTipo, "PERSON") ||
+            !strcasecmp(f.tmdbTipo, "DIRECTOR");
+      if (!fim) {
+        long tp = (long)js_num(corpo, NULL, "total_pages", 0);
+        long pg = (long)js_num(corpo, NULL, "page", pagina);
+        fim = !tp || pg >= tp;
+      }
+    }
+    for (; p && (!prov || aceitos < 48); p = js_prox(js_fim(p))) {
+      const char *fimItem = js_fim(p);
+      int ok, visto, repetido = 0;
+      raw++;
+      if (total >= teto) continue;
+      if (*p != '{') continue;
+      if (!nv_perfil_sessao_travar(sessao)) { free(corpo); free(ids); return 0; }
+      if (prov == 1 && !strcasecmp(f.tmdbTipo, "DIRECTOR")) {
+        char trabalho[48] = "";
+        js_texto(p, fimItem, "job", trabalho, sizeof trabalho);
+        if (strcasecmp(trabalho, "director")) { nv_perfil_sessao_destravar(); continue; }
+      }
+      ok = prov == 1 ? deMetaTmdb(p, fimItem, !strcasecmp(f.midia, "TV") ? "series" : "movie", &item) :
+           prov == 2 ? deMetaTrakt(p, fimItem, f.midia, &item) : deMeta(p, fimItem, f.type, &item);
+      if (!ok) { nv_perfil_sessao_destravar(); continue; }
+      if (descOcultaNaoLancado(&item)) { novos++; nv_perfil_sessao_destravar(); continue; }
+      if (!prov) origemDaBase(origem, item.origem, sizeof item.origem);
+      visto = desc_filme_visto(&item);
+      nv_perfil_sessao_destravar();
+      aceitos++;
+      for (int j = 0; item.imdb[0] && j < nIds; j++)
+        if (!strcmp(ids[j].imdb, item.imdb) && !strcmp(ids[j].tipo, item.tipo)) { repetido = 1; break; }
+      if (repetido) continue;
+      if (item.imdb[0] && nIds < VT_MAX) {
+        snprintf(ids[nIds].imdb, sizeof ids[nIds].imdb, "%s", item.imdb);
+        snprintf(ids[nIds++].tipo, sizeof ids[0].tipo, "%s", item.tipo);
+      }
+      total++; novos++;
+      if (!visto) visiveis++;
+      if (r.n < limite) {
+        itens[r.n++] = item;
+        prefixoVistos += visto;
+      } else if (prefixoVistos && !visto && r.extraN < limite) itens[limite + r.extraN++] = item;
+    }
+    free(corpo);
+    if (prov == 2 && raw < 40) fim = 1;
+    r.mais = raw > 0 && novos > 0 && total < teto && !fim;
+    r.pagina = prov ? pagina + (r.mais ? 1 : 0) : skip + raw;
+    if (!raw || !novos || total >= teto || fim || !ocultar || visiveis) break;
+    skip += raw;
+  }
+  free(ids);
+  if (r.erro) r.mais = 0;
+  if (!descSessaoAtual()) return 0;
+  if (prov == 2) {
+    // Somente as duas janelas que serao mostradas precisam de arte. O helper
+    // usa o mesmo pedido de sessao e seus proprios fios/buffers de enfeite.
+    if (r.n) r.n = descEnfeitar(itens, r.n);
+    if (!descSessaoAtual()) return 0;
+    if (r.extraN) r.extraN = descEnfeitar(itens + limite, r.extraN);
+  }
+  if (!nv_perfil_sessao_travar(sessao)) return 0;
+  *resultado = r;
+  nv_perfil_sessao_destravar();
+  return 1;
 }
 
 static void *fioVerTudo(void *u) {

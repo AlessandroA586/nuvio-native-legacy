@@ -6,6 +6,8 @@ Uint32 SDL_GetTicks(void) { return agora; }
 const char *i18n(const char *s) { return s; }
 const char *ling_nome(const char *s) { return s; }
 const char *ling_audio(void) { return ""; }
+const char *ling_audio2(void) { return ""; }
+const char *ling_original(void) { return ""; }
 int ling_casa(const char *a, const char *b) { (void)a;(void)b;return 0; }
 const char *ling_do_nome(const char *s) { (void)s;return NULL; }
 int ling_letreiro(const char *s,int n) { (void)s;(void)n;return 0; }

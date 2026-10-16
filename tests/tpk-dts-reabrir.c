@@ -19,12 +19,16 @@
 #include "intro.h"
 #include "rede.h"
 #include "dts/dts_hls_tpk.h"
+#include "audioescolha.h"
 
 const char *i18n(const char *s) { return s; }
 const char *ling_nome(const char *c) { return c; }
 int ling_casa(const char *c, const char *p) { return c && p && !strcmp(c, p); }
 static const char *pref = "";
 const char *ling_audio(void) { return pref; }
+static const char *pref2 = "", *orig = "";
+const char *ling_audio2(void) { return pref2; }
+const char *ling_original(void) { return orig; }
 int ling_tipo_legenda(const char *s, int f, int d) { (void)s; (void)f; (void)d; return 0; }
 const char *ling_tipo_legenda_rotulo(int t) { (void)t; return ""; }
 const char *ling_do_nome(const char *nome) { (void)nome; return NULL; }
@@ -99,20 +103,16 @@ int mkvass_cabecalho(const char *url, unsigned char **buf, long *n) {
 static int abriuConversor, urlEmN;
 static double urlEmUlt = -1, inicioStream = -1;
 int proxyts_e_url(const char *u) { (void)u; return 0; }
-// The app always asks for HLS. semIndice = the source has no keyframe index
-// (MKV without Cues): the HLS probe fails and the app redoes it on the TS.
-static int modoFake = DTSTPK_HLS, semIndice = 1;
+static int modoFake = DTSTPK_PROG_TS;
+int ajustes_dts_tpk_modo(void) { return modoFake; }
 int ajustes_dts_ac3(void) { return 1; }
 int dts_tpk_disponivel(void) { return 1; }
 const char *dts_tpk_modo_nome(int m) { (void)m; return "TS"; }
-const char *dts_tpk_corpo_nome(int c) { (void)c; return "chunked"; }
 int dts_tpk_abrir(const char *url, const char *headers, int audio_ordinal, int stereo_aac,
-                  int modo, int corpo, double inicio, char *out, size_t n) {
-  (void)url; (void)headers; (void)audio_ordinal; (void)stereo_aac; (void)corpo;
+                  int modo, double inicio, char *out, size_t n) {
+  (void)url; (void)headers; (void)audio_ordinal; (void)stereo_aac; (void)modo;
   abriuConversor++;
-  modoFake = modo;
-  if (modo == DTSTPK_HLS) snprintf(out, n, "http://127.0.0.1:1/tok/m.m3u8");
-  else snprintf(out, n, "http://127.0.0.1:1/tok/v.ts?t=%.0f", inicio);
+  snprintf(out, n, "http://127.0.0.1:1/tok/v.ts?t=%.0f", inicio);
   return 1;
 }
 int dts_tpk_url_em(double s, char *out, size_t n) {
@@ -121,13 +121,14 @@ int dts_tpk_url_em(double s, char *out, size_t n) {
   return 1;
 }
 void dts_tpk_fechar(void) {}
-int dts_tpk_estado(void) { return modoFake == DTSTPK_HLS && semIndice ? DTSTPK_FALHOU : DTSTPK_PRONTO; }
+int dts_tpk_estado(void) { return DTSTPK_PRONTO; }
 const char *dts_tpk_erro(void) { return ""; }
 double dts_tpk_duracao(void) { return 7200; }
 int dts_tpk_modo(void) { return modoFake; }
 double dts_tpk_inicio_stream(void) { return inicioStream; }
 const char *dts_tpk_caminho(void) { return "DTS core only"; }
-int dts_tpk_sem_indice(void) { return modoFake == DTSTPK_HLS && semIndice; }
+int dts_tpk_prebuffer_ms(void) { return 1000; }
+int dts_tpk_sem_indice(void) { return 0; }
 int dts_tpk_e_url(const char *u) { return u && strstr(u, "127.0.0.1") != NULL; }
 int video_faixa_dts(const VideoFaixa *f) { return f && !strncmp(f->codec, "A_DTS", 5); }
 
@@ -144,7 +145,8 @@ int video_tpk_convertendo(void);
 int video_tpk_capa(void);
 static char ultUrl[256];
 static int nAbriu, nBuscas, posMs;
-static void hAbrir(const char *u, const char *c) { (void)c; nAbriu++; snprintf(ultUrl, sizeof ultUrl, "%s", u); }
+static char ultCab[128];
+static void hAbrir(const char *u, const char *c) { nAbriu++; snprintf(ultUrl, sizeof ultUrl, "%s", u); snprintf(ultCab, sizeof ultCab, "%s", c ? c : ""); }
 static void hSem(void) {}
 static void hInt(int v) { (void)v; }
 static void hBuscar(int ms) { (void)ms; nBuscas++; }
@@ -163,9 +165,10 @@ static void hEscolher(int tipo, int idx) { (void)tipo; (void)idx; }
 static int falhas;
 static void ok(int c, const char *o) { printf("%s %s\n", c ? "ok  " : "FAIL", o); if (!c) falhas++; }
 static void bombear(int vezes) { while (vezes--) { video_bombear(); SDL_Delay(5); } }
+static const char *tvLang = "eng";   // the language the TV gives its one playable track
 static void playerPronto(void) {
   nv_tpk_video_evento(1, 0, 0);
-  nv_tpk_video_faixa(0, 0, "eng");
+  nv_tpk_video_faixa(0, 0, tvLang);
   nv_tpk_video_faixas_fim(0, -1);
   nv_tpk_video_evento(2, 0, 0);
 }
@@ -179,8 +182,7 @@ int main(void) {
   nv_tpk_video_registrar_faixas(hEscolher);
   video_definir_reconexao(1);
   video_tocar("http://h/a.mkv");
-  bombear(3);   // the HLS probe reports no index: the app redoes it on the TS
-  ok(abriuConversor == 2 && strstr(ultUrl, "v.ts?t=0"), "opens the converted TS from the start");
+  ok(abriuConversor == 1 && strstr(ultUrl, "v.ts?t=0"), "opens the converted TS from the start");
   ok(!video_pronto(), "first open is an open (the app's opening card shows)");
   ok(!video_tpk_capa(), "first open: no cover (the opening card is the screen)");
   inicioStream = 0; posMs = 1000;
@@ -251,13 +253,28 @@ int main(void) {
   playerPronto(); bombear(3);
   ok(pausas == 0, "no start buffer on the TS");
   video_parar();
-  semIndice = 0;
+  modoFake = DTSTPK_HLS;
   video_tocar("http://h/f2.mkv");
   posMs = 1000;
   playerPronto(); bombear(3);
   ok(pausas == 0, "no start buffer on HLS");
   video_parar();
-  semIndice = 1;
+  // The prebuffer reaches the host as a pseudo header with the converted URL.
+  video_tocar("http://h/f4.mkv");
+  ok(dts_tpk_e_url(ultUrl) && !strcmp(ultCab, "X-Nuvio-Prebuffer: 1000"), "prebuffer: 1000 ms goes to the host with the converted URL");
+  video_parar();
+  // STOP IS FINAL: after Back (or the error card) nothing reopens the file.
+  // The player's track list of the stopped file used to restart the
+  // conversion on the next tick, playing on behind the menus (TV, Oct 2026).
+  video_tocar("http://h/f3.mkv");
+  posMs = 30000;
+  playerPronto(); bombear(3);
+  ok(video_tpk_convertendo(), "stop: converting before the stop");
+  video_parar();
+  nAbriu = 0; abriuConversor = 0;
+  bombear(20);
+  ok(nAbriu == 0 && abriuConversor == 0 && !video_tpk_convertendo(), "stop: nothing reopens after the stop");
+  modoFake = DTSTPK_PROG_TS;
 
   // PREFERRED LANGUAGE ONLY ON DTS: English DTS + Japanese AAC, English wanted.
   misto = 1; montarCabecalho(); abriuConversor = 0;
@@ -269,14 +286,47 @@ int main(void) {
   video_tocar("http://h/c.mkv");
   ok(abriuConversor == 1 && dts_tpk_e_url(ultUrl), "mixed file, preferred language only on DTS (eng): converts it");
   video_parar();
-  // Header only after the original is playing: same rule, mid-film.
-  cabPronto = 0; abriuConversor = 0;
+  // Header only after the original is playing: same rule, mid-film. The TV
+  // lists the one track it plays (the Japanese AAC).
+  cabPronto = 0; abriuConversor = 0; tvLang = "jpn";
   video_tocar("http://h/e.mkv");
   inicioStream = -1; posMs = 2000;
   playerPronto(); bombear(3);
   cabPronto = 1;
   { Uint32 t0 = SDL_GetTicks(); while (!abriuConversor && SDL_GetTicks() - t0 < 3000) bombear(1); }
   ok(abriuConversor == 1 && dts_tpk_e_url(ultUrl) && video_pronto(), "header read while the original plays: converts, no opening card");
+  video_parar();
+
+  // THE AUDIO ORDER (audioescolha.h): picked by hand > preferred > second > original.
+  // Second language only on DTS: converts it before opening.
+  abriuConversor = 0; pref = "swe"; pref2 = "eng";
+  video_tocar("http://h/o1.mkv");
+  ok(abriuConversor == 1 && dts_tpk_e_url(ultUrl), "order: preferred (Swedish) missing, second (English) only on DTS: converts");
+  video_parar();
+  // No preference, original language only on DTS: converts.
+  abriuConversor = 0; pref = ""; pref2 = ""; orig = "eng";
+  video_tocar("http://h/o2.mkv");
+  ok(abriuConversor == 1 && dts_tpk_e_url(ultUrl), "order: original language (English) only on DTS: converts");
+  video_parar();
+  // Preferred Japanese plays on the TV: the original, even with English as the original language.
+  abriuConversor = 0; pref = "jpn"; orig = "eng";
+  video_tocar("http://h/o3.mkv");
+  ok(!abriuConversor && !dts_tpk_e_url(ultUrl), "order: preferred language playable beats the original language on DTS");
+  video_parar();
+  // Picked the Japanese AAC by hand in this playback: it wins over the preferred English DTS.
+  abriuConversor = 0; pref = "eng"; orig = "";
+  audioesc_titulo("tt9:0:0");
+  audioesc_lembrar("jpn", "A_AAC", "Japanese", 2);
+  video_tocar("http://h/o4.mkv");
+  ok(!abriuConversor && !dts_tpk_e_url(ultUrl), "order: the track picked by hand earlier (Japanese AAC) beats the preferred English DTS");
+  video_parar();
+  // And the other way: English DTS picked by hand, preferred Japanese: converts the English.
+  pref = "jpn";
+  audioesc_lembrar("eng", "A_DTS", "English", 6);
+  video_tocar("http://h/o5.mkv");
+  ok(abriuConversor == 1 && dts_tpk_e_url(ultUrl), "order: English DTS picked by hand earlier beats the preferred Japanese: converts");
+  audioesc_titulo("tt10:0:0");
+  pref = "eng"; tvLang = "eng";
   video_parar();
   pref = ""; abriuConversor = 0;
   video_tocar("http://h/d.mkv");

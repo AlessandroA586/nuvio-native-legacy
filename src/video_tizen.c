@@ -84,6 +84,7 @@
 #include "video.h"
 #include "video_reconexao.h"
 #include "linguas.h"
+#include "audioescolha.h"
 #include "idioma.h"
 #include "marco.h"
 #include "mkv.h"
@@ -963,27 +964,31 @@ void video_escolher_audio(int i);
 // aplicarIdiomasDoMkv (o caso real nesta TV, em que o idioma so existe depois
 // da sonda). Chamar so no primeiro nunca acertaria aqui.
 //
-// SEM PREFERENCIA, OU SEM FAIXA QUE CASE, NAO SE MEXE: a escolha do pipeline e
-// melhor que uma trocada por chute, e quem quer outra abre a folha de faixas.
-// Mesma regra do video.c, palavra por palavra.
+// A ORDEM DO AUDIO (audioescolha.h), a mesma de todos os alvos. Sem regra que
+// decida, NAO SE MEXE: a escolha do pipeline e melhor que uma trocada por
+// chute, e quem quer outra abre a folha de faixas.
 static void escolherAudioPreferido(void) {
-  const char *pref = ling_audio();
-  int i;
-  if (!pref[0] || nAudio < 2) return;
-  if (audioAtual >= 0 && audioAtual < nAudio &&
-      faixaAudio[audioAtual].idioma[0] &&
-      ling_casa(faixaAudio[audioAtual].idioma, pref)) return;   // ja esta boa
+  AudioCand c[NV_FAIXA_MAX];
+  int i, o, k;
+  if (nAudio < 2) return;
   for (i = 0; i < nAudio; i++) {
-    if (!faixaAudio[i].idioma[0] || !ling_casa(faixaAudio[i].idioma, pref)) continue;
-    printf("[video] audio preferido: %s (faixa %d de %d)\n",
-           ling_nome(faixaAudio[i].idioma), i + 1, nAudio);
+    c[i].idioma = faixaAudio[i].idioma; c[i].codec = faixaAudio[i].codec; c[i].rotulo = faixaAudio[i].rotulo;
+    c[i].canais = faixaAudio[i].canais;
+    c[i].dts = audioesc_dts_truehd(faixaAudio[i].codec, faixaAudio[i].rotulo);
+    // A Samsung nao toca DTS/TrueHD e o .wgt nao converte: escolher uma deixaria
+    // o filme mudo. So a mao (a folha de faixas continua listando).
+    c[i].pode = !c[i].dts;
+  }
+  k = audioesc_escolher(c, nAudio, &o);
+  if (k < 0) {
+    printf("[video] audio: nenhuma regra da ordem escolhe entre as %d: fica a do arquivo\n", nAudio);
     fflush(stdout);
-    video_escolher_audio(i);
     return;
   }
-  printf("[video] nenhuma faixa de audio em '%s' entre as %d: fica a do arquivo\n",
-         pref, nAudio);
+  if (k == audioAtual) return;
+  printf("[video] audio pela ordem (%s): %s (faixa %d de %d)\n", audioesc_origem_nome(o), faixaAudio[k].rotulo, k + 1, nAudio);
   fflush(stdout);
+  video_escolher_audio(k);
 }
 
 // O IDIOMA DAS FAIXAS VEM DO CONTAINER, porque o AVPlay nao o entrega.

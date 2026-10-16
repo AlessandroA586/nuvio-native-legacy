@@ -1162,13 +1162,12 @@ static void visualLinha(TxtFamilia fam, TxtEstilo est, char *linha) {
   if (txt_bidi_legenda(fam, est, linha, v, sizeof v) > 0) memcpy(linha, v, strlen(v) + 1);
 }
 
-static int quebrar(const LegendaCue *c, TxtEstilo est, int r, int g, int b, int borda,
+static int quebrar(const LegendaCue *c, const VideoLegendaEstilo *e, TxtEstilo est, int r, int g, int b, int borda, unsigned corBorda,
                    float maxW, Leg2Linha *out, int max) {
   char texto[768], *linha, *salva;
-  TxtFamilia fam = (TxtFamilia)player_leg_estilo()->familia;
-  int enf = (c->negrito || player_leg_estilo()->negrito ? TXT_ENF_NEGRITO : 0) | (c->italico ? TXT_ENF_ITALICO : 0);
-  int n = 0, oR, oG, oB;
-  ajustes_leg_contorno_rgb(&oR, &oG, &oB);
+  TxtFamilia fam = (TxtFamilia)e->familia;
+  int enf = (c->negrito || e->negrito ? TXT_ENF_NEGRITO : 0) | (c->italico ? TXT_ENF_ITALICO : 0);
+  int n = 0;
   snprintf(texto, sizeof texto, "%s", c->texto);
   for (linha = strtok_r(texto, "\n", &salva); linha && n < max; linha = strtok_r(NULL, "\n", &salva)) {
     char atual[768] = "", tent[768], *pal, *sp;
@@ -1178,7 +1177,7 @@ static int quebrar(const LegendaCue *c, TxtEstilo est, int r, int g, int b, int 
         if (n >= max) break;
         visualLinha(fam, est, atual);
         out[n].cor = txt_linha_corta_enfase(est, atual, r, g, b, 255, maxW, fam, enf);
-        out[n].borda = borda ? txt_linha_corta_enfase(est, atual, oR, oG, oB, 255, maxW, fam, enf) : (TxtLinha){0};
+        out[n].borda = borda ? txt_linha_corta_enfase(est, atual, (corBorda >> 16) & 255, (corBorda >> 8) & 255, corBorda & 255, 255, maxW, fam, enf) : (TxtLinha){0};
         n++;
         snprintf(atual, sizeof atual, "%s", pal);
       } else snprintf(atual, sizeof atual, "%s", tent);
@@ -1186,7 +1185,7 @@ static int quebrar(const LegendaCue *c, TxtEstilo est, int r, int g, int b, int 
     if (atual[0] && n < max) {
       visualLinha(fam, est, atual);
       out[n].cor = txt_linha_corta_enfase(est, atual, r, g, b, 255, maxW, fam, enf);
-      out[n].borda = borda ? txt_linha_corta_enfase(est, atual, oR, oG, oB, 255, maxW, fam, enf) : (TxtLinha){0};
+      out[n].borda = borda ? txt_linha_corta_enfase(est, atual, (corBorda >> 16) & 255, (corBorda >> 8) & 255, corBorda & 255, 255, maxW, fam, enf) : (TxtLinha){0};
       n++;
     }
   }
@@ -1195,26 +1194,38 @@ static int quebrar(const LegendaCue *c, TxtEstilo est, int r, int g, int b, int 
 
 void legendasui_banda_zerar(void) { bandaFim = 0.0f; }
 
+// Same eight vertical offsets as baseLegendaPrincipal. The player supplies its
+// actual safe bottom anchor (controls, mobile transport and next-episode card).
+// Remove the primary's offset before applying the independent secondary one.
+static float deslocamentoPosicao(int posicao) {
+  return posicao >= 3 ? -(posicao - 3) * 48.0f : (3 - posicao) * 20.0f;
+}
+
 // Estilo proprio da segunda legenda (Ajustes): cada campo "igual a principal"
 // (0 / -1) segue o estilo da principal, como era antes.
-static void estiloSecundario(const VideoLegendaEstilo *e, TxtEstilo *est, int *r, int *g, int *b,
-                             int *fundo, int *borda) {
-  int pct = ajustes_leg2_tamanho(), c = ajustes_leg2_cor(), f = ajustes_leg2_fundo(), bd = ajustes_leg2_borda();
-  if (pct <= 0) pct = e->tamanho * 9 / 10;
+static VideoLegendaEstilo estiloSecundario(const VideoLegendaEstilo *e, TxtEstilo *est, int *r, int *g, int *b,
+                                           int *fundo, int *borda) {
+  VideoLegendaEstilo secundario;
+  int pct;
+  ajustes_leg2_estilo(e, &secundario);
+  pct = secundario.tamanho;
   if (pct < TXT_LEG_PCT_MIN) pct = TXT_LEG_PCT_MIN;
   if (pct > TXT_LEG_PCT_MAX) pct = TXT_LEG_PCT_MAX;
   pct = (pct / 10) * 10;
   *est = (TxtEstilo)(TXT_LEG_50 + (pct - TXT_LEG_PCT_MIN) / 10);
-  corEstilo(c >= 0 ? c : e->cor, r, g, b);
-  *fundo = f >= 0 ? f : e->fundo;
-  *borda = bd >= 0 ? bd : e->borda;
+  corEstilo(secundario.cor, r, g, b);
+  *fundo = secundario.fundo;
+  *borda = secundario.borda;
+  return secundario;
 }
 
 void legendasui_desenhar_secundaria(const LegendasGeo *g) {
   LegendaCue cues[LEGENDA_SIMULTANEAS];
   Leg2Linha ln[LEG2_LINHAS];
-  const VideoLegendaEstilo *e = player_leg_estilo();
-  int n, i, nl = 0, r, gg, b, fundo, borda;
+  const VideoLegendaEstilo *principal = player_leg_estilo();
+  VideoLegendaEstilo secundario;
+  const VideoLegendaEstilo *e = &secundario;
+  int n, i, nl = 0, r, gg, b, fundo, borda, posicao = ajustes_leg2_posicao();
   float topo, x0 = 60.0f, x1 = 60.0f + larguraSecundaria(), alpha, y, altura = 0.0f;
   TxtEstilo est;
   GfxRect il;
@@ -1222,13 +1233,14 @@ void legendasui_desenhar_secundaria(const LegendasGeo *g) {
   // Minimised player / window animation: the second line has nowhere honest
   // to go, and the primary still identifies the scene.
   if (!g || g->videoW < NV_TELA_W * 0.6f) return;
+  if (posicao >= 0 && g->baseY <= 0.0f) return;   // explicit position needs the real safe anchor
   n = legenda2_cues(g->pos, cues, LEGENDA_SIMULTANEAS);
   if (n <= 0) return;
-  estiloSecundario(e, &est, &r, &gg, &b, &fundo, &borda);
+  secundario = estiloSecundario(principal, &est, &r, &gg, &b, &fundo, &borda);
   alpha = (e->opacidade == 3 ? .25f : e->opacidade == 2 ? .5f : e->opacidade == 1 ? .75f : 1.f) * g->alpha;
   topo = 48.0f + 72.0f * (g->osd < 0 ? 0 : g->osd > 1 ? 1 : g->osd);
   if (g->videoY > topo) topo = g->videoY + 24.0f;   // letterbox: start on the picture
-  if (!g->junto && plrilha_rect(&il)) {
+  if (posicao < 0 && !g->junto && plrilha_rect(&il)) {
     float s = gfx_escala_ui();
     il.x *= s; il.y *= s; il.w *= s; il.h *= s;
     if (il.y < topo + 260.0f && il.y + il.h > topo) {
@@ -1239,12 +1251,14 @@ void legendasui_desenhar_secundaria(const LegendasGeo *g) {
     }
   }
   for (i = 0; i < n && nl < LEG2_LINHAS; i++)
-    nl += quebrar(&cues[i], est, r, gg, b, borda, x1 - x0, ln + nl, LEG2_LINHAS - nl);
-  if (g->junto) {
+    nl += quebrar(&cues[i], e, est, r, gg, b, borda, ajustes_leg_borda_rgb(e->corBorda), x1 - x0, ln + nl, LEG2_LINHAS - nl);
+  if (g->junto || posicao >= 0) {
     // Stacked: the whole block ends just above the primary (2-line cues grow
     // upward, never over it) and stays inside the picture.
     for (i = 0; i < nl; i++) altura += (float)ln[i].cor.h + (i ? 5.0f : 0.0f);
-    topo = g->baseY - 10.0f - altura;
+    if (posicao >= 0)
+      topo = g->baseY - deslocamentoPosicao(principal->posicao) + deslocamentoPosicao(posicao) - altura;
+    else topo = g->baseY - 10.0f - altura;
     if (topo < 8.0f) topo = 8.0f;
   }
   y = topo;
@@ -1263,7 +1277,7 @@ void legendasui_desenhar_secundaria(const LegendasGeo *g) {
     txt_desenhar_alpha(l, x, y, alpha);
     y += (float)l.h + 5.0f;
   }
-  if (!g->junto) bandaFim = y;
+  if (posicao < 0 && !g->junto) bandaFim = y;
 }
 
 // Altura do bloco da segunda legenda agora (0 = nada a mostrar). O player usa
@@ -1271,16 +1285,19 @@ void legendasui_desenhar_secundaria(const LegendasGeo *g) {
 float legendasui_altura_secundaria(const LegendasGeo *g) {
   LegendaCue cues[LEGENDA_SIMULTANEAS];
   Leg2Linha ln[LEG2_LINHAS];
-  const VideoLegendaEstilo *e = player_leg_estilo();
+  const VideoLegendaEstilo *principal = player_leg_estilo();
+  VideoLegendaEstilo secundario;
+  const VideoLegendaEstilo *e = &secundario;
   int n, i, nl = 0, r, gg, b, fundo, borda;
   float altura = 0.0f;
   TxtEstilo est;
   if (!g || g->videoW < NV_TELA_W * 0.6f) return 0.0f;
+  if (ajustes_leg2_posicao() >= 0) return 0.0f;   // manual position overrides stacking
   n = legenda2_cues(g->pos, cues, LEGENDA_SIMULTANEAS);
   if (n <= 0) return 0.0f;
-  estiloSecundario(e, &est, &r, &gg, &b, &fundo, &borda);
+  secundario = estiloSecundario(principal, &est, &r, &gg, &b, &fundo, &borda);
   for (i = 0; i < n && nl < LEG2_LINHAS; i++)
-    nl += quebrar(&cues[i], est, r, gg, b, borda, larguraSecundaria(), ln + nl, LEG2_LINHAS - nl);
+    nl += quebrar(&cues[i], e, est, r, gg, b, borda, ajustes_leg_borda_rgb(e->corBorda), larguraSecundaria(), ln + nl, LEG2_LINHAS - nl);
   for (i = 0; i < nl; i++) altura += (float)ln[i].cor.h + (i ? 5.0f : 0.0f);
   return altura;
 }

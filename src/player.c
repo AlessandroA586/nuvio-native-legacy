@@ -34,6 +34,7 @@
 #include "dados.h"
 #include "trailer.h"
 #include "linguas.h"
+#include "audioescolha.h"
 #include "idioma.h"
 #include "posplay.h"
 #include "extras.h"
@@ -568,6 +569,14 @@ static double retomarFonteSeg = -1.0;
 static double basePos, baseDur;
 static int basePct, baseTocou, baseT = -1, baseE = -1;
 static int epT, epE, pedFontes, erroFonte, pedProxT, pedProxE;
+// A faixa de audio escolhida a mao vale para ESTE titulo (o filme, ou a serie
+// inteira: os outros episodios tambem) (audioescolha.h): troca de fonte,
+// reabertura e proximo episodio mantem, outro titulo esquece.
+static void audioTitulo(void) {
+  const CatItem *c = item();
+  if (!c) { audioesc_titulo(""); return; }
+  audioesc_titulo(c->imdb[0] ? c->imdb : c->titulo);
+}
 static int trocaEpisodio, episodioPedidoMarcado, confirmacaoTransporteRetida;
 static Uint32 episodioPedidoEm, recarregarPedidoEm;
 static int recarregarPedidoMarcado;
@@ -831,6 +840,7 @@ void player_definir_episodio(int t, int e) {
   const CatItem *c = item();
   if (t != epT || e != epE) retomarFonteSeg = -1.0;
   epT = t; epE = e; linhaEp[0] = 0;
+  audioTitulo();
   retomarPct = 0;
   // !canalSessao: canal nao tem retomada, e se o indice ja foi remapeado o
   // "progresso" lido ali seria de outro titulo qualquer.
@@ -1016,6 +1026,7 @@ static char   toastIcone[32];
 static int    toastCor;
 static int    avisouAudio;
 static char   dirPrefs[512];
+static int    prefsLidas;
 
 // Rotulos em portugues. Os do web sao "Fit (Original)", "Crop", "Stretch",
 // "Slight/Cinema/Ultra Zoom", "Fit Height", "Fit Width" — o resto do app fala
@@ -1047,6 +1058,7 @@ int player_aspecto(void) { return aspecto; }
 void player_dir(const char *dir) {
   if (!dir || !*dir) return;
   snprintf(dirPrefs, sizeof dirPrefs, "%s", dir);
+  prefsLidas = 0;
 }
 static const char *prefsArquivo(void) {
   static char caminho[600];
@@ -1068,8 +1080,9 @@ static VideoLegendaEstilo legEstilo = { 120, 0, 0, 3, 1, 0, 0, TXT_FAMILIA_INTER
 // valer so ate desligar a TV.
 static int legTocado = PLR_LEG_NADA;
 
-static void prefsGravar(void);
+static int prefsGravar(void);
 static void prefsLer(void) {
+  prefsLidas = 1;
   FILE *f = fopen(prefsArquivo(), "r");
   char chave[64]; int v, sinalNovo = 0, temAtraso = 0;
   if (!f) return;
@@ -1089,6 +1102,7 @@ static void prefsLer(void) {
     else if (!strcmp(chave, "leg_borda")   && v >= 0 && v <= 2)  legEstilo.borda = v;
     else if (!strcmp(chave, "leg_atraso")  && v >= -LEG_ATRASO_MANUAL_MAX && v <= LEG_ATRASO_MANUAL_MAX) { legEstilo.atrasoMs = v; temAtraso = 1; }
     else if (!strcmp(chave, "leg_atraso_sinal") && v == 1) sinalNovo = 1;
+    else if (!strcmp(chave, "leg_cor_borda") && v >= 0 && v < VIDEO_LEG_NCORES) legEstilo.corBorda = v;
     else if (!strcmp(chave, "leg_opacidade") && v >= 0 && v <= 3) legEstilo.opacidade = v;
     else if (!strcmp(chave, "leg_familia") && v >= 0 && v < TXT_FAMILIA_N) legEstilo.familia = v;
     else if (!strcmp(chave, "leg_negrito") && (v == 0 || v == 1)) legEstilo.negrito = v;
@@ -1101,9 +1115,12 @@ static void prefsLer(void) {
   if (!sinalNovo && temAtraso) { legEstilo.atrasoMs = -legEstilo.atrasoMs; prefsGravar(); }
 }
 
-static void prefsGravar(void) {
-  FILE *f = fopen(prefsArquivo(), "w");
-  if (!f) return;
+static int prefsGravar(void) {
+  char destino[600], temporario[608];
+  snprintf(destino, sizeof destino, "%s", prefsArquivo());
+  snprintf(temporario, sizeof temporario, "%s.tmp", destino);
+  FILE *f = fopen(temporario, "w");
+  if (!f) return 0;
   fprintf(f, "aspecto %d\n", aspecto);
   fprintf(f, "leg_tamanho %d\n", legEstilo.tamanho);
   fprintf(f, "leg_cor %d\n",     legEstilo.cor);
@@ -1116,15 +1133,51 @@ static void prefsGravar(void) {
   fprintf(f, "leg_familia %d\n", legEstilo.familia);
   fprintf(f, "leg_negrito %d\n", legEstilo.negrito);
   fprintf(f, "leg_tocado %d\n", legTocado);
-  fclose(f);
+  fprintf(f, "leg_cor_borda %d\n", legEstilo.corBorda);
+  int erro = ferror(f);
+  if (fclose(f)) erro = 1;
+  if (erro || rename(temporario, destino)) { remove(temporario); return 0; }
   dados_marcar_sujo(0);   // IDBFS (Samsung): ver o gravador de ajustes.c
+  return 1;
 }
 
 // Lidos pela folha de faixas, que e quem desenha os controles.
 VideoLegendaEstilo *player_leg_estilo(void) { return &legEstilo; }
+void player_leg_estilo_carregar(void) { if (!prefsLidas) prefsLer(); }
 void player_leg_estilo_mudou(void) {
   video_legenda_estilo(&legEstilo);
   prefsGravar();
+}
+const VideoLegendaEstilo *player_leg_estilo_padrao(void) {
+  static const VideoLegendaEstilo padrao = {120, 0, 0, 3, 1, 0, 0, TXT_FAMILIA_INTER, 0, 0};
+  return &padrao;
+}
+int player_leg_estilo_definir(const VideoLegendaEstilo *estilo, int tocou) {
+  if (!estilo || estilo->tamanho < TXT_LEG_PCT_MIN || estilo->tamanho > TXT_LEG_PCT_MAX ||
+      estilo->tamanho % 10 || estilo->cor < 0 || estilo->cor >= VIDEO_LEG_NCORES ||
+      estilo->corBorda < 0 || estilo->corBorda >= VIDEO_LEG_NCORES ||
+      estilo->familia < 0 || estilo->familia >= TXT_FAMILIA_N ||
+      estilo->fundo < 0 || estilo->fundo > 4 || estilo->posicao < 0 || estilo->posicao > 7 ||
+      estilo->borda < 0 || estilo->borda > 2 || estilo->opacidade < 0 || estilo->opacidade > 3 ||
+      estilo->negrito < 0 || estilo->negrito > 1 ||
+      estilo->atrasoMs < -LEG_ATRASO_MANUAL_MAX || estilo->atrasoMs > LEG_ATRASO_MANUAL_MAX) return 0;
+  player_leg_estilo_carregar();
+  VideoLegendaEstilo antes = legEstilo;
+  int tocadoAntes = legTocado;
+  legEstilo = *estilo;
+  if (tocou != PLR_LEG_NADA) {
+    if (antes.cor != estilo->cor) legTocado |= PLR_LEG_COR;
+    if (antes.familia != estilo->familia) legTocado |= PLR_LEG_FONTE;
+    if (antes.corBorda != estilo->corBorda) legTocado |= PLR_LEG_COR_BORDA;
+    if (antes.borda != estilo->borda) legTocado |= PLR_LEG_BORDA;
+    if (antes.fundo != estilo->fundo) legTocado |= PLR_LEG_FUNDO;
+    if (antes.posicao != estilo->posicao) legTocado |= PLR_LEG_POSICAO;
+    if (antes.negrito != estilo->negrito) legTocado |= PLR_LEG_NEGRITO;
+  }
+  if (tocou >= 0) player_leg_estilo_tocou(tocou);
+  if (!prefsGravar()) { legEstilo = antes; legTocado = tocadoAntes; return 0; }
+  video_legenda_estilo(&legEstilo);
+  return 1;
 }
 void player_leg_estilo_tocou(int campos) {
   if (campos == PLR_LEG_NADA) legTocado = PLR_LEG_NADA;
@@ -1502,6 +1555,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
     // A COPIA e feita AQUI, no unico instante em que o indice e sabidamente o
     // do titulo pedido. Ver item().
     if (ci) { itemFixo = *ci; temFixo = 1; } else temFixo = 0;
+    audioTitulo();
     artehero_logo_sessao_iniciar(temFixo ? &itemFixo : NULL);
     canalSessao = ci && (!strcmp(ci->tipo, "channel") || !strcmp(ci->tipo, "tv"));
     if (canalSessao) itemCanal = *ci;
@@ -4488,8 +4542,8 @@ static void blocoLinha(LegBloco *bl, TxtEstilo est, const char *linha, int r, in
   // Latin text comes back byte-identical.
   if (txt_bidi_legenda(fam, est, linha, visual, sizeof visual) > 0) linha = visual;
   bl->cor[bl->n]   = txt_linha_corta_enfase(est, linha, r, g, b, 255, PLR_LEG_LARG, fam, enf);
-  { int oR, oG, oB; ajustes_leg_contorno_rgb(&oR, &oG, &oB);
-    bl->borda[bl->n] = legEstilo.borda ? txt_linha_corta_enfase(est, linha, oR, oG, oB, 255, PLR_LEG_LARG, fam, enf) : (TxtLinha){0}; }
+  { unsigned cor = ajustes_leg_borda_rgb(legEstilo.corBorda);
+    bl->borda[bl->n] = legEstilo.borda ? txt_linha_corta_enfase(est, linha, (cor >> 16) & 255, (cor >> 8) & 255, cor & 255, 255, PLR_LEG_LARG, fam, enf) : (TxtLinha){0}; }
   if (bl->cor[bl->n].w > bl->w) bl->w = bl->cor[bl->n].w;
   bl->h += bl->cor[bl->n].h + (bl->n ? 5 : 0);
   bl->n++;
@@ -4664,6 +4718,7 @@ static void desenharLegendaExternaCorpo(void) {
   // terminava. Com ASS (libass) a principal nao se move — ali a secundaria
   // continua em cima, estimada como sempre.
   leg2Reserva = 0.0f;
+  g2.baseY = baseLegendaPrincipal();   // safe anchor for an explicit secondary position
   if (junto) legendasui_banda_zerar(); else legendasui_desenhar_secundaria(&g2);
   if (junto && (!assrender_ativo() || assrender_texto_simples())) {
     float h2 = legendasui_altura_secundaria(&g2);
@@ -4693,13 +4748,8 @@ static void desenharLegendaPrincipal(float *topoPilha){
   // PGS decodificado pelo app (mkvass): so ha quadros quando a faixa e de imagem.
   if (overlay && imgsub_desenhar(legsync_posicao(posLegenda()) + legsync_offset_ms(legEstilo.atrasoMs) / 1000.0,
         bitmapArea.x, bitmapArea.y, bitmapArea.w, bitmapArea.h, bitmapAlpha)) return;
-  /* ASS completo: libass devolve uma lista de bitmaps por camada, preservando
-   * karaoke, movimento, desenho vetorial, fontes e todas as tags do arquivo.
-   * Da folha, so chegam ao ASS o que nao desmonta o estilo do autor: tamanho
-   * (escala proporcional), opacidade e atraso. Cor, fonte, fundo, posicao e
-   * borda ficam com o arquivo, como no app web desde o 1.2.0 — trocar a cor
-   * apagava o karaoke e as placas coloridas. A folha mostra essas linhas como
-   * preservadas (faixas.c). */
+  /* Authored ASS keeps its styles until the corresponding user setting
+   * changes. Size remains proportional; opacity and delay apply globally. */
   int r, g, b;
   // F05: manual + automatico aceito, UMA vez, so para o documento dono do
   // overlay (sem ele, o manual intacto). O estilo guarda o ATRASO da pessoa
@@ -4713,7 +4763,7 @@ static void desenharLegendaPrincipal(float *topoPilha){
   assrender_definir_cor(0, 0, 0, 0);
   if (overlay && assrender_ativo()) {
     PlrRect area = areaVideoLegenda();
-    if (assrender_texto_simples()) {
+    {
       static const char *const families[] = {
         "Inter Display", "LG Display", "Droid Sans",
         "Montserrat", "Roboto", "Atkinson Hyperlegible Next",
@@ -4730,12 +4780,13 @@ static void desenharLegendaPrincipal(float *topoPilha){
       style.rgb = (r << 16) | (g << 8) | b;
       style.background = legEstilo.fundo >= 0 && legEstilo.fundo <= 4 ? legEstilo.fundo : 0;
       style.border = legEstilo.borda; style.bold = legEstilo.negrito;
-      { int oR, oG, oB; ajustes_leg_contorno_rgb(&oR, &oG, &oB); style.outline = (oR << 16) | (oG << 8) | oB; }
+      style.outlineRgb = (int)ajustes_leg_borda_rgb(legEstilo.corBorda);
+      style.overrides = legTocado;
       style.marginV = (int)(1080.f - base);
       assrender_definir_texto_estilo(&style);
       /* Plain captions follow the old screen-space layout; authored ASS
        * still follows the video rectangle and the author's styling. */
-      area = (PlrRect){0, 0, NV_TELA_W, NV_TELA_H};
+      if (assrender_texto_simples()) area = (PlrRect){0, 0, NV_TELA_W, NV_TELA_H};
     }
     float alpha = (legEstilo.opacidade==3?.25f:legEstilo.opacidade==2?.5f:
                    legEstilo.opacidade==1?.75f:1.f) * entrada;
