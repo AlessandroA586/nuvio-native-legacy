@@ -523,6 +523,7 @@ static int toqueAgendaRolar(const PonteiroRolagem *e) {
 // aqui partia na velocidade maxima e o primeiro quadro ja saltava 12%.
 static float velY;
 static int   sair;
+static int   pediuRelogio;
 // O MODAL DA LINHA (qualquer OK numa linha, ver agendaui_evento). `ctxAberto`
 // 1 = modal da serie (acoes + historico), 2 = manchetes, 3 = a noticia aberta.
 static int    ctxFoco, ctxItem, notFoco;
@@ -765,7 +766,7 @@ static float alturaDoc(void) {
 
 int agendaui_iniciar(void) {
   int i;
-  sair = 0;
+  sair = 0; pediuRelogio = 0;
   foco = 0;
   vistaMes = focoCabecalho = calPainel = calEvento = 0;
   { const char *h = agenda_hoje();
@@ -800,6 +801,7 @@ int agendaui_iniciar(void) {
 }
 
 int agendaui_quer_sair(void) { int s = sair; sair = 0; return s; }
+int agendaui_pediu_relogio(void) { int v = pediuRelogio; pediuRelogio = 0; return v; }
 
 static void alternarLembrete(void) {
   const AgItem *it = agenda_lista(foco);
@@ -965,6 +967,7 @@ void agendaui_teste_foco(int *linha, int *cabecalho, int *modal, int *modalFoco,
 }
 
 void agendaui_evento(const SDL_Event *e) {
+  pediuRelogio = 0;
 #ifdef NV_TOUCH_UI
   if (toquerol_navegacao(e)) {
     if (toqueAgenda.livre) {
@@ -1049,7 +1052,7 @@ void agendaui_evento(const SDL_Event *e) {
       int ordemListaN = vistaMes ? 5 : 2;
       int pos = 0, j;
       if (volta || k == SDLK_DOWN) { focoCabecalho = 0; return; }
-      if (k == SDLK_UP) { if (ajustes_menu_topo()) sair = 1; return; }
+      if (k == SDLK_UP) { if (ajustes_menu_topo()) sair = 1; else pediuRelogio = 1; return; }
       if (k == SDLK_LEFT || k == SDLK_RIGHT) {
         for (j = 0; j < ordemListaN; j++) {
           int id = vistaMes ? ordemLista[j] : (j == 0 ? AG_CAB_LISTA : AG_CAB_MES);
@@ -1128,7 +1131,7 @@ void agendaui_evento(const SDL_Event *e) {
   }
   if (focoCabecalho) {
     if (volta || k == SDLK_DOWN) { focoCabecalho = 0; return; }
-    if (k == SDLK_UP) { if (ajustes_menu_topo()) sair = 1; return; }
+    if (k == SDLK_UP) { if (ajustes_menu_topo()) sair = 1; else pediuRelogio = 1; return; }
     if (k == SDLK_LEFT && focoCabecalho == AG_CAB_LISTA) { sair = 1; return; }
     if (k == SDLK_LEFT || k == SDLK_RIGHT) {
       focoCabecalho = focoCabecalho == AG_CAB_LISTA ? AG_CAB_MES : AG_CAB_LISTA;

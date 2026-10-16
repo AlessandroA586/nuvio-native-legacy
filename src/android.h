@@ -44,6 +44,8 @@ int  android_volumes_externos(char *dst, size_t n);
 char *android_listar_apps(void);
 int android_abrir_app(const char *pacote);
 int android_abrir_loja(const char *pacote, const char *nome);
+// #501: entrega a URL a outro player (ACTION_VIEW, video/*). 1 = abriu.
+int android_abrir_externo(const char *url, const char *titulo);
 // Vigia do arranque (#266, ArranqueVigia.kt): a etapa do main() em que o fio do
 // SDL esta (texto estatico) e um contador de quadros apresentados. So o fio
 // do SDL chama.
