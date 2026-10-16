@@ -747,6 +747,8 @@ void gfx_furo(GfxRect r);
 // gfx_cor): o que fica fora do SDF mantem a alpha da superficie e o plano de
 // video so aparece pela area arredondada.
 void gfx_furo_raio(GfxRect r, float raio);
+// Furo com cantos + veu so-veu do GFX_JANELA (cor 0) numa passada: ver gfx.c.
+void gfx_furo_raio_veu(GfxRect r, float raio, float veu, float rolada, float exp, float ca);
 void gfx_textura(GfxRect r, GLuint tex);
 // Esmaece o quadro inteiro ja desenhado para `a` (0 = transparente, mostra o
 // plano de video de baixo). Usado no dissolve do voo da ilha.

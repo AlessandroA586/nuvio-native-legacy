@@ -2347,7 +2347,13 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
       float x0 = sx0 < 0.0f ? 0.0f : sx0, y0 = sy0 < 0.0f ? 0.0f : sy0;
       float x1 = sx1 > NV_TELA_W ? NV_TELA_W : sx1;
       float y1 = sy1 > NV_TELA_H ? NV_TELA_H : sy1;
-      if (x1 > x0 && y1 > y0) gfx_fill_vis += (double)((x1 - x0) * (y1 - y0)) / (NV_TELA_W * NV_TELA_H); }
+      if (x1 > x0 && y1 > y0) {
+        double vis = (double)((x1 - x0) * (y1 - y0)) / (NV_TELA_W * NV_TELA_H);
+        gfx_fill_vis += vis;
+        // "Cheia" = cobre meia tela NA TELA: a parte de um cartao vizinho que
+        // sai pela borda nao custa fill, entao nao conta.
+        if (vis < 0.5) area = 0.0f;
+      } else area = 0.0f; }
     if (area >= 0.5f) { gfx_n_cheio++;
 #ifdef NV_FLUIDEZ_PERF
       if (!comAmb && !opaco && !clearCor && glIsEnabled(GL_BLEND)) gfx_n_cheio_mistura++;
@@ -3977,6 +3983,23 @@ void gfx_furo_raio(GfxRect r, float raio) {
   gfxBlend(0);
   gfx_rect(r, 0, GFX_COR, 0, 0, 0, raio, 0, 0, 0, 0);
   gfxBlend(1);
+}
+
+// O furo com cantos E o veu do cartao numa passada so. gfx_furo_raio + o
+// GFX_JANELA so-veu eram duas camadas do tamanho do cartao sobre o video vivo:
+// o furo apaga o pixel (0,0,0,0) e o veu mistura por cima do zero, que e
+// rgb*a e a. Esta escreve esse resultado direto (SRC_ALPHA, ZERO / ONE, ZERO:
+// o destino e ignorado, ele ia ser apagado mesmo). Mesmo SDF, mesmo descarte
+// dos cantos, mesmo pixel. `veu`, `rolada` e `exp` sao os de gfx_rect/JANELA.
+void gfx_furo_raio_veu(GfxRect r, float raio, float veu, float rolada, float exp, float ca) {
+  GfxRect t = r;
+  dinDescarregar();
+  GFX_TR_RECT(t.x, t.y, t.w, t.h);
+  if (escAtiva != 1.0f) { t.x *= escAtiva; t.y *= escAtiva; t.w *= escAtiva; t.h *= escAtiva; }
+  vidroFuro(t);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ZERO, GL_ONE, GL_ZERO);
+  gfx_rect(r, 0, GFX_JANELA, veu, rolada, exp, raio, 0, 0, 0, ca);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 // Multiplica TUDO o que ja foi desenhado neste quadro (cor e alfa, que e

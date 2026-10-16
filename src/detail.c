@@ -7425,13 +7425,17 @@ static void carFundo(void) {
       // opaca fica), a arte apaga por cima com trailerFade quando o primeiro
       // quadro chega, e o veu sozinho (cor r=0) segue por cima do video.
       if (k == carAplicado && trailerFade > 0.005f && trailer_aberto() && !trailer_cheia()) {
+        float veuTrailer = veu * (1.0f - 0.85f * trailercinema_t(&trailerCinema) * expandida);
+        // Video pleno (a arte ja apagou): furo + veu numa camada so.
+        if (!tex || trailerFade >= 0.995f) {
+          gfx_furo_raio_veu(r, raio / r.h, veuTrailer, 0.85f * pg, expandida, ak * trailerFade);
+          continue;
+        }
         gfx_furo_raio(r, raio / r.h);
         gfx_tex_aspect_atual = tex ? tex_aspecto(arte) : 0.0f;
         if (tex && trailerFade < 0.995f)
           gfx_rect(r, tex, GFX_JANELA, veu, 0.85f * pg, 1.0f - cartao, raio / r.h, 1, 1, 1, ak * (1.0f - trailerFade));
-        gfx_rect(r, 0, GFX_JANELA,
-                 veu * (1.0f - 0.85f * trailercinema_t(&trailerCinema) * expandida),
-                 0.85f * pg, expandida, raio / r.h, 0, 0, 0, ak * trailerFade);
+        gfx_rect(r, 0, GFX_JANELA, veuTrailer, 0.85f * pg, expandida, raio / r.h, 0, 0, 0, ak * trailerFade);
         continue;
       }
       if (!tex) {
