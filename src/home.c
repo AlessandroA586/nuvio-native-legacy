@@ -370,6 +370,7 @@ static float velX[MAX_FIL];
 // Fileiras que o limite cortou na ultima montagem — colecoes incluidas. Ver o
 // comentario no corte, em remontar().
 static int   cortadasPeloLimite;
+static char  motivoCorte[128];
 static float velY = 0.0f;
 // RETORNO DE FIM DE FILEIRA (anim.h: AnimBorda). Um deslocamento em x por
 // fileira e um em y para a pagina, somados so no DESENHO: nao tocam scrollX,
@@ -3231,12 +3232,13 @@ static void sincronizarFileiras(void) {
     if (destino > 0 && !strcmp(fileiras[0].chave, "last_session"))
       arranjo[w++] = fileiras[0];
     q = fil_unir(ch, destino, ord, MAX_FIL);
+    int offTv = 0, offConta = 0;
     for (k = 0; k < q && w < MAX_FIL; k++) {
       Fileira *f = &fileiras[ord[k]];
       int j, repetida = 0;
       if (!strcmp(f->chave, "last_session")) continue;
-      if (fil_oculta(f->chave)) continue;
-      if (f->tipo == FILEIRA_CATALOGOS && (catordem_oculta(f->chave, f->chave) && !fil_adicionada_na_tv(f->chave))) continue;
+      if (fil_oculta(f->chave)) { offTv++; continue; }
+      if (f->tipo == FILEIRA_CATALOGOS && (catordem_oculta(f->chave, f->chave) && !fil_adicionada_na_tv(f->chave))) { offConta++; continue; }
       // UMA FILEIRA POR CHAVE (issue #127, "Proximos episodios" duplicada na
       // C9 do dono). A chave e a identidade da fileira em todo o resto — foco,
       // rolagem, registro, ordem —, e duas com a mesma chave desenhariam o
@@ -3286,7 +3288,7 @@ static void sincronizarFileiras(void) {
     // tudo que vem DEPOIS dele — e as fileiras de colecao entram justamente no
     // fim da lista. O corte tem de pular o catalogo que passou do orcamento e
     // seguir, deixando passar quem nao pede rede.
-    { int q2, rede = 0, mantidas = 0;
+    { int q2, rede = 0, mantidas = 0, naFila = 0, fora = 0, alem = 0;
       for (q2 = 0; q2 < w; q2++) {
         int pedeRede = arranjo[q2].base[0] && arranjo[q2].catId[0];
         // FILA NAO DESENHA. Editor e Home usam a mesma cota de catalogos;
@@ -3294,13 +3296,17 @@ static void sincronizarFileiras(void) {
         // entra; abre vaga sozinho quando o estado muda na remontagem.
         if (pedeRede) {
           int est = fil_estado_chave(arranjo[q2].chave);
-          if (est == FIL_NA_FILA || est == FIL_FORA) continue;
+          if (est == FIL_NA_FILA) { naFila++; continue; }
+          if (est == FIL_FORA) { fora++; continue; }
         }
-        if (pedeRede && ++rede > lim) continue;
+        if (pedeRede && ++rede > lim) { alem++; continue; }
         if (mantidas != q2) arranjo[mantidas] = arranjo[q2];
         mantidas++;
       }
       cortadasPeloLimite = w - mantidas;
+      // #545: which rows the catalogue had and the Home did not draw, by reason.
+      snprintf(motivoCorte, sizeof motivoCorte, "desligada na TV %d, desligada na conta %d, "
+               "fila %d, fora %d, alem do limite %d", offTv, offConta, naFila, fora, alem);
       w = mantidas; }
     memcpy(fileiras, arranjo, sizeof(Fileira) * (size_t)w);
     destino = w;
@@ -3402,8 +3408,8 @@ static void sincronizarFileiras(void) {
   // Diz TAMBEM o limite e quantas vinham do catalogo. Com um numero so, uma
   // home de 5 fileiras nao distinguia "o limite e 5" de "so 5 catalogos
   // responderam" — as duas perguntas que o dono faz quando a home vem curta.
-  printf("[home] %d fileiras na tela (limite %d, %d fileira(s) no catalogo)\n",
-         nFileiras, fil_limite(), nCat);
+  printf("[home] %d fileiras na tela (limite %d, %d fileira(s) no catalogo; fora da tela: %s)\n",
+         nFileiras, fil_limite(), nCat, motivoCorte);
 }
 
 int home_tem_fileiras(void) { return nFileiras > 0; }

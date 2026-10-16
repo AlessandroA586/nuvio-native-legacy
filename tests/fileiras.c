@@ -1161,6 +1161,38 @@ int main(void) {
     usaArquivo = 0; }
   puts("ok  #319: addon removido/desligado nao ocupa vaga da home e a poda nao fica adiada");
 
+  // #545: A CATALOG NO MANIFEST DECLARES THIS SESSION (Bingecat's rotating
+  // "because_watched_*" keys, Xperience catalogs pushed out by the per-addon
+  // quota) kept a Home slot while its add-on stayed enabled. Discovery only
+  // fetches declared catalogs, so it fetched rows past them; the Home then
+  // dropped those as "queue" ("5 fileiras na tela ... 13 no catalogo").
+  fil_esquecer();
+  { const char *decl[] = { "vivo_movie_real1", "vivo_movie_real2", "vivo_movie_real3" };
+    usaArquivo = 1;
+    { FILE *f = fopen(nvt("/fileirasui-p1.txt"), "w");
+      fprintf(f, "limite 3\nordem 1\n");
+      fprintf(f, "linha vivo_movie_velha1\t0\t0\t1\tVelha1\n");
+      fprintf(f, "linha vivo_movie_real1\t0\t0\t1\tReal1\n");
+      fprintf(f, "linha vivo_movie_velha2\t0\t0\t1\tVelha2\n");
+      fprintf(f, "linha vivo_movie_real2\t0\t0\t1\tReal2\n");
+      fprintf(f, "linha vivo_movie_real3\t0\t0\t1\tReal3\n");
+      fclose(f); }
+    fil_definir_perfil(1);
+    fil_teste_recarregar();
+    fil_marcar_declaradas(decl, 3, 1);
+    assert(fil_estado_chave("vivo_movie_real2") == FIL_NA_HOME);
+    assert(fil_estado_chave("vivo_movie_real3") == FIL_NA_HOME);
+    assert(fil_estado_chave("vivo_movie_velha1") == FIL_FORA);
+    assert(fil_n_na_home() == 3 && fil_n_fila() == 0);
+    // declared again: the row is back exactly where it was
+    fil_registrar("vivo_movie_velha1", "Velha1", "Vivo", "movie", 5);
+    assert(fil_estado_chave("vivo_movie_velha1") == FIL_NA_HOME);
+    assert(fil_estado_chave("vivo_movie_real3") == FIL_NA_FILA);
+    remove(nvt("/fileirasui-p1.txt"));
+    fil_definir_perfil(0);
+    usaArquivo = 0; }
+  puts("ok  #545: catalogo que nenhum manifesto declara nao ocupa vaga da home");
+
   // #365: FANTASMAS EM "FORA DA HOME". Removido o addon, as suas linhas
   // "Fora da Home" — a sugestao automatica (oculta=2) e a oculta impunida
   // que sobrou de arquivo antigo (oculta=1, sem mais escolha nenhuma) —
