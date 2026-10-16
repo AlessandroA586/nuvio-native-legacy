@@ -819,6 +819,14 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "    m *= smoothstep(0.56, 0.44, t);\n"
   "    if (m <= 0.002) discard;\n"
   "  }\n"
+  // ARCO (gfx_arco): uPar.y < 0 = comprimento em voltas, a partir de uDesliza
+  // (fracao de volta, 0 = topo), no sentido horario.
+  "  if (uPar.y < 0.0) {\n"
+  "    vec2 q = (vUv - 0.5) * vec2(uAspect, 1.0);\n"
+  "    float ta = fract(atan(q.x, -q.y) / 6.2831853 - uDesliza);\n"
+  "    m *= smoothstep(0.0, 0.01, ta) * smoothstep(-uPar.y, -uPar.y - 0.01, ta);\n"
+  "    if (m <= 0.002) discard;\n"
+  "  }\n"
   "  gl_FragColor = vec4(uCor.rgb, uCor.a * m);\n"
   "}\n",
 
@@ -1164,6 +1172,11 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "  if (uPar.y > 0.5) {\n"
   "    float tt = fract((atan(p.y, p.x) / 6.2831853 + 0.5) * uPar.y);\n"
   "    m *= smoothstep(0.56, 0.44, tt);\n"
+  "    if (m <= 0.002) discard;\n"
+  "  }\n"
+  "  if (uPar.y < 0.0) {\n"   // o arco do GFX_ANEL
+  "    float ta = fract(atan(p.x, -p.y) / 6.2831853 - uDesliza);\n"
+  "    m *= smoothstep(0.0, 0.01, ta) * smoothstep(-uPar.y, -uPar.y - 0.01, ta);\n"
   "    if (m <= 0.002) discard;\n"
   "  }\n"
   "  float g = 0.5 + 0.5 * cos(atan(p.y, p.x) - uTempo * 0.9);\n"
@@ -3122,6 +3135,13 @@ void gfx_anel(GfxRect r, float raio, float esp,
       return;
     } }
   gfx_rect(r, 0, GFX_ANEL, 0, esp / r.h, 0, raio, cr, cg, cb, ca);
+}
+void gfx_arco(GfxRect r, float esp, float ini, float frac,
+              float cr, float cg, float cb, float ca) {
+  if (r.h <= 0.0f || frac <= 0.0f) return;
+  gfx_desliza_atual = ini;
+  gfx_rect(r, 0, GFX_ANEL, 0, esp / r.h, frac >= 0.999f ? 0.0f : -frac, 0.5f, cr, cg, cb, ca);
+  gfx_desliza_atual = 0.0f;
 }
 // CONCENTRICO: o rect cresce g = folga + esp de cada lado e o raio em pixels
 // cresce o MESMO g. Com o raio normalizado copiado da peca (o erro comum), o

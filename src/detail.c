@@ -1295,6 +1295,7 @@ static const char *sinopseDe(int i) {
 static char arteFixa[NV_TEX_URL_MAX], logoFixo[512], logoCatalogoFixo[512];
 static int  arteFixaPoster;
 
+static GfxRect morphLogo;   // o logo do hero no ultimo quadro (player_morph_de)
 static const char *logoDe(int i) {
   const CatItem *c = cat_item(i);
   if (i == idx && logoFixo[0]) return logoFixo;
@@ -4634,6 +4635,7 @@ static void heroWeb(float a, float desloc) {
     { float f = (float)(SDL_GetTicks() - logoDesde) / 260.0f;
       if (f < 1.0f) aLogo *= f < 0.0f ? 0.0f : f; }
   } else logoVisto[0] = 0;
+  morphLogo.w = 0.0f;
   if (texLogo) {
     float asp = tex_aspecto(arqLogo);
     if (asp <= 0.0f) asp = 2.5f;
@@ -4659,6 +4661,7 @@ static void heroWeb(float a, float desloc) {
     if (w > larguraLogoHero()) { w = larguraLogoHero(); h = w / asp; }
     GfxRect r = { NV_DETW2_X, baseLogo - h, w, h };
     gfx_tex_aspect_atual = 0.0f;   // o logo ja vem na proporcao certa
+    morphLogo = r;
     // LOGO PRETO VIRA BRANCO. O TMDB serve a mesma marca em versao clara e
     // escura e NAO diz qual e qual — nao ha campo para isso, e o ranking do
     // proprio app web ordena so por idioma e nota. Quando cai a escura, ela
@@ -4748,6 +4751,7 @@ static void heroWeb(float a, float desloc) {
     float bx = NV_DETW2_X;
     GfxRect rp = heroAcaoRect(&bx, &cyBtn, larguraPrimario(rot), NV_DETW2_BTN_H);
     desenhaBotao(rp, rot, 0, nivel == 0 && botao == nb, a);
+    player_morph_de(morphLogo, rp);   // A3: o morph da abertura parte daqui
     primarioPct = -1;   // os outros botoes nao tem trilho
     if (a > 0.3f) ponteiro_alvo(rp.x, rp.y, rp.w, rp.h, ponteiroDetalhe, NULL, -1, nb);
     bx += rp.w + NV_DETW2_BTN_GAP; nb++;

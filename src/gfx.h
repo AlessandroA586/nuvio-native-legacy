@@ -682,6 +682,10 @@ void          gfx_mascara_opaca(GfxRect r, float raioPx);
 // normalizado pela altura, como em gfx_cor.
 void gfx_anel(GfxRect r, float raio, float esp,
               float cr, float cg, float cb, float ca);
+// Arco do circulo inscrito em r: `esp` px por dentro, de `ini` (fracao de
+// volta, 0 = topo) por `frac` voltas no sentido horario. Um quad (GFX_ANEL).
+void gfx_arco(GfxRect r, float esp, float ini, float frac,
+              float cr, float cg, float cb, float ca);
 // Painel opaco grande de cor com canto arredondado: clear tesourado no miolo,
 // faixa de borda pelo shader (mesmo pixel de gfx_cor; bem mais barato na GPU).
 void gfx_cor_painel(GfxRect r, float raio, float cr, float cg, float cb, float ca);
