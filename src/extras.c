@@ -215,7 +215,7 @@ static int  nTrailer;
 // relacionados e imagens competirem com a arte. Mantemos uma fila separada
 // que consulta apenas /videos. O fio e unico; pedidos novos substituem a
 // geracao pendente e uma resposta velha e descartada.
-typedef struct { char yt[16]; } HeroTrailer;
+typedef struct { char yt[16]; int idiomaPreferido; } HeroTrailer;
 static HeroTrailer heroTrailer[EX_TRAILER_MAX];
 static int nHeroTrailer;
 static char heroTrailerPedido[24];
@@ -523,6 +523,7 @@ int extras_teste_trailers_ficha(const char *corpo, int serie, const char *idioma
   if (max > EX_TRAILER_MAX) max = EX_TRAILER_MAX;
   n = trailersDaFicha(corpo, corpo ? corpo + strlen(corpo) : NULL, serie, idioma, v, max);
   for (i = 0; i < n; i++) snprintf(yt[i], 16, "%s", v[i].yt);
+  publicarTrailers(v, n);
   return n;
 }
 #endif
@@ -1925,7 +1926,10 @@ static int parsearHeroVideos(const char *corpo, int serie, const char *idioma,
   if (strstr(corpo, "\"videos\""))
     n = trailersDaFicha(corpo, NULL, serie, idioma, v, EX_TRAILER_MAX);
   else n = parsearVideos(js_array(corpo, NULL, "results"), serie, idioma, "", v, EX_TRAILER_MAX);
-  for (i = 0; i < n; i++) snprintf(saida[i].yt, sizeof saida[i].yt, "%s", v[i].yt);
+  for (i = 0; i < n; i++) {
+    snprintf(saida[i].yt, sizeof saida[i].yt, "%s", v[i].yt);
+    saida[i].idiomaPreferido = v[i].idiomaPreferido;
+  }
   return n;
 }
 
@@ -1933,6 +1937,12 @@ static int parsearHeroVideos(const char *corpo, int serie, const char *idioma,
 // Ponto de teste pequeno para o parser usado pelo worker real. O alvo normal
 // nao exporta este auxiliar; o harness compila com NUVIO_TRAILER_TEST e assim
 // exercita o mesmo filtro de site/tipo/chave sem simular o JSON em JavaScript.
+void extras_teste_publicar_hero(const char *id, const char *corpo, const char *idioma) {
+  snprintf(heroTrailerPedido, sizeof heroTrailerPedido, "%s", id);
+  nHeroTrailer = parsearHeroVideos(corpo, 0, idioma, heroTrailer);
+  heroTrailerVivo = 0;
+  heroTrailerExecutada = heroTrailerGer;
+}
 int extras_hero_trailer_parse(const char *corpo, char *dst, unsigned cap) {
   HeroTrailer encontrados[EX_TRAILER_MAX];
   int n = parsearHeroVideos(corpo, 0, "", encontrados);
@@ -2073,6 +2083,17 @@ int extras_hero_trailer_obter(const char *imdb, char *dst, unsigned cap) {
   }
   pthread_mutex_unlock(&heroTrailerTrava);
   return ok;
+}
+
+int extras_hero_trailer_idioma_preferido(const char *imdb) {
+  char id[24];
+  int preferido;
+  normalizarHeroId(imdb, id, sizeof id);
+  pthread_mutex_lock(&heroTrailerTrava);
+  preferido = id[0] && !strcmp(heroTrailerPedido, id) && !heroTrailerVivo &&
+    heroTrailerExecutada == heroTrailerGer && nHeroTrailer > 0 && heroTrailer[0].idiomaPreferido;
+  pthread_mutex_unlock(&heroTrailerTrava);
+  return preferido;
 }
 
 // Abre o trailer no app nativo da plataforma. O app nao tem reprodutor de

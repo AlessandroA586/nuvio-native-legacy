@@ -57,6 +57,8 @@ int ajustes_social(void) { return 1; }
 int ajustes_hist_conta(void) { return 1; }
 int ajustes_hero_ligado(void) { return 1; }
 int ajustes_trailer_hero(void) { return trailerSetting; }
+int ajustes_trailer_hero_vetado(void) { return 0; }
+int video_registro_negado(void) { return 0; }
 static int somSetting;
 int ajustes_trailer_som(void) { return somSetting; }
 Uint32 ajustes_trailer_hero_espera_ms(void) { return NV_TRAILER_HERO_ESPERA_MS; }
@@ -130,6 +132,11 @@ const char *trailerimdb_url(const char *imdb, const char **nome) {
 }
 int trailerimdb_respondeu(const char *imdb) { (void)imdb; return imdbReady || imdbAnswered; }
 
+#ifdef NUVIO_TRAILER_TEST
+const char *desc_chave_tmdb(void) { return ""; } /* Published response, no live network. */
+#endif
+#ifndef NUVIO_TRAILER_TEST
+int extras_hero_trailer_idioma_preferido(const char *imdb) { (void)imdb; return 0; }
 void extras_hero_trailer_pedir(const char *imdb, int serie, long tmdbId) {
   (void)imdb; (void)serie; (void)tmdbId;
   sourceRequests++;
@@ -140,6 +147,8 @@ int extras_hero_trailer_obter(const char *imdb, char *dst, unsigned cap) {
   snprintf(dst, cap, "%s", "dQw4w9WgXcQ");
   return 1;
 }
+
+#endif
 
 static int check(const char *name, int ok) {
   if (!ok) { fprintf(stderr, "FALHOU: %s\n", name); return 1; }
@@ -193,6 +202,26 @@ static void resetState(const char *id) {
 int main(void) {
   const Uint32 start = 100;
   int rc = 0;
+
+#ifdef NUVIO_TRAILER_TEST
+  void extras_teste_trailer_audio(const char *);
+  void extras_teste_publicar_hero(const char *, const char *, const char *);
+  char json[8192];
+  FILE *f = fopen("tests/fixtures/tmdb_movie_videos_dub.json", "r");
+  if (!f) return 1;
+  json[fread(json, 1, sizeof json - 1, f)] = 0; fclose(f);
+  for (int original = 0; original <= 1; original++) {
+    resetState("tt205"); appleReady = imdbReady = 1;
+    extras_teste_trailer_audio(original ? "~" : "pt");
+    extras_teste_publicar_hero("tt205", json, "en-US");
+    home_trailer_passo(1, .016f, start);
+    home_trailer_passo(1, .016f, start + NV_TRAILER_HERO_ESPERA_MS);
+    rc |= check(original ? "real native home: Original retains English playback" :
+                          "real native home: unavailable dubbed playback keeps artwork",
+                original ? opened && strstr(lastSource, "apple") : !opened);
+  }
+  return rc;
+#endif
 
   // UM TRAILER POR TITULO NA SESSAO (dono, 30/09). Tocou (o `playing` chegou),
   // o foco sai do destaque e volta: a arte fica, o trailer nao recomeca.

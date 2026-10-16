@@ -5765,19 +5765,16 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
     heroTrailerTentado = heroTrailerMemoriaFalhou || heroTrailerJaTocou(ci->imdb);
     if (heroTrailerTentado) goto trailer_hero_fim;
     trailerapple_pedir(ci->imdb, ci->titulo, ci->meta, ci->tipo[0] ? !strcmp(ci->tipo, "series") : 0);
-#ifdef __EMSCRIPTEN__
     // A consulta do hero e so /videos; extras_pedir (ficha, creditos,
     // relacionados e imagens) continua reservado para a pagina de detalhe.
     extras_hero_trailer_pedir(ci->imdb,
                               ci->tipo[0] ? !strcmp(ci->tipo, "series") : 0,
                               ci->tmdb);
-#endif
     // O IMDb exige Referer, que navegador nenhum deixa por (e o CORS dele so
     // aceita imdb.com): na Samsung so pelo servico de recomendacoes (#136).
     if (!trailerfonte_tizen() || trailerfonte_imdb_tizen()) trailerimdb_pedir(ci->imdb);
   } else {
     decorrido = agora - heroTrailerDesde;
-#ifdef __EMSCRIPTEN__
     // O worker tem uma janela de retry própria. Chamar aqui é barato e
     // idempotente enquanto a mesma fonte ainda pode chegar; depois de uma
     // falha transitória, o cooldown deixa a mesma obra tentar de novo sem
@@ -5786,7 +5783,6 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
       extras_hero_trailer_pedir(ci->imdb,
                                 ci->tipo[0] ? !strcmp(ci->tipo, "series") : 0,
                                 ci->tmdb);
-#endif
     // Um elemento que ficou em buffering nao pode congelar a home. Fechar
     // aqui tambem invalida a fonte antiga antes de a proxima arte entrar.
     if (trailer_aberto() && !trailer_tocando() && heroTrailerPreparandoAte &&
@@ -5860,6 +5856,10 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
 #else
     c.youtubeRespondeu = venceu;
 #endif
+    /* Home cannot play YouTube reliably. Keep artwork when only TMDB has
+     * the chosen audio instead of silently substituting English. */
+    if (trailerfonte_ajuste() == TRF_AUTO && extras_hero_trailer_idioma_preferido(ci->imdb))
+      goto trailer_hero_fim;
     // _destaque: igual a trailerfonte_escolher, salvo no .tpk com
     // NV_TRAILER_CONTINUA_DETALHE (IMDb antes da Apple, para o trailer poder
     // continuar COM SOM na pagina do titulo; ver trailerfonte.h).

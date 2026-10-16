@@ -217,6 +217,7 @@ void        extras_hero_trailer_pedir(const char *imdb, int serie, long tmdbId);
 // ao IMDb pedido. O snapshot sob trava evita que home combine n e ponteiro de
 // duas geracoes durante uma troca A -> B -> A.
 int         extras_hero_trailer_obter(const char *imdb, char *dst, unsigned cap);
+int         extras_hero_trailer_idioma_preferido(const char *imdb);
 #ifdef NUVIO_TRAILER_TEST
 int         extras_hero_trailer_parse(const char *json, char *dst, unsigned cap);
 #endif
