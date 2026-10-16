@@ -13,6 +13,18 @@
 // INCLUIDO, como em tests/social_shot.c, para semear contatos por dentro.
 //
 //   bash tests/socialui_shot.sh /tmp/nv-socialui
+#include "../src/rede.c"
+#include "celular.h"
+#include "celbotao.h"
+static int phoneOpen;
+int celular_disponivel(void) { return 1; }
+int celular_abrir(const char *t) { (void)t; phoneOpen = 1; return 1; }
+void celular_fechar(void) { phoneOpen = 0; }
+int celular_estado(void) { return phoneOpen ? CEL_ESPERANDO : CEL_PARADO; }
+const char *celular_url(void) { return phoneOpen ? "http://192.0.2.1/fixture" : ""; }
+int celular_pegar(char *d, size_t n) { (void)d; (void)n; return 0; }
+int celular_porta(void) { return 0; }
+#include "addons.h"
 #define NV_REC_URL "http://127.0.0.1:8799"
 // A CONTA TRAKT E O LOGIN DO SIMKL NA TV, so para as linhas de "Contas
 // ligadas" (o resto do app continua com os de verdade, sem login).
@@ -89,6 +101,7 @@ static void quadros(int n, const char *bmp) {
     SDL_PumpEvents();
     tex_bombear(8);
     home_atualizar(1.0f / 60.0f, agora);
+    celb_atualizar(1.0f / 60.0f);
     spainel_atualizar(1.0f / 60.0f, agora);
     ctx_atualizar(1.0f / 60.0f, agora);
     if (desenho == D_PERFIL) amigoperfil_atualizar(1.0f / 60.0f, agora);
@@ -188,8 +201,14 @@ static void irFileira(void) {
   home_ir_topo();
   for (r = 0; r < 14; r++) tecla(SDLK_UP);
   quadros(20, NULL);
-  tecla(SDLK_DOWN);
-  tecla(SDLK_DOWN);
+  for (int k = 0; k < 8; k++) {
+    tecla(SDLK_DOWN);
+    quadros(3, NULL);
+    char tipo[32]; snprintf(tipo, sizeof tipo, "tipo=%d ", FILEIRA_SOCIAL);
+    if (strstr(home_rastro_foco(), tipo)) return;
+  }
+  fprintf(stderr, "social row unreachable: %s\n", home_rastro_foco());
+  abort();
 }
 
 int main(int argc, char **argv) {
@@ -201,6 +220,7 @@ int main(int argc, char **argv) {
   int i, cen;
   
 
+  pronto = -1; // Refuse libcurl initialization, including background prefetch.
   dados_iniciar("deploy/app/art");
   dirDados = dados_dir();
   if (!dirDados || !strstr(dirDados, "nuvio-abas-shot")) {
@@ -260,6 +280,12 @@ int main(int argc, char **argv) {
   quadros(30, NULL);
 
 
+  AddonRemoto addon = { .nome = "Fixture", .url = "http://127.0.0.1:1/manifest.json", .ativo = 1 };
+  assert(addons_definir_lista(&addon, 1));
+#ifndef NV_AMIGOSFIL_TESTE
+  int classicOp = ajustes_rapido_op("friendsRowStyleLocal");
+  if (classicOp >= 0) for (int k = 0; k < 5; k++) ajustes_rapido_passo(classicOp, 1);
+#endif
   nContatos = 0;
   contato(nContatos++, "nuvio:pedro", "Pedro", "deploy/app/art/elenco/00_0.jpg", "nuvio");
   contato(nContatos++, "nuvio:marina", "Marina", "", "nuvio");

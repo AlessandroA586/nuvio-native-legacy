@@ -606,6 +606,7 @@ typedef enum {
   AJ_FONTE_PRECARREGAR, // local, append-only; video e proximo episodio, desligado
   AJ_PROVEDORES_ESCOPO, // local, append-only; 0 = shared, 1 = separate for this profile
   AJ_MURAL_TITULOS, // #521: local, append-only; Mural tile titles, on by default
+  AJ_AMIGOS_ESTILO, // local, append-only; Feed is the default
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -1136,6 +1137,7 @@ static const char *JF_ALFA_SENHA =
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-@!#$%&*+=?/ ";
 
 static const char *V_MANTER_PRAZO[] = { "2 min", "5 min", "10 min", "30 min", "Sem limite" };
+static const char *V_AMIGOS_ESTILO[] = { "Feed de cartões", "Ao vivo em destaque", "Histórias com cartaz", "Faixa de presença", "Cartaz primeiro", "Rostos clássicos" };
 static const Opcao OPCOES[AJ_N] = {
   ESC("Qualidade máxima",           V_QUALIDADE, 4),
   ESC("Dolby Vision",               V_LIGA, 2),
@@ -1539,6 +1541,7 @@ static const Opcao OPCOES[AJ_N] = {
 
   ESC("Configuração dos provedores", V_PROVEDORES_ESCOPO, 2),
   ESC("Títulos no Mural", V_LIGA, 2),  // local: muralTitulosLocal (#521)
+  ESC("Estilo da fileira de amigos", V_AMIGOS_ESTILO, 6),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1807,6 +1810,7 @@ static const char *CHAVE[] = {
 
   "-provedoresEscopo",
   "muralTitulosLocal",
+  "friendsRowStyleLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2927,6 +2931,7 @@ int ajustes_dts_ac3(void)             { return valor[AJ_DTS_AC3] == 1; }
 int ajustes_dv_mkv(void)              { return lig(AJ_DV_MKV); }
 int ajustes_hist_conta(void)          { return lig(AJ_HIST_CONTA); }
 int ajustes_social(void)              { return lig(AJ_SOCIAL); }
+int ajustes_amigos_estilo(void)       { return valor[AJ_AMIGOS_ESTILO]; }
 // Espaco da Home em fracao do valor medido. Fora da faixa do NUM (arquivo torto)
 // volta para dentro dela; 0 (arquivo sem a chave) nao chega aqui: o padrao e 100.
 float ajustes_espaco_fator(int pct) {
@@ -4913,6 +4918,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_ABERTURA_ADDON: /* idem */
     case AJ_ABERTURA_FUNDO: /* #508: idem */
     case AJ_EP_TAMANHO:    /* idem */
+    case AJ_AMIGOS_ESTILO: /* local friends row presentation */
     case AJ_MURAL_TITULOS: /* #521: idem */
     case AJ_MIC_BUSCA:     /* o microfone e o controle sao desta TV */
     case AJ_TECLADO_ANDROID: /* o web nao tem; o teclado e deste aparelho */

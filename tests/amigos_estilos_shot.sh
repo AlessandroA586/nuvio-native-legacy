@@ -8,7 +8,7 @@ NUVIO_DADOS=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-abas-shot.XXXXXX")
 trap 'rm -rf "$NUVIO_DADOS"' EXIT
 sources=()
 for source in src/*.c src/dts/*.c; do
-  case "$source" in src/main.c|src/recomenda.c) continue;; esac
+  case "$source" in src/main.c|src/recomenda.c|src/rede.c|src/celular.c) continue;; esac
   sources+=("$source")
 done
 flags=()
