@@ -5251,11 +5251,7 @@ static void desenhaShuffle(GfxRect r, float f, float a) {
   if (ajustes_vidro()) { gfx_vidro_painel(r, raio, 0.4f, a); gfx_vidro_pilula_cheia(r, raio, f, a); }
   else gfx_cor(r, raio, base + (fr - base) * f, base + (fg - base) * f, base + (fb - base) * f, a);
   gfx_icone(ig, "aj_shuffle", ic, ic, ic, a);
-  // A dica so aparece com o foco, acima do botao: o icone sozinho nao diz o que faz.
-  if (f > 0.05f) {
-    TxtLinha l = txt_linha(TXT_DET_META2, i18n("Episódio aleatório"), 190, 192, 200, 255);
-    txt_desenhar_alpha(l, r.x + (r.w - l.w) * 0.5f, r.y - l.h - 8.0f, a * f);
-  }
+  // Sem dica de texto no foco: o dono pediu (16/10/2026) so o icone.
 }
 
 // Item do segmentado de temporadas (Glass UI, mockup "detalhe-retomar"). Tres
