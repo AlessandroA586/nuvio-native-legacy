@@ -4,6 +4,9 @@ static struct { int amigo, titulo; } afItens[AF_FEED_MAX];
 static int afN, afEstilo = -1;
 static unsigned afRev = ~0u;
 static GfxRect afFoco;
+#ifdef NV_AMIGOSFIL_TESTE
+static GfxRect afUlt[AF_FEED_MAX];   // card rects of the last frame
+#endif
 static int afExemplos, afConviteEntrou;
 static char afId[96], afImdb[24];
 
@@ -130,11 +133,29 @@ static void afLegenda(int i, GfxRect r, float alpha) {
     afTexto(status, r.x, r.y + r.h + 42.0f, r.w, TXT_CAPTION2, alpha * 0.65f);
   }
 }
+// Landscape card art, the Continue Watching source (artehero): the catalog item's
+// card art, else the event's own backdrop, else its poster (the caller
+// cover-crops it to fill the card, never side bars).
+static const char *afArteDeitada(const SvEvento *e) {
+  int k = e->imdb[0] ? cat_indice_por_imdb(e->imdb) : -1;
+  const CatItem *it = k >= 0 ? cat_item(k) : NULL;
+  const char *u = it ? artehero_url_card_fonte(it, ajustes_hero_fonte(), ajustes_hero_arte_diferente()) : NULL;
+  return u && u[0] ? u : (e->arte[0] ? e->arte : e->poster);
+}
 static void afCartao(int i, GfxRect r, int foco, Uint32 agora) {
   int s = ajustes_amigos_estilo();
   const SvAmigo *a = afAmigo(i);
   const SvEvento *e = afEvento(i);
-  afAnel(r, foco);
+#ifdef NV_AMIGOSFIL_TESTE
+  afUlt[i] = r;
+#endif
+  // People cards (no title) wear the home card shell: radius, focus ring.
+  float raio = 12.0f / r.h;   // same corner as the feed cards
+  if (e) afAnel(r, foco);
+  else if (foco) {
+    svd_aro_foco(r, raio, 1.0f, 1.0f);
+    afFoco = (GfxRect){r.x - NV_ANEL_FOCO, r.y - NV_ANEL_FOCO, r.w + 2 * NV_ANEL_FOCO, r.h + 2 * NV_ANEL_FOCO};
+  }
   if (s == 3) {
     svd_superficie(r, .5f, 0, 1);
     svd_rosto((GfxRect){r.x + 24, r.y + 4, 48, 48}, a, 0, 1, agora);
@@ -155,8 +176,11 @@ static void afCartao(int i, GfxRect r, int foco, Uint32 agora) {
     }
     return;
   }
-  svd_poster(r, e ? (s == 2 || s == 4 ? (e->poster[0] ? e->poster : e->arte) : (e->arte[0] ? e->arte : e->poster)) : "", 12.0f / r.h, 1);
-  gfx_veu_base(r, 12.0f / r.h, .70f, .90f);
+  if (e && s != 2 && s != 4) gfx_card_forcar_cover_atual = 1.0f;   // fill the landscape card, no side bars
+  if (e) svd_poster(r, s == 2 || s == 4 ? (e->poster[0] ? e->poster : e->arte) : afArteDeitada(e), raio, 1);
+  else gfx_esqueleto(r, raio, NV_COR_ESQUELETO_R, NV_COR_ESQUELETO_G, NV_COR_ESQUELETO_B, 1.0f);   // home "no art" card
+  gfx_card_forcar_cover_atual = 0.0f;
+  if (e) gfx_veu_base(r, raio, .70f, .90f);   // home cards carry no veil over the empty placeholder
   if (e) {
     afTexto(e->titulo, r.x + 16, r.y + r.h - 42, r.w - 32, TXT_CALLOUT, 1);
     if (e->pct >= 0 && (e->acao == SV_AGORA || e->acao == SV_INICIO))
@@ -175,6 +199,9 @@ static void afCartao(int i, GfxRect r, int foco, Uint32 agora) {
         n++; break;
       }
     }
+  } else if (!e) {
+    float d = r.h * 0.5f;   // big centered avatar
+    svd_rosto((GfxRect){r.x + (r.w - d) * .5f, r.y + (r.h - d) * .5f, d, d}, a, 0, 1, agora);
   } else {
     svd_rosto((GfxRect){s == 2 ? r.x + (r.w - 48) * .5f : r.x + 16,
                              s == 2 ? r.y + r.h - 12 : r.y + 16, 48, 48}, a, 0, 1, agora);
@@ -313,6 +340,10 @@ static void afDesenhar(float x0, float y, float corte, int focada, int coluna, U
 }
 #ifdef NV_AMIGOSFIL_TESTE
 #include <assert.h>
+int amigosfil_teste_cartao(int i, GfxRect *r) {
+  if (i < 0 || i >= afN || afUlt[i].w <= 0) return -1;
+  *r = afUlt[i]; return afEvento(i) != NULL;
+}
 void amigosfil_teste_conferir(int w, int h) {
   if (ajustes_amigos_estilo() == 5) return;
   assert(afEstilo == ajustes_amigos_estilo());

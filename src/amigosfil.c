@@ -3,6 +3,7 @@
 #include "socialvis.h"
 #include "svdesenho.h"
 #include "catalogo.h"
+#include "artehero.h"
 #include "recomenda.h"
 #include "recenviar.h"
 #include "celbotao.h"
