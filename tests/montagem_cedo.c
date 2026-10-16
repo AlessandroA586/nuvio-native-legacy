@@ -32,12 +32,11 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <stdint.h>
-// A conta nao esta ligada nesta fixture; as seis montagens usam a sessao 0.
-uint64_t perfis_sessao_geracao(void) { return 0; }
-int perfis_sessao_atual(uint64_t geracao) { return geracao == 0; }
-int perfis_sessao_travar(uint64_t geracao) { return geracao == 0; }
-void perfis_sessao_destravar(void) {}
+#ifndef MONTAGEM_PERFIS_REAIS
+// These six discovery cases have one fixed account/profile per process.
+// The CW owner fixture instead links real perfis.c, including invalidation.
+#include "stub_perfisessao.h"
+#endif
 int arte_reserva_episodios(const char *imdb, const char *corpo) { (void)imdb; (void)corpo; return 0; }
 
 int ajustes_social(void) { return 1; }
@@ -97,9 +96,26 @@ int dados_apagar(const char *nome) {
 // ------------------------------------------------------------------ o addon
 // A lista "nova" do caso 1 troca a URL do addon (outro token no caminho, como
 // a conta faz): e isso que torna inutil o manifesto largado com a velha.
-static volatile unsigned versaoAddons = 1;
+static unsigned versaoAddons = 1;
+// Current addons.h snapshots borrow the same lock as fixture list writers.
+// This is a real ownership boundary, not an unlocked success stub.
+static pthread_mutex_t fixtureAddonListLock = PTHREAD_MUTEX_INITIALIZER;
+static _Thread_local unsigned fixtureAddonListDepth;
+static unsigned fixtureAddonListSnapshots;
+void addons_lista_travar(void) {
+  assert(!fixtureAddonListDepth);
+  assert(!pthread_mutex_lock(&fixtureAddonListLock));
+  fixtureAddonListDepth = 1;
+  __atomic_add_fetch(&fixtureAddonListSnapshots, 1, __ATOMIC_RELAXED);
+}
+void addons_lista_destravar(void) {
+  assert(fixtureAddonListDepth == 1);
+  fixtureAddonListDepth = 0;
+  assert(!pthread_mutex_unlock(&fixtureAddonListLock));
+}
 #define BASE_NOVA BASE "-v2"
-static const char *baseAtual(void)     { return versaoAddons > 1 ? BASE_NOVA : BASE; }
+static unsigned versaoAtual(void) { return __atomic_load_n(&versaoAddons, __ATOMIC_ACQUIRE); }
+static const char *baseAtual(void)     { return versaoAtual() > 1 ? BASE_NOVA : BASE; }
 int   addons_n(void)                   { return 1; }
 const char *addons_base(int i)         { (void)i; return baseAtual(); }
 int   addons_ativo(int i)              { (void)i; return 1; }
@@ -107,21 +123,19 @@ int   addons_fornece(int i, int oque)     { (void)i; (void)oque; return 0; }
 int   addons_sondado(int i)              { (void)i; return 0; }
 const char *addons_id_manifesto(int i) { (void)i; return AID; }
 const char *addons_nome(int i)         { (void)i; return "Addon"; }
-unsigned addons_versao(void)           { return versaoAddons; }
-// Este teste dubla a conta/fileiras; falta de retrato completo adia exclusao.
+unsigned addons_versao(void)           { return versaoAtual(); }
+// Fixture fakes the account/rows; a missing full snapshot defers exclusion.
 int addons_copiar_identidades(AddonIdentidade *saida, int max, unsigned versao, int perfil) {
   (void)saida; (void)max; (void)versao; (void)perfil; return -1;
 }
 int addons_travar_lista(unsigned versao, int perfil) { (void)versao; (void)perfil; return 0; }
 void addons_destravar_lista(void) {}
-void addons_lista_travar(void) {}
-void addons_lista_destravar(void) {}
 const char *addons_base_por_id(const char *id) { return id && !strcmp(id, AID) ? baseAtual() : ""; }
 void  addons_manifesto_lido(int i, const char *c) { (void)i; (void)c; }
 int addons_identidade_recebida(const char *base, unsigned versao, NvPerfilSessao sessao,
                               const char *corpo) {
   (void)corpo;
-  return nv_perfil_sessao_atual(sessao) && versao == versaoAddons && !strcmp(base, baseAtual());
+  return nv_perfil_sessao_atual(sessao) && versao == versaoAtual() && !strcmp(base, baseAtual());
 }
 int addons_manifesto_recebido(const char *base, unsigned versao, NvPerfilSessao sessao,
                              const char *corpo) {
@@ -142,8 +156,10 @@ static char imdbEsperado[32];
 static volatile int pedidosCatalogo, pendurados;
 // Manifesto baixado NO FIO DA MONTAGEM = o rede_baixar serial de lerManifesto,
 // e nao os fios de maniLargar.
-static pthread_t fioDaMontagem;
-static volatile int temFioDaMontagem, manifestosEmSerie;
+// The native assembly entry emits its marker before creating any workers.
+// A fresh pthread lifetime starts with role0, even if pthread_t is reused.
+static _Thread_local int fixtureFioMontagem;
+static volatile int manifestosEmSerie;
 static pthread_mutex_t pedTrava = PTHREAD_MUTEX_INITIALIZER;
 /* Hooks only for the focused cold/warm publication fixture. Defaults keep
  * the original six scenarios unchanged. */
@@ -163,13 +179,14 @@ static int imdbNaTela(const char *imdb, int (*campo)(const CatItem *)) {
 static int ehNaLista(const CatItem *c) { return c->naLista; }
 
 char *rede_baixar(const char *url, int t) {
+  assert(!fixtureAddonListDepth); // snapshots must release before transport
   char buf[600];
   const char *p;
   char id[16] = "";
   int armado;
   (void)t;
   if (strstr(url, "/manifest.json")) {
-    if (temFioDaMontagem && pthread_equal(pthread_self(), fioDaMontagem))
+    if (fixtureFioMontagem)
       __atomic_add_fetch(&manifestosEmSerie, 1, __ATOMIC_SEQ_CST);
     return strdup(MANIFESTO);
   }
@@ -234,9 +251,9 @@ int trakt_lista_cresc(const char *q, CatItem **s, int m) {
   if (n <= 0) { free(*s); *s = NULL; return 0; }
   return n;
 }
-// O "sync" que chega entre o Trakt e a leitura da lista de addons.
+// Synthetic account changes land at the assembly marker, before list read.
 enum { S_NADA, S_ADDONS, S_CREDENCIAL };
-static volatile int armadoSocial = S_NADA;
+static volatile int armadoInicio = S_NADA;
 // O servico social proprio (recomenda.c) fica fora deste teste: a uniao e so o que o Trakt trouxe.
 int   recomenda_social_mesclar(CatItem *i, int nTrakt, int max) { (void)i; (void)max; return nTrakt; }
 int recomenda_social_mesclar_sessao(CatItem *i, int nTrakt, int max, uint64_t sessao) {
@@ -245,13 +262,7 @@ int recomenda_social_mesclar_sessao(CatItem *i, int nTrakt, int max, uint64_t se
 unsigned recomenda_geracao(void) { return 1; }
 int trakt_social(CatItem *s, int m) {
   if (fixtureTrakt) fixtureTrakt(1);
-  int a = armadoSocial;
   (void)s; (void)m;
-  armadoSocial = S_NADA;
-  // (fioDaMontagem e marcado em trakt_continuar: o social corre em fio proprio.)
-  // Lista nova = versao nova: o manifesto largado no comeco nao serve mais.
-  if (a == S_ADDONS) { versaoAddons++; desc_repetir_addons(); }
-  else if (a == S_CREDENCIAL) desc_repetir();
   if (fixtureSocial && m > 0) {
     memset(s, 0, sizeof *s);
     snprintf(s->imdb, sizeof s->imdb, "ttSocial");
@@ -315,7 +326,18 @@ int   fil_unir(const char *const *c, int n, int *s, int m) {
 // ------------------------------------------------------------------ o resto
 static volatile int montagens;
 void  marco(const char *n) {
-  if (!strcmp(n, "montar: inicio")) montagens++;
+  if (!strcmp(n, "montar: inicio")) {
+    fixtureFioMontagem = 1; montagens++;
+    // This point is after the round captured generation/session and before
+    // manifest/list snapshots. Consume once so a retry cannot repeat it.
+    int a = __atomic_exchange_n(&armadoInicio, S_NADA, __ATOMIC_ACQ_REL);
+    if (a == S_ADDONS) {
+      addons_lista_travar();
+      __atomic_add_fetch(&versaoAddons, 1, __ATOMIC_RELEASE);
+      addons_lista_destravar();
+      desc_repetir_addons();
+    } else if (a == S_CREDENCIAL) desc_repetir();
+  }
   if (fixtureMarco) fixtureMarco(n);
 }
 void  SDL_Delay(Uint32 ms)                 { usleep(ms * 1000); }
@@ -365,7 +387,6 @@ int trakt_enfeitar_lote_sessao(CatItem *s, int n, uint64_t sessao) {
 }
 int trakt_continuar(CatItem *s, int m) {
   if (fixtureTrakt) fixtureTrakt(0);
-  fioDaMontagem = pthread_self(); temFioDaMontagem = 1;
   if (!fixtureCW || fixtureCWEmpty || m < 1) return 0;
   memset(s, 0, sizeof *s);
   snprintf(s->imdb, sizeof s->imdb, "ttCW");
@@ -386,14 +407,16 @@ int   arte_reserva_registrar(const char *url, const char *imdb, int poster) {
 // ------------------------------------------------------------------ o teste
 static void esperarQuieto(void) {
   unsigned long long inicio = agoraMs(), quietoDesde = 0;
-  // usleep pode agrupar despertares no macOS: 150 chamadas nao sao 300 ms.
-  while (!buscando && agoraMs() - inicio < 1000) usleep(2000);
+  // Darwin can coalesce sleeps. Measure 300 ms, not 150 assumed 2 ms wakes.
+  // The real accessor also covers the current CW publication/queued retry,
+  // under its existing locks; abandoned catalogue workers are not included.
+  while (!desc_montando() && agoraMs() - inicio < 1000) usleep(2000);
   inicio = agoraMs();
   for (;;) {
     unsigned long long agora;
     usleep(2000);
     agora = agoraMs();
-    if (buscando) quietoDesde = 0;
+    if (desc_montando()) quietoDesde = 0;
     else if (!quietoDesde) quietoDesde = agora;
     if (quietoDesde && agora - quietoDesde >= 300) return;
     assert(agora - inicio < 20000);
@@ -416,7 +439,45 @@ static void zerar(void) {
   pthread_mutex_lock(&pedTrava); pedidosCatalogo = 0; pthread_mutex_unlock(&pedTrava);
 }
 
+// The collector must count a truly serial request, and must not turn a CW
+// worker into an assembly worker. Run/reset this before the six real cases.
+static void *fixtureManifestoEmWorker(void *u) {
+  (void)u;
+  trakt_continuar(NULL, 0);
+  char *body = rede_baixar(BASE "/manifest.json", 20);
+  assert(body); free(body);
+  return NULL;
+}
+static void conferirMedidorManifestos(void) {
+  assert(!fixtureFioMontagem);
+  __atomic_store_n(&manifestosEmSerie, 0, __ATOMIC_SEQ_CST);
+  marco("montar: inicio");
+  char *body = rede_baixar(BASE "/manifest.json", 20);
+  assert(body); free(body);
+  assert(__atomic_load_n(&manifestosEmSerie, __ATOMIC_SEQ_CST) == 1);
+  pthread_t worker;
+  assert(!pthread_create(&worker, NULL, fixtureManifestoEmWorker, NULL));
+  assert(!pthread_join(worker, NULL));
+  assert(__atomic_load_n(&manifestosEmSerie, __ATOMIC_SEQ_CST) == 1);
+  fixtureFioMontagem = 0;
+  __atomic_store_n(&manifestosEmSerie, 0, __ATOMIC_SEQ_CST);
+  montagens = 0;
+}
+
 int main(void) {
+  conferirMedidorManifestos();
+#ifndef MONTAGEM_PERFIS_REAIS
+  NvPerfilSessao fixa = nv_perfil_sessao_ler();
+  CatItem controle = {0};
+  assert(perfis_ativo() == 1 && !strcmp(sessao_usuario(), "dono"));
+  assert(nv_perfil_sessao_atual(fixa) && !nv_perfil_sessao_atual(fixa + 1));
+  assert(nv_perfil_sessao_travar(fixa)); nv_perfil_sessao_destravar();
+  assert(!nv_perfil_sessao_travar(fixa + 1));
+  assert(trakt_enfeitar_lote_sessao(&controle, 1, fixa) == 1);
+  assert(!trakt_enfeitar_lote_sessao(&controle, 1, fixa + 1));
+  assert(recomenda_social_mesclar_sessao(&controle, 1, 1, fixa) == 1);
+  assert(!recomenda_social_mesclar_sessao(&controle, 1, 1, fixa + 1));
+#endif
   const char *tmp = getenv("TMPDIR");
   snprintf(dirDados, sizeof dirDados, "%snuvio-montagem-cedo-%d",
            nvt("/"), (int)getpid());
@@ -464,7 +525,7 @@ int main(void) {
 
   // ---------------------------------------------------------------- caso 1
   printf("\n==> addons novos antes de a volta ler a lista\n");
-  armadoSocial = S_ADDONS;
+  armadoInicio = S_ADDONS;
   manifestosEmSerie = 0;
   zerar();
   desc_repetir();
@@ -477,7 +538,7 @@ int main(void) {
 
   // ---------------------------------------------------------------- caso 2
   printf("\n==> credencial nova no meio: para e recomeca, sem pedir catalogo\n");
-  armadoSocial = S_CREDENCIAL;
+  armadoInicio = S_CREDENCIAL;
   zerar();
   desc_repetir();
   esperarQuieto();
@@ -522,6 +583,8 @@ int main(void) {
     armadoCatalogo = NADA; }
   puts("ok  catalogo lento largado: a home segue, o fio termina sozinho");
 
+  assert(__atomic_load_n(&fixtureAddonListSnapshots, __ATOMIC_RELAXED) > 0);
+  assert(!fixtureAddonListDepth);
   puts("montagem_cedo: tudo ok");
   return 0;
 }
