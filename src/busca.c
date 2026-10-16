@@ -1636,9 +1636,11 @@ static void desenhaTeclado(void) {
         s = rotulo;
       } else s = (c == 0) ? i18n("espaço") : (c == 1 ? i18n("apagar")
                : (c == 2 ? i18n("limpar") : (layoutCir ? "ABC" : "\xd0\x90\xd0\x91\xd0\x92")));
-      int tom = (int)anim_mistura(243.0f, (float)ajustes_tinta_foco(), k);
-      TxtLinha l = txt_linha(f < kbFil ? TXT_G26B : TXT_AJ_SEG, s, tom, tom, tom, 255);
-      txt_desenhar(l, t.x + (t.w - l.w) * 0.5f, t.y + (t.h - l.h) * 0.5f);
+      // The tone eases every frame while focus moves: tint the cached white
+      // line at draw time instead of rasterizing one line per tone.
+      float tom = anim_mistura(243.0f, (float)ajustes_tinta_foco(), k) / 255.0f;
+      TxtLinha l = txt_linha(f < kbFil ? TXT_G26B : TXT_AJ_SEG, s, 255, 255, 255, 255);
+      txt_desenhar_tom(l, t.x + (t.w - l.w) * 0.5f, t.y + (t.h - l.h) * 0.5f, tom, tom, tom, 1.0f);
     }
   }
   // Dicas do controle, 16 px a 16 abaixo da ilha (o texto mudo do mockup).
