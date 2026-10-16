@@ -7059,7 +7059,8 @@ void home_desenhar(Uint32 agora) {
         int cb = 181 + (int)((249 - 181) * k + 0.5f);
         tl = txt_linha_corta(TXT_ROW_TITULO, rotFil, cr, cg, cb, 255,
                              homeRetratoTelefone() ? homeLarguraUtil() - 76.0f : NV_TELA_W - homeConteudoX() - 180.0f);
-        txt_desenhar(tl, homeConteudoX(), y); }
+        if (tipo != FILEIRA_SOCIAL || ajustes_amigos_estilo() != 3 || amigosfil_convite())
+          txt_desenhar(tl, homeConteudoX(), y); }
       // A FONTE (Trakt, Simkl...) NAO APARECE NA FILEIRA DE AMIGOS: a pessoa
       // quer saber quem viu e o que achou, nao de onde veio o dado. Ela fica
       // so no perfil do amigo (amigoperfil.c). Era a marca do Trakt aqui.

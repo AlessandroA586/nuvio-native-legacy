@@ -92,6 +92,24 @@ static void gravarBmp(const char *bmp) {
   for (y = 0; y < 1080; y++)
     memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
   assert(SDL_SaveBMP(s, bmp) == 0);
+#ifdef NV_AMIGOSFIL_TESTE
+  if (strstr(bmp, "-9F")) for (int example = 0; example < 2; example++) {
+    int low = 255, high = 0, caption = 0;
+    int offset = example * 536;
+    // Sample each example's art, away from badges and labels.
+    for (int yy = 690; yy < 780; yy++) for (int xx = 820 + offset; xx < 1220 + offset; xx++) {
+      unsigned char *p = (unsigned char *)s->pixels + yy * s->pitch + xx * 4;
+      if (p[0] < low) low = p[0];
+      if (p[0] > high) high = p[0];
+    }
+    assert(high - low > 20);
+    for (int yy = 870; yy < 920; yy++) for (int xx = 780 + offset; xx < 1250 + offset; xx++) {
+      unsigned char *p = (unsigned char *)s->pixels + yy * s->pitch + xx * 4;
+      if (p[0] > 60 && p[1] > 60 && p[2] > 60) caption++;
+    }
+    assert(caption > 100);
+  }
+#endif
   SDL_FreeSurface(s);
   free(pix);
   printf("captura: %s\n", bmp);
@@ -362,12 +380,22 @@ int main(int argc, char **argv) {
   }
   nContatos = 0;
   socialvis_demo(0);
-  irFileira();
-  quadros(100, NULL);
-  assert(amigosfil_n_colunas() == 1);
-  snprintf(bmp, sizeof bmp, "%s-9F.bmp", saida);
-  quadros(1, bmp);
-  amigosfil_teste_conferir(1920, 1080);
+  for (int lang = 0; lang < 2; lang++) {
+    char cam[800]; snprintf(cam, sizeof cam, "%s/ajustes.txt", dirDados);
+    FILE *file = fopen(cam, "w"); assert(file);
+    fprintf(file, "idioma %d\nfriendsRowStyleLocal 0\n", lang ? IDIOMA_PT : IDIOMA_EN);
+    fclose(file); ajustes_dir(dirDados);
+    irFileira(); quadros(100, NULL);
+    assert(amigosfil_n_colunas() == 1);
+    snprintf(bmp, sizeof bmp, lang ? "%s-9F-pt.bmp" : "%s-9F.bmp", saida);
+    quadros(1, bmp);
+    amigosfil_teste_conferir(1920, 1080);
+    for (int k = 0; k < 3; k++) tecla(SDLK_RIGHT);
+    quadros(35, NULL);
+    assert(amigosfil_n_colunas() == 1);
+    assert(amigosfil_indice_cat(1) == -1);
+    amigosfil_teste_conferir(1920, 1080);
+  }
 #else
   irFileira();
   quadros(100, NULL);
