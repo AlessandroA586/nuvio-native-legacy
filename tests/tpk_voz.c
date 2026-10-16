@@ -22,6 +22,7 @@ void nv_tpk_texto_valor(const char *v);
 void nv_tpk_texto_fim(int confirmou);
 
 const char *desc_tmdb_idioma(void) { return "pt-BR"; }
+int ajustes_teclado_android(void) { return 0; }
 
 static int iniciou, parou, valorRecebido;
 static void hIniciar(void) { iniciou++; }
@@ -116,6 +117,13 @@ int main(void) {
   assert(parou == 1 && !texto_sistema_aberto() && st_estado() == ST_PARADO && !st_aviso()[0]);
   r = ler(ST_SPOT, t, sizeof t);          // o fim do fechamento nao vaza
   assert(r == ST_NADA);
+
+  // Host startup failure must survive the bridge as visible feedback.
+  assert(st_voz_iniciar(ST_BUSCA));
+  nv_tpk_texto_fim(-1);
+  r = ler(ST_BUSCA, t, sizeof t);
+  assert(r == ST_CANCELOU && st_estado() == ST_PARADO);
+  assert(st_aviso()[0] && !valorRecebido && !texto_sistema_aberto());
 
   SDL_Quit();
   puts("PASS: tpk_voz (botao abre o teclado da Samsung; teclado do app intacto)");

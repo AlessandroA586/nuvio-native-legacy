@@ -4706,7 +4706,7 @@ void app_atualizar(float dt, Uint32 agora) {
     } else if (tela == TELA_BUSCA && busca_pediu_pessoa(&pedPessoa)) {
       abrirPessoa(&pedPessoa);
     } else if (tela == TELA_BUSCA && busca_pediu_abrir(&idx)) {
-      if (busca_item_focado(&it)) abrirTitulo(&it, 1, 1); else abrirPorIndice(idx);
+      if (busca_item_focado(&it) && it.indice == idx) abrirTitulo(&it, 1, 1); else abrirPorIndice(idx);
     } else if (tela == TELA_BIBLIOTECA && biblioteca_pediu_abrir(&idx)) {
       abrirPorIndice(idx);
     } else if (tela == TELA_PERFIL) {

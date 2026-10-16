@@ -141,12 +141,12 @@ namespace NuvioTpk
                 viuPainel = false;
                 campo.Focusable = true;
                 if (!FocusManager.Instance.SetCurrentFocusView(campo))
-                    throw new InvalidOperationException("TextField nao ganhou foco");
+                    throw new InvalidOperationException("TextField did not receive focus");
                 // O IME pode aceitar ShowInputPanel sem nunca aparecer (GLWindow).
                 prazo = new Tizen.NUI.Timer(3000);
                 prazo.Tick += (s, e) =>
                 {
-                    if (aberto && !viuPainel) { Log("teclado nao apareceu em 3 s"); Terminar(false); }
+                    if (aberto && !viuPainel) { Log("keyboard startup failed: panel did not appear within 3 s"); Terminar(false, true); }
                     return false;
                 };
                 prazo.Start();
@@ -156,22 +156,22 @@ namespace NuvioTpk
             }
             catch (Exception e)
             {
-                Log("abrir teclado: " + e.Message);
+                Log("keyboard startup failed: " + e.GetType().Name + ": " + e.Message);
                 // Inclui falhas anteriores a aberto=true (Text/Focusable/foco).
                 aberto = true;
-                Terminar(false);
+                Terminar(false, true);
             }
         }
 
         // Concluido / painel fechado (confirmou) ou Voltar. So entrega com texto;
         // o que ja veio pelo TextChanged fica no campo do app nos dois casos.
-        void Terminar(bool confirmou)
+        void Terminar(bool confirmou, bool falhou = false)
         {
             if (!aberto) return;
             aberto = false;
             string t = (campo.Text ?? "").Trim();
             if (confirmou && t.Length > 0) nv_tpk_texto_valor(t);
-            nv_tpk_texto_fim(confirmou && t.Length > 0 ? 1 : 0);
+            nv_tpk_texto_fim(falhou ? -1 : confirmou && t.Length > 0 ? 1 : 0);
             Esconder();
         }
 

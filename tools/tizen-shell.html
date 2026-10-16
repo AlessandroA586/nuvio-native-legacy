@@ -508,10 +508,10 @@
       var c = document.getElementById("canvas");
       if (c) c.focus();
     }
-    function terminar(confirmou) {
+    function terminar(confirmou, falhou) {
       if (!t.aberto) return;
       t.aberto = false;
-      t.fim = confirmou ? 1 : 0;
+      t.fim = falhou ? 2 : confirmou ? 1 : 0;
       var el = campo();
       if (el) el.blur();
       devolverFoco();
@@ -530,8 +530,8 @@
         try { el.focus(); } catch (e) { console.warn("[texto] wgt: focus: " + e); }
       }
       if (!el || document.activeElement !== el) {
-        console.warn("[texto] wgt: campo nao recebeu foco");
-        terminar(0); return;   // C ja abriu a sessao: devolve o cancelamento.
+        console.warn("[voice] keyboard startup failed: input did not receive focus");
+        terminar(0, true); return;   // C ja abriu a sessao: devolve o cancelamento.
       }
       try { el.setSelectionRange(el.value.length, el.value.length); } catch (e) {}
       console.log("[texto] wgt: campo focado (voz=" + (voz ? 1 : 0) + ")");

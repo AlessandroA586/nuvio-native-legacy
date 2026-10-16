@@ -112,11 +112,11 @@ for (const foco of ["ausente", "recusa", "lanca"]) teste("falha de campo/foco ca
   const m = montar(true, foco);
   if (foco === "ausente") m.tirarCampo();
   m.t.abrir("", 1);
-  assert.strictEqual(m.t.fim, 0, "C precisa receber fim=0");
+  assert.strictEqual(m.t.fim, 2, "C must receive a startup failure");
   assert.strictEqual(m.t.aberto, false);
   assert.strictEqual(m.document.activeElement, m.canvas);
   m.t.fechar();
-  assert.strictEqual(m.t.fim, 0);
+  assert.strictEqual(m.t.fim, 2);
 });
 
 // Cada tradutor de captura, incluindo keyup de CH+ e aliases do desktop.
