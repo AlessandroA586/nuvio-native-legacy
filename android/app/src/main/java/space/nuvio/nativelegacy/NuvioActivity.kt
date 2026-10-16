@@ -187,6 +187,7 @@ class NuvioActivity : SDLActivity() {
         // do fio da interface livre.
         if (!mBrokenLibraries) vigia = ArranqueVigia(this).also { it.iniciar() }
         observarRede()
+        entregarDeepLink(intent)
 
         // SDLActivity.mLayout e um RelativeLayout com a SDLSurface dentro.
         // O video fica no indice 0 (atras); a SDLSurface fica por cima, em
@@ -257,6 +258,21 @@ class NuvioActivity : SDLActivity() {
     }
 
     private external fun nativeToqueCancelou()
+
+    // LINK EXTERNO (docs/deeplink.md): o C valida; aqui so se limita o tamanho.
+    private external fun nativeDeepLink(url: String)
+
+    private fun entregarDeepLink(i: Intent?) {
+        if (mBrokenLibraries || i?.action != Intent.ACTION_VIEW) return
+        val url = i.dataString ?: return
+        if (url.length <= 512) nativeDeepLink(url)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        entregarDeepLink(intent)
+    }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         // SDL turns CANCEL into finger UP. Queue the cancellation first so
@@ -506,11 +522,25 @@ class NuvioActivity : SDLActivity() {
         } catch (e: Exception) { false }
     }
 
-    // #501: entrega o stream a outro player. Sem app que aceite, devolve false
-    // (o nativo toca no interno). A URL nao vai para o log.
-    fun abrirExterno(url: String, titulo: String): Boolean = try {
-        startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(url), "video/*")
-            .putExtra("title", titulo).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    // Players de video instalados que abrem um stream http(s): "pacote\tnome" por linha.
+    fun listarPlayers(): String? = try {
+        val pm = packageManager
+        val q = Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse("https://example.com/v.mp4"), "video/*")
+        pm.queryIntentActivities(q, 0).mapNotNull { r ->
+            val pkg = r.activityInfo?.packageName
+            if (pkg == null || pkg == packageName) null
+            else pkg to r.loadLabel(pm).toString().replace('\t', ' ').replace('\n', ' ')
+        }.distinctBy { it.first }.sortedBy { it.second.lowercase() }
+            .joinToString("\n") { it.first + "\t" + it.second }
+    } catch (e: Exception) { null }
+
+    // #501: entrega o stream a outro player; `pacote` vazio = o sistema escolhe.
+    // Sem app que aceite, devolve false (o nativo toca no interno). A URL nao vai para o log.
+    fun abrirExterno(url: String, titulo: String, pacote: String): Boolean = try {
+        val i = Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(url), "video/*")
+            .putExtra("title", titulo).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (pacote.isNotEmpty()) i.setPackage(pacote)
+        startActivity(i)
         true
     } catch (e: Exception) { false }
 

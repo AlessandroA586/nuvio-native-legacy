@@ -806,6 +806,13 @@ static void campoDefinir(const char *t, int aparar) {
   nConsulta = (int)w;
 }
 
+// Consulta vinda de fora (deeplink): como o campo digitado, resultados na hora.
+void busca_definir_consulta(const char *t) {
+  campoDefinir(t, 1);
+  refiltrarJa();
+  campoFoco = 0;
+}
+
 static int vozBusca(void) {
   return st_dono() == ST_BUSCA && (st_estado() == ST_OUVINDO || st_estado() == ST_PERMISSAO ||
                                    st_estado() == ST_VOZ_SISTEMA);

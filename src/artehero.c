@@ -284,7 +284,7 @@ static void codificar(const char *s, char *dst, size_t n) {
 // ANIME: id de addon de anime (kitsu:, mal:, anilist:) ou, para um tt,
 // genero Animacao/Anime E pais Japao. So o genero pegaria Pixar e Disney,
 // e cada um custaria duas buscas (Kitsu e AniList) para nada.
-static int ehAnime(const CatItem *item) {
+int artehero_eh_anime(const CatItem *item) {
   if (!strncmp(item->imdb, "kitsu:", 6) || !strncmp(item->imdb, "mal:", 4) ||
       !strncmp(item->imdb, "anilist:", 8)) return 1;
   if (strncmp(item->imdb, "tt", 2)) return 0;
@@ -351,7 +351,7 @@ static const char *urlDaFonte(const CatItem *item, int fonte, int grande,
       return saida;
     case ARTEHERO_ANIME: {
       char enc[200], aid[40];
-      if (!ehAnime(item)) return NULL;
+      if (!artehero_eh_anime(item)) return NULL;
       if (temTt) snprintf(aid, sizeof aid, "%s", id);
       else {
         // "kitsu:7442" inteiro; um ":<episodio>" depois dele sai.

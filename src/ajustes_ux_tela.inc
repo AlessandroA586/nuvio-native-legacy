@@ -48,6 +48,7 @@ static const Item TELA[] = {
 #endif
 #ifdef NV_ANDROID
       OPC(AJ_PLAYER_EXTERNO),
+      OPC(AJ_PLAYER_ANIME),
 #endif
 #ifndef __EMSCRIPTEN__
     // .wgt: sem socket TCP/UDP no navegador, sem motor; P2P escondido (a8e7685d).

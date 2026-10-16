@@ -618,6 +618,8 @@ static Escrita escritaDe(Uint32 cp) {
 static int carregarFamilia(TxtFamilia familia);
 static void abrirEstiloCamada(TxtFamilia familia, int i);
 static void camadaAtualizar(void);
+// Alvo de composicao do contorno da legenda (ver txt_desenhar_borda).
+static GfxMini bordaMini;
 
 // Quantos caracteres da linha `s` a fonte NAO desenha, e o primeiro deles em
 // *primeiro. Conta so o que faz falta: ASCII nunca, os DECORATIVOS que a fonte
@@ -1379,6 +1381,7 @@ int txt_iniciar(const char *dirRecursos, float escala) {
 
 void txt_encerrar(void) {
   arabeBoldFechar();
+  gfx_mini_liberar(&bordaMini);
   limparCacheTexto();
   // ORDEM: a fonte primeiro, o RWops depois, o buffer por ultimo. A face do
   // FreeType ainda referencia o stream, e o stream, os bytes.
@@ -1986,6 +1989,32 @@ static float encaixa(float v) {
 
 void txt_desenhar_alpha(TxtLinha l, float x, float y, float alpha) {
   txt_desenhar_tom(l, x, y, 1, 1, 1, alpha);
+}
+
+// CONTORNO COMPOSTO, nao empilhado. As 8 estampas da borda se cobrem nas
+// bordas retas do glifo (uma coluna de 2 px e vista por 3 delas, um canto
+// por todas): estampar cada uma com o `alpha` do usuario compoe a cobertura
+// sobreposta N vezes — com a legenda a 25% o miolo do anel sai a ~58% e o
+// canto a ~90%, muito mais escuro que o pedido, em qualquer fade. Por isso
+// o contorno e composto OPACO num alvo proprio (um GfxMini 1:1 em pixel de
+// tela) e so entao desenhado UMA vez com `alpha`: a cobertura final e a de
+// um unico desenho. Sem FBO (alvo indisponivel) volta ao empilhado de antes.
+void txt_desenhar_borda(TxtLinha b, float x, float y, int borda, float alpha) {
+  static const int dir[8][2] = { {-1,-1}, {0,-1}, {1,-1}, {-1,0}, {1,0}, {-1,1}, {0,1}, {1,1} };
+  int i;
+  if (borda == 2) { txt_desenhar_alpha(b, x + 4.f, y + 4.f, .82f * alpha); return; }
+  if (!b.tex || alpha <= 0.0f) return;
+  const float m = 4.f;  // margem para a estampa de +-2 e o canto AA
+  float esc = gfx_px_por_unidade();
+  int mw = (int)((b.w + 2.f * m) * esc + 0.5f), mh = (int)((b.h + 2.f * m) * esc + 0.5f);
+  if (esc <= 0.0f || mw < 4 || mh < 4 || !gfx_mini_alvo(&bordaMini, mw, mh)) {
+    for (i = 0; i < 8; i++) txt_desenhar_alpha(b, x + dir[i][0] * 2.f, y + dir[i][1] * 2.f, alpha);
+    return;
+  }
+  gfx_mini_comecar(&bordaMini, x - m, y - m, esc);
+  for (i = 0; i < 8; i++) txt_desenhar_alpha(b, x + dir[i][0] * 2.f, y + dir[i][1] * 2.f, 1.0f);
+  gfx_mini_terminar();
+  gfx_mini_desenhar(&bordaMini, (GfxRect){ x - m, y - m, (float)mw / esc, (float)mh / esc }, 0.0f, alpha);
 }
 
 void txt_desenhar_tom(TxtLinha l, float x, float y, float cr, float cg, float cb, float alpha) {

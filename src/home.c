@@ -5706,6 +5706,9 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
   if (!enabled) heroTrailerVetoLog();   // so imprime quando a linha esta Ligada
   // Destino deste foco: o cartaz (modo No card) ou o retangulo do destaque.
   const int destCartao = !focoHero && posterSetting == AJ_TRAILER_CARTAZ_CARD;
+  // The card owns its identity and readiness; a hidden hero may never draw
+  // the pending title, and Dynamic layout scrolls only the hero offscreen.
+  const int itemAtual = destCartao ? cartaoTrailerItem : heroAtual;
 #ifdef NV_SHOT_HOOKS
   if (shotTrailer) { shotTrailerPasso(topo, dt, agora, heroSetting, posterSetting); return; }
 #endif
@@ -5744,23 +5747,22 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
   { int noHero = focoHero && ajustes_hero_ligado() && heroSetting;
     // Na Dinamica o destaque ROLOU para fora quando o foco esta num cartaz: o
     // trailer do cartaz tocaria onde ninguem ve.
-    int noCartaz = !focoHero && ajustes_hero_ligado() && posterSetting &&
-                   layoutHome() != HOME_LAYOUT_DINAMICA &&
-                   heroPendente == heroAtual &&
+    int noCartaz = !focoHero && posterSetting &&
+                   (destCartao || (ajustes_hero_ligado() && layoutHome() != HOME_LAYOUT_DINAMICA)) &&
+                   (destCartao || heroPendente == heroAtual) &&
                    agora - heroPendenteEm >= (Uint32)(ajustes_expandir_poster_atraso() * 1000.0f);
-    // No card: so o cartaz que o desenho marcou como capaz, e do MESMO titulo
-    // do destaque (o hero segue o foco; e dele a maquina de fontes).
-    if (destCartao) noCartaz = noCartaz && cartaoTrailerPode && cartaoTrailerItem == heroAtual;
+    // No card: the focused card drawn last frame must accept the video.
+    if (destCartao) noCartaz = noCartaz && cartaoTrailerPode && itemAtual >= 0;
     pronto = topo && (noHero || noCartaz);
     if (!topo) motivo = HERO_GATE_OVERLAY;
-    else if (!ajustes_hero_ligado()) motivo = HERO_GATE_DISABLED;
+    else if (!destCartao && !ajustes_hero_ligado()) motivo = HERO_GATE_DISABLED;
     else if (focoHero ? !heroSetting : !posterSetting) motivo = HERO_GATE_SETTING;
-    else if (!focoHero && layoutHome() == HOME_LAYOUT_DINAMICA) motivo = HERO_GATE_DYNAMIC;
+    else if (!destCartao && !focoHero && layoutHome() == HOME_LAYOUT_DINAMICA) motivo = HERO_GATE_DYNAMIC;
     else if (!noHero && !noCartaz) motivo = HERO_GATE_POSTER_WAIT;
   }
-  pronto = pronto &&
-           heroDesejado < 0 && heroAtual >= 0 && heroEntra >= 0.999f && heroSai <= 0.001f &&
-           heroDesliza >= 1.0f &&   // o trailer abre com a arte ja parada
+  pronto = pronto && itemAtual >= 0 &&
+           (destCartao || (heroDesejado < 0 && heroEntra >= 0.999f && heroSai <= 0.001f &&
+                          heroDesliza >= 1.0f)) &&   // hero artwork must settle
 #ifdef NV_TOUCH_UI
            !toqueHero.estado &&
 #endif
@@ -5773,7 +5775,7 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
       motivo = HERO_GATE_NONCONTENT;
     else motivo = HERO_GATE_TRANSITION;
   }
-  if (pronto) ci = cat_item_exato(heroAtual);
+  if (pronto) ci = cat_item_exato(itemAtual);
   if (pronto && (!ci || !ci->imdb[0])) motivo = HERO_GATE_NO_ID;
   heroTrailerGateLog(motivo, enabled);
   if (!pronto || !ci || !ci->imdb[0]) {
@@ -5795,7 +5797,7 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
     heroTrailerPreparandoAte = 0; heroTrailerFonte = 0; heroTrailerAppleFalhou = 0;
     heroTrailerFalhas = 0;heroTrailerQual = 0;
     heroTrailerFade = 0.0f; heroTrailerNoCartao = 0;
-  } else if (heroTrailerItem != heroAtual || strcmp(heroTrailerImdb, ci->imdb) != 0 ||
+  } else if (heroTrailerItem != itemAtual || strcmp(heroTrailerImdb, ci->imdb) != 0 ||
              (trailer_aberto() && !trailer_cheia() && trailer_dono() == TRAILER_DONO_HOME &&
               heroTrailerNoCartao != destCartao)) {
     // O DESTINO MUDOU com o mesmo titulo (cartaz -> destaque): o trailer no
@@ -5812,7 +5814,7 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
       fflush(stdout);
       trailer_fechar();
     }
-    heroTrailerItem = heroAtual; heroTrailerDesde = agora; heroTrailerTentado = 0;
+    heroTrailerItem = itemAtual; heroTrailerDesde = agora; heroTrailerTentado = 0;
     snprintf(heroTrailerImdb, sizeof heroTrailerImdb, "%s", ci->imdb);
     heroTrailerPreparandoAte = 0; heroTrailerFonte = 0; heroTrailerAppleFalhou = 0;
     heroTrailerFalhas = 0;heroTrailerQual = 0;
@@ -5870,7 +5872,7 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
     heroTrailerFonteFalhou();
   }
   decorrido = agora - heroTrailerDesde;
-  if (pronto && ci && ci->imdb[0] && heroTrailerItem == heroAtual &&
+  if (pronto && ci && ci->imdb[0] && heroTrailerItem == itemAtual &&
       !trailer_aberto() && !heroTrailerTentado && !heroTrailerMemoriaFalhou &&
       !heroTrailerJaTocou(ci->imdb) &&
       (!destCartao || cartaoTrailerServe) &&   // No card: em pe, so todo aberto
@@ -5962,7 +5964,7 @@ trailer_hero_fim:
   // Follow artwork geometry too: focusing the hero can expand last frame's
   // banner after the trailer opened (#500). Only update on a real move;
   // trailer_rect rebuilds the native video window and crop.
-  if (heroTrailerItem >= 0 && heroTrailerItem == heroAtual &&
+  if (heroTrailerItem >= 0 && heroTrailerItem == itemAtual &&
       trailer_aberto() && !trailer_cheia() && trailer_dono() == TRAILER_DONO_HOME &&
       (!heroTrailerNoCartao || cartaoTrailerItem == heroTrailerItem)) {
     GfxRect alvoR = heroTrailerNoCartao ? cartaoVideoRect(cartaoTrailerRect) : heroArteRect;
@@ -5971,7 +5973,7 @@ trailer_hero_fim:
         fabsf(alvoR.w - atual.w) > 1.0f || fabsf(alvoR.h - atual.h) > 1.0f)
       trailer_rect(alvoR);
   }
-  { float alvo = (heroTrailerItem >= 0 && heroTrailerItem == heroAtual &&
+  { float alvo = (heroTrailerItem >= 0 && heroTrailerItem == itemAtual &&
                   trailer_aberto() && !trailer_cheia() && trailer_tocando() &&
                   trailer_mostra_video()) ? 1.0f : 0.0f;   // .tpk: ate o recorte assentar (#178)
     heroTrailerFade = anim_mola(heroTrailerFade, alvo, dt, NV_MOLA_SCROLL);
