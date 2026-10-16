@@ -1074,7 +1074,8 @@ static const char *prefsArquivo(void) {
 // ESTILO DA LEGENDA: preferencia DO APARELHO, como o aspecto — nao vai em
 // ajustes.txt, que espelha as chaves de layout do app web. Padrao: tamanho 2
 // (o do aparelho), branco, sem fundo, posicao central, contorno.
-static VideoLegendaEstilo legEstilo = { 120, 0, 0, 3, 1, 0, 0, TXT_FAMILIA_INTER };
+// -1 preserves the legacy outline preference until a border colour is chosen.
+static VideoLegendaEstilo legEstilo = { 120, 0, 0, 3, 1, 0, 0, TXT_FAMILIA_INTER, 0, -1 };
 // Ver player_leg_estilo_tocou, em player.h: o que a pessoa mexeu vence o que o
 // arquivo ASS pede. Persistido junto com o resto — a preferencia nao pode
 // valer so ate desligar a TV.
@@ -1083,8 +1084,9 @@ static int legTocado = PLR_LEG_NADA;
 static int prefsGravar(void);
 static void prefsLer(void) {
   prefsLidas = 1;
+  legEstilo.corBorda = -1;
   FILE *f = fopen(prefsArquivo(), "r");
-  char chave[64]; int v, sinalNovo = 0, temAtraso = 0;
+  char chave[64]; int v, sinalNovo = 0, temAtraso = 0, bordaExplicita = 0;
   if (!f) return;
   while (fscanf(f, "%63s %d", chave, &v) == 2) {
     // Valor de outra versao (ou arquivo editado a mao) cai no padrao em vez de
@@ -1102,13 +1104,17 @@ static void prefsLer(void) {
     else if (!strcmp(chave, "leg_borda")   && v >= 0 && v <= 2)  legEstilo.borda = v;
     else if (!strcmp(chave, "leg_atraso")  && v >= -LEG_ATRASO_MANUAL_MAX && v <= LEG_ATRASO_MANUAL_MAX) { legEstilo.atrasoMs = v; temAtraso = 1; }
     else if (!strcmp(chave, "leg_atraso_sinal") && v == 1) sinalNovo = 1;
-    else if (!strcmp(chave, "leg_cor_borda") && v >= 0 && v < VIDEO_LEG_NCORES) legEstilo.corBorda = v;
+    else if (!strcmp(chave, "leg_cor_borda") && v >= -1 && v < VIDEO_LEG_NCORES) legEstilo.corBorda = v;
+    else if (!strcmp(chave, "leg_cor_borda_explicita") && v == 1) bordaExplicita = 1;
     else if (!strcmp(chave, "leg_opacidade") && v >= 0 && v <= 3) legEstilo.opacidade = v;
     else if (!strcmp(chave, "leg_familia") && v >= 0 && v < TXT_FAMILIA_N) legEstilo.familia = v;
     else if (!strcmp(chave, "leg_negrito") && (v == 0 || v == 1)) legEstilo.negrito = v;
     else if (!strcmp(chave, "leg_tocado")  && v >= 0) legTocado = v;
   }
   fclose(f);
+  // Older players wrote default Black even when no border colour was chosen.
+  if (!bordaExplicita && legEstilo.corBorda == 0 && !(legTocado & PLR_LEG_COR_BORDA))
+    legEstilo.corBorda = -1;
   // One-time migration: leg_atraso saved before the sign fix (positive =
   // later) was tuned under the inverted sign. Negate once; the marker written
   // by prefsGravar keeps this from running again.
@@ -1134,6 +1140,7 @@ static int prefsGravar(void) {
   fprintf(f, "leg_negrito %d\n", legEstilo.negrito);
   fprintf(f, "leg_tocado %d\n", legTocado);
   fprintf(f, "leg_cor_borda %d\n", legEstilo.corBorda);
+  fprintf(f, "leg_cor_borda_explicita 1\n");
   int erro = ferror(f);
   if (fclose(f)) erro = 1;
   if (erro || rename(temporario, destino)) { remove(temporario); return 0; }
@@ -1155,7 +1162,7 @@ const VideoLegendaEstilo *player_leg_estilo_padrao(void) {
 int player_leg_estilo_definir(const VideoLegendaEstilo *estilo, int tocou) {
   if (!estilo || estilo->tamanho < TXT_LEG_PCT_MIN || estilo->tamanho > TXT_LEG_PCT_MAX ||
       estilo->tamanho % 10 || estilo->cor < 0 || estilo->cor >= VIDEO_LEG_NCORES ||
-      estilo->corBorda < 0 || estilo->corBorda >= VIDEO_LEG_NCORES ||
+      estilo->corBorda < -1 || estilo->corBorda >= VIDEO_LEG_NCORES ||
       estilo->familia < 0 || estilo->familia >= TXT_FAMILIA_N ||
       estilo->fundo < 0 || estilo->fundo > 4 || estilo->posicao < 0 || estilo->posicao > 7 ||
       estilo->borda < 0 || estilo->borda > 2 || estilo->opacidade < 0 || estilo->opacidade > 3 ||

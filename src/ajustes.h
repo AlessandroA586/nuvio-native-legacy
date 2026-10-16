@@ -501,7 +501,7 @@ int   ajustes_leg2_cor(void);
 int   ajustes_leg2_fundo(void);
 int   ajustes_leg2_borda(void);
 void  ajustes_leg_contorno_rgb(int *r, int *g, int *b);   // #475: cor do contorno/sombra da legenda (0..255)
-unsigned ajustes_leg_borda_rgb(int corBorda);   // corBorda > 0: video_legenda_borda_rgb; 0: the #475 colour
+unsigned ajustes_leg_borda_rgb(int corBorda);   // corBorda >= 0: explicit colour; -1: legacy #475 colour
 // Independent secondary overrides; absent fields inherit the main style.
 void ajustes_leg2_estilo(const VideoLegendaEstilo *principal, VideoLegendaEstilo *out);
 int ajustes_leg2_posicao(void); // -1 keeps the existing Top/Stacked placement

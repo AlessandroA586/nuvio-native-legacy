@@ -2104,7 +2104,7 @@ static int ajLegendaValor(int op) {
     case AJ_LEG1_BORDA: return e->borda;
     case AJ_LEG1_ATRASO: return e->atrasoMs;
     case AJ_LEG1_NEGRITO: return !e->negrito;
-    default: return e->corBorda;
+    default: return e->corBorda < 0 ? 0 : e->corBorda;
   }
 }
 static void ajLegendaEspelhar(void) {
@@ -2694,11 +2694,11 @@ void ajustes_leg_contorno_rgb(int *r, int *g, int *b) {
   if (v < 0 || v >= (int)(sizeof c / sizeof *c)) v = 0;
   *r = c[v][0]; *g = c[v][1]; *b = c[v][2];
 }
-// #475 stays the fallback: with the player's border colour at its default
-// (black), the outline colour chosen in 2.0.5 still applies.
+// Only an unset player border inherits the legacy outline colour.
+// Explicit Black (0), including secondary overrides, stays Black.
 unsigned ajustes_leg_borda_rgb(int corBorda) {
   int r, g, b;
-  if (corBorda > 0) return video_legenda_borda_rgb(corBorda);
+  if (corBorda >= 0) return video_legenda_borda_rgb(corBorda);
   ajustes_leg_contorno_rgb(&r, &g, &b);
   return (unsigned)(r << 16 | g << 8 | b);
 }
