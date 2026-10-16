@@ -438,7 +438,7 @@ class NuvioActivity : SDLActivity() {
             con.instanceFollowRedirects = true
             con.useCaches = false
             con.requestMethod = metodo
-            con.setRequestProperty("User-Agent", "Nuvio/1.0 (webOS)")
+            con.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13; Android TV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
             for (l in cabs.split('\n')) {
                 val i = l.indexOf(':')
                 if (i > 0) con.setRequestProperty(l.substring(0, i).trim(), l.substring(i + 1).trim())

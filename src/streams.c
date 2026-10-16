@@ -1541,12 +1541,13 @@ static int resolverUrl(const char *url, const char *cabecalhos, int segundos,
   // O tipo e o tamanho do corpo vem da MESMA sonda: nenhum pedido a mais.
   if (rede_url_final_tipo(url, segundos, nc ? vetor : NULL, fim, tam, &http,
                           mime, mimeTam, corpo)) return 1;
-#ifdef __EMSCRIPTEN__
-  // XHR nao manda estes cabecalhos; AVPlay manda. A recusa nao prova que a
-  // fonte morreu (mesmo contrato de playlistVazia). 5xx nao entram aqui.
-  if ((http == 401 || http == 403) && restrito && strlen(url) < tam) {
+#if defined(NV_ANDROID) || defined(__EMSCRIPTEN__)
+  // No Android e Emscripten, o player nativo (ExoPlayer/AVPlay) possui pilha de
+  // rede propria com gestao completa de redirecionamentos, cookies e cabecalhos.
+  // Uma recusa da sonda com 401/403/405/416 nao prova que a fonte morreu.
+  if ((http == 401 || http == 403 || http == 405 || http == 416) && strlen(url) < tam) {
     memcpy(fim, url, strlen(url) + 1);
-    printf("[fonte] sonda HTTP %d com cabecalho controlado pelo navegador: quem decide e o player\n", http);
+    printf("[fonte] sonda HTTP %d: entregando ao player decidir\n", http);
     return 1;
   }
 #endif
