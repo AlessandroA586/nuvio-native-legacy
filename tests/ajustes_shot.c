@@ -25,6 +25,7 @@
 #include "logoapp.h"
 #include "text.h"
 #include "tex_cache.h"
+#include "vidro_telas.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <assert.h>
@@ -250,6 +251,32 @@ int main(int argc, char **argv) {
   if (getenv("NUVIO_SHOT_TEMA") || getenv("NUVIO_SHOT_VIDRO"))
     ajustes_teste_tema(getenv("NUVIO_SHOT_TEMA") ? atoi(getenv("NUVIO_SHOT_TEMA")) : -1,
                        getenv("NUVIO_SHOT_VIDRO") && atoi(getenv("NUVIO_SHOT_VIDRO")));
+
+  // NUVIO_VIDRO_TELAS=<dir> (tests/vidro_telas.sh): glass budget, first
+  // category (the settings list) static and while moving focus down it.
+  if (vt_ligado()) {
+    vt_vidro();
+    ajustes_teste_ux_captura(10);
+    for (i = 0; i < 150; i++) {
+      SDL_PumpEvents(); txt_novo_quadro(); tex_novo_quadro(); tex_bombear(6); gfx_novo_quadro(); vt_antes();
+      ajustes_atualizar(1.0f / 60.0f, SDL_GetTicks());
+      glClearColor(0.025f, 0.025f, 0.03f, 1.0f); glClear(GL_COLOR_BUFFER_BIT);
+      ajustes_desenhar(SDL_GetTicks()); vt_depois();
+      if (i == 119) vt_zerar();
+      if (i == 149) { vt_png("ajustes"); vt_relatar("settings", 1); }
+      SDL_Delay(2);
+    }
+    vt_zerar();
+    for (i = 0; i < 32; i++) {
+      if (i % 4 == 0) tecla(i % 8 ? SDLK_UP : SDLK_DOWN);
+      SDL_PumpEvents(); txt_novo_quadro(); tex_novo_quadro(); tex_bombear(6); gfx_novo_quadro(); vt_antes();
+      ajustes_atualizar(1.0f / 60.0f, SDL_GetTicks());
+      glClearColor(0.025f, 0.025f, 0.03f, 1.0f); glClear(GL_COLOR_BUFFER_BIT);
+      ajustes_desenhar(SDL_GetTicks()); vt_depois();
+    }
+    vt_relatar("settings", 0);
+    return vtFalhas ? 1 : 0;
+  }
 
 #ifdef AJUSTES_PERF
   if (getenv("NUVIO_AJUSTES_PERF")) { perf_walk(w); return 0; }

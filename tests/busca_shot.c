@@ -15,6 +15,7 @@
 #include "catalogo.h"
 #include "sistexto.h"
 #include "spotpessoa.h"
+#include "vidro_telas.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <assert.h>
@@ -49,12 +50,14 @@ static void quadro(void) {
   tex_novo_quadro();
   tex_bombear(12);
   gfx_novo_quadro();
+  vt_antes();
   busca_atualizar(1.0f / 60.0f, SDL_GetTicks());
   glClearColor(0.051f, 0.051f, 0.051f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
   busca_desenhar(SDL_GetTicks());
   rail_shot_desenhar(MENU_BUSCAR);
-  SDL_GL_SwapWindow(janela);
+  vt_depois();
+  if (!vt_ligado()) SDL_GL_SwapWindow(janela);
 }
 
 // `ms` > 0: grava depois de tantos milissegundos de quadros, e nao depois de
@@ -109,6 +112,17 @@ int main(int argc, char **argv) {
   ajustes_iniciar();
   if (getenv("NUVIO_SHOT_SOLIDO")) ajustes_aplicar_blob("{\"vidro\":false}");
   busca_iniciar();
+  // NUVIO_VIDRO_TELAS=<dir> (tests/vidro_telas.sh): glass budget, popular grid.
+  if (vt_ligado()) {
+    int i;
+    vt_vidro(); busca_iniciar();
+    for (i = 0; i < 120; i++) { quadro(); SDL_Delay(2); }
+    vt_zerar(); for (i = 0; i < 30; i++) quadro();
+    vt_png("busca"); vt_relatar("search", 1);
+    for (i = 0; i < 8; i++) { tecla(SDLK_RIGHT); quadro(); quadro(); quadro(); }
+    vt_relatar("search", 0);
+    return vtFalhas ? 1 : 0;
+  }
 
   snprintf(nome, sizeof nome, "%s-vazio.bmp", saida);
   captura(nome);
