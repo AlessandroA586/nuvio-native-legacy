@@ -12,6 +12,7 @@
 #include <SDL2/SDL.h>
 #include "idiomacod.h"
 #include "gfx.h"
+#include "video.h"
 
 int  ajustes_iniciar(void);
 // Per device: 0 = TV (default), 1 = Mobile. Applied before the initial viewport.
@@ -455,7 +456,7 @@ float ajustes_tamanho_ajustes(void);
 int   ajustes_layout_lista(void);
 int   ajustes_esconder_logo_trailer(void);   // 1 = hide the corner title logo while a trailer plays
 // R4: second subtitle placement and own style (local). junto: 1 = stacked right above the
-// primary at the bottom, 0 = top band. tamanho: percent (60..160), 0 = automatic (90% of the
+// primary at the bottom, 0 = top band. tamanho: percent (50..300), 0 = automatic (90% of the
 // primary). cor/fundo/borda: the same indices as the primary style (VideoLegendaEstilo), -1 = same as primary.
 int   ajustes_legendas_todas(void); // #425: abrir todas as faixas
 // #205: 1 = tela de abertura Detalhada (o cartao com fonte e passos); 0 = Cinema.
@@ -465,6 +466,11 @@ int   ajustes_leg2_tamanho(void);
 int   ajustes_leg2_cor(void);
 int   ajustes_leg2_fundo(void);
 int   ajustes_leg2_borda(void);
+// Independent secondary overrides; absent fields inherit the main style.
+void ajustes_leg2_estilo(const VideoLegendaEstilo *principal, VideoLegendaEstilo *out);
+int ajustes_leg2_posicao(void); // -1 keeps the existing Top/Stacked placement
+int ajustes_leg2_atraso(void);
+int ajustes_leg2_definir_atraso(int ms);
 int   ajustes_legenda_forcada_auto(void);    // #287: 1 = audio in the subtitle language -> only the forced track (local, default on)
 int   ajustes_legenda_sync_auto(void);       // local, ligada por padrão
 int   ajustes_legenda_sync_audio(void);      // 1 = offer "Por audio" in subtitle AutoSync (F06; local, default off)

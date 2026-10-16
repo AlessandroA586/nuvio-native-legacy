@@ -3,7 +3,7 @@
  * valor[], nunca uma fotografia de preferencias ja carregadas do usuario. */
 
 static int uxTemPadrao(int op) {
-  if (ajFalhaBackend(op)) return 1;
+  if (ajFalhaBackend(op) || ajLegendaPrincipal(op)) return 1;
   return op >= 0 && op < AJ_N &&
     (OPCOES[op].tipo == OP_ESCOLHA || OPCOES[op].tipo == OP_NUMERO) &&
     CHAVE[op] && CHAVE[op][0] && CHAVE[op][0] != '-' &&
@@ -17,6 +17,7 @@ static int uxValorPadrao(int op) {
 /* Fileiras tem uma fonte propria. valor[] e apenas seu espelho na tela. */
 static int uxValorAtual(int op) {
   if (op < 0 || op >= AJ_N) return 0;
+  if (ajLegendaPrincipal(op)) return ajLegendaValor(op);
   if (ajFalhaBackend(op)) return ajFalhaValor(op);
   if (op == AJ_SEEKR_LIGADO && !seekrChave[0]) return 1;
   return op == AJ_FIL_LIMITE ? fil_limite_gravado() : valor[op];
@@ -158,6 +159,8 @@ static void uxNormalizar(const char *src, char *dst, size_t tam) {
 }
 
 static const char *uxSinonimos(int op) {
+  if (ajLegendaPrincipal(op) || op == AJ_LEG1_RESTAURAR || ajLegendaSecundaria(op))
+    return "legenda estilo fonte tamanho cor opacidade fundo posicao borda contorno negrito atraso subtitle style font size color opacity position outline bold delay";
   switch (op) {
     case AJ_IDIOMA: return "idioma interface menus language portugues ingles espanhol";
     case AJ_AUD_LINGUA: return "idioma audio dublado dublagem original voz language";

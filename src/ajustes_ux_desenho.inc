@@ -701,6 +701,7 @@ static void ajAjudaLinhaDesenhar(int op, float x, float y, float a) {
 // escolhe a fonte; o padrao e o modelo sao do filtro; o estilo da segunda
 // legenda e dela.
 static int uxPaiVisual(int op) {
+  if (ajLegendaSecundaria(op)) return AJ_LEG_LINGUA2;
   switch (op) {
     case AJ_FONTE_PRIORIDADE: case AJ_FONTE_PRAZO: case AJ_FONTE_IDIOMA_AUDIO: return AJ_FONTE_MANUAL;
     case AJ_FONTE_REGEX_PADRAO: case AJ_FONTE_REGEX_MODELO: return AJ_FONTE_REGEX;
