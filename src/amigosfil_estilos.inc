@@ -150,7 +150,7 @@ static void afCartao(int i, GfxRect r, int foco, Uint32 agora) {
   afUlt[i] = r;
 #endif
   // People cards (no title) wear the home card shell: radius, focus ring.
-  float raio = e ? 12.0f / r.h : NV_RAIO_CARD;
+  float raio = 12.0f / r.h;   // same corner as the feed cards
   if (e) afAnel(r, foco);
   else if (foco) {
     svd_aro_foco(r, raio, 1.0f, 1.0f);
@@ -177,7 +177,8 @@ static void afCartao(int i, GfxRect r, int foco, Uint32 agora) {
     return;
   }
   if (e && s != 2 && s != 4) gfx_card_forcar_cover_atual = 1.0f;   // fill the landscape card, no side bars
-  svd_poster(r, e ? (s == 2 || s == 4 ? (e->poster[0] ? e->poster : e->arte) : afArteDeitada(e)) : "", raio, 1);
+  if (e) svd_poster(r, s == 2 || s == 4 ? (e->poster[0] ? e->poster : e->arte) : afArteDeitada(e), raio, 1);
+  else gfx_esqueleto(r, raio, NV_COR_ESQUELETO_R, NV_COR_ESQUELETO_G, NV_COR_ESQUELETO_B, 1.0f);   // home "no art" card
   gfx_card_forcar_cover_atual = 0.0f;
   if (e) gfx_veu_base(r, raio, .70f, .90f);   // home cards carry no veil over the empty placeholder
   if (e) {
@@ -198,6 +199,9 @@ static void afCartao(int i, GfxRect r, int foco, Uint32 agora) {
         n++; break;
       }
     }
+  } else if (!e) {
+    float d = r.h * 0.5f;   // big centered avatar
+    svd_rosto((GfxRect){r.x + (r.w - d) * .5f, r.y + (r.h - d) * .5f, d, d}, a, 0, 1, agora);
   } else {
     svd_rosto((GfxRect){s == 2 ? r.x + (r.w - 48) * .5f : r.x + 16,
                              s == 2 ? r.y + r.h - 12 : r.y + 16, 48, 48}, a, 0, 1, agora);
