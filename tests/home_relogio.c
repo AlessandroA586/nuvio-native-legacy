@@ -5,6 +5,7 @@
 #include "colecoes.h"
 #include "focus.h"
 #include "trailercinema.h"
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,6 +35,12 @@ static float okHold;
 static AnimBorda bordaPag, bordaFil[MAX_FIL];
 static TrailerCinema heroCinema;
 static int heroLigado, catalogoN, heroPos, menuN;
+static int menuTopo;
+static int ajustes_menu_topo(void) { return menuTopo; }
+static int homevazio_ativo(int rows) { return rows == 0; }
+static int homevazio_evento(const SDL_Event *e) { (void)e; return 0; }
+static float homeFileiraX(int r, int c) { (void)r; return c * 100.0f; }
+static float larguraFil(int r) { (void)r; return 80.0f; }
 static Uint32 agora=1000;
 static Uint32 SDL_GetTicks(void) { return agora; }
 static int ponteiro_ok_longo(void) { return 0; }
@@ -88,7 +95,7 @@ static void reset(int hero,int rows) {
   for(int r=0;r<rows;r++) { fileiras[r].tipo=FILEIRA_NORMAL; fileiras[r].n=4; }
   pedidoRelogio=pedidoAbrir=pedidoTocar=pedidoMenu=pedidoSocial=pedidoGuia=sair=0;
   okPressionando=okLongDisparado=okConsumirSoltura=0; okDesde=0; okHold=0;
-  heroPos=menuN=heroAutoDesligado=0; sairPerguntadoEm=0;
+  heroPos=menuN=heroAutoDesligado=menuTopo=0; sairPerguntadoEm=0;
 }
 static void homeKey(int type,SDL_Keycode key) {
   SDL_Event e={0}; e.type=type; e.key.keysym.sym=key; agora+=20; home_evento(&e);
@@ -126,6 +133,13 @@ int main(void) {
   reset(1,1); focoHero=1;
   homeKey(SDL_KEYDOWN,SDLK_RETURN); homeKey(SDL_KEYUP,SDLK_RETURN);
   check(pedidoAbrir && !pedidoRelogio,"normal short OK keeps opening the hero title");
+
+  reset(1,1); focoHero=1; menuTopo=1;
+  homeKey(SDL_KEYDOWN,SDLK_UP);
+  check(pedidoMenu && !pedidoRelogio,"top menu keeps Up priority over clock");
+  reset(1,2); foco.fileira=1; foco.coluna=2; foco.colunaLembrada[0]=0;
+  homeKey(SDL_KEYDOWN,SDLK_UP);
+  check(foco.fileira==0 && foco.coluna==2 && !pedidoRelogio,"vertical move preserves screen column instead of remembered destination");
 
   addonN=3; addonFoco=1; addonPedido=addonSair=addonMexeu=addonAlternados=0;
   addonKey(SDLK_UP);

@@ -243,6 +243,7 @@ typedef struct {
   char avisoId[72];      // ILHA_ESTREIA: id do aviso em avisos.c
   char pessoa[64], rosto[256];   // ILHA_AMIGO: nome e avatar de quem esta vendo
 } IlhaCartao;
+int ilha_retomar_focado(IlhaCartao *c);
 // NULL tira o cartao. A copia e da ilha; quem chama pode descartar o seu.
 void ilha_cartao(int qual, const IlhaCartao *c);
 // Troca de identidade: apaga este cartao e suas copias no modal, no pedido e
@@ -292,6 +293,8 @@ int  ilha_minimizando(void);
 // quadro: e de onde o painel de Salvos nasce e para onde ele recolhe. 0 quando
 // a ilha nao esta na tela.
 int  ilha_rect(float *x, float *y, float *w, float *h);
+// Largura do relogio em pixels reais, incluindo recuos e ponto de enquete.
+float ilha_relogio_largura(void);
 // 1 = outra superficie nasceu da pilula e esta no lugar dela (o painel de
 // Salvos): a ilha continua medindo, mas nao se desenha. Vale um quadro.
 void ilha_coberta(int coberta);

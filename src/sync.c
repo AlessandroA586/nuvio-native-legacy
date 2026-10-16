@@ -356,14 +356,14 @@ static int lerAddonsPara(const char *r, AddonRemoto *saida, char *url) {
       fora++; continue;
     }
     // #360: a conta pode trazer o MESMO addon duas vezes (heranca do tempo em
-    // que o push da TV duplicava a lista dela). Dedupe por URL base
-    // normalizada (nv_addon_base, addonurl.h): fica a primeira ocorrencia,
+    // que o push da TV duplicava a lista dela). Dedupe pela chave do addon
+    // (nv_addon_chave, addonurl.h; B4: URL grande e host sem caixa): fica a primeira ocorrencia,
     // com a URL exata que a conta mandou.
     { int i; char base[NV_ADDON_URL_MAX], bi[NV_ADDON_URL_MAX];
-      nv_addon_base(saida[k].url, base, sizeof base);
+      nv_addon_chave(saida[k].url, base, sizeof base);
       if (!base[0]) continue;
       for (i = 0; i < k; i++) {
-        nv_addon_base(saida[i].url, bi, sizeof bi);
+        nv_addon_chave(saida[i].url, bi, sizeof bi);
         if (!strcmp(bi, base)) break;
       }
       if (i < k) continue;

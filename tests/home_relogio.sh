@@ -32,7 +32,7 @@ row=re.search(r'typedef struct \{[\s\S]*?\} Fileira;',home)[0]
 (out/'home_relogio_tipos.inc').write_text(enum+'\n'+row+'\n')
 (out/'home_relogio_evento.inc').write_text(''.join(function('src/home.c',name) for name in (
     'static int fileiraItemIndice(', 'static int fileiraEhCanal(',
-    'static int primeiraFileiraNavegavel(', 'void home_evento(')))
+    'static int primeiraFileiraNavegavel(', 'static int focoVertical(', 'void home_evento(')))
 (out/'home_relogio_addons.inc').write_text(function('src/addonsui.c','void addonsui_evento('))
 PY
 flags=(-std=c11 -O1 -g -Isrc -I"$tmp" -Wall -Wextra)

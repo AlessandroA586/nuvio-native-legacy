@@ -40,7 +40,8 @@ typedef struct { float x,y,w,h; } GfxRect;
  X(novidades201_aberto) X(novidades202_aberto) X(novcartao_aberto) \
  X(telemetria_aberto) X(recintro_aberto) X(atualizacao_aberta) X(agendaviso_aberto) \
  X(avisos_cartao_aberto) X(glem_cartao_aberto) X(recenviar_aberto) X(pessoas_aberto) \
- X(recomenda_aberta) X(pipintro_aberto) X(diagnostico_intro_aberto)
+ X(recomenda_aberta) X(pipintro_aberto) X(diagnostico_intro_aberto) \
+ X(menu_relogio_cabe)
 #define DECLARE_GET(name) static int state_##name; static int name(void) { return state_##name; }
 GETTERS(DECLARE_GET)
 static Tela tela;
@@ -111,7 +112,7 @@ static void limpar(void) {
   memset(&relogioFoco,0,sizeof relogioFoco); memset(pedidos,0,sizeof pedidos);
   state_ajustes_relogio_ligado=state_login_concluido=state_perfilsel_concluido=1;
   state_detail_relogio_navegavel=state_ajustes_relogio_navegavel=state_busca_relogio_navegavel=1;
-  state_ajustes_relogio_cabe=1;
+  state_ajustes_relogio_cabe=1; state_menu_relogio_cabe=1;
   tela=TELA_HOME; homePronta=1; sessao=1; mobile=detailIdx=0;
   snprintf(item.imdb,sizeof item.imdb,"tt1"); snprintf(item.tipo,sizeof item.tipo,"movie");
   ilhaConsome=avisoConsome=ilhaN=avisoN=salvosN=modalPedido=0;

@@ -34,6 +34,7 @@ const char *ling_tipo_legenda_rotulo(int t) { (void)t; return ""; }
 const char *ling_do_nome(const char *nome) { (void)nome; return NULL; }
 int ling_letreiro(const char *nome, int forcado) { (void)nome; (void)forcado; return 0; }
 void mkvass_aceitar_texto(int sim) { (void)sim; }
+void mkvass_aceitar_imagem(int sim) { (void)sim; }
 void intro_definir_capitulos(const IntroTrecho *v, int n) { (void)v; (void)n; }
 char *rede_baixar_trecho_st(const char *url, int segundos, long long ini, long long fim,
                             long *tam, int *status, int *erro, char *final, unsigned tamFinal) {
@@ -229,6 +230,21 @@ int main(void) {
 
   video_parar();
   ok(!video_tpk_convertendo() && !video_tpk_fonte_tocou(), "stop clears the converted state");
+
+  // SEEK BEFORE THE PLAYER IS READY (pending seek) on the TS: it reopens the
+  // stream at the target by URL, never a raw seek, and the fresh open is not
+  // taken for a stuck player (no stale "preso" warning, no extra reopen).
+  video_tocar("http://h/g.mkv");
+  bombear(3);
+  nAbriu = 0; nBuscas = 0; urlEmN = 0;
+  bombear(3);
+  ok(nAbriu == 0, "fresh open: no recovery reopen from a stale stuck warning");
+  video_buscar(300);
+  inicioStream = 0; posMs = 1000;
+  playerPronto(); bombear(3);
+  ok(nBuscas == 0, "pending seek on the TS: no raw seek");
+  ok(urlEmN >= 1 && perto(urlEmUlt, 300) && strstr(ultUrl, "t=300"), "pending seek on the TS: reopens the stream at 300 s");
+  video_parar();
 
   // NO START BUFFER (removed, Round 2): the converted stream never pauses itself.
   misto = 0; montarCabecalho(); cabPronto = 1; pausas = retomadas = 0;

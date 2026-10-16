@@ -1,4 +1,6 @@
 #!/bin/sh
+export TMPDIR="${TMPDIR:-/tmp}"
+TMPDIR="${TMPDIR%/}"
 # Minimal static LGPL FFmpeg: DTS decode, stereo AAC and AC3 5.1 encode (no GPL/nonfree). No FFmpeg
 # network/TLS protocols or software video decoders enter the TV executable.
 #
@@ -7,13 +9,13 @@
 #   tpk             Samsung .tpk (tools/tpk.sh). Native build INSIDE the nuvio-tpk-sdk ARM
 #                   container, from the source tree tpk.sh already downloaded and checked on the
 #                   host (NUVIO_DTS_SRC; the container has no curl). Adds what the Samsung loopback
-#                   converter needs (docs/plans/dts-truehd-ac3-tizen-DESIGN.md): TrueHD/MLP
+#                   converter needs: TrueHD/MLP
 #                   decoders, mpegts/matroska/mp4 muxers, mlp/ac3 parsers, truehd_core.
 set -eu
 VERSION=7.1.5
 SHA256=de668509caf9e35e3cd162473441fdb29538c6d96ed080292b3cf9e6fc5d558f
 PREFIX=${NUVIO_DTS_ROOT:-/opt/nuvio-dts}
-BUILD=${NUVIO_DTS_BUILD:-/tmp/nuvio-dts-build}
+BUILD=${NUVIO_DTS_BUILD:-${TMPDIR:-/tmp}/nuvio-dts-build}
 TARGET=${NUVIO_DTS_TARGET:-webos}
 DECODERS=dca,dvdsub,pgssub,ass,ssa,subrip,movtext,webvtt
 MUXERS=

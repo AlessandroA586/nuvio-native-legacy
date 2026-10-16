@@ -443,6 +443,24 @@ static void ordem(void) {
   fonteregra_perfil_esquecer();
 }
 
+// PR #489: filtro so com caractere nao ASCII continua ativo (Exigir recusa o
+// que nao casa) e o Preferir conta as condicoes com as flags (s/m) do padrao.
+static void pr489(void) {
+  FonteRegraCfg c = cfg(FR_ESCOPO_TODAS, FR_REGEX_EXIGIR, 1);
+  fonteregra_limpar(0); fonteregra_limpar(1);
+  assert(fonteregra_definir_regex("日本語") == 1 && fonteregra_regex_estado() == 1);
+  assert(fonteregra_grupo(&c, "A", 0, "English") == -1);
+  assert(fonteregra_grupo(&c, "A", 0, "Film 日本語") == 0);
+  assert(fonteregra_definir_regex("[ñÑ]") == 1 && fonteregra_grupo(&c, "A", 0, "English") == -1);
+  assert(fonteregra_definir_regex("🇪🇸|🇲🇽") == 1 && fonteregra_grupo(&c, "A", 0, "English") == -1);
+  c.regexModo = FR_REGEX_PREFERIR;
+  assert(fonteregra_definir_regex("(?s)^(?=.*A)(?=.*B)(?=.*C)") == 1);
+  assert(fonteregra_grupo(&c, "A", 0, "\nABC") == 0);
+  assert(fonteregra_grupo(&c, "A", 0, "\nAB") == 1);   // so C falta
+  assert(fonteregra_grupo(&c, "A", 0, "A") == 2);
+  assert(fonteregra_definir_regex("") == 0);
+}
+
 int main(void) {
   const char *d = getenv("NUVIO_DADOS");
   assert(d && *d);
@@ -455,6 +473,7 @@ int main(void) {
   flagsNasCondicoes();
   grupos();
   distancia();
+  pr489();
   perfilEConta();
   ordem();
   puts("fonteregra: ok");

@@ -846,10 +846,10 @@ static void textoLinha(const LuiLinha *l, char *nome, size_t tn, char *sub, size
       *idioma = c->idioma;
       *ativo = ativoNoSlot(l->slot, c) && (l->slot == 0 || legenda2_estado() == LEG2_ATIVA);
       { int nomeado = legendasui_titulo(cand, nCand, l->cand, nome, tn);
-        if (nomeado) juntar(sub, ts, nomeIdioma(c->idioma));
+        if (nomeado) juntar(sub, ts, nomeIdioma(c->idioma));   // language is secondary
         if (!mais && !ver) {
-        juntar(sub, ts, c->embutida ? i18n("Embutida") : c->origem);
-        juntar(sub, ts, legendasui_tipo_rotulo(c));
+          juntar(sub, ts, c->embutida ? i18n("Embutida") : c->origem);
+          juntar(sub, ts, legendasui_tipo_rotulo(c));
         } else {
         const char *marca = c->embutida ? faixas_legenda_marca(c->indice) : NULL;
         juntar(sub, ts, c->embutida ? i18n("Embutida") : c->origem);
@@ -1251,7 +1251,7 @@ void legendasui_desenhar_secundaria(const LegendasGeo *g) {
     }
   }
   for (i = 0; i < n && nl < LEG2_LINHAS; i++)
-    nl += quebrar(&cues[i], e, est, r, gg, b, borda, video_legenda_borda_rgb(e->corBorda), x1 - x0, ln + nl, LEG2_LINHAS - nl);
+    nl += quebrar(&cues[i], e, est, r, gg, b, borda, ajustes_leg_borda_rgb(e->corBorda), x1 - x0, ln + nl, LEG2_LINHAS - nl);
   if (g->junto || posicao >= 0) {
     // Stacked: the whole block ends just above the primary (2-line cues grow
     // upward, never over it) and stays inside the picture.
@@ -1297,7 +1297,7 @@ float legendasui_altura_secundaria(const LegendasGeo *g) {
   if (n <= 0) return 0.0f;
   secundario = estiloSecundario(principal, &est, &r, &gg, &b, &fundo, &borda);
   for (i = 0; i < n && nl < LEG2_LINHAS; i++)
-    nl += quebrar(&cues[i], e, est, r, gg, b, borda, video_legenda_borda_rgb(e->corBorda), larguraSecundaria(), ln + nl, LEG2_LINHAS - nl);
+    nl += quebrar(&cues[i], e, est, r, gg, b, borda, ajustes_leg_borda_rgb(e->corBorda), larguraSecundaria(), ln + nl, LEG2_LINHAS - nl);
   for (i = 0; i < nl; i++) altura += (float)ln[i].cor.h + (i ? 5.0f : 0.0f);
   return altura;
 }

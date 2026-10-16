@@ -118,6 +118,10 @@ static const char *ALFABETO = "abcdefghijklmnopqrstuvwxyz0123456789";
 enum { TE_B_CAMPO = 0, TE_B_FALAR, TE_B_CEL, TE_B_IME, TE_B_N };
 static int   aberto, fileira, coluna;
 static int   voltaF, voltaC, barraAntes;
+// IME pendente do modo "Do Android": teclado_abrir_com nao abre na hora porque
+// o chamador pode chamar teclado_tipo em seguida e trocar o tipo; o primeiro
+// teclado_atualizar abre, uma vez so (abrirImeAgora desarma).
+static int   pendIme;
 static float animBarra[TE_B_N];
 // Coluna de caractere de onde o foco desceu para apagar/limpar/pronto. Sem ela,
 // subir de "pronto" (coluna 2) numa grade de 13 caia no 'c', a dez teclas de
@@ -144,7 +148,10 @@ static int vozOk(void) {
   return forcaVoz >= 0 ? forcaVoz : st_voz_disponivel() && !texto_sistema_voz_pelo_teclado();
 }
 static int celOk(void) { return (forcaCel >= 0 ? forcaCel : celb_disponivel()) && !semCel; }
-static int teTelefoneIme(void) { return telefoneui_ativo() && imeOk(); }
+// Ajuste "Teclado" (Android): 0 automatico, 1 so a grade do app, 2 o teclado do
+// sistema direto. Onde o ajuste nao existe (Mac) st_teclado_modo() e 0.
+static int modoTeclado(void) { return st_teclado_modo(); }
+static int teTelefoneIme(void) { return telefoneui_ativo() && imeOk() && modoTeclado() != 1; }
 #ifdef NV_TOUCH_UI
 enum { TE_P_CAMPO=0, TE_P_FALAR, TE_P_CEL, TE_P_APAGAR, TE_P_LIMPAR,
        TE_P_MASCARA, TE_P_PRONTO, TE_P_CANCELAR, TE_P_ATALHO=16 };
@@ -449,7 +456,7 @@ void teclado_tipo(int tipo) {
   if (tipo == TECLADO_TIPO_EMAIL) teMontar(1);
   // Onde o teclado do sistema abre sozinho (Android), ele ja vem aberto: quem
   // toca no campo de e-mail quer o teclado do aparelho, nao a grade.
-  if (semCel && aberto && imeOk() && st_abre_sozinho()) {
+  if (aberto && imeOk() && (modoTeclado() == 2 || (semCel && st_abre_sozinho() && modoTeclado() == 0))) {
     voltaF = 0; voltaC = 0;
     fileira = -1; coluna = campoFocavel() ? TE_B_CAMPO : TE_B_IME;
     abrirImeAgora();
@@ -544,7 +551,7 @@ void teclado_abrir_com(const char *titulo, const char *dica, int max,
 #endif
   alfabetoAtual = (alfabeto && *alfabeto) ? alfabeto : NULL;
   celb_fechar_dono(CELB_TECLADO);   // reabrir por cima nao herda o QR da anterior
-  mascarar = 0; tipoIme = ST_IME_TEXTO; ehSenha = 0; semCel = 0; aceitaUtf8 = 0;
+  mascarar = 0; tipoIme = ST_IME_TEXTO; ehSenha = 0; semCel = 0; pendIme = 0; aceitaUtf8 = 0;
   teMontar(0);
   aberto = 1;
   fileira = 0; coluna = 0; colunaAntes = 0;
@@ -574,6 +581,15 @@ void teclado_abrir_com(const char *titulo, const char *dica, int max,
 #ifdef NV_TOUCH_UI
   tePhoneFoco=TE_P_CAMPO;tePhoneOffset=0;tePhoneRol=(ToqueRolagem){0};
 #endif
+  // "Do Android": o teclado do sistema abre direto em todo campo. Voltar o
+  // fecha e deixa a grade do app, com o botao Teclado da TV em foco. A abertura
+  // fica PENDENTE (pendIme): login e ajustes chamam teclado_tipo logo depois,
+  // e abrir duas vezes no mesmo quadro (a primeira com o tipo errado) faz o
+  // IME piscar em alguns aparelhos.
+  if (imeOk() && modoTeclado() == 2) {
+    fileira = -1; coluna = campoFocavel() ? TE_B_CAMPO : TE_B_IME;
+    pendIme = 1;
+  }
 }
 
 // O texto do sistema passa pelo ALFABETO da modal: o codigo de pareamento e
@@ -602,12 +618,13 @@ static void definirDoSistema(const char *t) {
 
 static void fechar(int r) {
   aberto = 0;
+  pendIme = 0;
   celb_fechar_dono(CELB_TECLADO);
   resultado = r;
   st_fechar(ST_TECLADO);
 }
 
-static void abrirImeAgora(void) { st_ime_tipo(tipoIme); st_ime_abrir(ST_TECLADO, texto, maxN); }
+static void abrirImeAgora(void) { pendIme = 0; st_ime_tipo(tipoIme); st_ime_abrir(ST_TECLADO, texto, maxN); }
 static void okBarra(void) {
   if (coluna == TE_B_CEL) {
     // O QR abre AQUI DENTRO, embaixo do segmentado (celb_desenhar_em). OK com
@@ -844,6 +861,9 @@ void teclado_atualizar(float dt, Uint32 agora) {
   (void)agora;
   if (aberto) {
     char t[TECLADO_LONGO + 1];
+    // O IME que teclado_abrir_com deixou pendente ("Do Android") abre aqui,
+    // um quadro depois: teclado_tipo ja teve a chance de trocar o tipo.
+    if (pendIme) abrirImeAgora();
     int voz = st_estado() == ST_OUVINDO || st_estado() == ST_PERMISSAO || st_estado() == ST_VOZ_SISTEMA;
     int r;
     if (celb_pegar(CELB_TECLADO, t, sizeof t)) {
@@ -1254,7 +1274,7 @@ static void tePhoneDesenhar(Uint32 agora) {
   if (tePhoneNativo()) return;
   TePhoneLayout l = tePhoneMedir();
   if (ajustes_vidro()) {
-    gfx_cor(l.painel, 28 / l.painel.h, .055f, .059f, .071f, .86f * a);
+    gfx_vidro_material(l.painel, 28 / l.painel.h, GFX_VIDRO_DENS_MODAL, a);
     gfx_luz_canto(l.painel, 28 / l.painel.h, l.painel.w * .22f, -l.painel.h * .4f,
                   l.painel.h * .62f, 1, 1, 1, .1f * a);
   } else gfx_cor(l.painel, 28 / l.painel.h, .082f, .086f, .102f, a);
@@ -1337,7 +1357,7 @@ static void teDesenhar(Uint32 agora) {
     float raio = 36.0f / p.h;
     gfx_rect((GfxRect){ p.x - 20, p.y - 6, p.w + 40, p.h + 46 }, 0, GFX_SOMBRA, 1.0f, 0, 0, 0.5f, 0, 0, 0, 0.40f * a);
     if (ajustes_vidro()) {
-      gfx_cor(p, raio, 0.055f, 0.059f, 0.071f, 0.86f * a);
+      gfx_vidro_material(p, raio, GFX_VIDRO_DENS_MODAL, a);
       gfx_luz_canto(p, raio, p.w * 0.22f, -p.h * 0.40f, p.h * 0.62f, 1, 1, 1, 0.10f * a);
     } else gfx_cor(p, raio, 0.082f, 0.086f, 0.102f, a); }
 

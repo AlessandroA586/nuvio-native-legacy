@@ -1042,8 +1042,13 @@ int stream_extrair(const char *json, const char *provedor, Stream **saida) {
     char titulo[2048] = "", nomeFonte[1024] = "", texto[5000];
     fim = js_fim(p);
     if (!fim || fim <= p) break;
-    js_texto(p, fim, "url", s.url, sizeof s.url);
-    if (!s.url[0]) js_texto(p, fim, "externalUrl", s.url, sizeof s.url);
+    // externalUrl abre fora do player; sem midia/hash a fonte fica oculta.
+    js_texto_raiz_em(p, fim, "url", s.url, sizeof s.url);
+    { const char *bh = valorRaiz(p, fim, "behaviorHints");
+      const char *hint = bh ? valorRaiz(bh, fim, "notWebReady") : NULL;
+      s.notWebReady = hint && fim - hint >= 4 && !memcmp(hint, "true", 4) &&
+        (hint + 4 == fim || hint[4] == ',' || hint[4] == '}' || isspace((unsigned char)hint[4]));
+    }
     s.fileIdx = -1;
     // Torrent puro: sem url, com infoHash (no topo ou dentro de clientResolve,
     // como o AIOStreams manda). A url nasce depois, no debrid.
@@ -1102,7 +1107,8 @@ int stream_extrair(const char *json, const char *provedor, Stream **saida) {
       snprintf(s.provedor, sizeof s.provedor, "%s", provedor);
       snprintf(texto, sizeof texto, "%s %s %s %s", s.rotulo, s.descricao, titulo, s.arquivo);
       for (char *q = texto; *q; q++) if (*q == '\n') *q = ' ';
-      s.altura = contem(texto, "2160") || token(texto, "4k") || token(texto, "uhd") ? 2160 :
+      s.altura = contem(texto, "4320") || token(texto, "8k") ? 4320 :
+                 contem(texto, "2160") || token(texto, "4k") || token(texto, "uhd") ? 2160 :
                  contem(texto, "1440") ? 1440 : contem(texto, "1080") ? 1080 :
                  contem(texto, "720") ? 720 : contem(texto, "480") ? 480 : 0;
       s.dolbyVision = token(texto, "dv") || token(texto, "dovi") ||
@@ -1120,6 +1126,11 @@ int stream_extrair(const char *json, const char *provedor, Stream **saida) {
         s.badges |= badges_bit("r-1080");
       }
       s.mp4 = token(texto, "mp4") || contem(s.url, ".mp4");
+      // "av1" tambem casa "av1.0.0" (nivel/perfil, comum em nome de release);
+      // token() basta porque nao ha AV1 escrito colado a outra palavra nos
+      // nomes que os addons mandam (ao contrario de "dv", que precisa do
+      // cuidado de token() com DVDRip — o mesmo cuidado ja se aplica aqui).
+      s.av1 = token(texto, "av1") || contem(texto, "av01");
       s.foraCache = stream_texto_fora_de_cache(texto);
       // AIOStreams: clientResolve.isCached e explicito; ausente nao e false.
       if (s.infoHash[0] && !s.url[0] && cache < 0) s.foraCache = 1;

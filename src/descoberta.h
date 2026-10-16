@@ -24,6 +24,8 @@ void desc_esquecer_catalogo_perfil(void);
 // Confirmed opening, including the same profile: invalidate detached jobs and
 // clear live results, without removing saved account/profile configuration.
 void desc_abrir_sessao(void);
+// Drawing-thread guard: discovery has been opened for the live generation.
+int desc_sessao_aberta(void);
 // Called after this session's cached addon list/configuration is restored.
 // Starts its pending discovery once, reusing an in-flight worker. Before the
 // first main.c bootstrap start this only marks the sources ready.
@@ -214,6 +216,8 @@ int  desc_busca_base_oculta(const char *base);
 // lista vazia. `f` devolve 0 (nao espere: sem conta), 1 (espere: perfil ainda
 // nao escolhido) ou 2 (espere ate 10 s). Sem gancho, nao ha espera.
 void desc_espera_addons_definir(int (*f)(void));
+// Troca de perfil: a proxima volta espera de novo o ciclo da conta antes de ler a lista.
+void desc_esperar_conta(void);
 void desc_alvo_busca(const char *base, const char *tipo, const char *id,
                      const char *titulo, const char *addon);
 
