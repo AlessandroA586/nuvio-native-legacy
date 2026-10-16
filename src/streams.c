@@ -2011,6 +2011,8 @@ int stream_falha_aplicar(int indice, unsigned geracao, int servico, const char *
                                    nv_perfil_sessao_ler());
 }
 
+static int temAudioPt(const Stream *s);
+
 int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
   int fila[VER_MAX], nf, q, tocadas = 0, escolhida, total, pref, livres = 0, kk;
   int modo = ajustes_fonte_primeira() ? FONTEAUTO_PRIMEIRA : FONTEAUTO_MELHOR;
@@ -2679,7 +2681,6 @@ static const char *iconeBotao(int b) {
 static char provedores[13][96];
 static int nProvedores;
 
-static int temAudioPt(const Stream *s);
 // Os chips (MP4, cache, dublado) valem para a lista E para a contagem de cada
 // aba; o addon so para a lista.
 static int passaChips(int i) {
