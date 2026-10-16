@@ -418,6 +418,35 @@ int main(void) {
   assert(contapend_pendentes() == 0 && gateDepth == 0);
   OK("initial batch preserves episodes not superseded by a newer gesture");
 
+  // A late whole-series write must restore even already-confirmed overrides.
+  for (int retry = 0; retry < 2; retry++) {
+    free(journal); journal = NULL; contapend_esquecer(); zerar(); nWorkers = 0;
+    int temps[] = {1};
+    assert(visto_titulo("tt5480099", "series", temps, 1, 1, VISTO_TRAKT | VISTO_SIMKL));
+    assert(visto_episodios("tt5480099", "series", tres, 1, 0, VISTO_TRAKT | VISTO_SIMKL));
+    workers[1].run(workers[1].arg);
+    assert(nPost == 2);
+    if (retry) {
+      // Fail the original title write, then retry after journal reload.
+      offline = 1;
+      workers[0].run(workers[0].arg);
+      offline = 0;
+      contapend_esquecer(); zerar();
+      assert(contapend_reenviar() >= 0);
+    } else {
+      zerar();
+      workers[0].run(workers[0].arg);
+    }
+    assert(nPost == 4);
+    assert(!strstr(post[0].url, "/remove") && !strstr(post[1].url, "/remove"));
+    assert(strstr(post[2].url, "/remove") && strstr(post[3].url, "/remove"));
+    assert(strstr(post[2].corpo, "\"episodes\":[{\"number\":1}]"));
+    assert(contapend_pendentes() == 0 && gateDepth == 0);
+    assert(contapend_estado("tt5480099", "series", 1, 1, 0, -1) == 0);
+    assert(contapend_estado("tt5480099", "series", 1, 2, 0, -1) == 1);
+  }
+  OK("whole-series worker and retry preserve confirmed newer episode overrides");
+
   now += 10000; zerar();
   assert(visto_titulo_ja("tt5480004", "movie", NULL, 0, 0, visto_destinos()));
   contapend_esquecer();

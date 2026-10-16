@@ -401,6 +401,21 @@ int contapend_estado(const char *imdb, const char *tipo, int t, int e, long long
   return remoto;
 }
 
+// A broad tracker write also overwrites newer, already-confirmed episodes.
+// Keep those overrides durable until they have been replayed after the title.
+static void repetirOverrides(const Ent *titulo, int destinos) {
+  if (titulo->sup != 'V' || titulo->ep || strcmp(titulo->tipo, "series")) return;
+  destinos &= VISTO_TRAKT | VISTO_SIMKL;
+  for (int i = 0; i < nEnt; i++) {
+    Ent *p = &ents[i];
+    if (p->sup == 'V' && p->perfil == titulo->perfil && p->ep > 0 &&
+        p->ms > titulo->ms && !strcmp(p->id, titulo->id)) {
+      p->destinos |= destinos;
+      p->conf = !p->destinos;
+    }
+  }
+}
+
 // A copia enviada so quita a entrada se ela nao mudou durante a viagem (mesma
 // intencao, mesmo instante). Um gesto novo no meio fica pendente.
 static void confirmar(const char *usu, const Ent *env, int n, int destino) {
@@ -411,6 +426,7 @@ static void confirmar(const char *usu, const Ent *env, int n, int destino) {
     for (i = 0; i < n; i++) {
       k = achar(env[i].sup, env[i].perfil, env[i].id, env[i].temp, env[i].ep);
       if (k >= 0 && ents[k].op == env[i].op && ents[k].ms == env[i].ms && !ents[k].conf) {
+        repetirOverrides(&ents[k], destino);
         ents[k].destinos &= ~destino;
         ents[k].conf = !ents[k].destinos;
         ents[k].confMs = agora;
@@ -444,6 +460,7 @@ void contapend_confirmar_gesto(const char *imdb, const VistoPar *pares, int n,
   for (i = 0; i < (n ? n : 1); i++) {
     int k = achar('V', perfil, id, n ? pares[i].temporada : 0, n ? pares[i].episodio : 0);
     if (k >= 0 && ents[k].ms == ms) {
+      repetirOverrides(&ents[k], destinos);
       ents[k].destinos &= ~destinos;
       ents[k].conf = !ents[k].destinos;
     }
@@ -859,7 +876,7 @@ static int enviarJa(void) {
   return falhou ? -1 : total;
 }
 
-int contapend_reenviar(void) {
+static int reenviar(const char *id, long long ms) {
   if (!contapend_reenviar_existe()) return 0;
   NvPerfilSessao sessao = nv_perfil_sessao_ler();
   Ent *snap;
@@ -870,7 +887,7 @@ int contapend_reenviar(void) {
   snap = malloc(sizeof *snap * (size_t)(nEnt + 1));
   if (snap) for (i = 0; i < nEnt; i++)
     if (ents[i].sup == 'V' && ents[i].perfil == perfis_ativo() &&
-        (ents[i].destinos & (VISTO_TRAKT | VISTO_SIMKL)) &&
+        (!id || (ents[i].ep > 0 && ents[i].ms > ms && !strcmp(ents[i].id, id))) &&
         contapend_reenviar_existe()) snap[n++] = ents[i];
   snprintf(usu, sizeof usu, "%s", usuario);
   pthread_mutex_unlock(&trava);
@@ -883,7 +900,7 @@ int contapend_reenviar(void) {
     int k = carregado && !strcmp(usuario, usu)
           ? achar('V', snap[i].perfil, snap[i].id, snap[i].temp, snap[i].ep) : -1;
     if (k < 0 || ents[k].ms != snap[i].ms || ents[k].op != snap[i].op) bits = 0;
-    else bits &= ents[k].destinos;
+    else bits = ents[k].destinos & (VISTO_TRAKT | VISTO_SIMKL);
     pthread_mutex_unlock(&trava);
     // Keep credential capture and confirmation in the journal's profile session.
     if (snap[i].sup == 'V' && bits && snap[i].perfil == perfis_ativo()) {
@@ -906,6 +923,13 @@ int contapend_reenviar(void) {
   }
   free(snap);
   return falhou ? -1 : n;
+}
+
+int contapend_reenviar(void) { return reenviar(NULL, 0); }
+int contapend_reenviar_overrides(const char *imdb, long long ms) {
+  char id[24];
+  idVisto(imdb, id, sizeof id);
+  return reenviar(id, ms);
 }
 
 static pthread_mutex_t fioTrava = PTHREAD_MUTEX_INITIALIZER;

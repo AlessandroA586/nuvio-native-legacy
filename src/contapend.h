@@ -69,6 +69,8 @@ int contapend_estado(const char *id, const char *tipo, int t, int e, long long r
 // Devolve quantas entradas foram confirmadas, ou -1 se alguma falhou (o que
 // falhou continua pendente).
 int  contapend_enviar(void);
+// Replay newer episode overrides rearmed by a successful whole-series write.
+int contapend_reenviar_overrides(const char *id, long long ms);
 int  contapend_reenviar(void); // Retry pending Trakt/Simkl for the active profile.
 void contapend_reenviar_com(int (*f)(const char *, const char *, const VistoPar *,
                                      int, int, int, const int *, int));

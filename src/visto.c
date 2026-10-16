@@ -85,6 +85,7 @@ int visto_titulo_ja(const char *imdb, const char *tipo, const int *temporadas,
   int trackers = destinos & (VISTO_TRAKT | VISTO_SIMKL);
   int enviados = visto_reenviar(imdb, tipo, NULL, 0, visto, trackers, temporadas, nt);
   contapend_confirmar_gesto(imdb, NULL, 0, ms, enviados);
+  if (enviados) ok &= contapend_reenviar_overrides(imdb, ms) >= 0;
   ok &= enviados == trackers;
   nv_perfil_sessao_destravar();
   if (destinos & VISTO_CONTA) {
@@ -138,6 +139,7 @@ static void *fio(void *u) {
     if (ok) enviados |= VISTO_SIMKL;
   }
   contapend_confirmar_gesto(e->imdb, e->pares, e->n, e->ms, enviados);
+  if (e->titulo && enviados) contapend_reenviar_overrides(e->imdb, e->ms);
   nv_perfil_sessao_destravar();
   if (e->destinos & VISTO_CONTA) contapend_enviar(); // each journal record owns its account/profile
   memset(e, 0, sizeof *e);
