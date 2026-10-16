@@ -1107,9 +1107,9 @@ object NvPlayer {
     @JvmStatic fun volume(pct: Int) { principal.post { player?.volume = pct.coerceIn(0, 100) / 100f } }
     // F07: cache limit for the NEXT opens (MB, 0 = off) and the session volume
     // 0..200 (above 100 only while the audio is PCM).
-    // #338: buffer size preset (0 Auto, 1 Low, 2 Medium, 3 High), sticky, read at open.
+    // #338: buffer size in MiB (0 Auto; C already clamped it to free RAM), sticky, read at open.
     @Volatile private var bufferPreset = 0
-    @JvmStatic fun buffer(preset: Int) { bufferPreset = preset.coerceIn(0, 3) }
+    @JvmStatic fun buffer(mb: Int) { bufferPreset = mb.coerceIn(0, 256) }
     @JvmStatic fun cache(mb: Int) { cacheMbPedido = mb.coerceIn(0, 1024) }
     @JvmStatic fun cacheTitle(id: String) { tituloPedido = id }
     // Profile switch (C side): the kept cache belongs to the old profile.
@@ -1160,13 +1160,10 @@ object NvPlayer {
                         (totalMem in 1L..(3L shl 30)))).also { poucaRamAparelho = it }
         val tetoBuffer = if (poucaRam) (heap / 8).coerceIn(24L shl 20, 48L shl 20).toInt()
                          else (heap / 4).coerceIn(32L shl 20, 96L shl 20).toInt()
-        val (minMs, maxMs, bytes) = when (preset) {
-            1 -> Triple(15_000, 25_000, tetoBuffer / 2)
-            2 -> Triple(50_000, 80_000, tetoBuffer)
-            3 -> Triple(90_000, 150_000, (heap / 3).coerceIn(32L shl 20,
-                      (if (poucaRam) 48L else 96L) shl 20).toInt())
-            else -> Triple(50_000, 50_000, tetoBuffer)
-        }
+        // preset = MiB from Settings (0 Auto). ExoPlayer holds it in the Java heap: never past heap/3.
+        val (minMs, maxMs, bytes) = if (preset > 0)
+            Triple(50_000, 150_000, minOf(preset.toLong() shl 20, heap / 3).toInt())
+        else Triple(50_000, 50_000, tetoBuffer)
         val r = RecursosPlayer(CargaPlayer(minMs, maxMs, bytes, preparando), maxMs, if (preparando) idiomaAudio else "")
         try {
             val http = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
