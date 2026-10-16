@@ -75,6 +75,30 @@ const char *i18n(const char *s) { return s; }
 static void homeCom(int layout, int heroLigado) { testeLayout = layout; testeHero = heroLigado; }
 
 int main(void) {
+  // HEROI DIVIDIDO: painel deitado a esquerda (~45% da largura util), a fila de
+  // cartazes a direita dele, e o painel segue o foco da fileira.
+  {
+    int cols[] = {12, 12};
+    fileiras[0] = (Fileira){.tipo = FILEIRA_NORMAL, .n = 12, .escala = 1.0f};
+    fileiras[1] = (Fileira){.tipo = FILEIRA_HEROI_DIVIDIDO, .n = 12, .ini = 40, .escala = 1.0f};
+    focus_iniciar(&foco, 2, cols);
+    assert(focus_mover(&foco, 0, 1) && foco.fileira == 1);
+    GfxRect p = divididoPainel(1, 100.0f);
+    assert(fabsf(p.w - homeLarguraUtil() * 0.45f) < 0.5f);
+    assert(p.x == homeConteudoX() && p.y == 100.0f && p.h > 0.0f && p.h <= p.w * 9.0f / 16.0f + 0.5f);
+    // A fila comeca a direita do painel, e o card em foco e sempre o primeiro dela.
+    for (int c = 0; c < 6; c++) {
+      if (c) assert(focus_mover(&foco, 1, 0));
+      scrollX[1] = alvoScrollFil(1, c, scrollX[1], 0.0f);
+      float x = homeFileiraX(1, c) + xOffTipo(FILEIRA_HEROI_DIVIDIDO);
+      assert(x >= p.x + p.w + 20.0f && x < p.x + p.w + 80.0f);
+      assert(divididoItem(1) == 40 + c);   // o painel acompanha o foco
+    }
+    // O passo e o de um cartaz, nao o do painel; a altura reserva a ficha.
+    assert(passoFil(1) < larguraFil(1) + 60.0f);
+    assert(alturaTotalFil(1) > alturaFil(1) + 150.0f);
+    memset(scrollX, 0, sizeof scrollX);
+  }
   // Palco percorre as mesmas vagas e usa a mesma borda das fileiras comuns.
   // Igualar a largura isola a regra de ancoragem do tamanho de cada forma.
   {
@@ -339,10 +363,10 @@ int main(void) {
     assert(cat_visto(cat_item(top->ini + 1)));
     { Fileira numerals = *top;
       numerals.tipo = FILEIRA_TOP10_NUM; numerals.n = top->stackN;
-      assert(fileiraRank(&numerals, 0) == 1);
-      assert(fileiraRank(&numerals, 1) == 3);
+      assert(fileiraRanking(&numerals, 0) == 1);
+      assert(fileiraRanking(&numerals, 1) == 3);
     }
-    for (k = 0; k < top->stackN && k < 6; k++) assert(!cat_visto(cat_item(pilhaIndice(top, k))));
+    for (k = 0; k < top->stackN && k < 6; k++) assert(!cat_visto(cat_item(fileiraItemIndice(top, k))));
     for (r = 0; r < nFileiras; r++)
       if (!strcmp(fileiras[r].chave, fils[8].chave))
         assert(!fileiras[r].n && !fileiras[r].verTudo);

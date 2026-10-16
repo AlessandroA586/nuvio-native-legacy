@@ -319,6 +319,12 @@ int main(int argc, char **argv) {
         c->logo[0] = 0;
       }
       c->nota = 68 + (ini + i) % 25;
+      // NV_ELENCO=1: tres nomes de elenco por titulo (a ficha do Herói dividido).
+      if (getenv("NV_ELENCO")) {
+        snprintf(c->elenco[0].nome, sizeof c->elenco[0].nome, "Ana Prado");
+        snprintf(c->elenco[1].nome, sizeof c->elenco[1].nome, "Bruno Lage");
+        snprintf(c->elenco[2].nome, sizeof c->elenco[2].nome, "Clara Sol");
+      }
       if (k == 0) { c->progresso = 20 + i * 12; c->restanteMin = 90 - i * 10; }
     }
     ini += f->n;
@@ -437,6 +443,13 @@ int main(int argc, char **argv) {
     for (r = 0; r < desce; r++) { tecla(SDLK_DOWN); quadros(30, NULL); }
     snprintf(bmp, sizeof bmp, "%s-heroi.bmp", saida);
     quadros(1, bmp);
+    // NV_HEROI_ANDA=1: duas setas a direita e outra captura — o painel do
+    // Herói dividido tem de trocar para o novo foco.
+    if (getenv("NV_HEROI_ANDA")) {
+      tecla(SDLK_RIGHT); quadros(30, NULL); tecla(SDLK_RIGHT); quadros(90, NULL);
+      snprintf(bmp, sizeof bmp, "%s-heroi-andou.bmp", saida);
+      quadros(1, bmp);
+    }
   }
 
   // NV_SO_CTX=1: pula a volta pelos layouts e vai direto ao menu do cartaz
