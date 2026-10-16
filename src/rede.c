@@ -941,6 +941,24 @@ char *rede_postar_seguro_st(const char *url, int segundos, const char *const *ca
   return rede_postar_st(url, segundos, cab, corpo, status);
 }
 
+#ifdef NV_VIDAA
+// HEAD never downloads a media body, including when Range would be ignored;
+// in --um-fio nv_http is fetch() and yields to the other fibers meanwhile.
+// 1 resolved, 0 dead (real HTTP error), -1 unknown (blocked, or HEAD refused:
+// signed GET URLs answer HEAD with 403).
+static int sondaVidaa(const char *url, const char *cabs, char *dst, unsigned tam, int *http) {
+  int n = 0;
+  char *corpo;
+  *http = 0;
+  dst[0] = 0;
+  corpo = nv_http("HEAD", url, cabs, NULL, &n, http, dst, (int)tam, NULL, 0, NULL);
+  if (!corpo) return -1;
+  free(corpo);
+  if (*http == 403 || *http == 405 || *http == 501) return -1;
+  if (*http >= 200 && *http < 300 && dst[0]) return 1;
+  return *http > 0 ? 0 : -1;
+}
+#else
 // Sonda sem corpo atravessando a ponte. O XHR ainda recebe o corpo inteiro se
 // o servidor ignorar Range, mas nao aloca essa copia no heap do WASM.
 EM_JS(int, nv_url_sonda, (const char *url, const char *cabs, char *dst,
@@ -979,6 +997,7 @@ EM_JS(int, nv_url_sonda, (const char *url, const char *cabs, char *dst,
   stringToUTF8(finalUrl, dst, tam);
   return 1;
 });
+#endif
 
 int rede_url_final_cab(const char *url, int segundos, const char *const *cab,
                        char *dst, unsigned tam, int *status) {
@@ -1002,8 +1021,15 @@ int rede_url_final_tipo(const char *url, int segundos, const char *const *cab,
   // mas honram Range.
   cabs = juntarCabs(cab, NULL);
   if (cab && cab[0] && !cabs) return 0;
+#ifdef NV_VIDAA
+  // No type/size from HEAD (mime empty, corpo -1). Unknown is not dead: the
+  // player tries the URL itself (same policy as verificarUma).
+  ok = sondaVidaa(url, cabs, dst, tam, &http);
+  if (ok < 0) ok = snprintf(dst, tam, "%s", url) < (int)tam;
+#else
   ok = nv_url_sonda(url, cabs, dst, (int)tam, &http, mime,
                     mime && mimeTam < INT_MAX ? (int)mimeTam : 0, &c32);
+#endif
   free(cabs);
   if (corpo) *corpo = c32;
   if (status) *status = http;
@@ -1019,21 +1045,11 @@ int rede_url_final(const char *url, int segundos, char *dst, unsigned tam) {
 // vidaaPareceVideo — url de video sempre volta 415 do worker), entao esta
 // chamada e SEMPRE direta: um bloqueio de conteudo misto ou de CORS aqui e
 // ROTINEIRO, nao a excecao, e e exatamente o que -1 comunica ao chamador.
-// HEAD never downloads a media body, including when Range would be ignored.
 int rede_url_final_vidaa(const char *url, int segundos, char *dst, unsigned tam) {
-  char *corpo;
-  int n = 0, http = 0;
+  int http;
   (void)segundos;
   if (!url || !*url || !dst || tam == 0) return -1;
-  dst[0] = 0;
-  corpo = nv_http("HEAD", url, NULL, NULL, &n, &http, dst, (int)tam, NULL, 0, NULL);
-  if (!corpo) return -1;     // xhr nem completou (open/send lancou): desconhecido
-  free(corpo);
-  // HEAD rejection is inconclusive (signed GET URLs answer HEAD with 403);
-  // let the player try GET directly.
-  if (http == 403 || http == 405 || http == 501) return -1;
-  if (http >= 200 && http < 300 && dst[0]) return 1;
-  return http > 0 ? 0 : -1;  // completou sem endereco: so e "morto" se veio status de verdade
+  return sondaVidaa(url, NULL, dst, tam, &http);
 }
 #endif
 
