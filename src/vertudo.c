@@ -186,13 +186,14 @@ static const char *LAY_NOME[VT_LAY_N] = {
   "Fluxo de capas"
 };
 static const char *LAY_ICONE[VT_LAY_N] = {
-  "", "aj_layout-dashboard", "aj_rows-3", "aj_list-ordered", "aj_layers", "aj_calendar", "aj_images",
+  "aj_sliders-horizontal", "aj_layout-dashboard", "aj_rows-3", "aj_list-ordered", "aj_layers", "aj_calendar", "aj_images",
   "aj_monitor-play", "aj_film"
 };
 // A ordem do botao "Exibição": a horizontal logo depois da vertical.
 static const unsigned char LAY_CICLO[] = {
   VT_LAY_GRADE, VT_LAY_LINHA, VT_LAY_FLUXO, VT_LAY_RANKING, VT_LAY_SAGA,
-  VT_LAY_DECADAS, VT_LAY_MURAL, VT_LAY_VITRINE
+  VT_LAY_DECADAS, VT_LAY_MURAL, VT_LAY_VITRINE,
+  VT_LAY_AUTO   // "Padrão": a pasta volta a seguir o ajuste do perfil (#535)
 };
 static int layEscolha;            // gravada (VT_LAY_AUTO = nunca escolheu)
 static int semVitrineAuto;        // aberta por vertudo_abrir (ver layAuto)
@@ -1721,9 +1722,11 @@ static void abrirSeletor(void) {
   exibAberta = 1;
 }
 // A PROXIMA EXIBICAO, e ela fica gravada para esta pasta (atalho do perftv).
+// Parte da escolha gravada: depois de "Padrão" vem a primeira.
 static void alternarExibicao(void) {
+  int de = layEscolha >= VT_LAY_AUTO && layEscolha < VT_LAY_N ? layEscolha : lay;
   for (int k = 0; k < (int)sizeof LAY_CICLO; k++)
-    if (LAY_CICLO[k] == lay) { escolherExibicao(LAY_CICLO[(k + 1) % (int)sizeof LAY_CICLO]); return; }
+    if (LAY_CICLO[k] == de) { escolherExibicao(LAY_CICLO[(k + 1) % (int)sizeof LAY_CICLO]); return; }
 }
 
 const char *vertudo_perf_tag(void) {

@@ -52,9 +52,6 @@ static void fluxo_anel(GfxRect r, float raio, float esp, float cr, float cg, flo
 #define desc_vertudo_filtro_desde shot_filter_from
 #define desc_vertudo_pagina shot_page
 #define desc_colecao_inicial shot_collection
-#define gfx_cor shot_rect
-#define gfx_recorte shot_clip
-#define gfx_sem_recorte shot_unclip
 #define fundo_desenhar_modo shot_background
 #define txt_linha_corta shot_text
 #define desc_vertudo_n shot_vt_n
@@ -306,7 +303,7 @@ int main(int argc, char **argv) {
 
   // Default is a distinct selector step, regardless of the inherited layout.
   { static const int ciclo[] = {
-      VT_LAY_GRADE, VT_LAY_LINHA, VT_LAY_RANKING, VT_LAY_SAGA,
+      VT_LAY_GRADE, VT_LAY_LINHA, VT_LAY_FLUXO, VT_LAY_RANKING, VT_LAY_SAGA,
       VT_LAY_DECADAS, VT_LAY_MURAL, VT_LAY_VITRINE, VT_LAY_AUTO
     };
     for (int padrao = VT_LAY_N - 1; padrao >= VT_LAY_AUTO; padrao--) {
