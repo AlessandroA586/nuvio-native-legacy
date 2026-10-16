@@ -575,6 +575,7 @@ typedef enum {
   // Shared exclusions live in fontefalha.txt; appended device-local views.
   AJ_FILTROS_FONTES, AJ_FILTRO_TAM_MAX, AJ_FILTRO_GRUPOS,
   AJ_COLECAO_EXIBICAO, // #362: padrao das colecoes, por perfil neste aparelho
+  AJ_MURAL_TITULOS,    // #521: nome dentro dos ladrilhos do Mural, local
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -1485,6 +1486,7 @@ static const Opcao OPCOES[AJ_N] = {
   NUM("Tamanho máximo da fonte", 0, 1000, 1, " GB"),
   ACAO("Grupos de lançamento excluídos"),
   ESC("Exibição padrão das coleções", V_COLECAO_EXIBICAO, VT_LAY_N),
+  ESC("Títulos no Mural", V_LIGA, 2),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1746,6 +1748,7 @@ static const char *CHAVE[] = {
   "heroSynopsisSizeLocal",
   "-filtrosFontes", "-filtroTamanhoMax", "-filtroGrupos",
   "colecaoExibicaoPadraoLocal",
+  "muralTitulosLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2365,6 +2368,7 @@ int ajustes_colecao_exibicao(void) {
   int v = valor[AJ_COLECAO_EXIBICAO];
   return v >= VT_LAY_AUTO && v < VT_LAY_N ? v : VT_LAY_AUTO;
 }
+int ajustes_mural_titulos(void) { return lig(AJ_MURAL_TITULOS); }
 float ajustes_tamanho_ui(void) {
   static const float F[] = { 1.0f, 1.2f, 1.3f, 1.5f };
   int v = valor[AJ_TAMANHO_UI];
@@ -4706,6 +4710,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_MEDIDOR:        /* o medidor e da GPU desta TV; o web nao tem */
     case AJ_HERO_SINOPSE: /* acessibilidade desta tela; sem par na conta */
     case AJ_COLECAO_EXIBICAO: /* por perfil neste aparelho, sem par na conta */
+    case AJ_MURAL_TITULOS:     /* idem (#521) */
     case AJ_TAMANHO_UI:     /* o tamanho e desta tela, e o web nao tem */
     case AJ_TAMANHO_AJUSTES:
     case AJ_LAYOUT_AJUSTES: /* #339: o arranjo dos Ajustes e desta TV */
@@ -6152,6 +6157,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_POSTER_MODELO: return "Endereço com {imdb}, {tmdb}, {type} (movie ou series) e {tipo_tmdb} (movie ou tv), por exemplo https://meu.servidor/{type}/{imdb}.jpg. Quem não tiver o dado que o modelo pede fica com o cartaz normal.";
     case AJ_POSTER_TESTAR: return "Baixa o cartaz de um filme conhecido com a configuração atual e mostra se deu certo. O primeiro cartaz de cada título é montado no servidor e pode levar alguns segundos.";
     case AJ_COLECAO_EXIBICAO: return "Vale para coleções sem escolha própria neste perfil. Automático mantém a exibição original. Em Exibição, escolha Padrão para seguir este ajuste novamente.";
+    case AJ_MURAL_TITULOS: return "Ligado (padrão): cada ladrilho do Mural mostra o nome do título. Desligado: o nome fica só no painel da direita. Vale só nesta TV.";
     case AJ_HOME_LAYOUT: return "Moderna: destaque atrás das fileiras. Padrão: destaque num banner no topo. Dinâmica: estilo Apple TV, com destaques grandes e Top 10.";
     case AJ_VIDRO: return "Painéis, botões e menus viram ilhas translúcidas que deixam a arte aparecer. Desligado, as mesmas ilhas ficam opacas. Só muda o visual; nada muda de lugar.";
     case AJ_PROVEDORES_ESCOPO: return "Compartilhada usa as mesmas contas de provedores neste aparelho. Separada guarda uma cópia para este perfil. Trocar de opção mantém as duas configurações.";
@@ -8436,7 +8442,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_FIL_ORDEM: case AJ_RAIL: case AJ_RAIL_MODERNA:
     case AJ_RAIL_BLUR: case AJ_MIC_BUSCA: case AJ_HERO: case AJ_HERO_CATALOGOS:
     case AJ_PS_FUNDO: case AJ_PS_CONTINUAR: case AJ_DESCOBRIR: case AJ_ROTULOS:
-    case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_OCULTAR_NLANC:
+    case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_OCULTAR_NLANC: case AJ_MURAL_TITULOS:
     case AJ_NOTAS_HOME: case AJ_GRAD_CLASSICO: case AJ_SELO_VISTO: case AJ_OCULTAR_FILMES_VISTOS:
       return AJPV_HOME;
     case AJ_CW_LIGADO: case AJ_CW_OK: case AJ_CW_FONTE:

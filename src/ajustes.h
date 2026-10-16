@@ -499,6 +499,8 @@ int   ajustes_selo_visto(void);
 // Desligado de fabrica; busca, biblioteca e historico nao sao filtrados.
 int   ajustes_ocultar_filmes_vistos(void);
 void  ajustes_definir_ocultar_filmes_vistos(int ligado);
+// #521: nome dentro dos ladrilhos do Mural; local, ligado de fabrica.
+int   ajustes_mural_titulos(void);
 // MODO SEGURO (seguro.h). Chamar no arranque, DEPOIS de ajustes_dir e de
 // avisos_iniciar: `caiu` = a sessao anterior nao se despediu. Desfaz o ajuste
 // arriscado que estava em prova, liga o perfil seguro se as quedas se repetem e

@@ -284,3 +284,4 @@
   0, /* synopsis text size (#477): Normal, original typography */
   0, 0, 0, /* shared exclusions parent, max-size view, release-group editor */
   0, /* collection default view (#362): Automatic, existing layout */
+  0, /* Mural tile titles (#521): Ligado, local */
