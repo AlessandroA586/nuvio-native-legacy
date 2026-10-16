@@ -2687,7 +2687,7 @@ void ajustes_definir_estat_lado(int esquerda) {
 // anime" valem: 0 Interno, 1 Externo (seletor do sistema), 2 Perguntar sempre,
 // 3+i o app i da lista dos instalados. No anime o 0 e "Igual ao Player" e o resto
 // vem deslocado em 1. O indice de uma lista de apps nao e estavel (instala-se e
-// desinstala-se), entao o que vale e o PACOTE, em player.txt (linha 1 filmes,
+// desinstala-se), entao o que vale e o PACOTE, em player-externo.txt (linha 1 filmes,
 // linha 2 anime); o numero em ajustes.txt e so o espelho dele (ppReconciliar).
 static char ppPkg[2][96];
 static int ppN(void) {
@@ -2710,10 +2710,10 @@ static const char *ppNome(int op, int v) {
 static void ppGravar(void) {
   char t[2 * 96 + 4];
   snprintf(t, sizeof t, "%s\n%s\n", ppPkg[0], ppPkg[1]);
-  dados_gravar("player.txt", t);
+  dados_gravar("player-externo.txt", t);
 }
 static void ppCarregar(void) {
-  char *t = dados_ler("player.txt"), *q;
+  char *t = dados_ler("player-externo.txt"), *q;
   int i;
   ppPkg[0][0] = ppPkg[1][0] = 0;
 #ifdef NV_ANDROID
