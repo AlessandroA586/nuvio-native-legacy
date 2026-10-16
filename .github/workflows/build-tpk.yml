@@ -10,7 +10,6 @@ name: Build TPK
 # A new push to the same branch cancels the build still running for it.
 
 on:
-  push:
   workflow_dispatch:
     inputs:
       pacotes:
