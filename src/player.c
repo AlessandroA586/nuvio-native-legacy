@@ -6302,6 +6302,8 @@ static void desenharOsdCorpo(Uint32 agora, float a, float ac, const CatItem *c) 
 // CAPTURAS (tests/player_glass_shot.c): poe o player num estado de tela sem
 // pipeline. `agora` e o relogio do harness (o mesmo passado a desenhar).
 void player_shot_video(int sim) { comVideo = sim; shotSemFuro = sim; }
+// O furo de verdade (alfa 0, como na TV) em vez da arte fazendo de video.
+void player_shot_furo_real(void) { shotSemFuro = 0; }
 void player_shot_canal(const AoVivoEpg *e, int numero, int atrasS, int botaoFoco, int info) {
   shotEpgOk = e != NULL; if (e) shotEpg = *e; shotNumero = numero; shotAtras = atrasS;
   botaoAV = botaoFoco; infoAV = info;

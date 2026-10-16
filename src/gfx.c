@@ -1899,9 +1899,14 @@ typedef struct { unsigned hash; float cap[4]; int valida; } VidroEntrada;
 static VidroEntrada vidroAnt[VID_N], vidroCur[VID_N];
 static int vidroNAnt, vidroNCur, vidroNVidros, vidroNFuros, vidroSujo = 1, vidroCapNoQuadro;
 static unsigned vidroHash;
-#ifdef NV_WEBOS
+// One shared full-screen backdrop per frame for every glass (webOS, .tpk,
+// Mac), reused while nothing under the glasses changes. The per-region path
+// (Android) cost the .tpk home 4 copies + 20 blur passes per animated frame.
+#ifndef NV_ANDROID
+#define VID_PARTILHADO
 static unsigned vidroCapturaHash;
 static int vidroCapturaValida;
+static float vidroLeAnt[4], vidroLeCur[4];   // union of what the glasses read, last/this frame
 #endif
 static float vidroDesde[4];   // caixa do que foi pintado na tela desde a ultima captura
 static float vidroCapQ[4];    // a ultima captura deste quadro
@@ -1935,7 +1940,7 @@ static int vidroDentro(GfxRect r) {
 // de textura reaproveitado): nenhum vidro reaproveita a captura antiga.
 void gfx_vidro_sujar(void) {
   vidroSujo = 1;
-#ifdef NV_WEBOS
+#ifdef VID_PARTILHADO
   vidroCapturaValida = 0;
 #endif
 }
@@ -1956,31 +1961,39 @@ static void vidroDesenho(GfxRect r, GLuint tex, GfxModo modo, float foco, float 
                   gfx_card_forcar_cover_atual, gfx_card_veu_tela_atual };
   int e[9] = { (int)modo, (int)tex, recorteAtivo, blendLigado, giroOn, miniAtiva, snapAtivo,
                efeitosLeves, telaW };
-#ifdef NV_WEBOS
-  // Only what can reach the pixels decides reuse. Unsettled easing drifts
-  // below 1/256 forever (detail veil, logo), a draw wholly off the screen
-  // paints nothing, and the Explore sky's clock rides in `foco`: hashed raw,
-  // each made every frame "changed" and recaptured the backdrop at 60 fps.
-  if (!snapAtivo && !miniAtiva && !giroOn && telaW == telaRealW && telaH == telaRealH &&
-      (r.x >= NV_TELA_W || r.y >= NV_TELA_H || r.x + r.w <= 0.0f || r.y + r.h <= 0.0f))
-    return;
+  int conta = 1;
+#ifdef VID_PARTILHADO
+  // Only what can reach the pixels the glasses read decides reuse. Unsettled
+  // easing drifts below 1/256 forever (detail veil, logo, island shadow), a
+  // draw wholly off the screen paints nothing, a draw outside what last
+  // frame's glasses read changes no blurred pixel (the player's progress bar
+  // under a clock island in the letterbox band of 2.39:1 video), and the
+  // Explore sky's clock rides in `foco`: hashed raw, each made every frame
+  // "changed" and recaptured the backdrop at 60 fps.
+  if (!snapAtivo && !miniAtiva && !giroOn && telaW == telaRealW && telaH == telaRealH) {
+    float b[4] = { r.x, r.y, r.x + r.w, r.y + r.h };
+    if (r.x >= NV_TELA_W || r.y >= NV_TELA_H || r.x + r.w <= 0.0f || r.y + r.h <= 0.0f) return;
+    conta = vidroCruza(vidroLeAnt, b);
+  }
   {
     int i;
     if (modo == GFX_CEU) v[4] = v[5] = floorf(v[4] * 2.0f);   // sky: twice a second
     for (i = 0; i < 24; i++) v[i] = floorf(v[i] * 256.0f + 0.5f);
   }
 #endif
-  vidroSoma(v, sizeof v);
-  vidroSoma(e, sizeof e);
-  if (recorteAtivo) vidroSoma(recorteBox, sizeof recorteBox);
-  if (giroOn) vidroSoma(giroLayout, sizeof giroLayout);
-  if (P->jan >= 0) vidroSoma(modo == GFX_TEXTURA ? txUv : gfx_janela_atual, sizeof txUv);
-  if (P->veu >= 0) vidroSoma(gfx_veu_card_atual, sizeof gfx_veu_card_atual);
-  if (P->tempo >= 0) vidroSoma(&nv_tempo_viva, sizeof nv_tempo_viva);
-  if (P->reg0 >= 0) vidroSoma(nv_ambiente_viva, sizeof nv_ambiente_viva);
-  if (P->grad0 >= 0) vidroSoma(nv_grad_viva, sizeof nv_grad_viva);
-  if (P->din >= 0) vidroSoma(dinPend, sizeof dinPend);
-  if (P->texB >= 0) { vidroSoma(&camTexB, sizeof camTexB); vidroSoma(&camAlfaB, sizeof camAlfaB); }
+  if (conta) {
+    vidroSoma(v, sizeof v);
+    vidroSoma(e, sizeof e);
+    if (recorteAtivo) vidroSoma(recorteBox, sizeof recorteBox);
+    if (giroOn) vidroSoma(giroLayout, sizeof giroLayout);
+    if (P->jan >= 0) vidroSoma(modo == GFX_TEXTURA ? txUv : gfx_janela_atual, sizeof txUv);
+    if (P->veu >= 0) vidroSoma(gfx_veu_card_atual, sizeof gfx_veu_card_atual);
+    if (P->tempo >= 0) vidroSoma(&nv_tempo_viva, sizeof nv_tempo_viva);
+    if (P->reg0 >= 0) vidroSoma(nv_ambiente_viva, sizeof nv_ambiente_viva);
+    if (P->grad0 >= 0) vidroSoma(nv_grad_viva, sizeof nv_grad_viva);
+    if (P->din >= 0) vidroSoma(dinPend, sizeof dinPend);
+    if (P->texB >= 0) { vidroSoma(&camTexB, sizeof camTexB); vidroSoma(&camAlfaB, sizeof camAlfaB); }
+  }
   // So o que cai na TELA (nao num assado, snapshot ou miniatura) e nao o
   // proprio vidro: dois vidros que se cruzam ja vao chapados. Nem a SOMBRA
   // caida de cada vidro, nem o conteudo DENTRO de um vidro ja pintado (rotulo,
@@ -2017,6 +2030,9 @@ void gfx_novo_quadro(void) {
   memset(vidroCur, 0, sizeof vidroCur); vidroNCur = 0;
   memset(vidroDesde, 0, sizeof vidroDesde); memset(vidroCapQ, 0, sizeof vidroCapQ);
   vidroHash = 2166136261u; vidroCapNoQuadro = 0; vidroNVidros = 0; vidroNFuros = 0;
+#ifdef VID_PARTILHADO
+  memcpy(vidroLeAnt, vidroLeCur, sizeof vidroLeAnt); memset(vidroLeCur, 0, sizeof vidroLeCur);
+#endif
   gfx_vidro_capturas = 0; gfx_vidro_passadas = 0;
   gfx_vidro_fill = gfx_vidro_copia = 0.0;
   ambFonte = 0; dinPendente = 0; dinAdiado = 0; dinNOp = 0;
@@ -3188,7 +3204,7 @@ static void vidLiberar(void) {
   vidGrab = vidH2 = vidQa = vidQb = vidRuido = vidH2Fbo = vidQaFbo = vidQbFbo = 0;
   if (vidProg) glDeleteProgram(vidProg);
   vidProg = 0; vidW = vidH = 0;
-#ifdef NV_WEBOS
+#ifdef VID_PARTILHADO
   vidroCapturaValida = 0;
 #endif
   memset(vidroAnt, 0, sizeof vidroAnt); memset(vidroCur, 0, sizeof vidroCur);
@@ -3356,15 +3372,19 @@ static int vidCapturar(const float reg[4]) {
 
 // O backdrop desfocado para o vidro `r` (layout de tela), ou 0 = chapado.
 static GLuint vidroFonte(GfxRect r) {
-#ifdef NV_WEBOS
+#ifdef VID_PARTILHADO
   // The home chrome can draw between glass regions: its bounding box defeats
   // region sharing and causes four copies + twenty blur draws per frame.
   // Freeze the clean backdrop before the first glass, shared by all regions.
-  // Cross-frame reuse only while vidroHash matches: any change to what was
-  // painted forces a recapture, so a stale backdrop is never sampled after a
+  // Cross-frame reuse only while vidroHash matches and this glass reads only
+  // what last frame's glasses read (the hash covers just that): any change
+  // there forces a recapture, so a stale backdrop is never sampled after a
   // transition. Android keeps its original path.
+  float lido[4] = { r.x - VID_ALCANCE, r.y - VID_ALCANCE, r.x + r.w + VID_ALCANCE, r.y + r.h + VID_ALCANCE };
+  vidroUne(vidroLeCur, lido[0], lido[1], lido[2], lido[3]);
   if (vidH2 && vidW == telaW && vidH == telaH &&
-      (vidroCapNoQuadro || (vidroCapturaValida && vidroCapturaHash == vidroHash))) {
+      (vidroCapNoQuadro ||
+       (vidroCapturaValida && vidroCapturaHash == vidroHash && vidroContem(vidroLeAnt, lido)))) {
     vidroCapNoQuadro = 1;
     return vidH2;
   }
