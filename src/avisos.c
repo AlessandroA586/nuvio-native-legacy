@@ -423,7 +423,11 @@ int avisos_enviar_diagnostico(const char *execucao_id, const char *relatorio,
            "{\"versao\":\"%s\",\"plataforma\":\"%s\",\"execucao_id\":\"%s\",\"texto\":\"%s\"}",
            NV_VERSAO,
 #ifdef __EMSCRIPTEN__
+#ifdef NV_VIDAA
+           "vidaa",
+#else
            "tizen",
+#endif
 #elif defined(NV_TPK)
            "tizen-tpk",
 #elif defined(NV_ANDROID)
@@ -535,7 +539,11 @@ static void *enviarRegistro(void *u) {
              "{\"versao\":\"%s\",\"plataforma\":\"%s\",\"quando\":\"%s\",\"texto\":\"%s\"}",
              NV_VERSAO,
 #ifdef __EMSCRIPTEN__
+#ifdef NV_VIDAA
+             "vidaa",
+#else
              "tizen",
+#endif
 #elif defined(NV_TPK)
              "tizen-tpk",
 #elif defined(NV_ANDROID)
@@ -653,7 +661,11 @@ static void *fioCanalFn(void *u) {
       if (ate[0] && strcmp(hoje, ate) > 0) ok = 0;
       if (ateV[0] && versaoMaior(NV_VERSAO, ateV)) ok = 0;
 #ifdef __EMSCRIPTEN__
+#ifdef NV_VIDAA
+      if (plat[0] && strcmp(plat, "todas") && strcmp(plat, "vidaa")) ok = 0;
+#else
       if (plat[0] && strcmp(plat, "todas") && strcmp(plat, "tizen")) ok = 0;
+#endif
 #elif defined(NV_TPK)
       // O .tpk tambem e Samsung: vale o "tizen" de sempre, mais o "tizen-tpk"
       // so dele. O anuncio do proprio preview (id com "tpk-preview") nao faz

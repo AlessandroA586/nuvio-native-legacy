@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-15 19:50",
+ "atualizado_em": "2026-10-15 21:48",
  "base": "5544c3e4c",
- "nota": "Sync 2026-10-15 19:50, HEAD integracao/2.0.5 e82dc47ac; instalado 72a5b9852 (Android Success, C9 rc=255). Ver escrivao/estado.md.",
+ "nota": "Sync 2026-10-15 21:48, HEAD integracao/2.0.5 d626daf5c (84dc18246 ajustestestes merged); instalado cb7ece972 (Android Success, C9 rc=1). Running: estatresp, vidroc9, amigosestilo-b. Ver escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,
@@ -8948,7 +8948,7 @@
   {
    "numero": 436,
    "titulo": "Feature request: Option to view submitted logs",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "all",
    "tipo": "feature",
    "status": "aberta",
@@ -8963,8 +8963,7 @@
    "proximo_passo": "triar/reproduzir; falta conserto comprovado",
    "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/436",
-   "criada_em": "2026-10-11",
-   "alvo": "2.1"
+   "criada_em": "2026-10-11"
   },
   {
    "numero": 437,
@@ -9159,7 +9158,7 @@
   {
    "numero": 460,
    "titulo": "Playback buttons for reloading stream and next episode",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Android",
    "tipo": "feature",
    "status": "aberta",
@@ -9173,8 +9172,7 @@
    },
    "proximo_passo": "Conferir #403 e definir botões VOD com episódio disponível; reusar encaminhamento de próximo e reabrir a fonte sem perder posição/legenda, distinguindo recarregar Live TV.",
    "notas": "Pede botões recarregar fonte e próximo episódio. src/player.c:player_proximo_episodio e player_janela_proximo já suportam próxima mídia e oferta no fim; player_pediu_recarregar/avAtivar (AV_B_RECARREGAR) atendem Live TV, não provam botão VOD recarregar. Episódios/posplay existem; botões VOD sempre acessíveis são ampliação de UI, relacionada a #403.",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/460",
-   "alvo": "2.1"
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/460"
   },
   {
    "numero": 461,
@@ -9434,7 +9432,7 @@
   {
    "numero": 477,
    "titulo": "Bigger synopsis font",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "Samsung .tpk",
    "tipo": "melhoria",
    "status": "integrada",
@@ -9452,8 +9450,7 @@
    },
    "proximo_passo": "testar na TV; sai com 2.0.5",
    "notas": "Snapshot 2026-10-14 10:15: 1366561a \"Restore the original hero synopsis size and add a Synopsis size setting\" em agente/205-sinopse; j-205-sinopse done e j-revg-sinopse veredito OK. Escrivao 14/10 19:2x: 1366561a ancestral de integracao/2.0.5 (6a260e9b). [sync 2026-10-15: agente/205-sinopse477 integrada]",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/477",
-   "alvo": "2.0.6"
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/477"
   },
   {
    "numero": 479,
@@ -10193,7 +10190,7 @@
   {
    "numero": 529,
    "titulo": "Dubbing filter bug",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "?",
    "status": "integrada",
@@ -10210,8 +10207,7 @@
    "proximo_passo": "testar na TV; sai com 2.0.5",
    "notas": "Escrivão 10/15 12:48: novo no GitHub 2026-10-15 (dubbing filter), sem prompt de job. [sync 2026-10-15: agente/205-i529q em_revisao] [sync 2026-10-15 19:50: agente/205-i529q merged em integracao/2.0.5 (f8fbd3bd3)]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/529",
-   "criada_em": "2026-10-15",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-15"
   },
   {
    "numero": 530,
@@ -10235,6 +10231,27 @@
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/530",
    "criada_em": "2026-10-15",
    "alvo": "2.0.6"
+  },
+  {
+   "numero": 539,
+   "titulo": "Feature Request: Add Deep Link Support to Open Specific Movies and TV Shows",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "feature",
+   "status": "aberta",
+   "release": "",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triagem: pedido de deep link; fora da 2.0.5 (sem prompt)",
+   "notas": "Escrivao 2026-10-15 20:48: novo no GitHub 2026-10-15, sem job.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/539",
+   "criada_em": "2026-10-15",
+   "alvo": "2.1"
   }
  ],
  "validacoes": [

@@ -70,6 +70,32 @@ underneath). Pick the file for your TV:
 | 2022–2023 | 6.5 – 7 | `Nuvio-X.Y.Z-NuvioTpk65.tpk` |
 | 2024+ | 8 – 9 | `Nuvio-X.Y.Z-NuvioTpk.tpk` |
 
+### Hisense VIDAA
+
+VIDAA apps are hosted URLs, not system packages. This port loads from
+`https://nuvio-tv.henriquef29.workers.dev/tv/` and automatically picks
+between two builds: **multithreaded** (mt) when the TV supports SharedArrayBuffer
+and cross-origin isolation, with a **single-threaded fallback** (st) otherwise.
+
+**Status:** experimental, not verified on a real device. Both builds start and
+reach the home screen in desktop Chrome; nobody has run them on a VIDAA TV yet.
+Reports welcome: if you accept automatic log upload when the app asks, the log
+reaches us with your TV's browser version, the codecs it reports, and the
+remote keys it did not recognize.
+
+**Known limits:**
+
+- Dolby Vision in MP4 is avoided (reported to crash VIDAA browser)
+- AV1 video not decoded (browser limitation)
+- HTTP video sources go through a relay for metadata, but HTTP video itself cannot
+  play from an HTTPS page
+- Audio/subtitle track switching depends on what the browser exposes
+- YouTube trailers only work in single-threaded mode
+
+**Install:** Open the TV browser and bookmark `https://nuvio-tv.henriquef29.workers.dev/tv/`,
+or sideload with developer mode using `tools/vidaa-instalar/instalar.py` (DNS spoofing method).
+
+
 Not sure which Tizen you have? Apps2Samsung shows it when it connects.
 
 - **Updates itself** (new in 1.5.4, so the first real run is the next
@@ -116,7 +142,7 @@ and [issue #137](https://github.com/iqui27/nuvio-native-legacy/issues/137).
 ### Hisense VIDAA (experimental)
 
 VIDAA apps are hosted pages, not packages. Bookmark
-`https://nuvio-recomendacoes.henriquef29.workers.dev/tv/` in the TV browser, or
+`https://nuvio-tv.henriquef29.workers.dev/tv/` in the TV browser, or
 sideload it in developer mode with `tools/vidaa-instalar/instalar.py` (see
 `tools/vidaa-instalar/LEIAME.md`). It picks a multithreaded build when the
 browser supports SharedArrayBuffer and falls back to single-threaded otherwise.
