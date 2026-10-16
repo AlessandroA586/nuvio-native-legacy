@@ -22,9 +22,9 @@ static class VozHostTest
         catch (Exception e) { failures++; Console.WriteLine("FAIL: " + name + ": " + e.Message); }
     }
     static NuvioTpk.Voz New(Action<Action> post = null) => new NuvioTpk.Voz(post ?? (a => a()), s => { });
-    static void Cancelled()
+    static void Cancelled(int result = 0)
     {
-        Check(host_count() == 1 && host_result() == 0, "must send exactly one cancel callback");
+        Check(host_count() == 1 && host_result() == result, "must send exactly one completion with the failure reason");
         Check(!TextField.Last.Focusable, "field left focusable");
         TextField.Last.Imf.Status(false);
         Timer.Fire();
@@ -33,6 +33,7 @@ static class VozHostTest
     static int Main(string[] args)
     {
         NativeLibrary.SetDllImportResolver(typeof(VozHostTest).Assembly, (name, asm, path) => NativeLibrary.Load(args[0]));
+        Run("focus refusal reports failure", () => { var v = New(); FocusManager.Ok = false; host_start(); Cancelled(-1); GC.KeepAlive(v); });
         Run("zero frames cannot keep startup black despite live draw callbacks", () => {
             var p = new NuvioTpk.Program(null);
             p.DrawAt(14999); p.WatchAt(14999); Check(p.Error == null, "startup deadline too short");
@@ -71,13 +72,13 @@ static class VozHostTest
             host_reset(); host_start(); Check(host_count() == 0, "IME retry failed");
             v.Cancelar(); Cancelled(); GC.KeepAlive(v);
         });
-        Run("focus refusal cancels", () => { var v = New(); FocusManager.Ok = false; host_start(); Cancelled(); GC.KeepAlive(v); });
-        foreach (string op in new[] { "text-set", "focusable", "focus", "activate", "show", "timer-new", "timer-start" })
-            Run(op + " exception cancels", () => { var v = New(); Fault.At = op; host_start(); Cancelled(); GC.KeepAlive(v); });
+        foreach (string op in new[] { "text-set", "focus", "activate", "show", "timer-new", "timer-start" })
+            Run(op + " exception reports failure", () => { var v = New(); Fault.At = op; host_start(); Cancelled(-1); GC.KeepAlive(v); });
+        Run("focusable exception cancels during lazy mount", () => { var v = New(); Fault.At = "focusable"; host_start(); Cancelled(); GC.KeepAlive(v); });
         Run("missing panel times out and can reopen", () => {
             var v = New(); host_start(); Check(host_count() == 0, "cancelled before deadline");
             Check(Timer.All.Exists(t => t.Running && t.Interval > 0 && t.Interval <= 10000), "no bounded opening timer");
-            Timer.Fire(); Cancelled(); host_reset(); host_start();
+            Timer.Fire(); Cancelled(-1); host_reset(); host_start();
             TextField.Last.Imf.Status(true); TextField.Last.Text = "duna"; TextField.Last.Imf.Status(false);
             Check(host_count() == 1 && host_result() == 1, "reopening failed"); GC.KeepAlive(v);
         });

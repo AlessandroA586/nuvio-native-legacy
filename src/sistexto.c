@@ -121,7 +121,13 @@ int st_ime_abrir(int d, const char *inicial, int max) {
 
 int st_voz_iniciar(int d) {
   int ok = 0;
-  if (!st_voz_disponivel()) return 0;
+  if (!st_voz_disponivel()) {
+    dono = d; estado = ST_PARADO;
+    aviso = "Esta TV não tem reconhecimento de voz. Use o microfone do teclado do sistema.";
+    printf("[voice] unavailable: no registered voice backend (owner=%d)\n", d);
+    fflush(stdout);
+    return 0;
+  }
   descartar();
   micTeclado = 0;
   dono = d; aviso = ""; nivel = 0.0f;
@@ -142,7 +148,7 @@ int st_voz_iniciar(int d) {
   }
 #endif
   if (!ok) aviso = "O ditado não respondeu. Tente de novo ou digite.";
-  printf("[texto] voz: %s (dono %d, idioma %s)\n", ok ? "pedida" : "falhou", d, desc_tmdb_idioma());
+  printf("[voice] %s (owner=%d, language=%s)\n", ok ? "requested" : "startup failed", d, desc_tmdb_idioma());
   fflush(stdout);
   return ok;
 }
@@ -236,7 +242,10 @@ int st_ler_valor(int d, char *dst, size_t n, int *valorRecebido) {
         break;
       case 'I': printf("[texto] android: %s\n", v); fflush(stdout); break;
       case 'E':
-        printf("[texto] voz terminou: %s\n", v);
+        micTeclado = 0;
+        printf("[voice] failed: %s\n", !strcmp(v, "nada") ? "no speech recognized"
+               : !strcmp(v, "negada") ? "microphone permission denied"
+               : !strcmp(v, "ocupado") ? "recognizer busy" : v);
         fflush(stdout);
         aviso = !strcmp(v, "nada") ? "Não entendi. Tente de novo."
               : !strcmp(v, "negada") ? "Sem permissão do microfone."
@@ -255,6 +264,8 @@ int st_evento(const SDL_Event *e) {
     if (e->user.code == TS_EV_TEXTO) {
       snprintf(ev, sizeof ev, "T%s", texto_sistema_valor());
       st_teste_evento(ev);
+    } else if (e->user.code == TS_EV_ERRO) {
+      st_teste_evento("Ekeyboard startup failed");
     } else if (e->user.code == TS_EV_FIM) {
       if (e->user.data1) { snprintf(ev, sizeof ev, "D%s", texto_sistema_valor()); st_teste_evento(ev); }
       else st_teste_evento("X");

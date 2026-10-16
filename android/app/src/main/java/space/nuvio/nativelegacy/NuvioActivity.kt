@@ -1008,7 +1008,7 @@ class NuvioActivity : SDLActivity() {
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {}
             override fun onError(error: Int) {
-                log("voz: erro $error")
+                log("voice recognition failed: SpeechRecognizer error=$error")
                 reconhecedor = null
                 try { r.destroy() } catch (_: Exception) {}
                 when (error) {
@@ -1037,21 +1037,27 @@ class NuvioActivity : SDLActivity() {
             r.startListening(intentVoz().putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName))
         } catch (e: Exception) {
-            log("voz: startListening falhou: $e")
+            log("voice recognition failed: startListening: $e")
             reconhecedor = null
             vozDoSistema("semvoz")
         }
     }
 
     private fun vozDoSistema(motivo: String) {
+        log("voice fallback: " + when (motivo) {
+            "negada" -> "microphone permission denied"
+            "idioma" -> "recognition language unavailable"
+            else -> "in-app recognizer unavailable"
+        })
         val i = intentVoz()
         if (i.resolveActivity(packageManager) != null) {
             eventos.add("Ssistema:$motivo")
             @Suppress("DEPRECATION")
             try { esperandoTela = true; startActivityForResult(i, PEDIDO_DITADO); return }
-            catch (_: Exception) { esperandoTela = false }
+            catch (e: Exception) { esperandoTela = false; log("system voice activity failed: $e") }
         }
         // Nem a tela de voz: o C abre o teclado do sistema (o microfone dele dita).
+        log("voice fallback: system voice activity unavailable; opening keyboard")
         eventos.add("Steclado:$motivo")
     }
 

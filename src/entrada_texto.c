@@ -165,7 +165,7 @@ static void terminar(int confirmou, const char *porque) {
   aberto = 0;
   printf("[texto] teclado do sistema fechou (%s%s)\n", porque, confirmou ? ", confirmou" : "");
   fflush(stdout);
-  avisar(TS_EV_FIM, confirmou);
+  avisar(confirmou < 0 ? TS_EV_ERRO : TS_EV_FIM, confirmou > 0);
 }
 
 int texto_sistema_disponivel(void) {
@@ -317,7 +317,7 @@ void texto_sistema_quadro(void) {
       texto_sistema_ponte_valor(v);
     }
     fim = EM_ASM_INT({ var t = window.nvTexto; return t ? t.fim : -1; });
-    if (fim >= 0) { EM_ASM({ window.nvTexto.fim = -1; }); texto_sistema_ponte_fim(fim); }
+    if (fim >= 0) { EM_ASM({ window.nvTexto.fim = -1; }); texto_sistema_ponte_fim(fim == 2 ? -1 : fim); }
   }
 #endif
   SDL_AtomicLock(&trava);
@@ -330,7 +330,7 @@ void texto_sistema_quadro(void) {
     printf("[texto] valor do sistema: %d bytes\n", (int)strlen(valor));
     avisar(TS_EV_TEXTO, 0);
   }
-  if (fim >= 0) { terminar(fim, "sistema"); return; }
+  if (fim >= 0) { terminar(fim == 2 ? -1 : fim, "system"); return; }
 #if !defined(NV_TPK) && !defined(__EMSCRIPTEN__) && defined(__linux__)
   // LG/Android: fechou por fora (Voltar no teclado da TV)? So depois de o
   // teclado ter sido visto aberto, e com folga para ele subir.
@@ -360,6 +360,6 @@ void texto_sistema_ponte_valor(const char *v) {
 
 void texto_sistema_ponte_fim(int confirmou) {
   SDL_AtomicLock(&trava);
-  pendFim = confirmou ? 1 : 0;
+  pendFim = confirmou < 0 ? 2 : confirmou ? 1 : 0;
   SDL_AtomicUnlock(&trava);
 }
