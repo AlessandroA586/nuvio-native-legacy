@@ -1508,7 +1508,7 @@ static void desenhaTamanhos(GfxRect r, int i, float a) {
     if (pal[0]) { letra[k++] = pal[0];
       while (k < 6 && ((unsigned char)pal[k] & 0xC0) == 0x80) { letra[k] = pal[k]; k++; } }
     letra[k] = 0;
-    if (aberto && a > 0.5f)
+    if (aberto && pagina == 1 && a > 0.5f)
       ponteiro_alvo(c.x, c.y, c.w, c.h, ponteiroEstFoco, ponteiroEstOk, i, j + 1);
     if (esc) gfx_cor(c, 0.5f, 0.08f, 0.085f, 0.1f, 0.92f * a);
     l = esc ? txt_linha(TXT_DET_BOTAO, letra, 243, 242, 239, 255)
@@ -1587,7 +1587,7 @@ static void desenhaEstilos(float a) {
     GfxRect r = { m.x + EST_PAD, m.y + EST_PAD + (float)i * (lin + EST_GAP),
                   m.w - 2.0f * EST_PAD, lin };
     if (i < nEstilos) {
-      if (aberto && a > 0.5f)
+      if (aberto && pagina == 1 && a > 0.5f)
         ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroEstFoco, ponteiroEstOk, i, 0);
       linhaEstilo(r, estLin[i].rotulo, estTipo(i), estAnim[i], a);
       if (estLin[i].n > 1 && estAnim[i] > 0.5f) desenhaTamanhos(r, i, a);
@@ -1596,7 +1596,7 @@ static void desenhaEstilos(float a) {
       // clique cicla (mouse e Magic Remote nao tem esquerda/direita).
       char rot[96];
       snprintf(rot, sizeof rot, i18n("Ordem: %s"), i18n(fil_ordem_rotulo(ordemSel)));
-      if (aberto && a > 0.5f)
+      if (aberto && pagina == 1 && a > 0.5f)
         ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroEstFoco, ponteiroOrdemAtivar, nEstilos, 0);
       linhaEstilo(r, rot, -1, ordemAnim, a);
     }

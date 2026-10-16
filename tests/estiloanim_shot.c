@@ -22,6 +22,7 @@ float ctx_estilo_t(void) { return 1.0f; }
 #include "gfx.h"
 #include "home.h"
 #include "layout.h"
+#include "ponteiro.h"
 #include "tex_cache.h"
 #include "text.h"
 #include <SDL2/SDL.h>
@@ -84,6 +85,7 @@ static void quadros(int n, const char *png) {
     txt_novo_quadro();
     tex_novo_quadro();
     gfx_novo_quadro();
+    ponteiro_quadro(agora);
     gfx_ambiente_preparar();
     glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -93,6 +95,7 @@ static void quadros(int n, const char *png) {
     ctx_desenhar(agora);
     if (medir.w > 0.0f) medido = brilho(medir);
     if (png && i == n - 1) gravar(png);
+    ponteiro_desenhar();
     SDL_GL_SwapWindow(janela);
     SDL_Delay(8);
   }
@@ -244,6 +247,9 @@ int main(int argc, char **argv) {
                    2, 9, "Episódio 9", "2026-10-10", "2026-10-03");
   quadros(60, NULL);
 
+  ponteiro_iniciar();
+  ponteiro_teste_janela(1920, 1080);
+  ponteiro_teste_toque(1);
   ctx_fileira("pop_movie", "Em alta - Filme");
   ctx_abrir(6);
   quadros(40, NULL);
@@ -279,6 +285,25 @@ int main(int argc, char **argv) {
     ctx_estilo_rect(&r);
     snprintf(png, sizeof png, "%s/estiloanim-final.png", saida);
     quadros(1, png);
+    // Focus a sized row so both row and size targets exist before Back.
+    const PonteiroAlvo *alvos;
+    PonteiroAlvo row = {0};
+    FilEstiloLinha linhas[FIL_TIPO_N];
+    int nLinhas = fil_estilo_linhas("pop_movie", linhas, FIL_TIPO_N), sizedRow = -1;
+    int nAlvos = ponteiro_teste_lista(&alvos), original = fil_tipo("pop_movie");
+    for (k = 0; k < nLinhas; k++)
+      if (linhas[k].n > 1) { sizedRow = k; break; }
+    for (k = 0; k < nAlvos; k++)
+      if (alvos[k].focar && alvos[k].ativar && alvos[k].a == sizedRow && alvos[k].b == 0)
+        row = alvos[k];
+    confere("picker row target exists while open", row.focar != NULL);
+    if (row.focar) row.focar(row.a, row.b);
+    quadros(30, NULL);
+    int sizes = 0;
+    nAlvos = ponteiro_teste_lista(&alvos);
+    for (k = 0; k < nAlvos; k++)
+      if (alvos[k].focar == row.focar && alvos[k].b > 0) sizes++;
+    confere("size targets exist while open", sizes > 0);
     // VOLTAR: o seletor fecha animado (inverso da abertura), nao some de vez.
     e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_ESCAPE; ctx_evento(&e);
     e.type = SDL_KEYUP; ctx_evento(&e);
@@ -288,6 +313,11 @@ int main(int argc, char **argv) {
     printf("  t(fechar)=%.3f\n", t0);
     confere("fechar nao zera o progresso de uma vez", t0 > 0.5f);
     meio = medido;
+    int pickerTargets = 0;
+    nAlvos = ponteiro_teste_lista(&alvos);
+    for (k = 0; k < nAlvos; k++)
+      if (alvos[k].focar == row.focar) pickerTargets++;
+    confere("closing picker has no row, size or order targets", pickerTargets == 0);
     for (k = 1; k <= 20; k++) {
       snprintf(png, sizeof png, "%s/estiloanim-close-f%02d.png", saida, k);
       quadros(1, (fi < 3 && k == f[fi]) ? png : NULL);
@@ -303,7 +333,25 @@ int main(int argc, char **argv) {
     // fechamento o retangulo dele ainda e bem mais claro que o menu em repouso.
     fim = medido; medir.w = 0.0f;
     printf("  brilho meio=%ld fim=%ld rect=%.0f,%.0f %.0fx%.0f\n", meio, fim, r.x, r.y, r.w, r.h);
-    confere("fechar: seletor ainda visivel no inicio do fechamento", meio > fim * 4); }
+    confere("fechar: seletor ainda visivel no inicio do fechamento", meio > fim * 4);
+    // Repeat close for the click: the parent backdrop may dismiss its menu.
+    e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_RETURN; ctx_evento(&e);
+    e.type = SDL_KEYUP; ctx_evento(&e);
+    quadros(30, NULL);
+    confere("picker reopened for fading-row click", ctx_estilo_rect(&r));
+    e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_ESCAPE; ctx_evento(&e);
+    e.type = SDL_KEYUP; ctx_evento(&e);
+    quadros(1, NULL);
+    confere("click occurs while picker alpha exceeds 0.5", ctx_estilo_t() > 0.5f);
+    e.type = SDL_MOUSEBUTTONDOWN;
+    e.button.button = SDL_BUTTON_LEFT;
+    e.button.x = (int)(row.x + 30);
+    e.button.y = (int)(row.y + row.h / 2 + (1.0f - ctx_estilo_t()) * 12.0f);
+    ponteiro_evento(&e, ctx_evento);
+    e.type = SDL_MOUSEBUTTONUP;
+    ponteiro_evento(&e, ctx_evento);
+    confere("clicking fading row does not apply a style", fil_tipo("pop_movie") == original);
+  }
   (void)gl;
   printf("\n%s\n", falhas ? "FALHOU" : "PASSOU");
   return falhas ? 1 : 0;
