@@ -92,6 +92,7 @@ jobs:
           path: build/android/Nuvio-*-android.apk
 
   build-tizen:
+    if: false
     name: Build Samsung Tizen Packages
     runs-on: ubuntu-latest
     steps:
@@ -157,7 +158,7 @@ jobs:
 
   publish-release:
     name: Publish Release
-    needs: [build-android, build-tizen]
+    needs: [build-android]
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -169,12 +170,6 @@ jobs:
           name: android-release-apk
           path: dist
 
-      - name: Download Tizen Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: tizen-release-packages
-          path: dist
-
       - name: Generate Checksums
         run: |
           cd dist
@@ -184,42 +179,29 @@ jobs:
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0.5.1
-          name: Nuvio Legacy 2.0.5.1 - Juansher v1.0.0
+          tag_name: v2.0.5.2
+          name: Nuvio Legacy 2.0.5.2 - Juansher v1.1.0
           draft: false
           prerelease: false
           files: |
             dist/*
           body: |
-            ## Nuvio Legacy 2.0.5.1 - Juansher v1.0.0
+            ## Nuvio Legacy 2.0.5.2 - Juansher v1.1.0
 
-            Versión personalizada compilada para Android TV y Samsung Tizen con optimizaciones para español, rediseño técnico de fuentes y configuración de autoactualización independiente.
+            Actualizacion con rediseño integral de las tarjetas de fuentes de reproducción, tarjetas independientes delimitadas, resalte visual de pistas en español y selección automática inteligente basada en preferencias de usuario.
 
             ### Información de Versión
             - **Versión base oficial:** `2.0.5`
-            - **Compilación personalizada:** `Juansher v1.0.0`
+            - **Compilación técnica:** `2.0.5.2`
+            - **Edición personalizada:** `Juansher v1.1.0`
 
-            ### Cambios y Características
-            - **Rediseño de información en fuentes de reproducción:** Presentación técnica estructurada en las casillas de fuentes (modo detallado) con desglose de especificaciones de video (`AVC`, `HEVC`), canales y formatos de audio (`DD+`, `PCM`, `5.1`), métricas de archivo (tamaño y duración) y resalte visual de pistas de idioma dobladas.
-            - **Insignias dinámicas de perfil:** Renderizado de distintivos de calidad y sonido basado exclusivamente en las reglas configuradas en el perfil del usuario, sin dependencias externas estáticas.
-            - **Adaptación dinámica del filtro de doblaje:** El botón de filtrado rápido en el panel de fuentes ahora responde al idioma de audio preferido configurado por el usuario (`ling_audio`). Si el perfil tiene seleccionado Español, filtra de forma precisa pistas y términos en español y latino (`es`, `lat`, `latino`, `castellano`), adaptándose de forma automática a cualquier otro idioma configurado.
-            - **Preferencia predeterminada actualizada:** Activación de la vista técnica detallada de fuentes desde la instalación inicial para perfiles nuevos.
-            - **Preservación de la experiencia visual clásica:** Se mantiene el panel lateral translúcido (*Glass UI*), el indicador dinámico de reproducción con ecualizador animado en tiempo real, las alertas de fallos previos y la opción de alternar a la vista simple original desde los ajustes.
-            - **Compatibilidad completa con Smart TVs:** Paquetes nativos para Android TV / Google TV y toda la gama de televisores Samsung Smart TV con Tizen (versiones 4.0, 5.0, 5.5, 6.0, 6.5, 7.0, 8.0 y 9.0).
-
-            | Platform | File |
-            | :--- | :--- |
-            | Samsung Tizen 4 / 5 / 5.5 | `Nuvio-2.0.5.1-NuvioTpk40.tpk` |
-            | Samsung Tizen 6 | `Nuvio-2.0.5.1-NuvioTpk60.tpk` |
-            | Samsung Tizen 6.5 / 7 | `Nuvio-2.0.5.1-NuvioTpk65.tpk` |
-            | Samsung Tizen 8 / 9 | `Nuvio-2.0.5.1-NuvioTpk.tpk` |
-            | Android TV / Google TV, Android 7+ | `Nuvio-2.0.5.1-android.apk` |
-
-            ---
-
-            ### Bibliotecas de Autoactualización en Segundo Plano
-            - `libnuvio-2.0.5.1-tpk-arm.so` (Samsung Tizen 6.0 o superior / 2021+)
-            - `libnuvio-2.0.5.1-tpk40-arm.so` (Samsung Tizen 4.0 a 5.5 / 2018-2020)
-            - `SHA256SUMS.txt` (Sumas de comprobación SHA-256 de todos los archivos)
+            ### Cambios y Mejoras
+            - **Rediseño compacto y limpio de tarjetas de fuentes:** Organización estructurada en 3 líneas visuales equilibradas (título limpio, pistas de audio con desglose de canales, especificaciones técnicas compactas e insignias dinámicas de formato), eliminando la acumulación vertical y el salto visual al navegar con el mando a distancia.
+            - **Separación visual en casillas independientes:** Cada fuente se presenta dentro de su propio contenedor con borde tenue en reposo y marco iluminado de alto contraste al recibir el foco del control remoto.
+            - **Limpieza de encabezados redundantes:** Supresión de etiquetas repetitivas del proveedor en el título de la fuente, optimizando el espacio horizontal para el nombre del contenido.
+            - **Resalte visual de audio en español y latino:** Detección y coloración diferenciada en verde esmeralda de pistas en español y latino en la lista de audios disponibles.
+            - **Selección automática inteligente:** El modo de reproducción automática ahora respeta de forma estricta el techo de resolución configurado por el usuario (evaluando de forma descendente) y prioriza las fuentes que contienen el idioma de audio configurado en Ajustes.
+            - **Apertura de panel por ausencia de coincidencias:** Si ninguna fuente cumple simultáneamente con el techo de resolución y el idioma solicitado, la aplicación abre automáticamente el panel lateral de fuentes en lugar de forzar la reproducción de un contenido en otro idioma.
+            - **Paquete de distribución:** Compilación optimizada para Android TV / Google TV.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

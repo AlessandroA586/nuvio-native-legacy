@@ -2050,6 +2050,21 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
       free(pts); free(acima); free(excl); free(grp); free(rk);
       return -1;
     }
+    const char *alvoLing = ling_audio();
+    int temLinguaConfig = (alvoLing && *alvoLing && strcmp(alvoLing, "*") != 0);
+    int tetoRes = alturaMax();
+    int haCandidatasComLingua = 0;
+    if (temLinguaConfig) {
+      for (q = 0; q < total; q++) {
+        int i = ORD(q);
+        if (!lista[i].foraCache && !ehInformativa(&lista[i]) &&
+            (!tetoRes || !lista[i].altura || lista[i].altura <= tetoRes) &&
+            temAudioPt(&lista[i])) {
+          haCandidatasComLingua = 1;
+          break;
+        }
+      }
+    }
     for (q = 0; q < total; q++) {
       int i = ORD(q);
       ordem[q] = i;
@@ -2059,7 +2074,10 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
       if (i == pref && fonteregra_no_escopo(&cfgEscopo, ehPlugin(&lista[i]))) posPref = q;
       pts[q] = pontos(&lista[i]);
       acima[q] = (unsigned char)!cabeNoTeto(&lista[i]);
-      excl[q] = (unsigned char)foraDoAuto(i);
+      int exclui = foraDoAuto(i);
+      if (tetoRes && lista[i].altura > tetoRes) exclui = 1;
+      if (temLinguaConfig && (!haCandidatasComLingua || !temAudioPt(&lista[i]))) exclui = 1;
+      excl[q] = (unsigned char)exclui;
       grp[q] = (signed char)grupoDe(i);
       rk[q] = fonteregra_ordem_rank(lista[i].provedor);
       if (!excl[q]) livres++;
@@ -2073,11 +2091,11 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
   free(pts); free(acima); free(excl); free(grp); free(rk);
   if (nf < 1) {
     // Havia fonte, mas as regras de Ajustes nao deixam nenhuma (#202).
-    if (livres > 0) {
+    if (total > 0) {
       pthread_mutex_lock(&verTrava);
       if (nv_perfil_sessao_atual(c.sessao) && listaGeracao == c.geracao) regraBloqueou = 1;
       pthread_mutex_unlock(&verTrava);
-      printf("[fonte] auto-play: %d fonte(s), nenhuma passa nas regras (permitidos/regex); abrindo a lista\n", livres);
+      printf("[fonte] auto-play: %d fonte(s), nenhuma atende aos requisitos de idioma/resolucao; abrindo a lista\n", total);
     }
     return -1;
   }
@@ -2480,11 +2498,32 @@ static int automaticoCom(int regras) {
   long *pts = lg ? malloc(sizeof *pts * (size_t)n) : NULL;
   signed char *grp = lg ? malloc((size_t)n) : NULL;
   if (lg && (!idx || !pts || !grp)) lg = 0;
+
+  const char *alvoLing = ling_audio();
+  int temLinguaConfig = (alvoLing && *alvoLing && strcmp(alvoLing, "*") != 0);
+  int tetoRes = alturaMax();
+  int haCandidatasComLingua = 0;
+  if (regras && temLinguaConfig) {
+    for (int k = 0; k < n; k++) {
+      int i = ORD(k);
+      if (!lista[i].foraCache && !ehInformativa(&lista[i]) &&
+          (!tetoRes || !lista[i].altura || lista[i].altura <= tetoRes) &&
+          temAudioPt(&lista[i])) {
+        haCandidatasComLingua = 1;
+        break;
+      }
+    }
+  }
+
   // NA ORDEM DE EXIBICAO (#221), que e a da lista inteira: com a lista
   // enchendo por addon o indice e a ordem de CHEGADA, nao a dos addons.
   for (int k = 0; k < n; k++) {
     int i = ORD(k), g = regras ? grupoDe(i) : 0;
     if ((regras ? foraDoAuto(i) : lista[i].foraCache || automaticaExcluida(i) || ehInformativa(&lista[i])) || g < 0) continue;
+    if (regras) {
+      if (tetoRes && lista[i].altura > tetoRes) continue;
+      if (temLinguaConfig && (!haCandidatasComLingua || !temAudioPt(&lista[i]))) continue;
+    }
     long p = pontos(&lista[i]);
     if (lg) { idx[m] = i; pts[m] = p; grp[m] = (signed char)g; m++; }
     // O GRUPO das regras (#202) vem antes da pontuacao: permitida primeiro.
@@ -2509,6 +2548,9 @@ static int automaticoCom(int regras) {
     }
   }
   free(idx); free(pts); free(grp);
+  if (regras && melhor < 0 && n > 0) {
+    regraBloqueou = 1;
+  }
   return melhor;
 }
 // As regras de auto-play (#202) sao de filme e serie, como no oficial: canal
@@ -3053,8 +3095,33 @@ static float desenharFaixas(const Stream *s, float x, float y, float w, int sel,
     char idiomas[4096], linha[4224];
     int c = sel ? 180 : 140;
     if (!stream_faixas_texto(s, legendas, idiomas, sizeof idiomas)) continue;
-    snprintf(linha, sizeof linha, "%s: %s", i18n(legendas ? "Legendas" : "Áudio"), idiomas);
-    txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM, linha, c, c, c - 2, 255, w), x, y + altura, a);
+    snprintf(linha, sizeof linha, "%s: ", i18n(legendas ? "Legendas" : "Áudio"));
+    TxtLinha lPre = txt_linha(TXT_PG_FIM, linha, 120, 120, 120, 255);
+    txt_desenhar_alpha(lPre, x, y + altura, a);
+    float px = x + lPre.w;
+    const char *p = idiomas;
+    while (*p && w - (px - x) > 20) {
+      const char *sep = strstr(p, ", ");
+      size_t n = sep ? (size_t)(sep - p) : strlen(p);
+      char item[128];
+      if (n >= sizeof item) n = sizeof item - 1;
+      memcpy(item, p, n); item[n] = 0;
+      int cr = c, cg = c, cb = c;
+      if (!legendas && (temPalavra(item, "Español") || temPalavra(item, "Espanol") ||
+                        temPalavra(item, "Latino") || temPalavra(item, "Castellano") ||
+                        temPalavra(item, "Spanish"))) {
+        cr = 110; cg = 231; cb = 183;
+      }
+      TxtLinha lItem = txt_linha_corta(TXT_PG_FIM, item, cr, cg, cb, 255, w - (px - x));
+      txt_desenhar_alpha(lItem, px, y + altura, a);
+      px += lItem.w;
+      if (sep) {
+        TxtLinha lSep = txt_linha(TXT_PG_FIM, ", ", 120, 120, 120, 255);
+        txt_desenhar_alpha(lSep, px, y + altura, a);
+        px += lSep.w;
+        p = sep + 2;
+      } else break;
+    }
     altura += FOLHA_FAIXA_H;
   }
   return altura;
@@ -3319,13 +3386,11 @@ static int temMarca(int i, int automatica) {
 static float alturaLinha(int i, int automatica) {
   float h = FOLHA_LINHA_H + (temMarca(i, automatica) ? FOLHA_MARCA_H : 0);
   if (ajustes_fonte_texto_addon()) {
-    LinhaAddon tmp[FOLHA_ADDON_LINHAS];
-    int nl = linhasAddon(&lista[i], tmp, FOLHA_ADDON_LINHAS);
-    float ab = grupo == 1 && nOrdem == foco ? abreFoco : nOrdem == linhaAnt ? abreAnt : 0.0f;
-    float vis = nl > FOLHA_ADDON_FECHADA ? FOLHA_ADDON_FECHADA + (nl - FOLHA_ADDON_FECHADA) * ab : (float)nl;
-    h = 20 + 40 + vis * FOLHA_ADDON_LD + 18 + (temMarca(i, automatica) ? FOLHA_MARCA_H : 0);
-    if (stream_selos_ha(&lista[i])) h += 30.0f;
-    if (h < 96) h = 96;
+    h = 24.0f + 36.0f + 26.0f + (temMarca(i, automatica) ? FOLHA_MARCA_H : 0.0f);
+    if (stream_selos_ha(&lista[i])) h += 32.0f;
+    h += linhasFaixas(&lista[i]) * FOLHA_FAIXA_H;
+    if (h < 96.0f) h = 96.0f;
+    return h;
   } else {
     // The connection line opens with the focused row even without a file name.
     float extra = (arquivoDa(&lista[i])[0] ? FOLHA_ARQ_H : 0) + FOLHA_FIT_H * fitLinhas(i);
@@ -4336,7 +4401,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     const Stream *s=i>=0?&lista[i]:NULL;
     uint64_t tira, logos;
     if(y+h<FOLHA_TOPO-8 || y>NV_TELA_H) continue;
-    GfxRect r={lx,y,rw,h};
+    GfxRect r={lx,y+4.0f,rw,h-8.0f};
     if (i <= -2) {
       OndeVer o;
       if (ptr) ponteiro_alvo(r.x,r.y,r.w,r.h,ponteiroFolhaLinha,NULL,row,0);
@@ -4355,24 +4420,22 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       if (b > t) ponteiro_alvo(r.x, t, r.w, b - t, ponteiroFolhaLinha, NULL, row, 0);
     }
     if(sel){
-      // Foco so pela superficie clara: o contorno saiu a pedido do dono (02/10).
-      // No solido a superficie e um cinza opaco um degrau acima do miolo.
       if (ajustes_vidro()) gfx_cor(r,FOLHA_RAIO/h,1,1,1,.12f*anim);
       else gfx_cor(r,FOLHA_RAIO/h,.17f,.176f,.204f,anim);
+      gfx_anel(r, FOLHA_RAIO/h, 1.5f, 1.0f, 1.0f, 1.0f, .35f * anim);
+    } else {
+      gfx_cor(r, FOLHA_RAIO/h, 1.0f, 1.0f, 1.0f, .028f * anim);
+      gfx_anel(r, FOLHA_RAIO/h, 1.0f, 1.0f, 1.0f, 1.0f, .08f * anim);
     }
-    // COLUNA DA DIREITA: tamanho grande, addon embaixo. Medida primeiro: o
-    // titulo e a fileira de logos param antes dela.
-    { char gb[24]="";
+    colW = 0.0f;
+    txtW = tr - tx;
+    if (!ajustes_fonte_texto_addon()) {
+      char gb[24]="";
       TxtLinha lg, lu, lp;
       int cg=sel?250:218;
-      // No modo do addon o tamanho ja vem no texto dele; so o addon fica.
-      if(s->tamanhoMB && !ajustes_fonte_texto_addon()) { snprintf(gb,sizeof gb,s->tamanhoMB>=102400?"%.0f":"%.1f",s->tamanhoMB/1024.0); plrui_decimal(gb); }
+      if(s->tamanhoMB) { snprintf(gb,sizeof gb,s->tamanhoMB>=102400?"%.0f":"%.1f",s->tamanhoMB/1024.0); plrui_decimal(gb); }
       lg=txt_linha(TXT_CW_TITULO,gb,cg,cg,cg-2,255);
       lu=txt_linha(TXT_PG_FIM,"GB",120,120,118,255);
-      // TORRENT SEM DEBRID: quantos semeiam vai junto do addon. E o numero que
-      // diz se a fonte abre (log da 2.0.0 no Android: "metadados nao chegaram
-      // em 30 s"); a pessoa escolhia as cegas. "seeds" fica sem traducao: e o
-      // termo que quem usa torrent conhece em qualquer idioma.
       { char pv[160];
         if(!s->url[0] && s->infoHash[0] && s->temSemeadores)
           snprintf(pv,sizeof pv,"%d seeds · %s",s->semeadores,s->provedor);
@@ -4385,9 +4448,9 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
         txt_desenhar_alpha(lu,tr-lu.w,cy+(lg.h-lu.h)-3,anim);
         txt_desenhar_alpha(lg,tr-lu.w-6-lg.w,cy,anim); }
       txt_desenhar_alpha(lp,tr-lp.w,gb[0]?cy+40:cy+6,anim);
-      // Dica da tecla Info/Amarela: so na linha em foco, no canto do addon.
-      if(sel) gfx_icone((GfxRect){tr-lp.w-30,(gb[0]?cy+40:cy+6)+3,20,20},"aj_info",.62f,.62f,.62f,anim*.85f); }
-    txtW=tr-tx-colW-28;
+      if(sel) gfx_icone((GfxRect){tr-lp.w-30,(gb[0]?cy+40:cy+6)+3,20,20},"aj_info",.62f,.62f,.62f,anim*.85f);
+      txtW=tr-tx-colW-28;
+    }
     cy=y+20;
     // A MARCA: o que esta tocando (com o equalizador), a escolha anterior e a
     // automatica. Texto espacado no acento, e nao pilula: a pilula cheia era a
@@ -4485,38 +4548,62 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       cy+=desenharFaixas(s,tx,cy,tr-tx,sel,anim);
       LinhaAddon ls[FOLHA_ADDON_LINHAS];
       int nl=linhasAddon(s,ls,FOLHA_ADDON_LINHAS);
-      // abertura da linha: a mesma mola da altura (alturaLinha)
-      float abr = grupo==1 && row==foco ? abreFoco : row==linhaAnt ? abreAnt : 0.0f;
-      float vis = 0.0f;
-      for(int k=0;k<nl;k++){
-        float ak = anim;
-        if(k>=FOLHA_ADDON_FECHADA){ if(abr<.02f) break; ak = anim*abr; }
-        vis += 1.0f;
-        // A primeira linha do addon costuma ser a de numeros (tamanho, taxa):
-        // um degrau mais clara. As outras no cinza da especificacao.
-        int c = k==0 ? (sel?215:180) : (sel?170:130);
-        float px=tx, maxw=k==0?txtW:tr-tx, ly=cy+k*FOLHA_ADDON_LD;
-        for(int pc=0;pc<ls[k].n && maxw-(px-tx)>30;pc++){
-          int cr=c, cg=c, cb=c;
-          if(temPalavra(ls[k].tx[pc],"español")||temPalavra(ls[k].tx[pc],"espanol")||
-             temPalavra(ls[k].tx[pc],"latino")||temPalavra(ls[k].tx[pc],"castellano")){
-            cr=110; cg=231; cb=183;
-          }
-          if(ls[k].ic[pc]){
-            // O icone na altura do texto, na mesma tinta; so vale se couber.
-            gfx_icone((GfxRect){px,ly+3,22,22},ls[k].ic[pc],cr/255.0f,cg/255.0f,cb/255.0f,ak);
-            px+=22+8;
-          }
-          if(ls[k].tx[pc][0] && maxw-(px-tx)>30){
-            TxtLinha lp=txt_linha_corta(TXT_PG_FIM,ls[k].tx[pc],cr,cg,cb,255,maxw-(px-tx));
-            txt_desenhar_alpha(lp,px,ly,ak);
-            px+=lp.w+18;
-          }
+      const char *dur = NULL, *grpStr = NULL;
+      for (int k = 0; k < nl; k++) {
+        for (int pc = 0; pc < ls[k].n; pc++) {
+          if (ls[k].ic[pc] && !strcmp(ls[k].ic[pc], "aj_clock")) dur = ls[k].tx[pc];
+          else if (ls[k].ic[pc] && !strcmp(ls[k].ic[pc], "aj_tag")) grpStr = ls[k].tx[pc];
         }
       }
-      if(stream_selos_ha(s)){
-        float by = cy + vis * FOLHA_ADDON_LD + 4.0f;
-        stream_selos_fileira(s, tx, by, tr - tx, 22.0f, sel ? 1.0f : 0.75f, anim);
+      float px = tx, maxw = tr - tx, ly = cy;
+      if (s->tamanhoMB > 0) {
+        char gb[32];
+        if (s->tamanhoMB >= 1024) snprintf(gb, sizeof gb, "%.2f GB", s->tamanhoMB / 1024.0);
+        else snprintf(gb, sizeof gb, "%ld MB", s->tamanhoMB);
+        gfx_icone((GfxRect){px, ly + 2, 18, 18}, "aj_package", .75f, .75f, .75f, anim);
+        px += 22;
+        TxtLinha lgb = txt_linha_corta(TXT_PG_FIM, gb, sel ? 220 : 180, sel ? 220 : 180, sel ? 220 : 180, 255, maxw - (px - tx));
+        txt_desenhar_alpha(lgb, px, ly, anim);
+        px += lgb.w + 14;
+      }
+      if (dur && dur[0] && maxw - (px - tx) > 60) {
+        TxtLinha ldot = txt_linha(TXT_PG_FIM, "·", 100, 100, 100, 255);
+        txt_desenhar_alpha(ldot, px, ly, anim);
+        px += ldot.w + 12;
+        gfx_icone((GfxRect){px, ly + 2, 18, 18}, "aj_clock", .75f, .75f, .75f, anim);
+        px += 22;
+        TxtLinha ldur = txt_linha_corta(TXT_PG_FIM, dur, sel ? 180 : 140, sel ? 180 : 140, sel ? 180 : 140, 255, maxw - (px - tx));
+        txt_desenhar_alpha(ldur, px, ly, anim);
+        px += ldur.w + 14;
+      }
+      if (grpStr && grpStr[0] && maxw - (px - tx) > 60) {
+        TxtLinha ldot = txt_linha(TXT_PG_FIM, "·", 100, 100, 100, 255);
+        txt_desenhar_alpha(ldot, px, ly, anim);
+        px += ldot.w + 12;
+        gfx_icone((GfxRect){px, ly + 2, 18, 18}, "aj_tag", .75f, .75f, .75f, anim);
+        px += 22;
+        TxtLinha lgrp = txt_linha_corta(TXT_PG_FIM, grpStr, sel ? 180 : 140, sel ? 180 : 140, sel ? 180 : 140, 255, maxw - (px - tx));
+        txt_desenhar_alpha(lgrp, px, ly, anim);
+        px += lgrp.w + 14;
+      }
+      if (maxw - (px - tx) > 50) {
+        TxtLinha ldot = txt_linha(TXT_PG_FIM, "·", 100, 100, 100, 255);
+        txt_desenhar_alpha(ldot, px, ly, anim);
+        px += ldot.w + 12;
+        char orig[64];
+        if (s->foraCache) {
+          if (!s->url[0] && s->infoHash[0] && s->temSemeadores)
+            snprintf(orig, sizeof orig, "%d seeds · P2P", s->semeadores);
+          else snprintf(orig, sizeof orig, "Fora do cache");
+        } else snprintf(orig, sizeof orig, "Debrid");
+        int dr = s->foraCache ? 230 : 56, dg = s->foraCache ? 120 : 189, db = s->foraCache ? 120 : 248;
+        TxtLinha lorig = txt_linha_corta(TXT_PG_FIM, orig, dr, dg, db, 255, maxw - (px - tx));
+        txt_desenhar_alpha(lorig, px, ly, anim);
+        px += lorig.w + 14;
+      }
+      cy += 26.0f;
+      if (stream_selos_ha(s)) {
+        stream_selos_fileira(s, tx, cy + 2.0f, tr - tx, 22.0f, sel ? 1.0f : 0.75f, anim);
       }
       continue;
     }
