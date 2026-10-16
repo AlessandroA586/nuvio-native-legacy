@@ -1,53 +1,37 @@
-# Issue #565 — https://pengu.uk/ on Samsung .wgt (2.0.6)
+# i565 — PenguPlay (pengu.uk) "addon not working" on Tizen .wgt 2.0.6
 
-## Verdict
+## Report
+https://pengu.uk/ addon works elsewhere, fails in the app on Samsung Tizen 2.0.6.
 
-No fixture-backed app bug remains on current `integracao`. PenguPlay's supplied manifest and unauthenticated stream work through the local install/probe/parser/filter path. The relevant behavioral fix was already made after 2.0.6 by #552.
+## Root cause
+Same class as #552. In 2.0.6, `fonteOferecida` (src/streams.c) hid every
+stream with `behaviorHints.notWebReady` when P2P was off (introduced in
+b658b41b3). On .wgt, P2P is hidden/always off, so all of PenguPlay's catalog
+vanished — every authenticated stream it serves is `url: https://pengu.uk/...`
++ `notWebReady: true` (MKV/MP4 the browser cannot play but native players can).
 
-## What PenguPlay actually returns
+Fixed on this branch by d25a3e513 (`pedeP2P`/`fonteOferecida` in src/streams.c):
+notWebReady with a public http(s) URL no longer requires P2P.
 
-- `GET https://pengu.uk/` returns `302 Location: /web/index.html`, then HTML — not a manifest. The app must not fetch the entered root URL as the manifest; it must append `/manifest.json` to normalized base `https://pengu.uk`.
-- `manifest.json` declares object-form `resources`: `stream` for `movie`, `series`, `tv`; `meta` and `catalog` only for `tv`; `subtitles` for `movie`/`series`; empty `catalogs`.
-- `behaviorHints.configurable=true` means the root install is a configuration page. A configured install URL carries a config token in its path.
-- Unauthenticated `/stream/movie/tt...json` returns a playable public URL: `https://pengu.uk/signin.mp4`, with `behaviorHints.notWebReady=false`.
+## Verification (tests/pengu.sh, no network)
+Fixtures: `tests/fixtures/pengu/manifest-auth.json` (id `com.penguplay`,
+object resources, `tv` type, `tmdb:`/`tt`/… idPrefixes, config array) and
+three real authenticated bodies (token redacted before capture; not in repo):
+movie `tt0111161` (28 entries), movie `tmdb:278` (28), series
+`tt0903747:1:1` (27).
 
-## Current code path
+- Manifests install: base URL handling for root/token/query variants; the
+  manifest-auth (config + `behaviorHints:{}`) probes identically.
+- `stream_extrair` returns 27/27/26 playable streams — the leading
+  `{externalUrl: "https://pengu.uk/donate"}` card (no url/infoHash) is skipped,
+  matching Stremio behavior.
+- Every parsed stream: `https://` url, `notWebReady`, `fonteOferecida` true
+  with `p2p_ativo() == 0` — also under `-D__EMSCRIPTEN__` (WGT config,
+  stub emscripten.h).
+- `filename` containing `|^|` and 28 GB `videoSize` parse fine
+  (`arquivo`, `tamanhoBytes`).
+- FAIL side: the v2.0.6 `fonteOferecida` (extracted via `git show
+  v2.0.6:src/streams.c`) hides 27/27 streams of the real capture → exit 1
+  (expected FAIL). Current code → PASS. Fail-to-pass demonstrated.
 
-- URL install/normalization: `nv_addon_base` in `src/addonurl.h` trims whitespace, maps `stremio://` to `https://`, removes trailing `/manifest.json` and trailing slashes while preserving config path/query. It is the same shape as official Nuvio `canonicalizeUrl`/`buildManifestUrl`.
-- Add-on insertion: `adicionarSemTrava` in `src/addons.c` stores normalized base and starts with optimistic capabilities until probe.
-- Manifest probe: `sondar` fetches `<base>/manifest.json` (never the entered `/`), and `capacidadesDoManifesto` accepts resources as strings or objects, case-insensitive names, and type `tv`.
-- Stream request: `fioFontes` builds `<base>/stream/<type>/<id>.json`; `nv_addon_id` percent-encodes `tmdb:`/`pp-live:`.
-- Stream parser: `src/stream_parse.c` parses the sign-in stream and `notWebReady=false`.
-- Offer filter: current `fonteOferecida`/`pedeP2P` in `src/streams.c` no longer reject a public HTTP(S) stream merely because `notWebReady` is true; only non-HTTP or local streaming-server P2P sources require P2P.
-
-## 2.0.6 difference
-
-At `v2.0.6`, `fonteOferecida` was:
-
-```c
-return (!s->notWebReady || p2p_ativo()) &&
-       (s->url[0] || debrid_ativo() || p2p_ativo());
-```
-
-Any public `notWebReady:true` HTTP(S) stream was discarded when P2P was off. Current integration contains #552:
-
-- `6d524f947` — offer `notWebReady` streams that carry an HTTP(S) URL with P2P off.
-- `cbcf467f5` — parse stream hostnames before requiring P2P.
-
-Regression `tests/pengu.sh` extracts that exact 2.0.6 predicate into a generated probe and proves it fails the controlled `notWebReady:true` PenguPlay stream; the real current native and `-D__EMSCRIPTEN__` paths pass.
-
-## Fixture coverage added
-
-`tests/pengu.c` + `tests/pengu.sh`, fixtures under `tests/fixtures/pengu/`:
-
-- bare `https://pengu.uk/`, `manifest.json`, configured path, trailing slash, whitespace, and `stremio://` configured URL all normalize correctly;
-- manifest probe always requests `<base>/manifest.json`, never `/` or the HTML redirect;
-- object resources are read as stream/meta/catalog/subtitles; `tv`, `idPrefixes`, and empty catalogs accepted;
-- supplied sign-in stream parses and is offered;
-- controlled `notWebReady:true` variant fails under copied 2.0.6 predicate and passes under current code, including `.wgt` macro selection.
-
-No production diff was needed.
-
-## Remaining caveat
-
-The report has no log and no authenticated/configured response. If the user's real PenguPlay stream is an authenticated `notWebReady:true` URL plus required `proxyHeaders`, Tizen may still fail at playback: `src/video_tizen.c` stores `video_definir_cabecalhos` but intentionally does not apply headers to AVPlay. The fixture does not prove that scenario because the supplied stream has no required headers.
+No source change needed; regression test only.
