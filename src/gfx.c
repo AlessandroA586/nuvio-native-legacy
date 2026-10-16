@@ -3534,7 +3534,11 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   // opaque #1A1C21 of mockup-A27-sem-transparencia.
   if (tipo == GFX_VIDRO_BARRA) {
     float al = gfx_chrome_tinta();
-    if (vidPend.fonte) {
+    // Frost off: no blur source, but the bar stays see-through. Same tint on
+    // the live scene, alpha floored (no luma solve here) to keep text readable.
+    int claro = !vidPend.fonte && !ajustes_vidro_fosco() && !efeitosMinimos;
+    if (claro && al < 0.62f) al = 0.62f;
+    if (vidPend.fonte || claro) {
       vidPend.scrT[0] = vidPend.scrB[0] = 0x12 / 255.0f;
       vidPend.scrT[1] = vidPend.scrB[1] = 0x14 / 255.0f;
       vidPend.scrT[2] = vidPend.scrB[2] = 0x18 / 255.0f;
