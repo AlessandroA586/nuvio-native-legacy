@@ -112,6 +112,7 @@ static const char *familia(const char *c, char *buf) {
     // chines bilingue).
     { "chs","zh" },{ "cht","zh" },{ "zht","zh" },{ "zhe","zh" },{ "ze","zh" },
     { "pb","pt" },{ "ptbr","pt" },{ "spn","es" },{ "ea","es" },
+    { "lat","es" },{ "latam","es" },{ "cas","es" },{ "cast","es" },{ "es-419","es" },{ "es-es","es" },{ "es-mx","es" },{ "es-ar","es" },{ "es-co","es" },
     // O player do .tpk da Samsung (Tizen.Multimedia GetLanguageCode) devolve
     // estes no lugar do ISO 639-1. MEDIDO no log (p2p-20, MKV com 41
     // legendas): ja->"jp", cs->"cz", nl->"du", el->"gr", id->"in", ms->"ma".
