@@ -40,6 +40,7 @@ static int falhas;
 #define CONFERE(c, ...) do { if (!(c)) { printf("FALHOU: "); falhas++; } else printf("ok: "); \
                              printf(__VA_ARGS__); printf("\n"); } while (0)
 
+#ifndef NV_DESC_RECOVERY_TEST
 int main(void) {
   setvbuf(stdout, NULL, _IOLBF, 0);
   // arranque: perfilAbrirSessao + sync_iniciar, depois main.c larga a volta
@@ -62,3 +63,4 @@ int main(void) {
   printf(falhas ? "desc_sessao_pin: %d falha(s)\n" : "desc_sessao_pin: ok\n", falhas);
   return falhas ? 1 : 0;
 }
+#endif

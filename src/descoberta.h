@@ -24,6 +24,8 @@ void desc_esquecer_catalogo_perfil(void);
 // Confirmed opening, including the same profile: invalidate detached jobs and
 // clear live results, without removing saved account/profile configuration.
 void desc_abrir_sessao(void);
+// Drawing-thread guard: discovery has been opened for the live generation.
+int desc_sessao_aberta(void);
 // Called after this session's cached addon list/configuration is restored.
 // Starts its pending discovery once, reusing an in-flight worker. Before the
 // first main.c bootstrap start this only marks the sources ready.

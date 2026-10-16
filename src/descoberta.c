@@ -5425,6 +5425,7 @@ static int descIniciarTravado(int conferirVoltas, unsigned voltasAoAgendar,
   if (descobertaInicializada && (aberturaSessao != sessao ||
       (aberturaPendente && !aberturaFontesProntas))) {
     int semAbertura = aberturaSessao != sessao;
+    aberturaPendente = 1;  // The drawing thread opens/prepares before retrying.
     pthread_mutex_unlock(&listaTrava);
     printf("[desc] volta recusada: %s\n", semAbertura
            ? "sessao do perfil ainda nao aberta (desc_abrir_sessao)"
@@ -5444,6 +5445,10 @@ static int descIniciarTravado(int conferirVoltas, unsigned voltasAoAgendar,
     pthread_mutex_unlock(&listaTrava);
     if (!repetirSeOcupado) { printf("[desc] ja montando; pedido ignorado\n"); fflush(stdout); }
     return DESC_OCUPADO;
+  }
+  if (aberturaPendente) {
+    printf("[desc] retry discovery: profile session opened and sources ready\n");
+    fflush(stdout);
   }
   buscando = 1;
   listaLidaNaVolta = 0;
@@ -5468,7 +5473,7 @@ static int descIniciarTravado(int conferirVoltas, unsigned voltasAoAgendar,
       aberturaRetentarEm = agora + 1000;
     }
     pthread_mutex_unlock(&listaTrava);
-    printf("[desc] pthread_create FALHOU: o catalogo nao vai remontar\n");
+    printf("[desc] discovery refused: pthread_create failed; retry pending in 1000 ms\n");
     fflush(stdout);
   }
   else pthread_detach(th);
@@ -5478,6 +5483,14 @@ void desc_iniciar(void) { (void)descIniciarTravado(0, 0, 0, 0); }
 
 static void descTentarAbertura(void) {
   (void)descIniciarTravado(0, 0, 1, 1);
+}
+
+int desc_sessao_aberta(void) {
+  int aberta;
+  pthread_mutex_lock(&listaTrava);
+  aberta = aberturaSessao == nv_perfil_sessao_ler();
+  pthread_mutex_unlock(&listaTrava);
+  return aberta;
 }
 
 void desc_sessao_passo(void) { descTentarAbertura(); }
