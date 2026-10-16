@@ -699,7 +699,7 @@ static int abrirSessao(int inicioMs, int fracao) {
   // F07: the cache limit is sticky in Kotlin (read at each open), so it only
   // crosses JNI when it changes. Posted before the open on the same main
   // thread queue, it is in place when the open runs.
-  // #338: buffer preset, sticky in Kotlin like the cache limit.
+  // #338: buffer MiB (0 = Auto), sticky in Kotlin like the cache limit.
   if (mBuffer && bufferPreset != bufferEnviado) {
     (*env)->CallStaticVoidMethod(env, gCls, mBuffer, (jint)bufferPreset);
     fimChamada(env);
@@ -812,7 +812,7 @@ int video_tocar_retomada(const char *u, double segundos, double pct) {
 }
 int video_tocar_posicao(const char *u, double segundos) { return video_tocar_retomada(u, segundos, 0.0); }
 
-void cacheboost_backend_buffer(int p) { bufferPreset = p >= 0 && p <= 3 ? p : 0; }
+void cacheboost_backend_buffer(int mb) { bufferPreset = mb >= 0 && mb <= 256 ? mb : 0; }
 void cacheboost_backend_cache(int mb) { cacheArmado = mb > 0 ? mb : 0; }
 void cacheboost_backend_titulo(const char *id) { snprintf(tituloArmado, sizeof tituloArmado, "%s", id ? id : ""); }
 void cacheboost_backend_descartar(void) { if (mDescartar) kSemArg(mDescartar); }

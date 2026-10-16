@@ -549,8 +549,8 @@ typedef enum {
   // progresso.c, home.c). Padrao 1 = o comportamento de sempre. No fim: valor[]/CHAVE[]
   // sao posicionais.
   AJ_CW_MINIMO,
-  // #338: tamanho do buffer do player (Android: LoadControl do ExoPlayer). So
-  // existe onde o player deixa o app escolher; LOCAL. No fim: posicionais.
+  // #338: tamanho do buffer do player (Android: LoadControl do ExoPlayer; webOS:
+  // leitura a frente da conversao DTS/Dolby Vision). LOCAL. No fim: posicionais.
   AJ_BUFFER,
   // #329/#331: pular abertura/resumo e tocar o proximo sozinho (desligados por padrao).
   AJ_PULAR_ABERTURA,
@@ -731,8 +731,8 @@ static const char *V_INTERFACE_MODO[] = { "TV", "Mobile" };
 static const char *V_MENU_POS[] = { "Na lateral", "No topo" };   // #461
 static const char *V_ABAS_ESTILO[] = { "Chips", "Menu suspenso", "Barra central", "Páginas", "Menu no topo" };   // #205
 // F07: the order is cacheboost_cache_mb's (0, 256, 512, 1024 MB).
-// #338: indice = preset do NvPlayer.kt (0 = o de sempre).
-static const char *V_BUFFER[] = { "Automático", "Pequeno", "Médio", "Grande" };
+// #338: indice -> MiB em cacheboost_buffer_mb (0 = o de sempre).
+static const char *V_BUFFER[] = { "Automático", "64 MB", "128 MB", "256 MB" };
 // #338: o indice menos 1 e o tamanho de estatvivoui.h (0 = lembrar o ultimo).
 static const char *V_ESTAT_TAMANHO[] = { "Lembrar o último", "Completo", "Compacto", "Mínimo" };
 // 0 = Direita (como as outras laterais do player), 1 = Esquerda.
@@ -1550,7 +1550,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Brilho da interface em HDR", V_HDR_UI, 2),   // local: hdrUiLocal (#205)
   ESC("Tela de abertura do vídeo", V_TELA_ABERTURA, 2),   // local: telaAberturaLocal (#205)
   NUM("Mínimo para entrar no Continuar", 1, 20, 1, "%"),   // local: cwMinimoLocal
-  ESC("Tamanho do buffer", V_BUFFER, 4),                 // local: bufferPlayerLocal (Android)
+  ESC("Tamanho do buffer", V_BUFFER, 4),                 // local: bufferPlayerLocal
   ESC("Pular a abertura automaticamente", V_LIGA, 2),   // local: pularAberturaLocal
   ESC("Pular o resumo automaticamente", V_LIGA, 2),   // local: pularResumoLocal
   ESC("Tocar o próximo episódio automaticamente", V_LIGA, 2),   // local: proximoAutoLocal
@@ -2654,12 +2654,8 @@ void ajustes_definir_estat_lado(int esquerda) {
   AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar());
 }
 int ajustes_buffer_preset(void) {
-#ifdef NV_ANDROID
   int v = valor[AJ_BUFFER];
   return v >= 0 && v < 4 ? v : 0;
-#else
-  return 0;   // so o ExoPlayer deixa o app escolher o buffer
-#endif
 }
 int ajustes_fonte_idioma_audio(void) { return valor[AJ_FONTE_IDIOMA_AUDIO] == 0; }
 int ajustes_cache_seek_mb(void) {
@@ -6756,7 +6752,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_TRAILER_ZOOM_TPK: return "Amplia a imagem do trailer e libera os modos de recorte e zoom da proporção no player; em algumas TVs Samsung pode deixar a tela preta ou mostrar a tela inicial da TV.";
     case AJ_ESTAT_TAMANHO: return "Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fina. Lembrar o último reabre como você deixou. Com o painel aberto, OK troca o tamanho, Esquerda/Direita trocam o lado e Baixo fixa o painel no tamanho escolhido. Vale só nesta TV.";
     case AJ_ESTAT_LADO: return "O lado do player onde as Estatísticas ao vivo ficam, com a mesma margem das listas de Áudio e Legendas. Direita é o padrão. Com o painel aberto, Esquerda/Direita trocam o lado. Vale só nesta TV.";
-    case AJ_BUFFER: return "Quanto vídeo o player baixa à frente. Pequeno poupa memória e rede; Grande aguenta melhor internet instável e arquivos pesados, até o limite de memória da TV. Não muda a qualidade da imagem. Vale a partir do próximo vídeo.";
+    case AJ_BUFFER: return "Quanto vídeo o app guarda à frente. Automático é o de sempre; 64, 128 ou 256 MB ajudam arquivos 4K pesados e caem sozinhos se faltar memória na TV. No webOS vale para a conversão de DTS e Dolby Vision. Vale a partir do próximo vídeo.";
     case AJ_FONTE_IDIOMA_AUDIO: return "Na escolha automática, fontes com o seu Idioma do áudio ou áudio duplo passam na frente na mesma resolução. Não é filtro: sem elas, a melhor das outras toca.";
     case AJ_CACHE_SEEK: return "Com retomada rápida, guarda só o último título por até 3 horas. Trocar de perfil ou pouco espaço apagam o trecho.";
     case AJ_ANIM: return "Use Reduzidas para movimentos mais discretos ao navegar pela interface.";

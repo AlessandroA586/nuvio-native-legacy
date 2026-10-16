@@ -240,16 +240,16 @@ int main(void) {
   video_velocidade(200); video_bombear();
   assert(!strcmp(registro, "V100"));
 
-  // #338: buffer crosses before open, once per change, with invalid presets reset.
+  // #338: buffer MiB crosses before open, once per change, with invalid sizes reset.
   registro[0] = 0;
-  cacheboost_backend_buffer(3);
+  cacheboost_backend_buffer(128);
   assert(video_tocar("https://example.invalid/buffer.mkv"));
-  assert(strstr(registro, "B3") && strstr(registro, "B3") < strchr(registro, 'A'));
+  assert(strstr(registro, "B128") && strstr(registro, "B128") < strchr(registro, 'A'));
   registro[0] = 0;
   assert(abrirSessao(0, 0));
   assert(!strchr(registro, 'B'));
   registro[0] = 0;
-  cacheboost_backend_buffer(99);
+  cacheboost_backend_buffer(999);
   assert(abrirSessao(0, 0));
   assert(strstr(registro, "B0"));
   { VideoStats st;

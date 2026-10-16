@@ -516,7 +516,7 @@ int   ajustes_teclado_android(void);          // Android keyboard: 0 automatic, 
 int   ajustes_mic_busca(void);               // Samsung (.tpk/.wgt) search mic button: 0 automatic, 1 on, 2 off (local)
 unsigned ajustes_p2p_limite_mb(void);           // #334: P2P space limit in MB (0 = Automatic)
 int   ajustes_p2p_usb(void);                    // #205: 1 = cache P2P em pendrive USB
-int   ajustes_buffer_preset(void);           // #338: 0 Automatico, 1 Baixo, 2 Medio, 3 Alto (0 fora do Android)
+int   ajustes_buffer_preset(void);           // #338: 0 Automatico, 1 = 64, 2 = 128, 3 = 256 MiB
 int   ajustes_cache_seek_mb(void);           // F07: seek cache limit in MB for the next video (0 = off / not on this TV)
 #ifdef AJUSTES_TESTE
 void  ajustes_teste_escala(int percentual); // fixture only; does not persist
