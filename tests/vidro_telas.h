@@ -32,9 +32,11 @@ static void vt_depois(void) {
   if (gfx_vidro_capturas > vtMax) vtMax = gfx_vidro_capturas;
 }
 static void vt_zerar(void) { vtCap = vtPas = vtMax = vtN = 0; vtFill = vtTela = 0; vtRect = vtTxt = 0; vtTxt0 = txt_rasterizadas; }
-// parado = 1: budget 0 captures; parado = 0: at most 1 per frame.
+// parado = 1: budget 0 captures; parado = 0: at most 1 per frame. A screen
+// with a live animated background (Explore sky) passes parado = 2: at most
+// one capture per 30 frames, the 2 Hz the sky's clock is hashed at.
 static void vt_relatar(const char *tela, int parado) {
-  int ok = parado ? vtCap == 0 : vtMax <= 1;
+  int ok = parado == 2 ? vtMax <= 1 && vtCap * 30 <= vtN + 29 : parado ? vtCap == 0 : vtMax <= 1;
   double n = vtN ? vtN : 1;
   printf("vidro_telas %s %s: captures/frame=%.2f passes/frame=%.2f blur-pixels/frame=%.0f max=%d frames=%d fill/frame=%.2f rects/frame=%.0f text-raster/frame=%.2f\n",
          tela, parado ? "static" : "moving", vtCap / n, vtPas / n, vtFill / n * 1920 * 1080, vtMax, vtN,

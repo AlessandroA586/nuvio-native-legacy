@@ -206,7 +206,7 @@ int main(int argc, char **argv) {
     int i;
     vt_vidro();
     for (i = 0; i < 150; i++) { quadros(1, NULL); SDL_Delay(2); }
-    vt_zerar(); quadros(30, NULL); vt_png("explorar"); vt_relatar("explore", 1);
+    vt_zerar(); quadros(30, NULL); vt_png("explorar"); vt_relatar("explore", 2);
     for (i = 0; i < 6; i++) { tecla(i & 1 ? SDLK_LEFT : SDLK_RIGHT); quadros(4, NULL); }
     vt_relatar("explore", 0);
     return vtFalhas ? 1 : 0;
