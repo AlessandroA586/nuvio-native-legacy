@@ -490,6 +490,8 @@ int desc_tmdb_pos_creditos(const char *json) {
 
 #define DESC_MANTER_TITULO  1
 #define DESC_MANTER_SINOPSE 2
+#define DESC_MANTER_ELENCO 4
+static int tmdbElenco(const char *json, CatItem *d, int soVazios);
 static void fotosDoElenco(CatItem *d, const char *imdbSerie, int serie, int manter) {
   char url[400], *corpo;
   const char *chave;
@@ -657,7 +659,7 @@ static void fotosDoElenco(CatItem *d, const char *imdbSerie, int serie, int mant
              TMDB, serie ? "tv" : "movie", idTmdb, chave, desc_tmdb_idioma());
     corpo = rede_baixar(url, 20);
     if (corpo) {
-      int casados = desc_tmdb_elenco(corpo, d), comFoto = 0, k;
+      int casados = tmdbElenco(corpo, d, (manter & DESC_MANTER_ELENCO) != 0), comFoto = 0, k;
       for (k = 0; k < d->nElenco; k++) comFoto += d->elenco[k].foto[0] != 0;
       printf("[desc] elenco %s: %d nome(s), %d casaram com o TMDB, %d com foto\n", imdbSerie, d->nElenco, casados, comFoto);
       free(corpo);
@@ -6709,10 +6711,173 @@ static void normElenco(const char *s, char *dst, size_t tam) {
   dst[k] = 0;
 }
 
-int desc_tmdb_elenco(const char *json, CatItem *d) {
+// Le so membros diretos: "cast" de videos/app_extras nao e o cast da raiz.
+// Devolve um ponteiro emprestado, sem copiar nem limitar o tamanho da ficha.
+static const char *elencoCampo(const char *obj, const char *chave) {
+  const char *p, *f;
+  size_t n = strlen(chave);
+  if (!obj || *obj != '{') return NULL;
+  f = js_fim(obj);
+  for (p = obj + 1; p < f && *p;) {
+    const char *q, *v;
+    while (p < f && (*p == ',' || (unsigned char)*p <= ' ')) p++;
+    if (p >= f || *p != '"') break;
+    q = p + 1;
+    while (q < f && *q && *q != '"') { if (*q == '\\' && q + 1 < f) q++; q++; }
+    if (q >= f || !*q) break;
+    v = q + 1;
+    while (v < f && (unsigned char)*v <= ' ') v++;
+    if (v >= f || *v++ != ':') break;
+    while (v < f && (unsigned char)*v <= ' ') v++;
+    if ((size_t)(q - p - 1) == n && !memcmp(p + 1, chave, n)) return v;
+    if (v >= f) break;
+    if (*v == '{' || *v == '[') p = js_fim(v);
+    else if (*v == '"') {
+      p = v + 1;
+      while (p < f && *p && *p != '"') { if (*p == '\\' && p + 1 < f) p++; p++; }
+      if (p < f && *p) p++;
+    } else { p = v; while (p < f && *p && *p != ',' && *p != '}') p++; }
+    if (p <= v) break;
+  }
+  return NULL;
+}
+
+static int elencoMesmoNome(const char *a, const char *b) {
+  char na[64], nb[64];
+  if (!a[0] || !b[0]) return 0;
+  if (!strcmp(a, b)) return 1;  // nomes nao latinos tambem tem identidade
+  normElenco(a, na, sizeof na);
+  normElenco(b, nb, sizeof nb);
+  return na[0] && !strcmp(na, nb);
+}
+
+typedef struct { char nome[64], papel[64], foto[512]; } ElencoMeta;
+
+static int elencoIndice(const CatItem *d, const char *nome) {
+  int i;
+  for (i = 0; i < d->nElenco; i++)
+    if (elencoMesmoNome(d->elenco[i].nome, nome)) return i;
+  return -1;
+}
+static int elencoLerPessoa(const char *p, ElencoMeta *e) {
+  const char *f;
+  char foto[513] = "";
+  memset(e, 0, sizeof *e);
+  if (*p == '"') return js_cadeia(p, e->nome, sizeof e->nome);
+  if (*p != '{') return 0;
+  f = js_fim(p);
+  js_texto_raiz_em(p, f, "name", e->nome, sizeof e->nome);
+  js_texto_raiz_em(p, f, "character", e->papel, sizeof e->papel);
+  js_texto_raiz_em(p, f, "photo", foto, sizeof foto);
+  // URL incompleta, null ou outro esquema deixa o fallback de iniciais.
+  if (strlen(foto) < sizeof e->foto &&
+      ((!strncmp(foto, "https://", 8) && foto[8]) || (!strncmp(foto, "http://", 7) && foto[7])) &&
+      !strpbrk(foto, " \t\r\n"))
+    memcpy(e->foto, foto, strlen(foto) + 1);
+  return e->nome[0] != 0;
+}
+static const char *elencoProximo(const char *p) {
+  if (*p == '{') return js_prox(js_fim(p));
+  if (*p == '"') {
+    const char *q = p + 1;
+    while (*q && *q != '"') { if (*q == '\\' && q[1]) q++; q++; }
+    return *q ? js_prox(q + 1) : NULL;
+  }
+  return NULL;
+}
+
+// Cast Stremio (nomes) + app_extras.cast do Nuvio/AIOMetadata (nome, papel,
+// foto). Sem rede. A raiz define a ordem; o extra casa POR NOME, nunca indice.
+// Complementos so preenchem lacunas. A base nova preserva dados conhecidos da
+// MESMA pessoa, inclusive seu id TMDB, sem transferir ids de outro provedor.
+int desc_meta_elenco(const char *json, CatItem *d, int soVazios) {
+  const char *m = json, *extra, *raiz, *rico, *p;
+  struct { char nome[64], papel[64], foto[512]; long tmdb; } antigos[CAT_ELENCO_MAX];
+  int nAntigos, i;
+  if (!json || !d) return 0;
+  while (*m && (unsigned char)*m <= ' ') m++;
+  p = elencoCampo(m, "meta");
+  if (p) { if (*p != '{') return 0; m = p; }
+  raiz = elencoCampo(m, "cast");
+  extra = elencoCampo(m, "app_extras");
+  rico = elencoCampo(extra, "cast");
+  nAntigos = d->nElenco;
+  if (nAntigos < 0 || nAntigos > CAT_ELENCO_MAX) return 0;
+  for (i = 0; i < nAntigos; i++) {
+    memcpy(antigos[i].nome, d->elenco[i].nome, sizeof antigos[i].nome);
+    memcpy(antigos[i].papel, d->elenco[i].papel, sizeof antigos[i].papel);
+    memcpy(antigos[i].foto, d->elenco[i].foto, sizeof antigos[i].foto);
+    antigos[i].tmdb = d->elenco[i].tmdb;
+  }
+  if (!soVazios) d->nElenco = 0;
+  for (i = 0; i < 4; i++) {
+    // Sem cast novo, conserva a lista ANTES de completar fotos da equipe.
+    if (i == 2 && !d->nElenco && nAntigos) {
+      d->nElenco = nAntigos;
+      for (int j = 0; j < nAntigos; j++) {
+        memcpy(d->elenco[j].nome, antigos[j].nome, sizeof antigos[j].nome);
+        memcpy(d->elenco[j].papel, antigos[j].papel, sizeof antigos[j].papel);
+        memcpy(d->elenco[j].foto, antigos[j].foto, sizeof antigos[j].foto);
+        d->elenco[j].tmdb = antigos[j].tmdb;
+      }
+    }
+    const char *a = i == 0 ? raiz : i == 1 ? rico :
+                    elencoCampo(extra, i == 2 ? "directors" : "writers");
+    if (!a || *a != '[') continue;
+    p = a + 1;
+    while (*p && (unsigned char)*p <= ' ') p++;
+    while (*p == '"' || *p == '{') {
+      ElencoMeta e;
+      if (elencoLerPessoa(p, &e)) {
+        int k = elencoIndice(d, e.nome);
+        // Equipe so completa a foto de quem JA esta na fileira. Nao muda
+        // o teto/ordem de atores; character da equipe costuma ser o nome.
+        if (i >= 2) e.papel[0] = 0;
+        if (k < 0 && i < 2 && d->nElenco < CAT_ELENCO_MAX) {
+          int j;
+          k = d->nElenco++;
+          memset(&d->elenco[k], 0, sizeof d->elenco[k]);
+          snprintf(d->elenco[k].nome, sizeof d->elenco[k].nome, "%s", e.nome);
+          for (j = 0; j < nAntigos; j++) if (elencoMesmoNome(e.nome, antigos[j].nome)) {
+            snprintf(d->elenco[k].papel, sizeof d->elenco[k].papel, "%s", antigos[j].papel);
+            snprintf(d->elenco[k].foto, sizeof d->elenco[k].foto, "%s", antigos[j].foto);
+            d->elenco[k].tmdb = antigos[j].tmdb;
+            break;
+          }
+        }
+        if (k >= 0) {
+          if (e.papel[0] && (!soVazios || !d->elenco[k].papel[0]))
+            snprintf(d->elenco[k].papel, sizeof d->elenco[k].papel, "%s", e.papel);
+          if (e.foto[0] && ((!soVazios && i < 2) || !d->elenco[k].foto[0]))
+            snprintf(d->elenco[k].foto, sizeof d->elenco[k].foto, "%s", e.foto);
+        }
+      }
+      p = elencoProximo(p);
+      if (!p) break;
+    }
+  }
+  if (!soVazios || !d->direcao[0]) {
+    const char *a = elencoCampo(m, "director");
+    char nome[128] = "";
+    if (a && *a == '[') {
+      a++; while (*a && (unsigned char)*a <= ' ') a++;
+      if (*a == '"') js_cadeia(a, nome, sizeof nome);
+    }
+    if (!nome[0]) {
+      a = elencoCampo(extra, "directors");
+      if (a && *a == '[') {
+        a++; while (*a && (unsigned char)*a <= ' ') a++;
+        if (*a == '{') js_texto_raiz_em(a, js_fim(a), "name", nome, sizeof nome);
+      }
+    }
+    if (nome[0]) snprintf(d->direcao, sizeof d->direcao, "%s", nome);
+  }
+  return d->nElenco;
+}
+
+static int tmdbElenco(const char *json, CatItem *d, int soVazios) {
   enum { MAX_TMDB = 48 };
   struct { char nome[64], papel[64], foto[512]; long id; int usado; } *t;
-  char alvo[64], outro[64];
   const char *p;
   int n = 0, i, k, casados = 0;
   if (!json || !d) return 0;
@@ -6732,16 +6897,14 @@ int desc_tmdb_elenco(const char *json, CatItem *d) {
   }
   // Os nomes que ja estao na lista (do Cinemeta, ou de uma passada anterior).
   for (k = 0; k < d->nElenco; k++) {
-    normElenco(d->elenco[k].nome, alvo, sizeof alvo);
-    if (!alvo[0]) continue;
     for (i = 0; i < n; i++) {
       if (t[i].usado) continue;
-      normElenco(t[i].nome, outro, sizeof outro);
-      if (strcmp(alvo, outro)) continue;
+      if (!elencoMesmoNome(d->elenco[k].nome, t[i].nome)) continue;
+      if (d->elenco[k].tmdb > 0 && t[i].id > 0 && d->elenco[k].tmdb != t[i].id) continue;
       t[i].usado = 1;
-      if (t[i].papel[0])
+      if (t[i].papel[0] && (!soVazios || !d->elenco[k].papel[0]))
         snprintf(d->elenco[k].papel, sizeof d->elenco[k].papel, "%s", t[i].papel);
-      if (t[i].foto[0])
+      if (t[i].foto[0] && (!soVazios || !d->elenco[k].foto[0]))
         snprintf(d->elenco[k].foto, sizeof d->elenco[k].foto, "%s", t[i].foto);
       if (t[i].id > 0) d->elenco[k].tmdb = t[i].id;
       casados++;
@@ -6760,6 +6923,10 @@ int desc_tmdb_elenco(const char *json, CatItem *d) {
   }
   free(t);
   return casados;
+}
+
+int desc_tmdb_elenco(const char *json, CatItem *d) {
+  return tmdbElenco(json, d, 0);
 }
 
 // O nome que o TMDB devolve quando NAO tem traducao e "Episodio 3" (ou o
@@ -7640,36 +7807,7 @@ static int metaCatalogoResolver(const CatItem *orig, MetaFontes *mf, int indice)
 // Elenco/direcao/generos/nota/pais a partir de uma ficha, so nos campos que
 // `d` ainda tem vazios (`soVazios`=1) ou todos os que a ficha traz (0).
 static void fichaDe(CatItem *d, const char *corpo, int soVazios) {
-  const char *c = js_array(corpo, NULL, "cast");
-  if (!soVazios || !d->nElenco) {
-    int k = 0;
-    while (c && k < CAT_ELENCO_MAX) {
-      size_t n2 = 0;
-      const char *p2 = c;
-      if (*p2 != '"') break;
-      p2++;
-      while (*p2 && *p2 != '"' && n2 + 1 < sizeof d->elenco[k].nome) d->elenco[k].nome[n2++] = *p2++;
-      d->elenco[k].nome[n2] = 0;
-      d->elenco[k].papel[0] = 0;
-      d->elenco[k].foto[0] = 0;
-      d->elenco[k].tmdb = 0;
-      k++;
-      p2++;
-      while (*p2 == ' ') p2++;
-      c = (*p2 == ',') ? p2 + 1 : NULL;
-      while (c && *c == ' ') c++;
-    }
-    if (k) d->nElenco = k;
-  }
-  if (!soVazios || !d->direcao[0]) {
-    const char *dr = js_array(corpo, NULL, "director");
-    if (dr && *dr == '"') {
-      size_t n2 = 0;
-      dr++;
-      while (*dr && *dr != '"' && n2 + 1 < sizeof d->direcao) d->direcao[n2++] = *dr++;
-      d->direcao[n2] = 0;
-    }
-  }
+  desc_meta_elenco(corpo, d, soVazios);
   { char lista[160];
     generosDe(corpo, lista, sizeof lista, strcmp(d->tipo, "movie") ? "series" : "movie");
     // O genero que o catalogo trouxe ("Programa de TV") e o rotulo do tipo, nao
@@ -7911,34 +8049,8 @@ static void *buscarEps(void *u) {
   // novo para cada uma seria tres viagens ao mesmo lugar.
   {
     CatItem edit = *it;
-    int manter = 0;
-    const char *c = js_array(corpo, NULL, "cast");
-    int k = 0;
-    while (c && k < CAT_ELENCO_MAX) {
-      size_t n2 = 0;
-      const char *p2 = c;
-      if (*p2 != '"') break;
-      p2++;
-      while (*p2 && *p2 != '"' && n2 + 1 < sizeof edit.elenco[k].nome)
-        edit.elenco[k].nome[n2++] = *p2++;
-      edit.elenco[k].nome[n2] = 0;
-      edit.elenco[k].papel[0] = 0;   // o Cinemeta nao diz o personagem
-      edit.elenco[k].foto[0] = 0;
-      k++;
-      p2++;
-      while (*p2 == ' ') p2++;
-      c = (*p2 == ',') ? p2 + 1 : NULL;
-      while (c && *c == ' ') c++;
-    }
-    edit.nElenco = k;
-    { const char *dr = js_array(corpo, NULL, "director");
-      if (dr && *dr == '"') {
-        size_t n2 = 0;
-        dr++;
-        while (*dr && *dr != '"' && n2 + 1 < sizeof edit.direcao)
-          edit.direcao[n2++] = *dr++;
-        edit.direcao[n2] = 0;
-      } }
+    int manter = (externo || viaCatalogo) ? DESC_MANTER_ELENCO : 0;
+    desc_meta_elenco(corpo, &edit, 0);
     // GENEROS, NOTA E PAIS. Vinham so do CATALOGO, e o catalogo do Cinemeta nao
     // traz nenhum dos tres: a linha de meta ficava com o TIPO ("Programa de TV")
     // no lugar dos generos, sem selo do IMDb e sem pais. O /meta traz os tres, e
@@ -8022,6 +8134,7 @@ static void *buscarEps(void *u) {
           if (metaTextos(c5, tA, sizeof tA, NULL, 0)) {
             generosDe(c5, lista, sizeof lista, tipoA);
             if (lista[0]) snprintf(edit.genero, sizeof edit.genero, "%s", lista);
+            desc_meta_elenco(c5, &edit, 0);
             cA = c5;
           } else free(c5);
         }
