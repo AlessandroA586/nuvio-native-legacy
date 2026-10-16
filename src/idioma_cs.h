@@ -5555,7 +5555,7 @@
   T("mistério", "záhada"),
   T("mitologia", "mytologie"),
   T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "neplatná šablona: použijte http(s):// a {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} nebo {tipo_tmdb}"),
-  T("modelo longo demais: o endereço pronto passa de 512 caracteres", "šablona je příliš dlouhá: výsledná adresa má přes 512 znaků"),
+  T("modelo longo demais: o endereço pronto passa de 2048 caracteres", "šablona je příliš dlouhá: výsledná adresa má přes 2048 znaků"),
   T("monstros", "netvor"),
   T("mostrar", "zobrazit"),
   T("motor desta TV · versão %s", "jádro této televize · verze %s"),

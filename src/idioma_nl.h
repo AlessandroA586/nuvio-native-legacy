@@ -5555,7 +5555,7 @@
   T("mistério", "mysterie"),
   T("mitologia", "mythologie"),
   T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "ongeldig sjabloon: gebruik http(s):// en {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} of {tipo_tmdb}"),
-  T("modelo longo demais: o endereço pronto passa de 512 caracteres", "sjabloon te lang: het uiteindelijke adres is langer dan 512 tekens"),
+  T("modelo longo demais: o endereço pronto passa de 2048 caracteres", "sjabloon te lang: het uiteindelijke adres is langer dan 2048 tekens"),
   T("monstros", "monster"),
   T("mostrar", "tonen"),
   T("motor desta TV · versão %s", "engine van deze tv · versie %s"),

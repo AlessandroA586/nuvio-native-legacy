@@ -5554,7 +5554,7 @@
   { "mistério", "mystery" },
   { "mitologia", "mythology" },
   { "modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "invalid template: use http(s):// and {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} or {tipo_tmdb}" },
-  { "modelo longo demais: o endereço pronto passa de 512 caracteres", "template too long: the finished address goes over 512 characters" },
+  { "modelo longo demais: o endereço pronto passa de 2048 caracteres", "template too long: the finished address goes over 2048 characters" },
   { "monstros", "monster" },
   { "mostrar", "show" },
   { "motor desta TV · versão %s", "this TV's engine · version %s" },

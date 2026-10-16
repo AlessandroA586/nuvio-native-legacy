@@ -5555,7 +5555,7 @@
   T("mistério", "tajemnica"),
   T("mitologia", "mitologia"),
   T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "nieprawidłowy szablon: użyj http(s):// i {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} lub {tipo_tmdb}"),
-  T("modelo longo demais: o endereço pronto passa de 512 caracteres", "szablon za długi: gotowy adres przekracza 512 znaków"),
+  T("modelo longo demais: o endereço pronto passa de 2048 caracteres", "szablon za długi: gotowy adres przekracza 2048 znaków"),
   T("monstros", "potwór"),
   T("mostrar", "pokaż"),
   T("motor desta TV · versão %s", "silnik tego telewizora · wersja %s"),
