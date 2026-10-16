@@ -28,10 +28,12 @@ static void gfxBlend(int on) {
 // shader que usasse a mesma variavel.
 // Os uniforms proprios do GFX_VIDRO, na ordem de Programa.vid.
 enum { VID_V0, VID_V1, VID_UVPX, VID_SCRT, VID_SCRB, VID_ARO, VID_AROLUZ, VID_LUZBORDA,
-       VID_LUZDIR, VID_ESPEC, VID_DENS, VID_AMOSTRA, VID_RUIDO, VID_RUIDOESC, VID_MAPA, VID_NU };
+       VID_LUZDIR, VID_ESPEC, VID_DENS, VID_AMOSTRA, VID_RUIDO, VID_RUIDOESC, VID_MAPA,
+       VID_FOSB, VID_MAPAB, VID_FOSA, VID_FOSR, VID_FOSLUZ, VID_FOSLUZCOR, VID_FOSVEU, VID_NU };
 static const char *const VID_NOMES[VID_NU] = {
   "uV0", "uV1", "uUvPx", "uScrT", "uScrB", "uAro", "uAroLuz", "uLuzBorda",
-  "uLuzDir", "uEspec", "uDens", "uAmostra", "uRuido", "uRuidoEsc", "uMapa" };
+  "uLuzDir", "uEspec", "uDens", "uAmostra", "uRuido", "uRuidoEsc", "uMapa",
+  "uFosB", "uMapaB", "uFosA", "uFosR", "uFosLuz", "uFosLuzCor", "uFosVeu" };
 typedef struct {
   GLuint prog;
   GLint rect, tela, tex, foco, reflexo, par, raio, cor, asp, texAsp, forcarCover, veuTela, borda, varre, veu, desl, fundo,
@@ -1425,7 +1427,55 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "uniform NV_HP vec2 uRuidoEsc;\n"
   // uMapa: UV da tela -> UV da fonte (a arte pre-desfocada no retangulo dela).
   "uniform NV_HP vec4 uMapa;\n"
-  "vec3 vd_src(NV_HP vec2 s){ return texture2D(uTex, s * uMapa.xy + uMapa.zw).rgb; }\n"
+  // What the backdrop layer drew over that art, redone on it here (no capture):
+  // uFosB/uMapaB = the outgoing art of a crossfade (unit 2); uFosA = alpha of
+  // the art (x) and of the outgoing one (y), z = hero ramps (1 GFX_HERO, 2
+  // GFX_HERO_CHEIO) in the rect uFosR (screen UV, y down: x0, y0, 1/w, 1/h);
+  // uFosLuz/uFosLuzCor = a dark radial light (gfx_luz_canto: centre, 1/reach
+  // per axis; colour, alpha); uFosVeu = full-screen flat veils (c * a + rgb).
+  "uniform sampler2D uFosB;\n"
+  "uniform NV_HP vec4 uMapaB;\n"
+  "uniform vec4 uFosA;\n"
+  "uniform NV_HP vec4 uFosR;\n"
+  "uniform NV_HP vec4 uFosLuz;\n"
+  "uniform vec4 uFosLuzCor;\n"
+  "uniform vec4 uFosVeu;\n"
+  // The GFX_HERO / GFX_HERO_CHEIO ramps, copied.
+  "float vd_rampa(NV_HP vec2 u){\n"
+  "  float av, t, ah;\n"
+  "  if (uFosA.z < 1.5) {\n"
+  "    av = clamp((u.y-0.820)/0.072,0.0,1.0)*0.25 + clamp((u.y-0.892)/0.063,0.0,1.0)*0.40\n"
+  "       + clamp((u.y-0.955)/0.045,0.0,1.0)*0.35;\n"
+  "    t = u.x/0.45;\n"
+  "    ah = (1.0 - clamp(t/0.22,0.0,1.0)*0.14 - clamp((t-0.22)/0.24,0.0,1.0)*0.30\n"
+  "        - clamp((t-0.46)/0.30,0.0,1.0)*0.40 - clamp((t-0.76)/0.24,0.0,1.0)*0.16) * step(u.x, 0.45);\n"
+  "  } else {\n"
+  "    av = clamp((u.y-0.640)/0.108,0.0,1.0)*0.35 + clamp((u.y-0.748)/0.108,0.0,1.0)*0.40\n"
+  "       + clamp((u.y-0.856)/0.144,0.0,1.0)*0.25;\n"
+  "    t = u.x/0.65;\n"
+  "    ah = (1.0 - clamp(t/0.22,0.0,1.0)*0.10 - clamp((t-0.22)/0.24,0.0,1.0)*0.10\n"
+  "        - clamp((t-0.46)/0.30,0.0,1.0)*0.38 - clamp((t-0.76)/0.24,0.0,1.0)*0.42) * step(u.x, 0.65);\n"
+  "  }\n"
+  "  return clamp(ah + av - ah*av, 0.0, 1.0);\n"
+  "}\n"
+  "vec3 vd_src(NV_HP vec2 s){\n"
+  "  NV_HP vec2 e = vec2(s.x, 1.0 - s.y);\n"
+  "  float r = 0.0, k = 1.0;\n"
+  "  vec3 c = uFundo;\n"
+  "  if (uFosA.z > 0.5) {\n"
+  "    NV_HP vec2 u = (e - uFosR.xy) * uFosR.zw;\n"
+  "    r = vd_rampa(u);\n"
+  "    k = step(0.0, u.x) * step(u.x, 1.0) * step(0.0, u.y) * step(u.y, 1.0);\n"
+  "  }\n"
+  "  if (uFosA.y > 0.0) c = mix(c, mix(texture2D(uFosB, s * uMapaB.xy + uMapaB.zw).rgb, uFundo, r), uFosA.y * k);\n"
+  "  c = mix(c, mix(texture2D(uTex, s * uMapa.xy + uMapa.zw).rgb, uFundo, r), uFosA.x * k);\n"
+  "  if (uFosLuzCor.a > 0.0) {\n"
+  "    float l = clamp(1.0 - length((e - uFosLuz.xy) * uFosLuz.zw), 0.0, 1.0);\n"
+  "    l = l * l * (3.0 - 2.0 * l);\n"
+  "    c = mix(c, uFosLuzCor.rgb, l * l * uFosLuzCor.a);\n"
+  "  }\n"
+  "  return c * uFosVeu.a + uFosVeu.rgb;\n"
+  "}\n"
   "vec3 vd_dither(vec3 c){ return c + (texture2D(uRuido, vAmb * uRuidoEsc).r - 0.5) * (2.0 / 255.0); }\n"
   "NV_HP float vd_box(NV_HP vec2 p, NV_HP vec2 b, NV_HP float r){\n"
   "  NV_HP vec2 q = abs(p) - b + vec2(r);\n"
@@ -1584,7 +1634,7 @@ int gfx_iniciar(void) {
   // Capturas (tests/*_shot): NUVIO_TAMANHO_UI=1.2 liga o "Tamanho da
   // interface" sem passar por Ajustes. No app quem define e ajustes.c.
   { const char *t = getenv("NUVIO_TAMANHO_UI"); if (t && *t) { gfx_escala_ui_definir((float)atof(t)); escUiFixa = 1; } }
-  char fonte[12000];   // cabeca + sdf/cover + corpo; o maior (camadas) passa de 6000
+  char fonte[16000];   // cabeca + sdf/cover + corpo; o maior (vidro) passa de 8000
   for (int m = 0; m < GFX_NMODOS; m++) {
     snprintf(fonte, sizeof fonte, "%s%s%s%s", FS_CABECA,
              PRECISA[m].sdf ? FS_SDF : "", PRECISA[m].cover ? FS_COVER : "",
@@ -1654,6 +1704,7 @@ int gfx_iniciar(void) {
     if (progs[m].amb >= 0) glUniform1i(progs[m].amb, 1);
     if (progs[m].texB >= 0) glUniform1i(progs[m].texB, 2);
     if (progs[m].vid[VID_RUIDO] >= 0) glUniform1i(progs[m].vid[VID_RUIDO], 3);
+    if (progs[m].vid[VID_FOSB] >= 0) glUniform1i(progs[m].vid[VID_FOSB], 2);
   }
   glUseProgram(progs[GFX_CARD].prog);
   progAtual = GFX_CARD;
@@ -1889,9 +1940,12 @@ static int foscoBloq; // este quadro tem video vivo por baixo (gfx_vidro_fosco_b
 // (gfx_desfocado, 96x54), or a screen-space bake that is blurred already (the
 // Borrada/Frost canals). No screen capture, no blur pass per frame. Never the
 // title palette (the 14/10 green cast). fosMapa: screen UV -> source UV.
-static GLuint fosTex;
-static int fosPronto;
-static float fosMapa[4];
+// What the backdrop drew over the art is redone in the shader (vd_src): the
+// art under it while a crossfade runs (fosTexB), the hero ramps, the
+// full-screen veils and a dark radial light drawn before the glass.
+static GLuint fosTex, fosTexB;
+static int fosPronto, fosProntoB;
+static float fosMapa[4], fosMapaB[4], fosA[4], fosR[4], fosLuz[4], fosLuzCor[4], fosVeu[4];
 unsigned gfx_quadro_n;
 // Os vidros e os furos do quadro, em layout de tela (x0, y0, x1, y1): um vidro
 // sobre outro ou sobre o video sai chapado.
@@ -1899,7 +1953,7 @@ unsigned gfx_quadro_n;
 #define VID_NFUROS 4
 static int vidroNVidros, vidroNFuros;
 static float vidroVidros[VID_N][4], vidroFuros[VID_NFUROS][4];
-int gfx_vidro_capturas, gfx_vidro_passadas;   // always 0 now: no capture, no blur pass
+int gfx_vidro_capturas, gfx_vidro_passadas, gfx_vidro_chapados;   // capturas/passadas: always 0 now
 double gfx_vidro_fill, gfx_vidro_copia;
 // The backdrop layer: every draw before the frame's first content draw (art,
 // light, veils). Its art is the frost source; fundoFim = 1 once it closed.
@@ -1919,31 +1973,67 @@ static int vidroFundoModo(GfxRect r, GfxModo m) {
 static const unsigned long long VID_ARTE =
   1ull << GFX_HERO | 1ull << GFX_HERO_CHEIO | 1ull << GFX_HERO_CAM | 1ull << GFX_HERO_CHEIO_CAM |
   1ull << GFX_DETALHE | 1ull << GFX_ARTE | 1ull << GFX_VITRINE | 1ull << GFX_VITRINE_DIN;
-static void vidroArte(GLuint tex, GfxRect r) {
-  float a = gfx_tex_aspect_atual, q = r.w / r.h, uw = 1.0f, vh = 1.0f;
+// A new backdrop art (alpha `alfa`) over what is there: the previous art
+// stays under it while it is translucent; veils drawn before it are under it.
+static void vidroCamada(GLuint tex, int pronto, float alfa) {
+  if (alfa < 0.999f && fosTex) {
+    fosTexB = fosTex; fosProntoB = fosPronto; fosA[1] = fosA[0];
+    memcpy(fosMapaB, fosMapa, sizeof fosMapa);
+  } else { fosTexB = 0; fosA[1] = 0.0f; }
+  fosTex = tex; fosPronto = pronto; fosA[0] = alfa;
+  fosVeu[0] = fosVeu[1] = fosVeu[2] = 0.0f; fosVeu[3] = 1.0f; fosLuzCor[3] = 0.0f;
+}
+static void vidroArte(GLuint tex, GfxRect r, float a, float alfa, GfxModo modo) {
+  float q = r.w / r.h, uw = 1.0f, vh = 1.0f;
   if (a > 0.05f) { if (a > q) uw = q / a; else vh = a / q; }
-  fosTex = tex; fosPronto = 0;
+  vidroCamada(tex, 0, alfa);
   fosMapa[0] = NV_TELA_W * uw / r.w; fosMapa[1] = -NV_TELA_H * vh / r.h;
   fosMapa[2] = (1.0f - uw) * 0.5f - r.x * uw / r.w;
   fosMapa[3] = (1.0f - vh) * 0.5f + (NV_TELA_H - r.y) * vh / r.h;
+  fosA[2] = (modo == GFX_HERO || modo == GFX_HERO_CAM) ? 1.0f :
+            (modo == GFX_HERO_CHEIO || modo == GFX_HERO_CHEIO_CAM) ? 2.0f : 0.0f;
+  fosR[0] = r.x / NV_TELA_W; fosR[1] = r.y / NV_TELA_H; fosR[2] = NV_TELA_W / r.w; fosR[3] = NV_TELA_H / r.h;
 }
 static void vidroCanal(GLuint tex) {
-  fosTex = tex; fosPronto = 1;
-  fosMapa[0] = fosMapa[1] = 1.0f; fosMapa[2] = fosMapa[3] = 0.0f;
+  vidroCamada(tex, 1, 1.0f);
+  fosMapa[0] = fosMapa[1] = 1.0f; fosMapa[2] = fosMapa[3] = 0.0f; fosA[2] = 0.0f;
 }
 static int vidroCruza(const float a[4], const float b[4]) {
   return a[2] > a[0] && b[2] > b[0] && a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
 }
-// Todo desenho do quadro, ja em layout de tela: a arte do backdrop vira a
-// fonte do fosco (num crossfade, a que ja passou da metade), e o primeiro
-// desenho de conteudo fecha o backdrop.
-static void vidroDesenho(GfxRect r, GLuint tex, GfxModo modo, float ca) {
-  if (fundoFim || snapAtivo || miniAtiva || giroOn || telaW != telaRealW || telaH != telaRealH ||
-      modo == GFX_SOMBRA || r.x >= NV_TELA_W || r.y >= NV_TELA_H || r.x + r.w <= 0.0f || r.y + r.h <= 0.0f)
+static int vidroTela(GfxRect r) {
+  return r.x <= 0.0f && r.y <= 0.0f && r.x + r.w >= NV_TELA_W && r.y + r.h >= NV_TELA_H;
+}
+// Every draw of the frame, already in screen layout: the backdrop art becomes
+// the frost source (both arts of a crossfade, by alpha), and the first content
+// draw closes the backdrop. Full-screen flat veils and a big dark radial light
+// over the art, before or after that (the menu, a modal), go into the source.
+static void vidroDesenho(GfxRect r, GLuint tex, GfxModo modo, float foco, float parx, float pary,
+                         float cr, float cg, float cb, float ca) {
+  float va = ca * gfx_opacidade_grupo;
+  if (snapAtivo || miniAtiva || giroOn || telaW != telaRealW || telaH != telaRealH || modo == GFX_SOMBRA ||
+      r.x >= NV_TELA_W || r.y >= NV_TELA_H || r.x + r.w <= 0.0f || r.y + r.h <= 0.0f)
     return;
+  if (fosTex && modo == GFX_COR && vidroTela(r)) {
+    int i;
+    for (i = 0; i < 3; i++) fosVeu[i] = fosVeu[i] * (1.0f - va) + (i == 0 ? cr : i == 1 ? cg : cb) * va;
+    fosVeu[3] *= 1.0f - va;
+  } else if (fosTex && modo == GFX_LUZ && cr + cg + cb < 0.3f && r.w * r.h >= 0.25f * NV_TELA_W * NV_TELA_H) {
+    float alc = foco * r.h;
+    fosLuz[0] = (r.x + parx * r.w) / NV_TELA_W; fosLuz[1] = (r.y + pary * r.h) / NV_TELA_H;
+    fosLuz[2] = NV_TELA_W / alc; fosLuz[3] = NV_TELA_H / alc;
+    fosLuzCor[0] = cr; fosLuzCor[1] = cg; fosLuzCor[2] = cb; fosLuzCor[3] = va;
+  }
+  if (fundoFim) return;
   if (!vidroFundoModo(r, modo)) { vidroFundoFechar(); return; }
-  if (tex && ca >= 0.5f && r.w * r.h >= 0.25f * NV_TELA_W * NV_TELA_H && ((VID_ARTE >> (unsigned)modo) & 1ull))
-    vidroArte(tex, r);
+  if (tex && (va > 0.0f || ((modo == GFX_HERO_CAM || modo == GFX_HERO_CHEIO_CAM) && camAlfaB > 0.0f)) &&
+      r.w * r.h >= 0.25f * NV_TELA_W * NV_TELA_H &&
+      (((VID_ARTE >> (unsigned)modo) & 1ull) || (modo == GFX_CARD && vidroTela(r)))) {
+    if (modo == GFX_HERO_CAM || modo == GFX_HERO_CHEIO_CAM) {
+      if (camAlfaB > 0.0f) vidroArte(camTexB, r, camAspB, camAlfaB * gfx_opacidade_grupo, modo);
+    }
+    vidroArte(tex, r, gfx_tex_aspect_atual, va, modo);
+  }
 }
 
 // Furo para o video (alfa 0): o vidro que o cruza vai chapado — o que esta
@@ -1965,10 +2055,10 @@ void gfx_novo_quadro(void) {
   memcpy(gfx_fill_modo_ult, gfx_fill_modo, sizeof gfx_fill_modo);
   memset(gfx_fill_modo, 0, sizeof gfx_fill_modo);
   desfGeradosQuadro = 0;
-  ambPendente = 0; ambIntacta = 0; foscoBloq = 0; fosTex = 0;
+  ambPendente = 0; ambIntacta = 0; foscoBloq = 0; fosTex = 0; fosTexB = 0;
   vidroNVidros = 0; vidroNFuros = 0;
   fundoFim = 0;
-  gfx_vidro_capturas = 0; gfx_vidro_passadas = 0;
+  gfx_vidro_capturas = 0; gfx_vidro_passadas = 0; gfx_vidro_chapados = 0;
   gfx_vidro_fill = gfx_vidro_copia = 0.0;
   ambFonte = 0; dinPendente = 0; dinAdiado = 0; dinNOp = 0;
   gfx_n_assados = 0;
@@ -2174,6 +2264,7 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
     float va = ca * gfx_opacidade_grupo, rx = r.x, ry = r.y, rw = r.w, rh = r.h;
     if (va > 0.001f && va < 0.999f && rx <= 0.0f && ry <= 0.0f && rx + rw >= NV_TELA_W && ry + rh >= NV_TELA_H) {
       ambPendente = 0;
+      vidroDesenho(r, tex, modo, foco, parx, pary, cr, cg, cb, ca);
       ambPintarVeu(cr, cg, cb, va);
       return;
     }
@@ -2252,7 +2343,7 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
   Uint64 t0 = SDL_GetPerformanceCounter();
 #endif
   gfx_n_rect++;
-  vidroDesenho(r, tex, modo, ca);
+  vidroDesenho(r, tex, modo, foco, parx, pary, cr, cg, cb, ca);
   { float area = (r.w * r.h) / (NV_TELA_W * NV_TELA_H) *
                  (subAtual[2] - subAtual[0]) * (subAtual[3] - subAtual[1]);
     if (gfx_rastro_grandes && (area >= 0.12f || (modo == GFX_COR && area >= 0.01f)))
@@ -3151,22 +3242,23 @@ static void vidroFundoFechar(void) { fundoFim = 1; }
 
 // A fonte do fosco deste quadro, ou 0 = chapado. A copia 96x54 sai uma vez por
 // arte; no quadro em que ela nao cabe no limite do gfx_desfocado, a anterior.
-static GLuint vidroFonte(void) {
+// *b = the outgoing art of a crossfade, blurred, or 0 (then it is not drawn).
+static GLuint vidroFonte(GLuint *b) {
   static GLuint ult;
   GLuint t;
+  *b = 0;
   if (!fosTex) return 0;
-  if (fosPronto) return fosTex;
-  t = gfx_desfocado(fosTex, "vidro");
+  if (fosTexB) *b = fosProntoB ? fosTexB : gfx_desfocado(fosTexB, "vidro");
+  t = fosPronto ? fosTex : gfx_desfocado(fosTex, "vidro");
   if (t) ult = t;
   return t ? t : ult;
 }
-
 
 // Os parametros do proximo GFX_VIDRO, postos por gfx_vidro e enviados por
 // gfx_rect (vidroAplicar) com o retangulo ja em layout de tela.
 static struct {
   int tipo;
-  GLuint fonte;   // the blurred backdrop, 0 = chapado
+  GLuint fonte, fonteB;   // the blurred backdrop (0 = chapado) and the art under it
   float raio, scrT[4], scrB[4], aro, aroLuz, dens[4];
 } vidPend;
 static void vidroAplicar(Programa *P, GfxRect r) {
@@ -3196,6 +3288,14 @@ static void vidroAplicar(Programa *P, GfxRect r) {
               r.w * 0.25f / NV_TELA_W, r.h * 0.25f / NV_TELA_H);
   glUniform2f(u[VID_RUIDOESC], (float)telaW / VID_RUIDO_N, (float)telaH / VID_RUIDO_N);
   glUniform4fv(u[VID_MAPA], 1, fosMapa);
+  glUniform4fv(u[VID_MAPAB], 1, fosMapaB);
+  glUniform4f(u[VID_FOSA], fosA[0], vidPend.fonteB ? fosA[1] : 0.0f, fosA[2], 0.0f);
+  glUniform4fv(u[VID_FOSR], 1, fosR);
+  glUniform4fv(u[VID_FOSLUZ], 1, fosLuz);
+  glUniform4fv(u[VID_FOSLUZCOR], 1, fosLuzCor);
+  glUniform4fv(u[VID_FOSVEU], 1, fosVeu);
+  glActiveTexture(GL_TEXTURE2);
+  glBindTexture(GL_TEXTURE_2D, vidPend.fonteB);
   glActiveTexture(GL_TEXTURE3);
   glBindTexture(GL_TEXTURE_2D, vidRuido);
   glActiveTexture(GL_TEXTURE0);
@@ -3222,7 +3322,8 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   vidRuidoPreparar();   // o dither vale tambem no chapado
   if (!chapado) {
     gfx_ambiente_descarregar();   // a luz e o fundo pendentes ficam ATRAS do vidro
-    vidPend.fonte = vidroFonte();
+    vidPend.fonte = vidroFonte(&vidPend.fonteB);
+    gfx_vidro_chapados += !vidPend.fonte;
   }
   // Scrim CINZA NEUTRO (o verde vinha da fonte, nao daqui; R = G = B): a
   // barra 14/255 como a deles. Sem fonte, o scrim e o vidro inteiro.
@@ -3650,7 +3751,7 @@ void gfx_furo(GfxRect r) {
   if (ambPendente) { if (cheia) ambPendente = 0; else gfx_ambiente_descarregar(); }
   ambIntacta = 0;
   gfx_n_rect++;
-  vidroDesenho(r, 0, GFX_COR, 0.0f);
+  vidroDesenho(r, 0, GFX_COR, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
   vidroFuro(r);
   { float area = (r.w * r.h) / (NV_TELA_W * NV_TELA_H) *
                  (subAtual[2] - subAtual[0]) * (subAtual[3] - subAtual[1]);

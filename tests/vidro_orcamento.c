@@ -49,16 +49,16 @@ static GLuint arte(int r0, int b0) {
 static GLuint artA, artB;
 static float mix;
 static int detalhe;
+static GfxModo hero = GFX_HERO;
 static void quadro(float rola, Uint32 agora) {
   GfxRect tela = { 0, 0, 1920, 1080 };
   int i;
   gfx_novo_quadro();
   glClearColor(0, 0, 0, 1); glClear(GL_COLOR_BUFFER_BIT);
   if (detalhe) gfx_rect(tela, artB, GFX_DETALHE, 0.4f, 0, 0, 0.0f, 0, 0, 0, 1.0f);
-  else {
-    if (mix < 1.0f) gfx_rect(tela, artA, GFX_HERO, 0, 0, 0, 0, 0, 0, 0, 1.0f);
-    if (mix > 0.0f) gfx_rect(tela, artB, GFX_HERO, 0, 0, 0, 0, 0, 0, 0, mix);
-  }
+  // The crossfade goes through gfx_hero_camadas, as home.c does: the incoming
+  // art is the pass's texture, the outgoing one its layer B.
+  else assert(gfx_hero_camadas(tela, hero, artB, 16.0f / 9.0f, mix, artA, 16.0f / 9.0f, 1.0f - mix));
   for (i = 0; i < 12; i++)
     gfx_cor((GfxRect){ 0, 400 + i * 90.0f - rola, 1920, 60 }, 0, .1f + .06f * i, .2f, .5f - .03f * i, 1.0f);
   menu_atualizar(0.016f, agora);
@@ -67,10 +67,13 @@ static void quadro(float rola, Uint32 agora) {
   gfx_vidro_painel((GfxRect){ 1240, 140, 560, 220 }, 36.0f / 600.0f, 0.80f, 1.0f);
 }
 
-// Worst captures / passes over `n` frames, and whether the frost showed the
-// art's colour (flat glass is neutral gray, R = G = B) at the panel centre.
+// Worst captures / passes over `n` frames, whether the frost showed the art's
+// colour (flat glass is neutral gray, R = G = B; the two arts are mirrored, so
+// R - B cancels mid-crossfade, R + B - 2G does not) at the panel centre.
+// Count missing sources too: a translucent panel can show unblurred art even
+// when it fell back to the flat scrim.
 static void fase(const char *nome, int n, int k0, float rola0, float drola, float mix0, float dmix) {
-  int k, cap = 0, pas = 0, cor = 99;
+  int k, cap = 0, pas = 0, cor = 99, chap = 0;
   unsigned char p[4];
   for (k = 0; k < n; k++) {
     mix = mix0 + dmix * k;
@@ -78,12 +81,15 @@ static void fase(const char *nome, int n, int k0, float rola0, float drola, floa
     quadro(rola0 + drola * k, 16u * (k0 + k));
     if (gfx_vidro_capturas > cap) cap = gfx_vidro_capturas;
     if (gfx_vidro_passadas > pas) pas = gfx_vidro_passadas;
+    chap += gfx_vidro_chapados;
     glReadPixels(1520, LH - 250, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, p);
-    if (abs((int)p[0] - (int)p[2]) < cor) cor = abs((int)p[0] - (int)p[2]);
+    if (abs((int)p[0] + (int)p[2] - 2 * (int)p[1]) < cor) cor = abs((int)p[0] + (int)p[2] - 2 * (int)p[1]);
   }
-  printf("%s: up to %d captures and %d passes per frame, min |R-B| %d\n", nome, cap, pas, cor);
+  printf("%s: up to %d captures and %d passes per frame, min |R+B-2G| %d\n", nome, cap, pas, cor);
   confere(cap == 0 && pas == 0, nome);
   confere(cor >= 4, "frost shows the art behind the panel");
+  printf("%s: %d glasses fell back to the flat scrim\n", nome, chap);
+  confere(chap == 0, "frost source on every frame");
 }
 
 int main(void) {
@@ -122,7 +128,11 @@ int main(void) {
   // Warm-up: the bar springs settle in ~2 s.
   for (k = 0; k < 150; k++) quadro(0.0f, 16u * k);
   fase("home rows scrolling over the hero", 20, 150, 4.0f, 4.0f, 0.0f, 0.0f);
-  fase("hero crossfading to another art", 30, 170, 80.0f, 0.0f, 0.05f, 0.05f);
+  fase("hero crossfading to another art", 101, 170, 80.0f, 0.0f, 0.0f, 0.01f);
+  fase("hero crossfade first fractional alpha", 1, 271, 80.0f, 0.0f, 0.001f, 0.0f);
+  hero = GFX_HERO_CHEIO;
+  fase("full hero crossfading to another art", 101, 272, 80.0f, 0.0f, 0.0f, 0.01f);
+  fase("full hero crossfade first fractional alpha", 1, 373, 80.0f, 0.0f, 0.001f, 0.0f);
   fase("still home", 5, 200, 80.0f, 0.0f, 1.0f, 0.0f);
   detalhe = 1;
   fase("detail backdrop, page scrolling", 20, 205, 80.0f, 6.0f, 1.0f, 0.0f);
