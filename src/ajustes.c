@@ -4709,7 +4709,7 @@ static const char *pstTexto(int op) {
     case PST_EXTRA_RUIM:  return i18n("parâmetros inválidos (fmt, format, config e c não valem)");
     case PST_CHAVE_RUIM:  return i18n("chave inválida");
     case PST_MODELO_RUIM: return i18n("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}");
-    case PST_MODELO_LONGO: return i18n("modelo longo demais: o endereço pronto passa de 512 caracteres");
+    case PST_MODELO_LONGO: return i18n("modelo longo demais: o endereço pronto passa de 2048 caracteres");
     default: break;
   }
   { int e = atomic_load_explicit(&pstTeste, memory_order_acquire);

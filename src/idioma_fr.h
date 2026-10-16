@@ -5558,7 +5558,7 @@
   T("mistério", "mystère"),
   T("mitologia", "mythologie"),
   T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "modèle invalide : utilisez http(s):// et {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}"),
-  T("modelo longo demais: o endereço pronto passa de 512 caracteres", "modèle trop long : l’adresse finale dépasse 512 caractères"),
+  T("modelo longo demais: o endereço pronto passa de 2048 caracteres", "modèle trop long : l’adresse finale dépasse 2048 caractères"),
   T("monstros", "monstres"),
   T("mostrar", "afficher"),
   T("motor desta TV · versão %s", "moteur de ce téléviseur · version %s"),

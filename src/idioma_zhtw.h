@@ -5559,7 +5559,7 @@
   T("mistério", "懸疑"),
   T("mitologia", "神話"),
   T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "範本無效：請使用 http(s):// 以及 {imdb}、{imdb_id}、{tmdb}、{tmdb_id}、{id}、{type} 或 {tipo_tmdb}"),
-  T("modelo longo demais: o endereço pronto passa de 512 caracteres", "範本太長：產生的網址超過 512 個字元"),
+  T("modelo longo demais: o endereço pronto passa de 2048 caracteres", "範本太長：產生的網址超過 2048 個字元"),
   T("monstros", "怪物"),
   T("mostrar", "顯示"),
   T("motor desta TV · versão %s", "本機引擎 · 版本 %s"),

@@ -5559,7 +5559,7 @@
   T("mistério", "paslaptis"),
   T("mitologia", "mitologija"),
   T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "netinkamas šablonas: naudokite http(s):// ir {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} arba {tipo_tmdb}"),
-  T("modelo longo demais: o endereço pronto passa de 512 caracteres", "šablonas per ilgas: galutinis adresas viršija 512 simbolių"),
+  T("modelo longo demais: o endereço pronto passa de 2048 caracteres", "šablonas per ilgas: galutinis adresas viršija 2048 simbolių"),
   T("monstros", "pabaisa"),
   T("mostrar", "rodyti"),
   T("motor desta TV · versão %s", "šio televizoriaus variklis · versija %s"),

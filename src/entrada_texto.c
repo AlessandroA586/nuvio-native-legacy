@@ -53,13 +53,14 @@
 // (release, Voz.cs), e devolve por nv_tpk_texto_valor/nv_tpk_texto_fim. Host
 // antigo nao registra: texto_sistema_disponivel() da 0 e fica o teclado do app.
 #include "entrada_texto.h"
+#include "arteurl.h"
 #include <stdio.h>
 #include <string.h>
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
 
-#define TS_MAX 256
+#define TS_MAX NV_ARTE_URL_MAX
 
 static int aberto, viuTeclado, quadrosAberto;
 static Uint32 tipoEv;

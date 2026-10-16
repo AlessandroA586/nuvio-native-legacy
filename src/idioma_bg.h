@@ -5559,7 +5559,7 @@
   T("mistério", "мистерия"),
   T("mitologia", "митология"),
   T("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}", "невалиден шаблон: използвайте http(s):// и {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} или {tipo_tmdb}"),
-  T("modelo longo demais: o endereço pronto passa de 512 caracteres", "шаблонът е твърде дълъг: готовият адрес надхвърля 512 знака"),
+  T("modelo longo demais: o endereço pronto passa de 2048 caracteres", "шаблонът е твърде дълъг: готовият адрес надхвърля 2048 знака"),
   T("monstros", "чудовище"),
   T("mostrar", "покажи"),
   T("motor desta TV · versão %s", "двигател на този телевизор · версия %s"),
