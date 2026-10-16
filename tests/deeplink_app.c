@@ -9,10 +9,20 @@ static int count, opened, played, requested, detail;
 static int cwTocarT, cwTocarE, cwEspera;
 enum { TELA_BUSCA, MENU_BUSCAR, TELA_LOGIN, TELA_ESCOLHA_PERFIL };
 static int tela, busy;
+static int active, aguardandoFonte, fonteEscolhida, autoEsperaN;
+static int fontePendenteTipo, torrentPendente, stalkerRenovando;
+static unsigned sourceGeneration, torrentSessao;
+static int preparation, sourcePolicy, cancelled;
+static void preparoInvalidar(void) { preparation = 0; }
+static unsigned novaGeracaoFonte(void) { return ++sourceGeneration; }
+static void fa_nova_rodada(void) {}
+static void limparFontePendente(void) { fontePendenteTipo = 0; }
+static void limparFonteVOD(void) { sourcePolicy = 0; }
+static void p2pmotor_cancelar(void) { cancelled++; }
 static int desc_titulo_buscando(void) { return busy; }
-static int player_aberto(void) { return 0; }
+static int player_aberto(void) { return active; }
 static int player_retido(void) { return 0; }
-static void player_encerrar(void) {}
+static void player_encerrar(void) { active = 0; }
 static int detail_aberto(void) { return detail; }
 static void detail_fechar_seco(void) { detail = 0; }
 static int spainel_aberto(void) { return 0; }
@@ -60,6 +70,20 @@ int main(int argc, char **argv) {
     assert(!deeplink_pegar(&pending));
     return 0;
   }
+  // Replacing a player during source verification must preserve the new Play.
+  DeepLink replacement;
+  assert(deeplink_parse("nuvio-legacy://play/movie/603", &replacement));
+  count = 3; active = 1; aguardandoFonte = 2; fonteEscolhida = -2;
+  preparation = sourcePolicy = fontePendenteTipo = autoEsperaN = stalkerRenovando = 1;
+  torrentPendente = 4;
+  deeplinkAbrir(&replacement);
+  assert(opened == 2 && played == 1 && !active);
+  assert(aguardandoFonte == 0); // Otherwise app_atualizar consumes and drops Play.
+  assert(fonteEscolhida == -1 && !autoEsperaN && !stalkerRenovando);
+  assert(!preparation && !sourcePolicy && !fontePendenteTipo);
+  assert(sourceGeneration == 1 && torrentSessao == 1);
+  assert(torrentPendente == -1 && cancelled == 1);
+
   const char *urls[] = {"nuvio-legacy://play/movie/603",
                         "nuvio-legacy://play/series/603"};
   for (int series = 0; series <= 1; series++) {

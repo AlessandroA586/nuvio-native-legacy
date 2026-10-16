@@ -3146,6 +3146,17 @@ static int spotPode(void) {
 // busca num fio); o episodio pedido so toca se ele ja esta no catalogo.
 static void deeplinkAbrir(const DeepLink *d) {
   int k = -1, i;
+  // Invalidate outgoing source work before a new title can request Play.
+  preparoInvalidar();
+  novaGeracaoFonte();
+  fa_nova_rodada();
+  limparFontePendente();
+  limparFonteVOD();
+  aguardandoFonte = autoEsperaN = stalkerRenovando = 0;
+  fonteEscolhida = -1;
+  torrentSessao++;
+  torrentPendente = -1;
+  p2pmotor_cancelar();
   if (player_aberto() || player_retido()) player_encerrar();
   if (detail_aberto()) detail_fechar_seco();
   if (spainel_aberto()) spainel_fechar();
