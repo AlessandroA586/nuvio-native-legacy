@@ -62,8 +62,8 @@ int main(void) {
   cwo_marcar_estreia("tt1:1:2", AGORA + DIA);   // regravar troca, nao duplica
   assert(cwo_estreia("tt1:1:2") == AGORA + DIA);
   { char id[32];
-    for (i = 0; i < 200; i++) { snprintf(id, sizeof id, "tt9:%d:1", i); cwo_marcar_estreia(id, i); }
-    assert(cwo_estreia("tt9:199:1") == 199);   // cheia: a mais nova fica
+    for (i = 0; i < 201; i++) { snprintf(id, sizeof id, "tt9:%d:1", i); cwo_marcar_estreia(id, i); }
+    assert(cwo_estreia("tt9:200:1") == 200);   // cheia: a mais nova fica
     assert(cwo_estreia("tt9:0:1") == CWO_SEM_DATA); }
   puts("ok  estreias: regravar troca, tabela cheia gira");
 

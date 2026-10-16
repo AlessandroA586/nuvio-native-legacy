@@ -37,10 +37,9 @@ void cwo_corte(int principal, int nFut, int max, int *nPrincipal, int *nFuturos)
 }
 
 // --- Datas de estreia --------------------------------------------------------
-// 96: a fileira tem ate 12 itens por fonte e o Trakt guarda ate 64 "a seguir"
-// (TK_ULT_MAX). Cheia, a mais velha e sobrescrita em roda — o que importa e a
-// rodada atual.
-#define CWO_EST_MAX 96
+// 200: a fileira tem ate 40 itens por fonte (3 fontes = 120) e o Trakt guarda
+// ate 64 "a seguir" (TK_ULT_MAX). Cheia, a mais velha e sobrescrita em roda.
+#define CWO_EST_MAX 200
 static struct { char id[40]; long long ms; } est[CWO_EST_MAX];
 static int nEst, proxEst;
 static pthread_mutex_t estTrava = PTHREAD_MUTEX_INITIALIZER;

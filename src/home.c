@@ -115,11 +115,13 @@ int video_registro_negado(void); /* video.h: motivo do trailer bloqueado */
 #define MAX_FIL    64
 #endif
 _Static_assert(MAX_FIL >= CAT_FIL_MAX + 16, "a home precisa de folga sobre o teto do catalogo");
-// 13 e nao 12: sao 12 CARTAZES mais a coluna do card "Ver tudo", que ocupa a
-// posicao seguinte a ultima arte. Com 12 aqui, animFoco[r][12] escrevia fora do
-// vetor — o card nunca acendia ao receber foco e a memoria do vizinho era
-// corrompida em silencio.
-#define MAX_CARDS 33
+// 41: 40 cartazes (teto nativo de "Continuar assistindo", CONT_MAX) mais a
+// coluna do card "Ver tudo", que ocupa a posicao seguinte a ultima arte. Com
+// menos que isso, animFoco[r][n] escrevia fora do vetor — o card nunca
+// acendia ao receber foco e a memoria do vizinho era corrompida em silencio.
+#define MAX_CARDS 41
+// Mesmo valor que CONT_MAX em descoberta.c (issue #205).
+#define CW_TETO 40
 _Static_assert(DESC_ITENS_POR_FILEIRA <= MAX_CARDS - 1, "itens por fileira + Ver tudo cabem em MAX_CARDS");
 // A faixa editorial precisa de uma terceira alternativa para não terminar
 // visualmente depois de apenas dois cards. Quando o catálogo que virou
@@ -2962,7 +2964,11 @@ static void sincronizarFileiras(void) {
     // caber em MAX_CARDS - 1. Diminuir vale na hora (corta aqui); aumentar,
     // quando os catalogos forem pedidos de novo.
     { int teto = ajustes_itens_fileira();
-      if (teto > DESC_ITENS_POR_FILEIRA) teto = DESC_ITENS_POR_FILEIRA;
+      // "Continuar assistindo" nao segue "Itens por fileira": lista local que
+      // a pessoa ja preencheu, nao catalogo de rede — o teto e o nativo
+      // (CONT_MAX de descoberta.c); o web da 300.
+      if (!strcmp(cf->chave, "continue_watching")) teto = CW_TETO;
+      else if (teto > DESC_ITENS_POR_FILEIRA) teto = DESC_ITENS_POR_FILEIRA;
       fileiras[destino].n = cf->n > teto ? teto : cf->n; }
     // UMA COLUNA A MAIS: o card "Ver tudo" no fim. So em fileira que veio de um
     // CATALOGO de addon — "Continuar assistindo" e as listas do Trakt nao tem

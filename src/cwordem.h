@@ -72,7 +72,7 @@ int cwo_ordenar(const CwoItem *v, int n, int modo, long long agoraMs, int *perm)
 // futuros" e "Estilo streaming" nao mudavam nada: o episodio que ainda nao foi
 // ao ar sumia da tela em vez de ir para o fim ou para "Proximos episodios". O
 // web nao tem esse problema porque o slice dele e de 300 (CW_MAX_VISIBLE_ITEMS);
-// aqui a fileira e de 12, entao os futuros ganham ate um terco dela (minimo 1).
+// aqui a fileira e de 40 (CONT_MAX), entao os futuros ganham ate um terco dela (minimo 1).
 // Lugar que os futuros nao usam fica com os exibidos, e vice-versa.
 // montarContinuar reserva os pausados ANTES de chamar com os lugares restantes.
 void cwo_corte(int principal, int nFut, int max, int *nPrincipal, int *nFuturos);
