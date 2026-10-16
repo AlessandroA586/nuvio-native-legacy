@@ -16,12 +16,11 @@
 // ou fala) vem inteiro para o C; Concluido entrega, Voltar cancela, o painel
 // fechado pelo proprio teclado entrega o que ja tiver sido dito.
 //
-// QUANDO O BOTAO APARECE: o host registra sempre que monta o TextField e o
-// InputMethodContext, e diz o que a TV respondeu em
-// http://tizen.org/feature/microphone (1 tem, 0 nao tem, -1 sem resposta). O C
-// decide com o ajuste Tela inicial > Mais opcoes > Barra lateral > "Botao de
-// microfone na busca": Automatico esconde so com 0; Ligado mostra sempre;
-// Desligado esconde. Sem registro (sem IME), nunca ha botao.
+// The microphone button registers with unknown capability (-1) at startup.
+// TextField/InputMethodContext and feature/microphone are accessed only on an
+// explicit request, so defective IME firmware cannot block launch. Automatic
+// mode hides the button after a negative capability response; failed IME setup
+// cancels the request and leaves the app keyboard usable.
 //
 // Ponte (src/entrada_texto.c): C -> host iniciar()/parar() (fio do C; aqui vao
 // ao fio principal); host -> C nv_tpk_texto_valor(texto inteiro),
@@ -66,11 +65,11 @@ namespace NuvioTpk
                 principal(() => { if (minha == Volatile.Read(ref sessao)) Iniciar(); });
             };
             fParar = () => principal(Parar);
-            int mic = Microfone();
-            if (!MontarCampo()) return;
+            // Native IME crashes/hangs cannot be caught by C#. Never touch it
+            // before the user requests the optional microphone keyboard (#558).
             nv_tpk_voz_registrar(Marshal.GetFunctionPointerForDelegate(fIniciar),
-                                 Marshal.GetFunctionPointerForDelegate(fParar), mic);
-            Log("botao de microfone registrado (microfone=" + mic + ")");
+                                 Marshal.GetFunctionPointerForDelegate(fParar), -1);
+            Log("microphone registered; Samsung IME deferred until requested");
         }
 
         void Log(string s) { try { log("[texto] host voz " + s); } catch { } }
@@ -116,7 +115,7 @@ namespace NuvioTpk
                 };
                 Window.Instance.Add(campo);
                 imf = campo.GetInputMethodContext();
-                if (imf == null) { Log("sem InputMethodContext: sem botao"); return false; }
+                if (imf == null) throw new InvalidOperationException("No InputMethodContext");
                 imf.StatusChanged += (s, e) =>
                 {
                     Log("teclado da Samsung " + (e.StatusChanged ? "aberto" : "fechado"));
@@ -126,13 +125,26 @@ namespace NuvioTpk
                 };
                 return true;
             }
-            catch (Exception e) { Log("TextField indisponivel: " + e.GetType().Name + ": " + e.Message); return false; }
+            catch (Exception e)
+            {
+                Log("TextField indisponivel: " + e.GetType().Name + ": " + e.Message);
+                try { if (campo != null) { Window.Instance.Remove(campo); campo.Dispose(); } } catch { }
+                campo = null; imf = null;
+                return false;
+            }
         }
 
         void Iniciar()
         {
             Interlocked.Exchange(ref aberturaPendente, 0);
             if (aberto) return;
+            if (imf == null)
+            {
+                if (!MontarCampo()) { nv_tpk_texto_fim(0); return; }
+                int mic = Microfone();
+                nv_tpk_voz_registrar(Marshal.GetFunctionPointerForDelegate(fIniciar),
+                                     Marshal.GetFunctionPointerForDelegate(fParar), mic);
+            }
             try
             {
                 // Limpo ANTES de abrir: TextChanged nao apaga a busca do app.
