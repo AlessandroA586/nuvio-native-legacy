@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-15 20:48",
+ "atualizado_em": "2026-10-15 21:48",
  "base": "5544c3e4c",
- "nota": "Sync 2026-10-15 20:48, HEAD integracao/2.0.5 84dc18246; instalado cb7ece972 (Android Success, C9 rc=1). Ver escrivao/estado.md.",
+ "nota": "Sync 2026-10-15 21:48, HEAD integracao/2.0.5 d626daf5c (84dc18246 ajustestestes merged); instalado cb7ece972 (Android Success, C9 rc=1). Running: estatresp, vidroc9, amigosestilo-b. Ver escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,

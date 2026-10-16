@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `5544c3e4c` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-15 20:48. 462 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `5544c3e4c` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-15 21:48. 462 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
