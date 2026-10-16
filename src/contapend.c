@@ -378,7 +378,7 @@ int contapend_estado(const char *imdb, const char *tipo, int t, int e, long long
     Ent *p = &ents[i];
     if (p->sup != 'V' || p->perfil != perfil || strcmp(p->id, id) ||
         !((p->temp == t && p->ep == e) || (p->ep == 0 && e == 0) ||
-          (!p->ep && e > 0 && !strcmp(p->tipo, "series") && !strcmp(tipo, p->tipo)))) continue;
+          (!p->ep && e > 0 && !strcmp(p->tipo, "series") && (!tipo || !strcmp(tipo, p->tipo))))) continue;
     if (melhor < 0 || p->ms >= ents[melhor].ms) melhor = i;
   }
   if (melhor >= 0) {

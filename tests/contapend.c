@@ -235,6 +235,11 @@ int main(void) {
 
   OK("pull: linha remota velha nao re-marca o desmarcado; remota mais nova vence");
 
+  // 3b. Serie desmarcada inteira + pull de episodio: tipo=NULL nao pode cair no strcmp.
+  assert(contapend_titulo("tt0944947", "series", 0) == 1);
+  assert(contapend_visto_oculto("tt0944947", 1, 2, agora - 1) == 1);
+  OK("pull de episodio contra desmarca-serie: tipo NULL nao segfaulta");
+
   // 4. LISTA: pagina que falha nao vira push (e nao apaga nada).
   zerar();
   { int i; char id[24];
