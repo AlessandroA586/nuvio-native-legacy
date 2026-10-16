@@ -179,8 +179,8 @@ int main(void) {
   assert(!ajustes_p2p_url()[0]);
   puts("fontes_lista: P2P so mantem os torrents ligado e com endereco");
 
-  // J5.3: nem a URL direta marcada notWebReady entra com P2P desligado,
-  // mesmo com debrid. Conferir resposta inteira e chegada incremental.
+  // #552: URL http(s) marcada notWebReady e oferecida com P2P desligado (os
+  // players nativos a tocam); so o torrent sem url e o servidor local pedem P2P. Conferir resposta inteira e chegada incremental.
   char json[4096];
   FILE *f = fopen("tests/fixtures/streams_notwebready.json", "r");
   assert(f);
@@ -189,7 +189,7 @@ int main(void) {
   fclose(f); json[bytes] = 0;
   Stream *v = NULL;
   int count = stream_extrair(json, "fixture", &v);
-  assert(count == 9);
+  assert(count == 10);
   debrid_definir_chave("torbox", "chave-de-teste");
   // #505: as duas fontes notWebReady descartadas com o P2P desligado contam
   // para a dica "ligue o P2P" — nunca uma folha vazia calada. Sem debrid e
@@ -200,14 +200,14 @@ int main(void) {
   ajustes_definir_p2p_ligado(0);
   stream_definir_lista(v, count);
   assert(stream_torrents_para_p2p() == 2);
-  // Connected debrid cannot offer notWebReady sources: keep the P2P hint.
+  // Connected debrid cannot offer P2P-only sources: keep the P2P hint.
   debrid_definir_chave("torbox", "chave-de-teste");
   stream_definir_lista(v, count);
-  assert(stream_n() == 7 && stream_torrents_para_p2p() == 2);
+  assert(stream_n() == 8 && stream_torrents_para_p2p() == 2);
   Stream onlyP2P[2];
   int p2pCount = 0;
   for (int i = 0; i < count; i++)
-    if (v[i].notWebReady) onlyP2P[p2pCount++] = v[i];
+    if (!v[i].url[0] || strstr(v[i].url, "127.0.0.1")) onlyP2P[p2pCount++] = v[i];
   assert(p2pCount == 2);
   stream_definir_lista(onlyP2P, p2pCount);
   assert(stream_n() == 0 && stream_torrents_para_p2p() == 2);
@@ -221,21 +221,21 @@ int main(void) {
     assert(ajustes_definir_p2p_url("192.168.1.5"));
     ajustes_definir_p2p_ligado(ligado);
     stream_definir_lista(v, count);
-    assert(stream_n() == (ligado ? 9 : 7));
+    assert(stream_n() == (ligado ? 10 : 8));
     assert(stream_torrents_para_p2p() == (ligado ? 0 : 2));
     for (int i = 0; i < stream_n(); i++)
-      assert(ligado || !stream_item(i)->notWebReady);
+      assert(ligado || (stream_item(i)->url[0] && !strstr(stream_item(i)->url, "127.0.0.1")));
     stream_definir_lista(NULL, 0);
     stream_lista_acrescentar(v, count, 0);
-    assert(stream_n() == (ligado ? 9 : 7));
+    assert(stream_n() == (ligado ? 10 : 8));
     for (int i = 0; i < stream_n(); i++)
-      assert(ligado || !stream_item(i)->notWebReady);
+      assert(ligado || (stream_item(i)->url[0] && !strstr(stream_item(i)->url, "127.0.0.1")));
     stream_folha_abrir();
-    assert(stream_folha_n() == (ligado ? 9 : 7));
-    assert(ligado || !stream_item(stream_automatico())->notWebReady);
+    assert(stream_folha_n() == (ligado ? 10 : 8));
+    assert(ligado || !strstr(stream_item(stream_automatico())->url, "127.0.0.1"));
     tecla(SDLK_ESCAPE);
   }
   free(v);
-  puts("fontes_lista: notWebReady so oferecido com P2P ativo, externalUrl oculto");
+  puts("fontes_lista: notWebReady com url http oferecido, so P2P-puro exige P2P, externalUrl oculto");
   return 0;
 }
