@@ -3375,7 +3375,8 @@ static GLuint vidroFonte(GfxRect r) {
 #ifdef VID_PARTILHADO
   // The home chrome can draw between glass regions: its bounding box defeats
   // region sharing and causes four copies + twenty blur draws per frame.
-  // Freeze the clean backdrop before the first glass, shared by all regions.
+  // Share the backdrop only until an intervening backdrop draw reaches the
+  // next glass's sampling region (for example, a modal's full-screen veil).
   // Cross-frame reuse only while vidroHash matches and this glass reads only
   // what last frame's glasses read (the hash covers just that): any change
   // there forces a recapture, so a stale backdrop is never sampled after a
@@ -3383,8 +3384,9 @@ static GLuint vidroFonte(GfxRect r) {
   float lido[4] = { r.x - VID_ALCANCE, r.y - VID_ALCANCE, r.x + r.w + VID_ALCANCE, r.y + r.h + VID_ALCANCE };
   vidroUne(vidroLeCur, lido[0], lido[1], lido[2], lido[3]);
   if (vidH2 && vidW == telaW && vidH == telaH &&
-      (vidroCapNoQuadro ||
+      ((vidroCapNoQuadro && !vidroCruza(vidroDesde, lido)) ||
        (vidroCapturaValida && vidroCapturaHash == vidroHash && vidroContem(vidroLeAnt, lido)))) {
+    if (!vidroCapNoQuadro) memset(vidroDesde, 0, sizeof vidroDesde);
     vidroCapNoQuadro = 1;
     return vidH2;
   }
@@ -3394,6 +3396,7 @@ static GLuint vidroFonte(GfxRect r) {
     vidroCapNoQuadro = 1;
     vidroCapturaHash = vidroHash;
     vidroCapturaValida = 1;
+    memset(vidroDesde, 0, sizeof vidroDesde);
     return vidH2;
   }
 #endif
