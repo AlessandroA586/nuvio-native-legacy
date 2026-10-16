@@ -615,6 +615,12 @@ extern double gfx_vidro_fill, gfx_vidro_copia;
 // O quadro tem video vivo (furo) por baixo: o vidro sai chapado ate o proximo
 // gfx_novo_quadro (a tela ali e o furo, nao o que passa no video).
 void gfx_vidro_fosco_bloquear(void);
+// The live-video stand-in for this frame (until gfx_novo_quadro): a blurred
+// screen-oriented texture (a GfxMini target) that glass over the video hole
+// reads instead of going flat. 0 = flat, as before.
+void gfx_vidro_fonte_video(GLuint tex);
+// Glass drawn with a blur source this frame (zeroed in gfx_novo_quadro).
+extern int gfx_vidro_com_fonte;
 // CANAIS DE FUNDO DA LUZ ASSADA (fundo.c, "Arte borrada" e "Frost" de tela
 // cheia): o quadro pequeno (320x180, GL_RGB) do `canal` (0..1), pintado por
 // `pintar(ctx)` em coordenadas de layout de tela cheia pelo MESMO assado da luz
