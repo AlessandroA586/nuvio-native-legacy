@@ -14,3 +14,8 @@ cc "${sources[@]}" tests/ajustes_p2p_motivo.c -Isrc -o "$work/teste" \
   -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL \
   -Wno-deprecated-declarations -Wno-macro-redefined
 NUVIO_DADOS="$work" "$work/teste"
+cc "${sources[@]}" tests/ajustes_p2p_motivo.c -Isrc -o "$work/teste_android" -DP2PM_ANDROID_VISIVEL \
+  -O1 -g -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
+  -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL \
+  -Wno-deprecated-declarations -Wno-macro-redefined
+NUVIO_DADOS="$work" "$work/teste_android"
