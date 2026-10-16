@@ -85,11 +85,33 @@ static char usbMounts[200];      // teste: arquivo no formato /proc/mounts
 static int usbApp;               // sondando o dir do app que E a raiz do pendrive (Android)
 static int usbFat;               // raiz escolhida esta em FAT32: arquivo < 4 GiB
 static char usbAndroidLogado[700];
+static char usbRecusado[700];    // last rejected candidate path (for the modal)
+static char usbTizenLogado[700];
 // Shared by discovery and stale-cache cleanup; only mount roots qualify.
 static const char *const usbBases[] = {
   "/tmp/usb", "/media/usb", "/mnt/media_rw",
-  "/opt/storage/usb", "/opt/media/USBDriveA1"
+  "/opt/storage/usb"
 };
+// Tizen mounts each drive at /opt/media/USBDrive<letter><n> (A1, B1, ...).
+static char usbTizenDir[600] = "/opt/media";
+#define USB_MAX_BASES 16
+// Candidate roots: the test base alone, else static bases + enumerated Tizen drives.
+static unsigned usbTodasBases(const char *extra, char out[][700]) {
+  unsigned n = 0;
+  DIR *d;
+  struct dirent *e;
+  if (extra[0]) { snprintf(out[n++], 700, "%s", extra); return n; }
+  if (usbAndroidInj[0]) return 0;
+  if (!strcmp(usbTizenDir, "/opt/media"))   // a test dir replaces the real bases
+    for (; n < sizeof usbBases / sizeof usbBases[0]; n++) snprintf(out[n], 700, "%s", usbBases[n]);
+  if ((d = opendir(usbTizenDir))) {
+    while ((e = readdir(d)) && n < USB_MAX_BASES)
+      if (!strncmp(e->d_name, "USBDrive", 8) &&
+          snprintf(out[n], 700, "%s/%s", usbTizenDir, e->d_name) < 700) n++;
+    closedir(d);
+  }
+  return n;
+}
 #define USB_SCAN_SECONDS 0.25
 // ponytail: linear lookup within the bounded scan; index only if profiling warrants it.
 typedef struct UsbLog {
@@ -103,7 +125,10 @@ static UsbLog *usbLogs;
 // With usbTrava held. Retain per-path outcomes across scans, never file contents.
 static void usbResultado(const char *path, P2pmUsbMotivo reason, int error) {
   UsbLog *entry;
-  if ((int)reason > atomic_load(&usbMotivo)) atomic_store(&usbMotivo, reason);
+  if ((int)reason > atomic_load(&usbMotivo)) {
+    atomic_store(&usbMotivo, reason);
+    snprintf(usbRecusado, sizeof usbRecusado, "%s", path);
+  }
   for (entry = usbLogs; entry; entry = entry->next)
     if (!strcmp(entry->path, path)) break;
   if (!entry) {
@@ -415,7 +440,8 @@ static int usbFatExcede(uint64_t tam) {
 // Com usbTrava presa. Com usbExtra (teste) o scan olha SO ele: as bases de
 // verdade variam por maquina e tornariam o teste indeterminado.
 static int usbEscanear(char *raiz, unsigned nr, int criar) {
-  unsigned n = usbExtra[0] ? 1 : usbAndroidInj[0] ? 0 : sizeof usbBases / sizeof usbBases[0];
+  char bases[USB_MAX_BASES][700];
+  unsigned n = usbTodasBases(usbExtra, bases);
   int found = 0, exists = 0;
   char dirs[4][600], fs[64];
   unsigned k, i = 0;
@@ -424,7 +450,7 @@ static int usbEscanear(char *raiz, unsigned nr, int criar) {
   atomic_store(&usbMotivo, P2PM_USB_NONE);
   for (entry = usbLogs; entry; entry = entry->next) entry->seen = 0;
   for (i = 0; i < n; i++) {
-    const char *base = usbExtra[0] ? usbExtra : usbBases[i];
+    const char *base = bases[i];
     struct stat st;
     if (lstat(base, &st) != 0) {
       if (errno != ENOENT) { exists = 1; usbResultado(base, P2PM_USB_IO, errno); }
@@ -456,6 +482,12 @@ static int usbEscanear(char *raiz, unsigned nr, int criar) {
   if (found) {
     atomic_store(&usbMotivo, P2PM_USB_NONE);
     usbFs(raiz, fs, sizeof fs);
+    if (!usbApp && !strncmp(raiz, usbTizenDir, strlen(usbTizenDir)) && strcmp(usbTizenLogado, raiz)) {
+      uint64_t livre = 0;
+      if (livreReal(raiz, &livre) != 0) livre = 0;
+      snprintf(usbTizenLogado, sizeof usbTizenLogado, "%s", raiz);
+      printf("[p2p] usb tizen: %s %s free=%.1f\n", raiz, fs, (double)livre / 1073741824.0);
+    }
     int fat = usbFsLimitado(fs);
     if (fat && !usbFat) printf("[p2p] usb: %s is FAT32 or unknown backing (%s), files >= 4 GiB refused\n", raiz, fs);
     usbFat = fat;
@@ -624,6 +656,72 @@ int p2pmotor_usb_presente(void) {
 
 P2pmUsbMotivo p2pmotor_usb_motivo(void) {
   return ajustes_p2p_ligado() ? (P2pmUsbMotivo)atomic_load(&usbMotivo) : P2PM_USB_DISABLED;
+}
+
+// Drive label: the mount-root component (/storage/<id>, <base>/<id>) or the last one.
+static void usbRotulo(const char *dir, char *nome, size_t n) {
+  const char *p = NULL, *fim;
+  unsigned i;
+  if (!strncmp(dir, "/storage/", 9)) p = dir + 9;
+  for (i = 0; !p && i < sizeof usbBases / sizeof usbBases[0]; i++) {
+    size_t l = strlen(usbBases[i]);
+    if (!strncmp(dir, usbBases[i], l) && dir[l] == '/') p = dir + l + 1;
+  }
+  if (!p || !*p) {
+    p = strrchr(dir, '/');
+    p = p ? p + 1 : dir;
+  }
+  fim = p + strcspn(p, "/");
+  snprintf(nome, n, "%.*s", (int)(fim - p), p);
+}
+
+// What the USB cache modal shows. Refreshed at most every 2 s: the cache walk
+// and /proc/mounts read are I/O, and the UI asks every frame. No writes.
+void p2pmotor_usb_info(P2pmUsbInfo *o) {
+  static P2pmUsbInfo memo;
+  static double quando = -10.0;
+  char dir[700] = "";
+  int presente = p2pmotor_usb_presente();
+  P2pmUsbMotivo motivo = p2pmotor_usb_motivo();
+  memset(o, 0, sizeof *o);
+  pthread_mutex_lock(&usbTrava);
+  if (agora() - quando < 2.0 && (memo.estado == 1) == presente && memo.motivo == motivo) {
+    *o = memo;
+    pthread_mutex_unlock(&usbTrava);
+    return;
+  }
+  o->motivo = motivo;
+  if (presente && usbRaiz[0]) {
+    o->estado = 1;
+    snprintf(dir, sizeof dir, "%s", usbRaiz);
+  } else if (o->motivo > P2PM_USB_NO_BASE && o->motivo < P2PM_USB_DISABLED && usbRecusado[0]) {
+    o->estado = 2;
+    snprintf(dir, sizeof dir, "%s", usbRecusado);
+  }
+  if (o->estado) {
+    struct statvfs v;
+    LimTrab lim = { .max = 256, .ate = agora() + 0.05 };
+    char mae[700];
+    snprintf(mae, sizeof mae, "%s", dir);
+    if (o->estado == 1) { char *b = strrchr(mae, '/'); if (b && b != mae) *b = 0; }
+    snprintf(o->caminho, sizeof o->caminho, "%s", mae);
+    usbRotulo(mae, o->nome, sizeof o->nome);
+    usbFs(mae, o->fs, sizeof o->fs);
+    if (statvfs(mae, &v) == 0) {
+      o->total = (uint64_t)v.f_blocks * (uint64_t)v.f_frsize;
+      o->livre = (uint64_t)v.f_bavail * (uint64_t)v.f_frsize;
+    }
+    o->fat = usbFsLimitado(o->fs);
+    if (o->estado == 1) {
+      o->gravavel = access(mae, W_OK) == 0;
+      o->cache = percorrerL(usbRaiz, 0, 0, &lim);
+      o->limite = p2pmotor_teto_duro(o->livre, atomic_load(&limiteMb));
+      o->emUso = atomic_load(&usbPreferido) != 0;
+    }
+  }
+  memo = *o;
+  quando = agora();
+  pthread_mutex_unlock(&usbTrava);
 }
 
 // #334: a janela fica um pouco abaixo do teto duro (a vigia para em > duro e a
@@ -870,13 +968,13 @@ static void usbVarreSobraDir(const char *base, int fundo, const char *raizAtual)
 }
 static void usbVarreSobra(const char *raizAtual) {
   unsigned n, i;
-  char extra[600];
+  char extra[600], bases[USB_MAX_BASES][700];
   extra[0] = 0;
   pthread_mutex_lock(&usbTrava);
   snprintf(extra, sizeof extra, "%s", usbExtra);
-  n = extra[0] ? 1 : usbAndroidInj[0] ? 0 : sizeof usbBases / sizeof usbBases[0];
+  n = usbTodasBases(extra, bases);
   for (i = 0; i < n; i++) {
-    const char *base = extra[0] ? extra : usbBases[i];
+    const char *base = bases[i];
     struct stat st;
     if (lstat(base, &st) == 0 && S_ISDIR(st.st_mode)) usbVarreSobraDir(base, 0, raizAtual);
   }
@@ -960,6 +1058,21 @@ void p2pmotor_teste_usb_android(const char *lista, const char *mounts) {
   usbResolvido = 0;
   usbQuando = 0;
   pthread_mutex_unlock(&usbTrava);
+}
+
+unsigned p2pmotor_teste_usb_tizen(const char *dir, char *out, unsigned nout) {
+  char bases[USB_MAX_BASES][700];
+  unsigned n, i, len = 0;
+  pthread_mutex_lock(&usbTrava);
+  snprintf(usbTizenDir, sizeof usbTizenDir, "%s", dir);
+  usbTizenLogado[0] = 0;
+  usbResolvido = 0;
+  usbQuando = 0;
+  n = usbTodasBases("", bases);
+  pthread_mutex_unlock(&usbTrava);
+  out[0] = 0;
+  for (i = 0; i < n && len < nout; i++) len += snprintf(out + len, nout - len, "%s\n", bases[i]);
+  return n;
 }
 
 void p2pmotor_teste_usb_base(const char *base) {

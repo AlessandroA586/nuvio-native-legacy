@@ -367,6 +367,9 @@ void  ajustes_ui_grafico_memoria(float x, float y, float w, float h);
 // O mesmo grafico com o historico de exemplo (previa das Novidades da 1.8.0).
 void  ajustes_ui_grafico_exemplo(float x, float y, float w, float h);
 int   ajustes_relogio_cabe(void);
+int   ajustes_relogio_navegavel(void);
+int   ajustes_pediu_relogio(void);
+int   ajustes_edicao_ativa(void);
 // A FAIXA QUE A RAIL FIXA RESERVA na borda esquerda, em px de tela: com ela
 // presa, a borda da pilula de icones do menu (Moderna 136, Padrao 88, vezes o
 // Tamanho da interface) + 64 de vao - os 104 do recuo do conteudo; 0 recolhida
@@ -433,6 +436,7 @@ int   ajustes_selos_coloridos(void);
 int   ajustes_trailer_som(void);         // UM ajuste de som para todo trailer que toca sozinho (Samsung .wgt sempre mudo)
 Uint32 ajustes_trailer_hero_espera_ms(void); // repouso no titulo antes do trailer do destaque
 int   ajustes_trailer_qualidade(void); // teto em linhas (1080/720/480); 0 = a maior
+const char *ajustes_trailer_audio(void);  // "" auto (idioma da UI), "~" original, ou codigo ISO
 int   ajustes_trailer_fonte(void);     // TRF_* de trailerfonte.h; 0 = automatico
 float ajustes_trailer_zoom(void);      // ampliacao do trailer (1.0 = quadro inteiro)
 void  ajustes_definir_envio_auto(int ligado);
@@ -516,6 +520,8 @@ int   ajustes_teclado_android(void);          // Android keyboard: 0 automatic, 
 int   ajustes_mic_busca(void);               // Samsung (.tpk/.wgt) search mic button: 0 automatic, 1 on, 2 off (local)
 unsigned ajustes_p2p_limite_mb(void);           // #334: P2P space limit in MB (0 = Automatic)
 int   ajustes_p2p_usb(void);                    // #205: 1 = cache P2P em pendrive USB
+int   ajustes_player_externo(int anime);     // #501/#205: 0 Interno, 1 Externo, 2 Perguntar, 3 app (pacote em ajustes_player_pacote); anime: -1 = Igual ao Player
+const char *ajustes_player_pacote(int anime); // #205: pacote do app escolhido ("" = nenhum)
 int   ajustes_buffer_preset(void);           // #338: 0 Automatico, 1 = 64, 2 = 128, 3 = 256 MiB
 int   ajustes_cache_seek_mb(void);           // F07: seek cache limit in MB for the next video (0 = off / not on this TV)
 #ifdef AJUSTES_TESTE

@@ -31,6 +31,7 @@ StreamfitClasse streamfit_classificar(const StreamfitFoto *f, const char *u,
   (void)f; (void)u; (void)b; (void)d; (void)s; return 0;
 }
 int ajustes_fonte_primeira(void) { return 1; }
+int ajustes_fonte_idioma_audio(void) { return 0; }
 int stream_primeira_boa(int n) { (void)n; assert(!"job inicial fora deste teste"); return -1; }
 int stream_canal_primeira_viva(int n) { (void)n; return -1; }
 void player_episodio_atual(int *t, int *e) { *t = *e = 0; }

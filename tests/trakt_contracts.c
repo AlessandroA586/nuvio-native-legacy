@@ -1,5 +1,7 @@
 #include "trakt.h"
 #include "traktscrobble.h"
+#include "metaprov.h"
+#include "stub_perfisessao.h"
 #include <math.h>
 #include <assert.h>
 #include <pthread.h>
@@ -18,12 +20,6 @@ static char ultimaUrl[160], ultimoCorpo[320];
 static int chamadas, proximoStatus, bloquear, liberar;
 static unsigned long long geracaoMapa = 1;
 static int marcas;
-
-const char *metaprov_idioma(void) { return "en-US"; }
-char *metaprov_meta(const char *tipo, const char *id, int seg, int *prov) {
-  (void)tipo; (void)id; (void)seg; (void)prov;
-  return NULL;
-}
 
 char *rede_postar_st(const char *url, int segundos, const char *const *cab,
                      const char *corpo, int *status) {
@@ -57,6 +53,14 @@ int cat_historico_definir_se_geracao(const char *id, const char *tipo, int visto
   return 1;
 }
 void rede_avisar_401(void (*callback)(const char *url)) { (void)callback; }
+
+// These contracts use movies only; episode metadata must never be requested.
+const char *metaprov_idioma(void) { return "en-US"; }
+char *metaprov_meta(const char *tipo, const char *id, int seg, int *prov) {
+  (void)tipo; (void)id; (void)seg; (void)prov;
+  assert(!"unexpected episode metadata request");
+  return NULL;
+}
 
 static void espera(int esperado) {
   pthread_mutex_lock(&lock);

@@ -115,11 +115,13 @@ int video_registro_negado(void); /* video.h: motivo do trailer bloqueado */
 #define MAX_FIL    64
 #endif
 _Static_assert(MAX_FIL >= CAT_FIL_MAX + 16, "a home precisa de folga sobre o teto do catalogo");
-// 13 e nao 12: sao 12 CARTAZES mais a coluna do card "Ver tudo", que ocupa a
-// posicao seguinte a ultima arte. Com 12 aqui, animFoco[r][12] escrevia fora do
-// vetor — o card nunca acendia ao receber foco e a memoria do vizinho era
-// corrompida em silencio.
-#define MAX_CARDS 33
+// 41: 40 cartazes (teto nativo de "Continuar assistindo", CONT_MAX) mais a
+// coluna do card "Ver tudo", que ocupa a posicao seguinte a ultima arte. Com
+// menos que isso, animFoco[r][n] escrevia fora do vetor — o card nunca
+// acendia ao receber foco e a memoria do vizinho era corrompida em silencio.
+#define MAX_CARDS 41
+// Mesmo valor que CONT_MAX (CWO_FILEIRA_MAX, issue #205).
+#define CW_TETO CWO_FILEIRA_MAX
 _Static_assert(DESC_ITENS_POR_FILEIRA <= MAX_CARDS - 1, "itens por fileira + Ver tudo cabem em MAX_CARDS");
 // A faixa editorial precisa de uma terceira alternativa para não terminar
 // visualmente depois de apenas dois cards. Quando o catálogo que virou
@@ -379,7 +381,8 @@ static float velY = 0.0f;
 static AnimBorda bordaFil[MAX_FIL];
 static AnimBorda bordaPag;
 static float bordaX(int r) { return (r >= 0 && r < MAX_FIL) ? bordaFil[r].x : 0.0f; }
-static int sair = 0, pedidoAbrir = 0, pedidoTocar = 0, pedidoMenu = 0, pedidoIlha = 0;
+static int sair = 0, pedidoAbrir = 0, pedidoTocar = 0, pedidoMenu = 0;
+static int pedidoRelogio;
 // VOLTAR NA HOME PEDE CONFIRMACAO. Ver home_evento; o aviso e desenhado em
 // home_desenhar enquanto a janela esta aberta.
 #define HOME_SAIR_MS 3000
@@ -1736,7 +1739,7 @@ static float alfaFileiraHome(int r, float y, float topo, float corte) {
     if (fatia > fade) fade = fatia;
   }
 #ifdef NV_TOUCH_UI
-  if (toqueLivreY || homeRetratoTelefone())
+  if ((telefoneui_ativo() && toqueLivreY) || homeRetratoTelefone())
     fade = anim_clamp((y + NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r) - corte) / 80.0f, 0.0f, 1.0f);
 #endif
   return fade;
@@ -1904,7 +1907,7 @@ static int toqueHeroValido(void) {
 
 static void toqueHeroAtualizar(float dt, Uint32 agora, int oculto, int reduzido) {
   if (!toqueHero.estado) return;
-  if (oculto || !ajustes_hero_ligado() || !toqueHeroValido()) {
+  if (!telefoneui_ativo() || oculto || !ajustes_hero_ligado() || !toqueHeroValido()) {
     toqueHeroCancelar(); return;
   }
   heroUltTecla = agora;
@@ -1929,6 +1932,7 @@ static void toqueHeroAtualizar(float dt, Uint32 agora, int oculto, int reduzido)
 }
 
 static int toqueHeroRolar(const PonteiroRolagem *e) {
+  if (!telefoneui_ativo()) { toqueHeroCancelar(); return 0; }
   if (e->fase == PONT_ROL_INICIO) {
     if (e->eixoY || toqueHero.estado || !ajustes_hero_ligado() ||
         heroVisivelToque() <= .25f || detail_aberto() || player_aberto() ||
@@ -1991,6 +1995,7 @@ static int toqueHeroRolar(const PonteiroRolagem *e) {
 }
 
 static int toqueHomeRolar(const PonteiroRolagem *e) {
+  if (!telefoneui_ativo()) { toqueHomeLimpar(); toqueHeroCancelar(); return 0; }
   if (toqueHero.estado || (e->fase == PONT_ROL_INICIO && !e->eixoY)) {
     int capturado = toqueHeroRolar(e);
     if (capturado || toqueHero.estado) return capturado;
@@ -2037,6 +2042,7 @@ static int toqueHomeRolar(const PonteiroRolagem *e) {
 // O controle retoma da parte visivel, sem devolver a pagina ao foco que ficou
 // fora da tela durante o gesto. Tocar um card continua escolhendo aquele card.
 static void toqueHomeRetomarFoco(void) {
+  if (!telefoneui_ativo()) { toqueHomeLimpar(); return; }
   if (toqueLivreY && nFileiras > 0) {
     float y = topoFileiras() - scrollY, melhor = 1e9f;
     int escolhido = foco.fileira;
@@ -2065,7 +2071,7 @@ static void toqueHomeRetomarFoco(void) {
 
 static float homeScrollYPasso(float alvo, float dt, int reduzido) {
 #ifdef NV_TOUCH_UI
-  if (toqueHeroYPreso) {
+  if (telefoneui_ativo() && toqueHeroYPreso) {
     float minimo = -empurraHero(), maximo = toqueHomeMaxY();
     if (toqueHeroPaginaW != NV_TELA_W || toqueHeroPaginaH != NV_TELA_H ||
         toqueHeroPaginaMin != minimo || toqueHeroPaginaMax != maximo) {
@@ -2075,7 +2081,7 @@ static float homeScrollYPasso(float alvo, float dt, int reduzido) {
     }
     return scrollY;
   }
-  if (toqueLivreY)
+  if (telefoneui_ativo() && toqueLivreY)
     return anim_clamp(scrollY, -empurraHero(), toqueHomeMaxY());
 #endif
   return anim_mola2_reduzida(&velY, scrollY, alvo, dt, NV_MOLA2_SCROLL, reduzido);
@@ -2389,13 +2395,15 @@ static int focoVertical(int dy) {
 }
 
 void home_evento(const SDL_Event *e) {
+  pedidoRelogio = 0;
   if (e->type == SDL_QUIT) { sair = 1; return; }
   if (homevazio_ativo(nFileiras)) {
     if (homevazio_evento(e)) return;
     if (e->type == SDL_KEYDOWN) {
       SDL_Keycode k = e->key.keysym.sym;
       if (k == SDLK_LEFT || (k == SDLK_UP && ajustes_menu_topo())) { pedidoMenu = 1; return; }
-      if (k == SDLK_UP || k == SDLK_DOWN || k == SDLK_RIGHT) return;
+      if (k == SDLK_UP) { pedidoRelogio = 1; return; }
+      if (k == SDLK_DOWN || k == SDLK_RIGHT) return;
     }
   }
 #ifdef NV_TOUCH_UI
@@ -2596,11 +2604,10 @@ void home_evento(const SDL_Event *e) {
       }
       focoHero = 0; return;
     }
-    // Cima no destaque: com a barra no topo (#461) sobe para ela; sem, vai
-    // para a ilha do topo, como o CH+ (#495).
+    // Up reaches the top menu or focuses the clock until OK is pressed.
     if (k == SDLK_UP) {
       if (ajustes_menu_topo()) pedidoMenu = 1;
-      else { pedidoIlha = 1; anim_borda_bater(&bordaPag, -NV_BORDA_AMP); }
+      else { pedidoRelogio = 1; anim_borda_bater(&bordaPag, -NV_BORDA_AMP); }
       return;
     }
   }
@@ -2637,7 +2644,11 @@ void home_evento(const SDL_Event *e) {
       anim_borda_bater(&bordaFil[foco.fileira], -NV_BORDA_AMP);
   }
   else if (k == SDLK_DOWN)  focoVertical(1);
-  else if (k == SDLK_UP && !focoVertical(-1)) focoHero = 1;
+  else if (k == SDLK_UP && !focoVertical(-1)) {
+    if (ajustes_hero_ligado() && cat_n() > 0) focoHero = 1;
+    else if (ajustes_menu_topo()) pedidoMenu = 1;
+    else pedidoRelogio = 1;
+  }
 }
 
 // Reconstroi a lista a partir do catalogo. Chamada a cada quadro porque a
@@ -2956,7 +2967,11 @@ static void sincronizarFileiras(void) {
     // caber em MAX_CARDS - 1. Diminuir vale na hora (corta aqui); aumentar,
     // quando os catalogos forem pedidos de novo.
     { int teto = ajustes_itens_fileira();
-      if (teto > DESC_ITENS_POR_FILEIRA) teto = DESC_ITENS_POR_FILEIRA;
+      // "Continuar assistindo" nao segue "Itens por fileira": lista local que
+      // a pessoa ja preencheu, nao catalogo de rede — o teto e o nativo
+      // (CONT_MAX de descoberta.c); o web da 300.
+      if (!strcmp(cf->chave, "continue_watching")) teto = CW_TETO;
+      else if (teto > DESC_ITENS_POR_FILEIRA) teto = DESC_ITENS_POR_FILEIRA;
       fileiras[destino].n = cf->n > teto ? teto : cf->n; }
     // UMA COLUNA A MAIS: o card "Ver tudo" no fim. So em fileira que veio de um
     // CATALOGO de addon — "Continuar assistindo" e as listas do Trakt nao tem
@@ -3528,6 +3543,9 @@ static void heroAquecerVizinhos(Uint32 agora) {
 
 void home_atualizar(float dt, Uint32 agora) {
   curadoria_passo();   // a curadoria da fileira Herói, no seu tempo (curadoria.h)
+#ifdef NV_TOUCH_UI
+  if (!telefoneui_ativo()) { toqueHomeLimpar(); toqueHeroCancelar(); }
+#endif
   sincronizarFileiras();
   // A FILEIRA DE AMIGOS tem tantas colunas quantos rostos (+ "Adicionar"), e
   // isso muda sem o catalogo mudar (um amigo novo chega do recomenda.c).
@@ -4019,7 +4037,7 @@ static GfxRect heroArteRect = { 0, 0, NV_TELA_BASE_W, NV_TELA_BASE_H };
 #endif
 #ifdef NV_TOUCH_UI
 static void heroPublicarFoco(const CatItem *ci, float aTexto) {
-  if (!focoHero || !ci || toqueHero.estado || aTexto <= 0.004f) return;
+  if (!telefoneui_ativo() || !focoHero || !ci || toqueHero.estado || aTexto <= 0.004f) return;
   itemFoco.indice = heroAtual;
   itemFoco.rect = heroArteRect;
   itemFoco.arte = arteDoItem(ci, NULL);
@@ -4600,11 +4618,12 @@ static GfxRect heroEditorialRect(int editorial, float aspect) {
 }
 #ifdef NV_TOUCH_UI
 static void heroTrailerAtualizaRect(GfxRect r, float saida) {
-  if (saida <= 0.001f && heroTrailerItem >= 0 && heroTrailerItem == heroAtual &&
+  if (telefoneui_ativo() && saida <= 0.001f && heroTrailerItem >= 0 && heroTrailerItem == heroAtual &&
       trailer_aberto() && !trailer_cheia() && trailer_dono() == TRAILER_DONO_HOME)
     trailer_rect(r);
 }
 static void alvoAcaoHero(GfxRect r, float saida, float cin, float alpha) {
+  if (!telefoneui_ativo()) return;
   float primeira = topoFileiras() - scrollY;
   if (homeRetratoTelefone() && (r.x < homeConteudoX() || r.x + r.w > homeConteudoDireita())) return;
   if (saida <= 0.001f && cin <= 0.005f && alpha > 0.25f &&
@@ -5289,8 +5308,7 @@ static void desenhaHero(Uint32 agora, float saida) {
       // retangulo que o item ocupava. Com o foco no destaque esse retangulo e a
       // arte do proprio destaque, e sem isto o OK abriria o ULTIMO card que
       // recebeu foco — o titulo errado, com a animacao vindo de fora da tela.
-#ifndef NV_TOUCH_UI
-      if (focoHero && ci) {
+      if (!telefoneui_ativo() && focoHero && ci) {
         itemFoco.indice = heroAtual;
         itemFoco.rect   = heroArteRect;
         itemFoco.arte   = arteDoItem(ci, NULL);
@@ -5299,7 +5317,6 @@ static void desenhaHero(Uint32 agora, float saida) {
         itemFoco.meta   = ci->meta;
         publicarItemFoco();
       }
-#endif
     } }
 }
 
@@ -5632,12 +5649,22 @@ static void heroTrailerVetoLog(void) {
   fflush(stdout);
 }
 
+// Next hero source after `qual` fails. Samsung: the hero only opens YouTube
+// for the dubbed trailer (Trailer audio), ranked first, so a failed embed
+// falls back to Apple -> IMDb instead of keeping the art.
+static int heroTrailerDepois(int qual) {
+#ifdef __EMSCRIPTEN__
+  if (qual == TRF_YOUTUBE || (heroTrailerFalhas & (1u << TRF_YOUTUBE)))
+    return trailerfonte_depois_dublado(trailerfonte_ajuste(), trailerfonte_tizen(), qual);
+#endif
+  return trailerfonte_depois_destaque(trailerfonte_ajuste(), trailerfonte_tizen(), qual);
+}
+
 static void heroTrailerFonteFalhou(void) {
   if(heroTrailerQual>0&&heroTrailerQual<=TRF_YOUTUBE)
     heroTrailerFalhas|=1u<<heroTrailerQual;
   if(heroTrailerQual==TRF_APPLE)heroTrailerAppleFalhou=1;
-  heroTrailerTentado=trailerfonte_depois_destaque(trailerfonte_ajuste(),
-                    trailerfonte_tizen(),heroTrailerQual)==0;
+  heroTrailerTentado=heroTrailerDepois(heroTrailerQual)==0;
   heroTrailerFonte=heroTrailerTentado?3:0;
   heroTrailerPreparandoAte=0;heroTrailerFade=0.0f;
 }
@@ -5679,6 +5706,9 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
   if (!enabled) heroTrailerVetoLog();   // so imprime quando a linha esta Ligada
   // Destino deste foco: o cartaz (modo No card) ou o retangulo do destaque.
   const int destCartao = !focoHero && posterSetting == AJ_TRAILER_CARTAZ_CARD;
+  // The card owns its identity and readiness; a hidden hero may never draw
+  // the pending title, and Dynamic layout scrolls only the hero offscreen.
+  const int itemAtual = destCartao ? cartaoTrailerItem : heroAtual;
 #ifdef NV_SHOT_HOOKS
   if (shotTrailer) { shotTrailerPasso(topo, dt, agora, heroSetting, posterSetting); return; }
 #endif
@@ -5717,23 +5747,22 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
   { int noHero = focoHero && ajustes_hero_ligado() && heroSetting;
     // Na Dinamica o destaque ROLOU para fora quando o foco esta num cartaz: o
     // trailer do cartaz tocaria onde ninguem ve.
-    int noCartaz = !focoHero && ajustes_hero_ligado() && posterSetting &&
-                   layoutHome() != HOME_LAYOUT_DINAMICA &&
-                   heroPendente == heroAtual &&
+    int noCartaz = !focoHero && posterSetting &&
+                   (destCartao || (ajustes_hero_ligado() && layoutHome() != HOME_LAYOUT_DINAMICA)) &&
+                   (destCartao || heroPendente == heroAtual) &&
                    agora - heroPendenteEm >= (Uint32)(ajustes_expandir_poster_atraso() * 1000.0f);
-    // No card: so o cartaz que o desenho marcou como capaz, e do MESMO titulo
-    // do destaque (o hero segue o foco; e dele a maquina de fontes).
-    if (destCartao) noCartaz = noCartaz && cartaoTrailerPode && cartaoTrailerItem == heroAtual;
+    // No card: the focused card drawn last frame must accept the video.
+    if (destCartao) noCartaz = noCartaz && cartaoTrailerPode && itemAtual >= 0;
     pronto = topo && (noHero || noCartaz);
     if (!topo) motivo = HERO_GATE_OVERLAY;
-    else if (!ajustes_hero_ligado()) motivo = HERO_GATE_DISABLED;
+    else if (!destCartao && !ajustes_hero_ligado()) motivo = HERO_GATE_DISABLED;
     else if (focoHero ? !heroSetting : !posterSetting) motivo = HERO_GATE_SETTING;
-    else if (!focoHero && layoutHome() == HOME_LAYOUT_DINAMICA) motivo = HERO_GATE_DYNAMIC;
+    else if (!destCartao && !focoHero && layoutHome() == HOME_LAYOUT_DINAMICA) motivo = HERO_GATE_DYNAMIC;
     else if (!noHero && !noCartaz) motivo = HERO_GATE_POSTER_WAIT;
   }
-  pronto = pronto &&
-           heroDesejado < 0 && heroAtual >= 0 && heroEntra >= 0.999f && heroSai <= 0.001f &&
-           heroDesliza >= 1.0f &&   // o trailer abre com a arte ja parada
+  pronto = pronto && itemAtual >= 0 &&
+           (destCartao || (heroDesejado < 0 && heroEntra >= 0.999f && heroSai <= 0.001f &&
+                          heroDesliza >= 1.0f)) &&   // hero artwork must settle
 #ifdef NV_TOUCH_UI
            !toqueHero.estado &&
 #endif
@@ -5746,7 +5775,7 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
       motivo = HERO_GATE_NONCONTENT;
     else motivo = HERO_GATE_TRANSITION;
   }
-  if (pronto) ci = cat_item_exato(heroAtual);
+  if (pronto) ci = cat_item_exato(itemAtual);
   if (pronto && (!ci || !ci->imdb[0])) motivo = HERO_GATE_NO_ID;
   heroTrailerGateLog(motivo, enabled);
   if (!pronto || !ci || !ci->imdb[0]) {
@@ -5768,7 +5797,7 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
     heroTrailerPreparandoAte = 0; heroTrailerFonte = 0; heroTrailerAppleFalhou = 0;
     heroTrailerFalhas = 0;heroTrailerQual = 0;
     heroTrailerFade = 0.0f; heroTrailerNoCartao = 0;
-  } else if (heroTrailerItem != heroAtual || strcmp(heroTrailerImdb, ci->imdb) != 0 ||
+  } else if (heroTrailerItem != itemAtual || strcmp(heroTrailerImdb, ci->imdb) != 0 ||
              (trailer_aberto() && !trailer_cheia() && trailer_dono() == TRAILER_DONO_HOME &&
               heroTrailerNoCartao != destCartao)) {
     // O DESTINO MUDOU com o mesmo titulo (cartaz -> destaque): o trailer no
@@ -5785,7 +5814,7 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
       fflush(stdout);
       trailer_fechar();
     }
-    heroTrailerItem = heroAtual; heroTrailerDesde = agora; heroTrailerTentado = 0;
+    heroTrailerItem = itemAtual; heroTrailerDesde = agora; heroTrailerTentado = 0;
     snprintf(heroTrailerImdb, sizeof heroTrailerImdb, "%s", ci->imdb);
     heroTrailerPreparandoAte = 0; heroTrailerFonte = 0; heroTrailerAppleFalhou = 0;
     heroTrailerFalhas = 0;heroTrailerQual = 0;
@@ -5824,7 +5853,7 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
       printf("[trailer] hero: sem playing em %d ms (%s, estado %d), %s\n",
              NV_TRAILER_HERO_PREPARA_MS, trailerfonte_nome(heroTrailerQual),
              trailer_estado(),
-             trailerfonte_depois_destaque(trailerfonte_ajuste(), trailerfonte_tizen(), heroTrailerQual)
+             heroTrailerDepois(heroTrailerQual)
                ? "tenta a proxima fonte" : "desiste");
       fflush(stdout);
       trailer_fechar();
@@ -5837,13 +5866,13 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
   if (heroTrailerQual>0 && heroTrailerFonte>0 && heroTrailerFonte<3 &&
       !trailer_aberto() && trailer_falhou() && !(heroTrailerFalhas&(1u<<heroTrailerQual))) {
     printf("[home-trailer] source failed source=%s action=%s\n",trailerfonte_nome(heroTrailerQual),
-           trailerfonte_depois_destaque(trailerfonte_ajuste(), trailerfonte_tizen(), heroTrailerQual)
+           heroTrailerDepois(heroTrailerQual)
              ? "try_next_source" : "keep_art");
     fflush(stdout);
     heroTrailerFonteFalhou();
   }
   decorrido = agora - heroTrailerDesde;
-  if (pronto && ci && ci->imdb[0] && heroTrailerItem == heroAtual &&
+  if (pronto && ci && ci->imdb[0] && heroTrailerItem == itemAtual &&
       !trailer_aberto() && !heroTrailerTentado && !heroTrailerMemoriaFalhou &&
       !heroTrailerJaTocou(ci->imdb) &&
       (!destCartao || cartaoTrailerServe) &&   // No card: em pe, so todo aberto
@@ -5883,9 +5912,13 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
     // erro 153 ("Video player configuration error") e o hero fecha sem
     // `playing` aos 6,5 s. O destaque troca a cada seta: e o pior lugar para
     // ele. Aqui so <video> (Apple, IMDb); o YouTube fica na pagina do titulo.
-    // A lista do TMDB ainda e pedida (heroTrailerYoutube), mas nao abre.
-    (void)heroTrailerYoutube;
-    c.youtube = NULL;
+    // A lista do TMDB ainda e pedida (heroTrailerYoutube), mas so abre o
+    // trailer no idioma escolhido em "Audio do trailer"; ate o TMDB responder
+    // (ou a janela vencer) o ingles da Apple/IMDb espera.
+    c.youtubeIdiomaPreferido = extras_hero_trailer_idioma_preferido(ci->imdb);
+    if (c.youtubeIdiomaPreferido < 0 && venceu) c.youtubeIdiomaPreferido = 0;
+    c.youtube = c.youtubeIdiomaPreferido > 0 ? heroTrailerYoutube(ci->imdb) : NULL;
+    if (heroTrailerFalhas & (1u << TRF_YOUTUBE)) { c.youtube = NULL; c.youtubeIdiomaPreferido = 0; }
     c.youtubeRespondeu = 1;
 #else
     c.youtubeRespondeu = venceu;
@@ -5931,7 +5964,7 @@ trailer_hero_fim:
   // Follow artwork geometry too: focusing the hero can expand last frame's
   // banner after the trailer opened (#500). Only update on a real move;
   // trailer_rect rebuilds the native video window and crop.
-  if (heroTrailerItem >= 0 && heroTrailerItem == heroAtual &&
+  if (heroTrailerItem >= 0 && heroTrailerItem == itemAtual &&
       trailer_aberto() && !trailer_cheia() && trailer_dono() == TRAILER_DONO_HOME &&
       (!heroTrailerNoCartao || cartaoTrailerItem == heroTrailerItem)) {
     GfxRect alvoR = heroTrailerNoCartao ? cartaoVideoRect(cartaoTrailerRect) : heroArteRect;
@@ -5940,7 +5973,7 @@ trailer_hero_fim:
         fabsf(alvoR.w - atual.w) > 1.0f || fabsf(alvoR.h - atual.h) > 1.0f)
       trailer_rect(alvoR);
   }
-  { float alvo = (heroTrailerItem >= 0 && heroTrailerItem == heroAtual &&
+  { float alvo = (heroTrailerItem >= 0 && heroTrailerItem == itemAtual &&
                   trailer_aberto() && !trailer_cheia() && trailer_tocando() &&
                   trailer_mostra_video()) ? 1.0f : 0.0f;   // .tpk: ate o recorte assentar (#178)
     heroTrailerFade = anim_mola(heroTrailerFade, alvo, dt, NV_MOLA_SCROLL);
@@ -7035,6 +7068,9 @@ void home_desenhar(Uint32 agora) {
   // Nao conservar ponteiros para o catalogo de outro quadro/perfil quando
   // nenhuma tela de titulo publica um item (pasta, social ou estado vazio).
   temItemFoco = 0;
+#ifdef NV_TOUCH_UI
+  if (!telefoneui_ativo()) { toqueHomeLimpar(); toqueHeroCancelar(); }
+#endif
   // O cartaz capaz do trailer No card e reescrito por quem o pintar neste quadro.
   cartaoTrailerItem = -1; cartaoTrailerPode = cartaoTrailerServe = 0;
   amigostitulo_atualizar();   // barato: so remonta quando o feed social mudou
@@ -7800,7 +7836,8 @@ int home_pediu_tocar(void) { int v = pedidoTocar; pedidoTocar = 0; return v; }
 
 // Consome o pedido de abrir o menu lateral: quem le, zera.
 int home_pediu_menu(void) { int v = pedidoMenu; pedidoMenu = 0; return v; }
-int home_pediu_ilha(void) { int v = pedidoIlha; pedidoIlha = 0; return v; }
+int home_pediu_relogio(void) { int v = pedidoRelogio; pedidoRelogio = 0; return v; }
+int home_pediu_ilha(void) { return home_pediu_relogio(); }
 
 // CARROSSEL DA DINAMICA (detail.c): os titulos da fileira em foco, na ordem
 // da fileira, e a posicao do card focado entre eles. So nas fileiras de
@@ -7865,7 +7902,7 @@ void home_abrir_sessao(void) {
   memset(&itemFoco, 0, sizeof itemFoco);
   memset(&cartaoFoco, 0, sizeof cartaoFoco);
   itemFocoSessao = 0; itemFocoCatalogo = 0;
-  sair = pedidoAbrir = pedidoTocar = pedidoMenu = 0;
+  sair = pedidoAbrir = pedidoTocar = pedidoMenu = pedidoRelogio = 0;
   pedidoSocial = pedidoPessoaSocial = pedidoGuia = 0;
   memset(&pessoaSocial, 0, sizeof pessoaSocial); guiaId[0] = 0;
   okDesde = 0; okPressionando = okLongDisparado = okConsumirSoltura = 0;

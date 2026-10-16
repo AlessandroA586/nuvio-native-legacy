@@ -338,6 +338,7 @@ static int toqueLivre;
 // aqui partia na velocidade maxima e o primeiro quadro ja saltava 12%.
 static float velY = 0.0f;
 static int sair = 0, pedido = -1;
+static int pediuRelogio;
 static int nCelulas = 0;         // celulas da grade do estado atual
 static unsigned buscaAberta;     // 1 enquanto o teclado de busca esta na tela
 
@@ -516,6 +517,7 @@ static float toqueBibliotecaMax(void) {
   return linhas > 0 ? fmaxf(0.0f, gradeY() + (linhas - 1) * passoLinha() + alturaLinha() - BIB_GRADE_BASE) : 0.0f;
 }
 static int toqueBibliotecaRolar(const PonteiroRolagem *e) {
+  if (!layout_modo_mobile()) { toqueLivre = 0; return 0; }
   if (e->fase == PONT_ROL_INICIO) {
     if (!e->eixoY || e->x < bibX() || e->x >= bibX() + bibW() || e->y < gradeY() || e->y >= BIB_GRADE_BASE || nCelulas < 1 || teclado_aberto()) return 0;
     toqueLivre = 1; velY = 0.0f; okDesde = 0;
@@ -530,7 +532,7 @@ static int toqueBibliotecaRolar(const PonteiroRolagem *e) {
   return 1;
 }
 static void toqueBibliotecaRetomarFoco(void) {
-  if (toqueLivre && nCelulas > 0) {
+  if (layout_modo_mobile() && toqueLivre && nCelulas > 0) {
     int r = (int)((scrollY + (BIB_GRADE_BASE - gradeY()) * 0.35f) / passoLinha());
     int i = r * colunas() + foco.coluna;
     if (i >= nCelulas) i = nCelulas - 1;
@@ -804,7 +806,7 @@ static void pedirFonte(void) {
 static int iniciado;
 void biblioteca_abrir_sessao(void) {
   fonte = FONTE_TRAKT;
-  pedido = -1; sair = 0; temAberta = 0; buscaAberta = 0;
+  pedido = -1; sair = 0; pediuRelogio = 0; temAberta = 0; buscaAberta = 0;
   okDesde = 0;
   prefPerfil = -1;
 }
@@ -822,7 +824,7 @@ int biblioteca_iniciar(void) {
   buscaAberta = 0;
   memset(animModo, 0, sizeof animModo);
   memset(animPick, 0, sizeof animPick);
-  sair = 0; pedido = -1;
+  sair = 0; pedido = -1; pediuRelogio = 0;
   reconstruir();
   // O foco nasce na barra de modos: quem entra ainda esta escolhendo o recorte.
   foco.fileira = BIB_FIL_MODO;
@@ -830,7 +832,7 @@ int biblioteca_iniciar(void) {
   return 1;
 }
 
-void biblioteca_encerrar(void) { }
+void biblioteca_encerrar(void) { pediuRelogio = 0; }
 
 int biblioteca_na_lista(int i) {
   // A verdade e a marca DO ITEM, que a descoberta preenche com a watchlist do
@@ -849,6 +851,7 @@ void biblioteca_alternar_lista(int i) {
 }
 
 int biblioteca_quer_sair(void) { return sair; }
+int biblioteca_pediu_relogio(void) { int v = pediuRelogio; pediuRelogio = 0; return v; }
 
 int biblioteca_pediu_abrir(int *indiceCatalogo) {
   if (pedido < 0) return 0;
@@ -1044,6 +1047,7 @@ static void menuNaCelula(int i) {
 
 static void eventoAberta(SDL_Keycode k) {
   if (foco.fileira == 0) {
+    if (k == SDLK_UP) { pediuRelogio = 1; return; }
     if (k == SDLK_RIGHT && acaoSel < 2) { acaoSel++; foco.coluna = acaoSel; return; }
     if (k == SDLK_LEFT  && acaoSel > 0) { acaoSel--; foco.coluna = acaoSel; return; }
     if (k == SDLK_LEFT) { sair = 1; return; }   // comeco da fileira: o app abre a barra
@@ -1067,6 +1071,7 @@ static void eventoAberta(SDL_Keycode k) {
 }
 
 void biblioteca_evento(const SDL_Event *e) {
+  pediuRelogio = 0;
   // O TECLADO DA BUSCA E MODAL: enquanto ele esta na tela, ele fica com TODAS
   // as teclas. Deixar a grade responder por baixo foi o defeito que a busca de
   // codigo de amigo ja teve.
@@ -1118,6 +1123,7 @@ void biblioteca_evento(const SDL_Event *e) {
   // a partir de "Salvos" era preciso atravessar "Coleção" e "Listas", trocando
   // de aba (e pedindo a rede, nas listas) a cada passo.
   if (foco.fileira == BIB_FIL_MODO) {
+    if (k == SDLK_UP) { pediuRelogio = 1; return; }
     if (k == SDLK_LEFT  && foco.coluna > 0) { foco.coluna--; return; }
     if (k == SDLK_LEFT) { sair = 1; return; }   // 1a aba: o app abre a barra
     if (k == SDLK_RIGHT && foco.coluna < BIB_N_MODOS - 1) { foco.coluna++; return; }
@@ -1141,6 +1147,7 @@ void biblioteca_evento(const SDL_Event *e) {
   // menu suspenso; num D-pad, ciclar no proprio seletor poupa a viagem de ida
   // e volta ate a lista.
   if (foco.fileira == BIB_FIL_PICK) {
+    if (k == SDLK_UP) { pediuRelogio = 1; return; }
     if (k == SDLK_RIGHT && pickSel < 2) { pickSel++; foco.coluna = pickSel; return; }
     if (k == SDLK_LEFT  && pickSel > 0) { pickSel--; foco.coluna = pickSel; return; }
     if (k == SDLK_LEFT)  { foco.fileira = BIB_FIL_MODO; foco.coluna = BIB_N_MODOS - 1; return; }
@@ -1187,6 +1194,9 @@ void biblioteca_evento(const SDL_Event *e) {
 
 void biblioteca_atualizar(float dt, Uint32 agora) {
   int linhas, r, c, ini = gradeIni();
+#ifdef NV_TOUCH_UI
+  if (!layout_modo_mobile()) toqueLivre = 0;
+#endif
   (void)agora;
   lerPref();
   if (teclado_aberto()) teclado_atualizar(dt, agora);

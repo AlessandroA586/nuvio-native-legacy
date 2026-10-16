@@ -128,19 +128,14 @@ void metaep_scrobble_corpo(char *dst, size_t n, const char *showImdb,
   if (pct > 100.0) pct = 100.0;
   if (!showImdb || !showImdb[0]) { dst[0] = 0; return; }
   if (t > 0 && e > 0) {
-    if (ep && (ep->tvdb[0] || ep->tmdb[0] || ep->trakt[0])) {
+    if (ep && (ep->tvdb[0] || ep->trakt[0])) {
       char ids[220] = "";
-      if (showImdb[0] == 't' && showImdb[1] == 't')
-        snprintf(ids, sizeof ids, "\"imdb\":\"%s\"", showImdb);
+      // These IDs identify the episode, not the show. Trakt's episode
+      // contract supports TVDB/Trakt; TMDB-only metadata uses the pair below.
       if (ep->tvdb[0]) {
         size_t u = strlen(ids);
         snprintf(ids + u, sizeof ids - u, "%s\"tvdb\":%s",
                  ids[0] ? "," : "", ep->tvdb);
-      }
-      if (ep->tmdb[0]) {
-        size_t u = strlen(ids);
-        snprintf(ids + u, sizeof ids - u, "%s\"tmdb\":%s",
-                 ids[0] ? "," : "", ep->tmdb);
       }
       if (ep->trakt[0]) {
         size_t u = strlen(ids);
@@ -148,9 +143,8 @@ void metaep_scrobble_corpo(char *dst, size_t n, const char *showImdb,
                  ids[0] ? "," : "", ep->trakt);
       }
       snprintf(dst, n,
-               "{\"show\":{\"ids\":{%s}},"
-               "\"episode\":{\"season\":%d,\"number\":%d},\"progress\":%.2f}",
-               ids, t, e, pct);
+               "{\"episode\":{\"ids\":{%s}},\"progress\":%.2f}",
+               ids, pct);
       return;
     }
     snprintf(dst, n,

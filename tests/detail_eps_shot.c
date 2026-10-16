@@ -92,6 +92,11 @@ static float fx_titulo_bloco(TxtEstilo estilo, const char *s, int r, int g, int 
 #define txt_bloco fx_titulo_bloco
 #define gfx_icone fx_icone
 #define plrui_kicker fx_kicker
+#include "trailer.h"
+// NV_FPS trailer phase: the harness has no player, so fake "trailer live".
+static int fxTrailerVivo;
+static int fx_trailer_aberto(void) { return fxTrailerVivo; }
+#define trailer_aberto fx_trailer_aberto
 #include "../src/detail.c"
 #include "menu.h"
 #include "ilha.h"
@@ -422,24 +427,36 @@ static void gravar(const char *nome) {
 // quadro, e tex.c ainda esta decodificando a arte de fundo. Repetir e o que o
 // aparelho faz nos primeiros quadros da tela.
 static int parado, comMenu;
+// NV_FPS: custo por quadro (CPU de atualizar+desenhar, texto rasterizado, envios
+// de textura, capturas de vidro) de quem esta medindo.
+#define FPS_MAX 4096
+static int medindo, fpsN;
+static struct { double ms, fill; int txt, upl, vid, rects, cheio; } fpsQ[FPS_MAX];
 static void quadros(int n) {
   int i;
   for (i = 0; i < n; i++) {
+    Uint64 t0 = SDL_GetPerformanceCounter();
     SDL_PumpEvents();
+    tex_upl_n = 0; txt_rasterizadas = 0;
     // BOMBEAR ANTES DE TUDO, como main.c faz. Sem isto nada decodifica: a fila
     // de texturas so anda dentro do tex_bombear, e a captura sairia com a arte
     // do backdrop e as miniaturas dos episodios em cinza — de volta ao chao
     // chapado que este arquivo existe para nao ter.
     tex_bombear(3);
     if (!parado) detail_atualizar(1.0f / 60.0f, SDL_GetTicks());
+    if (fxTrailerVivo) trailerFade = 1.0f;
     txt_novo_quadro();
     tex_novo_quadro();
     gfx_novo_quadro();
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glViewport(0, 0, 1920, 1080);
     glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1.0f);
+    gfx_sem_recorte();
+    gfx_ambiente_preparar();
     glClear(GL_COLOR_BUFFER_BIT);
+    gfx_ambiente(1.0f);
     detail_desenhar(SDL_GetTicks());
+    gfx_ambiente_descarregar();
     // MENU OVER THE PAGE (NV_MENU_SOBRE): the same order as app.c — page,
     // side menu on top, clock island last (always top-right).
     if (comMenu) {
@@ -449,7 +466,36 @@ static void quadros(int n) {
       ilha_posicionar(1);
       ilha_desenhar(SDL_GetTicks());
     }
+    if (medindo && fpsN < FPS_MAX) {
+      glFinish();
+      fpsQ[fpsN].ms = (SDL_GetPerformanceCounter() - t0) * 1000.0 / SDL_GetPerformanceFrequency();
+      fpsQ[fpsN].txt = txt_rasterizadas; fpsQ[fpsN].upl = tex_upl_n;
+      fpsQ[fpsN].vid = gfx_vidro_capturas; fpsQ[fpsN].fill = gfx_fill_gpu; fpsQ[fpsN].rects = gfx_n_rect; fpsQ[fpsN].cheio = gfx_n_cheio; fpsN++;
+    }
   }
+}
+static int cmpMs(const void *a, const void *b) {
+  double x = *(const double *)a, y = *(const double *)b;
+  return x < y ? -1 : x > y;
+}
+// Fecha a janela de medida aberta por fpsN = 0: uma linha por fase.
+static void fpsRelata(const char *fase) {
+  static double v[FPS_MAX];
+  double soma = 0, pior = 0, fill = 0;
+  int rects = 0, cheio = 0;
+  int i, txt = 0, upl = 0, vid = 0, ip = 0;
+  for (i = 0; i < fpsN; i++) {
+    fill += fpsQ[i].fill; rects += fpsQ[i].rects; cheio += fpsQ[i].cheio; v[i] = fpsQ[i].ms; soma += v[i]; txt += fpsQ[i].txt; upl += fpsQ[i].upl; vid += fpsQ[i].vid;
+    if (v[i] > pior) { pior = v[i]; ip = i; }
+  }
+  if (getenv("NV_FPS_Q"))
+    for (i = 0; i < fpsN && i < 40; i++)
+      if (fpsQ[i].ms > 1.5 || fpsQ[i].txt || fpsQ[i].upl)
+        printf("  q%d %.2fms txt=%d upl=%d\n", i, fpsQ[i].ms, fpsQ[i].txt, fpsQ[i].upl);
+  qsort(v, fpsN, sizeof *v, cmpMs);
+  printf("[detfps] %-14s n=%d media=%.2f p95=%.2f pior=%.2f(q%d) ms txt=%d upl=%d vidro=%d fill=%.2f rects=%.0f cheias=%.1f\n",
+         fase, fpsN, soma / fpsN, v[(int)(fpsN * 0.95)], pior, ip, txt, upl, vid, fill / fpsN, (double)rects / fpsN, (double)cheio / fpsN);
+  fpsN = 0;
 }
 
 // Abre a pagina do item `i` e deixa o foco na TEMPORADA `tc` (coluna da fileira
@@ -524,6 +570,7 @@ int main(int argc, char **argv) {
     // NUVIO_SHOT_IDIOMA=N troca o idioma das capturas que nao sao as das notas
     // da release (0 pt ... 7 es; ver idiomacod.h): serve a conferir traducao.
     fprintf(f, "idioma %d\n", getenv("NUVIO_SHOT_IDIOMA") ? atoi(getenv("NUVIO_SHOT_IDIOMA")) : 0);
+    if (getenv("NV_AJ")) fprintf(f, "%s\n", getenv("NV_AJ"));   // linhas cruas de ajustes.txt
     if (getenv("NV_APPLE_EP")) fprintf(f,"homeLayoutLocal %d\n",HOME_LAYOUT_DINAMICA);
     // #205: NV_EP_TAMANHO=0/1/2 captura os tres tamanhos dos cards de episodio
     // da Moderna (Pequeno/Medio/Grande).
@@ -695,6 +742,57 @@ int main(int argc, char **argv) {
     snprintf(nome, sizeof nome, "%s-menu-sobre-voltou.png", saida); gravar(nome);
     assert(aberto && !saindo && foco.fileira == f0 && foco.coluna == c0 && scrollY == s0);
     puts("menu over detail: page kept alive under the menu, Right returns");
+    return 0;
+  }
+
+  // --- NV_FPS: custo por quadro ao abrir a pagina da serie e ao passar de card em
+  //     card na fileira de episodios (queixa 205: "drop fps when u open detail
+  //     page, and swipe between the episodes cards").
+  //     NV_FPS=1 bash tests/detail_eps_shot.sh /tmp/x
+  if (getenv("NV_FPS")) {
+    SDL_Event ev = {0};
+    semear(1, T1_N, 3); semear(2, T2_N, 0); semear(3, T3_N, 0);
+    progVis = 3; progExib = T1_N + T2_N + (T3_PROX_EP - 1);
+    medindo = 1; fpsN = 0;
+    { HomeItem hi; memset(&hi, 0, sizeof hi);
+      hi.rect.w = NV_TELA_W; hi.rect.h = NV_TELA_H;
+      hi.titulo = itens[0].titulo; hi.genero = itens[0].genero; hi.meta = itens[0].meta;
+      detail_abrir(&hi); }
+    nivel = 1;
+    quadros(30); fpsRelata("abrir 0-30");
+    quadros(120); fpsRelata("abrir 30-150");
+    foco.fileira = SEC_EPISODIOS; foco.coluna = 0;
+    quadros(120); fpsRelata("foco-eps");
+    for (int k = 0; k < 8; k++) {
+      ev.type = SDL_KEYDOWN; ev.key.keysym.sym = SDLK_RIGHT; detail_evento(&ev);
+      ev.type = SDL_KEYUP; detail_evento(&ev);
+      quadros(24);
+    }
+    fpsRelata("passa-cards");
+    snprintf(nome, sizeof nome, "%s-fps.png", saida); gravar(nome);
+    // Hero trailer live (queixa 205: 22-30 fps on the TCL while it plays): the
+    // video sits under the GL surface, so every full-screen layer drawn over
+    // it is paid in the compositor. Hero focus, page at rest.
+    nivel = 0; foco.fileira = SEC_TEMPORADAS; foco.coluna = 0;
+    fxTrailerVivo = 1; fpsN = 0;
+    quadros(120); fpsRelata("trailer-vivo");
+    snprintf(nome, sizeof nome, "%s-fps-trailer.png", saida); gravar(nome);
+    // Carousel card at rest (cartao=1) with the trailer live: where the TCL
+    // sat for the 22-30 fps. Fake the carousel, same as the app opening a card.
+    carro = 1; carN = 2; carIdx[0] = 0; carIdx[1] = 1; carPos = carAplicado = 0; carOff = 0;
+    carEsperaRect = 0; carCheia = 0; nivel = 0; botao = 0;
+    cartao = carTxt = 1; cartaoVel = carTxtVel = 0;
+    fpsN = 0; quadros(60); fpsRelata("trailer-cartao");
+    if (getenv("NV_FPS_RASTRO")) { gfx_rastro_grandes = 1; quadros(1); gfx_rastro_grandes = 0; }
+    snprintf(nome, sizeof nome, "%s-fps-trailer-cartao.png", saida); gravar(nome);
+    // NV_FPS_CHEIAS_MAX=N: fail when the live-trailer page OR card submits more
+    // than N full-screen fills per frame (gfx_n_cheio, the [quadro-des] "cheias").
+    if (getenv("NV_FPS_CHEIAS_MAX")) {
+      int n = 0, i, mx = atoi(getenv("NV_FPS_CHEIAS_MAX"));
+      for (i = 0; i < 60; i++) { quadros(1); n += gfx_n_cheio; }
+      printf("[detfps] trailer-cartao cheias=%.1f max=%d\n", n / 60.0, mx);
+      return n / 60.0 > mx ? 1 : 0;
+    }
     return 0;
   }
 

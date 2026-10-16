@@ -834,7 +834,7 @@ static int window_primeiro_quadro_feito(void) { return nvPrimeiroQuadroFeito; }
 static int esperaAddonsDaConta(void) {
   if (!sessao_logada() || sync_estado() == SYNC_FALHOU) return 0;
   if (perfis_precisa_escolher()) return 1;
-  return sync_perfil_pronto() ? 0 : 2;   // ciclo terminado E aplicado para o perfil ativo
+  return sync_home_fontes_prontas() ? 0 : 2;   // fontes aplicadas; progresso/pushes seguem em paralelo
 }
 
 
@@ -1771,6 +1771,10 @@ int main(int argc, char **argv) {
       // Teclado do sistema (entrada_texto.h): ve o texto ANTES de qualquer tela.
       texto_sistema_observar(&e);
       if (e.type == SDL_WINDOWEVENT) {
+        // A perda de foco cancela a selecao do relogio e qualquer OK armado;
+        // app_evento consome estes avisos antes de entregar teclas as paginas.
+        if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST || e.window.event == SDL_WINDOWEVENT_HIDDEN)
+          app_evento(&e);
         if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
           player_descartar_retido(); retomamorna_cancelar();
           ponteiro_evento(&e, app_evento);

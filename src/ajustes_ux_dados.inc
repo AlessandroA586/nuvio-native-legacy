@@ -105,6 +105,8 @@ static void uxValorTexto(int op, int v, char *buf, size_t tam) {
     texto = !cod || !cod[0] ? "Da conta" : !strcmp(cod, "*") ? "Todas"
       : !strcmp(cod, "~") ? "Original do título" : ling_nome(cod);
     texto = i18n(texto);
+  } else if (op == AJ_PLAYER_EXTERNO || op == AJ_PLAYER_ANIME) {
+    texto = i18n(ppNome(op, v));
   } else if (op == AJ_SELOS_PACOTE) {
     texto = v > 0 && v <= selospacote_n() ? selospacote_nome(v - 1) : i18n("Do Nuvio");
   } else if (op == AJ_TEX_MB && v > 0 && v < o->n && texAcima(v)) {
@@ -236,6 +238,8 @@ static const char *uxSinonimos(int op) {
     case AJ_P2P_DESTINO: return "cache p2p pendrive usb armazenamento interno disco externo flash drive storage location";
     case AJ_ESTAT_TAMANHO: return "estatisticas ao vivo stats nerds tamanho completo compacto minimo pequeno linha canto fixar velocidade buffer painel live statistics size full compact minimal";
     case AJ_ESTAT_LADO: return "estatisticas ao vivo stats nerds lado direita esquerda direito esquerdo posicao painel live statistics side left right position";
+    case AJ_PLAYER_ANIME: return "player anime externo igual vlc mx outro app video kitsu mal";
+    case AJ_PLAYER_EXTERNO: return "player externo interno perguntar vlc mx outro app video external ask";
     case AJ_BUFFER: return "buffer tamanho memoria 64 128 256 mb travando carregando rede instavel stats nerds";
     case AJ_CACHE_SEEK: return "cache seek buffer disco armazenamento voltar avancar travando carregando";
     case AJ_TMDB_IDIOMA: return "idioma metadados titulo sinopse traducao tmdb";
@@ -257,6 +261,7 @@ static const char *uxSinonimos(int op) {
     case AJ_AVANCADAS: return "avancado avancada avancados avancadas tecnico tecnica opcoes ocultas mostrar esconder advanced";
     case AJ_LOGO_TRAILER: return "trailer trailers logo marca titulo oled queimar burn-in esconder canto";
     case AJ_TRAILER_FONTE: return "trailer trailers fonte origem provedor apple imdb youtube";
+    case AJ_TRAILER_AUDIO: return "trailer trailers audio idioma dublado dublagem original";
     case AJ_TRAILER_QUAL: return "trailer trailers qualidade resolucao definicao";
     case AJ_TRAILER_ASPECTO: return "trailer trailers formato proporcao zoom tarja";
     case AJ_VIDRO: return "lento lenta lentidao travando trava desempenho vidro blur transparencia";
@@ -307,7 +312,7 @@ static const char *uxCaminhoAntigo(int op) {
     // desta TV virou Esta TV; Conta e perfis virou Conta e servicos.
     case AJ_HERO_TRAILER: case AJ_FOCO_TRAILER: case AJ_DET_TRAILER_AUTO: case AJ_DET_TRAILER:
     case AJ_HERO_TRAILER_SOM: case AJ_DET_TRAILER_SOM: case AJ_TRAILER_FONTE: case AJ_HERO_TRAILER_ESPERA:
-    case AJ_TRAILER_QUAL: case AJ_TRAILER_ASPECTO: case AJ_TRAILER_ZOOM_TPK: case AJ_LOGO_TRAILER:
+    case AJ_TRAILER_QUAL: case AJ_TRAILER_ASPECTO: case AJ_TRAILER_ZOOM_TPK: case AJ_LOGO_TRAILER:  case AJ_TRAILER_AUDIO:
       return "Trailers";
     case AJ_EXPANDIR: case AJ_EXPANDIR_ATRASO: case AJ_BORDA_FOCO: case AJ_GRAD_CLASSICO:
     case AJ_LARGURA_DP: case AJ_RAIO_DP: case AJ_PROF: case AJ_PROF_BORDA: case AJ_PROF_BRILHO:

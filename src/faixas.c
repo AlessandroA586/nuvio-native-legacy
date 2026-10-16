@@ -931,9 +931,13 @@ static void aplicar(void) {
   if (coluna == 0) {
     // F06: outra faixa de audio = outras falas; a escuta em curso nao vale mais.
     if (video_audio_atual() != foco[0]) legsync_audio_trocou();
-    // A ordem automatica (audioescolha.h) volta a esta faixa nesta reproducao.
+    // A ordem automatica (audioescolha.h) volta a esta faixa neste titulo, e
+    // nos outros episodios: gravada no perfil (audiomemoria.h), com o numero
+    // dela para a mesma release (bingeGroup).
     { const VideoFaixa *f = video_audio(foco[0]);
-      if (f && !player_id_canal()[0]) audioesc_lembrar(f->idioma, f->codec, f->rotulo, f->canais); }
+      if (f && !player_id_canal()[0])
+        audioesc_lembrar_faixa(f->idioma, f->codec, f->rotulo, f->canais,
+                              video_audio_numero_memoria(f)); }
     video_escolher_audio(foco[0]);
   } else {
     // A pessoa escolheu: a automatica nao mexe mais nesta sessao, nem se a
@@ -1744,7 +1748,7 @@ static void corpoLista(GfxRect c, float a) {
   visiveis = IL_VIS_COL(col);
 #ifdef NV_TOUCH_UI
   if (telefoneui_ativo()) {
-    if (!toqueAudio.livre) {
+    if (!toquerol_livre(&toqueAudio)) {
       ajustarRolagem();
       toqueAudioOffset = rolagem[col] * (IL_LN_H + IL_LN_VAO);
     }

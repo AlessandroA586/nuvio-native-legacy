@@ -1799,7 +1799,7 @@ static void avisos_desenharCorpo_(Uint32 agora) {
     toquerol_vincular(&toqueAvisos, (GfxRect){AVP_X + dx, AVP_TOPO, AVP_W, areaH}, gfx_escala(),
                      0, total - areaH, 1, &rol);
     if (aberto && !cartao && a > .99f) ponteiro_rolagem(toqueAvisosRolar);
-    if (!toqueAvisos.livre)
+    if (!toquerol_livre(&toqueAvisos))
 #endif
     rol += (alvo - rol) * 0.25f; }
   // A linha da ilha tem 22 de recuo proprio: a caixa dela sai 22 para fora,

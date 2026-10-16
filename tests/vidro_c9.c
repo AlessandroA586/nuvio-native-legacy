@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
     if (gfx_vidro_capturas > maximum) maximum = gfx_vidro_capturas;
   }
   printf("tier=%s drawable=%dx%d animated/focus: captures/frame=%.2f passes/frame=%.2f blur-fill/frame=%.6f copy/frame=%.6f blur-pixels/frame=%.0f max-captures=%d\n",
-         webos ? "webos" : "native", width, height, captures / 20.0, passes / 20.0, fill / 20, copy / 20, fill / 20 * width * height, maximum);
+         strrchr(argv[2], '/') ? strrchr(argv[2], '/') + 1 : argv[2], width, height, captures / 20.0, passes / 20.0, fill / 20, copy / 20, fill / 20 * width * height, maximum);
   check(captures > 0 && maximum <= 2, "capture budget across all chrome regions");
   check(captures <= 40, "animated capture budget");
   check(passes == captures * 5, "unchanged five-pass blur kernel");
@@ -136,14 +136,21 @@ int main(int argc, char **argv) {
   check(captures == 0 && passes == 0,
         "static backdrop reuse budget");
   // Home captures first; the consent veil must enter the later modal capture,
-  // including on subsequent frames while the modal remains open.
+  // including on subsequent frames while the modal remains open: those may
+  // reuse that capture (its own slot), so they must match the first frame.
   entrada = 1.0f;
+  size_t bytes = (size_t)width * height * 4;
+  unsigned char *first = malloc(bytes), *again = malloc(bytes);
+  assert(first && again);
   for (int i = 0; i < 3; i++) {
     frame(220, 0, 0);
-    int before = gfx_vidro_capturas;
+    int before = gfx_vidro_capturas, diff = 0;
     consent_draw(13520);
-    check(gfx_vidro_capturas > before, "consent veil invalidates Home backdrop before modal glass");
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, i ? again : first);
+    for (size_t p = 0; i && p < bytes; p++) diff |= first[p] != again[p];
+    check(i ? !diff : gfx_vidro_capturas > before, "consent veil invalidates Home backdrop before modal glass");
   }
+  free(first); free(again);
   shot(argv[2], "modal");
   for (int i = 0; i < 5; i++) frame(380 + i, 0, 1);
   shot(argv[2], "trailer");

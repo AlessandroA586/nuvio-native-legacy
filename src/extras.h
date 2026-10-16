@@ -198,6 +198,8 @@ const char *extras_ficha_lancamento(void);      // "2026-01-15"
 #define EX_TRAILER_MAX 6
 int         extras_n_trailers(void);
 const char *extras_trailer_yt(int i);        // id do video ("dQw4w9WgXcQ")
+void extras_trailer_audio_iso(char *dst);  // ISO de 2 letras do audio pedido ao trailer; "" no Original (so o TMDB sabe)
+int extras_trailer_idioma_preferido(int i);  // 1 in the chosen non-English audio, -1 TMDB pending
 const char *extras_trailer_nome(int i);      // "Official Trailer"
 // URL da miniatura. Previsivel a partir do id, sem chamada de API — e o mesmo
 // caminho que o web usa (metaDetailsScreen.js:5728). Passe direto a tex_obter:
@@ -216,6 +218,7 @@ void        extras_hero_trailer_pedir(const char *imdb, int serie, long tmdbId);
 // ao IMDb pedido. O snapshot sob trava evita que home combine n e ponteiro de
 // duas geracoes durante uma troca A -> B -> A.
 int         extras_hero_trailer_obter(const char *imdb, char *dst, unsigned cap);
+int         extras_hero_trailer_idioma_preferido(const char *imdb);  // same, for the hero
 #ifdef NUVIO_TRAILER_TEST
 int         extras_hero_trailer_parse(const char *json, char *dst, unsigned cap);
 #endif

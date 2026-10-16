@@ -21,7 +21,7 @@
 #define BASE     (NV_TELA_H - NV_MARGEM_Y - 48.0f)
 #define RAIO       0.13f
 
-static int   foco, sair;
+static int   foco, sair, pediuRelogio;
 // 1 quando alguem ligou ou desligou algum addon nesta visita. Ver a nota em
 // addonsui_quer_sair.
 static int   mexeu;
@@ -29,7 +29,7 @@ static float scrollY;
 static float animFoco[128];
 
 void addonsui_abrir(void) {
-  foco = 0; sair = 0; mexeu = 0; scrollY = 0.0f;
+  foco = 0; sair = 0; pediuRelogio = 0; mexeu = 0; scrollY = 0.0f;
   // Sonda aqui e nao no arranque: sao N viagens de rede, e elas so interessam
   // a quem abriu esta tela. Quem ja respondeu nao e consultado de novo.
   addons_sondar_manifestos();
@@ -54,6 +54,8 @@ int addonsui_quer_sair(void) {
   return sair;
 }
 
+int addonsui_pediu_relogio(void) { int v = pediuRelogio; pediuRelogio = 0; return v; }
+
 // SINCRONIZAR ADDONS (#360): a ultima linha da lista (foco == n). Pede a volta
 // da conta ja, pelo mesmo ciclo de sempre (sync.c, fora do fio do quadro); o
 // resultado vira aviso da ilha (ilhasinais.c). Sem conta nao ha o que puxar: a
@@ -70,9 +72,10 @@ static void sincronizar(void) {
 
 void addonsui_evento(const SDL_Event *e) {
   int n = addons_n();
+  pediuRelogio = 0;
   if (e->type != SDL_KEYDOWN) return;
   switch (e->key.keysym.sym) {
-    case SDLK_UP:     if (foco > 0) foco--; break;
+    case SDLK_UP:     if (foco > 0) foco--; else pediuRelogio = 1; break;
     case SDLK_DOWN:   if (foco < n) foco++; break;
     case SDLK_RETURN: case SDLK_KP_ENTER:
       if (foco >= n) { sincronizar(); break; }

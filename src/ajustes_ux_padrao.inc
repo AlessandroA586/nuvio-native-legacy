@@ -271,7 +271,7 @@
   1, /* owner decision #256: next episode auto-play is off by default */
   1, /* auto-skip credits, only with a real start+end marker: Desligado */
   5, /* owner decision #256: configurable countdown in seconds */
-  0, /* interface mode: TV, including on phones until Mobile is selected */
+  2, /* interface mode: Auto; saved TV=0 and Mobile=1 retain their meaning */
   0, /* Mic button in search (.tpk): Automatico, local */
   0, /* menu position (#461): Na lateral, the rail as always */
   0, /* collection tabs style (#205): Chips, as always */
@@ -305,3 +305,6 @@
   120, 0, 0, 0, 0, 3, 1, 0, 1, 0, 0, /* primary style views; player.txt is authoritative */
   0, 0, 0, 0, 0, 0, 0, /* secondary appearance inherits primary, manual delay0 */
   0, /* collection default view (#362): Automatic, existing layout */
+  0, /* external player (#501): Internal */
+  0, /* trailer audio: Automatic */
+  0, /* anime player (#205): Same as Player */

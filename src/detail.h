@@ -6,6 +6,7 @@
 // apenas o titulo: e esse rect que da continuidade ao movimento.
 #ifndef NV_DETAIL_H
 #define NV_DETAIL_H
+#include <stddef.h>
 #include <SDL2/SDL.h>
 #include "home.h"
 
@@ -24,6 +25,8 @@ void detail_fechar(void);
 // Fecha sem a mola de saida (o player saiu para a home: ilha_minimizar).
 void detail_fechar_seco(void);
 int  detail_relogio_oculto(void);  // 1 no carrossel de titulos (cartao com vizinhos), ainda sem esticar: a ilha do relogio some
+int  detail_pediu_relogio(void);
+int  detail_relogio_navegavel(void);
 int  detail_pediu_social(void);   // sempre 0 desde #407 (CIMA no topo nao abre Salvos/Avisos; AZUL/CH+ abre)
 int  detail_pediu_menu(void);   // 1 uma vez: ESQUERDA na borda pediu o menu lateral (a pagina NAO fecha; Voltar e quem sai)
 // app.c, a cada quadro: 1 enquanto a barra lateral esta aberta POR CIMA da
@@ -44,6 +47,10 @@ int  detail_assentado(void);
 // sozinha: reproduzir e marcar na lista. O detalhe nao chama o player nem a
 // biblioteca direto — quem conhece as outras telas e o roteador.
 int  detail_indice(void);
+// Copia a arte selecionada desta pagina somente para o mesmo titulo/tipo.
+// Nao entrega ponteiro do catalogo nem textura; 0 se a pagina saiu, mudou de
+// dono ou a URL nao cabe. `poster` opcional indica a reserva em retrato.
+int  detail_arte_titulo(const CatItem *titulo, char *saida, size_t tam, int *poster);
 // Temporada e episodio em foco (1 = ha episodio; 0 = titulo sem episodios).
 int  detail_ep_foco(int *temporada, int *episodio);
 int  detail_pediu_reproduzir(void);   // consome o pedido

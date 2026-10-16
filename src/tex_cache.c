@@ -1006,7 +1006,7 @@ static void podar(void) {
 // que ja esta decodificado nao fica errado — so nao melhora ate ser despejado.
 static int qualidadeImg = 1;
 void tex_qualidade(int nivel) {
-  if (nivel >= 0 && nivel <= 2) qualidadeImg = nivel;
+  if (nivel >= 0 && nivel <= 2) { qualidadeImg = nivel; arte_tamanho_qualidade(nivel); }
 }
 static float folgaDaQualidade(void) {
   return qualidadeImg == 0 ? 1.00f : qualidadeImg == 2 ? 1.60f : NV_TEX_FOLGA;
@@ -1982,7 +1982,7 @@ static int baixarParaItem(int idx, const char *url, char *dst, size_t tam, int *
     // card (limite <= 640): o item continua com a URL medium como chave, e a
     // promocao a heroi baixa o medium de novo, que e o que ela ja fazia.
     { int limite = limitePedido;
-      if (limite > 0 && limite <= 640) {
+      if (arte_tamanho_fundo_pequeno(limite, qualidadeImg == 2)) {
         variante = NV_CACHE_ARTE_SMALL;
         const char *m = strstr(url, "images.metahub.space/background/medium/");
         if (m) {
@@ -3818,7 +3818,7 @@ void tex_cache_marcar_larg(int grupo, const char *url, float largLayout,
   if (!url || !*url) return;
   snprintf(urlReal, sizeof urlReal, "%s", url);
 #ifdef __EMSCRIPTEN__
-  if (cap <= 640) {
+  if (arte_tamanho_fundo_pequeno(cap, qualidadeImg == 2)) {
     variante = NV_CACHE_ARTE_SMALL;
     const char *m = strstr(url, "images.metahub.space/background/medium/");
     if (m) {

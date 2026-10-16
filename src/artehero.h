@@ -1,7 +1,7 @@
 // A ARTE QUE OCUPA A TELA: qual URL pedir quando o desenho é de 1920 px.
 //
 // O catálogo guarda UMA url de fundo por título, e ela vem do que a fonte
-// mandou: o Cinemeta entrega o backdrop do metahub (1920x1080), o TMDB entrega
+// mandou: o Cinemeta entrega o backdrop do metahub (resolucao variavel), o TMDB entrega
 // um caminho que a descoberta reescreve para w1280 (1280x720) porque é o
 // tamanho certo para um CARD. Desenhar w1280 a 1920 amplia 1,5x, e é isso que
 // se vê como "arte pixelada no destaque" — o arquivo está inteiro, ele só é
@@ -38,6 +38,8 @@ void artehero_definir_falhou(int (*falhou)(const char *caminho));
 // QUALIDADE DA IMAGEM: 0 baixa, 1 padrão, 2 alta (vem da tela de Ajustes).
 // Na baixa, a arte de tela cheia é a url que o catálogo guarda — sem subir para
 // a versão grande. É a diferença entre baixar 3840 px e baixar 1280.
+// Na alta nativa, o fundo medium/small conhecido do Metahub sobe para large,
+// preservando a mesma foto. Cards e o navegador mantem seu tamanho anterior.
 void artehero_qualidade(int nivel);
 
 const char *artehero_url(const CatItem *item);
@@ -175,5 +177,9 @@ void artehero_escolha_suspender(int sim);
 // A chave com que a escolha deste item e guardada: o imdb (com episodio, que
 // arteescolha corta) ou, sem ele, "tmdb:m<id>"/"tmdb:t<id>". "" = sem chave.
 void artehero_id_escolha(const CatItem *item, char *dst, size_t n);
+
+// Titulo de anime: id de addon de anime (kitsu:/mal:/anilist:) ou tt com genero
+// Animacao/Anime e pais Japao. Regra unica, tambem do ajuste "Player para anime".
+int artehero_eh_anime(const CatItem *item);
 
 #endif

@@ -196,6 +196,10 @@ int  ilha_ponto_pediu(void);
 // Onde o relogio pode ficar, decidido por quadro por app.c (a home tem o topo
 // esquerdo livre; Ajustes e Explorar tem titulo ali).
 void ilha_relogio_visivel(int visivel);
+// O roteador concede foco ao sair pelo topo de uma pagina; nao altera os
+// cartoes nem o caminho existente de toque/AZUL/CH+.
+void ilha_relogio_focar(int foco);
+int  ilha_relogio_focado(void);
 
 // PONTO UNICO DA POSICAO. Sem chamada, a ilha fica no topo esquerdo, na coluna
 // do conteudo — ou no topo direito no layout Dinamica, onde a pilula fechada

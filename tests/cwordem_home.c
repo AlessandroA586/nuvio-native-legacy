@@ -35,15 +35,34 @@ int   dados_apagar(const char *nome) { (void)nome; return 1; }
 void  dados_marcar_sujo(int leve) { (void)leve; }
 const char *ling_legenda(void) { return ""; }
 const char *ling_audio(void) { return ""; }
+const char *ling_audio2(void) { return ""; }
+const char *ling_conta_audio2_valor(void) { return ""; }
+void ling_conta_audio2(const char *v) { (void)v; }
+void legenda2_atualizar_offset_manual(int ms) { (void)ms; }
+unsigned addons_versao(void) { return 1; }
+int curadoria_ativa(void) { return 0; }
+const char *curadoria_imdb(void) { return ""; }
+unsigned curadoria_revisao(void) { return 0; }
+void curadoria_passo(void) {}
+int curadoria_escolher(const int *itens, int n, int catN, int curadoria, unsigned *semente) {
+  (void)itens; (void)n; (void)catN; (void)curadoria; (void)semente; return -1; }
 const char *ling_conta_legenda_valor(void) { return ""; }
 const char *ling_conta_legenda2_valor(void) { return ""; }
 const char *ling_conta_audio_valor(void) { return ""; }
+// O segundo idioma (legenda2/audio2) e o offset manual: ajustes.c passou a
+// falar com eles em idiomasDoBlob/gravar; nesta fixture nada disso entra na
+// regra. Mesmos dublês de tests/ajustes_creditos.c.
+const char *ling_audio2(void) { return ""; }
+const char *ling_conta_audio2_valor(void) { return ""; }
+void ling_conta_audio2(const char *v) { (void)v; }
+void legenda2_atualizar_offset_manual(int ms) { (void)ms; }
 void ling_conta_legenda(const char *v) { (void)v; }
 void ling_conta_legenda2(const char *v) { (void)v; }
 void ling_conta_audio(const char *v) { (void)v; }
 void selospacote_conta_do_blob(const char *blob) { (void)blob; }
 int selospacote_n(void) { return 0; }
 int   perfis_ativo(void) { return 1; }
+unsigned addons_versao(void) { return 1; }
 const char *addons_base_por_id(const char *id) { (void)id; return ""; }
 const char *addons_nome_por_id(const char *id) { (void)id; return ""; }
 int  tex_falhou(const char *u) { (void)u; return 0; }

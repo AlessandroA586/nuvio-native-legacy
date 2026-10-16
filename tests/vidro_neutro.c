@@ -128,6 +128,22 @@ int main(int argc, char **argv) {
     confere(sobe, "o vidro desfoca o backdrop real (a borda vira degrade)");
     salvar(dir, "vidro-borda.bmp");
   }
+  // Top bar, glass on + frost OFF: still see-through. Left half black, right
+  // half white behind a bar spanning x = 960; opaque draws both halves equal.
+  {
+    GfxRect b = { 560, 40, 800, 96 };
+    double e[3], d[3];
+    setenv("NUVIO_SHOT_VIDRO_FOSCO", "0", 1); ajustes_teste_vidro_env();
+    assert(ajustes_vidro() && !ajustes_vidro_fosco());
+    quadro(0.0f);
+    gfx_cor((GfxRect){ 960, 0, 960, 1080 }, 0, 1, 1, 1, 1.0f);
+    gfx_chrome(b, 0.5f, 1.0f);
+    media(700, 70, 40, 30, e); media(1180, 70, 40, 30, d);
+    printf("barra fosco off: esq %.1f dir %.1f\n", e[1], d[1]);
+    confere(d[1] > e[1] + 12.0, "barra do topo, vidro sem fosco, deixa o fundo passar");
+    confere(e[1] < 60.0 && d[1] < 200.0, "barra sem fosco segue escura o bastante para o texto");
+    salvar(dir, "barra-fosco-off.bmp");
+  }
   printf("vidro_neutro: %s\n", falhas ? "FALHA" : "ok");
   return falhas ? 1 : 0;
 }

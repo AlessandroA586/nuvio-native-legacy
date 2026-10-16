@@ -68,6 +68,7 @@ int main(void) {
   sobTmdb = 335918;
   snprintf(sobTipo, sizeof sobTipo, "tv");
   sobTemSemente = 0; sobIndice = -1; sobFioVivo = 1;
+  sobSessao = nv_perfil_sessao_ler();
   buscarTitulo(NULL);
   assert(sobIndice == 1 && !sobFioVivo);
   assert(!strcmp(cat_item(1)->imdb, "tmdb:335918"));

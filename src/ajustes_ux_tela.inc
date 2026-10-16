@@ -31,7 +31,10 @@ static const Item TELA[] = {
       OPC(AJ_FONTE_ESCOPO), OPC(AJ_FONTE_ADDONS_PERM), OPC(AJ_FONTE_PLUGINS_PERM),
       OPC(AJ_FONTE_ORDEM), OPC(AJ_FONTE_ORDEM_USO), OPC(AJ_FONTE_OUTROS),
       OPC(AJ_FONTE_AUTO), OPC(AJ_FONTE_TOCAR_CONFERINDO), OPC(AJ_FONTE_AQUECER),
-      OPC(AJ_FONTE_CONFERIR_VARIAS), OPC(AJ_FONTE_PREPARAR), OPC(AJ_FONTE_PRECARREGAR),
+      OPC(AJ_FONTE_CONFERIR_VARIAS), OPC(AJ_FONTE_PREPARAR),
+#ifdef NV_ANDROID
+      OPC(AJ_FONTE_PRECARREGAR),   // so o Android tem o preload do player
+#endif
       OPC(AJ_TAM_MIN), OPC(AJ_FONTE_TEXTO), OPC(AJ_FONTE_ORDEM_ADDON), OPC(AJ_SELOS_CORES),
       OPC(AJ_SELOS_PACOTE), OPC(AJ_SELOS_PACOTE_ADD), OPC(AJ_SELOS_PACOTE_REM),
     ROT("Som e vídeo desta TV"),
@@ -43,13 +46,15 @@ static const Item TELA[] = {
 #if defined(NV_ANDROID) || (!defined(NV_TPK) && !defined(__EMSCRIPTEN__))
       OPC(AJ_BUFFER),   // webOS: DTS/Dolby Vision conversion read-ahead
 #endif
+#ifdef NV_ANDROID
+      OPC(AJ_PLAYER_EXTERNO),
+      OPC(AJ_PLAYER_ANIME),
+#endif
 #ifndef __EMSCRIPTEN__
     // .wgt: sem socket TCP/UDP no navegador, sem motor; P2P escondido (a8e7685d).
-    // #205: sem os pontos de montagem USB do motor (Android), a opcao some.
+    // #205: Android tambem lista o pendrive (NuvioActivity.volumesExternos).
     ROT("P2P"), OPC(AJ_P2P_LIGADO), OPC(AJ_P2P_URL), OPC(AJ_P2P_TESTAR), OPC(AJ_P2P_LIMITE),
-#ifndef NV_ANDROID
     OPC(AJ_P2P_DESTINO),
-#endif
 #endif
 
   SEC("Idiomas e legendas", "Idioma da interface, áudio, legenda e metadados", "aj_languages"),
@@ -191,6 +196,9 @@ static const Item TELA[] = {
       OPC(AJ_DET_TRAILER),
     ROT("Som e imagem"),
       OPC(AJ_HERO_TRAILER_SOM), OPC(AJ_TRAILER_FONTE),
+#ifdef __EMSCRIPTEN__
+      OPC(AJ_TRAILER_AUDIO),   // the dubbed trailer is a YouTube id: native players cannot play it
+#endif
 #ifdef NV_TPK
       OPC(AJ_TRAILER_ZOOM_TPK),
 #endif

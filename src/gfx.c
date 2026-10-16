@@ -1886,33 +1886,58 @@ static float dinPend[4];
 static void dinDescarregar(void);
 static void dinPintar(float y0);
 static int foscoBloq; // este quadro tem video vivo por baixo (gfx_vidro_fosco_bloquear)
+static GLuint foscoVideo; // gfx_vidro_fonte_video: what glass over live video reads
 unsigned gfx_quadro_n;
 // O BACKDROP DO VIDRO (gfx_vidro): um snapshot desfocado em meia resolucao,
 // dividido pelas superficies do quadro e reaproveitado entre quadros enquanto
 // o que foi pintado antes de cada vidro nao muda. vidroHash resume TODO
 // desenho do quadro ate aqui (vidroDesenho, chamado por gfx_rect e pelos
-// furos); cada vidro guarda o hash do seu momento e a regiao da captura que
-// leu. Regioes em layout de tela (x0, y0, x1, y1).
+// furos). Regioes em layout de tela (x0, y0, x1, y1).
 #define VID_N 16
 #define VID_NFUROS 4
-typedef struct { unsigned hash; float cap[4]; int valida; } VidroEntrada;
-static VidroEntrada vidroAnt[VID_N], vidroCur[VID_N];
-static int vidroNAnt, vidroNCur, vidroNVidros, vidroNFuros, vidroSujo = 1, vidroCapNoQuadro;
+static int vidroNVidros, vidroNFuros;
 static unsigned vidroHash;
-// One shared full-screen backdrop per frame for every glass (webOS, .tpk,
-// Mac), reused while nothing under the glasses changes. The per-region path
-// (Android) cost the .tpk home 4 copies + 20 blur passes per animated frame.
-#ifndef NV_ANDROID
-#define VID_PARTILHADO
-static unsigned vidroCapturaHash;
-static int vidroCapturaValida;
+// One shared full-screen backdrop per frame for every glass, every target,
+// reused while nothing under the glasses changes. The old per-region path
+// (Android until 2.0.5) cost the TCL home 4 copies + 20 blur passes per
+// animated frame (tests/vidro_c9.sh, android tier).
+// Capture slots: a frame whose glasses need several captures (a draw between
+// them reaches the next one's read region, e.g. detail cards under a section
+// title) keeps each in its own half-res target, so a static frame reuses all
+// of them. Slot 0 is vidH2; slot k > 0 is vidSlot[k].
+#define VID_NSLOTS 4
+static unsigned vidroSlotHash[VID_NSLOTS];
+static int vidroSlotValido[VID_NSLOTS], vidroSlot, vidroRecapturou;
 static float vidroLeAnt[4], vidroLeCur[4];   // union of what the glasses read, last/this frame
-#endif
 static float vidroDesde[4];   // caixa do que foi pintado na tela desde a ultima captura
-static float vidroCapQ[4];    // a ultima captura deste quadro
 static float vidroVidros[VID_N][4], vidroFuros[VID_NFUROS][4];
 int gfx_vidro_capturas, gfx_vidro_passadas;
 double gfx_vidro_fill, gfx_vidro_copia;
+// BACKDROP-ONLY SOURCE (docs/fosco-nova.md): the glasses read a blurred copy
+// of the backdrop layer alone (art, light, veils: every draw before the
+// frame's first content draw), captured when that layer changes. Rows
+// scrolling and focus moving under the glass no longer recapture. Off
+// (-DNV_VIDRO_SO_FUNDO=0) = the old capture of everything under each glass.
+#ifndef NV_VIDRO_SO_FUNDO
+#define NV_VIDRO_SO_FUNDO 1
+#endif
+int gfx_vidro_so_fundo = NV_VIDRO_SO_FUNDO;
+// fundoFim: 0 layer still open, 1 closed and vidFundo holds it, 2 closed
+// without it (old path). fundoDepois: a full-screen draw (modal veil) came
+// after the layer, so the glasses need the old path to see it.
+static int fundoFim, fundoDepois, fundoValido;
+static unsigned fundoHash;
+static void vidroFundoFechar(void);
+static int vidroFundoModo(GfxRect r, GfxModo m) {
+  static const unsigned long long FUNDO =
+    1ull << GFX_HERO | 1ull << GFX_FUNDO | 1ull << GFX_VEU_TOPO | 1ull << GFX_SNAP | 1ull << GFX_DETALHE |
+    1ull << GFX_HERO_CHEIO | 1ull << GFX_VEU_BAIXO | 1ull << GFX_SOCIAL | 1ull << GFX_EDITORIAL |
+    1ull << GFX_BRILHO_TOPO | 1ull << GFX_LUZ | 1ull << GFX_CEU | 1ull << GFX_AMBIENTE | 1ull << GFX_VITRINE |
+    1ull << GFX_FUNDO_DIN | 1ull << GFX_HERO_CAM | 1ull << GFX_HERO_CHEIO_CAM | 1ull << GFX_VEU_CSS |
+    1ull << GFX_VITRINE_DIN;
+  return ((FUNDO >> (unsigned)m) & 1ull) ||
+         (m != GFX_VIDRO && r.x <= 0.0f && r.y <= 0.0f && r.x + r.w >= NV_TELA_W && r.y + r.h >= NV_TELA_H);
+}
 static void vidroSoma(const void *p, size_t n) {
   const unsigned char *b = p;
   while (n--) vidroHash = (vidroHash ^ *b++) * 16777619u;
@@ -1938,18 +1963,7 @@ static int vidroDentro(GfxRect r) {
 }
 // Conteudo que muda sem passar pelo hash (textura reenviada no lugar, nome
 // de textura reaproveitado): nenhum vidro reaproveita a captura antiga.
-void gfx_vidro_sujar(void) {
-  vidroSujo = 1;
-#ifdef VID_PARTILHADO
-  vidroCapturaValida = 0;
-#endif
-}
-static void vidroAplicarSujo(void) {
-  int k;
-  if (!vidroSujo) return;
-  for (k = 0; k < VID_N; k++) { vidroAnt[k].valida = 0; vidroCur[k].valida = 0; }
-  vidroSujo = 0;
-}
+void gfx_vidro_sujar(void) { memset(vidroSlotValido, 0, sizeof vidroSlotValido); fundoValido = 0; }
 // Todo desenho do quadro, ja em layout de tela (r depois de GFX_TR_RECT e da
 // escala): entra no hash, e o que cai na tela entra na caixa vidroDesde.
 static void vidroDesenho(GfxRect r, GLuint tex, GfxModo modo, float foco, float parx, float pary,
@@ -1962,7 +1976,6 @@ static void vidroDesenho(GfxRect r, GLuint tex, GfxModo modo, float foco, float 
   int e[9] = { (int)modo, (int)tex, recorteAtivo, blendLigado, giroOn, miniAtiva, snapAtivo,
                efeitosLeves, telaW };
   int conta = 1;
-#ifdef VID_PARTILHADO
   // Only what can reach the pixels the glasses read decides reuse. Unsettled
   // easing drifts below 1/256 forever (detail veil, logo, island shadow), a
   // draw wholly off the screen paints nothing, a draw outside what last
@@ -1974,13 +1987,21 @@ static void vidroDesenho(GfxRect r, GLuint tex, GfxModo modo, float foco, float 
     float b[4] = { r.x, r.y, r.x + r.w, r.y + r.h };
     if (r.x >= NV_TELA_W || r.y >= NV_TELA_H || r.x + r.w <= 0.0f || r.y + r.h <= 0.0f) return;
     conta = vidroCruza(vidroLeAnt, b);
+    // The first content draw closes the backdrop layer: vidroHash is its hash.
+    // Every backdrop draw enters it, wherever it lands: the copy is then
+    // valid for a glass anywhere on the screen (the focus glass moving).
+    if (gfx_vidro_so_fundo && modo != GFX_SOMBRA) {
+      if (!fundoFim && !vidroFundoModo(r, modo)) vidroFundoFechar();
+      else if (fundoFim && modo != GFX_VIDRO && r.x <= 0.0f && r.y <= 0.0f &&
+               r.x + r.w >= NV_TELA_W && r.y + r.h >= NV_TELA_H) fundoDepois = 1;
+      if (!fundoFim) conta = 1;
+    }
   }
   {
     int i;
     if (modo == GFX_CEU) v[4] = v[5] = floorf(v[4] * 2.0f);   // sky: twice a second
     for (i = 0; i < 24; i++) v[i] = floorf(v[i] * 256.0f + 0.5f);
   }
-#endif
   if (conta) {
     vidroSoma(v, sizeof v);
     vidroSoma(e, sizeof e);
@@ -2024,16 +2045,13 @@ void gfx_novo_quadro(void) {
   memcpy(gfx_fill_modo_ult, gfx_fill_modo, sizeof gfx_fill_modo);
   memset(gfx_fill_modo, 0, sizeof gfx_fill_modo);
   desfGeradosQuadro = 0;
-  ambPendente = 0; ambIntacta = 0; foscoBloq = 0;
-  vidroAplicarSujo();
-  memcpy(vidroAnt, vidroCur, sizeof vidroAnt); vidroNAnt = vidroNCur;
-  memset(vidroCur, 0, sizeof vidroCur); vidroNCur = 0;
-  memset(vidroDesde, 0, sizeof vidroDesde); memset(vidroCapQ, 0, sizeof vidroCapQ);
-  vidroHash = 2166136261u; vidroCapNoQuadro = 0; vidroNVidros = 0; vidroNFuros = 0;
-#ifdef VID_PARTILHADO
+  ambPendente = 0; ambIntacta = 0; foscoBloq = 0; foscoVideo = 0;
+  memset(vidroDesde, 0, sizeof vidroDesde);
+  vidroHash = 2166136261u; vidroNVidros = 0; vidroNFuros = 0;
   memcpy(vidroLeAnt, vidroLeCur, sizeof vidroLeAnt); memset(vidroLeCur, 0, sizeof vidroLeCur);
-#endif
-  gfx_vidro_capturas = 0; gfx_vidro_passadas = 0;
+  vidroSlot = -1; vidroRecapturou = 0;
+  fundoFim = fundoDepois = 0;
+  gfx_vidro_capturas = 0; gfx_vidro_passadas = 0; gfx_vidro_com_fonte = 0;
   gfx_vidro_fill = gfx_vidro_copia = 0.0;
   ambFonte = 0; dinPendente = 0; dinAdiado = 0; dinNOp = 0;
   gfx_n_assados = 0;
@@ -2330,7 +2348,13 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
       float x0 = sx0 < 0.0f ? 0.0f : sx0, y0 = sy0 < 0.0f ? 0.0f : sy0;
       float x1 = sx1 > NV_TELA_W ? NV_TELA_W : sx1;
       float y1 = sy1 > NV_TELA_H ? NV_TELA_H : sy1;
-      if (x1 > x0 && y1 > y0) gfx_fill_vis += (double)((x1 - x0) * (y1 - y0)) / (NV_TELA_W * NV_TELA_H); }
+      if (x1 > x0 && y1 > y0) {
+        double vis = (double)((x1 - x0) * (y1 - y0)) / (NV_TELA_W * NV_TELA_H);
+        gfx_fill_vis += vis;
+        // "Cheia" = cobre meia tela NA TELA: a parte de um cartao vizinho que
+        // sai pela borda nao custa fill, entao nao conta.
+        if (vis < 0.5) area = 0.0f;
+      } else area = 0.0f; }
     if (area >= 0.5f) { gfx_n_cheio++;
 #ifdef NV_FLUIDEZ_PERF
       if (!comAmb && !opaco && !clearCor && glIsEnabled(GL_BLEND)) gfx_n_cheio_mistura++;
@@ -3170,12 +3194,16 @@ static float vidroTom(float cinza);
 // COM VIDEO VIVO POR BAIXO a tela nao e o fundo (o plano de video fica atras
 // dela, pelo alfa 0 do furo): o player avisa por quadro e o vidro sai chapado.
 #define VID_ALCANCE 68.0f   // BLUR_REACH: ate onde a lente e o desfoque leem fora do vidro
-#define VID_MARGEM  88.0f   // BLUR_MARGIN: o que se captura (folga para o vidro que se move)
 #define VID_RUIDO_N 256
 static GLuint vidGrab, vidH2, vidH2Fbo, vidQa, vidQaFbo, vidQb, vidQbFbo, vidRuido, vidProg;
+static GLuint vidSlot[VID_NSLOTS], vidSlotFbo[VID_NSLOTS], vidFundo, vidFundoFbo;
 static GLint vidLocR, vidLocT, vidLocO;
 static int vidW, vidH, vidFalhou;
 void gfx_vidro_fosco_bloquear(void) { foscoBloq = 1; }
+int gfx_vidro_com_fonte;
+// No TV lets GL read the video plane; the player hands a stand-in (its title
+// art, blurred and baked once) and glass over the hole reads that instead.
+void gfx_vidro_fonte_video(GLuint tex) { foscoVideo = tex; }
 
 static const char *VID_VS =
   NV_GLSL_PREFIXO
@@ -3204,10 +3232,11 @@ static void vidLiberar(void) {
   vidGrab = vidH2 = vidQa = vidQb = vidRuido = vidH2Fbo = vidQaFbo = vidQbFbo = 0;
   if (vidProg) glDeleteProgram(vidProg);
   vidProg = 0; vidW = vidH = 0;
-#ifdef VID_PARTILHADO
-  vidroCapturaValida = 0;
-#endif
-  memset(vidroAnt, 0, sizeof vidroAnt); memset(vidroCur, 0, sizeof vidroCur);
+  glDeleteTextures(VID_NSLOTS, vidSlot); glDeleteFramebuffers(VID_NSLOTS, vidSlotFbo);
+  memset(vidSlot, 0, sizeof vidSlot); memset(vidSlotFbo, 0, sizeof vidSlotFbo);
+  memset(vidroSlotValido, 0, sizeof vidroSlotValido);
+  glDeleteTextures(1, &vidFundo); glDeleteFramebuffers(1, &vidFundoFbo);
+  vidFundo = vidFundoFbo = 0; fundoValido = 0;
   gfx_tex_esquecer(0);
 }
 static GLuint vidTex(int w, int h, GLenum fmt) {
@@ -3316,8 +3345,9 @@ static void vidPassada(GLuint src, GLuint fbo, int w, int h, const float uv[4], 
 #endif
   if (perftv_enabled) perftv_blur++;
 }
-// Captura e desfoca a regiao `reg` (layout de tela) da tela atual em vidH2.
-static int vidCapturar(const float reg[4]) {
+// Captura e desfoca a regiao `reg` (layout de tela) da tela atual em `dst`
+// (vidH2 ou um slot; meia resolucao, tambem o alvo da primeira passada).
+static int vidCapturar(const float reg[4], GLuint dst, GLuint dstFbo) {
   float ex = (float)telaW / NV_TELA_W, ey = (float)telaH / NV_TELA_H, uv[4], fq;
   int x0, y0, x1, y1, qw, qh, tesoura;
   GLint fboAnt, vp[4];
@@ -3350,11 +3380,11 @@ static int vidCapturar(const float reg[4]) {
   if (uv[1] < 0.0f) uv[1] = 0.0f;
   if (uv[2] > 1.0f) uv[2] = 1.0f;
   if (uv[3] > 1.0f) uv[3] = 1.0f;
-  vidPassada(vidGrab, vidH2Fbo, telaW / 2, telaH / 2, uv, 0.0f, 0.0f);   // 1/2 (caixa 2x2)
-  vidPassada(vidH2, vidQaFbo, qw, qh, uv, 0.0f, 0.0f);                    // 1/4
+  vidPassada(vidGrab, dstFbo, telaW / 2, telaH / 2, uv, 0.0f, 0.0f);     // 1/2 (caixa 2x2)
+  vidPassada(dst, vidQaFbo, qw, qh, uv, 0.0f, 0.0f);                      // 1/4
   vidPassada(vidQa, vidQbFbo, qw, qh, uv, 0.35f / qw, 0.35f / qh);         // Kawase
   vidPassada(vidQb, vidQaFbo, qw, qh, uv, 0.75f / qw, 0.75f / qh);
-  vidPassada(vidQa, vidH2Fbo, telaW / 2, telaH / 2, uv,                   // de volta a 1/2
+  vidPassada(vidQa, dstFbo, telaW / 2, telaH / 2, uv,                     // de volta a 1/2
              1.25f / (telaW / 2), 1.25f / (telaH / 2));
   glBindTexture(GL_TEXTURE_2D, 0);
   glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)fboAnt);
@@ -3370,9 +3400,31 @@ static int vidCapturar(const float reg[4]) {
   return 1;
 }
 
+// Closes this frame's backdrop layer: recaptures it into vidFundo if its hash
+// changed, only when last frame had glass (screens without glass pay nothing).
+static void vidroFundoFechar(void) {
+  float full[4] = { 0, 0, NV_TELA_W, NV_TELA_H };
+  fundoFim = 2;
+  if (vidroLeAnt[2] <= vidroLeAnt[0] || foscoBloq || !ajustes_vidro_fosco() || efeitosMinimos) return;
+  if (!fundoValido || fundoHash != vidroHash) {
+    fundoValido = 0;
+    if (!vidPreparar()) return;
+    if (!vidFundo) {
+      GLint ant = fboLigado();
+      int ok = vidAlvo(&vidFundo, &vidFundoFbo, telaW / 2, telaH / 2);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)ant);
+      gfx_tex_esquecer(0);
+      if (!ok) return;
+    }
+    if (!vidCapturar(full, vidFundo, vidFundoFbo)) return;
+    fundoHash = vidroHash; fundoValido = 1;
+  }
+  fundoFim = 1;
+}
+
 // O backdrop desfocado para o vidro `r` (layout de tela), ou 0 = chapado.
 static GLuint vidroFonte(GfxRect r) {
-#ifdef VID_PARTILHADO
   // The home chrome can draw between glass regions: its bounding box defeats
   // region sharing and causes four copies + twenty blur draws per frame.
   // Share the backdrop only until an intervening backdrop draw reaches the
@@ -3380,82 +3432,49 @@ static GLuint vidroFonte(GfxRect r) {
   // Cross-frame reuse only while vidroHash matches and this glass reads only
   // what last frame's glasses read (the hash covers just that): any change
   // there forces a recapture, so a stale backdrop is never sampled after a
-  // transition. Android keeps its original path.
+  // transition.
+  // Each capture point of the frame is a slot: a glass whose read region an
+  // intervening draw reached moves to the next slot. A slot is reused across
+  // frames while vidroHash at its point matches and no earlier slot was
+  // recaptured this frame (its pixels may sit under this one's read region).
   float lido[4] = { r.x - VID_ALCANCE, r.y - VID_ALCANCE, r.x + r.w + VID_ALCANCE, r.y + r.h + VID_ALCANCE };
+  int sl;
+  GLuint *tex, *fbo;
   vidroUne(vidroLeCur, lido[0], lido[1], lido[2], lido[3]);
-  if (vidH2 && vidW == telaW && vidH == telaH &&
-      ((vidroCapNoQuadro && !vidroCruza(vidroDesde, lido)) ||
-       (vidroCapturaValida && vidroCapturaHash == vidroHash && vidroContem(vidroLeAnt, lido)))) {
-    if (!vidroCapNoQuadro) memset(vidroDesde, 0, sizeof vidroDesde);
-    vidroCapNoQuadro = 1;
-    return vidH2;
+  // Backdrop-only source; the old path below only for a glass over a
+  // full-screen draw after the backdrop (modal veil) or without a copy.
+  if (gfx_vidro_so_fundo) {
+    if (!fundoFim) vidroFundoFechar();
+    if (fundoFim == 1 && !fundoDepois) return vidFundo;
   }
-  {
+  if (!vidH2 || vidW != telaW || vidH != telaH) { if (!vidPreparar()) return 0; }
+  else if (vidroSlot >= 0 && !vidroCruza(vidroDesde, lido))
+    return vidroSlot ? vidSlot[vidroSlot] : vidH2;
+  sl = vidroSlot + 1 < VID_NSLOTS ? vidroSlot + 1 : VID_NSLOTS - 1;
+  tex = sl ? &vidSlot[sl] : &vidH2; fbo = sl ? &vidSlotFbo[sl] : &vidH2Fbo;
+  if (!*tex) {
+    GLint ant = fboLigado();
+    if (!vidAlvo(tex, fbo, telaW / 2, telaH / 2)) { sl = 0; tex = &vidH2; fbo = &vidH2Fbo; }
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)ant);
+    gfx_tex_esquecer(0);
+  }
+  memset(vidroDesde, 0, sizeof vidroDesde);
+  if (!(!vidroRecapturou && vidroSlotValido[sl] && vidroSlotHash[sl] == vidroHash && vidroContem(vidroLeAnt, lido))) {
     float full[4] = { 0, 0, NV_TELA_W, NV_TELA_H };
-    if (!vidCapturar(full)) return 0;
-    vidroCapNoQuadro = 1;
-    vidroCapturaHash = vidroHash;
-    vidroCapturaValida = 1;
-    memset(vidroDesde, 0, sizeof vidroDesde);
-    return vidH2;
+    vidroSlotValido[sl] = 0;
+    if (!vidCapturar(full, *tex, *fbo)) return 0;
+    vidroSlotHash[sl] = vidroHash; vidroSlotValido[sl] = 1; vidroRecapturou = 1;
   }
-#endif
-  float need[4], cap[4];
-  int i = vidroNCur, k, fonte = 0;
-  need[0] = r.x - VID_ALCANCE; need[1] = r.y - VID_ALCANCE;
-  need[2] = r.x + r.w + VID_ALCANCE; need[3] = r.y + r.h + VID_ALCANCE;
-  if (need[0] < 0.0f) need[0] = 0.0f;
-  if (need[1] < 0.0f) need[1] = 0.0f;
-  if (need[2] > NV_TELA_W) need[2] = NV_TELA_W;
-  if (need[3] > NV_TELA_H) need[3] = NV_TELA_H;
-  vidroAplicarSujo();
-  // 1. A captura que outro vidro deste quadro ja fez, se nada pintado desde
-  //    entao cai no que este le.
-  if (vidroCapNoQuadro && vidroContem(vidroCapQ, need) && !vidroCruza(vidroDesde, need)) {
-    memcpy(cap, vidroCapQ, sizeof cap); fonte = 1;
-  }
-  // 2. A do quadro anterior, se tudo o que veio antes deste vidro e igual e
-  //    nenhuma captura deste quadro escreveu por cima dela.
-  else if (vidH2 && vidW == telaW && vidH == telaH && i < vidroNAnt && vidroAnt[i].valida &&
-           vidroAnt[i].hash == vidroHash && vidroContem(vidroAnt[i].cap, need)) {
-    memcpy(cap, vidroAnt[i].cap, sizeof cap); fonte = 1;
-  }
-  // 3. Captura nova: o vidro com a margem e, na primeira do quadro, as regioes
-  //    dos vidros que vieram depois dele no quadro anterior (uma captura so
-  //    para todos, se nada for pintado entre eles).
-  else {
-    cap[0] = r.x - VID_MARGEM; cap[1] = r.y - VID_MARGEM;
-    cap[2] = r.x + r.w + VID_MARGEM; cap[3] = r.y + r.h + VID_MARGEM;
-    if (!vidroCapNoQuadro)
-      for (k = i; k < vidroNAnt; k++)
-        if (vidroAnt[k].cap[2] > vidroAnt[k].cap[0])
-          vidroUne(cap, vidroAnt[k].cap[0], vidroAnt[k].cap[1], vidroAnt[k].cap[2], vidroAnt[k].cap[3]);
-    if (cap[0] < 0.0f) cap[0] = 0.0f;
-    if (cap[1] < 0.0f) cap[1] = 0.0f;
-    if (cap[2] > NV_TELA_W) cap[2] = NV_TELA_W;
-    if (cap[3] > NV_TELA_H) cap[3] = NV_TELA_H;
-    if (!vidCapturar(cap)) return 0;
-    for (k = 0; k < VID_N; k++) {
-      if (vidroCruza(vidroAnt[k].cap, cap)) vidroAnt[k].valida = 0;
-      if (k < i && vidroCruza(vidroCur[k].cap, cap)) vidroCur[k].valida = 0;
-    }
-    memcpy(vidroCapQ, cap, sizeof cap);
-    vidroCapNoQuadro = 1;
-    memset(vidroDesde, 0, sizeof vidroDesde);
-    fonte = 1;
-  }
-  if (i < VID_N) {
-    vidroCur[i].hash = vidroHash; vidroCur[i].valida = fonte;
-    memcpy(vidroCur[i].cap, cap, sizeof cap);
-    vidroNCur++;
-  }
-  return vidH2;
+  vidroSlot = sl;
+  return *tex;
 }
 
 // Os parametros do proximo GFX_VIDRO, postos por gfx_vidro e enviados por
 // gfx_rect (vidroAplicar) com o retangulo ja em layout de tela.
 static struct {
-  int tipo, fonte;
+  int tipo;
+  GLuint fonte;   // the blurred backdrop, 0 = chapado
   float raio, scrT[4], scrB[4], aro, aroLuz, dens[4];
 } vidPend;
 static void vidroAplicar(Programa *P, GfxRect r) {
@@ -3492,22 +3511,27 @@ static void vidroAplicar(Programa *P, GfxRect r) {
 void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a) {
   GfxRect t = r;
   float d = dens, tela[4];
-  int chapado, i, contorno = ajustes_vidro_contorno();
+  int chapado, video, i, contorno = ajustes_vidro_contorno();
   if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
   GFX_TR_RECT(t.x, t.y, t.w, t.h);
   if (escAtiva != 1.0f) { t.x *= escAtiva; t.y *= escAtiva; t.w *= escAtiva; t.h *= escAtiva; }
   tela[0] = t.x; tela[1] = t.y; tela[2] = t.x + t.w; tela[3] = t.y + t.h;
-  chapado = foscoBloq || !ajustes_vidro_fosco() || efeitosMinimos || snapAtivo || miniAtiva || giroOn ||
-            gfx_opacidade_grupo < 0.999f;
+  // Wholly off the screen (detail hero buttons scrolled away) paints nothing:
+  // no capture for it.
+  chapado = !ajustes_vidro_fosco() || efeitosMinimos || snapAtivo || miniAtiva || giroOn ||
+            gfx_opacidade_grupo < 0.999f ||
+            t.x >= NV_TELA_W || t.y >= NV_TELA_H || t.x + t.w <= 0.0f || t.y + t.h <= 0.0f;
   for (i = 0; !chapado && i < vidroNVidros; i++) chapado = vidroCruza(vidroVidros[i], tela);
-  for (i = 0; !chapado && i < vidroNFuros; i++) chapado = vidroCruza(vidroFuros[i], tela);
+  video = foscoBloq;
+  for (i = 0; !video && i < vidroNFuros; i++) video = vidroCruza(vidroFuros[i], tela);
+  if (video && !foscoVideo) chapado = 1;
   if (vidroNVidros < VID_N) memcpy(vidroVidros[vidroNVidros++], tela, sizeof tela);
   memset(&vidPend, 0, sizeof vidPend);
   vidPend.tipo = tipo; vidPend.raio = raio;
   vidRuidoPreparar();   // o dither vale tambem no chapado
   if (!chapado) {
     gfx_ambiente_descarregar();   // a luz e o fundo pendentes ficam ATRAS do vidro
-    vidPend.fonte = vidroFonte(t) != 0;
+    vidPend.fonte = video ? foscoVideo : vidroFonte(t);
   }
   // Scrim CINZA NEUTRO (o verde vinha da fonte, nao daqui; R = G = B): a
   // barra 14/255 como a deles. Sem fonte, o scrim e o vidro inteiro.
@@ -3517,7 +3541,11 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   // opaque #1A1C21 of mockup-A27-sem-transparencia.
   if (tipo == GFX_VIDRO_BARRA) {
     float al = gfx_chrome_tinta();
-    if (vidPend.fonte) {
+    // Frost off: no blur source, but the bar stays see-through. Same tint on
+    // the live scene, alpha floored (no luma solve here) to keep text readable.
+    int claro = !vidPend.fonte && !ajustes_vidro_fosco() && !efeitosMinimos;
+    if (claro && al < 0.62f) al = 0.62f;
+    if (vidPend.fonte || claro) {
       vidPend.scrT[0] = vidPend.scrB[0] = 0x12 / 255.0f;
       vidPend.scrT[1] = vidPend.scrB[1] = 0x14 / 255.0f;
       vidPend.scrT[2] = vidPend.scrB[2] = 0x18 / 255.0f;
@@ -3541,7 +3569,8 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   if (tipo == GFX_VIDRO_BARRA) gfx_chrome_dens(vidPend.dens);
   vidPend.aro = contorno ? 0.14f : 0.0f;
   vidPend.aroLuz = contorno ? 0.28f : 0.0f;
-  gfx_rect(r, vidPend.fonte ? vidH2 : 0, GFX_VIDRO, 0, 0, 0, raio, 1, 1, 1, a);
+  gfx_vidro_com_fonte += vidPend.fonte != 0;
+  gfx_rect(r, vidPend.fonte, GFX_VIDRO, 0, 0, 0, raio, 1, 1, 1, a);
   gfx_vidro_matiz(r, raio, a);
   if (tipo == GFX_VIDRO_PAINEL) gfx_vidro_luz(r, raio, a);
 }
@@ -3966,6 +3995,23 @@ void gfx_furo_raio(GfxRect r, float raio) {
   gfxBlend(0);
   gfx_rect(r, 0, GFX_COR, 0, 0, 0, raio, 0, 0, 0, 0);
   gfxBlend(1);
+}
+
+// O furo com cantos E o veu do cartao numa passada so. gfx_furo_raio + o
+// GFX_JANELA so-veu eram duas camadas do tamanho do cartao sobre o video vivo:
+// o furo apaga o pixel (0,0,0,0) e o veu mistura por cima do zero, que e
+// rgb*a e a. Esta escreve esse resultado direto (SRC_ALPHA, ZERO / ONE, ZERO:
+// o destino e ignorado, ele ia ser apagado mesmo). Mesmo SDF, mesmo descarte
+// dos cantos, mesmo pixel. `veu`, `rolada` e `exp` sao os de gfx_rect/JANELA.
+void gfx_furo_raio_veu(GfxRect r, float raio, float veu, float rolada, float exp, float ca) {
+  GfxRect t = r;
+  dinDescarregar();
+  GFX_TR_RECT(t.x, t.y, t.w, t.h);
+  if (escAtiva != 1.0f) { t.x *= escAtiva; t.y *= escAtiva; t.w *= escAtiva; t.h *= escAtiva; }
+  vidroFuro(t);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ZERO, GL_ONE, GL_ZERO);
+  gfx_rect(r, 0, GFX_JANELA, veu, rolada, exp, raio, 0, 0, 0, ca);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 // Multiplica TUDO o que ja foi desenhado neste quadro (cor e alfa, que e

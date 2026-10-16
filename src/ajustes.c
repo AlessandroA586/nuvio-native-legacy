@@ -12,6 +12,7 @@
 #include "ajustes_ux.h"
 #include "trailerfonte.h"   // NV_TRAILER_CONTINUA_DETALHE, nas ajudas do trailer
 #include "dados.h"
+#include "extplayer.h"
 #include "resolucao.h"
 #include "gpunivel.h"
 #include "enquete.h"
@@ -559,7 +560,7 @@ typedef enum {
   // #329-ideia (PR #351): pular os creditos sozinho, so com inicio e fim reais do marcador. Desligado.
   AJ_PULAR_CREDITOS,
   AJ_PROXIMO_CONTAGEM, // #256: segundos locais; append-only
-  AJ_INTERFACE_MODO, // local, append-only; 0 = TV, 1 = Mobile
+  AJ_INTERFACE_MODO, // local, append-only; TV=0, Mobile=1, Auto=2
   // Botao de microfone das buscas no .tpk (Voz.cs): Automatico (a TV que diz
   // nao ter microfone fica sem ele) / Ligado / Desligado. LOCAL, so na tela do
   // .tpk. No fim: valor[]/CHAVE[] posicionais.
@@ -630,6 +631,9 @@ typedef enum {
   AJ_LEG2_FONTE, AJ_LEG2_OPACIDADE, AJ_LEG2_POSICAO, AJ_LEG2_ATRASO,
   AJ_LEG2_NEGRITO, AJ_LEG2_COR_BORDA, AJ_LEG2_RESTAURAR,
   AJ_COLECAO_EXIBICAO, // #362: padrao das colecoes, por perfil neste aparelho
+  AJ_PLAYER_EXTERNO,   // #501: Interno / Externo / Perguntar (so Android)
+  AJ_TRAILER_AUDIO,    // idioma do audio do trailer (local, append-only)
+  AJ_PLAYER_ANIME,     // #205: Player so para anime (0 = Igual ao Player; local)
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -727,11 +731,13 @@ _Static_assert(sizeof V_COLECAO_EXIBICAO / sizeof *V_COLECAO_EXIBICAO == VT_LAY_
 // Indice gravado em tamanhoUiLocal; o fator sai de ajustes_tamanho_ui.
 static const char *V_TAMANHO_UI[] = { "100%", "120%", "130%", "150%", "80%", "85%", "90%", "115%", "Automático" };
 static const char *V_TAMANHO_AJUSTES[] = { "80%", "90%", "100%" };
-static const char *V_INTERFACE_MODO[] = { "TV", "Mobile" };
+static const char *V_INTERFACE_MODO[] = { "TV", "Mobile", "Automático" };
 static const char *V_MENU_POS[] = { "Na lateral", "No topo" };   // #461
 static const char *V_ABAS_ESTILO[] = { "Chips", "Menu suspenso", "Barra central", "Páginas", "Menu no topo" };   // #205
 // F07: the order is cacheboost_cache_mb's (0, 256, 512, 1024 MB).
 // #338: indice -> MiB em cacheboost_buffer_mb (0 = o de sempre).
+// Os apps instalados vem depois destes tres (ppNome).
+static const char *V_PLAYER_EXTERNO[] = { "Interno", "Externo", "Perguntar sempre" };
 static const char *V_BUFFER[] = { "Automático", "64 MB", "128 MB", "256 MB" };
 // #338: o indice menos 1 e o tamanho de estatvivoui.h (0 = lembrar o ultimo).
 static const char *V_ESTAT_TAMANHO[] = { "Lembrar o último", "Completo", "Compacto", "Mínimo" };
@@ -1119,6 +1125,10 @@ static const char *W_TEMA[] = {
 
 static const char *V_LINGUA[LING_MAX_OPC];
 static int         nLingua;
+// Audio do trailer: Automatico, Original e os idiomas da lista (sem "Todas" e
+// sem "~", que ja e o Original). Lista propria porque o indice nao e o de linguas.c.
+static const char *V_TRAUD[LING_MAX_OPC + 2], *TRAUD_COD[LING_MAX_OPC + 2];
+static int         nTrAud;
 static void rotulosDeIdioma(void) {
   int i, n = ling_opcao_n();
   if (n > LING_MAX_OPC) n = LING_MAX_OPC;
@@ -1140,6 +1150,14 @@ static void rotulosDeIdioma(void) {
                 : ling_nome(c);
   }
   nLingua = n;
+  nTrAud = 0;
+  V_TRAUD[nTrAud] = "Automático"; TRAUD_COD[nTrAud++] = "";
+  V_TRAUD[nTrAud] = "Original";   TRAUD_COD[nTrAud++] = "~";
+  for (i = 2; i < n; i++) {
+    const char *c = ling_opcao_codigo(i);
+    if (!strcmp(c, "~")) continue;
+    V_TRAUD[nTrAud] = V_LINGUA[i]; TRAUD_COD[nTrAud++] = c;
+  }
 }
 
 // Natureza da linha.
@@ -1556,7 +1574,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Tocar o próximo episódio automaticamente", V_LIGA, 2),   // local: proximoAutoLocal
   ESC("Pular os créditos automaticamente", V_LIGA, 2),   // local: pularCreditosLocal
   NUM("Contagem do próximo episódio", 1, 60, 1, "s"),
-  ESC("Modo da interface", V_INTERFACE_MODO, 2),
+  ESC("Modo da interface", V_INTERFACE_MODO, 3),
   ESC("Botão de microfone na busca", V_MIC_BUSCA, 3),   // local: micBuscaLocal (.tpk)
   ESC("Posição do menu", V_MENU_POS, 2),   // por perfil: menuTopoLocal (#461)
   ESC("Estilo das abas", V_ABAS_ESTILO, 5),   // por perfil: abasEstiloLocal (#205)
@@ -1622,6 +1640,9 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Cor da borda", V_LEG2_COR_BORDA, VIDEO_LEG_NCORES + 1),
   ACAO("Restaurar padrão"),
   ESC("Exibição padrão das coleções", V_COLECAO_EXIBICAO, VT_LAY_N),
+  ESC("Player", V_PLAYER_EXTERNO, 3),                    // local: playerExternoLocal
+  ESC("Áudio do trailer", V_TRAUD, 2),   // n real em nValores
+  ESC("Player para anime", V_PLAYER_EXTERNO, 3),        // n real em nValores; local: playerExternoAnimeLocal
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1908,6 +1929,9 @@ static const char *CHAVE[] = {
   "legenda2FonteLocal", "legenda2OpacidadeLocal", "legenda2PosicaoLocal", "legenda2AtrasoLocal",
   "legenda2NegritoLocal", "legenda2CorBordaLocal", "-legenda2Restaurar",
   "colecaoExibicaoPadraoLocal",
+  "playerExternoLocal",
+  "trailerAudioLocal",
+  "playerExternoAnimeLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2297,6 +2321,7 @@ static int ajToqueRolar(const PonteiroRolagem *e) {
 }
 // Guarda a escala durante o desenho: no fio de eventos a escala ja voltou a 1.
 static float ajToqueRegistrar(int id, GfxRect r, float *offset, float maximo, float alvo, int chave) {
+  if (!ajTelaCheia()) return alvo;
   float s = gfx_escala();
   if (ajToqueChave[id] != chave) {
     ajToqueLivre[id] = 0; ajToqueChave[id] = chave;
@@ -2313,6 +2338,7 @@ static float ajToqueRegistrar(int id, GfxRect r, float *offset, float maximo, fl
 #endif
 static float paginaA = 1.0f;   // entrada da pagina da categoria (0..1)
 static int sair = 0;
+static int pediuRelogio;
 
 // Rascunho e navegação separados dos valores persistentes.
 static int uxIndice = 2;
@@ -2386,7 +2412,11 @@ static int cinemetaInstalado(void) {
 int ajustes_animacoes_reduzidas(void) { return valor[AJ_ANIM] == 1; }
 int ajustes_interface_mobile(void) {
 #ifdef NV_TOUCH_UI
-  return valor[AJ_INTERFACE_MODO] == 1;
+  int automaticoMobile = 0;
+#ifdef NV_ANDROID
+  automaticoMobile = android_interface_mobile_auto();
+#endif
+  return layout_modo_resolver(valor[AJ_INTERFACE_MODO], automaticoMobile);
 #else
   return 0;
 #endif
@@ -2653,6 +2683,82 @@ void ajustes_definir_estat_lado(int esquerda) {
   valor[AJ_ESTAT_LADO] = v;
   AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar());
 }
+// #205: PLAYER EXTERNO ESCOLHIDO. "Player" (filmes e series) e "Player para
+// anime" valem: 0 Interno, 1 Externo (seletor do sistema), 2 Perguntar sempre,
+// 3+i o app i da lista dos instalados. No anime o 0 e "Igual ao Player" e o resto
+// vem deslocado em 1. O indice de uma lista de apps nao e estavel (instala-se e
+// desinstala-se), entao o que vale e o PACOTE, em player-externo.txt (linha 1 filmes,
+// linha 2 anime); o numero em ajustes.txt e so o espelho dele (ppReconciliar).
+static char ppPkg[2][96];
+static int ppN(void) {
+#ifdef NV_ANDROID
+  return extplayer_n_apps();
+#else
+  return 0;
+#endif
+}
+static int ppBase(int op) { return op == AJ_PLAYER_ANIME ? 1 : 0; }
+static const char *ppNome(int op, int v) {
+  int b = v - ppBase(op);
+  if (op == AJ_PLAYER_ANIME && v == 0) return "Igual ao Player";
+  if (b >= 0 && b < 3) return V_PLAYER_EXTERNO[b];
+#ifdef NV_ANDROID
+  if (b >= 3 && b - 3 < ppN()) return extplayer_app_nome(b - 3);
+#endif
+  return "";
+}
+static void ppGravar(void) {
+  char t[2 * 96 + 4];
+  snprintf(t, sizeof t, "%s\n%s\n", ppPkg[0], ppPkg[1]);
+  dados_gravar("player-externo.txt", t);
+}
+static void ppCarregar(void) {
+  char *t = dados_ler("player-externo.txt"), *q;
+  int i;
+  ppPkg[0][0] = ppPkg[1][0] = 0;
+#ifdef NV_ANDROID
+  extplayer_atualizar_apps();
+#endif
+  for (i = 0, q = t; q && i < 2; i++) {
+    size_t n = strcspn(q, "\r\n");
+    if (n < sizeof ppPkg[i]) { memcpy(ppPkg[i], q, n); ppPkg[i][n] = 0; }
+    q += n; q += strspn(q, "\r\n");
+  }
+  free(t);
+}
+// Alinha o valor mostrado com o pacote guardado. Pacote que sumiu da lista
+// (app desinstalado) cai em "Perguntar sempre", com log.
+static void ppReconciliar(void) {
+  int k, i, mudou = 0;
+  for (k = 0; k < 2; k++) {
+    int op = k ? AJ_PLAYER_ANIME : AJ_PLAYER_EXTERNO, b = ppBase(op), achou = -1;
+    for (i = 0; ppPkg[k][0] && i < ppN(); i++)
+#ifdef NV_ANDROID
+      if (!strcmp(extplayer_app_pkg(i), ppPkg[k])) achou = i;
+#else
+      ;
+#endif
+    if (achou >= 0) valor[op] = b + 3 + achou;
+    else {
+      if (ppPkg[k][0]) {
+        printf("[ajustes] player externo %s nao esta instalado; perguntando\n", ppPkg[k]);
+        ppPkg[k][0] = 0; mudou = 1;
+        valor[op] = b + 2;
+      } else if (valor[op] >= b + 3) valor[op] = b + 2;
+    }
+  }
+  if (mudou) ppGravar();
+}
+int ajustes_player_externo(int anime) {
+#ifdef NV_ANDROID
+  int op = anime ? AJ_PLAYER_ANIME : AJ_PLAYER_EXTERNO, v = valor[op];
+  if (anime) { if (v <= 0) return -1; v--; }
+  return v >= 0 ? (v > 3 ? 3 : v) : 0;
+#else
+  return anime ? -1 : 0;
+#endif
+}
+const char *ajustes_player_pacote(int anime) { return ppPkg[anime ? 1 : 0]; }
 int ajustes_buffer_preset(void) {
   int v = valor[AJ_BUFFER];
   return v >= 0 && v < 4 ? v : 0;
@@ -3063,6 +3169,10 @@ float ajustes_trailer_zoom(void)      { static const float z[] = { 1.34f, 1.15f,
 // Teto de definicao do trailer: 0 = a maior que houver.
 int   ajustes_trailer_qualidade(void) { static const int t[] = { 0, 1080, 720, 480 }; int v = valor[AJ_TRAILER_QUAL]; return (v >= 0 && v < 4) ? t[v] : 0; }
 // Fonte do trailer: o TRF_* de trailerfonte.h. Fora da lista le Automatico.
+const char *ajustes_trailer_audio(void) {
+  int v = valor[AJ_TRAILER_AUDIO];
+  return (v > 0 && v < nTrAud) ? TRAUD_COD[v] : "";
+}
 int   ajustes_trailer_fonte(void)     { int v = valor[AJ_TRAILER_FONTE]; return (v >= 0 && v < nValores(AJ_TRAILER_FONTE)) ? v : 0; }
 int  ajustes_envio_auto(void)         { return lig(AJ_ENVIO_AUTO); }
 int  ajustes_menu_explorar(void)      { return lig(AJ_MENU_EXPLORAR); }
@@ -3997,6 +4107,7 @@ void ajustes_dir(const char *dir) {
   fanartCarregar();
   seekrCarregar();
   p2pCarregar();
+  ppCarregar();
   pstCarregar();
   fontefalha_dir(dirAjustes);
   ajustes_provedores_abrir_sessao();
@@ -4029,7 +4140,30 @@ void ajustes_dir(const char *dir) {
     int dtsSaidaAntiga = -1, dtsModoAntigo = -1, viuDtsTpk = 0;
     int leg2TamanhoAntigo = -1, viuLeg2Escala = 0;
   while (fgets(linha, sizeof linha, f)) {
-    char chave[64]; int v, i;
+    char chave[64]; int v, i, inicio = 0;
+    if (sscanf(linha, "%63s%n", chave, &inicio) != 1) continue;
+    if (!strcmp(chave, "interfaceModoLocal")) {
+      // The host reads the same logical record: at most 94 UTF-8 bytes,
+      // excluding LF/CRLF. Drain an oversized record before the next key.
+      size_t bytes = strlen(linha);
+      int ultimo = bytes ? (unsigned char)linha[bytes - 1] : 0;
+      if (ultimo == '\n') {
+        bytes--;
+        ultimo = bytes ? (unsigned char)linha[bytes - 1] : 0;
+      } else if (bytes == sizeof linha - 1) {
+        int c;
+        while ((c = fgetc(f)) != EOF && c != '\n') { bytes++; ultimo = c; }
+      }
+      if (ultimo == '\r') bytes--;
+      if (bytes > 94) continue;
+      // Keep the last valid local choice, including old TV=0/Mobile=1.
+      // strtol rejects oversized values without sscanf's int overflow.
+      char *fim;
+      long modo = strtol(linha + inicio, &fim, 10);
+      if (fim != linha + inicio && modo >= 0 && modo <= 2)
+        valor[AJ_INTERFACE_MODO] = (int)modo;
+      continue;
+    }
     if (sscanf(linha, "%63s %d", chave, &v) != 2) continue;
     // O idioma nao passa pelo laco: o numero do disco e um IDIOMA_*, e o
     // indice da lista da tela e outro (ver "IDIOMA AUTOMATICO").
@@ -4316,6 +4450,7 @@ void ajustes_dir(const char *dir) {
   if (valor[AJ_TEX_MB] > 0) tex_definir_orcamento_mb(ajustes_tex_mb());
   pstAplicar();
   legenda2_atualizar_offset_manual(ajustes_leg2_atraso());
+  ppReconciliar();
   ajSombraSync();   // o que veio do disco nao e mudanca de ninguem
 }
 
@@ -4574,7 +4709,7 @@ static const char *pstTexto(int op) {
     case PST_EXTRA_RUIM:  return i18n("parâmetros inválidos (fmt, format, config e c não valem)");
     case PST_CHAVE_RUIM:  return i18n("chave inválida");
     case PST_MODELO_RUIM: return i18n("modelo inválido: use http(s):// e {imdb}, {imdb_id}, {tmdb}, {tmdb_id}, {id}, {type} ou {tipo_tmdb}");
-    case PST_MODELO_LONGO: return i18n("modelo longo demais: o endereço pronto passa de 512 caracteres");
+    case PST_MODELO_LONGO: return i18n("modelo longo demais: o endereço pronto passa de 2048 caracteres");
     default: break;
   }
   { int e = atomic_load_explicit(&pstTeste, memory_order_acquire);
@@ -5169,6 +5304,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_FONTE_PRAZO:    /* o web nao tem: a rede e os addons sao desta casa */
     case AJ_MEDIDOR:        /* o medidor e da GPU desta TV; o web nao tem */
     case AJ_COLECAO_EXIBICAO: /* por perfil neste aparelho, sem par na conta */
+    case AJ_TRAILER_AUDIO:  /* o web nao tem */
     case AJ_TAMANHO_UI:     /* o tamanho e desta tela, e o web nao tem */
     case AJ_TAMANHO_AJUSTES:
     case AJ_LAYOUT_AJUSTES: /* #339: o arranjo dos Ajustes e desta TV */
@@ -5193,6 +5329,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_LEG_CONTORNO_COR: /* #475: idem */
     case AJ_CACHE_SEEK:     /* F07: o disco e o player sao desta TV */
     case AJ_BUFFER:         /* #338: o buffer e do player desta TV */
+    case AJ_PLAYER_EXTERNO: case AJ_PLAYER_ANIME: /* #501: o app externo e deste aparelho */
     case AJ_ESTAT_TAMANHO:  /* #338: o painel de estatisticas e desta TV */
     case AJ_ESTAT_LADO:     /* idem: o lado do painel */
     case AJ_FONTE_IDIOMA_AUDIO: /* como a prioridade da fonte: escolha desta TV */
@@ -5532,11 +5669,20 @@ static int foraDestaPlataforma(int op) {
 #ifndef NV_TOUCH_UI
   if (op == AJ_INTERFACE_MODO) return 1;
 #endif
+#ifndef NV_ANDROID
+  if (op == AJ_PLAYER_EXTERNO || op == AJ_PLAYER_ANIME) return 1;   // #501: so ha outro player no Android
+#endif
   if (op == AJ_RELOGIO_POS) return 1;   // saiu da tela em 7d69643a: a ilha e sempre no canto direito
   // 2.0.3: o Descobrir do web nao existe na TV; "Avancadas" e a pilula do alto
   // do indice; os oito AJ_MDB_* seguem as "Notas no titulo" (notaLigarPar).
   if (op == AJ_DESCOBRIR || op == AJ_AVANCADAS) return 1;
   if (op >= AJ_MDB_TRAKT && op <= AJ_MDB_MAL) return 1;
+  // #509: um so interruptor de som; AJ_DET_TRAILER_SOM fica so para a migracao.
+  if (op == AJ_DET_TRAILER_SOM) return 1;
+#ifndef __EMSCRIPTEN__
+  // O trailer dublado e um id do YouTube: o player nativo nao toca.
+  if (op == AJ_TRAILER_AUDIO) return 1;
+#endif
 #ifndef NV_TPK
   if (op == AJ_TRAILER_ZOOM_TPK) return 1;
 #endif
@@ -5553,13 +5699,8 @@ static int foraDestaPlataforma(int op) {
 #else
   if (op == AJ_GPU_EFEITOS) return 1;
 #endif
-#ifdef NV_ANDROID
-  // #205: o Android nao tem os pontos de montagem do scan do p2pmotor
-  // (/tmp/usb, /media/usb) — a opcao seria sempre um beco sem saida.
-  if (op == AJ_P2P_DESTINO) return 1;
-#endif
 #ifndef NV_ANDROID
-  if (op == AJ_LEG_SYNC_AUDIO) return 1;
+  if (op == AJ_FONTE_PRECARREGAR || op == AJ_LEG_SYNC_AUDIO) return 1;
 #endif
 #ifdef __EMSCRIPTEN__
   if (op == AJ_P2P_LIGADO || op == AJ_P2P_URL || op == AJ_P2P_TESTAR || op == AJ_P2P_LIMITE || op == AJ_P2P_DESTINO) return 1;
@@ -5621,6 +5762,11 @@ static void conferirPadroes(void) {
 
 static void ajMovReiniciar(void);
 int ajustes_iniciar(void) {
+  pediuRelogio = 0;
+#ifdef NV_ANDROID
+  extplayer_atualizar_apps();   // app instalado com o Nuvio aberto
+#endif
+  ppReconciliar();
   ajMovReiniciar();
   faRetornarFolha = 0; faAddonEditar[0] = 0; ajFalhaEspelhar(); ajLegendaEspelhar();
   uxVeioBusca = uxAbrirOp >= 0;
@@ -5685,8 +5831,9 @@ int ajustes_iniciar(void) {
   rotulosDeIdioma();
   return 1;
 }
-void ajustes_encerrar(void) { faRetornarFolha = 0; uxCancelar(); uxRetornarOp = -1; guiaFechar(); ajlog_vazar_tudo(); }
+void ajustes_encerrar(void) { pediuRelogio = 0; faRetornarFolha = 0; uxCancelar(); uxRetornarOp = -1; guiaFechar(); ajlog_vazar_tudo(); }
 int ajustes_quer_sair(void) { return sair; }
+int ajustes_pediu_relogio(void) { int v = pediuRelogio; pediuRelogio = 0; return v; }
 
 // Valor das linhas so de leitura. O espaco em disco NAO e um numero inventado:
 // vem do cache de texturas, que e exatamente o que "imagens" consome no
@@ -6603,6 +6750,7 @@ static const char *ajudaOpcaoBase(int op) {
       return "Alguns segundos depois de abrir um título, o trailer toca no lugar da arte de fundo; o som segue Som do trailer. Rolar a página ou sair dela volta para a arte.";
 #endif
     case AJ_TRAILER_QUAL: return "Definição do vídeo do trailer. Máxima usa a maior que existir para o título; as outras são um teto, para conexões mais lentas.";
+    case AJ_TRAILER_AUDIO: return "Idioma do áudio do trailer. Automático segue o idioma da interface; Original usa o idioma do título; ou escolha um idioma. Sem trailer nele, cai no inglês.";
     case AJ_TRAILER_ASPECTO: return "Quanto o trailer é ampliado para encher a tela. Zoom cinema tira a tarja preta de um trailer de cinema; Original mostra o quadro inteiro, com tarja.";
     case AJ_TRAILER_FONTE:
       // O que cada TV toca (trailerfonte.c, existe): a ajuda nomeia a fonte que
@@ -6647,7 +6795,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_FONTE_UI: return "Altera a tipografia dos menus. A fonte das legendas é escolhida separadamente no player.";
     case AJ_HERO_SINOPSE_TAM: return "Aumenta apenas as sinopses. Na página do título, abra Mais opções › Ler sinopse para ler o texto completo.";
     case AJ_TAMANHO_UI: return "Aumenta os controles do player, os painéis e os avisos. Os Ajustes têm um tamanho próprio.";
-    case AJ_INTERFACE_MODO: return "TV para controle remoto. Mobile para toque, em retrato ou paisagem. A troca é imediata e fica salva só neste aparelho.";
+    case AJ_INTERFACE_MODO: return "Automático usa TV em aparelhos Android TV e Mobile nos demais aparelhos. TV mantém a interface do controle remoto; Mobile usa toque em retrato ou paisagem. A escolha fica salva só neste aparelho.";
     case AJ_TAMANHO_AJUSTES: return i18n("Muda só o tamanho dos Ajustes nesta TV. O padrão é 80%.");
     case AJ_LAYOUT_AJUSTES: return "Painel mostra uma prévia ao lado das opções. Lista põe as categorias e as opções uma embaixo da outra, com a explicação logo abaixo da linha em foco.";
     case AJ_TEMA: return "Cor do botão em foco e das marcas de estado. Os claros levam texto escuro, os profundos texto branco — sempre a 4,5:1 ou mais.";
@@ -6752,6 +6900,8 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_TRAILER_ZOOM_TPK: return "Amplia a imagem do trailer e libera os modos de recorte e zoom da proporção no player; em algumas TVs Samsung pode deixar a tela preta ou mostrar a tela inicial da TV.";
     case AJ_ESTAT_TAMANHO: return "Tamanho com que as Estatísticas ao vivo abrem pela Central de controle. Completo mostra todas as medidas; Compacto, as principais; Mínimo, uma linha fina. Lembrar o último reabre como você deixou. Com o painel aberto, OK troca o tamanho, Esquerda/Direita trocam o lado e Baixo fixa o painel no tamanho escolhido. Vale só nesta TV.";
     case AJ_ESTAT_LADO: return "O lado do player onde as Estatísticas ao vivo ficam, com a mesma margem das listas de Áudio e Legendas. Direita é o padrão. Com o painel aberto, Esquerda/Direita trocam o lado. Vale só nesta TV.";
+    case AJ_PLAYER_EXTERNO: return "Escolha onde o vídeo toca: neste app, em um player instalado (VLC, MX Player...) ou perguntando a cada vez. O player externo não sincroniza o progresso.";
+    case AJ_PLAYER_ANIME: return "Player só para anime (kitsu, MAL, AniList, ou animação japonesa). Igual ao Player usa a escolha acima. O player externo não sincroniza o progresso.";
     case AJ_BUFFER: return "Quanto vídeo o app guarda à frente. Automático é o de sempre; 64, 128 ou 256 MB ajudam arquivos 4K pesados e caem sozinhos se faltar memória na TV. No webOS vale para a conversão de DTS e Dolby Vision. Vale a partir do próximo vídeo.";
     case AJ_FONTE_IDIOMA_AUDIO: return "Na escolha automática, fontes com o seu Idioma do áudio ou áudio duplo passam na frente na mesma resolução. Não é filtro: sem elas, a melhor das outras toca.";
     case AJ_CACHE_SEEK: return "Com retomada rápida, guarda só o último título por até 3 horas. Trocar de perfil ou pouco espaço apagam o trecho.";
@@ -8229,6 +8379,14 @@ static int definirValorDireto(int op, int novo) {
   if (op == AJ_ENQUETES) enquete_definir_optout(novo != 0);
   if (op == AJ_ADDONS_PRINCIPAL) sync_iniciar();
   if (op == AJ_SELOS_PACOTE) { selospacote_escolher(novo - 1); spEspelhar(); }
+  if (op == AJ_PLAYER_EXTERNO || op == AJ_PLAYER_ANIME) {
+    int b = novo - ppBase(op) - 3, k = op == AJ_PLAYER_ANIME;
+    ppPkg[k][0] = 0;
+#ifdef NV_ANDROID
+    if (b >= 0 && b < ppN()) snprintf(ppPkg[k], sizeof ppPkg[k], "%s", extplayer_app_pkg(b));
+#endif
+    ppGravar();
+  }
   // Modelo de regex (#202): escolher um troca o padrao; "Personalizado" so
   // deixa o padrao como esta.
   if (op == AJ_FONTE_REGEX_MODELO && novo > 0) fonteregra_definir_regex(fonteregra_modelo(novo));
@@ -8265,6 +8423,7 @@ static const char *uxCaminho(int op);
 static const char *uxBloco(int op);
 static void eventoTela(const SDL_Event *e);
 void ajustes_evento(const SDL_Event *e) {
+  pediuRelogio = 0;
 #ifdef NV_TOUCH_UI
   if (e->type == SDL_KEYDOWN) ajToqueLimpar();
 #endif
@@ -8657,7 +8816,7 @@ void ajustes_atualizar(float dt, Uint32 agora) {
   if (alvo < 0.0f) alvo = 0.0f;
   // (O "cabecalho inteiro ou nenhum" saiu: o cabecalho agora e fixo na folha.)
 #ifdef NV_TOUCH_UI
-  if (ajToqueLivre[AJT_LISTA]) velY = 0.0f;
+  if (ajTelaCheia() && ajToqueLivre[AJT_LISTA]) velY = 0.0f;
   else
 #endif
     scrollY = anim_mola2_reduzida(&velY, scrollY, alvo, dt, NV_MOLA2_SCROLL,
@@ -8692,7 +8851,10 @@ static void aplicarIdioma(int op) {
 // const e foi escrita antes de linguas.c existir.
 static int nValores(int op) {
   if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2) return nLingua > 0 ? nLingua : 1;
+  if (op == AJ_TRAILER_AUDIO) return nTrAud > 0 ? nTrAud : 1;
   if (op == AJ_SELOS_PACOTE) return 1 + selospacote_n();
+  if (op == AJ_PLAYER_EXTERNO) return 3 + ppN();
+  if (op == AJ_PLAYER_ANIME) return 4 + ppN();
 #ifndef __EMSCRIPTEN__
   // "YouTube" (o 4o valor) so toca no .wgt da Samsung (trailerfonte.c, existe).
   // Aqui ele era escolhivel e deixava a TV sem trailer nenhum: sem trailer no
@@ -8735,6 +8897,10 @@ static const char *textoValor(int op) {
     int v = valor[op];
     return (v >= 0 && v < nLingua && V_LINGUA[v]) ? V_LINGUA[v] : "Da conta";
   }
+  if (op == AJ_TRAILER_AUDIO) {
+    int v = valor[op];
+    return (v >= 0 && v < nTrAud) ? V_TRAUD[v] : "Automático";
+  }
   if (op == AJ_TEX_MB && valor[op] > 0 && valor[op] < 7 && texAcima(valor[op])) {
     static char tex[96];
     texValorTexto(valor[op], tex, sizeof tex);
@@ -8742,6 +8908,7 @@ static const char *textoValor(int op) {
   }
   if (op == AJ_CACHE_SEEK && !cacheSeekExiste()) return "Não disponível nesta TV";
   if (op == AJ_DTS_AC3 && !dtsConversaoExiste()) return "Não disponível nesta TV";
+  if (op == AJ_PLAYER_EXTERNO || op == AJ_PLAYER_ANIME) return ppNome(op, valor[op]);
   if (op == AJ_SELOS_PACOTE) {
     int v = valor[op];
     return v > 0 && v <= selospacote_n() ? selospacote_nome(v - 1) : "Do Nuvio";
@@ -9160,7 +9327,7 @@ static AjPreview familiaPreviaOpcao(int op) {
   switch (op) {
     case AJ_LEG_CONTORNO_COR:
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
-    case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK: case AJ_BUFFER: case AJ_ESTAT_TAMANHO: case AJ_ESTAT_LADO:
+    case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK: case AJ_BUFFER: case AJ_PLAYER_EXTERNO: case AJ_PLAYER_ANIME: case AJ_ESTAT_TAMANHO: case AJ_ESTAT_LADO:
     case AJ_DV_MKV:
     case AJ_LEG_FORCADA:
     case AJ_AUD_LINGUA: case AJ_AUD_LINGUA2: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_ABERTURA_ADDON: case AJ_ABERTURA_FUNDO: case AJ_FONTE_MANUAL:
@@ -9197,6 +9364,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_DET_DATA_CHEIA: case AJ_DET_VEU: case AJ_DET_TRAILER_AUTO:
     case AJ_DET_TRAILER_SOM:
     case AJ_TRAILER_QUAL: case AJ_TRAILER_ASPECTO: case AJ_TRAILER_FONTE: case AJ_TRAILER_ZOOM_TPK:
+    case AJ_TRAILER_AUDIO:
       return AJPV_DETALHE;
     case AJ_EXPANDIR: case AJ_EXPANDIR_ATRASO: case AJ_NAV_RAPIDA:
     case AJ_BORDA_FOCO:
@@ -9339,6 +9507,7 @@ static void ajDesenharTudo(Uint32 agora) {
 }
 
 float ajustes_ilha_x(void) { return aj2X0() * ajustes_tamanho_ajustes(); }
+int ajustes_edicao_ativa(void) { return uxEditor != 0; }
 int ajustes_relogio_cabe(void) {
   TraEstado ta = traktauth_estado();
   SmkEstado sa = simklauth_estado();
@@ -9346,6 +9515,13 @@ int ajustes_relogio_cabe(void) {
   if (ta == TRA_PEDINDO || ta == TRA_AGUARDANDO || ta == TRA_ERRO) return 0;
   if (sa == SMK_PEDINDO || sa == SMK_AGUARDANDO || sa == SMK_ERRO) return 0;
   return 1;
+}
+
+int ajustes_relogio_navegavel(void) {
+  DisEstado da = discord_estado();
+  return ajustes_relogio_cabe() && !filAberta && !frAberta && !uxEditor &&
+         !guiaAberto && !apoioAberto && !riscoFolha &&
+         da != DIS_PEDINDO && da != DIS_AGUARDANDO && da != DIS_ERRO;
 }
 
 #ifdef AJUSTES_TESTE
@@ -9413,7 +9589,7 @@ void ajustes_teste_ux_captura(int cenario) {
   if (cenario == 7) { focarOpcao(AJ_LARGURA_DP); uxAbrirEditor(AJ_LARGURA_DP); uxEvento(SDLK_DOWN); }
   if (cenario == 8) { focarSecao(0); uxIndice = 1; focoIndice = 1; uxChipAv = 1; }
   if (cenario == 9) { valor[AJ_IDIOMA] = IDIOMA_EN + 1; focarOpcao(AJ_HOME_LAYOUT); uxAbrirEditor(AJ_HOME_LAYOUT); }
-  if (cenario == 21) focarOpcao(AJ_FOCO_TRAILER);
+  if (cenario == 21) focarOpcao(getenv("NUVIO_SHOT_TRAILER_AUDIO") ? AJ_TRAILER_AUDIO : AJ_FOCO_TRAILER);
   if (cenario == 22) { focarOpcao(AJ_FOCO_TRAILER); uxAbrirEditor(AJ_FOCO_TRAILER); }
   // NUVIO_SHOT_TRAILER_VETO=1: captura da linha Ligada que nao vale (veto de
   // GPU): a ajuda tem de dizer por que, em vez de a linha parecer obedecida.

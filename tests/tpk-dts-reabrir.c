@@ -75,13 +75,15 @@ static long faixa(unsigned char *o, int num, int tipo, const char *codec, const 
   if (canais) { unsigned char a[8]; long k = uintEl(a, 0x9F, 1, (unsigned)canais); n += el(d + n, 0xE1, 1, a, k); }
   return el(o, 0xAE, 1, d, n);
 }
+static int duplicateDts;
 static int misto;   // + a Japanese AAC track the TV plays
 static const char *videoCodec = "V_MPEGH/ISO/HEVC";
 static void montarCabecalho(void) {
   unsigned char t[768];
   long n = 0;
   n += faixa(t + n, 1, 1, videoCodec, NULL, 0);
-  n += faixa(t + n, 2, 2, "A_DTS", "eng", 6);
+  n += faixa(t + n, 2, 2, "A_DTS", duplicateDts ? "jpn" : "eng", 6);
+  if (duplicateDts) n += faixa(t + n, 7, 2, "A_DTS", "jpn", 6);
   if (misto) n += faixa(t + n, 6, 2, "A_AAC", "jpn", 2);
   n += faixa(t + n, 3, 17, "S_HDMV/PGS", "eng", 0);
   n += faixa(t + n, 4, 17, "S_TEXT/ASS", "eng", 0);
@@ -346,6 +348,32 @@ int main(void) {
   videoCodec = "V_MPEG4/ISO/AVC"; montarCabecalho(); abriuConversor = 0;
   video_tocar("http://h/g.mkv");
   ok(abriuConversor == 1 && dts_tpk_e_url(ultUrl), "H.264 video, only DTS: converts");
+  video_parar();
+  // Identical Japanese DTS tracks: remember the second through the menu's
+  // identity, then restore it before the next episode opens its converter.
+  duplicateDts = 1; montarCabecalho(); pref = "jpn";
+  audioesc_titulo("tt550"); audioesc_fonte_binge("release550");
+  video_tocar("http://h/episode1.mkv");
+  playerPronto(); bombear(3);
+  ok(video_n_audio() == 2, "two identical Japanese DTS tracks in the converted menu");
+  {
+    const VideoFaixa *f = video_audio(1);
+    if (f) {
+      audioesc_lembrar_faixa(f->idioma, f->codec, f->rotulo, f->canais,
+                            video_audio_numero_memoria(f));
+      video_escolher_audio(1);
+    }
+  }
+  video_parar();
+  video_tocar("http://h/episode2.mkv");
+  playerPronto(); bombear(3);
+  ok(video_audio_atual() == 1 && video_audio(1)->stream_id == 7,
+     "same bingeGroup restores the second identical Japanese DTS track");
+  video_parar();
+  audioesc_fonte_binge("another-release");
+  video_tocar("http://h/episode3.mkv");
+  playerPronto(); bombear(3);
+  ok(video_audio_atual() == 0, "another bingeGroup falls back to the first Japanese DTS track");
   video_parar();
   printf(falhas ? "tpk-dts-reabrir: %d FAIL(S)\n" : "tpk-dts-reabrir: ok\n", falhas);
   return falhas != 0;

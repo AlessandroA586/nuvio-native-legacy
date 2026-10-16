@@ -93,7 +93,7 @@ static void heroReiniciar(void);
 
 static int detalheRetrato(void) {
 #ifdef NV_TOUCH_UI
-  return NV_TELA_W < NV_TELA_H;
+  return telefoneui_ativo() && NV_TELA_W < NV_TELA_H;
 #else
   return 0;
 #endif
@@ -329,6 +329,25 @@ static float velSec[N_SECOES], velY = 0.0f;
 static ToqueRolagem toqueDetalhe, toqueSec[N_SECOES], toqueColecao, toquePessoa;
 static int toqueSecAtiva = -1;
 static float toquePessoaOffset;
+static void toqueDetalheLimpar(void) {
+  toquerol_limpar(&toqueDetalhe); toquerol_limpar(&toqueColecao); toquerol_limpar(&toquePessoa);
+  for (int r = 0; r < N_SECOES; r++) toquerol_limpar(&toqueSec[r]);
+  toqueSecAtiva = -1;
+}
+static void toqueDetalheSincronizarModo(void) {
+  static int mobileAntes;
+  int mobile = telefoneui_ativo();
+  if (!mobile) {
+    toqueDetalheLimpar();
+    toquePessoaOffset = 0;
+    if (mobileAntes && pessoaAberta) {
+      int linha = pessoaFoco / PES_POR_LINHA;
+      if (pessoaLinha > linha) pessoaLinha = linha;
+      else if (pessoaLinha + 1 < linha) pessoaLinha = linha - 1;
+    }
+  }
+  mobileAntes = mobile;
+}
 #endif
 // Miniatura de episodio e cartaz relacionado chegando: esvanecem sobre o
 // esqueleto em vez de trocar num quadro (revela.h). Um registro por coluna.
@@ -347,12 +366,19 @@ static int    trailerTentado = 0;
 // proximo degrau uma vez.
 static int    trailerEtapa = 0;
 static Uint32 trailerPrazo = 0;
+#ifdef __EMSCRIPTEN__
+// 1 = the chain began with the dubbed YouTube trailer: fallback is Apple -> IMDb.
+static int    trailerDublado = 0;
+// 1 = the chain is the fullscreen "Watch trailer": same fallback, reopened fullscreen.
+static int    trailerEtapaCheia = 0;
+#endif
 // ESQUERDA no comeco de QUALQUER fileira da pagina (e na coluna 0 da
 // filmografia, e na lista da colecao): o app abre a barra lateral POR CIMA da
 // pagina, que continua viva embaixo — mesmo foco, rolagem e trailer (dono,
 // 03/10: "pode abrir por cima"). Antes a tecla ligava `saindo` junto e a
 // pagina fechava para a barra abrir sobre a tela de baixo. Voltar/DIREITA na
 // barra devolvem o foco aqui; um destino escolhido fecha a pagina (app.c).
+static int    pediuRelogio;
 static int    pediuMenu = 0;   // ESQUERDA na borda: abrir a barra por cima (ver app.c)
 // A barra esta aberta por cima (detail_sob_menu): o trailer segue tocando,
 // MUDO, e o som volta quando ela fecha. `somAntesMenu` lembra se tinha som.
@@ -466,7 +492,8 @@ static const char *trailerFonte(int k, int *qual, int cheia) {
   } else c.appleRespondeu = c.imdbRespondeu = 1;   // sem id nao ha o que esperar
 #ifdef __EMSCRIPTEN__
   if (k >= 0 && k < extras_n_trailers() && extras_trailer_yt(k)[0]) c.youtube = extras_trailer_yt(k);
-  else if (extras_n_trailers() > 0 && extras_trailer_yt(0)[0]) c.youtube = extras_trailer_yt(0);
+  else if (extras_n_trailers() > 0 && extras_trailer_yt(0)[0]) { k = 0; c.youtube = extras_trailer_yt(0); }
+  c.youtubeIdiomaPreferido = extras_trailer_idioma_preferido(k);
 #else
   (void)k;
 #endif
@@ -1306,7 +1333,8 @@ static const char *arteDe(int i) {
     // (recomendacao/filmografia sem fundo proprio) nao conta — e a mesma url
     // do poster (#502/#503).
     if (c && c->backdrop[0] && strcmp(c->backdrop, c->poster)) {
-      arteFixa[0] = 0; arteFixaPoster = 0;
+      const char *u = arteDeViva(i);
+      if (u && strcmp(u, arteFixa)) { arteFixa[0] = 0; arteFixaPoster = 0; }
     }
   }
   if (i == idx && arteFixa[0] && !tex_falhou(arteFixa)) return arteFixa;
@@ -1319,8 +1347,7 @@ static const char *arteDe(int i) {
       // Poster no lugar do fundo (semente de recomendacao que repetiu o
       // cartaz em `backdrop`) conta como cartaz: e o que faz a troca acima
       // disparar quando o fundo real chega (#502/#503).
-      arteFixaPoster = c && c->poster[0] &&
-                       (!c->backdrop[0] || !strcmp(c->backdrop, c->poster));
+      arteFixaPoster = c && c->poster[0] && !strcmp(u, c->poster);
     }
     return u; }
 }
@@ -1354,10 +1381,27 @@ static int arteDetalheEhPoster(int i) {
   // que o enriquecimento pode ter posto no catalogo depois.
   if (i == idx && trocaarte_previa_fundo()) return 0;   // previa: sempre fundo
   if (i == idx && arteFixa[0]) return arteFixaPoster;
-  { int r = c && c->poster[0] &&
-            (!c->backdrop[0] || !strcmp(c->backdrop, c->poster));
+  { const char *u = arteDeViva(i);
+    int r = c && c->poster[0] && u && !strcmp(u, c->poster);
     if (i == idx) arteFixaPoster = r;
     return r; }
+}
+
+int detail_arte_titulo(const CatItem *titulo, char *saida, size_t tam, int *poster) {
+  const CatItem *c;
+  const char *u;
+  if (saida && tam) saida[0] = 0;
+  if (poster) *poster = 0;
+  if (!titulo || !saida || !tam || !aberto || saindo || !idxTemCopia ||
+      !idxImdb[0] || strcmp(titulo->imdb, idxImdb) ||
+      strcmp(titulo->tipo, idxCopia.tipo)) return 0;
+  c = cat_item(idx);
+  if (!c || strcmp(c->imdb, idxImdb) || strcmp(c->tipo, titulo->tipo)) return 0;
+  u = arteDe(idx);
+  if (!u || !*u || strlen(u) >= tam) return 0;
+  snprintf(saida, tam, "%s", u);
+  if (poster) *poster = arteDetalheEhPoster(idx);
+  return 1;
 }
 
 static void desenhaArteDetalhe(GfxRect alvo, GLuint tex, const char *arte,
@@ -1434,6 +1478,7 @@ static void auditoriaEpisodios(void) {
 }
 
 static void abrirInterno(const HomeItem *it) {
+  pediuRelogio = 0;
   sinopse_fechar();
   pediuMenu = 0;
   audIdx = -1;
@@ -1594,6 +1639,7 @@ static void abrirInterno(const HomeItem *it) {
 }
 
 void detail_fechar(void) {
+  pediuRelogio = 0;
   sinopse_fechar();
   if (!aberto || saindo) return;
   pessoaAberta = 0;
@@ -1604,6 +1650,7 @@ void detail_fechar(void) {
 // SECO: o proximo detail_atualizar ja a encerra (o mesmo fim da mola de
 // saida, com o logo restaurado), sem a pagina recolher por cima da home.
 void detail_fechar_seco(void) {
+  pediuRelogio = 0;
   sinopse_fechar();
   if (!aberto) return;
   pessoaAberta = 0;
@@ -1613,6 +1660,7 @@ void detail_fechar_seco(void) {
 }
 
 void detail_mostrar_pessoa(long tmdb, const char *nome, const char *foto) {
+  pediuRelogio = 0;
   if (!aberto || tmdb <= 0) return;
   pessoa_pedir(tmdb, nome ? nome : "", foto ? foto : "");
   pessoaAberta = 1;
@@ -1624,6 +1672,7 @@ void detail_mostrar_pessoa(long tmdb, const char *nome, const char *foto) {
 }
 
 void detail_abrir(const HomeItem *it) {
+  pediuRelogio = 0;
   int replacing = aberto && !saindo;
   if (!replacing) { nVolta = 0; voltando = 0; }
   maisAcoes = 0;
@@ -1744,6 +1793,13 @@ int detail_relogio_oculto(void) { return aberto && carro && !carCheia && nivel =
 // accessor fica para o linkage e diz 0, para o caminho de app.c nao crescer
 // um #ifdef a mais por causa de um atalho que nao existe mais.
 int detail_pediu_social(void) { return 0; }
+int detail_pediu_relogio(void) { int p = pediuRelogio; pediuRelogio = 0; return p; }
+int detail_relogio_navegavel(void) {
+  return aberto && !saindo && !sinopse_aberta() && !corpoSobArte() &&
+         !trailer_cheia() && !trocaarte_aberto() && !reacao_aberta() &&
+         !amtui_aberta() && !detmais_aberto() && !episodios_menu_aberto() &&
+         !trailerCinema.oculta;
+}
 
 // 0..1 de quanto o detalhe ja tomou a tela. A home le isto para DESCER as
 // fileiras enquanto ele entra: e o movimento que o dono descreve como "so os
@@ -2481,11 +2537,19 @@ static int acaoEm(int n) {
 // "Assistir trailer" da linha de acoes passam por aqui). Voltar fecha o trailer
 // (trailer_evento) e a pagina continua com o mesmo foco.
 static void tocarTrailerCheio(int k) {
-  const char *u = trailer_suportado() ? trailerFonte(k, NULL, 1) : NULL;
+  int qual = 0;
+  const char *u = trailer_suportado() ? trailerFonte(k, &qual, 1) : NULL;
   if (u) {
     GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
     trailerEtapa = 0; trailerPrazo = 0;   // tela cheia: so o teclado fecha
     trailer_abrir(u, tela, ajustes_trailer_som(), 1);
+#ifdef __EMSCRIPTEN__
+    // Same deadline/fallback ladder as autoplay (trailerEscada), fullscreen.
+    trailerEtapa = qual;
+    trailerDublado = qual == TRF_YOUTUBE;
+    trailerEtapaCheia = 1;
+    trailerPrazo = SDL_GetTicks() + NV_TRAILER_PREPARA_MS;
+#endif
   }
 #ifdef __EMSCRIPTEN__
   // SAMSUNG: NUNCA o navegador (#136). O window.open do wgt trocava a
@@ -2503,6 +2567,49 @@ static void tocarTrailerCheio(int k) {
   else extras_trailer_abrir(k);
 #endif
 }
+
+#ifdef __EMSCRIPTEN__
+static void trailerEscada(Uint32 agora, int topo) {
+  // O PRAZO. Tocou: o prazo morre (buffering depois de `playing` nao e
+  // falha). Nao tocou a tempo, ou o elemento deu erro (trailer_atualizar
+  // ja fechou e marcou trailer_falhou): loga e passa para a PROXIMA fonte da
+  // ordem do ajuste que tem trailer — em Automatico, Apple -> IMDb ->
+  // YouTube (o erro 153 do embed chega como -3 e anda na hora, #136); com
+  // uma fonte fixa nao ha proxima e fica a arte. Tela cheia (trailerEtapaCheia)
+  // entra tambem, fora do topo, e reabre em tela cheia.
+  // trailerEtapa: 0 nada, TRF_* a fonte aberta, -1 acabou.
+  if (trailerEtapa > 0) {
+    int venceu = trailer_aberto() && (trailerEtapaCheia || !trailer_cheia()) && !trailer_tocando() &&
+                 trailerPrazo && (Sint32)(agora - trailerPrazo) >= 0;
+    int errou = !trailer_aberto() && trailer_falhou();
+    if (trailer_aberto() && trailer_tocando()) trailerPrazo = 0;
+    if ((venceu || errou) && (topo || trailerEtapaCheia)) {
+      // A PROXIMA DA ORDEM QUE TEM TRAILER: Apple -> IMDb -> YouTube na
+      // Samsung (#136). Uma fonte da ordem sem trailer para o titulo e
+      // pulada, nao encerra a fila.
+      int (*depois)(int, int, int) = trailerDublado ? trailerfonte_depois_dublado : trailerfonte_depois;
+      int prox = depois(trailerfonte_ajuste(), trailerfonte_tizen(), trailerEtapa);
+      const char *seg = NULL;
+      while (prox && !(seg = trailerUrlDaFonte(prox)))
+        prox = depois(trailerfonte_ajuste(), trailerfonte_tizen(), prox);
+      printf("[trailer] detalhe: %s %d ms (%s, estado %d), %s%s\n",
+             errou ? "erro em" : "sem playing em", NV_TRAILER_PREPARA_MS,
+             trailerfonte_nome(trailerEtapa), trailer_estado(),
+             seg ? "tenta " : "fica a arte", seg ? trailerfonte_nome(prox) : "");
+      fflush(stdout);
+      if (trailer_aberto()) trailer_fechar();
+      if (seg) {
+        GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
+        trailer_abrir(seg, tela, ajustes_trailer_som(), trailerEtapaCheia);
+        trailerEtapa = prox;
+        trailerPrazo = agora + NV_TRAILER_PREPARA_MS;
+      } else { trailerEtapa = -1; trailerPrazo = 0; }
+    } else if (!trailer_aberto() && !errou) {
+      trailerEtapa = 0; trailerPrazo = 0;   // fechou por fim ou por navegacao
+    }
+  }
+}
+#endif
 
 // ---- segurar OK numa lista da pagina (ctxlista.h) -------------------------
 // A celula em foco aceita o menu? Filmografia e saga: sempre que ha obra (o
@@ -2602,15 +2709,18 @@ static void executarMais(int dm) {
 }
 
 void detail_evento(const SDL_Event *e) {
+  pediuRelogio = 0;
   if (sinopse_aberta()) { sinopse_evento(e); return; }
+#ifdef NV_TOUCH_UI
+  toqueDetalheSincronizarModo();
+#endif
   if (corpoSobArte()) {
     if (trocaarte_aberto()) trocaarte_evento(e);
     return;
   }
 #ifdef NV_TOUCH_UI
   if (toquerol_navegacao(e)) {
-    toquerol_limpar(&toqueDetalhe); toquerol_limpar(&toqueColecao); toquerol_limpar(&toquePessoa);
-    for (int r = 0; r < N_SECOES; r++) toquerol_limpar(&toqueSec[r]);
+    toqueDetalheLimpar();
   }
 #endif
   if (saindo) return;
@@ -2707,6 +2817,7 @@ void detail_evento(const SDL_Event *e) {
         case SDLK_RIGHT: if (pessoaFoco + 1 < n) pessoaFoco++; return;
         case SDLK_UP:
           if (pessoaFoco >= pessoaColunas()) pessoaFoco -= pessoaColunas();
+          else pediuRelogio = 1;
           if (pessoaFoco / pessoaColunas() < pessoaLinha) pessoaLinha--;
           return;
         case SDLK_DOWN:
@@ -3056,10 +3167,8 @@ void detail_evento(const SDL_Event *e) {
       if (amigosDoTitulo(&at)) { focoAmigos = 1; return; }
     }
     if (k == SDLK_UP && reacao_detalhe_abrir(cat_item(idx))) return;
-    // #407: CIMA no alto da pagina NAO abre mais o painel de Salvos/Avisos.
-    // O atalho de cef8c3e8 (alcançar o painel sem tecla AZUL) ficou
-    // redundante com o relogio clicavel e com o CH+/AZUL, e a seta no topo da
-    // pagina abrindo um menu surpreendia (relato #407, Samsung).
+    // #407: Up focuses the clock; only OK opens its panel.
+    if (k == SDLK_UP && !e->key.repeat) { pediuRelogio = 1; return; }
     // CARROSSEL: a primeira seta para baixo so estica o cartao (ver carCheia).
     if (k == SDLK_DOWN && carro && !carCheia) { carCheia = 1; return; }
     if (k == SDLK_DOWN) {
@@ -3376,7 +3485,7 @@ static void trailerDetalheTela(void) {
 }
 static int toqueDetalheRolar(const PonteiroRolagem *e) {
   int r = 0;
-  if (!aberto || saindo || pessoaAberta || colListaAberta || trailer_cheia() || corpoSobArte()) return 0;
+  if (!telefoneui_ativo() || !aberto || saindo || pessoaAberta || colListaAberta || trailer_cheia() || corpoSobArte()) return 0;
   if (e->eixoY) r = toquerol_evento(&toqueDetalhe, e);
   else {
     if (e->fase == PONT_ROL_INICIO) {
@@ -3394,14 +3503,14 @@ static int toqueDetalheRolar(const PonteiroRolagem *e) {
 }
 static int toqueColecaoRolar(const PonteiroRolagem *e) {
   int r;
-  if (!colListaAberta) return 0;
+  if (!telefoneui_ativo() || !colListaAberta) return 0;
   r = toquerol_evento(&toqueColecao, e);
   if (r) { colListaVel = 0; ctxhold_cancelar(&holdLista); okDesceEm = 0; }
   return r;
 }
 static int toquePessoaRolar(const PonteiroRolagem *e) {
   int r;
-  if (!pessoaAberta) return 0;
+  if (!telefoneui_ativo() || !pessoaAberta) return 0;
   r = toquerol_evento(&toquePessoa, e);
   if (r) { ctxhold_cancelar(&holdLista); okDesceEm = 0; }
   return r;
@@ -3413,6 +3522,9 @@ static void toquePessoaFocar(int i, int b) { (void)b; pessoaFoco = i; }
 static float blocoAnt[3] = { -1.0f, -1.0f, -1.0f };   // Notas / Numeros / Progresso no quadro anterior
 
 void detail_atualizar(float dt, Uint32 agora) {
+#ifdef NV_TOUCH_UI
+  toqueDetalheSincronizarModo();
+#endif
   // `agora` ficou sem uso quando o repouso da troca de temporada saiu (ver a
   // nota mais abaixo). Fica na assinatura porque ela e a mesma de todas as
   // telas e app.c chama todas do mesmo jeito.
@@ -3420,7 +3532,7 @@ void detail_atualizar(float dt, Uint32 agora) {
   episodios_menu_atualizar(dt);   // as molas do menu de visto / painel da temporada
   if (!aberto) { blocoAnt[0] = blocoAnt[1] = blocoAnt[2] = -1.0f; return; }
 #ifdef NV_TOUCH_UI
-  trailerDetalheTela();
+  if (telefoneui_ativo()) trailerDetalheTela();
   if (detalheRetrato() && carro) {
     carCheia = 1; cartao = carTxt = cartaoVel = carTxtVel = 0;
   }
@@ -3440,7 +3552,7 @@ void detail_atualizar(float dt, Uint32 agora) {
     if (alvo > maxY) alvo = maxY;
     if (alvo < 0.0f) alvo = 0.0f;
 #ifdef NV_TOUCH_UI
-    if (toqueColecao.livre) { colListaScroll = toquerol_clamp(colListaScroll, 0, maxY); colListaVel = 0; }
+    if (toquerol_livre(&toqueColecao)) { colListaScroll = toquerol_clamp(colListaScroll, 0, maxY); colListaVel = 0; }
     else
 #endif
     colListaScroll = anim_mola2(&colListaVel, colListaScroll, alvo, dt, NV_MOLA2_SCROLL);
@@ -3492,47 +3604,14 @@ void detail_atualizar(float dt, Uint32 agora) {
         // A etapa e a FONTE aberta (TRF_*), para o prazo saber qual e a
         // proxima na ordem do ajuste (trailerfonte_depois).
         trailerEtapa = qual;
+        trailerDublado = qual == TRF_YOUTUBE;
+        trailerEtapaCheia = 0;
         trailerPrazo = agora + NV_TRAILER_PREPARA_MS;
 #endif
       }
     }
 #ifdef __EMSCRIPTEN__
-    // O PRAZO. Tocou: o prazo morre (buffering depois de `playing` nao e
-    // falha). Nao tocou a tempo, ou o elemento deu erro (trailer_atualizar
-    // ja fechou e marcou trailer_falhou): loga e passa para a PROXIMA fonte da
-    // ordem do ajuste que tem trailer — em Automatico, Apple -> IMDb ->
-    // YouTube (o erro 153 do embed chega como -3 e anda na hora, #136); com
-    // uma fonte fixa nao ha proxima e fica a arte. Tela cheia nao entra aqui.
-    // trailerEtapa: 0 nada, TRF_* a fonte aberta, -1 acabou.
-    if (trailerEtapa > 0) {
-      int venceu = trailer_aberto() && !trailer_cheia() && !trailer_tocando() &&
-                   trailerPrazo && (Sint32)(agora - trailerPrazo) >= 0;
-      int errou = !trailer_aberto() && trailer_falhou();
-      if (trailer_aberto() && trailer_tocando()) trailerPrazo = 0;
-      if ((venceu || errou) && topo) {
-        // A PROXIMA DA ORDEM QUE TEM TRAILER: Apple -> IMDb -> YouTube na
-        // Samsung (#136). Uma fonte da ordem sem trailer para o titulo e
-        // pulada, nao encerra a fila.
-        int prox = trailerfonte_depois(trailerfonte_ajuste(), trailerfonte_tizen(), trailerEtapa);
-        const char *seg = NULL;
-        while (prox && !(seg = trailerUrlDaFonte(prox)))
-          prox = trailerfonte_depois(trailerfonte_ajuste(), trailerfonte_tizen(), prox);
-        printf("[trailer] detalhe: %s %d ms (%s, estado %d), %s%s\n",
-               errou ? "erro em" : "sem playing em", NV_TRAILER_PREPARA_MS,
-               trailerfonte_nome(trailerEtapa), trailer_estado(),
-               seg ? "tenta " : "fica a arte", seg ? trailerfonte_nome(prox) : "");
-        fflush(stdout);
-        if (trailer_aberto()) trailer_fechar();
-        if (seg) {
-          GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
-          trailer_abrir(seg, tela, ajustes_trailer_som(), 0);
-          trailerEtapa = prox;
-          trailerPrazo = agora + NV_TRAILER_PREPARA_MS;
-        } else { trailerEtapa = -1; trailerPrazo = 0; }
-      } else if (!trailer_aberto() && !errou) {
-        trailerEtapa = 0; trailerPrazo = 0;   // fechou por fim ou por navegacao
-      }
-    }
+    trailerEscada(agora, topo);
 #endif
     // trailer_mostra_video: no .tpk a arte fica ate o recorte do zoom
     // assentar (#178); na LG e no .wgt e sempre 1.
@@ -3736,7 +3815,7 @@ void detail_atualizar(float dt, Uint32 agora) {
   // continua com o tempo do web.
   { float alvoPg = nivel >= 1 && !focoNoTopo() ? 1.0f : 0.0f;
 #ifdef NV_TOUCH_UI
-    if (toqueDetalhe.livre) alvoPg = scrollY > 1.0f ? 1.0f : 0.0f;
+    if (toquerol_livre(&toqueDetalhe)) alvoPg = scrollY > 1.0f ? 1.0f : 0.0f;
 #endif
     pg = anim_mola(pg, alvoPg, dt, alvoPg < pg ? NV_MOLA_PAGINA * 2.0f : NV_MOLA_PAGINA); }
   if (carro) {
@@ -3852,7 +3931,7 @@ void detail_atualizar(float dt, Uint32 agora) {
       }
       if (alvo < 0.0f) alvo = 0.0f;
 #ifdef NV_TOUCH_UI
-      if (!toqueSec[r].livre)
+      if (!toquerol_livre(&toqueSec[r]))
 #endif
       scrollSec[r] = anim_mola2(&velSec[r], scrollSec[r], alvo, dt, NV_MOLA2_SCROLL);
     }
@@ -3861,7 +3940,7 @@ void detail_atualizar(float dt, Uint32 agora) {
     // arrastar o foco junto.
     if (r != SEC_EPISODIOS && secaoN(SEC_EPISODIOS) > 0 &&
 #ifdef NV_TOUCH_UI
-        !toqueSec[SEC_EPISODIOS].livre &&
+        !toquerol_livre(&toqueSec[SEC_EPISODIOS]) &&
 #endif
         epAncora < foco.nColunas[SEC_EPISODIOS]) {
       float ax = xItem(SEC_EPISODIOS, epAncora) - NV_DETP_X;
@@ -3896,7 +3975,7 @@ void detail_atualizar(float dt, Uint32 agora) {
         }
         if (depois
 #ifdef NV_TOUCH_UI
-            && !toqueDetalhe.livre
+            && !toquerol_livre(&toqueDetalhe)
 #endif
            ) scrollY += bloco - blocoAnt[kb];
       }
@@ -3930,7 +4009,7 @@ void detail_atualizar(float dt, Uint32 agora) {
     if (alvoY < 0.0f) alvoY = 0.0f;
   }
 #ifdef NV_TOUCH_UI
-  if (toqueDetalhe.livre) { scrollY = toquerol_clamp(scrollY, 0, fmaxf(0, docFim - NV_TELA_H)); velY = 0; }
+  if (toquerol_livre(&toqueDetalhe)) { scrollY = toquerol_clamp(scrollY, 0, fmaxf(0, docFim - NV_TELA_H)); velY = 0; }
   else
 #endif
   scrollY = anim_mola2(&velY, scrollY, alvoY, dt, NV_MOLA2_SCROLL);
@@ -5189,11 +5268,7 @@ static void desenhaShuffle(GfxRect r, float f, float a) {
   if (ajustes_vidro()) { gfx_vidro_painel(r, raio, 0.4f, a); gfx_vidro_pilula_cheia(r, raio, f, a); }
   else gfx_cor(r, raio, base + (fr - base) * f, base + (fg - base) * f, base + (fb - base) * f, a);
   gfx_icone(ig, "aj_shuffle", ic, ic, ic, a);
-  // A dica so aparece com o foco, acima do botao: o icone sozinho nao diz o que faz.
-  if (f > 0.05f) {
-    TxtLinha l = txt_linha(TXT_DET_META2, i18n("Episódio aleatório"), 190, 192, 200, 255);
-    txt_desenhar_alpha(l, r.x + (r.w - l.w) * 0.5f, r.y - l.h - 8.0f, a * f);
-  }
+  // Sem dica de texto no foco: o dono pediu (16/10/2026) so o icone.
 }
 
 // Item do segmentado de temporadas (Glass UI, mockup "detalhe-retomar"). Tres
@@ -6334,7 +6409,7 @@ static void eventoListaColecao(const SDL_Event *e) {
   // por cima, como a borda de qualquer fileira da pagina (dono, 03/10).
   if (k == SDLK_LEFT) { pediuMenu = 1; return; }
   if (k == SDLK_DOWN && colListaFoco + 1 < n) colListaFoco++;
-  else if (k == SDLK_UP && colListaFoco > 0) colListaFoco--;
+  else if (k == SDLK_UP) { if (colListaFoco > 0) colListaFoco--; else pediuRelogio = 1; }
   else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) abrirParteColecao();
 }
 
@@ -6384,7 +6459,7 @@ static void desenhaListaColecao(float a) {
 
   // --- partes -----------------------------------------------------------
 #ifdef NV_TOUCH_UI
-  { float area = areaLista.h;
+  if (telefoneui_ativo()) { float area = areaLista.h;
     toquerol_vincular(&toqueColecao, areaLista, gfx_escala(),
                      0, n * passo - area, 1, &colListaScroll);
     ponteiro_rolagem(toqueColecaoRolar);
@@ -6457,7 +6532,7 @@ static void desenhaListaColecao(float a) {
                       tx, ty, tw, 31.0f, a, 3);
   }
 #ifdef NV_TOUCH_UI
-  gfx_sem_recorte();
+  if (telefoneui_ativo()) gfx_sem_recorte();
 #endif
 }
 
@@ -7237,29 +7312,37 @@ static void desenhaPessoa(float a) {
     txt_desenhar_alpha(lt, x0, 96.0f, a);
 #ifdef NV_TOUCH_UI
     float topo = 96.0f + lt.h + 28.0f, area = NV_TELA_H - 24.0f - topo;
-    if (!toquePessoa.livre) toquePessoaOffset = pessoaLinha * (PES_CARD_H + 92.0f);
-    toquerol_vincular(&toquePessoa, (GfxRect){x0, topo, NV_TELA_W - x0, area}, gfx_escala(),
-                     0, ((n + pessoaColunas() - 1) / pessoaColunas()) * (PES_CARD_H + 92.0f) - area, 1, &toquePessoaOffset);
-    ponteiro_rolagem(toquePessoaRolar);
-    gfx_recorte(x0, topo, NV_TELA_W - x0, area);
+    if (telefoneui_ativo()) {
+      if (!toquerol_livre(&toquePessoa)) toquePessoaOffset = pessoaLinha * (PES_CARD_H + 92.0f);
+      toquerol_vincular(&toquePessoa, (GfxRect){x0, topo, NV_TELA_W - x0, area}, gfx_escala(),
+                       0, ((n + pessoaColunas() - 1) / pessoaColunas()) * (PES_CARD_H + 92.0f) - area, 1, &toquePessoaOffset);
+      ponteiro_rolagem(toquePessoaRolar);
+      gfx_recorte(x0, topo, NV_TELA_W - x0, area);
+    }
 #endif
     for (i = 0; i < n; i++) {
       int col = i % pessoaColunas(), lin = i / pessoaColunas();
       float x = x0 + col * (PES_CARD_W + PES_CARD_GAP);
       float y = 96.0f + lt.h + 28.0f + (lin - pessoaLinha) * (PES_CARD_H + 92.0f);
 #ifdef NV_TOUCH_UI
-      y = topo + lin * (PES_CARD_H + 92.0f) - toquePessoaOffset;
-      if (y + PES_CARD_H + 92.0f < topo || y > topo + area) continue;
-#else
-      if (lin < pessoaLinha) continue;
+      if (telefoneui_ativo()) {
+        y = topo + lin * (PES_CARD_H + 92.0f) - toquePessoaOffset;
+        if (y + PES_CARD_H + 92.0f < topo || y > topo + area) continue;
+      } else
 #endif
+      if (lin < pessoaLinha) continue;
       GfxRect r = { x, y, PES_CARD_W, PES_CARD_H };
       const char *po = pessoa_credito_poster(i);
       GLuint t = po[0] ? tex_obter_larg(po, PES_CARD_W) : 0;
 #ifdef NV_TOUCH_UI
-      ponteiro_alvo_faixa(r.x, r.y, r.w, PES_CARD_H + 92.0f, topo, topo + area, toquePessoaFocar, NULL, i, 0);
-#else
-      if (y + PES_CARD_H > NV_TELA_H - 24.0f) break;
+      if (telefoneui_ativo())
+        ponteiro_alvo_faixa(r.x, r.y, r.w, PES_CARD_H + 92.0f, topo, topo + area, toquePessoaFocar, NULL, i, 0);
+      else {
+#endif
+        if (y + PES_CARD_H > NV_TELA_H - 24.0f) break;
+#ifdef NV_TOUCH_UI
+        ponteiro_alvo(r.x, r.y, r.w, PES_CARD_H + 92.0f, toquePessoaFocar, NULL, i, 0);
+      }
 #endif
       if (i == pessoaFoco) { pesFocoRect = r; snprintf(pesFocoArte, sizeof pesFocoArte, "%s", po); }
       // Foco da Home (focoprof.h): anel so com o ajuste ligado, senao cresce.
@@ -7290,7 +7373,7 @@ static void desenhaPessoa(float a) {
           } } }
     }
 #ifdef NV_TOUCH_UI
-    gfx_sem_recorte();
+    if (telefoneui_ativo()) gfx_sem_recorte();
 #endif
   }
 }
@@ -7359,13 +7442,17 @@ static void carFundo(void) {
       // opaca fica), a arte apaga por cima com trailerFade quando o primeiro
       // quadro chega, e o veu sozinho (cor r=0) segue por cima do video.
       if (k == carAplicado && trailerFade > 0.005f && trailer_aberto() && !trailer_cheia()) {
+        float veuTrailer = veu * (1.0f - 0.85f * trailercinema_t(&trailerCinema) * expandida);
+        // Video pleno (a arte ja apagou): furo + veu numa camada so.
+        if (!tex || trailerFade >= 0.995f) {
+          gfx_furo_raio_veu(r, raio / r.h, veuTrailer, 0.85f * pg, expandida, ak * trailerFade);
+          continue;
+        }
         gfx_furo_raio(r, raio / r.h);
         gfx_tex_aspect_atual = tex ? tex_aspecto(arte) : 0.0f;
         if (tex && trailerFade < 0.995f)
           gfx_rect(r, tex, GFX_JANELA, veu, 0.85f * pg, 1.0f - cartao, raio / r.h, 1, 1, 1, ak * (1.0f - trailerFade));
-        gfx_rect(r, 0, GFX_JANELA,
-                 veu * (1.0f - 0.85f * trailercinema_t(&trailerCinema) * expandida),
-                 0.85f * pg, expandida, raio / r.h, 0, 0, 0, ak * trailerFade);
+        gfx_rect(r, 0, GFX_JANELA, veuTrailer, 0.85f * pg, expandida, raio / r.h, 0, 0, 0, ak * trailerFade);
         continue;
       }
       if (!tex) {
@@ -7501,6 +7588,9 @@ static void maisDesenhar(void) {
 }
 
 void detail_desenhar(Uint32 agora) {
+#ifdef NV_TOUCH_UI
+  toqueDetalheSincronizarModo();
+#endif
   if (!aberto) return;
   amigostitulo_atualizar();   // barato: so remonta quando o feed social mudou
   // COR VIVA: a pagina do titulo manda na cor, acima da home que pode estar

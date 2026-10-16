@@ -13,6 +13,8 @@ void android_interface_modo(int mobile);
 // Salva uma copia local do registro pelo seletor de arquivos do Android.
 // As mensagens ja vem traduzidas; nao envia nem altera o registro original.
 void android_baixar_registro(const char *arquivo, const char *sucesso, const char *falha);
+// Android device classification captured before SDL starts; never a screen heuristic.
+int android_interface_mobile_auto(void);
 #ifdef NV_TOUCH_UI
 #include <SDL2/SDL.h>
 // Sinal do host enfileirado antes do finger UP sintetizado pelo SDL.
@@ -44,6 +46,11 @@ int  android_volumes_externos(char *dst, size_t n);
 char *android_listar_apps(void);
 int android_abrir_app(const char *pacote);
 int android_abrir_loja(const char *pacote, const char *nome);
+// #501: entrega a URL a outro player (ACTION_VIEW, video/*). `pacote` vazio =
+// o sistema escolhe. 1 = abriu.
+int android_abrir_externo(const char *url, const char *titulo, const char *pacote);
+// #501: players de video instalados, "pacote\tnome" por linha (malloc; NULL = falhou).
+char *android_listar_players(void);
 // Vigia do arranque (#266, ArranqueVigia.kt): a etapa do main() em que o fio do
 // SDL esta (texto estatico) e um contador de quadros apresentados. So o fio
 // do SDL chama.

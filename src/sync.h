@@ -161,6 +161,9 @@ void sync_trocar_perfil(int antes);
 // 1 quando o ultimo ciclo terminado e aplicado e do perfil ativo e nao ha
 // ciclo no ar. E a metade "conta" de "a home do perfil novo esta pronta".
 int  sync_perfil_pronto(void);
+// Addons, colecoes e ordem deste perfil ja podem alimentar a descoberta;
+// progresso e pushes podem continuar sem prender a Home.
+int  sync_home_fontes_prontas(void);
 
 // A pessoa mudou um ajuste NESTA TV. Faz duas coisas, e as duas de proposito:
 //

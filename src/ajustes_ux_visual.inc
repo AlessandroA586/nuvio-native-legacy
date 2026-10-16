@@ -135,6 +135,13 @@ static const char *ajVisualIcone(int op) {
     case AJ_FONTE_REPOR: return "aj_list-video";
     case AJ_FONTE_PREPARAR: return "aj_download";
     case AJ_FONTE_PRECARREGAR: return "aj_download";
+    case AJ_RETOMADA_MORNA: case AJ_MANTER_PRAZO: return "aj_rotate-ccw-clock";
+    case AJ_BUFFER: return "aj_gauge";
+    case AJ_FONTE_IDIOMA_AUDIO: return "aj_audio-lines";
+    case AJ_FILTROS_FONTES: return "aj_funnel";
+    case AJ_PROVEDORES_ESCOPO: return "aj_key-round";
+    case AJ_AMIGOS_ESTILO: return "aj_users";
+    case AJ_MURAL_TITULOS: return "aj_images";
     case AJ_FONTE_CONFERIR_VARIAS: return "aj_layers";
     case AJ_FONTE_AQUECER: return "aj_wifi";
     case AJ_FONTE_TOCAR_CONFERINDO: return "aj_zap";
@@ -168,7 +175,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_CW_CONCLUIDO: return "aj_circle-play";
     case AJ_CW_MINIMO: return "aj_circle-play";
     case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_AUTO: case AJ_PROXIMO_CONTAGEM: return "aj_circle-play";
-    case AJ_SAIDA_PLAYER: return "aj_circle-play";
+    case AJ_SAIDA_PLAYER: case AJ_PLAYER_EXTERNO: case AJ_PLAYER_ANIME: return "aj_circle-play";
     case AJ_SEEKR_LIGADO: return "aj_film";
     case AJ_SEEKR_CHAVE: return "aj_film";
     case AJ_SEEKR_TESTAR: return "aj_film";

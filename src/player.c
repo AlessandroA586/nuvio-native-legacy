@@ -48,7 +48,9 @@
 #include "telefoneui.h"
 #include "catalogo.h"
 #include "artehero.h"
+#include "detail.h"
 #include "logotitulo.h"
+#include "extplayer.h"
 #include "corviva.h"
 
 // A CASCA DO TIZEN PRECISA SABER SE O PLAYER ESTA NA TELA. tools/tizen-shell.html
@@ -437,6 +439,40 @@ static int     miniGuia;
 // vale; o indice e re-resolvido pelo IMDb quando alguem precisa dele (ver
 // idxAtual).
 static CatItem itemFixo; static int temFixo;
+// A mesma URL que a pagina mostrava ao pedir Play. So a URL e copiada:
+// texturas continuam no cache assincrono e nunca seguram a entrada do video.
+static char cinemaArte[NV_TEX_URL_MAX];
+static int cinemaPoster;
+static void cinemaArteIniciar(const CatItem *c) {
+  cinemaArte[0] = 0; cinemaPoster = 0;
+  if (c) detail_arte_titulo(c, cinemaArte, sizeof cinemaArte, &cinemaPoster);
+}
+static const char *cinemaArteObter(const CatItem *c) {
+  const char *u;
+  if (cinemaArte[0] && !tex_falhou(cinemaArte)) {
+    // O cartaz da semente e temporario (#503). Se a ficha do MESMO titulo
+    // ganhou um fundo enquanto a fonte abria, acompanha a pagina uma vez.
+    // Fundo de verdade fica congelado; o getter so copia estado ja local.
+    if (cinemaPoster) {
+      char atual[sizeof cinemaArte]; int poster;
+      if (detail_arte_titulo(c, atual, sizeof atual, &poster) && !poster) {
+        snprintf(cinemaArte, sizeof cinemaArte, "%s", atual);
+        cinemaPoster = 0;
+      }
+    }
+    return cinemaArte;
+  }
+  cinemaArte[0] = 0; cinemaPoster = 0;
+  // Next e Play direto da Home nao precisam passar pela pagina. Usam a mesma
+  // politica dela, inclusive arte alternativa, escolha manual e fundo por id.
+  u = artehero_url_destaque(c, ajustes_hero_fonte(), ajustes_hero_arte_diferente());
+  if (u && *u && strlen(u) < sizeof cinemaArte) {
+    snprintf(cinemaArte, sizeof cinemaArte, "%s", u);
+    cinemaPoster = c && c->poster[0] && !strcmp(u, c->poster);
+    return cinemaArte;
+  }
+  return NULL;
+}
 static const CatItem *item(void) {
   if (canalSessao) return &itemCanal;
   if (temFixo) return &itemFixo;
@@ -1562,6 +1598,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
     // A COPIA e feita AQUI, no unico instante em que o indice e sabidamente o
     // do titulo pedido. Ver item().
     if (ci) { itemFixo = *ci; temFixo = 1; } else temFixo = 0;
+    cinemaArteIniciar(temFixo ? &itemFixo : NULL);
     audioTitulo();
     artehero_logo_sessao_iniciar(temFixo ? &itemFixo : NULL);
     canalSessao = ci && (!strcmp(ci->tipo, "channel") || !strcmp(ci->tipo, "tv"));
@@ -1807,7 +1844,8 @@ static int preTituloLegendaUsar(const char *url) {
 }
 #endif
 
-static void tocarFonte(const char *url) {
+static void tocarFonteInterno(const char *url);
+static void tocarFonteInterno(const char *url) {
   marco("abrir: url ao pipeline");
   loadEm = SDL_GetTicks();   // #202: do pipeline ao primeiro quadro ("[player] load->1o quadro")
   video_definir_reconexao(!ehCanal());
@@ -1849,6 +1887,16 @@ static void tocarFonte(const char *url) {
               video_janela((int)(r.x + 0.5f), (int)(r.y + 0.5f),
                            (int)(r.w + 0.5f), (int)(r.h + 0.5f)); }
   else aplicarAspecto();
+}
+#ifdef NV_ANDROID
+static void sairParaExterno(void) { saindo = 1; pediuSair = 1; }
+#endif
+static void tocarFonte(const char *url) {
+#ifdef NV_ANDROID
+  const CatItem *c = item();   // #501: Interno / Externo / Perguntar sempre
+  if (extplayer_tentar(url, c ? c->titulo : "", c && artehero_eh_anime(c), tocarFonteInterno, sairParaExterno)) return;
+#endif
+  tocarFonteInterno(url);
 }
 // A TELA DO DOLBY VISION EM MKV (dvtela.h). O relogio dela e o do quadro do
 // player (dvAgora), o mesmo que as teclas usam: a espera do OK que sobra do
@@ -2395,6 +2443,7 @@ static void fecharSessao(int manter) {
   retido = manter; if (!manter) retidoVoo = 0;
   prepararRetencao = 0; saidaIlhaDesde = 0;
   esperandoFonte = 0; aberto = 0; saindo = 0; pediuSair = 0;
+  cinemaArteIniciar(NULL);
   pedProxT = pedProxE = trocaEpisodio = pedRecarregar = 0;
   scrubbing = scrubToque = 0; scrubInicio = 0.0;
   mini = 0; querMini = 0; miniGuia = 0; janAtiva = 0;
@@ -4596,10 +4645,7 @@ static void desenharBloco(const LegBloco *bl, float x0, float y, float alpha, in
     // 2 direita (x0 e a borda direita).
     float x = alinha == 0 ? x0 : alinha == 1 ? x0 - l.w * .5f : x0 - l.w;
     if (legEstilo.fundo) { float fa = legEstilo.fundo * .16f * alpha; gfx_cor((GfxRect){x-18,y-6,l.w+36,l.h+12},.16f,0,0,0,fa); }
-    if (bl->borda[i].tex) { float d = legEstilo.borda == 2 ? 4.f : 2.f;
-      txt_desenhar_alpha(bl->borda[i], x+d, y+d, .82f*alpha);
-      if (legEstilo.borda == 1) { txt_desenhar_alpha(bl->borda[i], x-d, y, .82f*alpha); txt_desenhar_alpha(bl->borda[i], x, y-d, .82f*alpha); }
-    }
+    txt_desenhar_borda(bl->borda[i], x, y, legEstilo.borda, alpha);
     txt_desenhar_alpha(l, x, y, alpha); y += l.h + 5;
   }
 }
@@ -5311,10 +5357,38 @@ void player_fundo_fora_do_furo(GfxRect furo, int recuado, const CatItem *c) {
              1.0f, 0, 0, 0.5f, 0, 0, 0, 0.5f); }
 }
 
+// FROST OVER LIVE VIDEO (owner, 16/10: the player glass flat over video). No
+// TV lets GL read the video plane (webOS/Tizen/.tpk/Android: hardware plane
+// behind the UI), so the glass over the hole reads the title art instead: the
+// 96x54 blurred copy (gfx_desfocado), covered to the screen and darkened, baked
+// ONCE per title into 192x108 in screen orientation. Per frame it costs only
+// the glass shader's own texture reads; no capture, no blur pass.
+static GLuint foscoSobreVideo(const CatItem *c) {
+  static GfxMini alvo;
+  static char feita[1024];
+  const char *arte = c && c->backdrop[0] && !player_id_canal()[0] ? artehero_url(c) : NULL;
+  GLuint tb;
+  if (!arte) return 0;
+  if (alvo.tex && !strcmp(feita, arte)) return alvo.tex;
+  tb = tex_obter_larg(arte, 480);
+  if (tb) tb = gfx_desfocado(tb, arte);
+  if (!tb || !gfx_mini_alvo(&alvo, 192, 108)) return 0;
+  gfx_mini_comecar(&alvo, 0.0f, 0.0f, 192.0f / NV_TELA_W);
+  gfx_tex_aspect_atual = tex_aspecto(arte);
+  gfx_rect((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, tb, GFX_CARD, 0, 0, 0, 0.0f, 0, 0, 0, 1.0f);
+  gfx_tex_aspect_atual = 0.0f;
+  gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0.0f, 0, 0, 0, 0.35f);
+  gfx_mini_terminar();
+  snprintf(feita, sizeof feita, "%s", arte);
+  return alvo.tex;
+}
+
 // A TELA CINEMA DA ABERTURA (#205, abrecine.h). Tudo multiplicado pelo veu,
 // que so cai com o quadro real (o crossfade e o veu saindo por cima dele).
-// CUSTO: a arte desfocada e a copia 96x54 de sempre (gfx_desfocado), uma
-// passada; a nitida so enquanto recua (~1 s); o preto so com o furo aberto
+// CUSTO: no Cinema padrao, a arte desfocada e a copia 96x54 de sempre
+// (gfx_desfocado), uma passada; a nitida so enquanto recua (~1 s). O Cinema
+// sem desfoque usa so a textura do detalhe, sem pedir a copia pequena.
+// O preto so com o furo aberto
 // (sem furo o preto opaco de baixo ja esta la). Logo, trilho e linha sao
 // retangulos pequenos.
 static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
@@ -5322,11 +5396,10 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
   float v = cine.veu, f = cine.foco, t = (float)(agora - cine.desde) / 1000.0f;
   float resp, entra, cy = NV_TELA_H * 0.46f, base;
   int reduz = ajustes_animacoes_reduzidas();
-  // #508: o fundo da tela e escolha da pessoa. 0 = Desligado (preto), 1 = Arte
-  // (o backdrop do titulo, nitido, com veu escuro), 2 = Arte borrada (o de
-  // sempre). Sem o pedido, nada de arte: o preto de baixo fica.
+  // #508: preserve the saved Off / Art / Blurred art choice. Reuse the
+  // title page's own artwork without starting a second metadata request.
   int nf = ajustes_abertura_fundo();
-  const char *arte = nf && c && c->backdrop[0] ? artehero_url(c) : NULL;
+  const char *arte = nf ? cinemaArteObter(c) : NULL;
   const char *marca = c ? artehero_logo_sessao(c) : NULL;
   GLuint ts = arte ? tex_obter_hero(arte) : 0, tb = nf == 2 && arte ? tex_obter_larg(arte, 480) : 0, lg;
   if (v <= 0.0f) return;
@@ -5338,7 +5411,14 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
   // e o trilho nao perderem leitura sobre a arte. uPar.x = 1 (so o dither): o
   // B-spline do 2 e para a copia de 96x54, e esticaria a arte grande em blocos.
   if (nf == 1) {
-    if (ts) gfx_rect(tela, ts, GFX_SNAP, 0.55f, 1.0f, 0.0f, 0.0f, 0, 0, 0, v);
+    GfxRect alvo = tela;
+    // A poster fallback stays in proportion, including on a portrait phone.
+    if (cinemaPoster && gfx_tex_aspect_atual > 0.0f) {
+      float ar = gfx_tex_aspect_atual;
+      if (ar < tela.w / tela.h) { alvo.w = tela.h * ar; alvo.x = (tela.w - alvo.w) * 0.5f; }
+      else { alvo.h = tela.w / ar; alvo.y = (tela.h - alvo.h) * 0.5f; }
+    }
+    if (ts) gfx_rect(alvo, ts, GFX_SNAP, 0.55f, 1.0f, 0.0f, 0.0f, 0, 0, 0, v);
   } else {
   // Recua para 45%: a arte vira luz de fundo, o logo fica sozinho na frente.
   // Pelo GFX_SNAP com o nv_dither e o B-spline ligados (uPar.x = 2) e o escurecimento na
@@ -5523,6 +5603,7 @@ void player_desenhar(Uint32 agora) {
   // Video vivo por baixo: o vidro fosco (assado de 320x180) nao desenha ali.
   if (furar) gfx_vidro_fosco_bloquear();
 #endif
+  if (furar && !janAtiva) gfx_vidro_fonte_video(foscoSobreVideo(c));
   if (furar) {
     // O furo acompanha o MESMO retangulo que foi ao plano de hardware, cortado
     // na tela. Furar sempre a tela inteira, como antes, deixava faixa preta nos
