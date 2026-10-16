@@ -142,6 +142,7 @@ void gfx_tamanho_alvo(int w, int h) {
   uTelaW = NV_TELA_W; uTelaH = NV_TELA_H;
 #endif
 }
+void gfx_tamanho_tela(int *w, int *h) { *w = telaRealW; *h = telaRealH; }
 // Tamanho da interface (gfx.h). escAtiva multiplica o retangulo de layout
 // antes de tudo: o SDF, os raios e as espessuras sao fracoes do proprio rect,
 // e uAlt sai da altura JA ampliada — a rampa de borda segue com 1 px do alvo.

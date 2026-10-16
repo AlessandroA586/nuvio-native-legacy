@@ -59,6 +59,11 @@ typedef struct {
   GfxRect header, meta, tiles[6], keys[5], separator;
   int nTiles, nKeys;
   char dicas[256];   // the hint row text, as drawn
+  // Every text box drawn this frame and the card (or panel) that owns it;
+  // `cortes` counts single lines cut with an ellipsis.
+  GfxRect textos[96], donos[96];
+  int nTextos, cortes;
+  float escala;      // gfx scale the panel was drawn at
 } EvGeometriaTeste;
 void estatvivo_teste_geometria(EvGeometriaTeste *g);
 #endif

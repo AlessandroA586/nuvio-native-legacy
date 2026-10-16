@@ -1988,6 +1988,10 @@ void txt_desenhar_tom(TxtLinha l, float x, float y, float cr, float cg, float cb
   camadaAtualizar();
   GfxRect r = { encaixa(x), encaixa(y), (float)l.w, (float)l.h };
   if (camada && l.pw > 0) { r.w = (float)l.pw / ESC_T; r.h = (float)l.ph / ESC_T; }
+#ifdef ESTATVIVO_TESTE
+  extern void estatvivo_teste_texto(GfxRect r);
+  if (alpha > 0.5f) estatvivo_teste_texto(r);
+#endif
   gfx_rect(r, l.tex, GFX_TEXTO, 0, cr != 1 || cg != 1 || cb != 1, 0, 0.0f, cr, cg, cb, alpha);
 }
 
