@@ -50,6 +50,13 @@ void  sync_proteger_ajustes_locais(void) {}
 int   perfis_ativo(void) { return 1; }
 const char *addons_base_por_id(const char *id) { (void)id; return ""; }
 const char *addons_nome_por_id(const char *id) { (void)id; return ""; }
+// fileiras.c declara estas como NV_PERFIL_OPCIONAL (weak_import); sem
+// definicao, o ld do Mach-O falha no link do fixture. Zeradas, o teste fica
+// no caminho "sem conta vinculada" que ja era o dele.
+unsigned addons_versao(void) { return 0; }
+int     addons_perfil_da_lista(void) { return 0; }
+int     addons_travar_lista(unsigned v, int p) { (void)v; (void)p; return 0; }
+void    addons_destravar_lista(void) {}
 
 // LAYOUT E DESTAQUE DO TESTE. home.c le os dois por estes acessores; trocados
 // aqui por variaveis, sem arrastar o disco e os idiomas de ajustes.c para o
