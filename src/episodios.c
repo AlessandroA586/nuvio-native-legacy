@@ -1136,7 +1136,7 @@ int  episodios_menu_pediu_fontes(void) { int v = vmFontesPed; vmFontesPed = 0; r
 int  episodios_menu_fontes(int *temporada, int *episodio) {
   if (temporada) *temporada = vmT;
   if (episodio)  *episodio = vmE;
-  return vmT > 0 && vmE > 0;
+  return vmT >= 0 && vmE > 0;
 }
 
 #ifdef NV_SHOT_HOOKS

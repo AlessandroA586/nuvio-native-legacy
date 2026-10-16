@@ -1401,7 +1401,7 @@ static int normalizarIndice(int indice) {
 // Sob pubTrava; aplicarUm ja a segura. Ordem: pubTrava -> epTrava.
 static void apontarEpisodio(int indice, int temporada, int episodio) {
   int e;
-  if (!(temporada > 0 && episodio > 0)) return;
+  if (!(temporada >= 0 && episodio > 0)) return;
   if (itens[indice].temporada != temporada || itens[indice].episodio != episodio)
     itens[indice].nomeEpisodio[0] = 0;
   itens[indice].temporada = temporada;
@@ -1481,7 +1481,7 @@ void cat_aplicar_progresso(int indice, double posSeg, double durSeg, int tempora
 // tem as faixas de episodio zeradas na publicacao, entao a busca nunca achava
 // nada aqui — so limpava o nome quando o episodio muda, e isso continua.
 static void apontarEm(CatItem *v, int i, int temporada, int episodio) {
-  if (!(temporada > 0 && episodio > 0)) return;
+  if (!(temporada >= 0 && episodio > 0)) return;
   if (v[i].temporada != temporada || v[i].episodio != episodio) v[i].nomeEpisodio[0] = 0;
   v[i].temporada = temporada;
   v[i].episodio  = episodio;
@@ -1808,8 +1808,8 @@ int cat_id_stream(int indiceItem, int t, int e, char *dst, unsigned tam) {
   dst[0] = 0;
   if (!c || !c->imdb[0]) return 0;
   idbase_copiar(c->imdb, base, sizeof base);
-  if (t <= 0 || e <= 0) { snprintf(dst, tam, "%s", c->imdb); return 1; }
-  if (!idbase_e_imdb(c->imdb)) {
+  if (t < 0 || e <= 0) { snprintf(dst, tam, "%s", c->imdb); return 1; }
+  if (!idbase_e_imdb(c->imdb) || t == 0) {
     n = cat_n_episodios(indiceItem);
     for (i = 0; i < n; i++) {
       const CatEp *ep = cat_episodio(indiceItem, i);
@@ -1818,9 +1818,13 @@ int cat_id_stream(int indiceItem, int t, int e, char *dst, unsigned tam) {
         return 1;
       }
     }
+    // Sem id publicado nao se inventa o endereco de um especial do addon.
+    if (t == 0 && !idbase_e_imdb(c->imdb)) return 0;
     // Sem o video: a convencao dos addons de anime e "<id>:<episodio>".
-    snprintf(dst, tam, "%s:%d", base, e);
-    return 1;
+    if (!idbase_e_imdb(c->imdb)) {
+      snprintf(dst, tam, "%s:%d", base, e);
+      return 1;
+    }
   }
   snprintf(dst, tam, "%s:%d:%d", base, t, e);
   return 1;

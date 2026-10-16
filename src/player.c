@@ -684,11 +684,11 @@ static long tmdbDoTocando(int *tt, int *te) {
   const CatItem *c = item();
   *tt = *te = 0;
   if (!c) return 0;
-  if (epT <= 0) return c->tmdb > 0 ? c->tmdb : 0;
+  if (epE <= 0) return c->tmdb > 0 ? c->tmdb : 0;
   for (int ix = idxAtual(), i = 0; i < cat_n_episodios(ix); i++) {
     const CatEp *ep = cat_episodio(ix, i);
     if (ep && ep->temporada == epT && ep->episodio == epE) {
-      if (ep->tmdbSerie > 0 && ep->tmdbT > 0 && ep->tmdbE > 0) {
+      if (ep->tmdbSerie > 0 && ep->tmdbT >= 0 && ep->tmdbE > 0) {
         *tt = ep->tmdbT; *te = ep->tmdbE; return ep->tmdbSerie;
       }
       return 0;
@@ -715,7 +715,7 @@ void player_episodio_atual(int *t, int *e) { *t = epT; *e = epE; }
 // O dono avancou na mao (Comecar agora): lembra quanto faltava (credaprende.h).
 void player_aprender_creditos(void) {
   const CatItem *c = item();
-  if (c && c->imdb[0] && epT > 0 && comVideo && video_pronto())
+  if (c && c->imdb[0] && epT >= 0 && epE > 0 && comVideo && video_pronto())
     cred_aprender(c->imdb, duracaoSeg, posSeg, credFonteAtual);
 }
 // A EXPLICACAO DA ESPERA NA ILHA (#202, inicio.h). app.c diz por quadro, ja
@@ -732,11 +732,11 @@ int player_pediu_ajustes_fonte(void) { int v = pedAjFonte; pedAjFonte = 0; retur
 Uint32 player_aberto_ha_ms(void) { return aberto && abertoEm ? SDL_GetTicks() - abertoEm : 0; }
 int player_pediu_fontes(void) { int p = pedFontes; pedFontes = 0; return p; }
 int player_pediu_proximo(int *t,int *e) {
-  if(!pedProxT||!pedProxE)return 0;
+  if(pedProxT<0||pedProxE<=0)return 0;
   if(t)*t=pedProxT;if(e)*e=pedProxE;pedProxT=pedProxE=0;return 1;
 }
 int player_transporte_pedido_pendente(void) {
-  return (pedProxT > 0 && pedProxE > 0) || (!ehCanal() && pedRecarregar);
+  return (pedProxT >= 0 && pedProxE > 0) || (!ehCanal() && pedRecarregar);
 }
 void player_episodio_pedido_liberar(void) {
   if (!pedProxT && !pedProxE) trocaEpisodio = 0;
@@ -921,7 +921,9 @@ void player_definir_episodio(int t, int e) {
     }
     return;
   }
-  if (epT < 1) epT = c->temporada > 0 ? c->temporada : 1;
+  // 0/0 e sem episodio; 0/E e um especial escolhido, nunca T1E.
+  if (epT < 0 || (epT == 0 && epE < 1))
+    epT = c->temporada > 0 || (c->temporada == 0 && c->episodio > 0) ? c->temporada : 1;
   if (epE < 1) epE = c->episodio > 0 ? c->episodio : 1;
   // AS FONTES SAO DESTE EPISODIO, E SO DELE — issue #101.
   //
@@ -2060,7 +2062,7 @@ float player_posicao_seg(void) { return posSeg; }
 static void idTrakt(const CatItem *ci, char *dst, size_t n) {
   const char *base = ci->imdb;
   size_t l = idbase_len(base);   // "tmdb:t123", "kitsu:41370" guardam o ':' do prefixo
-  if (epT > 0 && epE > 0) snprintf(dst, n, "%.*s:%d:%d", (int)l, base, epT, epE);
+  if (epT >= 0 && epE > 0) snprintf(dst, n, "%.*s:%d:%d", (int)l, base, epT, epE);
   else snprintf(dst, n, "%s", base);
 }
 
@@ -2081,11 +2083,11 @@ static int wsIdentidade(WsEvento *e) {
       !isdigit((unsigned char)c->imdb[2])) return 0;
   n = strlen(c->imdb);
   if (n >= sizeof e->imdb || strcspn(c->imdb, ":") != n) return 0;
-  if (!strcmp(c->tipo, "series") && epT > 0 && epE > 0) {
+  if (!strcmp(c->tipo, "series") && epT >= 0 && epE > 0) {
     snprintf(e->tipo, sizeof e->tipo, "series");
     snprintf(e->videoId, sizeof e->videoId, "%s:%d:%d", c->imdb, epT, epE);
     e->season = epT; e->episode = epE;
-  } else if (!strcmp(c->tipo, "movie") && epT <= 0) {
+  } else if (!strcmp(c->tipo, "movie") && epE <= 0) {
     snprintf(e->tipo, sizeof e->tipo, "movie");
     snprintf(e->videoId, sizeof e->videoId, "%s", c->imdb);
     e->season = e->episode = -1;
@@ -2145,7 +2147,7 @@ static void alvoStream(char *dst, unsigned tam) {
   const CatItem *c = item();
   dst[0] = 0;
   if (!c || !c->imdb[0]) return;
-  if (epT > 0 && epE > 0) cat_id_stream(idxAtual(), epT, epE, dst, tam);
+  if (epT >= 0 && epE > 0) cat_id_stream(idxAtual(), epT, epE, dst, tam);
   else snprintf(dst, tam, "%s", c->imdb);
 }
 
@@ -2162,7 +2164,7 @@ static double credEfetivo(void) {
   e.capitulo = video_creditos();
   { double ic = intro_creditos_seg();
     if (intro_creditos_aniskip()) e.aniskip = ic; else e.introdb = ic; }
-  if (c && c->imdb[0] && epT > 0 && epE > 0) {
+  if (c && c->imdb[0] && epT >= 0 && epE > 0) {
     cred_viz_ler(c->imdb, epT, &e.vizInicio, &e.vizDur);
     e.aprendidoResto = cred_aprendido_resto(c->imdb);
   }
@@ -2375,7 +2377,7 @@ static void fecharSessao(int manter) {
         // O stop do scrobble ja fecha o visto no Simkl (e cai no historico
         // sozinho se falhar): mandar o historico de novo seria pedido em dobro.
         if (simklScr == SCR_STOP) dest &= ~VISTO_SIMKL;
-        if (epT > 0 && epE > 0) {
+        if (epT >= 0 && epE > 0) {
           if (vistoep_estado(ci->imdb, epT, epE) != 1) {
             VistoPar par = { (short)epT, (short)epE };
             visto_episodios(ci->imdb, "series", &par, 1, 1, dest);
@@ -2384,7 +2386,7 @@ static void fecharSessao(int manter) {
           visto_titulo(ci->imdb, ci->tipo, NULL, 0, 1, dest);
         }
       }
-      if (assistiu && epT > 0 && epE > 0) vistoep_definir(ci->imdb, epT, epE, 1);
+      if (assistiu && epT >= 0 && epE > 0) vistoep_definir(ci->imdb, epT, epE, 1);
       // E para a CONTA. Trakt e conta sao dois destinos diferentes: nem todo
       // usuario liga o Trakt, e o progresso do app oficial vem da conta.
       sync_sujar_progresso();
@@ -2849,11 +2851,11 @@ void player_mini_desenhar(Uint32 agora) {
 // que tenha o que mostrar. Num filme sem relacionado nenhum ele some, em vez de
 // ficar la sem fazer nada.
 static int temUltimoBotao(void) {
-  return epT > 0 || extras_n_relacionados() > 0;
+  return epE > 0 || extras_n_relacionados() > 0;
 }
 
 typedef struct { int id, habilitada; } PlrAcao;
-static int transporteSerie(void) { return !ehCanal() && epT > 0 && epE > 0; }
+static int transporteSerie(void) { return !ehCanal() && epT >= 0 && epE > 0; }
 static int transporteAcoes(PlrAcao a[PLR_NBTNS]) {
   int n = 0, serie = transporteSerie();
   int pronto = serie && !trocaEpisodio && !pedRecarregar && !player_carregando() && !erroFonte && !saindo;
@@ -3006,7 +3008,7 @@ int player_regra_concluiu(double posSeg, double durSeg, double cred) {
 // filme NENHUM tinha guarda. Foi por ai que o PRONTO atrasado do trailer do
 // IMDb virou a duracao do filme no #205.
 static double duracaoCatalogo(void) {
-  if (epT <= 0) {
+  if (epE <= 0) {
     const CatItem *c = cat_item(idxAtual());
     return c && !strcmp(c->tipo, "movie") ? (double)duracaoDeMeta(c->meta) : 0.0;
   }
@@ -3024,7 +3026,7 @@ static double duracaoFonteEsperada(void) {
   double antes = 0, depois = 0;
   if (!c || ehCanal()) return 0;
   if (!strcmp(c->tipo, "movie")) return duracaoDeMeta(c->meta);
-  if (epT <= 0 || epE <= 0) return 0;
+  if (epT < 0 || epE <= 0) return 0;
   for (int ix = idxAtual(), i = 0; i < cat_n_episodios(ix); i++) {
     const CatEp *ep = cat_episodio(ix, i);
     double d;
@@ -3540,7 +3542,7 @@ static int ativarBotao(int i, int repetiu) {
       if (repetiu || trocaEpisodio ||
           (episodioPedidoMarcado && agora - episodioPedidoEm < 400u)) return 0;
       ep = i == PLR_ANTERIOR ? player_anterior_episodio() : player_proximo_episodio();
-      if (!ep || ep->temporada <= 0 || ep->episodio <= 0 ||
+      if (!ep || ep->temporada < 0 || ep->episodio <= 0 ||
           !cat_id_stream(idxAtual(), ep->temporada, ep->episodio, alvo, sizeof alvo) || !alvo[0]) return 0;
       // Copiar os numeros agora: a lista do catalogo pode ser republicada.
       // Nao aprender creditos nem marcar o episodio atual como terminado.
@@ -3565,7 +3567,7 @@ static int ativarBotao(int i, int repetiu) {
     case PLR_FONTES: pedFontes = 1; break;
     case PLR_EPISODIOS:
       if (ehCanal()) pedGuia = 1;
-      else if (epT > 0) episodios_abrir(idxAtual(), epT, epE);
+      else if (epE > 0) episodios_abrir(idxAtual(), epT, epE);
       else posplay_abrir_relacionados(idxAtual());
       break;
     default: return 0;
@@ -3826,7 +3828,7 @@ static void introTmdbTardio(Uint32 agora) {
       if (tm > 0 && cx) {
         double dA = 0, dP = 0;
         introTmdb = tm;
-        if (epT > 0)
+        if (epE > 0)
           for (int ix = idxAtual(), i = 0; i < cat_n_episodios(ix); i++) {
             const CatEp *ep = cat_episodio(ix, i);
             if (!ep || ep->temporada != epT) continue;
@@ -3834,7 +3836,7 @@ static void introTmdbTardio(Uint32 agora) {
             else if (ep->episodio == epE + 1) dP = duracaoTexto(ep->duracao);
           }
         printf("[intro] tmdb %ld chegou depois: pedindo de novo por tmdb_id\n", tm); fflush(stdout);
-        intro_pedir_ids(cx->imdb, tm, epT > 0 ? tt : 0, epT > 0 ? te : 0, dA, dP);
+        intro_pedir_ids(cx->imdb, tm, epE > 0 ? tt : 0, epE > 0 ? te : 0, dA, dP);
       }
     }
   }
@@ -4160,7 +4162,7 @@ void player_atualizar(float dt, Uint32 agora) {
     if (cs && jfid_e(cs->imdb)) cs = NULL;   // never scrobble personal-server items
     if (ok && cs && cs->imdb[0]) {
       char id[64];
-      if (epT > 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
+      if (epT >= 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
       else snprintf(id, sizeof id, "%s", cs->imdb);
       tocouS += dt;
       if (tocouS >= PLR_SCR_TOCOU_S) {
@@ -4179,7 +4181,7 @@ void player_atualizar(float dt, Uint32 agora) {
           duracaoSeg >= 120.0f && !scrubbing &&
           !player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo())) {
         char id[64];
-        if (epT > 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
+        if (epT >= 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
         else snprintf(id, sizeof id, "%s", cs->imdb);
         trakt_scrobble(SCR_EV_PAUSOU, id, posSeg, duracaoSeg, assistidoSeg, 0);
         simkl_scrobble(SCR_EV_PAUSOU, id, posSeg, duracaoSeg, assistidoSeg, 0);
@@ -4223,7 +4225,7 @@ void player_atualizar(float dt, Uint32 agora) {
     const CatItem *ci = item();
     if (epsPedidoRev != cat_revisao() || epsPedidoGer != cat_geracao_episodios()) {
       epsPedidoRev = cat_revisao(); epsPedidoGer = cat_geracao_episodios(); epsPedidoDe[0] = 0; }
-    if (!ehCanal() && epT > 0 && ci && ci->imdb[0] && strcmp(epsPedidoDe, ci->imdb)) {
+    if (!ehCanal() && epE > 0 && ci && ci->imdb[0] && strcmp(epsPedidoDe, ci->imdb)) {
       int ix = idxAtual();
       if (cat_n_episodios(ix) > 0) {
         snprintf(epsPedidoDe, sizeof epsPedidoDe, "%s", ci->imdb);
@@ -4318,7 +4320,7 @@ void player_atualizar(float dt, Uint32 agora) {
     if (mov && (Sint32)(mov - ultimoInput) > 0) ultimoInput = mov; }
   if (visivel && tocando && !player_carregando() && !episodios_aberto() &&
       !stream_folha_aberta() && !faixas_aberta() && agora - ultimoInput > PLR_ESCONDE_MS) visivel = 0;
-  if (epT > 0 && !strstr(linhaEp, " · ")) player_definir_episodio(epT, epE);
+  if (epE > 0 && !strstr(linhaEp, " · ")) player_definir_episodio(epT, epE);
   introTmdbTardio(agora);
 
   // PAINEL DE PAUSA. A condicao e a traducao de canShowPauseOverlay
@@ -4556,7 +4558,7 @@ static const char *iconeBotao(int i) {
     case PLR_ANTERIOR:  return "pl_chevron-left";
     case PLR_PROXIMO:   return "pl_chevron-right";
     case PLR_RECARREGAR:return "pl_rotate-ccw";
-    default:            return epT > 0 ? "pl_list-video" : "pl_film";
+    default:            return epE > 0 ? "pl_list-video" : "pl_film";
   }
 }
 static const char *rotuloBotao(int i) {
@@ -4569,7 +4571,7 @@ static const char *rotuloBotao(int i) {
     case PLR_ANTERIOR:  return "Episódio anterior";
     case PLR_PROXIMO:   return "Próximo episódio";
     case PLR_RECARREGAR:return "Recarregar";
-    default:            return ehCanal() ? "Guia" : epT > 0 ? "Epis\xc3\xb3""dios" : "Relacionados";
+    default:            return ehCanal() ? "Guia" : epE > 0 ? "Epis\xc3\xb3""dios" : "Relacionados";
   }
 }
 
@@ -4994,7 +4996,7 @@ static void desenharAcoesEpisodio(void){
 }
 static void desenharAcoesEpisodioCorpo(void){
   const CatEp *prox=player_proximo_episodio();double fim;int tipo=0;
-  intro_definir_duracao(duracaoReal ? (double)duracaoSeg : 0.0, epT <= 0);
+  intro_definir_duracao(duracaoReal ? (double)duracaoSeg : 0.0, epE <= 0);
   int trecho=intro_botao(posSeg,monoSeg(),visivel,skipFoco&&visivel,&fim,&tipo);
   // A CAIXA DE "Próximo episódio" QUE FICAVA AQUI FOI APAGADA. Era um retangulo
   // de posicao fixa em {420,720} que caia por cima da barra de tempo, sem foco

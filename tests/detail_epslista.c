@@ -116,6 +116,25 @@ int main(void) {
     foco.fileira = SEC_TEMPORADAS;
     assert(xItem(SEC_EPISODIOS, 0) == x0 && xItem(SEC_EPISODIOS, 1) == x1); }
 
+  // #556: especiais sao acessiveis, mas nao substituem o inicio regular.
+  memset(eps, 0, sizeof eps);
+  eps[0].temporada = 0; eps[0].episodio = 1;
+  eps[1].temporada = 0; eps[1].episodio = 2;
+  eps[2].temporada = 1; eps[2].episodio = 1;
+  c.temporadas[0] = 1; c.temporadas[1] = 0; c.nTemporadas = 2;
+  cat_definir_tudo(&c, 1, NULL, 0); cat_definir_episodios(0, eps, 3);
+  assert(primeiroEpRegular()->temporada == 1);
+  temporada = 1; // aba da temporada zero, nao T1
+  assert(temporadaEm(temporada) == 0 && epVisiveis() == 2);
+  foco.fileira = SEC_EPISODIOS; foco.coluna = 1;
+  { int t, e; assert(episodioAlvo(&t, &e, NULL) && t == 0 && e == 2); }
+  c.temporada = 0; c.episodio = 2; c.progresso = 40;
+  cat_definir_tudo(&c, 1, NULL, 0); cat_definir_episodios(0, eps, 3);
+  foco.fileira = 0;
+  { int t, e, origem; assert(episodioAlvo(&t, &e, &origem) && t == 0 && e == 2 && origem == 2); }
+  cat_definir_episodios(0, eps, 2);
+  assert(primeiroEpRegular()->temporada == 0);
+
   puts("detail_epslista: margem entre cards, prato de foco na mola, reduzidas snap, sem salto");
   return 0;
 }

@@ -84,7 +84,15 @@ static int   pmSemPlano;
 // (1 = "true") e se o mylist diz que o torrent ainda esta baixando.
 static int   tbSoCache = -1, tbBaixando;
 
-static char *dup2s(const char *s) { return strdup(s); }
+static int arquivosEspeciais;
+static char *dup2s(const char *s) {
+  char *c = strdup(s);
+  if (arquivosEspeciais) {
+    char *p = c;
+    while ((p = strstr(p, "S02"))) { p[2] = '0'; p += 3; }
+  }
+  return c;
+}
 
 // --- AllDebrid. Modos: o que o upload responde, a sequencia de statusCode que o
 // status devolve, e o que cada rota recebeu (para provar a ORDEM e a auth).
@@ -342,6 +350,29 @@ static void realDebrid(void) {
     assert(strstr(pub, "x.download.real-debrid.com"));  // o host fica: e o que diagnostica
     assert(strstr(pub, "/...")); }
   OK("o link do Real-Debrid nao vai inteiro para o log");
+}
+
+static void especiais(void) {
+  static const char *const servicos[] = {"realdebrid", "torbox", "premiumize"};
+  static const char *const chaves[] = {K_RD, K_TB, K_PM};
+  arquivosEspeciais = 1;
+  for (int i = 0; i < 3; i++) {
+    char url[4096] = "";
+    debrid_esquecer(); debrid_definir_chave(servicos[i], chaves[i]);
+    debrid_definir_episodio(0, 5); debrid_nova_busca();
+    assert(debrid_resolver("DEADBEEF", -1, url, sizeof url));
+    if (i == 0) assert(strstr(corpoSelectRD, "files=2"));
+    if (i == 1) assert(strstr(urlRequestdl, "file_id=1"));
+    if (i == 2) assert(strstr(url, "/dl/BBB"));
+    arquivosEspeciais = 0; debrid_esquecer();
+    debrid_definir_chave(servicos[i], chaves[i]); debrid_definir_episodio(0, 5);
+    assert(!debrid_resolver("DEADBEEF", -1, url, sizeof url));
+    debrid_nova_busca();
+    assert(debrid_resolver("DEADBEEF", 1, url, sizeof url)); // indice publicado continua valido
+    arquivosEspeciais = 1;
+  }
+  arquivosEspeciais = 0; debrid_esquecer();
+  OK("#556: debrid escolhe S00E05 em vez do maior arquivo do pacote");
 }
 
 static void torbox(void) {
@@ -1036,6 +1067,7 @@ int main(void) {
   assert(dup2(f, 1) >= 0);
 
   semChaves();
+  especiais();
   realDebrid();
   torbox();
   torbox403();

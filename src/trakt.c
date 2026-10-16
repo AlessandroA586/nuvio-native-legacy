@@ -696,7 +696,7 @@ static int enfeitar(CatItem *d, const char *tipo, uint64_t sessao) {
   // futuros no fim ou numa fileira propria. Vale para o Simkl tambem: o lote
   // dele passa por aqui (simkl_continuar -> trakt_enfeitar_lote). Episodio sem
   // `released` fica sem data, e sem data conta como exibido, como no web.
-  if (d->progresso == 0 && d->temporada > 0 && d->episodio > 0 && !strcmp(tipo, "series")) {
+  if (d->progresso == 0 && d->temporada >= 0 && d->episodio > 0 && !strcmp(tipo, "series")) {
     char quando[40] = "";
     long long ms;
     if (metaep_lancamento(epc, d->temporada, d->episodio, quando, sizeof quando)) {
@@ -1688,11 +1688,11 @@ int trakt_continuar(CatItem *saida, int max) {
       if (!imdb[0]) { p = js_prox(f); continue; }
       if (serie) {
         const char *fe = js_fim(strchr(ep, '{'));
-        d->temporada = (int)js_num(ep, fe, "season", 0);
+        d->temporada = (int)js_num(ep, fe, "season", 1);
         d->episodio  = (int)js_num(ep, fe, "number", 0);
         js_texto(ep, fe, "title", d->nomeEpisodio, sizeof d->nomeEpisodio);
         snprintf(d->imdb, sizeof d->imdb, "%s:%d:%d", imdb,
-                 d->temporada ? d->temporada : 1, d->episodio ? d->episodio : 1);
+                 d->temporada >= 0 && d->episodio > 0 ? d->temporada : 1, d->episodio > 0 ? d->episodio : 1);
         snprintf(d->tipo, sizeof d->tipo, "series");
       } else {
         snprintf(d->imdb, sizeof d->imdb, "%s", imdb);
@@ -2098,7 +2098,7 @@ int trakt_perfil(PerfilDados *d) {
       for(int i=0;i<nRanking;i++)if(imdb[0]&&!strcmp(ranking[i].id,imdb)){hi=i;break;}
       if(hi<0&&imdb[0]&&nRanking<100){hi=nRanking++;PerfilDestaque *h=&ranking[hi];
         snprintf(h->id,sizeof h->id,"%s",imdb);snprintf(h->titulo,sizeof h->titulo,"%s",titulo);
-        if(t>0&&e>0)snprintf(h->detalhe,sizeof h->detalhe,i18n("T%dE%d"),t,e);else snprintf(h->detalhe,sizeof h->detalhe,"Filme");
+        if(t>=0&&e>0)snprintf(h->detalhe,sizeof h->detalhe,i18n("T%dE%d"),t,e);else snprintf(h->detalhe,sizeof h->detalhe,"Filme");
         if(imdb[0]){snprintf(h->poster,sizeof h->poster,"https://images.metahub.space/poster/medium/%s/img",imdb);
           snprintf(h->backdrop,sizeof h->backdrop,"https://images.metahub.space/background/medium/%s/img",imdb);}}
       if(hi>=0){ranking[hi].plays++;if(runtime>0)ranking[hi].minutos+=runtime;}
@@ -2273,7 +2273,7 @@ static void idsScrobble(const char *id, ScrobbleEpIds *out) {
   memset(out, 0, sizeof *out);
   snprintf(base, sizeof base, "%s", id);
   dp = strchr(base, ':');
-  if (!dp || sscanf(dp + 1, "%d:%d", &t, &e) != 2 || t <= 0 || e <= 0) return;
+  if (!dp || sscanf(dp + 1, "%d:%d", &t, &e) != 2 || t < 0 || e <= 0) return;
   *dp = 0;
   meta = fichaBuscar("series", base);
   if (!meta) meta = metaprov_meta("series", base, 8, NULL);

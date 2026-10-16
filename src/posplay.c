@@ -99,6 +99,9 @@ static int    pedT, pedE, pedTitulo = -1;
 static int    pedAutomatico, automaticoEntregue, recuou, aguardaBusca;
 static int    proxT, proxE;          // proximo episodio, quando ha
 static char   proxNome[120];
+// Temporada0 e especial; quem distingue ausencia e o numero do episodio.
+static int temProximo(void) { return serie && proxT >= 0 && proxE > 0; }
+static int temPedidoEpisodio(void) { return pedT >= 0 && pedE > 0; }
 static char   preEpisodio[64], preAlvo[64];
 static int    preTentou;
 static int    preVideoTentou, preVideoRenovou;
@@ -138,10 +141,10 @@ int posplay_sobre_video(void) { return visivel && (serie || aguardaCena); }
 // segundo defeito somado ao primeiro.
 static void esconder(void) {
   automaticoEntregue = 0;
-  cancelarPreparo(!pedT);
+  cancelarPreparo(!temPedidoEpisodio());
   // O pedido Next consome no roteador antes de encerrar o player. Back/Down
   // descartam; uma escolha explicita de Next conserva o mesmo worker/token.
-  if (!pedT) proximopreparo_cancelar();
+  if (!temPedidoEpisodio()) proximopreparo_cancelar();
   visivel = 0; fecharEm = 0; foco = 0; dispensado = 1;
 }
 
@@ -168,7 +171,7 @@ static void cancelarAutomatico(void) {
   if (pedAutomatico) {
     pedT = pedE = 0;
     pedAutomatico = 0;
-    if (serie && proxT > 0 && proxE > 0) {
+    if (temProximo()) {
       visivel = 1;
       dispensado = 0;
     }
@@ -179,7 +182,7 @@ static void cancelarAutomatico(void) {
 // O pulo automatico de creditos usa so aguardar_busca e conserva o buffer.
 void posplay_busca_usuario(void) {
   cancelarAutomatico();
-  if (automaticoEntregue && serie && proxT > 0 && proxE > 0) {
+  if (automaticoEntregue && temProximo()) {
     visivel = 1;
     dispensado = 0;
   }
@@ -215,7 +218,7 @@ void posplay_aguardar_busca(int aguardar) {
 }
 
 int posplay_pediu_episodio(int *t, int *e) {
-  if (!pedT) return 0;
+  if (!temPedidoEpisodio()) return 0;
   if (t) *t = pedT;
   if (e) *e = pedE;
   pedT = pedE = 0;
@@ -299,7 +302,7 @@ static void prepararProximo(int ehSerie, double resta) {
       dispensado || recuou || aguardaBusca || durEstavel < PP_DUR_ESTAVEL_S ||
       !player_janela_proximo(video ? 60.0 : 10.0)) return;
   player_episodio_atual(&t, &e);
-  if (t <= 0 || e <= 0) return;
+  if (t < 0 || e <= 0) return;
   proximo = prox_indice_seguinte(n ? cat_episodio(idx, 0) : NULL, n, t, e);
   px = proximo >= 0 ? cat_episodio(idx, proximo) : NULL;
   if (!px) return;
@@ -421,7 +424,7 @@ void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
   { char episodio[64] = "";
     int t = 0, e = 0;
     player_episodio_atual(&t, &e);
-    if (ehSerie && t > 0 && e > 0)
+    if (ehSerie && t >= 0 && e > 0)
       cat_id_stream(idxCatalogo, t, e, episodio, sizeof episodio);
     if (preEpisodio[0] && strcmp(preEpisodio, episodio)) {
       cancelarPreparo(1);
@@ -498,8 +501,8 @@ void posplay_atualizar(float dt, Uint32 agora, double posSeg, double durSeg,
       // um episodio. O item continua valendo de reserva para o caso de o
       // player nao ter episodio nenhum (idx trocado, dado incompleto).
       player_episodio_atual(&t, &e);
-      if (!(t > 0 && e > 0) && ci) { t = ci->temporada; e = ci->episodio; }
-      if (t > 0 && e > 0 && acharProximo(idx, t, e)) {
+      if (!(t >= 0 && e > 0) && ci) { t = ci->temporada; e = ci->episodio; }
+      if (t >= 0 && e > 0 && acharProximo(idx, t, e)) {
         fecharEm = 0;            // arma neste quadro, depois de abrir o cartao
         visivel = 1;
       }
@@ -556,7 +559,7 @@ int posplay_evento(const SDL_Event *e) {
   // de titulo. O cartao inteiro volta no fim real do arquivo.
   // Serie com proximo: um segundo botao leva ao proximo episodio na mao.
   if (aguardaCena) {
-    int temProx = serie && proxT;
+    int temProx = temProximo();
     if (temProx && k == SDLK_RIGHT && foco == 0) { foco = 1; return 1; }
     if (temProx && k == SDLK_LEFT && foco == 1)  { foco = 0; return 1; }
     if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
@@ -639,7 +642,7 @@ static void anelContagem(float cx, float cy, float frac, float a) {
 // contagem automatica nao e tocada. No filme o foco segue a variavel das
 // setas (o cartaz); o OK abre o titulo, nao toca nada.
 static void ponteiroComecar(int a, int b) { (void)a; (void)b; }
-static void ponteiroCena(int i, int b) { (void)b; if (visivel && aguardaCena && proxT) foco = i; }
+static void ponteiroCena(int i, int b) { (void)b; if (visivel && aguardaCena && temProximo()) foco = i; }
 static void ponteiroCartaz(int i, int b) {
   int n = extras_n_relacionados();
   (void)b;
@@ -748,7 +751,7 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
       if (px && px->sinopse[0])
         sinopse_bloco_corta(TXT_ILHA_SUB, px->sinopse, 243, 242, 239, tx, ty, tw, 28.5f, a * 0.68f, 2);
       { float by = ilha.y + ilha.h - 28.0f - 60.0f;
-        if (aguardaCena && proxT) {   // continuar | proximo episodio, foco no OK
+        if (aguardaCena && temProximo()) {   // continuar | proximo episodio, foco no OK
           float b0 = plrui_botao(tx, by, "Continuar assistindo", "pl_play-f", foco == 0 ? 1.0f : 0.0f, a);
           float b1 = plrui_botao(tx + b0 + 16.0f, by, "Próximo episódio", NULL, foco == 1 ? 1.0f : 0.0f, a);
           if (visivel && a > 0.99f && a < 1.01f) {

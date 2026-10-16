@@ -294,6 +294,13 @@ int main(void) {
     assert(p2p_escolher_lista(nomes, tam, 5, 0, 1, 2) == 2);     // fileIdx de legenda: cai no SxxEyy
     assert(p2p_escolher_lista(nomes, tam, 0, -1, 0, 0) == -1);
   }
+  {
+    const char *nomes[] = {"Show.S01E01.mkv", "Show.S00E01.mkv", "Show.S00E02.mkv"};
+    double tam[] = {3e9, 900e6, 800e6};
+    assert(p2p_escolher_lista(nomes, tam, 3, -1, 0, 2) == 2);
+    assert(p2p_escolher_lista(nomes, tam, 3, 1, 0, 2) == 1); // indice explicito vence
+    assert(p2p_escolher_lista(nomes, tam, 1, -1, 0, 2) == -1); // nao tocar S01 por engano
+  }
   puts("p2p: motor (cotos, magnet, escolha) ok");
 
   puts("p2p: ok");

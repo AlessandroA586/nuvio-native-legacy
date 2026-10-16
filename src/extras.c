@@ -1828,7 +1828,7 @@ static void *buscarEpComent(void *arg) {
 
 void extras_pedir_comentarios_ep(const char *imdbSerie, int temporada, int episodio) {
   pthread_t f;
-  if (!imdbSerie || !imdbSerie[0] || temporada <= 0 || episodio <= 0) return;
+  if (!imdbSerie || !imdbSerie[0] || temporada < 0 || episodio <= 0) return;
   pthread_mutex_lock(&trava);
   // Mesmo episodio ja carregado (ou em voo): nao repete a viagem.
   // Sem o `nComentEp > 0` que havia aqui: um episodio SEM comentario
@@ -2265,7 +2265,7 @@ int extras_progresso_serie(int *vistosEp, int *exibidos) {
 
 int extras_proximo_episodio(int *t, int *e) {
   pthread_mutex_lock(&trava);
-  int ok = progressoPronto && proximoT > 0 && proximoE > 0;
+  int ok = progressoPronto && proximoT >= 0 && proximoE > 0;
   unsigned rev = epsRev;
   char id[sizeof idPedido];
   snprintf(id, sizeof id, "%s", idPedido);

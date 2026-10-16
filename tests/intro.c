@@ -423,6 +423,10 @@ int main(int argc,char **argv) {
     assert(!strcmp(url, "https://api.theintrodb.org/v3/media?tmdb_id=37854&season=4&episode=92&duration_ms=1385400"));
     intro_montar_url(url, sizeof url, "tt1375666", 0, 0, 0, 0.0);
     assert(!strcmp(url, "https://api.theintrodb.org/v3/media?imdb_id=tt1375666"));
+    intro_montar_url(url, sizeof url, "tt12409194", 0, 0, 1, 1200.0);
+    assert(strstr(url, "imdb_id=tt12409194&season=0&episode=1&duration_ms=1200000"));
+    assert(intro_resposta_confere("{\"season\":0,\"episode\":1}", 0, 1));
+    assert(!intro_resposta_confere("{\"season\":1,\"episode\":1}", 0, 1));
     intro_montar_url_aniskip(url, sizeof url, 21, 1, 1500.0);
     assert(strstr(url, "skip-times/21/1?types[]=op&types[]=ed&types[]=recap&episodeLength=1500"));
     puts("ok  URLs: tmdb_id + par do TMDB + duration_ms; imdb sozinho no filme; AniSkip");
@@ -468,6 +472,14 @@ int main(int argc,char **argv) {
     nt = esperar(2); nt = intro_trechos(t, 8);
     assert(nt == 2 && mesmoSeg(credFinal(t, nt), 1387.996));
     puts("ok  anime kitsu:12 -> MAL 21 -> AniSkip: abertura e ED");
+    // Especial sem um mapeamento MAL proprio nao herda os marcadores de E1 regular.
+    { int aniAntes;
+      pthread_mutex_lock(&fakeTrava); aniAntes = aniPedidos; pthread_mutex_unlock(&fakeTrava);
+      intro_pedir_ids("kitsu:12:1", 0, 0, 1, 0, 0);
+      assert(esperar(0) == 0);
+      pthread_mutex_lock(&fakeTrava); assert(aniPedidos == aniAntes); pthread_mutex_unlock(&fakeTrava);
+    }
+
     // #430: evidencia vem do TMDB ja baixado, antes ou depois do player.
     const char *anime = "{\"original_language\":\"ja\",\"genres\":[{\"id\":16}]}";
     intro_registrar_tmdb("tt5607616", 65942, anime);

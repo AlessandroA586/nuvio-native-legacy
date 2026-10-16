@@ -660,10 +660,10 @@ static int ehVideo(const char *nome) {
 static const char *escolherArquivo(const char *files, int fileIdx,
                                    const char *kNome, const char *kTam) {
   char pad1[16] = "", pad2[16] = "";
-  const char *p, *melhor = NULL; int idx = 0; double melhorTam = -1;
+  const char *p, *melhor = NULL; int idx = 0, porIndice = 0; double melhorTam = -1;
   int temporada = 0, episodio = 0;
   debrid_episodio(&temporada, &episodio);
-  if (temporada > 0 && episodio > 0) {
+  if (temporada >= 0 && episodio > 0) {
     snprintf(pad1, sizeof pad1, "s%02de%02d", temporada, episodio);
     snprintf(pad2, sizeof pad2, "%dx%02d", temporada, episodio);
   }
@@ -675,9 +675,12 @@ static const char *escolherArquivo(const char *files, int fileIdx,
     minusc(nome);
     if (!ehVideo(nome)) continue;
     if (pad1[0] && (strstr(nome, pad1) || strstr(nome, pad2))) return p;
-    if (idx == fileIdx && fileIdx >= 0) { melhor = p; melhorTam = 1e18; continue; }
+    if (idx == fileIdx && fileIdx >= 0) { melhor = p; melhorTam = 1e18; porIndice = 1; continue; }
     if (tam > melhorTam) { melhor = p; melhorTam = tam; }
   }
+  // Sem correspondencia ou indice publicado, nao trocar um especial pelo
+  // maior episodio regular de um pacote. A falha permite outra fonte.
+  if (temporada == 0 && episodio > 0 && !porIndice) return NULL;
   return melhor;
 }
 
