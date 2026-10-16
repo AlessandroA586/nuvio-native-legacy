@@ -123,7 +123,7 @@ class ParaleloDataSource(
         // O primeiro pedido e menor: a imagem nao espera 4 MB chegarem.
         private const val PRIMEIRO = 1 shl 20
         // Menor pedaco do FIM DO ARQUIVO (ver `cauda` em abrir).
-        private const val PEDACO_CAUDA_MIN = 256 shl 10
+        private const val PEDACO_CAUDA_MIN = 128 shl 10
 
         // Manifesto e segmento de streaming adaptativo: conexao unica.
         fun serve(uri: Uri): Boolean {
@@ -365,11 +365,12 @@ class ParaleloDataSource(
         // ultimos MB, e o Media3 vai ate la ANTES do primeiro quadro. Pela
         // conexao unica, os 4 MB finais de um remux de 50 GB levaram 24 s no
         // Shield (Ant-Man, 16/10/2026: 170 KB/s naquele trecho do TorBox) e a
-        // imagem esperou tudo. Uma janela que vai ate o fim e passa da sonda
-        // vai pelo pool, em pedacos menores que dividem o resto entre as
-        // outras conexoes; a sonda baixa ao mesmo tempo que eles.
-        val cauda = !paralelo && code == 206 && total > 0 && janela > PRIMEIRO &&
-            pos + janela >= total
+        // imagem esperou tudo; os 612 KB finais de outro remux, 5,3 s. Uma
+        // janela que vai ate o fim e tem mais de dois pedacos minimos vai pelo
+        // pool: a sonda fica com a sua parte e o resto se divide entre as
+        // outras conexoes, todas ao mesmo tempo.
+        val cauda = !paralelo && code == 206 && total > 0 &&
+            janela > PEDACO_CAUDA_MIN.toLong() * 2 && pos + janela >= total
         if (!paralelo && !cauda) {
             Log.i(TAG, "conexao unica: HTTP $code, total=$total, pos=$pos (${dataSpec.uri.host})")
             // Sem Range (ou pequeno demais para valer a pena): conexao unica.
@@ -408,7 +409,11 @@ class ParaleloDataSource(
         }
         urlFinal = c.url
         fim = if (pedido != C.LENGTH_UNSET.toLong()) minOf(total, pos + pedido) else total
-        val sondaFim = minOf(primeiroUltimo + 1, fim)
+        // No fim do arquivo a sonda le so a sua parte (o pedido dela ja foi ate
+        // PRIMEIRO; o resto daquela resposta e descartado ao desconectar).
+        val parte = ((fim - pos + conexoes - 1) / conexoes.coerceAtLeast(1))
+            .coerceIn(PEDACO_CAUDA_MIN.toLong(), PRIMEIRO.toLong())
+        val sondaFim = minOf(primeiroUltimo + 1, fim, if (cauda) pos + parte else Long.MAX_VALUE)
         if (cauda) {
             val outras = (conexoes - 1).coerceAtLeast(1)
             val resto = fim - sondaFim
@@ -418,7 +423,7 @@ class ParaleloDataSource(
             exec = Executors.newFixedThreadPool(conexoes)
             encher()
         }
-        val primeiro = try { lerTudo(c) } finally { desconectar(c) }
+        val primeiro = try { lerTudo(c, if (cauda) sondaFim - pos else -1L) } finally { desconectar(c) }
         if (cauda && primeiro.size.toLong() != sondaFim - pos)
             throw IOException("sonda curta: ${primeiro.size} de ${sondaFim - pos}")
         bufIni = pos
@@ -435,16 +440,19 @@ class ParaleloDataSource(
         return fim - pos
     }
 
-    private fun lerTudo(c: HttpURLConnection): ByteArray {
+    // `limite` >= 0: para ali (o resto da resposta fica para quem desconectar).
+    private fun lerTudo(c: HttpURLConnection, limite: Long = -1L): ByteArray {
         val esperado = c.contentLengthLong
-        val out = java.io.ByteArrayOutputStream(if (esperado > 0) esperado.toInt() else pedaco)
+        val cap = if (limite >= 0) limite else if (esperado > 0) esperado else pedaco.toLong()
+        val out = java.io.ByteArrayOutputStream(cap.toInt())
         val origem = PassivoMedidor.origemDe(c.url)
         conferirCancelamento()
         c.inputStream.use { inp ->
             val tmp = ByteArray(64 * 1024)
-            while (true) {
+            while (limite < 0 || out.size() < limite) {
                 conferirCancelamento()
-                val n = inp.read(tmp)
+                val quero = if (limite < 0) tmp.size else minOf(tmp.size.toLong(), limite - out.size()).toInt()
+                val n = inp.read(tmp, 0, quero)
                 conferirCancelamento()
                 if (n < 0) break
                 out.write(tmp, 0, n)

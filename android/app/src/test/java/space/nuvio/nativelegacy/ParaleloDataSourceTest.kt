@@ -305,14 +305,14 @@ class ParaleloDataSourceTest {
             assertEquals(total - pos, lidos)
             val faixas = conexoes.map { it.getRequestProperty("Range") }
             assertEquals("bytes=$pos-${pos + (1 shl 20) - 1}", faixas[0])
-            // Sonda + 3 pedacos: o resto (~2.8 MB) dividido entre as outras 3,
-            // contiguos ate o ultimo byte (a ordem de criacao depende dos fios).
+            // A sonda fica com 1/4 da janela; o resto vai em 3 pedacos contiguos
+            // ate o ultimo byte (a ordem de criacao depende dos fios).
             assertEquals(4, faixas.size)
             val pedacos = faixas.drop(1).map { f ->
                 val r = f!!.removePrefix("bytes=")
                 r.substringBefore('-').toLong() to r.substringAfter('-').toLong()
             }.sortedBy { it.first }
-            assertEquals(pos + (1 shl 20), pedacos.first().first)
+            assertEquals(pos + (total - pos + 3) / 4, pedacos.first().first)
             assertEquals(total - 1, pedacos.last().second)
             for (i in 1 until pedacos.size) assertEquals(pedacos[i - 1].second + 1, pedacos[i].first)
         } finally {
@@ -322,25 +322,51 @@ class ParaleloDataSourceTest {
         }
     }
 
-    @Test fun fimDoArquivoQueCabeNaSondaSegueNaConexaoUnica() {
-        // 600 KB finais: a sonda (1 MB) ja cobre tudo; nada de pool.
-        val total = 24891962527L
-        val aberturas = AtomicInteger()
+    // Le a janela inteira e devolve os Ranges pedidos.
+    private fun lerFim(total: Long, janela: Long): Pair<List<String>, Boolean> {
+        val conexoes = java.util.Collections.synchronizedList(ArrayList<ConexaoFaixa>())
         val fonte = ParaleloDataSource(null, emptyMap(), novaConexao = { url ->
-            aberturas.incrementAndGet()
-            ConexaoFaixa(url, total)
+            ConexaoFaixa(url, total).also { conexoes += it }
         }, dormir = { throw AssertionError("conexao viva nao deve esperar retry") })
         val exec = ParaleloDataSource::class.java.getDeclaredField("exec")
         exec.isAccessible = true
+        var pool: java.util.concurrent.ExecutorService? = null
         try {
             val len = fonte.open(DataSpec.Builder()
                 .setUri(android.net.Uri.parse("https://example.invalid/video.mkv"))
-                .setPosition(total - (600L shl 10))
+                .setPosition(total - janela)
                 .setLength(C.LENGTH_UNSET.toLong())
                 .build())
-            assertEquals(600L shl 10, len)
-            assertEquals(null, exec.get(fonte))
-        } finally { fonte.close() }
+            assertEquals(janela, len)
+            pool = exec.get(fonte) as java.util.concurrent.ExecutorService?
+            val buf = ByteArray(1 shl 16)
+            var lidos = 0L
+            while (true) {
+                val n = fonte.read(buf, 0, buf.size)
+                if (n == C.RESULT_END_OF_INPUT) break
+                lidos += n
+            }
+            assertEquals(janela, lidos)
+        } finally {
+            fonte.close()
+            pool?.let { assertTrue(it.awaitTermination(10, TimeUnit.SECONDS)) }
+        }
+        return conexoes.map { it.getRequestProperty("Range")!! } to (pool != null)
+    }
+
+    @Test fun indiceMenorQueASondaTambemSeDivide() {
+        // Outro remux (Shield, 17/10/2026): 612 132 bytes finais, 5,3 s pela
+        // conexao unica. A sonda ja cobria a janela; agora fica com 1/4 dela.
+        val (faixas, pool) = lerFim(54212259960L, 612132L)
+        assertTrue(pool)
+        assertEquals(4, faixas.size)
+    }
+
+    @Test fun fimDoArquivoMinusculoSegueNaConexaoUnica() {
+        // 200 KB finais: menos de dois pedacos minimos, nada de pool.
+        val (faixas, pool) = lerFim(24891962527L, 200L shl 10)
+        assertFalse(pool)
+        assertEquals(2, faixas.size)   // sonda + reabertura da conexao unica
     }
 
     // Link do addon que redireciona (307) para o CDN do debrid; o host em
