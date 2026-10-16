@@ -125,6 +125,7 @@ static int nAutomaticasExcluidas;
 static int decoder4k[4] = { -1, -1, -1, -1 }; // HEVC, AVC, VP9, AV1
 static int decoderFalhaAltura[4];             // apenas a lista atual
 static int excedeDecoder(const Stream *s);
+static int temAudioPt(const Stream *s);
 static pthread_mutex_t autoExclTrava = PTHREAD_MUTEX_INITIALIZER;
 // Trava entre a lista e os fios de verificacao (ver Lote, abaixo): a troca de
 // lista e as leituras/escritas dos fios em `lista[]` passam por ela.
@@ -2050,8 +2051,6 @@ int stream_falha_aplicar(int indice, unsigned geracao, int servico, const char *
   return stream_falha_aplicar_sessao(indice, geracao, servico, url,
                                    nv_perfil_sessao_ler());
 }
-
-static int temAudioPt(const Stream *s);
 
 int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
   int fila[VER_MAX], nf, q, tocadas = 0, escolhida, total, pref, livres = 0, kk;
