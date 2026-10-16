@@ -23,6 +23,9 @@
 #include <sys/statvfs.h>
 #include <time.h>
 #include <unistd.h>
+#ifdef __ANDROID__
+#include "android.h"
+#endif
 
 // ------------------------------------------------------------------ estado
 // TUDO abaixo da trava e lido/escrito so com ela, e ela so e presa por
@@ -75,6 +78,11 @@ static int usbENossa(const char *p2p);
 static struct stat usbVistos[USB_MAX_VISTOS];   // (dev,ino) ja olhados no scan
 static unsigned usbNVistos;
 static _Atomic int usbMotivo;
+static char usbAndroidInj[1400]; // teste: lista no lugar de getExternalFilesDirs
+static char usbMounts[200];      // teste: arquivo no formato /proc/mounts
+static int usbApp;               // sondando o dir do app que E a raiz do pendrive (Android)
+static int usbFat;               // raiz escolhida esta em FAT32: arquivo < 4 GiB
+static char usbAndroidLogado[700];
 // Shared by discovery and stale-cache cleanup; only mount roots qualify.
 static const char *const usbBases[] = {
   "/tmp/usb", "/media/usb", "/mnt/media_rw",
@@ -224,7 +232,7 @@ static int usbServe(const char *candidato, char *raiz, unsigned nr, int criar) {
   if (stat(candidato, &st) != 0)
     return usbRejeitar(candidato, P2PM_USB_IO, errno, 0);
   if (!S_ISDIR(st.st_mode)) return usbRejeitar(candidato, P2PM_USB_IO, ENOTDIR, -1);
-  if (!usbExtra[0]) {
+  if (!usbExtra[0] && !usbApp) {
     struct stat parent;
     // Only mount roots qualify; writable containers live on the parent device.
     if (snprintf(teste, sizeof teste, "%s/..", candidato) >= (int)sizeof teste)
@@ -327,16 +335,77 @@ static int usbEscanearDir(const char *base, char *raiz, unsigned nr, int fundo, 
   return usbEscanearDirL(base, raiz, nr, fundo, criar, &lim);
 }
 
+
+// #205 Android: app-specific dir of each removable volume (getExternalFilesDirs
+// minus index 0, the primary/emulated one). Writable with no permission, so
+// it stands in for the unwritable /storage/<id> root.
+static unsigned usbAndroidDirs(char dirs[][600], unsigned max) {
+  char lista[1400], *p, *fim;
+  unsigned n = 0, linha = 0;
+  lista[0] = 0;
+  if (usbAndroidInj[0]) snprintf(lista, sizeof lista, "%s", usbAndroidInj);
+#ifdef __ANDROID__
+  else android_volumes_externos(lista, sizeof lista);
+#endif
+  for (p = lista; p && n < max; p = fim ? fim + 1 : NULL, linha++) {
+    fim = strchr(p, '\n');
+    if (fim) *fim = 0;
+    if (linha && *p && strlen(p) < 600) snprintf(dirs[n++], 600, "%s", p);
+  }
+  return n;
+}
+
+// Filesystem type of the mount holding `path`. A /storage/<id> fuse view is
+// backed by /mnt/media_rw/<id>, which carries the real type when visible.
+static void usbFs(const char *path, char *fs, size_t nfs) {
+  char linha[1024], dev[512], mp[512], tipo[64], best[512] = "", alvo[600] = "";
+  const char *id;
+  FILE *f = fopen(usbMounts[0] ? usbMounts : "/proc/mounts", "r");
+  snprintf(fs, nfs, "?");
+  if (!f) return;
+  if (!strncmp(path, "/storage/", 9) && (id = path + 9)[0]) {
+    size_t l = strcspn(id, "/");
+    snprintf(alvo, sizeof alvo, "/mnt/media_rw/%.*s", (int)l, id);
+  }
+  while (fgets(linha, sizeof linha, f)) {
+    size_t l;
+    if (sscanf(linha, "%511s %511s %63s", dev, mp, tipo) != 3) continue;
+    l = strlen(mp);
+    if (alvo[0] && !strcmp(mp, alvo)) { snprintf(fs, nfs, "%s", tipo); fclose(f); return; }
+    if (!strncmp(path, mp, l) && (path[l] == 0 || path[l] == '/' || l == 1) && l >= strlen(best)) {
+      snprintf(best, sizeof best, "%s", mp);
+      snprintf(fs, nfs, "%s", tipo);
+    }
+  }
+  fclose(f);
+}
+
+// FAT32 holds files up to 4 GiB - 1: refuse a bigger one when the cache root
+// in use is the FAT32 USB volume.
+static int usbFatExcede(uint64_t tam) {
+  char raiz[600];
+  int r;
+  pthread_mutex_lock(&trava);
+  snprintf(raiz, sizeof raiz, "%s", pastaRaiz);
+  pthread_mutex_unlock(&trava);
+  pthread_mutex_lock(&usbTrava);
+  r = usbFat && usbRaiz[0] && !strcmp(raiz, usbRaiz) && tam >= (4ull << 30);
+  pthread_mutex_unlock(&usbTrava);
+  return r;
+}
+
 // Com usbTrava presa. Com usbExtra (teste) o scan olha SO ele: as bases de
 // verdade variam por maquina e tornariam o teste indeterminado.
 static int usbEscanear(char *raiz, unsigned nr, int criar) {
-  unsigned n = usbExtra[0] ? 1 : sizeof usbBases / sizeof usbBases[0];
+  unsigned n = usbExtra[0] ? 1 : usbAndroidInj[0] ? 0 : sizeof usbBases / sizeof usbBases[0];
   int found = 0, exists = 0;
+  char dirs[4][600], fs[64];
+  unsigned k, i = 0;
   UsbLog *entry;
   usbNVistos = 0;
   atomic_store(&usbMotivo, P2PM_USB_NONE);
   for (entry = usbLogs; entry; entry = entry->next) entry->seen = 0;
-  for (unsigned i = 0; i < n; i++) {
+  for (i = 0; i < n; i++) {
     const char *base = usbExtra[0] ? usbExtra : usbBases[i];
     struct stat st;
     if (lstat(base, &st) != 0) {
@@ -347,8 +416,32 @@ static int usbEscanear(char *raiz, unsigned nr, int criar) {
     if (!S_ISDIR(st.st_mode)) { usbResultado(base, P2PM_USB_NOT_MOUNT, 0); continue; }
     if (usbEscanearDir(base, raiz, nr, 0, criar)) { found = 1; break; }
   }
+  if (!found && !usbExtra[0]) {
+    k = usbAndroidDirs(dirs, 4);
+    usbApp = 1;
+    for (i = 0; i < k && !found; i++) {
+      exists = 1;
+      if (usbServe(dirs[i], raiz, nr, criar) > 0) {
+        uint64_t livre = 0;
+        found = 1;
+        usbFs(dirs[i], fs, sizeof fs);
+        if (livreReal(dirs[i], &livre) != 0) livre = 0;
+        if (strcmp(usbAndroidLogado, dirs[i])) {
+          snprintf(usbAndroidLogado, sizeof usbAndroidLogado, "%s", dirs[i]);
+          printf("[p2p] usb android: %s %s livre=%.1f\n", dirs[i], fs, (double)livre / 1073741824.0);
+        }
+      }
+    }
+    usbApp = 0;
+  }
   if (!exists) usbResultado("", P2PM_USB_NO_BASE, 0);
-  if (found) atomic_store(&usbMotivo, P2PM_USB_NONE);
+  if (found) {
+    atomic_store(&usbMotivo, P2PM_USB_NONE);
+    usbFs(raiz, fs, sizeof fs);
+    int fat = !strcmp(fs, "vfat") || !strcmp(fs, "msdos");
+    if (fat && !usbFat) printf("[p2p] usb: %s is FAT32, files >= 4 GiB refused\n", raiz);
+    usbFat = fat;
+  }
   for (UsbLog **p = &usbLogs; *p;) {
     static const char *const names[] = {
       "accepted", "nenhuma base", "not a mount root", "already seen",
@@ -761,11 +854,20 @@ static void usbVarreSobra(const char *raizAtual) {
   extra[0] = 0;
   pthread_mutex_lock(&usbTrava);
   snprintf(extra, sizeof extra, "%s", usbExtra);
-  n = extra[0] ? 1 : sizeof usbBases / sizeof usbBases[0];
+  n = extra[0] ? 1 : usbAndroidInj[0] ? 0 : sizeof usbBases / sizeof usbBases[0];
   for (i = 0; i < n; i++) {
     const char *base = extra[0] ? extra : usbBases[i];
     struct stat st;
     if (lstat(base, &st) == 0 && S_ISDIR(st.st_mode)) usbVarreSobraDir(base, 0, raizAtual);
+  }
+  if (!extra[0]) {
+    char dirs[4][600], p2p[720];
+    struct stat st;
+    unsigned k = usbAndroidDirs(dirs, 4);
+    for (i = 0; i < k; i++)   // each app dir is a drive root: only <dir>/p2p can be ours
+      if (snprintf(p2p, sizeof p2p, "%s/p2p", dirs[i]) < (int)sizeof p2p &&
+          lstat(p2p, &st) == 0 && S_ISDIR(st.st_mode) && strcmp(p2p, raizAtual) && usbENossa(p2p))
+        sobraAgendar(p2p);
   }
   pthread_mutex_unlock(&usbTrava);
 }
@@ -828,6 +930,16 @@ void p2pmotor_teste_injetar(const P2pmOps *o, P2pmLivreFn livre, P2pmSondaFn son
   if (raiz) snprintf(raizInjetada, sizeof raizInjetada, "%s", raiz);
   if (vms) vigiaMs = vms;
   pthread_mutex_unlock(&trava);
+}
+
+void p2pmotor_teste_usb_android(const char *lista, const char *mounts) {
+  pthread_mutex_lock(&usbTrava);
+  snprintf(usbAndroidInj, sizeof usbAndroidInj, "%s", lista ? lista : "");
+  snprintf(usbMounts, sizeof usbMounts, "%s", mounts ? mounts : "");
+  usbAndroidLogado[0] = 0;
+  usbResolvido = 0;
+  usbQuando = 0;
+  pthread_mutex_unlock(&usbTrava);
 }
 
 void p2pmotor_teste_usb_base(const char *base) {
@@ -1266,6 +1378,12 @@ static int resolverCom(Pedido *p, const char *h, int fileIdx, const char *fontes
     if (idx >= 0 && (size_t)idx < qtd) tamEscolhido = (uint64_t)tams[idx];
     for (i = 0; i < qtd; i++) free(nomes[i]);
     free(nomes); free(tams);
+  }
+  if (idx >= 0 && usbFatExcede(tamEscolhido)) {
+    printf("[p2p-motor] %.8s: arquivo %d tem %.0f MB, pendrive FAT32 aceita < 4096 MB: recusado\n",
+           h, idx, (double)tamEscolhido / 1048576.0);
+    soltarTorrent(p);
+    return P2P_ERR_SEM_ESPACO;
   }
   if (idx >= 0) {
     // #334: arquivo maior que o teto toca pela janela (o motor apaga o que ja
