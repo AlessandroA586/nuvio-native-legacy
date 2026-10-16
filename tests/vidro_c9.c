@@ -1,6 +1,7 @@
 // Offline home render: real home, A27 chrome, clock, moving focus and backdrop.
-// Budget: at most one five-pass capture every two frames on webOS; native
-// retains every-frame freshness. Same kernel and resolution preserve the look.
+// Budget: one shared five-pass capture per animated frame on webOS (a changed
+// backdrop is never served stale), zero while static; native retains
+// every-frame freshness. Same kernel and resolution preserve the look.
 #include "gfx.h"
 #include "ajustes.h"
 #include "addons.h"
@@ -109,9 +110,9 @@ int main(int argc, char **argv) {
   printf("tier=%s drawable=%dx%d animated/focus: captures/frame=%.2f passes/frame=%.2f blur-fill/frame=%.6f copy/frame=%.6f blur-pixels/frame=%.0f max-captures=%d\n",
          webos ? "webos" : "native", width, height, captures / 20.0, passes / 20.0, fill / 20, copy / 20, fill / 20 * width * height, maximum);
   check(captures > 0 && maximum <= (webos ? 1 : 4), "capture budget across all chrome regions");
-  check(captures <= (webos ? 10 : 80), "animated capture budget");
+  check(captures <= (webos ? 20 : 80), "animated capture budget");
   check(passes == captures * 5, "unchanged five-pass blur kernel");
-  check(fill / 20 <= (webos ? .343751 : 1.0), "blur fill budget: half of full-screen five-pass cost on webOS");
+  check(fill / 20 <= (webos ? .7 : 1.0), "blur fill budget: one shared full-screen capture per animated frame on webOS");
   check(webos || captures == 80, "native capture behavior unchanged");
   shot(argv[2], "focus");
   // Upload invalidation must override temporal reuse; sample age must not be

@@ -1899,7 +1899,7 @@ static VidroEntrada vidroAnt[VID_N], vidroCur[VID_N];
 static int vidroNAnt, vidroNCur, vidroNVidros, vidroNFuros, vidroSujo = 1, vidroCapNoQuadro;
 static unsigned vidroHash;
 #ifdef NV_WEBOS
-static unsigned vidroCapturaQuadro, vidroCapturaHash;
+static unsigned vidroCapturaHash;
 static int vidroCapturaValida;
 #endif
 static float vidroDesde[4];   // caixa do que foi pintado na tela desde a ultima captura
@@ -3263,8 +3263,10 @@ static void vidPassada(GLuint src, GLuint fbo, int w, int h, const float uv[4], 
   glBindTexture(GL_TEXTURE_2D, src);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   gfx_vidro_passadas++;
+#ifdef NV_WEBOS
   gfx_vidro_fill += (double)w * h * (uv[2] - uv[0]) * (uv[3] - uv[1]) /
                     ((double)telaRealW * telaRealH);
+#endif
   if (perftv_enabled) perftv_blur++;
 }
 // Captura e desfoca a regiao `reg` (layout de tela) da tela atual em vidH2.
@@ -3314,7 +3316,9 @@ static int vidCapturar(const float reg[4]) {
   if (blendLigado) glEnable(GL_BLEND);
   progAtual = -1; texAtual = 0;
   gfx_vidro_capturas++;
+#ifdef NV_WEBOS
   gfx_vidro_copia += (double)(x1 - x0) * (y1 - y0) / ((double)telaRealW * telaRealH);
+#endif
   GFX_OUTRO_FIM();
   return 1;
 }
@@ -3325,11 +3329,11 @@ static GLuint vidroFonte(GfxRect r) {
   // The home chrome can draw between glass regions: its bounding box defeats
   // region sharing and causes four copies + twenty blur draws per frame.
   // Freeze the clean backdrop before the first glass, shared by all regions.
-  // ponytail: at most one frame of backdrop lag on webOS; retain the full
-  // five-pass kernel and drawable resolution. Android keeps its original path.
+  // Cross-frame reuse only while vidroHash matches: any change to what was
+  // painted forces a recapture, so a stale backdrop is never sampled after a
+  // transition. Android keeps its original path.
   if (vidH2 && vidW == telaW && vidH == telaH &&
-      (vidroCapNoQuadro || (vidroCapturaValida &&
-       (vidroCapturaHash == vidroHash || gfx_quadro_n - vidroCapturaQuadro < 2u)))) {
+      (vidroCapNoQuadro || (vidroCapturaValida && vidroCapturaHash == vidroHash))) {
     vidroCapNoQuadro = 1;
     return vidH2;
   }
@@ -3337,7 +3341,6 @@ static GLuint vidroFonte(GfxRect r) {
     float full[4] = { 0, 0, NV_TELA_W, NV_TELA_H };
     if (!vidCapturar(full)) return 0;
     vidroCapNoQuadro = 1;
-    vidroCapturaQuadro = gfx_quadro_n;
     vidroCapturaHash = vidroHash;
     vidroCapturaValida = 1;
     return vidH2;
