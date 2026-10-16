@@ -838,7 +838,7 @@ static int ajcNovaTitulo(int sec, int op) {
     case AJ_DET_SO_CINEMETA: ajcT_soCinemeta(op); return 1;
     case AJ_IDIOMA: ajcT_idioma(); return 1;
     case AJ_TMDB_IDIOMA: ajcT_tmdbIdioma(); return 1;
-    case AJ_AUD_LINGUA: ajcT_audioLingua(); return 1;
+    case AJ_AUD_LINGUA: case AJ_AUD_LINGUA2: ajcT_audioLingua(); return 1;
     case AJ_LEG_LINGUA: ajcT_legendaLingua(); return 1;
     case AJ_LEG_FORCADA: ajcT_forcada(op); return 1;
     case AJ_LEG_LINGUA2: case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:

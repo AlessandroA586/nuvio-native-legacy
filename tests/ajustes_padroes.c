@@ -11,11 +11,12 @@
 #include <assert.h>
 
 int main(void) {
-  // #439: keep persisted indices 0..6, then every 10% up to 300%.
-  assert(OPCOES[AJ_LEG2_TAMANHO].n == 21);
-  for (int i = 0; i < 21; i++) {
+  // c2e07fe41: 0 = follow the primary, then 50%..300% every 10%; the #439
+  // indices saved by 2.0.5 are migrated on load (viuLeg2Escala).
+  assert(OPCOES[AJ_LEG2_TAMANHO].n == 27);
+  for (int i = 0; i < 27; i++) {
     valor[AJ_LEG2_TAMANHO] = i;
-    assert(ajustes_leg2_tamanho() == (i == 0 ? 0 : i <= 6 ? 40 + i * 20 : 100 + i * 10));
+    assert(ajustes_leg2_tamanho() == (i == 0 ? 0 : TXT_LEG_PCT_MIN + (i - 1) * 10));
   }
   valor[AJ_LEG2_TAMANHO] = 0;
   // TCL: opção ligada de fábrica, local, antes da sincronia por áudio.
@@ -162,11 +163,13 @@ int main(void) {
   assert(AJ_MIC_BUSCA == AJ_INTERFACE_MODO + 1);
   assert(AJ_MENU_TOPO == AJ_MIC_BUSCA + 1 && AJ_ABAS_ESTILO == AJ_MENU_TOPO + 1 && AJ_TECLADO_ANDROID == AJ_ABAS_ESTILO + 1 && AJ_LEG_CONTORNO_COR == AJ_TECLADO_ANDROID + 1);
   assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_RETOMADA_MORNA == AJ_FALHA_ADDON_LIMITE + 1 && AJ_MANTER_PRAZO == AJ_RETOMADA_MORNA + 1 && AJ_ESTAT_TAMANHO == AJ_MANTER_PRAZO + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_ESTAT_LADO == AJ_OCULTAR_FILMES_VISTOS + 1 && AJ_DICASCONTROLE == AJ_ESTAT_LADO + 1 && AJ_HERO_GENERO == AJ_DICASCONTROLE + 1 && AJ_ABERTURA_ADDON == AJ_HERO_GENERO + 1 && AJ_HERO_SINOPSE == AJ_ABERTURA_ADDON + 1 && AJ_HERO_NOTAS == AJ_HERO_SINOPSE + 1 && AJ_HERO_ANO == AJ_HERO_NOTAS + 1 && AJ_HERO_DURACAO == AJ_HERO_ANO + 1 && AJ_CURADORIA_URL == AJ_HERO_DURACAO + 1 && AJ_ABERTURA_FUNDO == AJ_CURADORIA_URL + 1 && AJ_HERO_SINOPSE_TAM == AJ_ABERTURA_FUNDO + 1 && AJ_EP_TAMANHO == AJ_HERO_SINOPSE_TAM + 1 && AJ_AMIGOS_ESTILO == AJ_MURAL_TITULOS + 1 && AJ_FONTE_IDIOMA_AUDIO == AJ_AMIGOS_ESTILO + 1 &&
+  AJ_AUD_LINGUA2 == AJ_FONTE_IDIOMA_AUDIO + 1 &&
 #ifdef NV_ANDROID
-  AJ_BAIXAR_REGISTRO == AJ_FONTE_IDIOMA_AUDIO + 1 && AJ_N == AJ_BAIXAR_REGISTRO + 1);
+  AJ_BAIXAR_REGISTRO == AJ_AUD_LINGUA2 + 1 && AJ_FILTROS_FONTES == AJ_BAIXAR_REGISTRO + 1 &&
 #else
-  AJ_N == AJ_FONTE_IDIOMA_AUDIO + 1);
+  AJ_FILTROS_FONTES == AJ_AUD_LINGUA2 + 1 &&
 #endif
+  AJ_N == AJ_COLECAO_EXIBICAO + 1);   // 2.0.6: master's #535 views appended after
   // #492: retomada morna e o prazo do video pronto
   assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
   assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));

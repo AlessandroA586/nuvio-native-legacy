@@ -1766,6 +1766,79 @@ static void desenhaFolhaFalha(void) {
   }
 }
 
+// Shared source exclusions. Checkmarks mean excluded, in both TV and Mobile;
+// this uses the same clipped rows and pointer dispatch as the source sheets.
+static void ffPont(int i, int categoria) {
+  if (frAberta != 6 || teclado_aberto() || categoria != ffCategoria) return;
+  int n = ffCategoria >= 0 ? fontefiltro_opcoes_n(ffCategoria) : 9;
+  if (i < 0 || i >= n) return;
+  if (ffCategoria >= 0) ffValorFoco = i; else ffFoco = i;
+}
+static void ffPontVoltar(int a, int b) { (void)a; (void)b; ffVoltar(); }
+static void desenhaFolhaFiltros(void) {
+  GfxRect m = {460.0f, 90.0f, 1000.0f, 900.0f};
+  float topo, base, alvo, y;
+  int n = ffCategoria >= 0 ? fontefiltro_opcoes_n(ffCategoria) : 9;
+  int foco = ffCategoria >= 0 ? ffValorFoco : ffFoco;
+  FonteFiltroConfig cfg; fontefalha_filtro(&cfg);
+  ponteiro_camada(); ajVeuModal(); ajCentraModal(&m); ajIlha(m, 36.0f, 1.0f, 1.0f);
+  topo = ajCabecalhoFolha(m, ffCategoria >= 0 ? "Filtros das fontes" : "Fontes e addons",
+                         ffCategoria >= 0 ? fontefiltro_rotulo(ffCategoria) : "Filtros das fontes",
+                         i18n(ffCategoria >= 0
+                           ? "Marcado = filtrado. OK ou toque marca/desmarca e salva na hora."
+                           : "Selecione os valores que deseja filtrar. As alterações são salvas na hora e valem antes dos limites de links."),
+                         0, 1);
+  base = m.y + m.h - 96.0f;
+  alvo = foco * 84.0f - (base - topo - 80.0f) * 0.5f;
+  if (alvo > n * 84.0f - (base - topo)) alvo = n * 84.0f - (base - topo);
+  if (alvo < 0.0f) alvo = 0.0f;
+#ifdef NV_TOUCH_UI
+  ajToqueCamada();
+  alvo = ajToqueRegistrar(AJT_FONTES, (GfxRect){m.x, topo, m.w, base - topo}, &ajToqueOffset[AJT_FONTES],
+                          n * 84.0f - (base - topo), alvo, 600 + ffCategoria);
+#endif
+  gfx_recorte(m.x, topo, m.w, base - topo); y = topo - alvo;
+  for (int i = 0; i < n; i++, y += 84.0f) {
+    GfxRect r = {m.x + 18.0f, y, m.w - 36.0f, 80.0f};
+    if (y + r.h < topo || y > base) continue;
+    int f = i == foco;
+    ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, topo, base, ffPont, NULL, i, ffCategoria);
+    if (f) ajFocoLinha(r, 22.0f, 1.0f, 1.0f);
+    if (ffCategoria >= 0) {
+      int excluido = (cfg.excluir[ffCategoria] & fontefiltro_bit(ffCategoria, i)) != 0;
+      GfxRect caixa = {r.x + r.w - 66.0f, y + 20.0f, 40.0f, 40.0f};
+      TxtLinha nome = ajTxtC(TXT_AJ_ROTULO, fontefiltro_opcao(ffCategoria, i), r.w - 122.0f);
+      txt_desenhar_alpha(nome, r.x + 36.0f, y + (r.h - nome.h) * 0.5f, f ? 1.0f : 0.86f);
+      if (excluido) {
+        ajPilulaAcento(caixa, 12.0f, 1.0f);
+        ajIconeT("aj_check", caixa.x + 8.0f, caixa.y + 8.0f, 24.0f, 1.0f);
+      } else ajNeutro(caixa, 12.0f, 0.10f, AJ_CHIP_SOL, 1.0f);
+    } else {
+      TxtLinha nome = ajTxtC(TXT_AJ_ROTULO, ffNome(i), r.w - 100.0f);
+      // Values are already translated, and user-entered release groups remain literal.
+      TxtLinha valorFiltro = txt_linha_corta(TXT_ILHA_GENERO, ffValor(i), AJ_TX, r.w - 100.0f);
+      float ty = y + (r.h - nome.h - 4.0f - valorFiltro.h) * 0.5f;
+      txt_desenhar_alpha(nome, r.x + 36.0f, ty, f ? 1.0f : 0.86f);
+      txt_desenhar_alpha(valorFiltro, r.x + 36.0f, ty + nome.h + 4.0f, 0.52f);
+      ajIcone("aj_chevron-right", r.x + r.w - 54.0f, y + 28.0f, 24.0f, f ? 1.0f : 0.65f);
+    }
+  }
+  gfx_sem_recorte();
+  TxtLinha fechar = ajTxt(TXT_V2_SEG, ffCategoria >= 0 ? "Voltar" : "Fechar");
+  GfxRect botao = {m.x + m.w - fechar.w - 84.0f, m.y + m.h - 76.0f, fechar.w + 40.0f, 48.0f};
+  ajNeutro(botao, 24.0f, 0.10f, AJ_CHIP_SOL, 1.0f);
+  txt_desenhar_alpha(fechar, botao.x + 20.0f, botao.y + (botao.h - fechar.h) * 0.5f, 0.9f);
+  ponteiro_alvo(botao.x, botao.y, botao.w, botao.h, NULL, ffPontVoltar, 0, 0);
+  if (!ajTelaCheia()) {
+    AjDica d[2] = {{"OK", ffCategoria >= 0 ? "Filtrar" : "Editar"}, {"Voltar", ffCategoria >= 0 ? "Voltar" : "Fechar"}};
+    ajDicasLinha(d, 2, m.x + 44.0f, m.y + m.h - 66.0f, 1.0f);
+  }
+  if (uxAviso[0]) {
+    TxtLinha aviso = ajTxtC(TXT_AJ_SUB, uxAviso, NV_VTELA_W - 80.0f);
+    txt_desenhar_alpha(aviso, (NV_VTELA_W - aviso.w) * 0.5f, NV_VTELA_H - 50.0f, 0.8f);
+  }
+}
+
 // --- PLUGINS (pluginsui.c, F09) NO MESMO ARRANJO ----------------------------------
 // Indice com Contas aberta, a folha com o liga/desliga, "Adicionar" e os
 // repositorios (ou os scrapers de um), e o inspetor do item focado. Sem motor

@@ -242,7 +242,7 @@
   1, /* also in Continue watching (2.0.2): Desligado (V_LIGA: 1 = Desligado) = one title, one place */
   0, /* continue on the profile picker (#303): Ligado (V_LIGA: 0 = Ligado) = as before */
 #ifdef NV_TPK
-  1, /* DTS converted to: 5.1 (Dolby Digital) on the Samsung .tpk (design rule 3) */
+  1, /* DTS/TrueHD on the Samsung .tpk: 5.1 (Dolby Digital) (0 = off, 2 = stereo AAC) */
 #else
   0, /* DTS converted to: Estereo (AAC) = the proven path */
 #endif
@@ -297,6 +297,11 @@
   0, /* Mural tile titles (#521): Ligado, as always, local */
   0, /* friends row: Feed (9A) */
   1, /* audio language in the automatic choice: off (V_LIGA 1), behaviour unchanged */
+  0, /* second audio language: Da conta */
 #ifdef NV_ANDROID
   0, /* Baixar registro: acao local, sem preferencia gravada */
 #endif
+  0, 0, 0, /* shared exclusions parent, max-size view, release-group editor */
+  120, 0, 0, 0, 0, 3, 1, 0, 1, 0, 0, /* primary style views; player.txt is authoritative */
+  0, 0, 0, 0, 0, 0, 0, /* secondary appearance inherits primary, manual delay0 */
+  0, /* collection default view (#362): Automatic, existing layout */

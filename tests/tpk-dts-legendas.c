@@ -22,6 +22,8 @@ const char *i18n(const char *s) { return s; }
 const char *ling_nome(const char *c) { return c; }
 int ling_casa(const char *c, const char *p) { return c && p && !strcmp(c, p); }
 const char *ling_audio(void) { return ""; }
+const char *ling_audio2(void) { return ""; }
+const char *ling_original(void) { return ""; }
 int ling_tipo_legenda(const char *s, int f, int d) { (void)s; (void)f; (void)d; return 0; }
 const char *ling_tipo_legenda_rotulo(int t) { (void)t; return ""; }
 const char *ling_do_nome(const char *nome) { (void)nome; return NULL; }
@@ -92,13 +94,13 @@ int mkvass_cabecalho(const char *url, unsigned char **buf, long *n) {
 // --- the converter: always there, HLS ---------------------------------------
 static int abriuConversor;
 int proxyts_e_url(const char *u) { (void)u; return 0; }
+int ajustes_dts_tpk_modo(void) { return DTSTPK_HLS; }
 int ajustes_dts_ac3(void) { return 1; }
 int dts_tpk_disponivel(void) { return 1; }
 const char *dts_tpk_modo_nome(int m) { (void)m; return "HLS"; }
-const char *dts_tpk_corpo_nome(int c) { (void)c; return "chunked"; }
 int dts_tpk_abrir(const char *url, const char *headers, int audio_ordinal, int stereo_aac,
-                  int modo, int corpo, double inicio, char *out, size_t n) {
-  (void)url; (void)headers; (void)audio_ordinal; (void)stereo_aac; (void)modo; (void)corpo; (void)inicio;
+                  int modo, double inicio, char *out, size_t n) {
+  (void)url; (void)headers; (void)audio_ordinal; (void)stereo_aac; (void)modo; (void)inicio;
   abriuConversor++;
   snprintf(out, n, "http://127.0.0.1:1/tok/v.m3u8");
   return 1;
@@ -111,6 +113,7 @@ double dts_tpk_duracao(void) { return 7200; }
 int dts_tpk_modo(void) { return DTSTPK_HLS; }
 double dts_tpk_inicio_stream(void) { return -1; }
 const char *dts_tpk_caminho(void) { return "DTS core only"; }
+int dts_tpk_prebuffer_ms(void) { return 0; }
 int dts_tpk_sem_indice(void) { return 0; }
 int dts_tpk_e_url(const char *u) { return u && strstr(u, "127.0.0.1") != NULL; }
 int video_faixa_dts(const VideoFaixa *f) { return f && !strncmp(f->codec, "A_DTS", 5); }

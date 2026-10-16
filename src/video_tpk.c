@@ -23,6 +23,7 @@
 #include "video_reconexao.h"
 #include "idioma.h"
 #include "linguas.h"
+#include "audioescolha.h"
 #include "mkv.h"
 #include "capmkv.h"
 #include "mkvass.h"
@@ -85,6 +86,8 @@ static Uint32 legSemCueMs, legBombeouEm;
 static char urlAtual[4096];
 static char cabecalhos[2048];
 static volatile int ativo, pronto, falhou, terminou, tocando, largura, altura;
+// video_parar ate o proximo video_tocar: nada abre o conversor (convIniciar).
+static int parado;
 static volatile int conflito;   // ver video_tpk_log_host
 static volatile int durMs, bufferando;
 // VELOCIDADE (#202, video.h). O host aplica por escolher(3, centesimos) —
@@ -166,7 +169,7 @@ static int audioLogado;
 static int fonteMp4;
 static Uint32 mkvOlhou;
 
-// CONVERSAO DTS/TrueHD -> DOLBY DIGITAL.
+// CONVERSAO DTS/TrueHD -> DOLBY DIGITAL (docs/features/dts/README.md).
 // O player da TV abre o fluxo convertido do servidor local (dts/dts_hls_tpk.c);
 // urlAtual SEGUE sendo a fonte original, porque legenda (mkvass), capitulos e a
 // sonda do MKV leem dela. Gatilho, sem mudar nada no que ja toca:
@@ -195,6 +198,7 @@ static struct {
   int voltar;           // voltando ao original: escolher a faixa `rotuloVolta`
   char rotuloVolta[48];
   int recusadas;        // entradas DTS/TrueHD acrescentadas ao menu (original)
+  int offLogado;
   double inicio;        // posicao da fonte em que o convertido abriu
   int refezProg;        // HLS sem indice (MKV sem Cues) ja refeito no TS continuo
   // MP4 / fonte que nao e MKV: a sonda do conversor roda ao lado do original
@@ -208,7 +212,6 @@ static struct {
   int reabrindo; double posMantida; Uint32 reabriuEm, reabTocandoEm;
   int fonteTocou;       // esta fonte (original ou convertida) ja andou > 0,5 s
   double posConhecida;  // ultima posicao real do convertido (nunca 0 por falta de dado)
-  int prefFeito;        // a regra do idioma preferido (trilhaPreferida) ja rodou nesta fonte
 } cv = { .buscarMs = -1 };
 static Uint32 faixasEm;           // quando a ultima lista de faixas do player chegou
 static volatile int naoSupPend;   // NotSupportedAudioCodec veio do host (outro fio)
@@ -234,23 +237,27 @@ void nv_tpk_video_registrar_aspecto(FnAspecto janela) { hAspecto = janela; }
 
 void video_escolher_audio(int i);
 
-// Mesma regra do video.c / video_tizen.c: sem preferencia ou sem faixa que
-// case, fica a do arquivo.
+static int convPossivel(void);
+// A ORDEM DO AUDIO (audioescolha.h) sobre a lista do menu: as faixas que a TV
+// toca e as DTS/TrueHD do arquivo que o menu acrescenta (acrescentarRecusadas;
+// escolhida, converte). Sem escolha da regra, fica a do arquivo.
 static void escolherAudioPreferido(void) {
-  const char *pref = ling_audio();
-  int i;
-  // Convertendo, a lista e a do arquivo e a faixa ja foi escolhida; as faixas
-  // DTS/TrueHD acrescentadas (numero < 0) so entram pela mao da pessoa.
-  if (cv.ativo || !pref[0] || nAudio < 2) return;
-  if (audioAtual >= 0 && audioAtual < nAudio && faixaAudio[audioAtual].idioma[0] &&
-      ling_casa(faixaAudio[audioAtual].idioma, pref)) return;
+  AudioCand c[MAX_FAIXAS];
+  int i, o, k;
+  // Convertendo, a lista e a do arquivo e a faixa ja foi escolhida.
+  if (cv.ativo || nAudio < 1) return;
   for (i = 0; i < nAudio; i++) {
-    if (faixaAudio[i].numero < 0) continue;
-    if (!faixaAudio[i].idioma[0] || !ling_casa(faixaAudio[i].idioma, pref)) continue;
-    printf("[video] audio preferido: %s (faixa %d de %d)\n", ling_nome(faixaAudio[i].idioma), i + 1, nAudio);
-    video_escolher_audio(i);
-    return;
+    const VideoFaixa *f = &faixaAudio[i];
+    c[i].idioma = f->idioma; c[i].codec = f->codec; c[i].rotulo = f->rotulo; c[i].canais = f->canais;
+    c[i].dts = f->numero < 0 || audioesc_dts_truehd(f->codec, f->rotulo);
+    c[i].pode = f->numero >= 0 || convPossivel();
   }
+  k = audioesc_escolher(c, nAudio, &o);
+  if (k < 0 || k == audioAtual) return;
+  printf("[video] audio pela ordem (%s): %s (faixa %d de %d)%s\n", audioesc_origem_nome(o), faixaAudio[k].rotulo,
+         k + 1, nAudio, faixaAudio[k].numero < 0 ? ", DTS/TrueHD: converte" : "");
+  fflush(stdout);
+  video_escolher_audio(k);
 }
 
 // Host, fio principal, depois do prepare: uma chamada por faixa (tipo 0 =
@@ -310,7 +317,9 @@ void nv_tpk_video_faixas_fim(int selAudio, int selLeg) {
     fflush(stdout);
     return;
   }
-  escolherAudioPreferido();
+  // Com o cabecalho do MKV lido, a ordem roda em sondaMkv, com os rotulos dele e
+  // as DTS/TrueHD do arquivo no menu; sem ele, ja, so com o que a TV listou.
+  if (mkvN == 0) escolherAudioPreferido();
 }
 
 // Host: texto da legenda embutida escolhida, valido por `durMs`.
@@ -488,7 +497,11 @@ static int abrirSessao(void) {
     // O player le do servidor local; os cabecalhos do addon sao da fonte (o
     // servidor ja os usa), nao do 127.0.0.1.
     cv.abriuEm = SDL_GetTicks(); cv.tocou = 0;
-    hAbrir(cv.url, "");
+    // The prebuffer goes as a pseudo header that the host turns into
+    // player_set_streaming_buffering_time (never sent).
+    { char pre[48] = ""; int ms = dts_tpk_prebuffer_ms();
+      if (ms > 0) snprintf(pre, sizeof pre, "X-Nuvio-Prebuffer: %d", ms);
+      hAbrir(cv.url, pre); }
   } else {
     hAbrir(urlAtual, cabecalhos);
   }
@@ -500,10 +513,11 @@ static int abrirSessao(void) {
 
 static void guardarMkv(const MkvFaixa *fx, int n);
 static int trilhaParaConverter(int tvLista);
-static int trilhaPreferida(void);
+static int trilhaPelaOrdem(void);
 static int videoConvertivel(void);
 
 int video_tocar(const char *u) {
+  parado = 0;
   if (cv.ativo || cv.sondando) dts_tpk_fechar();
   memset(&cv, 0, sizeof cv); cv.buscarMs = -1; naoSupPend = 0;
   // As listas do titulo anterior nao passam para o convertido (que as mantem
@@ -533,8 +547,8 @@ int video_tocar(const char *u) {
       free(fx); free(cab);
       { int t = mkvEstado == 3 ? trilhaParaConverter(-1) : 0;
         if (t > 0 && convIniciar(t, 0.0, i18n("cabecalho lido antes de abrir: so DTS/TrueHD"))) return 1;
-        t = mkvEstado == 3 ? trilhaPreferida() : 0;
-        if (t > 0 && convIniciar(t, 0.0, i18n("cabecalho lido antes de abrir: o idioma preferido so existe em DTS/TrueHD"))) return 1; }
+        t = mkvEstado == 3 ? trilhaPelaOrdem() : 0;
+        if (t > 0 && convIniciar(t, 0.0, "cabecalho lido antes de abrir: a ordem do audio escolhe uma faixa DTS/TrueHD")) return 1; }
     }
   }
   return abrirSessao();
@@ -587,14 +601,14 @@ int video_tpk_codec_recusado(const char *codecId) {
 
 // --- conversao DTS/TrueHD -------------------------------------------------------
 // A conversao pode acontecer nesta fonte? So no Tizen 6+ (pacotes NuvioTpk60/65
-// e NuvioTpk) com o FFmpeg na .so (dts_tpk_disponivel), fonte
+// e NuvioTpk) com o FFmpeg na .so (dts_tpk_disponivel), ajuste de teste ligado, fonte
 // por http(s) e sem desistencia nesta fonte. MKV decide pelo cabecalho; MP4 (e o
 // que nao e MKV) pela sonda do conversor, ao lado do original (convSondar).
 static int convPossivel(void) {
   if (cv.desistiu || emTrailer || !urlAtual[0]) return 0;
   if (strncmp(urlAtual, "http://", 7) && strncmp(urlAtual, "https://", 8)) return 0;
   if (proxyts_e_url(urlAtual) || dts_tpk_e_url(urlAtual)) return 0;
-  if (!videoConvertivel()) return 0;
+  if (ajustes_dts_tpk_modo() == DTSTPK_DESLIGADO || !videoConvertivel()) return 0;
   return dts_tpk_disponivel();
 }
 
@@ -614,10 +628,9 @@ static int videoConvertivel(void) {
 // A faixa (TrackNumber) a converter sem a pessoa pedir, ou 0. tvLista: quantas
 // faixas de audio a TV listou (-1 = ainda nao se sabe). So quando NENHUMA faixa
 // do arquivo toca na TV: arquivo misto segue no que ja toca (o menu oferece as
-// outras). Entre as recusadas, a do idioma preferido, senao a primeira.
+// outras). Entre as recusadas, a da ordem do audio, senao a primeira.
 static int trilhaParaConverter(int tvLista) {
-  const char *pref = ling_audio();
-  int i, nArq = 0, nRec = 0, prim = 0, pre = 0;
+  int i, nArq = 0, nRec = 0, prim = 0, pre;
   if (tvLista > 0 || !videoConvertivel()) return 0;
   for (i = 0; i < mkvN; i++) {
     if (mkvFx[i].tipo != 2) continue;
@@ -625,27 +638,32 @@ static int trilhaParaConverter(int tvLista) {
     if (!faixaRecusada(&mkvFx[i])) continue;
     nRec++;
     if (!prim) prim = mkvFx[i].numero;
-    if (!pre && pref[0] && mkvFx[i].idioma[0] && ling_casa(mkvFx[i].idioma, pref)) pre = mkvFx[i].numero;
   }
   if (!nRec || nRec != nArq) return 0;
+  pre = trilhaPelaOrdem();   // a da ordem do audio (audioescolha.h), senao a primeira
   return pre ? pre : prim;
 }
 
-// IDIOMA PREFERIDO SO EM DTS/TrueHD: arquivo misto (ha faixa que a TV toca), mas
-// o idioma de audio preferido so existe numa faixa que ela recusa. Converte
-// essa, uma vez por fonte (depois disso o menu manda). Pelo cabecalho do MKV:
-// a TV toca toda faixa de codec nao recusado.
-static int trilhaPreferida(void) {
-  const char *pref = ling_audio();
-  int i, rec = 0;
-  if (cv.prefFeito || !pref[0] || !videoConvertivel()) return 0;
-  cv.prefFeito = 1;
-  for (i = 0; i < mkvN; i++) {
-    if (mkvFx[i].tipo != 2 || !mkvFx[i].idioma[0] || !ling_casa(mkvFx[i].idioma, pref)) continue;
-    if (!faixaRecusada(&mkvFx[i])) return 0;   // ha uma que a TV toca nesse idioma
-    if (!rec) rec = mkvFx[i].numero;
+// A ORDEM DO AUDIO PELO CABECALHO, antes de a TV listar (abrir ja convertido,
+// sem o original mudo antes): a faixa DTS/TrueHD que a ordem escolhe, ou 0
+// (a escolhida a TV toca, ou nenhuma regra decide). A TV toca toda faixa de
+// codec nao recusado.
+static int trilhaPelaOrdem(void) {
+  AudioCand c[MKV_MAX_FAIXAS];
+  int num[MKV_MAX_FAIXAS], rec[MKV_MAX_FAIXAS];
+  int i, n = 0, k, pode = convPossivel();
+  if (!videoConvertivel()) return 0;
+  for (i = 0; i < mkvN && n < MKV_MAX_FAIXAS; i++) {
+    if (mkvFx[i].tipo != 2) continue;
+    rec[n] = faixaRecusada(&mkvFx[i]); num[n] = mkvFx[i].numero;
+    c[n].idioma = mkvFx[i].idioma; c[n].codec = mkvFx[i].codec; c[n].rotulo = mkvFx[i].nome;
+    c[n].canais = mkvFx[i].canais;
+    c[n].dts = rec[n] || audioesc_dts_truehd(mkvFx[i].codec, "");
+    c[n].pode = !rec[n] || pode;
+    n++;
   }
-  return rec;
+  k = audioesc_escolher(c, n, NULL);
+  return k >= 0 && rec[k] ? num[k] : 0;
 }
 
 static const MkvFaixa *mkvTrack(int numero) {
@@ -764,7 +782,7 @@ static int ordinalAudio(int numero) {
 
 // Abre a sessao do conversor (a sonda roda num fio). 0: servidor/FFmpeg indisponivel.
 static int convAbrirSessao(int ordinal, int modo, double pos, char *url, size_t n) {
-  if (dts_tpk_abrir(urlAtual, cabecalhos, ordinal, !ajustes_dts_ac3(), modo, DTSTPK_CORPO_CHUNKED, pos, url, n))
+  if (dts_tpk_abrir(urlAtual, cabecalhos, ordinal, !ajustes_dts_ac3(), modo, pos, url, n))
     return 1;
   printf("[dts-tpk] conversao nao comecou (servidor/FFmpeg indisponivel); fica o original\n");
   fflush(stdout);
@@ -772,7 +790,7 @@ static int convAbrirSessao(int ordinal, int modo, double pos, char *url, size_t 
   return 0;
 }
 
-static int modoProg(int modo) { return modo == DTSTPK_PROG_TS || modo == DTSTPK_PROG_MKV || modo == DTSTPK_PROG_MP4; }
+static int modoProg(int modo) { return modo == DTSTPK_PROG_TS; }
 
 // Outro player no meio de uma fonte que ja tocou: o app ve um seek ate o
 // convertido mostrar quadro de novo (convBombear solta).
@@ -803,12 +821,15 @@ static void convTrocar(int track, int modo, double pos, const char *url) {
 
 static int convIniciar(int track, double pos, const char *motivo) {
   char url[256];
-  int modo = DTSTPK_HLS;
+  int modo = ajustes_dts_tpk_modo();
   const MkvFaixa *m = mkvTrack(track);
+  // Parado (Voltar, cartao de erro): a lista de faixas do arquivo que parou
+  // nao reabre nada; so video_tocar comeca outra fonte.
+  if (parado) return 0;
   if (!convAbrirSessao(ordinalAudio(track), modo, pos, url, sizeof url)) return 0;
-  printf("[dts-tpk] convertendo a faixa %d do MKV (audio %d; %s %d canais%s%s) a partir de %.1f s, modo %s, corpo %s, saida %s; motivo: %s\n",
+  printf("[dts-tpk] convertendo a faixa %d do MKV (audio %d; %s %d canais%s%s) a partir de %.1f s, modo %s, saida %s; motivo: %s\n",
          track, ordinalAudio(track), m ? m->codec : "?", m ? m->canais : 0, m && m->idioma[0] ? ", " : "", m ? m->idioma : "", pos,
-         nomeModo(modo), dts_tpk_corpo_nome(DTSTPK_CORPO_CHUNKED), saidaRotulo(m ? m->canais : 6), motivo);
+         nomeModo(modo), saidaRotulo(m ? m->canais : 6), motivo);
   fflush(stdout);
   convTrocar(track, modo, pos, url);
   return 1;
@@ -849,7 +870,7 @@ static int faixasDaTv(void) {
   return n;
 }
 static void convSondar(int modo, const char *motivo) {
-  if (cv.ativo || cv.sondando || !convPossivel() || strstr(urlAtual, ".m3u8")) return;
+  if (parado || cv.ativo || cv.sondando || !convPossivel() || strstr(urlAtual, ".m3u8")) return;
   if (!convAbrirSessao(-1, modo, video_pos(), cv.url, sizeof cv.url)) return;
   cv.sondando = 1; cv.modo = modo;
   printf("[dts-tpk] MP4, %s: o conversor procura DTS/TrueHD na fonte (modo %s); o original segue tocando\n",
@@ -913,16 +934,17 @@ static void avaliarAudioTv(void) {
   }
   audioLogado = 1;
   if (!nRec) return;
-  if (nTv > 0 && convPossivel()) {
-    int t = trilhaPreferida();
-    if (t > 0 && convIniciar(t, video_pos(), i18n("o idioma de audio preferido so existe numa faixa DTS/TrueHD"))) return;
-  }
   printf("[audio] TV recusou %s: faixas da TV=%d, no arquivo=%d [%s]%s\n", recusados, nTv, nArq, lista,
          nRec == nArq && nTv == 0 ? " -> sem audio tocavel" : "");
   fflush(stdout);
   if (nRec == nArq && nTv == 0) {
     int t = convPossivel() ? trilhaParaConverter(0) : 0;
     if (t > 0 && convIniciar(t, video_pos(), i18n("a TV nao listou audio e o arquivo so tem DTS/TrueHD"))) return;
+    if (!cv.offLogado && ajustes_dts_tpk_modo() == DTSTPK_DESLIGADO) {
+      cv.offLogado = 1;
+      printf("[dts-tpk] teste Desligado: tocando o original (sem som), como o master\n");
+      fflush(stdout);
+    }
     audioNaoSup = 1;
   }
 }
@@ -980,9 +1002,16 @@ static void sondaMkv(double pos) {
       cv.voltar = 0;
       for (i = 0; i < nAudio; i++)
         if (!strcmp(faixaAudio[i].rotulo, cv.rotuloVolta)) { video_escolher_audio(i); break; }
-    } else if (m && !reconFaixasPend) escolherAudioPreferido();   // o idioma pode ter chegado so agora
+      acrescentarRecusadas();
+    } else {
+      acrescentarRecusadas();
+      // Rotulos e idiomas do cabecalho e as DTS/TrueHD no menu: a ordem do audio.
+      if (!reconFaixasPend) escolherAudioPreferido();
+    }
+  } else if (mkvN > 0 && faixasLidas && !cv.recusadas && nAudio > 0) {
     acrescentarRecusadas();
-  } else if (mkvN > 0 && faixasLidas && !cv.recusadas && nAudio > 0) acrescentarRecusadas();
+    if (!reconFaixasPend) escolherAudioPreferido();
+  }
   avaliarAudioTv();
 }
 
@@ -1083,7 +1112,7 @@ static void convBombear(void) {
     naoSupPend = 0;
     if (semCabecalho()) {
       cv.naoSup = 1;
-      convSondar(DTSTPK_HLS, "a TV acusou NotSupportedAudioCodec");
+      convSondar(ajustes_dts_tpk_modo(), "a TV acusou NotSupportedAudioCodec");
       if (!cv.sondando) audioNaoSup = 1;
     } else {
       int t = convPossivel() ? trilhaParaConverter(0) : 0;
@@ -1092,7 +1121,7 @@ static void convBombear(void) {
     }
   }
   if (!cv.ativo && !cv.sondando && semCabecalho() && pronto && faixasLidas && !faixasDaTv() && convPossivel())
-    convSondar(DTSTPK_HLS, i18n("a TV nao listou audio"));
+    convSondar(ajustes_dts_tpk_modo(), i18n("a TV nao listou audio"));
   if (cv.sondando) {
     int e = dts_tpk_estado(), nTv = faixasDaTv();
     if (nTv > 0) {
@@ -1115,8 +1144,8 @@ static void convBombear(void) {
       double pos = video_pos();
       snprintf(url, sizeof url, "%s", cv.url);
       if (modoProg(cv.modo)) dts_tpk_url_em(pos, url, sizeof url);
-      printf("[dts-tpk] convertendo o audio da fonte sem cabecalho MKV (%s) a partir de %.1f s, modo %s, corpo %s, saida %s; motivo: %s\n",
-             dts_tpk_caminho(), pos, nomeModo(cv.modo), dts_tpk_corpo_nome(DTSTPK_CORPO_CHUNKED), saidaRotulo(6),
+      printf("[dts-tpk] convertendo o audio da fonte sem cabecalho MKV (%s) a partir de %.1f s, modo %s, saida %s; motivo: %s\n",
+             dts_tpk_caminho(), pos, nomeModo(cv.modo), saidaRotulo(6),
              cv.naoSup ? "a TV acusou NotSupportedAudioCodec" : i18n("a TV nao listou audio"));
       fflush(stdout);
       convTrocar(0, cv.modo, pos, url);
@@ -1302,6 +1331,7 @@ void video_bombear(void) {
   }
 }
 void video_parar(void) {
+  parado = 1;
   if (cv.ativo || cv.sondando) dts_tpk_fechar();
   memset(&cv, 0, sizeof cv); cv.buscarMs = -1; naoSupPend = 0;
   emTrailer = emCartao = 0;

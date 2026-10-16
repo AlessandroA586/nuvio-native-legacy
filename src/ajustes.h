@@ -12,6 +12,7 @@
 #include <SDL2/SDL.h>
 #include "idiomacod.h"
 #include "gfx.h"
+#include "video.h"
 
 // Targets with a system (IME) keyboard the "Teclado" setting can choose between:
 // Android, LG webOS, Samsung Tizen (.tpk and .wgt). Elsewhere the option is hidden.
@@ -467,6 +468,9 @@ int   ajustes_relogio_12h(void);   // 1 = 12 h com AM/PM (relogio.h)
 // Local interface factor: 0.8..1.5, or automatic from physical panel size.
 // #477: synopsis typography follows the local Synopsis size (Normal/Grande).
 int ajustes_sinopse_tamanho(void);
+// #362: default for collections without an explicit view, active local profile.
+// Main UI thread: validated VtLayout ID (vertudo.h); 0 keeps automatic behavior.
+int ajustes_colecao_exibicao(void);
 float ajustes_tamanho_ui(void);
 // Settings only: 0.8/0.9/1.0, default 0.9; independent of global UI zoom.
 float ajustes_tamanho_ajustes(void);
@@ -474,7 +478,7 @@ float ajustes_tamanho_ajustes(void);
 int   ajustes_layout_lista(void);
 int   ajustes_esconder_logo_trailer(void);   // 1 = hide the corner title logo while a trailer plays
 // R4: second subtitle placement and own style (local). junto: 1 = stacked right above the
-// primary at the bottom, 0 = top band. tamanho: percent (60..160), 0 = automatic (90% of the
+// primary at the bottom, 0 = top band. tamanho: percent (50..300), 0 = automatic (90% of the
 // primary). cor/fundo/borda: the same indices as the primary style (VideoLegendaEstilo), -1 = same as primary.
 int   ajustes_legendas_todas(void); // #425: abrir todas as faixas
 // #205: 1 = tela de abertura Detalhada (o cartao com fonte e passos); 0 = Cinema.
@@ -497,6 +501,12 @@ int   ajustes_leg2_cor(void);
 int   ajustes_leg2_fundo(void);
 int   ajustes_leg2_borda(void);
 void  ajustes_leg_contorno_rgb(int *r, int *g, int *b);   // #475: cor do contorno/sombra da legenda (0..255)
+unsigned ajustes_leg_borda_rgb(int corBorda);   // corBorda >= 0: explicit colour; -1: legacy #475 colour
+// Independent secondary overrides; absent fields inherit the main style.
+void ajustes_leg2_estilo(const VideoLegendaEstilo *principal, VideoLegendaEstilo *out);
+int ajustes_leg2_posicao(void); // -1 keeps the existing Top/Stacked placement
+int ajustes_leg2_atraso(void);
+int ajustes_leg2_definir_atraso(int ms);
 int   ajustes_legenda_forcada_auto(void);    // #287: 1 = audio in the subtitle language -> only the forced track (local, default on)
 int   ajustes_legenda_sync_auto(void);       // local, ligada por padrão
 int   ajustes_legenda_sync_audio(void);      // 1 = offer "Por audio" in subtitle AutoSync (F06; local, default off)
@@ -556,7 +566,8 @@ int   ajustes_cw_proximo(void);   // 1 = 'a seguir' entra em Continuar assistind
 int   ajustes_cw_mostrar_nao_exibidos(void);  // showUnairedNextUp
 // continueWatchingSortMode: 0 default, 1 streaming_style, 2 split_upcoming
 int   ajustes_cw_ordem(void);
-int   ajustes_dts_ac3(void);             // 1 = DTS convertido em AC3 5.1 (LG, e padrao no .tpk); 0 = AAC estereo
+int   ajustes_dts_ac3(void);             // 1 = DTS convertido em AC3 5.1 (LG, e padrao no .tpk); 0 = AAC estereo (.tpk: ou desligado)
+int   ajustes_dts_tpk_modo(void);        // .tpk: DTSTPK_HLS, ou DTSTPK_DESLIGADO com a conversao desligada
 int   ajustes_ps_continuar(void);        // #303: 0 = sem o cartao "continuar" na escolha de perfil
 int   ajustes_hist_conta(void);          // 1 = this profile's history goes to the Nuvio account (per profile, default on)
 int   ajustes_amigos_estilo(void); // 0 Feed, 1 Live, 2 Stories, 3 Presence, 4 Poster, 5 Classic

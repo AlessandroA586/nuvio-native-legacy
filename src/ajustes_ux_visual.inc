@@ -1,6 +1,8 @@
 // Glifos complementares: SVG Lucide embarcado, rasterizado no pacote para OpenGL.
 static const char *ajVisualIcone(int op) {
+  if (ajLegendaPrincipal(op) || op == AJ_LEG1_RESTAURAR || ajLegendaSecundaria(op)) return "aj_captions";
   switch (op) {
+    case AJ_COLECAO_EXIBICAO: return "aj_layout-dashboard";
     case AJ_HOME_LAYOUT: return "aj_layout-dashboard";
     case AJ_LANDSCAPE: return "aj_layout-dashboard";
     case AJ_HERO: return "aj_layout-dashboard";
@@ -173,7 +175,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_SEEKR_FITA: return "aj_film";
     case AJ_SEEKR_AJUSTE: return "aj_film";
     case AJ_IDIOMA: return "aj_languages";
-    case AJ_AUD_LINGUA: return "aj_audio-lines";
+    case AJ_AUD_LINGUA: case AJ_AUD_LINGUA2: return "aj_audio-lines";
     case AJ_LEG_MOSTRAR: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_LEG_FORCADA: return "aj_captions";
     case AJ_CACHE_SEEK: return "aj_database";
     case AJ_TAM_MAX: case AJ_TAM_MIN: return "aj_database";
@@ -311,24 +313,24 @@ static TxtEstilo ajEstiloPxS(float px, int forte) { return ajEstiloPx(px < 6.0f 
 // ajArte). Linha = categoria (AJS_*), coluna = o bloco (ROT) na ordem de
 // ajustes_ux_tela.inc; a coluna 0 e a imagem da categoria, e vale tambem para
 // o primeiro bloco (entrar na categoria nao troca a imagem). Nenhum indice se
-// repete: sao 36 das 40 amostras de deploy/app/art (sobram 28, 29, 34 e 36).
+// repete: sao 39 das 40 amostras de deploy/app/art (sobra a 36).
 // -1 = a categoria nao tem esse bloco.
-#define AJ_ARTE_BLOCOS 9
+#define AJ_ARTE_BLOCOS 10
 // Os blocos de "Mais opcoes" (depois do MAIS() da categoria) repetem a arte do
 // bloco basico de mesmo nome: e a mesma parte do app, so que tecnica.
 static const signed char AJ_ARTE_SEC[AJS_N + 1][AJ_ARTE_BLOCOS] = {
-  { 18,  7, 22, 32,  7, 18, 19, -1, -1 },   // Reproducao: Imagem e som, Escolha da fonte, Durante e depois, Miniatura; Mais: fonte, som e video, P2P
-  { 21, 24, 21, -1, -1, -1, -1, -1, -1 },   // Idiomas e legendas: Idiomas, Segunda legenda; Mais: idiomas
-  {  5, 28, 37, 10, -1, -1, -1, -1, -1 },   // Fontes e addons: Addons, Falha na reproducao, Debrid, Servidores
-  {  2, 14, 14, -1, -1, -1, -1, -1, -1 },   // TV ao vivo: Provedor, Se o canal nao abre; Mais
-  { 12,  0, 20,  1, 31, 12,  0, 20,  1 },   // Tela inicial: Estilo, Fileiras, Continuar, Barra lateral, Escolha de perfil; Mais
-  {  9, 39, 38,  6, 11,  9, -1, -1, -1 },   // Aparencia: Cores e vidro, Logo e abertura, Texto e tamanho, Movimento e relogio, Tela de descanso; Mais
-  {  3,  4, 17,  4, 17, -1, -1, -1, -1 },   // Pagina do titulo: O que aparece, Notas, Dados do titulo; Mais: notas, dados
-  { 13, 35, 27, 15, 16, 13, 35, 27, 15 },   // Cartazes e trailers: Cartaz em foco, Forma, Arte, Trailers, Som e imagem; Mais
-  { 23, 33,  8, -1, -1, -1, -1, -1, -1 },   // Conta e servicos: Perfil, Trakt e Simkl, Notificacoes
-  { 26, -1, -1, -1, -1, -1, -1, -1, -1 },   // Esta TV (Mais: Memoria)
-  { 30, 25, -1, -1, -1, -1, -1, -1, -1 },   // Sobre e ajuda: (guia e) App, Registro
-  { 15, 16, -1, -1, -1, -1, -1, -1, -1 },   // (cena) Trailers: Onde toca, Som e imagem
+  { 18,  7, 22, 32,  7, 18, 19, -1, -1, -1 },   // Reproducao: Imagem e som, Escolha da fonte, Durante e depois, Miniatura; Mais: fonte, som e video, P2P
+  { 21, 34, 24, 21, -1, -1, -1, -1, -1, -1 },   // Idiomas e legendas: Idiomas, Legenda principal, Segunda legenda; Mais: idiomas
+  {  5, 28, 37, 10, -1, -1, -1, -1, -1, -1 },   // Fontes e addons: Addons, Falha na reproducao, Debrid, Servidores
+  {  2, 14, 14, -1, -1, -1, -1, -1, -1, -1 },   // TV ao vivo: Provedor, Se o canal nao abre; Mais
+  { 12,  0, 29, 20,  1, 31, 12,  0, 20,  1 },   // Tela inicial: Estilo, Fileiras, Colecoes, Continuar, Barra lateral, Escolha de perfil; Mais
+  {  9, 39, 38,  6, 11,  9, -1, -1, -1, -1 },   // Aparencia: Cores e vidro, Logo e abertura, Texto e tamanho, Movimento e relogio, Tela de descanso; Mais
+  {  3,  4, 17,  4, 17, -1, -1, -1, -1, -1 },   // Pagina do titulo: O que aparece, Notas, Dados do titulo; Mais: notas, dados
+  { 13, 35, 27, 15, 16, 13, 35, 27, 15, -1 },   // Cartazes e trailers: Cartaz em foco, Forma, Arte, Trailers, Som e imagem; Mais
+  { 23, 33,  8, -1, -1, -1, -1, -1, -1, -1 },   // Conta e servicos: Perfil, Trakt e Simkl, Notificacoes
+  { 26, -1, -1, -1, -1, -1, -1, -1, -1, -1 },   // Esta TV (Mais: Memoria)
+  { 30, 25, -1, -1, -1, -1, -1, -1, -1, -1 },   // Sobre e ajuda: (guia e) App, Registro
+  { 15, 16, -1, -1, -1, -1, -1, -1, -1, -1 },   // (cena) Trailers: Onde toca, Som e imagem
 };
 static int ajCenaArteN(int sec) {
   return sec >= 0 && sec <= AJS_N ? AJ_ARTE_SEC[sec][0] : 12;
@@ -572,7 +574,7 @@ static float ajVisualCena(int sec, int op, float x, float y, float w) {
       static const int OP3[3] = { AJ_IDIOMA, AJ_AUD_LINGUA, AJ_LEG_LINGUA };
       static const char *const ico[3] = { "aj_languages", "aj_audio-lines", "aj_captions" };
       static const char *const cod[3] = { "PT", "EN", "ES" };
-      int foco = op == AJ_IDIOMA || op == AJ_TMDB_IDIOMA ? 0 : op == AJ_AUD_LINGUA ? 1 : op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 ? 2 : -1;
+      int foco = op == AJ_IDIOMA || op == AJ_TMDB_IDIOMA ? 0 : op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2 ? 1 : op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 ? 2 : -1;
       ajCenaArte(ajArte(AJA_FUNDO, A), q, rr, 0.45f);
       for (i = 0; i < 3; i++) {
         float by = 36 + i * 100;

@@ -109,7 +109,7 @@ static void padroesEValores(void) {
   for (op = 0; op < AJ_N; op++) {
     assert(!uxDiferente(op));
     if (OPCOES[op].tipo == OP_ACAO || OPCOES[op].tipo == OP_LEITURA ||
-        (CHAVE[op][0] == '-' && !ajFalhaBackend(op)) || op == AJ_PERFIL_PESQ)
+        (CHAVE[op][0] == '-' && !ajFalhaBackend(op) && !ajLegendaPrincipal(op)) || op == AJ_PERFIL_PESQ)
       assert(!uxTemPadrao(op));
     else {
       assert(uxTemPadrao(op));
@@ -690,6 +690,7 @@ int main(void) {
     valor[AJ_CW_MINIMO] = antes; }
   // #400: appended without shifting older indices; later options may follow this prefix.
   assert(AJ_LEG_SYNC_AUTO == AJ_FONTE_ORDEM_ADDON + 1 && AJ_LEG_MOSTRAR == AJ_LEG_SYNC_AUTO + 1 && AJ_AVISO_LEGAL == AJ_LEG_MOSTRAR + 1 && AJ_HDR_UI == AJ_AVISO_LEGAL + 1 && AJ_TELA_ABERTURA == AJ_HDR_UI + 1 && AJ_CW_MINIMO == AJ_TELA_ABERTURA + 1 && AJ_BUFFER == AJ_CW_MINIMO + 1 && AJ_PULAR_ABERTURA == AJ_BUFFER + 1 && AJ_PULAR_RESUMO == AJ_PULAR_ABERTURA + 1 && AJ_PROXIMO_AUTO == AJ_PULAR_RESUMO + 1 && AJ_PULAR_CREDITOS == AJ_PROXIMO_AUTO + 1 && AJ_PROXIMO_CONTAGEM == AJ_PULAR_CREDITOS + 1 && AJ_INTERFACE_MODO == AJ_PROXIMO_CONTAGEM + 1 && AJ_MIC_BUSCA == AJ_INTERFACE_MODO + 1 && AJ_MENU_TOPO == AJ_MIC_BUSCA + 1 && AJ_ABAS_ESTILO == AJ_MENU_TOPO + 1 && AJ_TECLADO_ANDROID == AJ_ABAS_ESTILO + 1 && AJ_LEG_CONTORNO_COR == AJ_TECLADO_ANDROID + 1 && AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_RETOMADA_MORNA == AJ_FALHA_ADDON_LIMITE + 1 && AJ_MANTER_PRAZO == AJ_RETOMADA_MORNA + 1 && AJ_ESTAT_TAMANHO == AJ_MANTER_PRAZO + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_ESTAT_LADO == AJ_OCULTAR_FILMES_VISTOS + 1 && AJ_DICASCONTROLE == AJ_ESTAT_LADO + 1 && AJ_HERO_GENERO == AJ_DICASCONTROLE + 1 && AJ_ABERTURA_ADDON == AJ_HERO_GENERO + 1 && AJ_HERO_SINOPSE == AJ_ABERTURA_ADDON + 1 && AJ_HERO_NOTAS == AJ_HERO_SINOPSE + 1 && AJ_HERO_ANO == AJ_HERO_NOTAS + 1 && AJ_HERO_DURACAO == AJ_HERO_ANO + 1 && AJ_CURADORIA_URL == AJ_HERO_DURACAO + 1 && AJ_ABERTURA_FUNDO == AJ_CURADORIA_URL + 1 && AJ_HERO_SINOPSE_TAM == AJ_ABERTURA_FUNDO + 1 && AJ_EP_TAMANHO == AJ_HERO_SINOPSE_TAM + 1 && AJ_N > AJ_EP_TAMANHO);
+  assert(AJ_AUD_LINGUA2 == AJ_FONTE_IDIOMA_AUDIO + 1 && AJ_N > AJ_AUD_LINGUA2);
   assert(ajustes_selo_visto() && ajustes_selo_visto_modo() == 1);   // Icone, por padrao
   { int antes = valor[AJ_SELO_VISTO];
     valor[AJ_SELO_VISTO] = 1; assert(!ajustes_selo_visto() && ajustes_selo_visto_modo() == 0);
@@ -771,7 +772,7 @@ int main(void) {
   for (int i = AJ_LEG2_POS; i <= AJ_LEG2_BORDA; i++) { int vezes2 = 0, k; for (k = 0; k < AJ_N_TELA; k++) if (TELA[k].tipo == IT_OPC && TELA[k].op == i) vezes2++; assert(vezes2 == 1 && valorPadrao[i] == 0); }
   { int a0 = valor[AJ_LEG2_POS], t0 = valor[AJ_LEG2_TAMANHO];
     assert(!ajustes_leg2_junto() && ajustes_leg2_tamanho() == 0 && ajustes_leg2_cor() == -1 && ajustes_leg2_fundo() == -1 && ajustes_leg2_borda() == -1);
-    valor[AJ_LEG2_POS] = 1; valor[AJ_LEG2_TAMANHO] = 3; valor[AJ_LEG2_COR] = 2; valor[AJ_LEG2_FUNDO] = 5; valor[AJ_LEG2_BORDA] = 3;
+    valor[AJ_LEG2_POS] = 1; valor[AJ_LEG2_TAMANHO] = 6; valor[AJ_LEG2_COR] = 2; valor[AJ_LEG2_FUNDO] = 5; valor[AJ_LEG2_BORDA] = 3;  // size: 50% + 10 per step (c2e07fe41)
     assert(ajustes_leg2_junto() && ajustes_leg2_tamanho() == 100 && ajustes_leg2_cor() == 1 && ajustes_leg2_fundo() == 4 && ajustes_leg2_borda() == 2);
     valor[AJ_LEG2_POS] = a0; valor[AJ_LEG2_TAMANHO] = t0; valor[AJ_LEG2_COR] = valor[AJ_LEG2_FUNDO] = valor[AJ_LEG2_BORDA] = 0; }
   assert(!strcmp(CHAVE[AJ_DISCORD], "-discord"));

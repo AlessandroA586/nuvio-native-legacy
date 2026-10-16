@@ -87,6 +87,9 @@ namespace NuvioTpk
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void FnAspecto(int x, int y, int w, int h, int lx, int ly, int lw, int lh);
         [DllImport("libcapi-media-player.so.0")] static extern int player_set_display_mode(IntPtr p, PlayerDisplayMode mode);
         [DllImport("libcapi-media-player.so.0")] static extern int player_set_display_roi_area(IntPtr p, int x, int y, int w, int h);
+        // DTS conversion (X-Nuvio-Prebuffer from src/video_tpk.c): only in IDLE, before Prepare.
+        [DllImport("libcapi-media-player.so.0")] static extern int player_set_streaming_buffering_time(IntPtr p, int preMs, int reMs);
+        [DllImport("libcapi-media-player.so.0")] static extern int player_get_streaming_buffering_time(IntPtr p, out int preMs, out int reMs);
         FnAspecto fAspecto;
         bool aspectoRecusado;
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate int FnPos();
@@ -428,6 +431,17 @@ namespace NuvioTpk
                     int i = linha.IndexOf(':');
                     if (i <= 0) continue;
                     string nome = linha.Substring(0, i).Trim(), valor = linha.Substring(i + 1).Trim();
+                    if (nome == "X-Nuvio-Prebuffer")
+                    {
+                        try
+                        {
+                            int ms = int.Parse(valor), rc = player_set_streaming_buffering_time(p.Handle, ms, 0), pre = -1, re = -1;
+                            player_get_streaming_buffering_time(p.Handle, out pre, out re);
+                            Log("[dts-tpk] prebuffer " + ms + " ms: rc=" + rc + ", player says pre=" + pre + " re=" + re);
+                        }
+                        catch (Exception e) { Log("[dts-tpk] prebuffer: " + e.GetType().Name + " " + e.Message); }
+                        continue;
+                    }
                     if (nome.Equals("User-Agent", StringComparison.OrdinalIgnoreCase)) p.UserAgent = valor;
                     else if (nome.Equals("Cookie", StringComparison.OrdinalIgnoreCase)) p.Cookie = valor;
                     else Log("cabecalho ignorado pelo player: " + nome);

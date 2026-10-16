@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include "streamfit.h"
 #include "fontefalha.h"
+#include "fontefiltro.h"
 
 // A lista cresce conforme a resposta dos addons; a UI virtualiza as linhas.
 
@@ -53,6 +54,10 @@ typedef struct Stream {
   // Legendas anexadas pelo addon tambem contam, sem afirmar que sao embutidas.
   char audioIdiomas[512];
   char legendaIdiomas[512];
+  // Metadados canonicos para as exclusoes compartilhadas. Independentes dos
+  // badges importados e do tamanho exato exigido pelo StreamFit.
+  FonteFiltroDados filtro;
+  int filtroLido;       // 1 = classificado pelo parser; 0 = origem sintetica
   char descricao[2048];
   char arquivo[512];
   // O QUE O ADDON DECLARA COMO "a mesma fonte" entre episodios:
@@ -102,7 +107,18 @@ typedef struct Stream {
   // poe estas no fim e o automatico as exclui; a escolha manual avisa que esta
   // baixando. Nao exclui nada: escolhida a dedo, toca como na 1.3.5.
   int  foraCache;
-  int  emCache;        // 1: addon confirma cache; 0: desconhecido (nunca inferir da URL)
+  // Pronta no debrid: declaracao positiva do addon ou resolucao nativa que
+  // ja confirmou a disponibilidade. Zero tambem pode ser DESCONHECIDO; nao
+  // inferir cache de URL direta, nome do provedor ou ausencia de foraCache.
+  // So serve ao indicador/filtro da folha, nao a politica de reproducao.
+  int  emCache;
+  // isCached:false tambem pode vir com URL direta ainda tocavel. A negativa
+  // e visual: nao muda a elegibilidade operacional de foraCache. Uma consulta
+  // nativa que confirme a disponibilidade limpa esta declaracao anterior.
+  int  cacheNegado;
+  // Uma resposta nativa pronta e mais recente que a negativa antiga do addon.
+  // So atualiza a exibicao; nao limpa foraCache nem muda as tentativas.
+  int  cacheNativo;
   // A SONDA VIU A URL RESPONDER PAGINA (HTML/JSON/texto) e nao video (2.0.2,
   // naovideo.h): linha de aviso do addon. A folha a mostra apagada ("Nao e
   // video") e o automatico a pula. Marcada na verificacao, nunca no parser.
@@ -121,6 +137,9 @@ typedef struct Stream {
 int stream_extrair(const char *json, const char *provedor, Stream **saida);
 // Idiomas declarados para exibicao, sem rotulo. 0 = nenhum informado.
 int stream_faixas_texto(const Stream *fonte, int legendas, char *saida, unsigned tam);
+void stream_filtro_dados(const Stream *fonte, FonteFiltroDados *saida);
+int stream_filtro_permite(const Stream *fonte);
+int stream_filtro_bloqueou(void);
 void stream_definir_atual(int indice);
 int stream_atual(void);
 void stream_folha_contexto(const char *texto);

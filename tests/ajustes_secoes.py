@@ -41,6 +41,11 @@ RETIRADAS = {
     # o slot de "Som do trailer na pagina do titulo" fica no enum pelo valor[]
     # salvo, e a migracao do carregar adota a escolha antiga.
     "AJ_DET_TRAILER_SOM",
+    # 2.0.6 (#535): edited inside another row's editor, not as rows of their
+    # own (uxOpcaoNaTela in ajustes_ux_desenho.inc): the per-provider limits
+    # in "Ordem dos provedores", size/groups in "Filtros de fontes".
+    "AJ_FALHA_RD_LIMITE", "AJ_FALHA_TB_LIMITE", "AJ_FALHA_PM_LIMITE", "AJ_FALHA_AD_LIMITE",
+    "AJ_FILTRO_TAM_MAX", "AJ_FILTRO_GRUPOS",
 }
 opcoes = [op for op in opcoes if op not in RETIRADAS]
 

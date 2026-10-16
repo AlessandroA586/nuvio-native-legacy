@@ -24,13 +24,10 @@ int main(void) {
   assert(passaChips(0));
   s.audioIdiomas[0] = s.legendaIdiomas[0] = 0;
   snprintf(s.rotulo, sizeof s.rotulo, "Dublado");
-  assert(passaChips(0));
-  ling_local_audio("pl");
-  assert(!passaChips(0) && "Unspecified dubbing is not evidence of Polish audio");
+  assert(!passaChips(0) && "Unspecified dubbing is not declared audio");
   ling_local_audio("*");
-  assert(ling_casa(idioma_iso(ajustes_idioma()), "en"));
-  snprintf(s.audioIdiomas, sizeof s.audioIdiomas, "English");
-  assert(passaChips(0) && "No audio preference falls back to interface language");
+  snprintf(s.audioIdiomas, sizeof s.audioIdiomas, "Polish");
+  assert(passaChips(0) && "All audio languages leaves the filter open");
   ling_local_audio("~"); ling_definir_original("pl");
   snprintf(s.audioIdiomas, sizeof s.audioIdiomas, "Polish");
   assert(passaChips(0));

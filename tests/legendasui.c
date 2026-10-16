@@ -24,6 +24,14 @@ int ajustes_leg2_tamanho(void) { return segundaPct; }
 int ajustes_leg2_cor(void) { return -1; }
 int ajustes_leg2_fundo(void) { return -1; }
 int ajustes_leg2_borda(void) { return -1; }
+// Same sizing as ajustes.c; the other leg2 fields stay the primary's here.
+void ajustes_leg2_estilo(const VideoLegendaEstilo *p, VideoLegendaEstilo *o) {
+  *o = *p;
+  o->tamanho = segundaPct > 0 ? segundaPct : p->tamanho * 9 / 10;
+  if (o->tamanho < TXT_LEG_PCT_MIN) o->tamanho = TXT_LEG_PCT_MIN;
+  if (o->tamanho > TXT_LEG_PCT_MAX) o->tamanho = TXT_LEG_PCT_MAX;
+  o->tamanho = o->tamanho / 10 * 10;
+}
 void ajustes_leg_contorno_rgb(int *r, int *g, int *b) { *r = *g = *b = 0; }
 
 int video_n_legenda(void) { return nEmb; }

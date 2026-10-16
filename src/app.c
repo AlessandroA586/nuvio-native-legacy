@@ -161,6 +161,7 @@
 #include "trakt.h"
 #include "visto.h"
 #include "faixas.h"
+#include "legenda2.h"
 #include "episodios.h"
 #include <pthread.h>
 #include <stdatomic.h>
@@ -695,6 +696,7 @@ static int iniciarFonteJob(int tipo, unsigned geracao, const char *id, int renov
     const Stream *s = preparo.tem ? stream_item(preparo.idx) : NULL;
     job->renovar = preparo.tem && !preparo.falhou && preparo.lista == job->listaGeracao &&
                    preparo.lembrada == job->lembrada && s && s->infoHash[0] &&
+                   stream_filtro_permite(s) &&
                    preparoContextoAtual(&preparo.contexto) && id && !strcmp(preparo.alvo, id);
     job->escolhida = job->renovar ? preparo.idx : -1;
     if (job->renovar) job->servico = preparo.servico;
@@ -769,6 +771,7 @@ static int armarPoliticaFonteAberta(int indice, int servico, const char *url) {
   stream_falha_identidade(s, identidade, sizeof identidade);
   c.indice = indice; c.nativa = s->infoHash[0] != 0; c.ordemAddon = s->addonOrdem;
   snprintf(c.addon, sizeof c.addon, "%s", s->addonChave); c.identidade = identidade;
+  c.filtro = s->filtro;
   if (!iniciarPoliticaFonte(indice, 1) || !fontefalha_semear(fonteFalha, &c, servico, url)) {
     fontefalha_sessao_liberar(fonteFalha); fonteFalha = NULL; return 0;
   }
@@ -1193,6 +1196,7 @@ static int tocarFonteGuardada(void) {
   alvoPlayer(alvo, sizeof alvo);
   if (!alvo[0] || !fontevolta_pegar(alvo, sessao_usuario(), perfis_ativo(), SDL_GetTicks(), &s))
     return 0;
+  if (!stream_filtro_permite(&s)) return 0;
   if (fontesmortas_idade(&s) >= 0) { fontevolta_esquecer("fonte falhou antes"); return 0; }
   marco("abrir: fonte guardada, sem busca");
   stream_definir_atual(-1);
@@ -1664,6 +1668,11 @@ static void erroSemFonte(void) {
   char motivo[160];
   int canal = player_id_canal()[0] != 0;
   int semPlano = debrid_sem_plano();
+  if (!canal && stream_filtro_bloqueou()) {
+    player_erro_fonte_motivo(i18n("Nenhuma fonte passa pelos filtros"),
+        i18n("Revise os filtros em Fontes e addons."));
+    return;
+  }
   // CONTA DE DEBRID SEM PLANO vem antes de tudo: e a causa que a pessoa pode
   // resolver, e "nenhuma fonte serve" sozinho a mandava procurar outra fonte
   // do mesmo servico (registros 1731-1774). O aviso fica marcado como dado.
@@ -2952,6 +2961,7 @@ static void perfilAbrirSessao(int antes) {
 }
 
 int app_iniciar(const char *dirArte) {
+  legenda2_vincular_atraso(ajustes_leg2_atraso(), ajustes_leg2_definir_atraso);
   perfis_ao_abrir_sessao(perfilEncerrarSessao);
   cat_cache_perfis(1);
   snprintf(perfilDirArte, sizeof perfilDirArte, "%s", dirArte ? dirArte : "");
