@@ -48,6 +48,15 @@ static int indice(const char *chave) {
 static int filAba, filLista[FIL_MAX + 1], filListaN, filSep, filFoco;
 static int filForaAgrupada = 1;
 #define AJ_FIL_DESTAQUE (-2)
+static int refreshes, remounts;
+static const char *loaded[] = { "continue_watching", "social_activity", "vivo_movie_a", "vivo_movie_b" };
+static void desc_remontar_fileiras(void) {
+  int order[4];
+  remounts++;
+  assert(fil_unir(loaded, 4, order, 4) == 4);
+  fil_espelhar_ordem(loaded, NULL, 4);
+}
+static void desc_repetir(void) { refreshes++; }
 #include "ajustes_fileiras.inc"
 #define DECL_MAX 1024
 static struct { char chave[FIL_CHAVE]; } decls[DECL_MAX];
@@ -322,5 +331,27 @@ int main(int argc, char **argv) {
     assert(indice("nao_identificado_movie_top") >= 0);
   }
   puts("ok  troca de lista invalida autoridade antiga sem bloquear manifesto pendente");
+  // Fixed rows shift raw indices beyond the catalog quota. Explicit Add must
+  // still refresh an eligible missing catalog.
+  fil_definir_perfil(8); perfilLista = 8;
+  fil_esquecer();
+  conta(0, 1); reconciliar();
+  fil_definir_limite(3);
+  fil_registrar("continue_watching", "Continue", "", "", 9);
+  fil_registrar("social_activity", "Friends", "", "", 6);
+  fil_registrar("vivo_movie_a", "A", "Vivo", "movie", 5);
+  fil_registrar("vivo_movie_b", "B", "Vivo", "movie", 5);
+  {
+    const char *declared[] = { "vivo_movie_a", "vivo_movie_b" };
+    int state, qi;
+    fil_marcar_declaradas(declared, 2, 8);
+    fil_registrar_se_couber("vivo_movie_quota", "Quota", "Vivo", "movie");
+    qi = fil_adicionar(indice("vivo_movie_quota"), &state);
+    assert(qi >= fil_limite() && state == FIL_NA_HOME);
+    assert(fil_escolhida("vivo_movie_quota") == 2);
+    fileirasReagir();
+    assert(remounts == 1 && refreshes == 1);
+  }
+  puts("ok  explicit Add refreshes beyond fixed rows");
   puts("fileiras_removidas: tudo ok"); return 0;
 }
