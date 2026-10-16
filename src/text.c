@@ -1988,6 +1988,13 @@ void txt_desenhar_alpha(TxtLinha l, float x, float y, float alpha) {
   txt_desenhar_tom(l, x, y, 1, 1, 1, alpha);
 }
 
+void txt_desenhar_borda(TxtLinha b, float x, float y, int borda, float alpha) {
+  static const int dir[8][2] = { {-1,-1}, {0,-1}, {1,-1}, {-1,0}, {1,0}, {-1,1}, {0,1}, {1,1} };
+  int i;
+  if (borda == 2) { txt_desenhar_alpha(b, x + 4.f, y + 4.f, .82f * alpha); return; }
+  for (i = 0; i < 8; i++) txt_desenhar_alpha(b, x + dir[i][0] * 2.f, y + dir[i][1] * 2.f, alpha);
+}
+
 void txt_desenhar_tom(TxtLinha l, float x, float y, float cr, float cg, float cb, float alpha) {
   if (!l.tex) return;
   camadaAtualizar();

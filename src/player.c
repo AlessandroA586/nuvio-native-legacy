@@ -4608,10 +4608,7 @@ static void desenharBloco(const LegBloco *bl, float x0, float y, float alpha, in
     // 2 direita (x0 e a borda direita).
     float x = alinha == 0 ? x0 : alinha == 1 ? x0 - l.w * .5f : x0 - l.w;
     if (legEstilo.fundo) { float fa = legEstilo.fundo * .16f * alpha; gfx_cor((GfxRect){x-18,y-6,l.w+36,l.h+12},.16f,0,0,0,fa); }
-    if (bl->borda[i].tex) { float d = legEstilo.borda == 2 ? 4.f : 2.f;
-      txt_desenhar_alpha(bl->borda[i], x+d, y+d, .82f*alpha);
-      if (legEstilo.borda == 1) { txt_desenhar_alpha(bl->borda[i], x-d, y, .82f*alpha); txt_desenhar_alpha(bl->borda[i], x, y-d, .82f*alpha); }
-    }
+    txt_desenhar_borda(bl->borda[i], x, y, legEstilo.borda, alpha);
     txt_desenhar_alpha(l, x, y, alpha); y += l.h + 5;
   }
 }

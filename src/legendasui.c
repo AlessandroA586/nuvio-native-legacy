@@ -1266,14 +1266,7 @@ void legendasui_desenhar_secundaria(const LegendasGeo *g) {
     TxtLinha l = ln[i].cor;
     float x = (x0 + x1) * 0.5f - (float)l.w * 0.5f;
     if (fundo) gfx_cor((GfxRect){ x - 18, y - 6, (float)l.w + 36, (float)l.h + 12 }, .16f, 0, 0, 0, fundo * .16f * alpha);
-    if (ln[i].borda.tex) {
-      float d = borda == 2 ? 4.f : 2.f;
-      txt_desenhar_alpha(ln[i].borda, x + d, y + d, .82f * alpha);
-      if (borda == 1) {
-        txt_desenhar_alpha(ln[i].borda, x - d, y, .82f * alpha);
-        txt_desenhar_alpha(ln[i].borda, x, y - d, .82f * alpha);
-      }
-    }
+    txt_desenhar_borda(ln[i].borda, x, y, borda, alpha);
     txt_desenhar_alpha(l, x, y, alpha);
     y += (float)l.h + 5.0f;
   }

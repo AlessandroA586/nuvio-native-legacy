@@ -311,6 +311,9 @@ TxtLinha txt_linha_corta_enfase(TxtEstilo estilo, const char *s, int r, int g,
 // Desenha no canto superior esquerdo (x,y).
 void txt_desenhar(TxtLinha l, float x, float y);
 void txt_desenhar_alpha(TxtLinha l, float x, float y, float alpha);
+// Borda da legenda (b = textura na cor da borda): 1 = contorno opaco nas 8
+// direcoes, 2 = sombra deslocada. Desenhar ANTES do texto.
+void txt_desenhar_borda(TxtLinha b, float x, float y, int borda, float alpha);
 // Multiplica so o RGB da textura (0..1); preserva o alpha e o encaixe no pixel.
 void txt_desenhar_tom(TxtLinha l, float x, float y, float cr, float cg, float cb, float alpha);
 
