@@ -202,6 +202,8 @@ typedef int (*P2pmSondaFn)(const char *url, int (*parar)(void *), void *u); // 1
 void p2pmotor_teste_injetar(const P2pmOps *ops, P2pmLivreFn livre, P2pmSondaFn sonda,
                             const char *raiz, unsigned vigia_ms);
 void p2pmotor_teste_usb_base(const char *base);
+// Tizen: troca /opt/media por `dir` e devolve as raizes candidatas (uma por linha).
+unsigned p2pmotor_teste_usb_tizen(const char *dir, char *out, unsigned nout);
 // #205: lista (uma por linha, linha 0 = volume primario, ignorada) no lugar de
 // getExternalFilesDirs, e arquivo no formato /proc/mounts para o tipo do fs.
 void p2pmotor_teste_usb_android(const char *lista, const char *mounts);
