@@ -221,6 +221,8 @@ static int nHeroTrailer;
 static char heroTrailerPedido[24];
 static int heroTrailerSerie;
 static long heroTrailerTmdb;
+// Trailer audio the cached ranking was made for: a change refetches.
+static char heroTrailerAudio[16];
 static unsigned long heroTrailerGer, heroTrailerExecutada;
 static int heroTrailerVivo, heroTrailerFio;
 static int heroTrailerTentativas;
@@ -245,7 +247,7 @@ static struct { char nome[80], logo[220]; long tmdb; int rede; }
 static int  nEstudio;
 static long tmdbEmCurso;
 
-static char idPedido[24], idEmCurso[24];
+static char idPedido[24], idEmCurso[24], audioPedido[16];
 static NvPerfilSessao sessaoPedido;
 static pthread_key_t sessaoDoFio;
 static pthread_once_t sessaoDoFioUma = PTHREAD_ONCE_INIT;
@@ -1683,12 +1685,13 @@ void extras_pedir(const char *imdb, int serie, long tmdbId) {
   // ("anime") abre como filme e o /meta o resolve como serie — ai os extras
   // tem de ser refeitos por /tv e /shows (detail.c repede).
   if (!strcmp(idPedido, imdb) && seriePedido == serie &&
-      nv_perfil_sessao_atual(sessaoPedido)) {
+      !strcmp(audioPedido, PREF_AUDIO()) && nv_perfil_sessao_atual(sessaoPedido)) {
     printf("[vistoep] %s: extras reutilizados; fio=%d pronto=%d; sem nova consulta\n",
            imdb, fioVivo, progressoPronto);
     fflush(stdout);
     pthread_mutex_unlock(&trava); return; }
   snprintf(idPedido, sizeof idPedido, "%s", imdb);
+  snprintf(audioPedido, sizeof audioPedido, "%s", PREF_AUDIO());
   sessaoPedido = nv_perfil_sessao_ler();
   seriePedido = serie;
   tmdbPedido = tmdbId;
@@ -1949,6 +1952,7 @@ static int parsearHeroVideos(const char *corpo, int serie, const char *idioma,
 // exercita o mesmo filtro de site/tipo/chave sem simular o JSON em JavaScript.
 void extras_teste_publicar_hero(const char *id, const char *corpo, const char *idioma) {
   snprintf(heroTrailerPedido, sizeof heroTrailerPedido, "%s", id);
+  snprintf(heroTrailerAudio, sizeof heroTrailerAudio, "%s", PREF_AUDIO());
   nHeroTrailer = parsearHeroVideos(corpo, 0, idioma, heroTrailer);
   heroTrailerVivo = 0;
   heroTrailerExecutada = heroTrailerGer;
@@ -2048,7 +2052,7 @@ void extras_hero_trailer_pedir(const char *imdb, int serie, long tmdbId) {
   if (!id[0] || !desc_chave_tmdb()[0] || !ajustes_tmdb_trailers()) return;
   pthread_mutex_lock(&heroTrailerTrava);
   if (!strcmp(heroTrailerPedido, id) && heroTrailerSerie == serie &&
-      heroTrailerTmdb == tmdbId) {
+      heroTrailerTmdb == tmdbId && !strcmp(heroTrailerAudio, PREF_AUDIO())) {
     if (heroTrailerVivo || nHeroTrailer > 0 ||
         agora - heroTrailerTentativaEm < HERO_TRAILER_RETRY_S) {
       pthread_mutex_unlock(&heroTrailerTrava);
@@ -2058,6 +2062,7 @@ void extras_hero_trailer_pedir(const char *imdb, int serie, long tmdbId) {
     heroTrailerTentativas = 0;
   }
   snprintf(heroTrailerPedido, sizeof heroTrailerPedido, "%s", id);
+  snprintf(heroTrailerAudio, sizeof heroTrailerAudio, "%s", PREF_AUDIO());
   heroTrailerSerie = serie;
   heroTrailerTmdb = tmdbId;
   nHeroTrailer = 0;
@@ -2087,7 +2092,8 @@ int extras_hero_trailer_obter(const char *imdb, char *dst, unsigned cap) {
   if (!id[0] || !dst || cap < 2) return 0;
   pthread_mutex_lock(&heroTrailerTrava);
   if (!strcmp(heroTrailerPedido, id) && !heroTrailerVivo &&
-      heroTrailerExecutada == heroTrailerGer && nHeroTrailer > 0) {
+      heroTrailerExecutada == heroTrailerGer && nHeroTrailer > 0 &&
+      !strcmp(heroTrailerAudio, PREF_AUDIO())) {
     snprintf(dst, cap, "%s", heroTrailer[0].yt);
     ok = 1;
   }
@@ -2101,7 +2107,7 @@ int extras_hero_trailer_idioma_preferido(const char *imdb) {
   normalizarHeroId(imdb, id, sizeof id);
   pthread_mutex_lock(&heroTrailerTrava);
   if (id[0] && !strcmp(heroTrailerPedido, id) && !heroTrailerVivo &&
-      heroTrailerExecutada == heroTrailerGer)
+      heroTrailerExecutada == heroTrailerGer && !strcmp(heroTrailerAudio, PREF_AUDIO()))
     preferido = nHeroTrailer > 0 && heroTrailer[0].idiomaPreferido;
   else preferido = idiomaPedido() ? -1 : 0;
   pthread_mutex_unlock(&heroTrailerTrava);

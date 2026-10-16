@@ -161,6 +161,22 @@ int trailerfonte_depois(int ajuste, int tizen, int qual) {
   return 0;
 }
 
+// The dubbed YouTube trailer opened first (Trailer audio): the fallback walks
+// YouTube -> Apple -> IMDb, so a failed embed (153/timeout) still gets the
+// English trailer. Order without YouTube: same as trailerfonte_depois.
+int trailerfonte_depois_dublado(int ajuste, int tizen, int qual) {
+  int ordem[3], n = trailerfonte_ordem(ajuste, tizen, ordem), i, j;
+  for (i = 1; i < n; i++)
+    if (ordem[i] == TRF_YOUTUBE) {
+      for (j = i; j > 0; j--) ordem[j] = ordem[j - 1];
+      ordem[0] = TRF_YOUTUBE;
+      break;
+    }
+  for (i = 0; i + 1 < n; i++)
+    if (ordem[i] == qual) return ordem[i + 1];
+  return 0;
+}
+
 const char *trailerfonte_nome(int qual) {
   switch (qual) {
     case TRF_APPLE:   return "apple";

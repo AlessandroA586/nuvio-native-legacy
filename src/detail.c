@@ -347,6 +347,10 @@ static int    trailerTentado = 0;
 // proximo degrau uma vez.
 static int    trailerEtapa = 0;
 static Uint32 trailerPrazo = 0;
+#ifdef __EMSCRIPTEN__
+// 1 = the chain began with the dubbed YouTube trailer: fallback is Apple -> IMDb.
+static int    trailerDublado = 0;
+#endif
 // ESQUERDA no comeco de QUALQUER fileira da pagina (e na coluna 0 da
 // filmografia, e na lista da colecao): o app abre a barra lateral POR CIMA da
 // pagina, que continua viva embaixo — mesmo foco, rolagem e trailer (dono,
@@ -3493,6 +3497,7 @@ void detail_atualizar(float dt, Uint32 agora) {
         // A etapa e a FONTE aberta (TRF_*), para o prazo saber qual e a
         // proxima na ordem do ajuste (trailerfonte_depois).
         trailerEtapa = qual;
+        trailerDublado = qual == TRF_YOUTUBE;
         trailerPrazo = agora + NV_TRAILER_PREPARA_MS;
 #endif
       }
@@ -3514,10 +3519,11 @@ void detail_atualizar(float dt, Uint32 agora) {
         // A PROXIMA DA ORDEM QUE TEM TRAILER: Apple -> IMDb -> YouTube na
         // Samsung (#136). Uma fonte da ordem sem trailer para o titulo e
         // pulada, nao encerra a fila.
-        int prox = trailerfonte_depois(trailerfonte_ajuste(), trailerfonte_tizen(), trailerEtapa);
+        int (*depois)(int, int, int) = trailerDublado ? trailerfonte_depois_dublado : trailerfonte_depois;
+        int prox = depois(trailerfonte_ajuste(), trailerfonte_tizen(), trailerEtapa);
         const char *seg = NULL;
         while (prox && !(seg = trailerUrlDaFonte(prox)))
-          prox = trailerfonte_depois(trailerfonte_ajuste(), trailerfonte_tizen(), prox);
+          prox = depois(trailerfonte_ajuste(), trailerfonte_tizen(), prox);
         printf("[trailer] detalhe: %s %d ms (%s, estado %d), %s%s\n",
                errou ? "erro em" : "sem playing em", NV_TRAILER_PREPARA_MS,
                trailerfonte_nome(trailerEtapa), trailer_estado(),

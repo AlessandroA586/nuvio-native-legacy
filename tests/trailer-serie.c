@@ -142,6 +142,15 @@ int main(void) {
           d == TRF_ABRE && q == TRF_YOUTUBE && !strcmp(u, "trailerBR01"));
     d = trailerfonte_escolher(TRF_APPLE, 1, &c, &u, &q);
     check("home: fixed Apple source is respected", q == TRF_APPLE);
+    check("dubbed YouTube fails (153/timeout) -> Apple, then IMDb",
+          trailerfonte_depois_dublado(TRF_AUTO, 1, TRF_YOUTUBE) == TRF_APPLE &&
+          trailerfonte_depois_dublado(TRF_AUTO, 1, TRF_APPLE) == TRF_IMDB &&
+          trailerfonte_depois_dublado(TRF_AUTO, 1, TRF_IMDB) == 0);
+    extras_teste_trailer_audio("~");
+    check("Trailer audio change: cached pt-BR hero ranking is not reused",
+          extras_hero_trailer_idioma_preferido("tt0000205") != 1 &&
+          !extras_hero_trailer_obter("tt0000205", hero, sizeof hero));
+    extras_teste_trailer_audio("pt");
 
     extras_teste_trailers_ficha(corpo, 0, "en-US", yt, EX_TRAILER_MAX);
     c.youtube = extras_trailer_yt(0);
