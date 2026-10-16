@@ -1041,10 +1041,6 @@ static double duracaoDaLista(void) {
 }
 static const char *idiomaPreferidoFonte(void) {
   const char *c = ajustes_fonte_idioma_audio() ? ling_audio() : "";
-  const char *alvoLingPontos = ling_audio();
-  if (alvoLingPontos && *alvoLingPontos && strcmp(alvoLingPontos, "*") != 0) {
-    if (temAudioPreferido(s)) p += 200000L;
-  }
   return c ? c : "";
 }
 static int faixaIdiomaInformado(const char *raw, size_t n);
@@ -1246,6 +1242,10 @@ static long pontosDoAlvo(const Stream *s, const char *alvo) {
       if (REGRAS_VIDAA[k].bate(s)) p += REGRAS_VIDAA[k].pontos;
   }
 #endif
+  const char *alvoLingPontos = ling_audio();
+  if (alvoLingPontos && *alvoLingPontos && strcmp(alvoLingPontos, "*") != 0) {
+    if (temAudioPreferido(s)) p += 200000L;
+  }
   p -= multasDeAlvo(s, alvo);
   return p;
 }
