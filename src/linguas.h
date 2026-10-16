@@ -110,9 +110,10 @@ void ling_local_audio2(const char *v);   // "" = segue a conta
 void        ling_definir_original(const char *cod);
 const char *ling_original(void);
 
-// Indice de "Original do titulo" dentro da lista de opcoes. E o ULTIMO item de
-// proposito: o ajustes.txt grava indice, nao codigo, entao inserir no meio
-// reinterpreta o arquivo de quem ja tem ajuste salvo (ver a nota em linguas.c).
+// Indice de "Original do titulo" dentro da lista de opcoes. E FIXO, nao o
+// ultimo: o ajustes.txt grava indice, nao codigo, entao mover o "~" troca a
+// lingua de quem ja tem ajuste salvo, e inserir no meio reinterpreta o
+// arquivo (ver a nota em linguas.c). Idiomas novos entram DEPOIS dele.
 #define LING_OPC_ORIGINAL 30
 int         ling_opcao_n(void);
 const char *ling_opcao_codigo(int i);   // "" para conta, "*" para sem filtro

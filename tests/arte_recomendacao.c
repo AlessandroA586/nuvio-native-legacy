@@ -54,7 +54,8 @@ static void reset(const char *backdrop) {
   memset(&probe, 0, sizeof probe);
   sobFioVivo = 0; sobIndice = -1;
   desc_pedir_titulo_semente("tt9999901", 0, "movie", "Recommended title", "2026", poster);
-  assert(sobIndice == 0 && !sobFioVivo && !strcmp(probe.poster, probe.backdrop));
+  assert(sobIndice == 0 && !sobFioVivo && !probe.backdrop[0]);
+  assert(!strcmp(probe.poster, poster));
   assert(!strcmp(probe.imdb, "tt9999901") && !strcmp(probe.tipo, "movie"));
   if (backdrop) snprintf(probe.backdrop, sizeof probe.backdrop, "%s", backdrop);
   snprintf(probe.backdropCatalogo, sizeof probe.backdropCatalogo, "%s", probe.backdrop);

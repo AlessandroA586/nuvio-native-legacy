@@ -1,5 +1,6 @@
 #include "linguas.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
@@ -41,7 +42,7 @@ static const struct { const char *cod, *nome; } NOMES[] = {
   // tabela nao nomeava ("HRV", "BUL"...). So as familias de 2 letras: os
   // codigos de 3 letras e as variantes chegam aqui por familia() (ling_nome).
   { "hr", "Croata" },     { "bg", "Búlgaro" },   { "sk", "Eslovaco" },
-  { "sr", "Sérvio" },     { "sl", "Esloveno" },  { "et", "Estoniano" },
+  { "sr", "Sérvio" },     { "bs", "Bósnio" },    { "sl", "Esloveno" },  { "et", "Estoniano" },
   { "lv", "Letão" },      { "lt", "Lituano" },   { "ca", "Catalão" },
   { "eu", "Basco" },      { "gl", "Galego" },    { "is", "Islandês" },
   { "fa", "Persa" },      { "ms", "Malaio" },    { "tl", "Filipino" },
@@ -120,6 +121,11 @@ static const char *familia(const char *c, char *buf) {
     // #429: servo-croata. "hbs"/"sh" e o codigo conjunto que muitos MKV usam
     // para croata, servio e bosnio; ling_casa trata "sh" como os tres.
     { "bos","bs" },{ "hbs","sh" },
+    // #429: variantes regionais do conjunto servo-croata que MKV etiqueta com
+    // tracinho ("hbs-hrv", "hbs-srp"). Sem isto familia() devolvia "hbs" cru
+    // e ling_casa nao casava com preferencia "hr".
+    { "hbs-hrv","hr" },{ "hbs_hrv","hr" },{ "hbs-srp","sr" },{ "hbs_srp","sr" },
+    { "hbs-bos","bs" },{ "hbs_bos","bs" },
   };
   size_t i;
   for (i = 0; i < sizeof F / sizeof *F; i++)
@@ -130,6 +136,8 @@ static const char *familia(const char *c, char *buf) {
     for (k = 0; c[k] && c[k] != '-' && c[k] != '_' && k + 1 < 8; k++)
       d[k] = (char)(c[k] >= 'A' && c[k] <= 'Z' ? c[k] + 32 : c[k]);
     d[k] = 0;
+    for (i = 0; i < sizeof F / sizeof *F; i++)
+      if (!strcasecmp(d, F[i].cod)) return F[i].fam;
     return d; }
 }
 
@@ -331,30 +339,54 @@ const char *ling_audio_fonte(const char *padrao) {
 static const char *OPCOES_COD[] = {
   "", "*",
   "pt", "en", "es",
-  "de", "ar", "zh", "da", "ko", "fr", "el", "he", "nl", "hi", "hu", "id",
-  "it", "ja", "no", "pl", "ro", "ru", "sv", "th", "cs", "tr", "uk", "vi", "fi",
+  "de", "ar", "zh", "da", "ko", "fr", "el", "he", "nl", "hi", "hu",
+  "id", "it", "ja", "no", "pl", "ro", "ru", "sv", "th", "cs", "tr", "uk", "vi", "fi",
   // "~" = ORIGINAL DO TITULO. Nao e um idioma: e "descubra qual e o idioma
   // deste filme e toque esse". Quem resolve e ling_definir_original(), chamado
   // por quem abre o titulo; aqui so mora o marcador.
   //
-  // ELE FICA NO FIM, E ISSO NAO E ESTETICA — E COMPATIBILIDADE. O ajustes.txt
-  // grava o INDICE da opcao, nao o codigo ("aud_lingua 2"), entao inserir um
-  // item no meio desta lista REINTERPRETA o arquivo de quem ja atualizou:
-  // na 1.1.2 o "~" entrou no indice 2 e todo mundo que tinha audio "Portugues"
-  // (2) passava a ter "Original", quem tinha "Ingles" (3) passava a ter
-  // "Portugues", e assim por diante nos 28 idiomas — em audio E em legenda,
-  // que leem a MESMA lista. Foi pego na revisao antes de publicar.
+  // O ajustes.txt grava o INDICE da opcao, nao o codigo ("audioIdioma 30"),
+  // entao inserir um item no meio desta lista REINTERPRETA o arquivo de quem
+  // ja atualizou: na 1.1.2 o "~" entrou no indice 2 e todo mundo que tinha
+  // audio "Portugues" (2) passava a ter "Original", quem tinha "Ingles" (3)
+  // passava a ter "Portugues", e assim por diante nos 28 idiomas — em audio
+  // E em legenda, que leem a MESMA lista. Foi pego na revisao antes de
+  // publicar. Na revisao do #429 (2.0.6) quase aconteceu de novo: "hr",
+  // "sr" e "bs" entraram nos indices 16-18 e todo indice gravado >=16
+  // (id->hr, ..., fi->bs, ~->bs) trocava de idioma em silencio.
   //
-  // REGRA PARA QUEM MEXER AQUI: item novo entra NO FIM. Reordenar ou inserir no
-  // meio exige migracao do ajustes.txt, que hoje nao tem marca de versao.
-  "~"
+  // REGRA PARA QUEM MEXER AQUI: item novo entra NO FIM, DEPOIS do "~". O "~"
+  // NAO pode andar junto — mover ele regravaria o indice de quem tem audio no
+  // original (LING_OPC_ORIGINAL). Reordenar ou inserir no meio exige migracao
+  // do ajustes.txt, que hoje nao tem marca de versao.
+  "~",
+  // #429 (2.0.6): croata, servio e bosnio, adicionados NO FIM pela regra
+  // acima. Ficam fora da ordem alfabetica de proposito — a ordem e
+  // compatibilidade, nao estetica.
+  "hr", "sr", "bs"
 };
-// Se alguem acrescentar idioma depois do "~", o indice gravado deixa de bater
-// com LING_OPC_ORIGINAL e o padrao de audio vira outra coisa em silencio. Isto
-// quebra o build em vez de deixar passar.
-typedef char nv_checa_indice_original[
-  (sizeof OPCOES_COD / sizeof *OPCOES_COD) == LING_OPC_ORIGINAL + 1 ? 1 : -1];
-int ling_opcao_n(void) { return (int)(sizeof OPCOES_COD / sizeof *OPCOES_COD); }
+// LING_OPC_ORIGINAL e o indice do "~": fixo por compatibilidade com todo
+// ajustes.txt ja gravado (ver o comentario acima). Os idiomas novos entram
+// DEPOIS dele; so o tamanho total pode crescer. O C99 nao deixa conferir o
+// CONTEUDO de OPCOES_COD em tempo de compilacao num typedef de arquivo, entao
+// a trava mora em ling_opcao_n() abaixo: subir a build com o "~" fora do
+// indice 30 quebra o programa de cara, em vez de trocar a lingua salva em
+// silencio (a mesma funcao do typedef que havia aqui).
+typedef char nv_checa_tamanho[
+  (sizeof OPCOES_COD / sizeof *OPCOES_COD) > LING_OPC_ORIGINAL ? 1 : -1];
+int ling_opcao_n(void) {
+  // Trava do "~" no indice fixo: C99 nao deixa conferir o CONTEUDO do vetor
+  // num typedef de arquivo, entao a guarda e esta checagem no arranque
+  // (rotulosDeIdioma chama aqui antes de ler o ajustes.txt). Quem mover o
+  // "~" descobre no primeiro boot do proprio build, em vez de trocar a
+  // lingua salva de todo mundo em silencio.
+  if (OPCOES_COD[LING_OPC_ORIGINAL][0] != '~') {
+    fprintf(stderr, "[linguas] \"~\" fora do indice %d: lista reordenada sem "
+            "migracao do ajustes.txt\n", LING_OPC_ORIGINAL);
+    abort();
+  }
+  return (int)(sizeof OPCOES_COD / sizeof *OPCOES_COD);
+}
 const char *ling_opcao_codigo(int i) {
   return (i >= 0 && i < ling_opcao_n()) ? OPCOES_COD[i] : "";
 }

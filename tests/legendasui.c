@@ -24,6 +24,15 @@ int ajustes_leg2_tamanho(void) { return segundaPct; }
 int ajustes_leg2_cor(void) { return -1; }
 int ajustes_leg2_fundo(void) { return -1; }
 int ajustes_leg2_borda(void) { return -1; }
+// Same sizing as ajustes.c; the other leg2 fields stay the primary's here.
+void ajustes_leg2_estilo(const VideoLegendaEstilo *p, VideoLegendaEstilo *o) {
+  *o = *p;
+  o->tamanho = segundaPct > 0 ? segundaPct : p->tamanho * 9 / 10;
+  if (o->tamanho < TXT_LEG_PCT_MIN) o->tamanho = TXT_LEG_PCT_MIN;
+  if (o->tamanho > TXT_LEG_PCT_MAX) o->tamanho = TXT_LEG_PCT_MAX;
+  o->tamanho = o->tamanho / 10 * 10;
+}
+void ajustes_leg_contorno_rgb(int *r, int *g, int *b) { *r = *g = *b = 0; }
 
 int video_n_legenda(void) { return nEmb; }
 const VideoFaixa *video_legenda(int i) { return i >= 0 && i < nEmb ? &emb[i] : NULL; }
@@ -311,6 +320,33 @@ int main(void) {
   assert(recP == 1 && recAssinatura() != assinatura);
   legendasui_abrir(); assert(recP == 1);
   legauto_fonte(NULL); montarLinhas(); assert(recP == 0);
+
+  // --- #511: the row title is the track name, the language moves below ---
+  { LegUiCand c[8]; const VideoFaixa *pe[8]; char t[96], su[256];
+    const char *id, *ic; int k, at, ap, sv = nEmb, sa = nAdd;
+    VideoFaixa sal[8]; memcpy(sal, emb, sizeof sal);
+    faixa(0, 1, "en", "English  \xc2\xb7  Full", "S_TEXT/UTF8", 0);
+    faixa(1, 2, "en", "English  \xc2\xb7  Full w/ honorifics", "S_TEXT/UTF8", 0);
+    faixa(2, 3, "en", "English  \xc2\xb7  Full", "S_TEXT/UTF8", 0);
+    faixa(3, 4, "pt", "Português", "S_TEXT/UTF8", 0);                     // empty name
+    faixa(4, 5, "es", "Español  \xc2\xb7  S_TEXT/ASS", "S_TEXT/ASS", 0);   // codec id only
+    faixa(5, 6, "fr", "Français", "S_TEXT/UTF8", 0);
+    addon(0, "fr", "Prov", "An extremely long add-on label that must be cut cleanly.srt", "https://h.invalid/x.srt");
+    for (k = 0; k < 6; k++) pe[k] = &emb[k];
+    assert(legendasui_montar(pe, 6, add, 1, c, 8) == 7);
+    legendasui_titulo(c, 7, 0, t, sizeof t); assert(!strcmp(t, "Full (1)"));
+    legendasui_titulo(c, 7, 2, t, sizeof t); assert(!strcmp(t, "Full (2)"));
+    assert(legendasui_titulo(c, 7, 1, t, sizeof t) && !strcmp(t, "Full w/ honorifics"));
+    assert(!legendasui_titulo(c, 7, 3, t, sizeof t) && !strcmp(t, nomeIdioma("pt")));
+    assert(!legendasui_titulo(c, 7, 4, t, sizeof t) && !strcmp(t, nomeIdioma("es")));
+    legendasui_titulo(c, 7, 6, t, sizeof t);
+    assert(strlen(t) <= 43 && !strncmp(t, "An extremely", 12) && strstr(t, "\xe2\x80\xa6"));
+    // On screen: name first, language below it.
+    nEmb = 6; nAdd = 0; mais = 1; montarLinhas();
+    snprintf(t, sizeof t, "m|%s", cand[1].id);
+    { char nome[96]; textoLinha(&linhas[linhaDe(t)], nome, sizeof nome, su, sizeof su, &id, &ic, &at, &ap);
+      assert(!strcmp(nome, "Full w/ honorifics") && strstr(su, nomeIdioma("en"))); }
+    mais = 0; nEmb = sv; nAdd = sa; memcpy(emb, sal, sizeof sal); }
 
   // #518 / #511: preserve integration titles in recommended, full and version rows.
   { char title[96], detail[256]; const char *language, *icon; int active, dim;

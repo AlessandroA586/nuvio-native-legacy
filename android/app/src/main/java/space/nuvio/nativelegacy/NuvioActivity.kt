@@ -280,6 +280,7 @@ class NuvioActivity : SDLActivity() {
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
+        if (level >= 5) SDLActivity.nativeLowMemory()
         // Antes de a libmain.so carregar nao ha para quem avisar.
         try { nativeTrimMemoria(level) } catch (_: UnsatisfiedLinkError) { }
     }
@@ -598,6 +599,19 @@ class NuvioActivity : SDLActivity() {
         env("NUVIO_ARTE", File(res, "art").path)
         env("NUVIO_LOCALE", java.util.Locale.getDefault().toLanguageTag())
         env("NUVIO_TV_INFO", "${Build.MANUFACTURER} ${Build.MODEL}|${Build.VERSION.SDK_INT}|${Build.VERSION.RELEASE}|$versao")
+        // Real metrics include physical DPI; use the same pixel space as that DPI.
+        // Display.Mode.physicalWidth/Height are pixel counts, not inches.
+        val panelInches = try {
+            val metrics = android.util.DisplayMetrics()
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.getRealMetrics(metrics)
+            if (metrics.xdpi > 0 && metrics.ydpi > 0)
+                kotlin.math.hypot((metrics.widthPixels / metrics.xdpi).toDouble(),
+                    (metrics.heightPixels / metrics.ydpi).toDouble())
+            else 0.0
+        } catch (_: Exception) { 0.0 }
+        env("NUVIO_PANEL_INCHES", if (panelInches.isFinite() && panelInches in 20.0..120.0)
+            panelInches.toString() else "0")
         env("NUVIO_SAIDA_ANTERIOR", saidaAnterior())
         // Decoders de video do aparelho, para o log do D1 (#318): a deteccao de
         // MStar (NvPlayer.mstar) so aparecia no logcat e nunca soubemos se casou.
@@ -688,6 +702,11 @@ class NuvioActivity : SDLActivity() {
     // de strings (formato em src/sistexto.c) que o C drena por quadro.
     private val eventos = ConcurrentLinkedQueue<String>()
     fun proximoEvento(): String? = eventos.poll()
+
+    // #205: app-specific dir of every volume (index 0 = primary), one per line,
+    // empty line for an unavailable one. Writable with no storage permission.
+    fun volumesExternos(): String =
+        getExternalFilesDirs(null).joinToString("\n") { it?.absolutePath ?: "" }
 
     private fun log(m: String) = Log.i("nuvio", "[texto] $m")
 
@@ -894,7 +913,8 @@ class NuvioActivity : SDLActivity() {
     @Volatile private var iconePendente: String? = null
     @Volatile private var esperandoTela = false   // voz do sistema por cima
 
-    private fun compIcone(i: String) = ComponentName(this, "$packageName.Icone_$i")
+    // O pacote instalado muda no debug; a classe do alias continua no namespace.
+    private fun compIcone(i: String) = ComponentName(this, "space.nuvio.nativelegacy.Icone_$i")
     private fun iconeLigado(i: String): Boolean {
         val st = packageManager.getComponentEnabledSetting(compIcone(i))
         // DEFAULT = o que o manifest diz: so o original nasce ligado.

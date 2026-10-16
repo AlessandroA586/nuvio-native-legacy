@@ -224,6 +224,11 @@ void xtepg_passo(void) {
   }
 }
 
+int xtepg_carregando(const char *id) {
+  XeEnt *e = id ? achar(id) : NULL;
+  return e && e->estado == XE_PEDIDO;
+}
+
 int xtepg_tem(const char *id) {
   XeEnt *e = id ? achar(id) : NULL;
   return e && e->estado == XE_OK && e->n > 0;

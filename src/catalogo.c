@@ -186,11 +186,9 @@ static char dirGravacao[512];
 // Episodios de todos os titulos num vetor unico, com faixa por titulo. Uma
 // matriz [titulo][episodio] gastaria memoria pelo pior caso em 40 titulos dos
 // quais a maioria e filme e nao tem episodio nenhum.
-// 1200 e nao 600: uma serie longa (novela, anime) estourava o vetor e a
-// resposta ao estouro era ZERAR a faixa de episodios de TODOS os titulos —
-// abrir uma serie grande apagava os episodios das outras telas visitadas.
-// Sao ~200 B por CatEp: dobrar custa ~120 KB, metade do problema resolvido.
-#define CAT_EP_MAX 1200
+// 2400: preserva listas longas como S1E1..S1E2001 (#391). Em par com
+// VIDEOS_MAX (descoberta.c), sem mudar a invalidacao das faixas na volta.
+#define CAT_EP_MAX 2400
 static CatEp eps[CAT_EP_MAX];
 // Faixas de episodio por titulo, do mesmo tamanho do vetor de itens — que
 // agora cresce, entao estes tambem.
@@ -210,8 +208,8 @@ static int  *epIni, *epQtd, nEps;
 //
 // Mutex e nao copia-na-escrita porque o que se guarda e pequeno e quente: o
 // leitor pega a trava, le DOIS inteiros e solta (dezenas de ns sem disputa); o
-// escritor mais longo e o memcpy de ate CAT_EP_MAX episodios (~240 KB, fracao
-// de ms). Nada de rede, disco, printf nem desenho dentro dela.
+// escritor mais longo e o memcpy de ate CAT_EP_MAX episodios.
+// Nada de rede, disco, printf nem desenho dentro dela.
 //
 // ORDEM DAS TRAVAS (de fora para dentro; nunca o contrario):
 //   contTrava (descoberta.c)  ->  pubTrava  ->  epTrava
@@ -1969,6 +1967,7 @@ void cat_atualizar_item_sem_abas(int i, const CatItem *item) {
   if (itens && i >= 0 && i < n &&
       !strcmp(itens[i].imdb, copia.imdb) &&
       (!tipo_certo(itens[i].tipo) || !strcmp(tipo_base(itens[i].tipo), tipo_base(copia.tipo)))) {
+    copia.epsParciais = itens[i].epsParciais;
     copia.nTemporadas = itens[i].nTemporadas;
     memcpy(copia.temporadas, itens[i].temporadas, sizeof copia.temporadas);
     // A marca da cena chega por cat_marcar_pos_creditos noutro fio; uma copia

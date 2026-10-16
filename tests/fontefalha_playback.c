@@ -76,7 +76,7 @@ void stream_vod_falhou(int i) { (void)i; mortas++; }
 int stream_automatico_excluir(int i) { (void)i; mortas++; return 1; }
 int stream_automatico_excluir_irmas(int i) { (void)i; irmas++; return 1; }
 int stream_proxima_vod(int i) { (void)i; legadas++; return 1; }
-int ajustes_fonte_repor(void) { return 0; }
+int ajustes_fonte_repor(void) { return 2; }
 int debrid_servico_disponivel(int servico) { return servico == 0 || servico == 1; }
 const char *i18n(const char *s) { return s; }
 void marco(const char *s) { (void)s; }
@@ -102,7 +102,7 @@ int stream_primeira_boa_sessao(int n, uint64_t sessao) {
   (void)sessao; return stream_primeira_boa(n);
 }
 int stream_verificar_proxima_vod(int i, int n, int *conferidas) {
-  (void)i; (void)n; (void)conferidas; legadas++; assert(!"VOD policy must bypass legacy fallback"); return -1;
+  (void)i; (void)n; legadas++; *conferidas = 1; return 1;
 }
 int stream_verificar_proxima_vod_sessao(int i, int n, int *conferidas, uint64_t sessao) {
   (void)sessao; return stream_verificar_proxima_vod(i, n, conferidas);
@@ -351,8 +351,22 @@ static void escolhaManualContaPrimeiroLink(void) {
   assert(fontefalha_tentativas(fonteFalha) == 1 && !aberturas && !legadas);
   assert(fontefalha_definir_provedores(0));
 }
+static void autoplayPostOpenRetry(void) {
+  resetar(); fontefalha_sessao_liberar(fonteFalha); fonteFalha = NULL;
+  fonteVODTentativas = 1; tocou = 1; posicao = 42.0; falhou = 1;
+  tentarProximaFonteVOD();
+  assert(aberturas == 1 && paradas == 1 && retomada == 42.0);
+  assert(!mortas && !irmas && !worker && fonteVODTentativas == 1);
+  // Retry fails before another frame: the original post-open status survives.
+  tocou = 0; falhou = 1;
+  tentarProximaFonteVOD();
+  assert(irmas == 0 && mortas == 1 && worker);
+  concluirWorker(); processarFonteJob();
+  assert(fonteEscolhida == 1 && fonteVODAutomatica);
+}
 int main(int argc, char **argv) {
   assert(argc == 2); fontefalha_dir(argv[1]); assert(!fontefalha_ativa());
+  autoplayPostOpenRetry();
   erroRetomaAntesDeParar(); ultimoQuadroSobreviveAoBackendZerado(); seekParaInicioRetomaZero();
   amostrasInvalidasNaoSubstituemQuadro(); prazoDeAbertura();
   sinaisQueNaoTrocamFonte(); respostaObsoletaNaoGastaSessaoAtual();

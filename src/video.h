@@ -270,6 +270,11 @@ void   video_tpk_zoom_roi_definir(int ligado);
 int    video_tpk_zoom_roi(void);
 // trailer.c marca que o que toca agora e um trailer (so ele pode ter ROI fora da tela).
 void   video_tpk_trailer_marcar(int sim);
+void   video_tpk_cartao_marcar(int sim);   // o destino e o furo do cartao da home
+int    video_tpk_cartao_cover(void);       // 1 = o cartao recebe cover (recorte de fonte), 0 = encaixe
+void   video_tpk_cartao_destino(float x, float y, float w, float h, float *ox, float *oy, float *ow, float *oh);
+void   video_tpk_cartao_furo(float x, float y, float w, float h, float *ox, float *oy, float *ow, float *oh);
+void   video_tpk_tizen_definir(const char *versao);   // gpunivel.c: platform.version
 int    video_recorte_fonte_trailer(void);   // so o trailer: o ajuste em execucao
 #else
 static inline int video_recorte_fonte_trailer(void) { return video_recorte_fonte(); }
@@ -408,7 +413,7 @@ typedef struct {
   int opacidade;  // 0..3 = texto 100/75/50/25%
   int familia;    // TxtFamilia; aplicada ao overlay externo (OpenSubtitles)
   int negrito;    // 1 = peso negrito no overlay (so o que o app desenha)
-  int corBorda;   // 0 preto (padrao), 1 branco, 2 amarelo, 3 verde, 4 azul, 5 vermelho
+  int corBorda;   // -1 unset (legacy outline); 0 Black, 1 White, 2 Yellow, 3 Green, 4 Blue, 5 Red
 } VideoLegendaEstilo;
 
 #define VIDEO_LEG_NCORES 6

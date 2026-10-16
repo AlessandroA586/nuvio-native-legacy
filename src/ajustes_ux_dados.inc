@@ -173,12 +173,15 @@ static const char *uxSinonimos(int op) {
     case AJ_LOGO_APP: return "logo marca simbolo novo classico icone identidade nuvio tv retro play gradiente splash";
     case AJ_ABERTURA: return "abertura splash inicio animacao zoom esmaecer fade direto rapido logo entrada boot arranque";
     case AJ_ESMAECER: return "esmaecer escurecer apagar tela parado ocioso inatividade protecao oled burn-in screensaver descanso tempo minutos dim";
+    case AJ_MANTER_PRAZO: return "tempo video pronto sem limite pausa retencao ilimitado minutos memoria";
+    case AJ_RETOMADA_MORNA: return "retomada rapida morna cache disco quadro conexao ilha retomar";
     case AJ_MANTER_VIDEO: return "manter video pronto sair retomar rapido instantaneo pausado reter memoria pipeline ilha trailer avancado";
     case AJ_DESCANSO_ESTILO: return "descanso screensaver protetor vitrine relogio hora filmes escurecer estilo";
     case AJ_DESCANSO_FONTE: return "descanso vitrine titulos lista continuar catalogo filmes series";
     case AJ_PROPORCAO_PADRAO: return "proporcao padrao aspecto aspect ratio zoom original recortar esticar preencher cinema tarja barras pretas formato tela tamanho imagem player";
     case AJ_HDR_UI: return "brilho interface hdr dolby vision dv branco esbranquicado leitoso vidro cor player legenda";
     case AJ_BRILHO_PLAYER: return "brilho interface player controles barra escurecer forte claro oled hdr osd luz";
+    case AJ_DICASCONTROLE: return "controle dicas atalhos remote tips CH+ CH- toque";
     case AJ_NOVIDADES20: return "novidades novo versao 2.0 tour guia o que mudou mudancas whats new";
     case AJ_DTS_AC3: return "dts truehd convertido ac3 aac dolby digital 5.1 surround estereo audio som barra de som receiver arc earc conversao lg samsung desligado converted stereo off";
     case AJ_PS_CONTINUAR: return "continuar escolha perfil cartao card tela abertura inicial assistindo retomar remover esconder desligar quem esta assistindo continue watching profile picker";
@@ -186,6 +189,12 @@ static const char *uxSinonimos(int op) {
     case AJ_CW_RETIDO_TAMBEM: return "continuar assistindo tambem ilha retomar agora fileira duplicar repetir aparecer dois lugares titulo continue watching also island resume";
     case AJ_HIST_CONTA: return "historico historico vistos progresso conta nuvio enviar scrobble simkl trakt perfil sincronizar sync history watched";
     case AJ_SOCIAL: return "social amigos amigo atividade recomendar recomendacoes friends activity recommend presenca desligar remover";
+    case AJ_ABAS_ESTILO: return "abas estilo colecao streaming chips menu suspenso dropdown barra central paginas carrossel tabs style collection pages carousel";
+    case AJ_LEG_CONTORNO_COR: return "legenda contorno sombra borda cor preto branco cinza outline edge shadow subtitle color";
+    case AJ_MENU_TOPO: return "menu barra topo alto cima lateral esquerda rail posicao navegacao top bar toolbar sidebar left position";
+    case AJ_EP_TAMANHO: return "tamanho episodio cards cartao moderno pequeno medio grande serie episode card size small medium large";
+    case AJ_ABERTURA_ADDON: return "addon add-on provedor fonte nome abertura cinema tela carregando tentativa provider name opening source";
+    case AJ_ABERTURA_FUNDO: return "fundo arte backdrop imagem titulo abertura cinema tela carregando desligado nitida borrada desfocada preto opening backdrop blurred sharp off";
     case AJ_TELA_ABERTURA: return "tela abertura abrindo carregando loading cinema detalhada fonte play transicao opening source screen";
     case AJ_PLR_CLASSIF: return "classificacao indicativa idade faixa etaria 16 12 18 livre guia parental avisos violencia nudez player content rating age parental guide";
     case AJ_APOIAR: return "apoiar apoio doar doacao patreon kofi ko-fi cafe contribuir ajudar projeto qr support donate";
@@ -195,6 +204,7 @@ static const char *uxSinonimos(int op) {
     case AJ_ENQUETES: return "enquete enquetes votacao votar pesquisa opiniao notificacao notificacoes aviso convite ilha relogio poll";
     case AJ_LEG_LINGUA2: return "idioma legenda secundaria segunda dupla dual second subtitle subtitles";
     case AJ_TRAILER_ZOOM_TPK: return "trailer zoom barras pretas tarja ampliar recorte tela preta samsung experimental";
+    case AJ_TECLADO_ANDROID: return "teclado android app grade ime sistema digitar keyboard virtual tela";
     case AJ_MIC_BUSCA: return "microfone mic voz falar ditar ditado busca buscar teclado samsung controle remoto voice";
     case AJ_FONTE_ORDEM: case AJ_FONTE_ORDEM_USO:
       return "ordem ordenar subir descer prioridade add-on addon plugin primeiro desempate estrita auto-play autoplay automatico order priority tie strict";
@@ -223,9 +233,18 @@ static const char *uxSinonimos(int op) {
       return "falha erro provedor debrid addon add-on trocar ordem prioridade limite links timeout failover fallback retry";
     case AJ_FONTE_ORDEM_ADDON: return "ordem fontes qualidade addon aiostreams resolucao tamanho instalacao source order quality";
     case AJ_P2P_LIMITE: return "limite espaco p2p torrent armazenamento disco cheio memoria buffer cache tamanho maximo gb space limit storage full";
-    case AJ_BUFFER: return "buffer tamanho memoria pequeno medio grande travando carregando rede instavel stats nerds";
+    case AJ_P2P_DESTINO: return "cache p2p pendrive usb armazenamento interno disco externo flash drive storage location";
+    case AJ_ESTAT_TAMANHO: return "estatisticas ao vivo stats nerds tamanho completo compacto minimo pequeno linha canto fixar velocidade buffer painel live statistics size full compact minimal";
+    case AJ_ESTAT_LADO: return "estatisticas ao vivo stats nerds lado direita esquerda direito esquerdo posicao painel live statistics side left right position";
+    case AJ_BUFFER: return "buffer tamanho memoria 64 128 256 mb travando carregando rede instavel stats nerds";
     case AJ_CACHE_SEEK: return "cache seek buffer disco armazenamento voltar avancar travando carregando";
     case AJ_TMDB_IDIOMA: return "idioma metadados titulo sinopse traducao tmdb";
+    case AJ_HERO_GENERO: return "genero destaque hero logo titulo categoria esconder mostrar card genre";
+    case AJ_HERO_SINOPSE: return "sinopse destaque hero texto descricao resumo esconder mostrar synopsis description";
+    case AJ_HERO_SINOPSE_TAM: return "sinopse tamanho destaque hero texto grande normal synopsis size";
+    case AJ_HERO_NOTAS: return "nota notas imdb destaque hero avaliacao rating ratings esconder mostrar";
+    case AJ_HERO_ANO: return "ano destaque hero lancamento year data esconder mostrar";
+    case AJ_HERO_DURACAO: return "duracao tempo destaque hero runtime minutos horas esconder mostrar";
     case AJ_HERO_TRAILER: return "trailer trailers destaque topo hero autoplay automatico";
     case AJ_FOCO_TRAILER: return "trailer trailers cartaz poster foco autoplay";
     case AJ_DET_TRAILER_AUTO: return "trailer trailers pagina titulo detalhes autoplay automatico";
@@ -263,9 +282,10 @@ static const char *uxCaminhoAntigo(int op) {
     case AJ_ADDONS: case AJ_PLUGINS: case AJ_ADDONS_PRINCIPAL:
       return "Contas e serviços";
     case AJ_PROVEDORES_ESCOPO: case AJ_DEBRID_RD: case AJ_DEBRID_TB: case AJ_DEBRID_PM: case AJ_DEBRID_AD: case AJ_DEBRID_AD_TESTAR:
+    case AJ_DEBRID_RD_TESTAR: case AJ_DEBRID_TB_TESTAR: case AJ_DEBRID_PM_TESTAR:
     case AJ_MDB_CHAVE: case AJ_FANART_CHAVE:
       return "Chaves";
-    case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: case AJ_P2P_LIMITE:
+    case AJ_P2P_LIGADO: case AJ_P2P_URL: case AJ_P2P_TESTAR: case AJ_P2P_LIMITE: case AJ_P2P_DESTINO:
     case AJ_JF_LIGADO: case AJ_JF_SERVIDOR: case AJ_JF_ENTRAR: case AJ_JF_SAIR:
     case AJ_EM_SERVIDOR: case AJ_EM_ENTRAR: case AJ_EM_SAIR:
     case AJ_PX_ENTRAR: case AJ_PX_SERVIDOR: case AJ_PX_SAIR:
@@ -281,7 +301,7 @@ static const char *uxCaminhoAntigo(int op) {
     case AJ_SELOS_CORES: case AJ_SELOS_PACOTE: case AJ_SELOS_PACOTE_ADD: case AJ_SELOS_PACOTE_REM:
       return "Fontes e addons";   // 2.0.2; desde a 2.0.3 a escolha da fonte mora em Reproducao
     case AJ_BUSCA_CINEMETA: case AJ_BUSCA_NUVIO: case AJ_BUSCA_ORIGEM: return "Busca";
-    case AJ_HERO_SINOPSE: case AJ_AVANCADAS: return "Aparência";
+    case AJ_AVANCADAS: return "Aparência";
     case AJ_IDIOMA: return "Idioma";
     // 2.0.3: Cartazes e arte + Trailers viraram Cartazes e trailers; Desempenho
     // desta TV virou Esta TV; Conta e perfis virou Conta e servicos.
@@ -324,6 +344,14 @@ static int uxContem(const char *texto, const char *termo) {
     p++;
   }
   return 0;
+}
+
+/* Desempate dentro da mesma faixa: quem traz o termo mais cedo vem antes
+ * ("idioma" acha "Idioma do app" antes de "Preferir o idioma do audio"). */
+static int uxPosicao(const char *texto, const char *termo) {
+  const char *p = strstr(texto, termo);
+  int pos = p ? (int)(p - texto) : 99;
+  return pos > 99 ? 99 : pos;
 }
 
 static int uxTodasPalavras(const char *texto, const char *consulta) {
@@ -396,8 +424,9 @@ int ajustes_buscar(const char *consulta, AjusteBuscaResultado *resultados, int c
     }
     if (!uxTodasPalavras(indice, busca)) continue;
     pontos = !strcmp(titulo, busca) || !strcmp(tituloPt, busca) ? 1000
-      : uxContem(titulo, busca) || uxContem(tituloPt, busca) ? 800
-      : uxContem(aliases, busca) ? 600
+      : uxContem(titulo, busca) || uxContem(tituloPt, busca)
+        ? 800 - (uxPosicao(titulo, busca) < uxPosicao(tituloPt, busca) ? uxPosicao(titulo, busca) : uxPosicao(tituloPt, busca))
+      : uxContem(aliases, busca) ? 600 - uxPosicao(aliases, busca)
       : uxTodasPalavras(titulo, busca) || uxTodasPalavras(tituloPt, busca) ? 500 : 100;
     j = total;
     while (j > 0 && encontrados[j - 1].pontos < pontos) {
