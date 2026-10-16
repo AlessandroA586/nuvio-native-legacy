@@ -1229,6 +1229,11 @@ int main(void) {
     fil_adicionar(fil_teste_achar("vivo_movie_quota"), &state);
     assert(state == (full ? FIL_NA_FILA : FIL_NA_HOME));
     assert(fil_escolhida("vivo_movie_quota") == count);
+    // Refresh eligibility (ajustes.c fileirasReagir): the explicit add stays
+    // chosen and seen even though fil_linha_oculta() excludes it by semDecl.
+    { int qi = fil_teste_achar("vivo_movie_quota");
+      assert(qi >= 0 && fil_linha_oculta(qi) && fil_linha_vista(qi));
+      assert(fil_escolhida("vivo_movie_quota") < fil_limite() == !full); }
     fil_normalizar();
     assert(fil_escolhida("vivo_movie_quota") == count);
     assert(fil_estado_chave("vivo_movie_quota") == FIL_FORA);
