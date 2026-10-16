@@ -109,7 +109,7 @@ static void padroesEValores(void) {
   for (op = 0; op < AJ_N; op++) {
     assert(!uxDiferente(op));
     if (OPCOES[op].tipo == OP_ACAO || OPCOES[op].tipo == OP_LEITURA ||
-        (CHAVE[op][0] == '-' && !ajFalhaBackend(op)) || op == AJ_PERFIL_PESQ)
+        (CHAVE[op][0] == '-' && !ajFalhaBackend(op) && !ajLegendaPrincipal(op)) || op == AJ_PERFIL_PESQ)
       assert(!uxTemPadrao(op));
     else {
       assert(uxTemPadrao(op));
@@ -772,7 +772,7 @@ int main(void) {
   for (int i = AJ_LEG2_POS; i <= AJ_LEG2_BORDA; i++) { int vezes2 = 0, k; for (k = 0; k < AJ_N_TELA; k++) if (TELA[k].tipo == IT_OPC && TELA[k].op == i) vezes2++; assert(vezes2 == 1 && valorPadrao[i] == 0); }
   { int a0 = valor[AJ_LEG2_POS], t0 = valor[AJ_LEG2_TAMANHO];
     assert(!ajustes_leg2_junto() && ajustes_leg2_tamanho() == 0 && ajustes_leg2_cor() == -1 && ajustes_leg2_fundo() == -1 && ajustes_leg2_borda() == -1);
-    valor[AJ_LEG2_POS] = 1; valor[AJ_LEG2_TAMANHO] = 3; valor[AJ_LEG2_COR] = 2; valor[AJ_LEG2_FUNDO] = 5; valor[AJ_LEG2_BORDA] = 3;
+    valor[AJ_LEG2_POS] = 1; valor[AJ_LEG2_TAMANHO] = 6; valor[AJ_LEG2_COR] = 2; valor[AJ_LEG2_FUNDO] = 5; valor[AJ_LEG2_BORDA] = 3;  // size: 50% + 10 per step (c2e07fe41)
     assert(ajustes_leg2_junto() && ajustes_leg2_tamanho() == 100 && ajustes_leg2_cor() == 1 && ajustes_leg2_fundo() == 4 && ajustes_leg2_borda() == 2);
     valor[AJ_LEG2_POS] = a0; valor[AJ_LEG2_TAMANHO] = t0; valor[AJ_LEG2_COR] = valor[AJ_LEG2_FUNDO] = valor[AJ_LEG2_BORDA] = 0; }
   assert(!strcmp(CHAVE[AJ_DISCORD], "-discord"));
