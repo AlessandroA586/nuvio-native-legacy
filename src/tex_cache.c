@@ -1982,7 +1982,7 @@ static int baixarParaItem(int idx, const char *url, char *dst, size_t tam, int *
     // card (limite <= 640): o item continua com a URL medium como chave, e a
     // promocao a heroi baixa o medium de novo, que e o que ela ja fazia.
     { int limite = limitePedido;
-      if (limite > 0 && limite <= 640) {
+      if (arte_tamanho_fundo_pequeno(limite, qualidadeImg == 2)) {
         variante = NV_CACHE_ARTE_SMALL;
         const char *m = strstr(url, "images.metahub.space/background/medium/");
         if (m) {
@@ -3818,7 +3818,7 @@ void tex_cache_marcar_larg(int grupo, const char *url, float largLayout,
   if (!url || !*url) return;
   snprintf(urlReal, sizeof urlReal, "%s", url);
 #ifdef __EMSCRIPTEN__
-  if (cap <= 640) {
+  if (arte_tamanho_fundo_pequeno(cap, qualidadeImg == 2)) {
     variante = NV_CACHE_ARTE_SMALL;
     const char *m = strstr(url, "images.metahub.space/background/medium/");
     if (m) {

@@ -37,4 +37,8 @@
 // teto maior que a maior variante, `limite` <= 0, `saida` pequena).
 int arte_tamanho_url(const char *url, int limite, char *saida, size_t tam);
 
+// Tizen: o card pede o fundo small (480x270) do metahub? No Padrao ate o teto
+// 640 (#72); na qualidade Alta so ate 480, que e o que o small realmente cobre.
+int arte_tamanho_fundo_pequeno(int limite, int qualidadeAlta);
+
 #endif

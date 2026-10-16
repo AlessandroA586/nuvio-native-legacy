@@ -96,6 +96,10 @@ static int fundoMetahub(const char *url, int limite, char *saida, size_t tam) {
   return 0;
 }
 
+int arte_tamanho_fundo_pequeno(int limite, int qualidadeAlta) {
+  return limite > 0 && limite <= (qualidadeAlta ? 480 : 640);
+}
+
 int arte_tamanho_url(const char *url, int limite, char *saida, size_t tam) {
   if (!url || !saida || !tam || limite <= 0) return 0;
   return tmdb(url, limite, saida, tam) ||
