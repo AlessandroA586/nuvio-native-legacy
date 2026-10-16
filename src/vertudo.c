@@ -522,7 +522,11 @@ static void resolverLayout(void) {
 // depois que a sonda leu o manifesto daquele addon. Uma pasta que veio do
 // PACOTE ja traz a base escrita.
 static const char *baseDaFonte(const ColSource *s) {
+#if defined(NV_TPK40) || defined(NV_UM_FIO)
+  static char base[NV_ADDON_URL_MAX]; // no compiler TLS on Tizen 4/5 (rede.h)
+#else
   static _Thread_local char base[NV_ADDON_URL_MAX];
+#endif
   if (s->base[0]) return s->base;
   addons_base_por_id_copiar(s->addonId, base, sizeof base);
   return base;
