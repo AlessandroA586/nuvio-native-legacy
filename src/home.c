@@ -5157,7 +5157,7 @@ static void desenhaHero(Uint32 agora, float saida) {
   float aTexto = (1.0f - saida) * aVis * heroVisivelToque();
   // Herói dividido em foco: o painel da fileira já mostra logo/meta/sinopse;
   // fica só o fundo, para a ficha aparecer uma vez.
-  if (foco.fileira >= 0 && foco.fileira < nFileiras &&
+  if (!focoHero && foco.fileira >= 0 && foco.fileira < nFileiras &&
       fileiras[foco.fileira].tipo == FILEIRA_HEROI_DIVIDIDO) aTexto = 0.0f;
   // MODO CINEMA: o bloco desce NV_CINEMA_DESCE enquanto apaga (o do detalhe) e
   // so o logo fica. `aCopy` e a opacidade do que SOME; o logo segue `aTexto`.
