@@ -266,11 +266,11 @@ static int cwTocarT, cwTocarE;
 // onto a title-level sheet that had none.
 static int folhaTocarT, folhaTocarE;
 static void gravarFolhaTocar(int t, int e, int tem) {
-  if (tem && t > 0 && e > 0) { folhaTocarT = t; folhaTocarE = e; }
+  if (tem && t >= 0 && e > 0) { folhaTocarT = t; folhaTocarE = e; }
   else folhaTocarT = folhaTocarE = 0;
 }
 static int consumirFolhaTocar(int *t, int *e) {
-  if (folhaTocarT <= 0 || folhaTocarE <= 0) return 0;
+  if (folhaTocarT < 0 || folhaTocarE <= 0) return 0;
   if (t) *t = folhaTocarT; if (e) *e = folhaTocarE;
   folhaTocarT = folhaTocarE = 0;
   return 1;
@@ -944,7 +944,7 @@ static void abrirPorIndice(int i) {
 static void idDoAlvo(const CatItem *ci, char *dst, size_t n) {
   int t = 0, e = 0;
   if (!ci) { if (n) dst[0] = 0; return; }
-  if (!strcmp(ci->tipo, "series") && detail_ep_foco(&t, &e) && t > 0 && e > 0)
+  if (!strcmp(ci->tipo, "series") && detail_ep_foco(&t, &e) && t >= 0 && e > 0)
     // cat_id_stream: "tt:T:E" no IMDb; o id do video do addon nos demais
     // ("kitsu:41370:5"). Os dois callers passam o item do detalhe.
     cat_id_stream(detail_indice(), t, e, dst, (unsigned)n);
@@ -1003,7 +1003,7 @@ static void alvoPlayer(char *alvo, size_t tam) {
   // republicacao do catalogo ja pode ter apontado para outro item.
   if (player_id_canal()[0]) { snprintf(alvo,tam,"%s",player_id_canal()); return; }
   if (!c) { alvo[0] = 0; return; }
-  if (t > 0 && e > 0) cat_id_stream(player_indice(), t, e, alvo, (unsigned)tam);
+  if (t >= 0 && e > 0) cat_id_stream(player_indice(), t, e, alvo, (unsigned)tam);
   else snprintf(alvo,tam,"%s",c->imdb);
 }
 // --- StreamFit runtime and passive gate (F03) -------------------------------
@@ -1017,7 +1017,7 @@ static void alvoPlayer(char *alvo, size_t tam) {
 static double fitRuntimeItem(int indice, int t, int e) {
   const CatItem *c = cat_item(indice);
   if (!c) return 0;
-  if (t > 0 && e > 0) {
+  if (t >= 0 && e > 0) {
     int n = cat_n_episodios(indice);
     for (int k = 0; k < n; k++) {
       const CatEp *ep = cat_episodio(indice, k);
@@ -1038,7 +1038,7 @@ static double fitRuntimeMeta(const char *alvo) {
   { const CatItem *ci = cat_item(detail_indice());
     idDoAlvo(ci, a, sizeof a);
     if (ci && !strcmp(a, alvo)) {
-      if (!strcmp(ci->tipo, "series") && !(detail_ep_foco(&t, &e) && t > 0 && e > 0)) return 0;
+      if (!strcmp(ci->tipo, "series") && !(detail_ep_foco(&t, &e) && t >= 0 && e > 0)) return 0;
       return fitRuntimeItem(detail_indice(), t, e);
     }
   }
@@ -2644,7 +2644,7 @@ static void lembrarAutomatica(void) {
   at = stream_atual();
   if (at < 0 || (at == ultAtual && stream_lista_geracao() == ultGer)) return;
   player_episodio_atual(&t, &e);
-  if (t <= 0 || e <= 0) return;
+  if (t < 0 || e <= 0) return;
   ultAtual = at; ultGer = stream_lista_geracao();
   { char base[24];
     idBaseDoTitulo(base, sizeof base);
@@ -4599,7 +4599,7 @@ void app_atualizar(float dt, Uint32 agora) {
         // card" = Retomar: a pagina abre e a reproducao e pedida junto, no
         // episodio que o cartao mostrava (cwTocarT/E, issue #93).
         cwTocarT = cwTocarE = 0; cwEspera = 0;
-        if (o == ILHA_PEDIU_TOCAR && ic.serie && ic.t > 0 && ic.e > 0) { cwTocarT = ic.t; cwTocarE = ic.e; }
+        if (o == ILHA_PEDIU_TOCAR && ic.serie && ic.t >= 0 && ic.e > 0) { cwTocarT = ic.t; cwTocarE = ic.e; }
         abrirPorIndice(idx);
         if (o == ILHA_PEDIU_TOCAR) detail_pedir_reproduzir();
       } else desc_pedir_titulo(ic.imdb);
@@ -4892,7 +4892,7 @@ void app_atualizar(float dt, Uint32 agora) {
           // tem), a pagina abre e o toque espera a lista (cwEsperarProximo).
           // Sem proximo — fim da serie, ou o seguinte ainda nao foi ao ar —,
           // so a pagina abre.
-          if (cw->progresso >= ajustes_cw_concluido() && cw->temporada > 0 &&
+          if (cw->progresso >= ajustes_cw_concluido() && cw->temporada >= 0 &&
               cw->episodio > 0) {
             int k = cat_indice_titulo(cw->imdb, it.indice);
             ProxSugestao prox;
@@ -5028,7 +5028,7 @@ void app_atualizar(float dt, Uint32 agora) {
       char alvoPreparo[64], basePreparo[24];
       int idxPreparado = -1;
       idDoAlvo(ci, alvoPreparo, sizeof alvoPreparo);
-      if (ci && cwTocarT > 0 && cwTocarE > 0)
+      if (ci && cwTocarT >= 0 && cwTocarE > 0)
         cat_id_stream(detail_indice(), cwTocarT, cwTocarE, alvoPreparo, sizeof alvoPreparo);
       idBaseDoTitulo(basePreparo, sizeof basePreparo);
       int lembradaPreparo = basePreparo[0] ? fontepref_escolher(basePreparo) : -1;
@@ -5050,7 +5050,7 @@ void app_atualizar(float dt, Uint32 agora) {
       // CW direto (issue #93): o episodio que o card anunciava vale sobre o
       // que episodioAlvo resolveu — ele e a unica copia fiel do "T/E do card"
       // quando a lista de episodios ainda esta a caminho.
-      if (cwTocarT > 0 && cwTocarE > 0) {
+      if (cwTocarT >= 0 && cwTocarE > 0) {
         player_definir_episodio(cwTocarT, cwTocarE);
         cwTocarT = cwTocarE = 0;
       }

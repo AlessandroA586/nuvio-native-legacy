@@ -105,6 +105,20 @@ int main(void) {
   puts("ok scrobble_ids: absent title remains unsendable");
 
   scrobble_ids_limpar(&ids);
+  {
+    const char *especiais = "{\"videos\":[{\"season\":0,\"episode\":2},"
+                            "{\"season\":0,\"episode\":1}]}";
+    MetaEpInfo especial;
+    assert(metaep_buscar(especiais, 0, 1, &especial));
+    assert(especial.temporada == 0 && especial.episodio == 1);
+    assert(metaep_proximo(especiais, 0, 1, &especial));
+    assert(especial.temporada == 0 && especial.episodio == 2);
+    scrobble_corpo(corpo, sizeof corpo, "tt12409194:0:1", 41.0);
+    assert(strstr(corpo, "\"show\"") && !strstr(corpo, "\"movie\""));
+    assert(strstr(corpo, "\"season\":0") && strstr(corpo, "\"number\":1"));
+    assert(!metaep_existe(especiais, 0, 0));
+  }
+
   free(meta);
   puts("trakt_scrobble_ids: PASS");
   return 0;
