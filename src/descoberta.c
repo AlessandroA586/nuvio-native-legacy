@@ -7985,6 +7985,7 @@ static int metaCatalogoResolver(const CatItem *orig, MetaFontes *mf, int indice)
   char id[64];
   int origem = addonDaOrigem(orig->origem), i, n = addons_n(), extras = 0;
   int ehImdb = !strncmp(orig->imdb, "tt", 2);
+  const char *cid;
   EpCine cedo = { orig, indice, 1, epPedidoAtual(), NULL };
   pthread_t cineFio;
   int paralelo = ehImdb && strcmp(orig->tipo, "movie") &&
@@ -8024,14 +8025,16 @@ static int metaCatalogoResolver(const CatItem *orig, MetaFontes *mf, int indice)
   // d) sem IMDb a vista e ficha incompleta: a API ARM
   if (!mf->tt[0] && !ehImdb && (!mf->n || !metaCompleta(mf->corpo[0])))
     armImdb(id, mf->tt, sizeof mf->tt);
-  // c) o Cinemeta completa o que faltar (ou e a base, se nenhum addon serviu)
-  if (mf->tt[0]) {
+  // c) o Cinemeta completa o que faltar (ou e a base, se nenhum addon serviu).
+  // "tmdb:" sem IMDb na ficha: o catalogo do Nuvio resolve o proprio id (#555).
+  cid = mf->tt[0] ? mf->tt : (!strncmp(id, "tmdb:", 5) ? id : "");
+  if (cid[0]) {
     int fil = 1;
     char tp[16] = "";
     char *cm;
     if (mf->n) metaTipoProprio(mf->corpo[0], tp, sizeof tp);
     if (paralelo) { cm = cedo.corpo; fil = cedo.fil; }
-    else cm = cinemetaMeta(tp[0] ? tp : orig->tipo, mf->tt, &fil);
+    else cm = cinemetaMeta(tp[0] ? tp : orig->tipo, cid, &fil);
     if (cm) {
       printf("[desc] ficha do catalogo Nuvio/Cinemeta (%s)\n", mf->n ? "complemento" : "por mapeamento");
       fflush(stdout);
