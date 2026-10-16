@@ -208,7 +208,7 @@ static int  fichaDur;
 // runtime do filme antes da ficha tecnica existir.
 static char agStatus[32], agDataProx[16], agDataUlt[16], agNomeEp[120];
 static int  agTemp, agEp;
-static struct { char yt[16], nome[80], mini[80]; } trailer[EX_TRAILER_MAX];
+static struct { char yt[16], nome[80], mini[80]; int idiomaPreferido; } trailer[EX_TRAILER_MAX];
 static int  nTrailer;
 // O hero precisa de um trailer antes de a pessoa abrir a pagina de detalhe,
 // mas carregar `extras_pedir` inteiro nesse ponto faria creditos, ficha,
@@ -325,7 +325,7 @@ static int heroTrailerIdValido(const char *id) {
   return 1;
 }
 
-typedef struct { char yt[16], nome[80], pub[32]; int peso, ordem, serie; } VideoTmdb;
+typedef struct { char yt[16], nome[80], pub[32]; int peso, ordem, serie, idiomaPreferido; } VideoTmdb;
 
 // IDIOMAS DE VIDEO. Com `language=pt-BR` sozinho o TMDB devolve em /videos
 // SO os videos marcados em portugues — e trailer de serie quase sempre esta
@@ -333,7 +333,7 @@ typedef struct { char yt[16], nome[80], pub[32]; int peso, ordem, serie; } Video
 // `include_video_language` alarga para o idioma da interface, ingles e os
 // sem idioma: "pt,en,null"; em ingles, "en,null".
 // AUDIO DO TRAILER (Ajustes > Trailers). "" = automatico (idioma da interface,
-// depois ingles), "~" = original (o ingles, quando o TMDB nao diz mais), ou um
+// then original language and English), "~" = original then English, or an
 // codigo ISO da lista de idiomas. O teste injeta o valor, sem Ajustes.
 #ifdef NUVIO_TRAILER_TEST
 static const char *testeAudio = "";
@@ -346,24 +346,27 @@ void extras_teste_trailer_audio(const char *cod) { testeAudio = cod ? cod : ""; 
 // Idioma-alvo do trailer, "xx" ou "xx-RR": o que o ranking quer e o que
 // include_video_language pede. "pt" escolhido sem interface em portugues cai em
 // pt-BR (a lista de idiomas nao distingue a variante).
-static void alvoDeVideo(const char *idioma, char *dst, size_t cap) {
+static void alvoDeVideo(const char *idioma, const char *original, char *dst, size_t cap) {
   const char *p = PREF_AUDIO();
   if (!p || !p[0]) snprintf(dst, cap, "%s", idioma && idioma[0] && idioma[1] ? idioma : "en");
-  else if (!strcmp(p, "~")) snprintf(dst, cap, "en");
+  else if (!strcmp(p, "~")) snprintf(dst, cap, "%s", original && original[0] ? original : "en");
   else if (!strcmp(p, "pt") && idioma && !strncasecmp(idioma, "pt-", 3)) snprintf(dst, cap, "%s", idioma);
   else if (!strcmp(p, "pt")) snprintf(dst, cap, "pt-BR");
   else snprintf(dst, cap, "%s", p);
 }
 
-static void idiomasDeVideo(const char *idioma, char *dst, size_t cap) {
+static void idiomasDeVideo(const char *idioma, const char *original, char *dst, size_t cap) {
   char alvo[16], iso[3] = "";
-  alvoDeVideo(idioma, alvo, sizeof alvo);
+  alvoDeVideo(idioma, original, alvo, sizeof alvo);
   if (((alvo[0] | 32) >= 'a' && (alvo[0] | 32) <= 'z') &&
       ((alvo[1] | 32) >= 'a' && (alvo[1] | 32) <= 'z')) {
     iso[0] = (char)(alvo[0] | 32); iso[1] = (char)(alvo[1] | 32);
   }
   if (!iso[0] || !strcmp(iso, "en")) snprintf(dst, cap, "en,null");
   else snprintf(dst, cap, "%s,en,null", iso);
+  if ((!PREF_AUDIO()[0] || !strcmp(PREF_AUDIO(), "~")) && original && original[0] &&
+      strcmp(original, iso) && strcmp(original, "en"))
+    snprintf(dst, cap, "%s,%s,en,null", iso, original);
 }
 
 // URL da ficha /movie|tv/<id> com o append que os toggles pedem.
@@ -372,12 +375,12 @@ static void idiomasDeVideo(const char *idioma, char *dst, size_t cap) {
 // o YouTube e a fonte que sobra, sem trailer nenhum (#123).
 static void urlFicha(char *dst, size_t cap, int serie, long idT,
                      const char *chave, const char *idioma,
-                     int datas, int trailers, int mais) {
+                     int datas, int trailers, int mais, const char *original) {
   char append[80] = "", langs[24] = "", extra[48] = "";
   if (!serie && datas) snprintf(append, sizeof append, "release_dates");
   if (trailers) {
     snprintf(append + strlen(append), sizeof append - strlen(append), "%svideos", append[0] ? "," : "");
-    idiomasDeVideo(idioma, langs, sizeof langs);
+    idiomasDeVideo(idioma, original, langs, sizeof langs);
     snprintf(extra, sizeof extra, "&include_video_language=%s", langs);
   }
   if (mais) snprintf(append + strlen(append), sizeof append - strlen(append), "%srecommendations", append[0] ? "," : "");
@@ -392,9 +395,9 @@ static void urlFicha(char *dst, size_t cap, int serie, long idT,
 // /videos solto: o do hero (temporada 0 = da obra) e o recuo da ficha para a
 // temporada mais recente (/tv/<id>/season/<n>/videos).
 static void urlVideos(char *dst, size_t cap, int serie, long idT, int temp,
-                      const char *chave, const char *idioma) {
+                      const char *chave, const char *idioma, const char *original) {
   char langs[24], seg[24] = "";
-  idiomasDeVideo(idioma, langs, sizeof langs);
+  idiomasDeVideo(idioma, original, langs, sizeof langs);
   if (serie && temp > 0) snprintf(seg, sizeof seg, "/season/%d", temp);
   snprintf(dst, cap,
            "https://api.themoviedb.org/3/%s/%ld%s/videos?api_key=%s&language=%s"
@@ -416,15 +419,14 @@ static int nomeDeEpisodio(const char *nm) {
   return 0;
 }
 
-// Ordem: filme — o idioma da interface primeiro, depois a ordem do TMDB (o
-// comportamento de antes, quando so vinha o idioma da interface). Serie — o
-// mais NOVO primeiro: o trailer da temporada mais recente e o que se quer no
-// hero e no autoplay; empate, idioma da interface, depois Trailer > Teaser.
+// Language and region rank first. Within one language rank, series prefer
+// the newest publication, then Trailer over Teaser; movies keep TMDB order.
 // O tipo vai em cada elemento, e nao num global: o fio do hero e o da pagina
 // ordenam ao mesmo tempo.
 static int cmpVideo(const void *pa, const void *pb) {
   const VideoTmdb *a = pa, *b = pb;
   int c;
+  if (a->peso / 4 != b->peso / 4) return b->peso / 4 - a->peso / 4;
   if (a->serie && (c = strcmp(b->pub, a->pub)) != 0) return c;
   if (a->peso != b->peso) return b->peso - a->peso;
   return a->ordem - b->ordem;
@@ -434,12 +436,12 @@ static int cmpVideo(const void *pa, const void *pb) {
 // elemento de results (js_array). Le TODOS antes de cortar em `max`: a
 // ordenacao da serie precisa ver o mais novo, que o TMDB nao poe primeiro.
 #define VIDEOS_LIDOS 40
-static int parsearVideos(const char *v, int serie, const char *idioma,
+static int parsearVideos(const char *v, int serie, const char *idioma, const char *original,
                          VideoTmdb *saida, int max) {
   VideoTmdb todos[VIDEOS_LIDOS];
   char alvo[16], iso[3] = "", reg[3] = "";
   int n = 0, i;
-  alvoDeVideo(idioma, alvo, sizeof alvo);
+  alvoDeVideo(idioma, original, alvo, sizeof alvo);
   iso[0] = (char)(alvo[0] | 32); iso[1] = (char)(alvo[1] | 32);
   if (alvo[2] == '-' && alvo[3] && alvo[4]) {
     reg[0] = (char)(alvo[3] & ~32); reg[1] = (char)(alvo[4] & ~32);
@@ -463,8 +465,10 @@ static int parsearVideos(const char *v, int serie, const char *idioma,
       js_texto(v, vf, "published_at", o->pub, sizeof o->pub);
       // peso: 8 idioma-alvo, +4 a regiao (pt-BR sobre pt-PT), +1 Trailer
       // (desempate da serie).
-      o->peso = (!strcmp(lg, iso) ? 8 + (reg[0] && !strcmp(rg, reg) ? 4 : 0) : 0) +
+      o->peso = (!strcmp(lg, iso) ? 8 + (reg[0] && !strcmp(rg, reg) ? 4 : 0) : ((!PREF_AUDIO()[0] && original && original[0] && !strcmp(lg, original)) ? 4 :
+                        !strcmp(lg, "en") ? 2 : 0)) +
                 (serie && !strcmp(tipo, "Trailer") ? 1 : 0);
+      o->idiomaPreferido = strcmp(iso, "en") && !strcmp(lg, iso);
       o->ordem = n;
       o->serie = serie;
       n++;
@@ -481,18 +485,21 @@ static int parsearVideos(const char *v, int serie, const char *idioma,
 static int trailersDaFicha(const char *corpo, const char *fim, int serie,
                            const char *idioma, VideoTmdb *saida, int max) {
   const char *vid;
+  char original[8] = "";
   if (!corpo) return 0;
   // `results` aparece mais de uma vez no corpo (release_dates, videos,
   // recommendations); procura a partir do bloco de videos.
+  js_texto_raiz(corpo, "original_language", original, sizeof original);
   vid = strstr(corpo, "\"videos\"");
   if (!vid) return 0;
-  return parsearVideos(js_array(vid, fim, "results"), serie, idioma, saida, max);
+  return parsearVideos(js_array(vid, fim, "results"), serie, idioma, original, saida, max);
 }
 
 // Copia para a fileira da pagina (chamar com `trava`).
 static void publicarTrailers(const VideoTmdb *vt, int nv) {
   int k;
   for (k = 0; k < nv && k < EX_TRAILER_MAX; k++) {
+    trailer[k].idiomaPreferido = vt[k].idiomaPreferido;
     snprintf(trailer[k].yt,   sizeof trailer[k].yt,   "%s", vt[k].yt);
     snprintf(trailer[k].nome, sizeof trailer[k].nome, "%s", vt[k].nome);
     snprintf(trailer[k].mini, sizeof trailer[k].mini,
@@ -502,9 +509,12 @@ static void publicarTrailers(const VideoTmdb *vt, int nv) {
 }
 
 #ifdef NUVIO_TRAILER_TEST
+void extras_teste_idiomas_video(const char *idioma, const char *original, char *dst, unsigned cap) {
+  idiomasDeVideo(idioma, original, dst, cap);
+}
 void extras_teste_url_ficha(char *dst, unsigned cap, int serie, long id,
                             const char *idioma, int trailers) {
-  urlFicha(dst, cap, serie, id, "K", idioma, 1, trailers, 1);
+  urlFicha(dst, cap, serie, id, "K", idioma, 1, trailers, 1, "");
 }
 int extras_teste_trailers_ficha(const char *corpo, int serie, const char *idioma,
                                 char yt[][16], int max) {
@@ -1033,8 +1043,20 @@ static void *buscar(void *arg) {
       // tmdb_use_more_like_this. O corpo sempre traz status, runtime e as
       // produtoras/redes — ler nao custa viagem nenhuma.
       urlFicha(url, sizeof url, serie, idT, chave, desc_tmdb_idioma(),
-               ajustes_tmdb_datas(), ajustes_tmdb_trailers(), ajustes_tmdb_mais());
+               ajustes_tmdb_datas(), ajustes_tmdb_trailers(), ajustes_tmdb_mais(), "");
       corpo = rede_baixar(url, 15);
+      if (corpo && ajustes_tmdb_trailers() &&
+          (!PREF_AUDIO()[0] || !strcmp(PREF_AUDIO(), "~"))) {
+        char original[8] = "";
+        js_texto_raiz(corpo, "original_language", original, sizeof original);
+        if (original[0] && strcmp(original, "en")) {
+          char *comOriginal;
+          urlFicha(url, sizeof url, serie, idT, chave, desc_tmdb_idioma(),
+                   ajustes_tmdb_datas(), 1, ajustes_tmdb_mais(), original);
+          comOriginal = rede_baixar(url, 15);
+          if (comOriginal) { free(corpo); corpo = comOriginal; }
+        }
+      }
       if (corpo) {
         // A ficha abaixo escreve varios campos globais. Segura a mesma trava
         // usada por extras_pedir para que uma troca de titulo nao limpe os
@@ -1286,12 +1308,12 @@ static void *buscar(void *arg) {
         // serie, nao de episodio.
         if (ultTemp > 0 && pedidoAindaAtual(id)) {
           char *cs;
-          urlVideos(url, sizeof url, 1, idT, ultTemp, chave, desc_tmdb_idioma());
+          urlVideos(url, sizeof url, 1, idT, ultTemp, chave, desc_tmdb_idioma(), fichaIdiomaOrig);
           cs = rede_baixar(url, 15);
           if (cs) {
             VideoTmdb vt[EX_TRAILER_MAX];
             int nv = parsearVideos(js_array(cs, NULL, "results"), 1,
-                                      desc_tmdb_idioma(), vt, EX_TRAILER_MAX);
+                                      desc_tmdb_idioma(), fichaIdiomaOrig, vt, EX_TRAILER_MAX);
             pthread_mutex_lock(&trava);
             if (!strcmp(id, idPedido) && sessaoDoFioAtual() && !nTrailer) {
               publicarTrailers(vt, nv);
@@ -1867,6 +1889,9 @@ const char *extras_ficha_classificacao(void) { return fichaCert; }
 const char *extras_ficha_lancamento(void)    { return fichaLanc; }
 
 int extras_n_trailers(void) { return nTrailer; }
+int extras_trailer_idioma_preferido(int i) {
+  return i >= 0 && i < nTrailer && trailer[i].idiomaPreferido;
+}
 const char *extras_trailer_yt(int i) {
   return (i >= 0 && i < nTrailer) ? trailer[i].yt : "";
 }
@@ -1897,7 +1922,9 @@ static int parsearHeroVideos(const char *corpo, int serie, const char *idioma,
   VideoTmdb v[EX_TRAILER_MAX];
   int n, i;
   if (!corpo || !saida) return 0;
-  n = parsearVideos(js_array(corpo, NULL, "results"), serie, idioma, v, EX_TRAILER_MAX);
+  if (strstr(corpo, "\"videos\""))
+    n = trailersDaFicha(corpo, NULL, serie, idioma, v, EX_TRAILER_MAX);
+  else n = parsearVideos(js_array(corpo, NULL, "results"), serie, idioma, "", v, EX_TRAILER_MAX);
   for (i = 0; i < n; i++) snprintf(saida[i].yt, sizeof saida[i].yt, "%s", v[i].yt);
   return n;
 }
@@ -1923,7 +1950,7 @@ int extras_teste_hero_serie(const char *corpo, const char *idioma, char *dst, un
   return n;
 }
 void extras_teste_url_hero(char *dst, unsigned cap, int serie, long id, const char *idioma) {
-  urlVideos(dst, cap, serie, id, 0, "K", idioma);
+  urlVideos(dst, cap, serie, id, 0, "K", idioma, "");
 }
 #endif
 
@@ -1961,9 +1988,18 @@ static void *lacoHeroTrailer(void *ignorado) {
           } }
       }
       if (idT > 0) {
-        urlVideos(url, sizeof url, serie, idT, 0, chave, desc_tmdb_idioma());
+        urlFicha(url, sizeof url, serie, idT, chave, desc_tmdb_idioma(), 0, 1, 0, "");
         { char *corpo = rede_baixar(url, 4);
           if (corpo) {
+            char original[8] = "";
+            js_texto_raiz(corpo, "original_language", original, sizeof original);
+            if ((!PREF_AUDIO()[0] || !strcmp(PREF_AUDIO(), "~")) &&
+                original[0] && strcmp(original, "en")) {
+              char *comOriginal;
+              urlFicha(url, sizeof url, serie, idT, chave, desc_tmdb_idioma(), 0, 1, 0, original);
+              comOriginal = rede_baixar(url, 4);
+              if (comOriginal) { free(corpo); corpo = comOriginal; }
+            }
             n = parsearHeroVideos(corpo, serie, desc_tmdb_idioma(), encontrados);
             free(corpo);
           } }

@@ -104,6 +104,13 @@ static TrailerDecisao escolherNaOrdem(const int *ordem, int n, const TrailerCand
   if (url) *url = NULL;
   if (qual) *qual = 0;
   if (!c) return TRF_NENHUMA;
+  if (n > 1 && c->youtubeIdiomaPreferido && c->youtube && c->youtube[0]) {
+    for (i = 0; i < n; i++) if (ordem[i] == TRF_YOUTUBE) {
+      if (url) *url = c->youtube;
+      if (qual) *qual = TRF_YOUTUBE;
+      return TRF_ABRE;
+    }
+  }
   for (i = 0; i < n; i++) {
     const char *u = NULL;
     int respondeu = 1;

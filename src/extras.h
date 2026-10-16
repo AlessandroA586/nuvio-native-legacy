@@ -198,6 +198,7 @@ const char *extras_ficha_lancamento(void);      // "2026-01-15"
 #define EX_TRAILER_MAX 6
 int         extras_n_trailers(void);
 const char *extras_trailer_yt(int i);        // id do video ("dQw4w9WgXcQ")
+int extras_trailer_idioma_preferido(int i);  // Known non-English audio match.
 const char *extras_trailer_nome(int i);      // "Official Trailer"
 // URL da miniatura. Previsivel a partir do id, sem chamada de API — e o mesmo
 // caminho que o web usa (metaDetailsScreen.js:5728). Passe direto a tex_obter:

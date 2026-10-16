@@ -466,7 +466,8 @@ static const char *trailerFonte(int k, int *qual, int cheia) {
   } else c.appleRespondeu = c.imdbRespondeu = 1;   // sem id nao ha o que esperar
 #ifdef __EMSCRIPTEN__
   if (k >= 0 && k < extras_n_trailers() && extras_trailer_yt(k)[0]) c.youtube = extras_trailer_yt(k);
-  else if (extras_n_trailers() > 0 && extras_trailer_yt(0)[0]) c.youtube = extras_trailer_yt(0);
+  else if (extras_n_trailers() > 0 && extras_trailer_yt(0)[0]) { k = 0; c.youtube = extras_trailer_yt(0); }
+  c.youtubeIdiomaPreferido = c.youtube && extras_trailer_idioma_preferido(k);
 #else
   (void)k;
 #endif

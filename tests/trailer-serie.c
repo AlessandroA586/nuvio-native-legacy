@@ -2,6 +2,7 @@
 // pulava serie, e com language=pt-BR sem include_video_language o TMDB so
 // devolve video em portugues — trailer de serie costuma ser en ou sem idioma.
 #include "../src/extras.h"
+#include "../src/trailerfonte.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +15,7 @@ int extras_teste_hero_serie(const char *corpo, const char *idioma, char *dst, un
 void extras_teste_url_hero(char *dst, unsigned cap, int serie, long id, const char *idioma);
 
 void extras_teste_trailer_audio(const char *cod);
+void extras_teste_idiomas_video(const char *idioma, const char *original, char *dst, unsigned cap);
 
 static int falhas;
 static void check(const char *nome, int ok) {
@@ -96,6 +98,41 @@ int main(void) {
   check("auto com interface pt-PT: o pt-PT primeiro", n == 3 && !strcmp(yt[0], "trailerPT01"));
 
   free(corpo);
+  corpo = strdup("{\"original_language\": \"ja\", \"videos\": {\"results\": [{\"site\": \"YouTube\", \"type\": \"Trailer\", \"key\": \"english001\", \"iso_639_1\": \"en\", \"iso_3166_1\": \"US\", \"published_at\": \"2026-01-01\"}, {\"site\": \"YouTube\", \"type\": \"Trailer\", \"key\": \"japanese01\", \"iso_639_1\": \"ja\", \"iso_3166_1\": \"JP\", \"published_at\": \"2024-01-01\"}, {\"site\": \"YouTube\", \"type\": \"Trailer\", \"key\": \"dubbedBR01\", \"iso_639_1\": \"pt\", \"iso_3166_1\": \"BR\", \"published_at\": \"2023-01-01\"}]}}");
+  extras_teste_trailer_audio("~");
+  n = extras_teste_trailers_ficha(corpo, 0, "pt-BR", yt, EX_TRAILER_MAX);
+  extras_teste_idiomas_video("pt-BR", "ja", url, sizeof url);
+  check("Original requests Japanese then English", !strcmp(url, "ja,en,null"));
+  check("Original selects Japanese before English", n == 3 && !strcmp(yt[0], "japanese01"));
+  extras_teste_trailer_audio("");
+  n = extras_teste_trailers_ficha(corpo, 0, "fr-FR", yt, EX_TRAILER_MAX);
+  extras_teste_idiomas_video("fr-FR", "ja", url, sizeof url);
+  check("Auto requests UI, original, English", !strcmp(url, "fr,ja,en,null"));
+  check("Auto falls back to Japanese before English", n == 3 && !strcmp(yt[0], "japanese01"));
+  extras_teste_trailer_audio("pt");
+  n = extras_teste_trailers_ficha(corpo, 1, "en-US", yt, EX_TRAILER_MAX);
+  check("Series language wins before publication date", n == 3 && !strcmp(yt[0], "dubbedBR01"));
+  extras_teste_trailer_audio("");
+  free(corpo);
+  {
+    TrailerCandidatos c = {0};
+    int q = 0;
+    const char *u = NULL;
+    c.apple = "https://apple/english.m3u8"; c.appleRespondeu = 1;
+    c.imdb = "https://imdb/english.mp4"; c.imdbRespondeu = 1;
+    c.youtube = "dubbedBR01"; c.youtubeRespondeu = 1;
+    c.youtubeIdiomaPreferido = 1;
+    trailerfonte_definir_imdb_tizen(1);
+    trailerfonte_escolher(TRF_AUTO, 1, &c, &u, &q);
+    check("Available dubbed TMDB beats English Apple/IMDb", q == TRF_YOUTUBE);
+    trailerfonte_escolher_cheia(TRF_AUTO, 1, 1, &c, &u, &q);
+    check("Full screen respects dubbed language", q == TRF_YOUTUBE);
+    trailerfonte_escolher(TRF_APPLE, 1, &c, &u, &q);
+    check("Explicit source remains respected", q == TRF_APPLE);
+    c.youtubeIdiomaPreferido = 0;
+    trailerfonte_escolher(TRF_AUTO, 1, &c, &u, &q);
+    check("English fallback keeps native source priority", q == TRF_APPLE);
+  }
   puts(falhas ? "trailer-serie: FALHOU" : "trailer-serie: tudo ok");
   return falhas ? 1 : 0;
 }
