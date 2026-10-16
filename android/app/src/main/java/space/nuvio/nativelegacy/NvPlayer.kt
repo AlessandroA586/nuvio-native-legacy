@@ -718,7 +718,7 @@ object NvPlayer {
             if (pedido != pedidosPreparo.get()) return@post
             soltarPreparo()
             val s = Preparo(token, pedido, url, cabecalhos, inicioMs.coerceAtLeast(0),
-                if (inicioMs > 0) 0 else fracao.coerceIn(0, 9999), buffer.coerceIn(0, 3), cacheMb.coerceIn(0, 1024), proximo, idiomaAudio)
+                if (inicioMs > 0) 0 else fracao.coerceIn(0, 9999), buffer.coerceIn(0, 256), cacheMb.coerceIn(0, 1024), proximo, idiomaAudio)
             preparo = s
             prepararMain(s, SystemClock.elapsedRealtime())
         }
