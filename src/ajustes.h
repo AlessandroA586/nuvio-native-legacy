@@ -445,6 +445,9 @@ int   ajustes_relogio_12h(void);   // 1 = 12 h com AM/PM (relogio.h)
 // #477: shared local Normal/Grande setting. Only synopsis typography.
 int ajustes_sinopse_tamanho(void);
 int ajustes_hero_sinopse_grande(void); // Normal (22/30) or Grande (24/32)
+// #362: default for collections without an explicit view, active local profile.
+// Main UI thread: validated VtLayout ID (vertudo.h); 0 keeps automatic behavior.
+int ajustes_colecao_exibicao(void);
 float ajustes_tamanho_ui(void);
 // Settings only: 0.8/0.9/1.0, default 0.9; independent of global UI zoom.
 float ajustes_tamanho_ajustes(void);
@@ -496,6 +499,8 @@ int   ajustes_selo_visto(void);
 // Desligado de fabrica; busca, biblioteca e historico nao sao filtrados.
 int   ajustes_ocultar_filmes_vistos(void);
 void  ajustes_definir_ocultar_filmes_vistos(int ligado);
+// #521: nome dentro dos ladrilhos do Mural; local, ligado de fabrica.
+int   ajustes_mural_titulos(void);
 // MODO SEGURO (seguro.h). Chamar no arranque, DEPOIS de ajustes_dir e de
 // avisos_iniciar: `caiu` = a sessao anterior nao se despediu. Desfaz o ajuste
 // arriscado que estava em prova, liga o perfil seguro se as quedas se repetem e

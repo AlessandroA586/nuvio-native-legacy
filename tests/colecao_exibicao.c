@@ -22,6 +22,7 @@
 #define desc_vertudo_mais shot_more
 #define desc_vertudo_filtro_desde shot_filter_from
 #define desc_vertudo_pagina shot_page
+#define desc_colecao_inicial shot_collection
 #define gfx_cor shot_rect
 #define gfx_recorte shot_clip
 #define gfx_sem_recorte shot_unclip
@@ -32,6 +33,7 @@
 #define desc_vertudo_n_bruto shot_vt_n
 #define desc_vertudo_item_bruto shot_vt_item
 #include "../src/vertudo.c"
+#undef desc_colecao_inicial
 #undef desc_vertudo_n
 #undef desc_vertudo_item
 #undef desc_vertudo_n_bruto
@@ -75,6 +77,62 @@ int shot_vt_item(int i, CatItem *dst) {
   if (i < 0 || i >= nSemente) return 0;
   if (dst) *dst = semente[i];
   return 1;
+}
+
+// Each request receives an immutable page. Completion gates test the actual
+// scheduler without sharing the singleton page or mutable seed across workers.
+static struct {
+  CatItem itens[2 * VIT_ITENS];
+  int n, mais, pagina, iniciou, liberada;
+} shotSources[2];
+static pthread_mutex_t shotMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t shotCond = PTHREAD_COND_INITIALIZER;
+static int initialSources;
+static Uint32 shotNow = 900;
+static void shot_prepare(int r) {
+  pthread_mutex_lock(&shotMutex);
+  memset(&shotSources[r], 0, sizeof shotSources[r]);
+  shotSources[r].n = nSemente < 2 * VIT_ITENS ? nSemente : 2 * VIT_ITENS;
+  memcpy(shotSources[r].itens, semente, sizeof(CatItem) * (size_t)shotSources[r].n);
+  shotSources[r].mais = !exhausted;
+  shotSources[r].pagina = 300;
+  pthread_mutex_unlock(&shotMutex);
+}
+int shot_collection(const ColSource *source, const char *base, NvPerfilSessao epoch,
+                    CatItem *out, int limit, DescColecaoResultado *result) {
+  assert(source && base && *base && limit > 0 && out && result);
+  int r = !strcmp(source->catId, "source1");
+  pthread_mutex_lock(&shotMutex);
+  shotSources[r].iniciou = 1; initialSources++;
+  pthread_cond_broadcast(&shotCond);
+  while (!shotSources[r].liberada) pthread_cond_wait(&shotCond, &shotMutex);
+  int n = shotSources[r].n < limit ? shotSources[r].n : limit;
+  memcpy(out, shotSources[r].itens, sizeof(CatItem) * (size_t)n);
+  *result = (DescColecaoResultado){.n=n, .pagina=shotSources[r].pagina,
+                                  .mais=shotSources[r].mais};
+  pthread_mutex_unlock(&shotMutex);
+  return nv_perfil_sessao_atual(epoch);
+}
+static void shot_release(int r) {
+  pthread_mutex_lock(&shotMutex); shotSources[r].liberada = 1;
+  pthread_cond_broadcast(&shotCond); pthread_mutex_unlock(&shotMutex);
+}
+static void shot_pump(unsigned mask, int started) {
+  Uint32 end = SDL_GetTicks() + 3000;
+  for (;;) {
+    vitCarregar(shotNow += 16); vitProjetar();
+    unsigned ready = 0;
+    for (int r = 0; r < 2; r++) {
+      if (started) {
+        pthread_mutex_lock(&shotMutex);
+        if (shotSources[r].iniciou) ready |= 1u << r;
+        pthread_mutex_unlock(&shotMutex);
+      } else if (vitLin[r].estado == VIT_PRONTA || vitLin[r].estado == VIT_VAZIA)
+        ready |= 1u << r;
+    }
+    if ((ready & mask) == mask) return;
+    assert((Sint32)(end - SDL_GetTicks()) > 0); usleep(1000);
+  }
 }
 
 static const int ANOS[] = { 2005, 1977, 1999, 2015, 1980, 0, 2002, 1983,
@@ -200,6 +258,8 @@ int main(void) {
   salvos_perfil(1);
   layEscolha = VT_LAY_AUTO; lay = VT_LAY_GRADE;
   tecla(SDLK_RETURN);
+  assert(lay == VT_LAY_GRADE && layEscolha == VT_LAY_GRADE);
+  tecla(SDLK_RETURN);
   assert(lay == VT_LAY_LINHA && layEscolha == VT_LAY_LINHA);
   tecla(SDLK_RETURN); tecla(SDLK_RETURN);
   assert(lay == VT_LAY_SAGA);
@@ -213,10 +273,30 @@ int main(void) {
   salvos_perfil(1);
   assert(escolhaGravada(&pasta) == VT_LAY_SAGA);
   // Depois do Mural vem a Vitrine, e depois dela volta ao comeco (Grade).
-  lay = VT_LAY_MURAL; tabFocus = 1; tabCursor = nAbas();
+  lay = VT_LAY_MURAL; layEscolha = VT_LAY_MURAL; tabFocus = 1; tabCursor = nAbas();
   tecla(SDLK_RETURN); assert(lay == VT_LAY_VITRINE && tabFocus == 1);
   assert(nAbas() == 0 && tabCursor == 0);
   tecla(SDLK_RETURN); assert(lay == VT_LAY_GRADE);
+
+  // Default is a distinct selector step, regardless of the inherited layout.
+  { static const int ciclo[] = {
+      VT_LAY_GRADE, VT_LAY_LINHA, VT_LAY_RANKING, VT_LAY_SAGA,
+      VT_LAY_DECADAS, VT_LAY_MURAL, VT_LAY_VITRINE, VT_LAY_AUTO
+    };
+    for (int padrao = VT_LAY_N - 1; padrao >= VT_LAY_AUTO; padrao--) {
+      char ajuste[64];
+      snprintf(ajuste, sizeof ajuste, "colecaoExibicaoPadraoLocal %d\n", padrao);
+      dados_gravar("ajustes.txt", ajuste);
+      ajustes_dir(dir);
+      assert(ajustes_colecao_exibicao() == padrao);
+      layEscolha = VT_LAY_AUTO;
+      resolverLayout();
+      for (int passo = 0; passo < (int)(sizeof ciclo / sizeof *ciclo); passo++) {
+        alternarExibicao();
+        assert(layEscolha == ciclo[passo]);
+      }
+    }
+  }
 
   // 7. VITRINE: fileiras semeadas direto (a fila de abas precisa de rede).
   pasta.nSources = 2;
@@ -265,34 +345,38 @@ int main(void) {
   pasta.nSources = 2; vitIniciar();
   semear();
   hideWatched = allWatched = exhausted = 1; semFonte = loading = 0;
-  vitGuardar(0); vitProjetar();
+  vitGuardarPagina(0); vitProjetar();
   assert(vitLin[0].brutoN > 0 && vitLin[0].n == 0);
   exhausted = 1;
   vitDesenhar(1.0f, 100.0f);
   assert(emptyTexts == 1);
 
-  // Drive the real source queue: an all-watched row must not starve row two.
+  // Start both sources while the first is blocked: watched row zero cannot
+  // starve a ready second row, and the canonical order remains unchanged.
   snprintf(fontes[0].base, sizeof fontes[0].base, "https://unused.invalid/first");
   snprintf(fontes[1].base, sizeof fontes[1].base, "https://unused.invalid/second");
-  exhausted = moreCalls = 0;
-  vitIniciar();
-  vitCarregar(900); assert(openedSources == 1 && loading);
-  loading = 0;
-  vitCarregar(1000);
-  vitCarregar(1010);
-  assert(openedSources == 2 && source == 1);
-  snprintf(semente[0].tipo, sizeof semente[0].tipo, "series");
-  loading = 0;
-  vitCarregar(1020); vitProjetar();
+  for (i = 0; i < 2; i++) {
+    snprintf(fontes[i].type, sizeof fontes[i].type, "movie");
+    snprintf(fontes[i].catId, sizeof fontes[i].catId, "source%d", i);
+  }
+  semear(); exhausted = moreCalls = openedSources = initialSources = 0;
+  shot_prepare(0);
+  snprintf(semente[0].tipo, sizeof semente[0].tipo, "series"); shot_prepare(1);
+  snprintf(semente[0].tipo, sizeof semente[0].tipo, "movie");
+  vitIniciar(); shot_pump(3, 1);
+  assert(initialSources == 2 && openedSources == 0);
+  shot_release(1); shot_pump(2, 0);
+  assert(vitLin[0].estado == VIT_CARREGANDO && !vitLin[0].n && vitLin[1].n == 1);
+  shot_release(0); shot_pump(3, 0);
   assert(vitLin[1].n == 1 && vitCarga == vitN);
   vitFR = 0; vitFC = 0; tabFocus = 0;
   tecla(SDLK_DOWN); assert(vitFR == 1);
   tecla(SDLK_UP); assert(vitFR == 0);
-  tecla(SDLK_RETURN);
-  vitCarregar(1025);
-  assert(source == 0 && openedSources == 3 && resumedPage == 300);
+  tecla(SDLK_RETURN); vitCarregar(1025);
+  assert(source == 0 && openedSources == 1 && resumedPage == 300 && loading);
   loading = 0;
   snprintf(semente[0].imdb, sizeof semente[0].imdb, "tt-resumed");
+  snprintf(semente[0].tipo, sizeof semente[0].tipo, "series");
   vitCarregar(1030); vitProjetar();
   assert(vitLin[0].n == 1 && vitLin[1].n == 1);
   assert(!strcmp(vitItem(0, 0)->imdb, "tt-resumed"));
@@ -300,19 +384,19 @@ int main(void) {
   assert(vitLin[0].n == NANOS && !strcmp(vitItem(0, 0)->imdb, "tt7000000"));
   hideWatched = 1;
 
-  // A bounded all-watched page must stay available for explicit pagination.
-  semear(); vitIniciar();
-  semFonte = loading = 0;
-  vitCarga = source = 0; vitLin[0].estado = VIT_CARREGANDO;
-  vitCarregar(1000);
+  // A bounded all-watched page stays available for explicit pagination.
+  semear(); allWatched = 1; openedSources = 0;
+  shot_prepare(0); shot_prepare(1); vitIniciar();
+  shot_pump(3, 1); shot_release(0); shot_pump(1, 0);
   assert(vitCarga == 1 && temMaisVistos() && moreCalls == 0);
   tabFocus = 1;
   tecla(SDLK_DOWN); assert(!tabFocus && vitFR == 0);
-  tecla(SDLK_RETURN); assert(moreCalls == 1);
-  vitCarregar(1070); assert(vitCarga == 0 && moreCalls == 1);
+  tecla(SDLK_RETURN); vitCarregar(1070);
+  assert(openedSources == 1 && resumedPage == 300 && loading && vitCarga == 0);
   allWatched = loading = 0;
   vitCarregar(1100); vitProjetar();
-  assert(vitCarga == 1 && vitLin[0].n > 0);
+  assert(vitLin[0].n > 0);
+  shot_release(1); shot_pump(3, 0);
 
   // Single-source grouped rows must expose explicit continuation after 300 watched titles.
   pasta.nSources = 1; vitIniciar();
@@ -351,27 +435,26 @@ int main(void) {
   vitCarregar(1320); vitProjetar();
   assert(vitLin[1].n > 0 && !temMaisVistos());
 
-  // An empty non-first source can resume even with watched filtering disabled.
+  // An empty non-first source can resume even with watched filtering off.
   pasta.nSources = 2; hideWatched = allWatched = exhausted = loading = moreCalls = 0;
-  vitIniciar(); vitCarga = source = 1; vitLin[0].estado = VIT_PRONTA;
-  vitLin[1].estado = VIT_CARREGANDO; nSemente = 0;
-  vitCarregar(4000); vitProjetar();
+  semear(); shot_prepare(0); nSemente = 0; shot_prepare(1);
+  vitIniciar(); shot_release(0); shot_release(1); shot_pump(3, 0);
   assert(vitLin[1].estado == VIT_VAZIA && vitLin[1].mais && temMaisVistos());
-  vitFR = 1; vitFC = tabFocus = 0;
-  tecla(SDLK_RETURN); assert(moreCalls == 1 && loading);
+  openedSources = 0; vitFR = 1; vitFC = tabFocus = 0;
+  tecla(SDLK_RETURN); vitCarregar(4000);
+  assert(openedSources == 1 && resumedPage == 300 && loading);
   semear(); loading = 0;
   vitCarregar(4010); vitProjetar();
   assert(vitLin[1].n == NANOS);
 
   // Resuming a filtered non-first source preserves its original titles.
-  hideWatched = allWatched = 1; moreCalls = 0;
-  vitIniciar(); vitCarga = source = 1; vitLin[0].estado = VIT_PRONTA;
-  vitLin[1].estado = VIT_CARREGANDO;
-  vitCarregar(5000); vitProjetar();
+  semear(); hideWatched = allWatched = 1; moreCalls = openedSources = 0;
+  shot_prepare(0); shot_prepare(1); vitIniciar();
+  shot_release(0); shot_release(1); shot_pump(3, 0);
   assert(!vitLin[1].n && vitLin[1].mais);
   source = 0; vitFR = 1; vitFC = tabFocus = 0;
   tecla(SDLK_RETURN); vitCarregar(5010);
-  assert(source == 1 && resumedPage == 300 && loading);
+  assert(source == 1 && openedSources == 1 && resumedPage == 300 && loading);
   snprintf(semente[0].imdb, sizeof semente[0].imdb, "tt-later-source");
   snprintf(semente[0].tipo, sizeof semente[0].tipo, "series");
   loading = 0; vitCarregar(5020); vitProjetar();
