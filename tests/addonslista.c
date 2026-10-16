@@ -216,9 +216,10 @@ int main(void) {
   conferir("legenda[0]", addons_fornece(0, ADD_LEGENDA), 1);
   conferir("fonte[1]",   addons_fornece(1, ADD_STREAM),   1);
   conferir("catalogo[1] (ativo e catalogo)", addons_tem_catalogo(1), 1);
-  // Formato antigo: fonte e catalogo valem 1, legenda 0.
+  // Formato antigo: sem colunas vale tudo 1, como na lista da conta (#552) —
+  // addon de legenda so com a URL no arquivo nao pode esperar a sonda.
   conferir("fonte[2]",   addons_fornece(2, ADD_STREAM),   1);
-  conferir("legenda[2]", addons_fornece(2, ADD_LEGENDA), 0);
+  conferir("legenda[2]", addons_fornece(2, ADD_LEGENDA), 1);
 
   // A base sai sem "/manifest.json" — a mesma regra de baseNormalizada.
   conferirTexto("base[1]", addons_base(1), "https://exemplo.test");
@@ -378,6 +379,10 @@ int main(void) {
   // /stream/ a ele nem chama-lo de "sem resposta".
   conferir("so legenda entrou", addons_adicionar("OpenSubtitles v3", "https://legenda.test/manifest.json"), 1);
   idxLegenda = addons_n() - 1;
+  // Instalado pelo guia supoe legenda como a lista da conta (#552): sem isto o
+  // addon so de legenda ficava fora da busca ate a sonda, e para sempre se
+  // ela falhasse.
+  conferir("instalado pelo guia supoe legenda", addons_fornece(idxLegenda, ADD_LEGENDA), 1);
   pedidosLegendaStream = 0;
   addons_definir_origem("https://legenda.test");
   addons_buscar("tt0000013", "movie");
@@ -409,12 +414,14 @@ int main(void) {
     b = a + 1; c = a + 2;
     addons_manifesto_lido(a, "{\"id\":\"m.a\",\"name\":\"Meta A\",\"resources\":"
                              "[\"catalog\",{\"name\":\"meta\",\"types\":[\"series\"]}]}");
-    addons_manifesto_lido(b, "{\"id\":\"m.b\",\"name\":\"Meta B\",\"resources\":[\"meta\",\"subtitles\"]}");
+    addons_manifesto_lido(b, "{\"id\":\"m.b\",\"name\":\"Meta B\",\"resources\":[\"meta\","
+                             "{\"name\":\"subtitles\",\"types\":[\"movie\",\"series\"]}]}");
     addons_manifesto_lido(c, "{\"id\":\"m.c\",\"name\":\"Meta C\",\"resources\":[\"stream\"]}");
     conferir("meta (objeto)", addons_fornece(a, ADD_META), 1);
     conferir("meta (string)", addons_fornece(b, ADD_META), 1);
+    conferir("legenda (objeto)", addons_fornece(b, ADD_LEGENDA), 1);
     conferir("meta (nao declara)", addons_fornece(c, ADD_META), 0);
-    conferir("legenda segue lida do manifesto", addons_fornece(b, ADD_LEGENDA), 1); }
+    conferir("legenda segue lida do manifesto", addons_fornece(c, ADD_LEGENDA), 0); }
 
   // idPrefixes/types DO RESOURCE "meta" (addons_aceita_id). A raiz do manifesto
   // e o resource declaram; o do resource vence; o "idPrefixes" de OUTRO resource
