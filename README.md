@@ -23,26 +23,6 @@ Esta aplicación es una adaptación de alto rendimiento del reproductor Nuvio pa
 
 ---
 
-## Cómo Instalar la Aplicación
-
-### 1. En televisores Samsung (Tizen)
-
-1. En la tienda de aplicaciones de la tele (Apps), presiona los números `1 2 3 4 5` en el control remoto para activar el modo de desarrollo (**Developer Mode**).
-2. Activa la casilla **ON**, escribe la dirección IP de tu computadora y reinicia el televisor.
-3. Abre el programa [Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung) en tu computadora.
-4. Conéctate a la dirección IP de tu televisor y selecciona el archivo `.tpk` correspondiente al año de tu tele para instalarlo.
-
-### 2. En televisores Android TV
-
-1. Descarga el archivo de instalación `.apk`.
-2. Pásalo a una memoria USB para instalarlo en la tele, o instálalo directamente desde tu computadora usando el comando ADB:
-   ```bash
-   adb connect <IP_DE_TU_TELEVISOR>:5555
-   adb install -r Nuvio-android.apk
-   ```
-
----
-
 ## Proyectos Originales
 
 Para conocer los proyectos base o contribuir con el desarrollo general:
