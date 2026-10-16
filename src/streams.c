@@ -126,6 +126,8 @@ static int decoder4k[4] = { -1, -1, -1, -1 }; // HEVC, AVC, VP9, AV1
 static int decoderFalhaAltura[4];             // apenas a lista atual
 static int excedeDecoder(const Stream *s);
 static int temAudioPt(const Stream *s);
+static void audioPtCacheInvalidar(void);
+static void folhaCachesInvalidar(void);
 static pthread_mutex_t autoExclTrava = PTHREAD_MUTEX_INITIALIZER;
 // Trava entre a lista e os fios de verificacao (ver Lote, abaixo): a troca de
 // lista e as leituras/escritas dos fios em `lista[]` passam por ela.
@@ -500,6 +502,7 @@ void stream_definir_lista_idade(const Stream *l, int qtd, Uint32 idade) {
   recebidaEm = SDL_GetTicks() - idade;
   temRecebidaEm = 1;
   listaGeracao++;
+  folhaCachesInvalidar();
   cancelarConferenciasSemTrava();
   pthread_mutex_unlock(&verTrava);
   selosAgendar(0, n);
@@ -539,6 +542,38 @@ static _Atomic int foraCacheFoco = -1;
 static void atualizarProvedores(void);
 static int aberta, foco, grupo;
 static float rolagem, velRol;
+static int montarSujo = 1;
+static int cabecalhoSujo = 1;
+static unsigned provCacheGer = 0;
+static int provCacheN = -1;
+static unsigned abasCacheGer = 0;
+static int abasCacheN = -1;
+static int abasCacheSoMp4 = -1;
+static int abasCacheSoCache = -1;
+static int abasCacheSoDub = -1;
+static int abasCacheNProv = -1;
+static int autoCacheIdx[2] = { -1, -1 };
+static unsigned autoCacheGer[2] = { 0, 0 };
+static int autoCacheN[2] = { -1, -1 };
+static char autoCacheLing[2][32] = { "", "" };
+
+static void folhaCachesInvalidar(void) {
+  montarSujo = 1;
+  cabecalhoSujo = 1;
+  provCacheGer = 0;
+  provCacheN = -1;
+  abasCacheGer = 0;
+  abasCacheN = -1;
+  abasCacheSoMp4 = -1;
+  abasCacheSoCache = -1;
+  abasCacheSoDub = -1;
+  abasCacheNProv = -1;
+  autoCacheGer[0] = 0;
+  autoCacheGer[1] = 0;
+  autoCacheN[0] = -1;
+  autoCacheN[1] = -1;
+  audioPtCacheInvalidar();
+}
 
 void stream_lista_acrescentar(const Stream *l, int qtd, int ordemAddon) {
   int i, k = 0, focoIdx = -1, linhaAntes = -1, total;
@@ -586,6 +621,7 @@ void stream_lista_acrescentar(const Stream *l, int qtd, int ordemAddon) {
     exib[pos] = idx;
   }
   n = total;
+  folhaCachesInvalidar();
   if (!temRecebidaEm) { recebidaEm = SDL_GetTicks(); temRecebidaEm = 1; }
   pthread_mutex_unlock(&verTrava);
   selosAgendar(total - k, k);
@@ -2536,6 +2572,14 @@ static int canalFolha;
 static unsigned lgMp4LogGer; static int lgMp4LogIdx = -1;
 static int automaticoCom(int regras) {
   if (!stream_n()) return -1;
+  int rIdx = regras ? 1 : 0;
+  const char *alvoLing = ling_audio();
+  const char *lingStr = (alvoLing && *alvoLing) ? alvoLing : "es";
+  if (autoCacheGer[rIdx] == listaGeracao && autoCacheN[rIdx] == n &&
+      autoCacheN[rIdx] >= 0 &&
+      !strcmp(autoCacheLing[rIdx], lingStr)) {
+    return autoCacheIdx[rIdx];
+  }
   int melhor = -1, gMelhor = 0, m = 0;
   long maior = 0;
   int lg = regras && lgMp4Primeiro();
@@ -2544,7 +2588,6 @@ static int automaticoCom(int regras) {
   signed char *grp = lg ? malloc((size_t)n) : NULL;
   if (lg && (!idx || !pts || !grp)) lg = 0;
 
-  const char *alvoLing = ling_audio();
   int temLinguaConfig = (alvoLing && *alvoLing && strcmp(alvoLing, "*") != 0);
   int tetoRes = alturaMax();
   int haCandidatasComLingua = 0;
@@ -2596,6 +2639,10 @@ static int automaticoCom(int regras) {
   if (regras && melhor < 0 && n > 0) {
     regraBloqueou = 1;
   }
+  autoCacheIdx[rIdx] = melhor;
+  autoCacheGer[rIdx] = listaGeracao;
+  autoCacheN[rIdx] = n;
+  snprintf(autoCacheLing[rIdx], sizeof(autoCacheLing[rIdx]), "%s", lingStr);
   return melhor;
 }
 // As regras de auto-play (#202) sao de filme e serie, como no oficial: canal
@@ -2609,9 +2656,14 @@ int stream_proxima_sem_perda(int atual) {
   int melhor = -1, gMelhor = 0;
   long maior = 0;
   if (atual < 0 || atual >= n) return 0;
+  const char *alvoLing = ling_audio();
+  int temLinguaConfig = (alvoLing && *alvoLing && strcmp(alvoLing, "*") != 0);
+  int tetoRes = alturaMax();
   for (int k = 0; k < n; k++) {
     int i = ORD(k), g = grupoDe(i);
     if (i == atual || foraDoAuto(i) || g < 0) continue;
+    if (tetoRes && lista[i].altura > tetoRes) continue;
+    if (temLinguaConfig && !temAudioPt(&lista[i])) continue;
     long p = pontos(&lista[i]);
     if (melhor < 0 || g < gMelhor || (g == gMelhor && p > maior)) { maior = p; melhor = i; gMelhor = g; }
   }
@@ -2623,9 +2675,15 @@ int stream_proxima_sem_perda(int atual) {
 static int proximaVODSemTrava(int atualIdx) {
   // A vencedora inicial pode estar no fim: percorrer TODAS as nao tentadas,
   // na ordem do addon. Falhas anteriores ja estao excluidas nesta lista.
+  const char *alvoLing = ling_audio();
+  int temLinguaConfig = (alvoLing && *alvoLing && strcmp(alvoLing, "*") != 0);
+  int tetoRes = alturaMax();
   for (int k = 0; k < n; k++) {
     int i = ORD(k);
-    if (i != atualIdx && !foraDoAuto(i) && grupoDe(i) >= 0) return i;
+    if (i == atualIdx || foraDoAuto(i) || grupoDe(i) < 0) continue;
+    if (tetoRes && lista[i].altura > tetoRes) continue;
+    if (temLinguaConfig && !temAudioPt(&lista[i])) continue;
+    return i;
   }
   return -1;
 }
@@ -2742,6 +2800,7 @@ static int passaFiltro(int i) {
 // Abas na ORDEM DE EXIBICAO (a dos addons), e a aba escolhida segue pelo
 // NOME: com a lista enchendo (#221) um addon novo pode entrar antes dela.
 static void atualizarProvedores(void) {
+  if (provCacheGer == listaGeracao && provCacheN == n && nProvedores > 0) return;
   char escolhido[96];
   snprintf(escolhido, sizeof escolhido, "%s", filtro > 0 && filtro < nProvedores ? provedores[filtro] : "");
   nProvedores = 1;
@@ -2758,6 +2817,8 @@ static void atualizarProvedores(void) {
     filtro = j < nProvedores ? j : 0;
   }
   if(filtro>=nProvedores) filtro=0;
+  provCacheGer = listaGeracao;
+  provCacheN = n;
 }
 static int nFiltrados(void) {
   if (filtro == -1) return ondever_n(alvoPedido);
@@ -2851,15 +2912,22 @@ static void rotuloQualidade(const Stream *s, char *res, size_t nr, char *faixa, 
   else snprintf(faixa, nf, "SDR");
 }
 static int *ordem;
-static float *linhaY, *linhaH;
+static float *linhaY, *linhaH, *linhaBaseH, *linhaExtraH;
 static int ordemCap, nOrdem;
 static float secY[FOLHA_GRUPOS], alturaTotal;
 static int secN[FOLHA_GRUPOS];
-// A linha em foco abre (abreFoco 0->1) e a que perdeu o foco fecha (abreAnt
-// 1->0) ao mesmo tempo: abrir uma e fechar a outra no mesmo quadro empurraria
-// a lista inteira de uma vez.
 static float abreFoco = 1.0f, abreAnt;
 static int linhaAnt = -1, focoVisto = -1;
+static unsigned montarGeracao = 0;
+static int montarN = -1;
+static int montarFiltro = -999;
+static int montarSoMp4 = -1;
+static int montarSoCache = -1;
+static int montarSoDub = -1;
+static int montarMelhor = -999;
+static int montarOrdemAddon = -1;
+static float prevAbreFoco = -1.0f, prevAbreAnt = -1.0f;
+static int prevFoco = -1, prevLinhaAnt = -1;
 
 
 // MODO "DO ADDON" (Ajustes > Texto das fontes; dono, 02/10: "tem que ter a
@@ -2982,6 +3050,23 @@ static int temNoTexto(const Stream *s, const char *p) {
   return temPalavra(s->rotulo, p) || temPalavra(s->descricao, p) || temPalavra(s->arquivo, p);
 }
 static int ehIdiomaEspanhol(const char *txt) {
+  if (!txt || !*txt) return 0;
+  unsigned char c = (unsigned char)txt[0];
+  if (c == 'e' || c == 'E') {
+    if (!strncasecmp(txt, "es-", 3) || !strcasecmp(txt, "es") ||
+        !strcasecmp(txt, "español") || !strcasecmp(txt, "espanol") ||
+        !strcasecmp(txt, "spa") || !strncasecmp(txt, "esp", 3)) return 1;
+  } else if (c == 'l' || c == 'L') {
+    if (!strcasecmp(txt, "latino") || !strcasecmp(txt, "latam") ||
+        !strcasecmp(txt, "latteam") || !strncasecmp(txt, "lat", 3)) return 1;
+  } else if (c == 'c' || c == 'C') {
+    if (!strcasecmp(txt, "castellano") || !strcasecmp(txt, "cast")) return 1;
+  } else if (c == 's' || c == 'S') {
+    if (!strcasecmp(txt, "spanish") || !strcasecmp(txt, "spa")) return 1;
+  } else if (c == 'd' || c == 'D') {
+    if (!strcasecmp(txt, "doblaje") || !strcasecmp(txt, "doblado") ||
+        !strcasecmp(txt, "dual")) return 1;
+  }
   return temPalavra(txt, "latino") || temPalavra(txt, "latam") ||
          temPalavra(txt, "castellano") || temPalavra(txt, "cast") ||
          temPalavra(txt, "spanish") || temPalavra(txt, "español") ||
@@ -3291,7 +3376,62 @@ static const char *idiomaDa(const Stream *s) {
   if (temNoTexto(s, "legendado") || temNoTexto(s, "leg") || temNoTexto(s, "sub") || temNoTexto(s, "subs")) return "Legendado";
   return NULL;
 }
+static int *audioPtCache = NULL;
+static int audioPtCacheCap = 0;
+static unsigned audioPtCacheGer = 0;
+static char audioPtCacheLing[32] = "";
+static pthread_mutex_t audioPtTrava = PTHREAD_MUTEX_INITIALIZER;
+
+static void audioPtCacheInvalidar(void) {
+  pthread_mutex_lock(&audioPtTrava);
+  audioPtCacheGer = 0;
+  pthread_mutex_unlock(&audioPtTrava);
+}
+
+static int temAudioPtReal(const Stream *s);
+
 static int temAudioPt(const Stream *s) {
+  if (!s) return 0;
+  const char *alvo = ling_audio();
+  if (!alvo || !*alvo || !strcmp(alvo, "*")) alvo = "es";
+  if (lista && s >= lista && s < lista + n) {
+    int idx = (int)(s - lista);
+    int res = -1;
+    pthread_mutex_lock(&audioPtTrava);
+    if (audioPtCacheGer != listaGeracao || audioPtCacheCap < n || strcmp(audioPtCacheLing, alvo) != 0) {
+      if (audioPtCacheCap < n) {
+        int cap = n + 64;
+        int *c = realloc(audioPtCache, (size_t)cap * sizeof(int));
+        if (c) {
+          audioPtCache = c;
+          audioPtCacheCap = cap;
+        }
+      }
+      if (audioPtCache && audioPtCacheCap >= n) {
+        for (int i = 0; i < n; i++) audioPtCache[i] = -1;
+        audioPtCacheGer = listaGeracao;
+        snprintf(audioPtCacheLing, sizeof(audioPtCacheLing), "%s", alvo);
+      }
+    }
+    if (audioPtCache && idx < audioPtCacheCap) {
+      res = audioPtCache[idx];
+    }
+    pthread_mutex_unlock(&audioPtTrava);
+    if (res >= 0) return res;
+
+    res = temAudioPtReal(s);
+
+    pthread_mutex_lock(&audioPtTrava);
+    if (audioPtCache && audioPtCacheGer == listaGeracao && idx < audioPtCacheCap) {
+      audioPtCache[idx] = res;
+    }
+    pthread_mutex_unlock(&audioPtTrava);
+    return res;
+  }
+  return temAudioPtReal(s);
+}
+
+static int temAudioPtReal(const Stream *s) {
   if (!s) return 0;
   const char *alvo = ling_audio();
   if (!alvo || !*alvo || !strcmp(alvo, "*")) alvo = "es";
@@ -3538,12 +3678,31 @@ static float alturaLinha(int i, int automatica) {
   }
   return h + linhasFaixas(&lista[i]) * FOLHA_FAIXA_H;
 }
-static void porLinha(int i, float *y, int automatica) {
-  float h = alturaLinha(i, automatica);
+static void precalcularAlturas(int row, int i, int automatica) {
+  if (i < 0) {
+    linhaBaseH[row] = FOLHA_LINHA_H;
+    linhaExtraH[row] = 0.0f;
+    return;
+  }
+  float baseH = FOLHA_LINHA_H + (temMarca(i, automatica) ? FOLHA_MARCA_H : 0.0f);
+  float extraH = 0.0f;
+  if (ajustes_fonte_texto_addon()) {
+    int temIdioma = 0;
+    int nu = addonLinhasUteis(&lista[i], &temIdioma);
+    baseH = 36.0f + 38.0f + (float)nu * FOLHA_ADDON_LD + (temMarca(i, automatica) ? FOLHA_MARCA_H : 0.0f);
+    if (!temIdioma) baseH += (float)linhasFaixas(&lista[i]) * FOLHA_FAIXA_H;
+    if (stream_selos_ha(&lista[i])) baseH += 32.0f;
+    if (baseH < 96.0f) baseH = 96.0f;
+  } else {
+    extraH = (arquivoDa(&lista[i])[0] ? FOLHA_ARQ_H : 0.0f) + FOLHA_FIT_H * (float)fitLinhas(i);
+    baseH += (float)linhasFaixas(&lista[i]) * FOLHA_FAIXA_H;
+  }
+  linhaBaseH[row] = baseH;
+  linhaExtraH[row] = extraH;
+}
+static void porLinhaEstrutura(int i, int automatica) {
   ordem[nOrdem] = i;
-  linhaY[nOrdem] = *y;
-  linhaH[nOrdem] = h;
-  *y += h + FOLHA_LINHA_GAP;
+  precalcularAlturas(nOrdem, i, automatica);
   nOrdem++;
 }
 // Tamanho para ordenar: desconhecido (0) vai para o fim do grupo.
@@ -3557,8 +3716,8 @@ static long tamanhoOrdem(int i) { return lista[i].tamanhoMB > 0 ? lista[i].taman
 static int *grupoTmp;
 static int *grupoFitTmp;
 static int grupoTmpCap;
-static void montar(int automatica) {
-  float y = 0;
+
+static void montarEstrutura(int automatica) {
   int g, i, k, m = -1, nt;
   int needed = filtro == -1 ? ondever_n(alvoPedido) : n;
   if (ordemCap < needed) {
@@ -3569,25 +3728,35 @@ static void montar(int automatica) {
     if (a) linhaY = a;
     float *b = realloc(linhaH, cap * sizeof *b);
     if (b) linhaH = b;
-    if (!o || !a || !b) { nOrdem = 0; return; }
+    float *bh = realloc(linhaBaseH, cap * sizeof *bh);
+    if (bh) linhaBaseH = bh;
+    float *eh = realloc(linhaExtraH, cap * sizeof *eh);
+    if (eh) linhaExtraH = eh;
+    if (!o || !a || !b || !bh || !eh) { nOrdem = 0; return; }
     ordemCap = cap;
   }
   if (filtro == -1) {
     memset(secN, 0, sizeof secN);
     nOrdem = needed;
     for (k = 0; k < needed; k++) {
-      ordem[k] = -2-k; linhaY[k] = y; linhaH[k] = FOLHA_LINHA_H;
-      y += linhaH[k] + FOLHA_LINHA_GAP;
+      ordem[k] = -2-k;
+      linhaBaseH[k] = FOLHA_LINHA_H;
+      linhaExtraH[k] = 0.0f;
     }
-    alturaTotal = y;
+    montarSujo = 0;
+    montarGeracao = listaGeracao;
+    montarN = n;
+    montarFiltro = filtro;
+    montarSoMp4 = soMp4;
+    montarSoCache = soCache;
+    montarSoDub = soDub;
+    montarMelhor = melhorFolha;
+    montarOrdemAddon = ajustes_fonte_ordem_addon();
     return;
   }
   // #400/#402: ordem do addon, com negativas de cache conhecidas no fim.
   // A folha chama montar() a cada desenho: mudar o ajuste vale no proximo quadro.
   if (ajustes_fonte_ordem_addon()) {
-    // A classificacao do StreamFit (avisos "Acima da conexao") e o
-    // enriquecimento de canal (grupoRes -> stream_canal_enriquecer) continuam;
-    // so a ordem e a do addon.
     fitAtualizar();
     memset(secN, 0, sizeof secN);
     nOrdem = 0;
@@ -3595,9 +3764,17 @@ static void montar(int automatica) {
       i = ORD(k);
       if (!passaFiltro(i) || !!lista[i].foraCache != fora) continue;
       (void)grupoRes(&lista[i]);
-      porLinha(i, &y, automatica);
+      porLinhaEstrutura(i, automatica);
     }
-    alturaTotal = y;
+    montarSujo = 0;
+    montarGeracao = listaGeracao;
+    montarN = n;
+    montarFiltro = filtro;
+    montarSoMp4 = soMp4;
+    montarSoCache = soCache;
+    montarSoDub = soDub;
+    montarMelhor = melhorFolha;
+    montarOrdemAddon = ajustes_fonte_ordem_addon();
     return;
   }
   if (grupoTmpCap < n) {
@@ -3613,8 +3790,7 @@ static void montar(int automatica) {
   if (melhorFolha >= 0 && melhorFolha < n && !lista[melhorFolha].foraCache && passaFiltro(melhorFolha) && nFiltrados() > 1 &&
       (melhorFolha >= fitN || fitClasses[melhorFolha] != SF_PESADA)) {
     m = melhorFolha;
-    porLinha(m, &y, automatica);
-    y += FOLHA_SEC_GAP - FOLHA_LINHA_GAP;
+    porLinhaEstrutura(m, automatica);
   }
   for (g = 0; g < FOLHA_GRUPOS; g++) {
     secN[g] = 0;
@@ -3642,13 +3818,106 @@ static void montar(int automatica) {
       if (i != m && lista[i].foraCache && passaFiltro(i) && grupoRes(&lista[i]) == g) grupoTmp[nt++] = i;
     }
     if (!nt) continue;
-    if (nOrdem) y += FOLHA_SEC_GAP;
+    secN[g] = nt;
+    for (k = 0; k < nt; k++) porLinhaEstrutura(grupoTmp[k], automatica);
+  }
+  montarSujo = 0;
+  montarGeracao = listaGeracao;
+  montarN = n;
+  montarFiltro = filtro;
+  montarSoMp4 = soMp4;
+  montarSoCache = soCache;
+  montarSoDub = soDub;
+  montarMelhor = melhorFolha;
+  montarOrdemAddon = ajustes_fonte_ordem_addon();
+}
+
+static void montarLinhasY(void) {
+  float y = 0.0f;
+  if (filtro == -1) {
+    for (int k = 0; k < nOrdem; k++) {
+      linhaY[k] = y;
+      linhaH[k] = FOLHA_LINHA_H;
+      y += FOLHA_LINHA_H + FOLHA_LINHA_GAP;
+    }
+    alturaTotal = y;
+    return;
+  }
+  if (ajustes_fonte_ordem_addon()) {
+    for (int k = 0; k < nOrdem; k++) {
+      float h = linhaBaseH[k];
+      if (grupo == 1 && k == foco) h += linhaExtraH[k] * abreFoco;
+      else if (k == linhaAnt)      h += linhaExtraH[k] * abreAnt;
+      linhaH[k] = h;
+      linhaY[k] = y;
+      y += h + FOLHA_LINHA_GAP;
+    }
+    alturaTotal = y;
+    return;
+  }
+  int row = 0;
+  if (melhorFolha >= 0 && melhorFolha < n && !lista[melhorFolha].foraCache &&
+      passaFiltro(melhorFolha) && nFiltrados() > 1 &&
+      (melhorFolha >= fitN || fitClasses[melhorFolha] != SF_PESADA)) {
+    if (row < nOrdem) {
+      float h = linhaBaseH[row];
+      if (grupo == 1 && row == foco) h += linhaExtraH[row] * abreFoco;
+      else if (row == linhaAnt)      h += linhaExtraH[row] * abreAnt;
+      linhaH[row] = h;
+      linhaY[row] = y;
+      y += h + FOLHA_SEC_GAP;
+      row++;
+    }
+  }
+  for (int g = 0; g < FOLHA_GRUPOS; g++) {
+    int nt = secN[g];
+    if (!nt) continue;
+    if (nOrdem && y > 0.0f) y += FOLHA_SEC_GAP;
     secY[g] = y;
     y += FOLHA_SEC_H;
-    secN[g] = nt;
-    for (k = 0; k < nt; k++) porLinha(grupoTmp[k], &y, automatica);
+    for (int k = 0; k < nt && row < nOrdem; k++, row++) {
+      float h = linhaBaseH[row];
+      if (grupo == 1 && row == foco) h += linhaExtraH[row] * abreFoco;
+      else if (row == linhaAnt)      h += linhaExtraH[row] * abreAnt;
+      linhaH[row] = h;
+      linhaY[row] = y;
+      y += h + FOLHA_LINHA_GAP;
+    }
   }
   alturaTotal = y;
+}
+
+static int montarPrecisaReconstruir(void) {
+  if (montarSujo) return 1;
+  if (montarGeracao != listaGeracao) return 1;
+  if (montarN != n) return 1;
+  if (montarFiltro != filtro) return 1;
+  if (montarSoMp4 != soMp4) return 1;
+  if (montarSoCache != soCache) return 1;
+  if (montarSoDub != soDub) return 1;
+  if (montarMelhor != melhorFolha) return 1;
+  if (montarOrdemAddon != ajustes_fonte_ordem_addon()) return 1;
+  return 0;
+}
+
+static void montar(int automatica) {
+  int reconstruiu = 0;
+  if (montarPrecisaReconstruir()) {
+    montarEstrutura(automatica);
+    reconstruiu = 1;
+  }
+  int mudouAnim = (reconstruiu ||
+                   fabsf(abreFoco - prevAbreFoco) > 0.0005f ||
+                   fabsf(abreAnt - prevAbreAnt) > 0.0005f ||
+                   foco != prevFoco ||
+                   linhaAnt != prevLinhaAnt);
+  if (mudouAnim) {
+    montarLinhasY();
+    prevAbreFoco = abreFoco;
+    prevAbreAnt = abreAnt;
+    prevFoco = foco;
+    prevLinhaAnt = linhaAnt;
+  }
 }
 static int filtrado(int linha) {
   return linha >= 0 && linha < nOrdem ? ordem[linha] : -1;
@@ -3724,6 +3993,7 @@ void stream_folha_abrir(void) {
   int excl, aut, alvo;
   fitAbrir();
   aberta=1; escolha=-1; grupo=1; filtro=0; soMp4=0; soCache=0; soDub=0; recarregar=0;
+  folhaCachesInvalidar();
   folhaGeometria();
   atualizarProvedores();
   ondever_apps_atualizar();
@@ -4260,11 +4530,17 @@ static const char *iconeFiltro(int b) {
   return b == BT_SEM_HDR ? "aj_sun-dim" : b == BT_SO_MP4 ? "aj_film"
        : b == BT_CACHE ? "aj_zap" : b == BT_DUB ? "aj_languages" : NULL;
 }
+static int cabFoco = -999, cabGrupo = -999, cabNbt = -1;
 static void medirCabecalho(void) {
+  int nbt = nBotoes();
+  if (!cabecalhoSujo && cabFoco == foco && cabGrupo == grupo && cabNbt == nbt) return;
+  cabFoco = foco;
+  cabGrupo = grupo;
+  cabNbt = nbt;
+  cabecalhoSujo = 0;
   float rw = FOLHA_W - FOLHA_PAD_E - FOLHA_PAD_D;
   float tit = (float)txt_linha(TXT_ILHA_TITULO, "Fontes", 255, 255, 255, 255).w;
   float livre = rw - FOLHA_TXT - tit - 24.0f, soma = 0;
-  int nbt = nBotoes();
   for (nivelCab = 0; nivelCab < 3; nivelCab++) {
     float pad = nivelCab == 0 ? 20.0f : 14.0f;
     gapCab = nivelCab < 2 ? FOLHA_CHIP_GAP : 8.0f;
@@ -4404,6 +4680,38 @@ static void stream_folha_desenharCorpo_(Uint32 agora) {
     } else plrui_material(corpo,FOLHA_RAIO_IL,0,anim); }
   corpoFolha(x, FOLHA_W, anim, agora, 0);
 }
+
+static int abasCnt[14];
+static float abasIw[14];
+static float abasNomeW[14];
+static float abasNumW[14];
+static char abasNumStr[14][16];
+
+static void atualizarAbasContagem(void) {
+  memset(abasCnt, 0, sizeof abasCnt);
+  for (int i = 0; i < n; i++) {
+    if (!passaChips(i)) continue;
+    abasCnt[0]++;
+    for (int j = 1; j < nProvedores && j < 13; j++) {
+      if (!strcmp(provedores[j], lista[i].provedor)) { abasCnt[j]++; break; }
+    }
+  }
+  for (int i = -1; i < nProvedores && i + 1 < 14; i++) {
+    int qidx = i + 1;
+    snprintf(abasNumStr[qidx], sizeof abasNumStr[qidx], "%d", i < 0 ? ondever_n(alvoPedido) : abasCnt[i]);
+    const char *label = i < 0 ? "Onde ver" : i ? provedores[i] : "Todos";
+    abasNomeW[qidx] = (float)txt_linha_corta(TXT_HERO_META, label, 255, 255, 255, 255, 260).w;
+    abasNumW[qidx] = (float)txt_linha(TXT_PG_FIM, abasNumStr[qidx], 255, 255, 255, 255).w;
+    abasIw[qidx] = abasNomeW[qidx] + 10.0f + abasNumW[qidx] + 44.0f;
+  }
+  abasCacheGer = listaGeracao;
+  abasCacheN = n;
+  abasCacheSoMp4 = soMp4;
+  abasCacheSoCache = soCache;
+  abasCacheSoDub = soDub;
+  abasCacheNProv = nProvedores;
+}
+
 // `anim` aqui e o alfa do corpo (sombra a variavel da mola de proposito: na
 // ilha quem manda na opacidade e a forma, nao a mola da folha).
 static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
@@ -4484,27 +4792,22 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     } }
   // SELETOR DE ADDON, segmentado: o selecionado em superficie clara, o foco
   // no acento. Quantas fontes cada addon tem, ao lado do nome.
-  { int cnt[13]={0}; float iw[14], sx, segY=FOLHA_ABAS_Y+oy, maxW=rw+4.0f;
+  { if (abasCacheGer != listaGeracao || abasCacheN != n ||
+        abasCacheSoMp4 != soMp4 || abasCacheSoCache != soCache ||
+        abasCacheSoDub != soDub || abasCacheNProv != nProvedores) {
+      atualizarAbasContagem();
+    }
+    float sx, segY=FOLHA_ABAS_Y+oy, maxW=rw+4.0f;
     const float pin=(FOLHA_ABAS_H-FOLHA_ABA_H)*.5f;
-    TxtLinha nome[14], num[14];
-    for(int i=0;i<n;i++){ if(!passaChips(i)) continue; cnt[0]++;
-      for(int j=1;j<nProvedores;j++) if(!strcmp(provedores[j],lista[i].provedor)){cnt[j]++;break;} }
-    for(int i=-1;i<nProvedores;i++){
-      int qidx=i+1;
-      int sel=i==filtro, foc=sel&&grupo==0, c=foc?ajustes_tinta_foco():sel?250:150;
-      char q[16]; snprintf(q,sizeof q,"%d",i<0?ondever_n(alvoPedido):cnt[i]);
-      nome[qidx]=txt_linha_corta(TXT_HERO_META,i<0?"Onde ver":i?provedores[i]:"Todos",c,c,c,255,260);
-      num[qidx]=txt_linha(TXT_PG_FIM,q,foc?c:sel?170:100,foc?c:sel?170:100,foc?c:sel?170:100,255);
-      iw[qidx]=nome[qidx].w+10.0f+num[qidx].w+44.0f; }
     int ini=-1; float soma;
-    for(;;){ soma=2*pin; for(int i=ini;i<=filtro&&i<nProvedores;i++) soma+=iw[i+1]+6.0f;
+    for(;;){ soma=2*pin; for(int i=ini;i<=filtro&&i<nProvedores;i++) soma+=abasIw[i+1]+6.0f;
       if(soma<=maxW||ini>=filtro) break; ini++; }
     soma=2*pin; int fim=ini;
-    while(fim<nProvedores && soma+iw[fim+1]+6.0f<=maxW){ soma+=iw[fim+1]+6.0f; fim++; }
+    while(fim<nProvedores && soma+abasIw[fim+1]+6.0f<=maxW){ soma+=abasIw[fim+1]+6.0f; fim++; }
     if(fim==ini) fim=ini+1;
 #ifdef NV_TOUCH_UI
     { float total = 2 * pin, antes = 0;
-      for (int i = -1; i < nProvedores; i++) { total += iw[i + 1] + 6; if (i < ini) antes += iw[i + 1] + 6; }
+      for (int i = -1; i < nProvedores; i++) { total += abasIw[i + 1] + 6; if (i < ini) antes += abasIw[i + 1] + 6; }
       if (!toqueFontesAbas.livre) toqueFontesAbasOffset = antes;
       toquerol_vincular(&toqueFontesAbas, (GfxRect){lx - 2, segY, maxW, FOLHA_ABAS_H}, gfx_escala(),
                        0, total - 6 - maxW, 0, &toqueFontesAbasOffset);
@@ -4521,7 +4824,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
 #endif
     for(int i=ini;i<fim;i++){
       int qidx=i+1;
-      GfxRect r={sx,segY+pin,iw[qidx],FOLHA_ABA_H}; int sel=i==filtro;
+      GfxRect r={sx,segY+pin,abasIw[qidx],FOLHA_ABA_H}; int sel=i==filtro;
       if (ptr) {
 #ifdef NV_TOUCH_UI
         float l = fmaxf(r.x, lx - 2), d = fminf(r.x + r.w, lx - 2 + maxW);
@@ -4532,11 +4835,17 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       }
       if(sel&&grupo==0) focoFonte(r,.5f,anim);
       else if(sel) { if (ajustes_vidro()) gfx_cor(r,.5f,1,1,1,.12f*anim); else gfx_cor(r,.5f,.204f,.212f,.243f,anim); }
-      txt_desenhar_alpha(nome[qidx],r.x+22,r.y+(FOLHA_ABA_H-nome[qidx].h)*.5f,anim);
-      txt_desenhar_alpha(num[qidx],r.x+22+nome[qidx].w+10,r.y+(FOLHA_ABA_H-num[qidx].h)*.5f+1,anim);
-      sx+=iw[qidx]+6.0f; } }
+      int foc=sel&&grupo==0, c=foc?ajustes_tinta_foco():sel?250:150;
+      const char *label = i<0?"Onde ver":i?provedores[i]:"Todos";
+      TxtLinha nome = txt_linha_corta(TXT_HERO_META,label,c,c,c,255,260);
+      TxtLinha num = txt_linha(TXT_PG_FIM,abasNumStr[qidx],foc?c:sel?170:100,foc?c:sel?170:100,foc?c:sel?170:100,255);
+      txt_desenhar_alpha(nome,r.x+22,r.y+(FOLHA_ABA_H-nome.h)*.5f,anim);
+      txt_desenhar_alpha(num,r.x+22+abasNomeW[qidx]+10,r.y+(FOLHA_ABA_H-num.h)*.5f+1,anim);
+      sx+=abasIw[qidx]+6.0f;
+    }
+  }
   automatica = automaticaDaFolha();
-  melhor = melhorFolha = automaticoCom(!canalFolha);
+  melhor = melhorFolha;
   montar(automatica);
   nf=nOrdem;
   gfx_recorte(x,FOLHA_TOPO-8,w,folhaBase-(FOLHA_TOPO-8));
@@ -4566,6 +4875,11 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       txt_desenhar_alpha(l,tr-l.w,y+12,anim); }
     gfx_cor((GfxRect){lx,y+FOLHA_SEC_H-14,rw,1},0,1,1,1,.08f*anim);
   }
+  const CatItem *ciLogo = ajustes_fonte_texto_logo() && itemFolha >= 0 ? cat_item(itemFolha) : NULL;
+  const char *luLogo = ciLogo ? logotitulo_url(ciLogo, FOLHA_LOGO_W) : NULL;
+  GLuint ltLogo = luLogo ? tex_obter_larg_qualquer(luLogo, FOLHA_LOGO_W) : 0;
+  float laLogo = ltLogo ? tex_aspecto(luLogo) : 0.0f;
+  TxtLinha lsPonto = txt_linha(TXT_HERO_META, "·", 100, 100, 98, 255);
   for(int row=0;row<nf;row++) {
     float y=FOLHA_TOPO+linhaY[row]-rolagem, h=linhaH[row], cy, colW, txtW;
     int i=ordem[row], sel=grupo==1&&foco==row;
@@ -4596,7 +4910,11 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       gfx_anel(r, FOLHA_RAIO/h, 1.5f, 1.0f, 1.0f, 1.0f, .35f * anim);
     } else {
       gfx_cor(r, FOLHA_RAIO/h, 1.0f, 1.0f, 1.0f, .028f * anim);
+#ifdef NV_ANDROID
+      if (fabsf(velRol) < 5.0f) gfx_anel(r, FOLHA_RAIO/h, 1.0f, 1.0f, 1.0f, 1.0f, .08f * anim);
+#else
       gfx_anel(r, FOLHA_RAIO/h, 1.0f, 1.0f, 1.0f, 1.0f, .08f * anim);
+#endif
     }
     colW = 0.0f;
     txtW = tr - tx;
@@ -4694,10 +5012,9 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
         // LOGO DO TITULO no lugar do nome (ajuste em teste): a mesma logo do
         // hero/detalhe, encostada a esquerda numa caixa da altura do nome.
         // Sem logo (ausente ou ainda baixando) fica o nome escrito.
-        const CatItem *ci = ajustes_fonte_texto_logo() && itemFolha >= 0 ? cat_item(itemFolha) : NULL;
-        const char *lu = ci ? logotitulo_url(ci, FOLHA_LOGO_W) : NULL;
-        GLuint lt = lu ? tex_obter_larg_qualquer(lu, FOLHA_LOGO_W) : 0;
-        float la = lt ? tex_aspecto(lu) : 0.0f;
+        const char *lu = luLogo;
+        GLuint lt = ltLogo;
+        float la = laLogo;
         if (lt && la > .01f) {
           float lh = FOLHA_LOGO_H, lw = lh * la;
           if (lw > FOLHA_LOGO_W) { lw = FOLHA_LOGO_W; lh = lw / la; }
@@ -4786,7 +5103,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
         rotuloQualidade(s,rs,sizeof rs,fx,sizeof fx,&hd);
         int cr=sel?240:200;
         TxtLinha lr=txt_linha(TXT_HERO_META,rs,cr,cr,cr-2,255);
-        TxtLinha ls=txt_linha(TXT_HERO_META,"·",100,100,98,255);
+        TxtLinha ls=lsPonto;
         TxtLinha lf=hd ? txt_linha(TXT_HERO_META,fx,(int)(120+(ai-120)*.45f),(int)(120+(ag*255-120)*.45f),(int)(118+(ab*255-118)*.45f)+18,255)
                        : txt_linha(TXT_HERO_META,fx,sel?170:140,sel?170:140,sel?168:138,255);
         float lx2=tx;

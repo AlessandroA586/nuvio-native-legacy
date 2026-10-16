@@ -20,7 +20,7 @@ val versao = Regex("\"version\"\\s*:\\s*\"([^\"]+)\"")
 val partes = versao.split(".").mapNotNull { it.toIntOrNull() }
 val vx = partes.getOrElse(0) { 2 }
 val vy = partes.getOrElse(1) { 0 }
-val vz = partes.getOrElse(2) { 5 }
+val vz = partes.getOrElse(2) { 6 }
 val vw = partes.getOrElse(3) { 0 }
 
 android {
@@ -43,6 +43,7 @@ android {
                     "-DNUVIO_SDL_SRC=$sdlSrc",
                     "-DNUVIO_ENV_CMAKE=$estagio/nuvio-env.cmake",
                     "-DNUVIO_P2P_MOTOR=${(findProperty("nuvio.p2pMotor") as String?) ?: ""}",
+                    "-DNUVIO_RUST_MKVCORE=${(findProperty("nuvio.rustMkvcore") as String?) ?: ""}",
                 )
                 arguments += "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
             }
@@ -68,6 +69,11 @@ android {
         }
     }
     buildTypes {
+        debug {
+            // Nunca substituir a instalacao de producao durante diagnosticos.
+            applicationIdSuffix = ".strictdebug"
+            versionNameSuffix = "-strictdebug"
+        }
         release {
             isMinifyEnabled = false
             if (ks != null) signingConfig = signingConfigs.getByName("release")
@@ -90,6 +96,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+    testOptions { unitTests.isReturnDefaultValues = true }
 }
 
 // Copia as classes Java do SDL no build (nada de copia grande no git).
@@ -130,5 +137,6 @@ dependencies {
         implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.8.0+1")
     }
     implementation("androidx.core:core-ktx:1.13.1")
+    testImplementation("junit:junit:4.13.2")
 }
 

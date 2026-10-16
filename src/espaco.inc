@@ -152,50 +152,19 @@ static void espacoLogs(void) {
   struct stat st;
   if(lstat(anterior,&st)==0 && S_ISREG(st.st_mode) && st.st_size>2*(long)ESPACO_MB) unlink(anterior);
 }
-static int ehPrimeiraExecucaoVersao(const char *d, const char *versao) {
-  if (!d || !d[0] || !versao || !versao[0]) return 0;
-  char caminho[PATH_MAX];
-  snprintf(caminho, sizeof caminho, "%s/versao_executada.txt", d);
-  FILE *f = fopen(caminho, "r");
-  char lida[64] = "";
-  if (f) {
-    if (fgets(lida, sizeof lida, f)) {
-      size_t len = strlen(lida);
-      while (len > 0 && (lida[len - 1] == '\r' || lida[len - 1] == '\n' || lida[len - 1] == ' '))
-        lida[--len] = 0;
-    }
-    fclose(f);
-  }
-  if (strcmp(lida, versao) != 0) {
-    FILE *w = fopen(caminho, "w");
-    if (w) { fprintf(w, "%s\n", versao); fclose(w); }
-    return 1;
-  }
-  return 0;
-}
 static void *espacoFio(void *arg) {
   (void)arg; sleep(5);
   struct statvfs fs;
   double livre=statvfs(dados_dir(),&fs)==0 ? (double)fs.f_bavail*fs.f_frsize/ESPACO_MB : -1;
   espacoRelatar(stdout,dados_dir(),espacoApp,livre);
-  int posAtualizacao = ehPrimeiraExecucaoVersao(dados_dir(), NV_VERSAO);
-  if (posAtualizacao) {
-    printf("[espaco] primeira execucao da versao %s: executando limpeza pos-atualizacao\n", NV_VERSAO);
-    fflush(stdout);
+  pthread_mutex_lock(&espacoTrava);
+  espacoLimpar(dados_dir(),NV_VERSAO);
+  pthread_mutex_unlock(&espacoTrava);
+  for(;;) {
     pthread_mutex_lock(&espacoTrava);
-    char p[1200];
-    snprintf(p, sizeof p, "%s/atualizacao", dados_dir());
-    espacoPodar(p, NULL, 0, 0, NV_VERSAO);
-#ifdef NV_TPK
-    char staged[1200];
-    snprintf(staged, sizeof staged, "%s/libnuvio.download", dados_dir()); unlink(staged);
-    snprintf(staged, sizeof staged, "%s/libnuvio.staged.so", dados_dir()); unlink(staged);
-    snprintf(staged, sizeof staged, "%s/libnuvio.staged.sha256", dados_dir()); unlink(staged);
-    snprintf(staged, sizeof staged, "%s/libnuvio.staged.ver", dados_dir()); unlink(staged);
-#endif
-    espacoLimpar(dados_dir(), NV_VERSAO);
-    espacoLogs();
+    espacoLimpar(dados_dir(),NULL); espacoLogs();
     pthread_mutex_unlock(&espacoTrava);
+    sleep(30);
   }
   return NULL;
 }

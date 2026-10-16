@@ -1,19 +1,12 @@
 {
-  "id": "space.nuvio.native.legacy",
-  "version": "2.0.5.5",
+  "id": "space.nuvio.nativelegacy",
+  "version": "2.0.6.0",
   "vendor": "Juansher",
-  "type": "native",
-  "main": "nuvio-proto",
-  "title": "Nuvio Legacy",
-  "icon": "icon-20.png",
-  "largeIcon": "icon-large-20.png",
-  "splashBackground": "splash.png",
-  "resolution": "1920x1080",
-  "bgColor": "#0E0F12",
-  "iconColor": "#0D101E",
-  "disableBackHistoryAPI": true,
+  "type": "web",
+  "main": "index.html",
+  "title": "Nuvio",
+  "icon": "icon.png",
   "requiredPermissions": [
-    "all"
-  ],
-  "nativeLifeCycleInterfaceVersion": 2
+    "internet"
+  ]
 }

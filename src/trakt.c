@@ -14,6 +14,7 @@
 #include "cwordem.h"
 #include "traktscrobble.h"
 #include "traktult.h"
+#include "metaep.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -460,7 +461,8 @@ static void doBlocoTrakt(CatItem *d, const char *bloco, const char *fim,
 // cache em disco.
 #define TK_ULT_MAX 64
 // TkUltimo e a regra de empate: traktult.h (issue #213).
-static TkUltimo ult[TK_ULT_MAX];   // nUlt: ver trakt_esquecer
+static TkUltimo *ult;   // nUlt: ver trakt_esquecer
+static int ultCap;
 // Os ids ("tt:S:E") dos itens "a seguir" desta rodada, para enfeitar() saber
 // que precisa CONFERIR que o episodio existe antes de publicar.
 static char proxIds[TK_ULT_MAX][32];   // nProxIds: ver trakt_esquecer
@@ -485,13 +487,6 @@ int trakt_cw_concluiu(const char *id, long long progressoMs) {
   pthread_mutex_unlock(&travaCred);
   return concluiu;
 }
-// O episodio existe no meta do Cinemeta? Os ids em videos[] sao "tt:S:E".
-static int episodioExiste(const char *corpo, const char *serie, int t, int e) {
-  char chave[48];
-  snprintf(chave, sizeof chave, "\"id\":\"%s:%d:%d\"", serie, t, e);
-  return strstr(corpo, chave) != NULL;
-}
-
 // OBRAS JA TENTADAS NO CINEMETA PARA A NOTA, nesta sessao (#243). Sem isto, quem
 // o Cinemeta nao da nota (ou que estoura o tempo) voltava a rede a cada refacao
 // da fileira. Tentou uma vez (achou, sem nota ou falhou), conta como satisfeito.
@@ -630,8 +625,8 @@ static int enfeitar(CatItem *d, const char *tipo, uint64_t sessao) {
     // "A seguir" que o cache nao confirma pode ser episodio novo: pergunta a
     // rede antes de descartar o item.
     if (corpo && proximo &&
-        !episodioExiste(corpo, serie, d->temporada, d->episodio) &&
-        !episodioExiste(corpo, serie, d->temporada + 1, 1)) {
+        !metaep_existe(corpo, d->temporada, d->episodio) &&
+        !metaep_proximo(corpo, d->temporada, d->episodio, NULL)) {
       free(corpo); corpo = NULL; deCache = 0;
     }
     if (!corpo) {
@@ -653,23 +648,22 @@ static int enfeitar(CatItem *d, const char *tipo, uint64_t sessao) {
   // proximo e o primeiro da seguinte; depois do ultimo da serie nao ha
   // proximo, e a serie nao entra — nao e "continuar", e "acabou".
   epc = corpo;
-  if (proximo && !episodioExiste(corpo, serie, d->temporada, d->episodio) &&
-      !episodioExiste(corpo, serie, d->temporada + 1, 1) &&
+  if (proximo && !metaep_existe(corpo, d->temporada, d->episodio) &&
+      !metaep_proximo(corpo, d->temporada, d->episodio, NULL) &&
       provFicha != METAPROV_CINEMETA && !strcmp(tipo, "series")) {
     // A ficha do Nuvio pode estar atras do Cinemeta (The Rookie: 1 futuro
     // contra 18). Antes de largar o item, confere la; a ficha do Nuvio segue
     // valendo para todo o resto.
     corpoCine = cinemetaDaSerie(tipo, serie);
     if (corpoCine) {
-      int t = -1, e = -1;
-      if (episodioExiste(corpoCine, serie, d->temporada, d->episodio)) {
-        t = d->temporada; e = d->episodio;
-      } else if (episodioExiste(corpoCine, serie, d->temporada + 1, 1)) {
-        t = d->temporada + 1; e = 1;
-      }
-      if (t >= 0) {
+      MetaEpInfo prox;
+      if (metaep_existe(corpoCine, d->temporada, d->episodio)) {
         printf("[trakt] episodio ausente na ficha Nuvio; Cinemeta tem: %s S%dE%d\n",
-               serie, t, e);
+               serie, d->temporada, d->episodio);
+        epc = corpoCine;
+      } else if (metaep_proximo(corpoCine, d->temporada, d->episodio, &prox)) {
+        printf("[trakt] episodio ausente na ficha Nuvio; Cinemeta tem: %s S%dE%d\n",
+               serie, prox.temporada, prox.episodio);
         epc = corpoCine;
       }
     }
@@ -678,11 +672,13 @@ static int enfeitar(CatItem *d, const char *tipo, uint64_t sessao) {
              serie, d->temporada, d->episodio);
   }
   if (proximo) {
-    if (!episodioExiste(epc, serie, d->temporada, d->episodio)) {
-      if (episodioExiste(epc, serie, d->temporada + 1, 1)) {
+    MetaEpInfo prox;
+    if (!metaep_existe(epc, d->temporada, d->episodio)) {
+      if (metaep_proximo(epc, d->temporada, d->episodio, &prox)) {
         char velho[sizeof d->imdb];
         snprintf(velho, sizeof velho, "%s", d->imdb);
-        d->temporada++; d->episodio = 1;
+        d->temporada = prox.temporada;
+        d->episodio = prox.episodio;
         snprintf(d->imdb, sizeof d->imdb, "%s:%d:%d", serie, d->temporada, d->episodio);
         // So o da conta acompanha o id novo. O do Trakt continua como era
         // (ehProximo do id novo da 0); mexer nele nao e deste conserto.
@@ -692,12 +688,7 @@ static int enfeitar(CatItem *d, const char *tipo, uint64_t sessao) {
         virou = 1;
       } else { free(corpo); free(corpoCine); return 0; }
     }
-    // O nome do episodio, para a legenda do card.
-    { char chave[48]; const char *v;
-      snprintf(chave, sizeof chave, "\"id\":\"%s:%d:%d\"", serie, d->temporada, d->episodio);
-      v = strstr(epc, chave);
-      if (v) { const char *ini = v; while (ini > epc && *ini != '{') ini--;
-               js_texto(ini, js_fim(ini), "name", d->nomeEpisodio, sizeof d->nomeEpisodio); } }
+    metaep_nome(epc, d->temporada, d->episodio, d->nomeEpisodio, sizeof d->nomeEpisodio);
   }
   // A DATA DE ESTREIA DO EPISODIO "A SEGUIR" (issue #127), do mesmo videos[]
   // que acabou de confirmar que ele existe. E ela que separa o que ja foi ao ar
@@ -706,16 +697,9 @@ static int enfeitar(CatItem *d, const char *tipo, uint64_t sessao) {
   // dele passa por aqui (simkl_continuar -> trakt_enfeitar_lote). Episodio sem
   // `released` fica sem data, e sem data conta como exibido, como no web.
   if (d->progresso == 0 && d->temporada > 0 && d->episodio > 0 && !strcmp(tipo, "series")) {
-    char chave[48], quando[40] = "";
-    const char *v;
-    snprintf(chave, sizeof chave, "\"id\":\"%s:%d:%d\"", serie, d->temporada, d->episodio);
-    v = strstr(epc, chave);
-    if (v) {
-      const char *ini = v;
-      long long ms;
-      while (ini > epc && *ini != '{') ini--;
-      if (!js_texto(ini, js_fim(ini), "released", quando, sizeof quando))
-        js_texto(ini, js_fim(ini), "firstAired", quando, sizeof quando);
+    char quando[40] = "";
+    long long ms;
+    if (metaep_lancamento(epc, d->temporada, d->episodio, quando, sizeof quando)) {
       ms = js_ms_iso(quando);
       if (nv_perfil_sessao_travar(sessao)) {
         cwo_marcar_estreia(d->imdb, ms > 0 ? ms : CWO_SEM_DATA); nv_perfil_sessao_destravar();
@@ -1199,6 +1183,96 @@ static void carregarHistoricoReal(const char *const *cab, HistoricoPedido pedido
   free(corpo);
 }
 
+// TODAS AS SERIES VISTAS NO TRAKT (issue traktcw, log PRPMM8). O historico acima
+// so tem as ultimas 100 reproducoes: quem assistiu series no app do Trakt (ou
+// importou) e tem outra coisa recente nao tinha candidata a "a seguir" nem o
+// selo de serie vista no cartaz — so apareciam depois de abrir o titulo
+// (extras.c). /sync/watched/shows?extended=noseasons e leve (sem o mapa de
+// episodios, que a medicao antiga mostrou nao confiavel) e traz o instante do
+// ultimo episodio; quem diz o "proximo" e o /progress/watched de consultarProximos.
+// Entra com temporada -1: sem progresso confirmado nao ha palpite de episodio.
+static const char *filmesPula(const char *p);
+static const char *filmesObjetoFim(const char *p);
+
+static void carregarSeriesVistas(const char *const *cab, HistoricoPedido pedido,
+                                 TkUltimo **ult, int *nUlt, int *ultCap) {
+  TkUltimo *acc = NULL;
+  int nAcc = 0, cap = 0, pagina = 1, ok = 0;
+  char *anterior = NULL;
+  if (!historicoPedidoAtual(pedido)) return;
+  for (;; pagina++) {
+    char url[128], *corpo;
+    const char *p;
+    int st = 0, objetos = 0;
+    snprintf(url, sizeof url,
+             "https://api.trakt.tv/sync/watched/shows?extended=noseasons&page=%d&limit=250", pagina);
+    corpo = rede_baixar_st(url, 25, cab, &st);
+    if (!corpo || st != 200 || (anterior && !strcmp(anterior, corpo))) { free(corpo); break; }
+    free(anterior); anterior = corpo;
+    p = filmesPula(corpo);
+    if (*p != '[') break;
+    p = filmesPula(p + 1);
+    while (*p == '{') {
+      const char *f, *sh;
+      f = filmesObjetoFim(p);
+      if (!f) break;
+      objetos++;
+      sh = strstr(p, "\"show\"");
+      if (sh && sh < f) {
+        char id[24] = "", quando[40] = "";
+        js_texto(sh, js_fim(strchr(sh, '{')), "imdb", id, sizeof id);
+        js_texto(p, sh, "last_watched_at", quando, sizeof quando);
+        if (!quando[0]) js_texto(p, f, "last_watched_at", quando, sizeof quando);
+        if (!strncmp(id, "tt", 2)) {
+          long long ms = quando[0] ? js_ms_iso(quando) : 0;
+          if (nAcc == cap) {
+            if (cap > INT_MAX / 2) goto fimSeries;
+            int novaCap = cap ? cap * 2 : 128;
+            TkUltimo *novo = realloc(acc, sizeof *acc * (size_t)novaCap);
+            if (!novo) goto fimSeries;
+            acc = novo; cap = novaCap;
+          }
+          snprintf(acc[nAcc].imdb, sizeof acc[0].imdb, "%s", id);
+          acc[nAcc].temporada = -1;
+          acc[nAcc].episodio = (int)((ms / 1000) & 0x3fffffff) + 1;
+          acc[nAcc].quandoMs = ms;
+          nAcc++;
+        }
+      }
+      p = filmesPula(f);
+      if (*p == ']') break;
+      if (*p != ',') break;
+      p = filmesPula(p + 1);
+      if (*p != '{') break;
+    }
+    if (*p != ']' || *filmesPula(p + 1)) break;
+    if (!objetos) { ok = 1; break; }
+    if (pagina == INT_MAX || !historicoPedidoAtual(pedido)) break;
+  }
+fimSeries:
+  free(anterior);
+  if (!ok || !historicoPedidoAtual(pedido)) {
+    free(acc);
+    printf("[trakt] series vistas: falhou na pagina %d; lista anterior mantida\n", pagina);
+    fflush(stdout);
+    return;
+  }
+  if (nAcc > INT_MAX - *nUlt) { free(acc); return; }
+  if (*ultCap < *nUlt + nAcc) {
+    TkUltimo *novo = realloc(*ult, sizeof **ult * (size_t)(*nUlt + nAcc));
+    if (!novo) { free(acc); return; }
+    *ult = novo; *ultCap = *nUlt + nAcc;
+  }
+  for (int i = 0; i < nAcc; i++) {
+    int k;
+    for (k = 0; k < *nUlt; k++) if (!strcmp((*ult)[k].imdb, acc[i].imdb)) break;
+    if (k == *nUlt) (*ult)[(*nUlt)++] = acc[i];
+  }
+  free(acc);
+  printf("[trakt] series vistas: %d (%d pagina(s))\n", nAcc, pagina);
+  fflush(stdout);
+}
+
 // O "A SEGUIR" DO PROPRIO TRAKT (issue #213). O historico so diz o ultimo
 // episodio visto; quem sabe se ainda ha o que ver e /shows/<id>/progress/
 // watched (next_episode). Um GET por serie candidata, TK_FIOS em paralelo,
@@ -1277,12 +1351,25 @@ static void *fioProximo(void *x) {
     if (pedidoTravar(fila->pedido)) {
       int achou = proxMemBuscar(imdb, tv, ev, &tarefa->t, &tarefa->e);
       pedidoDestravar();
-      if (achou) { tarefa->estado = 1; continue; }
+      if (achou) {
+        tarefa->estado = 1;
+        historicoDefinirPedido(imdb, "series", 0, fila->pedido);
+        continue;
+      }
     } else return NULL;
     snprintf(url, sizeof url,
              "https://api.trakt.tv/shows/%s/progress/watched?hidden=false&specials=false", imdb);
     corpo = rede_baixar_com(url, 8, fila->cab);
     tarefa->estado = tk_prog_proximo(corpo, &tarefa->t, &tarefa->e);
+    // O SELO DE SERIE VISTA SAI DAQUI, nao da abertura do titulo: o cabecalho
+    // (aired/completed, antes de "seasons") diz se tudo o que foi ao ar foi visto.
+    if (corpo) {
+      const char *sz = strstr(corpo, "\"seasons\"");
+      const char *fimCab = sz ? sz : corpo + strlen(corpo);
+      int exib = (int)js_num(corpo, fimCab, "aired", 0.0);
+      int vist = (int)js_num(corpo, fimCab, "completed", 0.0);
+      if (exib > 0) historicoDefinirPedido(imdb, "series", vist >= exib, fila->pedido);
+    }
     if (tarefa->estado == 1)
       proxMemGuardar(imdb, tv, ev, tarefa->t, tarefa->e, fila->pedido);
     free(corpo);
@@ -1500,12 +1587,20 @@ static int dedupObras(CatItem *v, int n, TkPlay *playLocal, int nPlayLocal) {
 // de filmes) e, na LG e no Android, eram ~4 s dos 9-14 s ate a fileira "Continuar
 // assistindo". Agora saem juntos; cada um escreve em estado proprio (play[]/nPlay
 // so o playback, ult[]/nUlt so o historico, o mapa de vistos sob travaCred).
-typedef struct { const char *const *cab; HistoricoPedido pedido; TkUltimo *ult; int *nUlt; } PedidoHist;
+typedef struct {
+  const char *const *cab; HistoricoPedido pedido; TkUltimo **ult; int *nUlt, *ultCap;
+} PedidoHist;
 
+// *ult entra com TK_ULT_MAX vagas (o historico); as series vistas crescem a tabela.
+static void carregarHistoricoTudo(const char *const *cab, HistoricoPedido pedido,
+                                  TkUltimo **ult, int *nUlt, int *ultCap) {
+  carregarHistoricoReal(cab, pedido, *ult, nUlt);
+  carregarSeriesVistas(cab, pedido, ult, nUlt, ultCap);
+}
 static void *fioHistorico(void *u) {
   PedidoHist *h = (PedidoHist *)u;
   donoHttpDefinir(h->pedido);
-  carregarHistoricoReal(h->cab, h->pedido, h->ult, h->nUlt);
+  carregarHistoricoTudo(h->cab, h->pedido, h->ult, h->nUlt, h->ultCap);
   return NULL;
 }
 static void *fioFilmesVistos(void *u) {
@@ -1522,15 +1617,19 @@ int trakt_continuar(CatItem *saida, int max) {
   const char *p;
   int n = 0;
   TkPlay playLocal[TK_PLAY_MAX] = {0}; int nPlayLocal = 0;
-  TkUltimo ultLocal[TK_ULT_MAX] = {0}; int nUltLocal = 0;
+  TkUltimo *ultLocal; int nUltLocal = 0, capUltLocal = TK_ULT_MAX;
   char proxIdsLocal[TK_ULT_MAX][32] = {{0}}; int nProxLocal = 0;
   HistoricoPedido pedido = historicoPedido();
   if (!cabecalhosPedido(pedido, cab, aut, sizeof aut, chave, sizeof chave)) return 0;
   if (pedidoTravar(pedido)) { continuarFalhou = 0; pedidoDestravar(); } else return 0;
+  if (!(ultLocal = calloc(TK_ULT_MAX, sizeof *ultLocal))) {
+    if (pedidoTravar(pedido)) { continuarFalhou = 1; pedidoDestravar(); }
+    return 0;
+  }
   // Historico e filmes vistos em fios proprios enquanto o playback baixa. Sem
   // fio (pthread_create falhou, ou WebAssembly sem threads): ficam em serie,
   // depois do playback, como antes.
-  PedidoHist ph = { cab, pedido, ultLocal, &nUltLocal };
+  PedidoHist ph = { cab, pedido, &ultLocal, &nUltLocal, &capUltLocal };
   pthread_t fioHist, fioFilmes;
   int hist = pthread_create(&fioHist, NULL, fioHistorico, &ph) == 0;
   int filmes = pthread_create(&fioFilmes, NULL, fioFilmesVistos, &ph) == 0;
@@ -1539,11 +1638,15 @@ int trakt_continuar(CatItem *saida, int max) {
     if (hist) pthread_join(fioHist, NULL);
     if (filmes) pthread_join(fioFilmes, NULL);
     if (pedidoTravar(pedido)) { continuarFalhou = 1; pedidoDestravar(); }
+    free(ultLocal);
     printf("[trakt] sem resposta\n"); return 0;
   }
   // A prova de conclusao precisa estar pronta antes de consumir vagas de playback.
-  if (hist) pthread_join(fioHist, NULL); else carregarHistoricoReal(cab, pedido, ultLocal, &nUltLocal);
-  if (!historicoPedidoAtual(pedido)) { free(corpo); if (filmes) pthread_join(fioFilmes, NULL); return 0; }
+  if (hist) pthread_join(fioHist, NULL);
+  else carregarHistoricoTudo(cab, pedido, &ultLocal, &nUltLocal, &capUltLocal);
+  if (!historicoPedidoAtual(pedido)) {
+    free(corpo); free(ultLocal); if (filmes) pthread_join(fioFilmes, NULL); return 0;
+  }
   // O corpo e um array na raiz; js_array procura por chave, entao anda-se a mao.
   p = strchr(corpo, '[');
   p = p ? p + 1 : NULL;
@@ -1641,17 +1744,18 @@ int trakt_continuar(CatItem *saida, int max) {
   // descarta o que acabou. Ver ultLocal[].
   nProxLocal = 0;
   { int u, nTar = 0, acabou = 0;
-    TarefaProx tar[TK_ULT_MAX];
-    int tarDe[TK_ULT_MAX];   // ultLocal[u] -> indice em tar[], ou -1
-    for (u = 0; ajustes_cw_proximo() && u < nUltLocal; u++) {
-      int k, ja = 0;
-      size_t L = strlen(ultLocal[u].imdb);
+    TarefaProx *tar = calloc((size_t)nUltLocal, sizeof *tar);
+    int *tarDe = calloc((size_t)nUltLocal, sizeof *tarDe); // ultLocal[u] -> indice em tar[]
+    if (nUltLocal && (!tar || !tarDe)) {
+      free(tar); free(tarDe); free(ultLocal);
+      if (filmes) pthread_join(fioFilmes, NULL);
+      if (pedidoTravar(pedido)) { continuarFalhou = 1; pedidoDestravar(); }
+      return 0;
+    }
+    // Sem o toggle "Proximo episodio" o GET ainda sai: e ele que da o selo.
+    for (u = 0; u < nUltLocal; u++) {
       tarDe[u] = -1;
-      if (ultLocal[u].temporada <= 0 || ultLocal[u].episodio <= 0) continue;
-      for (k = 0; k < n; k++)
-        if (!strncmp(saida[k].imdb, ultLocal[u].imdb, L) &&
-            (saida[k].imdb[L] == 0 || saida[k].imdb[L] == ':')) { ja = 1; break; }
-      if (ja || strncmp(ultLocal[u].imdb, "tt", 2)) continue;
+      if (ultLocal[u].temporada == 0 || ultLocal[u].episodio <= 0 || strncmp(ultLocal[u].imdb, "tt", 2)) continue;
       tar[nTar].u = u; tar[nTar].estado = -1; tar[nTar].t = tar[nTar].e = 0;
       tarDe[u] = nTar++;
     }
@@ -1659,7 +1763,7 @@ int trakt_continuar(CatItem *saida, int max) {
     for (u = 0; ajustes_cw_proximo() && u < nUltLocal; u++) {
       int k, ja = 0, alvo, proxT = ultLocal[u].temporada, proxE = ultLocal[u].episodio + 1;
       size_t L = strlen(ultLocal[u].imdb);
-      if (ultLocal[u].temporada <= 0 || ultLocal[u].episodio <= 0) continue;
+      if (ultLocal[u].temporada == 0 || ultLocal[u].episodio <= 0) continue;
       for (k = 0; k < n; k++)
         if (!strncmp(saida[k].imdb, ultLocal[u].imdb, L) &&
             (saida[k].imdb[L] == 0 || saida[k].imdb[L] == ':')) { ja = 1; break; }
@@ -1676,6 +1780,9 @@ int trakt_continuar(CatItem *saida, int max) {
         }
         if (r->estado == 1) { proxT = r->t; proxE = r->e; }
       }
+      // Episodio desconhecido (vinda de /sync/watched/shows): sem o proximo do
+      // Trakt nao ha palpite possivel.
+      if (ultLocal[u].temporada < 0 && !(tarDe[u] >= 0 && tar[tarDe[u]].estado == 1)) continue;
       // Pausados validos nunca cedem lugar a sugestoes de outras obras.
       if (n < max) alvo = n++;
       else {
@@ -1699,7 +1806,9 @@ int trakt_continuar(CatItem *saida, int max) {
       }
     }
     if (nTar)
-      printf("[trakt] a seguir conferido no Trakt: %d serie(s), %d sem proximo\n", nTar, acabou); }
+      printf("[trakt] a seguir conferido no Trakt: %d serie(s), %d sem proximo\n", nTar, acabou);
+    free(tar); free(tarDe);
+  }
   // Pausados primeiro; recencia dentro de cada grupo. Insercao: n <= CONT_MAX.
   { int a, b;
     for (a = 1; a < n; a++) {
@@ -1720,7 +1829,12 @@ int trakt_continuar(CatItem *saida, int max) {
   // Publish only complete request-owned tables. No old worker can refill
   // them after a new profile opening clears them.
   if (pedidoTravar(pedido)) {
-    memcpy(ult, ultLocal, sizeof ultLocal); nUlt = nUltLocal;
+    if (ultCap < nUltLocal) {
+      TkUltimo *novo = realloc(ult, sizeof *ult * (size_t)nUltLocal);
+      if (novo) { ult = novo; ultCap = nUltLocal; }
+    }
+    nUlt = ultCap >= nUltLocal ? nUltLocal : 0;
+    if (nUlt) memcpy(ult, ultLocal, sizeof *ult * (size_t)nUlt);
     memcpy(proxIds, proxIdsLocal, sizeof proxIdsLocal); nProxIds = nProxLocal;
     pthread_mutex_lock(&playTrava);
     memcpy(play, playLocal, sizeof playLocal); nPlay = nPlayLocal;
@@ -1728,6 +1842,7 @@ int trakt_continuar(CatItem *saida, int max) {
     pedidoDestravar();
     n = trakt_enfeitar_lote_sessao(saida, n, pedido.sessao);
   } else n = 0;
+  free(ultLocal);
   if (filmes) pthread_join(fioFilmes, NULL);
 
   printf("[trakt] %d em andamento\n", n);
@@ -2149,12 +2264,32 @@ typedef struct ScrPendente {
 static ScrPendente *scrPrimeiro, *scrUltimo;
 static int scrFioVivo;
 
+static void idsScrobble(const char *id, ScrobbleEpIds *out) {
+  char base[64], *dp;
+  int t = 0, e = 0;
+  MetaEpInfo ep;
+  char *meta;
+  if (!out) return;
+  memset(out, 0, sizeof *out);
+  snprintf(base, sizeof base, "%s", id);
+  dp = strchr(base, ':');
+  if (!dp || sscanf(dp + 1, "%d:%d", &t, &e) != 2 || t <= 0 || e <= 0) return;
+  *dp = 0;
+  meta = fichaBuscar("series", base);
+  if (!meta) meta = metaprov_meta("series", base, 8, NULL);
+  if (!meta || !metaep_buscar(meta, t, e, &ep)) { free(meta); return; }
+  scrobble_ids_guardar(out, ep.tvdb, ep.tmdb, ep.trakt);
+  free(meta);
+}
+
 static void enviarScrobble(int acao, const char *id, double pct, HistoricoPedido pedido) {
   const char *cab[4];
   char aut[200], chave[140], corpo[400], url[64], *r;
+  ScrobbleEpIds epIds;
   int status = 0;
   if (!cabecalhosCongelados(pedido, cab, aut, sizeof aut, chave, sizeof chave)) return;
-  scrobble_corpo(corpo, sizeof corpo, id, pct);
+  idsScrobble(id, &epIds);
+  scrobble_corpo_ep(corpo, sizeof corpo, id, pct, &epIds);
   snprintf(url, sizeof url, "https://api.trakt.tv/scrobble/%s", scrobble_nome(acao));
   r = rede_postar_st(url, 20, cab, corpo, &status);
   // O log NUNCA leva o token. rede_postar devolvia corpo nao nulo tambem em
@@ -2201,11 +2336,17 @@ int trakt_scrobble(int evento, const char *imdb, double posSeg, double durSeg, d
   int acao;
   double pct;
   pthread_t t;
+  (void)assistiu;
   if (!ligado || !imdb || !*imdb || !isfinite(posSeg) || !isfinite(durSeg) ||
-      !isfinite(assistidoSeg) || durSeg < 120.0 || assistidoSeg < 5.0) return recusar(evento);
+      !isfinite(assistidoSeg) || durSeg < 120.0) return recusar(evento);
+  // PARIDADE COM O NUVIOTV OFICIAL: o start exige reproducao continua (o player
+  // so o pede depois de PLR_SCR_TOCOU_S), mas a SAIDA fala pela posicao, como
+  // o flushPlaybackSnapshotForSwitchOrExit de la — inclusive depois de um seek.
+  if (evento != SCR_EV_SAIU && assistidoSeg < 5.0) return recusar(evento);
+  if (evento == SCR_EV_SAIU && (posSeg < 1.0 || assistidoSeg < 1.0)) return recusar(evento);
   pct = 100.0 * posSeg / durSeg;
-  // Valida ANTES da vaga pendente: nem um stop sem reproducao entra na fila.
-  if (evento == SCR_EV_SAIU && pct >= 90.0 && !assistiu) return recusar(evento);
+  // As validacoes acima vem ANTES da vaga pendente: nem um stop sem reproducao
+  // entra na fila.
   HistoricoPedido pedido = historicoPedido();
   if (!pedido.aut[0] || !nv_perfil_sessao_travar(pedido.sessao)) return recusar(evento);
   pthread_mutex_lock(&travaScr);

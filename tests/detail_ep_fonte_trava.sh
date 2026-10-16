@@ -18,7 +18,7 @@ for source in src/*.c src/dts/*.c; do
   sources+=("$source")
 done
 cc "${sources[@]}" tests/detail_ep_fonte_trava.c -Isrc -o ${TMPDIR:-/tmp}/nuvio-detail-eptrava-tests \
-  -O0 -g -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
+  -O1 -g -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL \
   -Wno-deprecated-declarations -Wno-macro-redefined
 ${TMPDIR:-/tmp}/nuvio-detail-eptrava-tests

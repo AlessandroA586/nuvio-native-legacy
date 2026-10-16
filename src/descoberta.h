@@ -13,6 +13,7 @@
 #include <stddef.h>
 #include "catalogo.h"
 #include "colecoes.h"
+#include "perfisessao.h"
 
 // Solta a cache de corpos de manifesto entre ciclos e zera o estado da
 // descoberta. Chamar no logout, junto de addons_esquecer/fil_esquecer: a cache
@@ -213,6 +214,8 @@ int  desc_busca_base_oculta(const char *base);
 // lista vazia. `f` devolve 0 (nao espere: sem conta), 1 (espere: perfil ainda
 // nao escolhido) ou 2 (espere ate 10 s). Sem gancho, nao ha espera.
 void desc_espera_addons_definir(int (*f)(void));
+// Troca de perfil: a proxima volta espera de novo o ciclo da conta antes de ler a lista.
+void desc_esperar_conta(void);
 void desc_alvo_busca(const char *base, const char *tipo, const char *id,
                      const char *titulo, const char *addon);
 
@@ -253,6 +256,16 @@ void desc_vertudo_fonte(const ColSource *s);
 void desc_vertudo_fonte_desde(const ColSource *s, int pagina);
 void desc_vertudo_filtro_desde(const char *base, const char *tipo, const char *catId, const char *genre, int pagina);
 int desc_vertudo_pagina(void);
+// Primeira carga independente de uma fileira da Vitrine. Nao altera o
+// carregador de abas acima. `itens` tem 2*limite vagas (limite de 1 a 20):
+// prefixo canonico em [0,n), reserva nao vista em [limite,limite+extraN).
+// 1 = terminou nesta sessao (erro distingue falha de lista vazia); 0 = pedido
+// invalido ou de sessao antiga. Quem chama possui fonte/base/buffers.
+typedef struct { int n, extraN, erro, pagina, mais; } DescColecaoResultado;
+int desc_colecao_inicial(const ColSource *fonte, const char *base,
+                         NvPerfilSessao sessao, CatItem *itens, int limite,
+                         DescColecaoResultado *resultado);
+
 int desc_vertudo_erro(void);
 // Pede a proxima pagina, se houver. Nada acontece se a ultima veio curta — sinal
 // de fim de lista no protocolo.
