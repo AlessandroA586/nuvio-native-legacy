@@ -7225,29 +7225,26 @@ static int epSetNovo(EpSet *s, int t, int e) {
 // VIDEOS[] COM TEMPORADA FALSA: um addon que numera a temporada pelo indice do
 // episodio ("season":N,"episode":1 em cada video, "released" so com o ano) cria
 // uma aba por episodio (The Blacklist: Season 20+, cada uma com 1 episodio).
-// 5+ temporadas com no maximo 1,5 episodio por temporada nao e serie real; a
-// lista inteira conta 0 episodios (nunca vira lista nem aba), e a canonica
-// (Cinemeta) segue.
+// Reject only the episode-1/year-only pattern shared by all videos[] readers.
+// Sparse catalogs and missing dates alone do not prove malformed numbering.
 static int metaContarEpisodios(const char *corpo, int *brutos) {
   const char *v = corpo ? js_array(corpo, NULL, "videos") : NULL;
-  EpSet set = { 0 }, temps = { 0 };
-  int n = 0, b = 0, nt = 0;
+  EpSet set = { 0 };
+  int n = 0, b = 0;
+  if (js_videos_temporadas_falsas(corpo)) { if (brutos) *brutos = 0; return 0; }
   while (v) {
     const char *f = js_fim(v);
     int t = videoTemporada(v, f);
     if (t > 0) {
       int e = (int)js_num(v, f, "episode", 0);
-      unsigned antes = temps.n;
       b++;
       if (e <= 0 || epSetNovo(&set, t, e)) n++;
-      if (epSetNovo(&temps, t, 0) && temps.n > antes) nt++;
     }
     v = js_prox(f);
   }
   free(set.v);
-  free(temps.v);
   if (brutos) *brutos = b;
-  return nt >= 5 && n * 2 <= nt * 3 ? 0 : n;
+  return n;
 }
 
 int desc_meta_n_episodios(const char *corpo) { return metaContarEpisodios(corpo, NULL); }

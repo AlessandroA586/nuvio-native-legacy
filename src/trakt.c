@@ -779,7 +779,7 @@ static int enfeitar(CatItem *d, const char *tipo, uint64_t sessao) {
     js_texto(corpo, NULL, "runtime", r, sizeof r);
     // O catalogo do Nuvio nao tem duracao de SERIE, so por episodio ("25min"):
     // a do primeiro episodio faz o papel da "54 min" do Cinemeta.
-    if (!r[0]) { const char *v = js_array(corpo, NULL, "videos");
+    if (!r[0]) { const char *v = js_videos_temporadas_falsas(corpo) ? NULL : js_array(corpo, NULL, "videos");
                  if (v) js_texto(v, js_fim(v), "runtime", r, sizeof r); }
     metaprov_duracao(r, sizeof r);
     js_texto(corpo, NULL, "releaseInfo", ano, sizeof ano);

@@ -23,6 +23,7 @@ static void *callocDoTeste(size_t n, size_t tam) {
 #undef calloc
 Uint32 SDL_GetTicks(void) { return 0; }
 #include "../src/progresso.h"
+#include "../src/metaep.h"
 #include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -358,6 +359,62 @@ int main(void) {
     snprintf(bad + k, sizeof bad - k, "]}");
     assert(desc_meta_n_episodios(bad) == 0);
     assert(parsearEpisodios(bad, e, 16) == 0);
+    assert(js_videos_temporadas_falsas(bad));
+    assert(!metaep_existe(bad, 1, 1));
+    assert(!metaep_proximo(bad, 1, 1, NULL));
+    char date[40];
+    assert(!metaep_lancamento(bad, 1, 1, date, sizeof date));
+  }
+  // Sparse addon-only catalogs keep every episode, even without Cinemeta.
+  {
+    char sparse[2048];
+    size_t k = (size_t)snprintf(sparse, sizeof sparse,
+      "{\"meta\":{\"id\":\"tt13293588\",\"type\":\"series\",\"name\":\"Sparse\",\"videos\":[");
+    for (int i = 1; i <= 5; i++)
+      k += (size_t)snprintf(sparse + k, sizeof sparse - k,
+        "%s{\"id\":\"sparse:%d:1\",\"season\":%d,\"episode\":1,\"released\":\"202%d-02-%02d\"}",
+        i > 1 ? "," : "", i, i, i, i);
+    snprintf(sparse + k, sizeof sparse - k, "]}}");
+    assert(desc_meta_n_episodios(sparse) == 5);
+    assert(parsearEpisodios(sparse, e, 16) == 5);
+    assert(!js_videos_temporadas_falsas(sparse));
+    assert(metaep_existe(sparse, 5, 1));
+    MetaEpInfo next;
+    assert(metaep_proximo(sparse, 1, 1, &next));
+    assert(next.temporada == 2 && next.episodio == 1);
+    char date[40];
+    assert(metaep_lancamento(sparse, 5, 1, date, sizeof date));
+    assert(!strcmp(date, "2025-02-05"));
+    nFake = 1; nRotas = 0;
+    fake[0] = (FakeAddon){ "Sparse", "https://sparse.test", "org.sparse", "tt", 0 };
+    rota("sparse.test/meta/series/tt13293588.json", sparse);
+    rota("cinemeta", NULL);
+    limparCacheMeta();
+    catalogoDe("tt13293588", "series", "Sparse", "org.sparse");
+    abrir();
+    assert(cat_n_episodios(0) == 5 && cat_item(0)->nTemporadas == 5);
+    for (int i = 0; i < 5; i++) {
+      char id[32], date[16];
+      snprintf(id, sizeof id, "sparse:%d:1", i + 1);
+      snprintf(date, sizeof date, "202%d-02-%02d", i + 1, i + 1);
+      const CatEp *ep = cat_episodio(0, i);
+      assert(ep->temporada == i + 1 && ep->episodio == 1);
+      assert(!strcmp(ep->vid, id) && !strcmp(ep->dataIso, date));
+    }
+    nFake = 0; nRotas = 0;
+    limparCacheMeta();
+  }
+  // Missing dates and genuine episode numbers do not prove fake seasons.
+  for (int dated = 0; dated < 2; dated++) {
+    char sparse[2048];
+    size_t k = (size_t)snprintf(sparse, sizeof sparse, "{\"videos\":[");
+    for (int i = 1; i <= 5; i++)
+      k += (size_t)snprintf(sparse + k, sizeof sparse - k,
+        "%s{\"season\":%d,\"episode\":%d%s}", i > 1 ? "," : "", i,
+        dated ? 2 : 1, dated ? ",\"released\":\"2020-01-01\"" : "");
+    snprintf(sparse + k, sizeof sparse - k, "]}");
+    assert(desc_meta_n_episodios(sparse) == 5);
+    assert(parsearEpisodios(sparse, e, 16) == 5);
   }
   // A real short-season series (6 seasons, 2 episodes each) stays intact.
   {
