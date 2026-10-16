@@ -1387,6 +1387,23 @@ static int arteDetalheEhPoster(int i) {
     return r; }
 }
 
+int detail_arte_titulo(const CatItem *titulo, char *saida, size_t tam, int *poster) {
+  const CatItem *c;
+  const char *u;
+  if (saida && tam) saida[0] = 0;
+  if (poster) *poster = 0;
+  if (!titulo || !saida || !tam || !aberto || saindo || !idxTemCopia ||
+      !idxImdb[0] || strcmp(titulo->imdb, idxImdb) ||
+      strcmp(titulo->tipo, idxCopia.tipo)) return 0;
+  c = cat_item(idx);
+  if (!c || strcmp(c->imdb, idxImdb) || strcmp(c->tipo, titulo->tipo)) return 0;
+  u = arteDe(idx);
+  if (!u || !*u || strlen(u) >= tam) return 0;
+  snprintf(saida, tam, "%s", u);
+  if (poster) *poster = arteDetalheEhPoster(idx);
+  return 1;
+}
+
 static void desenhaArteDetalhe(GfxRect alvo, GLuint tex, const char *arte,
                                int poster, float alpha, float pg) {
   if (!tex) {

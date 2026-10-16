@@ -32,6 +32,8 @@ Uint32 SDL_GetTicks(void) { return 0; }
 #include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
+#define NV_TEST_SESSAO_PROPRIA
+#define NV_TEST_SOCIAL_PROPRIO
 #include "jellyfin_stub.inc"
 // Manifest loading is outside this metadata harness.
 void addons_lista_travar(void) {}
@@ -42,6 +44,18 @@ void ws_destino(const char *b, const char *u, int p, char out[20]) {
 void addons_manifesto_lido_base(int i, const char *b, const char *d,
                                unsigned v, const char *c) {
   (void)i; (void)b; (void)d; (void)v; (void)c;
+}
+int addons_identidade_recebida(const char *base, unsigned versao, uint64_t sessao,
+                               const char *corpo) {
+  (void)base; (void)versao; (void)sessao; (void)corpo;
+  fputs("unexpected addon identity publication in metadata fixture\n", stderr);
+  abort();
+}
+int addons_manifesto_recebido(const char *base, unsigned versao, uint64_t sessao,
+                              const char *corpo) {
+  (void)base; (void)versao; (void)sessao; (void)corpo;
+  fputs("unexpected addon manifest publication in metadata fixture\n", stderr);
+  abort();
 }
 
 // --- DUBLES: nenhum participa da regra, so fazem descoberta.c linkar ---------
@@ -169,7 +183,6 @@ uint64_t perfis_sessao_geracao(void) { return 1; }
 int perfis_sessao_atual(uint64_t s) { return s == 1; }
 int perfis_sessao_travar(uint64_t s) { return s == 1; }
 void perfis_sessao_destravar(void) {}
-int ajustes_ocultar_filmes_vistos(void) { return 0; }
 int trakt_enfeitar_lote_sessao(CatItem *s, int n, uint64_t sessao) {
   (void)sessao; (void)s; (void)n; return 0;
 }
@@ -991,8 +1004,9 @@ int main(void) {
     abrir();
     assert(cat_n_episodios(0) == 3);
     assert(!strcmp(cat_episodio(0, 0)->nome, "Nome do Xperience"));
-    assert(cat_item(0)->nElenco == 1 && !strcmp(cat_item(0)->elenco[0].nome, "Ator do Xperience"));
-    puts("ok  mescla: lista e elenco da base ficam; Cinemeta so preenche campos vazios");
+    // Integration also appends missing cast members from supplemental metadata.
+    assert(cat_item(0)->nElenco == 4 && !strcmp(cat_item(0)->elenco[0].nome, "Ator do Xperience"));
+    puts("ok  mescla: lista e elenco da base ficam; Cinemeta completa elenco ausente");
 
     // 26) Item do Cinemeta (origem "cinemeta"): nada muda, a lista e a do Cinemeta.
     limparCacheMeta(); nRotas = 0;

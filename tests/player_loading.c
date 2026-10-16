@@ -36,6 +36,10 @@ const Stream *stream_item(int idx) { (void)idx; return &fonte; }
 int stream_atual(void) { return 0; }
 void video_estatisticas(VideoStats *s) { *s = stats; }
 const char *artehero_url(const CatItem *c) { return c->backdrop; }
+// This renderer fixture supplies local artwork; ownership/copying uses the
+// real detail and player modules in player_loading_artwork.sh.
+static int cinemaPoster;
+static const char *cinemaArteObter(const CatItem *c) { return artehero_url(c); }
 const char *artehero_logo_sessao(const CatItem *c) { return c->logo; }
 GLuint tex_obter_hero(const char *s) { return *s ? 1 : 0; }
 GLuint tex_obter_larg(const char *s, float w) { (void)w; return *s ? 1 : 0; }

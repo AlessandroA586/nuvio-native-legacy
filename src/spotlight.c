@@ -410,21 +410,21 @@ static int tituloDoUsuario(const CatItem *ci) {
   return ci->naLista || ci->naColecao || ci->progresso > 0 || ci->retomadoMs > 0;
 }
 static void montarTitulos(const char *alvo) {
-  int nAlvos = desc_busca_n_alvos(), capacidade = 64 + nAlvos * 12;
+  int nAlvos = desc_busca_n_alvos(), capacidade = 64 + nAlvos * DESC_BUSCA_POR_ALVO;
   Cand c[capacidade];
+  CatItem *novos = NULL;
   int nc = 0, r, i, ordem = 0;
   char nome[320];
   // REDE primeiro na ORDEM (o addon ja ranqueou), local depois; o placar
   // decide o resto. Remoto que nao contem o texto (o addon casou por outro
   // campo) ainda entra, abaixo de qualquer casamento de nome.
   { int a;
-    // #405: 12 por alvo, como a Busca. Todos participam do ranking antes
+    // #405: a mesma janela da Busca. Todos participam do ranking antes
     // do teto global de 64: um exato no ultimo alvo nao pode ser descartado.
     for (a = 0; a < nAlvos; a++) {
       int nRem = desc_busca_alvo_n(a, consulta);
-      CatItem novos[12];
-      int posNovo[12], idxNovos[12], nNovos = 0;
-      for (i = 0; i < nRem && i < 12; i++) {
+      int posNovo[DESC_BUSCA_POR_ALVO], idxNovos[DESC_BUSCA_POR_ALVO], nNovos = 0;
+      for (i = 0; i < nRem && i < DESC_BUSCA_POR_ALVO; i++) {
         CatItem it;
         int idx, k, dup = 0;
         // Sem ID, cada montagem reinseriria o resultado e mudaria a revisao.
@@ -438,7 +438,13 @@ static void montarTitulos(const char *alvo) {
         c[nc].pont += 6 - (a < 6 ? a : 6);   // primeiro addon desempata
         c[nc].ordem = ordem++;
         if (idx >= 0) c[nc++].idx = idx;
-        else if (nNovos < 12) { novos[nNovos] = it; posNovo[nNovos++] = nc; c[nc++].idx = -1; }
+        else if (nNovos < DESC_BUSCA_POR_ALVO) {
+          // Um lote reutilizado entre alvos, so quando ha titulo novo. Nao
+          // levar centenas de KiB para a pilha da interface a cada montagem.
+          if (!novos) novos = malloc(sizeof(CatItem) * DESC_BUSCA_POR_ALVO);
+          if (!novos) continue;
+          novos[nNovos] = it; posNovo[nNovos++] = nc; c[nc++].idx = -1;
+        }
       }
       // Os que nao estao no catalogo entram numa troca de bloco so (o porque
       // esta em refiltrar, busca.c: cat_acrescentar por item copia tudo).
@@ -447,6 +453,7 @@ static void montarTitulos(const char *alvo) {
         for (i = 0; i < nNovos; i++) c[posNovo[i]].idx = i < entraram ? idxNovos[i] : -1;
       }
     } }
+  free(novos);
   // Salvos podem estar fora das fileiras. O bonus pessoal (15) vence a
   // ordem dos addons (0..6), mas nao a classe de casamento do nome (20).
   // Nao usamos nota como popularidade: CatItem nao tem esse dado.

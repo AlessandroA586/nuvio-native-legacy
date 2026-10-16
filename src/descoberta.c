@@ -871,7 +871,7 @@ static int lerBusca(const char *tipo, const char *termo, CatItem *saida,
 // Antes so o Cinemeta era consultado, e era isso que o dono via como "nao ta
 // procurando em todos os catalogos" — porque de fato nao estava.
 #define BUSCA_ALVOS  16
-#define BUSCA_POR_ALVO 12          // uma fileira por alvo, 12 cabem na tela
+#define BUSCA_POR_ALVO DESC_BUSCA_POR_ALVO
 #define BUSCA_FIOS    3            // quantos alvos em voo ao mesmo tempo
 
 // O PEDIDO A UM ADDON COUBE NO BUFFER? `w` e o retorno do snprintf que o
@@ -1026,18 +1026,27 @@ static int consultarAlvo(const AlvoBusca *a, const char *termo,
 }
 
 static void *fioBusca(void *arg) {
+  // O lote cabe na memoria limitada da busca, sem consumir quase toda a
+  // pilha de 512 KiB de um fio no macOS. Reutilizado ate a fila esvaziar.
+  CatItem *achados = malloc(sizeof(CatItem) * BUSCA_POR_ALVO);
   (void)arg;
+  if (!achados) {
+    pthread_mutex_lock(&buscaTrava);
+    fiosVivos--;
+    pthread_mutex_unlock(&buscaTrava);
+    return NULL;
+  }
   for (;;) {
     AlvoBusca a;
     char termo[96];
     int meu, g;
-    CatItem achados[BUSCA_POR_ALVO];
     int n;
 
     pthread_mutex_lock(&buscaTrava);
     if (proximoAlvo >= nAlvos || !buscaPedido[0]) {
       fiosVivos--;
       pthread_mutex_unlock(&buscaTrava);
+      free(achados);
       return NULL;
     }
     meu = proximoAlvo++;
