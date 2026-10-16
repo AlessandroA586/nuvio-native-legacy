@@ -90,6 +90,7 @@ int player_aberto(void);
 #if defined(NV_TPK) && !defined(__EMSCRIPTEN__)
 #include "video.h"   /* cartaoVideoRect: tamanho do quadro para o LetterBox no cartao */
 #endif
+int video_registro_negado(void); /* video.h: motivo do trailer bloqueado */
 #include "trailerimdb.h"
 #include "trailerapple.h"
 #include "trailerfonte.h"
