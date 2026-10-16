@@ -111,6 +111,15 @@ static void *fio(void *u) {
   // Serialize tracker writes with retries through confirmation.
   // ponytail: profile-wide gate; use per-item gates if write throughput matters.
   if (!nv_perfil_sessao_travar(e->sessao)) { free(e); return NULL; }
+  // Keep only journal entries still owned by this queued gesture.
+  int n = 0;
+  for (int i = 0; i < e->n; i++)
+    if (contapend_gesto_atual(e->imdb, e->pares[i].temporada, e->pares[i].episodio, e->ms))
+      e->pares[n++] = e->pares[i];
+  e->n = n;
+  if (e->titulo ? !contapend_gesto_atual(e->imdb, 0, 0, e->ms) : !n) {
+    nv_perfil_sessao_destravar(); free(e); return NULL;
+  }
   int enviados = 0;
   if (e->destinos & VISTO_TRAKT) {
     int ok = e->titulo ? trakt_titulo_marcar_destino(&e->trakt, e->imdb, e->tipo, e->visto)

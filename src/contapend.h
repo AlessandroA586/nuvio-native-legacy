@@ -56,6 +56,8 @@ int  contapend_lista(const char *imdb, const char *tipo, const char *nome,
 // retried independently; seasons are retained for safe Simkl series removal.
 long long contapend_gesto(const char *id, const char *tipo, const VistoPar *pares, int n,
                           int visto, int destinos, const int *temporadas, int nt);
+// Check queued intent after acquiring the profile write gate.
+int contapend_gesto_atual(const char *id, int t, int e, long long ms);
 void contapend_confirmar_gesto(const char *id, const VistoPar *pares, int n,
                               long long ms, int destinos);
 // Resolve against the latest local gesture (including whole-series intent).

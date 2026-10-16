@@ -421,6 +421,19 @@ static void confirmar(const char *usu, const Ent *env, int n, int destino) {
   pthread_mutex_unlock(&trava);
 }
 
+int contapend_gesto_atual(const char *imdb, int t, int e, long long ms) {
+  char id[24];
+  int atual = 0, perfil = perfis_ativo();
+  idVisto(imdb, id, sizeof id);
+  pthread_mutex_lock(&trava);
+  if (garantir()) {
+    int k = achar('V', perfil, id, t, e);
+    atual = k >= 0 && ents[k].ms == ms;
+  }
+  pthread_mutex_unlock(&trava);
+  return atual;
+}
+
 void contapend_confirmar_gesto(const char *imdb, const VistoPar *pares, int n,
                               long long ms, int destinos) {
   char id[24];

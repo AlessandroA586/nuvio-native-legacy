@@ -19,6 +19,12 @@ static int chamadas, proximoStatus, bloquear, liberar;
 static unsigned long long geracaoMapa = 1;
 static int marcas;
 
+const char *metaprov_idioma(void) { return "en-US"; }
+char *metaprov_meta(const char *tipo, const char *id, int seg, int *prov) {
+  (void)tipo; (void)id; (void)seg; (void)prov;
+  return NULL;
+}
+
 char *rede_postar_st(const char *url, int segundos, const char *const *cab,
                      const char *corpo, int *status) {
   (void)segundos; (void)cab;

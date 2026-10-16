@@ -20,6 +20,7 @@
 #include "../src/sessao.h"
 #include "../src/contapend.h"
 #include <assert.h>
+#include <pthread.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,6 +54,18 @@ const char *sessao_usuario(void) { return logada ? "usuario-teste" : ""; }
 char *contacache_ler(const char *s, int p, const char *u, long *q) { (void)s; (void)p; (void)u; (void)q; return NULL; }
 int perfis_ativo(void) { return perfil; }
 uint64_t perfis_sessao_geracao(void) { return 1; }
+
+// Capture workers instead of scheduling threads; tests choose their exact order.
+static struct { void *(*run)(void *); void *arg; } workers[2];
+static int nWorkers;
+int visto_test_create(pthread_t *t, const pthread_attr_t *a,
+                      void *(*run)(void *), void *arg) {
+  *t = (pthread_t)0; (void)a;
+  assert(nWorkers < 2);
+  workers[nWorkers].run = run; workers[nWorkers++].arg = arg;
+  return 0;
+}
+int visto_test_detach(pthread_t t) { (void)t; return 0; }
 
 static int replaceOnGate;
 static int gateDepth;
@@ -374,6 +387,36 @@ int main(void) {
   assert(nPost == 2 && strstr(post[0].url, "/remove") && strstr(post[1].url, "/remove"));
   assert(contapend_pendentes() == 0 && gateDepth == 0);
   OK("retry skips a snapshot superseded by a confirmed unmark");
+
+  // Initial workers must also skip superseded gestures, even after confirmation.
+  for (int whole = 0; whole < 2; whole++) {
+    free(journal); journal = NULL; contapend_esquecer(); zerar();
+    int temps[1] = {1};
+    nWorkers = 0;
+    for (int watched = 1; watched >= 0; watched--)
+      assert(whole ? visto_titulo("tt5480099", "series", temps, 1, watched, visto_destinos())
+                   : visto_episodios("tt5480099", "series", tres, 1, watched, visto_destinos()));
+    assert(nWorkers == 2 && nPost == 0);
+    workers[1].run(workers[1].arg);
+    assert(contapend_pendentes() == 0);
+    workers[0].run(workers[0].arg);
+    assert(nPost == 2 && strstr(post[0].url, "/remove") && strstr(post[1].url, "/remove"));
+    assert(contapend_pendentes() == 0 && gateDepth == 0);
+  }
+  OK("initial episode/title workers skip marks superseded by a confirmed unmark");
+
+  free(journal); journal = NULL; contapend_esquecer(); zerar(); nWorkers = 0;
+  assert(visto_episodios("tt5480099", "series", tres, 2, 1, visto_destinos()));
+  assert(visto_episodios("tt5480099", "series", tres, 1, 0, visto_destinos()));
+  workers[1].run(workers[1].arg);
+  workers[0].run(workers[0].arg);
+  assert(nPost == 4 && strstr(post[0].url, "/remove") && strstr(post[1].url, "/remove"));
+  for (int i = 2; i < 4; i++) {
+    assert(!strstr(post[i].url, "/remove"));
+    assert(strstr(post[i].corpo, "\"episodes\":[{\"number\":2}]"));
+  }
+  assert(contapend_pendentes() == 0 && gateDepth == 0);
+  OK("initial batch preserves episodes not superseded by a newer gesture");
 
   now += 10000; zerar();
   assert(visto_titulo_ja("tt5480004", "movie", NULL, 0, 0, visto_destinos()));
