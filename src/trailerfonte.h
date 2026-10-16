@@ -30,7 +30,7 @@ typedef struct {
   const char *apple;   int appleRespondeu, appleFalhou;
   const char *imdb;    int imdbRespondeu;
   const char *youtube; int youtubeRespondeu;
-  int youtubeIdiomaPreferido; /* Known non-English audio match from TMDB. */
+  int youtubeIdiomaPreferido; // 1 youtube is in the chosen (non-English) trailer audio; -1 TMDB not answered yet
 } TrailerCandidatos;
 
 typedef enum {

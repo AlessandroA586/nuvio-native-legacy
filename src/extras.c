@@ -355,6 +355,15 @@ static void alvoDeVideo(const char *idioma, const char *original, char *dst, siz
   else snprintf(dst, cap, "%s", p);
 }
 
+// The chosen trailer audio may not be English, so callers wait for TMDB.
+// Original is only known once TMDB answers.
+static int idiomaPedido(void) {
+  char alvo[16];
+  if (!strcmp(PREF_AUDIO(), "~")) return 1;
+  alvoDeVideo(desc_tmdb_idioma(), "", alvo, sizeof alvo);
+  return strncasecmp(alvo, "en", 2) != 0;
+}
+
 static void idiomasDeVideo(const char *idioma, const char *original, char *dst, size_t cap) {
   char alvo[16], iso[3] = "";
   alvoDeVideo(idioma, original, alvo, sizeof alvo);
@@ -1891,6 +1900,7 @@ const char *extras_ficha_lancamento(void)    { return fichaLanc; }
 
 int extras_n_trailers(void) { return nTrailer; }
 int extras_trailer_idioma_preferido(int i) {
+  if (!nTrailer && extras_carregando()) return idiomaPedido() ? -1 : 0;
   return i >= 0 && i < nTrailer && trailer[i].idiomaPreferido;
 }
 const char *extras_trailer_yt(int i) {
@@ -2090,8 +2100,10 @@ int extras_hero_trailer_idioma_preferido(const char *imdb) {
   int preferido;
   normalizarHeroId(imdb, id, sizeof id);
   pthread_mutex_lock(&heroTrailerTrava);
-  preferido = id[0] && !strcmp(heroTrailerPedido, id) && !heroTrailerVivo &&
-    heroTrailerExecutada == heroTrailerGer && nHeroTrailer > 0 && heroTrailer[0].idiomaPreferido;
+  if (id[0] && !strcmp(heroTrailerPedido, id) && !heroTrailerVivo &&
+      heroTrailerExecutada == heroTrailerGer)
+    preferido = nHeroTrailer > 0 && heroTrailer[0].idiomaPreferido;
+  else preferido = idiomaPedido() ? -1 : 0;
   pthread_mutex_unlock(&heroTrailerTrava);
   return preferido;
 }

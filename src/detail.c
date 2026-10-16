@@ -467,7 +467,7 @@ static const char *trailerFonte(int k, int *qual, int cheia) {
 #ifdef __EMSCRIPTEN__
   if (k >= 0 && k < extras_n_trailers() && extras_trailer_yt(k)[0]) c.youtube = extras_trailer_yt(k);
   else if (extras_n_trailers() > 0 && extras_trailer_yt(0)[0]) { k = 0; c.youtube = extras_trailer_yt(0); }
-  c.youtubeIdiomaPreferido = c.youtube && extras_trailer_idioma_preferido(k);
+  c.youtubeIdiomaPreferido = extras_trailer_idioma_preferido(k);
 #else
   (void)k;
 #endif
@@ -2482,14 +2482,6 @@ static int acaoEm(int n) {
 // "Assistir trailer" da linha de acoes passam por aqui). Voltar fecha o trailer
 // (trailer_evento) e a pagina continua com o mesmo foco.
 static void tocarTrailerCheio(int k) {
-#ifndef __EMSCRIPTEN__
-  /* Native video backends cannot play YouTube IDs. Use the existing external
-   * player for a known language match instead of silently playing English. */
-  if (trailerfonte_ajuste() == TRF_AUTO && extras_trailer_idioma_preferido(k)) {
-    extras_trailer_abrir(k);
-    return;
-  }
-#endif
   const char *u = trailer_suportado() ? trailerFonte(k, NULL, 1) : NULL;
   if (u) {
     GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };

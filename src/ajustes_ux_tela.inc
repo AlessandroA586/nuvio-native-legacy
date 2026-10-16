@@ -190,7 +190,10 @@ static const Item TELA[] = {
       OPC(AJ_HERO_TRAILER), OPC(AJ_FOCO_TRAILER), OPC(AJ_DET_TRAILER_AUTO),
       OPC(AJ_DET_TRAILER),
     ROT("Som e imagem"),
-      OPC(AJ_HERO_TRAILER_SOM), OPC(AJ_TRAILER_FONTE), OPC(AJ_TRAILER_AUDIO),
+      OPC(AJ_HERO_TRAILER_SOM), OPC(AJ_TRAILER_FONTE),
+#ifdef __EMSCRIPTEN__
+      OPC(AJ_TRAILER_AUDIO),   // the dubbed trailer is a YouTube id: native players cannot play it
+#endif
 #ifdef NV_TPK
       OPC(AJ_TRAILER_ZOOM_TPK),
 #endif
