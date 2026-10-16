@@ -169,12 +169,17 @@ int simkl_ler_playback(const char *json, CatItem *dst, long long *ids, int max) 
 }
 
 int simkl_ler_assistindo(const char *json, CatItem *dst, int max) {
+  // O Simkl guarda anime num terceiro tipo: /sync/all-items/anime/<estado>
+  // devolve a raiz "anime" e o objeto interno tambem se chama "anime".
+  static const char *vetores[] = { "shows", "anime" };
+  static const char *chaves[]  = { "show", "anime" };
   const char *p;
-  int n = 0;
+  int n = 0, k;
   if (!json || !dst) return 0;
   // Sem nada em "watching" o Simkl responde `null` ou `{}` — js_array devolve
   // NULL e o laco nem comeca.
-  for (p = js_array(json, NULL, "shows"); p && *p == '{' && n < max;
+  for (k = 0; k < 2 && n < max; k++)
+  for (p = js_array(json, NULL, vetores[k]); p && *p == '{' && n < max;
        p = js_prox(js_fim(p))) {
     const char *f = js_fim(p), *oi, *of;
     CatItem *d = &dst[n];
@@ -184,7 +189,7 @@ int simkl_ler_assistindo(const char *json, CatItem *dst, int max) {
     // "S01E05". Em dia com o que foi ao ar vem null, e ai nao ha o que seguir.
     if (!js_texto_raiz_em(p, f, "next_to_watch", prox, sizeof prox)) continue;
     if (sscanf(prox, "S%dE%d", &t, &e) != 2 || t <= 0 || e <= 0) continue;
-    if (!objetoRaiz(p, f, "show", &oi, &of)) continue;
+    if (!objetoRaiz(p, f, chaves[k], &oi, &of)) continue;
     if (!lerObra(oi, of, d, imdb, sizeof imdb)) continue;
     d->temporada = t;
     d->episodio = e;
@@ -201,16 +206,19 @@ int simkl_ler_assistindo(const char *json, CatItem *dst, int max) {
 }
 
 int simkl_ler_plantowatch(const char *json, int serie, CatItem *dst, int max) {
+  static const char *vetores[] = { "movies", "shows", "anime" };
+  static const char *chaves[]  = { "movie", "show", "anime" };
   const char *p;
-  int n = 0;
+  int n = 0, k;
   if (!json || !dst) return 0;
-  for (p = js_array(json, NULL, serie ? "shows" : "movies"); p && *p == '{' && n < max;
+  for (k = serie ? 1 : 0; k < (serie ? 3 : 1) && n < max; k++)
+  for (p = js_array(json, NULL, vetores[k]); p && *p == '{' && n < max;
        p = js_prox(js_fim(p))) {
     const char *f = js_fim(p), *oi, *of;
     CatItem *d = &dst[n];
     char imdb[24];
     memset(d, 0, sizeof *d);
-    if (!objetoRaiz(p, f, serie ? "show" : "movie", &oi, &of)) continue;
+    if (!objetoRaiz(p, f, chaves[k], &oi, &of)) continue;
     if (!lerObra(oi, of, d, imdb, sizeof imdb)) continue;
     snprintf(d->imdb, sizeof d->imdb, "%s", imdb);
     snprintf(d->tipo, sizeof d->tipo, "%s", serie ? "series" : "movie");
@@ -639,7 +647,8 @@ static int nPtw;
 // listas lidas aqui (watching, plantowatch) sao pequenas, e o incremental
 // exigiria guardar e fundir o estado entre arranques.
 static unsigned long assCw, assPtw;
-static char *corpoPlay, *corpoAssist, *corpoPtwFilmes, *corpoPtwSeries;
+static char *corpoPlay, *corpoAssist, *corpoAssistAnime,
+            *corpoPtwFilmes, *corpoPtwSeries, *corpoPtwAnime;
 
 static void trocar(char **dst, char *novo) { free(*dst); *dst = novo; }
 
@@ -654,7 +663,9 @@ void simkl_esquecer(void) {
   nPlay = nProx = nPtw = 0;
   assCw = assPtw = 0;
   trocar(&corpoPlay, NULL); trocar(&corpoAssist, NULL);
+  trocar(&corpoAssistAnime, NULL);
   trocar(&corpoPtwFilmes, NULL); trocar(&corpoPtwSeries, NULL);
+  trocar(&corpoPtwAnime, NULL);
   pthread_mutex_unlock(&trava);
 }
 
@@ -686,34 +697,50 @@ int simkl_continuar(CatItem *saida, int max) {
   CatItem *prox;
   long long ids[SMK_PLAY_MAX];
   unsigned long h;
-  char *cPlay = NULL, *cAssist = NULL;
+  char *cPlay = NULL, *cAssist = NULL, *cAnime = NULL;
   char proxLocal[SMK_PLAY_MAX][28]; int nProxLocal = 0;
-  int n, nP, i, k;
+  int n, nP, nA, i, k;
   SmkPedido pedido = pedidoCapturar();
   if (!saida || max <= 0 || !pedido.aut[0]) return 0;
   if (max > SMK_PLAY_MAX) max = SMK_PLAY_MAX;
   h = atividades(pedido);
   if (!pedidoTravar(pedido)) return 0;
-  if (h && h == assCw && corpoPlay && corpoAssist) {
+  if (h && h == assCw && corpoPlay && corpoAssist && corpoAssistAnime) {
     cPlay = strdup(corpoPlay); cAssist = strdup(corpoAssist);
+    cAnime = strdup(corpoAssistAnime);
   }
   pedidoDestravar();
-  if (!cPlay || !cAssist) {
-    int st = 0; free(cPlay); free(cAssist);
+  if (!cPlay || !cAssist || !cAnime) {
+    int st = 0; free(cPlay); free(cAssist); free(cAnime);
     cPlay = pegar(pedido, "/sync/playback", NULL, &st);
     cAssist = pegar(pedido, "/sync/all-items/shows/watching", NULL, &st);
+    // Anime e um TERCEIRO tipo no Simkl: /sync/all-items/anime/<estado>.
+    // Sem este pedido, nenhum anime aparece no Continuar assistindo.
+    cAnime = pegar(pedido, "/sync/all-items/anime/watching", NULL, &st);
     if (pedidoTravar(pedido)) {
-      if (h && cPlay && cAssist) {
-        trocar(&corpoPlay, strdup(cPlay)); trocar(&corpoAssist, strdup(cAssist)); assCw = h;
+      if (h && cPlay && cAssist && cAnime) {
+        trocar(&corpoPlay, strdup(cPlay)); trocar(&corpoAssist, strdup(cAssist));
+        trocar(&corpoAssistAnime, strdup(cAnime)); assCw = h;
       } else assCw = 0;
       pedidoDestravar();
     }
   }
-  if (!pedidoAtual(pedido)) { free(cPlay); free(cAssist); return 0; }
+  if (!pedidoAtual(pedido)) { free(cPlay); free(cAssist); free(cAnime); return 0; }
   n = simkl_ler_playback(cPlay, saida, ids, max);
   int nPausados = n;
   prox = malloc(sizeof(CatItem) * SMK_PLAY_MAX);
   nP = prox && ajustes_cw_proximo() ? simkl_ler_assistindo(cAssist, prox, SMK_PLAY_MAX) : 0;
+  // O mesmo leitor aceita a raiz "anime"; funde aqui, dedup por serie, para
+  // nao repetir um titulo que o endpoint de shows ja tenha trazido.
+  if (prox && ajustes_cw_proximo() && nP < SMK_PLAY_MAX) {
+    nA = simkl_ler_assistindo(cAnime, prox + nP, SMK_PLAY_MAX - nP);
+    for (k = nP; k < nP + nA; k++) {
+      int j, ja = 0;
+      for (j = 0; j < nP && !ja; j++) ja = mesmaSerie(prox[j].imdb, prox[k].imdb);
+      if (ja) memmove(prox + k, prox + k + 1, sizeof prox[0] * (size_t)(nP + nA - k - 1)), nA--, k--;
+    }
+    nP += nA;
+  }
   for (k = 0; k < nP; k++) {
     int ja = 0, alvo;
     for (i = 0; i < n && !ja; i++) ja = mesmaSerie(saida[i].imdb, prox[k].imdb);
@@ -731,7 +758,7 @@ int simkl_continuar(CatItem *saida, int max) {
     if (nProxLocal < SMK_PLAY_MAX)
       snprintf(proxLocal[nProxLocal++], sizeof proxLocal[0], "%s", prox[k].imdb);
   }
-  free(prox); free(cPlay); free(cAssist);
+  free(prox); free(cPlay); free(cAssist); free(cAnime);
   if (!pedidoTravar(pedido)) return 0;
   nPlay = 0;
   for (i = 0; i < nPausados; i++)
@@ -760,35 +787,46 @@ int simkl_continuar(CatItem *saida, int max) {
 }
 
 int simkl_plantowatch(CatItem *saida, int max) {
-  unsigned long h; char *cF = NULL, *cS = NULL; int n = 0, i;
+  unsigned long h; char *cF = NULL, *cS = NULL, *cA = NULL; int n = 0, nA, i, j;
   SmkPedido pedido = pedidoCapturar();
   if (!saida || max <= 0 || !pedido.aut[0]) return 0;
   h = atividades(pedido);
   if (!pedidoTravar(pedido)) return 0;
-  if (h && h == assPtw && corpoPtwFilmes && corpoPtwSeries) {
+  if (h && h == assPtw && corpoPtwFilmes && corpoPtwSeries && corpoPtwAnime) {
     cF = strdup(corpoPtwFilmes); cS = strdup(corpoPtwSeries);
+    cA = strdup(corpoPtwAnime);
   }
   pedidoDestravar();
-  if (!cF || !cS) {
-    int st = 0; free(cF); free(cS);
+  if (!cF || !cS || !cA) {
+    int st = 0; free(cF); free(cS); free(cA);
     cF = pegar(pedido, "/sync/all-items/movies/plantowatch", NULL, &st);
     cS = pegar(pedido, "/sync/all-items/shows/plantowatch", NULL, &st);
+    // Anime e o terceiro tipo do Simkl: vai para o lado das series.
+    cA = pegar(pedido, "/sync/all-items/anime/plantowatch", NULL, &st);
     if (pedidoTravar(pedido)) {
-      if (h && cF && cS) {
-        trocar(&corpoPtwFilmes, strdup(cF)); trocar(&corpoPtwSeries, strdup(cS)); assPtw = h;
+      if (h && cF && cS && cA) {
+        trocar(&corpoPtwFilmes, strdup(cF)); trocar(&corpoPtwSeries, strdup(cS));
+        trocar(&corpoPtwAnime, strdup(cA)); assPtw = h;
       } else assPtw = 0;
       pedidoDestravar();
     }
   }
   n = simkl_ler_plantowatch(cF, 0, saida, max);
   n += simkl_ler_plantowatch(cS, 1, saida + n, max - n);
-  if (cF && cS && pedidoTravar(pedido)) {
+  nA = simkl_ler_plantowatch(cA, 1, saida + n, max - n);
+  // Dedup por imdb: um titulo em shows e anime ao mesmo tempo nao entra 2x.
+  for (i = n; i < n + nA; i++) {
+    for (j = 0; j < n; j++) if (!strcmp(saida[j].imdb, saida[i].imdb)) break;
+    if (j < n) memmove(saida + i, saida + i + 1, sizeof saida[0] * (size_t)(n + nA - i - 1)), nA--, i--;
+  }
+  n += nA;
+  if (cF && cS && cA && pedidoTravar(pedido)) {
     nPtw = 0;
     for (i = 0; i < n && nPtw < SMK_PTW_MAX; i++)
       snprintf(ptw[nPtw++], sizeof ptw[0], "%s", saida[i].imdb);
     pedidoDestravar();
   }
-  free(cF); free(cS);
+  free(cF); free(cS); free(cA);
   printf("[simkl] plantowatch: %d\n", n); fflush(stdout);
   return pedidoAtual(pedido) ? n : 0;
 }
