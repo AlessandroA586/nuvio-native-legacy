@@ -33,6 +33,12 @@ void addons_lista_destravar(void) {}
 void ws_destino(const char *b, const char *u, int p, char out[20]) {
   (void)b; (void)u; (void)p; out[0] = 0;
 }
+int addons_identidade_recebida(const char *b, unsigned v, NvPerfilSessao s, const char *c) {
+  (void)b; (void)v; (void)s; (void)c; return 1;
+}
+int addons_manifesto_recebido(const char *b, unsigned v, NvPerfilSessao s, const char *c) {
+  return addons_identidade_recebida(b, v, s, c);
+}
 void addons_manifesto_lido_base(int i, const char *b, const char *d,
                                unsigned v, const char *c) {
   (void)i; (void)b; (void)d; (void)v; (void)c;
@@ -339,6 +345,32 @@ int main(void) {
                        "{\"id\":\"y\",\"season\":1,\"name\":\"Y\"},"
                        "{\"id\":\"z\",\"season\":1,\"name\":\"Z\"}]}", e, 16);
   assert(n == 3);
+  // The Blacklist: an addon videos[] with season = running index, episode 1 and
+  // a year-only date made 22 fake one-episode seasons. Never parsed/counted.
+  {
+    char bad[4096];
+    size_t k = (size_t)snprintf(bad, sizeof bad, "{\"videos\":[");
+    int i;
+    for (i = 1; i <= 22; i++)
+      k += (size_t)snprintf(bad + k, sizeof bad - k,
+        "%s{\"id\":\"tt2741602:%d:1\",\"season\":%d,\"episode\":1,\"released\":\"2013-01-01T00:00:00.000Z\"}",
+        i > 1 ? "," : "", i, i);
+    snprintf(bad + k, sizeof bad - k, "]}");
+    assert(desc_meta_n_episodios(bad) == 0);
+    assert(parsearEpisodios(bad, e, 16) == 0);
+  }
+  // A real short-season series (6 seasons, 2 episodes each) stays intact.
+  {
+    char ok[4096];
+    size_t k = (size_t)snprintf(ok, sizeof ok, "{\"videos\":[");
+    int i;
+    for (i = 0; i < 12; i++)
+      k += (size_t)snprintf(ok + k, sizeof ok - k,
+        "%s{\"season\":%d,\"episode\":%d}", i ? "," : "", i / 2 + 1, i % 2 + 1);
+    snprintf(ok + k, sizeof ok - k, "]}");
+    assert(desc_meta_n_episodios(ok) == 12);
+    assert(parsearEpisodios(ok, e, 16) == 12);
+  }
   // Samsung 2.0.4: One Piece renumerado por um addon de fontes.
   {
     size_t cap = 2u << 20, k;
