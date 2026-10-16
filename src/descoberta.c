@@ -1001,14 +1001,26 @@ static int consultarAlvo(const AlvoBusca *a, const char *termo,
   p = js_array(corpo, NULL, "metas");
   { char orig[96];
     origemDaBase(a->base, orig, sizeof orig);   // o resultado abre pelo addon que o achou
-    while (p && n < max) {
+    // #555: o TMDB ordena por popularidade e a serie de nome IGUAL ao termo
+    // ("Bigg Boss", 20 temporadas) vinha em 14o, atras do corte de `max`. Le a
+    // resposta toda e leva os de titulo igual ao termo para a frente (estavel).
+    CatItem *it = malloc(sizeof *it);
+    int exatos = 0;
+    while (it && p) {
       const char *f = js_fim(p);
-      if (deMeta(p, f, a->tipo, &saida[n])) {
-        snprintf(saida[n].origem, sizeof saida[n].origem, "%s", orig);
-        n++;
+      if (deMeta(p, f, a->tipo, it)) {
+        int exato = exatos < max && !strcasecmp(it->titulo, termo);
+        snprintf(it->origem, sizeof it->origem, "%s", orig);
+        if (exato) {
+          int fim = n < max ? n : max - 1;
+          memmove(&saida[exatos + 1], &saida[exatos], sizeof *saida * (size_t)(fim - exatos));
+          saida[exatos++] = *it;
+          if (n < max) n++;
+        } else if (n < max) saida[n++] = *it;
       }
       p = js_prox(f);
-    } }
+    }
+    free(it); }
   free(corpo);
   return n;
 }
