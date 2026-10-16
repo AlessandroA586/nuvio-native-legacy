@@ -60,10 +60,24 @@ static void conferir(const char *estado, int dicas) {
   CONFERE(dentro(painel, tela), "panel %.0f,%.0f %.0fx%.0f outside screen %.0fx%.0f", p[0], p[1], p[2], p[3], tela.w, tela.h);
   CONFERE(!dicas || g.nKeys >= 3, "hint row missing (%d keys)", g.nKeys);
   CONFERE(!dicas || (strstr(g.dicas, "↓") && strstr(g.dicas, "|")), "pin/close hints missing");
+  CONFERE(!dicas || g.hintTextH >= g.bodyTextH, "hint text height %.1f smaller than body %.1f", g.hintTextH, g.bodyTextH);
+  CONFERE(!dicas || g.hintTextH <= g.keys[0].h, "hint text exceeds row height");
   CONFERE(estatvivo_tamanho() == EV_TAM_MINIMO || g.nTextos > 10, "rendered text bounds missing");
   for (int i = 0; i < g.nKeys; i++)
     CONFERE(dentro(g.keys[i], tela) && dentro(g.keys[i], painel), "hint %d at %.0f,%.0f off screen/panel", i, g.keys[i].x, g.keys[i].y);
+  float titleH = 0;
   for (int i = 0; i < g.nTiles; i++) {
+    int found = 0;
+    for (int j = 0; j < g.nTextos; j++) {
+      if (g.donos[j].x != g.tiles[i].x || g.donos[j].y != g.tiles[i].y) continue;
+      // The header is drawn first in each card; wrapped lines keep this height.
+      float h = g.textos[j].h;
+      if (!titleH) titleH = h;
+      CONFERE(h == titleH, "card %d title height %.1f differs from %.1f", i, h, titleH);
+      found = 1;
+      break;
+    }
+    CONFERE(found, "card %d title missing", i);
     CONFERE(dentro(g.tiles[i], painel), "card %d %.0f,%.0f %.0fx%.0f outside panel", i, g.tiles[i].x, g.tiles[i].y, g.tiles[i].w, g.tiles[i].h);
     CONFERE(!dicas || g.tiles[i].y + g.tiles[i].h < g.separator.y, "card %d overlaps hint row", i);
   }

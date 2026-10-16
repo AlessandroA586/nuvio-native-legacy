@@ -58,6 +58,7 @@ int estatvivo_teste_tiles(int *ids);
 typedef struct {
   GfxRect header, meta, tiles[6], keys[5], separator;
   int nTiles, nKeys;
+  float hintTextH, bodyTextH;
   char dicas[256];   // the hint row text, as drawn
   // Every text box drawn this frame and the card (or panel) that owns it;
   // `cortes` counts single lines cut with an ellipsis.

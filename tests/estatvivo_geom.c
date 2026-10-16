@@ -82,15 +82,17 @@ static void checkGeometry(int t, const float *panel, const float *hints) {
             "mode %d: footer follows the content margins", t);
     CONFERE(fabsf(geo.separator.x - left) < 0.5f && fabsf(geo.separator.x + geo.separator.w - right) < 0.5f,
             "mode %d: separator aligned to content", t);
-    CONFERE(fabsf(hints[3] - GEO_KEY_H) < 0.5f, "mode %d: hints are one row", t);
+    CONFERE(fabsf(hints[3] - GEO_KEY_H * (t == EV_TAM_COMPLETO ? 1 : 2)) < 0.5f,
+            "mode %d: hint rows reserved", t);
     CONFERE(!strstr(geo.dicas, "Menu"), "mode %d: hints never name a Menu key (%s)", t, geo.dicas);
     CONFERE(fabsf(panel[1] + panel[3] - hints[1] - hints[3] - GEO_PAD) < 0.5f,
             "mode %d: footer bottom padding", t);
     for (i = 0; i < geo.nKeys; i++) {
       GfxRect k = geo.keys[i];
-      CONFERE(k.y == hints[1] && k.x >= left && k.x + k.w <= right,
-              "mode %d hint %d: on the single row, no overflow", t, i);
-      CONFERE(i == 0 || k.x > geo.keys[i - 1].x + geo.keys[i - 1].w, "mode %d hint %d: no overlap", t, i);
+      CONFERE(k.y >= hints[1] && k.y + k.h <= hints[1] + hints[3] && k.x >= left && k.x + k.w <= right,
+              "mode %d hint %d: inside footer, no overflow", t, i);
+      CONFERE(i == 0 || k.y > geo.keys[i - 1].y || k.x > geo.keys[i - 1].x + geo.keys[i - 1].w,
+              "mode %d hint %d: no overlap", t, i);
     }
   }
   if (t == EV_TAM_COMPLETO) {

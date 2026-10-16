@@ -488,7 +488,7 @@ static void ladrilho(GfxRect r, const char *icone, const char *rotulo, int orige
   gfx_icone((GfxRect){ x, y + 2, 24, 24 }, icone, 0.953f, 0.949f, 0.937f, a);
   gfx_icone((GfxRect){ r.x + r.w - EVU_TILE_PAD - 18, y + 4, 18, 18 },
             iconeOrigem(origem), 0.85f, 0.85f, 0.85f, a);
-  texto(EVU_FONTES({ TXT_G20M, 24 }, { TXT_G18M, 22 }, { TXT_G16B, 20 }, { TXT_G14B, 18 }), rotulo, 180, 180, 182, x + 36, y,
+  texto(EVU_FONTES({ TXT_G20M, 24 }), rotulo, 180, 180, 182, x + 36, y,
         r.w - 2 * EVU_TILE_PAD - 62, 2, 0, 0, a);
 }
 
@@ -713,7 +713,7 @@ static float tileServidor(GfxRect r, float a) {
 static float tileErros(GfxRect r, float a) {
   char n[16], t[128];
   float x = r.x + EVU_TILE_PAD, y = r.y + 96, w = r.w - 2 * EVU_TILE_PAD;
-  ladrilho(r, "aj_rotate-cw", i18n("Erros e reconexões"), EVO_MEDIDO, a);
+  ladrilho(r, "aj_rotate-cw", i18n("Falhas"), EVO_MEDIDO, a);
   snprintf(n, sizeof n, "%d", vis.erros);
   numero(n, i18n(vis.erros == 1 ? "erro" : "erros"), x, y, a, 0, w);
   if (!vis.reconexoes) snprintf(t, sizeof t, "%s", i18n("nenhuma reconexão"));
@@ -959,7 +959,8 @@ static void atualizarVis(void) {
 // Panel geometry shares the clock's top and screen inset, in the virtual screen
 // of the scale the panel is drawn at (escalaPainel). Live values never change
 // it; a card only grows when its text needs a second line.
-#define EVU_RODAPE (EVU_GAP + 10.0f + EVU_KEY_H + EVU_PAD)   // gap, separator, hint row, pad
+#define EVU_HINT_H(tam) (EVU_KEY_H * ((tam) == EV_TAM_COMPLETO ? 1 : 2))
+#define EVU_RODAPE(tam) (EVU_GAP + 10.0f + EVU_HINT_H(tam) + EVU_PAD)
 void estatvivo_retangulo(int tam, int esquerda, float *g) {
   float w = tam == EV_TAM_COMPLETO ? EVU_W : tam == EV_TAM_COMPACTO ? EVU_CW : EVU_MW;
   carregarTiles();
@@ -969,10 +970,10 @@ void estatvivo_retangulo(int tam, int esquerda, float *g) {
   g[2] = w;
   // Every focused size keeps an internal footer; an unfocused pinned panel
   // hugs its content.
-  g[3] = tam == EV_TAM_COMPLETO ? fmaxf(EVU_H, fundoCompleto() + EVU_RODAPE) : tam == EV_TAM_COMPACTO ? EVU_CH :
+  g[3] = tam == EV_TAM_COMPLETO ? fmaxf(EVU_H, fundoCompleto() + EVU_RODAPE(tam)) : tam == EV_TAM_COMPACTO ? EVU_CH + EVU_KEY_H :
     miniPadrao() ? EVU_PH : fmaxf(EVU_PH, nTiles[tam] * 44.0f + 32.0f);
-  if (tam == EV_TAM_MINIMO && aberto) g[3] += EVU_RODAPE;
-  if (fixado && !aberto && tam != EV_TAM_MINIMO) g[3] -= EVU_KEY_H + EVU_PAD + 12.0f;
+  if (tam == EV_TAM_MINIMO && aberto) g[3] += EVU_RODAPE(tam);
+  if (fixado && !aberto && tam != EV_TAM_MINIMO) g[3] -= EVU_HINT_H(tam) + EVU_PAD + 12.0f;
   if (editando) g[3] = 480;
 }
 void estatvivo_retangulo_atual(float *g) { estatvivo_retangulo(tamanho, ajustes_estat_lado(), g); }
@@ -984,8 +985,9 @@ static void ptSoltar(int a, int b) { (void)a; (void)b; fixado = 0; }
 static void ptLado(int a, int b) { (void)a; (void)b; ajustes_definir_estat_lado(!ajustes_estat_lado()); }
 
 #define EVU_N_DICAS 5
-// One thin row of plain text hints in the clock island's tones (key bright,
-// label muted, no keycaps), whenever the panel has focus, pinned or not.
+// One row of body-sized hints (key bright, label muted, no keycaps),
+// whenever the panel has focus, pinned or not.
+// Narrow panels wrap hints onto two rows before dropping items.
 // Items that do not fit are dropped, least needed first (Side, Size, Edit),
 // never truncated. No Menu key: UP edits or unpins.
 static void dicas(GfxRect p, float a) {
@@ -993,33 +995,49 @@ static void dicas(GfxRect p, float a) {
   const char *L[EVU_N_DICAS] = { "Tamanho", "Lado", "Fixar", "Fechar", fixado ? "Desafixar" : "Editar" };
   static const int sai[] = { 1, 0, 4, 2 };
   int n = tamanho == EV_TAM_COMPACTO && !fixado ? 4 : 5, i, shown = 0, fica[EVU_N_DICAS];
-  float x = p.x + EVU_PAD, y = p.y + p.h - EVU_PAD - EVU_KEY_H, avail = p.w - 2 * EVU_PAD, used = -22;
+  float x = p.x + EVU_PAD, y = p.y + p.h - EVU_PAD - EVU_HINT_H(tamanho), avail = p.w - 2 * EVU_PAD;
+  float rowW = 0;
+  int rows = 1;
   TxtLinha k[EVU_N_DICAS], l[EVU_N_DICAS];
   float wi[EVU_N_DICAS];
   if (y < p.y + EVU_PH) return;
   for (i = 0; i < n; i++) {
-    k[i] = txt_linha(TXT_ILHA_HORA, i18n(K[i]), 243, 242, 239, 230);
-    l[i] = txt_linha(TXT_ILHA_HORA, i18n(L[i]), 243, 242, 239, 140);
+    k[i] = txt_linha(TXT_AJ_TEXTO, i18n(K[i]), 243, 242, 239, 255);
+    l[i] = txt_linha(TXT_AJ_TEXTO, i18n(L[i]), 180, 180, 182, 255);
     wi[i] = (float)(k[i].w + 6 + l[i].w);
-    used += wi[i] + 22;
     fica[i] = 1;
   }
-  for (i = 0; used > avail && i < 4; i++)
-    if (sai[i] < n) { fica[sai[i]] = 0; used -= wi[sai[i]] + 22; }
+  for (int drop = 0; drop <= 4; drop++) {
+    rows = 1; rowW = 0;
+    for (i = 0; i < n; i++) {
+      if (!fica[i]) continue;
+      if (rowW > 0 && rowW + 22 + wi[i] > avail) { rows++; rowW = 0; }
+      rowW += (rowW > 0 ? 22 : 0) + wi[i];
+    }
+    if (rows * EVU_KEY_H <= EVU_HINT_H(tamanho) || drop == 4) break;
+    if (sai[drop] < n) fica[sai[drop]] = 0;
+  }
   GfxRect separator = { x, y - 10, avail, 1 };
 #ifdef ESTATVIVO_TESTE
   testeGeo.separator = separator;
-  memcpy(testeDicas, (float[]){ x, y, avail, EVU_KEY_H }, sizeof testeDicas);
+  memcpy(testeDicas, (float[]){ x, y, avail, EVU_HINT_H(tamanho) }, sizeof testeDicas);
   testeGeo.dicas[0] = 0;
+  testeGeo.bodyTextH = (float)txt_linha(TXT_AJ_TEXTO, "Ag", 255, 255, 255, 255).h;
+  testeGeo.hintTextH = fminf((float)k[0].h, (float)l[0].h);
 #endif
   gfx_cor(separator, 0, 1, 1, 1, 0.07f * a);
   for (i = 0; i < n; i++) {
-    if (!fica[i] || used > avail) continue;
+    if (!fica[i] || wi[i] > avail) continue;
+    if (x > p.x + EVU_PAD && x + wi[i] > p.x + p.w - EVU_PAD) {
+      x = p.x + EVU_PAD;
+      y += EVU_KEY_H;
+    }
 #ifdef ESTATVIVO_TESTE
     testeGeo.keys[shown] = (GfxRect){ x, y, wi[i], EVU_KEY_H };
     snprintf(testeGeo.dicas + strlen(testeGeo.dicas), sizeof testeGeo.dicas - strlen(testeGeo.dicas),
              "%s %s|", i18n(K[i]), i18n(L[i]));
     testeGeo.nKeys = shown + 1;
+    testeGeo.hintTextH = fminf(testeGeo.hintTextH, fminf((float)k[i].h, (float)l[i].h));
 #endif
     shown++;
     txt_desenhar_alpha(k[i], x, y + (EVU_KEY_H - (float)k[i].h) * 0.5f, a);
