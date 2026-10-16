@@ -507,8 +507,12 @@ static int soP2P(const Stream *s) {
 }
 
 static int fonteOferecida(const Stream *s) {
-  return (!s->notWebReady || p2p_ativo()) &&
-         (s->url[0] || debrid_ativo() || p2p_ativo());
+  // URL DIRETA VENCE A DECLARACAO. O parser so deixa http(s) (ou vazio) em
+  // s.url, e o player nativo abre sem P2P. Addons que marcam TODA fonte
+  // notWebReady — o StremHU serializa o default True em toda resposta —
+  // sumiam da folha inteira com P2P desligado (#505 era para torrent sem URL).
+  if (s->url[0]) return 1;
+  return (!s->notWebReady || p2p_ativo()) && (debrid_ativo() || p2p_ativo());
 }
 
 static Uint32 recebidaEm;
