@@ -433,6 +433,7 @@ int   ajustes_selos_coloridos(void);
 int   ajustes_trailer_som(void);         // UM ajuste de som para todo trailer que toca sozinho (Samsung .wgt sempre mudo)
 Uint32 ajustes_trailer_hero_espera_ms(void); // repouso no titulo antes do trailer do destaque
 int   ajustes_trailer_qualidade(void); // teto em linhas (1080/720/480); 0 = a maior
+const char *ajustes_trailer_audio(void);  // "" auto (idioma da UI), "~" original, ou codigo ISO
 int   ajustes_trailer_fonte(void);     // TRF_* de trailerfonte.h; 0 = automatico
 float ajustes_trailer_zoom(void);      // ampliacao do trailer (1.0 = quadro inteiro)
 void  ajustes_definir_envio_auto(int ligado);

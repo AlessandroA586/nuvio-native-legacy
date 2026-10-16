@@ -13,6 +13,8 @@ int extras_teste_trailers_ficha(const char *corpo, int serie, const char *idioma
 int extras_teste_hero_serie(const char *corpo, const char *idioma, char *dst, unsigned cap);
 void extras_teste_url_hero(char *dst, unsigned cap, int serie, long id, const char *idioma);
 
+void extras_teste_trailer_audio(const char *cod);
+
 static int falhas;
 static void check(const char *nome, int ok) {
   printf("%s %s\n", ok ? "ok" : "FALHOU:", nome);
@@ -72,6 +74,26 @@ int main(void) {
     int nh = extras_teste_hero_serie(bloco, "pt-BR", h, sizeof h);
     check("hero de serie escolhe a temporada mais recente",
           nh == 3 && !strcmp(h, "s3TrailerEN")); }
+
+  // AUDIO DO TRAILER: dublado pt-BR ganha do ingles e do pt-PT; Original fica no en.
+  free(corpo);
+  corpo = ler("tests/fixtures/tmdb_movie_videos_dub.json");
+  n = extras_teste_trailers_ficha(corpo, 0, "en-US", yt, EX_TRAILER_MAX);
+  check("auto com interface en: o ingles primeiro", n == 3 && !strcmp(yt[0], "trailerEN01"));
+  extras_teste_trailer_audio("pt");
+  n = extras_teste_trailers_ficha(corpo, 0, "en-US", yt, EX_TRAILER_MAX);
+  check("audio Portugues: pt-BR dublado primeiro", n == 3 && !strcmp(yt[0], "trailerBR01"));
+  check("depois o pt-PT, por ultimo o ingles", n == 3 && !strcmp(yt[1], "trailerPT01"));
+  extras_teste_url_ficha(url, sizeof url, 0, 603, "en-US", 1);
+  check("audio Portugues pede pt,en,null", strstr(url, "include_video_language=pt,en,null") != NULL);
+  extras_teste_trailer_audio("~");
+  extras_teste_url_ficha(url, sizeof url, 0, 603, "pt-BR", 1);
+  check("Original pede en,null mesmo com interface pt-BR", strstr(url, "include_video_language=en,null") != NULL);
+  n = extras_teste_trailers_ficha(corpo, 0, "pt-BR", yt, EX_TRAILER_MAX);
+  check("Original: o ingles primeiro", n == 3 && !strcmp(yt[0], "trailerEN01"));
+  extras_teste_trailer_audio("");
+  n = extras_teste_trailers_ficha(corpo, 0, "pt-PT", yt, EX_TRAILER_MAX);
+  check("auto com interface pt-PT: o pt-PT primeiro", n == 3 && !strcmp(yt[0], "trailerPT01"));
 
   free(corpo);
   puts(falhas ? "trailer-serie: FALHOU" : "trailer-serie: tudo ok");

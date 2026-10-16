@@ -19,6 +19,7 @@ extern void cat_historico_definir_id(const char *imdb, const char *tipo, int vis
 #include <pthread.h>
 #include <stdint.h>
 #include <string.h>
+#include <strings.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -331,11 +332,35 @@ typedef struct { char yt[16], nome[80], pub[32]; int peso, ordem, serie; } Video
 // em ingles ou sem idioma (iso_639_1 null). Era a lista vazia do #123.
 // `include_video_language` alarga para o idioma da interface, ingles e os
 // sem idioma: "pt,en,null"; em ingles, "en,null".
+// AUDIO DO TRAILER (Ajustes > Trailers). "" = automatico (idioma da interface,
+// depois ingles), "~" = original (o ingles, quando o TMDB nao diz mais), ou um
+// codigo ISO da lista de idiomas. O teste injeta o valor, sem Ajustes.
+#ifdef NUVIO_TRAILER_TEST
+static const char *testeAudio = "";
+void extras_teste_trailer_audio(const char *cod) { testeAudio = cod ? cod : ""; }
+#define PREF_AUDIO() testeAudio
+#else
+#define PREF_AUDIO() ajustes_trailer_audio()
+#endif
+
+// Idioma-alvo do trailer, "xx" ou "xx-RR": o que o ranking quer e o que
+// include_video_language pede. "pt" escolhido sem interface em portugues cai em
+// pt-BR (a lista de idiomas nao distingue a variante).
+static void alvoDeVideo(const char *idioma, char *dst, size_t cap) {
+  const char *p = PREF_AUDIO();
+  if (!p || !p[0]) snprintf(dst, cap, "%s", idioma && idioma[0] && idioma[1] ? idioma : "en");
+  else if (!strcmp(p, "~")) snprintf(dst, cap, "en");
+  else if (!strcmp(p, "pt") && idioma && !strncasecmp(idioma, "pt-", 3)) snprintf(dst, cap, "%s", idioma);
+  else if (!strcmp(p, "pt")) snprintf(dst, cap, "pt-BR");
+  else snprintf(dst, cap, "%s", p);
+}
+
 static void idiomasDeVideo(const char *idioma, char *dst, size_t cap) {
-  char iso[3] = "";
-  if (idioma && ((idioma[0] | 32) >= 'a' && (idioma[0] | 32) <= 'z') &&
-      ((idioma[1] | 32) >= 'a' && (idioma[1] | 32) <= 'z')) {
-    iso[0] = (char)(idioma[0] | 32); iso[1] = (char)(idioma[1] | 32);
+  char alvo[16], iso[3] = "";
+  alvoDeVideo(idioma, alvo, sizeof alvo);
+  if (((alvo[0] | 32) >= 'a' && (alvo[0] | 32) <= 'z') &&
+      ((alvo[1] | 32) >= 'a' && (alvo[1] | 32) <= 'z')) {
+    iso[0] = (char)(alvo[0] | 32); iso[1] = (char)(alvo[1] | 32);
   }
   if (!iso[0] || !strcmp(iso, "en")) snprintf(dst, cap, "en,null");
   else snprintf(dst, cap, "%s,en,null", iso);
@@ -412,19 +437,22 @@ static int cmpVideo(const void *pa, const void *pb) {
 static int parsearVideos(const char *v, int serie, const char *idioma,
                          VideoTmdb *saida, int max) {
   VideoTmdb todos[VIDEOS_LIDOS];
-  char iso[3] = "";
+  char alvo[16], iso[3] = "", reg[3] = "";
   int n = 0, i;
-  if (idioma && idioma[0] && idioma[1]) {
-    iso[0] = (char)(idioma[0] | 32); iso[1] = (char)(idioma[1] | 32);
+  alvoDeVideo(idioma, alvo, sizeof alvo);
+  iso[0] = (char)(alvo[0] | 32); iso[1] = (char)(alvo[1] | 32);
+  if (alvo[2] == '-' && alvo[3] && alvo[4]) {
+    reg[0] = (char)(alvo[3] & ~32); reg[1] = (char)(alvo[4] & ~32);
   }
   while (v && n < VIDEOS_LIDOS) {
     const char *vf = js_fim(v);
-    char site[24] = "", tipo[24] = "", key[16] = "", nm[80] = "", lg[8] = "";
+    char site[24] = "", tipo[24] = "", key[16] = "", nm[80] = "", lg[8] = "", rg[8] = "";
     js_texto(v, vf, "site", site, sizeof site);
     js_texto(v, vf, "type", tipo, sizeof tipo);
     js_texto(v, vf, "key",  key,  sizeof key);
     js_texto(v, vf, "name", nm,   sizeof nm);
     js_texto(v, vf, "iso_639_1", lg, sizeof lg);
+    js_texto(v, vf, "iso_3166_1", rg, sizeof rg);
     if (heroTrailerIdValido(key) && !strcmp(site, "YouTube") &&
         (!strcmp(tipo, "Trailer") || !strcmp(tipo, "Teaser")) &&
         !(serie && nomeDeEpisodio(nm))) {
@@ -433,8 +461,9 @@ static int parsearVideos(const char *v, int serie, const char *idioma,
       snprintf(o->yt, sizeof o->yt, "%s", key);
       snprintf(o->nome, sizeof o->nome, "%s", nm[0] ? nm : "Trailer");
       js_texto(v, vf, "published_at", o->pub, sizeof o->pub);
-      // peso: 2 idioma da interface, +1 Trailer (desempate da serie).
-      o->peso = (iso[0] && !strcmp(lg, iso) ? 2 : 0) +
+      // peso: 8 idioma-alvo, +4 a regiao (pt-BR sobre pt-PT), +1 Trailer
+      // (desempate da serie).
+      o->peso = (!strcmp(lg, iso) ? 8 + (reg[0] && !strcmp(rg, reg) ? 4 : 0) : 0) +
                 (serie && !strcmp(tipo, "Trailer") ? 1 : 0);
       o->ordem = n;
       o->serie = serie;
