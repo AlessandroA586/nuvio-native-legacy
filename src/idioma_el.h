@@ -3084,6 +3084,8 @@
   T("Não disponível nesta TV", "Μη διαθέσιμο σε αυτή την τηλεόραση"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "Μη διαθέσιμο σε αυτή την τηλεόραση. Η συσκευή αναπαραγωγής της LG και της Samsung δεν επιτρέπει στην εφαρμογή να αποθηκεύει το βίντεο στον δίσκο."),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "Μη διαθέσιμο σε αυτή την τηλεόραση. Μόνο η LG μετατρέπει το DTS μέσα στην εφαρμογή."),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "Δεν είναι διαθέσιμο σε αυτή την τηλεόραση: η GPU της δεν μπορεί να αποκωδικοποιήσει βίντεο κάτω από την αρχική οθόνη (μένει η εικόνα). Το τρέιλερ της σελίδας τίτλου συνεχίζει να λειτουργεί από το κουμπί."),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "Δεν είναι διαθέσιμο σε αυτή τη συνεδρία: η ασφαλής λειτουργία απενεργοποίησε τα τρέιλερ της αρχικής οθόνης μετά από κατάρρευση. Βγείτε από την ασφαλή λειτουργία στις Ρυθμίσεις › Αυτή η τηλεόραση."),
   T("Não entendi. Tente de novo.", "Δεν κατάλαβα. Δοκιμάστε ξανά."),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "Δεν κάνει τίποτα σε καμία από τις δύο. Κι αν το τηλεχειριστήριό σου δεν έχει σειρά χρωμάτων, τίποτα εδώ δεν εξαρτάται από αυτήν."),
   T("Não foi enviado", "Δεν στάλθηκε"),

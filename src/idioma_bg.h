@@ -3084,6 +3084,8 @@
   T("Não disponível nesta TV", "Не е налично на този телевизор"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "Не е налично на този телевизор. Плейърът на LG и Samsung не позволява на приложението да записва видеото на диска."),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "Не е налично на този телевизор. Само LG преобразува DTS в приложението."),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "Не е налично на този телевизор: GPU-то му не може да декодира видео под началния екран (остава изображението). Трейлърът на страницата на заглавието продължава да работи от бутона."),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "Не е налично в тази сесия: безопасният режим изключи трейлърите на началния екран след срив. Излезте от безопасен режим в Настройки › Този телевизор."),
   T("Não entendi. Tente de novo.", "Не разбрах. Опитайте отново."),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "Не прави нищо и на двете. А ако дистанционното ви няма ред с цветове, тук нищо не зависи от него."),
   T("Não foi enviado", "Не е изпратено"),

@@ -411,6 +411,8 @@ int   ajustes_envio_auto(void);
 float ajustes_detalhe_veu(void);
 int   ajustes_trailer_auto(void);      // trailer mudo no fundo da pagina de titulo
 int   ajustes_trailer_hero(void);      // trailer no destaque da home
+// 0 livre, 1 modo seguro, 2 GPU vetada (Mali-4xx); ver ajustes.c.
+int   ajustes_trailer_hero_vetado(void);
 // GPU que nao aguenta o trailer automatico da home (Utgard): desliga o do
 // destaque e o do cartaz em foco nesta sessao, sem gravar. Uma linha no log.
 void  ajustes_trailer_hero_vetar(const char *gpu);

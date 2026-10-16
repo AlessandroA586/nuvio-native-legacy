@@ -3084,6 +3084,8 @@
   T("Não disponível nesta TV", "Šiame televizoriuje nepasiekiama"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "Šiame televizoriuje nepasiekiama. LG ir Samsung grotuvas neleidžia programėlei įrašyti vaizdo įrašo į diską."),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "Šiame televizoriuje nepasiekiama. DTS programoje konvertuoja tik LG."),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "Šiame televizoriuje nepasiekiama: jo GPU negali dekoduoti vaizdo įrašo po pagrindiniu ekranu (lieka paveikslėlis). Anonsas titulo puslapyje vis dar veikia per mygtuką."),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "Šioje sesijoje nepasiekiama: saugusis režimas po gedimo išjungė pagrindinio ekrano anonsus. Išeikite iš saugiojo režimo Nustatymuose › Šis televizorius."),
   T("Não entendi. Tente de novo.", "Nesupratau. Bandykite dar kartą."),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "Nė vienoje jis nieko nedaro. O jei jūsų pultas neturi spalvų eilės, čia niekas nuo jos nepriklauso."),
   T("Não foi enviado", "Neišsiųsta"),

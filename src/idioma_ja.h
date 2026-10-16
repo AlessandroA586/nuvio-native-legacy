@@ -3084,6 +3084,8 @@
   T("Não disponível nesta TV", "このテレビでは使用できません"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "このテレビでは使用できません。LGとSamsungのプレーヤーでは、アプリが動画をディスクに保存できません。"),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "このテレビでは利用できません。アプリ内で DTS を変換できるのは LG のみです。"),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "このテレビでは利用できません：GPUがホーム画面の下で動画をデコードできません（画像のままです）。タイトルページの予告編はボタンから再生できます。"),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "このセッションでは利用できません：クラッシュ後にセーフモードがホームの予告編をオフにしました。設定 › このテレビ でセーフモードを解除してください。"),
   T("Não entendi. Tente de novo.", "聞き取れませんでした。もう一度お試しください。"),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "どちらでも何も起きません。また、お使いのリモコンにカラーボタンの列がなくても、ここでは何もそれに依存しません。"),
   T("Não foi enviado", "送信されませんでした"),

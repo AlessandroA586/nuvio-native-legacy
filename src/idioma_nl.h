@@ -3084,6 +3084,8 @@
   T("Não disponível nesta TV", "Niet beschikbaar op deze tv"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "Niet beschikbaar op deze tv. De speler van LG en Samsung laat de app de video niet op schijf opslaan."),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "Niet beschikbaar op deze tv. Alleen LG zet DTS om in de app."),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "Niet beschikbaar op deze tv: de GPU kan geen video onder de Home decoderen (de afbeelding blijft). De trailer op de pagina van de titel werkt nog steeds via de knop."),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "Niet beschikbaar in deze sessie: de veilige modus heeft de trailers van Home uitgeschakeld na een crash. Verlaat de veilige modus in Instellingen › Deze tv."),
   T("Não entendi. Tente de novo.", "Niet verstaan. Probeer opnieuw."),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "Het doet op geen van beide iets. En als je afstandsbediening geen kleurenrij heeft, hangt hier niets van af."),
   T("Não foi enviado", "Niet verzonden"),

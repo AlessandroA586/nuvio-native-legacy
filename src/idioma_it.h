@@ -3084,6 +3084,8 @@
   T("Não disponível nesta TV", "Non disponibile su questa TV"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "Non disponibile su questa TV. Il player di LG e Samsung non permette all'app di salvare il video su disco."),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "Non disponibile su questa TV. Solo LG converte il DTS nell’app."),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "Non disponibile su questa TV: la sua GPU non riesce a decodificare il video sotto la Home (resta l'immagine). Il trailer della pagina del titolo continua tramite il pulsante."),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "Non disponibile in questa sessione: la modalità sicura ha disattivato i trailer della Home dopo un arresto anomalo. Esci dalla modalità sicura in Impostazioni › Questa TV."),
   T("Não entendi. Tente de novo.", "Non ho capito. Riprova."),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "Non fa nulla su nessuna delle due. E se il tuo telecomando non ha la fila dei colori, niente qui ne dipende."),
   T("Não foi enviado", "Non inviato"),

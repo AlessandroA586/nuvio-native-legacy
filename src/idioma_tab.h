@@ -3083,6 +3083,8 @@
   { "Não disponível nesta TV", "Not available on this TV" },
   { "Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "Not available on this TV. The LG and Samsung player does not let the app store the video on disk." },
   { "Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "Not available on this TV. Only LG converts DTS inside the app." },
+  { "Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "Not available on this TV: its GPU can't decode video under the Home (the artwork stays). The title page trailer still plays via the button." },
+  { "Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "Not available this session: safe mode turned the Home trailers off after a crash. Leave safe mode in Settings › This TV." },
   { "Não entendi. Tente de novo.", "Didn't catch that. Try again." },
   { "Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "It does nothing on either. And if your remote has no colour row, nothing here depends on it." },
   { "Não foi enviado", "Not sent" },

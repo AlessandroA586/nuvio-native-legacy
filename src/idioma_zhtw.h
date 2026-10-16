@@ -3084,6 +3084,8 @@
   T("Não disponível nesta TV", "此電視無法使用"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "此電視無法使用。LG 和 Samsung 的播放器不允許應用程式將影片儲存到磁碟。"),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "此電視不可用。只有 LG 會在應用程式內轉換 DTS。"),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "此電視無法使用：其 GPU 無法在首頁下方解碼影片（保留封面圖）。標題頁的預告片仍可透過按鈕播放。"),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "此工作階段無法使用：安全模式在當機後關閉了首頁預告片。請在 設定 › 本電視 中離開安全模式。"),
   T("Não entendi. Tente de novo.", "沒聽懂。請重試。"),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "在兩種遙控器上都不會有任何作用。而且如果你的遙控器沒有彩色按鈕那一排，這裡也沒有任何東西依賴它。"),
   T("Não foi enviado", "未傳送"),

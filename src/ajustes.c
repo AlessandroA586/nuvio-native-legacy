@@ -2844,6 +2844,14 @@ void ajustes_trailer_hero_vetar(const char *gpu) {
   printf("[trailer] desligado no hero: %s (Mali-4xx)\n", gpu ? gpu : "?");
 }
 int   ajustes_trailer_hero(void)      { return lig(AJ_HERO_TRAILER) && !SEGURO && !trailerHeroVetado; }
+// POR QUE os trailers da home (destaque e cartaz) estao fora MESMO com a
+// linha Ligada (ajuda da linha aqui; log do portao em home.c). 0 = nada no
+// caminho: ou os ajustes estao desligados, ou valem.
+int   ajustes_trailer_hero_vetado(void) {
+  int quer = lig(AJ_HERO_TRAILER) || valor[AJ_FOCO_TRAILER] != AJ_TRAILER_CARTAZ_DESLIGADO;
+  if (!quer) return 0;
+  return trailerHeroVetado ? 2 : SEGURO ? 1 : 0;
+}
 // #509: UM ajuste de som para TODO trailer que toca sozinho — destaque, cartaz
 // em foco (Tela cheia e No card) e fundo da pagina do titulo. O trailer em
 // tela cheia (botao/OK) tambem segue. Na Samsung (.wgt) trailer_abrir forca
@@ -6552,6 +6560,14 @@ static const char *ajudaOpcaoBase(int op) {
 static const char *ajudaOpcao(int op) {
   const char *base = ajudaOpcaoBase(op);
   static char b[2048];
+  // A linha Ligada que NAO vale: diz por que em vez de parecer obedecida.
+  if ((op == AJ_HERO_TRAILER || op == AJ_FOCO_TRAILER) && ajustes_trailer_hero_vetado()) {
+    const char *aviso = ajustes_trailer_hero_vetado() == 2
+      ? "Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão."
+      : "Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.";
+    snprintf(b, sizeof b, "%s\n%s", i18n(aviso), i18n(base));
+    return b;
+  }
   if (gpun_efeitos_automaticos() &&
       (op == AJ_VIDRO || op == AJ_VIDRO_CONTORNO || op == AJ_VIDRO_OPAC ||
        op == AJ_VIDRO_FOSCO || (op >= AJ_PROF && op <= AJ_PROF_TRAILERS))) {
@@ -8997,6 +9013,13 @@ void ajustes_teste_ux_captura(int cenario) {
   if (cenario == 9) { valor[AJ_IDIOMA] = IDIOMA_EN + 1; focarOpcao(AJ_HOME_LAYOUT); uxAbrirEditor(AJ_HOME_LAYOUT); }
   if (cenario == 21) focarOpcao(AJ_FOCO_TRAILER);
   if (cenario == 22) { focarOpcao(AJ_FOCO_TRAILER); uxAbrirEditor(AJ_FOCO_TRAILER); }
+  // NUVIO_SHOT_TRAILER_VETO=1: captura da linha Ligada que nao vale (veto de
+  // GPU): a ajuda tem de dizer por que, em vez de a linha parecer obedecida.
+  if (cenario == 21 && getenv("NUVIO_SHOT_TRAILER_VETO")) {
+    valor[AJ_HERO_TRAILER] = 0;
+    ajustes_trailer_hero_vetar("Mali-450");
+    focarOpcao(AJ_HERO_TRAILER);
+  }
   if (cenario >= 10 && cenario < 21) { focarSecao(cenario - 10); focoIndice = 1; }
 }
 

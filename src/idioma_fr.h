@@ -3083,6 +3083,8 @@
   T("Não disponível nesta TV", "Non disponible sur ce téléviseur"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "Non disponible sur ce téléviseur. Le lecteur LG et Samsung ne permet pas à l'app d'enregistrer la vidéo sur disque."),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "Indisponible sur cette TV. Seule LG convertit le DTS dans l’appli."),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "Non disponible sur ce téléviseur : son GPU ne peut pas décoder la vidéo sous l'accueil (l'image reste). La bande-annonce de la page du titre fonctionne toujours via le bouton."),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "Non disponible dans cette session : le mode sans échec a désactivé les bandes-annonces de l'accueil après un plantage. Quittez le mode sans échec dans Réglages › Ce téléviseur."),
   T("Não entendi. Tente de novo.", "Je n’ai pas compris. Réessayez."),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "Ne fait rien sur les deux. Et si votre télécommande n'a pas la rangée de couleurs, rien ici n'en dépend."),
   T("Não foi enviado", "Non envoyé"),

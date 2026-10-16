@@ -5589,6 +5589,17 @@ static void heroTrailerGateLog(int motivo, int enabled) {
     fflush(stdout);
   }
 }
+// Raw ligado, efetivo fora: o log acima nao imprime nada (enabled=0) e a tela
+// nao diz por que. Uma linha por sessao, com o nome do veto.
+static void heroTrailerVetoLog(void) {
+  static int vetoLogado;
+  int v = ajustes_trailer_hero_vetado();
+  if (!v || vetoLogado == v) return;
+  vetoLogado = v;
+  printf("[home-trailer] autoplay off: setting on but vetoed (%s)\n",
+         v == 2 ? "low-gpu" : "safe-mode");
+  fflush(stdout);
+}
 
 static void heroTrailerFonteFalhou(void) {
   if(heroTrailerQual>0&&heroTrailerQual<=TRF_YOUTUBE)
@@ -5634,12 +5645,37 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
   Uint32 decorrido;
   int heroSetting = ajustes_trailer_hero(), posterSetting = ajustes_trailer_cartaz();
   int enabled = heroSetting || posterSetting, motivo = HERO_GATE_READY;
+  if (!enabled) heroTrailerVetoLog();   // so imprime quando a linha esta Ligada
   // Destino deste foco: o cartaz (modo No card) ou o retangulo do destaque.
   const int destCartao = !focoHero && posterSetting == AJ_TRAILER_CARTAZ_CARD;
 #ifdef NV_SHOT_HOOKS
   if (shotTrailer) { shotTrailerPasso(topo, dt, agora, heroSetting, posterSetting); return; }
 #endif
-  if (!trailer_suportado()) { heroTrailerGateLog(HERO_GATE_UNSUPPORTED, enabled); return; }
+  if (!trailer_suportado()) {
+    heroTrailerGateLog(HERO_GATE_UNSUPPORTED, enabled);
+    // UMA linha, uma vez: por que este aparelho nao tem plano de trailer.
+    // A linha do Ajustes fica Ligada; sem isto o registro so diz unsupported.
+    { static int suporteLogado;
+#if defined(__APPLE__) || defined(NV_LINUX_DESKTOP)
+      const char *porque = "desktop-stub";
+#elif defined(NV_TPK)
+      const char *porque =
+        video_conflito_recurso() ? "video-taken-by-other-app" :
+                                   "host-player-unavailable";
+#elif defined(NV_ANDROID)
+      const char *porque = "player-pipeline-unavailable";
+#else
+      const char *porque =
+        video_registro_negado() ? "ls2-registration-denied" :
+                                  "ls2-pipeline-unavailable";
+#endif
+      if (!suporteLogado && enabled) {
+        suporteLogado = 1;
+        printf("[home-trailer] unsupported: %s\n", porque);
+        fflush(stdout);
+      } }
+    return;
+  }
   // DUAS PORTAS PARA O MESMO TRAILER. Com o foco no destaque, "Trailer no
   // destaque". Com o foco num CARTAZ das fileiras (#124: "parado num titulo do
   // catalogo, nada toca"), "Trailer do cartaz em foco" — o
