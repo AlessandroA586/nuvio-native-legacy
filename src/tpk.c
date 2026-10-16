@@ -249,7 +249,14 @@ int nv_tpk_quadro(void) {
     // Arranque: o app ainda nao chegou ao primeiro quadro. No GLWindow da API8
     // (que troca de qualquer jeito) limpa para preto em vez de mostrar lixo.
     pthread_mutex_unlock(&trava);
-    if (esperaMs < 0) { glClearColor(0, 0, 0, 1); glClear(GL_COLOR_BUFFER_BIT); return 1; }
+    // API8 swaps even on return 0. A black clear is not an app frame: keep
+    // the host's first-frame watchdog armed until the app actually draws.
+    if (esperaMs < 0) {
+      glClearColor(0, 0, 0, 1); glClear(GL_COLOR_BUFFER_BIT);
+#ifdef NV_TPK40
+      return 1; // TVGLApplication stops callbacks on false (Tizen 4/5).
+#endif
+    }
     return 0;
   }
   eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);

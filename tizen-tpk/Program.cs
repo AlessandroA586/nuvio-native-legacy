@@ -314,8 +314,13 @@ namespace NuvioTpk
             Etapa("begin nv_tpk_iniciar");
             try
             {
-                // Reuse the model already reported by the [tv] startup line.
-                setenv("NUVIO_TV_MODEL", Tv().Split(' ')[0], 1);
+                // Optional panel heuristic must not gate native startup.
+                try
+                {
+                    if (setenv("NUVIO_TV_MODEL", Tv().Split(' ')[0], 1) != 0)
+                        Etapa("note panel model unavailable: setenv failed");
+                }
+                catch (Exception e) { Etapa("note panel model unavailable: " + e.Message); }
 #if NV_API8
                 nv_tpk_config(-1, 0);
 #else
@@ -338,6 +343,7 @@ namespace NuvioTpk
             // a versao dela.
             if (carregou) Etapa("note staged lib routes=" + NvCarga.RotaUsos);
 
+            inicioDesenhoMs = relogio.ElapsedMilliseconds;
             Etapa("begin gl-window");
             try
             {
@@ -620,7 +626,7 @@ namespace NuvioTpk
         // Contadores do fio de desenho: chamadas do framework e quadros trocados.
         int chamadas, trocados;
         readonly Stopwatch relogio = new Stopwatch();
-        long ultimaChamadaMs = -1;
+        long ultimaChamadaMs = -1, inicioDesenhoMs;
         volatile bool pausado;
         bool principalVisivel = true, glVisivel = true;
         int subidas, subidasFoco;
@@ -686,6 +692,16 @@ namespace NuvioTpk
         void Vigia()
         {
             if (!DesenhoPronto() || erroNaTela || saindo) return;
+            // Draw callbacks may run forever without producing an app frame.
+            // Keep the existing NUI diagnostics usable before native UI exists.
+            if (trocados == 0 && !pausado && principalVisivel &&
+                relogio.ElapsedMilliseconds - inicioDesenhoMs >= 15000)
+            {
+                Etapa("fail first-frame" + Contagem());
+                Erro("Nuvio has not drawn its first frame.",
+                     "Startup timed out. Please photograph this screen. Diagnostics: data/tpk-etapas.txt.");
+                return;
+            }
             long parado = ParadoMs();
             if (parado < 1500 || pausado || !principalVisivel)
             {
@@ -926,13 +942,23 @@ namespace NuvioTpk
         {
             Interlocked.Exchange(ref ultimaChamadaMs, relogio.ElapsedMilliseconds);
             if (Interlocked.Increment(ref chamadas) == 1) Etapa("note first draw call");
-            if (fim) return 0;
-            int r = nv_tpk_quadro();
+            if (fim || erroNaTela) return 0;
+            int r;
+            try { r = nv_tpk_quadro(); }
+            catch (Exception e)
+            {
+                Etapa("fail native-frame " + e.GetType().Name + ": " + e.Message);
+                return 0; // The UI-thread watchdog presents diagnostics.
+            }
             // De novo na saida: na API8 esta chamada roda no fio principal e pode
             // esperar o app terminar um quadro longo; o vigia (mesmo fio) nao
             // pode ler isso como "o framework parou de chamar".
             Interlocked.Exchange(ref ultimaChamadaMs, relogio.ElapsedMilliseconds);
-            if (r < 0) fim = true;
+            if (r < 0)
+            {
+                if (trocados > 0) fim = true;
+                else Etapa("fail native-frame before first-frame");
+            }
             if (r > 0)
             {
                 int n = Interlocked.Increment(ref trocados);
