@@ -263,6 +263,86 @@ class ParaleloDataSourceTest {
         }
     }
 
+    @Test fun fimDoArquivoDivideOIndiceEntreAsConexoes() {
+        // Ant-Man (Shield, 16/10/2026): o Media3 abriu os 4 002 478 bytes finais
+        // de um arquivo de 50 881 735 023 para ler o indice (Cues). Pela conexao
+        // unica, 24 s. Agora: sonda de 1 MB + o resto em pedacos pelo pool, ao
+        // mesmo tempo, e os bytes chegam inteiros e em ordem.
+        val total = 50881735023L
+        val pos = 50877732545L
+        val conexoes = java.util.Collections.synchronizedList(ArrayList<ConexaoFaixa>())
+        val fonte = ParaleloDataSource(null, emptyMap(), novaConexao = { url ->
+            object : ConexaoFaixa(url, total) {
+                // Cada byte carrega o proprio offset: a ordem e conferivel.
+                override fun getInputStream(): InputStream {
+                    val r = getRequestProperty("Range")!!.removePrefix("bytes=")
+                    val ini = r.substringBefore('-').toLong()
+                    val fim = r.substringAfter('-').let { if (it.isEmpty()) total - 1 else it.toLong() }
+                    return ByteArrayInputStream(ByteArray((fim - ini + 1).toInt()) { ((ini + it) % 251).toByte() })
+                }
+            }.also { conexoes += it }
+        }, dormir = { throw AssertionError("conexao viva nao deve esperar retry") })
+        val exec = ParaleloDataSource::class.java.getDeclaredField("exec")
+        exec.isAccessible = true
+        var pool: java.util.concurrent.ExecutorService? = null
+        try {
+            val len = fonte.open(DataSpec.Builder()
+                .setUri(android.net.Uri.parse("https://example.invalid/video.mkv"))
+                .setPosition(pos)
+                .setLength(C.LENGTH_UNSET.toLong())
+                .build())
+            assertEquals(total - pos, len)
+            pool = exec.get(fonte) as java.util.concurrent.ExecutorService?
+            assertTrue("o fim do arquivo deve usar o pool", pool != null)
+            val buf = ByteArray(1 shl 16)
+            var lidos = 0L
+            while (true) {
+                val n = fonte.read(buf, 0, buf.size)
+                if (n == C.RESULT_END_OF_INPUT) break
+                for (i in 0 until n) assertEquals(((pos + lidos + i) % 251).toByte(), buf[i])
+                lidos += n
+            }
+            assertEquals(total - pos, lidos)
+            val faixas = conexoes.map { it.getRequestProperty("Range") }
+            assertEquals("bytes=$pos-${pos + (1 shl 20) - 1}", faixas[0])
+            // Sonda + 3 pedacos: o resto (~2.8 MB) dividido entre as outras 3,
+            // contiguos ate o ultimo byte (a ordem de criacao depende dos fios).
+            assertEquals(4, faixas.size)
+            val pedacos = faixas.drop(1).map { f ->
+                val r = f!!.removePrefix("bytes=")
+                r.substringBefore('-').toLong() to r.substringAfter('-').toLong()
+            }.sortedBy { it.first }
+            assertEquals(pos + (1 shl 20), pedacos.first().first)
+            assertEquals(total - 1, pedacos.last().second)
+            for (i in 1 until pedacos.size) assertEquals(pedacos[i - 1].second + 1, pedacos[i].first)
+        } finally {
+            fonte.close()
+            pool?.let { assertTrue(it.awaitTermination(10, TimeUnit.SECONDS)) }
+            assertEquals(0, ParaleloDataSource.Estat.conexoes.get())
+        }
+    }
+
+    @Test fun fimDoArquivoQueCabeNaSondaSegueNaConexaoUnica() {
+        // 600 KB finais: a sonda (1 MB) ja cobre tudo; nada de pool.
+        val total = 24891962527L
+        val aberturas = AtomicInteger()
+        val fonte = ParaleloDataSource(null, emptyMap(), novaConexao = { url ->
+            aberturas.incrementAndGet()
+            ConexaoFaixa(url, total)
+        }, dormir = { throw AssertionError("conexao viva nao deve esperar retry") })
+        val exec = ParaleloDataSource::class.java.getDeclaredField("exec")
+        exec.isAccessible = true
+        try {
+            val len = fonte.open(DataSpec.Builder()
+                .setUri(android.net.Uri.parse("https://example.invalid/video.mkv"))
+                .setPosition(total - (600L shl 10))
+                .setLength(C.LENGTH_UNSET.toLong())
+                .build())
+            assertEquals(600L shl 10, len)
+            assertEquals(null, exec.get(fonte))
+        } finally { fonte.close() }
+    }
+
     @Test fun janelaVaziaAbreSemConectar() {
         // DataSpec de 0 byte: abre vazio, sem Range invalido (pos-1) nem 416.
         val aberturas = AtomicInteger()

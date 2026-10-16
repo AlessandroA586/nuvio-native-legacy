@@ -87,6 +87,8 @@ class ParaleloDataSource(
         private val ESPERA_TENTATIVA_MS = longArrayOf(250L, 750L)
         // O primeiro pedido e menor: a imagem nao espera 4 MB chegarem.
         private const val PRIMEIRO = 1 shl 20
+        // Menor pedaco do FIM DO ARQUIVO (ver `cauda` em abrir).
+        private const val PEDACO_CAUDA_MIN = 256 shl 10
 
         // Manifesto e segmento de streaming adaptativo: conexao unica.
         fun serve(uri: Uri): Boolean {
@@ -139,6 +141,7 @@ class ParaleloDataSource(
     private var exec: ExecutorService? = null
     private val pedidos = HashMap<Long, Future<ByteArray>>()   // inicio do pedaco -> dados
     private var proximoPedido = 0L
+    private var pedacoAtual = pedaco
     private var buf: ByteArray? = null
     private var bufIni = 0L
     // Conexao unica: servidor sem Range, ou arquivo pequeno.
@@ -293,7 +296,16 @@ class ParaleloDataSource(
             else -> C.LENGTH_UNSET.toLong()
         }
         val paralelo = code == 206 && total > 0 && janela > pedaco.toLong() * 2
-        if (!paralelo) {
+        // FIM DO ARQUIVO: o indice do MKV (Cues) e o moov do MP4 ficam nos
+        // ultimos MB, e o Media3 vai ate la ANTES do primeiro quadro. Pela
+        // conexao unica, os 4 MB finais de um remux de 50 GB levaram 24 s no
+        // Shield (Ant-Man, 16/10/2026: 170 KB/s naquele trecho do TorBox) e a
+        // imagem esperou tudo. Uma janela que vai ate o fim e passa da sonda
+        // vai pelo pool, em pedacos menores que dividem o resto entre as
+        // outras conexoes; a sonda baixa ao mesmo tempo que eles.
+        val cauda = !paralelo && code == 206 && total > 0 && janela > PRIMEIRO &&
+            pos + janela >= total
+        if (!paralelo && !cauda) {
             Log.i(TAG, "conexao unica: HTTP $code, total=$total, pos=$pos (${dataSpec.uri.host})")
             // Sem Range (ou pequeno demais para valer a pena): conexao unica.
             if (code == 206 || code == 200) {
@@ -329,15 +341,30 @@ class ParaleloDataSource(
         }
         urlFinal = c.url
         fim = if (pedido != C.LENGTH_UNSET.toLong()) minOf(total, pos + pedido) else total
+        val sondaFim = minOf(primeiroUltimo + 1, fim)
+        if (cauda) {
+            val outras = (conexoes - 1).coerceAtLeast(1)
+            val resto = fim - sondaFim
+            pedacoAtual = ((resto + outras - 1) / outras)
+                .coerceIn(PEDACO_CAUDA_MIN.toLong(), pedaco.toLong()).toInt()
+            proximoPedido = sondaFim
+            exec = Executors.newFixedThreadPool(conexoes)
+            encher()
+        }
         val primeiro = try { lerTudo(c) } finally { desconectar(c) }
+        if (cauda && primeiro.size.toLong() != sondaFim - pos)
+            throw IOException("sonda curta: ${primeiro.size} de ${sondaFim - pos}")
         bufIni = pos
         buf = primeiro
-        proximoPedido = pos + primeiro.size
-        exec = Executors.newFixedThreadPool(conexoes)
-        encher()
+        if (!cauda) {
+            proximoPedido = pos + primeiro.size
+            exec = Executors.newFixedThreadPool(conexoes)
+            encher()
+        }
         aberto = true
         transferStarted(dataSpec)
-        Log.i(TAG, "paralelo: $conexoes conexoes, pedaco ${pedaco shr 20} MB, ${(fim - pos) shr 20} MB a partir de $pos")
+        if (cauda) Log.i(TAG, "paralelo no fim do arquivo: ${fim - pos} bytes, pedaco ${pedacoAtual shr 10} KB a partir de $pos")
+        else Log.i(TAG, "paralelo: $conexoes conexoes, pedaco ${pedaco shr 20} MB, ${(fim - pos) shr 20} MB a partir de $pos")
         return fim - pos
     }
 
@@ -367,7 +394,7 @@ class ParaleloDataSource(
         val u = urlFinal ?: return
         while (pedidos.size < conexoes * ADIANTE && proximoPedido < fim) {
             val ini = proximoPedido
-            val ult = minOf(fim, ini + pedaco) - 1
+            val ult = minOf(fim, ini + pedacoAtual) - 1
             pedidos[ini] = ex.submit<ByteArray> { baixar(u, ini, ult) }
             proximoPedido = ult + 1
         }
