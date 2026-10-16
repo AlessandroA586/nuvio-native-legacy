@@ -1272,10 +1272,9 @@ static TxtLinha pinTitulo(const char *nome) {
   char t[128];
   snprintf(t, sizeof t, i18n("PIN de %s"), nome && nome[0] ? nome : i18n("perfil"));
 #ifdef NV_TOUCH_UI
-  return txt_linha_corta(TXT_TITULO3, t, 255, 255, 255, 255, fmaxf(1.0f, NV_TELA_W - 96.0f));
-#else
-  return txt_linha(TXT_TITULO3, t, 255, 255, 255, 255);
+  if (layout_modo_mobile()) return txt_linha_corta(TXT_TITULO3, t, 255, 255, 255, 255, fmaxf(1.0f, NV_TELA_W - 96.0f));
 #endif
+  return txt_linha(TXT_TITULO3, t, 255, 255, 255, 255);
 }
 
 static void desenhaPin(void) {

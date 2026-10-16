@@ -768,7 +768,7 @@ void episodios_atualizar(float dt) {
     // ve de onde veio e o que vem, e o foco fica na segunda linha.
     localizarAtual = 0; semMolaScroll = 1;
 #ifdef NV_TOUCH_UI
-    if (!toqueEp.livre)
+    if (!toquerol_livre(&toqueEp))
 #endif
     scroll = foco > 0 ? (float)(foco - 1) * EP_ROW : 0.0f;
   }
@@ -784,7 +784,7 @@ void episodios_atualizar(float dt) {
   if (alvo > max) alvo = max;
   if (alvo < 0) alvo = 0;
   #ifdef NV_TOUCH_UI
-  if (toqueEp.livre) { scroll = toquerol_clamp(scroll, 0.0f, max > 0 ? max : 0); velScroll = 0.0f; }
+  if (toquerol_livre(&toqueEp)) { scroll = toquerol_clamp(scroll, 0.0f, max > 0 ? max : 0); velScroll = 0.0f; }
   else
   #endif
   if (semMolaScroll) { scroll = alvo; velScroll = 0.0f; }
@@ -989,7 +989,7 @@ static void corpoIlha(GfxRect c, float a, void *u) {
       if (i == temporada) selecionada = total;
       total += toqueEpTemporada(i, 0, 0, 0, a) + 4;
     }
-    if (!toqueEpTemporadas.livre) toqueEpTemporadasOffset = fminf(selecionada, fmaxf(0, total - vista));
+    if (!toquerol_livre(&toqueEpTemporadas)) toqueEpTemporadasOffset = fminf(selecionada, fmaxf(0, total - vista));
     toquerol_vincular(&toqueEpTemporadas, regiao, gfx_escala(), 0, total - vista, 0, &toqueEpTemporadasOffset);
     gfx_recorte(sx, y, vista, EP_SEG_H);
     sx -= toqueEpTemporadasOffset;

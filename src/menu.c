@@ -868,6 +868,7 @@ static void tvToqueLimpar(void) { tvToqueLivre = 0; }
 static GfxRect tvToqueRegiao;
 static float tvToqueEscala = 1.0f, tvToqueMaximo;
 static int tvToqueRolar(const PonteiroRolagem *e) {
+  if (!layout_modo_mobile()) { tvToqueLimpar(); return 0; }
   if (e->fase == PONT_ROL_INICIO) {
     if (!e->eixoY || !aberto || e->x < tvToqueRegiao.x || e->x >= tvToqueRegiao.x + tvToqueRegiao.w || e->y < tvToqueRegiao.y || e->y >= tvToqueRegiao.y + tvToqueRegiao.h) return 0;
     tvToqueLivre = 1; tvRolarV = 0.0f; buscaOk = buscaLongo = 0; return 1;
@@ -977,6 +978,9 @@ void menu_pilula_mostrar(float alvo) {
 }
 
 static void tvAtualizar(float dt) {
+#ifdef NV_TOUCH_UI
+  if (!layout_modo_mobile()) tvToqueLimpar();
+#endif
   int i;
   float alvo = aberto ? 1.0f : 0.0f;
   desliza = 0.0f; expande = 0.0f; expandeV = 0.0f;

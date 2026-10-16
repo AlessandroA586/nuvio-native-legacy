@@ -157,6 +157,7 @@ static int toqueExplorarRolar(const PonteiroRolagem *e) {
 }
 static void explorarAlvoFileira(float x, float y, float w, float h, float x0, float x1,
                                PonteiroFn focar, int linha, int col) {
+  if (!layout_modo_mobile()) { ponteiro_alvo(x, y, w, h, focar, NULL, linha, col); return; }
   float fim = fminf(x + w, x1);
   x = fmaxf(x, x0);
   if (fim > x) ponteiro_alvo(x, y, fim - x, h, focar, NULL, linha, col);
@@ -376,7 +377,7 @@ static void vizAjustarFoco(void) {
 static float vizRolarFileira(int grupo, int linha, float largura) {
   float max = fmaxf(0.0f, viz.g[grupo].n * (EX_VZ_CARD + EX_VZ_GAP) - EX_VZ_GAP - largura);
   float *offset = &toqueVzOffset[grupo];
-  if (!toqueVz[grupo].livre && vzLinha == linha) {
+  if (!toquerol_livre(&toqueVz[grupo]) && vzLinha == linha) {
     float x = vzCol * (EX_VZ_CARD + EX_VZ_GAP);
     if (x < *offset) *offset = x;
     if (x + EX_VZ_CARD > *offset + largura) *offset = x + EX_VZ_CARD - largura;
@@ -566,7 +567,7 @@ void explorar_evento(const SDL_Event *e) {
     }
     if (modo == MODO_CLIMAS) climasRetomarFoco();
     for (int i = 0; i < 2; i++) {
-      if (modo == MODO_CLIMA && toqueCa[i].livre && caN[i] > 0) {
+      if (modo == MODO_CLIMA && toquerol_livre(&toqueCa[i]) && caN[i] > 0) {
         float passo = telefoneui_ativo() ? telefoneClimaPasso()
                     : (i == 1 && caN[0] > 0 ? EX_CB_W : EX_CA_W) + EX_CAR_GAP;
         int c = (int)(caRolar[i] / passo);
@@ -574,7 +575,7 @@ void explorar_evento(const SDL_Event *e) {
       }
       toquerol_limpar(&toqueCa[i]);
     }
-    if (modo == MODO_VIZ && toqueVzUltima >= 0 && toqueVz[toqueVzUltima].livre) {
+    if (modo == MODO_VIZ && toqueVzUltima >= 0 && toquerol_livre(&toqueVz[toqueVzUltima])) {
       int g[MAPA_VIZ_GRUPOS], n = gruposVisiveis(g);
       for (int i = 0; i < n; i++) if (g[i] == toqueVzUltima) {
         vzLinha = i; vzCol = (int)(toqueVzOffset[g[i]] / (telefoneui_ativo() ? telefoneCardPasso() : EX_VZ_CARD + EX_VZ_GAP));
@@ -782,7 +783,7 @@ static int climaGradeTelefone(GfxRect *cards) {
 }
 
 static void climasRetomarFoco(void) {
-  if (toqueCl.livre && telefoneui_ativo() && climas.n>0) {
+  if (toquerol_livre(&toqueCl) && telefoneui_ativo() && climas.n>0) {
     GfxRect cards[MAPA_CLIMA_N]; climaGradeTelefone(cards);
     int cols=climaColunas(), col=clFoco%cols, escolhido=clFoco;
     float melhor=1e9f, centro=(EX_CL_TOPO+NV_TELA_H-80)*.5f;
@@ -804,7 +805,7 @@ static void desenharClimasTelefone(void) {
     return;
   }
   float max=fmaxf(0,cards[n-1].y+cards[n-1].h-baixo);
-  if(!toqueCl.livre && clFoco>=0 && clFoco<n) {
+  if(!toquerol_livre(&toqueCl) && clFoco>=0 && clFoco<n) {
     if(cards[clFoco].y-clRolar<EX_CL_TOPO)clRolar=cards[clFoco].y-EX_CL_TOPO;
     if(cards[clFoco].y+cards[clFoco].h-clRolar>baixo)clRolar=cards[clFoco].y+cards[clFoco].h-baixo;
   }
@@ -896,7 +897,7 @@ static void fileiraClima(int linha, float y, float w, float h, float a) {
   toquerol_vincular(&toqueCa[linha], (GfxRect){x0, y, EX_DIR - x0, h}, gfx_escala(),
                    0.0f, caN[linha] * (w + EX_CAR_GAP) - EX_CAR_GAP - (EX_DIR - x0), 0, &caRolar[linha]);
   ponteiro_rolagem(toqueExplorarRolar);
-  gfx_recorte(x0, 0.0f, EX_DIR - x0, NV_TELA_H);
+  if (layout_modo_mobile()) gfx_recorte(x0, 0.0f, EX_DIR - x0, NV_TELA_H);
 #endif
   x = x0 - caRolar[linha];
   for (i = 0; i < caN[linha]; i++, x += w + EX_CAR_GAP) {
@@ -918,7 +919,7 @@ static void fileiraClima(int linha, float y, float w, float h, float a) {
     }
   }
 #ifdef NV_TOUCH_UI
-  gfx_sem_recorte();
+  if (layout_modo_mobile()) gfx_sem_recorte();
 #endif
 }
 
@@ -1116,6 +1117,7 @@ static void desenharGrupos(float a) {
         }
       } }
 #ifdef NV_TOUCH_UI
+    if (layout_modo_mobile()) {
     float largura = EX_DIR - x0;
     float max = vizRolarFileira(g[li], li, largura);
     toquerol_vincular(&toqueVz[g[li]], (GfxRect){x0 - 10.0f, posterY - 10.0f, largura + 14.0f, EX_VZ_PH + 20.0f},
@@ -1123,6 +1125,7 @@ static void desenharGrupos(float a) {
     ponteiro_rolagem(toqueExplorarRolar);
     gfx_recorte(x0 - 10.0f, 0.0f, largura + 14.0f, NV_TELA_H);
     x -= toqueVzOffset[g[li]];
+    }
 #endif
     for (i = 0; i < gr->n; i++, x += EX_VZ_CARD + EX_VZ_GAP) {
       const MapaVizItem *it = &gr->itens[i];
@@ -1131,14 +1134,17 @@ static void desenharGrupos(float a) {
       GfxRect p = { x, posterY, EX_VZ_PW, EX_VZ_PH };
       char pq[140];
 #ifdef NV_TOUCH_UI
+      if (layout_modo_mobile()) {
       if (x - 10.0f > EX_DIR + 4.0f) break;
       if (x + EX_VZ_CARD + 4.0f < x0 - 10.0f) continue;
       explorarAlvoFileira(x - 10.0f, p.y - 10.0f, EX_VZ_CARD + 14.0f, EX_VZ_PH + 20.0f,
                          x0 - 10.0f, EX_DIR + 4.0f, ponteiroViz, li, i);
-#else
+      } else
+#endif
+      {
       if (x + EX_VZ_CARD > EX_DIR + 4.0f) break;
       ponteiro_alvo(x - 10.0f, p.y - 10.0f, EX_VZ_CARD + 14.0f, EX_VZ_PH + 20.0f, ponteiroViz, NULL, li, i);
-#endif
+      }
       if (sel) {
         GfxRect fundo = { x - 10.0f, p.y - 10.0f, EX_VZ_CARD + 14.0f, EX_VZ_PH + 20.0f };
         painel(fundo, 14.0f / fundo.h, ae * f * 0.8f);
@@ -1154,7 +1160,7 @@ static void desenharGrupos(float a) {
                       EX_VZ_CARD - EX_VZ_PW - 18.0f, 26.0f, ae * (sel ? 1.0f : 0.85f), 3);
     }
 #ifdef NV_TOUCH_UI
-    gfx_sem_recorte();
+    if (layout_modo_mobile()) gfx_sem_recorte();
 #endif
     y += EX_VZ_LINHA + posterY - (y + 54.0f);
   }
@@ -1262,7 +1268,7 @@ static void telefoneMedir(ExTelefonePlano *p) {
   p->fim=y;
 }
 static void telefoneRetomarFoco(void) {
-  if(!toquePagina.livre || exPlano.n<=0)return;
+  if(!toquerol_livre(&toquePagina) || exPlano.n<=0)return;
   float centro=(exPlano.topo+exPlano.baixo)*.5f, melhor=1e9f;int linha=-1;
   for(int l=0;l<MAPA_VIZ_GRUPOS;l++)if(exPlano.cardH[l]>0) {
     float d=fabsf(exPlano.y[l]-exPagina+exPlano.cabH[l]+16+exPlano.cardH[l]*.5f-centro);
@@ -1372,7 +1378,7 @@ static void desenharVizTelefone(void) {
     if(g->tipo==MAPA_GR_AMIGOS && g->sub[0])telefoneTexto(g->sub,x,hy+cabH+8,exPlano.w,a,170,176,196);
     gfx_sem_recorte();
     float max=fmaxf(0,g->n*telefoneCardPasso()-24-exPlano.w),*offset=&toqueVzOffset[grupo];
-    if(!toqueVz[grupo].livre && vzLinha==l) {
+    if(!toquerol_livre(&toqueVz[grupo]) && vzLinha==l) {
       float pos=vzCol*telefoneCardPasso();
       if(pos<*offset)*offset=pos;
       if(pos+cw>*offset+exPlano.w)*offset=pos+cw-exPlano.w;
@@ -1487,7 +1493,7 @@ void explorar_atualizar(float dt, Uint32 agora) {
       if (alvo > max) alvo = max;
       if (alvo < 0.0f) alvo = 0.0f;
 #ifdef NV_TOUCH_UI
-      if (toqueCa[k].livre) caRolar[k] = anim_clamp(caRolar[k], 0.0f, fmaxf(0.0f, max));
+      if (toquerol_livre(&toqueCa[k])) caRolar[k] = anim_clamp(caRolar[k], 0.0f, fmaxf(0.0f, max));
       else
 #endif
         caRolar[k] = reduzida ? alvo : anim_mola(caRolar[k], alvo, dt, 10.0f);
