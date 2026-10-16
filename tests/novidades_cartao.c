@@ -90,25 +90,25 @@ static void vindoDa203(void) {
   dados_gravar("novidades-20-guia.txt", "1\n");
   dados_gravar("novidades-203.txt", "1\n");
   quadroHome(1, 0, 0);
-  assert(novcartao_aberto() && !existe("novidades-206.txt"));
+  assert(novcartao_aberto() && !existe("novidades-207.txt"));
   tecla(SDLK_ESCAPE);
-  assert(existe("novidades-203.txt") && existe("novidades-206.txt"));
+  assert(existe("novidades-203.txt") && existe("novidades-207.txt"));
   novaSessao();
   quadroHome(1, 0, 0);
   assert(!novcartao_aberto());
   puts("PASS: vindo da 2.0.3: marca independente, abre uma vez");
 }
 
-// A marca da 2.0.4 nao pode esconder o card da 2.0.6.
+// A marca da 2.0.4 nao pode esconder o card da 2.0.7.
 static void vindoDa204(void) {
   limpar();
   dados_gravar("novidades-20-guia.txt", "1\n");
   dados_gravar("novidades-203.txt", "1\n");
   dados_gravar("novidades-204.txt", "1\n");
   quadroHome(1, 0, 0);
-  assert(novcartao_aberto() && !existe("novidades-206.txt"));
+  assert(novcartao_aberto() && !existe("novidades-207.txt"));
   tecla(SDLK_ESCAPE);
-  assert(existe("novidades-204.txt") && existe("novidades-206.txt"));
+  assert(existe("novidades-204.txt") && existe("novidades-207.txt"));
   novaSessao();
   quadroHome(1, 0, 0);
   assert(!novcartao_aberto());
@@ -199,7 +199,7 @@ static void plataformas(void) {
   int lg, tpk, wgt, and;
   novcartao_teste_plataforma(NOV_LG);
   lg = novcartao_itens_visiveis();
-  assert(novcartao_cenas() == 0);   // a 2.0.6 nao tem cena
+  assert(novcartao_cenas() == 0);   // a 2.0.7 nao tem cena
   novcartao_teste_plataforma(NOV_TPK);
   tpk = novcartao_itens_visiveis();
   assert(novcartao_cenas() == 0);
@@ -209,10 +209,10 @@ static void plataformas(void) {
   novcartao_teste_plataforma(NOV_ANDROID);
   and = novcartao_itens_visiveis();
   assert(novcartao_cenas() == 0);
-  assert(lg == 5 && tpk == 4 && wgt == 4 && and == 5);
-  assert(novcartao_paginas() == 2);  // itens e apoio
+  assert(lg == 14 && tpk == 16 && wgt == 14 && and == 18);
+  assert(novcartao_paginas() >= 3 && novcartao_paginas() <= 5);  // itens e apoio
   novcartao_teste_plataforma(NOV_OUTRAS);
-  assert(novcartao_itens_visiveis() == 6);
+  assert(novcartao_itens_visiveis() == 19);
   assert(novcartao_paginas() >= 2);
   novcartao_teste_plataforma(0);
   printf("PASS: itens por plataforma: LG %d, .tpk %d, .wgt %d, Android %d\n", lg, tpk, wgt, and);
@@ -239,22 +239,35 @@ static void espacamento(void) {
   fputs("idioma 0\nfonteInterface 3\n", f); fclose(f);
   ajustes_dir(dados_dir());
   assert(txt_iniciar("deploy/app", 1)); // so TTF; sem janela ou contexto GL
-  // A previa nao existe na 2.0.6: o texto usa a largura cheia (1014 px aqui).
-  static const char *const frases[6] = {
-    "O atraso salvo da legenda foi corrigido uma vez: o sinal estava invertido.",
-    "O app não fecha mais por falta de memória durante a reprodução.",
-    "Telas mais fluidas, com vidro mais leve e menos sobreposição.",
-    "A fileira de Amigos usa pôsteres horizontais e cartões de pessoas.",
-    "Os Ajustes mostram por que o trailer do destaque está bloqueado.",
-    "As dicas do controle aparecem uma vez por versão.",
+  // A previa nao existe na 2.0.7: o texto usa a largura cheia (1014 px aqui).
+  static const struct { const char *s; int teto; } frases[19] = {
+    { "Novo estilo de fileira: o título em foco fica grande ao lado dos pôsteres. Escolha em Estilo da fileira.", 3 },
+    { "Escolha qualquer player instalado e, se quiser, outro só para anime.", 2 },
+    { "Áudio do trailer põe o trailer dublado na frente, e Original mantém o idioma do título. Se o YouTube falhar, entra o da Apple ou do IMDb.", 3 },
+    { "O trailer do YouTube mostra legendas no idioma das suas legendas.", 2 },
+    { "O APK padrão escolhe sozinho entre TV e Mobile; dá para fixar em Modo da interface.", 2 },
+    { "Até 40 títulos, e a fileira chega primeiro sem segurar os outros catálogos da Home.", 2 },
+    { "Bem mais leve: uma só captura do fundo por quadro, em todas as plataformas.", 2 },
+    { "O trailer toca no cartão em foco ou expandido, mesmo com o destaque desligado.", 2 },
+    { "A faixa de áudio que você escolher fica valendo para a série inteira.", 2 },
+    { "Novo ajuste do player: Automático, 64, 128 ou 256 MB, dentro da memória livre.", 2 },
+    { "Agora no Android e na Samsung, com todos os detalhes do pendrive.", 2 },
+    { "Links nuvio-legacy://, stremio:// e do IMDb abrem o título, tocam ou buscam no Nuvio.", 2 },
+    { "Fontes de link direto, como StreamBridge e Emby, voltaram, mesmo com o P2P desligado.", 2 },
+    { "O título exato vem primeiro, e séries com id do TMDB ganham os episódios.", 2 },
+    { "Digitar o PIN abre o perfil de primeira.", 2 },
+    { "Somem as fileiras de add-ons desinstalados, e catálogos extras não tomam o lugar das suas.", 2 },
+    { "As fotos do elenco ficam mesmo quando o TMDB não responde.", 2 },
+    { "Para cima chega ao relógio nas páginas de navegação.", 2 },
+    { "Abre de forma mais estável, e o teclado não atrapalha mais a inicialização.", 2 },
   };
-  assert(txt_largura(TXT_CAPTION, frases[0]) > 0);
+  assert(txt_largura(TXT_CAPTION, frases[0].s) > 0);
   novcartao_teste_plataforma(NOV_OUTRAS);
   novcartao_abrir();
   // A altura de cada item e o nome (34px) mais a frase medida na lingua atual,
-  // com teto de 2 linhas: sem vao extra por reserva fixa.
-  for (int i = 0; i < 6; i++) {
-    float h = txt_bloco_corta(TXT_CAPTION, frases[i], 0, 0, 0, 0, 0, 1014, 30, 0, 2);
+  // com o teto de linhas do item: sem vao extra por reserva fixa.
+  for (int i = 0; i < 19; i++) {
+    float h = txt_bloco_corta(TXT_CAPTION, frases[i].s, 0, 0, 0, 0, 0, 1014, 30, 0, frases[i].teto);
     assert(novcartao_teste_altura_item(i) == 34.0f + h);
   }
   assert(txt_rasterizadas == 0);
@@ -262,7 +275,7 @@ static void espacamento(void) {
   for (int i = 0; i < 120; i++) {
     txt_novo_quadro(); novcartao_atualizar(1.0f / 60.0f, 0);
     assert(novcartao_paginas() == paginas);
-    assert(novcartao_teste_altura_item(0) == 34.0f + txt_bloco_corta(TXT_CAPTION, frases[0], 0, 0, 0, 0, 0, 1014, 30, 0, 2));
+    assert(novcartao_teste_altura_item(0) == 34.0f + txt_bloco_corta(TXT_CAPTION, frases[0].s, 0, 0, 0, 0, 0, 1014, 30, 0, frases[0].teto));
   }
   for (int idi = 0; idi < IDIOMA_N; idi++) {
     f = fopen(caminho, "w"); assert(f);
@@ -270,12 +283,12 @@ static void espacamento(void) {
     ajustes_dir(dados_dir());
     assert(ajustes_idioma() == idi);
     novcartao_atualizar(0, 0); // muda o idioma com o cartao ainda aberto
-    for (int i = 0; i < 6; i++) {
-      float h = txt_bloco_corta(TXT_CAPTION, frases[i], 0, 0, 0, 0, 0, 1014, 30, 0, 2);
+    for (int i = 0; i < 19; i++) {
+      float h = txt_bloco_corta(TXT_CAPTION, frases[i].s, 0, 0, 0, 0, 0, 1014, 30, 0, frases[i].teto);
       assert(novcartao_teste_altura_item(i) == 34.0f + h);
     }
     assert(txt_rasterizadas == 0);
-    assert(novcartao_paginas() >= 2 && novcartao_paginas() <= 3);
+    assert(novcartao_paginas() >= 3 && novcartao_paginas() <= 5);
     assert(txt_bloco(TXT_CAPTION, "Dúvidas, bugs e builds de teste.",
       0, 0, 0, 0, 0, 300, 28, 0, 0) <= 84);
   }
@@ -303,8 +316,8 @@ int main(int argc, char **argv) {
     else espacamento();
     return 0;
   }
-  assert(!strcmp(novcartao_versao(), "2.0.6"));
-  assert(!strcmp(novcartao_arquivo(), "novidades-206.txt"));
+  assert(!strcmp(novcartao_versao(), "2.0.7"));
+  assert(!strcmp(novcartao_arquivo(), "novidades-207.txt"));
   instalacaoNova();
   vindoDa202();
   vindoDa203();
