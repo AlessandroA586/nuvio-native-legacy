@@ -1,8 +1,11 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-16 21:00, HEAD `fec2dc0ac`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-16 22:55, HEAD `f0f4f4928`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
+
+> O cartao dentro do app (`src/novidades/207.inc`) tem uma lista menor, escrita em conjunto com o dono;
+> este arquivo e a fonte completa para as release notes do GitHub.
 
 ---
 
@@ -38,6 +41,19 @@ that landed in the same window. Last tracking sync: 2026-10-16 21:00, HEAD `fec2
 
 ### Novidades
 
+- **Frost no player e nos menus**: os botões, a barra de controle, os painéis de fonte/legenda/áudio, o
+  painel de Estatísticas ao vivo e os menus rápido e de guia parental agora usam o mesmo vidro fosco do
+  resto da interface, em vez de painel chapado. Todas as plataformas (onde o vídeo dá para ler pelo GL).
+  Refs pedidos do dono, `46e0bd5bd`, `3982ef84b`.
+- **Menu do topo translúcido com o frost desligado**: com o Vidro ligado e o "Vidro fosco" desligado, a
+  barra do topo (e a ilha de avatar/relógio) fica transparente e tingida em vez de opaca. LG webOS.
+  `b5007ae85`.
+- **Linha "Cache do P2P" no Android**: a configuração de cache em pendrive aparece e funciona no APK
+  Android, como já acontecia no webOS. Android. `9b4f37efb`.
+- **Ver tudo em grade nas coleções**: as fileiras de destaque abrem em grade de "Ver tudo" com todos
+  os itens da coleção. Todas as plataformas. `4baf783fa`.
+- **Episódio certo no scrobble**: o progresso enviado para o Trakt usa a identidade exata do episódio.
+  Todas as plataformas. `ff1f1aa25`.
 - **Tamanho do buffer** (*Ajustes › Tamanho do buffer*): Automático, 64, 128 ou 256 MiB, sempre limitado pela
   memória livre. Todas as plataformas. `42b3718cf`, `62421bfdc`, `35a944d9f`.
 - **Linha "Split hero"** (*Ajustes › Aparência da Home › Estilo de linha*): o título focado vira um painel
@@ -76,6 +92,9 @@ that landed in the same window. Last tracking sync: 2026-10-16 21:00, HEAD `fec2
 
 ### Correções
 
+- **Frost em tudo que parece vidro**: o menu rápido e o painel de guia parental passam pelo material
+  compartilhado, e o frost volta a usar a arte do título pré-desfocada em vez de sumir no meio do
+  crossfade do destaque. Todas as plataformas. `46e0bd5bd`, `3982ef84b`.
 - **Tela preta no lançamento** (#558): o teclado e o microfone opcionais da Samsung saem do caminho de
   inicialização e a falha aparece na tela em vez de travar. Samsung .tpk. `cc49341e6`, `a1888d007`.
 - **URL direta toca sem P2P** (#552 #505): uma fonte com URL http(s) não desaparece mais por causa do
@@ -154,23 +173,34 @@ that landed in the same window. Last tracking sync: 2026-10-16 21:00, HEAD `fec2
   (`9356bc16c`).
 - Testes do cabeçalho de coleção fora da suíte padrão, mocks em `*_shot` (`eb03a56a4`, `1c3043479`) e fixtures
   de sessão/perfil para Continuar assistindo e catálogos (`8d8f5c92a`, `8c99638f7`, `840dacb67`).
+- Stubs de teste para o merge do master: fileiras (`c76ed4632`), home (`5a926a863`) e fontes/idiomas
+  (`33b0d7de0`).
+- Triagem dos PRs abertos (`72ba10761`) com o port de fixes de busca, coleção, Trakt e player
+  (`e0ddeca5f`, `4baf783fa`, `ff1f1aa25`, `61d73a5bf`).
 
 ### Pendente (ainda não integrado)
 
 Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 
-- **Perfil de visualizações (#548)** — `agente/205-vistos548`, 6 commits fora. Último VEREDITO **BLOQUEIA**
-  (`j-rev-vistos548-r4`); o fix `5b37cecd8` (defaults fracos para fixtures isoladas) é mais novo que o review,
-  e `j-rev-vistos548-r5` está rodando. **Needs review.** Android, LG webOS.
+- **Perfil de visualizações (#548)** — `agente/205-vistos548`, 8 commits fora (tip `b074d9fd5`).
+  VEREDITO **BLOQUEIA** `j-rev-vistos548-r7` (19:48): corrida de ordenação entre "marcar série inteira" e o
+  override de um episódio; o fix `b074d9fd5` é mais novo que o review. **Needs review.** Android, LG webOS.
 - **PR #487 v2** (idiomas de áudio e legenda informados pelo add-on) — `agente/205-pr487v2`, 3 commits fora,
   VEREDITO OK `j-rev-pr487-v2`, sem commit depois. **Needs final re-review.** Android, LG webOS.
 - **PR #493 v2 / v3** (perfil e sessão) — `agente/205-pr493`, 12 commits fora. VEREDITO **BLOQUEIA**
   `j-revg-pr493` (mais novo); `j-revpr493-v3` OK foi antes. Precisa de fix novo + review.
   Android, LG webOS.
-- **Vidro fosco: deixar como estava** — `agente/205-foscovelho` e `agente/205-semfosco`, jobs rodando agora
-  (logs vazios = QUEUED/RUNNING). Dono relata que o frost piorou. Todas as plataformas.
-- **Vidaa** — `agente/205-vidaa`, 15 commits fora. VEREDITO OK `j-revg-vidaa-6` após uma sequência de
-  BLOQUEIA; fix `j-fix-vidaa-3` mais novo que o review. **Needs review.**
+- **Vidro fosco: deixar como estava** — `agente/205-foscovelho`, 1 commit fora (`ab02d4aaa`); o job
+  `j-fix-foscovelho-r2` (rodada 2 dos achados do review) está com log vazio = QUEUED/RUNNING. Dono relata
+  que o frost piorou. Todas as plataformas. **Needs review.**
+- **Temporadas e episódios fantasmas** — `agente/205-temporadas`, 1 commit fora (`94d16f7de`):
+  ignora `videos[]` de add-on que criam uma temporada fake por episódio. VEREDITO **BLOQUEIA**
+  `j-rev-temporadas` (19:48). **Needs review.** Todas as plataformas.
+- **Catálogo fora da cota** (follow-up de #545) — `agente/205-pfhome545`, 2 commits fora
+  (`975638744`, `53b050753`); VEREDITO **BLOQUEIA** `j-revg-pfhome545` (18:47) e o fix `53b050753`
+  é mais novo que o review. **Needs review.** Todas as plataformas.
+- **Vidaa** — `agente/205-vidaa` foi **merged** (`d0bf5ba79`, 10-15 22:10); VEREDITO OK `j-revg-vidaa-6`
+  depois de uma sequência de BLOQUEIA. Sai na 2.0.7; não está em pendência.
 - **Cabeçalho de coleção diferente** (pedido do dono) — `agente/205-colhdr` foi **merged** (`fec2dc0ac`),
   review OK `j-revg-colhdr`; não está em pendência.
 - **Tizen/homebrew, glassmock, mock21, perfis21, respostas ao dono** — branches com job feito e nenhum review
@@ -213,6 +243,18 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 
 ### New
 
+- **Frost in the player and its menus**: the buttons, the control bar, the source/subtitle/audio panels,
+  the live Statistics panel and the quick menu / parental guide now use the same frosted glass as the rest
+  of the interface instead of a flat panel. All platforms (where the video can be read by GL).
+  Refs owner requests, `46e0bd5bd`, `3982ef84b`.
+- **Translucent top chrome with frost off**: with Glass on and "Vidro fosco" off, the top bar (and the
+  avatar/clock island) is see-through tinted glass instead of opaque. LG webOS. `b5007ae85`.
+- **"P2P cache" row on Android**: the USB drive cache setting shows up and works in the standard Android
+  APK, as it already did on webOS. Android. `9b4f37efb`.
+- **See all grid in collections**: showcase rows open into a full "See all" grid of the collection.
+  All platforms. `4baf783fa`.
+- **Exact episode identity in scrobbles**: progress sent to Trakt uses the exact episode identity.
+  All platforms. `ff1f1aa25`.
 - **Buffer size** (*Settings › Buffer size*): Automatic, 64, 128 or 256 MiB, always clamped to free RAM.
   All platforms. `42b3718cf`, `62421bfdc`, `35a944d9f`.
 - **Split hero row style** (*Settings › Home appearance › Row style*): the focused title becomes a large
@@ -249,6 +291,9 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 
 ### Fixes
 
+- **Frost on everything that looks like glass**: the quick menu and the parental guide panel now go
+  through the shared frosted material, and the frost source survives the hero crossfade (baked title art)
+  instead of dropping to the opaque fallback. All platforms. `46e0bd5bd`, `3982ef84b`.
 - **Black screen on launch** (#558): optional Samsung keyboard and microphone APIs leave the launch path and
   the failure is surfaced instead of hanging. Samsung .tpk. `cc49341e6`, `a1888d007`.
 - **A direct URL plays without P2P** (#552 #505): a source with an http(s) URL no longer disappears because
@@ -323,23 +368,34 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   (`9356bc16c`).
 - Collection header mocks moved out of the default suite as `*_shot` (`eb03a56a4`, `1c3043479`), plus
   session/profile fixtures for Continue Watching and catalogs (`8d8f5c92a`, `8c99638f7`, `840dacb67`).
+- Test stubs for the master merge: rows (`c76ed4632`), home (`5a926a863`) and sources/languages
+  (`33b0d7de0`).
+- Triaged open PRs (`72ba10761`) and ported fixes for search, collections, Trakt and player
+  (`e0ddeca5f`, `4baf783fa`, `ff1f1aa25`, `61d73a5bf`).
 
 ### Pending (not integrated yet)
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
-- **Watch profile (#548)** — `agente/205-vistos548`, 6 commits out. Last VEREDITO **BLOQUEIA**
-  (`j-rev-vistos548-r4`); the fix `5b37cecd8` (weak defaults so isolated fixtures link) is newer than the
-  review, and `j-rev-vistos548-r5` is running. **Needs review.** Android, LG webOS.
+- **Watch profile (#548)** — `agente/205-vistos548`, 8 commits out (tip `b074d9fd5`). VEREDITO
+  **BLOQUEIA** `j-rev-vistos548-r7` (19:48): whole-series mark vs single-episode override ordering race;
+  the fix `b074d9fd5` is newer than the review. **Needs review.** Android, LG webOS.
 - **PR #487 v2** (add-on reported audio and subtitle languages) — `agente/205-pr487v2`, 3 commits out,
   VEREDITO OK `j-rev-pr487-v2`, no commit after. **Needs final re-review.** Android, LG webOS.
 - **PR #493 v2 / v3** (profile and session) — `agente/205-pr493`, 12 commits out. VEREDITO **BLOQUEIA**
   `j-revg-pr493` (newer); the OK `j-revpr493-v3` came before. Needs a new fix + review.
   Android, LG webOS.
-- **Frosted glass: put it back as it was** — `agente/205-foscovelho` and `agente/205-semfosco`, jobs running now
-  (empty logs = QUEUED/RUNNING). Owner reports frosted glass got worse. All platforms.
-- **Vidaa** — `agente/205-vidaa`, 15 commits out. VEREDITO OK `j-revg-vidaa-6` after a run of BLOQUEIAS;
-  fix `j-fix-vidaa-3` is newer than the review. **Needs review.**
+- **Frosted glass: put it back as it was** — `agente/205-foscovelho`, 1 commit out (`ab02d4aaa`); the
+  round-2 fix job `j-fix-foscovelho-r2` has an empty log = QUEUED/RUNNING. Owner reports frosted glass got
+  worse. All platforms. **Needs review.**
+- **Ghost seasons and episodes** — `agente/205-temporadas`, 1 commit out (`94d16f7de`): ignores add-on
+  `videos[]` that create one fake season per episode. VEREDITO **BLOQUEIA** `j-rev-temporadas` (19:48).
+  **Needs review.** All platforms.
+- **Catalog outside the quota** (#545 follow-up) — `agente/205-pfhome545`, 2 commits out
+  (`975638744`, `53b050753`); VEREDITO **BLOQUEIA** `j-revg-pfhome545` (18:47) and the fix `53b050753`
+  is newer than the review. **Needs review.** All platforms.
+- **Vidaa** — `agente/205-vidaa` was **merged** (`d0bf5ba79`, 10-15 22:10); VEREDITO OK `j-revg-vidaa-6`
+  after a run of BLOQUEIAS. It ships in 2.0.7; no longer pending.
 - **Different collection header** (owner request) — `agente/205-colhdr` was **merged** (`fec2dc0ac`),
   review OK `j-revg-colhdr`; no longer pending.
 - **Tizen/homebrew, glassmock, mock21, perfis21, owner answers** — branches with a finished job and no review
