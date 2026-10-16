@@ -124,6 +124,9 @@ typedef enum {
   // com mais informação na base e o véu na cor predominante. No fim, pelo
   // mesmo motivo: o número gravado dos tipos acima não muda.
   FIL_TIPO_POSTER_GRANDE, // FILEIRA_POSTER_GRANDE — pôster 3:4 grande com ficha na base
+  // 16/10 (dono): "Hero dividido" — o painel do foco a esquerda, a fila a
+  // direita. No fim pelo mesmo motivo.
+  FIL_TIPO_HEROI_DIVIDIDO, // FILEIRA_HEROI_DIVIDIDO — painel deitado com a ficha + cartazes
   FIL_TIPO_N
 } FilTipo;
 
