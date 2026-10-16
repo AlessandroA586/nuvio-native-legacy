@@ -2019,7 +2019,10 @@ void extras_trailer_abrir(int i) {
   if (!yt[0]) return;
   char url[128];
   snprintf(url, sizeof url, "https://www.youtube.com/watch?v=%s", yt);
-#if defined(__EMSCRIPTEN__) || defined(NV_TPK) || defined(NV_ANDROID)
+#ifdef NV_VIDAA
+  printf("[extras] youtube externo indisponivel no VIDAA\n");
+  fflush(stdout);
+#elif defined(__EMSCRIPTEN__) || defined(NV_TPK) || defined(NV_ANDROID)
   // SAMSUNG (e Android, por ora; TODO Intent ACTION_VIEW): NAO abre mais nada (#136). No wgt o window.open trocava a
   // propria pagina do app pelo youtube.com/watch — o video tocava, mas o
   // Voltar nao tinha mais o Nuvio para onde voltar. O trailer da Samsung

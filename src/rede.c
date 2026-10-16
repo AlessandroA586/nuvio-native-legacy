@@ -105,7 +105,8 @@ void rede_resposta_limpar(RedeResposta *r) {
 #error "NV_TPK40 e so da libnuvio.so do Tizen 4/5; nunca junto com Emscripten"
 #endif
 
-#ifdef NV_TPK40
+#if defined(NV_TPK40) || defined(NV_UM_FIO)
+// ST fibers also use pthread keys: compiler TLS belongs to the browser thread.
 // ESTADO POR FIO SEM _Thread_local (Tizen 4/5, #137/#180).
 //
 // A libnuvio.so dessas TVs pode entrar pelo carregador de ELF proprio do host
@@ -221,6 +222,7 @@ static long redeLimiteAtual(void) {
 // espera e o navegador.
 
 #include <emscripten.h>
+#include "fio1.h"   // so tem corpo com NV_UM_FIO; nv_http troca de implementacao abaixo
 
 // Faz a requisicao e devolve um buffer de malloc com o corpo (com um NUL extra
 // no fim, para quem trata como texto). Escreve o tamanho em *tam e o status
@@ -229,6 +231,125 @@ static long redeLimiteAtual(void) {
 // `cabs` vem como uma unica string com uma linha "Nome: valor" por cabecalho,
 // separadas por \n, porque atravessar um vetor de ponteiros por EM_JS custaria
 // mais codigo do que juntar e separar.
+//
+// DUAS IMPLEMENTACOES, MESMA ASSINATURA C, nada abaixo desta regiao muda:
+// pedir2() chama nv_http() sem saber qual das duas esta ativa.
+//
+//   mt/ (pthreads de verdade): XHR SINCRONO. O fio que chama fica bloqueado
+//   de verdade, que e o contrato de rede_baixar ("chamar de um fio proprio")
+//   — o worker pthread trava, os outros workers e o fio principal seguem.
+//
+//   st/ (--um-fio, NV_UM_FIO): nao ha OUTRO fio de verdade para travar sem
+//   travar TUDO — so existe este fio de JS. Por isso aqui e fetch()
+//   ASSINCRONO, mas com um cuidado que nao e obvio: um EM_ASYNC_JS comum
+//   (await fetch(...)) suspenderia, via ASYNCIFY, a PILHA INTEIRA desta
+//   fibra e devolveria o controle ao LACO DE EVENTOS DO NAVEGADOR ate a
+//   promessa resolver — exatamente o mesmo mecanismo de nv_ceder_quadro em
+//   main.c. Isso tiraria o controle do ESCALONADOR DE FIBRAS (fio1.c) pelo
+//   tempo inteiro da requisicao: nenhuma OUTRA fibra (nem o proprio desenho,
+//   que so roda quando o fio principal volta a chamar fio1_rodar a cada
+//   quadro) rodaria nesse meio tempo — o app inteiro pareceria travado numa
+//   unica requisicao de rede, o oposto do que pthreads de verdade dão.
+//
+//   A saida e nao usar EM_ASYNC_JS aqui: o fetch() e disparado por uma
+//   EM_JS comum (sincrona, so entrega o pedido e devolve um id na hora), e a
+//   fibra chamadora fica num LACO POLLING fio1_ceder()+nv_http_pronto_assinc,
+//   que devolve o controle ao ESCALONADOR (nao ao navegador) a cada volta —
+//   as demais fibras (e o desenho, via fio1_rodar no laco de quadro) correm
+//   normalmente enquanto o fetch() ainda esta em voo no proprio navegador.
+#ifdef NV_UM_FIO
+
+EM_JS(int, nv_http_iniciar_assinc, (const char *metodo, const char *url,
+                                    const char *cabs, const char *corpo), {
+  if (!Module.nvFioReqs) { Module.nvFioReqs = {}; Module.nvFioProxId = 1; }
+  var id = Module.nvFioProxId++;
+  var m = UTF8ToString(metodo), u = UTF8ToString(url);
+  var cab = {};
+  if (cabs) {
+    UTF8ToString(cabs).split("\n").forEach(function (linha) {
+      var i = linha.indexOf(":");
+      if (i <= 0) return;
+      cab[linha.slice(0, i).trim()] = linha.slice(i + 1).trim();
+    });
+  }
+  // redirect:'follow' (padrao do fetch) para manter o mesmo comportamento do
+  // XHR sincrono: rede_url_final quer o ENDERECO FINAL depois de
+  // redirecionamentos (res.url), nao o pedido.
+  var init = { method: m, headers: cab, redirect: "follow" };
+  if (corpo) init.body = UTF8ToString(corpo);
+  var reg = { pronto: false, erro: false, status: 0, url: "", etag: "", bytes: null };
+  Module.nvFioReqs[id] = reg;
+  fetch(u, init).then(function (res) {
+    reg.status = res.status;
+    // Pelo /v1/proxy do worker (so no VIDAA), res.url e o endereco do PROXY;
+    // o destino real depois dos redirecionamentos vem neste cabecalho, que o
+    // worker expoe por CORS. Sem proxy ele nao existe e vale res.url.
+    reg.url = res.headers.get("x-nuvio-url-final") || res.url || "";
+    // getResponseHeader (XHR) e headers.get (fetch) tem a mesma regra: null
+    // quando o servidor nao mandou (ou o CORS escondeu) — string vazia e a
+    // resposta certa para quem chama nos dois casos.
+    reg.etag = res.headers.get("etag") || "";
+    return res.arrayBuffer();
+  }).then(function (buf) {
+    // arrayBuffer(), nao responseText+charset=x-user-defined como no XHR
+    // sincrono: aqui os bytes vem binarios de verdade, sem o truque de
+    // tunelar byte a byte por um charset de 1 byte.
+    reg.bytes = new Uint8Array(buf);
+    reg.pronto = true;
+  }).catch(function () {
+    // Mesma regra do XHR sincrono: falha de rede (CORS, DNS, offline) vira
+    // "requisicao nem saiu" — nv_http_colher_assinc devolve 0.
+    reg.erro = true;
+    reg.pronto = true;
+  });
+  return id;
+});
+
+// Nao-bloqueante DE VERDADE (nao e EM_ASYNC_JS): so olha uma flag. E o que
+// permite ao chamador ceder para outras fibras entre uma chamada e outra.
+EM_JS(int, nv_http_pronto_assinc, (int id), {
+  var reg = Module.nvFioReqs && Module.nvFioReqs[id];
+  return (reg && reg.pronto) ? 1 : 0;
+});
+
+EM_JS(char *, nv_http_colher_assinc, (int id, int *tam, int *status,
+                                      char *urlFinal, int urlFinalTam,
+                                      char *etag, int etagTam), {
+  var reg = Module.nvFioReqs && Module.nvFioReqs[id];
+  if (Module.nvFioReqs) delete Module.nvFioReqs[id];
+  if (status) HEAP32[status >> 2] = 0;
+  if (tam) HEAP32[tam >> 2] = 0;
+  if (!reg || reg.erro || !reg.bytes) return 0;
+  if (status) HEAP32[status >> 2] = reg.status;
+  if (urlFinal && urlFinalTam > 0) stringToUTF8(reg.url, urlFinal, urlFinalTam);
+  if (etag && etagTam > 0) stringToUTF8(reg.etag, etag, etagTam);
+  var n = reg.bytes.length;
+  var p = _malloc(n + 1);
+  if (!p) return 0;
+  HEAPU8.set(reg.bytes, p);
+  HEAPU8[p + n] = 0;
+  if (tam) HEAP32[tam >> 2] = n;
+  return p;
+});
+
+static char *nv_http(const char *metodo, const char *url, const char *cabs,
+                     const char *corpo, int *tam, int *status,
+                     char *urlFinal, int urlFinalTam,
+                     char *etag, int etagTam, int *retryAfter) {
+  int id = nv_http_iniciar_assinc(metodo, url, cabs, corpo);
+  // Retry-After nao e lido no st/: 0 = "sem pista", o chamador usa a espera padrao.
+  if (retryAfter) *retryAfter = 0;
+  // fio1_ceder() dentro de uma fibra troca para outra fibra pronta (ou para
+  // o desenho, via o escalonador); chamado da RAIZ (fio principal fora de
+  // fibra — nao deveria acontecer aqui, rede_baixar exige "fio proprio", mas
+  // sem essa garantia em tempo de compilacao) ele gira o escalonador em vez
+  // de travar o navegador parado num while(1) puro.
+  while (!nv_http_pronto_assinc(id)) fio1_ceder();
+  return nv_http_colher_assinc(id, tam, status, urlFinal, urlFinalTam, etag, etagTam);
+}
+
+#else /* !NV_UM_FIO: mt/, pthreads de verdade, XHR sincrono de sempre */
+
 EM_JS(char *, nv_http, (const char *metodo, const char *url, const char *cabs,
                         const char *corpo, int *tam, int *status,
                         char *urlFinal, int urlFinalTam,
@@ -257,7 +378,12 @@ EM_JS(char *, nv_http, (const char *metodo, const char *url, const char *cabs,
 
   if (status) HEAP32[status >> 2] = xhr.status;
   if (urlFinal && urlFinalTam > 0) {
-    stringToUTF8(xhr.responseURL || "", urlFinal, urlFinalTam);
+    // x-nuvio-url-final: so o /v1/proxy do worker manda (VIDAA). Pelo proxy,
+    // responseURL e o endereco do proprio proxy e nao diz para onde a fonte
+    // redirecionou; nos outros alvos o cabecalho nunca vem e nada muda.
+    var fim = null;
+    try { fim = xhr.getResponseHeader("x-nuvio-url-final"); } catch (e) {}
+    stringToUTF8(fim || xhr.responseURL || "", urlFinal, urlFinalTam);
   }
   // Cabecalho de RESPOSTA, para rede_baixar_etag. getResponseHeader devolve
   // null quando o servidor nao mandou o cabecalho (ou quando o CORS o esconde);
@@ -288,10 +414,14 @@ EM_JS(char *, nv_http, (const char *metodo, const char *url, const char *cabs,
   return p;
 });
 
+#endif /* NV_UM_FIO */
+
+#ifndef NV_UM_FIO
 _Thread_local long rede_teto = 0;
 // Destino do endereco final do proximo pedido (so rede_baixar_trecho_st liga).
 static _Thread_local char *redeFinalDst;
 static _Thread_local unsigned redeFinalTam;
+#endif
 
 void rede_preparar(void) { }   // nao ha biblioteca para carregar
 unsigned rede_pedido_capacidades(void) { return 0; }
@@ -373,21 +503,270 @@ void rede_avisar_saude(void (*f)(int codigo, const char *url, unsigned primeiraM
 static void (*avisoHost)(const char *url, int codigo, int http, unsigned ms);
 void rede_avisar_host(void (*f)(const char *url, int codigo, int http, unsigned ms)) { avisoHost = f; }
 
+#ifdef NV_VIDAA
+// VAZIO E O PADRAO, como em todo outro arquivo que usa NV_REC_URL (ver
+// recomenda.c, xtream.c, avisos.c, noticias.c, tex_cache.c): tools/env.sh so
+// emite o -D quando o servico de recomendacoes esta configurado, e uma build
+// sem ele nao pode falhar a compilar por causa disto.
+#ifndef NV_REC_URL
+#define NV_REC_URL ""
+#endif
+// O /v1/proxy mora no worker da TV (servidor/tv), nao mais na API: la ele nao
+// some quando alguem publica a API de outra arvore (issue #135).
+#ifndef NV_VIDAA_PROXY_URL
+#define NV_VIDAA_PROXY_URL "https://nuvio-tv.henriquef29.workers.dev"
+#endif
+
+// ---------------------------------------------------------------- VIDAA/PROXY
+//
+// A pagina da TV VIDAA e servida em https pelo proprio worker de
+// recomendacoes (rotaTv em servidor/recomendacoes/src/index.js). O Chromium
+// da Hisense bloqueia toda requisicao http:// feita de dentro dela (conteudo
+// misto), e alguns https tambem falham por o destino nao mandar CORS. Os dois
+// casos chegam aqui como o MESMO sintoma: nv_http devolve NULL com http==0
+// (nem open() nem send() lancam; o navegador so recusa em silencio). O worker
+// tem uma rota generica para isto, /v1/proxy (servidor/recomendacoes/src/proxy.js):
+// builda a mesma url como query e devolve com CORS.
+//
+// NUNCA PROXY:
+//   - NV_REC_URL: seria pedir ao proxy que buscasse a si mesmo.
+//   - SUPABASE_URL: rotaProxy so aceita GET sem cabecalho de autenticacao
+//     (ver proxy.js) — mandar login ali so gastaria uma volta a mais para
+//     falhar do mesmo jeito, e o pior caso seria logar a url errada.
+//   - VIDEO: o worker rejeita content-type video/audio de proposito (ver
+//     tipoAceito em proxy.js). Um HEAD/probe de stream por ali sempre
+//     voltaria 415, nunca 200 — so custaria a rodada. streams.c troca
+//     rede_url_final por rede_url_final_vidaa exatamente para nao precisar
+//     desta distincao aqui: aquela funcao NUNCA tenta o proxy (ver embaixo)
+//     e devolve "desconhecido" em vez de "morta" quando o bloqueio acontece.
+static int vidaaNuncaProxiar(const char *url) {
+  if (NV_REC_URL[0] && !strncmp(url, NV_REC_URL, strlen(NV_REC_URL))) return 1;
+  if (!strncmp(url, NV_VIDAA_PROXY_URL, strlen(NV_VIDAA_PROXY_URL))) return 1;
+#ifdef NV_SUPABASE_URL
+  if (NV_SUPABASE_URL[0] && !strncmp(url, NV_SUPABASE_URL, strlen(NV_SUPABASE_URL))) return 1;
+#endif
+  return 0;
+}
+
+// URL QUE "PARECE VIDEO", pelos mesmos sinais que o classificador do painel
+// Xtream usa do lado do worker (xtream.js: classificar) — caminho de
+// streaming ou extensao de midia. Nao precisa ser exaustivo: o objetivo aqui
+// e so evitar mandar ao proxy algo que ELE MESMO vai rejeitar por tipo,
+// nunca decidir o que e ou nao video para reproducao (isso e do addon).
+static int vidaaPareceVideo(const char *url) {
+  static const char *caminhos[] = { "/live/", "/movie/", "/series/", "/timeshift/", "/hls/", "/streaming/" };
+  static const char *extensoes[] = { ".m3u8", ".m3u", ".ts", ".mp4", ".mkv", ".avi" };
+  size_t i;
+  for (i = 0; i < sizeof caminhos / sizeof caminhos[0]; i++)
+    if (strstr(url, caminhos[i])) return 1;
+  for (i = 0; i < sizeof extensoes / sizeof extensoes[0]; i++) {
+    const char *p = strstr(url, extensoes[i]);
+    // So conta perto do fim (antes de `?`/`#` ou do fim da string): um
+    // ".mp4" no MEIO de um caminho de CDN nao e a extensao do recurso.
+    if (p) { const char *f = p + strlen(extensoes[i]);
+      if (*f == 0 || *f == '?' || *f == '#') return 1; }
+  }
+  return 0;
+}
+
+// Host[:porta] de uma URL http(s), para a tabela abaixo e para o log. So
+// string — o ramo Emscripten nunca tem libcurl para fazer isto por API.
+static void vidaaHostDe(const char *url, char *dst, size_t tam) {
+  const char *p = strstr(url, "://"), *fim;
+  size_t n;
+  dst[0] = 0;
+  if (!p) return;
+  p += 3;
+  for (fim = p; *fim && *fim != '/' && *fim != '?' && *fim != '#'; fim++) {}
+  n = (size_t)(fim - p);
+  if (n >= tam) n = tam - 1;
+  memcpy(dst, p, n);
+  dst[n] = 0;
+}
+
+// HOSTS QUE JA SE PROVARAM SO ACESSIVEIS VIA PROXY, para as chamadas
+// SEGUINTES ao mesmo host nao pagarem de novo a rodada perdida (https direto
+// ate o status 0, so entao o proxy). 64 e teto generoso: um titulo nao fala
+// com mais que uma duzia de addons/CDNs distintos. Descarte por indice mais
+// antigo (round-robin), nao por LRU de verdade — simples e suficiente para
+// uma tabela deste tamanho, que so existe para ECONOMIZAR uma rodada, nunca
+// para decidir corretude (o pior caso de um descarte errado e pagar de novo a
+// rodada perdida, nao um proxy indevido).
+#define VIDAA_HOSTS_MAX 64
+static char vidaaHosts[VIDAA_HOSTS_MAX][128];
+static int vidaaHostsN;
+static int vidaaHostsProx;
+static pthread_mutex_t vidaaHostsTrava = PTHREAD_MUTEX_INITIALIZER;
+
+static int vidaaHostViaProxy(const char *host) {
+  int i, achou = 0;
+  if (!host[0]) return 0;
+  pthread_mutex_lock(&vidaaHostsTrava);
+  for (i = 0; i < vidaaHostsN; i++)
+    if (!strcmp(vidaaHosts[i], host)) { achou = 1; break; }
+  pthread_mutex_unlock(&vidaaHostsTrava);
+  return achou;
+}
+
+// Registra o host e loga UMA VEZ: a propria ausencia na tabela e a guarda —
+// quem ja estava nao entra de novo, nem loga de novo.
+static void vidaaHostLembrar(const char *host) {
+  int i, ja = 0;
+  if (!host[0]) return;
+  pthread_mutex_lock(&vidaaHostsTrava);
+  for (i = 0; i < vidaaHostsN; i++)
+    if (!strcmp(vidaaHosts[i], host)) { ja = 1; break; }
+  if (!ja) {
+    int slot;
+    if (vidaaHostsN < VIDAA_HOSTS_MAX) slot = vidaaHostsN++;
+    else { slot = vidaaHostsProx; vidaaHostsProx = (vidaaHostsProx + 1) % VIDAA_HOSTS_MAX; }
+    snprintf(vidaaHosts[slot], sizeof vidaaHosts[slot], "%s", host);
+  }
+  pthread_mutex_unlock(&vidaaHostsTrava);
+  if (!ja) printf("[rede] via proxy: %s\n", host);
+}
+
+// Percent-encode minimo (RFC 3986, so os "unreserved" ficam de fora) — o
+// bastante para uma url inteira caber dentro de ?u=. malloc: o chamador libera.
+static char *vidaaUrlEncode(const char *s) {
+  static const char hex[] = "0123456789ABCDEF";
+  size_t n = strlen(s), i, o = 0;
+  char *out = (char *)malloc(n * 3 + 1);
+  if (!out) return NULL;
+  for (i = 0; i < n; i++) {
+    unsigned char c = (unsigned char)s[i];
+    if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') out[o++] = (char)c;
+    else { out[o++] = '%'; out[o++] = hex[c >> 4]; out[o++] = hex[c & 0xF]; }
+  }
+  out[o] = 0;
+  return out;
+}
+
+// "NV_VIDAA_PROXY_URL/v1/proxy?u=<url-encoded>", num buffer malloc'ado (o chamador
+// libera). NULL so por falta de memoria.
+static char *vidaaUrlProxy(const char *url) {
+  char *enc = vidaaUrlEncode(url), *out;
+  size_t tam;
+  if (!enc) return NULL;
+  tam = strlen(NV_VIDAA_PROXY_URL) + strlen("/v1/proxy?u=") + strlen(enc) + 1;
+  out = (char *)malloc(tam);
+  if (out) snprintf(out, tam, "%s/v1/proxy?u=%s", NV_VIDAA_PROXY_URL, enc);
+  free(enc);
+  return out;
+}
+#endif /* NV_VIDAA */
+
+#ifdef NV_VIDAA
+// Cabecalho AUTHORIZATION presente (em `cab` ou no `extraCab` fixo de quem
+// chamou)? Se sim, esta chamada NUNCA vai para o /v1/proxy generico, nem
+// forcada (http://) nem por retry (https:// com status 0): rotaProxy so
+// repassa `accept` e `if-none-match` (ver proxy.js) e DESCARTA qualquer
+// outro cabecalho, entao proxiar um pedido autenticado devolveria um 401 por
+// FALTA DE CREDENCIAL, nao pela credencial ser invalida — e
+// rede_avisar_401 nao sabe diferenciar os dois. NV_REC_URL/Supabase ja saem
+// pela lista de destinos proibidos; isto cobre o Trakt e qualquer outro host
+// https que precise de Authorization.
+static int vidaaTemAutorizacao(const char *const *cab, const char *extraCab) {
+  int k;
+  if (extraCab && !strncasecmp(extraCab, "Authorization:", 14)) return 1;
+  for (k = 0; cab && cab[k]; k++)
+    if (!strncasecmp(cab[k], "Authorization:", 14)) return 1;
+  return 0;
+}
+
+static int vidaaPodeProxiar(const char *url, const char *const *cab, const char *extraCab) {
+  return !vidaaNuncaProxiar(url) && !vidaaPareceVideo(url) &&
+         !vidaaTemAutorizacao(cab, extraCab);
+}
+#endif
+
 static char *pedir2(const char *metodo, const char *url, const char *const *cab,
                     const char *extraCab, const char *corpo,
                     long *tam, int *status, char *etag, unsigned tamEtag,
                     int *retryAfter) {
   char *cabs, *corpoResp;
   int n = 0, http = 0;
+#ifdef NV_VIDAA
+  char *urlProxiada = NULL;
+  const char *urlEfetiva = url;
+#endif
   if (etag && tamEtag) etag[0] = 0;
   if (status) *status = 0;
   if (retryAfter) *retryAfter = 0;
   if (!url || !*url) return NULL;
   if (!status && (!metodo || !strcmp(metodo, "GET")) && negcache_barra(url, (long)time(NULL))) return NULL;
+#ifdef NV_VIDAA
+  // http:// NUNCA SAI DIRETO: a pagina da TV e https, e o navegador bloqueia
+  // conteudo misto antes mesmo de tentar a conexao. HOST JA CONHECIDO como
+  // "so acessivel via proxy" (vidaaHostLembrar, mais abaixo) tambem entra
+  // direto pela mesma rota, para nao pagar de novo a rodada perdida.
+  if (vidaaPodeProxiar(url, cab, extraCab)) {
+    if (!strncmp(url, "http://", 7)) {
+      urlProxiada = vidaaUrlProxy(url);
+      if (urlProxiada) urlEfetiva = urlProxiada;
+    } else {
+      char host[128];
+      vidaaHostDe(url, host, sizeof host);
+      if (vidaaHostViaProxy(host)) {
+        urlProxiada = vidaaUrlProxy(url);
+        if (urlProxiada) urlEfetiva = urlProxiada;
+      }
+    }
+  }
+  cabs = juntarCabs(cab, extraCab);
+  corpoResp = nv_http(metodo, urlEfetiva, cabs, corpo, &n, &http,
+                      redeFinalDst, (int)redeFinalTam, etag, (int)tamEtag, retryAfter);
+  free(cabs);
+  // HTTPS QUE FALHOU DIRETO (http==0: nem chegou a ter status, o mesmo
+  // sintoma do bloqueio de conteudo misto) -> tenta 1x via proxy. So quando
+  // AINDA NAO tinha ido por ele: o http:// e o host ja conhecido acima ja
+  // usaram a rota certa de cara, e tentar de novo so repetiria a mesma falha.
+  if (!corpoResp && http == 0 && !urlProxiada && vidaaPodeProxiar(url, cab, extraCab)) {
+    char *urlP = vidaaUrlProxy(url);
+    if (urlP) {
+      char *cabs2 = juntarCabs(cab, extraCab);
+      int n2 = 0, http2 = 0;
+      char fim2[512];
+      char *r2;
+      fim2[0] = 0;
+      r2 = nv_http(metodo, urlP, cabs2, corpo, &n2, &http2, fim2, (int)sizeof fim2, etag, (int)tamEtag, NULL);
+      free(cabs2);
+      // SO VALE SE FOI O PROXY QUE BUSCOU. rotaProxy manda x-nuvio-url-final
+      // (o destino real, "http...") em TODA resposta que veio do destino, 404
+      // inclusive; sem o cabecalho nv_http devolve o endereco do proprio
+      // worker, e a resposta e dele: erro do proxy (403/415/429/502/504) ou
+      // rota inexistente. MEDIDO em 24/09: o worker publicado ainda nao tem
+      // /v1/proxy e responde 401 {"erro":"nao autenticado"} a qualquer url.
+      // Este ramo aceitava esse 401 como se fosse do destino: logava "via
+      // proxy: images.metahub.space" (o proxy nao buscou nada), anotava o
+      // host, e dai em diante todo pedido a ele ia so ao proxy, sem tentar o
+      // direto — 22 a 99 "HTTP 401 em images.metahub.space" por abertura da
+      // home. Um host que falhou UMA vez por acaso (rede) ficava preso ao
+      // proxy quebrado do mesmo jeito. Agora so anota quando o proxy entregou,
+      // e o erro do worker sai com o nome certo no log.
+      if (r2 && !strncmp(fim2, "http", 4) &&
+          !(NV_REC_URL[0] && !strncmp(fim2, NV_REC_URL, strlen(NV_REC_URL))) &&
+          strncmp(fim2, NV_VIDAA_PROXY_URL, strlen(NV_VIDAA_PROXY_URL))) {
+        char host[128];
+        corpoResp = r2; n = n2; http = http2;
+        vidaaHostDe(url, host, sizeof host);
+        vidaaHostLembrar(host);
+      } else if (r2) {
+        char host[128];
+        vidaaHostDe(url, host, sizeof host);
+        printf("[rede] proxy nao buscou %s (HTTP %d do worker)\n", host, http2);
+        free(r2);
+      }
+      free(urlP);
+    }
+  }
+  free(urlProxiada);
+#else
   cabs = juntarCabs(cab, extraCab);
   corpoResp = nv_http(metodo, url, cabs, corpo, &n, &http,
                       redeFinalDst, (int)redeFinalTam, etag, (int)tamEtag, retryAfter);
   free(cabs);
+#endif
   if (status) *status = http;
   // XHR sem status e sem corpo = nao houve resposta (rede, DNS, CORS): para a
   // saude da rede e o "6" do curl. Qualquer status e transporte que funcionou.
@@ -562,6 +941,24 @@ char *rede_postar_seguro_st(const char *url, int segundos, const char *const *ca
   return rede_postar_st(url, segundos, cab, corpo, status);
 }
 
+#ifdef NV_VIDAA
+// HEAD never downloads a media body, including when Range would be ignored;
+// in --um-fio nv_http is fetch() and yields to the other fibers meanwhile.
+// 1 resolved, 0 dead (real HTTP error), -1 unknown (blocked, or HEAD refused:
+// signed GET URLs answer HEAD with 403).
+static int sondaVidaa(const char *url, const char *cabs, char *dst, unsigned tam, int *http) {
+  int n = 0;
+  char *corpo;
+  *http = 0;
+  dst[0] = 0;
+  corpo = nv_http("HEAD", url, cabs, NULL, &n, http, dst, (int)tam, NULL, 0, NULL);
+  if (!corpo) return -1;
+  free(corpo);
+  if (*http == 403 || *http == 405 || *http == 501) return -1;
+  if (*http >= 200 && *http < 300 && dst[0]) return 1;
+  return *http > 0 ? 0 : -1;
+}
+#else
 // Sonda sem corpo atravessando a ponte. O XHR ainda recebe o corpo inteiro se
 // o servidor ignorar Range, mas nao aloca essa copia no heap do WASM.
 EM_JS(int, nv_url_sonda, (const char *url, const char *cabs, char *dst,
@@ -600,6 +997,7 @@ EM_JS(int, nv_url_sonda, (const char *url, const char *cabs, char *dst,
   stringToUTF8(finalUrl, dst, tam);
   return 1;
 });
+#endif
 
 int rede_url_final_cab(const char *url, int segundos, const char *const *cab,
                        char *dst, unsigned tam, int *status) {
@@ -623,8 +1021,15 @@ int rede_url_final_tipo(const char *url, int segundos, const char *const *cab,
   // mas honram Range.
   cabs = juntarCabs(cab, NULL);
   if (cab && cab[0] && !cabs) return 0;
+#ifdef NV_VIDAA
+  // No type/size from HEAD (mime empty, corpo -1). Unknown is not dead: the
+  // player tries the URL itself (same policy as verificarUma).
+  ok = sondaVidaa(url, cabs, dst, tam, &http);
+  if (ok < 0) ok = snprintf(dst, tam, "%s", url) < (int)tam;
+#else
   ok = nv_url_sonda(url, cabs, dst, (int)tam, &http, mime,
                     mime && mimeTam < INT_MAX ? (int)mimeTam : 0, &c32);
+#endif
   free(cabs);
   if (corpo) *corpo = c32;
   if (status) *status = http;
@@ -634,6 +1039,19 @@ int rede_url_final_tipo(const char *url, int segundos, const char *const *cab,
 int rede_url_final(const char *url, int segundos, char *dst, unsigned tam) {
   return rede_url_final_cab(url, segundos, NULL, dst, tam, NULL);
 }
+
+#ifdef NV_VIDAA
+// Ver rede.h. NUNCA passa pelo proxy (o proprio pedir2 evita isto por
+// vidaaPareceVideo — url de video sempre volta 415 do worker), entao esta
+// chamada e SEMPRE direta: um bloqueio de conteudo misto ou de CORS aqui e
+// ROTINEIRO, nao a excecao, e e exatamente o que -1 comunica ao chamador.
+int rede_url_final_vidaa(const char *url, int segundos, char *dst, unsigned tam) {
+  int http;
+  (void)segundos;
+  if (!url || !*url || !dst || tam == 0) return -1;
+  return sondaVidaa(url, NULL, dst, tam, &http);
+}
+#endif
 
 // VAZAO NO TIZEN (ver rede_medir_vazao em rede.h). XHR sincrono so devolve
 // quando o corpo inteiro chegou, entao nao ha "bytes por segundo" de dentro de
@@ -3095,7 +3513,7 @@ static unsigned long redeAgoraMs(void) {
 // pedido do resto volta com ZERO bytes em ~140 ms, toda vez, e as tentativas
 // de 2 s e 5 s so repetem a recusa. Quem chama le isto logo depois de
 // rede_baixar_trecho_st, NO MESMO FIO, para recuar de verdade.
-#ifndef NV_TPK40   // no NV_TPK40 e campo da struct por fio (topo)
+#if !defined(NV_TPK40) && !defined(NV_UM_FIO) // otherwise stored in RedeFio
 static _Thread_local int redeRestoRecusado;
 #endif
 int rede_resto_recusado(void) { return redeRestoRecusado; }

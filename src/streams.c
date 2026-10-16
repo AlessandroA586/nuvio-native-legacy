@@ -670,6 +670,46 @@ static int cabeNaAltura(const Stream *s) {
   return !teto || !s->altura || s->altura <= teto;
 }
 
+#ifdef NV_VIDAA
+// TABELA DE REGRAS DA VIDAA (Hisense) -----------------------------------------
+//
+// Fonte: medicoes de TERCEIROS contra o navegador dela (NoobyGains /
+// stremio-vidaa-tv), NAO VERIFICADAS neste aparelho — trocar os pesos aqui
+// se a VIDAA de verdade discordar. Aplicada DEPOIS da tabela da LG (logo
+// acima, no corpo de pontos()) e forte o bastante para reverter qualquer
+// bonus que aquela tabela ja tenha somado — a VIDAA discorda da LG em pelo
+// menos um ponto (DV em MP4), entao nao da para so ACRESCENTAR regras.
+//
+//   - DV EM MP4 TRAVA O NAVEGADOR da VIDAA — o oposto exato da LG (onde MP4 e
+//     o container que toca DV de verdade, ver o comentario grande acima).
+//     Penalidade forte o bastante para anular os +100000/+10000 que a tabela
+//     de cima ja somou para esta mesma combinacao.
+//   - DV EM MKV continua com bonus: e a LG que rebaixa DV em MKV para HDR10,
+//     nao a VIDAA — nao ha motivo medido para penalizar aqui.
+//   - AV1 nao decodifica (nem hardware nem software no navegador dela).
+//   - ACIMA DE 4K da tela preta.
+//   - http:// NA URL DO STREAM e conteudo misto — a pagina da VIDAA e https
+//     (rede.c ja reescreve para o proxy quando da, mas a pontuacao nao deve
+//     favorecer uma fonte que so toca as custas de um desvio).
+//   - MP4 SEM DV e o container que o <video> HTML5 toca com mais
+//     confiabilidade: bonus leve, so para desempatar MP4 x MKV equivalentes.
+typedef struct { const char *nome; int (*bate)(const Stream *s); long pontos; } RegraVidaa;
+static int rvDvMp4(const Stream *s)     { return s->mp4 && s->dolbyVision; }
+static int rvDvMkv(const Stream *s)     { return !s->mp4 && s->dolbyVision; }
+static int rvAv1(const Stream *s)       { return s->av1; }
+static int rvAcimaDe4k(const Stream *s) { return s->altura > 2160; }
+static int rvHttp(const Stream *s)      { return !strncmp(s->url, "http://", 7); }
+static int rvMp4SemDv(const Stream *s)  { return s->mp4 && !s->dolbyVision; }
+static const RegraVidaa REGRAS_VIDAA[] = {
+  { "dv-em-mp4 trava o navegador",  rvDvMp4,     -200000 },
+  { "dv-em-mkv ok nesta tv",        rvDvMkv,        10000 },
+  { "av1 nao decodifica",           rvAv1,        -150000 },
+  { "acima de 4k da tela preta",    rvAcimaDe4k,  -150000 },
+  { "http:// e conteudo misto",     rvHttp,       -150000 },
+  { "mp4 sem dv e mais confiavel",  rvMp4SemDv,      3000 },
+};
+#define N_REGRAS_VIDAA (sizeof REGRAS_VIDAA / sizeof REGRAS_VIDAA[0])
+#endif
 // FAIXA DE TAMANHO DA ESCOLHA AUTOMATICA (Ajustes > Reproducao > Imagem e som:
 // "Tamanho maximo" / "Tamanho minimo", em GB). Pedido de quem tem franquia de
 // dados curta: o automatico so pega arquivo dentro da faixa. Mesma regra do
@@ -959,7 +999,6 @@ static long multasDeAlvo(const Stream *s, const char *alvo) {
   return m;
 }
 
-static long multasDe(const Stream *s) { return multasDeAlvo(s, NULL); }
 static long pontosDoAlvo(const Stream *s, const char *alvo) {
   long p = 0;
   // DOLBY VISION SO VALE PONTO EM MP4 — e isto e medida, nao teoria.
@@ -996,6 +1035,12 @@ static long pontosDoAlvo(const Stream *s, const char *alvo) {
         if (pref == 0) p += h * 50; else if (pref == 2 && h) p -= 50; }
     } else p += qualidade(s, modo);
   }
+#ifdef NV_VIDAA
+  { unsigned k;
+    for (k = 0; k < N_REGRAS_VIDAA; k++)
+      if (REGRAS_VIDAA[k].bate(s)) p += REGRAS_VIDAA[k].pontos;
+  }
+#endif
   p -= multasDeAlvo(s, alvo);
   return p;
 }
@@ -1262,6 +1307,9 @@ static void soltarConf(void *u) {
   if (atomic_fetch_sub(&d->refs, 1) == 1) free(d);
 }
 
+#ifdef NV_VIDAA
+__attribute__((unused))
+#endif
 static int resolverUrl(const char *url, const char *cabecalhos, int segundos,
                         char *fim, unsigned tam, char *mime, unsigned mimeTam, long *corpo) {
   const char *vetor[8];
@@ -1346,24 +1394,38 @@ static int verificarUma(int i, Conferencia *c) {
     }
   } else if (!url[0]) {
     ok = 0;
-  } else if (!resolverUrl(url, cab, 10, fim, sizeof fim, mime, sizeof mime, &corpo)) {
-    printf("[fonte] %d nao resolveu\n", i);
-  } else if (naovideo_mime(mime, fim, corpo)) {
-    // Linha de aviso do addon (doacao, Discord, "indisponivel"): a URL leva a
-    // uma pagina, nao a um video. Fica marcada na folha e o automatico passa
-    // para a proxima da ordem da pessoa sem abrir o player.
-    printf("[fonte] nao e video: %s %s\n", addon[0] ? addon : "?",
-           mime[0] ? mime : (corpo >= 0 ? "corpo-minusculo" : "sem-tipo"));
-    fflush(stdout);
-    pthread_mutex_lock(&verTrava);
-    if (nv_perfil_sessao_atual(c->sessao) && listaGeracao == c->geracao && i < n) lista[i].naoVideo = 1;
-    pthread_mutex_unlock(&verTrava);
-  } else if (enderecoDeAviso(fim)) {
-    printf("[fonte] %d e aviso (%.60s)\n", i, fim);
-  } else if (!nv_perfil_sessao_atual(c->sessao)) { c->abortou = 1;
-  } else if (playlistVazia(fim, cab)) {
-    printf("[fonte] %d tem playlist vazia (canal fora do ar)\n", i);
-  } else ok = 1;
+  } else {
+    // -1 so sai na VIDAA: url de video nunca passa pelo /v1/proxy, entao um
+    // bloqueio de conteudo misto ou de CORS e rotineiro ali, nao prova de fonte
+    // morta. Mesma politica de playlistVazia: sem como conferir, presume viva.
+    // Sem tipo/tamanho do corpo ali (mime vazio, corpo -1): naovideo_mime nao pega.
+#ifdef NV_VIDAA
+    int r = rede_url_final_vidaa(url, 10, fim, sizeof fim);
+#else
+    int r = resolverUrl(url, cab, 10, fim, sizeof fim, mime, sizeof mime, &corpo);
+#endif
+    if (r < 0) {
+      printf("[fonte] %d sem confirmacao (bloqueio de rede na vidaa); presumindo viva\n", i);
+      ok = 1;
+    } else if (!r) {
+      printf("[fonte] %d nao resolveu\n", i);
+    } else if (naovideo_mime(mime, fim, corpo)) {
+      // Linha de aviso do addon (doacao, Discord, "indisponivel"): a URL leva a
+      // uma pagina, nao a um video. Fica marcada na folha e o automatico passa
+      // para a proxima da ordem da pessoa sem abrir o player.
+      printf("[fonte] nao e video: %s %s\n", addon[0] ? addon : "?",
+             mime[0] ? mime : (corpo >= 0 ? "corpo-minusculo" : "sem-tipo"));
+      fflush(stdout);
+      pthread_mutex_lock(&verTrava);
+      if (nv_perfil_sessao_atual(c->sessao) && listaGeracao == c->geracao && i < n) lista[i].naoVideo = 1;
+      pthread_mutex_unlock(&verTrava);
+    } else if (enderecoDeAviso(fim)) {
+      printf("[fonte] %d e aviso (%.60s)\n", i, fim);
+    } else if (!nv_perfil_sessao_atual(c->sessao)) { c->abortou = 1;
+    } else if (playlistVazia(fim, cab)) {
+      printf("[fonte] %d tem playlist vazia (canal fora do ar)\n", i);
+    } else ok = 1;
+  }
   return ok;
 }
 
@@ -2195,6 +2257,26 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
          modo == FONTEAUTO_PRIMEIRA ? "primeira da lista" : "melhor fonte",
          tocadas, nf, c.abortou ? ", lista trocada no meio" : "");
   if (escolhida >= 0) { printf("[fonte] %d ok\n", escolhida); logarEscolha(escolhida, pref, modo == FONTEAUTO_PRIMEIRA); }
+#ifdef NV_VIDAA
+  // QUAIS REGRAS DA TABELA DA VIDAA PESARAM na fonte escolhida — sem isto a
+  // pontuacao e uma caixa preta quando alguem perguntar "por que tocou este
+  // MKV e nao aquele MP4 4K". So imprime as que BATERAM (a maioria das
+  // fontes nao bate regra nenhuma, e "nenhuma" tambem e informacao).
+  if (escolhida >= 0 && escolhida < n) {
+    const Stream *s = &lista[escolhida];
+    char motivos[256] = "";
+    size_t u = 0;
+    unsigned k;
+    for (k = 0; k < N_REGRAS_VIDAA; k++) {
+      if (!REGRAS_VIDAA[k].bate(s)) continue;
+      int esc = snprintf(motivos + u, sizeof motivos - u, "%s%s(%+ld)",
+                          u ? "; " : "", REGRAS_VIDAA[k].nome, REGRAS_VIDAA[k].pontos);
+      if (esc < 0 || (size_t)esc >= sizeof motivos - u) break;
+      u += (size_t)esc;
+    }
+    printf("[fonte] vidaa: regras em %d: %s\n", escolhida, motivos[0] ? motivos : "nenhuma");
+  }
+#endif
   { FonteRegraCfg c = regraCfg();
     if (escolhida >= 0 && (fonteregra_ativa(&c) || ordemUso)) {
       static const char *const ESC_[3] = { "all", "addons-only", "plugins-only" };
