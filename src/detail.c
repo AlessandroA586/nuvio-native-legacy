@@ -1306,7 +1306,8 @@ static const char *arteDe(int i) {
     // (recomendacao/filmografia sem fundo proprio) nao conta — e a mesma url
     // do poster (#502/#503).
     if (c && c->backdrop[0] && strcmp(c->backdrop, c->poster)) {
-      arteFixa[0] = 0; arteFixaPoster = 0;
+      const char *u = arteDeViva(i);
+      if (u && strcmp(u, arteFixa)) { arteFixa[0] = 0; arteFixaPoster = 0; }
     }
   }
   if (i == idx && arteFixa[0] && !tex_falhou(arteFixa)) return arteFixa;
@@ -1319,8 +1320,7 @@ static const char *arteDe(int i) {
       // Poster no lugar do fundo (semente de recomendacao que repetiu o
       // cartaz em `backdrop`) conta como cartaz: e o que faz a troca acima
       // disparar quando o fundo real chega (#502/#503).
-      arteFixaPoster = c && c->poster[0] &&
-                       (!c->backdrop[0] || !strcmp(c->backdrop, c->poster));
+      arteFixaPoster = c && c->poster[0] && !strcmp(u, c->poster);
     }
     return u; }
 }
@@ -1354,8 +1354,8 @@ static int arteDetalheEhPoster(int i) {
   // que o enriquecimento pode ter posto no catalogo depois.
   if (i == idx && trocaarte_previa_fundo()) return 0;   // previa: sempre fundo
   if (i == idx && arteFixa[0]) return arteFixaPoster;
-  { int r = c && c->poster[0] &&
-            (!c->backdrop[0] || !strcmp(c->backdrop, c->poster));
+  { const char *u = arteDeViva(i);
+    int r = c && c->poster[0] && u && !strcmp(u, c->poster);
     if (i == idx) arteFixaPoster = r;
     return r; }
 }
