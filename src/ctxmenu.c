@@ -105,6 +105,9 @@ static int   aberto, idx = -1, foco;
 static int       doLista, cartazFixo, listaPedida, listaAlterou;
 static LstLista  lista;
 static float anim, animV;
+// Abertura da pagina de estilos: exponencial de saida, sem repique (~200 ms).
+static float estPag;
+static int estSaindo;   // Voltar da pagina de estilos: o seletor some animado sobre o menu
 static int   operacao, intencao, estadoOperacao;
 static int   espelhoAplicado;
 // A ESCRITA EM ANDAMENTO E DO SIMKL, e nao do Trakt (issue #110): diz a
@@ -679,6 +682,7 @@ static void abrirComum(int indice) {
   detalhesOk = detalhesPend; detalhesPend = 0;
   temCartaz = 0; cartazFixo = 0;
   pagina = soFileira ? 1 : 0;
+  estPag = 0.0f; estSaindo = 0;
   estFoco = -1;               // montar() poe o foco na forma atual
   ordemLinha = fil_origem_de(filChave) == FIL_ORIGEM_COLECAO;
   ordemSel = fil_ordem(filChave);
@@ -922,7 +926,7 @@ static void aplicar(void) {
     return;
   }
   if (acao == OP_ESTILO) {
-    pagina = 1; estFoco = -1;
+    pagina = 1; estFoco = -1; estPag = 0.0f; estSaindo = 0;
     memset(estAnim, 0, sizeof estAnim);
     montar();
     estAncorar(0.0f);
@@ -1136,7 +1140,7 @@ void ctx_evento(const SDL_Event *e) {
     if (pagina == 1) estRestaurar();
     if (pagina == 2) { pagina = 0; confExtra = -1; return; }   // Voltar = Cancelar
     if (pagina == 1 && !soFileira) {
-      pagina = 0; montar();
+      pagina = 0; montar(); estSaindo = 1;
       for (foco = 0; foco < nOps && ops[foco].acao != OP_ESTILO; foco++) {}
       if (foco >= nOps) foco = 0;
       return;
@@ -1219,6 +1223,12 @@ void ctx_atualizar(float dt, Uint32 agora) {
   // Pagina de estilos: so aqui, e so com a pagina aberta, o foco da lista anda.
   // Menu fechado (ou saido da pagina) por qualquer porta: desfaz o que nao foi
   // confirmado com OK.
+  if (estSaindo) {
+    estPag = (ajustes_animacoes_reduzidas() || !aberto || pagina == 1) ? 0.0f : anim_mola(estPag, 0.0f, dt, 14.0f);
+    if (estPag < 0.01f) { estPag = 0.0f; estSaindo = 0; }
+  } else
+  estPag = (ajustes_animacoes_reduzidas() || !aberto || pagina != 1) ? (pagina == 1 ? 1.0f : 0.0f)
+         : anim_mola(estPag, 1.0f, dt, 14.0f);
   if (aberto && pagina == 1) {
     estAncorar(dt);
     for (i = 0; i < FIL_TIPO_N; i++)
@@ -1498,7 +1508,7 @@ static void desenhaTamanhos(GfxRect r, int i, float a) {
     if (pal[0]) { letra[k++] = pal[0];
       while (k < 6 && ((unsigned char)pal[k] & 0xC0) == 0x80) { letra[k] = pal[k]; k++; } }
     letra[k] = 0;
-    if (aberto && a > 0.5f)
+    if (aberto && pagina == 1 && a > 0.5f)
       ponteiro_alvo(c.x, c.y, c.w, c.h, ponteiroEstFoco, ponteiroEstOk, i, j + 1);
     if (esc) gfx_cor(c, 0.5f, 0.08f, 0.085f, 0.1f, 0.92f * a);
     l = esc ? txt_linha(TXT_DET_BOTAO, letra, 243, 242, 239, 255)
@@ -1553,6 +1563,7 @@ int ctx_estilo_rect(GfxRect *out) {
 }
 
 static void desenhaEstilos(float a) {
+  a *= estPag;
   int i, n = nEstilos + (ordemLinha ? 1 : 0);
   float disp = NV_TELA_H - 2.0f * CTX_BORDA - 2.0f * EST_PAD;
   float lin = EST_LINHA;
@@ -1561,7 +1572,7 @@ static void desenhaEstilos(float a) {
   m = estIlha(2.0f * EST_PAD + (float)n * (lin + EST_GAP) - EST_GAP);
   estIlhaRect = m;
   m.y += (1.0f - a) * 12.0f;
-  if (aberto && a > 0.5f && ponteiro_ativo()) {
+  if (aberto && pagina == 1 && a > 0.5f && ponteiro_ativo()) {
     ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ponteiroEstFora, 0, 0);
     ponteiro_alvo(m.x, m.y, m.w, m.h, NULL, NULL, 0, 0);
   }
@@ -1576,7 +1587,7 @@ static void desenhaEstilos(float a) {
     GfxRect r = { m.x + EST_PAD, m.y + EST_PAD + (float)i * (lin + EST_GAP),
                   m.w - 2.0f * EST_PAD, lin };
     if (i < nEstilos) {
-      if (aberto && a > 0.5f)
+      if (aberto && pagina == 1 && a > 0.5f)
         ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroEstFoco, ponteiroEstOk, i, 0);
       linhaEstilo(r, estLin[i].rotulo, estTipo(i), estAnim[i], a);
       if (estLin[i].n > 1 && estAnim[i] > 0.5f) desenhaTamanhos(r, i, a);
@@ -1585,7 +1596,7 @@ static void desenhaEstilos(float a) {
       // clique cicla (mouse e Magic Remote nao tem esquerda/direita).
       char rot[96];
       snprintf(rot, sizeof rot, i18n("Ordem: %s"), i18n(fil_ordem_rotulo(ordemSel)));
-      if (aberto && a > 0.5f)
+      if (aberto && pagina == 1 && a > 0.5f)
         ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroEstFoco, ponteiroOrdemAtivar, nEstilos, 0);
       linhaEstilo(r, rot, -1, ordemAnim, a);
     }
@@ -1834,6 +1845,7 @@ int ctx_inline_painel_ativo(void) { return aberto && modoInline() && pagina == 0
 #endif
 void ctx_inline_pedir(int on) { inlinePend = on; }
 static int modoInline(void) { return inlineOn && doPainel && !doSocial && !doLista && !soFileira; }
+float ctx_estilo_t(void) { return estPag; }
 float ctx_inline_t(void) { return modoInline() ? (anim < 0.0f ? 0.0f : anim > 1.0f ? 1.0f : anim) : 0.0f; }
 static CtxInfoEstado estInline(const CatItem *ci) {
   CtxInfoEstado e; e.salvo = tituloSalvo(ci); e.visto = historicoDe(ci); return e;
@@ -1954,6 +1966,8 @@ static void ctx_desenharCorpo_(Uint32 agora);
 void ctx_desenhar(Uint32 agora) {
   ESCALA_INI();
   ctx_desenharCorpo_(agora);
+  // Depois do corpo: o veu de 94% do menu apagaria o seletor que esta sumindo.
+  if (estSaindo && anim >= 0.01f && !(modoInline() && pagina == 0)) desenhaEstilos(anim);
   ESCALA_FIM();
 }
 // O cartao da home e em pixels reais; o menu desenha na tela virtual.

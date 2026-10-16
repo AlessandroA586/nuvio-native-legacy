@@ -631,6 +631,7 @@ typedef enum {
   AJ_LEG2_NEGRITO, AJ_LEG2_COR_BORDA, AJ_LEG2_RESTAURAR,
   AJ_COLECAO_EXIBICAO, // #362: padrao das colecoes, por perfil neste aparelho
   AJ_PLAYER_EXTERNO,   // #501: Interno / Externo / Perguntar (so Android)
+  AJ_TRAILER_AUDIO,    // idioma do audio do trailer (local, append-only)
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -1121,6 +1122,10 @@ static const char *W_TEMA[] = {
 
 static const char *V_LINGUA[LING_MAX_OPC];
 static int         nLingua;
+// Audio do trailer: Automatico, Original e os idiomas da lista (sem "Todas" e
+// sem "~", que ja e o Original). Lista propria porque o indice nao e o de linguas.c.
+static const char *V_TRAUD[LING_MAX_OPC + 2], *TRAUD_COD[LING_MAX_OPC + 2];
+static int         nTrAud;
 static void rotulosDeIdioma(void) {
   int i, n = ling_opcao_n();
   if (n > LING_MAX_OPC) n = LING_MAX_OPC;
@@ -1142,6 +1147,14 @@ static void rotulosDeIdioma(void) {
                 : ling_nome(c);
   }
   nLingua = n;
+  nTrAud = 0;
+  V_TRAUD[nTrAud] = "Automático"; TRAUD_COD[nTrAud++] = "";
+  V_TRAUD[nTrAud] = "Original";   TRAUD_COD[nTrAud++] = "~";
+  for (i = 2; i < n; i++) {
+    const char *c = ling_opcao_codigo(i);
+    if (!strcmp(c, "~")) continue;
+    V_TRAUD[nTrAud] = V_LINGUA[i]; TRAUD_COD[nTrAud++] = c;
+  }
 }
 
 // Natureza da linha.
@@ -1625,6 +1638,7 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Restaurar padrão"),
   ESC("Exibição padrão das coleções", V_COLECAO_EXIBICAO, VT_LAY_N),
   ESC("Player", V_PLAYER_EXTERNO, 3),                    // local: playerExternoLocal
+  ESC("Áudio do trailer", V_TRAUD, 2),   // n real em nValores
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1912,6 +1926,7 @@ static const char *CHAVE[] = {
   "legenda2NegritoLocal", "legenda2CorBordaLocal", "-legenda2Restaurar",
   "colecaoExibicaoPadraoLocal",
   "playerExternoLocal",
+  "trailerAudioLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -3075,6 +3090,10 @@ float ajustes_trailer_zoom(void)      { static const float z[] = { 1.34f, 1.15f,
 // Teto de definicao do trailer: 0 = a maior que houver.
 int   ajustes_trailer_qualidade(void) { static const int t[] = { 0, 1080, 720, 480 }; int v = valor[AJ_TRAILER_QUAL]; return (v >= 0 && v < 4) ? t[v] : 0; }
 // Fonte do trailer: o TRF_* de trailerfonte.h. Fora da lista le Automatico.
+const char *ajustes_trailer_audio(void) {
+  int v = valor[AJ_TRAILER_AUDIO];
+  return (v > 0 && v < nTrAud) ? TRAUD_COD[v] : "";
+}
 int   ajustes_trailer_fonte(void)     { int v = valor[AJ_TRAILER_FONTE]; return (v >= 0 && v < nValores(AJ_TRAILER_FONTE)) ? v : 0; }
 int  ajustes_envio_auto(void)         { return lig(AJ_ENVIO_AUTO); }
 int  ajustes_menu_explorar(void)      { return lig(AJ_MENU_EXPLORAR); }
@@ -5181,6 +5200,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_FONTE_PRAZO:    /* o web nao tem: a rede e os addons sao desta casa */
     case AJ_MEDIDOR:        /* o medidor e da GPU desta TV; o web nao tem */
     case AJ_COLECAO_EXIBICAO: /* por perfil neste aparelho, sem par na conta */
+    case AJ_TRAILER_AUDIO:  /* o web nao tem */
     case AJ_TAMANHO_UI:     /* o tamanho e desta tela, e o web nao tem */
     case AJ_TAMANHO_AJUSTES:
     case AJ_LAYOUT_AJUSTES: /* #339: o arranjo dos Ajustes e desta TV */
@@ -6619,6 +6639,7 @@ static const char *ajudaOpcaoBase(int op) {
       return "Alguns segundos depois de abrir um título, o trailer toca no lugar da arte de fundo; o som segue Som do trailer. Rolar a página ou sair dela volta para a arte.";
 #endif
     case AJ_TRAILER_QUAL: return "Definição do vídeo do trailer. Máxima usa a maior que existir para o título; as outras são um teto, para conexões mais lentas.";
+    case AJ_TRAILER_AUDIO: return "Idioma do áudio do trailer. Automático segue o idioma da interface; Original usa o idioma do título; ou escolha um idioma. Sem trailer nele, cai no inglês.";
     case AJ_TRAILER_ASPECTO: return "Quanto o trailer é ampliado para encher a tela. Zoom cinema tira a tarja preta de um trailer de cinema; Original mostra o quadro inteiro, com tarja.";
     case AJ_TRAILER_FONTE:
       // O que cada TV toca (trailerfonte.c, existe): a ajuda nomeia a fonte que
@@ -8709,6 +8730,7 @@ static void aplicarIdioma(int op) {
 // const e foi escrita antes de linguas.c existir.
 static int nValores(int op) {
   if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2) return nLingua > 0 ? nLingua : 1;
+  if (op == AJ_TRAILER_AUDIO) return nTrAud > 0 ? nTrAud : 1;
   if (op == AJ_SELOS_PACOTE) return 1 + selospacote_n();
 #ifndef __EMSCRIPTEN__
   // "YouTube" (o 4o valor) so toca no .wgt da Samsung (trailerfonte.c, existe).
@@ -8751,6 +8773,10 @@ static const char *textoValor(int op) {
   if (op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2) {
     int v = valor[op];
     return (v >= 0 && v < nLingua && V_LINGUA[v]) ? V_LINGUA[v] : "Da conta";
+  }
+  if (op == AJ_TRAILER_AUDIO) {
+    int v = valor[op];
+    return (v >= 0 && v < nTrAud) ? V_TRAUD[v] : "Automático";
   }
   if (op == AJ_TEX_MB && valor[op] > 0 && valor[op] < 7 && texAcima(valor[op])) {
     static char tex[96];
@@ -9214,6 +9240,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_DET_DATA_CHEIA: case AJ_DET_VEU: case AJ_DET_TRAILER_AUTO:
     case AJ_DET_TRAILER_SOM:
     case AJ_TRAILER_QUAL: case AJ_TRAILER_ASPECTO: case AJ_TRAILER_FONTE: case AJ_TRAILER_ZOOM_TPK:
+    case AJ_TRAILER_AUDIO:
       return AJPV_DETALHE;
     case AJ_EXPANDIR: case AJ_EXPANDIR_ATRASO: case AJ_NAV_RAPIDA:
     case AJ_BORDA_FOCO:
@@ -9430,7 +9457,7 @@ void ajustes_teste_ux_captura(int cenario) {
   if (cenario == 7) { focarOpcao(AJ_LARGURA_DP); uxAbrirEditor(AJ_LARGURA_DP); uxEvento(SDLK_DOWN); }
   if (cenario == 8) { focarSecao(0); uxIndice = 1; focoIndice = 1; uxChipAv = 1; }
   if (cenario == 9) { valor[AJ_IDIOMA] = IDIOMA_EN + 1; focarOpcao(AJ_HOME_LAYOUT); uxAbrirEditor(AJ_HOME_LAYOUT); }
-  if (cenario == 21) focarOpcao(AJ_FOCO_TRAILER);
+  if (cenario == 21) focarOpcao(getenv("NUVIO_SHOT_TRAILER_AUDIO") ? AJ_TRAILER_AUDIO : AJ_FOCO_TRAILER);
   if (cenario == 22) { focarOpcao(AJ_FOCO_TRAILER); uxAbrirEditor(AJ_FOCO_TRAILER); }
   // NUVIO_SHOT_TRAILER_VETO=1: captura da linha Ligada que nao vale (veto de
   // GPU): a ajuda tem de dizer por que, em vez de a linha parecer obedecida.

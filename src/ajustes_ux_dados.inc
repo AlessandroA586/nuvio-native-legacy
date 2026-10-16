@@ -258,6 +258,7 @@ static const char *uxSinonimos(int op) {
     case AJ_AVANCADAS: return "avancado avancada avancados avancadas tecnico tecnica opcoes ocultas mostrar esconder advanced";
     case AJ_LOGO_TRAILER: return "trailer trailers logo marca titulo oled queimar burn-in esconder canto";
     case AJ_TRAILER_FONTE: return "trailer trailers fonte origem provedor apple imdb youtube";
+    case AJ_TRAILER_AUDIO: return "trailer trailers audio idioma dublado dublagem original";
     case AJ_TRAILER_QUAL: return "trailer trailers qualidade resolucao definicao";
     case AJ_TRAILER_ASPECTO: return "trailer trailers formato proporcao zoom tarja";
     case AJ_VIDRO: return "lento lenta lentidao travando trava desempenho vidro blur transparencia";
@@ -308,7 +309,7 @@ static const char *uxCaminhoAntigo(int op) {
     // desta TV virou Esta TV; Conta e perfis virou Conta e servicos.
     case AJ_HERO_TRAILER: case AJ_FOCO_TRAILER: case AJ_DET_TRAILER_AUTO: case AJ_DET_TRAILER:
     case AJ_HERO_TRAILER_SOM: case AJ_DET_TRAILER_SOM: case AJ_TRAILER_FONTE: case AJ_HERO_TRAILER_ESPERA:
-    case AJ_TRAILER_QUAL: case AJ_TRAILER_ASPECTO: case AJ_TRAILER_ZOOM_TPK: case AJ_LOGO_TRAILER:
+    case AJ_TRAILER_QUAL: case AJ_TRAILER_ASPECTO: case AJ_TRAILER_ZOOM_TPK: case AJ_LOGO_TRAILER:  case AJ_TRAILER_AUDIO:
       return "Trailers";
     case AJ_EXPANDIR: case AJ_EXPANDIR_ATRASO: case AJ_BORDA_FOCO: case AJ_GRAD_CLASSICO:
     case AJ_LARGURA_DP: case AJ_RAIO_DP: case AJ_PROF: case AJ_PROF_BORDA: case AJ_PROF_BRILHO:

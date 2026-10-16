@@ -148,6 +148,7 @@
 #include <unistd.h>
 #include "ondever.h"
 #include "fontepref.h"
+#include "audiomemoria.h"
 #include "fontesmortas.h"
 #include "video.h"
 #include "addons.h"
@@ -2648,6 +2649,19 @@ static void lembrarAutomatica(void) {
     idBaseDoTitulo(base, sizeof base);
     if (base[0]) fontepref_auto_guardar(base, stream_item(at)); }
 }
+// O BINGEGROUP DA FONTE QUE TOCA, para a faixa de audio exata (audiomemoria.h):
+// copiado aqui, no fio do app, a cada troca de fonte ou de lista. A escolha do
+// audio no Android roda no fio do Kotlin e nao pode ler a lista de fontes.
+static void bingeDaFonteAtual(void) {
+  static int ultAtual = -2;
+  static unsigned ultGer;
+  int at = stream_atual();
+  const Stream *s;
+  if (at == ultAtual && stream_lista_geracao() == ultGer) return;
+  ultAtual = at; ultGer = stream_lista_geracao();
+  s = at >= 0 ? stream_item(at) : NULL;
+  audioesc_fonte_binge(s ? s->bingeGroup : "");
+}
 static void guardarPosicaoFonteFalha(void) {
   // GATE e o AUTOMATICO (nao a sessao fonteFalha): o watchdog arma tambem sem
   // sessao (fonte aberta "enquanto confere", arming que falhou) e a troca
@@ -2963,6 +2977,8 @@ static void perfilAbrirSessao(int antes) {
 
 int app_iniciar(const char *dirArte) {
   legenda2_vincular_atraso(ajustes_leg2_atraso(), ajustes_leg2_definir_atraso);
+  // A faixa de audio escolhida a mao fica gravada por perfil (audiomemoria.h).
+  audioesc_definir_memoria(audiomem_ler, audiomem_gravar);
   perfis_ao_abrir_sessao(perfilEncerrarSessao);
   cat_cache_perfis(1);
   snprintf(perfilDirArte, sizeof perfilDirArte, "%s", dirArte ? dirArte : "");
@@ -4706,7 +4722,7 @@ void app_atualizar(float dt, Uint32 agora) {
     } else if (tela == TELA_BUSCA && busca_pediu_pessoa(&pedPessoa)) {
       abrirPessoa(&pedPessoa);
     } else if (tela == TELA_BUSCA && busca_pediu_abrir(&idx)) {
-      if (busca_item_focado(&it)) abrirTitulo(&it, 1, 1); else abrirPorIndice(idx);
+      if (busca_item_focado(&it) && it.indice == idx) abrirTitulo(&it, 1, 1); else abrirPorIndice(idx);
     } else if (tela == TELA_BIBLIOTECA && biblioteca_pediu_abrir(&idx)) {
       abrirPorIndice(idx);
     } else if (tela == TELA_PERFIL) {
@@ -5420,6 +5436,7 @@ void app_atualizar(float dt, Uint32 agora) {
   }
   tentarProximaFonteVOD();
   lembrarAutomatica();
+  bingeDaFonteAtual();
   atualizarMotivoInicio();
   // O OK na explicacao da ilha: sai do player e cai em Ajustes > Fontes e addons
   // > Escolha da fonte, na linha da espera. A pessoa pediu: e o unico caso em

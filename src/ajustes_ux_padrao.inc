@@ -306,3 +306,4 @@
   0, 0, 0, 0, 0, 0, 0, /* secondary appearance inherits primary, manual delay0 */
   0, /* collection default view (#362): Automatic, existing layout */
   0, /* external player (#501): Internal */
+  0, /* trailer audio: Automatic */

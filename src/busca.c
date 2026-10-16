@@ -953,8 +953,20 @@ int busca_pediu_pessoa(SpotPedido *p) {
 }
 
 int busca_item_focado(HomeItem *out) {
-  if (!temItemFoco || !out) return 0;
-  *out = itemFoco;
+  if (!out || painel != 1 || focoRes.fileira < 0 || focoRes.fileira >= nFil ||
+      fil[focoRes.fileira].pessoas || focoRes.coluna < 0 ||
+      focoRes.coluna >= fil[focoRes.fileira].n) return 0;
+  int i = fil[focoRes.fileira].itens[focoRes.coluna];
+  const CatItem *ci = cat_item(i);
+  if (!ci) return 0;
+  // Events can select another card before the next draw. Only reuse its rect
+  // when the cached card matches; title identity always comes from selection.
+  memset(out, 0, sizeof *out);
+  out->indice = i;
+  out->rect = temItemFoco && itemFoco.indice == i ? itemFoco.rect
+            : (GfxRect){0, 0, NV_TELA_W, NV_TELA_H};
+  out->arte = ci->backdrop[0] ? ci->backdrop : ci->poster;
+  out->titulo = ci->titulo; out->genero = ci->genero; out->meta = ci->meta;
   return 1;
 }
 
@@ -1597,12 +1609,12 @@ static void desenhaCampo(Uint32 agora) {
     { float tx = c.x + BU_CAMPO_PADX + 28.0f + 16.0f;
       float maxW = fim - tx - 14.0f;
       if (buUmaColuna()) gfx_recorte(tx - 8.0f, c.y + 4.0f, fim - tx, c.h - 8.0f);
-      if (nConsulta) {
+      const char *av = st_dono() == ST_BUSCA ? st_aviso() : "";
+      if (nConsulta && !av[0]) {
         TxtLinha l = txt_linha_corta(estilo, consulta, BU_TX, maxW);
         txt_desenhar(l, tx, c.y + (c.h - l.h) * 0.5f);
         tx += (buUmaColuna() ? fminf((float)l.w, maxW) : (float)l.w) + 2.0f;
       } else {
-        const char *av = st_dono() == ST_BUSCA ? st_aviso() : "";
         const char *ph = vozBusca() ? i18n("Ouvindo…") : av[0] ? i18n(av) : "Buscar filmes e séries";
         TxtLinha l = txt_linha_corta(estilo, ph, 255, av[0] && !vozBusca() ? 200 : 243,
                                      av[0] && !vozBusca() ? 140 : 239, 255, maxW);
