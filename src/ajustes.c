@@ -7210,19 +7210,25 @@ static float alturaFoco(int i) { return TELA[i].tipo == IT_GRP ? AJ_GRUPO_H : TE
 //    foi baixado. Resolve na hora tudo que ja tem dado no aparelho.
 // 2. desc_repetir(): a fileira promovida para dentro do limite que nunca foi
 //    buscada (vista na declaracao, nunca naHome) nao tem item nenhum salvo —
-//    nao ha o que a remontagem desenhar. So um ciclo de rede a traz. Varre so
-//    as primeiras `limite` posicoes: fora dele ela continuaria cortada de
-//    qualquer jeito, e o ciclo seria pago sem efeito.
+//    nao ha o que a remontagem desenhar. So um ciclo de rede a traz.
+//    Scan every row: fixed rows shift raw indices beyond the catalog quota.
+//    Only chosen catalog positions below the limit need a network cycle.
 static void fileirasReagir(void) {
   int i, teto = fil_limite(), n = fil_n();
   desc_remontar_fileiras();
-  for (i = 0; i < n && i < teto; i++)
-    if (!fil_linha_oculta(i) && fil_linha_vista(i) && !fil_linha_na_home(i)) {
+  for (i = 0; i < n; i++)
+    // fil_escolhida, e nao !fil_linha_oculta: a linha que a pessoa ACABOU de
+    // adicionar por esta folha mantem prioridade mesmo excluida da cota
+    // (semDecl, #545) — sem ela aqui o "Adicionada à Home" nunca buscava os
+    // dados e a fileira ficava fora ate outro ciclo de rede. O < teto barra
+    // quem esta so na fila (fil_escolhida devolve a posicao mesmo alem dele).
+    { int esc = fil_escolhida(fil_chave(i));
+      if (esc >= 0 && esc < teto && fil_linha_vista(i) && !fil_linha_na_home(i)) {
       printf("[ajustes] %d dentro do limite sem dados: ciclo de rede\n", i);
       fflush(stdout);
       desc_repetir();
       return;
-    }
+    } }
 }
 
 // DUAS ABAS: "Na Home" e "Fora da Home". Desenho do dono.

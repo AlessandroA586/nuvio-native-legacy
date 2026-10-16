@@ -24,7 +24,7 @@ def bloco(texto, inicio):
 ajustes = Path('src/ajustes.c').read_text()
 (out / 'ajustes_fileiras.inc').write_text(''.join(
     bloco(ajustes, ajustes.index(nome))
-    for nome in ('static int filCmpFora(', 'static void filMontarLista(')))
+    for nome in ('static int filCmpFora(', 'static void filMontarLista(', 'static void fileirasReagir(')))
 addons = Path('src/addons.c').read_text()
 (out / 'addons_identidades.inc').write_text(''.join(
     bloco(addons, addons.index(nome)) for nome in
