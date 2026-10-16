@@ -350,6 +350,8 @@ static Uint32 trailerPrazo = 0;
 #ifdef __EMSCRIPTEN__
 // 1 = the chain began with the dubbed YouTube trailer: fallback is Apple -> IMDb.
 static int    trailerDublado = 0;
+// 1 = the chain is the fullscreen "Watch trailer": same fallback, reopened fullscreen.
+static int    trailerEtapaCheia = 0;
 #endif
 // ESQUERDA no comeco de QUALQUER fileira da pagina (e na coluna 0 da
 // filmografia, e na lista da colecao): o app abre a barra lateral POR CIMA da
@@ -2486,11 +2488,19 @@ static int acaoEm(int n) {
 // "Assistir trailer" da linha de acoes passam por aqui). Voltar fecha o trailer
 // (trailer_evento) e a pagina continua com o mesmo foco.
 static void tocarTrailerCheio(int k) {
-  const char *u = trailer_suportado() ? trailerFonte(k, NULL, 1) : NULL;
+  int qual = 0;
+  const char *u = trailer_suportado() ? trailerFonte(k, &qual, 1) : NULL;
   if (u) {
     GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
     trailerEtapa = 0; trailerPrazo = 0;   // tela cheia: so o teclado fecha
     trailer_abrir(u, tela, ajustes_trailer_som(), 1);
+#ifdef __EMSCRIPTEN__
+    // Same deadline/fallback ladder as autoplay (trailerEscada), fullscreen.
+    trailerEtapa = qual;
+    trailerDublado = qual == TRF_YOUTUBE;
+    trailerEtapaCheia = 1;
+    trailerPrazo = SDL_GetTicks() + NV_TRAILER_PREPARA_MS;
+#endif
   }
 #ifdef __EMSCRIPTEN__
   // SAMSUNG: NUNCA o navegador (#136). O window.open do wgt trocava a
@@ -2508,6 +2518,49 @@ static void tocarTrailerCheio(int k) {
   else extras_trailer_abrir(k);
 #endif
 }
+
+#ifdef __EMSCRIPTEN__
+static void trailerEscada(Uint32 agora, int topo) {
+  // O PRAZO. Tocou: o prazo morre (buffering depois de `playing` nao e
+  // falha). Nao tocou a tempo, ou o elemento deu erro (trailer_atualizar
+  // ja fechou e marcou trailer_falhou): loga e passa para a PROXIMA fonte da
+  // ordem do ajuste que tem trailer — em Automatico, Apple -> IMDb ->
+  // YouTube (o erro 153 do embed chega como -3 e anda na hora, #136); com
+  // uma fonte fixa nao ha proxima e fica a arte. Tela cheia (trailerEtapaCheia)
+  // entra tambem, fora do topo, e reabre em tela cheia.
+  // trailerEtapa: 0 nada, TRF_* a fonte aberta, -1 acabou.
+  if (trailerEtapa > 0) {
+    int venceu = trailer_aberto() && (trailerEtapaCheia || !trailer_cheia()) && !trailer_tocando() &&
+                 trailerPrazo && (Sint32)(agora - trailerPrazo) >= 0;
+    int errou = !trailer_aberto() && trailer_falhou();
+    if (trailer_aberto() && trailer_tocando()) trailerPrazo = 0;
+    if ((venceu || errou) && (topo || trailerEtapaCheia)) {
+      // A PROXIMA DA ORDEM QUE TEM TRAILER: Apple -> IMDb -> YouTube na
+      // Samsung (#136). Uma fonte da ordem sem trailer para o titulo e
+      // pulada, nao encerra a fila.
+      int (*depois)(int, int, int) = trailerDublado ? trailerfonte_depois_dublado : trailerfonte_depois;
+      int prox = depois(trailerfonte_ajuste(), trailerfonte_tizen(), trailerEtapa);
+      const char *seg = NULL;
+      while (prox && !(seg = trailerUrlDaFonte(prox)))
+        prox = depois(trailerfonte_ajuste(), trailerfonte_tizen(), prox);
+      printf("[trailer] detalhe: %s %d ms (%s, estado %d), %s%s\n",
+             errou ? "erro em" : "sem playing em", NV_TRAILER_PREPARA_MS,
+             trailerfonte_nome(trailerEtapa), trailer_estado(),
+             seg ? "tenta " : "fica a arte", seg ? trailerfonte_nome(prox) : "");
+      fflush(stdout);
+      if (trailer_aberto()) trailer_fechar();
+      if (seg) {
+        GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
+        trailer_abrir(seg, tela, ajustes_trailer_som(), trailerEtapaCheia);
+        trailerEtapa = prox;
+        trailerPrazo = agora + NV_TRAILER_PREPARA_MS;
+      } else { trailerEtapa = -1; trailerPrazo = 0; }
+    } else if (!trailer_aberto() && !errou) {
+      trailerEtapa = 0; trailerPrazo = 0;   // fechou por fim ou por navegacao
+    }
+  }
+}
+#endif
 
 // ---- segurar OK numa lista da pagina (ctxlista.h) -------------------------
 // A celula em foco aceita o menu? Filmografia e saga: sempre que ha obra (o
@@ -3498,48 +3551,13 @@ void detail_atualizar(float dt, Uint32 agora) {
         // proxima na ordem do ajuste (trailerfonte_depois).
         trailerEtapa = qual;
         trailerDublado = qual == TRF_YOUTUBE;
+        trailerEtapaCheia = 0;
         trailerPrazo = agora + NV_TRAILER_PREPARA_MS;
 #endif
       }
     }
 #ifdef __EMSCRIPTEN__
-    // O PRAZO. Tocou: o prazo morre (buffering depois de `playing` nao e
-    // falha). Nao tocou a tempo, ou o elemento deu erro (trailer_atualizar
-    // ja fechou e marcou trailer_falhou): loga e passa para a PROXIMA fonte da
-    // ordem do ajuste que tem trailer — em Automatico, Apple -> IMDb ->
-    // YouTube (o erro 153 do embed chega como -3 e anda na hora, #136); com
-    // uma fonte fixa nao ha proxima e fica a arte. Tela cheia nao entra aqui.
-    // trailerEtapa: 0 nada, TRF_* a fonte aberta, -1 acabou.
-    if (trailerEtapa > 0) {
-      int venceu = trailer_aberto() && !trailer_cheia() && !trailer_tocando() &&
-                   trailerPrazo && (Sint32)(agora - trailerPrazo) >= 0;
-      int errou = !trailer_aberto() && trailer_falhou();
-      if (trailer_aberto() && trailer_tocando()) trailerPrazo = 0;
-      if ((venceu || errou) && topo) {
-        // A PROXIMA DA ORDEM QUE TEM TRAILER: Apple -> IMDb -> YouTube na
-        // Samsung (#136). Uma fonte da ordem sem trailer para o titulo e
-        // pulada, nao encerra a fila.
-        int (*depois)(int, int, int) = trailerDublado ? trailerfonte_depois_dublado : trailerfonte_depois;
-        int prox = depois(trailerfonte_ajuste(), trailerfonte_tizen(), trailerEtapa);
-        const char *seg = NULL;
-        while (prox && !(seg = trailerUrlDaFonte(prox)))
-          prox = depois(trailerfonte_ajuste(), trailerfonte_tizen(), prox);
-        printf("[trailer] detalhe: %s %d ms (%s, estado %d), %s%s\n",
-               errou ? "erro em" : "sem playing em", NV_TRAILER_PREPARA_MS,
-               trailerfonte_nome(trailerEtapa), trailer_estado(),
-               seg ? "tenta " : "fica a arte", seg ? trailerfonte_nome(prox) : "");
-        fflush(stdout);
-        if (trailer_aberto()) trailer_fechar();
-        if (seg) {
-          GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
-          trailer_abrir(seg, tela, ajustes_trailer_som(), 0);
-          trailerEtapa = prox;
-          trailerPrazo = agora + NV_TRAILER_PREPARA_MS;
-        } else { trailerEtapa = -1; trailerPrazo = 0; }
-      } else if (!trailer_aberto() && !errou) {
-        trailerEtapa = 0; trailerPrazo = 0;   // fechou por fim ou por navegacao
-      }
-    }
+    trailerEscada(agora, topo);
 #endif
     // trailer_mostra_video: no .tpk a arte fica ate o recorte do zoom
     // assentar (#178); na LG e no .wgt e sempre 1.
