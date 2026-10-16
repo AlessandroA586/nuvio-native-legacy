@@ -24,11 +24,15 @@ double capmkv_creditos(double d) { (void)d; return 0.0; }
 static struct JNINativeInterface_ jni;
 static const struct JNINativeInterface_ *env = &jni;
 static unsigned relogio = 100;
-void *SDL_AndroidGetJNIEnv(void) { return &env; }
+static int semEnv;
+void *SDL_AndroidGetJNIEnv(void) { return semEnv ? NULL : &env; }
 void *SDL_AndroidGetActivity(void) { return NULL; }
 Uint32 SDL_GetTicks(void) { return relogio; }
 SDL_mutex *SDL_CreateMutex(void) { return (SDL_mutex *)(uintptr_t)1; }
 void marco(const char *s) { (void)s; }
+const char *ling_audio(void) { return ""; }
+static int pressao = -1;   // last tex_pressao_reproducao() value
+void tex_pressao_reproducao(int l) { pressao = l; }
 
 // Call log: 'A' open, 'C<n>' cache(n), 'G<n>' ganho(n), 'V<n>' velocidade(n), 'P' stop,
 // 'T<id>;' titulo(id) (warm resume #492), 'D' descartarGuardado().
@@ -91,6 +95,13 @@ int main(void) {
   registro[0] = 0;
   assert(video_tocar("https://example.invalid/trailer.mp4"));
   assert(!strcmp(registro, "A"));
+  assert(pressao == 0);   // trailer: home art stays, texture cap untouched
+
+  // Failed open does not leave the texture cap on.
+  pressao = -1; semEnv = 1;
+  assert(!video_tocar("https://example.invalid/trailer.mp4"));
+  semEnv = 0;
+  assert(pressao == -1);
 
   // Player session, cache 512: the limit goes BEFORE the open; volume 100 is
   // not sent.
@@ -99,6 +110,7 @@ int main(void) {
   cacheboost_backend_cache(512);
   assert(video_tocar_posicao("https://example.invalid/filme.mkv", 0));
   assert(!strcmp(registro, "C512A"));
+  assert(pressao == 1);   // full-screen player caps the texture cache
 
   // WARM RESUME (#492): the title armed with the cache crosses JNI before the
   // open, once per change; the next open of the same title does not resend it.

@@ -98,8 +98,8 @@ object NvPlayer {
 
     private val principal = Handler(Looper.getMainLooper())
     private var activity: Activity? = null
-    // isLowRamDevice/memoryClass medidos no primeiro criarPlayer (0 = ainda
-    // nao mediu, 1 = pouca RAM, 2 = normal). CargaPlayer le sem Context.
+    // isLowRamDevice/memoryClass medidos no criarPlayer (true = pouca RAM;
+    // false tambem antes de medir). CargaPlayer le sem Context.
     @Volatile internal var poucaRamAparelho = false
     private var camada: FrameLayout? = null
     private var interfaceMobile = false

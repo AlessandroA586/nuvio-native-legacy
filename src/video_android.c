@@ -689,10 +689,6 @@ static int abrirSessao(int inicioMs, int fracao) {
   temEnv = 0;   // a SurfaceView nova ainda nao recebeu janela nenhuma
   if (!travaLeg) travaLeg = SDL_CreateMutex();
   unsigned geracao = novaRetomada(-1);
-  // Numero medido na TV TCL de 2,4 GB: 217 MB de textura + 96 MB de buffer +
-  // paralelo/preparo levaram o app a ~575 MB de PSS e o lmkd matou. A arte da
-  // home nao aparece durante o filme; o cache de disco refaz ela na volta.
-  tex_pressao_reproducao(1);
   env = ambiente();
   if (!env) { falhou = 1; printf("[video] android: NvPlayer indisponivel\n"); fflush(stdout); return 0; }
   // F07: the cache limit is sticky in Kotlin (read at each open), so it only
@@ -780,6 +776,11 @@ static int abrirSessao(int inicioMs, int fracao) {
   // Every Kotlin open starts at 100%: a player session re-applies its volume
   // (source change, reconnection) after the open in the same queue.
   ganhoEnviado = CB_VOL_NORMAL;
+  // Numero medido na TV TCL de 2,4 GB: 217 MB de textura + 96 MB de buffer +
+  // paralelo/preparo levaram o app a ~575 MB de PSS e o lmkd matou. So o
+  // player em tela cheia esconde a arte da home; trailers (home/detalhe) nao.
+  // Ligado so depois de abrir: falha no meio nao deixa o teto preso.
+  tex_pressao_reproducao(playerSessao);
   if (playerSessao && cacheboost_volume() != CB_VOL_NORMAL) cacheboost_backend_ganho(cacheboost_volume());
   return 1;
 }
