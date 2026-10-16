@@ -17,7 +17,11 @@ require(ffmpegAar == null || ffmpegAar.isFile) {
 // Versao: fonte unica e deploy/app/appinfo.json (mesma do env.sh).
 val versao = Regex("\"version\"\\s*:\\s*\"([^\"]+)\"")
     .find(File(raiz, "deploy/app/appinfo.json").readText())!!.groupValues[1]
-val (vx, vy, vz) = versao.split(".").map { it.toInt() }
+val partes = versao.split(".").mapNotNull { it.toIntOrNull() }
+val vx = partes.getOrElse(0) { 2 }
+val vy = partes.getOrElse(1) { 0 }
+val vz = partes.getOrElse(2) { 5 }
+val vw = partes.getOrElse(3) { 0 }
 
 android {
     namespace = "space.nuvio.nativelegacy"
@@ -28,7 +32,7 @@ android {
         applicationId = "space.nuvio.nativelegacy"
         minSdk = 24
         targetSdk = 35
-        versionCode = vx * 10000 + vy * 100 + vz
+        versionCode = vx * 100000 + vy * 10000 + vz * 100 + vw
         versionName = versao
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
         externalNativeBuild {

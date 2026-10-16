@@ -179,29 +179,31 @@ jobs:
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0.5.2
-          name: Nuvio Legacy 2.0.5.2 - Juansher v1.1.0
+          tag_name: v2.0.5.3
+          name: Nuvio Legacy 2.0.5.3 - Juansher v1.1.0
           draft: false
           prerelease: false
           files: |
             dist/*
           body: |
-            ## Nuvio Legacy 2.0.5.2 - Juansher v1.1.0
+            ## Nuvio Legacy 2.0.5.3 - Juansher v1.1.0
 
-            Actualizacion con rediseño integral de las tarjetas de fuentes de reproducción, tarjetas independientes delimitadas, resalte visual de pistas en español y selección automática inteligente basada en preferencias de usuario.
+            Actualizacion con rediseño completo de tarjetas de fuentes multilínea con iconos dedicados, resalte de audio en español/latino en verde esmeralda, selección automática condicionada estrictamente a ajustes, eliminación del marcado de debrid, y limpieza automática de residuos e instaladores post-actualización. Compatible con Android TV, Google TV y televisores Samsung (Tizen TPK / Web).
 
-            ### Información de Versión
+            ### Información de Versión y Plataformas
             - **Versión base oficial:** `2.0.5`
-            - **Compilación técnica:** `2.0.5.2`
+            - **Compilación técnica:** `2.0.5.3`
             - **Edición personalizada:** `Juansher v1.1.0`
+            - **Plataformas soportadas:** Android TV, Google TV y Samsung Smart TV (Tizen).
 
             ### Cambios y Mejoras
-            - **Rediseño compacto y limpio de tarjetas de fuentes:** Organización estructurada en 3 líneas visuales equilibradas (título limpio, pistas de audio con desglose de canales, especificaciones técnicas compactas e insignias dinámicas de formato), eliminando la acumulación vertical y el salto visual al navegar con el mando a distancia.
-            - **Separación visual en casillas independientes:** Cada fuente se presenta dentro de su propio contenedor con borde tenue en reposo y marco iluminado de alto contraste al recibir el foco del control remoto.
-            - **Limpieza de encabezados redundantes:** Supresión de etiquetas repetitivas del proveedor en el título de la fuente, optimizando el espacio horizontal para el nombre del contenido.
-            - **Resalte visual de audio en español y latino:** Detección y coloración diferenciada en verde esmeralda de pistas en español y latino en la lista de audios disponibles.
-            - **Selección automática inteligente:** El modo de reproducción automática ahora respeta de forma estricta el techo de resolución configurado por el usuario (evaluando de forma descendente) y prioriza las fuentes que contienen el idioma de audio configurado en Ajustes.
-            - **Apertura de panel por ausencia de coincidencias:** Si ninguna fuente cumple simultáneamente con el techo de resolución y el idioma solicitado, la aplicación abre automáticamente el panel lateral de fuentes en lugar de forzar la reproducción de un contenido en otro idioma.
-            - **Paquete de distribución:** Compilación optimizada para Android TV / Google TV.
+            - **Rediseño multilínea organizado:** Cada especificación se muestra en su propia fila con iconos claros de interfaz (video, audio, uploader, tamaño/duración e idiomas).
+            - **Píldora de estado de reproducción:** Muestra la insignia destacada 'Reproduciendo' en el extremo derecho de la fila del título cuando la fuente está activa.
+            - **Resalte visual de audio en español y latino:** Detección y coloración diferenciada en verde esmeralda de pistas en español, latino y castellano.
+            - **Supresión de indicador de Debrid:** Se eliminó por completo el marcado azul de debrid de la interfaz de fuentes.
+            - **Selección automática condicionada:** La reproducción automática respeta de forma estricta el techo de resolución (ej. 1080p hacia abajo) y el idioma de audio configurado en Ajustes. Si ninguna fuente cumple ambos requisitos, se abre automáticamente el panel de fuentes.
+            - **Enfoque inicial inteligente:** Al abrir el panel de fuentes, el cursor se posiciona sobre la mejor alternativa en español/resolución en lugar de situarse en la primera fila.
+            - **Limpieza automática post-actualización:** Al arrancar por primera vez una versión nueva, un proceso en segundo plano elimina de forma quirúrgica los paquetes instaladores `.apk` viejos, archivos `.tmp` y caché temporal, protegiendo todos los datos de usuario y ahorrando valioso espacio de almacenamiento en la TV.
+            - **Nota de distribución:** Compilación para Android TV / Google TV. Las compilaciones para Samsung Tizen se integran de forma continua.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

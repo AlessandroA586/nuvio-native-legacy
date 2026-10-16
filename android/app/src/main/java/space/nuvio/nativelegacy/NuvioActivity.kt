@@ -589,6 +589,41 @@ class NuvioActivity : SDLActivity() {
         env("NUVIO_DECODERS", decodersDeVideo())
         // Onde o crash nativo anterior aconteceu (Tombstone.kt); android.c imprime.
         env("NUVIO_QUEDA_ANDROID", quedaAnterior.joinToString("\n"))
+        verificarLimpezaPosAtualizacao()
+    }
+
+    // Limpeza em segundo plano que roda APENAS na primeira execucao apos uma atualizacao
+    private fun verificarLimpezaPosAtualizacao() {
+        val versaoAtual = try {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: ""
+        } catch (_: Exception) { "" }
+        if (versaoAtual.isEmpty()) return
+
+        val prefs = getSharedPreferences("nuvio_versao_control", Context.MODE_PRIVATE)
+        val ultVersao = prefs.getString("versao_instalada", "") ?: ""
+
+        if (ultVersao != versaoAtual) {
+            prefs.edit().putString("versao_instalada", versaoAtual).apply()
+            Thread {
+                try {
+                    // 1. Limpa APKs velhos e temporarios em dados/atualizacao
+                    val pastaAtualizacao = File(filesDir, "dados/atualizacao")
+                    if (pastaAtualizacao.isDirectory) {
+                        pastaAtualizacao.listFiles()?.forEach { f ->
+                            if (f.isFile && (f.name.endsWith(".apk") || f.name.endsWith(".tmp") || f.name.endsWith(".download") || f.name.endsWith(".part"))) {
+                                f.delete()
+                            }
+                        }
+                    }
+                    // 2. Limpa cache temporario do sistema (arquivos descartaveis do ExoPlayer / HTTP)
+                    cacheDir.listFiles()?.forEach { try { it.deleteRecursively() } catch (_: Exception) {} }
+                    externalCacheDir?.listFiles()?.forEach { try { it.deleteRecursively() } catch (_: Exception) {} }
+                    Log.i("Nuvio", "limpeza pos-atualizacao concluida com sucesso para v$versaoAtual")
+                } catch (e: Exception) {
+                    Log.w("Nuvio", "falha na limpeza pos-atualizacao: ${e.message}")
+                }
+            }.start()
+        }
     }
 
     private var quedaAnterior: List<String> = emptyList()

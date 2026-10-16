@@ -1611,7 +1611,22 @@ static int falhaCandidatas(unsigned geracao, int escolhida, int primeira, FonteF
   copia = malloc(sizeof *copia * (size_t)total);
   c = calloc((size_t)total, sizeof *c);
   if (!ordem || !fila || !rk || !pts || !acima || !excl || !grp || !copia || !c) goto fim;
-  memcpy(copia, lista, sizeof *copia * (size_t)total);
+  const char *alvoLing = ling_audio();
+  int temLinguaConfig = (alvoLing && *alvoLing && strcmp(alvoLing, "*") != 0);
+  int tetoRes = alturaMax();
+  int haCandidatasComLingua = 0;
+  if (temLinguaConfig && escolhida < 0) {
+    for (int q = 0; q < total; q++) {
+      int i = ORD(q);
+      const Stream *s = &lista[i];
+      if (!s->foraCache && !ehInformativa(s) &&
+          (!tetoRes || !s->altura || s->altura <= tetoRes) &&
+          temAudioPt(s)) {
+        haCandidatasComLingua = 1;
+        break;
+      }
+    }
+  }
   for (int q = 0; q < total; q++) {
     int i = ORD(q);
     const Stream *s = &lista[i];
@@ -1623,8 +1638,13 @@ static int falhaCandidatas(unsigned geracao, int escolhida, int primeira, FonteF
     // O addon pode estar dizendo "fora de cache no TB"; isso nao responde
     // pelo RD/PM/AD. Hash nativo passa apenas pelo resolvedor cache-only da
     // rota escolhida. URL direta fora de cache continua fora do automatico.
-    excl[q] = (unsigned char)(s->urlP2P || (s->foraCache && !s->infoHash[0]) || ehInformativa(s) || excedeDecoder(s) ||
+    int exclui = (s->urlP2P || (s->foraCache && !s->infoHash[0]) || ehInformativa(s) || excedeDecoder(s) ||
                  (!s->infoHash[0] && (automaticaExcluida(i) || fontesmortas_idade(s) >= 0)));
+    if (escolhida < 0) {
+      if (tetoRes && s->altura > tetoRes) exclui = 1;
+      if (temLinguaConfig && (!haCandidatasComLingua || !temAudioPt(s))) exclui = 1;
+    }
+    excl[q] = (unsigned char)exclui;
     grp[q] = (signed char)grupoDe(i);
     // Escolha explicita continua podendo tocar fora das regras do automatico.
     // As alternativas conservam os filtros; somente esta linha e preferida.
@@ -1639,7 +1659,7 @@ static int falhaCandidatas(unsigned geracao, int escolhida, int primeira, FonteF
   nf = fonteauto_fila_o(ajustes_fonte_primeira() ? FONTEAUTO_PRIMEIRA : FONTEAUTO_MELHOR,
                        total, pref, pts, acima, excl, grp, rk,
                        ajustes_fonte_ordem_uso(), total, fila);
-  regraBloqueou = !nf && livres > 0;
+  regraBloqueou = (!nf && total > 0);
   for (int q = 0; q < nf; q++) {
     int i = ordem[fila[q]];
     const Stream *s = &copia[i];
@@ -1868,11 +1888,31 @@ StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int total, int pr
     while (q > 0 && fontes[ordem[q-1]].addonOrdem > fontes[i].addonOrdem) { ordem[q] = ordem[q-1]; q--; }
     ordem[q] = i;
   }
+  const char *alvoLingPreparo = ling_audio();
+  int temLinguaPreparo = (alvoLingPreparo && *alvoLingPreparo && strcmp(alvoLingPreparo, "*") != 0);
+  int tetoResPreparo = alturaMax();
+  int haCandidatasLinguaPreparo = 0;
+  if (temLinguaPreparo && preferidaNext < 0) {
+    for (int q = 0; q < total; q++) {
+      int i = ordem[q]; const Stream *s = &fontes[i];
+      if (!s->foraCache && !ehInformativa(s) &&
+          (!tetoResPreparo || !s->altura || s->altura <= tetoResPreparo) &&
+          temAudioPt(s)) {
+        haCandidatasLinguaPreparo = 1;
+        break;
+      }
+    }
+  }
   for (int q = 0; q < total; q++) {
     int i = ordem[q]; const Stream *s = &fontes[i];
     pts[q] = pontosDoAlvo(s, alvo ? alvo : ""); acima[q] = !cabeNoTeto(s);
-    excl[q] = s->urlP2P || (s->foraCache && !s->infoHash[0]) || ehInformativa(s) || excedeDecoder(s) ||
-              (!s->infoHash[0] && fontesmortas_idade(s) >= 0);
+    int exclui = s->urlP2P || (s->foraCache && !s->infoHash[0]) || ehInformativa(s) || excedeDecoder(s) ||
+                 (!s->infoHash[0] && fontesmortas_idade(s) >= 0);
+    if (preferidaNext < 0) {
+      if (tetoResPreparo && s->altura > tetoResPreparo) exclui = 1;
+      if (temLinguaPreparo && (!haCandidatasLinguaPreparo || !temAudioPt(s))) exclui = 1;
+    }
+    excl[q] = (unsigned char)exclui;
     grupo[q] = grupoDaFonte(&escopo, s); rank[q] = fonteregra_ordem_rank(s->provedor);
     if (i == preferidaNext && fonteregra_no_escopo(&escopo, ehPlugin(s))) pref = q;
   }
@@ -2825,7 +2865,7 @@ static int linhaAnt = -1, focoVisto = -1;
 // veio — o AIOStreams do dono manda "11.1 GB | 30.1 Mbps |", o grupo, os
 // idiomas e o arquivo, cada um numa linha. Glifo que a Inter nao tem (o ⚡ e o
 // ⚑ do formatador) cai fora em text.c, sem virar quadrado.
-#define FOLHA_ADDON_LINHAS 5
+#define FOLHA_ADDON_LINHAS 8
 // Fora do foco a linha mostra so as 2 primeiras linhas do addon; a linha em
 // foco abre (mola abreFoco) e mostra todas, ate FOLHA_ADDON_LINHAS. Com 5
 // linhas em todas as fontes a lista caberia em 3 telas; assim ela continua
@@ -2848,7 +2888,9 @@ static void linhaLimpa(char *d, size_t tam, const char *ini, size_t n) {
 static const struct { const char *emoji, *icone; } EMOJI_ICONE[] = {
   { "\xF0\x9F\x92\xBE", "aj_hard-drive" },   // 💾
   { "\xF0\x9F\x91\xA4", "aj_users" },        // 👤
+  { "\xF0\x9F\x8E\xA5", "aj_clapperboard" }, // 🎥
   { "\xF0\x9F\x8E\x9E", "aj_film" },         // 🎞
+  { "\xF0\x9F\x8E\xA7", "aj_audio-lines" },  // 🎧
   { "\xF0\x9F\x94\x8A", "aj_volume-2" },     // 🔊
   { "\xF0\x9F\x8C\x90", "aj_globe" },        // 🌐
   { "\xE2\x9A\x99",     "aj_settings-2" },  // ⚙
@@ -2936,6 +2978,65 @@ static int temPalavra(const char *s, const char *p) {
 static int temNoTexto(const Stream *s, const char *p) {
   return temPalavra(s->rotulo, p) || temPalavra(s->descricao, p) || temPalavra(s->arquivo, p);
 }
+static int ehIdiomaEspanhol(const char *txt) {
+  return temPalavra(txt, "latino") || temPalavra(txt, "lat") ||
+         temPalavra(txt, "spanish") || temPalavra(txt, "español") ||
+         temPalavra(txt, "espanol") || temPalavra(txt, "castellano");
+}
+static float desenharIdiomasLinha(const char *txt, float px, float py, float maxw, int sel, float anim) {
+  float curX = px;
+  const char *p = txt;
+  while (*p && (curX - px) < maxw) {
+    while (*p && (*p == ' ' || *p == '\t' || *p == '|' || *p == '/' || *p == ',')) {
+      if (*p == '|' || *p == '/' || *p == ',') {
+        char sep[4] = { *p, ' ', 0 };
+        TxtLinha lsep = txt_linha(TXT_PG_FIM, sep, 110, 110, 110, 255);
+        if ((curX - px) + lsep.w > maxw) break;
+        txt_desenhar_alpha(lsep, curX, py, anim);
+        curX += lsep.w + 6.0f;
+      }
+      p++;
+    }
+    if (!*p) break;
+    const char *fim = p;
+    while (*fim && *fim != '|' && *fim != '/' && *fim != ',') fim++;
+    char token[64];
+    size_t tlen = (size_t)(fim - p);
+    if (tlen >= sizeof token) tlen = sizeof token - 1;
+    memcpy(token, p, tlen); token[tlen] = 0;
+    while (tlen > 0 && isspace((unsigned char)token[tlen - 1])) { token[--tlen] = 0; }
+    if (token[0]) {
+      int es = ehIdiomaEspanhol(token);
+      int cr = es ? 110 : (sel ? 210 : 170);
+      int cg = es ? 231 : (sel ? 210 : 170);
+      int cb = es ? 183 : (sel ? 210 : 170);
+      TxtLinha ltok = txt_linha_corta(TXT_PG_FIM, token, cr, cg, cb, 255, maxw - (curX - px));
+      txt_desenhar_alpha(ltok, curX, py, anim);
+      curX += ltok.w + 6.0f;
+    }
+    p = fim;
+  }
+  return curX - px;
+}
+static int addonLinhasUteis(const Stream *s, int *temIdioma) {
+  LinhaAddon ls[FOLHA_ADDON_LINHAS];
+  int nl = linhasAddon(s, ls, FOLHA_ADDON_LINHAS);
+  int uteis = 0;
+  if (temIdioma) *temIdioma = 0;
+  for (int k = 0; k < nl; k++) {
+    int tem = 0;
+    for (int pc = 0; pc < ls[k].n; pc++) {
+      if (!temPalavra(ls[k].tx[pc], "debrid") && strcasecmp(ls[k].tx[pc], "debrid") != 0) {
+        tem = 1;
+        if (ls[k].ic[pc] && !strcmp(ls[k].ic[pc], "aj_globe")) {
+          if (temIdioma) *temIdioma = 1;
+        }
+      }
+    }
+    if (tem) uteis++;
+  }
+  return uteis;
+}
 // Somente os idiomas DECLARADOS na resposta do addon. Nao usa o nome do
 // arquivo, as mascaras dos filtros nem as faixas descobertas pelo player.
 // ling_nome nomeia a familia; a variante declarada continua visivel aqui.
@@ -2974,8 +3075,10 @@ static const char *faixaIdiomaDoNome(const char *raw) {
     { "Slovak", "sk" }, { "Slovenian", "sl" }, { "Swedish", "sv" },
     { "Thai", "th" }, { "Turkish", "tr" }, { "Ukrainian", "uk" },
     { "Vietnamese", "vi" }, { "Filipino", "tl" }, { "Tagalog", "tl" },
-    { "Castilian", "es" }, { "Español", "es" }, { "Ingles", "en" },
-    { "Frances", "fr" }, { "Alemao", "de" }
+    { "Castilian", "es" }, { "Español", "es" }, { "Espanol", "es" },
+    { "Latino", "es" }, { "Latin American Spanish", "es" },
+    { "Spanish (Latin America)", "es" }, { "Castellano", "es" },
+    { "Ingles", "en" }, { "Frances", "fr" }, { "Alemao", "de" }
   };
   // Alias de entrada do addon; comparar sem traduzir os dados recebidos.
   if (!strcasecmp(raw, "Português (PT)")) return "pt-PT";
@@ -3143,6 +3246,11 @@ static int audioDeclaradoLingua(const Stream *s, const char *alvo) {
     const char *cod = faixaIdiomaDoNome(raw);
     if (!cod && faixaIdiomaEtiqueta(raw, codigo, sizeof codigo)) cod = codigo;
     if (cod && ling_casa(cod, alvo)) return 1;
+    if (ling_casa(alvo, "es")) {
+      if (temPalavra(raw, "latino") || temPalavra(raw, "lat") ||
+          temPalavra(raw, "castellano") || temPalavra(raw, "spanish") ||
+          temPalavra(raw, "español") || temPalavra(raw, "espanol")) return 1;
+    }
     p = f ? f + 1 : fim;
   }
   return 0;
@@ -3175,7 +3283,7 @@ static const char *idiomaDa(const Stream *s) {
 static int temAudioPt(const Stream *s) {
   const char *alvo = ling_audio();
   if (!alvo || !*alvo) alvo = "es";
-  if (s->audioIdiomas[0]) return audioDeclaradoLingua(s, alvo);
+  if (s->audioIdiomas[0] && audioDeclaradoLingua(s, alvo)) return 1;
   if (ling_casa(alvo, "es")) {
     if (temNoTexto(s, "latino") || temNoTexto(s, "lat") ||
         temNoTexto(s, "castellano") || temNoTexto(s, "spanish") ||
@@ -3387,9 +3495,11 @@ static int temMarca(int i, int automatica) {
 static float alturaLinha(int i, int automatica) {
   float h = FOLHA_LINHA_H + (temMarca(i, automatica) ? FOLHA_MARCA_H : 0);
   if (ajustes_fonte_texto_addon()) {
-    h = 24.0f + 36.0f + 26.0f + (temMarca(i, automatica) ? FOLHA_MARCA_H : 0.0f);
+    int temIdioma = 0;
+    int nu = addonLinhasUteis(&lista[i], &temIdioma);
+    h = 36.0f + 38.0f + (float)nu * FOLHA_ADDON_LD + (temMarca(i, automatica) ? FOLHA_MARCA_H : 0.0f);
+    if (!temIdioma) h += linhasFaixas(&lista[i]) * FOLHA_FAIXA_H;
     if (stream_selos_ha(&lista[i])) h += 32.0f;
-    h += linhasFaixas(&lista[i]) * FOLHA_FAIXA_H;
     if (h < 96.0f) h = 96.0f;
     return h;
   } else {
@@ -3596,6 +3706,29 @@ void stream_folha_abrir(void) {
   aut = automaticaDaFolha();
   melhorFolha = automaticoCom(!canalFolha);
   alvo = atual >= 0 ? atual : aut;
+  if (alvo < 0) {
+    const char *alvoLing = ling_audio();
+    int teto = alturaMax();
+    for (int k = 0; k < n; k++) {
+      int i = ORD(k);
+      if (!lista[i].foraCache && !ehInformativa(&lista[i]) &&
+          (!teto || !lista[i].altura || lista[i].altura <= teto) &&
+          temAudioPt(&lista[i])) {
+        alvo = i;
+        break;
+      }
+    }
+    if (alvo < 0 && teto) {
+      for (int k = 0; k < n; k++) {
+        int i = ORD(k);
+        if (!lista[i].foraCache && !ehInformativa(&lista[i]) &&
+            (!lista[i].altura || lista[i].altura <= teto)) {
+          alvo = i;
+          break;
+        }
+      }
+    }
+  }
   abreFoco = 1; abreAnt = 0; linhaAnt = -1; foco = 0;
   montar(aut);
   foco = linhaDe(alvo);
@@ -4519,7 +4652,8 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       tira=0;
       if(ajustes_fonte_texto_addon()) tituloAddon(s,nome,sizeof nome);
       else tituloConteudo(s,nome,sizeof nome,ep,sizeof ep);
-      { TxtLinha l=txt_linha_corta(TXT_CALLOUT,nome,c,c,c-2,255,txtW);
+      { float maxTituloW = (i == atual) ? (txtW - 130.0f) : txtW;
+        TxtLinha l=txt_linha_corta(TXT_CALLOUT,nome,c,c,c-2,255,maxTituloW);
         // LOGO DO TITULO no lugar do nome (ajuste em teste): a mesma logo do
         // hero/detalhe, encostada a esquerda numa caixa da altura do nome.
         // Sem logo (ausente ou ainda baixando) fica o nome escrito.
@@ -4540,71 +4674,63 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
           l.w = (int)(lw + .5f);
         } else
         txt_desenhar_alpha(l,tx,cy,anim);
+        if (i == atual) {
+          float pw = 116.0f, ph = 24.0f;
+          GfxRect pr = { tr - pw, cy + 3.0f, pw, ph };
+          gfx_cor(pr, 5.0f, .06f, .48f, .33f, .85f * anim);
+          gfx_anel(pr, 5.0f, 1.0f, .43f, .90f, .71f, .85f * anim);
+          TxtLinha lrep = txt_linha(TXT_MINI, "Reproduciendo", 255, 255, 255, 255);
+          txt_desenhar_alpha(lrep, tr - pw + (pw - lrep.w) * 0.5f, cy + 3.0f + (ph - lrep.h) * 0.5f, anim);
+        }
         if(ep[0]){ int ce=sel?175:135;
           TxtLinha le=txt_linha(TXT_PG_FIM,ep,ce,ce,ce,255);
           // Na linha de base do nome, nao no meio da altura dele.
-          if(l.w+14+le.w<=txtW) txt_desenhar_alpha(le,tx+l.w+14,cy+l.h-le.h-3,anim); } } }
-    cy+=40;
+          if(l.w+14+le.w<=maxTituloW) txt_desenhar_alpha(le,tx+l.w+14,cy+l.h-le.h-3,anim); } } }
+    cy+=38;
     if(ajustes_fonte_texto_addon()) {
-      cy+=desenharFaixas(s,tx,cy,tr-tx,sel,anim);
       LinhaAddon ls[FOLHA_ADDON_LINHAS];
       int nl=linhasAddon(s,ls,FOLHA_ADDON_LINHAS);
-      const char *dur = NULL, *grpStr = NULL;
+      int temLinhaIdioma = 0;
+      float maxw = tr - tx;
       for (int k = 0; k < nl; k++) {
+        float lx = tx;
+        int desenhouPeca = 0;
         for (int pc = 0; pc < ls[k].n; pc++) {
-          if (ls[k].ic[pc] && !strcmp(ls[k].ic[pc], "aj_clock")) dur = ls[k].tx[pc];
-          else if (ls[k].ic[pc] && !strcmp(ls[k].ic[pc], "aj_tag")) grpStr = ls[k].tx[pc];
+          if (temPalavra(ls[k].tx[pc], "debrid") || !strcasecmp(ls[k].tx[pc], "debrid"))
+            continue;
+          if (desenhouPeca && (lx - tx) + 12.0f < maxw) {
+            if (!ls[k].ic[pc]) {
+              TxtLinha ldot = txt_linha(TXT_PG_FIM, "·", 100, 100, 100, 255);
+              txt_desenhar_alpha(ldot, lx, cy, anim);
+              lx += ldot.w + 10.0f;
+            } else {
+              lx += 12.0f;
+            }
+          }
+          if (ls[k].ic[pc] && !strcmp(ls[k].ic[pc], "aj_globe")) {
+            temLinhaIdioma = 1;
+            gfx_icone((GfxRect){lx, cy + 2.0f, 18, 18}, "aj_globe", .75f, .75f, .75f, anim);
+            lx += 22.0f;
+            float wId = desenharIdiomasLinha(ls[k].tx[pc], lx, cy, maxw - (lx - tx), sel, anim);
+            lx += wId + 10.0f;
+            desenhouPeca = 1;
+          } else {
+            if (ls[k].ic[pc]) {
+              gfx_icone((GfxRect){lx, cy + 2.0f, 18, 18}, ls[k].ic[pc], sel ? .85f : .70f, sel ? .85f : .70f, sel ? .85f : .70f, anim);
+              lx += 22.0f;
+            }
+            TxtLinha lt = txt_linha_corta(TXT_PG_FIM, ls[k].tx[pc], sel ? 200 : 160, sel ? 200 : 160, sel ? 200 : 160, 255, maxw - (lx - tx));
+            txt_desenhar_alpha(lt, lx, cy, anim);
+            lx += lt.w + 10.0f;
+            desenhouPeca = 1;
+          }
         }
+        if (desenhouPeca) cy += FOLHA_ADDON_LD;
       }
-      float px = tx, maxw = tr - tx, ly = cy;
-      if (s->tamanhoMB > 0) {
-        char gb[32];
-        if (s->tamanhoMB >= 1024) snprintf(gb, sizeof gb, "%.2f GB", s->tamanhoMB / 1024.0);
-        else snprintf(gb, sizeof gb, "%ld MB", s->tamanhoMB);
-        gfx_icone((GfxRect){px, ly + 2, 18, 18}, "aj_package", .75f, .75f, .75f, anim);
-        px += 22;
-        TxtLinha lgb = txt_linha_corta(TXT_PG_FIM, gb, sel ? 220 : 180, sel ? 220 : 180, sel ? 220 : 180, 255, maxw - (px - tx));
-        txt_desenhar_alpha(lgb, px, ly, anim);
-        px += lgb.w + 14;
-      }
-      if (dur && dur[0] && maxw - (px - tx) > 60) {
-        TxtLinha ldot = txt_linha(TXT_PG_FIM, "·", 100, 100, 100, 255);
-        txt_desenhar_alpha(ldot, px, ly, anim);
-        px += ldot.w + 12;
-        gfx_icone((GfxRect){px, ly + 2, 18, 18}, "aj_clock", .75f, .75f, .75f, anim);
-        px += 22;
-        TxtLinha ldur = txt_linha_corta(TXT_PG_FIM, dur, sel ? 180 : 140, sel ? 180 : 140, sel ? 180 : 140, 255, maxw - (px - tx));
-        txt_desenhar_alpha(ldur, px, ly, anim);
-        px += ldur.w + 14;
-      }
-      if (grpStr && grpStr[0] && maxw - (px - tx) > 60) {
-        TxtLinha ldot = txt_linha(TXT_PG_FIM, "·", 100, 100, 100, 255);
-        txt_desenhar_alpha(ldot, px, ly, anim);
-        px += ldot.w + 12;
-        gfx_icone((GfxRect){px, ly + 2, 18, 18}, "aj_tag", .75f, .75f, .75f, anim);
-        px += 22;
-        TxtLinha lgrp = txt_linha_corta(TXT_PG_FIM, grpStr, sel ? 180 : 140, sel ? 180 : 140, sel ? 180 : 140, 255, maxw - (px - tx));
-        txt_desenhar_alpha(lgrp, px, ly, anim);
-        px += lgrp.w + 14;
-      }
-      if (maxw - (px - tx) > 50) {
-        TxtLinha ldot = txt_linha(TXT_PG_FIM, "·", 100, 100, 100, 255);
-        txt_desenhar_alpha(ldot, px, ly, anim);
-        px += ldot.w + 12;
-        char orig[64];
-        if (s->foraCache) {
-          if (!s->url[0] && s->infoHash[0] && s->temSemeadores)
-            snprintf(orig, sizeof orig, "%d seeds · P2P", s->semeadores);
-          else snprintf(orig, sizeof orig, "Fora do cache");
-        } else snprintf(orig, sizeof orig, "Debrid");
-        int dr = s->foraCache ? 230 : 56, dg = s->foraCache ? 120 : 189, db = s->foraCache ? 120 : 248;
-        TxtLinha lorig = txt_linha_corta(TXT_PG_FIM, orig, dr, dg, db, 255, maxw - (px - tx));
-        txt_desenhar_alpha(lorig, px, ly, anim);
-        px += lorig.w + 14;
-      }
-      cy += 26.0f;
+      if (!temLinhaIdioma) cy += desenharFaixas(s, tx, cy, tr - tx, sel, anim);
       if (stream_selos_ha(s)) {
-        stream_selos_fileira(s, tx, cy + 2.0f, tr - tx, 22.0f, sel ? 1.0f : 0.75f, anim);
+        stream_selos_fileira(s, tx, cy + 4.0f, tr - tx, 22.0f, sel ? 1.0f : 0.75f, anim);
+        cy += 32.0f;
       }
       continue;
     }
