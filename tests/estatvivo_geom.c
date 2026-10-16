@@ -74,23 +74,25 @@ static void checkGeometry(int t, const float *panel, const float *hints) {
   float left = panel[0] + GEO_PAD, right = panel[0] + panel[2] - GEO_PAD;
   estatvivo_teste_geometria(&geo);
   if (t == EV_TAM_MINIMO) {
-    CONFERE(fabsf(panel[3] - 56.0f) < 0.5f, "minimal: one-line height, got %.1f", panel[3]);
-    CONFERE(geo.nKeys == 0 && hints[2] == 0, "minimal: no hints");
+    CONFERE(panel[3] > 56.0f, "focused minimal: footer reserved, got %.1f", panel[3]);
+    CONFERE(geo.nKeys >= 3 && hints[2] > 0, "focused minimal: hints visible");
   } else {
     CONFERE(hints[2] > 0 && geo.nKeys >= 3, "size %d: hint row visible", t);
     CONFERE(fabsf(hints[0] - left) < 0.5f && fabsf(hints[0] + hints[2] - right) < 0.5f,
             "mode %d: footer follows the content margins", t);
     CONFERE(fabsf(geo.separator.x - left) < 0.5f && fabsf(geo.separator.x + geo.separator.w - right) < 0.5f,
             "mode %d: separator aligned to content", t);
-    CONFERE(fabsf(hints[3] - GEO_KEY_H) < 0.5f, "mode %d: hints are one row", t);
+    CONFERE(fabsf(hints[3] - GEO_KEY_H * (t == EV_TAM_COMPLETO ? 1 : 2)) < 0.5f,
+            "mode %d: hint rows reserved", t);
     CONFERE(!strstr(geo.dicas, "Menu"), "mode %d: hints never name a Menu key (%s)", t, geo.dicas);
     CONFERE(fabsf(panel[1] + panel[3] - hints[1] - hints[3] - GEO_PAD) < 0.5f,
             "mode %d: footer bottom padding", t);
     for (i = 0; i < geo.nKeys; i++) {
       GfxRect k = geo.keys[i];
-      CONFERE(k.y == hints[1] && k.x >= left && k.x + k.w <= right,
-              "mode %d hint %d: on the single row, no overflow", t, i);
-      CONFERE(i == 0 || k.x > geo.keys[i - 1].x + geo.keys[i - 1].w, "mode %d hint %d: no overlap", t, i);
+      CONFERE(k.y >= hints[1] && k.y + k.h <= hints[1] + hints[3] && k.x >= left && k.x + k.w <= right,
+              "mode %d hint %d: inside footer, no overflow", t, i);
+      CONFERE(i == 0 || k.y > geo.keys[i - 1].y || k.x > geo.keys[i - 1].x + geo.keys[i - 1].w,
+              "mode %d hint %d: no overlap", t, i);
     }
   }
   if (t == EV_TAM_COMPLETO) {
@@ -232,7 +234,9 @@ int main(void) {
       frame(120);
       estatvivo_teste_layout(panel, hints);
       CONFERE(fabsf(panel[1] - clock.y) < 0.5f, "scale %.1f size %d: virtual clock top", scale, t);
-      CONFERE(fabsf(NV_TELA_W - panel[0] - panel[2] - NV_ILHA_MARGEM_D) < 0.5f,
+      EvGeometriaTeste scaled;
+      estatvivo_teste_geometria(&scaled);
+      CONFERE(fabsf(1920.0f / scaled.escala - panel[0] - panel[2] - NV_ILHA_MARGEM_D) < 0.5f,
               "scale %.1f size %d: virtual clock margin", scale, t);
       estatvivo_retangulo(t, 1, g);
       CONFERE(fabsf(g[0] - NV_ILHA_MARGEM_D) < 0.5f && fabsf(g[1] - clock.y) < 0.5f,
@@ -314,7 +318,7 @@ int main(void) {
   estatvivo_teste_layout(panel, hints);
   CONFERE(fabsf(panel[0] - NV_ILHA_MARGEM_D) < 0.5f, "pinned panel settles left");
   { EvGeometriaTeste pg; estatvivo_teste_geometria(&pg);
-    CONFERE(pg.nKeys == 0 && hints[2] == 0, "pinned: no hints"); }
+    CONFERE(pg.nKeys >= 3 && hints[2] > 0, "focused pinned: hints visible"); }
   shotGeom("pinned-left");
   key(SDLK_RIGHT);
   CONFERE(!ajustes_estat_lado() && estatvivo_fixado(), "RIGHT moves pinned panel");

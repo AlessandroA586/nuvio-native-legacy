@@ -154,7 +154,7 @@ static EvTela tela;
 // alfa de cada tamanho e os numeros suavizados (-1 = ainda sem valor).
 static float ret[4], retV[4], alvoRet[4], entraA, contA[EV_TAM_N];
 static float sm[5], dtq = 1.0f / 60.0f;
-static float larg[EV_TAM_N * 8], larguraI;
+static float larg[EV_TAM_N * 8], larguraI, escP = 1;
 static int larguraBase;
 #ifdef ESTATVIVO_TESTE
 static int teste;
@@ -162,6 +162,19 @@ static float testePainel[4], testeDicas[4];
 static int testeTiles[6], testeNTiles;
 static EvGeometriaTeste testeGeo;
 void estatvivo_teste_geometria(EvGeometriaTeste *g) { *g = testeGeo; }
+// Fit test (tests/estatvivo_cabe.sh): record each text box with its owner card.
+static GfxRect donoTeste;
+static void anotaTexto(float x, float y, float w, float h) {
+  if (donoTeste.w <= 0 || w <= 0 || testeGeo.nTextos >= 96) return;
+  testeGeo.donos[testeGeo.nTextos] = donoTeste;
+  testeGeo.textos[testeGeo.nTextos++] = (GfxRect){ x, y, w, h };
+}
+void estatvivo_teste_texto(GfxRect r) { anotaTexto(r.x, r.y, r.w, r.h); }
+static TxtLinha cortaTeste(TxtEstilo e, const char *s, int r, int g, int b, int al, float w) {
+  if (txt_largura(e, s) > w) testeGeo.cortes++;
+  return txt_linha_corta(e, s, r, g, b, al, w);
+}
+#define txt_linha_corta cortaTeste
 int estatvivo_teste_tiles(int *ids) { memcpy(ids, testeTiles, testeNTiles * sizeof(int)); return testeNTiles; }
 void estatvivo_teste_layout(float *painel, float *dicas) {
   memcpy(painel, testePainel, sizeof testePainel);
@@ -398,10 +411,64 @@ void estatvivo_atualizar(Uint32 agora) {
 
 
 // --- PECAS DO DESENHO ------------------------------------------------------------
-static float caps(const char *s, float x, float y, float a) {
+static float caps(const char *s, float x, float y, float w, float a) {
   char up[160];
   idioma_maiusc_em(ajustes_idioma(), up, sizeof up, i18n(s));
+  if (txt_tracking(TXT_V2_KICK, up, 154, 154, 156, -1, y, 0, 3.4f) > w) {
+    TxtEstilo e = txt_largura(TXT_G16B, up) <= w ? TXT_G16B : TXT_G14B;
+    TxtLinha t = txt_linha(e, up, 154, 154, 156, 255);
+    txt_desenhar_alpha(t, x, y, a);
+    return (float)t.w;
+  }
   return txt_tracking(TXT_V2_KICK, up, 154, 154, 156, x, y, a, 3.4f);
+}
+
+// Text that must fit its card: the biggest style of `e` (biggest first) that
+// holds `s` in one line of `w`, then in up to `n` lines; else the last style
+// wrapped with an ellipsis, a cut only long add-on names and hosts may take
+// (`corta`). `dir` aligns right at x + w. Returns the height used; a = 0 measures.
+typedef struct { TxtEstilo e; float lead; } EvuFonte;
+#define EVU_FONTES(...) (const EvuFonte[]){ __VA_ARGS__ }, (int)(sizeof (EvuFonte[]){ __VA_ARGS__ } / sizeof(EvuFonte))
+static int palavrasCabem(TxtEstilo e, const char *s, float w) {
+  char p[160];
+  for (size_t t; *s; s += t) {
+    while (*s == ' ' || *s == '\n') s++;
+    if (!*s) break;
+    t = txt_token_tam(s);
+    snprintf(p, sizeof p, "%.*s", (int)(t < sizeof p - 1 ? t : sizeof p - 1), s);
+    if (txt_largura(e, p) > w) return 0;
+  }
+  return 1;
+}
+static float texto(const EvuFonte *e, int ne, const char *s, int cr, int cg, int cb,
+                   float x, float y, float w, int n, int dir, int corta, float a) {
+  float h = 0;
+  EvuFonte fontes[8];
+  for (int i = 0; i < ne; i++) {
+    fontes[i] = e[i];
+    fontes[i].lead = fmaxf(e[i].lead, (float)txt_linha(e[i].e, "Ag", 255, 255, 255, 255).h);
+  }
+  e = fontes;
+  for (int l = 1; l <= n && !h; l++)
+    for (int i = 0; i < ne && !h; i++) {
+      if (l == 1 && txt_largura(e[i].e, s) <= w) {
+        TxtLinha t = txt_linha(e[i].e, s, cr, cg, cb, 255);
+        if (a > 0) txt_desenhar_alpha(t, dir ? x + w - (float)t.w : x, y, a);
+        h = e[i].lead;
+      } else if (l > 1 && palavrasCabem(e[i].e, s, w) &&
+                 txt_bloco(e[i].e, s, cr, cg, cb, x, y, w, e[i].lead, 0, 0) <= l * e[i].lead + 0.5f) {
+        h = dir ? txt_bloco_dir(e[i].e, s, cr, cg, cb, x + w, y, w, e[i].lead, a, l)
+                : txt_bloco(e[i].e, s, cr, cg, cb, x, y, w, e[i].lead, a, l);
+      }
+    }
+  if (!h) {
+    h = txt_bloco_corta(e[ne - 1].e, s, cr, cg, cb, x, y, w, e[ne - 1].lead, a, n);
+#ifdef ESTATVIVO_TESTE
+    if (!corta && a > 0.5f) testeGeo.cortes++;
+#endif
+  }
+  (void)corta;
+  return h;
 }
 
 static const char *iconeOrigem(int o) {
@@ -421,8 +488,8 @@ static void ladrilho(GfxRect r, const char *icone, const char *rotulo, int orige
   gfx_icone((GfxRect){ x, y + 2, 24, 24 }, icone, 0.953f, 0.949f, 0.937f, a);
   gfx_icone((GfxRect){ r.x + r.w - EVU_TILE_PAD - 18, y + 4, 18, 18 },
             iconeOrigem(origem), 0.85f, 0.85f, 0.85f, a);
-  txt_bloco(TXT_G20M, rotulo, 180, 180, 182, x + 36, y,
-            r.w - 2 * EVU_TILE_PAD - 62, 24, a, 2);
+  texto(EVU_FONTES({ TXT_G20M, 24 }), rotulo, 180, 180, 182, x + 36, y,
+        r.w - 2 * EVU_TILE_PAD - 62, 2, 0, 0, a);
 }
 
 // Numero grande e unidade na mesma linha de base. Devolve a largura. A unidade
@@ -437,8 +504,10 @@ static float casa(TxtEstilo e, const char *n) {
   r[i] = 0;
   return (float)txt_linha(e, r, EVU_TX).w;
 }
-static float numero(const char *n, const char *unidade, float x, float y, float a, int apagado) {
-  TxtLinha t = apagado ? txt_linha(TXT_ILHA_TITULO, n, 111, 111, 114, 255) : txt_linha(TXT_AJ_NUM58, n, EVU_TX);
+static float numero(const char *n, const char *unidade, float x, float y, float a, int apagado, float maxW) {
+  TxtEstilo ea = TXT_ILHA_TITULO;
+  if (apagado && txt_largura(ea, n) > maxW) ea = txt_largura(TXT_ILHA_PERGUNTA, n) <= maxW ? TXT_ILHA_PERGUNTA : TXT_V2_LN_B;
+  TxtLinha t = apagado ? txt_linha(ea, n, 111, 111, 114, 255) : txt_linha(TXT_AJ_NUM58, n, EVU_TX);
   float w = fmaxf(suaveLargura((float)t.w), apagado ? 0.0f : casa(TXT_AJ_NUM58, n));
   txt_desenhar_alpha(t, x, y, a);
   if (unidade && unidade[0]) {
@@ -502,15 +571,24 @@ static void barra(float x, float y, float w, float frac, float a) {
   if (w * frac > 2) gfx_cor((GfxRect){ x, y, w * frac, 10 }, 0.5f, 0.902f, 0.902f, 0.894f, a);
 }
 
-static void kv(const char *k, const char *v, float x, float y, float w, int fio, float a) {
-  TxtLinha label = txt_linha(TXT_ILHA_SUB, k, 154, 154, 156, 255);
-  float labelW = fmaxf(w * 0.34f, fminf((float)label.w, w * 0.56f));
-  TxtLinha tv = txt_linha_corta(TXT_G20M, v[0] ? v : "—", 236, 236, 236, 255, w - labelW - 12);
-  TxtLinha tk = txt_linha_corta(TXT_ILHA_SUB, k, 154, 154, 156, 255, labelW);
-  float h = fio < 0 ? 26 : 40;
+// Label left, value right. A value that does not fit shrinks, then wraps to two
+// lines; only `corta` (add-on name) may end in an ellipsis. Returns the height
+// added to the row by wrapping.
+#define EVU_TEXTO  EVU_FONTES({ TXT_AJ_TEXTO, 26 }, { TXT_ILHA_SUB, 23 })
+#define EVU_SUB    EVU_FONTES({ TXT_ILHA_SUB, 24 }, { TXT_ILHA_HORA_L, 21 })
+#define EVU_ROTULO EVU_FONTES({ TXT_ILHA_SUB, 23 }, { TXT_ILHA_HORA_L, 20 })
+#define EVU_VALOR  EVU_FONTES({ TXT_G20M, 24 }, { TXT_G18M, 21 })
+static float kv(const char *k, const char *v, float x, float y, float w, int fio, int corta, float a) {
+  float labelW = fmaxf(w * 0.34f, fminf((float)txt_largura(TXT_ILHA_SUB, k), w * 0.5f)), vx = x + labelW + 12;
+  float base = fio < 0 ? 26 : 32;
+  if (!v[0]) v = "—";
+  float hk = texto(EVU_ROTULO, k, 154, 154, 156, x, y, labelW, 2, 0, 0, 0);
+  float hv = texto(EVU_VALOR, v, 236, 236, 236, vx, y, x + w - vx, 2, 1, corta, 0);
+  float h = fmaxf(base, fmaxf(hk, hv) + 8);
   if (fio > 0) gfx_cor((GfxRect){ x, y, w, 1 }, 0, 0.227f, 0.227f, 0.235f, a);
-  txt_desenhar_alpha(tk, x, y + (h - (float)tk.h) * 0.5f, a);
-  txt_desenhar_alpha(tv, x + w - (float)tv.w, y + (h - (float)tv.h) * 0.5f, a);
+  texto(EVU_ROTULO, k, 154, 154, 156, x, y + (h - hk) * 0.5f, labelW, 2, 0, 0, a);
+  texto(EVU_VALOR, v, 236, 236, 236, vx, y + (h - hv) * 0.5f, x + w - vx, 2, 1, corta, a);
+  return h - base;
 }
 
 // --- OS SEIS LADRILHOS -------------------------------------------------------------
@@ -520,7 +598,8 @@ static void tileGeo(int n, GfxRect r) {
 }
 #endif
 
-static void tileVelocidade(GfxRect r, float fase, float a) {
+// Each card returns the bottom of its content (from r.y): the row grows to fit it.
+static float tileVelocidade(GfxRect r, float fase, float a) {
   char n[24], p[24], m[24], t[64];
   float x = r.x + EVU_TILE_PAD, y = r.y + 96, w = r.w - 2 * EVU_TILE_PAD;
   int medido = vis.velOrigem == EVO_MEDIDO;
@@ -533,7 +612,7 @@ static void tileVelocidade(GfxRect r, float fase, float a) {
     txt_desenhar_alpha(q, x, y, a);
     x += (float)q.w + 14;
   }
-  numero(n, "Mbps", x, y, a, 0);
+  numero(n, "Mbps", x, y, a, 0, w);
   x = r.x + EVU_TILE_PAD;
   if (medido && vis.picoKbps > 0) {
     const char *partes[4];
@@ -548,20 +627,24 @@ static void tileVelocidade(GfxRect r, float fase, float a) {
                   : vis.kbps < 0 && !vis.nHist ? "Medindo…"
                   : vis.bufOrigem == EVO_MEDIDO ? "Pelo ritmo em que o buffer enche"
                   : "Pelo ritmo em que o vídeo toca";
-    TxtLinha l = txt_linha_corta(TXT_AJ_TEXTO, s, 180, 180, 182, 255, w);
-    txt_desenhar_alpha(l, x, r.y + 160, a);
+    float h = texto(EVU_TEXTO, i18n(s), 180, 180, 182, x, r.y + 160, w, 3, 0, 0, a);
+    if (h > 52) {   // a third line pushes the sparkline down
+      faisca(vis.hist, vis.nHist, (GfxRect){ x, r.y + 166 + h, w, 18 }, fase, a);
+      return 184 + h;
+    }
   }
   faisca(vis.hist, vis.nHist, (GfxRect){ x, r.y + 218, w, 18 }, fase, a);
+  return 236;
 }
 
-static void tileBuffer(GfxRect r, float a) {
+static float tileBuffer(GfxRect r, float a) {
   char n[24], t[96];
   float x = r.x + EVU_TILE_PAD, y = r.y + 96, w = r.w - 2 * EVU_TILE_PAD;
   ladrilho(r, "aj_database", i18n("Buffer à frente"), vis.bufOrigem, a);
   if (vis.bufOrigem == EVO_MEDIDO) {
     float nw;
     snprintf(n, sizeof n, "%d", (int)(vis.bufSeg + 0.5));
-    nw = numero(n, "s", x, y, a, 0);
+    nw = numero(n, "s", x, y, a, 0, w);
     if (vis.bufMb >= 0) {
       TxtLinha l;
       snprintf(t, sizeof t, "≈ %d MB", (int)(vis.bufMb + 0.5));
@@ -571,65 +654,68 @@ static void tileBuffer(GfxRect r, float a) {
     barra(x, r.y + 166, w, (float)(vis.bufSeg / (vis.bufAlvo > 0 ? vis.bufAlvo : 60.0)), a);
     if (vis.bufAlvo > 0) snprintf(t, sizeof t, i18n("de %d s que o player tenta manter"), (int)(vis.bufAlvo + 0.5));
     else snprintf(t, sizeof t, "%s", i18n("segundos de vídeo já baixados"));
-    txt_bloco(TXT_ILHA_SUB, t, 180, 180, 182, x, r.y + 188, w, 24, a, 2);
+    return 188 + texto(EVU_SUB, t, 180, 180, 182, x, r.y + 188, w, 3, 0, 0, a);
   } else if (vis.bufOrigem == EVO_SO_PCT) {
     snprintf(n, sizeof n, "%d", vis.bufPct);
-    numero(n, "%", x, y, a, 0);
+    numero(n, "%", x, y, a, 0, w);
     barra(x, r.y + 166, w, (float)vis.bufPct / 100.0f, a);
-    txt_bloco(TXT_AJ_TEXTO, i18n("A Samsung informa a porcentagem, não os segundos"), 180, 180, 182,
-              x, r.y + 182, w, 28, a, 2);
-  } else {
-    numero(i18n("Indisponível"), NULL, x, y + 8, a, 1);
-    txt_bloco(TXT_AJ_TEXTO, i18n("Esta TV não informa o buffer"), 180, 180, 182, x, r.y + 160, w, 28, a, 2);
+    return 182 + texto(EVU_TEXTO, i18n("A Samsung informa a porcentagem, não os segundos"), 180, 180, 182,
+                       x, r.y + 182, w, 3, 0, 0, a);
   }
+  numero(i18n("Indisponível"), NULL, x, y + 8, a, 1, w);
+  return 160 + texto(EVU_TEXTO, i18n("Esta TV não informa o buffer"), 180, 180, 182, x, r.y + 160, w, 3, 0, 0, a);
 }
 
-static void tileFonte(GfxRect r, float a) {
+static float tileFonte(GfxRect r, float a) {
   float x = r.x + EVU_TILE_PAD, y = r.y + 76, w = r.w - 2 * EVU_TILE_PAD;
   ladrilho(r, "aj_film", i18n("Fonte"), tela.addon[0] ? EVO_ADDON : EVO_SEM, a);
-  float step = r.h < 284 ? 26 : 32;
-  int fio = r.h < 284 ? -1 : 1;
-  kv(i18n("Add-on"), tela.addon, x, y, w, fio < 0 ? -1 : 0, a);
-  kv(i18n("Resolução"), tela.resolucao, x, y + step, w, fio, a);
-  kv(i18n("Codec · HDR"), tela.codecHdr, x, y + 2 * step, w, fio, a);
-  kv(i18n("Taxa do arquivo"), tela.taxa, x, y + 3 * step, w, fio, a);
-  kv(i18n("Áudio"), tela.audio, x, y + 4 * step, w, fio, a);
-  kv(i18n("Legenda"), tela.legenda, x, y + 5 * step, w, fio, a);
+  float step = 32;
+  int fio = 1;
+  y += step + kv(i18n("Add-on"), tela.addon, x, y, w, fio < 0 ? -1 : 0, 1, a);
+  y += step + kv(i18n("Resolução"), tela.resolucao, x, y, w, fio, 0, a);
+  y += step + kv(i18n("Codec · HDR"), tela.codecHdr, x, y, w, fio, 0, a);
+  y += step + kv(i18n("Taxa do arquivo"), tela.taxa, x, y, w, fio, 0, a);
+  y += step + kv(i18n("Áudio"), tela.audio, x, y, w, fio, 0, a);
+  y += kv(i18n("Legenda"), tela.legenda, x, y, w, fio, 0, a);
+  return y - r.y + 32;
 }
 
-static void tileServidor(GfxRect r, float a) {
+static float tileServidor(GfxRect r, float a) {
   char n[16], t[64];
   float x = r.x + EVU_TILE_PAD, y = r.y + 96, w = r.w - 2 * EVU_TILE_PAD;
   if (vis.servOrigem == EVO_MEDIDO) {
     const char *p[2];
     ladrilho(r, "aj_server", i18n("Conexões e servidor"), EVO_MEDIDO, a);
     snprintf(n, sizeof n, "%d", vis.conexoes);
-    numero(n, i18n(vis.conexoes == 1 ? "conexão" : "conexões"), x, y, a, 0);
-    txt_bloco(TXT_ILHA_SUB, vis.host[0] ? vis.host : "—", 180, 180, 182,
-              x, r.y + 164, w, 24, a, 2);
+    numero(n, i18n(vis.conexoes == 1 ? "conexão" : "conexões"), x, y, a, 0, w);
+    float hh = texto(EVU_SUB, vis.host[0] ? vis.host : "—", 180, 180, 182, x, r.y + 164, w, 2, 0, 1, a);
     if (vis.primeiroByteMs >= 0) {
+      float yy = fmaxf(r.y + (r.h < 284 ? 212 : 224), r.y + 168 + hh);
       snprintf(t, sizeof t, "%d ms", vis.primeiroByteMs);
       p[0] = i18n("Resposta do 1º byte"); p[1] = t;
-      apoio(p, 2, x, r.y + (r.h < 284 ? 212 : 224), w, a);
+      apoio(p, 2, x, yy, w, a);
+      return yy - r.y + 26;
     }
+    return 164 + hh;
   } else if (vis.servOrigem == EVO_LINK) {
-    TxtLinha h = txt_linha_corta(TXT_ILHA_PERGUNTA, vis.host, EVU_TX, w);
     ladrilho(r, "aj_server", i18n("Servidor"), EVO_LINK, a);
-    txt_desenhar_alpha(h, x, y, a);
-    txt_bloco(TXT_AJ_TEXTO, i18n("A TV não diz quantas conexões o player abre"), 180, 180, 182,
-              x, y + (float)h.h + 14, w, 28, a, 2);
-  } else {
-    ladrilho(r, "aj_server", i18n("Servidor"), EVO_SEM, a);
-    numero(i18n("Indisponível"), NULL, x, y + 8, a, 1);
+    // A host is one long word: it shrinks, then ends in an ellipsis.
+    float hh = texto(EVU_FONTES({ TXT_ILHA_PERGUNTA, 44 }, { TXT_V2_LN_B, 32 }, { TXT_G23B, 28 }),
+                     vis.host, 243, 242, 239, x, y, w, 1, 0, 1, a);
+    return y - r.y + hh + 14 + texto(EVU_TEXTO, i18n("A TV não diz quantas conexões o player abre"), 180, 180, 182,
+                                     x, y + hh + 14, w, 3, 0, 0, a);
   }
+  ladrilho(r, "aj_server", i18n("Servidor"), EVO_SEM, a);
+  numero(i18n("Indisponível"), NULL, x, y + 8, a, 1, w);
+  return 152;
 }
 
-static void tileErros(GfxRect r, float a) {
+static float tileErros(GfxRect r, float a) {
   char n[16], t[128];
   float x = r.x + EVU_TILE_PAD, y = r.y + 96, w = r.w - 2 * EVU_TILE_PAD;
-  ladrilho(r, "aj_rotate-cw", i18n("Erros e reconexões"), EVO_MEDIDO, a);
+  ladrilho(r, "aj_rotate-cw", i18n("Falhas"), EVO_MEDIDO, a);
   snprintf(n, sizeof n, "%d", vis.erros);
-  numero(n, i18n(vis.erros == 1 ? "erro" : "erros"), x, y, a, 0);
+  numero(n, i18n(vis.erros == 1 ? "erro" : "erros"), x, y, a, 0, w);
   if (!vis.reconexoes) snprintf(t, sizeof t, "%s", i18n("nenhuma reconexão"));
   else if (vis.reconexoes == 1) snprintf(t, sizeof t, i18n("1 reconexão às %02d:%02d"), vis.reconHora, vis.reconMin);
   else snprintf(t, sizeof t, i18n("%d reconexões, a última às %02d:%02d"), vis.reconexoes, vis.reconHora, vis.reconMin);
@@ -637,10 +723,10 @@ static void tileErros(GfxRect r, float a) {
     size_t u = strlen(t);
     snprintf(t + u, sizeof t - u, " · %s", i18n("sem falha"));
   }
-  { TxtLinha l = txt_linha_corta(TXT_AJ_TEXTO, t, 180, 180, 182, 255, w); txt_desenhar_alpha(l, x, r.y + 160, a); }
+  return 160 + texto(EVU_TEXTO, t, 180, 180, 182, x, r.y + 160, w, 2, 0, 0, a);
 }
 
-static void tileQuadros(GfxRect r, float a) {
+static float tileQuadros(GfxRect r, float a) {
   char n[24], q[32], p[24], t[64];
   float x = r.x + EVU_TILE_PAD, y = r.y + 96, w = r.w - 2 * EVU_TILE_PAD;
   ladrilho(r, "aj_monitor-play", i18n("Quadros perdidos"), vis.quadrosOrigem, a);
@@ -649,21 +735,20 @@ static void tileQuadros(GfxRect r, float a) {
     ev_fmt_milhar(n, sizeof n, vis.perdidos);
     ev_fmt_milhar(q, sizeof q, vis.quadros);
     snprintf(t, sizeof t, i18n("de %s"), q);
-    numero(n, t, x, y, a, 0);
+    numero(n, t, x, y, a, 0, w);
     ev_fmt_pct2(p, sizeof p, vis.perdidos, vis.quadros, sepDec());
     snprintf(t, sizeof t, "%s %%", p);
     (void)partes;
     { TxtLinha l = txt_linha(TXT_G21B, t, 255, 255, 255, 255);
       txt_desenhar_alpha(l, x, r.y + 161, a);
-      TxtLinha d = txt_linha_corta(TXT_ILHA_SUB, i18n("desde que o filme abriu"), 180, 180, 182, 255, w - (float)l.w - 7);
-      txt_desenhar_alpha(d, x + (float)l.w + 7, r.y + 160, a); }
-  } else {
-    int samsung = tela.plataforma == PTV_TIZEN || tela.plataforma == PTV_TPK;
-    numero(i18n("Indisponível"), NULL, x, y + 8, a, 1);
-    txt_bloco(TXT_AJ_TEXTO, i18n(samsung ? "O decodificador da Samsung não conta quadros"
-                                         : "O player desta TV não conta quadros"),
-              180, 180, 182, x, r.y + 154, w, 28, a, 2);
+      return 160 + texto(EVU_SUB, i18n("desde que o filme abriu"), 180, 180, 182,
+                         x + (float)l.w + 7, r.y + 160, w - (float)l.w - 7, 2, 0, 0, a); }
   }
+  int samsung = tela.plataforma == PTV_TIZEN || tela.plataforma == PTV_TPK;
+  numero(i18n("Indisponível"), NULL, x, y + 8, a, 1, w);
+  return 154 + texto(EVU_TEXTO, i18n(samsung ? "O decodificador da Samsung não conta quadros"
+                                             : "O player desta TV não conta quadros"),
+                     180, 180, 182, x, r.y + 154, w, 3, 0, 0, a);
 }
 
 static const char *nomePlataforma(int p) {
@@ -701,22 +786,46 @@ static void fmtVel(char *n, size_t cap) {
 // direita, minimo no da esquerda) e o painel recorta: ao trocar de tamanho nada
 // se reposiciona, o painel anda e o conteudo cobre/descobre.
 
+// Row of cards from tile index i: the approved height, or taller when a card's
+// content (measured last frame, `fundo`) needs it.
+static float fundo[6];
+static float linhaH(int i) {
+  float h = 244;
+  if (nTiles[EV_TAM_COMPLETO] == 6 && !memcmp(tiles[EV_TAM_COMPLETO], (int[]){0, 1, 2, 3, 4, 5}, 6 * sizeof(int)))
+    h = (float[]){252, 284, 196}[i / 2];
+  for (int j = i; j < i + 2 && j < nTiles[EV_TAM_COMPLETO]; j++) h = fmaxf(h, fundo[tiles[EV_TAM_COMPLETO][j]] + 16);
+  return h;
+}
+// Bottom of the full panel's cards, from the panel top.
+static float fundoCompleto(void) {
+  float y = 144;
+  for (int i = 0; i < nTiles[EV_TAM_COMPLETO]; i += 2) y += linhaH(i) + EVU_GAP;
+  return nTiles[EV_TAM_COMPLETO] ? y - EVU_GAP : y;
+}
+
 // COMPLETO: o cartao do mockup com os seis ladrilhos.
 static void conteudoCompleto(float ox, float oy, float fase, float a) {
   GfxRect c = { ox, oy, EVU_W, EVU_H };
   float x = c.x + EVU_PAD, cw = c.w - 2 * EVU_PAD;
   char meta[512];
-  caps("Estatísticas ao vivo", x, c.y + 32, a);
+  caps("Estatísticas ao vivo", x, c.y + 32, cw, a);
 #ifdef ESTATVIVO_TESTE
   if (tamanho == EV_TAM_COMPLETO)
     testeGeo.header = (GfxRect){ x, c.y + 32, cw, 104 };
+  donoTeste = c;
 #endif
   { TxtLinha t = txt_linha_corta(TXT_ILHA_PERGUNTA, tela.titulo[0] ? tela.titulo : i18n("Tocando agora"), EVU_TX, cw);
     txt_desenhar_alpha(t, x, c.y + 56, a); }
   // One meta line replaces the old stacked badges: subtitle, cadence, platform.
-  if (tela.sub[0]) snprintf(meta, sizeof meta, "%s · %s · %s", tela.sub, i18n("atualiza a cada 1 s"), nomePlataforma(tela.plataforma));
-  else snprintf(meta, sizeof meta, "%s · %s", i18n("atualiza a cada 1 s"), nomePlataforma(tela.plataforma));
-  { TxtLinha m = txt_linha_corta(TXT_AJ_TEXTO, meta, 196, 196, 196, 255, cw);
+  // Too long, it takes the smaller size, then drops the cadence, then the platform.
+  TxtEstilo me = TXT_AJ_TEXTO;
+  for (int v = 0; v < 3; v++) {
+    snprintf(meta, sizeof meta, "%s%s%s%s%s", tela.sub, tela.sub[0] && v < 2 ? " · " : "",
+             v ? "" : i18n("atualiza a cada 1 s"), v ? "" : " · ", v < 2 ? nomePlataforma(tela.plataforma) : "");
+    if (txt_largura(me, meta) <= cw || txt_largura(me = TXT_ILHA_SUB, meta) <= cw) break;
+    me = TXT_AJ_TEXTO;
+  }
+  { TxtLinha m = txt_linha_corta(me, meta, 196, 196, 196, 255, cw);
     txt_desenhar_alpha(m, x, c.y + 104, a);
 #ifdef ESTATVIVO_TESTE
     if (tamanho == EV_TAM_COMPLETO)
@@ -726,10 +835,8 @@ static void conteudoCompleto(float ox, float oy, float fase, float a) {
   // As linhas de ladrilhos abaixo da linha do subtitulo (y + 104 + ~30).
   float y = c.y + 144;
   for (int i = 0; i < nTiles[EV_TAM_COMPLETO]; i += 2) {
-    int id = tiles[EV_TAM_COMPLETO][i];
-    float h = 244;
-    if (nTiles[EV_TAM_COMPLETO] == 6 && !memcmp(tiles[EV_TAM_COMPLETO], (int[]){0, 1, 2, 3, 4, 5}, 6 * sizeof(int)))
-      h = (float[]){252, 284, 196}[i / 2];
+    int id;
+    float h = linhaH(i);
     for (int j = i; j < i + 2 && j < nTiles[EV_TAM_COMPLETO]; j++) {
       id = tiles[EV_TAM_COMPLETO][j];
       GfxRect r = { x + (j % 2) * (EVU_TILE_W + EVU_GAP), y, EVU_TILE_W, h };
@@ -738,18 +845,26 @@ static void conteudoCompleto(float ox, float oy, float fase, float a) {
         testeTiles[testeNTiles++] = id;
         tileGeo(testeGeo.nTiles++, r);
       }
+      donoTeste = r;
 #endif
+      float bottom = 0;
       switch (id) {
-        case 0: tileVelocidade(r, fase, a); break;
-        case 1: tileBuffer(r, a); break;
-        case 2: tileFonte(r, a); break;
-        case 3: tileServidor(r, a); break;
-        case 4: tileErros(r, a); break;
-        case 5: tileQuadros(r, a); break;
+        case 0: bottom = tileVelocidade(r, fase, a); break;
+        case 1: bottom = tileBuffer(r, a); break;
+        case 2: bottom = tileFonte(r, a); break;
+        case 3: bottom = tileServidor(r, a); break;
+        case 4: bottom = tileErros(r, a); break;
+        case 5: bottom = tileQuadros(r, a); break;
       }
+      // Keep the largest measured height: raster rounding at the fitted scale
+      // must not make adjacent frames alternate between two row heights.
+      fundo[id] = fmaxf(fundo[id], bottom);
     }
     y += h + EVU_GAP;
   }
+#ifdef ESTATVIVO_TESTE
+  donoTeste = (GfxRect){ 0 };
+#endif
 }
 
 // COMPACTO: o essencial em cinco linhas (resolucao, codec, velocidade, buffer,
@@ -757,23 +872,29 @@ static void conteudoCompleto(float ox, float oy, float fase, float a) {
 static void conteudoCompacto(float ox, float oy, float a) {
   float x = ox + EVU_PAD, w = EVU_CW - 2 * EVU_PAD, y = oy + 60;
   char n[48], p[32], q[32], t[96];
-  caps("Estatísticas ao vivo", x, oy + 32, a);
-  kv(i18n("Resolução"), tela.resolucao, x, y, w, 0, a);
-  kv(i18n("Codec · HDR"), tela.codecHdr, x, y + 50, w, 1, a);
+#ifdef ESTATVIVO_TESTE
+  donoTeste = (GfxRect){ ox, oy, EVU_CW, EVU_CH };
+#endif
+  caps("Estatísticas ao vivo", x, oy + 32, w, a);
+  y += 50 + kv(i18n("Resolução"), tela.resolucao, x, y, w, 0, 0, a);
+  y += 50 + kv(i18n("Codec · HDR"), tela.codecHdr, x, y, w, 1, 0, a);
   fmtVel(n, sizeof n);
   if (vis.kbps >= 0) snprintf(t, sizeof t, "%s Mbps", n);
   else t[0] = 0;
-  kv(i18n("Velocidade"), t, x, y + 100, w, 1, a);
+  y += 50 + kv(i18n("Velocidade"), t, x, y, w, 1, 0, a);
   if (vis.bufOrigem == EVO_MEDIDO) snprintf(t, sizeof t, "%d s", (int)(vis.bufSeg + 0.5));
   else if (vis.bufOrigem == EVO_SO_PCT) snprintf(t, sizeof t, "%d %%", vis.bufPct);
   else snprintf(t, sizeof t, "%s", i18n("Indisponível"));
-  kv(i18n("Buffer à frente"), t, x, y + 150, w, 1, a);
+  y += 50 + kv(i18n("Buffer à frente"), t, x, y, w, 1, 0, a);
   if (vis.quadrosOrigem == EVO_MEDIDO) {
     ev_fmt_milhar(q, sizeof q, vis.perdidos);
     ev_fmt_pct2(p, sizeof p, vis.perdidos, vis.quadros, sepDec());
     snprintf(t, sizeof t, "%s (%s %%)", q, p);
   } else snprintf(t, sizeof t, "%s", i18n("Indisponível"));
-  kv(i18n("Quadros perdidos"), t, x, y + 200, w, 1, a);
+  kv(i18n("Quadros perdidos"), t, x, y, w, 1, 0, a);
+#ifdef ESTATVIVO_TESTE
+  donoTeste = (GfxRect){ 0 };
+#endif
 }
 
 static int miniPadrao(void) { return nTiles[EV_TAM_MINIMO] == 2 && tiles[EV_TAM_MINIMO][0] == 0 && tiles[EV_TAM_MINIMO][1] == 1; }
@@ -805,7 +926,7 @@ static void conteudoMinimo(float ox, float oy, float fase, float a) {
           else snprintf(b, sizeof b, "%s", i18n("Indisponível"));
           break;
       }
-      kv(i18n(tileNome[id]), b, ox + EVU_PAD, oy + 32 + i * 44, EVU_MW - 2 * EVU_PAD, i > 0, a);
+      kv(i18n(tileNome[id]), b, ox + EVU_PAD, oy + 32 + i * 44, EVU_MW - 2 * EVU_PAD, i > 0, 1, a);
     }
     return;
   }
@@ -835,69 +956,96 @@ static void atualizarVis(void) {
   v = suave(&sm[4], (float)est.bufPct);    if (v >= 0) vis.bufPct = (int)(v + 0.5f);
 }
 
-// Fixed panel geometry shares the clock's top and screen inset. Live values
-// never change these dimensions.
+// Panel geometry shares the clock's top and screen inset, in the virtual screen
+// of the scale the panel is drawn at (escalaPainel). Live values never change
+// it; a card only grows when its text needs a second line.
+#define EVU_HINT_H(tam) (EVU_KEY_H * ((tam) == EV_TAM_COMPLETO ? 1 : 2))
+#define EVU_RODAPE(tam) (EVU_GAP + 10.0f + EVU_HINT_H(tam) + EVU_PAD)
 void estatvivo_retangulo(int tam, int esquerda, float *g) {
   float w = tam == EV_TAM_COMPLETO ? EVU_W : tam == EV_TAM_COMPACTO ? EVU_CW : EVU_MW;
-  g[0] = esquerda ? EVU_MARG : NV_TELA_W - EVU_MARG - w;
+  carregarTiles();
+  if (editando) w = EVU_MW;
+  g[0] = esquerda ? EVU_MARG : NV_LAYOUT_REAL_W / gfx_escala() - EVU_MARG - w;
   g[1] = EVU_TOPO;
   g[2] = w;
-  carregarTiles();
-  // Minimal is a single thin line: no hint reserve. Full/compact keep a footer row.
-  g[3] = tam == EV_TAM_COMPLETO ? EVU_H : tam == EV_TAM_COMPACTO ? EVU_CH :
+  // Every focused size keeps an internal footer; an unfocused pinned panel
+  // hugs its content.
+  g[3] = tam == EV_TAM_COMPLETO ? fmaxf(EVU_H, fundoCompleto() + EVU_RODAPE(tam)) : tam == EV_TAM_COMPACTO ? EVU_CH + EVU_KEY_H :
     miniPadrao() ? EVU_PH : fmaxf(EVU_PH, nTiles[tam] * 44.0f + 32.0f);
-  if (fixado && tam != EV_TAM_MINIMO) g[3] -= EVU_KEY_H + EVU_PAD + 12.0f;   // pinned: no hint row, shrink to content
-  if (editando) { g[2] = EVU_MW; g[0] = esquerda ? EVU_MARG : NV_TELA_W - EVU_MARG - g[2]; g[3] = 480; }
+  if (tam == EV_TAM_MINIMO && aberto) g[3] += EVU_RODAPE(tam);
+  if (fixado && !aberto && tam != EV_TAM_MINIMO) g[3] -= EVU_HINT_H(tam) + EVU_PAD + 12.0f;
+  if (editando) g[3] = 480;
 }
 void estatvivo_retangulo_atual(float *g) { estatvivo_retangulo(tamanho, ajustes_estat_lado(), g); }
 
 // O conteudo mora no canto do lado escolhido do painel (que anda na mola).
 static float ancora(const GfxRect *p, float w) { return ajustes_estat_lado() ? p->x : p->x + p->w - w; }
 
+static void ptSoltar(int a, int b) { (void)a; (void)b; fixado = 0; }
 static void ptLado(int a, int b) { (void)a; (void)b; ajustes_definir_estat_lado(!ajustes_estat_lado()); }
 
 #define EVU_N_DICAS 5
-// One thin row of plain text hints in the clock island's tones (key bright,
-// label muted, no keycaps). Never shown pinned or at the minimal size; items
-// that do not fit are dropped, never truncated. No Menu key: UP edits.
+// One row of body-sized hints (key bright, label muted, no keycaps),
+// whenever the panel has focus, pinned or not.
+// Narrow panels wrap hints onto two rows before dropping items.
+// Items that do not fit are dropped, least needed first (Side, Size, Edit),
+// never truncated. No Menu key: UP edits or unpins.
 static void dicas(GfxRect p, float a) {
   const char *K[EVU_N_DICAS] = { "Ok", "← →", "↓", "Voltar", "↑" };
-  const char *L[EVU_N_DICAS] = { "Tamanho", "Lado", "Fixar", "Fechar", "Editar" };
-  int n = tamanho == EV_TAM_COMPACTO ? 4 : 5, i, shown = 0;
-  float x = p.x + EVU_PAD, y = p.y + p.h - EVU_PAD - EVU_KEY_H, avail = p.w - 2 * EVU_PAD, used = 0;
+  const char *L[EVU_N_DICAS] = { "Tamanho", "Lado", "Fixar", "Fechar", fixado ? "Desafixar" : "Editar" };
+  static const int sai[] = { 1, 0, 4, 2 };
+  int n = tamanho == EV_TAM_COMPACTO && !fixado ? 4 : 5, i, shown = 0, fica[EVU_N_DICAS];
+  float x = p.x + EVU_PAD, y = p.y + p.h - EVU_PAD - EVU_HINT_H(tamanho), avail = p.w - 2 * EVU_PAD;
+  float rowW = 0;
+  int rows = 1;
   TxtLinha k[EVU_N_DICAS], l[EVU_N_DICAS];
-  float pos[EVU_N_DICAS], wi[EVU_N_DICAS];
-  if (fixado || tamanho == EV_TAM_MINIMO || y < p.y + EVU_PH) return;
+  float wi[EVU_N_DICAS];
+  if (y < p.y + EVU_PH) return;
   for (i = 0; i < n; i++) {
-    k[i] = txt_linha(TXT_ILHA_HORA, i18n(K[i]), 243, 242, 239, 230);
-    l[i] = txt_linha(TXT_ILHA_HORA, i18n(L[i]), 243, 242, 239, 140);
+    k[i] = txt_linha(TXT_AJ_TEXTO, i18n(K[i]), 243, 242, 239, 255);
+    l[i] = txt_linha(TXT_AJ_TEXTO, i18n(L[i]), 180, 180, 182, 255);
     wi[i] = (float)(k[i].w + 6 + l[i].w);
-    if (used + wi[i] > avail) break;
-    pos[i] = used;
-    used += wi[i] + 22;
-    shown++;
+    fica[i] = 1;
   }
-  if (!shown) return;
+  for (int drop = 0; drop <= 4; drop++) {
+    rows = 1; rowW = 0;
+    for (i = 0; i < n; i++) {
+      if (!fica[i]) continue;
+      if (rowW > 0 && rowW + 22 + wi[i] > avail) { rows++; rowW = 0; }
+      rowW += (rowW > 0 ? 22 : 0) + wi[i];
+    }
+    if (rows * EVU_KEY_H <= EVU_HINT_H(tamanho) || drop == 4) break;
+    if (sai[drop] < n) fica[sai[drop]] = 0;
+  }
   GfxRect separator = { x, y - 10, avail, 1 };
 #ifdef ESTATVIVO_TESTE
-  testeGeo.nKeys = shown;
   testeGeo.separator = separator;
-  memcpy(testeDicas, (float[]){ x, y, avail, EVU_KEY_H }, sizeof testeDicas);
+  memcpy(testeDicas, (float[]){ x, y, avail, EVU_HINT_H(tamanho) }, sizeof testeDicas);
   testeGeo.dicas[0] = 0;
+  testeGeo.bodyTextH = (float)txt_linha(TXT_AJ_TEXTO, "Ag", 255, 255, 255, 255).h;
+  testeGeo.hintTextH = fminf((float)k[0].h, (float)l[0].h);
 #endif
   gfx_cor(separator, 0, 1, 1, 1, 0.07f * a);
-  for (i = 0; i < shown; i++) {
-    float kx = x + pos[i];
+  for (i = 0; i < n; i++) {
+    if (!fica[i] || wi[i] > avail) continue;
+    if (x > p.x + EVU_PAD && x + wi[i] > p.x + p.w - EVU_PAD) {
+      x = p.x + EVU_PAD;
+      y += EVU_KEY_H;
+    }
 #ifdef ESTATVIVO_TESTE
-    testeGeo.keys[i] = (GfxRect){ kx, y, wi[i], EVU_KEY_H };
+    testeGeo.keys[shown] = (GfxRect){ x, y, wi[i], EVU_KEY_H };
     snprintf(testeGeo.dicas + strlen(testeGeo.dicas), sizeof testeGeo.dicas - strlen(testeGeo.dicas),
              "%s %s|", i18n(K[i]), i18n(L[i]));
+    testeGeo.nKeys = shown + 1;
+    testeGeo.hintTextH = fminf(testeGeo.hintTextH, fminf((float)k[i].h, (float)l[i].h));
 #endif
-    txt_desenhar_alpha(k[i], kx, y + (EVU_KEY_H - (float)k[i].h) * 0.5f, a);
-    txt_desenhar_alpha(l[i], kx + (float)k[i].w + 6, y + (EVU_KEY_H - (float)l[i].h) * 0.5f, a);
+    shown++;
+    txt_desenhar_alpha(k[i], x, y + (EVU_KEY_H - (float)k[i].h) * 0.5f, a);
+    txt_desenhar_alpha(l[i], x + (float)k[i].w + 6, y + (EVU_KEY_H - (float)l[i].h) * 0.5f, a);
     if (ponteiro_ativo() && a > 0.5f)
-      ponteiro_alvo(kx, y, wi[i], EVU_KEY_H, NULL,
-                    i == 0 ? ptTamanho : i == 1 ? ptLado : i == 2 ? ptFixar : i == 4 ? ptEditar : ptFora, 0, 0);
+      ponteiro_alvo(x, y, wi[i], EVU_KEY_H, NULL,
+                    i == 0 ? ptTamanho : i == 1 ? ptLado : i == 2 ? ptFixar : i == 4 ? (fixado ? ptSoltar : ptEditar) : ptFora, 0, 0);
+    x += wi[i] + 22;
   }
 }
 
@@ -962,12 +1110,26 @@ static void desenharVirtual(Uint32 agora) {
   if (!tela.titulo[0] && !tela.addon[0] && temSessao) montarTela(0);
   atualizarVis();
   fase = amostraEm ? anim_clamp((float)(Sint32)(agora - amostraEm) / 1000.0f, 0.0f, 1.0f) : 1.0f;
+  // The panel never leaves the screen: it draws at the Interface size while it
+  // fits the real screen, smaller otherwise (the full card is ~1000 px tall).
+  {
+    int dw, dh;
+    gfx_tamanho_tela(&dw, &dh);
+    float s = gfx_escala_ui(), alvo;
+    float px = gfx_px_por_unidade();
+    estatvivo_retangulo_atual(alvoRet);
+    alvo = fminf(s, fminf(dw / (px * (alvoRet[2] + 2 * EVU_MARG)),
+                         dh / (px * (alvoRet[3] + 2 * EVU_TOPO))));
+    escP = inicial ? alvo : anim_mola(escP, alvo, dtq, EVU_K_CONT);
+    gfx_escala_sair(escP);
+  }
   estatvivo_retangulo_atual(alvoRet);
   // Reuse the player clock's origin and the shared rectangle spring.
   if (quer && inicial) {
-    GfxRect clock = { NV_TELA_W - EVU_MARG - NV_ILHA_REP_W, EVU_TOPO, NV_ILHA_REP_W, EVU_PH };
+    GfxRect clock = { NV_LAYOUT_REAL_W / gfx_escala_ui() - EVU_MARG - NV_ILHA_REP_W, EVU_TOPO, NV_ILHA_REP_W, EVU_PH };
+    float k = gfx_escala_ui() / escP;   // the clock lays out at the Interface size
     plrilha_rect(&clock);
-    ret[0] = clock.x; ret[1] = clock.y; ret[2] = clock.w; ret[3] = clock.h;
+    ret[0] = clock.x * k; ret[1] = clock.y * k; ret[2] = clock.w * k; ret[3] = clock.h * k;
     for (i = 0; i < 4; i++) retV[i] = 0;
     for (i = 0; i < EV_TAM_N; i++) contA[i] = i == desenho ? 1.0f : 0.0f;
   }
@@ -980,7 +1142,7 @@ static void desenharVirtual(Uint32 agora) {
   if ((aberto || fixado) && !ajustes_estat_lado()) plrilha_esconder();
   if (aberto && ponteiro_ativo() && o > 0.5f) {
     ponteiro_camada();
-    ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ptFora, 0, 0);
+    ponteiro_alvo(0, 0, NV_LAYOUT_REAL_W / escP, NV_LAYOUT_REAL_H / escP, NULL, ptFora, 0, 0);
     if (!editando) ponteiro_alvo(alvoRet[0], alvoRet[1], alvoRet[2], alvoRet[3], NULL, ptTamanho, 0, 0);
   }
   if (fixado && !aberto && ponteiro_ativo() && o > 0.5f)
@@ -989,6 +1151,8 @@ static void desenharVirtual(Uint32 agora) {
   memcpy(testePainel, (float[]){ p.x, p.y, p.w, p.h }, sizeof testePainel);
   memset(testeDicas, 0, sizeof testeDicas);
   memset(&testeGeo, 0, sizeof testeGeo);
+  testeGeo.escala = gfx_escala();
+  donoTeste = (GfxRect){ 0 };
   testeNTiles = 0;
 #endif
   plrui_material(p, fminf(EVU_RAIO, p.h * 0.5f), 0, o);
@@ -1006,7 +1170,8 @@ static void desenharVirtual(Uint32 agora) {
   gfx_sem_recorte();
 }
 
-// The panel lays out in the virtual screen like the clock island (Interface size).
+// The panel lays out in the virtual screen like the clock island (Interface
+// size), shrunk when that would not fit (desenharVirtual).
 void estatvivo_desenhar(Uint32 agora) {
   ESCALA_INI();
   desenharVirtual(agora);
