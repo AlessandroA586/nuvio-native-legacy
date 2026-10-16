@@ -54,8 +54,20 @@ char *contacache_ler(const char *s, int p, const char *u, long *q) { (void)s; (v
 int perfis_ativo(void) { return perfil; }
 uint64_t perfis_sessao_geracao(void) { return 1; }
 
-int perfis_sessao_travar(uint64_t g) { return g == 1; }
-void perfis_sessao_destravar(void) {}
+static int replaceOnGate;
+static int gateDepth;
+int perfis_sessao_travar(uint64_t g) {
+  if (replaceOnGate) {
+    VistoPar pair = {1, 1};
+    replaceOnGate = 0;
+    assert(visto_episodios_ja("tt5480099", "series", &pair, 1, 0, VISTO_TRAKT | VISTO_SIMKL));
+    assert(contapend_pendentes() == 0);
+  }
+  if (g != 1) return 0;
+  gateDepth++;
+  return 1;
+}
+void perfis_sessao_destravar(void) { assert(gateDepth > 0); gateDepth--; }
 int sessao_token_copiar(char *dst, size_t n) {
   snprintf(dst, n, "%s", logada ? "token-teste" : "");
   return logada;
@@ -107,6 +119,7 @@ static const char *respostaSimkl = "{\"added\":{\"episodes\":3},\"not_found\":{\
 char *rede_postar_st(const char *url, int s, const char *const *cab, const char *corpo, int *st) {
   int k;
   (void)s;
+  if (corpo && strstr(corpo, "tt5480099")) assert(gateDepth > 0);
   assert(nPost < MAXP);
   snprintf(post[nPost].url, sizeof post[nPost].url, "%s", url);
   snprintf(post[nPost].corpo, sizeof post[nPost].corpo, "%s", corpo ? corpo : "");
@@ -351,6 +364,16 @@ int main(void) {
     if (whole) assert(contapend_estado(id, "series", 1, 2, now - 1000, 1) == 0);
   }
   OK("#548: episode/whole-series mark and unmark, restart, stale/new timestamps, service retry");
+
+  // Retry captured a mark, then a newer unmark completed before its gate.
+  free(journal); journal = NULL; contapend_esquecer(); zerar();
+  assert(contapend_gesto("tt5480099", "series", tres, 1, 1,
+                         VISTO_TRAKT | VISTO_SIMKL, NULL, 0));
+  replaceOnGate = 1;
+  assert(contapend_reenviar() >= 0);
+  assert(nPost == 2 && strstr(post[0].url, "/remove") && strstr(post[1].url, "/remove"));
+  assert(contapend_pendentes() == 0 && gateDepth == 0);
+  OK("retry skips a snapshot superseded by a confirmed unmark");
 
   now += 10000; zerar();
   assert(visto_titulo_ja("tt5480004", "movie", NULL, 0, 0, visto_destinos()));

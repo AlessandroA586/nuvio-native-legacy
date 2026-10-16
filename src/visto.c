@@ -56,6 +56,8 @@ int visto_episodios_ja(const char *imdb, const char *tipo, const VistoPar *pares
   int ok = 1;
   if (!imdb || !imdb[0] || !pares || n < 1) return 0;
   if (n > VT_LOTE) n = VT_LOTE;
+  NvPerfilSessao sessao = nv_perfil_sessao_ler();
+  if (!nv_perfil_sessao_travar(sessao)) return 0;
   long long ms = contapend_gesto(imdb, tipo, pares, n, visto, destinos, NULL, 0);
   // Ordem: Trakt, Simkl, conta. Nenhum depende do outro; a falha de um nao
   // impede os seguintes (cada um diz no log o que aconteceu).
@@ -63,6 +65,7 @@ int visto_episodios_ja(const char *imdb, const char *tipo, const VistoPar *pares
   int enviados = visto_reenviar(imdb, tipo, pares, n, visto, trackers, NULL, 0);
   contapend_confirmar_gesto(imdb, pares, n, ms, enviados);
   ok &= enviados == trackers;
+  nv_perfil_sessao_destravar();
   // A CONTA PASSA PELO JORNAL (contapend.c): o gesto fica em disco antes da
   // rede e so sai de la com 2xx. Era uma RPC solta — sem rede, a marca se
   // perdia. Quem ja registrou (visto_episodios) manda VISTO_CONTA_JORNAL.
@@ -76,11 +79,14 @@ int visto_titulo_ja(const char *imdb, const char *tipo, const int *temporadas,
                     int nt, int visto, int destinos) {
   int ok = 1;
   if (!imdb || !imdb[0]) return 0;
+  NvPerfilSessao sessao = nv_perfil_sessao_ler();
+  if (!nv_perfil_sessao_travar(sessao)) return 0;
   long long ms = contapend_gesto(imdb, tipo, NULL, 0, visto, destinos, temporadas, nt);
   int trackers = destinos & (VISTO_TRAKT | VISTO_SIMKL);
   int enviados = visto_reenviar(imdb, tipo, NULL, 0, visto, trackers, temporadas, nt);
   contapend_confirmar_gesto(imdb, NULL, 0, ms, enviados);
   ok &= enviados == trackers;
+  nv_perfil_sessao_destravar();
   if (destinos & VISTO_CONTA) {
     ok &= contapend_enviar() >= 0 ? 1 : 0;
   }
@@ -102,7 +108,9 @@ typedef struct {
 static void *fio(void *u) {
   Envio *e = (Envio *)u;
   // The UI/journal already received the gesture before this worker started.
-  // Remote destinations own copied authentication, never the active profile.
+  // Serialize tracker writes with retries through confirmation.
+  // ponytail: profile-wide gate; use per-item gates if write throughput matters.
+  if (!nv_perfil_sessao_travar(e->sessao)) { free(e); return NULL; }
   int enviados = 0;
   if (e->destinos & VISTO_TRAKT) {
     int ok = e->titulo ? trakt_titulo_marcar_destino(&e->trakt, e->imdb, e->tipo, e->visto)
@@ -120,10 +128,8 @@ static void *fio(void *u) {
            : simkl_episodios_marcar(e->imdb, e->pares, e->n, e->visto);
     if (ok) enviados |= VISTO_SIMKL;
   }
-  if (nv_perfil_sessao_travar(e->sessao)) {
-    contapend_confirmar_gesto(e->imdb, e->pares, e->n, e->ms, enviados);
-    nv_perfil_sessao_destravar();
-  }
+  contapend_confirmar_gesto(e->imdb, e->pares, e->n, e->ms, enviados);
+  nv_perfil_sessao_destravar();
   if (e->destinos & VISTO_CONTA) contapend_enviar(); // each journal record owns its account/profile
   memset(e, 0, sizeof *e);
   free(e);

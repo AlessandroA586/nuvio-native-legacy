@@ -864,6 +864,13 @@ int contapend_reenviar(void) {
   for (i = 0; i < n; i++) {
     int bits = snap[i].destinos & (VISTO_TRAKT | VISTO_SIMKL);
     if (!nv_perfil_sessao_travar(sessao)) { falhou = 1; break; }
+    // Revalidate after the write gate: a newer gesture may already be confirmed.
+    pthread_mutex_lock(&trava);
+    int k = carregado && !strcmp(usuario, usu)
+          ? achar('V', snap[i].perfil, snap[i].id, snap[i].temp, snap[i].ep) : -1;
+    if (k < 0 || ents[k].ms != snap[i].ms || ents[k].op != snap[i].op) bits = 0;
+    else bits &= ents[k].destinos;
+    pthread_mutex_unlock(&trava);
     // Keep credential capture and confirmation in the journal's profile session.
     if (snap[i].sup == 'V' && bits && snap[i].perfil == perfis_ativo()) {
       VistoPar par = { (short)snap[i].temp, (short)snap[i].ep };
