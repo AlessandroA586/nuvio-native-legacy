@@ -86,7 +86,9 @@ int main(void) {
 
   // busca: %XX malformado, limite de tamanho, corte sem meia sequencia UTF-8
   d = ok("nuvio-legacy://search?q=100%+%zz%2");
-  CHECK(d.consulta[0] == '1');
+  CHECK(!strcmp(d.consulta, "100% %zz%2"));
+  d = ok("nuvio-legacy://search?q=%zz");
+  CHECK(!strcmp(d.consulta, "%zz"));
   { char big[900]; size_t i;
     strcpy(big, "nuvio-legacy://search?q=");
     for (i = strlen(big); i < 520; i++) big[i] = 'a';
@@ -102,6 +104,11 @@ int main(void) {
 
   // postar/pegar: invalido nao enfileira, o mais novo vence, entrega uma vez
   deeplink_postar("lixo://x");
+  CHECK(!deeplink_pegar(&d));
+  ruim("https://www.imdb.com");
+  ruim("https://m.imdb.com");
+  ruim("https://imdb.com");
+  deeplink_postar("https://www.imdb.com");
   CHECK(!deeplink_pegar(&d));
   deeplink_postar("nuvio-legacy://meta/movie/tt0000001");
   deeplink_postar("nuvio-legacy://meta/movie/tt0000002");

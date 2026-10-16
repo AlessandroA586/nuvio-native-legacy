@@ -3157,7 +3157,7 @@ static void deeplinkAbrir(const DeepLink *d) {
   if (d->imdb[0]) k = cat_indice_por_imdb(d->imdb);
   else for (i = 0; i < cat_n() && k < 0; i++) {
     const CatItem *ci = cat_item(i);
-    if (ci && ci->tmdb == d->tmdb && strcmp(ci->tipo, "channel")) k = i;
+    if (ci && ci->tmdb == d->tmdb && !strcmp(ci->tipo, d->serie ? "series" : "movie")) k = i;
   }
   cwTocarT = cwTocarE = 0; cwEspera = 0;
   if (k >= 0) {
