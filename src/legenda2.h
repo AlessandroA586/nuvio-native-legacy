@@ -65,10 +65,12 @@ Leg2Estado legenda2_estado(void);
 // until legenda2_estado() says so.
 const char *legenda2_identidade(void);
 
-// Offsets in ms, positive = earlier (same sign as legenda_cues).
+// Manual offset in ms from the UI's point of view: positive = subtitle later.
+// AutoSync (offAuto) stays in lookup space (positive = earlier); legenda2_cues
+// subtracts the manual part before the lookup.
 int  legenda2_offset_manual(void);
 void legenda2_definir_offset_manual(int ms);
-void legenda2_definir_offset_auto(int ms);   // AutoSync (F05); 0 = none
+void legenda2_definir_offset_auto(int ms);   // AutoSync (F05), lookup space; 0 = none
 int  legenda2_offset_total(void);
 
 // Cues of the second document at `posSeg`, with the total offset applied

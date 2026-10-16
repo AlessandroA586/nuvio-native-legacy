@@ -1068,9 +1068,10 @@ static VideoLegendaEstilo legEstilo = { 120, 0, 0, 3, 1, 0, 0, TXT_FAMILIA_INTER
 // valer so ate desligar a TV.
 static int legTocado = PLR_LEG_NADA;
 
+static void prefsGravar(void);
 static void prefsLer(void) {
   FILE *f = fopen(prefsArquivo(), "r");
-  char chave[64]; int v;
+  char chave[64]; int v, sinalNovo = 0, temAtraso = 0;
   if (!f) return;
   while (fscanf(f, "%63s %d", chave, &v) == 2) {
     // Valor de outra versao (ou arquivo editado a mao) cai no padrao em vez de
@@ -1086,13 +1087,18 @@ static void prefsLer(void) {
     else if (!strcmp(chave, "leg_fundo")   && v >= 0 && v <= 4)  legEstilo.fundo = v;
     else if (!strcmp(chave, "leg_pos")     && v >= 0 && v <= 7)  legEstilo.posicao = v;
     else if (!strcmp(chave, "leg_borda")   && v >= 0 && v <= 2)  legEstilo.borda = v;
-    else if (!strcmp(chave, "leg_atraso")  && v >= -LEG_ATRASO_MANUAL_MAX && v <= LEG_ATRASO_MANUAL_MAX) legEstilo.atrasoMs = v;
+    else if (!strcmp(chave, "leg_atraso")  && v >= -LEG_ATRASO_MANUAL_MAX && v <= LEG_ATRASO_MANUAL_MAX) { legEstilo.atrasoMs = v; temAtraso = 1; }
+    else if (!strcmp(chave, "leg_atraso_sinal") && v == 1) sinalNovo = 1;
     else if (!strcmp(chave, "leg_opacidade") && v >= 0 && v <= 3) legEstilo.opacidade = v;
     else if (!strcmp(chave, "leg_familia") && v >= 0 && v < TXT_FAMILIA_N) legEstilo.familia = v;
     else if (!strcmp(chave, "leg_negrito") && (v == 0 || v == 1)) legEstilo.negrito = v;
     else if (!strcmp(chave, "leg_tocado")  && v >= 0) legTocado = v;
   }
   fclose(f);
+  // One-time migration: leg_atraso saved before the sign fix (positive =
+  // later) was tuned under the inverted sign. Negate once; the marker written
+  // by prefsGravar keeps this from running again.
+  if (!sinalNovo && temAtraso) { legEstilo.atrasoMs = -legEstilo.atrasoMs; prefsGravar(); }
 }
 
 static void prefsGravar(void) {
@@ -1105,6 +1111,7 @@ static void prefsGravar(void) {
   fprintf(f, "leg_pos %d\n",     legEstilo.posicao);
   fprintf(f, "leg_borda %d\n",   legEstilo.borda);
   fprintf(f, "leg_atraso %d\n",  legEstilo.atrasoMs);
+  fprintf(f, "leg_atraso_sinal 1\n");
   fprintf(f, "leg_opacidade %d\n", legEstilo.opacidade);
   fprintf(f, "leg_familia %d\n", legEstilo.familia);
   fprintf(f, "leg_negrito %d\n", legEstilo.negrito);
@@ -4695,7 +4702,9 @@ static void desenharLegendaPrincipal(float *topoPilha){
    * preservadas (faixas.c). */
   int r, g, b;
   // F05: manual + automatico aceito, UMA vez, so para o documento dono do
-  // overlay (sem ele, o manual intacto). Positivo adianta, como sempre.
+  // overlay (sem ele, o manual intacto). O estilo guarda o ATRASO da pessoa
+  // (positivo = a legenda aparece mais tarde); legsync_offset_ms ja devolve o
+  // deslocamento de busca (positivo adianta, como sempre).
   int atraso = legsync_offset_ms(legEstilo.atrasoMs);
   // Escala/trechos aceitos: o instante na legenda, nao no video (o mesmo
   // para libass e para o desenho do app).

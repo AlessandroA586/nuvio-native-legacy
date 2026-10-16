@@ -71,7 +71,7 @@ static void textoBase(const LegSyncVisao *v, char *dst, unsigned tam) {
       snprintf(dst, tam, "%s", i18n("Pronta: compara com a legenda incorporada do arquivo")); return;
     case LEGSYNC_LENDO:      snprintf(dst, tam, i18n("Lendo a legenda incorporada\xe2\x80\xa6 %d%%"), v->progresso); return;
     case LEGSYNC_ANALISANDO: snprintf(dst, tam, "%s", i18n("Analisando\xe2\x80\xa6")); return;
-    case LEGSYNC_ACEITA:     segundos(v->offsetAutoMs, s, sizeof s);
+    case LEGSYNC_ACEITA:     segundos(-v->offsetAutoMs, s, sizeof s);   // user sign: + = later
                              snprintf(dst, tam, i18n("Sincronizada: %s"), s); return;
     case LEGSYNC_OUVINDO:    snprintf(dst, tam, i18n("Ouvindo as falas\xe2\x80\xa6 %d%%"), v->progresso); return;
     case LEGSYNC_RECUSADA:
@@ -152,7 +152,7 @@ int legsync_pilula_final(const LegSyncVisao *v, const char *provedor, char *dst,
   const char *p = provedor && *provedor ? provedor : "";
   if (!dst || !tam) return 0;
   if (v && v->fase == LEGSYNC_ACEITA) {
-    segundos(v->offsetAutoMs, s, sizeof s);
+    segundos(-v->offsetAutoMs, s, sizeof s);   // user sign: + = later
     snprintf(dst, tam, i18n("Legenda sincronizada \xc2\xb7 %s \xc2\xb7 %s"), p, s);
     return 1;
   }
