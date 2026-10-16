@@ -1129,6 +1129,7 @@ static int eventoPayload(const char *p, unsigned minhaSessao) {
         c[i].idioma = faixaAudio[i].idioma; c[i].codec = faixaAudio[i].codec;
         c[i].rotulo = faixaAudio[i].rotulo; c[i].canais = faixaAudio[i].canais;
         c[i].dts = audioesc_dts_truehd(faixaAudio[i].codec, faixaAudio[i].rotulo); c[i].pode = 1;
+        c[i].numero = faixaAudio[i].numero;
       }
       k = audioesc_escolher(c, nAudio, &o);
       if (k >= 0 && k != audioAtual) {

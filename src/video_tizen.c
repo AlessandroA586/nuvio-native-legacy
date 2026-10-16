@@ -959,6 +959,7 @@ static void escolherAudioPreferido(void) {
     // A Samsung nao toca DTS/TrueHD e o .wgt nao converte: escolher uma deixaria
     // o filme mudo. So a mao (a folha de faixas continua listando).
     c[i].pode = !c[i].dts;
+    c[i].numero = faixaAudio[i].numero;
   }
   k = audioesc_escolher(c, nAudio, &o);
   if (k < 0) {

@@ -58,6 +58,7 @@ void fil_definir_perfil(int p) { (void)p; }
 // fontepref.c idem: a fonte lembrada tambem e por perfil, e perfis.c so avisa.
 void fontepref_definir_perfil(int p) { (void)p; }
 void legmem_definir_perfil(int p) { (void)p; }
+void audiomem_definir_perfil(int p) { (void)p; }
 // arteescolha.c idem (#142): a arte escolhida a mao e por perfil.
 void arteesc_definir_perfil(int p) { (void)p; }
 // O ajuste "Usar os addons do perfil principal" (ajustes.c): o teste escolhe.

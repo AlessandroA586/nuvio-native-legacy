@@ -241,6 +241,7 @@ static void escolherAudioPreferido(void) {
     c[i].idioma = f->idioma; c[i].codec = f->codec; c[i].rotulo = f->rotulo; c[i].canais = f->canais;
     c[i].dts = f->numero < 0 || audioesc_dts_truehd(f->codec, f->rotulo);
     c[i].pode = f->numero >= 0 || convPossivel();
+    c[i].numero = f->numero;   // -1 = so no arquivo (convertida): sem faixa exata
   }
   k = audioesc_escolher(c, nAudio, &o);
   if (k < 0 || k == audioAtual) return;
@@ -627,6 +628,7 @@ static int trilhaPelaOrdem(void) {
     c[n].canais = mkvFx[i].canais;
     c[n].dts = rec[n] || audioesc_dts_truehd(mkvFx[i].codec, "");
     c[n].pode = !rec[n] || pode;
+    c[n].numero = -1;   // numero do cabecalho MKV, nao o da lista da TV
     n++;
   }
   k = audioesc_escolher(c, n, NULL);
