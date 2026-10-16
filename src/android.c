@@ -398,8 +398,48 @@ static int chamarBool(const char *nome, const char *assin, const char *a, const 
 int android_abrir_app(const char *pacote) {
   return chamarBool("abrirApp", "(Ljava/lang/String;)Z", pacote, NULL);
 }
-int android_abrir_externo(const char *url, const char *titulo) {
-  return chamarBool("abrirExterno", "(Ljava/lang/String;Ljava/lang/String;)Z", url, titulo ? titulo : "");
+int android_abrir_externo(const char *url, const char *titulo, const char *pacote) {
+  JNIEnv *env = (JNIEnv *)SDL_AndroidGetJNIEnv();
+  jobject act = (jobject)SDL_AndroidGetActivity();
+  jclass cls = NULL;
+  jmethodID m;
+  jstring js[3] = { NULL, NULL, NULL };
+  int ok = 0, i;
+  const char *a[3] = { url, titulo ? titulo : "", pacote ? pacote : "" };
+  if (!env || !act) return 0;
+  m = metodo(env, act, &cls, "abrirExterno", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z");
+  if (m && !(*env)->ExceptionCheck(env)) {
+    for (i = 0; i < 3; i++) js[i] = (*env)->NewStringUTF(env, a[i]);
+    if (js[0] && js[1] && js[2] && !(*env)->ExceptionCheck(env))
+      ok = (*env)->CallBooleanMethod(env, act, m, js[0], js[1], js[2]) ? 1 : 0;
+  }
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); ok = 0; }
+  for (i = 0; i < 3; i++) if (js[i]) (*env)->DeleteLocalRef(env, js[i]);
+  if (cls) (*env)->DeleteLocalRef(env, cls);
+  (*env)->DeleteLocalRef(env, act);
+  return ok;
+}
+// Players de video instalados: "pacote\tnome" por linha (NuvioActivity.listarPlayers).
+char *android_listar_players(void) {
+  JNIEnv *env = (JNIEnv *)SDL_AndroidGetJNIEnv();
+  jobject act = (jobject)SDL_AndroidGetActivity();
+  jclass cls = NULL;
+  jmethodID m;
+  char *r = NULL;
+  if (!env || !act) return NULL;
+  m = metodo(env, act, &cls, "listarPlayers", "()Ljava/lang/String;");
+  if (m) {
+    jstring js = (jstring)(*env)->CallObjectMethod(env, act, m);
+    if (!(*env)->ExceptionCheck(env) && js) {
+      const char *c = (*env)->GetStringUTFChars(env, js, NULL);
+      if (c) { r = strdup(c); (*env)->ReleaseStringUTFChars(env, js, c); }
+    }
+    if (js) (*env)->DeleteLocalRef(env, js);
+  }
+  if ((*env)->ExceptionCheck(env)) (*env)->ExceptionClear(env);
+  if (cls) (*env)->DeleteLocalRef(env, cls);
+  (*env)->DeleteLocalRef(env, act);
+  return r;
 }
 int android_abrir_loja(const char *pacote, const char *nome) {
   return chamarBool("abrirLoja", "(Ljava/lang/String;Ljava/lang/String;)Z", pacote, nome ? nome : "");

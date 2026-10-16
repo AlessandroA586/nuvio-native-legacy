@@ -1858,7 +1858,7 @@ static void sairParaExterno(void) { saindo = 1; pediuSair = 1; }
 static void tocarFonte(const char *url) {
 #ifdef NV_ANDROID
   const CatItem *c = item();   // #501: Interno / Externo / Perguntar sempre
-  if (extplayer_tentar(url, c ? c->titulo : "", tocarFonteInterno, sairParaExterno)) return;
+  if (extplayer_tentar(url, c ? c->titulo : "", c && artehero_eh_anime(c), tocarFonteInterno, sairParaExterno)) return;
 #endif
   tocarFonteInterno(url);
 }

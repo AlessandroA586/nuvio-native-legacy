@@ -32,6 +32,7 @@ static int fixturePrintf(const char *format, ...) {
 
 static CatItem item;
 static int trailerSetting = 1;
+static int heroEnabled = 1;
 static int posterSetting;
 // "Fonte do trailer" (trailerfonte.h). A regra e a de producao
 // (src/trailerfonte.c entra na linha do emcc); so o valor gravado e do teste.
@@ -55,7 +56,7 @@ const CatItem *cat_item(int i) { return i == 0 ? &item : NULL; }
 
 int ajustes_social(void) { return 1; }
 int ajustes_hist_conta(void) { return 1; }
-int ajustes_hero_ligado(void) { return 1; }
+int ajustes_hero_ligado(void) { return heroEnabled; }
 int ajustes_trailer_hero(void) { return trailerSetting; }
 int ajustes_trailer_hero_vetado(void) { return 0; }
 int video_registro_negado(void) { return 0; }
@@ -163,6 +164,7 @@ static void resetState(const char *id) {
   heroDesejado = -1;
   heroEntra = 1.0f;
   heroSai = 0.0f;
+  heroDesliza = 1.0f;
   focoHero = 1;
   foco.fileira = -1;
   heroTrailerItem = -1;
@@ -177,6 +179,7 @@ static void resetState(const char *id) {
   heroTrailerTocouN = 0;   // cada caso reinicia a memoria da sessao no teste
   heroTrailerMemoriaFalhou = 0;
   trailerSetting = 1;
+  heroEnabled = 1;
   posterSetting = 0;
   nFileiras = 0;
   fonteSetting = TRF_AUTO;
@@ -539,6 +542,38 @@ int main(void) {
     home_trailer_passo(1,.016f,start+500);
     home_trailer_passo(1,.016f,start+500+NV_TRAILER_HERO_ESPERA_MS);
     rc|=check("no card asks for sound with the switch on",opened&&lastSom==1&&heroTrailerNoCartao&&lastNoCartao);
+
+    // Card playback uses the focused title, even when the hero is hidden or
+    // its artwork still belongs to another title. Fullscreen still needs it.
+    for (int hidden = 0; hidden < 2; hidden++) {
+      resetState(hidden ? "tt-card-no-hero" : "tt-card-dynamic");
+      focoHero=0;posterSetting=AJ_TRAILER_CARTAZ_CARD;trailerSetting=0;
+      nFileiras=1;foco.fileira=0;fileiras[0].tipo=FILEIRA_NORMAL;
+      layoutSetting=HOME_LAYOUT_DINAMICA;heroEnabled=!hidden;
+      heroPendente=0;heroPendenteEm=start;appleReady=1;
+      cartaoTrailerItem=0;cartaoTrailerRect=card;cartaoTrailerPode=1;cartaoTrailerServe=0;
+      if (hidden) { heroAtual=1;heroDesejado=0;heroEntra=0;heroSai=1;heroDesliza=0; }
+      home_trailer_passo(1,.016f,start+499);
+      rc|=check("independent card still waits for focus delay",!opened);
+      home_trailer_passo(1,.016f,start+500);
+      home_trailer_passo(1,.016f,start+500+NV_TRAILER_HERO_ESPERA_MS);
+      rc|=check("independent card still waits for full expansion",!opened);
+      cartaoTrailerServe=1;
+      home_trailer_passo(1,.016f,start+501+NV_TRAILER_HERO_ESPERA_MS);
+      rc|=check(hidden ? "no card plays without hero using focused identity" : "no card plays in Dynamic layout",
+                opened&&openedCount==1&&heroTrailerItem==0&&heroTrailerNoCartao&&lastNoCartao&&
+                !strcmp(heroTrailerImdb,item.imdb)&&lastRect.x==card.x&&lastRect.y==card.y&&
+                lastRect.w==card.w&&lastRect.h==card.h);
+      playing=1;
+      for (int q=0;q<60;q++) home_trailer_passo(1,.016f,start+600+NV_TRAILER_HERO_ESPERA_MS+q*16);
+      rc|=check("independent card fades in without cinema",heroTrailerFade>0.9f&&!heroCinema.oculta);
+      home_trailer_passo(0,.016f,start+4000);
+      rc|=check("independent card closes beneath overlay",!opened);
+      posterSetting=AJ_TRAILER_CARTAZ_CHEIA;
+      home_trailer_passo(1,.016f,start+5000);
+      rc|=check("fullscreen poster still requires visible hero",
+                !opened&&heroTrailerGateAnterior==(hidden ? HERO_GATE_DISABLED : HERO_GATE_DYNAMIC));
+    }
 
     resetState("tt-cheia");
     focoHero=0;posterSetting=AJ_TRAILER_CARTAZ_CHEIA;trailerSetting=0;nFileiras=1;foco.fileira=0;
