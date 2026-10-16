@@ -1234,7 +1234,8 @@ static void registrar(const FilPassada *passada, const char *chave,
   }
   linhas[i].vista = 1;
   linhas[i].semAddon = 0;   // an add-on declared it again
-  linhas[i].semDecl = 0;
+  // Listing a quota-excluded catalog must not restore its Home slot.
+  if (podeDespejar) linhas[i].semDecl = 0;
   // O PRIMEIRO A REGISTRAR MANDA NO NOME, e nao o ultimo. Sao dois
   // registradores: a descoberta com o nome do catalogo (ja com customTitles) e
   // a home com o nome que ela desenha, que para meia dezena de chaves conhecidas

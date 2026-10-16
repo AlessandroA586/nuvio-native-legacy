@@ -1180,9 +1180,18 @@ int main(void) {
     fil_definir_perfil(1);
     fil_teste_recarregar();
     fil_marcar_declaradas(decl, 3, 1);
+    // Discovery registers candidates, then lists quota-excluded catalogs.
+    { FilPassada passada = fil_passada_ler();
+      int k;
+      for (k = 0; k < 3; k++)
+        fil_registrar_de(&passada, decl[k], "", "Vivo", "movie", -1);
+      fil_registrar_se_couber_de(&passada, "vivo_movie_velha1", "Velha1", "Vivo", "movie");
+      fil_registrar_se_couber("vivo_movie_velha2", "Velha2", "Vivo", "movie"); }
     assert(fil_estado_chave("vivo_movie_real2") == FIL_NA_HOME);
     assert(fil_estado_chave("vivo_movie_real3") == FIL_NA_HOME);
     assert(fil_estado_chave("vivo_movie_velha1") == FIL_FORA);
+    assert(fil_estado_chave("vivo_movie_velha2") == FIL_FORA);
+    assert(fil_n() == 5); /* Excluded rows remain available in Settings. */
     assert(fil_n_na_home() == 3 && fil_n_fila() == 0);
     // declared again: the row is back exactly where it was
     fil_registrar("vivo_movie_velha1", "Velha1", "Vivo", "movie", 5);
