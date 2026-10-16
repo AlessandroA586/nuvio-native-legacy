@@ -1902,6 +1902,7 @@ static float vidroDesde[4];   // caixa do que foi pintado na tela desde a ultima
 static float vidroCapQ[4];    // a ultima captura deste quadro
 static float vidroVidros[VID_N][4], vidroFuros[VID_NFUROS][4];
 int gfx_vidro_capturas, gfx_vidro_passadas;
+double gfx_vidro_fill, gfx_vidro_copia;
 static void vidroSoma(const void *p, size_t n) {
   const unsigned char *b = p;
   while (n--) vidroHash = (vidroHash ^ *b++) * 16777619u;
@@ -1993,6 +1994,7 @@ void gfx_novo_quadro(void) {
   memset(vidroDesde, 0, sizeof vidroDesde); memset(vidroCapQ, 0, sizeof vidroCapQ);
   vidroHash = 2166136261u; vidroCapNoQuadro = 0; vidroNVidros = 0; vidroNFuros = 0;
   gfx_vidro_capturas = 0; gfx_vidro_passadas = 0;
+  gfx_vidro_fill = gfx_vidro_copia = 0.0;
   ambFonte = 0; dinPendente = 0; dinAdiado = 0; dinNOp = 0;
   gfx_n_assados = 0;
 }
@@ -3249,6 +3251,8 @@ static void vidPassada(GLuint src, GLuint fbo, int w, int h, const float uv[4], 
   glBindTexture(GL_TEXTURE_2D, src);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   gfx_vidro_passadas++;
+  gfx_vidro_fill += (double)w * h * (uv[2] - uv[0]) * (uv[3] - uv[1]) /
+                    ((double)telaRealW * telaRealH);
   if (perftv_enabled) perftv_blur++;
 }
 // Captura e desfoca a regiao `reg` (layout de tela) da tela atual em vidH2.
@@ -3298,6 +3302,7 @@ static int vidCapturar(const float reg[4]) {
   if (blendLigado) glEnable(GL_BLEND);
   progAtual = -1; texAtual = 0;
   gfx_vidro_capturas++;
+  gfx_vidro_copia += (double)(x1 - x0) * (y1 - y0) / ((double)telaRealW * telaRealH);
   GFX_OUTRO_FIM();
   return 1;
 }
