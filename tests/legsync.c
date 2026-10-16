@@ -191,7 +191,8 @@ static void pilula_sequencia(int fim, int ok, int cancela) {
   now += 500; r = legsync_pil_passo(&p, &v, now, "OS", t, sizeof t);
   assert((r & LEGSYNC_PIL_FINAL_TARDE) && p.estado == LEGSYNC_PIL_APLICADA && !p.espera);
   assert(p.final == (ok ? 1 : 0));
-  assert(ok ? strstr(t, "sincronizada") && strstr(t, "+2") : strstr(t, "n\xc3\xa3o sincronizada"));
+  // lookup +2500 (earlier) is shown in the user's delay sign: -2,50 s
+  assert(ok ? strstr(t, "sincronizada") && strstr(t, "-2") : strstr(t, "n\xc3\xa3o sincronizada"));
   // o aviso fica o tempo normal e some; sem nova abertura
   unsigned dur = ok ? LEGSYNC_PIL_APLICADA_MS : LEGSYNC_PIL_SEMSYNC_MS;
   now += dur - 10; r = legsync_pil_passo(&p, &v, now, "OS", t, sizeof t); assert(!(r & LEGSYNC_PIL_ZERAR));
@@ -656,7 +657,7 @@ int main(int argc, char **argv) {
       assert(v.autoFase == 2 && v.fase == LEGSYNC_ACEITA && abs(v.offsetAutoMs - 2500) <= 25);
       assert(legsync_offset_ms(0) == v.offsetAutoMs);
       conferirFilme(legsync_offset_ms(0));                      // a fala certa no instante certo
-      assert(legsync_pilula_final(&v, "OpenSubtitles", t, sizeof t) && strstr(t, "sincronizada \xc2\xb7 OpenSubtitles \xc2\xb7 +2."));
+      assert(legsync_pilula_final(&v, "OpenSubtitles", t, sizeof t) && strstr(t, "sincronizada \xc2\xb7 OpenSubtitles \xc2\xb7 -2."));   // user sign
       legsync_encerrar(); }
     casos++; }
   legsync_teste_auto(0); legsync_definir_trocador(NULL);
