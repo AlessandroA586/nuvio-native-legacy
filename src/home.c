@@ -3305,8 +3305,8 @@ static void sincronizarFileiras(void) {
       }
       cortadasPeloLimite = w - mantidas;
       // #545: which rows the catalogue had and the Home did not draw, by reason.
-      snprintf(motivoCorte, sizeof motivoCorte, "desligada na TV %d, desligada na conta %d, "
-               "fila %d, fora %d, alem do limite %d", offTv, offConta, naFila, fora, alem);
+      snprintf(motivoCorte, sizeof motivoCorte, "off on TV %d, off on account %d, "
+               "queued %d, out %d, over limit %d", offTv, offConta, naFila, fora, alem);
       w = mantidas; }
     memcpy(fileiras, arranjo, sizeof(Fileira) * (size_t)w);
     destino = w;
