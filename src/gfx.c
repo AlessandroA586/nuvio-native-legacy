@@ -1912,6 +1912,31 @@ static float vidroDesde[4];   // caixa do que foi pintado na tela desde a ultima
 static float vidroVidros[VID_N][4], vidroFuros[VID_NFUROS][4];
 int gfx_vidro_capturas, gfx_vidro_passadas;
 double gfx_vidro_fill, gfx_vidro_copia;
+// BACKDROP-ONLY SOURCE (docs/fosco-nova.md): the glasses read a blurred copy
+// of the backdrop layer alone (art, light, veils: every draw before the
+// frame's first content draw), captured when that layer changes. Rows
+// scrolling and focus moving under the glass no longer recapture. Off
+// (-DNV_VIDRO_SO_FUNDO=0) = the old capture of everything under each glass.
+#ifndef NV_VIDRO_SO_FUNDO
+#define NV_VIDRO_SO_FUNDO 1
+#endif
+int gfx_vidro_so_fundo = NV_VIDRO_SO_FUNDO;
+// fundoFim: 0 layer still open, 1 closed and vidFundo holds it, 2 closed
+// without it (old path). fundoDepois: a full-screen draw (modal veil) came
+// after the layer, so the glasses need the old path to see it.
+static int fundoFim, fundoDepois, fundoValido;
+static unsigned fundoHash;
+static void vidroFundoFechar(void);
+static int vidroFundoModo(GfxRect r, GfxModo m) {
+  static const unsigned long long FUNDO =
+    1ull << GFX_HERO | 1ull << GFX_FUNDO | 1ull << GFX_VEU_TOPO | 1ull << GFX_SNAP | 1ull << GFX_DETALHE |
+    1ull << GFX_HERO_CHEIO | 1ull << GFX_VEU_BAIXO | 1ull << GFX_SOCIAL | 1ull << GFX_EDITORIAL |
+    1ull << GFX_BRILHO_TOPO | 1ull << GFX_LUZ | 1ull << GFX_CEU | 1ull << GFX_AMBIENTE | 1ull << GFX_VITRINE |
+    1ull << GFX_FUNDO_DIN | 1ull << GFX_HERO_CAM | 1ull << GFX_HERO_CHEIO_CAM | 1ull << GFX_VEU_CSS |
+    1ull << GFX_VITRINE_DIN;
+  return ((FUNDO >> (unsigned)m) & 1ull) ||
+         (m != GFX_VIDRO && r.x <= 0.0f && r.y <= 0.0f && r.x + r.w >= NV_TELA_W && r.y + r.h >= NV_TELA_H);
+}
 static void vidroSoma(const void *p, size_t n) {
   const unsigned char *b = p;
   while (n--) vidroHash = (vidroHash ^ *b++) * 16777619u;
@@ -1937,7 +1962,7 @@ static int vidroDentro(GfxRect r) {
 }
 // Conteudo que muda sem passar pelo hash (textura reenviada no lugar, nome
 // de textura reaproveitado): nenhum vidro reaproveita a captura antiga.
-void gfx_vidro_sujar(void) { memset(vidroSlotValido, 0, sizeof vidroSlotValido); }
+void gfx_vidro_sujar(void) { memset(vidroSlotValido, 0, sizeof vidroSlotValido); fundoValido = 0; }
 // Todo desenho do quadro, ja em layout de tela (r depois de GFX_TR_RECT e da
 // escala): entra no hash, e o que cai na tela entra na caixa vidroDesde.
 static void vidroDesenho(GfxRect r, GLuint tex, GfxModo modo, float foco, float parx, float pary,
@@ -1961,6 +1986,15 @@ static void vidroDesenho(GfxRect r, GLuint tex, GfxModo modo, float foco, float 
     float b[4] = { r.x, r.y, r.x + r.w, r.y + r.h };
     if (r.x >= NV_TELA_W || r.y >= NV_TELA_H || r.x + r.w <= 0.0f || r.y + r.h <= 0.0f) return;
     conta = vidroCruza(vidroLeAnt, b);
+    // The first content draw closes the backdrop layer: vidroHash is its hash.
+    // Every backdrop draw enters it, wherever it lands: the copy is then
+    // valid for a glass anywhere on the screen (the focus glass moving).
+    if (gfx_vidro_so_fundo && modo != GFX_SOMBRA) {
+      if (!fundoFim && !vidroFundoModo(r, modo)) vidroFundoFechar();
+      else if (fundoFim && modo != GFX_VIDRO && r.x <= 0.0f && r.y <= 0.0f &&
+               r.x + r.w >= NV_TELA_W && r.y + r.h >= NV_TELA_H) fundoDepois = 1;
+      if (!fundoFim) conta = 1;
+    }
   }
   {
     int i;
@@ -2015,6 +2049,7 @@ void gfx_novo_quadro(void) {
   vidroHash = 2166136261u; vidroNVidros = 0; vidroNFuros = 0;
   memcpy(vidroLeAnt, vidroLeCur, sizeof vidroLeAnt); memset(vidroLeCur, 0, sizeof vidroLeCur);
   vidroSlot = -1; vidroRecapturou = 0;
+  fundoFim = fundoDepois = 0;
   gfx_vidro_capturas = 0; gfx_vidro_passadas = 0;
   gfx_vidro_fill = gfx_vidro_copia = 0.0;
   ambFonte = 0; dinPendente = 0; dinAdiado = 0; dinNOp = 0;
@@ -3154,7 +3189,7 @@ static float vidroTom(float cinza);
 #define VID_ALCANCE 68.0f   // BLUR_REACH: ate onde a lente e o desfoque leem fora do vidro
 #define VID_RUIDO_N 256
 static GLuint vidGrab, vidH2, vidH2Fbo, vidQa, vidQaFbo, vidQb, vidQbFbo, vidRuido, vidProg;
-static GLuint vidSlot[VID_NSLOTS], vidSlotFbo[VID_NSLOTS];
+static GLuint vidSlot[VID_NSLOTS], vidSlotFbo[VID_NSLOTS], vidFundo, vidFundoFbo;
 static GLint vidLocR, vidLocT, vidLocO;
 static int vidW, vidH, vidFalhou;
 void gfx_vidro_fosco_bloquear(void) { foscoBloq = 1; }
@@ -3189,6 +3224,8 @@ static void vidLiberar(void) {
   glDeleteTextures(VID_NSLOTS, vidSlot); glDeleteFramebuffers(VID_NSLOTS, vidSlotFbo);
   memset(vidSlot, 0, sizeof vidSlot); memset(vidSlotFbo, 0, sizeof vidSlotFbo);
   memset(vidroSlotValido, 0, sizeof vidroSlotValido);
+  glDeleteTextures(1, &vidFundo); glDeleteFramebuffers(1, &vidFundoFbo);
+  vidFundo = vidFundoFbo = 0; fundoValido = 0;
   gfx_tex_esquecer(0);
 }
 static GLuint vidTex(int w, int h, GLenum fmt) {
@@ -3352,6 +3389,29 @@ static int vidCapturar(const float reg[4], GLuint dst, GLuint dstFbo) {
   return 1;
 }
 
+// Closes this frame's backdrop layer: recaptures it into vidFundo if its hash
+// changed, only when last frame had glass (screens without glass pay nothing).
+static void vidroFundoFechar(void) {
+  float full[4] = { 0, 0, NV_TELA_W, NV_TELA_H };
+  fundoFim = 2;
+  if (vidroLeAnt[2] <= vidroLeAnt[0] || foscoBloq || !ajustes_vidro_fosco() || efeitosMinimos) return;
+  if (!fundoValido || fundoHash != vidroHash) {
+    fundoValido = 0;
+    if (!vidPreparar()) return;
+    if (!vidFundo) {
+      GLint ant = fboLigado();
+      int ok = vidAlvo(&vidFundo, &vidFundoFbo, telaW / 2, telaH / 2);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)ant);
+      gfx_tex_esquecer(0);
+      if (!ok) return;
+    }
+    if (!vidCapturar(full, vidFundo, vidFundoFbo)) return;
+    fundoHash = vidroHash; fundoValido = 1;
+  }
+  fundoFim = 1;
+}
+
 // O backdrop desfocado para o vidro `r` (layout de tela), ou 0 = chapado.
 static GLuint vidroFonte(GfxRect r) {
   // The home chrome can draw between glass regions: its bounding box defeats
@@ -3370,6 +3430,12 @@ static GLuint vidroFonte(GfxRect r) {
   int sl;
   GLuint *tex, *fbo;
   vidroUne(vidroLeCur, lido[0], lido[1], lido[2], lido[3]);
+  // Backdrop-only source; the old path below only for a glass over a
+  // full-screen draw after the backdrop (modal veil) or without a copy.
+  if (gfx_vidro_so_fundo) {
+    if (!fundoFim) vidroFundoFechar();
+    if (fundoFim == 1 && !fundoDepois) return vidFundo;
+  }
   if (!vidH2 || vidW != telaW || vidH != telaH) { if (!vidPreparar()) return 0; }
   else if (vidroSlot >= 0 && !vidroCruza(vidroDesde, lido))
     return vidroSlot ? vidSlot[vidroSlot] : vidH2;
