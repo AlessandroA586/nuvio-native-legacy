@@ -187,8 +187,9 @@ int prog_oculto_soltar(const char *id, long long ms) { (void)id; (void)ms; retur
 int prog_oculto_vence(const char *id, long long ms) { (void)id; (void)ms; return 0; }
 const char *nuvem_trakt_cliente(void)      { return ""; }
 int   addons_n(void)                       { return 0; }
-void addons_lista_travar(void) {}
-void addons_lista_destravar(void) {}
+// O teste de metadados nao monta manifestos nem enumera contas remotas.
+void addons_lista_travar(void) { assert(!"unexpected addon manifest enumeration"); }
+void addons_lista_destravar(void) { assert(!"unexpected addon manifest enumeration"); }
 const char *addons_base(int i)             { (void)i; return ""; }
 const char *addons_id_manifesto(int i)     { (void)i; return ""; }
 const char *addons_nome(int i)            { (void)i; return "addon"; }
@@ -438,6 +439,20 @@ static void testarMetaElenco(void) {
   puts("ok  homonimos com ids TMDB distintos conservam a identidade (#528)");
 }
 
+// Mesmo pedido capturado usado pelo worker atual; a execucao fica sincrona
+// para observar a publicacao antes do complemento TMDB sem criar outro fio.
+static void executarMetaTeste(void) {
+  EpPedido pedido = { .item = 0, .geracao = epGeracao,
+                      .sessao = nv_perfil_sessao_ler() };
+  assert(cat_copiar_item(0, &pedido.base));
+  snprintf(pedido.id, sizeof pedido.id, "%s", pedido.base.imdb);
+  pthread_once(&epPedidoOnce, epPedidoKeyCriar);
+  assert(!pthread_setspecific(epPedidoKey, &pedido));
+  fioEpVivo = 1;
+  buscarEps(NULL);
+  assert(!pthread_setspecific(epPedidoKey, NULL));
+}
+
 // #528: o worker real publica o meta antes da cauda TMDB falhar. A resposta
 // vem do cache de metadados real; catalogo.c e os publicadores tambem sao reais.
 static void testarMetaTMDBOffline(void) {
@@ -458,12 +473,10 @@ static void testarMetaTMDBOffline(void) {
   cat_definir_tudo(&it, 1, NULL, 0);
   desc_meta_chave(chave, sizeof chave, "movie", it.imdb);
   metaCacheGuardar(chave, corpo);
-  epItem = 0;
-  fioEpVivo = 1;
   metaObservarCatalogo = 0;
   metaPublicadoAntesTMDB = 0;
   snprintf(tmdbChave, sizeof tmdbChave, "offline-test");
-  buscarEps(NULL);
+  executarMetaTeste();
   tmdbChave[0] = 0;
   metaObservarCatalogo = -1;
   assert(metaRedePedidos == antes + 1); // /find tentou e o duble devolveu NULL
@@ -477,11 +490,10 @@ static void testarMetaTMDBOffline(void) {
   // Mesma obra no mesmo indice, agora de outro perfil: nem o id do titulo
   // autoriza a cauda antiga a substituir os campos do novo dono.
   cat_definir_tudo(&it, 1, NULL, 0);
-  fioEpVivo = 1;
   metaObservarCatalogo = 0;
   metaTrocarPerfilTMDB = 1;
   snprintf(tmdbChave, sizeof tmdbChave, "offline-test");
-  buscarEps(NULL);
+  executarMetaTeste();
   tmdbChave[0] = 0;
   metaObservarCatalogo = -1;
   assert(perfilTeste == 2 && !metaTrocarPerfilTMDB);
