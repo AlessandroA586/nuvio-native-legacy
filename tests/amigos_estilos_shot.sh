@@ -9,7 +9,12 @@ trap 'rm -rf "$NUVIO_DADOS"' EXIT
 sources=()
 for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/recomenda.c|src/rede.c|src/celular.c) continue;; esac
-  sources+=("$source")
+  if [ "${NV_AMIGOS_BEFORE:-0}" = 1 ] && [ "$source" = src/amigosfil.c ]; then
+    git show d626daf5c:src/amigosfil.c > "$NUVIO_DADOS/amigosfil-before.c"
+    sources+=("$NUVIO_DADOS/amigosfil-before.c")
+  else
+    sources+=("$source")
+  fi
 done
 flags=()
 if [ "${NV_AMIGOS_BEFORE:-0}" != 1 ]; then flags+=(-DNV_AMIGOSFIL_TESTE); fi

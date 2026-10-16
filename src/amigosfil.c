@@ -263,6 +263,7 @@ void amigosfil_atualizar(float dt, int focada, int *colunaP) {
     if (celb_pegar(CELB_AMIGO, t, sizeof t)) recomenda_vincular(t);
     afAtualizar(dt, focada, colunaP); return;
   }
+  if (afEstilo != 5) afMontar();
   n = socialvis_n_amigos();
   coluna = colunaP ? *colunaP : 0;
   // O MODELO MUDOU (chegou atividade): o foco segue a PESSOA, e nao o indice —
@@ -373,7 +374,6 @@ void amigosfil_desenhar(float x0, float y, float alt, float corte, int focada,
     ultX0 = x0; ultAlt = alt;
     afDesenhar(x0, y, corte, focada, coluna, agora); return;
   }
-  afMontar();
   float fy = y + 24.0f;
   // A rolagem anda em _atualizar, com a margem e a altura do ultimo desenho
   // (a rail fixa muda x0).

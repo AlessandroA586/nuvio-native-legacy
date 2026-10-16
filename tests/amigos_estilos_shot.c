@@ -16,6 +16,7 @@
 #include "../src/rede.c"
 #include "celular.h"
 #include "celbotao.h"
+#include "recenviar.h"
 static int phoneOpen;
 int celular_disponivel(void) { return 1; }
 int celular_abrir(const char *t) { (void)t; phoneOpen = 1; return 1; }
@@ -47,6 +48,8 @@ const char *shot_simklauth_token(void) { return contasNaTv ? "simkl-shot" : ""; 
 #include "ajustes.h"
 #include "amigoperfil.h"
 #include "amigosfil.h"
+#include "idioma.h"
+#include "idiomacod.h"
 #include "catalogo.h"
 #include "dados.h"
 #include "gfx.h"
@@ -303,11 +306,60 @@ int main(int argc, char **argv) {
     assert(ajustes_amigos_estilo() == style);
     irFileira();
     quadros(100, NULL);
-    snprintf(bmp, sizeof bmp, "%s-9%c.bmp", saida, style < 5 ? 'A' + style : 'G');
+    if (style == 5) snprintf(bmp, sizeof bmp, "%s-classic.bmp", saida);
+    else snprintf(bmp, sizeof bmp, "%s-9%c.bmp", saida, 'A' + style);
     quadros(1, bmp);
     amigosfil_teste_conferir(1920, 1080);
+    if (style < 5) {
+      int nc = amigosfil_n_colunas();
+      char title[24];
+      amigosfil_ok(0);
+      assert(amigosfil_pediu_titulo(title, sizeof title));
+      for (int c = 1; c < nc; c++) {
+        tecla(SDLK_RIGHT); quadros(35, NULL);
+        amigosfil_teste_conferir(1920, 1080);
+      }
+      amigosfil_ok(nc - 2);
+      assert(amigosfil_pediu_ajustes() || recenviar_aberto());
+    }
   }
   assert(ajustes_rapido_passo(op, 1));
+  // Today-only events: absent time/progress/reaction must stay absent.
+  static SvEvento missing[4];
+  for (int k = 0; k < 4; k++) {
+    const SvAmigo *a = socialvis_amigo(k ? 1 : 0);
+    missing[k] = a->tit[0];
+    snprintf(missing[k].imdb, sizeof missing[k].imdb, "ttmissing%d", k);
+    missing[k].acao = k == 2 ? SV_AGORA : SV_FIM;
+    missing[k].quando = 0; missing[k].pct = -1;
+    missing[k].restanteMin = -1; missing[k].reacao = SV_REAC_NADA;
+    missing[k].sobreMinhaRec = 0;
+    char q[80]; socialvis_quando(missing[k].quando, q, sizeof q); assert(!q[0]);
+    char status[160]; socialvis_status(&missing[k], status, sizeof status);
+    assert(!strstr(status, "%") && !strstr(status, " min"));
+  }
+  socialvis_definir_feed(missing, 4);
+  irFileira(); quadros(90, NULL);
+  amigosfil_teste_conferir(1920, 1080);
+  snprintf(bmp, sizeof bmp, "%s-missing.bmp", saida); quadros(1, bmp);
+  const int languages[] = { IDIOMA_DE, IDIOMA_PT, IDIOMA_RU };
+  for (int k = 0; k < 3; k++) {
+    char cam[800]; snprintf(cam, sizeof cam, "%s/ajustes.txt", dirDados);
+    FILE *file = fopen(cam, "w"); assert(file);
+    fprintf(file, "idioma %d\nfriendsRowStyleLocal 0\n", languages[k]); fclose(file);
+    ajustes_dir(dirDados);
+    assert(ajustes_idioma() == languages[k]);
+    const char *labels[] = {"Feed de cartões", "Ao vivo em destaque", "Histórias com cartaz", "Faixa de presença", "Cartaz primeiro", "Rostos clássicos"};
+    for (int j = 0; j < 6; j++) {
+      TxtLinha t = txt_linha(TXT_CAPTION, i18n(labels[j]), 255, 255, 255, 255);
+      assert(t.w < 600);
+    }
+    TxtLinha label = txt_linha(TXT_CAPTION, i18n("Estilo da fileira de amigos"), 255, 255, 255, 255);
+    assert(label.w < 600);
+    irFileira(); quadros(70, NULL);
+    snprintf(bmp, sizeof bmp, "%s-lang-%d.bmp", saida, languages[k]); quadros(1, bmp);
+    amigosfil_teste_conferir(1920, 1080);
+  }
   nContatos = 0;
   socialvis_demo(0);
   irFileira();
