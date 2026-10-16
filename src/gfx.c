@@ -1956,6 +1956,20 @@ static void vidroDesenho(GfxRect r, GLuint tex, GfxModo modo, float foco, float 
                   gfx_card_forcar_cover_atual, gfx_card_veu_tela_atual };
   int e[9] = { (int)modo, (int)tex, recorteAtivo, blendLigado, giroOn, miniAtiva, snapAtivo,
                efeitosLeves, telaW };
+#ifdef NV_WEBOS
+  // Only what can reach the pixels decides reuse. Unsettled easing drifts
+  // below 1/256 forever (detail veil, logo), a draw wholly off the screen
+  // paints nothing, and the Explore sky's clock rides in `foco`: hashed raw,
+  // each made every frame "changed" and recaptured the backdrop at 60 fps.
+  if (!snapAtivo && !miniAtiva && !giroOn && telaW == telaRealW && telaH == telaRealH &&
+      (r.x >= NV_TELA_W || r.y >= NV_TELA_H || r.x + r.w <= 0.0f || r.y + r.h <= 0.0f))
+    return;
+  {
+    int i;
+    if (modo == GFX_CEU) v[4] = v[5] = floorf(v[4] * 2.0f);   // sky: twice a second
+    for (i = 0; i < 24; i++) v[i] = floorf(v[i] * 256.0f + 0.5f);
+  }
+#endif
   vidroSoma(v, sizeof v);
   vidroSoma(e, sizeof e);
   if (recorteAtivo) vidroSoma(recorteBox, sizeof recorteBox);
