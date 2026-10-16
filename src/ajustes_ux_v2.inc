@@ -303,7 +303,7 @@ static void aj2MenuAtualizar(float dt) {
     if (alvo > fim - janela + AJ2_MENU_FADE) alvo = fim - janela + AJ2_MENU_FADE;
     if (alvo < 0) alvo = 0;
 #ifdef NV_TOUCH_UI
-    if (ajToqueLivre[AJT_MENU]) aj2MRolV = 0.0f;
+    if (ajTelaCheia() && ajToqueLivre[AJT_MENU]) aj2MRolV = 0.0f;
     else
 #endif
     if (!aj2MIni || red) { aj2MRol = alvo; aj2MRolV = 0; }
@@ -351,7 +351,7 @@ static void aj2DesenharMenu(const Aj2Pose *p) {
   if (p->mA <= 0.003f) return;
   aj2MenuMedir();
 #ifdef NV_TOUCH_UI
-  if (!ajModalAberto() && !uxEditor && p->mA > 0.1f && p->mS > 0.0f) {
+  if (ajTelaCheia() && !ajModalAberto() && !uxEditor && p->mA > 0.1f && p->mS > 0.0f) {
     GfxRect r = aj2MenuToqueRect((GfxRect){m.x, topo, m.w, base - topo}, m, p);
     ajToqueRegistrar(AJT_MENU, r, &aj2MRol, aj2MenuY(n - 1) + aj2MH[n - 1] - (base - topo) + AJ2_MENU_FADE, aj2MRol, 0);
     if (ajToqueN) ajToqueRegioes[ajToqueN - 1].escala *= p->mS;
@@ -394,7 +394,7 @@ static void aj2DesenharMenu(const Aj2Pose *p) {
       int ativa = c == 2 ? lig_ : sel;
       GfxRect r = { cx, cy, w, AJ2_MENU_CHIP };
 #ifdef NV_TOUCH_UI
-      if (!ajModalAberto() && !uxEditor && p->mA > 0.1f && (c != 2 || rot > 0.003f) && cy + r.h > topo && cy < base) {
+      if (ajTelaCheia() && !ajModalAberto() && !uxEditor && p->mA > 0.1f && (c != 2 || rot > 0.003f) && cy + r.h > topo && cy < base) {
         GfxRect hit = r;
         if (hit.y < topo) { hit.h -= topo - hit.y; hit.y = topo; }
         if (hit.y + hit.h > base) hit.h = base - hit.y;
@@ -442,7 +442,7 @@ static void aj2DesenharMenu(const Aj2Pose *p) {
     if (j < 2) continue;
     if (y > base || y + h < topo) continue;
 #ifdef NV_TOUCH_UI
-    if (!ajModalAberto() && !uxEditor && p->mA > 0.1f) {
+    if (ajTelaCheia() && !ajModalAberto() && !uxEditor && p->mA > 0.1f) {
       GfxRect hit = {rx, fmaxf(y, topo), m.w - 2 * AJ2_MENU_PAD, fminf(y + h, base) - fmaxf(y, topo)};
       hit = aj2MenuToqueRect(hit, m, p);
       ponteiro_alvo(hit.x, hit.y, hit.w, hit.h, aj2MenuToqueFocar, NULL, j, 0);
@@ -956,7 +956,7 @@ static void aj2LAtualizar(float dt) {
   } else if (total > jan && focoIndice && uxTopo >= 0) alvo = 0;
   else if (total > jan) alvo = aj2LRol;
 #ifdef NV_TOUCH_UI
-  if (ajToqueLivre[AJT_INDICE]) aj2LRol = anim_clamp(aj2LRol, 0.0f, fmaxf(0.0f, total - jan));
+  if (ajTelaCheia() && ajToqueLivre[AJT_INDICE]) aj2LRol = anim_clamp(aj2LRol, 0.0f, fmaxf(0.0f, total - jan));
   else
 #endif
   if (ajustes_animacoes_reduzidas()) aj2LRol = alvo;
@@ -1085,7 +1085,7 @@ static void aj2DesenharGrade(float a) {
   ajPaginaIlha(g, 40.0f, 1);
   if (a >= 0.999f && !ajModalAberto() && !uxEditor) {
 #ifdef NV_TOUCH_UI
-    if (aj2Lista() || ajRetrato()) {
+    if (ajTelaCheia() && (aj2Lista() || ajRetrato())) {
       float total; aj2LYRel(0, &total);
       ajToqueRegistrar(AJT_INDICE, (GfxRect){g.x, aj2LTopo(), g.w, aj2LBase() - aj2LTopo()},
                        &aj2LRol, total - (aj2LBase() - aj2LTopo()), aj2LRol, 0);
@@ -1240,7 +1240,7 @@ static void aj2DesenharPagina(float t) {
     GfxRect seg = { direita - sw, ajRetrato() ? h.y + h.h - sh - 10.0f : h.y + (h.h - sh) * 0.5f, sw, sh };
     aj2LayoutSeg(seg, TXT_V2_24, 26.0f, aj2Suave(aj2CabF));
 #ifdef NV_TOUCH_UI
-    if (t > 0.997f && !uxEditor)
+    if (ajTelaCheia() && t > 0.997f && !uxEditor)
       ponteiro_alvo(seg.x, seg.y, seg.w, seg.h, aj2PonteiroCabLayout, NULL, 0, 0);
 #endif
     if (!ajRetrato()) direita -= sw + 36.0f;

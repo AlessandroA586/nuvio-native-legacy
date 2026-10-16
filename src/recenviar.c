@@ -649,7 +649,7 @@ void recenviar_atualizar(float dt, Uint32 agora) {
     }
     troca = red ? 1.0f : anim_mola(troca, 1.0f, dt, NV_MOLA_FOCO * 0.5f);
 #ifdef NV_TOUCH_UI
-    if (!toque.livre)
+    if (!toquerol_livre(&toque))
 #endif
       rolar = red ? (float)topo : anim_mola(rolar, (float)topo, dt, NV_MOLA_FOCO * 0.7f); }
 }
@@ -768,7 +768,7 @@ static void ponteiroLinha(int i, int b) {
 int recenviar_teste_foco(int *pag) { if (pag) *pag = pagina; return foco; }
 #ifdef NV_TOUCH_UI
 static void toqueRetomar(void) {
-  if (toque.livre && nLinhas() > 0) {
+  if (toquerol_livre(&toque) && nLinhas() > 0) {
     float ponto = rolar * toquePasso + toque.regiao.h * 0.35f, y = 0.0f;
     int i;
     for (i = 0; i + 1 < nLinhas(); i++) {
@@ -790,7 +790,7 @@ static void desenhaLista(float x, float y, float w, float a) {
   int reg = aberto && anim > 0.99f && anim < 1.01f && troca > 0.99f &&
             !teclado_aberto() &&
 #ifdef NV_TOUCH_UI
-            (toque.livre ||
+            (toquerol_livre(&toque) ||
 #endif
             (rolar > (float)topo - 0.01f && rolar < (float)topo + 0.01f)
 #ifdef NV_TOUCH_UI

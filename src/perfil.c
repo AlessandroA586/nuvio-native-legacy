@@ -673,7 +673,7 @@ static void pfToquePreparar(void) {
   float maximo = fmaxf(0, ultimo.y + ultimo.h + pfScroll - PF_CONTEUDO_H);
   toquerol_vincular(&pfToque, (GfxRect){PF_X, topo, PF_W, PF_CONTEUDO_H - topo},
                     gfx_escala(), 0, maximo, 1, &pfScroll);
-  if (!pfToque.livre) {
+  if (!toquerol_livre(&pfToque)) {
     GfxRect r = modo == PF_DUELO ? (dLinha ? rCartazes() : rDuelo(0)) : rCartao(secao);
     if (r.y < topo) pfScroll -= topo - r.y;
     else if (r.y + r.h > PF_CONTEUDO_H) pfScroll += r.y + r.h - PF_CONTEUDO_H;

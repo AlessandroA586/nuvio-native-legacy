@@ -23,6 +23,8 @@ extern float nv_layout_h;
 // TV starts with the original 1920x1080 canvas. Mobile preserves the physical
 // aspect ratio, with a virtual short edge of 1080. Changing mode reuses the
 // last valid drawable size, including when Android does not emit a resize.
+// TV=0 and Mobile=1 are retained; all other choices follow device detection.
+int layout_modo_resolver(int preferencia, int automaticoMobile);
 void layout_tela_definir(int width, int height);
 void layout_modo_definir(int mobile);
 int layout_modo_mobile(void);

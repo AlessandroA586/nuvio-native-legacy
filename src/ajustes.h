@@ -369,6 +369,7 @@ void  ajustes_ui_grafico_exemplo(float x, float y, float w, float h);
 int   ajustes_relogio_cabe(void);
 int   ajustes_relogio_navegavel(void);
 int   ajustes_pediu_relogio(void);
+int   ajustes_edicao_ativa(void);
 // A FAIXA QUE A RAIL FIXA RESERVA na borda esquerda, em px de tela: com ela
 // presa, a borda da pilula de icones do menu (Moderna 136, Padrao 88, vezes o
 // Tamanho da interface) + 64 de vao - os 104 do recuo do conteudo; 0 recolhida

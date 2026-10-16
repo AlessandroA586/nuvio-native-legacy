@@ -235,7 +235,7 @@ static void fileiraBotoes(const AoVivoOsd *o, float y, float a) {
       total += w + (i + 1 < o->nBotoes ? 12 : 0);
     }
     float max = fmaxf(0, total - faixa.w);
-    if (!toqueLista.livre) {
+    if (!toquerol_livre(&toqueLista)) {
       if (fx < toqueRol) toqueRol = fx;
       if (fx + fw > toqueRol + faixa.w) toqueRol = fx + fw - faixa.w;
     }

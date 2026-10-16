@@ -1061,7 +1061,7 @@ void legendasui_corpo(GfxRect c, float a) {
   y += LU_TIT_H + 14.0f;
 #ifdef NV_TOUCH_UI
   if (telefoneui_ativo()) {
-    if (!toqueLegendas.livre) {
+    if (!toquerol_livre(&toqueLegendas)) {
       ajustarRolagem(vis);
       toqueLegendasOffset = rolagem * (LU_LN_H + LU_LN_VAO);
     }

@@ -222,7 +222,7 @@ static int toqueSpotRolar(const PonteiroRolagem *e) {
     if (toqueNoTeclado) { okPress = okLongo = 0; return 1; }
   } else if (toqueNoTeclado) return toquerol_evento(&toqueTeclado, e);
   int r = toquerol_evento(&toqueSpot, e);
-  if (toqueSpot.livre) { scrollAlvo = scrollY; velY = 0.0f; okPress = okLongo = 0; }
+  if (toquerol_livre(&toqueSpot)) { scrollAlvo = scrollY; velY = 0.0f; okPress = okLongo = 0; }
   return r;
 }
 #endif
@@ -1310,7 +1310,7 @@ void spot_evento(const SDL_Event *e) {
   if (!aberto) return;
 #ifdef NV_TOUCH_UI
   if (toquerol_navegacao(e)) toquerol_limpar(&toqueTeclado);
-  if (toquerol_navegacao(e) && toqueSpot.livre) {
+  if (toquerol_navegacao(e) && toquerol_livre(&toqueSpot)) {
     for (int i = 0; i < nLin; i++)
       if (focavel(lin[i].tipo) && lin[i].y + lin[i].h > scrollY) { focoL = i; painel = P_LISTA; break; }
     toquerol_limpar(&toqueSpot);
@@ -1496,7 +1496,7 @@ void spot_atualizar(float dt, Uint32 agora) {
 #ifdef NV_TOUCH_UI
   if (spTelefone() && kbAberto) {
     float maximo = fmaxf(0.0f, spTeclasH() - spTecladoVisivel());
-    if (!toqueTeclado.livre && painel == P_TECLADO) {
+    if (!toquerol_livre(&toqueTeclado) && painel == P_TECLADO) {
       float top = kbF * SP_KB_PASSO, bottom = top + SP_TECLA;
       if (top < kbRol) kbRol = top;
       if (bottom > kbRol + spTecladoVisivel()) kbRol = bottom - spTecladoVisivel();
@@ -1525,7 +1525,7 @@ void spot_atualizar(float dt, Uint32 agora) {
   // Rolagem: so o necessario para a linha focada caber (com o cabecalho do
   // grupo dela visivel, quando ele e a linha de cima).
 #ifdef NV_TOUCH_UI
-  if (toqueSpot.livre) { scrollAlvo = scrollY; velY = 0.0f; }
+  if (toquerol_livre(&toqueSpot)) { scrollAlvo = scrollY; velY = 0.0f; }
   else
 #endif
   if (painel == P_LISTA && focoL >= 0) {
@@ -1536,7 +1536,7 @@ void spot_atualizar(float dt, Uint32 agora) {
   } else if (painel != P_LISTA) scrollAlvo = 0.0f;
   if (scrollAlvo < 0.0f) scrollAlvo = 0.0f;
 #ifdef NV_TOUCH_UI
-  if (!toqueSpot.livre)
+  if (!toquerol_livre(&toqueSpot))
 #endif
   {
     scrollY = anim_mola2(&velY, scrollY, scrollAlvo, dt, NV_MOLA2_SCROLL);
@@ -1962,11 +1962,12 @@ static void desenhaLinha(int i, float x, float y, float a) {
   }
   if (ponteiro_ativo()) {
 #ifdef NV_TOUCH_UI
+    if (layout_modo_mobile())
     ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, toqueSpot.regiao.y,
                        toqueSpot.regiao.y + toqueSpot.regiao.h, focarLinha, NULL, i, 0);
-#else
-    ponteiro_alvo(r.x, r.y, r.w, r.h, focarLinha, NULL, i, 0);
+    else
 #endif
+    ponteiro_alvo(r.x, r.y, r.w, r.h, focarLinha, NULL, i, 0);
   }
   // Foco: SUPERFICIE UM DEGRAU MAIS CLARA (Glass UI, a .row.foco do mockup):
   // branco a 12 % no vidro, cinza opaco no solido, raio 22. Sem contorno e sem

@@ -496,7 +496,7 @@ static void toqueManchetesReiniciar(void) {
   if (toqueAgAtiva == &toqueManchetes) toqueAgAtiva = NULL;
 }
 static int toqueAgendaRolar(const PonteiroRolagem *e) {
-  if (!layout_modo_mobile()) return 0;
+  if (!agColunaUnica()) return 0;
   if (e->fase == PONT_ROL_INICIO) {
     toqueAgAtiva = NULL;
     ToqueRolagem *v[2]; int n = 0;
@@ -764,7 +764,30 @@ static float alturaDoc(void) {
   return yDe(n - 1) + agLinhaH();
 }
 
+// A troca de interface descarta a rolagem livre e as medidas da tela anterior.
+static void agInterfaceAtualizar(void) {
+#ifdef NV_TOUCH_UI
+  static int modoAnterior = -1;
+  int mobile = layout_modo_mobile();
+  if (modoAnterior == mobile) return;
+  modoAnterior = mobile;
+  memset(&toqueAgenda, 0, sizeof toqueAgenda);
+  memset(&toqueNoticia, 0, sizeof toqueNoticia);
+  memset(&toqueCalendario, 0, sizeof toqueCalendario);
+  memset(&toqueManchetes, 0, sizeof toqueManchetes);
+  memset(&toqueModal, 0, sizeof toqueModal);
+  toqueAgAtiva = NULL;
+  toqueCalOffset = toqueManchetesOffset = toqueModalOffset = 0.0f;
+  toqueManchetesChave = 0;
+  scrollY = velY = 0.0f;
+  notRol = notRolAlvo = notRolMax = notVel = 0.0f;
+  notH = escModal = 0.0f;
+  calIniFixo = -1;
+#endif
+}
+
 int agendaui_iniciar(void) {
+  agInterfaceAtualizar();
   int i;
   sair = 0; pediuRelogio = 0;
   foco = 0;
@@ -968,15 +991,16 @@ void agendaui_teste_foco(int *linha, int *cabecalho, int *modal, int *modalFoco,
 
 void agendaui_evento(const SDL_Event *e) {
   pediuRelogio = 0;
+  agInterfaceAtualizar();
 #ifdef NV_TOUCH_UI
-  if (toquerol_navegacao(e)) {
-    if (toqueAgenda.livre) {
+  if (agColunaUnica() && toquerol_navegacao(e)) {
+    if (toquerol_livre(&toqueAgenda)) {
       for (int i = 0; i < agenda_n() && i < AG_MAX; i++)
         if (yDe(i) + agLinhaH() > scrollY) { foco = i; break; }
     }
-    if (toqueCalendario.livre && !agColunaUnica()) calEvento = (int)(toqueCalOffset / 78.0f);
-    if (toqueNoticia.livre) notRolAlvo = notRol;
-    if (ctxAberto == 2 && toqueManchetes.livre) {
+    if (toquerol_livre(&toqueCalendario) && !agColunaUnica()) calEvento = (int)(toqueCalOffset / 78.0f);
+    if (toquerol_livre(&toqueNoticia)) notRolAlvo = notRol;
+    if (ctxAberto == 2 && toquerol_livre(&toqueManchetes)) {
       const AgItem *it = agenda_lista(ctxItem);
       int nn = noticias_n(it ? it->imdb : "");
       if (nn > 0) notFoco = toqueMancheteIndice(toqueManchetesOffset, nn);
@@ -1176,6 +1200,7 @@ const char *agendaui_pediu_abrir(void) {
 int agendaui_menu_aberto(void) { return ctxAberto != 0; }
 
 void agendaui_atualizar(float dt, Uint32 agora) {
+  agInterfaceAtualizar();
   int i, n;
   float alvoY, topo, base, y, h;
   (void)agora;
@@ -1208,7 +1233,7 @@ void agendaui_atualizar(float dt, Uint32 agora) {
   if (notRolAlvo > notRolMax) notRolAlvo = notRolMax;
   if (notRolAlvo < 0.0f) notRolAlvo = 0.0f;
 #ifdef NV_TOUCH_UI
-  if (toqueNoticia.livre) { notRolAlvo = notRol; notVel = 0.0f; }
+  if (agColunaUnica() && toquerol_livre(&toqueNoticia)) { notRolAlvo = notRol; notVel = 0.0f; }
   else
 #endif
     notRol = anim_mola2_reduzida(&notVel, notRol, notRolAlvo, dt, NV_MOLA2_SCROLL, reduz);
@@ -1249,7 +1274,7 @@ void agendaui_atualizar(float dt, Uint32 agora) {
     arteT = reduz ? 1.0f : arteT + dt * 5.0f;
     if (arteT > 1.0f) arteT = 1.0f; }
 #ifdef NV_TOUCH_UI
-  if (!toqueAgenda.livre)
+  if (!agColunaUnica() || !toquerol_livre(&toqueAgenda))
 #endif
     scrollY = anim_mola2_reduzida(&velY, scrollY, alvoY, dt, NV_MOLA2_SCROLL, reduz);
 }
@@ -1890,9 +1915,11 @@ static void desenhaLista(const AgC1 *L) {
   int n = agenda_n(), i, semData = 0;
   float top;
 #ifdef NV_TOUCH_UI
-  toquerol_vincular(&toqueAgenda, (GfxRect){L->pnX, L->lsY, L->pnW, L->lsH}, gfx_escala(),
-                   0.0f, alturaDoc() - L->lsH, 1, &scrollY);
-  ponteiro_rolagem(toqueAgendaRolar);
+  if (agColunaUnica()) {
+    toquerol_vincular(&toqueAgenda, (GfxRect){L->pnX, L->lsY, L->pnW, L->lsH}, gfx_escala(),
+                     0.0f, alturaDoc() - L->lsH, 1, &scrollY);
+    ponteiro_rolagem(toqueAgendaRolar);
+  }
 #endif
   top = L->lsY - scrollY;
   for (i = 0; i < n; i++) if (grupo(i) == 3) semData++;
@@ -2225,7 +2252,7 @@ static void desenhaModalSerie(const AgItem *it, float a) {
 #ifdef NV_TOUCH_UI
   GfxRect corpo = agModalCorpo(r);
   if (telefone) {
-    if (!toqueModal.livre) {
+    if (!toquerol_livre(&toqueModal)) {
       float fy = ctxFoco * AGC_LINHA;
       if (fy < toqueModalOffset) toqueModalOffset = fy;
       if (fy + AGC_LINHA > toqueModalOffset + corpo.h) toqueModalOffset = fy + AGC_LINHA - corpo.h;
@@ -2311,7 +2338,7 @@ static float toqueManchetePreparar(const AgItem *it, int n, GfxRect regiao, int 
   if (chave != toqueManchetesChave) {
     toqueManchetesReiniciar(); toqueManchetesChave = chave;
   }
-  if (!toqueManchetes.livre) toqueManchetesOffset = toqueMancheteY(ini);
+  if (!toquerol_livre(&toqueManchetes)) toqueManchetesOffset = toqueMancheteY(ini);
   if (ativa) {
     toquerol_vincular(&toqueManchetes, regiao, gfx_escala(), 0.0f,
                      toqueMancheteY(n) - regiao.h, 1, &toqueManchetesOffset);
@@ -2352,8 +2379,10 @@ static void desenhaManchetes(const AgItem *it, float a) {
     while (ini > 0 && soma + (float)alturaManchete(0) <= yFim - y) { ini--; soma += (float)alturaManchete(0); }
 #ifdef NV_TOUCH_UI
     float yTopo = y;
-    y -= toqueManchetePreparar(it, n, (GfxRect){r.x, yTopo, r.w, yFim - yTopo}, ini, a > 0.99f && ctxAberto == 2);
-    ini = 0;
+    if (agColunaUnica()) {
+      y -= toqueManchetePreparar(it, n, (GfxRect){r.x, yTopo, r.w, yFim - yTopo}, ini, a > 0.99f && ctxAberto == 2);
+      ini = 0;
+    }
     gfx_recorte(r.x, yTopo, r.w, yFim - yTopo);
 #else
     gfx_recorte(r.x, y, r.w, yFim - y);
@@ -2365,20 +2394,21 @@ static void desenhaManchetes(const AgItem *it, float a) {
       // SO LINHA INTEIRA: a que nao cabe ate o pe do painel fica para a
       // rolagem, em vez de sair cortada no meio das letras.
 #ifdef NV_TOUCH_UI
-      if (y + lh < yTopo) { y += lh; continue; }
-#else
-      if (y + lh - 12.0f > yFim) break;
+      if (agColunaUnica()) {
+        if (y + lh < yTopo) { y += lh; continue; }
+      } else
 #endif
+      if (y + lh - 12.0f > yFim) break;
       GfxRect lr = { r.x + 28.0f, y, r.w - 56.0f, lh - 12.0f };
       char sub[160], quando[48];
       float tx = lr.x + 24.0f, tw = lr.w - 48.0f, ty;
       if (!nt) { y += lh; continue; }
       if (a > 0.99f && ctxAberto == 2) {
 #ifdef NV_TOUCH_UI
-        ponteiro_alvo_faixa(lr.x, lr.y, lr.w, lr.h, yTopo, yFim, ponteiroManchete, NULL, i, 0);
-#else
-        ponteiro_alvo(lr.x, lr.y, lr.w, lr.h, ponteiroManchete, NULL, i, 0);
+        if (agColunaUnica()) ponteiro_alvo_faixa(lr.x, lr.y, lr.w, lr.h, yTopo, yFim, ponteiroManchete, NULL, i, 0);
+        else
 #endif
+          ponteiro_alvo(lr.x, lr.y, lr.w, lr.h, ponteiroManchete, NULL, i, 0);
       }
       noticias_quando(nt, agora, quando, sizeof quando);
       if (quando[0] && nt->fonte[0]) snprintf(sub, sizeof sub, "%s \xc2\xb7 %s", nt->fonte, quando);
@@ -2500,9 +2530,11 @@ static void desenhaNoticia(const AgItem *it, float a) {
   yTopo = r.y + 48.0f;
   yFim = r.y + r.h - 48.0f;
 #ifdef NV_TOUCH_UI
-  toquerol_vincular(&toqueNoticia, (GfxRect){xR, yTopo, wR, yFim - yTopo}, gfx_escala(),
-                   0.0f, notRolMax, 1, &notRol);
-  ponteiro_rolagem(toqueAgendaRolar);
+  if (agColunaUnica()) {
+    toquerol_vincular(&toqueNoticia, (GfxRect){xR, yTopo, wR, yFim - yTopo}, gfx_escala(),
+                     0.0f, notRolMax, 1, &notRol);
+    ponteiro_rolagem(toqueAgendaRolar);
+  }
 #endif
   noticias_quando(nt, (long long)time(NULL), quando, sizeof quando);
   if (nx && nx->url[0]) { leitura_url_qr(nx->url, qrUrl, sizeof qrUrl); leitura_host(nx->url, host, sizeof host); }
@@ -2973,7 +3005,7 @@ static void desenhaCalendarioMensal(void) {
   GfxRect corpo = {M.x, M.semanaY, M.gradeW, NV_TELA_H - P(44) - M.semanaY};
   if (agColunaUnica()) {
     float max = M.painel.y + M.painel.h - corpo.y - corpo.h;
-    if (!toqueCalendario.livre) {
+    if (!toquerol_livre(&toqueCalendario)) {
       if (!calPainel) {
         float topoDia = M.gradeY + (calCelula / 7) * (M.celH + M.espacY);
         if (topoDia - toqueCalOffset < corpo.y) toqueCalOffset = topoDia - corpo.y;
@@ -3098,20 +3130,8 @@ static void desenhaCalendarioMensal(void) {
     if (inicio > nTotal - maxLinhas) inicio = nTotal - maxLinhas;
     if (inicio < 0) inicio = 0;
 #ifdef NV_TOUCH_UI
-    float areaH = eventos.h;
     if (agColunaUnica()) {
       inicio = 0; maxLinhas = nTotal; passo = P(agTelefonePx(156));
-    } else {
-    if (!toqueCalendario.livre) toqueCalOffset = inicio * passo;
-    toquerol_vincular(&toqueCalendario, eventos, gfx_escala(),
-                     0.0f, nTotal * passo - areaH, 1, &toqueCalOffset);
-    ponteiro_rolagem(toqueAgendaRolar);
-    if (toqueCalendario.livre) {
-      inicio = (int)(toqueCalOffset / passo);
-      y -= toqueCalOffset - inicio * passo;
-      maxLinhas++;
-    }
-    gfx_recorte(painel.x, painel.y + 104.0f * u, painel.w, areaH);
     }
 #endif
     for (linha = inicio; linha < nTotal && linha < inicio + maxLinhas; linha++, y += passo) {
@@ -3119,19 +3139,20 @@ static void desenhaCalendarioMensal(void) {
       if (agColunaUnica()) r.h = P(agTelefonePx(142));
       int emFoco = calPainel && linha == calEvento;
 #ifdef NV_TOUCH_UI
-      if (agColunaUnica() && (r.y + r.h <= corpo.y || r.y >= corpo.y + corpo.h)) continue;
-      if (!ctxAberto) ponteiro_alvo_faixa(r.x, r.y, r.w, r.h,
-                        agColunaUnica() ? corpo.y : painel.y + 104.0f * u,
-                        agColunaUnica() ? corpo.y + corpo.h : painel.y + painel.h - 10.0f * u,
-                        ponteiroEvento, NULL, linha, inicio);
-#else
-      if (r.y + r.h > painel.y + painel.h - 4.0f) break;
-      if (!ctxAberto) ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroEvento, NULL, linha, inicio);
+      if (agColunaUnica()) {
+        if (r.y + r.h <= corpo.y || r.y >= corpo.y + corpo.h) continue;
+        if (!ctxAberto) ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, corpo.y, corpo.y + corpo.h,
+                                          ponteiroEvento, NULL, linha, inicio);
+      } else
 #endif
+      {
+        if (r.y + r.h > painel.y + painel.h - 4.0f) break;
+        if (!ctxAberto) ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroEvento, NULL, linha, inicio);
+      }
       desenhaEventoCalendario(r, agenda_lista(total[linha]), emFoco);
     }
 #ifdef NV_TOUCH_UI
-    gfx_sem_recorte();
+    if (agColunaUnica()) gfx_sem_recorte();
 #endif
   }
 }
@@ -3202,6 +3223,7 @@ static void desenharNaEscala(Uint32 agora) {
 // O desenho publico liga a escala (piso de 120%) e o layout mede pela tela
 // virtual — o mesmo modulo que mede e o que liga, como pede escala.h.
 void agendaui_desenhar(Uint32 agora) {
+  agInterfaceAtualizar();
 #ifdef NV_TOUCH_UI
   toqueAgenda.offset = toqueNoticia.offset = toqueCalendario.offset = toqueManchetes.offset = toqueModal.offset = NULL;
 #endif
