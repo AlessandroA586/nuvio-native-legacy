@@ -379,6 +379,22 @@ int main(int argc, char **argv) {
     quadros(60);
     salvar("osd");
   }
+  // O OSD sobre video 2.39:1 de verdade (#fpsplayer, S90D): furo alfa 0 com as
+  // faixas pretas em cima e embaixo, como o .tpk desenha.
+  if (quer(argc, argv, "osd-furo")) {
+    VideoSimulacao v;
+    memset(&v, 0, sizeof v);
+    v.largura = 3840; v.altura = 1606; v.pronto = 1;
+    abrir(&filme); video_simular(&v);
+    player_shot_video(1); player_shot_furo_real();
+    quadros(10);
+    player_shot_estado(relogio, 4360.0f, 9420.0f, 1, 0, 0, 0);
+    quadros(60);
+    { int i;   // tocando: a barra de progresso anda todo quadro
+      for (i = 0; i < 60; i++) { player_shot_estado(relogio, 4361.0f + i / 60.0f, 9420.0f, 1, 0, 0, 0); quadros(1); } }
+    salvar("osd-furo");
+    player_shot_video(0); simular(0, 0, "", 0, 0);
+  }
   // UI EM HDR (#205): o mesmo OSD com o video SDR e com Dolby Vision.
   if (quer(argc, argv, "osd-sdr") || quer(argc, argv, "osd-hdr")) {
     int k;

@@ -333,6 +333,7 @@ const char *player_shot_toast_texto(Uint32 agora);
 void player_shot_carregando(int sim);
 void player_shot_buscando(int sim);
 void player_shot_video(int sim);
+void player_shot_furo_real(void);
 // Canal: a grade, o numero, quanto atras do ao vivo, o botao em foco e o
 // painel de Informacoes.
 void player_shot_favorito(int f);   // 1 = botao Favorito na fileira, 2 = e o canal nos favoritos
