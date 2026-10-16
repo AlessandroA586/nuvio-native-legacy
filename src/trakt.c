@@ -1113,6 +1113,27 @@ int trakt_episodios_marcar_destino(const TraktDestino *destino, const char *imdb
   return ok;
 }
 
+int trakt_titulo_marcar_destino(const TraktDestino *d, const char *imdb, const char *tipo, int visto) {
+  const char *cab[4];
+  char aut[200], chave[140], corpo[200], url[80], id[24];
+  int st = 0;
+  if (!d || !imdb || imdb[0] != 't') return 0;
+  size_t n = strcspn(imdb, ":");
+  if (n >= sizeof id) return 0;
+  memcpy(id, imdb, n); id[n] = 0;
+  HistoricoPedido p = { .sessao = d->sessao, .mapa = d->mapa, .credencial = d->credencial };
+  snprintf(p.aut, sizeof p.aut, "%s", d->aut);
+  snprintf(p.chave, sizeof p.chave, "%s", d->chave);
+  if (!cabecalhosCongelados(p, cab, aut, sizeof aut, chave, sizeof chave)) return 0;
+  snprintf(corpo, sizeof corpo, "{\"%s\":[{\"ids\":{\"imdb\":\"%s\"}}]}",
+           tipo && !strcmp(tipo, "series") ? "shows" : "movies", id);
+  snprintf(url, sizeof url, "https://api.trakt.tv/sync/history%s", visto ? "" : "/remove");
+  char *r = rede_postar_st(url, 20, cab, corpo, &st);
+  int ok = r && st >= 200 && st < 300;
+  free(r);
+  return ok;
+}
+
 int trakt_destino_capturar(TraktDestino *d) {
   if (!d) return 0;
   HistoricoPedido p = historicoPedido();

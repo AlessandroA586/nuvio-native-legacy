@@ -3951,7 +3951,6 @@ static void marcarAssistidoSeSolicitado(void) {
     }
     cat_salvar_progresso(i, visto ? 0.0 : dur, dur);
     if (c->imdb[0]) {
-      trakt_assistido(c->imdb, !visto);
       // SIMKL E CONTA NUVIO tambem (visto.c), cada um se vinculado. O Trakt
       // segue pela linha acima, que nao mudou; sem ele a unica marca era o
       // progresso de 100% (que a conta ja entende como concluido), e o

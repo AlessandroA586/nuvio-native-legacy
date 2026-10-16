@@ -3,6 +3,8 @@
 long long contapend_agora_ms(void) { return 0; }
 int  contapend_aplicar_local(void) { return 0; }
 int  contapend_enviar(void) { return 0; }
+void visto_iniciar(void) {}
+int  contapend_reenviar(void) { return 0; }
 void contapend_esquecer(void) {}
 int  contapend_pendentes(void) { return 0; }
 void contapend_podar(long long desdeMs) { (void)desdeMs; }

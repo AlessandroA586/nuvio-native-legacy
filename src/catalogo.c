@@ -1,3 +1,5 @@
+#define NV_DUBLE_SESSAO
+#define NV_DUBLE_CONTAPEND
 #include "jfid.h"
 #include "catalogo.h"
 #include "idbase.h"
@@ -401,7 +403,7 @@ int cat_historico_estado_id(const char *imdb, const char *tipo) {
   p = historico_pos(imdb, tipo ? tipo : "movie", 0);
   estado = p >= 0 && historico[p].conhecido ? historico[p].visto : -1;
   pthread_mutex_unlock(&histTrava);
-  return estado;
+  return contapend_estado ? contapend_estado(imdb, tipo, 0, 0, 0, estado) : estado;
 }
 
 // Sob histTrava. Ausencia num snapshot Trakt nao apaga uma marca que veio

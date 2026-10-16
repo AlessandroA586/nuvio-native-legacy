@@ -41,6 +41,7 @@
 #include <time.h>
 
 // Optional imports belong to consumers: public declarations keep producers strong.
+extern int contapend_reenviar(void) NV_PERFIL_OPCIONAL;
 // Isolated legacy fixtures may omit this boundary: missing means DEFER,
 // never a fabricated empty/complete account list. Complete apps link addons.c.
 extern int addons_copiar_identidades(AddonIdentidade *, int, unsigned, int) NV_PERFIL_OPCIONAL;
@@ -3356,7 +3357,10 @@ static int contaASeguir(CatItem *lista, int n, int max, int comOutraFonte) {
   return n;
 }
 
+
 static int montarContinuar(CatItem *saida, int max) {
+  // Discovery also runs for tracker-only users, without Nuvio cloud sync.
+  if (contapend_reenviar) contapend_reenviar();
   // static: dois lotes de 40 CatItem passam de 1,3 MB e montar() roda uma vez,
   // num fio so — a mesma razao do vetor de Decl mais abaixo.
   static CatItem doTrakt[CONT_MAX], daConta[CONT_MAX];

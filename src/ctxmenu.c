@@ -783,7 +783,6 @@ static void desfazerAssistido(const void *p) {
   int volta = !c->intencao;
   if (volta) { printf("[visto] marcado por desfazer-menu-manual pos=0 dur=0 assistido=0s id=%s\n", c->ci.imdb); fflush(stdout); }
   visto_titulo(c->ci.imdb, c->ci.tipo, c->ci.temporadas, c->ci.nTemporadas, volta, visto_destinos());
-  if (trakt_ativo()) trakt_assistido_tipo(c->ci.imdb, c->ci.tipo, volta);
   cat_historico_definir_id(c->ci.imdb, c->ci.tipo, volta);
   desc_remontar_fileiras();
 }
@@ -895,12 +894,7 @@ static void iniciarAssistido(int atual, const CatItem *ci, int soMarcar) {
       // elas apagaria a serie da biblioteca de la (ver simkl.c).
       visto_titulo(ci->imdb, ci->tipo, ci->temporadas, ci->nTemporadas, intencao,
                    visto_destinos());
-      if (trakt_ativo()) {
-        // O caminho do Trakt NAO MUDOU: mesmo pedido, mesma espera, espelho so
-        // depois do 2xx em ctx_atualizar.
-        if (!trakt_assistido_tipo(ci->imdb, ci->tipo, intencao))
-          estadoOperacao = CTX_FALHA;
-      } else {
+      { // Local intent is durable; failed destinations retry in sync.
         // SEM TRAKT NAO HA RESPOSTA A ESPERAR (o mesmo raciocinio do "+" na
         // Lista do Nuvio, acima): o local e a verdade desta TV, aplicado agora,
         // e a conta o devolve no proximo pull (sync.c aplica os vistos da
