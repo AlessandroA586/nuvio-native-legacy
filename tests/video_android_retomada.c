@@ -31,6 +31,7 @@ Uint32 SDL_GetTicks(void) { return relogio; }
 SDL_mutex *SDL_CreateMutex(void) { return (SDL_mutex *)(uintptr_t)1; }
 const char *ling_audio(void) { return ""; }
 void marco(const char *s) { (void)s; }
+void tex_pressao_reproducao(int l) { (void)l; }
 void vel_log(int cent, const char *estado) { (void)cent; (void)estado; }
 
 static jobject JNICALL global(JNIEnv *e, jobject o) { (void)e; return o; }

@@ -37,6 +37,7 @@
 #include "streamfitpassiva.h"
 #include "audsync.h"
 #include "cacheboost.h"
+#include "tex_cache.h"
 #include "velocidade.h"
 #include <SDL2/SDL.h>
 #include <jni.h>
@@ -775,6 +776,11 @@ static int abrirSessao(int inicioMs, int fracao) {
   // Every Kotlin open starts at 100%: a player session re-applies its volume
   // (source change, reconnection) after the open in the same queue.
   ganhoEnviado = CB_VOL_NORMAL;
+  // Numero medido na TV TCL de 2,4 GB: 217 MB de textura + 96 MB de buffer +
+  // paralelo/preparo levaram o app a ~575 MB de PSS e o lmkd matou. So o
+  // player em tela cheia esconde a arte da home; trailers (home/detalhe) nao.
+  // Ligado so depois de abrir: falha no meio nao deixa o teto preso.
+  tex_pressao_reproducao(playerSessao);
   if (playerSessao && cacheboost_volume() != CB_VOL_NORMAL) cacheboost_backend_ganho(cacheboost_volume());
   return 1;
 }
@@ -927,6 +933,7 @@ void video_parar(void) {
   }
   ativo = prontoLoad = primeiroQuadro = tocando = 0; superficieEstavel = 0;
   pausaPedida = pausaVista = 0;
+  tex_pressao_reproducao(0);
 }
 void video_pausar(int p) {
   pausaVista = 0; pausaPedida = p ? 1 : 0;

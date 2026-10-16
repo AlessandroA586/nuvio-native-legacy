@@ -249,6 +249,10 @@ int tex_teto_ram_mb(void);
 // `tex_pressao_pct` e a tabela nivel -> % do teto que fica (100 = sem efeito).
 void tex_pressao_memoria(int nivel);
 int  tex_pressao_pct(int nivel);
+// Android: video aberto derruba o teto para tex_pressao_play_pct()%% pelo tempo
+// que a sessao durar (trim do sistema expira em 30 s; o video nao). 0 fecha.
+void tex_pressao_reproducao(int ligada);
+int  tex_pressao_play_pct(void);
 // O valor que "Automatico" significa: o perfil aprovado pelo diagnostico, ou
 // o padrao do aparelho com 0. Travado pelo teto da RAM; nao passa por cima de
 // Ajustes, de NV_TEX_MB_FIXO nem de NUVIO_TEX_MB.

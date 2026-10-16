@@ -627,6 +627,8 @@ static int pedidoObsoleto(const Item *it) {
 
 static void podar(void);
 static int pressaoAtiva(void);
+static volatile int pressaoPlay = 100;   // tex_pressao_reproducao (abaixo)
+static long orcMemTotal;                 // RAM medida (definida perto de orcamentoMB)
 
 void tex_novo_quadro(void) {
   tex_n_busca = 0;
@@ -651,7 +653,7 @@ void tex_novo_quadro(void) {
   }
   // PRESSAO DE MEMORIA (tex_pressao_memoria): o aviso chega de outro fio, que
   // nao tem contexto GL e nao pode despejar textura. Quem despeja e este quadro.
-  if (pressaoAtiva()) podar();
+  if (pressaoAtiva() || pressaoPlay < 100) podar();
   SDL_UnlockMutex(mtx);
 }
 
@@ -831,6 +833,14 @@ sai:
 #define NV_TEX_PRESSAO_MS 30000u
 static volatile int pressaoPct = 100;
 static volatile Uint32 pressaoAte;
+// REPRODUCAO NO ANDROID: o trim (abaixo) expira em 30 s porque onTrimMemory
+// avisa na transicao; o video toca por horas e a arte da home fica residente
+// o tempo todo. Com um teto persistente de tela-cheia, gpu-cache + player
+// buffer + pedacos paralelos + preload do proximo titulo estouraram uma TV
+// de 2,4 GB (PSS ~575 MB, lmkd matou o app). Durante a reproducao o teto
+// efetivo fica nesta fracao, ate a sessao de video fechar. So o Android
+// acorda isto; webOS/Tizen nunca chamam tex_pressao_reproducao.
+// `pressaoPlay` foi declarado junto das forward declarations (a poda a le).
 static int pressaoAtiva(void) {
   if (pressaoPct >= 100) return 0;
   if ((int)(SDL_GetTicks() - pressaoAte) >= 0) {
@@ -842,7 +852,32 @@ static int pressaoAtiva(void) {
   return 1;
 }
 static long limiteBytes(void) {
-  return pressaoAtiva() ? orcamento / 100 * pressaoPct : orcamento;
+  long lim = pressaoAtiva() ? orcamento / 100 * pressaoPct : orcamento;
+  if (pressaoPlay < 100 && orcamento / 100 * pressaoPlay < lim)
+    lim = orcamento / 100 * pressaoPlay;
+  return lim;
+}
+// % do teto que fica enquanto um video esta aberto (reproduzindo ou nao:
+// fechar a sessao, nao pausar, e o que libera). Numero pela RAM medida na
+// TV de 2,4 GB: 217 MB de textura + ~160 MB de player/preparo derrubaram o
+// app; com <= 96 MB de textura a soma cabe. A home redecodifica ao voltar —
+// o cache de disco continua la.
+int tex_pressao_play_pct(void) {
+#ifdef NV_ANDROID
+  if (!orcMemTotal) return 50;
+  if (orcMemTotal < 3000) return 40;
+  return 75;
+#else
+  return 100;
+#endif
+}
+void tex_pressao_reproducao(int ligada) {
+  int pct = ligada ? tex_pressao_play_pct() : 100;
+  if (pct == pressaoPlay) return;
+  pressaoPlay = pct;
+  printf("[tex] reproducao %s: teto a %d%% enquanto o video durar\n",
+         ligada ? "aberta" : "fechada", pct);
+  fflush(stdout);
 }
 // Niveis de ComponentCallbacks2.onTrimMemory -> fracao do teto que fica.
 // 5/10/15 sao com o app em primeiro plano (MODERATE/LOW/CRITICAL); 20 e a UI
@@ -976,7 +1011,7 @@ void tex_qualidade(int nivel) {
 static float folgaDaQualidade(void) {
   return qualidadeImg == 0 ? 1.00f : qualidadeImg == 2 ? 1.60f : NV_TEX_FOLGA;
 }
-static long orcMemTotal;   // definido mais abaixo (orcamento pela RAM)
+// RAM total medida no arranque: declarada la em cima (pressaoPlay usa).
 // TETO DO HEROI DO PERFIL (tex_definir_teto_heroi): 0 = sem teto proprio, so a
 // regra de qualidade abaixo. E um TETO, nunca um piso: 1920 aqui nao sobe o
 // Tizen acima de 1280 sem a qualidade Alta, e a qualidade Baixa continua 1280.
