@@ -37,10 +37,9 @@ void cwo_corte(int principal, int nFut, int max, int *nPrincipal, int *nFuturos)
 }
 
 // --- Datas de estreia --------------------------------------------------------
-// 96: a fileira tem ate 12 itens por fonte e o Trakt guarda ate 64 "a seguir"
-// (TK_ULT_MAX). Cheia, a mais velha e sobrescrita em roda — o que importa e a
-// rodada atual.
-#define CWO_EST_MAX 96
+// 200: a fileira tem ate 40 itens por fonte (3 fontes = 120) e o Trakt guarda
+// ate 64 "a seguir" (TK_ULT_MAX). Cheia, a mais velha e sobrescrita em roda.
+#define CWO_EST_MAX 200
 static struct { char id[40]; long long ms; } est[CWO_EST_MAX];
 static int nEst, proxEst;
 static pthread_mutex_t estTrava = PTHREAD_MUTEX_INITIALIZER;
@@ -70,7 +69,12 @@ long long cwo_estreia(const char *id) {
 }
 
 // --- Fileira de futuros ------------------------------------------------------
-#define CWO_FUT_MAX 36
+// Teto da fileira (CONT_MAX / CW_TETO). cwo_corte com 0 pausados devolve ate
+// max futuros; a tabela tem de caber todos, senão os ultimos ficam em
+// "Continuar assistindo" e nunca viram "Proximos episodios".
+#define CWO_FUT_MAX CWO_FILEIRA_MAX
+_Static_assert(CWO_FUT_MAX >= 40 && CWO_FUT_MAX == CWO_FILEIRA_MAX,
+               "futuros publicados cabem na fileira");
 static char fut[CWO_FUT_MAX][64];
 static int nFut;
 static pthread_mutex_t futTrava = PTHREAD_MUTEX_INITIALIZER;

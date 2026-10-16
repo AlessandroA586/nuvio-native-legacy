@@ -1583,7 +1583,7 @@ static int lerCatalogoHome(const char *base, const char *tipo, const char *id,
 // 512 nao e "o numero certo" — nao ha um; e so mais folga antes de
 // o mesmo corte voltar a acontecer com addons de sobra.
 #define DECL_MAX 512
-// Quantos itens cada fileira mostra. A home desenha no maximo MAX_CARDS (12) e
+// Quantos itens cada fileira mostra. A home desenha no maximo MAX_CARDS (41) e
 // buscar mais e trafego que ninguem ve.
 #define MAX_POR_FILEIRA DESC_ITENS_POR_FILEIRA   // ver descoberta.h (#163)
 
@@ -3011,7 +3011,9 @@ static int continuarLocal(CatItem *saida, int max) {
 // 12 e nao 8 (19/09, issue #66): com os itens "a seguir" do Trakt entrando
 // alem dos pausados, 8 lugares eram todos dos pausados e o "a seguir" nunca
 // aparecia. trakt_continuar ordena por instante antes de entregar.
-#define CONT_MAX 12
+// 40 e nao 12 (issue #205): a fileira cortava em 12; o web da 300.
+// Reserva de futuros e pausados em cwo_corte seguem a proporcao de `max`.
+#define CONT_MAX CWO_FILEIRA_MAX
 
 // Os limites que o caminho local sempre teve e o do Trakt nao: os mesmos de
 // home_registrar_retorno. Abaixo de 1% nao se comecou, do Percentual assistido
@@ -3346,7 +3348,7 @@ static int contaASeguir(CatItem *lista, int n, int max, int comOutraFonte) {
 }
 
 static int montarContinuar(CatItem *saida, int max) {
-  // static: dois lotes de 12 CatItem passam de 350 KB e montar() roda uma vez,
+  // static: dois lotes de 40 CatItem passam de 1,3 MB e montar() roda uma vez,
   // num fio so — a mesma razao do vetor de Decl mais abaixo.
   static CatItem doTrakt[CONT_MAX], daConta[CONT_MAX];
   // Tres fontes: conta, Trakt e Simkl, cada uma com ate CONT_MAX.
@@ -3681,7 +3683,8 @@ static pthread_mutex_t cwFilaTrava = PTHREAD_MUTEX_INITIALIZER;
 void desc_refazer_continuar(void);
 
 static void *fioContinuar(void *u) {
-  CatItem lote[CONT_MAX];
+  // static: 40 CatItem sao ~680 KB; um fio de refazagem por vez (cwVivo).
+  static CatItem lote[CONT_MAX];
   int n;
   unsigned minhaGer;
   NvPerfilSessao sessao = u ? *(NvPerfilSessao *)u : nv_perfil_sessao_ler();
