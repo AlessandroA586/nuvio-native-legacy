@@ -847,6 +847,7 @@ static int enviarJa(void) {
 
 int contapend_reenviar(void) {
   if (!contapend_reenviar_existe()) return 0;
+  NvPerfilSessao sessao = nv_perfil_sessao_ler();
   Ent *snap;
   char usu[80];
   int i, n = 0, falhou = 0;
@@ -862,6 +863,8 @@ int contapend_reenviar(void) {
   if (!snap) return -1;
   for (i = 0; i < n; i++) {
     int bits = snap[i].destinos & (VISTO_TRAKT | VISTO_SIMKL);
+    if (!nv_perfil_sessao_travar(sessao)) { falhou = 1; break; }
+    // Keep credential capture and confirmation in the journal's profile session.
     if (snap[i].sup == 'V' && bits && snap[i].perfil == perfis_ativo()) {
       VistoPar par = { (short)snap[i].temp, (short)snap[i].ep };
       int temps[64], nt = 0;
@@ -878,6 +881,7 @@ int contapend_reenviar(void) {
       if (ok) confirmar(usu, &snap[i], 1, ok);
       if (ok != bits) falhou = 1;
     }
+    nv_perfil_sessao_destravar();
   }
   free(snap);
   return falhou ? -1 : n;

@@ -1,5 +1,8 @@
 #include "vistoep.h"
 #include "perfisessao.h"
+#include "contapend.h"
+
+extern int contapend_estado(const char *, const char *, int, int, long long, int) NV_PERFIL_OPCIONAL;
 #include "js.h"
 #include <limits.h>
 #include <math.h>
@@ -139,8 +142,9 @@ int vistoep_estado(const char *imdb, int temporada, int episodio) {
 int vistoep_fonte(const char *imdb, int temporada, int episodio, int visto,
                   long long remotoMs, VistoFonte *c) {
   int ok, juiz = 0;
-  // DESMARCAR GANHA (vistonao.h). So o "visto" e julgado: fonte dizendo "nao
-  // visto" concorda com a pessoa ou fala de episodio que ela nao tocou.
+  // Both remote states must respect persisted gestures, including restored marks.
+  if (contapend_estado)
+    visto = contapend_estado(imdb, "series", temporada, episodio, remotoMs, visto);
   if (visto && lapBarra) juiz = lapBarra(imdb, temporada, episodio, remotoMs);
   if (juiz > 0) visto = 0;
   pthread_mutex_lock(&trava);
