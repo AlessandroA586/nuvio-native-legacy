@@ -195,6 +195,19 @@ static void qrDesenhar(const char *u, float x, float y, float a) {
   gfx_tex_aspect_atual = 0.0f;
   gfx_rect((GfxRect){ x + CB_MOLDURA, y + CB_MOLDURA, CB_QR, CB_QR }, texQr, GFX_SNAP, 0, 0.0f, 0.0f, 0.0f, 0, 0, 0, a);
 }
+void celb_desenhar_qr_em(int d, GfxRect r, float alpha) {
+  if (!celb_embutido(d)) return;
+  const char *u = celular_url();
+  if (!u[0]) {
+    txt_bloco(TXT_CAPTION2, i18n("Sem rede local. Conecte a TV ao Wi-Fi e aperte OK."),
+              190, 190, 200, r.x, r.y, r.w, 26, alpha, 4);
+    return;
+  }
+  qrTextura(u);
+  if (!texQr) return;
+  gfx_tex_aspect_atual = 0;
+  gfx_rect(r, texQr, GFX_SNAP, 0, 0, 0, 0, 0, 0, 0, alpha);
+}
 static const char *FRASE_QR = "Aponte a câmera do celular. Mesma rede Wi-Fi, vale por 5 minutos.";
 static const char *msgSemQr(int est) {
   return est == CEL_FALHOU ? "Endereço bloqueado por tentativas erradas. Aperte OK para gerar outro."

@@ -295,6 +295,7 @@
   1, /* video preload and next episode buffer: Desligado, independent source setting */
   0, /* provider setup: shared legacy accounts; choice itself belongs to this profile */
   0, /* Mural tile titles (#521): Ligado, as always, local */
+  0, /* friends row: Feed (9A) */
   1, /* audio language in the automatic choice: off (V_LIGA 1), behaviour unchanged */
 #ifdef NV_ANDROID
   0, /* Baixar registro: acao local, sem preferencia gravada */

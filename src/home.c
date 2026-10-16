@@ -1404,7 +1404,16 @@ static float alturaDe(TipoFileira t) {
     case FILEIRA_DESTAQUE_QUADRADO: return NV_DESTAQUE_QUADRADO_H;
     case FILEIRA_COLECAO: return 270.0f;
     case FILEIRA_SERVICO: return 203.0f;
-    case FILEIRA_SOCIAL: return 240.0f;
+    case FILEIRA_SOCIAL:
+      if (ajustes_amigos_estilo() != 5 && amigosfil_convite()) return NV_DESTAQUE_H + 76.0f;
+      switch (ajustes_amigos_estilo()) {
+        case 0: return NV_DESTAQUE_H + 76.0f;
+        case 1: return 320.0f;
+        case 2: return 410.0f;
+        case 3: return 112.0f;
+        case 4: return 376.0f;
+        default: return 240.0f;
+      }
     case FILEIRA_RETORNO: return 178.0f;
     case FILEIRA_TOP10: return 320.0f;
     case FILEIRA_CATALOGOS: return 203.0f;
@@ -7056,7 +7065,8 @@ void home_desenhar(Uint32 agora) {
         int cb = 181 + (int)((249 - 181) * k + 0.5f);
         tl = txt_linha_corta(TXT_ROW_TITULO, rotFil, cr, cg, cb, 255,
                              homeRetratoTelefone() ? homeLarguraUtil() - 76.0f : NV_TELA_W - homeConteudoX() - 180.0f);
-        txt_desenhar(tl, homeConteudoX(), y); }
+        if (tipo != FILEIRA_SOCIAL || ajustes_amigos_estilo() != 3 || amigosfil_convite())
+          txt_desenhar(tl, homeConteudoX(), y); }
       // A FONTE (Trakt, Simkl...) NAO APARECE NA FILEIRA DE AMIGOS: a pessoa
       // quer saber quem viu e o que achou, nao de onde veio o dado. Ela fica
       // so no perfil do amigo (amigoperfil.c). Era a marca do Trakt aqui.

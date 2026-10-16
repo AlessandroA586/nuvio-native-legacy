@@ -60,5 +60,8 @@ int  amigosfil_pediu_ajustes(void);
 
 // Para os testes: em que cartao esta o foco (-1 = no rosto).
 int  amigosfil_dentro(void);
+#ifdef NV_AMIGOSFIL_TESTE
+void amigosfil_teste_conferir(int w, int h);
+#endif
 #endif
 
