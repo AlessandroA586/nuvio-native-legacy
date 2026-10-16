@@ -319,6 +319,7 @@ static void cacheSeek(void) {
   assert(AJ_BUFFER == AJ_CW_MINIMO + 1 && !strcmp(CHAVE[AJ_BUFFER], "bufferPlayerLocal") && OPCOES[AJ_BUFFER].n == 4 && valorPadrao[AJ_BUFFER] == 0 && somenteDesteAparelho(AJ_BUFFER));
   valor[AJ_CACHE_SEEK] = antes;
   valor[AJ_BUFFER] = valorPadrao[AJ_BUFFER];
+  assert(!strcmp(CHAVE[AJ_PLAYER_EXTERNO], "playerExternoLocal") && OPCOES[AJ_PLAYER_EXTERNO].n == 3 && valorPadrao[AJ_PLAYER_EXTERNO] == 0 && somenteDesteAparelho(AJ_PLAYER_EXTERNO));
   n = ajustes_buscar("cache de seek", resultados, AJ_N);
   i = indiceResultado(AJ_CACHE_SEEK, n);
   assert(i >= 0 && resultados[i].bloqueado);

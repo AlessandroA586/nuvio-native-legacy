@@ -43,6 +43,9 @@ static const Item TELA[] = {
 #if defined(NV_ANDROID) || (!defined(NV_TPK) && !defined(__EMSCRIPTEN__))
       OPC(AJ_BUFFER),   // webOS: DTS/Dolby Vision conversion read-ahead
 #endif
+#ifdef NV_ANDROID
+      OPC(AJ_PLAYER_EXTERNO),
+#endif
 #ifndef __EMSCRIPTEN__
     // .wgt: sem socket TCP/UDP no navegador, sem motor; P2P escondido (a8e7685d).
     // #205: sem os pontos de montagem USB do motor (Android), a opcao some.
