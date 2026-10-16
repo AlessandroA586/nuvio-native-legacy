@@ -5108,11 +5108,11 @@ static void *montar(void *u) {
   if (social) {
     if (social->semFio) socialLer(social);
     else while (!__atomic_load_n(&social->pronto, __ATOMIC_ACQUIRE)) {
-      if (CONDENADA("esperando a atividade dos amigos")) goto condenada;
+      if (CONDENADA("waiting for friends activity")) goto condenada;
       LISTAS_SE_PRONTAS();
       SDL_Delay(10);
     }
-    if (CONDENADA("depois da atividade dos amigos")) goto condenada;
+    if (CONDENADA("after friends activity")) goto condenada;
     nSocial = social->n;
     if (nSocial > 0 && nFilsLote < CAT_FIL_MAX - (nContinuar ? 0 : 1)) {
       GARANTE(nSocial);
