@@ -22,6 +22,7 @@ void servidores_esquecer_todos(void);   // servidores.c: wipe every profile's to
 #include "recomenda.h"
 #include "fontepref.h"
 #include "legmemoria.h"
+#include "audiomemoria.h"
 #include "buscasrec.h"
 #include "trakt.h"
 #include "traktauth.h"
@@ -2160,6 +2161,8 @@ void sync_esquecer_usuario(void) {
   fontepref_esquecer();
   // E A LEGENDA ESCOLHIDA A MAO (2.0.3): o idioma e os titulos de quem saiu.
   legmem_esquecer();
+  // E A FAIXA DE AUDIO ESCOLHIDA A MAO (audiomemoria.h), pela mesma razao.
+  audiomem_esquecer();
   // E A ARTE ESCOLHIDA A MAO (#142): diz o que a pessoa abriu e guardou, e
   // sem esta linha a proxima conta herdaria as fotos de quem saiu.
   arteesc_esquecer();
