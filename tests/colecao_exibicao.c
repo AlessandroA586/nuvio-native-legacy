@@ -278,6 +278,26 @@ int main(void) {
   assert(nAbas() == 0 && tabCursor == 0);
   tecla(SDLK_RETURN); assert(lay == VT_LAY_GRADE);
 
+  // Default is a distinct selector step, regardless of the inherited layout.
+  { static const int ciclo[] = {
+      VT_LAY_GRADE, VT_LAY_LINHA, VT_LAY_RANKING, VT_LAY_SAGA,
+      VT_LAY_DECADAS, VT_LAY_MURAL, VT_LAY_VITRINE, VT_LAY_AUTO
+    };
+    for (int padrao = VT_LAY_N - 1; padrao >= VT_LAY_AUTO; padrao--) {
+      char ajuste[64];
+      snprintf(ajuste, sizeof ajuste, "colecaoExibicaoPadraoLocal %d\n", padrao);
+      dados_gravar("ajustes.txt", ajuste);
+      ajustes_dir(dir);
+      assert(ajustes_colecao_exibicao() == padrao);
+      layEscolha = VT_LAY_AUTO;
+      resolverLayout();
+      for (int passo = 0; passo < (int)(sizeof ciclo / sizeof *ciclo); passo++) {
+        alternarExibicao();
+        assert(layEscolha == ciclo[passo]);
+      }
+    }
+  }
+
   // 7. VITRINE: fileiras semeadas direto (a fila de abas precisa de rede).
   pasta.nSources = 2;
   lay = VT_LAY_VITRINE; layEscolha = VT_LAY_VITRINE; tabFocus = 0;
