@@ -394,6 +394,9 @@ static int chamarBool(const char *nome, const char *assin, const char *a, const 
 int android_abrir_app(const char *pacote) {
   return chamarBool("abrirApp", "(Ljava/lang/String;)Z", pacote, NULL);
 }
+int android_abrir_externo(const char *url, const char *titulo) {
+  return chamarBool("abrirExterno", "(Ljava/lang/String;Ljava/lang/String;)Z", url, titulo ? titulo : "");
+}
 int android_abrir_loja(const char *pacote, const char *nome) {
   return chamarBool("abrirLoja", "(Ljava/lang/String;Ljava/lang/String;)Z", pacote, nome ? nome : "");
 }

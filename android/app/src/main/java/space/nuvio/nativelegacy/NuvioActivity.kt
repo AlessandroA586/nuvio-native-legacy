@@ -495,6 +495,14 @@ class NuvioActivity : SDLActivity() {
         } catch (e: Exception) { false }
     }
 
+    // #501: entrega o stream a outro player. Sem app que aceite, devolve false
+    // (o nativo toca no interno). A URL nao vai para o log.
+    fun abrirExterno(url: String, titulo: String): Boolean = try {
+        startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(url), "video/*")
+            .putExtra("title", titulo).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
+    } catch (e: Exception) { false }
+
     // A loja (Google Play) na pagina do app; sem pacote, a busca pelo nome.
     fun abrirLoja(pacote: String, nome: String): Boolean {
         val alvo = if (pacote.isNotEmpty()) "market://details?id=$pacote"

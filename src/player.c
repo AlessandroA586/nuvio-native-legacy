@@ -49,6 +49,7 @@
 #include "catalogo.h"
 #include "artehero.h"
 #include "logotitulo.h"
+#include "extplayer.h"
 #include "corviva.h"
 
 // A CASCA DO TIZEN PRECISA SABER SE O PLAYER ESTA NA TELA. tools/tizen-shell.html
@@ -1807,7 +1808,8 @@ static int preTituloLegendaUsar(const char *url) {
 }
 #endif
 
-static void tocarFonte(const char *url) {
+static void tocarFonteInterno(const char *url);
+static void tocarFonteInterno(const char *url) {
   marco("abrir: url ao pipeline");
   loadEm = SDL_GetTicks();   // #202: do pipeline ao primeiro quadro ("[player] load->1o quadro")
   video_definir_reconexao(!ehCanal());
@@ -1849,6 +1851,16 @@ static void tocarFonte(const char *url) {
               video_janela((int)(r.x + 0.5f), (int)(r.y + 0.5f),
                            (int)(r.w + 0.5f), (int)(r.h + 0.5f)); }
   else aplicarAspecto();
+}
+#ifdef NV_ANDROID
+static void sairParaExterno(void) { saindo = 1; pediuSair = 1; }
+#endif
+static void tocarFonte(const char *url) {
+#ifdef NV_ANDROID
+  const CatItem *c = item();   // #501: Interno / Externo / Perguntar sempre
+  if (extplayer_tentar(url, c ? c->titulo : "", tocarFonteInterno, sairParaExterno)) return;
+#endif
+  tocarFonteInterno(url);
 }
 // A TELA DO DOLBY VISION EM MKV (dvtela.h). O relogio dela e o do quadro do
 // player (dvAgora), o mesmo que as teclas usam: a espera do OK que sobra do
