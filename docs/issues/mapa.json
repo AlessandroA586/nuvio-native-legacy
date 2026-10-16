@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-16T01:55:20-03:00",
- "base": "5544c3e4c",
- "nota": "Sync 2026-10-16T01:55, HEAD integracao/2.0.5 4359b10f5; instalado cb7ece972 (Android rc=0, C9 rc=1). Merged nesta janela: perffinal (4359b10f5, review OK), amigoscapa (498ff29fc, BLOQUEIA->OK), overdraw (3e3a909d5, BLOQUEIA->OK). Mais antigos ja na nota anterior: legatraso, tclmem, vidrotelas, herotrailer. Running: j-205-bump206, j-escrivao-0147. Ver escrivao/estado.md.",
+ "atualizado_em": "2026-10-16T12:48:46-03:00",
+ "base": "e680776ed",
+ "nota": "Sync 2026-10-16T12:48, HEAD integracao/2.0.5 e680776ed (tag v2.0.6 ja contem bump206/mergemaster/mestre1015 e os merges de PR 498/520/522/523/526/527/531..537). Instalado na TV cb7ece972 (Android rc=0, C9 rc=1), 250 commits atras. Merged nesta janela: catal551 (e680776ed, BLOQUEIA->OK), fonte552 (0d7821a01, BLOQUEIA->OK), bump206 (3a138358f, OK), mergemaster (6811d2b4a, BLOQUEIA,BLOQUEIA->OK). Na janela anterior: perffinal, amigoscapa, overdraw, herotrailer, vidrotelas, tclmem, legatraso, amigosestilo, estatresp, vidroc9, mestre1015, vidaa, ajustestestes. Rodando (log vivo): j-herosplit, j-trailerlingua, j-fpsplayer, j-estiloanim. Aguardando review/merge: agente/205-home545 (BLOQUEIA), agente/205-p2pmotivo, agente/205-usbmotivo, agente/205-usbpreparo, agente/205-logcabeca, agente/205-buffer, agente/205-legajuste (spec). Ver /Volumes/ExternalSSD/tmp/rev/escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,
@@ -8927,10 +8927,10 @@
   {
    "numero": 434,
    "titulo": "Ability to remove genre tags in title page",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "all",
    "tipo": "feature",
-   "status": "aberta",
+   "status": "fechada-sem-resposta",
    "release": "-",
    "conserto": [],
    "ultima_resposta": {
@@ -8939,11 +8939,10 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "triar/reproduzir; falta conserto comprovado",
-   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.",
+   "proximo_passo": "fechada no GitHub 2026-10-16; sem comentario nosso",
+   "notas": "Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivao 10-16 12:48: CLOSED no issues.json (mapa dizia aberta).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/434",
-   "criada_em": "2026-10-11",
-   "alvo": "2.1"
+   "criada_em": "2026-10-11"
   },
   {
    "numero": 436,
@@ -9559,7 +9558,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "merged em integracao/2.0.5 (fd6d795d0 fix(mkv): fetch Tracks via SeekHead when probe mis)",
-   "notas": "Impl fd6d795d; j-revg-i483remux OK 16:52. Merge 251632be (18:01). fetch via SeekHead quando a sonda erra o layout REMUX. Escrivao 14/10 19:1x: merge 18:01. | Escrivao 2026-10-15 11:48: prompt p-205-i483remux em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i483remux integrada]",
+   "notas": "Impl fd6d795d; j-revg-i483remux OK 16:52. Merge 251632be (18:01). fetch via SeekHead quando a sonda erra o layout REMUX. Escrivao 14/10 19:1x: merge 18:01. | Escrivao 2026-10-15 11:48: prompt p-205-i483remux em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i483remux integrada] Escrivao 10-16 12:48: agente/205-i483remux ja ancestral de HEAD; sem mudanca.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/483",
    "criada_em": "2026-10-13",
    "alvo": "2.0.6"
@@ -9823,7 +9822,7 @@
   {
    "numero": 502,
    "titulo": "Detail page keeps the low-res thumbnail instead of loading full artwork when opened from Recommendations or Filmography",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "bug",
    "status": "integrada",
@@ -9842,8 +9841,7 @@
    "proximo_passo": "merged em integracao/2.0.5 (d3fc8e5ee fix(detail): stop seeding list poster into backdro)",
    "notas": "Snapshot 2026-10-14 10:15: d3fc8e5e \"fix(detail): stop seeding list poster into backdrop for recommendations\" cobre #502 e #503, so em agente/205-i502arte. Job RUNNING, sem validacao. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i502arte. [sync 2026-10-15: agente/205-i502arte integrada]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/502",
-   "criada_em": "2026-10-14",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-14"
   },
   {
    "numero": 503,
@@ -10175,7 +10173,7 @@
   {
    "numero": 528,
    "titulo": "[Bug/FR] Cast Images Fail to Load — Request for Metadata Add-on Fallback or Custom TMDB Proxy",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "?",
    "status": "integrada",
@@ -10192,8 +10190,7 @@
    "proximo_passo": "merged em integracao/2.0.5 (10501d047 fix(metadata): preserve addon cast portraits when )",
    "notas": "Escrivao 2026-10-15 11:48: item novo (issues.json), alvo 2.0.6 provisório [sync 2026-10-15: agente/205-i528q integrada] Escrivao 10-15 22:49: merged via agente/205-i528q (f5c785d4f).",
    "criada_em": "2026-10-15",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/528",
-   "alvo": "2.0.6"
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/528"
   },
   {
    "numero": 529,
@@ -10290,9 +10287,31 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "aberta",
+   "status": "em_revisao",
    "release": "-",
    "alvo": "2.0.6",
+   "conserto": [
+    "26b9c635b (agente/205-home545, nao integrado)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "review j-rev2-home545 BLOQUEIA (catalogos fora da cota ainda ocupam vaga da Home): novo fix em agente/205-home545 ou descartar; sem merge",
+   "notas": "Nova em 2026-10-16 (issues.json, labels ['bug']). Sem job no snapshot. Escrivao 10-16 12:48: job home545 done (26b9c635b), 1 ahead de HEAD; review j-rev2-home545 BLOQUEIA. Distinto de #551 (descoberta nao reinicia apos PIN).",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/545",
+   "criada_em": "2026-10-16"
+  },
+  {
+   "numero": 548,
+   "titulo": "Mark as watched not working",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
    "conserto": [],
    "ultima_resposta": {
     "nos": false,
@@ -10300,10 +10319,103 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "sem job; triar (sem prompt de job no snapshot)",
-   "notas": "Nova em 2026-10-16 (issues.json, labels ['bug']). Sem job no snapshot.",
-   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/545",
-   "criada_em": "2026-10-16"
+   "proximo_passo": "sem job; triar",
+   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt).",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/548",
+   "criada_em": "2026-10-16",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 549,
+   "titulo": "Needs the See All tile for every row in showcase layout",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "enhancement",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "sem job; triar",
+   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt).",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/549",
+   "criada_em": "2026-10-16",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 551,
+   "titulo": "Catalog Not Loading 2.0.6",
+   "estado_github": "aberta",
+   "plataforma": "LG webOS 25/26",
+   "tipo": "bug",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "1c9043ed0 (agente/205-catal551)",
+    "a2e9daf91 (agente/205-catal551)",
+    "e680776ed (Merge agente/205-catal551)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "merged e680776ed (HEAD); review OK j-rev2-catal551; build+install no HEAD e resposta na issue",
+   "notas": "Escrivao 10-16 12:48: job catal551 done; review BLOQUEIA j-rev-catal551 -> fix 1c9043ed0 -> OK j-rev2-catal551; merged e680776ed. Causa: sessao de perfil velha nao reiniciava a descoberta.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/551",
+   "criada_em": "2026-10-16",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 552,
+   "titulo": "The add-on sources aren't appearing",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "cbcf467f5 (agente/205-fonte552)",
+    "6d524f947 (agente/205-fonte552)",
+    "0d7821a01 (Merge agente/205-fonte552)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "merged 0d7821a01; review OK j-rev2-fonte552; build+install no HEAD e resposta na issue",
+   "notas": "Escrivao 10-16 12:48: job fonte552 done; review BLOQUEIA j-rev-fonte552 -> fix cbcf467f5 -> OK j-rev2-fonte552; merged 0d7821a01. Hostnames de stream passam a ser lidos antes de exigir P2P.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/552",
+   "criada_em": "2026-10-16",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 553,
+   "titulo": "queda de desempenho",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "sem job; triar",
+   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt).",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/553",
+   "criada_em": "2026-10-16",
+   "alvo": "2.0.6"
   }
  ],
  "validacoes": [
@@ -12707,10 +12819,11 @@
    "status": "adiado",
    "release": "2.0.6",
    "conserto": [
-    "agente/205-homebrew (tip bcb1cdea, 1 commits fora)"
+    "bcb1cdeaf (agente/205-homebrew)",
+    "repo.json 2.0.6 (homebrew, HEAD c2e50a932)"
    ],
-   "proximo_passo": "adiado pelo dono; rascunho na branch",
-   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). branch com 1 commit, sem job recente. Escrivão 14/10 14:47: adiado (pesquisa; sem merge)."
+   "proximo_passo": "adiado pelo dono; rascunho e manifest na branch, 1 commit fora",
+   "notas": "Pedido do dono sem issue. Jobs concluidos (pesquisa, checklist, draft de manifest e PR). Escrivao 10-16 12:48: sem merge; repo.json de 2.0.6 saiu no homebrew c2e50a932."
   },
   {
    "id": "dono-205-relacionados",
@@ -15760,6 +15873,127 @@
    ],
    "proximo_passo": "job j-205-bump206 done (7310f53f4, tests rc=0); review j-revg-bump206 rodando (log vazio); mergear antes de build+install",
    "notas": "Owner aprovou o release 2.0.6. Notas 2.0.6 precisam cobrir: sinal do atraso de legenda, crash de memoria na TCL, telas webOS mais suaves (vidro/overdraw), fileira de amigos em paisagem + cards de pessoas, motivo do trailer do hero bloqueado, dicas de controle uma vez por versao. Escrivao 10-16 01:50. Escrivao 10-16 02:00: bump 2.0.6 feito (7310f53f4); versao_206.sh, novidades_cartao.sh e varredura-i18n.py rc=0. repo.json (Homebrew) ainda 2.0.5 (commit separado). Notas em docs/releases/2.0.6/NOVIDADES.md + NOTAS.md; rascunho de Discord em /Volumes/ExternalSSD/tmp/rev/discord-206.md (nao postado)."
+  },
+  {
+   "id": "dono-205-buffer",
+   "titulo": "Buffer do player configuravel (64/128/256 MiB) + clamp por RAM livre",
+   "plataforma": "LG webOS",
+   "status": "consertada-nao-lancada",
+   "release": "2.0.6",
+   "conserto": [
+    "42b3718cf (agente/205-buffer)",
+    "4907caa50 (spec DV7->8.1, agente/205-buffer)"
+   ],
+   "proximo_passo": "review do fix 42b3718cf (nenhuma) e merge; falta TV (256 MiB na LG C5, clamp em webOS de 1 GB)",
+   "notas": "Relato do usuario (LG C5): remux 4K trava depois de 15-30 min; 256 MiB estavel. Job j-buffer done 10-16 12:40. Tests buffer_tamanho/ajustes_ux_dados/video_android_cacheboost/i18n/build rc 0. Sem PNG; spec DV7->8.1 nao implementada."
+  },
+  {
+   "id": "dono-205-usbpreparo",
+   "titulo": "Preparar/formatar pendrive para o cache do P2P",
+   "plataforma": "webOS/Tizen/Android",
+   "status": "em-andamento",
+   "release": "2.0.6",
+   "conserto": [
+    "db03a2bc5 (agente/205-usbpreparo: spec docs/specs/pendrive-preparo.md + sonda de fs/ro)"
+   ],
+   "proximo_passo": "review e merge da sonda; implementar tarefas 2-9 da spec; validar exFAT/NTFS nas TVs",
+   "notas": "Pedido do dono. Job j-usbpreparo done 10-16 12:39 (sondagem, tests/usbsonda.sh rc 0). Falta varredura /storage/<UUID> no Android; FAT32 limita em 4 GiB."
+  },
+  {
+   "id": "dono-205-usbmotivo",
+   "titulo": "Dizer porque o cache do P2P em USB e recusado",
+   "plataforma": "webOS/Tizen",
+   "status": "em-andamento",
+   "release": "2.0.6",
+   "conserto": [
+    "ebb5eb8fe (agente/205-usbmotivo)"
+   ],
+   "proximo_passo": "review do fix (nenhuma ainda) e merge; so diagnostico, sem UI",
+   "notas": "Relato Discord: opcao \"guardar no pendrive\" cinza mesmo com pendrive espetado. Job j-usbmotivo done 10-16 12:37 (tests regressao/p2pusb/diff/build rc 0). Falta TV e integrar o texto da recusa nos Ajustes (com agente/205-p2pmotivo)."
+  },
+  {
+   "id": "dono-205-logcabeca",
+   "titulo": "Upload de registro deve manter o cabecalho de boot",
+   "plataforma": "webOS",
+   "status": "consertada-nao-lancada",
+   "release": "2.0.6",
+   "conserto": [
+    "3b12a5d2f (agente/205-logcabeca)"
+   ],
+   "proximo_passo": "review do fix (nenhuma ainda) e merge; validar numa TV real",
+   "notas": "Log WR9768 (webOS 2.0.6): 90% dos 200 KB eram linhas de perf e cortavam o cabecalho. Job j-logcabeca done 10-16 12:37 (tests registro_cabeca.sh rc 0, build rc 0)."
+  },
+  {
+   "id": "dono-205-legajuste",
+   "titulo": "Ajuste manual de legenda estilo Stremio + auto-sync melhor",
+   "plataforma": "todas",
+   "status": "em-andamento",
+   "release": "2.0.6",
+   "conserto": [
+    "18c8312c5 (docs/specs/legenda-ajuste-sync.md, agente/205-legajuste)"
+   ],
+   "proximo_passo": "sugestao Discord; SPEC ONLY. Virar tarefas T1-T10 da spec (retomada em agente/205-legajuste)",
+   "notas": "Job j-legajuste done 10-16 12:30: spec com estado atual, modos de falha do auto-sync (657/664 pistas ok e ainda region_disagreement) e 10 tarefas. Sem codigo de produto. Tambem listado em backlog-21.txt como pedido 2.1."
+  },
+  {
+   "id": "dono-205-herosplit",
+   "titulo": "Home: destaque grande a esquerda + fileira rolavel a direita (Dynamic Split)",
+   "plataforma": "todas",
+   "status": "em-andamento",
+   "release": "2.0.6",
+   "conserto": [
+    "agente/205-herosplit tip c2e50a932 = HEAD (nenhum commit proprio; zero ahead)"
+   ],
+   "proximo_passo": "job j-herosplit rodando (log vazio); sem commit -> nada a revisar ainda",
+   "notas": "Pedido do dono (imagem da Home). Novo estilo de fileira opcional, desligado por padrao."
+  },
+  {
+   "id": "dono-205-trailerlingua",
+   "titulo": "Trailer na versão dublada / idioma de audio e legenda do trailer",
+   "plataforma": "todas",
+   "status": "em-andamento",
+   "release": "2.0.6",
+   "conserto": [
+    "agente/205-trailerlingua tip c2e50a932 = HEAD (nenhum commit proprio; zero ahead)"
+   ],
+   "proximo_passo": "job j-trailerlingua rodando (log vazio); sem commit ainda",
+   "notas": "Pedido PT + dono: por em Ajustes o idioma de audio e de legenda do trailer."
+  },
+  {
+   "id": "dono-205-fpsplayer",
+   "titulo": "Player caiu de ~40 fps para ~20 fps (overlay do .tpk)",
+   "plataforma": "Samsung .tpk",
+   "status": "em-andamento",
+   "release": "2.0.6",
+   "conserto": [
+    "agente/205-fpsplayer tip c2e50a932 = HEAD (nenhum commit proprio; zero ahead)"
+   ],
+   "proximo_passo": "job j-fpsplayer rodando (log vazio); aguardar commit e review",
+   "notas": "Relato S90D Tizen nativo 2.0.6; log 1F3QGX."
+  },
+  {
+   "id": "dono-205-estiloanim",
+   "titulo": "Animacao de abertura do seletor \"Estilo da fileira\"",
+   "plataforma": "todas",
+   "status": "em-andamento",
+   "release": "2.0.6",
+   "conserto": [
+    "agente/205-estiloanim tip c2e50a932 = HEAD (nenhum commit proprio; zero ahead)"
+   ],
+   "proximo_passo": "job j-estiloanim rodando (log vazio); aguardar commit e review",
+   "notas": "Pedido do dono: \"abrir do menu contextual esta muito seco\" (src/home.c ~1364)."
+  },
+  {
+   "id": "dono-205-p2pmotivo",
+   "titulo": "Ajustes: dizer porque \"Cache do P2P\" fica indisponivel",
+   "plataforma": "todas",
+   "status": "em-andamento",
+   "release": "2.0.6",
+   "conserto": [
+    "f170d77ba (agente/205-p2pmotivo)"
+   ],
+   "proximo_passo": "review do fix (nenhuma ainda) e merge; ultimo veredito do ramo foi BLOQUEIA (j-rev-p2pmotivo) e o fix veio depois",
+   "notas": "Pedido do dono (foto): popup generico \"Indisponivel com os ajustes atuais\". Job j-p2pmotivo done 10-16 12:26, fix f170d77ba 1 ahead. Razao especifica por causa (motor/externo/USB), todas as linguas."
   }
  ],
  "fechar_203": [],
