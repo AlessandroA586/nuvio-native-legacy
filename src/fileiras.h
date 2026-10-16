@@ -274,11 +274,18 @@ void fil_registrar_se_couber_de(const FilPassada *p, const char *chave,
 // `bases` sao os ids de manifesto e as URLs base dos addons ATUAIS; so vale
 // depois de todos os manifestos da volta terem sido lidos. `perfilDaLista` e o
 // perfil cuja CONTA mandou essa lista (addons_perfil_da_lista): diferente do
-// perfil desta escolha, ou 0, nao poda nada. Linha com escolha da pessoa
-// (desligada, na fila, forma, tamanho, destaque) nunca e podada. Devolve
-// quantas sairam.
+// perfil desta escolha, ou 0, nao poda nada. Identidade incompleta adia a
+// limpeza. Desinstalacao confirmada apaga as linhas e suas escolhas locais;
+// addon apenas desligado conserva-as. Devolve quantas sairam.
 int  fil_podar_catalogos(const char *const *ids, const char *const *bases, int n,
                          int perfilDaLista);
+// Variante de producao: chamador protege a versao com addons_travar_lista.
+// Lista trocada depois invalida a autoridade inclusive durante manifestos pendentes.
+int  fil_podar_catalogos_de(const char *const *ids, const char *const *bases, int n,
+                            int perfilDaLista, unsigned versao);
+// So confirma ausencia depois da lista completa deste perfil. Para limpar
+// referencias de colecao com dono explicito; sem id/base, preserva a fonte.
+int  fil_addon_ausente(const char *id, const char *base);
 
 // #319: marca (so em memoria) as linhas de catalogo cujo addon saiu da conta ou
 // foi desligado, para elas nao ocuparem vaga do limite nem aparecerem na home.

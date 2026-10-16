@@ -14,6 +14,16 @@
 #include "addonurl.h"
 #include <stdint.h>
 
+// Um teto so para a lista e para os consumidores que precisam de TODOS os donos.
+#define ADDONS_MAX 128
+typedef struct { char id[96], base[NV_ADDON_URL_MAX]; int ativo; } AddonIdentidade;
+// Copia sob a trava; -1 se a lista mudou, e de outro perfil ou nao cabe inteira.
+int addons_copiar_identidades(AddonIdentidade *saida, int max, unsigned versao, int perfil);
+// Publicar a limpeza so enquanto a MESMA lista da conta continua protegida.
+// Ordem das travas: sessao de perfil, lista de addons, fileiras/colecoes.
+int addons_travar_lista(unsigned versao, int perfil);
+void addons_destravar_lista(void);
+
 typedef enum { ADD_PARADO = 0, ADD_BUSCANDO, ADD_PRONTO, ADD_VAZIO } AddEstado;
 
 // Le art/addons.txt (nome<TAB>url por linha). Sem ele a lista fica vazia.

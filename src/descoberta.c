@@ -41,6 +41,12 @@
 #include <time.h>
 
 // Optional imports belong to consumers: public declarations keep producers strong.
+// Isolated legacy fixtures may omit this boundary: missing means DEFER,
+// never a fabricated empty/complete account list. Complete apps link addons.c.
+extern int addons_copiar_identidades(AddonIdentidade *, int, unsigned, int) NV_PERFIL_OPCIONAL;
+extern int addons_travar_lista(unsigned, int) NV_PERFIL_OPCIONAL;
+extern void addons_destravar_lista(void) NV_PERFIL_OPCIONAL;
+extern int fil_podar_catalogos_de(const char *const *, const char *const *, int, int, unsigned) NV_PERFIL_OPCIONAL;
 extern int trakt_enfeitar_lote_sessao(CatItem *, int, uint64_t) NV_PERFIL_OPCIONAL;
 extern int recomenda_social_mesclar_sessao(CatItem *, int, int, uint64_t) NV_PERFIL_OPCIONAL;
 
@@ -4701,22 +4707,27 @@ static void *montar(void *u) {
     // S3R7Q0, Pluto TV desligado) e nenhum fantasma saia. So o addon LIGADO sem
     // id e uma volta incompleta; o desligado casa pela base (doAddon) e as
     // linhas dele nao valem nada para a home de qualquer jeito.
-    { const char *ids[16], *bases[16];
-      int ativos[16];
-      int na = addons_n(), q, semId = 0;
-      if (na > 16) na = 16;
-      for (q = 0; q < na; q++) {
-        ids[q] = addons_id_manifesto(q); bases[q] = addons_base(q);
-        ativos[q] = addons_ativo(q);
-        if (ativos[q] && (!ids[q] || !ids[q][0])) semId++;
-      }
-      if (addons_versao() != versaoManifestos)
-        printf("[fileiras] poda adiada: a lista de addons mudou durante a volta\n");
-      else if (semId)
-        printf("[fileiras] poda adiada: %d addon(s) sem manifesto lido nesta volta\n", semId);
+    { const char *ids[ADDONS_MAX], *bases[ADDONS_MAX];
+      int ativos[ADDONS_MAX], q, semId = 0;
+      int perfilLista = addons_perfil_da_lista();
+      AddonIdentidade *lista = calloc(ADDONS_MAX, sizeof *lista);
+      int na = lista && addons_copiar_identidades
+        ? addons_copiar_identidades(lista, ADDONS_MAX, versaoManifestos, perfilLista) : -1;
+      if (na < 0)
+        printf("[fileiras] poda adiada: sem retrato completo da lista desta volta\n");
       else {
-        int perfilLista = addons_perfil_da_lista();
-        if (fil_podar_catalogos(ids, bases, na, perfilLista)) fil_gravar_registro();
+        for (q = 0; q < na; q++) {
+          ids[q] = lista[q].id; bases[q] = lista[q].base; ativos[q] = lista[q].ativo;
+          if (ativos[q] && !ids[q][0]) semId++;
+        }
+        if (addons_versao() != versaoManifestos || addons_perfil_da_lista() != perfilLista)
+          printf("[fileiras] poda adiada: lista ou perfil mudou durante a copia\n");
+        else if (semId)
+          printf("[fileiras] poda adiada: %d addon(s) sem manifesto lido nesta volta\n", semId);
+        else if (nv_perfil_sessao_travar(descSessao())) {
+          if (addons_travar_lista && addons_destravar_lista && fil_podar_catalogos_de &&
+              addons_travar_lista(versaoManifestos, perfilLista)) {
+        if (fil_podar_catalogos_de(ids, bases, na, perfilLista, versaoManifestos)) fil_gravar_registro();
         // As que ficaram (com escolha da pessoa) deixam de ocupar vaga.
         { int m = fil_marcar_sem_addon(ids, bases, ativos, na, perfilLista);
           if (m) printf("[fileiras] %d fileira(s) de addon removido/desligado fora da conta de vagas\n", m); }
@@ -4732,7 +4743,13 @@ static void *montar(void *u) {
             free(dk);
           }
         }
-      } }
+            addons_destravar_lista();
+          }
+          nv_perfil_sessao_destravar();
+        }
+      }
+      free(lista);
+    }
 
     // ALVOS DE BUSCA. Independem da ordem/filtro das FILEIRAS da home: um
     // catalogo pode estar desativado na home e ainda assim ser bom para

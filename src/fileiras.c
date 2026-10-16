@@ -1,9 +1,16 @@
 #include "fileiras.h"
 #include "dados.h"
+#include "addons.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include "perfisessao.h"
+
+extern unsigned addons_versao(void) NV_PERFIL_OPCIONAL;
+extern int addons_perfil_da_lista(void) NV_PERFIL_OPCIONAL;
+extern int addons_travar_lista(unsigned, int) NV_PERFIL_OPCIONAL;
+extern void addons_destravar_lista(void) NV_PERFIL_OPCIONAL;
 
 // Uma linha da escolha local. A ORDEM do vetor E a ordem da home: nao ha campo
 // de posicao porque um numero de ordem gravado ao lado do indice sempre acaba
@@ -97,6 +104,16 @@ static int   registroSujo;   // ver fil_gravar_registro
 static char  heroFonte[FIL_CHAVE];
 static char donoAuto[128];
 static unsigned revisao;
+// Lista COMPLETA e identificada da conta deste perfil. So em memoria: impede
+// que uma foto antiga da Home recrie catalogos que acabamos de apagar.
+#define FIL_ADDONS_MAX ADDONS_MAX
+static struct { char id[FIL_CHAVE], base[NV_ADDON_URL_MAX]; } addonsConta[FIL_ADDONS_MAX];
+static int nAddonsConta = -1, addonsContaCompleta, addonsContaVinculada;
+static unsigned addonsContaVersao;
+static void esquecerAddonsConta(void) {
+  memset(addonsConta, 0, sizeof addonsConta); nAddonsConta = -1; addonsContaCompleta = 0;
+  addonsContaVinculada = 0; addonsContaVersao = 0;
+}
 // A leitura acontece no fio da DESCOBERTA (montar) e a escrita no fio de
 // desenho (tela de Ajustes). Sao os dois unicos, e a secao critica e uma varredura
 // de 64 strings — mutex simples, sem leitura sem trava: uma lista sendo
@@ -739,18 +756,53 @@ void fil_remover(int i) {
 //      apagada em TODO arranque. `perfilDaLista` e o perfil cuja conta mandou a
 //      lista (addons_perfil_da_lista); qualquer outra coisa — 0 (pacote, sem
 //      conta) ou o perfil anterior — nao poda nada.
-//   2. LINHA COM ESCOLHA NAO E FANTASMA. Desligada, na fila, com forma ou
-//      tamanho escolhidos, ou fonte do destaque: isso e a pessoa dizendo algo
-//      sobre a fileira, e o addon pode voltar (ou a lista pode estar errada de
-//      um jeito que a trava 1 nao previu). A poda e para a linha intocada, que
-//      e o unico caso do @rawldon: fantasma LIGADO aparecendo na home. Uma
-//      linha desligada de addon que saiu nao aparece em lugar nenhum da home.
+//   2. IDENTIDADE INCOMPLETA NAO CONFIRMA REMOCAO. Um addon desligado pode
+//      ainda nao ter id de manifesto. Nesse caso nao apagamos catalogos que
+//      poderiam ser dele. Com a lista identificada, remover o addon apaga
+//      tambem as escolhas das suas fileiras (#365/#504), mesmo ja vistas.
 // A chave de catalogo comeca por <id do manifesto>_ ou, sem id, <base>_.
 static int doAddon(const char *chave, const char *id, const char *base) {
   size_t li = id ? strlen(id) : 0, lb = base ? strlen(base) : 0;
   if (li && !strncmp(chave, id, li) && chave[li] == '_') return 1;
   if (lb && !strncmp(chave, base, lb) && chave[lb] == '_') return 1;
   return 0;
+}
+
+// Com a trava. Sem retrato autoritativo, nao bloqueia o arranque.
+static int autoridadeAtual(void) {
+  return addonsContaCompleta && (!addonsContaVinculada ||
+    (addons_versao && addons_perfil_da_lista &&
+     addons_versao() == addonsContaVersao && addons_perfil_da_lista() == perfil));
+}
+
+static int catalogoInstalado(const char *chave) {
+  if (!autoridadeAtual() || fil_origem_de(chave) != FIL_ORIGEM_CATALOGO) return 1;
+  for (int i = 0; i < nAddonsConta; i++)
+    if (doAddon(chave, addonsConta[i].id, addonsConta[i].base)) return 1;
+  return 0;
+}
+
+int fil_addon_ausente(const char *id, const char *base) {
+  int ausente = 0, vinculada, dono;
+  unsigned versao;
+  // Nao segure fileiras ao adquirir addons: a descoberta usa a ordem inversa.
+  pthread_mutex_lock(&trava);
+  vinculada = addonsContaVinculada; versao = addonsContaVersao; dono = perfil;
+  pthread_mutex_unlock(&trava);
+  if (vinculada && (!addons_travar_lista || !addons_destravar_lista ||
+                    !addons_travar_lista(versao, dono))) return 0;
+  pthread_mutex_lock(&trava);
+  if (autoridadeAtual() && perfil == dono && addonsContaVinculada == vinculada &&
+      (!vinculada || addonsContaVersao == versao) &&
+      ((id && *id) || (base && *base))) {
+    ausente = 1;
+    for (int i = 0; i < nAddonsConta; i++)
+      if ((id && *id && !strcmp(id, addonsConta[i].id)) ||
+          (base && *base && !strcmp(base, addonsConta[i].base))) ausente = 0;
+  }
+  pthread_mutex_unlock(&trava);
+  if (vinculada) addons_destravar_lista();
+  return ausente;
 }
 
 static int temEscolha(const Linha *l) {
@@ -845,40 +897,70 @@ int fil_marcar_declaradas(const char *const *chaves, int n, int perfilDaLista) {
   return fora;
 }
 
-int fil_podar_catalogos(const char *const *ids, const char *const *bases, int n,
-                        int perfilDaLista) {
-  int i, w = 0, fora = 0;
+static int podarCatalogos(const char *const *ids, const char *const *bases, int n,
+                         int perfilDaLista, unsigned versao, int vinculada) {
+  int i, w = 0, fora = 0, mudouLista, limpouHero = 0, completa = 1;
+  if (n < 0 || n > FIL_ADDONS_MAX || (n && (!ids || !bases))) return 0;
   pthread_mutex_lock(&trava);
   garantir();
   if (perfilDaLista <= 0 || perfilDaLista != perfil) {
     pthread_mutex_unlock(&trava);
     printf("[fileiras] poda adiada: lista de addons %s\n",
-           perfilDaLista <= 0 ? "nao veio da conta (pacote/arquivo)"
-                              : "e de outro perfil");
-    fflush(stdout);
+           perfilDaLista <= 0 ? "nao veio da conta (pacote/arquivo)" : "e de outro perfil");
     return 0;
   }
-  for (i = 0; i < nLinhas; i++) {
-    int vivo = 1;
-    if (fil_origem_de(linhas[i].chave) == FIL_ORIGEM_CATALOGO && !linhas[i].vista &&
-        !temEscolha(&linhas[i])) {
-      int k;
-      vivo = 0;
-      for (k = 0; k < n && !vivo; k++)
-        if (doAddon(linhas[i].chave, ids[k], bases[k])) vivo = 1;
+  // Nao transforme falta de manifesto (inclusive de addon desligado) em
+  // desinstalacao. Tambem nao guarde identidade/base truncada como autoridade.
+  for (i = 0; i < n; i++) {
+    if (!ids[i] || !ids[i][0]) completa = 0;
+    if ((ids[i] && strlen(ids[i]) >= sizeof addonsConta[i].id) ||
+        (bases[i] && strlen(bases[i]) >= sizeof addonsConta[i].base)) {
+      pthread_mutex_unlock(&trava);
+      return 0;
     }
-    if (vivo) { if (w != i) linhas[w] = linhas[i]; w++; }
-    else fora++;
   }
-  if (fora) { nLinhas = w; gravar(); }
+  mudouLista = nAddonsConta != n || addonsContaCompleta != completa;
+  for (i = 0; i < n; i++) {
+    const char *id = ids[i] ? ids[i] : "", *base = bases[i] ? bases[i] : "";
+    if (strcmp(addonsConta[i].id, id) || strcmp(addonsConta[i].base, base)) mudouLista = 1;
+    snprintf(addonsConta[i].id, sizeof addonsConta[i].id, "%s", id);
+    snprintf(addonsConta[i].base, sizeof addonsConta[i].base, "%s", base);
+  }
+  for (i = n; i < FIL_ADDONS_MAX; i++) memset(&addonsConta[i], 0, sizeof addonsConta[i]);
+  nAddonsConta = n; addonsContaCompleta = completa;
+  addonsContaVersao = versao; addonsContaVinculada = vinculada;
+  for (i = 0; i < nLinhas; i++) {
+    if (completa && !catalogoInstalado(linhas[i].chave)) { fora++; continue; }
+    if (w != i) linhas[w] = linhas[i];
+    w++;
+  }
+  if (completa && heroFonte[0] && strcmp(heroFonte, "*") && !catalogoInstalado(heroFonte)) {
+    heroFonte[0] = 0; limpouHero = 1;
+  }
+  if (fora || limpouHero) {
+    memset(linhas + w, 0, sizeof *linhas * (size_t)(nLinhas - w));
+    nLinhas = w; gravar(); registroSujo = 0;
+  } else if (mudouLista) revisao++; // colecoes tambem precisam limpar suas fontes
   pthread_mutex_unlock(&trava);
-  if (fora) { printf("[fileiras] %d fileira(s) de addon que ja nao existe sairam da lista\n", fora); fflush(stdout); }
+  if (fora) { printf("[fileiras] %d catalogo(s) de addon desinstalado apagados\n", fora); fflush(stdout); }
   return fora;
 }
 
-// #319: A ROW WHOSE ADD-ON WAS REMOVED OR SWITCHED OFF KEEPS ITS PLACE IN THE
-// TABLE (the person may have chosen something about it, and fil_podar_catalogos
-// never drops those), but it must stop being part of the Home. posicaoLigada
+int fil_podar_catalogos(const char *const *ids, const char *const *bases, int n,
+                        int perfilDaLista) {
+  return podarCatalogos(ids, bases, n, perfilDaLista, 0, 0);
+}
+
+int fil_podar_catalogos_de(const char *const *ids, const char *const *bases, int n,
+                           int perfilDaLista, unsigned versao) {
+  // Quem chama mantem addons_travar_lista ate terminar esta publicacao.
+  if (!addons_versao || !addons_perfil_da_lista || addons_versao() != versao ||
+      addons_perfil_da_lista() != perfilDaLista) return 0;
+  return podarCatalogos(ids, bases, n, perfilDaLista, versao, 1);
+}
+
+// #319: um addon DESLIGADO conserva as escolhas, mas nao ocupa vaga na Home.
+// O desinstalado ja saiu pela poda autoritativa acima. posicaoLigada
 // counts every row that is not hidden, so such a row used to eat one of the
 // `limite` slots: the real rows after it fell into the queue and the Home was
 // shorter than the limit with nothing visible in the gap. `ativos[k]` = the
@@ -984,6 +1066,7 @@ void fil_definir_perfil(int p) {
     registroSujo = 0;
     perfilGeracao++;
     perfil = p;
+    esquecerAddonsConta();
     nLinhas = 0; ordemLocal = 0; limite = FIL_LIMITE_PADRAO; limiteOrigem = 0;
     memset(linhas, 0, sizeof linhas);
     carregado = 0;
@@ -1015,7 +1098,11 @@ static void registrar(const FilPassada *passada, const char *chave,
     pthread_mutex_unlock(&trava);
     return;
   }
+  // Mesmo uma foto capturada depois da poda pode conter o catalogo antigo.
   i = achar(chave);
+  if (!catalogoInstalado(chave)) {
+    pthread_mutex_unlock(&trava); return;
+  }
   // #392: CHAVE NOVA DE CATALOGO NAO ENTRA ENQUANTO A LISTA DE ADDONS AINDA E DO
   // PERFIL QUE SAIU. Vale para todo escritor (descoberta, home, fora da cota):
   // os catalogos dela despejariam as fileiras deste perfil e entrariam no fim.
@@ -1262,6 +1349,7 @@ int fil_conta_dono(const char *usuario) {
   pthread_mutex_lock(&trava);
   garantir();
   int mudou = donoAuto[0] && strcmp(donoAuto, usuario);
+  if (mudou) esquecerAddonsConta();
   if (mudou) for (int i = 0; i < nLinhas; i++) {
     if (linhas[i].oculta == OC_COLECAO) linhas[i].oculta = OC_SUGESTAO;
     linhas[i].ocultaConta = 0; linhas[i].emColecao = 0;
@@ -1297,8 +1385,12 @@ void fil_colecoes_reconciliar(const char *const *chaves,
         viva = chaves[j] && !strcmp(linhas[i].chave, chaves[j]);
     }
     if (viva) { if (w != i) linhas[w] = linhas[i]; w++; }
-    else mudou = 1;
+    else {
+      if (!strcmp(heroFonte, linhas[i].chave)) heroFonte[0] = 0;
+      mudou = 1;
+    }
   }
+  memset(linhas + w, 0, sizeof *linhas * (size_t)(nLinhas - w));
   nLinhas = w;
   if (mudou) registroSujo = 1;
   pthread_mutex_unlock(&trava);
@@ -1905,6 +1997,7 @@ int fil_unir(const char *const *chaves, int n, int *saida, int max) {
 void fil_esquecer(void) {
   pthread_mutex_lock(&trava);
   passadaGeracao++;   // #392: fotos de antes do logout nao valem
+  esquecerAddonsConta();
   nLinhas = 0;
   ordemLocal = 0;
   donoAuto[0] = 0;

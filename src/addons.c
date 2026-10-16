@@ -40,7 +40,7 @@
 // perdia justamente os de legenda, que costumam ser os ultimos da lista.
 // 128: contas com 100 add-ons ultrapassavam o teto anterior e perdiam o resto.
 // O teto de lerAddons (sync.c) e o mesmo numero; o corte continua no log.
-#define ADD_MAX 128
+#define ADD_MAX ADDONS_MAX
 #define ADD_PREF_MAX 8
 #define ADD_PREF_TAM 24
 
@@ -607,6 +607,31 @@ static void esquecerSemTrava(void) {
   addons_marcar_da_conta(0);
   listaMudou();
   printf("[addons] lista esquecida (saiu da conta)\n");
+}
+
+int addons_travar_lista(unsigned versao, int perfil) {
+  pthread_mutex_lock(&addonTrava);
+  if (perfil > 0 && versao == versaoLista && perfil == addons_perfil_da_lista()) return 1;
+  pthread_mutex_unlock(&addonTrava);
+  return 0;
+}
+void addons_destravar_lista(void) { pthread_mutex_unlock(&addonTrava); }
+
+int addons_copiar_identidades(AddonIdentidade *saida, int max, unsigned versao, int perfil) {
+  int n = -1;
+  if (!saida || max < 0 || perfil <= 0) return -1;
+  pthread_mutex_lock(&addonTrava);
+  if (versao == versaoLista && perfil == addons_perfil_da_lista() && nAddon <= max) {
+    n = nAddon;
+    for (int i = 0; i < n; i++) {
+      snprintf(saida[i].id, sizeof saida[i].id, "%s", addon[i].id);
+      snprintf(saida[i].base, sizeof saida[i].base, "%s", addon[i].base);
+      saida[i].ativo = addon[i].ativo;
+    }
+    if (perfil != addons_perfil_da_lista()) n = -1;
+  }
+  pthread_mutex_unlock(&addonTrava);
+  return n;
 }
 
 int addons_n(void) { return nAddon; }
