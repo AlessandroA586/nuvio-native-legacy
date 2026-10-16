@@ -1161,6 +1161,80 @@ int main(void) {
     usaArquivo = 0; }
   puts("ok  #319: addon removido/desligado nao ocupa vaga da home e a poda nao fica adiada");
 
+  // #545: A CATALOG NO MANIFEST DECLARES THIS SESSION (Bingecat's rotating
+  // "because_watched_*" keys, Xperience catalogs pushed out by the per-addon
+  // quota) kept a Home slot while its add-on stayed enabled. Discovery only
+  // fetches declared catalogs, so it fetched rows past them; the Home then
+  // dropped those as "queue" ("5 fileiras na tela ... 13 no catalogo").
+  fil_esquecer();
+  { const char *decl[] = { "vivo_movie_real1", "vivo_movie_real2", "vivo_movie_real3" };
+    usaArquivo = 1;
+    { FILE *f = fopen(nvt("/fileirasui-p1.txt"), "w");
+      fprintf(f, "limite 3\nordem 1\n");
+      fprintf(f, "linha vivo_movie_velha1\t0\t0\t1\tVelha1\n");
+      fprintf(f, "linha vivo_movie_real1\t0\t0\t1\tReal1\n");
+      fprintf(f, "linha vivo_movie_velha2\t0\t0\t1\tVelha2\n");
+      fprintf(f, "linha vivo_movie_real2\t0\t0\t1\tReal2\n");
+      fprintf(f, "linha vivo_movie_real3\t0\t0\t1\tReal3\n");
+      fclose(f); }
+    fil_definir_perfil(1);
+    fil_teste_recarregar();
+    fil_marcar_declaradas(decl, 3, 1);
+    // Discovery registers candidates, then lists quota-excluded catalogs.
+    { FilPassada passada = fil_passada_ler();
+      int k;
+      for (k = 0; k < 3; k++)
+        fil_registrar_de(&passada, decl[k], "", "Vivo", "movie", -1);
+      fil_registrar_se_couber_de(&passada, "vivo_movie_velha1", "Velha1", "Vivo", "movie");
+      fil_registrar_se_couber("vivo_movie_velha2", "Velha2", "Vivo", "movie"); }
+    assert(fil_estado_chave("vivo_movie_real2") == FIL_NA_HOME);
+    assert(fil_estado_chave("vivo_movie_real3") == FIL_NA_HOME);
+    assert(fil_estado_chave("vivo_movie_velha1") == FIL_FORA);
+    assert(fil_estado_chave("vivo_movie_velha2") == FIL_FORA);
+    assert(fil_n() == 5); /* Excluded rows remain available in Settings. */
+    assert(fil_n_na_home() == 3 && fil_n_fila() == 0);
+    // declared again: the row is back exactly where it was
+    fil_registrar("vivo_movie_velha1", "Velha1", "Vivo", "movie", 5);
+    assert(fil_estado_chave("vivo_movie_velha1") == FIL_NA_HOME);
+    assert(fil_estado_chave("vivo_movie_real3") == FIL_NA_FILA);
+    remove(nvt("/fileirasui-p1.txt"));
+    fil_definir_perfil(0);
+    usaArquivo = 0; }
+  puts("ok  #545: catalogo que nenhum manifesto declara nao ocupa vaga da home");
+
+  // #545: Explicit additions must regain quota priority while unavailable
+  // catalogs still consume no Home or queue slots.
+  for (int full = 0; full <= 1; full++) {
+    const char *decl[] = { "vivo_movie_a", "vivo_movie_b", "vivo_movie_c" };
+    const char *selected[] = { "vivo_movie_a", "vivo_movie_b", "vivo_movie_c", "vivo_movie_quota" };
+    int count = full ? 3 : 2, state;
+    fil_esquecer();
+    fil_definir_perfil(1);
+    fil_definir_limite(3);
+    for (int k = 0; k < count; k++)
+      fil_registrar(decl[k], "", "Vivo", "movie", 5);
+    fil_registrar("vivo_movie_quota", "", "Vivo", "movie", 5);
+    fil_marcar_declaradas(decl, count, 1);
+    fil_registrar_se_couber("vivo_movie_quota", "", "Vivo", "movie");
+    assert(fil_escolhida("vivo_movie_quota") == -1);
+    fil_adicionar(fil_teste_achar("vivo_movie_quota"), &state);
+    assert(state == (full ? FIL_NA_FILA : FIL_NA_HOME));
+    assert(fil_escolhida("vivo_movie_quota") == count);
+    fil_normalizar();
+    assert(fil_escolhida("vivo_movie_quota") == count);
+    assert(fil_estado_chave("vivo_movie_quota") == FIL_FORA);
+    assert(fil_n_na_home() == count && fil_n_capacidade() == count && fil_n_fila() == 0);
+    // The next discovery admits the explicitly selected catalog.
+    if (!full) selected[2] = "vivo_movie_quota";
+    fil_marcar_declaradas(selected, count + 1, 1);
+    fil_registrar("vivo_movie_quota", "", "Vivo", "movie", 5);
+    fil_normalizar();
+    assert(fil_estado_chave("vivo_movie_quota") == state);
+    assert(fil_n_na_home() == 3 && fil_n_fila() == full);
+    fil_definir_perfil(0);
+  }
+  puts("ok  #545: explicit additions regain quota priority without consuming unavailable slots");
+
   // #365: FANTASMAS EM "FORA DA HOME". Removido o addon, as suas linhas
   // "Fora da Home" — a sugestao automatica (oculta=2) e a oculta impunida
   // que sobrou de arquivo antigo (oculta=1, sem mais escolha nenhuma) —
