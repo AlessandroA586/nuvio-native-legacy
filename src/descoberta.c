@@ -6705,7 +6705,8 @@ void desc_sinopse_hero(const int *idx, int n) {
 //
 // A comparacao e so de letras e digitos, em minuscula e sem acento latino
 // (normElenco): "Zoë", "Zoe" e "ZOE" casam; "J. K. Simmons" e "JK Simmons"
-// tambem. Nome que nao casa com ninguem fica SEM foto e sem papel — melhor
+// tambem. Outros caracteres UTF-8 ficam: "李明 Lee" nao e "王强 Lee".
+// Nome que nao casa com ninguem fica SEM foto e sem papel — melhor
 // que o de outra pessoa. As entradas do TMDB que nao casaram entram no fim,
 // na ordem do TMDB, ate o teto (o #94: o Cinemeta para em 3-5 nomes), sem
 // repetir quem ja esta na lista. Pura; devolve quantos nomes ganharam foto
@@ -6731,8 +6732,8 @@ static void normElenco(const char *s, char *dst, size_t tam) {
     char o = 0;
     if (c >= 'A' && c <= 'Z') o = (char)(c + 32);
     else if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) o = (char)c;
-    else if (c == 0xC3 && *p) o = normDobra(*p++);
-    else if (c >= 0x80) { while ((*p & 0xC0) == 0x80) p++; }
+    else if (c == 0xC3 && *p && (o = normDobra(*p))) p++;
+    else if (c >= 0x80) { dst[k++] = (char)c; continue; }
     if (o) dst[k++] = o;
   }
   dst[k] = 0;
@@ -6803,14 +6804,20 @@ static int elencoLerPessoa(const char *p, ElencoMeta *e) {
     memcpy(e->foto, foto, strlen(foto) + 1);
   return e->nome[0] != 0;
 }
-static const char *elencoProximo(const char *p) {
-  if (*p == '{') return js_prox(js_fim(p));
-  if (*p == '"') {
-    const char *q = p + 1;
-    while (*q && *q != '"') { if (*q == '\\' && q[1]) q++; q++; }
-    return *q ? js_prox(q + 1) : NULL;
-  }
-  return NULL;
+static const char *elencoProximo(const char *p, const char *fim) {
+  const char *q = p;
+  if (*p == '{' || *p == '[') q = js_fim(p);
+  else if (*p == '"') {
+    q = p + 1;
+    while (q < fim && *q && *q != '"') { if (*q == '\\' && q + 1 < fim) q++; q++; }
+    if (q >= fim || *q != '"') return NULL;
+    q++;
+  } else while (q < fim && *q && *q != ',' && *q != ']') q++;
+  if (!q || q <= p || q >= fim) return NULL;
+  while (q < fim && (unsigned char)*q <= ' ') q++;
+  if (q >= fim || *q++ != ',') return NULL;
+  while (q < fim && (unsigned char)*q <= ' ') q++;
+  return q < fim && *q && *q != ']' ? q : NULL;
 }
 
 // Cast Stremio (nomes) + app_extras.cast do Nuvio/AIOMetadata (nome, papel,
@@ -6851,11 +6858,13 @@ int desc_meta_elenco(const char *json, CatItem *d, int soVazios) {
     const char *a = i == 0 ? raiz : i == 1 ? rico :
                     elencoCampo(extra, i == 2 ? "directors" : "writers");
     if (!a || *a != '[') continue;
+    const char *fim = js_fim(a);
+    if (fim <= a || fim[-1] != ']') continue;
     p = a + 1;
     while (*p && (unsigned char)*p <= ' ') p++;
-    while (*p == '"' || *p == '{') {
+    while (p && p < fim && *p && *p != ']') {
       ElencoMeta e;
-      if (elencoLerPessoa(p, &e)) {
+      if ((*p == '"' || *p == '{') && elencoLerPessoa(p, &e)) {
         int k = elencoIndice(d, e.nome);
         // Equipe so completa a foto de quem JA esta na fileira. Nao muda
         // o teto/ordem de atores; character da equipe costuma ser o nome.
@@ -6879,7 +6888,7 @@ int desc_meta_elenco(const char *json, CatItem *d, int soVazios) {
             snprintf(d->elenco[k].foto, sizeof d->elenco[k].foto, "%s", e.foto);
         }
       }
-      p = elencoProximo(p);
+      p = elencoProximo(p, fim);
       if (!p) break;
     }
   }
