@@ -628,6 +628,7 @@ static int pedidoObsoleto(const Item *it) {
 static void podar(void);
 static int pressaoAtiva(void);
 static volatile int pressaoPlay = 100;   // tex_pressao_reproducao (abaixo)
+static long orcMemTotal;                 // RAM medida (definida perto de orcamentoMB)
 
 void tex_novo_quadro(void) {
   tex_n_busca = 0;
@@ -1010,7 +1011,7 @@ void tex_qualidade(int nivel) {
 static float folgaDaQualidade(void) {
   return qualidadeImg == 0 ? 1.00f : qualidadeImg == 2 ? 1.60f : NV_TEX_FOLGA;
 }
-static long orcMemTotal;   // definido mais abaixo (orcamento pela RAM)
+// RAM total medida no arranque: declarada la em cima (pressaoPlay usa).
 // TETO DO HEROI DO PERFIL (tex_definir_teto_heroi): 0 = sem teto proprio, so a
 // regra de qualidade abaixo. E um TETO, nunca um piso: 1920 aqui nao sobe o
 // Tizen acima de 1280 sem a qualidade Alta, e a qualidade Baixa continua 1280.
