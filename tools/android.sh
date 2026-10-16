@@ -100,7 +100,7 @@ nv_p2p_resolver android
 [ -n "$NV_P2P_DIR" ] && GR+=(-Pnuvio.p2pMotor="$NV_P2P_DIR")
 # Nucleo EBML/NAL do mkv.c em Rust, ligado por padrao (dono aprovou em 14/10/2026);
 # NUVIO_RUST_MKVCORE=0 volta ao C para comparar.
-if [ "${NUVIO_RUST_MKVCORE:-1}" = 1 ]; then
+if [ "${NUVIO_RUST_MKVCORE:-0}" = 1 ] && command -v cargo >/dev/null 2>&1; then
   NV_RUST_MKV_DIR="$EST/rust-mkvcore"
   tools/rust-mkvcore.sh --android "$NV_RUST_MKV_DIR" >&2
   GR+=(-Pnuvio.rustMkvcore="$NV_RUST_MKV_DIR")

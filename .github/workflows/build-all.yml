@@ -82,6 +82,7 @@ jobs:
           export NUVIO_KEY_ALIAS="$RELEASE_KEY_ALIAS"
           export NUVIO_KEY_PASS="$RELEASE_KEY_PASSWORD"
           export CERT_SHA256="skip"
+          export NUVIO_RUST_MKVCORE=0
           chmod +x android/gradlew
           bash tools/android.sh --release-only
 

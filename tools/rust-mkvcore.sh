@@ -7,8 +7,13 @@
 # installs anything: a missing cargo or target is an error.
 set -eu
 cd "$(dirname "$0")/.."
-export RUSTUP_HOME="${RUSTUP_HOME:-/Volumes/ExternalSSD/rust/rustup}"
-export CARGO_HOME="${CARGO_HOME:-/Volumes/ExternalSSD/rust/cargo}"
+if [ -d "/Volumes/ExternalSSD/rust/rustup" ]; then
+  export RUSTUP_HOME="${RUSTUP_HOME:-/Volumes/ExternalSSD/rust/rustup}"
+  export CARGO_HOME="${CARGO_HOME:-/Volumes/ExternalSSD/rust/cargo}"
+else
+  export RUSTUP_HOME="${RUSTUP_HOME:-$HOME/.rustup}"
+  export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"
+fi
 export PATH="$CARGO_HOME/bin:$PATH"
 command -v cargo >/dev/null || { echo "rust-mkvcore: cargo not found" >&2; exit 1; }
 if [ "${1:-}" = --android ]; then
