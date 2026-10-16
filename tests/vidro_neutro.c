@@ -3,8 +3,9 @@
 // paleta do titulo em cena), nao o que esta atras do painel: com um titulo
 // verde, o vidro sobre um fundo cinza saia verde. Aqui o fundo e cinza neutro
 // e branco, a luz da paleta e verde, e a media da area de vidro tem de sair
-// neutra: |G - (R+B)/2| <= 2 em 8 bits. Tambem confere que o vidro desfoca o
-// que esta ATRAS dele (uma borda preto/branco vira degrade dentro do painel).
+// neutra: |G - (R+B)/2| <= 2 em 8 bits. Tambem confere que o vidro desfoca a
+// arte ATRAS dele (uma borda preto/branco vira degrade dentro do painel): o
+// fundo e uma arte de tela cheia, a fonte do fosco (docs/fosco-nova.md).
 //   bash tests/vidro_neutro.sh [pasta-de-capturas]
 #include "gfx.h"
 #include "corviva.h"
@@ -52,10 +53,26 @@ static void salvar(const char *dir, const char *nome) {
   free(t); snprintf(cam, sizeof cam, "%s/%s", dir, nome);
   assert(SDL_SaveBMP(s, cam) == 0); SDL_FreeSurface(s); printf("captura: %s\n", cam);
 }
+// A full-screen art: left half `l`, right half `r` (gray levels).
+static GLuint arte(float l, float r) {
+  static unsigned char px[36][64][4];
+  GLuint t;
+  int x, y;
+  for (y = 0; y < 36; y++)
+    for (x = 0; x < 64; x++) {
+      unsigned char v = (unsigned char)((x < 32 ? l : r) * 255.0f + 0.5f);
+      px[y][x][0] = px[y][x][1] = px[y][x][2] = v; px[y][x][3] = 255;
+    }
+  glGenTextures(1, &t); glBindTexture(GL_TEXTURE_2D, t);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 64, 36, 0, GL_RGBA, GL_UNSIGNED_BYTE, px);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  return t;
+}
 // O quadro do Frost com "Vidro fosco": a luz da paleta do titulo (verde)
-// preparada como antes era assada para o fosco, a forca devolvida a 0, e o
-// fundo de tela cheia pintado por cima.
-static void quadro(float fundo) {
+// preparada como antes era assada para o fosco, a forca devolvida a 0, e a
+// arte de tela cheia pintada por cima.
+static void quadro(float fundo, float direita) {
   static const float verde[4][3] = { {0.10f,0.55f,0.12f}, {0.20f,0.70f,0.18f},
                                      {0.05f,0.45f,0.10f}, {0.15f,0.60f,0.15f} };
   glBindFramebuffer(GL_FRAMEBUFFER, fbo); glViewport(0, 0, LW, LH);
@@ -67,7 +84,7 @@ static void quadro(float fundo) {
   nv_ambiente_forca = 0.0f;
   glBindFramebuffer(GL_FRAMEBUFFER, fbo); glViewport(0, 0, LW, LH);
   glClearColor(0, 0, 0, 1); glClear(GL_COLOR_BUFFER_BIT);
-  gfx_cor((GfxRect){ 0, 0, 1920, 1080 }, 0, fundo, fundo, fundo, 1.0f);
+  gfx_rect((GfxRect){ 0, 0, 1920, 1080 }, arte(fundo, direita), GFX_ARTE, 0, 0, 0, 0, 1, 1, 1, 1.0f);
 }
 static void neutro(const char *nome, double m[3]) {
   double d = m[1] - (m[0] + m[2]) * 0.5;
@@ -101,7 +118,7 @@ int main(int argc, char **argv) {
     float fundo = k < 2 ? 0.5f : 1.0f;
     const char *nf = k < 2 ? "cinza" : "branco";
     char n[80];
-    quadro(fundo);
+    quadro(fundo, fundo);
     gfx_vidro_painel(painel, 36.0f / painel.h, 0.80f, 1.0f);
     gfx_vidro_folha(folha, 36.0f / folha.h, 1.0f);
     snprintf(n, sizeof n, "painel/%s/q%d", nf, k & 1);
@@ -119,8 +136,7 @@ int main(int argc, char **argv) {
     GfxRect p = { 760, 300, 400, 480 };
     double v[4][3];
     int i, sobe = 1;
-    quadro(0.0f);
-    gfx_cor((GfxRect){ 960, 0, 960, 1080 }, 0, 1, 1, 1, 1.0f);
+    quadro(0.0f, 1.0f);
     gfx_vidro_painel(p, 36.0f / p.h, 0.30f, 1.0f);
     for (i = 0; i < 4; i++) media(944 + 10 * i, 500, 2, 40, v[i]);
     for (i = 0; i < 3; i++) sobe &= v[i + 1][1] > v[i][1] + 2.0;

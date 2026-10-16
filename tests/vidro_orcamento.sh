@@ -1,5 +1,5 @@
 #!/bin/bash
-# Orcamento do vidro: barra, ilha e painel numa captura por quadro. Ver tests/vidro_orcamento.c.
+# Frost budget: zero captures and blur passes per frame over hero/detail art. Ver tests/vidro_orcamento.c.
 #
 #   bash tests/vidro_orcamento.sh
 set -eu
