@@ -43,7 +43,8 @@ static void abrirExterno(const char *url, const char *titulo,
 int extplayer_tentar(const char *url, const char *titulo,
                      void (*interno)(const char *url), void (*sair)(void)) {
   int avisar, d;
-  if (!url || !url[0] || perguntaAberta) return 0;
+  if (!url || !url[0]) return 0;
+  if (perguntaAberta) return 1;   // modal aberto: o segundo pedido espera a resposta
   d = extplayer_decidir(ajustes_player_externo(), video_cabecalhos(), &avisar);
   if (avisar) player_toast(i18n("Player externo indisponível; usando o interno"), 3500u);
   if (d == EXTPLAYER_INTERNO) return 0;
