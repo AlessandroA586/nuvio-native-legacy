@@ -36,6 +36,40 @@ import java.util.concurrent.TimeUnit
 // Senao, devolve o fluxo da conexao unica, como o DefaultHttpDataSource.
 internal class FalhaDownloadParalelo(causa: IOException) : IOException(causa)
 
+// DESTINO DO LINK DO ADDON, por sessao do player. O link do addon (AIOStreams,
+// Torrentio, MediaFusion...) redireciona para o CDN do debrid, e cada abertura
+// nova do Media3 (o indice no fim do arquivo, a volta ao inicio, cada seek)
+// pagava esse redirecionamento de novo: 1-2 s pelo Torrentio, ate 10 s pelo
+// MediaFusion no Shield (16/10/2026). Guardado o destino, a abertura seguinte
+// vai direto ao CDN; se ele recusar (link vencido, 403/410) ou cair, volta UMA
+// vez ao link do addon, que pede um novo. Mesma ideia do cdnlink.c do .tpk
+// (PR #567), aqui dentro do proprio DataSource. Nunca loga o destino: o link
+// do CDN carrega token.
+class DestinosAddon(private val agora: () -> Long = { android.os.SystemClock.elapsedRealtime() }) {
+    companion object {
+        // O TorBox da ~3 h ao link do CDN; o resto do caminho cobre a sobra.
+        const val VALIDADE_MS = 2L * 60 * 60 * 1000
+    }
+    private var original: String? = null
+    private var destino: URL? = null
+    private var desde = 0L
+
+    @Synchronized fun buscar(orig: String): URL? =
+        if (orig == original && agora() - desde < VALIDADE_MS) destino else null
+
+    // So guarda um redirecionamento de verdade (host diferente).
+    @Synchronized fun lembrar(orig: String, fim: URL) {
+        val o = try { URL(orig) } catch (_: java.net.MalformedURLException) { return }
+        if (fim.host.isNullOrEmpty() || fim.host.equals(o.host, true)) return
+        if (orig == original && fim == destino) return
+        original = orig; destino = fim; desde = agora()
+    }
+
+    @Synchronized fun esquecer(orig: String) {
+        if (orig == original) { original = null; destino = null }
+    }
+}
+
 /** Nao repete no Loader o ciclo de tentativas que este DataSource ja esgotou. */
 internal class PoliticaErroParalelo : DefaultLoadErrorHandlingPolicy() {
     override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
@@ -57,6 +91,7 @@ class ParaleloDataSource(
     // por estas transferencias, nunca a entrega de memoria ao ExoPlayer.
     private val medidor: PassivoMedidor? = null,
     private val token: Long = 0L,
+    private val destinos: DestinosAddon? = null,
     // Injetaveis para os testes de falha/cancelamento; producao usa a rede real.
     private val novaConexao: (URL) -> HttpURLConnection = { it.openConnection() as HttpURLConnection },
     private val dormir: (Long) -> Unit = { Thread.sleep(it) },
@@ -105,18 +140,22 @@ class ParaleloDataSource(
                   private val unica: HttpDataSource.Factory,
                   private val medidor: PassivoMedidor? = null,
                   private val token: Long = 0L) : DataSource.Factory {
-        override fun createDataSource(): DataSource = Seletor(ua, props, unica.createDataSource(), medidor, token)
+        // Uma fabrica por sessao do player (NvPlayer): o destino vale para todas
+        // as aberturas dela.
+        private val destinos = DestinosAddon()
+        override fun createDataSource(): DataSource = Seletor(ua, props, unica.createDataSource(), medidor, token, destinos)
     }
 
     // Escolhe por pedido: paralelo para arquivo progressivo, unica para o resto.
     // Os ouvintes de transferencia (medidor de banda do ExoPlayer) vao para os dois.
     private class Seletor(private val ua: String?, private val props: Map<String, String>,
                           private val unica: DataSource,
-                          private val medidor: PassivoMedidor?, private val token: Long) : DataSource {
+                          private val medidor: PassivoMedidor?, private val token: Long,
+                          private val destinos: DestinosAddon) : DataSource {
         private var atual: DataSource? = null
         private val ouvintes = ArrayList<androidx.media3.datasource.TransferListener>()
         override fun open(dataSpec: DataSpec): Long {
-            val d = if (serve(dataSpec.uri)) ParaleloDataSource(ua, props, medidor = medidor, token = token).also { p ->
+            val d = if (serve(dataSpec.uri)) ParaleloDataSource(ua, props, medidor = medidor, token = token, destinos = destinos).also { p ->
                 for (o in ouvintes) p.addTransferListener(o)
             } else unica
             atual = d
@@ -248,6 +287,31 @@ class ParaleloDataSource(
         throw FalhaDownloadParalelo(erro ?: IOException("conexao falhou"))
     }
 
+    // Abertura pelo destino ja conhecido do link do addon; recusa ou queda
+    // volta ao link do addon com o retry normal, e o destino novo fica guardado.
+    private fun abrirSonda(original: URL, ini: Long, ultimo: Long): HttpURLConnection {
+        val chave = original.toString()
+        val guardado = destinos?.buscar(chave)
+        if (guardado != null) {
+            try {
+                val c = conectar(guardado, ini, ultimo)
+                if (c.responseCode in 200..299) {
+                    Log.i(TAG, "destino guardado: ${guardado.host} direto, sem passar por ${original.host}")
+                    return c
+                }
+                Log.i(TAG, "destino guardado recusou (HTTP ${c.responseCode}); de volta a ${original.host}")
+                desconectar(c)
+            } catch (e: IOException) {
+                if (foiCancelado(e)) throw cancelado(e)
+                Log.i(TAG, "destino guardado falhou (${e.javaClass.simpleName}); de volta a ${original.host}")
+            }
+            destinos?.esquecer(chave)
+        }
+        val c = conectarComRetry(original, ini, ultimo, 0L)
+        if (c.responseCode in 200..299) destinos?.lembrar(chave, c.url)
+        return c
+    }
+
     override fun open(dataSpec: DataSpec): Long {
         // Conectar, esperar o primeiro byte e baixar o primeiro pedaco e
         // transferencia ativa (o tempo entra na cobertura do segundo).
@@ -279,8 +343,9 @@ class ParaleloDataSource(
         // chamou, antes do pool existir.
         val primeiroUltimo = pos + (if (pedido != C.LENGTH_UNSET.toLong()) minOf(pedido, PRIMEIRO.toLong()) else PRIMEIRO.toLong()) - 1
         // Primeiro pedaco pela URL original: segue os redirecionamentos do debrid
-        // uma vez so; os pedacos seguintes vao direto ao endereco final.
-        val c = conectarComRetry(URL(dataSpec.uri.toString()), pos, primeiroUltimo, 0L)
+        // uma vez so; os pedacos seguintes vao direto ao endereco final. Uma
+        // abertura seguinte da mesma sessao ja comeca no destino (DestinosAddon).
+        val c = abrirSonda(URL(dataSpec.uri.toString()), pos, primeiroUltimo)
         val code = c.responseCode
         if (code == 206) {
             val cr = c.getHeaderField("Content-Range") ?: ""
@@ -312,8 +377,10 @@ class ParaleloDataSource(
                 // 206 so da sonda: reabre ate o fim da janela pedida (sem teto
                 // se ela e o arquivo inteiro). Janela que cabe na sonda segue.
                 if (code == 206 && (pedido == C.LENGTH_UNSET.toLong() || pedido > PRIMEIRO)) {
+                    // A sonda acabou de resolver o destino: reabre nele.
+                    val alvo = c.url
                     desconectar(c)
-                    unicaCon = conectarComRetry(URL(dataSpec.uri.toString()), pos,
+                    unicaCon = conectarComRetry(alvo, pos,
                         if (pedido == C.LENGTH_UNSET.toLong()) -1 else pos + pedido - 1)
                 } else unicaCon = c
                 val uc = unicaCon!!

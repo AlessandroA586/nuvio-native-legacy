@@ -343,6 +343,90 @@ class ParaleloDataSourceTest {
         } finally { fonte.close() }
     }
 
+    // Link do addon que redireciona (307) para o CDN do debrid; o host em
+    // `vencido` responde 403 (link vencido).
+    private class Rede(val total: Long) {
+        val noAddon = AtomicInteger()
+        val noCdn = AtomicInteger()
+        @Volatile var cdn = "https://cdn1.invalid/f?token=a"
+        @Volatile var vencido = ""
+        fun conexao(url: URL): HttpURLConnection =
+            if (url.host == "addon.invalid") {
+                noAddon.incrementAndGet()
+                val destino = cdn
+                object : ConexaoFalsa(url) {
+                    override fun getResponseCode(): Int = 307
+                    override fun getHeaderField(name: String?): String? =
+                        if (name == "Location") destino else null
+                }
+            } else {
+                noCdn.incrementAndGet()
+                val recusa = url.host == vencido
+                object : ConexaoFaixa(url, total) {
+                    override fun getResponseCode(): Int = if (recusa) HTTP_FORBIDDEN else super.getResponseCode()
+                }
+            }
+    }
+
+    private fun abrirDois(fonte: ParaleloDataSource, pos: Long) {
+        try {
+            fonte.open(DataSpec.Builder()
+                .setUri(android.net.Uri.parse("https://addon.invalid/play/abc"))
+                .setPosition(pos).setLength(2L).build())
+        } finally { fonte.close() }
+    }
+
+    @Test fun aberturaSeguinteVaiDiretoAoDestinoDoAddon() {
+        val rede = Rede(24891962527L)
+        val destinos = DestinosAddon(agora = { 1000L })
+        val nova = { ParaleloDataSource(null, emptyMap(), destinos = destinos, novaConexao = rede::conexao,
+            dormir = { throw AssertionError("nao deve esperar retry") }) }
+        abrirDois(nova(), 0L)
+        assertEquals(1, rede.noAddon.get())
+        // Indice no fim, volta ao inicio, seek: nenhuma passa de novo pelo addon.
+        abrirDois(nova(), 24891962000L)
+        abrirDois(nova(), 5000L)
+        assertEquals(1, rede.noAddon.get())
+        assertEquals(3, rede.noCdn.get())
+    }
+
+    @Test fun destinoRecusadoVoltaAoAddonEGuardaONovo() {
+        val rede = Rede(24891962527L)
+        val destinos = DestinosAddon(agora = { 1000L })
+        val nova = { ParaleloDataSource(null, emptyMap(), destinos = destinos, novaConexao = rede::conexao,
+            dormir = { throw AssertionError("nao deve esperar retry") }) }
+        abrirDois(nova(), 0L)
+        // O link do CDN venceu: 403 no destino guardado, o addon da um novo.
+        rede.vencido = "cdn1.invalid"
+        rede.cdn = "https://cdn2.invalid/f?token=b"
+        val cdnAntes = rede.noCdn.get()
+        abrirDois(nova(), 7000L)
+        assertEquals(2, rede.noAddon.get())
+        assertEquals(cdnAntes + 2, rede.noCdn.get())   // cdn1 recusou, cdn2 serviu
+        assertEquals("cdn2.invalid", destinos.buscar("https://addon.invalid/play/abc")?.host)
+        // E a abertura seguinte ja vai direto ao cdn2.
+        abrirDois(nova(), 9000L)
+        assertEquals(2, rede.noAddon.get())
+    }
+
+    @Test fun destinoVencidoNaoEReusado() {
+        val rede = Rede(24891962527L)
+        var agora = 0L
+        val destinos = DestinosAddon(agora = { agora })
+        val nova = { ParaleloDataSource(null, emptyMap(), destinos = destinos, novaConexao = rede::conexao,
+            dormir = { throw AssertionError("nao deve esperar retry") }) }
+        abrirDois(nova(), 0L)
+        agora = DestinosAddon.VALIDADE_MS
+        abrirDois(nova(), 0L)
+        assertEquals(2, rede.noAddon.get())
+    }
+
+    @Test fun semRedirecionamentoNadaEGuardado() {
+        val destinos = DestinosAddon(agora = { 0L })
+        destinos.lembrar("https://cdn.invalid/f", URL("https://cdn.invalid/f"))
+        assertEquals(null, destinos.buscar("https://cdn.invalid/f"))
+    }
+
     @Test fun janelaVaziaAbreSemConectar() {
         // DataSpec de 0 byte: abre vazio, sem Range invalido (pos-1) nem 416.
         val aberturas = AtomicInteger()
