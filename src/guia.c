@@ -120,7 +120,7 @@
 #define G_AREA_DIR (G_AREA_X + G_AREA_W)
 static int gRetrato(void) {
 #ifdef NV_TOUCH_UI
-  return NV_TELA_W < NV_TELA_H;
+  return telefoneui_ativo() && NV_TELA_W < NV_TELA_H;
 #else
   return 0;
 #endif
@@ -1470,7 +1470,7 @@ static void toqueLimpar(void) {
 #endif
 static float tempoDesloc(void) {
 #ifdef NV_TOUCH_UI
-  if (toqueTempo.livre) return toqueTempoMin;
+  if (toquerol_livre(&toqueTempo)) return toqueTempoMin;
 #endif
   return (float)janelaDesl;
 }
@@ -2574,6 +2574,9 @@ static void drenarCarga(void) {
 }
 
 void guia_atualizar(float dt, Uint32 agora) {
+#ifdef NV_TOUCH_UI
+  if (!telefoneui_ativo()) toqueLimpar();
+#endif
   if (guia_visivel()) gTopoMedir();
   entrada = anim_mola(entrada, guia_visivel() ? 1.0f : 0.0f, dt, NV_MOLA_TELA);
   int prontoPend = atomic_load_explicit(&pendPronto, memory_order_acquire);
@@ -2627,7 +2630,7 @@ void guia_atualizar(float dt, Uint32 agora) {
     if (alvo > maxY) alvo = maxY;
     if (alvo < 0.0f) alvo = 0.0f;
 #ifdef NV_TOUCH_UI
-    if (!toqueLista.livre)
+    if (!toquerol_livre(&toqueLista))
 #endif
       rolL = anim_mola2(&velL, rolL, alvo, dt, NV_MOLA_SCROLL);
   }
@@ -2639,7 +2642,7 @@ void guia_atualizar(float dt, Uint32 agora) {
     if (alvo > maxY) alvo = maxY;
     if (alvo < 0.0f) alvo = 0.0f;
 #ifdef NV_TOUCH_UI
-    if (!toqueAddon.livre)
+    if (!toquerol_livre(&toqueAddon))
 #endif
       paRol = anim_mola2(&paVelRol, paRol, alvo, dt, NV_MOLA_SCROLL);
   }
@@ -2686,7 +2689,7 @@ void guia_atualizar(float dt, Uint32 agora) {
     if (alvo > maxY) alvo = maxY;
     if (alvo < 0.0f) alvo = 0.0f;
 #ifdef NV_TOUCH_UI
-    if (!toqueCat.livre) {
+    if (!toquerol_livre(&toqueCat)) {
 #endif
       if (catAnim < 0.02f) { catRol = alvo; catVelRol = 0.0f; }
       else catRol = anim_mola2(&catVelRol, catRol, alvo, dt, NV_MOLA2_SCROLL);
@@ -2712,7 +2715,7 @@ void guia_atualizar(float dt, Uint32 agora) {
     if (alvo > maxY) alvo = maxY;
     if (alvo < 0.0f) alvo = 0.0f;
 #ifdef NV_TOUCH_UI
-    if (!toqueGradeY.livre)
+    if (!toquerol_livre(&toqueGradeY))
 #endif
       rolY = anim_mola2(&velY, rolY, alvo, dt, NV_MOLA_SCROLL); }
   // Rolagem horizontal da fileira em foco.
@@ -2721,7 +2724,7 @@ void guia_atualizar(float dt, Uint32 agora) {
     float alvo = (float)focoCol * passo - G_AREA_W * 0.5f + G_CARD_W * 0.5f;
     if (alvo < 0.0f) alvo = 0.0f;
 #ifdef NV_TOUCH_UI
-    if (!toqueGradeX[l].livre)
+    if (!toquerol_livre(&toqueGradeX[l]))
 #endif
       rolX[l] = anim_mola(rolX[l], alvo, dt, 14.0f); }
 }
@@ -3811,8 +3814,11 @@ static void desenharReguaEm(float a, time_t ini, float yR) {
   float ppm = G_L_FAIXA_W / (float)G_L_JANELA_MIN;
   int i, n = G_L_JANELA_MIN / G_L_PASSO_MIN;
 #ifdef NV_TOUCH_UI
-  time_t reguaIni = (ini / (G_L_PASSO_MIN * 60)) * (G_L_PASSO_MIN * 60);
-  n++;
+  time_t reguaIni = ini;
+  if (telefoneui_ativo()) {
+    reguaIni = (ini / (G_L_PASSO_MIN * 60)) * (G_L_PASSO_MIN * 60);
+    n++;
+  }
 #endif
   for (i = 0; i < n; i++) {
     char h[12];
@@ -3821,7 +3827,7 @@ static void desenharReguaEm(float a, time_t ini, float yR) {
 #ifdef NV_TOUCH_UI
     time_t tick = reguaIni + (time_t)i * G_L_PASSO_MIN * 60;
     x = G_L_FAIXA_X + (float)(tick - ini) / 60.0f * ppm;
-    if (x < G_L_FAIXA_X || x >= G_AREA_DIR) continue;
+    if (telefoneui_ativo() && (x < G_L_FAIXA_X || x >= G_AREA_DIR)) continue;
     fmtHora(tick, h, sizeof h);
 #else
     fmtHora(ini + (time_t)i * G_L_PASSO_MIN * 60, h, sizeof h);
@@ -3870,7 +3876,7 @@ static void desenharLinhaLista(GCanal *c, float y, int focada, float a,
                                int passo, float agoraX, GfxRect *alvo) {
   float h = gCel;
 #ifdef NV_TOUCH_UI
-  if (!overlay) h = G_L_CEL;
+  if (telefoneui_ativo() && !overlay) h = G_L_CEL;
 #endif
   int textoRetrato = gRetrato() && h >= 70.0f;
   float raioB = 10.0f / h;
@@ -3938,7 +3944,7 @@ static void desenharLinhaLista(GCanal *c, float y, int focada, float a,
           float ar3, ag3, ab3, bw = b.w - 28.0f;
           ajustes_acento(&ar3, &ag3, &ab3);
 #ifdef NV_TOUCH_UI
-          if (bw > 0.0f) {
+          if (!telefoneui_ativo() || bw > 0.0f) {
 #endif
           gfx_cor((GfxRect){ b.x + 14.0f, b.y + h - 5.0f, bw, 3.0f }, 0.5f, 1, 1, 1, 0.14f * a);
           if (bw * f > 1.0f)
@@ -4268,7 +4274,7 @@ static void desenharBanda(float a, Uint32 agora) {
   float ar, ag, ab;
   if (nLinhas() < 1 || !linhaItem(focoLin, focoCol)) return;
 #ifdef NV_TOUCH_UI
-  if (!toqueTempo.livre) toqueTempoMin = (float)janelaDesl;
+  if (!toquerol_livre(&toqueTempo)) toqueTempoMin = (float)janelaDesl;
   toquePpm = G_L_FAIXA_W / G_L_JANELA_MIN;
   toquerol_vincular(&toqueTempo, (GfxRect){ G_L_FAIXA_X, yR, G_L_FAIXA_W, fimY - yR }, gfx_escala(), 0.0f, G_L_DESL_MAX, 0, &toqueTempoMin);
   ponteiro_rolagem(toqueGuiaRolar);
@@ -4519,7 +4525,7 @@ static void buscaAtualizar(float dt, Uint32 agora) {
     float alvo = y - area * 0.5f;
     if (alvo < 0.0f) alvo = 0.0f;
 #ifdef NV_TOUCH_UI
-    if (!toqueBusca.livre)
+    if (!toquerol_livre(&toqueBusca))
 #endif
       buscaRol += (alvo - buscaRol) * (dt * 12.0f > 1.0f ? 1.0f : dt * 12.0f);
   }
@@ -4626,6 +4632,7 @@ static void buscaDesenhar(Uint32 agora) {
 
 #ifdef NV_TOUCH_UI
 static int toqueGuiaRolar(const PonteiroRolagem *e) {
+  if (!telefoneui_ativo()) { toqueLimpar(); return 0; }
   PonteiroRolagem local = *e;
   if (e->fase == PONT_ROL_INICIO) {
     toqueAtual = NULL; toqueLinha = -1;
@@ -4668,8 +4675,9 @@ static int toqueAddonRolar(const PonteiroRolagem *e) {
 }
 static int toqueBuscaRolar(const PonteiroRolagem *e) { return toquerol_evento(&toqueBusca, e); }
 static void toqueGuiaRetomar(void) {
+  if (!telefoneui_ativo()) { toqueLimpar(); return; }
   if (buscaEstado == 2) {
-    if (toqueBusca.livre) {
+    if (toquerol_livre(&toqueBusca)) {
       float ponto = buscaRol + toqueBusca.regiao.h * 0.35f, y = G_BUSCA_ROW;
       buscaFoco = -1;
       for (int i = 0; i < buscaN(); i++) {
@@ -4683,20 +4691,20 @@ static void toqueGuiaRetomar(void) {
     toquerol_limpar(&toqueBusca); return;
   }
   if (catAberto) {
-    if (toqueCat.livre) catFoco = (int)((catRol + toqueCat.regiao.h * 0.35f) / G_CAT_ROW);
+    if (toquerol_livre(&toqueCat)) catFoco = (int)((catRol + toqueCat.regiao.h * 0.35f) / G_CAT_ROW);
     if (catFoco >= nLinhas()) catFoco = nLinhas() - 1;
     if (catFoco < 0) catFoco = 0;
     toquerol_limpar(&toqueCat); return;
   }
   if (painel) {
-    if (toqueAddon.livre) {
+    if (toquerol_livre(&toqueAddon)) {
       float ponto = paRol + toqueAddon.regiao.h * 0.35f;
       paFoco = 0;
       while (paFoco + 1 < painelN() && paItemY(paFoco + 1) <= ponto) paFoco++;
     }
     toquerol_limpar(&toqueAddon); return;
   }
-  if (toqueLista.livre && nLinhas() > 0) {
+  if (toquerol_livre(&toqueLista) && nLinhas() > 0) {
     float ponto = rolL + toqueLista.regiao.h * 0.35f, y = 0.0f;
     for (int l = 0; l < nLinhas(); l++) {
       float h = G_L_HEAD + linhaN(l) * G_L_ROW;
@@ -4710,26 +4718,29 @@ static void toqueGuiaRetomar(void) {
     }
     focoTopo = 0;
   }
-  if (toqueGradeY.livre && nLinhas() > 0) {
+  if (toquerol_livre(&toqueGradeY) && nLinhas() > 0) {
     focoLin = (int)((rolY + toqueGradeY.regiao.h * 0.35f) / G_PASSO_Y);
     if (focoLin >= nLinhas()) focoLin = nLinhas() - 1;
     if (focoCol >= linhaN(focoLin)) focoCol = linhaN(focoLin) - 1;
     if (focoCol < 0) focoCol = 0;
     focoTopo = 0;
   }
-  if (toqueLinha >= 0 && toqueLinha < nLinhas() && toqueGradeX[toqueLinha].livre) {
+  if (toqueLinha >= 0 && toqueLinha < nLinhas() && toquerol_livre(&toqueGradeX[toqueLinha])) {
     focoLin = toqueLinha;
     focoCol = (int)((rolX[focoLin] + toqueGradeX[focoLin].regiao.w * 0.35f) / (G_CARD_W + G_GAP_X));
     if (focoCol >= linhaN(focoLin)) focoCol = linhaN(focoLin) - 1;
     if (focoCol < 0) focoCol = 0;
     focoTopo = 0;
   }
-  if (toqueTempo.livre) janelaDesl = (int)((toqueTempoMin + G_L_PASSO_MIN * 0.5f) / G_L_PASSO_MIN) * G_L_PASSO_MIN;
+  if (toquerol_livre(&toqueTempo)) janelaDesl = (int)((toqueTempoMin + G_L_PASSO_MIN * 0.5f) / G_L_PASSO_MIN) * G_L_PASSO_MIN;
   toqueLimpar();
 }
 #endif
 
 void guia_desenhar(Uint32 agora) {
+#ifdef NV_TOUCH_UI
+  if (!telefoneui_ativo()) toqueLimpar();
+#endif
   time_t agoraT = time(NULL);
   time_t tFoco = instanteFoco(agoraT);
   float a = entrada;
@@ -4744,7 +4755,7 @@ void guia_desenhar(Uint32 agora) {
     float area = G_L_BASE - (modoLista ? G_L_TOPO : G_TOPO);
     if (modoLista) {
       toquerol_vincular(&toqueLista, (GfxRect){ G_AREA_X, G_L_TOPO, G_AREA_W, area }, gfx_escala(), 0.0f, fmaxf(0.0f, listaAltura() + G_L_FADE - area), 1, &rolL);
-      if (!toqueTempo.livre) toqueTempoMin = (float)janelaDesl;
+      if (!toquerol_livre(&toqueTempo)) toqueTempoMin = (float)janelaDesl;
       toquePpm = G_L_FAIXA_W / G_L_JANELA_MIN;
       toquerol_vincular(&toqueTempo, (GfxRect){ G_L_FAIXA_X, G_TOPO, G_L_FAIXA_W, G_L_BASE - G_TOPO }, gfx_escala(), 0.0f, G_L_DESL_MAX, 0, &toqueTempoMin);
     } else {
@@ -4933,10 +4944,11 @@ void guia_desenhar(Uint32 agora) {
 
   } else if (temLinhas) {
 #ifdef NV_TOUCH_UI
-    gfx_recorte(G_AREA_X, G_TOPO - 8.0f, G_AREA_W, G_L_BASE - G_TOPO + 8.0f);
-#else
-    gfx_recorte(0.0f, G_TOPO - 8.0f, NV_TELA_W, G_L_BASE - G_TOPO + 8.0f);
+    if (telefoneui_ativo())
+      gfx_recorte(G_AREA_X, G_TOPO - 8.0f, G_AREA_W, G_L_BASE - G_TOPO + 8.0f);
+    else
 #endif
+      gfx_recorte(0.0f, G_TOPO - 8.0f, NV_TELA_W, G_L_BASE - G_TOPO + 8.0f);
     for (l = 0; l < nLinhas(); l++) {
       float y = G_TOPO + (float)l * G_PASSO_Y - rolY;
       int n = linhaN(l);
@@ -4956,9 +4968,12 @@ void guia_desenhar(Uint32 agora) {
       { float x = G_AREA_X - rolX[l];
         for (i = 0; i < n; i++, x += G_CARD_W + G_GAP_X) {
 #ifdef NV_TOUCH_UI
-          desenharCardVisivel(linhaItem(l, i), x, y + G_HEAD_H, l, i,
-                             l == focoLin && i == focoCol ? 1.0f : 0.0f, a * dim, agoraT);
-#else
+          if (telefoneui_ativo()) {
+            desenharCardVisivel(linhaItem(l, i), x, y + G_HEAD_H, l, i,
+                               l == focoLin && i == focoCol ? 1.0f : 0.0f, a * dim, agoraT);
+            continue;
+          }
+#endif
           if (x + G_CARD_W < 0.0f || x > NV_TELA_W) continue;
           if (a > 0.99f)
             ponteiro_alvo_faixa(x, y + G_HEAD_H, G_CARD_W, G_CARD_H, G_TOPO - 8.0f, G_L_BASE,
@@ -4966,7 +4981,6 @@ void guia_desenhar(Uint32 agora) {
           desenharCard(linhaItem(l, i), x, y + G_HEAD_H,
                        l == focoLin && i == focoCol ? 1.0f : 0.0f,
                        a * dim, agoraT);
-#endif
         } }
     }
     gfx_sem_recorte();

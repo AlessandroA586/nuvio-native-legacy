@@ -1,4 +1,4 @@
-**Android TV and Mobile in one APK:** In Settings > Appearance, choose **Interface mode: TV / Mobile**. TV remains the default and keeps remote navigation. Mobile enables phone layouts, direct touch scrolling, portrait browsing, and the native keyboard; full-screen playback uses landscape. The choice is saved only on this device, and switching keeps the same app, account, and data. See [Android interface modes](docs/android/INTERFACE-MODES.md) for details.
+**Android TV and Mobile in one APK:** Automatic selects TV on Android TV / Google TV and Mobile on phones and tablets. In Settings > Appearance, **Interface mode** can override it with TV or Mobile. Mobile enables phone layouts, direct touch scrolling, portrait browsing, and the native keyboard; full-screen playback uses landscape. The choice is saved only on this device, and switching keeps the same app, account, and data. See [Android interface modes](docs/android/INTERFACE-MODES.md) for details.
 
 <picture>
   <source media="(max-width: 640px)" srcset="docs/assets/nuvio-readme-banner-mobile.png">

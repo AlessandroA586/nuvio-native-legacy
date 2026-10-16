@@ -796,7 +796,7 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
     if (telefoneui_ativo()) {
       float vista = ilha.w - 54.0f, max = fmaxf(0, n * 212.0f - 22.0f - vista);
       toquerol_vincular(&toquePP, (GfxRect){cx, y - 20, vista, 313}, gfx_escala(), 0, max, 0, &scrollPP);
-      if (!toquePP.livre) {
+      if (!toquerol_livre(&toquePP)) {
         float esq = foco * 212.0f, dir = esq + 190;
         if (esq < scrollPP) scrollPP = esq;
         if (dir > scrollPP + vista) scrollPP = dir - vista;

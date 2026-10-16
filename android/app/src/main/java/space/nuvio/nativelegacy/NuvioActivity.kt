@@ -1,11 +1,13 @@
 package space.nuvio.nativelegacy
 
 import android.Manifest
+import android.app.UiModeManager
 import android.content.Context
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
@@ -98,10 +100,11 @@ class NuvioActivity : SDLActivity() {
     }
 
     private fun aplicarOrientacaoTouch() {
-        val orientacao = if (!interfaceMobile) ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        else if (playerTelaCheiaTouch)
-            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        else ActivityInfo.SCREEN_ORIENTATION_FULL_USER
+        val orientacao = when (InterfaceMode.orientation(interfaceMobile, playerTelaCheiaTouch)) {
+            InterfaceMode.Orientation.LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            InterfaceMode.Orientation.SENSOR_LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            InterfaceMode.Orientation.FULL_USER -> ActivityInfo.SCREEN_ORIENTATION_FULL_USER
+        }
         if (requestedOrientation != orientacao) requestedOrientation = orientacao
     }
 
@@ -174,6 +177,7 @@ class NuvioActivity : SDLActivity() {
         }
         jaCriada = true
         prepararAmbiente()
+        aplicarOrientacaoTouch()
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= 28) cutoutModoTv = window.attributes.layoutInDisplayCutoutMode
         entradaModoTv = window.attributes.softInputMode
@@ -196,17 +200,18 @@ class NuvioActivity : SDLActivity() {
         mSurface.setZOrderMediaOverlay(true)
         mSurface.holder.setFormat(PixelFormat.TRANSLUCENT)
         NvPlayer.iniciar(this, camada)
+        NvPlayer.interfaceModo(interfaceMobile)
     }
 
     // SDL and video fill the window, including the camera cutout edges. Keeping
     // mLayout intact also keeps SDL's touch coordinates relative to the video.
     private fun prepararViewportTouch() {
-        val raizTouch = object : FrameLayout(this) {
+        val raiz = object : FrameLayout(this) {
             override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-                val r = TouchViewport.fit(View.MeasureSpec.getSize(widthMeasureSpec),
-                    View.MeasureSpec.getSize(heightMeasureSpec), 0, 0, 0, 0)
+                val r = InterfaceMode.viewport(interfaceMobile, View.MeasureSpec.getSize(widthMeasureSpec),
+                    View.MeasureSpec.getSize(heightMeasureSpec))
+                val atual = mLayout.layoutParams as FrameLayout.LayoutParams
                 if (r != null) {
-                    val atual = mLayout.layoutParams as FrameLayout.LayoutParams
                     if (atual.width != r.width || atual.height != r.height ||
                         atual.leftMargin != r.left || atual.topMargin != r.top) {
                         atual.width = r.width; atual.height = r.height
@@ -214,24 +219,30 @@ class NuvioActivity : SDLActivity() {
                         atual.leftMargin = r.left; atual.topMargin = r.top
                         Log.i("Nuvio", "touch viewport=${r.left},${r.top},${r.width},${r.height}")
                     }
+                } else {
+                    atual.width = ViewGroup.LayoutParams.MATCH_PARENT
+                    atual.height = ViewGroup.LayoutParams.MATCH_PARENT
+                    atual.leftMargin = 0; atual.topMargin = 0
                 }
                 super.onMeasure(widthMeasureSpec, heightMeasureSpec)
             }
         }.apply { setBackgroundColor(Color.BLACK) }
         (mLayout.parent as? ViewGroup)?.removeView(mLayout)
-        raizTouch.addView(mLayout, FrameLayout.LayoutParams(
+        raiz.addView(mLayout, FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        ViewCompat.setOnApplyWindowInsetsListener(raizTouch) { _, ins ->
-            val barras = ins.getInsets(WindowInsetsCompat.Type.systemBars())
-            val recorte = ins.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.displayCutout())
-            touchInsetLeft = maxOf(barras.left, recorte.left)
-            touchInsetTop = maxOf(barras.top, recorte.top)
-            touchInsetRight = maxOf(barras.right, recorte.right)
-            posicionarCampoTouch()
+        ViewCompat.setOnApplyWindowInsetsListener(raiz) { _, ins ->
+            if (interfaceMobile) {
+                val barras = ins.getInsets(WindowInsetsCompat.Type.systemBars())
+                val recorte = ins.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.displayCutout())
+                touchInsetLeft = maxOf(barras.left, recorte.left)
+                touchInsetTop = maxOf(barras.top, recorte.top)
+                touchInsetRight = maxOf(barras.right, recorte.right)
+                posicionarCampoTouch()
+            }
             ins
         }
-        setContentView(raizTouch)
-        ViewCompat.requestApplyInsets(raizTouch)
+        setContentView(raiz)
+        ViewCompat.requestApplyInsets(raiz)
         aplicarViewportModo()
     }
 
@@ -250,7 +261,7 @@ class NuvioActivity : SDLActivity() {
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         // SDL turns CANCEL into finger UP. Queue the cancellation first so
         // taking over a system gesture cannot confirm the pending tap/hold.
-        if (!mBrokenLibraries &&
+        if (interfaceMobile && !mBrokenLibraries &&
             ev.actionMasked == MotionEvent.ACTION_CANCEL) nativeToqueCancelou()
         return super.dispatchTouchEvent(ev)
     }
@@ -594,12 +605,20 @@ class NuvioActivity : SDLActivity() {
     // super.onCreate: o SDL abre o main numa thread logo depois.
     private fun prepararAmbiente() {
         val dados = File(filesDir, "dados").apply { mkdirs() }
+        val uiMode = (getSystemService(Context.UI_MODE_SERVICE) as? UiModeManager)?.currentModeType
+        val automaticMobile = InterfaceMode.automaticMobile(
+            uiMode == Configuration.UI_MODE_TYPE_TELEVISION,
+            packageManager.hasSystemFeature(PackageManager.FEATURE_TELEVISION),
+            packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK))
+        val preferencia = InterfaceMode.readPreference(File(dados, "ajustes.txt"))
+        interfaceMobile = InterfaceMode.resolve(preferencia, automaticMobile)
         val res = File(filesDir, "res")
         extrairAssets(res)
         val versao = try {
             packageManager.getPackageInfo(packageName, 0).versionName ?: ""
         } catch (e: Exception) { "" }
         fun env(k: String, v: String) = Os.setenv(k, v, true)
+        env("NUVIO_INTERFACE_AUTO", if (automaticMobile) "1" else "0")
         env("NUVIO_DADOS", dados.path)
         env("NUVIO_LOG", File(dados, "nuvio.log").path)
         env("NUVIO_LOG_ANTERIOR", File(dados, "nuvio-anterior.log").path)

@@ -2666,7 +2666,7 @@ void spainel_atualizar(float dt, Uint32 agora) {
     if (topoR + POP_LINHA_H - alvoR > janela) alvoR = topoR + POP_LINHA_H - janela;
     if (topoR < alvoR) alvoR = topoR;
 #ifdef NV_TOUCH_UI
-    if (!toquePop.livre)
+    if (!toquerol_livre(&toquePop))
 #endif
     popRol = ajustes_animacoes_reduzidas() ? alvoR : anim_mola(popRol, alvoR, dt, NV_MOLA_FOCO);
   }
@@ -2718,7 +2718,7 @@ void spainel_atualizar(float dt, Uint32 agora) {
   }
   if (alvo < 0.0f) alvo = 0.0f;
 #ifdef NV_TOUCH_UI
-  if (toquePainel.livre) { scrollY = toquerol_clamp(scrollY, 0, toquePainelMax()); velY = 0; }
+  if (toquerol_livre(&toquePainel)) { scrollY = toquerol_clamp(scrollY, 0, toquePainelMax()); velY = 0; }
   else
 #endif
   scrollY = anim_mola2_reduzida(&velY, scrollY, alvo, dt, NV_MOLA2_SCROLL,
@@ -4666,7 +4666,7 @@ static void desenhaEditar(float dx, float a) {
 #ifdef NV_TOUCH_UI
   float topo = SP_LISTA_Y + SP_FOCO_AR + 6.0f, base = SP_LISTA_BASE;
   float maximo = fmaxf(0, n * SPE_LIN_H + 18 + NV_CTRL_H - (base - topo));
-  if (!toqueEditar.livre) {
+  if (!toquerol_livre(&toqueEditar)) {
     float fim = editLin >= n ? n * SPE_LIN_H + 18 + NV_CTRL_H : (editLin + 1) * SPE_LIN_H;
     toqueEditarOffset = toquerol_clamp(fim - (base - topo), 0, maximo);
   }
