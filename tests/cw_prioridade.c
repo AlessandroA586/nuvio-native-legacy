@@ -7,15 +7,6 @@
 #include "perfis.h"
 #include <errno.h>
 
-/* Keep the remote-service boundary explicit on Mach-O as well as ELF. Profile
- * ownership still comes from the real perfis.c linked by this fixture. */
-int trakt_enfeitar_lote_sessao(CatItem *itens, int n, uint64_t sessao) {
-  return nv_perfil_sessao_atual(sessao) ? trakt_enfeitar_lote(itens, n) : 0;
-}
-int recomenda_social_mesclar_sessao(CatItem *itens, int n, int max, uint64_t sessao) {
-  return nv_perfil_sessao_atual(sessao) ? recomenda_social_mesclar(itens, n, max) : 0;
-}
-
 static pthread_mutex_t gate = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t changed = PTHREAD_COND_INITIALIZER;
 static int entered[2],released[2],finished[2];
@@ -123,5 +114,7 @@ int main(int argc,char **argv) {
     end=agoraMs()+3000;while(cwRunning()&&agoraMs()<end)usleep(1000);assert(!cwRunning());
     puts("PASS cached/updated/empty Continue Watching survives catalog publication and remount");
   }
+  assert(__atomic_load_n(&fixtureAddonListSnapshots, __ATOMIC_RELAXED) > 0);
+  assert(!fixtureAddonListDepth);
   puts("cw_prioridade: ok");return 0;
 }
