@@ -124,6 +124,9 @@ typedef enum {
   // com mais informação na base e o véu na cor predominante. No fim, pelo
   // mesmo motivo: o número gravado dos tipos acima não muda.
   FIL_TIPO_POSTER_GRANDE, // FILEIRA_POSTER_GRANDE — pôster 3:4 grande com ficha na base
+  // 16/10 (dono): "Hero dividido" — o painel do foco a esquerda, a fila a
+  // direita. No fim pelo mesmo motivo.
+  FIL_TIPO_HEROI_DIVIDIDO, // FILEIRA_HEROI_DIVIDIDO — painel deitado com a ficha + cartazes
   FIL_TIPO_N
 } FilTipo;
 
@@ -343,7 +346,8 @@ void fil_registrar_se_couber(const char *chave, const char *titulo,
 // limite, ou posta na fila pela pessoa —, e -1 quando nao (desconhecida,
 // oculta, ou ligada so por ter entrado no fim). E a pergunta que a cota de
 // declaracoes de descoberta.c faz antes de decidir quais catalogos de um addon
-// grande ler.
+// grande ler. Explicit additions and queue placement retain this priority even
+// when quota-excluded; unavailable catalogs still consume no Home slots.
 int fil_escolhida(const char *chave);
 
 // Grava o que fil_registrar acumulou, se houver. Chamar UMA VEZ no fim da

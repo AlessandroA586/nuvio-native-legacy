@@ -507,11 +507,9 @@ static void *enviarRegistro(void *u) {
   { const char *arq = manual ? registro_arquivo() : AV_LOG_ANTERIOR;
     FILE *f = arq ? fopen(arq, "rb") : NULL;
     if (f) {
-      long tam;
-      fseek(f, 0, SEEK_END); tam = ftell(f);
-      if (tam > AV_REGISTRO_MAX) fseek(f, tam - AV_REGISTRO_MAX, SEEK_SET); else rewind(f);
-      texto = malloc(AV_REGISTRO_MAX + 1);
-      if (texto) { nTexto = fread(texto, 1, AV_REGISTRO_MAX, f); texto[nTexto] = 0; }
+      size_t max = automatico ? AV_REGISTRO_AUTO_MAX : AV_REGISTRO_MAX;
+      texto = malloc(max + 1);
+      if (texto) nTexto = lerRegistroCabecaCauda(f, texto, max);
       fclose(f);
     } }
 #endif

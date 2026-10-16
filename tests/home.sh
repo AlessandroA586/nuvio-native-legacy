@@ -18,3 +18,39 @@ cc ${flags[@]+"${flags[@]}"} src/catalogo.c src/progresso.c src/focus.c src/ajus
   -DCURADORIA_TESTE -Wl,-dead_strip -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -Wno-deprecated-declarations -Wno-macro-redefined
 ${TMPDIR:-/tmp}/nuvio-home-tests
+# Exercise the production suppression guard, including Up from the first Split row.
+python3 - <<'PY'
+from pathlib import Path
+import re
+import subprocess
+import tempfile
+
+source = Path('src/home.c').read_text()
+guard = re.search(r'if \(([^;{}]+)\) aTexto = 0\.0f;', source)
+assert guard, 'hero copy suppression guard missing'
+with tempfile.TemporaryDirectory() as directory:
+    test = Path(directory) / 'hero-focus.c'
+    test.write_text('''
+#include <assert.h>
+enum { FILEIRA_NORMAL, FILEIRA_HEROI_DIVIDIDO };
+int main(void) {
+  struct { int tipo; } fileiras[1];
+  struct { int fileira; } foco;
+  int nFileiras = 1;
+  for (int tipo = FILEIRA_NORMAL; tipo <= FILEIRA_HEROI_DIVIDIDO; tipo++)
+    for (int focoHero = 0; focoHero <= 1; focoHero++)
+      for (int row = -1; row <= nFileiras; row++) {
+        fileiras[0].tipo = tipo;
+        foco.fileira = row;
+        float aTexto = 1.0f;
+        ''' + guard.group(0) + '''
+        assert(aTexto == ((!focoHero && row == 0 &&
+                            tipo == FILEIRA_HEROI_DIVIDIDO) ? 0.0f : 1.0f));
+      }
+}
+''')
+    executable = str(Path(directory) / 'hero-focus')
+    subprocess.run(['cc', str(test), '-o', executable], check=True)
+    subprocess.run([executable], check=True)
+print('hero focus suppression: ok')
+PY

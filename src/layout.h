@@ -363,6 +363,12 @@ int layout_modo_mobile(void);
 #define NV_POSTER_G_W       (NV_POSTER_G_H * 3.0f / 4.0f)
 #define NV_POSTER_G_VEU_F    0.58f   // quanto da altura o véu da base cobre
 #define NV_POSTER_G_VEU_A    0.94f
+// FILEIRA "HERÓI DIVIDIDO" (home.c, 16/10): o painel deitado do foco ocupa
+// esta fração da largura útil; a fila de cartazes começa depois do vão; a
+// ficha (meta, chips, sinopse, elenco) mora abaixo da arte do painel.
+#define NV_DIV_PAINEL_F     0.45f
+#define NV_DIV_VAO          40.0f
+#define NV_DIV_META_H       230.0f
 // O numeral: corpo do TXT_RANK_GRANDE (os algarismos da Inter medem ~0,73 do
 // corpo, ~190 px contra o cartaz de 322 — perto de 60%, a proporcao da Apple),
 // quanto da largura dele fica POR BAIXO do cartaz, e a folga minima ate o

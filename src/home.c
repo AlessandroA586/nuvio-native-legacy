@@ -370,6 +370,7 @@ static float velX[MAX_FIL];
 // Fileiras que o limite cortou na ultima montagem — colecoes incluidas. Ver o
 // comentario no corte, em remontar().
 static int   cortadasPeloLimite;
+static char  motivoCorte[128];
 static float velY = 0.0f;
 // RETORNO DE FIM DE FILEIRA (anim.h: AnimBorda). Um deslocamento em x por
 // fileira e um em y para a pagina, somados so no DESENHO: nao tocam scrollX,
@@ -830,7 +831,20 @@ static GfxRect padBannerRect(void) {
 }
 // O numeral do Top 10 mora ANTES do cartaz: a fileira comeca deslocada por esta
 // faixa (e o passo dela ja a inclui, em gapDe).
+// HERÓI DIVIDIDO: o painel do foco mora na mesma faixa, a esquerda da fila.
+// A arte é 16:9 da largura do painel; fora da Dinâmica a fileira em foco fica
+// sempre no mesmo Y, e a arte encolhe para a ficha caber até a base da tela.
+static float divPainelW(void) { return homeLarguraUtil() * NV_DIV_PAINEL_F; }
+static float divArteH(void) {
+  float h = divPainelW() * 9.0f / 16.0f;
+  if (layoutHome() != HOME_LAYOUT_DINAMICA) {
+    float hMax = NV_TELA_H - topoFileiras() - NV_LEGACY_ROW_HEAD_H - NV_DIV_META_H - 24.0f;
+    if (h > hMax) h = hMax;
+  }
+  return h;
+}
 static float xOffTipo(TipoFileira t) {
+  if (t == FILEIRA_HEROI_DIVIDIDO) return divPainelW() + NV_DIV_VAO;
   return t == FILEIRA_TOP10_NUM ? NV_TOP10_NUM_FAIXA : 0.0f;
 }
 
@@ -893,6 +907,7 @@ static float larguraDe(TipoFileira t) {
     case FILEIRA_FICHA:    return NV_FICHA_W;
     case FILEIRA_PALCO:    return NV_CARD_W * NV_PALCO_ESC;
     case FILEIRA_POSTER_GRANDE: return NV_POSTER_G_W;
+    case FILEIRA_HEROI_DIVIDIDO: return divArteH() * 2.0f / 3.0f;
     case FILEIRA_REDONDA:  return NV_REDONDA_D;
     case FILEIRA_HEROI:    return homeLarguraUtil();   // o cartão É a fileira
     case FILEIRA_LARGA:    return NV_DIN_LARGA_W;
@@ -1399,6 +1414,7 @@ static float alturaDe(TipoFileira t) {
     case FILEIRA_FICHA:    return NV_CARD_H;
     case FILEIRA_PALCO:    return NV_CARD_H * NV_PALCO_ESC;
     case FILEIRA_POSTER_GRANDE: return NV_POSTER_G_H;
+    case FILEIRA_HEROI_DIVIDIDO: return divArteH();
     case FILEIRA_REDONDA:  return NV_REDONDA_D;
     case FILEIRA_HEROI:    return homeLarguraUtil() * NV_HEROI_ASPECT;
     case FILEIRA_LARGA:    return NV_DIN_LARGA_H;
@@ -1429,6 +1445,7 @@ static int temRotulo(TipoFileira t) {
   // O rotulo abaixo do poster so existe no poster EM PE. No card deitado o web
   // poe a legenda DENTRO da moldura (.home-poster-landscape-copy) e esconde o
   // bloco de fora (.home-poster-card.is-landscape .home-poster-copy{display:none}).
+  if (t == FILEIRA_HEROI_DIVIDIDO) return 1;   // ano e nota embaixo do poster
   if (t == FILEIRA_REDONDA) return 1;   // pessoa sem nome embaixo nao se reconhece
   return t == FILEIRA_NORMAL && ajustes_rotulos_poster()
       && !ajustes_posteres_deitados();
@@ -1443,7 +1460,7 @@ static float gapDe(TipoFileira t) {
     float g = NV_CARD_GAP_GRANDE * f;
     return g < NV_CARD_GAP ? NV_CARD_GAP : g;
   }
-  return NV_CARD_GAP * f + xOffTipo(t);
+  return NV_CARD_GAP * f + (t == FILEIRA_TOP10_NUM ? xOffTipo(t) : 0.0f);
 }
 // Passo vertical entre fileiras. `.home-modern-landscape-posters` aperta o
 // `--home-row-gap` de 32 para 24 (components.css:6473) — a fileira deitada e
@@ -1689,13 +1706,13 @@ static float larguraFil(int r) {
   if (fileiras[r].tipo == FILEIRA_CATALOGOS) { float h; medidaCol(&fileiras[r], &w, &h); }
   // O Tamanho (Compacto/Grande) nao entra no Herói: o cartão é a fileira
   // inteira, e 1,2 x a largura da tela não é um tamanho, é um corte.
-  if (fileiras[r].tipo == FILEIRA_HEROI) return w;
+  if (fileiras[r].tipo == FILEIRA_HEROI || fileiras[r].tipo == FILEIRA_HEROI_DIVIDIDO) return w;
   return w * escalaFil(r);
 }
 static float alturaFil(int r) {
   float h = alturaDe(fileiras[r].tipo);
   if (fileiras[r].tipo == FILEIRA_CATALOGOS) { float w; medidaCol(&fileiras[r], &w, &h); }
-  if (fileiras[r].tipo == FILEIRA_HEROI) return h;
+  if (fileiras[r].tipo == FILEIRA_HEROI || fileiras[r].tipo == FILEIRA_HEROI_DIVIDIDO) return h;
   return h * escalaFil(r);
 }
 // Altura TOTAL que a fileira ocupa: a arte mais o bloco de rotulo, quando ele
@@ -1703,7 +1720,8 @@ static float alturaFil(int r) {
 // foi o mesmo defeito que o titulo de fileira ja tinha tido sobre os cards.
 // A Linha do tempo leva a faixa dos anos; o Palco, o nome do titulo do centro.
 static float extraTipo(TipoFileira t) {
-  return t == FILEIRA_LINHA_TEMPO ? NV_TEMPO_FAIXA_H : t == FILEIRA_PALCO ? 70.0f : 0.0f;
+  return t == FILEIRA_LINHA_TEMPO ? NV_TEMPO_FAIXA_H : t == FILEIRA_PALCO ? 70.0f
+       : t == FILEIRA_HEROI_DIVIDIDO ? NV_DIV_META_H : 0.0f;
 }
 static float alturaTotalFil(int r) {
   return alturaFil(r) + (temRotulo(fileiras[r].tipo) ? NV_POSTER_COPY_H : 0.0f)
@@ -1814,6 +1832,8 @@ static float alvoScrollFil(int r, int col, float atual, float abre) {
   float util  = homeLarguraUtil();
   float folga = sobraDireitaFoco(r, abre);
   float alvo  = atual;
+  // HERÓI DIVIDIDO: o card em foco é sempre o primeiro da fila, ao lado do painel.
+  if (fileiras[r].tipo == FILEIRA_HEROI_DIVIDIDO) return esq;
   if (dir + folga - alvo > util) alvo = dir + folga - util;
   // A esquerda ganha a MESMA folga: sem ela o card em foco na primeira coluna
   // visivel apoia a caixa em repouso na margem e o que cresce (ou o anel) fica
@@ -2082,6 +2102,7 @@ static TipoFileira tipoDaEscolha(int t) {
     case FIL_TIPO_REDONDA:  return FILEIRA_REDONDA;
     case FIL_TIPO_HEROI:    return FILEIRA_HEROI;
     case FIL_TIPO_POSTER_GRANDE: return FILEIRA_POSTER_GRANDE;
+    case FIL_TIPO_HEROI_DIVIDIDO: return FILEIRA_HEROI_DIVIDIDO;
     default:                return FILEIRA_TOP10;
   }
 }
@@ -3231,12 +3252,13 @@ static void sincronizarFileiras(void) {
     if (destino > 0 && !strcmp(fileiras[0].chave, "last_session"))
       arranjo[w++] = fileiras[0];
     q = fil_unir(ch, destino, ord, MAX_FIL);
+    int offTv = 0, offConta = 0;
     for (k = 0; k < q && w < MAX_FIL; k++) {
       Fileira *f = &fileiras[ord[k]];
       int j, repetida = 0;
       if (!strcmp(f->chave, "last_session")) continue;
-      if (fil_oculta(f->chave)) continue;
-      if (f->tipo == FILEIRA_CATALOGOS && (catordem_oculta(f->chave, f->chave) && !fil_adicionada_na_tv(f->chave))) continue;
+      if (fil_oculta(f->chave)) { offTv++; continue; }
+      if (f->tipo == FILEIRA_CATALOGOS && (catordem_oculta(f->chave, f->chave) && !fil_adicionada_na_tv(f->chave))) { offConta++; continue; }
       // UMA FILEIRA POR CHAVE (issue #127, "Proximos episodios" duplicada na
       // C9 do dono). A chave e a identidade da fileira em todo o resto — foco,
       // rolagem, registro, ordem —, e duas com a mesma chave desenhariam o
@@ -3286,7 +3308,7 @@ static void sincronizarFileiras(void) {
     // tudo que vem DEPOIS dele — e as fileiras de colecao entram justamente no
     // fim da lista. O corte tem de pular o catalogo que passou do orcamento e
     // seguir, deixando passar quem nao pede rede.
-    { int q2, rede = 0, mantidas = 0;
+    { int q2, rede = 0, mantidas = 0, naFila = 0, fora = 0, alem = 0;
       for (q2 = 0; q2 < w; q2++) {
         int pedeRede = arranjo[q2].base[0] && arranjo[q2].catId[0];
         // FILA NAO DESENHA. Editor e Home usam a mesma cota de catalogos;
@@ -3294,13 +3316,17 @@ static void sincronizarFileiras(void) {
         // entra; abre vaga sozinho quando o estado muda na remontagem.
         if (pedeRede) {
           int est = fil_estado_chave(arranjo[q2].chave);
-          if (est == FIL_NA_FILA || est == FIL_FORA) continue;
+          if (est == FIL_NA_FILA) { naFila++; continue; }
+          if (est == FIL_FORA) { fora++; continue; }
         }
-        if (pedeRede && ++rede > lim) continue;
+        if (pedeRede && ++rede > lim) { alem++; continue; }
         if (mantidas != q2) arranjo[mantidas] = arranjo[q2];
         mantidas++;
       }
       cortadasPeloLimite = w - mantidas;
+      // #545: which rows the catalogue had and the Home did not draw, by reason.
+      snprintf(motivoCorte, sizeof motivoCorte, "off on TV %d, off on account %d, "
+               "queued %d, out %d, over limit %d", offTv, offConta, naFila, fora, alem);
       w = mantidas; }
     memcpy(fileiras, arranjo, sizeof(Fileira) * (size_t)w);
     destino = w;
@@ -3402,8 +3428,8 @@ static void sincronizarFileiras(void) {
   // Diz TAMBEM o limite e quantas vinham do catalogo. Com um numero so, uma
   // home de 5 fileiras nao distinguia "o limite e 5" de "so 5 catalogos
   // responderam" — as duas perguntas que o dono faz quando a home vem curta.
-  printf("[home] %d fileiras na tela (limite %d, %d fileira(s) no catalogo)\n",
-         nFileiras, fil_limite(), nCat);
+  printf("[home] %d fileiras na tela (limite %d, %d fileira(s) no catalogo; fora da tela: %s)\n",
+         nFileiras, fil_limite(), nCat, motivoCorte);
 }
 
 int home_tem_fileiras(void) { return nFileiras > 0; }
@@ -5135,6 +5161,10 @@ static void desenhaHero(Uint32 agora, float saida) {
 #endif
 
   float aTexto = (1.0f - saida) * aVis * heroVisivelToque();
+  // Herói dividido em foco: o painel da fileira já mostra logo/meta/sinopse;
+  // fica só o fundo, para a ficha aparecer uma vez.
+  if (!focoHero && foco.fileira >= 0 && foco.fileira < nFileiras &&
+      fileiras[foco.fileira].tipo == FILEIRA_HEROI_DIVIDIDO) aTexto = 0.0f;
   // MODO CINEMA: o bloco desce NV_CINEMA_DESCE enquanto apaga (o do detalhe) e
   // so o logo fica. `aCopy` e a opacidade do que SOME; o logo segue `aTexto`.
   float cin = trailercinema_t(&heroCinema);
@@ -6365,7 +6395,7 @@ static void desenhaRotuloCard(const CatItem *cItem, TipoFileira tipo, int deitad
                               int rotuloFora, float px, float py, float w, float h,
                               float raio) {
   if (tipo != FILEIRA_CONTINUE && tipo != FILEIRA_RETORNO && !editorial(tipo) &&
-      (ajustes_rotulos_poster() || tipo == FILEIRA_LARGA) && cItem) {
+      (ajustes_rotulos_poster() || tipo == FILEIRA_LARGA || tipo == FILEIRA_HEROI_DIVIDIDO) && cItem) {
     const char *nome = cItem->titulo[0] ? cItem->titulo : NULL;
     const char *sub  = cItem->genero[0] ? cItem->genero : NULL;
     if (deitado && nome) {
@@ -6399,6 +6429,17 @@ static void desenhaRotuloCard(const CatItem *cItem, TipoFileira tipo, int deitad
       } else {
         txt_desenhar_alpha(tn, bx, py + h - base - tn.h, 0.98f);
       }
+    } else if (tipo == FILEIRA_HEROI_DIVIDIDO) {
+      // ano ★ nota, embaixo do poster
+      char l[64]; const char *e = strstr(cItem->meta, " \xc2\xb7 ");
+      int nota = imdbnota_obter(cItem->imdb, cItem->nota, !strcmp(cItem->tipo, "series"));
+      size_t n = e ? (size_t)(e - cItem->meta) : strlen(cItem->meta);
+      if (n > 12) n = 12;
+      snprintf(l, sizeof l, "%.*s", (int)n, cItem->meta);
+      if (nota > 0) snprintf(l + strlen(l), sizeof l - strlen(l), "%s\xe2\x98\x85 %d.%d", l[0] ? "  " : "", nota / 10, nota % 10);
+      if (l[0])
+        txt_desenhar_alpha(txt_linha_corta(TXT_CAPTION2, l, 235, 237, 242, 255, w),
+                           px + NV_POSTER_COPY_PADX, py + h + NV_POSTER_COPY_PADT, 0.9f);
     } else if (rotuloFora && nome) {
       float bx = px + NV_POSTER_COPY_PADX;
       float by = py + h + NV_POSTER_COPY_PADT;
@@ -6719,6 +6760,53 @@ static void desenhaHeroiCard(const CatItem *ci, const char *selo, const char *te
       }
     }
   }
+}
+
+// HERÓI DIVIDIDO (16/10): o painel a esquerda é o cartão Herói (arte deitada,
+// véu e logo) do título em foco na fileira, com a ficha embaixo — meta e
+// gênero, classificação e nota, três linhas de sinopse e o elenco. Os
+// vizinhos do foco já pedem a arte deitada, para o painel trocar sem buraco.
+static int divididoItem(int r) { return fileiraItemIndice(&fileiras[r], colunaDaFileira(r)); }
+static GfxRect divididoPainel(int r, float cardY) {
+  return (GfxRect){ homeConteudoX() + bordaX(r), cardY, divPainelW(), divArteH() };
+}
+static void desenhaDividido(int r, float cardY) {
+  GfxRect p = divididoPainel(r, cardY);
+  int idx = divididoItem(r), d;
+  const CatItem *ci = cat_item_exato(idx);
+  const char *caminho = arte_por_identidade(idx, 1);
+  GLuint t = caminho ? tex_obter_larg(caminho, p.w) : 0;
+  float x = p.x, y = p.y + p.h + 18.0f;
+  for (d = -1; d <= 1; d += 2) {
+    int c = colunaDaFileira(r) + d;
+    if (c >= 0 && c < fileiras[r].n) {
+      const char *v = arte_por_identidade(fileiraItemIndice(&fileiras[r], c), 1);
+      if (v) (void)tex_lookahead_pedir(v, p.w);
+    }
+  }
+  desenhaHeroiCard(ci, NULL, NULL, caminho, t, 1.0f, p.x, p.y, p.w, p.h,
+                   raioDe(p.w, p.h), 0.0f, 0.0f);
+  if (!ci) return;
+  { char linha[200];
+    snprintf(linha, sizeof linha, "%s%s%s", ci->meta, ci->meta[0] && ci->genero[0] ? " · " : "", ci->genero);
+    if (linha[0]) { TxtLinha m = txt_linha_corta(TXT_CW_META, linha, 218, 222, 232, 255, p.w);
+                    txt_desenhar(m, x, y); y += m.h + 12.0f; } }
+  { float bx = x;
+    int nota = imdbnota_obter(ci->imdb, ci->nota, !strcmp(ci->tipo, "series"));
+    if (ci->classificacao[0]) bx += badge_desenhar(bx, y, ci->classificacao, BADGE_NEUTRO, 1.0f) + BADGE_IMDB_GAP;
+    if (nota > 0) bx += badge_imdb(bx, y, nota, 0, 1.0f);
+    if (bx > x) y += BADGE_H + 14.0f; }
+  if (ci->sinopse[0])
+    y += sinopse_bloco(TXT_HERO_SIN, ci->sinopse, 214, 218, 228, x, y, p.w, 30.0f, 0.95f, 3) + 10.0f;
+  { char elenco[240]; size_t n = 0; int k;
+    elenco[0] = 0;
+    for (k = 0; k < CAT_ELENCO_MAX && k < 4 && ci->elenco[k].nome[0]; k++)
+      n += (size_t)snprintf(elenco + n, sizeof elenco - n, "%s%s", k ? ", " : "", ci->elenco[k].nome);
+    if (elenco[0]) {
+      char l[300];
+      snprintf(l, sizeof l, "%s: %s", i18n("Elenco"), elenco);
+      txt_desenhar(txt_linha_corta(TXT_MINI, l, 168, 174, 186, 255, p.w), x, y);
+    } }
 }
 
 static void pintarCartao(const CartaoFoco *k, float raio) {
@@ -7068,7 +7156,7 @@ void home_desenhar(Uint32 agora) {
     float cardY = y + NV_LEGACY_ROW_HEAD_H;
 
     int deitado = editorial(tipo) || tipo == FILEIRA_LARGA || tipo == FILEIRA_HEROI ||
-                  ((tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE) &&
+                  ((tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO) &&
                    ajustes_posteres_deitados());
     int rotuloFora = temRotulo(tipo);
     if (y < NV_TELA_H + 200 && y + NV_LEGACY_ROW_HEAD_H + lh > -200) {
@@ -7242,6 +7330,9 @@ void home_desenhar(Uint32 agora) {
           // desloca aqui e so a cascata de entrada, e so enquanto ela dura.
           float cy = cardY + artH * 0.5f + (1.0f - entra) * NV_ENTRA_DY;
           if (cx < -lw * 1.5f || cx > NV_TELA_W + lw) continue;
+          // HERÓI DIVIDIDO: o que já passou fica atrás do painel (pintado depois).
+          if (tipo == FILEIRA_HEROI_DIVIDIDO &&
+              cx + w * 0.5f < homeConteudoX() + bordaX(r) + divPainelW() + NV_DIV_VAO) continue;
           // Cartao TOTALMENTE fora da tela (mas dentro da faixa de cull que
           // ainda e desenhada): NIVEL 2, recusa sempre — EXCETO no lado em
           // que a rolagem entra (NIVEL 3): aquele card vira visivel nos
@@ -7511,6 +7602,7 @@ void home_desenhar(Uint32 agora) {
       gfx_opacidade_grupo = grupoFil;
       if (tipo == FILEIRA_LINHA_TEMPO) desenhaLinhaTempo(r, y, cardY + artH, passo, lw, agora);
       if (tipo == FILEIRA_PALCO) palcoLegenda(r, cardY + artH, lw);
+      if (tipo == FILEIRA_HEROI_DIVIDIDO) desenhaDividido(r, cardY);
     } else if (tipo == FILEIRA_LINHA_TEMPO) tempoEntraEm[r] = 0;   // fora: redesenha ao voltar
     y += NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r) + fileiraGap();
   }
@@ -7585,7 +7677,7 @@ void home_desenhar(Uint32 agora) {
           fileiraEhCanal(&fileiras[r])) continue;
       float lw = larguraFil(r);
       int deitado = editorial(tipo) || tipo == FILEIRA_LARGA || tipo == FILEIRA_HEROI ||
-                    (tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE &&
+                    (tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO &&
                      ajustes_posteres_deitados());
       for (int c = 0; c < fileiras[r].n && !pediu; c++) {
         float x = homeFileiraX(r, c);

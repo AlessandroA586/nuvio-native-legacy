@@ -703,6 +703,11 @@ class NuvioActivity : SDLActivity() {
     private val eventos = ConcurrentLinkedQueue<String>()
     fun proximoEvento(): String? = eventos.poll()
 
+    // #205: app-specific dir of every volume (index 0 = primary), one per line,
+    // empty line for an unavailable one. Writable with no storage permission.
+    fun volumesExternos(): String =
+        getExternalFilesDirs(null).joinToString("\n") { it?.absolutePath ?: "" }
+
     private fun log(m: String) = Log.i("nuvio", "[texto] $m")
 
     // --- Teclado do sistema -------------------------------------------------

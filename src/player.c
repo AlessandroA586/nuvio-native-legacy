@@ -1623,7 +1623,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   cacheboost_backend_cache(ehCanal() ? 0 : ajustes_cache_seek_mb());
   epT = itemFixo.temporada; epE = itemFixo.episodio;
   armarTituloGuardado();
-  cacheboost_backend_buffer(ajustes_buffer_preset());
+  cacheboost_backend_buffer(cacheboost_buffer_mb(ajustes_buffer_preset(), memlog_livre_mb()));
   loadEm = SDL_GetTicks();
   { char px[96];
     if (url && *url) { memlog_evento("load"); memQuadroPendente = 1; }
@@ -1734,7 +1734,7 @@ static int preTituloCriar(int indiceCatalogo, int t, int e, const Stream *s, uns
   snprintf(preTitulo.cab, sizeof preTitulo.cab, "%s", s->cabecalhos);
   snprintf(preTitulo.idioma, sizeof preTitulo.idioma, "%s", pref ? pref : "");
   snprintf(preTitulo.audio, sizeof preTitulo.audio, "%s", ling_audio());
-  preTitulo.buffer = ajustes_buffer_preset(); preTitulo.cacheMb = ajustes_cache_seek_mb();
+  preTitulo.buffer = cacheboost_buffer_mb(ajustes_buffer_preset(), memlog_livre_mb()); preTitulo.cacheMb = ajustes_cache_seek_mb();
   serie = !strcmp(c->tipo, "series");
   if (c->progresso > 0 && c->progresso < ajustes_cw_concluido() &&
       (!serie || (t == c->temporada && e == c->episodio))) {
@@ -1815,7 +1815,7 @@ static void tocarFonte(const char *url) {
   cacheboost_backend_cache(ehCanal() ? 0 : ajustes_cache_seek_mb());   // F07, ver player_abrir
   armarTituloGuardado();
   memlog_evento("load"); memQuadroPendente = 1;
-  cacheboost_backend_buffer(ajustes_buffer_preset());
+  cacheboost_backend_buffer(cacheboost_buffer_mb(ajustes_buffer_preset(), memlog_livre_mb()));
   { char px[96];
 #ifdef NV_ANDROID
     // app.c define episodio e "do inicio" antes de entregar a fonte. O
@@ -6302,6 +6302,8 @@ static void desenharOsdCorpo(Uint32 agora, float a, float ac, const CatItem *c) 
 // CAPTURAS (tests/player_glass_shot.c): poe o player num estado de tela sem
 // pipeline. `agora` e o relogio do harness (o mesmo passado a desenhar).
 void player_shot_video(int sim) { comVideo = sim; shotSemFuro = sim; }
+// O furo de verdade (alfa 0, como na TV) em vez da arte fazendo de video.
+void player_shot_furo_real(void) { shotSemFuro = 0; }
 void player_shot_canal(const AoVivoEpg *e, int numero, int atrasS, int botaoFoco, int info) {
   shotEpgOk = e != NULL; if (e) shotEpg = *e; shotNumero = numero; shotAtras = atrasS;
   botaoAV = botaoFoco; infoAV = info;

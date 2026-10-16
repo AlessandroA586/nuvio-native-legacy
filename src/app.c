@@ -2929,6 +2929,7 @@ static void perfilEncerrarSessao(void) {
 }
 
 static void perfilAbrirSessao(int antes) {
+  uint64_t sessao = perfis_sessao_geracao();
   // All hooks reset live state or reload profile-owned files. They neither
   // reload artwork nor wait for the old profile's network requests.
   addons_abrir_sessao();
@@ -2957,7 +2958,7 @@ static void perfilAbrirSessao(int antes) {
   saiuPorEsquerda = 0;
   ilhasinais_perfil_trocado();
   enquete_perfil_trocado();
-  perfilSessaoAplicada = perfis_sessao_geracao();
+  perfilSessaoAplicada = sessao;
 }
 
 int app_iniciar(const char *dirArte) {
@@ -3950,16 +3951,21 @@ void app_atualizar(float dt, Uint32 agora) {
     return;
   }
 
-  // A confirmed choice changes identity during input. Reset its modules
-  // before polling them, so an outgoing OAuth completion cannot push into
-  // the new profile during the first frame after selection.
-  if (tela == TELA_ESCOLHA_PERFIL && perfilsel_concluido() &&
-      perfis_sessao_geracao() != perfilSessaoAplicada) {
+  // Recover every logged-in screen, including same-profile HTTP 401 renewal.
+  // Only the drawing thread may install the profile's live state and sources.
+  if (sessao_logada() &&
+      (perfis_sessao_geracao() != perfilSessaoAplicada || !desc_sessao_aberta())) {
+    printf("[app] retry profile session opening: %s\n",
+           perfis_sessao_geracao() != perfilSessaoAplicada
+             ? "profile generation changed" : "discovery session unopened");
+    fflush(stdout);
     perfilAbrirSessao(perfilAntes);
     perfilAntes = perfis_ativo();
     sync_iniciar();
-    trocaPerfilDesde = agora;
-    perfilsel_preparar(1, agora);
+    if (tela == TELA_ESCOLHA_PERFIL && perfilsel_concluido()) {
+      trocaPerfilDesde = agora;
+      perfilsel_preparar(1, agora);
+    }
     return;
   }
 
@@ -4030,7 +4036,10 @@ void app_atualizar(float dt, Uint32 agora) {
       }
       return;
     }
-    if (perfilsel_concluido()) {
+    // #551: a PIN confirmed inside perfilsel_atualizar changed the session
+    // after the check above ran. Stay one frame so that check opens it;
+    // otherwise discovery refuses every round of the unopened session.
+    if (perfilsel_concluido() && perfis_sessao_geracao() == perfilSessaoAplicada) {
       sync_iniciar();
       tela = TELA_HOME;
     }

@@ -1,7 +1,7 @@
 // Offline home render: real home, A27 chrome, clock, moving focus and backdrop.
-// Budget: one shared five-pass capture per animated frame on webOS (a changed
-// backdrop is never served stale), zero while static; native retains
-// every-frame freshness. Same kernel and resolution preserve the look.
+// Budget: at most two five-pass captures per animated frame on webOS and .tpk
+// (intervening backdrop draws invalidate sharing), zero while static. Same kernel
+// and resolution preserve the look.
 #include "gfx.h"
 #include "ajustes.h"
 #include "addons.h"
@@ -13,6 +13,14 @@
 #include "menu.h"
 #include "text.h"
 #include "tex_cache.h"
+// Render the real consent modal offline, without enabling its Tizen startup gate.
+#define telemetria_primeira_vez consent_unused_startup
+#define telemetria_aberto consent_unused_open
+#define telemetria_evento consent_unused_event
+#define telemetria_atualizar consent_unused_update
+#define telemetria_desenhar consent_draw
+#define telemetria_teste_foco consent_unused_focus
+#include "../src/telemetria.c"
 #include <SDL2/SDL_image.h>
 #include <assert.h>
 #include <stdio.h>
@@ -109,11 +117,10 @@ int main(int argc, char **argv) {
   }
   printf("tier=%s drawable=%dx%d animated/focus: captures/frame=%.2f passes/frame=%.2f blur-fill/frame=%.6f copy/frame=%.6f blur-pixels/frame=%.0f max-captures=%d\n",
          webos ? "webos" : "native", width, height, captures / 20.0, passes / 20.0, fill / 20, copy / 20, fill / 20 * width * height, maximum);
-  check(captures > 0 && maximum <= (webos ? 1 : 4), "capture budget across all chrome regions");
-  check(captures <= (webos ? 20 : 80), "animated capture budget");
+  check(captures > 0 && maximum <= 2, "capture budget across all chrome regions");
+  check(captures <= 40, "animated capture budget");
   check(passes == captures * 5, "unchanged five-pass blur kernel");
-  check(fill / 20 <= (webos ? .7 : 1.0), "blur fill budget: one shared full-screen capture per animated frame on webOS");
-  check(webos || captures == 80, "native capture behavior unchanged");
+  check(fill / 20 <= (webos ? 1.4 : 1.0), "blur fill budget with intervening backdrop invalidation");
   shot(argv[2], "focus");
   // Upload invalidation must override temporal reuse; sample age must not be
   // renewed by reuse, or animation would freeze indefinitely.
@@ -126,8 +133,18 @@ int main(int argc, char **argv) {
     frame(220, 0, 0); captures += gfx_vidro_capturas; passes += gfx_vidro_passadas;
   }
   printf("static: captures=%d passes=%d over five frames\n", captures, passes);
-  check(webos ? captures == 0 && passes == 0 : captures <= 5,
+  check(captures == 0 && passes == 0,
         "static backdrop reuse budget");
+  // Home captures first; the consent veil must enter the later modal capture,
+  // including on subsequent frames while the modal remains open.
+  entrada = 1.0f;
+  for (int i = 0; i < 3; i++) {
+    frame(220, 0, 0);
+    int before = gfx_vidro_capturas;
+    consent_draw(13520);
+    check(gfx_vidro_capturas > before, "consent veil invalidates Home backdrop before modal glass");
+  }
+  shot(argv[2], "modal");
   for (int i = 0; i < 5; i++) frame(380 + i, 0, 1);
   shot(argv[2], "trailer");
   check(glGetError() == GL_NO_ERROR, "GL state after trailer and chrome");
