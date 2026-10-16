@@ -178,4 +178,8 @@ void artehero_escolha_suspender(int sim);
 // arteescolha corta) ou, sem ele, "tmdb:m<id>"/"tmdb:t<id>". "" = sem chave.
 void artehero_id_escolha(const CatItem *item, char *dst, size_t n);
 
+// Titulo de anime: id de addon de anime (kitsu:/mal:/anilist:) ou tt com genero
+// Animacao/Anime e pais Japao. Regra unica, tambem do ajuste "Player para anime".
+int artehero_eh_anime(const CatItem *item);
+
 #endif
