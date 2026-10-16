@@ -203,5 +203,19 @@ jobs:
             - **Apertura de fuentes por excedente de calidad:** Si en español solo hay calidades superiores al límite configurado (por ejemplo, solo hay 4K y se configuró 1080p) o no hay fuentes en español, el sistema despliega el panel de fuentes de forma segura, situando el cursor sobre la opción en español más cercana.
             - **Conmutación automática de pista interna:** En archivos o transmisiones con múltiples pistas de audio (Dual Audio), ExoPlayer y el reproductor de Tizen seleccionan y conmutan automáticamente a la pista en español en el primer cuadro.
             - **Mantenimiento y compatibilidad:** Incluye el rediseño multilínea de tarjetas con iconos dedicados, resalte en verde esmeralda y limpieza automática de instaladores residuales.
+
+            | Platform | File |
+            | :--- | :--- |
+            | Samsung Tizen 4 / 5 / 5.5 | `Nuvio-2.0.5.4-NuvioTpk40.tpk` |
+            | Samsung Tizen 6 | `Nuvio-2.0.5.4-NuvioTpk60.tpk` |
+            | Samsung Tizen 6.5 / 7 | `Nuvio-2.0.5.4-NuvioTpk65.tpk` |
+            | Samsung Tizen 8 / 9 | `Nuvio-2.0.5.4-NuvioTpk.tpk` |
+            | Android TV / Google TV, Android 7+ | `Nuvio-2.0.5.4-android.apk` |
+
+            ### Bibliotecas de Autoactualización en Segundo Plano
+
+            - `libnuvio-2.0.5.4-tpk-arm.so` (Samsung Tizen 6.0 o superior / 2021+)
+            - `libnuvio-2.0.5.4-tpk40-arm.so` (Samsung Tizen 4.0 a 5.5 / 2018-2020)
+            - `SHA256SUMS.txt` (Sumas de comprobación SHA-256 de todos los archivos)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

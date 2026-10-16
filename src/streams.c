@@ -1624,7 +1624,7 @@ static int falhaCandidatas(unsigned geracao, int escolhida, int primeira, FonteF
     for (int q = 0; q < total; q++) {
       int i = ORD(q);
       const Stream *s = &lista[i];
-      if (!s->foraCache && !ehInformativa(s) &&
+      if ((!s->foraCache || s->infoHash[0]) && !ehInformativa(s) &&
           (!tetoRes || !s->altura || s->altura <= tetoRes) &&
           temAudioPt(s)) {
         haCandidatasComLingua = 1;
@@ -1900,7 +1900,7 @@ StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int total, int pr
   if (temLinguaPreparo && preferidaNext < 0) {
     for (int q = 0; q < total; q++) {
       int i = ordem[q]; const Stream *s = &fontes[i];
-      if (!s->foraCache && !ehInformativa(s) &&
+      if ((!s->foraCache || s->infoHash[0]) && !ehInformativa(s) &&
           (!tetoResPreparo || !s->altura || s->altura <= tetoResPreparo) &&
           temAudioPt(s)) {
         haCandidatasLinguaPreparo = 1;
@@ -2102,7 +2102,7 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
     if (temLinguaConfig) {
       for (q = 0; q < total; q++) {
         int i = ORD(q);
-        if (!lista[i].foraCache && !ehInformativa(&lista[i]) &&
+        if ((!lista[i].foraCache || lista[i].infoHash[0]) && !ehInformativa(&lista[i]) &&
             (!tetoRes || !lista[i].altura || lista[i].altura <= tetoRes) &&
             temAudioPt(&lista[i])) {
           haCandidatasComLingua = 1;
@@ -2551,7 +2551,7 @@ static int automaticoCom(int regras) {
   if (regras && temLinguaConfig) {
     for (int k = 0; k < n; k++) {
       int i = ORD(k);
-      if (!lista[i].foraCache && !ehInformativa(&lista[i]) &&
+      if ((!lista[i].foraCache || lista[i].infoHash[0]) && !ehInformativa(&lista[i]) &&
           (!tetoRes || !lista[i].altura || lista[i].altura <= tetoRes) &&
           temAudioPt(&lista[i])) {
         haCandidatasComLingua = 1;
@@ -2982,12 +2982,15 @@ static int temNoTexto(const Stream *s, const char *p) {
   return temPalavra(s->rotulo, p) || temPalavra(s->descricao, p) || temPalavra(s->arquivo, p);
 }
 static int ehIdiomaEspanhol(const char *txt) {
-  return temPalavra(txt, "latino") || temPalavra(txt, "lat") ||
-         temPalavra(txt, "latam") || temPalavra(txt, "spanish") ||
-         temPalavra(txt, "español") || temPalavra(txt, "espanol") ||
-         temPalavra(txt, "castellano") || temPalavra(txt, "es-419") ||
-         temPalavra(txt, "spa") || temPalavra(txt, "esp") ||
-         temPalavra(txt, "cas") || temPalavra(txt, "cast") ||
+  return temPalavra(txt, "latino") || temPalavra(txt, "latam") ||
+         temPalavra(txt, "castellano") || temPalavra(txt, "cast") ||
+         temPalavra(txt, "spanish") || temPalavra(txt, "español") ||
+         temPalavra(txt, "ESPAÑOL") || temPalavra(txt, "espanol") ||
+         temPalavra(txt, "ESPANOL") || temPalavra(txt, "es-419") ||
+         temPalavra(txt, "es-es") || temPalavra(txt, "es-mx") ||
+         temPalavra(txt, "es-ar") || temPalavra(txt, "es-co") ||
+         temPalavra(txt, "es-cl") || temPalavra(txt, "es-la") ||
+         temPalavra(txt, "spa") || temPalavra(txt, "LatTeam") ||
          temPalavra(txt, "doblaje") || temPalavra(txt, "doblado");
 }
 static float desenharIdiomasLinha(const char *txt, float px, float py, float maxw, int sel, float anim) {
@@ -3259,14 +3262,16 @@ static int audioDeclaradoLingua(const Stream *s, const char *alvo) {
     if (!cod && faixaIdiomaEtiqueta(raw, codigo, sizeof codigo)) cod = codigo;
     if (cod && ling_casa(cod, alvo)) return 1;
     if (ling_casa(alvo, "es")) {
-      if (temPalavra(raw, "latino") || temPalavra(raw, "lat") ||
-          temPalavra(raw, "latam") || temPalavra(raw, "castellano") ||
+      if (temPalavra(raw, "latino") || temPalavra(raw, "latam") ||
+          temPalavra(raw, "castellano") || temPalavra(raw, "cast") ||
           temPalavra(raw, "spanish") || temPalavra(raw, "español") ||
-          temPalavra(raw, "espanol") || temPalavra(raw, "es-419") ||
+          temPalavra(raw, "ESPAÑOL") || temPalavra(raw, "espanol") ||
+          temPalavra(raw, "ESPANOL") || temPalavra(raw, "es-419") ||
           temPalavra(raw, "es-es") || temPalavra(raw, "es-mx") ||
-          temPalavra(raw, "spa") || temPalavra(raw, "esp") ||
-          temPalavra(raw, "cas") || temPalavra(raw, "cast") ||
-          temPalavra(raw, "doblaje") || temPalavra(raw, "doblado")) return 1;
+          temPalavra(raw, "es-ar") || temPalavra(raw, "es-co") ||
+          temPalavra(raw, "es-cl") || temPalavra(raw, "es-la") ||
+          temPalavra(raw, "spa") || temPalavra(raw, "doblaje") ||
+          temPalavra(raw, "doblado")) return 1;
     }
     p = f ? f + 1 : fim;
   }
@@ -3279,63 +3284,49 @@ static int audioDeclaradoPt(const Stream *s) {
 // fileira. Os rotulos antigos continuam onde o addon nao informa audio;
 // quando informa, nenhum deles contradiz a lista declarada.
 static const char *idiomaDa(const Stream *s) {
-  const char *alvo = ling_audio();
-  if (!alvo || !*alvo) alvo = "es";
-  int podeAlvo = !s->audioIdiomas[0] || audioDeclaradoLingua(s, alvo);
-  if (ling_casa(alvo, "es")) {
-    if (podeAlvo && (temNoTexto(s, "latino") || temNoTexto(s, "lat") ||
-                     temNoTexto(s, "latam") || temNoTexto(s, "castellano") ||
-                     temNoTexto(s, "spanish") || temNoTexto(s, "español") ||
-                     temNoTexto(s, "espanol") || temNoTexto(s, "es-419") ||
-                     temNoTexto(s, "spa") || temNoTexto(s, "esp") ||
-                     temNoTexto(s, "cas") || temNoTexto(s, "cast") ||
-                     temNoTexto(s, "doblaje") || temNoTexto(s, "doblado"))) return "Dublado";
-    if (podeAlvo && (temNoTexto(s, "dual") || temNoTexto(s, "multi") || temNoTexto(s, "multiaudio"))) return "Dual áudio";
-  } else {
-    if (podeAlvo && (temNoTexto(s, "dublado") || temNoTexto(s, "dub"))) return "Dublado";
-    if (podeAlvo && temNoTexto(s, "dual")) return "Dual áudio";
-    if (podeAlvo && (s->audioIdiomas[0] || !s->legendaIdiomas[0]) &&
-        (temNoTexto(s, "portuguese") || temNoTexto(s, "português") ||
-         temNoTexto(s, "pt-br") || temNoTexto(s, "ptbr"))) return "Dual áudio";
+  if (temAudioPt(s)) {
+    if (temNoTexto(s, "dual") || (s->audioIdiomas[0] && strchr(s->audioIdiomas, ','))) return "Dual áudio";
+    return "Dublado";
   }
-  if (temNoTexto(s, "legendado") || temNoTexto(s, "leg")) return "Legendado";
+  if (temNoTexto(s, "legendado") || temNoTexto(s, "leg") || temNoTexto(s, "sub") || temNoTexto(s, "subs")) return "Legendado";
   return NULL;
 }
 static int temAudioPt(const Stream *s) {
   if (!s) return 0;
   const char *alvo = ling_audio();
   if (!alvo || !*alvo || !strcmp(alvo, "*")) alvo = "es";
-  if (s->audioIdiomas[0] && audioDeclaradoLingua(s, alvo)) return 1;
+  if (s->audioIdiomas[0]) return audioDeclaradoLingua(s, alvo);
   if (ling_casa(alvo, "es")) {
-    if (temNoTexto(s, "latino") || temNoTexto(s, "lat") ||
-        temNoTexto(s, "latam") || temNoTexto(s, "castellano") ||
-        temNoTexto(s, "spanish") || temNoTexto(s, "español") ||
-        temNoTexto(s, "espanol") || temNoTexto(s, "es-419") ||
-        temNoTexto(s, "es-es") || temNoTexto(s, "es-mx") ||
-        temNoTexto(s, "es-ar") || temNoTexto(s, "es-co") ||
-        temNoTexto(s, "es-cl") || temNoTexto(s, "es-la") ||
-        temNoTexto(s, "spa") || temNoTexto(s, "esp") ||
-        temNoTexto(s, "cas") || temNoTexto(s, "cast") ||
-        temNoTexto(s, "doblaje") || temNoTexto(s, "doblado") ||
-        temNoTexto(s, "LatTeam") || temNoTexto(s, "audio latino") ||
-        temNoTexto(s, "audio castellano") || temNoTexto(s, "audio español") ||
-        temNoTexto(s, "dual") || temNoTexto(s, "multi") ||
-        temNoTexto(s, "multiaudio")) return 1;
+    if (temNoTexto(s, "latino") || temNoTexto(s, "latam") ||
+        temNoTexto(s, "castellano") || temNoTexto(s, "spanish") ||
+        temNoTexto(s, "español") || temNoTexto(s, "ESPAÑOL") ||
+        temNoTexto(s, "espanol") || temNoTexto(s, "ESPANOL") ||
+        temNoTexto(s, "es-419") || temNoTexto(s, "es-es") ||
+        temNoTexto(s, "es-mx") || temNoTexto(s, "es-ar") ||
+        temNoTexto(s, "es-co") || temNoTexto(s, "es-cl") ||
+        temNoTexto(s, "es-la") || temNoTexto(s, "doblaje") ||
+        temNoTexto(s, "doblado") || temNoTexto(s, "LatTeam") ||
+        temNoTexto(s, "audio latino") || temNoTexto(s, "audio castellano") ||
+        temNoTexto(s, "audio español") || temNoTexto(s, "audio espanol") ||
+        temNoTexto(s, "dual latino") || temNoTexto(s, "dual castellano") ||
+        temNoTexto(s, "dual español") || temNoTexto(s, "dual espanol")) return 1;
+    return 0;
   } else if (ling_casa(alvo, "pt") || ling_casa(alvo, "pob")) {
     if (temNoTexto(s, "dublado") || temNoTexto(s, "dub") ||
-        temNoTexto(s, "dual") || temNoTexto(s, "multi") ||
         temNoTexto(s, "portuguese") || temNoTexto(s, "português") ||
         temNoTexto(s, "portugues") || temNoTexto(s, "pt-br") ||
-        temNoTexto(s, "ptbr") || temNoTexto(s, "pt-pt")) return 1;
+        temNoTexto(s, "ptbr") || temNoTexto(s, "pt-pt") ||
+        temNoTexto(s, "dual audio") || temNoTexto(s, "dual áudio")) return 1;
+    return 0;
   } else if (ling_casa(alvo, "en")) {
-    if (temNoTexto(s, "english") || temNoTexto(s, "eng") || temNoTexto(s, "en")) return 1;
+    if (temNoTexto(s, "english") || temNoTexto(s, "eng")) return 1;
+    return 0;
   } else {
     if (temNoTexto(s, alvo)) return 1;
     const char *nomeLing = ling_nome(alvo);
     if (nomeLing && nomeLing[0] && temNoTexto(s, nomeLing)) return 1;
+    return 0;
   }
-  const char *id = idiomaDa(s);
-  return id && strcmp(id, "Legendado");
 }
 
 // O TITULO DA LINHA, modo "Do Nuvio": o NOME DO CONTEUDO (dono, 02/10: "deixar
@@ -3748,7 +3739,7 @@ void stream_folha_abrir(void) {
     int teto = alturaMax();
     for (int k = 0; k < n; k++) {
       int i = ORD(k);
-      if (!lista[i].foraCache && !ehInformativa(&lista[i]) &&
+      if ((!lista[i].foraCache || lista[i].infoHash[0]) && !ehInformativa(&lista[i]) &&
           (!teto || !lista[i].altura || lista[i].altura <= teto) &&
           temAudioPt(&lista[i])) {
         alvo = i;
@@ -3758,7 +3749,7 @@ void stream_folha_abrir(void) {
     if (alvo < 0) {
       for (int k = 0; k < n; k++) {
         int i = ORD(k);
-        if (!lista[i].foraCache && !ehInformativa(&lista[i]) && temAudioPt(&lista[i])) {
+        if ((!lista[i].foraCache || lista[i].infoHash[0]) && !ehInformativa(&lista[i]) && temAudioPt(&lista[i])) {
           alvo = i;
           break;
         }
@@ -3767,7 +3758,7 @@ void stream_folha_abrir(void) {
     if (alvo < 0 && teto) {
       for (int k = 0; k < n; k++) {
         int i = ORD(k);
-        if (!lista[i].foraCache && !ehInformativa(&lista[i]) &&
+        if ((!lista[i].foraCache || lista[i].infoHash[0]) && !ehInformativa(&lista[i]) &&
             (!lista[i].altura || lista[i].altura <= teto)) {
           alvo = i;
           break;
