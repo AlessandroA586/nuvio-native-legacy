@@ -3,11 +3,12 @@
 # fixa so cabem 4 colunas) e o nome no ladrilho e um ajuste local, ligado de fabrica.
 set -eu
 cd "$(dirname "$0")/.."
-python3 -I - <<'PY'
-import re
+ROOT="${MURAL_ROOT:-.}" python3 -I - <<'PY'
+import os, re
 from pathlib import Path
-v = Path('src/vertudo.c').read_text()
-a = Path('src/ajustes.c').read_text()
+r = Path(os.environ['ROOT'])
+v = (r / 'src/vertudo.c').read_text()
+a = (r / 'src/ajustes.c').read_text()
 ok = True
 def falha(m):
     global ok
@@ -22,10 +23,10 @@ if 'ajustes_mural_titulos()' not in t:
     falha('muralTile nao le o ajuste de titulos')
 if 'AJ_MURAL_TITULOS' not in a or '"muralTitulosLocal"' not in a:
     falha('ajuste AJ_MURAL_TITULOS nao registrado')
-# geometria: TV 1920, margem 104, painel 336, vao 24, g 16
+# geometria: TV 1920, margem 64, painel 336, vao 24, g 28; rail fixa => x0 218
 for x0 in (218.0, 64.0, 300.0):
-    W = min(5 * 248 + 4 * 16, 1920 - 104 - 336 - 24 - x0)
-    g = 16.0
+    W = min(5 * 248 + 4 * 28, 1920 - 64 - 336 - 24 - x0)
+    g = 28.0
     sh = min(174.0, (W - 2 * g - 16 / 9 * g) / (64 / 9))
     tot = (2 * sh + g) * 16 / 9 + 2 * sh * 16 / 9 + 2 * g
     if tot > W + 0.5:

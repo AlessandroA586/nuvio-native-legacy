@@ -252,6 +252,9 @@ const char *extras_relacionado_poster(int i);
 #ifdef NV_SHOT_HOOKS
 void extras_shot_relacionados(const char *const *titulo, const char *const *ano,
                               const char *const *poster, int n);
+void extras_shot_relacionados_ids(const char *const *titulo, const char *const *ano,
+                                  const char *const *poster, const char *const *imdb,
+                                  int n);
 #endif
 
 

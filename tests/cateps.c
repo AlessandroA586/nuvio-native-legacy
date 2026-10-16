@@ -187,6 +187,8 @@ int prog_oculto_soltar(const char *id, long long ms) { (void)id; (void)ms; retur
 int prog_oculto_vence(const char *id, long long ms) { (void)id; (void)ms; return 0; }
 const char *nuvem_trakt_cliente(void)      { return ""; }
 int   addons_n(void)                       { return 0; }
+void addons_lista_travar(void) {}
+void addons_lista_destravar(void) {}
 const char *addons_base(int i)             { (void)i; return ""; }
 const char *addons_id_manifesto(int i)     { (void)i; return ""; }
 const char *addons_nome(int i)            { (void)i; return "addon"; }
@@ -457,8 +459,6 @@ static void testarMetaTMDBOffline(void) {
   desc_meta_chave(chave, sizeof chave, "movie", it.imdb);
   metaCacheGuardar(chave, corpo);
   epItem = 0;
-  epSessao = nv_perfil_sessao_ler();
-  epRodaPre = epCancelar = 0;
   fioEpVivo = 1;
   metaObservarCatalogo = 0;
   metaPublicadoAntesTMDB = 0;
@@ -477,8 +477,6 @@ static void testarMetaTMDBOffline(void) {
   // Mesma obra no mesmo indice, agora de outro perfil: nem o id do titulo
   // autoriza a cauda antiga a substituir os campos do novo dono.
   cat_definir_tudo(&it, 1, NULL, 0);
-  epSessao = nv_perfil_sessao_ler();
-  epRodaPre = epCancelar = 0;
   fioEpVivo = 1;
   metaObservarCatalogo = 0;
   metaTrocarPerfilTMDB = 1;
@@ -573,6 +571,25 @@ int main(void) {
   assert(cat_indice_titulo("tt1", 1) == 1);              // filme/sem lista: o proprio
   assert(cat_indice_titulo("tt9", 1) == -1);
   puts("ok  mesma serie em duas fileiras: a copia com episodios vence a do CW");
+
+  // #391: uma lista longa nao perde os episodios depois do antigo teto de 1200.
+  montarCatalogo();
+  {
+    CatEp *longa = calloc(2001, sizeof *longa);
+    assert(longa);
+    for (int i = 0; i < 2001; i++) {
+      longa[i].temporada = 1;
+      longa[i].episodio = i + 1;
+    }
+    cat_definir_episodios(0, longa, 2001);
+    free(longa);
+    assert(cat_n_episodios(0) == 2001);
+    for (int i = 0; i < 2001; i++) {
+      assert(cat_episodio(0, i)->temporada == 1);
+      assert(cat_episodio(0, i)->episodio == i + 1);
+    }
+  }
+  puts("ok  #391: catalogo preserva S1E1..S1E2001");
 
   // E) APPEND DE ARTE: o caminho unitário precisa registrar poster e fundo
   // exatamente como o lote e a publicação completa. Repetir o mesmo item é

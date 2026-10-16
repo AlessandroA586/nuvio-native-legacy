@@ -271,11 +271,12 @@ int legenda2_cues(double posSeg, LegendaCue *dst, int max) {
   double (*f)(double) = tempoMapa;
   if (f) posSeg = f(posSeg);   // fora da trava: legsync tem a sua
   pthread_mutex_lock(&trava);
-  if (doc && estado == LEG2_ATIVA) { d = legenda_documento_reter(doc); off = limitarManual(offManual + offAuto); }
+  if (doc && estado == LEG2_ATIVA) { d = legenda_documento_reter(doc); off = limitarManual(offAuto - offManual); }
   pthread_mutex_unlock(&trava);
   if (!d) return 0;
   // The offset is applied HERE and only here (legenda_documento_cues adds it
-  // to the lookup time: positive = earlier, like the primary overlay).
+  // to the lookup time: positive = earlier). offManual is the user's delay
+  // (positive = later), so it enters subtracted; offAuto is already lookup.
   n = legenda_documento_cues(d, posSeg, off, dst, max);
   legenda_documento_liberar(d);
   return n;

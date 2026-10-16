@@ -19,7 +19,7 @@ static const Item TELA[] = {
       OPC(AJ_FONTE_MANUAL), OPC(AJ_FONTE_PRIORIDADE), OPC(AJ_FONTE_IDIOMA_AUDIO), OPC(AJ_FONTE_PRAZO),
       OPC(AJ_FONTE_REPOR), OPC(AJ_TAM_MAX),
     ROT("Durante e depois"),
-      OPC(AJ_PAUSA_OVERLAY), OPC(AJ_TELA_ABERTURA), OPC(AJ_PLR_CLASSIF), OPC(AJ_PULAR_ABERTURA), OPC(AJ_PULAR_RESUMO),
+      OPC(AJ_PAUSA_OVERLAY), OPC(AJ_TELA_ABERTURA), OPC(AJ_ABERTURA_ADDON), OPC(AJ_ABERTURA_FUNDO), OPC(AJ_ESTAT_TAMANHO), OPC(AJ_ESTAT_LADO), OPC(AJ_PLR_CLASSIF), OPC(AJ_PULAR_ABERTURA), OPC(AJ_PULAR_RESUMO),
       OPC(AJ_PULAR_CREDITOS), OPC(AJ_PROXIMO_AUTO), OPC(AJ_PROXIMO_CONTAGEM), OPC(AJ_REACAO_CREDITOS), OPC(AJ_CW_CONCLUIDO), OPC(AJ_CW_MINIMO),
       OPC(AJ_SAIDA_PLAYER), OPC(AJ_PROPORCAO_PADRAO), OPC(AJ_BRILHO_PLAYER), OPC(AJ_HDR_UI),
     ROT("Miniatura ao avançar"),
@@ -39,13 +39,17 @@ static const Item TELA[] = {
 #if !defined(NV_TPK) && !defined(NV_ANDROID)
       OPC(AJ_DV_MKV),
 #endif
-      OPC(AJ_CACHE_SEEK), OPC(AJ_MANTER_VIDEO), OPC(AJ_SEEKR_AJUSTE),
-#ifdef NV_ANDROID
-      OPC(AJ_BUFFER),
+      OPC(AJ_CACHE_SEEK), OPC(AJ_MANTER_VIDEO), OPC(AJ_RETOMADA_MORNA), OPC(AJ_MANTER_PRAZO), OPC(AJ_SEEKR_AJUSTE),
+#if defined(NV_ANDROID) || (!defined(NV_TPK) && !defined(__EMSCRIPTEN__))
+      OPC(AJ_BUFFER),   // webOS: DTS/Dolby Vision conversion read-ahead
 #endif
 #ifndef __EMSCRIPTEN__
     // .wgt: sem socket TCP/UDP no navegador, sem motor; P2P escondido (a8e7685d).
+    // #205: sem os pontos de montagem USB do motor (Android), a opcao some.
     ROT("P2P"), OPC(AJ_P2P_LIGADO), OPC(AJ_P2P_URL), OPC(AJ_P2P_TESTAR), OPC(AJ_P2P_LIMITE),
+#ifndef NV_ANDROID
+    OPC(AJ_P2P_DESTINO),
+#endif
 #endif
 
   SEC("Idiomas e legendas", "Idioma da interface, áudio, legenda e metadados", "aj_languages"),
@@ -67,6 +71,7 @@ static const Item TELA[] = {
       OPC(AJ_LEG2_TAMANHO), OPC(AJ_LEG2_FONTE), OPC(AJ_LEG2_COR), OPC(AJ_LEG2_OPACIDADE),
       OPC(AJ_LEG2_FUNDO), OPC(AJ_LEG2_POSICAO), OPC(AJ_LEG2_BORDA), OPC(AJ_LEG2_COR_BORDA),
       OPC(AJ_LEG2_NEGRITO), OPC(AJ_LEG2_ATRASO), OPC(AJ_LEG2_RESTAURAR), OPC(AJ_LEG2_POS),
+      OPC(AJ_LEG_CONTORNO_COR),
     MAIS(),
     ROT("Idiomas"), OPC(AJ_TMDB_IDIOMA),
 
@@ -82,7 +87,8 @@ static const Item TELA[] = {
       OPC(AJ_FALHA_ADDONS), OPC(AJ_FALHA_ADDON_ORDEM), OPC(AJ_FALHA_ADDON_LIMITE),
     ROT("Debrid"),
       OPC(AJ_PROVEDORES_ESCOPO), OPC(AJ_DEBRID_RD), OPC(AJ_DEBRID_TB), OPC(AJ_DEBRID_PM), OPC(AJ_DEBRID_AD),
-      OPC(AJ_DEBRID_AD_TESTAR),
+      OPC(AJ_DEBRID_AD_TESTAR), OPC(AJ_DEBRID_RD_TESTAR),
+      OPC(AJ_DEBRID_TB_TESTAR), OPC(AJ_DEBRID_PM_TESTAR),
     ROT("Servidores pessoais"),
       OPC(AJ_JF_LIGADO), OPC(AJ_JF_SERVIDOR), OPC(AJ_JF_ENTRAR), OPC(AJ_JF_SAIR),
       OPC(AJ_EM_SERVIDOR), OPC(AJ_EM_ENTRAR), OPC(AJ_EM_SAIR),
@@ -103,19 +109,23 @@ static const Item TELA[] = {
   SEC("Tela inicial", "Estilo, fileiras, barra lateral e Continuar assistindo", "aj_layout-dashboard"),
     ROT("Estilo"),
       OPC(AJ_HOME_LAYOUT), OPC(AJ_LANDSCAPE), OPC(AJ_HERO), OPC(AJ_HERO_CHEIO),
-      OPC(AJ_HERO_CATALOGOS),
+      OPC(AJ_HERO_CATALOGOS), OPC(AJ_HERO_GENERO),
+      OPC(AJ_HERO_SINOPSE), OPC(AJ_HERO_NOTAS), OPC(AJ_HERO_ANO), OPC(AJ_HERO_DURACAO),
+      OPC(AJ_HERO_SINOPSE_TAM),
     ROT("Fileiras"),
       OPC(AJ_FIL_ORDEM), OPC(AJ_FIL_LIMITE), OPC(AJ_ITENS_FILEIRA),
       OPC(AJ_ESPACO_FILEIRAS), OPC(AJ_ESPACO_TITULOS),
-      OPC(AJ_OCULTAR_NLANC), OPC(AJ_NOTAS_HOME), OPC(AJ_SELO_VISTO),
-      OPC(AJ_OCULTAR_FILMES_VISTOS),
-    ROT("Coleções"), OPC(AJ_COLECAO_EXIBICAO), OPC(AJ_MURAL_TITULOS),
+      OPC(AJ_OCULTAR_NLANC), OPC(AJ_NOTAS_HOME), OPC(AJ_SELO_VISTO), OPC(AJ_ABAS_ESTILO),
+      OPC(AJ_OCULTAR_FILMES_VISTOS), OPC(AJ_AMIGOS_ESTILO),
+      // A curadoria da fileira Herói (#205): a fonte do cartão único.
+      OPC(AJ_CURADORIA_URL),
+    ROT("Coleções"), OPC(AJ_COLECAO_EXIBICAO),
     ROT("Continuar assistindo"),
       OPC(AJ_CW_LIGADO), OPC(AJ_CW_OK), OPC(AJ_CW_ESTILO), OPC(AJ_CW_THUMB),
       OPC(AJ_CW_BLUR_PROX), OPC(AJ_CW_ORDEM), OPC(AJ_CW_NAO_EXIBIDOS),
       OPC(AJ_CW_RETIDO_TAMBEM),
     ROT("Barra lateral"),
-      OPC(AJ_RAIL_MODERNA), OPC(AJ_RAIL), OPC(AJ_MENU_EXPLORAR),
+      OPC(AJ_MENU_TOPO), OPC(AJ_RAIL_MODERNA), OPC(AJ_RAIL), OPC(AJ_MENU_EXPLORAR),
       OPC(AJ_MENU_GUIA), OPC(AJ_MENU_AGENDA), OPC(AJ_MENU_PERFIL),
     ROT("Escolha de perfil"), OPC(AJ_PS_FUNDO), OPC(AJ_PS_CONTINUAR),
     MAIS(),
@@ -131,12 +141,15 @@ static const Item TELA[] = {
 #ifdef NV_TOUCH_UI
     OPC(AJ_INTERFACE_MODO),
 #endif
+#ifdef NV_TECLADO_SIS
+    OPC(AJ_TECLADO_ANDROID),
+#endif
     ROT("Cores e vidro"),
       OPC(AJ_TEMA), OPC(AJ_FUNDO), OPC(AJ_COR_LOGO), OPC(AJ_VIDRO), OPC(AJ_VIDRO_CONTORNO),
     ROT("Logo e abertura"),
       OPC(AJ_LOGO_APP), OPC(AJ_ABERTURA), OPC(AJ_ICONE_APP),
     ROT("Texto e tamanho"),
-      OPC(AJ_FONTE_UI), OPC(AJ_TAMANHO_UI), OPC(AJ_HERO_SINOPSE), OPC(AJ_TAMANHO_AJUSTES), OPC(AJ_LAYOUT_AJUSTES),
+      OPC(AJ_FONTE_UI), OPC(AJ_TAMANHO_UI), OPC(AJ_TAMANHO_AJUSTES), OPC(AJ_LAYOUT_AJUSTES),
     ROT("Movimento e relógio"),
       OPC(AJ_ANIM), OPC(AJ_RELOGIO), OPC(AJ_RELOGIO_12H),
     ROT("Tela de descanso"),
@@ -149,7 +162,7 @@ static const Item TELA[] = {
   // conta: ligar uma nota liga o par dela e o MDBList por baixo (notaLigarPar).
   SEC("Página do título", "O que aparece, notas e dados do título", "aj_file-text"),
     ROT("O que aparece"),
-      OPC(AJ_DET_VEU), OPC(AJ_DET_DATA_CHEIA), OPC(AJ_DET_BLUR_NAO_VISTOS),
+      OPC(AJ_DET_VEU), OPC(AJ_DET_DATA_CHEIA), OPC(AJ_DET_BLUR_NAO_VISTOS), OPC(AJ_EP_TAMANHO),
     ROT("Notas"),
       OPC(AJ_NT_IMDB), OPC(AJ_NT_TOMATES), OPC(AJ_NT_AUDIENCIA), OPC(AJ_NT_META),
       OPC(AJ_NT_METAUSER), OPC(AJ_NT_TRAKT), OPC(AJ_NT_TMDB), OPC(AJ_NT_LETTER),
@@ -177,13 +190,13 @@ static const Item TELA[] = {
       OPC(AJ_HERO_TRAILER), OPC(AJ_FOCO_TRAILER), OPC(AJ_DET_TRAILER_AUTO),
       OPC(AJ_DET_TRAILER),
     ROT("Som e imagem"),
-      OPC(AJ_HERO_TRAILER_SOM), OPC(AJ_DET_TRAILER_SOM), OPC(AJ_TRAILER_FONTE),
+      OPC(AJ_HERO_TRAILER_SOM), OPC(AJ_TRAILER_FONTE),
 #ifdef NV_TPK
       OPC(AJ_TRAILER_ZOOM_TPK),
 #endif
       OPC(AJ_LOGO_TRAILER),
     MAIS(),
-    ROT("Cartaz em foco"), OPC(AJ_GRAD_CLASSICO),
+    ROT("Cartaz em foco"), OPC(AJ_GRAD_CLASSICO), OPC(AJ_MURAL_TITULOS),
     ROT("Forma"),
       OPC(AJ_PROF_BRILHO),
     ROT("De onde vem a arte"),
@@ -214,7 +227,7 @@ static const Item TELA[] = {
 
   SEC("Sobre e ajuda", "Guia de uso, versão, atualização e registros", "aj_info"),
     OPC(AJ_GUIA),
-    OPC(AJ_NOVIDADES20),
+    OPC(AJ_NOVIDADES20), OPC(AJ_DICASCONTROLE),
     OPC(AJ_APOIAR),
     OPC(AJ_AVISO_LEGAL),
     ROTS("App", ""), OPC(AJ_VERSAO_I), OPC(AJ_ATUALIZAR),

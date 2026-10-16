@@ -12,6 +12,7 @@
 //   3. com o ajuste desligado o mesmo toque pede REPRODUCAO e nao trava nada.
 //
 // Sem janela e sem rede — a mesma receita de tests/detail_epcard.c.
+#include "nvtmp.h"
 #include "dados.h"
 #include <assert.h>
 #include <stdlib.h>
@@ -20,7 +21,7 @@
 
 #include "../src/detail.c"
 
-static char dir[512], caminho[700];
+static char dir[NVT_MAX], caminho[700];
 static void gravar(const char *txt) {
   FILE *f = fopen(caminho, "w");
   assert(f);
@@ -42,7 +43,7 @@ int main(void) {
   CatEp eps[4];
   int i, t, e;
 
-  snprintf(dir, sizeof dir, "/tmp/nuvio-detail-epfoco-XXXXXX");
+  nvt_set(dir, sizeof dir, "/nuvio-detail-epfoco-XXXXXX");
   assert(mkdtemp(dir));
   assert(setenv("NUVIO_DADOS", dir, 1) == 0);
   dados_iniciar(dir);

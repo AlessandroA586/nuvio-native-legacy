@@ -136,6 +136,11 @@ static Uint32 legAutoDesde;
 // e a faixa ficava na TV — que corta metade das falas — ate o fim do episodio.
 static int legOverlayFalhas, legOverlayRecusas, legOverlayNoGoEstado;
 static int legOverlayTV, legOverlayColhidos;
+
+int faixas_legenda_overlay(void) {
+  return !legOverlayTV;
+}
+
 static Uint32 legOverlayRetomar;       // 0 = nada agendado
 
 static int ehAss(const VideoFaixa *f) {
@@ -149,8 +154,16 @@ static int ehAss(const VideoFaixa *f) {
 #else
 #define FX_TEXTO_OVERLAY 1
 #endif
+// PGS: so o .tpk decodifica e desenha (imgsub); as outras plataformas seguem.
+static int ehPgs(const VideoFaixa *f) {
+#ifdef NV_TPK
+  return f && faixasmkv_imagem_overlay(f->codec);
+#else
+  (void)f; return 0;
+#endif
+}
 static int vaiOverlay(const VideoFaixa *f) {
-  return f && faixasmkv_overlay(f->codec, FX_TEXTO_OVERLAY);
+  return f && (faixasmkv_overlay(f->codec, FX_TEXTO_OVERLAY) || ehPgs(f));
 }
 
 // O overlay do app assume a faixa embutida `i` (ordinal `ord` no arquivo): a
@@ -161,7 +174,7 @@ static int vaiOverlay(const VideoFaixa *f) {
 // outro bug (a resposta do uMS sai logo abaixo como "[video] {...}").
 static void overlayAssumir(int i, int ord) {
   const VideoFaixa *f = video_legenda(i);
-  int texto = f && !ehAss(f);
+  int texto = f && f->numero >= 0 && !ehAss(f) && !ehPgs(f);
   // Texto: a TV segura a legenda enquanto a rede ainda nao entregou cues.
   video_escolher_legenda(texto ? i : -1);
   mkvass_iniciar_ordinal(video_url_atual(), ord);
@@ -402,7 +415,7 @@ static void reiniciarFaixas(int preservarPrebusca) {
   legOverlayFalhas = legOverlayRecusas = legOverlayNoGoEstado = 0; legOverlayRetomar = 0;
   legOverlayTV = legOverlayColhidos = 0;
   if (!preservarPrebusca) mkvass_parar();
-  legenda_desligar();
+  legenda_desligar(); legenda_pre_reiniciar();
   legAuto = 1; legAutoDesde = 0; pilZerar(); pil.espera = 0;
   legendasui_reiniciar();   // F04: the second subtitle belongs to the session too
   // #202: speed is per playback: a new title starts at 1x.
@@ -415,7 +428,14 @@ void faixas_reiniciar_preparada(void) { reiniciarFaixas(1); }
 
 // Indice da legenda que a folha deve marcar como ATIVA.
 static int legendaAtiva(void) {
-  if (legExterna >= 0) return legExterna;
+  if (legExternaId[0]) {
+    char id[24];
+    for (int j = 0; j < addons_n_legendas(); j++) {
+      legendasui_id_addon(addons_legenda(j), id);
+      if (!strcmp(id, legExternaId)) return legExterna = video_n_legenda() + j;
+    }
+    return legExterna = -1;
+  }
   if (legOverlay >= 0) return legOverlay;
   return video_legenda_atual();
 }
@@ -706,8 +726,13 @@ static void estDeFrac(int i, float f) {
 }
 static void estAbrir(int i) {
   ctl = ctlVis = i; ctlRep = 0;
-  ctlSub = i == EST_COR ? player_leg_estilo()->cor : i == EST_COR_BORDA ? player_leg_estilo()->corBorda
+  ctlSub = i == EST_COR ? player_leg_estilo()->cor
          : i == EST_FONTE ? player_leg_estilo()->familia : 0;
+  if (i == EST_COR_BORDA) {
+    unsigned rgb = ajustes_leg_borda_rgb(player_leg_estilo()->corBorda);
+    for (int c = 0; c < VIDEO_LEG_NCORES; c++)
+      if (video_legenda_borda_rgb(c) == rgb) { ctlSub = c; break; }
+  }
   if (estSlider(i)) ctlFrac = estFrac(i);
 }
 static void estEscolher(int i) {   // amostra / fonte `i`: aplica ao vivo
@@ -925,6 +950,39 @@ static void aplicar(void) {
 // cada addon com 25 s de teto. Vencido o prazo, decide-se com o que ha.
 #define FX_AUTO_EMB_MS  10000u   // espera pelos idiomas das embutidas (era 30 s: a legenda do addon ja estava na mao)
 #define FX_AUTO_FIM_MS  30000u   // desiste de vez: legenda ligada no minuto 5 assusta
+// A mesma decisao de faixa exata antes e depois do sourceInfo.
+static int legendaExata(const LegMem *mt, int nEmb, int nAdd) {
+  int nums[NV_FAIXA_MAX];
+  const char *emb[NV_FAIXA_MAX], *nomes[NV_FAIXA_MAX], *ids[LEG_MAX];
+  char idsBuf[LEG_MAX][24];
+  int i;
+  for (i = 0; i < nEmb; i++) {
+    const VideoFaixa *f = video_legenda(i);
+    nums[i] = f ? f->numero : -1;
+    emb[i] = f ? f->idioma : "";
+    nomes[i] = f ? f->rotulo : "";
+  }
+  for (i = 0; i < nAdd; i++) { legendasui_id_addon(addons_legenda(i), idsBuf[i]); ids[i] = idsBuf[i]; }
+  return legmem_exata(mt, nums, emb, nomes, nEmb, ids, nAdd);
+}
+static void legendaPreDownload(void) {
+  char tit[64]; int origem, r, n;
+  const LegMem *mt;
+  const CatItem *ci;
+  if (!legAuto || !player_aberto() || player_com_video() || player_id_canal()[0]) return;
+  ci = cat_item(player_indice());
+  if (!ci || !ci->imdb[0]) return;
+  tituloAtual(tit, sizeof tit);
+  mt = tit[0] ? legmem_do_titulo(tit) : NULL;
+  legmem_preferencia(ling_legenda(), mt, legmem_ultima(), &origem);
+  if (origem != LEGMEM_DE_TITULO || mt->tipo != 'a') return;
+  n = addons_n_legendas(); if (n > LEG_MAX) n = LEG_MAX;
+  r = legendaExata(mt, 0, n);
+  if (r >= 0) {
+    const Legenda *l = addons_legenda(r);
+    if (l) legenda_pre_baixar(l->url);
+  }
+}
 static void legendaAutomatica(Uint32 agora) {
   const char *emb[NV_FAIXA_MAX], *add[LEG_MAX], *audio, *pref;
   const VideoFaixa *fa;
@@ -989,16 +1047,7 @@ static void legendaAutomatica(Uint32 agora) {
   // vale mais que "a primeira do idioma" (o arquivo pode ter pt e pt-BR, ou a
   // completa e a SDH). Ainda nao apareceu e a lista dela nao fechou: espera.
   if (origem == LEGMEM_DE_TITULO && mt->tipo) {
-    int nums[NV_FAIXA_MAX];
-    const char *nomes[NV_FAIXA_MAX], *ids[LEG_MAX];
-    char idsBuf[LEG_MAX][24];
-    for (i = 0; i < nEmb; i++) {
-      const VideoFaixa *f = video_legenda(i);
-      nums[i] = f ? f->numero : -1;
-      nomes[i] = f ? f->rotulo : "";
-    }
-    for (i = 0; i < nAdd; i++) { legendasui_id_addon(addons_legenda(i), idsBuf[i]); ids[i] = idsBuf[i]; }
-    r = legmem_exata(mt, nums, emb, nomes, nEmb, ids, nAdd);
+    r = legendaExata(mt, nEmb, nAdd);
     if (r < 0 && !(mt->tipo == 'e' ? embFechado : addFechado)) return;
     if (r >= 0) {
       legAuto = 0;
@@ -1240,7 +1289,9 @@ void faixas_atualizar(float dt, Uint32 agora) {
   // Fechando a partir da barra, ela sai como barra: sem isto a folha inteira
   // piscaria no caminho de volta.
   if (aberta || anim < .01f) animTopo = anim_mola(animTopo, faixas_estilo_topo() ? 1.0f : 0.0f, dt, NV_MOLA_TELA);
+  legendaPreDownload();
   legendaAutomatica(agora);
+  if (!legAuto) legenda_pre_descartar("automatica encerrada");
   pilAtualizar(agora);
   // Recuo vencido: a MESMA faixa de novo. O overlay nao foi desligado — o que
   // ja estava colhido continua na tela, e o fio novo retoma do sidecar parcial.

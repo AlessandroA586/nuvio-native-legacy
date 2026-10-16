@@ -1,8 +1,10 @@
 #!/bin/bash
+export TMPDIR="${TMPDIR:-/tmp}"
+TMPDIR="${TMPDIR%/}"
 # Parser sem inicializar SDL; os desenhos de badges sao descartados no link.
 set -eu
 cd "$(dirname "$0")/.."
-DIR=$(mktemp -d /tmp/nuvio-stream-parser.XXXXXX)
+DIR=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-stream-parser.XXXXXX")
 trap 'rm -rf "$DIR"' EXIT
 flags=(-ffunction-sections -fdata-sections)
 if [ "$(uname -s)" = Darwin ]; then flags+=(-Wl,-dead_strip); else flags+=(-Wl,--gc-sections); fi

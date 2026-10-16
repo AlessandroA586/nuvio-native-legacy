@@ -38,6 +38,7 @@
 #include "streamfitpassiva.h"
 #include "audsync.h"
 #include "cacheboost.h"
+#include "tex_cache.h"
 #include "velocidade.h"
 #include <SDL2/SDL.h>
 #include <jni.h>
@@ -63,6 +64,8 @@ static unsigned preparoAdotar;
 // F07 (optional, like abrirPosicao): cache(mb) and ganho(pct). A shell without
 // them simply has no seek cache and no boost.
 static jmethodID mCache, mGanho, mBuffer;
+// Warm resume (#492, optional too): titulo(id) and descartarGuardado().
+static jmethodID mTitulo, mDescartar, mMorno, mQuadro;
 // #202 (opcional, como os de cima): velocidade(centesimos). Casca sem ele =
 // sem a linha da velocidade.
 static jmethodID mVelocidade;
@@ -84,6 +87,14 @@ static int resolverMetodos(JNIEnv *env) {
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mAbrirRetomada = NULL; }
   mCache = (*env)->GetStaticMethodID(env, gCls, "cache", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mCache = NULL; }
+  mTitulo = (*env)->GetStaticMethodID(env, gCls, "cacheTitle", "(Ljava/lang/String;)V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mTitulo = NULL; }
+  mDescartar = (*env)->GetStaticMethodID(env, gCls, "descartarGuardado", "()V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mDescartar = NULL; }
+  mMorno = (*env)->GetStaticMethodID(env, gCls, "morno", "(I)V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mMorno = NULL; }
+  mQuadro = (*env)->GetStaticMethodID(env, gCls, "quadro", "(I)I");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mQuadro = NULL; }
   mBuffer = (*env)->GetStaticMethodID(env, gCls, "buffer", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mBuffer = NULL; }
   mGanho = (*env)->GetStaticMethodID(env, gCls, "ganho", "(I)V");
@@ -348,6 +359,9 @@ static unsigned sessao;
 // at 100%. `cacheSessao` survives the reconnection reopens of that video.
 static int bufferPreset, bufferEnviado;
 static int cacheArmado = -1, cacheSessao, cacheEnviado, playerSessao;
+// Warm resume (#492): id of the title the player armed for the next open, the
+// one of this open (empty for trailers/channels) and the one Kotlin has.
+static char tituloArmado[96], tituloSessao[96], tituloEnviado[96];
 static int ganhoEnviado = CB_VOL_NORMAL;
 static int retomadaInicialEstado = -1;
 static pthread_mutex_t travaRetomada = PTHREAD_MUTEX_INITIALIZER;
@@ -361,6 +375,7 @@ static volatile int reconErroPend, reconErroCod, reconErroVideo;
 static int reconAudio = -1, reconLeg = -1;
 static volatile int reconFaixasPend;
 static int reconBuscarMs = -1;
+static int reconPausado;
 static int recarregarPausa = -1, recarregarPosMs;
 static char erroTxt[64];
 
@@ -587,6 +602,15 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeErroTexto(JN
   fflush(stdout);
 }
 
+// #345: keep audio diagnostics in the uploaded app log, not only logcat.
+JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeAudioLog(JNIEnv *env, jclass cls, jstring texto) {
+  char t[512];
+  (void)cls;
+  deJString(env, texto, t, sizeof t);
+  printf("[video] android audio: %s\n", t);
+  fflush(stdout);
+}
+
 JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeHdr(JNIEnv *env, jclass cls, jstring hdr, jint dv, jint atmos) {
   char h[24];
   (void)cls;
@@ -675,7 +699,7 @@ static int abrirSessao(int inicioMs, int fracao) {
   // F07: the cache limit is sticky in Kotlin (read at each open), so it only
   // crosses JNI when it changes. Posted before the open on the same main
   // thread queue, it is in place when the open runs.
-  // #338: buffer preset, sticky in Kotlin like the cache limit.
+  // #338: buffer MiB (0 = Auto), sticky in Kotlin like the cache limit.
   if (mBuffer && bufferPreset != bufferEnviado) {
     (*env)->CallStaticVoidMethod(env, gCls, mBuffer, (jint)bufferPreset);
     fimChamada(env);
@@ -685,6 +709,15 @@ static int abrirSessao(int inicioMs, int fracao) {
     (*env)->CallStaticVoidMethod(env, gCls, mCache, (jint)cacheSessao);
     fimChamada(env);
     cacheEnviado = cacheSessao;
+  }
+  if (mTitulo && strcmp(tituloSessao, tituloEnviado)) {
+    jstring t = paraJString(env, tituloSessao);
+    if (t) {
+      (*env)->CallStaticVoidMethod(env, gCls, mTitulo, t);
+      (*env)->DeleteLocalRef(env, t);
+      fimChamada(env);
+      snprintf(tituloEnviado, sizeof tituloEnviado, "%s", tituloSessao);
+    }
   }
   {
     jstring u = paraJString(env, urlAtual);
@@ -748,6 +781,11 @@ static int abrirSessao(int inicioMs, int fracao) {
   // Every Kotlin open starts at 100%: a player session re-applies its volume
   // (source change, reconnection) after the open in the same queue.
   ganhoEnviado = CB_VOL_NORMAL;
+  // Numero medido na TV TCL de 2,4 GB: 217 MB de textura + 96 MB de buffer +
+  // paralelo/preparo levaram o app a ~575 MB de PSS e o lmkd matou. So o
+  // player em tela cheia esconde a arte da home; trailers (home/detalhe) nao.
+  // Ligado so depois de abrir: falha no meio nao deixa o teto preso.
+  tex_pressao_reproducao(playerSessao);
   if (playerSessao && cacheboost_volume() != CB_VOL_NORMAL) cacheboost_backend_ganho(cacheboost_volume());
   return 1;
 }
@@ -763,17 +801,27 @@ int video_tocar_retomada(const char *u, double segundos, double pct) {
   nv_recon_zerar(&recon);
   reconPermitida = reconProxima; reconProxima = 0;
   reconIniciou = 0; reconErroPend = 0;
-  reconAudio = reconLeg = -1; reconFaixasPend = 0; reconBuscarMs = -1;
+  reconAudio = reconLeg = -1; reconFaixasPend = 0; reconBuscarMs = -1; reconPausado = 0;
   recarregarPausa = -1;
   playerSessao = cacheArmado >= 0;
   cacheSessao = cacheArmado > 0 ? cacheArmado : 0;
   cacheArmado = -1;
+  snprintf(tituloSessao, sizeof tituloSessao, "%s", playerSessao ? tituloArmado : "");
+  tituloArmado[0] = 0;
   return abrirSessao(inicioMs, fracao);
 }
 int video_tocar_posicao(const char *u, double segundos) { return video_tocar_retomada(u, segundos, 0.0); }
 
-void cacheboost_backend_buffer(int p) { bufferPreset = p >= 0 && p <= 3 ? p : 0; }
+void cacheboost_backend_buffer(int mb) { bufferPreset = mb >= 0 && mb <= 256 ? mb : 0; }
 void cacheboost_backend_cache(int mb) { cacheArmado = mb > 0 ? mb : 0; }
+void cacheboost_backend_titulo(const char *id) { snprintf(tituloArmado, sizeof tituloArmado, "%s", id ? id : ""); }
+void cacheboost_backend_descartar(void) { if (mDescartar) kSemArg(mDescartar); }
+void cacheboost_backend_morno(int ligado) { if (mMorno) kInt(mMorno, ligado); }
+int cacheboost_backend_quadro(int acao) {
+  JNIEnv *env = ambiente(); int r = 0;
+  if (env && mQuadro) { r = (*env)->CallStaticIntMethod(env, gCls, mQuadro, acao); fimChamada(env); }
+  return r;
+}
 void cacheboost_backend_ganho(int pct) {
   if (pct < CB_VOL_MIN) pct = CB_VOL_MIN;
   if (pct > CB_VOL_MAX) pct = CB_VOL_MAX;
@@ -827,7 +875,7 @@ void video_bombear(void) {
   if (prontoLoad && pos > 0.5) reconIniciou = 1;
   if (prontoLoad && reconBuscarMs < 0) nv_recon_progresso(&recon, pos);
   // O seek do recarregar sai com o player ja tocando.
-  if (reconBuscarMs >= 0 && prontoLoad && tocando) {
+  if (reconBuscarMs >= 0 && prontoLoad && (tocando || reconPausado)) {
     kInt(mBuscar, reconBuscarMs);
     printf("[video] reconexao: retomado em %ds\n", reconBuscarMs / 1000);
     fflush(stdout);
@@ -840,7 +888,10 @@ void video_bombear(void) {
     if (reconPermitida && urlAtual[0] && (reconIniciou || recon.tentativa) &&
         nv_recon_erro(&recon, rede, SDL_GetTicks(),
                       eraRecarga ? recarregarPosMs / 1000.0 : pos)) {
-      if (!antes && !eraRecarga) { reconAudio = audioAtual; reconLeg = legAtual; }
+      if (!antes && !eraRecarga) {
+        reconAudio = audioAtual; reconLeg = legAtual;
+        reconPausado = pausaPedida;
+      }
       if (recon.tentativa != antes) {
         printf("[video] conexao caiu (%d): tentativa %d/%d, espera %us\n",
                reconErroCod, recon.tentativa, NV_RECON_MAX,
@@ -862,13 +913,20 @@ void video_bombear(void) {
     if (!abrirSessao(recarregarPausa >= 0 ? recarregarPosMs : 0, 0))
       { reconErroCod = -1; reconErroPend = 1; }
     else if (recarregarPausa > 0) video_pausar(1);
+    else if (recarregarPausa < 0 && reconPausado) {
+      // abrirSessao nasce tocando. Enfileirar pause logo depois da abertura
+      // conserva o estado de um seek feito pausado; o seek de retomada acima
+      // aceita prontoLoad mesmo sem EV_TOCANDO.
+      pausaPedida = 1; pausaVista = 0;
+      kInt(mPausar, 1);
+    }
   }
 }
 void video_parar(void) {
   novaRetomada(-1);
   capmkv_zerar();   // fio de capitulos em voo nao alimenta o proximo titulo
   nv_recon_zerar(&recon);
-  reconErroPend = 0; reconErroVideo = 0; reconFaixasPend = 0; reconBuscarMs = -1;
+  reconErroPend = 0; reconErroVideo = 0; reconFaixasPend = 0; reconBuscarMs = -1; reconPausado = 0;
   recarregarPausa = -1;
   if (ativo) {
     // Troca de episodio: o consumidor ja destacou o proximo buffer. Soltar
@@ -880,9 +938,11 @@ void video_parar(void) {
   }
   ativo = prontoLoad = primeiroQuadro = tocando = 0; superficieEstavel = 0;
   pausaPedida = pausaVista = 0;
+  tex_pressao_reproducao(0);
 }
 void video_pausar(int p) {
   pausaVista = 0; pausaPedida = p ? 1 : 0;
+  if (nv_recon_ativa(&recon)) reconPausado = pausaPedida;
   if (recarregarPausa >= 0) recarregarPausa = pausaPedida;
   kInt(mPausar, pausaPedida);
 }
