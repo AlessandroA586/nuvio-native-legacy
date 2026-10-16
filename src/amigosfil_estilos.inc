@@ -77,7 +77,7 @@ static GfxRect afRect(int i, float x0, float y) {
   } else if (s == 2 || s == 4) {
     r.x += i * 228.0f; r.w = 204.0f; r.h = 306.0f;
   } else if (s == 3) {
-    r.x += i * 408.0f; r.w = 384.0f; r.h = 96.0f;
+    r.x += i * 144.0f; r.w = 128.0f; r.h = 96.0f;
   } else r.x += i * (NV_DESTAQUE_W + 24.0f);
   return r;
 }
@@ -125,7 +125,14 @@ static void afCartao(int i, GfxRect r, int foco, Uint32 agora) {
   const SvAmigo *a = afAmigo(i);
   const SvEvento *e = afEvento(i);
   afAnel(r, foco);
-  if (s == 3 || (s == 1 && (!e || e->acao != SV_AGORA))) {
+  if (s == 3) {
+    gfx_cor(r, .5f, .08f, .08f, .10f, .94f);
+    svd_rosto((GfxRect){r.x + 40, r.y + 10, 48, 48}, a, 0, 1, agora);
+    TxtLinha t = txt_linha_corta(TXT_CAPTION2, a->nome, 240, 240, 245, 255, r.w - 16);
+    txt_desenhar(t, r.x + (r.w - t.w) * .5f, r.y + 66);
+    return;
+  }
+  if (s == 1 && (!e || e->acao != SV_AGORA)) {
     char linha[256], ep[32];
     gfx_cor(r, 14.0f / r.h, 0.08f, 0.08f, 0.10f, 0.94f);
     svd_rosto((GfxRect){r.x + 16, r.y + (r.h - 48) * .5f, 48, 48}, a, 0, 1, agora);
@@ -215,7 +222,7 @@ static void afAtualizar(float dt, int focada, int *colunaP) {
   if (ultX0 >= 0 && focada && c < afN) {
     GfxRect r = afRect(c, ultX0, 0);
     float alvo = scroll;
-    float dir = amigosfilDireita() - 12;
+    float dir = amigosfilDireita() - 12 - (ajustes_amigos_estilo() == 3 ? 612 : 0);
     if (r.x - alvo < ultX0 + 8) alvo = r.x - ultX0 - 8;
     if (r.x + r.w - alvo > dir) alvo = r.x + r.w - dir;
     if (alvo < 0) alvo = 0;
@@ -234,6 +241,10 @@ static void afDesenhar(float x0, float y, float corte, int focada, int coluna, U
   afMontar(); afFoco = (GfxRect){0}; afExemplos = 0;
   if (amigosfil_convite()) { afConvite(x0, y, focada); return; }
   float dir = amigosfilDireita();
+  if (ajustes_amigos_estilo() == 3) {
+    gfx_cor((GfxRect){x0 - 8, y + 4, dir - x0 + 8, 104}, .5f, .06f, .06f, .08f, .96f);
+    dir -= 612;
+  }
   gfx_recorte(x0 - 12, fmaxf(corte, y - 4), dir - x0 + 24, NV_TELA_H - fmaxf(corte, y - 4));
   for (int i = 0; i < afN; i++) {
     GfxRect r = afRect(i, x0 - scroll, y);
@@ -246,6 +257,17 @@ static void afDesenhar(float x0, float y, float corte, int focada, int coluna, U
 #endif
   }
   gfx_recorte(0, corte, NV_TELA_W, NV_TELA_H - corte);
+  if (ajustes_amigos_estilo() == 3) {
+    int c = coluna < afN ? coluna : 0;
+    const SvEvento *e = afEvento(c);
+    if (e) {
+      GfxRect art = {dir + 24, y + 20, 128, 72};
+      svd_poster(art, e->arte[0] ? e->arte : e->poster, .12f, 1);
+      afTexto(e->titulo, art.x + 148, y + 24, 400, TXT_CAPTION, 1);
+      char status[160]; socialvis_status(e, status, sizeof status);
+      afTexto(status, art.x + 148, y + 57, 400, TXT_CAPTION2, .65f);
+    }
+  }
   for (int i = afN; i < afN + 2; i++) {
     GfxRect r = afAcaoRect(i, y);
     afAnel(r, focada && coluna == i);
