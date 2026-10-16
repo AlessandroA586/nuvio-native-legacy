@@ -726,8 +726,13 @@ static void estDeFrac(int i, float f) {
 }
 static void estAbrir(int i) {
   ctl = ctlVis = i; ctlRep = 0;
-  ctlSub = i == EST_COR ? player_leg_estilo()->cor : i == EST_COR_BORDA ? player_leg_estilo()->corBorda
+  ctlSub = i == EST_COR ? player_leg_estilo()->cor
          : i == EST_FONTE ? player_leg_estilo()->familia : 0;
+  if (i == EST_COR_BORDA) {
+    unsigned rgb = ajustes_leg_borda_rgb(player_leg_estilo()->corBorda);
+    for (int c = 0; c < VIDEO_LEG_NCORES; c++)
+      if (video_legenda_borda_rgb(c) == rgb) { ctlSub = c; break; }
+  }
   if (estSlider(i)) ctlFrac = estFrac(i);
 }
 static void estEscolher(int i) {   // amostra / fonte `i`: aplica ao vivo
