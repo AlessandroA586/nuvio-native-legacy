@@ -22,3 +22,8 @@ Subtitles need a new path; no caption code exists in the tree (`grep -ri "captio
 
 ## Risk
 Extractor changes break often (YouTube side); keep the parse behind one function and fail silent (no subtitles).
+
+## Built (webOS/emscripten YouTube embed)
+No new setting: reuses the subtitle language (`ling_legenda()`). `trailer_js_legenda` in `src/trailer.c` holds the rule:
+no captions when the trailer audio is dubbed in that language, none without a track in it, else that track.
+Needs on-TV check: the tracklist reply (`info.tracklist`) from the embed/proxy page; without it, no captions.

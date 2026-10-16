@@ -4,6 +4,8 @@
 #include "layout.h"
 #include "ajustes.h"
 #include "trailerfonte.h"
+#include "extras.h"
+#include "linguas.h"
 #include "video.h"      // trailer_osd_desenhar reads video_pos/duracao on every target
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,6 +77,20 @@ void trailer_recorte(int vw, int vh, float z, float dw, float dh,
 // nao de 1920x1080 diretos. `origin` no embed e o que a IFrame API exige
 // para aceitar postMessage; a origem de um wgt e "file://" ou "null", e ai
 // vai sem.
+// Legenda do trailer do YouTube: a do idioma de legenda da pessoa, nunca com
+// audio dublado nesse idioma, nunca sem faixa nesse idioma. `sub`/`audio` sao
+// ISO de 2 letras ("" = sem preferencia / audio desconhecido).
+EM_JS(void, trailer_js_legenda, (const char *sub, const char *audio), {
+  Module.nvLegendaEscolher = function (tracks, s, a) {
+    if (!s || s === 'none' || s === a || !tracks) return '';
+    for (var i = 0; i < tracks.length; i++) {
+      var c = tracks[i] && tracks[i].languageCode;
+      if (c && c.slice(0, 2).toLowerCase() === s) return c;
+    }
+    return '';
+  };
+  Module.nvLegenda = { sub: UTF8ToString(sub), audio: UTF8ToString(audio) };
+});
 EM_JS(int, trailer_js_abrir, (const char *fonte, float x, float y, float w, float h, int som, float zoom, const char *proxy), {
   var id = UTF8ToString(fonte);
   var base = proxy ? UTF8ToString(proxy) : '';
@@ -186,6 +202,18 @@ EM_JS(int, trailer_js_abrir, (const char *fonte, float x, float y, float w, floa
           if (T.estado === -3) return;   // erro e final para este elemento
           if (m.event === 'infoDelivery' && m.info && typeof m.info.playerState === 'number') T.estado = m.info.playerState;
           if (m.event === 'onStateChange' && typeof m.info === 'number') T.estado = m.info;
+          // Legenda: com o video tocando pede a lista de faixas; a resposta
+          // (info.tracklist) escolhe o idioma ou nenhuma. Sem lista, sem legenda.
+          var L = Module.nvLegenda, pw = T.f.contentWindow;
+          var cmd = function (fn, args) { try { pw.postMessage(JSON.stringify({ event: 'command', func: fn, args: args }), '*'); } catch (e) {} };
+          if (L && Module.nvLegendaEscolher && !T.f.nvLegPedida && T.estado === 1) {
+            T.f.nvLegPedida = 1; cmd('loadModule', ['captions']); cmd('getOption', ['captions', 'tracklist']);
+          }
+          if (L && Module.nvLegendaEscolher && m.info && m.info.tracklist && !T.f.nvLegAplicada) {
+            T.f.nvLegAplicada = 1;
+            var cod = Module.nvLegendaEscolher(m.info.tracklist, L.sub, L.audio);
+            if (cod) cmd('setOption', ['captions', 'track', { languageCode: cod }]); else cmd('unloadModule', ['captions']);
+          }
         });
       }
       // A IFrame API so fala depois de "listening"; mandamos ao carregar.
@@ -387,6 +415,13 @@ void trailer_abrir(const char *fonte, GfxRect r, int som, int modoCheia) {
 #endif
   if (nova) falhouUltima = 0;
 #ifdef __EMSCRIPTEN__
+  {
+    char sub[8] = "", aud[3] = "";
+    ling_normalizar(ling_legenda(), sub, sizeof sub);
+    sub[2] = 0;
+    extras_trailer_audio_iso(aud);
+    trailer_js_legenda(sub, aud);
+  }
   if (!trailer_js_abrir(fonte, r.x, r.y, r.w, r.h, som, ajustes_trailer_zoom(), NV_REC_URL)) return;
 #else
   if (nova) {

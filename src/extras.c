@@ -357,6 +357,14 @@ static void alvoDeVideo(const char *idioma, const char *original, char *dst, siz
   else snprintf(dst, cap, "%s", p);
 }
 
+void extras_trailer_audio_iso(char *dst) {
+  char alvo[16];
+  dst[0] = 0;
+  if (!strcmp(PREF_AUDIO(), "~")) return;
+  alvoDeVideo(desc_tmdb_idioma(), "", alvo, sizeof alvo);
+  if (alvo[0] && alvo[1]) { dst[0] = (char)(alvo[0] | 32); dst[1] = (char)(alvo[1] | 32); dst[2] = 0; }
+}
+
 // The chosen trailer audio may not be English, so callers wait for TMDB.
 // Original is only known once TMDB answers.
 static int idiomaPedido(void) {
