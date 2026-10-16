@@ -61,7 +61,9 @@ static const char *MANIFESTO =
 static char dirDados[PATH_MAX];
 static const char *fixtureDono = "dono";
 const char *sessao_usuario(void)  { return __atomic_load_n(&fixtureDono, __ATOMIC_ACQUIRE); }
+#ifndef MONTAGEM_PERFIS_REAIS
 int         perfis_ativo(void)    { return 1; }
+#endif
 const char *dados_dir(void)       { return dirDados; }
 static void caminhoDado(char *dst, size_t tam, const char *nome) {
   snprintf(dst, tam, "%s/%s", dirDados, nome);
@@ -102,6 +104,15 @@ const char *addons_nome(int i)         { (void)i; return "Addon"; }
 unsigned addons_versao(void)           { return versaoAddons; }
 const char *addons_base_por_id(const char *id) { return id && !strcmp(id, AID) ? baseAtual() : ""; }
 void  addons_manifesto_lido(int i, const char *c) { (void)i; (void)c; }
+int addons_identidade_recebida(const char *base, unsigned versao, NvPerfilSessao sessao,
+                              const char *corpo) {
+  (void)corpo;
+  return nv_perfil_sessao_atual(sessao) && versao == versaoAddons && !strcmp(base, baseAtual());
+}
+int addons_manifesto_recebido(const char *base, unsigned versao, NvPerfilSessao sessao,
+                             const char *corpo) {
+  return addons_identidade_recebida(base, versao, sessao, corpo);
+}
 
 // ------------------------------------------------------------------ o relogio
 static unsigned long long agoraMs(void) {
@@ -124,7 +135,8 @@ static pthread_mutex_t pedTrava = PTHREAD_MUTEX_INITIALIZER;
  * the original six scenarios unchanged. */
 static void (*fixtureCatalogo)(const char *id);
 static void (*fixtureMarco)(const char *name);
-static int fixtureCW, fixtureSocial;
+static void (*fixtureTrakt)(int social);
+static int fixtureCW, fixtureSocial, fixtureCWEmpty;
 
 static int imdbNaTela(const char *imdb, int (*campo)(const CatItem *)) {
   int i, k = 0;
@@ -215,6 +227,7 @@ static volatile int armadoSocial = S_NADA;
 int   recomenda_social_mesclar(CatItem *i, int nTrakt, int max) { (void)i; (void)max; return nTrakt; }
 unsigned recomenda_geracao(void) { return 1; }
 int trakt_social(CatItem *s, int m) {
+  if (fixtureTrakt) fixtureTrakt(1);
   int a = armadoSocial;
   (void)s; (void)m;
   armadoSocial = S_NADA;
@@ -327,8 +340,9 @@ int   simkl_plantowatch(CatItem *s, int m) { (void)s; (void)m; return 0; }
 int   ajustes_salvos_no_simkl(void)        { return 0; }
 int   trakt_enfeitar_lote(CatItem *s, int n) { (void)s; return n; }
 int trakt_continuar(CatItem *s, int m) {
+  if (fixtureTrakt) fixtureTrakt(0);
   fioDaMontagem = pthread_self(); temFioDaMontagem = 1;
-  if (!fixtureCW || m < 1) return 0;
+  if (!fixtureCW || fixtureCWEmpty || m < 1) return 0;
   memset(s, 0, sizeof *s);
   snprintf(s->imdb, sizeof s->imdb, "ttCW");
   snprintf(s->tipo, sizeof s->tipo, "movie");
