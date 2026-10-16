@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-16T12:48:46-03:00",
- "base": "e680776ed",
- "nota": "Sync 2026-10-16T12:48, HEAD integracao/2.0.5 e680776ed (tag v2.0.6 ja contem bump206/mergemaster/mestre1015 e os merges de PR 498/520/522/523/526/527/531..537). Instalado na TV cb7ece972 (Android rc=0, C9 rc=1), 250 commits atras. Merged nesta janela: catal551 (e680776ed, BLOQUEIA->OK), fonte552 (0d7821a01, BLOQUEIA->OK), bump206 (3a138358f, OK), mergemaster (6811d2b4a, BLOQUEIA,BLOQUEIA->OK). Na janela anterior: perffinal, amigoscapa, overdraw, herotrailer, vidrotelas, tclmem, legatraso, amigosestilo, estatresp, vidroc9, mestre1015, vidaa, ajustestestes. Rodando (log vivo): j-herosplit, j-trailerlingua, j-fpsplayer, j-estiloanim. Aguardando review/merge: agente/205-home545 (BLOQUEIA), agente/205-p2pmotivo, agente/205-usbmotivo, agente/205-usbpreparo, agente/205-logcabeca, agente/205-buffer, agente/205-legajuste (spec). Ver /Volumes/ExternalSSD/tmp/rev/escrivao/estado.md.",
+ "atualizado_em": "2026-10-16T15:05:00-03:00",
+ "base": "70bc8a630",
+ "nota": "Sync 2026-10-16T15:05, HEAD integracao/2.0.5 70bc8a630. Instalado na TV cb7ece972 (Android rc=0, C9 rc=1), 271 commits atras. Merged nesta janela: home545 (#545), p2pmotivo, usbmotivo, logcabeca, usbandroid, buffer, fpsplayer, herosplit, estiloanim, tpk558 (#558), trailerlingua, pr538b, pr540b, pr543, pr546, pr550, pr559. Rodando (log vivo): j-merge-pr547. Aguardando review/merge: agente/205-pr547, agente/205-extplayer (#501), agente/205-usbpreparo (review OK), agente/205-buscafila, agente/205-legenda552 (#552 follow-up). Ver /Volumes/ExternalSSD/tmp/rev/escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,
@@ -9804,17 +9804,19 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "feature",
-   "status": "aberta",
+   "status": "em_revisao",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "f954a272c (agente/205-extplayer, nao integrado)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": null,
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "sem job nem branch: triar e criar job",
-   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local.",
+   "proximo_passo": "job j-extplayer done (f954a272c, player externo no Android TV), sem review; revisar e merge; falta TV e PNG",
+   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. | Escrivao 10-16 14:58: job extplayer done f954a272c (configuracao de player externo); sem review; PNG nao sai no host (sem NV_ANDROID).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/501",
    "criada_em": "2026-10-14",
    "alvo": "2.0.6"
@@ -10287,11 +10289,14 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "-",
    "alvo": "2.0.6",
    "conserto": [
-    "26b9c635b (agente/205-home545, nao integrado)"
+    "26b9c635b (agente/205-home545)",
+    "67985ea5d (agente/205-home545)",
+    "21d1783b6 (agente/205-home545)",
+    "9e2138f9d (Merge agente/205-home545)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10299,8 +10304,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "review j-rev2-home545 BLOQUEIA (catalogos fora da cota ainda ocupam vaga da Home): novo fix em agente/205-home545 ou descartar; sem merge",
-   "notas": "Nova em 2026-10-16 (issues.json, labels ['bug']). Sem job no snapshot. Escrivao 10-16 12:48: job home545 done (26b9c635b), 1 ahead de HEAD; review j-rev2-home545 BLOQUEIA. Distinto de #551 (descoberta nao reinicia apos PIN).",
+   "proximo_passo": "merged 9e2138f9d (HEAD); review BLOQUEIA j-rev2-home545 -> fixes 67985ea5d/21d1783b6 -> OK j-rev-home545-r4; build+install no HEAD e resposta na issue",
+   "notas": "Nova em 2026-10-16 (issues.json, labels ['bug']). Sem job no snapshot. Escrivao 10-16 12:48: job home545 done (26b9c635b), 1 ahead de HEAD; review j-rev2-home545 BLOQUEIA. Distinto de #551 (descoberta nao reinicia apos PIN). | Escrivao 10-16 14:58: merged 9e2138f9d; review OK j-rev-home545-r4 depois dos fixes de cota/selecao explicita.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/545",
    "criada_em": "2026-10-16"
   },
@@ -10310,7 +10315,7 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "aberta",
+   "status": "em_revisao",
    "release": "-",
    "conserto": [],
    "ultima_resposta": {
@@ -10319,8 +10324,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "sem job; triar",
-   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt).",
+   "proximo_passo": "job j-vistos548 rodando (marca de assistido nao sobrevive ao relancamento); branch ainda sem commit proprio",
+   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | Escrivao 10-16 14:58: job vistos548 rodando (branch agente/205-vistos548 = HEAD, 0 ahead); log vivo; sem fix ainda.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/548",
    "criada_em": "2026-10-16",
    "alvo": "2.0.6"
@@ -10390,8 +10395,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "merged 0d7821a01; review OK j-rev2-fonte552; build+install no HEAD e resposta na issue",
-   "notas": "Escrivao 10-16 12:48: job fonte552 done; review BLOQUEIA j-rev-fonte552 -> fix cbcf467f5 -> OK j-rev2-fonte552; merged 0d7821a01. Hostnames de stream passam a ser lidos antes de exigir P2P.",
+   "proximo_passo": "merged 0d7821a01 (fontes); follow-up de addons de legenda 27988615e em agente/205-legenda552 (1 ahead) sem review; build+install no HEAD e resposta na issue",
+   "notas": "Escrivao 10-16 12:48: job fonte552 done; review BLOQUEIA j-rev-fonte552 -> fix cbcf467f5 -> OK j-rev2-fonte552; merged 0d7821a01. Hostnames de stream passam a ser lidos antes de exigir P2P. | Escrivao 10-16 14:58: follow-up do reporter (addons de legenda nao aparecem): fix 27988615e em agente/205-legenda552, sem review.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/552",
    "criada_em": "2026-10-16",
    "alvo": "2.0.6"
@@ -10414,6 +10419,93 @@
    "proximo_passo": "sem job; triar",
    "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/553",
+   "criada_em": "2026-10-16",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 558,
+   "titulo": "Black screen on launch",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "integrada",
+   "release": "-",
+   "conserto": [
+    "cc49341e6 (agente/205-tpk558)",
+    "a1888d007 (Merge agente/205-tpk558)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "merged a1888d007 (HEAD); review OK j-rev-tpk558; build+install na TV Tizen 6 do reporter para confirmar",
+   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova, tela preta no lancamento num Q50A Tizen 6 2.0.6. Job j-tpk558 done (cc49341e6, tools/tpk.sh rc 0); sem review. | Escrivao 10-16 14:58: merged a1888d007 (adiar IME da Samsung e expor falha no boot); review OK j-rev-tpk558; spec docs/issues/558-tpk-startup.md.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/558",
+   "criada_em": "2026-10-16",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 557,
+   "titulo": "Playback cannot be skipped to a particular time stamp",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "?",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "sem job nem branch: triar e criar job",
+   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/557",
+   "criada_em": "2026-10-16",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 556,
+   "titulo": "Special / out-of-order seasons recognised by Trakt are not shown for some anime",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "?",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "sem job nem branch: triar e criar job",
+   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/556",
+   "criada_em": "2026-10-16",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 555,
+   "titulo": "Search does not work as expected",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "?",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "sem job nem branch: triar e criar job",
+   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/555",
    "criada_em": "2026-10-16",
    "alvo": "2.0.6"
   }
@@ -15878,50 +15970,55 @@
    "id": "dono-205-buffer",
    "titulo": "Buffer do player configuravel (64/128/256 MiB) + clamp por RAM livre",
    "plataforma": "LG webOS",
-   "status": "consertada-nao-lancada",
+   "status": "integrada",
    "release": "2.0.6",
    "conserto": [
     "42b3718cf (agente/205-buffer)",
-    "4907caa50 (spec DV7->8.1, agente/205-buffer)"
+    "4907caa50 (spec DV7->8.1, agente/205-buffer)",
+    "62421bfdc (agente/205-buffer)",
+    "35a944d9f (agente/205-buffer)",
+    "28c77a9b0 (Merge agente/205-buffer)"
    ],
-   "proximo_passo": "review do fix 42b3718cf (nenhuma) e merge; falta TV (256 MiB na LG C5, clamp em webOS de 1 GB)",
-   "notas": "Relato do usuario (LG C5): remux 4K trava depois de 15-30 min; 256 MiB estavel. Job j-buffer done 10-16 12:40. Tests buffer_tamanho/ajustes_ux_dados/video_android_cacheboost/i18n/build rc 0. Sem PNG; spec DV7->8.1 nao implementada."
+   "proximo_passo": "merged 28c77a9b0; review BLOQUEIA r1/r2 -> OK j-rev-buffer-r3; falta TV (256 MiB / clamp 1 GB) e build Android",
+   "notas": "Relato do usuario (LG C5): remux 4K trava depois de 15-30 min; 256 MiB estavel. Job j-buffer done 10-16 12:40. Tests buffer_tamanho/ajustes_ux_dados/video_android_cacheboost/i18n/build rc 0. Sem PNG; spec DV7->8.1 nao implementada. | Escrivao 10-16 14:58: merged 28c77a9b0; fixes de clamp de RAM (62421bfdc) e MiB no Android (35a944d9f); review OK r3."
   },
   {
    "id": "dono-205-usbpreparo",
    "titulo": "Preparar/formatar pendrive para o cache do P2P",
    "plataforma": "webOS/Tizen/Android",
-   "status": "em-andamento",
+   "status": "em_revisao",
    "release": "2.0.6",
    "conserto": [
     "db03a2bc5 (agente/205-usbpreparo: spec docs/specs/pendrive-preparo.md + sonda de fs/ro)"
    ],
-   "proximo_passo": "review e merge da sonda; implementar tarefas 2-9 da spec; validar exFAT/NTFS nas TVs",
-   "notas": "Pedido do dono. Job j-usbpreparo done 10-16 12:39 (sondagem, tests/usbsonda.sh rc 0). Falta varredura /storage/<UUID> no Android; FAT32 limita em 4 GiB."
+   "proximo_passo": "review OK j-revg-usbpreparo; merge da sonda; implementar tarefas 2-9 da spec; validar exFAT/NTFS nas TVs",
+   "notas": "Pedido do dono. Job j-usbpreparo done 10-16 12:39 (sondagem, tests/usbsonda.sh rc 0). Falta varredura /storage/<UUID> no Android; FAT32 limita em 4 GiB. | Escrivao 10-16 14:58: review OK j-revg-usbpreparo (db03a2bc5); falta merge. | Escrivao 10-16 15:04: review OK j-revg-usbpreparo (db03a2bc5); falta merge."
   },
   {
    "id": "dono-205-usbmotivo",
    "titulo": "Dizer porque o cache do P2P em USB e recusado",
    "plataforma": "webOS/Tizen",
-   "status": "em-andamento",
+   "status": "integrada",
    "release": "2.0.6",
    "conserto": [
-    "ebb5eb8fe (agente/205-usbmotivo)"
+    "ebb5eb8fe (agente/205-usbmotivo)",
+    "30b57ccf1 (Merge agente/205-usbmotivo)"
    ],
-   "proximo_passo": "review do fix (nenhuma ainda) e merge; so diagnostico, sem UI",
-   "notas": "Relato Discord: opcao \"guardar no pendrive\" cinza mesmo com pendrive espetado. Job j-usbmotivo done 10-16 12:37 (tests regressao/p2pusb/diff/build rc 0). Falta TV e integrar o texto da recusa nos Ajustes (com agente/205-p2pmotivo)."
+   "proximo_passo": "merged 30b57ccf1; review OK j-rev-usbmotivo; validar numa TV com pendrive",
+   "notas": "Relato Discord: opcao \"guardar no pendrive\" cinza mesmo com pendrive espetado. Job j-usbmotivo done 10-16 12:37 (tests regressao/p2pusb/diff/build rc 0). Falta TV e integrar o texto da recusa nos Ajustes (com agente/205-p2pmotivo). | Escrivao 10-16 14:58: merged 30b57ccf1 (review OK j-rev-usbmotivo)."
   },
   {
    "id": "dono-205-logcabeca",
    "titulo": "Upload de registro deve manter o cabecalho de boot",
    "plataforma": "webOS",
-   "status": "consertada-nao-lancada",
+   "status": "integrada",
    "release": "2.0.6",
    "conserto": [
-    "3b12a5d2f (agente/205-logcabeca)"
+    "3b12a5d2f (agente/205-logcabeca)",
+    "84c1a90b6 (Merge agente/205-logcabeca)"
    ],
-   "proximo_passo": "review do fix (nenhuma ainda) e merge; validar numa TV real",
-   "notas": "Log WR9768 (webOS 2.0.6): 90% dos 200 KB eram linhas de perf e cortavam o cabecalho. Job j-logcabeca done 10-16 12:37 (tests registro_cabeca.sh rc 0, build rc 0)."
+   "proximo_passo": "merged 84c1a90b6; review OK j-rev-logcabeca; build+install e teste de upload numa TV",
+   "notas": "Log WR9768 (webOS 2.0.6): 90% dos 200 KB eram linhas de perf e cortavam o cabecalho. Job j-logcabeca done 10-16 12:37 (tests registro_cabeca.sh rc 0, build rc 0). | Escrivao 10-16 14:58: merged 84c1a90b6 (review OK j-rev-logcabeca)."
   },
   {
    "id": "dono-205-legajuste",
@@ -15939,61 +16036,224 @@
    "id": "dono-205-herosplit",
    "titulo": "Home: destaque grande a esquerda + fileira rolavel a direita (Dynamic Split)",
    "plataforma": "todas",
-   "status": "em-andamento",
+   "status": "integrada",
    "release": "2.0.6",
    "conserto": [
-    "agente/205-herosplit tip c2e50a932 = HEAD (nenhum commit proprio; zero ahead)"
+    "8655956cb (agente/205-herosplit)",
+    "669fa7b5c (agente/205-herosplit)",
+    "f8815746a (agente/205-herosplit)",
+    "6375a1520 (agente/205-herosplit)",
+    "76c6e8eea (Merge agente/205-herosplit)"
    ],
-   "proximo_passo": "job j-herosplit rodando (log vazio); sem commit -> nada a revisar ainda",
-   "notas": "Pedido do dono (imagem da Home). Novo estilo de fileira opcional, desligado por padrao."
+   "proximo_passo": "merged 76c6e8eea; review BLOQUEIA r2 -> OK j-rev-herosplit-r3; validar nas TVs",
+   "notas": "Pedido do dono (imagem da Home). Novo estilo de fileira opcional, desligado por padrao. | Escrivao 10-16 14:58: merged 76c6e8eea (Split hero + ano/nota + volta do topo); review OK r3."
   },
   {
    "id": "dono-205-trailerlingua",
    "titulo": "Trailer na versão dublada / idioma de audio e legenda do trailer",
    "plataforma": "todas",
-   "status": "em-andamento",
+   "status": "integrada",
    "release": "2.0.6",
    "conserto": [
-    "agente/205-trailerlingua tip c2e50a932 = HEAD (nenhum commit proprio; zero ahead)"
+    "b43655122, c831a592f, 1c7455e37, c0ea07466, 1797b5306, 5f4caef1c (agente/205-trailerlingua)",
+    "70bc8a630 (Merge agente/205-trailerlingua)"
    ],
-   "proximo_passo": "job j-trailerlingua rodando (log vazio); sem commit ainda",
-   "notas": "Pedido PT + dono: por em Ajustes o idioma de audio e de legenda do trailer."
+   "proximo_passo": "merged 70bc8a630; review BLOQUEIA r5 -> OK j-rev-trailerlingua-r6; testar trailer dublado na webOS e parity nativa",
+   "notas": "Pedido PT + dono: por em Ajustes o idioma de audio e de legenda do trailer. | Escrivao 10-16 14:58: 6 ahead; BLOQUEIA r5 (tela cheia sem fallback) -> fix 5f4caef1c, precisa review r6. | Escrivao 10-16 15:04: merged 70bc8a630; fix de fallback em tela cheia (5f4caef1c) aprovado em r6."
   },
   {
    "id": "dono-205-fpsplayer",
    "titulo": "Player caiu de ~40 fps para ~20 fps (overlay do .tpk)",
    "plataforma": "Samsung .tpk",
-   "status": "em-andamento",
+   "status": "integrada",
    "release": "2.0.6",
    "conserto": [
-    "agente/205-fpsplayer tip c2e50a932 = HEAD (nenhum commit proprio; zero ahead)"
+    "d98d72026 (agente/205-fpsplayer)",
+    "f8bc42b11 (agente/205-fpsplayer)",
+    "b45510394 (Merge agente/205-fpsplayer)"
    ],
-   "proximo_passo": "job j-fpsplayer rodando (log vazio); aguardar commit e review",
-   "notas": "Relato S90D Tizen nativo 2.0.6; log 1F3QGX."
+   "proximo_passo": "merged b45510394; review BLOQUEIA r1 -> OK j-rev-fpsplayer-r2; medir fps no .tpk",
+   "notas": "Relato S90D Tizen nativo 2.0.6; log 1F3QGX. | Escrivao 10-16 14:58: merged b45510394 (captura unica de backdrop por frame d98d72026 + refazer o backdrop f8bc42b11); review OK r2."
   },
   {
    "id": "dono-205-estiloanim",
    "titulo": "Animacao de abertura do seletor \"Estilo da fileira\"",
    "plataforma": "todas",
-   "status": "em-andamento",
+   "status": "integrada",
    "release": "2.0.6",
    "conserto": [
-    "agente/205-estiloanim tip c2e50a932 = HEAD (nenhum commit proprio; zero ahead)"
+    "92656f2ae (agente/205-estiloanim)",
+    "86c763a2d (agente/205-estiloanim)",
+    "84239e65a (agente/205-estiloanim)",
+    "40b7d8e15 (agente/205-estiloanim)",
+    "d2b4e0b12 (Merge agente/205-estiloanim)"
    ],
-   "proximo_passo": "job j-estiloanim rodando (log vazio); aguardar commit e review",
-   "notas": "Pedido do dono: \"abrir do menu contextual esta muito seco\" (src/home.c ~1364)."
+   "proximo_passo": "merged d2b4e0b12; review BLOQUEIA r2/r3 -> OK j-rev-estiloanim-r4; testar interacao na TV",
+   "notas": "Pedido do dono: \"abrir do menu contextual esta muito seco\" (src/home.c ~1364). | Escrivao 10-16 14:58: merged d2b4e0b12 (abertura/fechamento do seletor, alvos de toque, OOB); review OK r4."
   },
   {
    "id": "dono-205-p2pmotivo",
    "titulo": "Ajustes: dizer porque \"Cache do P2P\" fica indisponivel",
    "plataforma": "todas",
-   "status": "em-andamento",
+   "status": "integrada",
    "release": "2.0.6",
    "conserto": [
-    "f170d77ba (agente/205-p2pmotivo)"
+    "f170d77ba (agente/205-p2pmotivo)",
+    "2e480806c (agente/205-p2pmotivo)",
+    "e21441cd2 (Merge agente/205-p2pmotivo)"
    ],
-   "proximo_passo": "review do fix (nenhuma ainda) e merge; ultimo veredito do ramo foi BLOQUEIA (j-rev-p2pmotivo) e o fix veio depois",
-   "notas": "Pedido do dono (foto): popup generico \"Indisponivel com os ajustes atuais\". Job j-p2pmotivo done 10-16 12:26, fix f170d77ba 1 ahead. Razao especifica por causa (motor/externo/USB), todas as linguas."
+   "proximo_passo": "merged e21441cd2; review BLOQUEIA j-rev-p2pmotivo -> OK j-rev-p2pmotivo-r2; build+install; juntar com o texto do usbmotivo",
+   "notas": "Pedido do dono (foto): popup generico \"Indisponivel com os ajustes atuais\". Job j-p2pmotivo done 10-16 12:26, fix f170d77ba 1 ahead. Razao especifica por causa (motor/externo/USB), todas as linguas. | Escrivao 10-16 14:58: merged e21441cd2 (review OK r2)."
+  },
+  {
+   "id": "dono-205-usbandroid",
+   "titulo": "Cache do P2P em USB no Android (getExternalFilesDirs + teto FAT32)",
+   "plataforma": "Android TV",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "51daddd84 (agente/205-usbandroid)",
+    "3b025a959 (agente/205-usbandroid)",
+    "0fe8a7731 (Merge agente/205-usbandroid)"
+   ],
+   "proximo_passo": "merged 0fe8a7731; review BLOQUEIA r1 -> OK j-rev-usbandroid-r2; build Android e teste na TCL com pendrive",
+   "notas": "Escrivao 10-16 14:58: merged 0fe8a7731. Acha volumes por getExternalFilesDirs, falha fechado em fs desconhecida, teto FAT32. Review OK r2.",
+   "url": null
+  },
+  {
+   "id": "pr-538b",
+   "titulo": "PR #538 (ghbarker): priorizar Continuar assistindo sem travar os catalogos",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "cfc15aeab (agente/205-pr538b)",
+    "5f0ad732e (agente/205-pr538b)",
+    "a748ebf32 (Merge agente/205-pr538b)"
+   ],
+   "proximo_passo": "merged a748ebf32; review OK j-rev-pr538b; sai com 2.0.6",
+   "notas": "Escrivao 10-16 14:58: merged a748ebf32; review OK j-rev-pr538b.",
+   "url": null
+  },
+  {
+   "id": "pr-540b",
+   "titulo": "PR #540 (ghbarker): manter retratos do elenco vindo do addon quando o TMDB falha",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "a1eca619b (agente/205-pr540b)",
+    "8bd065a36 (agente/205-pr540b)",
+    "5ae92423e (agente/205-pr540b)",
+    "0e727bd31 (merge integracao em agente/205-pr540b)",
+    "8cc5d723d (Merge agente/205-pr540b)"
+   ],
+   "proximo_passo": "merged 8cc5d723d; review OK j-rev-pr540b (conflitos mantiveram os fixes da integracao); sai com 2.0.6",
+   "notas": "Escrivao 10-16 14:58: merged 8cc5d723d; review OK j-rev-pr540b.",
+   "url": null
+  },
+  {
+   "id": "pr-543",
+   "titulo": "PR #543 (ghbarker): tirar linhas de addon desinstalado e fontes de colecao propria",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "11e6e8535 (agente/205-pr543)",
+    "85562a66b (agente/205-pr543)",
+    "87b5cc866 (merge integracao em agente/205-pr543)",
+    "0d44804f0 (Merge agente/205-pr543)"
+   ],
+   "proximo_passo": "merged 0d44804f0 (HEAD); review OK j-rev-pr543; build+install no HEAD",
+   "notas": "Escrivao 10-16 14:58: merged 0d44804f0; review OK j-rev-pr543.",
+   "url": null
+  },
+  {
+   "id": "pr-546",
+   "titulo": "PR #546 (ghbarker): backdrop completo do recomendado e respeitar a qualidade Alta",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "946ad1819 (agente/205-pr546)",
+    "bbb74484e (agente/205-pr546)",
+    "09a32acfa (merge integracao em agente/205-pr546)",
+    "66299e5f0 (Merge agente/205-pr546)"
+   ],
+   "proximo_passo": "merged 66299e5f0; review OK j-rev-pr546; sai com 2.0.6",
+   "notas": "Escrivao 10-16 14:58: merged 66299e5f0; review OK j-rev-pr546.",
+   "url": null
+  },
+  {
+   "id": "pr-547",
+   "titulo": "PR #547 (ghbarker): chegar no relogio e na ilha de retomada com Up",
+   "plataforma": "all",
+   "status": "em_revisao",
+   "release": "2.0.6",
+   "conserto": [
+    "a7d8b1f58 (agente/205-pr547)",
+    "d570cb3c1 (agente/205-pr547, 2 ahead)"
+   ],
+   "proximo_passo": "job j-merge-pr547 rodando; sem review (j-rev-pr547 na fila); merge depois do review",
+   "notas": "Escrivao 10-16 14:58: 2 ahead; job de merge rodando, sem review ainda.",
+   "url": null
+  },
+  {
+   "id": "pr-550",
+   "titulo": "PR #550 (Tolu-Walop-E): lembrar a faixa de audio escolhida para a serie toda",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "0c2a1ba2c (agente/205-pr550)",
+    "3486c616b (fix, agente/205-pr550)",
+    "2cec223fd (Merge agente/205-pr550)"
+   ],
+   "proximo_passo": "merged 2cec223fd; review BLOQUEIA j-rev-pr550 (identidade de faixa MKV) -> fix 3486c616b -> OK j-rev-pr550-r2",
+   "notas": "Escrivao 10-16 14:58: merged 2cec223fd; review OK j-rev-pr550-r2 depois do fix de identidade MKV.",
+   "url": null
+  },
+  {
+   "id": "pr-559",
+   "titulo": "PR #559 (mark-major): URL direta toca sem P2P; notWebReady nao pode esconder",
+   "plataforma": "all",
+   "status": "integrada",
+   "release": "2.0.6",
+   "conserto": [
+    "d25a3e513 (agente/205-pr559)",
+    "892f13d54 (merge integracao em agente/205-pr559)",
+    "06724b3ed (Merge agente/205-pr559)"
+   ],
+   "proximo_passo": "merged 06724b3ed; review OK j-rev-pr559; sai com 2.0.6",
+   "notas": "Escrivao 10-16 14:58: merged 06724b3ed; review OK j-rev-pr559.",
+   "url": null
+  },
+  {
+   "id": "dono-205-buscafila",
+   "titulo": "Discord 2.0.6: busca abre o titulo anterior / fila travada + busca por voz",
+   "plataforma": "all",
+   "status": "em_revisao",
+   "release": "2.0.6",
+   "conserto": [
+    "a2fd7e41d (agente/205-buscafila)",
+    "999b94a2c (merge integracao em agente/205-buscafila, 2 ahead)"
+   ],
+   "proximo_passo": "fix a2fd7e41d pronto, sem review; revisar e merge; falta TV (permissao de mic na Samsung)",
+   "notas": "Escrivao 10-16 14:58: fix a2fd7e41d (abrir o titulo escolhido da busca + motivo da falha da voz); sem review. | Escrivao 10-16 15:04: job done (a2fd7e41d, tests/busca_voice_registro + build + Android rc 0); sem review.",
+   "url": null
+  },
+  {
+   "id": "dono-205-legenda552",
+   "titulo": "Follow-up #552: addons de legenda instalados nao sao consultados",
+   "plataforma": "Samsung .tpk",
+   "status": "em_revisao",
+   "release": "2.0.6",
+   "conserto": [
+    "27988615e (agente/205-legenda552, 1 ahead)"
+   ],
+   "proximo_passo": "job j-legenda552 done (27988615e); sem review; revisar e merge",
+   "notas": "Escrivao 10-16 14:58: fix 27988615e (assumir legenda ate a sonda do manifesto negar); tests rc 0; sem review.",
+   "url": null
   }
  ],
  "fechar_203": [],
