@@ -6,6 +6,10 @@ int ajustes_p2p_ligado(void);
 static int tst_usb(void) { return ajustes_p2p_ligado() && tUsb; }
 #define p2pmotor_disponivel tst_disp
 #define p2pmotor_usb_presente tst_usb
+#ifdef P2PM_ANDROID_VISIVEL
+#define NV_ANDROID 1   // only for ajustes.c: the other sources stay desktop
+void android_baixar_registro(const char *a, const char *b, const char *c) { (void)a; (void)b; (void)c; }
+#endif
 #include "../src/ajustes.c"
 #include <assert.h>
 
@@ -38,6 +42,7 @@ int main(void) {
   tUsb = 1;
   assert(!inativa(AJ_P2P_DESTINO));
   assert(!inativa(AJ_P2P_LIMITE));
+  assert(!foraDestaPlataforma(AJ_P2P_DESTINO));   // #205: visible on Android too
   puts("ajustes_p2p_motivo: ok");
   return 0;
 }

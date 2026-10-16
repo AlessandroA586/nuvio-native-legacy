@@ -5624,11 +5624,6 @@ static int foraDestaPlataforma(int op) {
 #else
   if (op == AJ_GPU_EFEITOS) return 1;
 #endif
-#ifdef NV_ANDROID
-  // #205: o Android nao tem os pontos de montagem do scan do p2pmotor
-  // (/tmp/usb, /media/usb) — a opcao seria sempre um beco sem saida.
-  if (op == AJ_P2P_DESTINO) return 1;
-#endif
 #ifndef NV_ANDROID
   if (op == AJ_FONTE_PRECARREGAR || op == AJ_LEG_SYNC_AUDIO) return 1;
 #endif
