@@ -3001,7 +3001,7 @@ static int continuarLocal(CatItem *saida, int max) {
 // aparecia. trakt_continuar ordena por instante antes de entregar.
 // 40 e nao 12 (issue #205): a fileira cortava em 12; o web da 300.
 // Reserva de futuros e pausados em cwo_corte seguem a proporcao de `max`.
-#define CONT_MAX 40
+#define CONT_MAX CWO_FILEIRA_MAX
 
 // Os limites que o caminho local sempre teve e o do Trakt nao: os mesmos de
 // home_registrar_retorno. Abaixo de 1% nao se comecou, do Percentual assistido

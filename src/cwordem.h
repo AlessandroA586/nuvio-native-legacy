@@ -1,3 +1,7 @@
+// Teto de "Continuar assistindo" (issue #205). descoberta.c (CONT_MAX) e
+// home.c (CW_TETO) repetem este numero; a tabela de futuros tambem.
+#define CWO_FILEIRA_MAX 40
+
 // ORDENACAO DE "CONTINUAR ASSISTINDO" (issue #127).
 //
 // Ajustes -> Continuar assistindo -> Ordenacao sempre existiu (AJ_CW_ORDEM,

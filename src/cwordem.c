@@ -69,7 +69,12 @@ long long cwo_estreia(const char *id) {
 }
 
 // --- Fileira de futuros ------------------------------------------------------
-#define CWO_FUT_MAX 36
+// Teto da fileira (CONT_MAX / CW_TETO). cwo_corte com 0 pausados devolve ate
+// max futuros; a tabela tem de caber todos, senão os ultimos ficam em
+// "Continuar assistindo" e nunca viram "Proximos episodios".
+#define CWO_FUT_MAX CWO_FILEIRA_MAX
+_Static_assert(CWO_FUT_MAX >= 40 && CWO_FUT_MAX == CWO_FILEIRA_MAX,
+               "futuros publicados cabem na fileira");
 static char fut[CWO_FUT_MAX][64];
 static int nFut;
 static pthread_mutex_t futTrava = PTHREAD_MUTEX_INITIALIZER;

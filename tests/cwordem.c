@@ -73,6 +73,16 @@ int main(void) {
     cwo_publicar_futuros(NULL, 0);
     assert(!cwo_e_futuro("tt5:2:1")); }
   puts("ok  futuros publicados: substitui o conjunto inteiro");
+  // 0 pausados + 39 proximos nao exibidos, Separar: cwo_corte devolve 39 e
+  // todos tem de caber na tabela (antes CWO_FUT_MAX era 36).
+  { int mp, mf, k; char buf[40][16]; const char *ids[40];
+    cwo_corte(0, 39, CWO_FILEIRA_MAX, &mp, &mf);
+    assert(mp == 0 && mf == 39);
+    for (k = 0; k < 39; k++) { snprintf(buf[k], sizeof buf[k], "ttF:%d:1", k); ids[k] = buf[k]; }
+    cwo_publicar_futuros(ids, 39);
+    for (k = 0; k < 39; k++) assert(cwo_e_futuro(buf[k]));
+    cwo_publicar_futuros(NULL, 0); }
+  puts("ok  39 futuros publicados cabem na fileira");
   // O corte com reserva (Brothers, C9 24/09: 21 exibidos + 1 futuro, 12 lugares).
   { int mp, mf;
     cwo_corte(21, 1, 12, &mp, &mf); assert(mp == 11 && mf == 1);

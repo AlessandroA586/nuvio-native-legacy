@@ -120,8 +120,8 @@ _Static_assert(MAX_FIL >= CAT_FIL_MAX + 16, "a home precisa de folga sobre o tet
 // menos que isso, animFoco[r][n] escrevia fora do vetor — o card nunca
 // acendia ao receber foco e a memoria do vizinho era corrompida em silencio.
 #define MAX_CARDS 41
-// Mesmo valor que CONT_MAX em descoberta.c (issue #205).
-#define CW_TETO 40
+// Mesmo valor que CONT_MAX (CWO_FILEIRA_MAX, issue #205).
+#define CW_TETO CWO_FILEIRA_MAX
 _Static_assert(DESC_ITENS_POR_FILEIRA <= MAX_CARDS - 1, "itens por fileira + Ver tudo cabem em MAX_CARDS");
 // A faixa editorial precisa de uma terceira alternativa para não terminar
 // visualmente depois de apenas dois cards. Quando o catálogo que virou
