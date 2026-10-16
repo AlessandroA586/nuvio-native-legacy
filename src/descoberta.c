@@ -4327,6 +4327,8 @@ static void *montar(void *u) {
   unsigned socialGeracao;
   unsigned minhaGeracao = montagemGeracao;
   if (!descSessaoVincular(montagemSessao)) {
+    printf("[desc] volta largada: a sessao do perfil mudou antes de ela comecar\n");
+    fflush(stdout);
     free(lote); buscandoSoltar(); descTentarAbertura(); return NULL;
   }
   // O CONTEXTO EM QUE ESTA VOLTA BUSCA, em partes (ver homeestado.h). A
@@ -5422,12 +5424,19 @@ static int descIniciarTravado(int conferirVoltas, unsigned voltasAoAgendar,
   // its addon/configuration cache has been installed on the drawing thread.
   if (descobertaInicializada && (aberturaSessao != sessao ||
       (aberturaPendente && !aberturaFontesProntas))) {
+    int semAbertura = aberturaSessao != sessao;
     pthread_mutex_unlock(&listaTrava);
+    printf("[desc] volta recusada: %s\n", semAbertura
+           ? "sessao do perfil ainda nao aberta (desc_abrir_sessao)"
+           : "abertura do perfil esperando os addons da conta");
+    fflush(stdout);
     return DESC_ATENDIDO;
   }
   if (conferirVoltas && descVoltas != voltasAoAgendar) {
     pthread_mutex_unlock(&listaTrava);
-    return DESC_ATENDIDO;   // uma volta ja comecou depois do pedido
+    printf("[desc] volta adiada dispensada: outra volta ja comecou depois do pedido\n");
+    fflush(stdout);
+    return DESC_ATENDIDO;
   }
   if (buscando) {
     if (apenasAbertura && montagemSessao == sessao) aberturaPendente = 0;

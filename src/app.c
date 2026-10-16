@@ -4030,7 +4030,10 @@ void app_atualizar(float dt, Uint32 agora) {
       }
       return;
     }
-    if (perfilsel_concluido()) {
+    // #551: a PIN confirmed inside perfilsel_atualizar changed the session
+    // after the check above ran. Stay one frame so that check opens it;
+    // otherwise discovery refuses every round of the unopened session.
+    if (perfilsel_concluido() && perfis_sessao_geracao() == perfilSessaoAplicada) {
       sync_iniciar();
       tela = TELA_HOME;
     }
