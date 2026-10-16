@@ -3075,6 +3075,8 @@
   T("Não disponível nesta TV", "Inte tillgängligt på den här tv:n"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "Inte tillgängligt på den här tv:n. Spelaren i LG och Samsung låter inte appen spara videon på disk."),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "Inte tillgängligt på den här tv:n. Bara LG konverterar DTS i appen."),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "Ej tillgängligt på den här TV:n: dess GPU klarar inte att avkoda video under startvyn (bilden blir kvar). Trailern på titelsidan fungerar fortfarande via knappen."),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "Ej tillgängligt i den här sessionen: felsäkert läge stängde av startsidans trailers efter en krasch. Lämna felsäkert läge i Inställningar › Den här TV:n."),
   T("Não entendi. Tente de novo.", "Jag förstod inte. Försök igen."),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "Den gör ingenting på någon av dem. Och om din fjärrkontroll inte har någon färgrad beror ingenting här på den."),
   T("Não foi enviado", "Inte skickad"),

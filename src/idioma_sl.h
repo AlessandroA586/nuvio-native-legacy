@@ -3075,6 +3075,8 @@
   T("Não disponível nesta TV", "Na tem televizorju ni na voljo"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "Na tem televizorju ni na voljo. Predvajalnik LG in Samsung aplikaciji ne dovoli shranjevanja videa na disk."),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "Na tem televizorju ni na voljo. DTS v aplikaciji pretvarja samo LG."),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "Na tem televizorju ni na voljo: njegov GPU ne more dekodirati videa pod domačim zaslonom (ostane slika). Napovednik na strani naslova še deluje prek gumba."),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "V tej seji ni na voljo: varni način je po sesutju izklopil napovednike domačega zaslona. Zapustite varni način v Nastavitvah › Ta televizor."),
   T("Não entendi. Tente de novo.", "Nisem razumel. Poskusite znova."),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "Ne naredi ničesar na nobenem. In če vaš daljinec nima vrste barv, tu nič ni odvisno od nje."),
   T("Não foi enviado", "Ni poslano"),

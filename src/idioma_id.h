@@ -3075,6 +3075,8 @@
   T("Não disponível nesta TV", "Tidak tersedia di TV ini"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "Tidak tersedia di TV ini. Pemutar LG dan Samsung tidak mengizinkan aplikasi menyimpan video di disk."),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "Tidak tersedia di TV ini. Hanya LG yang mengonversi DTS di dalam aplikasi."),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "Tidak tersedia di TV ini: GPU-nya tidak dapat mendekode video di bawah Beranda (gambar tetap tampil). Trailer di halaman judul tetap berfungsi lewat tombol."),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "Tidak tersedia di sesi ini: mode aman mematikan trailer Beranda setelah aplikasi berhenti. Keluar dari mode aman di Pengaturan › TV Ini."),
   T("Não entendi. Tente de novo.", "Tidak mengerti. Coba lagi."),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "Tidak melakukan apa pun di keduanya. Dan jika remote-mu tidak punya baris warna, tidak ada yang di sini bergantung padanya."),
   T("Não foi enviado", "Tidak terkirim"),

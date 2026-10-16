@@ -3075,6 +3075,8 @@
   T("Não disponível nesta TV", "Não disponível nesta TV"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "Não disponível nesta TV. O leitor da LG e da Samsung não deixa a app guardar o vídeo no disco."),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "Indisponível nesta TV. Só a LG converte o DTS dentro da aplicação."),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "Não disponível nesta TV: a GPU dela não consegue descodificar vídeo por baixo da página inicial (fica a arte). O trailer da página do título continua pelo botão."),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "Não disponível nesta sessão: o modo seguro desligou os trailers da página inicial depois de um encerramento inesperado. Saia do modo seguro em Definições › Esta TV."),
   T("Não entendi. Tente de novo.", "Não percebi. Tente de novo."),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "Não faz nada em nenhuma das duas. E se o teu comando não tem a fila de cores, nada aqui depende dela."),
   T("Não foi enviado", "Não foi enviado"),

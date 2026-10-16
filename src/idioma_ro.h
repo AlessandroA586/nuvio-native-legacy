@@ -3074,6 +3074,8 @@
   T("Não disponível nesta TV", "Indisponibil pe acest televizor"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "Indisponibil pe acest televizor. Playerul LG și Samsung nu permite aplicației să salveze videoclipul pe disc."),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "Indisponibil pe acest TV. Doar LG convertește DTS în aplicație."),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "Nu este disponibil pe acest TV: GPU-ul lui nu poate decoda videoclipul sub pagina Home (rămâne imaginea). Trailerul paginii titlului merge în continuare din buton."),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "Nu este disponibil în această sesiune: modul sigur a dezactivat trailerele din Home după o cădere. Ieși din modul sigur în Ajustes › Acest TV."),
   T("Não entendi. Tente de novo.", "Nu am înțeles. Încearcă din nou."),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "Nu face nimic pe niciuna. Iar dacă telecomanda ta nu are rândul de culori, nimic de aici nu depinde de el."),
   T("Não foi enviado", "Nu a fost trimis"),

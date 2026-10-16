@@ -3075,6 +3075,8 @@
   T("Não disponível nesta TV", "Na tomto televízore nie je k dispozícii"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "Na tomto televízore nie je k dispozícii. Prehrávač LG a Samsung nedovoľuje aplikácii ukladať video na disk."),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "Na tomto televízore nie je dostupné. DTS v aplikácii prevádza len LG."),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "Na tomto televízore nie je k dispozícii: jeho GPU nedokáže dekódovať video pod domovskou obrazovkou (zostane obrázok). Trailer na stránke titulu funguje ďalej cez tlačidlo."),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "V tejto relácii nie je k dispozícii: núdzový režim po páde vypol trailery domovskej obrazovky. Opustite núdzový režim v Nastaveniach › Tento televízor."),
   T("Não entendi. Tente de novo.", "Nerozumel som. Skúste to znova."),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "Nerobí to nič ani na jednom. A ak váš ovládač nemá rad farieb, nič tu na ňom nezávisí."),
   T("Não foi enviado", "Neodoslané"),

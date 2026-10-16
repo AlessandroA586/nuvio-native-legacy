@@ -3075,6 +3075,8 @@
   T("Não disponível nesta TV", "Bu TV'de kullanılamaz"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "Bu TV'de kullanılamaz. LG ve Samsung oynatıcısı uygulamanın videoyu diske kaydetmesine izin vermez."),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "Bu TV’de kullanılamıyor. DTS’i uygulama içinde yalnızca LG dönüştürür."),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "Bu TV'de kullanılamaz: GPU'su Ana Sayfa'nın altında videoyu çözemez (görsel kalır). Başlık sayfasındaki fragman düğmeyle oynamaya devam eder."),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "Bu oturumda kullanılamaz: güvenli mod, bir çökmenin ardından Ana Sayfa fragmanlarını kapattı. Ayarlar › Bu TV'den güvenli moddan çıkın."),
   T("Não entendi. Tente de novo.", "Anlamadım. Tekrar deneyin."),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "İkisinde de hiçbir şey yapmaz. Kumandanda renk sırası yoksa buradaki hiçbir şey ona bağlı değildir."),
   T("Não foi enviado", "Gönderilmedi"),

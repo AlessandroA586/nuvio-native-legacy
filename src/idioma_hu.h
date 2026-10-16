@@ -3075,6 +3075,8 @@
   T("Não disponível nesta TV", "Ezen a tévén nem érhető el"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "Ezen a tévén nem érhető el. Az LG és a Samsung lejátszója nem engedi, hogy az alkalmazás lemezre mentse a videót."),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "Ezen a tévén nem érhető el. A DTS-t az alkalmazásban csak az LG alakítja át."),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "Ezen a tévén nem érhető el: a GPU-ja nem tudja dekódolni a videót a főoldal alatt (a kép marad). A címoldal trailere továbbra is működik a gombbal."),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "Ebben a munkamenetben nem érhető el: a biztonságos mód egy összeomlás után kikapcsolta a főoldal trailereit. Lépjen ki a biztonságos módból a Beállítások › Ez a tévé menüpontban."),
   T("Não entendi. Tente de novo.", "Nem értettem. Próbáld újra."),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "Egyiken sem csinál semmit. És ha a távirányítódon nincs színsor, semmi nem függ tőle."),
   T("Não foi enviado", "Nincs elküldve"),

@@ -3075,6 +3075,8 @@
   T("Não disponível nesta TV", "Không khả dụng trên TV này"),
   T("Não disponível nesta TV. O player da LG e da Samsung não deixa o app guardar o vídeo em disco.", "Không khả dụng trên TV này. Trình phát của LG và Samsung không cho ứng dụng lưu video vào ổ đĩa."),
   T("Não disponível nesta TV. Só a LG converte o DTS dentro do app.", "Không khả dụng trên TV này. Chỉ LG chuyển đổi DTS trong ứng dụng."),
+  T("Não disponível nesta TV: a GPU dela não aguenta decodificar vídeo por baixo da Home (fica a arte). O trailer da página do título continua pelo botão.", "Không khả dụng trên TV này: GPU của nó không giải mã được video dưới màn hình chính (chỉ còn hình ảnh). Trailer ở trang tiêu đề vẫn phát qua nút."),
+  T("Não disponível nesta sessão: o modo seguro desligou os trailers da Home depois de uma queda. Saia do modo seguro em Ajustes › Esta TV.", "Không khả dụng trong phiên này: chế độ an toàn đã tắt trailer màn hình chính sau khi ứng dụng bị lỗi. Thoát chế độ an toàn trong Cài đặt › TV này."),
   T("Não entendi. Tente de novo.", "Tôi không hiểu. Hãy thử lại."),
   T("Não faz nada nas duas. E se o seu controle não tem a fileira de cores, nada aqui depende dela.", "Nó không làm gì trên cả hai. Và nếu điều khiển của bạn không có hàng nút màu, không có gì ở đây phụ thuộc vào nó."),
   T("Não foi enviado", "Chưa gửi được"),
