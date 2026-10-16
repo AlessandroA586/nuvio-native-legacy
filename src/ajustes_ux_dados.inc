@@ -337,6 +337,14 @@ static int uxContem(const char *texto, const char *termo) {
   return 0;
 }
 
+/* Desempate dentro da mesma faixa: quem traz o termo mais cedo vem antes
+ * ("idioma" acha "Idioma do app" antes de "Preferir o idioma do audio"). */
+static int uxPosicao(const char *texto, const char *termo) {
+  const char *p = strstr(texto, termo);
+  int pos = p ? (int)(p - texto) : 99;
+  return pos > 99 ? 99 : pos;
+}
+
 static int uxTodasPalavras(const char *texto, const char *consulta) {
   const char *p = consulta;
   while (*p) {
@@ -407,8 +415,9 @@ int ajustes_buscar(const char *consulta, AjusteBuscaResultado *resultados, int c
     }
     if (!uxTodasPalavras(indice, busca)) continue;
     pontos = !strcmp(titulo, busca) || !strcmp(tituloPt, busca) ? 1000
-      : uxContem(titulo, busca) || uxContem(tituloPt, busca) ? 800
-      : uxContem(aliases, busca) ? 600
+      : uxContem(titulo, busca) || uxContem(tituloPt, busca)
+        ? 800 - (uxPosicao(titulo, busca) < uxPosicao(tituloPt, busca) ? uxPosicao(titulo, busca) : uxPosicao(tituloPt, busca))
+      : uxContem(aliases, busca) ? 600 - uxPosicao(aliases, busca)
       : uxTodasPalavras(titulo, busca) || uxTodasPalavras(tituloPt, busca) ? 500 : 100;
     j = total;
     while (j > 0 && encontrados[j - 1].pontos < pontos) {
