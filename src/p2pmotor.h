@@ -90,6 +90,16 @@ typedef enum {
   P2PM_USB_DISABLED
 } P2pmUsbMotivo;
 P2pmUsbMotivo p2pmotor_usb_motivo(void);
+// Everything the USB cache modal draws. estado: 0 no drive, 1 found (emUso = the
+// cache goes there), 2 found but rejected (motivo says why). Sizes in bytes;
+// cache/limite/gravavel/emUso only for estado 1. Cached ~2 s, never writes.
+typedef struct {
+  int estado, emUso, gravavel, fat;
+  P2pmUsbMotivo motivo;
+  char nome[64], caminho[256], fs[32];
+  uint64_t total, livre, cache, limite;
+} P2pmUsbInfo;
+void p2pmotor_usb_info(P2pmUsbInfo *o);
 // A conta acima, pura (testes).
 uint64_t p2pmotor_teto_duro(uint64_t livre, unsigned escolhaMb);
 // #334: janela de streaming que o motor recebe para um teto duro (0 = sem

@@ -231,6 +231,7 @@ static int uxEvento(SDL_Keycode k) {
       if (uxEditor == 2) {
         int req = uxRequisito(uxOp);
         if (req >= 0) { uxRetornarOp = uxOp; uxCancelar(); focarOpcao(req); }
+        else uxCancelar();
         return 1;
       }
       uxAplicar(); return 1;

@@ -85,6 +85,7 @@ static char usbMounts[200];      // teste: arquivo no formato /proc/mounts
 static int usbApp;               // sondando o dir do app que E a raiz do pendrive (Android)
 static int usbFat;               // raiz escolhida esta em FAT32: arquivo < 4 GiB
 static char usbAndroidLogado[700];
+static char usbRecusado[700];    // last rejected candidate path (for the modal)
 // Shared by discovery and stale-cache cleanup; only mount roots qualify.
 static const char *const usbBases[] = {
   "/tmp/usb", "/media/usb", "/mnt/media_rw",
@@ -103,7 +104,10 @@ static UsbLog *usbLogs;
 // With usbTrava held. Retain per-path outcomes across scans, never file contents.
 static void usbResultado(const char *path, P2pmUsbMotivo reason, int error) {
   UsbLog *entry;
-  if ((int)reason > atomic_load(&usbMotivo)) atomic_store(&usbMotivo, reason);
+  if ((int)reason > atomic_load(&usbMotivo)) {
+    atomic_store(&usbMotivo, reason);
+    snprintf(usbRecusado, sizeof usbRecusado, "%s", path);
+  }
   for (entry = usbLogs; entry; entry = entry->next)
     if (!strcmp(entry->path, path)) break;
   if (!entry) {
@@ -624,6 +628,72 @@ int p2pmotor_usb_presente(void) {
 
 P2pmUsbMotivo p2pmotor_usb_motivo(void) {
   return ajustes_p2p_ligado() ? (P2pmUsbMotivo)atomic_load(&usbMotivo) : P2PM_USB_DISABLED;
+}
+
+// Drive label: the mount-root component (/storage/<id>, <base>/<id>) or the last one.
+static void usbRotulo(const char *dir, char *nome, size_t n) {
+  const char *p = NULL, *fim;
+  unsigned i;
+  if (!strncmp(dir, "/storage/", 9)) p = dir + 9;
+  for (i = 0; !p && i < sizeof usbBases / sizeof usbBases[0]; i++) {
+    size_t l = strlen(usbBases[i]);
+    if (!strncmp(dir, usbBases[i], l) && dir[l] == '/') p = dir + l + 1;
+  }
+  if (!p || !*p) {
+    p = strrchr(dir, '/');
+    p = p ? p + 1 : dir;
+  }
+  fim = p + strcspn(p, "/");
+  snprintf(nome, n, "%.*s", (int)(fim - p), p);
+}
+
+// What the USB cache modal shows. Refreshed at most every 2 s: the cache walk
+// and /proc/mounts read are I/O, and the UI asks every frame. No writes.
+void p2pmotor_usb_info(P2pmUsbInfo *o) {
+  static P2pmUsbInfo memo;
+  static double quando = -10.0;
+  char dir[700] = "";
+  int presente = p2pmotor_usb_presente();
+  P2pmUsbMotivo motivo = p2pmotor_usb_motivo();
+  memset(o, 0, sizeof *o);
+  pthread_mutex_lock(&usbTrava);
+  if (agora() - quando < 2.0 && (memo.estado == 1) == presente && memo.motivo == motivo) {
+    *o = memo;
+    pthread_mutex_unlock(&usbTrava);
+    return;
+  }
+  o->motivo = motivo;
+  if (presente && usbRaiz[0]) {
+    o->estado = 1;
+    snprintf(dir, sizeof dir, "%s", usbRaiz);
+  } else if (o->motivo > P2PM_USB_NO_BASE && o->motivo < P2PM_USB_DISABLED && usbRecusado[0]) {
+    o->estado = 2;
+    snprintf(dir, sizeof dir, "%s", usbRecusado);
+  }
+  if (o->estado) {
+    struct statvfs v;
+    LimTrab lim = { .max = 256, .ate = agora() + 0.05 };
+    char mae[700];
+    snprintf(mae, sizeof mae, "%s", dir);
+    if (o->estado == 1) { char *b = strrchr(mae, '/'); if (b && b != mae) *b = 0; }
+    snprintf(o->caminho, sizeof o->caminho, "%s", mae);
+    usbRotulo(mae, o->nome, sizeof o->nome);
+    usbFs(mae, o->fs, sizeof o->fs);
+    if (statvfs(mae, &v) == 0) {
+      o->total = (uint64_t)v.f_blocks * (uint64_t)v.f_frsize;
+      o->livre = (uint64_t)v.f_bavail * (uint64_t)v.f_frsize;
+    }
+    o->fat = usbFsLimitado(o->fs);
+    if (o->estado == 1) {
+      o->gravavel = access(mae, W_OK) == 0;
+      o->cache = percorrerL(usbRaiz, 0, 0, &lim);
+      o->limite = p2pmotor_teto_duro(o->livre, atomic_load(&limiteMb));
+      o->emUso = atomic_load(&usbPreferido) != 0;
+    }
+  }
+  memo = *o;
+  quando = agora();
+  pthread_mutex_unlock(&usbTrava);
 }
 
 // #334: a janela fica um pouco abaixo do teto duro (a vigia para em > duro e a
