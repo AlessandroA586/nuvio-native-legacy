@@ -92,6 +92,11 @@ static float fx_titulo_bloco(TxtEstilo estilo, const char *s, int r, int g, int 
 #define txt_bloco fx_titulo_bloco
 #define gfx_icone fx_icone
 #define plrui_kicker fx_kicker
+#include "trailer.h"
+// NV_FPS trailer phase: the harness has no player, so fake "trailer live".
+static int fxTrailerVivo;
+static int fx_trailer_aberto(void) { return fxTrailerVivo; }
+#define trailer_aberto fx_trailer_aberto
 #include "../src/detail.c"
 #include "menu.h"
 #include "ilha.h"
@@ -426,7 +431,7 @@ static int parado, comMenu;
 // de textura, capturas de vidro) de quem esta medindo.
 #define FPS_MAX 4096
 static int medindo, fpsN;
-static struct { double ms, fill; int txt, upl, vid, rects; } fpsQ[FPS_MAX];
+static struct { double ms, fill; int txt, upl, vid, rects, cheio; } fpsQ[FPS_MAX];
 static void quadros(int n) {
   int i;
   for (i = 0; i < n; i++) {
@@ -439,6 +444,7 @@ static void quadros(int n) {
     // chapado que este arquivo existe para nao ter.
     tex_bombear(3);
     if (!parado) detail_atualizar(1.0f / 60.0f, SDL_GetTicks());
+    if (fxTrailerVivo) trailerFade = 1.0f;
     txt_novo_quadro();
     tex_novo_quadro();
     gfx_novo_quadro();
@@ -464,7 +470,7 @@ static void quadros(int n) {
       glFinish();
       fpsQ[fpsN].ms = (SDL_GetPerformanceCounter() - t0) * 1000.0 / SDL_GetPerformanceFrequency();
       fpsQ[fpsN].txt = txt_rasterizadas; fpsQ[fpsN].upl = tex_upl_n;
-      fpsQ[fpsN].vid = gfx_vidro_capturas; fpsQ[fpsN].fill = gfx_fill_gpu; fpsQ[fpsN].rects = gfx_n_rect; fpsN++;
+      fpsQ[fpsN].vid = gfx_vidro_capturas; fpsQ[fpsN].fill = gfx_fill_gpu; fpsQ[fpsN].rects = gfx_n_rect; fpsQ[fpsN].cheio = gfx_n_cheio; fpsN++;
     }
   }
 }
@@ -476,10 +482,10 @@ static int cmpMs(const void *a, const void *b) {
 static void fpsRelata(const char *fase) {
   static double v[FPS_MAX];
   double soma = 0, pior = 0, fill = 0;
-  int rects = 0;
+  int rects = 0, cheio = 0;
   int i, txt = 0, upl = 0, vid = 0, ip = 0;
   for (i = 0; i < fpsN; i++) {
-    fill += fpsQ[i].fill; rects += fpsQ[i].rects; v[i] = fpsQ[i].ms; soma += v[i]; txt += fpsQ[i].txt; upl += fpsQ[i].upl; vid += fpsQ[i].vid;
+    fill += fpsQ[i].fill; rects += fpsQ[i].rects; cheio += fpsQ[i].cheio; v[i] = fpsQ[i].ms; soma += v[i]; txt += fpsQ[i].txt; upl += fpsQ[i].upl; vid += fpsQ[i].vid;
     if (v[i] > pior) { pior = v[i]; ip = i; }
   }
   if (getenv("NV_FPS_Q"))
@@ -487,8 +493,8 @@ static void fpsRelata(const char *fase) {
       if (fpsQ[i].ms > 1.5 || fpsQ[i].txt || fpsQ[i].upl)
         printf("  q%d %.2fms txt=%d upl=%d\n", i, fpsQ[i].ms, fpsQ[i].txt, fpsQ[i].upl);
   qsort(v, fpsN, sizeof *v, cmpMs);
-  printf("[detfps] %-14s n=%d media=%.2f p95=%.2f pior=%.2f(q%d) ms txt=%d upl=%d vidro=%d fill=%.2f rects=%.0f\n",
-         fase, fpsN, soma / fpsN, v[(int)(fpsN * 0.95)], pior, ip, txt, upl, vid, fill / fpsN, (double)rects / fpsN);
+  printf("[detfps] %-14s n=%d media=%.2f p95=%.2f pior=%.2f(q%d) ms txt=%d upl=%d vidro=%d fill=%.2f rects=%.0f cheias=%.1f\n",
+         fase, fpsN, soma / fpsN, v[(int)(fpsN * 0.95)], pior, ip, txt, upl, vid, fill / fpsN, (double)rects / fpsN, (double)cheio / fpsN);
   fpsN = 0;
 }
 
@@ -764,6 +770,29 @@ int main(int argc, char **argv) {
     }
     fpsRelata("passa-cards");
     snprintf(nome, sizeof nome, "%s-fps.png", saida); gravar(nome);
+    // Hero trailer live (queixa 205: 22-30 fps on the TCL while it plays): the
+    // video sits under the GL surface, so every full-screen layer drawn over
+    // it is paid in the compositor. Hero focus, page at rest.
+    nivel = 0; foco.fileira = SEC_TEMPORADAS; foco.coluna = 0;
+    fxTrailerVivo = 1; fpsN = 0;
+    quadros(120); fpsRelata("trailer-vivo");
+    snprintf(nome, sizeof nome, "%s-fps-trailer.png", saida); gravar(nome);
+    // Carousel card at rest (cartao=1) with the trailer live: where the TCL
+    // sat for the 22-30 fps. Fake the carousel, same as the app opening a card.
+    carro = 1; carN = 2; carIdx[0] = 0; carIdx[1] = 1; carPos = carAplicado = 0; carOff = 0;
+    carEsperaRect = 0; carCheia = 0; nivel = 0; botao = 0;
+    cartao = carTxt = 1; cartaoVel = carTxtVel = 0;
+    fpsN = 0; quadros(60); fpsRelata("trailer-cartao");
+    if (getenv("NV_FPS_RASTRO")) { gfx_rastro_grandes = 1; quadros(1); gfx_rastro_grandes = 0; }
+    snprintf(nome, sizeof nome, "%s-fps-trailer-cartao.png", saida); gravar(nome);
+    // NV_FPS_CHEIAS_MAX=N: fail when the live-trailer page OR card submits more
+    // than N full-screen fills per frame (gfx_n_cheio, the [quadro-des] "cheias").
+    if (getenv("NV_FPS_CHEIAS_MAX")) {
+      int n = 0, i, mx = atoi(getenv("NV_FPS_CHEIAS_MAX"));
+      for (i = 0; i < 60; i++) { quadros(1); n += gfx_n_cheio; }
+      printf("[detfps] trailer-cartao cheias=%.1f max=%d\n", n / 60.0, mx);
+      return n / 60.0 > mx ? 1 : 0;
+    }
     return 0;
   }
 
