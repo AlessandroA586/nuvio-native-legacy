@@ -1,7 +1,8 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Community server: **https://discord.gg/9NWr6SHyzJ**
+that landed in the same window. Last tracking sync: 2026-10-16 21:00, HEAD `fec2dc0ac`. Community server:
+**https://discord.gg/9NWr6SHyzJ**
 
 ---
 
@@ -9,14 +10,24 @@ that landed in the same window. Community server: **https://discord.gg/9NWr6SHyz
 
 ### Destaques
 
+- **Deep links** (#539): `nuvio-legacy://`, `stremio://` e links do IMDb abrem o app direto no título,
+  na busca ou já tocando, com o link mais recente guardado enquanto a descoberta roda. Todas as plataformas.
+  Refs #539, `8f38bb943`, `a3eb1e19a`, `7cf145dca`, `f44e64863`, `a4f220cd7`.
+- **Cache do P2P no pendrive, em todas as plataformas** (pedidos do dono, #486 #505): o cache USB passa a
+  aparecer e funcionar no Android e no Samsung .tpk — antes só no webOS — com o tamanho e o motivo de cada
+  recusa explicados em português. Android, Samsung .tpk. Refs pedidos do dono, `31a62b273`, `51daddd84`,
+  `b090905dc`, `a633888a3`, `ebb5eb8fe`, `9b4f37efb`.
 - **Player externo no Android TV** (#501): escolha qual app de vídeo instalado abre a fonte em
   *Ajustes › Player* (Interno, Externo ou Perguntar sempre) — e uma escolha separada para anime. Legenda e
   proporção sobrevivem. Android. Refs #501, `f954a272c`, `276207fac`, `059f4d4f3`.
-- **Cache do P2P no pendrive, em todas as plataformas**: o cache USB passa a aparecer e funcionar no Android e
-  no Samsung .tpk — antes só no webOS — com o tamanho e o motivo de cada recusa explicados em português.
-  Android, Samsung .tpk. Refs pedidos do dono, `31a62b273`, `51daddd84`, `b090905dc`, `a633888a3`, `ebb5eb8fe`.
 - **Modo TV e Celular automático no APK Android** (PR #431): o app escolhe a interface pelo tamanho da tela e
   pelo controle, sem alternar nada na mão. Android. Refs PR #431, `c305e6f7e`, `8979ef16c`, `875d7f18f`.
+- **Legenda com contorno nítido** (pedidos do dono): o contorno da legenda passa a ser um anel opaco de
+  8 direções, sem o "sombra" translúcida, e a opacidade escolhida vale uma vez só em vez de se acumular nas
+  quinas. LG webOS, Samsung .tpk. Refs `6a76a46aa`, `d0f6f5986`, `f29e252c2`.
+- **Simkl com anime** (pedidos do dono): o terceiro tipo do Simkl (anime) entra nas listas de séries, no
+  Continuar assistindo e no Planejo assistir, sem itens repetidos. Todas as plataformas. Refs `f5dab2f8a`,
+  `d6244a1f1`.
 - **Busca e episódios voltam a funcionar** (#555): séries de título exato como "Bigg Boss" não ficam mais fora
   do limite de resultados, e séries que vêm de um add-on sem episódios preenchem a lista pelo catálogo.
   Todas as plataformas. Refs #555, `2e5b2ffde`, `d479a8463`.
@@ -52,6 +63,16 @@ that landed in the same window. Community server: **https://discord.gg/9NWr6SHyz
   fechar o app (PR #550). Todas as plataformas. `0c2a1ba2c`.
 - **Log dos amigos em inglês**: o motivo da fileira de amigos não suja mais a varredura de tradução.
   Todas as plataformas. `171e49772`.
+
+- **Arte em alta qualidade que sobe de tamanho** (pedidos do dono): com a qualidade Alta, pôsteres w342 e
+  backdrops w780 guardados pelo catálogo passam a ser buscados no tamanho que a tela precisa, e o backdrop
+  pequeno de 480px não é mais servido para cartões de até 640px. Todas as plataformas. `ff1cd6dcd`,
+  `44bf4884a`.
+- **Modelo de URL de pôster longo** (pedidos do dono): colar um modelo de URL longo na página do celular
+  deixa de ser cortado em 1024 caracteres, e as sessões nativas acompanham o mesmo limite. Todas as
+  plataformas. `0950a8eb8`, `df7c93aaf`.
+- **Faixa de áudio MKV lembrada**: em MKV com faixa convertida, a escolha manual continua valendo para o
+  episódio seguinte, mesmo com duas faixas idênticas. Todas as plataformas. `3486c616b`.
 
 ### Correções
 
@@ -94,6 +115,13 @@ that landed in the same window. Community server: **https://discord.gg/9NWr6SHyz
   Todas as plataformas. PR #538, `cee137de7`, `cfc15aeab`, `8c99638f7`.
 - **Buffer preso na memória ativa**: a faixa DTS em uso reserva seu 4 MiB antes de medir a fila.
   Todas as plataformas. `62421bfdc`.
+- **Vidro fosco: uma captura por mudança de cena**: o desfoque do vidro agora lê uma cópia em meia
+  resolução só da camada de fundo, e apenas quando ela muda — 1,15 → 0,35 capturas por quadro com foco/arte
+  em movimento, 0,54 → 0,04 na Exploração e 1 → 0 ao rolar fileiras sobre fundo parado. Todas as plataformas.
+  `e9c809475`.
+- **Detalhe: menos camadas de tela cheia**: furo e véu do cartão de trailer passam a ser um único desenho, e
+  um cartão vizinho quase fora da tela deixa de contar como cheio — 4 → 2 camadas, preenchimento 1,81 → 0,99
+  no harness, PNGs idênticos. Todas as plataformas. `5ed6ddfaa`.
 
 ### Comunidade
 
@@ -120,32 +148,38 @@ that landed in the same window. Community server: **https://discord.gg/9NWr6SHyz
   (`4907caa50`, `db03a2bc5`).
 - `repo.json` do homebrew alinhado com a 2.0.6 (`c2e50a932`).
 
+- Deep links: parser, fila limitada e cobertura de regressão (`8f38bb943`, `7cf145dca`, `f44e64863`).
+- Simkl anime mesclado às listas de séries com dedupe por imdb (`f5dab2f8a`).
+- Vidro: captura única do backdrop por mudança de hash (`e9c809475`) e harness NV_FPS para o detalhe
+  (`9356bc16c`).
+- Testes do cabeçalho de coleção fora da suíte padrão, mocks em `*_shot` (`eb03a56a4`, `1c3043479`) e fixtures
+  de sessão/perfil para Continuar assistindo e catálogos (`8d8f5c92a`, `8c99638f7`, `840dacb67`).
+
 ### Pendente (ainda não integrado)
 
 Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 
-- **Idiomas de áudio e legenda informados pelo add-on** — @ghbarker, PR #487 (`agente/205-pr487v2`,
-  VEREDITO OK; falta o merge). Android, LG webOS.
-- **Perfil de visualizações (#548)** — `agente/205-vistos548`, VEREDITO **BLOQUEIA** com fix feito e sem
-  review nova. Android, LG webOS.
-- **Deep links** — `agente/205-deeplink`, VEREDITO **BLOQUEIA** com fix feito e sem review nova.
-  Todas as plataformas.
-- **Resolução de imagem** — `agente/205-imgres`, VEREDITO **BLOQUEIA** com fix feito e sem review nova.
-  Todas as plataformas.
-- **Contorno da legenda** — `agente/205-legcontorno`, VEREDITO **BLOQUEIA** com fix feito e sem review nova.
-  LG webOS, Samsung .tpk.
-- **URL de pôster** — `agente/205-posterurl`, VEREDITO **BLOQUEIA** com fix feito e sem review nova.
-  Todas as plataformas.
-- **Novidades 2.0.7 no app** — `agente/205-novidades207`, VEREDITO **BLOQUEIA**, fix rodando agora.
-  Todas as plataformas.
-- **Linha de cabeçalho colorida** — `agente/205-colhdr`, VEREDITO **BLOQUEIA**, sem fix.
-  Todas as plataformas.
-- **PR #493 v2 / v3** (perfil e sessão) — `agente/205-pr493`, 12 commits fora, VEREDITO OK no v3 mas a branch
-  seguiu crescendo com BLOQUEIA depois. Android, LG webOS.
+- **Perfil de visualizações (#548)** — `agente/205-vistos548`, 6 commits fora. Último VEREDITO **BLOQUEIA**
+  (`j-rev-vistos548-r4`); o fix `5b37cecd8` (defaults fracos para fixtures isoladas) é mais novo que o review,
+  e `j-rev-vistos548-r5` está rodando. **Needs review.** Android, LG webOS.
+- **PR #487 v2** (idiomas de áudio e legenda informados pelo add-on) — `agente/205-pr487v2`, 3 commits fora,
+  VEREDITO OK `j-rev-pr487-v2`, sem commit depois. **Needs final re-review.** Android, LG webOS.
+- **PR #493 v2 / v3** (perfil e sessão) — `agente/205-pr493`, 12 commits fora. VEREDITO **BLOQUEIA**
+  `j-revg-pr493` (mais novo); `j-revpr493-v3` OK foi antes. Precisa de fix novo + review.
+  Android, LG webOS.
+- **Vidro fosco: deixar como estava** — `agente/205-foscovelho` e `agente/205-semfosco`, jobs rodando agora
+  (logs vazios = QUEUED/RUNNING). Dono relata que o frost piorou. Todas as plataformas.
+- **Vidaa** — `agente/205-vidaa`, 15 commits fora. VEREDITO OK `j-revg-vidaa-6` após uma sequência de
+  BLOQUEIA; fix `j-fix-vidaa-3` mais novo que o review. **Needs review.**
+- **Cabeçalho de coleção diferente** (pedido do dono) — `agente/205-colhdr` foi **merged** (`fec2dc0ac`),
+  review OK `j-revg-colhdr`; não está em pendência.
+- **Tizen/homebrew, glassmock, mock21, perfis21, respostas ao dono** — branches com job feito e nenhum review
+  (`agente/205-homebrew`, `agente/205-tizenbrew`, `agente/205-glassmock`, `agente/205-mock21`,
+  `agente/205-perfis21`, `agente/205-respostas`). Sem conteúdo de usuário confirmado.
 - **Fonte de legenda customizada** — a segunda metade de #501, sem branch. Android.
 - **Sync manual de legenda** — `agente/205-legajuste`, só especificação. Adiado para 2.1.
-- **Tizen/homebrew, glassmock, mock21, perfis21, respostas ao dono** — branches com job feito e nenhum review.
-  Sem conteúdo de usuário confirmado.
+- **PRs abertos sem branch local**: #456/#457/#466/#467/#468/#469/#478/#482 (os de fora de escopo ficam no
+  mapa). Triagem, não perdidos.
 
 ---
 
@@ -153,14 +187,23 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 
 ### Highlights
 
+- **Deep links** (#539): `nuvio-legacy://`, `stremio://` and IMDb links open the app straight to a title,
+  to search, or already playing, with the newest link kept queued while discovery runs. All platforms.
+  Refs #539, `8f38bb943`, `a3eb1e19a`, `7cf145dca`, `f44e64863`, `a4f220cd7`.
+- **P2P cache on a USB drive, on every platform** (owner requests, #486 #505): USB caching now shows up and
+  works on Android and Samsung .tpk, not just webOS, with the size limit and the reason for each rejection
+  spelled out. Android, Samsung .tpk. Refs owner requests, `31a62b273`, `51daddd84`, `b090905dc`, `a633888a3`,
+  `ebb5eb8fe`, `9b4f37efb`.
 - **External player on Android TV** (#501): pick which installed video app opens the source in
   *Settings › Player* (Internal, External, Ask every time) — plus a separate choice for anime. Subtitle and
   aspect preferences survive. Android. Refs #501, `f954a272c`, `276207fac`, `059f4d4f3`.
-- **P2P cache on a USB drive, on every platform**: USB caching now shows up and works on Android and Samsung
-  .tpk, not just webOS, with the size limit and the reason for each rejection spelled out.
-  Android, Samsung .tpk. Refs owner requests, `31a62b273`, `51daddd84`, `b090905dc`, `a633888a3`, `ebb5eb8fe`.
 - **Automatic TV and Mobile mode in the standard Android APK** (PR #431): the app picks the interface from
   screen size and input, nothing to switch by hand. Android. Refs PR #431, `c305e6f7e`, `8979ef16c`, `875d7f18f`.
+- **Subtitle outline reads solid** (owner requests): the subtitle outline is now an opaque 8-direction ring
+  instead of a translucent drop shadow, and the chosen opacity applies once instead of compounding at the
+  corners. LG webOS, Samsung .tpk. Refs `6a76a46aa`, `d0f6f5986`, `f29e252c2`.
+- **Simkl with anime** (owner requests): Simkl's third type (anime) joins the series lists, Continue Watching
+  and Plan to Watch, deduplicated. All platforms. Refs `f5dab2f8a`, `d6244a1f1`.
 - **Search and episodes work again** (#555): exact-title series like "Bigg Boss" are no longer cut by the
   result cap, and series that come from an add-on with no episodes get their list filled from the catalog.
   All platforms. Refs #555, `2e5b2ffde`, `d479a8463`.
@@ -194,6 +237,15 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   app (PR #550). All platforms. `0c2a1ba2c`.
 - **English friends log**: the friends row reason no longer dirties the translation scan. All platforms.
   `171e49772`.
+
+- **High-quality artwork is fetched at the size it needs** (owner requests): at High quality, w342 posters and
+  w780 backdrops stored by the catalog are fetched at the size the draw needs, and the 480px small backdrop
+  is no longer served for cards up to 640px. All platforms. `ff1cd6dcd`, `44bf4884a`.
+- **Long poster URL templates** (owner requests): pasting a long poster URL template on the phone page is no
+  longer cut at 1024 characters, and the native keyboards accept the same limit. All platforms. `0950a8eb8`,
+  `df7c93aaf`.
+- **MKV audio track remembered**: on MKV with a converted track, the hand pick keeps sticking for the next
+  episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
 
@@ -235,6 +287,12 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   PR #538, `cee137de7`, `cfc15aeab`, `8c99638f7`.
 - **Buffer clamp accounts for active DTS**: the in-use range reserves its 4 MiB before queue capacity is
   chosen. All platforms. `62421bfdc`.
+- **Frosted glass: one capture per backdrop change**: the glass blur now reads a half-res copy of the
+  backdrop layer alone, only when that layer changes — 1.15 → 0.35 captures per frame with focus/art moving,
+  0.54 → 0.04 on Explore, and 1 → 0 while rows scroll over a static backdrop. All platforms. `e9c809475`.
+- **Detail: fewer full-screen layers**: the trailer card's hole and veil are drawn in one pass, and a
+  neighbour card almost off screen no longer counts as full — 4 → 2 layers, fill 1.81 → 0.99 on the harness,
+  PNGs byte-identical. All platforms. `5ed6ddfaa`.
 
 ### Community
 
@@ -259,28 +317,35 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   spec (`4907caa50`, `db03a2bc5`).
 - Homebrew `repo.json` aligned with 2.0.6 (`c2e50a932`).
 
+- Deep links: parser, bounded queue and regression coverage (`8f38bb943`, `7cf145dca`, `f44e64863`).
+- Simkl anime merged into the series lists, deduplicated by imdb (`f5dab2f8a`).
+- Glass: single backdrop capture per hash change (`e9c809475`) plus an NV_FPS harness for the detail page
+  (`9356bc16c`).
+- Collection header mocks moved out of the default suite as `*_shot` (`eb03a56a4`, `1c3043479`), plus
+  session/profile fixtures for Continue Watching and catalogs (`8d8f5c92a`, `8c99638f7`, `840dacb67`).
+
 ### Pending (not integrated yet)
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
-- **Add-on reported audio and subtitle languages** — @ghbarker, PR #487 (`agente/205-pr487v2`, VEREDITO OK;
-  merge missing). Android, LG webOS.
-- **Watch profile (#548)** — `agente/205-vistos548`, VEREDITO **BLOQUEIA** with a fix done and no new review.
+- **Watch profile (#548)** — `agente/205-vistos548`, 6 commits out. Last VEREDITO **BLOQUEIA**
+  (`j-rev-vistos548-r4`); the fix `5b37cecd8` (weak defaults so isolated fixtures link) is newer than the
+  review, and `j-rev-vistos548-r5` is running. **Needs review.** Android, LG webOS.
+- **PR #487 v2** (add-on reported audio and subtitle languages) — `agente/205-pr487v2`, 3 commits out,
+  VEREDITO OK `j-rev-pr487-v2`, no commit after. **Needs final re-review.** Android, LG webOS.
+- **PR #493 v2 / v3** (profile and session) — `agente/205-pr493`, 12 commits out. VEREDITO **BLOQUEIA**
+  `j-revg-pr493` (newer); the OK `j-revpr493-v3` came before. Needs a new fix + review.
   Android, LG webOS.
-- **Deep links** — `agente/205-deeplink`, VEREDITO **BLOQUEIA** with a fix done and no new review.
-  All platforms.
-- **Image resolution** — `agente/205-imgres`, VEREDITO **BLOQUEIA** with a fix done and no new review.
-  All platforms.
-- **Subtitle outline** — `agente/205-legcontorno`, VEREDITO **BLOQUEIA** with a fix done and no new review.
-  LG webOS, Samsung .tpk.
-- **Poster URL** — `agente/205-posterurl`, VEREDITO **BLOQUEIA** with a fix done and no new review.
-  All platforms.
-- **2.0.7 in-app What's New** — `agente/205-novidades207`, VEREDITO **BLOQUEIA**, fix running now.
-  All platforms.
-- **Coloured header row** — `agente/205-colhdr`, VEREDITO **BLOQUEIA**, no fix. All platforms.
-- **PR #493 v2 / v3** (profile and session) — `agente/205-pr493`, 12 commits out, VEREDITO OK on v3 but the
-  branch kept growing with BLOQUEIA after. Android, LG webOS.
+- **Frosted glass: put it back as it was** — `agente/205-foscovelho` and `agente/205-semfosco`, jobs running now
+  (empty logs = QUEUED/RUNNING). Owner reports frosted glass got worse. All platforms.
+- **Vidaa** — `agente/205-vidaa`, 15 commits out. VEREDITO OK `j-revg-vidaa-6` after a run of BLOQUEIAS;
+  fix `j-fix-vidaa-3` is newer than the review. **Needs review.**
+- **Different collection header** (owner request) — `agente/205-colhdr` was **merged** (`fec2dc0ac`),
+  review OK `j-revg-colhdr`; no longer pending.
+- **Tizen/homebrew, glassmock, mock21, perfis21, owner answers** — branches with a finished job and no review
+  (`agente/205-homebrew`, `agente/205-tizenbrew`, `agente/205-glassmock`, `agente/205-mock21`,
+  `agente/205-perfis21`, `agente/205-respostas`). No confirmed user-facing content.
 - **Custom subtitle font** — the other half of #501, no branch. Android.
 - **Manual subtitle sync** — `agente/205-legajuste`, spec only. Deferred to 2.1.
-- **Tizen/homebrew, glassmock, mock21, perfis21, owner answers** — branches with a finished job and no review
-  at all. No confirmed user-facing content.
+- **Open PRs with no local branch**: #456/#457/#466/#467/#468/#469/#478/#482 (out-of-scope ones stay in the
+  map). Triage, not lost.
