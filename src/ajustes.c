@@ -9007,6 +9007,13 @@ void ajustes_teste_ux_captura(int cenario) {
   if (cenario == 9) { valor[AJ_IDIOMA] = IDIOMA_EN + 1; focarOpcao(AJ_HOME_LAYOUT); uxAbrirEditor(AJ_HOME_LAYOUT); }
   if (cenario == 21) focarOpcao(AJ_FOCO_TRAILER);
   if (cenario == 22) { focarOpcao(AJ_FOCO_TRAILER); uxAbrirEditor(AJ_FOCO_TRAILER); }
+  // NUVIO_SHOT_TRAILER_VETO=1: captura da linha Ligada que nao vale (veto de
+  // GPU): a ajuda tem de dizer por que, em vez de a linha parecer obedecida.
+  if (cenario == 21 && getenv("NUVIO_SHOT_TRAILER_VETO")) {
+    valor[AJ_HERO_TRAILER] = 0;
+    ajustes_trailer_hero_vetar("Mali-450");
+    focarOpcao(AJ_HERO_TRAILER);
+  }
   if (cenario >= 10 && cenario < 21) { focarSecao(cenario - 10); focoIndice = 1; }
 }
 
