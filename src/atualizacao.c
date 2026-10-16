@@ -1233,7 +1233,7 @@ void atualizacao_atualizar(float dt, Uint32 agora) {
         char t[160];
         IlhaAvisoEx e;
         memset(&e, 0, sizeof e);
-        snprintf(t, sizeof t, i18n("Você está na versão mais recente (%s · Juansher v1.2.1)"), NV_VERSAO);
+        snprintf(t, sizeof t, i18n("Você está na versão mais recente (%s · Juansher v1.2.2)"), NV_VERSAO);
         e.chave = "atualizacao"; e.tipo = ILHA_OK; e.icone = "check"; e.texto = t;
         e.kicker = i18n("Em dia"); e.ms = 6000u;
         ilha_avisar_ex(&e);
@@ -1592,7 +1592,7 @@ void atualizacao_desenhar(Uint32 agora) {
 #ifdef NV_TEX_MB_FIXO
   snprintf(buf, sizeof buf, i18n("Você está na %s · cache grande"), NV_VERSAO);
 #else
-  snprintf(buf, sizeof buf, i18n("Você está na %s · Juansher v1.2.1"), NV_VERSAO);
+  snprintf(buf, sizeof buf, i18n("Você está na %s · Juansher v1.2.2"), NV_VERSAO);
 #endif
   y += 6.0f;
   { TxtLinha l = txt_linha(TXT_G28R, buf, AT_TX, 255);
