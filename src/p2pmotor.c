@@ -351,13 +351,13 @@ static int usbEscanear(char *raiz, unsigned nr, int criar) {
   if (found) atomic_store(&usbMotivo, P2PM_USB_NONE);
   for (UsbLog **p = &usbLogs; *p;) {
     static const char *const names[] = {
-      "accepted", "nenhuma base", "not a mount root", "already seen",
+      "accepted", "no base", "not a mount root", "already seen",
       "timeout budget", "data dir", "I/O failure", "read-only", "P2P disabled"
     };
     entry = *p;
     if (!entry->seen) { *p = entry->next; free(entry); continue; }
     if (entry->reason != entry->previous || entry->error != entry->previousError) {
-      if (entry->reason == P2PM_USB_NO_BASE) printf("[p2p] usb: nenhuma base\n");
+      if (entry->reason == P2PM_USB_NO_BASE) printf("[p2p] usb: no base\n");
       else if (entry->reason == P2PM_USB_NONE) printf("[p2p] usb: %s accepted\n", entry->path);
       else printf("[p2p] usb: %s rejeitado: %s (errno=%d)\n",
                   entry->path, names[entry->reason], entry->error);
